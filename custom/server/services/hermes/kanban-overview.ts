@@ -31,7 +31,8 @@ export interface KanbanOverviewDeps {
   idleWatcherMs?: number
   /** sqlite 直读快道的 kanban 数据根（含 boards/ 子目录与主库 kanban.db）。
    *  不传 = 快道关闭，纯 CLI 老路径（测试默认）。生产由 command-post 注入。 */
-  kanbanDir?: string
+  /** sqlite 直读快道数据根；函数形态=每次调用动态解析（活动 profile 可切换） */
+  kanbanDir?: string | (() => string)
 }
 
 export interface KanbanOverviewResult {
@@ -57,11 +58,15 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   const boardCache = new Map<string, BoardCacheEntry>()
   const watchers = new Map<string, { pid?: number; kill: () => void; refs: number; lastEventAt: number; lastLine: string }>()
   const listeners = new Set<Listener>()
+  // 性能批二轮（2026-09-30）：板级事件对外订阅（看板读缓存 flush 等）
+  const boardEventCallbacks = new Set<(board: string) => void>()
 
-  // ── sqlite 直读快道（2026-09-28 性能根治）──────────────────────────────
-  // 与 CLI 同一存储：<kanbanDir>/boards/<slug>/kanban.db（tasks 表）+
-  // 主库 <kanbanDir>/kanban.db（default 板）。只读打开、用完即关，
-  // 失败一律返回 null 由调用方回落 CLI 老路径。deps.kanbanDir 未给 = 快道关。
+  // ── sqlite 直读快道（2026-09-28 性能根治；性能批二轮 2026-09-30 布局修正）──
+  // 与 CLI 同一存储。kanbanDir=HERMES home：主库 <home>/kanban.db（default 板，
+  // 102 任务实测在根级；旧布局 <home>/kanban/kanban.db 兜底）+ 分板
+  // <home>/kanban/boards/<slug>/kanban.db（旧布局 <home>/boards 兜底）。
+  // 只读打开、用完即关，失败一律返回 null 由调用方回落 CLI 老路径。
+  // deps.kanbanDir 未给 = 快道关。
   function queryBoardDb<T = any>(dbPath: string, fn: (db: any) => T): T | null {
     let db: any = null
     try {
@@ -77,20 +82,40 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     }
   }
 
+  /** 布局候选解析（性能批二轮）：主库/分板目录按现行→旧布局依次探测 */
+  function fastMainDb(home: string): string | null {
+    const p1 = join(home, 'kanban.db')
+    if (existsSync(p1)) return p1
+    const p2 = join(home, 'kanban', 'kanban.db')
+    return existsSync(p2) ? p2 : null
+  }
+  function fastBoardsDir(home: string): string | null {
+    const p1 = join(home, 'kanban', 'boards')
+    if (existsSync(p1)) return p1
+    const p2 = join(home, 'boards')
+    return existsSync(p2) ? p2 : null
+  }
+
   /** 快道 boards 列表：default（主库）+ boards/<slug>/（board.json + tasks 计数）。失败返回 null。 */
   function listBoardsFast(): any[] | null {
-    if (!deps.kanbanDir) return null
-    const boardsDir = join(deps.kanbanDir, 'boards')
-    if (!existsSync(boardsDir)) return null
+    const home = typeof deps.kanbanDir === 'function' ? deps.kanbanDir() : deps.kanbanDir
+    if (!home) return null
+    const boardsDir = fastBoardsDir(home)
+    if (!boardsDir) return null
     try {
       const out: any[] = []
-      const mainDb = join(deps.kanbanDir, 'kanban.db')
-      if (existsSync(mainDb)) {
+      const mainDb = fastMainDb(home)
+      if (mainDb) {
         const total = queryBoardDb(mainDb, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
         if (total === null) return null // 主库读不了 → 整体回落（与分板语义一致，防"Default 板 0 任务"假象）
         out.push({ slug: 'default', name: 'Default', total, archived: false })
       }
       for (const slug of readdirSync(boardsDir)) {
+        // 下划线前缀=特殊/归档目录（_archive 等）与 default 残根（真 default
+        // 数据在根级主库 <home>/kanban.db；boards/default/ 是 0 字节历史残根，
+        // 其库不可读会误触「任一板读不了→整体回落」，实测快道因此全关——
+        // 性能批二轮）
+        if (slug.startsWith('_') || slug === 'default') continue
         const dbPath = join(boardsDir, slug, 'kanban.db')
         if (!existsSync(dbPath)) continue
         let name = slug
@@ -112,9 +137,12 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
 
   /** 快道单板任务：tasks 全行（CLI 同款 rows）。板库不存在或读失败返回 null。 */
   function listTasksFast(board: string): any[] | null {
-    if (!deps.kanbanDir) return null
-    const dbPath = board === 'default' ? join(deps.kanbanDir, 'kanban.db') : join(deps.kanbanDir, 'boards', board, 'kanban.db')
-    if (!existsSync(dbPath)) return board === 'default' ? [] : null
+    const home = typeof deps.kanbanDir === 'function' ? deps.kanbanDir() : deps.kanbanDir
+    if (!home) return null
+    const dbPath = board === 'default'
+      ? fastMainDb(home)
+      : (() => { const d = fastBoardsDir(home); return d ? join(d, board, 'kanban.db') : null })()
+    if (!dbPath || !existsSync(dbPath)) return board === 'default' ? [] : null
     return queryBoardDb(dbPath, db =>
       db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board })),
     )
@@ -169,6 +197,11 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     if (entry) entry.ts = 0
     // 板级失效连带作废整结果缓存（事件到达时结果必已过期）
     overviewResult = null
+    // 性能批二轮（2026-09-30）：对外失效回调（如看板读缓存 flush）——
+    // agent 侧写看板经板级 watcher 事件近实时失效，读缓存 TTL 只兜底
+    for (const cb of boardEventCallbacks) {
+      try { cb(board) } catch { /* 单个回调异常不阻塞 */ }
+    }
   }
 
   function notify(board: string): void {
@@ -190,6 +223,17 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     const child = deps.watchEvents({ board, interval: 0.5 })
     const record = { pid: child.pid, kill: () => deps.killWatch(child.pid, () => child.kill()), refs: 1, lastEventAt: Date.now(), lastLine: '' }
     watchers.set(board, record)
+    // 性能批二轮（2026-09-30）：同一板事件（agent 心跳/锁续期等高频写）逐行
+    // 失效+广播会把下游全量刷新逐次打到冷 CLI——每板 2s 合并一次失效/广播；
+    // 板级缓存 TTL 10s 与读缓存 TTL 仍兜底新鲜度上限。
+    const EVENT_MERGE_MS = 2_000
+    let lastNotifyAt = 0
+    let mergeTimer: ReturnType<typeof setTimeout> | null = null
+    const flushBoardEvent = (): void => {
+      lastNotifyAt = Date.now()
+      invalidateBoard(board)
+      notify(board)
+    }
     child.stdout?.on('data', (chunk: any) => {
       record.lastEventAt = Date.now()
       const text = String(chunk || '')
@@ -198,8 +242,17 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
         if (!trimmed) continue
         if (trimmed.toLowerCase().startsWith('watching kanban events')) continue
         record.lastLine = trimmed
-        invalidateBoard(board)
-        notify(board)
+        const now = Date.now()
+        if (now - lastNotifyAt >= EVENT_MERGE_MS) {
+          flushBoardEvent()
+          continue
+        }
+        if (mergeTimer) clearTimeout(mergeTimer)
+        mergeTimer = setTimeout(() => {
+          mergeTimer = null
+          flushBoardEvent()
+        }, lastNotifyAt + EVENT_MERGE_MS - now)
+        mergeTimer.unref?.()
       }
     })
   }
@@ -367,6 +420,11 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   return {
     getOverview,
     invalidateBoard,
+    /** 板级事件订阅（watcher 收到任一 board 事件即回调；返回退订函数） */
+    onBoardEvent(cb: (board: string) => void): () => void {
+      boardEventCallbacks.add(cb)
+      return () => boardEventCallbacks.delete(cb)
+    },
     ensureWatcher,
     releaseWatcher,
     attachWebSocket,

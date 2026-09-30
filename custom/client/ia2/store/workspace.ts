@@ -284,6 +284,12 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   // ── ④ 看板聚合 WS 生命周期（接管点：旧驾驶舱壳 unmount（已退役）+ IaShell unmount 兜底）──
   let _overviewStream: fleetAdapter.FleetStreamHandle | null = null
   let _overviewDebounce: ReturnType<typeof setTimeout> | undefined
+  // 性能批二轮（2026-09-30 按钮/链路排查）：WS 板级事件→全量刷新由 500ms 去抖
+  // 改 leading+trailing 10s 节流——agent 心跳/锁续期类高频事件会把每次刷新都
+  // 打到冷 CLI（服务端缓存被同一事件失效，实测每事件 5-7.5s×3 端点）；
+  // 看板/状态 chips 的后台新鲜度 10s 足够，用户自己的操作仍经本地乐观更新即时可见。
+  const OVERVIEW_EVENT_THROTTLE_MS = 10_000
+  let _lastOverviewRefreshAt = 0
 
   /** 连接看板聚合 WS（幂等）。名字沿用台账；fleet sessions WS 无消费方不再连。 */
   function initFleetStream(): void {
@@ -291,8 +297,20 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     _overviewStream = fleetAdapter.connectOverviewStream({
       onBoardEvent: () => {
         _emitBoardEvent()
+        const now = Date.now()
+        if (now - _lastOverviewRefreshAt >= OVERVIEW_EVENT_THROTTLE_MS) {
+          _lastOverviewRefreshAt = now
+          void refreshAllBoards(true)
+          return
+        }
+        // 节流窗内：尾随合并刷新（距窗口末端最近一次到期）
         if (_overviewDebounce) clearTimeout(_overviewDebounce)
-        _overviewDebounce = setTimeout(() => { void refreshAllBoards(true) }, 500)
+        const wait = Math.max(0, _lastOverviewRefreshAt + OVERVIEW_EVENT_THROTTLE_MS - now)
+        _overviewDebounce = setTimeout(() => {
+          _overviewDebounce = undefined
+          _lastOverviewRefreshAt = Date.now()
+          void refreshAllBoards(true)
+        }, wait)
       },
     })
   }
