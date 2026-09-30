@@ -9,11 +9,10 @@
 // ia2.collabSession 与 ia2.commsRoom 的参数名（sessionId/roomId）原样保留——
 // cockpit 适配器与上游 GlobalPendingActions/KanbanTaskDrawer 的深链零改动。
 // board/runs/eng 为工作页（不进场景条）：看板 / 全部运行 / 编排。
-// 收编例外（2026-09-30 用户裁定）：hermes.settings 挂为 /app/settings 子路由
-// （设置页顶部栏+注意力条常显）；路由名保留 hermes.settings——上游
-// useKeyboard/ChatInput/MessageItem/GroupChatInput/DefaultCredentialPrompt 按
-// 名跳零改动；registerRoute → addRoute 同名先删上游顶层记录，旧路径由
-// /hermes/settings 函数式重定向兜住（query 保真）。
+// 收编例外（2026-09-30 用户裁定·两批）：设置页 + 侧栏可达的 /hermes-* 功能页
+// 全量收编（ANNEXED_LEGACY 同名替换上游记录，路径不变、上游按名跳零改动；
+// hermes.browser 桌面桥条件注册不收编）。组件统一 IaLegacyShell：页头+注意力
+// 条+IaSettingsSidebar（原三侧栏功能面并集）+ 内容区——双栏根治。
 //
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 // 不触发任何懒组件加载。壳层 meta.fullscreen: true。
@@ -60,6 +59,56 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   { from: '/app/collab/global-agent/session/:sessionId', to: '/app/agent/session/:sessionId' },
   { from: '/app/collab/global-agent', to: '/app/agent' },
   { from: '/app/collab', to: '/app' },
+]
+
+/**
+ * 收编页记录表（2026-09-30 双栏根治）：同名替换上游 /hermes-* 家族 + 设置页，
+ * 组件统一 IaLegacyShell（视图装载表见其 VIEW_LOADERS，两者按路由名一一对应）。
+ * 路径与上游逐字一致（deep link 兼容）；requiresSuperAdmin 随上游路由 meta 迁移。
+ */
+const annex = (path: string, name: string, requiresSuperAdmin = false): RouteRecordRaw => ({
+  path,
+  name,
+  component: () => import('./views/IaLegacyShell.vue'),
+  meta: { fullscreen: true, ...(requiresSuperAdmin ? { requiresSuperAdmin: true } : {}) },
+})
+
+export const ANNEXED_LEGACY: RouteRecordRaw[] = [
+  // 设置页（路径沿用收编批已迁的 /app/settings；旧路径重定向见树尾记录）
+  annex('/app/settings', 'hermes.settings'),
+  // ChatView 族（页面自持会话列；路径不变 → 页内按 path 分派行为不变）
+  annex('/hermes/chat', 'hermes.chat'),
+  annex('/hermes/session/:sessionId', 'hermes.session'),
+  annex('/hermes/global-agent', 'hermes.globalAgent'),
+  annex('/hermes/global-agent/session/:sessionId', 'hermes.globalAgentSession'),
+  annex('/hermes/models', 'hermes.models'),
+  annex('/hermes/connections', 'hermes.connections'),
+  annex('/studio/agents', 'hermes.agentManager', true),
+  // 群聊（GroupChatView 兜底深链族）
+  annex('/hermes/group-chat', 'hermes.groupChat'),
+  annex('/hermes/group-chat/room/:roomId', 'hermes.groupChatRoom'),
+  // 工具页
+  annex('/hermes/workflow', 'hermes.workflow'),
+  annex('/hermes/files', 'hermes.files'),
+  // 配置域（原 HermesConfigSidebar 面）
+  annex('/hermes/skills', 'hermes.skills'),
+  annex('/hermes/plugins', 'hermes.plugins'),
+  annex('/hermes/mcp', 'hermes.mcp'),
+  annex('/hermes/memory', 'hermes.memory'),
+  annex('/hermes/channels', 'hermes.channels'),
+  annex('/hermes/config/settings', 'hermes.configSettings'),
+  annex('/hermes/jobs', 'hermes.jobs'),
+  annex('/hermes/kanban', 'hermes.kanban'),
+  annex('/hermes/journey', 'hermes.journey'),
+  // 系统域（原 AppSidebar 系统组面）
+  annex('/hermes/logs', 'hermes.logs'),
+  annex('/hermes/usage', 'hermes.usage'),
+  annex('/hermes/performance', 'hermes.performance', true),
+  annex('/hermes/profiles', 'hermes.profiles', true),
+  annex('/hermes/theme', 'hermes.theme'),
+  annex('/hermes/petdex', 'hermes.petdex'),
+  annex('/hermes/skills-usage', 'hermes.skillsUsage'),
+  annex('/hermes/version-preview', 'hermes.versionPreview', true),
 ]
 
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
@@ -210,24 +259,19 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.collabGlobalAgentSession',
           component: () => import('@/views/hermes/GlobalAgentView.vue'),
         },
-        {
-          // 设置页收编（2026-09-30 用户裁定）：进入设置页后顶部栏与注意力条
-          // 常显——上游 SettingsView 挂为 /app 壳子路由；路由名保留
-          // hermes.settings，bootstrap 的同名 addRoute 即替换上游顶层记录，
-          // 上游按名跳（Ctrl+, / ChatInput / MessageItem 等）零改动直落本页。
-          // 左侧栏（同日二次反馈）：侧栏在注意力条下方（壳主区内自绘，
-          // IaSettingsView = IaSettingsSidebar | SettingsView 两栏；壳层
-          // fullscreen 保持 true，App.vue 不挂 AppSidebar），功能面恢复为
-          // 原 hermes-studio 三侧栏并集，见 IaSettingsSidebar 头注。
-          path: 'settings',
-          name: 'hermes.settings',
-          component: () => import('./views/IaSettingsView.vue'),
-        },
         ...legacy,
       ],
     },
+    // ── 收编页（2026-09-30 用户裁定：双栏根治）──────────────────────────────
+    // 「左边栏功能点开后右边又出现一个边栏」根因：侧栏可达的 /hermes-* 页仍活在
+    // 上游 App.vue 布局（AppSidebar/HermesConfigSidebar 又挂一层）。收编=同名
+    // addRoute 替换上游记录：路径/路由名不变（上游按名跳与深链零改动），组件
+    // 统一 IaLegacyShell（IaGlobalTop + IaSettingsSidebar + 内容区），meta
+    // fullscreen=true 压掉 App.vue 侧栏。权限语义保真：requiresSuperAdmin
+    // 随迁。hermes.browser 不收编（上游桌面桥运行时条件注册，保持桌面专属）。
+    ...ANNEXED_LEGACY,
     {
-      // 旧深链兜底（收编配套）：/hermes/settings → 壳内 /app/settings；
+      // 旧深链兜底（收编配套）：/hermes/settings → /app/settings；
       // 函数式重定向保 query（?tab=display 等 SettingsView 页签深链不丢）。
       path: '/hermes/settings',
       redirect: to => ({ path: '/app/settings', query: to.query }),

@@ -98,33 +98,27 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
-  it('设置页收编（2026-09-30 用户裁定）：hermes.settings 挂 /app 壳子路由，旧路径重定向保 query', async () => {
-    // 子路由在案：/app/settings、名保留 hermes.settings（上游 useKeyboard/
-    // ChatInput/MessageItem 等按名跳零改动；bootstrap 同名 addRoute 替换上游
-    // 顶层记录——设置页落壳内，顶部栏+注意力条常显）
+  it('设置页收编（2026-09-30 用户裁定）：hermes.settings 经 IaLegacyShell 进壳，旧路径重定向保 query', async () => {
+    // 设置页与全量收编批同构（ANNEXED_LEGACY 首条）：同名替换上游顶层记录——
+    // 上游 useKeyboard/ChatInput/MessageItem 等按名跳零改动；壳=页头+注意力条+
+    // IaSettingsSidebar（注意力条下方）+内容区，App.vue 不再挂侧栏（双栏根治）
     const routes = buildIaRoutes()
-    const app = routes.find(r => r.path === '/app')
-    const child = app?.children?.find(c => c.name === 'hermes.settings')
-    expect(child, '/app/settings 子路由应存在').toBeTruthy()
-    expect(child?.path).toBe('settings')
-    // 左侧栏（2026-09-30 二次反馈）：壳内自绘（IaSettingsView 两栏，侧栏在注意
-    // 力条下方），子路由不得覆写 fullscreen（覆写 false 会让 App.vue 挂
-    // AppSidebar 致双栏/贯穿左侧栏回潮）
-    expect(child?.meta?.fullscreen).toBeUndefined()
-    const setView = readFileSync(resolve(__dirname, '../views/IaSettingsView.vue'), 'utf8')
+    const setRec = routes.find(r => r.name === 'hermes.settings')
+    expect(setRec, 'hermes.settings 收编记录应存在').toBeTruthy()
+    expect(setRec?.path).toBe('/app/settings')
+    expect(String(setRec?.component)).toContain('IaLegacyShell')
+    expect(setRec?.meta?.fullscreen).toBe(true)
+    // 左侧栏（注意力条下方）：壳内自绘，见 IaLegacyShell/IaSettingsSidebar
+    const shellSrc = readFileSync(resolve(__dirname, '../views/IaLegacyShell.vue'), 'utf8')
     const setNav = readFileSync(resolve(__dirname, '../components/IaSettingsSidebar.vue'), 'utf8')
-    expect(setView).toContain('<IaSettingsSidebar />')
-    expect(setView).toContain("from '@/views/hermes/SettingsView.vue'")
-    // 功能面=三侧栏并集；全部条目 hasRoute 门控（退役/桌面专属路由自动隐）
+    expect(shellSrc).toContain('<IaGlobalTop />')
+    expect(shellSrc).toContain('<IaSettingsSidebar />')
     expect(setNav).toContain('router.hasRoute(')
-    for (const name of ['hermes.skillsUsage', 'hermes.theme', 'hermes.petdex', 'hermes.mcp', 'hermes.plugins', 'hermes.memory', 'hermes.models', 'hermes.workflow', 'hermes.connections', 'hermes.files', 'hermes.kanban', 'hermes.journey', 'hermes.channels', 'hermes.jobs']) {
-      expect(setNav, `侧栏应含原功能入口 ${name}`).toContain(`name: '${name}'`)
-    }
     // 旧深链兜底：/hermes/settings → /app/settings（query 保真，tab 页签深链不丢）
     const legacy = routes.find(r => r.path === '/hermes/settings')
     expect(legacy, '旧路径兼容重定向应存在').toBeTruthy()
     expect(typeof legacy?.redirect).toBe('function')
-    // 实走重定向（组件换桩，避免拉起 SettingsView 导入链）
+    // 实走重定向（组件换桩，避免拉起 IaLegacyShell 导入链）
     const Stub = { template: '<div />' }
     const stub = (records: ReturnType<typeof buildIaRoutes>): ReturnType<typeof buildIaRoutes> =>
       records.map(r => {

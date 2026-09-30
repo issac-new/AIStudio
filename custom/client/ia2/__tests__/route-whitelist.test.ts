@@ -1,8 +1,10 @@
 // overlay/custom/client/ia2/__tests__/route-whitelist.test.ts
 // 路由白名单守门（补遗⑤ §13.6-2）：用户可达路由集合快照断言——新增可达路由须走补遗⑤评审
 //（改本快照=显式变更点）。快照取自 2026-09-29 P9/P10 落地后实况；
-// 2026-09-30 用户裁定变更：+hermes.settings（设置页收编 /app/settings，唯一
-// hermes.* 例外，路由名保留换掉上游顶层记录——上游按名跳零改动）。
+// 2026-09-30 用户裁定变更（两批）：+hermes.settings（设置页收编）；
+// +ANNEXED_LEGACY 全量收编 28 名（双栏根治：侧栏可达 /hermes-* 页同名替换进
+// IaLegacyShell 壳，见 routes.ts ANNEXED_LEGACY 表——收编例外为唯一 hermes.*
+// 来源，未收编的 hermes.browser/terminal/ekko.* 等仍归上游，不经本表）。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { buildIaRoutes } from '../routes'
@@ -16,7 +18,35 @@ const all = flatten([...buildIaRoutes(), ...buildIdeRoutes()])
 const named = all.filter((r) => r.name).map((r) => r.name) as string[]
 const compat = all.filter((r) => r.redirect)
 const EXPECTED_NAMES = [
+  'hermes.agentManager',
+  'hermes.channels',
+  'hermes.chat',
+  'hermes.configSettings',
+  'hermes.connections',
+  'hermes.files',
+  'hermes.globalAgent',
+  'hermes.globalAgentSession',
+  'hermes.groupChat',
+  'hermes.groupChatRoom',
+  'hermes.jobs',
+  'hermes.journey',
+  'hermes.kanban',
+  'hermes.logs',
+  'hermes.mcp',
+  'hermes.memory',
+  'hermes.models',
+  'hermes.performance',
+  'hermes.petdex',
+  'hermes.plugins',
+  'hermes.profiles',
+  'hermes.session',
   'hermes.settings',
+  'hermes.skills',
+  'hermes.skillsUsage',
+  'hermes.theme',
+  'hermes.usage',
+  'hermes.versionPreview',
+  'hermes.workflow',
   'ia2.accounts',
   'ia2.board',
   'ia2.collab',
@@ -41,8 +71,21 @@ const EXPECTED_NAMES = [
 ]
 
 describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
-  it('路由名账本快照：ia2.* 与 ide.shell + 收编例外 hermes.settings（2026-09-30 设置页进壳）——零其它 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
+  it('路由名账本快照：ia2.* 与 ide.shell + 收编例外 hermes.*（2026-09-30 设置页+ANNEXED_LEGACY 全量进壳）——零其它 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
     expect([...new Set(named)].sort()).toEqual(EXPECTED_NAMES)
+  })
+  it('收编例外全部经 IaLegacyShell（双栏根治守门）：hermes.* 记录零裸视图', () => {
+    const hermes = all.filter((r) => typeof r.name === 'string' && r.name.startsWith('hermes.'))
+    expect(hermes.length).toBe(29)
+    for (const r of hermes) {
+      expect(r.meta?.fullscreen, `${r.name} 收编记录须 fullscreen=true`).toBe(true)
+      expect(String(r.component), `${r.name} 收编记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
+    }
+    // requiresSuperAdmin 随上游 meta 迁移（守卫语义保真）
+    for (const name of ['hermes.agentManager', 'hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
+      const rec = hermes.find((r) => r.name === name)
+      expect(rec?.meta?.requiresSuperAdmin, `${name} 须保留 requiresSuperAdmin`).toBe(true)
+    }
   })
   it('兼容层全部为 redirect；退役名 ia2.eng / ia2.loopCanvas 不在可达名账本', () => {
     for (const c of compat) expect(['string','function']).toContain(typeof c.redirect)
