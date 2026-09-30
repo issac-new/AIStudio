@@ -23,6 +23,8 @@ import StateModelSection from '@/custom/governance/components/StateModelSection.
 import OrgDiagnosisSection from '@/custom/governance/components/OrgDiagnosisSection.vue'
 import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraphSection.vue'
 import ChangeGovernanceSection from '@/custom/governance/components/ChangeGovernanceSection.vue'
+import DecisionGraphSection from '@/custom/governance/components/DecisionGraphSection.vue'
+import DecisionRulesSection from '@/custom/governance/components/DecisionRulesSection.vue'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
@@ -34,6 +36,22 @@ const L = computed(() => {
   const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
   return loc.startsWith('zh') ? governanceMessages.zh.governance : governanceMessages.en.governance
 })
+
+/** 二级分区导航（2026-10-01 用户裁定：板块重规划）：13 个板块按用户视角收 5 区，
+ *  v-if 分区渲染=懒挂载（切区才加载）。 */
+type GovTab = 'overview' | 'org' | 'registry' | 'audit' | 'docs'
+const subTab = ref<GovTab>('overview')
+const GOV_TABS: Array<{ key: GovTab; testid: string }> = [
+  { key: 'overview', testid: 'gov-tab-overview' },
+  { key: 'org', testid: 'gov-tab-org' },
+  { key: 'registry', testid: 'gov-tab-registry' },
+  { key: 'audit', testid: 'gov-tab-audit' },
+  { key: 'docs', testid: 'gov-tab-docs' },
+]
+const govTabLabel = (k: GovTab): string => {
+  const g = L.value as unknown as { govTabs?: Record<string, string> }
+  return g.govTabs?.[k] ?? k
+}
 
 const overview = ref<GovernanceOverview | null>(null)
 const selectedKind = ref('')
@@ -158,6 +176,18 @@ onMounted(() => void refresh())
 
     <div v-if="error" class="ia-gov__error" data-testid="gov-error">{{ L.loadFailed }}：{{ error }}</div>
 
+    <!-- 二级分区导航（2026-10-01 板块重规划）：总览/组织与知识/台账与规则/审计与变更/文档评审 -->
+    <div class="ia-gov__subtabs" role="tablist" data-testid="gov-subtabs">
+      <button
+        v-for="gt in GOV_TABS" :key="gt.key" type="button" role="tab"
+        class="ia-gov__subtab" :class="{ 'is-active': subTab === gt.key }"
+        :aria-selected="subTab === gt.key" :data-testid="gt.testid"
+        @click="subTab = gt.key"
+      >{{ govTabLabel(gt.key) }}</button>
+    </div>
+
+    <!-- ═══ 分区一：总览（六闸卡 + 六域体检） ═══ -->
+    <template v-if="subTab === 'overview'">
     <!-- 六闸卡 -->
     <div class="ia-gov__gates" data-testid="gov-gates">
       <div v-for="card in gateCards" :key="card.gate" class="ia-gov__gate" :class="{ 'is-ok': card.ok }" :data-gate="card.gate">
@@ -191,22 +221,40 @@ onMounted(() => void refresh())
         台账 {{ audit.total }} 条判定 · {{ audit.runs.length }} 轮（{{ audit.runs.slice(0, 3).join(' / ') }}{{ audit.runs.length > 3 ? ' …' : '' }}）——长期基础数据，下轮目标 = 上轮基线
       </div>
     </div>
+    </template>
 
-    <!-- 4A 治理层四区（一期台账+二期运行态/审计+五期本体） -->
-    <LedgerSection />
-    <RuntimeSection />
-    <AuditSection />
-    <StateModelSection />
-
+    <!-- ═══ 分区二：组织与知识（五流断点 + 板级KG + 决策图谱） ═══ -->
+    <template v-else-if="subTab === 'org'">
     <!-- 五流断点诊断（2026-09-30 调研落地）：信息/决策/责任/资源/反馈 + 机制归因闭环 -->
     <OrgDiagnosisSection />
 
     <!-- 板级共享知识图谱（2026-09-30 调研落地）：结案摄取 + 冲突收件箱 -->
     <KnowledgeGraphSection />
 
+    <!-- 决策图谱（2026-10-01 UI 化）：时间线/因果链/门禁同步/双时态回放 -->
+    <DecisionGraphSection />
+    </template>
+
+    <!-- ═══ 分区三：台账与规则（能力台账 + 状态本体 + 决策规则 + 运行态） ═══ -->
+    <template v-else-if="subTab === 'registry'">
+    <LedgerSection />
+    <StateModelSection />
+
+    <!-- 决策规则闸（2026-10-01 UI 化）：注册表只读投影 + mode 徽标 -->
+    <DecisionRulesSection />
+    <RuntimeSection />
+    </template>
+
+    <!-- ═══ 分区四：审计与变更（统一审计 + 变更治理） ═══ -->
+    <template v-else-if="subTab === 'audit'">
+    <AuditSection />
+
     <!-- 变更治理（调研落地轮 2026-09-29）：分级评审/五维影响/三级冻结窗口/管控基准 -->
     <ChangeGovernanceSection />
+    </template>
 
+    <!-- ═══ 分区五：文档评审（工件库 + 待裁决 + 管理维护） ═══ -->
+    <template v-else>
     <div class="ia-gov__main">
       <!-- 左：工件清单 -->
       <aside class="ia-gov__list" data-testid="gov-docs">
@@ -267,6 +315,7 @@ onMounted(() => void refresh())
         <OrgEditor />
       </section>
     </div>
+    </template>
   </div>
 </template>
 
@@ -297,6 +346,24 @@ onMounted(() => void refresh())
   font-size: 12px;
   cursor: pointer;
   &:hover { background: var(--bg-secondary, #f1f2f4); }
+}
+.ia-gov__subtabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  flex-shrink: 0;
+}
+.ia-gov__subtab {
+  border: none; background: transparent; cursor: pointer;
+  padding: 6px 12px; font-size: 13px; font-family: inherit;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  border-bottom: 2px solid transparent;
+}
+.ia-gov__subtab:hover { color: inherit; }
+.ia-gov__subtab.is-active {
+  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-bottom-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  font-weight: 600;
 }
 .ia-gov__error { color: #dc2626; font-size: 12px; }
 .ia-gov__audit-error { color: #dc2626; font-size: 12px; padding: 6px 0; }

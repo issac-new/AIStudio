@@ -365,3 +365,78 @@ export function resolveConflict(inboxId: string, action: 'keep-existing' | 'take
     body: { inboxId, action },
   })
 }
+
+// ---- 决策图谱/规则闸/回放 UI 化（2026-10-01 用户裁定） ----
+export interface DecisionGraphStatus {
+  ok: boolean
+  available: boolean
+  python: boolean
+  kgPath: string
+  exists: boolean
+  nodes: number
+  decisions: number
+}
+export interface DecisionItem {
+  id: string
+  category: string | null
+  scenario: string | null
+  outcome: string | null
+  confidence: number | null
+  decidedBy?: string | null
+}
+export interface ChainItem extends DecisionItem { }
+export interface ReplayResp {
+  ok: boolean
+  at: number
+  snapshotTs: number | null
+  lagMs: number | null
+  decisions: DecisionItem[]
+}
+export interface SnapshotsResp {
+  ok: boolean
+  stats: { count: number; totalBytes: number }
+  snapshots: Array<{ file: string; ts: number }>
+}
+export function fetchDgStatus(): Promise<DecisionGraphStatus> {
+  return request<DecisionGraphStatus>('/api/governance/decision-graph/status')
+}
+export function fetchDgDecisions(limit = 30): Promise<{ ok: boolean; decisions: DecisionItem[]; total: number }> {
+  return request<{ ok: boolean; decisions: DecisionItem[]; total: number }>(`/api/governance/decision-graph/decisions?limit=${limit}`)
+}
+export function fetchDgChain(id: string): Promise<{ ok: boolean; chain: ChainItem[] }> {
+  return request<{ ok: boolean; chain: ChainItem[] }>(`/api/governance/decision-graph/chain?id=${encodeURIComponent(id)}`)
+}
+export function syncDgGates(): Promise<{ ok: boolean; ingested: number; totalSeen: number }> {
+  return request<{ ok: boolean; ingested: number; totalSeen: number }>('/api/governance/decision-graph/sync-gates', { method: 'POST' })
+}
+export function fetchDgReplay(at: number): Promise<ReplayResp> {
+  return request<ReplayResp>(`/api/governance/decision-graph/replay?at=${at}`)
+}
+export function fetchDgSnapshots(): Promise<SnapshotsResp> {
+  return request<SnapshotsResp>('/api/governance/decision-graph/snapshots')
+}
+export interface DecisionRulesResp {
+  ok: boolean
+  exists: boolean
+  doc?: {
+    version: number
+    mode: string
+    rules: Array<{ id: string; description?: string; when: Record<string, string>; then: string; message: string }>
+  } | null
+  problems?: string[]
+  error?: string
+}
+export function fetchDecisionRules(): Promise<DecisionRulesResp> {
+  return request<DecisionRulesResp>('/api/governance/decision-rules')
+}
+/** PROV-O 导出（下载 JSON-LD 文件——audit 四源证据链标准格式）。 */
+export async function downloadProvO(limit = 200): Promise<void> {
+  const res = await request<Record<string, unknown>>(`/api/governance/audit-log/prov-o?limit=${limit}`)
+  const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/ld+json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `prov-o-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.jsonld`
+  a.click()
+  URL.revokeObjectURL(url)
+}

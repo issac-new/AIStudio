@@ -13,13 +13,14 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
+import GovernanceView from '@/custom/ia2/views/GovernanceView.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const kanban = useKanbanStore()
 
-type TabKey = 'board' | 'trace' | 'accounts'
+type TabKey = 'board' | 'trace' | 'accounts' | 'gov'
 const tab = ref<TabKey>('board')
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
@@ -38,6 +39,7 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
 function applyQuery(q: Record<string, unknown>): void {
   if (q.tab === 'trace') tab.value = 'trace'
   else if (q.tab === 'accounts') tab.value = 'accounts'
+  else if (q.tab === 'gov') tab.value = 'gov'
   else if (q.tab === 'board') tab.value = 'board'
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
@@ -112,17 +114,18 @@ function goInboxFromAccounts(): void {
       >
         {{ t('ia2.tasks.tabAccounts') }}
       </button>
-      <!-- 治理中心跳转（2026-09-30 用户找不到入口的实缺口）：看板侧平级入口——
-           治理中心是独立工作页（ia2.governance），非本页内 tab，点击整页跳转。 -->
+      <!-- 治理中心平级页签（2026-10-01 用户裁定：内嵌不整页跳转——页签不再消失；
+           独立路由 ia2.governance 保留为 IDE 侧/深链入口）。 -->
       <button
         type="button"
-        class="ia-tasks__tab ia-tasks__tab--link"
+        class="ia-tasks__tab"
+        :class="{ 'ia-tasks__tab--active': tab === 'gov' }"
         role="tab"
-        :aria-selected="false"
+        :aria-selected="tab === 'gov'"
         data-testid="ia-tasks-tab-governance"
-        @click="router.push({ name: 'ia2.governance' })"
+        @click="tab = 'gov'"
       >
-        {{ t('ia2.tasks.tabGovernance') }} ↗
+        {{ t('ia2.tasks.tabGovernance') }}
       </button>
       <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
       <button
@@ -137,6 +140,9 @@ function goInboxFromAccounts(): void {
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView />
+    </div>
+    <div v-else-if="tab === 'gov'" class="ia-area ia-tasks__gov" data-testid="ia-tasks-gov">
+      <GovernanceView />
     </div>
     <div v-else-if="tab === 'accounts'" class="ia-area">
       <ManagementAccountsPanel
@@ -168,6 +174,7 @@ function goInboxFromAccounts(): void {
   align-items: center;
 }
 
+.ia-tasks__gov { min-height: 0; overflow: hidden; }
 .ia-tasks__close {
   margin-left: auto; flex-shrink: 0;
   width: 24px; height: 24px; padding: 0; margin-bottom: 2px;

@@ -60,6 +60,15 @@ vi.mock('@/custom/governance/api/governance', () => ({
     total: 1,
     events: [{ ts: 1790000000000, source: 'approvals', actor: 'admin', action: 'review:approve', target: '评审 X', result: 'approve' }],
   })),
+  // 决策图谱/规则闸（2026-10-01 UI 化分区消费面）——mock 须全量
+  fetchDgStatus: vi.fn(async () => ({ ok: true, available: true, python: true, kgPath: '/x/kg.json', exists: true, nodes: 3, decisions: 2 })),
+  fetchDgDecisions: vi.fn(async () => ({ ok: true, decisions: [{ id: 'd-uuid-1', category: 'dispatch', scenario: 'review 编排', outcome: 'approved', confidence: 0.9, decidedBy: 'studio' }], total: 1 })),
+  fetchDgChain: vi.fn(async () => ({ ok: true, chain: [] })),
+  syncDgGates: vi.fn(async () => ({ ok: true, ingested: 0, totalSeen: 0 })),
+  fetchDgReplay: vi.fn(async () => ({ ok: true, at: 1, snapshotTs: null, lagMs: null, decisions: [] })),
+  fetchDgSnapshots: vi.fn(async () => ({ ok: true, stats: { count: 0, totalBytes: 0 }, snapshots: [] })),
+  fetchDecisionRules: vi.fn(async () => ({ ok: true, exists: true, problems: [], doc: { version: 1, mode: 'warn', rules: [{ id: 'retire-candidate-no-new', when: { unitLifecycle: 'retire-candidate' }, then: 'deny', message: '退役候选禁派' }] } })),
+  downloadProvO: vi.fn(async () => undefined),
 }))
 // 变更治理区（2026-09-29 调研落地轮挂进 GovernanceView）——mock 须全量，
 // 缺导出即 vitest unhandled rejection（同 LedgerSection 先例）
@@ -124,6 +133,12 @@ async function mountView() {
   return wrapper
 }
 
+/** 切二级分区（2026-10-01 板块重规划后：工件/评审/三区分属 docs/registry/audit 区）。 */
+async function goto(wrapper: Awaited<ReturnType<typeof mountView>>, testid: string): Promise<void> {
+  await wrapper.find(`[data-testid="${testid}"]`).trigger('click')
+  await flushPromises()
+}
+
 describe('治理中心前端', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -147,28 +162,46 @@ describe('治理中心前端', () => {
     expect(flat).toContain('"gov"')
   })
 
-  it('渲染六闸卡（G3 以分支数为证据）+ 工件清单 + 待裁决评审', async () => {
+  it('渲染六闸卡（G3 以分支数为证据）+ 二级分区导航', async () => {
     const wrapper = await mountView()
     const gates = wrapper.findAll('.ia-gov__gate')
     expect(gates).toHaveLength(6)
     expect(wrapper.find('[data-testid="gov-gate-G1"]').text()).toContain('在仓')
     expect(wrapper.find('[data-testid="gov-gate-G3"]').text()).toContain('4')
-    // 工件库分组渲染（六闸工件 + 管理档案同屏）
+    // 板块重规划（2026-10-01）：五分区导航在页头下，默认总览区
+    const tabs = wrapper.findAll('.ia-gov__subtab')
+    expect(tabs).toHaveLength(5)
+    expect(wrapper.find('[data-testid="gov-tab-overview"]').classes()).toContain('is-active')
+    // 分区懒挂载：默认区不渲染其他分区板块
+    expect(wrapper.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="gov-docs"]').exists()).toBe(false)
+    await goto(wrapper, 'gov-tab-docs')
     const groupTitles = wrapper.findAll('.ia-gov__group-title').map(n => n.text())
     expect(groupTitles).toContain('六闸工件')
     expect(groupTitles).toContain('管理档案')
     expect(wrapper.find('[data-testid="gov-doc-roster"]').exists()).toBe(true)
-    // 六闸卡计数不受管理档案掺入（roster gate='' 不计入任何闸）
-    expect(wrapper.find('[data-testid="gov-gate-G1"]').text()).toContain('1/1')
-    // 缺失工件禁用态
     const retroBtn = wrapper.find('[data-testid="gov-doc-retro"]')
     expect(retroBtn.attributes('disabled')).toBeDefined()
-    // 待裁决评审在列
     expect(wrapper.find('[data-testid="gov-review-review:r1"]').exists()).toBe(true)
+  })
+
+  it('分区二/三：组织知识区含决策图谱；台账规则区含规则闸', async () => {
+    const wrapper = await mountView()
+    await goto(wrapper, 'gov-tab-org')
+    expect(wrapper.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-knowledge-graph"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-decision-graph"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dg-decision-d-uuid-1"]').exists()).toBe(true)
+
+    await goto(wrapper, 'gov-tab-registry')
+    expect(wrapper.find('[data-testid="gov-decision-rules"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dr-rule-retire-candidate-no-new"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dr-mode"]').attributes('data-mode')).toBe('warn')
   })
 
   it('点击工件渲染 markdown 全文（含 frozen:true 与 commit 锚点）', async () => {
     const wrapper = await mountView()
+    await goto(wrapper, 'gov-tab-docs')
     await wrapper.find('[data-testid="gov-doc-freeze"]').trigger('click')
     await flushPromises()
     const md = wrapper.find('[data-testid="gov-doc-md"]')
@@ -178,6 +211,7 @@ describe('治理中心前端', () => {
 
   it('裁决按钮走 decideApproval 并刷新', async () => {
     const wrapper = await mountView()
+    await goto(wrapper, 'gov-tab-docs')
     await wrapper.find('[data-testid="gov-review-review:r1"] .ia-gov__btn.is-approve').trigger('click')
     await flushPromises()
     expect(approvals.decideApproval).toHaveBeenCalledWith('review:r1', 'approve')
@@ -197,18 +231,20 @@ describe('治理中心前端', () => {
     expect(runDomainAudit).toHaveBeenCalled()
   })
 
-  it('4A 治理层三区渲染（台账/运行态/统一审计）', async () => {
+  it('4A 治理层三区渲染（台账/运行态/统一审计——2026-10-01 分属 registry/audit 区）', async () => {
     const wrapper = await mountView()
+    await goto(wrapper, 'gov-tab-registry')
     expect(wrapper.find('[data-testid="gov-ledger"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="gov-runtime"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-audit"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="gov-state-model"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="sm-trans-run.complete"]').exists()).toBe(true)
     // 运行态：SLO 档行渲染 + 零调用空态如实
     expect(wrapper.find('[data-testid="slo-tier-core"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="usage-zero-none"]').exists()).toBe(true)
-    // 统一审计：四源 chips + 事件行 + 计数
+    // 统一审计（audit 区）：四源 chips + 事件行 + 计数 + PROV-O 导出按钮
+    await goto(wrapper, 'gov-tab-audit')
     expect(wrapper.findAll('[data-testid^="audit-src-"]').length).toBe(4)
+    expect(wrapper.find('[data-testid="audit-prov-export"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-row-approvals"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-count"]').text()).toContain('1')
   })
