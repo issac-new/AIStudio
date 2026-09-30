@@ -377,9 +377,9 @@ if step_reached analysis; then
     # 消息洪窗口失效（run4 实锤：当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
     # 数十页不经济）：派发真实性由 state dispatch_marker（事件 id 可反查）锚定，此处
     # 文本级复查按 60s 窗降级观察——结论不放宽，只省注定超时的等待。
-    wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 60 bash -c \
-      "mx_messages_deep \"$(load_token fanfan)\" \"$RID\" $(( $(date +%s) - 3600 )) 3 | \
-       jq -e '[.[] | select(.type==\"m.room.message\") | select((.content.body//\"\") | contains(\"@${1}-agent\") and contains(\"@${2}-agent\"))] | length > 0'" \
+    # 注意必须当前 shell 直调谓词函数：bash -c 起的子进程继承不到 shell 函数（未 export -f），
+    # mx_messages_deep 在子进程内 127 恒假=复查恒失败白等 60s（24h 审查实锤）
+    wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 60 raci_dispatch_seen "${1}" "${2}" "${RID}" \
       || note "[观察] @$1/@$2 派发消息未见（消息洪窗口外，dispatch_marker 锚在 state，继续）"
   done
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
