@@ -11,6 +11,8 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
 import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import TaskRunsPanel from '@/custom/loop/runcenter/components/TaskRunsPanel.vue'
+import WorkflowObservationPanel from '@/custom/ide/components/WorkflowObservationPanel.vue'
+import { useRunSurfaceText } from '@/custom/ia2/i18n-run-surface'
 import { filterRuns } from '@/custom/loop/runcenter/adapters'
 import { formatEventTs } from '@/custom/loop/runcenter/adapters/run-graph'
 import type { GraphEventLike, RunAction, RunStatus, RunSummary } from '@/custom/loop/runcenter/types'
@@ -20,8 +22,19 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
-// ── 视图 tab（运行列表 / 介入收件箱 / 任务运行，2026-09-28 演示轮补第三 tab）──
-const activeTab = ref<'runs' | 'inbox' | 'taskRuns'>('runs')
+// ── 视图 tab（运行列表 / 介入收件箱 / 任务运行 / 工作流——2026-10-01 循环×工作流
+//    融合 Phase 1 补第四 tab：zcode 工作流观测面并入运行中心）──
+const activeTab = ref<'runs' | 'inbox' | 'taskRuns' | 'workflows'>('runs')
+
+const TAB_KEYS = new Set(['runs', 'inbox', 'taskRuns', 'workflows'])
+/** 工作流页签/CTA 词条（i18n-run-surface 独立事实源，漂移治理后收编 473） */
+const rsText = useRunSurfaceText()
+/** 深链 ?tab= 消费（RunDetailView 既有 push query:{tab:'runs'} 此前是死参数，就地接通；
+ *  非法值忽略不炸，模式同 TasksView.applyQuery） */
+function applyQueryTab(q: Record<string, unknown>): void {
+  const v = q.tab
+  if (typeof v === 'string' && TAB_KEYS.has(v)) activeTab.value = v as typeof activeTab.value
+}
 
 // ── 工具条状态 ──
 const statusFilter = ref<'' | RunStatus>('')
@@ -78,9 +91,12 @@ onMounted(() => {
   // runId/graphId 包含匹配，graphId 即 loop id，落点即该 loop 的运行列表。
   const loopParam = route.query.loop
   if (typeof loopParam === 'string' && loopParam) query.value = loopParam
+  applyQueryTab(route.query as Record<string, unknown>)
   store.fetchRuns()
 })
 onBeforeUnmount(() => { store.disconnect() })
+// 同路由 query 变化（已在 /app/runs 时被深链再次唤起）同样生效
+watch(() => route.query, (q) => { applyQueryTab(q as Record<string, unknown>) })
 
 // ── 操作分发（合法操作集 → 现有落点；无落点的动作不出现按钮）──
 const actionError = ref<string | null>(null)
@@ -189,6 +205,15 @@ function replayTime(e: GraphEventLike): string {
         >
           {{ t('runcenter.tab.taskRuns') }}
         </button>
+        <!-- 工作流（2026-10-01 循环×工作流融合 Phase 1：zcode 工作流观测面共享组件） -->
+        <button
+          class="rc-view__tab"
+          :class="{ 'rc-view__tab--active': activeTab === 'workflows' }"
+          data-testid="rc-tab-workflows"
+          @click="activeTab = 'workflows'"
+        >
+          {{ rsText.tabWorkflows }}
+        </button>
       </div>
 
       <span class="rc-view__connection" :class="`rc-view__connection--${store.connection}`">
@@ -237,6 +262,11 @@ function replayTime(e: GraphEventLike): string {
     <!-- 任务运行（kanban task_runs 投影，自含拉取/过滤/空态） -->
     <TaskRunsPanel v-else-if="activeTab === 'taskRuns'" />
 
+    <!-- 工作流（zcode 引擎实时运行行 + 已保存档案；引擎离线显示占位不炸） -->
+    <div v-else-if="activeTab === 'workflows'" class="rc-view__workflows" data-testid="rc-panel-workflows">
+      <WorkflowObservationPanel />
+    </div>
+
     <!-- 空态三步引导（R4：选模板 → 设节奏 → 跑起来） -->
     <div v-else-if="!store.loading && store.runs.length === 0" class="rc-view__onboarding">
       <h3>{{ t('runcenter.empty.title') }}</h3>
@@ -257,9 +287,10 @@ function replayTime(e: GraphEventLike): string {
           <p>{{ t('runcenter.empty.step3Desc') }}</p>
         </div>
       </div>
-      <!-- 2026-09-18 统一导航：hermes.loop 壳已退役，空态引导落工程场景编排 tab -->
-      <button class="rc-view__cta" @click="router.push({ name: 'ia2.eng' })">
-        {{ t('runcenter.empty.cta') }}
+      <!-- 2026-09-18 编排页（ia2.eng）已于 S5 退役——空态引导改指工作流页签
+           （2026-10-01 循环×工作流融合：zcode 工作流是当前可自助启动的运行面） -->
+      <button class="rc-view__cta" data-testid="rc-empty-cta" @click="activeTab = 'workflows'">
+        {{ rsText.ctaWorkflows }}
       </button>
     </div>
 
@@ -319,6 +350,17 @@ function replayTime(e: GraphEventLike): string {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* 工作流页签容器：定高滚动列里的 flex 项防压扁（min-height:0 + 面板自管滚动） */
+.rc-view__workflows {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
 }
 .rc-view__title { margin: 0; font-size: 16px; }
 
