@@ -274,6 +274,14 @@ function fmtTime(v: string | null): string {
   overflow: auto;
   padding: 4px 2px;
 }
+/* 空白根治（2026-09-30 二次反馈）：本容器是定高列向 flex（overflow:auto 滚动），
+ * 子项默认 flex-shrink:1 会被压扁；而 .ia-trace__group 的 overflow:hidden
+ * （圆角裁剪）令其自动最小尺寸为 0 —— 全部组被压成 2px 边框盒、内部头部/表格
+ * 被自己 overflow:hidden 裁掉，DOM 文字都在但视觉一片白（用户两次反馈）。
+ * 滚动容器的子项一律禁收缩，高度超了走滚动条。 */
+.ia-trace > * {
+  flex-shrink: 0;
+}
 .ia-trace__loading {
   align-self: center;
   margin: 40px 0;
