@@ -113,7 +113,7 @@ vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({
 
 import IaShell from '../views/IaShell.vue'
 import { useFlowStore } from '../store/flow'
-import { __resetSharedArmForTest } from '../composables/useSharedArm'
+import { __resetSharedArmForTest, __flushSharedArmDisposeForTest } from '../composables/useSharedArm'
 import { IA_AREAS } from '../routes'
 
 const AREA = { template: '<div class="area-stub" />' }
@@ -186,9 +186,11 @@ describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
     wrapper.unmount()
   })
 
-  it('卸载回收：workspace 三停 + cockpit.disconnectOnUnmount', async () => {
+  it('卸载回收：workspace 三停 + cockpit.disconnectOnUnmount（宽限冲刷后）', async () => {
     const { wrapper } = await mountShell('/app/runs')
     wrapper.unmount()
+    // 2026-09-30 性能批：末卸载改宽限延迟回收——立即断言须冲刷宽限
+    __flushSharedArmDisposeForTest()
     expect(workspaceStubs.state.unwatchKanbanTasks).toHaveBeenCalled()
     expect(workspaceStubs.state.stopFleetStream).toHaveBeenCalled()
     expect(workspaceStubs.state.stopReminderScheduler).toHaveBeenCalled()
