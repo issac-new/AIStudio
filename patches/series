@@ -224,6 +224,7 @@
 457-agent-runaway-supervisor.patch
 458-agent-profile-hot-reload.patch
 459-server-mcp-config-mount.patch
+# 473（2026-10-01 0.7.26 迁移重生成：stash 注入态 × 0.7.26 基线深合并，键序=overlay 主序保下游 hunk 兼容）
 473-client-locales-rebaseline.patch
 475-agent-shed-tiered-metrics.patch
 477-server-ide-engine-models-route.patch
@@ -294,13 +295,14 @@
 # 500（B7 自定义斜杠命令）：ChatInput slash 菜单合并自定义命令（coding-agent 会话面），
 #      选中写 prompt 模板全文而非 /name；数据=/api/ide/slash-commands（native-routes 原生中间件）。
 #      B8 扩展：监听 ide-edit-resend 事件 + expose setInputText（取回编辑消费面）。
-500-client-chatinput-custom-slash.patch
+# 500 退役（2026-10-01 0.7.26 干净重放迁移）：B7/B8 特性撤下——引入内容从未在重放基线上出现，
+#      反向删除版无对象；503（B8 MessageItem 侧）同撤防孤儿。B7 管理页签（IdeSlashCommandsPane）保留。
 # 501（B7 配套词条）：ide.sidePane.tab_slash zh/en 成对（473 之后按 496 同例单补）。
-501-client-i18n-sidepane-slash-tab.patch
+# 501-client-i18n-sidepane-slash-tab.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 # 503（B8 取回编辑）：MessageItem 用户消息 ✎ 按钮 → window ide-edit-resend 事件 →
 #      ChatInput（patch 500 扩）填入可改再发；历史不改写（真改写重生成的引擎命令
 #      =zcode v4 editUserQuery，hermes 链未开——面板按钮 title 已如实标注）。
-503-client-messageitem-edit-resend.patch
+# 503 退役（随 500）：B8 撤下，MessageItem ✎ 事件无消费面。
 # 504（侧栏死链根治，原 499 让号避 goals-budget）：删 PageSidebarNav 孤函数 openMatrixChat——
 #      目标路由 hermes.matrixChat 已被 297 随 cockpit 家族整体删除，函数零调用方。
 504-sidebar-dead-matrix-entry-removal.patch
@@ -314,7 +316,7 @@
 507-client-groupchatview-standalone-embed.patch
 # 508（v14 配套词条，473 之后按 496/501 同例单补）：ia2.flow 六键 zh/en 成对——
 #      chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup。
-508-client-i18n-comm-v14.patch
+# 508-client-i18n-comm-v14.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 # 509/510（v14 统一聊天 P2B ChatBridge）：group-chat.ts 桥注入 API
 #      （publishBridgeMemberMessage：持久化+广播+processMentions 编排，非 socket 入口）
 #      + bridgeEvents 桥订阅面（approval.requested 广播）+ bootstrap/http.ts 挂载
@@ -329,13 +331,13 @@
 511-server-change-gov-mount.patch
 # 512（三账页签词条，调研落地轮 2026-09-29，原 507 让号）：ia2.tasks.tabAccounts
 #      zh/en 成对（473 之后按 496/501 同例单补，不动其余 9 语言）。
-512-client-i18n-tasks-tab-accounts.patch
+# 512-client-i18n-tasks-tab-accounts.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 # 513（IDE Automations 服务端挂载，A2，原 506 让号避变更治理 511/512 重编号）：
 #      /api/ide/automations 规则 CRUD+事件摄入。控制器 custom/controllers/ide/automations.ts
 #      （A 类）；引擎 custom/server/automations/。
 513-server-ide-automations-route.patch
 # 514（IDE Automations 侧栏页签 i18n，A2，原 507 重编号）：tab_automations zh/en 双语。
-514-client-i18n-automations-tab.patch
+# 514-client-i18n-automations-tab.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 
 # 515（fresh-build 类型门禁根治；原 511 让号予变更治理批）：上游 vue-tsc 门禁在 dist
 #      缺席的全新树上被 prepare 钩子触发，暴露补丁集 29 项存量类型债。一次收口：
@@ -348,12 +350,12 @@
 517-client-globalpendingactions-cockpit-deeplinks.patch
 # 518（驾驶舱聚焦轮 V5 补遗⑤ M6；原拟 514/516 两度让号）：runcenter.detail.loopCanvas zh/en 成对
 #      （473 之后按 496/501/512 同例单补，不动其余 9 语言）。
-518-client-i18n-runcenter-loop-canvas.patch
+# 518-client-i18n-runcenter-loop-canvas.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 # 记档（2026-09-29 驾驶舱聚焦轮）：v14 三补丁（506/507/508）并行合并悬空事故已由并行会话在
 #      main 原号复原（与 cbd7b3e7^ 历史逐字节一致）；本仓曾复位的 517/518/519 冗余件已撤。
 # 519（驾驶舱聚焦 P10 精简批 S1，2026-09-29）：系统组收缩——技能用量/主题/宠物商店
 #      三入口摘除+SYSTEM_ROUTE_NAMES 同步（A 档：路由与页面保留，主题切换走页头开关）。
-519-client-appsidebar-system-trim.patch
+# 519 退役（2026-10-01 0.7.26 迁移）：S1 系统组收缩内容已折入重生成版 072；文件保留注记壳（519-client-appsidebar-system-trim.patch），重复登记无对象。
 # 520（P10 精简批 S3 部分）：WebPet 宠物浮面默认关（B 档 VITE_CUSTOM_PETS 开关；
 #      组件保留）。语音/ekko/外部渠道挂载链分散，记档 P10 剩余项。
 520-client-webpet-off.patch
@@ -395,7 +397,7 @@
 
 # 532（白话化批 2026-09-30）：看板第三页签「管理三账」→「项目健康」(zh/en)；
 #      追溯空态提示去 loop/run 黑话改白话（用户裁定：不要有黑话）。
-532-client-i18n-accounts-plain-tab.patch
+# 532-client-i18n-accounts-plain-tab.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 
 # 533（限流通知风暴根治 2026-09-30，run4 实锤）：容量拒绝（max_concurrent_sessions）
 #      不再回写聊天——机器人"session limit"通知本身就是群消息，会再次触发全部 agent
@@ -416,3 +418,6 @@
 #      tests/gateway/test_outbound_notice_guard.py 12 守门（含风暴签名两条）；
 #      双树可移植性验证：v0.21.5 工作树与安装树（~/.hermes/hermes-agent）均干净应用。
 534-agent-gateway-outbound-notice-guard.patch
+# 535-client-i18n-tasks-tab-governance.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
+536-client-locales-drift-restore.patch
+537-client-appsidebar-ide-entry.patch

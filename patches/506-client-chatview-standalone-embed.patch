@@ -1,6 +1,6 @@
---- a/packages/client/src/views/hermes/ChatView.vue	2026-09-29 16:18:09
-+++ b/packages/client/src/views/hermes/ChatView.vue	2026-09-29 16:18:09
-@@ -24,7 +24,9 @@
+--- a/packages/client/src/views/hermes/ChatView.vue
++++ b/packages/client/src/views/hermes/ChatView.vue
+@@ -25,7 +25,9 @@
    return typeof value === 'string' && value.trim() ? value : null
  })
  

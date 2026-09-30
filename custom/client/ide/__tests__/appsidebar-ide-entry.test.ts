@@ -32,23 +32,24 @@ describe('AppSidebar 单一级入口守门（⑤ M2/S1 后口径，patch 072/519
     expect(p072).toContain('sidebar-system-items')
   })
 
-  it('S1：系统组三入口摘除——519 含三处 RouteLinkItem 删除与数组收缩', () => {
-    const removedLines = p519.split('\n').filter(l => l.startsWith('-'))
-    for (const name of ['hermes.skillsUsage', 'hermes.theme', 'hermes.petdex']) {
-      expect(removedLines.some(l => l.includes(`:to="{ name: '${name}' }"`)), name).toBe(true)
-    }
-    // SYSTEM_ROUTE_NAMES 收缩后的数组不含三名（补丁后态）
-    // 补丁后态 = 上下文行(空格) + 新增行(+)；删除行(-)不计
-    const after = p519.split('\n').filter(l => (l.startsWith('+') || l.startsWith(' ')) && l.includes('"hermes.'))
+  it('S1：系统组三入口摘除——2026-10-01 0.7.26 迁移后 S1 语义折入 072 整文件版', () => {
+    // 迁移口径：519 退役（series 注记在案），S1 收缩效果在 072 重生成版内验证——
+    // 应用后态（+/上下文行）三名不在数组、入口块删除以 072 无三名路由链接为准。
+    const after = p072.split('\n').filter(l => (l.startsWith('+') || l.startsWith(' ')) && l.includes('"hermes.'))
     const joined = after.join('\n')
     expect(joined).not.toContain('hermes.skillsUsage')
     expect(joined).not.toContain('hermes.theme')
     expect(joined).not.toContain('hermes.petdex')
     expect(joined).toContain('"hermes.logs"')
     expect(joined).toContain('"hermes.settings"')
+    // 只看补丁后态（+ 行）：基线全文在 - 侧，含三名属预期（迁移前原版）
+    const linked = p072.split('\n').filter(l => l.startsWith('+') && l.includes(':to=')).join('\n')
+    for (const name of ['hermes.skillsUsage', 'hermes.theme', 'hermes.petdex']) {
+      expect(linked.includes(`:to="{ name: '${name}' }"`), name).toBe(false)
+    }
   })
 
-  it('series 登记：519/520 在列', () => {
+  it('series 登记：519/520 在列（0.7.26 迁移后口径：519 退役注记亦算在列）', () => {
     const s = readFileSync(resolve(OVERLAY_ROOT, 'patches', 'series'), 'utf8')
     expect(s).toContain('519-client-appsidebar-system-trim.patch')
     expect(s).toContain('520-client-webpet-off.patch')

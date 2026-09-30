@@ -1,8 +1,6 @@
-diff --git a/packages/client/index.html b/packages/client/index.html
-index e430165..4af9182 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
-@@ -8,9 +8,9 @@
+@@ -9,9 +9,9 @@
    <link rel="manifest" href="/manifest.webmanifest" />
    <meta name="theme-color" content="#f7f7f4" />
    <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1491,11 +1489,9 @@ index 7d4ee4f..de3d081 100644
    const details = document.createElement('pre')
    details.style.cssText = 'white-space:pre-wrap;color:#f88'
    details.textContent = error instanceof Error ? error.message : String(error)
-diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
-index 584bce9..d00fc78 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
-@@ -34,7 +34,7 @@ const contentMode = computed<ChatContentMode>(() => {
+@@ -34,7 +34,7 @@
    if (route.name === 'hermes.models') return 'models'
    return 'chat'
  })
@@ -2311,7 +2307,6 @@ index f22f461..755a75c 100644
            options: {
              baseURL: runtime.baseUrl || '',
              apiKey: `{env:${OPENCODE_API_KEY_ENV}}`,
-
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts b/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts
 index 6429d4b..73d6c50 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts

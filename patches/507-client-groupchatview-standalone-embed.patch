@@ -1,18 +1,16 @@
-diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
-index 1547e2e8..6fa9bd3c 100644
 --- a/packages/client/src/views/hermes/GroupChatView.vue
 +++ b/packages/client/src/views/hermes/GroupChatView.vue
-@@ -29,6 +29,9 @@ const routeProfile = computed(() => {
+@@ -24,6 +24,9 @@
      return typeof value === 'string' && value.trim() ? value : null
  })
  
 +// overlay[v14]: standaloneEmbed — ia2 工作台嵌入态（隐藏房间侧栏；左栏即唯一导航）
 +const isStandaloneEmbed = computed(() => route.meta?.standaloneEmbed === true)
 +
- async function applyRouteProfile() {
-     const profile = routeProfile.value
-     if (!profile || profile === profilesStore.activeProfileName) return
-@@ -48,7 +51,8 @@ async function syncRouteRoom() {
+ const routeProfile = computed(() => {
+     const value = route.query?.profile
+     return typeof value === 'string' && value.trim() ? value : null
+@@ -48,7 +51,8 @@
      }
  
      if (!store.rooms.some(room => room.id === roomId)) {
@@ -22,7 +20,7 @@ index 1547e2e8..6fa9bd3c 100644
          return
      }
  
-@@ -99,8 +103,8 @@ watch([routeRoomId, routeProfile], async () => {
+@@ -99,12 +103,15 @@
  </script>
  
  <template>
@@ -33,13 +31,10 @@ index 1547e2e8..6fa9bd3c 100644
      </PageLoading>
  </template>
  
-@@ -110,4 +114,9 @@ watch([routeRoomId, routeProfile], async () => {
-     display: flex;
-     flex-direction: column;
- }
-+
-+/* overlay[v14]: 嵌入态以容器高度为准（工作台三栏中栏非整屏，calc(vh) 会溢出裁切） */
+ <style scoped lang="scss">
 +.group-chat-view--standalone {
 +    height: 100%;
 +}
- </style>
+ .group-chat-view {
+     height: 100%;
+     display: flex;

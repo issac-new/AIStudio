@@ -36,11 +36,9 @@ diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages
              :status="voiceInput.dialogue.status.value"
              :transcript="voiceInput.transcript.value"
              :error="voiceInput.error.value"
-diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
 --- a/packages/client/src/views/hermes/AgentManagerView.vue
 +++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -1,7 +1,9 @@
- <script setup lang="ts">
+@@ -2,6 +2,8 @@
  import PageLoading from '@/components/common/PageLoading.vue'
  import PageHeader from '@/components/layout/PageHeader.vue'
  import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
@@ -49,15 +47,6 @@ diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/cl
  import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
  import { useRoute, useRouter } from 'vue-router'
  import { useI18n } from 'vue-i18n'
-@@ -517,7 +519,7 @@
-           </NAlert>
- 
-           <div class="coding-agent-grid">
--            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
-+            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
-               <header class="agent-card-header compact">
-                 <div class="agent-identity">
-                   <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
