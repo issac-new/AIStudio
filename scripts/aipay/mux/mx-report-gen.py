@@ -561,6 +561,20 @@ GATE_DESC = {
     'G5': '发布准出：七项检查+人工批准才上线',
     'G6': '复盘：问题单 100% 处置，经验入记忆库',
 }
+# R16 操作入口（V5 补遗⑥）：轮次无关的产品事实，报告内可复现路径
+try:
+    from steps_entry import STEP_ENTRIES
+except ImportError:
+    STEP_ENTRIES = {}
+
+def _entry_html(n):
+    e = STEP_ENTRIES.get(n)
+    if not e:
+        return ''
+    who, path, ops = e
+    return (f'<div class="st-entry"><b>操作入口</b>（{H.escape(who)}）：'
+            f'{H.escape(path)} → {H.escape(ops)}</div>')
+
 STEPS = []
 for n in range(1, 27):
     title, gate = plan_steps.get(n, (f'步骤 {n}', ''))
@@ -985,6 +999,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     <span class="st-meta">{status}{f" · {ts}" if ts else ""} <span class="actor" style="background:{abg};color:{afg}">{atxt}｜{H.escape(meta["actorText"])}</span></span></div>
   </div>
   <p class="st-story">{H.escape(meta["narrative"])}</p>
+  {_entry_html(n)}
   {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
   {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
@@ -1053,6 +1068,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .gate-card.gfail{{border-top-color:var(--err)}}
 .gate-card.gfail .gate-state{{color:var(--err)}}
 .st-open{{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--err);background:#fef2f2;border-radius:8px;font-size:12.5px;color:#991b1b;line-height:1.7}}
+.st-entry{{margin:8px 0 0;padding:8px 12px;border-left:3px solid #0891b2;background:#ecfeff;border-radius:8px;font-size:12px;color:#155e75;line-height:1.7}}
 .st-note{{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--warn);background:#fffbeb;border-radius:8px;font-size:12.5px;color:#92400e;line-height:1.7}}
 
 .phase{{margin-bottom:32px}}
