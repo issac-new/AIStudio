@@ -87,6 +87,11 @@ function fakeEngine(): DispatchEnginePort & { sessions: number; texts: string[] 
 }
 
 let dir: string
+// 决策图谱环境闸（乙4/乙5 接线后派发会触发先例检索与落账）：测试一律关闭，
+// 防真实 ~/.hermes KG 污染与 python 子进程拖慢（decisiongraph 域有独立真集成）。
+let prevDg: string | undefined
+beforeEach(() => { prevDg = process.env.HERMES_DECISION_GRAPH; process.env.HERMES_DECISION_GRAPH = '0' })
+afterEach(() => { if (prevDg === undefined) delete process.env.HERMES_DECISION_GRAPH; else process.env.HERMES_DECISION_GRAPH = prevDg })
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'columns-'))
   process.env.HERMES_COLUMNS_FILE = join(dir, 'columns.yaml')
