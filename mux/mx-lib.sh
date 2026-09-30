@@ -280,6 +280,12 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['gateway'] = {'multiplex_profiles': True}   # 单 gateway 多路复用（方案 §2.2 #1）
+# LLM 通道并发闸（run4/run5 双轮实锤）：MGLM 单池仅耐 1-2 并发，多 agent 并发打满
+# 1302 限流形成重试风暴（run5 00:18-00:22 实测 msgs=217/tokens≈104K 连三重试全 429）；
+# 串行闸 1 是 run4 续跑轮"零 429"实证值。MX_MAX_CONCURRENT=0 可显式关闸。
+_mcs = os.environ.get('MX_MAX_CONCURRENT', '1').strip()
+if _mcs.isdigit() and int(_mcs) > 0:
+    out['gateway']['max_concurrent_sessions'] = int(_mcs)
 out['platforms'] = {
     'api_server': {'enabled': True, 'extra': {'host': '127.0.0.1', 'port': int(os.environ['GW_PORT'])}},
     'matrix': {'enabled': False},
