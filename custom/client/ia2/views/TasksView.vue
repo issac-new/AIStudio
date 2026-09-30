@@ -15,7 +15,9 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
 import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
+import GovernanceView from '@/custom/ia2/views/GovernanceView.vue'
 import { useRunSurfaceText } from '../i18n-run-surface'
+
 
 const { t } = useI18n()
 const route = useRoute()
@@ -23,7 +25,7 @@ const router = useRouter()
 const kanban = useKanbanStore()
 const cockpit = useCockpitStore()
 
-type TabKey = 'board' | 'trace' | 'accounts' | 'observatory'
+type TabKey = 'board' | 'trace' | 'accounts' | 'observatory' | 'gov'
 const tab = ref<TabKey>('board')
 /** 全链路追踪页签约文案（i18n-run-surface 独立事实源，漂移治理后收编 473） */
 const rsText = useRunSurfaceText()
@@ -45,6 +47,7 @@ function applyQuery(q: Record<string, unknown>): void {
   if (q.tab === 'trace') tab.value = 'trace'
   else if (q.tab === 'accounts') tab.value = 'accounts'
   else if (q.tab === 'observatory') tab.value = 'observatory'
+  else if (q.tab === 'gov') tab.value = 'gov'
   else if (q.tab === 'board') tab.value = 'board'
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
@@ -140,17 +143,19 @@ function goInboxFromAccounts(): void {
       >
         {{ rsText.tabObservatory }}
       </button>
-      <!-- 治理中心跳转（2026-09-30 用户找不到入口的实缺口）：看板侧平级入口——
-           治理中心是独立工作页（ia2.governance），非本页内 tab，点击整页跳转。 -->
+      <!-- 治理中心平级页签（2026-10-01 用户裁定：内嵌不整页跳转——页签不再消失；
+           独立路由 ia2.governance 保留为 IDE 侧/深链入口）。2026-09-30 的平级跳转
+           入口被本页签取代（用户找不到入口的实缺口由页签常驻终结）。 -->
       <button
         type="button"
-        class="ia-tasks__tab ia-tasks__tab--link"
+        class="ia-tasks__tab"
+        :class="{ 'ia-tasks__tab--active': tab === 'gov' }"
         role="tab"
-        :aria-selected="false"
+        :aria-selected="tab === 'gov'"
         data-testid="ia-tasks-tab-governance"
-        @click="router.push({ name: 'ia2.governance' })"
+        @click="tab = 'gov'"
       >
-        {{ t('ia2.tasks.tabGovernance') }} ↗
+        {{ rsText.tabGovernance }}
       </button>
       <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
       <button
@@ -165,6 +170,9 @@ function goInboxFromAccounts(): void {
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView />
+    </div>
+    <div v-else-if="tab === 'gov'" class="ia-area ia-tasks__gov" data-testid="ia-tasks-gov">
+      <GovernanceView />
     </div>
     <div v-else-if="tab === 'accounts'" class="ia-area">
       <ManagementAccountsPanel
@@ -201,6 +209,7 @@ function goInboxFromAccounts(): void {
   align-items: center;
 }
 
+.ia-tasks__gov { min-height: 0; overflow: hidden; }
 .ia-tasks__close {
   margin-left: auto; flex-shrink: 0;
   width: 24px; height: 24px; padding: 0; margin-bottom: 2px;
