@@ -380,3 +380,15 @@
 #      fleetRouter，profileReadCache 须直挂其前（GET /api/hermes/profiles 实测
 #      8.7s CLI；中间件实现在 custom/server/middleware/kanban-read-cache.ts）。
 528-server-profiles-read-cache-mount.patch
+
+# 529（根治批 2026-09-30）：CLI 启动快道——check_runtime 旗标短路（venv 货币性
+#      检查 48 插件 YAML 解析 3.9s/exec）+ 舰队重启启动提示 TTY 门（git 身份解析
+#      2s/exec 且横幅污染 --json stdout）。
+529-agent-cli-startup-fastpath.patch
+# 530（根治批 2026-09-30）：studio execHermes 注入 HERMES_DISABLE_LAZY_INSTALLS=1
+#      （短生命周期查询 exec 专用；spawn 长连流不注入），配 529 短路。
+530-server-exec-lazy-install-off.patch
+
+# 531（根治批 2026-09-30）：公告远端拉取服务端 TTL 缓存（5min/locale）——
+#      实测 2.6s/次且客户端每冷启动都拉，页面武装被拖慢；失败不缓存。
+531-server-announcements-ttl-cache.patch

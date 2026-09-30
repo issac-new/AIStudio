@@ -1,0 +1,30 @@
+diff --git a/packages/server/src/modules/studio/controllers/announcements.ts b/packages/server/src/modules/studio/controllers/announcements.ts
+--- a/packages/server/src/modules/studio/controllers/announcements.ts
++++ b/packages/server/src/modules/studio/controllers/announcements.ts
+@@ -3,10 +3,25 @@
+ import { getHermesWebUiVersion } from '../public/system-info'
+ import { filterStaleAnnouncementPayload } from '../../../custom/studio/announcement-filter'
+ 
++// overlay[perf]（2026-09-30 根治批）：远端公告拉取服务端 TTL 缓存——实测
++// 2.6s/次（外网往返），客户端每次冷启动都请求，页面武装被它拖慢；公告变更
++// 频率低，按 locale 缓存 5 分钟，失败不缓存（保持 502 语义）。
++const ANNOUNCEMENT_TTL_MS = 300_000
++const announcementCache = new Map<string, { payload: unknown; ts: number }>()
++
++async function fetchAnnouncementsCached(localeInput: unknown): Promise<unknown> {
++  const key = typeof localeInput === 'string' ? localeInput : ''
++  const hit = announcementCache.get(key)
++  if (hit && Date.now() - hit.ts < ANNOUNCEMENT_TTL_MS) return hit.payload
++  const payload = await fetchStudioAnnouncements(localeInput)
++  announcementCache.set(key, { payload, ts: Date.now() })
++  return payload
++}
++
+ export async function getAnnouncements(ctx: Context): Promise<void> {
+   ctx.set('Cache-Control', 'no-store')
+   try {
+-    const payload = await fetchStudioAnnouncements(ctx.query.locale)
++    const payload = await fetchAnnouncementsCached(ctx.query.locale)
+     // 版本感知过滤：公告引用的全部 x.y.z ≤ 本机版本 → 过期不再下发
+     // （0.7.23 机器被弹「请更新至0.7.20」实锤；无版本号公告不过滤不误杀）
+     ctx.body = filterStaleAnnouncementPayload(payload, getHermesWebUiVersion())
