@@ -1,7 +1,8 @@
 # QGate 通用交付门禁框架设计 v0.2（修正与落地方案）
 
 日期：2026-09-23（2026-09-24 复盘轮修订）
-状态：**P0-P9 + 收尾件收口；09-24 复盘轮修正三处虚报并补内嵌融合**
+状态：**已被 v0.3 移植设计取代（2026-10-01），本文保留为 D1-D5 历史裁定与落地实录**。上游演进与移植路线见 `2026-10-01-qgate-upstream-v1.24-research.md` 与 `2026-10-01-qgate-v0.3-port-design.md`；D1-D5 裁定继续有效。
+原状态：P0-P9 + 收尾件收口；09-24 复盘轮修正三处虚报并补内嵌融合
 - 修正①：§34 六事件钩子面真实可用（此前 PreToolUse/UserPromptSubmit/PostToolUseFailure 三钩因 import 路径错从未工作，已按 stdin+审计日志模式重写并实测）
 - 修正②：§49 缓存真接线进 runGate（此前 cache.ts 为孤儿模块；现 cacheGet→miss→run→cachePut + 3 例守门测试）
 - 修正③：MCP tools schema 属性内 required 布尔违反 JSON Schema 规范致 GLM 1210 全量请求失败（生产事故，8cbcfa1 修复 + 回归测试）
