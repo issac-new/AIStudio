@@ -67,28 +67,22 @@ function isEntry(v: unknown): v is ApprovalLogEntry {
   return typeof e.id === 'string' && typeof e.ts === 'number' && typeof e.decision === 'string'
 }
 
-// 进程内写互斥（promise 链）：append 是 load→push→整文件重写，两个并发 append
-// 不串行时后写者以自己的快照覆写、先写者条目丢失。跨进程并发仍靠 CAP 裁剪兜底。
-let writeChain: Promise<unknown> = Promise.resolve()
-
-/** 追加一条决策记录（原子写：tmp + rename）。返回写入后的条目。 */
+/** 追加一条决策记录（原子写：tmp + rename）。返回写入后的条目。
+ * 串行性说明：load→push→重写全程同步无 await 点，单线程内天然串行——不引入
+ * promise 链（链会把返回值变成 Promise，破坏同步契约与调用方取值）；跨进程
+ * 并发仍靠 CAP 裁剪兜底。 */
 export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: number }): ApprovalLogEntry {
   const full: ApprovalLogEntry = { ts: Date.now(), ...entry }
   recordToDecisionGraph(entry)
-  const exec = (): ApprovalLogEntry => {
-    const list = load()
-    list.push(full)
-    const trimmed = list.length > CAP ? list.slice(list.length - CAP) : list
-    const file = resolveApprovalLogPath()
-    mkdirSync(dirname(file), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-    writeFileSync(tmp, JSON.stringify(trimmed, null, 1), 'utf8')
-    renameSync(tmp, file)
-    return full
-  }
-  const next = writeChain.then(exec, exec)
-  writeChain = next.catch(() => undefined)
-  return next
+  const list = load()
+  list.push(full)
+  const trimmed = list.length > CAP ? list.slice(list.length - CAP) : list
+  const file = resolveApprovalLogPath()
+  mkdirSync(dirname(file), { recursive: true })
+  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
+  writeFileSync(tmp, JSON.stringify(trimmed, null, 1), 'utf8')
+  renameSync(tmp, file)
+  return full
 }
 
 /** 历史查询（新→旧）。 */
