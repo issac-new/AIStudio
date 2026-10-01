@@ -9,6 +9,11 @@
 - [2026-10-01-upstream-absorption-analysis.md](./2026-10-01-upstream-absorption-analysis.md)
   12 组件源码盘点 + 贴合判断 + 27 项吸收清单 + **附录 27 项执行对账表**（实施终态）。
   逐项终态判定（已落地/核实已存在/记档待环境）与合 main 锚点都在对账表里。
+- [2026-10-01-upstream-absorption-round2-exhaustive.md](./2026-10-01-upstream-absorption-round2-exhaustive.md)
+  **补全版（第二轮，穷尽盘点）**：首轮未展开面全部展开（hermes-agent web dashboard 19 页逐页/
+  ui-tui/127 RPC/290 端点；zcode 三端逐件；element-web 补 80 项+Labs 26 全清单；编码四家+dsh 补漏）+
+  两个新视角——**hermes-studio 上游暴露面 diff**（六个"有而没用"面+门控不一致）与
+  **69 条推演改进点×吸收源交叉对照**（未覆盖残留前 6 方向）。第二轮分期清单 22 项。
 
 ## 吸收实施轮的验证资产
 
