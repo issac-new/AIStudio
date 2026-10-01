@@ -665,6 +665,26 @@ key = m.get("api_key") or ""
 name = m.get("default") or ""
 if not url or not name:
     print("unreachable"); raise SystemExit
+# 通道模式对齐（2026-10-01 run6 实锤）：sim agent 实际按 anthropic_messages 格式调
+# 网关（api_mode），cc-switch 双通道（codex→Kimi / claude→mimo）可能一死一活；
+# 只探 /chat/completions 会把活通道误判 quota（当晚整晚 quota 假红实录）。先探
+# agent 真用的 /v1/messages，通即 ok；不通再走 openai 候选，双败才按原口径分类。
+abody = json.dumps({"model": name, "max_tokens": 4,
+                    "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
+ahdrs = {"Content-Type": "application/json", "anthropic-version": "2023-06-01",
+         **({"x-api-key": key} if key else {})}
+areq = urllib.request.Request(url + "/v1/messages", data=abody, headers=ahdrs)
+try:
+    # mimo 队列重（run6 实测大生成 6 分钟级），4-token 探针给 150s 预算防慢通道误杀
+    with urllib.request.urlopen(areq, timeout=150) as r:
+        r.read()
+        print("ok"); raise SystemExit
+except urllib.error.HTTPError:
+    pass  # 404=该代理无 anthropic 面；4xx/529 交由 openai 候选段终判
+except SystemExit:
+    raise
+except Exception:
+    pass
 # URL 拼接 bug 修复（2026-09-26 实锤）：只拼 /v1/chat/completions 会把
 # bigmodel 的 .../paas/v4 端点拼成 /v4/v1/... → 404 → 误报 noreply（额度被冤枉）。
 # 两种候选都试：base 已含版本段（/v1 /v4 ...）→ base/chat/completions 优先；
