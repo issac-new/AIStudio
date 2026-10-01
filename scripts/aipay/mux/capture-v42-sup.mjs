@@ -150,7 +150,7 @@ for (const [name, kind, titleFrag] of DOCS) {
     if (await btn.count() === 0) { console.log('  [warn]', name, `gov-doc-${kind} 不存在(try${attempt})`); await page.waitForTimeout(1500); continue }
     await btn.first().scrollIntoViewIfNeeded().catch(() => {})
     await btn.first().click().catch((e) => console.log('  [warn]', name, e.message))
-    ok = await page.locator('.ia-gov__docview-hd b', { hasText: titleFrag }).first()
+    ok = await page.locator('.gov-docs__docview-hd b', { hasText: titleFrag }).first()
       .waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false)
     if (!ok) console.log('  [warn]', name, `详情头未含 "${titleFrag}"(try${attempt})`)
   }
