@@ -74,6 +74,21 @@ export function buildSessionRows(
 
 // ── 循环行（阶段指针 + 门等待 + 阻塞 + 进度）──
 
+/** 会话行排序模式（2026-10-01 吸收二期·房间列表卫生，element-web skip-list
+ *  三排序器范式：活跃度/未读/字母）。recent 保持 buildSessionRows 的活跃倒序。 */
+export type FlowSortMode = 'recent' | 'unread' | 'alpha'
+
+/** 会话行排序（单一事实源；recent 透传不重排——上游已是活跃倒序） */
+export function sortFlowRows(rows: FlowSessionRow[], mode: FlowSortMode): FlowSessionRow[] {
+  if (mode === 'alpha') {
+    return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+  }
+  if (mode === 'unread') {
+    return [...rows].sort((a, b) => (b.unread - a.unread) || ((b.lastActivityAt ?? 0) - (a.lastActivityAt ?? 0)))
+  }
+  return rows
+}
+
 /** 阶段序（①-⑤ 词表；服务端 loop-to-graph 同序，客户端本地声明避免跨层 import） */
 export const LOOP_STAGE_ORDER: readonly string[] = [
   'discovery', 'handoff', 'validation', 'persistence', 'scheduling',

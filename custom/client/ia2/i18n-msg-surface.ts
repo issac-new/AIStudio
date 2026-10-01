@@ -42,6 +42,9 @@ const MSG_SURFACE_TEXT = {
     stateEventsCollapsed: '条系统事件',
     expand: '展开',
     collapse: '收起',
+    sortRecent: '按活跃排序',
+    sortUnread: '按未读排序',
+    sortAlpha: '按名称排序',
   },
   en: {
     jumpToUnread: 'Jump to unread',
@@ -78,6 +81,9 @@ const MSG_SURFACE_TEXT = {
     stateEventsCollapsed: 'system events',
     expand: 'Expand',
     collapse: 'Collapse',
+    sortRecent: 'Sort by activity',
+    sortUnread: 'Sort by unread',
+    sortAlpha: 'Sort by name',
   },
 } as const
 
