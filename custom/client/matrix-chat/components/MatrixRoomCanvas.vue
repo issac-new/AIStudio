@@ -11,6 +11,7 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixMessagePanel from './MatrixMessagePanel.vue'
 import MatrixRightPanel from './MatrixRightPanel.vue'
 import MatrixRoomHeader from './MatrixRoomHeader.vue'
@@ -21,6 +22,7 @@ const clientStore = useMatrixClientStore()
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
 const composerStore = useMatrixComposerStore()
+const threadStore = useMatrixThreadStore()
 const route = useRoute()
 const { t } = useI18n()
 
@@ -47,6 +49,17 @@ watch(() => clientStore.syncState, (s) => {
     roomStore.selectRoom(routeRoomId.value)
   }
 })
+
+// 未读线程聚合跳转的消费端（2026-10-01 消息面批）：通知中心置
+// pendingOpenThreadPanel 后跳房；房间真正选中（activeRoom 有值）时开线程
+// 面板并清标记。直接在 selectRoom 时机开会在房间未挂载时打空。
+watch(() => roomStore.activeRoomId, (roomId) => {
+  if (roomId && roomStore.activeRoom && roomStore.pendingOpenThreadPanel) {
+    if (roomStore.consumeOpenThreadPanel()) {
+      threadStore.openThreadPanel()
+    }
+  }
+}, { immediate: true })
 
 // hermes:open-page-sidebar 只由上游 App.vue 的移动端汉堡按钮发出；本画布无侧栏，
 // 不需要转发——原实现监听后同步再发同名事件会自激递归（Maximum call stack）。
