@@ -12,6 +12,7 @@ import {
   fetchSpotChecks, resolveSpotCheck,
   type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier, type SpotCheckItem,
 } from '../api/approvals'
+import { approvalsSpotcheckMessages } from '../i18n-approvals'
 
 const props = withDefaults(defineProps<{
   /** 轮询间隔 ms；0 = 不轮询（外部控制刷新） */
@@ -34,7 +35,12 @@ function prettyTarget(title: string): string {
 }
 const history = ref<ApprovalHistoryEntry[]>([])
 const spotChecks = ref<SpotCheckItem[]>([])
-const spotResolvedCount = ref(0)
+/** 已处置条目（API 返 resolved 全量；此前只取 length 当计数，回看内容整块丢弃——
+ *  抽检器的意义恰在事后回看，UI 必须展示条目与裁决结论）。 */
+const spotResolved = ref<SpotCheckItem[]>([])
+/** 抽检区词条：本地字典（见 i18n-approvals.ts 头注释——键族已从注入词表丢失）。 */
+const spotT = computed(() =>
+  locale.value.startsWith('zh') ? approvalsSpotcheckMessages.zh : approvalsSpotcheckMessages.en)
 const loading = ref(false)
 const error = ref('')
 const acting = ref<Set<string>>(new Set())
@@ -62,7 +68,7 @@ async function refresh(): Promise<void> {
     items.value = dedupePending(pending.items ?? [])
     history.value = hist.entries ?? []
     spotChecks.value = spot.items ?? []
-    spotResolvedCount.value = (spot.resolved ?? []).length
+    spotResolved.value = spot.resolved ?? []
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -203,14 +209,15 @@ defineExpose({ refresh })
       </div>
     </section>
 
-    <!-- V4.1 §七 抽检器：低风险自动放行的事后回看（收件箱治理面） -->
-    <section v-if="showHistory && (spotChecks.length || spotResolvedCount)" class="approval-panel__spotcheck" data-testid="approval-spotcheck">
+    <!-- V4.1 §七 抽检器：低风险自动放行的事后回看（收件箱治理面）。
+         词条走本地字典 spotT（i18n-approvals.ts——键族从注入词表丢失，t() 会回退）。 -->
+    <section v-if="showHistory && (spotChecks.length || spotResolved.length)" class="approval-panel__spotcheck" data-testid="approval-spotcheck">
       <h4 class="approval-panel__group-title">
-        <span class="risk-dot risk-dot--low"></span>{{ t('approvals.spotcheck.title') }}
-        <span class="risk-hint risk-hint--low">{{ t('approvals.spotcheck.hint') }}</span>
+        <span class="risk-dot risk-dot--low"></span>{{ spotT.title }}
+        <span class="risk-hint risk-hint--low">{{ spotT.hint }}</span>
       </h4>
       <div v-if="spotChecks.length === 0" class="approval-panel__empty" data-testid="approval-spotcheck-empty">
-        {{ t('approvals.spotcheck.empty', { n: spotResolvedCount }) }}
+        {{ spotT.empty.replace('{n}', String(spotResolved.length)) }}
       </div>
       <div
         v-for="sc in spotChecks"
@@ -224,11 +231,33 @@ defineExpose({ refresh })
             {{ sc.title }}
           </div>
           <code class="approval-row__detail">{{ sc.detail }}</code>
-          <div class="approval-row__meta">{{ t('approvals.spotcheck.autoPassedAt') }} {{ fmtTime(sc.ts) }}<template v-if="sc.profile"> · {{ sc.profile }}</template></div>
+          <div class="approval-row__meta">{{ spotT.autoPassedAt }} {{ fmtTime(sc.ts) }}<template v-if="sc.profile"> · {{ sc.profile }}</template></div>
         </div>
         <div class="approval-row__actions">
-          <button type="button" class="approval-btn approval-btn--once" data-testid="spotcheck-btn-confirm" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'confirm')">{{ t('approvals.spotcheck.confirm') }}</button>
-          <button type="button" class="approval-btn approval-btn--deny" data-testid="spotcheck-btn-veto" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'veto')">{{ t('approvals.spotcheck.veto') }}</button>
+          <button type="button" class="approval-btn approval-btn--once" data-testid="spotcheck-btn-confirm" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'confirm')">{{ spotT.confirm }}</button>
+          <button type="button" class="approval-btn approval-btn--deny" data-testid="spotcheck-btn-veto" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'veto')">{{ spotT.veto }}</button>
+        </div>
+      </div>
+      <!-- 已处置回看：裁决结论+操作人+时间逐条可见（此前只有计数，回看形同虚设） -->
+      <div v-if="spotResolved.length" class="approval-panel__spotcheck-resolved" data-testid="approval-spotcheck-resolved">
+        <div class="approval-panel__spotcheck-sub">{{ spotT.resolvedTitle }} · {{ spotResolved.length }}</div>
+        <div
+          v-for="sr in spotResolved"
+          :key="sr.id"
+          class="approval-row approval-row--spotcheck-resolved"
+          data-testid="approval-spotcheck-resolved-row"
+        >
+          <div class="approval-row__main">
+            <div class="approval-row__title">
+              <span
+                class="risk-badge"
+                :class="sr.verdict === 'vetoed' ? 'risk-badge--high' : 'risk-badge--low'"
+                data-testid="approval-spotcheck-verdict"
+              >{{ sr.verdict === 'vetoed' ? spotT.verdictVetoed : spotT.verdictConfirmed }}</span>
+              {{ sr.title }}
+            </div>
+            <div class="approval-row__meta">{{ spotT.verdictAt }} {{ fmtTime(sr.verdictTs ?? sr.ts) }}<template v-if="sr.verdictActor"> · {{ sr.verdictActor }}</template></div>
+          </div>
         </div>
       </div>
     </section>
@@ -465,6 +494,18 @@ defineExpose({ refresh })
 .approval-row--spotcheck {
   border-left: 3px solid var(--success-color, #059669);
   opacity: 0.92;
+}
+/* 已处置回看子区：灰轴弱化（已闭环非待办），子标题区别主标题 */
+.approval-panel__spotcheck-sub {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #878c99);
+}
+.approval-row--spotcheck-resolved {
+  border-left: 3px solid var(--border-color, #e5e7eb);
+  opacity: 0.75;
+  padding: 6px 10px;
 }
 .approval-row__kind {
   display: inline-block;

@@ -34,7 +34,26 @@ const roomStubs = vi.hoisted(() => {
   }
   return { state, useMatrixRoomStore: () => state }
 })
-vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: roomStubs.useMatrixRoomStore }))
+// 工厂内包 reactive：state 身份恒定（组件 setup 闭包的是同一对象），后续测试
+// 直接给 sortedRooms 赋新数组即可触发 useSessionRows 的 computed 翻案。
+vi.mock('@/custom/matrix-chat/stores/matrix-room', async () => {
+  const { reactive } = await import('vue')
+  roomStubs.state = reactive(roomStubs.state)
+  return { useMatrixRoomStore: () => roomStubs.state }
+})
+// 深链可靠装载（2026-10-01）：client store 桩——authenticated=true 但 client=null
+// 模拟「已登录未建连」（ensureDeepLinkClient 应触发 initClient）；用例内可换 client。
+const matrixClientStubs = vi.hoisted(() => {
+  const state = {
+    client: null as unknown,
+    authenticated: true,
+    syncState: '',
+    refreshCredentials: vi.fn(),
+    initClient: vi.fn(async () => {}),
+  }
+  return { state, useMatrixClientStore: () => state }
+})
+vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientStore: matrixClientStubs.useMatrixClientStore }))
 
 const chatStubs = vi.hoisted(() => {
   const state = {
@@ -394,6 +413,57 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)
+  })
+
+  // ── 深链房间可靠装载（2026-10-01 产品修复）──
+  // 死锁链：深链列表外房间 → SessionCanvas 不渲染 → MatrixRoomCanvas 的
+  // onMounted initClient 兜底不触发 → 房间永不进列表。视图层三守门：
+  // 同步中态+initClient 兜底 / 到位自愈 / 超时不可达+重试补 join。
+  it('深链到列表外房间：显示同步中态（非"未选择"误导空态）并触发 initClient 兜底', async () => {
+    matrixClientStubs.state.client = null
+    matrixClientStubs.state.initClient.mockClear()
+    const { wrapper } = await mountAt('/app/s/room/!missing:host')
+    const st = wrapper.find('[data-testid="wb-canvas-deeplink-state"]')
+    expect(st.exists()).toBe(true)
+    expect(st.text()).toContain('正在同步会话')
+    expect(wrapper.text()).not.toContain('未选择会话或循环')
+    expect(matrixClientStubs.state.initClient).toHaveBeenCalled()
+  })
+
+  it('房间同步到位后自愈：列表出现该房 → 画布切真实会话（不再停留同步态）', async () => {
+    const had = [...roomStubs.state.sortedRooms]
+    const { wrapper } = await mountAt('/app/s/room/!late:host')
+    expect(wrapper.find('[data-testid="wb-canvas-deeplink-state"]').exists()).toBe(true)
+    // matrix Sync 推送到达：房间进列表（reactive state，属性赋值即触发 computed）
+    roomStubs.state.sortedRooms = [...had, { roomId: '!late:host', name: '后到的房间' }]
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-canvas-deeplink-state"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="room-canvas-stub"]').exists()).toBe(true)
+    roomStubs.state.sortedRooms = had
+  })
+
+  it('15s 看门狗：超时判不可达 + 重试按钮；重试对已建连 client 主动补 joinRoom', async () => {
+    const had = [...roomStubs.state.sortedRooms]
+    vi.useFakeTimers()
+    try {
+      const joinRoom = vi.fn(async () => ({}))
+      matrixClientStubs.state.client = { joinRoom }
+      const { wrapper } = await mountAt('/app/s/room/!invited:host')
+      expect(wrapper.find('[data-testid="wb-canvas-ph-retry"]').exists()).toBe(false)
+      vi.advanceTimersByTime(15000)
+      await flushPromises()
+      const st = wrapper.find('[data-testid="wb-canvas-deeplink-state"]')
+      expect(st.text()).toContain('会话不可达或未加入')
+      const retry = wrapper.find('[data-testid="wb-canvas-ph-retry"]')
+      expect(retry.exists()).toBe(true)
+      await retry.trigger('click')
+      await flushPromises()
+      expect(joinRoom).toHaveBeenCalledWith('!invited:host')
+    } finally {
+      vi.useRealTimers()
+      matrixClientStubs.state.client = null
+      roomStubs.state.sortedRooms = had
+    }
   })
 
   it('R4b 群聊入列与分派：群聊行在群聊簇 → 点击路由 ia2.groupRoom → 中栏 GroupChatView', async () => {

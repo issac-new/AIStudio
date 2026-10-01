@@ -142,7 +142,8 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     const row = wrap.find('[data-testid="approval-spotcheck-row"]')
     expect(row.exists()).toBe(true)
     expect(row.text()).toContain('git status')
-    expect(wrap.find('[data-testid="approval-spotcheck"]').text()).toContain('approvals.spotcheck.title')
+    // 词条走本地字典（i18n-approvals.ts——键族已从注入词表丢失），非 t() key 直出
+    expect(wrap.find('[data-testid="approval-spotcheck"]').text()).toContain('抽检 · 自动放行回看')
 
     api2.fetchSpotChecks.mockClear()
     await wrap.find('[data-testid="spotcheck-btn-veto"]').trigger('click')
@@ -156,7 +157,7 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(narrow.find('[data-testid="approval-spotcheck"]').exists()).toBe(false)
   })
 
-  it('V4.1：抽检空态（仅已处置计数，无待抽检行）', async () => {
+  it('V4.1：抽检空态（仅已处置计数，无待抽检行）；已处置条目回看列表可见', async () => {
     const api2 = approvalsApi as unknown as { __setState: (s: Record<string, unknown>) => void }
     api2.__setState({
       pending: { items: [] }, history: { entries: [] },
@@ -166,5 +167,27 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     await flushPromises()
     expect(wrap.find('[data-testid="approval-spotcheck-row"]').exists()).toBe(false)
     expect(wrap.find('[data-testid="approval-spotcheck-empty"]').exists()).toBe(true)
+    // 回看内容不得只留计数：已处置条目逐条渲染，vetoed 判红徽标（2026-10-01 修复）
+    const resRow = wrap.find('[data-testid="approval-spotcheck-resolved-row"]')
+    expect(resRow.exists()).toBe(true)
+    expect(resRow.text()).toContain('t')
+    expect(wrap.find('[data-testid="approval-spotcheck-verdict"]').classes()).toContain('risk-badge--high')
+    expect(wrap.find('[data-testid="approval-spotcheck-resolved"]').text()).toContain('已处置回看')
+  })
+
+  it('V4.1：已处置 confirmed 条目绿徽标 + 操作人/处置时间随行', async () => {
+    const api2 = approvalsApi as unknown as { __setState: (s: Record<string, unknown>) => void }
+    api2.__setState({
+      pending: { items: [] }, history: { entries: [] },
+      spotcheck: {
+        items: [], resolved: [
+          { id: 'y1', ts: 1759000010000, title: 'git status', detail: 'git status', verdict: 'confirmed', verdictTs: 1759000090000, verdictActor: 'qa-lead' },
+        ],
+      },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true } })
+    await flushPromises()
+    expect(wrap.find('[data-testid="approval-spotcheck-verdict"]').classes()).toContain('risk-badge--low')
+    expect(wrap.find('[data-testid="approval-spotcheck-resolved-row"]').text()).toContain('qa-lead')
   })
 })

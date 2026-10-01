@@ -24,6 +24,7 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -65,6 +66,7 @@ const loopStore = useLoopStore()
 const runsStore = useRunCenterStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
+const matrixClient = useMatrixClientStore()
 const chatStore = useChatStore()
 const platformsStore = usePlatformsStore()
 
@@ -319,6 +321,61 @@ const selectedSessionRow = computed(() => {
   return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id) ?? null
 })
 
+// ── 深链房间可靠装载（2026-10-01 产品修复）──
+// 死锁链根治：深链 s/room/:roomId 到列表外房间（新加入未同步/冷启动 client 未起）
+// 时，SessionCanvas 因 selectedSessionRow 为空不渲染 → MatrixRoomCanvas 的
+// onMounted initClient 兜底永不触发 → 房间永远进不了 sessionRows。视图层补：
+// ①缺失时幂等 initClient；②画布区分「同步中/不可达」态（替代误导性的
+// 「未选择会话」空态）；③15s 超时判不可达，可手动重试。
+const deepLinkMissing = computed(() => {
+  const sel = routeSel.value
+  return !!sel && (sel.kind === 'room' || sel.kind === 'group') && !selectedSessionRow.value
+})
+const deepLinkUnreachable = ref(false)
+let deepLinkTimer: ReturnType<typeof setTimeout> | null = null
+
+function armDeepLinkWatchdog(): void {
+  deepLinkUnreachable.value = false
+  if (deepLinkTimer) clearTimeout(deepLinkTimer)
+  deepLinkTimer = setTimeout(() => {
+    if (deepLinkMissing.value) deepLinkUnreachable.value = true
+  }, 15000)
+}
+
+function ensureDeepLinkClient(): void {
+  const sel = routeSel.value
+  if (sel?.kind !== 'room') return
+  matrixClient.refreshCredentials()
+  if (matrixClient.authenticated && !matrixClient.client) void matrixClient.initClient()
+}
+
+function retryDeepLinkRoom(): void {
+  armDeepLinkWatchdog()
+  ensureDeepLinkClient()
+  const sel = routeSel.value
+  if (!sel || (sel.kind !== 'room' && sel.kind !== 'group')) return
+  // 被邀请未接受的房：不 join 永不进列表（sortedRooms 只认 join 态）——
+  // 重试时主动补一刀；未被邀/已退房则 join 报错，如实落回不可达态。
+  const client = matrixClient.client
+  if (client) {
+    void client.joinRoom(sel.id)
+      .then(() => { matrixRoom.refreshRoomList() })
+      .catch(() => { /* 无邀请权加入失败：留给 15s 看门狗如实判不可达 */ })
+  }
+}
+
+watch(deepLinkMissing, (missing) => {
+  if (!missing) {
+    deepLinkUnreachable.value = false
+    if (deepLinkTimer) { clearTimeout(deepLinkTimer); deepLinkTimer = null }
+    return
+  }
+  armDeepLinkWatchdog()
+  ensureDeepLinkClient()
+}, { immediate: true })
+
+onUnmounted(() => { if (deepLinkTimer) clearTimeout(deepLinkTimer) })
+
 /** 门节点标题：等我队列命中当前对象挂接任务时显示（验收中任务标题） */
 const gateTitle = computed(() => {
   const sel = activeSel.value
@@ -531,12 +588,29 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       <!-- V5 补遗⑤ M6：RunCanvas 中栏分支移除——循环观测落运行详情页（组件内嵌复用） -->
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
         <div class="wb__canvas-ph-body">
-          <p class="wb__canvas-ph-tit">未选择会话或循环</p>
-          <p class="wb__canvas-ph-sub">从左侧选择一个会话 / 循环开始工作；归档或无内容的条目也会落到这里。</p>
-          <div class="wb__canvas-ph-acts">
-            <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-board" @click="router.push({ name: 'ia2.board' })">打开看板</button>
-            <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.tasks' })">查看任务</button>
-          </div>
+          <!-- 深链房间缺失态：与「未选择」区分——同步中给预期，超时给原因+出路 -->
+          <template v-if="deepLinkMissing">
+            <p class="wb__canvas-ph-tit" data-testid="wb-canvas-deeplink-state">
+              {{ deepLinkUnreachable ? '会话不可达或未加入' : '正在同步会话…' }}
+            </p>
+            <p class="wb__canvas-ph-sub">
+              {{ deepLinkUnreachable
+                ? `房间 ${activeSel?.id ?? ''} 未出现在你的会话列表——可能尚未完成加入，或矩阵服务暂不可达。`
+                : '正在从矩阵服务同步房间；新加入的房间首次同步可能需要数秒。' }}
+            </p>
+            <div class="wb__canvas-ph-acts">
+              <button v-if="deepLinkUnreachable" type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-retry" @click="retryDeepLinkRoom">重试同步</button>
+              <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-back" @click="router.push({ name: 'ia2.board' })">返回工作台</button>
+            </div>
+          </template>
+          <template v-else>
+            <p class="wb__canvas-ph-tit">未选择会话或循环</p>
+            <p class="wb__canvas-ph-sub">从左侧选择一个会话 / 循环开始工作；归档或无内容的条目也会落到这里。</p>
+            <div class="wb__canvas-ph-acts">
+              <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-board" @click="router.push({ name: 'ia2.board' })">打开看板</button>
+              <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.tasks' })">查看任务</button>
+            </div>
+          </template>
         </div>
       </div>
     </section>
