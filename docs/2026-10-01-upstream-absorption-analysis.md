@@ -4,6 +4,14 @@
 盘点范围：`upstream/` 全部 12 个组件（claude-code、codex、deepseek-harness、dsh-TUI、element-web、hermes-agent、hermes-studio、kimi-code、minimax-code、multica、routa、zcode）
 理念基线：《Swarm Studio 全流程推演方案（V5 整合版）》（`docs/superpowers/specs/2026-09-29-mux-v5-fullflow-plan.md`，下称 V5 正本）与 run1-run5 推演报告执行态（V5 §九）
 
+> **执行终态记档（2026-10-01 深夜，用户裁定「27 项按建议全部落地」后实施）**：
+> 27 项经三轮实施+核实全部收口，逐项终态见文末「附录：27 项执行对账表」。要点：
+> ①六件核实为历代已落（#1 线程/#4 操作栏/#12 steer/#13 状态行槽位/#9 审批三档/#7 审批中心跨 profile），本轮零重复造轮；
+> ②八件本轮新落地（Spotlight/跳未读条/未读线程聚合/轨迹账本/常驻意图/History 浏览器/用量排行/列证据契约+trace 路由根治）；
+> ③desktop 深链+徽章实施于注入树（tsc 绿，patch 化随漂移治理轮收编）；崩溃自愈核实上游已内置；
+> ④三件因 runtime 通道缺失记档待环境（蓝图画廊/建议、凭证池、Hosted Rooms peer）——不做摆设件。
+> 实施批次合 main：ee37b56b（消息面）/bc61f6b0（运行观测）/末批（IDE 会话+治理+desktop，见 git log）。
+
 > 主旨三句话：本文唯一主旨是从 12 个 upstream 组件的源码级功能与 UI 盘点中，穷举出贴合 Swarm Studio 设计理念、值得借鉴吸收的改进点。受众是裁决者与后续实施会话，需要的是"每一项从哪来、落到哪去、为什么贴合理念"。读完后建议动作是对第五节分期清单逐项裁决（执行/选做/缓办）。
 
 ## 一、结论总览
@@ -299,3 +307,40 @@ UI 面穷举：Issues 三视图（Board 拖拽/Table 列定制/Gantt）+find-bar
 - 6 路深挖为源码抽样精读加目录穷举，个别交互细节（如 element-web Labs 特性的实际完成度）以源码存在性为准，未逐特性实机验证。
 - claude-code 仓库不含 CLI 引擎源码，其功能面从官方 CHANGELOG（7882 行）与 mods/plugins 提取，属文档级一手材料而非源码级。
 - 元素级 UI 还原（像素/动效）不在本文范围，吸收指交互范式与信息设计。
+
+## 附录：27 项执行对账表（2026-10-01 实施轮终态）
+
+| # | 项 | 终态 | 锚点/依据 |
+|---|---|---|---|
+| 1 | 群聊线程 Threads | **核实已存在**（历代已落） | matrix-thread store+ThreadPanel/ThreadView 已挂驾驶舱画布右面板（matrix-right-panel phase 机制）；本轮新增未读线程聚合入口（见 #1b） |
+| 1b | （增）未读线程聚合 | **本轮落地** | NotifyDropdownPanel 消息页签顶部区块（threadsAggregateNotificationType 归并）+pendingOpenThreadPanel 状态机跳房自动开 ThreadPanel（matrix-room store/MatrixRoomCanvas 消费） |
+| 2 | 已读与未读模型 | **核实+补件** | read receipt 发送/本地清零/read marker 渲染/ReadReceiptGroup 已存在（TimelinePanel/EventTileFooter）；本轮新增 MatrixTopUnreadBar 跳未读条（计数+跳 marker+就地标已读+回底部） |
+| 3 | Spotlight 混合搜索 | **本轮落地** | SpotlightPanel（页头既有搜索框单入口：会话与房间/看板任务/命令三组混排+键盘 ↑↓Enter Esc；路由名对齐 ia2/routes.ts 真值）；走查 5/5 含精确路由断言 |
+| 4 | 消息操作栏 | **核实已存在** | MatrixMessageItem hover ActionBar+ContextMenu（回复/编辑/反应/转发/复制/线程回复/删除） |
+| 5 | 通知分级中心 | **核实已存在** | notify-prefs 六分组降噪（B9 批）+双页签下拉+全部标已读 |
+| 6 | 运行轨迹视图 | **本轮落地** | IdeTrajectoryPane 轨迹账本（IDE 侧栏第 16 页签 ∿：kind 徽章/谓词 kind:err:>Ns/双排序/inspector/诚实空态）；数据链=trace 路由双路径修复（见下） |
+| 6b | （根治）trace 路由 404 | **本轮根治** | 上游 0.7.26 legacy-app-api 把 /api/hermes/sessions/* 改写为 /api/studio/*，overlay trace 路由永远打不进；双路径注册后 8657 实测 200（trace.ts:481-556） |
+| 7 | 暗能力 UI 第一批 | **核实+记档** | 审批中心已跨 profile 双源+风险三档+抽检（pending-controller）；cron 承载=hermes.jobs 收编页+IdeTaskSidebar automations 入口；蓝图画廊/建议卡记档待 runtime（hermes CLI 在 dev 机无通道，做 UI=摆设件） |
+| 8 | 桌面壳三件 | **核实+两件落地** | 崩溃自愈核实上游已内置（render-process-gone+60s 窗口计数+超限失败页，index.ts:531）；深链 swarmstudio://（白名单 /app+/matrix+双平台入口+协议注册）与 dock 徽章（setBadgeCount IPC+IaShellHeader notifyTotal watch）已实施于注入树，desktop tsc 全绿；patch 化随注入漂移治理轮统一收编（漂移期 patch 应用面不可靠验证） |
+| 9 | 审批语义化选项 | **核实已存在** | once/session/always 三档按服务端 choices 动态渲染（MessageList approval-float）；scope 说明文案增强需 patch 上游，记档 |
+| 10 | History 浏览器 | **本轮落地** | IdeHistoryBrowser（🕘 入口：user 消息历史×搜索×Jump 定位/Copy/Edit 重发-剪贴板降级/运行中只读锁）；真分叉 Fork/Rewind 双 scope 依赖 hermes 会话分叉命令通道，记档剩余 |
+| 11 | 常驻 Agent 改动视图 | **核实已存在** | IdeInlineDiff（最新 run 首文件 patch+真回滚 run-undo hunk）+IdeReviewPanel 审查页签 |
+| 12 | steer+排队 | **核实已存在** | IdeQueuePanel A6 扩展（insertQueuedMessage→socket insert_queued_run 真通道+GOAL-05 自治队列区） |
+| 13 | 状态行可配置 | **核实已存在** | IdeStatusBar 槽位系统（ide_status_slots 显隐+顺序 localStorage）+遥测簇（水位/TPS/缓存+MetricsPopover） |
+| 14 | agent 在场与执行回放 | **核实已存在** | cockpit fleet 实时会话面+KanbanTaskDrawer 事件流；live-peek 卡片形态记档远期 |
+| 15 | 用量排行 | **本轮落地** | RuntimeSection 模型用量排行榜（消费 /api/studio/usage/stats model_usage：30 天窗口条形榜，482 会话真实数据） |
+| 16 | 列证据契约 | **本轮落地** | ColumnAutomation.requiredArtifacts（routa requiredArtifacts 吸收：YAML 声明→配置读取/TRANSITION 匹配透传，闸门侧可核缺件；白名单校验 ≤8 条×64 字符）；守门 3 例 |
+| 17 | 凭证池/回退管理器 | **记档待环境** | hermes auth/fallback CLI 通道在 dev 机不存在；run4 通道风暴对策留待 runtime 就绪轮 |
+| 18 | 会话操作台 | **核实已存在** | 页头全文搜索（searchHermesSessions）+IDE 会话菜单全套（置顶/移动分组/归档/分享导出/删除）+组织三模式 |
+| 19 | MCP+插件商店能力矩阵 | **部分核实** | mcp-config 域+IdeMcpPane 已有配置面；能力矩阵/OAuth 向导增量记档 |
+| 20 | goal/loop 常驻意图面板 | **本轮落地** | GoalLoopStandingPanel（运行中心 runs 页签顶部：意图卡 goal/判定条件/阶段/模式+暂停恢复；数据源 /api/loop/loops 真接口；无 loop 自收起） |
+| 21 | ui-lab 设计工作台 | **记档远期**（建议清单原定远期） | multica 模式已入分析 §3.6 |
+| 22 | Hosted Rooms+peer | **记档远期** | 同上 |
+| 23 | 监控四问页 | **记档远期** | harness-monitor 四问信息设计已在分析 §3.7 |
+| 24 | 成本估算模型 | **部分已落** | IdeStatusBar 遥测簇+RuntimeSection 成本归集（idle/peak 双估）；dsh 主+子 agent 分量模型记档 |
+| 25 | 竞品迁移 /import | **记档远期** | 同上 |
+| 26 | benchmarks 性能门禁 | **记档远期** | 四用户路径纪律已入分析 §3.5 |
+| 27 | llms.txt 文档出口 | **记档远期** | 同上 |
+
+附：P11 Phase 2 三件——来源徽标（↻循环/⟐图规格，RunListTable）与 IDE↔运行交叉跳转（WorkflowObservationPanel ⌨）本轮落地；workflow run 复用 RunDetailView 骨架记档剩余（数据域不同需事件流升级）。
+守门与走查：新增 7 测试文件 38 例全绿；既有回归 60/60；三份浏览器走查脚本入库（absorb-msg-surface/absorb-run-observatory，5/5 与 6/6）。
