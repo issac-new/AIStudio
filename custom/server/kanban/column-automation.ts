@@ -18,7 +18,7 @@
 // 配置校验（P-D(d)）：provider 限词表（zcode）；id/role/specialist 限长 + 限字符集
 // （[A-Za-z0-9._-]）——这些字段会拼进派单文本，宽松放行即 mention/指令注入面。
 // 违规 step 拼文本前由 column-dispatch 硬拦（REST 400 配置错误），加载时 warn 不静默。
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, statSync } from 'fs'
 import { resolve } from 'path'
 import { resolveRosterFile } from '../zcode/squad-protocol'
 
@@ -90,6 +90,8 @@ export interface ColumnTransitionTrigger {
 }
 
 let cached: Record<string, ColumnAutomation> | null = null
+// mtime 失效：模块级永久缓存曾让运行期改 columns.yaml 永不生效（须重启 server）
+let cachedMtimeMs = -1
 
 export function columnsFilePath(): string {
   const env = process.env.HERMES_COLUMNS_FILE?.trim()
@@ -98,10 +100,12 @@ export function columnsFilePath(): string {
 }
 
 export function loadColumnAutomations(): Record<string, ColumnAutomation> {
-  if (cached) return cached
   try {
     const p = columnsFilePath()
-    if (!existsSync(p)) {
+    const mtime = existsSync(p) ? statSync(p).mtimeMs : -1
+    if (cached && mtime === cachedMtimeMs) return cached
+    cachedMtimeMs = mtime
+    if (mtime < 0) {
       // P-E：全 miss 不再无声回空——打一条 warn 让部署形态问题可见。
       console.warn(`[columns] 列编排配置不存在（候选探测全 miss）：${p}，回空配置`)
       return (cached = Object.create(null) as Record<string, ColumnAutomation>)
@@ -192,8 +196,14 @@ export function matchColumnTransition(
     if (fires) out.push({ column, matchedTiming, steps: cfg.steps, autoAdvanceOnSuccess: cfg.autoAdvanceOnSuccess })
   }
   if (from && to) {
-    push(from, 'exit')
-    push(to, 'entry')
+    if (from === to) {
+      // 同列流转（未真正换列）：只按 entry 触发一次——exit+entry 各派一单会让
+      // timing=both 的列对同一次流转重复派单（24h 审查 P3）
+      push(to, 'entry')
+    } else {
+      push(from, 'exit')
+      push(to, 'entry')
+    }
   } else if (to) {
     push(to, 'entry')
   }

@@ -46,8 +46,12 @@ async function runKgOp<T>(op: string, kgPath: string, input: Record<string, unkn
   return new Promise((res) => {
     const child = spawn(python, [bridgeScript(), op, '--kg', kgPath], { stdio: ['pipe', 'pipe', 'pipe'] })
     let out = ''
+    let err = ''
     const timer = setTimeout(() => child.kill('SIGKILL'), 8000)
     child.stdout.on('data', (d: Buffer) => { out += d.toString() })
+    // stderr 必须消费：semantica/gensim 警告量大时撑满 64KB 管道缓冲，python 阻塞到
+    // 被 SIGKILL，操作恒败；stdin error 监听防 EPIPE uncaughtException（FATAL shutdown）。
+    child.stderr.on('data', (d: Buffer) => { err = (err + d.toString()).slice(-4096) })
     child.on('close', () => {
       clearTimeout(timer)
       const lines = out.split('\n').filter((l) => l.trim().startsWith('{'))
@@ -57,9 +61,11 @@ async function runKgOp<T>(op: string, kgPath: string, input: Record<string, unkn
           if (parsed.ok !== false) { res(parsed); return }
         } catch { /* 找下一行 */ }
       }
+      if (err.trim()) console.warn(`[board-graph] bridge ${op} 失败（stderr 尾部）：${err.trim().slice(-300)}`)
       res(null)
     })
     child.on('error', () => { clearTimeout(timer); res(null) })
+    child.stdin.on('error', () => {})
     child.stdin.write(JSON.stringify(input))
     child.stdin.end()
   })

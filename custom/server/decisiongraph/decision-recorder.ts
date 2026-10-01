@@ -85,12 +85,16 @@ export function recordEscalationDecision(input: {
   })
 }
 
-export function recordGateRunDecision(input: {
+/** 门禁判定摄取（唯一的可等待落账面）：返回是否真实落账成功。
+ * 去重键只在成功后记入 seenKeys——失败（bridge 缺席/超时）不记，配合 sync-gates
+ * 端点「成功才写 marker」即失败下轮自动重试；此前 fire-and-forget+先记 marker 会把
+ * 失败 run 永久标成已摄取（丢单）。其余三类落账面保持 fire-and-forget（主链路绝不等待）。 */
+export async function recordGateRunDecision(input: {
   runId: string; verdict: string; gateId?: string; gateName?: string
-}): void {
+}): Promise<boolean> {
   const key = `gate:${input.runId}`
-  if (!once(key)) return
-  void recordDecision({
+  if (seenKeys.has(key)) return false
+  const res = await recordDecision({
     category: 'gate',
     scenario: `${input.gateName ?? input.gateId ?? 'qgate'} ${input.runId}`.slice(0, 400),
     reasoning: 'qgate run 判定（.qgate/runs 摄取）',
@@ -100,6 +104,10 @@ export function recordGateRunDecision(input: {
     metadata: { runId: input.runId, verdict: input.verdict, gateId: input.gateId },
     linkPrecedent: false,
   })
+  if (!res) return false
+  seenKeys.add(key)
+  if (seenKeys.size > 5000) seenKeys.clear()  // 防无界增长：清空重放代价=可能重复落账，可接受
+  return true
 }
 
 // ---- 乙5：先例检索回灌（带 TTL 缓存 + 预算超时） ----

@@ -245,7 +245,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b 翻页直抵 since 时刻
   # 消息洪后固定窗口失效（run4 实锤：500 条只回溯到当天上午，昨日派发被挤出）。
   # 用 end token 连续翻页，直到某页最老消息早于 since 或页数耗尽；输出与 mx_messages 同构数组。
-  local tok="$1" room="$2" since_ms=$(( $3 * 1000 )) pages="${4:-10}" out='[]' page_url chunk oldest
+  local tok="$1" room="$2" since_ms=$(( $3 * 1000 )) pages="${4:-10}" out='[]' page_url chunk oldest end_tok
   page_url="$HS/_matrix/client/v3/rooms/$room/messages?access_token=$tok&dir=b&limit=500"
   for _ in $(seq 1 "$pages"); do
     chunk=$(curl -sf -m 20 "$page_url" 2>/dev/null) || break
@@ -258,6 +258,12 @@ mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b �
     page_url="$HS/_matrix/client/v3/rooms/$room/messages?access_token=$tok&dir=b&limit=500&from=$end_tok"
   done
   printf '%s' "$out"
+}
+
+raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派发消息（供 wait_truth 当前 shell 直调）
+  # 勿经 bash -c 包装本函数：shell 函数不跨子进程继承（未 export -f），子进程必 127 恒假。
+  mx_messages_deep "$(load_token fanfan)" "$3" $(( $(date +%s) - 3600 )) 3 \
+    | jq -e '[.[] | select(.type=="m.room.message") | select((.content.body//"") | contains("@'"$1"'-agent") and contains("@'"$2"'-agent"))] | length > 0'
 }
 
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假

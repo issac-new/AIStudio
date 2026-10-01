@@ -48,6 +48,9 @@ export function createReadCacheMiddleware(opts: ReadCacheOptions): ReadCacheMidd
   const maxEntries = opts.maxEntries ?? 128
   const cache = new Map<string, CacheEntry>()
   const inflight = new Map<string, Promise<void>>()
+  // 失效代数：每次失效自增。在途回源（CLI 4-6s）落缓存前必须核对代数——否则
+  // 「GET 回源中 → POST 写完清缓存 → GET 用写前旧数据回填」会把陈旧值钉满整个 TTL。
+  let generation = 0
 
   function cacheable(path: string): boolean {
     if (whitelist?.has(path)) return true
@@ -69,6 +72,7 @@ export function createReadCacheMiddleware(opts: ReadCacheOptions): ReadCacheMidd
     // 写路径：先放行，落定后全量失效（同进程内 UI 变更即时生效）
     if (ctx.method !== 'GET' && ctx.method !== 'HEAD') {
       await next()
+      generation += 1
       cache.clear()
       return
     }
@@ -95,12 +99,15 @@ export function createReadCacheMiddleware(opts: ReadCacheOptions): ReadCacheMidd
         ctx.body = fresh.body
         return
       }
-      // 回源失败（未入缓存）：直接放行重试一次
+      // 回源失败或中途被失效（未入缓存）：直接放行重试一次
       return next()
     }
 
+    const genAtStart = generation
     const fill = (async () => {
       await next()
+      // 回源期间发生过失效（写落定/事件 flush）：本次结果是写前旧数据，放弃入缓存
+      if (generation !== genAtStart) return
       if (ctx.status >= 200 && ctx.status < 300 && ctx.body !== undefined) {
         if (cache.size >= maxEntries) {
           // 淘汰最早入缓存项（Map 保插入序，首键最旧）
@@ -119,6 +126,7 @@ export function createReadCacheMiddleware(opts: ReadCacheOptions): ReadCacheMidd
   }
 
   middleware.flush = () => {
+    generation += 1
     cache.clear()
   }
 

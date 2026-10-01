@@ -75,7 +75,11 @@ if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then
   log "检测到 matrix 适配器降级（agent 将收不到 @mention）——执行自愈"
   if matrix_adapter_selfheal; then
     kill "$(cat "$PIDS_DIR/gateway.pid" 2>/dev/null)" 2>/dev/null; sleep 3
-    ( cd "$SIM_ROOT" && HERMES_GATEWAY_BUSY_INPUT_MODE=queue nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 & \
+    # 重启环境必须与首启（:31-33）逐项对齐：缺 HERMES_HOME/LOCK_DIR 会落 ~/.hermes 真实环境并
+    # 失去与宿主 orchestrator 的锁隔离，缺 HERMES_BIN 时 kanban worker spawn 必崩（run4 实锤第三层）
+    ( cd "$SIM_ROOT" && PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
+      HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
+      nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 & \
       echo $! > "$PIDS_DIR/gateway.pid" )
     deadline=$(( $(date +%s) + 120 ))
     while (( $(date +%s) < deadline )); do

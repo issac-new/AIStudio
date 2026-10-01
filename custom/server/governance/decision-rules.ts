@@ -139,7 +139,14 @@ export function evaluateDecisionRules(ctx: RuleContext, opts: { now?: number } =
   const { doc, problems } = loadDecisionRules()
   const envMode = process.env.GOVERNANCE_RULES_MODE?.trim()
   const mode: RuleMode = envMode === 'off' || envMode === 'warn' || envMode === 'enforce' ? envMode : (doc?.mode ?? 'warn')
-  if (!doc || problems.length > 0) return { mode: 'warn', violations: [], problems }
+  if (!doc || problems.length > 0) {
+    // 规则表损坏=fail-open（无规则可命中，不产生新拒派），但 mode 不得被硬写 warn：
+    // enforce 意图下静默降级会让"以为有闸其实没闸"；此处显性报错并如实返回意图档位。
+    if (mode === 'enforce') {
+      console.error(`[decision-rules] 规则表损坏而 GOVERNANCE_RULES_MODE=enforce，规则闸失效放行：${problems.join('；')}`)
+    }
+    return { mode, violations: [], problems }
+  }
   if (mode === 'off') return { mode, violations: [], problems: [] }
   const unit = ctx.specialist ? loadCapabilityLedger().doc?.units.find((u) => u.id === ctx.specialist) : undefined
   const facts: Partial<Record<RulePredicateKey, string>> = {

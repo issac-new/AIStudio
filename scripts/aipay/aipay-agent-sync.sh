@@ -97,7 +97,7 @@ if [[ -n "$env_block" && -n "${HERMES_HOME:-}" && -d "${HERMES_HOME}/installs" ]
     cp "$kt" "$bak"
     printf '\n\n%s\n' "$env_block" >> "$kt"
     python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$kt" 2>/dev/null \
-      && { env_fixed=$((env_fixed+1)); echo "  ✓ 环境工作区补齐 ${env_fix_fn}：${wk#"$HERMES_HOME"/}" ; } \
+      && { rm -f "$bak"; env_fixed=$((env_fixed+1)); echo "  ✓ 环境工作区补齐 ${env_fix_fn}：${wk#"$HERMES_HOME"/}" ; } \
       || { mv "$bak" "$kt" 2>/dev/null; echo "  ✗ 补齐后语法校验失败，已回滚：$kt" >&2; }
   done
 fi
