@@ -1,7 +1,11 @@
-// 治理中心前端守门（补功能主清单 2026-09-28）：
-// ① 路由存在性：buildIaRoutes 含 /app/gov（ia2.governance）
-// ② 视图渲染：六闸卡 + 工件清单（点击渲染 markdown）+ 待裁决评审（裁决按钮 emit 链）
-// ③ i18n：governanceMessages zh/en 键集合一致（治理词条单一事实源自检）
+// 治理分区前端守门（2026-10-01 单层页签重构随迁：GovernanceView 退役，
+// 拆 GovHealthSection（入三账与体检页签）+ 四平级分区视图，断言逐条移植）：
+// ① 路由：ia2.governance 重定向 /app/board?tab=gov-org（入口/旧深链不死链）
+// ② GovHealthSection：六闸卡（G3 以分支数为证据）+ 六域体检（台账最新判定+运行按钮链）
+// ③ GovDocsReviewView：工件清单（点击渲染 markdown）+ 待裁决评审（decideApproval 链）
+// ④ 四分区视图：板块挂载（组织知识/台账规则/审计变更）
+// ⑤ 单层纪律：治理分区视图内无二级页签（gov-subtabs/ia-gov__subtab 永不回潮）
+// ⑥ i18n：governanceMessages zh/en 键集合一致（治理词条单一事实源自检）
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -45,7 +49,7 @@ vi.mock('@/custom/governance/api/governance', () => ({
     },
   })),
   fetchSlo: vi.fn(async () => ({
-    ok: true, budgetMode: 'warn', windowDays: 30,
+    budgetMode: 'warn', windowDays: 30,
     tiers: [{ tier: 'core', target: { successRate: 0.95, windowDays: 30, minSamples: 10, budgetAction: 'freeze' }, closed: 20, done: 19, successRate: 0.95, p95DurationS: 120, exhausted: false }],
     unmapped: { closed: 0, done: 0, successRate: null, assignees: [] }, dataAvailable: true,
   })),
@@ -70,7 +74,7 @@ vi.mock('@/custom/governance/api/governance', () => ({
   fetchDecisionRules: vi.fn(async () => ({ ok: true, exists: true, problems: [], doc: { version: 1, mode: 'warn', rules: [{ id: 'retire-candidate-no-new', when: { unitLifecycle: 'retire-candidate' }, then: 'deny', message: '退役候选禁派' }] } })),
   downloadProvO: vi.fn(async () => undefined),
 }))
-// 变更治理区（2026-09-29 调研落地轮挂进 GovernanceView）——mock 须全量，
+// 变更治理区（2026-09-29 调研落地轮，现挂 GovAuditChangeView）——mock 须全量，
 // 缺导出即 vitest unhandled rejection（同 LedgerSection 先例）
 vi.mock('@/custom/governance/api/changeGov', () => ({
   fetchChangeGovMeta: vi.fn(async () => ({ ok: true, levels: [], dimensions: [], baselines: {}, freezeTiers: [] })),
@@ -125,58 +129,66 @@ function makeI18n(locale = 'zh') {
   })
 }
 
-async function mountView() {
-  const GovernanceView = (await import('@/custom/ia2/views/GovernanceView.vue')).default
+async function mountGovView(rel: string) {
+  const comp = (await import(rel)).default
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div/>' } }] })
-  const wrapper = mount(GovernanceView, { global: { plugins: [makeI18n(), router] } })
+  const wrapper = mount(comp, { global: { plugins: [makeI18n(), router] } })
   await flushPromises()
   return wrapper
 }
 
-/** 切二级分区（2026-10-01 板块重规划后：工件/评审/三区分属 docs/registry/audit 区）。 */
-async function goto(wrapper: Awaited<ReturnType<typeof mountView>>, testid: string): Promise<void> {
-  await wrapper.find(`[data-testid="${testid}"]`).trigger('click')
-  await flushPromises()
-}
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(api.fetchGovernanceOverview).mockResolvedValue(overviewFixture as any)
+  vi.mocked(api.fetchGovernanceDoc).mockResolvedValue({
+    ok: true, kind: 'freeze', title: 'G1 需求冻结', gate: 'G1',
+    commit: 'abc1234', committedAt: '2026-09-26T00:24:00+08:00',
+    markdown: '# RFD-001 G1 冻结标记\n\nAC-1 下单幂等\n\nfrozen: true',
+  } as any)
+  vi.mocked(approvals.fetchPendingApprovals).mockResolvedValue({
+    items: [{ id: 'review:r1', kind: 'review', title: 'demo-rfd001-review', detail: '概设评审', createdAt: Date.now() }],
+  } as any)
+  vi.mocked(approvals.decideApproval).mockResolvedValue({ ok: true } as any)
+})
 
-describe('治理中心前端', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(api.fetchGovernanceOverview).mockResolvedValue(overviewFixture as any)
-    vi.mocked(api.fetchGovernanceDoc).mockResolvedValue({
-      ok: true, kind: 'freeze', title: 'G1 需求冻结', gate: 'G1',
-      commit: 'abc1234', committedAt: '2026-09-26T00:24:00+08:00',
-      markdown: '# RFD-001 G1 冻结标记\n\nAC-1 下单幂等\n\nfrozen: true',
-    } as any)
-    vi.mocked(approvals.fetchPendingApprovals).mockResolvedValue({
-      items: [{ id: 'review:r1', kind: 'review', title: 'demo-rfd001-review', detail: '概设评审', createdAt: Date.now() }],
-    } as any)
-    vi.mocked(approvals.decideApproval).mockResolvedValue({ ok: true } as any)
-  })
-
-  it('路由表含 ia2.governance（/app/gov）', async () => {
+describe('治理分区（2026-10-01 单层页签重构）', () => {
+  it('路由 ia2.governance 重定向 /app/board?tab=gov-org（入口不死链）', async () => {
     const { buildIaRoutes } = await import('@/custom/ia2/routes')
     const routes = buildIaRoutes()
     const flat = JSON.stringify(routes)
     expect(flat).toContain('"ia2.governance"')
     expect(flat).toContain('"gov"')
+    // 退役整页承载：redirect 指向工作项区治理首分区页签
+    const gov = routes.flatMap((r: { children?: unknown[] }) => [r, ...((r.children ?? []) as typeof r[])])
+      .find((r: { name?: string }) => r.name === 'ia2.governance') as { redirect?: () => unknown }
+    expect(typeof gov.redirect).toBe('function')
+    expect(gov.redirect()).toEqual({ name: 'ia2.board', query: { tab: 'gov-org' } })
   })
 
-  it('渲染六闸卡（G3 以分支数为证据）+ 二级分区导航', async () => {
-    const wrapper = await mountView()
-    const gates = wrapper.findAll('.ia-gov__gate')
+  it('GovHealthSection（三账与体检页签）：六闸卡（G3 以分支数为证据）+ 六域体检台账链', async () => {
+    const wrapper = await mountGovView('@/custom/ia2/views/gov/GovHealthSection.vue')
+    const gates = wrapper.findAll('.gov-health__gate')
     expect(gates).toHaveLength(6)
     expect(wrapper.find('[data-testid="gov-gate-G1"]').text()).toContain('在仓')
     expect(wrapper.find('[data-testid="gov-gate-G3"]').text()).toContain('4')
-    // 板块重规划（2026-10-01）：五分区导航在页头下，默认总览区
-    const tabs = wrapper.findAll('.ia-gov__subtab')
-    expect(tabs).toHaveLength(5)
-    expect(wrapper.find('[data-testid="gov-tab-overview"]').classes()).toContain('is-active')
-    // 分区懒挂载：默认区不渲染其他分区板块
-    expect(wrapper.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="gov-docs"]').exists()).toBe(false)
-    await goto(wrapper, 'gov-tab-docs')
-    const groupTitles = wrapper.findAll('.ia-gov__group-title').map(n => n.text())
+    // 六域体检：台账最新判定 + 证据
+    expect(wrapper.find('[data-testid="gov-domain-audit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('通过')
+    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('AC 可判定 7 条')
+    expect(wrapper.text()).toContain('1 轮')
+    // 运行按钮 → runDomainAudit → 台账重读
+    await wrapper.find('[data-testid="gov-audit-run"]').trigger('click')
+    await flushPromises()
+    expect(api.runDomainAudit).toHaveBeenCalled()
+    // 刷新按钮 → overview 重拉
+    await wrapper.find('[data-testid="gov-health-refresh"]').trigger('click')
+    await flushPromises()
+    expect(api.fetchGovernanceOverview).toHaveBeenCalledTimes(2)
+  })
+
+  it('GovDocsReviewView：工件四组清单 + 缺件灰态 + 待裁决行', async () => {
+    const wrapper = await mountGovView('@/custom/ia2/views/gov/GovDocsReviewView.vue')
+    const groupTitles = wrapper.findAll('.gov-docs__group-title').map(n => n.text())
     expect(groupTitles).toContain('六闸工件')
     expect(groupTitles).toContain('管理档案')
     expect(wrapper.find('[data-testid="gov-doc-roster"]').exists()).toBe(true)
@@ -185,68 +197,63 @@ describe('治理中心前端', () => {
     expect(wrapper.find('[data-testid="gov-review-review:r1"]').exists()).toBe(true)
   })
 
-  it('分区二/三：组织知识区含决策图谱；台账规则区含规则闸', async () => {
-    const wrapper = await mountView()
-    await goto(wrapper, 'gov-tab-org')
-    expect(wrapper.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-knowledge-graph"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-decision-graph"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="dg-decision-d-uuid-1"]').exists()).toBe(true)
-
-    await goto(wrapper, 'gov-tab-registry')
-    expect(wrapper.find('[data-testid="gov-decision-rules"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="dr-rule-retire-candidate-no-new"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="dr-mode"]').attributes('data-mode')).toBe('warn')
-  })
-
   it('点击工件渲染 markdown 全文（含 frozen:true 与 commit 锚点）', async () => {
-    const wrapper = await mountView()
-    await goto(wrapper, 'gov-tab-docs')
+    const wrapper = await mountGovView('@/custom/ia2/views/gov/GovDocsReviewView.vue')
     await wrapper.find('[data-testid="gov-doc-freeze"]').trigger('click')
     await flushPromises()
     const md = wrapper.find('[data-testid="gov-doc-md"]')
     expect(md.text()).toContain('frozen: true')
-    expect(wrapper.find('.ia-gov__docview-meta').text()).toContain('abc1234')
+    expect(wrapper.find('.gov-docs__docview-meta').text()).toContain('abc1234')
   })
 
   it('裁决按钮走 decideApproval 并刷新', async () => {
-    const wrapper = await mountView()
-    await goto(wrapper, 'gov-tab-docs')
-    await wrapper.find('[data-testid="gov-review-review:r1"] .ia-gov__btn.is-approve').trigger('click')
+    const wrapper = await mountGovView('@/custom/ia2/views/gov/GovDocsReviewView.vue')
+    await wrapper.find('[data-testid="gov-review-review:r1"] .gov-docs__btn.is-approve').trigger('click')
     await flushPromises()
     expect(approvals.decideApproval).toHaveBeenCalledWith('review:r1', 'approve')
     expect(api.fetchGovernanceOverview).toHaveBeenCalledTimes(2)
   })
 
-  it('六域体检区渲染（台账最新判定+运行按钮链）', async () => {
-    const wrapper = await mountView()
-    expect(wrapper.find('[data-testid="gov-domain-audit"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('通过')
-    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('AC 可判定 7 条')
-    expect(wrapper.text()).toContain('1 轮')
-    // 运行按钮 → runDomainAudit → 台账重读
-    await wrapper.find('[data-testid="gov-audit-run"]').trigger('click')
-    await flushPromises()
-    const { runDomainAudit } = await import('@/custom/governance/api/governance')
-    expect(runDomainAudit).toHaveBeenCalled()
+  it('分区视图：组织知识区含决策图谱；台账规则区含规则闸/本体/运行态', async () => {
+    const org = await mountGovView('@/custom/ia2/views/gov/GovOrgKnowledgeView.vue')
+    expect(org.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(true)
+    expect(org.find('[data-testid="gov-knowledge-graph"]').exists()).toBe(true)
+    expect(org.find('[data-testid="gov-decision-graph"]').exists()).toBe(true)
+    expect(org.find('[data-testid="dg-decision-d-uuid-1"]').exists()).toBe(true)
+
+    const reg = await mountGovView('@/custom/ia2/views/gov/GovRegistryRulesView.vue')
+    expect(reg.find('[data-testid="gov-decision-rules"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="dr-rule-retire-candidate-no-new"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="dr-mode"]').attributes('data-mode')).toBe('warn')
+    expect(reg.find('[data-testid="gov-ledger"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="gov-state-model"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="sm-trans-run.complete"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="slo-tier-core"]').exists()).toBe(true)
+    expect(reg.find('[data-testid="usage-zero-none"]').exists()).toBe(true)
   })
 
-  it('4A 治理层三区渲染（台账/运行态/统一审计——2026-10-01 分属 registry/audit 区）', async () => {
-    const wrapper = await mountView()
-    await goto(wrapper, 'gov-tab-registry')
-    expect(wrapper.find('[data-testid="gov-ledger"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-runtime"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-state-model"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="sm-trans-run.complete"]').exists()).toBe(true)
-    // 运行态：SLO 档行渲染 + 零调用空态如实
-    expect(wrapper.find('[data-testid="slo-tier-core"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="usage-zero-none"]').exists()).toBe(true)
-    // 统一审计（audit 区）：四源 chips + 事件行 + 计数 + PROV-O 导出按钮
-    await goto(wrapper, 'gov-tab-audit')
+  it('审计变更区：四源 chips + 事件行 + 计数 + PROV-O 导出按钮', async () => {
+    const wrapper = await mountGovView('@/custom/ia2/views/gov/GovAuditChangeView.vue')
     expect(wrapper.findAll('[data-testid^="audit-src-"]').length).toBe(4)
     expect(wrapper.find('[data-testid="audit-prov-export"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-row-approvals"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-count"]').text()).toContain('1')
+  })
+
+  it('单层纪律：治理分区视图内无二级页签（gov-subtabs/ia-gov__subtab 永不回潮）', async () => {
+    for (const rel of [
+      '@/custom/ia2/views/gov/GovHealthSection.vue',
+      '@/custom/ia2/views/gov/GovOrgKnowledgeView.vue',
+      '@/custom/ia2/views/gov/GovRegistryRulesView.vue',
+      '@/custom/ia2/views/gov/GovAuditChangeView.vue',
+      '@/custom/ia2/views/gov/GovDocsReviewView.vue',
+    ]) {
+      const wrapper = await mountGovView(rel)
+      expect(wrapper.find('[data-testid="gov-subtabs"]').exists(), rel).toBe(false)
+      expect(wrapper.findAll('.ia-gov__subtab').length, rel).toBe(0)
+      expect(wrapper.findAll('[role="tablist"]').length, rel).toBe(0)
+      wrapper.unmount()
+    }
   })
 
   it('i18n zh/en 键集合一致', () => {
