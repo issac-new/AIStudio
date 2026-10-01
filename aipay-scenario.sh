@@ -580,12 +580,12 @@ fi
 if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   if ! repo_has docs/plan/${RFD_ID}-schedule.md; then
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
-1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲
+1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
 3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
 结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)"
-    wait_truth "docs/plan/${RFD_ID}-schedule.md 入库" 2400 repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期超时"
+    wait_truth "docs/plan/${RFD_ID}-schedule.md 入库" 7200 repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期超时"
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
