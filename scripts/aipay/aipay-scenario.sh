@@ -60,6 +60,8 @@ mx_cleanup() {
 }
 trap 'mx_cleanup' EXIT
 
+# 本轮首次起跑时刻（幂等：续跑轮不重置——repo_has 新鲜度窗口的锚点，run5 教训）
+[ -n "$(sget run_started_at)" ] || sset run_started_at "$(date +%s)"
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
 # LLM 依赖区间为 [dispatch, uat]（agent 回合步骤）：执行区间与它有交集才要求通道；
