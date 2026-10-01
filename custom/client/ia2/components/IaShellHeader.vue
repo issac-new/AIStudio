@@ -28,6 +28,7 @@ import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
+import SpotlightPanel from './SpotlightPanel.vue'
 import SitlineBar from './SitlineBar.vue'
 import SitDetailPanel, { type SitSegment, type SitTaskRow } from './SitDetailPanel.vue'
 import { useSitCounts } from '../composables/useSitCounts'
@@ -47,6 +48,18 @@ defineProps<{ userName?: string }>()
 
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
+
+// ── Spotlight 混合搜索（2026-10-01 消息面批 #3，element-web Spotlight 吸收）──
+// 既有行为全保留：输入仍写 store.searchQuery（左栏过滤）+ hermes 全文搜索缓存；
+// 增量=聚焦/输入时弹混合结果面板（会话与房间/看板任务/命令三组，键盘可达）。
+const spotOpen = ref(false)
+const spotRef = ref<InstanceType<typeof SpotlightPanel> | null>(null)
+
+function onSpotKeydown(e: KeyboardEvent) {
+  spotRef.value?.onKeydown(e)
+}
+
+function closeSpot() { spotOpen.value = false }
 
 // ── V5 补遗⑤ S7（仅 Gateway 段维持摘除）：platforms store 与轮询能力保留，
 //    引用计数由 GovTeamSection/WorkbenchView 各自 retain ──
@@ -147,9 +160,13 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
       <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
-        :placeholder="t('cockpit.searchPlaceholder')" @input="store.runSearch(($event.target as HTMLInputElement).value)" />
+        :placeholder="t('cockpit.searchPlaceholder')" data-testid="ia-header-search-input"
+        @input="store.runSearch(($event.target as HTMLInputElement).value); spotOpen = true"
+        @focus="spotOpen = true"
+        @keydown="onSpotKeydown" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
+      <SpotlightPanel v-if="spotOpen" ref="spotRef" :query="store.searchQuery" @close="closeSpot" />
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__sit">
