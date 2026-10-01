@@ -27,24 +27,18 @@ export interface FeatureConfig {
   /** S3：connections 的社媒 app tab + ESP32 mcu tab。
    *  VITE_CUSTOM_CONNECTIONS_EXTRAS=true 再开。 */
   connectionsExtras: boolean;
-  /** S3：ekko 配置面（AgentManagerView 卡片 + /ekko/* 路由守卫；VITE_CUSTOM_EKKO）。 */
+  /** S3：ekko 配置面（AgentManagerView 卡片 + /ekko/* 路由守卫 + 四页 superadmin
+   *  运维面；VITE_CUSTOM_EKKO=true 再开）。 */
   ekko: boolean;
-  /** S3：agent 管理中心路由族（bootstrap 摘除；VITE_CUSTOM_AGENT_MANAGER）。 */
+  /** S3：/studio/agents 配置中心（hermes.agentManager 侧栏条目与收编路由门控；
+   *  VITE_CUSTOM_AGENT_MANAGER=true 再开）。 */
   agentManager: boolean;
-  /** S3：外链路由族（bootstrap 摘除 share/group-chat-link 等；VITE_CUSTOM_EXTERNAL_LINKS）。 */
+  /** S3：三个外链页路由（/share/group-chat、/group-chat-link、/desktop-chat，
+   *  bootstrap 摘除；VITE_CUSTOM_EXTERNAL_LINKS=true 再开）。 */
   externalLinks: boolean;
   /** S3：图像生成辅助模型面板（ModelsView auxiliary tab）。
    *  VITE_CUSTOM_IMAGE_ASSIST=true 再开。 */
   imageAssist: boolean;
-  /** S3：ekko 四页（memory/skills/mcp/settings，superadmin 运维面）。
-   *  VITE_CUSTOM_EKKO=true 再开。 */
-  ekko: boolean;
-  /** S3：/studio/agents 配置中心（hermes.agentManager + codingAgent.config）。
-   *  VITE_CUSTOM_AGENT_MANAGER=true 再开。 */
-  agentManager: boolean;
-  /** S3：三个外链页路由（/share/group-chat、/group-chat-link、/desktop-chat）。
-   *  VITE_CUSTOM_EXTERNAL_LINKS=true 再开。 */
-  externalLinks: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -64,9 +58,6 @@ export const features: FeatureConfig = {
   agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
   externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
   imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',
-  ekko: import.meta.env.VITE_CUSTOM_EKKO === 'true',
-  agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
-  externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {

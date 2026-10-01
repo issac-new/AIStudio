@@ -38,6 +38,7 @@ const MSG_SURFACE_TEXT = {
     historyFork: '从此分叉（复制 /fork 到剪贴板+聚焦输入框，粘贴补参后回车执行）',
     historyLocked: '运行中只读',
     historyLockedHint: '当前回合进行中——历史动作在回合结束后可用（minimax 语义）',
+    deepSearchSessions: '在会话消息全文里继续搜 →',
   },
   en: {
     jumpToUnread: 'Jump to unread',
@@ -70,6 +71,7 @@ const MSG_SURFACE_TEXT = {
     historyFork: 'Fork from here (copies /fork to clipboard + focuses composer; paste, complete args, send)',
     historyLocked: 'Read-only while running',
     historyLockedHint: 'A turn is in progress — history actions unlock when it settles (minimax semantics)',
+    deepSearchSessions: 'Search inside session messages →',
   },
 } as const
 

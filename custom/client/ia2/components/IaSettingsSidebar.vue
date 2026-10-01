@@ -22,6 +22,7 @@ import { isStoredSuperAdmin } from '@/api/client'
 import { useAuthStore } from '@/stores/hermes/auth'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import { features } from '../../../../config/features'
 
 interface NavEntry {
   name: string
@@ -74,6 +75,7 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
       { name: 'hermes.logs', icon: 'file', labelKey: 'sidebar.logs' },
       { name: 'hermes.usage', icon: 'chart', labelKey: 'sidebar.usage' },
       { name: 'hermes.performance', icon: 'activity', labelKey: 'sidebar.performance', superAdmin: true },
+      { name: 'hermes.terminal', icon: 'terminal', labelKey: 'sidebar.terminal', superAdmin: true },
       { name: 'hermes.browser', icon: 'globe', labelKey: 'sidebar.browser' },
       { name: 'hermes.versionPreview', icon: 'refresh', labelKey: 'sidebar.versionPreview' },
     ],
@@ -83,6 +85,11 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
 function visible(e: NavEntry): boolean {
   if (e.superAdmin && !isSuperAdmin.value) return false
   if (e.name === 'hermes.versionPreview' && !isVersionPreview) return false
+  // 门控一致性（2026-10-01 上游自用批 A4）：petdex 条目随 features.pet（S3 既定
+  // 语义——pet 三件套默认关，此前侧栏条目漏接开关线）；agentManager 条目随
+  // features.agentManager（收编路由同门控，见 routes.ts ANNEXED_LEGACY）。
+  if (e.name === 'hermes.petdex' && !features.pet) return false
+  if (e.name === 'hermes.agentManager' && !features.agentManager) return false
   return router.hasRoute(e.name)
 }
 

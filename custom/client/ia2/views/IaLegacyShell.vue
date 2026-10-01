@@ -49,6 +49,7 @@ const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
   'hermes.petdex': () => import('@/views/hermes/PetdexView.vue'),
   'hermes.skillsUsage': () => import('@/views/hermes/SkillsUsageView.vue'),
   'hermes.configSettings': () => import('@/views/hermes/HermesSettingsView.vue'),
+  'hermes.terminal': () => import('@/views/hermes/TerminalView.vue'),
   'hermes.versionPreview': () => import('@/views/hermes/VersionPreviewView.vue'),
 }
 

@@ -36,6 +36,8 @@ import { useSessionRows } from '../composables/useSessionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows } from '../composables/useDecisionRows'
 import { useNowTick } from '../composables/useNowTick'
+import { NModal } from 'naive-ui'
+import { changelog } from '@/data/changelog'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -48,6 +50,11 @@ defineProps<{ userName?: string }>()
 
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
+
+// ── 更新日志弹窗（2026-10-01 上游自用批 A3）：上游 11 语言 changelog 数据
+//    （@/data/changelog）随版本维护，072 重写侧栏时入口丢失——页头账户区
+//    挂版本号按钮补回，交互同上游 SidebarAccountControls.openChangelog ──
+const showChangelog = ref(false)
 
 // ── Spotlight 混合搜索（2026-10-01 消息面批 #3，element-web Spotlight 吸收）──
 // 既有行为全保留：输入仍写 store.searchQuery（左栏过滤）+ hermes 全文搜索缓存；
@@ -202,6 +209,9 @@ function onPanelJumpTask(taskId: string): void {
       <!-- R6 补充：通知徽章双计数（决策未读 + 消息未读合计；悬停分明细） -->
       <span v-if="notifyTotal" class="cockpit-top__bdg cockpit-top__bdg--err" data-testid="ia-header-notify-badge" :title="t('ia2.notify.totalHint', { decisions: decisionUnread, messages: messageUnread })">{{ notifyTotal }}</span>
     </button>
+    <button type="button" class="cockpit-top__btn cockpit-top__ver" data-testid="ia-header-changelog"
+      :title="t('sidebar.changelog')" @click="showChangelog = true"
+    >v{{ appStore.serverVersion || '—' }}</button>
     <button type="button" class="cockpit-top__user" data-testid="ia-header-user" @click="goSettings">
       <span class="cockpit-top__avatar">{{ (userName ?? t('cockpit.defaultUser')).slice(0, 1) }}</span>
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
@@ -237,6 +247,22 @@ function onPanelJumpTask(taskId: string): void {
     <!-- 通知下拉（v12.3：双页签，点击遮罩关闭） -->
     <NotifyDropdownPanel v-if="showNotify" @close="showNotify = false" />
     <div v-if="showNotify" class="cockpit-top__mask" @click="showNotify = false" />
+
+    <!-- 更新日志（A3：上游 changelog 数据直渲，词条键经 t() 跟随 locale） -->
+    <NModal v-model:show="showChangelog" preset="dialog" :title="t('sidebar.changelog')"
+      style="width: min(520px, calc(100vw - 32px))">
+      <div class="ia-changelog">
+        <div v-for="entry in changelog" :key="entry.version" class="ia-changelog__block">
+          <div class="ia-changelog__head">
+            <span class="ia-changelog__tag">v{{ entry.version }}</span>
+            <span class="ia-changelog__date">{{ entry.date }}</span>
+          </div>
+          <ul class="ia-changelog__list">
+            <li v-for="(change, idx) in entry.changes" :key="idx">{{ t(change) }}</li>
+          </ul>
+        </div>
+      </div>
+    </NModal>
   </div>
 </template>
 
@@ -256,6 +282,13 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top__dot.is-idle { background: var(--text-muted); }
 .cockpit-top__bdg { position: absolute; top: -3px; right: -3px; background: var(--accent-primary); color: var(--text-on-accent); font-size: 8px; font-weight: 700; min-width: 13px; height: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--bg-card); padding: 0 3px; }
 .cockpit-top__bdg--err { background: var(--error); }
+.cockpit-top__ver { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ia-changelog { max-height: 60vh; overflow-y: auto; }
+.ia-changelog__block + .ia-changelog__block { margin-top: 14px; }
+.ia-changelog__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.ia-changelog__tag { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+.ia-changelog__date { font-size: 11px; color: var(--text-muted); }
+.ia-changelog__list { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
 .cockpit-top__search { flex: 1 1 auto; max-width: 280px; min-width: 120px; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 11px; color: var(--text-muted); position: relative; flex-shrink: 2; }
 .cockpit-top__search-icon { font-size: 12px; flex-shrink: 0; color: var(--text-muted); }
 .cockpit-top__search-input { flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 11px; outline: none; font-family: inherit; min-width: 0; &::placeholder { color: var(--text-muted); } }
