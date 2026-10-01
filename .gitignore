@@ -13,3 +13,4 @@ tests/
 .runtime-cache/
 __pycache__/
 runtime/
+vite.config.overlay.wt.ts
