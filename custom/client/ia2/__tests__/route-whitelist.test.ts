@@ -4,7 +4,10 @@
 // 2026-09-30 用户裁定变更（两批）：+hermes.settings（设置页收编）；
 // +ANNEXED_LEGACY 全量收编 28 名（双栏根治：侧栏可达 /hermes-* 页同名替换进
 // IaLegacyShell 壳，见 routes.ts ANNEXED_LEGACY 表——收编例外为唯一 hermes.*
-// 来源，未收编的 hermes.browser/terminal/ekko.* 等仍归上游，不经本表）。
+// 来源，未收编的 hermes.browser/ekko.* 等仍归上游，不经本表）。
+// 2026-10-01 上游自用批：+hermes.terminal（Web 终端收编，superadmin）；
+// −hermes.agentManager（features.agentManager 默认关，S3 既定语义补上消费方；
+// vitest 无 VITE_CUSTOM_AGENT_MANAGER → 收编记录默认不进树）。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { buildIaRoutes } from '../routes'
@@ -18,7 +21,6 @@ const all = flatten([...buildIaRoutes(), ...buildIdeRoutes()])
 const named = all.filter((r) => r.name).map((r) => r.name) as string[]
 const compat = all.filter((r) => r.redirect)
 const EXPECTED_NAMES = [
-  'hermes.agentManager',
   'hermes.channels',
   'hermes.chat',
   'hermes.configSettings',
@@ -43,6 +45,7 @@ const EXPECTED_NAMES = [
   'hermes.settings',
   'hermes.skills',
   'hermes.skillsUsage',
+  'hermes.terminal',
   'hermes.theme',
   'hermes.usage',
   'hermes.versionPreview',
@@ -81,14 +84,15 @@ describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
       expect(r.meta?.fullscreen, `${r.name} 收编记录须 fullscreen=true`).toBe(true)
       expect(String(r.component), `${r.name} 收编记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
     }
-    // requiresSuperAdmin 随上游 meta 迁移（守卫语义保真）
-    for (const name of ['hermes.agentManager', 'hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
+    // requiresSuperAdmin 随上游 meta 迁移（守卫语义保真；terminal 为 2026-10-01
+    // 收编新增——上游 /hermes/terminal 本就 requiresSuperAdmin）
+    for (const name of ['hermes.terminal', 'hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
       const rec = hermes.find((r) => r.name === name)
       expect(rec?.meta?.requiresSuperAdmin, `${name} 须保留 requiresSuperAdmin`).toBe(true)
     }
     // 五次反馈（2026-09-30）：ChatView 族+工作流页自带会话/列表侧栏也要隐——
     // standaloneEmbed（ChatPanel standalone prop / patch 526 WorkflowView 默认收起）
-    for (const name of ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.models', 'hermes.connections', 'hermes.agentManager', 'hermes.workflow']) {
+    for (const name of ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.models', 'hermes.connections', 'hermes.workflow']) {
       const rec = hermes.find((r) => r.name === name)
       expect(rec?.meta?.standaloneEmbed, `${name} 须带 standaloneEmbed（隐自带侧栏）`).toBe(true)
     }

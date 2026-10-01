@@ -12,6 +12,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useMsgSurfaceText } from '../i18n-msg-surface'
+import { useSessionSearch } from '@/composables/useSessionSearch'
 
 const props = defineProps<{ query: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -150,6 +151,15 @@ function onKeydown(e: KeyboardEvent) {
 }
 defineExpose({ onKeydown })
 
+/** 会话全文深搜升级行（2026-10-01 上游自用批 A2）：Spotlight 是混合对象快搜，
+ *  消息级全文检索升级出口=上游 SessionSearchModal（全局挂载于 App.vue，
+ *  此前 overlay 侧零调用方——本条接线即全部成本）。 */
+const { openSessionSearch } = useSessionSearch()
+function openDeepSearch() {
+  emit('close')
+  openSessionSearch()
+}
+
 function groupLabel(g: SpotRow['group']): string {
   return g === 'sessions' ? tx.value.groupSessions : g === 'tasks' ? tx.value.groupTasks : tx.value.groupCommands
 }
@@ -175,6 +185,9 @@ function groupLabel(g: SpotRow['group']): string {
         </button>
       </template>
     </div>
+    <button type="button" class="spot__foot" data-testid="spotlight-deep-search" @click="openDeepSearch">
+      {{ tx.deepSearchSessions }}
+    </button>
   </div>
 </template>
 
@@ -204,6 +217,20 @@ function groupLabel(g: SpotRow['group']): string {
 }
 
 .spot__list { overflow-y: auto; padding: 4px 0; }
+
+.spot__foot {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.spot__foot:hover { color: var(--text-primary); background: var(--bg-hover, rgba(0, 0, 0, 0.04)); }
 
 .spot__group {
   padding: 6px 12px 2px;

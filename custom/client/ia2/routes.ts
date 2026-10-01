@@ -17,6 +17,7 @@
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 // 不触发任何懒组件加载。壳层 meta.fullscreen: true。
 import type { RouteRecordRaw } from 'vue-router'
+import { features } from '../../../config/features'
 
 /** 视图 key（场景条与区域投影的词表）—— v12 双视图的 /app 侧；IDE 侧经 ide.shell 直链 */
 export type IaAreaKey = 'collab'
@@ -91,7 +92,12 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/global-agent/session/:sessionId', 'hermes.globalAgentSession', { embed: true }),
   annex('/hermes/models', 'hermes.models', { embed: true }),
   annex('/hermes/connections', 'hermes.connections', { embed: true }),
-  annex('/studio/agents', 'hermes.agentManager', { superAdmin: true, embed: true }),
+  // agent 管理中心随 features.agentManager 门控（S3 既定语义补上消费方——此前
+  // flag 定义零消费，中心对 superadmin 常开；关闭时上游同名路由仍在但侧栏不可达，
+  // 属 UI 裁剪而非权限边界，真权限由上游 requiresSuperAdmin 把守）
+  ...(features.agentManager
+    ? [annex('/studio/agents', 'hermes.agentManager', { superAdmin: true, embed: true })]
+    : []),
   // 群聊（GroupChatView 兜底深链族；自带房间列是该页核心导航，不隐）
   annex('/hermes/group-chat', 'hermes.groupChat'),
   annex('/hermes/group-chat/room/:roomId', 'hermes.groupChatRoom'),
@@ -116,6 +122,9 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/theme', 'hermes.theme'),
   annex('/hermes/petdex', 'hermes.petdex'),
   annex('/hermes/skills-usage', 'hermes.skillsUsage'),
+  // Web 终端收编（2026-10-01 上游自用批 A1）：上游路由与 superadmin 门控本就
+  // 在线（terminal/mobile-terminal 双 WS），此前零导航入口；收编进壳同域管理
+  annex('/hermes/terminal', 'hermes.terminal', { superAdmin: true }),
   annex('/hermes/version-preview', 'hermes.versionPreview', { superAdmin: true }),
 ]
 
