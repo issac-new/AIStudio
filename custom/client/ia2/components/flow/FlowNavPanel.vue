@@ -14,10 +14,11 @@
      画布内侧栏管理入口）；栏底「＋新聊天」三分型菜单（agent 单聊/agent 群聊/
      matrix 房间），matrix 房间沿用内联输入。正本 docs/comm-collab-v14-unified-chat.md §4。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { filterStreams, LOOP_STAGE_ORDER, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type StreamSelection } from '../../adapters/flow'
+import { filterStreams, LOOP_STAGE_ORDER, sortFlowRows, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type FlowSortMode, type StreamSelection } from '../../adapters/flow'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
+import { useMsgSurfaceText } from '../../i18n-msg-surface'
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
@@ -53,6 +54,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const tx = useMsgSurfaceText()
+/** 排序档 hover 文案（msg-surface 本地字典，漂移期模式） */
+function sortTitle(m: FlowSortMode): string {
+  return m === 'recent' ? tx.value.sortRecent : m === 'unread' ? tx.value.sortUnread : tx.value.sortAlpha
+}
 const filterKind = ref<FlowFilter['kind']>('all')
 const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
@@ -76,13 +82,22 @@ const dupNames = computed(() =>
   collectDuplicateNames((props.sessions as Array<{ name: string }>).map(r => r.name)))
 
 /** v14 单一「聊天」列表：三类混排按 lastActivityAt 降序（无活动时间者沉底，
- *  sort 稳定保序）。kind 图标替代旧三小节分节（R4a 聚类退役）。 */
-const chatRows = computed<FlowSessionRow[]>(() =>
-  [...shownSessions.value].sort((a, b) => {
+ *  sort 稳定保序）。kind 图标替代旧三小节分节（R4a 聚类退役）。
+ *  2026-10-01 吸收二期·房间列表卫生：排序器三档（活跃/未读/名称，
+ *  element-web skip-list sorters 范式），选择持久化 localStorage。 */
+const SORT_MODE_KEY = 'ia2.flow.sortMode'
+const sortMode = ref<FlowSortMode>(
+  (['recent', 'unread', 'alpha'] as const).find(m => m === localStorage.getItem(SORT_MODE_KEY)) ?? 'recent',
+)
+watch(sortMode, (m) => localStorage.setItem(SORT_MODE_KEY, m))
+const chatRows = computed<FlowSessionRow[]>(() => {
+  const base = [...shownSessions.value].sort((a, b) => {
     const at = a.lastActivityAt ?? 0
     const bt = b.lastActivityAt ?? 0
     return bt - at
-  }))
+  })
+  return sortMode.value === 'recent' ? base : sortFlowRows(base, sortMode.value)
+})
 
 const KIND_ICONS: Record<FlowSessionRow['kind'], string> = { room: '#', group: '👥', chat: '💬' }
 const KIND_LABEL_KEYS: Record<FlowSessionRow['kind'], string> = {
@@ -146,6 +161,19 @@ function submitCreateRoom(): void {
       data-testid="flow-search"
       :placeholder="t('ia2.flow.searchPlaceholder')"
     >
+    <!-- 排序器（房间列表卫生）：活跃/未读/名称三档，选择持久化 -->
+    <div class="flow-nav__sorts" data-testid="flow-sorts">
+      <button
+        v-for="sm in (['recent', 'unread', 'alpha'] as const)"
+        :key="sm"
+        type="button"
+        class="flow-nav__sort"
+        :class="{ 'flow-nav__sort--on': sortMode === sm }"
+        :data-testid="`flow-sort-${sm}`"
+        :title="sortTitle(sm)"
+        @click="sortMode = sm"
+      >{{ sm === 'recent' ? '🕐' : sm === 'unread' ? '🔴' : '🔤' }}</button>
+    </div>
 
     <div class="flow-nav__scroll">
       <!-- v14 单一「聊天」列表（三小节退役；行 testid 沿用 flow-session-*） -->
@@ -172,7 +200,7 @@ function submitCreateRoom(): void {
             <span
               v-if="dupNames.has(s.name)"
               class="flow-nav__suffix"
-              :title="s.id"
+              :title="`${s.id}${s.lastActivityAt ? ' · ' + new Date(s.lastActivityAt).toLocaleString() : ''}`"
               data-testid="flow-dup-suffix"
             >#{{ shortRoomId(s.id) }}</span>
             <span v-if="s.teamTag" class="flow-nav__teamtag">{{ s.teamTag }}</span>
@@ -338,6 +366,13 @@ function submitCreateRoom(): void {
   background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; outline: none;
   &:focus { border-color: var(--primary); }
 }
+.flow-nav__sorts { display: flex; gap: 4px; margin: 0 12px 6px; }
+.flow-nav__sort {
+  height: 20px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 5px;
+  background: transparent; color: var(--text-muted); font-size: 11px; cursor: pointer; line-height: 1;
+  &:hover { color: var(--text-primary); }
+}
+.flow-nav__sort--on { border-color: var(--primary); background: var(--bg-secondary); }
 .flow-nav__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 8px; }
 .flow-nav__sec { margin-bottom: 8px; }
 .flow-nav__sec-head {
