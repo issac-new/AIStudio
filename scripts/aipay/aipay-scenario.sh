@@ -192,6 +192,7 @@ if step_reached ba; then
   fi
   rm -f "/tmp/mx-rfd-remote.$$"
   if [[ $need_push == 1 ]]; then
+    mkdir -p "$(dirname "$DIRECTOR_CLONE/$RFD_DOC")"   # mx-clean 全清后目录本体不存在（run6 实锤）
     cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/$RFD_DOC"
     # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法提交落错分支、
     # push 空推/非快进暴毙，需求书进不了 origin/main、reqgate 判读的还是旧版；失败记问题单
@@ -242,6 +243,7 @@ if step_reached reqgate; then
     fi
     # 写冻结标记（AC 清单提取 + 涉敏结论）并推送
     FREEZE_LOCAL="$DIRECTOR_CLONE/$(freeze_doc)"
+    mkdir -p "$(dirname "$FREEZE_LOCAL")"   # mx-clean 九目录全清后目录本体不存在（run6 实锤）
     {
       echo "# ${RFD_ID} G1 冻结标记"
       echo
