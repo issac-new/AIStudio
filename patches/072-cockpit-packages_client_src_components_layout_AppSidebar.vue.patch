@@ -1,6 +1,6 @@
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -1,523 +1,545 @@
+@@ -1,523 +1,543 @@
 -<script setup lang="ts">
 -import PageSidebar from "./PageSidebar.vue";
 -import { usePageSidebarState } from "@/composables/usePageSidebar";
@@ -563,8 +563,6 @@
 +const selectedKey = computed(() => {
 +  return route.name as string;
 +});
-+// overlay: 响应式超管判定（authStore 优先，回退 localStorage 快照）
-+const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
 +const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
 +const isDesktopShell = computed(
 +  () =>

@@ -41,6 +41,11 @@
 060-test-matrix-message-actions.patch
 070-cockpit-packages_client_src_App.vue.patch
 071-cockpit-packages_client_src_router_index.ts.patch
+# 072 修（2026-10-01 构建闸）：重生成版 + 侧终态曾带两份 isSuperAdmin 声明（519
+#      折入时重复叠加，第二份在 selectedKey 块后）——干净基线重放后 AppSidebar
+#      SFC 编译即炸（vite:vue Identifier already declared），全链构建阻断。
+#      删第二份，+1,545→+1,543；干净重放→构建✓。系列内 072 是最后触碰该文件
+#      的补丁（519/537 均已退役折入），无下游锚点牵连。
 072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch
 078-server-kanban-workspace-files.patch
 080-echarts-dep.patch
