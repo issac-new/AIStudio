@@ -71,6 +71,13 @@ router.post('/dispatch', async (ctx) => {
       ctx.body = { ok: false, reason: 'slo_budget_exhausted', detail }
       return
     }
+    // 决策规则拒派（乙6）：DecisionRuleError 声明的"REST 侧 409"必须落地——漏映射时
+    // 策略拒派以 500/internal_error 形态出现，调用方拿不到规则 id 与原因。
+    if ((err as { name?: string } | null)?.name === 'DecisionRuleError') {
+      ctx.status = 409
+      ctx.body = { ok: false, reason: 'decision_rule_denied', detail }
+      return
+    }
     const transport = /ECONNREFUSED|ETIMEDOUT|ECONNRESET|EPIPE|handshake|ws closed|unreachable/i.test(detail)
     ctx.status = transport ? 503 : 500
     ctx.body = { ok: false, reason: transport ? 'engine_unreachable' : 'internal_error', detail }

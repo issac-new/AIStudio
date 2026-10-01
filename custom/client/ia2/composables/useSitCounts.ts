@@ -3,7 +3,7 @@
 // 数据源全走既有 store：workspace.tasks / buildWaiting / loopStore.loops /
 // chatStore.sessions ∪ matrixRoom.sortedRooms / teamRegistry.accounts /
 // cockpit.fleetSessions。pinia 单例——多处 useStore 无重复成本。
-import { computed, ref, watch } from 'vue'
+import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
 import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -32,8 +32,11 @@ export function useSitCounts() {
   const teamRegistry = useTeamRegistryStore()
   const kanbanStore = useKanbanStore()
   const platformsStore = usePlatformsStore()
-  // 网关探测轮询随首个态势消费方启动（retain 引用计数，shell 生命周期内常驻）
+  // 网关探测轮询随首个态势消费方启动（retain 引用计数）。retain 必须与 release 配对：
+  // 本组合式函数每次调用 +1，消费方（SitDetailPanel 等）随面板反复挂载，只增不减会
+  // 让计数单调累积、末客卸载后轮询永不停止（与 useSharedArm 的平衡语义对齐）。
   platformsStore.retain()
+  if (getCurrentScope()) onScopeDispose(() => platformsStore.release(), true)
   const now = useNowTick()
 
   /** matrix 客户端已建立连接=本人在线（在线三数里「人」的底线真值） */

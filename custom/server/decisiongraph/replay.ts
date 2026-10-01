@@ -64,7 +64,9 @@ export function listSnapshots(): Array<{ file: string; ts: number }> {
   }
 }
 
-function pruneSnapshots(): void {
+/** 快照裁剪（保留最新 SNAP_MAX 份；导出供守门测试直接驱动——曾只经 snapshotNow
+ *  内部调用，测试无法触达=裁剪逻辑零覆盖）。 */
+export function pruneSnapshots(): void {
   const snaps = listSnapshots()
   for (const s of snaps.slice(0, Math.max(0, snaps.length - SNAP_MAX))) {
     try { rmSync(s.file) } catch { /* 删失败留待下轮 */ }
@@ -91,6 +93,8 @@ export async function replayDecisions(atMs: number): Promise<ReplayResult> {
     let out = ''
     const timer = setTimeout(() => child.kill('SIGKILL'), 15000)
     child.stdout.on('data', (d: Buffer) => { out += d.toString() })
+    // stderr 必须消费：python 警告撑满管道缓冲会让子进程阻塞到超时被杀，回放恒空
+    child.stderr.on('data', () => {})
     child.on('error', () => { clearTimeout(timer); res([]) })
     child.on('close', () => {
       clearTimeout(timer)
@@ -103,6 +107,7 @@ export async function replayDecisions(atMs: number): Promise<ReplayResult> {
       }
       res([])
     })
+    child.stdin.on('error', () => {})
     child.stdin.end()
   })
   return { at: atMs, snapshotTs: latest.ts, lagMs: atMs - latest.ts, decisions }

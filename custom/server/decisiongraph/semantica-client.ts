@@ -35,8 +35,12 @@ export function studioKgPath(): string {
 export function semanticaPython(): string | null {
   const env = process.env.SEMANTICA_PYTHON?.trim()
   if (env) return existsSync(env) ? env : null
-  const def = join(homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'python')
-  return existsSync(def) ? def : null
+  // POSIX（venv/bin/python）与 Windows（venv/Scripts/python.exe）双布局探测，缺席降级
+  const venv = join(homedir(), '.hermes', 'hermes-agent', 'venv')
+  for (const cand of [join(venv, 'bin', 'python'), join(venv, 'scripts', 'python.exe')]) {
+    if (existsSync(cand)) return cand
+  }
+  return null
 }
 
 /** bridge 脚本路径（custom/server/decisiongraph/semantica-bridge.py）。 */
@@ -67,6 +71,10 @@ const defaultRunner: BridgeRunner = (python, args, input, timeoutMs) =>
       else reject(new Error(`bridge exit ${code}: ${err.slice(-300)}`))
     })
     if (input !== null) child.stdin.write(input)
+    // EPIPE 兜底：python 提前退出且 stdin 还有未刷写数据时，stdin 的 error 事件无人
+    // 监听会变成 uncaughtException → upstream http.ts 的 FATAL shutdown 整个 server 退出。
+    // 结果判定统一走 close 事件，这里只吞错。
+    child.stdin.on('error', () => {})
     child.stdin.end()
   })
 

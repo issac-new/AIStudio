@@ -27,7 +27,7 @@ GIT_AUTHOR_DATE="1600000000 +0000" GIT_COMMITTER_DATE="1600000000 +0000" \
   git -C "$DIRECTOR_CLONE" commit -qm "旧稿（2020 年）"
 echo "fresh" > "$DIRECTOR_CLONE/docs/analysis/AN-NEW-analysis.md"
 git -C "$DIRECTOR_CLONE" add -A && git -C "$DIRECTOR_CLONE" commit -qm "本轮新稿"
-git -C "$DIRECTOR_CLONE" branch -q origin/main 2>/dev/null || git -C "$DIRECTOR_CLONE" update-ref refs/remotes/origin/main HEAD
+# 只建 remote-tracking ref：git branch -q origin/main 会造出名为 origin/main 的本地分支（语义混淆留脏 ref）
 git -C "$DIRECTOR_CLONE" update-ref refs/remotes/origin/main HEAD
 
 # 仅提取 repo_has 函数定义（不 source 全库——避免其初始化副作用）

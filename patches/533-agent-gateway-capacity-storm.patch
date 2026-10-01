@@ -2,7 +2,7 @@ diff --git a/gateway/run_busy.py b/gateway/run_busy.py
 index 89cadb02a82e..2210c977b33a 100644
 --- a/gateway/run_busy.py
 +++ b/gateway/run_busy.py
-@@ -229,6 +229,56 @@ class GatewayBusySessionMixin:
+@@ -229,6 +229,84 @@ class GatewayBusySessionMixin:
          from hermes_cli.active_sessions import active_session_limit_message
          return active_session_limit_message(active_count, max_sessions)
  
@@ -25,9 +25,30 @@ index 89cadb02a82e..2210c977b33a 100644
 +                "Capacity retry queue full (%d); dropping message for %s",
 +                len(pending), session_key)
 +            return False
-+        pending.append((time.monotonic(), event, source, session_key))
++        now = time.monotonic()
++        # Age anchor + re-refusal backoff keyed on the event identity: a cross-process
++        # refusal (slots held by another gateway process or a CLI exec) comes back
++        # through handle_message and re-enqueues as a NEW entry, so both the age limit
++        # and the retry pacing must survive that round trip — otherwise the pump spins
++        # with zero backoff and MAX_AGE never fires (24h review P1/P2).
++        since_map = getattr(self, "_capacity_retry_since", None)
++        if since_map is None:
++            since_map = self._capacity_retry_since = {}
++        first_seen = since_map.get(id(event))
++        if first_seen is None:
++            since_map[id(event)] = now
++            not_before = now
++        else:
++            not_before = now + self.CAPACITY_RETRY_POLL_SEC
++        if len(since_map) > self.CAPACITY_RETRY_MAX_PENDING * 2:
++            # Delivered events never come back; age out their anchors to stay bounded.
++            for k in [k for k, v in since_map.items() if now - v > self.CAPACITY_RETRY_MAX_AGE_SEC]:
++                since_map.pop(k, None)
++        pending.append((first_seen if first_seen is not None else now, event, source, session_key, not_before))
 +        pump = getattr(self, "_capacity_retry_task", None)
 +        if pump is None or pump.done():
++            if pump is not None and not pump.cancelled():
++                pump.exception()  # retrieve a dead pump's exception; no orphaned-task warning
 +            self._capacity_retry_task = asyncio.create_task(self._capacity_retry_pump())
 +        return True
 +
@@ -35,23 +56,30 @@ index 89cadb02a82e..2210c977b33a 100644
 +        """Re-dispatch capacity-rejected events once a slot frees (FIFO, age-bounded)."""
 +        queue = getattr(self, "_capacity_retry_queue", None) or []
 +        while queue:
-+            enqueued_ts, event, source, session_key = queue[0]
-+            if time.monotonic() - enqueued_ts > self.CAPACITY_RETRY_MAX_AGE_SEC:
++            enqueued_ts, event, source, session_key, not_before = queue[0]
++            now = time.monotonic()
++            if now - enqueued_ts > self.CAPACITY_RETRY_MAX_AGE_SEC:
 +                queue.pop(0)
++                since_map = getattr(self, "_capacity_retry_since", None)
++                if since_map is not None:
++                    since_map.pop(id(event), None)
 +                logger.warning(
 +                    "Capacity retry for %s expired after %.0fs; dropping",
 +                    session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)
++                continue
++            if now < not_before:
++                await asyncio.sleep(min(self.CAPACITY_RETRY_POLL_SEC, not_before - now))
 +                continue
 +            if self._active_session_limit_message(session_key) is not None:
 +                await asyncio.sleep(self.CAPACITY_RETRY_POLL_SEC)
 +                continue
 +            queue.pop(0)
-+            adapter = self._delivery_adapter_for(source)
-+            if adapter is None:
-+                logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
-+                continue
 +            logger.info("Capacity retry: re-dispatching queued message for %s", session_key)
 +            try:
++                adapter = self._delivery_adapter_for(source)
++                if adapter is None:
++                    logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
++                    continue
 +                await adapter.handle_message(event)
 +            except Exception:
 +                logger.warning("Capacity retry dispatch failed for %s", session_key, exc_info=True)
@@ -103,7 +131,7 @@ index 6bf97c7730a1..1fbc12d16a4a 100644
      _silence_global_gateway_hooks(monkeypatch)
      runner = _make_runner(max_concurrent_sessions=1)
      _occupy_session(runner, "busy")
-@@ -112,9 +116,68 @@ def test_new_session_gets_clean_error_at_active_session_limit(monkeypatch):
+@@ -112,9 +116,91 @@ def test_new_session_gets_clean_error_at_active_session_limit(monkeypatch):
      with patch.object(GatewayRunner, "_handle_message_with_agent", fail_if_agent_runs):
          result = asyncio.run(runner._handle_message(event))
  
@@ -148,6 +176,29 @@ index 6bf97c7730a1..1fbc12d16a4a 100644
 +    asyncio.run(scenario())
 +    assert re_dispatched == [event]  # queued work is re-dispatched, never dropped
 +    assert runner._capacity_retry_queue == []
++
++
++def test_capacity_retry_preserves_age_and_backs_off(monkeypatch):
++    """Re-refused events keep their ORIGINAL first-refusal age (the 20min cap must
++    survive the handle_message round trip) and re-enqueue with a backoff deadline so
++    a cross-process saturation cannot spin the pump with zero delay."""
++    _silence_global_gateway_hooks(monkeypatch)
++    runner = _make_runner(max_concurrent_sessions=1)
++    _occupy_session(runner, "busy")  # keep the pump in its sleep branch: it must not drain entries mid-test
++    event = _make_event(chat_id="new")
++
++    async def enqueue_twice():
++        # enqueue needs a running loop (the pump is scheduled via create_task);
++        # two entries for the same event model the cross-process refusal round trip
++        assert runner._queue_capacity_retry(event, None, "new") is True
++        assert runner._queue_capacity_retry(event, None, "new") is True
++
++    asyncio.run(enqueue_twice())
++    first = runner._capacity_retry_queue[0]
++    second = runner._capacity_retry_queue[-1]
++    assert second[0] == first[0]  # age anchored at the FIRST refusal
++    assert second[4] > first[4]  # re-refusal backs off behind the first entry
++    assert len(runner._capacity_retry_queue) == 2
 +
 +
 +def test_non_capacity_refusal_still_replies(monkeypatch):
