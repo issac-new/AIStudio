@@ -207,8 +207,21 @@ mx_create_room() { # <token> <name> [invite-csv] → room_id
   local token="$1" name="$2" invite="${3:-}"
   local invites='[]'
   [[ -n "$invite" ]] && invites=$(echo "$invite" | tr ',' '\n' | jq -R . | jq -s .)
-  mx "$token" POST createRoom "$(jq -n --arg n "$name" --argjson i "$invites" \
-    '{name:$n, preset:"private_chat", invite:$i}')" | jq -r '.room_id'
+  # 建群邀请分批（2026-10-01 run6 实锤）：synapse 对 createRoom 单请求 invite 数有
+  # 未文档化上限——17 邀报 M400 "Cannot invite so many users at once"，且 rc_invites_per_room
+  # 等放宽到 1000 后仍拦（3/10 邀过、17 邀拒的分界实验）。首请求只带前 8 人，其余逐个
+  # /invite 补齐；全量预邀语义不变，漏邀由 room-invite-gap 真值核验兜底。
+  local first rest rid u _miss=0
+  first=$(echo "$invites" | jq -c '.[:8]')
+  rest=$(echo "$invites" | jq -c '.[8:]')
+  rid=$(mx "$token" POST createRoom "$(jq -n --arg n "$name" --argjson i "$first" \
+    '{name:$n, preset:"private_chat", invite:$i}')" | jq -r '.room_id')
+  [[ "$rid" == '!'* ]] || { echo "$rid"; return 1; }
+  for u in $(echo "$rest" | jq -r '.[]'); do
+    mx "$token" POST "rooms/$rid/invite" "$(jq -nc --arg u "$u" '{user_id:$u}')" >/dev/null 2>&1 || _miss=$((_miss+1))
+  done
+  (( _miss == 0 )) || echo "[mx_create_room] 补邀 $_miss 人失败（room=$rid，真值核验将把关）" >&2
+  echo "$rid"
 }
 mx_join() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1 || true; }
 
