@@ -388,10 +388,12 @@ if RUN_BODY:
         for _l in _ilog_p.read_text(encoding='utf-8').splitlines():
             if _l.startswith('ISSUE|'):
                 _p = _l.split('|', 3)
-                _seen_i.add(f'{_p[1]}·{_p[2]}')
+                if len(_p) >= 3:  # 畸形短行跳过，勿让 IndexError 中止整个报告生成
+                    _seen_i.add(f'{_p[1]}·{_p[2]}')
             elif _l.startswith('DISP|'):
                 _p = _l.split('|', 3)
-                _seen_d.add(f'{_p[1]}·{_p[2]}')
+                if len(_p) >= 3:
+                    _seen_d.add(f'{_p[1]}·{_p[2]}')
         _iss_n, _disp_n = len(_seen_i), len(_seen_d)
     _gov_cards = [
         ('协作事件总数', _gov_stats['collab_total'], 'scenario.log 三源核验留痕行'),
@@ -487,11 +489,12 @@ if RUN_BODY:
         for _l in _ilog.read_text(encoding='utf-8').splitlines():
             if _l.startswith('ISSUE|'):
                 _p = _l.split('|', 3)
-                if f'{_p[1]}·{_p[2]}' not in _iss:
+                if len(_p) >= 3 and f'{_p[1]}·{_p[2]}' not in _iss:
                     _iss.append(f'{_p[1]}·{_p[2]}')
             elif _l.startswith('DISP|'):
                 _p = _l.split('|', 3)
-                _disp.add(f'{_p[1]}·{_p[2]}')
+                if len(_p) >= 3:
+                    _disp.add(f'{_p[1]}·{_p[2]}')
     _open = [k for k in _iss if k not in _disp]
     gaps_show = [(f'未闭环问题单（{len(_open)}/{len(_iss)}）', '；'.join(_open) if _open else '无——全部已处置（DISP 回写台账）')]
     for _gi, _gd in [tuple(x.split('=', 1)) for x in FACTS.get('limitation', '').split(';;') if '=' in x]:

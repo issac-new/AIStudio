@@ -18,7 +18,9 @@ kv() { # key value…
 
 : > "$OUT"
 # 代码线（服务面）
-CODE_LINE=$(git -C "$WT" log -1 --format='%h %ci %s' 2>/dev/null | head -c 160)
+# || true 守卫必须给整条命令替换：set -euo pipefail 下 git 失败（WT 缺失/换轮未带 FACTS_WT）
+# 会让赋值语句失败并静默终止整个脚本、零输出（24h 审查实锤），与 :31 SERIES_N 的守卫对齐
+CODE_LINE=$(git -C "$WT" log -1 --format='%h %ci %s' 2>/dev/null | head -c 160 || true)
 [ -n "$CODE_LINE" ] && kv code_line "overlay fix/run5-approve-harness-b（run5 治理逆境根治批：审批双通道/PATH 盲/判词模板自毒/在线三数投影/并发闸）@ ${CODE_LINE}；studio dist=worktree 源直建（vite.config.overlay.wt 别名重锚）"
 # 注入与构建
 SERIES_N=$(grep -cv '^\s*#' "$WT/patches/series" 2>/dev/null || echo 0)
