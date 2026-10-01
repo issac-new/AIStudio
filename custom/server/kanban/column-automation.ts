@@ -79,6 +79,14 @@ export interface ColumnAutomation {
   timing: AutomationTiming
   autoAdvanceOnSuccess: boolean
   steps: AutomationStep[]
+  /**
+   * 列证据契约（2026-10-01 吸收批 #16：routa requiredArtifacts 模型吸收）：
+   * 卡片过该列时应挂的工件类型清单（如 freeze.md/testlog/report.md）。
+   * 声明后 /match 与配置读取返回该清单，供门禁侧核「缺件不过列」；
+   * 本层不拦截（证据核验属闸门域——与六闸 G1-G6 判词真值化同构）。
+   * 缺省=该列无证据契约（现状语义不变）。
+   */
+  requiredArtifacts?: string[]
 }
 
 export interface ColumnTransitionTrigger {
@@ -87,6 +95,8 @@ export interface ColumnTransitionTrigger {
   matchedTiming: 'entry' | 'exit'
   steps: AutomationStep[]
   autoAdvanceOnSuccess: boolean
+  /** 列证据契约透传（见 ColumnAutomation.requiredArtifacts）。 */
+  requiredArtifacts?: string[]
 }
 
 let cached: Record<string, ColumnAutomation> | null = null
@@ -157,6 +167,14 @@ export function loadColumnAutomations(): Record<string, ColumnAutomation> {
             timing: d.timing === 'exit' || d.timing === 'both' ? d.timing : 'entry',
             autoAdvanceOnSuccess: d.autoAdvanceOnSuccess === true,
             steps,
+            // 列证据契约（#16 routa 吸收）：字符串数组白名单（≤8 条、每条 ≤64 字符）
+            ...(Array.isArray((def as { requiredArtifacts?: unknown }).requiredArtifacts)
+              ? {
+                  requiredArtifacts: ((def as { requiredArtifacts?: unknown[] }).requiredArtifacts ?? [])
+                    .filter((a): a is string => typeof a === 'string' && a.length > 0 && a.length <= 64)
+                    .slice(0, 8),
+                }
+              : {}),
           }
         } catch (err) {
           console.warn(`[columns] 列条目 ${name} 解析失败，跳过：${err instanceof Error ? err.message : err}`)
@@ -193,7 +211,13 @@ export function matchColumnTransition(
     if (!cfg || typeof cfg !== 'object' || !Array.isArray(cfg.steps) || cfg.steps.length === 0) return
     const timing = cfg.timing
     const fires = timing === 'both' || timing === matchedTiming
-    if (fires) out.push({ column, matchedTiming, steps: cfg.steps, autoAdvanceOnSuccess: cfg.autoAdvanceOnSuccess })
+    if (fires) out.push({
+      column,
+      matchedTiming,
+      steps: cfg.steps,
+      autoAdvanceOnSuccess: cfg.autoAdvanceOnSuccess,
+      ...(cfg.requiredArtifacts?.length ? { requiredArtifacts: cfg.requiredArtifacts } : {}),
+    })
   }
   if (from && to) {
     if (from === to) {

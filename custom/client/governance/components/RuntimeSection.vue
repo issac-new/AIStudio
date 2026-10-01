@@ -23,6 +23,33 @@ const slo = ref<SloReport | null>(null)
 const cost = ref<CostSummary | null>(null)
 const error = ref('')
 
+// ── 模型用量排行榜（2026-10-01 吸收批 #15：multica usage-leaderboard 吸收）──
+// 数据源=上游 /api/studio/usage/stats（30 天窗口 model_usage：sessions/token 三分）；
+// 按 input+cache_read 折算总吞吐排序，条形长度=占比。失败/空数据如实隐藏小节。
+interface ModelUsageRow {
+  model: string
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  sessions: number
+}
+const modelBoard = ref<ModelUsageRow[]>([])
+
+async function loadModelBoard(): Promise<void> {
+  try {
+    const res = await fetch('/api/studio/usage/stats', { headers: { Authorization: `Bearer ${localStorage.getItem('hermes_api_key') ?? ''}` } })
+    if (!res.ok) return
+    const data = (await res.json()) as { model_usage?: ModelUsageRow[] }
+    modelBoard.value = (data.model_usage ?? [])
+      .slice()
+      .sort((a, b) => (b.input_tokens + b.cache_read_tokens) - (a.input_tokens + a.cache_read_tokens))
+      .slice(0, 6)
+  } catch { /* 榜缺席非致命——小节隐藏 */ }
+}
+
+const boardMax = computed(() =>
+  Math.max(1, ...modelBoard.value.map(m => m.input_tokens + m.cache_read_tokens)))
+
 function pct(v: number | null): string {
   return v == null ? '—' : `${(v * 100).toFixed(1)}%`
 }
@@ -54,6 +81,7 @@ async function refresh(): Promise<void> {
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
+  void loadModelBoard()
 }
 
 onMounted(() => void refresh())
@@ -182,6 +210,23 @@ onMounted(() => void refresh())
         </template>
         <div v-else class="runtime__empty">…</div>
       </section>
+
+      <!-- ⑤ 模型用量排行榜（multica usage-leaderboard 吸收；30 天窗口） -->
+      <section v-if="modelBoard.length" class="runtime__card" data-testid="runtime-model-board">
+        <h4 class="runtime__card-title">{{ L?.modelBoardTitle ?? '模型用量排行' }}<span class="runtime__window">30d</span></h4>
+        <div v-for="m in modelBoard" :key="m.model" class="runtime__boardrow" :data-testid="`model-board-${m.model}`">
+          <span class="runtime__boardname" :title="m.model">{{ m.model }}</span>
+          <span class="runtime__boardbar">
+            <span
+              class="runtime__boardfill"
+              :style="{ width: `${Math.max(2, Math.round(((m.input_tokens + m.cache_read_tokens) / boardMax) * 100))}%` }"
+            />
+          </span>
+          <span class="runtime__boardval" :title="`in ${fmtTokens(m.input_tokens)} · cache ${fmtTokens(m.cache_read_tokens)} · out ${fmtTokens(m.output_tokens)}`">
+            {{ fmtTokens(m.input_tokens + m.cache_read_tokens) }} · {{ m.sessions }}s
+          </span>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -198,6 +243,19 @@ onMounted(() => void refresh())
   gap: 8px;
 }
 .runtime__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* 模型用量排行榜（#15 multica 吸收） */
+.runtime__boardrow { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.runtime__boardname {
+  flex-shrink: 0; width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; font-family: var(--font-mono, monospace); color: var(--text-primary, #d7dae0);
+}
+.runtime__boardbar {
+  flex: 1; height: 8px; border-radius: 4px; background: var(--bg-secondary, #f3f4f6); overflow: hidden;
+}
+.runtime__boardfill { display: block; height: 100%; border-radius: 4px; background: var(--primary, #3b82f6); }
+.runtime__boardval { flex-shrink: 0; font-size: 10px; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; }
+
 .runtime__title {
   margin: 0;
   font-size: 12px;
