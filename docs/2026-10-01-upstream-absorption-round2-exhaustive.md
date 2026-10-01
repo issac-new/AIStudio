@@ -1,6 +1,13 @@
 # upstream 技术组件吸收分析·补全版：穷尽盘点与推演交叉对照
 
 日期：2026-10-01　　性质：调研设计文档（只读分析，未动代码）　　owner：本轮调研会话
+
+> **执行终态记档（2026-10-01 深夜，用户裁定「帮我判断形成方案推进落实」后实施）**：
+> §六近期 6 项经源码核实后按四批处置——
+> **A 批（建议 1 上游自用四件）已落地合 main 05dc790c**：Web 终端收编三段链（ANNEXED_LEGACY+VIEW_LOADERS+侧栏条目）、Spotlight 底部会话全文深搜升级行（openSessionSearch 接线，此前零调用方）、页头账户区版本号钮+changelog 弹窗（上游 11 语言数据接线）、petdex/agentManager 门控一致性（S3 既定语义补消费方）+features.ts 重复键清理；守门 9 例新增+邻域回归 460/460 全绿。
+> **B 批（建议 2 消息面治理）两件落地合 main da28a1ec**：系统事件聚合折叠（连续 ≥3 条状态事件折叠一行可展开，element-web 合并行范式）+permalink 改 studio 内链（#/app/s/room/:roomId?event=:id 编码）+房间路由 event 参数直跳（jumpToEvent 为 C6 修过的全链路）；守门 6 例新增+matrix-chat 47/47 全绿。tab 溢出一件（建议 2 第三件）记档：目标组件定位不确定（疑似上游 ChatPanel 会话 tab，需 patch 路线），不为显得有进展而猜改。
+> **C/D 批（建议 4/5/6）源码核实后判定不重复造轮**：待审批汇聚=注意力条 blocked/review/triage 梯队+决策行+铃铛双计数已实质覆盖（首轮 #7 跨 profile 审批中心在）；web 房间深链选中=MatrixRoomCanvas routeRoomId→selectRoom 既有（D3 兜底），B2 已补强 event 直跳；通道状态卡=RuntimeSection 凭证池卡（provider/failed/failureDetail+失败徽标）+SLO 分档成功率+p95+错误预算已在（首轮 runtime-caps 批），实时冷却/优先级编辑维持首轮 #17 记档待环境。
+> 建议 3（房间列表卫生）未动，留待下批。
 盘点范围：`upstream/` 全部 12 个组件 + `overlay/` 现状基线 + 推演语料（V5 正本、V3 生命周期、aipaydev 全链报告、ncwk-sim-mux evidence 全部报告与审计）
 上位文档：《2026-10-01-upstream-absorption-analysis.md》（下称首轮）——27 项清单已全部收口，逐项终态见其附录对账表。本文是它的补全版：首轮是抽样精读，本文按"无遗漏"要求做穷尽盘点，并新增两个首轮没有的视角——**hermes-studio 上游暴露面 diff**（上游有而 studio 没用起来的面）与**推演改进点×吸收源交叉对照**（需求侧驱动）。
 
