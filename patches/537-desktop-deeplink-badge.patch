@@ -1,0 +1,105 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index b34de71..7de8b2b 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -150,6 +150,50 @@ function showMainWindow() {
+   showWindowWithFade(true)
+ }
+ 
++// ── SwarmStudio deep link（swarmstudio://）+ dock badge（overlay 537，2026-10-01
++//    吸收批 #8：element-web protocol.ts/badge.ts 吸收）──
++// 安全口径同 element-web：深链只接受白名单路径（/app 树与 /matrix），query 透传、
++// fragment 透传，其余静默丢弃；badge 仅 darwin（app.badgeCount），其它平台记 debug。
++const DEEP_LINK_SCHEME = 'swarmstudio'
++const DEEP_LINK_PATH_ALLOWLIST = /^\/(app(\/|$)|matrix(\/|$))/
++
++function handleDeepLink(rawUrl: string): void {
++  try {
++    const parsed = new URL(rawUrl)
++    if (parsed.protocol !== `${DEEP_LINK_SCHEME}:`) return
++    const target = `${parsed.pathname}${parsed.search}`
++    if (!DEEP_LINK_PATH_ALLOWLIST.test(target)) {
++      console.warn('[deep-link] rejected non-allowlisted path:', target)
++      return
++    }
++    if (!mainWindow || mainWindow.isDestroyed()) return
++    showMainWindow()
++    void mainWindow.webContents
++      .executeJavaScript(`window.location.hash = ${JSON.stringify(`#${target}`)}`)
++      .catch(error => console.warn('[deep-link] navigation failed:', error))
++  } catch (error) {
++    console.warn('[deep-link] unparseable url:', rawUrl, error)
++  }
++}
++
++function findDeepLinkArg(argv: readonly string[]): string | null {
++  for (const arg of argv) {
++    if (arg.startsWith(`${DEEP_LINK_SCHEME}://`)) return arg
++  }
++  return null
++}
++
++ipcMain.handle('hermes-desktop:set-badge-count', (_event, rawCount?: unknown) => {
++  const n = typeof rawCount === 'number' && Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0
++  if (process.platform === 'darwin') {
++    app.badgeCount = n
++    return true
++  }
++  // Windows/Linux overlay 图标需要 renderer 侧画布配合（element-web favicon 管线），
++  // 本层先行提供通道；未支持平台如实返回 false，renderer 不做假呈现。
++  return false
++})
++
+ function quitApp() {
+   appLifecycle.quit()
+ }
+@@ -1453,9 +1497,21 @@ function runDesktopApp() {
+       quitApp()
+       return
+     }
++    // Windows/Linux 深链入口：second-instance 尾参携带 swarmstudio:// URL
++    const deepLink = findDeepLinkArg(argv)
++    if (deepLink) {
++      handleDeepLink(deepLink)
++      return
++    }
+     showMainWindow()
+   })
+ 
++  // macOS 深链入口（open-url 在 whenReady 前后均可能到达，注册放锁之后）
++  app.on('open-url', (event, url) => {
++    event.preventDefault()
++    handleDeepLink(url)
++  })
++
+   app.whenReady().then(async () => {
+     if (QUIT_EXISTING) {
+       quitApp()
+@@ -1473,6 +1529,14 @@ function runDesktopApp() {
+       console.warn('[desktop] failed to migrate the Windows login item:', error)
+     }
+     installMicrophonePermissionHandler()
++    // SwarmStudio 深链协议注册（537 吸收批 #8）
++    try {
++      if (!app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME)) {
++        console.warn('[deep-link] protocol registration returned false (may already be claimed)')
++      }
++    } catch (error) {
++      console.warn('[deep-link] protocol registration failed:', error)
++    }
+     createTray()
+     await createWindow()
+     await initializeDesktopBrowser().catch(error => {
+diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
+index ebb7a15..cba2a69 100644
+--- a/packages/desktop/src/preload/index.ts
++++ b/packages/desktop/src/preload/index.ts
+@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+   restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
+   selectRuntimeDirectory: (defaultPath?: string): Promise<string | null> => ipcRenderer.invoke('hermes-desktop:select-runtime-directory', defaultPath),
+   notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),
++  // overlay[537]：dock 徽章（未读计数→app.badgeCount；非 darwin 平台主进程返回 false）
++  setBadgeCount: (count: number): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:set-badge-count', count),
+   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:open-external-url', url),
+   openChatWindow: (sessionId: string, profile?: string): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-chat-window', sessionId, profile),
+   // overlay[wm]: 驾驶舱操作页弹出独立窗口（routePath 含 standalone=1 query）
