@@ -888,11 +888,15 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   [[ -n "$AC_LIST" ]] || { echo "ISSUE|uat-no-ac|director|需求书未提取到 AC 清单" >> "$EVID_DIR/issues.log"; fail "UAT 无 AC 清单可验（G1 冻结缺陷）"; }
   UAT_TS=$(( $(date +%s) * 1000 ))
   dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。bella 将逐条核对。" "$(agent_mxid fanfan)"
-  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "UAT-EVIDENCE" "$UAT_TS"; then
+  # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
+  # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
+  # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
+  # 到达与取样都按行首正则判。
+  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "^UAT-EVIDENCE" "$UAT_TS"; then
     UAT_OK=1; UAT_MISS=""
     # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
     UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
-      '[.[] | select(.sender == $s and ((.content.body//"") | contains("UAT-EVIDENCE")))] | last | .content.body // ""')
+      '[.[] | select(.sender == $s and ((.content.body//"") | test("^\\s*UAT-EVIDENCE")))] | last | .content.body // ""')
     AC_MISS=$(uat_ac_covered "$AC_LIST" "$UAT_BODY")
     if [[ -n "$AC_MISS" ]]; then
       UAT_OK=0; UAT_MISS="${UAT_MISS}UAT-EVIDENCE 未逐条覆盖 AC（缺 ${AC_MISS}）；"

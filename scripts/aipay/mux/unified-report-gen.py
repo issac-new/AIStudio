@@ -280,6 +280,40 @@ if RUN_BODY:
                '旅程线四查（标题逐字 26/26·把关齐·完成步图齐·无假重复·引用无缺·闸门与 state 一致）已过；'
                '真实性叠加层见下方"独立审计改判"节——闸门状态与 state 一致 ≠ 实质通过，判词以审计复核为准。</div>')
 
+    # ── 全流程推演逻辑与协作顺序（演示总纲：先讲清"为什么这样跑"，再看 26 步实操）──
+    out.append('<h2>全流程推演逻辑与协作顺序（演示总纲）</h2>')
+    out.append(
+        '<div class="meta"><b>推演逻辑一句话</b>：以真实支付需求（收单商户双端小程序支付收银台）驱动，'
+        '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
+        '按 26 步标准流程跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
+        '<b>人是意图持有者、仲裁者与最终验证者；AI 员工主理执行；六道硬闸守住意图对齐与不可逆决策；'
+        '一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验</b>——治幻觉的硬手段。</div>')
+    out.append(
+        '<h4>① 协作发生在哪：六层链路（自上而下=一次任务的完整旅程）</h4>'
+        '<table class="gap"><tr><th style="width:150px">层</th><th>谁在协作</th><th>协作载体</th></tr>'
+        '<tr><td>① 人机入口层</td><td>15 人经 studio 驾驶舱登录（matrix 免密→JWT→只见本账号档案）</td><td>驾驶舱 /app 单面（补遗⑤）</td></tr>'
+        '<tr><td>② 分布式协作层</td><td>人 @AI 助理派单；AI 之间回执/缺陷回流/审批请求</td><td>Matrix 群（消息即指令，双兜底回执）</td></tr>'
+        '<tr><td>③ 调度与看板层</td><td>28 kanban 一板一库、team 围栏、认领即 spawn agent</td><td>单 gateway :8801 多路复用 42 profile</td></tr>'
+        '<tr><td>④ 能力层</td><td>四类 AI 员工共用 swarm yuan 生成的 xxx-dev 技能（认知地图/规格先行/代码纪律/知识池/质量门禁五步）</td><td>worktree 工作区</td></tr>'
+        '<tr><td>⑤ 产物与证据层</td><td>冻结→系分→概设→排期→分支→测试→验收→审计→复盘全程入仓</td><td>GitHub aipaydev 中央仓</td></tr>'
+        '<tr><td>⑥ 记忆沉淀层</td><td>复盘经验入家族记忆库，下轮同需求自动回忆（历史偏差红杠 G2 检查项⑤）</td><td>hindsight :8888</td></tr></table>')
+    out.append(
+        '<h4>② 协作顺序：谁发起 → 谁执行 → 谁把关 → 产物去哪（26 步六阶段）</h4>'
+        '<table class="gap"><tr><th style="width:120px">阶段（步）</th><th style="width:170px">人（发起/把关）</th><th style="width:230px">AI 员工（执行）</th><th>硬闸与产物</th></tr>'
+        '<tr><td>筹备 1-6</td><td>admin 建账号；负责人登记资产/组织</td><td>装配脚本自检（30 token/围栏/板库真值）</td><td>冒烟准出（在线三数阻断位）→ registry/org 入仓</td></tr>'
+        '<tr><td>需求 7-9</td><td><b>bella</b>（BA）私信交需求</td><td>fanfan-agent 建群全量预邀、接派发</td><td><b>G1 人审上锁</b>（冻结件 AC 机械化）→ 建群 → 派发指令（证据纪律随单）</td></tr>'
+        '<tr><td>分析 10-13</td><td>wei/mei（lead）分诊确认</td><td>fanfan-agent 系统分析（三清单+SMART）；chen/hu/lin/xiao 四路系分</td><td>主卡+七跟踪卡落板；tasklist v9 入仓（1b2fce3）；双凭证反向核验</td></tr>'
+        '<tr><td>设计 14-16</td><td><b>arch</b>（架构师）治理评审</td><td>fanfan-agent 汇总复核产概设</td><td><b>G2 架构评审</b>（本轮真实打回环：首评 FAIL 真缺项→修订→复评 PASS）→ 主任务归档</td></tr>'
+        '<tr><td>研发 17-19</td><td>—</td><td>chen/hu/lin/xiao 并行开发（xxx-dev 技能五步）；qi/fei 独立测试+缺陷回流</td><td><b>G3 编码门禁</b>（testlog 随分支）→ <b>G4 独立验证</b>（非实现者测试）→ integration 合并</td></tr>'
+        '<tr><td>发布验收 20-23</td><td><b>导演 HumanGate</b> 批准发布；<b>bella</b> UAT 逐条验收</td><td>fanfan-agent 七项准出评审（同 commit 复现台架实测）</td><td><b>G5 发布准出</b>（回滚阈值/灰度/观察窗）→ REL 三卡 → <b>UAT AC 逐条判词</b>（7/7 全过）</td></tr>'
+        '<tr><td>治理 22-26</td><td><b>audit</b> 独立签名线</td><td>台账/审计/复盘/报告</td><td><b>G6 复盘</b>（三段式+DISP 100% 记账）→ 记忆沉淀 → 本报告</td></tr></table>')
+    out.append(
+        '<h4>③ 协作的三条铁律（演示讲解口径）</h4>'
+        '<div class="meta">'
+        '1) <b>消息即指令</b>：@某人-agent 的群消息才触发执行，去重键=任务 ID+RUN——历史轮产物不算完成，须重新执行或核验并回执；'
+        '2) <b>完成必带双凭证</b>：结论行 commit=<提交号> card=<建卡工具返回的真实卡 ID>，两个凭证都会被反向核验（查不到=虚报打回，本轮 G2 打回环与 UAT 退回均由此机制真实触发）；'
+        '3) <b>闸门 FAIL 优先</b>：房间行与评审卡双源判词合并，任一 FAIL 即拦（判词语义经 run2 误判与 run5 模板自毒两代根治）。</div>')
+
     # 新特性实证（run4 起数据驱动：按本轮证据文件存在性挂接实拍锚——缺图如实标"本轮未出数"，
     # 文案锚=V5 §七 终态表产品事实；run2 版硬编码叙事已废）
     _feat_defs = [
