@@ -14,6 +14,7 @@
 // workspacePath 映射，见 zcode-projection.ts:39/54）。
 // 引擎离线：REST 503 reason=engine_unreachable，面板显示引擎离线占位（不炸）。
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import IdeWorkflowRunLines from './IdeWorkflowRunLines.vue'
@@ -30,6 +31,13 @@ const props = defineProps<{ workspace?: string | null }>()
 
 const ide = useIdeStore()
 const zcode = useZcodeProjection()
+const router = useRouter()
+
+/** IDE↔运行面交叉跳转（P11 Phase 2）：会话锚 → IDE 工作台深链（?session=）。
+ *  双消费场景：运行中心「工作流」页签里点会话名 → 跳进 IDE 该会话上下文。 */
+function jumpIdeSession(sessionId: string): void {
+  void router.push({ path: '/app/ide', query: { session: sessionId } })
+}
 
 /** 有效工作区：显式 prop 优先 → ide.workspace 回落（null=无工作区，档案区降级） */
 const ws = computed(() => props.workspace ?? ide.workspace)
@@ -147,7 +155,14 @@ function statusText(s?: string): string {
         当前没有正在跑的工作流运行。会话里 agent 调用工作流工具（或 @zcode 派单触发）后，运行行实时出现在这里。
       </p>
       <div v-for="entry in sessionEntries" :key="entry.sessionId" class="ide-wf-session">
-        <p class="ide-wf-session-title" :title="entry.sessionId">{{ entry.title }}</p>
+        <p class="ide-wf-session-title" :title="entry.sessionId">
+          {{ entry.title }}
+          <button
+            class="ide-wf-jump" title="在 IDE 工作台打开该会话"
+            :data-testid="`wf-jump-ide-${entry.sessionId}`"
+            @click.stop="jumpIdeSession(entry.sessionId)"
+          >⌨</button>
+        </p>
         <IdeWorkflowRunLines
           :activity="entry.activity"
           :session-id="entry.sessionId"
@@ -236,6 +251,11 @@ function statusText(s?: string): string {
 .ide-wf-error { font-size: 11px; color: var(--error-color, #d03050); margin: 4px 0; word-break: break-all; }
 .ide-wf-session { display: flex; flex-direction: column; gap: 2px; }
 .ide-wf-session-title { font-size: 11px; color: var(--text-color-2, #666); margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-wf-jump {
+  border: none; background: transparent; color: var(--text-color-3, #999); cursor: pointer;
+  font-size: 11px; padding: 0 3px; margin-left: 4px;
+  &:hover { color: var(--primary-color, #2080f0); }
+}
 .ide-wf-events { border-left: 2px solid var(--border-color, #e0e0e0); padding: 4px 8px; margin: 2px 0 4px 8px; }
 .ide-wf-event-list { margin: 0; padding: 0; list-style: none; font-size: 10px; color: var(--text-color-2, #666);
   li { font-family: var(--font-family-mono, monospace); line-height: 1.6; } }
