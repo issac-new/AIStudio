@@ -810,5 +810,6 @@ PYEOF
 }
 
 matrix_adapter_degraded() { # <gatewayLog>：近端日志有降级症状？
-  tail -60 "$1" 2>/dev/null | grep -q "skipping platform 'matrix'"
+  # 症状词覆盖三面（run6 实锤补全）：skip 型 / requirements-not-met 型 / adapter-failed 型
+  tail -120 "$1" 2>/dev/null | grep -qE "skipping platform 'matrix'|requirements not met|adapter creation failed"
 }
