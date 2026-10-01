@@ -158,8 +158,11 @@ if _RUN_ID and JOURNEY_HTML.exists():
     _jh = JOURNEY_HTML.read_text(encoding='utf-8')
     _sm = re.search(r'<style>(.*?)</style>', _jh, re.S)
     if _sm:
-        JOURNEY_STYLE = ('\n/* ── 旅程线正文样式（run 模式随正文注入，后定义覆盖同名 demo 类）── */\n'
-                         + _sm.group(1))
+        # 必须自带 <style> 包裹：本串拼在演示线 </style> 之后的 </head> 前——
+        # 裸 CSS 落进 head 会被浏览器当正文文本整段渲染在页首（run5 09-26 用户
+        # 实拍实锤"报告顶部一屏全是 CSS 源码"）。包独立 style 块，后位覆盖同名类。
+        JOURNEY_STYLE = ('\n<style>\n/* ── 旅程线正文样式（run 模式随正文注入，后定义覆盖同名 demo 类）── */\n'
+                         + _sm.group(1) + '\n</style>\n')
     _m = re.search(r'<body[^>]*>(.*)</body>', _jh, re.S)
     if _m:
         RUN_BODY = _m.group(1)
