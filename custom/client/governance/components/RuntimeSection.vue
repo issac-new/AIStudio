@@ -9,6 +9,7 @@ import {
   fetchUsage, fetchSlo, fetchCostSummary,
   type UsageReport, type SloReport, type CostSummary,
 } from '@/custom/governance/api/governance'
+import { fetchCredentialProviders, fetchCronRuns, type CredentialProviderRow, type CronRunRow } from '@/custom/ia2/api/runtime-caps'
 import { governanceMessages } from '@/custom/governance/i18n'
 
 const i18nCtx = useI18n()
@@ -82,7 +83,15 @@ async function refresh(): Promise<void> {
     error.value = e instanceof Error ? e.message : String(e)
   }
   void loadModelBoard()
+  // 凭证池（#17）+ cron 运行史（#7）：暗能力只读代理；失败/通道缺席=null 隐藏小节
+  void fetchCredentialProviders().then(v => { credentials.value = v }).catch(() => undefined)
+  void fetchCronRuns(8).then(v => { cronRuns.value = v }).catch(() => undefined)
 }
+
+const credentials = ref<CredentialProviderRow[] | null>(null)
+const cronRuns = ref<CronRunRow[] | null>(null)
+
+const failedCredentials = computed(() => (credentials.value ?? []).filter(c => c.failed))
 
 onMounted(() => void refresh())
 </script>
@@ -227,6 +236,36 @@ onMounted(() => void refresh())
           </span>
         </div>
       </section>
+
+      <!-- ⑥ 凭证池（#17 吸收批 9：hermes auth list 只读代理；run4 通道风暴对策面） -->
+      <section v-if="credentials && credentials.length" class="runtime__card" data-testid="runtime-credentials">
+        <h4 class="runtime__card-title">
+          {{ L?.credentialsTitle ?? '凭证池' }}
+          <span class="runtime__window">{{ credentials.length }} providers</span>
+          <span v-if="failedCredentials.length" class="runtime__chip is-bad" data-testid="runtime-credentials-failed">
+            ✕ {{ failedCredentials.length }} {{ L?.credentialsFailed ?? '失败' }}
+          </span>
+        </h4>
+        <div class="runtime__credrow" v-for="c in credentials.slice(0, 10)" :key="c.provider"
+          :data-testid="`credential-${c.provider}`" :title="c.failureDetail ?? c.provider">
+          <span class="runtime__boardname">{{ c.provider }}</span>
+          <span class="runtime__tag" :class="c.failed ? 'is-bad' : 'is-ok'">
+            {{ c.count }} {{ L?.credentialsCount ?? '凭证' }}{{ c.failed ? ' · auth failed' : '' }}
+          </span>
+        </div>
+      </section>
+
+      <!-- ⑦ cron 运行史（#7 吸收批 9：hermes cron runs 只读代理） -->
+      <section v-if="cronRuns && cronRuns.length" class="runtime__card" data-testid="runtime-cron-runs">
+        <h4 class="runtime__card-title">{{ L?.cronRunsTitle ?? '定时任务运行史' }}<span class="runtime__window">recent</span></h4>
+        <div class="runtime__credrow" v-for="r in cronRuns.slice(0, 8)" :key="r.runId + r.ts"
+          :data-testid="`cron-run-${r.runId}`">
+          <span class="runtime__boardname">{{ r.job }}</span>
+          <span class="runtime__tag" :class="r.status === 'completed' ? 'is-ok' : r.status === 'failed' ? 'is-bad' : ''">{{ r.status }}</span>
+          <span class="runtime__boardval">{{ r.ts.slice(5, 16).replace('T', ' ') }}</span>
+          <span class="runtime__boardval">{{ r.source }}</span>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -255,6 +294,9 @@ onMounted(() => void refresh())
 }
 .runtime__boardfill { display: block; height: 100%; border-radius: 4px; background: var(--primary, #3b82f6); }
 .runtime__boardval { flex-shrink: 0; font-size: 10px; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; }
+
+/* 凭证池/cron 运行史行（#7/#17 吸收批 9） */
+.runtime__credrow { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 
 .runtime__title {
   margin: 0;
