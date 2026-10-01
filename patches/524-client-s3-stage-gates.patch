@@ -1,14 +1,51 @@
+--- a/packages/client/src/components/hermes/chat/ChatPanel.vue
++++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
+@@ -53,6 +53,8 @@
+ import StarIcon from "@/components/common/StarIcon.vue";
+ import ChatInput from "./ChatInput.vue";
+ import RealtimeVoiceStage from "./RealtimeVoiceStage.vue";
++// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
++import { features } from "@/custom/features";
+ import ConversationMonitorPane from "./ConversationMonitorPane.vue";
+ import MessageList from "./MessageList.vue";
+ import SessionListItem from "./SessionListItem.vue";
+@@ -3387,7 +3389,7 @@
+     </div>
+     <Teleport to="body">
+       <RealtimeVoiceStage
+-        v-if="showRealtimeVoice"
++        v-if="showRealtimeVoice && features.voice"
+         @close="closeRealtimeVoice"
+       />
+     </Teleport>
+
+--- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
++++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
+@@ -61,10 +61,10 @@
+       pane-class="connections-tab-pane"
+       @update:value="updateTab"
+     >
+-      <NTabPane name="app" :tab="t('connections.tabs.app')" display-directive="if">
++      <NTabPane v-if="features.connectionsExtras" name="app" :tab="t('connections.tabs.app')" display-directive="if">
+         <AppConnectionsPanel />
+       </NTabPane>
+-      <NTabPane name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
++      <NTabPane v-if="features.connectionsExtras" name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
+         <McuDevicesPanel />
+       </NTabPane>
+       <NTabPane v-if="isSuperAdmin" name="devices" :tab="t('connections.tabs.devices')" display-directive="if">
+
 --- a/packages/client/src/views/hermes/ModelsView.vue
 +++ b/packages/client/src/views/hermes/ModelsView.vue
-@@ -5,6 +5,8 @@
+@@ -4,6 +4,8 @@
+ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
  import { useRoute, useRouter } from 'vue-router'
  import { NButton, NSelect, NTabPane, NTabs, useMessage } from 'naive-ui'
- import { useI18n } from 'vue-i18n'
 +// overlay[s3]（补遗⑤）：语音设置/图像生成辅助默认关（VITE_CUSTOM_VOICE/IMAGE_ASSIST 再开）
 +import { features } from '@/custom/features'
+ import { useI18n } from 'vue-i18n'
  import AuxiliaryModelsPanel from '@/components/hermes/models/AuxiliaryModelsPanel.vue'
  import CombinationModelsPanel from '@/components/hermes/models/CombinationModelsPanel.vue'
- import JevSettingsPanel from '@/components/hermes/models/JevSettingsPanel.vue'
 @@ -221,7 +223,7 @@
              <ProvidersPanel />
            </div>
@@ -18,14 +55,16 @@
            <AuxiliaryModelsPanel />
          </NTabPane>
          <NTabPane name="combination" :tab="t('models.combinationTitle')">
---- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
-+++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
-@@ -3,6 +3,8 @@
- import { computed, ref, watch } from 'vue'
- import { NTabPane, NTabs } from 'naive-ui'
- import { useI18n } from 'vue-i18n'
-+// overlay[s3]（补遗⑤）：connections 的社媒 app/ESP32 mcu tab 默认关（VITE_CUSTOM_CONNECTIONS_EXTRAS 再开）
-+import { features } from '@/custom/features'
- import { useRoute, useRouter } from 'vue-router'
- import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsPanel.vue'
- import McuDevicesPanel from '@/components/hermes/connections/McuDevicesPanel.vue'
+@@ -230,10 +232,10 @@
+         <NTabPane name="jev" tab="JEV">
+           <JevSettingsPanel :profile="selectedProfile" />
+         </NTabPane>
+-        <NTabPane name="stt" :tab="t('settings.voice.sttProvidersTitle')">
++        <NTabPane v-if="features.voice" name="stt" :tab="t('settings.voice.sttProvidersTitle')">
+           <VoiceSettings :key="`stt-${selectedProfile}`" kind="stt" />
+         </NTabPane>
+-        <NTabPane name="tts" :tab="t('settings.voice.ttsProvidersTitle')">
++        <NTabPane v-if="features.voice" name="tts" :tab="t('settings.voice.ttsProvidersTitle')">
+           <VoiceSettings :key="`tts-${selectedProfile}`" kind="tts" />
+         </NTabPane>
+       </NTabs>

@@ -17,6 +17,8 @@ vi.mock('naive-ui', () => ({
   NPopconfirm: { name: 'NPopconfirm', template: '<div><slot /></div>' },
   NTooltip: { name: 'NTooltip', template: '<div><slot /></div>' },
   NSelect: { name: 'NSelect', template: '<select />' },
+  // 0.7.26 终端视图新增消费面（测试适配，非功能变更）
+  NSpin: { name: 'NSpin', template: '<div><slot /></div>' },
   useMessage: () => ({ error: vi.fn() }),
 }))
 

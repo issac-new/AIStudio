@@ -83,16 +83,22 @@ diff --git a/packages/server/src/modules/studio/repositories/usage-store.ts b/pa
      getDb()!.prepare(`DELETE FROM ${TABLE} WHERE session_id = ?`).run(sessionId)
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
-@@ -38,7 +38,7 @@
-   updateSessionStats as localUpdateSessionStats,
- } from '../public/sessions'
- import { buildDbExportHistory, ExportCompressor } from '../services/context-compressor/export-compressor'
--import { getUnpricedHermesUsageSessions, getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch } from '../public/sessions'
-+import { getUnpricedHermesUsageSessions, getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch, getUsageRounds } from '../public/sessions'
- import {
-   SESSION_CATEGORY_NAME_MAX_LENGTH,
-   createSessionCategory,
-diff --git a/packages/server/src/modules/studio/routes/sessions.ts b/packages/server/src/modules/studio/routes/sessions.ts
+@@ -1420,6 +1420,15 @@
+   ctx.body = result
+ }
+ 
++// G8 每轮用量（IDE 遥测面板轮表数据源）：按 run_id 聚合 session_usage 行
++export async function usageRuns(ctx: any) {
++  const session = localGetSession(ctx.params.id)
++  if (denySessionAccess(ctx, session)) return
++  const rawLimit = parseInt(String(ctx.query?.limit ?? '50'), 10)
++  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 50
++  ctx.body = { rounds: getUsageRounds(ctx.params.id, limit) }
++}
++
+ export async function rename(ctx: any) {
+   const { title } = ctx.request.body as { title?: string }
+   if (!title || typeof title !== 'string') {
 --- a/packages/server/src/modules/studio/routes/sessions.ts
 +++ b/packages/server/src/modules/studio/routes/sessions.ts
 @@ -36,6 +36,7 @@
