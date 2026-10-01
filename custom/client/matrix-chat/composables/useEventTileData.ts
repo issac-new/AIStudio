@@ -76,7 +76,11 @@ export function useEventTileData(options: EventTileDataOptions): EventTileData {
     const roomId = event.getRoomId()
     const evtId = event.getId()
     if (!roomId || !evtId) return '#'
-    return `https://matrix.to/#/${roomId}/${evtId}`
+    // 2026-10-01 吸收二期 B2：permalink 改 studio 内链（hash 路由 + event 查询
+    // 参数，MatrixRoomCanvas 消费直跳定位）——matrix.to 外链在本产品内不可消费
+    // （跳到公共跳转站，取证链断）；roomId/eventId 含 !/: 必须编码。
+    const base = `${window.location.origin}${window.location.pathname}`
+    return `${base}#/app/s/room/${encodeURIComponent(roomId)}?event=${encodeURIComponent(evtId)}`
   })
 
   const roomId = computed(() => event.getRoomId() ?? null)

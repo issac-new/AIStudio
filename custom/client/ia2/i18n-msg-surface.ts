@@ -39,6 +39,9 @@ const MSG_SURFACE_TEXT = {
     historyLocked: '运行中只读',
     historyLockedHint: '当前回合进行中——历史动作在回合结束后可用（minimax 语义）',
     deepSearchSessions: '在会话消息全文里继续搜 →',
+    stateEventsCollapsed: '条系统事件',
+    expand: '展开',
+    collapse: '收起',
   },
   en: {
     jumpToUnread: 'Jump to unread',
@@ -72,6 +75,9 @@ const MSG_SURFACE_TEXT = {
     historyLocked: 'Read-only while running',
     historyLockedHint: 'A turn is in progress — history actions unlock when it settles (minimax semantics)',
     deepSearchSessions: 'Search inside session messages →',
+    stateEventsCollapsed: 'system events',
+    expand: 'Expand',
+    collapse: 'Collapse',
   },
 } as const
 

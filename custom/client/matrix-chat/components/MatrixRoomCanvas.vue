@@ -50,6 +50,19 @@ watch(() => clientStore.syncState, (s) => {
   }
 })
 
+// 事件深链直跳（2026-10-01 吸收二期 B2，element-web permalink 范式）：房间路由
+// 带 ?event=<eventId> 时定位到该消息（jumpToEvent 为 C6 修过的全链路——事件未
+// 加载先回读上下文再滚动高亮）。消费时机=房间选中后，否则打到空时间线。
+const routeEventId = computed(() => {
+  const value = route.query.event
+  return typeof value === 'string' && value.trim() ? value : null
+})
+watch([routeEventId, () => roomStore.activeRoomId], ([eventId, roomId]) => {
+  if (eventId && roomId && roomStore.activeRoom) {
+    void roomStore.jumpToEvent(eventId)
+  }
+}, { immediate: true })
+
 // 未读线程聚合跳转的消费端（2026-10-01 消息面批）：通知中心置
 // pendingOpenThreadPanel 后跳房；房间真正选中（activeRoom 有值）时开线程
 // 面板并清标记。直接在 selectRoom 时机开会在房间未挂载时打空。
