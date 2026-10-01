@@ -62,7 +62,7 @@ if (!ONLY || ONLY === 'gov') {
         if (await btn.count() === 0) { console.log('  [warn]', name, 'btn missing', attempt); continue }
         await btn.first().scrollIntoViewIfNeeded().catch(() => {})
         await btn.first().click().catch(() => {})
-        ok = await page.locator('.ia-gov__docview-hd b', { hasText: frag }).first()
+        ok = await page.locator('.gov-docs__docview-hd b', { hasText: frag }).first()
           .waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false)
       } else {
         ok = await page.locator('[data-testid^="gov-doc-"]').first().isVisible().catch(() => false)
