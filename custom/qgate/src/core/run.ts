@@ -14,6 +14,7 @@ import { runLlmExecutor } from '../executors/llm.js'
 import { runScopeExecutor } from '../executors/scope.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 import { cacheKeyFor, cacheGet, cachePut, markCached } from './cache.js'
+import { inputGlobsOf, snapshotForGlobs, snapshotsEqual } from './snapshot.js'
 
 export interface RunInput {
   spec: GateSpec
@@ -81,7 +82,8 @@ export async function runGate(input: RunInput): Promise<RunResult> {
   // §49 缓存适用面：仅 argv 确定性 executor（command/llm）参与——files/scope/ontology/
   // persistence 的输入是工作区文件内容，非 git 目录下 cache key 不随内容漂移（demo-l0
   // 实测逮住：改登记文件后命中旧证据）。git 项目内 treeHash 锚可兜底，但统一收窄最稳。
-  const cacheable = spec.spec.executors.every((e) => e.type === 'command' || e.type === 'llm')
+  // v0.3：元门（meta）的输入包含其他门判定，同样不参与缓存。
+  const cacheable = spec.spec.meta !== true && spec.spec.executors.every((e) => e.type === 'command' || e.type === 'llm')
   const cacheKey = cacheable
     ? cacheKeyFor(spec, spec.spec.executors, { qgateDir, workspace, commit: git.commit, treeHash: git.treeHash, changedPaths })
     : null
@@ -93,6 +95,10 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     cached = true
     evidence = markCached(hit.evidence, cacheKey!)
   }
+
+  // 输入快照（v0.3 §3.2）：执行前对门声明输入面取 sha256 索引，执行后再取一次比对。
+  const snapGlobs = inputGlobsOf(spec)
+  const preSnapshot = !cached && snapGlobs.length > 0 ? snapshotForGlobs(workspace, snapGlobs) : {}
 
   if (!cached) {
     for (const executor of spec.spec.executors) {
@@ -114,6 +120,16 @@ export async function runGate(input: RunInput): Promise<RunResult> {
   }
 
   const decision = decide(spec, evidence)
+
+  // 执行后快照：与执行前比对得 inputsStable（门自身没有改写自己的输入）。
+  // 缓存命中路径无新执行，快照字段留空——新鲜度判定回退原三锚。
+  let inputSnapshot: Record<string, string> | undefined
+  let inputsStable: boolean | undefined
+  if (!cached && snapGlobs.length > 0) {
+    const postSnapshot = snapshotForGlobs(workspace, snapGlobs)
+    inputSnapshot = postSnapshot
+    inputsStable = snapshotsEqual(preSnapshot, postSnapshot)
+  }
 
   // P5 豁免：FAIL/INCONCLUSIVE 且存在有效 waiver 且 policy 允许 → WAIVED（v0.1 §17/§20）。
   // 原始判定保留在 failureSummary/conditions 里——豁免不抹除事实。
@@ -147,6 +163,8 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     treeHash: git.treeHash,
     changedPaths,
     failureSummary: decision.failureSummary,
+    inputSnapshot,
+    inputsStable,
   }
   saveRun(paths, run, evidence)
   return { run, evidence, decision }

@@ -80,7 +80,7 @@ export function parseClaim(raw: unknown): Claim | null {
 function parseExecutor(raw: unknown): ExecutorSpec | null {
   if (!isRecord(raw)) return null
   const id = validId(raw.id)
-  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm', 'scope'] as const)
+  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm', 'scope', 'traceability', 'register'] as const)
   const evidenceType = validId(raw.evidenceType)
   if (!id || !type || !evidenceType) return null
   const out: ExecutorSpec = { id, type, evidenceType }
@@ -94,6 +94,15 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     if (expectExit !== undefined) out.expectExit = expectExit
     const timeoutMs = num(raw.timeoutMs)
     if (timeoutMs !== undefined && timeoutMs > 0) out.timeoutMs = timeoutMs
+    if (raw.rawOutput !== undefined) {
+      if (!isRecord(raw.rawOutput)) return null
+      const format = enumOf(raw.rawOutput.format, ['tap', 'junit'] as const)
+      const file = str(raw.rawOutput.file)
+      const minTotal = num(raw.rawOutput.minTotal)
+      if (!format || !file || file.length === 0) return null
+      if (minTotal !== undefined && minTotal <= 0) return null
+      out.rawOutput = { format, file, ...(minTotal !== undefined ? { minTotal } : {}) }
+    }
   } else if (type === 'persistence') {
     const scenario = str(raw.scenario)
     if (scenario === undefined || scenario.length === 0) return null
@@ -121,6 +130,26 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const mode = enumOf(raw.mode, ['scope', 'acceptance'] as const)
     if (!mode) return null
     out.mode = mode
+    if (raw.taskIntent !== undefined) {
+      if (!isRecord(raw.taskIntent)) return null
+      const file = str(raw.taskIntent.file)
+      if (!file || file.length === 0) return null
+      const acknowledgedSha256 = str(raw.taskIntent.acknowledgedSha256)
+      out.taskIntent = {
+        file,
+        ...(acknowledgedSha256 !== undefined ? { acknowledgedSha256 } : {}),
+        ...(raw.taskIntent.require === true ? { require: true } : {}),
+      }
+    }
+  } else if (type === 'traceability') {
+    const requirementsFile = str(raw.requirementsFile)
+    if (requirementsFile !== undefined) out.requirementsFile = requirementsFile
+  } else if (type === 'register') {
+    const register = enumOf(raw.register, ['debt', 'assumptions', 'decisions'] as const)
+    if (!register) return null
+    out.register = register
+    const registerFile = str(raw.registerFile)
+    if (registerFile !== undefined) out.registerFile = registerFile
   }
   return out
 }
@@ -157,6 +186,8 @@ export function parseGateSpec(raw: unknown): GateSpec | null {
   const required = strList(spec.evidence.required)
   if (!required || required.length === 0) return null
 
+  const meta = spec.meta === true ? true : undefined
+
   if (!isRecord(spec.policy)) return null
   const failure = enumOf(spec.policy.failure, POLICY_ACTIONS)
   const inconclusive = enumOf(spec.policy.inconclusive, POLICY_ACTIONS)
@@ -184,6 +215,7 @@ export function parseGateSpec(raw: unknown): GateSpec | null {
     spec: {
       domain, claims, appliesWhen, triggers, executors,
       evidence: { required },
+      meta,
       policy: { failure, inconclusive, allowWaiver, maxAgeHours },
     },
   }
@@ -285,6 +317,19 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
   }
   const conditions = strList(raw.conditions, 20)
   if (verdict === 'CONDITIONAL' && (!conditions || conditions.length === 0)) return null
+  let inputSnapshot: Record<string, string> | undefined
+  if (raw.inputSnapshot !== undefined) {
+    if (!isRecord(raw.inputSnapshot)) return null
+    const keys = Object.keys(raw.inputSnapshot)
+    if (keys.length > 200) return null
+    inputSnapshot = {}
+    for (const k of keys) {
+      const v = str(raw.inputSnapshot[k])
+      if (v === undefined) return null
+      inputSnapshot[k] = v
+    }
+  }
+  const inputsStable = typeof raw.inputsStable === 'boolean' ? raw.inputsStable : undefined
   return {
     runId, gateId, gateVersion, trigger, workspace, startedAt,
     endedAt: num(raw.endedAt),
@@ -295,5 +340,7 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
     treeHash: str(raw.treeHash),
     changedPaths: strList(raw.changedPaths, 500),
     failureSummary: str(raw.failureSummary),
+    inputSnapshot,
+    inputsStable,
   }
 }
