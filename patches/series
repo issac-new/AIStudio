@@ -420,4 +420,4 @@
 534-agent-gateway-outbound-notice-guard.patch
 # 535-client-i18n-tasks-tab-governance.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
 536-client-locales-drift-restore.patch
-537-client-appsidebar-ide-entry.patch
+# 537 退役（2026-10-01 双栏根治 aa3e0bbe）：IDE 一级入口并回 072 整文件版（isIdeShellArea 口径），独立补丁无对象。
