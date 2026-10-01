@@ -475,10 +475,16 @@ export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trail
 
 /**
  * GET /api/hermes/sessions/:id/trace
- * 
+ *
  * Returns Layer 2 trace data for a session.
+ *
+ * 双路径注册（2026-10-01 修复）：上游 0.7.26 的 legacy-app-api 兼容中间件
+ * （modules/studio/middleware/legacy-app-api.ts）把 /api/hermes/sessions/* 全部
+ * 改写为 /api/studio/sessions/*，本路由的旧路径从此永远打不进（Koa 兜底 404，
+ * 8647/8657 实测复现）。补注册 canonical 路径让改写后的请求落地；旧路径保留
+ * 供不经该中间件的调用方（防御性双挂）。
  */
-router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
+async function handleSessionTrace(ctx: any) {
   const sessionId = ctx.params.id
   if (!sessionId) {
     ctx.status = 400
@@ -544,6 +550,9 @@ router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
     ctx.status = 500
     ctx.body = { error: 'Failed to read trace file' }
   }
-})
+}
+
+router.get('/api/hermes/sessions/:id/trace', handleSessionTrace)
+router.get('/api/studio/sessions/:id/trace', handleSessionTrace)
 
 export default router

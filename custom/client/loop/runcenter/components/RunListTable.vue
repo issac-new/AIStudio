@@ -239,6 +239,13 @@ function togglePeek(run: RunSummary): void {
               >
                 <span class="rc-table__peek-chevron" aria-hidden="true" />
               </button>
+              <!-- 来源徽标（P11 Phase 2）：graphId 前缀判据——loop-<id>=循环 run，
+                   其余=图规格 run（workflow/编排）。混排列表一眼区分来源 -->
+              <span
+                class="rc-table__src-badge"
+                :class="row.run.graphId?.startsWith('loop-') ? 'rc-table__src-badge--loop' : 'rc-table__src-badge--graph'"
+                :title="row.run.graphId"
+              >{{ row.run.graphId?.startsWith('loop-') ? '↻' : '⟐' }}</span>
               <span class="rc-table__run-id">{{ row.run.runId }}</span>
             </span>
             <span class="rc-table__graph-id">{{ row.run.graphId }}</span>
@@ -457,6 +464,21 @@ function togglePeek(run: RunSummary): void {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 来源徽标（P11 Phase 2）：↻=循环 run（loop- 前缀）、⟐=图规格 run */
+.rc-table__src-badge {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 10px;
+  background: var(--bg-secondary);
+}
+.rc-table__src-badge--loop { color: #61afef; }
+.rc-table__src-badge--graph { color: #c678dd; }
 .rc-table__graph-id {
   font-size: 11px;
   color: var(--text-muted, var(--color-text-secondary, #878c99));
