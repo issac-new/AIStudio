@@ -23,6 +23,7 @@ import IdeWorkflowPane from './IdeWorkflowPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
 import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
+import IdeTrajectoryPane from '../components/IdeTrajectoryPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 import {
   loadTerminalActions,
@@ -52,7 +53,17 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'terminal', icon: '⌨' },
   { key: 'hooks', icon: '⚓' },
   { key: 'slash', icon: '/' },
+  { key: 'trajectory', icon: '∿' },
 ]
+
+// 漂移期本地字典兜底（i18n-observatory）：locale 词表键 tab_trajectory 尚未
+// 收编进 473 单一事实源，缺键时 t() 回显键名——trajectory 页签 title 走本地字典。
+import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
+const obsTx = useRunSurfaceText()
+function tabTitle(key: IdeSidePaneTab): string {
+  if (key === 'trajectory') return obsTx.value.trajTabTitle
+  return t(`ide.sidePane.tab_${key}`)
+}
 
 // R4 终端 actions（工作区级；MVP localStorage，团队共享归 R5+）
 const termActions = ref<TerminalAction[]>([])
@@ -125,7 +136,7 @@ function focusMainChat(): void {
         :class="{ 'is-active': ide.sidePane.tab === tab.key }"
         :aria-selected="ide.sidePane.tab === tab.key"
         :data-testid="`ide-sidepane-tab-${tab.key}`"
-        :title="t(`ide.sidePane.tab_${tab.key}`)"
+        :title="tabTitle(tab.key)"
         @click="ide.setSidePaneTab(tab.key)"
       >
         <span class="ide-sidepane__tab-icon" aria-hidden="true">{{ tab.icon }}</span>
@@ -216,6 +227,7 @@ function focusMainChat(): void {
       </template>
       <IdeHooksPane v-else-if="ide.sidePane.tab === 'hooks'" class="ide-sidepane__fill" data-testid="ide-sidepane-hooks" />
       <IdeSlashCommandsPane v-else-if="ide.sidePane.tab === 'slash'" class="ide-sidepane__fill" data-testid="ide-sidepane-slash" />
+      <IdeTrajectoryPane v-else-if="ide.sidePane.tab === 'trajectory'" class="ide-sidepane__fill" data-testid="ide-sidepane-trajectory" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">
