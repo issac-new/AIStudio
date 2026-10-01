@@ -207,12 +207,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/InboxView.vue'),
         },
         {
-          // 治理中心（工作页，补功能主清单 2026-09-28）：六闸工件（G1 冻结/概设/
-          // 排期/测试报告/发布说明/UAT/审计/复盘）真仓锚点 + markdown 全文 +
-          // 待裁决评审就地裁决
+          // 治理中心独立路由（2026-10-01 单层页签重构退役整页承载）：治理四分区
+          // 升 /app/board 平级页签后，FlowNavPanel 入口与旧深链经重定向不死链
+          // ——落治理首分区「组织与知识」。
           path: 'gov',
           name: 'ia2.governance',
-          component: () => import('./views/GovernanceView.vue'),
+          redirect: () => ({ name: 'ia2.board', query: { tab: 'gov-org' } }),
         },
         {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓

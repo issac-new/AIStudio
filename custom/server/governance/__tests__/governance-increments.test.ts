@@ -53,11 +53,15 @@ describe('② 状态-事件本体视图（StateModelSection）', () => {
     expect(src).toContain('data-testid="gov-state-model"')
   })
 
-  it('治理视图挂载四区（含本体区）', () => {
-    const src = readFileSync(resolve(ROOT, 'custom/client/ia2/views/GovernanceView.vue'), 'utf8')
-    for (const sec of ['LedgerSection', 'RuntimeSection', 'AuditSection', 'StateModelSection']) {
-      expect(src, `GovernanceView 缺 ${sec} 挂载`).toContain(sec)
+  it('治理视图挂载四区（含本体区）——2026-10-01 单层页签重构：随分区视图迁移', () => {
+    // 台账/本体/运行态在「台账与规则」页签视图
+    const registry = readFileSync(resolve(ROOT, 'custom/client/ia2/views/gov/GovRegistryRulesView.vue'), 'utf8')
+    for (const sec of ['LedgerSection', 'RuntimeSection', 'StateModelSection']) {
+      expect(registry, `GovRegistryRulesView 缺 ${sec} 挂载`).toContain(sec)
     }
+    // 统一审计在「审计与变更」页签视图
+    const audit = readFileSync(resolve(ROOT, 'custom/client/ia2/views/gov/GovAuditChangeView.vue'), 'utf8')
+    expect(audit, 'GovAuditChangeView 缺 AuditSection 挂载').toContain('AuditSection')
   })
 
   it('视图测试 mock 含 fetchStateModel（防 unhandled rejection）', () => {

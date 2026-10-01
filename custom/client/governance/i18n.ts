@@ -110,13 +110,6 @@ export const governanceMessages = {
         severity: { ok: '健康', warn: '观察', alert: '断点', unknown: '无数据' },
         attributionDone: '已归因',
         attributeAction: '归因',
-      govTabs: {
-        overview: '总览',
-        org: '组织与知识',
-        registry: '台账与规则',
-        audit: '审计与变更',
-        docs: '文档评审',
-      },
       decisionGraph: {
         title: '决策图谱',
         sub: '派发/审批/升级/门禁四类决策的落账时间线与因果链（Semantica KG）',
@@ -386,13 +379,6 @@ export const governanceMessages = {
         severity: { ok: 'ok', warn: 'watch', alert: 'breakpoint', unknown: 'no data' },
         attributionDone: 'attributed',
         attributeAction: 'attribute',
-      govTabs: {
-        overview: 'Overview',
-        org: 'Org & Knowledge',
-        registry: 'Registry & Rules',
-        audit: 'Audit & Change',
-        docs: 'Docs & Review',
-      },
       decisionGraph: {
         title: 'Decision Graph',
         sub: 'Timeline and causal chains of dispatch/approval/escalation/gate decisions (Semantica KG)',
