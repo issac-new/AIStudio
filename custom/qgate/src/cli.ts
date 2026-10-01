@@ -13,6 +13,7 @@ import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from 
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
 import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
+import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import type { GateSpec, Trigger } from './core/types.js'
 
@@ -120,9 +121,11 @@ async function main(): Promise<void> {
           ? (changed.length > 0 ? selectGates(enabledGates, changed) : enabledGates)
           : enabledGates.filter((g) => g.metadata.id === target)
       if (toRun.length === 0) fail(target ? `gate not found or disabled: ${target}` : 'missing gateId or --all')
+      // 元门二轮通道（v0.3 §3.3）：meta 门排在普通门之后——它们的输入是其他门的本轮判定。
+      const ordered = [...toRun.filter((g) => g.spec.meta !== true), ...toRun.filter((g) => g.spec.meta === true)]
       let blocking = 0
       const runIds: string[] = []
-      for (const spec of toRun) {
+      for (const spec of ordered) {
         const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed })
         runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
@@ -157,6 +160,8 @@ async function main(): Promise<void> {
       const json = hasFlag(rest, '--json')
       const state = latestRuns(paths)
       const git = fresh ? gitContext(workspace) : undefined
+      // 输入快照重算（v0.3 §3.2）：全门共享一次走树，逐门按 glob 面过滤比对。
+      const sharedFiles = fresh ? listWorkspaceFiles(workspace) : undefined
       const report: Record<string, unknown>[] = []
       for (const g of enabledGates) {
         const entry = state[g.metadata.id]
@@ -165,8 +170,11 @@ async function main(): Promise<void> {
         if (entry) {
           const run = loadRun(paths, entry.runId)
           if (run && fresh && git) {
+            const globs = inputGlobsOf(g)
+            const currentSnapshot = globs.length > 0 ? snapshotForGlobs(workspace, globs, sharedFiles) : undefined
             freshness = isFresh(run, Date.now(), {
               commit: git.commit, treeHash: git.treeHash, changedPaths: git.changedPaths, appliesWhen: g.spec.appliesWhen,
+              inputSnapshot: currentSnapshot,
             }, policy.maxAgeHours ?? 24) ? 'fresh' : 'stale'
           } else if (run) freshness = 'fresh'
         }

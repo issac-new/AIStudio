@@ -3,7 +3,9 @@
 
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
+import { parseRawOutput } from '../core/raw-evidence.js'
 
 const DEFAULT_TIMEOUT_MS = 120_000
 
@@ -78,6 +80,55 @@ export async function runCommandExecutor(
   const code = execResult.code ?? -3
   out.evidence.provenance.exitCode = code
   out.evidence.execution = 'exercised'
+
+  // rawOutput 交叉核验（v0.3 §3.1）：退出码之外，内核独立重解析原始测试报告重算计数。
+  // exit 0 但报告含失败 / 总数低于 minTotal 静默空跑 / 报告缺失或畸形 → error（INCONCLUSIVE）。
+  const raw = executor.rawOutput
+  if (raw) {
+    const reportPath = resolveWithin(cwd, raw.file)
+    let text: string | null = null
+    try {
+      if (existsSync(reportPath)) text = readFileSync(reportPath, 'utf8')
+    } catch {
+      text = null
+    }
+    if (text === null) {
+      out.evidence.result = 'error'
+      out.evidence.summary = `rawOutput report missing: ${raw.file} (exit ${code} alone is not evidence — emit the report or drop the declaration)`
+      return out
+    }
+    let counts
+    try {
+      counts = parseRawOutput(raw.format, text)
+    } catch (e) {
+      out.evidence.result = 'error'
+      out.evidence.summary = `rawOutput ${raw.format} cross-check rejected: ${(e as Error).message}`
+      return out
+    }
+    const tally = `${counts.parser}: ${counts.total} total/${counts.passed} passed/${counts.failed} failed/${counts.skipped} skipped`
+    if (code === expectExit && counts.failed > 0) {
+      out.evidence.result = 'error'
+      out.evidence.summary = `exit ${code} but report has ${counts.failed} failed (${tally}) — exit code alone is not evidence`
+      return out
+    }
+    if (code === expectExit && raw.minTotal !== undefined && counts.total < raw.minTotal) {
+      out.evidence.result = 'error'
+      out.evidence.summary = `silent no-op suspected: exit ${code} but only ${counts.total} tests < minTotal ${raw.minTotal} (${tally})`
+      return out
+    }
+    out.evidence.artifacts = [raw.file]
+    if (code === expectExit) {
+      out.evidence.result = 'pass'
+      out.evidence.independence = 'implementation-derived'
+      out.evidence.summary = `exit ${code} (expected ${expectExit}); kernel cross-checked ${tally}`
+    } else {
+      out.evidence.result = 'fail'
+      out.evidence.independence = 'implementation-derived'
+      out.evidence.summary = `exit ${code} (expected ${expectExit}); kernel recomputed ${tally}; stderr tail: ${execResult.stderr.slice(-300) || '(empty)'}`
+    }
+    return out
+  }
+
   if (code === expectExit) {
     out.evidence.result = 'pass'
     out.evidence.independence = 'implementation-derived'
