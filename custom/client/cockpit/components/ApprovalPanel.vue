@@ -13,6 +13,29 @@ import {
   type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier, type SpotCheckItem,
 } from '../api/approvals'
 import { approvalsSpotcheckMessages } from '../i18n-approvals'
+import { fetchApprovalSuggestions, type ApprovalSuggestion } from '@/custom/ia2/api/runtime-caps'
+
+// ── 放行建议（吸收批 9 #7）：展开才拉取（冷启扫库 60-70s，勿随面板挂载即取）──
+const suggestionsOpen = ref(false)
+const suggestionsLoading = ref(false)
+const suggestionsError = ref<string | null>(null)
+const suggestions = ref<ApprovalSuggestion[]>([])
+
+async function toggleSuggestions(): Promise<void> {
+  suggestionsOpen.value = !suggestionsOpen.value
+  if (suggestionsOpen.value && !suggestions.value.length && !suggestionsError.value) {
+    suggestionsLoading.value = true
+    try {
+      const list = await fetchApprovalSuggestions(6)
+      suggestions.value = list ?? []
+      if (list === null) suggestionsError.value = '生成失败或 runtime 通道缺席（稍后重试）'
+    } catch (e) {
+      suggestionsError.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      suggestionsLoading.value = false
+    }
+  }
+}
 
 const props = withDefaults(defineProps<{
   /** 轮询间隔 ms；0 = 不轮询（外部控制刷新） */
@@ -289,6 +312,36 @@ defineExpose({ refresh })
         </tbody>
       </table>
     </section>
+
+    <!-- 放行建议（2026-10-01 吸收批 9 #7：hermes approvals suggest 只读代理）。
+         冷启扫库 60-70s（后端长缓存 600s）——折叠默认收起，展开才触发拉取；
+         建议 numbered 展示 pattern×count，采纳动作走 CLI 须人工执行（代理永不落盘）。 -->
+    <section class="approval-panel__section approval-panel__suggestions">
+      <button type="button" class="approval-panel__sugg-toggle" data-testid="approval-suggestions-toggle"
+        @click="toggleSuggestions">
+        {{ suggestionsOpen ? '▾' : '▸' }} 放行建议（从历史审批提炼可入白名单的模式）
+      </button>
+      <template v-if="suggestionsOpen">
+        <div v-if="suggestionsLoading" class="approval-sugg__state" data-testid="approval-suggestions-loading">
+          正在扫描历史审批生成建议（冷启约 1 分钟，之后 10 分钟内直接命中缓存）…
+        </div>
+        <div v-else-if="suggestionsError" class="approval-sugg__state approval-sugg__state--err" data-testid="approval-suggestions-error">
+          {{ suggestionsError }}
+        </div>
+        <div v-else-if="!suggestions.length" class="approval-sugg__state" data-testid="approval-suggestions-empty">
+          近期无可提炼的放行模式。
+        </div>
+        <div v-else class="approval-sugg__list" data-testid="approval-suggestions-list">
+          <div v-for="s in suggestions" :key="s.n" class="approval-sugg__row" :data-testid="`approval-suggestion-${s.n}`">
+            <span class="approval-sugg__n">{{ s.n }}</span>
+            <span class="approval-sugg__pattern" :title="(s.examples ?? []).join('\n')">{{ s.pattern }}</span>
+            <span class="approval-sugg__count">×{{ s.count }}</span>
+            <span class="approval-sugg__kind">{{ s.kind }}</span>
+          </div>
+          <p class="approval-sugg__hint">采纳：在 agent 会话执行 /approvals 或 CLI approvals suggest --apply N（本面板只读不落盘）。</p>
+        </div>
+      </template>
+    </section>
   </div>
 </template>
 
@@ -299,6 +352,22 @@ defineExpose({ refresh })
   gap: 10px;
   min-height: 0;
 }
+
+/* 放行建议（吸收批 9 #7） */
+.approval-panel__suggestions { border-top: 1px solid var(--border-color); padding-top: 8px; }
+.approval-panel__sugg-toggle {
+  border: none; background: none; color: var(--text-secondary); font-size: 12px;
+  cursor: pointer; font-family: inherit; padding: 2px 0;
+  &:hover { color: var(--text-primary); }
+}
+.approval-sugg__state { padding: 10px 4px; font-size: 11px; color: var(--text-muted); }
+.approval-sugg__state--err { color: var(--error, #e11d48); }
+.approval-sugg__row { display: flex; align-items: center; gap: 8px; padding: 3px 4px; }
+.approval-sugg__n { flex-shrink: 0; width: 18px; height: 18px; border-radius: 9px; background: var(--bg-secondary); color: var(--text-muted); font-size: 10px; display: inline-flex; align-items: center; justify-content: center; }
+.approval-sugg__pattern { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-primary); font-family: var(--font-mono, monospace); }
+.approval-sugg__count { flex-shrink: 0; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.approval-sugg__kind { flex-shrink: 0; font-size: 9px; padding: 1px 6px; border-radius: 8px; background: var(--bg-secondary); color: var(--text-muted); }
+.approval-sugg__hint { margin: 6px 0 0; font-size: 10px; color: var(--text-muted); }
 .approval-panel__head {
   display: flex;
   align-items: center;
