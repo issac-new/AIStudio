@@ -68,6 +68,14 @@ async function editRefill(text: string): Promise<void> {
   ide.setChatFocus()
 }
 
+/** 从此分叉（#10 剩余，2026-10-01 批 9C）：/fork 是聊天内 slash 命令
+ *  （chatStore.sendMessage 的 isBridgeForkCommand 通道）——复制 "/fork" 进
+ *  剪贴板+聚焦输入框，用户粘贴补参后回车执行（分叉是不可逆动作，不经面板代发）。 */
+async function forkRefill(): Promise<void> {
+  await copyText('/fork ')
+  ide.setChatFocus()
+}
+
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape') { e.preventDefault(); emit('close') }
 }
@@ -100,6 +108,7 @@ function onKeydown(e: KeyboardEvent): void {
           <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyJump" @click="jump(m.id)">↗</button>
           <button type="button" class="ihb__act" :title="tx.historyCopy" @click="copyText(String(m.content))">⧉</button>
           <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyEdit" @click="editRefill(String(m.content))">✎</button>
+          <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyFork" @click="forkRefill()">⋔</button>
         </span>
       </div>
     </div>
