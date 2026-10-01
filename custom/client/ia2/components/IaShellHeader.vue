@@ -14,7 +14,7 @@
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -88,6 +88,13 @@ const messageUnread = computed(() =>
   filterInboxByPrefs(store.inboxItems ?? []).reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
 )
 const notifyTotal = computed(() => decisionUnread.value + messageUnread.value)
+
+// dock 徽章（2026-10-01 吸收批 #8：element-web badge.ts 吸收）：通知合计→
+// Electron app.badgeCount（仅桌面桥存在时；浏览器环境静默跳过不做假呈现）
+watch(notifyTotal, (n) => {
+  const bridge = (window as unknown as { hermesDesktop?: { setBadgeCount?: (c: number) => Promise<boolean> } }).hermesDesktop
+  if (bridge?.setBadgeCount) void bridge.setBadgeCount(n).catch(() => undefined)
+}, { immediate: true })
 
 // ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；v12.4/12.5 口径修订）──
 

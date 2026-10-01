@@ -44,6 +44,7 @@ import IdeInlineDiff from '../components/IdeInlineDiff.vue'
 import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
 import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
 import IdeFindInSession from '../components/IdeFindInSession.vue'
+import IdeHistoryBrowser from '../components/IdeHistoryBrowser.vue'
 import IdeBtwPanel from '../components/IdeBtwPanel.vue'
 import IdeBgTasksPanel from '../components/IdeBgTasksPanel.vue'
 import IdeSideSessionPane from '../components/IdeSideSessionPane.vue'
@@ -348,6 +349,8 @@ function openFind(): void {
 const btwOpen = ref(false)
 // B1 后台任务中心开关
 const bgTasksOpen = ref(false)
+// #10 History 浏览器开关（minimax /history Web 化：user 消息历史×搜索×定位/复制/编辑重发）
+const historyOpen = ref(false)
 // B6 对照分屏开关（只读第二会话）
 const sideSessionOpen = ref(false)
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
@@ -452,6 +455,14 @@ async function pickModel(provider: string, model: string): Promise<void> {
           title="会话内查找（跳转定位；行内高亮待上游 MessageList 补丁）"
           @click="openFind"
         >🔍</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-history"
+          :class="{ 'is-on': historyOpen }"
+          title="历史提示浏览器（搜索过往提示：定位/复制/编辑重发；运行中只读）"
+          @click="historyOpen = !historyOpen"
+        >🕘</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -619,6 +630,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
       <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
       <IdeFindInSession v-if="findOpen" ref="findRef" @close="findOpen = false" />
+      <IdeHistoryBrowser v-if="historyOpen" @close="historyOpen = false" />
       <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />
       <IdeBgTasksPanel v-if="bgTasksOpen" @close="bgTasksOpen = false" />
       <IdeCompactionCard />
