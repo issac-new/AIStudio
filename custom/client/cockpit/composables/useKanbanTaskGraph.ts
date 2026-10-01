@@ -134,29 +134,37 @@ export function useKanbanTaskGraph() {
     }
   }
 
+  /** 列表态任务索引（性能轮 2026-10-01：listTasks 响应已含 parents/children/
+   *  session_id/status/时间戳——树构建与会话发现免 detail 请求；
+   *  detail（runs/latest_summary 精化）只对时间窗入选任务补拉） */
+  let listTaskMap = new Map<string, KanbanTask>()
+
   /** BFS 任务树：从 seedTaskIds 出发，上溯 parents + 下探 children。
-   *  返回全树 taskId 集合 + 父子关系列表（供 buildCrossSessionEdges 构建跨任务边）。 */
-  async function buildTaskTree(seedTaskIds: string[]): Promise<{ tree: Set<string>; relations: Array<{ parent: string; child: string }> }> {
+   *  返回全树 taskId 集合 + 父子关系列表（供 buildCrossSessionEdges 构建跨任务边）。
+   *  性能轮改：关系读列表数据（零 detail 请求——793 任务×秒级 detail≈5 分钟是
+   *  首载卡顿主因）；列表外悬空引用跳过并记 debug。 */
+  function buildTaskTree(seedTaskIds: string[]): { tree: Set<string>; relations: Array<{ parent: string; child: string }> } {
     const tree = new Set<string>()
     const relations: Array<{ parent: string; child: string }> = []
     const queue = [...seedTaskIds]
     let depth = 0
     while (queue.length > 0 && depth < 30) {
       const batch = queue.splice(0, queue.length)
-      // 并发取 detail（每批不限流，getTask 已有缓存）
-      const details = await Promise.all(batch.map(id => getDetail(id)))
-      for (const d of details) {
-        if (!d) continue
-        const tid = d.task.id
-        if (tree.has(tid)) continue
-        tree.add(tid)
-        for (const p of d.parents ?? []) {
-          relations.push({ parent: p, child: tid })
-          if (!tree.has(p)) queue.push(p)
+      for (const id of batch) {
+        if (tree.has(id)) continue
+        const t = listTaskMap.get(id)
+        if (!t) {
+          if (depth === 0) tree.add(id) // seed 缺列表数据（异常）仍入树保底
+          continue
         }
-        for (const c of d.children ?? []) {
-          relations.push({ parent: tid, child: c })
-          if (!tree.has(c)) queue.push(c)
+        tree.add(id)
+        for (const p of (t as KanbanTask & { parents?: string[] }).parents ?? []) {
+          relations.push({ parent: p, child: id })
+          if (!tree.has(p) && listTaskMap.has(p)) queue.push(p)
+        }
+        for (const c of (t as KanbanTask & { children?: string[] }).children ?? []) {
+          relations.push({ parent: id, child: c })
+          if (!tree.has(c) && listTaskMap.has(c)) queue.push(c)
         }
       }
       depth++
@@ -164,13 +172,13 @@ export function useKanbanTaskGraph() {
     return { tree, relations }
   }
 
-  /** 发现关联会话：建立 sessionTaskMap（创建者会话 + worker 会话标题匹配） */
+  /** 发现关联会话：建立 sessionTaskMap（创建者会话 + worker 会话标题匹配）。
+   *  性能轮：session_id 读列表数据（detail 未全量拉取）。 */
   function discoverSessions(treeTaskIds: Set<string>) {
     sessionTaskMap = new Map()
-    // 创建者会话：detail.task.session_id
+    // 创建者会话：列表项 session_id
     for (const tid of treeTaskIds) {
-      const d = taskDetailCache.get(tid)
-      const sid = d?.task?.session_id
+      const sid = listTaskMap.get(tid)?.session_id ?? undefined
       if (sid) sessionTaskMap.set(sid, { taskId: tid, profile: undefined, role: 'creator' })
     }
     // worker 会话：标题 matchSessionTaskId 命中树内 taskId
@@ -183,15 +191,17 @@ export function useKanbanTaskGraph() {
     }
   }
 
-  /** 计算任务活动时间戳集合（任务时间 + 会话时间 + runs 时间） */
+  /** 计算任务活动时间戳集合（任务时间 + 会话时间 + runs 时间）。
+   *  性能轮：detail 缺席（未入选未补拉）时回落列表数据。 */
   function collectActivityTimes(taskId: string): number[] {
     const times: number[] = []
     const d = taskDetailCache.get(taskId)
-    if (d) {
-      times.push(toMs(d.task.created_at))
-      if (d.task.started_at) times.push(toMs(d.task.started_at))
-      if (d.task.completed_at) times.push(toMs(d.task.completed_at))
-      for (const r of d.runs ?? []) {
+    const t = d?.task ?? listTaskMap.get(taskId)
+    if (t) {
+      times.push(toMs(t.created_at))
+      if (t.started_at) times.push(toMs(t.started_at))
+      if (t.completed_at) times.push(toMs(t.completed_at))
+      for (const r of d?.runs ?? []) {
         times.push(toMs(r.started_at))
         if (r.ended_at) times.push(toMs(r.ended_at))
       }
@@ -336,10 +346,11 @@ export function useKanbanTaskGraph() {
       // 1. 拉全量任务
       const allTasks = await loadAllTasks()
       taskBoardMap = new Map(allTasks.map(t => [t.id, t.board]))
+      listTaskMap = new Map(allTasks.map(t => [t.id, t]))
       console.debug(`[taskGraph] 加载到 ${allTasks.length} 个任务`)
 
-      // 2. 全树 BFS（所有任务为 seed）
-      const { tree, relations } = await buildTaskTree(allTasks.map(t => t.id))
+      // 2. 全树 BFS（列表数据构建关系，零 detail 请求——性能轮根治 793×秒级首载）
+      const { tree, relations } = buildTaskTree(allTasks.map(t => t.id))
       taskRelations = relations
       progress.value = 20
 
@@ -348,57 +359,80 @@ export function useKanbanTaskGraph() {
       discoverSessions(tree)
       progress.value = 40
 
-      // 4. 时间窗过滤 + 状态过滤（默认排除 done/archived）
-      const included = [...tree].filter(id => {
+      // 4. 时间窗过滤 + 状态过滤（默认排除 done/archived）——粗判用列表数据，
+      //    runs/摘要仅 detail 有：入选集先粗判，再对入选集并发补拉 detail
+      //    （量级=窗内任务数而非全库），拉完用 runs 时间复核补录边缘任务
+      const statusOf = (id: string) => listTaskMap.get(id)?.status
+      const included = new Set([...tree].filter(id => {
         if (!taskInWindow(id, win)) return false
-        const d = taskDetailCache.get(id)
-        const st = d?.task?.status
+        const st = statusOf(id)
         if (st === 'done' && !includeDone) return false
         if (st === 'archived' && !includeArchived) return false
         return true
-      })
-      console.debug(`[taskGraph] 树内 ${tree.size} 任务，过滤后 ${included.length}（done=${includeDone}, archived=${includeArchived}）`)
+      }))
+      await Promise.all([...included].map(id => getDetail(id)))
+      // 边缘复核（限量并发）：running 态任务的列表时间戳可能在窗外但今天的 run 在窗内
+      // ——只复核 running（在跑才可能有新 run；done/todo 无近期 run 可言），
+      // 并发拉取避免串行秒级×N 回潮（性能轮教训：793×2s 串行=26 分钟）
+      const recheck = [...tree].filter(id =>
+        !included.has(id) && !taskDetailCache.has(id) && statusOf(id) === 'running')
+      for (let i = 0; i < recheck.length; i += 30) {
+        await Promise.all(recheck.slice(i, i + 30).map(id => getDetail(id)))
+      }
+      for (const id of recheck) {
+        const d = taskDetailCache.get(id)
+        if (d && (d.runs ?? []).some(r => {
+          const s0 = toMs(r.started_at); const s1 = r.ended_at ? toMs(r.ended_at) : s0
+          return win ? (s0 >= win.start && s0 <= win.end) || (s1 >= win.start && s1 <= win.end) : true
+        })) included.add(id)
+      }
+      console.debug(`[taskGraph] 树内 ${tree.size} 任务，过滤后 ${included.size}（done=${includeDone}, archived=${includeArchived}，复核 running ${recheck.length}）`)
 
       // 5. 构建 tasks 元信息
-      const metas: TaskMeta[] = included.map(id => {
+      const metas: TaskMeta[] = [...included].map(id => {
         const d = taskDetailCache.get(id)
+        const t = d?.task ?? listTaskMap.get(id)
         const board = taskBoardMap.get(id) ?? 'default'
         const sessionIds = [...sessionTaskMap].filter(([, info]) => info.taskId === id).map(([sid]) => sid)
         return {
           taskId: id,
           board,
-          title: d?.task?.title ?? id,
-          status: d?.task?.status ?? '',
-          createdAt: toMs(d?.task?.created_at),
-          startedAt: d?.task?.started_at ? toMs(d.task.started_at) : null,
-          completedAt: d?.task?.completed_at ? toMs(d.task.completed_at) : null,
+          title: t?.title ?? id,
+          status: t?.status ?? '',
+          createdAt: toMs(t?.created_at),
+          startedAt: t?.started_at ? toMs(t.started_at) : null,
+          completedAt: t?.completed_at ? toMs(t.completed_at) : null,
           activityTimes: collectActivityTimes(id),
           sessionIds,
         }
       })
       tasks.value = metas
 
-      // 6. 构建 trace
+      // 6. 构建 trace（性能轮：并发分批——原串行×每会话秒级（消息分页+L2）是
+      //    首载第二瓶颈；traceStates 收集序与 merge 无序依赖，语义不变）
       const traceStates: TraceState[] = []
       const sessionSet = new Set<string>()
       for (const m of metas) sessionSet.add(...m.sessionIds)
 
+      const sessionIds = [...sessionSet].filter(sid => sessionTaskMap.has(sid))
+      const BATCH = 10
       let i = 0
-      for (const sid of sessionSet) {
-        const info = sessionTaskMap.get(sid)
-        if (!info) continue
-        const s = allSessions.find(x => x.id === sid)
-        const startedAt = s ? toMs(s.started_at) : Date.now()
-        const isEmpty = (s?.message_count ?? 0) <= 1
-        try {
-          const st = await buildSessionState(sid, startedAt, isEmpty, info.profile ?? (s as any)?.profile)
-          if (st) traceStates.push(st)
-        } catch (e) {
-          console.warn(`[taskGraph] 会话 ${sid} trace 构建失败:`, e)
+      for (let b = 0; b < sessionIds.length; b += BATCH) {
+        const results = await Promise.allSettled(
+          sessionIds.slice(b, b + BATCH).map(sid => {
+            const info = sessionTaskMap.get(sid)!
+            const s = allSessions.find(x => x.id === sid)
+            const startedAt = s ? toMs(s.started_at) : Date.now()
+            const isEmpty = (s?.message_count ?? 0) <= 1
+            return buildSessionState(sid, startedAt, isEmpty, info.profile ?? (s as any)?.profile)
+          }),
+        )
+        for (const r of results) {
+          if (r.status === 'fulfilled' && r.value) traceStates.push(r.value)
+          else if (r.status === 'rejected') console.warn('[taskGraph] 会话 trace 构建失败:', r.reason)
         }
-        i++
-        progress.value = 40 + Math.round((i / Math.max(1, sessionSet.size)) * 55)
-        await new Promise(r => setTimeout(r, 0))
+        i = Math.min(b + BATCH, sessionIds.length)
+        progress.value = 40 + Math.round((i / Math.max(1, sessionIds.length)) * 55)
       }
 
       // 7. 合并 + 回填 cluster/profile + 注入 title/摘要 + 构建跨任务拓扑边
@@ -418,7 +452,7 @@ export function useKanbanTaskGraph() {
           if (taskId && (n.kind === 'ingress' || n.kind === 'workflow')) {
             const t = taskDetailCache.get(taskId)
             const tag = board ? `[${board}] ${taskId}` : taskId
-            const title = t?.task?.title
+            const title = t?.task?.title ?? listTaskMap.get(taskId)?.title
             const summary = t?.latest_summary
             const taskStatus = t?.task?.status // kanban 任务状态（running/done/blocked…）
             // label 显示任务标题 + taskId 追踪信息（状态用独立徽标显示，避免长文本被截断）
@@ -480,7 +514,7 @@ export function useKanbanTaskGraph() {
     tasks: TaskMeta[]
     clusterMeta: Map<string, { startedAt: number; title: string; summary?: string; profile?: string; sessionCount: number; board?: string }>
   } | null> {
-    const { tree } = await buildTaskTree([taskId])
+    const { tree } = buildTaskTree([taskId])
     const treeSet = tree
     const subNodes = nodes.value.filter(n => {
       const sid = n.ref?.sessionId

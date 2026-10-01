@@ -111,8 +111,8 @@ vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
 // 默认隐藏已完成/已归档任务，故 t_child 默认不显示，需勾选"已完成"后才纳入。
 // 时间戳用今天（todaySec），匹配 overview 默认"仅加载今天"的时间窗。
 const mockKanbanTasks = [
-  { id: 't_parent', title: '父任务', body: null, assignee: null, status: 'running', priority: 2, created_by: null, created_at: todaySec, started_at: todaySec, completed_at: null, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
-  { id: 't_child', title: '子任务', body: null, assignee: null, status: 'done', priority: 2, created_by: null, created_at: todaySec + 100, started_at: todaySec + 100, completed_at: todaySec + 1100, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+  { id: 't_parent', title: '父任务', body: null, assignee: null, status: 'running', priority: 2, created_by: null, created_at: todaySec, started_at: todaySec, completed_at: null, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null, session_id: 's1', parents: [], children: ['t_child'] },
+  { id: 't_child', title: '子任务', body: null, assignee: null, status: 'done', priority: 2, created_by: null, created_at: todaySec - 3600, started_at: todaySec - 3600, completed_at: todaySec - 1800, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null, session_id: null, parents: ['t_parent'], children: [] },
 ]
 vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
