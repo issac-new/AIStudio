@@ -10,11 +10,13 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useFlowStore } from '../store/flow'
 import { useNotifyReadStore } from '../store/notify-read'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows, type DecisionRow } from '../composables/useDecisionRows'
+import { useMsgSurfaceText } from '../i18n-msg-surface'
 import { NOTIFY_PREF_GROUPS, filterInboxByPrefs, notifyPrefsState, prefEnabled, setPref } from '../store/notify-prefs'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -23,8 +25,10 @@ const { t } = useI18n()
 const router = useRouter()
 const cockpit = useCockpitStore()
 const flow = useFlowStore()
+const matrixRoom = useMatrixRoomStore()
 const read = useNotifyReadStore()
 const reviewCenter = useReviewCenterStore()
+const tx = useMsgSurfaceText()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
 const { decisionRows, decisionIds, decisionUnread, gateRows } = useDecisionRows()
 
@@ -63,6 +67,28 @@ function onDecisionOpen(row: DecisionRow): void {
 
 function onMessageOpen(routeTarget: unknown): void {
   if (routeTarget) void router.push(routeTarget as never)
+}
+
+// ── 未读线程聚合（2026-10-01 消息面批 #1 线程活动中心，element-web
+//    ThreadsActivityCentre 吸收）：跨房间汇总 threadsAggregateNotificationType
+//    非 none 的房间；点击置 pending 标记跳房，MatrixRoomCanvas 消费开 ThreadPanel。
+const unreadThreadRooms = computed(() => {
+  void matrixRoom.roomVersion
+  const out: Array<{ roomId: string; name: string; highlight: boolean }> = []
+  for (const room of matrixRoom.sortedRooms as any[]) {
+    try {
+      const n = room?.threadsAggregateNotificationType
+      if (n === 'Highlight' || n === 2) out.push({ roomId: room.roomId, name: room.name ?? room.roomId, highlight: true })
+      else if (n === 'Total' || n === 1) out.push({ roomId: room.roomId, name: room.name ?? room.roomId, highlight: false })
+    } catch { /* SDK 旧版无该字段 */ }
+  }
+  return out.slice(0, 8)
+})
+
+function onThreadRoomOpen(roomId: string): void {
+  matrixRoom.requestOpenThreadPanel()
+  void router.push({ name: 'ia2.commsRoom', params: { roomId } })
+  emit('close')
 }
 
 function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
@@ -151,6 +177,19 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
             {{ g.label }}
           </label>
         </div>
+        <!-- 未读线程聚合（element-web ThreadsActivityCentre 吸收） -->
+        <div v-if="unreadThreadRooms.length" class="ndp__threads" data-testid="notify-unread-threads">
+          <div class="ndp__threadshead">{{ tx.threadsSection }}</div>
+          <button
+            v-for="tr in unreadThreadRooms" :key="tr.roomId" type="button" class="ndp__threadsrow"
+            :data-testid="`notify-unread-thread-${tr.roomId}`"
+            @click="onThreadRoomOpen(tr.roomId)"
+          >
+            <span class="ndp__dot" :class="tr.highlight ? 'is-unread' : 'is-read'" />
+            <span class="ndp__name">{{ tr.name }}</span>
+            <span class="ndp__thrjump">{{ tx.threadsJump }} →</span>
+          </button>
+        </div>
         <div v-if="!messageRows.length" class="ndp__empty">{{ t('ia2.notify.emptyMessages') }}</div>
         <button
           v-for="m in messageRows" :key="m.id" type="button" class="ndp__row ndp__row--msg"
@@ -195,6 +234,14 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__prefs { border-bottom: 1px solid var(--border-color); padding: 6px 10px; }
 .ndp__prefshead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); margin-bottom: 4px; }
 .ndp__prefsrow { display: flex; gap: 6px; align-items: center; font-size: 12px; padding: 2px 0; cursor: pointer; }
+.ndp__threads { border-bottom: 1px solid var(--border-color); padding: 6px 0 4px; }
+.ndp__threadshead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); padding: 0 10px 4px; }
+.ndp__threadsrow {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 10px;
+  border: none; background: transparent; cursor: pointer; font-family: inherit; text-align: left;
+  &:hover { background: var(--bg-secondary); }
+}
+.ndp__thrjump { font-size: 10px; color: var(--primary, #3b82f6); white-space: nowrap; flex-shrink: 0; }
 .ndp__spacer { flex: 1; }
 .ndp__act {
   height: 22px; padding: 0 8px; border: none; border-radius: 4px; background: transparent;
