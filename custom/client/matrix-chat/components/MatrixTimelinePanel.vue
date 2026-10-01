@@ -8,6 +8,7 @@ import MatrixDateSeparator from './MatrixDateSeparator.vue'
 import MatrixReadMarker from './MatrixReadMarker.vue'
 import MatrixTypingNotification from './MatrixTypingNotification.vue'
 import MatrixStateEvent from './MatrixStateEvent.vue'
+import { useMsgSurfaceText } from '@/custom/ia2/i18n-msg-surface'
 
 interface Props {
   /** 传入时,从该 timelineSet 派生消息(列表/详情用);不传 = 读 roomStore.activeRoomMessages(主聊天界面,零回归) */
@@ -38,6 +39,16 @@ const props = withDefaults(defineProps<Props>(), {
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()
 const { t } = useI18n()
+const tx = useMsgSurfaceText()
+
+/** 系统事件聚合组的展开态（B1）：key=组首事件 id */
+const expandedStateGroups = ref<Set<string>>(new Set())
+function toggleStateGroup(key: string) {
+  const next = new Set(expandedStateGroups.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedStateGroups.value = next
+}
 
 const listRef = ref<HTMLElement | null>(null)
 const isLoadingMore = ref(false)
@@ -106,15 +117,38 @@ const groupedItems = computed(() => {
     | { type: 'date'; date: string }
     | { type: 'message'; event: any; showSender: boolean; isContinuation: boolean; isLastInSection: boolean }
     | { type: 'stateEvent'; event: any }
+    | { type: 'stateEventGroup'; events: any[]; key: string }
     | { type: 'agentBadge'; event: any; label: string }
     | { type: 'readMarker' }
   > = []
   let lastSenderId = ''
   let lastDateStr = ''
+
+  // 系统事件聚合（2026-10-01 吸收二期 B1，element-web 成员事件合并行范式）：
+  // 连续 ≥3 条状态事件（join/leave/rename 等）折叠成一行摘要，点击展开逐条。
+  // 1-2 条保持原样直渲——少量系统事件本就有上下文价值，不过度隐藏。
+  const pendingState: any[] = []
+  const flushState = () => {
+    if (pendingState.length >= 3) {
+      result.push({ type: 'stateEventGroup', events: [...pendingState], key: String(pendingState[0]?.getId?.() ?? result.length) })
+    } else {
+      for (const ev of pendingState) result.push({ type: 'stateEvent', event: ev })
+    }
+    pendingState.length = 0
+  }
+
   for (let i = 0; i < messages.value.length; i++) {
     const event = messages.value[i]
     const date = event.getDate()
     const dateStr = date ? date.toLocaleDateString('zh-CN') : ''
+
+    // 状态事件(create/member):连续段聚合,不参与消息分组
+    if (isStateEvent(event)) {
+      pendingState.push(event)
+      lastSenderId = '' // 状态事件打断消息分组
+      continue
+    }
+    flushState()
 
     // Date separator
     if (dateStr && dateStr !== lastDateStr) {
@@ -134,13 +168,6 @@ const groupedItems = computed(() => {
       continue
     }
 
-    // 状态事件(create/member):渲染为系统通知,不参与消息分组
-    if (isStateEvent(event)) {
-      result.push({ type: 'stateEvent', event })
-      lastSenderId = '' // 状态事件打断消息分组
-      continue
-    }
-
     // Check if read marker should be inserted before this message
     const readMarkerId = roomStore.readMarkerEventId
     if (readMarkerId && readMarkerId === event.getId() && roomStore.readMarkerVisible) {
@@ -150,8 +177,8 @@ const groupedItems = computed(() => {
     const senderId = event.getSender() ?? ''
     const isContinuation = !props.disableGrouping && senderId === lastSenderId && lastDateStr === dateStr
     const nextEvent = messages.value[i + 1]
-    const nextSenderId = nextEvent?.getSender() ?? ''
-    const nextDate = nextEvent?.getDate()
+    const nextSenderId = nextEvent?.getSender?.() ?? ''
+    const nextDate = nextEvent?.getDate?.()
     const nextDateStr = nextDate ? nextDate.toLocaleDateString('zh-CN') : ''
     const isLastInSection = senderId !== nextSenderId || dateStr !== nextDateStr
 
@@ -164,6 +191,7 @@ const groupedItems = computed(() => {
     })
     lastSenderId = senderId
   }
+  flushState()
 
   return result
 })
@@ -391,10 +419,18 @@ watch(
       <p class="matrix-timeline-empty-title">{{ emptyState.title }}</p>
       <p class="matrix-timeline-empty-desc">{{ emptyState.description }}</p>
     </div>
-    <template v-for="(item, idx) in groupedItems" :key="item.type === 'date' ? 'date-' + item.date : item.type === 'readMarker' ? 'read-marker-' + idx : item.type === 'stateEvent' ? 'state-' + item.event.getId() : item.type === 'agentBadge' ? 'agent-badge-' + item.event.getId() : 'msg-' + item.event.getId()">
+    <template v-for="(item, idx) in groupedItems" :key="item.type === 'date' ? 'date-' + item.date : item.type === 'readMarker' ? 'read-marker-' + idx : item.type === 'stateEvent' ? 'state-' + item.event.getId() : item.type === 'stateEventGroup' ? 'stategroup-' + item.key : item.type === 'agentBadge' ? 'agent-badge-' + item.event.getId() : 'msg-' + item.event.getId()">
       <MatrixDateSeparator v-if="item.type === 'date'" :date="item.date" />
       <MatrixReadMarker v-if="item.type === 'readMarker'" />
       <MatrixStateEvent v-if="item.type === 'stateEvent'" :event="item.event" />
+      <div v-if="item.type === 'stateEventGroup'" class="mx_StateEventGroup" :data-testid="'state-event-group-' + item.key">
+        <button type="button" class="mx_StateEventGroup__toggle" @click="toggleStateGroup(item.key)">
+          🗂 {{ item.events.length }} {{ tx.stateEventsCollapsed }} · {{ expandedStateGroups.has(item.key) ? tx.collapse : tx.expand }}
+        </button>
+        <template v-if="expandedStateGroups.has(item.key)">
+          <MatrixStateEvent v-for="ev in item.events" :key="ev.getId()" :event="ev" />
+        </template>
+      </div>
       <div
         v-if="item.type === 'agentBadge'"
         class="mx_AgentBadge"
@@ -439,6 +475,19 @@ watch(
   // 用户向上翻页加载历史后无法滚动到 room 起点或滚动条跳变。滚动容器里应避免对
   // 直接子元素使用 content-visibility: auto。
 }
+
+.mx_StateEventGroup { display: flex; flex-direction: column; }
+.mx_StateEventGroup__toggle {
+  align-self: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.mx_StateEventGroup__toggle:hover { background: var(--bg-secondary); color: var(--text-secondary); }
 
 .paginate-loading {
   padding: 8px 16px;
