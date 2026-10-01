@@ -254,10 +254,13 @@ describe('⑥ 报告路由（H7：无 RUN_ID 落全局目录出旧轮假报告�
 })
 
 describe('⑦ 闸门判词语义（H8/R-A2：转述 stub 不得当结论行）', () => {
-  it('引用讨论（判词成对出现）取末判词 FAIL——绝不假过', () => {
+  it('协议转述行（判词成对出现）整行不作判词——既不假过也不自毒（f1979781）', () => {
     const root = sandbox()
     const out = sh(`mx_text_gate_verdict READY-GATE 'False alarm — the stub itself says "结论行 READY-GATE-PASS 或 READY-GATE-FAIL", tripping my check.'`, root)
-    expect(out.trim()).toBe('FAIL')
+    // 成对判词=协议转述（如卡面引用本判词契约原文）：按判词处理必自毒（f1979781 G2 根治）。
+    // 代价面：真结论行若回引前次判词（"前次 FAIL 已解决，结论 PASS"）也会被整行丢弃，
+    // 表现为门禁未结、等待复审重发单判词结论行——保守方向，不产生假过。
+    expect(out.trim()).toBe('')
   })
 
   it('真实结论行（判词居中/居末）正确取判词', () => {
