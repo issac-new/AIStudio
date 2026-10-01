@@ -392,13 +392,15 @@ room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
 # 「结论行 READY-GATE-PASS 或 READY-GATE-FAIL」，G5 即把该条当结论行误过
 # （04:49:04 判 ✓，真实评审 04:51:27 才完成且卡面结论实为 READY-GATE-FAIL）。
 # 语义：**最后一个判词赢**——结论行居末是派单既定约定（"结论行 … 开头"、卡面
-# conclusion 节在 body 末尾）；引用讨论里判词成对出现时末个为 FAIL，只会把门
-# 禁推向拒绝/打回（保守方向），不会假过。多条结论行取时间最新一条（打回后
-# 复审 PASS 盖过前次 FAIL）。FAIL 是显式判词：调用方必须熔断，不得置卡 done、
-# 不得落键（R-A2）。
+# conclusion 节在 body 末尾）；同一行判词成对出现（PASS…FAIL / FAIL…PASS）视为
+# 协议转述，整行不作判词（f1979781 G2 卡面自毒根治：卡面引用判词契约原文时，
+# 协议文本自身不得把门禁判成 FAIL）。多条结论行取时间最新一条（打回后复审 PASS 盖过前次 FAIL）。FAIL
+# 是显式判词：调用方必须熔断，不得置卡 done、不得落键（R-A2）。
 mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=无判词）
   local out
-  out=$(printf '%s' "$2" | grep -vE "$1-PASS.*$1-FAIL|$1-FAIL.*$1-PASS" | grep -oE "$1-(PASS|FAIL)" | tail -1)
+  # errexit 自守（本库 773 行 set -euo pipefail 是运行态）：grep -vE 全滤空/grep -oE
+  # 零匹配都退 1，裸赋值管道会炸掉整个调用方脚本——无判词是常态输入不是错误。
+  out=$(printf '%s' "$2" | { grep -vE "$1-PASS.*$1-FAIL|$1-FAIL.*$1-PASS" || true; } | { grep -oE "$1-(PASS|FAIL)" || true; } | tail -1)
   case "$out" in
     *-PASS) echo PASS ;;
     *-FAIL) echo FAIL ;;
