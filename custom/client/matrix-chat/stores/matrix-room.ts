@@ -233,6 +233,17 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   const selectedEventId = ref<string | null>(null)
   function selectEvent(eventId: string | null) { selectedEventId.value = eventId }
 
+  // ── 跨房间打开线程面板的待决标记（2026-10-01 消息面批：未读线程聚合入口用）──
+  // 通知中心点击「某房间未读线程」→ 置标记 + 跳 ia2.commsRoom；MatrixRoomCanvas
+  // 在房间选择完成后消费标记（调 threadStore.openThreadPanel 并清除）。
+  const pendingOpenThreadPanel = ref(false)
+  function requestOpenThreadPanel() { pendingOpenThreadPanel.value = true }
+  function consumeOpenThreadPanel(): boolean {
+    const v = pendingOpenThreadPanel.value
+    pendingOpenThreadPanel.value = false
+    return v
+  }
+
   // C6 jumpToEvent：修 scrollToEvent 只认已渲染 DOM 的断链。事件未加载（搜索命中远古历史）
   // 时先向上分页 loadOlderMessages 直到命中，再 selectEvent 高亮。上限 30 页防死循环。
   // loadOlderMessages 返回 0 有两种语义，不能一律当"到头"：①到头/翻页失败停试
@@ -1275,6 +1286,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     bumpRoomVersion,
     timelineLayout, alwaysShowTimestamps, useCompactLayout,
     readMarkerEventId, readMarkerVisible, typingUsers, selectedEventId,
+    pendingOpenThreadPanel, requestOpenThreadPanel, consumeOpenThreadPanel,
     activeRoom, sortedRooms, activeRoomMessages, activeRoomUnreadCount,
     setTimelineLayout, toggleAlwaysShowTimestamps, toggleCompactLayout,
     setReadMarker, hideReadMarker, setTypingUsers, selectEvent, jumpToEvent,
