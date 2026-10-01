@@ -15,8 +15,8 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
 import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
-import { useRunSurfaceText } from '../i18n-run-surface'
 import GovernanceView from '@/custom/ia2/views/GovernanceView.vue'
+import { useRunSurfaceText } from '../i18n-run-surface'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -143,8 +143,8 @@ function goInboxFromAccounts(): void {
         {{ rsText.tabObservatory }}
       </button>
       <!-- 治理中心平级页签（2026-10-01 用户裁定：内嵌不整页跳转——页签不再消失；
-           独立路由 ia2.governance 保留为 IDE 侧/深链入口）。 -->
-
+           独立路由 ia2.governance 保留为 IDE 侧/深链入口）。2026-09-30 的平级跳转
+           入口被本页签取代（用户找不到入口的实缺口由页签常驻终结）。 -->
       <button
         type="button"
         class="ia-tasks__tab"
@@ -154,7 +154,7 @@ function goInboxFromAccounts(): void {
         data-testid="ia-tasks-tab-governance"
         @click="tab = 'gov'"
       >
-        {{ t('ia2.tasks.tabGovernance') }}
+        {{ rsText.tabGovernance }}
       </button>
       <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
       <button

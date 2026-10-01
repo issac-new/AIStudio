@@ -19,10 +19,11 @@ describe('AppSidebar 单一级入口守门（⑤ M2/S1 后口径，patch 072/519
   const p072 = readPatch('072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch')
   const p519 = readPatch('519-client-appsidebar-system-trim.patch')
 
-  it('M2：IDE 一级入口已移除——072 无 ide.shell 路由链接与 isIdeArea', () => {
-    expect(p072).not.toContain(`:to="{ name: 'ide.shell' }"`)
-    expect(p072).not.toContain('isIdeArea')
-    expect(p072).not.toContain('overlay[ide]')
+  it('双栏根治（aa3e0bbe 用户裁定，压过 M2 旧口径）：IDE 一级入口在位——072 含 ide.shell 与高亮', () => {
+    // M2 曾裁 "IDE 一级入口移除"；2026-09-30 双栏根治翻案为 驾驶舱+IDE 双入口，
+    // unified-nav-guard（patch 299 守门）为现行口径，本用例对齐翻案后事实。
+    expect(p072).toContain(`:to="{ name: 'ide.shell' }"`)
+    expect(p072).toContain('isIdeShellArea')
   })
 
   it('驾驶舱唯一一级入口在位（ia2.collab）+ 系统折叠组结构不变', () => {
