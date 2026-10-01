@@ -67,3 +67,14 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
    await ensureDesktopAuth()
  
    if (to.name === 'codingAgent.config' && ['plugins', 'presets'].includes(String(to.params.section)) && to.params.agentId !== 'dsh') {
+--- a/packages/client/src/views/hermes/AgentManagerView.vue
++++ b/packages/client/src/views/hermes/AgentManagerView.vue
+@@ -497,7 +497,7 @@
+           </NAlert>
+ 
+           <div class="coding-agent-grid">
+-            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
++            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
+               <header class="agent-card-header compact">
+                 <div class="agent-identity">
+                   <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />
