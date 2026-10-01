@@ -116,6 +116,8 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     ( cd "$CEN" && git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       git commit -q -m "mx-clean：推演工件全目录清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
+    # 九目录骨架重建（run6 实锤：git rm -rf 连目录一起删，freeze 等直写路径炸 ENOENT）
+    ( cd "$CEN" && mkdir -p docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin )
     # 合格线自检：七目录 + admin 不得残留（旧稿残留=repo_has 假真值温床）
     _leftover="$(cd "$CEN" && ls docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/admin 2>/dev/null | grep -v '^$' | head -5 || true)"
     if [ -n "$_leftover" ]; then

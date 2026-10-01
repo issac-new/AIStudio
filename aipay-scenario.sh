@@ -242,6 +242,7 @@ if step_reached reqgate; then
     fi
     # 写冻结标记（AC 清单提取 + 涉敏结论）并推送
     FREEZE_LOCAL="$DIRECTOR_CLONE/$(freeze_doc)"
+    mkdir -p "$(dirname "$FREEZE_LOCAL")"   # mx-clean 九目录全清后目录本体不存在（run6 实锤）
     {
       echo "# ${RFD_ID} G1 冻结标记"
       echo
