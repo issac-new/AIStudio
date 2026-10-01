@@ -204,8 +204,21 @@ await shot('ui-gov-center', '/app/gov', { wait: 5500, expect: 'main', expectRout
 // ── 分析群：全景 + P4③ 时间线特写 + 成员面板（全量预邀实证）──
 if (await openCurrentRoom()) {
   await page.waitForTimeout(2500)
-  await page.screenshot({ path: `${OUT}/ui-08-groupchat.png` })
-  console.log('shot: ui-08-groupchat')
+  // 空态拒拍守门（run5 09-40 覆盖事故根治，R12）：深链目标房被清后回落页是
+  // "未选择会话"空态——此时截图会把上一轮真实房间截图覆盖成空态占位。房间画布
+  // 必须见到真实消息气泡（含时间戳的消息行）才落盘，否则拒拍保留旧图。
+  const hasRealMsgs = await page.evaluate(() => {
+    const t = (document.body.innerText || '')
+    if (/未选择会话|从左侧选择一个会话/.test(t)) return false
+    const nodes = [...document.querySelectorAll('[class*="message"], [class*="msg-item"], [data-testid*="msg"]')]
+    return nodes.filter(n => (n.innerText || '').trim().length > 8).length >= 3
+  })
+  if (!hasRealMsgs) {
+    console.error('DEFECT[shutter-gate]: ui-08-groupchat 会话画布为空态（房间不可达/已清）——拒拍，保留既有截图')
+  } else {
+    await page.screenshot({ path: `${OUT}/ui-08-groupchat.png` })
+    console.log('shot: ui-08-groupchat')
+  }
 
   // P4③：右栏「任务流转」节区域特写（存在性随消息流；缺失时也截全栏供审计）
   if (!only || only === 'ui-08c-flow-timeline') {
@@ -338,7 +351,11 @@ if (!only || only === 'skill-views') await guarded('skill-views', async () => {
 // R14④⑤ 驱动开发过程两帧：skill 五步能力调用现场（agent 真实产出物引用该 skill 的痕迹）
 if (!only || only === 'skill-drive') await guarded('skill-drive', async () => {
   const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
-  const roots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/kanban/boards']
+  // roots 修正（run5 R14 实锤缺席根因）：原只搜 RUN_DIR/workspaces（不存在——工作区在
+  // SIM_ROOT/workspaces）与 boards；swarm yuan 生成的 aipaydev-dev 技能真容在
+  // hermes/profiles/<profile>/skills/aipaydev-dev/（N 份装配副本），驱动现场痕迹
+  // （分支提交/测试输出）在 SIM_ROOT/workspaces/<user>/aipaydev。
+  const roots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/workspaces', '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/profiles', '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/kanban/boards']
   const hits = []
   const small = (p) => { try { return statSync(p).size < 400000 } catch { return false } }
   const grep = (d, depth) => { if (depth > 4 || !existsSync(d) || hits.length > 6) return
