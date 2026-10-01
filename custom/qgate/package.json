@@ -10,11 +10,14 @@
   "main": "./dist/core/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run __tests__",
-    "e2e": "node scripts/e2e.mjs"
+    "test": "vitest run __tests__"
   },
   "dependencies": {
     "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=22.5.0"
