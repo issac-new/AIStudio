@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L2.data-consistency
+  version: 0.1.0
+  description: >
+    R8 数据一致性（上游 consistency 五类型本地方言）：zero-sum（BigInt 借贷平衡）/
+    append-only/reconciliation（SLA 分桶）/dlq/audit-chain（内核重算哈希链）。
+    一执行器一类型，dataFile {kind:...}；多类型同门多 executor 声明。
+spec:
+  domain: L2
+  claims:
+    - L2.consistency-proven
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: l2.consistency
+      type: ops
+      mode: consistency
+      dataFile: ".qgate/observations/consistency.json"
+      evidenceType: consistency-result
+  evidence:
+    required: [consistency-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

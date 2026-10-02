@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.convention-alignment
+  version: 0.1.0
+  description: >
+    R8 约定对齐（上游 convention-alignment 本地方言）：.qgate/registers/conventions.json
+    规则（include 正则 × paths glob × severity）扫描命中即报——统一语言/弃用词/代码约定
+    的机器执法面。severity=fail 命中 → FAIL 点名文件与行号。
+spec:
+  domain: L0
+  claims:
+    - L0.conventions-aligned
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: l0.conventions
+      type: ops
+      mode: conventions
+      dataFile: ".qgate/registers/conventions.json"
+      evidenceType: convention-alignment-result
+  evidence:
+    required: [convention-alignment-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

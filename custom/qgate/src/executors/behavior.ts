@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
-import { jsonPointerDiff, evaluateAssertion, type AssertionSpec } from '../core/diff.js'
+import { jsonPointerDiff, evaluateAssertion, getPath, type AssertionSpec } from '../core/diff.js'
 
 export interface BehaviorExecutorInput {
   runId: string
@@ -85,6 +85,33 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
     const cases = parseCases(obs.value)
     if ('error' in cases) return done('error', `observation invalid: ${cases.error}`)
     const byId = new Map(cases.map((c) => [c.id, c]))
+
+    // replay-baseline（R8，上游 replayBaseline 本地方言）：归档观察记录作期望基线。
+    // 内容哈希绑定（不符 → FAIL，须显式重 pin）；当次观察 vs 基线逐用例比对。
+    const rb = executor.replayBaseline
+    if (rb) {
+      const bl = rel(rb.file)
+      if (!bl || !existsSync(bl)) return done('error', `replay baseline missing: ${rb.file}`)
+      const actual = createHash('sha256').update(readFileSync(bl)).digest('hex')
+      if (rb.contentSha256 && actual !== rb.contentSha256) {
+        return done('fail', `replay-baseline-modified: ${rb.file} sha256 drifted from declared pin — re-pin explicitly`)
+      }
+      const b = readJson(bl)
+      if ('error' in b) return done('error', `replay baseline malformed: ${b.error}`)
+      const baselineCases = parseCases(b.value)
+      if ('error' in baselineCases) return done('error', `replay baseline invalid: ${baselineCases.error}`)
+      const problems: string[] = []
+      for (const bc of baselineCases) {
+        const cur = byId.get(bc.id)
+        if (!cur) { problems.push(`${bc.id}: missing in current observation`); continue }
+        const diffs = jsonPointerDiff(bc.actual, cur.actual)
+        if (diffs.length > 0) problems.push(`${bc.id}: replay-drift ${summarizeDiffs(diffs)}`)
+      }
+      const extra = cases.filter((c) => !baselineCases.some((b2) => b2.id === c.id)).map((c) => c.id)
+      if (extra.length > 0) problems.push(`extra cases vs baseline: ${extra.join(', ')}`)
+      if (problems.length > 0) return done('fail', `replay drift (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
+      return done('pass', `replay matches baseline: ${baselineCases.length} cases identical to ${rb.file}`)
+    }
 
     // F2P/P2P 双版本基线审计（R7）：六类违规全指名，防伪修复/掩盖回归。
     const f2p = executor.f2p ?? []
@@ -246,6 +273,38 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
       return done('pass', `visual within tolerance: ${pixels}/${totalPixels}px (sha differs, pixel-diff mode)`)
     }
     return done('fail', `visual byte mismatch: actual ${aSha.slice(0, 12)}… vs baseline ${bSha.slice(0, 12)}… (no tolerance declared → exact-bytes mode)`)
+  }
+
+  if (executor.mode === 'invariant') {
+    const obsFile = rel(executor.observedFile)
+    if (!obsFile) return done('error', 'invariant requires observedFile')
+    if (!existsSync(obsFile)) return done('error', `observation missing: ${executor.observedFile}`)
+    const obs = readJson(obsFile)
+    if ('error' in obs) return done('error', `observation malformed: ${obs.error}`)
+    const v = obs.value as Record<string, unknown>
+    if (typeof v.values !== 'object' || v.values === null || Array.isArray(v.values)) return done('error', 'observation lacks values{}')
+    const values = v.values
+    const assertions = (executor.assertions ?? []) as AssertionSpec[]
+    if (assertions.length === 0) return done('error', 'invariant requires assertions[]')
+    const violations: string[] = []
+    let evaluated = 0
+    for (const a of assertions) {
+      // 断言语义复用 diff.ts（含 when 条件 skip——上游 invariant 语义：条件不满足该断言跳过）
+      const verdict = evaluateAssertion(a, values)
+      if (verdict === 'skip') continue
+      evaluated++
+      if (!verdict) violations.push(`${a.left} ${a.operator} ${a.right ?? JSON.stringify(a.value)} (got ${JSON.stringify(getPath(values, a.left))})`)
+    }
+    if (evaluated === 0) {
+      // 全部断言因 when 条件不满足而跳过（上游：门 SKIP）——本地方言：skipped 证据 → 决策层 INCONCLUSIVE
+      ev.result = 'skipped'
+      ev.execution = 'exercised'
+      ev.summary = 'all assertions skipped (when-conditions unmet) — no invariant evaluated'
+      ev.provenance.endedAt = Date.now()
+      return ev
+    }
+    if (violations.length > 0) return done('fail', `invariant violations (${violations.length}): ${violations.join(' | ')}`, violations)
+    return done('pass', `${evaluated}/${assertions.length} assertions hold over observed values`)
   }
 
   return done('error', `unknown behavior mode: ${String(executor.mode)}`)

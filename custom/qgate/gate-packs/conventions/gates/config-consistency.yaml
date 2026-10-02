@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L5.config-consistency
+  version: 0.1.0
+  description: >
+    R8 配置一致性（上游 configuration 本地方言）：多环境配置 flatten 逐键比对
+    （missing-key/type-mismatch/undeclared-difference；allowedDifferences 支持 * 段通配）
+    + 秘密键明文检测（非 ref: 间接引用 → FAIL，值不进证据）。
+spec:
+  domain: L5
+  claims:
+    - L5.configs-aligned
+  triggers: [task_close, release]
+  executors:
+    - id: l5.configuration
+      type: ops
+      mode: configuration
+      dataFile: ".qgate/observations/configs.json"
+      evidenceType: config-consistency-result
+  evidence:
+    required: [config-consistency-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

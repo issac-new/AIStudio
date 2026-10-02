@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L1.symbol-grounding
+  version: 0.1.0
+  description: >
+    R8 符号接地（上游 symbol-grounding 本地方言）：纯内核词法分析——静态 import
+    三分类（项目内/依赖清单/内置），未解析说明符 → FAIL（幻觉 import 在此被逮）；
+    相对导入的命名成员对账目标模块导出面。
+spec:
+  domain: L1
+  claims:
+    - L1.imports-grounded
+  appliesWhen:
+    changed:
+      any: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs", "**/*.vue", "package.json"]
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: l1.symbols
+      type: ops
+      mode: symbols
+      evidenceType: symbol-grounding-result
+  evidence:
+    required: [symbol-grounding-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

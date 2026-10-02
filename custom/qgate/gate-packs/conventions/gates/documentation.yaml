@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L5.documentation
+  version: 0.1.0
+  description: >
+    R8 文档制品（上游 documentation 本地方言）：code/api/user/operator 四角色制品
+    存在非空 + 版本一致 + requiredTopics 在文——"改了代码忘了文档"在此被逮。
+spec:
+  domain: L5
+  claims:
+    - L5.docs-current
+  triggers: [task_close, release]
+  executors:
+    - id: l5.documentation
+      type: ops
+      mode: documentation
+      dataFile: ".qgate/observations/docs.json"
+      evidenceType: documentation-result
+  evidence:
+    required: [documentation-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

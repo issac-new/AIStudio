@@ -58,12 +58,12 @@ export function runSemanticExecutor(executor: ExecutorSpec, input: SemanticExecu
   const rel = (p: string | undefined): string | undefined => (p ? join(input.workspace, p) : undefined)
 
   const check = executor.check
-  if (!check) return done('error', 'semantic executor requires check (alignment|consistency|constraint|state|exposure|instance|relation|terminology)')
+  if (!check) return done('error', 'semantic executor requires check (alignment|consistency|constraint|state|exposure|instance|relation|terminology|profile)')
 
   // consistency / terminology 不需要观察文件；其余按需
   let reasoning: ReasoningCatalog | null = null
   const catalogPath = join(input.workspace, executor.catalogFile ?? join('.qgate', 'registers', 'catalog.json'))
-  const needCatalog = check !== 'instance' || !!executor.catalogFile
+  const needCatalog = check !== 'instance' && check !== 'profile' ? true : !!executor.catalogFile
   if (needCatalog) {
     if (!existsSync(catalogPath)) return done('error', `semantic catalog missing: ${executor.catalogFile ?? '.qgate/registers/catalog.json'}`)
     const loaded = loadCatalog(catalogPath)
@@ -297,6 +297,78 @@ export function runSemanticExecutor(executor: ExecutorSpec, input: SemanticExecu
     }
     if (problems.length > 0) return done('fail', `relation violations (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
     return done('pass', `${expected.length} expected relations satisfied by ${observedRel.length} observations (incl. property semantics)`)
+  }
+
+  if (check === 'profile') {
+    // SHACL-lite（R8，上游 semantic-profile 本地方言）：shapesFile 声明字段形状
+    // （datatype/minCount/maxCount/pattern/allowedValues/min/max），dataFile 逐记录核验；
+    // targetClass 深度匹配（概念子类路由，无 catalog 时跳过路由）。
+    const shapesPath = rel(executor.shapesFile)
+    const dataPath = rel(executor.dataFile)
+    if (!shapesPath || !dataPath) return done('error', 'semantic profile requires shapesFile and dataFile')
+    if (!existsSync(shapesPath)) return done('error', `shapes file missing: ${executor.shapesFile}`)
+    if (!existsSync(dataPath)) return done('error', `records file missing: ${executor.dataFile}`)
+    const sh = readJson(shapesPath)
+    if ('error' in sh) return done('error', `shapes malformed: ${sh.error}`)
+    const dd = readJson(dataPath)
+    if ('error' in dd) return done('error', `records malformed: ${dd.error}`)
+    const shapes = sh.value as Record<string, unknown>
+    const fields = typeof shapes.fields === 'object' && shapes.fields !== null ? (shapes.fields as Record<string, unknown>) : null
+    if (!fields) return done('error', 'shapes file lacks fields{}')
+    const recordsRaw = (dd.value as Record<string, unknown>).records
+    const records = Array.isArray(recordsRaw) ? recordsRaw.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null) : null
+    if (!records) return done('error', 'records file lacks records[]')
+    // targetClass 路由：声明且 catalog 在档时，记录须声明 types 且被 targetClass 包含
+    const targetClass = typeof shapes.targetClass === 'string' ? shapes.targetClass : null
+    if (targetClass && reasoning) {
+      for (const [i, r] of records.entries()) {
+        const types = Array.isArray(r.types) ? (r.types as unknown[]).filter((t): t is string => typeof t === 'string') : []
+        if (types.length === 0) return done('error', `records[${i}]: targetClass routing requires types[]`)
+        if (!types.some((t) => reasoning!.subsumedBy(t, targetClass))) {
+          return done('fail', `records[${i}]: typed ${types.join(',')} not subsumed by targetClass ${targetClass}`)
+        }
+      }
+    }
+    const problems: string[] = []
+    const datatypeOf = (v: unknown): string => {
+      if (v === null) return 'null'
+      if (Array.isArray(v)) return 'array'
+      if (typeof v === 'number') return Number.isInteger(v) ? 'integer' : 'number'
+      return typeof v
+    }
+    for (const [i, r] of records.entries()) {
+      const rid = typeof r.id === 'string' ? r.id : `record[${i}]`
+      for (const [field, shapeRaw] of Object.entries(fields)) {
+        if (typeof shapeRaw !== 'object' || shapeRaw === null) return done('error', `shapes.fields.${field}: must be an object`)
+        const shape = shapeRaw as Record<string, unknown>
+        const value = r[field]
+        const count = Array.isArray(value) ? value.length : value === undefined ? 0 : 1
+        if (typeof shape.minCount === 'number' && count < shape.minCount) { problems.push(`${rid}.${field}: minCount ${shape.minCount} unmet (${count})`); continue }
+        if (typeof shape.maxCount === 'number' && count > shape.maxCount) { problems.push(`${rid}.${field}: maxCount ${shape.maxCount} exceeded (${count})`); continue }
+        if (value === undefined) continue
+        const values = Array.isArray(value) ? value : [value]
+        for (const v of values) {
+          if (typeof shape.datatype === 'string') {
+            const dt = shape.datatype
+            const actual = datatypeOf(v)
+            const ok = dt === actual || (dt === 'number' && actual === 'integer')
+            if (!ok) { problems.push(`${rid}.${field}: datatype ${dt} expected, got ${actual}`); continue }
+          }
+          if (typeof shape.pattern === 'string' && (typeof v !== 'string' || !new RegExp(shape.pattern, 'u').test(v))) {
+            problems.push(`${rid}.${field}: pattern /${shape.pattern}/ unmatched (${typeof v === 'string' ? v.slice(0, 24) : typeof v})`)
+          }
+          if (Array.isArray(shape.allowedValues) && !shape.allowedValues.includes(v as never)) {
+            problems.push(`${rid}.${field}: value not in allowedValues`)
+          }
+          if (typeof v === 'number') {
+            if (typeof shape.min === 'number' && v < shape.min) problems.push(`${rid}.${field}: ${v} < min ${shape.min}`)
+            if (typeof shape.max === 'number' && v > shape.max) problems.push(`${rid}.${field}: ${v} > max ${shape.max}`)
+          }
+        }
+      }
+    }
+    if (problems.length > 0) return done('fail', `profile violations (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
+    return done('pass', `${records.length} record(s) conform to ${Object.keys(fields).length}-field shape${targetClass ? ` (targetClass ${targetClass})` : ''}`)
   }
 
   return done('error', `unknown semantic check: ${String(check)}`)
