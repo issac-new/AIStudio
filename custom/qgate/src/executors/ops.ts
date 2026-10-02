@@ -708,7 +708,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
         if (pkgDeps.has(bareOf(spec))) { importsChecked++; continue }
         unresolved.push(`${file}: '${spec}'`)
       }
-      const reReq = /^[ \t]*(?:const|let|var\s+[\w$]+\s*=\s*)?require\(\s*['"]([^'"]+)['"]\s*\)/gm
+      // const/let 赋值形态与解构形态与 var 同为"赋值形态"（2026-10-02 审查批：旧式只给
+      // var 配了变量名捕获，const x = require(...) 整行不匹配——未声明依赖经此逃过接地）。
+      // 行首锚定保留（注释文本中的 require 不抓）。
+      const reReq = /^[ \t]*(?:(?:const|let|var)\s+(?:[\w$]+|\{[^}]*\})\s*=\s*)?require\(\s*['"]([^'"]+)['"]\s*\)/gm
       while ((m = reReq.exec(content)) !== null) {
         const spec0 = m[1]
         if (spec0.startsWith('node:') || spec0.startsWith('.')) continue

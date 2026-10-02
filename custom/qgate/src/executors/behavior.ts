@@ -92,7 +92,14 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
     if (rb) {
       const bl = rel(rb.file)
       if (!bl || !existsSync(bl)) return done('error', `replay baseline missing: ${rb.file}`)
-      const actual = createHash('sha256').update(readFileSync(bl)).digest('hex')
+      // existsSync 对目录也返回 true：readFileSync 指向目录抛 EISDIR，降级 error 证据而非炸整 run
+      let blBuf: Buffer
+      try {
+        blBuf = readFileSync(bl)
+      } catch (e) {
+        return done('error', `replay baseline unreadable: ${rb.file} (${(e as Error).message})`)
+      }
+      const actual = createHash('sha256').update(blBuf).digest('hex')
       if (rb.contentSha256 && actual !== rb.contentSha256) {
         return done('fail', `replay-baseline-modified: ${rb.file} sha256 drifted from declared pin — re-pin explicitly`)
       }
@@ -247,8 +254,15 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
     if (!actual || !baseline) return done('error', 'visual requires observedFile (actual) and expectedFile (baseline)')
     if (!existsSync(actual)) return done('error', `actual artifact missing: ${executor.observedFile}`)
     if (!existsSync(baseline)) return done('error', `baseline missing: ${executor.expectedFile ?? executor.baselineFile}`)
-    const aStat = readFileSync(actual)
-    const bStat = readFileSync(baseline)
+    // 同上：目录/不可读降级 error 证据而非抛 EISDIR 炸整 run
+    let aStat: Buffer
+    let bStat: Buffer
+    try {
+      aStat = readFileSync(actual)
+      bStat = readFileSync(baseline)
+    } catch (e) {
+      return done('error', `visual artifacts unreadable (${(e as Error).message})`)
+    }
     if (aStat.length === 0 || bStat.length === 0) return done('error', 'visual artifacts must be non-empty')
     const aSha = createHash('sha256').update(aStat).digest('hex')
     const bSha = createHash('sha256').update(bStat).digest('hex')

@@ -284,16 +284,28 @@ async function main(): Promise<void> {
           const text = readFileSync(gateFile, 'utf8')
           if (!text.includes('taskIntent') || !text.includes(fileRel)) continue
           let next = text
-          if (/^(\s*)acknowledgedSha256:.*$/m.test(text)) {
+          // 重绑须锚定本登记文件的 taskIntent 块（2026-10-02 审查批）：全局替换首个
+          // acknowledgedSha256 会把多绑定门文件中 A 块的 pin 覆写成 B 登记文件的哈希，
+          // A 从此恒 FAIL intent-file-modified（错误数据持久化进门配置）。
+          const escaped = fileRel.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&')
+          const fileLine = new RegExp(`^(\\s*)(file:\\s*["']?${escaped}["']?\\s*)$`, 'm').exec(text)
+          if (fileLine) {
+            const head = text.slice(0, fileLine.index + fileLine[0].length)
+            const tail = text.slice(fileLine.index + fileLine[0].length)
+            // 只在本 file: 行与下一个 file: 行之间找 pin（同一 taskIntent 块边界）
+            const nextFile = /^\s*file:\s/m.exec(tail)
+            const seg = nextFile ? tail.slice(0, nextFile.index) : tail
+            const rest = nextFile ? tail.slice(nextFile.index) : ''
+            if (/^(\s*)acknowledgedSha256:.*$/m.test(seg)) {
+              next = head + seg.replace(/^(\s*)acknowledgedSha256:.*$/m, `$1acknowledgedSha256: "${written.sha256}"`) + rest
+            } else {
+              // 块内无 pin：在 file: 行后同列插入（fileRel 逐字符转义防正则注入；
+              // 同列=与 file 同级映射项，多缩进会破坏 YAML 列对齐）
+              next = head + `\n${fileLine[1]}acknowledgedSha256: "${written.sha256}"` + tail
+            }
+          } else if (/^(\s*)acknowledgedSha256:.*$/m.test(text)) {
+            // 无可锚定 file: 行的旧形态门文件：退回全局首处替换（单块语义下等价）
             next = text.replace(/^(\s*)acknowledgedSha256:.*$/m, `$1acknowledgedSha256: "${written.sha256}"`)
-          } else {
-            // 在 file: 行后同列插入 acknowledgedSha256（fileRel 逐字符转义防正则注入；
-            // 同列=与 file 同级映射项，多缩进会破坏 YAML 列对齐）
-            const escaped = fileRel.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&')
-            next = text.replace(
-              new RegExp(`^(\\s*)(file:\\s*["']?${escaped}["']?\\s*)$`, 'm'),
-              `$1$2\n$1acknowledgedSha256: "${written.sha256}"`,
-            )
           }
           if (next !== text) {
             writeFileSync(gateFile, next, 'utf8')

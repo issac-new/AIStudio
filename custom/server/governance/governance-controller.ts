@@ -19,7 +19,7 @@
 import Router from '@koa/router'
 import { execFile } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile, rename } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
@@ -244,9 +244,18 @@ router.put('/doc', async (ctx) => {
   }
   const abs = resolve(repoRoot(), entry.path)
   await mkdir(dirname(abs), { recursive: true })
-  await writeFile(abs, markdown, 'utf-8')
-  await git(['add', entry.path])
-  await git(['commit', '--allow-empty', '-m', String(message || `更新 ${entry.title}`), '-m', `actor=${actor || 'studio-ui'} via studio 治理工件编辑`])
+  // tmp+rename 原子落盘（board-graph/kg-trigger 同纪律）：进程中途死/盘满不产生半写工件
+  const tmp = `${abs}.tmp-${process.pid}`
+  await writeFile(tmp, markdown, 'utf-8')
+  await rename(tmp, abs)
+  try {
+    await git(['add', entry.path])
+    await git(['commit', '--allow-empty', '-m', String(message || `更新 ${entry.title}`), '-m', `actor=${actor || 'studio-ui'} via studio 治理工件编辑`])
+  } catch (e) {
+    ctx.status = 502
+    ctx.body = { ok: false, error: `文件已原子保存但 git 提交失败：${(e as Error).message}（工作树留有未提交改动，重试保存即可再提交）` }
+    return
+  }
   const meta = await docMeta(entry)
   ctx.body = { ok: true, kind: entry.kind, commit: meta.commit, committedAt: meta.committedAt }
 })

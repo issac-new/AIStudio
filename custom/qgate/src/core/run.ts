@@ -71,7 +71,9 @@ export function gitContext(workspace: string): { commit?: string; treeHash?: str
   out.changedPaths = status
     ? status
         .split('\n')
-        .map((l) => l.slice(3).trim().replace(/^"|"$/g, ''))
+        // 暂存重命名行（R  old -> new）拆成两个真实路径，否则整行 "old -> new" 与任何
+        // glob 都不匹配（scope 误报出界+新旧路径双双逃出范围审计）
+        .flatMap((l) => l.slice(3).split('->').map((p) => p.trim().replace(/^"|"$/g, '')))
         .filter((l) => l.length > 0)
         .map(toProjectRelative)
         .filter((p): p is string => p !== null)
