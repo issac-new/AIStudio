@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.constraint
+  version: 0.1.0
+  description: >
+    R3 概念约束（上游 semantic-constraint 本地方言）：catalog 概念上声明的 constraints
+    在观察案例上执行（与 invariant 同一断言语义）。项目覆盖 concept 与观察产出。
+spec:
+  domain: L3
+  claims:
+    - semantic.constraints-hold
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: semantic.constraint
+      type: semantic
+      check: constraint
+      catalogFile: ".qgate/registers/catalog.json"
+      observedFile: ".qgate/observations/semantic-cases.json"
+      concept: "example:ReplaceMe"
+      evidenceType: semantic-constraint-result
+  evidence:
+    required: [semantic-constraint-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

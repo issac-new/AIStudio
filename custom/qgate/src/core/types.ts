@@ -50,6 +50,7 @@ export interface Claim {
 export interface ExecutorSpec {
   id: string
   type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm' | 'scope' | 'traceability' | 'register'
+    | 'contract' | 'behavior' | 'semantic' | 'ops'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
@@ -70,8 +71,10 @@ export interface ExecutorSpec {
   require?: string[]
   /** files：文件存在之外还须包含指定标记串（格式在档检查，仍为 present 级）。 */
   mustContain?: Array<{ file: string; markers: string[] }>
-  /** scope：检查模式——scope=声明范围 vs 实际 diff；acceptance=验收条目映射完备。 */
-  mode?: 'scope' | 'acceptance'
+  /** 检查模式：scope/acceptance（scope executor）；diff/breaking/surface/matrix（contract）；
+      cases/journey/property/visual（behavior）；metrics/budget/rerun/trace-continuity/resilience/topology（ops）。 */
+  mode?: 'scope' | 'acceptance' | 'diff' | 'breaking' | 'surface' | 'matrix' | 'cases' | 'journey' | 'property' | 'visual'
+    | 'metrics' | 'budget' | 'rerun' | 'trace-continuity' | 'resilience' | 'topology'
   /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
   requirementsFile?: string
   /** register：登记簿种类（debt/assumptions/decisions，可多类合一证据）与登记文件路径（单类时可覆盖）。 */
@@ -79,6 +82,52 @@ export interface ExecutorSpec {
   registerFile?: string
   /** scope(mode=scope)：任务意图登记绑定（v0.3 §4.2，交集对账 + 哈希防篡改）。 */
   taskIntent?: { file: string; acknowledgedSha256?: string; require?: boolean }
+
+  // ── contract（v0.3 R1：上游 alignment/api-surface/consumer-matrix 本地方言） ──
+  /** 期望契约文件（mode=diff）；观察文件由同门先行 command executor 产出（观察文件模式）。 */
+  expectedFile?: string
+  /** 观察文件（contract diff/breaking/matrix、behavior 全模式、semantic 观察类、ops 观察类）。 */
+  observedFile?: string
+  /** JSON Pointer 忽略前缀（支持 * 段通配，上游 diff.mjs 语义）。 */
+  ignorePaths?: string[]
+  /** mode=surface：被登记的 API 面文件（openapi.json）。 */
+  surfaceFile?: string
+  /** mode=matrix：消费者期望目录（每消费者一个 JSON）。 */
+  consumersDir?: string
+
+  // ── behavior（v0.3 R2：上游 behavior/journey/property/visual 本地方言；R7 F2P/P2P） ──
+  cases?: Array<{ id: string; expected?: unknown }>
+  scenarios?: Array<{ id: string; expectedSteps: Array<{ id: string; expected?: unknown }> }>
+  /** 断言（property 模式；left/right 为观察案例内点路径，value 为字面量）。 */
+  assertions?: Array<{ left: string; operator: 'eq' | 'neq' | 'le' | 'lt' | 'ge' | 'gt'; right?: string; value?: unknown; when?: string }>
+  allowedTransitions?: string[][]
+  seed?: number
+  minCases?: number
+  /** F2P/P2P 基线观察文件（R7）：{cases:[{id, actual}]}。 */
+  baselineFile?: string
+  f2p?: string[]
+  p2p?: string[]
+  maxDiffPixels?: number
+  maxDiffRatio?: number
+
+  // ── semantic（v0.3 R3：上游 semantic-* + OWL 子集本地方言） ──
+  check?: 'alignment' | 'consistency' | 'constraint' | 'state' | 'exposure' | 'instance' | 'relation' | 'terminology'
+  catalogFile?: string
+  dataFile?: string
+  /** constraint/state/exposure/relation 所作用的概念 IRI。 */
+  concept?: string
+  matchMode?: 'strict' | 'subsumed'
+  requireRuntimeOrigin?: boolean
+  expectedMap?: Array<{ symbol: string; iri: string }>
+  relations?: Array<{ subject: string; predicate: string; object: string }>
+
+  // ── ops（v0.3 R4：上游 L4 运营门本地方言） ──
+  thresholds?: Record<string, { min?: number; max?: number }>
+  pairs?: string[][]
+  maxRecoveryMs?: number
+  maxAgeDays?: number
+  requiredSignals?: string[]
+
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
   /** 该 executor 产出的 evidence type。 */

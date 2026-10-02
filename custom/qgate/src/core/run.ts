@@ -14,6 +14,10 @@ import { runLlmExecutor } from '../executors/llm.js'
 import { runScopeExecutor } from '../executors/scope.js'
 import { runRegisterExecutor } from '../executors/register.js'
 import { runTraceabilityExecutor } from '../executors/traceability.js'
+import { runContractExecutor } from '../executors/contract.js'
+import { runBehaviorExecutor } from '../executors/behavior.js'
+import { runSemanticExecutor } from '../executors/semantic.js'
+import { runOpsExecutor } from '../executors/ops.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 import { cacheKeyFor, cacheGet, cachePut, markCached } from './cache.js'
 import { inputGlobsOf, snapshotForGlobs, snapshotsEqual } from './snapshot.js'
@@ -123,6 +127,14 @@ export async function runGate(input: RunInput): Promise<RunResult> {
         evidence.push(runRegisterExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       } else if (executor.type === 'traceability') {
         evidence.push(runTraceabilityExecutor(executor, { runId, gateId: spec.metadata.id, workspace, qgateDir, commit: git.commit, treeHash: git.treeHash, changedPaths }))
+      } else if (executor.type === 'contract') {
+        evidence.push(runContractExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+      } else if (executor.type === 'behavior') {
+        evidence.push(runBehaviorExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+      } else if (executor.type === 'semantic') {
+        evidence.push(runSemanticExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+      } else if (executor.type === 'ops') {
+        evidence.push(runOpsExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       }
     }
     if (cacheKey) cachePut(qgateDir, cacheKey, evidence)

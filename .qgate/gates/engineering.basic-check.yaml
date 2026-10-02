@@ -22,7 +22,13 @@ spec:
   executors:
     - id: test
       type: command
-      command: ["npm", "test", "--silent"]
+      # junit reporter 落盘 → 内核独立重解析重算计数（R0 接线，v0.3 §3.1）：
+      # 退出码 0 但报告含失败 / 套件静默缩水（< minTotal）→ INCONCLUSIVE，不给假绿
+      command: ["npm", "test", "--silent", "--", "--reporter=junit", "--outputFile=.qgate/junit-report.xml"]
+      rawOutput:
+        format: junit
+        file: ".qgate/junit-report.xml"
+        minTotal: 100
       evidenceType: unit-test-result
       timeoutMs: 600000
   evidence:

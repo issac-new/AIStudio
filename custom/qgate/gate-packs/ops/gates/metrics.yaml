@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.metrics
+  version: 0.1.0
+  description: >
+    R4 指标阈值（v0.1 §10 L4.2，上游 metrics 本地方言）：观察指标 × thresholds
+    {name:{min,max}}；指标缺失/非数值 → INCONCLUSIVE（不给假绿）。
+spec:
+  domain: L4
+  claims:
+    - ops.metrics-within-budget
+  triggers: [pre_commit, release]
+  executors:
+    - id: ops.metrics
+      type: ops
+      mode: metrics
+      observedFile: ".qgate/observations/metrics.json"
+      evidenceType: metrics-result
+  evidence:
+    required: [metrics-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

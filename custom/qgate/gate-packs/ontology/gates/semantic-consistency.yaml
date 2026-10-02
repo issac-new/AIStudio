@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.consistency
+  version: 0.1.0
+  description: >
+    R3 目录自检（上游 semantic-consistency 本地方言）：catalog 构建期核验——
+    子类环、悬垂目标、互斥×包含矛盾（构建期 fail-closed）；证据报声明/推断互斥对计数。
+spec:
+  domain: L3
+  claims:
+    - semantic.catalog-consistent
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: semantic.consistency
+      type: semantic
+      check: consistency
+      catalogFile: ".qgate/registers/catalog.json"
+      evidenceType: semantic-consistency-result
+  evidence:
+    required: [semantic-consistency-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

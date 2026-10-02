@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: behavior.visual-regression
+  version: 0.1.0
+  description: >
+    R2 视觉回归（v0.1 §9 L3.4，上游 visual 本地方言）：实际制品 vs 基线 sha256 严格
+    字节比对；声明容差时要求像素度量按阈值判定（度量也是被核验的声明）。
+    基线同机 pin（跨机字体渲染差异须重 pin）。
+spec:
+  domain: L3
+  claims:
+    - behavior.visual-stable
+  triggers: [task_close, release]
+  executors:
+    - id: behavior.visual
+      type: behavior
+      mode: visual
+      observedFile: ".qgate/observations/actual.png"
+      expectedFile: ".qgate/observations/baseline.png"
+      evidenceType: visual-result
+  evidence:
+    required: [visual-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 168

@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.relation
+  version: 0.1.0
+  description: >
+    R3 关系对齐（上游 semantic-relation 本地方言）：期望三元组 vs 观察注解，满足判定
+    含属性语义（子属性闭包/逆属性/传递链）；未声明谓词不得超出目录语义。
+spec:
+  domain: L3
+  claims:
+    - semantic.relations-sanctioned
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: semantic.relation
+      type: semantic
+      check: relation
+      catalogFile: ".qgate/registers/catalog.json"
+      observedFile: ".qgate/observations/semantic-relations.json"
+      evidenceType: semantic-relation-result
+  evidence:
+    required: [semantic-relation-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

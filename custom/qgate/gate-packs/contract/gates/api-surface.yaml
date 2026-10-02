@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: api.surface-register
+  version: 0.1.0
+  description: >
+    R1 API 面登记（上游 api-surface 本地方言）：openapi.json 端点枚举 + 可选
+    contentSha256 内容绑定（面被静默改动 → FAIL）。
+spec:
+  domain: L2
+  claims:
+    - api.surface-declared
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: api.surface
+      type: contract
+      mode: surface
+      surfaceFile: "openapi.json"
+      evidenceType: api-surface-result
+  evidence:
+    required: [api-surface-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

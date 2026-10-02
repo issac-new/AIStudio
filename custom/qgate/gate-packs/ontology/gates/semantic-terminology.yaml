@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.terminology
+  version: 0.1.0
+  description: >
+    R3 术语完整性（上游 terminology 本地方言）：prefLabel/altLabel 按（语言,值）
+    唯一（SKOS S14 精神）+ 同标签多概念的解析歧义检测。
+spec:
+  domain: L3
+  claims:
+    - semantic.terms-unambiguous
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: semantic.terminology
+      type: semantic
+      check: terminology
+      catalogFile: ".qgate/registers/catalog.json"
+      evidenceType: semantic-terminology-result
+  evidence:
+    required: [semantic-terminology-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
