@@ -55,9 +55,11 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 .guide code{background:#f1f1ee;padding:1px 6px;border-radius:4px;font-size:12.5px}
 .guide .note{font-size:12.5px;color:#889}</style>'''
 
-# ── PART 1 说人话导读（八章；处置口径与 2026-10-02 处置轮终态对齐）──
+# ── PART 1 说人话导读（八章）──按轮注册（R17 按轮真值）────────────────────
+# 说人话叙事是逐轮人工正本（时间线/故事/提交锚皆该轮真值），禁旧轮顶包；
 # 占位标记 {{n_*}} 由 main() 实算替换；正文为普通字符串（非 f-string），CSS 花括号安全。
-PART1_TMPL = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+# run6 正本（处置口径与 2026-10-02 处置轮终态对齐）：
+PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
 
@@ -156,6 +158,13 @@ PART1_TMPL = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 </div>'''
 
 
+# R17 硬闸（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
+# 防旧轮叙事顶包新轮报告。新轮正本=人工按该轮实锚编写后注册。
+PART1_BY_RUN = {
+    '20261001-v5-run6': PART1_RUN6,
+}
+
+
 def load_state(run_dir: Path) -> dict:
     state = {}
     f = run_dir / 'state.env'
@@ -212,7 +221,13 @@ def main():
 
     import datetime
     gen_time = datetime.datetime.now().strftime('%H:%M')
-    part1 = (PART1_TMPL
+    part1_tmpl = PART1_BY_RUN.get(args.run)
+    if part1_tmpl is None:
+        raise SystemExit(
+            '[final-report-merge] 无该轮说人话叙事: ' + args.run
+            + '（已知: ' + ', '.join(sorted(PART1_BY_RUN))
+            + '）——PART 1 为逐轮人工正本，禁旧轮顶包；请按本轮实锚编写后注册 PART1_BY_RUN')
+    part1 = (part1_tmpl
              .replace('{{run_id}}', args.run)
              .replace('{{gen_time}}', gen_time)
              .replace('{{n_issue}}', str(n_issue))
