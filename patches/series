@@ -444,4 +444,3 @@
 # 545（上下文无损滚存 2026-10-02，C3）：跨窗工作笔记 REST 挂载——CRUD/search +
 #      新鲜度门（笔记 updatedAt 落后最近归档 archivedAt 即 stale）+ hasNotes 诚实降级。
 545-server-ctx-notes-routes.patch
-543-server-harness-routes.patch
