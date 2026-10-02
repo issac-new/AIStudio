@@ -55,7 +55,9 @@ describe('R5 CLI 生命周期', () => {
       expect(res.stdout).toContain('vibe-fast')
       expect(res.stdout).toContain('feature-close')
       expect(res.stdout).toContain('high-assurance')
-      expect(res.stdout).toContain('→ 5 gates')  // vibe-fast 面
+      // vibe-fast 7 门：R8 收编 L0.convention-alignment + L1.symbol-grounding（L0/L1 域默认开，
+      // 与 L0.registers 同待遇；symbol-grounding 逮幻觉 import 正是 lite 档核心风险）
+      expect(res.stdout).toContain('→ 7 gates')
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })
 

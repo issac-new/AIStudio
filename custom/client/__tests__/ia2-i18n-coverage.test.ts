@@ -40,12 +40,13 @@ function collectUsedKeys(): Map<string, string[]> {
     let m: RegExpExecArray | null
     while ((m = pattern.exec(source)) !== null) {
       // 非文案语境豁免：路由跳转目标（name:）/路由名 switch（case）/存储键常量
-      //（const KEY_* =）——三者均与词表无关，误报会逼着往 locale 里塞假键
+      //（const KEY_* = / *_KEY =，如 SORT_MODE_KEY）——三者均与词表无关，误报会逼着往 locale 里塞假键
       const before = source.slice(Math.max(0, m.index - 48), m.index)
       // name: 后到字面量之间允许三元条件（name: prefix === 'x' ? 'ia2.…'）
       if (/name\s*:[^'"\n]*$/.test(before)) continue
       if (/case\s+$/.test(before)) continue
       if (/KEY_[A-Z_]*\s*=\s*$/.test(before)) continue
+      if (/\b[A-Z][A-Z0-9_]*_KEY\s*=\s*$/.test(before)) continue
       const list = used.get(m[1]) ?? []
       list.push(file)
       used.set(m[1], list)

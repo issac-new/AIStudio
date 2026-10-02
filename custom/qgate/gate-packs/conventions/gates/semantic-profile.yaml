@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L2.semantic-profile
+  version: 0.1.0
+  description: >
+    R8 记录形状（上游 semantic-profile/SHACL 本地方言）：shapesFile 声明字段形状
+    （datatype/minCount/maxCount/pattern/allowedValues/min/max）× dataFile 逐记录核验；
+    targetClass 声明且 catalog 在档时按概念子类路由。
+spec:
+  domain: L2
+  claims:
+    - L2.records-conform
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: l2.profile
+      type: semantic
+      check: profile
+      shapesFile: ".qgate/registers/shapes.json"
+      dataFile: ".qgate/observations/records.json"
+      evidenceType: semantic-profile-result
+  evidence:
+    required: [semantic-profile-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

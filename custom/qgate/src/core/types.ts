@@ -72,9 +72,12 @@ export interface ExecutorSpec {
   /** files：文件存在之外还须包含指定标记串（格式在档检查，仍为 present 级）。 */
   mustContain?: Array<{ file: string; markers: string[] }>
   /** 检查模式：scope/acceptance（scope executor）；diff/breaking/surface/matrix（contract）；
-      cases/journey/property/visual（behavior）；metrics/budget/rerun/trace-continuity/resilience/topology（ops）。 */
-  mode?: 'scope' | 'acceptance' | 'diff' | 'breaking' | 'surface' | 'matrix' | 'cases' | 'journey' | 'property' | 'visual'
+      cases/journey/property/visual/invariant（behavior，invariant=R8 上游 invariant 本地方言）；
+      metrics/budget/rerun/trace-continuity/resilience/topology/conventions/consistency/configuration/documentation/symbols（ops，
+      后五者为 R8 门类补齐：上游 convention-alignment/consistency 五类型/configuration/documentation/symbol-grounding）。 */
+  mode?: 'scope' | 'acceptance' | 'diff' | 'breaking' | 'surface' | 'matrix' | 'cases' | 'journey' | 'property' | 'visual' | 'invariant'
     | 'metrics' | 'budget' | 'rerun' | 'trace-continuity' | 'resilience' | 'topology'
+    | 'conventions' | 'consistency' | 'configuration' | 'documentation' | 'symbols'
   /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
   requirementsFile?: string
   /** register：登记簿种类（debt/assumptions/decisions，可多类合一证据）与登记文件路径（单类时可覆盖）。 */
@@ -109,9 +112,14 @@ export interface ExecutorSpec {
   p2p?: string[]
   maxDiffPixels?: number
   maxDiffRatio?: number
+  /** replay-baseline（R8，上游 replayBaseline 本地方言）：归档观察记录作期望基线（内容哈希绑定）。
+      声明后 cases 的 expected 以基线 actual 为准（当次观察 vs 归档基线逐用例比对）。 */
+  replayBaseline?: { file: string; contentSha256?: string }
+  /** semantic check=profile：SHACL-lite 形状文件（R8，上游 semantic-profile 本地方言）。 */
+  shapesFile?: string
 
   // ── semantic（v0.3 R3：上游 semantic-* + OWL 子集本地方言） ──
-  check?: 'alignment' | 'consistency' | 'constraint' | 'state' | 'exposure' | 'instance' | 'relation' | 'terminology'
+  check?: 'alignment' | 'consistency' | 'constraint' | 'state' | 'exposure' | 'instance' | 'relation' | 'terminology' | 'profile'
   catalogFile?: string
   dataFile?: string
   /** constraint/state/exposure/relation 所作用的概念 IRI。 */
