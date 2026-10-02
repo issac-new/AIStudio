@@ -11,6 +11,21 @@
 
 ---
 
+## 落地与收口状态（2026-10-03 记档）
+
+本文菜单 12 项已于 2026-10-02 全部落地（用户批"全做"；甲乙丙三组并行 worktree，patch 542-545，全量 3703 过 0 红；实弹证据与浏览器走查截图见 `evidence/20261002-swarm-capability-4articles/`）。2026-10-03 凌晨收口轮处置遗留四项：
+
+| 遗留 | 结局 | 锚点 |
+|---|---|---|
+| ② merge-review 裁决不写 marker | **根治**：裁决台账 board-adjudicated-<slug>.json——keep-existing 裁决后管线豁免+marker 放宽（written∪keepDrops），修掉"幂等只挡未决→已裁决被重新追加"死循环；take-incoming 经 updates 自然闭环 | 0a3ffe32；守门三测 |
+| ④ C1 首窗不可切分 | **根治（增量面）**：patch 546 压缩边界史表（追加式）+advance 按次切窗（缺表回落/防御兜底/boundarySource 溯源）；546 部署前存量首窗物理性丢失，firstObservation 如实保留 | e02550e3；守门三测 |
+| ③ 499 干净树不可重放 | **实证已自愈**：hermes-agent 干净克隆 42 补丁全链重放一次全过；对账抓到活树 533 未重放漂移，已重建至 LIVE==REPLAY 逐字节等效 | 树级修复（无 overlay 提交） |
+| ① 三部曲③未发布 | **挂起**：10-03 晨检仍未出；A4 维持预判实现，③发布后对照校准 | — |
+
+设计正本同步：V6 推演方案（`docs/superpowers/specs/2026-10-02-mux-v6-fullflow-plan.md`）第二章能力行/P18 行/§14.3 补丁清单已更新（patch 542-546）；过程记档入 V5 changelog-archive §十。
+
+---
+
 ## 一、四篇源文讲了什么
 
 ### 源文① 动态本体三部曲①：触发 + 增量抽取（2026-09-29，AI砖家成长日记）
