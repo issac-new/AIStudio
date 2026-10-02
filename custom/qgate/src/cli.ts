@@ -129,7 +129,7 @@ async function main(): Promise<void> {
       let blocking = 0
       const runIds: string[] = []
       for (const spec of ordered) {
-        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed })
+        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved) })
         runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
         const isBlocking =
@@ -201,11 +201,12 @@ async function main(): Promise<void> {
           if (/^(\s*)acknowledgedSha256:.*$/m.test(text)) {
             next = text.replace(/^(\s*)acknowledgedSha256:.*$/m, `$1acknowledgedSha256: "${written.sha256}"`)
           } else {
-            // 在 file: 行后按同缩进插入 acknowledgedSha256（fileRel 逐字符转义防正则注入）
+            // 在 file: 行后同列插入 acknowledgedSha256（fileRel 逐字符转义防正则注入；
+            // 同列=与 file 同级映射项，多缩进会破坏 YAML 列对齐）
             const escaped = fileRel.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&')
             next = text.replace(
               new RegExp(`^(\\s*)(file:\\s*["']?${escaped}["']?\\s*)$`, 'm'),
-              `$1$2\n$1  acknowledgedSha256: "${written.sha256}"`,
+              `$1$2\n$1acknowledgedSha256: "${written.sha256}"`,
             )
           }
           if (next !== text) {

@@ -316,6 +316,30 @@ describe('门包 YAML 与 profile 裁剪（v0.3 新门接线）', () => {
   })
 })
 
+describe('profile policy override 贯通 decide（v0.3 根治：override 此前只影响 CLI 阻断计算）', () => {
+  it('门自带 warn + profile override failure:block → verdict 真 FAIL（阻断），非 CONDITIONAL 降级', async () => {
+    const fx = tmpProject()
+    try {
+      const warnSpec: GateSpec = {
+        apiVersion: 'qgate/v1alpha1', kind: 'Gate',
+        metadata: { id: 'g.warnpack', version: '0.1.0' },
+        spec: {
+          domain: 'L5', claims: ['c'], triggers: ['task_close'],
+          executors: [{ id: 'e', type: 'command', command: ['sh', '-c', 'exit 1'], evidenceType: 'x' }],
+          evidence: { required: ['x'] }, policy: { failure: 'warn', inconclusive: 'warn' },
+        },
+      }
+      // 无 override：warn 降级 CONDITIONAL
+      const soft = await runGate({ spec: warnSpec, trigger: 'task_close', workspace: fx.dir, qgateDir: fx.qgateDir, changedPaths: [] })
+      expect(soft.run.verdict).toBe('CONDITIONAL')
+      // override 后同门再跑（换 runId 天然不撞缓存；decision 不走缓存）：FAIL
+      const hard = await runGate({ spec: warnSpec, trigger: 'task_close', workspace: fx.dir, qgateDir: fx.qgateDir, changedPaths: [], effectivePolicy: { failure: 'block', inconclusive: 'warn' } })
+      expect(hard.run.verdict).toBe('FAIL')
+      expect(hard.run.failureSummary).toContain('x:fail')
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+})
+
 describe('CLI intent（唯一写入通道 + 哈希重绑）', () => {
   it('登记→项目门 acknowledgedSha256 自动重绑→修订留痕', () => {
     const fx = tmpProject()
@@ -346,6 +370,9 @@ describe('CLI intent（唯一写入通道 + 哈希重绑）', () => {
       const gateText = readFileSync(join(fx.qgateDir, 'gates', 'intent-drift.yaml'), 'utf8')
       const sha = taskIntentSha256(join(fx.qgateDir, 'registers', 'task-intent.json'))!
       expect(gateText).toContain(sha)
+      // 守门：重绑插入不得破坏 YAML（回归：曾多缩进两格致列不对齐、门解析失败回退内置门）
+      expect(parseGateSpec(parseYaml(gateText)), 'gate must still parse after rebind').not.toBeNull()
+      expect(parseGateSpec(parseYaml(gateText))!.spec.executors[0].taskIntent?.acknowledgedSha256).toBe(sha)
       const rev = spawnSync('node', [distCli, 'intent', '--revise', '--reason', '扩范围', '--scope', 'src/**,docs/**'], { cwd: fx.dir, encoding: 'utf8', timeout: 30_000 })
       expect(rev.status).toBe(0)
       expect(rev.stdout).toContain('revised task-intent T-9')

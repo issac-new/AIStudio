@@ -24,6 +24,9 @@ export interface RunInput {
   workspace: string
   qgateDir: string
   changedPaths?: readonly string[]
+  /** profile 覆盖后的有效 policy（缺省用门自带）；贯通 decide——否则 override 只影响
+      CLI 阻断计算而 verdict 已被门自带 warn 降级，block 覆盖永远拦不住（v0.3 根治）。 */
+  effectivePolicy?: GateSpec['spec']['policy']
 }
 
 export interface RunResult {
@@ -125,7 +128,7 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     if (cacheKey) cachePut(qgateDir, cacheKey, evidence)
   }
 
-  const decision = decide(spec, evidence)
+  const decision = decide(spec, evidence, input.effectivePolicy)
 
   // 执行后快照：与执行前比对得 inputsStable（门自身没有改写自己的输入）。
   // 缓存命中路径无新执行，快照字段留空——新鲜度判定回退原三锚。
