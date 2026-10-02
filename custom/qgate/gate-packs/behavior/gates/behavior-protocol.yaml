@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: behavior.protocol
+  version: 0.1.0
+  description: >
+    R2 行为协议（v0.1 §9，上游 behavior 本地方言）：用例 expected vs 观察实际的结构化
+    深比较；支持 F2P/P2P 双版本基线（baselineFile + f2p/p2p 清单，六类违规全指名）。
+    观察文件由同门先行命令产出（runner 无权自判）。
+spec:
+  domain: L3
+  claims:
+    - behavior.protocol-honored
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: behavior.cases
+      type: behavior
+      mode: cases
+      observedFile: ".qgate/observations/behavior.json"
+      evidenceType: behavior-protocol-result
+  evidence:
+    required: [behavior-protocol-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

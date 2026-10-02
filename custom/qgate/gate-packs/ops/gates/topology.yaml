@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.topology
+  version: 0.1.0
+  description: >
+    R4 拓扑健康（上游 topology 本地方言）：R1 故障域分散 / R2 副本阈值按 stateModel /
+    R3 一阶割集 / R4 leader 租约；无域信息须显式 domainVerification:"unavailable" 降级。
+spec:
+  domain: L4
+  claims:
+    - ops.topology-sound
+  triggers: [release]
+  executors:
+    - id: ops.topology
+      type: ops
+      mode: topology
+      dataFile: ".qgate/registers/topology.json"
+      evidenceType: topology-result
+  evidence:
+    required: [topology-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 720

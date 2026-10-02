@@ -38,7 +38,8 @@ export function emit(obj) {
   process.exit(0)
 }
 
-/** Stop 续跑预算状态（会话内持久；block 两次后降级放行+登记 Risk，总阻断 ≤2 < 3 上限）。 */
+/** Stop 续跑预算状态（会话内持久；block 两次后降级放行+登记 Risk，总阻断 ≤2 < 3 上限）。
+ *  v0.3 R6：携带会话基线（SessionStart 写入的逐门判定），供 Stop 做 new-only 降级。 */
 const MAX_BLOCKS = 2
 
 export function stopBudgetState(qgateDir, sessionId) {
@@ -55,6 +56,27 @@ export function saveStopBudgetState(qgateDir, state) {
     mkdirSync(qgateDir, { recursive: true })
     writeFileSync(join(qgateDir, 'stop-state.json'), JSON.stringify(state))
   } catch { /* 预算状态写失败只影响降级计数，不影响放行语义 */ }
+}
+
+/** 会话基线写入（SessionStart 调用）：记录逐门判定，Stop 据此区分"新失败"与"既有失败"。 */
+export function writeSessionBaseline(qgateDir, sessionId, gates, profile) {
+  const verdicts = {}
+  for (const g of gates ?? []) verdicts[g.gateId] = g.verdict
+  saveStopBudgetState(qgateDir, { sessionId, blocks: 0, baseline: { at: Date.now(), profile, verdicts } })
+}
+
+/** new-only 降级判定（上游 blockMode:new-only 本地方言）：
+ *  阻断门全部在会话基线中已是同判定（非本会话新引入），且证据仍新鲜（基线后无命中变更）
+ *  → 视为既有已知状态，放行留痕不烧阻断预算。INCONCLUSIVE（框架/证据不可得）永不降级。 */
+export function isNewOnly(blocking, state) {
+  const baseline = state?.baseline
+  if (!baseline || !baseline.verdicts) return false
+  if ((blocking ?? []).length === 0) return false
+  return blocking.every(
+    (g) => g.verdict !== 'INCONCLUSIVE'
+      && baseline.verdicts[g.gateId] === g.verdict
+      && g.freshness === 'fresh',
+  )
 }
 
 /** 计算下一次阻断决策：false=不再阻断（预算耗尽，降级）。 */

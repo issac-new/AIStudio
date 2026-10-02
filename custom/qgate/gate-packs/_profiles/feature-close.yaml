@@ -15,4 +15,7 @@ spec:
     - llm.*
     - api.*
     - schema.*
+    - behavior.*
+    - semantic.*
+    - ops.*
     - L5

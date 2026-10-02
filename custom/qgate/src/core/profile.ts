@@ -42,11 +42,14 @@ export function resolveProfile(
   }
   if (!chosen) return resolved
 
-  for (const pattern of chosen.spec.disable) {
-    for (const g of gates) if (patternMatches(pattern, g)) resolved.enabled.set(g.metadata.id, false)
-  }
+  // 求值顺序（v0.3 R1-R7 收口轮根治）：enable 先提名、disable 后否决。
+  // 原顺序（disable 先）会让域级 enable（L3.*/L4.*）静默复活被前缀 disable 点名的门——
+  // v0.2 起 high-assurance 的 ontology.*/llm.* disable 从未生效（第四暗坑）。
   for (const pattern of chosen.spec.enable) {
     for (const g of gates) if (patternMatches(pattern, g)) resolved.enabled.set(g.metadata.id, true)
+  }
+  for (const pattern of chosen.spec.disable) {
+    for (const g of gates) if (patternMatches(pattern, g)) resolved.enabled.set(g.metadata.id, false)
   }
   for (const [gateId, override] of Object.entries(chosen.spec.overrides ?? {})) {
     if (override.policy && Object.keys(override.policy).length > 0) {

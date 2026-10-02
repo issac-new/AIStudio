@@ -4,7 +4,7 @@
 // 退出码：0=全部 PASS/无阻断；1=存在 FAIL/INCONCLUSIVE 阻断；2=配置或环境错误。
 
 import { resolve, join } from 'node:path'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
@@ -32,6 +32,10 @@ commands:
   exceptions                          列出豁免及有效性
   intent --task-id --statement --scope --acceptance --confirmed-by
                                       登记任务意图（唯一写入通道；--revise --reason 修订留痕并自动重绑哈希）
+  templates                           档位模板一览（profile × 门面，选档参考）
+  inspect                             只读体检：诊断/登记在档/判定新鲜度
+  leftovers                           只读扫描 .qgate/ 未引用残留
+  update --profile <id>               受控切档（改后即校验）
   release-report [--out <file>]       生成发布证据包（md + json）
   init                                在当前项目创建 .qgate/ 骨架`
 
@@ -67,13 +71,14 @@ async function main(): Promise<void> {
 
   if (cmd === 'init') {
     const fs = await import('node:fs')
-    const dir = resolve(workspace, '.qgate', 'gates')
-    fs.mkdirSync(dir, { recursive: true })
+    fs.mkdirSync(resolve(workspace, '.qgate', 'gates'), { recursive: true })
+    fs.mkdirSync(resolve(workspace, '.qgate', 'registers'), { recursive: true })
+    fs.mkdirSync(resolve(workspace, '.qgate', 'observations'), { recursive: true })
     const cfg = resolve(workspace, '.qgate', 'qgate.yaml')
     if (!fs.existsSync(cfg)) {
       fs.writeFileSync(cfg, 'profile: feature-close\nclaims: []\n', 'utf8')
     }
-    process.stdout.write(`initialized ${resolve(workspace, '.qgate')}\n`)
+    process.stdout.write(`initialized ${resolve(workspace, '.qgate')} (gates/ registers/ observations/)\n`)
     return
   }
 
@@ -83,6 +88,87 @@ async function main(): Promise<void> {
   const profile = findProfile(loaded.profiles, loaded.config.profile)
   const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile)
   const enabledGates = loaded.gates.filter((g) => resolved.enabled.get(g.metadata.id) === true)
+
+  // ── R5 配置生命周期（templates/inspect/leftovers/update；上游本地方言：
+  //    本地配置是声明式 .qgate/，无单文件装配——templates 是选档参考，update 只做受控切档） ──
+
+  if (cmd === 'templates') {
+    const byDomain = new Map<string, number>()
+    for (const g of loaded.gates) byDomain.set(g.spec.domain, (byDomain.get(g.spec.domain) ?? 0) + 1)
+    process.stdout.write(`available profiles: ${loaded.profiles.map((p) => `${p.metadata.id}${p.metadata.tier ? `(${p.metadata.tier})` : ''}`).join(', ') || '(none)'}\n`)
+    process.stdout.write(`builtin gates by domain: ${[...byDomain.entries()].map(([d, n]) => `${d}=${n}`).join(' ')} (total ${loaded.gates.length})\n`)
+    for (const p of loaded.profiles) {
+      const r = resolveProfile(loaded.gates, p, p.metadata.id)
+      const enabled = loaded.gates.filter((g) => r.enabled.get(g.metadata.id))
+      process.stdout.write(`  ${p.metadata.id}${p.metadata.tier ? ` [tier=${p.metadata.tier}]` : ''} → ${enabled.length} gates: ${enabled.map((g) => g.metadata.id).join(' ')}\n`)
+    }
+    process.stdout.write(`switch via: qgate update --profile <id>（或手改 .qgate/qgate.yaml）\n`)
+    return
+  }
+
+  if (cmd === 'inspect') {
+    const state = latestRuns(paths)
+    const git = gitContext(workspace)
+    const sharedFiles = listWorkspaceFiles(workspace)
+    const registers = ['requirements.json', 'task-intent.json', 'assumptions.json', 'decisions.json', 'debt.json', 'budget.json', 'rerun.json', 'topology.json', 'catalog.json']
+    process.stdout.write(`project: ${workspace}\n`)
+    process.stdout.write(`profile: ${resolved.profileId}${resolved.tier ? ` (tier=${resolved.tier})` : ''} · gates ${loaded.gates.length} (enabled ${enabledGates.length})\n`)
+    process.stdout.write(`diagnostics: ${loaded.diagnostics.length === 0 ? 'clean' : `${loaded.diagnostics.length} issue(s)`}\n`)
+    for (const d of loaded.diagnostics) process.stdout.write(`  ✗ ${d.path}: ${d.message}\n`)
+    process.stdout.write(`registers (in .qgate/registers/):\n`)
+    for (const r of registers) {
+      process.stdout.write(`  ${existsSync(join(loaded.qgateDir, 'registers', r)) ? '✓' : '–'} ${r}\n`)
+    }
+    process.stdout.write(`latest verdicts:\n`)
+    for (const g of enabledGates) {
+      const entry = state[g.metadata.id]
+      if (!entry) { process.stdout.write(`  ? ${g.metadata.id}: never run\n`); continue }
+      const run = loadRun(paths, entry.runId)
+      const globs = inputGlobsOf(g)
+      const currentSnapshot = run && globs.length > 0 ? snapshotForGlobs(workspace, globs, sharedFiles) : undefined
+      const fresh = run ? isFresh(run, Date.now(), { commit: git.commit, treeHash: git.treeHash, changedPaths: git.changedPaths, appliesWhen: g.spec.appliesWhen, inputSnapshot: currentSnapshot }, effectivePolicy(g, resolved).maxAgeHours ?? 24) : false
+      process.stdout.write(`  ${fresh ? '✓' : '✗'} ${g.metadata.id}: ${entry.verdict} (${fresh ? 'fresh' : 'stale'})\n`)
+    }
+    return
+  }
+
+  if (cmd === 'leftovers') {
+    const known = new Set(['qgate.yaml', 'state.json', 'hooks.log', 'stop-state.json', 'release-report.md', 'release-report.json', 'junit-report.xml', 'baseline.json', '.gitignore'])
+    const reservedDirs = new Set(['runs', 'evidence', 'risks', 'exceptions', 'cache', 'registers', 'observations', 'gates', 'profiles'])
+    const leftovers: string[] = []
+    try {
+      for (const name of readdirSync(loaded.qgateDir)) {
+        if (reservedDirs.has(name) || known.has(name)) continue
+        leftovers.push(name)
+      }
+    } catch {
+      fail('.qgate/ unreadable')
+    }
+    if (leftovers.length === 0) process.stdout.write('✓ no leftovers in .qgate/\n')
+    else {
+      process.stdout.write('leftover candidates (unreferenced, review before removing):\n')
+      for (const l of leftovers) process.stdout.write(`  ? ${l}\n`)
+    }
+    return
+  }
+
+  if (cmd === 'update') {
+    const profileArg = flag(rest, '--profile')
+    if (!profileArg) fail('usage: update --profile <id>（当前仅支持 profile 切档；门与登记的演进直接改对应 YAML/JSON——声明式配置无破坏性迁移）')
+    if (!loaded.profiles.some((p) => p.metadata.id === profileArg)) {
+      fail(`unknown profile: ${profileArg}（qgate templates 查看可用档）`)
+    }
+    const cfgFile = join(loaded.qgateDir, 'qgate.yaml')
+    const raw = readFileSync(cfgFile, 'utf8')
+    const next = /^profile:\s*.+$/m.test(raw)
+      ? raw.replace(/^profile:\s*.+$/m, `profile: ${profileArg}`)
+      : `profile: ${profileArg}\n${raw}`
+    writeFileSync(cfgFile, next, 'utf8')
+    const reloaded = loadProject(workspace)
+    if (!reloaded) fail('update left project unloadable (refusing to keep)')
+    process.stdout.write(`profile switched to ${profileArg} (${reloaded.gates.length} gates loaded, ${reloaded.diagnostics.length} diagnostics)\n`)
+    return
+  }
 
   if (loaded.diagnostics.length > 0 && cmd === 'validate-config') {
     for (const d of loaded.diagnostics) process.stdout.write(`DIAG ${d.path}: ${d.message}\n`)

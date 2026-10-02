@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.state
+  version: 0.1.0
+  description: >
+    R3 状态机对齐（上游 semantic-state 本地方言）：概念 lifecycle 状态机 vs 观察实例
+    转换——未知状态/非法转换点名（v0.1 §9 功能主路径之外的状态机错误在此被逮）。
+spec:
+  domain: L3
+  claims:
+    - semantic.lifecycle-honored
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: semantic.state
+      type: semantic
+      check: state
+      catalogFile: ".qgate/registers/catalog.json"
+      observedFile: ".qgate/observations/semantic-transitions.json"
+      concept: "example:ReplaceMe"
+      evidenceType: semantic-state-result
+  evidence:
+    required: [semantic-state-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

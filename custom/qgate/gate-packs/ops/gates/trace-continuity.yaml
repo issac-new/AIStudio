@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.trace-continuity
+  version: 0.1.0
+  description: >
+    R4 链路贯通（上游 trace-continuity 本地方言）：声明调用对两端 span 核验——
+    traceId 连续、parentSpanId 匹配、W3C traceparent 格式与一致性。
+spec:
+  domain: L4
+  claims:
+    - ops.trace-continuous
+  triggers: [task_close, release]
+  executors:
+    - id: ops.trace
+      type: ops
+      mode: trace-continuity
+      observedFile: ".qgate/observations/trace-links.json"
+      evidenceType: trace-result
+  evidence:
+    required: [trace-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

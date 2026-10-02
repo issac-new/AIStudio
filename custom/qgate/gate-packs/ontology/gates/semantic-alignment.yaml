@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.alignment
+  version: 0.1.0
+  description: >
+    R3 概念映射对齐（上游 semantic-alignment 本地方言）：代码符号→IRI 候选映射 vs
+    expectedMap——strict 等值 / subsumed 允许子类；互斥候选冲突、runtime 来源强制。
+    观察文件由项目命令产出（静态注解或 runtime 探测均可）。
+spec:
+  domain: L3
+  claims:
+    - semantic.mapping-aligned
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: semantic.alignment
+      type: semantic
+      check: alignment
+      catalogFile: ".qgate/registers/catalog.json"
+      observedFile: ".qgate/observations/semantic-map.json"
+      matchMode: strict
+      evidenceType: semantic-alignment-result
+  evidence:
+    required: [semantic-alignment-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

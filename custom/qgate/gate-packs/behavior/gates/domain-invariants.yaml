@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: behavior.domain-invariants
+  version: 0.1.0
+  description: >
+    R2 领域不变量（v0.1 §9 L3.6，上游 property 本地方言）：固定 seed 案例集上执行
+    断言（eq/neq/le/lt/ge/gt + when）与状态转换白名单；反例入证据。项目覆盖
+    assertions/minCases/allowedTransentions 后生效。
+spec:
+  domain: L3
+  claims:
+    - behavior.invariants-hold
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: behavior.property
+      type: behavior
+      mode: property
+      observedFile: ".qgate/observations/property-cases.json"
+      minCases: 10
+      evidenceType: invariant-result
+  evidence:
+    required: [invariant-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
