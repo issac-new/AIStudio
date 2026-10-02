@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L2.domain-invariant
+  version: 0.1.0
+  description: >
+    R8 领域不变量（上游 invariant 本地方言）：观察值集 {values:{...}} × 断言
+    （eq/neq/le/lt/ge/gt，when 条件跳过）。全部断言被 when 跳过 → skipped
+    （诚实：没断言≠通过）。项目覆盖 assertions 后生效。
+spec:
+  domain: L2
+  claims:
+    - L2.invariants-hold
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: l2.invariant
+      type: behavior
+      mode: invariant
+      observedFile: ".qgate/observations/invariant-values.json"
+      evidenceType: invariant-result
+  evidence:
+    required: [invariant-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
