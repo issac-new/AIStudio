@@ -357,28 +357,35 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
   done
 }
 
-# ── 闸点经验沉淀（2026-10-02 用户终局：恰当卡点保留 background_review）────
+# ── 闸点经验沉淀（2026-10-02 用户终局：有意义卡点自动 review，减空转、token 花在刀刃）──
 # 每 turn 自动 review fork 已由 auxiliary.background_review.enabled=false 关闭；
-# 沉淀保留在治理卡点：闸通过后以人类账号对自家 agent DM 先垫一句话建立/刷新
-# 会话缓存（/refine 需 agent 空闲且有缓存），再发 "!refine <闸点名>" 显式触发
-# hermes 的 background_review fork（slash_commands_goals._handle_refine_command，
-# focus 路径不查 enabled 开关）。MX_GATE_REVIEW=0 可整体停用闸点沉淀。
-gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程推进
-  local u="$1" gate="$2" dm i body re tok
+# 沉淀发生在有意义卡点：治理闸/大协作阶段完成时，对该阶段**实质干活**的 agent
+# 各触发一次。触发方式：在 agent 最近的工作线程内发 "!refine <闸点名>"——
+# 群会话键是 thread 级（build_session_key thread 优先），线程内消息按 thread
+# 归属路由到该 agent（approve 线程回复实证），refine 因此对准**真实工作历史**
+# 而非空会话（v1 的 DM 垫话方案 refine 的是空 DM 会话，已废）。/refine 走
+# background_review 同一代码路径且不查 enabled。MX_GATE_REVIEW=0 可整体停用。
+gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
+  local u="$1" gate="$2" room tok last_eid thread_root payload re
   [[ "${MX_GATE_REVIEW:-1}" == "1" ]] || return 0
-  dm=$(dm_room_agent "$u" "$u") || { note "[观察] 闸点沉淀 DM 建房失败 ${u}@${gate}（跳过）"; return 0; }
+  room="${SCAN_ROOM:-$(sget room_analysis)}"
+  [[ -n "$room" ]] || return 0
   tok=$(load_token "$u")
-  mx_send "$tok" "$dm" "【闸点复盘】${gate} 已通过。请一句话确认收到即可，随后我将触发经验沉淀回顾。" >/dev/null 2>&1 || true
-  # 等 agent 回应（turn 完成——refine 拒绝 running 态）；best-effort 90s
-  for i in 1 2 3 4 5 6; do
-    sleep 15
-    body=$(mx_messages "$tok" "$dm" 5 2>/dev/null | jq -r --arg s "$(agent_mxid "$u")" \
-      '[.[] | select(.sender == $s)][0].content.body // ""' 2>/dev/null) || body=""
-    [[ -n "$body" ]] && break
-  done
-  re=$(mx_send "$tok" "$dm" "!refine ${gate}")
+  # 该 agent 群内最近一条消息 = 当前工作线程最新活动
+  last_eid=$(mx_messages "$tok" "$room" 50 2>/dev/null | jq -r --arg s "$(agent_mxid "$u")" \
+    '[.[] | select(.sender == $s)][0].event_id // empty' 2>/dev/null)
+  if [[ -z "$last_eid" ]]; then
+    note "[观察] 闸点沉淀：${u}@${gate} 未找到 ${u}-agent 近期群消息（跳过）"
+    return 0
+  fi
+  thread_root=$(mx_messages "$tok" "$room" 50 2>/dev/null | jq -r --arg e "$last_eid" \
+    '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || thread_root="$last_eid"
+  payload=$(jq -n --arg r "$thread_root" --arg e "$last_eid" \
+    --arg m "@$(agent_mxid "$u") !refine ${gate}" \
+    '{msgtype:"m.text", body:$m, m.relates_to:{rel_type:"m.thread", event_id:$r, is_falling_back:true, m.in_reply_to:{event_id:$e}}}')
+  re=$(mx "$tok" POST "rooms/$room/send/m.room.message" "$payload" | jq -r '.event_id // empty' 2>/dev/null) || true
   if [[ -n "$re" ]]; then
-    note "[闸点沉淀] ${u}@${gate}：!refine 已发（${re}）——background_review 于卡点显式触发"
+    note "[闸点沉淀] ${u}@${gate}：!refine 已发进工作线程（${re}）——background_review 对真实工作历史触发"
   else
     note "[观察] ${u}@${gate} !refine 发送失败（跳过，不影响流程）"
   fi
