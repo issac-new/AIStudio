@@ -1,0 +1,38 @@
+# 项目覆盖内置门：符号接地的 overlay 借用契约（2026-10-02 根治轮）。
+# 架构事实：overlay/node_modules 是指向 upstream/hermes-studio/node_modules 的符号链——
+# 依赖声明的单一事实源在上游 package.json（vue/pinia/vitest/typescript/cross-env 均由其声明）。
+# 借用三要素显式化：
+#   depsFile         —— 接地核验读上游清单（上游砍依赖时本门立即亮红，借用漂移可机检）
+#   aliases          —— @/custom、@custom 映射到本仓 custom/client（与 vitest.config.ts 同步）
+#   ignoredSpecifiers —— '@/'' 前缀豁免：@ 兜底指向上游 client src（仓外文件，接地属上游职责）
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L1.symbol-grounding
+  version: 0.1.0-overlay
+  description: overlay 符号接地（借用契约版）：依赖核验指上游清单+本仓 alias 映射+上游源码引用豁免。
+spec:
+  domain: L1
+  claims:
+    - L1.imports-grounded
+  appliesWhen:
+    changed:
+      any: ["custom/**/*.ts", "custom/**/*.vue", "scripts/**", "vitest.config.ts"]
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: l1.symbols
+      type: ops
+      mode: symbols
+      depsFile: "../upstream/hermes-studio/package.json"
+      aliases:
+        "@/custom/": "./custom/client/"
+        "@custom/": "./custom/client/"
+      ignoredSpecifiers: ["@/"]
+      evidenceType: symbol-grounding-result
+  evidence:
+    required: [symbol-grounding-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

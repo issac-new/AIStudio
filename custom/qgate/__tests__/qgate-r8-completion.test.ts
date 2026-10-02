@@ -274,3 +274,23 @@ describe('ops symbols alias/ignore 扩展', () => {
     expect(configured.result).toBe('pass')
   })
 })
+
+describe('ops symbols depsFile（符号链借用契约显式化）', () => {
+  it('depsFile 指认上游清单：上游声明的包接地；清单缺失 → error（架构漂移）', () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'shared-host'), { recursive: true })
+    writeFileSync(join(ws, 'shared-host', 'package.json'), JSON.stringify({ devDependencies: { vitest: '^3.2.4', vue: '^3.5.0' } }))
+    writeFileSync(join(ws, 'app.ts'), "import { describe } from 'vitest'\nimport { ref } from 'vue'\nexport const x = 1\n")
+    // 根清单零依赖（借用架构）：无 depsFile → vitest/vue 判 unresolved（如实）
+    const bare = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }, ws)
+    expect(bare.result).toBe('fail')
+    // 指认上游清单 → 接地
+    const borrowed = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x', depsFile: 'shared-host/package.json' }, ws)
+    expect(borrowed.result).toBe('pass')
+    // 指认的清单消失 → error（漂移是异常不是"没依赖"）
+    rmSync(join(ws, 'shared-host', 'package.json'))
+    const drifted = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x', depsFile: 'shared-host/package.json' }, ws)
+    expect(drifted.result).toBe('error')
+    expect(drifted.summary).toContain('depsFile missing')
+  })
+})
