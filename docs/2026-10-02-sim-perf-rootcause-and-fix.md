@@ -76,9 +76,14 @@
 
 ## 四、验证
 
-- 已完成：bash -n 语法过；三模板实跑输出 YAML 断言（enabled=False / effort=high / 空串=ultra）；43 处 sim 配置 YAML 全量校验 0 异常；merge 回 main 后主树复核过。
-- 观察中：`ncwk-sim-mux/logs/bgreview-off-watch.log`（20min 观察器，21:35 后新 turn vs 新 review spawn 对照）。判据：改后全编制 background_review 新增 = 0。
-- 下一轮全流程推演（run8）为终验：预期 26 步总时长从 8–10h 压到 ~3h 量级；若单步仍慢，下一个优化面是 R3（history 截断/压缩）与 R4（memory 上限）。
+- **运行时验证已过（2026-10-02 21:35–21:57 窗口）**：配置生效后全编制新发生 12 个 turn，background_review 新增 = 0（改前每个任务 turn 后必跟一个，存量数百次）。观察器存档：`ncwk-sim-mux/logs/bgreview-off-watch.log`。
+- 已完成：bash -n 语法过；三模板实跑输出 YAML 断言（enabled=False / effort=high / 空串=ultra / memory 4400-2750）；43 处 sim 配置 YAML 全量校验 0 异常；merge 回 main 后主树复核过。
+- 下一轮全流程推演（run8）为终验：预期 26 步总时长从 8–10h 压到 ~3h 量级。
+
+## 四b、追加（同日 22 时轮）：R4 已落地、R3 维持不动
+
+- **R4 已落地（main `d1e24f9e`）**：write_user/agent_profile 两模板 memory 段补 `memory_char_limit: 4400 / user_char_limit: 2750`（对齐宿主实证值）；sim 树 42 profile 已同步、YAML 校验 0 异常。读取时机为 agent 进程初始化（memory_tool.py:56 / agent_init.py:1318），新拉起进程即生效，下轮全量生效。
+- **R3 维持不动（有意决策，非遗漏）**：压缩阈值 0.35 在 1M 窗口下约 37 万 token 触发，看似"从不压缩"，但盲调阈值有摘要丢任务约束（卡 ID/事件 ID/RACI 口径）致返工的风险——一次返工 20–40min 即吃掉全部压缩收益；且窗口调小会被 `_SMALL_CTX_THRESHOLD_PERCENT=0.75` floor 抬得更高（context_compressor.py:1177）。待 high 档下轮实测后若任务 turn 仍慢，再按数据裁阈值。
 
 ## 五、未验证与风险声明
 
