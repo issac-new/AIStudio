@@ -681,6 +681,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       while ((m = reImp.exec(content)) !== null) {
         const [, defaultBare, namedList, , spec0] = m
         if (spec0.startsWith('node:')) continue
+        if (spec0.startsWith('/')) continue // 绝对路径=仓外引用（接地属目标仓）
         const { spec, aliased } = applyAlias(spec0)
         if (isIgnored(spec)) continue
         if (spec.startsWith('.')) {
