@@ -298,7 +298,14 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
   # manual：全部挂起等真人；hybrid：关键挂真人+过程性 agent 代审（见上块注释）；
   # auto：历史行为——扫到即批（反应+线程内 !approve 双通道）。
   local MODE="${MX_APPROVE_MODE:-auto}" room="$1"
-  [[ "$MODE" == "manual" ]] && return 0
+  # 大小写归一+非法值 fail-closed（2026-10-02 审查批）：配置漂移（Manual/HYBRID 等）
+  # 不得静默落 auto"扫到即批"——未知的值按 manual 全挂起处理并记单。
+  MODE="$(printf '%s' "$MODE" | tr 'A-Z' 'a-z')"
+  case "$MODE" in
+    manual) return 0 ;;
+    auto|hybrid) ;;
+    *) note "[审批开关] MX_APPROVE_MODE='${MX_APPROVE_MODE}' 非法（合法值 auto/manual/hybrid）——按 manual 全挂起处理"; return 0 ;;
+  esac
   for u in "${INSTANCED_USERS[@]}"; do
     local pend
     # 去重改固定串（H5）：eid 形如 $abc…:matrix.test，当正则用时 `.` 是通配、^eid 还前缀
@@ -486,12 +493,12 @@ raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派�
   # 只查正文对合规消息恒假阴性；深翻页另证 17:20-18:10 无 fanfan 双 @ 正文消息，
   # 观察 4 条的真因是消息未发而非窗口外）。
   mx_messages_deep "$(load_token fanfan)" "$3" $(( $(date +%s) - 3600 )) 3 \
-    | jq -e --arg u1 "@'"$1"'-agent" --arg u2 "@'"$2"'-agent" \
+    | jq -e --arg u1 "@$1-agent" --arg u2 "@$2-agent" \
       '[.[] | select(.type=="m.room.message")
         | (.content.body//"") as $b
         | ((.content["m.mentions"] // {}) | (.user_ids // [])) as $m
-        | select((($b | contains($u1)) or ($m | index($u1)))
-             and (($b | contains($u2)) or ($m | index($u2))))] | length > 0'
+        | select((($b | contains($u1)) or ($m | any(.; startswith($u1))))
+             and (($b | contains($u2)) or ($m | any(.; startswith($u2)))))] | length > 0'
 }
 
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
