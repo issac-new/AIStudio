@@ -21,6 +21,9 @@
 import type { RouteLocationRaw } from 'vue-router'
 import type { RunSummary } from '@/custom/loop/runcenter/types'
 import type { KvStorage } from '@/custom/loop/runcenter/adapters/inbox'
+// API 面透传：storage 注入参数类型是本模块公开契约的一部分（测试/消费方从本模块取 KvStorage——
+// 此前仅 import 不透传，消费方 import 悬空无人管，symbol-grounding 2026-10-02 逮住）
+export type { KvStorage } from '@/custom/loop/runcenter/adapters/inbox'
 import { parseApprovalInterrupt } from '@/custom/loop/runcenter/adapters/intervention'
 import { localDateStr } from './overview'
 
