@@ -8,6 +8,32 @@
 > **B 批（建议 2 消息面治理）两件落地合 main da28a1ec**：系统事件聚合折叠（连续 ≥3 条状态事件折叠一行可展开，element-web 合并行范式）+permalink 改 studio 内链（#/app/s/room/:roomId?event=:id 编码）+房间路由 event 参数直跳（jumpToEvent 为 C6 修过的全链路）；守门 6 例新增+matrix-chat 47/47 全绿。tab 溢出一件（建议 2 第三件）记档：目标组件定位不确定（疑似上游 ChatPanel 会话 tab，需 patch 路线），不为显得有进展而猜改。
 > **C/D 批（建议 4/5/6）源码核实后判定不重复造轮**：待审批汇聚=注意力条 blocked/review/triage 梯队+决策行+铃铛双计数已实质覆盖（首轮 #7 跨 profile 审批中心在）；web 房间深链选中=MatrixRoomCanvas routeRoomId→selectRoom 既有（D3 兜底），B2 已补强 event 直跳；通道状态卡=RuntimeSection 凭证池卡（provider/failed/failureDetail+失败徽标）+SLO 分档成功率+p95+错误预算已在（首轮 runtime-caps 批），实时冷却/优先级编辑维持首轮 #17 记档待环境。
 > 建议 3（房间列表卫生）未动，留待下批。
+
+> **二轮执行终态记档（2026-10-01 深夜续，用户裁定「完成所有剩余工作」后实施）**：
+> **建议 3 落地合 main 503db60e**——房间列表排序器三档（活跃/未读/名称，localStorage 持久化，
+> element-web skip-list sorters 范式；sortFlowRows 单一事实源）+同名房悬停从属标注（房 ID+最后活跃时间）；
+> 守门 7 例新增+flow 系 20/20 绿。
+> **建议 2 第三件（tab 溢出）改判关闭**——缺陷载体（会话 tab 条）在 v12/v14 重构中已退役，
+> 痛点实质（同名不可区分）由左栏消歧后缀+排序器+搜索承接。
+> **建议 4-6（C/D 批）维持核实结论**（已覆盖不重造，见上节）。
+> **中期 #8 核实过半**：?board= 直链与板选项带计数上游原生已在（KanbanView.vue:60-99），
+> 首轮台账此处过时；计数口径统一（stats-bar 读 kanbanStore.stats vs boardOptions 读 board.total
+> 两数据源）需动上游 store/server 聚合，漂移期 patch 不可验证，记档带锚点待治理轮。
+> **中期 #15 落地**：插件接缝定义文档 `2026-10-01-plugin-seam-definition.md`（八组 24 缝枚举+
+> 不开放面+实施前提，合 main 3bda8d1e）。
+> **浏览器走查 10/10**（`scripts/absorb-round2-walkthrough.mjs`：changelog/深搜/终端收编/
+> 门控/排序器/event 深链，href 硬断言替代文案断言——locale 时序使文案中英不定）。
+> **中期受阻项记档**：#7 会话家族树（Fork/Rewind 依赖 hermes 会话分叉命令通道，runtime 未就绪，
+> 首轮 #10 同源记档）；#9 工件编辑器+新鲜度徽标（自有治理中心工程，等 P12 页签化合入后开工，
+> 防同文件冲突——沿用首轮纪律）；#10 暗能力 UI 化第二批（tui_gateway 127 RPC/subagent/spawn_tree，
+> hermes runtime 通道未就绪）；#11 蓝图实例化 UI（CLI 通道已通，需 /api/cron/blueprints 协议
+> 考证+槽位表单设计，专项轮）；#12 ekko/JEV 开 flag（产品裁决项：开 flag 后需走查评估面，
+> 不擅自开）；#13 设置架构升级（element-web 三层范式是大工程，与 #15 插件宿主同批设计更省）；
+> #14 Squads 混编面（账户管理页延伸工程，等 #12/#13 裁决后统一定交互）。
+> **环境修复记档**：dev 起不来根因=.overlay-injected.json manifest 落后 series 两条（537/538
+> 实际已在树），ensure-injected 补套失败即退——核实树内证据后登记 manifest 两条，
+> 恢复 dev；走查五坑新增两条=naive-ui 关闭钮不响应合成 JS click（必须 locator 真点）、
+> dev 实例 DefaultCredentialPrompt 自动弹窗须每步清场。
 盘点范围：`upstream/` 全部 12 个组件 + `overlay/` 现状基线 + 推演语料（V5 正本、V3 生命周期、aipaydev 全链报告、ncwk-sim-mux evidence 全部报告与审计）
 上位文档：《2026-10-01-upstream-absorption-analysis.md》（下称首轮）——27 项清单已全部收口，逐项终态见其附录对账表。本文是它的补全版：首轮是抽样精读，本文按"无遗漏"要求做穷尽盘点，并新增两个首轮没有的视角——**hermes-studio 上游暴露面 diff**（上游有而 studio 没用起来的面）与**推演改进点×吸收源交叉对照**（需求侧驱动）。
 
