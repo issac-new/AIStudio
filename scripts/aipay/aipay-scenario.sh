@@ -916,7 +916,11 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     fi
     git -C "$DIRECTOR_CLONE" fetch -q origin || true
     git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null || { UAT_OK=0; UAT_MISS="integration 分支不存在；"; }
-    repo_has "docs/test/${RFD_ID}-test-report.md" || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失；"; }
+    # 测试报告核对口径=origin/integration（发布基线分支，与 testpass 派发词 push 目标一致）——
+    # repo_has 盯 origin/main，报告按流程只进 integration，曾致 UAT 死循环九连 FAIL
+    # （run7 03:53-05:42 实锤，relay 换代掩盖）。冻结件仍在 main 口径。
+    git -C "$DIRECTOR_CLONE" show "origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" >/dev/null 2>&1 \
+      || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失（integration）；"; }
     repo_has "$(freeze_doc)" || { UAT_OK=0; UAT_MISS="${UAT_MISS}G1 冻结文件缺失；"; }
     if [[ $UAT_OK == 1 ]]; then
       # 逐条 AC 判词（独立审计意见 #3）：验收书按证据行逐条落判词，有条件/不通过
