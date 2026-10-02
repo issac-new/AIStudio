@@ -724,7 +724,12 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # origin/integration 引用，不看 HEAD。
     git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
       || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
-  note "[集成] integration/${RFD_ID} 四开发分支已合并并推送（推送被拒时已记问题单，见 issues.log）"
+  # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已记单
+  if git rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1; then
+    note "[集成] integration/${RFD_ID} 四开发分支已合并并推送 ✓（origin 可反查）"
+  else
+    note "[集成] integration/${RFD_ID} 本地合并完成、推送未达（已记问题单，见 issues.log）"
+  fi
 
   dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
