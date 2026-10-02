@@ -30,7 +30,7 @@ describe('B12 saved-views 域', () => {
     removeView(v!.id)
     expect(savedViewsState().views).toHaveLength(0)
     saveView('视角3', { board: 'x', status: null, assignee: null, search: '', includeArchived: false })
-    expect(JSON.parse(localStorage.getItem('kanban_saved_views') ?? '[]')).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('sl:user:kanban.savedViews') ?? '[]')).toHaveLength(1)
   })
 
   it('快照差异判定五元全覆盖', () => {

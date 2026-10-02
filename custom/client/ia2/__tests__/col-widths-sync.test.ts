@@ -16,7 +16,7 @@ describe('R6 三栏宽度同步联动（colWidths 单一事实源）', () => {
   it('默认宽度（无 key 无历史）→ 默认 280/480 并回填共享 key', () => {
     const w = readColWidths()
     expect(w).toEqual({ left: 280, right: 480 })
-    expect(JSON.parse(localStorage.getItem('ncwk.cols')!)).toEqual({ left: 280, right: 480 })
+    expect(JSON.parse(localStorage.getItem('sl:user:ui.colWidths')!)).toEqual({ left: 280, right: 480 })
   })
 
   it('历史 key 迁移回填（ncwk.wb.leftWidth/rightWidth → ncwk.cols）', () => {
@@ -24,23 +24,23 @@ describe('R6 三栏宽度同步联动（colWidths 单一事实源）', () => {
     localStorage.setItem('ncwk.wb.rightWidth', '500')
     const w = readColWidths()
     expect(w).toEqual({ left: 320, right: 500 })
-    expect(JSON.parse(localStorage.getItem('ncwk.cols')!)).toEqual({ left: 320, right: 500 })
+    expect(JSON.parse(localStorage.getItem('sl:user:ui.colWidths')!)).toEqual({ left: 320, right: 500 })
   })
 
   it('共享 key 优先于历史 key', () => {
-    localStorage.setItem('ncwk.cols', JSON.stringify({ left: 300, right: 460 }))
+    localStorage.setItem('sl:user:ui.colWidths', JSON.stringify({ left: 300, right: 460 }))
     localStorage.setItem('ncwk.wb.leftWidth', '999')
     const w = readColWidths()
     expect(w).toEqual({ left: 300, right: 460 })
   })
 
   it('clamp 边界（<180→180，>560→560）', () => {
-    localStorage.setItem('ncwk.cols', JSON.stringify({ left: 50, right: 999 }))
+    localStorage.setItem('sl:user:ui.colWidths', JSON.stringify({ left: 50, right: 999 }))
     expect(readColWidths()).toEqual({ left: 180, right: 560 })
   })
 
   it('updateColWidth 单边更新另一边保留 + 广播', () => {
-    localStorage.setItem('ncwk.cols', JSON.stringify({ left: 280, right: 480 }))
+    localStorage.setItem('sl:user:ui.colWidths', JSON.stringify({ left: 280, right: 480 }))
     const events: ColWidths[] = []
     const off = onColWidthsChange((w) => events.push(w))
     const next = updateColWidth('left', 320)
@@ -71,7 +71,7 @@ describe('R6 三栏宽度同步联动（colWidths 单一事实源）', () => {
     // writeColWidths 摘键静默丢弃——拖了不生效。现在必须当场抛错。
     expect(() => updateColWidth('sidebar' as 'left', 300)).toThrow(/invalid side/)
     expect(() => updateColWidth('sidepane' as 'right', 300)).toThrow(/invalid side/)
-    expect(JSON.parse(localStorage.getItem('ncwk.cols') || 'null')).toBeNull()
+    expect(JSON.parse(localStorage.getItem('sl:user:ui.colWidths') || 'null')).toBeNull()
   })
 
   it('COL_WIDTHS_EVENT 常量稳定（跨 store 订阅同名事件）', () => {

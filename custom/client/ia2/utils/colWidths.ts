@@ -5,12 +5,14 @@
 // 拖任一边另一边跟随。
 // 本模块是唯一事实源：shared localStorage key + CustomEvent 广播（同页跨 store）。
 // 历史 key 迁移（读时回填；写时只写共享 key，历史 key 不再写）。
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
+
 export interface ColWidths {
   left: number
   right: number
 }
 
-const SHARED_KEY = 'ncwk.cols'
+const SHARED_KEY = 'ncwk.cols'  // 遗留裸键（2026-10-02 #13 批三迁入分层 ui.colWidths）
 export const COL_WIDTHS_EVENT = 'ncwk:cols-changed'
 
 const MIN_W = 180
@@ -29,9 +31,9 @@ const LEGACY = {
 
 function readShared(): ColWidths | null {
   try {
-    const raw = localStorage.getItem(SHARED_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<ColWidths>
+    // #13 批三：分层键 ui.colWidths（user 层）；ncwk.cols 裸键一次性收养（JSON 形态直搬）
+    adoptLegacySetting('ui.colWidths', SHARED_KEY)
+    const parsed = readSetting<Partial<ColWidths>>('ui.colWidths', {}).value
     if (typeof parsed.left !== 'number' || typeof parsed.right !== 'number') return null
     return { left: clamp(parsed.left), right: clamp(parsed.right) }
   } catch {
@@ -68,7 +70,7 @@ export function readColWidths(): ColWidths {
 export function writeColWidths(widths: ColWidths, opts: { silent?: boolean } = {}): void {
   const clamped: ColWidths = { left: clamp(widths.left), right: clamp(widths.right) }
   try {
-    localStorage.setItem(SHARED_KEY, JSON.stringify(clamped))
+    writeSetting('user', 'ui.colWidths', clamped)
   } catch { /* 存储满静默 */ }
   if (!opts.silent && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent<ColWidths>(COL_WIDTHS_EVENT, { detail: clamped }))

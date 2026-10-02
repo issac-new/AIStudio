@@ -5,6 +5,7 @@
 // kanban store 既有过滤面（零新过滤维度）；持久化=localStorage per-user。
 // 纯函数 + 模块级响应式状态（KanbanToolbar 与守门测试共用单一事实源）。
 import { reactive } from 'vue'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 
 export interface KanbanViewSnapshot {
   board: string
@@ -21,11 +22,12 @@ export interface SavedKanbanView {
   savedAt: number
 }
 
-const KEY = 'kanban_saved_views'
+const KEY = 'kanban_saved_views'  // 遗留裸键（#13 批三迁入 kanban.savedViews）
 
 function load(): SavedKanbanView[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+    adoptLegacySetting('kanban.savedViews', KEY)
+    const raw = readSetting<unknown[]>('kanban.savedViews', []).value
     if (!Array.isArray(raw)) return []
     return raw.filter((v): v is SavedKanbanView =>
       v && typeof v === 'object' && typeof v.id === 'string' && typeof v.name === 'string' && v.snapshot && typeof v.snapshot === 'object')
@@ -39,7 +41,7 @@ export function savedViewsState(): { views: SavedKanbanView[] } {
 }
 
 function persist(): void {
-  try { localStorage.setItem(KEY, JSON.stringify(state.views)) } catch { /* quota 静默 */ }
+  try { writeSetting('user', 'kanban.savedViews', state.views) } catch { /* quota 静默 */ }
 }
 
 /** 保存（重名覆盖同名旧视图；id=名称确定性哈希，幂等）。 */
@@ -70,8 +72,10 @@ export function snapshotEquals(a: KanbanViewSnapshot, b: KanbanViewSnapshot): bo
     && a.search === b.search && a.includeArchived === b.includeArchived
 }
 
-/** 测试/复位用。 */
+/** 测试/复位用：清分层键（三层）后重载（重载触发遗留收养——与 notify-prefs 同语义）。 */
 export function __resetSavedViewsForTest(): void {
-  state.views = []
-  try { localStorage.removeItem(KEY) } catch { /* 忽略 */ }
+  for (const l of ['user', 'workspace', 'session'] as const) {
+    try { localStorage.removeItem(`sl:${l}:kanban.savedViews`) } catch { /* 忽略 */ }
+  }
+  state.views = load()
 }
