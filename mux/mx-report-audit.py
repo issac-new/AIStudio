@@ -222,17 +222,21 @@ elif _entry_hit > 0:
 else:
     fails.append('R16 操作入口零呈现：报告无任何 st-entry 步块（补遗⑥ R16 验收线）')
 
-_uni = EVID / 'unified-roadshow-report.html'
-if _uni.exists():
-    _u = _uni.read_text(encoding='utf-8')
+# R15 载体按双正本制（补遗⑩/8.1）：unified-roadshow-report.html 自 run6 起退役，
+# 第 0 章宿主=final-report.html（PART 1 合并正本）；run5 及以前历史轮兼容旧载体。
+_r15 = EVID / 'final-report.html'
+if not _r15.exists():
+    _r15 = EVID / 'unified-roadshow-report.html'
+if _r15.exists():
+    _u = _r15.read_text(encoding='utf-8')
     if 'id="ch0-collab"' not in _u:
-        fails.append('R15 统一版缺第 0 章「推演逻辑与协作顺序总述」（id=ch0-collab 未检出）')
+        fails.append(f'R15 正本缺第 0 章「推演逻辑与协作顺序总述」（id=ch0-collab 未检出，载体={_r15.name}）')
     elif 'scenario.log 实抽' not in _u:
         warns.append('R15 第 0 章在位但协作时序线标记缺失（scenario.log 实抽注记）')
     if '研发全流程治理有效性' not in _u:
-        warns.append('统一版缺「研发全流程治理有效性」实算节（补遗⑥）')
+        warns.append('正本缺「研发全流程治理有效性」实算节（补遗⑥）')
 else:
-    warns.append('统一版 unified-roadshow-report.html 未生成——R15 断言待其生成后复跑审计')
+    warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
 
 # ── 汇总 ──
 print(f'报告：{REPORT}')
