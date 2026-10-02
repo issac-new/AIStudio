@@ -98,6 +98,6 @@
 
 用户裁决链：①"推理档位拉满，不要变，保持"→ 撤销降档（dfb302c4）；②"所有审批复核应该都是人工介入的……打开 background_review，以使全流程推演与真实场景一致" → review 重开（43 处 true + 模板，7c3838b8）。
 
-**终态原则：全流程推演的目标是保真复刻真实场景，速度是次要项。** 真实场景要素：真人使用 hermes 助理（ultra 推理 + background_review 默认开）+ 审批由人复核。配套基建：`MX_APPROVE_MODE` 审批模式开关已入 main（6d14253f，auto=脚本秒批历史行为/manual=挂起等真人手动批），人工介入模式菜单待用户裁决。
+**终态原则：全流程推演的目标是保真复刻真实场景，速度是次要项。** 真实场景要素：真人使用 hermes 助理（ultra 推理 + background_review 默认开）+ 审批由人复核。配套基建与裁决落地：`MX_APPROVE_MODE` 三模式已实现并入 main——`auto`=脚本秒批（历史默认）、`manual`=全部挂起真人、`hybrid`=**C 裁决落地区**（928adc95）：关键操作（push origin main/master、rm -rf、--force、drop table、unlink，`MX_APPROVE_CRITICAL_EXTRA` 可扩展）挂起等真人在 element 回复 !approve/!deny；过程性操作（run7 实测 34/35）由代审 agent（`MX_REVIEW_AGENT` 默认 fanfan）DM 复核后批/拒，REJECT 理由经线程内 !deny 回传请求 agent，代审超时（`MX_REVIEW_TIMEOUT` 1800s）转人工兜底。已知保真偏差：代审者非请求主人本人（编制内主人唯一 AI 代表即请求方），语义为审批复核人代过程性复核。
 
 事故记录：审批开关提交时 `git commit` 未限定路径，误将并行会话暂存中的 4 个文件带入；已剥离还原（080311bd，main 树经 diff 验证回到 c4337457 状态，改动内容完璧归还工作区）。教训再确认：共享树 commit 必须显式路径。
