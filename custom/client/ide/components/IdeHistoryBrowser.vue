@@ -83,24 +83,29 @@ async function forkSession(): Promise<void> {
   const store = chatStore as unknown as { activeSessionId?: string | null }
   const sid = store.activeSessionId ?? chatStore.activeSession?.id
   if (!sid || forkBusy.value) return
-  if (!window.confirm(tx.historyForkConfirm)) return
+  // tx 是 computed ref——脚本侧须 .value（模板才自动解包；undefined 文案/假值
+  // v-if 曾致消息不渲染，2026-10-02 走查实锤）
+  if (!window.confirm(tx.value.historyForkConfirm)) return
   forkBusy.value = true
   forkMsg.value = ''
   forkErr.value = ''
   try {
     const res = await forkGatewaySession(String(sid))
     if (res.ok) {
-      forkMsg.value = `${tx.historyForkDone}（${res.session.title ?? res.session.id}）`
+      forkMsg.value = `${tx.value.historyForkDone}（${res.session.title ?? res.session.id}）`
       const s = chatStore as unknown as { switchSession?: (id: string) => Promise<void> }
       await s.switchSession?.(res.session.id)
       setTimeout(() => { forkMsg.value = '' }, 5000)
     } else if (res.status === 404) {
       await copyText('/fork ')
       ide.setChatFocus()
-      forkMsg.value = tx.historyForkFallback
+      forkMsg.value = tx.value.historyForkFallback
     } else {
       forkErr.value = res.error
     }
+  } catch (e) {
+    // 代理/网络层异常不再裸抛（无 catch 的 unhandled rejection 会吞掉消息呈现）
+    forkErr.value = e instanceof Error ? e.message : String(e)
   } finally {
     forkBusy.value = false
   }

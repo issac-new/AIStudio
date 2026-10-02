@@ -12,6 +12,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT } from '../utils/metrics'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
 import IdeKeymapCard from '../components/IdeKeymapCard.vue'
@@ -24,9 +25,10 @@ const message = useMessage()
 const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
 // 槽位定制（UI-8，kimi/minimax/codex/dsh 四源合并的数据面消费——轻量版：
-// 显隐+顺序存 localStorage；custom 探针槽列层 2）。
+// 显隐+顺序走 settings-layers user 层，#13 步二迁键；custom 探针槽列层 2）。
 interface StatusSlotConf { kind: 'workspace' | 'zcode' | 'metrics' | 'workdir'; on: boolean }
 const SLOT_KEYS: Array<StatusSlotConf['kind']> = ['workspace', 'zcode', 'metrics', 'workdir']
+adoptLegacySetting('ide.slots', 'ide_status_slots')
 const slotsConf = ref<StatusSlotConf[]>(readSlots())
 const slotsPanelOpen = ref(false)
 
@@ -50,8 +52,10 @@ const workdirWarnings = computed<WorkdirWarning[]>(() => {
 
 function readSlots(): StatusSlotConf[] {
   try {
-    const raw = JSON.parse(localStorage.getItem('ide_status_slots') ?? '[]') as StatusSlotConf[]
-    const valid = SLOT_KEYS.map((k) => raw.find((r) => r && r.kind === k) ?? { kind: k, on: true })
+    // 2026-10-02 #13 步二迁键：槽位偏好走 settings-layers user 层（遗留裸键
+    // ide_status_slots 一次性收养）；SLOT_KEYS 归一=复合值形状校验（缺槽补默认）
+    const raw = readSetting<StatusSlotConf[]>('ide.slots', []).value as unknown
+    const valid = SLOT_KEYS.map((k) => (Array.isArray(raw) ? raw.find((r) => r && r.kind === k) : undefined) ?? { kind: k, on: true })
     return valid
   } catch {
     return SLOT_KEYS.map((k) => ({ kind: k, on: true }))
@@ -59,7 +63,7 @@ function readSlots(): StatusSlotConf[] {
 }
 
 function persistSlots(): void {
-  localStorage.setItem('ide_status_slots', JSON.stringify(slotsConf.value))
+  writeSetting('user', 'ide.slots', slotsConf.value)
 }
 
 function slotOn(kind: StatusSlotConf['kind']): boolean {

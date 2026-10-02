@@ -43,7 +43,8 @@ describe('IdeStatusBar 槽位定制（UI-8）', () => {
     expect(ws.exists()).toBe(true)
     await ws.setValue(false)
     expect(w.text()).not.toContain('/w')
-    expect(JSON.parse(localStorage.getItem('ide_status_slots') ?? '[]')).toEqual(
+    // 2026-10-02 #13 步二：持久化走 settings-layers user 层（sl:user:ide.slots）
+    expect(JSON.parse(localStorage.getItem('sl:user:ide.slots') ?? '[]')).toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: 'workspace', on: false })]),
     )
   })

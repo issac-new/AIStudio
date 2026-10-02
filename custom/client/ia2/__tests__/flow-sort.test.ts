@@ -42,11 +42,14 @@ describe('sortFlowRows 三档排序（单一事实源）', () => {
 describe('FlowNavPanel 排序切换器接线', () => {
   const panel = readFileSync(resolve(OVERLAY_ROOT, 'custom/client/ia2/components/flow/FlowNavPanel.vue'), 'utf8')
 
-  it('切换器三档 testid（模板插值模式）+ localStorage 持久化 + sortFlowRows 消费', () => {
+  it('切换器三档 testid（模板插值模式）+ settings-layers user 层持久化 + sortFlowRows 消费', () => {
     // 模板里是 `flow-sort-${sm}` 插值——断言插值锚点与三档数组字面量
     expect(panel).toContain('flow-sort-${sm}')
     expect(panel).toContain("'recent', 'unread', 'alpha'")
-    expect(panel).toContain('ia2.flow.sortMode')
+    // 2026-10-02 #13 步二：偏好走分层（user 层 sl:user:flow.sortMode），
+    // 遗留裸键 ia2.flow.sortMode 一次性收养后退役
+    expect(panel).toContain("writeSetting('user', 'flow.sortMode'")
+    expect(panel).toContain("adoptLegacySetting('flow.sortMode', 'ia2.flow.sortMode')")
     expect(panel).toContain('sortFlowRows')
   })
 
