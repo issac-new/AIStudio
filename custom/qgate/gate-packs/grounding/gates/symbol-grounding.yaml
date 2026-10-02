@@ -23,7 +23,10 @@ spec:
   evidence:
     required: [symbol-grounding-result]
   policy:
-    failure: block
+    # advisory 起步（诚实显示不阻断 Stop）：幽灵依赖/alias 是真实卫生债，
+    # 项目治理收敛后可 override 升 block。aliases/ignoredSpecifiers 项目侧按需配置，如：
+    #   aliases: { '@': './custom/client' }   ignoredSpecifiers: ['vitest']
+    failure: warn
     inconclusive: warn
     allowWaiver: true
     maxAgeHours: 24
