@@ -472,7 +472,7 @@ capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清�
 
 各轮执行态与证据链全表见 changelog-archive §五。最近一轮：**run6（RUN=20261001-v5-run6）26 步全 gates 收官、四开发分支+双测试线全部本轮真实交付**，终版报告=runs/20261001-v5-run6/evidence/final-report.html（双正本制）。
 
-**在途：run7（RUN=20261002-v5-run7，V6 契约=V5 契约零变更）**——mx-clean 20261002-164757 彻底清环境后 16:49 0→1 起跑；至 23:10 步 11/24（devimpl 收官+G3 落键 23:06：四开发分支 branch_fresh 4/4 本轮新鲜，run6 同段假真值对照）；G1 冻结 16:51（f521a8a）、G2 硬闸 19:36:27（arch 板评审卡 t_dcd2e700 PASS）；register 打回环真实发生（首报凭证不实 600s 超时→重报核验 ✓，治理闸拒收假凭证实证）；plan 排期 46min 零超时（run6 七连超时根治链验证位）。run7 是判词器括号注耐受（uat_verdict.py）、报告链按轮注册（R17）、branch_fresh 守门的首轮全流程真验证轮。收官序：capture 三脚本 FORCE=1 → mx-report-gen → STEPS_META 14-26 实锚+PART1_RUN7 → final-report-merge → mx-report-audit R1-R17 → 修复清零。
+**run7（RUN=20261002-v5-run7）已收官（2026-10-03 05:54，全程 13h5m 零停摆）**——26 步全走完、六闸 G1-G6 全落键（首过率 3/4：G5 真实打回一次后过闸 t_73b1518a）；四开发分支 branch_fresh 4/4 本轮新鲜（chen 3241e5a/hu 7c09aab/xiao 12c568b/lin 4766cb6）合入 integration/RFD-001；UAT 判词 7/7（判词器 python 后端首轮零误报，验收书 a7eb6b3 入 main）；register 假凭证打回环（17:33 拒收→18:01 过）；排期 46min 零超时。夜里韧性实录：gate_review jq 裸键击杀驱动（c24a9d60 热修）+UAT 核对口径 main/integration 不一致死循环九连（afd10ce1 根治+V6 步 21 细则勘误）——接力器兜底零进度损失。收官链全绿：42 图采集→26 步实锚+PART1_RUN7 注册→双正本→mx-report-audit R1-R17 全过→视觉验收 5/5 pass→持久化 reports/run7/→central 回灌 b3f9296。overlay 收官批=9ee4299f。
 
 ## 十一、开放事项与能力演进线
 
