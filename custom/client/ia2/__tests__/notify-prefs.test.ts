@@ -34,9 +34,17 @@ describe('B9 收件箱偏好分组', () => {
 
   it('持久化：写入后重读 localStorage 生效；重开恢复', () => {
     setPref('system', false)
-    expect(JSON.parse(localStorage.getItem('ia2_notify_prefs') ?? '{}')).toEqual({ system: false })
+    // 2026-10-02 #13 步二批二：持久化走 settings-layers user 层（sl:user:notify.prefs）
+    expect(JSON.parse(localStorage.getItem('sl:user:notify.prefs') ?? '{}')).toEqual({ system: false })
     setPref('system', true)
     expect(prefEnabled('system')).toBe(true)
+  })
+
+  it('遗留收养：旧裸键 ia2_notify_prefs 的值无损入分层（复位重载触发，旧键退役）', () => {
+    localStorage.setItem('ia2_notify_prefs', JSON.stringify({ reminders: false }))
+    __resetNotifyPrefsForTest()
+    expect(prefEnabled('reminders')).toBe(false)
+    expect(localStorage.getItem('ia2_notify_prefs')).toBeNull()
   })
 
   it('未归组 kind 默认放行（词表漂移防护）', () => {

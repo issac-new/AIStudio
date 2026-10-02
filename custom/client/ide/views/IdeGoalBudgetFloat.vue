@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { formatTokens } from '../utils/metrics'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { extractGoalProgress, extractGoalStatusText, goalBudgetLevel } from '../utils/goalEngine'
 import { parseThreeBudgets, type GoalThreeBudgets } from '../utils/goal-budget'
 import { shouldStop, type AutonomyMode } from '../../../server/goalautonomy/goal-autonomy'
@@ -53,11 +54,13 @@ const AUTONOMY_HINT: Record<AutonomyMode, string> = {
   checkin: '每步向人确认',
   assistive: '只建议不执行',
 }
+// 2026-10-02 #13 步二批二：偏好走 settings-layers user 层（遗留裸键一次性收养）
+adoptLegacySetting('ide.goalAutonomy', 'ide_goal_autonomy')
 const autonomy = ref<AutonomyMode>((() => {
-  const saved = localStorage.getItem('ide_goal_autonomy')
+  const saved = readSetting<string>('ide.goalAutonomy', 'autonomous').value
   return saved === 'checkin' || saved === 'assistive' || saved === 'autonomous' ? saved : 'autonomous'
 })())
-watch(autonomy, (m) => localStorage.setItem('ide_goal_autonomy', m))
+watch(autonomy, (m) => writeSetting('user', 'ide.goalAutonomy', m))
 
 const stopDecision = computed(() => shouldStop(autonomy.value, {
   reachable: true,

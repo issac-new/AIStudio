@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { McpServerInfo } from '@/api/hermes/mcp'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { fetchMcpServers } from '@/api/hermes/mcp'
 import { listFiles } from '@/api/studio/files'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -27,12 +28,14 @@ const chatStore = useChatStore()
 
 // ── 搜索策略（v2 批 websearch）：四档（codex off/light/full/agent）+判定展示 ──
 const SEARCH_TEXT: Record<SearchTier, string> = { off: '关', light: '摘录', full: '完整', agent: '自决' }
+// 2026-10-02 #13 步二批二：偏好走 settings-layers user 层（遗留裸键一次性收养）
+adoptLegacySetting('ide.websearchTier', 'ide_websearch_tier')
 const searchTier = ref<SearchTier>((() => {
-  const saved = localStorage.getItem('ide_websearch_tier')
-  return (SEARCH_TIERS as readonly string[]).includes(saved ?? '') ? saved as SearchTier : 'agent'
+  const saved = readSetting<string>('ide.websearchTier', 'agent').value
+  return (SEARCH_TIERS as readonly string[]).includes(saved) ? saved as SearchTier : 'agent'
 })())
 watch(searchTier, (v) => {
-  localStorage.setItem('ide_websearch_tier', v)
+  writeSetting('user', 'ide.websearchTier', v)
   applySearchPolicy(v)
 })
 /** 写穿（遗留清单 L5）：策略声明注入当前会话——声明式（agent 遵循取决于模型；
