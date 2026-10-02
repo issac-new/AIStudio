@@ -157,8 +157,8 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const modes = type === 'contract'
       ? ['diff', 'breaking', 'surface', 'matrix'] as const
       : type === 'behavior'
-        ? ['cases', 'journey', 'property', 'visual'] as const
-        : ['metrics', 'budget', 'rerun', 'trace-continuity', 'resilience', 'topology'] as const
+        ? ['cases', 'journey', 'property', 'visual', 'invariant'] as const
+        : ['metrics', 'budget', 'rerun', 'trace-continuity', 'resilience', 'topology', 'conventions', 'consistency', 'configuration', 'documentation', 'symbols'] as const
     const mode = enumOf(raw.mode, modes)
     if (!mode) return null
     out.mode = mode
@@ -208,6 +208,13 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
       if (raw.p2p !== undefined) { const v = strList(raw.p2p, 20); if (!v) return null; out.p2p = v }
       const baselineFile = str(raw.baselineFile)
       if (baselineFile !== undefined) out.baselineFile = baselineFile
+      if (raw.replayBaseline !== undefined) {
+        if (!isRecord(raw.replayBaseline)) return null
+        const file = str(raw.replayBaseline.file)
+        if (!file || file.length === 0) return null
+        const contentSha256 = str(raw.replayBaseline.contentSha256)
+        out.replayBaseline = { file, ...(contentSha256 !== undefined ? { contentSha256 } : {}) }
+      }
       if (raw.allowedTransitions !== undefined) {
         if (!Array.isArray(raw.allowedTransitions) || raw.allowedTransitions.length > 50) return null
         const pairs: string[][] = []
@@ -255,11 +262,13 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
       if (raw.requiredSignals !== undefined) { const v = strList(raw.requiredSignals, 10); if (!v) return null; out.requiredSignals = v }
     }
   } else if (type === 'semantic') {
-    const check = enumOf(raw.check, ['alignment', 'consistency', 'constraint', 'state', 'exposure', 'instance', 'relation', 'terminology'] as const)
+    const check = enumOf(raw.check, ['alignment', 'consistency', 'constraint', 'state', 'exposure', 'instance', 'relation', 'terminology', 'profile'] as const)
     if (!check) return null
     out.check = check
     const catalogFile = str(raw.catalogFile)
     if (catalogFile !== undefined) out.catalogFile = catalogFile
+    const shapesFile = str(raw.shapesFile)
+    if (shapesFile !== undefined) out.shapesFile = shapesFile
     const dataFile = str(raw.dataFile)
     if (dataFile !== undefined) out.dataFile = dataFile
     const observedFile = str(raw.observedFile)

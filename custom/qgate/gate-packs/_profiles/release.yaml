@@ -18,6 +18,13 @@ spec:
     - behavior.*
     - semantic.*
     - ops.*
+    - L0.convention-alignment
+    - L1.symbol-grounding
+    - L2.data-consistency
+    - L2.domain-invariant
+    - L2.semantic-profile
+    - L5.config-consistency
+    - L5.documentation
   overrides:
     data.persistence-integrity:
       policy:
