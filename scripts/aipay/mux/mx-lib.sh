@@ -308,11 +308,12 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
-# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
-# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
-_bg = os.environ.get('MX_BGREVIEW', '1')
-out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
+# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
+# 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
+# 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
+_bg = os.environ.get('MX_BGREVIEW', '0')
+out['auxiliary'] = {'background_review': {'enabled': _bg in ('1', 'true', 'yes')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
@@ -442,11 +443,12 @@ out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
-# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
-# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
-_bg = os.environ.get('MX_BGREVIEW', '1')
-out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
+# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
+# 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
+# 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
+_bg = os.environ.get('MX_BGREVIEW', '0')
+out['auxiliary'] = {'background_review': {'enabled': _bg in ('1', 'true', 'yes')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
@@ -503,11 +505,12 @@ if mu:
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
-# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
-# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
-# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
-_bg = os.environ.get('MX_BGREVIEW', '1')
-out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
+# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
+# 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
+# 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
+_bg = os.environ.get('MX_BGREVIEW', '0')
+out['auxiliary'] = {'background_review': {'enabled': _bg in ('1', 'true', 'yes')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
