@@ -7,8 +7,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   KanbanPersistenceAdapter, defaultKanbanBoardResolver, readLoopTenant,
-  type KanbanServiceModule,
 } from '../kanban-persistence'
+
+/** 注入的 kanban 服务模块形状（listTasks/createTask——注释 5 行所述 DI 契约）。
+ *  原写法 import type { KanbanServiceModule } from '../kanban-persistence'——该类型名
+ *  全库无声明（esbuild 剥类型不校验，悬空无人管；symbol-grounding 2026-10-02 逮出），
+ *  形状即本 fake 的形状，就地定义即事实。 */
+interface KanbanServiceModule {
+  listTasks: (board: string) => Promise<Array<{ id: string; title: string; status: string }>>
+  createTask: (title: string, board?: string) => Promise<{ id: string; title: string; status: string }>
+}
 import {
   CH, createPhaseNode, isPersistFailure,
   type PhaseNodeDeps, type PersistenceAdapter,
