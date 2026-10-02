@@ -41,6 +41,7 @@ export interface GovernanceDoc {
   gate: string
   commit: string
   committedAt: string
+  editable: boolean
   markdown: string
 }
 
@@ -50,6 +51,14 @@ export function fetchGovernanceOverview(): Promise<GovernanceOverview> {
 
 export function fetchGovernanceDoc(kind: string): Promise<GovernanceDoc> {
   return request<GovernanceDoc>(`/api/governance/doc?kind=${encodeURIComponent(kind)}`)
+}
+
+/** 通用工件编辑链（R13，吸收二期 #9）：保存即本地 git 提交；ref 分支证据件服务端 409 只读。 */
+export function saveGovernanceDoc(kind: string, markdown: string, message: string, actor?: string): Promise<{ ok: boolean; commit: string; committedAt: string }> {
+  return request('/api/governance/doc', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, markdown, message, actor }),
+  })
 }
 
 // ── 六域体检（长期台账：多轮累积的基础数据）──
