@@ -28,7 +28,7 @@ router.get('/capability-catalog', async (ctx) => {
   try {
     const source = parseCapabilitySource(typeof ctx.query.source === 'string' ? ctx.query.source : undefined)
     const res = await collectCapabilityCatalog(source)
-    ctx.body = { ok: true, source: source ?? 'all', ...res }
+    ctx.body = { ...res, ok: true, source: source ?? 'all' }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -38,7 +38,7 @@ router.get('/capability-catalog', async (ctx) => {
 router.get('/cost-accounts', async (ctx) => {
   try {
     const report: CostAccountsReport = await collectCostAccounts({ days: daysOf(ctx.query.days) })
-    ctx.body = { ok: true, ...report }
+    ctx.body = { ...report, ok: true }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
