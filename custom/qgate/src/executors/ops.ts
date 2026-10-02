@@ -612,11 +612,13 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       let m: RegExpExecArray | null
       // async 导出（export async function foo）与 type-only 列表导出（export type { A }）
       // 是两枚曾漏的形态——84 条成员悬空长尾的两枚根因（2026-10-02 分类定位）
-      const re = /export\s+(?:declare\s+)?(?:async\s+)?(?:const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g
+      const re = /export\s+(?:declare\s+)?(?:async\s+)?(?:const\s+enum|const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g
       while ((m = re.exec(content)) !== null) names.add(m[1])
       const reDef = /export\s+default(?:\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*))?/
       const def = reDef.exec(content)
       if (def) names.add(def[1] ?? 'default')
+      // <script setup> 的 .vue 隐式 default 导出（Vue 惯例：组件即 default，无显式语句）
+      if (file.endsWith('.vue')) names.add('default')
       const reList = /export\s+(?:type\s+)?\{([^}]+)\}(?:\s*from\s*['"][^'"]+['"])?/g
       while ((m = reList.exec(content)) !== null) {
         for (const part of m[1].split(',')) {

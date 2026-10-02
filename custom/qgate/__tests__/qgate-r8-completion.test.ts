@@ -333,3 +333,15 @@ describe('ops symbols 导出面两形态补全（84 条长尾两枚根因的守�
     expect(ev.result).toBe('pass')
   })
 })
+
+describe('ops symbols 导出面收官两形态（const enum + .vue script setup 隐式 default）', () => {
+  it('export const enum 入导出面；.vue 文件隐式 default 可被具名外 import', () => {
+    const ws = tmp()
+    writeFileSync(join(ws, 'package.json'), '{}')
+    writeFileSync(join(ws, 'shared.ts'), 'export const enum ReqType { Init = 0, Ok = 1 }\n')
+    writeFileSync(join(ws, 'Comp.vue'), '<script setup lang="ts">\nconst x = 1\n</script>\n<template><div/></template>\n')
+    writeFileSync(join(ws, 'app.ts'), "import { ReqType } from './shared'\nimport Comp from './Comp.vue'\nexport const y = [ReqType.Init, Comp]\n")
+    const ev = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }, ws)
+    expect(ev.result).toBe('pass')
+  })
+})
