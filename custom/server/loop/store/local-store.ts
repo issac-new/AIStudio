@@ -1,4 +1,5 @@
 // overlay/custom/server/loop/store/local-store.ts
+/// <reference path="./proper-lockfile.d.ts" />
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
