@@ -351,7 +351,9 @@ export class LoopEngine {
     if (loop.schedule.mode === 'cron' && loop.schedule.cron) {
       try {
         const interval = CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
-        return interval.next().toISOString()
+        // cron-parser 真类型：next() 的 toISOString() 可空（无下一次触发点）——空则走兜底
+        const iso = interval.next()?.toISOString()
+        if (iso) return iso
       } catch {
         return new Date(Date.now() + 3600_000).toISOString()
       }
