@@ -19,7 +19,8 @@
 import Router from '@koa/router'
 import { execFile } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
-import { join, resolve } from 'path'
+import { mkdir, readFile, writeFile } from 'fs/promises'
+import { join, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
@@ -128,15 +129,21 @@ function repoReady(): boolean {
 }
 
 /** 单件工件元数据：commit/时间一次合并取（缺失如实 exists:false；行数由 /doc 惰性算，
- *  overview 不为行数拉全文——20 件工件 × 全文 show 会把聚合拖到秒级）。 */
+ *  overview 不为行数拉全文——20 件工件 × 全文 show 会把聚合拖到秒级）。
+ *  无 ref 工件取 HEAD 与 origin/main 双查询的较新者（编辑链本地提交后 HEAD 领先，
+ *  未编辑时与远端真值一致；ISO 时间字典序可比）。 */
 async function docMeta(entry: typeof GOVERNANCE_DOCS[number]) {
   const empty = { ...entry, exists: false, commit: null as string | null, committedAt: null as string | null, lines: 0 }
   if (!repoReady()) return empty
   try {
-    const ref = entry.ref || 'origin/main'
-    const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', entry.path])).trim()
-    if (!out) return empty
-    const [commit, ...rest] = out.split(' ')
+    const refs = entry.ref ? [entry.ref] : ['HEAD', 'origin/main']
+    let best = ''
+    for (const ref of refs) {
+      const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', entry.path])).trim()
+      if (out && (!best || out.split(' ').slice(1).join(' ') > best.split(' ').slice(1).join(' '))) best = out
+    }
+    if (!best) return empty
+    const [commit, ...rest] = best.split(' ')
     return { ...entry, exists: true, commit, committedAt: rest.join(' '), lines: 0 }
   } catch {
     return empty
@@ -187,6 +194,15 @@ router.get('/doc', async (ctx) => {
     ctx.body = { ok: false, error: `doc not in repo: ${entry.path}` }
     return
   }
+  // 无 ref 工件优先读工作树（编辑链本地提交后工作树领先 origin/main；与 registry
+  // 读路径同语义）；ref 工件恒读对象库引用（分支证据件真值快照，只读）
+  let markdown: string
+  const abs = resolve(repoRoot(), entry.path)
+  if (!entry.ref && existsSync(abs)) {
+    markdown = await readFile(abs, 'utf-8')
+  } else {
+    markdown = await git(['show', `${entry.ref || 'origin/main'}:${entry.path}`])
+  }
   ctx.body = {
     ok: true,
     kind: entry.kind,
@@ -194,8 +210,45 @@ router.get('/doc', async (ctx) => {
     gate: entry.gate,
     commit: meta.commit,
     committedAt: meta.committedAt,
-    markdown: await git(['show', `${entry.ref || 'origin/main'}:${entry.path}`]),
+    editable: !entry.ref,
+    markdown,
   }
+})
+
+/** 通用工件编辑链（R13，吸收二期 #9）：写工作树 → git add → 本地提交。
+ *  仅无 ref 工件可编辑（ref=分支证据件是 G3 分支产物的真值快照，编辑会破坏证据
+ *  语义）；与 registry 写端点同闸同模式（本地可回溯，push 纪律归治理流程）。 */
+router.put('/doc', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const { kind, markdown, message, actor } = ctx.request.body as { kind?: string; markdown?: string; message?: string; actor?: string }
+  const entry = GOVERNANCE_DOCS.find((d) => d.kind === kind)
+  if (!entry) {
+    ctx.status = 404
+    ctx.body = { ok: false, error: `unknown kind: ${kind}` }
+    return
+  }
+  if (entry.ref) {
+    ctx.status = 409
+    ctx.body = { ok: false, error: '分支证据件只读（ref 工件不可编辑）' }
+    return
+  }
+  if (typeof markdown !== 'string' || !markdown.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'markdown 必填' }
+    return
+  }
+  if (!repoReady()) {
+    ctx.status = 503
+    ctx.body = { ok: false, error: 'repo 不可用' }
+    return
+  }
+  const abs = resolve(repoRoot(), entry.path)
+  await mkdir(dirname(abs), { recursive: true })
+  await writeFile(abs, markdown, 'utf-8')
+  await git(['add', entry.path])
+  await git(['commit', '--allow-empty', '-m', String(message || `更新 ${entry.title}`), '-m', `actor=${actor || 'studio-ui'} via studio 治理工件编辑`])
+  const meta = await docMeta(entry)
+  ctx.body = { ok: true, kind: entry.kind, commit: meta.commit, committedAt: meta.committedAt }
 })
 
 /** 工件全文读取（domain-audit 检查器复用；缺失返回 null）。 */
