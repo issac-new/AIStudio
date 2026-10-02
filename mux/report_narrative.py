@@ -392,3 +392,115 @@ def render_intent_chain(sim) -> str:
 .nv-ic-arrow{color:#94a3b8;font-size:14px}
 </style>
 """
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 第 0 章 推演逻辑与协作顺序总述（V5 §8.2 第 0 章 / 8.3 R15，补遗⑫收编）
+# 单一事实源：unified-report-gen.py 的内联实现自本函数起为历史副本；
+# final-report-merge.py（双层正本）消费本函数。一切数字实算，取不到标 ⬜。
+# ══════════════════════════════════════════════════════════════════════
+
+_CH0_ACTS = [
+    ('一 环境准备', '1-4', '账号分配 · 配置初始化 · 登录 · 冒烟', 'admin+各用户', '—', ''),
+    ('二 需求管理', '5-7', '应用登记 · 人员管理 · 需求上锁', 'admin+bella(BA)+人审', 'G1（步7）', 'G1'),
+    ('三 需求分析', '8-14', '建群 · 派发 · 系统分析 · 四路系分 · 复核定稿', 'fanfan(PM)+系分 agent+各 lead', '—', ''),
+    ('四 设计评审与编码', '15-18', 'G2 评审 · 归档 · 排期 · G3 编码', 'arch 治理组+研发 agent', 'G2（步15）G3（步18）', 'G2'),
+    ('五 测试与交付', '19-21', 'G4 测试 · G5 准出 · 发版 UAT', 'qi/fei 独立测试+PM+评审卡+bella', 'G4（步19）G5（步20）', 'G4'),
+    ('六 治理与复盘', '22-26', '台账 · 审计 · G6 复盘 · IDE · 报告', '全员+治理 AI+audit', 'G6（步24）', 'G6'),
+]
+
+_CH0_GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'g3_code_pass',
+                  'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
+
+
+def parse_collab_events(evid):
+    """scenario.log 实抽协作时序：(HH:MM:SS, 主体, 事件行) 正序。R15 数据源，禁手编。"""
+    evts = []
+    scen = Path(evid) / 'scenario.log'
+    if not scen.exists():
+        return evts
+    for line in scen.read_text(encoding='utf-8', errors='replace').splitlines():
+        m = re.match(r'^\[mux (\d{2}:\d{2}:\d{2})\] (.+)$', line.strip())
+        if not m:
+            continue
+        ts, body = m.group(1), m.group(2)
+        am = re.match(r'^\[([^\]]+)\]\s*(.*)$', body)
+        if am and not am.group(1).startswith('mux'):
+            actor, rest = am.group(1), am.group(2)
+        else:
+            actor, rest = '', body
+        if body.startswith('──') or body.startswith('====='):
+            actor, rest = '阶段', body
+        evts.append((ts, actor, rest or body))
+    return evts
+
+
+def render_chapter0(state, evid, journey_html=None, steps_dir=None):
+    """R15 第 0 章 HTML 片段：产品定位一页 → 演示动线 → 六幕分幕总览 → RACI 协作时序线。"""
+    evid = Path(evid)
+    out = []
+    gate_ok = {}
+    if journey_html and Path(journey_html).exists():
+        jh = Path(journey_html).read_text(encoding='utf-8', errors='replace')
+        for gr in re.finditer(r'<tr><td><b>(G[1-6])</b></td>(.*?)</tr>', jh, re.S):
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', '<tr>' + gr.group(2) + '</tr>', re.S)
+            plain = re.sub(r'<[^>]+>', ' ', cells[1] if len(cells) > 1 else '')
+            gate_ok[gr.group(1)] = ('✓' in plain) or ('PASS' in plain.upper()) or ('✅' in plain)
+    for g, k in _CH0_GATE_KEYS.items():
+        gate_ok.setdefault(g, bool(state.get(k)))
+
+    out.append('<h2 id="ch0-collab">第 0 章 · 推演逻辑与协作顺序总述（R15）</h2>')
+    out.append('<div class="gatebox"><b style="font-size:14px">产品定位（一页）</b>'
+               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">Swarm Studio 是 AI 员工驱动的研发交付系统：'
+               '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
+               '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
+               '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'
+               '六道硬闸守住意图对齐与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
+               '产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），'
+               '双 loop=skill 内循环 × swarm 外循环。</p></div>')
+
+    tri = [('ui-03-cockpit', '工作台（#/app）'), ('ui-10-kanban', '看板（#/app/board）'), ('ui-25-ide', 'IDE 画布（#/app/ide）')]
+    if steps_dir:
+        sd = Path(steps_dir)
+        tri_html = ' ｜ '.join(
+            (f'<b>{n}</b> <code>{s}.png</code>' if (sd / (s + '.png')).exists() else f'{n}（本轮未拍——如实标注）')
+            for s, n in tri)
+    else:
+        tri_html = '（截图目录未提供——如实标注）'
+    out.append('<div class="gatebox"><b style="font-size:14px">演示动线（驾驶舱单面）</b>'
+               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 驾驶舱工作台（任务/在线 chips·注意力条·中栏会话画布）'
+               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全链路追踪页签） → IDE 画布（任务简报·交互编码）'
+               ' → 治理中心（六闸工件·应用资产·组织）——全流程不出 /app 路由树。</p>'
+               f'<p style="margin:4px 0;font-size:12.5px;color:#57606a">三功能区证据（R7 核验口径）：{tri_html}</p></div>')
+
+    out.append('<h3>26 步六阶段分幕总览</h3>'
+               '<div class="meta">每幕一行：目标 · 主角（RACI 摘要）· 闸门位置；先读此表建立全局，再走下方 26 步实录。'
+               '闸门状态列自本轮闸门表/落键实抽。</div>'
+               '<table><tr><th>幕</th><th>步骤</th><th>目标</th><th>主角（谁在做什么）</th><th>闸门</th><th>本轮</th></tr>')
+    for act, rng, goal, who, gates, gk in _CH0_ACTS:
+        st = ''
+        if gk:
+            if gate_ok.get(gk):
+                st = '<span style="color:#059669;font-weight:700">✓ 已过</span>'
+            else:
+                st = '<span style="color:#b45309">未过/未落键（见审计叠加层）</span>'
+        out.append(f'<tr><td><b>{act}</b></td><td>步 {rng}</td><td>{goal}</td>'
+                   f'<td style="font-size:12px">{who}</td><td>{gates}</td><td>{st}</td></tr>')
+    out.append('</table>')
+
+    evts = parse_collab_events(evid)
+    out.append(f'<h3>RACI 协作时序线（scenario.log 实抽，{len(evts)} 条）</h3>'
+               '<div class="meta">数据源=导演侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
+               '谁在何时发起、谁执行、谁把关、何处打回，时间线自明；锚点（event_id $xxx／t_ 卡号）可反查。</div>')
+    if evts:
+        out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
+                   '<table class="idx" style="max-height:520px;overflow:auto;display:block">'
+                   '<tr><th>时间</th><th>主体</th><th>协作事件（含锚点）</th></tr>')
+        for ts, actor, body in evts:
+            out.append(f'<tr><td style="white-space:nowrap">{ESC(ts)}</td>'
+                       f'<td style="white-space:nowrap">{ESC(actor)}</td>'
+                       f'<td style="font-size:11.5px">{ESC(body[:220])}</td></tr>')
+        out.append('</table></details>')
+    else:
+        out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 scenario.log 无可解析协作事件（如实标注，禁编造）。</div>')
+    return '\n'.join(out)
