@@ -10,4 +10,4 @@ index 28b894ea..1577dd79 100644
 +      arch: [x64]
      - target: nsis
        arch: [x64]
-   artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+   artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
