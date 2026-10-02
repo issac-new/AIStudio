@@ -66,18 +66,35 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import IdeHistoryBrowser from '../../ide/components/IdeHistoryBrowser.vue'
 
-describe('IdeHistoryBrowser — fork 直通（聊天内 /fork 命令通道）', () => {
+describe('IdeHistoryBrowser — fork 直通（2026-10-02 接真后的门闸契约）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
   })
 
-  it('⋔ 分叉按钮复制 /fork 并聚焦输入框（不代发——不可逆动作人工回车）', async () => {
+  it('⋔ confirm 拒绝=零动作（不可逆分叉的人工门闸；剪贴板不被无条件写）', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const wrapper = mount(IdeHistoryBrowser)
     const btns = wrapper.findAll('.ihb__act')
-    expect(btns.length).toBe(4) // ↗ ⧉ ✎ ⋔
+    expect(btns.length).toBe(4) // ↗ ⧉ ✎ ⋐（fork=第 4 键）
     await btns[3]!.trigger('click')
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(writeText).not.toHaveBeenCalled()
+    expect(setChatFocus).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
+  })
+
+  it('⋔ confirm 接受+网关 404（会话不在网关库）→降级复制 /fork 并聚焦输入框', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: false, error: { message: 'Session not found' } }), { status: 404 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const wrapper = mount(IdeHistoryBrowser)
+    const btns = wrapper.findAll('.ihb__act')
+    await btns[3]!.trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/runtime-caps/gateway/sessions/s1/fork'), expect.anything())
     expect(writeText).toHaveBeenCalledWith('/fork ')
     expect(setChatFocus).toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 })
