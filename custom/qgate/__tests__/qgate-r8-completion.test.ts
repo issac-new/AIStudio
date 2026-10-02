@@ -294,3 +294,20 @@ describe('ops symbols depsFile（符号链借用契约显式化）', () => {
     expect(drifted.summary).toContain('depsFile missing')
   })
 })
+
+describe('ops symbols scoped 包与 alias 根锚定（两正统 bug 回归守门）', () => {
+  it('scoped 包 @scope/name 的裸名取前两段（@vue/test-utils 不得切成 @vue）；alias 产物按仓根解析', () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'client'), { recursive: true })
+    writeFileSync(join(ws, 'package.json'), JSON.stringify({ devDependencies: { '@vue/test-utils': '^2.4.0' } }))
+    writeFileSync(join(ws, 'client', 'store.ts'), 'export const x = 1\n')
+    // 引用者位于 client/deep/ 下：alias 产物 './client/store' 若按引用者相对解析必失败
+    mkdirSync(join(ws, 'client', 'deep'), { recursive: true })
+    writeFileSync(join(ws, 'client', 'deep', 'app.ts'), "import { x } from '@/custom/store'\nimport { mount } from '@vue/test-utils'\nexport const y = [x, mount]\n")
+    const ev = runOps({
+      id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x',
+      aliases: { '@/custom/': './client/' },
+    }, ws)
+    expect(ev.result).toBe('pass')
+  })
+})

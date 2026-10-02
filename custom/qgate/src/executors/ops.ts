@@ -633,10 +633,14 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       }
       return names
     }
-    const resolveSpecifier = (fromFile: string, spec: string): string | null => {
+    // 裸说明符：@scope/name 取前两段，普通包取首段（scoped 包 split('/')[0] 只得 '@scope' 的正统坑）
+    const bareOf = (spec: string): string =>
+      spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]
+    const resolveSpecifier = (fromFile: string, spec: string, fromRoot = false): string | null => {
       if (!spec.startsWith('.')) return null
-      // fromFile 是 workspace 相对路径——先锚到绝对再展开候选，最后回相对比对
-      const base = join(input.workspace, fromFile, '..', spec)
+      // fromFile 是 workspace 相对路径——先锚到绝对再展开候选，最后回相对比对；
+      // fromRoot=true（alias 产物）：路径语义是仓根相对，不随引用者目录漂移
+      const base = fromRoot ? join(input.workspace, spec) : join(input.workspace, fromFile, '..', spec)
       for (const cand of [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.mjs`, `${base}.vue`, join(base, 'index.ts'), join(base, 'index.js')]) {
         const relc = relative(input.workspace, cand)
         if (files.includes(relc)) return relc
@@ -645,11 +649,12 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
     }
     const aliases = executor.aliases ?? {}
     const ignoredSpecifiers = executor.ignoredSpecifiers ?? []
-    const applyAlias = (spec: string): string => {
+    // applyAlias 返回 {spec, aliased}——aliased 产物是仓根相对路径（fromRoot 解析）
+    const applyAlias = (spec: string): { spec: string; aliased: boolean } => {
       for (const [prefix, mapped] of Object.entries(aliases)) {
-        if (spec.startsWith(prefix)) return mapped + spec.slice(prefix.length)
+        if (spec.startsWith(prefix)) return { spec: mapped + spec.slice(prefix.length), aliased: true }
       }
-      return spec
+      return { spec, aliased: false }
     }
     const isIgnored = (spec: string): boolean => ignoredSpecifiers.some((p) => spec === p || spec.startsWith(p))
     let importsChecked = 0
@@ -666,11 +671,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       while ((m = reImp.exec(content)) !== null) {
         const [, defaultBare, namedList, , spec0] = m
         if (spec0.startsWith('node:')) continue
-        const spec = applyAlias(spec0)
+        const { spec, aliased } = applyAlias(spec0)
         if (isIgnored(spec)) continue
-        const bare = spec.split('/')[0]
         if (spec.startsWith('.')) {
-          const t = resolveSpecifier(file, spec)
+          const t = resolveSpecifier(file, spec, aliased)
           if (!t) { unresolved.push(`${file}: '${spec}'`); continue }
           const names = exportsOf(t)
           if (!names) continue // 目标不可词法解析（.vue 等）→ 不判成员
@@ -684,18 +688,17 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
           importsChecked++
           continue
         }
-        if (NODE_BUILTINS.has(bare)) continue
-        if (pkgDeps.has(bare)) { importsChecked++; continue }
+        if (NODE_BUILTINS.has(bareOf(spec))) continue
+        if (pkgDeps.has(bareOf(spec))) { importsChecked++; continue }
         unresolved.push(`${file}: '${spec}'`)
       }
       const reReq = /require\(\s*['"]([^'"]+)['"]\s*\)/g
       while ((m = reReq.exec(content)) !== null) {
         const spec0 = m[1]
         if (spec0.startsWith('node:') || spec0.startsWith('.')) continue
-        const spec = applyAlias(spec0)
+        const { spec } = applyAlias(spec0)
         if (isIgnored(spec)) continue
-        const bare = spec.split('/')[0]
-        if (NODE_BUILTINS.has(bare) || pkgDeps.has(bare)) continue
+        if (NODE_BUILTINS.has(bareOf(spec)) || pkgDeps.has(bareOf(spec))) continue
         unresolved.push(`${file}: '${spec}' (require)`)
       }
     }
