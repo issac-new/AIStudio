@@ -688,8 +688,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
           const names = exportsOf(t)
           if (!names) continue // 目标不可词法解析（.vue 等）→ 不判成员
           for (const raw of (namedList ?? '').split(',')) {
-            const seg = raw.trim()
+            let seg = raw.trim()
             if (!seg) continue
+            // 内联 type 修饰符（import { type X }）：类型成员不参与运行时导出面
+            if (/^type\s+/.test(seg)) seg = seg.replace(/^type\s+/, '')
             const local = seg.split(/\s+as\s+/)[0].trim()
             if (local && local !== 'type' && !names.has(local)) unresolvedMember.push(`${file}: '${spec}' member ${local}`)
           }
@@ -701,7 +703,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
         if (pkgDeps.has(bareOf(spec))) { importsChecked++; continue }
         unresolved.push(`${file}: '${spec}'`)
       }
-      const reReq = /^[ \t]*(?:const|let|var)?[^\n]*?require\(\s*['"]([^'"]+)['"]\s*\)/gm
+      const reReq = /^[ \t]*(?:const|let|var\s+[\w$]+\s*=\s*)?require\(\s*['"]([^'"]+)['"]\s*\)/gm
       while ((m = reReq.exec(content)) !== null) {
         const spec0 = m[1]
         if (spec0.startsWith('node:') || spec0.startsWith('.')) continue
