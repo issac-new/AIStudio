@@ -17,7 +17,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
+# SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
+# 亦支持隔离树回归测试（run7 实锤：写死路径使归档态 run6 无法离线回归）。
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 # RUN_ID 参数化（V4-run1 起）：MX_RUN_ID=<id> 或 --run <id> → state/evidence/出报告
 # 全部指向 runs/<id>/；缺省回落 SIM 根（V3 兼容）。生成终版报告必须带本轮
 # RUN_ID，否则会拿旧轮 state 出"状态真实"的假报告（run2 05:15 实锤：无参调用
@@ -734,8 +736,11 @@ DOMAINS = [
 
 # ── 六域按轮覆写（2026-10-02 run6 实锤：静态兜底是 run5 旧账，直接渲染=旧账冒充本轮）──
 _DOMAINS_RUN6 = {0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass', '无漏做。验收标准 7 条可判定（freeze 18c9d77 补推后在仓）；如实边界：两份渠道系分（微信/支付宝）超时未入库已记问题单，代码实现在开发线补齐。', '实测：AC 判定 7 条 · freeze 在仓（18c9d77）· 渠道系分 2/4 入库（超时 2 记单）', 'cp-g1,cp-g6'), 1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass', '成立（本轮真实提交实证）。四开发分支全部含本轮 commit 与 testlog（chen 28c3517 五子卡/hu S1-S3/lin/xiao 8c0207f），集成复跑 194/194 全绿零缺陷。', '实测：四分支 run6 commit 锚 · 测试报告 8dbf5bf（194/194）', 'cp-g3,cp-g4'), 2: ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass', '一致（对账沿用+本轮反查）。契约口径（snake_case/金额分 int64/渠道 mock）在概设定稿，测试用例按契约反查一致；本轮未重跑治理 API 全量巡检（沿用既有实测，如实标注）。', '实测：概设契约×测试用例反查一致 · 治理 API 巡检本轮未重跑（沿用声明）', 'cp-g1,cp-g5'), 4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass', '可接受。安全探针（无 token/伪造 token→401）沿用既有实测，本轮未重跑（如实标注）；渠道端点全 mock、密钥不出服务端、金额分 int64 沿契约。', '实测：本轮未重跑安全探针（沿用既有 401 双探针结论，声明来源）', 'cp-gate,cp-g3'), 5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn', '可追责但记账有缺口：19 问题单全部在案、DISP 处置记账 0 条（缺口如实，复盘记单；终版合并报告已分档处置）；REL-MERGE/G1 推送/UAT 结论行三笔导演补账均留痕注明；UAT 七条证据 7/7 在案。', '实测：issues 19 条在案 · DISP 0（缺口记单）· 三笔补账留痕（f7b1cbc/18c9d77/$V_jLqhvn）', 'cp-g5,cp-g6')}
-if RUN_ID == '20261001-v5-run6':
-    DOMAINS = [_DOMAINS_RUN6.get(i, d) for i, d in enumerate(DOMAINS)]
+# 六域按轮覆写注册表（R17）：逐轮叙事按轮编写后在此注册；未注册轮走下方台账/静态兜底
+# 并在表头声明来源（台账命中则判定/证据取最新轮真值）。
+_DOMAINS_BY_RUN = {'20261001-v5-run6': _DOMAINS_RUN6}
+if RUN_ID in _DOMAINS_BY_RUN:
+    DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
 
 # ── 六域台账（真实产品功能产出，治理中心「六域体检」运行落账）──
 # 有台账：判定/证据取最新轮（真实流程中运行的检查器输出）；
@@ -1079,11 +1084,21 @@ def artifact_block(n: int) -> str:
     return (f'<details class="st-artifact"><summary>📦 交付物真容与模版核对（{len(pieces)} 件）</summary>'
             '<div class="art-body">' + ''.join(pieces) + '</div></details>')
 
-# 文件域无独立工件的两步（8.6 矩阵有位、文件域无件）：汇总节如实标注
-ART_NOFILE_NOTES = {
-    15: ('G2 评审记录', '评审记录在卡（t_11e182b3，arch-governance 板），文件域无独立工件'),
+# 文件域无独立工件的两步（8.6 矩阵有位、文件域无件）：注记按轮注册（R17）——
+# 旧注记写死 run2 期评审卡锚 t_11e182b3（run2 scenario.log 实证归属；run5/6/7 零命中），
+# 渲进任何非 run2 轮即旧账冒充。锚随文保留于 run2 注册项；其余轮用无锚通用注
+# （评审卡号以闸门仪表盘/本轮叙事实抽为准），新轮按该轮实锚注册。
+_ART_NOFILE_DEFAULT = {
+    15: ('G2 评审记录', '评审记录在评审卡（arch-governance 板，卡号见闸门仪表盘 G2 行），文件域无独立工件'),
     22: ('工作台账 work-report.md', '台账经驾驶舱概览页/治理报告呈现，文件域无独立工件（8.6 矩阵 work-report.md 未落地）'),
 }
+_ART_NOFILE_BY_RUN = {
+    '20260929-v4-run2': {
+        15: ('G2 评审记录', '评审记录在卡（t_11e182b3，arch-governance 板），文件域无独立工件'),
+        22: ('工作台账 work-report.md', '台账经驾驶舱概览页/治理报告呈现，文件域无独立工件（8.6 矩阵 work-report.md 未落地）'),
+    },
+}
+ART_NOFILE_NOTES = _ART_NOFILE_BY_RUN.get(RUN_ID, _ART_NOFILE_DEFAULT)
 
 def artifact_panorama():
     """文末汇总节：8.6 矩阵全景表（步|交付物|模版核对结果|锚）+ 全 OK 计数与缺件如实。"""
