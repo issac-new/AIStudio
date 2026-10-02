@@ -356,6 +356,17 @@ for ac in AC-1 AC-2 AC-3 AC-4 AC-5 AC-6 AC-7; do echo "$ac=$(uat_ac_verdict "$BO
     expect(lines).toHaveLength(7)
     for (const l of lines) expect(l).toMatch(/^AC-[1-7]=通过$/)
   })
+
+  it('判词含映射归属（run6 实锤：括注冻结AC-M 映射时判词同时归属映射目标）', () => {
+    const root = sandbox()
+    const out = sh(`
+BODY='UAT-EVIDENCE AC-2（双渠道调起参数=冻结AC-4 L8 渠道适配）不通过 — 断言不成立'
+for ac in AC-2 AC-4 AC-5; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done`, root)
+    const lines = out.trim().split('\n')
+    expect(lines[0]).toBe('AC-2=不通过')
+    expect(lines[1]).toBe('AC-4=不通过')
+    expect(lines[2]).toBe('AC-5=未见')
+  })
 })
 
 describe('⑨ 基线变更受控绊线（H10/H11/R-A3）', () => {
