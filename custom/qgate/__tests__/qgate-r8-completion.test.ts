@@ -180,6 +180,32 @@ describe('ops symbols（符号接地）', () => {
     expect(fail.summary).toContain("member ghost")
     expect(fail.summary).toContain("'nonexistent-pkg'")
   })
+
+  it('require 四形态等价接地（2026-10-02 审查批：const/let/解构赋值此前整行不匹配，未声明依赖逃过检查）', () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'src'), { recursive: true })
+    writeFileSync(join(ws, 'package.json'), JSON.stringify({ dependencies: { vue: '^3.0.0', yaml: '^2.9.0' } }))
+    writeFileSync(join(ws, 'src', 'req.ts'), [
+      "const leftpad = require('leftpad-fake')",
+      "let y = require('yaml')",
+      "const { reactive } = require('vue')",
+      'var legacy = require("vue")',
+      "require('vue')",
+      '// const c = require("commented-pkg")',
+    ].join('\n'))
+    const fail = runOps(exec, ws)
+    expect(fail.result).toBe('fail')
+    expect(fail.summary).toContain("'leftpad-fake' (require)")
+    expect(fail.summary).not.toContain('commented-pkg')
+    writeFileSync(join(ws, 'src', 'req.ts'), [
+      "let y = require('yaml')",
+      "const { reactive } = require('vue')",
+      'var legacy = require("vue")',
+      "require('vue')",
+      '// const c = require("commented-pkg")',
+    ].join('\n'))
+    expect(runOps(exec, ws).result).toBe('pass')
+  })
 })
 
 describe('semantic profile（SHACL-lite）', () => {

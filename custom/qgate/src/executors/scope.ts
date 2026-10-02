@@ -98,6 +98,12 @@ export function runScopeExecutor(executor: ExecutorSpec, input: ScopeExecutorInp
       if (badAc.length > 0) {
         return finish('fail', `acceptance entries lacking Gherkin When/Then skeleton: ${badAc.map((a) => a.slice(0, 60)).join(' | ')}`)
       }
+      // pin 缺席=哈希对账被整体绕过（2026-10-02 审查批）：登记文件在档而无
+      // acknowledgedSha256（手删/手写旁路）在 scope 放行前 FAIL——CLI 登记通道必写 pin，
+      // 缺席即非正道形态。
+      if (!ti.acknowledgedSha256) {
+        return finish('fail', `task-intent pin missing: ${ti.file} declares no acknowledgedSha256 — tamper check cannot run; re-bind via 'qgate intent --revise --reason ...'`)
+      }
       const outOfIntent = changed.filter((c) => !intent.scope.some((g) => globMatch(g, c)))
       if (outOfIntent.length > 0) {
         return finish('fail', `outside-task-scope: ${outOfIntent.join(', ')} — task ${intent.taskId} declared scope ${intent.scope.join(', ')}; revise intent or revert`, outOfIntent)

@@ -10,6 +10,8 @@ import { join, relative } from 'node:path'
 import { globMatch } from './impact.js'
 
 export const SNAPSHOT_LIMIT = 200
+/** 快照截断标记键（非真实路径形态，不与 glob 命中的相对路径冲突）。 */
+export const SNAPSHOT_TRUNCATED_KEY = '__qgate_snapshot_truncated__'
 
 /** 工作区相对路径文件清单（深度 ≤8，跳过 node_modules/.git，总数 ≤fileLimit）。 */
 export function listWorkspaceFiles(workspace: string, fileLimit = 5000): string[] {
@@ -51,6 +53,12 @@ export function snapshotForGlobs(
   const universe = files ?? listWorkspaceFiles(workspace)
   const matched = universe.filter((rel) => globs.some((g) => globMatch(g, rel)))
   const out: Record<string, string> = {}
+  if (matched.length > limit) {
+    // 截断必须留痕（2026-10-02 审查批）：两轮同样截断的快照逐键相等，会让第 limit+1 个
+    // 输入的变更逃过新鲜度比对（陈旧证据被误判 fresh）——isFresh 见此标记即判不新鲜
+    // （fail-closed：宁可重跑门，不放过截断面外的变更）。
+    out[SNAPSHOT_TRUNCATED_KEY] = String(matched.length)
+  }
   for (const rel of matched.slice(0, limit)) {
     const full = join(workspace, rel)
     if (!existsSync(full)) continue

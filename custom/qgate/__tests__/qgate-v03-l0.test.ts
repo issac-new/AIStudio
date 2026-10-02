@@ -100,9 +100,10 @@ describe('scope executor × taskIntent 漂移对账', () => {
     const fx = tmpProject()
     try {
       writeFileSync(join(fx.qgateDir, 'scope.yaml'), 'paths:\n  - "src/**"\n  - "docs/**"\n')
-      writeIntent(fx.dir)
-      // docs/** 在 scope.yaml 内但不在意图 scope 内 → 交集判负
-      const out = runScopeExecutor(intentExec({ file: TI_FILE, require: true }),
+      const file = writeIntent(fx.dir)
+      // docs/** 在 scope.yaml 内但不在意图 scope 内 → 交集判负（2026-10-02 审查批：夹具补
+      // acknowledgedSha256——CLI 登记通道必写 pin，无 pin 形态另立用例守门）
+      const out = runScopeExecutor(intentExec({ file: TI_FILE, acknowledgedSha256: taskIntentSha256(file)!, require: true }),
         { runId: 'r', gateId: 'g', workspace: fx.dir, changedPaths: ['docs/x.md'] })
       expect(out.result).toBe('fail')
       expect(out.summary).toContain('outside-task-scope')
@@ -111,6 +112,18 @@ describe('scope executor × taskIntent 漂移对账', () => {
         { runId: 'r', gateId: 'g', workspace: fx.dir, changedPaths: ['src/a.ts'] })
       expect(none.result).toBe('fail')
       expect(none.summary).toContain('no-task-intent')
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('pin 缺席 → fail task-intent pin missing（防篡改对账不可被整体绕过）', () => {
+    const fx = tmpProject()
+    try {
+      writeFileSync(join(fx.qgateDir, 'scope.yaml'), 'paths:\n  - "src/**"\n')
+      writeIntent(fx.dir)
+      const ev = runScopeExecutor(intentExec({ file: TI_FILE, require: true }), // 无 acknowledgedSha256
+        { runId: 'r', gateId: 'g', workspace: fx.dir, changedPaths: ['src/a.ts'] })
+      expect(ev.result).toBe('fail')
+      expect(ev.summary).toContain('task-intent pin missing')
     } finally { rmSync(fx.dir, { recursive: true, force: true }) }
   })
 

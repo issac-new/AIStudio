@@ -909,7 +909,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     UAT_OK=1; UAT_MISS=""
     # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
     UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
-      '[.[] | select(.sender == $s and ((.content.body//"") | test("^\\s*UAT-EVIDENCE")))] | last | .content.body // ""')
+      '[.[] | select(.sender == $s and ((.content.body//"") | test("^\\s*UAT-EVIDENCE")))] | .[0] | .content.body // ""')
     AC_MISS=$(uat_ac_covered "$AC_LIST" "$UAT_BODY")
     if [[ -n "$AC_MISS" ]]; then
       UAT_OK=0; UAT_MISS="${UAT_MISS}UAT-EVIDENCE 未逐条覆盖 AC（缺 ${AC_MISS}）；"

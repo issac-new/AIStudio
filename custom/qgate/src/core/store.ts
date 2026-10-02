@@ -32,7 +32,7 @@ export function redactForStore<T>(value: T): T {
 import type { Evidence, ExceptionWaiver, GateRun, Risk } from './types.js'
 import { parseEvidence, parseRun } from './parse.js'
 import { globMatch } from './impact.js'
-import { snapshotsEqual } from './snapshot.js'
+import { snapshotsEqual, SNAPSHOT_TRUNCATED_KEY } from './snapshot.js'
 
 export interface StorePaths {
   runsDir: string
@@ -185,6 +185,8 @@ export function isFresh(
   const ageH = (now - run.startedAt) / 3_600_000
   if (ageH > maxAgeHours) return false
   if (run.inputSnapshot && Object.keys(run.inputSnapshot).length > 0 && ctx.inputSnapshot) {
+    // 截断快照无法断言新鲜（fail-closed）：第 limit+1 个输入的变更对比对不可见，重跑门取证
+    if (run.inputSnapshot[SNAPSHOT_TRUNCATED_KEY] !== undefined || ctx.inputSnapshot[SNAPSHOT_TRUNCATED_KEY] !== undefined) return false
     return snapshotsEqual(run.inputSnapshot, ctx.inputSnapshot)
   }
   if (ctx.treeHash && run.treeHash && ctx.treeHash === run.treeHash) return true

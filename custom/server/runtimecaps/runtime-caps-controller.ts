@@ -56,7 +56,7 @@ function runCli(args: string[], ttlMs: number, key: string, timeoutMs = CLI_TIME
     return await new Promise<CachedOut>((resolve) => {
       const child = spawn(bin, args, {
         env: { ...process.env, HERMES_HOME: join(homedir(), '.hermes'), HERMES_SKIP_UPDATE: '1' },
-        timeout: CLI_TIMEOUT_MS,
+        timeout: timeoutMs,
       })
       let out = ''
       let err = ''

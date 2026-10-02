@@ -81,7 +81,7 @@ const STATUS_TONE: Record<string, string> = {
       </button>
       <!-- 暂停中的意图（可恢复） -->
       <button
-        v-for="l in loopStore.loops.filter(x => pausedById.value.has(x.id)).slice(0, 4)"
+        v-for="l in loopStore.loops.filter(x => pausedById.has(x.id)).slice(0, 4)"
         :key="'p-' + l.id" type="button" class="glsp__card glsp__card--paused"
         :data-testid="`goal-loop-paused-${l.id}`"
         @click="togglePause(l.id, true)"

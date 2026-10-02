@@ -63,7 +63,10 @@ export function runSemanticExecutor(executor: ExecutorSpec, input: SemanticExecu
   // consistency / terminology 不需要观察文件；其余按需
   let reasoning: ReasoningCatalog | null = null
   const catalogPath = join(input.workspace, executor.catalogFile ?? join('.qgate', 'registers', 'catalog.json'))
-  const needCatalog = check !== 'instance' && check !== 'profile' ? true : !!executor.catalogFile
+  // catalog 要求面：instance 分支全程依赖 byIri/subsumedBy/disjointOf（无处可空），
+  // 仅 profile 允许无 catalog（targetClass 路由有 reasoning 空守卫）——漏收 instance
+  // 会让下方 reasoning! 解引用抛 TypeError 炸整个 run（而非产出 error 证据）。
+  const needCatalog = check === 'profile' ? !!executor.catalogFile : true
   if (needCatalog) {
     if (!existsSync(catalogPath)) return done('error', `semantic catalog missing: ${executor.catalogFile ?? '.qgate/registers/catalog.json'}`)
     const loaded = loadCatalog(catalogPath)
@@ -354,8 +357,17 @@ export function runSemanticExecutor(executor: ExecutorSpec, input: SemanticExecu
             const ok = dt === actual || (dt === 'number' && actual === 'integer')
             if (!ok) { problems.push(`${rid}.${field}: datatype ${dt} expected, got ${actual}`); continue }
           }
-          if (typeof shape.pattern === 'string' && (typeof v !== 'string' || !new RegExp(shape.pattern, 'u').test(v))) {
-            problems.push(`${rid}.${field}: pattern /${shape.pattern}/ unmatched (${typeof v === 'string' ? v.slice(0, 24) : typeof v})`)
+          if (typeof shape.pattern === 'string') {
+            // 用户可编辑 shapes：非法正则须降级为 error 证据，不得抛 SyntaxError 炸整个 run
+            let re: RegExp
+            try {
+              re = new RegExp(shape.pattern, 'u')
+            } catch (e) {
+              return done('error', `shapes.fields.${field}.pattern invalid: /${shape.pattern}/ (${(e as Error).message})`)
+            }
+            if (typeof v !== 'string' || !re.test(v)) {
+              problems.push(`${rid}.${field}: pattern /${shape.pattern}/ unmatched (${typeof v === 'string' ? v.slice(0, 24) : typeof v})`)
+            }
           }
           if (Array.isArray(shape.allowedValues) && !shape.allowedValues.includes(v as never)) {
             problems.push(`${rid}.${field}: value not in allowedValues`)

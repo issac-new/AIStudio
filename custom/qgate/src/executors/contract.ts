@@ -114,7 +114,14 @@ export function runContractExecutor(executor: ExecutorSpec, input: ContractExecu
       const r = reg.value as Record<string, unknown>
       const want = typeof r.contentSha256 === 'string' ? r.contentSha256 : undefined
       if (want) {
-        const actual = createHash('sha256').update(readFileSync(surface)).digest('hex')
+        // 目录/不可读降级 error 证据而非抛 EISDIR 炸整 run
+        let surfaceBuf: Buffer
+        try {
+          surfaceBuf = readFileSync(surface)
+        } catch (e) {
+          return done('error', `api surface file unreadable (${(e as Error).message})`)
+        }
+        const actual = createHash('sha256').update(surfaceBuf).digest('hex')
         if (actual !== want) return done('fail', `api surface content sha256 drifted: declared ${want.slice(0, 12)}…, actual ${actual.slice(0, 12)}…`)
       }
     }

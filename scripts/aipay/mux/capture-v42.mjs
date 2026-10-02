@@ -87,7 +87,6 @@ async function shot(name, url, opts = {}) {
   // ⚠️ 不点任何弹窗按钮："知道了"=通知跳转钮，点击即劫持导航到 board?task=<卡>
   // （run2 实锤：五连拍全被劫持到 t_666aecf8；去掉 Dismiss 循环后全部正确落位）
   if (opts.after) await opts.after()
-  await page.screenshot({ path: `${OUT}/${name}.png`, ...(opts.fullPage ? { fullPage: true } : {}) })
   const probe = await page.evaluate(() => {
     const q = (s) => !!document.querySelector(s)
     return {
@@ -96,13 +95,17 @@ async function shot(name, url, opts = {}) {
       bodyText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 90),
     }
   })
-  // 文件名-内容对齐校验：落地路由与预期不符即记缺陷（防 ui-26 错拍类复发）
-  // 校验前剥 hash 前缀（probe.url 形如 #/app，expectRoute 写 ^/app——直接测必误报，
-  // run5 09-30 实锤 DEFECT[route-mismatch] 全是校验器自身假红）
+  // 文件名-内容对齐校验：落地路由与预期不符即拒拍（2026-10-02 审查批：旧序"先写盘后
+  // 校验"，错页截图已覆盖上一份好图才报缺陷——run5 空态覆盖好图事故只剩 expectText 一类
+  // 有拒拍门，路由错配这类仍是被动的。校验前剥 hash 前缀（probe.url 形如 #/app，
+  // expectRoute 写 ^/app——直接测必误报，run5 09-30 实锤 DEFECT[route-mismatch] 全是
+  // 校验器自身假红）。
   const landed = (probe.url || '').replace(/^#/, '')
   if (opts.expectRoute && !new RegExp(opts.expectRoute).test(landed)) {
-    console.error(`DEFECT[route-mismatch]: ${name} 落地 ${probe.url} ≠ 预期 /#${opts.expectRoute}`)
+    console.error(`DEFECT[route-mismatch]: ${name} 落地 ${probe.url} ≠ 预期 /#${opts.expectRoute}——拒拍（不覆盖既有图）`)
+    return
   }
+  await page.screenshot({ path: `${OUT}/${name}.png`, ...(opts.fullPage ? { fullPage: true } : {}) })
   console.log('shot:', name, JSON.stringify(probe))
 }
 // 同画面去重：全量拍完按文件字节哈希报告重复帧（采集计划收敛依据）
