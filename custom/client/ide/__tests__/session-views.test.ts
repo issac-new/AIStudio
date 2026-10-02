@@ -88,8 +88,10 @@ describe('patch 347 漂移守卫', () => {
     expect(store).toContain("sessionView: 'active'")
     expect(store).toContain('setSessionView')
     // loadJson 的 {...fallback, ...parsed} 合并天然回填缺失字段（无 IIFE——
-    // IIFE 破坏 Vue 同步响应式追踪，探针实锤后改回直调）
-    expect(store).toContain('loadJson(SIDEBAR_KEY, DEFAULT_SIDEBAR)')
+    // IIFE 破坏 Vue 同步响应式追踪，探针实锤后改回直调）。
+    // 2026-10-02 settings-layers 步二迁键：分层键 ide.sidebar + legacyKey 收养旧偏好
+    // （守卫意图"旧偏好回填"由第三参 legacyKey 承载）
+    expect(store).toContain("loadJson('ide.sidebar', DEFAULT_SIDEBAR, SIDEBAR_KEY)")
     expect(store).not.toContain('sessionView ?? DEFAULT_SIDEBAR.sessionView')
   })
 })
