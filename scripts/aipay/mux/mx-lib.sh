@@ -418,7 +418,11 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# memory 上限对齐宿主实证值（2026-10-02 run7 实锤）：缺省 2200/1375 太小，
+# consolidation 反复 "would be at 2,26x/2,200 -- over the limit" 每 turn 重试 4 次
+# （memory_tool.py 默认值；宿主 ~/.hermes 4400/2750 已长期实证可用）。
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True,
+                 'memory_char_limit': 4400, 'user_char_limit': 2750}
 # 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道。
 # 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
 # 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
@@ -479,7 +483,11 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# memory 上限对齐宿主实证值（2026-10-02 run7 实锤）：缺省 2200/1375 太小，
+# consolidation 反复 "would be at 2,26x/2,200 -- over the limit" 每 turn 重试 4 次
+# （memory_tool.py 默认值；宿主 ~/.hermes 4400/2750 已长期实证可用）。
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True,
+                 'memory_char_limit': 4400, 'user_char_limit': 2750}
 # 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道。
 # 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
 # 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
