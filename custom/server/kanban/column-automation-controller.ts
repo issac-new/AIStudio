@@ -13,12 +13,19 @@
 import Router from '@koa/router'
 import { loadColumnAutomations, matchColumnTransition } from './column-automation'
 import { dispatchColumnTransition, ColumnDispatchConfigError } from './column-dispatch'
+import { SPECIALIST_PRESETS } from './specialist-presets'
 import { getMentionDispatch, workspaceAccessDenied } from '../zcode/engine-controller'
 
 const router = new Router({ prefix: '/api/column-automation' })
 
 router.get('/', async (ctx) => {
   ctx.body = { ok: true, columns: loadColumnAutomations() }
+})
+
+/** 列 specialist 预置库（2026-10-02 吸收二期 #19-1：routa 九件套+review 三层
+ *  契约资产；编排配置 steps[].specialist 可引用 preset id，编辑器预置下拉消费） */
+router.get('/presets', async (ctx) => {
+  ctx.body = { ok: true, presets: SPECIALIST_PRESETS }
 })
 
 router.get('/match', async (ctx) => {
