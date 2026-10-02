@@ -504,6 +504,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     note "[观察] 评审卡未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
     echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
   fi
+  gate_review fanfan "G2-系分评审闸"
   sset review_done 1
 fi
 
@@ -573,6 +574,7 @@ if step_reached close && [[ -z "$(sget close_done)" ]]; then
     wait_truth "fanfan 账号板 ${RFD_ID} 主卡 done" 1200 kanban_done fanfan "${RFD_ID}" \
       || note "[观察] 主卡未置 done（记问题单）"
   fi
+  gate_review arch "概设收口闸"
   sset close_done 1
 fi
 
@@ -636,6 +638,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
       || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
   done
+  gate_review chen "G3-代码实现闸"
   sset devimpl_done 1
   sset g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
@@ -764,6 +767,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' show origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
   fi
+  gate_review qi "G4-测试过闸"
   sset testpass_done 1
   sset g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
@@ -877,6 +881,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
     kanban_status_as fanfan "$ID" todo || true
     note "[fanfan] 发布登记 $k → 卡 $ID"
   done
+  gate_review fanfan "G5-发布闸"
   sset release_done 1
 fi
 
