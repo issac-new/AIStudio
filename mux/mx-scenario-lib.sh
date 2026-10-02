@@ -189,6 +189,14 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
 # 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份批准（反应+线程内 !approve 双通道）
+  # 审批复核模式开关（2026-10-02 保真裁决配套）：
+  #   MX_APPROVE_MODE=auto（默认）  脚本扫到即批——历史行为，速度最快
+  #   MX_APPROVE_MODE=manual        不自动批——请求挂起等真人登录 matrix 客户端手动 !approve
+  #                                 （审批等待窗 .env MATRIX_APPROVAL_TIMEOUT_SECONDS=1800s）
+  #   MX_APPROVE_MODE=agent         审批者 agent 先审阅决策再批——决策内容真实（待裁决后实现）
+  if [[ "${MX_APPROVE_MODE:-auto}" == "manual" ]]; then
+    return 0
+  fi
   local room="$1"
   for u in "${INSTANCED_USERS[@]}"; do
     local pend
