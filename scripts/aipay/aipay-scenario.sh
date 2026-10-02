@@ -580,12 +580,12 @@ fi
 if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   if ! repo_has docs/plan/${RFD_ID}-schedule.md; then
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
-1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
+1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；工作量 ≥2 人日的任务须同步给出子任务拆分（子任务 ID/内容/工作量，每件 ≤1 人日）写入文档；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
 3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
 结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)"
-    wait_truth "docs/plan/${RFD_ID}-schedule.md 入库" 7200 repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期超时"
+    wait_alive_truth "docs/plan/${RFD_ID}-schedule.md 入库" 1800 fanfan repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期空转（fanfan 日志 1800s 零增长）"
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
@@ -597,14 +597,14 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   note "── devimpl：后端核心先行，渠道/前端随后"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
 
-  dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core）。
+  dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core，3 人日重度任务）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：按工作量与复杂度把本任务拆成 3-6 件子任务（每件 ≤1 人日、有独立验收口径），kanban 建 DEV-PAYCORE 主卡并把子任务建为 link 子卡（含工作量与 --raci 字段）；逐子任务实现，每件子任务至少一个独立 commit（消息含子任务 ID），全部子任务完成后再进入整体自测。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
 4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
-  wait_truth "origin 出现 feat/DEV-PAYCORE 分支" 3600 bash -c \
+  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支" 1800 chen bash -c \
     "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/DEV-PAYCORE" \
     || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
 
@@ -613,21 +613,22 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
               "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
     IFS='|' read -r who task app chan <<< "$spec"
-    dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}）。
+    dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
 2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     sleep 5
   done
 
-  dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp）。
+  dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
 
-  for b in DEV-CHWX DEV-CHALI DEV-MP; do
-    wait_truth "origin 出现 feat/$b 分支" 3600 bash -c \
+  for ba in "DEV-CHWX|hu" "DEV-CHALI|lin" "DEV-MP|xiao"; do
+    IFS='|' read -r b bowner <<< "$ba"
+    wait_alive_truth "origin 出现 feat/$b 分支" 1800 "$bowner" bash -c \
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/$b" \
       || { note "[观察] $b 分支未达"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
   done
@@ -761,7 +762,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
-    wait_truth "测试报告入库" 2400 bash -c \
+    wait_alive_truth "测试报告入库" 1800 qi bash -c \
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' show origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
   fi
