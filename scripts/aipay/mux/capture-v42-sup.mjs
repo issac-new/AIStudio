@@ -62,15 +62,11 @@ for (let i = 0; i < 4; i++) {
 }
 
 async function dismissOverlays() {
-  for (let i = 0; i < 3; i++) {
-    const bannerBtn = page.locator('[data-testid="studio-announcement"] button').last()
-    if (await bannerBtn.isVisible().catch(() => false)) { await bannerBtn.click().catch(() => {}); await page.waitForTimeout(400); continue }
-    break
-  }
-  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒']) {
-    const btn = page.locator(`button:has-text("${txt}")`).first()
-    if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(400) }
-  }
+  // 拍前去噪（V5 §8.4②）：CSS 隐藏公告横幅/版本通知与 naive 通知，不点任何弹窗按钮——
+  // 公告按钮=跳转劫持钮（run2 五连拍被劫持到 t_666aecf8 实锤；旧实现点击式去噪+boot
+  // 重试是绕坑不是根治，2026-10-02 改 CSS 隐藏从源头不触发导航）。
+  await page.addStyleTag({ content: '.n-notification,.announcement-banner,[data-testid="studio-announcement"]{display:none!important}' }).catch(() => {})
+  await page.keyboard.press('Escape').catch(() => {})
 }
 
 async function goHash(url, verify) {
