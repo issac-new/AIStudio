@@ -26,6 +26,17 @@ describe('patch 539：/hermes/history 悬空链接根治', () => {
     expect(minus.filter(l => l.includes('hermes/history') || l.includes("'hermes.history'"))).toHaveLength(7)
   })
 
+  it('patch 541 死导航清族：PageSidebarNav/Rail 零 hermes.history 导航（走查复现修复）', () => {
+    const patch541 = readFileSync(resolve(OVERLAY_ROOT, 'patches/541-history-deadnav-family-fix.patch'), 'utf8')
+    expect(readFileSync(resolve(OVERLAY_ROOT, 'patches/series'), 'utf8')).toContain('541-history-deadnav-family-fix.patch')
+    expect(patch541).toContain("router.push('/app/history')")
+    expect(patch541).toContain("route: 'ia2.collabHistory'")
+    const nav = read('packages/client/src/components/layout/PageSidebarNav.vue')
+    expect(nav).not.toContain("name: 'hermes.history'")
+    const rail = read('packages/client/src/components/layout/StudioNavigationRail.vue')
+    expect(rail).not.toContain("route: 'hermes.history'")
+  })
+
   it('注入树零残留：MessageList/HistoryView 不再产出 /hermes/history 引用', () => {
     const ml = read('packages/client/src/components/hermes/chat/MessageList.vue')
     expect(ml).not.toContain('#/hermes/history')

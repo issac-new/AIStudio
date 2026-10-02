@@ -430,3 +430,4 @@
 538-server-routes-runtimecaps-mount.patch
 539-client-history-dangling-links-fix.patch
 540-kanban-selectedboard-layers.patch
+541-history-deadnav-family-fix.patch
