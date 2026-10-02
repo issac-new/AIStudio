@@ -10,6 +10,6 @@ index ec205519..28b894ea 100644
 +  # notarize 需 Apple Developer 凭据;本地/CI 无凭据构建时关闭以免 build 失败。
 +  # 正式发布构建设回 true 并通过 CSC_LINK/CSC_KEY_PASSWORD/APPLE_ID 等环境变量提供凭据。
 +  notarize: false
-   artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+   artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  win:

@@ -25,7 +25,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
 -    NSMicrophoneUsageDescription: "Ekko Studio uses the microphone for voice conversations and speech transcription."
 -  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
 +    NSMicrophoneUsageDescription: "SwarmStudio uses the microphone for voice conversations and speech transcription."
-+  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  win:
    icon: build/icon.ico
@@ -33,7 +33,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
      - target: nsis
        arch: [x64]
 -  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
-+  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  linux:
    icon: build/icons
@@ -42,7 +42,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development
 -  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
-+  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  deb:
    afterInstall: build/linux-after-install.tpl
