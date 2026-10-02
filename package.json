@@ -31,6 +31,7 @@
     "zcode:serve": "node scripts/zcode-engine.mjs serve",
     "postbuild": "node scripts/verify-dist.mjs"
   },
+  "//deps-borrow": "node_modules 为指向 upstream/hermes-studio/node_modules 的符号链——依赖声明单一事实源在上游 package.json（devDependencies），本仓不重复声明框架/测试依赖（双源制造版本分叉）。借用契约由 .qgate/gates/symbol-grounding.yaml 机器核验（depsFile 指上游清单，上游砍依赖即亮红）。",
   "engines": {
     "node": ">=23.0.0"
   }

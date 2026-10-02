@@ -270,6 +270,8 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
         out.aliases = aliases
       }
       if (raw.ignoredSpecifiers !== undefined) { const v = strList(raw.ignoredSpecifiers, 50); if (!v) return null; out.ignoredSpecifiers = v }
+      const depsFile = str(raw.depsFile)
+      if (depsFile !== undefined && depsFile.length > 0) out.depsFile = depsFile
     }
   } else if (type === 'semantic') {
     const check = enumOf(raw.check, ['alignment', 'consistency', 'constraint', 'state', 'exposure', 'instance', 'relation', 'terminology', 'profile'] as const)

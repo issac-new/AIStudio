@@ -139,6 +139,9 @@ export interface ExecutorSpec {
   aliases?: Record<string, string>
   /** ops symbols：忽略的说明符前缀（显式豁免清单，如测试运行时注入的全局）。 */
   ignoredSpecifiers?: string[]
+  /** ops symbols：依赖清单来源（默认 package.json）。符号链借用架构下指向上游清单
+      （如 ../upstream/hermes-studio/package.json）——事实源在哪，接地就核哪。 */
+  depsFile?: string
 
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
