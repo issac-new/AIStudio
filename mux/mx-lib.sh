@@ -313,9 +313,9 @@ out['platforms'] = {
 # 开关为官方配置（agent/background_review.py load_background_review_settings）；
 # hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
 out['auxiliary'] = {'background_review': {'enabled': False}}
-# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
-# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
-_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+# 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
+# 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
+_re = os.environ.get('MX_REASONING_EFFORT', '')
 if _re and isinstance(out.get('agent'), dict):
     out['agent']['reasoning_effort'] = _re
 # 模型通道覆写（同 profile：root default profile 也要改道，否则网关默认会话仍走旧通道）
@@ -447,9 +447,9 @@ out['platforms'] = {
 # 开关为官方配置（agent/background_review.py load_background_review_settings）；
 # hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
 out['auxiliary'] = {'background_review': {'enabled': False}}
-# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
-# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
-_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+# 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
+# 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
+_re = os.environ.get('MX_REASONING_EFFORT', '')
 if _re and isinstance(out.get('agent'), dict):
     out['agent']['reasoning_effort'] = _re
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
@@ -508,9 +508,9 @@ if mu:
 # 开关为官方配置（agent/background_review.py load_background_review_settings）；
 # hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
 out['auxiliary'] = {'background_review': {'enabled': False}}
-# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
-# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
-_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+# 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
+# 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
+_re = os.environ.get('MX_REASONING_EFFORT', '')
 if _re and isinstance(out.get('agent'), dict):
     out['agent']['reasoning_effort'] = _re
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
