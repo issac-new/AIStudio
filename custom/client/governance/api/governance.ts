@@ -339,6 +339,10 @@ export interface BoardSyncResultDto {
   relations: number
   conflicts: Array<{ entityId: string; field: string; existing: unknown; incoming: unknown }>
   kgAvailable: boolean
+  /** KG 演化治理（A3，2026-10-02）：合并分级统计。 */
+  governed?: { auto: number; manual: number; breaker: boolean; reason?: string }
+  /** KG 演化治理（A2）：三档去重统计。 */
+  dedup?: { autoAlias: number; review: number }
 }
 export interface KgSummaryDto {
   ok: boolean
@@ -357,6 +361,10 @@ export interface ConflictInboxDto {
   existing: unknown
   incoming: unknown
   resolved: false | { action: 'keep-existing' | 'take-incoming'; at: number }
+  /** additive（KG 演化治理）：field-conflict=属性矛盾；merge-review=去重/治理扣留待裁决。 */
+  kind?: 'field-conflict' | 'merge-review'
+  /** additive：merge-review 去重档的名称相似度。 */
+  similarity?: number
 }
 export function syncKnowledgeGraph(board?: string): Promise<{ ok: boolean; results: BoardSyncResultDto[] }> {
   const q = board ? `?board=${encodeURIComponent(board)}` : ''
@@ -372,6 +380,51 @@ export function resolveConflict(inboxId: string, action: 'keep-existing' | 'take
   return request<{ ok: boolean; entry?: ConflictInboxDto; detail?: string }>('/api/governance/knowledge-graph/conflicts/resolve', {
     method: 'POST',
     body: { inboxId, action },
+  })
+}
+
+// ---- KG 演化治理（A1/A4，2026-10-02 动态本体三部曲调研落地；/api/kg-evolution/*） ----
+export interface KgEvolutionStatusDto {
+  ok: boolean
+  envEnabled: boolean
+  armed: boolean
+  running: boolean
+  intervalMs: number
+  batchSize: number
+  batchWindowMs: number
+  minSyncIntervalMs: number
+  pendingCount: number
+  pending: Array<{ slug: string; mtimeMs: number; firstSeenAt: number; count: number; ageMs: number }>
+  lastSuccessAt: number
+  /** 节流余量（ms）：距下次允许自动同步的剩余等待；0=已可触发。 */
+  throttleRemainMs: number
+}
+export interface KgVersionDto {
+  ts: number
+  file: string
+  bytes: number
+  nodes: number
+}
+export function kgEvolutionStatus(): Promise<KgEvolutionStatusDto> {
+  return request<KgEvolutionStatusDto>('/api/kg-evolution/status')
+}
+/** 手动兜底：立即推进一轮自动同步（force，绕节流/攒批等待）。 */
+export function tickKg(): Promise<{ ok: boolean; tick: { synced: boolean; reason: string; pendingCount: number } }> {
+  return request<{ ok: boolean; tick: { synced: boolean; reason: string; pendingCount: number } }>('/api/kg-evolution/tick', { method: 'POST' })
+}
+export function armKg(): Promise<{ ok: boolean; armed: boolean; envEnabled: boolean }> {
+  return request<{ ok: boolean; armed: boolean; envEnabled: boolean }>('/api/kg-evolution/arm', { method: 'POST' })
+}
+export function disarmKg(): Promise<{ ok: boolean; armed: boolean; envEnabled: boolean }> {
+  return request<{ ok: boolean; armed: boolean; envEnabled: boolean }>('/api/kg-evolution/disarm', { method: 'POST' })
+}
+export function fetchKgVersions(board: string): Promise<{ ok: boolean; board: string; versions: KgVersionDto[] }> {
+  return request<{ ok: boolean; board: string; versions: KgVersionDto[] }>(`/api/kg-evolution/versions?board=${encodeURIComponent(board)}`)
+}
+export function rollbackKg(board: string, ts: number): Promise<{ ok: boolean; board: string; ts: number; preRollback: string; detail?: string }> {
+  return request<{ ok: boolean; board: string; ts: number; preRollback: string; detail?: string }>('/api/kg-evolution/rollback', {
+    method: 'POST',
+    body: { board, ts },
   })
 }
 
