@@ -9,6 +9,6 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
 +    # 2.25 轮 patch 109 语义，系列折叠时孤儿化，本补丁按 v0.7.25 结构重建）
 +    - target: zip
 +      arch: [x64]
-   artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+   artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  linux:
