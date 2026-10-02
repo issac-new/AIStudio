@@ -577,17 +577,23 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
     const changed = (executor.observedFile === undefined)
     const files = listWorkspaceFilesSafe(input.workspace).filter((f) => /\.(ts|tsx|js|mjs|vue)$/.test(f))
     const target = changed ? files : files // 全仓走读（增量面由 appliesWhen 承担）
+    // 依赖清单来源：默认 workspace package.json；depsFile 可指向上游——符号链借用架构
+    //（node_modules 实为上游树的链接）时声明的事实源在上游 package.json，借用必须显式指认；
+    // 指认的清单缺失 → error（链接架构漂移是异常，不是"没有依赖"）
     let pkgDeps: Set<string> = new Set()
-    for (const pkg of ['package.json']) {
-      const f = join(input.workspace, pkg)
-      if (!existsSync(f)) continue
+    const depsFile = executor.depsFile ?? 'package.json'
+    const depsPath = join(input.workspace, depsFile)
+    if (executor.depsFile && !existsSync(depsPath)) {
+      return done('error', `depsFile missing: ${depsFile}（借用契约指认的上游依赖清单不存在——符号链架构漂移）`)
+    }
+    if (existsSync(depsPath)) {
       try {
-        const j = JSON.parse(readFileSync(f, 'utf8')) as Record<string, unknown>
+        const j = JSON.parse(readFileSync(depsPath, 'utf8')) as Record<string, unknown>
         for (const key of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
           const deps = j[key]
           if (typeof deps === 'object' && deps !== null) for (const d of Object.keys(deps as Record<string, unknown>)) pkgDeps.add(d)
         }
-      } catch { /* package.json 坏 → 依赖清单空，unresolved 会如实暴露 */ }
+      } catch { /* 清单坏 → 依赖集空，unresolved 会如实暴露 */ }
     }
     const NODE_BUILTINS = new Set(['assert', 'buffer', 'child_process', 'cluster', 'console', 'constants', 'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'http2', 'https', 'inspector', 'module', 'net', 'os', 'path', 'perf_hooks', 'process', 'punycode', 'querystring', 'readline', 'repl', 'stream', 'string_decoder', 'timers', 'tls', 'trace_events', 'tty', 'url', 'util', 'v8', 'vm', 'wasi', 'worker_threads', 'zlib'])
     const unresolved: string[] = []
