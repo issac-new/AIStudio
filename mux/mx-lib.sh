@@ -308,11 +308,11 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
-# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
-# 开关为官方配置（agent/background_review.py load_background_review_settings）；
-# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
-out['auxiliary'] = {'background_review': {'enabled': False}}
+# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
+# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
+# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
+_bg = os.environ.get('MX_BGREVIEW', '1')
+out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
@@ -442,11 +442,11 @@ out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
-# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
-# 开关为官方配置（agent/background_review.py load_background_review_settings）；
-# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
-out['auxiliary'] = {'background_review': {'enabled': False}}
+# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
+# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
+# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
+_bg = os.environ.get('MX_BGREVIEW', '1')
+out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
@@ -503,11 +503,11 @@ if mu:
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
-# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
-# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
-# 开关为官方配置（agent/background_review.py load_background_review_settings）；
-# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
-out['auxiliary'] = {'background_review': {'enabled': False}}
+# background_review 保真裁决（2026-10-02 用户指令）：推演须与真实场景一致——
+# 真实部署默认开启（fail-open），显式置 true。速度代价接受（run7 实测占单
+# agent LLM 时间 79%，160/203min）；如需临时提速可 MX_BGREVIEW=0 关一轮。
+_bg = os.environ.get('MX_BGREVIEW', '1')
+out['auxiliary'] = {'background_review': {'enabled': _bg not in ('0', 'false', 'no')}}
 # 推理档位：用户裁决 2026-10-02「拉满保持」——默认不覆盖（沿用宿主 ultra），
 # 仅 MX_REASONING_EFFORT 显式设值时才覆写（low/medium/high/ultra）。
 _re = os.environ.get('MX_REASONING_EFFORT', '')
