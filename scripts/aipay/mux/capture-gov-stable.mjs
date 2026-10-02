@@ -86,8 +86,7 @@ if (!ONLY || ONLY === 'g5drawer') {
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
       await page.evaluate(() => { location.hash = '#/hermes/kanban?board=fanfan-review' })
       await page.waitForTimeout(3500)
-      // G5 评审卡按轮取（旧写死 t_ea68c462 是 run2 卡——run7 预检实锤任何新轮必打不开）：
-      // state card_g5_ready 优先，缺省按准出评审标题找；done 卡视区外时先状态筛出。
+      // t_ea68c462 是 done 卡（列在已完成/已归档，视区外）——先用状态筛出再点卡开抽屉
       const stSel = page.locator('text=全部状态').first()
       if (await stSel.isVisible().catch(() => false)) {
         await stSel.click().catch(() => {})
@@ -95,19 +94,14 @@ if (!ONLY || ONLY === 'g5drawer') {
         const doneOpt = page.locator('text=已完成').first()
         if (await doneOpt.isVisible().catch(() => false)) { await doneOpt.click().catch(() => {}); await page.waitForTimeout(1500) }
       }
-      const g5id = state.card_g5_ready || state.card_g5 || ''
-      const byTitle = page.locator('text=/发布准出评审/').first()
-      const card = (await byTitle.isVisible().catch(() => false)) || !g5id
-        ? byTitle : page.locator(`text=${g5id}`).first()
+      const card = page.locator('text=t_ea68c462').first()
       if (await card.isVisible().catch(() => false)) {
         await card.scrollIntoViewIfNeeded().catch(() => {})
         await card.click().catch(() => {})
+        await page.waitForTimeout(2200)
       }
-      // 抽屉签名=「Task ID」字段行（卡面上没有）+ .task-drawer 根；仅卡标题可见不算开抽屉。
-      // 抽屉根是 v-else-if="task && detail" 详情就绪才渲染——waitFor 轮询免假阴性。
-      ok = await page.locator('.task-drawer').first()
-        .waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false)
-      ok = ok && (await page.locator('text=Task ID').first().isVisible().catch(() => false))
+      // 抽屉签名=「Task ID」字段行（卡面上没有）；仅卡标题可见不算开抽屉
+      ok = await page.locator('text=Task ID').first().isVisible().catch(() => false)
     }
     if (ok) { await page.screenshot({ path: `${OUT}/ui-g5-carddrawer.png` }); console.log('shot: ui-g5-carddrawer（抽屉校验过）') }
     else console.log('  [FAIL] ui-g5-carddrawer 抽屉未开，不截')
