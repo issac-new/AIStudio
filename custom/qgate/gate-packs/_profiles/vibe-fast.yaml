@@ -12,3 +12,5 @@ spec:
     - L3
     - L4
     - L5
+    # v0.3：意图漂移对账需要任务级登记，lite 迭代不要求（feature-close 起启用）
+    - L0.intent-drift

@@ -32,6 +32,7 @@ export function redactForStore<T>(value: T): T {
 import type { Evidence, ExceptionWaiver, GateRun, Risk } from './types.js'
 import { parseEvidence, parseRun } from './parse.js'
 import { globMatch } from './impact.js'
+import { snapshotsEqual } from './snapshot.js'
 
 export interface StorePaths {
   runsDir: string
@@ -165,15 +166,27 @@ export function listRisks(paths: StorePaths): Risk[] {
   return out
 }
 
-/** 新鲜度（设计 §5.4）：同 treeHash 或（同 commit 且门适用路径与变更集不相交），且未超 maxAge。 */
+/** 新鲜度（设计 §5.4 + v0.3 §3.2）：
+    输入快照在档时快照即权威——逐项一致即新鲜、不一致即陈（门声明输入面已变，其他锚不再旁证）；
+    无快照回退原三锚：同 treeHash 或（同 commit 且门适用路径与变更集不相交），且未超 maxAge。 */
 export function isFresh(
   run: GateRun,
   now: number,
-  ctx: { commit?: string; treeHash?: string; changedPaths: readonly string[]; appliesWhen?: { changed: { any?: string[]; all?: string[] } } },
+  ctx: {
+    commit?: string
+    treeHash?: string
+    changedPaths: readonly string[]
+    appliesWhen?: { changed: { any?: string[]; all?: string[] } }
+    /** 当前重算的门输入快照（与 run.inputSnapshot 比对）。 */
+    inputSnapshot?: Record<string, string>
+  },
   maxAgeHours = 24,
 ): boolean {
   const ageH = (now - run.startedAt) / 3_600_000
   if (ageH > maxAgeHours) return false
+  if (run.inputSnapshot && Object.keys(run.inputSnapshot).length > 0 && ctx.inputSnapshot) {
+    return snapshotsEqual(run.inputSnapshot, ctx.inputSnapshot)
+  }
   if (ctx.treeHash && run.treeHash && ctx.treeHash === run.treeHash) return true
   if (ctx.commit && run.commit === ctx.commit) {
     if (!ctx.appliesWhen) return ctx.changedPaths.length === 0

@@ -1,0 +1,4 @@
+.qgate/runs/
+.qgate/evidence/
+.qgate/state.json
+.qgate/registers/task-intent.json

@@ -12,6 +12,7 @@ import { parse as parseYaml } from 'yaml'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { isRecord } from '../core/parse.js'
 import { globMatch } from '../core/impact.js'
+import { hasGherkinSkeleton, loadTaskIntent, taskIntentSha256 } from '../core/task-intent.js'
 
 export interface ScopeExecutorInput {
   runId: string
@@ -74,10 +75,37 @@ export function runScopeExecutor(executor: ExecutorSpec, input: ScopeExecutorInp
     }
     const changed = [...(input.changedPaths ?? [])] // runGate 统一计算传入（避免与 run.ts 循环 import）
     const outOfScope = changed.filter((c) => !declared.some((p) => globMatch(p, c)))
-    if (outOfScope.length === 0) {
-      return finish('pass', `all ${changed.length} changed paths within declared scope (${declared.length} globs)`, changed)
+    if (outOfScope.length > 0) {
+      return finish('fail', `out-of-scope changes: ${outOfScope.join(', ')} — declare them in scope.yaml or revert`, outOfScope)
     }
-    return finish('fail', `out-of-scope changes: ${outOfScope.join(', ')} — declare them in scope.yaml or revert`, outOfScope)
+
+    // 任务意图交集对账（v0.3 §4.2）：声明绑定 taskIntent 时，变更还须落在意图 scope 内，
+    // 登记文件哈希与声明不符即 FAIL（防静默修改），require 且无登记即 FAIL。
+    const ti = executor.taskIntent
+    if (ti) {
+      const intentFile = join(input.workspace, ti.file)
+      if (!existsSync(intentFile)) {
+        if (ti.require) return finish('fail', `no-task-intent: ${ti.file} not registered — run 'qgate intent' to declare what this task claims to do (drift reconciliation is binding)`)
+        return finish('pass', `all ${changed.length} changed paths within declared scope (${declared.length} globs); task-intent not registered (not required)`, changed)
+      }
+      const sha = taskIntentSha256(intentFile)
+      if (ti.acknowledgedSha256 && sha !== ti.acknowledgedSha256) {
+        return finish('fail', `intent-file-modified: ${ti.file} sha256 drifted from acknowledgedSha256 — re-confirm via 'qgate intent --revise --reason ...' and re-bind the hash`)
+      }
+      const intent = loadTaskIntent(intentFile)
+      if (!intent) return err(`task-intent register invalid: ${ti.file} (fail-closed: unreadable intent is not evidence)`)
+      const badAc = intent.acceptance.filter((a) => !hasGherkinSkeleton(a))
+      if (badAc.length > 0) {
+        return finish('fail', `acceptance entries lacking Gherkin When/Then skeleton: ${badAc.map((a) => a.slice(0, 60)).join(' | ')}`)
+      }
+      const outOfIntent = changed.filter((c) => !intent.scope.some((g) => globMatch(g, c)))
+      if (outOfIntent.length > 0) {
+        return finish('fail', `outside-task-scope: ${outOfIntent.join(', ')} — task ${intent.taskId} declared scope ${intent.scope.join(', ')}; revise intent or revert`, outOfIntent)
+      }
+      return finish('pass', `all ${changed.length} changed paths within declared scope ∩ task-intent ${intent.taskId} scope (${intent.scope.length} globs)`, changed)
+    }
+
+    return finish('pass', `all ${changed.length} changed paths within declared scope (${declared.length} globs)`, changed)
   }
 
   if (executor.mode === 'acceptance') {

@@ -49,7 +49,7 @@ export interface Claim {
 
 export interface ExecutorSpec {
   id: string
-  type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm' | 'scope'
+  type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm' | 'scope' | 'traceability' | 'register'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
@@ -58,6 +58,10 @@ export interface ExecutorSpec {
   expectExit?: number
   /** command：超时毫秒（默认 120000）。 */
   timeoutMs?: number
+  /** command：原始测试报告交叉核验（v0.3 §3.1，上游 ADR-0007 本地方言）。
+      声明后内核独立重解析 TAP/JUnit 重算计数：exit 0 但报告含失败、或 total<minTotal
+      静默空跑 → error 证据（INCONCLUSIVE，不是 PASS）。 */
+  rawOutput?: { format: 'tap' | 'junit'; file: string; minTotal?: number }
   /** persistence：场景文件路径（相对 .qgate/ 或内置 pack scenarios/）。 */
   scenario?: string
   /** ontology：内容扫描 glob（默认 docs 与 src 下的 md/ts 文件）。 */
@@ -68,6 +72,13 @@ export interface ExecutorSpec {
   mustContain?: Array<{ file: string; markers: string[] }>
   /** scope：检查模式——scope=声明范围 vs 实际 diff；acceptance=验收条目映射完备。 */
   mode?: 'scope' | 'acceptance'
+  /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
+  requirementsFile?: string
+  /** register：登记簿种类（debt/assumptions/decisions，可多类合一证据）与登记文件路径（单类时可覆盖）。 */
+  register?: Array<'debt' | 'assumptions' | 'decisions'>
+  registerFile?: string
+  /** scope(mode=scope)：任务意图登记绑定（v0.3 §4.2，交集对账 + 哈希防篡改）。 */
+  taskIntent?: { file: string; acknowledgedSha256?: string; require?: boolean }
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
   /** 该 executor 产出的 evidence type。 */
@@ -87,6 +98,9 @@ export interface GateSpec {
     executors: ExecutorSpec[]
     /** PASS 所需 evidence type 全集。 */
     evidence: { required: string[] }
+    /** 元门标记（v0.3 §3.3）：需要本轮其他门的判定作输入（如 traceability）。
+        CLI run 批量执行时元门排在普通门之后；元门永不参与 §49 缓存。 */
+    meta?: boolean
     policy: {
       failure: PolicyAction
       inconclusive: PolicyAction
@@ -155,6 +169,10 @@ export interface GateRun {
   treeHash?: string
   changedPaths?: string[]
   failureSummary?: string
+  /** 输入快照（v0.3 §3.2，上游 inputSnapshot 本地方言）：门声明输入文件的 sha256（相对路径→哈希）。 */
+  inputSnapshot?: Record<string, string>
+  /** 执行前后两次快照一致（门自身没有改写自己的输入）。 */
+  inputsStable?: boolean
 }
 
 export interface Risk {
