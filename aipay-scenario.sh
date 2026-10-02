@@ -475,6 +475,10 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
       && note "[真值] $t 完成回执在房间可见 ✓" \
       || { note "[观察] $t 回执未见"; echo "ISSUE|receipt-missing|$t|完成回执未见（双兜底缺口）" >> "$EVID_DIR/issues.log"; }
   done
+  gate_review chen "系分执行-AN-PAYCORE"
+  gate_review hu "系分执行-AN-CHWX"
+  gate_review lin "系分执行-AN-CHALI"
+  gate_review xiao "系分执行-AN-MP"
   sset anexec_done 1
 fi
 
@@ -638,7 +642,10 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
       || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
   done
-  gate_review chen "G3-代码实现闸"
+  gate_review chen "G3-代码实现闸-csw-pay-core"
+  gate_review hu "G3-代码实现闸-csw-channel-wechat"
+  gate_review lin "G3-代码实现闸-csw-channel-alipay"
+  gate_review xiao "G3-代码实现闸-csw-cashier-mp"
   sset devimpl_done 1
   sset g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
