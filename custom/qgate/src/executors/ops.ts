@@ -636,12 +636,20 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
     // 裸说明符：@scope/name 取前两段，普通包取首段（scoped 包 split('/')[0] 只得 '@scope' 的正统坑）
     const bareOf = (spec: string): string =>
       spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]
+    // 非代码资源 import（样式/字体/图像——合法语句，不属符号接地面）
+    const ASSET_RE = /\.(scss|css|less|sass|styl|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|mp3|mp4|wav)$/
     const resolveSpecifier = (fromFile: string, spec: string, fromRoot = false): string | null => {
       if (!spec.startsWith('.')) return null
+      if (ASSET_RE.test(spec)) return '__asset__'
       // fromFile 是 workspace 相对路径——先锚到绝对再展开候选，最后回相对比对；
       // fromRoot=true（alias 产物）：路径语义是仓根相对，不随引用者目录漂移
       const base = fromRoot ? join(input.workspace, spec) : join(input.workspace, fromFile, '..', spec)
-      for (const cand of [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.mjs`, `${base}.vue`, join(base, 'index.ts'), join(base, 'index.js')]) {
+      // TS NodeNext 惯例：import './x.js' 实指 x.ts——.js/.mjs/.cjs 结尾时同步试 TS 同名件
+      const tsRemap = []
+      if (/\.js$/.test(spec)) tsRemap.push(`${base.slice(0, -3)}.ts`, `${base.slice(0, -3)}.tsx`)
+      if (/\.mjs$/.test(spec)) tsRemap.push(`${base.slice(0, -4)}.ts`)
+      if (/\.cjs$/.test(spec)) tsRemap.push(`${base.slice(0, -4)}.ts`)
+      for (const cand of [base, ...tsRemap, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.mjs`, `${base}.vue`, `${base}.json`, join(base, 'index.ts'), join(base, 'index.js')]) {
         const relc = relative(input.workspace, cand)
         if (files.includes(relc)) return relc
       }
@@ -676,6 +684,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
         if (spec.startsWith('.')) {
           const t = resolveSpecifier(file, spec, aliased)
           if (!t) { unresolved.push(`${file}: '${spec}'`); continue }
+          if (t === '__asset__') { importsChecked++; continue }
           const names = exportsOf(t)
           if (!names) continue // 目标不可词法解析（.vue 等）→ 不判成员
           for (const raw of (namedList ?? '').split(',')) {
