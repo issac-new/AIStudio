@@ -119,23 +119,38 @@ export interface GatewayBlueprint {
   slots: GatewayBlueprintSlot[]
 }
 
-/** 蓝图目录（后端=运行时 venv python 导入 CATALOG，16 件；409=通道缺席） */
+/** 蓝图目录（后端=运行时 venv python 导入 CATALOG，16 件；409=通道缺席）。
+ *  契约纪律：永不 reject——fetch 本身失败（测试环境相对 URL / 网络断）转 error 分支，
+ *  调用方（BlueprintGalleryPanel onMounted）按契约无 try/catch，裸抛会成 unhandled
+ *  rejection 漂浮到进程层（vitest 全量 13 个 unhandled 的根因，2026-10-02 实证）。 */
 export async function fetchGatewayBlueprints(): Promise<{ blueprints: GatewayBlueprint[] } | { error: string }> {
-  const res = await authFetch('/api/runtime-caps/gateway/blueprints')
-  const data = (await res.json()) as { ok?: boolean; blueprints?: GatewayBlueprint[]; error?: string }
+  let res: Response
+  let data: { ok?: boolean; blueprints?: GatewayBlueprint[]; error?: string }
+  try {
+    res = await authFetch('/api/runtime-caps/gateway/blueprints')
+    data = (await res.json()) as { ok?: boolean; blueprints?: GatewayBlueprint[]; error?: string }
+  } catch (e) {
+    return { error: `加载失败：${(e as Error).message}` }
+  }
   if (!res.ok || !data.ok) return { error: data.error ?? `HTTP ${res.status}` }
   return { blueprints: data.blueprints ?? [] }
 }
 
-/** 蓝图实例化：填槽→网关 POST /api/jobs 真实建任务（422=槽位校验错，内联展示） */
+/** 蓝图实例化：填槽→网关 POST /api/jobs 真实建任务（422=槽位校验错，内联展示）。契约同上：永不 reject。 */
 export async function instantiateGatewayBlueprint(
   key: string, values: Record<string, string>,
 ): Promise<{ ok: true; job: unknown } | { ok: false; error: string; status: number }> {
-  const res = await authFetch('/api/runtime-caps/gateway/blueprints/instantiate', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, values }),
-  })
-  const data = (await res.json()) as { ok?: boolean; job?: unknown; error?: string }
+  let res: Response
+  let data: { ok?: boolean; job?: unknown; error?: string }
+  try {
+    res = await authFetch('/api/runtime-caps/gateway/blueprints/instantiate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, values }),
+    })
+    data = (await res.json()) as { ok?: boolean; job?: unknown; error?: string }
+  } catch (e) {
+    return { ok: false, error: `创建失败：${(e as Error).message}`, status: 0 }
+  }
   if (!res.ok || !data.ok) return { ok: false, error: data.error ?? `HTTP ${res.status}`, status: res.status }
   return { ok: true, job: data.job }
 }

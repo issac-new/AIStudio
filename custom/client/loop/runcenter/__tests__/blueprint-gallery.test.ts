@@ -11,6 +11,7 @@ const api = readFileSync(resolve(OVERLAY_ROOT, 'custom/client/ia2/api/runtime-ca
 const view = readFileSync(resolve(OVERLAY_ROOT, 'custom/client/loop/runcenter/views/RunCenterView.vue'), 'utf8')
 const ide = readFileSync(resolve(OVERLAY_ROOT, 'custom/client/ide/components/IdeHistoryBrowser.vue'), 'utf8')
 
+
 describe('蓝图画廊（#11 解封）', () => {
   it('运行中心 runs 页签挂载（GoalLoop 面板之后第二横条）', () => {
     expect(view).toContain('BlueprintGalleryPanel')
@@ -49,5 +50,20 @@ describe('会话分叉接真（#7 解封）', () => {
     for (const k of ['historyForkConfirm', 'historyForkDone', 'historyForkFallback']) {
       expect(dict.match(new RegExp(`${k}: '`, 'g'))?.length, `${k} 须 zh/en 双份`).toBe(2)
     }
+  })
+})
+
+describe('蓝图 API 契约：永不 reject（fetch 失败转 error 分支）', () => {
+  // 根因锚点：BlueprintGalleryPanel onMounted 按契约无 try/catch——fetch 抛异常
+  // （node 测试环境相对 URL 必抛，与全量 13 个 unhandled 同源）会漂浮到进程层。
+  // 契约：两函数接住 fetch 层异常转 error 分支（2026-10-02 根治 + 本守门防回退）。
+  it('fetchGatewayBlueprints / instantiate：fetch 抛 → error 分支，不向上抛', async () => {
+    const mod = await import('../../../ia2/api/runtime-caps')
+    const r = await mod.fetchGatewayBlueprints()
+    expect('error' in r).toBe(true)
+    expect((r as { error: string }).error).toContain('加载失败')
+    const i = await mod.instantiateGatewayBlueprint('k', {})
+    expect(i.ok).toBe(false)
+    expect((i as { error: string }).error).toContain('创建失败')
   })
 })
