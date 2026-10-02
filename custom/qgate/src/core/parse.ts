@@ -260,6 +260,16 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
       const maxAgeDays = num(raw.maxAgeDays)
       if (maxAgeDays !== undefined && maxAgeDays > 0) out.maxAgeDays = maxAgeDays
       if (raw.requiredSignals !== undefined) { const v = strList(raw.requiredSignals, 10); if (!v) return null; out.requiredSignals = v }
+      if (raw.aliases !== undefined) {
+        if (!isRecord(raw.aliases)) return null
+        const aliases: Record<string, string> = {}
+        for (const [k, v] of Object.entries(raw.aliases)) {
+          if (typeof v !== 'string' || k.length === 0 || v.length === 0) return null
+          aliases[k] = v
+        }
+        out.aliases = aliases
+      }
+      if (raw.ignoredSpecifiers !== undefined) { const v = strList(raw.ignoredSpecifiers, 50); if (!v) return null; out.ignoredSpecifiers = v }
     }
   } else if (type === 'semantic') {
     const check = enumOf(raw.check, ['alignment', 'consistency', 'constraint', 'state', 'exposure', 'instance', 'relation', 'terminology', 'profile'] as const)

@@ -135,6 +135,10 @@ export interface ExecutorSpec {
   maxRecoveryMs?: number
   maxAgeDays?: number
   requiredSignals?: string[]
+  /** ops symbols：bundler alias 前缀表（如 {'@/': 'custom/client/'}）；说明符前缀命中即映射后解析。 */
+  aliases?: Record<string, string>
+  /** ops symbols：忽略的说明符前缀（显式豁免清单，如测试运行时注入的全局）。 */
+  ignoredSpecifiers?: string[]
 
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
