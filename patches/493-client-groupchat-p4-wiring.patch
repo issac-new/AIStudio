@@ -37,12 +37,13 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.v
  let streamingMarkdownTimer: ReturnType<typeof setTimeout> | null = null
  
  function clearStreamingMarkdownTimer() {
-@@ -833,7 +846,7 @@
+@@ -833,8 +847,8 @@
                      <MarkdownRenderer :content="referencedContentMarkdown" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
                      <MarkdownRenderer v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
                  </template>
 -                <MarkdownRenderer v-else-if="renderedDisplayBody" :content="renderedDisplayBody" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" :defer-images="!!message.isStreaming" />
 +                <MarkdownRenderer v-else-if="renderedDisplayBody" :content="groupBodyLinkified" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" :defer-images="!!message.isStreaming" />
+                 <slot name="before-workspace-changes" />
                  <ToolChangeCard
                      v-for="change in assistantWorkspaceChanges"
                      :key="change.change_id"

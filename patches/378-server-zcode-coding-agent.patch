@@ -672,9 +672,14 @@ diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b
 diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 --- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 +++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-@@ -13,7 +13,7 @@
+@@ -13,12 +13,12 @@
    sessionId: string
    runId?: string | null
+   /** The foreground run, separate from the deduplication key for each API call. */
+   parentRunId?: string
+   createdAt?: number
+   /** Model request duration in seconds, excluding tool execution. */
+   apiDuration?: number
    source: 'hermes' | 'coding_agent' | 'ekko_agent'
 -  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko_agent'
 +  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko_agent'
