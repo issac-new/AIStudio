@@ -1,0 +1,11 @@
+--- 主树实跑（overlay 根，2026-10-02，merge 后）---
+R0 接线门（engineering.basic-check，advisory warn 档）：
+  △ CONDITIONAL — failing evidence accepted under warn policy
+  evidence unit-test-result: fail/exercised — exit 1 (expected 0);
+    kernel recomputed junit: 3529 total/3527 passed/1 failed/1 skipped
+  → rawOutput 交叉核验真实工作：退出码 1 ↔ 报告 1 failed 一致；
+    唯一 failed = custom/client ia2-i18n-coverage 既有红（本轮零触碰 client，归因既有）
+
+qgate 套件（主树，dist 重建后）：139/139 绿（13 文件）
+相邻面回归：qgate-bridge + governance-analytics = 18/18 绿
+四档裁剪实测：vibe-fast 5 门 / feature-close 9 门 / high-assurance & release 17 门
