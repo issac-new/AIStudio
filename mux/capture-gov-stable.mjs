@@ -32,7 +32,7 @@ await page.addStyleTag({ content: '.n-notification,.announcement-banner,[data-te
 console.log('boot hash:', await page.evaluate(() => location.hash), '| user:', USER)
 
 if (!ONLY || ONLY === 'gov') {
-  await page.evaluate(() => { location.hash = '#/app/gov' })
+  await page.evaluate(() => { location.hash = '#/app/board?tab=gov-docs' })  // 治理中心内嵌看板 tab：/app/gov 别名落 gov-org（无工件库钮），正身=tab=gov-docs
   await page.waitForTimeout(4500)
   console.log('gov docs at nav:', await page.evaluate(() => document.querySelectorAll('[data-testid^="gov-doc-"]').length))
   const DOCS = [
@@ -58,7 +58,7 @@ if (!ONLY || ONLY === 'gov') {
     if (existsSync(`${OUT}/${name}.png`) && !process.env.FORCE) { console.log('skip:', name); continue }
     let ok = false
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-      await page.evaluate(() => { location.hash = '#/app/gov' })
+      await page.evaluate(() => { location.hash = '#/app/board?tab=gov-docs' })  // 治理中心内嵌看板 tab：/app/gov 别名落 gov-org（无工件库钮），正身=tab=gov-docs
       await page.waitForTimeout(2500)
       if (kind) {
         const btn = page.locator(`[data-testid="gov-doc-${kind}"]`)
