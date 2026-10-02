@@ -1,0 +1,24 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: test.fee
+  version: 0.1.0
+  description: rtm-demo 的链接验证门（RTM testGateIds 指向它）
+spec:
+  domain: L1
+  claims: [demo.fee-correct]
+  appliesWhen:
+    changed:
+      any: ["src/**", "test-fee.mjs"]
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: fee-test
+      type: command
+      command: ["node", "test-fee.mjs"]
+      evidenceType: unit-test-result
+      timeoutMs: 30000
+  evidence:
+    required: [unit-test-result]
+  policy:
+    failure: block
+    inconclusive: warn
