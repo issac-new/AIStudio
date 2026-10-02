@@ -101,6 +101,33 @@ function markerPath(slug: string): string {
   return join(dir, `board-sync-${slug.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
 }
 
+// ---- 裁决台账（遗留②闭环 2026-10-03）：merge-review 一经人工裁决即持久，
+// 同步管线据此跳过已裁决实体（keep-existing 不再重扣重问），marker 判定放宽。 ----
+
+export interface AdjudicationRecord { action: 'keep-existing' | 'take-incoming'; at: number; inboxId: string }
+
+function adjudicatedPath(slug: string): string {
+  const base = process.env.GOVERNANCE_BOARD_ADJUDICATED_DIR?.trim() ?? process.env.GOVERNANCE_BOARD_SYNC_MARKER_DIR?.trim()
+  const dir = base ? resolve(base) : resolve(homedir(), '.hermes-web-ui', 'overlay')
+  return join(dir, `board-adjudicated-${slug.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
+}
+
+function readAdjudicated(slug: string): Record<string, AdjudicationRecord> {
+  try {
+    return JSON.parse(readFileSync(adjudicatedPath(slug), 'utf8')) as Record<string, AdjudicationRecord>
+  } catch { return {} }
+}
+
+function writeAdjudicated(slug: string, map: Record<string, AdjudicationRecord>): void {
+  try {
+    const file = adjudicatedPath(slug)
+    mkdirSync(join(file, '..'), { recursive: true })
+    const tmp = `${file}.tmp-${process.pid}`
+    writeFileSync(tmp, JSON.stringify(map))
+    renameSync(tmp, file)
+  } catch { /* 台账写失败=裁决不持久（重新评审一次），同步语义不受影响 */ }
+}
+
 function inboxPath(): string {
   const env = process.env.GOVERNANCE_CONFLICT_INBOX?.trim()
   return env ? resolve(env) : resolve(homedir(), '.hermes-web-ui', 'overlay', 'conflict-inbox.jsonl')
@@ -153,6 +180,13 @@ export function resolveConflictInbox(inboxId: string, action: 'keep-existing' | 
     const props: Record<string, unknown> = { [hit.field]: hit.incoming, type: hit.entityId.split(':')[0] === 'task' ? 'task' : 'agent' }
     void runKgOp('entity', boardKgPath(board), { id: hit.entityId, type: props.type as string, props, force: true })
   }
+  if (hit.kind === 'merge-review') {
+    // 遗留②闭环：治理评审的裁决落台账——keep-existing 后同步不再重扣重问（幂等只挡未决条目，
+    // 已裁决项若无台账会在下一轮同步被重新追加为新的未决评审，形成审了也白审的死循环）
+    const map = readAdjudicated(hit.board)
+    map[hit.entityId] = { action, at: Date.now(), inboxId: hit.inboxId }
+    writeAdjudicated(hit.board, map)
+  }
   hit.resolved = { action, at: Date.now() }
   try {
     const tmp = `${file}.tmp-${process.pid}`
@@ -173,6 +207,8 @@ export function appendMergeReviewInbox(entry: {
   incoming: unknown
   similarity?: number
 }): InboxEntry | null {
+  // 遗留②闭环第一道闸：该实体已经人工裁决过（台账在档）→ 不再重问，直接跳过追加。
+  if (readAdjudicated(entry.board)[entry.entityId]) return null
   const dup = listConflictInbox().find((e) => !e.resolved && e.kind === 'merge-review'
     && e.board === entry.board && e.entityId === entry.entityId && e.field === entry.field
     && JSON.stringify(e.incoming) === JSON.stringify(entry.incoming))
@@ -216,6 +252,8 @@ export interface BoardSyncResult {
   governed?: { auto: number; manual: number; breaker: boolean; reason?: string }
   /** additive（KG 演化治理 A2）：三档去重统计。 */
   dedup?: { autoAlias: number; review: number }
+  /** additive（遗留②闭环 2026-10-03）：本批因裁决台账（keep-existing）被豁免的实体数。 */
+  adjudicated?: number
 }
 
 interface TaskRow { id: string | number; title: string | null; assignee: string | null; status: string; completed_at: number | null }
@@ -276,9 +314,18 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   // 已存在同 id 实体不进治理面（它们不是"新增类"），维持丙8 冲突上报的既有行为。
   const kgState = readBoardKgState(kg)
   const existingIds = new Set((kgState?.nodes ?? []).map((n) => n.id))
+  // 遗留②闭环第二道闸：裁决台账在档的 keep-existing 实体不再进任何管线（不重扣/不重问/
+  // 不写图）；take-incoming 实体已被 force 写入（在 existingIds 里走 updates 正常演进）。
+  const adjudicated = readAdjudicated(slug)
+  const keepDrops = new Set(Object.entries(adjudicated).filter(([, r]) => r.action === 'keep-existing').map(([id]) => id))
+  let adjudicatedDropped = 0
   const updates: typeof entities = []
   const candidates: typeof entities = []
-  for (const e of entities) (existingIds.has(e.id) ? updates : candidates).push(e)
+  for (const e of entities) {
+    if (keepDrops.has(e.id)) { adjudicatedDropped += 1; continue }
+    (existingIds.has(e.id) ? updates : candidates).push(e)
+  }
+  const activeRelations = relations.filter((r) => !keepDrops.has(r.src) && !keepDrops.has(r.dst))
 
   const dedup = threeTierDedup(candidates, (kgState?.nodes ?? []).map((n) => {
     const type = n.type || (typeof n.properties.type === 'string' ? n.properties.type : '')
@@ -293,7 +340,7 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   const cls = classifyBatch({
     // fresh=正常新实体；skipped=不参与去重的候选（task 默认档等）——都进治理分级
     newEntities: [...dedup.fresh, ...dedup.skipped],
-    newRelations: relations.filter((r) => !heldIds.has(r.src) && !heldIds.has(r.dst)),
+    newRelations: activeRelations.filter((r) => !heldIds.has(r.src) && !heldIds.has(r.dst)),
     existingNodeCount: kgState?.nodes.length ?? 0,
     existingRelationTypes: kgState?.edgeTypes ?? new Set<string>(),
     opts: { breakerRatio: breakerRatioFromEnv() },
@@ -309,6 +356,7 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   const writtenIds = new Set(writeEntities.map((e) => e.id))
   res.governed = { auto: cls.auto.entities.length, manual: cls.manual.entities.length, breaker: cls.breaker, ...(cls.breaker && cls.reason ? { reason: cls.reason } : {}) }
   res.dedup = { autoAlias: dedup.alias.length, review: dedup.review.length }
+  if (adjudicatedDropped > 0) res.adjudicated = adjudicatedDropped
 
   if (writeEntities.length > 0) {
     const batch = await runKgOp<{ ok: boolean; added: number; conflicts: Array<{ entityId: string; fields: EntityConflict[] }> }>('entity-batch', kg, { items: writeEntities })
@@ -333,9 +381,9 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
     res.relations = relBatch.added ?? 0
   }
   for (const tid of touched) {
-    // 本批实体全部放行（写入或冲突上报）才记 marker；含被扣实体的任务不记——
-    // 人工裁决前每次同步重新过治理面（收件箱追加有幂等去重，不重复刷屏）
-    if ((produced.get(tid) ?? []).every((id) => writtenIds.has(id))) seen.add(tid)
+    // 本批实体全部落定（写入、或裁决台账 keep-existing 豁免）才记 marker；仍含未决扣留的
+    // 任务不记——人工裁决前每次同步重新过治理面（未决追加有幂等去重，不重复刷屏）。
+    if ((produced.get(tid) ?? []).every((id) => writtenIds.has(id) || keepDrops.has(id))) seen.add(tid)
   }
   if (res.kgAvailable) writeMarker(slug, seen)
   // A4（KG 演化治理）：sync 成功且确有新增实体才自动快照（版本化接线在成功路径）

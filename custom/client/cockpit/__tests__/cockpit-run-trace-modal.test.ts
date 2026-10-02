@@ -16,10 +16,18 @@ vi.mock('@/stores/hermes/profiles', () => ({
 // ── mock sessions API (fetchHermesSessions 从 state.db 获取，跨 profile) ──
 // 时间戳统一用当前时刻（秒级），匹配 overview 默认"仅加载今天"的时间窗（今天00:00~现在）。
 // 用 Date.now() 而非固定 01:00，避免跨午夜运行时 hoisted 基准与组件窗口错位。
-const { todaySec, mockFetchHermesSessions, mockFetchSessionMessagesPage } = vi.hoisted(() => {
+const { todaySec, childSec, childDoneSec, mockFetchHermesSessions, mockFetchSessionMessagesPage } = vi.hoisted(() => {
   const _todaySec = Math.floor(Date.now() / 1000) // 当前时刻（秒）
+  // t_child 时间戳须落在 overview 默认"今天 00:00"窗内：now-3600 在午夜后 1 小时内
+  // 会跨到昨天被时间窗过滤（"已完成"开关只放状态过滤，救不回时间窗）——00:06 实录。
+  // 锚定 max(今天 00:00+30s, now-3600)：保留"1 小时前完成"语义且永不跨日。
+  const _dayStartSec = Math.floor(new Date(new Date().setHours(0, 0, 0, 0)).getTime() / 1000)
+  const _childSec = Math.max(_dayStartSec + 30, _todaySec - 3600)
+  const _childDoneSec = Math.min(Math.max(_childSec + 30, _todaySec - 1800), _todaySec - 30)
   return {
     todaySec: _todaySec,
+    childSec: _childSec,
+    childDoneSec: _childDoneSec,
     mockFetchHermesSessions: vi.fn(async (_source?: string, _limit?: number, profile?: string) => {
       if (profile === 'orchestrator') return [
         { id: 's1', title: 'Hermes Session 1', model: 'gpt-4', ended_at: null, started_at: _todaySec, last_active: _todaySec + 4000, message_count: 10, source: 'cli' },
@@ -112,7 +120,7 @@ vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
 // 时间戳用今天（todaySec），匹配 overview 默认"仅加载今天"的时间窗。
 const mockKanbanTasks = [
   { id: 't_parent', title: '父任务', body: null, assignee: null, status: 'running', priority: 2, created_by: null, created_at: todaySec, started_at: todaySec, completed_at: null, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null, session_id: 's1', parents: [], children: ['t_child'] },
-  { id: 't_child', title: '子任务', body: null, assignee: null, status: 'done', priority: 2, created_by: null, created_at: todaySec - 3600, started_at: todaySec - 3600, completed_at: todaySec - 1800, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null, session_id: null, parents: ['t_parent'], children: [] },
+  { id: 't_child', title: '子任务', body: null, assignee: null, status: 'done', priority: 2, created_by: null, created_at: childSec, started_at: childSec, completed_at: childDoneSec, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null, session_id: null, parents: ['t_parent'], children: [] },
 ]
 vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
