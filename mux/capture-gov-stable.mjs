@@ -26,6 +26,9 @@ await page.goto(BASE + '/login')
 await page.evaluate(([t]) => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_server_url', location.origin); localStorage.setItem('hermes_locale', 'zh') }, [loginRes.token])
 await page.goto(BASE + '/#/app')
 await page.waitForTimeout(9000)
+// 拍前去噪（V5 §8.4②）：CSS 隐藏公告横幅/版本通知（"知道了"=跳转劫持钮，禁点）；
+// 样式注入后同文档 hash 导航不丢，全程有效。
+await page.addStyleTag({ content: '.n-notification,.announcement-banner,[data-testid="studio-announcement"]{display:none!important}' }).catch(() => {})
 console.log('boot hash:', await page.evaluate(() => location.hash), '| user:', USER)
 
 if (!ONLY || ONLY === 'gov') {

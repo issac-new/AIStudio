@@ -56,7 +56,7 @@ async function shot(name, url, opts = {}) {
   if (only && only !== name) return
   await page.goto(BASE + '/#' + url.replace(/^#/, ''))
   // 拍前去噪：CSS 隐藏版本通知 toast（严禁点击"知道了"=跳转劫持钮）+Esc 收浮层
-  await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+  await page.addStyleTag({ content: '.n-notification,.announcement-banner{display:none!important}' }).catch(() => {})
   await page.keyboard.press('Escape').catch(() => {})
   // 快门守门（8.4 规范）：目标组件非空且无加载态才拍；空/加载中重试，最终仍空=拒拍记缺陷
   if (opts.expect) {
@@ -123,34 +123,48 @@ async function reportDuplicateFrames() {
   if (dups.length) console.warn('WARN[duplicate-frames]:', JSON.stringify(dups))
 }
 
-/** 打开本轮分析群：优先路由深链 /app/s/room/<id>（⑤ 后会话画布子路由，P9 WorkbenchView），
- *  列表点选仅兜底（列表装载时序不稳——run4 实测房间名 9s 内未上左栏）。 */
+/** 严格"房间真打开"判据：见到真实消息气泡（≥3 条长文本）才算开房成功。
+ *  消息行选择器=.mx_EventTile（MatrixMessageItem 根类，element-web 风格）——
+ *  run7 实锤双坑：①深链只渲染壳（V5 §8.4 深链不驱动）；②旧判据 [class*=message]
+ *  等命不中 mx_EventTile，守门自诞生起只不放行、永不能放行（run6 零截图隐性根因）。
+ *  此判据为快门守门唯一事实源，群聊图位共用。 */
+async function roomLoaded() {
+  return page.evaluate(() => {
+    const t = (document.body.innerText || '')
+    if (/未选择会话|从左侧选择一个会话/.test(t)) return false
+    const nodes = [...document.querySelectorAll('.mx_EventTile')]
+    return nodes.filter(n => (n.innerText || '').trim().length > 8).length >= 3
+  }).catch(() => false)
+}
+
+/** 打开本轮分析群：V5 §8.4「房间须左栏点击选择（深链不驱动）」——run7 实锤深链
+ *  /app/s/room/<id> 只渲染壳不驱动画布。正道=#/app/s 会话视图 FlowNavPanel 的
+ *  flow-session-<roomId> 行精确点选（矩阵房列表等 sync，run4 实测 9s 未必上列）。
+ *  去噪一律 CSS 隐藏 toast，不点任何弹窗按钮（"知道了"=通知跳转劫持钮）。 */
 async function openCurrentRoom() {
-  if (ROOM) {
-    await page.goto(BASE + '/#/app/s/room/' + encodeURIComponent(ROOM))
-    await page.waitForTimeout(6500)
-    await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
-    const onRoom = await page.evaluate(() => {
-      const t = (document.body.innerText || '')
-      return t.includes('支付收银台需求分析讨论群') || !!document.querySelector('[data-testid="tdp"], [class*="group-chat"], [class*="room-view"]')
-    })
-    if (onRoom) { console.log('room opened via deep link: ' + ROOM.slice(0, 20)); return true }
-    console.log('WARN: 深链未见房间视图标志，回落列表点选')
+  const hideToasts = async () => {
+    await page.addStyleTag({ content: '.n-notification,.announcement-banner{display:none!important}' }).catch(() => {})
+    await page.keyboard.press('Escape').catch(() => {})
   }
-  await page.goto(BASE + '/#/app')
+  await page.goto(BASE + '/#/app/s')
   await page.waitForTimeout(9000)
-  for (const txt of ['知道了', '确定', '稍后提醒']) {
-    const btn = page.locator(`button:has-text("${txt}")`).first()
-    if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(300) }
+  await hideToasts()
+  let clicked = false
+  for (let i = 0; i < 10 && !clicked; i++) {
+    const row = ROOM
+      ? page.locator(`[data-testid="flow-session-${ROOM}"]`).first()
+      : page.locator('[data-testid="flow-cluster-chat-all"] >> text=支付收银台需求分析讨论群').first()
+    if (await row.count().catch(() => 0)) {
+      await row.click({ timeout: 4000 }).catch(() => {})
+      await page.waitForTimeout(5500)
+      await hideToasts()
+      if (await roomLoaded()) clicked = true
+    }
+    if (!clicked) await page.waitForTimeout(2500)
   }
-  const items = page.locator('text=支付收银台需求分析讨论群')
-  const n = await items.count().catch(() => 0)
-  for (let i = 0; i < n; i++) {
-    await items.nth(i).click({ timeout: 6000 }).catch(() => {})
-    await page.waitForTimeout(5500)
-    if (!ROOM || page.url().includes(ROOM.slice(0, 12))) return true
-  }
-  return false
+  if (clicked) console.log('room opened via flow-session row: ' + (ROOM || '<by-name>').slice(0, 20))
+  else console.log('WARN: 本轮房间未在列表命中（sync 未达/非成员）')
+  return clicked
 }
 
 // ── 驾驶舱全景 + P5 概览 ──
@@ -163,7 +177,7 @@ await shot('ui-03b-dash', '/app/dash', { wait: 5000, expect: '[data-testid*="das
 if (!only || only === 'sit-chips') await guarded('sit-chips', async () => {
   await page.goto(BASE + '/#/app')
   await page.waitForTimeout(7000)
-  await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+  await page.addStyleTag({ content: '.n-notification,.announcement-banner{display:none!important}' }).catch(() => {})
   // ① 任务 chip：计数与状态下拉开面板
   const tasksChip = page.locator('[data-testid="sit-tasks"]')
   if (!(await tasksChip.isVisible({ timeout: 6000 }).catch(() => false))) throw new Error('sit-tasks chip 不可见')
@@ -204,16 +218,9 @@ await shot('ui-gov-center', '/app/gov', { wait: 5500, expect: 'main', expectRout
 // ── 分析群：全景 + P4③ 时间线特写 + 成员面板（全量预邀实证）──
 if (await openCurrentRoom()) {
   await page.waitForTimeout(2500)
-  // 空态拒拍守门（run5 09-40 覆盖事故根治，R12）：深链目标房被清后回落页是
-  // "未选择会话"空态——此时截图会把上一轮真实房间截图覆盖成空态占位。房间画布
-  // 必须见到真实消息气泡（含时间戳的消息行）才落盘，否则拒拍保留旧图。
-  const hasRealMsgs = await page.evaluate(() => {
-    const t = (document.body.innerText || '')
-    if (/未选择会话|从左侧选择一个会话/.test(t)) return false
-    const nodes = [...document.querySelectorAll('[class*="message"], [class*="msg-item"], [data-testid*="msg"]')]
-    return nodes.filter(n => (n.innerText || '').trim().length > 8).length >= 3
-  })
-  if (!hasRealMsgs) {
+  // 空态拒拍守门（run5 09-40 覆盖事故根治，R12）：房间画布必须见到真实消息气泡
+  // （.mx_EventTile 长文本行）才落盘，否则拒拍保留旧图。判据单一事实源=roomLoaded()。
+  if (!(await roomLoaded())) {
     console.error('DEFECT[shutter-gate]: ui-08-groupchat 会话画布为空态（房间不可达/已清）——拒拍，保留既有截图')
   } else {
     await page.screenshot({ path: `${OUT}/ui-08-groupchat.png` })
