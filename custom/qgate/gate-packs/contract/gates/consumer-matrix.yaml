@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: api.consumer-matrix
+  version: 0.1.0
+  description: >
+    R1 消费者兼容矩阵（上游 consumer-matrix 本地方言）：逐消费者期望
+    （consumers/*.json：端点+请求字段）vs 观察到的 provider 面；断供/缺字段 →
+    FAIL 归因到消费者。观察面由项目命令产出（可从 openapi 或实况探测）。
+spec:
+  domain: L2
+  claims:
+    - api.consumers-compatible
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: api.matrix
+      type: contract
+      mode: matrix
+      consumersDir: ".qgate/observations/consumers"
+      observedFile: ".qgate/observations/provider-surface.json"
+      evidenceType: consumer-matrix-result
+  evidence:
+    required: [consumer-matrix-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

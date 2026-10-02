@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: api.contract-breaking
+  version: 0.1.0
+  description: >
+    R1 破坏性变更（上游 alignment scope=contract-diff 本地方言）：消费外部 diff 工具
+    报告（{checked, breaking[]}）——工具自证 checked 才被采信，破坏清单非空 → FAIL 点名。
+spec:
+  domain: L2
+  claims:
+    - api.no-breaking-change
+  triggers: [pre_commit, release]
+  executors:
+    - id: api.breaking
+      type: contract
+      mode: breaking
+      observedFile: ".qgate/observations/contract-diff.json"
+      evidenceType: contract-breaking-result
+  evidence:
+    required: [contract-breaking-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

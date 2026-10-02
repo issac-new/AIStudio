@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: behavior.journey
+  version: 0.1.0
+  description: >
+    R2 用户旅程（上游 journey 本地方言）：场景逐步骤比对——步骤序漂移与逐步骤内容
+    漂移都点名（smoke/integration/e2e 场景）。
+spec:
+  domain: L3
+  claims:
+    - behavior.journey-honored
+  triggers: [task_close, release]
+  executors:
+    - id: behavior.journey
+      type: behavior
+      mode: journey
+      observedFile: ".qgate/observations/journey.json"
+      evidenceType: journey-result
+  evidence:
+    required: [journey-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

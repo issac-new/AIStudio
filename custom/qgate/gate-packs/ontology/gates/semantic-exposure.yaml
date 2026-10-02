@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.exposure
+  version: 0.1.0
+  description: >
+    R3 暴露策略（上游 semantic-exposure 本地方言）：概念 public/internal 策略 vs
+    观察到的公共面——internal 概念暴露即 FAIL。
+spec:
+  domain: L3
+  claims:
+    - semantic.exposure-respected
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: semantic.exposure
+      type: semantic
+      check: exposure
+      catalogFile: ".qgate/registers/catalog.json"
+      observedFile: ".qgate/observations/semantic-exposed.json"
+      evidenceType: semantic-exposure-result
+  evidence:
+    required: [semantic-exposure-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

@@ -8,7 +8,7 @@
 import { spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { readStdinJson, projectRootOf, resolveCli } from './qgate-lib.mjs'
+import { readStdinJson, projectRootOf, resolveCli, writeSessionBaseline } from './qgate-lib.mjs'
 
 const input = await readStdinJson()
 if (!input) process.exit(0)
@@ -87,6 +87,8 @@ if (cwd) {
       })
       if (res.error || !res.stdout || res.stdout.trim().length === 0) throw new Error('status unavailable')
       const status = JSON.parse(res.stdout)
+      // R6 会话基线：逐门判定落 stop-state（Stop 的 new-only 降级据此区分新失败与既有失败）
+      writeSessionBaseline(qgateDir, sessionId, status.gates, status.profile)
       const gates = (status.gates ?? []).map((g) => `${g.gateId}[${g.verdict}]`).join(', ')
       line += ` Profile: ${status.profile ?? '(all)'}${status.tier ? ` (tier=${status.tier})` : ''}. Gates: ${gates || '(none configured)'}.`
       line += ' Before finishing, run the gates (e.g. `qgate run --all` via the /qgate-run command) and fix failures.'

@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.idempotent-rerun
+  version: 0.1.0
+  description: >
+    R4 幂等重跑（上游 rerun 本地方言）：每 job 同 seed ≥2 次、输出 sha256 一致、
+    幂等键策略必填、可选复式恒等式（借贷平衡）。
+spec:
+  domain: L4
+  claims:
+    - ops.rerun-idempotent
+  triggers: [task_close, release]
+  executors:
+    - id: ops.rerun
+      type: ops
+      mode: rerun
+      dataFile: ".qgate/registers/rerun.json"
+      evidenceType: rerun-result
+  evidence:
+    required: [rerun-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

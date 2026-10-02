@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: api.contract-alignment
+  version: 0.2.0
+  description: >
+    R1 契约对齐（v0.1 §8.1，上游 alignment 本地方言）：期望契约 vs 实际观察的 JSON Pointer
+    深比较。模板门形态：项目覆盖 executor 的 expectedFile/observedFile 与产出命令
+    （如 oasdiff/schema-observe）；未覆盖 → INCONCLUSIVE（未声明 ≠ 通过）。
+spec:
+  domain: L2
+  claims:
+    - api.contract-aligned
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: api.diff
+      type: contract
+      mode: diff
+      expectedFile: ".qgate/observations/api-expected.json"
+      observedFile: ".qgate/observations/api-observed.json"
+      evidenceType: api-alignment-result
+  evidence:
+    required: [api-alignment-result]
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

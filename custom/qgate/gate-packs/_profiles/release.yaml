@@ -15,6 +15,9 @@ spec:
   disable:
     - ontology.*
     - llm.*
+    - behavior.*
+    - semantic.*
+    - ops.*
   overrides:
     data.persistence-integrity:
       policy:
