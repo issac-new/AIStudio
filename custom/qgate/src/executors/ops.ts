@@ -32,7 +32,9 @@ function listWorkspaceFilesSafe(workspace: string, limit = 5000): string[] {
       return
     }
     for (const name of entries) {
-      if (name === 'node_modules' || name === '.git' || name === 'dist' || name === '.qgate') continue
+      // 扫描面跳过：依赖/版本库/构建产物/门数据，以及 .claude（worktree 残根——
+      // symbol-grounding 主树首跑逮住 2782 条残根误报后加入）
+      if (name === 'node_modules' || name === '.git' || name === 'dist' || name === '.qgate' || name === '.claude' || name === '.wxwork') continue
       if (out.length >= limit) return
       const full = join(dir, name)
       let st
