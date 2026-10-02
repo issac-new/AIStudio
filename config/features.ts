@@ -28,7 +28,8 @@ export interface FeatureConfig {
    *  VITE_CUSTOM_CONNECTIONS_EXTRAS=true 再开。 */
   connectionsExtras: boolean;
   /** S3：ekko 配置面（AgentManagerView 卡片 + /ekko/* 路由守卫 + 四页 superadmin
-   *  运维面；VITE_CUSTOM_EKKO=true 再开）。 */
+   *  运维面）。2026-10-02 用户裁定开门（评估体系启用）：默认开，
+   *  VITE_CUSTOM_EKKO=false 显式再关——其余 S3 开关语义不变（默认关）。 */
   ekko: boolean;
   /** S3：/studio/agents 配置中心（hermes.agentManager 侧栏条目与收编路由门控；
    *  VITE_CUSTOM_AGENT_MANAGER=true 再开）。 */
@@ -54,7 +55,7 @@ export const features: FeatureConfig = {
   voice: import.meta.env.VITE_CUSTOM_VOICE === 'true',
   pet: import.meta.env.VITE_CUSTOM_PETS === 'true',
   connectionsExtras: import.meta.env.VITE_CUSTOM_CONNECTIONS_EXTRAS === 'true',
-  ekko: import.meta.env.VITE_CUSTOM_EKKO === 'true',
+  ekko: import.meta.env.VITE_CUSTOM_EKKO !== 'false',
   agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
   externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
   imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',

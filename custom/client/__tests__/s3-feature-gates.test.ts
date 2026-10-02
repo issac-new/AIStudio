@@ -15,14 +15,14 @@ function readOverlay(rel: string): string {
 }
 
 describe('S3 功能开关默认关（B 档：构建可再开，组件与 API 全保留）', () => {
-  it('七个 S3 开关默认全关（VITE_CUSTOM_*=true 显式再开）', () => {
+  it('六个 S3 开关默认全关 + ekko 默认开（2026-10-02 用户裁定开门：评估体系启用，VITE_CUSTOM_EKKO=false 可关）', () => {
     expect(features.voice).toBe(false)
     expect(features.pet).toBe(false)
     expect(features.connectionsExtras).toBe(false)
     expect(features.imageAssist).toBe(false)
-    expect(features.ekko).toBe(false)
     expect(features.agentManager).toBe(false)
     expect(features.externalLinks).toBe(false)
+    expect(features.ekko).toBe(true)
   })
 
   it('既有开关语义不变（matrixChat 等默认开、matrixAuth 默认关）', () => {
@@ -86,9 +86,9 @@ describe('S3 入口补齐 patch 523 守门（cockpit-s3 轮：语音入口/ekko 
     expect(patch).not.toContain('externalShare')
   })
 
-  it('开关键集收敛：七键全默认关（agentManager/externalLinks 补齐后与 bootstrap 消费对齐）', () => {
+  it('开关键集收敛：agentManager/externalLinks 默认关，ekko 默认开（2026-10-02 用户裁定开门）', () => {
     expect(features.agentManager).toBe(false)
     expect(features.externalLinks).toBe(false)
-    expect(features.ekko).toBe(false)
+    expect(features.ekko).toBe(true)
   })
 })
