@@ -29,8 +29,10 @@
 
 ## 延续线索（记档待环境/待治理）
 
-- **蓝图画廊（hermes cron blueprint_catalog）**：CLI 通道已通（venv 安装树），
-  蓝图实例化 UI 留待专项轮——需 /api/cron/blueprints 协议考证+槽位表单设计。
+- **蓝图画廊已落地**（2026-10-02 四轮解封，见 round2 文档四轮记档）：网关 api_server
+  代理（runtime-caps 域五端点）+运行中心 runs 页签画廊；蓝图=运行时 venv python 导入。
+- **#13 步二进行中**：settings-layers 基建+首批两键（flow.sortMode/ide.slots）已迁，
+  剩余散键逐域迁入（kanban selectedBoard/attention 偏好等）。
 - **desktop patch 537/538 化**：深链+dock 徽章已实施于注入树（tsc 绿），patch
   化随注入漂移治理轮统一收编（漂移期应用面不可验证，先入库先丢失风险为真）。
 - **peer 拓扑（#22）/竞品迁移 import（#25）**：超范围真记档，不在任何在途 backlog。
