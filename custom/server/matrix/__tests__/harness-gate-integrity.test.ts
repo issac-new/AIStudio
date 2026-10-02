@@ -337,6 +337,25 @@ echo "AC-2x=$(uat_ac_verdict 'AC-2 未通过：断言不成立' AC-2)"`, root)
     expect(lines[3]).toBe('AC-9=未见')
     expect(lines[4]).toBe('AC-2x=不通过')
   })
+
+  it('判词耐受括号注（run6 实锤：AC 编号与判词隔全角注不得判"未见"）', () => {
+    const root = sandbox()
+    const out = sh(`
+BODY='UAT-EVIDENCE RUN=20261001-v5-run6（G1 冻结清单逐条证据；派单 AC 编号=冻结 RFD-001.freeze.md AC-1/4/5/6/7，冻结条款与首冻逐字一致）
+UAT-EVIDENCE AC-1（统一下单幂等=冻结AC-1 L5）通过 — 分支 origin/integration/RFD-001 @ 8dbf5bf（被测 8ec13c3）：①用例 L38
+UAT-EVIDENCE AC-2（双渠道调起参数=冻结AC-4 L8 渠道适配）通过 — 同基线：①微信 5 文件
+UAT-EVIDENCE AC-3（回调验签拒绝+重复回调幂等=冻结AC-5 L9）通过 — 同基线
+UAT-EVIDENCE AC-4（超时关单=冻结AC-6 L10）通过 — 同基线
+UAT-EVIDENCE AC-5（收银台双端结果三态=冻结AC-7 L11 前半）通过 — 同基线
+UAT-EVIDENCE AC-6（失败重试不重复下单=冻结AC-7 L11 后半）通过 — 同基线
+UAT-EVIDENCE AC-7（测试报告全绿）通过 — ①报告 194/194
+依据链：G1 冻结 origin/main 3191c11；派单 AC 编号映射——派单AC-1=冻结AC-1、派单AC-2/AC-3=冻结AC-4 双渠道四方法、派单AC-7=报告全绿总检。
+[导演代投注记 RUN=20261001-v5-run6] 本结论行原文由 @fanfan-agent 于 DM 线程发出。'
+for ac in AC-1 AC-2 AC-3 AC-4 AC-5 AC-6 AC-7; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done`, root)
+    const lines = out.trim().split('\n')
+    expect(lines).toHaveLength(7)
+    for (const l of lines) expect(l).toMatch(/^AC-[1-7]=通过$/)
+  })
 })
 
 describe('⑨ 基线变更受控绊线（H10/H11/R-A3）', () => {
