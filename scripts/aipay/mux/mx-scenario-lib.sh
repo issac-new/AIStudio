@@ -363,8 +363,11 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
 # 各触发一次。触发方式：在 agent 最近的工作线程内发 "!refine <闸点名>"——
 # 群会话键是 thread 级（build_session_key thread 优先），线程内消息按 thread
 # 归属路由到该 agent（approve 线程回复实证），refine 因此对准**真实工作历史**
-# 而非空会话（v1 的 DM 垫话方案 refine 的是空 DM 会话，已废）。/refine 走
-# background_review 同一代码路径且不查 enabled。MX_GATE_REVIEW=0 可整体停用。
+# 而非空会话（v1 的 DM 垫话方案 refine 的是空 DM 会话，已废）。body 必须以
+# "!refine" 开头——matrix 命令归一化（adapter _normalize_matrix_bang_command）
+# 只认 ! 开头的 body，前置 @mention 会使命令沦为聊天文本（v2 前缀缺陷已修，
+# 与 !approve 纯命令形态同构）。/refine 走 background_review 同一代码路径且
+# 不查 enabled。MX_GATE_REVIEW=0 可整体停用。
 gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
   local u="$1" gate="$2" room tok last_eid thread_root payload re
   [[ "${MX_GATE_REVIEW:-1}" == "1" ]] || return 0
@@ -381,7 +384,7 @@ gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
   thread_root=$(mx_messages "$tok" "$room" 50 2>/dev/null | jq -r --arg e "$last_eid" \
     '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || thread_root="$last_eid"
   payload=$(jq -n --arg r "$thread_root" --arg e "$last_eid" \
-    --arg m "@$(agent_mxid "$u") !refine ${gate}" \
+    --arg m "!refine ${gate}" \
     '{msgtype:"m.text", body:$m, m.relates_to:{rel_type:"m.thread", event_id:$r, is_falling_back:true, m.in_reply_to:{event_id:$e}}}')
   re=$(mx "$tok" POST "rooms/$room/send/m.room.message" "$payload" | jq -r '.event_id // empty' 2>/dev/null) || true
   if [[ -n "$re" ]]; then
