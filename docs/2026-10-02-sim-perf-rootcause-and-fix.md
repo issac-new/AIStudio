@@ -2,7 +2,7 @@
 
 ## 主旨三句话
 
-一轮 26 步全流程推演要跑通宵（run6 约 8h+，run7 4.7h 才到 11/26 步），根因不在场景脚本，而在 hermes agent 侧：**后台技能回顾 fork（background_review）空转吃掉单个 agent 79% 的 LLM 时间**，叠加全编制 `reasoning_effort: ultra` 推理档位与 10 万+ token 膨胀上下文，把单次 LLM 调用推到 p50=18.5s / p90=91s。本次已落地"关 review fork"主优化（用户同日裁决推理档位保持拉满不降），预期单轮总时长压至原来的一半左右。
+一轮 26 步全流程推演要跑通宵（run6 约 8h+，run7 4.7h 才到 11/26 步），根因不在场景脚本，而在 hermes agent 侧：**后台技能回顾 fork（background_review）空转吃掉单个 agent 79% 的 LLM 时间**，叠加全编制 `reasoning_effort: ultra` 推理档位与 10 万+ token 膨胀上下文，把单次 LLM 调用推到 p50=18.5s / p90=91s。性能优化轮曾落地"关 review fork"；同日用户最终裁决**保真优先于速度**——推理档位保持拉满、background_review 重新打开，推演必须与真实场景一致（速度回归固有成本，预期单轮时长回到 8–10h 量级）。
 
 ## 受众
 
@@ -55,7 +55,11 @@
 
 ## 三、已落地优化（2026-10-02 21:35 生效）
 
-### 3.1 关闭 background_review（对应 R1）
+### 3.1 background_review：关→再开（保真裁决终态：开启）
+
+性能轮曾按 R1 关闭（43 处配置 + 模板，main 03aa099d）；**用户同日终局裁决"推演须与真实场景一致"后已重新打开**（43 处置 true + 模板默认 true，main 7c3838b8）：真实部署 hermes 默认开启（fail-open），推演保真接受其 79% LLM 时间成本；留 `MX_BGREVIEW=0` 环境变量供临时提速关一轮。历史关闭期间（run7 前 11 步）的实测数据仍有效，作为 R1 定量依据保留。
+
+原关闭记录（供回溯）
 
 - **sim 树 43 处**：`ncwk-sim-mux/hermes/config.yaml`（root）+ 42 个 `profiles/*/config.yaml` 追加：
 
@@ -89,3 +93,11 @@
 - 79% 节省是 LLM 时间占比，不严格等于墙钟节省（review fork 与任务 turn 部分并行）；墙钟预期保守打六到七折。
 - 推理档位保持 ultra（用户裁决），单次调用 p50 18.5s 的延迟成本继续存在，属接受项。
 - gateway `max_concurrent_sessions=4`（root config 实测值）下多 agent 并发对 cc-switch 上游的容量压力仍在；review 关闭后并发争抢会显著缓解，但不消除。
+
+## 六、保真裁决记录（2026-10-02 晚，终局）
+
+用户裁决链：①"推理档位拉满，不要变，保持"→ 撤销降档（dfb302c4）；②"所有审批复核应该都是人工介入的……打开 background_review，以使全流程推演与真实场景一致" → review 重开（43 处 true + 模板，7c3838b8）。
+
+**终态原则：全流程推演的目标是保真复刻真实场景，速度是次要项。** 真实场景要素：真人使用 hermes 助理（ultra 推理 + background_review 默认开）+ 审批由人复核。配套基建：`MX_APPROVE_MODE` 审批模式开关已入 main（6d14253f，auto=脚本秒批历史行为/manual=挂起等真人手动批），人工介入模式菜单待用户裁决。
+
+事故记录：审批开关提交时 `git commit` 未限定路径，误将并行会话暂存中的 4 个文件带入；已剥离还原（080311bd，main 树经 diff 验证回到 c4337457 状态，改动内容完璧归还工作区）。教训再确认：共享树 commit 必须显式路径。
