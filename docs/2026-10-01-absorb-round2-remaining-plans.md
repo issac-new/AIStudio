@@ -12,8 +12,13 @@
 **目标范式（element-web 实证锚点）**：7 级 SettingLevel handler（config/default/account/room-account/room/device/platform）+ SettingController（依赖/互斥/服务器能力探测/变更重载声明式表达，`element-web/apps/web/src/settings/{handlers,controllers,watchers}/`）；zcode 设置页 16 节双作用域（user/workspace，SettingsScopeBadge，`zcode/packages/ui/src/settings/settingsPageConfig.ts:49-154`）是轻量参照。
 
 **迁移三步**（每步独立可交付）：
-1. **建层**（纯基建，零行为变化）：新增 `custom/client/settings-layers/`——SettingsLevel 四级（default/user/workspace/session）+ 读路径聚合函数（session>workspace>user>default），localStorage 键加层级前缀规范。守门：同键不同层各写各读、回退链正确。
-2. **迁键**（按域分批）：把散键（ide_status_slots/ia2.flow.sortMode/attention 偏好等约 15 键）逐域迁入层化读写；每批一个守门测试（旧键值迁移不丢）。分批顺序=先 IDE 后驾驶舱后收编页。
+1. **建层**（纯基建，零行为变化）✅ 已落地（2026-10-02，settings-layers/ 四层读写链+JSON 复合值+adoptLegacySetting 遗留收养，20 守门）。
+2. **迁键**（按域分批）**进行中**：
+   - 批一（已迁）：ia2.flow.sortMode（房间排序）、ide.slots（状态栏槽位）——29d6117。
+   - 批二（已迁）：notify.prefs（通知分组降噪）、ide.websearchTier、ide.goalAutonomy——b899474。
+   - 批三（候选，overlay 自有）：ncwk.cols（三栏宽度——自带双层旧键链+CustomEvent 广播，需保序细迁）、ide_keymap_overrides_v1（键位覆盖）、kanban_saved_views（保存视图）。
+   - **上游自有键（须 patch 批次）**：hermes.kanban.selectedBoard（KanbanView/store）、hermes_ide_layout/sidePane.width（上游壳布局）——随漂移治理轮 patch 化同批。
+   - **不迁（非偏好）**：hermes_api_key/server_url/locale（账号配置）、ide-permission-mode:<sid>（会话态）、runcenter:inbox:archived（UI 态）、hermes_ide_workspace（工作区选择=状态）。
 3. **Controller 声明**（只对确有依赖/互斥关系的设置项，约 5 组：时间线布局×紧凑模式、通知分级×铃铛计数、主题×密度等）：声明式互斥+变更重载提示。
 
 **代价估算**：步 1 约 1 个工作日（含守门）；步 2 每域 1-2 小时；步 3 半日。**启动条件**：无环境依赖，但建议与 #15 插件宿主同批（插件设置节直接长在新层上，避免二次迁移）。
