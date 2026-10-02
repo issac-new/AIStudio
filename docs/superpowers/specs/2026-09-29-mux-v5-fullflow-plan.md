@@ -7,7 +7,8 @@
 > **补遗记档**：2026-09-29 补遗④（用户十项调整）——①0→1 清环境推演（run4 定义+清理程序，§十一）；②账号分配产品化（设置·账户管理页，本机↔matrix 账号管理联动，§七 P6+4.5 批第 1 步）；③驾驶舱「任务/在线」下拉功能回归验证（4.5 批第 4 步）；④应用资产登记表 UI 可维护（P7+第 5 步）；⑤研发人员/团队/负责人关系 UI 可维护（P8+第 6 步）；⑥六闸把关标准显性清单化（新增 §4.4）；⑦截图内容与工作要求一致性硬校验（8.3 R12）；⑧交付物真实可编辑可提交 git（R13）；⑨xxx-dev skill 生成与开发过程截屏展示（R14+第 13/18 步）；⑩各环节交付物+测试案例/数据/报告+衔接流转全截屏串联（8.6 扩列+第 19-21 步）。
 > **补遗记档**：2026-09-29 补遗⑤（用户指令：驾驶舱聚焦）——推演 UI 面限定"只能使用驾驶舱及其下的功能"，其它页面在用功能迁入驾驶舱（§13.3 迁移清单 M1-M6）；推演全程未用到的 UI 功能分析后精简、保留基础技术组件能力（§13.4 精简清单 S1-S7）；新增 §4.6 步骤修订批（第 4/10/25/26 步 UI 落点）；§一"5 个产品面"口径自本补遗起由 §13.1 取代；§十 增执行序条目 7，沿革表登记。同日用户四项裁决：M1 看板统一用注意力条「swarm kanban」既有入口（v12.4 裁定动线，不新增左栏入口）；M2 IDE 子页面化照准；R-C1 裁决合一、转为迁移项 M6；M3-M4 两处深链改指照准。同日 P9 迁移批落地（M1-M6 全实施，patch 517/518 两度让号；走查 8/8）；同日 P10 精简批落地（S1 系统组三入口摘除 patch 519／S5 /app/eng 退役重定向交付案例／S4 删 16 孤儿组件（trajectory-hotspot 实为在用获回，GanttPanel 测试段同剥）／S7 页头日程+探测组摘除／S3 部分=WebPet 默认关 patch 520；语音/ekko/外部渠道挂载链分散记档剩余；走查 16/16）。同日深夜 S3 剩余补齐+双轨收敛完成（cockpit-s3 轮）：收敛=301 复原+517 回登记+518/519/520 永久退役（473/072/522 各已承载）+513-515 第三方补丁复位；并行收敛误删五件根治（chat-bridge.ts 464 行+agent-identity+automations 模块+controllers+enginemodels provider-policy+task-protocol v14 镜像——main 后端曾因悬空 import 起不来）；S3 补齐 patch 523（语音入口两处：设置菜单 voiceMode 项过滤+作曲麦克风；ekko 卡片+路由守卫；外链分享页守卫并轨 externalLinks 键）+features 补 agentManager/externalLinks 键（bootstrap 消费对齐）；walkthrough 复原+S3 断言；终态走查 18/18+注入 228/228+全量 3300/3308（7 红全既有归因：qgate×2+base-runtimes×4 环境耦合+matrix-login 注入态依赖）。同期 main 发生 v14 三补丁（506/507/508）让号重编内容悬空事故，由并行会话在 main 原号复原（与历史逐字节一致），本仓曾做的 517-519 冗余复位件已撤、守门回滚原号。
 > **补遗记档**：2026-10-01 补遗⑥（用户指令：完成最新版全流程推演方案的重构及优化——报告适应演示需要，完全以实际功能一一逐步操作呈现，突出产品重点、难点与研发全流程的有效应用及治理，报告中要能清晰讲述完整的全流程推演逻辑及协作顺序）——①新增 §4.7 步骤修订批：运行面融合三功能（运行中心「工作流」第四页签／看板「全链路追踪」页签／页头日程回生）与治理中心页签化入推演观测面；②8.2 增第 0 章「推演逻辑与协作顺序总述」，旅程层五件套升六件套（+操作入口）；③8.3 增 R15 协作顺序叙事线／R16 操作入口可复现；④§七 增 P11 运行面融合／P12 治理中心页签化（在途）；⑤§十 增执行序条目 8；⑥§13.2/13.4 补 S7 反转记档。触发依据=运行面融合轮 linear 合 main（f04da072/9ae089d0/c9ab0a0d，走查 14/14）与用户同日三项裁定（日程还原保留／循环×工作流融合／看板全链路追踪页签）。
-> **基准**：overlay main @ e6f13ff9（补遗④基底）→ cbf76b7a（补遗⑤基底）→ c9ab0a0d（补遗⑥基底）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **补遗记档**：2026-10-01 补遗⑦（用户指令「27 项按建议全部落地」承接同日调研轮 `overlay/docs/2026-10-01-upstream-absorption-analysis.md`，其附录为 27 项逐项执行对账表）——①新增 §4.8 步骤修订批：吸收面入推演观测与走查（第 4 步冒烟增 Spotlight 混合搜索/未读线程聚合/治理凭证池与放行建议回归；第 10 步看板增列证据契约声明位；第 17/18 步增轨迹账本与凭证池观测面；第 24 步增模型用量排行与放行建议采纳动线；第 25 步 IDE 增 History 浏览器 🕘/轨迹页签 ∿/⋔ fork 直通；第 26 步报告增新观测面截图位）；②§七 增 P13 消息面吸收／P14 运行观测吸收（含 trace 路由根治）／P15 runtime-caps 暗能力代理／P16 desktop 深链与徽章四行（吸收终态 main=7ac18a6a：ee37b56b/bc61f6b0/d94a2d97/d55e0c51 四批线性合入，未推 origin）；③§九 增执行态行；④§十 增执行序条目 9；⑤沿革表登记。范围裁定：27 项中 8 项新落地、6 项核实历代已落（零重复造轮）、2 项 desktop 件实施于注入树（desktop tsc 绿；patch 化随漂移治理轮统一收编）、真记档项=蓝图实例化 UI（协议考证留专项轮）/peer 拓扑与竞品迁移（超范围）/fork 双 scope 文件回滚（hermes /fork 参数语法待考证）；hermes CLI 通道经 `~/.hermes/hermes-agent/venv/bin/hermes` 核实可用（此前「通道缺失」判断仅查 PATH 系错误前提——凭证池/放行建议/cron 运行史据此解锁，run4 通道风暴「只能看日志」痛点自此有产品面）。
+> **基准**：overlay main @ e6f13ff9（补遗④基底）→ cbf76b7a（补遗⑤基底）→ c9ab0a0d（补遗⑥基底）→ 7ac18a6a（补遗⑦基底=吸收四批终态）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 
 ---
 
@@ -255,6 +256,17 @@ graph TB
 - 第 17/18 步（编码与门禁）增补运行观测：循环与工作流运行行在运行中心「工作流」页签可见、事件流可下钻到步骤级，作为 G3 编码门禁"运行证据"的可视化呈现面（不替代 testlog 真值）。（依据=§七 P11。）
 - 第 24 步（治理复盘）落点增补（P12 合入后生效）：治理中心 URL 不变（#/app/gov），内部升级为平级真页签+五分区二级导航（六闸工件/裁决/体检/应用资产/组织），决策图谱/规则闸/PROV-O 治理面全 UI 化直达。（依据=§七 P12。）
 
+### 4.8 步骤修订批·补遗⑦（upstream 吸收面的操作层落点）
+
+4.2 原文仍一字不动；本批为吸收轮（§七 P13-P16）落地后的观测面/走查位增补，随吸收终态 main=7ac18a6a 即时生效。
+
+- 第 4 步（冒烟）增补吸收面回归：①页头 Spotlight 混合搜索——聚焦弹命令组（≥8 行）、查询命中会话/任务/命令三组、Enter/点击直达精确路由（/app/board 断言）；②群聊跳未读条——有未读房间显示计数条、跳 read marker、就地标已读发 SDK receipt；③通知下拉消息页签未读线程区块（threadsAggregateNotificationType 非 none 房间，点击跳房自动开线程面板）；④治理中心·注册表·运行态分区——凭证池卡（provider 数+失败红标）与 cron 运行史卡（recent 行状态色）加载或诚实缺席（runtime-caps 路由缺席=0 块不炸）；⑤审批收件箱放行建议折叠区在位（展开呈现四态之一：生成中/失败/空/建议列表）。
+- 第 10 步（看板登记）增补列证据契约：列编排配置（columns.yaml）可声明 `requiredArtifacts`（如 review 列 [testlog.txt, report.md]）——TRANSITION 匹配透传该清单，闸门侧核「缺件不过列」；不声明=现状语义不变。
+- 第 17/18 步（编码与门禁）增补观测面：①IDE 工作台右侧辅助面板第 16 页签「∿ 轨迹」——会话轨迹账本（kind 徽章/谓词过滤 kind:tool err: >10s/热点排序/inspector），作为 G3 运行证据的可视化补充面（不替代 testlog 真值）；②运行中心 runs 页签顶部「常驻意图」卡（goal/判定条件/阶段/暂停恢复）；③治理·运行态凭证池卡=通道风暴对策面（run4 四池全限时的产品面出口，替代看日志）。
+- 第 24 步（治理复盘）增补：治理·运行态模型用量排行榜（30 天窗口条形榜）入复盘度量面；放行建议采纳动线（收件箱建议卡→人工 CLI --apply）作为「问题单→规则回写」的规则闸补充入口记档。
+- 第 25 步（IDE 介入）增补：输入区 🕘 History 浏览器（搜历史提示：↗ 定位/⧉ 复制/✎ 编辑重发/⋔ fork 直通——/fork 聊天内 slash 命令，剪贴板+聚焦通道，不可逆动作不代发）；轨迹页签（∿）同第 17/18 步口径。
+- 第 26 步（报告）增补截图位：新观测面各 ≥1 帧入报告（Spotlight 结果面板/轨迹账本/常驻意图卡/凭证池卡/放行建议卡/History 浏览器），按 8.4 快门守门（非空断言+文件名-内容对齐）；演示动线记档：desktop 深链 `swarmstudio://app/...`（白名单 /app 与 /matrix 树）可作路演外部入口，浏览器链不受影响。
+
 ## 五、质量与闭环治理总则（贯穿全程）
 
 1. 四道锁系统直接拦：需求未上锁不分析（G1，第 7 条）、设计未评审不排期（G2，第 15 条）、测试未过不发布（G4，第 19 条）、发布检查未过不上线（G5，第 20 条）——锁不过，后续步骤脚本直接拒绝执行。
@@ -327,6 +339,10 @@ graph TB
 | main v14 三补丁悬空事故（记档） | 并行合并让号重编致 506/507/508 内容悬空（守门 4 红+ia2.flow 词条缺失实锤）——由并行会话在 main 原号复原（逐字节一致）；本仓曾复位 517-519 冗余件已撤、守门回滚原号 | main 281a3b00 前序提交；series 尾记档行 |
 | **P11 运行面融合（补遗⑥）** | 页头日程回生（📅 按钮+当日徽章，弹窗挂载补回驾驶舱壳与 IDE 壳双处；Gateway 探测组维持摘除）+运行中心第四页签「工作流」（IDE 侧栏 ⟐ 面板实体抽成共享组件 WorkflowObservationPanel：实时运行行/事件流下钻/已保存工作流档案三能力，运行中心与 IDE 双消费）+看板第四页签「全链路追踪」（Run Observatory 页签化：拓扑图+时间筛选+检索+session 下钻复用既有弹窗，?tab=observatory 深链）；顺带根治 runcenter CTA 断言漂移与 RunDetailView ?tab= 死参数 | f04da072+9ae089d0+c9ab0a0d（linear 合 main）；走查 14/14 两轮（scripts/run-surface-fusion-walkthrough.mjs）；漂移期 i18n 走本地字典 i18n-run-surface（漂移治理后收编退役）；**Phase 2 已批待做**=runs 列表 loop/workflow 来源徽标混排+workflow run 复用 RunDetailView 骨架+IDE↔运行详情交叉跳转 |
 | P12 治理中心页签化（补遗⑥记档） | 治理中心平级真页签内嵌（URL 不变 #/app/gov）+GovernanceView 五分区二级导航+决策图谱/规则闸/PROV-O 治理面全 UI 化 | feat/gov-inline-tab @ 64f0cdce **在途未合**（与运行面融合改同文件 TasksView，需 rebase 后合入）；合入后回填验证态 |
+| **P13 消息面吸收（补遗⑦）** | Spotlight 混合搜索（页头既有搜索框单入口：会话房间/看板任务/命令三组混排+键盘 ↑↓Enter Esc；既有左栏过滤与全文搜索全保留）+跳未读条（TopUnreadBar：计数/跳 read marker/就地标已读 unthreaded receipt/回底部；零未读不渲染）+未读线程聚合（通知下拉区块→pendingOpenThreadPanel 状态机→跳房自动开 ThreadPanel）。核实已存在不重复：线程面板/视图全链、消息操作栏、已读回执渲染、通知偏好六分组降噪 | ee37b56b（linear 合 main）；守门 msg-surface-absorption 7 例+top-unread-bar 5 例；走查 5/5（absorb-msg-surface-walkthrough.mjs，含精确路由断言 /app/board）；词条走 i18n-msg-surface 本地字典（漂移期先例，473 恢复后收编） |
+| **P14 运行观测吸收（补遗⑦）** | 会话轨迹账本 IdeTrajectoryPane（IDE 侧栏第 16 页签 ∿：dsh-TUI TrajectoryScene 与 deepseek ui-trajectory 的 Web 化——kind 徽章×谓词过滤 kind:/err:/>Ns AND 组合×时间线/热点双排序×inspector；404 诚实空态）+常驻意图面板 GoalLoopStandingPanel（运行中心 runs 页签顶部：意图卡 goal/判定条件/阶段/模式+暂停恢复，数据源 /api/loop/loops 真接口零新后端）+P11 Phase2 两件（RunListTable 来源徽标 ↻循环/⟐图规格+WorkflowObservationPanel ⌨ 跳 IDE 深链）。**附带根治：trace 路由 404**——上游 0.7.26 legacy-app-api 把 /api/hermes/sessions/* 全量改写 /api/studio/sessions/*，overlay trace 路由（Layer 2 图投影）永远打不进；双路径注册后 8657 实测 200。**同类风险定式：新 /api/hermes/* overlay 路由一律双注册** | bc61f6b0（linear 合 main）；守门 trajectory-pane 11 例（含路由双路径静态断言）；走查 6/6；P11 Phase2 第三件（workflow run 复用 RunDetailView 骨架）记档剩余（数据域不同需事件流升级） |
+| **P15 runtime-caps 暗能力代理（补遗⑦）** | /api/runtime-caps/*（hermes CLI 只读代理：credentials/cron-runs/approval-suggestions——TTL 缓存+单飞锁防 CLI 风暴+HERMES_SKIP_UPDATE=1 阻断自更新+二进制探测序 HERMES_BIN→安装树 venv→PATH，缺席如实 409）；#17 凭证池卡+cron 运行史卡挂治理·运行态（15 provider 真数据：invalid_api_key 409 失败红标）；#7 放行建议卡挂审批收件箱（折叠展开才拉取——冷启扫库 67s 如实呈现生成中，长缓存 600s；采纳走 CLI 人工执行，代理永不落盘）；#10 fork 直通（History 浏览器 ⋔：/fork 聊天内 slash 命令核实 isBridgeForkCommand 通道——剪贴板+聚焦，不代发不可逆动作）；#19 核实已存在（IdeMcpPane 消费 /api/hermes/mcp 含 tool_details/raw_config）零重复 | d55e0c51（linear 合 main）；守门 runtime-caps 10 例（CLI 文本协议解析纯函数+fork 通道）；三端点 8657 实测 200（credentials/cron-runs 真数据/approval-suggestions 67s 冷启后建议列表）；走查 6/6 |
+| **P16 desktop 深链与徽章（补遗⑦）** | 深链 swarmstudio://（element-web protocol 白名单口径：仅 /app 树与 /matrix，query 透传；mac open-url+win/linux second-instance 双入口+协议注册）+dock 徽章（setBadgeCount IPC+preload 暴露+页头 notifyTotal watch 桥守卫，非 darwin 如实 false）——实施于注入树，desktop tsc 全绿；**patch 化随注入漂移治理轮统一收编**（漂移期 patch 应用面不可可靠验证，先入库=负债）。崩溃自愈核实上游已内置（render-process-gone+60s 窗口计数+超限服务失败页）零重复 | 注入树态（upstream/hermes-studio/packages/desktop main+preload 两文件）；验证=desktop tsc 全绿+浏览器链无影响；蓝图实例化 UI/peer 拓扑/竞品迁移/fork 双 scope 文件回滚记档待环境或超范围 |
 
 ## 八、路演报告规范与交付物（第 26 步细化）
 
@@ -439,6 +455,7 @@ capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清�
 | V5-run4（RUN_ID=20260929-v5-run4，09-29/30） | **0→1 清环境首跑（补遗④⑤双口径）+ 部分执行轮（通道受限，如实记档）**：mx-clean --apply --reset-central 实测（旧轮同名房 ×10 退出/中央仓 RFD 工件重置+tag 快照/板库 147 旧卡清空——板库归档为 run4 实锤新增步）；步骤 1-9 全真值 ✓（smoke 含新驾驶舱在线真值 connected_platforms=15；G1 冻结 3191c11；建群全量预邀 0 缺口；派发 event 可反查）；**register/analysis 打回环各 3 轮真实发生**——agent 主卡 t_215792cd+T-101~107 七子卡 RACI 落对板落对人（23:46-23:52），但 body 虚报"分析稿 v8"（worktree/中央仓均无 v8）被凭证核验三轮正确拦截=治理逆境实证；**LLM 通道四池全限**（aim 池 MiMo/SGLM 429 配额死→MGLM 直连撞 bigmodel 1302→HK256/kimi too-many→deepseek 不通；并发闸 max_concurrent_sessions=3 后 429 由 746/5min 降 111 仍不足），07:33 fanfan-agent 终局回报"全 fallback 链失败"；步 10-25 ⬜ 如实未达，步 26 报告产物 ✅。**报告链终版全过**：旅程版 85.7KB 四查全过（标题 26/26/19 图唯一 md5/闸门与 state 一致）+ report-audit.txt 落档 + 统一报告 100KB（14 节全/30 图零缺/演示动线+六闸清单+事实节全数据驱动）。四起 harness 事故记档 runs/CLAIMS.md（驱动 PATH 盲/旧壳杀网关/overflow 中断毒循环/kanban_list 静默吞错）；修复批=在线三数根治（守门 8/8）+worktree 构建链三处（525 补丁）+capture 深链房间+walk 递归。**通道恢复后重跑（run5）即补全 10-25 步**（0→1 环境已在，analysis_done 前状态键幂等续跑） |
 | V5-run5（RUN_ID=20260930-v5-run5，09-30/10-01） | **26 步全流程收官轮（run4 通道恢复后 0→1 续跑补全）**：16:41:59-03:59:12 全 26 步落键（smoke→G1 冻结→建群全量预邀 0 缺口→派发 $Cxsn3swx…→主卡 t_f405c7b2+七跟踪卡→tasklist v9=1b2fce3（RUN 标记）→agent 亲发 ANALYSIS-DONE 双凭证反核验 ✓→四路系分回执 ✓→**G2 真实打回环**（首评 FAIL=真缺项：merchant-api 主责三处登记缺失+T-007 不存在→回灌修订→复评 PASS 01:57:49，评审卡 t_a10e41d9 四检查项证据链+ARCH-GATE-PASS 签名）→集成合并（收编 7410464）→**G5 过闸**（t_73c36618 七项检查含同 commit 五套复现台架实测+HumanGate 留痕）→**UAT AC=7 全过**（验收书 9cc4422，条件解除链 9d9c792→926cce1→9cc4422 如实入仓）→审计/复盘/记忆探针/IDE 三真值→报告生成。**治理逆境即主线素材**：首夜三坑（审批线程 relation 拒发致 !approve 全灭/驱动 PATH 盲/G2 判词模板自毒致结构性不可过）+深夜通道风暴（bigmodel 1302/容量队列回灌丢派发/网关锁 env 缺失）全部根治入正（overlay 8e21a6b8..07fd8f01 八提交，合 main 054370f6）；UAT contains 命中工作回声 110s 误判→行首锚定根治（f5fb7fba）。0→1 缺口如实披露（plan/devimpl/testpass 三步以远端带回历史工件过闸，报告侧以 RUN 标记锚定本轮真值）。问题单 11 键 DISP 100% 记账。**报告链终版**：旅程版 110KB 四查全过（26/26 标题·33 图·无假重复·闸门与 state 一致·R6 锚点密度 WARN 清零）+ 统一报告 162KB（29 步 UI 实操+21 张真证据索引+新增"全流程推演逻辑与协作顺序"演示总纲节：六层链路+六阶段"谁发起→谁执行→谁把关→产物去哪"协作顺序表+协作三铁律）+ run-facts.env |
 | 终态回归 | vitest 413 文件 3034 用例 + build:full 绿（V4.1 时点）；v0.7.25 升级轮 244 补丁重放零告警 |
+| upstream 吸收 27 项落地轮（10-01，补遗⑦） | 四批线性合 main（ee37b56b 消息面/bc61f6b0 运行观测/d94a2d97 收官批/d55e0c51 runtime-caps；终态 main=7ac18a6a 未推 origin）：8 项新落地（Spotlight/跳未读条/未读线程聚合/轨迹账本/常驻意图/History 浏览器/用量排行/列证据契约）+6 项核实已存在（线程/操作栏/steer/状态行槽位/审批三档/审批中心跨 profile）零重复+2 项 desktop 件注入树实施（tsc 绿）+P11 Phase2 两件+**trace 路由 legacy-app-api 改写 404 根治**（新 /api/hermes/* 路由双注册定式）；守门新增 7 文件 48 例+回归 1252/1252 与 server 1286/1286 绿+走查 5/5、6/6、6/6；27 项逐项对账表=overlay/docs/2026-10-01-upstream-absorption-analysis.md 附录 |
 | aipaydev 中央仓 | 冻结/系分/概设/排期/DEV 分支/测试报告/验收/审计/复盘全程入仓（本地 integration/RFD-001 与远端 27 分支，ls-remote 核对） |
 | 在途待合（截至 a34e15aa） | fix/24h-review-20260929（24h 审查批 20 项根治）；fix/harness-gate-integrity（门禁完整性六缺陷+H7-H11 判词语义与报告真值化，8.3 节 R1-R4 根治所在）；fix/report-generator-four @ 2f6d8a8d（生成器四修，R3/R5/R9 断言+元信息参数化）——x20 吸收计划已全数进 main（第一批 d5f70537/83e5413f、v2 批 a34e15aa）。合并守卫：任一分支合 main 前验证 `git diff main...<branch> -- docs/superpowers/specs/2026-09-29-mux-v5-fullflow-plan.md` 为空（三点 diff=分支侧改动），非空先 checkout main -- 或 rebase，禁整文件重写正本 |
 
@@ -452,6 +469,7 @@ capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清�
 6. **长线记档项**：SBOM+依赖白名单；graphify 代码知识图谱接入；影子运行/双跑对比（口径已立）；逃逸缺陷率与 revert 率长线数据（六域体检台账已开始积攒）。
 7. **补遗⑤执行序（驾驶舱聚焦；2026-09-29 用户四项裁决已收）**：**P9 迁移批与 P10 精简批均已落地**（走查 16/16，§七 P9/P10 行）。**run4 双口径已执行（2026-09-29/30）**：0→1 清环境+驾驶舱聚焦合一，部分执行轮（通道受限如实记档，§九 run4 行）；R7 三功能区核验在统一报告头节（ui-03/ui-10/ui-25 全实拍）。**run5 重跑窗口=LLM 通道任一池恢复**（0→1 环境在位，analysis 前状态键幂等续跑补 10-25 步）。锚点与验收门见 §十三。
 8. **补遗⑥执行序（运行面融合入案+演示版报告；2026-10-01）**：P11 已在 main（走查 14/14）→ **注入链漂移治理**（upstream 0.7.26 pull 冲掉 473 locale 段、manifest 278/535 失真、499 干净树不可重放堵死全量重放——并行会话在途逐 patch 语义重建；收口后 473 重建+i18n-run-surface 本地字典收编+全量 clean+inject 验证）→ **P12 治理中心页签化 rebase 合入** → **run5 续跑收口**（步 1-14 已真值、G2 判词自毒根治在 fix/run5-approve-harness-b 待合；跑完步 16-26，兜底 run6 清环境重跑）→ **演示叙事版统一报告**（8.2 第 0 章+六件套+R15/R16 全量落地）→ §九补 run5 终态行。
+9. **补遗⑦执行序（吸收面入推演与漂移联动；2026-10-01）**：吸收四批已在 main（7ac18a6a，未推 origin——推前须过 §九 在途待合并集核对）→ **吸收面入 run6 走查**（4.8 批第 4 步冒烟清单增五项吸收回归；capture 增补新观测面截图位，走 8.4 快门守门）→ **desktop patch 537/538 化**（随补遗⑥条目 8 的注入链漂移治理收口统一做——深链+徽章从注入树语义重建为正式补丁，届时装机验证 swarmstudio:// 深链与 dock 徽章）→ **蓝图实例化 UI 专项**（hermes cron blueprint_catalog 协议考证后立项）→ 下轮推演（run6）冒烟即验吸收面。
 
 ## 十一、运行手册
 
@@ -491,6 +509,7 @@ RUN_ID=<run4> bash scripts/aipay/aipay-scenario.sh
 | ④ | 09-29 | 用户十项调整（0→1/账户管理产品化/任务在线回归/资产表与组织 UI/六闸标准显性化/截图一致性/工件可编辑/skill 过程/流转串联） | §4.4 六闸清单+§4.5 修订批；P6-P8；R12-R14；8.6 扩列；§十一 mx-clean+run4 | P6-P8 立项→mx-clean→run4 0→1 全流程→补遗④口径统一报告 | 待立项（P6-P8 为前置） |
 | ⑤ | 09-29 | 用户指令：推演限定驾驶舱单面，未用 UI 精简保能力；同日四项裁决（M1 注意力条入口/R-C1 合一转 M6/M2/M3-M4 照准） | §4.6 修订批；§十三（13.1-13.6；13.3 迁移 M1-M6，13.4 精简 S1-S7）；§十 7 | P9+P10+S3 补齐**均已落地**（走查 18/18+注入 228/228+全量 3300/3308；双轨收敛完成：正线=517+523，518/519/520 退役，误删五件根治）→run4 双口径 | P9/P10/S3 已验；run4 待跑（sim 栈空窗） |
 | ⑥ | 10-01 | 用户指令：报告适应演示需要（实际功能逐步操作呈现/突出重点难点与全流程治理/清晰讲述推演逻辑及协作顺序）；运行面融合轮合 main+用户三项裁定 | §4.7 修订批；8.2 第 0 章+五件套升六件套；8.3 R15/R16；§七 P11/P12；§十 8；§13.2/13.4 S7 反转记档 | P12 合入→注入链漂移治理→run5 收口（兜底 run6）→演示叙事版统一报告→§九 run5 终态行 | P11 已验（走查 14/14）；余在途 |
+| ⑦ | 10-01 | 用户指令「27 项按建议全部落地」（承接同日 12 组件调研轮）；hermes CLI 通道核实解锁暗能力 | §4.8 修订批（第 4/10/17/18/24/25/26 步吸收面）；§七 P13-P16；§九 吸收轮执行行；§十 9 | 吸收面入 run6 走查与 capture 截图位→desktop patch 537/538 化（随漂移治理）→蓝图实例化 UI 专项 | 吸收四批已合 main 7ac18a6a（守门 48 例+回归全绿+走查 17/17 项次）；run6 验吸收面待跑 |
 
 | 版本 | 日期 | 定位 | 状态 |
 |---|---|---|---|
@@ -544,6 +563,8 @@ RUN_ID=<run4> bash scripts/aipay/aipay-scenario.sh
 轻量备选案记档（不推荐）：M2 若工期紧可退为"仅入口归一"——一级入口移除、进入路径全发自驾驶舱，路由暂不动；代价是 /ide 独立壳仍在，不满足 13.1 判定标准（UI 动作出 /app 树）。
 
 ### 13.4 精简清单（未用到→摘面；能力保留）
+
+> **补遗⑦记档（2026-10-02）**：S3 之 ekko 项**开门反转**——用户裁定启用评估体系（JEV），features.ekko 默认开（VITE_CUSTOM_EKKO=false 可关），设置侧栏增「ekko 运维」入口（superadmin 双门控，走查 5/5）。S3 其余项（语音/宠物/外链/社媒等）维持默认关不变。
 
 四档处置语义见 13.1 原则 3。逐组：
 
