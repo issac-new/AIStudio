@@ -241,6 +241,43 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   return 1
 }
 
+
+# ── 活性等待（2026-10-01 用户裁决：重载任务不设绝对时长上限）─────────────
+# 只要责任 agent 还在产出（profiles/<a>/logs/agent.log 持续增长）就一直等；
+# 连续 <idle-sec> 无日志增长才判空转/死循环退出。长生成/长测试的单次静默
+# 远小于阈值（run6 实测大生成 6 分钟级），1800s 足够宽容；真死循环（429 退避
+# 风暴、工具卡死）会在阈值内暴露。无可观测日志面时退化为 86400s 硬窗并告警。
+wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
+  local desc="$1" idle="$2" agents="$3"; shift 3
+  local -a logs=()
+  local a
+  for a in ${agents//,/ }; do
+    [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+  done
+  if (( ${#logs[@]} == 0 )); then
+    note "[观察] wait_alive_truth 无日志面可观测（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 86400s 硬窗"
+    wait_truth "$desc" 86400 "$@"
+    return
+  fi
+  local last_sig=0 last_size=-1 cur_size sz
+  while true; do
+    [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+    if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+    cur_size=0
+    for a in "${logs[@]}"; do
+      sz=$(stat -f%z "$a" 2>/dev/null || echo 0)
+      cur_size=$(( cur_size + sz ))
+    done
+    if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
+    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; fi
+    if (( $(date +%s) - last_sig > idle )); then
+      note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限）"
+      return 1
+    fi
+    sleep 15
+  done
+}
+
 # ── 完成凭证反向核验（账号板断言）────────────────────────
 mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b 翻页直抵 since 时刻
   # 消息洪后固定窗口失效（run4 实锤：500 条只回溯到当天上午，昨日派发被挤出）。
