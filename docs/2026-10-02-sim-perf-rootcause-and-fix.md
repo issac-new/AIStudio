@@ -109,6 +109,6 @@
 - **自动 review fork 关闭**（43 处 enabled=false + 模板默认 false；`MX_BGREVIEW=1` 恢复历史"每 turn 自动"形态）——79% LLM 空转消除。
 - **卡点保留沉淀**：`gate_review <u> <闸名>`——治理闸通过后，人类账号对自家 agent DM 垫一句话建立会话缓存，再发 `!refine <闸名>` 显式触发 hermes 的 background_review fork（`slash_commands_goals` focus 路径不查 enabled 开关，走的正是 background_review 代码路径）。五闸接线：G2 评审→fanfan、概设收口→arch、G3 代码→chen、G4 测试→qi、G5 发布→fanfan。`MX_GATE_REVIEW=0` 可停用。
 - **审批回归 auto 全自动**（默认值即历史行为）；hybrid/manual 全量保留为 `MX_APPROVE_MODE` 选项（人工验收轮可用）。
-- 宿主真实部署**同步卡点化**（2026-10-02 用户追问后修正——原表述"零影响"与卡点原则自相矛盾）：`~/.hermes/config.yaml` 的既有 `auxiliary.background_review` 条目（review fork 的模型路由，aim）内加 `enabled: false`，与路由字段共存；沉淀改由用户在恰当卡点手动 `/refine`（真实场景无闸脚本，卡点由人判断）。备份 `config.yaml.bak-gate-review-20261002`；回滚=删 enabled 行。
+- 宿主真实部署**同步卡点化**（2026-10-02 用户追问后修正——原表述"零影响"与卡点原则自相矛盾）：`~/.hermes/config.yaml` 的既有 `auxiliary.background_review` 条目（review fork 的模型路由，aim）内加 `enabled: false`，与路由字段共存；沉淀改为**自动卡点判断**（2026-10-02 用户裁决"不要人工判断"）：恢复 `enabled: true` + 双阈值校准——`agent.skills.creation_nudge_interval: 30`（技能线，agent_init.py:1371）与 `memory.nudge_interval: 30`（记忆线，agent_init.py:1315），即**工作量启发式**：≥30 次工具迭代的重任务 turn 完成后自动沉淀（hermes 原生机制，默认阈值 10 调严）；日常轻交互（<30 迭代）不触发。备份 `config.yaml.bak-gate-review-20261002`；`/refine` 仍可随时手动补充。
 
 净效果：推演速度恢复优化轮水平（无每 turn 空转），关键治理节点保留真实经验沉淀动作（每闸一次显式 fork），审批全自动可无人值守跑完。DM 垫话→!refine 链路为运行面路径，下轮起跑实测验证。
