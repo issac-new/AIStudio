@@ -2,7 +2,7 @@
 
 ## 主旨三句话
 
-一轮 26 步全流程推演要跑通宵（run6 约 8h+，run7 4.7h 才到 11/26 步），根因不在场景脚本，而在 hermes agent 侧：**后台技能回顾 fork（background_review）空转吃掉单个 agent 79% 的 LLM 时间**，叠加全编制 `reasoning_effort: ultra` 推理档位与 10 万+ token 膨胀上下文，把单次 LLM 调用推到 p50=18.5s / p90=91s。本次已落地"关 review fork + 推理档位降档钩子"双优化，预期单轮总时长压至原来的 1/3 左右。
+一轮 26 步全流程推演要跑通宵（run6 约 8h+，run7 4.7h 才到 11/26 步），根因不在场景脚本，而在 hermes agent 侧：**后台技能回顾 fork（background_review）空转吃掉单个 agent 79% 的 LLM 时间**，叠加全编制 `reasoning_effort: ultra` 推理档位与 10 万+ token 膨胀上下文，把单次 LLM 调用推到 p50=18.5s / p90=91s。本次已落地"关 review fork"主优化（用户同日裁决推理档位保持拉满不降），预期单轮总时长压至原来的一半左右。
 
 ## 受众
 
@@ -68,11 +68,10 @@
 - **生效机制**：`run_agent.py:795-800` spawn 时现读 `load_background_review_settings()`；`hermes_cli/config.py` 缓存按文件签名（mtime/size/ino/ctime）自动失效 → **改完即时生效，无需重启，对在途 run7 零干扰**。
 - **固化**：`overlay` main `37f6b860`（merge `03aa099d`）改 `mx-lib.sh` 三同构模板（`write_root_config`/`write_user_profile`/`write_agent_profile`），编制重建不回退。
 
-### 3.2 推理档位降档钩子（对应 R2）
+### 3.2 推理档位：保持拉满（用户裁决 2026-10-02）
 
-- 同一提交：模板默认 `reasoning_effort: high`，`MX_REASONING_EFFORT` 环境变量可覆盖，空串保留宿主值。
-- **下一轮起跑生效**（编制重建时写入）；在途 run7 不动，避免前后档位不一致干扰归因。
-- 选 high 而非 medium 的权衡：推演打回多为格式/流程错误（DONE 行 card ID 填错等），与推理深度弱相关；但一次返工 = 一个完整 turn（20–40min），档位过浅有返工增多风险。high 是保守起点，下轮实测后可再降。
+- 初版曾默认降为 high，用户明确指令"推理档位拉满，不要变，保持"——已回滚（main `dfb302c4`）：模板默认不覆盖，沿用宿主 `ultra`；`MX_REASONING_EFFORT` 钩子保留，仅显式设值时才覆写。sim 树 42 profile 全程 ultra 未动过。
+- 影响：R2（ultra 单次延迟放大）按用户裁决**接受为固有成本**，不作为优化项；提速预期相应下调——主要收益只剩关 review 一项（fanfan 实测占其 LLM 时间 79%，该比例不受档位影响）。
 
 ## 四、验证
 
@@ -88,5 +87,5 @@
 ## 五、未验证与风险声明
 
 - 79% 节省是 LLM 时间占比，不严格等于墙钟节省（review fork 与任务 turn 部分并行）；墙钟预期保守打六到七折。
-- `high` 档对返工率的影响未实测，下轮用打回次数对照（run6/run7 issues.log 有基线）。
+- 推理档位保持 ultra（用户裁决），单次调用 p50 18.5s 的延迟成本继续存在，属接受项。
 - gateway `max_concurrent_sessions=4`（root config 实测值）下多 agent 并发对 cc-switch 上游的容量压力仍在；review 关闭后并发争抢会显著缓解，但不消除。
