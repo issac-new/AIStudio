@@ -357,6 +357,33 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
   done
 }
 
+# ── 闸点经验沉淀（2026-10-02 用户终局：恰当卡点保留 background_review）────
+# 每 turn 自动 review fork 已由 auxiliary.background_review.enabled=false 关闭；
+# 沉淀保留在治理卡点：闸通过后以人类账号对自家 agent DM 先垫一句话建立/刷新
+# 会话缓存（/refine 需 agent 空闲且有缓存），再发 "!refine <闸点名>" 显式触发
+# hermes 的 background_review fork（slash_commands_goals._handle_refine_command，
+# focus 路径不查 enabled 开关）。MX_GATE_REVIEW=0 可整体停用闸点沉淀。
+gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程推进
+  local u="$1" gate="$2" dm i body re tok
+  [[ "${MX_GATE_REVIEW:-1}" == "1" ]] || return 0
+  dm=$(dm_room_agent "$u" "$u") || { note "[观察] 闸点沉淀 DM 建房失败 ${u}@${gate}（跳过）"; return 0; }
+  tok=$(load_token "$u")
+  mx_send "$tok" "$dm" "【闸点复盘】${gate} 已通过。请一句话确认收到即可，随后我将触发经验沉淀回顾。" >/dev/null 2>&1 || true
+  # 等 agent 回应（turn 完成——refine 拒绝 running 态）；best-effort 90s
+  for i in 1 2 3 4 5 6; do
+    sleep 15
+    body=$(mx_messages "$tok" "$dm" 5 2>/dev/null | jq -r --arg s "$(agent_mxid "$u")" \
+      '[.[] | select(.sender == $s)][0].content.body // ""' 2>/dev/null) || body=""
+    [[ -n "$body" ]] && break
+  done
+  re=$(mx_send "$tok" "$dm" "!refine ${gate}")
+  if [[ -n "$re" ]]; then
+    note "[闸点沉淀] ${u}@${gate}：!refine 已发（${re}）——background_review 于卡点显式触发"
+  else
+    note "[观察] ${u}@${gate} !refine 发送失败（跳过，不影响流程）"
+  fi
+}
+
 wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   local desc="$1" timeout="$2"; shift 2
   local deadline=$(( $(date +%s) + timeout ))
