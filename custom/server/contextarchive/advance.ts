@@ -1,16 +1,18 @@
 /**
  * 归档推进器（C1 核心）：把会话库压缩边界的变化推进到归档文件面。
  *
- * 扫 chat_compression_snapshots，对每会话：若 compressed_through_message_id
- * 超过 index 记录的上次归档边界 → 读取 (上次边界, 本边界] 区间 messages
- * verbatim → 写 window-<N>.json（编号递增）→ 更新 index。幂等：边界没推进
- * 就无新窗（重复 advance 零动作零写盘）。
+ * 边界源两档（遗留④根治 2026-10-03）：
+ * 1) 边界史表 chat_compression_boundary_history（patch 546 起，压缩保存时追加式
+ *    记录每一次边界）在档 → 按 (上次边界, b1] (b1, b2] … 逐次精确切窗——即使两次
+ *    advance 之间发生了多次压缩也一窗不并；
+ * 2) 史表缺席（patch 546 之前的库/未注入环境）→ 回落旧语义：扫 chat_compression_
+ *    snapshots 主表（每会话只留最新边界，历史被覆盖），单窗推进。
  *
- * 首观察语义（已知数据面限制，如实声明）：chat_compression_snapshots 每会话
- * 只留最新一份边界（历史边界被覆盖），首次 advance 看到某会话时无法还原历史
- * 切窗——从会话头（id > 0）到当前边界整体作 window #1（firstObservation 标记
- * 进 boundary，API/UI 如实呈现）。此后的每次边界推进都是精确的单窗增量。
+ * 首观察语义（残余数据面限制，如实声明）：patch 546 部署前的历史边界本就未记档，
+ * 首次 advance 看到某会话仍只能从会话头到（最早的已知边界）整体作 window #1
+ * （firstObservation 标记进 boundary，API/UI 如实呈现）。部署后的每次压缩都精确可切。
  *
+ * 幂等：边界没推进就无新窗（重复 advance 零动作零写盘）。
  * 会话库只读打开（readOnly: true，红线）；库缺席/表缺席 → available:false
  * 不抛（fail-soft，桌面工具读旁路数据不崩主流程）。
  */
@@ -82,9 +84,11 @@ export async function advanceSessionArchives(dbPath?: string): Promise<AdvanceRe
       'SELECT session_id, compressed_through_message_id, history_revision FROM chat_compression_snapshots WHERE compressed_through_message_id IS NOT NULL',
     ).all() as Array<{ session_id: string; compressed_through_message_id: number; history_revision: number }>
     result.sessionsScanned = snapshots.length
+    // 边界史表在档 → 按次切窗（遗留④）；缺席 → 主表单窗回落（旧语义）
+    const useHistory = tableExists(db, 'chat_compression_boundary_history')
     for (const snap of snapshots) {
       try {
-        advanceOneSession(db, snap.session_id, snap.compressed_through_message_id, snap.history_revision, result)
+        advanceOneSession(db, snap.session_id, snap.compressed_through_message_id, snap.history_revision, result, useHistory)
       } catch (err) {
         // 单会话失败不拖垮整轮（fail-soft），但原因入列可观测
         result.reasons.push(`session_error:${snap.session_id}:${err instanceof Error ? err.message : String(err)}`)
@@ -100,55 +104,82 @@ export async function advanceSessionArchives(dbPath?: string): Promise<AdvanceRe
   return result
 }
 
-/** 单会话推进（advanceSessionArchives 内部）：读边界→缺窗补窗→更新 index。 */
+/** 单会话推进（advanceSessionArchives 内部）：读边界序列→逐窗补齐→更新 index。 */
 function advanceOneSession(
   db: DatabaseSync,
   sessionId: string,
   compressedThrough: number,
   historyRevision: number,
   result: AdvanceResult,
+  useHistory: boolean,
 ): void {
   const index = readSessionIndex(sessionId)
   const lastArchived = index?.lastArchivedMessageId ?? 0
-  if (compressedThrough <= lastArchived) return // 幂等：边界未推进
+  // 边界序列：史表逐次边界（>lastArchived）优先；主表边界兜底追加（史表落后主表
+  // 的防御路径——理论上 546 后每次压缩都追加，仍不丢消息为准）
+  const boundaries: Array<{ to: number; source: 'history' | 'snapshot' }> = []
+  if (useHistory) {
+    try {
+      const rows = db.prepare(
+        'SELECT boundary_message_id FROM chat_compression_boundary_history WHERE session_id = ? AND boundary_message_id > ? ORDER BY id ASC',
+      ).all(sessionId, lastArchived) as Array<{ boundary_message_id: number }>
+      for (const r of rows) boundaries.push({ to: Number(r.boundary_message_id), source: 'history' })
+    } catch { /* 史表读失败 → 回落主表单窗 */ }
+  }
+  if (compressedThrough > (boundaries[boundaries.length - 1]?.to ?? 0)) {
+    boundaries.push({ to: compressedThrough, source: 'snapshot' })
+  }
+  if (boundaries.length === 0) return // 幂等：边界未推进
+
   const cols = MESSAGE_COLUMNS.join(', ')
-  const rows = db.prepare(
-    `SELECT ${cols} FROM messages WHERE session_id = ? AND id > ? AND id <= ? ORDER BY id ASC`,
-  ).all(sessionId, lastArchived, compressedThrough) as unknown as ArchivedMessageRow[]
-  if (rows.length === 0) return // 区间空（边界指向的消息非本会话/已删）：不建空窗
   const titleRow = db.prepare('SELECT title FROM sessions WHERE id = ?').get(sessionId) as { title: string | null } | undefined
-  const windowNumber = (index?.windowCount ?? 0) + 1
-  const boundary = {
-    fromMessageId: rows[0]!.id,
-    toMessageId: rows[rows.length - 1]!.id,
-    messageCount: rows.length,
-    archivedAt: Date.now(),
-    historyRevision,
-    compressedThroughMessageId: compressedThrough,
-    // 首观察窗：从会话头整体归档（历史边界已被覆盖，无法按次切窗——见文件头注释）
-    firstObservation: index === null,
+  let cursor = lastArchived
+  let windowNumber = index?.windowCount ?? 0
+  let firstOfRun = index === null  // 本轮首窗若也是会话首档 → firstObservation
+  const windowsLite: Array<{ window: number; fromMessageId: number; toMessageId: number; messageCount: number; archivedAt: number; firstObservation: boolean }> = []
+  for (const b of boundaries) {
+    if (b.to <= cursor) continue
+    const rows = db.prepare(
+      `SELECT ${cols} FROM messages WHERE session_id = ? AND id > ? AND id <= ? ORDER BY id ASC`,
+    ).all(sessionId, cursor, b.to) as unknown as ArchivedMessageRow[]
+    cursor = b.to // 空区间也推进游标（边界推进了，即使区间无消息也不反复重扫）
+    if (rows.length === 0) continue // 不建空窗
+    windowNumber += 1
+    const boundary = {
+      fromMessageId: rows[0]!.id,
+      toMessageId: rows[rows.length - 1]!.id,
+      messageCount: rows.length,
+      archivedAt: Date.now(),
+      historyRevision,
+      compressedThroughMessageId: b.to,
+      // 首观察窗：从会话头整体归档（部署前历史边界未记档，无法按次切窗——见文件头注释）
+      firstObservation: firstOfRun,
+      // 边界源（遗留④）：history=史表逐次精确切窗；snapshot=主表单窗（含部署前语义）
+      boundarySource: b.source,
+    }
+    const windowFile: ContextWindowFile = {
+      session: sessionId,
+      window: windowNumber,
+      boundary,
+      // 锚点行一律脱敏（保守策略，见 redact.ts 文件头）
+      anchor: redactAnchorLines(buildHandoffAnchor({ windowNumber, sessionTitle: titleRow?.title ?? null, messages: rows })),
+      messages: rows,
+    }
+    writeWindowFile(windowFile)
+    windowsLite.push({ window: windowNumber, ...pickBoundaryLite(boundary) })
+    result.windowsCreated++
+    result.windows.push({ session: sessionId, window: windowNumber, messageCount: rows.length })
+    firstOfRun = false
   }
-  const windowFile: ContextWindowFile = {
-    session: sessionId,
-    window: windowNumber,
-    boundary,
-    // 锚点行一律脱敏（保守策略，见 redact.ts 文件头）
-    anchor: redactAnchorLines(buildHandoffAnchor({ windowNumber, sessionTitle: titleRow?.title ?? null, messages: rows })),
-    messages: rows,
+  if (cursor > lastArchived) {
+    writeSessionIndex(sessionId, {
+      session: sessionId,
+      windowCount: windowNumber,
+      lastArchivedMessageId: cursor,
+      windows: [...(index?.windows ?? []), ...windowsLite],
+    })
+    result.sessionsArchived++
   }
-  writeWindowFile(windowFile)
-  writeSessionIndex(sessionId, {
-    session: sessionId,
-    windowCount: windowNumber,
-    lastArchivedMessageId: compressedThrough,
-    windows: [
-      ...(index?.windows ?? []),
-      { window: windowNumber, ...pickBoundaryLite(boundary) },
-    ],
-  })
-  result.windowsCreated++
-  result.sessionsArchived++
-  result.windows.push({ session: sessionId, window: windowNumber, messageCount: rows.length })
 }
 
 /** index.windows 条目瘦身（boundary 里 archivedAt/historyRevision 等保留摘要字段）。 */
