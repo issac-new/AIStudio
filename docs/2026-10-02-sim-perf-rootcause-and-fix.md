@@ -101,3 +101,14 @@
 **终态原则：全流程推演的目标是保真复刻真实场景，速度是次要项。** 真实场景要素：真人使用 hermes 助理（ultra 推理 + background_review 默认开）+ 审批由人复核。配套基建与裁决落地：`MX_APPROVE_MODE` 三模式已实现并入 main——`auto`=脚本秒批（历史默认）、`manual`=全部挂起真人、`hybrid`=**C 裁决落地区**（928adc95）：关键操作（push origin main/master、rm -rf、--force、drop table、unlink，`MX_APPROVE_CRITICAL_EXTRA` 可扩展）挂起等真人在 element 回复 !approve/!deny；过程性操作（run7 实测 34/35）由代审 agent（`MX_REVIEW_AGENT` 默认 fanfan）DM 复核后批/拒，REJECT 理由经线程内 !deny 回传请求 agent，代审超时（`MX_REVIEW_TIMEOUT` 1800s）转人工兜底。已知保真偏差：代审者非请求主人本人（编制内主人唯一 AI 代表即请求方），语义为审批复核人代过程性复核。
 
 事故记录：审批开关提交时 `git commit` 未限定路径，误将并行会话暂存中的 4 个文件带入；已剥离还原（080311bd，main 树经 diff 验证回到 c4337457 状态，改动内容完璧归还工作区）。教训再确认：共享树 commit 必须显式路径。
+
+## 七、终局收敛（2026-10-02 深夜，用户第三次裁决）
+
+裁决："在恰当场景卡点保留 background_review，推演时使用全自动审批。"落地（main 8f93a048）：
+
+- **自动 review fork 关闭**（43 处 enabled=false + 模板默认 false；`MX_BGREVIEW=1` 恢复历史"每 turn 自动"形态）——79% LLM 空转消除。
+- **卡点保留沉淀**：`gate_review <u> <闸名>`——治理闸通过后，人类账号对自家 agent DM 垫一句话建立会话缓存，再发 `!refine <闸名>` 显式触发 hermes 的 background_review fork（`slash_commands_goals` focus 路径不查 enabled 开关，走的正是 background_review 代码路径）。五闸接线：G2 评审→fanfan、概设收口→arch、G3 代码→chen、G4 测试→qi、G5 发布→fanfan。`MX_GATE_REVIEW=0` 可停用。
+- **审批回归 auto 全自动**（默认值即历史行为）；hybrid/manual 全量保留为 `MX_APPROVE_MODE` 选项（人工验收轮可用）。
+- 宿主真实部署不受任何影响（宿主 config 无 auxiliary 段，走 hermes 默认开启）。
+
+净效果：推演速度恢复优化轮水平（无每 turn 空转），关键治理节点保留真实经验沉淀动作（每闸一次显式 fork），审批全自动可无人值守跑完。DM 垫话→!refine 链路为运行面路径，下轮起跑实测验证。
