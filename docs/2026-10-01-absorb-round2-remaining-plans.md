@@ -17,7 +17,8 @@
    - 批一（已迁）：ia2.flow.sortMode（房间排序）、ide.slots（状态栏槽位）——29d6117。
    - 批二（已迁）：notify.prefs（通知分组降噪）、ide.websearchTier、ide.goalAutonomy——b899474。
    - 批三（已迁，2026-10-02 收官）：ui.colWidths（三栏宽度——ncwk.cols 收养+ncwk.wb.* 双层旧键链与 CustomEvent 广播保序保留）、ide.keymapOverrides（键位覆盖，双 script 读点归一 readOverrides）、kanban.savedViews（看板保存视图+reset 助手分层感知）——5d7a2b0。
-   - **上游自有键（须 patch 批次）**：hermes.kanban.selectedBoard（KanbanView/store）、hermes_ide_layout/sidePane.width（上游壳布局）——随漂移治理轮 patch 化同批。
+   - 批四（已迁，2026-10-02 终收官）：ide.layout/ide.sidebar（ide store——此前误归"上游自有"，实为 overlay 文件）+ kanban.selectedBoard（上游 kanban store，**patch 540**：预编辑副本 diff 法出纯净增量，收养+分层读写）。
+   - **上游自有键剩余**：hermes_ide_layout/sidePane.width 经查即批四的 ide.layout/sidebar（同源）——无剩余；#13 步二全部迁毕。
    - **不迁（非偏好）**：hermes_api_key/server_url/locale（账号配置）、ide-permission-mode:<sid>（会话态）、runcenter:inbox:archived（UI 态）、hermes_ide_workspace（工作区选择=状态）。
 3. **Controller 声明**（只对确有依赖/互斥关系的设置项，约 5 组：时间线布局×紧凑模式、通知分级×铃铛计数、主题×密度等）：声明式互斥+变更重载提示。
 
