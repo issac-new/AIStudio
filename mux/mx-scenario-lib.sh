@@ -188,16 +188,117 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
-auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份批准（反应+线程内 !approve 双通道）
-  # 审批复核模式开关（2026-10-02 保真裁决配套）：
-  #   MX_APPROVE_MODE=auto（默认）  脚本扫到即批——历史行为，速度最快
-  #   MX_APPROVE_MODE=manual        不自动批——请求挂起等真人登录 matrix 客户端手动 !approve
-  #                                 （审批等待窗 .env MATRIX_APPROVAL_TIMEOUT_SECONDS=1800s）
-  #   MX_APPROVE_MODE=agent         审批者 agent 先审阅决策再批——决策内容真实（待裁决后实现）
-  if [[ "${MX_APPROVE_MODE:-auto}" == "manual" ]]; then
+# ── 审批复核人工介入（2026-10-02 用户裁决 C 混合模式）──────────────
+# MX_APPROVE_MODE=auto（默认）脚本扫到即批——历史行为
+#                 =manual 全部挂起等真人（element 以人类账号回复 !approve / !deny）
+#                 =hybrid  关键操作挂起真人复核 + 过程性操作由代审 agent 先审后批
+# 关键=主干写入与破坏性（git push origin main/master、rm -rf、--force、drop table、
+# unlink(）；MX_APPROVE_CRITICAL_EXTRA 可追加扩展正则（对小写正文匹配）。
+# 代审者=MX_REVIEW_AGENT（默认 fanfan，其 orchestrator agent 收审阅 DM；语义=审批
+# 复核人代过程性审批，非请求主人本人——保真偏差如实记档）。agent 复核回复
+# APPROVE→执行原批准双通道；REJECT <理由>→线程内 !deny（hermes 会把理由回传请求
+# agent 使其调整）；代审超时 MX_REVIEW_TIMEOUT（默认 1800s）→转人工挂起兜底。
+REVIEW_STATE="$EVID_DIR/review.pending"; touch "$REVIEW_STATE"
+review_state_get() { grep -F "$1|" "$REVIEW_STATE" 2>/dev/null | head -1; }
+review_state_del() { # <eid>（sed 免疫点号通配：用 awk 精确首列）
+  local _f; _f=$(mktemp) || return 0
+  awk -F'|' -v e="$1" '$1 != e' "$REVIEW_STATE" > "$_f" 2>/dev/null || true
+  cat "$_f" > "$REVIEW_STATE"; rm -f "$_f"
+}
+review_state_set() { echo "$1|$2|$3|$4|$(date +%s)" >> "$REVIEW_STATE"; } # <eid> <state> <ask_eid> <u>
+
+approve_is_critical() { # <body> → 0=关键(挂真人) 1=过程性
+  local low; low=$(printf '%s' "$1" | tr 'A-Z' 'a-z')
+  if printf '%s' "$low" | grep -qE \
+      -e 'git .*push.*origin.* main( |$)' \
+      -e 'git .*push.*origin.*:main( |$)' \
+      -e 'git .*push.*origin.* master( |$)' \
+      -e 'git .*push.*origin.*:master( |$)' \
+      -e 'git .*push.*origin/(main|master)' \
+      -e 'rm -[rf][rf]? ' -e 'push .*--force' -e '--force-push' \
+      -e 'drop table' -e 'unlink\('; then
     return 0
   fi
-  local room="$1"
+  if [[ -n "${MX_APPROVE_CRITICAL_EXTRA:-}" ]] && printf '%s' "$low" | grep -qE "${MX_APPROVE_CRITICAL_EXTRA}"; then
+    return 0
+  fi
+  return 1
+}
+
+dm_room_agent() { # <fromUser> <agentOwner> → room_id（人类 from 邀 agentOwner 的 agent；agent 侧 _on_invite 自动加入）
+  local a="$1" b="$2" key="dma_${a}_${b}" cached rid
+  cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
+  rid=$(mx "$(load_token "$a")" POST createRoom "$(jq -n --arg t "$(agent_mxid "$b")" \
+    '{is_direct:true, preset:"trusted_private_chat", invite:[$t]}')" | jq -r '.room_id')
+  [[ "$rid" == '!'* ]] || return 1
+  sset "$key" "$rid"; echo "$rid"
+}
+
+approve_deny() { # <u> <room> <eid> <reason> —— 线程内 !deny（理由回传请求 agent）
+  local u="$1" room="$2" eid="$3" reason="$4" reply_eid root tok payload
+  tok=$(load_token "$u")
+  root=$(mx_messages "$tok" "$room" 20 2>/dev/null | jq -r --arg e "$eid" \
+    '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || root="$eid"
+  payload=$(jq -n --arg r "$root" --arg e "$eid" --arg d "!deny ${reason}" \
+    '{msgtype:"m.text", body:$d, m.relates_to:{rel_type:"m.thread", event_id:$r, is_falling_back:true, m.in_reply_to:{event_id:$e}}}')
+  reply_eid=$(mx "$tok" POST "rooms/$room/send/m.room.message" "$payload" | jq -r '.event_id // empty' 2>/dev/null) || true
+  echo "$eid DENIED:${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
+  note "[$u][代审拒绝] !deny 已发（请求 ${eid} → ${reply_eid:-NO_REPLY}）理由：${reason:-未给}"
+}
+
+approve_review_ask() { # <u> <eid> <body> —— 发审阅 DM 给代审 agent，记 ASKED 态
+  local u="$1" eid="$2" body="$3" reviewer rv_dm ask_eid
+  reviewer="${MX_REVIEW_AGENT:-fanfan}"
+  rv_dm=$(dm_room_agent "$u" "$reviewer") || {
+    note "[${u}][代审 DM 建房失败→转人工挂起] ${eid}"; echo "$eid HUMAN_PENDING $u $(date +%s)" >> "$APPROVED_LOG"; return 0; }
+  ask_eid=$(mx_send "$(load_token "$u")" "$rv_dm" "[审批复核] 请以审批复核人身份代 ${u} 复核其 agent 请求执行的操作：
+
+${body}
+
+审阅口径：建卡/查询/本地构建等过程性操作符合任务口径即批；越权、破坏性、明显偏离任务目标应拒。
+请仅回复一行：APPROVE 或 REJECT <一句理由>。")
+  if [[ -z "$ask_eid" ]]; then
+    note "[${u}][代审 DM 发送失败→转人工挂起] ${eid}"; echo "$eid HUMAN_PENDING $u $(date +%s)" >> "$APPROVED_LOG"; return 0
+  fi
+  review_state_set "$eid" "ASKED" "$ask_eid" "$u"
+  note "[${u}→${reviewer}-agent] 代审请求已发（${eid}），等复核回复"
+}
+
+approve_review_poll() { # <u> <room> <eid> <state-line> → 0=流转中/已处理 2=代审通过(走原批准动作)
+  local u="$1" room="$2" eid="$3" line="$4" ask_eid ts reviewer rv_dm verdict
+  ask_eid=$(printf '%s' "$line" | cut -d'|' -f3); ts=$(printf '%s' "$line" | cut -d'|' -f5)
+  reviewer="${MX_REVIEW_AGENT:-fanfan}"
+  if (( $(date +%s) - ${ts:-0} > ${MX_REVIEW_TIMEOUT:-1800} )); then
+    review_state_del "$eid"
+    echo "$eid HUMAN_PENDING $u $(date +%s)" >> "$APPROVED_LOG"
+    note "[${u}][代审超时转人工] ${reviewer}-agent 未在 ${MX_REVIEW_TIMEOUT:-1800}s 内复核 ${eid}，请真人接手"
+    return 0
+  fi
+  rv_dm=$(sget "dma_${u}_${reviewer}")
+  [[ -n "$rv_dm" ]] || { dm_room_agent "$u" "$reviewer" >/dev/null 2>&1 || true; return 0; }
+  verdict=$(mx_messages "$(load_token "$u")" "$rv_dm" 30 2>/dev/null | jq -r --arg m "$ask_eid" --arg s "$(agent_mxid "$reviewer")" '
+    (map(.event_id) | index($m) // -1) as $i
+    | (if $i < 0 then . else .[0:$i] end)
+    | map(select(.sender == $s)) | map(.content.body // "")
+    | map(select(test("^(APPROVE|REJECT)\\b")))[0] // empty' 2>/dev/null) || true
+  if [[ "$verdict" == APPROVE* ]]; then
+    review_state_del "$eid"
+    note "[${reviewer}-agent 代审通过] ${eid}"
+    return 2
+  elif [[ "$verdict" == REJECT* ]]; then
+    local reason; reason=$(printf '%s' "$verdict" | sed 's/^REJECT[[:space:]]*//' | cut -c1-200)
+    review_state_del "$eid"
+    approve_deny "$u" "$room" "$eid" "$reason"
+    return 0
+  fi
+  return 0
+}
+
+auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发（auto/manual/hybrid）
+  # manual：全部挂起等真人；hybrid：关键挂真人+过程性 agent 代审（见上块注释）；
+  # auto：历史行为——扫到即批（反应+线程内 !approve 双通道）。
+  local MODE="${MX_APPROVE_MODE:-auto}" room="$1"
+  [[ "$MODE" == "manual" ]] && return 0
   for u in "${INSTANCED_USERS[@]}"; do
     local pend
     # 去重改固定串（H5）：eid 形如 $abc…:matrix.test，当正则用时 `.` 是通配、^eid 还前缀
@@ -211,6 +312,25 @@ auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份批准
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK"))) | .event_id' 2>/dev/null \
       | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
+      if [[ "$MODE" == "hybrid" ]]; then
+        local body line rc
+        body=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg e "$eid" \
+          '[.[] | select(.event_id == $e)][0].content.body // ""' 2>/dev/null) || body=""
+        if approve_is_critical "$body"; then
+          echo "$eid HUMAN_PENDING $u $(date +%s)" >> "$APPROVED_LOG"
+          note "[${u}][人工审批挂起] 关键操作待真人复核：element 以 ${u} 回复 !approve / !deny —— $(printf '%s' "$body" | head -c 100 | tr '\n' ' ')"
+          continue
+        fi
+        line=$(review_state_get "$eid")
+        if [[ -z "$line" ]]; then
+          approve_review_ask "$u" "$eid" "$body"
+          continue
+        fi
+        approve_review_poll "$u" "$room" "$eid" "$line"
+        rc=$?
+        (( rc == 2 )) || continue
+        note "[hybrid] 代审通过→执行批准 ${eid}"
+      fi
       local reply_eid="" react_eid="" root
       # 反应通道（✅=once）：按 prompt.session_key 直解，不受线程/会话路由影响，是双兜底之一
       react_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.reaction" \
