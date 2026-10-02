@@ -28,6 +28,8 @@ spec:
         "@/custom/": "./custom/client/"
         "@custom/": "./custom/client/"
       ignoredSpecifiers:
+        # 相对路径逃出 workspace（测试直插上游源文件）——接地属上游职责
+        - "../../../"
         - "@/"
         # 上游未声明、实为其传递依赖的直接借用（上游仓只读，声明化属上游职责，借用期豁免留痕）：
         #   d3-force（loop graph 力导布局，上游 d3 生态传递依赖）
