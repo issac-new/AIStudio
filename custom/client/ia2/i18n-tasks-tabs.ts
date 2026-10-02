@@ -19,6 +19,7 @@ const TASKS_TABS_TEXT = {
     tabGovRegistry: '台账与规则',
     tabGovAudit: '审计与变更',
     tabGovDocs: '文档评审',
+    tabGovHarness: '驾驭工程',
   },
   en: {
     tabBoard: 'Board',
@@ -29,6 +30,7 @@ const TASKS_TABS_TEXT = {
     tabGovRegistry: 'Registry & Rules',
     tabGovAudit: 'Audit & Change',
     tabGovDocs: 'Docs & Review',
+    tabGovHarness: 'Harness',
   },
 } as const
 
