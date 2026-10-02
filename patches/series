@@ -435,3 +435,6 @@
 #      verbatim 归档/召回（懒推进 advance + sessions/windows/window/search/state）。
 #      零压缩链改动，只读开库；锚点行脱敏。
 544-server-context-archive-routes.patch
+# 545（上下文无损滚存 2026-10-02，C3）：跨窗工作笔记 REST 挂载——CRUD/search +
+#      新鲜度门（笔记 updatedAt 落后最近归档 archivedAt 即 stale）+ hasNotes 诚实降级。
+545-server-ctx-notes-routes.patch
