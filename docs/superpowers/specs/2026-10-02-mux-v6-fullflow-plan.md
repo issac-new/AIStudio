@@ -1,7 +1,7 @@
 # Swarm Studio 全流程推演方案（V6 整合版）
 
 > **文档定位**：全流程推演唯一正本（V6 终态版）——26 步主链与六道硬闸为契约层（自 V5 起稳定，run7 在途执行即本契约）；四组件能力底座、治理总则、报告规范、运行手册与推演纪律为规则层。历史沿革与过程记档见 `2026-09-29-mux-v5-fullflow-plan-changelog-archive.md`（V3/V4/V5 底本脉络俱存档其中），本文不保留修订过程层。
-> **当前基准**：overlay main fdba8f63 系（含四源文 12 提案甲乙丙三组全落地 patch 542-545、QGate v0.3、保真开关面 gate_review v3/hybrid 审批）；run7（RUN=20261002-v5-run7）起跑基准=11767f6f 系。推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **当前基准**：overlay main 6a146cbe 系（含四源文 12 提案甲乙丙三组全落地 patch 542-546 与 2026-10-03 遗留收口【merge-review 裁决台账闭环+压缩边界史按次切窗】、QGate v0.3、保真开关面 gate_review v3/hybrid 审批）；run7（RUN=20261002-v5-run7）起跑基准=11767f6f 系。推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 > **V5→V6 重构要点**：①新增第二章「四组件能力底座与设计初衷」（用户指令：依据四组件最新全量功能重构方案）；②修正 V5 §一"5 个产品面"与 §十三"驾驶舱单一面"的口径矛盾（统一为驾驶舱单面六功能区）；③收编四源文 12 提案落地态（KG 演化治理/驾驭工程治理面/无损换窗）与保真运行开关面；④运行手册纪律十条扩至十三条。
 
 ---
@@ -26,9 +26,9 @@
 |---|---|---|
 | governance | 治理中心：六闸工件真 git 实查+六域体检+知识分区/决策图谱/PROV-O | patch 490，governance-controller.ts |
 | change-gov | 变更治理 L1-L4 分级评审/决策时效/五维影响/三级冻结闸 | patch 511 |
-| kg-evolution | KG 演化治理：自动同步攒批/相似度三档去重/治理分级熔断/版本快照回滚（A1-A4） | patch 542 |
+| kg-evolution | KG 演化治理：自动同步攒批/相似度三档去重/治理分级熔断/版本快照回滚（A1-A4）+merge-review 裁决台账闭环 | patch 542 |
 | harness | 驾驭工程治理面：统一能力目录/六类成本账/L1-L5 成熟度自检/八工程原语对账（B1-B4） | patch 543 |
-| context-archive + ctx-notes | 无损换窗：旧窗 verbatim 归档召回/机械交接锚点/跨窗笔记新鲜度门（C1-C4） | patch 544+545 |
+| context-archive + ctx-notes | 无损换窗：旧窗 verbatim 归档召回（压缩边界史按次切窗）/机械交接锚点/跨窗笔记新鲜度门（C1-C4） | patch 544+545+546 |
 | kanban + column-automation | 看板域+列编排配置（requiredArtifacts 缺件不过列） | column-automation-controller.ts |
 | approvals / approval | 审批收件箱（pending/decide/history）+ 审批候选/规则评估 | patch 488 / 402 |
 | loop + graph | 循环引擎与图路由（cron-bridge） | patch 472 |
@@ -362,9 +362,9 @@ graph TB
 
 | 项 | 内容 | 落点/验证 |
 |---|---|---|
-| P18 甲组 KG 演化治理四件套 | A1 自动同步攒批窗口（kgtrigger 域：攒 N 条或等够 T 秒先到先触发、advanceTick 状态机+首见建基线、KG_AUTO_SYNC 总闸）+A2 相似度三档去重（Jaccard+Levenshtein 加权、≥0.85 自动别名/[0.6,0.85) 转人工/<0.6 新实体）+A3 合并治理分级+熔断（涉层级转 manual、批新增比>20% 熔断全转人工、空图冷启动豁免）+A4 板级 KG 版本快照+回滚（tmp+rename 快照、pre-rollback 另存可再回滚） | 304c3006 merge；patch 542；/api/kg-evolution 六路（status/tick/arm/disarm/versions/rollback）+super_admin 写闸；治理中心知识分区 UI（同步报告/版本下拉+两步回滚/自动同步状态行/相似度标签）e033da08 |
+| P18 甲组 KG 演化治理四件套 | A1 自动同步攒批窗口（kgtrigger 域：攒 N 条或等够 T 秒先到先触发、advanceTick 状态机+首见建基线、KG_AUTO_SYNC 总闸）+A2 相似度三档去重（Jaccard+Levenshtein 加权、≥0.85 自动别名/[0.6,0.85) 转人工/<0.6 新实体）+A3 合并治理分级+熔断（涉层级转 manual、批新增比>20% 熔断全转人工、空图冷启动豁免）+A4 板级 KG 版本快照+回滚（tmp+rename 快照、pre-rollback 另存可再回滚） | 304c3006 merge；patch 542；/api/kg-evolution 六路（status/tick/arm/disarm/versions/rollback）+super_admin 写闸；治理中心知识分区 UI（同步报告/版本下拉+两步回滚/自动同步状态行/相似度标签）e033da08；收口轮裁决台账闭环（board-adjudicated 持久化，keep-existing 不再重扣死循环）0a3ffe32 |
 | P18 乙组驾驭工程治理面四件套 | B1 统一能力目录（三系 mcpcatalog/extmarket/registry-admin 只读聚合读模型+四要素缺口报告）+B2 六类成本账（token/人工干预/工具执行/等待时延/故障返工/安全治理）+B3 L1-L5 成熟度量化自检（人工介入率/审计完整率/单位任务成本/失败率/MTTR，自检清单非认证）+B4 八工程原语对账（任务/会话/状态/工具/记忆/权限/评估/审计的唯一标识+版本+生命周期，静态定义锚点+活体计数+覆盖矩阵） | b755e548 merge；patch 543；/api/harness 四子路由 812ec073；驾驭工程页签（四 Section 聚合+TasksView 注册）d5521b37 |
-| P18 丙组无损换窗四件套 | C1 旧窗 verbatim 归档+召回（零摘要，sessions/windows/search/state/advance 召回 API+会话可观测）+C2 机械交接锚点（窗口号/任务/最近动作三行，零模型调用）+C3 跨窗工作笔记（ctx-notes CRUD/search+新鲜度门 STALE 警示+"从未写笔记"诚实降级）+C4 强制脱敏+engine-state 可观测 | 1b9ddac0 merge；patch 544+545 |
+| P18 丙组无损换窗四件套 | C1 旧窗 verbatim 归档+召回（零摘要，sessions/windows/search/state/advance 召回 API+会话可观测）+C2 机械交接锚点（窗口号/任务/最近动作三行，零模型调用）+C3 跨窗工作笔记（ctx-notes CRUD/search+新鲜度门 STALE 警示+"从未写笔记"诚实降级）+C4 强制脱敏+engine-state 可观测 | 1b9ddac0 merge；patch 544+545；收口轮压缩边界史表（chat_compression_boundary_history 追加式，advance 按次切窗/缺表回落/防御兜底，boundarySource 溯源）e02550e3 |
 | P19 保真运行开关面 | MX_BGREVIEW（默认 0 关每 turn 自动 fork；background_review 收敛到治理卡点）+gate_review v3（扫群定位 agent 最近工作线程、thread 内发纯命令 body `!refine <闸>`——与 !approve 同构路由；v1 DM 垫话空会话/v2 @mention 前缀致 matrix 命令归一化失效均已废）+MX_APPROVE_MODE auto（默认，脚本秒批双通道）/hybrid（关键动作真人 element 手批+过程性代审 agent DM 复核+超时转人工）/manual+MX_REASONING_EFFORT（默认保持宿主 ultra）+memory 对齐宿主 4400/2750 | 8f93a048+a74ec6e3+b4603ef9+78527e0a+479178a0+a0fe08a1+dfb302c4+d1e24f9e；分类器 14/14 单测+poll jq 4 用例；run7 为混合状态轮（前 11 步关 review 后开），报告引用性能数据须标注口径 |
 | P20 loop/构建链 ts-node 真启动修复族 | cron-parser 退役遮蔽垫片改真 API 具名导入+local-store proper-lockfile.d.ts 三斜线引用+computeNextTick 可空兜底+控制器回包 ok 键重复展开序统一——vitest esbuild 不查类型、ts-node 真编译抓出的潜伏族；540/543 重生成锚到纯净重放态（跨组 routes 锚撞与干净树不可重放雷根治） | fdba8f63/20e94bce/55d4f7cd/bcaedeca/175e89d8+8251f51d |
 
@@ -548,7 +548,7 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 
 ### 14.3 补丁族记档（推演环境相关）
 
-539/541=/hermes/history 死导航清族；540=看板选板迁分层；537/538 深链+badge 注入树实施；542=kg-evolution 六路挂载；543=harness 四子路由挂载；544/545=context-archive+ctx-notes 挂载。540/543 已重生成锚到纯净重放态（8251f51d，全链重放确定性验证）。
+539/541=/hermes/history 死导航清族；540=看板选板迁分层；537/538 深链+badge 注入树实施；542=kg-evolution 六路挂载；543=harness 四子路由挂载；544/545=context-archive+ctx-notes 挂载；546=压缩边界史表（收口轮）。540/543 已重生成锚到纯净重放态（8251f51d，全链重放确定性验证）。
 
 ### 14.4 开放线（记档防丢，不阻塞推演轮）
 
