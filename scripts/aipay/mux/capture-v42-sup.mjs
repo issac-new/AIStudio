@@ -116,7 +116,7 @@ async function shot(name, url, opts = {}) {
 }
 
 // ── 治理中心：总览 + 工件详情位（kinds 对齐 governance-controller GOVERNANCE_DOCS）──
-await shot('ui-gov-center', '/app/gov', { wait: 6500, verify: govReady })
+await shot('ui-gov-center', '/app/board?tab=gov-docs', { wait: 6500, verify: govReady })  // 治理中心正身=看板 gov-docs tab（/app/gov 别名落 gov-org 无工件库钮）
 
 const DOCS = [
   ['ui-gov-roster', 'roster', '账号清单'],
@@ -138,7 +138,7 @@ const DOCS = [
 ]
 for (const [name, kind, titleFrag] of DOCS) {
   if (existsSync(`${OUT}/${name}.png`) && !process.env.FORCE) { console.log('skip(已有):', name); continue }
-  await goHash('/app/gov', govReady)
+  await goHash('/app/board?tab=gov-docs', govReady)
   await dismissOverlays()
   let ok = false
   for (let attempt = 0; attempt < 2 && !ok; attempt++) {
