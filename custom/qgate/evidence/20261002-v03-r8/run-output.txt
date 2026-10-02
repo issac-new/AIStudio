@@ -1,0 +1,5 @@
+--- 主树终验（2026-10-02，R8 merge 后）---
+npm test: Tests 3540 passed | 1 skipped (3541)   ← ia2 根治后零红
+qgate run engineering.basic-check: PASS（exit 0；内核重算 junit 3540 total）
+qgate run L1.symbol-grounding: CONDITIONAL（advisory；2844 条=幽灵依赖+@ alias 真实卫生债，诚实显示）
+四档：vibe-fast 7 / feature-close 9 / high-assurance 17 / release 17（共 44 门）
