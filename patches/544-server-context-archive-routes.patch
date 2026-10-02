@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 00b465c..c013f9b 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -117,6 +117,8 @@ import { askRoutes } from '../custom/ask/ask-controller'
+ import { escalationRoutes } from '../custom/escalation/escalation-controller'
+ // overlay[mcpconfig]: MCP 配置管理（kimi /mcp-config 余项，矩阵 §3.3 P1）
+ import { mcpConfigRoutes } from '../custom/mcpconfig/mcp-config-controller'
++// overlay[contextarchive]: 上下文无损滚存——旧窗 verbatim 归档/召回（C1/C4，dsh-smart-compact）
++import { contextArchiveRoutes } from '../custom/contextarchive/context-archive-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -372,6 +374,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(askRoutes.routes())                     // 结构化问卷：1-4 步契约/一次定音（P1 §3.4）
+   app.use(escalationRoutes.routes())              // 权限升级：urgency 三档/批准即改沙箱（P1 §3.6）
+   app.use(mcpConfigRoutes.routes())              // MCP 配置：scope 三选一/needs-auth 闭环（P1 §3.3）
++  app.use(contextArchiveRoutes.routes())          // 上下文档案：sessions/windows/window/search/state/advance（C1 召回 + C4 可观测）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），

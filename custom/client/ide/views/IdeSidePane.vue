@@ -24,6 +24,7 @@ import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
 import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
 import IdeTrajectoryPane from '../components/IdeTrajectoryPane.vue'
+import IdeContextArchivePane from '../components/IdeContextArchivePane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 import {
   loadTerminalActions,
@@ -33,7 +34,7 @@ import {
   type TerminalAction,
 } from '../utils/terminalActions'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const ide = useIdeStore()
 const message = useMessage()
 
@@ -54,14 +55,21 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'hooks', icon: '⚓' },
   { key: 'slash', icon: '/' },
   { key: 'trajectory', icon: '∿' },
+  { key: 'ctxarchive', icon: '▤' },
 ]
 
 // 漂移期本地字典兜底（i18n-observatory）：locale 词表键 tab_trajectory 尚未
 // 收编进 473 单一事实源，缺键时 t() 回显键名——trajectory 页签 title 走本地字典。
+// ctxarchive 同款（上下文无损滚存批）：本地字典，473 恢复后一并收编。
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
 const obsTx = useRunSurfaceText()
+const CTXARCHIVE_TAB_TITLE = { zh: '上下文档案', en: 'Context Archive' } as const
 function tabTitle(key: IdeSidePaneTab): string {
   if (key === 'trajectory') return obsTx.value.trajTabTitle
+  if (key === 'ctxarchive') {
+    const loc = String((locale as unknown as { value?: string } | undefined)?.value ?? 'zh')
+    return loc.startsWith('zh') ? CTXARCHIVE_TAB_TITLE.zh : CTXARCHIVE_TAB_TITLE.en
+  }
   return t(`ide.sidePane.tab_${key}`)
 }
 
@@ -228,6 +236,7 @@ function focusMainChat(): void {
       <IdeHooksPane v-else-if="ide.sidePane.tab === 'hooks'" class="ide-sidepane__fill" data-testid="ide-sidepane-hooks" />
       <IdeSlashCommandsPane v-else-if="ide.sidePane.tab === 'slash'" class="ide-sidepane__fill" data-testid="ide-sidepane-slash" />
       <IdeTrajectoryPane v-else-if="ide.sidePane.tab === 'trajectory'" class="ide-sidepane__fill" data-testid="ide-sidepane-trajectory" />
+      <IdeContextArchivePane v-else-if="ide.sidePane.tab === 'ctxarchive'" class="ide-sidepane__fill" data-testid="ide-sidepane-ctxarchive" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">

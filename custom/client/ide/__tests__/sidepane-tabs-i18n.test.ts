@@ -25,7 +25,9 @@ describe('IdeSidePane 页签 i18n 守门（无裸键）', () => {
   // 漂移期本地字典豁免（i18n-observatory.ts 兜底，同 i18n-run-surface 先例）：
   // tab_trajectory 键走本地字典（IdeSidePane.tabTitle 分支），473 恢复后收编进
   // locale 并从本豁免清单移除（届时本守门重新全覆盖）。
-  const LOCAL_DICT_EXEMPT = new Set(['trajectory'])
+  // ctxarchive（上下文无损滚存批，2026-10-02）同款：IdeSidePane.tabTitle 本地
+  // 字典分支 + 面板内自备 zh/en 词条（IdeContextArchivePane CTX_TEXT）。
+  const LOCAL_DICT_EXEMPT = new Set(['trajectory', 'ctxarchive'])
 
   it('TABS 解析非空（组件重构时同步本守门）', () => {
     expect(keys.length).toBeGreaterThan(5)

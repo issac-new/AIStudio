@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index c013f9b..d856338 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -119,6 +119,8 @@ import { escalationRoutes } from '../custom/escalation/escalation-controller'
+ import { mcpConfigRoutes } from '../custom/mcpconfig/mcp-config-controller'
+ // overlay[contextarchive]: 上下文无损滚存——旧窗 verbatim 归档/召回（C1/C4，dsh-smart-compact）
+ import { contextArchiveRoutes } from '../custom/contextarchive/context-archive-controller'
++// overlay[ctxnotes]: 跨窗工作笔记——压缩换窗后保留，落后于归档即 STALE（C3）
++import { ctxNotesRoutes } from '../custom/ctxnotes/ctx-notes-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -375,6 +377,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(escalationRoutes.routes())              // 权限升级：urgency 三档/批准即改沙箱（P1 §3.6）
+   app.use(mcpConfigRoutes.routes())              // MCP 配置：scope 三选一/needs-auth 闭环（P1 §3.3）
+   app.use(contextArchiveRoutes.routes())          // 上下文档案：sessions/windows/window/search/state/advance（C1 召回 + C4 可观测）
++  app.use(ctxNotesRoutes.routes())                // 跨窗笔记：CRUD/search + 新鲜度门（C3）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
