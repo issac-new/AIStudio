@@ -670,6 +670,11 @@ DOMAINS = [
      'cp-g5,cp-g6'),
 ]
 
+# ── 六域按轮覆写（2026-10-02 run6 实锤：静态兜底是 run5 旧账，直接渲染=旧账冒充本轮）──
+_DOMAINS_RUN6 = {0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass', '无漏做。验收标准 7 条可判定（freeze 18c9d77 补推后在仓）；如实边界：两份渠道系分（微信/支付宝）超时未入库已记问题单，代码实现在开发线补齐。', '实测：AC 判定 7 条 · freeze 在仓（18c9d77）· 渠道系分 2/4 入库（超时 2 记单）', 'cp-g1,cp-g6'), 1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass', '成立（本轮真实提交实证）。四开发分支全部含本轮 commit 与 testlog（chen 28c3517 五子卡/hu S1-S3/lin/xiao 8c0207f），集成复跑 194/194 全绿零缺陷。', '实测：四分支 run6 commit 锚 · 测试报告 8dbf5bf（194/194）', 'cp-g3,cp-g4'), 2: ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass', '一致（对账沿用+本轮反查）。契约口径（snake_case/金额分 int64/渠道 mock）在概设定稿，测试用例按契约反查一致；本轮未重跑治理 API 全量巡检（沿用既有实测，如实标注）。', '实测：概设契约×测试用例反查一致 · 治理 API 巡检本轮未重跑（沿用声明）', 'cp-g1,cp-g5'), 4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass', '可接受。安全探针（无 token/伪造 token→401）沿用既有实测，本轮未重跑（如实标注）；渠道端点全 mock、密钥不出服务端、金额分 int64 沿契约。', '实测：本轮未重跑安全探针（沿用既有 401 双探针结论，声明来源）', 'cp-gate,cp-g3'), 5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn', '可追责但记账有缺口：19 问题单全部在案、DISP 处置记账 0 条（缺口如实，复盘记单；终版合并报告已分档处置）；REL-MERGE/G1 推送/UAT 结论行三笔导演补账均留痕注明；UAT 七条证据 7/7 在案。', '实测：issues 19 条在案 · DISP 0（缺口记单）· 三笔补账留痕（f7b1cbc/18c9d77/$V_jLqhvn）', 'cp-g5,cp-g6')}
+if RUN_ID == '20261001-v5-run6':
+    DOMAINS = [_DOMAINS_RUN6.get(i, d) for i, d in enumerate(DOMAINS)]
+
 # ── 六域台账（真实产品功能产出，治理中心「六域体检」运行落账）──
 # 有台账：判定/证据取最新轮（真实流程中运行的检查器输出）；
 # 无台账：回落下方内置静态实测（2026-09-28 手工实测留档），并在表头声明来源。
@@ -1060,9 +1065,25 @@ except Exception as _e:
     import html as _H
     _narrative_html = (f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;'
                        f'color:#92400e">叙事层生成失败（如实标注）：{_H.escape(str(_e))}</div>')
+_AUDIT_RUN2_BLOCK_HD = '<p class="stat-note"><b>以下为 v4-run2（2026-09-29）轮独立审计史实</b></p>'
+_AUDIT_RUN2_BLOCK = '  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与导演侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收口轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。<b>收口追记（2026-09-29 10:52）：R1-R4 闭环、G5 复审 r8 READY-GATE-PASS、REL-* 解冻、UAT 条件解除</b>——判废口径经闭环转正，全链锚点见处置表。</p>\n  <details class="audit" open><summary>▶ 独立审计 10 项判定与处置</summary>\n  <table style="margin-top:8px"><tr><th>#</th><th>发现</th><th>判定</th><th>处置</th></tr>\n  <tr><td>1</td><td>G5 落键"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入守门用例；步 20 判回滚→复审 r8 PASS（闭环）</td></tr>\n  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修+已闭环：H11 机制根治；回补 merge 67a1a95（丢线整线回归）+同基线复验 194/194+6/6+42/42+220（2026-09-29）</td></tr>\n  <tr><td>3</td><td>UAT"全过"与证据行矛盾（AC-4/AC-7 有条件通过）+基线锚断裂</td><td>属实</td><td>已修（根因）：H9 逐条判词（有条件≠无条件验收，放行权归 bella）；验收书勘误入 origin/main</td></tr>\n  <tr><td>4</td><td>G3 硬门无落键，治理报告跳过 G3/G6</td><td>属实</td><td>已修：H10 g3_code_pass 落键+治理报告六闸全列</td></tr>\n  <tr><td>5</td><td>评审卡缺失由导演登记即置 done</td><td>属实</td><td>已修（R-A4）：补登记卡保留"评审记录待补"，不自批置 done</td></tr>\n  <tr><td>6</td><td>G5 HumanGate 自评自批；approved.events 无 G5 审批事件</td><td>属实（部分环境局限）</td><td>部分已修：HumanGate 批准事件入 approved.events 可反查；审批人独立性=单操作者推演局限，观察记档</td></tr>\n  <tr><td>7</td><td>问题单 DISP 0 条；ISSUES-LOG 未收录；复盘计数 5≠6</td><td>属实</td><td>已修（R-A5）：DISP 6/6 补记+ISSUES-LOG 回灌+复盘计数勘误</td></tr>\n  <tr><td>8</td><td>完备性检查留痕未受控删行；台账同名 G5 卡双态</td><td>部分属实</td><td>删行来源未查明→已回滚恢复留痕原貌（快照不可变）；双态卡=各轮卡并存，观察记档</td></tr>\n  <tr><td>9</td><td>G6 复盘模板话术/交叉引用断链/metrics 口径偏离</td><td>属实</td><td>部分已修：复盘逐单归类+断链修正+行动项补 R-A1..R-A6；metrics 口径重出延后（行动项）</td></tr>\n  <tr><td>10</td><td>导演侧意见书"通过（无发现）"不成立</td><td>属实</td><td>已修（R-A6）：意见书勘误改判"有保留（待整改）"，以独立意见为准</td></tr>\n  </table></details>\n  <p class="stat-note">抽检通过项（独立审计留痕）：G1 四要素真实可判 · G2 留痕完整（t_11e182b3 独立评审人）· 测试内容真实性（testlog 实物与报告数字一致）· 复盘对事不对人口径 · 评审人如实报 FAIL 附取证。另有收口补充处置：报告路由缺陷 H7（05:15 首次生成落全局目录拿旧轮 state）已修并重生成本报告；双驱动污染窗口 02:26:04–02:37:56（run1 ready 续跑误抢活锁，H1 已修）如实记档。</p>'
+audit_response_section = (_AUDIT_RUN2_BLOCK_HD + _AUDIT_RUN2_BLOCK) if RUN_ID == '20260929-v4-run2' else (
+    '<p class="stat-note">本轮（RUN=' + RUN_ID + '）无独立审计处置段——该段为 v4-run2 轮专属治理史，对其他轮渲染属旧账冒充，2026-10-02 根治。本轮独立审计结论见仓库 docs/audit/ 合规意见书。</p>')
+
+_GOV_METRICS_RUN2 = '<tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚（R-A1）→ R-A3 闭环复审 PASS（r8）</b>；"4/4 首过"口径判废后经闭环转正 · G3 落键缺失（R-A4 已修）</td></tr>\n    <tr><td>问题单终态</td><td>{stat}</td></tr>\n    <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>\n    <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>\n    <tr><td>发布状态</td><td><b>R-A3 已闭环、发布解冻</b>（2026-09-29 10:52）：G5 复审 r8 READY-GATE-PASS（独立评审），REL-* 三卡 blocked→ready（解冻批准入 approved.events）；放行后动作 R5（RELEASE.md 替换）随发布执行</td></tr>'
+_GOV_METRICS_RUN6 = '<tr><td>闸门判定</td><td><b>六闸全过</b>：G1 10-01 08:23（推送失败当日补账 18c9d77）· G2 10-01 18:57 · G3 10-02 08:44 · G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d 七项全过）· G6 12:03:24</td></tr>\n<tr><td>问题单终态</td><td>{stat}</td></tr>\n<tr><td>测试口径</td><td>TEST-BE 194/194 全绿零缺陷（报告 8dbf5bf，被测 8ec13c3）· TEST-FE 全绿（TEST-PASS-TEST-FE 13:50，push 039a6da）——测试者独立于开发线</td></tr>\n<tr><td>UAT 判词</td><td><b>七条 AC 证据 7/7 PASS</b>（UAT-EVIDENCE 行 $V_jLqhvn）；验收书判词列"未见"为模板解析口径缺陷（证据行在案，记单待修）</td></tr>\n<tr><td>发布状态</td><td><b>已发版</b>：REL-MERGE 合 main（f7b1cbc，导演补账留痕）· REL-DELIVER 卡 t_5f8c2d25 · 验收书入仓 12:03:04</td></tr>'
+gov_metrics_rows = (_GOV_METRICS_RUN6 if RUN_ID == '20261001-v5-run6'
+                   else _GOV_METRICS_RUN2 if RUN_ID == '20260929-v4-run2'
+                   else '<tr><td>问题单终态</td><td>{stat}</td></tr>')
+
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists()})
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
+
+ckpt_intro_note = ('九个人工卡点按流程顺序排列——每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。'
+                   if total_imgs > 0 else
+                   '九个人工卡点按流程顺序排列——谁在把关、把什么关、证据在哪。本轮未拍摄界面截图（推演主验证流程与协作，界面沿用既有版本）：卡点证据以过程日志与仓内锚点为准，配图位留空不冒充实拍。')
+
 
 # ── 闸门仪表盘 ──
 
@@ -1375,7 +1396,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <div class="gates">{gate_cards()}</div>
 
   <h2 class="section-hd" id="checkpoints">关键卡点 · 人工把关实拍现场</h2>
-  <p class="stat-note">九个人工卡点按流程顺序排列——每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。</p>
+  <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
 
   {content_html}
@@ -1390,22 +1411,9 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
 
 
-  <h2 class="section-hd" id="audit-response">独立审计与处置 · AUDIT-OPINION-CONCERNS（10/10 逐条）</h2>
-  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与导演侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收口轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。<b>收口追记（2026-09-29 10:52）：R1-R4 闭环、G5 复审 r8 READY-GATE-PASS、REL-* 解冻、UAT 条件解除</b>——判废口径经闭环转正，全链锚点见处置表。</p>
-  <details class="audit" open><summary>▶ 独立审计 10 项判定与处置</summary>
-  <table style="margin-top:8px"><tr><th>#</th><th>发现</th><th>判定</th><th>处置</th></tr>
-  <tr><td>1</td><td>G5 落键"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入守门用例；步 20 判回滚→复审 r8 PASS（闭环）</td></tr>
-  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修+已闭环：H11 机制根治；回补 merge 67a1a95（丢线整线回归）+同基线复验 194/194+6/6+42/42+220（2026-09-29）</td></tr>
-  <tr><td>3</td><td>UAT"全过"与证据行矛盾（AC-4/AC-7 有条件通过）+基线锚断裂</td><td>属实</td><td>已修（根因）：H9 逐条判词（有条件≠无条件验收，放行权归 bella）；验收书勘误入 origin/main</td></tr>
-  <tr><td>4</td><td>G3 硬门无落键，治理报告跳过 G3/G6</td><td>属实</td><td>已修：H10 g3_code_pass 落键+治理报告六闸全列</td></tr>
-  <tr><td>5</td><td>评审卡缺失由导演登记即置 done</td><td>属实</td><td>已修（R-A4）：补登记卡保留"评审记录待补"，不自批置 done</td></tr>
-  <tr><td>6</td><td>G5 HumanGate 自评自批；approved.events 无 G5 审批事件</td><td>属实（部分环境局限）</td><td>部分已修：HumanGate 批准事件入 approved.events 可反查；审批人独立性=单操作者推演局限，观察记档</td></tr>
-  <tr><td>7</td><td>问题单 DISP 0 条；ISSUES-LOG 未收录；复盘计数 5≠6</td><td>属实</td><td>已修（R-A5）：DISP 6/6 补记+ISSUES-LOG 回灌+复盘计数勘误</td></tr>
-  <tr><td>8</td><td>完备性检查留痕未受控删行；台账同名 G5 卡双态</td><td>部分属实</td><td>删行来源未查明→已回滚恢复留痕原貌（快照不可变）；双态卡=各轮卡并存，观察记档</td></tr>
-  <tr><td>9</td><td>G6 复盘模板话术/交叉引用断链/metrics 口径偏离</td><td>属实</td><td>部分已修：复盘逐单归类+断链修正+行动项补 R-A1..R-A6；metrics 口径重出延后（行动项）</td></tr>
-  <tr><td>10</td><td>导演侧意见书"通过（无发现）"不成立</td><td>属实</td><td>已修（R-A6）：意见书勘误改判"有保留（待整改）"，以独立意见为准</td></tr>
-  </table></details>
-  <p class="stat-note">抽检通过项（独立审计留痕）：G1 四要素真实可判 · G2 留痕完整（t_11e182b3 独立评审人）· 测试内容真实性（testlog 实物与报告数字一致）· 复盘对事不对人口径 · 评审人如实报 FAIL 附取证。另有收口补充处置：报告路由缺陷 H7（05:15 首次生成落全局目录拿旧轮 state）已修并重生成本报告；双驱动污染窗口 02:26:04–02:37:56（run1 ready 续跑误抢活锁，H1 已修）如实记档。</p>
+  <h2 class="section-hd" id="audit-response">独立审计与处置</h2>
+{audit_response_section}
+
 
   <h2 class="section-hd">闭环治理终态</h2>
   <div class="govgrid">
@@ -1413,11 +1421,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
     {''.join(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td><td class="{"err" if g == "G5" else "ok"}">{"✗ 判回滚（R-A1，实物 FAIL）" if g == "G5" else "✓"}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>' for g in ['G1','G2','G3','G4','G5','G6'])}
     </table>
     <table><tr><th>度量</th><th>终态值</th></tr>
-    <tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚（R-A1）→ R-A3 闭环复审 PASS（r8）</b>；"4/4 首过"口径判废后经闭环转正 · G3 落键缺失（R-A4 已修）</td></tr>
-    <tr><td>问题单终态</td><td>{stat}</td></tr>
-    <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>
-    <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>
-    <tr><td>发布状态</td><td><b>R-A3 已闭环、发布解冻</b>（2026-09-29 10:52）：G5 复审 r8 READY-GATE-PASS（独立评审），REL-* 三卡 blocked→ready（解冻批准入 approved.events）；放行后动作 R5（RELEASE.md 替换）随发布执行</td></tr>
+    {gov_metrics_rows}
     <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）{_BASELINE_NOTE}</td></tr></table>
   </div>
 
