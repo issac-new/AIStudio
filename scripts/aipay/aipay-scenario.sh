@@ -893,7 +893,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
   # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
   # 到达与取样都按行首正则判。
-  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "^UAT-EVIDENCE" "$UAT_TS"; then
+  if wait_alive_truth "UAT 证据行到位" 1800 fanfan room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "^UAT-EVIDENCE" "$UAT_TS"; then
     UAT_OK=1; UAT_MISS=""
     # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
     UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
