@@ -1071,10 +1071,50 @@ audit_response_section = (_AUDIT_RUN2_BLOCK_HD + _AUDIT_RUN2_BLOCK) if RUN_ID ==
     '<p class="stat-note">本轮（RUN=' + RUN_ID + '）无独立审计处置段——该段为 v4-run2 轮专属治理史，对其他轮渲染属旧账冒充，2026-10-02 根治。本轮独立审计结论见仓库 docs/audit/ 合规意见书。</p>')
 
 _GOV_METRICS_RUN2 = '<tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚（R-A1）→ R-A3 闭环复审 PASS（r8）</b>；"4/4 首过"口径判废后经闭环转正 · G3 落键缺失（R-A4 已修）</td></tr>\n    <tr><td>问题单终态</td><td>{stat}</td></tr>\n    <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>\n    <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>\n    <tr><td>发布状态</td><td><b>R-A3 已闭环、发布解冻</b>（2026-09-29 10:52）：G5 复审 r8 READY-GATE-PASS（独立评审），REL-* 三卡 blocked→ready（解冻批准入 approved.events）；放行后动作 R5（RELEASE.md 替换）随发布执行</td></tr>'
-_GOV_METRICS_RUN6 = '<tr><td>闸门判定</td><td><b>六闸全过</b>：G1 10-01 08:23（推送失败当日补账 18c9d77）· G2 10-01 18:57 · G3 10-02 08:44 · G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d 七项全过）· G6 12:03:24</td></tr>\n<tr><td>问题单终态</td><td>{stat}</td></tr>\n<tr><td>测试口径</td><td>TEST-BE 194/194 全绿零缺陷（报告 8dbf5bf，被测 8ec13c3）· TEST-FE 全绿（TEST-PASS-TEST-FE 13:50，push 039a6da）——测试者独立于开发线</td></tr>\n<tr><td>UAT 判词</td><td><b>七条 AC 证据 7/7 PASS</b>（UAT-EVIDENCE 行 $V_jLqhvn）；验收书判词列"未见"为模板解析口径缺陷（证据行在案，记单待修）</td></tr>\n<tr><td>发布状态</td><td><b>已发版</b>：REL-MERGE 合 main（f7b1cbc，导演补账留痕）· REL-DELIVER 卡 t_5f8c2d25 · 验收书入仓 12:03:04</td></tr>'
+_GOV_METRICS_RUN6 = '<tr><td>闸门判定</td><td><b>六闸全过</b>：G1 10-01 08:23（推送失败当日补账 18c9d77）· G2 10-01 18:57 · G3 10-02 08:44 · G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d 七项全过）· G6 12:03:24</td></tr>\n<tr><td>问题单终态</td><td>{stat}</td></tr>\n<tr><td>测试口径</td><td>TEST-BE 194/194 全绿零缺陷（报告 8dbf5bf，被测 8ec13c3）· TEST-FE 全绿（TEST-PASS-TEST-FE 13:50，push 039a6da）——测试者独立于开发线</td></tr>\n<tr><td>UAT 判词</td><td><b>七条 AC 证据 7/7 PASS</b>（UAT-EVIDENCE 行 $V_jLqhvn）；验收书初版判词列"未见"系判词器模板解析口径缺陷（证据行在案）——已根治（uat_ac_verdict 括号注/段首归属耐受）并出勘误版验收书</td></tr>\n<tr><td>发布状态</td><td><b>已发版</b>：REL-MERGE 合 main（f7b1cbc，导演补账留痕）· REL-DELIVER 卡 t_5f8c2d25 · 验收书入仓 12:03:04</td></tr>'
+# {stat} 占位符在按轮常量里——常量为普通字符串不会随模板 f-string 替换，须在此显式替换
+# （run6 实锤漏网：闭环治理终态表曾原样渲染 {stat}）。
 gov_metrics_rows = (_GOV_METRICS_RUN6 if RUN_ID == '20261001-v5-run6'
                    else _GOV_METRICS_RUN2 if RUN_ID == '20260929-v4-run2'
-                   else '<tr><td>问题单终态</td><td>{stat}</td></tr>')
+                   else '<tr><td>问题单终态</td><td>{stat}</td></tr>').replace('{stat}', stat)
+
+# hero 统计卡第三格按轮取值（run2 的 R-A3 闭环史曾硬编码渲进 run6——按轮隔离根治）；
+# 缺省从 state 六闸落键实算，不编造。
+def _hero_gate_default():
+    n_pass = sum(1 for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] if state.get(GATE_STATE_KEY[g]))
+    return (f'<b>六闸全过</b><span>G1–G6 全部落键通过</span>' if n_pass == 6
+            else f'<b>{n_pass}/6</b><span>闸门落键（未达项如实 ⬜）</span>')
+
+_HERO_GATE_HSTAT = {
+    '20260929-v4-run2': '<b>R-A3 闭环</b><span>G5 复审 r8 PASS · 发布解冻（10:52）</span>',
+    '20261001-v5-run6': '<b>六闸全过</b><span>已发版：REL-MERGE f7b1cbc 合入主干</span>',
+}
+
+# 闭环治理终态表「硬闸」列按轮隔离（run6 实锤漏网根治：run2 的 G5 判回滚史曾无条件
+# 渲进 run6 终态表，与同报告"六闸全过/已发版"自相矛盾）。某轮某闸有独立治理史实才
+# 登记覆盖条目；其余按 state 六闸落键实算（通过 ✓ / 未落键 ○），不编造。
+_GOV_FINAL_OVERRIDES_BY_RUN = {
+    '20260929-v4-run2': {
+        'G5': ('err', '✗ 判回滚（R-A1，实物 FAIL）→ R-A3 闭环复审 PASS（r8）'),
+    },
+    '20261001-v5-run6': {
+        'G5': ('ok', '✓ READY-GATE-PASS（t_3aaacf2d 七项全过）'),
+    },
+}
+
+def gov_final_rows():
+    rows = []
+    for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
+        ovr = _GOV_FINAL_OVERRIDES_BY_RUN.get(RUN_ID, {}).get(g)
+        if ovr:
+            cls, verdict = ovr
+        elif state.get(GATE_STATE_KEY[g]):
+            cls, verdict = 'ok', '✓'
+        else:
+            cls, verdict = 'gpending', '○ 未达'
+        rows.append(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td>'
+                    f'<td class="{cls}">{verdict}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>')
+    return ''.join(rows)
 
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists()})
@@ -1119,15 +1159,25 @@ def checkpoints_html():
     return '<div class="cp-grid">' + ''.join(cards) + '</div>'
 
 def gate_cards():
-    # 打回/判回滚记录（如实，run2）：G2 一次通过；G5 判词误过→独立审计 R-A1 判回滚
-    rejected = {'G5': '误过→R-A1 判回滚→R-A3 闭环复审 PASS（r8 @ 5c1a02d）'}
-    annot = {'G3': 'g3_code_pass 落键缺失（R-A4 已修）'}
+    # 打回/判回滚记录按轮隔离（run6 实锤漏网根治：run2 的 R-A1 判回滚史曾渲进 run6 门禁卡）。
+    # 某轮有真实打回环才登记该轮条目；无条目=该轮一次通过，如实渲染。
+    _GATE_REJ_BY_RUN = {
+        '20260929-v4-run2': {'G5': '误过→R-A1 判回滚→R-A3 闭环复审 PASS（r8 @ 5c1a02d）'},
+    }
+    _GATE_ANNOT_BY_RUN = {
+        '20260929-v4-run2': {'G3': 'g3_code_pass 落键缺失（R-A4 已修）'},
+    }
+    _G5_BADGE_BY_RUN = {
+        '20260929-v4-run2': '✓ 已通过（复审 r8）',
+    }
+    rejected = _GATE_REJ_BY_RUN.get(RUN_ID, {})
+    annot = _GATE_ANNOT_BY_RUN.get(RUN_ID, {})
     cards = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
         ts = fmt_ts(GATE_STATE_KEY[g])
         passed = bool(state.get(GATE_STATE_KEY[g]))
-        if g == 'G5' and passed:
-            cls, badge = 'gpass', '✓ 已通过（复审 r8）'
+        if g == 'G5' and passed and RUN_ID in _G5_BADGE_BY_RUN:
+            cls, badge = 'gpass', _G5_BADGE_BY_RUN[RUN_ID]
         else:
             cls = 'gpass' if passed else 'gpending'
             badge = '✓ 已通过' if passed else '○ 未达'
@@ -1382,8 +1432,8 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
     推演轮次 {RUN_ID or 'V3 基线轮'} · 锚定本轮 state 落键时间窗 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
-      <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次 · 全部实拍</span></div>
-      <div class="hstat"><b>R-A3 闭环</b><span>G5 复审 r8 PASS · 发布解冻（10:52）</span></div>
+      <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
+      <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
@@ -1418,7 +1468,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <h2 class="section-hd">闭环治理终态</h2>
   <div class="govgrid">
     <table><tr><th>硬闸</th><th>把关点</th><th>终态</th><th>落键时间</th></tr>
-    {''.join(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td><td class="{"err" if g == "G5" else "ok"}">{"✗ 判回滚（R-A1，实物 FAIL）" if g == "G5" else "✓"}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>' for g in ['G1','G2','G3','G4','G5','G6'])}
+    {gov_final_rows()}
     </table>
     <table><tr><th>度量</th><th>终态值</th></tr>
     {gov_metrics_rows}
