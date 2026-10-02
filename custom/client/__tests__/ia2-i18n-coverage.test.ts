@@ -47,6 +47,8 @@ function collectUsedKeys(): Map<string, string[]> {
       if (/case\s+$/.test(before)) continue
       if (/KEY_[A-Z_]*\s*=\s*$/.test(before)) continue
       if (/\b[A-Z][A-Z0-9_]*_KEY\s*=\s*$/.test(before)) continue
+      // adoptLegacySetting(oldKey, newKey)：键收养工具的两参数都是存储键非文案（2026-10-02 absorb #13 新形态）
+      if (/adoptLegacySetting\([^)]*,\s*$/.test(before)) continue
       const list = used.get(m[1]) ?? []
       list.push(file)
       used.set(m[1], list)
