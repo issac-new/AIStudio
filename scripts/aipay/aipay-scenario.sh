@@ -1078,14 +1078,17 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
   code=$(curl -s -o /dev/null -w '%{http_code}' "$(studio_url)/ide")
   [[ "$code" == 200 ]] && note "[真值] /ide 路由 200 ✓" || echo "ISSUE|ide-route|studio|/ide HTTP $code" >> "$EVID_DIR/issues.log"
   # 2) 任务跳转参数 ide?task= 处理代码存在性（client 源码）
-  if grep -rq "route.query.task" "$NCWK/overlay/custom/client/ide" 2>/dev/null; then
+  # 路径用 $OVERLAY_ROOT（本检出根，worktree 下恒正确）：run6 实锤 $NCWK 在 worktree
+  # 驱动下解析到 .wxwork（root_walk 被 upstream 软链有意跳过而失败、回落父目录），
+  # $NCWK/overlay/... 不存在 → grep 空转 → 两条"未见"假阴性（功能实存，记 DISP 撤单）。
+  if grep -rq "route.query.task" "$OVERLAY_ROOT/custom/client/ide" 2>/dev/null; then
     note "[真值] ide?task 参数处理代码存在 ✓"
   else
     echo "ISSUE|ide-task-param|client|未见 ide?task 参数处理（任务→IDE 跳转缺口）" >> "$EVID_DIR/issues.log"
     note "[观察] ide?task 跳转处理未见（记问题单）"
   fi
   # 3) 任务简报自动生成能力
-  if find "$NCWK/overlay/custom/client/ide/components" -iname '*brief*' 2>/dev/null | grep -q .; then
+  if find "$OVERLAY_ROOT/custom/client/ide/components" -iname '*brief*' 2>/dev/null | grep -q .; then
     note "[真值] IDE 简报相关代码存在 ✓"
   else
     echo "ISSUE|ide-brief|client|任务接入 IDE 自动简报生成功能未见（步骤 20 要求）" >> "$EVID_DIR/issues.log"

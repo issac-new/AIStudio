@@ -270,6 +270,12 @@ type BriefingTaskView = {
 // 派单式「团队负责人 @wei」），否则简报恒显 R:—·A:—（aipaydev 实证缺陷）。
 const briefingRaci = computed(() => parseRaciFromTask(briefingTask.value))
 const briefingOpen = ref(false)
+// 深链到达即展开简报（run6 复盘 UX 缺口：ide?task= 只绑定不展开，用户落地还需
+// 自寻按钮——跳转意图即"看这个任务"）。单独 watch 且置于声明后：早处深链
+// watch 是 immediate 的，setup 期执行时本 ref 尚未声明（TDZ）。
+watch(() => route.query.task, (taskId) => {
+  if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
+}, { immediate: true })
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 // 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
 // （同一 resolveBriefingCrossBoard，当前板缓存优先零额外请求），随后刷新 Git 块。
