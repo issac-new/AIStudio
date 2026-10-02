@@ -52,6 +52,30 @@
 > 低成本高价值可下批、backend 所有权仲裁=架构专项）；#19 拆两段（九件套契约文本入库
 > 零模型变更可做、评审多层列专项）。走查新坑=gov 页冷载 selector 等待不稳
 > （state:'attached'+预热+稳定子选择器）。
+> **四轮执行终态记档（2026-10-02，用户指令「打开 ekko/完成四项方案/推动三项受阻」后实施）**：
+> **ekko 开门落地合 82c69f9**：features.ekko 默认翻转（!== 'false'，可显式关）+设置侧栏
+> "ekko 运维"入口（superadmin 双门控）+走查 5/5（侧栏入口/四页 URL 直达不被守卫弹回）。
+> **三项"受阻"实证解封合 a1c69d15**——关键发现：**通道一直是通的**。网关 api_server
+> 常驻（launchd，127.0.0.1:8650，钥匙在 ~/.hermes/.env API_SERVER_KEY），此前"CLI 无
+> blueprints 子命令+/api 404"是探错了面：blueprints 只挂 dashboard 进程，但
+> **api_server 路由表自带会话分叉/jobs/capabilities 全套**（gateway/platforms/api_server.py:1587
+> _http_route_table；fork 实测真分叉成功、CLI /branch 语义=子全量拷+父 branched）。
+> 落地五端点代理（同域 runtime-caps 扩展，密钥仅文件读不透传）：#11 蓝图画廊
+> （运行中心 runs 页签 16 卡+类型化槽位表单；蓝图目录=运行时 venv python 导入
+> CATALOG 零漂移；**建删冒烟实证**：instantiate 200 真建 Custom reminder job+422
+> 未知槽位精准拒绝+网关 DELETE 清理）；#7 IDE History Fork 接真（confirm 明示
+> 不可逆+成功 switchSession+404 降级回剪贴板 /fork）；#10 网关能力卡（RuntimeSection
+> healthy/model/runtime mode）；走查 gateway-caps-walkthrough.mjs 5/5。
+> **四项方案落地合 58027a9**：#13 步一设置分层基建（四层读写链+类型保真+脏值容错
+> +default 不可写+清层精确前缀，8 守门；步二三待逐域迁键）；#19-1 契约库入库
+> （12 预置：看板九件套+评审三层；id/name/reminder 与上游 yaml **逐字对照守门**防漂移
+> +GET /api/column-automation/presets 输出）；#14 spike 结论=**已存在**（TeamsManagePanel
+> 全套自宣编辑+leader 增删）+改他人角色会绕过准入五问闸=治理裁决非代码缺口
+> （matrix state event 天生 last-writer-wins，无应用层合并问题）；#16 记档=webhooks
+> 管理面挂 dashboard 进程（hermes dashboard CLI 在，未常驻），studio 不擅自起新常驻
+> 服务，待运维裁决。
+> **走查坑追加**：gov 页签键=gov-registry 非 gov-org（RuntimeSection 宿主）；冷载时序
+> 抖动复现两次（一律预热 15s+attached 态+重试容忍）。
 盘点范围：`upstream/` 全部 12 个组件 + `overlay/` 现状基线 + 推演语料（V5 正本、V3 生命周期、aipaydev 全链报告、ncwk-sim-mux evidence 全部报告与审计）
 上位文档：《2026-10-01-upstream-absorption-analysis.md》（下称首轮）——27 项清单已全部收口，逐项终态见其附录对账表。本文是它的补全版：首轮是抽样精读，本文按"无遗漏"要求做穷尽盘点，并新增两个首轮没有的视角——**hermes-studio 上游暴露面 diff**（上游有而 studio 没用起来的面）与**推演改进点×吸收源交叉对照**（需求侧驱动）。
 
