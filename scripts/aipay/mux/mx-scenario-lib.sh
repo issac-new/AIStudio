@@ -390,9 +390,11 @@ gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
   fi
   thread_root=$(mx_messages "$tok" "$room" 50 2>/dev/null | jq -r --arg e "$last_eid" \
     '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || thread_root="$last_eid"
+  # jq 键名含点必须引号（m.relates_to/m.in_reply_to 裸键=语法错误，set -e 下击杀驱动
+  # ——run7 实锤：testpass 步 gate_review 死循环重启三连的根因）
   payload=$(jq -n --arg r "$thread_root" --arg e "$last_eid" \
     --arg m "!refine ${gate}" \
-    '{msgtype:"m.text", body:$m, m.relates_to:{rel_type:"m.thread", event_id:$r, is_falling_back:true, m.in_reply_to:{event_id:$e}}}')
+    '{"msgtype":"m.text", body:$m, "m.relates_to":{"rel_type":"m.thread", event_id:$r, is_falling_back:true, "m.in_reply_to":{event_id:$e}}}')
   re=$(mx "$tok" POST "rooms/$room/send/m.room.message" "$payload" | jq -r '.event_id // empty' 2>/dev/null) || true
   if [[ -n "$re" ]]; then
     note "[闸点沉淀] ${u}@${gate}：!refine 已发进工作线程（${re}）——background_review 对真实工作历史触发"
