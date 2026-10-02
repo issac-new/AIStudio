@@ -145,9 +145,13 @@ for g, k in GATE_KEYS.items():
         fails.append(f'{g} 状态不一致：state={in_state} report={rep_pass}（报告疑为闸前旧生成，须重生成）')
 
 # ── 查 6：V5 §8.3 硬性要求断言（R3-R9；R1 判词语义/R2 落键由 harness H8-H11 与查 5 覆盖） ──
-# R3 UAT 逐条判词：报告含"全部 AC 通过"总括且同文出现"有条件"=判词矛盾
-if re.search(r'全部\s*AC\s*通过', rep) and '有条件' in rep:
-    fails.append('R3 UAT 判词矛盾：同文出现"全部 AC 通过"与"有条件"——须逐条判词，禁总括')
+# R3 UAT 逐条判词：判定范围=验收书判词载体（UAT 步块+交付物渲染区），禁全文共查——
+# 沿革表 run2 史实行（"UAT 有条件验收"）与验收书 7/7 原文（"全部 AC 通过"）合法同页共存，
+# 全文共查会误伤（run7 实录：验收书原文真容渲染触发假 FAIL）。本意=验收书自身禁总括矛盾。
+_uat_blocks = [b for b in blocks if '<span class="st-num">21</span>' in b]
+_r3_txt = ''.join(_uat_blocks)
+if re.search(r'全部\s*AC\s*通过', _r3_txt) and '有条件' in _r3_txt:
+    fails.append('R3 UAT 判词矛盾（UAT 载体内）：同文出现"全部 AC 通过"与"有条件"——须逐条判词，禁总括')
 
 # R4 发布基线守卫：合入只许快进或 merge 增量（检出即 FAIL，守卫属 harness H11 执行侧）
 _main_repo = Path('/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev/.git')
