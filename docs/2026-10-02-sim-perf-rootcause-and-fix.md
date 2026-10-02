@@ -127,3 +127,9 @@
 | 减少空转 | 每 turn 自动 fork 关闭（推演 79% 空转归零；宿主轻交互不触发） |
 | 自动判断 | 推演=闸门脚本自动；宿主=工作量启发式（≥30 迭代）自动 |
 | token 有效 | 每块真实工作恰一次沉淀；refine 空会话缺陷已根治 |
+
+### v3 续修（main b4603ef9）：`!` 前缀必须居 body 首位
+
+v2 的 body 形如 `@<mxid> !refine <闸名>`——matrix 命令归一化（adapter `_normalize_matrix_bang_command`）只对 `!` 开头的 body 生效，前置 mention 使 `!refine` 沦为普通聊天文本、闸点沉淀**静默失效**。已改为纯命令形态（与 `!approve` 线程回复完全同构，thread 归属路由 65 次实证）。命令白名单已核（`commands.py:124` refine 注册于 COMMAND_REGISTRY）。离线重放 hermes 真实归一化正则双向验证：修复形态 `"!refine G4-测试过闸"` → `/refine …` ✓；缺陷形态（mention 前缀）确不归一 ✓。
+
+运行面终验（下轮推演）：scenario 日志出现"[闸点沉淀] … !refine 已发进工作线程"条目 **且** 目标 agent 在线程回复 "⚗ Reviewing this conversation in the background"，双重确认链路通。
