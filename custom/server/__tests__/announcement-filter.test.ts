@@ -38,6 +38,19 @@ describe('announcement-filter 版本感知过滤', () => {
     expect(isStaleAnnouncement(item, '0.7.23')).toBe(false)
   })
 
+  it('依赖产品版本不参与判定（run7 实锤：hermes 0.21.5 曾让 0.7.25 过期公告在 0.7.26 放行）', () => {
+    const item = {
+      title: '版本通知',
+      content: '0.7.25已更新，加入jev、cursor，修复更新到最新hermes 0.21.5 无法使用的问题，修复更新到dsh 0.17 无法使用的问题',
+    }
+    // 主体版本只有 0.7.25（≤0.7.26）→ 过期；hermes 0.21.5 是依赖版本不抬刀
+    expect(isStaleAnnouncement(item, '0.7.26')).toBe(true)
+    // 主体版本 0.7.27 > 0.7.26 → 保留（确有新版），即便正文同样提到 hermes 0.21.5
+    expect(isStaleAnnouncement({ title: '版本通知', content: '0.7.27已发布，适配hermes 0.21.5' }, '0.7.26')).toBe(false)
+    // 正文只有依赖版本、无 studio 主体版本 → 保留（不误杀兼容性公告）
+    expect(isStaleAnnouncement({ title: '兼容性公告', content: '已适配hermes 0.21.5' }, '0.7.26')).toBe(false)
+  })
+
   it('无版本号 → 保留（维护/活动公告不误杀）', () => {
     expect(isStaleAnnouncement({ title: '维护通知', content: '今晚 24:00 停机维护' }, '0.7.23')).toBe(false)
   })
