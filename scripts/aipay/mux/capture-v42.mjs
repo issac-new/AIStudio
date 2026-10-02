@@ -285,6 +285,15 @@ if (!only || only === 'ui-20b-spotcheck') {
 // ── IDE 任务简报 + 治理面 ──
 const ideTask = process.env.IDE_TASK || state.card_review_rfd || ''
 await shot('ui-25-ide', `/app/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000, expect: 'main', expectRoute: '/app/ide' })
+// ui-25-models：IDE 内 Models 页（模型设置面）——run7 补位（原仅 capture-ui.mjs 旧脚本有，
+// 旧脚本 OUT 落全局目录且房间硬编码，不可用于 run 轮；此位迁移入 RUN_ID 参数化链）
+await shot('ui-25-models', '/app/ide', {
+  wait: 3500,
+  after: async () => {
+    const m = page.locator('text=/^Models$|^模型$/').first()
+    if (await m.isVisible().catch(() => false)) { await m.click().catch(() => {}); await page.waitForTimeout(2500) }
+  },
+})
 // ui-26-report：第 26 步交付物=本报告自身——直拍生成的 simulation-report.html 首屏（治"拍成治理中心"错拍）
 if (!only || only === 'ui-26-report') {
   await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })
