@@ -80,7 +80,7 @@ export function parseClaim(raw: unknown): Claim | null {
 function parseExecutor(raw: unknown): ExecutorSpec | null {
   if (!isRecord(raw)) return null
   const id = validId(raw.id)
-  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm', 'scope', 'traceability', 'register'] as const)
+  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm', 'scope', 'traceability', 'register', 'contract', 'behavior', 'semantic', 'ops'] as const)
   const evidenceType = validId(raw.evidenceType)
   if (!id || !type || !evidenceType) return null
   const out: ExecutorSpec = { id, type, evidenceType }
@@ -152,6 +152,162 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     out.register = kinds as ExecutorSpec['register']
     const registerFile = str(raw.registerFile)
     if (registerFile !== undefined) out.registerFile = registerFile
+  } else if (type === 'contract' || type === 'behavior' || type === 'ops') {
+    // v0.3 R1/R2/R4：结构性字段（mode）在解析层校验；载荷字段由 executor 运行时 fail-closed
+    const modes = type === 'contract'
+      ? ['diff', 'breaking', 'surface', 'matrix'] as const
+      : type === 'behavior'
+        ? ['cases', 'journey', 'property', 'visual'] as const
+        : ['metrics', 'budget', 'rerun', 'trace-continuity', 'resilience', 'topology'] as const
+    const mode = enumOf(raw.mode, modes)
+    if (!mode) return null
+    out.mode = mode
+    if (type !== 'ops') {
+      const expectedFile = str(raw.expectedFile)
+      if (expectedFile !== undefined) out.expectedFile = expectedFile
+    }
+    const observedFile = str(raw.observedFile)
+    if (observedFile !== undefined) out.observedFile = observedFile
+    const dataFile = str(raw.dataFile)
+    if (dataFile !== undefined) out.dataFile = dataFile
+    if (type === 'contract') {
+      if (raw.ignorePaths !== undefined) {
+        const ignorePaths = strList(raw.ignorePaths, 100)
+        if (!ignorePaths) return null
+        out.ignorePaths = ignorePaths
+      }
+      const surfaceFile = str(raw.surfaceFile)
+      if (surfaceFile !== undefined) out.surfaceFile = surfaceFile
+      const consumersDir = str(raw.consumersDir)
+      if (consumersDir !== undefined) out.consumersDir = consumersDir
+    } else if (type === 'behavior') {
+      if (raw.cases !== undefined) {
+        if (!Array.isArray(raw.cases) || raw.cases.length === 0 || raw.cases.length > 20) return null
+        const cases: NonNullable<ExecutorSpec['cases']> = []
+        for (const c of raw.cases) {
+          if (!isRecord(c) || typeof c.id !== 'string' || c.id.length === 0) return null
+          cases.push({ id: c.id, expected: c.expected })
+        }
+        out.cases = cases
+      }
+      if (raw.scenarios !== undefined) {
+        if (!Array.isArray(raw.scenarios) || raw.scenarios.length === 0 || raw.scenarios.length > 20) return null
+        const scenarios: NonNullable<ExecutorSpec['scenarios']> = []
+        for (const s of raw.scenarios) {
+          if (!isRecord(s) || typeof s.id !== 'string' || !Array.isArray(s.expectedSteps) || s.expectedSteps.length === 0) return null
+          const steps: Array<{ id: string; expected?: unknown }> = []
+          for (const t of s.expectedSteps) {
+            if (!isRecord(t) || typeof t.id !== 'string' || t.id.length === 0) return null
+            steps.push({ id: t.id, expected: t.expected })
+          }
+          scenarios.push({ id: s.id, expectedSteps: steps })
+        }
+        out.scenarios = scenarios
+      }
+      if (raw.f2p !== undefined) { const v = strList(raw.f2p, 20); if (!v) return null; out.f2p = v }
+      if (raw.p2p !== undefined) { const v = strList(raw.p2p, 20); if (!v) return null; out.p2p = v }
+      const baselineFile = str(raw.baselineFile)
+      if (baselineFile !== undefined) out.baselineFile = baselineFile
+      if (raw.allowedTransitions !== undefined) {
+        if (!Array.isArray(raw.allowedTransitions) || raw.allowedTransitions.length > 50) return null
+        const pairs: string[][] = []
+        for (const t of raw.allowedTransitions) {
+          if (!Array.isArray(t) || t.length !== 2 || t.some((x) => typeof x !== 'string')) return null
+          pairs.push([t[0], t[1]])
+        }
+        out.allowedTransitions = pairs
+      }
+      if (raw.assertions !== undefined) out.assertions = parseAssertions(raw.assertions)
+      const seed = num(raw.seed)
+      if (seed !== undefined) out.seed = seed
+      const minCases = num(raw.minCases)
+      if (minCases !== undefined && minCases > 0) out.minCases = minCases
+      const maxDiffPixels = num(raw.maxDiffPixels)
+      if (maxDiffPixels !== undefined && maxDiffPixels >= 0) out.maxDiffPixels = maxDiffPixels
+      const maxDiffRatio = num(raw.maxDiffRatio)
+      if (maxDiffRatio !== undefined && maxDiffRatio >= 0 && maxDiffRatio <= 1) out.maxDiffRatio = maxDiffRatio
+    } else {
+      if (raw.thresholds !== undefined) {
+        if (!isRecord(raw.thresholds)) return null
+        const thresholds: Record<string, { min?: number; max?: number }> = {}
+        for (const [k, v] of Object.entries(raw.thresholds)) {
+          if (!isRecord(v)) return null
+          const min = num(v.min)
+          const max = num(v.max)
+          if (min === undefined && max === undefined) return null
+          thresholds[k] = { ...(min !== undefined ? { min } : {}), ...(max !== undefined ? { max } : {}) }
+        }
+        out.thresholds = thresholds
+      }
+      if (raw.pairs !== undefined) {
+        if (!Array.isArray(raw.pairs) || raw.pairs.length === 0 || raw.pairs.length > 40) return null
+        const pairs: string[][] = []
+        for (const p of raw.pairs) {
+          if (!Array.isArray(p) || p.length !== 2 || p.some((x) => typeof x !== 'string')) return null
+          pairs.push([p[0], p[1]])
+        }
+        out.pairs = pairs
+      }
+      const maxRecoveryMs = num(raw.maxRecoveryMs)
+      if (maxRecoveryMs !== undefined && maxRecoveryMs > 0) out.maxRecoveryMs = maxRecoveryMs
+      const maxAgeDays = num(raw.maxAgeDays)
+      if (maxAgeDays !== undefined && maxAgeDays > 0) out.maxAgeDays = maxAgeDays
+      if (raw.requiredSignals !== undefined) { const v = strList(raw.requiredSignals, 10); if (!v) return null; out.requiredSignals = v }
+    }
+  } else if (type === 'semantic') {
+    const check = enumOf(raw.check, ['alignment', 'consistency', 'constraint', 'state', 'exposure', 'instance', 'relation', 'terminology'] as const)
+    if (!check) return null
+    out.check = check
+    const catalogFile = str(raw.catalogFile)
+    if (catalogFile !== undefined) out.catalogFile = catalogFile
+    const dataFile = str(raw.dataFile)
+    if (dataFile !== undefined) out.dataFile = dataFile
+    const observedFile = str(raw.observedFile)
+    if (observedFile !== undefined) out.observedFile = observedFile
+    const concept = str(raw.concept)
+    if (concept !== undefined) out.concept = concept
+    const matchMode = enumOf(raw.matchMode, ['strict', 'subsumed'] as const)
+    if (matchMode !== undefined) out.matchMode = matchMode
+    if (raw.requireRuntimeOrigin === true) out.requireRuntimeOrigin = true
+    if (raw.expectedMap !== undefined) {
+      if (!Array.isArray(raw.expectedMap) || raw.expectedMap.length === 0 || raw.expectedMap.length > 100) return null
+      const map: Array<{ symbol: string; iri: string }> = []
+      for (const m of raw.expectedMap) {
+        if (!isRecord(m) || typeof m.symbol !== 'string' || typeof m.iri !== 'string') return null
+        map.push({ symbol: m.symbol, iri: m.iri })
+      }
+      out.expectedMap = map
+    }
+    if (raw.relations !== undefined) {
+      if (!Array.isArray(raw.relations) || raw.relations.length === 0 || raw.relations.length > 100) return null
+      const rels: Array<{ subject: string; predicate: string; object: string }> = []
+      for (const r of raw.relations) {
+        if (!isRecord(r) || typeof r.subject !== 'string' || typeof r.predicate !== 'string' || typeof r.object !== 'string') return null
+        rels.push({ subject: r.subject, predicate: r.predicate, object: r.object })
+      }
+      out.relations = rels
+    }
+  }
+  return out
+}
+
+/** 断言数组解析（behavior property / semantic constraint 共用形状）。 */
+function parseAssertions(raw: unknown): NonNullable<ExecutorSpec['assertions']> | undefined {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) return undefined
+  const ops = ['eq', 'neq', 'le', 'lt', 'ge', 'gt'] as const
+  const out: NonNullable<ExecutorSpec['assertions']> = []
+  for (const a of raw) {
+    if (!isRecord(a) || typeof a.left !== 'string' || a.left.length === 0) return undefined
+    const operator = enumOf(a.operator, ops)
+    if (!operator) return undefined
+    if (a.right === undefined && !('value' in a)) return undefined
+    out.push({
+      left: a.left,
+      operator,
+      ...(typeof a.right === 'string' ? { right: a.right } : {}),
+      ...('value' in a ? { value: a.value } : {}),
+      ...(typeof a.when === 'string' ? { when: a.when } : {}),
+    })
   }
   return out
 }
