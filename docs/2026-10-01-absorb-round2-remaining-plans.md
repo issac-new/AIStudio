@@ -13,10 +13,10 @@
 
 **迁移三步**（每步独立可交付）：
 1. **建层**（纯基建，零行为变化）✅ 已落地（2026-10-02，settings-layers/ 四层读写链+JSON 复合值+adoptLegacySetting 遗留收养，20 守门）。
-2. **迁键**（按域分批）**进行中**：
+2. **迁键**（按域分批）**overlay 自有键已全部迁毕**：
    - 批一（已迁）：ia2.flow.sortMode（房间排序）、ide.slots（状态栏槽位）——29d6117。
    - 批二（已迁）：notify.prefs（通知分组降噪）、ide.websearchTier、ide.goalAutonomy——b899474。
-   - 批三（候选，overlay 自有）：ncwk.cols（三栏宽度——自带双层旧键链+CustomEvent 广播，需保序细迁）、ide_keymap_overrides_v1（键位覆盖）、kanban_saved_views（保存视图）。
+   - 批三（已迁，2026-10-02 收官）：ui.colWidths（三栏宽度——ncwk.cols 收养+ncwk.wb.* 双层旧键链与 CustomEvent 广播保序保留）、ide.keymapOverrides（键位覆盖，双 script 读点归一 readOverrides）、kanban.savedViews（看板保存视图+reset 助手分层感知）——5d7a2b0。
    - **上游自有键（须 patch 批次）**：hermes.kanban.selectedBoard（KanbanView/store）、hermes_ide_layout/sidePane.width（上游壳布局）——随漂移治理轮 patch 化同批。
    - **不迁（非偏好）**：hermes_api_key/server_url/locale（账号配置）、ide-permission-mode:<sid>（会话态）、runcenter:inbox:archived（UI 态）、hermes_ide_workspace（工作区选择=状态）。
 3. **Controller 声明**（只对确有依赖/互斥关系的设置项，约 5 组：时间线布局×紧凑模式、通知分级×铃铛计数、主题×密度等）：声明式互斥+变更重载提示。
