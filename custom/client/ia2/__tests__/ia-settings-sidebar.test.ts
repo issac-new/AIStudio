@@ -18,6 +18,8 @@ const routerState = vi.hoisted(() => ({ hasRouteNames: new Set<string>([
   'hermes.skillsUsage', 'hermes.logs', 'hermes.usage', 'hermes.performance',
   // hermes.browser 桌面专属：dev 不注册 → 应隐藏
   'hermes.terminal', 'hermes.versionPreview',
+  // ekko 运维面（2026-10-02 开门）：上游 bootstrap 注册，superadmin 可见
+  'ekko.settings',
 ]) }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ hasRoute: (name: string) => routerState.hasRouteNames.has(name), push: vi.fn() }),
@@ -56,6 +58,8 @@ describe('IaSettingsSidebar — 设置页侧栏（功能面恢复）', () => {
     for (const key of ['sidebar.settings', 'sidebar.profiles', 'sidebar.theme', 'sidebar.skillsUsage', 'sidebar.logs', 'sidebar.usage', 'sidebar.performance', 'sidebar.terminal']) {
       expect(text, `系统组缺 ${key}`).toContain(key)
     }
+    // ekko 运维面（2026-10-02 开门）：Hermes 组直书文案条目、superadmin 可见
+    expect(text).toContain('ekko 运维')
     // 分组标签（既有词表键，零新增 i18n）
     expect(text).toContain('sidebar.groupTools')
     expect(text).toContain('sidebar.groupSystem')

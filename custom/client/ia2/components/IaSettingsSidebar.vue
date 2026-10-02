@@ -27,7 +27,9 @@ import { features } from '../../../../config/features'
 interface NavEntry {
   name: string
   icon: string
-  labelKey: string
+  labelKey?: string
+  /** 直书文案（品牌名/无词表键时用，与分组 label 同规——走 t() 会触发 intlify 缺键告警） */
+  label?: string
   superAdmin?: boolean
 }
 
@@ -62,6 +64,10 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
       { name: 'hermes.jobs', icon: 'clock', labelKey: 'sidebar.jobs' },
       { name: 'hermes.kanban', icon: 'kanban', labelKey: 'sidebar.kanban' },
       { name: 'hermes.journey', icon: 'history', labelKey: 'sidebar.journey' },
+      // ekko 运维面（2026-10-02 用户裁定开门）：上游 /ekko/* 四页（memory/skills/
+      // mcp/settings）入口；superadmin+features.ekko 双门控，页面自带 ekkoConfig
+      // meta 守卫（patch 523）——四页经 URL 直达，本入口落配置页
+      { name: 'ekko.settings', icon: 'grid', label: 'ekko 运维', superAdmin: true },
     ],
   },
   {
@@ -90,6 +96,8 @@ function visible(e: NavEntry): boolean {
   // features.agentManager（收编路由同门控，见 routes.ts ANNEXED_LEGACY）。
   if (e.name === 'hermes.petdex' && !features.pet) return false
   if (e.name === 'hermes.agentManager' && !features.agentManager) return false
+  // ekko 开门（2026-10-02 用户裁定）：条目随 features.ekko（默认开，false 可关）
+  if (e.name === 'ekko.settings' && !features.ekko) return false
   return router.hasRoute(e.name)
 }
 
@@ -107,7 +115,7 @@ const groupVisible = computed(() =>
           class="ia-setnav__item" :to="{ name: e.name }"
         >
           <CockpitIcon :name="e.icon" :size="14" />
-          <span>{{ t(e.labelKey) }}</span>
+          <span>{{ e.labelKey ? t(e.labelKey) : e.label }}</span>
         </RouteLinkItem>
         <p v-if="g.entries.length === 0" class="ia-setnav__empty">—</p>
       </section>
