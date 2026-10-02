@@ -49,7 +49,7 @@ router.get('/maturity', async (ctx) => {
   try {
     const inputs = await collectMaturityInputs(daysOf(ctx.query.days))
     const report: MaturityReport = assessMaturity(inputs)
-    ctx.body = { ok: true, ...report }
+    ctx.body = { ...report, ok: true }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -60,7 +60,7 @@ router.get('/primitives', async (ctx) => {
   try {
     const { counts, notes } = await collectPrimitiveCounts()
     const report: PrimitivesReport = buildPrimitivesReport(counts, notes)
-    ctx.body = { ok: true, ...report }
+    ctx.body = { ...report, ok: true }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
