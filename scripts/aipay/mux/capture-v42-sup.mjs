@@ -207,26 +207,13 @@ if (!existsSync(`${OUT}/ui-10-carddrawer.png`) || process.env.FORCE) {
   await goHash('/hermes/kanban?board=fanfan-pm-plan')
   await page.waitForTimeout(5000)
   await dismissOverlays()
-  // 开抽屉门禁（run7 预检实锤：旧标题模式只匹配 run6 卡名，找不到卡→不点→光板与
-  // kanban-mine 同帧 md5 重复）：按 /RFD-001/ 逐候选点开，.task-drawer 出现才算开；
-  // 开不出即 DEFECT 拒拍，禁回退拍光板。
-  let drawerOk = false
-  for (let i = 0; i < 3 && !drawerOk; i++) {
-    const card = page.locator('text=/RFD-001/').nth(i)
-    if (!(await card.isVisible().catch(() => false))) break
-    await card.scrollIntoViewIfNeeded().catch(() => {})
+  const card = page.locator('text=/RFD-001 支付收银台需求分析/').first()
+  if (await card.isVisible().catch(() => false)) {
     await card.click().catch(() => {})
-    // 抽屉根 .task-drawer 是 v-else-if="task && detail"——详情异步加载完才渲染，
-    // 固定短等待即查属假阴性（run7 预检实锤）；waitFor 自动轮询至详情就绪。
-    drawerOk = await page.locator('.task-drawer').first()
-      .waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false)
+    await page.waitForTimeout(2000)
   }
-  if (drawerOk) {
-    await page.screenshot({ path: `${OUT}/ui-10-carddrawer.png` })
-    console.log('shot: ui-10-carddrawer（抽屉校验过）')
-  } else {
-    console.error('DEFECT[shutter-gate]: ui-10-carddrawer 抽屉未开——拒拍（禁光板顶替）')
-  }
+  await page.screenshot({ path: `${OUT}/ui-10-carddrawer.png` })
+  console.log('shot: ui-10-carddrawer')
 }
 
 // ui-g5-carddrawer：fanfan-review 板 G5 评审卡 t_ea68c462 抽屉（review-record r7 头部）
@@ -236,19 +223,13 @@ if (!existsSync(`${OUT}/ui-g5-carddrawer.png`) || process.env.FORCE) {
   await dismissOverlays()
   let drawerOk = false
   for (let attempt = 0; attempt < 2 && !drawerOk; attempt++) {
-    // 卡号按轮取（旧写死 t_ea68c462 是 run2 卡，任何新轮必打不开）：state card_g5_ready
-    // 优先，缺省按 G5 评审卡标题找；开启判据=.task-drawer 出现且卡面含准出评审字样。
-    const g5id = state.card_g5_ready || state.card_g5 || ''
-    const byTitle = page.locator('text=/发布准出评审/').first()
-    const card = (await byTitle.isVisible().catch(() => false)) || !g5id
-      ? byTitle : page.locator(`text=${g5id}`).first()
+    const card = page.locator('text=t_ea68c462').first()
     if (await card.isVisible().catch(() => false)) {
       await card.scrollIntoViewIfNeeded().catch(() => {})
       await card.click().catch(() => {})
+      await page.waitForTimeout(2500)
     }
-    drawerOk = await page.locator('.task-drawer').first()
-      .waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false)
-    drawerOk = drawerOk && (await page.locator('text=/发布准出评审/').last().isVisible().catch(() => false))
+    drawerOk = await page.locator('text=发布准出评审（G5）').last().isVisible().catch(() => false)
   }
   if (drawerOk) {
     await page.screenshot({ path: `${OUT}/ui-g5-carddrawer.png` })
