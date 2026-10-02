@@ -431,3 +431,7 @@
 539-client-history-dangling-links-fix.patch
 540-kanban-selectedboard-layers.patch
 541-history-deadnav-family-fix.patch
+# 544（上下文无损滚存 2026-10-02，C1/C4）：上下文档案 REST 挂载——旧窗 messages
+#      verbatim 归档/召回（懒推进 advance + sessions/windows/window/search/state）。
+#      零压缩链改动，只读开库；锚点行脱敏。
+544-server-context-archive-routes.patch
