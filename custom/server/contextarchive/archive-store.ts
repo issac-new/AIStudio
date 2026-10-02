@@ -57,8 +57,13 @@ export interface WindowBoundary {
   compressedThroughMessageId: number
   /** 首观察窗：advance 首次看到该会话时，从会话头到当前边界整体作 window #1。
    * 已知数据面限制——chat_compression_snapshots 每会话只留最新一份边界，历史
-   * 边界被覆盖，无法按次切多窗；此标记让 API/UI 如实呈现首窗语义。 */
+   * 边界被覆盖，无法按次切多窗；此标记让 API/UI 如实呈现首窗语义。
+   * （遗留④ 2026-10-03：patch 546 边界史表起，部署后的压缩都可按次切窗，
+   * 本标记只对部署前的存量首窗为 true。） */
   firstObservation: boolean
+  /** additive（遗留④ 2026-10-03）：边界源——history=史表逐次精确切窗；
+   * snapshot=主表单窗回落（含 patch 546 部署前的旧语义）。缺席=旧档文件。 */
+  boundarySource?: 'history' | 'snapshot'
 }
 
 /** window-<N>.json 文件体。 */
