@@ -2,8 +2,8 @@
 # hermes.kanban.selectedBoard（裸字符串 slug）→ 分层键 kanban.selectedBoard（user 层），
 # 遗留裸键读时一次性收养；写走 writeSetting。KanbanView 的 routeBoard 深链语义不变
 # （route query 优先，store 只兜底）。上下文=539 之后的注入态（含既有 kanban 补丁行）。
+# [2026-10-02 重生成] 原版锚在漂移态树上、干净重放不可套（与 499 同族雷）；本版按纯净重放态（series --include 全链后）重生成，语义零改动。
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
-index c8459c0..bfada0d 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
 @@ -1,10 +1,12 @@
@@ -16,10 +16,10 @@ index c8459c0..bfada0d 100644
  
  export const KANBAN_SELECTED_BOARD_STORAGE_KEY = 'hermes.kanban.selectedBoard'
 +// overlay[#539-batch4/patch 540]: 选板偏好走 settings-layers user 层（遗留裸键一次性收养）
- 
  export const DEFAULT_KANBAN_BOARD = 'default'
  
-@@ -52,7 +54,9 @@ export const useKanbanStore = defineStore('kanban', () => {
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+@@ -51,7 +53,9 @@
    const orchestration = ref<KanbanOrchestration | null>(null)
    const attachments = ref<Record<string, KanbanAttachment[]>>({})
  
@@ -30,7 +30,7 @@ index c8459c0..bfada0d 100644
  
    const filterStatus = ref<string | null>(null)
    const filterAssignee = ref<string | null>(null)
-@@ -271,7 +275,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+@@ -270,7 +274,7 @@
      const resolved = resolveAvailableBoard(board)
      const changed = selectedBoard.value !== resolved
      selectedBoard.value = resolved
@@ -39,3 +39,4 @@ index c8459c0..bfada0d 100644
      boardWarning.value = null
      if (changed) {
        clearBoardScopedState()
+
