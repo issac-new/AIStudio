@@ -279,3 +279,13 @@
 - 产出：正本移交 `2026-10-02-mux-v6-fullflow-plan.md`。重构四要点：①新增第二章四组件能力底座与设计初衷（studio 服务域 20+/前端视图族/patch 545·331 项、hermes 0.21.5 全量运行时+两大不变量、matrix 指令数据通道分离+element 吸收面、yuan skill R81 基线+五步载体锚）；②修正 V5 §一"5 产品面"与 §十三"驾驶舱单一面"口径矛盾；③收编四源文 12 提案落地态（P18 甲乙丙）与保真运行开关面（P19）；④运行手册纪律十条→十三条（+保真形态默认/KG 与换窗开关/判驱动状态先 grep 派发行）。
 - 契约层：26 步主链与六道硬闸语义零变更（run7 在途执行 V5=V6 契约）；章节号重排（原§四→§五、原§八→§九等），正本内交叉引用已同步。
 - V5 正本加退役指针存档；本沿革章为 V5 侧最后增补。
+
+## 十、遗留收口轮（2026-10-03 凌晨，V6 正基同步）
+
+- 触发：用户令"完成所有遗留项"（四源文 12 提案落地轮的遗留清单）。
+- ② merge-review 裁决闭环（0a3ffe32）：病根=幂等去重只挡未决条目，keep-existing 裁决后下轮同步重新扣留并再追加新待审（审了也白审死循环）。根治=裁决台账 board-adjudicated-<slug>.json 持久化（resolve 时落档）；同步管线豁免 keep-existing 实体+关系；marker 判定放宽为 written∪keepDrops；take-incoming 走 force 写入后经 updates 路径自然闭环。守门三测（含熔断扣留项裁决）。
+- ④ 压缩边界史（e02550e3，patch 546）：saveCompressionSnapshot 成功且带边界游标时向 chat_compression_boundary_history 追加一行（CREATE IF NOT EXISTS 幂等+fail-soft 不阻塞压缩主链）；advance.ts 两档边界源——史表在=按每次压缩精确切窗（两次归档间多次压缩不并窗），缺表=回落旧单窗语义，史表落后主表=防御兜底不丢消息；boundary 字段加 boundarySource 溯源。存量首窗（546 部署前的物理性丢失）仍如实 firstObservation 标记。守门三测。
+- ③ 499 干净树可重放实证（自愈确认）：hermes-agent 干净克隆（f97608f178）全链 42 个路由补丁按序重放一次全过（含 499）——09-29 记档的雷已被后续轮修掉。对账顺带抓到活树真漂移：533（网关容量重试）升级后未重放（改已记账 patch inject 跳重放老坑），gateway/run_busy.py 停旧版；按 HEAD+--include 全链重放重建三文件，活树与纯净重放逐字节等效（LIVE==REPLAY 验证）。
+- ① 三部曲③仍未发布（09-29/10-01 隔日节奏，10-03 晨检未出）——唯一挂起项；A4 维持预判实现，③发布后对照校准（预告主题：质量门禁/版本快照回滚/schema 迁移）。
+- 验证：全量 3708 过 0 红；8647 按 nodemon 口径重启，kg-evolution/板同步/context-archive 三面冒烟过（A1 真实探到 main 板 mtime 变化进 pending）。patch 546 经 ensure-injected 干净入列（manifest 280 条）。
+- 轮间事实：并行会话当晚完成 studio 0.7.27 迁移（279 补丁重锚）并主动合入收口分支推 origin（main=6a146cbe）；V6 正文六处同步（基准行/第二章两能力行/P18 甲丙两行/§14.3 补丁清单）。
