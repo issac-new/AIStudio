@@ -604,8 +604,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
 4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
-  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支" 1800 chen bash -c \
-    "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/DEV-PAYCORE" \
+  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支（本轮新鲜）" 1800 chen branch_fresh "feat/DEV-PAYCORE" \
     || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
 
   # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
@@ -628,8 +627,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 
   for ba in "DEV-CHWX|hu" "DEV-CHALI|lin" "DEV-MP|xiao"; do
     IFS='|' read -r b bowner <<< "$ba"
-    wait_alive_truth "origin 出现 feat/$b 分支" 1800 "$bowner" bash -c \
-      "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/$b" \
+    wait_alive_truth "origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
       || { note "[观察] $b 分支未达"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
   done
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）
