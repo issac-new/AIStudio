@@ -48,6 +48,8 @@ describe('网关代理结构守门', () => {
 })
 
 describe('真网关链路冒烟（本机网关在场则实弹，缺席则如实 409）', () => {
+  // 30s 预算：控制器内部实弹调外部网关（python 进程），全量并行负载下 >5s 常态
+  //（2026-10-02 全量 junit 实锤 5s timeout flake；本地临时 server 本身毫秒级）
   it('GET /gateway/status 返回 healthy 布尔（实弹或 409 诚实缺席）', async () => {
     const cfgExists = (() => {
       try {
@@ -82,7 +84,7 @@ describe('真网关链路冒烟（本机网关在场则实弹，缺席则如实 
     } finally {
       server.close()
     }
-  })
+  }, 30_000)
 })
 
 function homedir(): string {

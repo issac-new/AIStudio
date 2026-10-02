@@ -311,3 +311,25 @@ describe('ops symbols scoped 包与 alias 根锚定（两正统 bug 回归守门
     expect(ev.result).toBe('pass')
   })
 })
+
+describe('ops symbols 导出面两形态补全（84 条长尾两枚根因的守门）', () => {
+  it('export async function 与 export type { A } from 均入导出面（薄 re-export 层视角）', () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'lib'), { recursive: true })
+    writeFileSync(join(ws, 'package.json'), '{}')
+    writeFileSync(join(ws, 'lib', 'util.ts'), [
+      'export async function authFetch(u: string): Promise<Response> { return fetch(u) }',
+      "export type { GraphSpec, NodeSpec } from './deep'",
+      "export { validate } from './deep'",
+      'export type Deep = { a: 1 }',
+    ].join('\n'))
+    writeFileSync(join(ws, 'lib', 'deep.ts'), 'export type GraphSpec = unknown\nexport type NodeSpec = unknown\nexport function validate(): void {}\n')
+    writeFileSync(join(ws, 'app.ts'), [
+      "import { authFetch, validate } from './lib/util'",
+      "import type { GraphSpec, Deep } from './lib/util'",
+      'export const x = { authFetch, validate } as unknown as GraphSpec as unknown as Deep',
+    ].join('\n'))
+    const ev = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }, ws)
+    expect(ev.result).toBe('pass')
+  })
+})
