@@ -1,0 +1,68 @@
+上一篇跑出了候选本体（Person、Gpe），但直接合并进主本体是危险的：LLM 抽取每次遣词造句可能不同，这次抽出 Person，下次可能抽出 Individual；这次抽出 Organization，下次可能抽出 Company。如果每次都直接合并，本体会迅速膨胀出大量同义但拼写不同的类——这是自动化流水线最容易踩的坑。这篇讲动态本体流水线的阶段 4-6：相似度去重、冲突检测消解、治理分级、合并到主本体。
+版本声明：本文代码来自 dynamic_ontology/dedup.py、conflicts.py、governance.py、merge.py，均为已实现、已跑通的真实模块。文中的真实运行数据来自 demos/10_dynamic_ontology_v1.py 的第二、三轮增量演化。
+
+一、相似度去重：三档判定
+DuplicateDetector 是 semantica 里通用的实体去重引擎，不是"本体专用"类，但它比较的字典形状（至少要有 name 字段）和本体 class dict 的形状恰好兼容，可以直接复用：
+# dynamic_ontology/dedup.py（节选）
+AUTO_ALIAS_THRESHOLD = 0.85     # 阈值需要针对业务数据实验调参，不是 semantica 给的默认值
+MANUAL_REVIEW_THRESHOLD = 0.6
+
+detector = DuplicateDetector(similarity_threshold=MANUAL_REVIEW_THRESHOLD,
+                              confidence_threshold=MANUAL_REVIEW_THRESHOLD)
+candidates = detector.incremental_detect(
+    new_entities=[_sanitize_for_comparison(c) for c in candidate_classes],
+    existing_entities=[_sanitize_for_comparison(c) for c in existing_classes],
+    threshold=MANUAL_REVIEW_THRESHOLD,
+)
+图1：相似度去重三档判定流程
+一个已验证的真实坑：本体 class dict 里的 properties 字段是一个属性名字符串列表，但 SimilarityCalculator.calculate_property_similarity() 内部假设 entity.get("properties") 返回的是一个字典（会调用 .keys()）。两者形状不兼容，直接把本体 class dict 传进去会报 AttributeError: 'list' object has no attribute 'keys'。上面代码里的 _sanitize_for_comparison() 就是为了规避这个问题——在比对前先剔除 properties 字段，反正类名去重主要依据字符串相似度，不依赖这个字段。
+本机实测（第二轮，故意构造近义词场景："Bright Path Analytics is a startup founded by Priya Shah in Denver, Colorado."）：
+候选本体类:       ['Gpe']
+去重-自动别名:    ['Gpe']
+去重-转人工:      ['Gpe']
+去重-真正新类:    []
+这一批新抽出的候选类只有 Gpe（地名类，和第一轮一样），去重判定它和主本体里已有的 Gpe 高度相似，直接判定为已有类的别名，没有产生新类。这正是去重机制该起的作用：同一个概念不会被重复添加。
+二、冲突检测与消解
+冲突检测处理的是另一类问题：不是"两个类是不是同一个概念"，而是"同一个实体在不同批次被赋予了矛盾的属性值"（比如一家公司这批数据说位于西雅图，另一批数据说位于奥斯汀）：
+# dynamic_ontology/conflicts.py（节选）
+SOURCE_CREDIBILITY = {
+    "official_filing": 0.95, "press_release": 0.7,
+    "news_article": 0.5, "unknown": 0.3,
+}
+
+detector = ConflictDetector(config={"source_tracker": source_tracker})
+conflicts = detector.detect_conflicts(combined, method="all")   # 同时查 value/type/temporal/logical 四类冲突
+
+for conflict in conflicts:
+    if conflict.severity == "critical":
+        result = resolver.resolve_conflict(conflict, strategy="manual_review")  # 逻辑冲突强制转人工
+    else:
+        result = resolver.resolve_conflict(conflict, strategy="credibility_weighted")
+图2：冲突消解决策流程
+SOURCE_CREDIBILITY 这张可信度打分表是我们自己设计的示例规则——semantica 只提供"按可信度加权消解冲突"的机制，不提供具体分值，生产环境应该根据实际数据源的权威性重新设计。critical 级别的冲突（比如同一实体不能既是 Person 又是 Organization）被强制转人工，不允许自动消解，避免自动化流程"猜错"高风险冲突。
+一个诚实的真实结果：demos/10_dynamic_ontology_v1.py 第三轮刻意构造了一个跨批次冲突场景——第一轮里 "Nova Robotics" 被记录位于 Austin, Texas，第三轮让同一个实体名再次出现、但改口说位于 Seattle。本机实测这一轮的冲突检测结果是：
+冲突检测:         检出 0 个，自动消解 0 个，转人工 0 个
+没有检出预期中的冲突。原因是 ConflictDetector 判断"同一实体"依赖实体的 id 字段完全一致，而每一轮 NERExtractor 都是独立跑抽取，两轮抽出的 "Nova Robotics" 实体对象各自生成了不同的 id，entity_sources 映射和冲突检测都没能把它们识别成"同一个实体的两次记录"。这暴露了当前实现的一个真实局限：冲突检测的前提是有一套跨批次稳定的实体 id/实体链接机制，本项目目前没有做这一层，这也是"已知限制"之一，不能含糊过去。想要让这类冲突真正被检出，需要先补一层实体消歧（把不同批次里指代同一现实世界对象的实体统一到同一个 id 上），这是留给读者的一个明确扩展方向。
+三、治理分级：谁能自动合并，谁必须走人工
+治理规则表是我们自己设计的判断标准，把"多大的变更算安全"这类业务判断写成了可执行的分级函数：
+# dynamic_ontology/governance.py（节选）
+CIRCUIT_BREAKER_RATIO = 0.20   # 单批次新增类数 / 现有类数 超过这个比例就熔断
+
+leaf_classes = [c for c in genuinely_new_classes if not (c.get("subClassOf") or c.get("parent"))]
+hierarchy_classes = [c for c in genuinely_new_classes if c.get("subClassOf") or c.get("parent")]
+if change_ratio > CIRCUIT_BREAKER_RATIO:
+    # 全部转人工，不自动合并
+图3：治理分级判定流程
+三条分级规则背后的风险逻辑：无父类冲突的叶子类风险最低（纯增量，不影响已有结构），可以自动合并；涉及层级变更的类（有 subClassOf/parent）是结构性变更，会影响下游查询逻辑，必须人工审核；单批次变更幅度过大（新增类数超过现有类数的 20%）大概率意味着一次异常输入（比如 LLM 抽风或者数据源本身有问题），直接熔断、全部转人工，防止自动化流程在无人察觉的情况下把本体污染。
+四、合并到主本体
+去重和治理都判定完之后，只把"允许自动合并"的那部分类交给 ReuseManager.merge_ontology_data()：
+# dynamic_ontology/merge.py（节选）
+filtered_candidate = dict(candidate_ontology)
+filtered_candidate["classes"] = classes_to_merge   # 已经排除掉判定为别名的类
+merged = ReuseManager().merge_ontology_data(
+    target=main_ontology, source=filtered_candidate,
+    overwrite=False, merge_metadata=True,
+)
+overwrite=False 呼应第三节的治理原则：只做新增，不覆盖已有定义。
+小结，以及下一篇要做什么
+这篇讲了动态本体流水线里最复杂、最需要针对业务数据调参的三个阶段：相似度去重防止本体类爆炸，实测中真实复现了它的作用（第二轮的 Gpe 被正确判定为已有类别名）；冲突检测与消解处理跨批次的属性矛盾，但也诚实暴露了当前实现的局限——没有跨批次实体链接，导致刻意构造的冲突场景实际没有被检出；治理分级把"自动合并 vs 人工审核 vs 熔断"变成了可执行的规则，而不是一句"人工判断"糊弄过去。去重、冲突、治理、合并都做完了，但谁能保证这次自动演化让本体质量变好而不是变差？下一篇讲质量门禁、版本快照与回滚，以及本体变化怎么联动下游 Neo4j schema。

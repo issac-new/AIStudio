@@ -1,0 +1,48 @@
+第③④篇分别讲过 GraphBuilder 怎么建图、OntologyGenerator 怎么一次性从抽取结果生成本体。但真实业务里，数据是持续进来的：今天来一批新闻稿，明天来一批公告。如果每来一批新数据就把 OntologyGenerator 在全部历史数据上重新跑一遍，本体是能生成对，但代价会越滚越大。这个三部曲要做的，是在已有能力之上封装一层编排逻辑，让本体具备"新数据进来 → 自动增量演化 → 有冲突检测 → 有版本追踪 → 可回滚"的能力——业内叫这个方向"动态本体"。
+版本声明：本文代码来自本项目 dynamic_ontology/ 包（已实现、已跑通），设计依据是 docs/dynamic_ontology_design.md（一份基于 semantica 真实源码调研、经过确认的技术方案）。所有输出均为本机 semantica==0.6.0 实测结果，本体存储走 SQLite（OntologyVersionManager），不是内存态。
+
+一、全量重新生成 vs 增量演化
+设想一个场景：知识库里已经有 10000 篇文档抽取出的本体，今天新来了 5 篇文档。"一次性生成"的做法是把这 10005 篇文档全部重新走一遍 ingest → extract → OntologyGenerator；"动态本体"的做法是只处理这 5 篇新文档，把它们的抽取结果和已有本体做增量比对再合并。差别不是代码行数，而是成本结构：前者的 LLM 调用量、计算量随文档总量线性增长，文档越多，每次"加一点新数据"的代价越高；后者的成本只取决于本次新增的数据量，和历史数据总量无关。
+图1：全量重新生成 vs 增量演化
+这也是为什么本方案第 1 节专门用一张表格划清了"现状 vs 目标"的边界：本体从数据推断的能力（OntologyGenerator）已经有了，缺的是"只处理增量、自动判断新旧本体的差异、自动决定合不合并"这一整套编排逻辑——这正是 dynamic_ontology/ 包要补的。
+二、整体 8 阶段流水线
+动态本体一轮完整的演化，拆成 8 个阶段：
+图2：动态本体 8 阶段流水线总览
+本篇讲前 3 个阶段（触发、增量抽取、候选本体生成），下一篇讲相似度去重、冲突检测消解、治理分级、合并（阶段 4-6），最后一篇讲质量门禁、版本快照与回滚，以及下游 Neo4j schema 迁移（阶段 7-8）。三篇共用同一张总览图，方便你随时回来对照自己看到哪一步。
+一个容易被忽略但很重要的实现细节：设计方案原本设想用 semantica.pipeline.PipelineBuilder/ExecutionEngine 把 8 个阶段注册成 DAG 节点统一编排。实测发现 PipelineBuilder 是通用 DAG 执行器，handler 签名固定是"上一步输出 = 下一步唯一输入"的单线数据流；但阶段 5（治理）需要同时拿到 dedup 结果和现有类数量，阶段 6（合并）需要同时拿到主本体、候选本体、治理决策——不是简单的单线传递。硬套 PipelineBuilder 会导致所有上下文被打包进一个大 dict 在 handler 之间传递，代码可读性反而更差。所以 dynamic_ontology/pipeline.py 最终改成用普通 Python 函数顺序调用编排（见 run_incremental_cycle），这是权衡后的主动简化，不是"没试就放弃"。
+三、阶段 1：触发（trigger）
+semantica 包本身不对外暴露可复用的文件监听类——watchdog 的用法只出现在 semantica/cli.py 的私有实现里，不能 from semantica import FileWatcher 这样直接用，需要照抄写法自己实现一份。更关键的是批处理窗口这个治理设计：不对每个新文件立即触发一次全流程，而是"攒够 N 个文件，或从第一个文件到达起等够 T 秒，两者先到先触发"：
+# dynamic_ontology/trigger.py
+BATCH_SIZE = 3
+BATCH_WINDOW_SECONDS = 5.0
+
+def watch_and_batch(watch_dir, batch_size=BATCH_SIZE,
+                     batch_window_seconds=BATCH_WINDOW_SECONDS, ...):
+    # watchdog Observer 监听 watch_dir，新文件进队列；
+    # 主循环按 batch_size/batch_window_seconds 攒批，满足任一条件就返回这一批文件路径
+    ...
+图3：触发 + 批处理窗口流程
+为什么要攒批，不能来一个处理一个：每一轮增量演化都要跑一遍 LLM 抽取、相似度计算、质量评估，如果每个文件单独触发一轮，LLM 调用成本会被文件数放大，本体也会因为频繁的小批量合并而"震荡"（这次进来一个类，下次进来一个几乎同义的类，来回折腾）。这是 dynamic_ontology 自己加的治理措施，semantica 没有内置任何类似机制。
+四、阶段 2-3：增量抽取 + 候选本体生成
+增量抽取复用第①②篇学过的 ingest → parse → normalize → extract 链路，只处理本批新文件：
+# dynamic_ontology/incremental_extract.py（节选）
+def extract_from_files(file_paths):
+    docs = FileIngestor().ingest(file_paths)
+    parsed = DocumentParser().parse(docs)
+    normalized = TextNormalizer().normalize([d["text"] for d in parsed])
+    entities = NERExtractor(method=["llm", "ml"]).extract(normalized)
+    relationships = RelationExtractor(method=["llm", "dependency", "pattern"]).extract(normalized, entities)
+    return entities, relationships, normalized
+候选本体生成直接调用第④篇学过的 OntologyGenerator，但产出的只是"如果只看这批新数据，本体长什么样"——还不是最终要合并进主本体的结果：
+# dynamic_ontology/candidate_ontology.py（节选）
+candidate = OntologyGenerator(base_uri=CURRENT_BASE_URI).generate_ontology({
+    "entities": new_entities, "relationships": new_relationships,
+})
+五、本机实测：跑一轮真实的触发→抽取→候选生成
+用 demos/10_dynamic_ontology_v1.py 里的第一轮数据（一段全新的公司创立故事："Nova Robotics was founded by Elena Torres and Marcus Webb in Austin, Texas."）实际跑一遍：
+新增实体数:       5
+新增关系数:       4
+候选本体类:       ['Person', 'Gpe']
+抽取出了 5 个实体、4 条关系，候选本体归纳出两个类：Person（人物）和 Gpe（地名，spaCy 的标签命名习惯，全大写词组的首字母缩写）。因为这是主本体第一次演化（起点是空本体），这两个候选类会在下一篇的去重阶段被直接判定为"真正的新类"——没有任何已有类可以拿来比对。
+小结，以及下一篇要做什么
+这篇讲清楚了动态本体为什么要"增量"而不是"全量重跑"、8 阶段流水线的全貌、以及触发和增量抽取这两个前置阶段的具体设计——包括批处理窗口这个自己加的治理措施，以及 PipelineBuilder 编排方案在实测后被主动简化为普通函数调用的真实过程。候选本体生成出来了，但直接把候选本体的 Person/Gpe 合并进主本体是不够谨慎的——如果下一批数据又抽出一个语义相近但拼写不同的类（比如 Organization vs Company），本体会迅速膨胀出大量同义但不同名的类。下一篇讲怎么用相似度去重防止这件事发生，以及怎么检测消解跨批次的属性冲突。
