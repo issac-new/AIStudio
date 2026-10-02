@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.resilience
+  version: 0.1.0
+  description: >
+    R4 故障演练（v0.1 §10 L4.6，上游 resilience 本地方言）：恢复时长、终态、
+    log/metric/trace/alert 信号齐全、演练时效（maxAgeDays）；演练过期不算数。
+spec:
+  domain: L4
+  claims:
+    - ops.recovery-proven
+  triggers: [release]
+  executors:
+    - id: ops.resilience
+      type: ops
+      mode: resilience
+      observedFile: ".qgate/observations/drills.json"
+      maxRecoveryMs: 30000
+      maxAgeDays: 30
+      evidenceType: resilience-result
+  evidence:
+    required: [resilience-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 720

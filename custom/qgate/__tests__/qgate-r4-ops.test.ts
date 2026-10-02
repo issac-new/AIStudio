@@ -212,3 +212,29 @@ describe('ops topology（R1-R4）', () => {
     expect(run(exec, ws).result).toBe('pass')
   })
 })
+
+describe('profile 求值顺序（第四暗坑根治：enable 提名、disable 否决）', () => {
+  it('域 enable 不能复活被前缀 disable 点名的门（v0.2 起 high-assurance 的 disable 从未生效）', async () => {
+    const { resolveProfile } = await import('../src/core/profile.js')
+    const { parseProfile } = await import('../src/core/parse.js')
+    const { parse: parseYaml } = await import('yaml')
+    const profile = parseProfile(parseYaml([
+      'apiVersion: qgate/v1alpha1', 'kind: Profile',
+      'metadata: { id: t.negotiate, tier: compliance }',
+      'spec:',
+      '  enable: [L1.*, L3.*]',
+      '  disable: [ontology.*, llm.*]',
+    ].join('\n')))
+    const gates = [
+      { metadata: { id: 'engineering.basic-check' }, spec: { domain: 'L1' } },
+      { metadata: { id: 'ontology.semantic-v0' }, spec: { domain: 'L3' } },
+      { metadata: { id: 'llm.review-reasoner' }, spec: { domain: 'L4' } },
+      { metadata: { id: 'behavior.protocol' }, spec: { domain: 'L3' } },
+    ].map((g) => g as never)
+    const r = resolveProfile(gates, profile!, 't.negotiate')
+    expect(r.enabled.get('engineering.basic-check')).toBe(true)
+    expect(r.enabled.get('ontology.semantic-v0')).toBe(false)  // L3.* enable ≠ 复活前缀 disable
+    expect(r.enabled.get('llm.review-reasoner')).toBe(false)
+    expect(r.enabled.get('behavior.protocol')).toBe(true)
+  })
+})

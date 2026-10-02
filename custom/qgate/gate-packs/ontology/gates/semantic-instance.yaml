@@ -1,0 +1,27 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: semantic.instance
+  version: 0.1.0
+  description: >
+    R3 实例类型解析（上游 semantic-instance 本地方言）：数据样本逐条类型解析——
+    互斥多类型/不可比较类型 FAIL；entityTypes 允许子类特化。
+spec:
+  domain: L3
+  claims:
+    - semantic.instances-typed
+  triggers: [task_close]
+  executors:
+    - id: semantic.instance
+      type: semantic
+      check: instance
+      catalogFile: ".qgate/registers/catalog.json"
+      dataFile: ".qgate/observations/semantic-instances.json"
+      evidenceType: semantic-instance-result
+  evidence:
+    required: [semantic-instance-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

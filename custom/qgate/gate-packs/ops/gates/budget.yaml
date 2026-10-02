@@ -1,0 +1,26 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ops.timeout-budget
+  version: 0.1.0
+  description: >
+    R4 超时预算守恒（上游 budget 本地方言）：上游预算 ≥ Σ(timeout×(retries+1))；
+    重试开销 >20% → FAIL（防重试风暴）。
+spec:
+  domain: L4
+  claims:
+    - ops.budgets-sound
+  triggers: [task_close, pre_commit, release]
+  executors:
+    - id: ops.budget
+      type: ops
+      mode: budget
+      dataFile: ".qgate/registers/budget.json"
+      evidenceType: budget-result
+  evidence:
+    required: [budget-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

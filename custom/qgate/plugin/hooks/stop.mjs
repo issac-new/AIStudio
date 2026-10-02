@@ -7,7 +7,7 @@ import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   readStdinJson, projectRootOf, resolveCli, emit,
-  stopBudgetState, saveStopBudgetState, canBlock, registerDegradedRisk,
+  stopBudgetState, saveStopBudgetState, canBlock, registerDegradedRisk, isNewOnly,
 } from './qgate-lib.mjs'
 
 const input = await readStdinJson()
@@ -63,6 +63,16 @@ if (blocking.length === 0) {
 const detail = blocking
   .map((g) => `${g.gateId}:${g.verdict}${g.freshness ? `(${g.freshness})` : ''}`)
   .join(', ')
+
+// R6 new-only 降级：阻断门全是会话基线里的既有失败且证据仍新鲜（本会话没引入新问题）
+// → 放行留痕，不烧阻断预算（上游 blockMode:new-only 本地方言；INCONCLUSIVE 永不降级）。
+if (isNewOnly(blocking, state)) {
+  log({ hook: 'Stop', at: new Date().toISOString(), outcome: 'approve-new-only', blocking: detail })
+  emit({
+    decision: 'approve',
+    systemMessage: `QGate new-only downgrade: blocking gates (${detail}) were already failing at session baseline with fresh evidence — no new regressions introduced this session. Known issues remain tracked; fix them before the next release gate.`,
+  })
+}
 
 if (!canBlock(state)) {
   registerDegradedRisk(qgateDir, detail)
