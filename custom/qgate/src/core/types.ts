@@ -74,8 +74,8 @@ export interface ExecutorSpec {
   mode?: 'scope' | 'acceptance'
   /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
   requirementsFile?: string
-  /** register：登记簿种类（debt/assumptions/decisions）与登记文件路径。 */
-  register?: 'debt' | 'assumptions' | 'decisions'
+  /** register：登记簿种类（debt/assumptions/decisions，可多类合一证据）与登记文件路径（单类时可覆盖）。 */
+  register?: Array<'debt' | 'assumptions' | 'decisions'>
   registerFile?: string
   /** scope(mode=scope)：任务意图登记绑定（v0.3 §4.2，交集对账 + 哈希防篡改）。 */
   taskIntent?: { file: string; acknowledgedSha256?: string; require?: boolean }

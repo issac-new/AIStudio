@@ -22,3 +22,6 @@ spec:
     delivery.operational-readiness:
       policy:
         inconclusive: warn
+    L5.technical-debt:
+      policy:
+        failure: block
