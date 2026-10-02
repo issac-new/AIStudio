@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/loop-engine.ts
-import cronParser from 'cron-parser'
+import { CronExpressionParser } from 'cron-parser'
 import type {
   LoopInstance, TaskContract, LoopEvent, LoopStage, LoopStats,
   VerificationRecord,
@@ -350,7 +350,7 @@ export class LoopEngine {
     if (loop.schedule.mode === 'manual') return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     if (loop.schedule.mode === 'cron' && loop.schedule.cron) {
       try {
-        const interval = cronParser.CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
+        const interval = CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
         return interval.next().toISOString()
       } catch {
         return new Date(Date.now() + 3600_000).toISOString()
