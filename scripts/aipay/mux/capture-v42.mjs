@@ -248,19 +248,20 @@ if (await openCurrentRoom()) {
     }
   }
 
-  // ui-08d-members：会话工作台面板（session-workbench-panel：对象/任务簇/参与方/动作
-  // 四块，参与方条含 👤/🤖徽章并排+溢出计+邀请钮=全量预邀实证）。run7 预检三锤：
+  // 成员面板：点开成员列表截图（预邀实证；按钮文案自适应兜底两轮）
+  // ui-08d-members：参与方条（swp 参与方块 data-testid=participants-bar）=成员面——
+  // 人👤+AI 助理🤖徽章并排+超员 +N 溢出计+邀请钮=全量预邀实证。run7 预检双锤：
   // ①旧「成员/Members/参与者」按钮循环是死路（画布无此钮）②全屏拍与 msgcard 同帧
-  // ③参与方条单件 <10KB 被审计判空图嫌疑——取景框定整个 swp 面板。不可见拒拍。
+  // （md5 重复告警）。改参与方条特写（R7 真实产品 UI 面），不可见即拒拍保留旧图。
   if (!only || only === 'ui-08d-members') {
-    const pax = page.locator('[data-testid="session-workbench-panel"]').first()
+    const pax = page.locator('[data-testid="participants-bar"]').first()
     if (await pax.isVisible().catch(() => false)) {
       await pax.scrollIntoViewIfNeeded().catch(() => {})
       await page.waitForTimeout(800)
       await pax.screenshot({ path: `${OUT}/ui-08d-members.png` })
-      console.log('shot: ui-08d-members (会话工作台面板特写)')
+      console.log('shot: ui-08d-members (参与方条特写)')
     } else {
-      console.error('DEFECT[shutter-gate]: ui-08d-members 参与方面板不可见——拒拍保留既有图')
+      console.error('DEFECT[shutter-gate]: ui-08d-members 参与方条不可见——拒拍保留既有图')
     }
   }
 
