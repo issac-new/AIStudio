@@ -22,3 +22,6 @@ spec:
     engineering.basic-check:
       policy:
         inconclusive: block
+    L5.technical-debt:
+      policy:
+        failure: block

@@ -145,9 +145,11 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const requirementsFile = str(raw.requirementsFile)
     if (requirementsFile !== undefined) out.requirementsFile = requirementsFile
   } else if (type === 'register') {
-    const register = enumOf(raw.register, ['debt', 'assumptions', 'decisions'] as const)
-    if (!register) return null
-    out.register = register
+    const kinds = strList(raw.register, 3)
+    if (!kinds || kinds.length === 0) return null
+    const allowed = ['debt', 'assumptions', 'decisions'] as const
+    if (!kinds.every((k) => (allowed as readonly string[]).includes(k))) return null
+    out.register = kinds as ExecutorSpec['register']
     const registerFile = str(raw.registerFile)
     if (registerFile !== undefined) out.registerFile = registerFile
   }

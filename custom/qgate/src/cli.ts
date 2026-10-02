@@ -14,7 +14,8 @@ import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
 import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
 import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { TASK_INTENT_DEFAULT_FILE, loadTaskIntent, writeTaskIntent } from './core/task-intent.js'
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import type { GateSpec, Trigger } from './core/types.js'
 
 const HELP = `qgate — universal delivery gate CLI
@@ -29,6 +30,8 @@ commands:
   waive <gateId> --reason --approver  登记豁免（WAIVED；必填 reason/approver，默认 24h 过期）
     [--scope s] [--mitigation m] [--hours N] [--revalidation r]
   exceptions                          列出豁免及有效性
+  intent --task-id --statement --scope --acceptance --confirmed-by
+                                      登记任务意图（唯一写入通道；--revise --reason 修订留痕并自动重绑哈希）
   release-report [--out <file>]       生成发布证据包（md + json）
   init                                在当前项目创建 .qgate/ 骨架`
 
@@ -152,6 +155,67 @@ async function main(): Promise<void> {
         process.stdout.write(`evidence archived to docs/delivery-evidence/ (${runIds.length} runs)\n`)
       }
       process.exit(blocking > 0 ? 1 : 0)
+      return
+    }
+
+    case 'intent': {
+      // 任务意图登记（v0.3 §4.2）：唯一写入通道——登记/修订只经本命令，修订必须带 reason 留痕。
+      const revise = hasFlag(rest, '--revise')
+      const fileRel = flag(rest, '--file') ?? TASK_INTENT_DEFAULT_FILE
+      const file = resolve(workspace, fileRel)
+      const prev = revise ? loadTaskIntent(file) : null
+      if (revise && !prev) fail(`cannot revise: no valid task-intent register at ${fileRel}`)
+      const scopeArg = flag(rest, '--scope')
+      const acceptanceArg = flag(rest, '--acceptance')
+      const input = {
+        taskId: flag(rest, '--task-id') ?? prev?.taskId,
+        statement: flag(rest, '--statement') ?? prev?.statement,
+        scope: scopeArg ? scopeArg.split(',').map((s) => s.trim()).filter(Boolean) : prev?.scope,
+        acceptance: acceptanceArg ? acceptanceArg.split(';').map((s) => s.trim()).filter(Boolean) : prev?.acceptance,
+        constraints: flag(rest, '--constraints')?.split(',').map((s) => s.trim()).filter(Boolean) ?? prev?.constraints,
+        confirmedBy: flag(rest, '--confirmed-by') ?? prev?.confirmedBy,
+      }
+      if (!input.taskId || !input.statement || !input.scope?.length || !input.acceptance?.length || !input.confirmedBy) {
+        fail('usage: intent --task-id T --statement "..." --scope "src/**,db/**" --acceptance "When..Then..;When..Then.." --confirmed-by <name> [--constraints a,b] [--file path]\n       intent --revise --reason "..." [同上字段可覆盖]')
+      }
+      let written
+      try {
+        written = writeTaskIntent(file, input as Parameters<typeof writeTaskIntent>[1], { revise, reason: flag(rest, '--reason') })
+      } catch (e) {
+        fail((e as Error).message)
+      }
+      process.stdout.write(`${revise ? 'revised' : 'registered'} task-intent ${written.intent.taskId} → ${fileRel}\n`)
+      process.stdout.write(`sha256: ${written.sha256}\n`)
+
+      // 哈希重绑：项目门声明里引用本登记文件的 taskIntent.acknowledgedSha256 同步更新。
+      const gatesDir = join(loaded.qgateDir, 'gates')
+      const rebound: string[] = []
+      if (existsSync(gatesDir)) {
+        const { readdirSync } = await import('node:fs')
+        for (const name of readdirSync(gatesDir).sort()) {
+          if (!/\.(ya?ml|json)$/i.test(name)) continue
+          const gateFile = join(gatesDir, name)
+          const text = readFileSync(gateFile, 'utf8')
+          if (!text.includes('taskIntent') || !text.includes(fileRel)) continue
+          let next = text
+          if (/^(\s*)acknowledgedSha256:.*$/m.test(text)) {
+            next = text.replace(/^(\s*)acknowledgedSha256:.*$/m, `$1acknowledgedSha256: "${written.sha256}"`)
+          } else {
+            // 在 file: 行后按同缩进插入 acknowledgedSha256（fileRel 逐字符转义防正则注入）
+            const escaped = fileRel.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&')
+            next = text.replace(
+              new RegExp(`^(\\s*)(file:\\s*["']?${escaped}["']?\\s*)$`, 'm'),
+              `$1$2\n$1  acknowledgedSha256: "${written.sha256}"`,
+            )
+          }
+          if (next !== text) {
+            writeFileSync(gateFile, next, 'utf8')
+            rebound.push(name)
+          }
+        }
+      }
+      if (rebound.length > 0) process.stdout.write(`re-bound acknowledgedSha256 in: ${rebound.join(', ')}\n`)
+      else process.stdout.write(`note: no project gate references this register — bind it via taskIntent in a gate's scope executor to activate drift reconciliation\n`)
       return
     }
 

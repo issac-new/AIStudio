@@ -12,6 +12,8 @@ import { runOntologyExecutor } from '../executors/ontology.js'
 import { runFilesExecutor } from '../executors/files.js'
 import { runLlmExecutor } from '../executors/llm.js'
 import { runScopeExecutor } from '../executors/scope.js'
+import { runRegisterExecutor } from '../executors/register.js'
+import { runTraceabilityExecutor } from '../executors/traceability.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 import { cacheKeyFor, cacheGet, cachePut, markCached } from './cache.js'
 import { inputGlobsOf, snapshotForGlobs, snapshotsEqual } from './snapshot.js'
@@ -114,6 +116,10 @@ export async function runGate(input: RunInput): Promise<RunResult> {
         evidence.push(await runLlmExecutor(executor, { runId, gateId: spec.metadata.id, workspace, gateSpec: spec, commit: git.commit, changedPaths }))
       } else if (executor.type === 'scope') {
         evidence.push(runScopeExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit, changedPaths }))
+      } else if (executor.type === 'register') {
+        evidence.push(runRegisterExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+      } else if (executor.type === 'traceability') {
+        evidence.push(runTraceabilityExecutor(executor, { runId, gateId: spec.metadata.id, workspace, qgateDir, commit: git.commit, treeHash: git.treeHash, changedPaths }))
       }
     }
     if (cacheKey) cachePut(qgateDir, cacheKey, evidence)
