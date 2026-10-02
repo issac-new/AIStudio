@@ -9,7 +9,7 @@ import {
   fetchUsage, fetchSlo, fetchCostSummary,
   type UsageReport, type SloReport, type CostSummary,
 } from '@/custom/governance/api/governance'
-import { fetchCredentialProviders, fetchCronRuns, type CredentialProviderRow, type CronRunRow } from '@/custom/ia2/api/runtime-caps'
+import { fetchCredentialProviders, fetchCronRuns, fetchGatewayStatus, type CredentialProviderRow, type CronRunRow, type GatewayStatus } from '@/custom/ia2/api/runtime-caps'
 import { governanceMessages } from '@/custom/governance/i18n'
 
 const i18nCtx = useI18n()
@@ -86,10 +86,14 @@ async function refresh(): Promise<void> {
   // 凭证池（#17）+ cron 运行史（#7）：暗能力只读代理；失败/通道缺席=null 隐藏小节
   void fetchCredentialProviders().then(v => { credentials.value = v }).catch(() => undefined)
   void fetchCronRuns(8).then(v => { cronRuns.value = v }).catch(() => undefined)
+  // 网关能力面（2026-10-02 解封 #10）：/v1/capabilities 经代理——模型/运行模式/
+  // 鉴权型呈现；网关缺席=null 隐藏（诚实空态）
+  void fetchGatewayStatus().then(v => { gateway.value = v }).catch(() => undefined)
 }
 
 const credentials = ref<CredentialProviderRow[] | null>(null)
 const cronRuns = ref<CronRunRow[] | null>(null)
+const gateway = ref<GatewayStatus | null>(null)
 
 const failedCredentials = computed(() => (credentials.value ?? []).filter(c => c.failed))
 
@@ -264,6 +268,20 @@ onMounted(() => void refresh())
           <span class="runtime__tag" :class="r.status === 'completed' ? 'is-ok' : r.status === 'failed' ? 'is-bad' : ''">{{ r.status }}</span>
           <span class="runtime__boardval">{{ r.ts.slice(5, 16).replace('T', ' ') }}</span>
           <span class="runtime__boardval">{{ r.source }}</span>
+        </div>
+      </section>
+
+      <!-- ⑧ 网关能力面（2026-10-02 解封 #10：/v1/capabilities 经代理——api_server
+           常驻进程的模型/运行模式/鉴权型；网关缺席=null 隐藏） -->
+      <section v-if="gateway && gateway.healthy" class="runtime__card" data-testid="runtime-gateway">
+        <h4 class="runtime__card-title">
+          {{ L?.gatewayTitle ?? '网关能力' }}
+          <span class="runtime__chip is-ok">healthy</span>
+        </h4>
+        <div class="runtime__credrow" data-testid="runtime-gateway-model">
+          <span class="runtime__boardname">{{ gateway.capabilities?.model ?? '—' }}</span>
+          <span class="runtime__tag is-ok">{{ gateway.capabilities?.runtime?.mode ?? 'server' }}</span>
+          <span class="runtime__boardval">{{ gateway.capabilities?.auth?.type ?? 'bearer' }}</span>
         </div>
       </section>
     </div>

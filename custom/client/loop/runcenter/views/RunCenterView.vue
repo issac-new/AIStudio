@@ -13,6 +13,7 @@ import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import TaskRunsPanel from '@/custom/loop/runcenter/components/TaskRunsPanel.vue'
 import WorkflowObservationPanel from '@/custom/ide/components/WorkflowObservationPanel.vue'
 import GoalLoopStandingPanel from '@/custom/loop/runcenter/components/GoalLoopStandingPanel.vue'
+import BlueprintGalleryPanel from '@/custom/loop/runcenter/components/BlueprintGalleryPanel.vue'
 import { useRunSurfaceText } from '@/custom/ia2/i18n-run-surface'
 import { filterRuns } from '@/custom/loop/runcenter/adapters'
 import { formatEventTs } from '@/custom/loop/runcenter/adapters/run-graph'
@@ -253,6 +254,10 @@ function replayTime(e: GraphEventLike): string {
     <!-- 常驻意图面板（runs 页签顶部：goal/loop 意图卡，2026-10-01 吸收批 #20）。
          放在页签链之外（v-show 独立于 v-if/v-else-if 链，不打断 InboxPanel→空态→列表） -->
     <div v-show="activeTab === 'runs'"><GoalLoopStandingPanel /></div>
+
+    <!-- 蓝图画廊（runs 页签第二横条，2026-10-02 三受阻项解封 #11：填槽即建
+         网关定时任务；网关缺席时组件内诚实降级单行提示） -->
+    <div v-show="activeTab === 'runs'"><BlueprintGalleryPanel /></div>
 
     <!-- 介入收件箱（两态，task-7） -->
     <InboxPanel

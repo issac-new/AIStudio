@@ -1,20 +1,23 @@
 <!-- overlay/custom/client/ide/components/IdeHistoryBrowser.vue -->
 <!-- 会话 History 浏览器（2026-10-01 IDE 会话吸收批 #10：minimax-code /history
-     交互的 Web 化）。
+     交互的 Web 化；2026-10-02 Fork 接真——三受阻项解封 #7）。
      语义：搜索历史提示（user 消息行）→ 每条三动作——
        Jump 定位（focusMessageId 走 MessageList 既有定位链，与 IdeFindInSession 同源）；
        Copy 复制（纯前端）；
        Edit 重发（剪贴板+聚焦输入框——诚实降级：上游 ChatInput 的 initialText 仅
        mount/切会话时消费，动态注入需 patch 收编轮升级，此处如实标注）；
      运行中只读锁（minimax 语义：isStreaming 时动作禁用并提示）。
-     真分叉（Fork from here / Rewind 双 scope）依赖 hermes 会话分叉命令通道与
-     文件快照回滚接线，记档剩余（分析文档 §五 #10 剩余行）。 -->
+     Fork（2026-10-02 真链路）：网关 POST /api/sessions/{id}/fork（CLI /branch 语义
+     ——子会话全量拷消息+源会话标记 branched 结束，不可逆，confirm 双确认）→ 成功
+     switchSession 进新会话；404=该会话不在网关会话库（如 zcode 引擎会话）→ 诚实
+     降级回剪贴板 "/fork" 路径。Rewind 双 scope（会话+文件）仍记档（文件快照通道未开）。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { authFetch } from '../utils/auth-fetch'
 import { useMsgSurfaceText } from '@/custom/ia2/i18n-msg-surface'
+import { forkGatewaySession } from '@/custom/ia2/api/runtime-caps'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
@@ -68,12 +71,39 @@ async function editRefill(text: string): Promise<void> {
   ide.setChatFocus()
 }
 
-/** 从此分叉（#10 剩余，2026-10-01 批 9C）：/fork 是聊天内 slash 命令
- *  （chatStore.sendMessage 的 isBridgeForkCommand 通道）——复制 "/fork" 进
- *  剪贴板+聚焦输入框，用户粘贴补参后回车执行（分叉是不可逆动作，不经面板代发）。 */
-async function forkRefill(): Promise<void> {
-  await copyText('/fork ')
-  ide.setChatFocus()
+/** 从此分叉（2026-10-02 接真，#7 解封）：网关真分叉——子会话全量拷消息，源会话
+ *  标记 branched 结束（不可逆，confirm 明示）；成功即 switchSession 进新会话。
+ *  404=会话不在网关会话库（zcode 引擎会话不落 hermes session store）→ 降级回
+ *  剪贴板 "/fork"（聊天内 slash 通道，粘贴补参回车执行）。 */
+const forkBusy = ref(false)
+const forkMsg = ref('')
+const forkErr = ref('')
+
+async function forkSession(): Promise<void> {
+  const store = chatStore as unknown as { activeSessionId?: string | null }
+  const sid = store.activeSessionId ?? chatStore.activeSession?.id
+  if (!sid || forkBusy.value) return
+  if (!window.confirm(tx.historyForkConfirm)) return
+  forkBusy.value = true
+  forkMsg.value = ''
+  forkErr.value = ''
+  try {
+    const res = await forkGatewaySession(String(sid))
+    if (res.ok) {
+      forkMsg.value = `${tx.historyForkDone}（${res.session.title ?? res.session.id}）`
+      const s = chatStore as unknown as { switchSession?: (id: string) => Promise<void> }
+      await s.switchSession?.(res.session.id)
+      setTimeout(() => { forkMsg.value = '' }, 5000)
+    } else if (res.status === 404) {
+      await copyText('/fork ')
+      ide.setChatFocus()
+      forkMsg.value = tx.historyForkFallback
+    } else {
+      forkErr.value = res.error
+    }
+  } finally {
+    forkBusy.value = false
+  }
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -108,10 +138,12 @@ function onKeydown(e: KeyboardEvent): void {
           <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyJump" @click="jump(m.id)">↗</button>
           <button type="button" class="ihb__act" :title="tx.historyCopy" @click="copyText(String(m.content))">⧉</button>
           <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyEdit" @click="editRefill(String(m.content))">✎</button>
-          <button type="button" class="ihb__act" :disabled="isStreaming" :title="tx.historyFork" @click="forkRefill()">⋔</button>
+          <button type="button" class="ihb__act" :disabled="isStreaming || forkBusy" :title="tx.historyFork" data-testid="ide-history-fork" @click="forkSession()">{{ forkBusy ? '…' : '⋔' }}</button>
         </span>
       </div>
     </div>
+    <div v-if="forkMsg" class="ihb__forkmsg" data-testid="ide-history-fork-msg">↪ {{ forkMsg }}</div>
+    <div v-if="forkErr" class="ihb__forkerr" data-testid="ide-history-fork-err">{{ forkErr }}</div>
   </div>
 </template>
 
@@ -146,6 +178,8 @@ function onKeydown(e: KeyboardEvent): void {
 }
 
 .ihb__empty { padding: 16px 0; text-align: center; color: var(--text-muted); font-size: 11px; }
+.ihb__forkmsg { padding: 4px 6px; font-size: 11px; color: #059669; }
+.ihb__forkerr { padding: 4px 6px; font-size: 11px; color: #dc2626; }
 
 .ihb__list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 
