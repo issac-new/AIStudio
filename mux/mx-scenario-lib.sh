@@ -242,6 +242,23 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 }
 
 
+
+# ── 分支新鲜度（2026-10-02 run6 实锤：run5 旧 feat/DEV-* 分支留存，devimpl 存在性
+# 检查秒过=假真值，驱动用旧代码跑完后续步。与 repo_has 文件新鲜度同口径：分支 tip
+# 提交时间必须 ≥ run_started_at；缺键退化为存在性旧语义并告警。──
+branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提交时间在本轮起跑后）
+  local br="$1" ct rs
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/$br" >/dev/null 2>&1 || return 1
+  rs="$(sget run_started_at)"
+  if [ -z "$rs" ]; then
+    log "[观察] branch_fresh 无 run_started_at 键（旧 state 兼容），退化为存在性：$br"
+    return 0
+  fi
+  ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/$br" 2>/dev/null)"
+  [ -n "$ct" ] && [ "$ct" -ge "$rs" ] 2>/dev/null
+}
+
 # ── 活性等待（2026-10-01 用户裁决：重载任务不设绝对时长上限）─────────────
 # 只要责任 agent 还在产出（profiles/<a>/logs/agent.log 持续增长）就一直等；
 # 连续 <idle-sec> 无日志增长才判空转/死循环退出。长生成/长测试的单次静默
