@@ -6,14 +6,23 @@
 // 映射=server/keymap/keymap.ts（applyKeymap/defaultKeymap，纯函数跨引）。
 import { computed, ref } from 'vue'
 import { defaultKeymap, applyKeymap, type KeyBinding, type KeymapConflict } from '../../../server/keymap/keymap'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 
 const open = ref(false)
 const recording = ref<string | null>(null)
 
-const OVERRIDES_KEY = 'ide_keymap_overrides_v1'
+const OVERRIDES_KEY = 'ide_keymap_overrides_v1'  // 遗留裸键（#13 批三迁入 ide.keymapOverrides）
+// 分层读（含一次性收养）：返回归一后的覆盖数组
+function readOverrides(): KeyBinding[] {
+  try {
+    adoptLegacySetting('ide.keymapOverrides', OVERRIDES_KEY)
+    const raw = readSetting<KeyBinding[]>('ide.keymapOverrides', []).value
+    return Array.isArray(raw) ? raw : []
+  } catch { return [] }
+}
 function loadOverrides(): KeyBinding[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(OVERRIDES_KEY) ?? '[]')
+    const raw = readOverrides()
     return Array.isArray(raw) ? raw : []
   } catch { return [] }
 }
@@ -51,13 +60,13 @@ function onRecordKey(ev: KeyboardEvent): void {
   const rest = overrides.value.filter((o) => !(o.context === context && o.action === action))
   const next = [...rest, { context, action, key: combo }]
   overrides.value = next
-  localStorage.setItem(OVERRIDES_KEY, JSON.stringify(next))
+  writeSetting('user', 'ide.keymapOverrides', next)
   recording.value = null
 }
 
 function resetAll(): void {
   overrides.value = []
-  localStorage.removeItem(OVERRIDES_KEY)
+  writeSetting('user', 'ide.keymapOverrides', null)
 }
 </script>
 
@@ -66,7 +75,7 @@ function resetAll(): void {
 export function useKeyBinding(context: string, action: string): () => string {
   return () => {
     try {
-      const raw = JSON.parse(localStorage.getItem('ide_keymap_overrides_v1') ?? '[]') as KeyBinding[]
+      const raw = readOverrides()
       const applied = applyKeymap(defaultKeymap(), Array.isArray(raw) ? raw : [])
       return applied.bindings.find((b) => b.context === context && b.action === action)?.key ?? ''
     } catch { return '' }
