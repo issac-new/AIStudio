@@ -428,3 +428,4 @@
 # 537 退役（2026-10-01 双栏根治 aa3e0bbe）：IDE 一级入口并回 072 整文件版（isIdeShellArea 口径），独立补丁无对象。
 537-desktop-deeplink-badge.patch
 538-server-routes-runtimecaps-mount.patch
+539-client-history-dangling-links-fix.patch

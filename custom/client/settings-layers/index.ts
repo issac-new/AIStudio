@@ -19,8 +19,10 @@ function storageKey(layer: SettingsLayer, key: string): string {
 }
 
 /** 撤销保护：跨标签页写同键时后写胜（与 multica 按 workspace 记忆/清空语义对齐，
- *  登出清 localStorage 即全清——不引入服务端态）。 */
-export function writeSetting<T extends string | number | boolean>(
+ *  登出清 localStorage 即全清——不引入服务端态）。
+ *  值域：原始量（string/number/boolean）+ JSON 复合值（数组/对象）——步二迁键
+ *  需要（如 ide_status_slots 是槽位数组）。 */
+export function writeSetting<T>(
   layer: SettingsLayer, key: string, value: T | null,
 ): void {
   if (layer === 'default') {
@@ -38,8 +40,11 @@ export interface LayeredResult<T> {
 }
 
 /** 沿链读取：session → workspace → user；全未设返回 fallback（layer='default'）。
- *  解析失败的脏值按未设处理（不抛——旧版本残留键不该炸读路径）。 */
-export function readSetting<T extends string | number | boolean>(
+ *  解析失败的脏值按未设处理（不抛——旧版本残留键不该炸读路径）。
+ *  类型校验仅对原始量 fallback 强制（存 string 读 number 链=未设）；复合值
+ *  fallback（数组/对象）不做形状校验——消费方自校（迁移域本就有自己的
+ *  valid 化逻辑，如 IdeStatusBar readSlots 的 SLOT_KEYS 归一）。 */
+export function readSetting<T>(
   key: string, fallback: T,
   opts: { workspaceId?: string; sessionId?: string } = {},
 ): LayeredResult<T> {
@@ -47,12 +52,14 @@ export function readSetting<T extends string | number | boolean>(
   if (opts.sessionId) scoped.push('session')
   if (opts.workspaceId) scoped.push('workspace')
   const chain: SettingsLayer[] = [...scoped, 'user']
+  const primitive = typeof fallback !== 'object' || fallback === null
   for (const layer of chain) {
     const raw = localStorage.getItem(storageKey(layer, key))
     if (raw === null) continue
     try {
       const parsed = JSON.parse(raw) as T
-      if (typeof parsed === typeof fallback) return { value: parsed, layer }
+      if (primitive && typeof parsed !== typeof fallback) continue
+      return { value: parsed, layer }
     } catch { /* 脏值跳过 */ }
   }
   return { value: fallback, layer: 'default' }
@@ -79,4 +86,23 @@ export function clearLayer(layer: SettingsLayer): void {
     if (k && k.startsWith(prefix)) doomed.push(k)
   }
   for (const k of doomed) localStorage.removeItem(k)
+}
+
+/** 遗留裸键一次性收养（步二迁键用）：分层键未设而遗留键在→把遗留原值搬入
+ *  user 层并删遗留键。原值语义保真：遗留存储形态已是 JSON（JSON.stringify
+ *  产物，如对象/数组/带引号串）直接搬；裸字符串（如 sortMode=alpha 不带
+ *  引号）包成 JSON 字符串。不解析校验——消费方读端自有 valid 化，脏值搬入后
+ *  走读端容错等效未设。幂等：收养过（任一层已设）即空转。 */
+export function adoptLegacySetting(key: string, legacyKey: string): void {
+  const layered = ['user', 'workspace', 'session'].some(
+    l => localStorage.getItem(storageKey(l, key)) !== null)
+  if (layered) return
+  const raw = localStorage.getItem(legacyKey)
+  if (raw === null) return
+  localStorage.setItem(storageKey('user', key), isJsonText(raw) ? raw : JSON.stringify(raw))
+  localStorage.removeItem(legacyKey)
+}
+
+function isJsonText(text: string): boolean {
+  try { JSON.parse(text); return true } catch { return false }
 }

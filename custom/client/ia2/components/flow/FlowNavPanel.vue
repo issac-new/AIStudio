@@ -19,6 +19,7 @@ import { useI18n } from 'vue-i18n'
 import { filterStreams, LOOP_STAGE_ORDER, sortFlowRows, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type FlowSortMode, type StreamSelection } from '../../adapters/flow'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
 import { useMsgSurfaceText } from '../../i18n-msg-surface'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
@@ -84,12 +85,14 @@ const dupNames = computed(() =>
 /** v14 单一「聊天」列表：三类混排按 lastActivityAt 降序（无活动时间者沉底，
  *  sort 稳定保序）。kind 图标替代旧三小节分节（R4a 聚类退役）。
  *  2026-10-01 吸收二期·房间列表卫生：排序器三档（活跃/未读/名称，
- *  element-web skip-list sorters 范式），选择持久化 localStorage。 */
-const SORT_MODE_KEY = 'ia2.flow.sortMode'
+ *  element-web skip-list sorters 范式）。
+ *  2026-10-02 #13 步二迁键：偏好走 settings-layers user 层（遗留裸键
+ *  ia2.flow.sortMode 一次性收养），非法存量值回退 recent。 */
+const SORT_MODES = ['recent', 'unread', 'alpha'] as const
+adoptLegacySetting('flow.sortMode', 'ia2.flow.sortMode')
 const sortMode = ref<FlowSortMode>(
-  (['recent', 'unread', 'alpha'] as const).find(m => m === localStorage.getItem(SORT_MODE_KEY)) ?? 'recent',
-)
-watch(sortMode, (m) => localStorage.setItem(SORT_MODE_KEY, m))
+  SORT_MODES.find(m => m === readSetting('flow.sortMode', 'recent').value) ?? 'recent')
+watch(sortMode, (m) => writeSetting('user', 'flow.sortMode', m))
 const chatRows = computed<FlowSessionRow[]>(() => {
   const base = [...shownSessions.value].sort((a, b) => {
     const at = a.lastActivityAt ?? 0
