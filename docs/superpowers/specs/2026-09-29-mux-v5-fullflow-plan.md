@@ -1,5 +1,7 @@
 # Swarm Studio 全流程推演方案（V5 整合版）
 
+> **⚠️ 已被 V6 取代（2026-10-02）**：最新正本=`2026-10-02-mux-v6-fullflow-plan.md`（四组件能力底座章+驾驶舱单面口径统一+12 提案与保真开关收编）；本文保留为 V5 契约历史存档，26 步六闸契约 V6 零变更沿用。
+
 > **文档定位**：全流程推演唯一正本（终态版）——26 步主链与六道硬闸为契约层，历轮把关增补已直接并入各步（细则/落点行）；治理总则、报告规范、运行手册与纪律十条为规则层。历史沿革与全部过程记档见 `2026-09-29-mux-v5-fullflow-plan-changelog-archive.md`（V3/V4.1 底本亦存档其中脉络），本文不再保留修订过程层。
 > **当前基准**：overlay main 最新（run7 起跑基准=11767f6f 系，含 QGate v0.3/报告链收口/产品修复）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。历史基底链见 changelog-archive §八。
 
