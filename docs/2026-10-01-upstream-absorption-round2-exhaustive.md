@@ -34,6 +34,24 @@
 > 实际已在树），ensure-injected 补套失败即退——核实树内证据后登记 manifest 两条，
 > 恢复 dev；走查五坑新增两条=naive-ui 关闭钮不响应合成 JS click（必须 locator 真点）、
 > dev 实例 DefaultCredentialPrompt 自动弹窗须每步清场。
+> **三轮执行终态记档（2026-10-01 深夜续二，用户裁定「完成所有剩余任务」后实施）**：
+> **#7/#10/#11 实证维持受阻（证据升级）**：本机 hermes CLI（v0.21.5+5355）无 blueprints
+> 子命令、/api/cron/blueprints 经 studio 后端 404——「CLI 通道已通」仅指 CLI 本体可用，
+> 蓝图/分叉/RPC 面均不可达，维持记档待 runtime。
+> **#9 落地合 main 9adb5959**：通用工件编辑链（PUT /api/governance/doc 保存即本地提交+
+> ref 分支证据件 409 只读+工作树优先读+docMeta HEAD/origin 取新）+工件卡新鲜度徽标
+> （本轮<24h/旧轮，24h 为轮次窗口代理判定如实标注）+**P12 docview flex 压扁根治**
+> （走查实锤：内容列受限时文档盒压到 2px、头部被 reviews 覆盖，flex-shrink:0+min-height
+> 修复；「overflow 的 flex 项必防压扁」又一实证）。守门：服务端 4 例新增（temp 仓自包含）+
+> 客户端静态 5 例+治理域 110/110 绿；走查 gov-doc-edit-walkthrough.mjs 4/4。
+> **#12 可开证明**：ekko 四页（memory/skills/mcp/settings）flag-on 实例走查 4/4 不被守卫
+> 弹回（scripts/ekko-flagon-walkthrough.mjs 入库）——默认仍关，开 flag 只差用户一句话。
+> **#13/#14/#16/#19 方案与评估落盘**：`2026-10-01-absorb-round2-remaining-plans.md`——
+> #13 三层迁移三步（步 1 无依赖可做）；#14 依赖实证解除（与 ekko/设置无耦合），先 spike
+> 验证 registry 事件冲突合并再铺 UI；#16 对标 30 域出两真差距（webhooks 管理面收编=
+> 低成本高价值可下批、backend 所有权仲裁=架构专项）；#19 拆两段（九件套契约文本入库
+> 零模型变更可做、评审多层列专项）。走查新坑=gov 页冷载 selector 等待不稳
+> （state:'attached'+预热+稳定子选择器）。
 盘点范围：`upstream/` 全部 12 个组件 + `overlay/` 现状基线 + 推演语料（V5 正本、V3 生命周期、aipaydev 全链报告、ncwk-sim-mux evidence 全部报告与审计）
 上位文档：《2026-10-01-upstream-absorption-analysis.md》（下称首轮）——27 项清单已全部收口，逐项终态见其附录对账表。本文是它的补全版：首轮是抽样精读，本文按"无遗漏"要求做穷尽盘点，并新增两个首轮没有的视角——**hermes-studio 上游暴露面 diff**（上游有而 studio 没用起来的面）与**推演改进点×吸收源交叉对照**（需求侧驱动）。
 
