@@ -27,7 +27,13 @@ spec:
       aliases:
         "@/custom/": "./custom/client/"
         "@custom/": "./custom/client/"
-      ignoredSpecifiers: ["@/"]
+      ignoredSpecifiers:
+        - "@/"
+        # 上游未声明、实为其传递依赖的直接借用（上游仓只读，声明化属上游职责，借用期豁免留痕）：
+        #   d3-force（loop graph 力导布局，上游 d3 生态传递依赖）
+        #   @intlify/message-compiler（vue-i18n 传递依赖，i18n 编译守门测试直接用）
+        - "d3-force"
+        - "@intlify/message-compiler"
       evidenceType: symbol-grounding-result
   evidence:
     required: [symbol-grounding-result]
