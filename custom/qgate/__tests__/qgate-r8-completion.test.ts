@@ -254,3 +254,23 @@ describe('behavior invariant（单值集断言）+ replayBaseline', () => {
     expect(tampered.summary).toContain('replay-baseline-modified')
   })
 })
+
+describe('ops symbols alias/ignore 扩展', () => {
+  it('aliases 映射 @/ 前缀后可解析；ignoredSpecifiers 显式豁免', () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'client'), { recursive: true })
+    writeFileSync(join(ws, 'package.json'), JSON.stringify({ dependencies: {} }))
+    writeFileSync(join(ws, 'client', 'store.ts'), 'export const x = 1\n')
+    writeFileSync(join(ws, 'app.ts'), "import { x } from '@/store'\nimport { testFn } from 'vitest- injected-global'\nexport const y = x\n")
+    // 无配置：@ 与 vitest- 注入均 unresolved
+    const bare = runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }, ws)
+    expect(bare.result).toBe('fail')
+    // 配置后：alias 解析 + 豁免清单放行
+    const configured = runOps({
+      id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x',
+      aliases: { '@/': './client/' },
+      ignoredSpecifiers: ['vitest-'],
+    }, ws)
+    expect(configured.result).toBe('pass')
+  })
+})
