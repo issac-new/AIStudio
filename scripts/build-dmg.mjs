@@ -12,7 +12,11 @@ import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：与 inject.mjs 同款私有上游隔离——缺省行为不变（ncwk 共享树）。
+const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
+  : resolve(ncwkRoot, 'upstream');
+const upstream = resolve(upstreamRoot, 'hermes-studio');
 const desktopDir = resolve(upstream, 'packages/desktop');
 
 const platform = process.argv.includes('--win') ? 'win'
@@ -26,8 +30,10 @@ const platform = process.argv.includes('--win') ? 'win'
 process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
 
 const electronBuilderFlags = {
-  mac: '--mac --publish never',
-  win: '--win --publish never',
+  // mac：identity=null 显式 ad-hoc（Apple Development 证书已吊销，见上注）；分发签名恢复时移除。
+  // win：--x64 必带——electron-builder 缺省取宿主 arch（arm64 mac 上出 arm64 win 包必废）。
+  mac: '--mac --publish never -c.mac.identity=null',
+  win: '--win --x64 --publish never',
   linux: '--linux --publish never',
 }[platform];
 
