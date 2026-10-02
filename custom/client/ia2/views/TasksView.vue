@@ -25,6 +25,7 @@ import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
 import GovRegistryRulesView from './gov/GovRegistryRulesView.vue'
 import GovAuditChangeView from './gov/GovAuditChangeView.vue'
 import GovDocsReviewView from './gov/GovDocsReviewView.vue'
+import GovHarnessView from './gov/GovHarnessView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
 
 const { t } = useI18n()
@@ -34,7 +35,7 @@ const kanban = useKanbanStore()
 const cockpit = useCockpitStore()
 
 /** 单层页签全集（2026-10-01）：文案单一事实源=i18n-tasks-tabs 模块字典 */
-type TabKey = 'board' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs'
+type TabKey = 'board' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness'
 const tab = ref<TabKey>('board')
 const tabText = useTasksTabsText()
 
@@ -47,8 +48,9 @@ const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'gov-registry', testid: 'ia-tasks-tab-gov-registry' },
   { key: 'gov-audit', testid: 'ia-tasks-tab-gov-audit' },
   { key: 'gov-docs', testid: 'ia-tasks-tab-gov-docs' },
+  { key: 'gov-harness', testid: 'ia-tasks-tab-gov-harness' },
 ]
-type TabTextKey = 'tabBoard' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs'
+type TabTextKey = 'tabBoard' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   board: 'tabBoard',
   trace: 'tabTrace',
@@ -58,6 +60,7 @@ const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   'gov-registry': 'tabGovRegistry',
   'gov-audit': 'tabGovAudit',
   'gov-docs': 'tabGovDocs',
+  'gov-harness': 'tabGovHarness',
 }
 const TAB_KEYS: ReadonlySet<string> = new Set(TABS.map(x => x.key))
 /** 旧深链兼容：治理中心单页签时代的 ?tab=gov → 治理首分区 */
@@ -176,6 +179,9 @@ function goInboxFromAccounts(): void {
     </div>
     <div v-else-if="tab === 'gov-docs'" class="ia-area" data-testid="ia-tasks-panel-gov-docs">
       <GovDocsReviewView />
+    </div>
+    <div v-else-if="tab === 'gov-harness'" class="ia-area" data-testid="ia-tasks-panel-gov-harness">
+      <GovHarnessView />
     </div>
     <!-- 全链路追踪：RunTraceOverview 自足组件（useKanbanTaskGraph 数据面）；
          定高滚动容器内 flex 项防压扁（min-height:0 交给面板自管） -->

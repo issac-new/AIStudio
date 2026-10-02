@@ -28,6 +28,10 @@ vi.mock('@/custom/ia2/views/gov/GovAuditChangeView.vue', () => ({
 vi.mock('@/custom/ia2/views/gov/GovDocsReviewView.vue', () => ({
   default: { template: '<div data-testid="gov-docs-stub">gov-docs</div>' },
 }))
+// 驾驭工程页签（2026-10-02 信通院报告产品化）：能力目录/成本账/成熟度/原语四板块聚合
+vi.mock('@/custom/ia2/views/gov/GovHarnessView.vue', () => ({
+  default: { template: '<div data-testid="gov-harness-stub">gov-harness</div>' },
+}))
 vi.mock('@/custom/kanban/components/ManagementAccountsPanel.vue', () => ({
   default: { template: '<div data-testid="ma-stub">accounts</div>' },
 }))
@@ -66,7 +70,7 @@ describe('视图壳内嵌接线', () => {
     expect(swarmKanbanMounted.count).toBe(1)
   })
 
-  it('单层页签（2026-10-01 用户裁定：不要二级页签）：8 平级页签 + 治理四分区直挂 + 旧链兼容', async () => {
+  it('单层页签（2026-10-01 用户裁定：不要二级页签）：9 平级页签 + 治理四分区直挂 + 旧链兼容', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [{ path: '/app/board', name: 'ia2.board', component: TasksView }],
@@ -74,13 +78,13 @@ describe('视图壳内嵌接线', () => {
     await router.push('/app/board')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    // 单层纪律：恰 8 个平级页签，无二级页签行（gov-subtabs 随 GovernanceView 退役）
+    // 单层纪律：恰 9 个平级页签（2026-10-02 驾驭工程入列），无二级页签行（gov-subtabs 随 GovernanceView 退役）
     const tabs = wrapper.findAll('.ia-tasks__tab')
-    expect(tabs).toHaveLength(8)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(8)
+    expect(tabs).toHaveLength(9)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(9)
     expect(wrapper.find('[data-testid="gov-subtabs"]').exists()).toBe(false)
     expect(tabs.map(x => x.text())).toEqual([
-      '看板', '追溯矩阵', '三账与体检', '全链路追踪', '组织与知识', '台账与规则', '审计与变更', '文档评审',
+      '看板', '追溯矩阵', '三账与体检', '全链路追踪', '组织与知识', '台账与规则', '审计与变更', '文档评审', '驾驭工程',
     ])
     // 治理首分区：点击=页内切换（URL 不变 + 内嵌渲染 + 页签仍在）
     const govOrgTab = wrapper.find('[data-testid="ia-tasks-tab-gov-org"]')
@@ -101,6 +105,11 @@ describe('视图壳内嵌接线', () => {
     await wrapper.find('[data-testid="ia-tasks-tab-gov-docs"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="gov-docs-stub"]').exists()).toBe(true)
+    // 驾驭工程页签：点击=页内切换 + 面板挂载（2026-10-02 守门同步）
+    await wrapper.find('[data-testid="ia-tasks-tab-gov-harness"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gov-harness-stub"]').exists()).toBe(true)
+    expect(router.currentRoute.value.name).toBe('ia2.board')
     // 三账与体检：管理三账 + 治理体检同页签堆叠（整合守门）
     await wrapper.find('[data-testid="ia-tasks-tab-accounts"]').trigger('click')
     await flushPromises()
@@ -114,6 +123,10 @@ describe('视图壳内嵌接线', () => {
     await router.push('/app/board?tab=gov-docs')
     await flushPromises()
     expect(wrapper.find('[data-testid="gov-docs-stub"]').exists()).toBe(true)
+    // 新深链 ?tab=gov-harness 直达
+    await router.push('/app/board?tab=gov-harness')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gov-harness-stub"]').exists()).toBe(true)
     wrapper.unmount()
   })
 
