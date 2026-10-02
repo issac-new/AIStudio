@@ -7,7 +7,7 @@
 //   ui-08d-members        建群全量预邀实证（成员面板：人+agent 并排 17 号在列）
 //   ui-20b-spotcheck      V4.1 抽检器：收件箱「抽检·自动放行回看」区（含真实自动放行条目）
 import { chromium } from 'playwright'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 
 const BASE = 'http://127.0.0.1:8802'
 const RUN_ID = process.env.RUN_ID || '20260929-v4-run2'
@@ -212,7 +212,9 @@ if (!only || only === 'sit-chips') await guarded('sit-chips', async () => {
 
 // ── 补遗④第 2/4/5 项产品面：P6 账户管理 / P7 应用资产 / P8 组织（保存即 git 提交，R13）──
 await shot('ui-01-accounts', '/app/accounts', { wait: 4500, expect: 'main', expectRoute: '/app/accounts' })
-await shot('ui-gov-center', '/app/gov', { wait: 5500, expect: 'main', expectRoute: '/app/gov' })
+// 治理中心路由真相（run7 预检实锤）：/app/gov 是 redirect → /app/board?tab=gov-org
+// （治理中心内嵌为看板平级 tab，入口路径仍有效）——预期路由按落地态写，免误报错拍。
+await shot('ui-gov-center', '/app/board?tab=gov-docs', { wait: 5500, expect: 'main', expectRoute: '^/app/board\\?tab=gov-docs' })  // 治理中心正身=看板 gov-docs tab（/app/gov 别名落 gov-org 无工件库钮）
 
 
 // ── 分析群：全景 + P4③ 时间线特写 + 成员面板（全量预邀实证）──
@@ -247,13 +249,20 @@ if (await openCurrentRoom()) {
   }
 
   // 成员面板：点开成员列表截图（预邀实证；按钮文案自适应兜底两轮）
+  // ui-08d-members：参与方条（swp 参与方块 data-testid=participants-bar）=成员面——
+  // 人👤+AI 助理🤖徽章并排+超员 +N 溢出计+邀请钮=全量预邀实证。run7 预检双锤：
+  // ①旧「成员/Members/参与者」按钮循环是死路（画布无此钮）②全屏拍与 msgcard 同帧
+  // （md5 重复告警）。改参与方条特写（R7 真实产品 UI 面），不可见即拒拍保留旧图。
   if (!only || only === 'ui-08d-members') {
-    for (const label of ['成员', 'Members', '参与者']) {
-      const btn = page.locator(`button:has-text("${label}")`).first()
-      if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(1500); break }
+    const pax = page.locator('[data-testid="participants-bar"]').first()
+    if (await pax.isVisible().catch(() => false)) {
+      await pax.scrollIntoViewIfNeeded().catch(() => {})
+      await page.waitForTimeout(800)
+      await pax.screenshot({ path: `${OUT}/ui-08d-members.png` })
+      console.log('shot: ui-08d-members (参与方条特写)')
+    } else {
+      console.error('DEFECT[shutter-gate]: ui-08d-members 参与方条不可见——拒拍保留既有图')
     }
-    await page.screenshot({ path: `${OUT}/ui-08d-members.png` })
-    console.log('shot: ui-08d-members')
   }
 
   // 消息卡链接特写（滚动到底部最新派发/回执）
@@ -302,11 +311,17 @@ await shot('ui-25-models', '/app/ide', {
   },
 })
 // ui-26-report：第 26 步交付物=本报告自身——直拍生成的 simulation-report.html 首屏（治"拍成治理中心"错拍）
+// 守卫：报告未生成（推演未到第 26 步）时如实跳过，禁裸 goto file:// 缺文件崩链；
+// 真实采集序=驱动 report 步先出机器报告 → 本位落图 → 再重生成/合并嵌入。
 if (!only || only === 'ui-26-report') {
-  await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })
-  await page.waitForTimeout(2500)
-  await page.screenshot({ path: `${OUT}/ui-26-report.png` })
-  console.log('shot: ui-26-report (report file first screen)')
+  if (existsSync(`${RUN_DIR}/evidence/simulation-report.html`)) {
+    await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })
+    await page.waitForTimeout(2500)
+    await page.screenshot({ path: `${OUT}/ui-26-report.png` })
+    console.log('shot: ui-26-report (report file first screen)')
+  } else {
+    console.log('SKIP[ui-26-report]: simulation-report.html 未生成（推演未到第 26 步）——真实采集时补拍')
+  }
 }
 
 // ── 补遗④：R14 skill 过程位 + 流转衔接现场位（缺席记 DEFECT 不炸）──
