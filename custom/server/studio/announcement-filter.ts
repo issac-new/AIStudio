@@ -43,6 +43,19 @@ export function parseSemver(text: string): Semver | null {
 }
 
 /**
+ * 依赖产品名前缀的版本（hermes 0.21.5 / dsh 0.17 …）不是本机 studio 的主体版本——
+ * 2026-10-02 run7 实锤：「0.7.25已更新…修复更新到最新hermes 0.21.5…」在 0.7.26
+ * 机器上被放行（0.21.5 按 semver > 0.7.26，"全部引用 ≤ 本机"不成立），过期公告
+ * 逢新必弹复发。比较前剔除这些 span，只留 studio 主体版本参与判定。
+ */
+const DEP_VERSION_RE =
+  /(?:hermes|dsh|element|matrix|synapse|node(?:\.js)?|python|graphify|ekko|swarm[ -]?yuan)[^0-9]{0,10}\d+\.\d+\.\d+/gi
+
+function subjectVersions(text: string): Semver[] {
+  return referencedVersions(text.replace(DEP_VERSION_RE, ''))
+}
+
+/**
  * 单条公告是否过期：引用的全部版本号 ≤ 本机。
  * 无版本引用或本机版本非法 → false（保留）。
  */
@@ -50,7 +63,7 @@ export function isStaleAnnouncement(item: AnnouncementEntry, currentVersion: str
   const current = parseSemver(currentVersion)
   if (!current) return false
   const text = `${typeof item?.title === 'string' ? item.title : ''}\n${typeof item?.content === 'string' ? item.content : ''}`
-  const refs = referencedVersions(text)
+  const refs = subjectVersions(text)
   if (refs.length === 0) return false
   return refs.every((v) => compareSemver(v, current) <= 0)
 }
