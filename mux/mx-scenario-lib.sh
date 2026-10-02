@@ -481,8 +481,17 @@ mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b �
 
 raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派发消息（供 wait_truth 当前 shell 直调）
   # 勿经 bash -c 包装本函数：shell 函数不跨子进程继承（未 export -f），子进程必 127 恒假。
+  # 提及判定=正文 OR m.mentions 字段（run7 实锤：派发消息正文只含被派人 mxid，
+  # 团队负责人经 content."m.mentions".user_ids 附带——任务书明确要求"用 m.mentions 提及"，
+  # 只查正文对合规消息恒假阴性；深翻页另证 17:20-18:10 无 fanfan 双 @ 正文消息，
+  # 观察 4 条的真因是消息未发而非窗口外）。
   mx_messages_deep "$(load_token fanfan)" "$3" $(( $(date +%s) - 3600 )) 3 \
-    | jq -e '[.[] | select(.type=="m.room.message") | select((.content.body//"") | contains("@'"$1"'-agent") and contains("@'"$2"'-agent"))] | length > 0'
+    | jq -e --arg u1 "@'"$1"'-agent" --arg u2 "@'"$2"'-agent" \
+      '[.[] | select(.type=="m.room.message")
+        | (.content.body//"") as $b
+        | ((.content["m.mentions"] // {}) | (.user_ids // [])) as $m
+        | select((($b | contains($u1)) or ($m | index($u1)))
+             and (($b | contains($u2)) or ($m | index($u2))))] | length > 0'
 }
 
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
