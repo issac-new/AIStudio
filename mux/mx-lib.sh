@@ -308,6 +308,16 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
+# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
+# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
+# 开关为官方配置（agent/background_review.py load_background_review_settings）；
+# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
+out['auxiliary'] = {'background_review': {'enabled': False}}
+# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
+# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
+_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+if _re and isinstance(out.get('agent'), dict):
+    out['agent']['reasoning_effort'] = _re
 # 模型通道覆写（同 profile：root default profile 也要改道，否则网关默认会话仍走旧通道）
 # 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
 # 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
@@ -428,6 +438,16 @@ out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
+# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
+# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
+# 开关为官方配置（agent/background_review.py load_background_review_settings）；
+# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
+out['auxiliary'] = {'background_review': {'enabled': False}}
+# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
+# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
+_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+if _re and isinstance(out.get('agent'), dict):
+    out['agent']['reasoning_effort'] = _re
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
@@ -475,6 +495,16 @@ if mu:
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
+# 推演提速（2026-10-02 run7 实锤）：无人参与场景关后台技能/记忆 review fork——
+# 实测占 fanfan LLM 时间 79%（160/203min，7 次 fork 各 17-70 次 API 调用）。
+# 开关为官方配置（agent/background_review.py load_background_review_settings）；
+# hermes 自身 cron 路径同理关闭（scheduler.py:2438 "no human-in-the-loop need"）。
+out['auxiliary'] = {'background_review': {'enabled': False}}
+# 推理档位降档：宿主 ultra 档单次 LLM p50=18.5s/p90=91s，推演流程性任务 high 足够；
+# MX_REASONING_EFFORT 可覆盖（设为空串保留宿主值）。
+_re = os.environ.get('MX_REASONING_EFFORT', 'high')
+if _re and isinstance(out.get('agent'), dict):
+    out['agent']['reasoning_effort'] = _re
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
