@@ -675,7 +675,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       }
       let m: RegExpExecArray | null
       // import 语句（含命名成员）；require('spec') 裸式
-      const reImp = /import\s+(?:type\s+)?(?:([\w$]+)\s*,\s*)?(?:\{([^}]*)\}|([\w$]+)|\*\s+as\s+[\w$]+)?\s*(?:from\s+)?['"]([^'"]+)['"]/g
+      const reImp = /^[ \t]*import\s+(?:type\s+)?(?:([\w$]+)\s*,\s*)?(?:\{([^}]*)\}|([\w$]+)|\*\s+as\s+[\w$]+)?\s*(?:from\s+)?['"]([^'"]+)['"]/gm
       while ((m = reImp.exec(content)) !== null) {
         const [, defaultBare, namedList, , spec0] = m
         if (spec0.startsWith('node:')) continue
@@ -701,7 +701,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
         if (pkgDeps.has(bareOf(spec))) { importsChecked++; continue }
         unresolved.push(`${file}: '${spec}'`)
       }
-      const reReq = /require\(\s*['"]([^'"]+)['"]\s*\)/g
+      const reReq = /^[ \t]*(?:const|let|var)?[^\n]*?require\(\s*['"]([^'"]+)['"]\s*\)/gm
       while ((m = reReq.exec(content)) !== null) {
         const spec0 = m[1]
         if (spec0.startsWith('node:') || spec0.startsWith('.')) continue
