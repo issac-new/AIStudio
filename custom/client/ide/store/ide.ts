@@ -12,6 +12,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { CodingAgentId } from '@/api/coding-agents'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 
 const WORKSPACE_KEY = 'hermes_ide_workspace'
 const AGENT_KEY = 'hermes_ide_agent'
@@ -127,11 +128,13 @@ const DEFAULT_SIDEPANE: IdeSidePanePrefs = {
   width: 480,
 }
 
-function loadJson<T>(key: string, fallback: T): T {
+// 2026-10-02 #13 步二批四：布局类偏好走 settings-layers user 层（调用侧先收养遗留裸键）
+function loadJson<T>(key: string, fallback: T, legacyKey?: string): T {
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return fallback
-    return { ...fallback, ...JSON.parse(raw) } as T
+    if (legacyKey) adoptLegacySetting(key, legacyKey)
+    const parsed = readSetting<Partial<T>>(key, {}).value
+    if (!parsed || typeof parsed !== 'object' || !Object.keys(parsed).length) return fallback
+    return { ...fallback, ...parsed } as T
   } catch {
     return fallback
   }
@@ -154,9 +157,9 @@ function loadDimension(): IdeDimension {
 export const useIdeStore = defineStore('ide', () => {
   const workspace = ref<string | null>(localStorage.getItem(WORKSPACE_KEY) || null)
   const agentId = ref<CodingAgentId>(loadAgent())
-  const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>(LAYOUT_KEY, DEFAULT_LAYOUT))
+  const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>('ide.layout', DEFAULT_LAYOUT, LAYOUT_KEY))
   const sidebar = ref<{ organize: IdeOrganizeMode; sessionView: IdeSessionView }>(
-    loadJson(SIDEBAR_KEY, DEFAULT_SIDEBAR),
+    loadJson('ide.sidebar', DEFAULT_SIDEBAR, SIDEBAR_KEY),
   )
   const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
   /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
@@ -213,13 +216,13 @@ export const useIdeStore = defineStore('ide', () => {
 
   watch(layout, (value) => {
     try {
-      localStorage.setItem(LAYOUT_KEY, JSON.stringify(value))
+      writeSetting('user', 'ide.layout', value)
     } catch { /* 存储满等异常不阻塞 UI */ }
   }, { deep: true })
 
   watch([sidebar, sidePane], () => {
     try {
-      localStorage.setItem(SIDEBAR_KEY, JSON.stringify(sidebar.value))
+      writeSetting('user', 'ide.sidebar', sidebar.value)
       localStorage.setItem(SIDEPANE_KEY, JSON.stringify(sidePane.value))
     } catch { /* 存储满等异常不阻塞 UI */ }
   }, { deep: true })
