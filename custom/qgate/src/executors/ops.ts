@@ -610,12 +610,14 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       }
       const names = new Set<string>()
       let m: RegExpExecArray | null
-      const re = /export\s+(?:declare\s+)?(?:const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g
+      // async 导出（export async function foo）与 type-only 列表导出（export type { A }）
+      // 是两枚曾漏的形态——84 条成员悬空长尾的两枚根因（2026-10-02 分类定位）
+      const re = /export\s+(?:declare\s+)?(?:async\s+)?(?:const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g
       while ((m = re.exec(content)) !== null) names.add(m[1])
       const reDef = /export\s+default(?:\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*))?/
       const def = reDef.exec(content)
       if (def) names.add(def[1] ?? 'default')
-      const reList = /export\s*\{([^}]+)\}/g
+      const reList = /export\s+(?:type\s+)?\{([^}]+)\}(?:\s*from\s*['"][^'"]+['"])?/g
       while ((m = reList.exec(content)) !== null) {
         for (const part of m[1].split(',')) {
           const seg = part.trim()

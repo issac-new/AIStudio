@@ -176,19 +176,28 @@ describe('IdeShell 布局守门', () => {
     // 空 localStorage → 共享源默认 left 280 / right 480，挂载回填进 store
     expect(ide.layout.sidebarWidth).toBe(280)
     expect(ide.sidePane.width).toBe(480)
+    // 现场增强（2026-10-02）：本用例在全量并行负载下偶发 cols.left undefined
+    //（产品链纯同步无竞态，根因未定——事件时序嫌疑）。失败信息附 localStorage
+    // 与 store 快照，下次复现直接见现场；事件间补 nextTick 消除微任务窗口。
+    const snapshot = (): string =>
+      `ls=${localStorage.getItem('sl:user:ui.colWidths')} store.left=${ide.layout.sidebarWidth} store.right=${ide.sidePane.width}`
     // 左分割条：右拖 +40 → left 280→320
     await w.find('[data-testid="ide-split-l"]').trigger('mousedown', { clientX: 300 })
+    await w.vm.$nextTick()
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 340 }))
     window.dispatchEvent(new MouseEvent('mouseup'))
+    await w.vm.$nextTick()
     let cols = JSON.parse(localStorage.getItem('sl:user:ui.colWidths') || '{}')
-    expect(cols.left).toBe(320)
+    expect(cols.left, `[拖拽后现场] ${snapshot()}`).toBe(320)
     expect(ide.layout.sidebarWidth).toBe(320)
     // 右分割条：左拖 -40 → right 480→520（sidepane 映射 right，反向）
     await w.find('[data-testid="ide-split-r"]').trigger('mousedown', { clientX: 800 })
+    await w.vm.$nextTick()
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 760 }))
     window.dispatchEvent(new MouseEvent('mouseup'))
+    await w.vm.$nextTick()
     cols = JSON.parse(localStorage.getItem('sl:user:ui.colWidths') || '{}')
-    expect(cols.right).toBe(520)
+    expect(cols.right, `[二次拖拽现场] ${snapshot()}`).toBe(520)
     expect(ide.sidePane.width).toBe(520)
     w.unmount()
   })
