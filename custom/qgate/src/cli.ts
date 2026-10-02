@@ -13,7 +13,9 @@ import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from 
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
 import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
+import { TASK_INTENT_DEFAULT_FILE, loadTaskIntent, writeTaskIntent } from './core/task-intent.js'
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import type { GateSpec, Trigger } from './core/types.js'
 
 const HELP = `qgate — universal delivery gate CLI
@@ -28,6 +30,8 @@ commands:
   waive <gateId> --reason --approver  登记豁免（WAIVED；必填 reason/approver，默认 24h 过期）
     [--scope s] [--mitigation m] [--hours N] [--revalidation r]
   exceptions                          列出豁免及有效性
+  intent --task-id --statement --scope --acceptance --confirmed-by
+                                      登记任务意图（唯一写入通道；--revise --reason 修订留痕并自动重绑哈希）
   release-report [--out <file>]       生成发布证据包（md + json）
   init                                在当前项目创建 .qgate/ 骨架`
 
@@ -120,10 +124,12 @@ async function main(): Promise<void> {
           ? (changed.length > 0 ? selectGates(enabledGates, changed) : enabledGates)
           : enabledGates.filter((g) => g.metadata.id === target)
       if (toRun.length === 0) fail(target ? `gate not found or disabled: ${target}` : 'missing gateId or --all')
+      // 元门二轮通道（v0.3 §3.3）：meta 门排在普通门之后——它们的输入是其他门的本轮判定。
+      const ordered = [...toRun.filter((g) => g.spec.meta !== true), ...toRun.filter((g) => g.spec.meta === true)]
       let blocking = 0
       const runIds: string[] = []
-      for (const spec of toRun) {
-        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed })
+      for (const spec of ordered) {
+        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved) })
         runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
         const isBlocking =
@@ -152,11 +158,75 @@ async function main(): Promise<void> {
       return
     }
 
+    case 'intent': {
+      // 任务意图登记（v0.3 §4.2）：唯一写入通道——登记/修订只经本命令，修订必须带 reason 留痕。
+      const revise = hasFlag(rest, '--revise')
+      const fileRel = flag(rest, '--file') ?? TASK_INTENT_DEFAULT_FILE
+      const file = resolve(workspace, fileRel)
+      const prev = revise ? loadTaskIntent(file) : null
+      if (revise && !prev) fail(`cannot revise: no valid task-intent register at ${fileRel}`)
+      const scopeArg = flag(rest, '--scope')
+      const acceptanceArg = flag(rest, '--acceptance')
+      const input = {
+        taskId: flag(rest, '--task-id') ?? prev?.taskId,
+        statement: flag(rest, '--statement') ?? prev?.statement,
+        scope: scopeArg ? scopeArg.split(',').map((s) => s.trim()).filter(Boolean) : prev?.scope,
+        acceptance: acceptanceArg ? acceptanceArg.split(';').map((s) => s.trim()).filter(Boolean) : prev?.acceptance,
+        constraints: flag(rest, '--constraints')?.split(',').map((s) => s.trim()).filter(Boolean) ?? prev?.constraints,
+        confirmedBy: flag(rest, '--confirmed-by') ?? prev?.confirmedBy,
+      }
+      if (!input.taskId || !input.statement || !input.scope?.length || !input.acceptance?.length || !input.confirmedBy) {
+        fail('usage: intent --task-id T --statement "..." --scope "src/**,db/**" --acceptance "When..Then..;When..Then.." --confirmed-by <name> [--constraints a,b] [--file path]\n       intent --revise --reason "..." [同上字段可覆盖]')
+      }
+      let written
+      try {
+        written = writeTaskIntent(file, input as Parameters<typeof writeTaskIntent>[1], { revise, reason: flag(rest, '--reason') })
+      } catch (e) {
+        fail((e as Error).message)
+      }
+      process.stdout.write(`${revise ? 'revised' : 'registered'} task-intent ${written.intent.taskId} → ${fileRel}\n`)
+      process.stdout.write(`sha256: ${written.sha256}\n`)
+
+      // 哈希重绑：项目门声明里引用本登记文件的 taskIntent.acknowledgedSha256 同步更新。
+      const gatesDir = join(loaded.qgateDir, 'gates')
+      const rebound: string[] = []
+      if (existsSync(gatesDir)) {
+        const { readdirSync } = await import('node:fs')
+        for (const name of readdirSync(gatesDir).sort()) {
+          if (!/\.(ya?ml|json)$/i.test(name)) continue
+          const gateFile = join(gatesDir, name)
+          const text = readFileSync(gateFile, 'utf8')
+          if (!text.includes('taskIntent') || !text.includes(fileRel)) continue
+          let next = text
+          if (/^(\s*)acknowledgedSha256:.*$/m.test(text)) {
+            next = text.replace(/^(\s*)acknowledgedSha256:.*$/m, `$1acknowledgedSha256: "${written.sha256}"`)
+          } else {
+            // 在 file: 行后同列插入 acknowledgedSha256（fileRel 逐字符转义防正则注入；
+            // 同列=与 file 同级映射项，多缩进会破坏 YAML 列对齐）
+            const escaped = fileRel.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&')
+            next = text.replace(
+              new RegExp(`^(\\s*)(file:\\s*["']?${escaped}["']?\\s*)$`, 'm'),
+              `$1$2\n$1acknowledgedSha256: "${written.sha256}"`,
+            )
+          }
+          if (next !== text) {
+            writeFileSync(gateFile, next, 'utf8')
+            rebound.push(name)
+          }
+        }
+      }
+      if (rebound.length > 0) process.stdout.write(`re-bound acknowledgedSha256 in: ${rebound.join(', ')}\n`)
+      else process.stdout.write(`note: no project gate references this register — bind it via taskIntent in a gate's scope executor to activate drift reconciliation\n`)
+      return
+    }
+
     case 'status': {
       const fresh = hasFlag(rest, '--fresh')
       const json = hasFlag(rest, '--json')
       const state = latestRuns(paths)
       const git = fresh ? gitContext(workspace) : undefined
+      // 输入快照重算（v0.3 §3.2）：全门共享一次走树，逐门按 glob 面过滤比对。
+      const sharedFiles = fresh ? listWorkspaceFiles(workspace) : undefined
       const report: Record<string, unknown>[] = []
       for (const g of enabledGates) {
         const entry = state[g.metadata.id]
@@ -165,8 +235,11 @@ async function main(): Promise<void> {
         if (entry) {
           const run = loadRun(paths, entry.runId)
           if (run && fresh && git) {
+            const globs = inputGlobsOf(g)
+            const currentSnapshot = globs.length > 0 ? snapshotForGlobs(workspace, globs, sharedFiles) : undefined
             freshness = isFresh(run, Date.now(), {
               commit: git.commit, treeHash: git.treeHash, changedPaths: git.changedPaths, appliesWhen: g.spec.appliesWhen,
+              inputSnapshot: currentSnapshot,
             }, policy.maxAgeHours ?? 24) ? 'fresh' : 'stale'
           } else if (run) freshness = 'fresh'
         }

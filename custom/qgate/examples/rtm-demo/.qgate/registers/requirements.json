@@ -1,0 +1,12 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "prdRef": "docs/PRD.md#r1",
+      "requiredTypes": ["unit"],
+      "acceptanceCriteria": [
+        { "id": "AC-1", "type": "unit", "codeFiles": ["src/fee.mjs"], "testGateIds": ["test.fee"] }
+      ]
+    }
+  ]
+}

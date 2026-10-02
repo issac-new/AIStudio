@@ -23,8 +23,8 @@ function coverageOf(evidence: readonly Evidence[], type: string): Decision['cove
   return latest.result === 'fail' ? 'fail' : (latest.result === 'conditional' ? 'conditional' : 'pass')
 }
 
-export function decide(spec: GateSpec, evidence: readonly Evidence[]): Decision {
-  const coverage: Decision['coverage'] = {}
+export function decide(spec: GateSpec, evidence: readonly Evidence[], policy: GateSpec['spec']['policy'] = spec.spec.policy): Decision {
+  const coverage: Record<string, Decision['coverage'][string]> = {}
   for (const type of spec.spec.evidence.required) coverage[type] = coverageOf(evidence, type)
 
   const entries = Object.entries(coverage) as [string, Decision['coverage'][string]][]
@@ -34,9 +34,11 @@ export function decide(spec: GateSpec, evidence: readonly Evidence[]): Decision 
   const conditional = entries.filter(([, v]) => v === 'conditional')
 
   // 1) 明确反驳 → FAIL；policy.warn 把 FAIL 降级为 CONDITIONAL（带解除条件）
+  //    policy 为 profile 覆盖后的有效值（v0.3 根治：override 此前只影响 CLI 阻断计算，
+  //    decide 内部已把 FAIL 降级为 CONDITIONAL，block 覆盖永远拦不住——暗坑修复）
   if (failed.length > 0) {
     const parts = failed.map(([t, v]) => `${t}:${v}`)
-    if (spec.spec.policy.failure === 'warn') {
+    if (policy.failure === 'warn') {
       return {
         verdict: 'CONDITIONAL',
         conditions: [`failing evidence accepted under warn policy: ${parts.join(', ')} — must be cleared before release`],
@@ -49,7 +51,7 @@ export function decide(spec: GateSpec, evidence: readonly Evidence[]): Decision 
   // 2) 证据不足 → INCONCLUSIVE（不能 PASS）
   if (missing.length > 0) {
     const parts = missing.map(([t, v]) => `${t}:${v}`)
-    if (spec.spec.policy.inconclusive === 'warn') {
+    if (policy.inconclusive === 'warn') {
       return {
         verdict: 'CONDITIONAL',
         conditions: [`insufficient evidence accepted under warn policy: ${parts.join(', ')}`],

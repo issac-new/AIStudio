@@ -1,0 +1,17 @@
+      Tests  93 passed (93)
+   Start at  08:09:54
+   Duration  1.69s (transform 442ms, setup 0ms, collect 1.53s, tests 5.20s, environment 1ms, prepare 468ms)
+
+
+--- rtm-demo 实测 ---
+✓ test.fee: PASS
+✓ L0.requirement-trace: PASS
+--- intent-demo 五场景 ---
+✓ L0.intent-drift: PASS
+✗ L0.intent-drift: FAIL — intent-drift-result:fail
+✓ L0.intent-drift: PASS
+--- debt-demo 三场景 ---
+✓ L5.technical-debt: PASS
+--- 相邻面回归（主树 overlay 根，2026-10-02）---
+npx vitest run custom/client/matrix-teams/__tests__/qgate-bridge.test.ts custom/server/governance/__tests__/governance-analytics.test.ts --no-file-parallelism
+Test Files 2 passed (2) / Tests 18 passed (18)

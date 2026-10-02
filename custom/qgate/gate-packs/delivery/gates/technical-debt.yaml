@@ -1,0 +1,30 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L5.technical-debt
+  version: 0.1.0
+  description: >
+    L5.5 技术债登记（v0.1 §11 L5.5，v0.3 移植上游 debt 门）：.qgate/registers/debt.json
+    模式核验——open 且 severity high/critical 阻断、dueDate 过期阻断、
+    空登记须显式 {"none": true}（裸空数组 FAIL）。登记缺失 → INCONCLUSIVE。
+spec:
+  domain: L5
+  claims:
+    - L5.debt-governed
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: l5.debt
+      type: register
+      register: ["debt"]
+      evidenceType: debt-register-result
+  evidence:
+    required:
+      - debt-register-result
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

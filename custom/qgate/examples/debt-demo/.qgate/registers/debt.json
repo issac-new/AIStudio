@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "DEBT-1",
+      "description": "calcFee 上限硬编码，应进配置",
+      "owner": "demo-owner",
+      "impact": "medium",
+      "repayment": "下版本抽配置项",
+      "severity": "low",
+      "status": "open",
+      "dueDate": "2027-06-30"
+    }
+  ]
+}

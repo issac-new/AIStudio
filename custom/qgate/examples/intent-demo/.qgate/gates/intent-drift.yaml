@@ -1,0 +1,24 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.intent-drift
+  version: 0.1.0
+  description: intent-demo 项目门（taskIntent.acknowledgedSha256 由 qgate intent 自动写入）
+spec:
+  domain: L0
+  claims: [demo.intent-honored]
+  triggers: [task_close, pre_commit]
+  executors:
+    - id: l0.intent
+      type: scope
+      mode: scope
+      taskIntent:
+        file: ".qgate/registers/task-intent.json"
+        acknowledgedSha256: "db4a542918a4e74a048811509fb60ff460ad2e3400207f56da7e36697055f661"
+        require: true
+      evidenceType: intent-drift-result
+  evidence:
+    required: [intent-drift-result]
+  policy:
+    failure: block
+    inconclusive: warn

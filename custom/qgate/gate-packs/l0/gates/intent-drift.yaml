@@ -1,0 +1,41 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.intent-drift
+  version: 0.1.0
+  description: >
+    L0 意图漂移对账（v0.3 §4.2，移植上游 v0.9 task-intent）：本任务宣称要做什么
+    （.qgate/registers/task-intent.json，经 qgate intent 登记）与实际改了什么
+    （git 变更事实）取交集判定。登记被静默修改（哈希漂移）、越界变更、
+    验收条目缺 Gherkin 骨架 → FAIL 点名。acknowledgedSha256 由 qgate intent 写入时重绑。
+spec:
+  domain: L0
+  claims:
+    - L0.intent-honored
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+        - "custom/**"
+        - "db/**"
+        - "**/*.ts"
+        - "**/*.sql"
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: l0.intent
+      type: scope
+      mode: scope
+      taskIntent:
+        file: ".qgate/registers/task-intent.json"
+        require: true
+      evidenceType: intent-drift-result
+  evidence:
+    required:
+      - intent-drift-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

@@ -1,0 +1,31 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.requirement-trace
+  version: 0.1.0
+  description: >
+    L0.1 需求追溯（v0.1 §6.1 Requirement Traceability，v0.3 移植上游 RTM 元门）：
+    .qgate/registers/requirements.json 逐验收条件核验——codeFiles 存在、
+    testGateIds 指向的门最新判定为 PASS 且证据新鲜、需求级 prdRef 可解析。
+    元门（meta: true）：读其他门判定，批量运行时排在普通门之后。
+spec:
+  domain: L0
+  meta: true
+  claims:
+    - L0.requirement-traced
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: l0.rtm
+      type: traceability
+      evidenceType: requirement-trace-result
+  evidence:
+    required:
+      - requirement-trace-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
