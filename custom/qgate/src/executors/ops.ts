@@ -637,6 +637,15 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       }
       return null
     }
+    const aliases = executor.aliases ?? {}
+    const ignoredSpecifiers = executor.ignoredSpecifiers ?? []
+    const applyAlias = (spec: string): string => {
+      for (const [prefix, mapped] of Object.entries(aliases)) {
+        if (spec.startsWith(prefix)) return mapped + spec.slice(prefix.length)
+      }
+      return spec
+    }
+    const isIgnored = (spec: string): boolean => ignoredSpecifiers.some((p) => spec === p || spec.startsWith(p))
     let importsChecked = 0
     for (const file of target) {
       let content: string
@@ -649,8 +658,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       // import 语句（含命名成员）；require('spec') 裸式
       const reImp = /import\s+(?:type\s+)?(?:([\w$]+)\s*,\s*)?(?:\{([^}]*)\}|([\w$]+)|\*\s+as\s+[\w$]+)?\s*(?:from\s+)?['"]([^'"]+)['"]/g
       while ((m = reImp.exec(content)) !== null) {
-        const [, defaultBare, namedList, , spec] = m
-        if (spec.startsWith('node:')) continue
+        const [, defaultBare, namedList, , spec0] = m
+        if (spec0.startsWith('node:')) continue
+        const spec = applyAlias(spec0)
+        if (isIgnored(spec)) continue
         const bare = spec.split('/')[0]
         if (spec.startsWith('.')) {
           const t = resolveSpecifier(file, spec)
@@ -673,8 +684,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       }
       const reReq = /require\(\s*['"]([^'"]+)['"]\s*\)/g
       while ((m = reReq.exec(content)) !== null) {
-        const spec = m[1]
-        if (spec.startsWith('node:') || spec.startsWith('.')) continue
+        const spec0 = m[1]
+        if (spec0.startsWith('node:') || spec0.startsWith('.')) continue
+        const spec = applyAlias(spec0)
+        if (isIgnored(spec)) continue
         const bare = spec.split('/')[0]
         if (NODE_BUILTINS.has(bare) || pkgDeps.has(bare)) continue
         unresolved.push(`${file}: '${spec}' (require)`)
