@@ -41,9 +41,10 @@ index 49f1f54b..75564f7f 100644
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1526,6 +1533,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1526,7 +1533,9 @@ export const useChatStore = defineStore('chat', () => {
      clearBackgroundObservers()
      sessions.value = []
+     pendingRunUsage.clear()
      completedUnreadSessions.value = new Set()
 +    // HERMES_CUSTOM[ChatUnread]
 +    unreadMessages.value = new Map()

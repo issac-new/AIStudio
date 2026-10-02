@@ -519,9 +519,9 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
        const final = (storageSafeResponseEvent.data as any).response || storageSafeResponseEvent.data
 -      if (run.launch.mode !== 'scoped' && !['opencode', 'pi'].includes(run.launch.agentId)) {
 +      if (run.launch.mode !== 'scoped' && !['opencode', 'mimo', 'pi'].includes(run.launch.agentId)) {
-         const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
-         this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
-       }
+         this.captureUsage(run, () => {
+           const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
+           this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
 @@ -2854,8 +2858,9 @@
      systemPrompt = '',
      images: CodingAgentImageInput[] = [],
@@ -655,9 +655,14 @@ diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b
 diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 --- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 +++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-@@ -13,7 +13,7 @@
+@@ -13,12 +13,12 @@
    sessionId: string
    runId?: string | null
+   /** The foreground run, separate from the deduplication key for each API call. */
+   parentRunId?: string
+   createdAt?: number
+   /** Model request duration in seconds, excluding tool execution. */
+   apiDuration?: number
    source: 'hermes' | 'coding_agent' | 'ekko_agent'
 -  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko_agent'
 +  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode' | 'ekko_agent'

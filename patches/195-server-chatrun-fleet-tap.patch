@@ -24,9 +24,10 @@ index 447e570..1d9c8d2 100644
    }
  
    // --- Auth middleware ---
-@@ -2901,6 +2909,10 @@ export class ChatRunSocket {
+@@ -2901,7 +2909,11 @@ export class ChatRunSocket {
      if (this.closing) return
      this.closing = true
+     this.stopUsageUpdates()
      for (const sessionId of this.sessionMap.keys()) this.finishTaskPlanRun(sessionId, 'abort.completed')
 +    // overlay[fleet-tap]: 注销舰队聚合
 +    try {
