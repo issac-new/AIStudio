@@ -12,11 +12,18 @@
  *
  * 写者边界登记：board KG 写者=本模块（bridge 串行+文件锁）；agent MCP 实例不指向
  * 板级 KG（各走各文件）。
+ *
+ * KG 演化治理（2026-10-02，A2/A3/A4 接线）：写入前先过三档去重（entity-dedup）与
+ * 治理分级（merge-governance），只写放行部分，扣留项进 kind:'merge-review' 收件箱；
+ * sync 成功且 ingested>0 自动快照（kg-version）。既有对外行为不变（additive）。
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { classifyBatch, breakerRatioFromEnv } from './merge-governance'
+import { threeTierDedup, dedupOptsFromEnv } from './entity-dedup'
+import { snapshotBoardKg } from './kg-version'
 
 // ---- bridge 操作（复用 decisiongraph 客户端的执行器注入） ----
 import { semanticaPython, setBridgeRunnerForTests, bridgeScript, type BridgeRunner } from '../decisiongraph/semantica-client'
@@ -38,6 +45,10 @@ export interface InboxEntry {
   existing: unknown
   incoming: unknown
   resolved: false | { action: 'keep-existing' | 'take-incoming'; at: number }
+  /** additive（KG 演化治理 2026-10-02）：条目类别。旧数据/旧写入路径无此字段。 */
+  kind?: 'field-conflict' | 'merge-review'
+  /** additive：merge-review 的名称相似度（仅 A2 去重评审档有值）。 */
+  similarity?: number
 }
 
 async function runKgOp<T>(op: string, kgPath: string, input: Record<string, unknown>): Promise<T | null> {
@@ -100,6 +111,8 @@ function inboxPath(): string {
 export function appendConflictInbox(entry: Omit<InboxEntry, 'inboxId' | 'ts' | 'resolved'> & { ts?: number }): InboxEntry {
   const full: InboxEntry = {
     ...entry,
+    // 已有写入路径默认 field-conflict（additive 默认值，不改老行为——老条目解析不受影响）
+    kind: entry.kind ?? 'field-conflict',
     inboxId: `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     ts: entry.ts ?? Date.now(),
     resolved: false,
@@ -149,6 +162,47 @@ export function resolveConflictInbox(inboxId: string, action: 'keep-existing' | 
   return hit
 }
 
+// ---- merge-review 收件箱（A2/A3，KG 演化治理 2026-10-02）----
+
+/** 追加 merge-review 条目；同一未决评审（board+entityId+field+incoming）不重复追加（幂等）。 */
+export function appendMergeReviewInbox(entry: {
+  board: string
+  entityId: string
+  field: string
+  existing: unknown
+  incoming: unknown
+  similarity?: number
+}): InboxEntry | null {
+  const dup = listConflictInbox().find((e) => !e.resolved && e.kind === 'merge-review'
+    && e.board === entry.board && e.entityId === entry.entityId && e.field === entry.field
+    && JSON.stringify(e.incoming) === JSON.stringify(entry.incoming))
+  if (dup) return null
+  return appendConflictInbox({ ...entry, kind: 'merge-review' })
+}
+
+/** 板 KG JSON 投影（A2/A3 既有面读取；参照 bridge kg-summary 的 json.load 做法）。 */
+export interface KgNodeProjection { id: string; type: string; properties: Record<string, unknown> }
+
+/** 读板 KG 文件提取节点与谓词集合；文件缺席/损坏返回 null（=空图冷启动语义，fail-soft）。 */
+export function readBoardKgState(kgPath: string): { nodes: KgNodeProjection[]; edgeTypes: Set<string> } | null {
+  try {
+    const j = JSON.parse(readFileSync(kgPath, 'utf8')) as { nodes?: unknown; edges?: unknown }
+    if (!Array.isArray(j.nodes) || !Array.isArray(j.edges)) return null
+    const nodes: KgNodeProjection[] = []
+    for (const n of j.nodes) {
+      if (!n || typeof n !== 'object') continue
+      const no = n as { id?: unknown; type?: unknown; properties?: unknown }
+      if (typeof no.id !== 'string') continue
+      nodes.push({ id: no.id, type: typeof no.type === 'string' ? no.type : '', properties: (no.properties ?? {}) as Record<string, unknown> })
+    }
+    const edgeTypes = new Set<string>()
+    for (const e of j.edges) {
+      if (e && typeof e === 'object' && typeof (e as { type?: unknown }).type === 'string') edgeTypes.add((e as { type: string }).type)
+    }
+    return { nodes, edgeTypes }
+  } catch { return null }
+}
+
 // ---- 板同步（结案任务摄取） ----
 
 export interface BoardSyncResult {
@@ -158,6 +212,10 @@ export interface BoardSyncResult {
   relations: number
   conflicts: EntityConflict[]
   kgAvailable: boolean
+  /** additive（KG 演化治理 A3）：合并治理分级统计。 */
+  governed?: { auto: number; manual: number; breaker: boolean; reason?: string }
+  /** additive（KG 演化治理 A2）：三档去重统计。 */
+  dedup?: { autoAlias: number; review: number }
 }
 
 interface TaskRow { id: string | number; title: string | null; assignee: string | null; status: string; completed_at: number | null }
@@ -199,18 +257,61 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   const entities: Array<{ id: string; type: string; props: Record<string, unknown> }> = []
   const relations: Array<{ src: string; dst: string; type: string }> = []
   const touched: string[] = []
+  const produced = new Map<string, string[]>()  // tid → 本批产出实体 id（A3：被扣实体不记 marker，人工放行前重同步仍会再过治理面）
   for (const t of rows) {
     const tid = String(t.id)
     if (seen.has(tid)) continue
+    const ids: string[] = [`task:${tid}`]
     entities.push({ id: `task:${tid}`, type: 'task', props: { title: t.title ?? '', status: t.status, type: 'task' } })
     if (t.assignee?.trim()) {
       entities.push({ id: `agent:${t.assignee.trim()}`, type: 'agent', props: { name: t.assignee.trim(), type: 'agent' } })
       relations.push({ src: `agent:${t.assignee.trim()}`, dst: `task:${tid}`, type: 'performed' })
+      ids.push(`agent:${t.assignee.trim()}`)
     }
+    produced.set(tid, ids)
     touched.push(tid)
   }
-  if (entities.length > 0) {
-    const batch = await runKgOp<{ ok: boolean; added: number; conflicts: Array<{ entityId: string; fields: EntityConflict[] }> }>('entity-batch', kg, { items: entities })
+
+  // ---- A2/A3 接线（KG 演化治理 2026-10-02）：三档去重 → 治理分级 → 只写放行部分 ----
+  // 已存在同 id 实体不进治理面（它们不是"新增类"），维持丙8 冲突上报的既有行为。
+  const kgState = readBoardKgState(kg)
+  const existingIds = new Set((kgState?.nodes ?? []).map((n) => n.id))
+  const updates: typeof entities = []
+  const candidates: typeof entities = []
+  for (const e of entities) (existingIds.has(e.id) ? updates : candidates).push(e)
+
+  const dedup = threeTierDedup(candidates, (kgState?.nodes ?? []).map((n) => {
+    const type = n.type || (typeof n.properties.type === 'string' ? n.properties.type : '')
+    return { id: n.id, type, name: type === 'task' ? n.properties.title : n.properties.name }
+  }), dedupOptsFromEnv())
+  for (const rv of dedup.review) {
+    appendMergeReviewInbox({ board: slug, entityId: rv.entity.id, field: 'name', existing: rv.existingName, incoming: rv.candidateName, similarity: rv.similarity })
+  }
+  const heldIds = new Set(dedup.review.map((r) => r.entity.id))  // 评审扣留：其关系一并扣（不写悬空边）
+  const aliasEntities = dedup.alias.map((a) => ({ ...a.entity, props: { ...a.entity.props, aliasOf: a.aliasOf } }))
+
+  const cls = classifyBatch({
+    // fresh=正常新实体；skipped=不参与去重的候选（task 默认档等）——都进治理分级
+    newEntities: [...dedup.fresh, ...dedup.skipped],
+    newRelations: relations.filter((r) => !heldIds.has(r.src) && !heldIds.has(r.dst)),
+    existingNodeCount: kgState?.nodes.length ?? 0,
+    existingRelationTypes: kgState?.edgeTypes ?? new Set<string>(),
+    opts: { breakerRatio: breakerRatioFromEnv() },
+  })
+  for (const me of cls.manual.entities) {
+    appendMergeReviewInbox({
+      board: slug, entityId: me.id, field: 'governance', existing: '(未写入)',
+      incoming: cls.breaker ? `熔断扣留：${cls.reason ?? '批新增超阈'}` : '结构性变更扣留（新关系谓词/单实体关系数突变）',
+    })
+  }
+
+  const writeEntities = [...updates, ...aliasEntities, ...cls.auto.entities]
+  const writtenIds = new Set(writeEntities.map((e) => e.id))
+  res.governed = { auto: cls.auto.entities.length, manual: cls.manual.entities.length, breaker: cls.breaker, ...(cls.breaker && cls.reason ? { reason: cls.reason } : {}) }
+  res.dedup = { autoAlias: dedup.alias.length, review: dedup.review.length }
+
+  if (writeEntities.length > 0) {
+    const batch = await runKgOp<{ ok: boolean; added: number; conflicts: Array<{ entityId: string; fields: EntityConflict[] }> }>('entity-batch', kg, { items: writeEntities })
     if (!batch) {
       res.kgAvailable = false
       return res  // python 缺席：如实降级，不写 marker（下次重试）
@@ -223,16 +324,22 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
       }
     }
   }
-  if (relations.length > 0) {
-    const relBatch = await runKgOp<{ ok: boolean; added: number }>('relation-batch', kg, { items: relations })
+  if (cls.auto.relations.length > 0) {
+    const relBatch = await runKgOp<{ ok: boolean; added: number }>('relation-batch', kg, { items: cls.auto.relations })
     if (!relBatch) {
       res.kgAvailable = false
       return res
     }
     res.relations = relBatch.added ?? 0
   }
-  for (const tid of touched) seen.add(tid)
+  for (const tid of touched) {
+    // 本批实体全部放行（写入或冲突上报）才记 marker；含被扣实体的任务不记——
+    // 人工裁决前每次同步重新过治理面（收件箱追加有幂等去重，不重复刷屏）
+    if ((produced.get(tid) ?? []).every((id) => writtenIds.has(id))) seen.add(tid)
+  }
   if (res.kgAvailable) writeMarker(slug, seen)
+  // A4（KG 演化治理）：sync 成功且确有新增实体才自动快照（版本化接线在成功路径）
+  if (res.kgAvailable && res.ingested > 0) snapshotBoardKg(slug)
   return res
 }
 
