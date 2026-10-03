@@ -243,7 +243,7 @@ if (!existsSync(`${OUT}/ui-g5-carddrawer.png`) || process.env.FORCE) {
     // 卡号按轮取（旧写死 t_ea68c462 是 run2 卡，任何新轮必打不开）：state card_g5_ready
     // 优先，缺省按 G5 评审卡标题找；开启判据=.task-drawer 出现且卡面含准出评审字样。
     const g5id = state.card_g5_ready || state.card_g5 || ''
-    const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审|/ }).first()
+    const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审/ }).first()
     const card2 = g5id ? page.locator('.kanban-task-card').filter({ hasText: g5id }).first() : card
     const target = (await card2.count().catch(() => 0)) ? card2 : card
     if (await target.isVisible().catch(() => false)) {
@@ -267,7 +267,8 @@ if (!existsSync(`${OUT}/ui-room-archived.png`) || process.env.FORCE) {
   if (ROOM) await goHash(`/app/s/group/${encodeURIComponent(ROOM)}`)
   await page.waitForTimeout(9000)
   await dismissOverlays()
-  if (!page.url().includes(ROOM.slice(0, 12))) {
+  // ROOM 空守卫：''.includes 恒真——空态/清场后会把任意当前页当"房间校验过"截入证据链
+  if (ROOM && !page.url().includes(ROOM.slice(0, 12))) {
     // 深链未选中房间时（run1 坑位）：在协作视图房间列表里点选同名房
     const items = page.locator('[data-testid*="room"] >> text=支付收银台需求分析讨论群')
     const n = await items.count().catch(() => 0)
@@ -278,7 +279,7 @@ if (!existsSync(`${OUT}/ui-room-archived.png`) || process.env.FORCE) {
     }
   }
   await page.waitForTimeout(2500)
-  const roomOk = page.url().includes(ROOM.slice(0, 12))
+  const roomOk = !!ROOM && page.url().includes(ROOM.slice(0, 12))
   if (roomOk) {
     await page.screenshot({ path: `${OUT}/ui-room-archived.png` })
     console.log('shot: ui-room-archived（房间校验过，url=', page.url(), ')')

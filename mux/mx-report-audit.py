@@ -158,7 +158,9 @@ if re.search(r'全部\s*AC\s*通过', _r3_txt) and '有条件' in _r3_txt:
     fails.append('R3 UAT 判词矛盾（UAT 载体内）：同文出现"全部 AC 通过"与"有条件"——须逐条判词，禁总括')
 
 # R4 发布基线守卫：合入只许快进或 merge 增量（检出即 FAIL，守卫属 harness H11 执行侧）
-_main_repo = Path('/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev/.git')
+# 中央仓路径跟随 SIM（AIPAY_SIM_ROOT 可覆盖——同源口径见文件头）：写死生产路径会让
+# 夹具/归档树审计拿夹具 baseline_sha 对生产仓 main 误判 FAIL，或生产路径缺席时静默跳过
+_main_repo = SIM / 'central' / 'aipaydev' / '.git'
 if _main_repo.exists():
     import subprocess
     _heads = subprocess.run(['git', '--git-dir', str(_main_repo), 'for-each-ref',

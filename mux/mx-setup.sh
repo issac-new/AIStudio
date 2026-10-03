@@ -94,19 +94,27 @@ done
 log "default 板保留为串板哨兵"
 
 # ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
+# 克隆后立即剥掉 remote URL 里的 token：git clone <带token URL> 会把它永久写进每个
+# clone 的 remote.origin.url——随后 runs.tar/workspaces.tar 归档与 push 失败时的
+# stderr（进 relay/scenario 日志=证据链）都会带着凭据扩散
+gh_clone_sanitize() { # <cloneDir>：token 只用于拉取，落盘 remote 一律还原无凭据形态
+  git -C "$1" remote set-url origin "https://github.com/${GH_REPO}.git" 2>/dev/null || true
+}
 if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
   mkdir -p "$(dirname "$DIRECTOR_CLONE")"
   git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
-  log "中央仓已克隆：$DIRECTOR_CLONE"
+  gh_clone_sanitize "$DIRECTOR_CLONE"
+  log "中央仓已克隆：$DIRECTOR_CLONE（remote URL 已剥 token）"
 fi
 for u in "${INSTANCED_USERS[@]}"; do
   WS=$(workspace "$u")
   if [[ ! -d "$WS/.git" ]]; then
     mkdir -p "$(dirname "$WS")"
     git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    gh_clone_sanitize "$WS"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
-    log "账号工作区就绪：$u"
+    log "账号工作区就绪：$WS（remote URL 已剥 token）"
   fi
 done
 

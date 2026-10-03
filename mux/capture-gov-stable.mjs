@@ -95,7 +95,7 @@ if (!ONLY || ONLY === 'g5drawer') {
       // G5 评审卡按轮取（旧写死 t_ea68c462 是 run2 卡——run7 预检实锤任何新轮必打不开）：
       // state card_g5_ready 优先，缺省按准出评审标题找；done 卡视区外时先状态筛出。
       const g5id = state.card_g5_ready || state.card_g5 || ''
-      const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审|/ }).first()
+      const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审/ }).first()
       const card2 = g5id ? page.locator(`.kanban-task-card`).filter({ hasText: g5id }).first() : card
       const target = (await card2.count().catch(() => 0)) ? card2 : card
       if (await target.isVisible().catch(() => false)) {
