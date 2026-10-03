@@ -58,7 +58,10 @@ export function snapshotBoardKg(slug: string, now = Date.now(), label: SnapshotL
     // 写失败不阻塞快照本身（缺边车=列表显示 auto 缺省）
     try {
       writeFileSync(join(dir, `kg-${now}.meta.json`), JSON.stringify({ ts: now, label }))
-    } catch { /* 边车缺省可接受 */ }
+    } catch (err) {
+      // 留痕不吞（2026-10-03 审计）：生产目录曾出现快照无边车，静默 catch 让根因不可查
+      console.warn(`[kg-version] 快照元数据边车写入失败（label=${label}）：${err instanceof Error ? err.message : String(err)}`)
+    }
     pruneBoardSnapshots(slug)
     return out
   } catch {
