@@ -17,7 +17,7 @@
  * 每板一个子目录 board-<slug>/；保留 KG_SNAPSHOT_MAX（默认 50，SNAP_MAX）份，
  * kg-* 与 pre-rollback-* 各自按上限裁剪。全部 fail-soft 不抛。
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { boardKgPath } from './board-graph'
@@ -41,7 +41,9 @@ export function boardKgVersionDir(slug: string): string {
 }
 
 /** 单板快照：当前 KG 文件 → <dir>/kg-<epoch-ms>.json（tmp+rename）；缺席返回 null。 */
-export function snapshotBoardKg(slug: string, now = Date.now()): string | null {
+export type SnapshotLabel = 'auto-pre' | 'auto-post' | 'rollback' | 'manual'
+
+export function snapshotBoardKg(slug: string, now = Date.now(), label: SnapshotLabel = 'manual'): string | null {
   const kg = boardKgPath(slug)
   if (!existsSync(kg)) return null
   try {
@@ -52,6 +54,11 @@ export function snapshotBoardKg(slug: string, now = Date.now()): string | null {
     const tmp = `${out}.tmp-${process.pid}`
     copyFileSync(kg, tmp)
     renameSync(tmp, out)
+    // 元数据边车（A4 校准 2026-10-03，源文③：快照带 label/原因可审计）；
+    // 写失败不阻塞快照本身（缺边车=列表显示 auto 缺省）
+    try {
+      writeFileSync(join(dir, `kg-${now}.meta.json`), JSON.stringify({ ts: now, label }))
+    } catch { /* 边车缺省可接受 */ }
     pruneBoardSnapshots(slug)
     return out
   } catch {
@@ -60,7 +67,7 @@ export function snapshotBoardKg(slug: string, now = Date.now()): string | null {
 }
 
 /** 快照列表（ts 降序=新→旧；含每份大小与节点数，坏文件节点数记 0）。 */
-export function listBoardSnapshots(slug: string): Array<{ ts: number; file: string; bytes: number; nodes: number }> {
+export function listBoardSnapshots(slug: string): Array<{ ts: number; file: string; bytes: number; nodes: number; label: string }> {
   const dir = boardKgVersionDir(slug)
   if (!existsSync(dir)) return []
   try {
@@ -75,7 +82,12 @@ export function listBoardSnapshots(slug: string): Array<{ ts: number; file: stri
           const j = JSON.parse(readFileSync(file, 'utf8')) as { nodes?: unknown[] }
           if (Array.isArray(j.nodes)) nodes = j.nodes.length
         } catch { /* 单份坏文件如实记 0，不拖垮整列 */ }
-        return { ts: Number(f.slice(3, -5)), file, bytes, nodes }
+        let label = 'auto'
+        try {
+          const meta = JSON.parse(readFileSync(join(dir, f.replace(/\.json$/, '.meta.json')), 'utf8')) as { label?: string }
+          if (typeof meta.label === 'string' && meta.label) label = meta.label
+        } catch { /* 旧档无边车：label=auto */ }
+        return { ts: Number(f.slice(3, -5)), file, bytes, nodes, label }
       })
       .sort((a, b) => b.ts - a.ts)
   } catch {
@@ -96,6 +108,8 @@ export function pruneBoardSnapshots(slug: string): void {
         .sort((a, b) => b.ts - a.ts)
       for (const { f } of files.slice(max)) {
         try { rmSync(join(dir, f)) } catch { /* 删失败留待下轮 */ }
+        // 伴随清理同名 .meta.json 边车（孤儿边车无消费方，留着只积灰）
+        try { rmSync(join(dir, f.replace(/\.json$/, '.meta.json'))) } catch { /* 同上 */ }
       }
     } catch { /* 读目录失败放弃本轮裁剪 */ }
   }
@@ -126,6 +140,7 @@ export function rollbackBoardKg(slug: string, ts: number, now = Date.now()): Rol
     const preTmp = `${pre}.tmp-${process.pid}`
     copyFileSync(kg, preTmp)
     renameSync(preTmp, pre)
+    try { writeFileSync(join(dir, `pre-rollback-${now}.meta.json`), JSON.stringify({ ts: now, label: 'rollback' })) } catch { /* 缺省可接受 */ }
     const tmp = `${kg}.tmp-${process.pid}`
     copyFileSync(hit.file, tmp)
     renameSync(tmp, kg)

@@ -143,7 +143,7 @@ describe('A2/A3/A4 接线：去重三档 + 治理分级 + 自动快照', () => {
     expect(r1.relations).toBe(10)
     expect(r1.governed).toMatchObject({ auto: 20, manual: 0, breaker: false })  // 空图冷启动：不评估熔断
     expect(r1.dedup).toEqual({ autoAlias: 0, review: 0 })
-    expect(snaps('gov1')).toHaveLength(1)  // A4：ingested>0 自动快照
+    expect(snaps('gov1')).toHaveLength(1)  // A4+A5：冷启动无 KG 文件=无 pre 态，仅门禁通过后的 post 正式版
 
     // 增量批：别名档（归一化后同名）+ 评审档（≈0.62）+ 全新档；fresh=4/20=恰好 0.20 → 不熔断
     addTasks('gov1', [
@@ -168,14 +168,14 @@ describe('A2/A3/A4 接线：去重三档 + 治理分级 + 自动快照', () => {
     expect(reviews[0].incoming).toBe('bob workers')
     expect(reviews[0].similarity).toBeGreaterThan(0.6)
     expect(reviews[0].similarity).toBeLessThan(0.85)
-    expect(snaps('gov1')).toHaveLength(2)  // 第二次有新增 → 第二份快照
+    expect(snaps('gov1')).toHaveLength(3)  // 第二次有新增 → pre+post 两份（pre 态此刻可拍）
 
     // 幂等：被扣任务（t13）不记 marker，重同步重新过治理面——收件箱不重复、零写入
     const r3 = await bg.syncBoardGraph('gov1')
     expect(r3.ingested).toBe(0)
     expect(r3.relations).toBe(0)
     expect(bg.listConflictInbox().filter((e) => e.kind === 'merge-review')).toHaveLength(1)
-    expect(snaps('gov1')).toHaveLength(2)  // 零新增不快照
+    expect(snaps('gov1')).toHaveLength(3)  // 幂等重同步零结构新增=无 pre 无 post
     // 图里没有评审扣留的实体（悬空防线）
     expect(kgJson('gov1').nodes.some((n) => n.id === 'agent:bob workers')).toBe(false)
   })
