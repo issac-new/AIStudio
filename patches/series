@@ -454,3 +454,7 @@
 #      上屏），改本地化 journey.loadFailed，原始错误降级 console.warn。
 548-client-i18n-regression-keys.patch
 549-client-journey-error-toast.patch
+# 550（2026-10-03 深度回归轮 D6）：changelog v0.7.27 词条 zh/en 补齐——data/changelog.ts
+#      引用 new_0_7_27_1..8 而两语言缺键（473 重定基时随块删除、26 组后来回植时 27 未跟），
+#      版本弹窗 v0.7.27 节八条全裸键。词源=473 删除行回收（上游 v0.7.27 tag 原文）。
+550-client-i18n-changelog-0_7_27.patch

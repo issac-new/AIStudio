@@ -87,7 +87,8 @@ const pageKey = computed(() => String(route.name ?? ''))
 /* 与 IaShell 同构：全高列，IaGlobalTop 在顶（页头+注意力条全宽），主区
  * [侧栏 | 内容]。上游视图根节点多为固定 100vh 高度，经内容列 flex 收缩
  * （与壳内其他上游视图同款语义），页面自持滚动。 */
-.ia-lshell { height: calc(100 * var(--vh, 1vh)); display: flex; flex-direction: column; overflow: hidden; background: var(--bg-primary); color: var(--text-primary); }
+/* overflow:clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤）。 */
+.ia-lshell { height: calc(100 * var(--vh, 1vh)); display: flex; flex-direction: column; overflow: clip; background: var(--bg-primary); color: var(--text-primary); }
 .ia-lshell__main { flex: 1; min-height: 0; display: flex; }
 .ia-lshell__content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 </style>
