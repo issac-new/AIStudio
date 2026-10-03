@@ -4,7 +4,7 @@
 // （336-338 事件）永远不上树且无日志，曾被迫手动 git apply + 手工登记。
 // 本测试做源码标记断言（脚本顶层副作用无法直接 import），防止回退到静默跳过。
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 // inject.mjs 顶部无副作用(直跑守卫见其尾部),可静态 import 做行为断言。
 import * as injectModule from '../../../scripts/inject.mjs'
@@ -58,8 +58,14 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
     // toContain 是单向断言（删前缀仍绿），此处解析 shell 正则片段与 js 导出逐项双向比对，
     // 任一侧增删即红。分树轮（2026-10-03）aipay-agent-sync.sh 移居 simharness 独立仓
     // （ncwk 根下与 overlay 平级；MX_SIMHARNESS_ROOT 可覆盖）。
+    const m2hRoot = process.env.MX_SIMHARNESS_ROOT
+      ?? Array.from({ length: 9 }, (_, i) => i + 4)
+        .map((up) => resolve(__dirname, '../'.repeat(up), 'simharness'))
+        .find((d) => existsSync(d))
+    // 主检出向上 4 级=ncwk 根；worktree（.claude/worktrees/<b>）需 8 级——逐级探测兜底，
+    // 仍找不到（脱离仓库运行）时给原 env 提示路径保持报错可读。
     const syncSrc = readFileSync(
-      resolve(__dirname, process.env.MX_SIMHARNESS_ROOT || '../../../../simharness', 'aipay-agent-sync.sh'),
+      resolve(m2hRoot || resolve(__dirname, '../../../../simharness'), 'aipay-agent-sync.sh'),
       'utf8')
     const m = syncSrc.match(/AGENT_PREFIXES='\^\(([^)]*)\)'/)
     expect(m, "aipay-agent-sync.sh 应含 AGENT_PREFIXES='^(a/|b_|...)' 正则片段").toBeTruthy()
