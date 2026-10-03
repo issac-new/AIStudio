@@ -487,8 +487,11 @@ cd overlay
 bash scripts/aipay/mux/mx-setup.sh     # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
 bash scripts/aipay/mux/mx-up.sh        # 起单 gateway + 单 studio
 RUN_ID=<轮次> bash scripts/aipay/aipay-scenario.sh   # 26 步与 5.2 逐步对应，一键推演
+RUN_ID=<轮次> nohup bash scripts/aipay/mux/mx-relay.sh >> $SIM_ROOT/logs/<RUN_ID>-relay-outer.log 2>&1 &   # 通用接力器（run8 起）：驱动死亡自动按 state 续跑+接力前运行面自愈（manifest 同步+533/534 重放）
 # 断点续跑 START_STEP=<步名>；区间上界 UNTIL_STEP=<步名>；换需求轮 RFD_ID=RFD-00X；协议事件 MX_DELIVERY=1
 ```
+
+**运行面自愈（533/534 长效化，run7 遗留①）**：自更新会 git 清洗源码树（manifest 文件与补丁一并被擦，run5/6/7 三次实录）。三通道收敛：①runtime manifest 21 文件（533/534 全量收编，含 base.py 接线）；②mx-up 起跑前 deploy-agent-runtime --apply + mx_apply_agent_patches 双通道重放；③mx-relay 每棒接力前同款自愈——擦除后下一棒自动恢复，不再依赖人工 git apply。
 
 脚本每步的"把关"即硬断言（真值轮询/超时打回/凭证核验）。截图 capture-ui.mjs（v42 起 RUN_ID 参数化）；报告链见第九章；治理工件 `#/app/gov`（GOVERNANCE_REPO 可配仓根）。
 

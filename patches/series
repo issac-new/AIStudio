@@ -445,3 +445,4 @@
 #      新鲜度门（笔记 updatedAt 落后最近归档 archivedAt 即 stale）+ hasNotes 诚实降级。
 545-server-ctx-notes-routes.patch
 546-server-context-archive-boundary-history.patch
+547-server-kanban-unassigned-visible.patch
