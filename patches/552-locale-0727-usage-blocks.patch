@@ -1,68 +1,120 @@
-From: regression-round <regression@local>
-Subject: [PATCH] fix(i18n): 0.7.27 usage.costStates/pricing 词条回填——473 rebaseline 误删
-
-473-client-locales-rebaseline.patch 按 0.7.26 ISO 基线重生成，落地 0.7.27 上游时
-把 usage.costStates/pricing 两块（unknown/partial/reported/estimated/mixed 与
-selectionHelp/catalogError/help 等）当旧键删除，用量统计页费用态/模型单价文案
-落裸键风险面。本补丁按纯净上游原文原位回填（changelog 8 键由
-550-client-i18n-changelog-0_7_27.patch 承担，防重复回填）；防复发守门见
-i18n-upstream-keys-gate.test.ts。
-
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -5845,6 +5845,26 @@
-     summaryLoadFailed: '加载房间总结失败'
-   },
-   usage: {
-+    costStates: {
-+      unknown: "未记录",
-+      partial: "部分费用，其余未记录",
-+      reported: "上游返回费用",
-+      estimated: "估算费用",
-+      mixed: "含上游费用与估算费用",
-+    },
-+    pricing: {
-+      title: "模型单价",
-+      selectionHelp: "可选择已配置的供应商及其模型，也可输入 ID 后按回车。",
-+      catalogError: "无法加载已配置的供应商和模型，仍可手动输入 ID。",
-+      help: "未设置自定义单价时，自动使用 models.dev 中匹配模型的价格估算。单位为美元／百万 Token。按供应商和模型 ID 精确匹配（例如 global），仅在上游未返回费用时估算。缓存单价留空表示未知。修改从后续调用生效，不重算历史费用。",
-+      provider: "供应商 ID",
-+      model: "模型 ID",
-+      input: "输入",
-+      output: "输出",
-+      cacheRead: "缓存读取",
-+      cacheWrite: "缓存写入",
-+      error: "无法读取或保存单价。请检查供应商、模型是否填写或重复，单价必须为非负数。",
-+    },
-     title: '用量统计',
-     refresh: '刷新',
-     totalTokens: '总 Token 数',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index ba3aac7..45594ca 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -5845,6 +5845,26 @@
+@@ -5768,6 +5768,26 @@ export default {
      summaryLoadFailed: 'Failed to load room summary'
    },
    usage: {
 +    costStates: {
-+      unknown: "Not recorded",
-+      partial: "Partial cost; some usage is unpriced",
-+      reported: "Provider-reported cost",
-+      estimated: "Estimated cost",
-+      mixed: "Includes reported and estimated costs",
++      unknown: 'Not recorded',
++      partial: 'Partial cost; some usage is unpriced',
++      reported: 'Provider-reported cost',
++      estimated: 'Estimated cost',
++      mixed: 'Includes reported and estimated costs'
 +    },
 +    pricing: {
-+      title: "Model pricing",
-+      selectionHelp: "Select a configured provider and model, or type an ID and press Enter.",
-+      catalogError: "Could not load configured providers and models. You can still enter IDs manually.",
-+      help: "Without a custom price, models.dev is used to estimate costs for matching models. USD per million tokens. Match provider and model IDs exactly (e.g. global). Used only when no cost is returned. Blank cache rates mean unknown. Changes apply to future calls; historical costs are not recalculated.",
-+      provider: "Provider ID",
-+      model: "Model ID",
-+      input: "Input",
-+      output: "Output",
-+      cacheRead: "Cache read",
-+      cacheWrite: "Cache write",
-+      error: "Could not load or save pricing. Check provider/model IDs, duplicates and non-negative rates.",
++      title: 'Model pricing',
++      selectionHelp: 'Select a configured provider and model, or type an ID and press Enter.',
++      catalogError: 'Could not load configured providers and models. You can still enter IDs manually.',
++      help: 'Without a custom price, models.dev is used to estimate costs for matching models. USD per million tokens. Match provider and model IDs exactly (e.g. global). Used only when no cost is returned. Blank cache rates mean unknown. Changes apply to future calls; historical costs are not recalculated.',
++      provider: 'Provider ID',
++      model: 'Model ID',
++      input: 'Input',
++      output: 'Output',
++      cacheRead: 'Cache read',
++      cacheWrite: 'Cache write',
++      error: 'Could not load or save pricing. Check provider/model IDs, duplicates and non-negative rates.'
 +    },
      title: 'Usage Statistics',
      refresh: 'Refresh',
      totalTokens: 'Total Tokens',
+@@ -5801,27 +5821,7 @@ export default {
+     cacheWrite: 'Cache Write',
+     sessions: 'Sessions',
+     cost: 'Cost',
+-    noData: 'No usage data',
+-    costStates: {
+-      unknown: 'Not recorded',
+-      partial: 'Partial cost; some usage is unpriced',
+-      reported: 'Provider-reported cost',
+-      estimated: 'Estimated cost',
+-      mixed: 'Includes reported and estimated costs'
+-    },
+-    pricing: {
+-      title: 'Model pricing',
+-      selectionHelp: 'Select a configured provider and model, or type an ID and press Enter.',
+-      catalogError: 'Could not load configured providers and models. You can still enter IDs manually.',
+-      help: 'Without a custom price, models.dev is used to estimate costs for matching models. USD per million tokens. Match provider and model IDs exactly (e.g. global). Used only when no cost is returned. Blank cache rates mean unknown. Changes apply to future calls; historical costs are not recalculated.',
+-      provider: 'Provider ID',
+-      model: 'Model ID',
+-      input: 'Input',
+-      output: 'Output',
+-      cacheRead: 'Cache read',
+-      cacheWrite: 'Cache write',
+-      error: 'Could not load or save pricing. Check provider/model IDs, duplicates and non-negative rates.'
+-    }
++    noData: 'No usage data'
+   },
+   skillsUsage: {
+     title: 'Skills Usage',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index e00d9a2..7762768 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -5768,6 +5768,26 @@ export default {
+     summaryLoadFailed: '加载房间总结失败'
+   },
+   usage: {
++    costStates: {
++      unknown: '未记录',
++      partial: '部分费用，其余未记录',
++      reported: '上游返回费用',
++      estimated: '估算费用',
++      mixed: '含上游费用与估算费用'
++    },
++    pricing: {
++      title: '模型单价',
++      selectionHelp: '可选择已配置的供应商及其模型，也可输入 ID 后按回车。',
++      catalogError: '无法加载已配置的供应商和模型，仍可手动输入 ID。',
++      help: '未设置自定义单价时，自动使用 models.dev 中匹配模型的价格估算。单位为美元／百万 Token。按供应商和模型 ID 精确匹配（例如 global），仅在上游未返回费用时估算。缓存单价留空表示未知。修改从后续调用生效，不重算历史费用。',
++      provider: '供应商 ID',
++      model: '模型 ID',
++      input: '输入',
++      output: '输出',
++      cacheRead: '缓存读取',
++      cacheWrite: '缓存写入',
++      error: '无法读取或保存单价。请检查供应商、模型是否填写或重复，单价必须为非负数。'
++    },
+     title: '用量统计',
+     refresh: '刷新',
+     totalTokens: '总 Token 数',
+@@ -5800,27 +5820,7 @@ export default {
+     cacheWrite: '缓存写入',
+     sessions: '会话',
+     cost: '费用',
+-    noData: '暂无用量数据',
+-    costStates: {
+-      unknown: '未记录',
+-      partial: '部分费用，其余未记录',
+-      reported: '上游返回费用',
+-      estimated: '估算费用',
+-      mixed: '含上游费用与估算费用'
+-    },
+-    pricing: {
+-      title: '模型单价',
+-      selectionHelp: '可选择已配置的供应商及其模型，也可输入 ID 后按回车。',
+-      catalogError: '无法加载已配置的供应商和模型，仍可手动输入 ID。',
+-      help: '未设置自定义单价时，自动使用 models.dev 中匹配模型的价格估算。单位为美元／百万 Token。按供应商和模型 ID 精确匹配（例如 global），仅在上游未返回费用时估算。缓存单价留空表示未知。修改从后续调用生效，不重算历史费用。',
+-      provider: '供应商 ID',
+-      model: '模型 ID',
+-      input: '输入',
+-      output: '输出',
+-      cacheRead: '缓存读取',
+-      cacheWrite: '缓存写入',
+-      error: '无法读取或保存单价。请检查供应商、模型是否填写或重复，单价必须为非负数。'
+-    }
++    noData: '暂无用量数据'
+   },
+   skillsUsage: {
+     title: '技能用量',
