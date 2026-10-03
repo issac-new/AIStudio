@@ -300,6 +300,9 @@ describe('TasksView 页签与深链预选', () => {
     await wrapper.find('[data-testid="ia-tasks-tab-trace"]').trigger('click')
     expect(wrapper.find('[data-testid="ia-trace"]').exists()).toBe(true)
     expect(wrapper.find('.kanban-stub').exists()).toBe(false)
+    // L4 页签 URL 回写引入跨 tick 的 router.replace——组件不卸载会在下一用例
+    // 执行期 resolve 并经共享 kanbanState 污染断言（跨用例泄漏组件的既有卫生债）
+    wrapper.unmount()
   })
 
   it('非法 status/未知 tab 忽略不炸；追溯任务点击切回看板并预选搜索', async () => {
