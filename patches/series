@@ -446,3 +446,11 @@
 545-server-ctx-notes-routes.patch
 546-server-context-archive-boundary-history.patch
 547-server-kanban-unassigned-visible.patch
+# 548/549（2026-10-03 全功能回归轮）：i18n 裸键根治 + journey 错误呈现。
+# 548=508 被临时跳过后「末批迁移」欠账的落地（ia2.flow 六键 zh/en）+ 交付案例
+#      completed 键 + approvals.choice 补 spotcheck_confirm/spotcheck_veto/auto_pass
+#      （autopass.ts 落台账的三枚 decision 值，历史表曾裸显枚举）。
+# 549=JourneyView 加载失败 toast 弃用原始 err.message（会带本机路径/命令失败细节
+#      上屏），改本地化 journey.loadFailed，原始错误降级 console.warn。
+548-client-i18n-regression-keys.patch
+549-client-journey-error-toast.patch
