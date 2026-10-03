@@ -309,8 +309,9 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top__uname { font-size: 11px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .cockpit-top__caret { font-size: 9px; color: var(--text-muted); }
 
-/* 态势内联面板浮层（v12.3：贴页头下方，左对齐态势 chips 区） */
-.cockpit-top__sitpanel { position: absolute; top: 100%; left: 12px; width: min(760px, calc(100vw - 48px)); z-index: 999; }
+/* 态势内联面板浮层：贴页头下方、右锚定对齐触发 chips（任务/在线现居页头右侧；
+   left:12px 系旧版 chips 左置时的遗留，与现行触发点错位——2026-10-03 回归走查修正） */
+.cockpit-top__sitpanel { position: absolute; top: 100%; right: 12px; width: min(760px, calc(100vw - 48px)); z-index: 999; }
 .cockpit-top__sitpanel :deep(.sitp) { margin: 6px 0 0; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
 .cockpit-top__mask { position: fixed; inset: 0; z-index: 998; }
 
