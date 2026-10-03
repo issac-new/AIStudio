@@ -117,13 +117,18 @@ normalize_assignee() { # <assignee> → 短名
   printf '%s' "$a"
 }
 
-kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 缓存防重；缺省落该账号默认板）
+kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → id（state 缓存防重；缺省落该账号默认板）
   # 09-26 run8 实锤：studio POST /api/hermes/kanban 写路径与读路径同病（tenant 面），
   # 导演兜底建卡直接 fail。改 CLI 直查（--json 返回卡对象，.id 即卡号，实测 t_8b84e215）。
-  local u="$1" key="card_$2" title="$3" body="$4" board="${5:-$(first_board_of "$u")}" cached id
+  # assignee（第 6 参，可选）：未指派卡虽经 547 已对板内可见，但指派到板团队档案
+  # （board.json profiles 之一）可同时过 477 围栏与 391 认领白名单——评审/准出类
+  # 导演建卡一律带（run7 ui-g5-carddrawer 教训：NULL assignee 曾被滤光致抽屉打不开）。
+  local u="$1" key="card_$2" title="$3" body="$4" board="${5:-$(first_board_of "$u")}" asg="${6:-}" cached id
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
+  local asg_args=()
+  [[ -n "$asg" ]] && asg_args=(--assignee "$asg")
   id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
-    --body "$body" --project aipaydev --json 2>/dev/null | jq -r '.id // empty')
+    --body "$body" --project aipaydev --json "${asg_args[@]}" 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
   # ——补创建后归属核验：错板记单留证，不再静默）
