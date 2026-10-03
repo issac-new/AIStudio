@@ -1,8 +1,9 @@
 # Swarm Studio 全流程推演方案（V7 整合版）
 
 > **文档定位**：全流程推演唯一正本（V7 运行韧性版）——承 V6 终态版全部契约层（26 步主链/六道硬闸/治理总则 1-15 条/报告规范/推演纪律），本轮增量专注**运行韧性与容量规划**（run7 报告实锤的方案层八缺口）。历史沿革见 changelog-archive（V3-V5）与 V6 正本（2026-10-02-mux-v6-fullflow-plan.md）。
-> **当前基准**：overlay main c634c9af 系（run7 收官批+五项遗留落地+方案问题分析）。run7（RUN=20261002-v5-run7）已收官：26 步/六闸/UAT 判词 7/7 全绿。推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **当前基准**：overlay main 67c3e857 系（run7 收官+全功能回归三会话修复线+UX 复盘批）。run7（RUN=20261002-v5-run7）已收官：26 步/六闸/UAT 判词 7/7 全绿。推演环境 ncwk-sim-mux 已完成 0→1 备场（2026-10-03：mx-clean 全旗标清理+残留二连清零，gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888 待起跑）；中央仓 github.com/issac-new/aipaydev（远端仅剩 main，九目录零文件）。
 > **V6→V7 修订要点**（输入=2026-10-03-v6-plan-issue-analysis-from-run7-report.md，八缺口各带 run7 实锤锚）：①§四新增并发预算与容量守卫（P1）；②§十一环境重置合格线扩三面+总则 artifact_fresh（P2）；③总则 16 驱动韧性（P3）；④§十二会话断裂恢复+观测面语义（P4/P6）；⑤总则 17 完成凭证一体化（P5）；⑥§十五补丁收编纪律（P7）；⑦§五步 10 判据窗口改写（P8）。
+> **V7.1 回归回灌修订**（2026-10-03，输入=四会话全功能回归 e4e4e183/33f0a7ff/8d8e44ff/0d24c88b+run8 备场清环境轮）：①§十二 0→1 段重写为 mx-clean 六旗标终态（--reset-central/--reset-workspaces/--reset-memory/房间 v2 purge/hermes 运行态清零）+起跑环境前置四条；②纪律 6 改 533/534 三通道自愈收编终态、纪律 13 除旧；③§9.4 快门守门⑦ IAB 冻结假象；④§12.x 观测面补在线面板计数语义；⑤§十一.4 回归轮遗留五项；⑥§14.3 回归轮补丁族（524 补遗/539 补遗+551/547/548-553 族）；⑦§十五.6 注入链纪律五条。契约层（26 步/六闸/总则 1-18）零改写。
 
 ---
 
@@ -436,7 +437,7 @@ graph TB
 
 capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清单＋等您操作/概览/卡链接专用截图位）→ shots/ → 生成器。群聊实拍注意：房间须左栏点击选择（深链不驱动）、matrix 房列表等 sync、登录身份须为房间成员。报告生成后跑 mx-report-audit（选择器锚定真实 DOM，标题逐字 26/26）并对 9.3 的 R1-R17 逐项断言，不过即打回重生成。
 
-**采集快门守门（据视觉审计 15 处图证不一致固化）**：①快门时机——截图前断言目标组件非空，空态与加载中重试或记缺陷，不照拍；②拍前去噪——关闭版本通知 toast、收起下拉、防末行裁切；③文件名-内容对齐校验；④同画面去重与"拍而未嵌"治理；⑤工件新鲜度同 R10；⑥报告口径自洽——头部计数=实际嵌入数。
+**采集快门守门（据视觉审计 15 处图证不一致固化）**：①快门时机——截图前断言目标组件非空，空态与加载中重试或记缺陷，不照拍；②拍前去噪——关闭版本通知 toast、收起下拉、防末行裁切；③文件名-内容对齐校验；④同画面去重与"拍而未嵌"治理；⑤工件新鲜度同 R10；⑥报告口径自洽——头部计数=实际嵌入数；⑦IAB 冻结假象（2026-10-03 回归轮两撤实录）——后台标签 rAF 冻结致动画/弹窗类组件"不渲染"假缺陷，走查判缺陷前必以前台复核（NModal teleport 类同理区分测试环境干扰），勿据后台帧报缺陷。
 
 ### 9.5 交付物清单
 
@@ -492,6 +493,7 @@ capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清�
 1. **已落地演进线（V6 收编）**：四源文 12 提案甲乙丙三组全部落地（P18；调研正本 `docs/2026-10-02-swarm-capability-research-4articles.md` 差距矩阵 14 行闭合）；保真运行开关面（P19）；QGate v0.3（P17）。
 2. **长线记档项**：SBOM+依赖白名单；graphify 代码图谱接入 IDE 面；影子运行/双跑对比（口径已立）；逃逸缺陷率与 revert 率长线数据（六域体检台账累积中）；KG 跨批次实体消歧/实体链接（源文②诚实局限同款，冲突检测前提）。
 3. **待下轮验证**：MX_APPROVE_MODE=hybrid 起跑实测（DM 建房/!deny 线程路由为运行面路径）；!refine 治理卡点链路实测；IDE↔运行详情交叉跳转（P14 记档剩余）。
+4. **回归轮遗留（2026-10-03 全功能回归三会话+mimo 补轮）**：①mx-up 偶发退出码 1 且网关 8801 未起（根因未查；同日备场轮双绿属正常——起跑以 mx-up 后双 health 显式断言兜底，见 §十二前置③）；②patch 540 重生成版重放失败（does not apply，与 499 同族"锚在漂移态树上"雷，仅记档未根治）；③「改已记账补丁后 inject 跳重放」（533 升级未重放致 run_busy.py 停旧版实录）未根治——升级已记账补丁后须手工全链重放对账；④fanfan UI 出站 Enter 发送在合成键盘下不触发，待真实键盘人工复验；⑤L10 Changelog NModal 在 IAB 后台标签不渲染，待装机/Electron 验证（用户已授权）。
 
 ## 十二、运行手册
 
@@ -505,14 +507,17 @@ RUN_ID=<轮次> bash scripts/aipay/aipay-scenario.sh   # 26 步与 5.2 逐步对
 
 脚本每步的"把关"即硬断言（真值轮询/超时打回/凭证核验）。截图 capture-ui.mjs（v42 起 RUN_ID 参数化）；报告链见第九章；治理工件 `#/app/gov`（GOVERNANCE_REPO 可配仓根）。
 
-**0→1 清环境推演（run4 起口径）**：执行前先清环境：
+**0→1 清环境推演（run4 起口径；2026-10-03 回归轮后 mx-clean 六旗标态）**：执行前先清环境：
 ```
-bash scripts/aipay/mux/mx-clean.sh          # ①停 studio/gateway ②归档并清空 runs/、state.env、gateway-locks/
-                                             # ③synapse 房间归档清理 ④中央仓按需重置
+bash scripts/aipay/mux/mx-clean.sh --apply --reset-central --reset-workspaces [--reset-memory]
 bash scripts/aipay/mux/mx-setup.sh && bash scripts/aipay/mux/mx-up.sh
 RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 ```
-合格线=推演开始前 runs/ 无旧轮目录、state.env 空、房间列表无旧轮同名房；**另三面（V7 P2 扩）**：①agent 工作区（workspaces/）按轮基线重置（mx-clean 不清，起跑前人工/脚本重置到本轮基线，或依赖 branch_fresh/artifact_fresh 甄别并在此声明）；②远端旧轮 feat-DEV-*/test-* 分支删除或声明由 branch_fresh 时间甄别（run7 run6 旧 tip 顶名险情）；③integration/RFD-* 分支重置（旧轮测试报告/工件不得让 repo_has 存在性判真直接过闸——配套总则 18 artifact_fresh）。勿以"分支/文件存在"当本轮交付。
+旗标语义：`--reset-central`=中央仓 docs 九目录清空（admin 三张基础注册表 roster/app-registry/org 保留——文档评审 registry API 数据源）+清空提交推 origin/main+快照 tag 上推+删远端 integration/feat/test/wt/fix/wip 全部旧轮分支；`--reset-workspaces`=agent 工作区整树 tar 归档后删（setup 重建净克隆）；`--reset-memory`=hindsight 模拟 14 家族记忆 bank 清场（pg_dump 全库归档前置+单事务+宿主 bank 绝缘）——跨轮家族记忆保留是默认态，零记忆起跑须显式指定。看板整树归档重置、hermes 运行态归档清零（pending_messages/sessions/approvals/state*/cron——旧在途消息不清会致网关每启刷 WARNING 并误触发 mx-up matrix 降级自愈长挂）、synapse 房间逐房 v2 purge（`DELETE /_synapse/admin/v2/rooms/{id}`，1.154 起 v1 /delete 与 kick 均未注册；v2 不可用回落 leave 全退+拒邀请）均为无旗标缺省动作。
+
+合格线（mx-clean 自带核验+起跑前复核）：runs/ 无旧轮目录、state.env 归档移除、kanban 整树空（setup 重建）、hermes 运行态五类清零、**服务器房间数=0 且全部账号 joined=0**、中央仓远端**仅剩 main 分支**且九目录零文件（admin 注册表除外）、workspaces 为净克隆。旧三面 caveat（workspaces/旧轮分支/integration 分支的人工甄别义务）已由旗标收编；artifact_fresh（总则 18）仍为纵深防御——未全旗标重置的轮次以新鲜度甄别兜底，勿以"分支/文件存在"当本轮交付。
+
+**起跑环境前置（2026-10-03 回归轮补充）**：①磁盘低水位——系统盘 <20GB 先清理再起跑/构建（vite/vitest OOM 与 node_modules 残缺实录，17GB 时曾炸装机轮）；②hindsight :8888 须先在（mx-setup 前置检查会拒跑；launchctl 未挂载，冷启走 `~/.hermes/profiles/orchestrator/hindsight/start.sh`）；③mx-up 收尾后**显式断言** gateway/studio 双 health 再起跑——曾实录 mx-up 退出码 1 且网关 8801 未起（根因未查，见 §十一）；④vite dev server 挂约一天后模块请求 504 而根路径 200 的僵尸态，重启即愈，走查前先探活。
 
 **推演 harness 纪律（十三条）**：
 1. **重载任务不设绝对时长**——wait_alive_truth 空转判据：责任 agent 日志连续 1800s 零增长才判空转退出；无日志面退化 86400s 硬窗。先例：排期任务 40-60min 实跑撞 2400s 窗口，接力重启即换新会话丢进度=结构性不可能过闸（run6 首因，窗口已改 7200s）。
@@ -520,14 +525,14 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 3. **派发词明示 push 目标**——repo_has 真值盯 origin/main+新鲜度窗，任务书不含 push origin main 则旧稿不奏效（run6 第二因）。
 4. **双格式探针 anthropic 优先**——预检不得只探 /chat/completions；agent 实走 anthropic_messages，探错端点=整晚 quota 假红（run6 第三因）。150s 超时防队列重误杀。
 5. **接力/看门狗脚本迁数据盘**（ncwk-sim-mux/）——/tmp 被 macOS periodic 夜清两案实录；夜间停摆链=/tmp 清脚本→接力死→无人重派→Docker 睡眠 synapse 停，晨修序=Docker/synapse 拉起→脚本迁数据盘→预检→重派。
-6. **hermes home 树补丁为工作区态**——自更新会再擦（533/534 不在 runtime manifest，run7 三度实录）；恢复=deploy-agent-runtime --apply+git apply 两补丁；网关判活看端口 health 非 pid。
+6. **hermes home 树补丁三通道自愈（run8 备场轮收编后终态）**——533/534 已收编 runtime manifest（21 件）+mx-up 起跑双通道收敛（deploy-agent-runtime --apply 内容同步+mx_apply_agent_patches git apply）+mx-relay 接力器第三通道，marker 双面核验（安装环境或源码树，任一在位即过）；hermes 自更新擦树后每次 mx-up 自动恢复，无需人工重放。网关判活看端口 health 非 pid。仍未收编的新运行时补丁一律走 §十五.5 三步收编，工作区态视为未部署。
 7. **分支新鲜度守门 branch_fresh**——分支存在≠本轮交付：守门=分支 tip 提交时间 ≥ run_started_at；缺键退化存在性并告警（run7 devimpl 4/4 全新鲜即本守门实证）。
 8. **群线程派发路由丢失→DM 直发兜底**——群内线程派发对部分账号静默丢失（run6 实录）。兜底=导演以私聊直发任务书原文（含去重脚注）；并发闸弹回的 agent 等槽腾后 nudge 续派；**网关重启后 agent 会话上下文丢失——孤立"续跑/提示"短消息只做字面响应不接任务，唯一有效恢复=重发完整任务书**（run7 实录）。
 9. **DISP 处置记账措辞对齐分桶**——issues.log 的 DISP 行措辞须前置生成器分桶词（已修/观察/延后），否则整行误桶。
 10. **UAT 等待同活性口径**——UAT 超时分支是 fail 中止整驱动，2400s 硬窗在证据核验 40min 场景必炸；第六处等待点收编 wait_alive_truth（同纪律 1 判据）。
 11. **保真形态默认（run7 起口径）**——推演=真实场景的复刻实验，偏离默认行为的"优化"污染实验效度。不设 MX_* 环境变量即保真形态：background_review 每 turn 自动 fork 关闭（MX_BGREVIEW=0），沉淀收敛到治理卡点（工作线程内纯命令 body `!refine <闸>` 显式触发，五治理闸主责+实质干活者每轮恰一次）；审批 auto 全自动（MX_APPROVE_MODE 可选 hybrid=关键动作真人手批/过程性代审复核；manual=全真人）；推理档位保持宿主 ultra。性能口径引证：自动 fork 曾占单 agent LLM 时间 79%（fanfan 160/203min），根因报告 `docs/2026-10-02-sim-perf-rootcause-and-fix.md`。
 12. **KG 演化与无损换窗开关**——KG_AUTO_SYNC 总闸（默认开）+KG_DEDUP_*/KG_MERGE_BREAKER_RATIO 可调（patch 542）；context-archive 归档召回 API 经 /api/context-archive/*（patch 544/545）。推演中默认全开=产品真实形态。
-13. **判驱动状态先 grep 派发行勿只看 tail**——scenario.log 尾部常被审批行淹没，"任务尚未派发"误判会错发 nudge（run7 director-nudge-mislead 实录，导演自查纠偏三连记档）；同理勿把 run6 工作区遗留（mx-clean 不清 workspaces）当 run7 进度。
+13. **判驱动状态先 grep 派发行勿只看 tail**——scenario.log 尾部常被审批行淹没，"任务尚未派发"误判会错发 nudge（run7 director-nudge-mislead 实录，导演自查纠偏三连记档）；同理勿把旧轮工作区遗留当本轮进度（workspaces 已可 `--reset-workspaces` 归档重置；未重置轮以 branch_fresh/artifact_fresh 甄别）。
 
 > **报告双正本制**（run6 起）：`evidence/final-report.html`=唯一人读正本（双层：PART 1 说人话导读 `.guide` 前缀样式隔离 + PART 2 机器报告全文嵌入）；`simulation-report.html`=机器档案。按轮注册（STEPS_META_RUNn/PART1_BY_RUN）为 R17 硬闸，未注册轮拒绝合并/生成，禁编造叙事、禁旧轮顶包。
 
@@ -538,7 +543,7 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 
 **会话断裂恢复**（run7 实锤：网关重启腰斩三会话三次摸索）：判据=agent 日志静默且无活动 turn；恢复唯一有效模式=**重发完整任务书**（附断点引导：检查工作区 git status/log 续作、已完成勿重做）——"续跑提示"类短消息触发的新 turn 只做字面回复即停（三人验证一致），勿再发；重发后 2 分钟内出现 API call 即接单成功。
 
-**观测面语义**：gateway_state.json 的 active_agents 是 turn 边界快照（turn 进行中显示陈旧值）——只作趋势参考，**不作判活依据**；判活唯一口径=责任 agent 日志活性（wait_alive_truth 语义）；任何自动重启/清理动作前置条件=二次确认无 in-flight turn（run7 idle-restart 守护误判快照重启腰斩双会话实录）。
+**观测面语义**：gateway_state.json 的 active_agents 是 turn 边界快照（turn 进行中显示陈旧值）——只作趋势参考，**不作判活依据**；判活唯一口径=责任 agent 日志活性（wait_alive_truth 语义）；任何自动重启/清理动作前置条件=二次确认无 in-flight turn（run7 idle-restart 守护误判快照重启腰斩双会话实录）。在线面板计数语义（2026-10-03 回归轮 F6 定口径）：机器位=运行中网关数（单网关拓扑恒 1）、agent 位=connected 通道数、人员位=当前登录账号（≥1）——三档非同一量纲，勿横向相加比较。
 
 ## 十三、产品面聚焦原则
 
@@ -570,6 +575,8 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 
 539/541=/hermes/history 死导航清族；540=看板选板迁分层；537/538 深链+badge 注入树实施；542=kg-evolution 六路挂载；543=harness 四子路由挂载；544/545=context-archive+ctx-notes 挂载；546=压缩边界史表（收口轮）。540/543 已重生成锚到纯净重放态（8251f51d，全链重放确定性验证）。
 
+**回归轮补丁族（2026-10-03 全功能回归，main 37aa4c64→f80429bc 线）**：524 补遗=ConnectionsPanel connectionsExtras 缺 import（整页空白+全应用导航冻结级联，P0）；539 补遗+551=HistoryView 悬空 `name:'hermes.historySession'` push 清族（改路径式 /app/history）；547=看板抽屉未指派卡不滤（G5 卡 NULL assignee 滤光=抽屉打不开根因，回归实测 0→2 有效）；548/549/550/552=i18n 回归四连——rebalance/rebase 丢键复发族（548 ia2 九键、549 journey 错误 toast 本地化、550 changelog 0.7.27 八键、552 usage costStates/pricing 块），守门 `i18n-upstream-keys-gate.test.ts` 已立；553=A-H 八项 UX 晦涩修复（原编 552 撞号让位改号）。非编号锚：D4 三壳 overflow:clip（6dc5436e，顶栏操作区死区 P0）；merge-review 裁决死循环根治（0a3ffe3，board-adjudicated-\<slug\>.json 持久台账+keep-existing 豁免）；网关 platforms/base.py 与并发测试入库存档（原被 .gitignore 挡库外）。
+
 ### 14.4 开放线（记档防丢，不阻塞推演轮）
 
 ①设置步三互斥声明（与插件宿主同批——接缝文档 `2026-10-01-plugin-seam-definition.md`）；②webhooks 管理面（dashboard 常驻依赖，运维裁决）；③KG 跨批次实体消歧（§十一 2）。
@@ -581,3 +588,4 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 3. **证据锚不可丢**：条目修订时其 commit/事件/文件锚随文保留；删除内容必须先入归档件。
 4. **契约层稳定**：26 步主链与六闸语义（§五）自 V5 冻结，变更须整轮推演验证后才可动；运行纪律（§十二）按轮追加先例时只增不改写。
 5. **运行时补丁收编**（V7 新增，P7）：凡涉 gateway/runtime 行为的上游补丁（容量排队/出站守卫/kanban 链路等），必须三步收编——正本入 overlay/runtime/、登记 runtime-manifest.json、`deploy-agent-runtime.mjs --apply` 验证收敛；**工作区态补丁视为未部署**（hermes 自更新会擦，run6/run7 三次实录）。每次 mx-up 后跑 deploy dry-run 对账（清单全相同为合格）。
+6. **注入链纪律（2026-10-03 回归/漂移轮固化）**：①manifest-树失配自愈——inject manifest 宣称已注入但树被 reset/clean 过时前端 500，恢复=三树 `npm run clean`+删 manifest+全量重注入（勿信 manifest 自报）；②「改已记账补丁 inject 跳重放」已知坑——升级已注入补丁内容后 inject 不会自动重放，须按 HEAD+全链 include 重放并做 LIVE==REPLAY 逐字节对账（533 升级未重放致 run_busy.py 停旧版实录）；③补丁编号唯一性——撞号（552 双补丁并存+series UU）让位改号收编，series 冲突按 patch 编号排序解，插入行后必须 hunk recount+补末行换行（corrupt 事故两录）；④注入生效边界——overlay→upstream 注入后 8647/8649 须重启，runtime→hermes 注入后**须重启各 profile 网关**才生效；⑤反向操作禁止——`npm run clean` 在脏树上可能逆放补丁（mx-clean 逆放 539 灾情根因），clean 前必查 manifest 与树的致性。
