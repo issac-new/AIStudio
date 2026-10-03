@@ -66,9 +66,11 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
     <div class="tdp__head">{{ t('ia2.tdp.title') }}</div>
 
     <div class="tdp__scroll">
+      <!-- UX 裁决 D（2026-10-03）：四分法并为二分——「待我处理」=等我+需关注，
+           「上下文」=挂接任务+任务流转+任务动态。子列表 testid 原样保留。 -->
       <section class="tdp__sec">
         <div class="tdp__sec-head">
-          <span>{{ t('ia2.tdp.waiting') }}<span v-if="waitItems.length" class="tdp__n">{{ waitItems.length }}</span></span>
+          <span>{{ t('ia2.tdp.pendingTitle') }}<span v-if="waitItems.length + (attentionRows?.length ?? 0)" class="tdp__n">{{ waitItems.length + (attentionRows?.length ?? 0) }}</span></span>
           <button type="button" class="tdp__link" data-testid="tdp-wait-all" @click="emit('all-timeline')">
             {{ t('ia2.tdp.all') }} ›
           </button>
@@ -82,21 +84,15 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
           @approve-fleet="item => emit('approve-fleet', item)"
           @reject-fleet="item => emit('reject-fleet', item)"
         />
-      </section>
-
-      <section class="tdp__sec">
-        <div class="tdp__sec-head">
-          <span>
-            {{ t('ia2.att.title') }}<span v-if="attentionRows?.length" class="tdp__n tdp__n--warn">{{ attentionRows.length }}</span>
-          </span>
+        <div v-if="attentionRows?.length" class="tdp__sub">
+          <AttentionList :rows="attentionRows" @open="row => emit('open-attention', row)" />
         </div>
-        <AttentionList :rows="attentionRows ?? []" @open="row => emit('open-attention', row)" />
       </section>
 
       <section class="tdp__sec">
         <div class="tdp__sec-head">
           <span>
-            {{ t('ia2.tdp.linked') }}<template v-if="linkedContext"> · {{ linkedContext }}</template>
+            {{ t('ia2.tdp.contextTitle') }}<template v-if="linkedContext"> · {{ linkedContext }}</template>
           </span>
           <button type="button" class="tdp__link" data-testid="tdp-new-task" @click="emit('new-task')">
             ＋ {{ t('ia2.tdp.newTask') }}
@@ -108,19 +104,13 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
           @open-ide="id => emit('open-ide', id)"
           @handle-task="id => emit('handle-task', id)"
         />
-      </section>
-
-      <!-- P4③ 当前群任务流转时间线（仅选中群且有任务型消息时渲染） -->
-      <section v-if="flowEvents?.length" class="tdp__sec" data-testid="tdp-flow-sec">
-        <div class="tdp__sec-head">
-          <span>{{ t('ia2.tdp.flowTitle') }}<span class="tdp__n">{{ flowEvents.length }}</span></span>
+        <!-- P4③ 当前群任务流转时间线（仅选中群且有任务型消息时渲染） -->
+        <div v-if="flowEvents?.length" class="tdp__sub" data-testid="tdp-flow-sec">
+          <TaskFlowTimeline :events="flowEvents" @open-task="id => emit('open-task', id)" />
         </div>
-        <TaskFlowTimeline :events="flowEvents" @open-task="id => emit('open-task', id)" />
-      </section>
-
-      <section class="tdp__sec">
-        <div class="tdp__sec-head">{{ t('ia2.tdp.feed') }}</div>
-        <TaskFeed :rows="feedWithTime" />
+        <div class="tdp__sub">
+          <TaskFeed :rows="feedWithTime" />
+        </div>
       </section>
     </div>
 
@@ -141,6 +131,7 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
 .tdp__head { padding: 10px 12px 6px; font-weight: 700; color: var(--text-primary); }
 .tdp__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px; }
 .tdp__sec { margin-bottom: 10px; }
+.tdp__sub { margin-top: 6px; }
 .tdp__sec-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 4px 4px 4px; font-size: 10px; text-transform: uppercase;

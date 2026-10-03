@@ -188,7 +188,10 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(header).toContain('<IaViewSwitcher')
     expect(switcher).toContain('data-testid="ia-viewswitch-row"')
     expect(switcher).toContain('data-testid="ia-view-toggle"')
-    expect(switcher).toContain(`{ name: isIde.value ? 'ia2.collab' : 'ide.shell' }`)
+    // UX 毛刺③（2026-10-03）：切换带 URL 上下文——回协作落会话画布、去 IDE 带 ?session=
+    expect(switcher).toContain(`ia2.collabSession`)
+    expect(switcher).toContain('ide.shell')
+    expect(switcher).toContain('session: sid')
     expect(switcher).not.toContain('data-testid="ia-scene-collab"')
     expect(switcher).not.toContain('data-testid="ia-scene-ide"')
   })

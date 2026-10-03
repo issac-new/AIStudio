@@ -2,6 +2,8 @@
 <!-- v12 管理台 · 评审中心区（M-C）：待审清单（R/G 门聚合投影）+ 逐卡签核操作。
      数据单一事实源 = matrix-teams review-center store（delivery.gate 事件流）。 -->
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+const router = useRouter()
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
@@ -23,6 +25,7 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
     <div class="grs__head">
       <span class="grs__title">{{ t('ia2.gov.review.title') }}</span>
       <span class="grs__sub">{{ t('ia2.gov.review.sub') }}</span>
+      <button type="button" class="grs__jump" data-testid="gov-review-jump-inbox" @click="router.push({ name: 'ia2.inbox' })">{{ t('ia2.gov.jump.inbox') }} ›</button>
     </div>
     <div class="grs__body">
       <div class="grs__card">
@@ -56,6 +59,7 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
 
 <style scoped lang="scss">
 .grs { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
+.grs__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .grs__jump:hover { color: var(--primary, #6366f1); }
 .grs__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .grs__title { font-weight: 700; }
 .grs__sub { font-size: 10px; color: var(--text-muted); }

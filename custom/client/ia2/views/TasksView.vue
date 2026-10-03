@@ -11,7 +11,7 @@
      status 预选看板状态过滤器、task 预选搜索框（合法状态词表校验，非法值忽略不炸页面）。 -->
 <script setup lang="ts">
 import type { KanbanTaskStatus } from '@/api/hermes/kanban'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
@@ -77,6 +77,9 @@ function closeBoard(): void {
 const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>([
   'triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived',
 ])
+
+/** UX 裁决 E：?new=1 深链直开列内建卡表单 */
+const autoOpenCreate = computed(() => route.query.new === '1' || route.query.new === 'true')
 
 /** route query → 看板预选（tab 切换 + status 过滤器 + task 搜索）。非法值忽略。 */
 function applyQuery(q: Record<string, unknown>): void {
@@ -163,7 +166,7 @@ function goInboxFromAccounts(): void {
     </div>
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
-      <SwarmKanbanView />
+      <SwarmKanbanView :auto-open-create="autoOpenCreate" />
     </div>
     <!-- 三账与体检（2026-10-01 整合）：管理三账 + 治理体检同页签堆叠——
          同属管理者健康总览语义，滚动一屏读全 -->

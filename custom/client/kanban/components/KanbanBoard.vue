@@ -11,6 +11,8 @@ const props = defineProps<{
   includeArchived?: boolean
   laneByProfile?: boolean
   parentTasks?: Array<{ id: string; title: string }>
+  /** UX 裁决 E：首列自动展开行内建卡器（?new=1 深链） */
+  autoOpenCreate?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -128,8 +130,9 @@ function handleTrashDrop(e: DragEvent) {
 <template>
   <div class="kanban-board">
     <KanbanColumn
-      v-for="status in allColumns"
+      v-for="(status, colIndex) in allColumns"
       :key="status"
+      :auto-open-create="autoOpenCreate && colIndex === 0"
       :status="status"
       :title="columnTitles[status] || status"
       :tasks="tasksByColumn[status] || []"
