@@ -12,15 +12,24 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import { useChatStore } from '@/stores/hermes/chat'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const chatStore = useChatStore()
 
 const isIde = computed(() => route.path === '/app/ide' || route.path.startsWith('/app/ide/'))
 
+/** UX 复盘毛刺③（2026-10-03）：切换带 URL 上下文——当前会话随行，两视图落点即当前
+ *  会话（可复制可分享），无会话时回各自视图根。 */
 function toggleView(): void {
-  void router.push({ name: isIde.value ? 'ia2.collab' : 'ide.shell' })
+  const sid = chatStore.activeSessionId
+  if (isIde.value) {
+    void router.push(sid ? { name: 'ia2.collabSession', params: { sessionId: sid } } : { name: 'ia2.collab' })
+  } else {
+    void router.push(sid ? { name: 'ide.shell', query: { session: sid } } : { name: 'ide.shell' })
+  }
 }
 </script>
 

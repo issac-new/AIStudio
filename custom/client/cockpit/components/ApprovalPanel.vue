@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createDiscreteApi } from 'naive-ui'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, fetchApprovalHistory,
   fetchSpotChecks, resolveSpotCheck,
@@ -49,6 +50,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ changed: [] }>()
 
 const { t, locale } = useI18n()
+// 离散 dialog（无 n-dialog-provider 也可用；测试与嵌入场景同稳）
+const { dialog } = createDiscreteApi(['dialog'])
 const items = ref<PendingApprovalItem[]>([])
 
 /** 操作对象可读化（视觉审计 #14）：纯哈希对象缩位显示 `对象 xxxxxxxx`，完整值挂 title。 */
@@ -109,6 +112,12 @@ async function refresh(): Promise<void> {
 
 async function decide(item: PendingApprovalItem, decision: string): Promise<void> {
   if (acting.value.has(item.id)) return
+  // 审批是治理决策动作（2026-10-03 UX 复盘裁决 C）：一键直通改为先确认再执行，防误触
+  const ok = await confirmDialog(
+    t('approvals.confirmTitle'),
+    t('approvals.confirmBody', { choice: t(`approvals.choice.${decision}`), target: (item.title || item.detail || item.id).slice(0, 60) }),
+  )
+  if (!ok) return
   acting.value = new Set(acting.value).add(item.id)
   try {
     const res = await decideApproval(item.id, decision)
@@ -127,9 +136,30 @@ async function decide(item: PendingApprovalItem, decision: string): Promise<void
   }
 }
 
+/** 确认对话框（Promise 化；negative=取消） */
+function confirmDialog(title: string, body: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    dialog.warning({
+      title,
+      content: body,
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: () => resolve(true),
+      onNegativeClick: () => resolve(false),
+      onClose: () => resolve(false),
+    })
+  })
+}
+
 /** V4.1 抽检处置：认可放行 / 误放行（veto 落台账回灌治理） */
 async function onSpotResolve(item: SpotCheckItem, verdict: 'confirm' | 'veto'): Promise<void> {
   if (acting.value.has(item.id)) return
+  // 抽检处置同为治理决策（裁决 C）：确认后执行
+  const ok = await confirmDialog(
+    t('approvals.confirmTitle'),
+    t('approvals.confirmBody', { choice: t(verdict === 'confirm' ? 'approvals.choice.spotcheck_confirm' : 'approvals.choice.spotcheck_veto'), target: (item.title || item.id).slice(0, 60) }),
+  )
+  if (!ok) return
   acting.value = new Set(acting.value).add(item.id)
   try {
     const res = await resolveSpotCheck(item.id, verdict)

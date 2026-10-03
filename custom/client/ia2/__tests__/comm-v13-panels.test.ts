@@ -31,8 +31,8 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('TaskDecisionPanel — v13 需关注节', () => {
-  it('有行时节头计数徽章 + 行渲染（副文 i18n + 等待时长）；行点击上抛 open-attention', async () => {
+describe('TaskDecisionPanel — v13 需关注（并入「待我处理」节，UX 裁决 D）', () => {
+  it('有行时并入待我处理徽标（等我+需关注合计）+ 行渲染（副文 i18n + 等待时长）；行点击上抛 open-attention', async () => {
     const w = mount(TaskDecisionPanel, {
       props: {
         ...BASE_PANEL_PROPS,
@@ -43,7 +43,8 @@ describe('TaskDecisionPanel — v13 需关注节', () => {
       },
     })
     expect(w.find('[data-testid="attention-list"]').exists()).toBe(true)
-    expect(w.find('.tdp__n--warn').text()).toBe('2')
+    // 裁决 D：徽标=待我处理合计（本例 waitItems 空 + 需关注 2 = 2），旧 --warn 独立徽标退役
+    expect(w.find('.tdp__n').text()).toBe('2')
     expect(w.find('[data-testid="att-task:t1"]').text()).toContain('ia2.att.subTaskBlocked')
     expect(w.find('[data-testid="att-task:t1"]').text()).toContain('10m')
     await w.find('[data-testid="att-run:r9"]').trigger('click')
@@ -52,9 +53,9 @@ describe('TaskDecisionPanel — v13 需关注节', () => {
     expect(emitted![0][0]).toMatchObject({ runId: 'r9', kind: 'run-failed' })
   })
 
-  it('无行时空态文案（向后兼容：缺省 attentionRows 不炸）', () => {
+  it('无行时子块整体隐藏（裁决 D：合并后不再单独出需关注空态）；缺省 attentionRows 不炸', () => {
     const w = mount(TaskDecisionPanel, { props: BASE_PANEL_PROPS })
-    expect(w.find('[data-testid="att-empty"]').exists()).toBe(true)
+    expect(w.find('[data-testid="att-empty"]').exists()).toBe(false)
     expect(w.find('.tdp__n--warn').exists()).toBe(false)
   })
 })

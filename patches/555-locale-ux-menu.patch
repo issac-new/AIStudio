@@ -1,0 +1,113 @@
+From: regression-round <regression@local>
+Subject: [PATCH] fix(i18n): UX 裁决菜单实施配套词条——审批确认/右栏二分/兜底反馈/主管面跳转
+
+裁决菜单 A/C/D 与毛刺修复配套（zh/en 成对，2026-10-03）：
+- approvals.confirmTitle/Body：审批一键直通改确认制的对话框文案（裁决 C）。
+- ia2.tdp.pendingTitle/contextTitle：右栏四分法并二分「待我处理/上下文」（裁决 D）。
+- ia2.att.gone：注意力条查无对象的显式反馈（毛刺①）。
+- ia2.overviewDash.cardHint：概览卡整卡可点的悬停提示（毛刺②）。
+- ia2.gov.jump.{accounts,org,inbox}：管理台分区「主管面跳转」链接（裁决 A 主从显性化）。
+- ia2.gov.note 改写：管理台职责=跨域汇总与快捷操作，对象管理归看板/账户管理/收件箱。
+
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1662,6 +1662,7 @@
+       }
+     },
+     overviewDash: {
++      cardHint: '点击进入对应工作面',
+       title: '驾驶舱概览',
+       navLabel: '概览',
+       myTodo: '我的待办',
+@@ -1679,6 +1680,8 @@
+       open: '未开始'
+     },
+     tdp: {
++      pendingTitle: '待我处理',
++      contextTitle: '上下文',
+       title: '任务 · 决策',
+       waiting: '等我',
+       all: '全部',
+@@ -1801,9 +1804,14 @@
+       panelAgents: '智能体'
+     },
+     gov: {
++      jump: {
++        accounts: '账户管理',
++        org: '组织与知识',
++        inbox: '收件箱',
++      },
+       title: '管理',
+       back: '返回',
+-      note: '管理台覆盖全屏；实时徽章进列表，历史跳「运行·历史」，操作在行上',
++      note: '管理台只做跨域汇总与快捷操作：任务管理在看板、人员与团队在账户管理/组织与知识、审批裁决在收件箱。行内保留详情/IDE/历史快捷键，历史跳「运行·历史」',
+       section: {
+         task: '📋 任务',
+         session: '💬 会话',
+@@ -2027,6 +2035,7 @@
+       metricPartial: '部分数据'
+     },
+     att: {
++    gone: '该条目已不在当前列表，可能已被处理',
+       subTaskBlocked: '任务受阻',
+       subSessionFailed: '会话失败',
+       subSessionBlocked: '会话受阻',
+@@ -6673,6 +6682,8 @@
+     voiceCall: '语音通话'
+   },
+   approvals: {
++    confirmTitle: '确认执行审批决策',
++    confirmBody: '将对「{target}」执行：{choice}。决策即时生效。',
+     title: '审批收件箱',
+     pageTitle: '审批收件箱',
+     navLabel: '待审收件箱',
+
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1662,6 +1662,7 @@
+       }
+     },
+     overviewDash: {
++      cardHint: 'Click to open the workspace',
+       title: 'Cockpit overview',
+       navLabel: 'Overview',
+       myTodo: 'My to-dos',
+@@ -1679,6 +1680,8 @@
+       open: 'Open'
+     },
+     tdp: {
++      pendingTitle: 'For Me',
++      contextTitle: 'Context',
+       title: 'Tasks · Decisions',
+       waiting: 'Waiting',
+       all: 'All',
+@@ -1801,6 +1804,11 @@
+       panelAgents: 'Agents'
+     },
+     gov: {
++      jump: {
++        accounts: 'Accounts',
++        org: 'Org & Knowledge',
++        inbox: 'Inbox',
++      },
+       title: 'Manage',
+       back: 'Back',
+       note: 'Governance overlays the screen; live badges in lists, history jumps to runs, actions on rows',
+@@ -2027,6 +2035,7 @@
+       metricPartial: 'partial data'
+     },
+     att: {
++    gone: 'This item is no longer in the list — it may have been handled',
+       subTaskBlocked: 'Task blocked',
+       subSessionFailed: 'Session failed',
+       subSessionBlocked: 'Session blocked',
+@@ -6674,6 +6683,8 @@
+     voiceCall: 'Voice Call'
+   },
+   approvals: {
++    confirmTitle: 'Confirm decision',
++    confirmBody: 'Apply "{choice}" to "{target}". This takes effect immediately.',
+     title: 'Approval inbox',
+     pageTitle: 'Approval Inbox',
+     navLabel: 'Approvals',
+

@@ -1,0 +1,62 @@
+From: regression-round <regression@local>
+Subject: [PATCH] fix(nav): 移除导航面推荐码外链——apikey.fan/register?aff=LIBAPI
+
+UX 复盘裁决 G（2026-10-03 用户拍板）：图标栏与设置侧栏把上游作者的推荐码外链
+（apikey.fan/register?aff=LIBAPI）伪装成产品导航（label 为「API 中继」/「饲料」），
+点导航预期落产品页却进第三方注册页，职责界面混淆且含未披露商业导流。两处导航
+面一律移除（ProviderFormModal 内的上下文帮助链接不在导航面，保留）。
+
+--- a/packages/client/src/components/layout/StudioNavigationRail.vue
++++ b/packages/client/src/components/layout/StudioNavigationRail.vue
+@@ -52,14 +52,6 @@
+     <div class="studio-navigation-rail__bottom">
+       <NTooltip placement="right" trigger="hover">
+         <template #trigger>
+-          <a class="studio-navigation-rail__item" href="https://apikey.fan/register?aff=LIBAPI" target="_blank" rel="noopener noreferrer" :aria-label="t('sidebar.apiRelay')">
+-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" /></svg>
+-          </a>
+-        </template>
+-        {{ t('sidebar.apiRelay') }}
+-      </NTooltip>
+-      <NTooltip placement="right" trigger="hover">
+-        <template #trigger>
+           <RouteLinkItem class="studio-navigation-rail__item" :to="{ name: 'hermes.settings' }" :active="activeKey === 'settings'" :aria-label="t('sidebar.settings')">
+             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+           </RouteLinkItem>
+
+--- a/packages/client/src/components/layout/PageSidebarNav.vue
++++ b/packages/client/src/components/layout/PageSidebarNav.vue
+@@ -62,10 +62,6 @@
+   void router.push({ name: 'hermes.workflow' })
+ }
+ 
+-function openApiRelay() {
+-  if (typeof window === 'undefined') return
+-  window.open('https://apikey.fan/register?aff=LIBAPI', '_blank', 'noopener,noreferrer')
+-}
+ </script>
+ 
+ <template>
+@@ -187,21 +183,6 @@
+         </svg>
+         <span>{{ t('sidebar.models') }}</span>
+       </button>
+-      <button v-if="!hasNavigationRail" class="page-sidebar-tab" type="button" @click="openApiRelay">
+-        <svg
+-          width="15"
+-          height="15"
+-          viewBox="0 0 24 24"
+-          fill="none"
+-          stroke="currentColor"
+-          stroke-width="1.8"
+-        >
+-          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+-          <polyline points="15 3 21 3 21 9" />
+-          <line x1="10" y1="14" x2="21" y2="3" />
+-        </svg>
+-        <span>{{ t('sidebar.apiRelay') }}</span>
+-      </button>
+     </div>
+     <div v-if="!hasNavigationRail" class="conversation-switch conversation-switch--four" role="tablist" aria-label="Conversation type">
+       <NTooltip trigger="hover" placement="top">
+

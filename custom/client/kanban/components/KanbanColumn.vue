@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { NButton, NSpin, NCheckbox } from 'naive-ui'
 import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 import KanbanTaskCard from './KanbanTaskCard.vue'
@@ -9,6 +9,8 @@ import { useI18n } from 'vue-i18n'
 const props = defineProps<{
   status: KanbanTaskStatus
   title: string
+  /** UX 裁决 E：挂载即展开行内建卡器（/app/board?new=1 深链直开建卡表单） */
+  autoOpenCreate?: boolean
   tasks: KanbanTask[]
   loading?: boolean
   selectedIds?: Set<string>
@@ -30,7 +32,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const count = computed(() => props.tasks.length)
-const showCreate = ref(false)
+const showCreate = ref(!!props.autoOpenCreate)
+// ?new=1 深链二次唤起（同页 query 变化）也展开
+watch(() => props.autoOpenCreate, (on) => { if (on) showCreate.value = true })
 
 // Lane-by-profile sub-grouping. Mirrors the agent dashboard:
 // applied ONLY to the "running" column. Tasks are bucketed by assignee

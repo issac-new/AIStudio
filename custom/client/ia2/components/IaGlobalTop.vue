@@ -9,12 +9,13 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { showToast } from '@/custom/ide/utils/toast'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useWorkspaceStore } from '../store/workspace'
 import { useSitCounts } from '../composables/useSitCounts'
+import { useAttentionRows } from '../composables/useAttentionRows'
 import type { AttentionRow } from '../adapters/overview'
-import { mergeAttention } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
 import AttentionStrip from './AttentionStrip.vue'
@@ -22,12 +23,13 @@ import { useDeliveryCasesStore } from '@/custom/matrix-teams/stores/delivery-cas
 
 const router = useRouter()
 const { t } = useI18n()
+const message = { info: (m: string) => showToast(m, 'info') }
 useSharedArm()
 
 const cockpit = useCockpitStore()
 const runsStore = useRunCenterStore()
 const workspace = useWorkspaceStore()
-const { waitItems, loopRows } = useSitCounts()
+const { waitItems } = useSitCounts()
 // P1（09-28）：交付网络读数卡（分布式设计 §7 总览三数：在途案例/待审人工门/已完成）
 // ——数据来自 delivery-cases store（事件驱动实时投影）；有在途或待审才显示（零噪音）。
 const delivery = useDeliveryCasesStore()
@@ -40,25 +42,8 @@ function openCases(): void {
   void router.push({ name: 'ia2.deliveryCases' })
 }
 
-/** 注意力梯队（mergeAttention 单一排序：blocked → review → triage）：
- *  blocked 任务（跨板聚合）+ blocked 循环 + 等我（review 任务/中断运行/fleet）。 */
-const attentionRows = computed<AttentionRow[]>(() => {
-  const inputs: Array<{ id: string; title: string; status: 'blocked' | 'review' | 'triage'; priority?: number; createdAt?: number }> = []
-  for (const t of workspace.tasks) {
-    if (t.status === 'blocked') {
-      inputs.push({ id: t.id, title: t.title, status: 'blocked', createdAt: t.createdAt })
-    }
-  }
-  for (const l of loopRows.value) {
-    if (l.blocked) {
-      inputs.push({ id: `loop:${l.id}`, title: l.name, status: 'blocked', priority: 2 })
-    }
-  }
-  for (const w of waitItems.value) {
-    inputs.push({ id: w.id, title: w.title, status: w.kind === 'task-review' ? 'review' : 'triage', priority: 1, createdAt: w.ts })
-  }
-  return mergeAttention(inputs)
-})
+// UX 裁决 B（2026-10-03）：注意力装配统一到 useAttentionRows（与右栏需关注同源同口径）。
+const { attentionRows } = useAttentionRows()
 
 /** 动线④：注意力条 → 对象（任务→看板预选；循环→最新 run 运行详情；运行→运行详情；其余→工作台）。
  *  mergeAttention 会把行 id 改写为 att- 前缀（且仅保留源输入 id 于 taskId），
@@ -67,6 +52,11 @@ const attentionRows = computed<AttentionRow[]>(() => {
  *  V5 补遗⑤ M6：循环行落运行中心（该循环最新 run 详情，画布已内嵌）。 */
 function onAttentionSelect(row: AttentionRow): void {
   const base = row.id.replace(/^att-/, '')
+  // kind 直达分派（统一装配行带来源）：会话→IDE 会话画布
+  if (row.kind === 'session') {
+    void router.push({ name: 'ide.shell', query: { session: base } })
+    return
+  }
   if (base.startsWith('loop:')) {
     const loopId = base.slice(5)
     const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${loopId}`)
@@ -78,7 +68,10 @@ function onAttentionSelect(row: AttentionRow): void {
   if (hit?.taskId) void router.push({ name: 'ia2.board', query: { task: hit.taskId } })
   else if (hit?.runId) void router.push({ name: 'ia2.runDetail', params: { runId: hit.runId } })
   else if (row.status === 'blocked') void router.push({ name: 'ia2.board', query: { task: row.taskId } })
-  else void router.push({ path: '/app' })
+  else {
+    // UX 毛刺①（2026-10-03）：查无对象时给显式反馈，不再静默跳 /app 原地打转
+    message.info(t('ia2.att.gone'))
+  }
 }
 
 /** v12.4：标签双击 → swarm kanban 看板总览（全部任务，与原 AI协作中心同动线） */
