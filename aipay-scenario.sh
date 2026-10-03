@@ -382,15 +382,37 @@ if step_reached analysis; then
     # 注意必须当前 shell 直调谓词函数：bash -c 起的子进程继承不到 shell 函数（未 export -f），
     # mx_messages_deep 在子进程内 127 恒假=复查恒失败白等 60s（24h 审查实锤）
     wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 60 raci_dispatch_seen "${1}" "${2}" "${RID}" \
-      || note "[观察] @$1/@$2 派发消息未见（消息洪窗口外，dispatch_marker 锚在 state，继续）"
+      || { note "[观察] @$1/@$2 派发消息未见（先记数，末尾统一回灌）"; RACI_MISS_PAIRS="${RACI_MISS_PAIRS:-} $1/$2"; }
   done
+  # 双 @ 派发消息回灌闭环（run8 遗留⑤：run7 四组全未见只记观察——agent 执行率缺口，
+  # 记单前先回灌要求补发，重查一轮仍缺才落单）：消息洪窗口外不是借口，群通知是
+  # 接收方知晓任务的唯一正道（派发词明文要求），静默=任务失联风险。
+  if [[ -n "${RACI_MISS_PAIRS:-}" ]]; then
+    mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】以下 RACI 派发消息在群内未见：${RACI_MISS_PAIRS}。请立即在群内逐条补发（@责任人-agent @团队负责人-agent 附任务明细，用 m.mentions 提及）——群通知是接收方知晓任务的唯一正道，缺发记执行缺口。补发后无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    note "[回灌] RACI 双 @ 派发缺 ${RACI_MISS_PAIRS}——已要求 fanfan 补发，重查 300s"
+    sleep 60
+    for pair in ${RACI_MISS_PAIRS}; do
+      set -- $(echo "$pair" | tr '/' ' ')
+      wait_truth "回灌后房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 240 raci_dispatch_seen "${1}" "${2}" "${RID}" \
+        || { echo "ISSUE|raci-dispatch-missing|fanfan-agent|@${1}/@${2} RACI 双 @ 群通知回灌后仍未补发（执行率缺口）" >> "$EVID_DIR/issues.log"; note "[观察] @$1/@$2 回灌后仍未见（记问题单）"; }
+    done
+  fi
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
+  # run8 遗留②：记单前先回灌补填（kanban 更新卡或重建主卡带 --raci），重查一轮。
   RACI_JSON="$(kanban_raci_of fanfan "${RFD_ID}")"
   if [[ -n "$RACI_JSON" ]]; then
     note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
   else
-    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（仍靠正文承载）" >> "$EVID_DIR/issues.log"
-    note "[观察] 主卡未带结构化 raci（记问题单，继续）"
+    mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    note "[回灌] 主卡缺结构化 raci——已要求 fanfan 补填，重查 300s"
+    sleep 60
+    RACI_JSON="$(wait_truth "主卡结构化 raci 补填" 240 fanfan kanban_raci_nonempty "${RFD_ID}" && kanban_raci_of fanfan "${RFD_ID}" || true)"
+    if [[ -n "$RACI_JSON" ]]; then
+      note "[真值] 回灌后主卡带结构化 raci ✓"
+    else
+      echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（回灌补填后仍缺，仍靠正文承载）" >> "$EVID_DIR/issues.log"
+      note "[观察] 主卡回灌后仍未带结构化 raci（记问题单，继续）"
+    fi
   fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
   # 判定语义（V4-run1 误报根治）：agent 职责=邀请发出（join|invite 均算履职）；
@@ -468,12 +490,27 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
       || { note "[观察] $t 分析文档未达（记问题单）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
   done
-  # 双兜底回执核验
-  for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
-    mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -e --arg t "$t" \
-      '[.[] | select((.content.body // "") | contains("完成回执") and contains($t))] | length > 0' >/dev/null \
-      && note "[真值] $t 完成回执在房间可见 ✓" \
-      || { note "[观察] $t 回执未见"; echo "ISSUE|receipt-missing|$t|完成回执未见（双兜底缺口）" >> "$EVID_DIR/issues.log"; }
+  # 双兜底回执核验（run8 遗留③：run7 三条回执未见——agent 重活完成即停 turn，
+  # 回执动作被丢。双形态匹配【完成回执】或 AN-DONE-<ID> 结论行；未见先回灌
+  # @任务 owner 补发，重查一轮仍缺才落单）。
+  for spec in "AN-PAYCORE chen" "AN-MP xiao" "AN-CHWX hu" "AN-CHALI lin"; do
+    set -- $spec; t="$1"; owner="$2"
+    receipt_seen() { # 双形态任一命中（当前 shell 直调）
+      mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -e --arg t "$t" \
+        '[.[] | select(.sender == "'"$(agent_mxid "$owner")"'") | select((.content.body // "") | (contains("完成回执") and contains($t)) or test("^\\s*AN-DONE-" + $t))] | length > 0' >/dev/null
+    }
+    if receipt_seen; then
+      note "[真值] $t 完成回执在房间可见 ✓"
+    else
+      mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" >/dev/null 2>&1 || true
+      note "[回灌] $t 回执未见——已要求 ${owner} 补发，重查 300s"
+      if wait_truth "回灌后 $t 回执补发" 300 "$owner" receipt_seen; then
+        note "[真值] $t 回灌后回执可见 ✓"
+      else
+        echo "ISSUE|receipt-missing|$t|完成回执未见（回灌补发后仍缺，双兜底缺口——入库真值在案）" >> "$EVID_DIR/issues.log"
+        note "[观察] $t 回灌后回执仍未见（记问题单）"
+      fi
+    fi
   done
   gate_review chen "系分执行-AN-PAYCORE"
   gate_review hu "系分执行-AN-CHWX"
@@ -501,12 +538,23 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     kanban_walk_done fanfan "$RID"
     note "[fanfan] 线下评审结论：通过（虚拟架构小组人工评审），评审卡 $RID → done"
   else
+    # 评审人自登回灌（run8 遗留④：run7 直接导演补登——agent 自登能力从未被触发验证。
+    # 先回灌 fanfan 在账号板自登评审卡（标题含 <RFD>-评审），重查一轮）。
+    mx_send "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    note "[回灌] 评审卡未见——已要求 fanfan 自登，重查 300s"
+    wait_truth "回灌后 fanfan 板出现 ${RFD_ID} 评审卡" 300 fanfan kanban_has "${RFD_ID}-评审" || true
+    RID=$(kanban_list fanfan | jq -r --arg rfd "$RFD_ID" '[.. | objects | select(has("title")) | select((.title // "") | contains($rfd + "-评审")) | .id][0] // empty')
+    if [[ -n "$RID" ]]; then
+      kanban_walk_done fanfan "$RID"
+      note "[fanfan] 回灌自登评审卡 $RID → done（线下评审通过）"
+    else
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
-    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（agent 未登记评审卡，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md")
-    note "[观察] 评审卡未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
-    echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md")
+    note "[观察] 回灌后评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
+    echo "ISSUE|review-card-missing|fanfan|agent 回灌自登后仍未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+    fi
   fi
   gate_review fanfan "G2-系分评审闸"
   sset review_done 1
