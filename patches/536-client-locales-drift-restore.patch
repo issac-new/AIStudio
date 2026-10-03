@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 93d6723..734cec5 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -802,12 +802,12 @@ export default {
+@@ -709,12 +709,12 @@ export default {
        daysAgo: '{count} days ago',
        more: 'More actions',
        view_tasks: 'Tasks',
@@ -17,7 +18,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        views: 'Views',
        organize_grouped: 'Groups',
        organize_project: 'Projects',
-@@ -838,7 +838,10 @@ export default {
+@@ -745,7 +745,10 @@ export default {
        deleteAllArchivedTitle: 'Delete {count} archived tasks?',
        deleteAllArchivedResult: 'Deleted {deleted}, skipped {skipped}, failed {failed}.',
        deleteAllArchivedError: 'Operation or list refresh failed; refresh to check remaining tasks.',
@@ -29,7 +30,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      modelInvalid: {
        title: 'Current model unavailable',
-@@ -872,6 +875,8 @@ export default {
+@@ -779,6 +782,8 @@ export default {
        tab_tools: 'Tools timeline',
        tab_hooks: 'Hooks',
        tab_workflow: 'Workflows',
@@ -38,7 +39,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        ledgerPeak: 'Peak {day} · {tokens}',
        ledgerTotal: 'Total {tokens}',
        roundsTotal: 'Total ({n} rounds)',
-@@ -1180,6 +1185,7 @@ export default {
+@@ -1087,6 +1092,7 @@ export default {
      chatTabTraceDisabled: 'Unavailable without an active session',
      briefing: {
        title: 'Task Briefing',
@@ -46,7 +47,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        toggle: 'Task Briefing',
        close: 'Collapse briefing',
        noActiveTask: 'No active task: open from the board or a task link to load the briefing',
-@@ -1190,7 +1196,6 @@ export default {
+@@ -1097,7 +1103,6 @@ export default {
        taskPriority: 'Priority',
        stage: 'Stage',
        branch: 'Branch',
@@ -54,7 +55,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        contextBlock: 'Requirement Context',
        noContext: 'No requirement context yet',
        raciLabel: 'RACI',
-@@ -1597,6 +1602,7 @@ export default {
+@@ -1504,6 +1509,7 @@ export default {
    },
    ia2: {
      delivery: {
@@ -63,9 +64,10 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        title: 'Delivery Cases',
        empty: 'No delivery cases yet',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 689339b..76df397 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -838,7 +838,10 @@ export default {
+@@ -745,7 +745,10 @@ export default {
        deleteAllArchivedTitle: '删除 {count} 个归档任务？',
        deleteAllArchivedResult: '已删除 {deleted} 个，跳过 {skipped} 个，失败 {failed} 个。',
        deleteAllArchivedError: '操作或列表刷新失败，请刷新后检查剩余任务。',
@@ -77,7 +79,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      modelInvalid: {
        title: '当前模型已不可用',
-@@ -872,6 +875,8 @@ export default {
+@@ -779,6 +782,8 @@ export default {
        tab_tools: '工具时间线',
        tab_hooks: '钩子',
        tab_workflow: '工作流',
@@ -86,7 +88,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        ledgerPeak: '峰值 {day} · {tokens}',
        ledgerTotal: '累计 {tokens}',
        roundsTotal: '合计（{n} 轮）',
-@@ -1180,6 +1185,7 @@ export default {
+@@ -1087,6 +1092,7 @@ export default {
      chatTabTraceDisabled: '无活跃会话，暂不可用',
      briefing: {
        title: '任务简报',
@@ -94,7 +96,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        toggle: '任务简报',
        close: '收起简报',
        noActiveTask: '当前无激活任务：从看板或任务跳转进入后自动带入简报',
-@@ -1190,7 +1196,6 @@ export default {
+@@ -1097,7 +1103,6 @@ export default {
        taskPriority: '优先级',
        stage: '当前阶段',
        branch: '分支',
@@ -102,7 +104,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        contextBlock: '需求上下文',
        noContext: '暂无需求上下文',
        raciLabel: 'RACI',
-@@ -1597,6 +1602,7 @@ export default {
+@@ -1504,6 +1509,7 @@ export default {
    },
    ia2: {
      delivery: {
