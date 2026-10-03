@@ -35,6 +35,12 @@ if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
     echo "[mx-clean FAIL] 推演进行中（驱动 pid $LP 活锁）——拒绝清理；结束推演后重试" >&2; exit 3
   fi
 fi
+# 0b) relay 接力器在跑同样拒绝：驱动死在两代接力之间时锁已被 EXIT trap 摘除，但
+# relay 15s 内会拉起新驱动——清场（删 runs/ + 逐房 purge）与重生成的驱动互踩
+# （run7/8 夜间 relay 常态在跑，此窗口真实存在）
+if pgrep -f 'mx-relay\.sh' >/dev/null 2>&1; then
+  echo "[mx-clean FAIL] mx-relay 接力器在跑（清场中途会复活驱动互踩）——先停 relay 再清理" >&2; exit 3
+fi
 
 # 1) 停栈
 say "停 studio/gateway（pids/ 下 pid 若活则 TERM）"
@@ -42,7 +48,15 @@ for f in studio.pid gateway.pid; do
   p="$SIM_ROOT/pids/$f"
   [ -f "$p" ] || continue
   pid=$(cat "$p")
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then say "  TERM $f pid=$pid"; [ "$APPLY" = 1 ] && kill "$pid" || true
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    # pid 复用二因子：长跑机器 pid 会被无关进程复用，裸 TERM 会误杀无辜进程
+    _cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+    case "$_cmd" in
+      *studio*|*gateway*|*hermes*|*electron*|*vite*)
+        say "  TERM $f pid=$pid"; [ "$APPLY" = 1 ] && kill "$pid" || true ;;
+      *)
+        say "  ⏭ $f pid=$pid 已被无关进程复用（cmdline 不含 studio/gateway/hermes/electron/vite），跳过不杀" ;;
+    esac
   fi
 done
 
@@ -163,7 +177,21 @@ if [ "$RESET_MEMORY" = 1 ]; then
         say "  全库已归档 → ${DUMPF}"
         _banks=""
         for u in bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit; do
-          _mac=$(printf '%s' "$u" | shasum | cut -c1-12)
+          # 与 mx-lib user_mac12 同源派生（AIPAY_USER_MAC 覆盖 + shasum/sha1sum/openssl
+          # 回落链）。旧实现裸 shasum 且不认覆盖变量：AIPAY_USER_MAC 起跑的轮按错误 ID
+          # 删 0 行、事务照样 COMMIT 打"✓ 已清"——零记忆起跑前提为假且无告警
+          if [ -n "${AIPAY_USER_MAC:-}" ]; then
+            _mac="$AIPAY_USER_MAC"
+          elif command -v shasum >/dev/null 2>&1; then
+            _mac=$(printf '%s' "$u" | shasum | cut -c1-12)
+          elif command -v sha1sum >/dev/null 2>&1; then
+            _mac=$(printf '%s' "$u" | sha1sum | cut -c1-12)
+          elif command -v openssl >/dev/null 2>&1; then
+            _mac=$(printf '%s' "$u" | openssl dgst -sha1 | awk '{print $NF}' | cut -c1-12)
+          else
+            echo "[mx-clean FAIL] shasum/sha1sum/openssl 全缺，无法派生 bank MAC——拒绝 --reset-memory（防 0 行删除假成功）" >&2; exit 4
+          fi
+          [ -n "$_mac" ] || { echo "[mx-clean FAIL] bank MAC 派生为空（user=$u）" >&2; exit 4; }
           _banks="$_banks,('hermes-$_mac-$u')"
         done
         if docker exec -i hindsight-db-1 psql -U hindsight -d hindsight <<HSQ
@@ -251,11 +279,26 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(integration/|feat/|test/|wt/|fix/|wip/)' || true)
       if [ -n "$_brs" ]; then
         git fetch -q origin 2>/dev/null || true
+        # 全量拉回待删 tips（中央导演 clone 平时只 fetch main，分支 tip 本地无 ref；
+        # push --delete 还会删 remote-tracking ref——删后 tag 是唯一恢复锚，必须先打）
+        git fetch -q origin '+refs/heads/*:refs/remotes/origin/*' 2>/dev/null || true
+        : > "$ARC/central-deleted-branches-${TS}.txt"
+        for _b in $_brs; do
+          _n="${_b#refs/heads/}"
+          _sha=$(git rev-parse "refs/remotes/origin/${_n}" 2>/dev/null || true)
+          if [ -n "$_sha" ]; then
+            git tag "mx-clean-${TS}-b-${_n//\//_}" "$_sha" 2>/dev/null || true
+            printf '%s %s\n' "$_sha" "$_n" >> "$ARC/central-deleted-branches-${TS}.txt"
+          fi
+        done
         git tag "mx-clean-${TS}-branches" 2>/dev/null || true
         for _b in $_brs; do
           _n="${_b#refs/heads/}"
           git push -q origin --delete "$_n" 2>/dev/null && say "  删远端分支 $_n" || say "  ⚠ 删失败 $_n（远端间歇，起跑前核）"
         done
+        _tags=$(git tag -l "mx-clean-${TS}-b-*")
+        [ -n "$_tags" ] && git push -q origin $_tags 2>/dev/null || true
+        say "  已删分支 SHA 清单 → $ARC/central-deleted-branches-${TS}.txt（每 tip tag mx-clean-${TS}-b-* 并已推远端）"
       else
         say "✓ 远端无 integration/feat/test 残留分支"
       fi )

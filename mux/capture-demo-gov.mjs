@@ -27,16 +27,19 @@ const page = await ctx.newPage()
 page.setDefaultTimeout(70000)
 
 await page.goto(BASE + '/login')
-await page.evaluate((tk) => {
+// 浏览器侧 matrix-js-sdk 凭据（snake_case 键，坑②）——token 必须 Node 侧读好经
+// 参数传入：evaluate 回调在页面上下文执行，闭包里的 readFileSync/SIM 不会随行，
+// 旧写法（回调内读文件）在任何 goto/截图之前就 ReferenceError 崩溃，脚本自 1e1b29a7 起为死码
+const matrixToken = readFileSync(`${SIM}/creds/fanfan.token`, 'utf8').split('\n')[0].trim()
+await page.evaluate(([tk, mtk]) => {
   localStorage.setItem('hermes_api_key', tk)
   localStorage.setItem('hermes_server_url', location.origin)
   localStorage.setItem('hermes_locale', 'zh')
-  // 浏览器侧 matrix-js-sdk 凭据（snake_case 键，坑②）
-  localStorage.setItem('matrix_access_token', readFileSync(`${SIM}/creds/fanfan.token`, 'utf8').split('\n')[0].trim())
+  localStorage.setItem('matrix_access_token', mtk)
   localStorage.setItem('matrix_user_id', '@fanfan:matrix.test')
   localStorage.setItem('matrix_device_id', 'CAPTURE-GOV')
   localStorage.setItem('matrix_homeserver_url', 'http://127.0.0.1:8008')
-}, [login.token])
+}, [login.token, matrixToken])
 
 async function dismissOverlays() {
   for (let i = 0; i < 3; i++) {
