@@ -104,4 +104,4 @@
 
 毛刺同批：注意力条查无对象改显式提示（ia2.att.gone）、概览三卡整卡可点（含悬停提示）、视图切换带 URL 会话上下文（?session= / /app/s/chat/:id）。
 
-配套词条 patch 555（zh/en 成对）；测试契约同步：approval-panel（确认步骤）、comm-v13-panels/task-flow-timeline（二分结构）、unified-nav-guard（切换器上下文断言）、ia-shell-header（vue-router mock 补 createRouter 家族）。全量 vitest 3724 绿（8 个既有 qgate 红不变）。
+配套词条 patch 557（zh/en 成对；554/555 号位被并行占用让号 556/557）；测试契约同步：approval-panel（确认步骤）、comm-v13-panels/task-flow-timeline（二分结构）、unified-nav-guard（切换器上下文断言）、ia-shell-header（vue-router mock 补 createRouter 家族）。全量 vitest 3724 绿（8 个既有 qgate 红不变）。

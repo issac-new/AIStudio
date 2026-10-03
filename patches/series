@@ -461,7 +461,14 @@
 552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 553-locale-ux-clarity.patch
-# 554=UX 裁决 G：导航面移除推荐码外链（rail+设置侧栏）。
-554-nav-remove-affiliate-link.patch
-# 555=UX 裁决 A/C/D 与毛刺修复配套词条（审批确认/右栏二分/兜底反馈/主管面跳转/管理台职责注记）。
-555-locale-ux-menu.patch
+
+
+# 554: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)
+# 554: A-H 复盘轮——dev 下口令提醒 localStorage 跨会话/语言偏好按账户分键/IDE 工具时间线等 locale 词条（473 追加承载）
+554-client-ux-ah-round.patch
+# 555: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)；554 号位已被并行会话 ux-ah-round 占用，本补丁让号 555（550 撞号处置先例）
+555-client-vuetsc-gate-debt-clear.patch
+# 556=UX 裁决 G：导航面移除推荐码外链（rail+设置侧栏；554/555 号位被并行占用，让号 556）。
+556-nav-remove-affiliate-link.patch
+# 557=UX 裁决 A/C/D 与毛刺修复配套词条（审批确认/右栏二分/兜底反馈/主管面跳转/管理台职责注记；让号 557）。
+557-locale-ux-menu.patch

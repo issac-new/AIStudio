@@ -10,28 +10,65 @@ index 0000000..f07f1be
 +  <circle cx="24.5" cy="11.5" r="2" fill="#FF6900" fill-opacity=".85"/>
 +</svg>
 diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
+index cc7d267..c1ff4e5 100644
 --- a/packages/client/src/api/agent-status.ts
 +++ b/packages/client/src/api/agent-status.ts
 @@ -1,6 +1,6 @@
  import { request } from './client'
  
--export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
-+export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
  export type AgentStatusSource = 'managed-runtime' | 'user-cli' | 'built-in' | 'not-installed'
  
  export interface AgentStatusRecord {
-@@ -42,6 +42,7 @@
+@@ -42,6 +42,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
    pi: 'pi',
    grok: 'grok',
    opencode: 'opencode',
 +  mimo: 'mimo',
    dsh: 'dsh',
    cursor: 'cursor',
-   zcode: 'zcode',
+   antigravity: 'antigravity',
+diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
+index 4b305fd..7b0ed18 100644
+--- a/packages/client/src/api/coding-agents.ts
++++ b/packages/client/src/api/coding-agents.ts
+@@ -1,7 +1,7 @@
+ import { request } from './client'
+ import type { ProviderApiMode } from './studio/provider-api-mode'
+ 
+-export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
++export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+ export type ChatCodingAgentId = CodingAgentId | 'ekko-agent'
+ export const CODING_AGENT_API_MODES = [
+   'chat_completions',
+diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
+index 9d33692..0a62b09 100644
+--- a/packages/client/src/api/studio/chat.ts
++++ b/packages/client/src/api/studio/chat.ts
+@@ -138,7 +138,7 @@ export interface RunEvent {
+   }>
+   generation?: string
+   queue_id?: string
+-  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
++  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+   phase?: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message' | 'cancelled'
+   guarantee?: 'strict' | 'immediate'
+   requested_at?: number
+@@ -194,7 +194,7 @@ export interface ResumeSessionPayload {
+     generation: string
+     run_id?: string
+     queue_id: string
+-    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
++    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+     phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
+     guarantee: 'strict' | 'immediate'
+     requested_at: number
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+index 22d8cda..b324ea9 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -36,6 +36,7 @@
+@@ -36,6 +36,7 @@ const emptyStateAgents = [
      { name: 'Pi', src: '/coding-agents/pi.svg' },
      { name: 'Grok', src: '/coding-agents/grok.svg' },
      { name: 'OpenCode', src: '/coding-agents/opencode.png' },
@@ -40,9 +77,10 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.v
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
+index 90dd88a..d40553a 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -17,6 +17,8 @@
+@@ -17,6 +17,8 @@ const AGENT_AVATARS = {
    pi: { label: 'Pi', src: '/coding-agents/pi.svg' },
    grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
    opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
@@ -50,11 +88,12 @@ diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/sr
 +  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
    dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
    cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
-   zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
+   antigravity: { label: 'Antigravity', src: '/coding-agents/antigravity.png' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
+index 0822108..1c333b9 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
-@@ -9,6 +9,8 @@
+@@ -9,6 +9,8 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
      pi: '/coding-agents/pi.svg',
      grok: '/coding-agents/grok.svg',
      opencode: '/coding-agents/opencode.png',
@@ -62,37 +101,4 @@ diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/s
 +    mimo: '/coding-agents/mimo.svg',
      dsh: '/coding-agents/deepseek.svg',
      cursor: '/coding-agents/cursor-logo.png',
- }
-diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
---- a/packages/client/src/api/coding-agents.ts
-+++ b/packages/client/src/api/coding-agents.ts
-@@ -1,7 +1,7 @@
- import { request } from './client'
- import type { ProviderApiMode } from './studio/provider-api-mode'
- 
--export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
-+export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
- export type ChatCodingAgentId = CodingAgentId | 'ekko-agent'
- export const CODING_AGENT_API_MODES = [
-   'chat_completions',
-diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
---- a/packages/client/src/api/studio/chat.ts
-+++ b/packages/client/src/api/studio/chat.ts
-@@ -137,7 +137,7 @@
-   }>
-   generation?: string
-   queue_id?: string
--  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
-+  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
-   phase?: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message' | 'cancelled'
-   guarantee?: 'strict' | 'immediate'
-   requested_at?: number
-@@ -193,7 +193,7 @@
-     generation: string
-     run_id?: string
-     queue_id: string
--    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
-+    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
-     phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
-     guarantee: 'strict' | 'immediate'
-     requested_at: number
+     antigravity: '/coding-agents/antigravity.png',

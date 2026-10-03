@@ -18,6 +18,9 @@ import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import IdeWorkflowRunLines from './IdeWorkflowRunLines.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import {
   fetchWorkflowRunEvents,
   fetchSavedWorkflows,
@@ -150,9 +153,9 @@ function statusText(s?: string): string {
 <template>
   <div class="ide-wf-pane" data-testid="workflow-observation-panel">
     <section class="ide-wf-section">
-      <h4 class="ide-wf-title">会话运行</h4>
+      <h4 class="ide-wf-title">{{ t('ide.wf.title') }}</h4>
       <p v-if="!sessionEntries.length" class="ide-wf-empty" data-testid="ide-workflow-empty">
-        当前没有正在跑的工作流运行。会话里 agent 调用工作流工具（或 @zcode 派单触发）后，运行行实时出现在这里。
+        {{ t('ide.wf.empty') }}
       </p>
       <div v-for="entry in sessionEntries" :key="entry.sessionId" class="ide-wf-session">
         <p class="ide-wf-session-title" :title="entry.sessionId">

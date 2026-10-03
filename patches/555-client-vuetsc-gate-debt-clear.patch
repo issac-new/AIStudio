@@ -1,0 +1,50 @@
+diff --git a/tmp/p554/App.vue.pre b/packages/client/src/App.vue
+index 46bedbc0..6e8f3429 100644
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -146,7 +146,6 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
+ function handleWideViewportChange(event: MediaQueryListEvent) {
+   isWideViewport.value = event.matches;
+ }
+-const usesPageSidebar = computed(() => false);
+ const isFullscreen = computed(() => route.meta?.fullscreen === true);
+ const usesHermesConfigSidebar = computed(
+   () => route.meta?.hermesConfig === true,
+diff --git a/tmp/p554/kanban.ts.pre b/packages/client/src/stores/hermes/kanban.ts
+index d780aea8..b1ba1956 100644
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -11,24 +11,6 @@ export const DEFAULT_KANBAN_BOARD = 'default'
+ 
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+ 
+-function safeStorageGet(key: string): string | null {
+-  if (typeof window === 'undefined') return null
+-  try {
+-    return window.localStorage.getItem(key)
+-  } catch {
+-    return null
+-  }
+-}
+-
+-function safeStorageSet(key: string, value: string) {
+-  if (typeof window === 'undefined') return
+-  try {
+-    window.localStorage.setItem(key, value)
+-  } catch {
+-    // Ignore storage failures; selectedBoard still remains explicit in-memory.
+-  }
+-}
+-
+ export function normalizeBoardSlug(board?: string | null): string {
+   const trimmed = board?.trim().toLowerCase()
+   if (!trimmed) return DEFAULT_KANBAN_BOARD
+@@ -54,7 +36,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+   const attachments = ref<Record<string, KanbanAttachment[]>>({})
+ 
+   adoptLegacySetting('kanban.selectedBoard', KANBAN_SELECTED_BOARD_STORAGE_KEY)
+-  const _boardPref = readSetting<string>('kanban.selectedBoard', '')
++  const _boardPref = readSetting('kanban.selectedBoard', '')
+   const selectedBoard = ref(normalizeBoardSlug(_boardPref.value || null))
+ 
+   const filterStatus = ref<string | null>(null)

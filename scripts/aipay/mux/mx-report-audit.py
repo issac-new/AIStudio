@@ -34,8 +34,12 @@ if '--run' in sys.argv:
     RUN_ID = sys.argv[_i + 1]
 if not RUN_ID:
     sys.exit('[audit] 必须 MX_RUN_ID=<id> 指定本轮')
+# 隔离树回归支持（与 mx-report-gen.py 同源口径——AIPAY_SIM_ROOT 可覆盖；写死路径
+# 使夹具树/归档态无法离线审计，run7 实锤同款教训）。
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', str(SIM)))
 EVID = SIM / 'runs' / RUN_ID / 'evidence'
 REPORT = EVID / 'simulation-report.html'
+R18F = EVID / 'r18-steps.json'
 PLAN = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 STATE = SIM / 'runs' / RUN_ID / 'state.env'
 
@@ -241,6 +245,44 @@ if _r15.exists():
         warns.append('正本缺「研发全流程治理有效性」实算节（补遗⑥）')
 else:
     warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
+
+# ── 查 8：R18 全量呈现（V7.2 验收线：对话全文/操作前后帧/环节效果实证）──
+# 按步型必采矩阵（方案 §9.3 R18 与 §5.2 派发/操作/工件步语义对应）：
+#   对话必采=派发/回执/审批/缺陷/验收对账步；操作必采=建群/看板/IDE 等真 UI 操作步
+#   （每组 ops 须 ≥2 帧=前后帧下限）；效果必采=工件产出闸步；其余 ✅ 步任一位在位即可。
+_R18_DIALOG_STEPS = {9, 11, 17, 19, 21}
+_R18_OP_STEPS = {8, 10, 25}
+_R18_EFFECT_STEPS = {7, 20, 24}
+_r18_missing_file = not R18F.exists()
+if _r18_missing_file:
+    fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）')
+for blk in blocks:
+    n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
+    if not n_s:
+        continue
+    n = int(n_s)
+    if '<span class="no">⬜</span>' in blk[:400]:
+        continue  # 未执行步不要求 R18（无现场可采）
+    m18 = re.search(r'data-r18="d:(\d+);o:(\d+);e:(\d+)"', blk)
+    d_cnt, o_cnt, e_cnt = (int(m18.group(i)) for i in (1, 2, 3)) if m18 else (0, 0, 0)
+    # 帧数核验：ops 组内引用的帧文件须真实存在（生成器对缺帧渲染"帧缺失"占位——报告侧可检出）
+    frames_missing = len(re.findall(r'帧缺失：', blk))
+    if frames_missing:
+        fails.append(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐')
+    if n in _R18_DIALOG_STEPS and d_cnt == 0:
+        fails.append(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）')
+    if n in _R18_OP_STEPS:
+        if o_cnt == 0:
+            fails.append(f'R18 步 {n} 缺「操作前后帧」（真 UI 操作步必采——r18-frames.mjs 拍摄+collect op）')
+        else:
+            _fr = len(re.findall(r'class="shot r18-shot"', blk))
+            if _fr < 2 * o_cnt:
+                fails.append(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）')
+    if n in _R18_EFFECT_STEPS and e_cnt == 0:
+        fails.append(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）')
+    if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
+            and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and not _r18_missing_file:
+        fails.append(f'R18 步 {n} 三位载荷全缺（对话/操作/效果任一在位即可）')
 
 # ── 汇总 ──
 print(f'报告：{REPORT}')
