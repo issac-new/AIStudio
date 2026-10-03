@@ -2078,7 +2078,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      inbox: 'Inbox',
 +      tasks: 'Work Items',
 +      comms: 'Comms',
-+      settings: 'Settings'
++      settings: 'Settings',
++      accounts: 'Account Management'
 +    },
 +    shell: {
 +      gotoIde: 'IDE Workspace'
@@ -5358,6 +5359,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    pendingCount: '{n} pending',
 +    kindCommand: 'Command approvals',
 +    kindReview: 'Review cards',
++    objectPrefix: 'Object',
++    reviewUncommitted: 'No uncommitted changes were submitted',
++    reviewBaseline: 'Baseline diff {ref}',
 +    history: 'Decision history',
 +    historyEmpty: 'No decisions yet',
 +    colTime: 'Time',
@@ -7697,7 +7701,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      inbox: '介入',
 +      tasks: '工作项',
 +      comms: '沟通',
-+      settings: '设置'
++      settings: '设置',
++      accounts: '账户管理'
 +    },
 +    shell: {
 +      gotoIde: 'IDE 工作台'
@@ -11013,6 +11018,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    pendingCount: '{n} 项待审',
 +    kindCommand: '命令审批',
 +    kindReview: '评审卡',
++    objectPrefix: '对象',
++    reviewUncommitted: '未提交变更',
++    reviewBaseline: '基线对照 {ref}',
 +    history: '审批历史',
 +    historyEmpty: '暂无记录',
 +    colTime: '时间',
