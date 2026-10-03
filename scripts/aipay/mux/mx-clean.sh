@@ -1,17 +1,20 @@
 #!/bin/bash
-# mx-clean.sh —— 0→1 清环境（V5 补遗④第 1 项 / §十一；2026-10-03 四缺口修订）
-# 用法：bash mx-clean.sh [--dry-run] [--keep-accounts] [--reset-central] [--reset-workspaces]
+# mx-clean.sh —— 0→1 清环境（V5 补遗④第 1 项 / §十一；2026-10-03 六缺口+清场升级修订）
+# 用法：bash mx-clean.sh [--dry-run] [--keep-accounts] [--reset-central] [--reset-workspaces] [--reset-memory]
 #   --dry-run      只打印将执行的动作（默认即 dry-run——显式 --apply 才真清）
-#   --apply        真执行（危险：清空 runs/state/locks/看板整树/hermes 运行态/全部房间退出）
-#   --keep-accounts 保留 synapse 账号（缺省账号保留、退出全部房间+拒绝全部待处理邀请）
+#   --apply        真执行（危险：清空 runs/state/locks/看板整树/hermes 运行态/全部房间 purge）
+#   --keep-accounts 保留 synapse 账号（缺省账号保留、服务器房间逐房 v2 purge 全迹清场）
 #   --reset-central 重置中央仓 docs 九目录+推清空提交+删远端 integration/feat/test/wt/fix/wip 分支（tag 快照后删）
 #   --reset-workspaces 归档并重置 agent 工作区 workspaces/（tar 后删，mx-setup 重建；V7 P2 实装）
+#   --reset-memory  清 hindsight 模拟 14 家族记忆 bank（pg_dump 全库归档后删；宿主 bank 绝不动；
+#                   跨轮记忆保留是默认态——2026-09-25 用户裁决，零记忆起跑须显式指定本旗标）
 # 合格线（方案 §十一 + 2026-10-03 修订）：清后 runs/ 无旧轮目录、state.env 归档移除、
 #   kanban/ 整树空（mx-setup 重建）、hermes 运行态归档清零（pending/sessions/approvals/
-#   state*/cron）、全部账号 joined=0、中央仓远端 main 九目录零文件且仅剩 main 分支；可反复跑。
+#   state*/cron）、服务器房间数=0（admin rooms 复核）、中央仓远端 main 九目录零文件且仅剩
+#   main 分支；--reset-memory 加验：模拟 bank 按 14 精确 ID 各表计数=0；可反复跑。
 set -euo pipefail
 SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
-APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0; RESET_WORKSPACES=0
+APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0; RESET_WORKSPACES=0; RESET_MEMORY=0
 for a in "$@"; do
   case "$a" in
     --apply) APPLY=1 ;;
@@ -19,6 +22,7 @@ for a in "$@"; do
     --keep-accounts) KEEP_ACCOUNTS=1 ;;
     --reset-central) RESET_CENTRAL=1 ;;
     --reset-workspaces) RESET_WORKSPACES=1 ;;
+    --reset-memory) RESET_MEMORY=1 ;;
     *) echo "未知参数 $a"; exit 2 ;;
   esac
 done
@@ -102,15 +106,31 @@ if [ "$APPLY" = 1 ]; then
   fi
 fi
 
-# 3) synapse 房间退出（保留账号与凭据）
-#    2026-10-03 实锤修订：按房间名过滤（讨论群/需求/dlv-）只清得掉主群——旧轮 DM、G5 审批房、
-#    无名工作房全数漏网（bella 实测挂 16 间）。0→1 语义=全账号退出全部已加入房间+拒绝全部
-#    待处理邀请；旧房在服务器侧留壳（本机构建 synapse 管理 API 残缺，purge 不可用；run5/6/7
-#    三轮实证空壳与陈旧邀请惰性，不影响推演）。
+# 3) synapse 房间清场（保留账号与凭据）
+#    2026-10-03 二次修订：leave 只断成员关系，僵尸房与陈旧邀请成员态留服务器。本机 synapse
+#    1.154 的房间删除 API 已演进为 DELETE /_synapse/admin/v2/rooms/{id}（v1 POST /delete、
+#    kick、purge_room 均未注册——旧注释"管理 API 残缺"实为调错版本）。0→1 语义=逐房
+#    v2 DELETE（block:false purge:true force_purge:true）连历史带成员态全清；v2 不可用
+#    （405/404，旧版 synapse）回落 leave 全退+拒邀请。
 if [ "$KEEP_ACCOUNTS" = 0 ]; then
-  say "全部 creds 账号退出所有已加入房间 + 拒绝待处理邀请（账号/凭据不动）"
   HS=http://127.0.0.1:8008
-  if [ "$APPLY" = 1 ]; then
+  ADM=$( [ -f "$SIM_ROOT/creds/admin.token" ] && head -1 "$SIM_ROOT/creds/admin.token" || true )
+  _purge_failed=0; _purged=0
+  if [ "$APPLY" = 1 ] && [ -n "$ADM" ]; then
+    say "synapse 房间清场：逐房 v2 DELETE purge（账号/凭据不动）"
+    for RID in $(curl -sf "$HS/_synapse/admin/v1/rooms?access_token=$ADM" 2>/dev/null | jq -r '.rooms[].room_id' 2>/dev/null); do
+      code=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$HS/_synapse/admin/v2/rooms/$RID?access_token=$ADM" \
+        -H 'Content-Type: application/json' -d '{"block":false,"purge":true,"force_purge":true}' 2>/dev/null)
+      if [ "$code" = "200" ]; then _purged=$((_purged+1)); else _purge_failed=$((_purge_failed+1)); fi
+    done || true
+    if [ "$_purge_failed" = 0 ]; then
+      say "✓ ${_purged} 间已提交 purge（异步收敛——起跑前复核 admin rooms=0）"
+    else
+      say "⚠ ${_purge_failed} 间 v2 purge 失败——回落 leave 全退+拒邀请（服务器留壳）"
+    fi
+  fi
+  if [ "$APPLY" = 1 ] && { [ "$_purge_failed" -gt 0 ] || [ -z "$ADM" ]; }; then
+    say "全部 creds 账号退出所有已加入房间 + 拒绝待处理邀请（账号/凭据不动）"
     for tf in "$SIM_ROOT"/creds/*.token; do
       u=$(basename "$tf" .token); T=$(head -1 "$tf" 2>/dev/null)
       [ -n "$T" ] || continue
@@ -126,6 +146,64 @@ if [ "$KEEP_ACCOUNTS" = 0 ]; then
   fi
 else
   say "保留账号且不动房间（--keep-accounts）"
+fi
+
+# 3b) hindsight 模拟家族记忆清场（--reset-memory；2026-10-03 用户裁决零记忆起跑首次启用）
+#     模拟 14 用户家族 bank=hermes-<sha1(user)[:12]>-<user>（与 mx-lib memory_bank_id 同源
+#     派生，精确 ID 匹配）；宿主 bank（hermes-b24d7ac5d9c4-* 真机 MAC 系及其他）绝不触碰
+#     ——教训：宽正则 ^hermes-[0-9a-f]{12}-ops$ 会误伤宿主同名用户 bank，必须精确清单。
+#     归档纪律：pg_dump 全库（-Fc 含宿主，恢复兜底）成功后才删；单事务按依赖序删 18 张
+#     bank_id 表 + banks 注册行，失败即整体回滚（原子）。
+if [ "$RESET_MEMORY" = 1 ]; then
+  say "hindsight 模拟 bank 清场：全库 pg_dump 归档 → 删 14 家族 bank（宿主 bank 不动）"
+  if [ "$APPLY" = 1 ]; then
+    if docker exec hindsight-db-1 true 2>/dev/null; then
+      DUMPF="$ARC/hindsight-full-${TS}.dump"
+      if docker exec hindsight-db-1 pg_dump -U hindsight -d hindsight -Fc > "$DUMPF" 2>/dev/null && [ -s "$DUMPF" ]; then
+        say "  全库已归档 → ${DUMPF}"
+        _banks=""
+        for u in bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit; do
+          _mac=$(printf '%s' "$u" | shasum | cut -c1-12)
+          _banks="$_banks,('hermes-$_mac-$u')"
+        done
+        if docker exec -i hindsight-db-1 psql -U hindsight -d hindsight <<HSQ
+BEGIN;
+CREATE TEMP TABLE _sb(b text);
+INSERT INTO _sb VALUES ${_banks#,};
+DELETE FROM memory_links           WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM invalidated_memory_units WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM graph_maintenance_queue WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM chunks                 WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM knowledge_pages        WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM documents              WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM observation_history    WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM entities               WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM memory_units           WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM mental_model_history   WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM mental_models          WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM directives             WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM webhooks               WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM audit_log              WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM async_operations       WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM llm_requests           WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM bank_stats_cache       WHERE bank_id IN (SELECT b FROM _sb);
+DELETE FROM banks                  WHERE bank_id IN (SELECT b FROM _sb);
+COMMIT;
+HSQ
+        then
+          say "✓ 模拟 bank 已清（复核口径：按 14 精确 ID IN 计数各表=0；宿主 b24d7ac5d9c4-* 不动）"
+        else
+          say "⚠ 记忆清理事务失败（已整体回滚）——人工处置，勿在半态起跑"
+        fi
+      else
+        say "⚠ pg_dump 归档失败——中止删记忆（人工处置）"
+      fi
+    else
+      say "⚠ hindsight-db-1 容器不可用——跳过记忆清场"
+    fi
+  fi
+else
+  say "hindsight 记忆保留（未指定 --reset-memory；跨轮家族记忆=2026-09-25 用户裁决默认态）"
 fi
 
 # 4) 中央仓按需重置（默认保留；--reset-central 清推演工件与 integration 分支）
