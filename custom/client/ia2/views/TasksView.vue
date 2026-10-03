@@ -109,6 +109,13 @@ watch(
   (q) => { applyQuery(q as Record<string, unknown>) },
 )
 
+// 页签 → URL 回写（2026-10-03 走查 L4）：此前切换页签只改本地 tab，
+// 刷新/分享后页签位置丢失。同值跳过避免与上方 query watch 互相触发。
+watch(tab, (key) => {
+  if (route.query.tab === key) return
+  void router.replace({ name: 'ia2.board', query: { ...route.query, tab: key } })
+})
+
 /** 追溯矩阵 → 看板定位任务：切回看板页签 + 搜索框预选 taskId */
 function openTaskFromMatrix(taskId: string): void {
   tab.value = 'board'
