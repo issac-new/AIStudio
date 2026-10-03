@@ -17,6 +17,10 @@ export const approvalsSpotcheckMessages = {
     verdictConfirmed: '认可放行',
     verdictVetoed: '误放行',
     verdictAt: '处置于',
+    suggToggle: '放行建议（从历史审批提炼可入白名单的模式）',
+    suggScanning: '正在扫描历史审批生成建议（冷启约 1 分钟，之后 10 分钟内直接命中缓存）…',
+    suggEmpty: '近期无可提炼的放行模式。',
+    suggAdoptHint: '采纳：在 agent 会话执行 /approvals 或 CLI approvals suggest --apply N（本面板只读不落盘）。',
   },
   en: {
     title: 'Spot check · Auto-pass review',
@@ -29,5 +33,9 @@ export const approvalsSpotcheckMessages = {
     verdictConfirmed: 'Confirmed',
     verdictVetoed: 'Vetoed',
     verdictAt: 'Resolved at',
+    suggToggle: 'Pass suggestions (patterns mined from approval history)',
+    suggScanning: 'Scanning approval history (cold start ~1 min; cached hits within 10 min after)…',
+    suggEmpty: 'No pass patterns to mine recently.',
+    suggAdoptHint: 'Adopt: run /approvals in the agent session, or CLI approvals suggest --apply N (this panel is read-only).',
   },
 }

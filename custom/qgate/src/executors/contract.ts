@@ -153,7 +153,14 @@ export function runContractExecutor(executor: ExecutorSpec, input: ContractExecu
     }
     const broken: string[] = []
     const matrix: string[] = []
-    const files = readdirSync(dir).filter((n) => n.endsWith('.json')).sort()
+    // existsSync 对"文件"也为真——consumersDir 配成文件时 readdirSync 抛 ENOTDIR
+    // 会炸穿整轮 run（runGate 对 executor 无 try/catch），故读目录自身 fail-soft
+    let files: string[]
+    try {
+      files = readdirSync(dir).filter((n) => n.endsWith('.json')).sort()
+    } catch (e) {
+      return done('error', `consumers dir unreadable: ${executor.consumersDir} (${e instanceof Error ? e.message : String(e)})`)
+    }
     if (files.length === 0) return done('error', `consumers dir empty: ${executor.consumersDir}`)
     for (const name of files) {
       const c = readJson(join(dir, name))

@@ -95,6 +95,6 @@ describe('六域体检（POST /domains/run + GET /domains）', () => {
   it('patch 490 在 series（挂载单一事实源）', async () => {
     const { readFileSync: rf } = await import('node:fs')
     const series = rf('patches/series', 'utf8')
-    expect(series).toContain('490-server-governance-mount.patch')
+    expect(series).toContain('560-server-governance-mount.patch')
   })
 })

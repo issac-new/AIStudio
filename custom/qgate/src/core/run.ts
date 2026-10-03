@@ -139,7 +139,9 @@ export async function runGate(input: RunInput): Promise<RunResult> {
         evidence.push(runOpsExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       }
     }
-    if (cacheKey) cachePut(qgateDir, cacheKey, evidence)
+    // error 证据=基础设施瞬时故障（超时/网络/子进程异常），不是确定性判定——
+    // 落缓存会把一次抖动在同输入下钉死到 maxAgeHours，重跑无法自愈，故不缓存
+    if (cacheKey && !evidence.some((e) => e.result === 'error')) cachePut(qgateDir, cacheKey, evidence)
   }
 
   const decision = decide(spec, evidence, input.effectivePolicy)
