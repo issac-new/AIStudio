@@ -107,6 +107,16 @@
       "source": "tests/gateway/test_max_concurrent_sessions.py",
       "dest": "tests/gateway/test_max_concurrent_sessions.py",
       "note": "533: 容量排队泵测试"
+    },
+    {
+      "source": "hermes_cli/kanban_gates.py",
+      "dest": "hermes_cli/kanban_gates.py",
+      "note": "399 流转声明式门禁层：kanban_db.complete/request_review/promote 三处消费（宿主未跟踪文件，manifest 是其唯一分发通道；2026-10-03 隔离轮补——快照只取 git 跟踪文件致缺位，G 门禁必炸）"
+    },
+    {
+      "source": "gateway/noise_filter.py",
+      "dest": "gateway/noise_filter.py",
+      "note": "噪声过滤层：matrix adapter/weixin 平台消费（宿主未跟踪文件，manifest 分发通道；2026-10-03 隔离轮补）"
     }
   ],
   "notes": [

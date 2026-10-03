@@ -3,7 +3,10 @@
 Lives under the shared Hermes root: ``default`` board DB at ``<root>/kanban.db`` (pre-boards
 back-compat), other boards at ``<root>/kanban/boards/<slug>/``; a worker on one board never sees
 another. Board resolution: ``board=`` arg > ``HERMES_KANBAN_BOARD`` > ``HERMES_KANBAN_DB`` (pins the
-file path) > ``<root>/kanban/current`` > ``default``; the dispatcher injects these into workers.
+file path) > ``<root>/kanban/current`` > ``default`` — but only for unfenced callers; the dispatcher
+injects these into workers, and dispatched workers (``HERMES_KANBAN_TASK``), delegated children and
+board-enumerating machine flows (gateway notifier/watcher/dispatcher, ``pin_first_board_resolution``)
+always resolve through the pin, so workers physically cannot see other boards.
 Concurrency: WAL + ``BEGIN IMMEDIATE`` + compare-and-swap on ``tasks.status``/``claim_lock`` —
 SQLite serializes writers so one claimer wins, losers see zero rows (no retries, no distributed
 locks). Schema: tasks, task_links, task_comments, task_events, task_runs, attachments, notify subs.
@@ -130,6 +133,107 @@ def normalize_reasoning_effort(effort: Optional[str]) -> Optional[str]:
 KNOWN_TOOLSET_NAMES = frozenset(name.casefold() for name in get_toolset_names())
 _IS_WINDOWS = sys.platform == "win32"
 KANBAN_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024  # one cap for dashboard, tools and CLI
+
+
+# >>> swarm:kanban-guardrail-rearm >>> (t_62b2af6b, 2026-10-03: re-armed from
+# 9996e5931b after the 09-04 layer was evaporated by hermes update — commit
+# left the HEAD line, 15 board DBs measured 0 triggers, no mechanism noticed.
+# Restored verbatim with anchors adapted to the post-#102117 decomposition.)
+# Name of the schema-level guard trigger installed by install_guardrail_triggers().
+# Triggers whose WHEN clause calls this name reject every write made by a
+# connection that did not attest via register_write_sanction_udf().
+GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
+
+# Every user table the kanban schema owns. install_guardrail_triggers() puts
+# an INSERT/UPDATE/DELETE guard trigger on each so NO write path — not the
+# CLI, not the structured tools, not a raw `sqlite3` process poking the file —
+# can touch board state without an attesting connection. 2026-09-01
+# t_d37428d2: a delegated child bypassed the CLI guard by shelling out to
+# `sqlite3 INSERT` directly; this layer closes that vector at the schema.
+_GUARDRAIL_TABLES = (
+    "tasks",
+    "task_links",
+    "task_comments",
+    "task_events",
+    "task_runs",
+    "task_attachments",
+    "kanban_notify_subs",
+)
+
+
+def install_guardrail_triggers(conn: sqlite3.Connection) -> None:
+    """Install the sanctioned-writer guard triggers on a kanban DB.
+
+    Idempotent (``CREATE TRIGGER IF NOT EXISTS``), safe to call from multiple
+    processes (DDL takes the DB write lock briefly). After installation every
+    INSERT/UPDATE/DELETE on kanban tables is rejected unless the writing
+    connection has register_write_sanction_udf's UDF registered:
+
+    * a bare ``sqlite3`` process (the 2026-09-01 incident vector) fails at
+      statement-prepare time — the WHEN clause references a function its
+      connection doesn't have — with ``no such function:
+      kanban_write_sanctioned``;
+    * a Python connection that went through ``connect`` attests via the
+      delegation-context guard and passes;
+    * an in-process delegated child that imports this module directly and
+      builds its own raw ``sqlite3.connect()`` fails the guard_fn check.
+
+    Reads are untouched. Rollback = ``DROP TRIGGER kanban_guard_<table>_<op>;``
+    (see _guardrail_trigger_name).
+    """
+    # Installing the triggers is itself a schema mutation: same trust bar.
+    _assert_not_delegated_child_mutation()
+    for table in _GUARDRAIL_TABLES:
+        for op in ("insert", "update", "delete"):
+            conn.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS {_guardrail_trigger_name(table, op)}
+                BEFORE {op} ON {table}
+                FOR EACH ROW
+                WHEN kanban_write_sanctioned() <> 1
+                BEGIN
+                    SELECT RAISE(ABORT,
+                        'unsanctioned kanban write (delegate child or raw sqlite3 client)');
+                END
+                """
+            )
+    conn.commit()
+
+
+def _guardrail_trigger_name(table: str, op: str) -> str:
+    """Trigger name for *table*/*op*; also documents the DROP rollback form."""
+    return f"kanban_guard_{table}_{op}"
+
+
+def register_write_sanction_udf(
+    conn: sqlite3.Connection,
+    *,
+    guard_fn=None,
+) -> None:
+    """Mark *conn* as a sanctioned kanban writer for schema-level guard triggers.
+
+    Boards protected by ``install_guardrail_triggers()`` reject any INSERT /
+    UPDATE / DELETE whose WHEN clause sees ``kanban_write_sanctioned() <> 1``.
+    The guard UDF is connection-scoped, so a bare ``sqlite3`` process (no UDF
+    registered) is rejected at prepare time with "no such function" — that is
+    the fail-closed property this whole layer rests on.
+
+    ``guard_fn`` lets tests inject the attestation; production callers omit it
+    and get the delegation-context check: attestation is granted only when this
+    process is NOT a ``delegate_task`` child, mirroring
+    ``_assert_not_delegated_child_mutation()`` at the DB layer.
+    """
+    if guard_fn is None:
+        def guard_fn() -> int:
+            try:
+                from agent.delegation_context import is_delegated_child_process_context
+
+                return 0 if is_delegated_child_process_context() else 1
+            except Exception:
+                return 0
+
+    conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
+# <<< swarm:kanban-guardrail-rearm <<<
 
 
 def _assert_not_delegated_child_mutation(path: "str | Path | None" = None) -> None:
@@ -355,6 +459,32 @@ DEFAULT_BOARD = "default"
 _CURRENT_BOARD_OVERRIDE: ContextVar[str | None] = ContextVar(
     "hermes_kanban_current_board_override", default=None,
 )
+# Machine flows that enumerate boards (gateway notifier / watcher / dispatcher
+# ticks) resolve board paths env-pin-first — see pin_first_board_resolution().
+_PIN_FIRST_BOARD_RESOLUTION: ContextVar[bool] = ContextVar(
+    "hermes_kanban_pin_first_board_resolution", default=False,
+)
+
+
+@contextlib.contextmanager
+def pin_first_board_resolution():
+    """Resolve board paths env-pin-first for machine flows that enumerate boards.
+
+    The gateway notifier, per-subscription cursor writes and the embedded
+    dispatcher poll every board slug from ``list_boards()`` — the slug is not
+    caller intent, it is an iteration variable. On a box whose environment pins
+    ``HERMES_KANBAN_DB`` (the dispatcher default) every slug must map to that
+    one pinned file: the notifier dedupes resolved DB paths, and per-slug
+    paths read empty boards nobody writes, silently killing wake
+    notifications. Explicit cross-board intent (CLI ``--board``, a model
+    tool's ``board=``) is a USER property and must never run inside this
+    context; with no pin set this context changes nothing.
+    """
+    token = _PIN_FIRST_BOARD_RESOLUTION.set(True)
+    try:
+        yield
+    finally:
+        _PIN_FIRST_BOARD_RESOLUTION.reset(token)
 
 
 @contextlib.contextmanager
@@ -528,16 +658,59 @@ def _dir_holds_board(d: Path) -> bool:
     return (d / "board.json").exists() or (d / "kanban.db").exists()
 
 
+def _explicit_board_slug(board: Optional[str]) -> Optional[str]:
+    """Explicit caller intent: a direct ``board=`` argument, else the scoped
+    ``--board`` context (CLI ``hermes kanban --board``, dashboard plugin_api);
+    ``None`` when the caller expressed neither."""
+    if board is not None:
+        return _normalize_board_slug(board)
+    # A caller-scoped board (CLI `hermes kanban --board B ...`, dashboard
+    # plugin_api) is explicit intent just like a direct board= argument —
+    # without this a worker-pinned HERMES_KANBAN_DB silently outranks --board
+    # (os-reviewer P1 on PR#107195 / t_11c4afd8).
+    ctx = (_CURRENT_BOARD_OVERRIDE.get() or "").strip()
+    if ctx:
+        try:
+            return _normalize_board_slug(ctx)
+        except ValueError:
+            return None
+    return None
+
+
+def _explicit_board_intent_pinned() -> bool:
+    """Whether an explicit ``board=`` (or scoped ``--board``) must still resolve
+    through the ``HERMES_KANBAN_DB``-style env pins instead of its own board dir.
+
+    True for machine flows wrapped in :func:`pin_first_board_resolution` and
+    for every execution the dispatcher fences: its own workers (they carry
+    ``HERMES_KANBAN_TASK``) and delegated children / descendants (the
+    ``HERMES_DELEGATED_CHILD_CONTEXT`` marker). The pins ARE the "workers
+    physically cannot see other boards" isolation (5ec6baa), and
+    ``agent.delegation_context.kanban_path_is_fenced`` checks the pinned path /
+    fenced root — an explicit board that resolved elsewhere would also escape
+    that fence."""
+    if _PIN_FIRST_BOARD_RESOLUTION.get():
+        return True
+    from agent.delegation_context import explicit_board_intent_is_pinned
+    return explicit_board_intent_is_pinned()
+
+
 def _board_path(
     env_var: Optional[str], board: Optional[str], default_parts: tuple[str, ...], leaf: str,
 ) -> Path:
-    """Shared resolver: ``env_var`` override, else legacy ``<root>/<default_parts>``
-    for the ``default`` board, else ``board_dir(slug)/leaf``."""
-    if env_var:
-        override = os.environ.get(env_var, "").strip()
-        if override:
-            return Path(override).expanduser()
-    slug = _normalize_board_slug(board)
+    """Shared resolver. An explicit ``board=`` argument — or the scoped
+    ``--board`` context (:func:`scoped_current_board`) — outranks the ``env_var``
+    pin ONLY where no fence applies (see :func:`_explicit_board_intent_pinned`):
+    user-facing cross-board intent (CLI ``--board``, a model tool's ``board=``)
+    is honored, but machine flows that enumerate boards (gateway notifier /
+    watcher / dispatcher ticks) and dispatched or delegated workers keep
+    resolving through the pin. Without explicit intent the ``env_var`` override
+    pins the file, else legacy ``<root>/<default_parts>`` for the ``default``
+    board, else ``board_dir(slug)/leaf``."""
+    pin = os.environ.get(env_var, "").strip() if env_var else ""
+    slug = _explicit_board_slug(board)
+    if pin and (slug is None or _explicit_board_intent_pinned()):
+        return Path(pin).expanduser()
     if slug is None:
         slug = get_current_board()
     if slug == DEFAULT_BOARD:
@@ -638,6 +811,58 @@ def read_board_metadata(board: Optional[str] = None) -> dict:
         pass
     meta["db_path"] = str(kanban_db_path(slug))
     return meta
+
+
+# >>> swarm:kanban-guardrail-rearm >>> (domain isolation, t_62b2af6b: from
+# 9996e5931b / devops-kanban-domain-isolation design. board.json profile_scope
+# is the single source of truth; unscoped boards are never filtered.)
+def _board_profile_scope(board: Optional[str] = None) -> set:
+    """Return the lowercase profile set declared in ``board.json``.
+
+    Empty set = board declares no ``profile_scope`` = no filtering.
+    Never raises; read_board_metadata already degrades gracefully.
+    """
+    try:
+        meta = read_board_metadata(board)
+        scope = meta.get("profile_scope")
+        if isinstance(scope, (list, tuple)):
+            return {str(p).strip().lower() for p in scope if str(p).strip()}
+    except Exception:
+        pass
+    return set()
+
+
+def _board_dispatcher_bypass(board: Optional[str] = None) -> set:
+    """Return the board's cross-domain dispatch whitelist (lowercase set).
+
+    ``board.json``'s ``dispatcher_bypass`` names profiles (typically the
+    fleet-wide orchestrator) that may create/dispatch on this board from
+    OUTSIDE its ``profile_scope``.
+    """
+    try:
+        meta = read_board_metadata(board)
+        bypass = meta.get("dispatcher_bypass")
+        if isinstance(bypass, (list, tuple)):
+            return {str(p).strip().lower() for p in bypass if str(p).strip()}
+    except Exception:
+        pass
+    return set()
+
+
+def profile_may_work_board(profile: Optional[str], board: Optional[str] = None) -> bool:
+    """True iff ``profile`` may hold cards on ``board``.
+
+    Unscoped board → always True. Scoped board → profile must be inside
+    ``profile_scope`` or the board's ``dispatcher_bypass`` whitelist.
+    """
+    if not profile:
+        return True
+    scope = _board_profile_scope(board)
+    if not scope:
+        return True
+    name = str(profile).strip().lower()
+    return name in scope or name in _board_dispatcher_bypass(board)
+# <<< swarm:kanban-guardrail-rearm <<<
 
 
 def write_board_metadata(
@@ -1319,7 +1544,7 @@ def _normalize_task_skills(skills: Optional[Iterable[str]]) -> Optional[list[str
 def create_task(
     conn: sqlite3.Connection, *, title: str, body: Optional[str] = None,
     assignee: Optional[str] = None, created_by: Optional[str] = None,
-    workspace_kind: Optional[str] = None, workspace_path: Optional[str] = None,
+    workspace_kind: str = "worktree", workspace_path: Optional[str] = None,
     branch_name: Optional[str] = None, tenant: Optional[str] = None, priority: int = 0,
     parents: Iterable[str] = (), triage: bool = False, idempotency_key: Optional[str] = None,
     max_runtime_seconds: Optional[int] = None, skills: Optional[Iterable[str]] = None,
