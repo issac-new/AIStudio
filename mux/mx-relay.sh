@@ -27,7 +27,7 @@ ORDER=(smoke appinit people ba reqgate room dispatch register analysis triage an
 # 单实例守卫：除自身（$$）外已有 mx-relay 在跑即退出
 _others=$(pgrep -f "mx-relay.sh" | /usr/bin/grep -v "^$$\$" || true)
 if [[ -n "$_others" ]]; then
-  echo "[relay] 已有 mx-relay 实例在跑（pid $_others），本实例退出（防双接力）"
+  echo "[relay] 已有 mx-relay 实例在跑（pid ${_others}），本实例退出（防双接力）"
   exit 0
 fi
 

@@ -104,7 +104,7 @@ if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
   mkdir -p "$(dirname "$DIRECTOR_CLONE")"
   git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
   gh_clone_sanitize "$DIRECTOR_CLONE"
-  log "中央仓已克隆：$DIRECTOR_CLONE（remote URL 已剥 token）"
+  log "中央仓已克隆：${DIRECTOR_CLONE}（remote URL 已剥 token）"
 fi
 for u in "${INSTANCED_USERS[@]}"; do
   WS=$(workspace "$u")
@@ -114,7 +114,7 @@ for u in "${INSTANCED_USERS[@]}"; do
     gh_clone_sanitize "$WS"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
-    log "账号工作区就绪：$WS（remote URL 已剥 token）"
+    log "账号工作区就绪：${WS}（remote URL 已剥 token）"
   fi
 done
 
