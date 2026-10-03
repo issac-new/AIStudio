@@ -8,8 +8,10 @@
 #   1. 运行面自愈（533/534 长效化第二通道）：每次接力前 deploy-agent-runtime --apply
 #      + mx_apply_agent_patches——自更新擦除补丁后，下一棒自动恢复，不再依赖人工 git apply。
 #   2. 终局判据双信号：scenario.log "全部 gates 执行完毕" 或 state.env report_done=。
-#   3. 接力节奏：驱动死亡后 90s 探测周期+拉起后 120s 宽限（run7 实录：杀驱动后 2-4 分钟
-#      才接力属正常，勿急判卡死）。
+#   3. 接力节奏（run8 提速 D）：驱动死亡后 15s 探测周期+拉起后 10s 确认即回主循环
+#      （run7 实测 29 代接力，旧 90s+120s 每代机械开销约 2.5 分钟、全程约 72 分钟纯
+#      等待。拉起后 pgrep 立即可见（同 shell fork+exec），宽限只需防竞态确认，主循环
+#      兜底；勿改回大宽限——"杀驱动后 2-4 分钟才接力"即此参数造成）。
 #   4. 幂等护栏：段重入由驱动 step_reached/_done 键保证；本脚本只管拉起。
 #   5. 单实例守卫：同机已有其它 mx-relay 实例即退出（防双接力重复拉驱动）。
 set -u
@@ -56,7 +58,7 @@ while true; do
     RELAY_N=$((RELAY_N+1))
     echo "[$(date '+%F %H:%M:%S')] 接力 #${RELAY_N}：START_STEP=$NEXT"
     RUN_ID="$RUN_ID" START_STEP="$NEXT" nohup bash "$OVERLAY_ROOT/scripts/aipay/aipay-scenario.sh" >> "$RELAY_LOG" 2>&1 &
-    sleep 120
+    sleep 10   # 拉起确认窗口（pgrep 同 shell fork+exec 立即可见；主循环 15s 周期兜底防双拉）
   fi
-  sleep 90
+  sleep 15   # 探测周期（run8 提速 D：旧 90s 是每代 2.5 分钟机械开销的主成分）
 done
