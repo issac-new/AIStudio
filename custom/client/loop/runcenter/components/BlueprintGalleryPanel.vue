@@ -23,13 +23,13 @@ const L = computed(() => {
   return loc.startsWith('zh') ? {
     title: '自动化蓝图', hint: '16 件运行时模板 · 填槽即建定时任务',
     absent: '网关通道缺席（API_SERVER_KEY 未配置或网关未运行）——画廊不可用',
-    loadFail: '蓝图目录加载失败', slotFill: '配置槽位', create: '创建任务',
+    loadFail: '蓝图目录加载失败', retry: '重试', slotFill: '配置槽位', create: '创建任务',
     creating: '创建中…', cancel: '取消', created: '已创建', createFail: '创建失败',
     required: '必填', optional: '选填', expand: '展开', collapse: '收起',
   } : {
     title: 'Automation Blueprints', hint: '16 runtime templates · fill slots to create a cron job',
     absent: 'Gateway channel absent (API_SERVER_KEY unset or gateway down) — gallery unavailable',
-    loadFail: 'Failed to load blueprints', slotFill: 'Configure slots', create: 'Create job',
+    loadFail: 'Failed to load blueprints', retry: 'Retry', slotFill: 'Configure slots', create: 'Create job',
     creating: 'Creating…', cancel: 'Cancel', created: 'Created', createFail: 'Create failed',
     required: 'required', optional: 'optional', expand: 'Expand', collapse: 'Collapse',
   }
@@ -44,16 +44,20 @@ const creating = ref(false)
 const createMsg = ref('')
 const createErr = ref('')
 
-onMounted(async () => {
+async function load(): Promise<void> {
+  error.value = ''
+  absent.value = false
   const res = await fetchGatewayBlueprints()
   if ('error' in res) {
-    // 409=通道缺席（诚实降级）；其余=加载错误
-    absent.value = res.error.includes('缺席') || res.error.includes('HTTP 409')
+    // 409=通道缺席（诚实降级，status 为结构化信号；文案子串仅作旧链路兜底）；其余=加载错误，可手动重试
+    absent.value = res.status === 409 || res.error.includes('缺席') || res.error.includes('HTTP 409')
     error.value = res.error
     return
   }
   blueprints.value = res.blueprints
-})
+}
+
+onMounted(() => void load())
 
 function toggle(bp: GatewayBlueprint): void {
   createMsg.value = ''
@@ -123,7 +127,9 @@ const expandedBp = computed(() => blueprints.value?.find(b => b.key === expanded
 
 <template>
   <section v-if="absent" class="bpabsent" data-testid="blueprint-absent">{{ L.absent }}</section>
-  <section v-else-if="error" class="bpabsent" data-testid="blueprint-error">{{ L.loadFail }}：{{ error }}</section>
+  <section v-else-if="error" class="bpabsent" data-testid="blueprint-error">{{ L.loadFail }}：{{ error }}
+    <button type="button" class="bpabsent__retry" data-testid="blueprint-retry" @click="load()">{{ L.retry }}</button>
+  </section>
   <section v-else-if="blueprints" class="bpgal" data-testid="blueprint-gallery">
     <header class="bpgal__hd">
       <h3>{{ L.title }}</h3>
@@ -193,6 +199,7 @@ const expandedBp = computed(() => blueprints.value?.find(b => b.key === expanded
 
 <style scoped lang="scss">
 .bpabsent { padding: 10px 14px; font-size: 12px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; }
+.bpabsent__retry { margin-left: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); padding: 1px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
 .bpgal { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .bpgal__hd { display: flex; align-items: baseline; gap: 10px; h3 { margin: 0; font-size: 13px; } }
 .bpgal__hint { font-size: 11px; color: var(--text-muted); }

@@ -94,12 +94,16 @@ async function runReplay(): Promise<void> {
   }
 }
 
-const outcomeZh = (o: string | null): string =>
-  o === 'approved' ? '放行' : o === 'rejected' ? '拒绝' : o === 'deferred' ? '暂缓' : (o ?? '—')
+// 判定/类别映射走词条（2026-10-04 i18n 补齐）：未知值原样透出，不编造
+const outcomeZh = (o: string | null): string => {
+  const m = (L.value as unknown as { outcome?: Record<string, string> })?.outcome
+  return (o && m?.[o]) || o || '—'
+}
 
-const categoryZh = (c: string | null): string => ({
-  dispatch: '派发', approval: '审批', escalation: '升级', gate: '门禁',
-}[c ?? ''] ?? (c ?? '—'))
+const categoryZh = (c: string | null): string => {
+  const m = (L.value as unknown as { category?: Record<string, string> })?.category
+  return (c && m?.[c]) || c || '—'
+}
 
 function fmtTs(ts: number | null): string {
   // 跟随应用 locale（zh→zh-CN，其余 en 族→en）：硬编码 zh-CN 会让 en 用户看到中文格式时间戳
@@ -115,7 +119,7 @@ onMounted(() => void refresh())
     <div class="dg__bar">
       <h3 class="dg__title">{{ L?.title }}</h3>
       <span v-if="status" class="dg__chip" data-testid="dg-status">
-        {{ status.decisions }} 决策 · {{ status.nodes }} 节点
+        {{ (L?.countSummary ?? '{d} 决策 · {n} 节点').replace('{d}', String(status.decisions)).replace('{n}', String(status.nodes)) }}
         <template v-if="snapCount !== null"> · {{ (L?.snapshots ?? '').replace('{n}', String(snapCount)).replace('{kb}', '?') }}</template>
       </span>
       <button type="button" class="dg__sync" data-testid="dg-sync-gates" :disabled="busy" @click="syncGates()">
