@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index e28c072..7ab2a70 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -30,6 +30,7 @@
+@@ -33,6 +33,7 @@ import { ANTIGRAVITY_DEFAULT_SETTINGS, ANTIGRAVITY_INSTALL_URL, prepareAntigravi
  import { CURSOR_DEFAULT_SETTINGS, cursorSettingsPath, validateCursorSettings } from './cursor/settings'
  import { PI_EXTENDED_THINKING_LEVEL_MAP, piModelSupportsThinking } from './pi/thinking'
  import { GROK_API_KEY_ENV, GROK_CODING_AGENT_DEFINITION, GROK_PROVIDER_ID } from './grok/definition'
@@ -9,7 +10,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
  import { getDisabledManagedMcpServers, getManagedMcpServerOverride } from './mcp-overrides'
  import {
    grokSettingsConfig,
-@@ -397,6 +398,7 @@
+@@ -402,6 +403,7 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
      command: 'dsh',
      packageName: '@deepseek-ai/dsh',
    },
@@ -17,7 +18,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    {
      id: 'cursor',
      name: 'Cursor',
-@@ -407,6 +409,7 @@
+@@ -412,6 +414,7 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
  ]
  
  const CONFIG_FILE_DEFINITIONS: Record<CodingAgentId, Array<Omit<CodingAgentConfigFileDefinition, 'absolutePath'> & { scopedPath: string }>> = {
@@ -25,23 +26,24 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    'claude-code': [
      { key: 'settings', path: '~/.claude/settings.json', scopedPath: 'settings.json', language: 'json' },
      { key: 'mcp', path: '~/.claude/mcp.json', scopedPath: 'mcp.json', language: 'json' },
-@@ -893,13 +896,14 @@
+@@ -903,7 +906,7 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
    return session?.provider === 'global' ? 'global' : 'scoped'
  }
  
--function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
-+function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
+-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' {
++function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
    if (id === 'codex') return 'codex'
    if (id === 'pi') return 'pi'
    if (id === 'grok') return 'grok'
-   if (id === 'dsh') return 'dsh'
+@@ -911,6 +914,7 @@ function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'ope
    if (id === 'opencode') return 'opencode'
+   if (id === 'antigravity') return 'antigravity'
    if (id === 'cursor') return 'cursor'
 +  if (id === 'zcode') return 'zcode'
    return 'claude'
  }
  
-@@ -2864,6 +2868,53 @@
+@@ -2876,6 +2880,53 @@ export function getCodingAgentConfigFileDefinitions(id: string): CodingAgentConf
  }
  
  export async function getCodingAgentStatus(definition: CodingAgentDefinition): Promise<CodingAgentToolStatus> {
@@ -95,7 +97,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    let resolvedCommand = ''
    try {
      const env = await commandEnv()
-@@ -3035,6 +3086,12 @@
+@@ -3047,6 +3098,12 @@ export async function checkUpdateAgent(id: string): Promise<CodingAgentUpdateRes
  }
  
  export async function installCodingAgent(id: string): Promise<CodingAgentMutationResult> {
@@ -108,7 +110,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    const tool = getCodingAgentDefinition(id)
    if (!tool) {
      const err = new Error('Unknown coding agent')
-@@ -3382,6 +3439,7 @@
+@@ -3398,6 +3455,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
      let files: Array<{ key: string; path: string; absolutePath: string }> = []
      let args: string[] = []
      let env: Record<string, string> = {}
@@ -116,7 +118,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
  
      if (tool.id === 'claude-code') {
        promptFile = join(rootDir, 'hermes-rules.md')
-@@ -3402,6 +3460,13 @@
+@@ -3418,6 +3476,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
          { key: 'config', path: 'config.toml', absolutePath: join(rootDir, 'config.toml') },
        ]
        env = { CODEX_HOME: rootDir }
@@ -130,7 +132,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
      } else if (tool.id === 'grok') {
        const prepared = await prepareGlobalGrokRuntime({
          sourceHome: process.env.GROK_HOME?.trim() || join(getGlobalConfigHome(), '.grok'),
-@@ -3474,7 +3539,7 @@
+@@ -3498,7 +3563,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
      const shellCommand = buildLaunchShellCommand({
        workspaceDir,
        env,
@@ -139,7 +141,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        args,
      })
      return {
-@@ -3485,7 +3550,7 @@
+@@ -3509,7 +3574,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        model: '',
        rootDir,
        workspaceDir,
@@ -148,67 +150,68 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        args,
        env,
        shellCommand,
-@@ -3547,6 +3612,14 @@
-   let args: string[] = []
-   let env: Record<string, string> = {}
- 
-+  if (tool.id === 'zcode') {
+@@ -3582,6 +3647,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+     files.push(...prepared.files)
+     env = prepared.env
+     args = ['--dangerously-skip-permissions']
++  } else if (tool.id === 'zcode') {
 +    // overlay[zcode] R3：scoped（hermes 托管密钥/代理）模式不支持——
 +    // zcode 走自身 provider 体系与登录凭据（~/.zcode/v2），仅 global 模式。
 +    const err = new Error('ZCode 会话仅支持 global 模式（zcode 自身登录）')
 +    ;(err as any).status = 400
 +    throw err
-+  }
-+
-   if (tool.id === 'claude-code') {
+   } else if (tool.id === 'claude-code') {
      const proxyTarget = baseUrl && (apiKey || freeRuntime)
        ? registerClaudeCodeProxyTarget({
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+index f234d10..9f48865 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-@@ -29,6 +29,9 @@
- import { updateManagedPromptFileSync } from '../prompt-file'
- import { grokSessionExists, startGrokTurnProcess } from '../grok/turn-process'
+@@ -31,6 +31,9 @@ import { grokSessionExists, startGrokTurnProcess } from '../grok/turn-process'
  import { applyGrokStreamEvent } from '../grok/event-adapter'
+ import { applyAntigravityStreamEvent } from '../antigravity/event-adapter'
+ import { startAntigravityTurnProcess } from '../antigravity/turn-process'
 +import { startZcodeTurnProcess } from '../zcode/turn-process'
 +import { applyZcodeStreamEvent } from '../zcode/event-adapter'
 +import { resolveZcodeCliEntry } from '../zcode/definition'
  import { CURSOR_COMPACT_UNSUPPORTED, startCursorTurnProcess } from '../cursor/turn-process'
  import { applyCursorStreamEvent } from '../cursor/event-adapter'
  import { isolatedCodingAgentChildEnv } from './child-env'
-@@ -321,26 +324,28 @@
+@@ -341,10 +344,10 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
  }
  
  function isPrintAgent(agentId: string): boolean {
--  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
-+  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+-  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
++  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
  }
  
--function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
-+function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
+-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' {
++function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
    if (agentId === 'grok') return 'grok'
-   if (agentId === 'dsh') return 'dsh'
+@@ -352,10 +355,11 @@ function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'gro
    if (agentId === 'opencode') return 'opencode'
+   if (agentId === 'antigravity') return 'antigravity'
    if (agentId === 'cursor') return 'cursor'
 +  if (agentId === 'zcode') return 'zcode'
    return 'claude'
  }
  
--export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
-+export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
+-export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' {
++export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
    if (agentId === 'grok') return 'grok'
-   if (agentId === 'dsh') return 'dsh'
+@@ -363,6 +367,7 @@ export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi
    if (agentId === 'opencode') return 'opencode'
+   if (agentId === 'antigravity') return 'antigravity'
    if (agentId === 'cursor') return 'cursor'
 +  if (agentId === 'zcode') return 'zcode'
    return 'claude_code'
  }
  
-@@ -503,6 +508,7 @@
+@@ -526,6 +531,7 @@ function codingAgentDisplayName(agentId: string): string {
    if (agentId === 'grok') return 'Grok'
    if (agentId === 'opencode') return 'OpenCode'
    if (agentId === 'dsh') return 'DeepSeek Harness'
@@ -216,8 +219,8 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
    return 'Claude Code'
  }
  
-@@ -758,6 +764,8 @@
-               ? 'DeepSeek Harness'
+@@ -783,6 +789,8 @@ export class CodingAgentRunManager {
+               ? 'Antigravity'
              : launch.agentId === 'cursor'
                ? 'Cursor'
 +            : launch.agentId === 'zcode'
@@ -225,8 +228,8 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
              : 'Claude Code'
        this.emitTerminalStatus(run, `${agentName} chat runner ready.`)
        logger.info({
-@@ -864,6 +872,10 @@
-       this.startGrokPrintTurn(run, text, systemPrompt, images)
+@@ -904,6 +912,10 @@ export class CodingAgentRunManager {
+       this.startAntigravityPrintTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
 +    if (run.launch.agentId === 'zcode') {
@@ -236,7 +239,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
      if (run.launch.agentId === 'cursor') {
        this.startCursorPrintTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
-@@ -2727,6 +2739,115 @@
+@@ -3023,6 +3035,115 @@ export class CodingAgentRunManager {
      }
    }
  
@@ -354,7 +357,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
      input: string,
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/definition.ts b/packages/server/src/modules/coding-agents/services/zcode/definition.ts
 new file mode 100644
-index 00000000..467c3062
+index 0000000..467c306
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/zcode/definition.ts
 @@ -0,0 +1,26 @@
@@ -386,7 +389,7 @@ index 00000000..467c3062
 +}
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts b/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts
 new file mode 100644
-index 00000000..6b455d13
+index 0000000..6b455d1
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts
 @@ -0,0 +1,30 @@
@@ -422,7 +425,7 @@ index 00000000..6b455d13
 +}
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts b/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts
 new file mode 100644
-index 00000000..a1188a9c
+index 0000000..a1188a9
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts
 @@ -0,0 +1,98 @@
@@ -526,7 +529,7 @@ index 00000000..a1188a9c
 +}
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts b/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts
 new file mode 100644
-index 00000000..b8bb27bc
+index 0000000..b8bb27b
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts
 @@ -0,0 +1,55 @@
@@ -586,59 +589,62 @@ index 00000000..b8bb27bc
 +
 +export type { ZcodeUsage }
 diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
+index 11f51a6..27b1ef7 100644
 --- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
 +++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
 @@ -1,9 +1,9 @@
  import type { AgentFamily } from './family'
  
--export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor'] as const
-+export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'zcode'] as const
+-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity'] as const
++export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'zcode'] as const
  
  export type AgentRuntime = typeof AGENT_RUNTIMES[number]
--export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'>
-+export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'>
+-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'>
++export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'>
  
  const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
  
-@@ -17,6 +17,7 @@
-   opencode: 'coding',
+@@ -18,6 +18,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
    dsh: 'coding',
    cursor: 'coding',
+   antigravity: 'coding',
 +  zcode: 'coding',
  }
  
  export function isAgentRuntime(value: unknown): value is AgentRuntime {
 diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
+index e05a06b..048f8ae 100644
 --- a/packages/server/src/modules/studio/contracts/runs/session.ts
 +++ b/packages/server/src/modules/studio/contracts/runs/session.ts
-@@ -211,7 +211,7 @@
+@@ -215,7 +215,7 @@ export interface BridgeContextState {
  }
  
  export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
--export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko-agent'
-+export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko-agent'
+-export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'ekko-agent'
++export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko-agent'
  
  export interface BridgeCompressionResult {
    messages: ChatMessage[]
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
+index f623ae1..c1aa11c 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
 @@ -1,4 +1,4 @@
--export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
-+export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
  
  export type AgentStatusSource =
    | 'managed-runtime'
-@@ -46,7 +46,7 @@
+@@ -46,7 +46,7 @@ export interface AgentAvailabilitySnapshot {
    agents: AgentAvailabilityRecord[]
  }
  
--const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor']
-+const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'zcode']
+-const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity']
++const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'zcode']
  
  const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
    hermes: {
-@@ -61,6 +61,19 @@
+@@ -61,6 +61,19 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
      error: '',
      installations: [],
    },
@@ -659,53 +665,52 @@ diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts 
      id: 'ekko-agent',
      name: 'Ekko',
 diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
+index c563fd2..a1cf13d 100644
 --- a/packages/server/src/modules/studio/services/agent-availability.ts
 +++ b/packages/server/src/modules/studio/services/agent-availability.ts
-@@ -27,6 +27,7 @@
-   opencode: 'OpenCode',
+@@ -29,6 +29,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
    dsh: 'DeepSeek Harness',
    cursor: 'Cursor',
+   antigravity: 'Antigravity',
 +  zcode: 'ZCode',
  }
  
  export const AGENT_NOT_INSTALLED = 'AGENT_NOT_INSTALLED'
-diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
---- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-+++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-@@ -13,12 +13,12 @@
-   sessionId: string
-   runId?: string | null
-   /** The foreground run, separate from the deduplication key for each API call. */
-   parentRunId?: string
-   createdAt?: number
-   /** Model request duration in seconds, excluding tool execution. */
-   apiDuration?: number
-   source: 'hermes' | 'coding_agent' | 'ekko_agent'
--  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko_agent'
-+  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko_agent'
-   profile?: string | null
-   model?: string | null
-   provider?: string | null
 diff --git a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
+index 2333b15..c5a5bd5 100644
 --- a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
-@@ -167,7 +167,7 @@
+@@ -167,7 +167,7 @@ export async function handleCodingAgentRun(
    try {
      const codingInput = convertContentBlocksForCodingAgent(data.input)
      if (!data.studio_mcp_token_file) await writeModelRunProfileToken(socketUser, profile)
--    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
-+    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+-    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'cursor' || agentId === 'antigravity') || (agentId === 'opencode' || agentId === 'dsh')
++    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'cursor' || agentId === 'antigravity') || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
      const runPrompt = [
        groupSystemPrompt
          ? [groupSystemPrompt, studioMcpUsageGuidelines(mcpCapabilities)].filter(Boolean).join('\n\n')
 diff --git a/packages/server/src/modules/studio/services/chat-run/types.ts b/packages/server/src/modules/studio/services/chat-run/types.ts
+index 4f9e3ef..49d5234 100644
 --- a/packages/server/src/modules/studio/services/chat-run/types.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/types.ts
-@@ -3,6 +3,6 @@
+@@ -3,6 +3,6 @@ export * from '../../contracts/runs/session'
  
  export function codingAgentId(data: { coding_agent_id?: ChatCodingAgentId; agent_id?: ChatCodingAgentId }): Exclude<ChatCodingAgentId, 'ekko-agent'> {
    const value = data.coding_agent_id || data.agent_id || 'claude-code'
--  if (value === 'codex' || value === 'pi' || value === 'grok' || value === 'cursor' || (value === 'opencode' || value === 'dsh')) return value
-+  if (value === 'codex' || value === 'pi' || value === 'grok' || value === 'cursor' || (value === 'opencode' || value === 'dsh') || value === 'zcode') return value
+-  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'cursor' || value === 'antigravity') || (value === 'opencode' || value === 'dsh')) return value
++  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'cursor' || value === 'antigravity') || (value === 'opencode' || value === 'dsh') || value === 'zcode') return value
    return 'claude-code'
  }
+diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+index 6065229..adad4a3 100644
+--- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
++++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+@@ -22,7 +22,7 @@ export interface RecordSessionUsageInput {
+   /** Model request duration in seconds, excluding tool execution. */
+   apiDuration?: number
+   source: 'hermes' | 'coding_agent' | 'ekko_agent'
+-  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'ekko_agent'
++  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko_agent'
+   profile?: string | null
+   model?: string | null
+   provider?: string | null
