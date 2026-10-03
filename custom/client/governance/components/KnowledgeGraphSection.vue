@@ -158,6 +158,10 @@ onMounted(() => {
         <template v-if="r.conflicts.length"> · 冲突 {{ r.conflicts.length }}（进收件箱）</template>
         <template v-if="r.governed"> · {{ L?.governedAuto }} {{ r.governed.auto }} / {{ L?.governedManual }} {{ r.governed.manual }}<template v-if="r.governed.breaker">（{{ L?.breaker }}：{{ r.governed.reason }}）</template></template>
         <template v-if="r.dedup"> · {{ L?.dedupAlias }} {{ r.dedup.autoAlias }} / {{ L?.dedupReview }} {{ r.dedup.review }}</template>
+        <template v-if="r.qualityGate">
+          <template v-if="r.qualityGate.passed"> · {{ L?.gatePass }}</template>
+          <template v-else> · <span class="kg__gate-fail" data-testid="kg-gate-fail">{{ L?.gateFail }}{{ r.qualityGate.rolledBack ? `（${L?.gateRolledBack}）` : '' }}：{{ r.qualityGate.reason }}</span></template>
+        </template>
       </div>
     </div>
 
@@ -187,7 +191,7 @@ onMounted(() => {
         <select v-model.number="selectedTs" class="kg__versions-select" data-testid="kg-version-select">
           <option :value="null" disabled>{{ L?.versionSelect }}</option>
           <option v-for="v in versions" :key="v.ts" :value="v.ts">
-            {{ fmtTime(v.ts) }} · {{ v.nodes }} {{ L?.nodes }} · {{ Math.round(v.bytes / 1024) }}KB
+            {{ fmtTime(v.ts) }} · {{ v.label && v.label !== 'auto' ? v.label : '' }}{{ v.label && v.label !== 'auto' ? ' · ' : '' }}{{ v.nodes }} {{ L?.nodes }} · {{ Math.round(v.bytes / 1024) }}KB
           </option>
         </select>
         <template v-if="!confirmRollback">
