@@ -343,6 +343,8 @@ export interface BoardSyncResultDto {
   governed?: { auto: number; manual: number; breaker: boolean; reason?: string }
   /** KG 演化治理（A2）：三档去重统计。 */
   dedup?: { autoAlias: number; review: number }
+  /** A5 质量门禁（2026-10-03）：passed=false 即已自动回滚。 */
+  qualityGate?: { passed: boolean; rolledBack?: boolean; reason?: string; before?: { coverage: number; aliasRatio: number; orphanRate: number }; after?: { coverage: number; aliasRatio: number; orphanRate: number } }
 }
 export interface KgSummaryDto {
   ok: boolean
@@ -404,6 +406,8 @@ export interface KgVersionDto {
   file: string
   bytes: number
   nodes: number
+  /** 快照类型（A5 2026-10-03）：auto-pre=门禁前基线 / auto-post=通过后正式版（旧档缺省 auto）。 */
+  label?: string
 }
 export function kgEvolutionStatus(): Promise<KgEvolutionStatusDto> {
   return request<KgEvolutionStatusDto>('/api/kg-evolution/status')
