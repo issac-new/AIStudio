@@ -198,17 +198,19 @@ function collectPendingItems(): PendingItem[] {
   try {
     for (const rec of listReviews()) {
       if (rec.verdict) continue
-      const detail = rec.domain === 'baseline' ? `基线对照 ${rec.baseRef ?? ''}` : '未提交变更'
+      // 2026-10-03 走查 L3：title/detail 不再拼中文（服务端无 locale 语境，
+      // EN 模式漏中文）——title 发纯 ID、detail 发语义 token，本地化交给
+      // 前端消费方（ApprovalPanel / GovDocsReviewView 按 kind=review 补前缀）。
       items.push({
         id: `review:${rec.reviewId}`,
         kind: 'review',
-        title: rec.taskId ? `评审 · ${rec.taskId}` : `评审 · ${rec.reviewId}`,
-        detail,
+        title: rec.taskId ?? rec.reviewId,
+        detail: rec.domain === 'baseline' ? `baseline ${rec.baseRef ?? ''}` : 'uncommitted',
         taskId: rec.taskId,
         domain: rec.domain,
         baseRef: rec.baseRef,
         createdAt: rec.createdAt,
-        risk: classifyApprovalRisk({ kind: 'review', title: rec.taskId || rec.reviewId, detail, domain: rec.domain }),
+        risk: classifyApprovalRisk({ kind: 'review', title: rec.taskId || rec.reviewId, detail: '', domain: rec.domain }),
       })
     }
   } catch { /* review 源不可用不阻断 */ }

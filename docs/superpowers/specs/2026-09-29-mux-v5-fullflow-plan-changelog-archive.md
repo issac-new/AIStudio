@@ -306,3 +306,11 @@
 - 审计补齐两件：①门禁状态行组件测试（通过/失败+已回滚三态，此前只有服务端测试）4/4 绿；②快照边车写入失败由静默 catch 改留痕（warn 日志）。
 - 悬案定性（快照目录 13:48 前均无 meta 边车）：现役进程实弹验证写边车正常（无操作回滚产出 pre-rollback.meta.json ✓）；13:48 无边快照出自 13:47-13:50 的短命进程（并行会话自 0.7.27 worktree——停在 A5 合入前 e48e475c——拉起的服务器），代码无缺陷。546 边界史表未建=部署后尚无真实压缩发生（非缺陷，等事件）。
 - 合 main 50f83f0b（https 撞墙走 ssh443+deploy key 既定绕行）。
+
+## 十三、功能端到端真实验证轮（2026-10-03 傍晚）
+
+- 触发：用户令"确保 swarm studio 的功能落地实施完成"——标准从"代码在库+测试绿"升到"真实产品环境端到端跑通"。
+- **C 组档案链全链真实跑通**：受控调用真实 saveCompressionSnapshot 两次（真实 session mul3dtaokagker+真实消息 id+乐观并发 revision）→ patch 546 边界史表自动建立+两行落盘 → /advance 按史精确切两窗（(0,5] 首观察+(5,9]，boundarySource=history）→ 机械锚点三行带真实会话内容 → 整窗 verbatim 召回 → 跨窗搜索双窗命中 → 笔记 CRUD+新鲜度门（笔记晚于归档=fresh 判定正确）。
+- **KG 治理链全链真实跑通**（一次性沙盒板 zz-e2e-probe-20261003，验毕全清）：冷启动摄取（无门禁=设计语义）→ 增量轮 **A3 熔断真实触发**（3/4>0.2 全转人工零写入）+ **A5 门禁判定真实出现**（passed=true，coverage/aliasRatio 实数）+ A2 autoAlias 正确（Probe-Alice 归一化 sim=1.0）→ 真实人工裁决 3 条（keep-existing×2+take-incoming×1）→ 裁决台账真实落盘 → 再同步零重扣零重问（闭环证明；裁决前 auto-sync 窗口追加的 4 条时序垃圾第四次同步不再增长）→ take-incoming force 写入入图/keep 豁免不入图 → **A4 真实回滚**（6 节点回落 4）。
+- 探针全清：板目录/KG/快照/marker/裁决台账/收件箱 7 条/boundary_history 2 行/压缩快照行/归档目录/笔记/lock——零残留（state.json 为 C4 产品态正常留存）。
+- 坑：独立脚本触发 server 模块须带 TS_NODE_FILES=1（活进程实勘）否则 ts-node 拿不到工程 types 报 TS2591；裁决闭环的"未决不增"验证须做两次同步（auto-sync 60s 窗口会插队追加时序垃圾，非死循环）。
