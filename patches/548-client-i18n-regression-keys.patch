@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 734cec5..9082087 100644
+index d9385ab..5b81d94 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1519,7 +1519,8 @@ export default {
+@@ -1533,7 +1533,8 @@ export default {
        formRepo: 'Central repo URL',
        submit: 'Launch',
        readings: 'Network',
@@ -12,7 +12,7 @@ index 734cec5..9082087 100644
      },
      brand: 'Cockpit',
      flow: {
-@@ -1541,7 +1542,13 @@ export default {
+@@ -1555,7 +1556,13 @@ export default {
        clusterRooms: 'Rooms',
        clusterGroups: 'Group Chats',
        clusterChats: 'Agent Chats',
@@ -27,7 +27,7 @@ index 734cec5..9082087 100644
      },
      loop: {
        stage: {
-@@ -6610,7 +6617,10 @@ export default {
+@@ -6625,7 +6632,10 @@ export default {
        always: 'Always allow',
        deny: 'Deny',
        approve: 'Approve',
@@ -40,10 +40,10 @@ index 734cec5..9082087 100644
      colRisk: 'Risk tier',
      risk: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 76df397..d9f68ed 100644
+index 43a869e..91d499b 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1519,7 +1519,8 @@ export default {
+@@ -1533,7 +1533,8 @@ export default {
        formRepo: '中央仓地址',
        submit: '发起',
        readings: '网络读数',
@@ -53,7 +53,7 @@ index 76df397..d9f68ed 100644
      },
      brand: '驾驶舱',
      flow: {
-@@ -1541,7 +1542,13 @@ export default {
+@@ -1555,7 +1556,13 @@ export default {
        clusterRooms: '房间',
        clusterGroups: '群聊',
        clusterChats: '会话',
@@ -68,7 +68,7 @@ index 76df397..d9f68ed 100644
      },
      loop: {
        stage: {
-@@ -6609,7 +6616,10 @@ export default {
+@@ -6624,7 +6631,10 @@ export default {
        always: '总是允许',
        deny: '拒绝',
        approve: '批准',

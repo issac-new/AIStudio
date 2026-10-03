@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 50188f1..93d6723 100644
+index 50188f1..d8ec35f 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -2,294 +2,384 @@ import { socialMessagesEn } from '../social-messages'
@@ -809,7 +809,7 @@ index 50188f1..93d6723 100644
      theme: 'Theme',
      settings: 'Settings',
      connected: 'Connected',
-@@ -575,8 +650,1585 @@ export default {
+@@ -575,8 +650,1599 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -819,6 +819,19 @@ index 50188f1..93d6723 100644
 +    systemGroup: 'System'
 +  },
 +  ide: {
++    tools: {
++      title: 'Tools timeline',
++      empty: 'No tool calls in this session yet'
++    },
++    wf: {
++      title: 'Session runs',
++      empty: "No workflow runs in progress. When the agent invokes workflow tools (or {'@'}zcode dispatches), run rows appear here in real time."
++    },
++    slash: {
++      title: 'Custom slash commands',
++      hint: 'Type / in the /ide input to pick one; the selected template is written into the input for editing before sending.',
++      empty: 'No custom commands yet'
++    },
 +    dims: {
 +      workspace: 'Workspace',
 +      task: 'Task',
@@ -1190,6 +1203,7 @@ index 50188f1..93d6723 100644
 +    },
 +    paletteCmdReview: 'Review current changes (read-only)',
 +    hooks: {
++      add: 'Add',
 +      title: 'Hooks',
 +      refresh: 'Refresh',
 +      loadFailed: 'Failed to load hooks',
@@ -2396,7 +2410,7 @@ index 50188f1..93d6723 100644
    agentManager: {
      title: 'Agent Manager',
      subtitle: 'Discover and manage the Agents available on this device.',
-@@ -590,7 +2242,7 @@ export default {
+@@ -590,7 +2256,7 @@ export default {
      agentVersion: 'Hermes Agent version',
      path: 'Path',
      userCli: 'Hermes CLI',
@@ -2405,7 +2419,7 @@ index 50188f1..93d6723 100644
      readOnly: 'Read only',
      noUserCli: 'No available Hermes CLI was detected',
      unknownVersion: 'Unknown version',
-@@ -599,9 +2251,8 @@ export default {
+@@ -599,9 +2265,8 @@ export default {
      ekkoDescription: 'Ekko ships with Studio and does not need separate installation, updates, or removal.',
      version: 'Version',
      codingAgentDescription: 'Studio can install, check for updates, and remove this Agent.',
@@ -2416,7 +2430,7 @@ index 50188f1..93d6723 100644
      updateToVersion: 'Update to {version}',
      deleteConfirm: 'Remove {name}?',
      installOperation: 'installation',
-@@ -611,18 +2262,18 @@ export default {
+@@ -611,18 +2276,18 @@ export default {
      aiHelpDialogPositive: 'Ask AI',
      aiHelpDrawerTitle: 'Ekko · Agent troubleshooting',
      aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
@@ -2439,7 +2453,7 @@ index 50188f1..93d6723 100644
    runtimeVersions: {
      title: 'Version Management',
      runtimeTitle: 'Hermes Runtime',
-@@ -639,8 +2290,8 @@ export default {
+@@ -639,8 +2304,8 @@ export default {
      dataDirectoryEnvMacos: 'macOS (Desktop / terminal)',
      dataDirectoryEnvLinux: 'Linux (login environment)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -2450,7 +2464,7 @@ index 50188f1..93d6723 100644
      webUiTitle: 'Web UI',
      platform: 'Platform',
      currentWebUi: 'Current Web UI',
-@@ -649,10 +2300,10 @@ export default {
+@@ -649,10 +2314,10 @@ export default {
      chooseRuntimeDirectory: 'Choose directory',
      resetRuntimeDirectory: 'Use system default',
      runtimeDirectoryHint: 'The current Runtime is copied and verified before local services start on the next restart. Old storage is retained, and future Runtime downloads are stored here.',
@@ -2463,7 +2477,7 @@ index 50188f1..93d6723 100644
      active: 'Active',
      installed: 'Installed',
      download: 'Download',
-@@ -671,7 +2322,7 @@ export default {
+@@ -671,7 +2336,7 @@ export default {
      remoteLoadFailed: 'Failed to load remote versions',
      downloadTasks: 'Download tasks',
      downloadStarted: 'Download started',
@@ -2472,7 +2486,7 @@ index 50188f1..93d6723 100644
      restartPromptTitle: 'Runtime ready',
      restartPromptContent: 'Hermes Runtime {version} has been installed. Restart now to use it?',
      restartLater: 'Later',
-@@ -681,7 +2332,7 @@ export default {
+@@ -681,7 +2346,7 @@ export default {
        queued: 'Queued',
        running: 'Running',
        completed: 'Completed',
@@ -2481,7 +2495,7 @@ index 50188f1..93d6723 100644
      },
      jobStageStatus: {
        queued: 'Queued',
-@@ -691,7 +2342,7 @@ export default {
+@@ -691,7 +2356,7 @@ export default {
        extract: 'Extracting',
        install: 'Installing',
        completed: 'Completed',
@@ -2490,7 +2504,7 @@ index 50188f1..93d6723 100644
      },
      jobStage: {
        queued: 'Queued',
-@@ -705,10 +2356,9 @@ export default {
+@@ -705,10 +2370,9 @@ export default {
        extractWebUi: 'Extracting Web UI archive',
        installWebUi: 'Installing Web UI',
        completed: 'Completed',
@@ -2503,7 +2517,7 @@ index 50188f1..93d6723 100644
    mcuDevices: {
      title: 'Little Box',
      subtitle: 'Manage Little Box voice interaction devices and connections',
-@@ -748,15 +2398,14 @@ export default {
+@@ -748,15 +2412,14 @@ export default {
      deleted: 'MCU device deleted',
      deleteFailed: 'Failed to delete MCU device',
      loadFailed: 'Failed to load MCU devices',
@@ -2521,7 +2535,7 @@ index 50188f1..93d6723 100644
      },
      app: {
        subtitle: 'Connect the App to your devices',
-@@ -764,9 +2413,9 @@ export default {
+@@ -764,9 +2427,9 @@ export default {
        viewList: 'List',
        viewDownload: 'Download',
        viewMessages: 'Message Push',
@@ -2533,7 +2547,7 @@ index 50188f1..93d6723 100644
        downloadScan: 'Scan with your phone',
        downloadScanHint: 'Android download available now',
        available: 'Available',
-@@ -805,19 +2454,19 @@ export default {
+@@ -805,19 +2468,19 @@ export default {
          internal: 'Internal testing',
          public_beta: 'Public beta',
          paid: 'Paid',
@@ -2556,7 +2570,7 @@ index 50188f1..93d6723 100644
        },
        deviceName: 'Device name',
        deviceBrand: 'Device brand',
-@@ -828,13 +2477,13 @@ export default {
+@@ -828,13 +2491,13 @@ export default {
        authorizedUser: 'Authorizing user',
        connectionTypes: {
          lan: 'LAN',
@@ -2574,7 +2588,7 @@ index 50188f1..93d6723 100644
        online: 'Online',
        offline: 'Offline',
        active: 'Active',
-@@ -845,10 +2494,9 @@ export default {
+@@ -845,10 +2508,9 @@ export default {
        deleted: 'App connection deleted',
        deleteFailed: 'Failed to delete App connection',
        empty: 'No connected Apps',
@@ -2587,7 +2601,7 @@ index 50188f1..93d6723 100644
    devices: {
      title: 'Devices',
      subtitle: 'Manage connected devices, pairing requests, and remote access',
-@@ -904,22 +2552,21 @@ export default {
+@@ -904,22 +2566,21 @@ export default {
        pending: 'Pending',
        approved: 'Approved',
        rejected: 'Rejected',
@@ -2614,7 +2628,7 @@ index 50188f1..93d6723 100644
    performance: {
      title: 'Performance',
      subtitle: 'Inspect system resources, bridge broker, workers, and active sessions',
-@@ -947,9 +2594,8 @@ export default {
+@@ -947,9 +2608,8 @@ export default {
      status: 'Status',
      noWorkers: 'No workers',
      sessionsByProfile: 'Sessions by Profile',
@@ -2625,7 +2639,7 @@ index 50188f1..93d6723 100644
    journey: {
      title: 'Learning Journey',
      play: 'Play journey',
-@@ -979,21 +2625,28 @@ export default {
+@@ -979,21 +2639,28 @@ export default {
      useCount: 'Use count',
      createdBy: 'Created by',
      timestamp: 'Time',
@@ -2663,7 +2677,7 @@ index 50188f1..93d6723 100644
    realtimeVoice: {
      title: 'Realtime Voice',
      mode: 'Voice mode',
-@@ -1016,7 +2669,15 @@ export default {
+@@ -1016,7 +2683,15 @@ export default {
      finishTurn: 'Finish turn',
      speak: 'Start speaking',
      end: 'End',
@@ -2680,7 +2694,7 @@ index 50188f1..93d6723 100644
      hint: {
        idle: 'Tap the center to begin a voice turn',
        paused: 'Turn the microphone back on when you are ready',
-@@ -1025,25 +2686,23 @@ export default {
+@@ -1025,25 +2700,23 @@ export default {
        processing: 'Converting your voice into text',
        thinking: 'Your message was sent to the current conversation',
        speaking: 'You can interrupt at any time',
@@ -2721,7 +2735,7 @@ index 50188f1..93d6723 100644
      contextRemaining: 'remaining',
      contextClickToEdit: 'Click to edit context length',
      contextEditTitle: 'Edit Context Length',
-@@ -1070,7 +2729,7 @@ export default {
+@@ -1070,7 +2743,7 @@ export default {
      slashCommandArgs: {
        message: '<message>',
        title: '<title>',
@@ -2730,7 +2744,7 @@ index 50188f1..93d6723 100644
      },
      slashCommands: {
        usage: 'Calculate current session usage',
-@@ -1100,7 +2759,7 @@ export default {
+@@ -1100,7 +2773,7 @@ export default {
        reloadMcp: 'Reload MCP servers',
        reloadSkills: 'Reload skill commands',
        bundles: 'Browse skill bundles',
@@ -2739,7 +2753,7 @@ index 50188f1..93d6723 100644
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1115,7 +2774,7 @@ export default {
+@@ -1115,7 +2788,7 @@ export default {
        deleteFailed: 'Failed to delete bundle',
        deleted: 'Bundle deleted',
        noBundles: 'No bundles yet. Create one to combine multiple skills.',
@@ -2748,7 +2762,7 @@ index 50188f1..93d6723 100644
      },
      bundleCreator: {
        title: 'Create Skill Bundle',
-@@ -1131,7 +2790,7 @@ export default {
+@@ -1131,7 +2804,7 @@ export default {
        skillsRequired: 'Select at least one skill',
        skillsLoadFailed: 'Failed to load skills',
        createFailed: 'Failed to create bundle',
@@ -2757,7 +2771,7 @@ index 50188f1..93d6723 100644
      },
      attachFiles: 'Attach files',
      reasoningEffort: {
-@@ -1147,8 +2806,8 @@ export default {
+@@ -1147,8 +2820,8 @@ export default {
          high: 'High',
          max: 'Max',
          xhigh: 'Extra high',
@@ -2768,7 +2782,7 @@ index 50188f1..93d6723 100644
      },
      autoPlaySpeech: 'Auto-play voice',
      voiceInput: {
-@@ -1164,17 +2823,17 @@ export default {
+@@ -1164,17 +2837,17 @@ export default {
          capturing: 'Capturing',
          transcribing: 'Transcribing',
          sending: 'Adding to input',
@@ -2789,7 +2803,7 @@ index 50188f1..93d6723 100644
      hideToolCalls: 'Hide tool calls',
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
-@@ -1203,7 +2862,7 @@ export default {
+@@ -1203,7 +2876,7 @@ export default {
      searchTitle: 'Search Sessions',
      searchSubtitle: 'Search by title or message content',
      searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
@@ -2798,7 +2812,7 @@ index 50188f1..93d6723 100644
      searchPlaceholder: 'Search sessions...',
      searchEmpty: 'Recent sessions',
      searchRecent: 'Recent session',
-@@ -1254,9 +2913,7 @@ export default {
+@@ -1254,9 +2927,7 @@ export default {
      newCliChat: 'New CLI',
      deleteSession: 'Delete this session?',
      sessionDeleted: 'Session deleted',
@@ -2809,7 +2823,7 @@ index 50188f1..93d6723 100644
      toggleBatchMode: 'Batch selection',
      selectAll: 'Select all',
      confirmBatchDelete: 'Delete {count} selected sessions?',
-@@ -1358,11 +3015,32 @@ export default {
+@@ -1358,11 +3029,32 @@ export default {
      resumeSpeech: 'Resume',
      stopSpeech: 'Stop',
      speechNotSupported: 'Voice playback not supported in this browser',
@@ -2845,7 +2859,7 @@ index 50188f1..93d6723 100644
      title: 'Workflow',
      profile: 'Profile',
      namePlaceholder: 'Workflow name',
-@@ -1370,7 +3048,7 @@ export default {
+@@ -1370,7 +3062,7 @@ export default {
      workspace: {
        title: 'Select Workspace',
        select: 'Select workspace',
@@ -2854,7 +2868,7 @@ index 50188f1..93d6723 100644
      },
      actions: {
        newWorkflow: 'New Workflow',
-@@ -1396,99 +3074,356 @@ export default {
+@@ -1396,99 +3088,356 @@ export default {
        imported: 'Workflow imported',
        exported: 'Workflow exported',
        importFailed: 'Workflow import failed',
@@ -3264,7 +3278,7 @@ index 50188f1..93d6723 100644
        },
        jsonFieldOperatorHelp: {
          equals: 'Reads the value at {path}. Matches only when that field value exactly equals “{value}”; it never compares the field name.',
-@@ -1496,14 +3431,18 @@ export default {
+@@ -1496,14 +3445,18 @@ export default {
          contains: 'Reads the value at {path} and checks whether that field value contains “{value}”; it never searches the field name.',
          not_contains: 'Reads the value at {path}. Matches only when that field value does not contain “{value}”; it never searches the field name.',
          exists: 'Matches when the JSON field at {path} exists. It does not compare the field value.',
@@ -3288,7 +3302,7 @@ index 50188f1..93d6723 100644
      },
      batch: {
        toggle: 'Batch selection',
-@@ -1511,7 +3450,7 @@ export default {
+@@ -1511,7 +3464,7 @@ export default {
        confirmDelete: 'Delete {count} selected workflows?',
        deleteSuccess: 'Deleted {count} workflows',
        deletePartial: '{failed} workflows failed to delete',
@@ -3297,7 +3311,7 @@ index 50188f1..93d6723 100644
      },
      validation: {
        nodesRequired: 'Add at least one node',
-@@ -1524,7 +3463,7 @@ export default {
+@@ -1524,7 +3477,7 @@ export default {
        invalidConnectionDirection: 'Connections must go from the right output to the left input',
        orphanNode: 'Node {node} is not connected to the workflow',
        disconnectedFlow: 'The workflow cannot be split into multiple disconnected flows',
@@ -3306,7 +3320,7 @@ index 50188f1..93d6723 100644
      },
      node: {
        title: 'Node name',
-@@ -1540,7 +3479,7 @@ export default {
+@@ -1540,7 +3493,7 @@ export default {
        joinAnyHelp: 'Runs once when the first incoming route is taken; skips only if every route is decided and none matches. Example: continue after either reviewer approves.',
        promptPlaceholder: 'Describe what this agent should do...',
        skillsPlaceholder: 'Skills, press Enter to add',
@@ -3315,7 +3329,7 @@ index 50188f1..93d6723 100644
      },
      status: {
        idle: 'Idle',
-@@ -1551,7 +3490,7 @@ export default {
+@@ -1551,7 +3504,7 @@ export default {
        skipped: 'Skipped',
        failed: 'Failed',
        approval_rejected: 'Approval rejected',
@@ -3324,7 +3338,7 @@ index 50188f1..93d6723 100644
      },
      runs: {
        title: 'Run Records',
-@@ -1568,26 +3507,26 @@ export default {
+@@ -1568,26 +3521,26 @@ export default {
        stopRequested: 'Stop requested',
        stopFailed: 'Failed to stop run',
        delete: 'Delete record',
@@ -3356,7 +3370,7 @@ index 50188f1..93d6723 100644
      },
      initialNodes: {
        node1: 'Node 1',
-@@ -1595,7 +3534,7 @@ export default {
+@@ -1595,7 +3548,7 @@ export default {
        node3: 'Node 3',
        plan: 'Plan',
        execute: 'Execute',
@@ -3365,7 +3379,7 @@ index 50188f1..93d6723 100644
      },
      initialPrompts: {
        node1: 'Enter this node input.',
-@@ -1603,12 +3542,11 @@ export default {
+@@ -1603,12 +3556,11 @@ export default {
        node3: 'Enter this node input.',
        plan: 'Break the request into actionable steps.',
        execute: 'Run the implementation steps and produce artifacts.',
@@ -3380,7 +3394,7 @@ index 50188f1..93d6723 100644
    kanban: {
      title: 'Kanban Board',
      createTask: 'New Task',
-@@ -1625,6 +3563,22 @@ export default {
+@@ -1625,6 +3577,22 @@ export default {
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
        defaultArchiveUnavailable: 'The default board cannot be archived',
@@ -3403,7 +3417,7 @@ index 50188f1..93d6723 100644
      },
      columns: {
        triage: 'Triage',
-@@ -1635,7 +3589,7 @@ export default {
+@@ -1635,7 +3603,7 @@ export default {
        blocked: 'Blocked',
        review: 'Review',
        done: 'Done',
@@ -3412,7 +3426,7 @@ index 50188f1..93d6723 100644
      },
      form: {
        title: 'Title',
-@@ -1667,20 +3621,29 @@ export default {
+@@ -1667,20 +3635,29 @@ export default {
        maxRetriesPlaceholder: 'Number of retries',
        goalMaxTurns: 'Goal max turns',
        goalMaxTurnsPlaceholder: 'Maximum turns',
@@ -3445,7 +3459,7 @@ index 50188f1..93d6723 100644
      },
      detail: {
        status: 'Status',
-@@ -1703,7 +3666,7 @@ export default {
+@@ -1703,7 +3680,7 @@ export default {
        noLog: 'No log found for this task.',
        addComment: 'Add Comment',
        commentPlaceholder: 'Write a task comment...',
@@ -3454,7 +3468,7 @@ index 50188f1..93d6723 100644
      },
      action: {
        title: 'Actions',
-@@ -1712,7 +3675,6 @@ export default {
+@@ -1712,7 +3689,6 @@ export default {
        block: 'Block',
        blockReason: 'Reason for blocking',
        unblock: 'Unblock',
@@ -3462,7 +3476,7 @@ index 50188f1..93d6723 100644
        archiveConfirm: 'Archive this completed task?',
        assign: 'Assign',
        assignTo: 'Assign to...',
-@@ -1723,6 +3685,11 @@ export default {
+@@ -1723,6 +3699,11 @@ export default {
        specify: 'Specify',
        loadLog: 'Load Log',
        loadDiagnostics: 'Load Diagnostics',
@@ -3474,7 +3488,7 @@ index 50188f1..93d6723 100644
      },
      message: {
        taskCreated: 'Task created',
-@@ -1737,15 +3704,202 @@ export default {
+@@ -1737,15 +3718,202 @@ export default {
        taskReassigned: 'Task reassigned',
        taskSpecified: 'Task specified',
        loadFailed: 'Failed to load task',
@@ -3681,7 +3695,7 @@ index 50188f1..93d6723 100644
    jobs: {
      title: 'Scheduled Jobs',
      createJob: 'Create Job',
-@@ -1806,7 +3960,7 @@ export default {
+@@ -1806,7 +3974,7 @@ export default {
        running: 'Running',
        paused: 'Paused',
        disabled: 'Disabled',
@@ -3690,7 +3704,7 @@ index 50188f1..93d6723 100644
      },
      info: {
        model: 'Model',
-@@ -1815,7 +3969,7 @@ export default {
+@@ -1815,7 +3983,7 @@ export default {
        lastRun: 'Last Run',
        nextRun: 'Next Run',
        deliver: 'Deliver',
@@ -3699,7 +3713,7 @@ index 50188f1..93d6723 100644
      },
      action: {
        pause: 'Pause',
-@@ -1823,24 +3977,21 @@ export default {
+@@ -1823,24 +3991,21 @@ export default {
        resume: 'Resume',
        resumeJob: 'Resume job',
        runNow: 'Run Now',
@@ -3728,7 +3742,7 @@ index 50188f1..93d6723 100644
      },
      searchPlaceholder: 'Search skills...',
      noMatch: 'No skills match your search',
-@@ -1865,7 +4016,7 @@ export default {
+@@ -1865,7 +4030,7 @@ export default {
        builtin: 'Builtin',
        hub: 'Hub',
        local: 'Local',
@@ -3737,7 +3751,7 @@ index 50188f1..93d6723 100644
      },
      delete: 'Delete',
      deleteConfirm: 'Delete skill "{name}"? This cannot be undone.',
-@@ -1888,7 +4039,7 @@ export default {
+@@ -1888,7 +4053,7 @@ export default {
      importFailed: 'Failed to import skill',
      path: {
        local: 'Local',
@@ -3746,7 +3760,7 @@ index 50188f1..93d6723 100644
      },
      externalDirs: {
        manage: 'External dirs',
-@@ -1902,7 +4053,7 @@ export default {
+@@ -1902,7 +4067,7 @@ export default {
        saveSuccess: 'External dirs saved',
        saveFailed: 'Save failed',
        loadFailed: 'Failed to load external dirs',
@@ -3755,7 +3769,7 @@ index 50188f1..93d6723 100644
      },
      pathCopied: 'Path copied',
      pathCopyFailed: 'Failed to copy path',
-@@ -1934,9 +4085,8 @@ export default {
+@@ -1934,9 +4099,8 @@ export default {
      writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
      writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
      writeApprovalRemoveFile: 'This approval removes {file} from skill {skill}.',
@@ -3766,7 +3780,7 @@ index 50188f1..93d6723 100644
    plugins: {
      title: 'Plugins',
      refresh: 'Refresh',
-@@ -1962,28 +4112,28 @@ export default {
+@@ -1962,28 +4126,28 @@ export default {
        active: 'Enabled / auto',
        inactive: 'Inactive',
        disabled: 'Disabled',
@@ -3802,7 +3816,7 @@ index 50188f1..93d6723 100644
      },
      table: {
        plugin: 'Plugin',
-@@ -1992,21 +4142,20 @@ export default {
+@@ -1992,21 +4156,20 @@ export default {
        kind: 'Kind',
        capabilities: 'Capabilities',
        path: 'Path / entrypoint',
@@ -3828,7 +3842,7 @@ index 50188f1..93d6723 100644
    petdex: {
      title: 'Petdex Pets',
      subtitle: 'Browse the public petdex catalog used by Hermes desktop pets.',
-@@ -2026,11 +4175,9 @@ export default {
+@@ -2026,11 +4189,9 @@ export default {
        total: 'Catalog total',
        visible: 'Matching',
        kinds: 'Kinds',
@@ -3842,7 +3856,7 @@ index 50188f1..93d6723 100644
    memory: {
      title: 'Memory',
      refresh: 'Refresh',
-@@ -2043,15 +4190,13 @@ export default {
+@@ -2043,15 +4204,13 @@ export default {
      profilePlaceholder: 'Write your profile...',
      soul: 'Soul',
      noSoul: 'No soul configuration yet.',
@@ -3863,7 +3877,7 @@ index 50188f1..93d6723 100644
      title: 'Models',
      searchPlaceholder: 'Search models...',
      noResults: 'No results',
-@@ -2198,7 +4343,7 @@ export default {
+@@ -2198,7 +4357,7 @@ export default {
      customBadge: 'CUSTOM',
      previewBadge: 'PREVIEW',
      disabledBadge: 'UNAVAILABLE',
@@ -3872,7 +3886,7 @@ index 50188f1..93d6723 100644
      customModelPlaceholder: 'Unlisted model ID',
      customModelHint: 'For provider-supported models not returned by the API; not a display rename. Press Enter to load.',
      removeCustomModel: 'Remove this unlisted model',
-@@ -2329,17 +4474,15 @@ export default {
+@@ -2329,17 +4488,15 @@ export default {
      enterBaseUrl: 'Please enter Base URL first',
      unexpectedFormat: 'Unexpected response format',
      foundModels: 'Found {count} models',
@@ -3892,7 +3906,7 @@ index 50188f1..93d6723 100644
    },
    profiles: {
      title: 'Profiles',
-@@ -2404,7 +4547,7 @@ export default {
+@@ -2404,7 +4561,7 @@ export default {
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Default avatar restored',
@@ -3901,7 +3915,7 @@ index 50188f1..93d6723 100644
      },
      runtime: {
        activeProfile: 'Active: {name}',
-@@ -2422,24 +4565,20 @@ export default {
+@@ -2422,24 +4579,20 @@ export default {
        gatewayRestarted: 'Gateway restarted: {name}',
        gatewayRestartFailed: 'Failed to restart gateway',
        profileRestarted: 'Profile restarted: {name}',
@@ -3932,7 +3946,7 @@ index 50188f1..93d6723 100644
    theme: {
      title: 'Theme',
      saved: 'Theme saved',
-@@ -2479,7 +4618,7 @@ export default {
+@@ -2479,7 +4632,7 @@ export default {
      preview: 'Preview',
      previewTitle: 'Your workspace, your atmosphere',
      previewText: 'Text and selection colors update throughout the interface.',
@@ -3941,7 +3955,7 @@ index 50188f1..93d6723 100644
    },
    settings: {
      title: 'Settings',
-@@ -2499,6 +4638,7 @@ export default {
+@@ -2499,6 +4652,7 @@ export default {
        apiServer: 'API Server',
        models: 'Models',
        voice: 'Voice',
@@ -3949,7 +3963,7 @@ index 50188f1..93d6723 100644
      },
      webhooks: {
        title: 'Webhooks',
-@@ -2524,10 +4664,13 @@ export default {
+@@ -2524,10 +4678,13 @@ export default {
          receivedAt: 'Received at',
          event: 'Event',
          eventId: 'Event ID',
@@ -3965,7 +3979,7 @@ index 50188f1..93d6723 100644
          runQueued: 'Run queued',
          runStarted: 'Run started',
          toolStarted: 'Tool started',
-@@ -2538,11 +4681,11 @@ export default {
+@@ -2538,11 +4695,11 @@ export default {
          clarificationRequested: 'Clarification requested',
          clarificationResolved: 'Clarification resolved',
          completed: 'Run completed',
@@ -3979,7 +3993,7 @@ index 50188f1..93d6723 100644
        },
        runtime: {
          idle: 'Idle',
-@@ -2550,7 +4693,7 @@ export default {
+@@ -2550,7 +4707,7 @@ export default {
          retrying: 'Retrying',
          success: 'Delivered',
          failed: 'Failed',
@@ -3988,7 +4002,7 @@ index 50188f1..93d6723 100644
        },
        actions: {
          add: 'Add Webhook',
-@@ -2560,7 +4703,7 @@ export default {
+@@ -2560,7 +4717,7 @@ export default {
          disable: 'Disable',
          refresh: 'Refresh',
          clear: 'Clear',
@@ -3997,7 +4011,7 @@ index 50188f1..93d6723 100644
        },
        form: {
          name: 'Name',
-@@ -2581,7 +4724,7 @@ export default {
+@@ -2581,7 +4738,7 @@ export default {
          includeUserContentHint: 'User messages may contain sensitive information. This is disabled by default and does not include system prompts, reasoning, tool arguments, or tool results.',
          allowPrivateNetwork: 'Allow private or local network addresses',
          allowPrivateNetworkHint: 'Only enable this for trusted internal endpoints. DNS is checked again for every delivery.',
@@ -4006,7 +4020,7 @@ index 50188f1..93d6723 100644
        },
        messages: {
          required: 'Name and URL are required',
-@@ -2596,8 +4739,8 @@ export default {
+@@ -2596,8 +4753,8 @@ export default {
          localTestFailed: 'Failed to create the local test receiver',
          inboxLoadFailed: 'Failed to load local test events',
          inboxCleared: 'Local test events cleared',
@@ -4017,7 +4031,7 @@ index 50188f1..93d6723 100644
      },
      models: {
        apiKey: 'API Key',
-@@ -2605,7 +4748,7 @@ export default {
+@@ -2605,7 +4762,7 @@ export default {
        save: 'Save',
        saved: 'Saved',
        saveFailed: 'Save failed',
@@ -4026,7 +4040,7 @@ index 50188f1..93d6723 100644
      },
      display: {
        streaming: 'Stream Responses',
-@@ -2631,7 +4774,7 @@ export default {
+@@ -2631,7 +4788,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -4035,7 +4049,7 @@ index 50188f1..93d6723 100644
        notifyOnCompleteHint: 'Show a system notification when AI finishes',
        notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
        notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -2653,8 +4796,8 @@ export default {
+@@ -2653,8 +4810,8 @@ export default {
        chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
        linkOpenTarget: 'Open web links in',
        linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
@@ -4046,7 +4060,7 @@ index 50188f1..93d6723 100644
      },
      agent: {
        maxTurns: 'Max Turns',
-@@ -2667,7 +4810,7 @@ export default {
+@@ -2667,7 +4824,7 @@ export default {
        toolEnforcementHint: 'Control tool call execution mode',
        auto: 'Auto',
        always: 'Always',
@@ -4055,7 +4069,7 @@ index 50188f1..93d6723 100644
      },
      gatewayAutoStart: {
        title: 'Gateway Auto-Start',
-@@ -2687,7 +4830,7 @@ export default {
+@@ -2687,7 +4844,7 @@ export default {
        includeHint: 'Comma-separated profile names. In include mode, an empty list starts none.',
        exclude: 'Excluded profiles',
        excludeHint: 'Comma-separated profile names to skip after the include/all policy is applied.',
@@ -4064,7 +4078,7 @@ index 50188f1..93d6723 100644
      },
      proxy: {
        title: 'Gateway Proxy',
-@@ -2700,7 +4843,7 @@ export default {
+@@ -2700,7 +4857,7 @@ export default {
        allProxyHint: 'Fallback proxy used when a protocol-specific proxy is not set.',
        noProxy: 'NO_PROXY',
        noProxyHint: 'Comma-separated hosts or domains that should bypass the proxy.',
@@ -4073,7 +4087,7 @@ index 50188f1..93d6723 100644
      },
      memory: {
        enabled: 'Enable Memory',
-@@ -2710,7 +4853,7 @@ export default {
+@@ -2710,7 +4867,7 @@ export default {
        charLimit: 'Memory Char Limit',
        charLimitHint: 'Max characters for MEMORY.md',
        userCharLimit: 'User Profile Char Limit',
@@ -4082,7 +4096,7 @@ index 50188f1..93d6723 100644
      },
      compression: {
        enabled: 'Enable Compression',
-@@ -2722,7 +4865,7 @@ export default {
+@@ -2722,7 +4879,7 @@ export default {
        protectLastN: 'Protect Recent Messages',
        protectLastNHint: 'Keep this many latest messages uncompressed',
        protectFirstN: 'Protect First Messages',
@@ -4091,7 +4105,7 @@ index 50188f1..93d6723 100644
      },
      session: {
        mode: 'Reset Mode',
-@@ -2771,11 +4914,11 @@ export default {
+@@ -2771,11 +4928,11 @@ export default {
        writeApprovalRequestedOldString: 'Requested old_string',
        writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
        writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
@@ -4105,7 +4119,7 @@ index 50188f1..93d6723 100644
      },
      apiServer: {
        enable: 'Enable',
-@@ -2787,7 +4930,7 @@ export default {
+@@ -2787,7 +4944,7 @@ export default {
        key: 'Key',
        keyHint: 'API access key',
        cors: 'CORS Origins',
@@ -4114,7 +4128,7 @@ index 50188f1..93d6723 100644
      },
      lockedIps: {
        title: 'Locked IPs',
-@@ -2801,8 +4944,8 @@ export default {
+@@ -2801,8 +4958,8 @@ export default {
        type: {
          password: 'Password',
          token: 'API token',
@@ -4125,7 +4139,7 @@ index 50188f1..93d6723 100644
      },
      userAvatar: {
        title: 'User Avatar',
-@@ -2815,7 +4958,7 @@ export default {
+@@ -2815,7 +4972,7 @@ export default {
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Avatar reset to default',
@@ -4134,7 +4148,7 @@ index 50188f1..93d6723 100644
      },
      voice: {
        activeTtsApi: 'Active TTS API',
-@@ -2847,13 +4990,13 @@ export default {
+@@ -2847,13 +5004,13 @@ export default {
          validate: 'Validating model runtime…',
          install: 'Installing model…',
          completed: 'Model is ready',
@@ -4151,7 +4165,7 @@ index 50188f1..93d6723 100644
        providerSpeed: 'Speed',
        providerSampleRate: 'Sample rate',
        providerBitRate: 'Bit rate',
-@@ -2867,7 +5010,7 @@ export default {
+@@ -2867,7 +5024,7 @@ export default {
        optionDisabled: 'Disabled',
        nativeProvider: 'Hermes native provider',
        selectNativeProvider: 'Select a Hermes native provider',
@@ -4160,7 +4174,7 @@ index 50188f1..93d6723 100644
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
-@@ -3024,27 +5167,16 @@ export default {
+@@ -3024,27 +5181,16 @@ export default {
        sttTestEmpty: 'No audio was captured for the STT test.',
        sttTestSucceeded: 'STT test succeeded.',
        sttTestFailed: 'STT test failed: {error} — {hint}',
@@ -4188,7 +4202,7 @@ index 50188f1..93d6723 100644
        sttFailureHintGeneric: 'Check API key, model, and provider account access, then retry.',
        sttTestRecordFailed: 'Could not start microphone recording: {error}',
        sttTestTranscript: 'Transcript: {text}',
-@@ -3054,13 +5186,9 @@ export default {
+@@ -3054,13 +5200,9 @@ export default {
        providerOpenai: 'OpenAI TTS',
        providerCustom: 'Custom Endpoint (OpenAI-compatible)',
        providerEdge: 'Edge TTS (Free, no API Key)',
@@ -4202,7 +4216,7 @@ index 50188f1..93d6723 100644
        openaiKey: 'API Key',
        openaiKeyHint: 'Your OpenAI API key with TTS access',
        openaiUrl: 'API Base URL',
-@@ -3069,8 +5197,6 @@ export default {
+@@ -3069,8 +5211,6 @@ export default {
        openaiModelHint: 'tts-1 (faster) / tts-1-hd (higher quality)',
        openaiVoice: 'Voice',
        openaiVoiceHint: 'Voice to use for synthesis',
@@ -4211,7 +4225,7 @@ index 50188f1..93d6723 100644
        customHint: 'Use any OpenAI-compatible TTS API — works with GPT-SoVITS, CosyVoice, etc.',
        customUrl: 'API URL',
        customUrlHint: 'Base URL of your TTS service',
-@@ -3078,7 +5204,6 @@ export default {
+@@ -3078,7 +5218,6 @@ export default {
        customApiKey: 'API Key (Optional)',
        customApiKeyHint: 'Some custom endpoints require authentication',
        customApiKeyPlaceholder: 'Leave blank if not needed',
@@ -4219,7 +4233,7 @@ index 50188f1..93d6723 100644
        edgeHint: 'Powered by Microsoft Edge TTS (node-edge-tts).',
        edgeUrl: 'Adapter URL',
        edgeUrlHint: 'Address of your Edge TTS adapter, e.g. http://127.0.0.1:9882',
-@@ -3089,8 +5214,6 @@ export default {
+@@ -3089,8 +5228,6 @@ export default {
        edgeRateHint: 'Adjust speech speed (0.5x ~ 2.0x)',
        edgePitch: 'Pitch',
        edgePitchHint: 'Adjust speech pitch (-20 ~ +20 Hz)',
@@ -4228,7 +4242,7 @@ index 50188f1..93d6723 100644
        testTitle: 'Test Voice',
        testText: 'Test Text',
        testTextPlaceholder: 'Enter text to test...',
-@@ -3098,8 +5221,6 @@ export default {
+@@ -3098,8 +5235,6 @@ export default {
        testButton: 'Test',
        testButtonPlaying: 'Playing...',
        testFailed: 'Test failed: {error}',
@@ -4237,7 +4251,7 @@ index 50188f1..93d6723 100644
        providerMimo: 'MiMo TTS',
        mimoHint: 'Xiaomi MiMo TTS — supports preset voices, voice design, and voice clone modes',
        mimoApiKey: 'API Key',
-@@ -3128,136 +5249,144 @@ export default {
+@@ -3128,136 +5263,144 @@ export default {
        mimoCloneAudioClear: 'Clear',
        mimoStylePrompt: 'Style Prompt',
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
@@ -4501,7 +4515,7 @@ index 50188f1..93d6723 100644
    platform: {
      requireMention: "Require {'@'}Mention",
      requireMentionGroup: "Require {'@'}mention in groups to respond",
-@@ -3338,7 +5467,6 @@ export default {
+@@ -3338,7 +5481,6 @@ export default {
      qrFetching: 'Fetching QR code...',
      qrScanHint: 'Scan with WeChat to login',
      qrScanedHint: 'Scaned, please confirm on phone...',
@@ -4509,7 +4523,7 @@ index 50188f1..93d6723 100644
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ Open Platform Bot App ID',
      qqAppSecret: 'App Secret',
-@@ -3347,17 +5475,13 @@ export default {
+@@ -3347,17 +5489,13 @@ export default {
      qqMarkdownHint: 'Enable Markdown formatted messages (some clients may not support)',
      qqSandbox: 'Sandbox Mode',
      qqSandboxHint: 'Enable sandbox environment (for testing)',
@@ -4529,7 +4543,7 @@ index 50188f1..93d6723 100644
    terminal: {
      sessions: 'Sessions',
      newTab: 'New Terminal',
-@@ -3367,20 +5491,26 @@ export default {
+@@ -3367,20 +5505,26 @@ export default {
      noSessions: 'No terminal sessions',
      connectionFailed: 'Terminal service connection failed',
      connectionClosed: 'Terminal connection closed',
@@ -4563,7 +4577,7 @@ index 50188f1..93d6723 100644
      agentPreset: 'Agent preset',
      agentPresets: 'Agent presets',
      agentPresetPlaceholder: 'Select a preset',
-@@ -3502,7 +5632,12 @@ export default {
+@@ -3502,7 +5646,12 @@ export default {
      allAgents: 'All Agents',
      addAgent: 'Add Agent',
      agentType: 'Agent',
@@ -4577,7 +4591,7 @@ index 50188f1..93d6723 100644
      selectProfile: 'Select a profile',
      agentAdded: 'Agent added',
      selectRoomFirst: 'Please select a room first',
-@@ -3586,7 +5721,12 @@ export default {
+@@ -3586,7 +5735,12 @@ export default {
      summaryConfigurationOwnerRequired: 'This room has no summarizer yet. Ask a room administrator to configure it before sending messages.',
      saveSummaryConfig: 'Save summary settings',
      currentSummary: 'Current Summary',
@@ -4591,7 +4605,7 @@ index 50188f1..93d6723 100644
      summaryUpdatedAt: 'Last updated',
      summarizedTurns: 'Summarized effective utterances',
      summaryAnchor: 'Summary anchor',
-@@ -3598,31 +5738,9 @@ export default {
+@@ -3598,31 +5752,9 @@ export default {
      saveSummary: 'Save summary',
      summaryUpdated: 'Summary updated',
      summaryNever: 'Never',
@@ -4624,7 +4638,7 @@ index 50188f1..93d6723 100644
      title: 'Usage Statistics',
      refresh: 'Refresh',
      totalTokens: 'Total Tokens',
-@@ -3634,7 +5752,20 @@ export default {
+@@ -3634,7 +5766,20 @@ export default {
      cacheHitRate: 'Cache Hit Rate',
      modelBreakdown: 'Model Breakdown',
      agentBreakdown: 'Agent Breakdown',
@@ -4646,7 +4660,7 @@ index 50188f1..93d6723 100644
      dailyTrend: 'Daily Usage',
      date: 'Date',
      tokens: 'Tokens',
-@@ -3644,6 +5775,26 @@ export default {
+@@ -3644,6 +5789,26 @@ export default {
      sessions: 'Sessions',
      cost: 'Cost',
      noData: 'No usage data',
@@ -4673,7 +4687,7 @@ index 50188f1..93d6723 100644
    },
    skillsUsage: {
      title: 'Skills Usage',
-@@ -3664,10 +5815,8 @@ export default {
+@@ -3664,10 +5829,8 @@ export default {
      lastUsed: 'Last Used',
      noData: 'No skill usage data',
      loadFailed: 'Failed to load skill usage',
@@ -4685,7 +4699,7 @@ index 50188f1..93d6723 100644
    files: {
      title: 'Files',
      fileTree: 'File Tree',
-@@ -3735,8 +5884,8 @@ export default {
+@@ -3735,8 +5898,8 @@ export default {
      zoom: 'Zoom',
      pdfPageLimit: 'Preview is limited to the first {count} pages.',
      tableTruncated: 'The preview was truncated to keep the interface responsive. Download the file to inspect all rows and columns.',
@@ -4695,7 +4709,7 @@ index 50188f1..93d6723 100644
    download: {
      downloading: 'Downloading...',
      downloadFailed: 'Download failed',
-@@ -3748,35 +5897,9 @@ export default {
+@@ -3748,35 +5911,9 @@ export default {
      invalidPath: 'Invalid file path',
      contentDisplay: 'Content display',
      download: 'Download',
@@ -4732,7 +4746,7 @@ index 50188f1..93d6723 100644
      new_0_7_25_1: 'Added Cursor CLI support for chat, group chats, and workflows, with native settings, skills management, and isolated Studio MCP (#3110)',
      new_0_7_25_2: 'Added configurable JEV memory recall, relevance filtering, write review, skill matching, and learning preflight (#3159, #3161, #3169)',
      new_0_7_25_3: 'Added optional JEV browser target matching and action verification, group summary review and message routing, and workflow quality checks (#3208, #3211)',
-@@ -3810,7 +5933,7 @@ export default {
+@@ -3810,7 +5947,7 @@ export default {
      new_0_7_22_5: 'Restored Studio MCP tools in global Coding Agent sessions and improved executable search paths and missing-command errors (#3044, #3055)',
      new_0_7_22_6: 'Added version declarations to Studio-generated DSH plugin manifests for compatibility (#3038)',
      new_0_7_22_7: 'Fixed API URL configuration migration reading the next line when BASE_URL is empty (#3046)',
@@ -4741,7 +4755,7 @@ index 50188f1..93d6723 100644
      new_0_7_22_9: 'Fixed truncated or incorrectly split multi-line arrays, strings and arrays of tables in scoped Grok session configuration (#3072)',
      new_0_7_22_10: 'Fixed lost browser executable permissions and symbolic links in desktop runtime bundles, added Hermes 0.21.3 compatibility, and prevented runtime releases from replacing the latest desktop release marker (#3073)',
      new_0_7_21_1: 'Fixed DSH plugin configuration and Agent preset pages failing to open on Windows when startup selected the wrong command script (#3026)',
-@@ -3827,7 +5950,7 @@ export default {
+@@ -3827,7 +5964,7 @@ export default {
      new_0_7_20_10: 'Fixed approval session association for Hermes Agent 0.21 and later while retaining compatibility with older runtimes (#3018)',
      new_0_7_20_11: 'Updated default apikey domains to apikey.fan and added a one-time startup migration of old endpoints in existing Hermes configurations, preserving paths, keys, and model settings (#3022)',
      new_0_7_20_12: 'Improved Linux launcher and window icons with rounded corners and transparent margins for a more balanced visual size (#3008)',
@@ -4750,7 +4764,7 @@ index 50188f1..93d6723 100644
      new_0_7_19_2: 'Fixed desktop restart loops, interrupted updates, and startup failures; preserved sign-in and browser data across upgrades and migrated Windows startup settings (#2931, #2979, #2988)',
      new_0_7_19_3: 'Added native OpenCode Free with keyless chat creation and Coding Agent access; available models load in the background (#2932)',
      new_0_7_19_4: 'Fixed OpenCode session compatibility for Ekko and Coding Agents routed through Studio; Hermes still requires a runtime upgrade (#2996)',
-@@ -3863,7 +5986,7 @@ export default {
+@@ -3863,7 +6000,7 @@ export default {
      new_0_7_16_1: 'Desktop now handles Runtime restart requests from its bundled Web UI through Electron, using a clean relaunch with duplicate protection while standalone Web UI restarts continue to work (#2827)',
      new_0_7_16_2: 'Workflows and group chats can now launch Claude, Codex, and Pi Agents in scoped or global mode; global runs keep Studio-managed prompts and environments isolated while preserving user configuration (#2828)',
      new_0_7_16_3: 'Grok CLI is now a first-class Coding Agent with scoped proxy models, isolated global mode, native session resume, usage tracking, Skills, workflows, and group chat support (#2832)',
@@ -4759,7 +4773,7 @@ index 50188f1..93d6723 100644
      new_0_7_16_5: 'Windows legacy data migration now copies only user data and database sidecars with validation and rollback, excluding replaceable Runtimes, sessions, and logs to avoid locked-file failures (#2836)',
      new_0_7_15_1: 'Hermes Runtime version detection now probes the selected local environment directly without triggering network update checks, keeping startup and Version Management reliable offline (#2822)',
      new_0_7_15_2: 'Activating or installing a Runtime now asks whether to restart immediately; choosing “next launch” no longer restarts the desktop or standalone Web UI automatically (#2822)',
-@@ -3872,7 +5995,7 @@ export default {
+@@ -3872,7 +6009,7 @@ export default {
      new_0_7_13_1: 'Windows Runtime installation and cleanup now retry files temporarily locked by Defender or indexers, preventing EACCES, EBUSY, ENOTEMPTY, and EPERM failures when removing or activating downloaded versions (#2801)',
      new_0_7_13_2: 'Creating Hermes chats now reuses the lightweight Agent availability status; only administrators are sent to installation when Hermes is missing, and failed status checks no longer block chat creation (#2805)',
      new_0_7_13_3: 'Desktop, the backend Bridge, and CLI now share one locked Hermes environment selection; Version Management shows the active CLI, environment details, and data-directory override guidance, and can install a missing Runtime on demand (#2808)',
@@ -4768,7 +4782,7 @@ index 50188f1..93d6723 100644
      new_0_7_12_2: 'Windows Ekko and Hermes startup now defers locked Skill resets for retry and launches command shims correctly, preventing EPERM and spawn EINVAL startup failures (#2796)',
      new_0_7_12_3: 'Ekko now rejects incomplete model tool calls and removes invalid tool-call history before retrying, preventing empty function, name, or arguments failures across compatible models (#2796)',
      new_0_7_12_4: 'Database, Skills, memory, and logs now fail independently: Core chat remains available, unavailable modules are marked degraded, and each incident exposes its cause and repair context (#2797)',
-@@ -3896,5 +6019,859 @@ export default {
+@@ -3896,5 +6033,860 @@ export default {
      new_0_7_0_9: 'Server ownership is now divided into canonical Studio, Hermes, Ekko, and Coding Agent modules, while legacy MCU routes remain compatible and shutdown reliably cleans up Studio-owned process trees (#2744, #2746, #2747)',
      new_0_7_0_10: 'The English and Chinese READMEs now document the five runtimes, three Agent families, module ownership, canonical APIs, and current development and validation workflows (#2745)',
      new_0_7_0_11: 'Device Connections now shows only Android and iOS download cards; official Apple releases are labeled App Store instead of TestFlight · App Store',
@@ -5001,7 +5015,7 @@ index 50188f1..93d6723 100644
 +    completionSummaryHint: 'Enter a summary for this task. It is stored as the task result.',
 +    scheduleTitle: 'Schedule',
 +    yearLabel: 'Year',
-+    itemCount: '{count} items',
++    itemCount: '{n} items',
 +    aggregateSessions: 'Aggregate linked sessions',
 +    termTool: 'Terminal tool',
 +    termToolNotInstalled: 'not installed',
@@ -5079,6 +5093,7 @@ index 50188f1..93d6723 100644
 +    taskSwimlane: 'Task Swimlane',
 +    taskTimeline: 'Task Timeline',
 +    taskTopology: 'Task Topology',
++    focusTask: ' · focused {id}',
 +    tenant: 'Tenant',
 +    timeWindow: 'Time Window',
 +    timelinePrefix: 'Timeline',
@@ -5629,7 +5644,7 @@ index 50188f1..93d6723 100644
 +  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 940946d..689339b 100644
+index 940946d..92c25da 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -2,294 +2,384 @@ import { socialMessagesZh } from '../social-messages'
@@ -6439,7 +6454,7 @@ index 940946d..689339b 100644
      theme: '主题',
      settings: '设置',
      connected: '已连接',
-@@ -575,8 +650,1585 @@ export default {
+@@ -575,8 +650,1599 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -6449,6 +6464,19 @@ index 940946d..689339b 100644
 +    systemGroup: '系统'
 +  },
 +  ide: {
++    tools: {
++      title: '工具时间线',
++      empty: '当前会话暂无工具调用'
++    },
++    wf: {
++      title: '会话运行',
++      empty: "当前没有正在跑的工作流运行。会话里 agent 调用工作流工具（或 {'@'}zcode 派单触发）后，运行行实时出现在这里。"
++    },
++    slash: {
++      title: '自定义斜杠命令',
++      hint: '在 /ide 输入框键入 / 即可选用；选中后模板写入输入框，可编辑再发送。',
++      empty: '暂无自定义命令'
++    },
 +    dims: {
 +      workspace: '工作空间',
 +      task: '任务',
@@ -6820,6 +6848,7 @@ index 940946d..689339b 100644
 +    },
 +    paletteCmdReview: '评审当前改动（只读）',
 +    hooks: {
++      add: '新增',
 +      title: 'Hooks',
 +      refresh: '刷新',
 +      loadFailed: 'Hooks 加载失败',
@@ -8026,7 +8055,7 @@ index 940946d..689339b 100644
    agentManager: {
      title: 'Agent 管理',
      subtitle: '统一发现和管理这台设备上的 Agent。',
-@@ -599,7 +2251,6 @@ export default {
+@@ -599,7 +2265,6 @@ export default {
      ekkoDescription: 'Ekko 随 Studio 提供，无需单独安装、升级或删除。',
      version: '版本',
      codingAgentDescription: '可由 Studio 安装、检查更新和删除。',
@@ -8034,7 +8063,7 @@ index 940946d..689339b 100644
      cursorDescription: '请从 https://cursor.com/install 安装 Cursor CLI（`agent`），然后刷新。Studio 不会用 npm 安装。',
      cursorNoManagedConfig: '启动不会改写 ~/.cursor/mcp.json。托管服务写在本次会话的运行时副本里。',
      updateToVersion: '更新到 {version}',
-@@ -611,18 +2262,18 @@ export default {
+@@ -611,18 +2276,18 @@ export default {
      aiHelpDialogPositive: '询问 AI',
      aiHelpDrawerTitle: 'Ekko · Agent 管理排障',
      aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
@@ -8057,7 +8086,7 @@ index 940946d..689339b 100644
    runtimeVersions: {
      title: '版本管理',
      runtimeTitle: 'Hermes Runtime',
-@@ -639,8 +2290,8 @@ export default {
+@@ -639,8 +2304,8 @@ export default {
      dataDirectoryEnvMacos: 'macOS（桌面端 / 终端）',
      dataDirectoryEnvLinux: 'Linux（登录环境）',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -8068,7 +8097,7 @@ index 940946d..689339b 100644
      webUiTitle: 'Web UI',
      platform: '平台',
      currentWebUi: '当前 Web UI',
-@@ -649,10 +2300,10 @@ export default {
+@@ -649,10 +2314,10 @@ export default {
      chooseRuntimeDirectory: '选择目录',
      resetRuntimeDirectory: '恢复系统默认',
      runtimeDirectoryHint: '下次重启时会在本地服务启动前复制并校验当前 Runtime，旧目录会保留；后续 Runtime 下载也会保存在这里。',
@@ -8081,7 +8110,7 @@ index 940946d..689339b 100644
      active: '已启用',
      installed: '已安装',
      download: '下载',
-@@ -671,7 +2322,7 @@ export default {
+@@ -671,7 +2336,7 @@ export default {
      remoteLoadFailed: '远程版本加载失败',
      downloadTasks: '下载任务',
      downloadStarted: '已开始下载',
@@ -8090,7 +8119,7 @@ index 940946d..689339b 100644
      restartPromptTitle: 'Runtime 已就绪',
      restartPromptContent: 'Hermes Runtime {version} 已安装完成，是否立即重启并使用该版本？',
      restartLater: '稍后',
-@@ -681,7 +2332,7 @@ export default {
+@@ -681,7 +2346,7 @@ export default {
        queued: '排队中',
        running: '下载中',
        completed: '已完成',
@@ -8099,7 +8128,7 @@ index 940946d..689339b 100644
      },
      jobStageStatus: {
        queued: '排队中',
-@@ -691,7 +2342,7 @@ export default {
+@@ -691,7 +2356,7 @@ export default {
        extract: '解压中',
        install: '安装中',
        completed: '已完成',
@@ -8108,7 +8137,7 @@ index 940946d..689339b 100644
      },
      jobStage: {
        queued: '排队中',
-@@ -705,10 +2356,9 @@ export default {
+@@ -705,10 +2370,9 @@ export default {
        extractWebUi: '正在解压 Web UI 压缩包',
        installWebUi: '正在安装 Web UI',
        completed: '已完成',
@@ -8121,7 +8150,7 @@ index 940946d..689339b 100644
    mcuDevices: {
      title: '小方盒',
      subtitle: '管理小方盒语音交互设备及其连接',
-@@ -748,15 +2398,14 @@ export default {
+@@ -748,15 +2412,14 @@ export default {
      deleted: 'MCU 设备已删除',
      deleteFailed: '删除 MCU 设备失败',
      loadFailed: '加载 MCU 设备失败',
@@ -8139,7 +8168,7 @@ index 940946d..689339b 100644
      },
      app: {
        subtitle: '让 App 连接你的设备',
-@@ -764,9 +2413,9 @@ export default {
+@@ -764,9 +2427,9 @@ export default {
        viewList: '列表',
        viewDownload: '下载',
        viewMessages: '消息推送',
@@ -8151,7 +8180,7 @@ index 940946d..689339b 100644
        downloadScan: '手机扫码下载',
        downloadScanHint: '当前提供 Android 安装包',
        available: '可下载',
-@@ -805,19 +2454,19 @@ export default {
+@@ -805,19 +2468,19 @@ export default {
          internal: '内测',
          public_beta: '公测',
          paid: '收费',
@@ -8174,7 +8203,7 @@ index 940946d..689339b 100644
        },
        deviceName: '设备名称',
        deviceBrand: '设备品牌',
-@@ -828,13 +2477,13 @@ export default {
+@@ -828,13 +2491,13 @@ export default {
        authorizedUser: '授权用户',
        connectionTypes: {
          lan: '局域网',
@@ -8192,7 +8221,7 @@ index 940946d..689339b 100644
        online: '在线',
        offline: '离线',
        active: '有效',
-@@ -845,10 +2494,9 @@ export default {
+@@ -845,10 +2508,9 @@ export default {
        deleted: 'App 连接已删除',
        deleteFailed: '删除 App 连接失败',
        empty: '暂无已连接 App',
@@ -8205,7 +8234,7 @@ index 940946d..689339b 100644
    devices: {
      title: '设备',
      subtitle: '管理已连接设备、配对请求及远程访问',
-@@ -904,22 +2552,21 @@ export default {
+@@ -904,22 +2566,21 @@ export default {
        pending: '待处理',
        approved: '已通过',
        rejected: '已拒绝',
@@ -8232,7 +8261,7 @@ index 940946d..689339b 100644
    performance: {
      title: '性能监控',
      subtitle: '查看系统资源、Bridge Broker、Workers 和活跃会话',
-@@ -947,9 +2594,8 @@ export default {
+@@ -947,9 +2608,8 @@ export default {
      status: '状态',
      noWorkers: '暂无 Worker',
      sessionsByProfile: '按 Profile 统计会话',
@@ -8243,7 +8272,7 @@ index 940946d..689339b 100644
    journey: {
      title: '学习轨迹',
      play: '播放学习轨迹',
-@@ -979,21 +2625,28 @@ export default {
+@@ -979,21 +2639,28 @@ export default {
      useCount: '使用次数',
      createdBy: '创建来源',
      timestamp: '时间',
@@ -8281,7 +8310,7 @@ index 940946d..689339b 100644
    realtimeVoice: {
      title: '实时语音',
      mode: '语音模式',
-@@ -1016,7 +2669,15 @@ export default {
+@@ -1016,7 +2683,15 @@ export default {
      finishTurn: '结束本轮',
      speak: '开始说话',
      end: '结束',
@@ -8298,7 +8327,7 @@ index 940946d..689339b 100644
      hint: {
        idle: '轻触中央区域开始一轮语音',
        paused: '准备好后重新打开麦克风',
-@@ -1025,25 +2686,23 @@ export default {
+@@ -1025,25 +2700,23 @@ export default {
        processing: '正在将你的语音转换为文字',
        thinking: '消息已发送到当前对话',
        speaking: '你可以随时打断回答',
@@ -8339,7 +8368,7 @@ index 940946d..689339b 100644
      contextRemaining: '剩余',
      contextClickToEdit: '点击编辑上下文长度',
      contextEditTitle: '编辑上下文长度',
-@@ -1070,7 +2729,7 @@ export default {
+@@ -1070,7 +2743,7 @@ export default {
      slashCommandArgs: {
        message: '<消息>',
        title: '<标题>',
@@ -8348,7 +8377,7 @@ index 940946d..689339b 100644
      },
      slashCommands: {
        usage: '计算当前会话用量',
-@@ -1100,7 +2759,7 @@ export default {
+@@ -1100,7 +2773,7 @@ export default {
        reloadMcp: '重载 MCP 服务器',
        reloadSkills: '重载技能命令',
        bundles: '查看 Skill Bundle',
@@ -8357,7 +8386,7 @@ index 940946d..689339b 100644
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1115,7 +2774,7 @@ export default {
+@@ -1115,7 +2788,7 @@ export default {
        deleteFailed: '删除 Bundle 失败',
        deleted: 'Bundle 已删除',
        noBundles: '还没有 Bundle，可创建一个来组合多个 Skills。',
@@ -8366,7 +8395,7 @@ index 940946d..689339b 100644
      },
      bundleCreator: {
        title: '创建 Skill Bundle',
-@@ -1131,7 +2790,7 @@ export default {
+@@ -1131,7 +2804,7 @@ export default {
        skillsRequired: '请至少选择一个 Skill',
        skillsLoadFailed: '加载 Skills 失败',
        createFailed: '创建 Bundle 失败',
@@ -8375,7 +8404,7 @@ index 940946d..689339b 100644
      },
      attachFiles: '添加附件',
      reasoningEffort: {
-@@ -1147,8 +2806,8 @@ export default {
+@@ -1147,8 +2820,8 @@ export default {
          high: '高',
          max: 'Max',
          xhigh: '超高',
@@ -8386,7 +8415,7 @@ index 940946d..689339b 100644
      },
      autoPlaySpeech: '自动播放语音',
      voiceInput: {
-@@ -1164,17 +2823,17 @@ export default {
+@@ -1164,17 +2837,17 @@ export default {
          capturing: '正在聆听',
          transcribing: '正在转写',
          sending: '正在插入输入框',
@@ -8407,7 +8436,7 @@ index 940946d..689339b 100644
      hideToolCalls: '隐藏工具调用',
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
-@@ -1203,7 +2862,7 @@ export default {
+@@ -1203,7 +2876,7 @@ export default {
      searchTitle: '搜索会话',
      searchSubtitle: '按标题或消息内容搜索',
      searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
@@ -8416,7 +8445,7 @@ index 940946d..689339b 100644
      searchPlaceholder: '搜索会话...',
      searchEmpty: '最近会话',
      searchRecent: '最近会话',
-@@ -1254,9 +2913,7 @@ export default {
+@@ -1254,9 +2927,7 @@ export default {
      newCliChat: '新建 CLI',
      deleteSession: '确定删除此会话？',
      sessionDeleted: '会话已删除',
@@ -8427,7 +8456,7 @@ index 940946d..689339b 100644
      toggleBatchMode: '批量选择',
      selectAll: '全选',
      confirmBatchDelete: '确定删除选中的 {count} 个会话？',
-@@ -1358,11 +3015,32 @@ export default {
+@@ -1358,11 +3029,32 @@ export default {
      resumeSpeech: '继续',
      stopSpeech: '停止',
      speechNotSupported: '此浏览器不支持语音播放',
@@ -8463,7 +8492,7 @@ index 940946d..689339b 100644
      title: '工作流',
      profile: '配置',
      namePlaceholder: '工作流名称',
-@@ -1370,7 +3048,7 @@ export default {
+@@ -1370,7 +3062,7 @@ export default {
      workspace: {
        title: '选择工作区',
        select: '选择工作区',
@@ -8472,7 +8501,7 @@ index 940946d..689339b 100644
      },
      actions: {
        newWorkflow: '新建工作流',
-@@ -1396,145 +3074,356 @@ export default {
+@@ -1396,145 +3088,356 @@ export default {
        imported: 'Workflow 导入成功',
        exported: 'Workflow 导出成功',
        importFailed: 'Workflow 导入失败',
@@ -8926,7 +8955,7 @@ index 940946d..689339b 100644
        },
        jsonFieldOperatorHelp: {
          equals: '读取 {path} 对应的字段 value。只有该字段值与“{value}”完全相同时才匹配；不会比较字段名。',
-@@ -1542,14 +3431,18 @@ export default {
+@@ -1542,14 +3445,18 @@ export default {
          contains: '读取 {path} 对应的字段 value，并检查这个值是否包含“{value}”；不会搜索字段名。',
          not_contains: '读取 {path} 对应的字段 value。只有这个值不包含“{value}”时才匹配；不会搜索字段名。',
          exists: '{path} 对应的 JSON 字段存在时匹配，不比较字段 value。',
@@ -8950,7 +8979,7 @@ index 940946d..689339b 100644
      },
      batch: {
        toggle: '批量选择',
-@@ -1557,7 +3450,7 @@ export default {
+@@ -1557,7 +3464,7 @@ export default {
        confirmDelete: '确定删除选中的 {count} 个工作流？',
        deleteSuccess: '已删除 {count} 个工作流',
        deletePartial: '{failed} 个工作流删除失败',
@@ -8959,7 +8988,7 @@ index 940946d..689339b 100644
      },
      validation: {
        nodesRequired: '请至少添加一个节点',
-@@ -1570,7 +3463,7 @@ export default {
+@@ -1570,7 +3477,7 @@ export default {
        invalidConnectionDirection: '连接线只能从右侧输出连接到左侧输入',
        orphanNode: '节点 {node} 没有连接到流程',
        disconnectedFlow: '流程不能拆成多条互不连接的链路',
@@ -8968,7 +8997,7 @@ index 940946d..689339b 100644
      },
      node: {
        title: '节点名称',
-@@ -1586,7 +3479,7 @@ export default {
+@@ -1586,7 +3493,7 @@ export default {
        joinAnyHelp: '任一入线生效就执行一次；只有全部都不匹配才跳过。示例：任一审核人批准后继续。',
        promptPlaceholder: '描述这个 Agent 要做什么...',
        skillsPlaceholder: '技能，按 Enter 添加',
@@ -8977,7 +9006,7 @@ index 940946d..689339b 100644
      },
      status: {
        idle: '空闲',
-@@ -1597,7 +3490,7 @@ export default {
+@@ -1597,7 +3504,7 @@ export default {
        skipped: '已跳过',
        failed: '失败',
        approval_rejected: '审批拒绝',
@@ -8986,7 +9015,7 @@ index 940946d..689339b 100644
      },
      runs: {
        title: '执行记录',
-@@ -1614,26 +3507,26 @@ export default {
+@@ -1614,26 +3521,26 @@ export default {
        stopRequested: '已请求停止执行',
        stopFailed: '停止执行失败',
        delete: '删除记录',
@@ -9018,7 +9047,7 @@ index 940946d..689339b 100644
      },
      initialNodes: {
        node1: '节点 1',
-@@ -1641,7 +3534,7 @@ export default {
+@@ -1641,7 +3548,7 @@ export default {
        node3: '节点 3',
        plan: '规划',
        execute: '执行',
@@ -9027,7 +9056,7 @@ index 940946d..689339b 100644
      },
      initialPrompts: {
        node1: '输入这个节点的内容。',
-@@ -1649,12 +3542,11 @@ export default {
+@@ -1649,12 +3556,11 @@ export default {
        node3: '输入这个节点的内容。',
        plan: '把需求拆成可执行步骤。',
        execute: '执行实现步骤并产出结果。',
@@ -9042,7 +9071,7 @@ index 940946d..689339b 100644
    kanban: {
      title: '看板',
      createTask: '新建任务',
-@@ -1671,6 +3563,22 @@ export default {
+@@ -1671,6 +3577,22 @@ export default {
        archived: '看板已归档',
        archiveConfirm: '确定归档当前看板？',
        defaultArchiveUnavailable: '默认看板不能归档',
@@ -9065,7 +9094,7 @@ index 940946d..689339b 100644
      },
      columns: {
        triage: '待分拣',
-@@ -1681,7 +3589,7 @@ export default {
+@@ -1681,7 +3603,7 @@ export default {
        blocked: '阻塞',
        review: '待审查',
        done: '已完成',
@@ -9074,7 +9103,7 @@ index 940946d..689339b 100644
      },
      form: {
        title: '标题',
-@@ -1713,20 +3621,29 @@ export default {
+@@ -1713,20 +3635,29 @@ export default {
        maxRetriesPlaceholder: '重试次数',
        goalMaxTurns: '目标最大轮次',
        goalMaxTurnsPlaceholder: '最大轮次',
@@ -9107,7 +9136,7 @@ index 940946d..689339b 100644
      },
      detail: {
        status: '状态',
-@@ -1749,7 +3666,7 @@ export default {
+@@ -1749,7 +3680,7 @@ export default {
        noLog: '未找到该任务的日志。',
        addComment: '添加评论',
        commentPlaceholder: '输入任务评论...',
@@ -9116,7 +9145,7 @@ index 940946d..689339b 100644
      },
      action: {
        title: '操作',
-@@ -1758,7 +3675,6 @@ export default {
+@@ -1758,7 +3689,6 @@ export default {
        block: '阻塞',
        blockReason: '阻塞原因',
        unblock: '解除阻塞',
@@ -9124,7 +9153,7 @@ index 940946d..689339b 100644
        archiveConfirm: '确定归档这个已完成任务？',
        assign: '分配',
        assignTo: '分配给...',
-@@ -1769,6 +3685,11 @@ export default {
+@@ -1769,6 +3699,11 @@ export default {
        specify: '细化',
        loadLog: '加载日志',
        loadDiagnostics: '加载诊断',
@@ -9136,7 +9165,7 @@ index 940946d..689339b 100644
      },
      message: {
        taskCreated: '任务已创建',
-@@ -1783,15 +3704,202 @@ export default {
+@@ -1783,15 +3718,202 @@ export default {
        taskReassigned: '任务已重新分配',
        taskSpecified: '任务已细化',
        loadFailed: '加载任务失败',
@@ -9343,7 +9372,7 @@ index 940946d..689339b 100644
    jobs: {
      title: '定时任务',
      createJob: '创建任务',
-@@ -1852,7 +3960,7 @@ export default {
+@@ -1852,7 +3974,7 @@ export default {
        running: '运行中',
        paused: '已暂停',
        disabled: '已禁用',
@@ -9352,7 +9381,7 @@ index 940946d..689339b 100644
      },
      info: {
        model: '模型',
-@@ -1861,7 +3969,7 @@ export default {
+@@ -1861,7 +3983,7 @@ export default {
        lastRun: '上次运行',
        nextRun: '下次运行',
        deliver: '投递',
@@ -9361,7 +9390,7 @@ index 940946d..689339b 100644
      },
      action: {
        pause: '暂停',
-@@ -1869,24 +3977,21 @@ export default {
+@@ -1869,24 +3991,21 @@ export default {
        resume: '恢复',
        resumeJob: '恢复任务',
        runNow: '立即运行',
@@ -9390,7 +9419,7 @@ index 940946d..689339b 100644
      },
      searchPlaceholder: '搜索技能...',
      noMatch: '没有匹配的技能',
-@@ -1911,7 +4016,7 @@ export default {
+@@ -1911,7 +4030,7 @@ export default {
        builtin: '内置',
        hub: 'Hub 安装',
        local: '本地安装',
@@ -9399,7 +9428,7 @@ index 940946d..689339b 100644
      },
      delete: '删除',
      deleteConfirm: '确定要删除技能 "{name}" 吗？此操作不可撤销。',
-@@ -1934,7 +4039,7 @@ export default {
+@@ -1934,7 +4053,7 @@ export default {
      importFailed: '导入失败',
      path: {
        local: '本地',
@@ -9408,7 +9437,7 @@ index 940946d..689339b 100644
      },
      externalDirs: {
        manage: '外部目录',
-@@ -1948,7 +4053,7 @@ export default {
+@@ -1948,7 +4067,7 @@ export default {
        saveSuccess: '外部目录已保存',
        saveFailed: '保存失败',
        loadFailed: '加载外部目录失败',
@@ -9417,7 +9446,7 @@ index 940946d..689339b 100644
      },
      pathCopied: '路径已复制',
      pathCopyFailed: '复制路径失败',
-@@ -1980,9 +4085,8 @@ export default {
+@@ -1980,9 +4099,8 @@ export default {
      writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
      writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
      writeApprovalRemoveFile: '这次审批会从技能 {skill} 中移除文件 {file}。',
@@ -9428,7 +9457,7 @@ index 940946d..689339b 100644
    plugins: {
      title: '插件',
      refresh: '刷新',
-@@ -2008,28 +4112,28 @@ export default {
+@@ -2008,28 +4126,28 @@ export default {
        active: '已启用 / 自动',
        inactive: '未启用',
        disabled: '已禁用',
@@ -9464,7 +9493,7 @@ index 940946d..689339b 100644
      },
      table: {
        plugin: '插件',
-@@ -2038,21 +4142,20 @@ export default {
+@@ -2038,21 +4156,20 @@ export default {
        kind: '类型',
        capabilities: '能力',
        path: '路径 / 入口',
@@ -9490,7 +9519,7 @@ index 940946d..689339b 100644
    petdex: {
      title: 'Petdex 宠物',
      subtitle: '浏览 Hermes 桌宠使用的 petdex 公共图库。',
-@@ -2072,11 +4175,9 @@ export default {
+@@ -2072,11 +4189,9 @@ export default {
        total: '图库总数',
        visible: '匹配数量',
        kinds: '类型数',
@@ -9504,7 +9533,7 @@ index 940946d..689339b 100644
    memory: {
      title: '记忆',
      refresh: '刷新',
-@@ -2089,15 +4190,13 @@ export default {
+@@ -2089,15 +4204,13 @@ export default {
      profilePlaceholder: '输入用户画像...',
      soul: '灵魂',
      noSoul: '暂无灵魂配置。',
@@ -9525,7 +9554,7 @@ index 940946d..689339b 100644
      title: '模型',
      searchPlaceholder: '搜索模型...',
      noResults: '无结果',
-@@ -2244,7 +4343,7 @@ export default {
+@@ -2244,7 +4357,7 @@ export default {
      customBadge: '自定义',
      previewBadge: '预览',
      disabledBadge: '不可用',
@@ -9534,7 +9563,7 @@ index 940946d..689339b 100644
      customModelPlaceholder: '未列出的模型 ID',
      customModelHint: '仅用于 provider 支持但未返回的模型；不是重命名。按回车加载。',
      removeCustomModel: '移除这个未列出的模型',
-@@ -2375,10 +4474,8 @@ export default {
+@@ -2375,10 +4488,8 @@ export default {
      enterBaseUrl: '请先输入 Base URL',
      unexpectedFormat: '响应格式异常',
      foundModels: '找到 {count} 个模型',
@@ -9546,7 +9575,7 @@ index 940946d..689339b 100644
    profiles: {
      title: '配置',
      create: '创建配置',
-@@ -2442,7 +4539,7 @@ export default {
+@@ -2442,7 +4553,7 @@ export default {
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -9555,7 +9584,7 @@ index 940946d..689339b 100644
      },
      runtime: {
        activeProfile: '当前：{name}',
-@@ -2460,24 +4557,20 @@ export default {
+@@ -2460,24 +4571,20 @@ export default {
        gatewayRestarted: '网关已重启：{name}',
        gatewayRestartFailed: '重启网关失败',
        profileRestarted: '配置已重启：{name}',
@@ -9586,7 +9615,7 @@ index 940946d..689339b 100644
    theme: {
      title: '主题',
      saved: '主题已保存',
-@@ -2517,7 +4610,7 @@ export default {
+@@ -2517,7 +4624,7 @@ export default {
      preview: '预览',
      previewTitle: '打造属于你的工作空间',
      previewText: '文字和选中颜色会同步应用到整个界面。',
@@ -9595,7 +9624,7 @@ index 940946d..689339b 100644
    },
    settings: {
      title: '设置',
-@@ -2537,6 +4630,7 @@ export default {
+@@ -2537,6 +4644,7 @@ export default {
        apiServer: 'API 服务器',
        models: '模型',
        voice: '语音',
@@ -9603,7 +9632,7 @@ index 940946d..689339b 100644
      },
      webhooks: {
        title: 'Webhook',
-@@ -2562,10 +4656,13 @@ export default {
+@@ -2562,10 +4670,13 @@ export default {
          receivedAt: '接收时间',
          event: '事件',
          eventId: 'Event ID',
@@ -9619,7 +9648,7 @@ index 940946d..689339b 100644
          runQueued: '运行已排队',
          runStarted: '运行已开始',
          toolStarted: '工具已开始',
-@@ -2576,11 +4673,11 @@ export default {
+@@ -2576,11 +4687,11 @@ export default {
          clarificationRequested: '请求澄清',
          clarificationResolved: '澄清已处理',
          completed: '运行完成',
@@ -9633,7 +9662,7 @@ index 940946d..689339b 100644
        },
        runtime: {
          idle: '空闲',
-@@ -2588,7 +4685,7 @@ export default {
+@@ -2588,7 +4699,7 @@ export default {
          retrying: '等待重试',
          success: '已送达',
          failed: '投递失败',
@@ -9642,7 +9671,7 @@ index 940946d..689339b 100644
        },
        actions: {
          add: '添加 Webhook',
-@@ -2598,7 +4695,7 @@ export default {
+@@ -2598,7 +4709,7 @@ export default {
          disable: '停用',
          refresh: '刷新',
          clear: '清空',
@@ -9651,7 +9680,7 @@ index 940946d..689339b 100644
        },
        form: {
          name: '名称',
-@@ -2619,7 +4716,7 @@ export default {
+@@ -2619,7 +4730,7 @@ export default {
          includeUserContentHint: '用户消息可能包含敏感信息，默认关闭。系统提示词、推理过程、工具参数和工具结果不会随此开关发送。',
          allowPrivateNetwork: '允许私网或本机地址',
          allowPrivateNetworkHint: '仅对可信的内部接收端开启；每次投递前都会重新检查 DNS。',
@@ -9660,7 +9689,7 @@ index 940946d..689339b 100644
        },
        messages: {
          required: '名称和 URL 不能为空',
-@@ -2634,8 +4731,8 @@ export default {
+@@ -2634,8 +4745,8 @@ export default {
          localTestFailed: '创建本机测试接收器失败',
          inboxLoadFailed: '加载本机测试事件失败',
          inboxCleared: '本机测试事件已清空',
@@ -9671,7 +9700,7 @@ index 940946d..689339b 100644
      },
      models: {
        apiKey: 'API Key',
-@@ -2643,7 +4740,7 @@ export default {
+@@ -2643,7 +4754,7 @@ export default {
        save: '保存',
        saved: '已保存',
        saveFailed: '保存失败',
@@ -9680,7 +9709,7 @@ index 940946d..689339b 100644
      },
      display: {
        streaming: '流式响应',
-@@ -2662,14 +4759,14 @@ export default {
+@@ -2662,14 +4773,14 @@ export default {
        approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
        notifyOnComplete: '完成弹窗通知',
        notifyOnApproval: '审批桌面通知',
@@ -9697,7 +9726,7 @@ index 940946d..689339b 100644
        notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
        notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
        notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -2691,8 +4788,8 @@ export default {
+@@ -2691,8 +4802,8 @@ export default {
        chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
        linkOpenTarget: '网页链接打开方式',
        linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
@@ -9708,7 +9737,7 @@ index 940946d..689339b 100644
      },
      agent: {
        maxTurns: '最大轮次',
-@@ -2705,7 +4802,7 @@ export default {
+@@ -2705,7 +4816,7 @@ export default {
        toolEnforcementHint: '控制工具调用的执行模式',
        auto: '自动',
        always: '始终',
@@ -9717,7 +9746,7 @@ index 940946d..689339b 100644
      },
      gatewayAutoStart: {
        title: 'Gateway 自动启动',
-@@ -2725,7 +4822,7 @@ export default {
+@@ -2725,7 +4836,7 @@ export default {
        includeHint: '逗号分隔 profile 名。白名单模式下留空表示不自动启动任何 profile。',
        exclude: '排除 profiles',
        excludeHint: '逗号分隔 profile 名；会在白名单/全量策略之后再排除。',
@@ -9726,7 +9755,7 @@ index 940946d..689339b 100644
      },
      proxy: {
        title: 'Gateway 代理',
-@@ -2738,7 +4835,7 @@ export default {
+@@ -2738,7 +4849,7 @@ export default {
        allProxyHint: '未设置协议专用代理时使用的兜底代理。',
        noProxy: 'NO_PROXY',
        noProxyHint: '不走代理的主机或域名，使用逗号分隔。',
@@ -9735,7 +9764,7 @@ index 940946d..689339b 100644
      },
      memory: {
        enabled: '启用记忆',
-@@ -2748,7 +4845,7 @@ export default {
+@@ -2748,7 +4859,7 @@ export default {
        charLimit: '记忆字符上限',
        charLimitHint: 'MEMORY.md 最大字符数',
        userCharLimit: '用户画像字符上限',
@@ -9744,7 +9773,7 @@ index 940946d..689339b 100644
      },
      compression: {
        enabled: '启用压缩',
-@@ -2760,7 +4857,7 @@ export default {
+@@ -2760,7 +4871,7 @@ export default {
        protectLastN: '保护最近消息',
        protectLastNHint: '最近多少条消息不参与压缩',
        protectFirstN: '保护开头消息',
@@ -9753,7 +9782,7 @@ index 940946d..689339b 100644
      },
      session: {
        mode: '重置模式',
-@@ -2809,11 +4906,11 @@ export default {
+@@ -2809,11 +4920,11 @@ export default {
        writeApprovalRequestedOldString: '本次请求匹配的 old_string',
        writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
        writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
@@ -9767,7 +9796,7 @@ index 940946d..689339b 100644
      },
      apiServer: {
        enable: '启用',
-@@ -2825,7 +4922,7 @@ export default {
+@@ -2825,7 +4936,7 @@ export default {
        key: '密钥',
        keyHint: 'API 访问密钥',
        cors: 'CORS 来源',
@@ -9776,7 +9805,7 @@ index 940946d..689339b 100644
      },
      lockedIps: {
        title: '锁定 IP 管理',
-@@ -2839,8 +4936,8 @@ export default {
+@@ -2839,8 +4950,8 @@ export default {
        type: {
          password: '密码',
          token: 'API Token',
@@ -9787,7 +9816,7 @@ index 940946d..689339b 100644
      },
      userAvatar: {
        title: '用户头像',
-@@ -2853,7 +4950,7 @@ export default {
+@@ -2853,7 +4964,7 @@ export default {
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -9796,7 +9825,7 @@ index 940946d..689339b 100644
      },
      voice: {
        activeTtsApi: '当前 TTS API',
-@@ -2885,13 +4982,13 @@ export default {
+@@ -2885,13 +4996,13 @@ export default {
          validate: '正在验证模型可用性……',
          install: '正在安装模型……',
          completed: '模型已可用',
@@ -9813,7 +9842,7 @@ index 940946d..689339b 100644
        providerSpeed: '语速',
        providerSampleRate: '采样率',
        providerBitRate: '比特率',
-@@ -2905,7 +5002,7 @@ export default {
+@@ -2905,7 +5016,7 @@ export default {
        optionDisabled: '停用',
        nativeProvider: 'Hermes 原生提供商',
        selectNativeProvider: '选择 Hermes 原生提供商',
@@ -9822,7 +9851,7 @@ index 940946d..689339b 100644
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
-@@ -3062,27 +5159,16 @@ export default {
+@@ -3062,27 +5173,16 @@ export default {
        sttTestEmpty: '没有录到可用于 STT 测试的音频。',
        sttTestSucceeded: 'STT 测试成功。',
        sttTestFailed: 'STT 测试失败：{error} —— {hint}',
@@ -9850,7 +9879,7 @@ index 940946d..689339b 100644
        sttFailureHintGeneric: '请检查 API key、模型和 provider 账号权限后重试。',
        sttTestRecordFailed: '无法开始麦克风录音：{error}',
        sttTestTranscript: '转写结果：{text}',
-@@ -3092,13 +5178,9 @@ export default {
+@@ -3092,13 +5192,9 @@ export default {
        providerOpenai: 'OpenAI TTS',
        providerCustom: '自定义端点（兼容 OpenAI）',
        providerEdge: 'Edge TTS（免费，无需 API Key）',
@@ -9864,7 +9893,7 @@ index 940946d..689339b 100644
        openaiKey: 'API 密钥',
        openaiKeyHint: '具有 TTS 权限的 OpenAI API Key',
        openaiUrl: 'API 基础地址',
-@@ -3107,8 +5189,6 @@ export default {
+@@ -3107,8 +5203,6 @@ export default {
        openaiModelHint: 'tts-1（快速）/ tts-1-hd（高音质）',
        openaiVoice: '音色',
        openaiVoiceHint: '用于语音合成的音色',
@@ -9873,7 +9902,7 @@ index 940946d..689339b 100644
        customHint: '支持任何 OpenAI 兼容的 TTS 服务——可用于 GPT-SoVITS、CosyVoice 等自部署服务。',
        customUrl: 'API 地址',
        customUrlHint: 'TTS 服务的完整基础地址',
-@@ -3116,7 +5196,6 @@ export default {
+@@ -3116,7 +5210,6 @@ export default {
        customApiKey: 'API 密钥（可选）',
        customApiKeyHint: '部分自部署服务需要身份验证',
        customApiKeyPlaceholder: '不需要则留空',
@@ -9881,7 +9910,7 @@ index 940946d..689339b 100644
        edgeHint: '由 Microsoft Edge TTS 驱动（node-edge-tts）。',
        edgeUrl: '适配器地址',
        edgeUrlHint: 'Edge TTS 适配器地址，例如 http://127.0.0.1:9882',
-@@ -3127,8 +5206,6 @@ export default {
+@@ -3127,8 +5220,6 @@ export default {
        edgeRateHint: '调整语音速度（0.5～2.0 倍）',
        edgePitch: '音调',
        edgePitchHint: '调整语音音调（-20～+20 Hz）',
@@ -9890,7 +9919,7 @@ index 940946d..689339b 100644
        testTitle: '试听测试',
        testText: '测试文本',
        testTextPlaceholder: '输入测试文本...',
-@@ -3136,8 +5213,6 @@ export default {
+@@ -3136,8 +5227,6 @@ export default {
        testButton: '试听',
        testButtonPlaying: '播放中...',
        testFailed: '测试失败：{error}',
@@ -9899,7 +9928,7 @@ index 940946d..689339b 100644
        providerMimo: 'MiMo TTS',
        mimoHint: '小米 MiMo TTS，支持预置音色、音色设计、音色复刻三种模式',
        mimoApiKey: 'API Key',
-@@ -3166,136 +5241,144 @@ export default {
+@@ -3166,136 +5255,144 @@ export default {
        mimoCloneAudioClear: '清除音频',
        mimoStylePrompt: '风格指令',
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
@@ -10163,7 +10192,7 @@ index 940946d..689339b 100644
    platform: {
      requireMention: "需要 {'@'}提及",
      requireMentionGroup: "群组中需要 {'@'}机器人 才会响应",
-@@ -3376,7 +5459,6 @@ export default {
+@@ -3376,7 +5473,6 @@ export default {
      qrFetching: '正在获取二维码...',
      qrScanHint: '使用微信扫描二维码登录',
      qrScanedHint: '已扫描，请在手机上确认...',
@@ -10171,7 +10200,7 @@ index 940946d..689339b 100644
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ 开放平台机器人 App ID',
      qqAppSecret: 'App Secret',
-@@ -3385,27 +5467,21 @@ export default {
+@@ -3385,27 +5481,21 @@ export default {
      qqMarkdownHint: '启用 Markdown 格式消息（部分客户端可能不支持）',
      qqSandbox: '沙箱模式',
      qqSandboxHint: '启用沙箱环境（测试用）',
@@ -10202,7 +10231,7 @@ index 940946d..689339b 100644
    terminal: {
      sessions: '会话',
      newTab: '新建终端',
-@@ -3415,20 +5491,26 @@ export default {
+@@ -3415,20 +5505,26 @@ export default {
      noSessions: '暂无终端会话',
      connectionFailed: '终端服务连接失败',
      connectionClosed: '终端连接已关闭',
@@ -10236,7 +10265,7 @@ index 940946d..689339b 100644
      agentPreset: 'Agent 预设',
      agentPresets: 'Agent 预设',
      agentPresetPlaceholder: '选择预设',
-@@ -3550,7 +5632,12 @@ export default {
+@@ -3550,7 +5646,12 @@ export default {
      allAgents: '所有 Agent',
      addAgent: '添加智能体',
      agentType: 'Agent 类型',
@@ -10250,7 +10279,7 @@ index 940946d..689339b 100644
      selectProfile: '选择一个配置',
      agentAdded: '智能体已添加',
      selectRoomFirst: '请先选择一个群组',
-@@ -3634,7 +5721,12 @@ export default {
+@@ -3634,7 +5735,12 @@ export default {
      summaryConfigurationOwnerRequired: '该群聊尚未配置总结器，请联系房间管理员完成配置后再发送消息。',
      saveSummaryConfig: '保存总结设置',
      currentSummary: '当前总结',
@@ -10264,7 +10293,7 @@ index 940946d..689339b 100644
      summaryUpdatedAt: '最后更新',
      summarizedTurns: '已总结有效发言',
      summaryAnchor: '总结锚点',
-@@ -3646,31 +5738,9 @@ export default {
+@@ -3646,31 +5752,9 @@ export default {
      saveSummary: '保存总结',
      summaryUpdated: '总结已更新',
      summaryNever: '从未',
@@ -10297,7 +10326,7 @@ index 940946d..689339b 100644
      title: '用量统计',
      refresh: '刷新',
      totalTokens: '总 Token 数',
-@@ -3682,7 +5752,19 @@ export default {
+@@ -3682,7 +5766,19 @@ export default {
      cacheHitRate: '缓存命中率',
      modelBreakdown: '模型分布',
      agentBreakdown: 'Agent 分布',
@@ -10318,7 +10347,7 @@ index 940946d..689339b 100644
      dailyTrend: '每日用量',
      date: '日期',
      tokens: 'Token',
-@@ -3692,6 +5774,26 @@ export default {
+@@ -3692,6 +5788,26 @@ export default {
      sessions: '会话',
      cost: '费用',
      noData: '暂无用量数据',
@@ -10345,7 +10374,7 @@ index 940946d..689339b 100644
    },
    skillsUsage: {
      title: '技能用量',
-@@ -3712,10 +5814,8 @@ export default {
+@@ -3712,10 +5828,8 @@ export default {
      lastUsed: '最近',
      noData: '暂无技能用量数据',
      loadFailed: '技能用量加载失败',
@@ -10357,7 +10386,7 @@ index 940946d..689339b 100644
    files: {
      title: '文件',
      fileTree: '文件树',
-@@ -3783,8 +5883,8 @@ export default {
+@@ -3783,8 +5897,8 @@ export default {
      zoom: '缩放',
      pdfPageLimit: '仅预览前 {count} 页。',
      tableTruncated: '为保持界面流畅，表格预览已截断。请下载文件查看全部行列。',
@@ -10367,7 +10396,7 @@ index 940946d..689339b 100644
    download: {
      downloading: '正在下载...',
      downloadFailed: '下载失败',
-@@ -3796,35 +5896,9 @@ export default {
+@@ -3796,35 +5910,9 @@ export default {
      invalidPath: '无效的文件路径',
      contentDisplay: '内容展示',
      download: '下载',
@@ -10404,7 +10433,7 @@ index 940946d..689339b 100644
      new_0_7_25_1: '新增 Cursor CLI 支持，可用于聊天、群聊和工作流，并提供原生设置、技能管理与独立的 Studio MCP 配置 (#3110)',
      new_0_7_25_2: '新增可配置的 JEV 记忆召回、相关性过滤、写入审核、技能匹配与学习预检查 (#3159、#3161、#3169)',
      new_0_7_25_3: '新增可选的 JEV 浏览器目标匹配与操作验证、群聊摘要审核与消息路由，以及工作流质量检查 (#3208、#3211)',
-@@ -3858,7 +5932,7 @@ export default {
+@@ -3858,7 +5946,7 @@ export default {
      new_0_7_22_5: '补齐全局 Coding Agent 会话的 Studio MCP 工具，改进启动命令搜索路径及未安装可执行程序时的错误提示 (#3044, #3055)',
      new_0_7_22_6: '为 Studio 生成的 DSH 插件声明版本号，修复插件清单兼容性 (#3038)',
      new_0_7_22_7: '修复 API 地址配置迁移时，空 BASE_URL 错误读取下一行配置的问题 (#3046)',
@@ -10413,7 +10442,7 @@ index 940946d..689339b 100644
      new_0_7_22_9: '修复 Grok 独立会话配置中的多行数组、长文本和表数组被截断或错误拆分的问题 (#3072)',
      new_0_7_22_10: '修复桌面运行时打包时浏览器执行权限和符号链接丢失的问题，兼容 Hermes 0.21.3；运行时发布不再覆盖桌面端的最新版本标记 (#3073)',
      new_0_7_21_1: '修复 Windows 下因选错启动脚本导致 DSH 插件配置和 Agent 预设页面无法打开的问题 (#3026)',
-@@ -3875,7 +5949,7 @@ export default {
+@@ -3875,7 +5963,7 @@ export default {
      new_0_7_20_10: '修复 Hermes Agent 0.21 及后续版本的审批会话关联，兼容旧版运行时 (#3018)',
      new_0_7_20_11: '将 apikey 默认域名更新为 apikey.fan，启动时一次性迁移已有 Hermes 配置中的旧端点，保留路径、密钥和模型设置 (#3022)',
      new_0_7_20_12: '优化 Linux 启动器和窗口图标的圆角与透明留白，使显示尺寸更协调 (#3008)',
@@ -10422,7 +10451,7 @@ index 940946d..689339b 100644
      new_0_7_19_2: '修复桌面端反复重启、更新中断与启动失败；升级后保留登录及浏览器数据，并迁移 Windows 开机启动设置 (#2931, #2979, #2988)',
      new_0_7_19_3: '新增原生 OpenCode Free 提供商，无需 API Key 即可建聊和供 Coding Agent 使用，可用模型在后台加载 (#2932)',
      new_0_7_19_4: '修复 Ekko 与 Studio 代理的 Coding Agent 请求 OpenCode 时的会话兼容性；Hermes 仍需升级运行时 (#2996)',
-@@ -3911,7 +5985,7 @@ export default {
+@@ -3911,7 +5999,7 @@ export default {
      new_0_7_16_1: '桌面端现在会通过 Electron 处理内置 Web UI 发起的 Runtime 重启请求，使用带重复请求保护的干净重启，同时保留独立 Web UI 的重启行为（#2827）',
      new_0_7_16_2: '工作流和群聊现在可用 scoped 或 global 模式启动 Claude、Codex 和 Pi Agent；global 模式会隔离 Studio 管理的提示词和运行环境，同时保留用户配置（#2828）',
      new_0_7_16_3: 'Grok CLI 现作为一等 Coding Agent 集成，支持 scoped 代理模型、隔离 global 模式、原生会话续接、用量统计、Skills、工作流和群聊（#2832）',
@@ -10431,7 +10460,7 @@ index 940946d..689339b 100644
      new_0_7_16_5: 'Windows 旧数据迁移现在只复制用户数据和数据库 sidecar，通过校验和回滚保护结果，并排除可替换的 Runtime、会话和日志，避免锁文件导致迁移失败（#2836）',
      new_0_7_15_1: 'Hermes Runtime 版本检测现在会直接探测选中的本地环境，不再触发网络更新检查，让离线启动和版本管理更加可靠（#2822）',
      new_0_7_15_2: '启用或安装 Runtime 后现在会询问是否立即重启；选择“下次启动使用”不再自动重启桌面端或独立 Web UI（#2822）',
-@@ -3920,7 +5994,7 @@ export default {
+@@ -3920,7 +6008,7 @@ export default {
      new_0_7_13_1: 'Windows Runtime 安装和清理现在会重试被 Defender 或索引器暂时锁定的文件，避免在删除或启用已下载版本时因 EACCES、EBUSY、ENOTEMPTY 或 EPERM 失败 (#2801)',
      new_0_7_13_2: '创建 Hermes 聊天现在会复用轻量级 Agent 可用状态；仅在 Hermes 未安装时引导管理员前往安装，状态检查失败也不再阻止创建聊天 (#2805)',
      new_0_7_13_3: 'Desktop、后端 Bridge 和 CLI 现在共享同一套锁定的 Hermes 环境选择；版本管理会显示当前 CLI、环境详情和数据目录覆盖说明，并可按需安装缺失的 Runtime (#2808)',
@@ -10440,7 +10469,7 @@ index 940946d..689339b 100644
      new_0_7_12_2: 'Windows 上的 Ekko 与 Hermes 启动流程现会延后重试被占用的 Skill 重置，并正确启动命令包装脚本，避免 EPERM 与 spawn EINVAL 导致启动失败（#2796）',
      new_0_7_12_3: 'Ekko 现会拒绝模型生成的不完整工具调用，并在重试前清理无效工具调用历史，避免兼容模型因 function、name 或 arguments 为空而失败（#2796）',
      new_0_7_12_4: '数据库、Skills、记忆和日志现可独立降级：核心对话保持可用，不可用模块会明确标记，每个故障都会提供原因与修复上下文（#2797）',
-@@ -3944,5 +6018,859 @@ export default {
+@@ -3944,5 +6032,860 @@ export default {
      new_0_7_0_9: '服务端职责现规范划分到 Studio、Hermes、Ekko 与 Coding Agent 模块；旧版 MCU 路由继续兼容，关闭 Studio 时也会可靠清理其创建的进程树（#2744、#2746、#2747）',
      new_0_7_0_10: '中英文 README 已更新，完整说明五种运行时、三类 Agent、模块归属、规范 API，以及当前开发和验证流程（#2745）',
      new_0_7_0_11: '“设备互联”现仅显示 Android 和 iOS 下载卡片；Apple 正式版只标记为 App Store，不再显示 TestFlight · App Store',
@@ -10673,7 +10702,7 @@ index 940946d..689339b 100644
 +    completionSummaryHint: '输入此任务的摘要，将存为任务结果。',
 +    scheduleTitle: '日程',
 +    yearLabel: '年',
-+    itemCount: '{count} 项',
++    itemCount: '{n} 项',
 +    aggregateSessions: '聚合关联会话',
 +    termTool: '终端工具',
 +    termToolNotInstalled: '未安装',
@@ -10751,6 +10780,7 @@ index 940946d..689339b 100644
 +    taskSwimlane: '任务泳道',
 +    taskTimeline: '任务时间线',
 +    taskTopology: '任务拓扑',
++    focusTask: ' · 聚焦 {id}',
 +    tenant: '租户',
 +    timeWindow: '时间窗口',
 +    timelinePrefix: '时间线',
