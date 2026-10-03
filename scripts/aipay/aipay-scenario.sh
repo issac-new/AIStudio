@@ -459,18 +459,21 @@ SCAN_ROOM="$(sget room_analysis)"
 
 # ══ 步骤 12：各主责系分执行（worktree + 分析文档 + 双兜底回执）══
 if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
-  note "── anexec：派发 4 个系分执行任务（错峰 2+2）"
+  note "── anexec：派发 4 个系分执行任务（真分批 2+2，V7 P1 并发预算实装——闸值 4 下首批 2 路占 2 槽留余量，首批交付后再派第二批，杜绝 run7 三发 nudge 实录的四路齐发撞闸）"
   # COMMON 双引号定义：模板内仅 ${RFD_DOC}/${RFD_ID} 需展开，其余全是字面量
   # （已核对无 $、无反引号）；单引号会把这两处变量原样发给 agent（P2）。
   # %WS% 是唯一随派单变化的占位，在使用点 ${COMMON//%WS%/$WS} 替换。
+  # 结论行=完成回执一体化（V7 总则 17 实装）：一行携带全部凭证要素，agent 报 DONE
+  # 与回执不再是分离动作（run7 四类尾部动作被丢的根治位）；核验侧双形态匹配天然兼容。
   COMMON="你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 xxx-dev skill 执行「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
 工作要求：
 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
 3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)
 4) git 提交并 push 到 origin main（worktree 内直接提交本文件即可，commit message: docs(analysis): <任务ID>）
-5) 完成后在本群发【完成回执】（双兜底：@你的团队负责人-agent 与 @fanfan-agent），格式见 inbox-dedup 技能
-结论行以 AN-DONE-<任务ID> 开头。不许谎报。"
+5) 完成后在群内发唯一一行结论（此行即完成回执，缺任一要素=未完成会被打回）：
+AN-DONE-<任务ID> commit=<已推送的 commitId> done=<一句话交付摘要>
+不许谎报。"
 
   WS=$(workspace chen)
   dispatch_in_room chen "@chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。
@@ -478,7 +481,11 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid chen),$(agent_mxid wei)"
   WS=$(workspace xiao)
   dispatch_in_room xiao "@xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid xiao),$(agent_mxid mei)"
-  sleep 5
+  # 首批交付等待（真分批）：两路入仓才派第二批——并发预算与交付节奏双收
+  for t in AN-PAYCORE AN-MP; do
+    wait_truth "首批：仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
+      || { note "[观察] 首批 $t 分析文档未达（记问题单，第二批照派）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
+  done
   WS=$(workspace hu)
   dispatch_in_room hu "@hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid hu),$(agent_mxid wei)"
@@ -486,7 +493,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid hu),$(agent_mxid wei)"
   dispatch_in_room lin "@lin-agent:matrix.test 执行任务 AN-CHALI（csw-channel-alipay 支付宝渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
 
-  for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
+  for t in AN-CHWX AN-CHALI; do
     wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
       || { note "[观察] $t 分析文档未达（记问题单）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
   done
@@ -551,7 +558,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
-    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md")
+    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
     note "[观察] 回灌后评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
     echo "ISSUE|review-card-missing|fanfan|agent 回灌自登后仍未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
     fi
@@ -663,6 +670,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 
   # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
   # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
+  # 真分批（V7 P1 并发预算实装）：chen（上方已 wait）+hu+lin=3 会话峰值≤闸值 4；
+  # 渠道两分支交付后再派 xiao（第四会话），杜绝 run7 devimpl 十一次拒收实录的四路齐发。
   for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
               "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
     IFS='|' read -r who task app chan <<< "$spec"
@@ -670,7 +679,11 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
 2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
-    sleep 5
+  done
+  for ba in "DEV-CHWX|hu" "DEV-CHALI|lin"; do
+    IFS='|' read -r b bowner <<< "$ba"
+    wait_alive_truth "渠道批：origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
+      || { note "[观察] $b 分支未达（第二批照派）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
   done
 
   dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
@@ -679,11 +692,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
 
-  for ba in "DEV-CHWX|hu" "DEV-CHALI|lin" "DEV-MP|xiao"; do
-    IFS='|' read -r b bowner <<< "$ba"
-    wait_alive_truth "origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
-      || { note "[观察] $b 分支未达"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
-  done
+  wait_alive_truth "origin 出现 feat/DEV-MP 分支（本轮新鲜）" 1800 xiao branch_fresh "feat/DEV-MP" \
+    || { note "[观察] DEV-MP 分支未达"; echo "ISSUE|dev-branch-missing|DEV-MP|分支未推送" >> "$EVID_DIR/issues.log"; }
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）
   for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
     repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
@@ -843,7 +853,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久）
   G5_TS=$(( $(date +%s) * 1000 ))
   RGID=$(kanban_create_as fanfan g5_ready "${RFD_ID} 发布准出评审（G5）" \
-    "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review)
+    "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review fanfan-researcher)
   dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
 1) G4 证据已挂关联任务卡
 2) 构建产物同 commit 可复现（integration commit 存在、分支树干净）

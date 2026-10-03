@@ -402,3 +402,41 @@ describe('⑨ 基线变更受控绊线（H10/H11/R-A3）', () => {
     expect(scen).toContain('G5-HUMANGATE-APPROVED')
   })
 })
+
+// ═══ 驱动静态自检（V7 总则 16 实装，run7 gate_review jq 裸键三连死循环实录）═══
+// jq 表达式编译错在 set -e 下击杀驱动主循环→relay 无限换代；上线前静态拦。
+describe('⑩ 驱动静态自检（bash 语法 + jq 表达式编译）', () => {
+  it('aipay-scenario/mx-lib/mx-scenario-lib 全部 jq 表达式可编译', () => {
+    const out = execFileSync('bash', ['-c', `
+python3 - << 'PYE'
+import re, subprocess, sys
+bad = []
+files = [
+  "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}",
+  "${join(MX, 'mx-lib.sh')}",
+  "${join(MX, 'mx-scenario-lib.sh')}",
+]
+for f in files:
+    src = open(f, encoding='utf-8').read()
+    for m in re.finditer(r"jq\\s+(?:-[a-zA-Z]+\\s+)*'((?:[^'\\\\]|\\\\.)*?)'", src, re.S):
+        expr = m.group(1)
+        if not expr.strip():
+            continue
+        r = subprocess.run(['jq', '-n', expr], capture_output=True)
+        if r.returncode == 3:  # 3=语法/编译错（5=运行错不算——未绑定变量属运行面）
+            bad.append(f + ': ' + expr.replace(chr(10), ' ')[:80])
+print('\\n'.join(bad) if bad else 'ALL-COMPILE-OK')
+PYE`], { encoding: 'utf8' })
+    expect(out.trim()).toBe('ALL-COMPILE-OK')
+  })
+
+  it('mx-clean/mx-up/aipay-scenario/mx-lib/mx-scenario-lib bash -n 语法通过', () => {
+    for (const f of [
+      join(MX, 'mx-clean.sh'), join(MX, 'mx-up.sh'),
+      join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh'),
+      join(MX, 'mx-lib.sh'), join(MX, 'mx-scenario-lib.sh'),
+    ]) {
+      execFileSync('bash', ['-n', f])
+    }
+  })
+})

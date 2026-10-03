@@ -4,17 +4,19 @@
 #   --dry-run      只打印将执行的动作（默认即 dry-run——显式 --apply 才真清）
 #   --apply        真执行（危险：清空 runs/state/locks/房间归档）
 #   --keep-accounts 保留 synapse 账号（缺省连同房间一起归档清理但保留账号与凭据）
-#   --reset-central 重置中央仓 integration/RFD-* 与 docs/{analysis,design,plan,test,delivery,acceptance,retro,requirements}/RFD-*
+#   --reset-central 重置中央仓 docs 九目录+删远端 integration/feat/test 分支（tag 快照后删，V7 P2 实装）
+#   --reset-workspaces 归档并重置 agent 工作区 workspaces/（tar 后删，mx-setup 重建；V7 P2 实装）
 # 合格线（方案 §十一）：清后 runs/ 无旧轮目录、state.env 空、房间列表无旧轮同名房；可反复跑。
 set -euo pipefail
 SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
-APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0
+APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0; RESET_WORKSPACES=0
 for a in "$@"; do
   case "$a" in
     --apply) APPLY=1 ;;
     --dry-run) APPLY=0 ;;
     --keep-accounts) KEEP_ACCOUNTS=1 ;;
     --reset-central) RESET_CENTRAL=1 ;;
+    --reset-workspaces) RESET_WORKSPACES=1 ;;
     *) echo "未知参数 $a"; exit 2 ;;
   esac
 done
@@ -129,9 +131,39 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     else
       say "✓ 交付目录清空核验通过（九目录零残留）"
     fi
+    # ── 4b) 三面残留根治（V7 总则 18/P2 实装；run7 实锤三险情）──
+    # ①integration 分支：注释长期称"清"而从未删（run7 旧轮测试报告顶名险情）——tag 快照后删远端。
+    # ②远端旧轮工作分支（feat-*/test-*）：旧 tip 依赖 branch_fresh 兜底甄别——tag 快照后删，
+    #   消除"分支存在"误读本轮交付的面。
+    # 归档纪律：删前统一 tag 快照 mx-clean-${TS}-branches（可恢复）。
+    ( cd "$CEN" || exit 0
+      _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(integration/|feat/|test/)' || true)
+      if [ -n "$_brs" ]; then
+        git fetch -q origin 2>/dev/null || true
+        git tag "mx-clean-${TS}-branches" 2>/dev/null || true
+        for _b in $_brs; do
+          _n="${_b#refs/heads/}"
+          git push -q origin --delete "$_n" 2>/dev/null && say "  删远端分支 $_n" || say "  ⚠ 删失败 $_n（远端间歇，起跑前核）"
+        done
+      else
+        say "✓ 远端无 integration/feat/test 残留分支"
+      fi )
   fi
 else
   say "中央仓保留（未指定 --reset-central）"
+fi
+
+# 4c) agent 工作区重置（V7 §十二合格线三面之一；--reset-workspaces）
+# run7 实锤：workspaces 不清→run6 旧提交（534202f@11:38）被误读为 run7 进度（导演误导单）。
+# 归档纪律：tar 整树后删，mx-setup 重建净工作区。
+if [ "$RESET_WORKSPACES" = 1 ]; then
+  say "agent 工作区归档重置：workspaces/ → ${ARC}/workspaces.tar（tar 后删，mx-setup 重建）"
+  if [ "$APPLY" = 1 ]; then
+    [ -d "$SIM_ROOT/workspaces" ] && tar -cf "$ARC/workspaces.tar" -C "$SIM_ROOT" workspaces \
+      && rm -rf "$SIM_ROOT/workspaces" && say "✓ workspaces 已归档重置（重建走 mx-setup.sh）"
+  fi
+else
+  say "agent 工作区保留（未指定 --reset-workspaces；旧轮提交残留由 branch_fresh/artifact_fresh 甄别——V7 总则 18）"
 fi
 
 say "完成。后续：mx-setup.sh → mx-up.sh → RUN_ID=<新轮> aipay-scenario.sh（0→1）"
