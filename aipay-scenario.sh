@@ -411,7 +411,7 @@ if step_reached analysis; then
     mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[回灌] 主卡缺结构化 raci——已要求 fanfan 补填，重查 300s"
     sleep 60
-    RACI_JSON="$(wait_truth "主卡结构化 raci 补填" 240 fanfan kanban_raci_nonempty "${RFD_ID}" && kanban_raci_of fanfan "${RFD_ID}" || true)"
+    RACI_JSON="$(wait_truth "主卡结构化 raci 补填" 240 kanban_raci_nonempty "${RFD_ID}" && kanban_raci_of fanfan "${RFD_ID}" || true)"
     if [[ -n "$RACI_JSON" ]]; then
       note "[真值] 回灌后主卡带结构化 raci ✓"
     else
@@ -524,7 +524,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     else
       mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" >/dev/null 2>&1 || true
       note "[回灌] $t 回执未见——已要求 ${owner} 补发，重查 300s"
-      if wait_truth "回灌后 $t 回执补发" 300 "$owner" receipt_seen; then
+      if wait_truth "回灌后 $t 回执补发" 300 receipt_seen; then
         note "[真值] $t 回灌后回执可见 ✓"
       else
         echo "ISSUE|receipt-missing|$t|完成回执未见（回灌补发后仍缺，双兜底缺口——入库真值在案）" >> "$EVID_DIR/issues.log"
@@ -562,7 +562,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # 先回灌 fanfan 在账号板自登评审卡（标题含 <RFD>-评审），重查一轮）。
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[回灌] 评审卡未见——已要求 fanfan 自登，重查 300s"
-    wait_truth "回灌后 fanfan 板出现 ${RFD_ID} 评审卡" 300 fanfan kanban_has "${RFD_ID}-评审" || true
+    wait_truth "回灌后 fanfan 板出现 ${RFD_ID} 评审卡" 300 kanban_has fanfan "${RFD_ID}-评审" || true
     RID=$(kanban_list fanfan | jq -r --arg rfd "$RFD_ID" '[.. | objects | select(has("title")) | select((.title // "") | contains($rfd + "-评审")) | .id][0] // empty')
     if [[ -n "$RID" ]]; then
       kanban_walk_done fanfan "$RID"
