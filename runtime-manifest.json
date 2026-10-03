@@ -77,6 +77,36 @@
       "source": "hermes_cli/kanban_db_dispatch.py",
       "dest": "hermes_cli/kanban_db_dispatch.py",
       "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）"
+    },
+    {
+      "source": "gateway/run_busy.py",
+      "dest": "gateway/run_busy.py",
+      "note": "533: 容量拒绝排队重试泵（_queue_capacity_retry/_capacity_retry_pump）——并发闸拒收不再丢消息；hermes 自更新擦除三次实录（run6/run7），收编正本防再擦"
+    },
+    {
+      "source": "gateway/run_inbound.py",
+      "dest": "gateway/run_inbound.py",
+      "note": "533: claim 拒绝路径接容量排队（静默重试不回声防通知风暴）+534 出站通知守卫接线"
+    },
+    {
+      "source": "gateway/outbound_notice_guard.py",
+      "dest": "gateway/outbound_notice_guard.py",
+      "note": "534: 出站通知守卫（通知风暴断源）"
+    },
+    {
+      "source": "tests/gateway/test_outbound_notice_guard.py",
+      "dest": "tests/gateway/test_outbound_notice_guard.py",
+      "note": "534: 守门测试"
+    },
+    {
+      "source": "gateway/platforms/base.py",
+      "dest": "gateway/platforms/base.py",
+      "note": "534: 出站通知守卫接线点（notice 调用经守卫包裹——缺它 534 半残）"
+    },
+    {
+      "source": "tests/gateway/test_max_concurrent_sessions.py",
+      "dest": "tests/gateway/test_max_concurrent_sessions.py",
+      "note": "533: 容量排队泵测试"
     }
   ],
   "notes": [
