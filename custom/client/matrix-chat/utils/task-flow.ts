@@ -1,7 +1,7 @@
 // overlay/custom/client/matrix-chat/utils/task-flow.ts
 // P4③ 群侧栏任务流转时间线（2026-09-28 产品 UI 缺陷修复 §五）：
 // 从房间消息流解析任务型事件（派发/完成回执/缺陷/评审结论），渲染"谁→什么操作→何时"。
-// 消息模式锚定推演协议真源（scripts/aipay/aipay-scenario.sh + skills/inbox-dedup）：
+// 消息模式锚定推演协议真源（simharness/aipay-scenario.sh + skills/inbox-dedup；分树轮 2026-10-03 移居独立仓）：
 //   派发：含 card=t_xxx 且 @责任人（RACI 派发消息）
 //   完成回执：【完成回执】<任务ID> 已完成（inbox-dedup 技能格式）
 //   缺陷：【缺陷】<任务ID> …（defect-loop 技能格式）
