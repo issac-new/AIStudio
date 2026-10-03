@@ -122,17 +122,19 @@ export interface GatewayBlueprint {
 /** 蓝图目录（后端=运行时 venv python 导入 CATALOG，16 件；409=通道缺席）。
  *  契约纪律：永不 reject——fetch 本身失败（测试环境相对 URL / 网络断）转 error 分支，
  *  调用方（BlueprintGalleryPanel onMounted）按契约无 try/catch，裸抛会成 unhandled
- *  rejection 漂浮到进程层（vitest 全量 13 个 unhandled 的根因，2026-10-02 实证）。 */
-export async function fetchGatewayBlueprints(): Promise<{ blueprints: GatewayBlueprint[] } | { error: string }> {
+ *  rejection 漂浮到进程层（vitest 全量 13 个 unhandled 的根因，2026-10-02 实证）。
+ *  error 分支带 status（网络断=0）：调用方按 HTTP 409 判通道缺席，不再依赖错误文案子串
+ *  （2026-10-04 72h 审查遗留修复——文案改版即断的脆弱判定）。 */
+export async function fetchGatewayBlueprints(): Promise<{ blueprints: GatewayBlueprint[] } | { error: string; status: number }> {
   let res: Response
   let data: { ok?: boolean; blueprints?: GatewayBlueprint[]; error?: string }
   try {
     res = await authFetch('/api/runtime-caps/gateway/blueprints')
     data = (await res.json()) as { ok?: boolean; blueprints?: GatewayBlueprint[]; error?: string }
   } catch (e) {
-    return { error: `加载失败：${(e as Error).message}` }
+    return { error: `加载失败：${(e as Error).message}`, status: 0 }
   }
-  if (!res.ok || !data.ok) return { error: data.error ?? `HTTP ${res.status}` }
+  if (!res.ok || !data.ok) return { error: data.error ?? `HTTP ${res.status}`, status: res.status }
   return { blueprints: data.blueprints ?? [] }
 }
 
