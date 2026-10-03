@@ -263,7 +263,10 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     # 合格线自检：九目录除 admin 三张基础注册表外零文件（旧稿残留=repo_has 假真值温床）；
     # find 只认真实文件，ls 空目录会打 "dir:" 头行造成假残留告警（24h 批③裁决：find 版取代
     # ls 版——且缺 retro 目录；骨架重建保留 main 侧 run6 实锤版）
-    _leftover="$(cd "$CEN" 2>/dev/null && find docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin -type f 2>/dev/null | grep -vE 'docs/admin/(roster|app-registry|org)\.md$' | head -5)"
+    # pipefail 陷阱（2026-10-04 实锤）：清空成功时 find 只剩 admin 三件、被 grep -v 滤尽
+    # → grep 退出 1 → 管道失败 → 赋值语句在 set -e 下静默中断整个脚本（workspaces 重置与
+    # 合格线全程未跑，且无任何报错）。管道尾加 || true 兜底——"干净"恰是本步的成功态。
+    _leftover="$(cd "$CEN" 2>/dev/null && find docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin -type f 2>/dev/null | grep -vE 'docs/admin/(roster|app-registry|org)\.md$' | head -5 || true)"
     if [ -n "$_leftover" ]; then
       say "⚠ 清空后仍残留：$_leftover …（人工核查——勿带旧稿起跑 0→1 轮）"
     else
