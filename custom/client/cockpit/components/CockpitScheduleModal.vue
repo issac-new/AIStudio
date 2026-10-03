@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, onMounted } from 'vue'
 import { Solar } from 'lunar-typescript'
 import { useRouter } from 'vue-router'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
@@ -215,6 +215,9 @@ function onEventClick(ev: ScheduleEvent) {
 
 // ── 键盘导航 ──
 const focusedIndex = ref(-1)
+// 弹层根 tabindex=0 但从不获得焦点时 @keydown 永不触发（Esc/方向键全哑，2026-10-03 回归实锤）——挂载即聚焦根
+const rootEl = ref<HTMLElement | null>(null)
+onMounted(() => rootEl.value?.focus())
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') { store.closeSchedule(); return }
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -263,6 +266,7 @@ function miniTitle(c: MiniCell): string {
 
 <template>
   <div
+    ref="rootEl"
     class="cockpit-schedule-modal"
     tabindex="0"
     @keydown="onKeydown"

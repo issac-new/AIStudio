@@ -59,6 +59,14 @@ describe('S3 上游挂载点 patch 524 守门（997faa70 收敛删 522 后复活
     expect(patch.match(/v-if="features\.connectionsExtras" name="app"/g)).toHaveLength(1)
     expect(patch.match(/v-if="features\.connectionsExtras" name="mcu"/g)).toHaveLength(1)
   })
+
+  it('ConnectionsPanel 段落必须自带 features 导入（模板引用而缺导入=整页渲染崩+导航冻结，2026-10-03 回归实锤）', () => {
+    const section = patch.slice(
+      patch.indexOf('--- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue'),
+      patch.indexOf('--- a/packages/client/src/views/hermes/ModelsView.vue'),
+    )
+    expect(section).toContain("import { features } from '@/custom/features'")
+  })
 })
 
 // 997faa70 收敛撤销了 bootstrap 路由摘除（ekko/agentManager/外链）——外链与 ekko 改由 523 路由守卫承载
