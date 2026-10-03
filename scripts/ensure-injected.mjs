@@ -105,6 +105,56 @@ function cockpitRouteInjected() {
 }
 
 const manifestApplied = readManifestApplied();
+const zcodeRoot = resolve(upstreamRootBase, 'zcode');
+const zcodeSeriesFile = resolve(overlayRoot, 'zcode-patches', 'series');
+
+// ── zcode patch 漂移自愈（2026-10-03 全功能回归轮 T1 根治）──
+// zcode-patches/series 由 inject.mjs 按目录路由打进 upstream/zcode，但旧逻辑只对账
+// hermes series：zcode 树被 reset/re-pull（v3.14.3 刷新实测）后补丁静默丢失，
+// cua-node-backend-platforms.test.ts import node-backend.js 直接红、无人发现。
+// 判定信号：series 非空且 `git -C zcode status --porcelain` 为空（干净树=补丁必不在）
+// → 按 series 重放；树脏则视为已注入（与 inject.mjs 容错语义一致）。
+// zcode 为可选树：目录不存在/非 git 仓时跳过；apply 失败响亮报错并 exit(1)，
+// 不静默（红线：不隐瞒失败）。
+function healZcodePatches() {
+  if (!existsSync(zcodeRoot) || !existsSync(zcodeSeriesFile)) return;
+  let series;
+  try {
+    series = readFileSync(zcodeSeriesFile, 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'));
+  } catch {
+    return;
+  }
+  if (series.length === 0) return;
+  let status;
+  try {
+    status = execSync('git status --porcelain', { cwd: zcodeRoot, encoding: 'utf8' }).trim();
+  } catch {
+    console.warn('[ensure-injected] zcode 树不可读(非 git 仓?),跳过 zcode 补丁自愈。');
+    return;
+  }
+  if (status) return; // 脏树=已注入态
+  console.warn(`[ensure-injected] zcode 树干净但 series 有 ${series.length} 条补丁,重放自愈:`);
+  const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+  for (const p of series) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) {
+      console.error(`[ensure-injected] FAILED: zcode patch 文件不存在: ${p}`);
+      process.exit(1);
+    }
+    const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
+    try {
+      execSync(`git apply --whitespace=nowarn${wsFlag} "${patchPath}"`, { cwd: zcodeRoot, stdio: 'pipe' });
+      console.log(`[ensure-injected] applied zcode patch: ${p}`);
+    } catch (e) {
+      console.error(`[ensure-injected] FAILED: zcode patch 补套失败: ${p}`);
+      console.error(`  ${String(e.stderr || e.message).trim().split('\n').slice(0, 4).join('\n  ')}`);
+      process.exit(1);
+    }
+  }
+}
 
 if (manifestApplied === null && !existsSync(manifestPath) && !cockpitRouteInjected()) {
   // 未 inject → 检查 upstream 是否干净
@@ -136,17 +186,18 @@ if (manifestApplied === null && !existsSync(manifestPath) && !cockpitRouteInject
 // 已 inject(manifest 存在或 cockpit 路由在位)→ 差量检查
 const injectedSet = new Set(manifestApplied ?? []);
 const delta = readSeries().filter((p) => !injectedSet.has(p));
-if (delta.length === 0) {
-  process.exit(0);
+if (delta.length > 0) {
+  console.warn(`[ensure-injected] series 领先 manifest ${delta.length} 条,自动补套:`);
+  for (const p of delta) console.warn(`  ${p}`);
+  if (!applyDelta(delta)) process.exit(1);
+  // 差量入册(manifest 可能不存在——cockpit 路由在位但无 manifest 的中间态,此时重建)
+  const nextApplied = [...(manifestApplied ?? readSeries().filter((p) => !delta.includes(p)))];
+  for (const p of delta) nextApplied.push(p);
+  writeFileSync(manifestPath, JSON.stringify({ appliedPatches: nextApplied, generatedAt: new Date().toISOString() }, null, 2));
+  console.log(`[ensure-injected] manifest 已更新(${nextApplied.length} 条)`);
 }
 
-console.warn(`[ensure-injected] series 领先 manifest ${delta.length} 条,自动补套:`);
-for (const p of delta) console.warn(`  ${p}`);
-if (!applyDelta(delta)) process.exit(1);
-// 差量入册(manifest 可能不存在——cockpit 路由在位但无 manifest 的中间态,此时重建)
-const nextApplied = [...(manifestApplied ?? readSeries().filter((p) => !delta.includes(p)))];
-for (const p of delta) nextApplied.push(p);
-writeFileSync(manifestPath, JSON.stringify({ appliedPatches: nextApplied, generatedAt: new Date().toISOString() }, null, 2));
-console.log(`[ensure-injected] manifest 已更新(${nextApplied.length} 条)`);
+// zcode 补丁漂移自愈须在所有早退路径之后执行(含 delta=0 的健康路径)
+healZcodePatches();
 
 
