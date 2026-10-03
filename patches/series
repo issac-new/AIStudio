@@ -461,11 +461,9 @@
 552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 553-locale-ux-clarity.patch
-# 554（2026-10-03 A-H 复盘轮；撞号两次让位：552→mimo usage 块、553→locale-ux-clarity）：八项可用性修复的上游侧——locale 新增提示键
-#      （sit 芯片/chain.timeline/flow 创建菜单四 hints/ide.pane.unmaxAll）+
-#      swp.object 改「当前对象」+ kanban 板过滤条标注多选语义 + i18n 偏好按账户
-#      分键（G：根治切账号语言跳变，旧键作迁移初值）+ DefaultCredentialPrompt
-#      dev 下「稍后提醒」记 localStorage 跨会话（H：devAutoLogin 场景高频打扰）。
-#      组件侧 title/还原浮动钮在 overlay 仓直接改（SitlineBar/SessionWorkbenchPanel/
-#      FlowNavPanel/IdeShell）。
+
+# 554: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)
+# 554: A-H 复盘轮——dev 下口令提醒 localStorage 跨会话/语言偏好按账户分键/IDE 工具时间线等 locale 词条（473 追加承载）
 554-client-ux-ah-round.patch
+# 555: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)；554 号位已被并行会话 ux-ah-round 占用，本补丁让号 555（550 撞号处置先例）
+555-client-vuetsc-gate-debt-clear.patch

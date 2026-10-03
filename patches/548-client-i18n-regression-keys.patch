@@ -1,47 +1,8 @@
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1612,7 +1612,8 @@
-       formRepo: '中央仓地址',
-       submit: '发起',
-       readings: '网络读数',
--      pendingHuman: '待审人工门'
-+      pendingHuman: '待审人工门',
-+      completed: '已完成'
-     },
-     brand: '驾驶舱',
-     flow: {
-@@ -1634,7 +1635,13 @@
-       clusterRooms: '房间',
-       clusterGroups: '群聊',
-       clusterChats: '会话',
--      groupAgents: 'Agents'
-+      groupAgents: 'Agents',
-+      chatSection: '聊天',
-+      newChat: '新聊天',
-+      newAgentChat: 'Agent 单聊',
-+      newGroupChat: 'Agent 群聊',
-+      newMatrixRoom: 'Matrix 房间',
-+      deleteGroup: '删除群聊'
-     },
-     loop: {
-       stage: {
-@@ -6660,7 +6667,10 @@
-       always: '总是允许',
-       deny: '拒绝',
-       approve: '批准',
--      request_changes: '打回返工'
-+      request_changes: '打回返工',
-+      spotcheck_confirm: '抽检认可',
-+      spotcheck_veto: '抽检否决',
-+      auto_pass: '自动放行'
-     },
-     colRisk: '风险档',
-     risk: {
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index d9385ab..5b81d94 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1612,7 +1612,8 @@
+@@ -1533,7 +1533,8 @@ export default {
        formRepo: 'Central repo URL',
        submit: 'Launch',
        readings: 'Network',
@@ -51,7 +12,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      brand: 'Cockpit',
      flow: {
-@@ -1634,7 +1635,13 @@
+@@ -1555,7 +1556,13 @@ export default {
        clusterRooms: 'Rooms',
        clusterGroups: 'Group Chats',
        clusterChats: 'Agent Chats',
@@ -66,7 +27,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      loop: {
        stage: {
-@@ -6661,7 +6668,10 @@
+@@ -6625,7 +6632,10 @@ export default {
        always: 'Always allow',
        deny: 'Deny',
        approve: 'Approve',
@@ -77,4 +38,45 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      auto_pass: 'Auto-passed'
      },
      colRisk: 'Risk tier',
+     risk: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 43a869e..91d499b 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1533,7 +1533,8 @@ export default {
+       formRepo: '中央仓地址',
+       submit: '发起',
+       readings: '网络读数',
+-      pendingHuman: '待审人工门'
++      pendingHuman: '待审人工门',
++      completed: '已完成'
+     },
+     brand: '驾驶舱',
+     flow: {
+@@ -1555,7 +1556,13 @@ export default {
+       clusterRooms: '房间',
+       clusterGroups: '群聊',
+       clusterChats: '会话',
+-      groupAgents: 'Agents'
++      groupAgents: 'Agents',
++      chatSection: '聊天',
++      newChat: '新聊天',
++      newAgentChat: 'Agent 单聊',
++      newGroupChat: 'Agent 群聊',
++      newMatrixRoom: 'Matrix 房间',
++      deleteGroup: '删除群聊'
+     },
+     loop: {
+       stage: {
+@@ -6624,7 +6631,10 @@ export default {
+       always: '总是允许',
+       deny: '拒绝',
+       approve: '批准',
+-      request_changes: '打回返工'
++      request_changes: '打回返工',
++      spotcheck_confirm: '抽检认可',
++      spotcheck_veto: '抽检否决',
++      auto_pass: '自动放行'
+     },
+     colRisk: '风险档',
      risk: {
