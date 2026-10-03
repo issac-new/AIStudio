@@ -54,7 +54,15 @@ const items = ref<PendingApprovalItem[]>([])
 /** 操作对象可读化（视觉审计 #14）：纯哈希对象缩位显示 `对象 xxxxxxxx`，完整值挂 title。 */
 function prettyTarget(title: string): string {
   const s = (title || '').trim()
-  return /^[0-9a-f]{16,}$/i.test(s) ? `对象 ${s.slice(0, 8)}…` : s || '—'
+  return /^[0-9a-f]{16,}$/i.test(s) ? `${t('approvals.objectPrefix')} ${s.slice(0, 8)}…` : s || '—'
+}
+
+/** review 卡 detail 本地化（L3）：服务端 token → locale 文案。 */
+function reviewDetailText(item: PendingApprovalItem): string {
+  const d = (item.detail || '').trim()
+  if (d === 'uncommitted') return t('approvals.reviewUncommitted')
+  if (d.startsWith('baseline')) return t('approvals.reviewBaseline', { ref: d.slice('baseline'.length).trim() })
+  return d
 }
 const history = ref<ApprovalHistoryEntry[]>([])
 const spotChecks = ref<SpotCheckItem[]>([])
@@ -204,6 +212,9 @@ defineExpose({ refresh })
             {{ item.title }}
           </div>
           <code v-if="item.kind === 'command'" class="approval-row__detail">{{ item.detail }}</code>
+          <!-- L3（2026-10-03）：review 卡 detail 是服务端语义 token（uncommitted /
+               baseline <ref>），按前缀路由本地化；历史缓存里的中文串原样回落。 -->
+          <div v-else-if="item.kind === 'review'" class="approval-row__detail">{{ reviewDetailText(item) }}</div>
           <div v-else class="approval-row__detail">{{ item.detail }}</div>
           <div class="approval-row__meta">
             {{ fmtTime(item.createdAt) }}

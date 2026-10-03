@@ -1,13 +1,17 @@
 <!-- overlay/custom/client/ia2/components/AccountsNavEntry.vue -->
-<!-- 账户管理导航入口（P6 补遗④）：matrix 系统管理员页（建号/绑定/停用）。 -->
+<!-- 账户管理导航入口（P6 补遗④）：matrix 系统管理员页（建号/绑定/停用）。
+     2026-10-03 走查 L5：EN 模式硬编码中文「账户管理」——改走 ia2.nav.accounts
+     键（zh/en 双语），与同排 Overview/Approvals/Governance Center 一致。 -->
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 const router = useRouter()
+const { t } = useI18n()
 </script>
 
 <template>
   <button type="button" class="acct-nav" data-testid="nav-accounts" @click="router.push({ name: 'ia2.accounts' })">
-    <span class="acct-nav__ico">👤</span> 账户管理
+    <span class="acct-nav__ico">👤</span> {{ t('ia2.nav.accounts') }}
   </button>
 </template>
 
