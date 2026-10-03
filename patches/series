@@ -459,3 +459,5 @@
 551-history-session-name-dangling-fix.patch
 # 552=usage.costStates/pricing 词条回填（473 rebaseline 误删；changelog 8 键归 550）。
 552-locale-0727-usage-blocks.patch
+# 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
+553-locale-ux-clarity.patch
