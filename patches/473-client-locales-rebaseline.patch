@@ -874,7 +874,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      theme: 'Theme',
      settings: 'Settings',
      connected: 'Connected',
-@@ -547,8 +743,1584 @@ export default {
+@@ -547,8 +743,1589 @@
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -884,6 +884,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    systemGroup: 'System'
 +  },
 +  ide: {
++    tools: { title: 'Tools timeline', empty: 'No tool calls in this session yet' },
++    wf: { title: 'Session runs', empty: 'No workflow runs in progress. When the agent invokes workflow tools (or @zcode dispatches), run rows appear here in real time.' },
++    slash: { title: 'Custom slash commands', hint: 'Type / in the /ide input to pick one; the selected template is written into the input for editing before sending.', empty: 'No custom commands yet' },
 +    dims: {
 +      workspace: 'Workspace',
 +      task: 'Task',
@@ -1255,6 +1258,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    },
 +    paletteCmdReview: 'Review current changes (read-only)',
 +    hooks: {
++      add: 'Add',
 +      title: 'Hooks',
 +      refresh: 'Refresh',
 +      loadFailed: 'Failed to load hooks',
@@ -4804,7 +4808,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      new_0_7_12_2: 'Windows Ekko and Hermes startup now defers locked Skill resets for retry and launches command shims correctly, preventing EPERM and spawn EINVAL startup failures (#2796)',
      new_0_7_12_3: 'Ekko now rejects incomplete model tool calls and removes invalid tool-call history before retrying, preventing empty function, name, or arguments failures across compatible models (#2796)',
      new_0_7_12_4: 'Database, Skills, memory, and logs now fail independently: Core chat remains available, unavailable modules are marked degraded, and each incident exposes its cause and repair context (#2797)',
-@@ -3859,5 +6089,813 @@ export default {
+@@ -3859,5 +6089,817 @@ export default {
      new_0_7_0_9: 'Server ownership is now divided into canonical Studio, Hermes, Ekko, and Coding Agent modules, while legacy MCU routes remain compatible and shutdown reliably cleans up Studio-owned process trees (#2744, #2746, #2747)',
      new_0_7_0_10: 'The English and Chinese READMEs now document the five runtimes, three Agent families, module ownership, canonical APIs, and current development and validation workflows (#2745)',
      new_0_7_0_11: 'Device Connections now shows only Android and iOS download cards; official Apple releases are labeled App Store instead of TestFlight · App Store',
@@ -5021,7 +5025,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    completionSummaryHint: 'Enter a summary for this task. It is stored as the task result.',
 +    scheduleTitle: 'Schedule',
 +    yearLabel: 'Year',
-+    itemCount: '{count} items',
++    itemCount: '{n} items',
 +    aggregateSessions: 'Aggregate linked sessions',
 +    termTool: 'Terminal tool',
 +    termToolNotInstalled: 'not installed',
@@ -5099,6 +5103,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    taskSwimlane: 'Task Swimlane',
 +    taskTimeline: 'Task Timeline',
 +    taskTopology: 'Task Topology',
++    focusTask: ' · focused {id}',
 +    tenant: 'Tenant',
 +    timeWindow: 'Time Window',
 +    timelinePrefix: 'Timeline',
@@ -6497,7 +6502,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      theme: '主题',
      settings: '设置',
      connected: '已连接',
-@@ -547,8 +743,1584 @@ export default {
+@@ -547,8 +743,1589 @@
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -6507,6 +6512,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    systemGroup: '系统'
 +  },
 +  ide: {
++    tools: { title: '工具时间线', empty: '当前会话暂无工具调用' },
++    wf: { title: '会话运行', empty: '当前没有正在跑的工作流运行。会话里 agent 调用工作流工具（或 @zcode 派单触发）后，运行行实时出现在这里。' },
++    slash: { title: '自定义斜杠命令', hint: '在 /ide 输入框键入 / 即可选用；选中后模板写入输入框，可编辑再发送。', empty: '暂无自定义命令' },
 +    dims: {
 +      workspace: '工作空间',
 +      task: '任务',
@@ -6878,6 +6886,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    },
 +    paletteCmdReview: '评审当前改动（只读）',
 +    hooks: {
++      add: '新增',
 +      title: 'Hooks',
 +      refresh: '刷新',
 +      loadFailed: 'Hooks 加载失败',
@@ -10463,7 +10472,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      new_0_7_12_2: 'Windows 上的 Ekko 与 Hermes 启动流程现会延后重试被占用的 Skill 重置，并正确启动命令包装脚本，避免 EPERM 与 spawn EINVAL 导致启动失败（#2796）',
      new_0_7_12_3: 'Ekko 现会拒绝模型生成的不完整工具调用，并在重试前清理无效工具调用历史，避免兼容模型因 function、name 或 arguments 为空而失败（#2796）',
      new_0_7_12_4: '数据库、Skills、记忆和日志现可独立降级：核心对话保持可用，不可用模块会明确标记，每个故障都会提供原因与修复上下文（#2797）',
-@@ -3907,5 +6088,813 @@ export default {
+@@ -3907,5 +6088,817 @@ export default {
      new_0_7_0_9: '服务端职责现规范划分到 Studio、Hermes、Ekko 与 Coding Agent 模块；旧版 MCU 路由继续兼容，关闭 Studio 时也会可靠清理其创建的进程树（#2744、#2746、#2747）',
      new_0_7_0_10: '中英文 README 已更新，完整说明五种运行时、三类 Agent、模块归属、规范 API，以及当前开发和验证流程（#2745）',
      new_0_7_0_11: '“设备互联”现仅显示 Android 和 iOS 下载卡片；Apple 正式版只标记为 App Store，不再显示 TestFlight · App Store',
@@ -10680,7 +10689,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    completionSummaryHint: '输入此任务的摘要，将存为任务结果。',
 +    scheduleTitle: '日程',
 +    yearLabel: '年',
-+    itemCount: '{count} 项',
++    itemCount: '{n} 项',
 +    aggregateSessions: '聚合关联会话',
 +    termTool: '终端工具',
 +    termToolNotInstalled: '未安装',
@@ -10758,6 +10767,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    taskSwimlane: '任务泳道',
 +    taskTimeline: '任务时间线',
 +    taskTopology: '任务拓扑',
++    focusTask: ' · 聚焦 {id}',
 +    tenant: '租户',
 +    timeWindow: '时间窗口',
 +    timelinePrefix: '时间线',

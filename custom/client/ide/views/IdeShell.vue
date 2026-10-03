@@ -206,6 +206,14 @@ const mainClass = computed(() => ({
   'has-max-sidepane': ide.layout.sidepane.maximized,
 }))
 
+// A-H 复盘轮 C：最大化互斥态的显眼还原入口——唯一还原钮藏在页签条尾部小图标，
+// 互斥隐藏他栏后不易发现（回归实测曾误判布局崩溃）。常驻浮动钮直达。
+function unmaximizeAll(): void {
+  for (const k of ['sidebar', 'chat', 'sidepane'] as PaneKey[]) {
+    if (ide.layout[k].maximized) ide.toggleMax(k)
+  }
+}
+
 // 左栏宽度样式（sidebarWidth 拖拽持久化）
 const sidebarWidthStyle = computed(() => ide.layout.sidebarWidth ? { width: `${ide.layout.sidebarWidth}px`, flex: '0 0 auto' } : {})
 // 右辅助面板宽度样式（sidePane.width 拖拽持久化，走 sidePane 独立 ref）
@@ -411,6 +419,7 @@ onUnmounted(() => {
     <!-- v12.1 全局顶区常驻双视图；v12.6 维度条（工作空间行）退役——与三栏
          功能重叠（任务/会话在侧栏与会话列直达，辅助面板页签自持） -->
     <IaGlobalTop @notify="cockpitStore.openNotify()" />
+    <button v-if="anyMax" type="button" class="ide-shell__unmax" data-testid="ide-unmax-restore" :title="t('ide.pane.unmaxAll')" @click="unmaximizeAll">⤢ {{ t('ide.pane.unmaxAll') }}</button>
     <IdeTaskContextBar />
     <div class="ide-shell__main" :class="mainClass">
       <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }" :style="sidebarWidthStyle">
@@ -485,6 +494,26 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="scss">
+.ide-shell__unmax {
+  position: fixed;
+  top: 50px;
+  right: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  background: var(--bg-card, #1f2226);
+  color: var(--text-primary, #e6e6e6);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  &:hover { border-color: var(--color-primary, #3b82f6); }
+}
+
 .ide-shell {
   height: calc(var(--vh, 1vh) * 100);
   display: flex;

@@ -47,12 +47,12 @@ const taskStatusSummary = computed(() =>
   <div class="sit" data-testid="sitline">
     <!-- R6 补充：「等我」与「任务」合并为单「任务」chip（待决策数作为角标副注；
          面板顶部仍有待决策区，决策动作在面板内） -->
-    <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" @click="emit('select', 'tasks')">
+    <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" :title="t('ia2.sit.chipTasksHint')" @click="emit('select', 'tasks')">
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
       <span v-if="waitingCount" class="sit__sm sit__sm--warn" data-testid="sit-tasks-decide">{{ t('ia2.sit.decideCount', { n: waitingCount }) }}</span>
       <span v-if="taskStatusSummary" class="sit__sm" data-testid="sit-tasks-summary">{{ taskStatusSummary }}</span>
     </button>
-    <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" @click="emit('select', 'online')">
+    <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" :title="t('ia2.sit.chipOnlineHint')" @click="emit('select', 'online')">
       <span class="sit__dot sit__dot--ok" />{{ t('ia2.sit.online') }} {{ onlinePeople + onlineAgents + onlineMachines }}
       <span class="sit__sm">{{ t('ia2.sit.onlineDetail', { p: onlinePeople, a: onlineAgents, m: onlineMachines }) }}</span>
     </button>
