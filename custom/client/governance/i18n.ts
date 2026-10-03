@@ -9,6 +9,7 @@ export const governanceMessages = {
       pageSub: '六道闸工件 · 真仓锚点 · 就地裁决',
       harness: {
         // 通用
+        pageSub: '统一能力目录 · 六类成本账 · L1-L5 成熟度自检 · 八工程原语对账',
         refresh: '刷新',
         loading: '加载中…',
         loadFailed: '加载失败',
@@ -226,6 +227,26 @@ export const governanceMessages = {
         snapshots: '快照 {n} 份 · {kb}KB',
         total: '共 {n} 条',
         expanded: '已展开',
+        // 2026-10-04 i18n 补齐（72h 审查窗口外旧债）：原先硬编码 zh 的判定/类别映射与计数行
+        countSummary: '{d} 决策 · {n} 节点',
+        outcome: { approved: '放行', rejected: '拒绝', deferred: '暂缓' },
+        category: { dispatch: '派发', approval: '审批', escalation: '升级', gate: '门禁' },
+      },
+      health: {
+        sixDomains: '六域体检',
+        sub: '工件在仓锚点 · 判定引擎台账',
+        listTitle: '六域体检 · 每域一个交付问题',
+        runNow: '▶ 运行六域体检',
+        running: '⏳ 体检中…',
+        auditFailed: '六域体检失败：{msg}（徽章仍为上一轮台账）',
+        verdict: { pass: '通过', warn: '观察', fail: '不通过' },
+        notRun: '未体检',
+        emptyHint: '尚未体检——点击「运行六域体检」产出首轮台账（docs/governance/domain-audit.jsonl，跨轮累积）',
+        ledgerMeta: '台账 {total} 条判定 · {runs} 轮（{list}）——长期基础数据，下轮目标 = 上轮基线',
+        levels: {
+          L0: '范围与需求', L1: '工程正确性', L2: '系统一致性',
+          L3: '行为与业务语义', L4: '架构·非功能·安全', L5: '交付与治理',
+        },
       },
       decisionRules: {
         title: '决策规则闸',
@@ -402,6 +423,7 @@ export const governanceMessages = {
       pageSub: 'Six gates · repo-anchored · decide in place',
       harness: {
         // shared
+        pageSub: 'Unified capability catalog · six cost accounts · L1-L5 maturity self-check · eight engineering primitives',
         refresh: 'Refresh',
         loading: 'loading…',
         loadFailed: 'Load failed',
@@ -619,6 +641,26 @@ export const governanceMessages = {
         snapshots: '{n} snapshots · {kb}KB',
         total: '{n} total',
         expanded: 'expanded',
+        // 2026-10-04 i18n backfill (pre-window debt flagged by 72h review)
+        countSummary: '{d} decisions · {n} nodes',
+        outcome: { approved: 'approved', rejected: 'rejected', deferred: 'deferred' },
+        category: { dispatch: 'dispatch', approval: 'approval', escalation: 'escalation', gate: 'gate' },
+      },
+      health: {
+        sixDomains: 'Six-Domain Check',
+        sub: 'Repo-anchored artifacts · verdict-engine ledger',
+        listTitle: 'Six-domain check · one delivery problem per domain',
+        runNow: '▶ Run domain check',
+        running: '⏳ running…',
+        auditFailed: 'Domain check failed: {msg} (badges keep the previous ledger)',
+        verdict: { pass: 'pass', warn: 'watch', fail: 'fail' },
+        notRun: 'not run',
+        emptyHint: 'Not run yet — click "Run domain check" to produce the first ledger (docs/governance/domain-audit.jsonl, accumulated across rounds)',
+        ledgerMeta: 'Ledger: {total} verdicts · {runs} runs ({list}) — long-term baseline data; next round targets the previous baseline',
+        levels: {
+          L0: 'Scope & requirements', L1: 'Engineering correctness', L2: 'System consistency',
+          L3: 'Behavior & business semantics', L4: 'Architecture · non-functional · security', L5: 'Delivery & governance',
+        },
       },
       decisionRules: {
         title: 'Decision Rules Gate',

@@ -32,10 +32,9 @@ const audit = ref<DomainAuditSummary | null>(null)
 const auditRunning = ref(false)
 const auditError = ref('')
 const DOMAIN_ORDER = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'] as const
-const DOMAIN_NAMES: Record<string, string> = {
-  L0: '范围与需求', L1: '工程正确性', L2: '系统一致性',
-  L3: '行为与业务语义', L4: '架构·非功能·安全', L5: '交付与治理',
-}
+// 2026-10-04 i18n 补齐（72h 审查窗口外旧债）：域名/判词/提示原硬编码 zh，改走 governance.health 词条
+const DOMAIN_NAMES = computed<Record<string, string>>(() =>
+  (L.value as unknown as { health: { levels: Record<string, string> } }).health.levels)
 
 async function runAudit(): Promise<void> {
   auditRunning.value = true
@@ -45,7 +44,8 @@ async function runAudit(): Promise<void> {
     audit.value = await fetchDomainAudit()
   } catch (e) {
     // 失败必须可见：静默吞掉会让旧台账徽章继续冒充本轮结果
-    auditError.value = `六域体检失败：${e instanceof Error ? e.message : String(e)}（徽章仍为上一轮台账）`
+    const h = (L.value as unknown as { health: { auditFailed: string } }).health
+    auditError.value = h.auditFailed.replace('{msg}', e instanceof Error ? e.message : String(e))
   } finally { auditRunning.value = false }
 }
 
@@ -90,8 +90,8 @@ onMounted(() => void refresh())
   <section class="gov-health" data-testid="gov-health">
     <div class="gov-health__bar">
       <div>
-        <h3 class="gov-health__title">{{ L.gatesTitle }} + 六域体检</h3>
-        <p class="gov-health__sub">工件在仓锚点 · 判定引擎台账<template v-if="overview"> · {{ L.repoLabel }}: {{ overview.repo }}</template></p>
+        <h3 class="gov-health__title">{{ L.gatesTitle }} + {{ (L as any).health.sixDomains }}</h3>
+        <p class="gov-health__sub">{{ (L as any).health.sub }}<template v-if="overview"> · {{ L.repoLabel }}: {{ overview.repo }}</template></p>
       </div>
       <button type="button" class="gov-health__refresh" data-testid="gov-health-refresh" :disabled="loading" @click="refresh()">
         {{ loading ? '⏳ …' : '⟳ ' + L.refresh }}
@@ -112,24 +112,24 @@ onMounted(() => void refresh())
     <!-- 六域体检：真实流程中运行的判定引擎，台账跨轮累积 -->
     <div class="gov-health__audit" data-testid="gov-domain-audit">
       <div class="gov-health__audit-bar">
-        <h4 class="gov-health__list-title">六域体检 · 每域一个交付问题</h4>
+        <h4 class="gov-health__list-title">{{ (L as any).health.listTitle }}</h4>
         <button type="button" class="gov-health__refresh" data-testid="gov-audit-run" :disabled="auditRunning" @click="runAudit()">
-          {{ auditRunning ? '⏳ 体检中…' : '▶ 运行六域体检' }}
+          {{ auditRunning ? (L as any).health.running : (L as any).health.runNow }}
         </button>
       </div>
       <div v-if="auditError" class="gov-health__audit-error" data-testid="gov-audit-error">{{ auditError }}</div>
       <div v-if="audit" class="gov-health__audit-grid">
         <div v-for="d in DOMAIN_ORDER" :key="d" class="gov-health__audit-cell" :data-testid="`gov-audit-${d}`">
-          <span class="gov-health__audit-dom">{{ d }} · {{ DOMAIN_NAMES[d] }}</span>
+          <span class="gov-health__audit-dom">{{ d }} · {{ DOMAIN_NAMES[d] ?? d }}</span>
           <span class="gov-health__audit-badge" :class="`is-${audit.latest[d]?.verdict ?? 'none'}`">
-            {{ audit.latest[d] ? ({ pass: '通过', warn: '观察', fail: '不通过' } as Record<string, string>)[audit.latest[d]!.verdict] : '未体检' }}
+            {{ audit.latest[d] ? ((L as any).health.verdict as Record<string, string>)[audit.latest[d]!.verdict] ?? audit.latest[d]!.verdict : (L as any).health.notRun }}
           </span>
           <div class="gov-health__audit-ev">{{ (audit.latest[d]?.evidence ?? []).slice(0, 2).join(' · ') }}</div>
         </div>
       </div>
-      <div v-else class="gov-health__empty">尚未体检——点击「运行六域体检」产出首轮台账（docs/governance/domain-audit.jsonl，跨轮累积）</div>
+      <div v-else class="gov-health__empty">{{ (L as any).health.emptyHint }}</div>
       <div v-if="audit" class="gov-health__audit-meta">
-        台账 {{ audit.total }} 条判定 · {{ audit.runs.length }} 轮（{{ audit.runs.slice(0, 3).join(' / ') }}{{ audit.runs.length > 3 ? ' …' : '' }}）——长期基础数据，下轮目标 = 上轮基线
+        {{ (L as any).health.ledgerMeta.replace('{total}', String(audit.total)).replace('{runs}', String(audit.runs.length)).replace('{list}', audit.runs.slice(0, 3).join(' / ') + (audit.runs.length > 3 ? ' …' : '')) }}
       </div>
     </div>
   </section>
