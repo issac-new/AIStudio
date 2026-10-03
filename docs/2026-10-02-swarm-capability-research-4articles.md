@@ -7,7 +7,7 @@
   2. 信通院报告的"四大职能 / 六类能力 / L1-L5"里，治理闭环（审批/熔断/审计/PROV-O）SwarmStudio 已厚，但**能力目录三系并存无单一事实源、成本只有 token 一类、无量化成熟度自检**。
   3. 上下文管理现状是"shift 丢旧窗 / compact 靠 LLM 摘要"两极，**没有源文④主张的"旧窗 verbatim 归档可召回 + 机械交接锚点"无损路线**。
 
-源文原始材料存于 `docs/2026-10-02-4articles-sources/`（三篇公众号全文 txt + 头条要点摘录）。
+源文原始材料存于 `docs/2026-10-02-4articles-sources/`（三篇公众号全文 txt + 头条要点摘录；三部曲③全文 2026-10-03 补档为 `GrrESIILeQ2cxlF0-JKeaQ.txt`）。
 
 ---
 
@@ -20,7 +20,7 @@
 | ② merge-review 裁决不写 marker | **根治**：裁决台账 board-adjudicated-<slug>.json——keep-existing 裁决后管线豁免+marker 放宽（written∪keepDrops），修掉"幂等只挡未决→已裁决被重新追加"死循环；take-incoming 经 updates 自然闭环 | 0a3ffe32；守门三测 |
 | ④ C1 首窗不可切分 | **根治（增量面）**：patch 546 压缩边界史表（追加式）+advance 按次切窗（缺表回落/防御兜底/boundarySource 溯源）；546 部署前存量首窗物理性丢失，firstObservation 如实保留 | e02550e3；守门三测 |
 | ③ 499 干净树不可重放 | **实证已自愈**：hermes-agent 干净克隆 42 补丁全链重放一次全过；对账抓到活树 533 未重放漂移，已重建至 LIVE==REPLAY 逐字节等效 | 树级修复（无 overlay 提交） |
-| ① 三部曲③未发布 | **挂起**：10-03 晨检仍未出；A4 维持预判实现，③发布后对照校准 | — |
+| ① 三部曲③未发布 | **已闭合（2026-10-03 午）**：③已发布并完成对照校准——质量门禁真缺口落地为 A5（86e9e248，失败自动回滚）、快照元数据 label 补齐、回滚哲学实证对齐、Neo4j 迁移判定无对应物（等价物=governance manual 档+裁决台账） | a14f7406 |
 
 设计正本同步：V6 推演方案（`docs/superpowers/specs/2026-10-02-mux-v6-fullflow-plan.md`）第二章能力行/P18 行/§14.3 补丁清单已更新（patch 542-546）；过程记档入 V5 changelog-archive §十。
 

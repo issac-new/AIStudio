@@ -289,3 +289,12 @@
 - ① 三部曲③仍未发布（09-29/10-01 隔日节奏，10-03 晨检未出）——唯一挂起项；A4 维持预判实现，③发布后对照校准（预告主题：质量门禁/版本快照回滚/schema 迁移）。
 - 验证：全量 3708 过 0 红；8647 按 nodemon 口径重启，kg-evolution/板同步/context-archive 三面冒烟过（A1 真实探到 main 板 mtime 变化进 pending）。patch 546 经 ensure-injected 干净入列（manifest 280 条）。
 - 轮间事实：并行会话当晚完成 studio 0.7.27 迁移（279 补丁重锚）并主动合入收口分支推 origin（main=6a146cbe）；V6 正文六处同步（基准行/第二章两能力行/P18 甲丙两行/§14.3 补丁清单）。
+
+## 十一、三部曲③校准轮（2026-10-03 午）
+
+- 触发：三部曲③《质量门禁、版本快照与回滚，以及下游 Neo4j Schema 迁移》发布（mp=GrrESIILeQ2cxlF0-JKeaQ，2026-10-03 08:00），收口轮遗留①的对照校准兑现。
+- 对照结论：①**质量门禁=真缺口**（我方只有治理分级，缺「演化后图谱变好还是变差」判定）→ 落地 A5；②版本快照/回滚哲学已对齐（回滚不删史、pre-rollback 另存=文章「回滚也是新快照」），补元数据 label 校准；③Neo4j schema 迁移在本栈无直接对应物（等价物=governance manual 档+裁决台账+人工批准语义，映射记档不硬造）。
+- A5 落地（86e9e248，零新 patch——纯 overlay custom 代码，门禁结果随既有 /sync 回包）：quality-gate.ts 纯函数（coverage=task 节点/eligible 任务、orphanRate 信息性不门禁、aliasRatio 别名率守门；源文③ CompetencyQuestions 英文关键词子串匹配两大坑对我栈不适用——指标直接从 KG JSON 结构计算）；sync 接线=结构性新增才上门禁（auto/alias 实体，updates 纯重写不空转拍快照）→ pre 快照 → 判定（coverage 不降 且 aliasRatio≤cap，KG_QUALITY_ALIAS_CAP/KG_QUALITY_GATE 总闸）→ 失败自动回滚+marker 不写下轮自愈+收件箱 quality-gate 条目+废态不进版本史；python 缺席早退清白拍快照。守门五测（纯函数二+端到端三：别名率超限回滚/正常通过双快照/总闸关闭回退）。
+- 快照元数据（同轮）：kg-<ts>.meta.json 边车（label=auto-pre/auto-post/rollback/manual），listBoardSnapshots 返回 label，裁剪伴随清理边车；UI 版本下拉显 label+门禁状态行（失败红显「已自动回滚+原因」）。
+- 验证：全量三轮——第二轮 11 红（含真实 python 集成 r3 冲突消失），隔离复刻诊断证明代码无回归（R3 冲突正确产出），全部坐实环境争用 flake（8647 自动同步同用真 venv bridge+机器高负载+并行会话），第三轮同树 3725 全过 0 红。合 main a14f7406 已推。
+- 坑：breakerRatioFromEnv 拒收 >1 值回落 0.20（测试想关熔断须用 '1' 而非 '10'）；门禁 before 指标按当前 eligible 计（同题集前后对照=公平性所在）；冷启动无 KG 文件=无 pre 态=无门禁判定（首同步天然单调增无门禁必要）。
