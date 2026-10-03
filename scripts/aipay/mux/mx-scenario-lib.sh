@@ -580,6 +580,23 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   [ -n "$_ct" ] || return 1
   (( _ct >= _rs ))
 }
+test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd>（发布基线分支口径，
+  # 与 testpass 派发词 push 目标一致）。run7 实锤：testpass/uat 用 repo_has（origin/main
+  # 口径）查一份只进 integration 的报告=永假——testpass 六代重启代代白派、UAT 九连死循环
+  # 3h45m 的共同根因位。冻结件仍走 repo_has（main 口径）。
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1
+}
+
+uat_evidence_body() { # 本轮（run_started_at 起）fanfan 发的最新一条 UAT-EVIDENCE 结论行 body；
+  # 无则输出空串。证据复用（run8 优化 A）与等待后取样共用同一取法，保证"复用判定"与
+  # "正式核验"看到同一行。按 origin_server_ts 排序取最新（结论行以最终一条为准），
+  # 与 mx_messages 返回序解耦。
+  mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null \
+    | jq -r --arg s "$(agent_mxid fanfan)" --argjson since "${1}000" \
+      '[.[] | select(.origin_server_ts > $since and .sender == $s and ((.content.body // "") | test("^\\s*UAT-EVIDENCE")))] | sort_by(.origin_server_ts) | .[-1] | .content.body // ""' 2>/dev/null
+}
+
 # repo_pull（Z3）：只刷引用、不动当前分支/工作树。旧写法 `git pull origin main` 会把
 # origin/main merge 进当前分支——defect 步后 HEAD 停在 integration/${RFD_ID}，pull 即把
 # main 混进集成分支污染其历史。现改为：全量 fetch 刷远端引用（repo_has/步骤内 merge 用的

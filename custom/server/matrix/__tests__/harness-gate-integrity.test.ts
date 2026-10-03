@@ -440,3 +440,89 @@ PYE`], { encoding: 'utf8' })
     }
   })
 })
+
+// ═══ run8 耗时优化绊线（run7 13h05m 归因：5.5h 可恢复浪费的防复发结构）═══
+// A UAT fail-fast+证据复用 / B testpass 口径 / C 派发幂等 marker / D relay 提速 /
+// E G5 活性等待+判词复用。逐条绊线防回归：改掉任一结构此处变红。
+describe('⑪ run8 耗时优化（fail-fast/复用/幂等/接力节奏）', () => {
+  const SCEN = join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
+
+  it('B：testpass 前置守卫=origin/integration 口径（repo_has 查 test-report 不得回归）', () => {
+    const scen = read(SCEN)
+    expect(scen).toContain('if ! test_report_on_integration "${RFD_ID}"; then')
+    expect(scen).not.toContain('repo_has docs/test/')
+    expect(scen).toContain('wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}"')
+  })
+
+  it('A：UAT fail-fast——本地校验前移到派单之前（缺件不烧 agent）', () => {
+    const scen = read(SCEN)
+    const preIdx = scen.indexOf('uat-precheck')
+    const dispatchIdx = scen.indexOf('dispatch_in_room bella')
+    expect(preIdx).toBeGreaterThan(-1)
+    expect(dispatchIdx).toBeGreaterThan(-1)
+    expect(preIdx).toBeLessThan(dispatchIdx)   // 前置校验必须在派单之前
+    expect(scen).toContain('先修上游再验收（未派发 UAT 任务）')
+  })
+
+  it('A：UAT 证据复用——锚=本轮起跑时刻，既有合格结论行不重派', () => {
+    const scen = read(SCEN)
+    expect(scen).toContain('UAT_SINCE_SEC=$(sget run_started_at)')
+    expect(scen).toContain('UAT 证据复用（本轮既有合格结论行，不重派验收）')
+    // 等待谓词同锚（派发时刻锚会使重启后既有证据行落在窗外）
+    expect(scen).toContain('"^UAT-EVIDENCE" "$UAT_TS"')
+  })
+
+  it('A：uat_evidence_body 行为——取本轮最新结论行，滤旧轮/他发者/非行首回声', () => {
+    const root = sandbox()
+    const out = sh(`
+sget() { case "$1" in room_analysis) echo '!room:x';; *) echo '';; esac; }
+load_token() { echo 'tok'; }
+agent_mxid() { echo "@$1:matrix.test"; }
+mx_messages() { cat <<'J'
+[
+ {"origin_server_ts": 1790931000000, "sender": "@fanfan:matrix.test", "content": {"body": "hindsight_recall 预览 UAT-EVIDENCE AC-1 AC-2"}},
+ {"origin_server_ts": 1790932000000, "sender": "@fanfan:matrix.test", "content": {"body": "UAT-EVIDENCE AC-1 通过 AC-2 通过"}},
+ {"origin_server_ts": 1790933000000, "sender": "@fanfan:matrix.test", "content": {"body": "UAT-EVIDENCE AC-1 通过 AC-2 通过 AC-3 通过 AC-4 通过 AC-5 通过 AC-6 通过 AC-7 通过"}},
+ {"origin_server_ts": 1790934000000, "sender": "@wei:matrix.test", "content": {"body": "UAT-EVIDENCE 假冒行"}},
+ {"origin_server_ts": 1790830000000, "sender": "@fanfan:matrix.test", "content": {"body": "UAT-EVIDENCE 旧轮残留"}}
+]
+J
+}
+uat_evidence_body 1790930955`, root)
+    expect(out).toContain('AC-7 通过')      // sort_by 取最新=全覆盖结论行
+    expect(out).not.toContain('hindsight_recall')
+    expect(out).not.toContain('旧轮残留')
+    expect(out).not.toContain('假冒')
+  })
+
+  it('C：派发幂等 marker 全集在场（重启防整批重派）', () => {
+    const scen = read(SCEN)
+    for (const k of ['anexec_d1', 'anexec_d2', 'devimpl_d1', 'devimpl_d2', 'devimpl_d3',
+                     'defect_dispatched', 'audit_dispatched', 'preflight_ok', 'g5_rgid']) {
+      expect(scen).toContain(k)
+    }
+  })
+
+  it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
+    const scen = read(SCEN)
+    expect(scen).toContain('g5_pass_finalize()')
+    expect(scen).toContain('wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 fanfan')
+    expect(scen).toContain('G5 判词复用（本轮既有 PASS 结论行，不重派评审）')
+    expect(scen).toContain('G5_TS=$(( $(sget run_started_at) * 1000 ))')
+  })
+
+  it('D：relay 探测 15s/拉起确认 10s（90s+120s 旧节奏不得回归）', () => {
+    const relay = read(join(MX, 'mx-relay.sh'))
+    expect(relay).toContain('sleep 15')
+    expect(relay).toContain('sleep 10')
+    expect(relay).not.toContain('sleep 90')
+    expect(relay).not.toContain('sleep 120')
+  })
+
+  it('D：模型预检只首轮（preflight_ok 键落 state）', () => {
+    const scen = read(SCEN)
+    expect(scen).toMatch(/\[\[ -z "\$\(sget preflight_ok\)" \]\]/)
+    expect(scen).toContain('sset preflight_ok 1')
+  })
+})

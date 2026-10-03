@@ -67,9 +67,14 @@ note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL
 # LLM 依赖区间为 [dispatch, uat]（agent 回合步骤）：执行区间与它有交集才要求通道；
 # smoke..reqgate 与 workmgr/audit/retro/ide 均为导演侧动作，无 LLM 依赖
 # （v3 实测 bug③④：全量预检会把导演侧管理步误拦在额度耗尽环境下）。
+# 只首轮跑（run8 优化 D）：14 账号串行探针 25-40s×每棒接力纯浪费（run7 28 代实录）；
+# 探针串行是防自挤 429（勿改并行），改"每轮只检一次"——中途通道劣化由 wait_alive
+# 空转判据兜住（日志零增长即判死），预检的职责只是"坏通道别开局"。
 RANGE_END="${UNTIL_STEP:-report}"
-if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$START_STEP") <= $(step_pos uat) )); then
+if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$START_STEP") <= $(step_pos uat) )) \
+   && [[ -z "$(sget preflight_ok)" ]]; then
   model_preflight_report
+  sset preflight_ok 1
 fi
 
 # ══ 步骤 1-5：账号/配置/登录/功能就绪冒烟 ═════════════
@@ -475,23 +480,31 @@ if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
 AN-DONE-<任务ID> commit=<已推送的 commitId> done=<一句话交付摘要>
 不许谎报。"
 
-  WS=$(workspace chen)
-  dispatch_in_room chen "@chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。
+  # 派发幂等 marker（run8 优化 C）：驱动中途死亡→relay 重拉→无 marker 会整批重派，
+  # agent 收到重复任务书即重复开工（真实 LLM 工作量白烧）。marker 落 state，跨代持久。
+  if [[ -z "$(sget anexec_d1)" ]]; then
+    WS=$(workspace chen)
+    dispatch_in_room chen "@chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid chen),$(agent_mxid wei)"
-  WS=$(workspace xiao)
-  dispatch_in_room xiao "@xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。
+    WS=$(workspace xiao)
+    dispatch_in_room xiao "@xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid xiao),$(agent_mxid mei)"
+    sset anexec_d1 1
+  fi
   # 首批交付等待（真分批）：两路入仓才派第二批——并发预算与交付节奏双收
   for t in AN-PAYCORE AN-MP; do
     wait_truth "首批：仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
       || { note "[观察] 首批 $t 分析文档未达（记问题单，第二批照派）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
   done
-  WS=$(workspace hu)
-  dispatch_in_room hu "@hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。
+  if [[ -z "$(sget anexec_d2)" ]]; then
+    WS=$(workspace hu)
+    dispatch_in_room hu "@hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid hu),$(agent_mxid wei)"
-  WS=$(workspace lin)
-  dispatch_in_room lin "@lin-agent:matrix.test 执行任务 AN-CHALI（csw-channel-alipay 支付宝渠道系分）。
+    WS=$(workspace lin)
+    dispatch_in_room lin "@lin-agent:matrix.test 执行任务 AN-CHALI（csw-channel-alipay 支付宝渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
+    sset anexec_d2 1
+  fi
 
   for t in AN-CHWX AN-CHALI; do
     wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
@@ -658,12 +671,16 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   note "── devimpl：后端核心先行，渠道/前端随后"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
 
-  dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core，3 人日重度任务）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：按工作量与复杂度把本任务拆成 3-6 件子任务（每件 ≤1 人日、有独立验收口径），kanban 建 DEV-PAYCORE 主卡并把子任务建为 link 子卡（含工作量与 --raci 字段）；逐子任务实现，每件子任务至少一个独立 commit（消息含子任务 ID），全部子任务完成后再进入整体自测。
+  # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1/d2），三批各一键。
+  if [[ -z "$(sget devimpl_d1)" ]]; then
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core，3 人日重度任务）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：按工作量与复杂度把本任务拆成 3-6 件子任务（每件 ≤1 人日、有独立验收口径），kanban 建 DEV-PAYCORE 主卡并把子任务建为 link 子卡（含工作量与 --raci 字段）；逐子任务实现，每件子任务至少一个独立 commit（消息含子任务 ID），全部子任务完成后再进入整体自测。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
 4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+    sset devimpl_d1 1
+  fi
 
   wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支（本轮新鲜）" 1800 chen branch_fresh "feat/DEV-PAYCORE" \
     || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
@@ -672,25 +689,31 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
   # 真分批（V7 P1 并发预算实装）：chen（上方已 wait）+hu+lin=3 会话峰值≤闸值 4；
   # 渠道两分支交付后再派 xiao（第四会话），杜绝 run7 devimpl 十一次拒收实录的四路齐发。
-  for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
-              "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
-    IFS='|' read -r who task app chan <<< "$spec"
-    dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+  if [[ -z "$(sget devimpl_d2)" ]]; then
+    for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
+                "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
+      IFS='|' read -r who task app chan <<< "$spec"
+      dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
 2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
-  done
+    done
+    sset devimpl_d2 1
+  fi
   for ba in "DEV-CHWX|hu" "DEV-CHALI|lin"; do
     IFS='|' read -r b bowner <<< "$ba"
     wait_alive_truth "渠道批：origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
       || { note "[观察] $b 分支未达（第二批照派）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
   done
 
-  dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+  if [[ -z "$(sget devimpl_d3)" ]]; then
+    dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+    sset devimpl_d3 1
+  fi
 
   wait_alive_truth "origin 出现 feat/DEV-MP 分支（本轮新鲜）" 1800 xiao branch_fresh "feat/DEV-MP" \
     || { note "[观察] DEV-MP 分支未达"; echo "ISSUE|dev-branch-missing|DEV-MP|分支未推送" >> "$EVID_DIR/issues.log"; }
@@ -789,16 +812,19 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     note "[集成] integration/${RFD_ID} 本地合并完成、推送未达（已记问题单，见 issues.log）"
   fi
 
-  dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
+  if [[ -z "$(sget defect_dispatched)" ]]; then
+    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。" "$(agent_mxid qi),$(agent_mxid wei)"
 
-  dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
+    dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
 2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。" "$(agent_mxid fei),$(agent_mxid mei)"
+    sset defect_dispatched 1
+  fi
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
   # TEST-PASS/缺陷消息曾让门禁在派发后 1 秒即判「零缺陷轮真值」（假完成）
@@ -827,14 +853,16 @@ fi
 
 # ══ 步骤 17：测试通过登记 + 测试报告 ═════════════════
 if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
-  if ! repo_has docs/test/${RFD_ID}-test-report.md; then
+  # 前置守卫口径=origin/integration（run8 优化 B）：报告按派发词只进 integration 分支，
+  # repo_has（origin/main）查它=永假——run7 六代重启代代白派报告任务书（jq 崩溃期）的
+  # 放大器。与下方 wait_alive_truth 等待谓词同口径（test_report_on_integration）。
+  if ! test_report_on_integration "${RFD_ID}"; then
     dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告：
 1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围/用例数/通过数/缺陷清单及状态/结论/通过时的 git commit id）
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
-    wait_alive_truth "测试报告入库" 1800 qi bash -c \
-      "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' show origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" \
+    wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
   fi
   gate_review qi "G4-测试过闸"
@@ -850,11 +878,36 @@ fi
 # 硬闸：G4 未过不得评审；G5 未过不得发布。
 if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   gate_blocked g4_pass ready   # V3 硬闸：G4 未过不进发布准出
-  mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久）
-  G5_TS=$(( $(date +%s) * 1000 ))
-  RGID=$(kanban_create_as fanfan g5_ready "${RFD_ID} 发布准出评审（G5）" \
-    "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review fanfan-researcher)
-  dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
+  # 判词锚点=本轮起跑时刻（run8 优化 E）：派发时刻锚会把重启前已存在的结论行排除在
+  # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。起跑锚
+  # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
+  G5_TS=$(( $(sget run_started_at) * 1000 ))
+  # 过闸收口（复用与新评同一收口路径：置卡 done/落键/批准留痕/M3 事件——防两路漂移）
+  g5_pass_finalize() {
+    kanban_walk_done fanfan "$RGID"
+    sset g5_ready "$(date +%s)"
+    # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
+    # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
+    echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+    note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
+    # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
+    dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
+    return 0   # dlv 未启用时末行 && 列表返回 1，函数调用是裸命令会被 set -e 击杀（包装引入的差异）
+  }
+  # 评审卡幂等（run8 优化 E）：卡 ID 落 state，重启复用不再重复建卡
+  RGID="$(sget g5_rgid)"
+  if [[ -z "$RGID" ]]; then
+    RGID=$(kanban_create_as fanfan g5_ready "${RFD_ID} 发布准出评审（G5）" \
+      "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review fanfan-researcher)
+    sset g5_rgid "$RGID"
+  fi
+  # 判词复用（run8 优化 E）：本轮已有 PASS 判词（房间行+卡面双源合并）直接收口不重派
+  if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
+    note "[真值] G5 判词复用（本轮既有 PASS 结论行，不重派评审）✓"
+    g5_pass_finalize
+  else
+    mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久；已 PASS 复用不受历史 FAIL 计数拦）
+    dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
 1) G4 证据已挂关联任务卡
 2) 构建产物同 commit 可复现（integration commit 存在、分支树干净）
 3) 依赖无新增（package 清单 diff）
@@ -863,35 +916,31 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
 评审记录落卡 body（review-record 结构）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
-  if wait_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
-    # 判词合并（R-A2，run2 实锤）：房间行判词子串曾被「转述 stub 原文」消息命中
-    # （"结论行 READY-GATE-PASS 或 READY-GATE-FAIL"）→ G5 误过；真实卡面结论是
-    # READY-GATE-FAIL。双源合并 FAIL 优先，FAIL 不得置卡 done、不得落键。
-    if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
-      kanban_walk_done fanfan "$RGID"
-      sset g5_ready "$(date +%s)"
-      # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
-      # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
-      echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
-      note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
-      # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
-      dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
-    else
-      echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
-      mx_gate_breaker_trip g5 "G5 发布准出" 1
-      G5_RETRY_TS=$(( $(date +%s) * 1000 ))
-      dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
-      if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
-        kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
-        echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+    # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
+    # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
+    if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
+      # 判词合并（R-A2，run2 实锤）：房间行判词子串曾被「转述 stub 原文」消息命中
+      # （"结论行 READY-GATE-PASS 或 READY-GATE-FAIL"）→ G5 误过；真实卡面结论是
+      # READY-GATE-FAIL。双源合并 FAIL 优先，FAIL 不得置卡 done、不得落键。
+      if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
+        g5_pass_finalize
       else
+        echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
         mx_gate_breaker_trip g5 "G5 发布准出" 1
-        fail "G5 两轮未过，不得发布（V3 硬闸）"
+        G5_RETRY_TS=$(( $(date +%s) * 1000 ))
+        dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
+        if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
+          kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
+          echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+        else
+          mx_gate_breaker_trip g5 "G5 发布准出" 1
+          fail "G5 两轮未过，不得发布（V3 硬闸）"
+        fi
       fi
+    else
+      echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
+      fail "G5 发布准出超时，中止（V3 硬闸）"
     fi
-  else
-    echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
-    fail "G5 发布准出超时，中止（V3 硬闸）"
   fi
   # 交付模板完备性（原 templates 步并入）：标准正文引用 + 双口径完备性检查 + 证据落 main
   TPL="$HOME/.hermes/delivery/DELIVERY-STANDARD-COMPLETE.md"
@@ -962,86 +1011,108 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   repo_pull
   AC_LIST=$(sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -oE "AC-[0-9]+" | sort -u | tr '\n' ' ')
   [[ -n "$AC_LIST" ]] || { echo "ISSUE|uat-no-ac|director|需求书未提取到 AC 清单" >> "$EVID_DIR/issues.log"; fail "UAT 无 AC 清单可验（G1 冻结缺陷）"; }
-  UAT_TS=$(( $(date +%s) * 1000 ))
-  dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)"
-  # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
-  # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
-  # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
-  # 到达与取样都按行首正则判。
-  if wait_alive_truth "UAT 证据行到位" 1800 fanfan room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "^UAT-EVIDENCE" "$UAT_TS"; then
-    UAT_OK=1; UAT_MISS=""
-    # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
-    UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
-      '[.[] | select(.sender == $s and ((.content.body//"") | test("^\\s*UAT-EVIDENCE")))] | .[0] | .content.body // ""')
-    AC_MISS=$(uat_ac_covered "$AC_LIST" "$UAT_BODY")
-    if [[ -n "$AC_MISS" ]]; then
-      UAT_OK=0; UAT_MISS="${UAT_MISS}UAT-EVIDENCE 未逐条覆盖 AC（缺 ${AC_MISS}）；"
-    fi
-    git -C "$DIRECTOR_CLONE" fetch -q origin || true
-    git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null || { UAT_OK=0; UAT_MISS="integration 分支不存在；"; }
-    # 测试报告核对口径=origin/integration（发布基线分支，与 testpass 派发词 push 目标一致）——
-    # repo_has 盯 origin/main，报告按流程只进 integration，曾致 UAT 死循环九连 FAIL
-    # （run7 03:53-05:42 实锤，relay 换代掩盖）。冻结件仍在 main 口径。
-    git -C "$DIRECTOR_CLONE" show "origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" >/dev/null 2>&1 \
-      || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失（integration）；"; }
-    repo_has "$(freeze_doc)" || { UAT_OK=0; UAT_MISS="${UAT_MISS}G1 冻结文件缺失；"; }
-    if [[ $UAT_OK == 1 ]]; then
-      # 逐条 AC 判词（独立审计意见 #3）：验收书按证据行逐条落判词，有条件/不通过
-      # 不得写成"全部通过"——放行权归需求提出方 bella（人），条件闭环后另行验收。
-      UAT_ALL_PASS=1; UAT_VERDICTS=""
-      for ac in $AC_LIST; do
-        v=$(uat_ac_verdict "$UAT_BODY" "$ac")
-        UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
-        [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
-      done
-      ACC="$DIRECTOR_CLONE/docs/acceptance/${RFD_ID}-acceptance.md"
-      mkdir -p "$(dirname "$ACC")"
-      {
-        echo "# ${RFD_ID} 业务验收报告（UAT，$(date '+%F %T')）"
-        echo
-        echo "- 验收人：bella（需求提出方）；依据：$(freeze_doc)（G1 冻结 AC 清单）"
-        echo "- 证据锚点：integration/${RFD_ID} 分支 + docs/test/${RFD_ID}-test-report.md + 房间 UAT-EVIDENCE 行"
-        echo
-        sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
-          | while IFS= read -r l; do
-              _ac=$(printf '%s' "$l" | grep -oE 'AC-[0-9]+' | head -1)
-              echo "- ${l#\- } → $(uat_ac_verdict "$UAT_BODY" "$_ac")（证据见上锚点）"
-            done
-        echo
-        echo "## SLA（ITIL 接管登记，retro 资产回写用）"
-        echo "- SVC-cashier-${RFD_ID}：收银台下单/查单/关单/回调 | 全体商户 | Silver | fanfan | 运营中"
-        echo "- 可用性 99.5%；下单接口 P95 ≤800ms；P2 事件 4h 响应"
-        echo
-        if [[ $UAT_ALL_PASS == 1 ]]; then
-          echo "- 结论：全部 AC 通过，验收接受。"
-        else
-          echo "- 结论：AC 判定见上表（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
-        fi
-      } > "$ACC"
-      [[ $UAT_ALL_PASS == 1 ]] || echo "ISSUE|uat-conditional|fanfan-agent|UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella" >> "$EVID_DIR/issues.log"
-      # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main
-      # 是空推/被拒，验收书进不了 main 且 set -e 暴毙、uat_done 落不了键。
-      if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收（${UAT_VERDICTS}）"; then
-        note "[UAT] 验收文档已入仓：docs/acceptance/${RFD_ID}-acceptance.md → origin/main"
-      else
-        echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
-        note "[观察] 验收文档推送失败（留存本地，记问题单）"
-      fi
-      sset uat_done "$(date +%s)"
-      if [[ $UAT_ALL_PASS == 1 ]]; then
-        note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
-      else
-        note "[UAT] ${RFD_ID} 业务验收完成（${UAT_VERDICTS}）——非全过项不作无条件验收，放行权归 bella"
-      fi
-      # M3 事件化：P5 done（发布+UAT 验收报告）→ case→P6
-      dlv_enabled && dlv_scenario_advance P5 fanfan P6 "git:main#$(git -C "${DIRECTOR_CLONE:-.}" rev-parse --short HEAD 2>/dev/null || echo na):docs/acceptance/${RFD_ID}-acceptance.md"
-    else
-      echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
-      fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
-    fi
+  # fail-fast 前置（run8 优化 A）：本地廉价校验（git 引用级，秒级）前移到派单之前——
+  # 缺件直接 fail+记单，不再让 agent 生成完整证据后才发现核对永败（run7 口径矛盾期
+  # 每代白派一次 UAT 证据生成，18 代实录）。口径=origin/integration（与 testpass 派发词
+  # 一致，3bb5b88a 修的是口径本身，此处把校验次序从"等证据后"前移到"派单前"）。
+  UAT_PRE=""
+  git -C "$DIRECTOR_CLONE" fetch -q origin || true
+  git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1 \
+    || UAT_PRE="integration 分支不存在；"
+  test_report_on_integration "${RFD_ID}" || UAT_PRE="${UAT_PRE}测试报告缺失（integration）；"
+  repo_has "$(freeze_doc)" || UAT_PRE="${UAT_PRE}G1 冻结文件缺失；"
+  if [[ -n "$UAT_PRE" ]]; then
+    echo "ISSUE|uat-precheck|director|UAT 前置缺件（fail-fast 未派单）：${UAT_PRE}" >> "$EVID_DIR/issues.log"
+    fail "UAT 前置缺件：${UAT_PRE}先修上游再验收（未派发 UAT 任务）"
+  fi
+  # 证据锚点=本轮起跑时刻（run8 优化 A）：派发时刻锚会把重启前已到的证据行排除在窗外，
+  # relay 换代后 fanfan 被迫重生成证据（run7 首份合格证据 02:08 到位、05:53 才被
+  # "看见"的 3h45m 实录）。
+  UAT_SINCE_SEC=$(sget run_started_at)
+  UAT_TS=$(( UAT_SINCE_SEC * 1000 ))
+  UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC")"
+  if [[ -n "$UAT_BODY" ]] && [[ -z "$(uat_ac_covered "$AC_LIST" "$UAT_BODY")" ]]; then
+    # 证据复用：本轮既有结论行且逐条覆盖全部 AC——不重派，直接进核验
+    note "[真值] UAT 证据复用（本轮既有合格结论行，不重派验收）✓"
   else
-    echo "ISSUE|uat-evidence-missing|fanfan-agent|UAT-EVIDENCE 2400s 未达" >> "$EVID_DIR/issues.log"
-    fail "UAT 证据行超时，中止"
+    dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)"
+    # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
+    # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
+    # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
+    # 到达与取样都按行首正则判。
+    if ! wait_alive_truth "UAT 证据行到位" 1800 fanfan room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "^UAT-EVIDENCE" "$UAT_TS"; then
+      echo "ISSUE|uat-evidence-missing|fanfan-agent|UAT-EVIDENCE 2400s 未达" >> "$EVID_DIR/issues.log"
+      fail "UAT 证据行超时，中止"
+    fi
+    UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC")"
+  fi
+  UAT_OK=1; UAT_MISS=""
+  # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
+  AC_MISS=$(uat_ac_covered "$AC_LIST" "$UAT_BODY")
+  if [[ -n "$AC_MISS" ]]; then
+    UAT_OK=0; UAT_MISS="${UAT_MISS}UAT-EVIDENCE 未逐条覆盖 AC（缺 ${AC_MISS}）；"
+  fi
+  git -C "$DIRECTOR_CLONE" fetch -q origin || true
+  git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null || { UAT_OK=0; UAT_MISS="${UAT_MISS}integration 分支不存在；"; }
+  # 测试报告核对口径=origin/integration（发布基线分支，与 testpass 派发词 push 目标一致）——
+  # repo_has 盯 origin/main，报告按流程只进 integration，曾致 UAT 死循环九连 FAIL
+  # （run7 03:53-05:42 实锤，relay 换代掩盖）。冻结件仍在 main 口径。
+  git -C "$DIRECTOR_CLONE" show "origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" >/dev/null 2>&1 \
+    || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失（integration）；"; }
+  repo_has "$(freeze_doc)" || { UAT_OK=0; UAT_MISS="${UAT_MISS}G1 冻结文件缺失；"; }
+  if [[ $UAT_OK == 1 ]]; then
+    # 逐条 AC 判词（独立审计意见 #3）：验收书按证据行逐条落判词，有条件/不通过
+    # 不得写成"全部通过"——放行权归需求提出方 bella（人），条件闭环后另行验收。
+    UAT_ALL_PASS=1; UAT_VERDICTS=""
+    for ac in $AC_LIST; do
+      v=$(uat_ac_verdict "$UAT_BODY" "$ac")
+      UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
+      [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
+    done
+    ACC="$DIRECTOR_CLONE/docs/acceptance/${RFD_ID}-acceptance.md"
+    mkdir -p "$(dirname "$ACC")"
+    {
+      echo "# ${RFD_ID} 业务验收报告（UAT，$(date '+%F %T')）"
+      echo
+      echo "- 验收人：bella（需求提出方）；依据：$(freeze_doc)（G1 冻结 AC 清单）"
+      echo "- 证据锚点：integration/${RFD_ID} 分支 + docs/test/${RFD_ID}-test-report.md + 房间 UAT-EVIDENCE 行"
+      echo
+      sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
+        | while IFS= read -r l; do
+            _ac=$(printf '%s' "$l" | grep -oE 'AC-[0-9]+' | head -1)
+            echo "- ${l#\- } → $(uat_ac_verdict "$UAT_BODY" "$_ac")（证据见上锚点）"
+          done
+      echo
+      echo "## SLA（ITIL 接管登记，retro 资产回写用）"
+      echo "- SVC-cashier-${RFD_ID}：收银台下单/查单/关单/回调 | 全体商户 | Silver | fanfan | 运营中"
+      echo "- 可用性 99.5%；下单接口 P95 ≤800ms；P2 事件 4h 响应"
+      echo
+      if [[ $UAT_ALL_PASS == 1 ]]; then
+        echo "- 结论：全部 AC 通过，验收接受。"
+      else
+        echo "- 结论：AC 判定见上表（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
+      fi
+    } > "$ACC"
+    [[ $UAT_ALL_PASS == 1 ]] || echo "ISSUE|uat-conditional|fanfan-agent|UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella" >> "$EVID_DIR/issues.log"
+    # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main
+    # 是空推/被拒，验收书进不了 main 且 set -e 暴毙、uat_done 落不了键。
+    if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收（${UAT_VERDICTS}）"; then
+      note "[UAT] 验收文档已入仓：docs/acceptance/${RFD_ID}-acceptance.md → origin/main"
+    else
+      echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
+      note "[观察] 验收文档推送失败（留存本地，记问题单）"
+    fi
+    sset uat_done "$(date +%s)"
+    if [[ $UAT_ALL_PASS == 1 ]]; then
+      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+    else
+      note "[UAT] ${RFD_ID} 业务验收完成（${UAT_VERDICTS}）——非全过项不作无条件验收，放行权归 bella"
+    fi
+    # M3 事件化：P5 done（发布+UAT 验收报告）→ case→P6
+    dlv_enabled && dlv_scenario_advance P5 fanfan P6 "git:main#$(git -C "${DIRECTOR_CLONE:-.}" rev-parse --short HEAD 2>/dev/null || echo na):docs/acceptance/${RFD_ID}-acceptance.md"
+  else
+    echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
+    fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
   fi
 fi
 
@@ -1070,7 +1141,10 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   else
     note "[audit] 门禁留痕/台账格式/取证目录 审计通过 ✓"
   fi
-  dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。" "$(agent_mxid audit)" || true
+  if [[ -z "$(sget audit_dispatched)" ]]; then
+    dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。" "$(agent_mxid audit)" || true
+    sset audit_dispatched 1
+  fi
   AUDDOC="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-audit-opinion.md"
   mkdir -p "$(dirname "$AUDDOC")"
   {
