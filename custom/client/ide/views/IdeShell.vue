@@ -491,7 +491,9 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
-  overflow: hidden;
+  // clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤：hidden 容器
+  // 被 focus/scrollIntoView 滚动后壳头上探进 z1001 页头带，顶栏操作区被截不可点）
+  overflow: clip;
 
 }
 

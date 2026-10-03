@@ -9,7 +9,11 @@
   height: calc(100 * var(--vh, 1vh));
   background: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden;
+  // clip 而非 hidden：hidden 容器仍可被编程性滚动（focus/scrollIntoView 副作用），
+  // 2026-10-03 回归实锤 scrollTop=26 时壳头上探进 z1001 页头带（App 级
+  // teleport 宿主），态势芯片/日程/通知铃/版本/用户钮中心点全部被截不可点；
+  // clip 禁止一切滚动偏移，scrollTop 恒 0。
+  overflow: clip;
 }
 
 // ── 六场景条（拷贝自退役 LoopCockpitView 的 .lcp-scenes，改名 .ia-scenes） ──
