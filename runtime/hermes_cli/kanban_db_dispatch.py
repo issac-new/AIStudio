@@ -116,6 +116,17 @@ class DispatchResult:
     skipped_unassigned: list[str] = field(default_factory=list)
     """Ready task ids with no assignee at all — operator-actionable (usually a
     misfiled task waiting for routing)."""
+    # >>> swarm:kanban-guardrail-rearm >>> (t_2101cdd8 review fix: the patch
+    # carried the gate but not this field declaration — 9996e5931b had both.
+    # Without it the out-of-scope gate raises AttributeError on first
+    # out-of-scope card and the dispatcher tick dies.)
+    skipped_out_of_scope: list[tuple[str, str]] = field(default_factory=list)
+    """Tasks skipped this tick because their assignee is outside the
+    board's ``profile_scope`` domain isolation (and not in the board's
+    ``dispatcher_bypass`` whitelist). Each entry is ``(task_id, assignee)``.
+    These cards sit in ready/review until reassigned or the board scope is
+    widened — dispatcher-side gate of the Q2 domain-isolation design."""
+    # <<< swarm:kanban-guardrail-rearm <<<
     auto_assigned_default: list[str] = field(default_factory=list)
     """Unassigned task ids that had ``kanban.default_assignee`` applied this
     tick before spawning, so telemetry/CLI/dashboard can show the dispatcher
@@ -2042,6 +2053,22 @@ def _dispatch_lane_task(
     skip is recorded on ``result``.
     """
     task_id = row["id"]
+    # >>> swarm:kanban-guardrail-rearm >>> (domain isolation dispatch gate,
+    # t_62b2af6b from 9996e5931b): assignee outside this board's profile_scope.
+    # Never auto-spawn cross-domain; leave an event once so ``hermes kanban
+    # tail`` shows WHY the card isn't moving. Single chokepoint covers BOTH
+    # the ready and review lanes (post-#102117 decomposition).
+    if not _kb.profile_may_work_board(assignee, board=board):
+        result.skipped_out_of_scope.append((task_id, assignee))
+        if not dry_run:
+            with _kb.write_txn(conn):
+                _kb._append_event(
+                    conn, task_id, "out_of_scope",
+                    {"assignee": assignee, "board": board or _kb.get_current_board(),
+                     "lane": lane},
+                )
+        return False
+    # <<< swarm:kanban-guardrail-rearm <<<
     # Non-profile assignees (control-plane lanes that pull via ``claim_task``)
     # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
     # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
@@ -2813,6 +2840,20 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     """
     if not task.assignee:
         raise ValueError(f"task {task.id} has no assignee")
+
+    # swarm:tree-write-gate (t_b5f5f6be): a patch/update pipeline holding the
+    # tree write lock means the source tree is mid-replay (mixed old/new
+    # modules). Spawning a worker now guarantees an import-time crash — skip
+    # this tick; the dispatcher retries on the next one after the lock clears.
+    from hermes_constants import get_default_hermes_root
+    _lock_dir = Path(get_default_hermes_root()) / "hermes-agent" / ".write-lock"
+    if _lock_dir.exists():
+        logger.info(
+            "worker: skip spawn task=%s — source tree write lock held by pipeline (%s)",
+            task.id, (_lock_dir / "holder").read_text().strip()[:120] if (_lock_dir / "holder").exists() else "?",
+        )
+        return None
+
 
     from hermes_cli.profiles import normalize_profile_name, resolve_profile_env
 

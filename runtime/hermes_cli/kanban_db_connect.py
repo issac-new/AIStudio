@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import os
 import random
 import re
 import secrets
@@ -630,11 +631,14 @@ def _schema_is_present(conn: sqlite3.Connection) -> bool:
     return row is not None
 
 
-# >>> swarm:kanban-guardrail-attestation >>>
-# every-open attestation（守门触发器调 kanban_write_sanctioned()，UDF 须逐连接注册；
-# 历史上这层只活在 ~/.hermes 工作区补丁里——hermes 自更新与 deploy-agent-runtime
-# 同步都会把它擦掉（2026-10-03 run7 收官段实锤：擦后 kanban assignees/stats/
-# diagnostics 全 500，卡抽屉永不渲染）。收编进 runtime 清单=源头持久。
+# >>> swarm:kanban-guardrail-rearm >>> (t_933e48fe F2: absorbed the former
+# swarm:kanban-guardrail-attestation every-open UDF shim into THIS patch as
+# the single re-arm chain — the standalone block edited the same region as
+# the _open_configured hunk below, so the two patches kept reversing each
+# other's anchor and the rearm patch stopped applying to the live tree.
+# Logic verbatim from the attestation workstream; single marker = single
+# reclaim chain. The globals() guard keeps it a no-op shim if upstream ever
+# lands a native attestation.)
 if "register_write_sanction_udf" not in globals():  # bare tree: local attestation shim
     GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
 
@@ -644,7 +648,7 @@ if "register_write_sanction_udf" not in globals():  # bare tree: local attestati
             from agent.delegation_context import is_delegated_child_process_context
             return 0 if is_delegated_child_process_context() else 1
         conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
-# <<< swarm:kanban-guardrail-attestation <<<
+# <<< swarm:kanban-guardrail-rearm <<<
 
 
 def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
@@ -655,7 +659,13 @@ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     ``_INITIALIZED_PATHS`` is populated. Closed if anything raises."""
     conn = _sqlite_connect(path)
     try:
-        register_write_sanction_udf(conn)  # every-open attestation（触发器在库必须注册）
+        # >>> swarm:kanban-guardrail-rearm >>> (t_62b2af6b): sanctioned-writer
+        # attestation must run on EVERY open, not just init — the UDF is
+        # connection-scoped, and once a board carries guard triggers, any
+        # attestation-less connection (including our own) would fail its next
+        # write with "no such function".
+        _kb.register_write_sanction_udf(conn)
+        # <<< swarm:kanban-guardrail-rearm <<<
         conn.row_factory = sqlite3.Row
         conn.text_factory = _kb._lossy_text
         with _INIT_LOCK:
@@ -747,6 +757,15 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
             # threads can't race the ALTER TABLE pass with stale PRAGMA snapshots.
             if resolved not in _INITIALIZED_PATHS:
                 conn.executescript(_kb.SCHEMA_SQL)
+                # >>> swarm:kanban-guardrail-rearm >>> (t_62b2af6b, default-ON
+                # reversal of the 09-04 opt-in): install the 21 kanban_guard_*
+                # ABORT triggers on every fresh DB init. The UDF attestation in
+                # _open_configured (above) keeps first-party writers passing.
+                # Opt-OUT for one deployment cycle via HERMES_KANBAN_WRITE_GUARDRAIL=0
+                # (rollback: DROP TRIGGER kanban_guard_<table>_<op> x21).
+                if os.environ.get("HERMES_KANBAN_WRITE_GUARDRAIL", "1") != "0":
+                    _kb.install_guardrail_triggers(conn)
+                # <<< swarm:kanban-guardrail-rearm <<<
                 _migrate_add_optional_columns(conn)
                 _INITIALIZED_PATHS.add(resolved)
 
