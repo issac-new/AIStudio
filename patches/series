@@ -360,7 +360,11 @@
 #      main 原号复原（与 cbd7b3e7^ 历史逐字节一致）；本仓曾复位的 517/518/519 冗余件已撤。
 # 519（驾驶舱聚焦 P10 精简批 S1，2026-09-29）：系统组收缩——技能用量/主题/宠物商店
 #      三入口摘除+SYSTEM_ROUTE_NAMES 同步（A 档：路由与页面保留，主题切换走页头开关）。
-# 519 退役（2026-10-01 0.7.26 迁移）：S1 系统组收缩内容已折入重生成版 072；文件保留注记壳（519-client-appsidebar-system-trim.patch），重复登记无对象。
+# 519 退役（2026-10-01 0.7.26 迁移）：S1 系统组收缩内容已折入重生成版 072；曾保留注记壳（519-client-appsidebar-system-trim.patch），
+#      2026-10-04 patches 卫生清理连壳删除（残体 382B 无 series 行引用；appsidebar 守门测试改为只依赖 072 与本注记行）。
+# 2026-10-04 patches 卫生清理（72h 审查遗留卫生项）：删除 6 个无 series 引用死件——074/075（cockpit 旧 locale 补丁无后缀，
+#      早已被 locale 补丁族取代）、133（空文件）、106/109（electron-builder notarize/win-zip 旧意图，语义现由构建脚本与
+#      在役补丁承载，series 零引用实测）、519（截断注记壳）。历史语义与出处见各退役注记行。
 # 520（P10 精简批 S3 部分）：WebPet 宠物浮面默认关（B 档 VITE_CUSTOM_PETS 开关；
 #      组件保留）。语音/ekko/外部渠道挂载链分散，记档 P10 剩余项。
 520-client-webpet-off.patch

@@ -17,7 +17,8 @@ function readPatch(name: string): string {
 
 describe('AppSidebar 单一级入口守门（⑤ M2/S1 后口径，patch 072/519）', () => {
   const p072 = readPatch('072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch')
-  const p519 = readPatch('519-client-appsidebar-system-trim.patch')
+  // 519 残体文件已随 2026-10-04 patches 卫生清理删除（series 退役注记保留史实），
+  // 本测试只依赖 072 整文件版与 series 注记，不再读取 519 文件。
 
   it('双栏根治（aa3e0bbe 用户裁定，压过 M2 旧口径）：IDE 一级入口在位——072 含 ide.shell 与高亮', () => {
     // M2 曾裁 "IDE 一级入口移除"；2026-09-30 双栏根治翻案为 驾驶舱+IDE 双入口，
