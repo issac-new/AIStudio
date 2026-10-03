@@ -1,0 +1,15 @@
+diff --git a/packages/client/src/views/hermes/JourneyView.vue b/packages/client/src/views/hermes/JourneyView.vue
+--- a/packages/client/src/views/hermes/JourneyView.vue
++++ b/packages/client/src/views/hermes/JourneyView.vue
+@@ -630,7 +630,10 @@
+     if (options.fitAfterLoad) void fitJourneyView()
+   } catch (err: any) {
+     if (disposed || generation !== loadGeneration) return generation
+-    message.error(err?.message || t('journey.loadFailed'))
++    // Raw server errors can leak host paths (e.g. CLI exec failures); keep them
++    // in the console and surface the localized message to the user instead.
++    console.warn('[journey] load failed:', err?.message || String(err))
++    message.error(t('journey.loadFailed'))
+   } finally {
+     if (!disposed && generation === loadGeneration) loading.value = false
+   }
