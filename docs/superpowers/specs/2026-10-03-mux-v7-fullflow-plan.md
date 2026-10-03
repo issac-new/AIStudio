@@ -5,6 +5,7 @@
 > **V6→V7 修订要点**（输入=2026-10-03-v6-plan-issue-analysis-from-run7-report.md，八缺口各带 run7 实锤锚）：①§四新增并发预算与容量守卫（P1）；②§十一环境重置合格线扩三面+总则 artifact_fresh（P2）；③总则 16 驱动韧性（P3）；④§十二会话断裂恢复+观测面语义（P4/P6）；⑤总则 17 完成凭证一体化（P5）；⑥附录 B 补丁收编纪律（P7）；⑦§五步 10 判据窗口改写（P8）。
 > **V7.1 回归回灌修订**（2026-10-03，输入=四会话全功能回归 e4e4e183/33f0a7ff/8d8e44ff/0d24c88b+run8 备场清环境轮）：①§十二 0→1 段重写为 mx-clean 六旗标终态（--reset-central/--reset-workspaces/--reset-memory/房间 v2 purge/hermes 运行态清零）+起跑环境前置四条；②纪律 6 改 533/534 三通道自愈收编终态、纪律 13 除旧；③§9.4 快门守门⑦ IAB 冻结假象；④§12.x 观测面补在线面板计数语义；⑤§十一.4 回归轮遗留五项；⑥§14.3（现附录 A.3）回归轮补丁族（524 补遗/539 补遗+551/547/548-553 族）；⑦附录 B.6 注入链纪律五条。契约层（26 步/六闸/总则 1-18）零改写。
 > **V7.2 说人话与全量呈现修订**（2026-10-03，用户三指令）：①§一重写为说人话总览（干什么/怎么干/干完得到什么）；②§2.1 能力表去 patch 锚（锚集中附录 A），正文讲用户可感知能力；③新增 §5.0 功能效果清单（业务/质量/交付/呈现四层，先看结果再看流程）；④新增 §5.4 各环节交付物与模板规范（14 环节字段级，缺字段即打回的唯一依据）；⑤§9.2 旅程层强化+**R18 全量呈现不裁剪**新验收线（对话收全文/操作前后帧/环节效果实证/交付物真容/报告自包含——自下轮起强制，生成器配套起跑前落位）；⑥§十四/十五 改制附录 A/B（工程内部机制与交付叙事分离）。契约层依旧零改写。
+> **V7.3 附录 C 分树隔离**（2026-10-03 隔离轮）：新增附录 C——推演 harness 分树独立仓（simharness，subtree split 自 scripts/aipay 后删除）、执行面三参自持（快照+hermes-sim wrapper -I 语义）、快照语义（工作态/node_modules 镜像）、D3 覆盖事故防复发四件（模板入库/manifest 23 件/marker 扫描面/bak 恢复源）、mx-up 验收基线。契约层零改写。
 
 ---
 
@@ -644,3 +645,14 @@ RUN_ID=<runN> bash scripts/aipay/aipay-scenario.sh
 4. **契约层稳定**：26 步主链与六闸语义（§五）自 V5 冻结，变更须整轮推演验证后才可动；运行纪律（§十二）按轮追加先例时只增不改写。
 5. **运行时补丁收编**（V7 新增，P7）：凡涉 gateway/runtime 行为的上游补丁（容量排队/出站守卫/kanban 链路等），必须三步收编——正本入 overlay/runtime/、登记 runtime-manifest.json、`deploy-agent-runtime.mjs --apply` 验证收敛；**工作区态补丁视为未部署**（hermes 自更新会擦，run6/run7 三次实录）。每次 mx-up 后跑 deploy dry-run 对账（清单全相同为合格）。
 6. **注入链纪律（2026-10-03 回归/漂移轮固化）**：①manifest-树失配自愈——inject manifest 宣称已注入但树被 reset/clean 过时前端 500，恢复=三树 `npm run clean`+删 manifest+全量重注入（勿信 manifest 自报）；②「改已记账补丁 inject 跳重放」已知坑——升级已注入补丁内容后 inject 不会自动重放，须按 HEAD+全链 include 重放并做 LIVE==REPLAY 逐字节对账（533 升级未重放致 run_busy.py 停旧版实录）；③补丁编号唯一性——撞号（552 双补丁并存+series UU）让位改号收编，series 冲突按 patch 编号排序解，插入行后必须 hunk recount+补末行换行（corrupt 事故两录）；④注入生效边界——overlay→upstream 注入后 8647/8649 须重启，runtime→hermes 注入后**须重启各 profile 网关**才生效；⑤反向操作禁止——`npm run clean` 在脏树上可能逆放补丁（mx-clean 逆放 539 灾情根因），clean 前必查 manifest 与树的致性。
+
+## 附录 C、推演 harness 分树隔离（2026-10-03 隔离轮）
+
+> 目标：推演栈与产品仓（overlay/upstream/宿主 ~/.hermes）彻底解耦，根治四类历史事故——mx-clean 逆放擦产品补丁、共享执行面互踩、hermes 自更新与补丁部署互擦、产品构建期间推演断供。
+
+1. **两仓分界**：推演 harness（mx-* 脚本/场景/技能/报告生成器）经 `git subtree split` 独立为 **simharness 仓**（ncwk 根下与 overlay 平级；commit ddb4484）。overlay 侧 `scripts/aipay/` 删除；overlay 对 simharness **只读消费**（隔离边界测试三断言：产品零反向依赖、引用全落白名单、零写原语指向产品/上游树）。跨仓守门留在 overlay（raci-rest-guard ④ 白名单重锚 simharness 相对路径，MX_SIMHARNESS_ROOT 可覆盖；ensure-injected-delta-guard 的 AGENT_PREFIXES 双向比对同步重锚）。
+2. **执行面三参自持**：STUDIO_DIST/HERMES_BIN/HERMES_PYTHONPATH 缺省指向 SIM 自有快照（ncwk-sim-mux/），缺位回落宿主/活树并大声告警。HERMES_PYTHONPATH **只余 agent 源码快照**——installs（py3.14）site-packages 进 PYTHONPATH 即与宿主 venv（py3.11）混载原生扩展，pydantic_core 炸载→mcp SDK 导入环（网关 MCP 告警环实录）。
+3. **hermes-sim wrapper**：`mx_provision_agent_src` 生成 .py+shell 双件，`venv python -I` 复刻官方 venv wrapper 语义（依赖只取 venv 自身 site-packages）+ `sys.path` 前置快照源——sim 网关执行的全是快照代码，宿主自更新/产品补丁操作不再互相污染。验收=网关进程命令行带 `-I …/hermes-sim.py`、env PYTHONPATH 仅快照路径。
+4. **快照语义**：agent 源码快照=宿主 git **跟踪文件的工作态**（HEAD+脏态指纹；git archive HEAD 漏未提交补丁层——StdioServerParameters 缺失网关卡 MCP 连接环实录），git 化+provenance 档案；product-dist 快照=dist+**node_modules 全量镜像**（bundle 外部依赖 9 包从仓库根解析，快照目录链无 node_modules→studio 300s 不就绪实录；dist 重灌 `--delete` 必须加 `--exclude=node_modules`）。
+5. **D3 覆盖事故（2026-10-03 21:29 实锤，防复发条款）**：deploy-agent-runtime 旧模板（旧基线内容副本）覆盖宿主 5 个 kanban 文件，抹掉 HEAD 已收编的 pin_first_board_resolution/guardrail 重装层/Q2 域隔离字段——宿主 orchestrator 网关错误环 605 次、推演快照连带继承。根治四件：①模板回灌宿主 `.bak.1791034185944`（部署前完好态，幂等备份是恢复源，KEEP_BACKUPS=3 勿清）；②**runtime/ 移出 .gitignore**（模板无版本控制即漂移——本次事故直接根因）；③manifest 增补未跟踪分发件 kanban_gates.py/noise_filter.py（快照只取 git 跟踪文件，未跟踪运行件必须走 manifest 通道，共 23 件）；④mx_apply_agent_patches marker 扫描面=六代码目录（390 marker 在 hermes_cli/、533 在 tests/，只扫 gateway/ 必漏）。
+6. **验收基线（每次 mx-up 后）**：8801/health + 8802/health/ready 双绿；gateway.log 零 AttributeError/pydantic/告警环；`deploy-agent-runtime` dry-run 对账全相同；simharness 守门 `tests/run-gates.sh`（41 用例）+ isolation-boundary 三断言全过。
