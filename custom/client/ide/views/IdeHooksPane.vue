@@ -124,7 +124,7 @@ function discard(): void {
     <div class="ide-hooks__head">
       <span class="ide-hooks__title">{{ t('ide.hooks.title') }}</span>
       <button type="button" class="ide-hooks__refresh" data-testid="ide-hooks-add" @click="adding = !adding">
-        ＋ 新增
+        {{ t('ide.hooks.add') }}
       </button>
       <button type="button" class="ide-hooks__refresh" data-testid="ide-hooks-refresh" @click="load">
         {{ t('ide.hooks.refresh') }}

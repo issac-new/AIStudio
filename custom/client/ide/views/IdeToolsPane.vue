@@ -5,6 +5,9 @@
 // 跳转、grep/search→命中摘要、glob→文件清单、web→URL、mcp→服务器.工具。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const chat = useChatStore()
 
@@ -120,8 +123,8 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 
 <template>
   <div class="ide-tools" data-testid="ide-tools-pane">
-    <div class="ide-tools__head">⚙ 工具时间线 <span class="ide-tools__count">{{ rows.length }}</span></div>
-    <p v-if="!rows.length" class="ide-tools__empty">当前会话暂无工具调用</p>
+    <div class="ide-tools__head">⚙ {{ t('ide.tools.title') }} <span class="ide-tools__count">{{ rows.length }}</span></div>
+    <p v-if="!rows.length" class="ide-tools__empty">{{ t('ide.tools.empty') }}</p>
     <div
       v-for="row in rows"
       :key="row.id"

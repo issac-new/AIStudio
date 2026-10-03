@@ -8,6 +8,9 @@ import {
   loadSlashCommands, saveSlashCommands,
   __resetSlashCommandsForTest, type SlashCommandEntry,
 } from '../store/slash-commands'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const rows = ref<SlashCommandEntry[]>([])
 const dirty = ref(false)
@@ -56,13 +59,13 @@ async function reload(): Promise<void> {
 <template>
   <div class="ide-slash" data-testid="ide-slash-pane">
     <div class="ide-slash__head">
-      <span class="ide-slash__title">自定义斜杠命令</span>
+      <span class="ide-slash__title">{{ t('ide.slash.title') }}</span>
       <button type="button" data-testid="ide-slash-add" @click="addRow">＋</button>
       <button type="button" data-testid="ide-slash-reload" title="重新载入" @click="reload">↻</button>
     </div>
-    <p class="ide-slash__hint">在 /ide 输入框键入 / 即可选用；选中后模板写入输入框，可编辑再发送。</p>
+    <p class="ide-slash__hint">{{ t('ide.slash.hint') }}</p>
 
-    <div v-if="!rows.length" class="ide-slash__empty" data-testid="ide-slash-empty">暂无自定义命令</div>
+    <div v-if="!rows.length" class="ide-slash__empty" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
 
     <div v-for="(c, i) in rows" :key="i" class="ide-slash__row" :data-testid="`ide-slash-row-${i}`">
       <div class="ide-slash__line">

@@ -461,3 +461,11 @@
 552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 553-locale-ux-clarity.patch
+# 554（2026-10-03 A-H 复盘轮；撞号两次让位：552→mimo usage 块、553→locale-ux-clarity）：八项可用性修复的上游侧——locale 新增提示键
+#      （sit 芯片/chain.timeline/flow 创建菜单四 hints/ide.pane.unmaxAll）+
+#      swp.object 改「当前对象」+ kanban 板过滤条标注多选语义 + i18n 偏好按账户
+#      分键（G：根治切账号语言跳变，旧键作迁移初值）+ DefaultCredentialPrompt
+#      dev 下「稍后提醒」记 localStorage 跨会话（H：devAutoLogin 场景高频打扰）。
+#      组件侧 title/还原浮动钮在 overlay 仓直接改（SitlineBar/SessionWorkbenchPanel/
+#      FlowNavPanel/IdeShell）。
+554-client-ux-ah-round.patch

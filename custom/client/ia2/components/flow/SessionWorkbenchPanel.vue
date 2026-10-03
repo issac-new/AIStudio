@@ -83,8 +83,8 @@ const firstTask = () => props.linkedTasks[0]
     </div>
     <!-- ④ 动作块 -->
     <div class="swp__block swp__block--acts">
-      <button type="button" class="swp__link" data-testid="chain-timeline" @click="emit('open-timeline')">
-        {{ t('ia2.chain.timeline') }} ▾
+      <button type="button" class="swp__link" data-testid="chain-timeline" :title="t('ia2.chain.timelineHint')" @click="emit('open-timeline')">
+        {{ t('ia2.chain.timeline') }} ↗
       </button>
       <button
         v-if="firstTask()"

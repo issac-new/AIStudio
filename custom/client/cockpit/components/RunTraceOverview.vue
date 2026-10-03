@@ -146,7 +146,7 @@ function closeRightPanel() {
       <span class="run-trace-overview__dot"></span>
       <div class="run-trace-overview__title">
         <b>Run Observatory</b>
-        <small>kanban {{ t('cockpit.taskTopology') }} · {{ t('cockpit.itemCount', { n: graph.tasks.value.length }) }}{{ selectedTaskId ? ' · 聚焦 ' + selectedTaskId : '' }}</small>
+        <small>kanban {{ t('cockpit.taskTopology') }} · {{ t('cockpit.itemCount', { n: graph.tasks.value.length }) }}{{ selectedTaskId ? t('cockpit.focusTask', { id: selectedTaskId }) : '' }}</small>
       </div>
       <div class="run-trace-overview__search">
         <input type="text" v-model="searchQuery" :placeholder="t('cockpit.searchEvents')" />

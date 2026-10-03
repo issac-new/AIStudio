@@ -322,19 +322,20 @@ function submitCreateRoom(): void {
     </div>
 
     <div class="flow-nav__foot">
-      <!-- v14「＋新聊天」三分型：agent 单聊 / agent 群聊 / matrix 房间（内联输入） -->
+      <!-- v14「＋新聊天」三分型：agent 单聊 / agent 群聊 / matrix 房间（内联输入）。
+           A-H 复盘轮 D：三项 + 菜单钮补 title 说明（命名区分度不足的补偿通道）。 -->
       <div v-if="newMenuOpen && !createOpen" class="flow-nav__newmenu" data-testid="flow-new-menu">
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" @click="newMenuOpen = false; emit('new-chat')">
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" :title="t('ia2.flow.newAgentChatHint')" @click="newMenuOpen = false; emit('new-chat')">
           💬 {{ t('ia2.flow.newAgentChat') }}
         </button>
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-group" @click="newMenuOpen = false; emit('create-group')">
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-group" :title="t('ia2.flow.newGroupChatHint')" @click="newMenuOpen = false; emit('create-group')">
           👥 {{ t('ia2.flow.newGroupChat') }}
         </button>
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-room" @click="newMenuOpen = false; createOpen = true">
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-room" :title="t('ia2.flow.newMatrixRoomHint')" @click="newMenuOpen = false; createOpen = true">
           # {{ t('ia2.flow.newMatrixRoom') }}
         </button>
       </div>
-      <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" @click="newMenuOpen = !newMenuOpen">
+      <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" :title="t('ia2.flow.newChatHint')" @click="newMenuOpen = !newMenuOpen">
         ＋ {{ t('ia2.flow.newChat') }}
       </button>
       <!-- S5（补遗⑤）：/app/eng 编排页退役——＋新循环入口随之摘除（守门 workbench-flow
