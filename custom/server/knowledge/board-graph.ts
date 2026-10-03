@@ -17,13 +17,14 @@
  * 治理分级（merge-governance），只写放行部分，扣留项进 kind:'merge-review' 收件箱；
  * sync 成功且 ingested>0 自动快照（kg-version）。既有对外行为不变（additive）。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { classifyBatch, breakerRatioFromEnv } from './merge-governance'
 import { threeTierDedup, dedupOptsFromEnv } from './entity-dedup'
-import { snapshotBoardKg } from './kg-version'
+import { boardKgVersionDir, rollbackBoardKg, snapshotBoardKg } from './kg-version'
+import { aliasCapFromEnv, checkQualityGate, evaluateKgQuality, qualityGateEnabled, type KgQualityMetrics } from './quality-gate'
 
 // ---- bridge 操作（复用 decisiongraph 客户端的执行器注入） ----
 import { semanticaPython, setBridgeRunnerForTests, bridgeScript, type BridgeRunner } from '../decisiongraph/semantica-client'
@@ -46,7 +47,7 @@ export interface InboxEntry {
   incoming: unknown
   resolved: false | { action: 'keep-existing' | 'take-incoming'; at: number }
   /** additive（KG 演化治理 2026-10-02）：条目类别。旧数据/旧写入路径无此字段。 */
-  kind?: 'field-conflict' | 'merge-review'
+  kind?: 'field-conflict' | 'merge-review' | 'quality-gate'
   /** additive：merge-review 的名称相似度（仅 A2 去重评审档有值）。 */
   similarity?: number
 }
@@ -219,8 +220,9 @@ export function appendMergeReviewInbox(entry: {
 /** 板 KG JSON 投影（A2/A3 既有面读取；参照 bridge kg-summary 的 json.load 做法）。 */
 export interface KgNodeProjection { id: string; type: string; properties: Record<string, unknown> }
 
-/** 读板 KG 文件提取节点与谓词集合；文件缺席/损坏返回 null（=空图冷启动语义，fail-soft）。 */
-export function readBoardKgState(kgPath: string): { nodes: KgNodeProjection[]; edgeTypes: Set<string> } | null {
+/** 读板 KG 文件提取节点与谓词集合；文件缺席/损坏返回 null（=空图冷启动语义，fail-soft）。
+ * A5（2026-10-03）：附 edges 投影（src/dst，质量门禁的孤儿率/覆盖率计算依赖）。 */
+export function readBoardKgState(kgPath: string): { nodes: KgNodeProjection[]; edgeTypes: Set<string>; edges: Array<{ src: string; dst: string }> } | null {
   try {
     const j = JSON.parse(readFileSync(kgPath, 'utf8')) as { nodes?: unknown; edges?: unknown }
     if (!Array.isArray(j.nodes) || !Array.isArray(j.edges)) return null
@@ -232,10 +234,14 @@ export function readBoardKgState(kgPath: string): { nodes: KgNodeProjection[]; e
       nodes.push({ id: no.id, type: typeof no.type === 'string' ? no.type : '', properties: (no.properties ?? {}) as Record<string, unknown> })
     }
     const edgeTypes = new Set<string>()
+    const edges: Array<{ src: string; dst: string }> = []
     for (const e of j.edges) {
-      if (e && typeof e === 'object' && typeof (e as { type?: unknown }).type === 'string') edgeTypes.add((e as { type: string }).type)
+      if (!e || typeof e !== 'object') continue
+      const eo = e as { type?: unknown; source_id?: unknown; target_id?: unknown }
+      if (typeof eo.type === 'string') edgeTypes.add(eo.type)
+      if (typeof eo.source_id === 'string' && typeof eo.target_id === 'string') edges.push({ src: eo.source_id, dst: eo.target_id })
     }
-    return { nodes, edgeTypes }
+    return { nodes, edgeTypes, edges }
   } catch { return null }
 }
 
@@ -254,6 +260,8 @@ export interface BoardSyncResult {
   dedup?: { autoAlias: number; review: number }
   /** additive（遗留②闭环 2026-10-03）：本批因裁决台账（keep-existing）被豁免的实体数。 */
   adjudicated?: number
+  /** additive（A5 质量门禁 2026-10-03，三部曲③校准）：本轮演化质量判定；失败即自动回滚。 */
+  qualityGate?: { passed: boolean; rolledBack?: boolean; reason?: string; before: KgQualityMetrics; after: KgQualityMetrics }
 }
 
 interface TaskRow { id: string | number; title: string | null; assignee: string | null; status: string; completed_at: number | null }
@@ -358,10 +366,35 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   res.dedup = { autoAlias: dedup.alias.length, review: dedup.review.length }
   if (adjudicatedDropped > 0) res.adjudicated = adjudicatedDropped
 
+  // A5 质量门禁（三部曲③校准 2026-10-03）：写入前先快照 pre 态 + 记 before 指标。
+  // pre 快照失败则跳过门禁（无回滚手段的门禁不设牙齿，fail-open 维持旧语义）。
+  // 仅结构性新增（auto 放行实体/别名实体）才上门禁：updates 纯重写在幂等重同步时
+  // 反复触发 pre 快照纯属空转（r3 实测），且不改变 coverage/aliasRatio 任何门禁输入。
+  const gateOn = qualityGateEnabled() && (cls.auto.entities.length > 0 || aliasEntities.length > 0)
+  let gatePreTs = 0
+  let gateBefore: KgQualityMetrics | null = null
+  if (gateOn) {
+    const snap = snapshotBoardKg(slug, Date.now(), 'auto-pre')
+    if (snap) {
+      const m = /kg-(\d+)\.json$/.exec(snap)
+      if (m) gatePreTs = Number(m[1])
+    }
+    if (gatePreTs > 0 && kgState) {
+      gateBefore = evaluateKgQuality({ nodes: kgState.nodes, edges: kgState.edges, eligibleTasks: rows.length })
+    }
+  }
+
   if (writeEntities.length > 0) {
     const batch = await runKgOp<{ ok: boolean; added: number; conflicts: Array<{ entityId: string; fields: EntityConflict[] }> }>('entity-batch', kg, { items: writeEntities })
     if (!batch) {
       res.kgAvailable = false
+      // python 缺席=零写入：清掉本轮白拍的 pre 快照（防自动重试堆积废快照，fail-soft）
+      if (gatePreTs > 0) {
+        const vdir = boardKgVersionDir(slug)
+        for (const f of [`kg-${gatePreTs}.json`, `kg-${gatePreTs}.meta.json`]) {
+          try { rmSync(join(vdir, f), { force: true }) } catch { /* 留待 prune */ }
+        }
+      }
       return res  // python 缺席：如实降级，不写 marker（下次重试）
     }
     res.ingested = batch.added ?? 0
@@ -380,14 +413,43 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
     }
     res.relations = relBatch.added ?? 0
   }
+  // A5 质量门禁判定：写完重读图谱算 after 指标，coverage 回退或别名率超限 → 自动回滚
+  // 到 pre 快照（不写 marker，任务下轮重试自愈）+ 收件箱记 quality-gate 条目。
+  if (gateOn && gatePreTs > 0 && gateBefore) {
+    const afterState = readBoardKgState(kg)
+    if (afterState) {
+      const after = evaluateKgQuality({ nodes: afterState.nodes, edges: afterState.edges, eligibleTasks: rows.length })
+      const verdict = checkQualityGate(gateBefore, after, { aliasCap: aliasCapFromEnv() })
+      res.qualityGate = { passed: verdict.passed, ...(verdict.reason ? { reason: verdict.reason } : {}), before: gateBefore, after }
+      if (!verdict.passed) {
+        const rb = rollbackBoardKg(slug, gatePreTs)
+        res.qualityGate.rolledBack = rb.ok
+        appendConflictInbox({
+          board: slug, entityId: `board:${slug}`, field: 'quality-gate',
+          existing: Number(gateBefore.coverage.toFixed(3)), incoming: Number(after.coverage.toFixed(3)),
+          kind: 'quality-gate',
+        })
+        return res // 回滚即终态：不写 marker（下轮重试）、不留 auto-post 快照（废态不入版本史）
+      }
+    }
+  }
+  // 零新增轮（幂等重放：未决扣留任务重过治理面，writeEntities 非空但 entity-batch
+  // added=0）不改变图态——清掉本轮白拍的 pre 快照，保持「无写入=无版本史噪声」。
+  // 与 python 缺席清理（上方）同构；须在质量门通过路径之后（回滚路径已提前 return）。
+  if (gateOn && gatePreTs > 0 && res.ingested === 0) {
+    const vdir = boardKgVersionDir(slug)
+    for (const f of [`kg-${gatePreTs}.json`, `kg-${gatePreTs}.meta.json`]) {
+      try { rmSync(join(vdir, f), { force: true }) } catch { /* 留待 prune */ }
+    }
+  }
   for (const tid of touched) {
     // 本批实体全部落定（写入、或裁决台账 keep-existing 豁免）才记 marker；仍含未决扣留的
     // 任务不记——人工裁决前每次同步重新过治理面（未决追加有幂等去重，不重复刷屏）。
     if ((produced.get(tid) ?? []).every((id) => writtenIds.has(id) || keepDrops.has(id))) seen.add(tid)
   }
   if (res.kgAvailable) writeMarker(slug, seen)
-  // A4（KG 演化治理）：sync 成功且确有新增实体才自动快照（版本化接线在成功路径）
-  if (res.kgAvailable && res.ingested > 0) snapshotBoardKg(slug)
+  // A4（KG 演化治理）：门禁通过且确有新增实体才落正式版本快照（源文③：版本化在门禁通过后）
+  if (res.kgAvailable && res.ingested > 0) snapshotBoardKg(slug, Date.now(), 'auto-post')
   return res
 }
 
