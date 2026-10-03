@@ -97,8 +97,13 @@ onMounted(() => {
   store.fetchRuns()
 })
 onBeforeUnmount(() => { store.disconnect() })
-// 同路由 query 变化（已在 /app/runs 时被深链再次唤起）同样生效
-watch(() => route.query, (q) => { applyQueryTab(q as Record<string, unknown>) })
+// 同路由 query 变化（已在 /app/runs 时被深链再次唤起）同样生效；loop 也要跟
+// （GoalLoopStandingPanel 与本视图同页挂载，onMounted 不会再触发，只靠这里消费）
+watch(() => route.query, (q) => {
+  applyQueryTab(q as Record<string, unknown>)
+  const lp = q.loop
+  if (typeof lp === 'string' && lp) query.value = lp
+})
 
 // ── 操作分发（合法操作集 → 现有落点；无落点的动作不出现按钮）──
 const actionError = ref<string | null>(null)

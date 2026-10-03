@@ -2,7 +2,7 @@
 // + .qgate/state.json（每门最新判定索引）。JSONL/JSON 文件制（OD-002 裁定）。
 // 本地执行数据默认 .gitignore（设计 §5.5）；Profile evidenceCommit 时的归档由调用方处理。
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // ── 脱敏（v0.1 §50）：Evidence/Run 落盘前打码 env 值与常见 secret 模式 ──
@@ -55,7 +55,12 @@ export function storePaths(qgateDir: string): StorePaths {
 
 function writeJson(file: string, value: unknown): void {
   mkdirSync(join(file, '..'), { recursive: true })
-  writeFileSync(file, JSON.stringify(value, null, 2) + '\n', 'utf8')
+  // 原子写（tmp+rename）：state.json 是全部门判定的唯一索引，裸 writeFile 在写入
+  // 中途被杀（Stop hook 超时 kill/断电/Ctrl-C）会留下半写 JSON，读侧 catch 会把
+  // 损坏静默当"无历史"，全部门变 never run
+  const tmp = `${file}.tmp-${process.pid}`
+  writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', 'utf8')
+  renameSync(tmp, file)
 }
 
 export function saveRun(paths: StorePaths, run: GateRun, evidence: readonly Evidence[]): void {

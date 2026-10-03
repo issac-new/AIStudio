@@ -39,10 +39,10 @@ function togglePause(id: string, isPaused: boolean): void {
 }
 
 function openDetail(loopId: string): void {
-  void router.push({ name: 'ia2.runs' })
   // 循环行点击语义=跳该循环最新 run 详情（M6 动线）；run id 经运行列表解析，
-  // 此处跳运行中心并预填搜索（loop id 即检索锚）
-  void router.push({ name: 'ia2.runs', query: { tab: 'runs', q: loopId } })
+  // 此处切 runs 页签并预填搜索。参数名必须是 loop：RunCenterView 只消费
+  // route.query.loop（旧代码发 q，全库零消费方，预填是死链）
+  void router.push({ name: 'ia2.runs', query: { tab: 'runs', loop: loopId } })
 }
 
 const STATUS_TONE: Record<string, string> = {
