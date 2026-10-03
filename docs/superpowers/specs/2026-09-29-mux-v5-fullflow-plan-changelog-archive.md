@@ -314,3 +314,11 @@
 - **KG 治理链全链真实跑通**（一次性沙盒板 zz-e2e-probe-20261003，验毕全清）：冷启动摄取（无门禁=设计语义）→ 增量轮 **A3 熔断真实触发**（3/4>0.2 全转人工零写入）+ **A5 门禁判定真实出现**（passed=true，coverage/aliasRatio 实数）+ A2 autoAlias 正确（Probe-Alice 归一化 sim=1.0）→ 真实人工裁决 3 条（keep-existing×2+take-incoming×1）→ 裁决台账真实落盘 → 再同步零重扣零重问（闭环证明；裁决前 auto-sync 窗口追加的 4 条时序垃圾第四次同步不再增长）→ take-incoming force 写入入图/keep 豁免不入图 → **A4 真实回滚**（6 节点回落 4）。
 - 探针全清：板目录/KG/快照/marker/裁决台账/收件箱 7 条/boundary_history 2 行/压缩快照行/归档目录/笔记/lock——零残留（state.json 为 C4 产品态正常留存）。
 - 坑：独立脚本触发 server 模块须带 TS_NODE_FILES=1（活进程实勘）否则 ts-node 拿不到工程 types 报 TS2591；裁决闭环的"未决不增"验证须做两次同步（auto-sync 60s 窗口会插队追加时序垃圾，非死循环）。
+
+## 十四、全功能回归回灌轮（2026-10-03 晚，V7.1）
+
+- 触发：用户令"根据全功能回归测试等会话（sess_e4e4e183/33f0a7ff/8d8e44ff/0d24c88b）更新全流程推演方案"。四会话并行独立回归（42 路由走查+末级走查 L1-L13+D4/D6 轮+mimo 侧 F1-F9+文章调研漂移灾后），产出回灌 V7 正本。
+- 正文七处修订（契约层零改写）：①§十二 0→1 段重写——mx-clean 六旗标终态（--reset-central 九目录+push+wt/fix/wip 分支删、--reset-workspaces、--reset-memory、看板整树重置、hermes 运行态清零、房间 v2 purge；锚 f0cc70ba）；合格线从"旧三面人工甄别"升为旗标收编+起跑前复核清单；新增起跑环境前置四条（磁盘水位/hindsight 前置/mx-up 后双 health 断言/vite 僵尸态探活）。②纪律 6 改写——533/534 三通道自愈收编终态（manifest 21 件+mx-up 双通道+mx-relay 接力器+marker 双面，锚 63dfd2dc）。③纪律 13 除旧（workspaces 已可旗标重置）。④§9.4 快门守门⑦——IAB 后台标签 rAF 冻结假象（L6/L11 两撤实录：勿据后台帧报 NModal/动画类缺陷）。⑤§12.x 观测面补在线面板计数语义（F6：机器位=网关数/agent 位=通道数/人员位=登录账号，三档量纲不同）。⑥§十一.4 回归轮遗留五项（mx-up 退出码 1 网关未起根因未查/540 重放失败同族雷/inject 跳重放未根治/Enter 合成键限制/L10 装机待验）。⑦§十五.6 注入链纪律五条（manifest-树失配自愈/跳重放坑须 LIVE==REPLAY 对账/撞号让位改号+编号排序+hunk recount+末行换行/注入后重启网关/clean 逆放禁令——mx-clean 逆放 539 灾情根因）。
+- §14.3 补丁族追加回归轮族：524 补遗（connectionsExtras import 冻结级联 P0）、539 补遗+551（HistoryView 悬空 push 清族）、547（看板抽屉未指派卡不滤——G5 卡 NULL assignee 根因，回归实测有效）、548/549/550/552（i18n 回归四连=rebalance/rebase 丢键复发族，守门 i18n-upstream-keys-gate）、553（A-H 八项 UX，552 撞号让位改号）；非编号锚 D4 三壳 overflow:clip（6dc5436e）、merge-review 裁决台账（0a3ffe3）、网关 base.py 入库。
+- 基准行更新：c634c9af→67c3e857（回归三会话修复线+UX 复盘批合入后）。
+- 环境事实（同日 run8 备场轮，本方案合格线的实证来源）：mx-clean 全旗标清理+40 间僵尸房 v2 purge+14 模拟记忆 bank 清零（宿主 15 bank 无损，813M dump 归档）；mx-clean 本体七缺口修复合 f0cc70ba 已推。
