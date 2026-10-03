@@ -100,8 +100,8 @@
 | D | 右栏四分法并二分：「待我处理」=等我+需关注、「上下文」=挂接+任务流转+动态；子列表 testid 全保留 | 实测两分区标题；comm-v13/task-flow 测试契约同步绿 |
 | E | ＋新任务 → /app/board?new=1 首列自动展开行内建卡表单（KanbanColumn autoOpenCreate，支持同页 query 二次唤起） | 实测 hash+composer 在位 |
 | F | 协作侧 ⌘K/Ctrl+K 唤起混合搜索面板（命令/会话/任务三组），与 IDE 命令面板对称 | 实测唤起+焦点入搜索框 |
-| G | 移除图标栏与设置侧栏的推荐码外链（apikey.fan/register?aff=LIBAPI；模型表单内上下文帮助链接保留） | 实测导航面零外链 |
+| G | 移除图标栏与设置侧栏的推荐码外链（apikey.fan/register?aff=LIBAPI；模型表单内上下文帮助链接保留） | 实测导航面零外链；0.7.29 私有树重锚核实时发现上游已自行移除两导航面的该外链（grep 零命中），patch 556 退役（c3dfc554 先例），裁决 G 终态=上游原生 |
 
 毛刺同批：注意力条查无对象改显式提示（ia2.att.gone）、概览三卡整卡可点（含悬停提示）、视图切换带 URL 会话上下文（?session= / /app/s/chat/:id）。
 
-配套词条 patch 557（zh/en 成对；554/555 号位被并行占用让号 556/557）；测试契约同步：approval-panel（确认步骤）、comm-v13-panels/task-flow-timeline（二分结构）、unified-nav-guard（切换器上下文断言）、ia-shell-header（vue-router mock 补 createRouter 家族）。全量 vitest 3724 绿（8 个既有 qgate 红不变）。
+配套词条 patch 557（zh/en 成对；554/555 号位被并行占用让号 556/557）；测试契约同步：approval-panel（确认步骤）、comm-v13-panels/task-flow-timeline（二分结构）、unified-nav-guard（切换器上下文断言）、ia-shell-header（vue-router mock 补 createRouter 家族）。0.7.29 私有树注入终态 290 补丁全绿（556 退役后），全量 vitest 3725 绿（8 个既有 qgate 红不变；mimo 用例断言随 0.7.29 基线对齐——上游 CodingAgentId 新增 'antigravity'）。
