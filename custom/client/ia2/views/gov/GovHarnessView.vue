@@ -3,13 +3,23 @@
      L1-L5 成熟度自检 · 八工程原语对账。分区无内部导航（单层页签纪律）；
      各板块自取数（/api/harness/*）、失败态自管、缺席如实降级。 -->
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import CapabilityCatalogSection from '@/custom/governance/components/CapabilityCatalogSection.vue'
 import CostAccountsSection from '@/custom/governance/components/CostAccountsSection.vue'
 import MaturitySection from '@/custom/governance/components/MaturitySection.vue'
 import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.vue'
+import { governanceMessages } from '@/custom/governance/i18n'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
 const tabText = useTasksTabsText()
+// 2026-10-04 i18n 补齐（72h 审查窗口外旧债）：页副题原先硬编码 zh
+const i18nCtx = useI18n()
+const L = computed(() => {
+  const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
+  const g = loc.startsWith('zh') ? governanceMessages.zh.governance : governanceMessages.en.governance
+  return (g as unknown as { harness: { pageSub: string } }).harness
+})
 </script>
 
 <template>
@@ -17,7 +27,7 @@ const tabText = useTasksTabsText()
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovHarness }}</h2>
-        <p class="gov-view__sub">统一能力目录 · 六类成本账 · L1-L5 成熟度自检 · 八工程原语对账</p>
+        <p class="gov-view__sub">{{ L.pageSub }}</p>
       </div>
     </header>
     <div class="gov-view__body">
