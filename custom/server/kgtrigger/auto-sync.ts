@@ -44,7 +44,8 @@ export function setAutoSyncRunnerForTests(runner: SyncRunner | null): void {
 export async function observeBoards(): Promise<BoardObservation[]> {
   const out: BoardObservation[] = []
   for (const file of kanbanDbFiles()) {
-    const m = file.match(/boards[\/]([^/]+)[\/]kanban\.db$/)
+    // Windows 反斜杠路径归一后再取 slug，否则所有板并成 'main'（与 board-graph.syncAllBoardGraphs 同修）
+    const m = file.split('\\').join('/').match(/boards\/([^/]+)\/kanban\.db$/)
     const slug = m ? m[1] : 'main'
     try {
       const mtimeMs = Math.round(statSync(file).mtimeMs)

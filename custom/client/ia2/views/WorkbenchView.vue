@@ -607,7 +607,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
             <p class="wb__canvas-ph-sub">从左侧选择一个会话 / 循环开始工作；归档或无内容的条目也会落到这里。</p>
             <div class="wb__canvas-ph-acts">
               <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-board" @click="router.push({ name: 'ia2.board' })">打开看板</button>
-              <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.tasks' })">查看任务</button>
+              <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.board', query: { tab: 'board' } })">查看任务</button>
             </div>
           </template>
         </div>

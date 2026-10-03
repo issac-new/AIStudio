@@ -81,12 +81,12 @@ async function saveEdit(): Promise<void> {
   }
 }
 
-/** 工件库四组（单一事实源=server GOVERNANCE_DOCS.group 值；标题本地化） */
-const DOC_GROUPS: Array<{ key: string; zh: string }> = [
-  { key: 'gate', zh: '六闸工件' },
-  { key: 'admin', zh: '管理档案' },
-  { key: 'analysis', zh: '分析档案' },
-  { key: 'evidence', zh: '测试证据' },
+/** 工件库四组（单一事实源=server GOVERNANCE_DOCS.group 值；标题走 L 本地字典，zh/en 双语） */
+const DOC_GROUPS: Array<{ key: string; labelKey: 'docGroupGate' | 'docGroupAdmin' | 'docGroupAnalysis' | 'docGroupEvidence' }> = [
+  { key: 'gate', labelKey: 'docGroupGate' },
+  { key: 'admin', labelKey: 'docGroupAdmin' },
+  { key: 'analysis', labelKey: 'docGroupAnalysis' },
+  { key: 'evidence', labelKey: 'docGroupEvidence' },
 ]
 const docGroups = computed(() =>
   DOC_GROUPS.map(g => ({ ...g, docs: (overview.value?.docs ?? []).filter(d => (d.group || 'gate') === g.key) }))
@@ -159,7 +159,7 @@ onMounted(() => void refresh())
       <aside class="gov-docs__list" data-testid="gov-docs">
         <h3 class="gov-docs__list-title">{{ L.docsTitle }}</h3>
         <template v-for="g in docGroups" :key="g.key">
-          <div class="gov-docs__group-title" :data-group="g.key">{{ g.zh }}</div>
+          <div class="gov-docs__group-title" :data-group="g.key">{{ L[g.labelKey] }}</div>
           <button
             v-for="d in g.docs"
             :key="d.kind"

@@ -175,8 +175,12 @@ export function resolveConflictInbox(inboxId: string, action: 'keep-existing' | 
   const entries = listConflictInbox().reverse()
   const hit = entries.find((e) => e.inboxId === inboxId)
   if (!hit || hit.resolved) return hit ?? null
-  if (action === 'take-incoming') {
-    // force 重写实体（裁决"取新值"）：经 bridge 写回，board 从 entityId 前缀 task:/agent: 推断
+  if (action === 'take-incoming' && hit.kind !== 'quality-gate') {
+    // force 重写实体（裁决"取新值"）：经 bridge 写回，board 从 entityId 前缀 task:/agent: 推断。
+    // quality-gate 类除外：其 entityId=board:<slug>、field='quality-gate'、incoming=分数，
+    // 不是实体属性——走此路径会向板 KG 新建 board 垃圾节点（bridge 对不存在的 id 直接
+    // 创建）且该 id 不进 marker，下轮同步再产一条假冲突。merge-review 的 force 写入是
+    // 裁决闭环设计语义（merge-review-closure.test.ts 守门），必须保留
     const board = hit.board
     const props: Record<string, unknown> = { [hit.field]: hit.incoming, type: hit.entityId.split(':')[0] === 'task' ? 'task' : 'agent' }
     void runKgOp('entity', boardKgPath(board), { id: hit.entityId, type: props.type as string, props, force: true })
@@ -457,7 +461,9 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
 export async function syncAllBoardGraphs(): Promise<BoardSyncResult[]> {
   const out: BoardSyncResult[] = []
   for (const file of kanbanDbFiles()) {
-    const m = file.match(/boards[\/]([^/]+)[\/]kanban\.db$/)
+    // Windows 上 join() 产反斜杠路径，正则只认 / 会把所有板并成 'main'（同模块族
+    // 明确宣称 win 支持）——先归一分隔符再取 slug
+    const m = file.split('\\').join('/').match(/boards\/([^/]+)\/kanban\.db$/)
     const slug = m ? m[1] : 'main'
     out.push(await syncBoardGraph(slug, file))
   }

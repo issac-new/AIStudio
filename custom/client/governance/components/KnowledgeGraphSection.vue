@@ -130,8 +130,9 @@ const kgUnavailable = computed(() => syncResults.value?.some((r) => !r.kgAvailab
 const fmtTime = (ts: number): string => (ts > 0 ? new Date(ts).toLocaleString() : '')
 
 onMounted(() => {
-  void refresh()
-  void refreshVersions()
+  // 版本下拉依赖 summary.board——先取摘要再拉版本。并行发起时 summary 尚未
+  // 落地，refreshVersions 会固定打到 'main' 板（非 main 板上版本/回滚列表错板）
+  void refresh().then(() => refreshVersions())
 })
 </script>
 

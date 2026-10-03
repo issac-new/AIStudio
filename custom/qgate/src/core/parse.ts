@@ -371,7 +371,9 @@ export function parseGateSpec(raw: unknown): GateSpec | null {
   const failure = enumOf(spec.policy.failure, POLICY_ACTIONS)
   const inconclusive = enumOf(spec.policy.inconclusive, POLICY_ACTIONS)
   if (!failure || !inconclusive) return null
-  const allowWaiver = spec.policy.allowWaiver === true ? true : undefined
+  // 保留显式 false：cli 的 waive 拒绝分支与 run 的 `!== false` 都按布尔语义判；
+  // 归一成 undefined 会让 allowWaiver:false 的禁豁免守卫整体失效
+  const allowWaiver = typeof spec.policy.allowWaiver === 'boolean' ? spec.policy.allowWaiver : undefined
   const maxAgeHours = num(spec.policy.maxAgeHours)
   if (maxAgeHours !== undefined && maxAgeHours <= 0) return null
 
@@ -425,13 +427,13 @@ export function parseProfile(raw: unknown): Profile | null {
       const policyRec = isRecord(ov.policy) ? ov.policy : undefined
       const failure = policyRec ? enumOf(policyRec.failure, POLICY_ACTIONS) : undefined
       const inconclusive = policyRec ? enumOf(policyRec.inconclusive, POLICY_ACTIONS) : undefined
-      const allowWaiver = policyRec?.allowWaiver === true
+      const allowWaiver = typeof policyRec?.allowWaiver === 'boolean' ? policyRec.allowWaiver : undefined
       const maxAgeHours = policyRec ? num(policyRec.maxAgeHours) : undefined
       overrides[gateId] = {
         policy: {
           ...(failure ? { failure } : {}),
           ...(inconclusive ? { inconclusive } : {}),
-          ...(allowWaiver ? { allowWaiver: true } : {}),
+          ...(allowWaiver !== undefined ? { allowWaiver } : {}),
           ...(maxAgeHours !== undefined ? { maxAgeHours } : {}),
         },
       }
