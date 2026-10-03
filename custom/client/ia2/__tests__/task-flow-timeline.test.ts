@@ -24,12 +24,12 @@ beforeEach(() => {
 })
 
 describe('P4③ 任务流转时间线', () => {
-  it('TaskDecisionPanel：有 flowEvents 渲染「任务流转」节+计数；缺省不渲染', () => {
+  it('TaskDecisionPanel：有 flowEvents 渲染「任务流转」时间线（并入「上下文」节，UX 裁决 D）；缺省不渲染', () => {
     const withFlow = mount(TaskDecisionPanel, {
       props: { waitItems: [], linkedTasks: [], feedRows: [], flowEvents: EVENTS },
     })
     expect(withFlow.find('[data-testid="tdp-flow-sec"]').exists()).toBe(true)
-    expect(withFlow.find('[data-testid="tdp-flow-sec"]').text()).toContain('3')
+    expect(withFlow.find('[data-testid="tdp-flow-sec"]').text()).toContain('fei-agent')
 
     const without = mount(TaskDecisionPanel, {
       props: { waitItems: [], linkedTasks: [], feedRows: [] },

@@ -461,3 +461,7 @@
 552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 553-locale-ux-clarity.patch
+# 554=UX 裁决 G：导航面移除推荐码外链（rail+设置侧栏）。
+554-nav-remove-affiliate-link.patch
+# 555=UX 裁决 A/C/D 与毛刺修复配套词条（审批确认/右栏二分/兜底反馈/主管面跳转/管理台职责注记）。
+555-locale-ux-menu.patch

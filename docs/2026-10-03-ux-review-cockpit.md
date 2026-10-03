@@ -88,3 +88,20 @@
 
 - 强证据：101 跳转点源码测绘；三处文案双链实测；管理台行操作/搜索/会话动线实测；审批直通代码锚（`ApprovalPanel.vue:102 decide()`）；外链实锤（`StudioNavigationRail.vue:55`，上游 HEAD 原生）。
 - 弱证据（数据态所致未取得有效点击样本，结论从代码推定）：注意力条任务 chip 点击落点（实测时注意力条为空态）、右栏条目点击落点（实测误点容器）——两处动线代码上看均有 ?task=/jump 处理，待数据态下补测。
+
+
+## 八、裁决项落地记录（2026-10-03 用户拍板「全都做」后实施）
+
+| # | 落地形态 | 验证 |
+|---|---|---|
+| A | 管理台员工/团队/评审三分区头各加「主管面跳转」（账户管理/组织与知识/收件箱）+ 职责注记改写（管理台=跨域汇总与快捷操作） | 浏览器实测三跳转+注记在位 |
+| B | 新增 useAttentionRows 单一装配（blocked 任务+blocked 循环+等我+会话受阻四源 mergeAttention 归并），注意力条与右栏需关注同源同口径，行带 kind 供分派 | strip 与徽标同源；global-top/ia-shell 测试绿 |
+| C | 批准/打回/抽检处置改确认制（离散 dialog，无 provider 依赖），文案 approvals.confirmTitle/Body | 「批准」弹确认层实测（未实裁）；approval-panel 8/8 绿 |
+| D | 右栏四分法并二分：「待我处理」=等我+需关注、「上下文」=挂接+任务流转+动态；子列表 testid 全保留 | 实测两分区标题；comm-v13/task-flow 测试契约同步绿 |
+| E | ＋新任务 → /app/board?new=1 首列自动展开行内建卡表单（KanbanColumn autoOpenCreate，支持同页 query 二次唤起） | 实测 hash+composer 在位 |
+| F | 协作侧 ⌘K/Ctrl+K 唤起混合搜索面板（命令/会话/任务三组），与 IDE 命令面板对称 | 实测唤起+焦点入搜索框 |
+| G | 移除图标栏与设置侧栏的推荐码外链（apikey.fan/register?aff=LIBAPI；模型表单内上下文帮助链接保留） | 实测导航面零外链 |
+
+毛刺同批：注意力条查无对象改显式提示（ia2.att.gone）、概览三卡整卡可点（含悬停提示）、视图切换带 URL 会话上下文（?session= / /app/s/chat/:id）。
+
+配套词条 patch 555（zh/en 成对）；测试契约同步：approval-panel（确认步骤）、comm-v13-panels/task-flow-timeline（二分结构）、unified-nav-guard（切换器上下文断言）、ia-shell-header（vue-router mock 补 createRouter 家族）。全量 vitest 3724 绿（8 个既有 qgate 红不变）。

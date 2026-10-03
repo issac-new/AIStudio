@@ -14,7 +14,7 @@
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -61,6 +61,19 @@ const showChangelog = ref(false)
 // 增量=聚焦/输入时弹混合结果面板（会话与房间/看板任务/命令三组，键盘可达）。
 const spotOpen = ref(false)
 const spotRef = ref<InstanceType<typeof SpotlightPanel> | null>(null)
+const searchInputEl = ref<HTMLInputElement | null>(null)
+
+// UX 裁决 F（2026-10-03）：协作侧命令面板快捷键——⌘K/Ctrl+K 唤起混合搜索（命令/会话/任务），
+// 与 IDE 壳 ⌘K 命令面板对称。焦点进输入框，Spotlight 键盘导航即刻可用。
+function onGlobalPaletteKey(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    spotOpen.value = true
+    nextTick(() => searchInputEl.value?.focus())
+  }
+}
+onMounted(() => window.addEventListener('keydown', onGlobalPaletteKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalPaletteKey))
 
 function onSpotKeydown(e: KeyboardEvent) {
   spotRef.value?.onKeydown(e)
@@ -173,7 +186,7 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
-      <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
+      <input ref="searchInputEl" type="text" class="cockpit-top__search-input" :value="store.searchQuery"
         :placeholder="t('cockpit.searchPlaceholder')" data-testid="ia-header-search-input"
         @input="store.runSearch(($event.target as HTMLInputElement).value); spotOpen = true"
         @focus="spotOpen = true"

@@ -2,6 +2,8 @@
 <!-- v12 管理台 · 团队与通道区：团队卡（cockpit TeamRecord 编制）+ 通道卡
      （platforms store：api_server/matrix/email 实时状态）。 -->
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+const router = useRouter()
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -34,6 +36,7 @@ onUnmounted(() => platforms.release())
     <div class="gte__head">
       <span class="gte__title">{{ t('ia2.gov.team.title') }}</span>
       <span class="gte__sub">{{ t('ia2.gov.team.sub') }}</span>
+      <button type="button" class="gte__jump" data-testid="gov-team-jump-org" @click="flow.closeGov(); router.push({ name: 'ia2.board', query: { tab: 'gov-org' } })">{{ t('ia2.gov.jump.org') }} ›</button>
     </div>
     <div class="gte__body">
       <div class="gte__card">
@@ -62,6 +65,7 @@ onUnmounted(() => platforms.release())
 
 <style scoped lang="scss">
 .gte { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
+.gte__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gte__jump:hover { color: var(--primary, #6366f1); }
 .gte__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gte__title { font-weight: 700; }
 .gte__sub { font-size: 10px; color: var(--text-muted); }

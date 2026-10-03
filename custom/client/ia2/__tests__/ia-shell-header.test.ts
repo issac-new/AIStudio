@@ -24,6 +24,12 @@ const pushMock = vi.hoisted(() => vi.fn())
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
   useRoute: () => ({ path: '/app', fullPath: '/app', query: {} }),
+  // 依赖链（IaViewSwitcher→chat store→api/client→router/index）会在模块初始化
+  // 调 createRouter——mock 需补齐（UX 裁决 F/G 轮新增依赖）
+  createRouter: () => ({ push: vi.fn(), replace: vi.fn(), resolve: (x: unknown) => x, currentRoute: { value: { path: '/app', query: {} } }, beforeEach: vi.fn(), afterEach: vi.fn(), addRoute: vi.fn(), getRoutes: () => [] }),
+  createWebHashHistory: () => ({}),
+  RouterView: { name: 'RouterView', template: '<div />' },
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
 }))
 
 // cockpit store 桩：可变状态（日程徽章用例逐例覆写 scheduleDatesWithEvents）

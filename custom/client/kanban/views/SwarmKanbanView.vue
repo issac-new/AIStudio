@@ -1,4 +1,7 @@
 <script setup lang="ts">
+
+// UX 裁决 E（2026-10-03）：?new=1 深链直开建卡表单——TasksView 传入后首列展开建卡器。
+const props = defineProps<{ autoOpenCreate?: boolean }>()
 import { ref, computed, onMounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -573,6 +576,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       <NSpin v-if="store.loading && !filteredTasks.length" size="large" class="page-loading" />
       <KanbanBoard
         v-else
+        :auto-open-create="autoOpenCreate"
         :tasks="filteredTasks"
         :loading="store.loading"
         :selected-ids="selectedIds"

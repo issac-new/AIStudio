@@ -41,12 +41,16 @@ export interface AttentionInput {
   priority?: number | string | null
   /** 创建时刻 epoch ms（缺省视为最旧） */
   createdAt?: number | null
+  /** 来源类型（UX 裁决 B：分派用；缺省按 task 处理） */
+  kind?: 'task' | 'loop' | 'run' | 'session' | 'fleet'
 }
 
 export interface AttentionRow {
   /** 条目 id（att- 前缀避免与 taskId 混用） */
   id: string
   taskId: string
+  /** 来源类型（分派依据；缺省 task） */
+  kind?: 'task' | 'loop' | 'run' | 'session' | 'fleet'
   title: string
   status: AttentionTier
   severity: 'high' | 'medium'
@@ -76,6 +80,7 @@ export function mergeAttention(tasks: AttentionInput[]): AttentionRow[] {
       return {
         id: `att-${t.id}`,
         taskId: t.id,
+        kind: t.kind ?? 'task',
         title: t.title,
         status,
         severity: status === 'review' ? 'medium' as const : 'high' as const,
