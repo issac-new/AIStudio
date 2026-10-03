@@ -1,125 +1,3 @@
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -936,7 +936,8 @@
-     pane: {
-       fold: '向侧边折叠',
-       expand: '展开',
--      maximize: '最大化/还原'
-+      maximize: '最大化/还原',
-+      unmaxAll: '还原布局'
-     },
-     working: '已工作',
-     min: '分',
-@@ -1641,7 +1642,11 @@
-       newAgentChat: 'Agent 单聊',
-       newGroupChat: 'Agent 群聊',
-       newMatrixRoom: 'Matrix 房间',
--      deleteGroup: '删除群聊'
-+      deleteGroup: '删除群聊',
-+      newChatHint: '新建聊天：选择会话类型',
-+      newAgentChatHint: '发起与单个 AI Agent 的新单聊',
-+      newGroupChatHint: '创建群聊房间（多 Agent 协作）',
-+      newMatrixRoomHint: '按名称新建 Matrix 房间（真人与 Agent 同厅协作）'
-     },
-     loop: {
-       stage: {
-@@ -1724,6 +1729,7 @@
-     },
-     chain: {
-       timeline: '时间线',
-+      timelineHint: '打开全链路追踪（Run Observatory 全局面板）',
-       openIde: '在 IDE 打开',
-       gateReview: '等你验收'
-     },
-@@ -1797,6 +1803,8 @@
-       panelBoards: '板',
-       openManage: '打开管理台',
-       decideCount: '待决策 {n}',
-+      chipTasksHint: '点击切换右栏到「任务与决策」视图',
-+      chipOnlineHint: '点击切换右栏到「在线」视图',
-       panelPeople: '人',
-       panelAgents: '智能体'
-     },
-@@ -2283,7 +2291,7 @@
-       offline: '离线'
-     },
-     swp: {
--      object: '对象',
-+      object: '当前对象',
-       tasks: '任务簇',
-       noTasks: '无挂接任务',
-       participants: '参与方'
-@@ -3682,7 +3690,7 @@
-       switchToNew: '创建后切换到新看板',
-       createFailed: '创建看板失败',
-       archiveFailed: '归档看板失败',
--      filterLabel: '看板',
-+      filterLabel: '看板（可多选）',
-       filterAll: '全部'
-     },
-     columns: {
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -936,7 +936,8 @@
-     pane: {
-       fold: 'Fold to side',
-       expand: 'Expand',
--      maximize: 'Maximize/Restore'
-+      maximize: 'Maximize/Restore',
-+      unmaxAll: 'Restore layout'
-     },
-     working: 'Working',
-     min: 'm',
-@@ -1641,7 +1642,11 @@
-       newAgentChat: 'Agent Chat',
-       newGroupChat: 'Agent Group Chat',
-       newMatrixRoom: 'Matrix Room',
--      deleteGroup: 'Delete Group'
-+      deleteGroup: 'Delete Group',
-+      newChatHint: 'New chat: pick a session type',
-+      newAgentChatHint: 'Start a new chat with a single AI agent',
-+      newGroupChatHint: 'Create a group chat room (multi-agent)',
-+      newMatrixRoomHint: 'Create a Matrix room by name (humans + agents)'
-     },
-     loop: {
-       stage: {
-@@ -1724,6 +1729,7 @@
-     },
-     chain: {
-       timeline: 'Timeline',
-+      timelineHint: 'Open run observatory (full-trace panel)',
-       openIde: 'Open in IDE',
-       gateReview: 'Awaiting you'
-     },
-@@ -1797,6 +1803,8 @@
-       panelBoards: ' boards',
-       openManage: 'Open management',
-       decideCount: '{n} to decide',
-+      chipTasksHint: 'Switch the right panel to tasks & decisions',
-+      chipOnlineHint: 'Switch the right panel to the online view',
-       panelPeople: 'People',
-       panelAgents: 'Agents'
-     },
-@@ -2283,7 +2291,7 @@
-       offline: 'Offline'
-     },
-     swp: {
--      object: 'Object',
-+      object: 'Current object',
-       tasks: 'Task Cluster',
-       noTasks: 'No linked tasks',
-       participants: 'Participants'
-@@ -3682,7 +3690,7 @@
-       switchToNew: 'Switch to the new board after creating',
-       createFailed: 'Failed to create board',
-       archiveFailed: 'Failed to archive board',
--      filterLabel: 'Boards',
-+      filterLabel: 'Boards (multi-select)',
-       filterAll: 'All'
-     },
-     columns: {
 diff --git a/packages/client/src/i18n/index.ts b/packages/client/src/i18n/index.ts
 --- a/packages/client/src/i18n/index.ts
 +++ b/packages/client/src/i18n/index.ts
@@ -181,3 +59,127 @@ diff --git a/packages/client/src/components/auth/DefaultCredentialPrompt.vue b/p
    }
    show.value = false;
  }
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 1f5cc5a..d8e39e8 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -856,7 +856,8 @@ export default {
+     pane: {
+       fold: 'Fold to side',
+       expand: 'Expand',
+-      maximize: 'Maximize/Restore'
++      maximize: 'Maximize/Restore',
++      unmaxAll: 'Restore layout'
+     },
+     working: 'Working',
+     min: 'm',
+@@ -1562,7 +1563,11 @@ export default {
+       newAgentChat: 'Agent Chat',
+       newGroupChat: 'Agent Group Chat',
+       newMatrixRoom: 'Matrix Room',
+-      deleteGroup: 'Delete Group'
++      deleteGroup: 'Delete Group',
++      newChatHint: 'New chat: pick a session type',
++      newAgentChatHint: 'Start a new chat with a single AI agent',
++      newGroupChatHint: 'Create a group chat room (multi-agent)',
++      newMatrixRoomHint: 'Create a Matrix room by name (humans + agents)'
+     },
+     loop: {
+       stage: {
+@@ -1645,6 +1650,7 @@ export default {
+     },
+     chain: {
+       timeline: 'Timeline',
++      timelineHint: 'Open run observatory (full-trace panel)',
+       openIde: 'Open in IDE',
+       gateReview: 'Awaiting you'
+     },
+@@ -1718,6 +1724,8 @@ export default {
+       panelBoards: ' boards',
+       openManage: 'Open management',
+       decideCount: '{n} to decide',
++      chipTasksHint: 'Switch the right panel to tasks & decisions',
++      chipOnlineHint: 'Switch the right panel to the online view',
+       panelPeople: 'People',
+       panelAgents: 'Agents'
+     },
+@@ -2204,7 +2212,7 @@ export default {
+       offline: 'Offline'
+     },
+     swp: {
+-      object: 'Object',
++      object: 'Current object',
+       tasks: 'Task Cluster',
+       noTasks: 'No linked tasks',
+       participants: 'Participants'
+@@ -3604,7 +3612,7 @@ export default {
+       switchToNew: 'Switch to the new board after creating',
+       createFailed: 'Failed to create board',
+       archiveFailed: 'Failed to archive board',
+-      filterLabel: 'Boards',
++      filterLabel: 'Boards (multi-select)',
+       filterAll: 'All'
+     },
+     columns: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 030eecf..49926ab 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -856,7 +856,8 @@ export default {
+     pane: {
+       fold: '向侧边折叠',
+       expand: '展开',
+-      maximize: '最大化/还原'
++      maximize: '最大化/还原',
++      unmaxAll: '还原布局'
+     },
+     working: '已工作',
+     min: '分',
+@@ -1562,7 +1563,11 @@ export default {
+       newAgentChat: 'Agent 单聊',
+       newGroupChat: 'Agent 群聊',
+       newMatrixRoom: 'Matrix 房间',
+-      deleteGroup: '删除群聊'
++      deleteGroup: '删除群聊',
++      newChatHint: '新建聊天：选择会话类型',
++      newAgentChatHint: '发起与单个 AI Agent 的新单聊',
++      newGroupChatHint: '创建群聊房间（多 Agent 协作）',
++      newMatrixRoomHint: '按名称新建 Matrix 房间（真人与 Agent 同厅协作）'
+     },
+     loop: {
+       stage: {
+@@ -1645,6 +1650,7 @@ export default {
+     },
+     chain: {
+       timeline: '时间线',
++      timelineHint: '打开全链路追踪（Run Observatory 全局面板）',
+       openIde: '在 IDE 打开',
+       gateReview: '等你验收'
+     },
+@@ -1718,6 +1724,8 @@ export default {
+       panelBoards: '板',
+       openManage: '打开管理台',
+       decideCount: '待决策 {n}',
++      chipTasksHint: '点击切换右栏到「任务与决策」视图',
++      chipOnlineHint: '点击切换右栏到「在线」视图',
+       panelPeople: '人',
+       panelAgents: '智能体'
+     },
+@@ -2204,7 +2212,7 @@ export default {
+       offline: '离线'
+     },
+     swp: {
+-      object: '对象',
++      object: '当前对象',
+       tasks: '任务簇',
+       noTasks: '无挂接任务',
+       participants: '参与方'
+@@ -3604,7 +3612,7 @@ export default {
+       switchToNew: '创建后切换到新看板',
+       createFailed: '创建看板失败',
+       archiveFailed: '归档看板失败',
+-      filterLabel: '看板',
++      filterLabel: '看板（可多选）',
+       filterAll: '全部'
+     },
+     columns: {

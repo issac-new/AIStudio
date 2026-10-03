@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 23f1fd5..461d765 100644
+index ba3aac7..45594ca 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -5754,6 +5754,26 @@ export default {
+@@ -5768,6 +5768,26 @@ export default {
      summaryLoadFailed: 'Failed to load room summary'
    },
    usage: {
@@ -29,7 +29,7 @@ index 23f1fd5..461d765 100644
      title: 'Usage Statistics',
      refresh: 'Refresh',
      totalTokens: 'Total Tokens',
-@@ -5787,27 +5807,7 @@ export default {
+@@ -5801,27 +5821,7 @@ export default {
      cacheWrite: 'Cache Write',
      sessions: 'Sessions',
      cost: 'Cost',
@@ -59,10 +59,10 @@ index 23f1fd5..461d765 100644
    skillsUsage: {
      title: 'Skills Usage',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 4adf325..e0e7559 100644
+index e00d9a2..7762768 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -5754,6 +5754,26 @@ export default {
+@@ -5768,6 +5768,26 @@ export default {
      summaryLoadFailed: '加载房间总结失败'
    },
    usage: {
@@ -89,7 +89,7 @@ index 4adf325..e0e7559 100644
      title: '用量统计',
      refresh: '刷新',
      totalTokens: '总 Token 数',
-@@ -5786,27 +5806,7 @@ export default {
+@@ -5800,27 +5820,7 @@ export default {
      cacheWrite: '缓存写入',
      sessions: '会话',
      cost: '费用',
