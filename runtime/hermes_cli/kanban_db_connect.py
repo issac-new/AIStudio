@@ -630,6 +630,23 @@ def _schema_is_present(conn: sqlite3.Connection) -> bool:
     return row is not None
 
 
+# >>> swarm:kanban-guardrail-attestation >>>
+# every-open attestation（守门触发器调 kanban_write_sanctioned()，UDF 须逐连接注册；
+# 历史上这层只活在 ~/.hermes 工作区补丁里——hermes 自更新与 deploy-agent-runtime
+# 同步都会把它擦掉（2026-10-03 run7 收官段实锤：擦后 kanban assignees/stats/
+# diagnostics 全 500，卡抽屉永不渲染）。收编进 runtime 清单=源头持久。
+if "register_write_sanction_udf" not in globals():  # bare tree: local attestation shim
+    GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
+
+    def register_write_sanction_udf(conn) -> None:
+        """Attest this connection as a sanctioned writer (see trigger docs)."""
+        def guard_fn() -> int:
+            from agent.delegation_context import is_delegated_child_process_context
+            return 0 if is_delegated_child_process_context() else 1
+        conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
+# <<< swarm:kanban-guardrail-attestation <<<
+
+
 def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     """Open ``path`` with the kanban PRAGMA set, then run ``under_lock(conn)``.
     WAL activation and ``under_lock`` share the ``_INIT_LOCK`` critical section:
@@ -638,6 +655,7 @@ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     ``_INITIALIZED_PATHS`` is populated. Closed if anything raises."""
     conn = _sqlite_connect(path)
     try:
+        register_write_sanction_udf(conn)  # every-open attestation（触发器在库必须注册）
         conn.row_factory = sqlite3.Row
         conn.text_factory = _kb._lossy_text
         with _INIT_LOCK:
@@ -678,6 +696,7 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
         # Reads must not enter schema/backfill write transactions. Never create a
         # missing board or migrate on a descendant's behalf; the owner initializes it.
         conn = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+        register_write_sanction_udf(conn)  # 围栏读连接同样作证（触发器评估安全）
         conn.row_factory = sqlite3.Row
         conn.text_factory = _kb._lossy_text
         if not _schema_is_present(conn):

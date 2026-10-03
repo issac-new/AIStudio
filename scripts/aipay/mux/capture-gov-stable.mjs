@@ -84,24 +84,23 @@ if (!ONLY || ONLY === 'g5drawer') {
   } else {
     let ok = false
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-      await page.evaluate(() => { location.hash = '#/hermes/kanban?board=fanfan-review' })
-      await page.waitForTimeout(3500)
+      // G5 评审卡在 swarm 看板（旧 #/hermes/kanban?board=… 落旧版 Default 板——run7 补拍
+      // 实锤路由参数被无视、卡不在旧看板）：localStorage 选板 + /app/board + 卡元素
+      // （.kanban-task-card）点击开抽屉，深链 ?task= 不驱动抽屉。
+      await page.evaluate(() => {
+        localStorage.setItem('hermes.kanban.selectedBoard', 'fanfan-review')
+        location.hash = '#/app/board'
+      })
+      await page.waitForTimeout(5000)
       // G5 评审卡按轮取（旧写死 t_ea68c462 是 run2 卡——run7 预检实锤任何新轮必打不开）：
       // state card_g5_ready 优先，缺省按准出评审标题找；done 卡视区外时先状态筛出。
-      const stSel = page.locator('text=全部状态').first()
-      if (await stSel.isVisible().catch(() => false)) {
-        await stSel.click().catch(() => {})
-        await page.waitForTimeout(800)
-        const doneOpt = page.locator('text=已完成').first()
-        if (await doneOpt.isVisible().catch(() => false)) { await doneOpt.click().catch(() => {}); await page.waitForTimeout(1500) }
-      }
       const g5id = state.card_g5_ready || state.card_g5 || ''
-      const byTitle = page.locator('text=/发布准出评审/').first()
-      const card = (await byTitle.isVisible().catch(() => false)) || !g5id
-        ? byTitle : page.locator(`text=${g5id}`).first()
-      if (await card.isVisible().catch(() => false)) {
-        await card.scrollIntoViewIfNeeded().catch(() => {})
-        await card.click().catch(() => {})
+      const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审|/ }).first()
+      const card2 = g5id ? page.locator(`.kanban-task-card`).filter({ hasText: g5id }).first() : card
+      const target = (await card2.count().catch(() => 0)) ? card2 : card
+      if (await target.isVisible().catch(() => false)) {
+        await target.scrollIntoViewIfNeeded().catch(() => {})
+        await target.click().catch(() => {})
       }
       // 抽屉签名=「Task ID」字段行（卡面上没有）+ .task-drawer 根；仅卡标题可见不算开抽屉。
       // 抽屉根是 v-else-if="task && detail" 详情就绪才渲染——waitFor 轮询免假阴性。
