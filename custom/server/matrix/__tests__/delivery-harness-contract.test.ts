@@ -9,7 +9,11 @@ import {
   parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
 } from '../../../client/matrix-teams/delivery-protocol'
 
-const BUILDER = join(__dirname, '..', '..', '..', '..', 'scripts', 'aipay', 'mux', 'delivery-event.mjs')
+// 构造器随分树轮（2026-10-03）移居 simharness 独立仓（ncwk 根下与 overlay 平级；
+// MX_SIMHARNESS_ROOT 可覆盖，与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称）。
+const BUILDER = join(
+  process.env.MX_SIMHARNESS_ROOT || join(__dirname, '..', '..', '..', '..', '..', 'simharness'),
+  'mux', 'delivery-event.mjs')
 
 function build(args: string[]): Record<string, unknown> {
   const out = execFileSync('node', [BUILDER, ...args], { encoding: 'utf8' })
