@@ -247,7 +247,7 @@ mx_create_room() { # <token> <name> [invite-csv] → room_id
   for u in $(echo "$rest" | jq -r '.[]'); do
     mx "$token" POST "rooms/$rid/invite" "$(jq -nc --arg u "$u" '{user_id:$u}')" >/dev/null 2>&1 || _miss=$((_miss+1))
   done
-  (( _miss == 0 )) || echo "[mx_create_room] 补邀 $_miss 人失败（room=$rid，真值核验将把关）" >&2
+  (( _miss == 0 )) || echo "[mx_create_room] 补邀 $_miss 人失败（room=${rid}，真值核验将把关）" >&2
   echo "$rid"
 }
 mx_join() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1 || true; }

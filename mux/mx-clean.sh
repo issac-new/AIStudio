@@ -109,7 +109,7 @@ if [ "$APPLY" = 1 ]; then
       && ( cd "$H" && rm -rf $_rt auth.lock gateway.lock gateway.pid gateway.sock ) \
       && mkdir -p "$H/pending_messages" "$H/sessions" "$H/approvals/responses" "$H/cron" "$H/logs" \
       && say "✓ hermes 运行态已归档重置（骨架重建）" \
-      || say "⚠ hermes 运行态清理不完整（人工核查 $H）"
+      || say "⚠ hermes 运行态清理不完整（人工核查 ${H}）"
   fi
   # SIM_ROOT/logs 旧轮日志归档（gateway/studio 现行日志会被下次 mx-up 重写，一并带走）
   if [ -d "$SIM_ROOT/logs" ]; then
@@ -191,7 +191,7 @@ if [ "$RESET_MEMORY" = 1 ]; then
           else
             echo "[mx-clean FAIL] shasum/sha1sum/openssl 全缺，无法派生 bank MAC——拒绝 --reset-memory（防 0 行删除假成功）" >&2; exit 4
           fi
-          [ -n "$_mac" ] || { echo "[mx-clean FAIL] bank MAC 派生为空（user=$u）" >&2; exit 4; }
+          [ -n "$_mac" ] || { echo "[mx-clean FAIL] bank MAC 派生为空（user=${u}）" >&2; exit 4; }
           _banks="$_banks,('hermes-$_mac-$u')"
         done
         if docker exec -i hindsight-db-1 psql -U hindsight -d hindsight <<HSQ
@@ -297,7 +297,7 @@ if [ "$RESET_CENTRAL" = 1 ]; then
         git tag "mx-clean-${TS}-branches" 2>/dev/null || true
         for _b in $_brs; do
           _n="${_b#refs/heads/}"
-          git push -q origin --delete "$_n" 2>/dev/null && say "  删远端分支 $_n" || say "  ⚠ 删失败 $_n（远端间歇，起跑前核）"
+          git push -q origin --delete "$_n" 2>/dev/null && say "  删远端分支 $_n" || say "  ⚠ 删失败 ${_n}（远端间歇，起跑前核）"
         done
         _tags=$(git tag -l "mx-clean-${TS}-b-*")
         [ -n "$_tags" ] && git push -q origin $_tags 2>/dev/null || true

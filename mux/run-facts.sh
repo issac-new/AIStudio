@@ -50,7 +50,7 @@ fi
 CEN="$SIM/central/aipaydev"
 if [ -d "$CEN/.git" ]; then
   BASE=$(git -C "$CEN" rev-parse --short=8 HEAD 2>/dev/null || true)
-  [ -n "$BASE" ] && kv baseline "aipaydev 中央仓 HEAD $BASE（merge-base 快进链由 R4 断言守卫）"
+  [ -n "$BASE" ] && kv baseline "aipaydev 中央仓 HEAD ${BASE}（merge-base 快进链由 R4 断言守卫）"
 fi
 kv stack "单 gateway :8801（hermes 0.21.5 多路复用 15 平台）+ 单 studio :8802（沙箱 dist）+ matrix :8008 + hindsight :8888；编制 15 人 ×2 账号"
 # 记档项（诚实台账行，;; 分隔多条）
