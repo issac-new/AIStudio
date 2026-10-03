@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index b2a059ec..fd1de955 100644
+index 54058db..927f095 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -27,6 +27,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd
@@ -18,7 +18,7 @@ index b2a059ec..fd1de955 100644
  const route = useRoute();
  const { sessionSearchOpen } = useSessionSearch();
  
-@@ -144,22 +146,8 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
+@@ -144,23 +146,8 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
  function handleWideViewportChange(event: MediaQueryListEvent) {
    isWideViewport.value = event.matches;
  }
@@ -29,6 +29,7 @@ index b2a059ec..fd1de955 100644
 -    "hermes.connections",
 -    "hermes.agentManager",
 -    "hermes.models",
+-    "hermes.apiRelay",
 -    "hermes.history",
 -    "hermes.historySession",
 -    "hermes.globalAgent",
@@ -43,7 +44,7 @@ index b2a059ec..fd1de955 100644
  const usesHermesConfigSidebar = computed(
    () => route.meta?.hermesConfig === true,
  );
-@@ -173,7 +161,7 @@ const showAppSidebar = computed(
+@@ -174,7 +161,7 @@ const showAppSidebar = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -52,7 +53,7 @@ index b2a059ec..fd1de955 100644
      !usesHermesConfigSidebar.value &&
      !usesEkkoConfigSidebar.value &&
      !usesCodingAgentConfigSidebar.value,
-@@ -185,8 +173,8 @@ const showMobileMenuButton = computed(
+@@ -186,8 +173,8 @@ const showMobileMenuButton = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -62,7 +63,7 @@ index b2a059ec..fd1de955 100644
        usesHermesConfigSidebar.value ||
        usesEkkoConfigSidebar.value ||
        usesCodingAgentConfigSidebar.value),
-@@ -246,6 +234,7 @@ watch(
+@@ -247,6 +234,7 @@ watch(
        appStore.stopHealthPolling();
        return;
      }
