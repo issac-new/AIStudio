@@ -461,7 +461,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
     cur_size=0
     for a in "${logs[@]}"; do
-      sz=$(stat -f%z "$a" 2>/dev/null || echo 0)
+      sz=$(stat -f%z "$a" 2>/dev/null || stat -c%s "$a" 2>/dev/null || echo 0)
       cur_size=$(( cur_size + sz ))
     done
     if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi

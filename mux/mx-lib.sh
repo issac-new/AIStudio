@@ -343,7 +343,10 @@ sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
 from hermes_cli.main import main
 sys.exit(main())
 WRAPPY
-  sed -i '' "s|@AGENT_SRC@|$AGENT_SRC|" "$SIM_ROOT/bin/hermes-sim.py"
+  # GNU sed 不认 `sed -i ''`（'' 被当脚本、真脚本被当文件名，wrapper 生成必炸）——
+  # 便携式原地替换：tmp+mv（BSD/GNU 通用，顺带原子）
+  _wpy="$SIM_ROOT/bin/hermes-sim.py"
+  sed "s|@AGENT_SRC@|$AGENT_SRC|" "$_wpy" > "${_wpy}.tmp" && mv "${_wpy}.tmp" "$_wpy"
   cat > "$SIM_ROOT/bin/hermes-sim" <<WRAP
 #!/bin/bash
 # 借宿主 venv 依赖环境（只读），代码取 SIM 源码快照；-I 与官方 wrapper 同源语义。
@@ -358,7 +361,10 @@ mx_provision_product_dist() {
   local live="$NCWK_ROOT/upstream/hermes-studio/dist"
   [[ -f "$live/server/index.js" ]] || { log "⚠ 活注入树无构建产物（${live}）——跳过 dist 快照"; return 0; }
   local ovl; ovl=$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
-  local stamp; stamp=$(stat -f '%Sm' -t '%F %T' "$live/server/index.js" 2>/dev/null || echo unknown)
+  # dist mtime 跨端取法：BSD `stat -f '%Sm' -t` / GNU `stat -c '%y'`（Linux 上
+  # BSD 语法静默失败回落 unknown，快照判旧失效——product-dist 每轮全量重拷）
+  local stamp; stamp=$(stat -f '%Sm' -t '%F %T' "$live/server/index.js" 2>/dev/null \
+    || stat -c '%y' "$live/server/index.js" 2>/dev/null | cut -d. -f1 || echo unknown)
   local cur; cur=$(_mx_provenance "$PRODUCT_DIST.provenance.json" --read | sed -n 's/.*"dist_mtime": "\([^"\\]*\)".*/\1/p')
   if [[ "$cur" == "$stamp" && -f "$PRODUCT_DIST/server/index.js" ]]; then
     log "product-dist 快照已在位且同步（dist_mtime=${stamp}）——跳过"
