@@ -226,6 +226,8 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     readMarkerVisible.value = true
   }
   function hideReadMarker() { readMarkerVisible.value = false }
+  /** 每房最后读位（会话级）：selectRoom 离开房间时记录，重进时恢复 marker。 */
+  const readMarkerByRoom = new Map<string, string>()
 
   // ── Typing / selection ──
   const typingUsers = ref<string[]>([])
@@ -611,6 +613,15 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   }
 
   function selectRoom(roomId: string | null) {
+    // 离开房间时把"已读到哪"记为该房的 read marker；重进时恢复——
+    // TopUnreadBar 的「跳到未读」与 TimelinePanel 的 marker 线都消费
+    // readMarkerEventId，此前全库无写入方，按钮恒回落 jump-bottom 跳过全部未读
+    const prevRoomId = activeRoomId.value
+    if (prevRoomId && prevRoomId !== roomId) {
+      const lastId = messageList.value.at(-1)?.getId?.() ?? null
+      if (lastId) readMarkerByRoom.set(prevRoomId, lastId)
+    }
+    setReadMarker(roomId ? (readMarkerByRoom.get(roomId) ?? null) : null)
     activeRoomId.value = roomId
     // 切房间时重置消息列表 + 分页状态(refreshMessages 会重新初始化)
     messageList.value = []

@@ -114,9 +114,12 @@ watch(
 
 // 页签 → URL 回写（2026-10-03 走查 L4）：此前切换页签只改本地 tab，
 // 刷新/分享后页签位置丢失。同值跳过避免与上方 query watch 互相触发。
+// task/status 是一次性深链参数，回写时剥离——否则用户清掉的过滤器会在每次
+// 切页签时被 URL 残影复活（query watch 重放 applyQuery 覆盖用户输入态）
 watch(tab, (key) => {
   if (route.query.tab === key) return
-  void router.replace({ name: 'ia2.board', query: { ...route.query, tab: key } })
+  const { task: _t, status: _s, ...rest } = route.query as Record<string, unknown>
+  void router.replace({ name: 'ia2.board', query: { ...rest, tab: key } })
 })
 
 /** 追溯矩阵 → 看板定位任务：切回看板页签 + 搜索框预选 taskId */

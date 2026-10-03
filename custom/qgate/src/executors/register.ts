@@ -193,7 +193,14 @@ export function runRegisterExecutor(executor: ExecutorSpec, input: RegisterExecu
       const mdRel = join('.qgate', 'registers', `${kind}.md`)
       const mdFile = join(input.workspace, mdRel)
       if (existsSync(mdFile)) {
-        const content = readFileSync(mdFile, 'utf8')
+        // existsSync 对目录也为真——<kind>.md 是目录时 readFileSync 抛 EISDIR 炸穿整轮 run
+        let content: string
+        try {
+          content = readFileSync(mdFile, 'utf8')
+        } catch (e) {
+          outcomes.push({ kind, status: 'error', level: 'present', notes: [`${kind}.md unreadable (${e instanceof Error ? e.message : String(e)})`] })
+          continue
+        }
         const missing = MD_MARKERS[kind].filter((m) => !content.includes(m))
         if (missing.length === 0) {
           outcomes.push({ kind, status: 'pass', level: 'present', notes: [`${kind}.md on file with markers (present-level: on file ≠ verified)`] })

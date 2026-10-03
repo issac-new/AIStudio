@@ -614,9 +614,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       // 是两枚曾漏的形态——84 条成员悬空长尾的两枚根因（2026-10-02 分类定位）
       const re = /export\s+(?:declare\s+)?(?:async\s+)?(?:const\s+enum|const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g
       while ((m = re.exec(content)) !== null) names.add(m[1])
-      const reDef = /export\s+default(?:\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*))?/
-      const def = reDef.exec(content)
-      if (def) names.add(def[1] ?? 'default')
+      // default 槽位只有一个名字：default。`export default function foo()` 的 foo
+      // 不是命名导出（外部拿不到 `import { foo }`）——旧代码把 foo 记进导出面，
+      // 悬空 default 检测（消费侧）会假阳
+      if (/export\s+default\b/.test(content)) names.add('default')
       // <script setup> 的 .vue 隐式 default 导出（Vue 惯例：组件即 default，无显式语句）
       if (file.endsWith('.vue')) names.add('default')
       const reList = /export\s+(?:type\s+)?\{([^}]+)\}(?:\s*from\s*['"][^'"]+['"])?/g
@@ -681,7 +682,9 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
       // import 语句（含命名成员）；require('spec') 裸式
       const reImp = /^[ \t]*import\s+(?:type\s+)?(?:([\w$]+)\s*,\s*)?(?:\{([^}]*)\}|([\w$]+)|\*\s+as\s+[\w$]+)?\s*(?:from\s+)?['"]([^'"]+)['"]/gm
       while ((m = reImp.exec(content)) !== null) {
-        const [, defaultBare, namedList, , spec0] = m
+        // 组3=裸 default 绑定（import Foo from './x'——最主流形态）；组1=逗号前 default
+        // （import Foo, { bar } from './x'）。旧代码丢弃组3，悬空 default import 整类逃过接地
+        const [, defaultBare, namedList, defaultSolo, spec0] = m
         if (spec0.startsWith('node:')) continue
         if (spec0.startsWith('/')) continue // 绝对路径=仓外引用（接地属目标仓）
         const { spec, aliased } = applyAlias(spec0)
@@ -700,7 +703,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
             const local = seg.split(/\s+as\s+/)[0].trim()
             if (local && local !== 'type' && !names.has(local)) unresolvedMember.push(`${file}: '${spec}' member ${local}`)
           }
-          if (defaultBare && !names.has('default')) unresolvedMember.push(`${file}: '${spec}' default`)
+          if ((defaultBare ?? defaultSolo) && !names.has('default')) unresolvedMember.push(`${file}: '${spec}' default`)
           importsChecked++
           continue
         }

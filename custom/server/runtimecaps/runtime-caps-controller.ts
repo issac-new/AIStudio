@@ -110,8 +110,10 @@ router.get('/approval-suggestions', async (ctx) => {
 
 /** cron 执行史（#7）：TTL 30s */
 router.get('/cron-runs', async (ctx) => {
-  const limit = Math.min(Number(ctx.query.limit) || 20, 50)
-  await respond(ctx, 'cron-runs', ['cron', 'runs', '--limit', String(limit)], 30_000)
+  // 缓存键必须含 limit（对齐 approval-suggestions/gateway-sessions）：常量键会让
+  // ?limit=50 的结果在 TTL 内顶给 ?limit=5；下钳 1 防负数直传 hermes CLI
+  const limit = Math.min(Math.max(Number(ctx.query.limit) || 20, 1), 50)
+  await respond(ctx, `cron-runs:${limit}`, ['cron', 'runs', '--limit', String(limit)], 30_000)
 })
 
 // ── 网关 api_server HTTP 代理（2026-10-02 三受阻项解封：会话分叉/蓝图/暗能力）──

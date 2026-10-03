@@ -252,11 +252,11 @@
 # 490（治理中心 · 补功能主清单）：/api/governance overview（六闸工件 git 实查+G3 分支
 #      证据+评审待裁决聚合）+ doc?kind=（markdown 全文含 commit 锚点）；本体走 custom
 #      （governance-controller，数据源=GOVERNANCE_REPO 真仓 git，缺失如实 exists:false）。
-490-server-governance-mount.patch
+560-server-governance-mount.patch
 # 488（验收修复）：视频抽帧端点独立文件化（append 到既有 controller 的路由真进程
 #      不生效——独立文件模式实证有效）+挂载；compaction/run-undo db 路径多候选修复
 #      （serve 子进程 cwd=hermes-studio 根为最可靠锚）。
-488-server-video-frames-route.patch
+559-server-video-frames-route.patch
 # 489（404 缺陷修复）：IDE 两端点原生中间件直挂（PUT engine-models/POST video-frames
 #      ——绕开 koa-router 注册面，404 怪象根治性 workaround）。
 489-server-native-ide-routes.patch
@@ -270,14 +270,14 @@
 # 477（feat/p1-batch）：kanban 空映射不滤光——Mux admin 建号无 user_profiles 行致
 #      GET /api/hermes/kanban?board=* 整板 {"tasks":[]}（CLI 正常；run6-9 实锤，
 #      harness 曾被迫 CLI 直查绕开）；空 Set 视为不限制（admin 应见全部板）。
-477-kanban-empty-profile-no-filter.patch
+558-kanban-empty-profile-no-filter.patch
 # 478（feat/p1-batch）：dispatcher 遥信补盲——_tick_spawn_budget 拒绝（max_spawn/
 #      max_in_progress 满载）与 per_profile cap 此前不进 describe_suppression，
 #      stuck 告警零后缀把"忙"误报"卡死"（B2 根治，gateway N=600+ 实锤）。
 478-dispatch-budget-telemetry.patch
 # 490（走查修复 2）：zcode 会话 scoped→global 自动回落——IDE 会话默认 scoped（模型
 #      可调）与服务端 zcode-only-global 冲突致发送全 400；回落而非硬拒。
-490-server-zcode-scoped-fallback.patch
+561-server-zcode-scoped-fallback.patch
 # 493（P4①② 群聊面接线 · 补功能缺口收口）：GroupMessageItem——card=t_xxx 转看板
 #      卡深链 markdown（utils/group-body-links）+ @当前登录人入 mention 高亮词表。
 #      （P4 特性组件与测试早已在库，但从未接入群聊真实渲染面——"证据待补"根因。）

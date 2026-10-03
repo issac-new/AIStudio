@@ -16,6 +16,7 @@ import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
 import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
 import { TASK_INTENT_DEFAULT_FILE, loadTaskIntent, writeTaskIntent } from './core/task-intent.js'
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { cacheGc } from './core/cache.js'
 import type { GateSpec, Trigger } from './core/types.js'
 
 const HELP = `qgate — universal delivery gate CLI
@@ -228,6 +229,9 @@ async function main(): Promise<void> {
           `${result.run.failureSummary ? ` — ${result.run.failureSummary}` : ''}\n`,
         )
       }
+      // §49 缓存生命周期：随 run 触发过期清理（此前 cacheGc 定义后无任何调用点，
+      // .qgate/cache/evidence/ 按 key 无限累积）
+      try { cacheGc(loaded.qgateDir) } catch { /* GC 失败不影响判定 */ }
       // §51 evidenceCommit：把本次运行证据归档进可提交区（对齐交付标准"证据落卡"）
       if (loaded.config.evidenceCommit) {
         const { cpSync, mkdirSync: mk } = await import('node:fs')

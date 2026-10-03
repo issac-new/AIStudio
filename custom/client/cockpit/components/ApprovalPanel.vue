@@ -360,17 +360,17 @@ defineExpose({ refresh })
     <section class="approval-panel__section approval-panel__suggestions">
       <button type="button" class="approval-panel__sugg-toggle" data-testid="approval-suggestions-toggle"
         @click="toggleSuggestions">
-        {{ suggestionsOpen ? '▾' : '▸' }} 放行建议（从历史审批提炼可入白名单的模式）
+        {{ suggestionsOpen ? '▾' : '▸' }} {{ spotT.suggToggle }}
       </button>
       <template v-if="suggestionsOpen">
         <div v-if="suggestionsLoading" class="approval-sugg__state" data-testid="approval-suggestions-loading">
-          正在扫描历史审批生成建议（冷启约 1 分钟，之后 10 分钟内直接命中缓存）…
+          {{ spotT.suggScanning }}
         </div>
         <div v-else-if="suggestionsError" class="approval-sugg__state approval-sugg__state--err" data-testid="approval-suggestions-error">
           {{ suggestionsError }}
         </div>
         <div v-else-if="!suggestions.length" class="approval-sugg__state" data-testid="approval-suggestions-empty">
-          近期无可提炼的放行模式。
+          {{ spotT.suggEmpty }}
         </div>
         <div v-else class="approval-sugg__list" data-testid="approval-suggestions-list">
           <div v-for="s in suggestions" :key="s.n" class="approval-sugg__row" :data-testid="`approval-suggestion-${s.n}`">
@@ -379,7 +379,7 @@ defineExpose({ refresh })
             <span class="approval-sugg__count">×{{ s.count }}</span>
             <span class="approval-sugg__kind">{{ s.kind }}</span>
           </div>
-          <p class="approval-sugg__hint">采纳：在 agent 会话执行 /approvals 或 CLI approvals suggest --apply N（本面板只读不落盘）。</p>
+          <p class="approval-sugg__hint">{{ spotT.suggAdoptHint }}</p>
         </div>
       </template>
     </section>
