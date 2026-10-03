@@ -1,6 +1,6 @@
 # SwarmStudio 全功能回归测试报告（2026-10-03）
 
-**结论**：驾驶舱（/app/* 全家）、沟通协作三栏工作台、IDE 工作台（/ide）已完成全量回归（42 路由 + 顶栏/注意力条/左栏/右栏/会话窗格全部按钮与弹层逐一点到），发现 8 项缺陷并修复 7 项（含 1 项 P0 整页崩溃+全应用冻结级联），复验 7/7 全绿、全量 vitest 3717 绿（8 个既有 qgate 红已stash 基线实证与本轮无关）。
+**结论**：驾驶舱（/app/* 全家）、沟通协作三栏工作台、IDE 工作台（/ide）已完成全量回归（42 路由 + 顶栏/注意力条/左栏/右栏/会话窗格全部按钮与弹层逐一点到），发现 9 项缺陷并修复 8 项（含 1 项 P0 整页崩溃+全应用冻结级联），复验全绿、全量 vitest 3724 绿（8 个既有 qgate 红经 stash 基线实证与本轮无关）。
 
 ## 一、测试范围与方法
 
@@ -19,6 +19,7 @@
 | F5 | P2 | `/app/history` 页触发 `No match for hermes.historySession`，点历史会话打不开 | 补丁 297 摘除该路由名后，HistoryView 尚存 3 处按名导航（539 修过 4 处但漏此 3 处） | 539 补 openHistorySession 处；新增 patch 551 修 openDefaultHistorySession/buildHistorySessionUrl 两处（改路径式）；测试签名同步并加 551 守门 |
 | F6 | P2 | 在线面板「暂无内容」与顶栏「在线 3」自相矛盾 | 计数走 presence/网关兜底而面板树只绑账号花名册（空时即空） | useSitCounts.online 增 identities 同源清单，SitDetailPanel 树在花名册空时按 identities 建行（计数与列表同源同口径） |
 | F7 | P3 | 新树/私有树启动时 event-log SQLite 创建失败降级 InMemory | `.loop/` 父目录缺失时 node:sqlite 报 unable to open database file，未 mkdir | 建库前 `mkdirSync(recursive)`；补守门测试 |
+| F9 | P3 | 态势/在线弹层恒锚页头左上，与右上触发 chips（任务/在线）错位 | `.cockpit-top__sitpanel { left:12px }` 系旧版 chips 左置时遗留 | 改右锚定（`right:12px`）贴触发簇；实测弹层右缘=视口-17px |
 | F8 | P2(观察) | /ide 冷加载对陈旧持久化会话 id 打 `workspace-run-changes` 404 | localStorage 会话 id 陈旧（该会话已不存在）；代码已有优雅降级（`!res.ok` 即返回），仅控制台噪声 | 不改代码（改动收益低于风险）；记档观察 |
 
 ## 三、判为非缺陷（含误报澄清）
@@ -39,5 +40,4 @@
 ## 五、遗留与建议
 
 1. qgate 族 8 个既有失败（CLI intent/生命周期断言不符）建议另立任务处置。
-2. `.cockpit-top__sitpanel { left: 12px }` 硬编码使在线/态势面板恒锚左上（从右上按钮弹出时错位感明显），建议按触发按钮锚定（P3 体验项，未改）。
 3. `＋新任务` 仅跳看板不带建卡动作，可考虑带 `?new=1` 直开建卡表单（P3 体验项，未改）。
