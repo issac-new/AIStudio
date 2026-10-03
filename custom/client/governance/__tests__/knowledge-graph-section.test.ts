@@ -84,6 +84,41 @@ describe('KnowledgeGraphSection KG 演化治理扩展', () => {
     expect(tag.text()).toContain('0.62')
   })
 
+  it('门禁状态行：通过态一句话；失败态红显原因+已自动回滚；版本下拉显 label', async () => {
+    // 通过态
+    ;(api.syncKnowledgeGraph as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      results: [{
+        board: 'demo', scanned: 5, ingested: 3, relations: 2, conflicts: [], kgAvailable: true,
+        qualityGate: { passed: true, before: { coverage: 0.5, orphanRate: 0, aliasRatio: 0, nodeCount: 5, edgeCount: 4 }, after: { coverage: 1, orphanRate: 0, aliasRatio: 0.1, nodeCount: 10, edgeCount: 9 } },
+      }],
+    })
+    let w = await mountSection()
+    await flushPromises()
+    await w.find('[data-testid="kg-sync"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="kg-gate-fail"]').exists()).toBe(false)
+    expect(w.find('[data-testid="kg-sync-log"]').text()).toContain('质量门禁通过')
+    w.unmount()
+    // 失败态：已自动回滚 + 原因红显
+    ;(api.syncKnowledgeGraph as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      results: [{
+        board: 'demo', scanned: 5, ingested: 3, relations: 2, conflicts: [], kgAvailable: true,
+        qualityGate: { passed: false, rolledBack: true, reason: '别名率 0.400 超上限 0.30（去重阈值疑似失配，类爆炸风险）', before: { coverage: 1, orphanRate: 0, aliasRatio: 0, nodeCount: 12, edgeCount: 11 }, after: { coverage: 1, orphanRate: 0, aliasRatio: 0.4, nodeCount: 16, edgeCount: 15 } },
+      }],
+    })
+    w = await mountSection()
+    await flushPromises()
+    await w.find('[data-testid="kg-sync"]').trigger('click')
+    await flushPromises()
+    const fail = w.find('[data-testid="kg-gate-fail"]')
+    expect(fail.exists()).toBe(true)
+    expect(fail.text()).toContain('质量门禁未过')
+    expect(fail.text()).toContain('已自动回滚')
+    expect(fail.text()).toContain('别名率')
+  })
+
   it('版本与回滚：下拉选择 → 两步确认 → rollbackKg(board, ts)', async () => {
     const w = await mountSection()
     await flushPromises()
