@@ -1,0 +1,73 @@
+前两篇把候选本体做完了去重、冲突消解、治理分级，合并进了主本体。这篇是三部曲的收尾：怎么防止本体"越自动演化越差"（质量门禁），怎么让每一次演化都可追溯、可撤销（版本快照与回滚），以及本体变化怎么联动下游已经建好的 Neo4j 图谱（第③篇persist 过的那份图）。
+版本声明：本文代码来自 dynamic_ontology/quality_gate.py、versioning.py、neo4j_migration.py，均为已实现、已跑通的真实模块，全部涉及 semantica 真实存在但官方文档未明确记录细节的 API 行为，本文会如实复现三处真实踩过的坑。
+
+一、质量门禁：合并前后对比覆盖率
+semantica 官方的 evals/ 模块是空壳（源码原文就是 """Coming Soon""" 占位符），本项目的质量门禁完全是基于真实存在的 OntologyEvaluator + CompetencyQuestionsManager 自己拼装的——这不是 semantica 提供的现成"动态本体质量保障"功能，这一点必须讲清楚，不能让读者误以为这是官方能力。
+# dynamic_ontology/quality_gate.py（节选）
+def check_quality_gate(ontology_before, ontology_after, competency_questions=None):
+    before = evaluate_ontology_quality(ontology_before, competency_questions)
+    after = evaluate_ontology_quality(ontology_after, competency_questions)
+    passed = after["coverage_score"] >= before["coverage_score"]
+    return {"passed": passed, "before": before, "after": after}
+图1：质量门禁判定流程
+一个已验证的真实坑：CompetencyQuestionsManager 判断"本体能不能回答某个问题"的算法是纯英文关键词子串匹配——把问题转小写、按空格分词、只看长度大于 3 的词，逐个检查该词是否是某个 class/property 名称小写后的子串。这意味着两件事：① 完全不支持中文分词，用中文提问（比如"谁创立了哪些公司？"）覆盖率会恒为 0；② 如果类名本身很短（比如 spaCy 标签 Gpe，小写后只有 3 个字符），由于只考察长度大于 3 的关键词，不可能有任何关键词是它的子串，这类短类名永远无法被命中，即使问题里真的包含"gpe"这个词也不行。因此本项目的默认胜任力问题被设计成只用能真正命中的英文关键词：
+def build_default_competency_questions():
+    return ["Which person is mentioned in this data?"]   # "person" 能命中 Person 类
+本机实测（第一轮，主本体从空到有）：
+质量门禁:         通过=True，覆盖率 0.00 -> 1.00
+合并前主本体是空的，回答不了任何胜任力问题，覆盖率 0；合并后新增了 Person 类，"Which person is mentioned in this data?" 能被命中，覆盖率变成 1.0，质量门禁通过。第二、三轮由于本体已经能回答这个问题，覆盖率维持在 1.00 -> 1.00，同样通过。
+二、版本快照：两个必须踩过才知道的坑
+# dynamic_ontology/versioning.py（节选）
+def create_snapshot(self, ontology_data, version_label, author, description):
+    wrapped = dict(ontology_data)
+    wrapped["structure"] = {
+        "classes": [c.get("name") for c in ontology_data.get("classes", []) if c.get("name")],
+        "properties": [p.get("name") for p in ontology_data.get("properties", []) if p.get("name")],
+        "individuals": [], "axioms": [],
+    }
+    snapshot = self._manager.create_snapshot(wrapped, version_label=version_label,
+                                              author=author, description=description)
+坑一：author 必须是合法邮箱格式。 设计方案原本以为 author 可以随便传一个标识字符串（如 "dynamic-ontology-pipeline"），实测底层 ChangeLogEntry._validate_author() 用正则强制校验 author 必须匹配邮箱格式，传纯字符串会直接抛 ValidationError: Invalid email format。所有调用点已改为传类邮箱格式的标识，如 "dynamic-ontology-pipeline@semantica-learning.local"。
+坑二：结构化差异信息要包在 structure 键下。 设计方案原本以为可以直接把 OntologyGenerator.generate_ontology() 产出的原始 dict（classes/properties 在顶层）传给 create_snapshot()。实测 OntologyVersionManager 内部实际读取的是 ontology_data["structure"] 这一层包装，且 classes/properties 是名字字符串列表而不是完整 dict。不做转换直接传，compare_versions()/diff 只能对比到空结构——上面代码里的 wrapped["structure"] = {...} 就是专门做这层转换的。
+三、回滚：自己补的能力
+OntologyVersionManager 只提供 create_snapshot()/get_version()/compare_versions()，没有"设为当前版本"的方法。dynamic_ontology/versioning.py 自己维护了一个 current_version.json 文件记录"当前生效版本"指针，回滚的实现方式是：把目标历史快照的内容重新创建成一条新快照（带上新的 checksum、新的时间戳），再把指针指向这条新快照——不删除、不覆盖回滚点之后的任何历史记录，这样"我们决定回滚过一次"这件事本身也是可追溯的：
+图2：版本快照与回滚状态流转
+本机实测（把当前版本从 v3 回滚到 v1）：
+回滚前当前版本: v3
+回滚操作结果:   {'rollback_label': 'v1-rollback-from-v3', 'restored_from': 'v1', 'previous_current': 'v3'}
+回滚后当前版本: v1-rollback-from-v3
+回滚验证通过：当前版本指针已正确指回 v1 的本体结构，且回滚事件本身被记为新的审计快照。
+v1、v2、v3 三条历史记录原样保留，list_versions() 里能同时看到它们和 v1-rollback-from-v3 这条新记录——审计链条完整，没有任何一条历史被抹掉。
+四、下游 Neo4j Schema 迁移：完全自建的能力
+本体的 class 变化会影响第③篇里已经持久化到 Neo4j 的节点标签（labels）。这一整块 semantica 没有任何支持，是完全自己设计实现的，分两种场景：新增类/属性对已有数据无影响，是 no-op；类改名/层级变化需要生成迁移脚本，且必须人工审核批准才能执行：
+# dynamic_ontology/neo4j_migration.py（节选）
+def plan_migration(old_label, new_label):
+    cypher = f"MATCH (n:{old_label}) SET n:{new_label} REMOVE n:{old_label}"
+    return {"cypher": cypher, "old_label": old_label, "new_label": new_label}
+
+def execute_migration(migration_plan, approved, ...):
+    if not approved:
+        return {"executed": False, "reason": "未获得人工审核批准（approved=False），迁移脚本已生成但不会执行"}
+    # 只有 approved=True 才真正连接 Neo4j 执行
+图3：Neo4j schema 迁移决策流程
+本机实测：demos/10_dynamic_ontology_v1.py 三轮演化里，governance 判定的 manual_review_classes（涉及层级变更的类）始终为空——三批示例数据设计的都是"全新叶子类"或"高置信度别名"，没有真的触发层级变更，is_migration_needed() 返回 False，迁移是 no-op。这是一个诚实的局限：这次跑的三轮 demo 数据没能自然触发迁移这条代码路径。为了让你看到迁移计划真正长什么样，我单独手动调用了一次：
+>>> plan = neo4j_migration.plan_migration("Organization", "Company")
+>>> plan
+{'cypher': 'MATCH (n:Organization) SET n:Company REMOVE n:Organization',
+ 'old_label': 'Organization', 'new_label': 'Company'}
+>>> neo4j_migration.execute_migration(plan, approved=False)
+{'executed': False, 'reason': '未获得人工审核批准（approved=False），迁移脚本已生成但不会执行', 'records_affected': None}
+>>> neo4j_migration.execute_migration(plan, approved=True)
+{'executed': True, 'reason': '已获批准，迁移脚本已对 Neo4j 执行', 'records_affected': 0}
+records_affected: 0 是因为本机 Neo4j 里当前没有任何 Organization 标签的节点（前面几轮的示例数据抽出的是 Person/Gpe），Cypher 语句本身是真实针对本机 Neo4j 容器执行的，不是模拟输出。
+五、诚实的系列总结
+三篇文章走完了动态本体设计方案第 1 节表格里"目标"那一列的全部内容：触发（批处理窗口）→ 增量抽取 → 候选本体生成 → 相似度去重 → 冲突检测消解 → 治理分级 → 合并 → 质量门禁 → 版本快照 → 回滚 → Neo4j schema 迁移。但按照设计文档第 5 节的要求，这里也如实列出这套系统目前明确没做的部分，不藏起来：
+冲突检测依赖跨批次稳定的实体 id，本项目没有做实体链接/消歧这一层，第②篇里刻意构造的冲突场景因此没有被真实检出。
+
+外部标准本体（FOAF/Schema.org）导入是假的——ReuseManager.import_external_ontology() 只是把 URI 字符串塞进 imports 列表，不会真的抓取解析外部本体内容。
+
+相似度去重阈值、源可信度打分、质量门禁基线——这些数字都是本项目针对 demo 场景手工检查合理的初始值，不是放之四海而皆准的默认值，接到真实业务数据上需要重新实验调参。
+
+本方案假设单机单进程运行，没有考虑多实例并发写同一个本体的竞态问题。
+
+这套三部曲的价值不在于"做出一个完美的动态本体系统"，而在于把 semantica 真实存在的几个能力（去重、冲突检测、版本管理）通过一层自己设计的编排和治理逻辑串起来，同时诚实标注每一处"设计以为的样子"和"实测到的真实样子"之间的差异——这也是整个系列一路坚持的写法。
