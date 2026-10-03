@@ -312,6 +312,7 @@ onMounted(() => void refresh())
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  min-width: 0;
 }
 .gov-docs__docview {
   border: 1px solid var(--border-color, #e5e7eb);
@@ -388,7 +389,16 @@ onMounted(() => void refresh())
   &.is-reject { color: #dc2626; border: 1px solid #dc266444; }
   &:disabled { opacity: 0.5; cursor: wait; }
 }
-.gov-docs__admin { display: flex; flex-direction: column; gap: 14px; }
+/* P7/P8 管理维护区：grid 主区只有两列（240px 清单 + 内容），admin 是第三个子块，
+   不给列位会被 auto-placement 掉进第二行第一列挤在 240px 里（2026-10-03 走查实锤：
+   表头竖排折行、按钮换行）——显式跨全宽整行，宽表才有列空间。 */
+.gov-docs__admin {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
 
 .gov-docs__fresh {
   margin-left: auto;
