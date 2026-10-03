@@ -7,6 +7,18 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mx-lib.sh"
 
+# ── 运行面自愈（533/534 长效化：自更新擦除后每次 mx-up 收敛恢复）──────
+# 自更新会 git 清洗源码树——manifest 文件与 git-applied 补丁一并被擦（run5/6/7 三次实录，
+# run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此双通道收敛：
+#   ① deploy-agent-runtime --apply（manifest 21 文件内容同步，结构化 raci 等能力依赖）
+#   ② mx_apply_agent_patches（390/391/533/534 git apply，源码树语义在位）
+# 幂等：两路都带在位检查，重复跑零副作用；失败只告警不阻断（网关可能带旧码起——
+# 容量风暴行为会复发，issues.log 会有拒收实录可追）。
+if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
+fi
+mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
+
 # ── host 共存检查（G5 证据面）────────────────────────────
 host_health=$(curl -sf "$HOST_ORCH_HEALTH" -m 3 || true)
 if [[ -n "$host_health" ]]; then
