@@ -10,6 +10,8 @@
 
 import { DatabaseSync } from 'node:sqlite'
 import type { SQLInputValue } from 'node:sqlite'
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 
 export interface GraphLogEvent {
   seq: number
@@ -339,6 +341,8 @@ function rowToCheckpoint(r: Record<string, unknown>): StoredCheckpoint {
 export function createEventLogStore(sqlitePath?: string): EventLogStore {
   if (sqlitePath) {
     try {
+      // 父目录缺失时 node:sqlite 报 unable to open database file（新检出/私有树必现）——先建目录再开库
+      mkdirSync(dirname(sqlitePath), { recursive: true })
       return new SqliteEventLogStore(new DatabaseSync(sqlitePath))
     } catch (err) {
       // 创建失败（路径不可写 / node:sqlite 不可用）→ 显式告警后降级，不静默

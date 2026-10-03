@@ -5,6 +5,8 @@
 # "No match for {name:'hermes.history'}" 页面错误）。本补丁把两类指向 /app/history
 # 真身路由（ia2.collabHistory/ia2.collabHistorySession）；profile 查询串原样透传。
 # PageSidebarNav:37 同名导航在 studio embed 态隐藏（零触达）不修，此处记档。
+# 2026-10-03 回归补遗：openHistorySession 的 name:'hermes.historySession' push 同病
+# （补丁 297 已摘该路由名，点击历史会话触发 No match for）——一并改路径式导航。
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
 index 8702c553..fc55363c 100644
 @@ -347,9 +348,9 @@ const showHistoryArchiveLink = computed(() => {
@@ -30,6 +32,15 @@ index 8702c553..fc55363c 100644
      lastMessage: session.parentLastMessage || "",
 diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
 index 21e9eac5..b96805fd 100644
+@@ -345,7 +345,6 @@ function openHistorySession(sessionId: string, profile?: string | null) {
+ function openHistorySession(sessionId: string, profile?: string | null) {
+   return router.push({
+-    name: 'hermes.historySession',
+-    params: { sessionId },
++    path: `/app/history/session/${encodeURIComponent(sessionId)}`,
+     query: profile ? { profile } : undefined,
+   })
+ }
 @@ -363,7 +363,7 @@ async function openDefaultHistorySession(replace = false) {
    if (!firstSession) {
      historySessionId.value = null

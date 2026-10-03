@@ -454,3 +454,5 @@
 #      上屏），改本地化 journey.loadFailed，原始错误降级 console.warn。
 548-client-i18n-regression-keys.patch
 549-client-journey-error-toast.patch
+550-locale-0727-upstream-keys.patch
+551-history-session-name-dangling-fix.patch

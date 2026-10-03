@@ -100,7 +100,7 @@ describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
 
   it('两者皆空保持 0（无实例在线是真实状态）', () => {
     const { online } = useSitCounts()
-    expect(online.value).toEqual({ people: 0, agents: 0, machines: 0 })
+    expect(online.value).toEqual({ people: 0, agents: 0, machines: 0, identities: { people: [], agents: [], machines: [] } })
   })
 
   it('网关真值（cockpit-online-zero 根治）：fleet 空时机器=网关实例、智能体=连通通道档案、人≥登录本人', () => {
