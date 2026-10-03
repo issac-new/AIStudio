@@ -18,12 +18,24 @@ describe('patch 539：/hermes/history 悬空链接根治', () => {
     expect(readFileSync(resolve(OVERLAY_ROOT, 'patches/series'), 'utf8')).toContain('539-client-history-dangling-links-fix.patch')
   })
 
-  it('补丁内容签名：7 处改向（3 链接+4 内部导航）指向 /app/history', () => {
+  it('补丁内容签名：8 处改向（3 链接+4 内部导航+openHistorySession，2026-10-03 回归补遗）指向 /app/history', () => {
     const patch = readFileSync(resolve(OVERLAY_ROOT, 'patches/539-client-history-dangling-links-fix.patch'), 'utf8')
     const plus = patch.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'))
-    expect(plus.filter(l => l.includes('/app/history'))).toHaveLength(7)
+    expect(plus.filter(l => l.includes('/app/history'))).toHaveLength(8)
     const minus = patch.split('\n').filter(l => l.startsWith('-') && !l.startsWith('---'))
     expect(minus.filter(l => l.includes('hermes/history') || l.includes("'hermes.history'"))).toHaveLength(7)
+    // 改向后的新增行不得再按悬空路由名导航
+    expect(plus.filter(l => l.includes("name: 'hermes.history"))).toHaveLength(0)
+  })
+
+  it('patch 551 补遗守门：openDefaultHistorySession/buildHistorySessionUrl 两处同名 push 改路径式', () => {
+    const patch = readFileSync(resolve(OVERLAY_ROOT, 'patches/551-history-session-name-dangling-fix.patch'), 'utf8')
+    expect(readFileSync(resolve(OVERLAY_ROOT, 'patches/series'), 'utf8')).toContain('551-history-session-name-dangling-fix.patch')
+    const plus = patch.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'))
+    expect(plus.filter(l => l.includes('/app/history/session/'))).toHaveLength(2)
+    expect(plus.filter(l => l.includes("name: 'hermes.historySession'"))).toHaveLength(0)
+    const minus = patch.split('\n').filter(l => l.startsWith('-') && !l.startsWith('---'))
+    expect(minus.filter(l => l.includes("name: 'hermes.historySession'"))).toHaveLength(2)
   })
 
   it('patch 541 死导航清族：PageSidebarNav/Rail 零 hermes.history 导航（走查复现修复）', () => {

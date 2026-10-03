@@ -151,7 +151,17 @@ export function useSitCounts() {
     const registryPeople = accounts.value.length
     const registryAgents = accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0)
     if (registryPeople > 0 || registryAgents > 0) {
-      return { people: registryPeople, agents: Math.max(registryAgents, gwAgents), machines: Math.max(fleet.length, gw ? 1 : 0) }
+      return {
+        people: registryPeople,
+        agents: Math.max(registryAgents, gwAgents),
+        machines: Math.max(fleet.length, gw ? 1 : 0),
+        // 身份清单与计数同源（SitDetailPanel 在线树消费；计数与列表零割裂）
+        identities: {
+          people: accounts.value.map(a => a.displayName || a.userId),
+          agents: accounts.value.flatMap(a => (a.agentTeams ?? []).flatMap(at => at.profiles.map(String))),
+          machines: fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status })),
+        },
+      }
     }
     const profiles = new Set(fleet.map(s => s.profile || 'default'))
     const people = collectPresencePeople()
@@ -168,6 +178,11 @@ export function useSitCounts() {
       people: Math.max(people.size, profiles.size, selfOnline),
       agents: Math.max(fleet.length, runningAssignees.size, gwAgents),
       machines: Math.max(fleet.length, gw ? 1 : 0),
+      identities: {
+        people: [...(people.size ? people : selfOnline ? [cockpit.currentUserName || 'self'] : [])],
+        agents: [...runningAssignees, ...gwPlatforms.filter(p => p.state === 'connected' && p.profile).map(p => String(p.profile))],
+        machines: fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status })),
+      },
     }
   })
 
