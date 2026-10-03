@@ -7,6 +7,18 @@ import { mount, flushPromises } from '@vue/test-utils'
 import ApprovalPanel from '../components/ApprovalPanel.vue'
 import * as approvalsApi from '../api/approvals'
 
+
+// UX 裁决 C（2026-10-03）：审批一键直通改确认制——点击动作后须在离散 dialog 确认
+// （positiveText 走 t('common.confirm')，mock 的 t 返回键名）。取消路径见行为守门。
+async function confirmDecision(): Promise<void> {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r, 30))
+  // 取最后一个确定钮：离散 dialog 残留（前例）会遮蔽后例
+  const btn = [...document.querySelectorAll('button')].reverse().find((b) => (b.textContent || '').includes('common.confirm'))
+  if (btn) (btn as HTMLElement).click()
+  await flushPromises()
+}
+
 // U2 改版（locale 时间随界面语言）：mock 需带 locale ref，否则 fmtTime 读 locale.value 炸挂载
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k), locale: ref('zh-CN') }) }))
 // mock 整个 approvals API 模块：经 @/api/client 会连锁拉入上游 router（node 环境无 location）
@@ -70,6 +82,7 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     await flushPromises()
     fetchP.mockClear()
     await wrap.find('[data-testid="approval-btn-approve"]').trigger('click')
+    await confirmDecision()
     await flushPromises()
     expect(decide).toHaveBeenCalledWith('review:rev-1', 'approve')
     expect(fetchP).toHaveBeenCalled()
@@ -85,6 +98,7 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(wrap.find('[data-testid="approval-btn-session"]').exists()).toBe(true)
     expect(wrap.find('[data-testid="approval-btn-always"]').exists()).toBe(false)
     await wrap.find('[data-testid="approval-btn-deny"]').trigger('click')
+    await confirmDecision()
     await flushPromises()
     expect(decide).toHaveBeenCalledWith('fleet:s1:a1', 'deny')
   })
@@ -147,6 +161,7 @@ describe('ApprovalPanel（P1 审批面板）', () => {
 
     api2.fetchSpotChecks.mockClear()
     await wrap.find('[data-testid="spotcheck-btn-veto"]').trigger('click')
+    await confirmDecision()
     await flushPromises()
     expect(api2.resolveSpotCheck).toHaveBeenCalledWith('fleetfile:rq-1', 'veto')
     expect(api2.fetchSpotChecks).toHaveBeenCalled()

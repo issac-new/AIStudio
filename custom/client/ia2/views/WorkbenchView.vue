@@ -34,7 +34,8 @@ import {
   linkedTaskIdsOfSession, mergeFeed,
   type StreamSelection,
 } from '../adapters/flow'
-import { buildAttention, loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
+import { loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
+import { useAttentionRows } from '../composables/useAttentionRows'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
@@ -250,26 +251,23 @@ const loopActivity = computed<Record<string, LoopActivity>>(() => {
   return Object.fromEntries(m)
 })
 
-// R7-B 开发产出回喂：ide 会话失败/受阻 → 协作感知输入（abortStates 投影）
-const sessionAttention = computed(() => {
-  const out: Array<{ id: string; title: string; failed?: boolean; blocked?: boolean; updatedAt: number }> = []
-  for (const s of chatStore.sessions ?? []) {
-    const abort = (chatStore as unknown as { abortStates?: Map<string, { error?: string; timedOut?: boolean; aborting?: boolean }> }).abortStates?.get(s.id)
-    if (abort?.error || abort?.timedOut) {
-      out.push({ id: s.id, title: s.title, failed: true, updatedAt: s.updatedAt ?? Date.now() })
-    } else if (abort?.aborting && !abort.error) {
-      // 长时 aborting 未落定 = 受阻
-      out.push({ id: s.id, title: s.title, blocked: true, updatedAt: s.updatedAt ?? Date.now() })
-    }
-  }
-  return out
-})
+// UX 裁决 B（2026-10-03）：会话受阻/注意力装配统一到 useAttentionRows——
+// 与注意力条（IaGlobalTop）同源同口径，需关注徽标与条上 chip 数不再打架。
+const { attentionRows, sessionAttention } = useAttentionRows()
 
-const attentionRows = computed<AttentionRow[]>(() =>
-  buildAttention(tasksForShow.value, runsStore.sortedRuns ?? [], Date.now(), sessionAttention.value))
-
-/** 需关注行点击分派：任务→看板预选；运行→所属循环画布；会话→ide 会话；兜底全局时间线 */
+/** 需关注行点击分派：任务→看板预选；运行→运行详情；会话→ide 会话；兜底全局时间线。
+ *  统一装配行带 kind——先按 kind 直达，再走历史兜底。 */
 function onOpenAttention(row: AttentionRow): void {
+  const base = row.id.replace(/^att-/, '')
+  if (row.kind === 'session') {
+    void router.push({ name: 'ide.shell', query: { session: base } })
+    return
+  }
+  if (row.kind === 'loop') {
+    const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${base.slice(5)}`)
+    void router.push(latest ? { name: 'ia2.runDetail', params: { runId: latest.runId } } : { name: 'ia2.runs' })
+    return
+  }
   if (row.taskId) {
     void router.push({ name: 'ia2.board', query: { task: row.taskId } })
     return
@@ -306,7 +304,8 @@ function onHandleTask(taskId: string): void {
 }
 
 function onNewTask(): void {
-  void router.push({ name: 'ia2.board' })
+  // UX 裁决 E（2026-10-03）：跳看板即展开列内建卡表单，操作序列不再断拍
+  void router.push({ name: 'ia2.board', query: { new: '1' } })
 }
 
 function onAllTimeline(): void {

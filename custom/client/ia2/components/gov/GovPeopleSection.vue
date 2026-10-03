@@ -47,6 +47,7 @@ function roomName(roomId: string): string {
     <div class="gps__head">
       <span class="gps__title">{{ t('ia2.gov.people.title') }}</span>
       <span class="gps__sub">{{ t('ia2.gov.people.sub') }}</span>
+      <button type="button" class="gps__jump" data-testid="gov-people-jump-accounts" @click="router.push({ name: 'ia2.accounts' })">{{ t('ia2.gov.jump.accounts') }} ›</button>
     </div>
     <div class="gps__list" data-testid="gov-people-rows">
       <div v-if="!rows.length" class="gps__empty">{{ t('ia2.gov.people.empty') }}</div>
@@ -78,6 +79,7 @@ function roomName(roomId: string): string {
 
 <style scoped lang="scss">
 .gps { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
+.gps__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gps__jump:hover { color: var(--primary, #6366f1); }
 .gps__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gps__title { font-weight: 700; }
 .gps__sub { font-size: 10px; color: var(--text-muted); }

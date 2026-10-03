@@ -75,16 +75,16 @@ function raciOf(t: CockpitTask) {
     <div class="ov__title">{{ t('ia2.overviewDash.title') }}</div>
     <div class="ov__grid">
       <!-- ① 我的待办 -->
-      <section class="ov__card" data-testid="ov-todo">
+      <section class="ov__card ov__card--click" data-testid="ov-todo" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-inbox')">
         <div class="ov__card-head">
           <span>{{ t('ia2.overviewDash.myTodo') }}</span>
           <span v-if="myTodoCount" class="ov__n ov__n--hot">{{ myTodoCount }}</span>
         </div>
-        <button type="button" class="ov__row" data-testid="ov-todo-approvals" @click="emit('open-inbox')">
+        <button type="button" class="ov__row" data-testid="ov-todo-approvals" @click.stop="emit('open-inbox')">
           <span class="ov__row-label">{{ t('ia2.overviewDash.waitingApproval') }}</span>
           <b>{{ pending.length }}</b>
         </button>
-        <button type="button" class="ov__row" data-testid="ov-todo-raci" @click="emit('open-board')">
+        <button type="button" class="ov__row" data-testid="ov-todo-raci" @click.stop="emit('open-board')">
           <span class="ov__row-label">{{ t('ia2.overviewDash.myRaci') }}</span>
           <b>{{ myRaciTasks.length }}</b>
         </button>
@@ -92,18 +92,18 @@ function raciOf(t: CockpitTask) {
           <button
             v-for="t in myRaciTasks.slice(0, 3)" :key="t.id"
             type="button" class="ov__mini-row" :data-testid="`ov-mytask-${t.id}`"
-            @click="emit('open-task', t.id)"
+            @click.stop="emit('open-task', t.id)"
           >{{ t.title }}</button>
         </div>
       </section>
 
       <!-- ② 评审闸口 -->
-      <section class="ov__card" data-testid="ov-gates">
+      <section class="ov__card ov__card--click" data-testid="ov-gates" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-inbox')">
         <div class="ov__card-head">
           <span>{{ t('ia2.overviewDash.gateReview') }}</span>
           <span v-if="pendingReviews.length" class="ov__n ov__n--warn">{{ pendingReviews.length }}</span>
         </div>
-        <button type="button" class="ov__row" data-testid="ov-gates-pending" @click="emit('open-inbox')">
+        <button type="button" class="ov__row" data-testid="ov-gates-pending" @click.stop="emit('open-inbox')">
           <span class="ov__row-label">{{ t('ia2.overviewDash.pendingReview') }}</span>
           <b>{{ pendingReviews.length }}</b>
         </button>
@@ -119,7 +119,7 @@ function raciOf(t: CockpitTask) {
       </section>
 
       <!-- ③ 交付进度 -->
-      <section class="ov__card" data-testid="ov-progress">
+      <section class="ov__card ov__card--click" data-testid="ov-progress" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-board')">
         <div class="ov__card-head"><span>{{ t('ia2.overviewDash.progress') }}</span></div>
         <div class="ov__bar" role="progressbar" :aria-valuenow="progressPct">
           <div class="ov__bar-fill" data-testid="ov-progress-fill" :style="{ width: progressPct + '%' }" />
@@ -140,6 +140,8 @@ function raciOf(t: CockpitTask) {
 .ov { padding: 18px 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
 .ov__title { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
 .ov__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.ov__card--click { cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.ov__card--click:hover { border-color: var(--primary, #6366f1); box-shadow: 0 1px 6px rgba(0, 0, 0, .08); }
 .ov__card {
   border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px;
   padding: 12px 14px; background: var(--bg-card, #fff);
