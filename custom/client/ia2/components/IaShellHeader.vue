@@ -14,7 +14,7 @@
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -67,6 +67,17 @@ function onSpotKeydown(e: KeyboardEvent) {
 }
 
 function closeSpot() { spotOpen.value = false }
+
+// 2026-10-03 走查 L1：外点关闭——点搜索容器外任意处收起 Spotlight（此前仅
+// 选行/Escape/清空可退，失焦后面板悬挂遮挡）。mask 方案会挡输入框继续输入，
+// 故走 document mousedown + 容器包含性判定。
+function onDocMousedown(e: MouseEvent) {
+  if (!spotOpen.value) return
+  const root = (e.target as HTMLElement | null)?.closest?.('.cockpit-top__search')
+  if (!root) spotOpen.value = false
+}
+document.addEventListener('mousedown', onDocMousedown)
+onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
 
 // ── V5 补遗⑤ S7（仅 Gateway 段维持摘除）：platforms store 与轮询能力保留，
 //    引用计数由 GovTeamSection/WorkbenchView 各自 retain ──
@@ -215,7 +226,8 @@ function onPanelJumpTask(taskId: string): void {
     <button type="button" class="cockpit-top__user" data-testid="ia-header-user" @click="goSettings">
       <span class="cockpit-top__avatar">{{ (userName ?? t('cockpit.defaultUser')).slice(0, 1) }}</span>
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
-      <span class="cockpit-top__caret">▾</span>
+      <!-- 2026-10-03 走查 L8：删误导箭头 ▾——整钮即跳设置页，无下拉菜单，
+           箭头暗示有菜单属虚假可供性（要真菜单再回补） -->
     </button>
 
     <!-- 态势内联面板（v12.3 迁页头；浮层贴页头下方） -->
