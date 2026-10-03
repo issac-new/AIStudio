@@ -11,6 +11,7 @@
 #   4. 问题单口径对齐台账（22 唯一键），如实标注与复盘文档事件流口径（70 行）的差异
 #   5. 发布基线动态取 git rev-parse，不再硬编码
 import html as H
+import json
 import os
 import re
 import subprocess
@@ -42,11 +43,20 @@ else:
     STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 OUT = EVID / 'simulation-report.html'
+# ── R18 载荷（V7.2 全量呈现）：evidence/r18-steps.json ──
+# 契约（r18-collect.py 写入方为单一事实源）：
+#   {"_schema":1,"steps":{"<n>":{"dialogs":[{"title","room","anchor",
+#     "messages":[{"sender","ts","body"}]}],
+#     "ops":[{"title","entry","frames":["<n>-op<k>-before.png",…],"note"}],
+#     "effect":{"text","evidence":[{"label","anchor"}]}}}}
+# 载荷文件缺失=本轮未采集（渲染诚实"未采集"章，审计器查 8 打回）。
+R18F = EVID / 'r18-steps.json'
 # 路径契约自证（守门测试用）：--print-paths 只打印解析结果不读 state 不出报告。
 if '--print-paths' in sys.argv:
     print(f'OUT={OUT}')
     print(f'STATE={STATE_FILES[0]}')
     print(f'STEPS_DIR={STEPS_DIR}')
+    print(f'R18={R18F}')
     sys.exit(0)
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 CEN = SIM / 'central/aipaydev'
@@ -68,6 +78,15 @@ if SNAP.exists():
             k, v = line.split('=', 1)
             if v.strip():
                 state[k.strip()] = v.strip()
+
+# ── R18 载荷加载（缺失/坏 JSON=空载荷，渲染诚实缺席、审计打回；不让生成器崩）──
+R18 = {}
+if R18F.exists():
+    try:
+        _r18raw = json.loads(R18F.read_text(encoding='utf-8'))
+        R18 = _r18raw.get('steps', {}) if isinstance(_r18raw, dict) else {}
+    except (json.JSONDecodeError, OSError) as e:
+        print(f'[mx-report-gen] WARN r18-steps.json 解析失败按空载荷处理：{e}', file=sys.stderr)
 
 # ── 方案原文解析 ──
 plan_text = PLAN_PATH.read_text(encoding='utf-8')
@@ -847,6 +866,80 @@ def img_tags(imgs):
                 f'<figcaption><span class="shot-kind" style="background:{kb};color:{kf}">{kt}</span>{H.escape(cap)}</figcaption></label>')
     return ''.join(out)
 
+# ── R18 全量呈现（V7.2 §9.3 R18）：对话全文 / 操作前后帧 / 环节效果实证 ──
+def _r18_msg_html(m):
+    sender = H.escape(str(m.get('sender', '?')))
+    ts = H.escape(str(m.get('ts', '')))
+    body = str(m.get('body', '')).strip()
+    return (f'<div class="r18-msg"><div class="r18-msg-hd"><b>{sender}</b>'
+            + (f'<span class="r18-ts">{ts}</span>' if ts else '')
+            + '</div><div class="r18-msg-body">' + H.escape(body).replace('\n', '<br>') + '</div></div>')
+
+def _r18_frame_tags(frames, step):
+    out = []
+    for f in frames:
+        name = str(f)
+        if not name.endswith('.png'):
+            name += '.png'
+        p = STEPS_DIR / name
+        cap = {'before': '① 操作前', 'action': '② 操作动作', 'after': '③ 系统响应'}.get(
+            name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
+        if p.exists():
+            out.append(
+                f'<label class="shot r18-shot"><input type="checkbox">'
+                f'<img src="screenshots/steps/{name}" alt="{H.escape(cap or name)}" loading="lazy">'
+                f'<figcaption>{H.escape(cap or name)}</figcaption></label>')
+        else:
+            out.append(f'<p class="no-evidence">帧缺失：{H.escape(name)}（采集位空——按 R18 补拍）</p>')
+    return ''.join(out)
+
+def r18_block(n: int) -> str:
+    """步骤 n 的 R18 三位载荷渲染。载荷空 → 诚实"未采集"章（审计查 8 按线打回）。"""
+    payload = R18.get(str(n)) or R18.get(n) or {}
+    dialogs = payload.get('dialogs') or []
+    ops = payload.get('ops') or []
+    effect = payload.get('effect') or {}
+    counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0}'
+    if not (dialogs or ops or effect):
+        return (f'<details class="st-r18 r18-empty"><summary>R18 全量呈现</summary>'
+                f'<div class="r18-body" data-r18="{counts}">'
+                f'<p class="no-evidence">R18 载荷未采集（对话全文/操作前后帧/环节效果三缺）'
+                f'——V7.2 起为验收线，按线打回（r18-collect.py 采集）</p></div></details>')
+    parts = [f'<details class="st-r18"><summary>R18 全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}）</summary>',
+             f'<div class="r18-body" data-r18="{counts}">']
+    for d in dialogs:
+        anchor = str(d.get('anchor', ''))
+        room = str(d.get('room', ''))
+        parts.append('<div class="r18-sec r18-dialog"><div class="r18-sec-hd">'
+                     f'<b>{H.escape(str(d.get("title", "对话")))}</b>'
+                     + (f'<span class="r18-anchor" title="room">{H.escape(room)}</span>' if room else '')
+                     + (f'<span class="r18-anchor">锚 {H.escape(anchor)}</span>' if anchor else '')
+                     + '</div>' + ''.join(_r18_msg_html(m) for m in (d.get('messages') or []))
+                     + '</div>')
+    for op in ops:
+        parts.append('<div class="r18-sec r18-op"><div class="r18-sec-hd">'
+                     f'<b>{H.escape(str(op.get("title", "操作")))}</b></div>'
+                     + (f'<div class="r18-entry">操作入口：{H.escape(str(op.get("entry", "")))}</div>' if op.get('entry') else '')
+                     + '<div class="st-shots r18-frames">' + _r18_frame_tags(op.get('frames') or [], n) + '</div>'
+                     + (f'<div class="r18-note">{md_bold(str(op.get("note", "")))}</div>' if op.get('note') else '')
+                     + '</div>')
+    if effect:
+        parts.append('<div class="r18-sec r18-effect"><div class="r18-sec-hd"><b>环节效果</b></div>'
+                     f'<p class="r18-effect-text">{md_bold(str(effect.get("text", "")))}</p>')
+        for ev in (effect.get('evidence') or []):
+            parts.append(f'<div class="r18-ev">◦ {H.escape(str(ev.get("label", "")))}：'
+                         f'<code>{H.escape(str(ev.get("anchor", "")))}</code></div>')
+        parts.append('</div>')
+    parts.append('</div></details>')
+    return ''.join(parts)
+
+def r18_coverage() -> str:
+    """hero 统计位：26 步中 R18 载荷覆盖数（任一位在位即计）。"""
+    hit = sum(1 for k in range(1, 27)
+              if ((R18.get(str(k)) or {}).get('dialogs') or (R18.get(str(k)) or {}).get('ops')
+                  or (R18.get(str(k)) or {}).get('effect')))
+    return f'{hit}/26'
+
 def issues_stats():
     """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。"""
     lines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
@@ -1309,6 +1402,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   {art_html}
+  {r18_block(n)}
   <div class="st-shots">{imgs_html}</div>
 </article>''')
     nav_items.append('</div>')
@@ -1401,6 +1495,30 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-gate summary::marker{{display:none}}
 .gate-body{{padding:8px 14px 12px;font-size:12px;line-height:1.8;color:var(--text);border-top:1px solid var(--border)}}
 .step.gate-step .gate-body{{color:#78350f}}
+
+/* ── R18 全量呈现（V7.2）：对话全文/操作前后帧/环节效果 ── */
+.st-r18{{margin:8px 0 8px 44px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}}
+.st-r18 summary{{padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;background:var(--bg)}}
+.st-r18 summary::before{{content:'▸';transition:transform .2s}}
+.st-r18[open] summary::before{{transform:rotate(90deg)}}
+.st-r18 summary::marker{{display:none}}
+.st-r18.r18-empty{{opacity:.75;border-style:dashed}}
+.r18-body{{padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px}}
+.r18-sec{{border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg)}}
+.r18-sec-hd{{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;margin-bottom:6px}}
+.r18-anchor{{font-size:10px;color:var(--muted);font-family:ui-monospace,monospace;word-break:break-all}}
+.r18-msg{{padding:6px 0;border-bottom:1px dashed var(--border)}}
+.r18-msg:last-child{{border-bottom:none}}
+.r18-msg-hd{{display:flex;gap:8px;align-items:baseline;font-size:11px}}
+.r18-msg-hd b{{color:var(--text)}}
+.r18-ts{{color:var(--muted);font-size:10px;font-family:ui-monospace,monospace}}
+.r18-msg-body{{font-size:12px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;margin-top:2px}}
+.r18-entry{{font-size:11.5px;color:#155e75;background:#ecfeff;border-radius:6px;padding:4px 10px;margin-bottom:6px}}
+.r18-frames{{margin:4px 0}}
+.r18-note{{font-size:11.5px;color:#92400e;margin-top:4px}}
+.r18-effect-text{{font-size:12.5px;line-height:1.7}}
+.r18-ev{{font-size:11px;color:var(--muted);margin-top:2px}}
+.r18-ev code{{font-family:ui-monospace,monospace;word-break:break-all}}
 
 /* ── 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对，与 .st-gate/details 同风格 ── */
 .st-artifact{{margin:8px 0 8px 44px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}}
@@ -1517,6 +1635,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
+      <div class="hstat"><b>{r18_coverage()}</b><span>R18 全量呈现覆盖</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
