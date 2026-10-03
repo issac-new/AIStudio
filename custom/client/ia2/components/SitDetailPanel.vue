@@ -174,6 +174,14 @@ const onlineTree = computed<OnlineTreeRow[]>(() => {
       machines, boards,
     })
   }
+  if (rows.length === 0) {
+    // 名册为空而在线计数 >0 时的同源兜底（D4「在线 3 · 暂无内容」割裂根治，2026-10-03
+    // 回归复现）：直接按 useSitCounts.online.identities 建行，列表与计数同源同口径。
+    const ids = sitCounts.online.value.identities
+    for (const p of ids.people) rows.push({ account: { userId: p, displayName: p, isLeader: false, profiles: [] }, machines: [], boards: [] })
+    for (const ag of ids.agents) rows.push({ account: { userId: `agent:${ag}`, displayName: ag, isLeader: false, profiles: [ag] }, machines: [], boards: [] })
+    for (const m of ids.machines) rows.push({ account: { userId: `machine:${m.id}`, displayName: m.label, isLeader: false, profiles: [m.profile] }, machines: [], boards: [] })
+  }
   return rows
 })
 
