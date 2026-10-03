@@ -27,6 +27,13 @@ describe('isSessionModelInvalid（M1.6 模型失效判定）', () => {
     expect(isSessionModelInvalid({ model: 'c' }, groups)).toBe(false)
     expect(isSessionModelInvalid({ model: 'gone' }, groups)).toBe(true)
   })
+
+  it('L12：global coding agent 会话豁免（CLI 别名不在 web 目录不算失效）', () => {
+    const groups = [{ provider: 'alibaba', models: ['qwen3.7-max'] }]
+    expect(isSessionModelInvalid({ model: 'aim', codingAgentMode: 'global' }, groups)).toBe(false)
+    expect(isSessionModelInvalid({ model: 'aim', codingAgentMode: 'scoped' }, groups)).toBe(true)
+    expect(isSessionModelInvalid({ model: 'aim', codingAgentMode: null }, groups)).toBe(true)
+  })
 })
 
 describe('ImagePreviewOverlay 灯箱（patch 310 注入态，M1.4）', () => {

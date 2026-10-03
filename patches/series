@@ -459,3 +459,11 @@
 551-history-session-name-dangling-fix.patch
 # 552=usage.costStates/pricing 词条回填（473 rebaseline 误删；changelog 8 键归 550）。
 552-locale-0727-usage-blocks.patch
+# 553（2026-10-03 A-H 复盘轮，原撞号 552 已让位）：八项可用性修复的上游侧——locale 新增提示键
+#      （sit 芯片/chain.timeline/flow 创建菜单四 hints/ide.pane.unmaxAll）+
+#      swp.object 改「当前对象」+ kanban 板过滤条标注多选语义 + i18n 偏好按账户
+#      分键（G：根治切账号语言跳变，旧键作迁移初值）+ DefaultCredentialPrompt
+#      dev 下「稍后提醒」记 localStorage 跨会话（H：devAutoLogin 场景高频打扰）。
+#      组件侧 title/还原浮动钮在 overlay 仓直接改（SitlineBar/SessionWorkbenchPanel/
+#      FlowNavPanel/IdeShell）。
+553-client-ux-ah-round.patch
