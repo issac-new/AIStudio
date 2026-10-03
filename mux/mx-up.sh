@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/mx-lib.sh"
 # 幂等：两路都带在位检查，重复跑零副作用；失败只告警不阻断（网关可能带旧码起——
 # 容量风暴行为会复发，issues.log 会有拒收实录可追）。
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
-  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
 fi
 mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
 

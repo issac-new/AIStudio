@@ -11,8 +11,12 @@
 set -uo pipefail
 
 MX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OVERLAY_ROOT="$(cd "$MX_SCRIPT_DIR/../../.." && pwd)"
-PATCH_DIR="$OVERLAY_ROOT/patches"
+# ── 推演/产品隔离布线（2026-10-03 隔离轮：harness 独立仓 ncwk/simharness）──
+# 本仓对产品仓（overlay）只做「只读消费」：patches/、deploy-agent-runtime.mjs、
+# custom/ 探针核验；绝不写产品树。运行时执行面用 SIM 自有快照
+# （hermes-agent-src / product-dist），杜绝三类历史事故：mx-clean 逆放擦产品
+# 补丁、hermes 自更新互擦、注入树与推演互占。边界正本=overlay docs 方案附录 C。
+HARNESS_ROOT="$(cd "$MX_SCRIPT_DIR/.." && pwd)"
 # ncwk 根用"向上找含真实 upstream/hermes-studio 的目录"锚定——固定层数回溯在
 # worktree 场景（overlay 检出于 .claude/worktrees/<x>）会差一层解析到错处；
 # 跳过符号链是为了不被 .claude/worktrees/upstream 软链（inject 从 worktree 跑
@@ -27,24 +31,11 @@ _mx_root_walk() {
   done
   return 1
 }
-NCWK_ROOT="$(_mx_root_walk "$OVERLAY_ROOT" || echo "$(cd "$OVERLAY_ROOT/.." && pwd)")"
-SKILLS_SRC="$OVERLAY_ROOT/scripts/aipay/skills"
-STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
-HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
-# 驱动 PATH 盲（run5 09-30 实锤再犯）：库内裸 `hermes` 调用面（kanban_list/
-# verify_done_evidence 等）依赖登录 shell 的 PATH，非交互 shell 启动的驱动里
-# `hermes` 不在 PATH → CLI 报 command not found 被 `|| echo '[]'` 吞掉 → 看板
-# 查询恒空、真值闸门永远差一拍。显式把 HERMES_BIN 所在目录前置进 PATH 兜全部裸调用。
-# 仅当 HERMES_BIN 是路径（含 /）才前置其目录：裸命令名（HERMES_BIN=hermes）时
-# dirname 得 "." ，把当前目录前置进 PATH 等于可执行注入面
-case "$HERMES_BIN" in
-  */*) export PATH="$(dirname "$HERMES_BIN"):$PATH" ;;
-esac
-# worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
-# PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
-_env_sp=$(ls -d "$HOME"/.hermes/installs/*/environments/*/venv/lib/python*/site-packages 2>/dev/null | head -1)
-HERMES_PYTHONPATH="${HERMES_PYTHONPATH:-$HOME/.hermes/hermes-agent${_env_sp:+:$_env_sp}}"
-unset _env_sp
+NCWK_ROOT="${MX_NCWK_ROOT:-$(_mx_root_walk "$MX_SCRIPT_DIR" || echo "$(cd "$HARNESS_ROOT/.." && pwd)")}"
+OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT/overlay}"
+PATCH_DIR="$OVERLAY_ROOT/patches"
+SKILLS_SRC="$HARNESS_ROOT/skills"
+STUDIO_DIST_DEFERRED=1   # 执行面三参（STUDIO_DIST/HERMES_BIN/HERMES_PYTHONPATH）在 SIM_ROOT 定锚后统一定义（见下）
 
 # ── 拓扑常量 ────────────────────────────────────────────
 # SIM_ROOT：env（AIPAY_SIM_ROOT）优先。默认在 NVMe 卷上，Linux 等无该挂载点的机器不可写
@@ -60,6 +51,38 @@ else
 fi
 unset _mx_sim_default
 HERMES_ROOT="$SIM_ROOT/hermes"            # 单 hermes root（gateway 的 HERMES_HOME）
+AGENT_SRC="$SIM_ROOT/hermes-agent-src"    # SIM 自有 agent 源码快照（隔离轮；mx-setup 供给）
+PRODUCT_DIST="$SIM_ROOT/product-dist"     # SIM 自有 studio 构建快照（隔离轮；mx-setup 供给）
+
+# ── 执行面三参（SIM 自有快照缺省；缺位回落宿主/活树并大声告警——先跑 mx-setup）──
+STUDIO_DIST="${MX_STUDIO_DIST:-$PRODUCT_DIST}"
+if [[ ! -d "$STUDIO_DIST/server" ]]; then
+  STUDIO_DIST="$NCWK_ROOT/upstream/hermes-studio/dist"
+  echo "[mx-lib] ⚠ product-dist 快照缺位，studio 回落活注入树（产品 clean/inject 将与推演互踩——mx-setup 供给快照可根治）" >&2
+fi
+HERMES_BIN="${HERMES_BIN:-$SIM_ROOT/bin/hermes-sim}"
+if [[ ! -x "$HERMES_BIN" ]]; then
+  HERMES_BIN="$HOME/.hermes/hermes-agent/venv/bin/hermes"
+  echo "[mx-lib] ⚠ hermes-sim wrapper 缺位，网关回落宿主 venv（执行面共享宿主源码树，自更新互擦风险——mx-setup 供给快照可根治）" >&2
+fi
+# 驱动 PATH 盲（run5 09-30 实锤再犯）：库内裸 `hermes` 调用面（kanban_list/
+# verify_done_evidence 等）依赖登录 shell 的 PATH，非交互 shell 启动的驱动里
+# `hermes` 不在 PATH → CLI 报 command not found 被 `|| echo '[]'` 吞掉 → 看板
+# 查询恒空、真值闸门永远差一拍。显式把 HERMES_BIN 所在目录前置进 PATH 兜全部裸调用。
+# 仅当 HERMES_BIN 是路径（含 /）才前置其目录：裸命令名（HERMES_BIN=hermes）时
+# dirname 得 "." ，把当前目录前置进 PATH 等于可执行注入面
+case "$HERMES_BIN" in
+  */*) export PATH="$(dirname "$HERMES_BIN"):$PATH" ;;
+esac
+# worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
+# PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
+# 隔离轮定案：worker/网关全走 hermes-sim wrapper（-I 语义），依赖取 venv 自身；
+# installs 环境（py3.14）site-packages 不得进 PYTHONPATH——与 venv(py3.11) 混载
+# 原生扩展即炸（pydantic_core 实锤）。PYTHONPATH 只需要快照源码树。
+HERMES_PYTHONPATH="${HERMES_PYTHONPATH:-$AGENT_SRC}"
+if [[ ! -d "$AGENT_SRC" ]]; then
+  echo "[mx-lib] ⚠ hermes-agent-src 快照缺位，PYTHONPATH 将落宿主树（同上回落告警）" >&2
+fi
 GW_PORT="${MX_GW_PORT:-8801}"
 STUDIO_PORT="${MX_STUDIO_PORT:-8802}"
 LOCK_DIR="$SIM_ROOT/gateway-locks"        # 隔离锁目录：与真机 orchestrator(:8650) 共存
@@ -263,8 +286,102 @@ mx_kanban() { # <board> <hermes-kanban-args...>
 }
 
 # ── 运行时 patch 部署（安装树；同 aipay-agent-sync 的安全语义）──
+# ── SIM 执行面快照供给（隔离轮 2026-10-03）：推演自持，不共享宿主/活树 ──
+# ①agent 源码快照：宿主 hermes-agent 是 git 仓——git archive HEAD 出纯净跟踪源
+#   （钉版本、无 venv/垃圾），原子换入 $AGENT_SRC；hermes-sim wrapper 用宿主 venv
+#   python（只借依赖环境，绝不写）+ sys.path 前置快照源 → sim 网关执行的全是快照代码，
+#   宿主自更新/产品补丁操作不再互相污染。②product-dist 快照：rsync 注入树 dist 一次，
+#   推演期间产品可自由 clean/inject。两快照 provenance 落 JSON 可审计。
+_mx_provenance() { # <file> <k=v>…：写/读快照来源档案
+  local f="$1"; shift
+  if [[ "$1" == "--read" ]]; then cat "$f" 2>/dev/null; return 0; fi
+  printf '{\n' > "$f"
+  local first=1 kv
+  for kv in "provisioned_at=$(date -u +%FT%TZ)" "$@"; do
+    [[ $first = 1 ]] || printf ',\n' >> "$f"; first=0
+    printf '  "%s": "%s"' "${kv%%=*}" "${kv#*=}" >> "$f"
+  done
+  printf '\n}\n' >> "$f"
+}
+mx_provision_agent_src() {
+  local host_tree="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}"
+  [[ -d "$host_tree/.git" ]] || { log "⚠ 宿主 hermes-agent 非 git 仓（${host_tree}）——跳过源码快照供给，执行面维持回落态"; return 0; }
+  local head; head=$(git -C "$host_tree" rev-parse HEAD)
+  # 快照键=HEAD+工作树脏态指纹：宿主补丁态即工作树态（存在 8+ 文件未提交的实跑态），
+  # 只取 HEAD 会漏（隔离轮实锤：archive HEAD 缺 StdioServerParameters 等运行态，
+  # 网关卡 MCP 连接环）。快照源=git 跟踪文件的工作态（含未提交改动，天然排除
+  # venv/node_modules 等非跟踪重物）。
+  local dirty; dirty=$( { git -C "$host_tree" diff HEAD; git -C "$host_tree" status --porcelain; } 2>/dev/null | shasum | cut -c1-12)
+  local key="${head:0:9}+${dirty}"
+  local cur; cur=$(_mx_provenance "$AGENT_SRC.provenance.json" --read | sed -n 's/.*"snapshot_key": "\([^"]*\)".*/\1/p')
+  if [[ "$cur" == "$key" && -x "$SIM_ROOT/bin/hermes-sim" && -d "$AGENT_SRC/gateway" ]]; then
+    log "agent 源码快照已在位且同步（key=${key}）——跳过"
+    return 0
+  fi
+  log "供给 agent 源码快照：${host_tree} 工作态 @ ${key} → $AGENT_SRC"
+  local tmp="$AGENT_SRC.tmp.$$"
+  rm -rf "$tmp"; mkdir -p "$tmp"
+  git -C "$host_tree" ls-files -z > "$tmp.files0" \
+    && rsync -a --from0 --files-from="$tmp.files0" "$host_tree"/ "$tmp"/ \
+    && rm -f "$tmp.files0" || { rm -rf "$tmp"; fail "跟踪文件工作态快照失败"; }
+  rm -rf "$AGENT_SRC"; mv "$tmp" "$AGENT_SRC"
+  # git 化快照：mx_apply_agent_patches 的 git apply/反向幂等检查需要 .git（archive 是纯净抽出）
+  git -C "$AGENT_SRC" init -q && git -C "$AGENT_SRC" add -A \
+    && git -C "$AGENT_SRC" -c user.name=sim-snapshot -c user.email=sim@snapshot commit -qm "snapshot @ $key" \
+    || { rm -rf "$AGENT_SRC"; fail "快照 git 化失败"; }
+  mkdir -p "$SIM_ROOT/bin"
+  local venv_py="$HOME/.hermes/hermes-agent/venv/bin/python"
+  [[ -x "$venv_py" ]] || fail "宿主 venv python 缺失（${venv_py}）——wrapper 依赖环境不可用"
+  # wrapper 必须 -I 复刻官方 venv wrapper 语义（隔离轮实锤）：-I 无视 PYTHONPATH，
+  # 依赖一律取自 venv 自身 site-packages——否则 installs 环境（py3.14）的原生扩展
+  # 混入 py3.11 venv 即 pydantic_core 加载炸 → mcp SDK 导入环（网关 MCP 告警环实录）。
+  cat > "$SIM_ROOT/bin/hermes-sim.py" <<'WRAPPY'
+# hermes-sim — 推演隔离 wrapper（生成于 mx-lib mx_provision_agent_src，勿手改）
+import re, sys
+sys.path.insert(0, "@AGENT_SRC@")
+sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
+from hermes_cli.main import main
+sys.exit(main())
+WRAPPY
+  sed -i '' "s|@AGENT_SRC@|$AGENT_SRC|" "$SIM_ROOT/bin/hermes-sim.py"
+  cat > "$SIM_ROOT/bin/hermes-sim" <<WRAP
+#!/bin/bash
+# 借宿主 venv 依赖环境（只读），代码取 SIM 源码快照；-I 与官方 wrapper 同源语义。
+exec "$venv_py" -I "$SIM_ROOT/bin/hermes-sim.py" "\$@"
+WRAP
+  chmod +x "$SIM_ROOT/bin/hermes-sim"
+  _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_head=$head" "dirty=$dirty" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  log "✓ agent 源码快照就绪（wrapper=$SIM_ROOT/bin/hermes-sim）"
+}
+mx_provision_product_dist() {
+  [[ "${MX_SKIP_SNAPSHOT:-}" = 1 ]] && { log "MX_SKIP_SNAPSHOT=1——跳过 product-dist 快照（studio 将服务活注入树）"; return 0; }
+  local live="$NCWK_ROOT/upstream/hermes-studio/dist"
+  [[ -f "$live/server/index.js" ]] || { log "⚠ 活注入树无构建产物（${live}）——跳过 dist 快照"; return 0; }
+  local ovl; ovl=$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
+  local stamp; stamp=$(stat -f '%Sm' -t '%F %T' "$live/server/index.js" 2>/dev/null || echo unknown)
+  local cur; cur=$(_mx_provenance "$PRODUCT_DIST.provenance.json" --read | sed -n 's/.*"dist_mtime": "\([^"\\]*\)".*/\1/p')
+  if [[ "$cur" == "$stamp" && -f "$PRODUCT_DIST/server/index.js" ]]; then
+    log "product-dist 快照已在位且同步（dist_mtime=${stamp}）——跳过"
+  else
+    log "供给 product-dist 快照：${live}（dist_mtime=$stamp, overlay=${ovl}）→ $PRODUCT_DIST"
+    mkdir -p "$PRODUCT_DIST"
+    rsync -a --delete --exclude=node_modules "$live"/ "$PRODUCT_DIST"/ || fail "rsync dist 快照失败"
+    _mx_provenance "$PRODUCT_DIST.provenance.json" "overlay_commit=$ovl" "dist_mtime=$stamp"
+  fi
+  # dist 是 bundle 但外部依赖（socket.io/node-pty 等 9 包+传递树）从仓库根 node_modules
+  # 解析——快照目录链上没有（iso4 实锤：studio 300s 未就绪=Cannot find module 'socket.io'）。
+  # node_modules 全量镜像进快照（1.4G 一次落，后续 rsync 增量秒级；不用 --delete——
+  # 活树 npm 卸载残留包对启动无害，镜像删反而会在活树 npm install 半程撞脏态）。
+  local live_nm="$NCWK_ROOT/upstream/hermes-studio/node_modules"
+  if [[ -d "$live_nm" && ! -d "$PRODUCT_DIST/node_modules/socket.io" ]]; then
+    log "供给 node_modules 镜像：${live_nm} → $PRODUCT_DIST/node_modules（约 1.4G，一次性）"
+    rsync -a "$live_nm"/ "$PRODUCT_DIST/node_modules"/ || fail "rsync node_modules 失败"
+  fi
+  log "✓ product-dist 快照就绪"
+}
+
 mx_apply_agent_patches() {
-  local tree="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
+  local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
   for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch; do
     local pf="$PATCH_DIR/$p"
@@ -278,7 +395,13 @@ mx_apply_agent_patches() {
       _marker=$(grep -m1 -oE '^\+(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+(def|class) //')
       # 语义在位检查双面：installs/ 分发物 + 源码树本体（534 实锤：manifest 文件同步
       # 已把守卫/接线放进源码树，git apply 与内容副本冲突——语义在位即跳过，不 fail）
-      if [ -n "$_marker" ] && { grep -rql "$_marker" "$HERMES_ROOT/installs/" 2>/dev/null || grep -rql "$_marker" "$tree/gateway/" 2>/dev/null; }; then
+      # 扫描面=五个代码目录而非仅 gateway/（390 实锤：marker _home_default_board 在
+      # hermes_cli/、391 在 kanban_db、533 marker 在 tests——只扫 gateway/ 必漏，
+      # 退化去扫 installs 既慢又可能扑空误 fail）。
+      # 顺序根治（隔离轮实锤）：源码树快查在前（deploy 已同步 runtime 文件时秒中）；
+      # installs 树含 venv/site-packages 上千 MB 二进制——加过滤防 marker 兜底挂死
+      # （旧序曾对 installs 盲扫 8min+ 卡死 mx-up）。
+      if [ -n "$_marker" ] && { grep -rql --include='*.py' "$_marker" "$tree/gateway/" "$tree/hermes_cli/" "$tree/tools/" "$tree/agent/" "$tree/plugins/" "$tree/tests/" 2>/dev/null || grep -rql --include='*.py' --exclude-dir=venv --exclude-dir=site-packages "$_marker" "$HERMES_ROOT/installs/" 2>/dev/null; }; then
         log "运行时 patch 语义已在位（安装环境或源码树，内容副本同步渠道）：${p}（marker=${_marker}）"
         continue
       fi
@@ -675,7 +798,7 @@ GH_REPO="issac-new/aipaydev"
 RFD_ID="${RFD_ID:-RFD-001}"
 RFD_SLUG="${RFD_SLUG:-payment-cashier}"
 RFD_DOC="docs/requirements/${RFD_ID}-${RFD_SLUG}.md"
-RFD_MATERIAL="${RFD_MATERIAL:-$OVERLAY_ROOT/scripts/aipay/materials/${RFD_ID}-${RFD_SLUG}.md}"
+RFD_MATERIAL="${RFD_MATERIAL:-$HARNESS_ROOT/materials/${RFD_ID}-${RFD_SLUG}.md}"
 if [[ -z "${RFD_ONELINE:-}" ]]; then
   case "$RFD_ID" in
     RFD-002) RFD_ONELINE="在已上线的收单商户小程序收银台之上，增加退款（整单/多次部分、原路退回）与分账（多接收方、比例/时窗/冻结解冻）两项资金能力，双端一致且不产生资损" ;;
@@ -836,7 +959,7 @@ matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
   local sel_env sel_py rt uv_bin
   sel_env="$(mx_selected_venv 2>/dev/null || true)"
   if [[ -z "$sel_env" ]]; then
-    rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+    rt="${HERMES_AGENT_RT:-$AGENT_SRC}"
     sel_env="$rt/venv"
     [[ -x "$sel_env/bin/python" ]] || { log "matrix 自愈：selected venv 与 agent venv（${rt}）均不在，跳过"; return 2; }
     log "matrix 自愈：selected venv 未登记，回落 agent venv（${rt}）"
@@ -855,7 +978,7 @@ matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
         'aiohttp==3.14.3' 'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
     fi
   fi
-  rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+  rt="${HERMES_AGENT_RT:-$AGENT_SRC}"
   "$sel_py" - "$rt/pyproject.toml" << 'PYEOF'
 import sys
 p = sys.argv[1]

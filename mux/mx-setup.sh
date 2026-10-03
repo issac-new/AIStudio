@@ -20,13 +20,19 @@ docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAP
 curl -sf -m 3 "${MX_HINDSIGHT_API:-http://localhost:8888}/health" >/dev/null \
   || fail "hindsight 记忆服务（${MX_HINDSIGHT_API:-http://localhost:8888}）不可用——家族共享记忆依赖它（用户裁决 2026-09-25），请先拉起 hindsight-api 再跑"
 
-# ── 1. 运行时 patch（390/391 → 安装树）──────────────────
+# ── 0b. SIM 执行面快照供给（隔离轮 2026-10-03）：先快照后打补丁——
+#     agent 源码快照就位后，390/391/533/534 与 runtime manifest 全部落 SIM 自有树，
+#     宿主 ~/.hermes/hermes-agent 不再被推演写入。dist 快照使 studio 与活注入树解耦。
+mx_provision_agent_src
+mx_provision_product_dist
+
+# ── 1. 运行时 patch（390/391 → SIM 源码快照树）───────────
 mx_apply_agent_patches
 
 # ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
 #        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
-  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply ) \
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" ) \
     || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
 fi
 
