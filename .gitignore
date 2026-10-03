@@ -12,7 +12,10 @@ tests/
 # 基础运行时:远端 vendor 模式的上游检出缓存(脚本生成,不入库)
 .runtime-cache/
 __pycache__/
-runtime/
+# runtime/ 模板必须入库（D3 事故实锤 2026-10-03：模板无版本控制即漂移——旧基线副本
+# 静默覆盖宿主演进态，pin/guardrail/域隔离层被抹）。只忽略其运行垃圾：
+runtime/.pytest_cache/
+runtime/**/__pycache__/
 vite.config.overlay.wt.ts
 
 # worktree 环境的上游符号链（主 checkout 中 upstream/ 是仓外真实目录，不入库）

@@ -8,14 +8,17 @@
 //   ① URL 字面量（_matrix/client/v3）仅白名单模块可出现；
 //   ② REST 包装函数名逐一断言「引用者 ∈ 允许消费方清单」（G1：仅①会被 import 包装函数绕过）；
 //   ③ `com.swarmstudio.` 协议事件类型字面量唯一源是 task-protocol.ts；
-//   ④ sim harness（scripts/aipay）REST 原语锁白名单（G2：通用封装 mx/mx_messages 等
-//      与 mx_send 同级，只认两个名字即可绕过）。
+//   ④ sim harness（simharness 仓，2026-10-03 分树）REST 原语锁白名单（G2：通用封装
+//      mx/mx_messages 等与 mx_send 同级，只认两个名字即可绕过）。
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join, relative, sep } from 'path'
 import { describe, expect, it } from 'vitest'
 
 const customRoot = join(__dirname, '..', '..', '..') // custom
 const overlayRoot = join(__dirname, '..', '..', '..', '..') // overlay 根
+// simharness 独立仓（ncwk 根下与 overlay 平级；分树隔离轮 2026-10-03）。
+// 可用 MX_SIMHARNESS_ROOT 覆盖（与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称）。
+const simharnessRoot = process.env.MX_SIMHARNESS_ROOT || join(overlayRoot, '..', 'simharness')
 
 // ② REST 包装函数清单（单一常量）：client-server REST 全部通道。
 // matrixSendProtocolEvent 为协议事件通道（协作信号唯一入口），一并入清单防绕过。
@@ -38,22 +41,23 @@ const URL_ALLOWED = [
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'
 
-// ④ sim 侧 REST 原语清单（单一常量）：定义见 scripts/aipay/mux/mx-lib.sh——
-// mx_login():132 / mx():138 通用封装（URL 直连在库内）/ mx_send():147 /
-// mx_messages():157 / mx_wait_sender():162 / mx_create_room():178 / mx_join():185。
+// ④ sim 侧 REST 原语清单（单一常量）：定义见 simharness/mux/mx-lib.sh——
+// mx_login()/mx() 通用封装（URL 直连在库内）/ mx_send()/mx_messages()/
+// mx_wait_sender()/mx_create_room()/mx_join()。
 // 命中形态：① 具名原语任意引用；② 裸 mx 调用形态（后随空白+引号/$ 实参）——
 // \bmx\b 会误伤 mx-down.sh/mx-lib.sh 类名称，故裸 mx 只认调用形态。
 const HARNESS_REST_FNS = ['mx_send', 'mx_create_room', 'mx_messages', 'mx_login', 'mx_join', 'mx_wait_sender']
 const HARNESS_REST_RE = new RegExp(
   `\\b(?:${HARNESS_REST_FNS.join('|')})\\b|(?:^|[\\s;|&(])mx\\s+["'$]`, 'm')
+// 路径相对 simharness 仓根（原 scripts/aipay/ 前缀随分树摘除）
 const HARNESS_REST_WHITELIST = [
-  'scripts/aipay/mux/mx-lib.sh', // sim 编排（mx/mx_send/mx_create_room 等定义处，URL 直连唯一 sim 源）
-  'scripts/aipay/mux/mx-scenario-lib.sh', // sim 场景（dm_room/auto_approve/消息收发）
-  'scripts/aipay/mux/mx-smoke.sh', // sim 冒烟（经 mx_send 收发核验）
-  'scripts/aipay/mux/mx-setup.sh', // sim 账号开通（mx_login 取 token）
-  'scripts/aipay/mux/mx-delivery-lib.sh', // M3 delivery 协议轮（事件收发，mx_messages 同款直连）
-  'scripts/aipay/mux/mx-delivery-smoke.sh', // M3 六阶段协议轮（断言读回）
-  'scripts/aipay/aipay-scenario.sh', // sim 导演兜底（建群/邀人/补邀/读消息）
+  'mux/mx-lib.sh', // sim 编排（mx/mx_send/mx_create_room 等定义处，URL 直连唯一 sim 源）
+  'mux/mx-scenario-lib.sh', // sim 场景（dm_room/auto_approve/消息收发）
+  'mux/mx-smoke.sh', // sim 冒烟（经 mx_send 收发核验）
+  'mux/mx-setup.sh', // sim 账号开通（mx_login 取 token）
+  'mux/mx-delivery-lib.sh', // M3 delivery 协议轮（事件收发，mx_messages 同款直连）
+  'mux/mx-delivery-smoke.sh', // M3 六阶段协议轮（断言读回）
+  'aipay-scenario.sh', // sim 导演兜底（建群/邀人/补邀/读消息）
 ]
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {
@@ -100,11 +104,11 @@ describe('REST 直连白名单守门', () => {
 })
 
 describe('REST 直连白名单守门（sim harness）', () => {
-  it('④ scripts/aipay 的 synapse REST 原语仅白名单脚本可出现', () => {
-    const harnessDir = join(overlayRoot, 'scripts', 'aipay')
+  it('④ simharness 的 synapse REST 原语仅白名单脚本可出现', () => {
+    const harnessDir = simharnessRoot
     const offenders: string[] = []
     for (const file of walk(harnessDir, ['.sh'])) {
-      const rel = relative(overlayRoot, file).split(sep).join('/')
+      const rel = relative(simharnessRoot, file).split(sep).join('/')
       if (HARNESS_REST_WHITELIST.includes(rel)) continue
       if (HARNESS_REST_RE.test(readFileSync(file, 'utf8'))) offenders.push(rel)
     }

@@ -56,8 +56,11 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
     // 2a02847 事故：inject.mjs 补齐 tools//tests/tools//tests/agent/ 时漏了 shell 侧镜像
     // AGENT_PREFIXES，tools/ 开头的 patch 被静默跳过（候选 0 exit 0 无告警）。上例
     // toContain 是单向断言（删前缀仍绿），此处解析 shell 正则片段与 js 导出逐项双向比对，
-    // 任一侧增删即红。
-    const syncSrc = readFileSync(resolve(__dirname, '../../../scripts/aipay/aipay-agent-sync.sh'), 'utf8')
+    // 任一侧增删即红。分树轮（2026-10-03）aipay-agent-sync.sh 移居 simharness 独立仓
+    // （ncwk 根下与 overlay 平级；MX_SIMHARNESS_ROOT 可覆盖）。
+    const syncSrc = readFileSync(
+      resolve(__dirname, process.env.MX_SIMHARNESS_ROOT || '../../../../simharness', 'aipay-agent-sync.sh'),
+      'utf8')
     const m = syncSrc.match(/AGENT_PREFIXES='\^\(([^)]*)\)'/)
     expect(m, "aipay-agent-sync.sh 应含 AGENT_PREFIXES='^(a/|b_|...)' 正则片段").toBeTruthy()
     const shellPrefixes = (m as RegExpMatchArray)[1].split('|').filter((p) => p.length > 0)
