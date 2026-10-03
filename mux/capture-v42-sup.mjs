@@ -231,7 +231,11 @@ if (!existsSync(`${OUT}/ui-10-carddrawer.png`) || process.env.FORCE) {
 
 // ui-g5-carddrawer：fanfan-review 板 G5 评审卡 t_ea68c462 抽屉（review-record r7 头部）
 if (!existsSync(`${OUT}/ui-g5-carddrawer.png`) || process.env.FORCE) {
-  await goHash('/hermes/kanban?board=fanfan-review')
+  // G5 评审卡在 swarm 看板（旧 #/hermes/kanban 路由参数被无视落 Default 板——run7 补拍实锤）
+  await page.evaluate(() => {
+    localStorage.setItem('hermes.kanban.selectedBoard', 'fanfan-review')
+    location.hash = '#/app/board'
+  })
   await page.waitForTimeout(5000)
   await dismissOverlays()
   let drawerOk = false
@@ -239,12 +243,12 @@ if (!existsSync(`${OUT}/ui-g5-carddrawer.png`) || process.env.FORCE) {
     // 卡号按轮取（旧写死 t_ea68c462 是 run2 卡，任何新轮必打不开）：state card_g5_ready
     // 优先，缺省按 G5 评审卡标题找；开启判据=.task-drawer 出现且卡面含准出评审字样。
     const g5id = state.card_g5_ready || state.card_g5 || ''
-    const byTitle = page.locator('text=/发布准出评审/').first()
-    const card = (await byTitle.isVisible().catch(() => false)) || !g5id
-      ? byTitle : page.locator(`text=${g5id}`).first()
-    if (await card.isVisible().catch(() => false)) {
-      await card.scrollIntoViewIfNeeded().catch(() => {})
-      await card.click().catch(() => {})
+    const card = page.locator('.kanban-task-card').filter({ hasText: /发布准出评审|/ }).first()
+    const card2 = g5id ? page.locator('.kanban-task-card').filter({ hasText: g5id }).first() : card
+    const target = (await card2.count().catch(() => 0)) ? card2 : card
+    if (await target.isVisible().catch(() => false)) {
+      await target.scrollIntoViewIfNeeded().catch(() => {})
+      await target.click().catch(() => {})
     }
     drawerOk = await page.locator('.task-drawer').first()
       .waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false)
