@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index 7da2cc7..3da31ee 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -903,6 +903,9 @@
+@@ -913,6 +913,9 @@ function normalizeLaunchApiMode(value: unknown, fallback: ApiMode): ApiMode {
  
  function resolvedCodingAgentLaunchMode(id: string, mode?: string | null): 'global' | 'scoped' {
    if (id === 'cursor') return 'global'
@@ -11,10 +12,10 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    return mode === 'global' ? 'global' : 'scoped'
  }
  
-@@ -3637,11 +3640,9 @@
-   let env: Record<string, string> = {}
- 
-   if (tool.id === 'zcode') {
+@@ -3672,11 +3675,9 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+     env = prepared.env
+     args = ['--dangerously-skip-permissions']
+   } else if (tool.id === 'zcode') {
 -    // overlay[zcode] R3：scoped（hermes 托管密钥/代理）模式不支持——
 -    // zcode 走自身 provider 体系与登录凭据（~/.zcode/v2），仅 global 模式。
 -    const err = new Error('ZCode 会话仅支持 global 模式（zcode 自身登录）')
@@ -23,6 +24,6 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
 +    // overlay[zcode] 490：resolvedCodingAgentLaunchMode 已将 zcode 强制 global，
 +    // 此分支正常不应再进入；保留观测日志兜底而非硬拒（IDE 兼容缝）。
 +    console.log('[coding-agents] zcode 会话 scoped→global 回落（IDE 兼容缝）')
-   }
- 
-   if (tool.id === 'claude-code') {
+   } else if (tool.id === 'claude-code') {
+     const proxyTarget = baseUrl && (apiKey || freeRuntime)
+       ? registerClaudeCodeProxyTarget({

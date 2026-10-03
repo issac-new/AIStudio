@@ -1,47 +1,8 @@
-From: regression-round <regression@local>
-Subject: [PATCH] fix(i18n): 术语澄清三处——饲料(API 中继外链)/工作流双义/AGENTS 混编
-
-UX 复盘（2026-10-03）晦涩点整改：
-- sidebar.apiRelay「饲料」实为上游外链 apikey.fan/register?aff=LIBAPI（推荐码），
-  图标栏里毫无标识——改「API 中继（外链）」，点击语义可预期。
-- ia2.flow.title（左栏组头）与 sidebar.workflow（图标栏→编排页）同名「工作流」
-  双义撞名——左栏改「协作流」（承载会话/循环流，归属沟通协作视图）。
-- ia2.flow.groupAgents 组头英文「Agents」裸露且该列表混编智能体与通道——改「智能体」
-  与管理台词表一致。仅改值不改键（agents-round7 等测试按键存在性断言，不受影响）。
-
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -680,7 +680,7 @@
-     chat: '对话',
-     backToChat: '返回',
-     search: '搜索',
--    apiRelay: '饲料',
-+    apiRelay: 'API 中继（外链）',
-     history: '历史',
-     jobs: '任务',
-     kanban: '看板',
-@@ -1617,7 +1617,7 @@
-     },
-     brand: '驾驶舱',
-     flow: {
--      title: '工作流',
-+      title: '协作流',
-       filter: {
-         all: '全部',
-         session: '会话',
-@@ -1635,7 +1635,7 @@
-       clusterRooms: '房间',
-       clusterGroups: '群聊',
-       clusterChats: '会话',
--      groupAgents: 'Agents',
-+      groupAgents: '智能体',
-       chatSection: '聊天',
-       newChat: '新聊天',
-       newAgentChat: 'Agent 单聊',
-
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 461d765..1f1ef0f 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -680,7 +680,7 @@
+@@ -587,7 +587,7 @@ export default {
      chat: 'Chat',
      backToChat: 'Back',
      search: 'Search',
@@ -50,7 +11,7 @@ UX 复盘（2026-10-03）晦涩点整改：
      history: 'History',
      jobs: 'Jobs',
      kanban: 'Kanban',
-@@ -1617,7 +1617,7 @@
+@@ -1524,7 +1524,7 @@ export default {
      },
      brand: 'Cockpit',
      flow: {
@@ -59,4 +20,34 @@ UX 复盘（2026-10-03）晦涩点整改：
        filter: {
          all: 'All',
          session: 'Sessions',
-
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index e0e7559..c123af5 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -587,7 +587,7 @@ export default {
+     chat: '对话',
+     backToChat: '返回',
+     search: '搜索',
+-    apiRelay: '饲料',
++    apiRelay: 'API 中继（外链）',
+     history: '历史',
+     jobs: '任务',
+     kanban: '看板',
+@@ -1524,7 +1524,7 @@ export default {
+     },
+     brand: '驾驶舱',
+     flow: {
+-      title: '工作流',
++      title: '协作流',
+       filter: {
+         all: '全部',
+         session: '会话',
+@@ -1542,7 +1542,7 @@ export default {
+       clusterRooms: '房间',
+       clusterGroups: '群聊',
+       clusterChats: '会话',
+-      groupAgents: 'Agents',
++      groupAgents: '智能体',
+       chatSection: '聊天',
+       newChat: '新聊天',
+       newAgentChat: 'Agent 单聊',
