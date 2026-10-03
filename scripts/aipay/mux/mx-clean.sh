@@ -130,9 +130,10 @@ fi
 
 # 4) 中央仓按需重置（默认保留；--reset-central 清推演工件与 integration 分支）
 # 清空范围（run5 教训修订）：推演工件不止 RFD-* 前缀——系分稿 AN-*、任务稿 T-*、
-# admin 台账（app-registry/org，setup 重建）同属轮次产物。0→1 语义=七个 docs 交付
-# 目录全清 + docs/admin + retro*RFD*；architecture/ 基线保留（AN 稿引用的公共基线，
-# setup 负责刷新）。合格线新增：清空后七目录为空（防旧稿残留满足"文件存在"假真值）。
+# admin 轮次台账同属轮次产物。0→1 语义=七个 docs 交付目录全清 + docs/admin +
+# retro*RFD*；architecture/ 基线保留（AN 稿引用的公共基线，setup 负责刷新）。
+# 例外（2026-10-03 文档评审 404 实锤）：docs/admin/{roster,app-registry,org}.md
+# 是组织编制基建（/api/governance/registry/:kind 数据源），保留不随轮清。
 if [ "$RESET_CENTRAL" = 1 ]; then
   say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro,admin} 全目录 + integration 分支（先打 tag 快照 mx-clean-${TS}）"
   if [ "$APPLY" = 1 ]; then
@@ -146,17 +147,21 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     ( cd "$CEN" || exit 0
       git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
-      git commit -q -m "mx-clean：推演工件全目录清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
+      # 基础注册表保留（2026-10-03 文档评审 404 实锤：roster/app-registry/org 是组织编制
+      # 基建非轮次工件，/api/governance/registry/:kind 直接读它们；清了文档评审页管理区必空。
+      # setup 不重建（旧注释"setup 重建"不实）——清空前自快照 tag 取回。）
+      git checkout "mx-clean-${TS}" -- docs/admin/roster.md docs/admin/app-registry.md docs/admin/org.md 2>/dev/null || true
+      git commit -q -m "mx-clean：推演工件全目录清空（保留 admin 基础注册表；快照 tag mx-clean-${TS}）" 2>/dev/null || true )
     # 九目录骨架重建（run6 实锤：git rm -rf 连目录一起删，freeze 等直写路径炸 ENOENT）
     ( cd "$CEN" && mkdir -p docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin )
-    # 合格线自检：九目录均不得残留文件（旧稿残留=repo_has 假真值温床）；find 只认真实文件，
-    # ls 空目录会打 "dir:" 头行造成假残留告警（24h 批③裁决：find 版取代 ls 版——ls 会给空目录
-    # 打 "dir:" 头行造成假残留告警，且缺 retro 目录；骨架重建保留 main 侧 run6 实锤版）
-    _leftover="$(cd "$CEN" 2>/dev/null && find docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin -type f 2>/dev/null | head -5)"
+    # 合格线自检：九目录除 admin 三张基础注册表外零文件（旧稿残留=repo_has 假真值温床）；
+    # find 只认真实文件，ls 空目录会打 "dir:" 头行造成假残留告警（24h 批③裁决：find 版取代
+    # ls 版——且缺 retro 目录；骨架重建保留 main 侧 run6 实锤版）
+    _leftover="$(cd "$CEN" 2>/dev/null && find docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin -type f 2>/dev/null | grep -vE 'docs/admin/(roster|app-registry|org)\.md$' | head -5)"
     if [ -n "$_leftover" ]; then
       say "⚠ 清空后仍残留：$_leftover …（人工核查——勿带旧稿起跑 0→1 轮）"
     else
-      say "✓ 交付目录清空核验通过（九目录零残留）"
+      say "✓ 交付目录清空核验通过（九目录零残留，admin 基础注册表除外）"
     fi
     # ── 4b) 三面残留根治（V7 总则 18/P2 实装；run7 实锤三险情）──
     # ①integration 分支：注释长期称"清"而从未删（run7 旧轮测试报告顶名险情）——tag 快照后删远端。
