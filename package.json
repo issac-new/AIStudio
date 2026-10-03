@@ -1,0 +1,6 @@
+{
+  "name": "sim-harness",
+  "private": true,
+  "version": "1.0.0",
+  "description": "推演 harness 独立仓（与 SwarmStudio 产品仓隔离，2026-10-03 分树）——vitest 借道 overlay node_modules，见 tests/run-gates.sh"
+}

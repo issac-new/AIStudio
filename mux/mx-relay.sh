@@ -33,7 +33,7 @@ fi
 
 heal_runtime() {
   if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
-    ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply ) >>"$RELAY_LOG" 2>&1 \
+    ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" ) >>"$RELAY_LOG" 2>&1 \
       || echo "[relay $(date +%H:%M:%S)] runtime manifest 自愈告警"
   fi
   mx_apply_agent_patches >>"$RELAY_LOG" 2>&1 \
@@ -57,7 +57,7 @@ while true; do
     NEXT="${ORDER[$((LAST+1))]:-report}"
     RELAY_N=$((RELAY_N+1))
     echo "[$(date '+%F %H:%M:%S')] 接力 #${RELAY_N}：START_STEP=$NEXT"
-    RUN_ID="$RUN_ID" START_STEP="$NEXT" nohup bash "$OVERLAY_ROOT/scripts/aipay/aipay-scenario.sh" >> "$RELAY_LOG" 2>&1 &
+    RUN_ID="$RUN_ID" START_STEP="$NEXT" nohup bash "$HARNESS_ROOT/aipay-scenario.sh" >> "$RELAY_LOG" 2>&1 &
     sleep 10   # 拉起确认窗口（pgrep 同 shell fork+exec 立即可见；主循环 15s 周期兜底防双拉）
   fi
   sleep 15   # 探测周期（run8 提速 D：旧 90s 是每代 2.5 分钟机械开销的主成分）

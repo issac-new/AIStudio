@@ -20,7 +20,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # V1（aipay-lib.sh）退役后自包含：PATCHDIR/PATH 原由 aipay-lib 提供，此处内联。
 # PATCHDIR 取**本树**（worktree 检出各自生效）的 patches 目录。
-OVERLAY_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$(cd "$SCRIPT_DIR/../overlay" 2>/dev/null && pwd || echo "$SCRIPT_DIR/..")}"
 PATCHDIR="$OVERLAY_ROOT/patches"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
