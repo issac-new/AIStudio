@@ -105,6 +105,11 @@ if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
   git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
   gh_clone_sanitize "$DIRECTOR_CLONE"
   log "中央仓已克隆：${DIRECTOR_CLONE}（remote URL 已剥 token）"
+  # 治理基线接线（2026-10-04 台账与规则页 404 实锤）：studio 的 resolveRosterFile 从服务目录
+  # 向上探测 <dir>/runtime/governance；SIM 根软链到中央仓 runtime/governance（单一事实源、
+  # agent 侧继续 git 版本化），三数据源（能力台账/决策规则/状态本体）随装即在。
+  mkdir -p "$SIM_ROOT/runtime"
+  ln -sfn "$SIM_ROOT/central/aipaydev/runtime/governance" "$SIM_ROOT/runtime/governance"
 fi
 for u in "${INSTANCED_USERS[@]}"; do
   WS=$(workspace "$u")
