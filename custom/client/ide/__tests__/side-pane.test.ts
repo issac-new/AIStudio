@@ -70,13 +70,25 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     expect(w.find('[data-testid="stub-wikipane"]').exists()).toBe(true)
   })
 
-  it('九 tab 齐备（files 居首：查看文件右移）+ 关闭按钮收起', async () => {
+  it('分组整合（2026-10-04 用户裁定）：默认编码组 3 签、全部组 17 签齐备、外部深链自动切组、关闭收起', async () => {
     const ide = useIdeStore()
     ide.sidePane.open = true
     ide.sidePane.tab = 'wiki'
-    const w = mountPane()
-    const tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
+    let w = mountPane()
+    // wiki 不在默认 code 组 → watch 兜底切到 knowledge 组（深链语义）
+    await flushPromises()
+    expect(w.find('[data-testid="ide-sidepane-group-knowledge"]').exists()).toBe(true)
+    // 默认组态：code 组恰 3 签，files 居首
+    ide.sidePane.tab = 'files'
+    w = mountPane()
+    await flushPromises()
+    let tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
+    expect(tabs).toHaveLength(3)
     expect(tabs[0].attributes('data-testid')).toBe('ide-sidepane-tab-files')
+    // 全部组：17 签齐备（tab 本体与 testid 不因分组丢失）
+    await w.find('[data-testid="ide-sidepane-group-all"]').trigger('click')
+    tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
+    expect(tabs).toHaveLength(17)
     for (const tab of ['files', 'review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
       expect(w.find(`[data-testid="ide-sidepane-tab-${tab}"]`).exists()).toBe(true)
     }
