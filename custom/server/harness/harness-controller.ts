@@ -17,6 +17,7 @@ import { collectCostAccounts, type CostAccountsReport } from './cost-accounts'
 import { assessMaturity, collectMaturityInputs, type MaturityReport } from './maturity'
 import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } from './primitives'
 import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
+import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
 
 const router = new Router({ prefix: '/api/harness' })
 
@@ -75,6 +76,17 @@ router.get('/eval-layers', async (ctx) => {
     const inputs = await collectEvalLayersInputs(daysOf(ctx.query.days))
     const report: EvalLayersReport = buildEvalLayers(inputs)
     ctx.body = { ...report, ok: true, days: inputs.days }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// B6 RSI 分级自检（P9）：L1-L5 对照 + 五元组盘点，每级判定带本机证据。
+router.get('/rsi-maturity', async (ctx) => {
+  try {
+    const report: RsiMaturityReport = collectRsiMaturity()
+    ctx.body = { ...report, ok: true }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
