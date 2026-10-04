@@ -257,6 +257,9 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       # 基建非轮次工件，/api/governance/registry/:kind 直接读它们；清了文档评审页管理区必空。
       # setup 不重建（旧注释"setup 重建"不实）——清空前自快照 tag 取回。）
       git checkout "mx-clean-${TS}" -- docs/admin/roster.md docs/admin/app-registry.md docs/admin/org.md 2>/dev/null || true
+      # 治理基线保留（2026-10-04 台账与规则页 404 实锤）：runtime/governance 是产品治理面
+      # 数据源（能力台账/决策规则/状态本体，正本=overlay runtime 分发），非轮次工件，随轮保留。
+      git checkout "mx-clean-${TS}" -- runtime/governance 2>/dev/null || true
       git commit -q -m "mx-clean：推演工件全目录清空（保留 admin 基础注册表；快照 tag mx-clean-${TS}）" 2>/dev/null || true )
     # 九目录骨架重建（run6 实锤：git rm -rf 连目录一起删，freeze 等直写路径炸 ENOENT）
     ( cd "$CEN" && mkdir -p docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin )
