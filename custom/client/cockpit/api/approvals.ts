@@ -5,6 +5,16 @@ import { request } from '@/api/client'
 /** V4-N1 风险档：high 不可逆高危（红标逐条裁决）/ medium 常规 / low 低风险（可自动通过+抽检） */
 export type ApprovalRiskTier = 'high' | 'medium' | 'low'
 
+/** 2026-10-04 影响面预览（Blast Radius）：服务端 impact-preview.ts 纯解析产物（DTO 即契约）。 */
+export type ImpactDanger = 'delete' | 'overwrite' | 'worktree-reset'
+
+export interface CommandImpact {
+  danger: ImpactDanger
+  targets: Array<{ spec: string; kind: 'path' | 'glob' | 'flag-arg' }>
+  unbounded: boolean
+  note?: 'variable-target' | 'root-path' | 'bare-glob' | 'subshell'
+}
+
 export interface PendingApprovalItem {
   id: string
   kind: 'command' | 'review'
@@ -18,6 +28,17 @@ export interface PendingApprovalItem {
   choices?: string[]
   createdAt: number
   risk?: ApprovalRiskTier
+  /** null/缺省 = 非破坏性模式（不假装零影响）；服务端 pending 聚合时内嵌 */
+  impact?: CommandImpact | null
+}
+
+/** 影响面预览按需取（聊天侧审批卡等消费方；pending 已内嵌，多数场景无需调） */
+export function fetchImpactPreview(command: string): Promise<{ ok: boolean; command: string; impact: CommandImpact | null }> {
+  return request('/api/approvals/impact-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command }),
+  })
 }
 
 export interface ApprovalHistoryEntry {

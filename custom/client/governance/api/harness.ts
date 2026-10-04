@@ -155,3 +155,33 @@ export interface PrimitivesDto {
 export function fetchPrimitives(): Promise<PrimitivesDto> {
   return request<PrimitivesDto>('/api/harness/primitives')
 }
+
+// ---- B5 四层评估读模型（2026-10-04 九源调研落地项②）----
+export type EvalLayerKey = 'result' | 'execution' | 'resource' | 'governance'
+
+export interface EvalMetricDto {
+  key: string
+  status: 'instrumented' | 'gap'
+  value: number | null
+  unit: string
+  source: string
+  definition?: string
+  note?: string
+}
+
+export interface EvalLayerDto {
+  key: EvalLayerKey
+  metrics: EvalMetricDto[]
+}
+
+export interface EvalLayersDto {
+  ok: boolean
+  days: number
+  layers: EvalLayerDto[]
+  counts: { instrumented: number; gap: number }
+  meta: { note: string; source: string; gapNote: string }
+}
+
+export function fetchEvalLayers(days = 7): Promise<EvalLayersDto> {
+  return request<EvalLayersDto>(`/api/harness/eval-layers?days=${encodeURIComponent(String(days))}`)
+}

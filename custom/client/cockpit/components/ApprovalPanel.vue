@@ -13,7 +13,7 @@ import {
   fetchSpotChecks, resolveSpotCheck,
   type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier, type SpotCheckItem,
 } from '../api/approvals'
-import { approvalsSpotcheckMessages } from '../i18n-approvals'
+import { approvalsSpotcheckMessages, approvalImpactMessages } from '../i18n-approvals'
 import { fetchApprovalSuggestions, type ApprovalSuggestion } from '@/custom/ia2/api/runtime-caps'
 
 // ── 放行建议（吸收批 9 #7）：展开才拉取（冷启扫库 60-70s，勿随面板挂载即取）──
@@ -75,6 +75,9 @@ const spotResolved = ref<SpotCheckItem[]>([])
 /** 抽检区词条：本地字典（见 i18n-approvals.ts 头注释——键族已从注入词表丢失）。 */
 const spotT = computed(() =>
   locale.value.startsWith('zh') ? approvalsSpotcheckMessages.zh : approvalsSpotcheckMessages.en)
+/** 影响面预览（Blast Radius）词条：同抽检区先例，custom 模块本地字典。 */
+const impactT = computed(() =>
+  locale.value.startsWith('zh') ? approvalImpactMessages.zh : approvalImpactMessages.en)
 const loading = ref(false)
 const error = ref('')
 const acting = ref<Set<string>>(new Set())
@@ -242,6 +245,29 @@ defineExpose({ refresh })
             {{ item.title }}
           </div>
           <code v-if="item.kind === 'command'" class="approval-row__detail">{{ item.detail }}</code>
+          <!-- 2026-10-04 影响面预览（Blast Radius）：高危命令裁决前先看清要动什么。
+               服务端纯模式解析（无 IO）；null/缺省不渲染（不假装零影响）。 -->
+          <details
+            v-if="item.kind === 'command' && item.impact"
+            class="approval-row__impact"
+            :data-testid="`approval-impact`"
+          >
+            <summary>
+              <span class="impact-chip">{{ impactT.chip }}</span>
+              <span class="impact-danger" :class="`impact-danger--${item.impact.danger}`">{{ impactT.danger[item.impact.danger] ?? item.impact.danger }}</span>
+              <span class="impact-count">{{ item.impact.targets.length ? impactT.targetCount.replace('{n}', String(item.impact.targets.length)) : '—' }}</span>
+              <span v-if="item.impact.unbounded" class="impact-unbounded" :title="impactT.unbounded">⚠︎</span>
+            </summary>
+            <div class="impact-body">
+              <div v-if="item.impact.unbounded" class="impact-note">{{ impactT.unbounded }}</div>
+              <div v-if="item.impact.note && impactT.notes[item.impact.note]" class="impact-note">{{ impactT.notes[item.impact.note] }}</div>
+              <ul v-if="item.impact.targets.length" class="impact-targets">
+                <li v-for="(tg, idx) in item.impact.targets.slice(0, 50)" :key="idx"><code>{{ tg.spec }}</code></li>
+                <li v-if="item.impact.targets.length > 50" class="impact-more">+{{ item.impact.targets.length - 50 }}</li>
+              </ul>
+              <div class="impact-hint">{{ impactT.hint }}</div>
+            </div>
+          </details>
           <!-- L3（2026-10-03）：review 卡 detail 是服务端语义 token（uncommitted /
                baseline <ref>），按前缀路由本地化；历史缓存里的中文串原样回落。 -->
           <div v-else-if="item.kind === 'review'" class="approval-row__detail">{{ reviewDetailText(item) }}</div>
@@ -387,6 +413,35 @@ defineExpose({ refresh })
 </template>
 
 <style scoped lang="scss">
+/* 影响面预览（Blast Radius）：待审命令行内可展开块 */
+.approval-row__impact {
+  margin-top: 2px;
+  border: 1px dashed var(--warning, #d97706);
+  border-radius: 8px;
+  background: rgb(254 243 199 / 35%);
+  padding: 2px 8px;
+  font-size: 11.5px;
+  summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 2px 0; }
+  summary::-webkit-details-marker { display: none; }
+}
+.impact-chip { font-weight: 600; color: var(--warning-ink, #92400e); }
+.impact-danger {
+  padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; font-size: 10.5px;
+  &--delete { color: var(--danger, #dc2626); }
+  &--overwrite { color: var(--warning-ink, #92400e); }
+  &--worktree-reset { color: var(--danger, #dc2626); }
+}
+.impact-count { color: var(--text-muted, #878c99); }
+.impact-unbounded { color: var(--warning-ink, #92400e); }
+.impact-body { display: flex; flex-direction: column; gap: 3px; padding: 2px 0 4px; }
+.impact-note { color: var(--warning-ink, #92400e); }
+.impact-targets {
+  margin: 0; padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 1px;
+  li code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
+}
+.impact-more { color: var(--text-muted, #878c99); }
+.impact-hint { color: var(--text-muted, #878c99); font-size: 10.5px; }
+
 .approval-panel {
   display: flex;
   flex-direction: column;
