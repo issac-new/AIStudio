@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAgentActivity, agentActivityOf } from '@/custom/ia2/composables/useAgentActivity'
+import { pickBgworkMessages } from '@/custom/ia2/i18n-bgwork'
 import { computed } from 'vue'
 import { NCheckbox } from 'naive-ui'
 import type { KanbanTask } from '@/api/hermes/kanban'
@@ -23,13 +25,23 @@ const emit = defineEmits<{
   dragEnd: [taskId: string, event: DragEvent]
 }>()
 
-const { t } = useI18n()
+const i18nCtx = useI18n()
+const { t } = i18nCtx
 
 // Card body mirrors the reference plugin's TaskCard exactly: a single
 // meta row of badges, the title, and a meta line. There is intentionally
 // NO body/result/latest-summary/skills preview on cards — the reference
 // keeps cards lean (those live in the drawer).
 // P2 RACI 徽章（2026-09-28 §三）：非空角色字母标签；当前用户承担的角色高亮。
+// 后台执行态徽章（2026-10-04 三件套①）：assignee 有 working 会话即显示活体点+最近产出
+const { activity: agentActivity } = useAgentActivity()
+const liveActivity = computed(() => agentActivityOf(agentActivity.value, props.task.assignee))
+const liveL = computed(() => pickBgworkMessages((i18nCtx as { locale?: { value?: string } })?.locale?.value))
+const liveSec = computed(() => {
+  const a = liveActivity.value
+  return a && a.lastActiveAt > 0 ? Math.max(0, Math.floor(Date.now() / 1000 - a.lastActiveAt / 1000)) : null
+})
+
 const raciOf = computed(() => parseTaskRaci(props.task))
 const raciBadgeList = computed(() => raciBadges(raciOf.value))
 const myRole = computed<RaciRole | null>(() => myRaciRole(raciOf.value, getStoredUsername()))
@@ -200,6 +212,14 @@ function handleDragEnd(e: DragEvent) {
     <div class="card-meta">
       <span v-if="task.assignee" class="meta-assignee" :title="`Assigned to Hermes profile @${task.assignee}`">
         @{{ task.assignee }}
+      </span>
+      <span
+        v-if="liveActivity && liveActivity.working > 0"
+        class="meta-live"
+        data-testid="card-live-badge"
+        :title="`@${task.assignee}: ${liveActivity.working} working session(s), last output ${liveSec ?? '—'}s ago`"
+      >
+        <span class="meta-live__dot" />{{ liveL.live }}<template v-if="liveSec !== null"> · {{ liveSec }}s</template>
       </span>
       <span v-else class="meta-unassigned">{{ t('kanban.card.unassigned') }}</span>
       <span
@@ -430,4 +450,14 @@ function handleDragEnd(e: DragEvent) {
   margin-left: auto;
   white-space: nowrap;
 }
+
+.meta-live {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: #15803d; font-size: 10.5px; font-weight: 600;
+}
+.meta-live__dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+  animation: card-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes card-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 </style>

@@ -478,3 +478,5 @@
 #      本就属上下文帮助/页面内容，保留。裁决 G 无剩余对象，补丁删除（c3dfc554 退役先例）。
 # 557=UX 裁决 A/C/D 与毛刺修复配套词条（审批确认/右栏二分/兜底反馈/主管面跳转/管理台职责注记；让号 557）。
 557-locale-ux-menu.patch
+# 562=推演运行态路由挂载（后台感知③）：GET /api/sim/run-progress 读 \$HERMES_HOME/run-progress.json（harness sset 单写契约），fail-soft 空态。
+562-server-sim-run-progress-route.patch
