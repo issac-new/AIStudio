@@ -103,6 +103,30 @@
 
 明确**不做**（本轮裁决）：ekko 主会话 append-only 化（P4 级存储迁移风险大于收益，loop 侧已有事件日志满足推演审计）；进程沙箱（独立基建轮）；完整 Mods 兼容层（dsh 尚在 alpha 且其目的为 API 子集验证，非实用兼容——见源9 发布说明原话）。
 
+## 五之前·P1-P12 全做执行回填（2026-10-04 深夜轮，用户裁决"全都做"）
+
+十二项全部落地（分支 `feat/nine-sources-p1-p12-exec-20261004`），每项独立提交，全量测试 3735→**3774 绿**（+39 用例零失败）：
+
+| # | 落地物 | 锚点 |
+|---|---|---|
+| P1 | 工具执行瀑布：ekko registry pre/post 钩子（权限后/回填前）+ manager 双路注入 + overlay 观测面（v1 只观测，脱敏 JSONL，fail-open） | patch 565/566 + `custom/server/toolpipeline/` |
+| P2 | MCP 工具暴露模式 `tool_mode=direct|proxy|defer`：defer=装配期零连接零枚举 + search/call 双元工具（60s 目录缓存） | patch 567（ekko tsc 零错） |
+| P3 | Auto 路由档位映射升服务端一等配置（config.route 校验+对话框三下拉+切换器优先级链）——**盘点勘误：切换器本有选择时路由，真实缺口是映射只有 localStorage** | `enginemodels` + `IdeModelSwitcher` |
+| P4 | 模组横幅带：注册式插槽（priority 排序/单条隐藏 user 层持久化/一键恢复），六条迁移保形 | `IdeModBand` + `useModBand` |
+| P5 | 编辑时间轴回放：filehistory 双相快照投影（前后缀裁剪+增删账）+ `GET /api/ide/replay/:sid` + 时间轴 UI | `filehistory/replay-theater.ts` |
+| P6a | 等待时延双口径（≤24h 子集 p95 主指标；长周期透明另列）——**更正前文"时间戳脏数据"误判** | `cost-accounts.ts` |
+| P6b | 五治理指标采集：三可算（路由违约/恢复成功/人工接管，实测 0.75）接入 instrumented，两缺口指标给具体采集点 | `harness/gov-metrics.ts` |
+| P7 | held-out 密封评测库：列表只回元数据/评分只回聚合/限次 3 防探测（契约测试逐条锁） | `heldout/held-out-store.ts` |
+| P8 | 双跑对照器 `mx-report-ab.py`：state.env 键集+审计子进程健康对比（simharness 仓 7bccb6e） | `simharness/mux/` |
+| P9 | RSI 分级自检：L1-L5 带本机证据（L4=安全取舍性未达成如实呈现）+五元组盘点，实测 L1-L3 达成 | `harness/rsi-maturity.ts` + 板块 |
+| P10 | agent 身份与委托链台账：登记/凭证撤销/委托（环检测）/链查询/事件流，REST+面板，实测 aid-001→did-001→链查询全通；**台账层不接线鉴权（如实边界）** | `agentidentity/` |
+| P11 | `/skill-draft` 内置斜杠命令：技能草稿协议（skill_manage 建草稿+自校验+待人工采纳），save 双保险剥内置 | `slashcmd/builtins.ts` |
+| P12 | 讨好者防线：ekko TS + hermes python 双组装器常驻 Disclosure of Limits 段（563/564，四条纪律） | `disclosurerules/` 守门 |
+
+**未做（维持前裁）**：ekko 主会话 append-only 化、进程沙箱、完整 Mods 兼容层。**装机验证**未做（默认热更新验证制）。
+
+**本轮新坑记档**：①全量 clean+inject 重放期间 vite 若在跑会撞瞬态缺文件（dep-scan 缓存中毒→页面"Maximum call stack size exceeded"假象崩溃）——**注入前先杀 vite，完成后重启**（本轮对照实验定位：摘 patch 不崩→恢复+先杀后注不崩→假象实锤）；②ts-node 全量编译会逮 vitest 不查的类型债（AccountData 联合漏字段）；③vue-i18n 测试桩无 locale——组件里 locale 一律可选链。
+
 ## 五、已具备清单（九源建议中本仓已有等价物，防重复建设）
 
 - Token Weather（源4）≈ 上下文水位/TPS/缓存命中/四段构成分解（`useSessionMetrics.ts`、`contextBreakdown.ts`、`IdeMetricsPopover`）
@@ -129,6 +153,6 @@
 - 浏览器走查 `#/app/board?tab=gov-harness`：四层评估板块完整渲染（四宫格/双态徽章/五口径/底部 instrumented 6 · gap 6 计数）。
 - 浏览器走查 `#/app/inbox`：收件箱正常渲染（1 条评审卡待审+抽检区+决策历史）；当前待审为 review 卡（非破坏性命令），影响面块按设计不出现——不注入假审批数据污染共享队列（`~/.hermes/approvals/queue.jsonl` 有真实 worker 在轮询），影响面渲染路径由 jsdom 挂载测试覆盖。
 
-**走查顺带的数据质量发现（记档，不属本轮范围）**：等待时延账 `waitP95Seconds=664448s`（≈7.7 天）——看板 done 任务 created→completed 时间戳存在脏数据，P6 采集五治理指标时须先做数据清洗与口径对齐。
+**走查顺带的数据质量发现（P6a 已根治并更正判断）**：等待时延账全量 p95=664448s——直查板库实锤为 137 条 done 里 35 条 187-251h 长周期研究/裁决项混入（时间戳无错，是挂板周期混入等待口径）；P6a 双口径根治：≤24h 子集 p95 为主指标（实测 55989s）、长周期计数与全量进注记，数据未删一笔。
 
 **合并状态**：feature 分支 `feat/nine-sources-harness-round-20261004` → main（见 git log）。

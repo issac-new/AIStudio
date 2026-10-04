@@ -69,6 +69,10 @@ export interface WaitLatencyData {
   avgSeconds: number | null
   medianSeconds: number | null
   p95Seconds: number | null
+  /** P6a（2026-10-04 九源轮）：≤24h 完成子集 p95（主口径）；长周期项另列不删 */
+  p95SecondsWithinDay?: number | null
+  /** 超 24h 完成的长周期条数（口径分层透明度字段） */
+  overDayCount?: number | null
 }
 
 export interface ReworkData {
@@ -337,7 +341,7 @@ export async function collectWaitLatencyAccount(days: number): Promise<CostAccou
   const files = kanbanDbFiles()
   const sources: AccountSourceStatus[] = [{ id: 'kanban-boards', available: files.length > 0, note: files.length > 0 ? `${files.length} 个板库` : '板库缺席（HERMES_HOME 下无 kanban.db）' }]
   if (files.length === 0) {
-    return { key: 'waitLatency', available: false, sources, data: { boards: [], tasksDone: null, avgSeconds: null, medianSeconds: null, p95Seconds: null } }
+    return { key: 'waitLatency', available: false, sources, data: { boards: [], tasksDone: null, avgSeconds: null, medianSeconds: null, p95Seconds: null, p95SecondsWithinDay: null, overDayCount: 0 } }
   }
   const sinceS = Math.floor((Date.now() - days * 86400000) / 1000)
   const durations: number[] = []
