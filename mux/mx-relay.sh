@@ -22,7 +22,8 @@ source "$SCRIPT_DIR/mx-lib.sh"
 STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 LOG="$SIM_ROOT/runs/$RUN_ID/evidence/scenario.log"
 RELAY_LOG="$LOGS_DIR/${RUN_ID}-relay.log"
-ORDER=(smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report)
+# 步骤序改用 mx-lib 单一事实源 MX_STEP_ORDER（2026-10-04 与 sset 进度 JSON 对齐）
+ORDER=(${MX_STEP_ORDER:-smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report})
 
 # 单实例守卫：除自身（$$）外已有 mx-relay 在跑即退出
 _others=$(pgrep -f "mx-relay.sh" | /usr/bin/grep -v "^$$\$" || true)

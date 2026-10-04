@@ -787,6 +787,11 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
 # ═══════════════════════════════════════════════════════════
 
 # ── 推演轮次隔离（state/evidence 按 RUN_ID 分家，语义同 V1）────
+# 步骤序单一事实源（2026-10-04 后台感知轮）：relay 接力序 = sset 进度 JSON 的 total 口径。
+# sset 每次写 state.env 后同步刷 $HERMES_ROOT/run-progress.json 供 studio 驾驶舱读
+# （文件契约：harness 单写、产品只读；缺文件=无推演在跑，产品侧隐藏 widget）。
+MX_STEP_ORDER="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report"
+
 RUN_ID="${RUN_ID:-}"
 if [[ -n "$RUN_ID" ]]; then
   RUN_DIR="$SIM_ROOT/runs/$RUN_ID"
