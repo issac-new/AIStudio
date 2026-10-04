@@ -128,7 +128,7 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
   local asg_args=()
   [[ -n "$asg" ]] && asg_args=(--assignee "$asg")
   id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
-    --body "$body" --project aipaydev --json "${asg_args[@]}" 2>/dev/null | jq -r '.id // empty')
+    --body "$body" --project aipaydev --json ${asg_args[@]+"${asg_args[@]}"} 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
   # ——补创建后归属核验：错板记单留证，不再静默）
@@ -460,7 +460,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
     cur_size=0
-    for a in "${logs[@]}"; do
+    for a in ${logs[@]+"${logs[@]}"}; do
       sz=$(stat -f%z "$a" 2>/dev/null || stat -c%s "$a" 2>/dev/null || echo 0)
       cur_size=$(( cur_size + sz ))
     done
