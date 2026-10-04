@@ -480,3 +480,15 @@
 557-locale-ux-menu.patch
 # 562=推演运行态路由挂载（后台感知③）：GET /api/sim/run-progress 读 \$HERMES_HOME/run-progress.json（harness sset 单写契约），fail-soft 空态。
 562-server-sim-run-progress-route.patch
+# 563=P12 讨好者防线(ekko TS 侧)：buildSystemPrompt 常驻 Disclosure of Limits 段(截断/部分读取/未验证同屏披露)。
+563-agent-ekko-disclosure-limits-prompt.patch
+# 564=P12 讨好者防线(hermes-agent python 侧)：system_prompt.py stable 层追加 HERMES_DISCLOSURE_GUIDELINES(与 563 同文)。
+564-agent-disclosure-limits-prompt.patch
+# 563=响应投递丢弃根治（run8 五起停摆根因）：纯附件指令型响应在附件投递失败/被滤时整条蒸发（房间静默=假停摆，回执/RACI 行随消息丢失）——丢弃分支加原文兜底投递
+563-agent-response-delivery-fallback.patch
+# 565=P1 工具执行瀑布(ekko-agent)：types/registry/runtime 三处——ToolExecuteHook 接口+setExecuteHooks+pre(权限后)/post(回填前)瀑布+AgentRuntimeOptions.toolExecuteHooks 双路径挂载。
+565-agent-ekko-tool-waterfall.patch
+# 566=P1 工具执行瀑布(server 注入)：ekko manager 两处 createRuntime 注入 overlay 观测钩子(v1 只观测不拦截)。
+566-server-manager-tool-hooks-inject.patch
+# 567=P2 MCP 工具暴露模式：server 配置增 tool_mode=direct|proxy|defer——defer=Pi 延迟加载（装配期不连接不枚举零阻塞，mcp__<srv>_search/_call 双元工具按需取用）；proxy=复用既有单代理收拢。
+567-agent-ekko-mcp-tool-mode.patch

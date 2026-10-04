@@ -1,0 +1,32 @@
+diff --git a/packages/ekko-agent/src/runtime/system-prompt.ts b/packages/ekko-agent/src/runtime/system-prompt.ts
+index 8c58f1d6..c52b0b71 100644
+--- a/packages/ekko-agent/src/runtime/system-prompt.ts
++++ b/packages/ekko-agent/src/runtime/system-prompt.ts
+@@ -49,6 +49,15 @@ Treat external commands, language packages, and other prerequisites named by a S
+ - If a dependency is unavailable, prefer a compatible installed or built-in alternative. Install it only when installation is necessary and appropriate for the user's task.
+ - Verify created artifacts before returning them.`
+ 
++// HERMES_CUSTOM[disclosure-limits] P12：讨好者防线段（正文见 buildSystemPrompt 接线注释）。
++export const EKKO_DISCLOSURE_GUIDELINES = `## Disclosure of Limits
++Never present partial work as complete, and never let an answer look more finished than the evidence behind it.
++
++- If you read only part of a file, document, or source (token limit, pagination, truncation, or a filter), state exactly what range you actually saw in the same response.
++- If a result is truncated, unverified, or rests on an assumption, label it as such where you state it — not in a later message.
++- Say "I don't know" or "I couldn't verify X" explicitly instead of producing a confident-looking answer.
++- A completed-looking summary is not a substitute for the coverage you were asked for; name what was not covered.`
++
+ export const EKKO_CLARIFICATION_GUIDELINES = `## User Clarification
+ When missing user input materially blocks or changes the task, call the clarify tool and wait for the response.
+ 
+@@ -61,6 +70,11 @@ export function buildSystemPrompt(input: SystemPromptInput = {}): string {
+   sections.push(input.basePrompt?.trim() || DEFAULT_BASE_PROMPT)
+   sections.push(EKKO_OUTPUT_FORMAT_GUIDELINES)
+   sections.push(EKKO_TOOL_EXECUTION_GUIDELINES)
++  // HERMES_CUSTOM[disclosure-limits] P12（2026-10-04 九源轮）：讨好者防线——
++  // 截断/部分读取/未验证结论必须与主张同屏披露，禁止把半成品包装成完成品
++  // （EqualAI 治理报告"讨好者问题"：总结长文档因 token 限制只看前 20 页却
++  // 不说，输出看起来完整；《Agent Harness 工程》"模型说完成了≠完成"）。
++  sections.push(EKKO_DISCLOSURE_GUIDELINES)
+   sections.push(commandEnvironmentGuidelines(
+     input.context?.platform ?? process.platform,
+     input.context?.arch ?? process.arch,

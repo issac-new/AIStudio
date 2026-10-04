@@ -1,0 +1,130 @@
+diff --git a/packages/ekko-agent/src/runtime/runtime.ts b/packages/ekko-agent/src/runtime/runtime.ts
+index 3644aa0b..7dc682d5 100644
+--- a/packages/ekko-agent/src/runtime/runtime.ts
++++ b/packages/ekko-agent/src/runtime/runtime.ts
+@@ -20,7 +20,7 @@ import type { AgentSkill } from '../skills/types'
+ import { RunTaskPlan } from '../tools/plan'
+ import { AgentToolRegistry, createDefaultToolRegistry } from '../tools/registry'
+ import { sanitizeAgentToolResult } from '../tools/tool-result-sanitizer'
+-import type { AgentTaskRequest, AgentToolContext, AgentToolResult } from '../tools/types'
++import type { AgentTaskRequest, AgentToolContext, AgentToolResult, ToolExecuteHook } from '../tools/types'
+ import {
+   inspectLocalSkillValidationIssues,
+   resolveSkillRouting,
+@@ -210,6 +210,10 @@ export class AgentRuntime {
+     if (this.toolsEnabled && options.tools && options.toolAuthorizer) {
+       this.tools.setAuthorizer(options.toolAuthorizer)
+     }
++    // HERMES_CUSTOM[tool-waterfall] P1：瀑布钩子挂载（自建与外部传入 registry 双路径）
++    if (this.toolsEnabled) {
++      this.tools.setExecuteHooks(options.toolExecuteHooks ?? [])
++    }
+     this.skillsEnabled = options.skillsEnabled !== false
+     this.skillsAvailable = options.skillsAvailable
+     this.skills = this.skillsEnabled ? options.skills ?? [] : []
+diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/runtime/types.ts
+index 5d2bc35f..a78098d1 100644
+--- a/packages/ekko-agent/src/runtime/types.ts
++++ b/packages/ekko-agent/src/runtime/types.ts
+@@ -2,7 +2,8 @@ import type { AgentMessage, ModelClient, ModelRequest } from '../model/types'
+ import type { AgentMessageInput, AgentOutputMessage } from '../model/messages'
+ import type { AgentSkill } from '../skills/types'
+ import type { AgentToolRegistry } from '../tools/registry'
+-import type { AgentToolAuthorizer, AgentToolContext, AgentToolResult } from '../tools/types'
++import type {
++  ToolExecuteHook, AgentToolAuthorizer, AgentToolContext, AgentToolResult } from '../tools/types'
+ import type { AgentRuntimeEvent } from './events'
+ import type { MemoryContext, MemoryEvidenceMessageInput, MemoryOrigin, MemoryScope, MemoryWritePolicy } from '../memory/types'
+ import type { MemoryService } from '../memory/service'
+@@ -45,6 +46,9 @@ export interface AgentRuntimeRecoveryDirective {
+ }
+ 
+ export interface AgentRuntimeOptions {
++  /** HERMES_CUSTOM[tool-waterfall] P1（2026-10-04 九源轮）：工具执行瀑布钩子
++   *  （pre 在权限后/post 在结果回填前；默认无钩子=行为零变化）。 */
++  toolExecuteHooks?: ToolExecuteHook[]
+   /** JEV configuration values only; the runtime creates its own client and never persists overrides. */
+   jev?: EkkoJevOverrides
+   /** Fixed profile identity for tool and memory operations. Per-run input cannot override it. */
+diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src/tools/registry.ts
+index d65af413..de9317af 100644
+--- a/packages/ekko-agent/src/tools/registry.ts
++++ b/packages/ekko-agent/src/tools/registry.ts
+@@ -4,6 +4,7 @@ import type {
+   AgentToolContext,
+   AgentToolProvider,
+   AgentToolResult,
++  ToolExecuteHook,
+ } from './types'
+ import { UpdatePlanTool } from './plan'
+ import { createBrowserTools } from './browser'
+@@ -23,9 +24,15 @@ export class AgentToolRegistry {
+   private readonly tools = new Map<string, AgentTool>()
+   private readonly providers = new Map<string, AgentToolProvider>()
+   private readonly providerTools = new Map<string, Set<string>>()
++  // HERMES_CUSTOM[tool-waterfall] P1：执行瀑布钩子（authorizer 之后；默认空=零行为变化）
++  private executeHooks: ToolExecuteHook[] = []
+ 
+   constructor(private authorizer?: AgentToolAuthorizer) {}
+ 
++  setExecuteHooks(hooks: ToolExecuteHook[]): void {
++    this.executeHooks = hooks.slice()
++  }
++
+   setAuthorizer(authorizer?: AgentToolAuthorizer): void {
+     this.authorizer = authorizer
+   }
+@@ -99,7 +106,24 @@ export class AgentToolRegistry {
+         },
+       }
+     }
+-    return tool.execute(input, context)
++    // HERMES_CUSTOM[tool-waterfall] P1：pre-execute 钩子（权限已过；{allow:false} 拒绝）
++    for (const hook of this.executeHooks) {
++      const verdict = await hook.preExecute?.(name, input, context)
++      if (verdict && verdict.allow === false) {
++        return {
++          ok: false,
++          content: verdict.error,
++          error: verdict.error,
++        }
++      }
++    }
++    let result = await tool.execute(input, context)
++    // post-execute 钩子：可改写结果（返回 undefined=原样）
++    for (const hook of this.executeHooks) {
++      const rewritten = await hook.postExecute?.(name, input, result, context)
++      if (rewritten) result = rewritten
++    }
++    return result
+   }
+ }
+ 
+diff --git a/packages/ekko-agent/src/tools/types.ts b/packages/ekko-agent/src/tools/types.ts
+index 1819802e..5181edbc 100644
+--- a/packages/ekko-agent/src/tools/types.ts
++++ b/packages/ekko-agent/src/tools/types.ts
+@@ -122,3 +122,23 @@ export class AgentToolError extends Error {
+     this.name = 'AgentToolError'
+   }
+ }
++
++// HERMES_CUSTOM[tool-waterfall] P1（2026-10-04 九源轮）：工具执行瀑布钩子。
++// preExecute 在 authorizer 之后、真实执行之前（权限先于一切副作用）；
++// postExecute 在执行之后、结果回填模型之前（可改写）。来源：《Agent Harness
++// 工程》"schema 校验→权限→审批→Hook→能力路由"分层 + dsh tools/pre-execute→
++// tools/execute→tools/post-execute 瀑布。钩子异常=放行原路径（fail-open 由
++// 调用方约定；ekko 默认无钩子，行为零变化）。
++export interface ToolExecuteHook {
++  preExecute?(
++    name: string,
++    input: Record<string, unknown>,
++    context?: AgentToolContext,
++  ): Promise<{ allow: false; error: string } | void> | { allow: false; error: string } | void
++  postExecute?(
++    name: string,
++    input: Record<string, unknown>,
++    result: AgentToolResult,
++    context?: AgentToolContext,
++  ): Promise<AgentToolResult | void> | AgentToolResult | void
++}

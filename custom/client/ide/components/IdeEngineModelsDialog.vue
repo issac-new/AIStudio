@@ -3,7 +3,7 @@
 // 此前无客户端写方）。全量替换语义（服务端幂等写+校验+原子落盘+引擎写穿）：
 // 载入 GET → 表单编辑 → 保存 PUT；400 校验问题逐条可见；写穿结果如实回显。
 // 凭据纪律：apiKeyEnv 只填环境变量名，不存值（服务端解析注入）。
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { authFetch } from '../utils/auth-fetch'
 
 interface ModelRow { modelId: string; reasoningLevels: string }
@@ -14,6 +14,19 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
 const rows = ref<ProviderRow[]>([])
 const defaultProviderId = ref('')
 const defaultModelId = ref('')
+const routeOptions = computed(() => {
+  const out: Array<{ value: string; label: string }> = []
+  for (const p of rows.value) {
+    for (const m of p.models) {
+      if (p.providerId && m.modelId) out.push({ value: `${p.providerId}/${m.modelId}`, label: `${p.providerId} · ${m.modelId}` })
+    }
+  }
+  return out
+})
+// P3 Auto 路由档位映射（economy/standard/power → provider/model；空=回落链兜底）
+const routeEconomy = ref('')
+const routeStandard = ref('')
+const routePower = ref('')
 const loading = ref(true)
 const saving = ref(false)
 const problems = ref<string[]>([])
@@ -36,6 +49,11 @@ onMounted(async () => {
     }))
     defaultProviderId.value = body.config?.defaultModel?.providerId ?? ''
     defaultModelId.value = body.config?.defaultModel?.modelId ?? ''
+    const route = (body.config as { route?: Record<string, { providerId: string; modelId: string }> })?.route
+    const refOf = (r?: { providerId: string; modelId: string }) => (r ? `${r.providerId}/${r.modelId}` : '')
+    routeEconomy.value = refOf(route?.economy)
+    routeStandard.value = refOf(route?.standard)
+    routePower.value = refOf(route?.power)
   } finally {
     loading.value = false
   }
@@ -66,6 +84,15 @@ async function save(): Promise<void> {
       defaultModel: defaultProviderId.value && defaultModelId.value
         ? { providerId: defaultProviderId.value, modelId: defaultModelId.value }
         : null,
+      // P3：档位映射（`provider/model` 串拆回引用；空档不发=回落链兜底）
+      route: (() => {
+        const parse = (v: string) => {
+          const i = v.indexOf('/')
+          return i > 0 && i < v.length - 1 ? { providerId: v.slice(0, i), modelId: v.slice(i + 1) } : undefined
+        }
+        const route = { economy: parse(routeEconomy.value), standard: parse(routeStandard.value), power: parse(routePower.value) }
+        return Object.values(route).some(Boolean) ? route : undefined
+      })(),
     }
     // PUT 真进程 404 历史病灶根因已修（runtime 层级）；POST 变体为实证稳定面
     const res = await authFetch('/api/ide/engine-models-put', {
@@ -124,6 +151,22 @@ async function save(): Promise<void> {
             <option v-for="m in (rows.find((r) => r.providerId === defaultProviderId)?.models ?? [])" :key="m.modelId" :value="m.modelId">{{ m.modelId }}</option>
           </select>
         </div>
+        <div class="ide-emd__row ide-emd__route" data-testid="ide-emd-route">
+          <span>Auto 路由档</span>
+          <select v-model="routeEconomy" data-testid="ide-emd-route-economy">
+            <option value="">economy（自动兜底）</option>
+            <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <select v-model="routeStandard" data-testid="ide-emd-route-standard">
+            <option value="">standard（自动兜底）</option>
+            <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <select v-model="routePower" data-testid="ide-emd-route-power">
+            <option value="">power（自动兜底）</option>
+            <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+        <p class="ide-emd__routehint">复杂度→档位（0.5×/1×/2×）；未映射档按目录顺序自动兜底（切换器回落链）。</p>
         <ul v-if="problems.length" class="ide-emd__problems" data-testid="ide-emd-problems">
           <li v-for="(p, i) in problems" :key="i">{{ p }}</li>
         </ul>
@@ -149,6 +192,9 @@ async function save(): Promise<void> {
 .ide-emd__row button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
 .ide-emd__add { border: 1px dashed var(--border-color, #ccc); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; }
 .ide-emd__default { align-items: center; margin-top: 8px; }
+.ide-emd__route { align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.ide-emd__route span { font-size: 11px; color: var(--text-color-3, #999); }
+.ide-emd__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-color-3, #999); }
 .ide-emd__default span { font-size: 11px; color: var(--text-color-3, #999); }
 .ide-emd__problems { color: var(--error-color, #d03050); font-size: 11px; margin: 6px 0; padding-left: 18px; }
 .ide-emd__saved { color: var(--primary-color, #18a058); font-size: 11px; margin-top: 6px; }

@@ -69,6 +69,9 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
+import IdeModBand from '../components/IdeModBand.vue'
+import IdeReplayTheater from '../components/IdeReplayTheater.vue'
+import { useModBand, type ModBandSpec } from '../composables/useModBand'
 import IdeTodoBar from '../components/IdeTodoBar.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
 import IdeShareEntry from './IdeShareEntry.vue'
@@ -94,6 +97,18 @@ const message = useMessage()
 
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
 const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
+// P4 模组横幅带 specs：六条注册（priority 小者在上；visible=有内容才占位）
+const band = useModBand()
+const modBandSpecs = computed<ModBandSpec[]>(() => [
+  { id: 'recap', priority: 10, visible: !!recap.value, hideable: false },
+  { id: 'injection', priority: 20, visible: flaggedSubagents.value.size > 0 },
+  { id: 'approval-hint', priority: 30, visible: !!approvalMemoryHint.value },
+  { id: 'runline', priority: 40, visible: running.value || !!lastCompletedSummary.value },
+  { id: 'run-result', priority: 50, visible: true },
+  { id: 'replay', priority: 55, visible: true },
+  { id: 'todo', priority: 60, visible: true },
+])
+
 
 // ChatPanel 上下文契约（ChatPanel.vue:84）——MessageList 的 workspace 文件
 // 预览依赖此 provide，缺失会静默降级。
@@ -566,39 +581,56 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
     </div>
 
-    <!-- R2 会话恢复 recap（claude-code 2.1.108 语义：切回旧会话给“上次谈到哪”） -->
-    <div v-if="recap" class="ide-chat__recap" data-testid="ide-session-recap">
-      <span class="ide-chat__recap-kicker">{{ t('ide.recap.title') }}</span>
-      <span class="ide-chat__recap-last">{{ recap.lastUserText }}</span>
-      <span v-if="recap.items.length" class="ide-chat__recap-items" :title="recap.items.join('\n')">
-        {{ recap.items.slice(0, 3).join(' · ') }}
-      </span>
-      <button type="button" class="ide-chat__recap-dismiss" data-testid="ide-recap-dismiss" :aria-label="t('ide.recap.dismiss')" @click="dismissRecap">✕</button>
-    </div>
-
-    <!-- R2 子代理反注入：任一子代理命中注入指纹时的会话级提示条 -->
-    <div v-if="flaggedSubagents.size > 0" class="ide-chat__injection" data-testid="ide-injection-banner">
-      <span>{{ t('ide.injection.banner', { count: flaggedSubagents.size }) }}</span>
-    </div>
-
-    <!-- R2 批准即学习：新审批匹配本会话记忆时的宽度提示条 -->
-    <div v-if="approvalMemoryHint" class="ide-chat__approval-hint" data-testid="ide-approval-memory-hint">
-      <span>{{ t('ide.approval.memoryHint', { width: t(`ide.approval.width.${approvalMemoryHint.width}`) }) }}</span>
-    </div>
-
-    <div class="ide-chat__runline" data-testid="ide-chat-runline">
-      <template v-if="running">
-        <span class="ide-chat__runline-time">{{ t('ide.working') }} {{ runElapsed }}</span>
+    <!-- P4 模组横幅带（2026-10-04 九源轮）：输入区上方注册式插槽（dsh band 语义）。
+         六条迁入：recap(10,自带关闭钮不可带级隐藏)/反注入(20)/审批记忆(30)/
+         运行行(40)/轮结果卡(50,自隐藏组件)/todo 条(60,自隐藏组件)。 -->
+    <IdeModBand :mods="modBandSpecs">
+      <template #recap>
+        <!-- R2 会话恢复 recap（claude-code 2.1.108 语义：切回旧会话给“上次谈到哪”） -->
+        <div v-if="recap" class="ide-chat__recap" data-testid="ide-session-recap">
+          <span class="ide-chat__recap-kicker">{{ t('ide.recap.title') }}</span>
+          <span class="ide-chat__recap-last">{{ recap.lastUserText }}</span>
+          <span v-if="recap.items.length" class="ide-chat__recap-items" :title="recap.items.join('\n')">
+            {{ recap.items.slice(0, 3).join(' · ') }}
+          </span>
+          <button type="button" class="ide-chat__recap-dismiss" data-testid="ide-recap-dismiss" :aria-label="t('ide.recap.dismiss')" @click="dismissRecap">✕</button>
+        </div>
       </template>
-      <template v-else-if="lastCompletedSummary">
-        <span class="ide-chat__runline-done">✓ {{ lastCompletedSummary }}</span>
+      <template #injection>
+        <!-- R2 子代理反注入：任一子代理命中注入指纹时的会话级提示条 -->
+        <div v-if="flaggedSubagents.size > 0" class="ide-chat__injection" data-testid="ide-injection-banner">
+          <span>{{ t('ide.injection.banner', { count: flaggedSubagents.size }) }}</span>
+        </div>
       </template>
-    </div>
-
-    <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
-    <IdeRunResultCard />
-    <!-- B5 todo 常驻条：最新 todo_list 快照的进度+展开清单（无 todo 自隐藏） -->
-    <IdeTodoBar />
+      <template #approval-hint>
+        <!-- R2 批准即学习：新审批匹配本会话记忆时的宽度提示条 -->
+        <div v-if="approvalMemoryHint" class="ide-chat__approval-hint" data-testid="ide-approval-memory-hint">
+          <span>{{ t('ide.approval.memoryHint', { width: t(`ide.approval.width.${approvalMemoryHint.width}`) }) }}</span>
+        </div>
+      </template>
+      <template #runline>
+        <div class="ide-chat__runline" data-testid="ide-chat-runline">
+          <template v-if="running">
+            <span class="ide-chat__runline-time">{{ t('ide.working') }} {{ runElapsed }}</span>
+          </template>
+          <template v-else-if="lastCompletedSummary">
+            <span class="ide-chat__runline-done">✓ {{ lastCompletedSummary }}</span>
+          </template>
+        </div>
+      </template>
+      <template #replay>
+        <!-- P5 编辑时间轴回放：无快照时入口仍显示（点击给空态说明，不误导） -->
+        <IdeReplayTheater />
+      </template>
+      <template #run-result>
+        <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
+        <IdeRunResultCard />
+      </template>
+      <template #todo>
+        <!-- B5 todo 常驻条：最新 todo_list 快照的进度+展开清单（无 todo 自隐藏） -->
+        <IdeTodoBar />
+      </template>
+    </IdeModBand>
 
     <div class="ide-chat__body">
       <div class="ide-chat__messages-anchor" :style="sideSessionOpen ? { paddingRight: '348px' } : undefined">

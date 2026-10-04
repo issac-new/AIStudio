@@ -13,13 +13,18 @@ export interface EngineCatalog {
   groups: EngineCatalogGroup[]
   /** 独立配置是否非空（false=回落 hermes 目录）。 */
   independent: boolean
+  /** P3 Auto 路由档位映射（config.route；缺省档不在此）。 */
+  route?: Partial<Record<'economy' | 'standard' | 'power', { providerId: string; modelId: string }>>
 }
 
 export async function fetchEngineCatalog(): Promise<EngineCatalog> {
   const res = await authFetch('/api/ide/engine-models')
   if (!res.ok) throw new Error(`engine-models ${res.status}`)
   const body = (await res.json()) as {
-    config?: { providers?: Array<{ providerId: string; models?: Array<{ modelId: string; reasoningLevels?: string[] }> }> }
+    config?: {
+      providers?: Array<{ providerId: string; models?: Array<{ modelId: string; reasoningLevels?: string[] }> }>
+      route?: Partial<Record<'economy' | 'standard' | 'power', { providerId: string; modelId: string }>>
+    }
   }
   const providers = body.config?.providers ?? []
   const groups = providers
@@ -28,5 +33,5 @@ export async function fetchEngineCatalog(): Promise<EngineCatalog> {
       provider: p.providerId,
       models: (p.models ?? []).map((m) => ({ id: m.modelId, ...(m.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) })),
     }))
-  return { groups, independent: groups.length > 0 }
+  return { groups, independent: groups.length > 0, route: body.config?.route }
 }

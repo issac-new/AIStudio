@@ -25,6 +25,13 @@ export interface EngineModelConfig {
   defaultModel: { providerId: string; modelId: string } | null
   /** B2 提供方策略（用户自作者语句；治理面语句运行时另载拼接，见 provider-policy.ts）。 */
   policy?: { statements: PolicyStatement[] }
+  /** P3 Auto 路由档位映射（2026-10-04 九源轮）：economy/standard/power → 具体模型。
+   *  缺席档由 switcher 回落链兜底（localStorage 摊平序 > 目录摊平序）。 */
+  route?: {
+    economy?: { providerId: string; modelId: string }
+    standard?: { providerId: string; modelId: string }
+    power?: { providerId: string; modelId: string }
+  }
 }
 
 import { validatePolicyStatements, type PolicyStatement } from './provider-policy'
@@ -37,6 +44,17 @@ export interface ConfigValidation {
 /** 配置校验：provider/model 唯一性+默认模型可达+策略语句合法（B2）。 */
 export function validateEngineModelConfig(config: EngineModelConfig): ConfigValidation {
   const problems: string[] = []
+  // P3：route 档位引用可达性（缺省档合法——回落链兜底；映射了就必须可达）
+  const route = config.route ?? {}
+  for (const tier of ['economy', 'standard', 'power'] as const) {
+    const ref = route[tier]
+    if (!ref) continue
+    const provider = config.providers.find((p) => p.providerId === ref.providerId)
+    if (!provider) { problems.push(`route.${tier} 的 provider 不存在：${ref.providerId}`); continue }
+    if (!provider.models.some((m) => m.modelId === ref.modelId)) {
+      problems.push(`route.${tier} 的模型不在 ${ref.providerId} 目录中：${ref.modelId}`)
+    }
+  }
   const policyRes = validatePolicyStatements(config.policy?.statements)
   if (!policyRes.ok) problems.push(...policyRes.problems)
   const providerIds = new Set<string>()

@@ -109,3 +109,57 @@ describe('B7 patch 500 漂移守卫', () => {
     expect(patch).toContain('inputText.value = command.insertText ??')
   })
 })
+
+// ── P11 内置命令（2026-10-04 九源轮）：合并/剥离/面板只读 ──
+describe('P11 内置命令（skill-draft）', () => {
+  it('builtins 域：合并时内置在前、同名用户版优先；剥离防回写', async () => {
+    const { mergeBuiltins, stripBuiltins, BUILTIN_SLASH_COMMANDS } = await import('../../../server/slashcmd/builtins')
+    expect(BUILTIN_SLASH_COMMANDS.some((b) => b.name === 'skill-draft')).toBe(true)
+    const merged = mergeBuiltins([{ name: 'mine', description: '', prompt: 'p' }])
+    expect(merged[0]!.name).toBe('skill-draft')
+    expect(merged[0]!.builtin).toBe(true)
+    // 同名用户版覆盖内置（用户可自定义同名语义）
+    const overridden = mergeBuiltins([{ name: 'skill-draft', description: '自定义', prompt: 'my' }])
+    expect(overridden.filter((c) => c.name === 'skill-draft')).toHaveLength(1)
+    expect(overridden.find((c) => c.name === 'skill-draft')!.prompt).toBe('my')
+    // save 剥离：带 builtin 的条目不进用户存储
+    const stripped = stripBuiltins([
+      { name: 'skill-draft', description: '', prompt: 'x', builtin: true },
+      { name: 'mine', description: '', prompt: 'p' },
+    ])
+    expect(stripped.map((c) => c.name)).toEqual(['mine'])
+  })
+
+  it('客户端 save 只上送用户命令（内置双保险）', async () => {
+    __resetSlashCommandsForTest()
+    const calls: Array<{ commands: unknown }> = []
+    fetchMock.mockImplementation(async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/save')) {
+        calls.push(JSON.parse(init?.body ?? '{}'))
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ ok: true, commands: [] }), { status: 200 })
+    })
+    await saveSlashCommands([
+      { name: 'skill-draft', description: '', prompt: 'x', builtin: true },
+      { name: 'mine', description: '', prompt: 'p' },
+    ])
+    expect(calls[0]!.commands).toEqual([{ name: 'mine', description: '', prompt: 'p' }])
+  })
+
+  it('面板：内置行只读（无删除钮+禁用输入+徽章）', async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({
+      ok: true,
+      commands: [{ name: 'skill-draft', description: 'd', prompt: 'p', builtin: true }, { name: 'mine', description: '', prompt: 'p' }],
+    }), { status: 200 }))
+    __resetSlashCommandsForTest()
+    const w = mount(IdeSlashCommandsPane)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(w.find('[data-testid="ide-slash-builtin-skill-draft"]').exists()).toBe(true)
+    // 内置行无删除钮，用户行有
+    expect(w.findAll('[data-testid="ide-slash-del"]')).toHaveLength(1)
+    const names = w.findAll('[data-testid="ide-slash-name"]')
+    expect((names[0]!.element as HTMLInputElement).disabled).toBe(true)
+    expect((names[1]!.element as HTMLInputElement).disabled).toBe(false)
+  })
+})

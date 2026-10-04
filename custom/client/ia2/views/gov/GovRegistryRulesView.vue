@@ -7,6 +7,7 @@ import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
 import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
 import DecisionRulesSection from '@/custom/governance/components/DecisionRulesSection.vue'
+import AgentIdentitySection from '@/custom/governance/components/AgentIdentitySection.vue'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
 const tabText = useTasksTabsText()
@@ -25,6 +26,7 @@ const tabText = useTasksTabsText()
       <StateModelSection />
       <DecisionRulesSection />
       <RuntimeSection />
+      <AgentIdentitySection />
     </div>
   </div>
 </template>
