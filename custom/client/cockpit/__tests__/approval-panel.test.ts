@@ -74,6 +74,33 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(wrap.find('[data-testid="approval-pending-count"]').text()).toContain('2')
   })
 
+  // 2026-10-04 影响面预览（Blast Radius）：impact 命中渲染展开块；无 impact 不渲染
+  it('影响面预览：高危命令展开块（危险徽章+目标数+清单）；无 impact 不渲染', async () => {
+    api.__setState({
+      pending: {
+        items: [
+          {
+            ...pendingItems[0]!,
+            detail: 'rm -rf dist build',
+            risk: 'high' as const,
+            impact: { danger: 'delete' as const, targets: [{ spec: 'dist', kind: 'path' as const }, { spec: 'build', kind: 'path' as const }], unbounded: false },
+          },
+          pendingItems[1]!,
+        ],
+      },
+      history: { entries: [] },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0 } })
+    await flushPromises()
+    const impact = wrap.find('[data-testid="approval-impact"]')
+    expect(impact.exists()).toBe(true)
+    expect(impact.text()).toContain('影响面预览')
+    expect(impact.text()).toContain('2')
+    expect(impact.text()).toContain('dist')
+    // review 卡无 impact 块
+    expect(wrap.findAll('[data-testid="approval-impact"]')).toHaveLength(1)
+  })
+
   it('就地裁决：approve 点击 → decideApproval 正确入参 → 刷新 + changed 事件', async () => {
     api.__setState({ pending: { items: pendingItems }, history: { entries: [] }, decideResult: { ok: true } })
     const decide = api.decideApproval
