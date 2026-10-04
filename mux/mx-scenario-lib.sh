@@ -135,7 +135,11 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
   # assignee（第 6 参，可选）：未指派卡虽经 547 已对板内可见，但指派到板团队档案
   # （board.json profiles 之一）可同时过 477 围栏与 391 认领白名单——评审/准出类
   # 导演建卡一律带（run7 ui-g5-carddrawer 教训：NULL assignee 曾被滤光致抽屉打不开）。
-  local u="$1" key="card_$2" title="$3" body="$4" board="${5:-$(first_board_of "$u")}" asg="${6:-}" cached id
+  # 拆两条 local（2026-10-04 run8 uat 崩溃环实锤）：bash 的 local 参数展开先于赋值——
+  # 同语句内 board 默认值引用 $(first_board_of "$u") 时 u 尚未赋值，set -u 下命令替换
+  # 子 shell 即死（卡已建但 ID 丢失、驱动被 set -e 连坐），每棒复发。
+  local u="$1" key="card_$2" title="$3" body="$4" cached id
+  local board="${5:-$(first_board_of "$u")}" asg="${6:-}"
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
   local asg_args=()
   [[ -n "$asg" ]] && asg_args=(--assignee "$asg")
