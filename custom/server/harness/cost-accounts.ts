@@ -364,11 +364,22 @@ export async function collectWaitLatencyAccount(days: number): Promise<CostAccou
   }
   const sorted = durations.slice().sort((a, b) => a - b)
   const avg = sorted.length > 0 ? Math.round(sorted.reduce((s, v) => s + v, 0) / sorted.length) : null
+  // P6a（2026-10-04 九源轮）：双口径披露。实锤 137 条 done 里 35 条为 8-10 天
+  // 长周期研究/裁决项（时间戳无错，是"挂板周期"混入"等待时延"）——全量 p95
+  // 被长尾拉到 7.7 天失义。≤24h 完成子集 p95 反映正常工作节奏；长周期计数
+  // 单列不静默丢弃。数据不改动，口径在账面如实分层。
+  const withinDay = sorted.filter((d) => d <= 86400)
+  const overDayCount = sorted.length - withinDay.length
   return {
     key: 'waitLatency',
     available: boards.length > 0,
     sources,
-    data: { boards, tasksDone: sorted.length, avgSeconds: avg, medianSeconds: medianOf(sorted), p95Seconds: percentileOf(sorted, 95) },
+    data: {
+      boards, tasksDone: sorted.length, avgSeconds: avg, medianSeconds: medianOf(sorted),
+      p95Seconds: percentileOf(sorted, 95),
+      p95SecondsWithinDay: percentileOf(withinDay, 95),
+      overDayCount,
+    },
   }
 }
 
