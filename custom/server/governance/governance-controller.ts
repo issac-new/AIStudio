@@ -555,4 +555,81 @@ router.post('/matrix-offboard', async (ctx) => {
   }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
 })
 
+
+// ── P10 agent 身份与委托链台账（2026-10-04 九源轮）──
+// 台账层：登记/委托/撤销/链查询/事件流；不接线鉴权（网关/JWT 面不动）。
+import {
+  listIdentities, registerIdentity, updateIdentity, addCredential, revokeCredential,
+  delegate, revokeDelegation, activeDelegationChain, listEvents,
+} from '../agentidentity/agent-identity'
+
+function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
+  return ctx.state?.user?.username ?? 'anonymous'
+}
+
+router.get('/agent-identity', async (ctx) => {
+  ctx.body = { ok: true, identities: listIdentities(), events: listEvents(50) }
+})
+
+router.post('/agent-identity/register', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = registerIdentity({
+    name: String(b.name ?? ''),
+    kind: (['human', 'agent', 'bot', 'service'].includes(String(b.kind)) ? String(b.kind) : 'agent') as 'human' | 'agent' | 'bot' | 'service',
+    owner: String(b.owner ?? ''),
+    toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : [],
+  }, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/agent-identity/:id/update', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = updateIdentity(String(ctx.params.id ?? ''), {
+    owner: b.owner === undefined ? undefined : String(b.owner),
+    toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : undefined,
+  }, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/agent-identity/:id/credential', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = addCredential(String(ctx.params.id ?? ''), {
+    kind: String(b.kind ?? 'api-key') as 'api-key' | 'jwt' | 'matrix-account' | 'token' | 'none',
+    label: String(b.label ?? ''),
+    note: b.note === undefined ? undefined : String(b.note),
+  }, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/agent-identity/:id/credential/revoke', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = revokeCredential(String(ctx.params.id ?? ''), String(b.label ?? ''), govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/agent-identity/:id/delegate', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = delegate(String(ctx.params.id ?? ''), {
+    to: String(b.to ?? ''),
+    scope: String(b.scope ?? ''),
+    expiresAt: typeof b.expiresAt === 'number' ? b.expiresAt : undefined,
+  }, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/agent-identity/:id/delegation/:did/revoke', async (ctx) => {
+  const res = revokeDelegation(String(ctx.params.id ?? ''), String(ctx.params.did ?? ''), govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.get('/agent-identity/:id/chain', async (ctx) => {
+  ctx.body = { ok: true, ...activeDelegationChain(String(ctx.params.id ?? '')) }
+})
+
 export const governanceRoutes = router
