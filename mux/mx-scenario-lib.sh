@@ -485,7 +485,9 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     done
     if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
     if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; nudged=0; fi
-    if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half && -n "$_nroom" )); then
+    # 注意：字符串判空不能进算术上下文（run8 实锤：(( ... && -n "$x" )) 把 -n 解析成
+    # "减变量 n"，set -u 下 n: unbound variable 击杀驱动）——[[ ]] 移出 (( ))。
+    if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "${_nmentions}" >/dev/null 2>&1 || true
       note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次"
       nudged=1
