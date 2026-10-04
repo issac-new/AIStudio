@@ -86,6 +86,12 @@ export const governanceMessages = {
         evalDefinition: '口径',
         evalSource: '数据源',
         evalGapNote: 'gap 指标不造数：口径已立账，采纳后按口径采集',
+        // B6 RSI 分级自检（P9）
+        rsiTitle: 'RSI 分级自检',
+        rsiSub: 'L1 人工 → L5 通用递归；每级判定带本机证据，"机制存在"不等于"级别达成"',
+        rsiEvolvableYes: '可进化',
+        rsiEvolvablePartial: '部分',
+        rsiEvolvableNo: '不可',
         // B4 原语对账
         primitivesTitle: '八工程原语对账',
         primitivesSub: '任务/会话/状态/工具/记忆/权限/评估/审计 × 唯一标识/版本/生命周期/审计追溯——从代码现实归纳',
@@ -509,6 +515,12 @@ export const governanceMessages = {
         evalDefinition: 'Definition',
         evalSource: 'Source',
         evalGapNote: 'Gap metrics are never fabricated: definitions are on record; collect per definition once adopted',
+        // B6 RSI maturity (P9)
+        rsiTitle: 'RSI Maturity Self-Check',
+        rsiSub: 'L1 manual → L5 general recursion; every verdict carries local evidence — a mechanism existing is not a level achieved',
+        rsiEvolvableYes: 'Evolvable',
+        rsiEvolvablePartial: 'Partial',
+        rsiEvolvableNo: 'No',
         // B4 primitives
         primitivesTitle: 'Eight Engineering Primitives',
         primitivesSub: 'task/session/state/tool/memory/permission/evaluation/audit × identity/version/lifecycle/audit — grounded in actual code',

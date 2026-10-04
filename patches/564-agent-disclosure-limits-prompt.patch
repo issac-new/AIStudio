@@ -1,0 +1,33 @@
+diff --git a/agent/system_prompt.py b/agent/system_prompt.py
+index 853462571c..3d8403c1da 100644
+--- a/agent/system_prompt.py
++++ b/agent/system_prompt.py
+@@ -724,6 +724,19 @@ def _join_tier(parts: List[Optional[str]]) -> str:
+     return "\n\n".join(p.strip() for p in parts if p and p.strip())
+ 
+ 
++# HERMES_CUSTOM[disclosure-limits] P12（2026-10-04 九源轮）：讨好者防线——
++# 截断/部分读取/未验证结论必须与主张同屏披露（EqualAI 治理报告"讨好者问题"：
++# 总结长文档因 token 限制只看前 20 页却不说，输出看起来完整）。置于 stable
++# 层（guidance 段后），缓存前缀不受会话内容影响。
++HERMES_DISCLOSURE_GUIDELINES = """## Disclosure of Limits
++Never present partial work as complete, and never let an answer look more finished than the evidence behind it.
++
++- If you read only part of a file, document, or source (token limit, pagination, truncation, or a filter), state exactly what range you actually saw in the same response.
++- If a result is truncated, unverified, or rests on an assumption, label it as such where you state it — not in a later message.
++- Say "I don't know" or "I couldn't verify X" explicitly instead of producing a confident-looking answer.
++- A completed-looking summary is not a substitute for the coverage you were asked for; name what was not covered."""
++
++
+ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) -> Dict[str, str]:
+     """Assemble the system prompt as three ordered cache tiers: ``stable`` (identity,
+     guidance and the coding brief), ``context`` (caller ``system_message``, project
+@@ -743,6 +756,8 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None)
+     _help_guidance_slot = len(stable_parts)
+     stable_parts.append(HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS)
+     stable_parts.extend(_guidance_parts(agent))
++    # HERMES_CUSTOM[disclosure-limits] P12：讨好者防线段（stable 层，见常量定义注释）。
++    stable_parts.append(HERMES_DISCLOSURE_GUIDELINES)
+     skills_prompt = _skills_prompt(agent)
+     # Skill-pointer variant requires BOTH skill_view AND the hermes-agent skill
+     # in the rendered index (pure string check — inherits the index's stability).
