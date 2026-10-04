@@ -38,24 +38,28 @@ const { t, locale } = useI18n()
 const ide = useIdeStore()
 const message = useMessage()
 
-const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
-  { key: 'files', icon: '🗁' },
-  { key: 'review', icon: '⎇' },
-  { key: 'browser', icon: '◍' },
-  { key: 'wiki', icon: 'W' },
-  { key: 'assistant', icon: '✦' },
-  { key: 'storage', icon: '▤' },
-  { key: 'memory', icon: '◈' },
-  { key: 'board', icon: '✎' },
-  { key: 'kanban', icon: '▦' },
-  { key: 'tools', icon: '⚙' },
-  { key: 'workflow', icon: '⟐' },
-  { key: 'mcp', icon: '⌗' },
-  { key: 'terminal', icon: '⌨' },
-  { key: 'hooks', icon: '⚓' },
-  { key: 'slash', icon: '/' },
-  { key: 'trajectory', icon: '∿' },
-  { key: 'ctxarchive', icon: '▤' },
+// 2026-10-04 辅助栏整合（用户裁定：17 平铺页签心智负担过重）——按研发直觉分 5 语义组：
+// 编码（高频默认）/知识/观测/协作/工具与配置。组过滤条单选；tab 本体与 testid 全保留，
+// 深链 setSidePaneTab 不受影响（切组兜底：目标 tab 不在当前组时自动回到「全部」）。
+type SidePaneGroup = 'code' | 'knowledge' | 'observe' | 'collab' | 'config'
+const TABS: Array<{ key: IdeSidePaneTab; icon: string; group: SidePaneGroup }> = [
+  { key: 'files', icon: '🗁', group: 'code' },
+  { key: 'review', icon: '⎇', group: 'code' },
+  { key: 'terminal', icon: '⌨', group: 'code' },
+  { key: 'wiki', icon: 'W', group: 'knowledge' },
+  { key: 'memory', icon: '◈', group: 'knowledge' },
+  { key: 'ctxarchive', icon: '▤', group: 'knowledge' },
+  { key: 'tools', icon: '⚙', group: 'observe' },
+  { key: 'trajectory', icon: '∿', group: 'observe' },
+  { key: 'workflow', icon: '⟐', group: 'observe' },
+  { key: 'kanban', icon: '▦', group: 'collab' },
+  { key: 'assistant', icon: '✦', group: 'collab' },
+  { key: 'board', icon: '✎', group: 'collab' },
+  { key: 'browser', icon: '◍', group: 'config' },
+  { key: 'storage', icon: '▤', group: 'config' },
+  { key: 'mcp', icon: '⌗', group: 'config' },
+  { key: 'hooks', icon: '⚓', group: 'config' },
+  { key: 'slash', icon: '/', group: 'config' },
 ]
 
 // 漂移期本地字典兜底（i18n-observatory）：locale 词表键 tab_trajectory 尚未
@@ -64,6 +68,29 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
 const obsTx = useRunSurfaceText()
 const CTXARCHIVE_TAB_TITLE = { zh: '上下文档案', en: 'Context Archive' } as const
+
+// 组词条（本地字典，漂移期通道先例；组名走说人话口径）
+const GROUPS: Array<{ id: SidePaneGroup | 'all'; zh: string; en: string }> = [
+  { id: 'all', zh: '全部', en: 'All' },
+  { id: 'code', zh: '编码', en: 'Code' },
+  { id: 'knowledge', zh: '知识', en: 'Knowledge' },
+  { id: 'observe', zh: '观测', en: 'Observe' },
+  { id: 'collab', zh: '协作', en: 'Collab' },
+  { id: 'config', zh: '工具与配置', en: 'Tools' },
+]
+const paneLocale = computed(() =>
+  String((locale as unknown as { value?: string } | undefined)?.value ?? 'zh').startsWith('zh') ? 'zh' : 'en')
+const groupFilter = ref<SidePaneGroup | 'all'>('code')
+const visibleTabs = computed(() =>
+  groupFilter.value === 'all' ? TABS : TABS.filter(x => x.group === groupFilter.value))
+// 深链/外部切换兜底：目标页签不在当前组时自动切到其所在组（命令面板/BgTasks 跳
+// workflow 等路径不因分组而断）
+watch(() => ide.sidePane.tab, (k) => {
+  if (!k) return
+  if (!visibleTabs.value.some(x => x.key === k)) {
+    groupFilter.value = TABS.find(x => x.key === k)?.group ?? 'all'
+  }
+})
 function tabTitle(key: IdeSidePaneTab): string {
   if (key === 'trajectory') return obsTx.value.trajTabTitle
   if (key === 'ctxarchive') {
@@ -135,8 +162,17 @@ function focusMainChat(): void {
 <template>
   <aside v-if="ide.sidePane.open" class="ide-sidepane" :class="{ 'is-max': ide.layout.sidepane.maximized }" :style="paneStyle" data-testid="ide-sidepane">
     <div class="ide-sidepane__tabs" role="tablist" :aria-label="t('ide.sidePane.togglePanel')">
+      <div class="ide-sidepane__groups" data-testid="ide-sidepane-groups">
+        <button
+          v-for="g in GROUPS" :key="g.id" type="button"
+          class="ide-sidepane__group"
+          :class="{ 'is-active': groupFilter === g.id }"
+          :data-testid="`ide-sidepane-group-${g.id}`"
+          @click="groupFilter = g.id"
+        >{{ paneLocale === 'zh' ? g.zh : g.en }}</button>
+      </div>
       <button
-        v-for="tab in TABS"
+        v-for="tab in visibleTabs"
         :key="tab.key"
         type="button"
         role="tab"
@@ -149,14 +185,6 @@ function focusMainChat(): void {
       >
         <span class="ide-sidepane__tab-icon" aria-hidden="true">{{ tab.icon }}</span>
       </button>
-      <button
-        type="button"
-        class="ide-sidepane__tab ide-sidepane__tab--add"
-        data-testid="ide-sidepane-add"
-        :title="t('ide.sidePane.addTab')"
-        :aria-label="t('ide.sidePane.addTab')"
-        @click="ide.toggleSidePane('wiki')"
-      >＋</button>
       <span class="ide-sidepane__spacer" />
       <button
         type="button"
@@ -281,6 +309,15 @@ function focusMainChat(): void {
   min-height: 0;
 }
 
+.ide-sidepane__groups {
+  display: flex; gap: 2px; width: 100%; padding: 3px 6px 0 6px; flex-wrap: wrap;
+}
+.ide-sidepane__group {
+  border: 1px solid var(--border-color, #e5e7eb); border-radius: 999px;
+  background: var(--bg-primary, #fff); color: var(--text-muted, #878c99);
+  font-size: 10px; padding: 1px 8px; cursor: pointer; font-family: inherit;
+  &.is-active { color: var(--text-primary, inherit); border-color: var(--text-muted, #878c99); font-weight: 600; }
+}
 .ide-sidepane__tabs {
   display: flex;
   align-items: center;
