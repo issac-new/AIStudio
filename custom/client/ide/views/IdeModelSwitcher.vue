@@ -26,15 +26,31 @@ const open = ref(false)
 // 档位→模型映射默认=目录摊平序 [首/中位/末]，localStorage ide_auto_tier_map 可覆盖。
 const AUTO_MAP_KEY = 'ide_auto_tier_map'
 function tierModels(): Record<CostTier, { provider: string; model: string } | null> {
+  // P3 优先级链：服务端 config.route > localStorage 覆盖 > 目录摊平序兜底
+  const fromServer = (tier: CostTier): { provider: string; model: string } | null => {
+    const r = serverRoute.value[tier]
+    return r ? { provider: r.providerId, model: r.modelId } : null
+  }
+  const served: Partial<Record<CostTier, { provider: string; model: string } | null>> = {
+    economy: fromServer('economy'), standard: fromServer('standard'), power: fromServer('power'),
+  }
+  if (served.economy && served.standard && served.power) return served as Record<CostTier, { provider: string; model: string }>
   try {
     const raw = JSON.parse(localStorage.getItem(AUTO_MAP_KEY) ?? 'null')
     if (raw?.economy?.model && raw?.standard?.model && raw?.power?.model) return raw
   } catch { /* 坏档回默认 */ }
   const flat: Array<{ provider: string; model: string }> = []
   for (const g of groups.value) for (const m of g.models) flat.push({ provider: g.provider, model: m })
-  if (!flat.length) return { economy: null, standard: null, power: null }
+  const merged: Record<CostTier, { provider: string; model: string } | null> = {
+    economy: null, standard: null, power: null,
+  }
+  const ls = (() => { try { return JSON.parse(localStorage.getItem(AUTO_MAP_KEY) ?? 'null') } catch { return null } })()
   const pickAt = (i: number) => flat[Math.min(i, flat.length - 1)] ?? null
-  return { economy: pickAt(0), standard: pickAt(Math.floor((flat.length - 1) / 2)), power: pickAt(flat.length - 1) }
+  const fallback = { economy: pickAt(0), standard: pickAt(Math.floor((flat.length - 1) / 2)), power: pickAt(flat.length - 1) }
+  for (const tier of ['economy', 'standard', 'power'] as const) {
+    merged[tier] = served[tier] ?? (ls?.[tier]?.model ? { provider: ls[tier].provider ?? '', model: ls[tier].model } : null) ?? fallback[tier]
+  }
+  return merged
 }
 
 function judgeComplexity(): 'simple' | 'standard' | 'complex' {
@@ -79,6 +95,8 @@ const currentModel = computed(() => session.value?.model || '')
 
 const engineGroups = ref<EngineCatalogGroup[]>([])
 const usingIndependent = ref(false)
+// P3：服务端档位映射（config.route，engine-models 对话框维护）；优先于 localStorage
+const serverRoute = ref<Partial<Record<'economy' | 'standard' | 'power', { providerId: string; modelId: string }>>>({})
 const manageOpen = ref(false)
 
 // A8：抽成可重入——管理对话框保存后重拉目录（写穿结果立即可选）。
@@ -87,6 +105,7 @@ async function loadCatalog(): Promise<void> {
     const catalog = await fetchEngineCatalog()
     engineGroups.value = catalog.groups
     usingIndependent.value = catalog.independent
+    serverRoute.value = catalog.route ?? {}
   } catch {
     engineGroups.value = []
     usingIndependent.value = false

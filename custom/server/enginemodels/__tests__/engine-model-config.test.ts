@@ -45,3 +45,17 @@ describe('隔离断言+目录投影', () => {
     ])
   })
 })
+
+// ── P3（2026-10-04 九源轮）：route 档位映射校验 ──
+describe('route 档位映射校验', () => {
+  const base = {
+    providers: [{ providerId: 'glm', baseURL: 'https://x', models: [{ modelId: 'flash' }, { modelId: 'max' }] }],
+    defaultModel: { providerId: 'glm', modelId: 'flash' },
+  }
+  it('可达映射通过；provider/模型不可达拦截；缺省档合法', () => {
+    expect(validateEngineModelConfig({ ...base, route: { economy: { providerId: 'glm', modelId: 'flash' } } }).ok).toBe(true)
+    expect(validateEngineModelConfig({ ...base, route: { economy: { providerId: 'nope', modelId: 'flash' } } }).problems.join()).toContain('provider 不存在')
+    expect(validateEngineModelConfig({ ...base, route: { power: { providerId: 'glm', modelId: 'ghost' } } }).problems.join()).toContain('不在')
+    expect(validateEngineModelConfig({ ...base, route: {} }).ok).toBe(true)
+  })
+})

@@ -35,3 +35,45 @@ export function normalizeThinkLevel(v: unknown): ThinkLevel {
   return (typeof v === 'string' && ['low', 'medium', 'high', 'max'].includes(v))
     ? (v as ThinkLevel) : 'medium'
 }
+
+// ── P3 接线（2026-10-04 九源轮）：档位→具体模型解析 ──
+
+/** 档位映射（engine-models config.route 的形状；client/服务端共用）。 */
+export interface TierModelRef { providerId: string; modelId: string }
+export type TierRouteMap = Partial<Record<CostTier, TierModelRef>>
+
+/**
+ * 档位映射归一：只保留"provider+model 都齐"的条目（半截映射丢弃并报告）。
+ * 返回 [归一映射, 丢弃的档位名]。
+ */
+export function normalizeTierRouteMap(raw: unknown): [TierRouteMap, CostTier[]] {
+  const out: TierRouteMap = {}
+  const dropped: CostTier[] = []
+  if (!raw || typeof raw !== 'object') return [out, dropped]
+  for (const tier of ['economy', 'standard', 'power'] as CostTier[]) {
+    const ref = (raw as Record<string, unknown>)[tier]
+    if (!ref || typeof ref !== 'object') continue
+    const providerId = (ref as Record<string, unknown>).providerId
+    const modelId = (ref as Record<string, unknown>).modelId
+    if (typeof providerId === 'string' && providerId && typeof modelId === 'string' && modelId) {
+      out[tier] = { providerId, modelId }
+    } else {
+      dropped.push(tier)
+    }
+  }
+  return [out, dropped]
+}
+
+/**
+ * Auto 路由解析：复杂度 → 档位决策 + 具体模型目标。
+ * 映射缺该档时 target=null（调用方走回落链：localStorage/目录摊平序），
+ * 如实返回 unmapped 而不是猜一个模型。
+ */
+export function resolveAutoRouteTarget(
+  complexity: RoutingFacts['complexity'],
+  routeMap: TierRouteMap,
+): RoutingDecision & { target: TierModelRef | null; unmapped: boolean } {
+  const decision = autoRoute({ complexity })
+  const target = routeMap[decision.tier] ?? null
+  return { ...decision, target, unmapped: target === null }
+}
