@@ -23,6 +23,7 @@ interface RunProgress { runId: string; done: number; total: number; doneSteps: s
 const run = ref<RunProgress | null>(null)
 const now = ref(Math.floor(Date.now() / 1000))
 let timer: ReturnType<typeof setInterval> | null = null
+let runTimer: ReturnType<typeof setInterval> | null = null
 
 async function refreshRun(): Promise<void> {
   try {
@@ -36,8 +37,12 @@ async function refreshRun(): Promise<void> {
 onMounted(() => {
   void refreshRun()
   timer = setInterval(() => { now.value = Math.floor(Date.now() / 1000) }, 5_000)
+  // 2026-10-04 24h 审查：run 只在挂载时取一次，进度/陈旧判定从此冻结——挂载 5 分钟后
+  // 必然误报「无进展」，推演明明在走也看不到。按本段注释声明 30s 轮询补上独立表
+  // （now 的 5s 表只管相对时钟，不打端点）。
+  runTimer = setInterval(() => { void refreshRun() }, 30_000)
 })
-onUnmounted(() => { if (timer) clearInterval(timer); releaseAgentActivity() })
+onUnmounted(() => { if (timer) clearInterval(timer); if (runTimer) clearInterval(runTimer); releaseAgentActivity() })
 
 const latestStep = computed(() => run.value?.doneSteps?.[run.value.doneSteps.length - 1] ?? '')
 const runStaleMin = computed(() => run.value ? Math.floor((now.value - run.value.updatedTs) / 60) : 0)
