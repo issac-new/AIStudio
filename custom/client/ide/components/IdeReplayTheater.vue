@@ -4,11 +4,11 @@
      双相快照投影）。作为模组带一员（priority 55）：无快照不占位。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useChatStore } from '@/hermes/stores/chat'
+import { useChatStore } from '@/stores/hermes/chat'
 import { useI18n } from 'vue-i18n'
 
 const { locale } = useI18n()
-const T = computed(() => (locale.value.startsWith('zh')
+const T = computed(() => ((((locale as { value?: string } | undefined)?.value) ?? 'zh').startsWith('zh')
   ? {
       open: '回放文件修改', none: '本会话暂无回合快照', steps: '轮', files: (n: number) => `${n} 个文件`,
       lines: (a: number, d: number) => `+${a} / -${d}`, added: '新增', removed: '删除', changed: '修改',
