@@ -389,7 +389,7 @@ mx_provision_product_dist() {
 mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 563-agent-response-delivery-fallback.patch; do
+  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch; do
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
