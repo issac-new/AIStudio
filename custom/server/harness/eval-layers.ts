@@ -36,7 +36,12 @@ export interface EvalLayersInputs {
   days: number
   dispatch: { dispatched: number; deliveredRate: number | null; failedRate: number | null } | null
   tokenTotal: number | null
+  /** P6a：优先 ≤24h 完成子集口径（全量 p95 被长周期挂板项拉失义） */
   waitP95Seconds: number | null
+  /** 全量口径（长周期含入）；null=账缺 */
+  waitP95SecondsAll: number | null
+  /** 超 24h 完成的长周期条数（口径分层的透明度字段） */
+  waitOverDayCount: number | null
   reworkHours: number | null
   interventionsCount: number | null
 }
@@ -128,7 +133,8 @@ export function buildEvalLayers(inputs: EvalLayersInputs): EvalLayersReport {
           status: 'instrumented',
           value: inputs.waitP95Seconds,
           unit: 's',
-          source: 'harness/cost-accounts 等待时延账（看板完成时延 p95）',
+          source: 'harness/cost-accounts 等待时延账（≤24h 完成子集 p95；长周期项另列）',
+          note: inputs.waitOverDayCount != null ? `超 24h 长周期 ${inputs.waitOverDayCount} 条不计入（全量 p95=${inputs.waitP95SecondsAll ?? '—'}s）` : undefined,
         },
         {
           key: 'reworkHours',
@@ -217,7 +223,7 @@ export async function collectEvalLayersInputs(days = 7): Promise<EvalLayersInput
     auditLog({ limit: 500 }).catch(() => null),
   ])
   const tokenData = costs?.accounts.find((a) => a.key === 'token')?.data as { totalTokens: number | null } | undefined
-  const waitData = costs?.accounts.find((a) => a.key === 'waitLatency')?.data as { p95Seconds: number | null } | undefined
+  const waitData = costs?.accounts.find((a) => a.key === 'waitLatency')?.data as { p95Seconds: number | null; p95SecondsWithinDay?: number | null; overDayCount?: number | null } | undefined
   const reworkData = costs?.accounts.find((a) => a.key === 'rework')?.data as { reworkHours: number | null } | undefined
   let interventionsCount: number | null = null
   if (audit && audit.sources.some((s) => s.available)) {
@@ -228,7 +234,9 @@ export async function collectEvalLayersInputs(days = 7): Promise<EvalLayersInput
     days: safeDays,
     dispatch: windowDispatch(safeDays),
     tokenTotal: tokenData?.totalTokens ?? null,
-    waitP95Seconds: waitData?.p95Seconds ?? null,
+    waitP95Seconds: waitData?.p95SecondsWithinDay ?? waitData?.p95Seconds ?? null,
+    waitP95SecondsAll: waitData?.p95Seconds ?? null,
+    waitOverDayCount: typeof waitData?.overDayCount === 'number' ? waitData.overDayCount : null,
     reworkHours: reworkData?.reworkHours ?? null,
     interventionsCount,
   }

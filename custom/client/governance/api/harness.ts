@@ -63,7 +63,7 @@ export type AccountDataDto =
     }
   | { sampleCap: number; events: number | null; byAction: Array<{ action: string; count: number }> }
   | { auditToolActions: number | null; traceDir: string | null; traceFiles: number | null; traceSpanCount: number | null }
-  | { boards: string[]; tasksDone: number | null; avgSeconds: number | null; medianSeconds: number | null; p95Seconds: number | null }
+  | { boards: string[]; tasksDone: number | null; avgSeconds: number | null; medianSeconds: number | null; p95Seconds: number | null; p95SecondsWithinDay?: number | null; overDayCount?: number | null }
   | { requests: number | null; reworkHours: number | null }
   | { severityBuckets: { high: number; medium: number; low: number }; freezeWindows: { total: number | null; active: number | null } }
 
