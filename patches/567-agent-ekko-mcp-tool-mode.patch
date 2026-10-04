@@ -1,0 +1,201 @@
+diff --git a/packages/ekko-agent/src/config.ts b/packages/ekko-agent/src/config.ts
+index 9a8132c9..3721cb7c 100644
+--- a/packages/ekko-agent/src/config.ts
++++ b/packages/ekko-agent/src/config.ts
+@@ -135,6 +135,10 @@ export interface EkkoMcpServerConfig {
+   url?: string
+   headers?: Record<string, string>
+   enabled: boolean
++  /** HERMES_CUSTOM[mcp-tool-mode] P2（2026-10-04 九源轮）：direct（默认，每工具
++   *  一个模型可见定义）/ proxy（单代理收拢）/ defer（装配期不连接不枚举，
++   *  search/call 双元工具按需取用——工具说明也是上下文，按需分配）。 */
++  tool_mode?: 'direct' | 'proxy' | 'defer'
+ }
+ 
+ export interface EkkoMcpProfileConfig {
+diff --git a/packages/ekko-agent/src/tools/mcp.ts b/packages/ekko-agent/src/tools/mcp.ts
+index 65140e73..7aa342e0 100644
+--- a/packages/ekko-agent/src/tools/mcp.ts
++++ b/packages/ekko-agent/src/tools/mcp.ts
+@@ -8,6 +8,7 @@ interface StdioMcpServerConfig {
+   args: string[]
+   env: Record<string, string>
+   supportsParallelToolCalls: boolean
++  toolMode: McpToolMode
+ }
+ 
+ interface StreamableHttpMcpServerConfig {
+@@ -15,11 +16,21 @@ interface StreamableHttpMcpServerConfig {
+   url: string
+   headers: Record<string, string>
+   supportsParallelToolCalls: boolean
++  toolMode: McpToolMode
+ }
+ 
+ type McpServerConfig = StdioMcpServerConfig | StreamableHttpMcpServerConfig
+ type McpClientTransport = StdioClientTransport | StreamableHTTPClientTransport
+ 
++// HERMES_CUSTOM[mcp-tool-mode] P2（2026-10-04 九源轮）：工具暴露模式。
++//   direct = 现行为（每工具一个模型可见定义）；
++//   proxy  = 强制单代理工具（复用既有 McpProxyTool 收拢——全部 schema 仍入参
++//            anyOf，省条目数不省描述预算）；
++//   defer  = Pi 延迟加载语义：装配时不连接不枚举（零首请求阻塞），注册
++//            `mcp__<server>_search`（按需列名+描述）与 `mcp__<server>_call`
++//            （免 schema 直调）两元工具——工具说明也是上下文，按需分配。
++export type McpToolMode = 'direct' | 'proxy' | 'defer'
++
+ const DEFAULT_MCP_TIMEOUT_MS = 30_000
+ const MODEL_TOOL_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/
+ const MCP_PROXY_PREFIX = 'mcp__'
+@@ -43,6 +54,8 @@ function normalizeServerType(value: unknown): string {
+ function normalizeServerConfig(value: unknown): McpServerConfig | null {
+   if (!isRecord(value) || value.enabled === false) return null
+   const supportsParallelToolCalls = value.supports_parallel_tool_calls === true
++  const rawMode = typeof value.tool_mode === 'string' ? value.tool_mode.trim().toLowerCase() : ''
++  const toolMode: McpToolMode = rawMode === 'proxy' || rawMode === 'defer' ? rawMode : 'direct'
+   const configuredType = normalizeServerType(value.type)
+   const command = typeof value.command === 'string' ? value.command.trim() : ''
+   const rawUrl = typeof value.url === 'string' ? value.url.trim() : ''
+@@ -57,6 +70,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
+         url: url.toString(),
+         headers: normalizeStringRecord(value.headers),
+         supportsParallelToolCalls,
++        toolMode,
+       }
+     } catch {
+       return null
+@@ -71,6 +85,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
+     args: Array.isArray(value.args) ? value.args.map(arg => String(arg)) : [],
+     env: normalizeProcessEnv(value.env),
+     supportsParallelToolCalls,
++    toolMode,
+   }
+ }
+ 
+@@ -288,6 +303,97 @@ class McpProxyTool implements AgentTool {
+   }
+ }
+ 
++// HERMES_CUSTOM[mcp-tool-mode] P2：defer 双元工具（search 按需列示 / call 免 schema 直调）。
++class McpDeferToolset {
++  private catalogCache: { at: number; tools: any[] } | null = null
++  private readonly catalogTtlMs = 60_000
++
++  constructor(
++    private readonly safeName: string,
++    private readonly serverName: string,
++    private readonly session: McpClientSession,
++  ) {}
++
++  private async catalog(timeoutMs: number): Promise<any[]> {
++    if (this.catalogCache && Date.now() - this.catalogCache.at < this.catalogTtlMs) return this.catalogCache.tools
++    const tools = await this.session.listTools(timeoutMs)
++    this.catalogCache = { at: Date.now(), tools }
++    return tools
++  }
++
++  async search(input: Record<string, unknown>, timeoutMs: number): Promise<AgentToolResult> {
++    const query = typeof input.query === 'string' ? input.query.trim().toLowerCase() : ''
++    const limit = typeof input.limit === 'number' && input.limit > 0 ? Math.min(Math.floor(input.limit), 100) : 50
++    try {
++      const tools = await this.catalog(timeoutMs)
++      const matched = tools
++        .filter(tool => {
++          const name = String(tool.name || '')
++          const desc = String(tool.description || '')
++          return !query || name.toLowerCase().includes(query) || desc.toLowerCase().includes(query)
++        })
++        .slice(0, limit)
++      const lines = matched.map(tool => `${String(tool.name)}: ${String(tool.description || 'No description provided.')}`)
++      const content = [
++        `MCP server "${this.serverName}" exposes ${tools.length} tool(s); ${matched.length} shown.`,
++        ...lines,
++        matched.length === 0 ? 'No match — try a shorter query or omit it to list all.' : '',
++      ].filter(Boolean).join('\n')
++      return { ok: true, content }
++    } catch (error) {
++      const message = error instanceof Error ? error.message : String(error)
++      return { ok: false, content: message, error: message }
++    }
++  }
++
++  async call(input: Record<string, unknown>, timeoutMs: number): Promise<AgentToolResult> {
++    const remoteName = typeof input.tool === 'string' ? input.tool : ''
++    if (!remoteName) {
++      return { ok: false, content: 'Missing remote tool name ("tool").', error: 'Missing remote tool name' }
++    }
++    const args = isRecord(input.arguments) ? input.arguments : {}
++    return await this.session.callTool(remoteName, args, timeoutMs)
++  }
++
++  tools(supportsParallelToolCalls: boolean): AgentTool[] {
++    const concurrency: AgentTool['concurrency'] = supportsParallelToolCalls ? 'parallel' : 'serial'
++    const searchTool: AgentTool = {
++      concurrency,
++      definition: {
++        name: `${this.safeName}_search`,
++        description: `Discover tools on the ${this.serverName} MCP server (names + descriptions, optional query filter). Call this before ${this.safeName}_call when unsure of the tool name.`,
++        parameters: {
++          type: 'object',
++          properties: {
++            query: { type: 'string', description: 'Case-insensitive substring filter on name/description; omit to list all.' },
++            limit: { type: 'number', description: 'Max entries to return (default 50, cap 100).' },
++          },
++        },
++      },
++      execute: async (input: Record<string, unknown>, context: AgentToolContext = {}) =>
++        await this.search(input, context.timeoutMs || DEFAULT_MCP_TIMEOUT_MS),
++    }
++    const callTool: AgentTool = {
++      concurrency,
++      definition: {
++        name: `${this.safeName}_call`,
++        description: `Call a tool on the ${this.serverName} MCP server by exact name; arguments are forwarded as-is.`,
++        parameters: {
++          type: 'object',
++          properties: {
++            tool: { type: 'string', description: 'Exact remote MCP tool name (see ' + `${this.safeName}_search` + ').' },
++            arguments: { type: 'object', description: 'Arguments object forwarded unchanged to the remote tool.' },
++          },
++          required: ['tool'],
++        },
++      },
++      execute: async (input: Record<string, unknown>, context: AgentToolContext = {}) =>
++        await this.call(input, context.timeoutMs || DEFAULT_MCP_TIMEOUT_MS),
++    }
++    return [searchTool, callTool]
++  }
++}
++
+ function modelSafeToolName(name: string): boolean {
+   return MODEL_TOOL_NAME_PATTERN.test(name)
+ }
+@@ -349,11 +455,27 @@ export function createMcpToolProvider(): AgentToolProvider {
+           sessions.set(serverName, session)
+         }
+ 
++        // HERMES_CUSTOM[mcp-tool-mode] P2：defer 模式——装配期不连接不枚举
++        //（零首请求阻塞、零描述预算），注册 search/call 双元工具按需取用。
++        if (server.toolMode === 'defer') {
++          const safe = `${MCP_PROXY_PREFIX}${serverName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'server'}`
++          const toolset = new McpDeferToolset(safe.slice(0, 58), serverName, session)
++          for (const tool of toolset.tools(server.supportsParallelToolCalls)) {
++            const name = tool.definition.name
++            if (!usedNames.has(name)) {
++              usedNames.add(name)
++              tools.push(tool)
++            }
++          }
++          continue
++        }
++
+         try {
+           const remoteTools = (await session.listTools(timeoutMs))
+             .filter(tool => !!tool?.name)
+           scope?.throwIfAborted()
+-          const requiresProxy = remoteTools.some(tool => {
++          // P2 proxy 模式：强制单代理收拢（config 显式要求）
++          const requiresProxy = server.toolMode === 'proxy' || remoteTools.some(tool => {
+             const name = String(tool.name)
+             return !modelSafeToolName(name) || usedNames.has(name)
+           })
