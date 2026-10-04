@@ -490,3 +490,5 @@
 565-agent-ekko-tool-waterfall.patch
 # 566=P1 工具执行瀑布(server 注入)：ekko manager 两处 createRuntime 注入 overlay 观测钩子(v1 只观测不拦截)。
 566-server-manager-tool-hooks-inject.patch
+# 567=P2 MCP 工具暴露模式：server 配置增 tool_mode=direct|proxy|defer——defer=Pi 延迟加载（装配期不连接不枚举零阻塞，mcp__<srv>_search/_call 双元工具按需取用）；proxy=复用既有单代理收拢。
+567-agent-ekko-mcp-tool-mode.patch
