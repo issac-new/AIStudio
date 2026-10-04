@@ -43,6 +43,11 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleCacheAttribution(ctx)
       return
     }
+    // ── P5 编辑时间轴回放（Replay Theater，2026-10-04 九源轮）──
+    if (method === 'GET' && /^\/api\/ide\/replay\/[^/]+$/.test(path)) {
+      await handleReplayGet(ctx, decodeURIComponent(path.slice('/api/ide/replay/'.length)))
+      return
+    }
     // ── B7：自定义斜杠命令（zcode CommandsSection 对照）──
     if (method === 'GET' && path === '/api/ide/slash-commands') {
       await handleSlashCommandsGet(ctx)
@@ -64,6 +69,17 @@ function slashCommandStorePath(): string {
     // 3 级指向 custom/（无 runtime/，写盘 ENOENT 被错误链吞成 404；同根因即历史
     // 「PUT /api/ide/engine-models 真进程 404 学理未解」悬案病灶）。
     : resolve(__dirname, '../../../../runtime/ide-slash-commands.json')
+}
+
+async function handleReplayGet(ctx: Context, sessionId: string): Promise<void> {
+  const { listTurnSnapshots, buildReplayTimeline } = await import('../../filehistory/replay-theater')
+  try {
+    if (!sessionId.trim()) { ctx.status = 400; ctx.body = { ok: false, detail: 'sessionId 必填' }; return }
+    ctx.body = { ok: true, ...buildReplayTimeline(sessionId, listTurnSnapshots(sessionId)) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, detail: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 async function handleSlashCommandsGet(ctx: Context): Promise<void> {
