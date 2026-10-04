@@ -49,15 +49,22 @@ function storePath(): string {
 }
 
 function readStore(): StoreShape {
+  let raw: Partial<StoreShape>
   try {
-    const raw = JSON.parse(readFileSync(storePath(), 'utf8')) as Partial<StoreShape>
-    return {
-      sets: Array.isArray(raw.sets) ? raw.sets : [],
-      attempts: raw.attempts && typeof raw.attempts === 'object' ? raw.attempts : {},
-      nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
+    raw = JSON.parse(readFileSync(storePath(), 'utf8')) as Partial<StoreShape>
+  } catch (e) {
+    // 仅"首装无文件"按空账处理；损坏/占用（EBUSY/EPERM 等，含并发 rename 竞态
+    // 中途读到半态）如实上抛（500）——静默当空账会让下一次 createSet 的全量
+    // writeStore 把密封题库整体覆写清零且 nextSeq 重置撞号（密封面不可恢复）
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { sets: [], attempts: {}, nextSeq: 1 }
     }
-  } catch {
-    return { sets: [], attempts: {}, nextSeq: 1 }
+    throw e
+  }
+  return {
+    sets: Array.isArray(raw.sets) ? raw.sets : [],
+    attempts: raw.attempts && typeof raw.attempts === 'object' ? raw.attempts : {},
+    nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
   }
 }
 
