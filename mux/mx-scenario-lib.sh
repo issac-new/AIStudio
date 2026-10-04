@@ -14,7 +14,19 @@ SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
 sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
-sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
+# 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）
+mx_write_progress() {
+  [[ -n "${HERMES_ROOT:-}" && -n "${STATE:-}" ]] || return 0
+  mkdir -p "$HERMES_ROOT" 2>/dev/null || true
+  local _n=0 _list="" _s
+  for _s in ${MX_STEP_ORDER:-}; do
+    if grep -q "^${_s}_done=" "$STATE" 2>/dev/null; then _n=$((_n+1)); _list="${_list}\"$_s\","; fi
+  done
+  printf '{"run_id":"%s","done":%d,"total":%d,"done_steps":[%s],"updated_ts":%d}\n' \
+    "${RUN_ID:-}" "$_n" "$(echo ${MX_STEP_ORDER:-} | wc -w | tr -d ' ')" "${_list%,}" "$(date +%s)" \
+    > "$HERMES_ROOT/run-progress.json.tmp" 2>/dev/null && mv "$HERMES_ROOT/run-progress.json.tmp" "$HERMES_ROOT/run-progress.json" 2>/dev/null || true
+}
+sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; mx_write_progress; }
 # 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
 # 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
 mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
