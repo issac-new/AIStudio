@@ -1,0 +1,31 @@
+diff --git a/packages/server/src/modules/ekko/services/manager.ts b/packages/server/src/modules/ekko/services/manager.ts
+index 1411b894..3f399fa5 100644
+--- a/packages/server/src/modules/ekko/services/manager.ts
++++ b/packages/server/src/modules/ekko/services/manager.ts
+@@ -24,6 +24,8 @@ import {
+ } from '../../studio/public/profile-config'
+ import { denyPendingEkkoToolApprovals } from './approvals'
+ import { cancelPendingEkkoClarifications } from './clarifications'
++// HERMES_CUSTOM[tool-waterfall] P1：overlay 观测钩子（v1 只观测不拦截）
++import { ekkoToolExecuteHooks } from '../../../custom/toolpipeline/tool-hooks'
+ 
+ export interface GlobalEkkoAgentOptions {
+   setup: EkkoAgentSetup
+@@ -86,6 +88,8 @@ export class GlobalEkkoAgent {
+     try {
+       const runtime = this.setup.createRuntime({
+         ...options,
++        // HERMES_CUSTOM[tool-waterfall] P1：瀑布观测钩子（经 setup 的 runtimeOverrides 直通 AgentRuntime）
++        toolExecuteHooks: options.toolExecuteHooks ?? ekkoToolExecuteHooks,
+         jev: await this.jevRuntimeConfig(),
+         profile: this.options.profile || 'default',
+         memory: options.memory ?? false,
+@@ -174,6 +178,8 @@ export class GlobalEkkoAgent {
+       return this.runtime
+     }
+     this.runtime = this.setup.createRuntime({
++      // HERMES_CUSTOM[tool-waterfall] P1：瀑布观测钩子（常驻 runtime 路径）
++      toolExecuteHooks: ekkoToolExecuteHooks,
+       jev: jev ?? false,
+       profile: this.options.profile || 'default',
+       memory: this.memory ?? false,
