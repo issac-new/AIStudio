@@ -39,7 +39,18 @@ def _gates_path(conn: sqlite3.Connection, task_id: str) -> Optional[Path]:
     except sqlite3.OperationalError:
         return None
     board = (row[0] if row else None) or "default"
-    p = Path(os.path.expanduser(f"~/.hermes/kanban/boards/{board}/gates.json"))
+    # 2026-10-04 24h 审查：改走 kanban_db.kanban_home()（HERMES_KANBAN_HOME >
+    # get_default_hermes_root()，后者尊重 HERMES_HOME/平台缺省）。原先硬编码
+    # ~/.hermes 在多路复用 profile / SIM 隔离（HERMES_HOME 指 SIM 根）下读错树：
+    # 门文件缺席时声明式门 fail-open 静默失效，宿主树同名板有 gates.json 时则
+    # 反向吃到他树之门。kanban_db 在调用点函数内 import 本模块，这里同样函数内
+    # 反向 import，避免模块级循环。
+    try:
+        from hermes_cli.kanban_db import kanban_home
+        boards_root = kanban_home() / "kanban" / "boards"
+    except Exception:
+        boards_root = Path(os.path.expanduser("~/.hermes/kanban/boards"))
+    p = boards_root / board / "gates.json"
     return p if p.exists() else None
 
 

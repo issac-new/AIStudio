@@ -480,9 +480,10 @@
 557-locale-ux-menu.patch
 # 562=推演运行态路由挂载（后台感知③）：GET /api/sim/run-progress 读 \$HERMES_HOME/run-progress.json（harness sset 单写契约），fail-soft 空态。
 562-server-sim-run-progress-route.patch
-# 563=P12 讨好者防线(ekko TS 侧)：buildSystemPrompt 常驻 Disclosure of Limits 段(截断/部分读取/未验证同屏披露)。
-563-agent-ekko-disclosure-limits-prompt.patch
-# 564=P12 讨好者防线(hermes-agent python 侧)：system_prompt.py stable 层追加 HERMES_DISCLOSURE_GUIDELINES(与 563 同文)。
-564-agent-disclosure-limits-prompt.patch
 # 564=响应投递丢弃根治（run8 五起停摆根因）：纯附件指令型响应在附件投递失败/被滤时整条蒸发（房间静默=假停摆，回执/RACI 行随消息丢失）——丢弃分支加原文兜底投递
+# [2026-10-04 24h 审查] 61419f38 曾把在途分支的 series 尾巴带上 main 而未带文件
+# （563-agent-ekko-disclosure-limits-prompt / 564-agent-disclosure-limits-prompt 两行
+# 悬空，inject.mjs 对缺文件硬失败）且 564 号与 disclosure 撞号——两行移除，随在途
+# 分支（feat/nine-sources-p1-p12-exec）合并时再一并落地；守门见
+# custom/__tests__/patches-series-guard.test.ts。
 564-agent-response-delivery-fallback.patch
