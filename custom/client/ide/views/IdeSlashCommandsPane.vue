@@ -3,14 +3,16 @@
 // 语义：name + prompt 模板；/ide 输入框 /name 选中后模板文本写入输入框
 // （ChatInput patch 500 消费本 store）。保存=POST /api/ide/slash-commands/save
 // 全量替换（服务端校验+原子写）；校验问题逐条可见。
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   loadSlashCommands, saveSlashCommands,
   __resetSlashCommandsForTest, type SlashCommandEntry,
 } from '../store/slash-commands'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+// P11：内置命令徽章（注入词表不动，本地字典直取——i18n-approvals 同款先例）
+const builtinLabel = computed(() => ((locale as { value?: string } | undefined)?.value ?? 'zh').startsWith('zh') ? '内置' : 'built-in')
 
 const rows = ref<SlashCommandEntry[]>([])
 const dirty = ref(false)
@@ -67,14 +69,15 @@ async function reload(): Promise<void> {
 
     <div v-if="!rows.length" class="ide-slash__empty" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
 
-    <div v-for="(c, i) in rows" :key="i" class="ide-slash__row" :data-testid="`ide-slash-row-${i}`">
+    <div v-for="(c, i) in rows" :key="i" class="ide-slash__row" :class="{ 'ide-slash__row--builtin': c.builtin }" :data-testid="`ide-slash-row-${i}`">
       <div class="ide-slash__line">
         <span class="ide-slash__slash">/</span>
-        <input v-model="c.name" placeholder="name（小写字母/数字/-/_）" data-testid="ide-slash-name" @input="markDirty" />
-        <button type="button" data-testid="ide-slash-del" title="删除" @click="removeRow(i)">🗑</button>
+        <input v-model="c.name" placeholder="name（小写字母/数字/-/_）" data-testid="ide-slash-name" :disabled="!!c.builtin" @input="markDirty" />
+        <span v-if="c.builtin" class="ide-slash__builtin" :data-testid="`ide-slash-builtin-${c.name}`">{{ builtinLabel }}</span>
+        <button v-if="!c.builtin" type="button" data-testid="ide-slash-del" title="删除" @click="removeRow(i)">🗑</button>
       </div>
-      <input v-model="c.description" class="ide-slash__desc" placeholder="一句话说明（可空）" data-testid="ide-slash-desc" @input="markDirty" />
-      <textarea v-model="c.prompt" rows="3" placeholder="prompt 模板（选中后写入输入框的文本）" data-testid="ide-slash-prompt" @input="markDirty" />
+      <input v-model="c.description" class="ide-slash__desc" placeholder="一句话说明（可空）" data-testid="ide-slash-desc" :disabled="!!c.builtin" @input="markDirty" />
+      <textarea v-model="c.prompt" rows="3" placeholder="prompt 模板（选中后写入输入框的文本）" data-testid="ide-slash-prompt" :disabled="!!c.builtin" @input="markDirty" />
     </div>
 
     <ul v-if="problems.length" class="ide-slash__problems" data-testid="ide-slash-problems">
@@ -110,4 +113,6 @@ async function reload(): Promise<void> {
 .ide-slash__savebar { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .ide-slash__savebar button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 4px; padding: 2px 14px; cursor: pointer; }
 .ide-slash__ok { color: var(--primary-color, #18a058); font-size: 11px; }
+.ide-slash__row--builtin { border-style: dashed; opacity: 0.85; }
+.ide-slash__builtin { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; color: var(--text-muted, #878c99); flex-shrink: 0; }
 </style>

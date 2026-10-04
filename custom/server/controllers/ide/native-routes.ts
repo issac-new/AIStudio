@@ -67,24 +67,26 @@ function slashCommandStorePath(): string {
 }
 
 async function handleSlashCommandsGet(ctx: Context): Promise<void> {
+  // P11：GET 合并内置命令（/skill-draft 等内置在前；同名用户版本优先）
+  const { normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+  const { mergeBuiltins } = await import('../../slashcmd/builtins')
+  let userCommands: ReturnType<typeof normalizeSlashCommands> = []
   const store = slashCommandStorePath()
-  if (!existsSync(store)) {
-    ctx.body = { ok: true, commands: [] }
-    return
+  if (existsSync(store)) {
+    try {
+      const raw = JSON.parse(readFileSync(store, 'utf8')) as { commands?: unknown }
+      userCommands = normalizeSlashCommands(raw.commands)
+    } catch { /* 存储坏档按空表处理（既有行为） */ }
   }
-  try {
-    const raw = JSON.parse(readFileSync(store, 'utf8')) as { commands?: unknown }
-    const { normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
-    ctx.body = { ok: true, commands: normalizeSlashCommands(raw.commands) }
-  } catch {
-    ctx.body = { ok: true, commands: [] }
-  }
+  ctx.body = { ok: true, commands: mergeBuiltins(userCommands) }
 }
 
 async function handleSlashCommandsSave(ctx: Context): Promise<void> {
   const { validateSlashCommands, normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+  const { stripBuiltins } = await import('../../slashcmd/builtins')
   const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
-  const commands = normalizeSlashCommands(body.commands)
+  // P11：先剥内置条目（面板回传全量表时内置项不落用户存储）
+  const commands = normalizeSlashCommands(stripBuiltins(Array.isArray(body.commands) ? body.commands : []))
   const problems = validateSlashCommands(commands)
   if (problems.length) {
     ctx.status = 400
