@@ -12,6 +12,7 @@ import { auditLog } from '../governance/governance-audit'
 import { readDispatchLedger, type DispatchLedgerEntry } from '../governance/dispatch-ledger'
 import { dispatchStats } from '../governance/governance-analytics'
 import { collectCostAccounts, isHumanInterventionEvent } from './cost-accounts'
+import { collectGovernanceMetrics } from './gov-metrics'
 
 export type EvalLayerKey = 'result' | 'execution' | 'resource' | 'governance'
 
@@ -44,6 +45,13 @@ export interface EvalLayersInputs {
   waitOverDayCount: number | null
   reworkHours: number | null
   interventionsCount: number | null
+  /** P6b（2026-10-04 九源轮）：三可算治理指标（gov-metrics 采集；null=账本缺席/分母为 0） */
+  routeViolation?: { value: number | null; numerator: number; denominator: number; note: string } | null
+  recoverySuccess?: { value: number | null; numerator: number; denominator: number; note: string } | null
+  humanTakeover?: { value: number | null; numerator: number; denominator: number; note: string } | null
+  /** 两个仍 gap 指标的采集点缺口说明（loop 侧加账后接入） */
+  duplicateSideEffectGapReason?: string
+  budgetStopGapReason?: string
 }
 
 export interface EvalLayersReport {
@@ -101,19 +109,21 @@ export function buildEvalLayers(inputs: EvalLayersInputs): EvalLayersReport {
       metrics: [
         {
           key: 'routeViolationRate',
-          status: 'gap',
-          value: null,
+          status: inputs.routeViolation ? 'instrumented' : 'gap',
+          value: inputs.routeViolation?.value ?? null,
           unit: 'ratio',
-          source: 'loop 引擎事件日志（eid 幂等 + predicate 路由断言，未聚合成率）',
+          source: inputs.routeViolation ? 'harness/gov-metrics（loop graph_events 聚合）' : 'loop 引擎事件日志（账本缺席）',
           definition: GOVERNANCE_METRIC_DEFINITIONS.routeViolationRate,
+          note: inputs.routeViolation?.note,
         },
         {
           key: 'budgetStopAccuracy',
           status: 'gap',
           value: null,
           unit: 'ratio',
-          source: 'loop 引擎 BudgetGuard（停止事件已留痕，未聚合成率）',
+          source: 'loop 引擎 BudgetGuard',
           definition: GOVERNANCE_METRIC_DEFINITIONS.budgetStopAccuracy,
+          note: inputs.budgetStopGapReason,
         },
       ],
     },
@@ -161,24 +171,27 @@ export function buildEvalLayers(inputs: EvalLayersInputs): EvalLayersReport {
           status: 'gap',
           value: null,
           unit: 'ratio',
-          source: 'loop 事件日志 eid 幂等去重（命中数已挡，未对外聚合）',
+          source: 'loop 事件日志 eid 幂等去重',
           definition: GOVERNANCE_METRIC_DEFINITIONS.duplicateSideEffectRate,
+          note: inputs.duplicateSideEffectGapReason,
         },
         {
           key: 'recoverySuccessRate',
-          status: 'gap',
-          value: null,
+          status: inputs.recoverySuccess ? 'instrumented' : 'gap',
+          value: inputs.recoverySuccess?.value ?? null,
           unit: 'ratio',
-          source: 'loop checkpoint/session-resume（恢复路径在，无成功率口径采集）',
+          source: inputs.recoverySuccess ? 'harness/gov-metrics（中断 run 终态聚合）' : 'loop checkpoint/session-resume（账本缺席）',
           definition: GOVERNANCE_METRIC_DEFINITIONS.recoverySuccessRate,
+          note: inputs.recoverySuccess?.note,
         },
         {
           key: 'humanTakeoverRate',
-          status: 'gap',
-          value: null,
+          status: inputs.humanTakeover ? 'instrumented' : 'gap',
+          value: inputs.humanTakeover?.value ?? null,
           unit: 'ratio',
-          source: '审批收件箱（人工裁决已落台账，分母未按"不可判定状态"口径采集）',
+          source: inputs.humanTakeover ? 'harness/gov-metrics（审批台账 human/auto_pass）' : '审批收件箱（台账缺席）',
           definition: GOVERNANCE_METRIC_DEFINITIONS.humanTakeoverRate,
+          note: inputs.humanTakeover?.note,
         },
       ],
     },
@@ -230,6 +243,7 @@ export async function collectEvalLayersInputs(days = 7): Promise<EvalLayersInput
     const sinceMs = Date.now() - safeDays * 86400000
     interventionsCount = audit.events.filter((e) => e.ts >= sinceMs && isHumanInterventionEvent(e)).length
   }
+  const gov = collectGovernanceMetrics(safeDays)
   return {
     days: safeDays,
     dispatch: windowDispatch(safeDays),
@@ -239,5 +253,10 @@ export async function collectEvalLayersInputs(days = 7): Promise<EvalLayersInput
     waitOverDayCount: typeof waitData?.overDayCount === 'number' ? waitData.overDayCount : null,
     reworkHours: reworkData?.reworkHours ?? null,
     interventionsCount,
+    routeViolation: gov.routeViolationRate,
+    recoverySuccess: gov.recoverySuccessRate,
+    humanTakeover: gov.humanTakeoverRate,
+    duplicateSideEffectGapReason: gov.duplicateSideEffectRate.gapReason,
+    budgetStopGapReason: gov.budgetStopAccuracy.gapReason,
   }
 }
