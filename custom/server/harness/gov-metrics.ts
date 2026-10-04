@@ -12,12 +12,31 @@
 // 仍 gap（采集点不存在，不造数）：
 //   - duplicateSideEffectRate：append 端 eid 去重不落"拒绝账"（graph_events 无 rejected 记录）
 //   - budgetStopAccuracy：BudgetGuard 停止未发图事件（handleBudgetExceed 无 eventLog 写入）
-import { DatabaseSync } from 'node:sqlite'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { delimiter as pathDelimiter, join } from 'path'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { resolveLoopBaseDir } from '../loop/paths'
+
+// node:sqlite 与 run-undo/change-governance-store 等同款惰性加载：守门环境无该
+// 内建时按库降级（单库跳过），而非模块链顶层 import 直接炸掉 harness 路由装配
+// （本模块经 eval-layers → harness-controller → bootstrap routes 静态可达）。
+type DatabaseSyncCtor = new (path: string, options?: { open?: boolean; readOnly?: boolean }) => {
+  prepare: (sql: string) => { all: () => unknown[] }
+  close: () => void
+}
+let sqliteCtor: DatabaseSyncCtor | null | undefined
+function loadSqlite(): DatabaseSyncCtor | null {
+  if (sqliteCtor !== undefined) return sqliteCtor
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('node:sqlite') as { DatabaseSync: DatabaseSyncCtor }
+    sqliteCtor = mod.DatabaseSync
+  } catch {
+    sqliteCtor = null
+  }
+  return sqliteCtor
+}
 
 export interface GovMetricValue {
   value: number | null
@@ -117,15 +136,18 @@ export function computeGovernanceMetrics(events: EventRow[], approvals: Approval
 export function collectGovernanceMetrics(days = 7): GovernanceMetrics {
   const windowMs = days * 86400000
   const dbs: string[] = [join(resolveLoopBaseDir(), 'graph-events.db')]
-  const extra = process.env.GOV_METRICS_EXTRA_DBS?.split(':').map((s) => s.trim()).filter(Boolean) ?? []
+  // 跨平台（24h 审查补）：Windows 绝对路径含 ':'，按 ':' 切会把 C:\ 盘符切碎、
+  // 补充库静默全灭——用 path.delimiter（POSIX ':' / Windows ';'，与 terminal-tools 同口径）
+  const extra = process.env.GOV_METRICS_EXTRA_DBS?.split(pathDelimiter).map((s) => s.trim()).filter(Boolean) ?? []
   dbs.push(...extra)
 
+  const Sqlite = loadSqlite()
   const events: EventRow[] = []
   for (const dbPath of dbs) {
-    if (!existsSync(dbPath)) continue
-    let db: InstanceType<typeof DatabaseSync> | null = null
+    if (!Sqlite || !existsSync(dbPath)) continue
+    let db: InstanceType<DatabaseSyncCtor> | null = null
     try {
-      db = new DatabaseSync(dbPath, { open: true, readOnly: true })
+      db = new Sqlite(dbPath, { open: true, readOnly: true })
       const rows = db.prepare('SELECT run_id, kind, ts FROM graph_events').all() as unknown as Array<{ run_id: string; kind: string; ts: number }>
       for (const r of rows) events.push({ runId: r.run_id, kind: r.kind, ts: r.ts })
     } catch { /* 单库失败跳过（诚实降级） */ }
