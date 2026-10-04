@@ -9,6 +9,7 @@ import CapabilityCatalogSection from '@/custom/governance/components/CapabilityC
 import CostAccountsSection from '@/custom/governance/components/CostAccountsSection.vue'
 import MaturitySection from '@/custom/governance/components/MaturitySection.vue'
 import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.vue'
+import EvalLayersSection from '@/custom/governance/components/EvalLayersSection.vue'
 import { governanceMessages } from '@/custom/governance/i18n'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
@@ -35,6 +36,7 @@ const L = computed(() => {
       <CostAccountsSection />
       <MaturitySection />
       <PrimitivesSection />
+      <EvalLayersSection />
     </div>
   </div>
 </template>

@@ -30,6 +30,7 @@ import { isReviewVerdict, type ReviewVerdict } from '../review/review-store'
 import { appendApprovalLog, queryApprovalLog } from './approval-log'
 import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
+import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -47,6 +48,9 @@ export interface PendingItem {
   createdAt: number
   /** V4-N1 风险档（服务端权威分类；high 红标逐条裁决 / low 可自动通过+抽检） */
   risk: ApprovalRiskTier
+  /** 2026-10-04 影响面预览（Blast Radius）：高危命令裁决前列受影响目标；
+   *  null/缺省 = 非破坏性模式或解析不适用（不假装零影响）。纯模式解析无 IO。 */
+  impact?: CommandImpact | null
 }
 
 function actorOf(ctx: { state?: { user?: { username?: string } } }): string {
@@ -137,6 +141,7 @@ function readOneQueue(dir: string): PendingItem[] {
       detail: entry.command || entry.description || entry.request_id,
       choices: (entry.allowed_choices && entry.allowed_choices.length ? entry.allowed_choices : ['once', 'session', 'deny']),
       createdAt: enqueued || now,
+      impact: analyzeCommandImpact(entry.command || ''),
     })
   }
   return out
@@ -189,6 +194,7 @@ function collectPendingItems(): PendingItem[] {
           choices: approval.choices,
           createdAt: session.lastActiveAt || 0,
           risk: classifyApprovalRisk({ kind: 'command', detail: approval.preview || '', title: session.title }),
+          impact: analyzeCommandImpact(approval.preview || ''),
         })
       }
     }
@@ -376,6 +382,19 @@ router.post('/:id/decide', async (ctx) => {
 router.get('/history', async (ctx) => {
   const limit = Number(ctx.query.limit ?? 50)
   ctx.body = { ok: true, entries: queryApprovalLog(Number.isFinite(limit) ? limit : 50) }
+})
+
+// ── 2026-10-04 影响面预览（Blast Radius）：任意命令的破坏性影响面解析 ──
+// pending 聚合已内嵌 impact；本端点供聊天侧审批卡等消费方按需取（纯解析无 IO）。
+router.post('/impact-preview', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { command?: unknown }
+  const command = typeof body.command === 'string' ? body.command.slice(0, 2000) : ''
+  if (!command.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'command 必填（待解析的完整 shell 命令）' }
+    return
+  }
+  ctx.body = { ok: true, command, impact: analyzeCommandImpact(command) }
 })
 
 // ── V4.1 §七 抽检器端点：低风险自动放行的事后回看与处置 ──

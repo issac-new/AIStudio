@@ -16,6 +16,7 @@ import { collectCapabilityCatalog, parseCapabilitySource } from './capability-ca
 import { collectCostAccounts, type CostAccountsReport } from './cost-accounts'
 import { assessMaturity, collectMaturityInputs, type MaturityReport } from './maturity'
 import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } from './primitives'
+import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
 
 const router = new Router({ prefix: '/api/harness' })
 
@@ -61,6 +62,19 @@ router.get('/primitives', async (ctx) => {
     const { counts, notes } = await collectPrimitiveCounts()
     const report: PrimitivesReport = buildPrimitivesReport(counts, notes)
     ctx.body = { ...report, ok: true }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// B5 四层评估读模型（2026-10-04 九源调研落地项②）：既有仪表四层归位 +
+// 五治理量化口径 gap 立账（口径原文在 definition，数据未采不造数）。
+router.get('/eval-layers', async (ctx) => {
+  try {
+    const inputs = await collectEvalLayersInputs(daysOf(ctx.query.days))
+    const report: EvalLayersReport = buildEvalLayers(inputs)
+    ctx.body = { ...report, ok: true, days: inputs.days }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
