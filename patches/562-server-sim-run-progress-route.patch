@@ -4,7 +4,7 @@
  import { startKgAutoSync } from '../custom/kgtrigger/auto-sync'
  // overlay[harness]: 驾驭工程治理面（能力目录/六类成本账/成熟度自检/八原语对账）
  import { harnessRoutes } from '../custom/harness/harness-controller'
-+import { simRunRouter } from '../custom/controllers/sim/run-progress'
++import simRunRouter from '../custom/controllers/sim/run-progress'
  // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
  import { evidenceRoutes } from '../custom/evidence/evidence-controller'
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
