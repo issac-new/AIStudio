@@ -70,6 +70,7 @@ import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
 import IdeModBand from '../components/IdeModBand.vue'
+import IdeReplayTheater from '../components/IdeReplayTheater.vue'
 import { useModBand, type ModBandSpec } from '../composables/useModBand'
 import IdeTodoBar from '../components/IdeTodoBar.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
@@ -104,6 +105,7 @@ const modBandSpecs = computed<ModBandSpec[]>(() => [
   { id: 'approval-hint', priority: 30, visible: !!approvalMemoryHint.value },
   { id: 'runline', priority: 40, visible: running.value || !!lastCompletedSummary.value },
   { id: 'run-result', priority: 50, visible: true },
+  { id: 'replay', priority: 55, visible: true },
   { id: 'todo', priority: 60, visible: true },
 ])
 
@@ -615,6 +617,10 @@ async function pickModel(provider: string, model: string): Promise<void> {
             <span class="ide-chat__runline-done">✓ {{ lastCompletedSummary }}</span>
           </template>
         </div>
+      </template>
+      <template #replay>
+        <!-- P5 编辑时间轴回放：无快照时入口仍显示（点击给空态说明，不误导） -->
+        <IdeReplayTheater />
       </template>
       <template #run-result>
         <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
