@@ -103,6 +103,28 @@ vi.mock('@/custom/governance/api/harness', () => ({
       fullyCovered: 0,
     },
   })),
+  fetchEvalLayers: vi.fn(async () => ({
+    ok: true,
+    days: 7,
+    layers: [
+      { key: 'result', metrics: [
+        { key: 'dispatchDeliveredRate', status: 'instrumented', value: 0.9, unit: 'ratio', source: 'dispatch-ledger', note: '窗口 7 天 · 42 次派发' },
+        { key: 'escapedDefectRate', status: 'gap', value: null, unit: 'ratio', source: 'V5 长线', definition: '逃逸到发布后的缺陷 / 发布前已知缺陷' },
+      ] },
+      { key: 'execution', metrics: [
+        { key: 'routeViolationRate', status: 'gap', value: null, unit: 'ratio', source: 'loop', definition: '触发未声明边的次数 / 总边选择次数' },
+      ] },
+      { key: 'resource', metrics: [
+        { key: 'tokenTotal', status: 'instrumented', value: 123456, unit: 'tokens', source: 'cost-accounts' },
+      ] },
+      { key: 'governance', metrics: [
+        { key: 'humanInterventions', status: 'instrumented', value: 6, unit: 'count', source: 'governance-audit' },
+        { key: 'duplicateSideEffectRate', status: 'gap', value: null, unit: 'ratio', source: 'loop eid', definition: '重复执行的外部动作数 / 外部动作总数' },
+      ] },
+    ],
+    counts: { instrumented: 3, gap: 3 },
+    meta: { note: '四层评估', source: 'Harness·Loop·Graph 选型文', gapNote: 'gap 不造数' },
+  })),
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'zh-CN', messages: {} })
@@ -162,6 +184,20 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-primitives-summary"]').text()).toContain('0 / 2')
   })
 
+  it('B5 四层评估：四宫格 + instrumented/gap 双态 + 口径展示 + gap 不造数', async () => {
+    const w = await mountComp('@/custom/governance/components/EvalLayersSection.vue')
+    await flushPromises()
+    for (const k of ['result', 'execution', 'resource', 'governance']) {
+      expect(w.find(`[data-testid="harness-eval-layer-${k}"]`).exists(), k).toBe(true)
+    }
+    expect(w.find('[data-testid="harness-eval-metric-dispatchDeliveredRate"]').text()).toContain('90%')
+    expect(w.find('[data-testid="harness-eval-metric-escapedDefectRate"]').classes()).toContain('el__metric--gap')
+    expect(w.find('[data-testid="harness-eval-metric-escapedDefectRate"]').text()).toContain('口径')
+    expect(w.find('[data-testid="harness-eval-metric-escapedDefectRate"]').text()).toContain('—')
+    expect(w.find('[data-testid="harness-eval-metric-duplicateSideEffectRate"]').text()).toContain('重复执行的外部动作数')
+    expect(w.find('[data-testid="harness-eval-gapnote"]').text()).toContain('3')
+  })
+
   it('GovHarnessView 聚合四板块（页签面板壳）', async () => {
     const w = await mountComp('@/custom/ia2/views/gov/GovHarnessView.vue')
     await flushPromises()
@@ -170,6 +206,7 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-cost"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-maturity"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-primitives"]').exists()).toBe(true)
+    expect(w.find('[data-testid="harness-eval-layers"]').exists()).toBe(true)
   })
 
   it('降级诚实：API 抛错渲染错误行，不编造数据', async () => {

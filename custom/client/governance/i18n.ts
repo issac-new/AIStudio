@@ -77,6 +77,15 @@ export const governanceMessages = {
         notAchieved: '未达成',
         undetermined: '无法判定',
         evidence: '证据',
+        // B5 四层评估（2026-10-04 九源调研落地项②：Harness·Loop·Graph 选型文框架）
+        evalLayersTitle: '四层评估读模型',
+        evalLayersSub: '结果质量 / 执行质量 / 资源效率 / 治理质量——既有仪表按层归位；不能用单一完成率代替四层证据',
+        evalLayerNames: '结果质量|执行质量|资源效率|治理质量',
+        evalStatusInstrumented: '已仪表化',
+        evalStatusGap: '口径已立 · 数据未采',
+        evalDefinition: '口径',
+        evalSource: '数据源',
+        evalGapNote: 'gap 指标不造数：口径已立账，采纳后按口径采集',
         // B4 原语对账
         primitivesTitle: '八工程原语对账',
         primitivesSub: '任务/会话/状态/工具/记忆/权限/评估/审计 × 唯一标识/版本/生命周期/审计追溯——从代码现实归纳',
@@ -491,6 +500,15 @@ export const governanceMessages = {
         notAchieved: 'not achieved',
         undetermined: 'undetermined',
         evidence: 'Evidence',
+        // B5 four evaluation layers (2026-10-04 nine-source round: Harness/Loop/Graph framework)
+        evalLayersTitle: 'Four-Layer Evaluation',
+        evalLayersSub: 'Result / execution / resource / governance — existing meters classified by layer; one completion rate cannot replace four layers of evidence',
+        evalLayerNames: 'Result quality|Execution quality|Resource efficiency|Governance quality',
+        evalStatusInstrumented: 'Instrumented',
+        evalStatusGap: 'Definition set · data not collected',
+        evalDefinition: 'Definition',
+        evalSource: 'Source',
+        evalGapNote: 'Gap metrics are never fabricated: definitions are on record; collect per definition once adopted',
         // B4 primitives
         primitivesTitle: 'Eight Engineering Primitives',
         primitivesSub: 'task/session/state/tool/memory/permission/evaluation/audit × identity/version/lifecycle/audit — grounded in actual code',

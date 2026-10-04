@@ -39,3 +39,37 @@ export const approvalsSpotcheckMessages = {
     suggAdoptHint: 'Adopt: run /approvals in the agent session, or CLI approvals suggest --apply N (this panel is read-only).',
   },
 }
+
+// 影响面预览（Blast Radius，2026-10-04 九源调研落地项①）词条。
+// 同上先例：approvals.* 主键族在注入词表（patch 473 单一事实源），新增子键族
+// 走 custom 模块本地字典，不动注入词表；服务端只发语义 token（danger/note）。
+export const approvalImpactMessages = {
+  zh: {
+    chip: '影响面预览',
+    danger: { delete: '删除不可逆', overwrite: '覆盖既有内容', 'worktree-reset': '重置工作区改动' } as Record<string, string>,
+    targets: '将触及的目标',
+    targetCount: '{n} 个目标',
+    unbounded: '影响面无法静态界定（变量/宽域目标），清单可能不完整',
+    notes: {
+      'variable-target': '目标含变量或命令替换，实际范围以运行时为准',
+      'root-path': '目标指向根路径',
+      'bare-glob': '目标为宽域通配或整目录递归',
+      subshell: '含子命令',
+    } as Record<string, string>,
+    hint: '裁决前先看清要动什么（对应"权限必须早于副作用"）',
+  },
+  en: {
+    chip: 'Blast radius',
+    danger: { delete: 'Irreversible deletion', overwrite: 'Overwrites content', 'worktree-reset': 'Resets worktree changes' } as Record<string, string>,
+    targets: 'Targets',
+    targetCount: '{n} target(s)',
+    unbounded: 'Blast radius not statically boundable (variable/broad target); list may be incomplete',
+    notes: {
+      'variable-target': 'Target contains variables or command substitution; real scope resolves at run time',
+      'root-path': 'Target points at a root path',
+      'bare-glob': 'Target is a broad glob or recursive directory',
+      subshell: 'Contains a subshell',
+    } as Record<string, string>,
+    hint: 'See what will be touched before deciding ("permissions before side effects")',
+  },
+}
