@@ -484,5 +484,5 @@
 563-agent-ekko-disclosure-limits-prompt.patch
 # 564=P12 讨好者防线(hermes-agent python 侧)：system_prompt.py stable 层追加 HERMES_DISCLOSURE_GUIDELINES(与 563 同文)。
 564-agent-disclosure-limits-prompt.patch
-# 563=响应投递丢弃根治（run8 五起停摆根因）：纯附件指令型响应在附件投递失败/被滤时整条蒸发（房间静默=假停摆，回执/RACI 行随消息丢失）——丢弃分支加原文兜底投递
-563-agent-response-delivery-fallback.patch
+# 564=响应投递丢弃根治（run8 五起停摆根因）：纯附件指令型响应在附件投递失败/被滤时整条蒸发（房间静默=假停摆，回执/RACI 行随消息丢失）——丢弃分支加原文兜底投递
+564-agent-response-delivery-fallback.patch
