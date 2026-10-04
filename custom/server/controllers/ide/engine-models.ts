@@ -83,6 +83,8 @@ engineModelsRouter.put('/', (ctx) => {
     policy: body?.policy && typeof body.policy === 'object' && Array.isArray(body.policy.statements)
       ? { statements: body.policy.statements }
       : undefined,
+    // P3 档位映射透传（24h 审查补）：漏抄=每次 PUT 静默蒸发档位映射
+    route: body?.route && typeof body.route === 'object' ? body.route : undefined,
   }
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {

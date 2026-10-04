@@ -44,6 +44,9 @@ router.post('/engine-models-put', async (ctx) => {
   const config = {
     providers: Array.isArray(body.providers) ? (body.providers as never[]) : [],
     defaultModel: (body.defaultModel as never) ?? null,
+    // P3 档位映射透传（24h 审查补）：客户端已发 route，此处重建 config 漏抄会在
+    // 每次保存时静默蒸发档位映射——对话框重开即空、switcher 永远走回落链
+    route: (body.route && typeof body.route === 'object' ? body.route : undefined) as never,
   } as never
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {
