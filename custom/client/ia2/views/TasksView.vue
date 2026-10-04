@@ -17,6 +17,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
+import TabIntroBanner from '../components/TabIntroBanner.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
 import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
@@ -167,6 +168,8 @@ function goInboxFromAccounts(): void {
         @click="closeBoard"
       >×</button>
     </div>
+
+    <TabIntroBanner :tab="tab" />
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView :auto-open-create="autoOpenCreate" />
