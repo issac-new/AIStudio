@@ -83,15 +83,21 @@ function eventLogPath(): string {
 interface StoreShape { identities: AgentIdentity[]; nextSeq: number; nextDelegationSeq: number }
 
 function readStore(): StoreShape {
+  let raw: Partial<StoreShape>
   try {
-    const raw = JSON.parse(readFileSync(storePath(), 'utf8')) as Partial<StoreShape>
-    return {
-      identities: Array.isArray(raw.identities) ? raw.identities : [],
-      nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
-      nextDelegationSeq: typeof raw.nextDelegationSeq === 'number' ? raw.nextDelegationSeq : 1,
+    raw = JSON.parse(readFileSync(storePath(), 'utf8')) as Partial<StoreShape>
+  } catch (e) {
+    // 仅"首装无文件"按空账处理；损坏/占用/权限错误如实上抛（500）——静默当空账
+    // 会让下一次写的全量 writeStore 把既有台账整体覆写清零（24h 审查补）
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { identities: [], nextSeq: 1, nextDelegationSeq: 1 }
     }
-  } catch {
-    return { identities: [], nextSeq: 1, nextDelegationSeq: 1 }
+    throw e
+  }
+  return {
+    identities: Array.isArray(raw.identities) ? raw.identities : [],
+    nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
+    nextDelegationSeq: typeof raw.nextDelegationSeq === 'number' ? raw.nextDelegationSeq : 1,
   }
 }
 
@@ -236,13 +242,16 @@ export function delegate(
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: false, problems: [`委托来源身份不存在：${id}`] }
   if (!input.to?.trim() || !input.scope?.trim()) return { ok: false, problems: ['to 与 scope 必填'] }
-  if (!store.identities.some((i) => i.id === input.to || i.name === input.to)) {
+  // 委托目标归一为稳定主键 id（UI 接受"身份名或 id"输入；链查询按 id 解析——
+  // 存名字会让 byId 解析断链，委托"存在"却从不延伸路径，审计面静默缺数）
+  const target = store.identities.find((i) => i.id === input.to || i.name === input.to)
+  if (!target) {
     return { ok: false, problems: [`委托目标身份不存在：${input.to}（先登记再委托）`] }
   }
   const delegation: DelegationRecord = {
     id: `did-${String(store.nextDelegationSeq).padStart(3, '0')}`,
     from: identity.id,
-    to: input.to.trim(),
+    to: target.id,
     scope: input.scope.trim(),
     grantedAt: Date.now(),
     grantedBy: actor,
@@ -252,7 +261,7 @@ export function delegate(
   identity.delegations.push(delegation)
   identity.updatedAt = Date.now()
   writeStore(store)
-  appendEvent({ actor, action: 'delegate', targetId: id, detail: `${identity.id}→${input.to}：${input.scope}` })
+  appendEvent({ actor, action: 'delegate', targetId: id, detail: `${identity.id}→${target.id}（${target.name}）：${input.scope}` })
   return { ok: true, delegation }
 }
 
@@ -274,7 +283,10 @@ export function revokeDelegation(id: string, delegationId: string, actor: string
 export function activeDelegationChain(id: string): { from: AgentIdentity; edges: DelegationRecord[]; paths: string[][] } {
   const store = readStore()
   const byId = new Map(store.identities.map((i) => [i.id, i]))
-  const from = byId.get(id) ?? null
+  // 兼容历史行：目标存了名字的委托也按名解析（新委托已在 delegate() 归一为 id）
+  const byName = new Map(store.identities.map((i) => [i.name, i]))
+  const resolve = (key: string): AgentIdentity | undefined => byId.get(key) ?? byName.get(key)
+  const from = resolve(id) ?? null
   const now = Date.now()
   const edges: DelegationRecord[] = []
   if (from) {
@@ -287,7 +299,7 @@ export function activeDelegationChain(id: string): { from: AgentIdentity; edges:
   // 全图 BFS 找从 id 出发的所有有效路径（防环：路径内不重复访问）
   const paths: string[][] = []
   const walk = (current: string, path: string[]): void => {
-    const node = byId.get(current)
+    const node = resolve(current)
     if (!node) return
     for (const d of node.delegations) {
       if (d.revokedAt || (d.expiresAt && d.expiresAt < now)) continue

@@ -248,7 +248,14 @@ export async function collectEvalLayersInputs(days = 7): Promise<EvalLayersInput
     days: safeDays,
     dispatch: windowDispatch(safeDays),
     tokenTotal: tokenData?.totalTokens ?? null,
-    waitP95Seconds: waitData?.p95SecondsWithinDay ?? waitData?.p95Seconds ?? null,
+    // ≤24h 子集 p95 为主指标（P6a）：仅当账本未算该口径（undefined，如旧数据/账本
+    // 未升级）才回退全量 p95；算过但子集为空（null，全部完成 >24h）时如实给
+    // null——静默回退全量 p95 会顶着"≤24h 子集"的口径标签输出被排除的数字
+    waitP95Seconds: waitData
+      ? (typeof waitData.p95SecondsWithinDay === 'number'
+          ? waitData.p95SecondsWithinDay
+          : (waitData.p95SecondsWithinDay === null ? null : waitData.p95Seconds ?? null))
+      : null,
     waitP95SecondsAll: waitData?.p95Seconds ?? null,
     waitOverDayCount: typeof waitData?.overDayCount === 'number' ? waitData.overDayCount : null,
     reworkHours: reworkData?.reworkHours ?? null,

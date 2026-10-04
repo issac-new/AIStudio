@@ -572,6 +572,7 @@ router.get('/agent-identity', async (ctx) => {
 })
 
 router.post('/agent-identity/register', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = registerIdentity({
     name: String(b.name ?? ''),
@@ -584,6 +585,7 @@ router.post('/agent-identity/register', async (ctx) => {
 })
 
 router.post('/agent-identity/:id/update', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = updateIdentity(String(ctx.params.id ?? ''), {
     owner: b.owner === undefined ? undefined : String(b.owner),
@@ -594,6 +596,7 @@ router.post('/agent-identity/:id/update', async (ctx) => {
 })
 
 router.post('/agent-identity/:id/credential', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = addCredential(String(ctx.params.id ?? ''), {
     kind: String(b.kind ?? 'api-key') as 'api-key' | 'jwt' | 'matrix-account' | 'token' | 'none',
@@ -605,6 +608,7 @@ router.post('/agent-identity/:id/credential', async (ctx) => {
 })
 
 router.post('/agent-identity/:id/credential/revoke', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = revokeCredential(String(ctx.params.id ?? ''), String(b.label ?? ''), govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
@@ -612,6 +616,7 @@ router.post('/agent-identity/:id/credential/revoke', async (ctx) => {
 })
 
 router.post('/agent-identity/:id/delegate', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = delegate(String(ctx.params.id ?? ''), {
     to: String(b.to ?? ''),
@@ -623,6 +628,7 @@ router.post('/agent-identity/:id/delegate', async (ctx) => {
 })
 
 router.post('/agent-identity/:id/delegation/:did/revoke', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const res = revokeDelegation(String(ctx.params.id ?? ''), String(ctx.params.did ?? ''), govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
   ctx.body = res
@@ -641,6 +647,7 @@ router.get('/heldout/sets', async (ctx) => {
 })
 
 router.post('/heldout/sets', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 建密封题库=写面，与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as { name?: unknown; items?: unknown }
   const items = Array.isArray(b.items)
     ? (b.items as Array<{ prompt?: unknown; expected?: unknown }>).map((it) => ({ prompt: String(it?.prompt ?? ''), expected: String(it?.expected ?? '') }))
@@ -651,6 +658,8 @@ router.post('/heldout/sets', async (ctx) => {
 })
 
 router.post('/heldout/sets/:id/score', async (ctx) => {
+  // 评分消耗不可重置的尝试预算，按写面同闸（防未授权第三方烧尽预算；24h 审查补）
+  if (superAdminDenied(ctx)) return
   const b = (ctx.request.body ?? {}) as { answers?: unknown }
   const answers = Array.isArray(b.answers)
     ? (b.answers as Array<{ index?: unknown; answer?: unknown }>).map((a) => ({ index: Number(a?.index), answer: String(a?.answer ?? '') }))
