@@ -15,6 +15,7 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useWorkspaceStore } from '../store/workspace'
 import { useSitCounts } from '../composables/useSitCounts'
 import { useAttentionRows } from '../composables/useAttentionRows'
+import BackgroundWorkStrip from './BackgroundWorkStrip.vue'
 import type { AttentionRow } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
@@ -83,6 +84,7 @@ function onOpenBoard(): void {
 <template>
   <div class="ia-gtop" data-testid="ia-global-top">
     <IaShellHeader :user-name="cockpit.currentUserName" />
+    <BackgroundWorkStrip />
     <div v-if="showDelivery" class="delivery-strip" data-testid="delivery-readings" @click="openCases">
       <span class="dchip dchip--flight">{{ t('ia2.delivery.inFlight') }} {{ deliveryReadings.inFlight }}</span>
       <span v-for="(n, st) in deliveryReadings.byStage" :key="st" class="dchip">{{ st }} {{ n }}</span>
