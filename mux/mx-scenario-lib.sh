@@ -456,6 +456,13 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     return
   fi
   local last_sig=0 last_size=-1 cur_size sz
+  # idle-nudge（2026-10-04 run8 plan 步实录：agent 审批后提前收工、静坐 1800s 才被判死重派，
+  # 损失=30 分钟死窗+agent 重做上下文。中途轻推一次：空转过半时 @agent 催办，多数"提前收工"
+  # 会被一条提醒拉回；催后仍静默才走原判死路径。agent 恢复活动则重新武装（新一轮静默可再催）。
+  local nudged=0 idle_half=$(( idle / 2 ))
+  local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
+  local _nmentions=""
+  for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
@@ -465,9 +472,14 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       cur_size=$(( cur_size + sz ))
     done
     if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
-    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; fi
+    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; nudged=0; fi
+    if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half && -n "$_nroom" )); then
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "${_nmentions}" >/dev/null 2>&1 || true
+      note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次"
+      nudged=1
+    fi
     if (( $(date +%s) - last_sig > idle )); then
-      note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限）"
+      note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
       return 1
     fi
     sleep 15
