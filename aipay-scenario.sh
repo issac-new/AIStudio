@@ -789,12 +789,20 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           note "[观察] $2 合并冲突仅限 testlog 污染副本，已取 integration 正本自动收口"
           echo "ISSUE|merge-conflict-autoresolved|$2|testlog 副本冲突已取 integration 正本收口（仍记单追踪提交纪律）" >> "$EVID_DIR/issues.log"
         else
-          git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$2|integration 合并冲突" >> "$EVID_DIR/issues.log"
+          git merge --abort 2>/dev/null || true; echo "ISSUE|merge-conflict|$2|integration 合并冲突" >> "$EVID_DIR/issues.log"
         fi
       fi
     }
     merge_keep_history origin/main "origin-main"   # 主线同步（首建时 BASE=origin/main，空合幂等）
     for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
+      # 分支缺席前置检查（2026-10-04 run8 实锤：hu/xiao 停摆未推分支，devimpl 按回灌语义
+      # 记单放行后，此处对不存在 ref 的 merge 走 not-something-we-can-merge → abort 128 崩溃环）。
+      # 缺席=跳过合并+如实记单，集成以已交付分支继续。
+      if ! git rev-parse -q --verify "refs/remotes/origin/feat/$b" >/dev/null 2>&1; then
+        echo "ISSUE|integration-branch-missing|$b|feat/$b 未在 origin（开发交付缺席，integration 跳过该分支）" >> "$EVID_DIR/issues.log"
+        note "[观察] feat/$b 缺席 origin——跳过合并并记单（已交付分支继续集成）"
+        continue
+      fi
       merge_keep_history "origin/feat/$b" "$b"
     done
     # 丢线守卫：旧基线头必须仍是 HEAD 祖先，否则本轮基线无效、如实记账（R-A3）
