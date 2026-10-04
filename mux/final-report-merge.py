@@ -158,6 +158,19 @@ PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 </div>'''
 
 
+PART1_RUN8 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>12 个 AI 角色用真实聊天群、真实看板、真实 Git 仓库，从需求做到验收；本轮重点检验 V7 韧性方案（真分批并发预算/活性判据/回灌闭环/接力自愈）在事故压力下的表现。</div>
+
+<div class="card warn"><b>本轮的诚实结论——带伤完成：</b>26 步全部走完、六道闸全过，但过程事故密集：六型 Bash 安全模式坑逐个击杀驱动（累计烧掉约 4 小时，全部当场根治）；五名 AI 员工"集体偷懒"实为同一个产品缺陷——网关把他们的回复静默丢弃了（投递层 bug，修复已入库，下轮验证）；四个开发任务两个真交付、两个缺席（如实记单，集成按实际分支继续）。</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（每步含真实时间戳与证据锚点）；所有"记问题单"的地方都是如实呈现的缺口，不是遗漏。</div>
+
+{{ch0}}
+'''
+
 PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
@@ -273,6 +286,7 @@ PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 # 防旧轮叙事顶包新轮报告。新轮正本=人工按该轮实锚编写后注册。
 PART1_BY_RUN = {
     '20261001-v5-run6': PART1_RUN6,
+    '20261004-v7-run8': PART1_RUN8,
     '20261002-v5-run7': PART1_RUN7,
 }
 
