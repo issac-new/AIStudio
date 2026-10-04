@@ -632,4 +632,32 @@ router.get('/agent-identity/:id/chain', async (ctx) => {
   ctx.body = { ok: true, ...activeDelegationChain(String(ctx.params.id ?? '')) }
 })
 
+
+// ── P7 held-out 留出评测库（2026-10-04 九源轮）：密封题库 + 聚合评分 ──
+import { listSets, createSet, scoreSet } from '../heldout/held-out-store'
+
+router.get('/heldout/sets', async (ctx) => {
+  ctx.body = { ok: true, sets: listSets() }
+})
+
+router.post('/heldout/sets', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as { name?: unknown; items?: unknown }
+  const items = Array.isArray(b.items)
+    ? (b.items as Array<{ prompt?: unknown; expected?: unknown }>).map((it) => ({ prompt: String(it?.prompt ?? ''), expected: String(it?.expected ?? '') }))
+    : []
+  const res = createSet({ name: String(b.name ?? ''), items }, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  ctx.body = res
+})
+
+router.post('/heldout/sets/:id/score', async (ctx) => {
+  const b = (ctx.request.body ?? {}) as { answers?: unknown }
+  const answers = Array.isArray(b.answers)
+    ? (b.answers as Array<{ index?: unknown; answer?: unknown }>).map((a) => ({ index: Number(a?.index), answer: String(a?.answer ?? '') }))
+    : []
+  const res = scoreSet(String(ctx.params.id ?? ''), answers, govActorOf(ctx as never))
+  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems, attemptsLeft: res.attemptsLeft }; return }
+  ctx.body = res
+})
+
 export const governanceRoutes = router
