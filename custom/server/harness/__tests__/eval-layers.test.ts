@@ -8,6 +8,8 @@ const base: EvalLayersInputs = {
   dispatch: { dispatched: 42, deliveredRate: 0.9, failedRate: 0.05 },
   tokenTotal: 1_234_567,
   waitP95Seconds: 320,
+  waitP95SecondsAll: 664448,
+  waitOverDayCount: 35,
   reworkHours: 2.5,
   interventionsCount: 6,
 }
@@ -69,5 +71,23 @@ describe('五治理指标 gap 立账', () => {
     const all = r.layers.flatMap((l) => l.metrics)
     expect(r.counts.instrumented).toBe(all.filter((m) => m.status === 'instrumented').length)
     expect(r.counts.gap).toBe(all.filter((m) => m.status === 'gap').length)
+  })
+})
+
+describe('P6a 等待时延双口径', () => {
+  it('主指标用 ≤24h 子集口径，长周期计数与全量 p95 进注记（不静默丢弃）', () => {
+    const r = buildEvalLayers(base)
+    const m = r.layers.flatMap((l) => l.metrics).find((x) => x.key === 'waitP95Seconds')!
+    expect(m.value).toBe(320)
+    expect(m.note).toContain('35')
+    expect(m.note).toContain('664448')
+    expect(m.source).toContain('≤24h')
+  })
+
+  it('缺子集口径时回落全量（老账兼容），注记不误报', () => {
+    const r = buildEvalLayers({ ...base, waitP95Seconds: 664448, waitP95SecondsAll: 664448, waitOverDayCount: null })
+    const m = r.layers.flatMap((l) => l.metrics).find((x) => x.key === 'waitP95Seconds')!
+    expect(m.value).toBe(664448)
+    expect(m.note).toBeUndefined()
   })
 })

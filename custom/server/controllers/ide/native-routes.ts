@@ -43,6 +43,11 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleCacheAttribution(ctx)
       return
     }
+    // ── P5 编辑时间轴回放（Replay Theater，2026-10-04 九源轮）──
+    if (method === 'GET' && /^\/api\/ide\/replay\/[^/]+$/.test(path)) {
+      await handleReplayGet(ctx, decodeURIComponent(path.slice('/api/ide/replay/'.length)))
+      return
+    }
     // ── B7：自定义斜杠命令（zcode CommandsSection 对照）──
     if (method === 'GET' && path === '/api/ide/slash-commands') {
       await handleSlashCommandsGet(ctx)
@@ -66,25 +71,38 @@ function slashCommandStorePath(): string {
     : resolve(__dirname, '../../../../runtime/ide-slash-commands.json')
 }
 
-async function handleSlashCommandsGet(ctx: Context): Promise<void> {
-  const store = slashCommandStorePath()
-  if (!existsSync(store)) {
-    ctx.body = { ok: true, commands: [] }
-    return
-  }
+async function handleReplayGet(ctx: Context, sessionId: string): Promise<void> {
+  const { listTurnSnapshots, buildReplayTimeline } = await import('../../filehistory/replay-theater')
   try {
-    const raw = JSON.parse(readFileSync(store, 'utf8')) as { commands?: unknown }
-    const { normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
-    ctx.body = { ok: true, commands: normalizeSlashCommands(raw.commands) }
-  } catch {
-    ctx.body = { ok: true, commands: [] }
+    if (!sessionId.trim()) { ctx.status = 400; ctx.body = { ok: false, detail: 'sessionId 必填' }; return }
+    ctx.body = { ok: true, ...buildReplayTimeline(sessionId, listTurnSnapshots(sessionId)) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, detail: e instanceof Error ? e.message : String(e) }
   }
+}
+
+async function handleSlashCommandsGet(ctx: Context): Promise<void> {
+  // P11：GET 合并内置命令（/skill-draft 等内置在前；同名用户版本优先）
+  const { normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+  const { mergeBuiltins } = await import('../../slashcmd/builtins')
+  let userCommands: ReturnType<typeof normalizeSlashCommands> = []
+  const store = slashCommandStorePath()
+  if (existsSync(store)) {
+    try {
+      const raw = JSON.parse(readFileSync(store, 'utf8')) as { commands?: unknown }
+      userCommands = normalizeSlashCommands(raw.commands)
+    } catch { /* 存储坏档按空表处理（既有行为） */ }
+  }
+  ctx.body = { ok: true, commands: mergeBuiltins(userCommands) }
 }
 
 async function handleSlashCommandsSave(ctx: Context): Promise<void> {
   const { validateSlashCommands, normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+  const { stripBuiltins } = await import('../../slashcmd/builtins')
   const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
-  const commands = normalizeSlashCommands(body.commands)
+  // P11：先剥内置条目（面板回传全量表时内置项不落用户存储）
+  const commands = normalizeSlashCommands(stripBuiltins(Array.isArray(body.commands) ? body.commands : []))
   const problems = validateSlashCommands(commands)
   if (problems.length) {
     ctx.status = 400

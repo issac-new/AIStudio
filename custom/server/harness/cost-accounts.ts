@@ -69,6 +69,10 @@ export interface WaitLatencyData {
   avgSeconds: number | null
   medianSeconds: number | null
   p95Seconds: number | null
+  /** P6a（2026-10-04 九源轮）：≤24h 完成子集 p95（主口径）；长周期项另列不删 */
+  p95SecondsWithinDay?: number | null
+  /** 超 24h 完成的长周期条数（口径分层透明度字段） */
+  overDayCount?: number | null
 }
 
 export interface ReworkData {
@@ -337,7 +341,7 @@ export async function collectWaitLatencyAccount(days: number): Promise<CostAccou
   const files = kanbanDbFiles()
   const sources: AccountSourceStatus[] = [{ id: 'kanban-boards', available: files.length > 0, note: files.length > 0 ? `${files.length} 个板库` : '板库缺席（HERMES_HOME 下无 kanban.db）' }]
   if (files.length === 0) {
-    return { key: 'waitLatency', available: false, sources, data: { boards: [], tasksDone: null, avgSeconds: null, medianSeconds: null, p95Seconds: null } }
+    return { key: 'waitLatency', available: false, sources, data: { boards: [], tasksDone: null, avgSeconds: null, medianSeconds: null, p95Seconds: null, p95SecondsWithinDay: null, overDayCount: 0 } }
   }
   const sinceS = Math.floor((Date.now() - days * 86400000) / 1000)
   const durations: number[] = []
@@ -364,11 +368,22 @@ export async function collectWaitLatencyAccount(days: number): Promise<CostAccou
   }
   const sorted = durations.slice().sort((a, b) => a - b)
   const avg = sorted.length > 0 ? Math.round(sorted.reduce((s, v) => s + v, 0) / sorted.length) : null
+  // P6a（2026-10-04 九源轮）：双口径披露。实锤 137 条 done 里 35 条为 8-10 天
+  // 长周期研究/裁决项（时间戳无错，是"挂板周期"混入"等待时延"）——全量 p95
+  // 被长尾拉到 7.7 天失义。≤24h 完成子集 p95 反映正常工作节奏；长周期计数
+  // 单列不静默丢弃。数据不改动，口径在账面如实分层。
+  const withinDay = sorted.filter((d) => d <= 86400)
+  const overDayCount = sorted.length - withinDay.length
   return {
     key: 'waitLatency',
     available: boards.length > 0,
     sources,
-    data: { boards, tasksDone: sorted.length, avgSeconds: avg, medianSeconds: medianOf(sorted), p95Seconds: percentileOf(sorted, 95) },
+    data: {
+      boards, tasksDone: sorted.length, avgSeconds: avg, medianSeconds: medianOf(sorted),
+      p95Seconds: percentileOf(sorted, 95),
+      p95SecondsWithinDay: percentileOf(withinDay, 95),
+      overDayCount,
+    },
   }
 }
 

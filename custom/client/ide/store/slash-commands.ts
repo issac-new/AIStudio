@@ -11,6 +11,8 @@ export interface SlashCommandEntry {
   name: string
   description: string
   prompt: string
+  /** P11：内置命令（/skill-draft 等）随版本演进，不可删改；save 前会被剥离 */
+  builtin?: boolean
 }
 
 const state = reactive<{ commands: SlashCommandEntry[]; loaded: boolean }>({ commands: [], loaded: false })
@@ -29,10 +31,12 @@ export async function loadSlashCommands(force = false): Promise<SlashCommandEntr
 }
 
 export async function saveSlashCommands(commands: SlashCommandEntry[]): Promise<{ ok: boolean; problems?: string[] }> {
+  // P11：只上送用户命令（内置项由服务端版本演进；双保险——服务端 save 也会剥）
+  const userOnly = commands.filter((c) => !c.builtin).map((c) => ({ name: c.name, description: c.description, prompt: c.prompt }))
   const res = await authFetch('/api/ide/slash-commands/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ commands }),
+    body: JSON.stringify({ commands: userOnly }),
   })
   const body = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[] }
   if (!res.ok) return { ok: false, problems: body.problems ?? [`HTTP ${res.status}`] }
