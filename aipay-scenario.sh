@@ -1038,7 +1038,9 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   # "看见"的 3h45m 实录）。
   UAT_SINCE_SEC=$(sget run_started_at)
   UAT_TS=$(( UAT_SINCE_SEC * 1000 ))
-  UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC")"
+  # curl 瞬时 HTTP 错（exit 22：429/网关抖动）在赋值位被 set -e 击杀→relay 30s 环
+  # （run8 uat 二段崩溃环实锤）。证据体空走重派分支属正常语义，拉取失败须容错：
+  UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC" 2>/dev/null || true)"
   if [[ -n "$UAT_BODY" ]] && [[ -z "$(uat_ac_covered "$AC_LIST" "$UAT_BODY")" ]]; then
     # 证据复用：本轮既有结论行且逐条覆盖全部 AC——不重派，直接进核验
     note "[真值] UAT 证据复用（本轮既有合格结论行，不重派验收）✓"
@@ -1052,7 +1054,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       echo "ISSUE|uat-evidence-missing|fanfan-agent|UAT-EVIDENCE 2400s 未达" >> "$EVID_DIR/issues.log"
       fail "UAT 证据行超时，中止"
     fi
-    UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC")"
+    UAT_BODY="$(uat_evidence_body "$UAT_SINCE_SEC" 2>/dev/null || true)"
   fi
   UAT_OK=1; UAT_MISS=""
   # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
