@@ -3,7 +3,7 @@
 // （FleetSession：profile/status:working|idle/lastActiveAt），按 profile 聚合
 // 「working 会话数 + 最近活动时间」。模块级单例——卡片/顶栏多处消费共用一份
 // 轮询（引用计数，最后一个消费者卸载才停表）。
-import { readonly, ref } from 'vue'
+import { getCurrentScope, onScopeDispose, readonly, ref } from 'vue'
 
 export interface AgentActivity {
   working: number
@@ -60,13 +60,23 @@ function stop(): void {
 export function useAgentActivity() {
   consumers += 1
   start()
-  // 消费方失活即减引用（组合式无法感知 unmount 钩子的统一注册，由调用方在
-  // onUnmounted 里调 releaseAgentActivity；顶栏/看板常驻，实践上进程级存活）
+  // 消费方失活即减引用。2026-10-04 24h 审查：KanbanTaskCard（全站最高频挂载组件）
+  // 只取值从不释放，consumers 只增不减，15s 轮询离开看板后仍进程级常驻——改为
+  // effect scope 销毁时自动释放（卡片/顶栏统一覆盖），releaseAgentActivity 保留
+  // 手动通道且幂等（双通道不会二次减计）。
+  let released = false
+  const release = (): void => {
+    if (released) return
+    released = true
+    consumers -= 1
+    stop()
+  }
+  if (getCurrentScope()) onScopeDispose(release)
   return {
     activity: readonly(activity),
     activeProfiles: readonly(activeProfiles),
     ready: readonly(ready),
-    releaseAgentActivity: () => { consumers -= 1; stop() },
+    releaseAgentActivity: release,
   }
 }
 
