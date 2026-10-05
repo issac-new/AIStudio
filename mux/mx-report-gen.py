@@ -1085,9 +1085,11 @@ ARTIFACT_VIEWS = {
     20: [('商户接入文档 v1.0.0-cashier', 'docs/delivery/merchant-onboarding-v1.0.0-cashier.md',
           [('回滚', r'回滚'), ('灰度', r'灰度'), ('观察窗', r'观察')]),
          ('完备性检查 completeness-check', 'docs/delivery/RFD-001-completeness-check.md',
-          [('回滚', r'回滚'), ('灰度', r'灰度'), ('观察窗', r'观察')])],
+          [('任务覆盖', r'任务覆盖'), ('档案覆盖', r'档案覆盖'), ('分类/优先级/依赖', r'分类/优先级/依赖')])],
     21: [('UAT 验收报告 acceptance', 'docs/acceptance/RFD-001-acceptance.md',
           [('AC 逐条', r'AC-\d'), ('判词', r'判词'), ('通过判定', r'通过')])],
+    22: [('工作台账 work-report', 'work-report.md',
+          [('状态分布', r'todo|待办|进行中'), ('WIP 清点', r'WIP'), ('卡壳 72h 清点', r'72h')])],
     23: [(f'审计意见书（{_RUN_TAG or RUN_ID or "本轮"}）',
           _OPINION_PATH,
           [('独立性声明', r'独立'), ('签名线', r'签名'), ('关切清单', r'关切'), ('10 项逐条', r'10')])],
@@ -1179,11 +1181,42 @@ def art_md_to_html(md: str) -> str:
         out.append('<pre class="art-code">' + H.escape('\n'.join(code_buf)) + '</pre>')
     return ''.join(out)
 
-def _art_read(rel: str):
+# 交付物读头（run8 复盘根治）：落档分支优先——repo_commit_main 口径的交付物
+# （完备性检查/验收书/意见书/工作台账等）只进 origin/main，HEAD 停在 integration
+# 检出时工作树不可见，run8 实锤 completeness-check 已在 main（d9f9d2f）仍被判缺件。
+# 解析次序：origin/main → origin/integration/RFD-001（测试报告口径）→ 工作树
+# （repo_commit_main 未跟踪残件兜底）。锚随解析源逐件标注，禁笼统 HEAD 锚。
+def _git_ok(*args) -> bool:
+    try:
+        return subprocess.run(['git', '--git-dir', str(CEN / '.git'), *args],
+                              capture_output=True).returncode == 0
+    except Exception:
+        return False
+
+def _git_out(*args):
+    try:
+        r = subprocess.run(['git', '--git-dir', str(CEN / '.git'), *args],
+                           capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else ''
+    except Exception:
+        return ''
+
+def _art_resolve(rel: str):
+    """→ (text|None, 解析源, 解析源锚)。None=三处皆无（如实缺件，不冒充）。"""
+    if not rel:
+        return None, '', ''
+    for ref in ('origin/main', 'origin/integration/RFD-001'):
+        if _git_ok('cat-file', '-e', f'{ref}:{rel}'):
+            sha = _git_out('rev-parse', '--short', ref).strip()
+            return _git_out('show', f'{ref}:{rel}'), ref, sha
     p = CEN / rel
-    if not rel or not p.exists():
-        return None
-    return p.read_text(encoding='utf-8', errors='replace')
+    if p.exists():
+        return p.read_text(encoding='utf-8', errors='replace'), '(工作树检出)', CEN_ANCHOR
+    return None, '', ''
+
+def _art_read(rel: str):
+    raw, _, _ = _art_resolve(rel)
+    return raw
 
 def _art_checks_html(raw: str, checks):
     ok_all = True
@@ -1218,7 +1251,7 @@ def artifact_block(n: int) -> str:
                 f'0→1 缺口记档）——不作本轮交付物呈现。</div></div></div></details>')
     pieces = []
     for name, rel, checks in arts:
-        raw = _art_read(rel)
+        raw, aref, asha = _art_resolve(rel)
         if raw is None:
             pieces.append(f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
                           f'<span class="art-path">{H.escape(rel or "（无路径）")}</span></div>'
@@ -1230,27 +1263,27 @@ def artifact_block(n: int) -> str:
             else art_md_to_html(body)
         ok_all, chk = _art_checks_html(raw, checks)  # 核对跑全文（不受展示截断影响）
         trunc_note = (f'<div class="art-trunc">已截断（{len(raw)}→{ART_TRUNC} 字符），'
-                      f'全文见中央仓 {H.escape(rel)}@{CEN_ANCHOR or "?"}</div>') if truncated else ''
+                      f'全文见中央仓 {H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</div>') if truncated else ''
         pieces.append(
             f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
             f'<span class="art-verdict{" ok" if ok_all else " miss"}">{"模版符合" if ok_all else "模版不符"}</span>'
-            f'<span class="art-path">{H.escape(rel)}@{CEN_ANCHOR or "?"}</span></div>'
+            f'<span class="art-path">{H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</span></div>'
             f'<div class="art-checks">{chk}</div>{content}{trunc_note}</div>')
     return (f'<details class="st-artifact"><summary>📦 交付物真容与模版核对（{len(pieces)} 件）</summary>'
             '<div class="art-body">' + ''.join(pieces) + '</div></details>')
 
-# 文件域无独立工件的两步（8.6 矩阵有位、文件域无件）：注记按轮注册（R17）——
+# 文件域无独立工件的步（8.6 矩阵有位、文件域无件）：注记按轮注册（R17）——
 # 旧注记写死 run2 期评审卡锚 t_11e182b3（run2 scenario.log 实证归属；run5/6/7 零命中），
 # 渲进任何非 run2 轮即旧账冒充。锚随文保留于 run2 注册项；其余轮用无锚通用注
 # （评审卡号以闸门仪表盘/本轮叙事实抽为准），新轮按该轮实锚注册。
+# 步 22 work-report.md 自 run8 收官根治后为文件域交付物（workmgr 落档 origin/main，
+# ARTIFACT_VIEWS 已注册）——旧轮再生成时三处解析皆无则如实缺件，不再注记遮红。
 _ART_NOFILE_DEFAULT = {
     15: ('G2 评审记录', '评审记录在评审卡（arch-governance 板，卡号见闸门仪表盘 G2 行），文件域无独立工件'),
-    22: ('工作台账 work-report.md', '台账经驾驶舱概览页/治理报告呈现，文件域无独立工件（8.6 矩阵 work-report.md 未落地）'),
 }
 _ART_NOFILE_BY_RUN = {
     '20260929-v4-run2': {
         15: ('G2 评审记录', '评审记录在卡（t_11e182b3，arch-governance 板），文件域无独立工件'),
-        22: ('工作台账 work-report.md', '台账经驾驶舱概览页/治理报告呈现，文件域无独立工件（8.6 矩阵 work-report.md 未落地）'),
     },
 }
 ART_NOFILE_NOTES = _ART_NOFILE_BY_RUN.get(RUN_ID, _ART_NOFILE_DEFAULT)
@@ -1260,7 +1293,7 @@ def artifact_panorama():
     rows, n_ok, n_bad, n_files = [], 0, 0, 0
     for n in sorted(set(ARTIFACT_VIEWS) | set(ART_NOFILE_NOTES)):
         for name, rel, checks in ARTIFACT_VIEWS.get(n, []):
-            raw = _art_read(rel)
+            raw, aref, asha = _art_resolve(rel)
             if raw is None:
                 res, anchor, n_bad = '<span class="art-verdict miss">缺件（文件不存在）</span>', '—', n_bad + 1
             else:
@@ -1272,7 +1305,7 @@ def artifact_panorama():
                 else:
                     res, n_bad = (f'<span class="art-verdict miss">模版不符（缺：{H.escape("、".join(miss))}）</span>',
                                   n_bad + 1)
-                anchor = f'<code>{CEN_ANCHOR or "?"}</code>'
+                anchor = f'<code>{H.escape(aref)}@{asha or "?"}</code>'
             rows.append(f'<tr><td><b>{n}</b></td><td>{H.escape(name)}<br>'
                         f'<span class="art-path">{H.escape(rel or "—")}</span></td><td>{res}</td><td>{anchor}</td></tr>')
         if n in ART_NOFILE_NOTES:
@@ -1285,7 +1318,8 @@ def artifact_panorama():
     html_tbl = ('<table><tr><th>步</th><th>交付物</th><th>模版核对结果</th><th>锚</th></tr>'
                 + ''.join(rows) + '</table>')
     stat = (f'共 {len(rows)} 行：文件在仓 {n_files} 件——模版符合 {n_ok} · 模版不符/缺件 {n_bad}；'
-            f'另文件域无独立工件 {len(ART_NOFILE_NOTES)} 步（15/22，如实标注）。中央仓锚 @{CEN_ANCHOR or "?"}')
+            f'另文件域无独立工件 {len(ART_NOFILE_NOTES)} 步'
+            f'（{"/".join(str(k) for k in sorted(ART_NOFILE_NOTES))}，如实标注）。中央仓锚 @{CEN_ANCHOR or "?"}')
     return html_tbl, stat, note_g5
 
 # 叙事层（V4 §四：终版报告=叙事层+旅程层单文件；失败显式降级不阻断）
