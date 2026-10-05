@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 2ba643ec..94667877 100644
+index d5d788a8..14b39ab5 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -70,6 +70,7 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
+@@ -72,6 +72,7 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
  import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
  import { petRoutes } from '../modules/studio/routes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
@@ -10,7 +10,7 @@ index 2ba643ec..94667877 100644
  // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
  import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
  // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
-@@ -276,6 +277,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -282,6 +283,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(petRoutes.routes())
    app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
    app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe

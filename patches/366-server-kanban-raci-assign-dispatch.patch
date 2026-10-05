@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index c67fc78d..88a78774 100644
+index 9c59f47a..027cb1c5 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -751,6 +751,14 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
+@@ -759,6 +759,14 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
      'Hermes CLI: kanban assign failed',
      'Failed to assign kanban task',
    )

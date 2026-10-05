@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/hermes/skills.ts b/packages/client/src/api/hermes/skills.ts
-index 242a14e6..c7e4bdf2 100644
+index efafbd51..94658e5b 100644
 --- a/packages/client/src/api/hermes/skills.ts
 +++ b/packages/client/src/api/hermes/skills.ts
 @@ -156,10 +156,14 @@ export async function fetchMemory(): Promise<MemoryData> {
@@ -20,10 +20,10 @@ index 242a14e6..c7e4bdf2 100644
  }
  
 diff --git a/packages/client/src/views/hermes/MemoryView.vue b/packages/client/src/views/hermes/MemoryView.vue
-index ab83b3d4..8b6b3c47 100644
+index b0790eac..ef1c6f62 100644
 --- a/packages/client/src/views/hermes/MemoryView.vue
 +++ b/packages/client/src/views/hermes/MemoryView.vue
-@@ -47,13 +47,23 @@ async function handleSave() {
+@@ -49,13 +49,23 @@ async function handleSave() {
    if (!editingSection.value) return
    saving.value = true
    try {
@@ -98,6 +98,7 @@ index bf722914..a4d50df7 100644
      ctx.status = 500
 diff --git a/tests/client/memory-view-conflict.test.ts b/tests/client/memory-view-conflict.test.ts
 new file mode 100644
+index 00000000..6702f9e8
 --- /dev/null
 +++ b/tests/client/memory-view-conflict.test.ts
 @@ -0,0 +1,86 @@

@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 87a2621..f413fb3 100644
+index 87a26215..f413fb3a 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -87,6 +87,8 @@ import ideCompactionTraceRouter from '../custom/controllers/ide/compaction-trace

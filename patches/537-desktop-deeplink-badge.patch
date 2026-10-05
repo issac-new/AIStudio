@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index b34de71..7de8b2b 100644
+index b34de716..7de8b2b6 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
 @@ -150,6 +150,50 @@ function showMainWindow() {
@@ -91,7 +91,7 @@ index b34de71..7de8b2b 100644
      await createWindow()
      await initializeDesktopBrowser().catch(error => {
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
-index ebb7a15..cba2a69 100644
+index ebb7a152..cba2a692 100644
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
 @@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {

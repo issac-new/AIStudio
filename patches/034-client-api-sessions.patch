@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/api/studio/sessions.ts b/packages/client/src/api/studio/sessions.ts
-index 64ecce0c..ebab989b 100644
+index d0e7446a..b157045c 100644
 --- a/packages/client/src/api/studio/sessions.ts
 +++ b/packages/client/src/api/studio/sessions.ts
-@@ -167,7 +167,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
+@@ -175,7 +175,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
    if (profile) params.set('profile', profile)
    const query = params.toString()
    const res = await request<{ sessions: SessionSummary[] }>(`/api/studio/sessions${query ? `?${query}` : ''}`)
@@ -11,7 +11,7 @@ index 64ecce0c..ebab989b 100644
  }
  
  export async function fetchSessionCategories(): Promise<SessionCategory[]> {
-@@ -333,7 +333,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
+@@ -363,7 +363,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
    if (profile) params.set('profile', profile)
    const query = params.toString()
    const res = await request<{ sessions: SessionSummary[] }>(`/api/studio/sessions/hermes${query ? `?${query}` : ''}`)

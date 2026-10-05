@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index 5e78353..07ad404 100644
+index 21bc5a47..aefa5326 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -331,7 +331,11 @@ export async function createBoard(ctx: Context) {
@@ -52,7 +52,7 @@ index 5e78353..07ad404 100644
      })
      ctx.body = { task }
    } catch (err: any) {
-@@ -1508,3 +1526,62 @@ async function _downloadUrlWithCapAndSsrf(
+@@ -1510,3 +1528,62 @@ async function _downloadUrlWithCapAndSsrf(
  }
  // HERMES_CUSTOM[AttachUrl] END
  

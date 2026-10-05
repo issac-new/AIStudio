@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py b/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
+index 9a0f4cdd..5ef5d056 100755
 --- a/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
 +++ b/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
-@@ -254,7 +254,11 @@
+@@ -263,7 +263,11 @@ class BridgeBroker(_broker.BridgeBroker):
  def main(argv: list[str] | None = None) -> int:
      parser = argparse.ArgumentParser(description="Hermes AIAgent in-process bridge")
      parser.add_argument("--endpoint", default=os.environ.get("HERMES_AGENT_BRIDGE_ENDPOINT", DEFAULT_ENDPOINT))

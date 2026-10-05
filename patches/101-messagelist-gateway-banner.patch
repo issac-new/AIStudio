@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index c8d3eded..c6da693f 100644
+index e07b4179..b9a7d258 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
-@@ -28,6 +28,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
+@@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
  import { chatSessionAgentAvatar } from "@/utils/chat-agent-avatar";
  import { parseThinking } from "@/utils/thinking-parser";
  import { groupCompletedToolsByRun } from "./tool-run-grouping";
@@ -10,7 +10,7 @@ index c8d3eded..c6da693f 100644
  
  const props = withDefaults(defineProps<{
    approvalPortalToBody?: boolean
-@@ -374,6 +375,24 @@ async function openForkParent(event?: MouseEvent) {
+@@ -378,6 +379,24 @@ async function openForkParent(event?: MouseEvent) {
  }
  
  function handleApproval(choice: "once" | "session" | "always" | "deny") {
@@ -35,7 +35,7 @@ index c8d3eded..c6da693f 100644
    chatStore.respondApproval(choice);
  }
  
-@@ -654,6 +673,7 @@ defineExpose({
+@@ -658,6 +677,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell" :aria-busy="isSearchLoading">

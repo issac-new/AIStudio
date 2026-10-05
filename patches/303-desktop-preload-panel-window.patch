@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
-index 64627e71..3e736adb 100644
+index d59a5c65..ebb7a152 100644
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
-@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
    notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),
    openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:open-external-url', url),
    openChatWindow: (sessionId: string, profile?: string): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-chat-window', sessionId, profile),

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 007105f..740d465 100644
+index 007105f1..740d465e 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,113 +2,155 @@

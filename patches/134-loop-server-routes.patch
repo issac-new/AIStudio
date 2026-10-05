@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 3f84722..280abf9 100644
+index 8ee9a75e..3346c69d 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -68,8 +68,58 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
+@@ -72,8 +72,58 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
  import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
  import { petRoutes } from '../modules/studio/routes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
@@ -61,7 +61,7 @@ index 3f84722..280abf9 100644
  /**
   * Register all routes on the Koa app.
   * Public routes are registered first, then auth middleware,
-@@ -149,4 +199,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -158,4 +208,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(petdexRoutes.routes())
    app.use(petRoutes.routes())
    app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API

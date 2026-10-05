@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
-index 0cc66828..158cae0f 100644
+index 32f1375c..7450bbfb 100644
 --- a/packages/server/src/modules/studio/repositories/users-store.ts
 +++ b/packages/server/src/modules/studio/repositories/users-store.ts
 @@ -16,6 +16,11 @@ export interface UserRecord {

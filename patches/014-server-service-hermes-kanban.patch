@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 2a3614bd..52060557 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -4,6 +4,8 @@
- import { join } from 'path'
+@@ -5,6 +5,8 @@ import { join } from 'path'
  import { logger } from '../../../studio/public/logging'
  import { detectHermesRootHome } from '../runtime/path'
  import { execHermes, spawnHermes } from '../runtime/process'
@@ -10,7 +10,8 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
 +import { getActiveProfileName, getProfileDir } from '../profiles/profile'
  
  const execOpts = { windowsHide: true }
-@@ -44,6 +46,7 @@ export interface KanbanTask {
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+@@ -45,6 +47,7 @@ export interface KanbanTask {
    workspace_kind: string
    workspace_path: string | null
    tenant: string | null
@@ -18,7 +19,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
    result: string | null
    skills: string[] | null
    goal_mode?: boolean
-@@ -155,6 +158,7 @@ export interface KanbanBulkTaskUpdateOptions extends KanbanBoardOptions {
+@@ -168,6 +171,7 @@ export interface KanbanBulkTaskUpdateOptions extends KanbanBoardOptions {
    ids: string[]
    status?: KanbanTaskStatus
    assignee?: string | null
@@ -26,7 +27,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
    archive?: boolean
    summary?: string
    reason?: string
-@@ -271,7 +275,7 @@ export async function getCapabilities(): Promise<KanbanCapabilities> {
+@@ -268,7 +272,7 @@ export async function getCapabilities(): Promise<KanbanCapabilities> {
      { key: 'links', status: 'supported', canonicalRoute: '/links', canonicalCommand: 'link/unlink', requiresBoard: true },
      { key: 'bulk', status: 'partial', reason: 'WUI applies supported bulk-equivalent CLI transitions per id and returns per-task outcomes; direct priority/status patch parity remains deferred', canonicalRoute: '/tasks/bulk', canonicalCommand: 'bulk-equivalent via complete/block/unblock/archive/assign', requiresBoard: true },
      { key: 'events', status: 'partial', reason: 'WUI exposes a board-scoped WebSocket bridge backed by the canonical `kanban watch` stream; payload is currently a refresh invalidation signal, not a typed event model', canonicalRoute: '/events', canonicalCommand: 'watch', requiresBoard: true },
@@ -35,7 +36,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
    ]
    const supports = Object.fromEntries(capabilities.map(capability => [capability.key, capability.status === 'supported'])) as Record<string, boolean>
    const missing = capabilities
-@@ -552,6 +556,7 @@ export async function createTask(
+@@ -551,6 +555,7 @@ export async function createTask(
      assignee?: string
      priority?: number
      tenant?: string
@@ -43,7 +44,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
      workspace?: string
      branch?: string
      triage?: boolean
-@@ -567,6 +572,7 @@ export async function createTask(
+@@ -566,6 +571,7 @@ export async function createTask(
    if (opts?.assignee) args.push('--assignee', opts.assignee)
    if (opts?.priority !== undefined) args.push('--priority', String(opts.priority))
    if (opts?.tenant) args.push('--tenant', opts.tenant)
@@ -51,7 +52,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
    if (opts?.workspace) args.push('--workspace', opts.workspace)
    if (opts?.branch) args.push('--branch', opts.branch)
    if (opts?.triage) args.push('--triage')
-@@ -761,3 +767,261 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
+@@ -771,3 +777,261 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
      throw new Error(`Failed to get kanban assignees: ${err.message}`)
    }
  }

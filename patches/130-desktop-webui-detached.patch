@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index 1bc01e7f..12445444 100644
+index 9c1ee227..024c8217 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
-@@ -422,6 +422,14 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+@@ -749,6 +749,14 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
  }
  
  async function launchWebUiServer(webUiDirectory: string, entry: string, env: NodeJS.ProcessEnv, port: number): Promise<string> {

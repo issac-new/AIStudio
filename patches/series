@@ -180,8 +180,6 @@
 374-agent-matrix-room-tools.patch
 375-runtime-semantica-mcp-catalog.patch
 377-client-search-hotkey-cmdf.patch
-378-server-zcode-coding-agent.patch
-379-client-zcode-agent-ui.patch
 380-server-zcode-engine-health-route.patch
 381-client-workflow-define-props-fix.patch
 382-client-matrix-gateway-auto-login.patch
@@ -456,15 +454,14 @@
 #      （autopass.ts 落台账的三枚 decision 值，历史表曾裸显枚举）。
 # 549=JourneyView 加载失败 toast 弃用原始 err.message（会带本机路径/命令失败细节
 #      上屏），改本地化 journey.loadFailed，原始错误降级 console.warn。
-548-client-i18n-regression-keys.patch
 549-client-journey-error-toast.patch
-550-client-i18n-changelog-0_7_27.patch
 # 551=HistoryView 剩余两处 hermes.historySession 悬空导航改路径式（539 补遗）。
 551-history-session-name-dangling-fix.patch
 # 552=usage.costStates/pricing 词条回填（473 rebaseline 误删；changelog 8 键归 550）。
 552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 553-locale-ux-clarity.patch
+553b-locale-restore-from-chain.patch
 
 
 # 554: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)
@@ -477,7 +474,6 @@
 #      ProviderFormModal（fun-codex/fun-claude 注册链接映射）与 ApiRelayView 页内链接按 556 原口径
 #      本就属上下文帮助/页面内容，保留。裁决 G 无剩余对象，补丁删除（c3dfc554 退役先例）。
 # 557=UX 裁决 A/C/D 与毛刺修复配套词条（审批确认/右栏二分/兜底反馈/主管面跳转/管理台职责注记；让号 557）。
-557-locale-ux-menu.patch
 # 562=推演运行态路由挂载（后台感知③）：GET /api/sim/run-progress 读 \$HERMES_HOME/run-progress.json（harness sset 单写契约），fail-soft 空态。
 562-server-sim-run-progress-route.patch
 # 563=P12 讨好者防线(ekko TS 侧)：buildSystemPrompt 常驻 Disclosure of Limits 段(截断/部分读取/未验证同屏披露)。

@@ -1,8 +1,11 @@
 diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
+index fceab970..6a817d70 100644
 --- a/packages/client/src/main.ts
 +++ b/packages/client/src/main.ts
-@@ -8,3 +8,15 @@ import { desktopBridge } from '@/utils/desktop-bridge'
-
+@@ -7,6 +7,18 @@ import './styles/global.scss'
+ import { desktopBridge } from '@/utils/desktop-bridge'
+ import { useTheme } from '@/composables/useTheme'
+ 
 +// overlay[aipaydev]: hash 路由吞掉路径形态深链的 search 参数（/ide?task=x 落 /app 后
 +// task 丢失，推演实锤 ide-deeplink-loses-task）。与下方 token 特例同构：在 router 初始化
 +// 前把 pathname+search 迁移为 hash 形态（#/ide?task=x），通用兼容所有路径深链。
@@ -17,3 +20,4 @@ diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
 +
  // Apply theme classes before mount to prevent FOUC (Flash of Unstyled Content)
  function storedPreference(key: string, fallback: string): string {
+   try {

@@ -1,6 +1,8 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index a6b52258..fae8ccb5 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
-@@ -58,7 +58,10 @@
+@@ -58,7 +58,10 @@ function taskAssigneeProfile(task: { assignee: string | null }): string {
  
  function filterTasksByVisibleProfiles(ctx: Context, tasks: kanbanCli.KanbanTask[]): kanbanCli.KanbanTask[] {
    const visible = visibleProfileSet(ctx)

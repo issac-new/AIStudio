@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+index 1b9870ac..abb0497b 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -358,10 +358,10 @@ router.beforeEach(async (to, _from, next) => {
+@@ -363,10 +363,10 @@ router.beforeEach(async (to, _from, next) => {
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
@@ -15,9 +16,9 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
        return
      }
      next()
-@@ -375,8 +375,8 @@ router.beforeEach(async (to, _from, next) => {
+@@ -380,8 +380,8 @@ router.beforeEach(async (to, _from, next) => {
    }
-
+ 
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
 -    // overlay[ia2]: 非 superadmin 兜底落 AI 协作中心（与登录默认落点一致）
 -    next('/hermes/cockpit')
@@ -25,4 +26,4 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
 +    next('/ide')
      return
    }
-
+ 

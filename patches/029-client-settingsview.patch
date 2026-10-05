@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/views/hermes/SettingsView.vue b/packages/client/src/views/hermes/SettingsView.vue
+index 36838919..ebbbe78a 100644
 --- a/packages/client/src/views/hermes/SettingsView.vue
 +++ b/packages/client/src/views/hermes/SettingsView.vue
-@@ -19,14 +19,15 @@
- import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
+@@ -17,13 +17,14 @@ import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
  import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
  import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
  import WebhookSettings from "@/components/hermes/settings/WebhookSettings.vue";

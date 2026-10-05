@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
-index d3358560..b0f49c3f 100644
+index 97ef4302..638fce81 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
 @@ -1,7 +1,8 @@
@@ -170,7 +170,7 @@ index d3358560..b0f49c3f 100644
      } catch (err) {
        if (isCurrentRequest(seq, generation, board, assigneesRequestSeq)) console.error('Failed to fetch kanban assignees:', err)
      }
-@@ -461,8 +517,209 @@ export const useKanbanStore = defineStore('kanban', () => {
+@@ -460,8 +516,209 @@ export const useKanbanStore = defineStore('kanban', () => {
      else filterAssignee.value = value
    }
  
@@ -382,7 +382,7 @@ index d3358560..b0f49c3f 100644
    }
  
    return {
-@@ -479,6 +736,12 @@ export const useKanbanStore = defineStore('kanban', () => {
+@@ -478,6 +735,12 @@ export const useKanbanStore = defineStore('kanban', () => {
      selectedBoard,
      filterStatus,
      filterAssignee,

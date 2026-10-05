@@ -1,4 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index ba3aaaec..9eb2abe2 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,8 +1,12 @@
@@ -17,7 +18,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
  import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
  import { safeFileStore } from '../../studio/public/safe-file-store'
  import {
-@@ -943,6 +946,30 @@
+@@ -943,6 +947,30 @@ export async function readArtifact(ctx: Context) {
    }
  }
  
@@ -48,7 +49,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
  export async function searchSessions(ctx: Context) {
    const { task_id, profile, q } = ctx.query as {
      task_id?: string
-@@ -1157,6 +1184,27 @@
+@@ -1159,6 +1187,27 @@ async function findAttachmentById(taskId: string, attachmentId: number, board?:
    return (list as any[]).find(a => Number(a?.id) === attachmentId) ?? null
  }
  
@@ -76,7 +77,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
  export async function uploadAttachment(ctx: Context) {
    const taskId = ctx.params.id
    const board = ctx.query.board as string | undefined
-@@ -1226,6 +1274,7 @@
+@@ -1228,6 +1277,7 @@ export async function uploadAttachment(ctx: Context) {
      // CLI attach 不写 HTTP 返回；回读附件列表取最新一条返回（按 id 最大）
      const list = await kanbanCli.listAttachments(taskId, { board })
      const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
@@ -84,13 +85,12 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
      ctx.body = { attachment: record ?? { id: 0, filename: safeName, content_type: null, size: uploadedFile.size, uploaded_by: ctx.state.user?.username || 'dashboard', stored_path: '', created_at: Math.floor(Date.now() / 1000) } }
    } catch (err: any) {
      ctx.status = 500
-@@ -1236,7 +1285,13 @@
+@@ -1238,7 +1288,13 @@ export async function uploadAttachment(ctx: Context) {
  export async function removeAttachment(ctx: Context) {
    const attachmentId = Number(ctx.params.id)
    const board = ctx.query.board as string | undefined
--  try {
 +  const taskId = (ctx.query.task_id as string | undefined) || undefined
-+  try {
+   try {
 +    // CLI 模型下 attach-rm 只收 attachment id；workspace 反向清理需先按 task_id 查到记录
 +    if (taskId) {
 +      const rec = await findAttachmentById(taskId, attachmentId, board)
@@ -100,6 +100,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
      ctx.body = { ok: true }
    } catch (err: any) {
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
+index eab6c93b..6a0dc2cf 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -22,6 +22,8 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)

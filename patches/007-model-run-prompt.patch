@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts b/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
-index f383b98d..2fd55b5f 100644
+index 1403170d..d9716e01 100644
 --- a/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
 @@ -21,7 +21,12 @@ export function modelRunProfileTokenPath(profile: string): string {

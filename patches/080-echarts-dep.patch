@@ -1,8 +1,8 @@
 diff --git a/package.json b/package.json
-index 05acb49..4426ada 100644
+index a7ed7ec4..fccb8d38 100644
 --- a/package.json
 +++ b/package.json
-@@ -86,6 +86,7 @@
+@@ -96,6 +96,7 @@
      "adm-zip": "^0.6.0",
      "agent-browser": "^0.26.0",
      "boring-avatars-vanilla": "^1.0.2",

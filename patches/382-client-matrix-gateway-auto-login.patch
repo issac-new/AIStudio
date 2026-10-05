@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/stores/hermes/auth.ts
+index 4abecf1e..655d63e7 100644
 --- a/packages/client/src/stores/hermes/auth.ts
 +++ b/packages/client/src/stores/hermes/auth.ts
-@@ -61,5 +61,28 @@
+@@ -61,6 +61,29 @@ export const useAuthStore = defineStore('hermes-auth', () => {
      }
    }
  
@@ -30,7 +31,8 @@ diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/sto
 +  }
    async function localLogin(username: string, password: string) {
      isLoading.value = true
-@@ -132,6 +155,7 @@
+     error.value = null
+@@ -131,6 +154,7 @@ export const useAuthStore = defineStore('hermes-auth', () => {
      isMatrixLoggedIn,
      isSuperAdmin,
      matrixLogin,
@@ -39,9 +41,10 @@ diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/sto
      fetchUser,
      logout,
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
+index 9cfed10f..4440052b 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
-@@ -79,9 +79,16 @@
+@@ -79,9 +79,16 @@ function clearSavedCredentials(form: 'matrix' | 'local'): void {
    localStorage.removeItem(keys.pass);
  }
  

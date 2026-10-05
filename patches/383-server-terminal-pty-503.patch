@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/sockets/terminal.ts b/packages/server/src/modules/hermes/sockets/terminal.ts
+index 1ec268e9..e96b7960 100644
 --- a/packages/server/src/modules/hermes/sockets/terminal.ts
 +++ b/packages/server/src/modules/hermes/sockets/terminal.ts
-@@ -86,7 +86,19 @@
+@@ -86,7 +86,19 @@ function killPtySession(session: PtySession): void {
  
  export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
    if (!pty) {

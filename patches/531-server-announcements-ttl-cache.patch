@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/studio/controllers/announcements.ts b/packages/server/src/modules/studio/controllers/announcements.ts
+index b5bc0375..77b0b904 100644
 --- a/packages/server/src/modules/studio/controllers/announcements.ts
 +++ b/packages/server/src/modules/studio/controllers/announcements.ts
-@@ -3,10 +3,34 @@
+@@ -3,10 +3,34 @@ import { fetchStudioAnnouncements } from '../services/notifications/announcement
  import { getHermesWebUiVersion } from '../public/system-info'
  import { filterStaleAnnouncementPayload } from '../../../custom/studio/announcement-filter'
  

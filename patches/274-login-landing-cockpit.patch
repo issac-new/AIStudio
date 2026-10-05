@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index e75e8af..6890dad 100644
+index e7e30a6e..1b9870ac 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -358,10 +358,10 @@ router.beforeEach(async (to, _from, next) => {
+@@ -363,10 +363,10 @@ router.beforeEach(async (to, _from, next) => {
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
@@ -16,7 +16,7 @@ index e75e8af..6890dad 100644
        return
      }
      next()
-@@ -375,8 +375,8 @@ router.beforeEach(async (to, _from, next) => {
+@@ -380,8 +380,8 @@ router.beforeEach(async (to, _from, next) => {
    }
  
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {

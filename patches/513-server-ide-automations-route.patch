@@ -1,3 +1,5 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 29036236..68b798bb 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -82,6 +82,7 @@ import { registerLoopCronBridgeRoutes } from '../custom/loop/graph/cron-bridge'
@@ -8,7 +10,7 @@
  import ideRunUndoRouter from '../custom/controllers/ide/run-undo'
  import ideCompactionTraceRouter from '../custom/controllers/ide/compaction-trace'
  import ideVideoFramesRouter from '../custom/controllers/ide/video-frames'
-@@ -328,6 +329,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -329,6 +330,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(ideRetryCountRoutes.routes())              // IDE 简报打回计数（aipaydev 缺口 3 可视化；与 patch 363 计数链同源）
    app.use(ideSessionShareRouter.routes())            // IDE 共享会话（R6：invite token 四档模式 + prompt 审批，multica 人机共驾）
    app.use(ideEngineModelsRouter.routes())             // IDE 编码引擎独立模型配置（2026-09-26 用户指令：与 hermes agent 模型独立设置）

@@ -1,12 +1,17 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index a020d611..a2a24f4e 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -69,3 +69,4 @@ import {
+@@ -71,6 +71,7 @@ import { ekkoMcpRoutes } from '../modules/ekko/routes/mcp'
+ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
  import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
  import { petRoutes } from '../modules/studio/routes/pets'
 +import traceRoutes from '../custom/controllers/hermes/trace'
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
-@@ -146,3 +147,4 @@
+ 
+ /**
+@@ -155,4 +156,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(writeGateRoutes.routes())              // Hermes Agent write approval review
    app.use(petdexRoutes.routes())
    app.use(petRoutes.routes())
 +  app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API

@@ -1,8 +1,8 @@
 diff --git a/package.json b/package.json
-index 9d9e3b6..c691232 100644
+index 41417028..c0af9984 100644
 --- a/package.json
 +++ b/package.json
-@@ -97,6 +97,7 @@
+@@ -107,6 +107,7 @@
      "node-pty": "^1.1.0",
      "sharp": "^0.35.3",
      "sherpa-onnx-node": "1.13.3",

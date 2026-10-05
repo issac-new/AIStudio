@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 01ac931d..ed269461 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -87,6 +87,12 @@
+@@ -87,6 +87,12 @@ import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
  import { evidenceRoutes } from '../custom/evidence/evidence-controller'
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
  import { reviewRoutes } from '../custom/review/review-controller'
@@ -14,7 +15,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
  // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
  import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
  // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
-@@ -309,6 +315,9 @@
+@@ -309,6 +315,9 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）
    app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
    app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）

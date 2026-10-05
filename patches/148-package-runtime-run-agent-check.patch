@@ -1,7 +1,8 @@
 diff --git a/packages/desktop/scripts/package-runtime.mjs b/packages/desktop/scripts/package-runtime.mjs
+index 00ff5073..41c6db55 100644
 --- a/packages/desktop/scripts/package-runtime.mjs
 +++ b/packages/desktop/scripts/package-runtime.mjs
-@@ -64,6 +64,14 @@
+@@ -72,6 +72,14 @@ for (const dir of [PY_DIR, NODE_DIR]) {
    }
  }
  

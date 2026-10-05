@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/runtime/process.ts b/packages/server/src/modules/hermes/services/runtime/process.ts
+index f981ae38..2d5a9a7a 100644
 --- a/packages/server/src/modules/hermes/services/runtime/process.ts
 +++ b/packages/server/src/modules/hermes/services/runtime/process.ts
-@@ -65,7 +65,13 @@
+@@ -65,7 +65,13 @@ export function execHermesWithBin(
    args: readonly string[],
    options?: ExecFileOptions,
  ): Promise<HermesExecResult> {
@@ -16,7 +17,7 @@ diff --git a/packages/server/src/modules/hermes/services/runtime/process.ts b/pa
    const invocationArgs = [...invocation.argsPrefix, ...args]
    const execution = process.platform === 'win32' && windowsCommandNeedsShell(invocation.command)
      ? windowsCmdShimExecution(invocation.command, invocationArgs)
-@@ -75,7 +81,7 @@
+@@ -75,7 +81,7 @@ export function execHermesWithBin(
        execution.command,
        execution.args,
        {

@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
+index 0c408b62..44c23523 100644
 --- a/packages/client/src/components/hermes/chat/ChatInput.vue
 +++ b/packages/client/src/components/hermes/chat/ChatInput.vue
-@@ -16,6 +16,8 @@
+@@ -16,6 +16,8 @@ import { useI18n } from 'vue-i18n'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import { extractClipboardFiles } from '@/utils/clipboard-files'
  import VoiceDialogueControls from './VoiceDialogueControls.vue'
@@ -10,7 +11,7 @@ diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages
  import BundleCreateModal from './BundleCreateModal.vue'
  import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
  import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
-@@ -484,14 +486,15 @@
+@@ -456,14 +458,15 @@ function startResize(e: MouseEvent) {
  }
  
  const inputSettingsOptions = computed<DropdownOption[]>(() => [
@@ -28,7 +29,7 @@ diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages
    {
      label: t('chat.showToolCalls'),
      key: 'toolTrace',
-@@ -1446,6 +1449,7 @@
+@@ -1384,6 +1387,7 @@ function openAttachmentPreview(attachment: Attachment) {
          </div>
          <div class="input-actions">
            <VoiceDialogueControls
@@ -36,18 +37,8 @@ diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages
              :status="voiceInput.dialogue.status.value"
              :transcript="voiceInput.transcript.value"
              :error="voiceInput.error.value"
---- a/packages/client/src/views/hermes/AgentManagerView.vue
-+++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -2,6 +2,8 @@
- import PageLoading from '@/components/common/PageLoading.vue'
- import PageHeader from '@/components/layout/PageHeader.vue'
- import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
-+// overlay[s3]（补遗⑤）：ekko 配置入口默认关（VITE_CUSTOM_EKKO 再开）
-+import { features } from '@/custom/features'
- import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
- import { useRoute, useRouter } from 'vue-router'
- import { useI18n } from 'vue-i18n'
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+index 47d92583..cd5d6d32 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
 @@ -1,4 +1,5 @@
@@ -56,7 +47,7 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
  import { hasApiKey, isStoredSuperAdmin } from '@/api/client'
  import { hasDesktopBrowserBridge } from '@/utils/desktop-bridge'
  import { resolveLoginRedirect } from '@/utils/login-redirect'
-@@ -266,6 +267,10 @@
+@@ -320,6 +321,10 @@ function isDesktopShell(): boolean {
  }
  
  router.beforeEach(async (to, _from, next) => {
@@ -67,14 +58,3 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
    await ensureDesktopAuth()
  
    if (to.name === 'codingAgent.config' && ['plugins', 'presets'].includes(String(to.params.section)) && to.params.agentId !== 'dsh') {
---- a/packages/client/src/views/hermes/AgentManagerView.vue
-+++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -497,7 +497,7 @@
-           </NAlert>
- 
-           <div class="coding-agent-grid">
--            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
-+            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
-               <header class="agent-card-header compact">
-                 <div class="agent-identity">
-                   <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />

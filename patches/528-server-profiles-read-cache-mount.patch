@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 68b798bb..707d0883 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -29,6 +29,12 @@
+@@ -29,6 +29,12 @@ import { mcuDeviceRoutes } from '../modules/studio/routes/mcu-devices'
  import { sessionRoutes } from '../modules/studio/routes/sessions'
  import { sessionSharePublicRoutes, sessionShareRoutes } from '../modules/studio/routes/session-shares'
  import { profileRoutes } from '../modules/hermes/routes/profiles'
@@ -14,7 +15,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
  import { skillRoutes } from '../modules/hermes/routes/skills'
  import { skillBundleRoutes } from '../modules/hermes/routes/skill-bundles'
  import { pluginRoutes } from '../modules/hermes/routes/plugins'
-@@ -226,6 +232,10 @@
+@@ -226,6 +232,10 @@ const commandPost = initCommandPost({
    killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
    getSession: getSessionRowForCommandPost,
    userCanAccessProfile: userCanAccessProfileForCommandPost,
@@ -25,7 +26,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
  })
  async function initLoopSubsystem(): Promise<void> {
    if (loopStore) return
-@@ -278,6 +288,11 @@
+@@ -278,6 +288,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(socialMessageRoutes.routes())
    app.use(sessionRoutes.routes())
    app.use(sessionShareRoutes.routes())
@@ -37,7 +38,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
    app.use(profileRoutes.routes())
    app.use(ekkoMemoryRoutes.routes())
    app.use(ekkoSkillRoutes.routes())
-@@ -306,6 +321,11 @@
+@@ -306,6 +321,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(jobRoutes.routes())
    app.use(cronHistoryRoutes.routes())
    app.use(kanbanDashboardUrlRoutes.routes())

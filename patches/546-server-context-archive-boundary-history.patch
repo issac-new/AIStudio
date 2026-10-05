@@ -1,11 +1,8 @@
-# 546（上下文无损滚存遗留④ 2026-10-03）：压缩边界史——saveCompressionSnapshot
-#      成功保存且有边界游标时，向 chat_compression_boundary_history 追加一行（CREATE
-#      IF NOT EXISTS 幂等建表）。主表 UPSERT 覆盖旧边界，档案侧（custom/server/
-#      contextarchive/advance.ts）据此把多次压缩精确切多窗；失败 fail-soft 不阻塞压缩。
 diff --git a/packages/server/src/modules/studio/repositories/compression-snapshot.ts b/packages/server/src/modules/studio/repositories/compression-snapshot.ts
+index 2d94ed38..5bc6c06f 100644
 --- a/packages/server/src/modules/studio/repositories/compression-snapshot.ts
 +++ b/packages/server/src/modules/studio/repositories/compression-snapshot.ts
-@@ -117,6 +117,27 @@
+@@ -117,6 +117,27 @@ export function saveCompressionSnapshot(
      sessionId,
      cursor?.expectedHistoryRevision ?? historyRevision,
    )
@@ -33,4 +30,3 @@ diff --git a/packages/server/src/modules/studio/repositories/compression-snapsho
    return result.changes > 0
  }
  
-

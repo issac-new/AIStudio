@@ -1,27 +1,26 @@
-diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
---- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-+++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -691,6 +691,16 @@
-     'Hermes CLI: kanban block failed',
-     'Failed to block kanban task',
-   )
-+}
-+
-+export async function reopenReview(
-+  taskIds: string[],
-+  reason?: string,
-+  opts?: KanbanBoardOptions,
-+): Promise<void> {
-+  const args = [...boardArgs(opts?.board), 'reopen-review', ...taskIds]
-+  if (reason) args.push('--reason', reason)
-+  await execKanbanMutation(args, 'Hermes CLI: kanban reopen-review failed', 'Failed to reopen review')
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index 68fe80e8..3a8667d1 100644
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -462,6 +462,13 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
+   })
  }
  
- export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
++export async function reopenReview(taskIds: string[], reason?: string, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
++  return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/reopen-review', boardParams(opts?.board)), {
++    method: 'POST',
++    body: JSON.stringify(reason ? { task_ids: taskIds, reason } : { task_ids: taskIds }),
++  })
++}
++
+ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+   return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/unblock', boardParams(opts?.board)), {
+     method: 'POST',
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index 205a8589..e41288be 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
-@@ -571,6 +571,29 @@
+@@ -571,6 +571,29 @@ export async function block(ctx: Context) {
    }
  }
  
@@ -52,9 +51,10 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
    const bodyResult = requestBody(ctx)
    if (rejectBadRequest(ctx, bodyResult.error)) return
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
+index 5cb0cb9e..29940763 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
-@@ -49,6 +49,8 @@
+@@ -49,6 +49,8 @@ kanbanRoutes.get('/api/hermes/kanban/:id', ctrl.get)
  kanbanRoutes.post('/api/hermes/kanban', ctrl.create)
  kanbanRoutes.post('/api/hermes/kanban/complete', ctrl.complete)
  kanbanRoutes.post('/api/hermes/kanban/unblock', ctrl.unblock)
@@ -63,27 +63,32 @@ diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/serv
  kanbanRoutes.post('/api/hermes/kanban/:id/block', ctrl.block)
  kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
  kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)
-diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
---- a/packages/client/src/api/hermes/kanban.ts
-+++ b/packages/client/src/api/hermes/kanban.ts
-@@ -462,6 +462,13 @@
-   })
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 9eaaca98..acc0304b 100644
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -693,6 +693,16 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
+   )
  }
  
-+export async function reopenReview(taskIds: string[], reason?: string, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
-+  return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/reopen-review', boardParams(opts?.board)), {
-+    method: 'POST',
-+    body: JSON.stringify(reason ? { task_ids: taskIds, reason } : { task_ids: taskIds }),
-+  })
++export async function reopenReview(
++  taskIds: string[],
++  reason?: string,
++  opts?: KanbanBoardOptions,
++): Promise<void> {
++  const args = [...boardArgs(opts?.board), 'reopen-review', ...taskIds]
++  if (reason) args.push('--reason', reason)
++  await execKanbanMutation(args, 'Hermes CLI: kanban reopen-review failed', 'Failed to reopen review')
 +}
 +
- export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
-   return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/unblock', boardParams(opts?.board)), {
-     method: 'POST',
+ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
+   await execKanbanMutation(
+     [...boardArgs(opts?.board), 'unblock', ...taskIds],
 diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
+index a75399ae..d57d0da6 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,7 @@ const mockAddComment = vi.hoisted(() => vi.fn())
  const mockLinkTasks = vi.hoisted(() => vi.fn())
  const mockUnlinkTasks = vi.hoisted(() => vi.fn())
  const mockBulkUpdateTasks = vi.hoisted(() => vi.fn())
@@ -91,7 +96,7 @@ diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-contro
  const mockGetTaskLog = vi.hoisted(() => vi.fn())
  const mockGetDiagnostics = vi.hoisted(() => vi.fn())
  const mockReclaimTask = vi.hoisted(() => vi.fn())
-@@ -67,6 +68,7 @@
+@@ -67,6 +68,7 @@ vi.mock('../../packages/server/src/modules/hermes/services/kanban/kanban-service
    linkTasks: mockLinkTasks,
    unlinkTasks: mockUnlinkTasks,
    bulkUpdateTasks: mockBulkUpdateTasks,
@@ -99,7 +104,7 @@ diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-contro
    getTaskLog: mockGetTaskLog,
    getDiagnostics: mockGetDiagnostics,
    reclaimTask: mockReclaimTask,
-@@ -676,6 +678,31 @@
+@@ -676,6 +678,31 @@ describe('kanban controller', () => {
      expect(exactSearchCtx.body.results[0]).toMatchObject({ id: 'session-2', title: 'Matched session' })
    })
  

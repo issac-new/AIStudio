@@ -1,4 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/packages/server/src/modules/hermes/services/gateway/autostart.ts
+index 454b3966..c9347694 100644
 --- a/packages/server/src/modules/hermes/services/gateway/autostart.ts
 +++ b/packages/server/src/modules/hermes/services/gateway/autostart.ts
 @@ -9,6 +9,10 @@ import { getHermesBaseDir, getProfileDir, listProfileNamesFromDisk } from '../pr

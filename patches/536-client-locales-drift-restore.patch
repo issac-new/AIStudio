@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index d8ec35f..d9385ab 100644
+index ee41e953..f5835602 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -722,12 +722,12 @@ export default {
+@@ -694,12 +694,12 @@ export default {
        daysAgo: '{count} days ago',
        more: 'More actions',
        view_tasks: 'Tasks',
@@ -18,7 +18,7 @@ index d8ec35f..d9385ab 100644
        views: 'Views',
        organize_grouped: 'Groups',
        organize_project: 'Projects',
-@@ -758,7 +758,10 @@ export default {
+@@ -730,7 +730,10 @@ export default {
        deleteAllArchivedTitle: 'Delete {count} archived tasks?',
        deleteAllArchivedResult: 'Deleted {deleted}, skipped {skipped}, failed {failed}.',
        deleteAllArchivedError: 'Operation or list refresh failed; refresh to check remaining tasks.',
@@ -30,7 +30,7 @@ index d8ec35f..d9385ab 100644
      },
      modelInvalid: {
        title: 'Current model unavailable',
-@@ -792,6 +795,8 @@ export default {
+@@ -764,6 +767,8 @@ export default {
        tab_tools: 'Tools timeline',
        tab_hooks: 'Hooks',
        tab_workflow: 'Workflows',
@@ -39,7 +39,7 @@ index d8ec35f..d9385ab 100644
        ledgerPeak: 'Peak {day} · {tokens}',
        ledgerTotal: 'Total {tokens}',
        roundsTotal: 'Total ({n} rounds)',
-@@ -1101,6 +1106,7 @@ export default {
+@@ -1073,6 +1078,7 @@ export default {
      chatTabTraceDisabled: 'Unavailable without an active session',
      briefing: {
        title: 'Task Briefing',
@@ -47,7 +47,7 @@ index d8ec35f..d9385ab 100644
        toggle: 'Task Briefing',
        close: 'Collapse briefing',
        noActiveTask: 'No active task: open from the board or a task link to load the briefing',
-@@ -1111,7 +1117,6 @@ export default {
+@@ -1083,7 +1089,6 @@ export default {
        taskPriority: 'Priority',
        stage: 'Stage',
        branch: 'Branch',
@@ -55,7 +55,7 @@ index d8ec35f..d9385ab 100644
        contextBlock: 'Requirement Context',
        noContext: 'No requirement context yet',
        raciLabel: 'RACI',
-@@ -1518,6 +1523,7 @@ export default {
+@@ -1490,6 +1495,7 @@ export default {
    },
    ia2: {
      delivery: {
@@ -64,10 +64,10 @@ index d8ec35f..d9385ab 100644
        title: 'Delivery Cases',
        empty: 'No delivery cases yet',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 92c25da..43a869e 100644
+index 9ddab268..248139ac 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -758,7 +758,10 @@ export default {
+@@ -729,7 +729,10 @@ export default {
        deleteAllArchivedTitle: '删除 {count} 个归档任务？',
        deleteAllArchivedResult: '已删除 {deleted} 个，跳过 {skipped} 个，失败 {failed} 个。',
        deleteAllArchivedError: '操作或列表刷新失败，请刷新后检查剩余任务。',
@@ -79,7 +79,7 @@ index 92c25da..43a869e 100644
      },
      modelInvalid: {
        title: '当前模型已不可用',
-@@ -792,6 +795,8 @@ export default {
+@@ -763,6 +766,8 @@ export default {
        tab_tools: '工具时间线',
        tab_hooks: '钩子',
        tab_workflow: '工作流',
@@ -88,7 +88,7 @@ index 92c25da..43a869e 100644
        ledgerPeak: '峰值 {day} · {tokens}',
        ledgerTotal: '累计 {tokens}',
        roundsTotal: '合计（{n} 轮）',
-@@ -1101,6 +1106,7 @@ export default {
+@@ -1072,6 +1077,7 @@ export default {
      chatTabTraceDisabled: '无活跃会话，暂不可用',
      briefing: {
        title: '任务简报',
@@ -96,7 +96,7 @@ index 92c25da..43a869e 100644
        toggle: '任务简报',
        close: '收起简报',
        noActiveTask: '当前无激活任务：从看板或任务跳转进入后自动带入简报',
-@@ -1111,7 +1117,6 @@ export default {
+@@ -1082,7 +1088,6 @@ export default {
        taskPriority: '优先级',
        stage: '当前阶段',
        branch: '分支',
@@ -104,7 +104,7 @@ index 92c25da..43a869e 100644
        contextBlock: '需求上下文',
        noContext: '暂无需求上下文',
        raciLabel: 'RACI',
-@@ -1518,6 +1523,7 @@ export default {
+@@ -1489,6 +1494,7 @@ export default {
    },
    ia2: {
      delivery: {

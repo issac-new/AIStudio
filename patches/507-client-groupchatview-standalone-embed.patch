@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
+index 1547e2e8..d8df8cc4 100644
 --- a/packages/client/src/views/hermes/GroupChatView.vue
 +++ b/packages/client/src/views/hermes/GroupChatView.vue
-@@ -24,6 +24,9 @@
+@@ -24,6 +24,9 @@ const routeRoomId = computed(() => {
      return typeof value === 'string' && value.trim() ? value : null
  })
  
@@ -10,7 +12,7 @@
  const routeProfile = computed(() => {
      const value = route.query?.profile
      return typeof value === 'string' && value.trim() ? value : null
-@@ -48,7 +51,8 @@
+@@ -48,7 +51,8 @@ async function syncRouteRoom() {
      }
  
      if (!store.rooms.some(room => room.id === roomId)) {
@@ -20,7 +22,7 @@
          return
      }
  
-@@ -99,12 +103,15 @@
+@@ -99,12 +103,15 @@ watch([routeRoomId, routeProfile], async () => {
  </script>
  
  <template>

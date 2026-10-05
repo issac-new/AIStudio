@@ -1,6 +1,6 @@
 {
   "name": "hermes-overlay",
-  "version": "0.7.29-overlay-2.37",
+  "version": "0.7.30-overlay-2.38",
   "private": true,
   "type": "module",
   "description": "二次开发 overlay 层:注入到 hermes-studio 上游",

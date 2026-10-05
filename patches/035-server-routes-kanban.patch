@@ -1,4 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
+index efffc35e..eab6c93b 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -1,5 +1,13 @@
@@ -15,7 +16,7 @@ diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/serv
  
  export const kanbanRoutes = new Router()
  
-@@ -11,12 +19,20 @@ kanbanRoutes.get('/api/hermes/kanban/capabilities', ctrl.capabilities)
+@@ -10,12 +18,20 @@ kanbanRoutes.get('/api/hermes/kanban/capabilities', ctrl.capabilities)
  kanbanRoutes.get('/api/hermes/kanban/stats', ctrl.stats)
  kanbanRoutes.get('/api/hermes/kanban/assignees', ctrl.assignees)
  kanbanRoutes.get('/api/hermes/kanban/diagnostics', ctrl.diagnostics)
@@ -36,7 +37,7 @@ diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/serv
  kanbanRoutes.get('/api/hermes/kanban', ctrl.list)
  kanbanRoutes.get('/api/hermes/kanban/:id/attachments', ctrl.listAttachments)
  kanbanRoutes.get('/api/hermes/kanban/:id/attachments/:attachmentId', ctrl.readAttachment)
-@@ -28,3 +43,6 @@ kanbanRoutes.get('/api/hermes/kanban/:id/log', ctrl.taskLog)
+@@ -30,3 +46,6 @@ kanbanRoutes.get('/api/hermes/kanban/:id/log', ctrl.taskLog)
  kanbanRoutes.post('/api/hermes/kanban/:id/reclaim', ctrl.reclaim)
  kanbanRoutes.post('/api/hermes/kanban/:id/reassign', ctrl.reassign)
  kanbanRoutes.post('/api/hermes/kanban/:id/specify', ctrl.specify)

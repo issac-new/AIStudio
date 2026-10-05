@@ -1,8 +1,8 @@
 diff --git a/vite.config.ts b/vite.config.ts
-index 1b0d7001..9fc073a8 100644
+index f339b9eb..e765b38c 100644
 --- a/vite.config.ts
 +++ b/vite.config.ts
-@@ -38,6 +38,10 @@ export default defineConfig({
+@@ -40,6 +40,10 @@ export default defineConfig({
    },
    resolve: {
      alias: {

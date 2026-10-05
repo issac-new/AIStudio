@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
-index 0e5664e8..3f3656ed 100644
+index 28e5655a..7e9396dc 100644
 --- a/packages/client/src/api/client.ts
 +++ b/packages/client/src/api/client.ts
-@@ -108,11 +108,54 @@ function isProfileWideSessionCollection(pathname: string): boolean {
+@@ -157,11 +157,54 @@ function isProfileWideSessionCollection(pathname: string): boolean {
      pathname === '/api/studio/sessions/conversations'
  }
  
@@ -58,7 +58,7 @@ index 0e5664e8..3f3656ed 100644
  function messageFromErrorValue(value: unknown): string {
    if (typeof value === 'string') return value
    if (value == null) return ''
-@@ -175,11 +218,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+@@ -237,11 +280,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
      !path.startsWith('/v1/')
  
    if (res.status === 401 && isLocalBff) {
@@ -71,7 +71,7 @@ index 0e5664e8..3f3656ed 100644
      throw new Error('Unauthorized')
    }
  
-@@ -187,11 +226,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+@@ -249,11 +288,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
      const text = await res.text().catch(() => '')
      if (res.status === 403 && isLocalBff) {
        if (text.includes('User is disabled or does not exist')) {
@@ -84,7 +84,7 @@ index 0e5664e8..3f3656ed 100644
        } else {
          emitAuthNotice('forbidden')
        }
-@@ -205,3 +240,50 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+@@ -270,3 +305,50 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
  export function getBaseUrlValue(): string {
    return getBaseUrl()
  }

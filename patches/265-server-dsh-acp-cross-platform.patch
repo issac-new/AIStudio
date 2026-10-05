@@ -1,3 +1,63 @@
+diff --git a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+index ae52a27a..c0640cb3 100644
+--- a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
++++ b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+@@ -24,6 +24,7 @@ export class DshAcpTurn {
+   private sessionId = ''
+   private attempts = new Map<string, StreamedText>()
+   private committed = new Map<string, StreamedText>()
++  private strayLines = 0
+ 
+   constructor(private child: ChildProcess, private callbacks: {
+     update(update: any): void
+@@ -40,7 +41,17 @@ export class DshAcpTurn {
+         while ((end = this.buffer.indexOf('\n')) >= 0) {
+           const line = this.buffer.slice(0, end).trim()
+           this.buffer = this.buffer.slice(end + 1)
+-          if (line) this.receive(JSON.parse(line))
++          if (!line) continue
++          try {
++            this.receive(JSON.parse(line))
++          } catch (error) {
++            // Windows cmd shims, antivirus wrappers and locale banners can print
++            // non-JSON lines to stdout; skip those instead of killing the turn.
++            // Real protocol breakage still surfaces once garbage dominates.
++            if (!(error instanceof SyntaxError)) throw error
++            this.strayLines += 1
++            if (this.strayLines > 64) throw new Error('DSH ACP stdout produced too many non-JSON lines')
++          }
+         }
+       } catch (error) { this.dispose(error instanceof Error ? error : new Error(String(error))) }
+     })
+diff --git a/packages/server/src/modules/coding-agents/services/dsh/host.ts b/packages/server/src/modules/coding-agents/services/dsh/host.ts
+index 33d591aa..e5dcd6ed 100644
+--- a/packages/server/src/modules/coding-agents/services/dsh/host.ts
++++ b/packages/server/src/modules/coding-agents/services/dsh/host.ts
+@@ -45,6 +45,15 @@ export function createDshHost(host: DshHostCommands) {
+     const env = await host.commandEnv()
+     const command = await host.resolveCommandForExecution('dsh', env)
+     const execution = host.commandExecution(command, args)
++
++    // cmd.exe/PowerShell localize "command not found" ("'pnpm' 不是内部或外部命令",
++    // "pnpm: The term 'pnpm' is not recognized", "无法将“pnpm”项识别为 cmdlet"), so a
++    // plain /pnpm not found/ match misclassifies missing pnpm as a plugin failure.
++    // ERR_PNPM_* (e.g. FETCH_404 "Not Found") means pnpm itself ran — never a
++    // missing-pnpm case, so exclude it before the wording match.
++    const pnpmMissing = (stderr: string) => /ENOENT/.test(stderr)
++      || (!/ERR_PNPM_/.test(stderr) && /pnpm/i.test(stderr) && /not found|is not recognized|不是内部或外部命令|无法将|could not be found/i.test(stderr))
++
+     await new Promise<void>((resolve, reject) => {
+       const child = spawn(execution.command, execution.args, {
+         cwd: home, detached: process.platform !== 'win32', windowsHide: true,
+@@ -68,7 +77,7 @@ export function createDshHost(host: DshHostCommands) {
+         if (signal.aborted) reject(new DshPluginError(503, 'DSH_OPERATION_INTERRUPTED', 'Plugin operation interrupted'))
+         else if (timedOut) reject(new DshPluginError(503, 'DSH_OPERATION_TIMEOUT', 'Plugin operation timed out'))
+         else if (code === 0) resolve()
+-        else if (/pnpm not found|ENOENT/.test(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
++        else if (pnpmMissing(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
+         else reject(new DshPluginError(422, 'DSH_PLUGIN_OPERATION_FAILED', 'Web plugin operation failed; reload the list to inspect its current state'))
+       })
+     })
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts b/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
 index dc1242a7..d2105d9a 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
@@ -31,63 +91,3 @@ index dc1242a7..d2105d9a 100644
    }
    for (const [key, value] of Object.entries(launchEnv)) {
      if (value !== undefined) env[key] = value
-diff --git a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
-index 81ec370d..011695dd 100644
---- a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
-+++ b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
-@@ -23,6 +23,7 @@ export class DshAcpTurn {
-   private sessionId = ''
-   private attempts = new Map<string, StreamedText>()
-   private committed = new Map<string, StreamedText>()
-+  private strayLines = 0
- 
-   constructor(private child: ChildProcess, private callbacks: {
-     update(update: any): void
-@@ -38,7 +39,17 @@ export class DshAcpTurn {
-         while ((end = this.buffer.indexOf('\n')) >= 0) {
-           const line = this.buffer.slice(0, end).trim()
-           this.buffer = this.buffer.slice(end + 1)
--          if (line) this.receive(JSON.parse(line))
-+          if (!line) continue
-+          try {
-+            this.receive(JSON.parse(line))
-+          } catch (error) {
-+            // Windows cmd shims, antivirus wrappers and locale banners can print
-+            // non-JSON lines to stdout; skip those instead of killing the turn.
-+            // Real protocol breakage still surfaces once garbage dominates.
-+            if (!(error instanceof SyntaxError)) throw error
-+            this.strayLines += 1
-+            if (this.strayLines > 64) throw new Error('DSH ACP stdout produced too many non-JSON lines')
-+          }
-         }
-       } catch (error) { this.dispose(error instanceof Error ? error : new Error(String(error))) }
-     })
-diff --git a/packages/server/src/modules/coding-agents/services/dsh/host.ts b/packages/server/src/modules/coding-agents/services/dsh/host.ts
-index 33d591aa..6fc4f84d 100644
---- a/packages/server/src/modules/coding-agents/services/dsh/host.ts
-+++ b/packages/server/src/modules/coding-agents/services/dsh/host.ts
-@@ -45,6 +45,15 @@ export function createDshHost(host: DshHostCommands) {
-     const env = await host.commandEnv()
-     const command = await host.resolveCommandForExecution('dsh', env)
-     const execution = host.commandExecution(command, args)
-+
-+    // cmd.exe/PowerShell localize "command not found" ("'pnpm' 不是内部或外部命令",
-+    // "pnpm: The term 'pnpm' is not recognized", "无法将“pnpm”项识别为 cmdlet"), so a
-+    // plain /pnpm not found/ match misclassifies missing pnpm as a plugin failure.
-+    // ERR_PNPM_* (e.g. FETCH_404 "Not Found") means pnpm itself ran — never a
-+    // missing-pnpm case, so exclude it before the wording match.
-+    const pnpmMissing = (stderr: string) => /ENOENT/.test(stderr)
-+      || (!/ERR_PNPM_/.test(stderr) && /pnpm/i.test(stderr) && /not found|is not recognized|不是内部或外部命令|无法将|could not be found/i.test(stderr))
-+
-     await new Promise<void>((resolve, reject) => {
-       const child = spawn(execution.command, execution.args, {
-         cwd: home, detached: process.platform !== 'win32', windowsHide: true,
-@@ -68,7 +75,7 @@ export function createDshHost(host: DshHostCommands) {
-         if (signal.aborted) reject(new DshPluginError(503, 'DSH_OPERATION_INTERRUPTED', 'Plugin operation interrupted'))
-         else if (timedOut) reject(new DshPluginError(503, 'DSH_OPERATION_TIMEOUT', 'Plugin operation timed out'))
-         else if (code === 0) resolve()
--        else if (/pnpm not found|ENOENT/.test(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
-+        else if (pnpmMissing(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
-         else reject(new DshPluginError(422, 'DSH_PLUGIN_OPERATION_FAILED', 'Web plugin operation failed; reload the list to inspect its current state'))
-       })
-     })

@@ -1,26 +1,26 @@
 diff --git a/packages/client/src/api/studio/group-chat-agent-link.ts b/packages/client/src/api/studio/group-chat-agent-link.ts
-index 1f90db3..dd1a9ce 100644
+index b9c6eefe..aa08f95a 100644
 --- a/packages/client/src/api/studio/group-chat-agent-link.ts
 +++ b/packages/client/src/api/studio/group-chat-agent-link.ts
 @@ -1,7 +1,7 @@
  import { request } from '../client'
  
  export type RemoteGroupAgentDescriptor = {
--  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
    agentMode: 'scoped' | 'global'
    priorAgentMode?: 'scoped' | 'global' | ''
    profile: string
 diff --git a/packages/client/src/api/studio/group-chat.ts b/packages/client/src/api/studio/group-chat.ts
-index 1c9bd56..9e07fad 100644
+index e7187198..f90f502f 100644
 --- a/packages/client/src/api/studio/group-chat.ts
 +++ b/packages/client/src/api/studio/group-chat.ts
 @@ -100,7 +100,7 @@ export interface RoomAgent {
      id: string
      roomId: string
      agentId: string
--    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
      agentMode: 'scoped' | 'global'
      priorAgentMode?: 'scoped' | 'global' | ''
      profile: string
@@ -28,30 +28,30 @@ index 1c9bd56..9e07fad 100644
  
  export interface RoomAgentInput {
      presetId?: string
--    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
      agentMode?: 'scoped' | 'global'
      priorAgentMode?: 'scoped' | 'global' | ''
      profile: string
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 6453f1d..c2e3d98 100644
+index 87ce44f4..bed8578b 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -250,7 +250,7 @@ const profileOptions = computed(() =>
+@@ -251,7 +251,7 @@ const profileOptions = computed(() =>
      profilesStore.profiles.map(p => ({ label: p.name, value: p.name }))
  )
  
--type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
  
  const groupAgentTypeDefinitions = GROUP_AGENT_OPTIONS
  
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-index 741c377..02a6c35 100644
+index 02e262ae..4c917042 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-@@ -1,7 +1,7 @@
- <script setup lang="ts">
+@@ -2,7 +2,7 @@
+ import { isGlobalOnlyCodingAgent } from "@/utils/agent-catalog"
  import DshSessionPresetSelect from "@/components/coding-agents/dsh/DshSessionPresetSelect.vue"
  import { computed, ref } from 'vue'
 -import { Handle, Position, type NodeProps } from '@vue-flow/core'
@@ -60,7 +60,7 @@ index 741c377..02a6c35 100644
  import { NInput, NSelect, NSwitch, NTooltip, useMessage } from 'naive-ui'
  import { useI18n } from 'vue-i18n'
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
-index 1bd4888..865e032 100644
+index 1bd4888d..865e0320 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 @@ -1,6 +1,6 @@
@@ -96,7 +96,7 @@ index 1bd4888..865e032 100644
  }>()
  const emit = defineEmits<{ edit: [edgeId: string] }>()
 diff --git a/packages/client/src/composables/useKeyboard.ts b/packages/client/src/composables/useKeyboard.ts
-index 47824ee..28d413e 100644
+index 47824eea..28d413e3 100644
 --- a/packages/client/src/composables/useKeyboard.ts
 +++ b/packages/client/src/composables/useKeyboard.ts
 @@ -11,7 +11,7 @@ export function useKeyboard() {
@@ -109,10 +109,10 @@ index 47824ee..28d413e 100644
  
    function handleKeydown(e: KeyboardEvent) {
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 503abf3..2c76c6a 100644
+index ed3d51e2..97fecc68 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -108,7 +108,7 @@ export interface Message {
+@@ -114,7 +114,7 @@ export interface Message {
    // 不含 <think> 包裹标签；内容自身可以为多段纯文本。
    reasoning?: string
    queued?: boolean
@@ -121,26 +121,19 @@ index 503abf3..2c76c6a 100644
    commandAction?: string
    commandData?: Record<string, unknown>
    finishReason?: string | null
-@@ -451,7 +451,7 @@ export interface QueueInsertionState {
+@@ -457,7 +457,7 @@ export interface QueueInsertionState {
    generation: string
    runId?: string
    queueId: string
--  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
    phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn'
    guarantee: 'strict' | 'immediate'
    requestedAt: number
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index d40553a..5dc4d7a 100644
+index a7cae438..99b820fd 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -1,5 +1,5 @@
- export interface ChatAgentAvatar {
--  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity'
-+  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'MiMo Code' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'ZCode'
-   src: string
- }
- 
 @@ -18,7 +18,6 @@ const AGENT_AVATARS = {
    grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
    opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
@@ -148,40 +141,41 @@ index d40553a..5dc4d7a 100644
 -  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
    dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
    cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
-   antigravity: { label: 'Antigravity', src: '/coding-agents/antigravity.png' },
+   qwen: { label: 'Qwen Code', src: '/coding-agents/qwen-logo.svg' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index 1c333b9..c1e6c1b 100644
+index 4f051115..24cc7656 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
-@@ -10,10 +10,10 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
+@@ -10,7 +10,6 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
      grok: '/coding-agents/grok.svg',
      opencode: '/coding-agents/opencode.png',
      mimo: '/coding-agents/mimo.svg',
 -    mimo: '/coding-agents/mimo.svg',
      dsh: '/coding-agents/deepseek.svg',
      cursor: '/coding-agents/cursor-logo.png',
+     qwen: '/coding-agents/qwen-logo.svg',
+@@ -20,6 +19,7 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
+     copilot: '/coding-agents/copilot-logo.svg',
+     zcode: '/coding-agents/zcode-logo.png',
      antigravity: '/coding-agents/antigravity.png',
 +    zcode: '/coding-agents/zcode.svg',
  }
  
  export function parseStoredAvatar(raw: unknown): ProfileAvatar | null {
 diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
-index b2c3152..b43957d 100644
+index 55151cb2..48e4ec31 100644
 --- a/packages/client/src/views/hermes/AgentManagerView.vue
 +++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -126,18 +126,20 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
- const aiHelpDrawerVisible = ref(false)
- const aiHelpPrompt = ref('')
- const legacyDataMigrationChecked = ref(false)
--const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, zcode: false })
--const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, zcode: false })
--const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, zcode: false })
-+const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, zcode: false })
-+const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, zcode: false })
-+const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, zcode: false })
- const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
-   'claude-code': null,
-   codex: null,
+@@ -3,6 +3,8 @@ import { agentMetadata } from '@/utils/agent-catalog'
+ import PageLoading from '@/components/common/PageLoading.vue'
+ import PageHeader from '@/components/layout/PageHeader.vue'
+ import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
++// overlay[s3]（补遗⑤）：ekko 配置入口默认关（VITE_CUSTOM_EKKO 再开）
++import { features } from '@/custom/features'
+ import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
+ import { useRoute, useRouter } from 'vue-router'
+ import { useI18n } from 'vue-i18n'
+@@ -141,6 +143,7 @@ const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
    pi: null,
    grok: null,
    opencode: null,
@@ -189,39 +183,40 @@ index b2c3152..b43957d 100644
    dsh: null,
    cursor: null,
    antigravity: null,
-+  zcode: null,
- })
+@@ -521,7 +524,7 @@ onUnmounted(() => {
+           </NAlert>
  
- const hermesStatus = computed(() => agentStatusSnapshot.value?.agents.find(agent => agent.id === 'hermes'))
+           <div class="coding-agent-grid">
+-            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
++            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
+               <header class="agent-card-header compact">
+                 <div class="agent-identity">
+                   <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />
 diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-index 9341dbb..09c8a2f 100644
+index f90c0780..74bb37f4 100644
 --- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
 +++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-@@ -42,9 +42,11 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
-   dsh: { preference: 'memory', configuration: 'settings' },
-   cursor: { configuration: 'settings' },
+@@ -48,6 +48,8 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
+   copilot: {},
+   zcode: {},
    antigravity: { preference: 'memory', configuration: 'settings' },
 +  mimo: { preference: 'memory', configuration: 'settings' },
 +  zcode: {},
  }
  
--const skillTargets: Record<CodingAgentId, SkillTarget> = {
-+const skillTargets: Partial<Record<CodingAgentId, SkillTarget>> = {
-   'claude-code': 'claude',
-   codex: 'codex',
-   pi: 'pi',
-@@ -66,8 +68,8 @@ let loadVersion = 0
+ const skillTargets: Partial<Record<CodingAgentId, SkillTarget>> = {
+@@ -72,8 +74,8 @@ let loadVersion = 0
  const validAgentId = computed<CodingAgentId | null>(() =>
    agentId.value in settingsKeys ? agentId.value as CodingAgentId : null,
  )
 -const skillTarget = computed<SkillTarget>(() =>
--  validAgentId.value ? skillTargets[validAgentId.value] : 'hermes',
+-  validAgentId.value ? skillTargets[validAgentId.value] || 'hermes' : 'hermes',
 +const skillTarget = computed<SkillTarget | null>(() =>
 +  validAgentId.value ? skillTargets[validAgentId.value] ?? null : 'hermes',
  )
  const activeEditorKinds = computed(() => editorKinds.filter(kind =>
    validAgentId.value && settingsKeys[validAgentId.value][kind],
-@@ -151,7 +153,7 @@ watch([agentId, section], loadSettingsFiles, { immediate: true })
+@@ -157,7 +159,7 @@ watch([agentId, section], loadSettingsFiles, { immediate: true })
      <DshPluginsPanel v-if="section === 'plugins' && validAgentId === 'dsh'" />
      <DshAgentPresetsPanel v-else-if="section === 'presets' && validAgentId === 'dsh'" />
      <div v-else-if="section === 'skills'" class="coding-agent-skills-content">

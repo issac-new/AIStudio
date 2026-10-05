@@ -1,20 +1,5 @@
-diff --git a/packages/desktop/scripts/runtime-config.mjs b/packages/desktop/scripts/runtime-config.mjs
-index c4dca20..fcf4877 100644
---- a/packages/desktop/scripts/runtime-config.mjs
-+++ b/packages/desktop/scripts/runtime-config.mjs
-@@ -1,7 +1,7 @@
--export const DEFAULT_HERMES_VERSION = '0.20.6'
-+export const DEFAULT_HERMES_VERSION = '0.21.5'
- export const DEFAULT_HERMES_SOURCE_REPOSITORY = 'https://github.com/NousResearch/hermes-agent.git'
--export const DEFAULT_HERMES_SOURCE_REF = 'v2026.8.27'
--export const DEFAULT_HERMES_SOURCE_COMMIT = '5fc308a70719a83cccdbba4c0e39c23f5a8239d5'
-+export const DEFAULT_HERMES_SOURCE_REF = 'v2026.9.24'
-+export const DEFAULT_HERMES_SOURCE_COMMIT = 'f97608f178d1ffeca59860195ab7da295f7c8e5f'
- 
- export function hermesVersion(env = process.env) {
-   return env.HERMES_VERSION || DEFAULT_HERMES_VERSION
 diff --git a/packages/desktop/build/runtime-release.json b/packages/desktop/build/runtime-release.json
-index 2b17a6b..41d6c4b 100644
+index 2b17a6be..dc50ff4c 100644
 --- a/packages/desktop/build/runtime-release.json
 +++ b/packages/desktop/build/runtime-release.json
 @@ -1,9 +1,9 @@
@@ -31,8 +16,23 @@ index 2b17a6b..41d6c4b 100644
 +    "commit": "f97608f178d1ffeca59860195ab7da295f7c8e5f"
    }
  }
+diff --git a/packages/desktop/scripts/runtime-config.mjs b/packages/desktop/scripts/runtime-config.mjs
+index c4dca20e..d47491d0 100644
+--- a/packages/desktop/scripts/runtime-config.mjs
++++ b/packages/desktop/scripts/runtime-config.mjs
+@@ -1,7 +1,7 @@
+-export const DEFAULT_HERMES_VERSION = '0.20.6'
++export const DEFAULT_HERMES_VERSION = '0.21.5'
+ export const DEFAULT_HERMES_SOURCE_REPOSITORY = 'https://github.com/NousResearch/hermes-agent.git'
+-export const DEFAULT_HERMES_SOURCE_REF = 'v2026.8.27'
+-export const DEFAULT_HERMES_SOURCE_COMMIT = '5fc308a70719a83cccdbba4c0e39c23f5a8239d5'
++export const DEFAULT_HERMES_SOURCE_REF = 'v2026.9.24'
++export const DEFAULT_HERMES_SOURCE_COMMIT = 'f97608f178d1ffeca59860195ab7da295f7c8e5f'
+ 
+ export function hermesVersion(env = process.env) {
+   return env.HERMES_VERSION || DEFAULT_HERMES_VERSION
 diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
-index 760bff4..94e9281 100644
+index ccd95349..6a5f9b74 100644
 --- a/packages/desktop/src/main/paths.ts
 +++ b/packages/desktop/src/main/paths.ts
 @@ -10,7 +10,7 @@ import {
@@ -45,7 +45,7 @@ index 760bff4..94e9281 100644
  const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
  let incompleteActiveWebUiWarningPath = ''
 diff --git a/tests/desktop/runtime-config.test.ts b/tests/desktop/runtime-config.test.ts
-index 1763467..d6131d3 100644
+index 1763467d..3b84aa7d 100644
 --- a/tests/desktop/runtime-config.test.ts
 +++ b/tests/desktop/runtime-config.test.ts
 @@ -9,9 +9,9 @@ import {
@@ -62,10 +62,10 @@ index 1763467..d6131d3 100644
        version: DEFAULT_HERMES_VERSION,
        repository: DEFAULT_HERMES_SOURCE_REPOSITORY,
 diff --git a/tests/desktop/runtime-paths.test.ts b/tests/desktop/runtime-paths.test.ts
-index 1ce2a51..4741a97 100644
+index b7d1d712..a686e373 100644
 --- a/tests/desktop/runtime-paths.test.ts
 +++ b/tests/desktop/runtime-paths.test.ts
-@@ -185,7 +185,7 @@ describe('desktop runtime paths', () => {
+@@ -197,7 +197,7 @@ describe('desktop runtime paths', () => {
  
      expect(desktopRuntimeDir()).toBe(runtimeDir)
      expect(webuiDir()).toBe(webUiDir)
@@ -74,7 +74,7 @@ index 1ce2a51..4741a97 100644
    })
  
    it('falls back to the bundled Web UI when the active Web UI directory is incomplete', async () => {
-@@ -333,7 +333,7 @@ describe('desktop runtime paths', () => {
+@@ -345,7 +345,7 @@ describe('desktop runtime paths', () => {
  
      const { runtimePlatformKey } = await import('../../packages/desktop/src/main/runtime-paths')
      const runtimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.15.2', runtimePlatformKey())

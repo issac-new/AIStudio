@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index b130fd7..bd7141b 100644
+index a22fce83..35c5f672 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -17,6 +17,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
+@@ -19,6 +19,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
  import './chat-agent-runtime-adapter'
  import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
@@ -11,7 +11,7 @@ index b130fd7..bd7141b 100644
  import { setChatRunServer } from '../modules/studio/public/chat-run'
  import { GroupChatServer } from '../modules/studio/public/group-chat'
  import {
-@@ -732,6 +734,9 @@ export async function bootstrap() {
+@@ -745,6 +747,9 @@ export async function bootstrap() {
    petStateSocketServer = new PetStateSocketServer(activeGroupChatServer.getIO())
    petStateSocketServer.init()
  

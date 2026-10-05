@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/utils/desktop-bridge.ts
-index 51960d35..d8df7207 100644
+index 36dc79a3..9c1b5bde 100644
 --- a/packages/client/src/utils/desktop-bridge.ts
 +++ b/packages/client/src/utils/desktop-bridge.ts
-@@ -129,6 +129,8 @@ export interface HermesDesktopBridge {
+@@ -148,6 +148,8 @@ export interface HermesDesktopBridge {
    notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }) => Promise<boolean>
    openExternalUrl?: (url: string) => Promise<boolean>
    openChatWindow?: (sessionId: string, profile?: string) => Promise<void>
@@ -11,7 +11,7 @@ index 51960d35..d8df7207 100644
    getWindowState: () => Promise<{ isMaximized: boolean }>
    windowControl: (action: 'minimize' | 'toggle-maximize' | 'close') => Promise<{ isMaximized: boolean }>
    onWindowStateChange?: (callback: (state: { isMaximized: boolean }) => void) => () => void
-@@ -139,7 +141,7 @@ export interface HermesDesktopBridge {
+@@ -158,7 +160,7 @@ export interface HermesDesktopBridge {
    browser?: DesktopBrowserBridge
    platform: string
    isDesktop: boolean

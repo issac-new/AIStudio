@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/studio/auth.ts b/packages/client/src/api/studio/auth.ts
+index 4e1ff1de..36eea31e 100644
 --- a/packages/client/src/api/studio/auth.ts
 +++ b/packages/client/src/api/studio/auth.ts
-@@ -34,6 +34,29 @@
+@@ -34,6 +34,29 @@ export async function loginWithPassword(username: string, password: string): Pro
    return data as LoginResponse
  }
  
@@ -44,8 +45,7 @@ diff --git a/packages/client/src/api/studio/auth.ts b/packages/client/src/api/st
  }
  
  export interface UserAvatar {
-@@ -129,7 +158,91 @@ export interface ManagedUsersResponse {
-   users: ManagedUser[]
+@@ -131,6 +160,90 @@ export interface ManagedUsersResponse {
    profiles: string[]
  }
  

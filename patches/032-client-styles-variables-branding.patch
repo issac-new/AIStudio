@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
-index 0dd7cb84..eb84e17e 100644
+index 395b740e..8159efd5 100644
 --- a/packages/client/src/styles/variables.scss
 +++ b/packages/client/src/styles/variables.scss
-@@ -45,7 +45,7 @@
+@@ -73,7 +73,7 @@
    --text-on-overlay: #ffffff;
    --accent-info: #4a90d9;
  
@@ -11,7 +11,7 @@ index 0dd7cb84..eb84e17e 100644
    --accent-primary-rgb: 51, 51, 51;
    --accent-hover-rgb: 26, 26, 26;
    --text-primary-rgb: 26, 26, 26;
-@@ -54,6 +54,7 @@
+@@ -83,6 +83,7 @@
    --error-rgb: 198, 40, 40;
    --warning-rgb: 245, 127, 23;
    --accent-info-rgb: 74, 144, 217;
@@ -19,7 +19,7 @@ index 0dd7cb84..eb84e17e 100644
  }
  
  .dark {
-@@ -106,6 +107,7 @@
+@@ -153,6 +154,7 @@
    --error-rgb: 239, 83, 80;
    --warning-rgb: 255, 183, 77;
    --accent-info-rgb: 107, 163, 214;
@@ -27,11 +27,7 @@ index 0dd7cb84..eb84e17e 100644
  }
  
  .comic {
-@@ -239,7 +239,22 @@ $radius-lg: 8px;
- $transition-normal: 0.25s ease;
- 
- @media (max-width: $breakpoint-mobile) {
-   :root {
+@@ -241,3 +243,18 @@ $transition-normal: 0.25s ease;
      --studio-drawer-width: 100vw;
    }
  }

@@ -1,5 +1,6 @@
 diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
 new file mode 100644
+index 00000000..b4774cdf
 --- /dev/null
 +++ b/packages/desktop/scripts/after-pack-combined.cjs
 @@ -0,0 +1,52 @@

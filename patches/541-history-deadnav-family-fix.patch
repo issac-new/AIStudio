@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 1fde592..2b6ad29 100644
+index 1fde5925..2b6ad296 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
 @@ -34,7 +34,7 @@ function openChat() {
@@ -12,7 +12,7 @@ index 1fde592..2b6ad29 100644
  
  function openConnections() {
 diff --git a/packages/client/src/components/layout/StudioNavigationRail.vue b/packages/client/src/components/layout/StudioNavigationRail.vue
-index a41890e..b186287 100644
+index a41890e7..b1862879 100644
 --- a/packages/client/src/components/layout/StudioNavigationRail.vue
 +++ b/packages/client/src/components/layout/StudioNavigationRail.vue
 @@ -15,8 +15,8 @@ const entries = computed(() => [

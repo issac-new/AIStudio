@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
+index 7b6c0612..d94821ce 100644
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
-@@ -703,7 +703,8 @@
+@@ -703,7 +703,8 @@ export async function matrixLogin(ctx: Context) {
  
    if (!user) {
      const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
@@ -11,7 +12,7 @@ diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/s
      user = createFromMatrix({
        matrixUserId,
        username: localpart,
-@@ -713,9 +714,11 @@
+@@ -713,9 +714,11 @@ export async function matrixLogin(ctx: Context) {
        role,
      })
      if (user) {
@@ -25,7 +26,7 @@ diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/s
        user = findByMatrixUserId(matrixUserId)
      }
    } else {
-@@ -725,9 +728,14 @@
+@@ -725,9 +728,14 @@ export async function matrixLogin(ctx: Context) {
        avatarUrl: matrixInfo?.avatarUrl || undefined,
        lastLoginAt: now,
      })

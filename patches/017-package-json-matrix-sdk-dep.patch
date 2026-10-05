@@ -1,8 +1,8 @@
 diff --git a/package.json b/package.json
-index fc60846c..50200bc5 100644
+index 50abb2c9..a7ed7ec4 100644
 --- a/package.json
 +++ b/package.json
-@@ -85,6 +85,7 @@
+@@ -99,6 +99,7 @@
      "eventsource": "^4.1.0",
      "js-tiktoken": "^1.0.21",
      "katex": "^0.17.0",

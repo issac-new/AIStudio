@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 707d088..00b465c 100644
+index 707d0883..00b465ca 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -78,6 +78,7 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'

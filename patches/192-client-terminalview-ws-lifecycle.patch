@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/views/hermes/TerminalView.vue b/packages/client/src/views/hermes/TerminalView.vue
+index 65858bf7..59aee3e8 100644
 --- a/packages/client/src/views/hermes/TerminalView.vue
 +++ b/packages/client/src/views/hermes/TerminalView.vue
-@@ -245,6 +245,10 @@
+@@ -246,6 +246,10 @@ let activeTerm: Terminal | null = null;
  let activeFitAddon: FitAddon | null = null;
  let resizeObserver: ResizeObserver | null = null;
  let mobileQuery: MediaQueryList | null = null;
@@ -11,7 +13,7 @@
  let touchScrollLastY: number | null = null;
  let touchScrollRemainder = 0;
  const TOUCH_SCROLL_LINE_PX = 18;
-@@ -298,14 +302,17 @@
+@@ -299,14 +303,17 @@ function buildWsUrl(): string {
  }
  
  function connect() {
@@ -32,18 +34,13 @@
      const data = typeof event.data === "string" ? event.data : "";
      if (data.charCodeAt(0) === 0x7b) {
        try {
-@@ -316,17 +323,15 @@
+@@ -317,17 +324,15 @@ function connect() {
      }
    };
  
 -  // On reconnect, recreate all terminals for existing sessions
 -  ws.onopen = () => {
 -    // Server will auto-create the first session again
--  };
--
--  ws.onclose = () => {
--    // Reconnect after delay
--    setTimeout(connect, 3000);
 +  sock.onclose = () => {
 +    if (ws !== sock) return; // stale close must not touch the live socket
 +    ws = null;
@@ -52,12 +49,17 @@
 +    if (!destroyed) setTimeout(connect, 3000);
    };
  
+-  ws.onclose = () => {
+-    // Reconnect after delay
+-    setTimeout(connect, 3000);
+-  };
+-
 -  ws.onerror = () => {
 +  sock.onerror = () => {
      // let onclose handle reconnect
    };
  }
-@@ -560,6 +565,7 @@
+@@ -561,6 +566,7 @@ onMounted(() => {
  });
  
  onUnmounted(() => {
@@ -65,7 +67,7 @@
    mobileQuery?.removeEventListener("change", handleMobileChange);
    unmountActiveTerminal();
    // Dispose all terminal instances
-@@ -569,8 +575,18 @@
+@@ -570,8 +576,18 @@ onUnmounted(() => {
    termMap.clear();
    activeTerm = null;
    activeFitAddon = null;

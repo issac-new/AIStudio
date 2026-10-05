@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index aefa5326..205a8589 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
-@@ -537,7 +537,7 @@
+@@ -537,7 +537,7 @@ export async function complete(ctx: Context) {
        ctx,
        board,
        taskIds.value!,
@@ -10,7 +11,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
        'complete',
      )) return
      await kanbanCli.completeTasks(taskIds.value!, summary.value, { board, operatorOverride: true })
-@@ -693,7 +693,7 @@
+@@ -693,7 +693,7 @@ export async function bulkUpdateTasks(ctx: Context) {
    if (!board) return
    try {
      const allowedStatuses = status.value === 'done'
@@ -20,13 +21,13 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
          ? new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready'])
          : status.value === 'ready'
 diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
+index e8007a07..a75399ae 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
-@@ -675,7 +675,32 @@
-     await ctrl.searchSessions(exactSearchCtx)
+@@ -676,6 +676,31 @@ describe('kanban controller', () => {
      expect(exactSearchCtx.body.results[0]).toMatchObject({ id: 'session-2', title: 'Matched session' })
    })
-+
+ 
 +  it('allows completing a review-state task (验收动线) and bulk done from review', async () => {
 +    mockGetTask.mockResolvedValue({
 +      task: { id: 'task-1', assignee: null, status: 'review' },
@@ -34,7 +35,7 @@ diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-contro
 +      events: [],
 +      runs: [],
 +    })
- 
++
 +    const completeCtx = ctx({
 +      query: { board: 'project-a' },
 +      request: { body: { task_ids: ['task-1'], summary: 'accepted' } },

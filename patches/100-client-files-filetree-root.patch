@@ -1,4 +1,5 @@
 diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
+index db1dd8ab..76fc1f81 100644
 --- a/packages/client/src/components/hermes/files/FileTree.vue
 +++ b/packages/client/src/components/hermes/files/FileTree.vue
 @@ -166,6 +166,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => files

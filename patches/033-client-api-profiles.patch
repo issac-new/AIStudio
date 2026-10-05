@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/hermes/profiles.ts b/packages/client/src/api/hermes/profiles.ts
-index 4c47d7c0..140e032f 100644
+index 608d3901..2d56b6c3 100644
 --- a/packages/client/src/api/hermes/profiles.ts
 +++ b/packages/client/src/api/hermes/profiles.ts
 @@ -61,7 +61,7 @@ export interface ProfileRuntimeStatusesResponse {

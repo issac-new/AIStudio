@@ -1,6 +1,8 @@
---- a/packages/server/src/modules/studio/sockets/group-chat.ts	2026-09-29 16:30:23
-+++ b/packages/server/src/modules/studio/sockets/group-chat.ts	2026-09-29 16:30:23
-@@ -7,6 +7,8 @@
+diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
+index a5556fbe..abe053dd 100644
+--- a/packages/server/src/modules/studio/sockets/group-chat.ts
++++ b/packages/server/src/modules/studio/sockets/group-chat.ts
+@@ -8,6 +8,8 @@ import { bindLegacyAppEvents } from '../services/webhooks/legacy-app-events'
  import { registerGroupEventAccess } from '../services/webhooks/app-events'
  import { publishGroupMessage, publishGroupInteraction } from '../services/webhooks/domain-events'
  import { Server, Socket, Namespace } from 'socket.io'
@@ -9,7 +11,7 @@
  import type { Server as HttpServer } from 'http'
  import { mkdirSync } from 'fs'
  import { basename, join } from 'path'
-@@ -3252,6 +3254,8 @@
+@@ -3270,6 +3272,8 @@ export class GroupChatServer {
      /** Map: socket.id → numeric users.id from the web UI auth (for avatar resolution) */
      private socketAuthUserIdMap = new Map<string, number>()
      readonly agentClients = new AgentClients()
@@ -18,12 +20,10 @@
      private roomSummaryService: GroupRoomSummaryService
      private summaryReviewService: GroupSummaryReviewService
      private messageRoutingService: GroupMessageRoutingService
-@@ -3671,6 +3675,58 @@
- 
-     getChatRunService(): GroupChatRunService | null {
+@@ -3691,6 +3695,58 @@ export class GroupChatServer {
          return this.chatRunService
-+    }
-+
+     }
+ 
 +    /**
 +     * overlay[v14 P2B ChatBridge]: 非 socket 人类消息注入——matrix 桥把远端人的
 +     * 话落进本地群房。复用 handleMessage 的持久化/广播/编排尾段；无 socket 语义
@@ -74,10 +74,12 @@
 +            this.agentClients.processSummaryCheck(input.roomId, saved.message.id).catch(() => { /* 桥路径 summary 失败不阻断 */ })
 +        })
 +        return saved.message
-     }
- 
++    }
++
      publishAgentAttachmentMessage(input: {
-@@ -5375,6 +5431,8 @@
+         roomId: string
+         agentId: string
+@@ -5429,6 +5485,8 @@ export class GroupChatServer {
              requestedAt: Date.now(),
          }
          this.pendingApprovalRoutes.set(routeKey, pendingRoute)

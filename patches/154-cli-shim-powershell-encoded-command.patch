@@ -1,7 +1,8 @@
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+index b75fdcd2..4e15c5a5 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
-@@ -351,7 +351,11 @@
+@@ -440,7 +440,11 @@ function shellPathSnippet(platform: NodeJS.Platform, profilePath: string): strin
  }
  
  function powershellArgs(command: string): string[] {
@@ -14,7 +15,7 @@ diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/c
  }
  
  async function readWindowsUserPath(): Promise<string> {
-@@ -361,7 +365,7 @@
+@@ -450,7 +454,7 @@ async function readWindowsUserPath(): Promise<string> {
    ].join('; ')
    const { stdout } = await execFileAsync('powershell.exe', powershellArgs(command), {
      encoding: 'utf-8',
@@ -23,7 +24,7 @@ diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/c
      windowsHide: true,
    })
    const encoded = stdout.trim()
-@@ -380,7 +384,7 @@
+@@ -469,7 +473,7 @@ async function writeWindowsUserPath(pathValue: string): Promise<void> {
        ...process.env,
        [WINDOWS_USER_PATH_ENV_B64]: Buffer.from(pathValue, 'utf-8').toString('base64'),
      },

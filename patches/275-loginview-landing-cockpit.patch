@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 740d465..4e97dd8 100644
+index 740d465e..4e97dd88 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -24,10 +24,11 @@ const localRememberMe = ref(false);

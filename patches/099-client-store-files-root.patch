@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
-index 6c4e7e9c..24122e47 100644
+index ba86eaff..29333223 100644
 --- a/packages/client/src/stores/hermes/files.ts
 +++ b/packages/client/src/stores/hermes/files.ts
-@@ -55,6 +55,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -61,6 +61,7 @@ export const useFilesStore = defineStore('files', () => {
    const currentWorkspaceRoomId = ref<string | null>(null)
    const entries = ref<FileEntry[]>([])
    const loading = ref(false)
@@ -10,7 +10,7 @@ index 6c4e7e9c..24122e47 100644
    const sortBy = ref<'name' | 'size' | 'modTime'>('name')
    const sortOrder = ref<'asc' | 'desc'>('asc')
    let fetchRequestSeq = 0
-@@ -118,12 +119,12 @@ export const useFilesStore = defineStore('files', () => {
+@@ -137,12 +138,12 @@ export const useFilesStore = defineStore('files', () => {
      const workspaceRoomId = currentWorkspaceRoomId.value
      if (workspaceRoomId) return listGroupWorkspaceFiles(workspaceRoomId, path)
      if (workspaceSessionId) return listSessionWorkspaceFiles(workspaceSessionId, path)
@@ -25,7 +25,7 @@ index 6c4e7e9c..24122e47 100644
    }
  
    async function fetchEntries(path?: string, options: { profile?: string | null; workspaceSessionId?: string | null; workspaceRoomId?: string | null } = {}) {
-@@ -188,7 +189,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -208,7 +209,7 @@ export const useFilesStore = defineStore('files', () => {
      }
      const profile = resolveProfile(options.profile)
      currentProfile.value = profile
@@ -34,7 +34,7 @@ index 6c4e7e9c..24122e47 100644
      editingFile.value = {
        path: filePath,
        content: result.content,
-@@ -236,7 +237,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -258,7 +259,7 @@ export const useFilesStore = defineStore('files', () => {
          editingFile.value.content,
        )
      } else {
@@ -43,7 +43,7 @@ index 6c4e7e9c..24122e47 100644
      }
      editingFile.value.originalContent = editingFile.value.content
    }
-@@ -262,14 +263,14 @@ export const useFilesStore = defineStore('files', () => {
+@@ -285,14 +286,14 @@ export const useFilesStore = defineStore('files', () => {
          ? await readGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path)
          : currentWorkspaceSessionId.value
            ? await readSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path)
@@ -60,7 +60,7 @@ index 6c4e7e9c..24122e47 100644
        previewFile.value = {
          ...common,
          content: result.content,
-@@ -344,7 +345,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -413,7 +414,7 @@ export const useFilesStore = defineStore('files', () => {
      const path = targetPath ? `${targetPath}/${name}` : name
      if (currentWorkspaceRoomId.value) await mkdirGroupWorkspaceFile(currentWorkspaceRoomId.value, path)
      else if (currentWorkspaceSessionId.value) await mkdirSessionWorkspaceFile(currentWorkspaceSessionId.value, path)
@@ -69,7 +69,7 @@ index 6c4e7e9c..24122e47 100644
      await fetchEntries(undefined)
    }
  
-@@ -352,14 +353,14 @@ export const useFilesStore = defineStore('files', () => {
+@@ -421,14 +422,14 @@ export const useFilesStore = defineStore('files', () => {
      const path = currentPath.value ? `${currentPath.value}/${name}` : name
      if (currentWorkspaceRoomId.value) await writeGroupWorkspaceFile(currentWorkspaceRoomId.value, path, '')
      else if (currentWorkspaceSessionId.value) await writeSessionWorkspaceFile(currentWorkspaceSessionId.value, path, '')
@@ -86,7 +86,7 @@ index 6c4e7e9c..24122e47 100644
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -374,7 +375,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -443,7 +444,7 @@ export const useFilesStore = defineStore('files', () => {
      const newPath = parentPath ? `${parentPath}/${newName}` : newName
      if (currentWorkspaceRoomId.value) await renameGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path, newPath)
      else if (currentWorkspaceSessionId.value) await renameSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, newPath)
@@ -95,7 +95,7 @@ index 6c4e7e9c..24122e47 100644
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -387,13 +388,13 @@ export const useFilesStore = defineStore('files', () => {
+@@ -456,13 +457,13 @@ export const useFilesStore = defineStore('files', () => {
    async function copyEntry(entry: FileEntry, destPath: string) {
      if (currentWorkspaceRoomId.value) await copyGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path, destPath)
      else if (currentWorkspaceSessionId.value) await copySessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, destPath)
@@ -111,7 +111,7 @@ index 6c4e7e9c..24122e47 100644
        await fetchEntries(undefined)
        return
      }
-@@ -421,7 +422,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -490,7 +491,7 @@ export const useFilesStore = defineStore('files', () => {
    })
  
    return {

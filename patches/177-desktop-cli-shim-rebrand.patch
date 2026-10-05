@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
-index 4e15c5a..3f699e0 100644
+index 4e15c5a5..3f699e08 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
 @@ -18,8 +18,8 @@ const execFileAsync = promisify(execFile)

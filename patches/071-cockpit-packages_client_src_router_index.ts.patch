@@ -1,22 +1,24 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+index e44b1c42..481c4bfe 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -79,11 +79,6 @@
+@@ -78,11 +78,6 @@ const router = createRouter({
+       component: () => import('@/views/hermes/KanbanView.vue'),
        meta: { hermesConfig: true },
      },
-     {
+-    {
 -      path: '/hermes/workflow',
 -      name: 'hermes.workflow',
 -      component: () => import('@/views/hermes/WorkflowView.vue'),
 -    },
--    {
+     {
        path: '/hermes/models',
        name: 'hermes.models',
-       component: () => import('@/views/hermes/ChatView.vue'),
-@@ -234,30 +229,6 @@
+@@ -238,30 +233,6 @@ const router = createRouter({
+       path: '/hermes/agents',
        redirect: { name: 'hermes.agentManager' },
      },
-     {
+-    {
 -      path: '/hermes/group-chat',
 -      name: 'hermes.groupChat',
 -      component: () => import('@/views/hermes/GroupChatView.vue'),
@@ -40,11 +42,10 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
 -        params: { roomId: to.params.roomId },
 -      }),
 -    },
--    {
+     {
        path: '/hermes/files',
        name: 'hermes.files',
-       component: () => import('@/views/hermes/FilesView.vue'),
-@@ -314,7 +285,10 @@
+@@ -324,7 +295,10 @@ router.beforeEach(async (to, _from, next) => {
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
@@ -56,7 +57,7 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
        return
      }
      next()
-@@ -328,7 +302,8 @@
+@@ -338,7 +312,8 @@ router.beforeEach(async (to, _from, next) => {
    }
  
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {

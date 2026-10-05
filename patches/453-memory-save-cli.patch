@@ -1,3 +1,5 @@
+diff --git a/packages/server/src/modules/hermes/controllers/memory.ts b/packages/server/src/modules/hermes/controllers/memory.ts
+index a4d50df7..c230c660 100644
 --- a/packages/server/src/modules/hermes/controllers/memory.ts
 +++ b/packages/server/src/modules/hermes/controllers/memory.ts
 @@ -1,7 +1,10 @@
@@ -12,7 +14,7 @@
  
  function requestedProfile(ctx: any): string {
    return ctx.state?.profile?.name || getActiveProfileName() || 'default'
-@@ -50,8 +53,8 @@
+@@ -50,8 +53,8 @@ export async function save(ctx: any) {
      filePath = join(hd, 'memories', fileName)
    }
    try {
@@ -23,7 +25,7 @@
      // 缺省（不带 expected_mtime）保持旧行为，兼容既有调用方。
      if (expected_mtime != null && expected_mtime !== '') {
        const expMs = typeof expected_mtime === 'number'
-@@ -65,13 +68,32 @@
+@@ -65,13 +68,32 @@ export async function save(ctx: any) {
          return
        }
      }

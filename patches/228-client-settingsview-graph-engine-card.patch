@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/views/hermes/SettingsView.vue b/packages/client/src/views/hermes/SettingsView.vue
+index ebbbe78a..3edec35c 100644
 --- a/packages/client/src/views/hermes/SettingsView.vue
 +++ b/packages/client/src/views/hermes/SettingsView.vue
-@@ -17,6 +17,8 @@
+@@ -17,6 +17,8 @@ import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
  import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
  import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
  import WebhookSettings from "@/components/hermes/settings/WebhookSettings.vue";
@@ -9,7 +11,7 @@
  import { useAuthStore } from "@/stores/hermes/auth";
  import { useProfilesStore } from "@/stores/hermes/profiles";
  
-@@ -38,6 +40,8 @@
+@@ -38,6 +40,8 @@ const validTabs = computed(() => new Set([
    "compression",
    "privacy",
    "models",
@@ -18,7 +20,7 @@
  ]));
  
  function normalizeTab(value: unknown): string {
-@@ -128,6 +132,10 @@
+@@ -128,6 +132,10 @@ onMounted(() => {
            <NTabPane name="models" :tab="t('settings.tabs.models')">
              <ModelSettings />
            </NTabPane>

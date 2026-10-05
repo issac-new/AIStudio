@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index b7a3063..025191a 100644
+index 2f882799..d5d788a8 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -92,6 +92,15 @@ import { HookManager } from '../custom/loop/engine/hooks'
+@@ -95,6 +95,15 @@ import { HookManager } from '../custom/loop/engine/hooks'
  import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
  import { emitLoopEvent } from '../custom/loop/services/loop-socket'
  import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
@@ -18,7 +18,7 @@ index b7a3063..025191a 100644
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
  
  let loopStore: any = null
-@@ -120,7 +129,51 @@
+@@ -123,7 +132,51 @@ const loopEngine = new LoopEngine({
    },
  })
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
@@ -71,7 +71,7 @@ index b7a3063..025191a 100644
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
  // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
-@@ -223,5 +274,12 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -231,5 +284,12 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
    app.use(loopRouter.routes())
    app.use(graphRouter.routes())

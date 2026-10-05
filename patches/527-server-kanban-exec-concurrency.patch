@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index e1f6e320..a9dde676 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -18,7 +18,11 @@
+@@ -18,7 +18,11 @@ const execOpts = { windowsHide: true }
  // 后续请求连带挂起（health 正常而 /api/hermes/kanban* 整体无响应）。
  // 处置：进程内 FIFO 队列把 execHermes 并发压到 2；排队超过 queueTimeout 的
  // 请求直接报错（把挂起变成快速失败）。watchEvents 长连流不经过此队列。

@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index 246e2341..73082693 100644
+index 481c4bfe..27e69e25 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -101,6 +101,13 @@ const router = createRouter({
+@@ -78,6 +78,13 @@ const router = createRouter({
        component: () => import('@/views/hermes/KanbanView.vue'),
        meta: { hermesConfig: true },
      },
@@ -16,7 +16,7 @@ index 246e2341..73082693 100644
      {
        path: '/hermes/models',
        name: 'hermes.models',
-@@ -245,6 +252,32 @@ const router = createRouter({
+@@ -233,6 +240,32 @@ const router = createRouter({
        path: '/hermes/agents',
        redirect: { name: 'hermes.agentManager' },
      },

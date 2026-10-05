@@ -1,6 +1,8 @@
---- a/packages/server/src/bootstrap/http.ts	2026-09-29 16:30:42
-+++ b/packages/server/src/bootstrap/http.ts	2026-09-29 16:30:42
-@@ -583,6 +583,11 @@
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index 72136f4e..04996b18 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -726,6 +726,11 @@ export async function bootstrap() {
    const activeGroupChatServer = new GroupChatServer(servers)
    groupChatServer = activeGroupChatServer
    setGroupChatServer(activeGroupChatServer)

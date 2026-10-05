@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index 2dbfa562..a6b52258 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
-@@ -54,12 +54,45 @@
+@@ -62,12 +62,45 @@ function filterTasksByVisibleProfiles(ctx: Context, tasks: kanbanCli.KanbanTask[
    return tasks.filter(task => visible.has(taskAssigneeProfile(task)))
  }
  
@@ -48,7 +49,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
    if (!detail || !filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
      ctx.status = 404
      ctx.body = { error: 'Task not found' }
-@@ -78,7 +111,7 @@
+@@ -86,7 +119,7 @@ async function authorizeTaskIds(
    const visible = visibleProfileSet(ctx)
    if (!visible && !allowedStatuses) return true
    const ids = [...new Set(taskIds.map(id => id.trim()).filter(Boolean))]
@@ -57,7 +58,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
    if (details.some(detail => !detail || (visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
      ctx.status = 404
      ctx.body = { error: 'Task not found' }
-@@ -387,7 +420,7 @@
+@@ -403,7 +436,7 @@ export async function get(ctx: Context) {
    const board = requestBoard(ctx)
    if (!board) return
    try {

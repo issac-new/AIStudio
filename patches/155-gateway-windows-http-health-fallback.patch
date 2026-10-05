@@ -1,11 +1,11 @@
 diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/packages/server/src/modules/hermes/services/gateway/autostart.ts
+index 74dc6fb3..cd1bb593 100644
 --- a/packages/server/src/modules/hermes/services/gateway/autostart.ts
 +++ b/packages/server/src/modules/hermes/services/gateway/autostart.ts
-@@ -401,6 +401,22 @@
-     }
+@@ -402,6 +402,22 @@ export async function isGatewayRunningForProfile(hermesBin: string, profileDir:
      if (output.trim()) {
        logger.warn({ err, profileDir }, 'Hermes gateway status failed; treating as not running')
-+    }
+     }
 +    // overlay[gateway-http-probe]: on Windows the CLI may fail (Python path
 +    // issues) even when the gateway HTTP server is healthy. Probe the HTTP
 +    // health endpoint as a last-resort fallback before declaring not running.
@@ -21,6 +21,7 @@ diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/
 +      } catch (probeErr: any) {
 +        logger.debug({ probeErr, profileDir }, 'Hermes gateway HTTP health probe also failed')
 +      }
-     }
++    }
      return false
    }
+ }
