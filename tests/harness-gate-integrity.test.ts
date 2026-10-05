@@ -587,3 +587,50 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(audit).not.toContain('{9, 11, 17, 19, 21}')
   })
 })
+
+describe('⑬ runtime 副本须包含补丁面（部署通道不得静默回退已打补丁）', () => {
+  // 2026-10-05 实锤：mx-setup 先打补丁后 deploy-agent-runtime --apply，runtime 清单内
+  // gateway/platforms/base.py 副本停在 564 之前——每次部署把 564 静默覆盖回去
+  // （.bak 链取证）。本守门断言：凡 agent 运行时补丁的目标文件在 overlay/runtime/
+  // 有副本，副本必须包含该补丁的新增内容（模板↔产物双向同步的机械化）。
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('agent 补丁目标文件在 runtime/ 有副本的，副本须含补丁新增行', () => {
+    const out = execFileSync('python3', ['-c', `
+import re, sys
+from pathlib import Path
+mx = Path(${JSON.stringify(MX)})
+ovl = Path(${JSON.stringify(PRODUCT)})
+lib = (mx / 'mx-lib.sh').read_text()
+m = re.search(r'mx_apply_agent_patches\\(\\) \\{.*?for p in ([^;]+); do', lib, re.S)
+if not m:
+    print('PARSE_FAIL: 找不到 mx_apply_agent_patches 补丁清单'); sys.exit(0)
+patches = re.findall(r'(\\d+-[\\w.-]+\\.patch)', m.group(1))
+bad = []
+for name in patches:
+    pf = ovl / 'patches' / name
+    if not pf.exists():
+        bad.append(f'{name}: patch 文件缺失'); continue
+    text = pf.read_text()
+    for target in re.findall(r'^diff --git a/(\\S+) b/(\\S+)$', text, re.M):
+        path = target[1]
+        rt = ovl / 'runtime' / path
+        if not rt.exists():
+            continue  # 无 runtime 副本=不经部署通道，不受回退面影响
+        rt_text = rt.read_text()
+        added = [l[1:].strip() for l in text.splitlines()
+                 if l.startswith('+') and not l.startswith('+++') and len(l[1:].strip()) >= 20]
+        if added and not any(a in rt_text for a in added):
+            bad.append(f'{name} → runtime/{path}: 副本不含任何补丁新增行（部署将回退该补丁）')
+print('\\n'.join(bad) if bad else 'ALL_SYNCED patches=%d' % len(patches))`], { encoding: 'utf-8' })
+    expect(out).not.toContain('副本不含任何补丁新增行')
+    expect(out).not.toContain('PARSE_FAIL')
+    expect(out).not.toContain('patch 文件缺失')
+    expect(out).toMatch(/ALL_SYNCED patches=\d+/)
+  })
+
+  it('回归锚：564 兜底代码在 runtime 副本在位（2026-10-05 回退事故的定点绊线）', () => {
+    const rt = read(join(PRODUCT, 'runtime/gateway/platforms/base.py'))
+    expect(rt).toContain('response_delivery_fallback')
+  })
+})
