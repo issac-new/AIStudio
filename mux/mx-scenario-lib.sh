@@ -989,6 +989,15 @@ audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
   fi
   # 取证目录在位
   [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
+  # 交付物对账（run8 复盘根治：商户接入文档全程缺席但零记单，直到 8.6 矩阵才暴露
+  # ——REL-DELIVER 在册交付物缺件必须进台账；版本号与报告侧 ARTIFACT_VIEWS 同源硬编
+  # v1.0.0-cashier，改版处两处同步）。release 已在册才查，防部分轮误报。
+  if [[ -n "$(sget release_done)" && -n "${RFD_ID:-}" ]]; then
+    repo_has "docs/delivery/merchant-onboarding-v1.0.0-cashier.md" \
+      || { echo "REL-DELIVER 交付物缺件：docs/delivery/merchant-onboarding-v1.0.0-cashier.md 不在 origin/main"; bad=1; }
+    repo_has "docs/delivery/${RFD_ID}-completeness-check.md" \
+      || { echo "完备性检查缺件：docs/delivery/${RFD_ID}-completeness-check.md 不在 origin/main"; bad=1; }
+  fi
   return $bad
 }
 
