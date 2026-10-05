@@ -25,6 +25,8 @@ import re
 import sys
 from pathlib import Path
 
+from r18_matrix import DIALOG_STEPS, EFFECT_STEPS, OP_STEPS  # 必采矩阵单一事实源（与生成器 hero 统计同表）
+
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
 if '--run' in sys.argv:
@@ -256,13 +258,13 @@ if _r15.exists():
 else:
     warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
 
-# ── 查 8：R18 全量呈现（V7.2 验收线：对话全文/操作前后帧/环节效果实证）──
-# 按步型必采矩阵（方案 §9.3 R18 与 §5.2 派发/操作/工件步语义对应）：
+# ── 查 8：R18 全量呈现（正本 §5.5 验收线：对话全文/操作前后帧/环节效果实证）──
+# 按步型必采矩阵（步集自 r18_matrix 单一事实源——生成器 hero 统计同表，守门测试 ⑫）：
 #   对话必采=派发/回执/审批/缺陷/验收对账步；操作必采=建群/看板/IDE 等真 UI 操作步
 #   （每组 ops 须 ≥2 帧=前后帧下限）；效果必采=工件产出闸步；其余 ✅ 步任一位在位即可。
-_R18_DIALOG_STEPS = {9, 11, 17, 19, 21}
-_R18_OP_STEPS = {8, 10, 25}
-_R18_EFFECT_STEPS = {7, 20, 24}
+_R18_DIALOG_STEPS = DIALOG_STEPS
+_R18_OP_STEPS = OP_STEPS
+_R18_EFFECT_STEPS = EFFECT_STEPS
 _r18_missing_file = not R18F.exists()
 if _r18_missing_file:
     fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）')
