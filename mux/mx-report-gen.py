@@ -1085,7 +1085,7 @@ ARTIFACT_VIEWS = {
     20: [('商户接入文档 v1.0.0-cashier', 'docs/delivery/merchant-onboarding-v1.0.0-cashier.md',
           [('回滚', r'回滚'), ('灰度', r'灰度'), ('观察窗', r'观察')]),
          ('完备性检查 completeness-check', 'docs/delivery/RFD-001-completeness-check.md',
-          [('回滚', r'回滚'), ('灰度', r'灰度'), ('观察窗', r'观察')])],
+          [('任务覆盖', r'任务覆盖'), ('档案覆盖', r'档案覆盖'), ('分类/优先级/依赖', r'分类/优先级/依赖')])],
     21: [('UAT 验收报告 acceptance', 'docs/acceptance/RFD-001-acceptance.md',
           [('AC 逐条', r'AC-\d'), ('判词', r'判词'), ('通过判定', r'通过')])],
     22: [('工作台账 work-report', 'work-report.md',
