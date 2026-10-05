@@ -40,7 +40,7 @@ SIM = Path(os.environ.get('AIPAY_SIM_ROOT', str(SIM)))
 EVID = SIM / 'runs' / RUN_ID / 'evidence'
 REPORT = EVID / 'simulation-report.html'
 R18F = EVID / 'r18-steps.json'
-# R22（V8 §5.5）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → NVMe 镜像兜底），
+# 验收线（正本 §5.5 反凑数·方案解析源单一）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → NVMe 镜像兜底），
 # 勿再硬编码旧版路径——正本与审计源分叉即验收缺陷（V3 分叉实录见结构排查 §二.1）。
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
@@ -238,7 +238,7 @@ if blocks and _entry_hit == len(blocks):
 elif _entry_hit > 0:
     fails.append(f'R16 操作入口缺失：{_entry_hit}/{len(blocks)} 步块含入口行——26 步须全量可复现路径')
 else:
-    fails.append('R16 操作入口零呈现：报告无任何 st-entry 步块（补遗⑥ R16 验收线）')
+    fails.append('操作入口零呈现：报告无任何 st-entry 步块（验收线：操作记录真值化）')
 
 # R15 载体按双正本制（补遗⑩/8.1）：unified-roadshow-report.html 自 run6 起退役，
 # 第 0 章宿主=final-report.html（PART 1 合并正本）；run5 及以前历史轮兼容旧载体。
@@ -252,7 +252,7 @@ if _r15.exists():
     elif 'scenario.log 实抽' not in _u:
         warns.append('R15 第 0 章在位但协作时序线标记缺失（scenario.log 实抽注记）')
     if '研发全流程治理有效性' not in _u:
-        warns.append('正本缺「研发全流程治理有效性」实算节（补遗⑥）')
+        warns.append('正本缺「研发全流程治理有效性」实算节')
 else:
     warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
 

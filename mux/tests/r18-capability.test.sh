@@ -81,7 +81,7 @@ check t "25-op1-after.png"
 check t "操作入口：#/app/board → 卡右栏 ⌨IDE"                 # 操作入口复现路径
 check t "主任务卡 t_fixture9 落 fanfan-pm-plan 板"            # 环节效果实证
 check t "R18 载荷未采集"                                       # 空载荷步诚实缺席章
-check t "R18 全量呈现覆盖"                                     # hero 覆盖率位
+check t "全量呈现覆盖"                                     # hero 覆盖率位
 echo "PASS ①生成器：对话全文/前后帧/效果/诚实缺席/覆盖位 全渲染"
 
 # ── ② 审计器查 8 断言 ───────────────────────────────────
