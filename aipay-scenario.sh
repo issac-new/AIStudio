@@ -973,6 +973,13 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
              docs/test/${RFD_ID}-test-report.md; do
       if repo_has "$p"; then echo "- ✓ $p"; else echo "- ✗ 缺 $p"; fi
     done
+    echo
+    # 分类/优先级/依赖（§8.8 发布准出第⑦项：完备性检查防多漏错重的三个维度；
+    # run8 复盘：8.6 核对项原为商户接入文档字段误配，生成器补真维度对齐方案）
+    echo "## 分类/优先级/依赖完备性（防多漏错重）"
+    echo "- 分类清点（卡面族谱）：$(kanban_list fanfan | jq -r '.. | objects | select(has("title")) | .title' | grep -oE 'T10[0-9]|G5|评审|排期|主卡' | sort | uniq -c | sort -rn | awk '{printf "%s×%s ", $2, $1}' | sed 's/ $//')"
+    echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
+    echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)"
   } > "$EVID_DIR/completeness-check.md"
   DL_WT="$SIM_ROOT/var/templates-main-wt"
   mkdir -p "$SIM_ROOT/var"
@@ -1090,7 +1097,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
         | while IFS= read -r l; do
             _ac=$(printf '%s' "$l" | grep -oE 'AC-[0-9]+' | head -1)
-            echo "- ${l#\- } → $(uat_ac_verdict "$UAT_BODY" "$_ac")（证据见上锚点）"
+            echo "- ${l#\- } → 判词：$(uat_ac_verdict "$UAT_BODY" "$_ac")（三态：通过/有条件通过/不通过；证据见上锚点）"
           done
       echo
       echo "## SLA（ITIL 接管登记，retro 资产回写用）"
@@ -1098,9 +1105,9 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       echo "- 可用性 99.5%；下单接口 P95 ≤800ms；P2 事件 4h 响应"
       echo
       if [[ $UAT_ALL_PASS == 1 ]]; then
-        echo "- 结论：全部 AC 通过，验收接受。"
+        echo "- 结论：判词汇总——全部 AC「通过」，验收接受。"
       else
-        echo "- 结论：AC 判定见上表（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
+        echo "- 结论：判词汇总（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
       fi
     } > "$ACC"
     [[ $UAT_ALL_PASS == 1 ]] || echo "ISSUE|uat-conditional|fanfan-agent|UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella" >> "$EVID_DIR/issues.log"
@@ -1136,6 +1143,16 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
   else
     note "[M3] 工作台账生成 ✓（${#INSTANCED_USERS[@]} 账号×状态分布，WIP 全员 ≤2）"
   fi
+  # 台账落档（run8 复盘根治：方案 §8.6 步 22 准出=work-report.md 落档，此前只写
+  # evidence 致 8.6 矩阵"文件域无独立工件"）——repo_commit_main 口径进 origin/main，
+  # 失败记单不中止（与验收书/意见书同族收尾语义）。
+  cp "$EVID_DIR/work-report.md" "$DIRECTOR_CLONE/work-report.md"
+  if repo_commit_main "work-report.md" "fanfan (workmgr)" "fanfan@aipaydev.local" "docs(work): ${RFD_ID} 工作台账落档（M3，RUN=${RUN_ID:-}）"; then
+    note "[M3] 工作台账已落档 origin/main（work-report.md）"
+  else
+    echo "ISSUE|workreport-push|director|工作台账落档 origin/main 失败（留存 $EVID_DIR/work-report.md）" >> "$EVID_DIR/issues.log"
+    note "[观察] 工作台账落档失败（留存本地，记问题单）"
+  fi
   sset workmgr_done "$(date +%s)"
   note "[M3] 报告落 $(echo "$WR" | tail -1)"
 fi
@@ -1157,6 +1174,16 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   fi
   AUDDOC="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-audit-opinion.md"
   mkdir -p "$(dirname "$AUDDOC")"
+  # §8.6 审计域模板字段（run8 复盘根治：意见书缺独立性声明/抽检记录/关切清单/分层
+  # 签名线，8.6 矩阵模版核对四项红——生成器按方案字段措辞补齐，抽检三条全部实查）。
+  repo_pull
+  _aud_t1=$(repo_has "$(freeze_doc)" && echo "✓ 在 origin/main" || echo "✗ 缺（origin/main）")
+  _aud_t2=$(repo_has "docs/acceptance/${RFD_ID}-acceptance.md" && echo "✓ 在 origin/main" || echo "✗ 缺（origin/main）——验收书在派发链上晚于 audit 步时如实标缺，回灌后另签")
+  if git -C "$DIRECTOR_CLONE" show "origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" >/dev/null 2>&1; then
+    _aud_t3="✓ 在 origin/integration（报告 commit 锚随分支可反查）"
+  else
+    _aud_t3="✗ 缺（origin/integration）"
+  fi
   {
     echo "# ${RFD_ID} 合规审计意见书（audit，$(date '+%F %T')）"
     echo
@@ -1164,6 +1191,25 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     echo "- 范围：G1-G6 门禁留痕完整性、凭证抽检（freeze/验收/测试报告）、问题单台账格式与处置、复盘口径"
     echo "- 导演侧机械化结论：$( [[ -z "$AUD" ]] && echo '通过（无发现）' || echo "发现——${AUD}" )"
     echo "- 意见：门禁链（G1/G2/G4/G5）与回灌机制执行合规；问题单 100% 台账化；记忆沉淀探针随 retro。"
+    echo
+    echo "## 独立性声明"
+    echo "- 本意见书由 audit（合规及审计管理线，独立于研发执行线）出具；导演侧机械化审计与 @audit-agent 独立复核分列，两层结论不一致时以独立意见为准，原结论勘误改判留痕（治理总则 10）。"
+    echo
+    echo "## 抽检记录（含 3 条 AI 结论反核）"
+    echo "- 凭证抽检①：G1 冻结件 $(freeze_doc)——${_aud_t1}（repo_has 实查）。"
+    echo "- 凭证抽检②：UAT 验收书 docs/acceptance/${RFD_ID}-acceptance.md——${_aud_t2}（repo_has 实查）。"
+    echo "- AI 结论反核③：G4 测试报告（TEST 侧 AI 结论）——${_aud_t3}（git show 引用实查）。"
+    echo
+    echo "## 关切清单"
+    if [[ -n "$AUD" ]]; then
+      echo "- ${AUD}"
+    else
+      echo "- 无（导演侧机械化审计未发现；独立复核以房间 @audit-agent 结论行为准）。"
+    fi
+    echo
+    echo "## 分层签名线"
+    echo "- 导演侧机械化审计：audit（compliance）· $(date '+%F %T')"
+    echo "- 独立复核：@audit-agent 结论行 AUDIT-OPINION-PASS / AUDIT-OPINION-CONCERNS(附清单)——房间可反查；未回执留空待补，不代签。"
   } > "$AUDDOC"
   # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
   # 空推/被拒，"已入仓"成假成功——意见书根本没进 origin/main。
