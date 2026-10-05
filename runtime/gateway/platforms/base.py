@@ -4466,10 +4466,24 @@ class BasePlatformAdapter(ABC):
             force_document_attachments=extracted.force_document_attachments,
             human_delay=human_delay, metadata=metadata, record_delivery=record_delivery)
         if not (anything_sent or images or local_files or media_files) and extracted.pre_extract.strip():
-            logger.error("[%s] response_delivery_dropped: non-empty response "
-                         "(%d chars) produced no delivered message or attachment "
-                         "for %s (empty after extract, recovery yielded nothing).", self.name,
-                         len(extracted.pre_extract), event.source.chat_id)
+            # Fallback (2026-10-04 run8 root-cure): a directive-only response (bare MEDIA
+            # tag / attachment path) whose attachment send failed or was filtered vanished
+            # here — the room saw silence and the turn read as an agent stall (run8 five
+            # stalled-agent cases; conclusion/receipt lines lost with the message).
+            # Deliver the raw pre-extract text as a last resort so peers — and any harness
+            # waiting on a conclusion line — see the attempt instead of nothing.
+            try:
+                await self.send(chat_id=event.source.chat_id,
+                                content=extracted.pre_extract.strip(), metadata=metadata)
+                logger.warning("[%s] response_delivery_fallback: attachment lane delivered "
+                               "nothing for a %d-char response; raw text delivered to %s",
+                               self.name, len(extracted.pre_extract), event.source.chat_id)
+            except Exception as fallback_err:
+                logger.error("[%s] response_delivery_dropped: non-empty response "
+                             "(%d chars) produced no delivered message or attachment "
+                             "for %s (empty after extract, recovery and fallback both "
+                             "failed: %s).", self.name,
+                             len(extracted.pre_extract), event.source.chat_id, fallback_err)
 
     def _start_typing_refresh(self, event: MessageEvent, interrupt_event: asyncio.Event,
                               metadata: Optional[dict]) -> Optional[asyncio.Task]:
