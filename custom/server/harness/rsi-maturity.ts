@@ -79,7 +79,8 @@ export function buildRsiMaturity(probes: { ladder: boolean; watchdog: boolean; s
       achieved: true,
       title: 'Manual Improvement（人工改进）',
       whatItMeans: '所有诊断、修改、验证与部署都由人完成',
-      evidence: [{ anchor: 'overlay/simharness git 主干（全部变更经人审合并）', present: true }],
+      // 证据锚不得点名 harness 仓名（隔离门①：custom/ 运行时代码零 simharness 引用）
+      evidence: [{ anchor: '推演 harness 独立仓 git 主干（全部变更经人审合并）', present: true }],
       gap: '',
     },
     {
