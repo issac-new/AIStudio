@@ -1,7 +1,8 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index dee703f7..17cdc6d7 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
-@@ -97,6 +97,10 @@
+@@ -101,6 +101,10 @@ win:
    target:
      - target: nsis
        arch: [x64]

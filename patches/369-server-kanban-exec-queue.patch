@@ -1,4 +1,4 @@
-diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 index 027cb1c5..27a29a13 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts

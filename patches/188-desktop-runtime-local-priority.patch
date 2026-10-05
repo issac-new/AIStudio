@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
-index eb4cc82..760bff4 100644
+index 8b12d250..ccd95349 100644
 --- a/packages/desktop/src/main/paths.ts
 +++ b/packages/desktop/src/main/paths.ts
 @@ -340,6 +340,26 @@ export function runtimeStorageRoot(): string {
@@ -74,7 +74,7 @@ index eb4cc82..760bff4 100644
  }
  
 diff --git a/packages/desktop/src/main/runtime-manager.ts b/packages/desktop/src/main/runtime-manager.ts
-index c1e23fc..8dc785b 100644
+index bf5c01ab..4d16abd6 100644
 --- a/packages/desktop/src/main/runtime-manager.ts
 +++ b/packages/desktop/src/main/runtime-manager.ts
 @@ -26,9 +26,11 @@ import { app } from 'electron'

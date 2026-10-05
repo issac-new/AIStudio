@@ -1,14 +1,15 @@
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
-index 3f699e08..d239e3d7 100644
+index 3f699e08..044c8bc6 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
-@@ -400,4 +400,4 @@
+@@ -399,13 +399,19 @@ function writeWindowsShimPair(
+   return 'unchanged'
  }
  
 -function shellProfilePaths(homeDir: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
 +export function shellProfilePaths(homeDir: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
    if (platform === 'win32') return []
-@@ -405,7 +405,13 @@ function shellProfilePaths(homeDir: string, platform: NodeJS.Platform, env: Node
+ 
    const shell = env.SHELL?.trim() || ''
    const name = shell.split('/').pop() || ''
    if (name === 'fish') return [join(homeDir, '.config', 'fish', 'conf.d', 'ekko-studio.fish')]

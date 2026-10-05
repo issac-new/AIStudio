@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+index 638fce81..879139cc 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
-@@ -690,4 +690,15 @@ export const useKanbanStore = defineStore('kanban', () => {
+@@ -690,6 +690,17 @@ export const useKanbanStore = defineStore('kanban', () => {
      return result
    }
  
@@ -17,7 +18,13 @@ diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/s
 +  }
 +
    async function deleteTaskAttachment(taskId: string, attachmentId: number) {
-@@ -798,2 +809,3 @@ export const useKanbanStore = defineStore('kanban', () => {
+     const board = selectedBoard.value
+     await kanbanApi.deleteAttachment(attachmentId, { board })
+@@ -796,6 +807,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+     autoGenerateProfileDescription,
+     fetchAttachments,
      uploadTaskAttachment,
 +    uploadTaskAttachmentFromUrl,
      deleteTaskAttachment,
+   }
+ })

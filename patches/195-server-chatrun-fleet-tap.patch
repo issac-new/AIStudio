@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 447e570..1d9c8d2 100644
+index ef4daf2c..8cb44694 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -75,6 +75,8 @@ import {
+@@ -94,6 +94,8 @@ import {
    type MobileHealthResponse,
    type MobileHealthRequest,
  } from '../services/chat-run/mobile-health'
@@ -11,7 +11,7 @@ index 447e570..1d9c8d2 100644
  
  type AgentBridgeBackgroundNotification = any
  type AgentBridgeBackgroundSession = any
-@@ -634,6 +636,12 @@ export class ChatRunSocket {
+@@ -709,6 +711,12 @@ export class ChatRunSocket {
      this.backgroundPollTimer.unref?.()
      void this.pollBackgroundWork()
      logger.info('[chat-run-socket] Socket.IO ready at /chat-run')
@@ -24,8 +24,7 @@ index 447e570..1d9c8d2 100644
    }
  
    // --- Auth middleware ---
-@@ -2901,7 +2909,11 @@ export class ChatRunSocket {
-     if (this.closing) return
+@@ -3173,6 +3181,10 @@ export class ChatRunSocket {
      this.closing = true
      this.stopUsageUpdates()
      for (const sessionId of this.sessionMap.keys()) this.finishTaskPlanRun(sessionId, 'abort.completed')

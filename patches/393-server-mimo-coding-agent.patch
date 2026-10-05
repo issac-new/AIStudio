@@ -1,60 +1,41 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 7ab2a70..7da2cc7 100644
+index b3439edb..fd9fc8fb 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -27,6 +27,7 @@ import { PROVIDER_PRESETS } from '../../studio/contracts/providers'
+@@ -1,6 +1,6 @@
+ import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
+ import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
+-import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, openCodeRuntimeEnv, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
++import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
+ import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
+ import { NATIVE_CODING_AGENTS, prepareNativeScopedRuntime, nativeScopedUsesChatCompletions, checkNativeCodingAgentEnvironment, checkNativeCodingAgentPlatform } from './registry/native-agents'
+ import { resolveZcodeCommand } from './zcode/installation'
+@@ -33,6 +33,7 @@ import { PROVIDER_PRESETS, assertProviderAvailable, isRetiredProvider } from '..
  import { getModelContextLength, getModelRuntimeCapabilities } from '../../studio/public/provider-runtime'
  import { getSystemPrompt, studioMcpUsageGuidelines } from '../../studio/public/runs/prompt'
  import { codingAgentRunManager } from './runtime/run-manager'
 +import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from './opencode-family'
  import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
- import { ANTIGRAVITY_CAPABILITIES } from './antigravity/capabilities'
  import { ANTIGRAVITY_DEFAULT_SETTINGS, ANTIGRAVITY_INSTALL_URL, prepareAntigravityRuntime, validateAntigravitySettings } from './antigravity/config'
-@@ -396,6 +397,13 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
-     command: 'opencode',
-     packageName: 'opencode-ai',
-   },
-+  {
-+    id: 'mimo',
-+    name: 'MiMo Code',
-+    provider: 'Xiaomi MiMo',
-+    command: 'mimo',
-+    packageName: '@mimo-ai/cli',
-+  },
-   {
-     id: 'dsh',
-     name: 'DeepSeek Harness',
-@@ -461,6 +469,13 @@ const CONFIG_FILE_DEFINITIONS: Record<CodingAgentId, Array<Omit<CodingAgentConfi
-     { key: 'settings', path: '~/.cursor/cli-config.json', scopedPath: 'cli-config.json', language: 'json' },
-     { key: 'mcp', path: '~/.cursor/mcp.json', scopedPath: '.cursor/mcp.json', language: 'json' },
-   ],
-+  mimo: [
-+    { key: 'settings', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
-+    { key: 'memory', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
-+    { key: 'mcp', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
-+    { key: 'config', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
-+    { key: 'agents', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
-+  ],
- }
- 
- const installingTools = new Set<CodingAgentId>()
-@@ -906,13 +921,14 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
+ import { CURSOR_DEFAULT_SETTINGS, cursorSettingsPath, validateCursorSettings } from './cursor/settings'
+@@ -780,7 +781,7 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
    return session?.provider === 'global' ? 'global' : 'scoped'
  }
  
--function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
-+function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
+-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
++function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+   if (isNativeCodingAgent(id)) return id
    if (id === 'codex') return 'codex'
    if (id === 'pi') return 'pi'
-   if (id === 'grok') return 'grok'
+@@ -788,6 +789,7 @@ function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'ope
    if (id === 'dsh') return 'dsh'
    if (id === 'opencode') return 'opencode'
    if (id === 'antigravity') return 'antigravity'
 +  if (id === 'mimo') return 'mimo'
    if (id === 'cursor') return 'cursor'
-   if (id === 'zcode') return 'zcode'
    return 'claude'
-@@ -1266,7 +1282,7 @@ function managedHermesMcpServerConfig(
+ }
+@@ -1129,7 +1131,7 @@ function managedHermesMcpServerConfig(
      if (env?.[HERMES_MCP_MANAGED_ENV_KEY] === '1') {
        server.env = { ...env, HERMES_MCP_SERVER_NAME: serverName, HERMES_MCP_USER_CLARIFICATION: '1' }
      }
@@ -63,84 +44,129 @@ index 7ab2a70..7da2cc7 100644
      if (agentId === 'dsh') server.toolCallTimeoutMs = Math.max(360_000, Number(server.toolCallTimeoutMs) || 0)
    }
    return server
-@@ -1826,6 +1842,7 @@ function mergeOpenCodeSettingsConfig(existingContent: string, settingsContent: s
- }
- 
- function opencodeRuntimeConfig(
-+  family: OpenCodeFamilyId,
-   profile: string,
-   runtime: {
-     provider?: string
-@@ -1842,9 +1859,10 @@ function opencodeRuntimeConfig(
-     ? { ...config.mcp }
-     : {}
-   for (const name of [...HERMES_MCP_SERVER_NAMES, ...LEGACY_HERMES_MCP_SERVER_NAMES]) delete externalMcp[name]
--  const disabledManaged = getDisabledManagedMcpServers('opencode', profile)
-+  const familyVars = OPENCODE_FAMILY_VARS[family]
-+  const disabledManaged = getDisabledManagedMcpServers(family, profile)
-   const managedMcp = Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
--    const server = managedHermesMcpServerConfig('opencode', profile, item.name, item.toolset, runtime.studioMcpTokenFile)
-+    const server = managedHermesMcpServerConfig(family, profile, item.name, item.toolset, runtime.studioMcpTokenFile)
-     return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
-   }))
-   const inheritedInstructions = Array.isArray(config.instructions)
-@@ -1859,7 +1877,7 @@ function opencodeRuntimeConfig(
-   delete config.instructions
-   return `${JSON.stringify({
-     ...config,
--    $schema: 'https://opencode.ai/config.json',
-+    $schema: familyVars.schemaUrl,
-     ...(runtime.model ? {
-       model: `${OPENCODE_PROVIDER_ID}/${runtime.model}`,
-       provider: {
-@@ -1868,7 +1886,7 @@ function opencodeRuntimeConfig(
-           name: runtime.provider || 'SwarmStudio',
-           options: {
-             baseURL: runtime.baseUrl || '',
--            apiKey: `{env:${OPENCODE_API_KEY_ENV}}`,
-+            apiKey: `{env:${familyVars.apiKeyEnv}}`,
-           },
-           models: {
-             [runtime.model]: {
-@@ -1905,7 +1923,7 @@ function opencodeRuntimeConfig(
+@@ -1611,12 +1613,120 @@ function piMcpConfig(profile: string, runTokenFile: string | undefined, ...exter
    }, null, 2)}\n`
  }
  
--function openCodeRuntimeEnv(input: {
-+function openCodeRuntimeEnv(family: OpenCodeFamilyId, input: {
-   configDir: string
-   databasePath: string
-   runtimeConfig?: string
-@@ -1920,12 +1938,14 @@ function openCodeRuntimeEnv(input: {
-   // OPENCODE_CONFIG_CONTENT, which OpenCode intentionally loads last. The
-   // native database remains isolated per conversation. Do not redirect HOME or
-   // XDG because that would also redirect git, ssh, npm, and child shells.
++function opencodeRuntimeConfig(
++  family: OpenCodeFamilyId,
++  profile: string,
++  runtime: {
++    provider?: string
++    model?: string
++    baseUrl?: string
++    systemPrompt?: string
++    contextPolicy?: CodingAgentContextPolicy
++    studioMcpTokenFile?: string
++  },
++  ...existingContents: Array<string | null | undefined>
++): string {
++  const config = parseOpenCodeConfig(...existingContents)
++  const externalMcp = config.mcp && typeof config.mcp === 'object' && !Array.isArray(config.mcp)
++    ? { ...config.mcp }
++    : {}
++  for (const name of [...HERMES_MCP_SERVER_NAMES, ...LEGACY_HERMES_MCP_SERVER_NAMES]) delete externalMcp[name]
 +  const familyVars = OPENCODE_FAMILY_VARS[family]
-   return {
--    OPENCODE_CONFIG_DIR: input.configDir,
--    OPENCODE_DB: input.databasePath,
--    ...(input.runtimeConfig ? { [OPENCODE_RUNTIME_CONFIG_ENV]: input.runtimeConfig } : {}),
--    OPENCODE_DISABLE_CLAUDE_CODE: '1',
--    ...(input.apiKey ? { [OPENCODE_API_KEY_ENV]: input.apiKey } : {}),
++  const disabledManaged = getDisabledManagedMcpServers(family, profile)
++  const managedMcp = Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
++    const server = managedHermesMcpServerConfig(family, profile, item.name, item.toolset, runtime.studioMcpTokenFile)
++    return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
++  }))
++  const inheritedInstructions = Array.isArray(config.instructions)
++    ? config.instructions.map(String)
++    : typeof config.instructions === 'string'
++      ? [config.instructions]
++      : []
++  if (runtime.model) {
++    delete config.model
++    delete config.provider
++  }
++  delete config.instructions
++  return `${JSON.stringify({
++    ...config,
++    $schema: familyVars.schemaUrl,
++    ...(runtime.model ? {
++      model: `${OPENCODE_PROVIDER_ID}/${runtime.model}`,
++      provider: {
++        [OPENCODE_PROVIDER_ID]: {
++          npm: '@ai-sdk/openai',
++          name: runtime.provider || 'SwarmStudio',
++          options: {
++            baseURL: runtime.baseUrl || '',
++            apiKey: `{env:${familyVars.apiKeyEnv}}`,
++          },
++          models: {
++            [runtime.model]: {
++              name: displayNameForModel(runtime.model),
++              // Always forward images; let the upstream model handle support.
++              attachment: true,
++              modalities: { input: ['text', 'image'], output: ['text'] },
++              ...(runtime.contextPolicy ? { limit: {
++                context: runtime.contextPolicy.contextWindow,
++                input: runtime.contextPolicy.contextWindow,
++                output: runtime.contextPolicy.outputLimit,
++              } } : {}),
++            },
++          },
++        },
++      },
++    } : {}),
++    ...(runtime.contextPolicy ? { compaction: {
++      ...(config.compaction && typeof config.compaction === 'object' ? config.compaction : {}),
++      auto: true,
++      reserved: runtime.contextPolicy.contextWindow - runtime.contextPolicy.triggerTokens,
++    } } : {}),
++    ...((inheritedInstructions.length || runtime.systemPrompt) ? {
++      instructions: [...new Set([
++        ...inheritedInstructions,
++        ...(runtime.systemPrompt ? [runtime.systemPrompt] : []),
++      ])],
++    } : {}),
++    mcp: {
++      ...externalMcp,
++      ...managedMcp,
++    },
++    permission: { '*': 'allow' },
++  }, null, 2)}\n`
++}
++
++function openCodeRuntimeEnv(family: OpenCodeFamilyId, input: {
++  configDir: string
++  databasePath: string
++  runtimeConfig?: string
++  apiKey?: string
++}): Record<string, string> {
++  // OPENCODE_CONFIG_DIR is OpenCode's native global-config override. Keep it
++  // stable at the provider/profile root so OpenCode installs its plugin SDK
++  // once and discovers the same agents, commands, plugins, skills, memory, and
++  // MCP configuration for terminal, chat, group-chat, and workflow launches.
++  //
++  // Per-conversation provider credentials and model selection are applied with
++  // OPENCODE_CONFIG_CONTENT, which OpenCode intentionally loads last. The
++  // native database remains isolated per conversation. Do not redirect HOME or
++  // XDG because that would also redirect git, ssh, npm, and child shells.
++  const familyVars = OPENCODE_FAMILY_VARS[family]
++  return {
 +    [familyVars.configDirEnv]: input.configDir,
 +    [familyVars.databaseEnv]: input.databasePath,
 +    ...(input.runtimeConfig ? { [familyVars.runtimeConfigEnv]: input.runtimeConfig } : {}),
 +    // MiMo-Code gates Claude-Code skill import behind an opt-in flag already.
 +    ...(family === 'opencode' ? { OPENCODE_DISABLE_CLAUDE_CODE: '1' } : {}),
 +    ...(input.apiKey ? { [familyVars.apiKeyEnv]: input.apiKey } : {}),
-   }
- }
- 
-@@ -1934,7 +1954,7 @@ export function getCodingAgentManagedMcpServerConfigs(
++  }
++}
++
+ export function getCodingAgentManagedMcpServerConfigs(
+   id: CodingAgentId,
    profile = 'default',
    runTokenFile?: string,
  ): Record<string, Record<string, unknown>> {
--  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity'].includes(id)) return {}
-+  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity'].includes(id)) return {}
+-  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
++  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
+   if (id === 'zcode') return {}
    const disabledManaged = getDisabledManagedMcpServers(id, profile)
    return Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
-     const server = managedHermesMcpServerConfig(id, profile || 'default', item.name, item.toolset, runTokenFile)
-@@ -1957,7 +1977,7 @@ export function getCodingAgentManagedMcpServerConfigs(
+@@ -1640,7 +1750,7 @@ export function getCodingAgentManagedMcpServerConfigs(
          ...(disabledManaged.has(item.name) ? { enabled: false } : {}),
        }]
      }
@@ -149,75 +175,115 @@ index 7ab2a70..7da2cc7 100644
        return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
      }
      return [item.name, {
-@@ -2313,7 +2333,7 @@ async function ensurePiScopedBaseConfigFiles(scope: Required<CodingAgentConfigSc
+@@ -1995,12 +2105,102 @@ async function ensurePiScopedBaseConfigFiles(scope: Required<CodingAgentConfigSc
+   }
  }
  
- function shouldShareOpenCodeGlobalFile(name: string): boolean {
--  if (name === 'AGENTS.md' || name === 'opencode.json' || name === 'opencode.jsonc') return false
+-function ensureOpenCodeScopedBaseConfigFiles(scope: Required<CodingAgentConfigScope>, systemPrompt: string, workspaceDir = resolveLaunchWorkspaceRoot(scope, null)) {
+-  return prepareOpenCodeBaseConfig({
+-    rootDir: getScopedConfigRoot('opencode', scope),
+-    sourceHome: dirname(getLiveConfigFileDefinition('opencode', 'config')?.absolutePath || ''),
+-    profile: scope.profile, systemPrompt, workspaceDir, writeLauncherScript, opencodeRuntimeConfig,
++function shouldShareOpenCodeGlobalFile(name: string): boolean {
 +  if (name === 'AGENTS.md' || name === 'opencode.json' || name === 'opencode.jsonc' || name === 'mimocode.json' || name === 'mimocode.jsonc' || name === 'config.json') return false
-   if (name === '.gitignore' || name === 'package.json' || name === 'package-lock.json' || name === 'bun.lock') return false
-   if (name.endsWith('.lock') || name.endsWith('.pid') || name.endsWith('.sock')) return false
-   if (name.endsWith('.db') || name.endsWith('.db-shm') || name.endsWith('.db-wal')) return false
-@@ -2346,6 +2366,7 @@ async function shareOpenCodeGlobalEntry(source: string, target: string, type: 'f
- }
- 
- async function ensureOpenCodeScopedBaseConfigFiles(
++  if (name === '.gitignore' || name === 'package.json' || name === 'package-lock.json' || name === 'bun.lock') return false
++  if (name.endsWith('.lock') || name.endsWith('.pid') || name.endsWith('.sock')) return false
++  if (name.endsWith('.db') || name.endsWith('.db-shm') || name.endsWith('.db-wal')) return false
++  if (name.endsWith('.sqlite') || name.endsWith('.sqlite-shm') || name.endsWith('.sqlite-wal')) return false
++  return !name.endsWith('.log')
++}
++
++async function shareOpenCodeGlobalEntry(source: string, target: string, type: 'file' | 'dir'): Promise<void> {
++  if (await pathEntryExists(target)) return
++  try {
++    await symlink(source, target, process.platform === 'win32' && type === 'dir' ? 'junction' : type)
++    return
++  } catch (err: any) {
++    if (err?.code !== 'EEXIST' && err?.code !== 'EPERM' && err?.code !== 'ENOTSUP' && err?.code !== 'EINVAL') {
++      throw err
++    }
++    if (err?.code === 'EEXIST') return
++  }
++  if (type === 'dir') {
++    await cp(source, target, {
++      recursive: true,
++      dereference: true,
++      errorOnExist: false,
++      force: false,
++      preserveTimestamps: true,
++    })
++  } else {
++    await copyFile(source, target)
++  }
++}
++
++async function ensureOpenCodeScopedBaseConfigFiles(
 +  family: OpenCodeFamilyId,
-   scope: Required<CodingAgentConfigScope>,
-   systemPrompt: string,
-   workspaceDir = resolveLaunchWorkspaceRoot(scope, null),
-@@ -2357,8 +2378,9 @@ async function ensureOpenCodeScopedBaseConfigFiles(
-   launcherFile: string
-   launcherRuntimeConfig: string
- }> {
--  const rootDir = getScopedConfigRoot('opencode', scope)
--  const sourceHome = dirname(getLiveConfigFileDefinition('opencode', 'config')?.absolutePath || '')
++  scope: Required<CodingAgentConfigScope>,
++  systemPrompt: string,
++  workspaceDir = resolveLaunchWorkspaceRoot(scope, null),
++): Promise<{
++  rootDir: string
++  memoryFile: string
++  promptFile: string
++  configFile: string
++  launcherFile: string
++  launcherRuntimeConfig: string
++}> {
 +  const familyVars = OPENCODE_FAMILY_VARS[family]
 +  const rootDir = getScopedConfigRoot(family, scope)
 +  const sourceHome = dirname(getLiveConfigFileDefinition(family, 'config')?.absolutePath || '')
-   await mkdir(rootDir, { recursive: true, mode: 0o700 })
-   await mkdir(sourceHome, { recursive: true })
- 
-@@ -2379,29 +2401,30 @@ async function ensureOpenCodeScopedBaseConfigFiles(
- 
-   const memoryFile = join(rootDir, 'AGENTS.md')
-   const promptFile = join(rootDir, 'hermes-rules.md')
--  const configFile = join(rootDir, OPENCODE_CONFIG_FILE)
++  await mkdir(rootDir, { recursive: true, mode: 0o700 })
++  await mkdir(sourceHome, { recursive: true })
++
++  for (const directory of OPENCODE_SHARED_CONFIG_DIRS) {
++    const source = join(sourceHome, directory)
++    const target = join(rootDir, directory)
++    if (directory === 'skills') await mkdir(source, { recursive: true })
++    if (!existsSync(source)) continue
++    await shareOpenCodeGlobalEntry(source, target, 'dir')
++  }
++
++  if (sourceHome !== rootDir && existsSync(sourceHome)) {
++    for (const entry of await readdir(sourceHome, { withFileTypes: true })) {
++      if (!entry.isFile() || !shouldShareOpenCodeGlobalFile(entry.name)) continue
++      await shareOpenCodeGlobalEntry(join(sourceHome, entry.name), join(rootDir, entry.name), 'file')
++    }
++  }
++
++  const memoryFile = join(rootDir, 'AGENTS.md')
++  const promptFile = join(rootDir, 'hermes-rules.md')
 +  const configFile = join(rootDir, familyVars.configFileName)
-   const globalInstructions = await safeReadFile(join(sourceHome, 'AGENTS.md')) || ''
--  const globalConfig = await safeReadFile(join(sourceHome, OPENCODE_CONFIG_FILE))
--    || await safeReadFile(join(sourceHome, 'opencode.jsonc'))
++  const globalInstructions = await safeReadFile(join(sourceHome, 'AGENTS.md')) || ''
 +  const globalConfig = await safeReadFile(join(sourceHome, familyVars.configFileName))
 +    || await safeReadFile(join(sourceHome, `${familyVars.configFileName}c`))
 +    || (family === 'mimo' ? await safeReadFile(join(sourceHome, 'config.json')) : '')
-     || ''
-   await writeFile(memoryFile, globalInstructions, 'utf-8')
-   await writeManagedPromptFile(promptFile, systemPrompt, '')
-   await writeFile(
-     configFile,
--    opencodeRuntimeConfig(scope.profile, {}, globalConfig),
++    || ''
++  await writeFile(memoryFile, globalInstructions, 'utf-8')
++  await writeManagedPromptFile(promptFile, systemPrompt, '')
++  await writeFile(
++    configFile,
 +    opencodeRuntimeConfig(family, scope.profile, {}, globalConfig),
-     'utf-8',
-   )
--  const launcherRuntimeConfig = opencodeRuntimeConfig(scope.profile, { systemPrompt: promptFile })
--  const env = openCodeRuntimeEnv({
++    'utf-8',
++  )
 +  const launcherRuntimeConfig = opencodeRuntimeConfig(family, scope.profile, { systemPrompt: promptFile })
 +  const env = openCodeRuntimeEnv(family, {
-     configDir: rootDir,
--    databasePath: join(rootDir, OPENCODE_DATABASE_FILE),
++    configDir: rootDir,
 +    databasePath: join(rootDir, familyVars.databaseFile),
-     runtimeConfig: launcherRuntimeConfig,
-   })
-   const launcherFile = await writeLauncherScript({
-     rootDir,
-     workspaceDir,
-     env,
--    command: 'opencode',
++    runtimeConfig: launcherRuntimeConfig,
++  })
++  const launcherFile = await writeLauncherScript({
++    rootDir,
++    workspaceDir,
++    env,
 +    command: family,
-     args: [],
++    args: [],
    })
-   return { rootDir, memoryFile, promptFile, configFile, launcherFile, launcherRuntimeConfig }
-@@ -2859,7 +2882,7 @@ export function withCodingAgentRegistry(id: CodingAgentId, args: string[]): stri
++  return { rootDir, memoryFile, promptFile, configFile, launcherFile, launcherRuntimeConfig }
+ }
+ 
+ function buildLaunchShellCommand(input: {
+@@ -2470,7 +2670,7 @@ export function withCodingAgentRegistry(id: CodingAgentId, args: string[]): stri
    // DSH's native dependencies share a process-wide FFI type registry; duplicate
    // copies can crash plugin startup after an otherwise successful npm update.
    const installOptions = id === 'dsh' && args[0] === 'install' ? ['--prefer-dedupe'] : []
@@ -226,7 +292,7 @@ index 7ab2a70..7da2cc7 100644
      ? [...args, ...installOptions, `--registry=${OFFICIAL_NPM_REGISTRY}`]
      : [...args]
  }
-@@ -3269,7 +3292,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
+@@ -2837,7 +3037,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
        )
        : id === 'grok' && key === 'settings'
          ? grokSettingsConfig(sourceContent)
@@ -235,7 +301,7 @@ index 7ab2a70..7da2cc7 100644
            ? openCodeSettingsConfig(sourceContent)
          : sourceContent
      return {
-@@ -3288,7 +3311,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
+@@ -2856,7 +3056,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
        : id === 'cursor' && key === 'settings' ? CURSOR_DEFAULT_SETTINGS
        : id === 'pi'
          ? piLiveConfigDefault(key, normalizedScope.profile) || ''
@@ -244,7 +310,7 @@ index 7ab2a70..7da2cc7 100644
            ? '{}\n'
            : id === 'dsh' && key === 'settings' ? '{}\n'
              : id === 'dsh' && key === 'mcp' ? '[]\n'
-@@ -3325,7 +3348,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
+@@ -2893,7 +3093,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
      persistedContent = key === 'mcp'
        ? mergeGrokUserMcpConfig(existingContent, persistedContent)
        : mergeGrokSettingsConfig(existingContent, persistedContent)
@@ -253,7 +319,7 @@ index 7ab2a70..7da2cc7 100644
      const existingContent = await safeReadFile(definition.absolutePath) || '{}'
      persistedContent = mergeOpenCodeSettingsConfig(existingContent, persistedContent)
    }
-@@ -3353,7 +3376,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
+@@ -2921,7 +3121,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
          )
        : id === 'grok' && key === 'settings'
          ? grokSettingsConfig(persistedContent)
@@ -262,7 +328,7 @@ index 7ab2a70..7da2cc7 100644
            ? openCodeSettingsConfig(persistedContent)
          : content,
      exists: true,
-@@ -3517,17 +3540,18 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3096,17 +3296,18 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        files = prepared.files
        args = prepared.args
        env = {}
@@ -286,7 +352,7 @@ index 7ab2a70..7da2cc7 100644
        })
        const launcherFile = await writeLauncherScript({
          rootDir,
-@@ -3539,7 +3563,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3118,7 +3319,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        files = [
          { key: 'agents', path: 'AGENTS.md', absolutePath: prepared.memoryFile },
          { key: 'prompt', path: 'hermes-rules.md', absolutePath: promptFile },
@@ -295,7 +361,7 @@ index 7ab2a70..7da2cc7 100644
          {
            key: 'launcher',
            path: process.platform === 'win32' ? WINDOWS_LAUNCHER_FILE : POSIX_LAUNCHER_FILE,
-@@ -3995,11 +4019,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3586,11 +3787,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
            chatSessionId: isolatedInput.sessionId,
          })
        : null
@@ -312,7 +378,7 @@ index 7ab2a70..7da2cc7 100644
        studioMcpTokenFile: input.studioMcpTokenFile,
        provider,
        model,
-@@ -4009,12 +4035,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3600,12 +3803,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
      })
      await writeFile(configPath, runtimeConfig, 'utf-8')
      files.push(
@@ -328,7 +394,7 @@ index 7ab2a70..7da2cc7 100644
        runtimeConfig,
        apiKey: proxyTarget?.token || apiKey,
      })
-@@ -4061,7 +4087,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3660,7 +3863,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        ? join(rootDir, 'hermes-rules.md')
        : tool.id === 'grok' || tool.id === 'dsh'
          ? join(rootDir, 'AGENTS.md')
@@ -337,7 +403,7 @@ index 7ab2a70..7da2cc7 100644
            ? join(rootDir, 'AGENTS.md')
          : undefined,
      reasoningEffort,
-@@ -4125,10 +4151,10 @@ async function startCodingAgentRunInternal(
+@@ -3725,10 +3928,10 @@ async function startCodingAgentRunInternal(
      isolateSettings: true,
      piOutputMode: id === 'pi' ? 'rpc' : undefined,
    })
@@ -351,9 +417,35 @@ index 7ab2a70..7da2cc7 100644
        : id === 'pi'
          ? join(launch.rootDir, 'mcp.json')
          : '')
+diff --git a/packages/server/src/modules/coding-agents/services/mimo/definition.ts b/packages/server/src/modules/coding-agents/services/mimo/definition.ts
+new file mode 100644
+index 00000000..0f718fd9
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/mimo/definition.ts
+@@ -0,0 +1,20 @@
++// overlay[mimo-agent]: MiMo Code coding agent definition —— opencode 家族 fork
++// （npm @mimo-ai/cli，bin `mimo`），家族差异单一事实源见 services/opencode-family.ts。
++import type { CodingAgentConfigFileTemplate } from '../../contracts/definition'
++import { OPENCODE_FAMILY_VARS } from '../opencode-family'
++
++export const MIMO_DEFINITION = {
++  id: 'mimo',
++  name: 'MiMo Code',
++  provider: 'Xiaomi MiMo',
++  command: 'mimo',
++  packageName: '@mimo-ai/cli',
++} as const
++
++export const MIMO_CONFIG_FILES: CodingAgentConfigFileTemplate[] = [
++  { key: 'settings', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++  { key: 'memory', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
++  { key: 'mcp', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++  { key: 'config', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++  { key: 'agents', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
++]
 diff --git a/packages/server/src/modules/coding-agents/services/opencode-family.ts b/packages/server/src/modules/coding-agents/services/opencode-family.ts
 new file mode 100644
-index 0000000..cfa99a6
+index 00000000..cfa99a69
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/opencode-family.ts
 @@ -0,0 +1,61 @@
@@ -418,11 +510,78 @@ index 0000000..cfa99a6
 +export function isOpenCodeFamily(id: string): id is OpenCodeFamilyId {
 +  return (OPENCODE_FAMILY_IDS as readonly string[]).includes(id)
 +}
+diff --git a/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts b/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
+index e80d0939..5b09cc09 100644
+--- a/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
++++ b/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
+@@ -6,6 +6,7 @@ import type { OpenCodeTurnHost } from './turn-host'
+ import { logger } from '../../../studio/public/logging'
+ import { updateManagedPromptFileSync } from '../prompt-file'
+ import { isolatedCodingAgentChildEnv } from '../runtime/child-env'
++import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from '../opencode-family'
+ 
+ export function startOpenCodeTurn(
+   run: ManagedCodingAgentRun,
+@@ -15,7 +16,9 @@ export function startOpenCodeTurn(
+   host: OpenCodeTurnHost,
+ ) {
+   if (host.isRunning(run.currentChild)) {
+-    throw new Error('OpenCode is still processing the previous input')
++    // overlay[mimo-agent]: opencode 家族(MiMo fork)品牌差异单一事实源在 opencode-family.ts
++    const family: OpenCodeFamilyId = isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'
++    throw new Error(`${OPENCODE_FAMILY_VARS[family].brandName} is still processing the previous input`)
+   }
+ 
+   const responseId = `resp_${Date.now()}`
+@@ -39,11 +42,14 @@ export function startOpenCodeTurn(
+   })
+ 
+   if (run.launch.promptFile) updateManagedPromptFileSync(run.launch.promptFile, systemPrompt)
++  const family: OpenCodeFamilyId = isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'
++  const familyVars = OPENCODE_FAMILY_VARS[family]
+   const args = [
+     'run',
+     '--format', 'json',
+     '--agent', 'build',
+-    '--auto',
++    // MiMo fork 已移除 --auto(见 opencode-family.ts runSupportsAutoFlag)
++    ...(familyVars.runSupportsAutoFlag ? ['--auto'] : []),
+     '--thinking',
+     ...run.launch.args,
+     ...(run.launch.agentNativeSessionId && run.nativeResumeReady
+diff --git a/packages/server/src/modules/coding-agents/services/registry/definitions.ts b/packages/server/src/modules/coding-agents/services/registry/definitions.ts
+index 53f0ff68..67700f56 100644
+--- a/packages/server/src/modules/coding-agents/services/registry/definitions.ts
++++ b/packages/server/src/modules/coding-agents/services/registry/definitions.ts
+@@ -12,6 +12,7 @@ import { CODEX_DEFINITION, CODEX_CONFIG_FILES } from '../codex/definition'
+ import { PI_DEFINITION, PI_CONFIG_FILES } from '../pi/definition'
+ import { GROK_CODING_AGENT_DEFINITION, GROK_CODING_AGENT_CONFIG_FILES } from '../grok/definition'
+ import { OPENCODE_DEFINITION, OPENCODE_CONFIG_FILES } from '../opencode/definition'
++import { MIMO_DEFINITION, MIMO_CONFIG_FILES } from '../mimo/definition'
+ import { DSH_DEFINITION, DSH_CONFIG_FILES } from '../dsh/definition'
+ import { CURSOR_DEFINITION, CURSOR_CONFIG_FILES } from '../cursor/definition'
+ import { NATIVE_CODING_AGENTS } from './native-agents'
+@@ -24,6 +25,7 @@ export const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
+   PI_DEFINITION,
+   GROK_CODING_AGENT_DEFINITION,
+   OPENCODE_DEFINITION,
++  MIMO_DEFINITION,
+   DSH_DEFINITION,
+   CURSOR_DEFINITION,
+ ]
+@@ -41,6 +43,7 @@ export const CONFIG_FILE_DEFINITIONS: Record<CodingAgentRuntime, CodingAgentConf
+   pi: PI_CONFIG_FILES,
+   grok: GROK_CODING_AGENT_CONFIG_FILES,
+   opencode: OPENCODE_CONFIG_FILES,
++  mimo: MIMO_CONFIG_FILES,
+   dsh: DSH_CONFIG_FILES,
+   cursor: CURSOR_CONFIG_FILES,
+ }
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-index 9f48865..3d3ac4d 100644
+index 1f9035df..721a7e83 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-@@ -3,6 +3,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
+@@ -9,6 +9,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
  import { agentUpdateLocked, noteAgentActivity } from '../update-lock'
  import { dirname, join } from 'path'
  import { existsSync, accessSync, chmodSync, constants as fsConstants, readFileSync, writeFileSync } from 'fs'
@@ -430,41 +589,42 @@ index 9f48865..3d3ac4d 100644
  import { homedir } from 'os'
  import { spawn, type ChildProcess } from 'child_process'
  import { createSession, addMessage, getSession, updateSession, updateSessionStats } from '../../../studio/public/sessions'
-@@ -344,28 +345,30 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
+@@ -349,10 +350,10 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
  }
  
  function isPrintAgent(agentId: string): boolean {
--  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
-+  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (isOpenCodeFamily(agentId) || agentId === 'dsh') || agentId === 'zcode'
+-  return isNativeCodingAgent(agentId) || agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
++  return isNativeCodingAgent(agentId) || agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (isOpenCodeFamily(agentId) || agentId === 'dsh')
  }
  
--function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
-+function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
+-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
++function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+   if (isNativeCodingAgent(agentId)) return agentId
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
-   if (agentId === 'grok') return 'grok'
+@@ -360,11 +361,12 @@ function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'gro
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
    if (agentId === 'antigravity') return 'antigravity'
 +  if (agentId === 'mimo') return 'mimo'
    if (agentId === 'cursor') return 'cursor'
-   if (agentId === 'zcode') return 'zcode'
    return 'claude'
  }
  
--export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
-+export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' {
+-export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
++export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+   if (isNativeCodingAgent(agentId)) return agentId
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
-   if (agentId === 'grok') return 'grok'
+@@ -372,6 +374,7 @@ export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
    if (agentId === 'antigravity') return 'antigravity'
 +  if (agentId === 'mimo') return 'mimo'
    if (agentId === 'cursor') return 'cursor'
-   if (agentId === 'zcode') return 'zcode'
    return 'claude_code'
-@@ -400,11 +403,12 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
+ }
+@@ -405,11 +408,12 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
        return false
      }
    }
@@ -480,16 +640,16 @@ index 9f48865..3d3ac4d 100644
        return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
      } catch {
        return false
-@@ -529,7 +533,7 @@ function codingAgentDisplayName(agentId: string): string {
+@@ -535,7 +539,7 @@ function codingAgentDisplayName(agentId: string): string {
    if (agentId === 'codex') return 'Codex'
    if (agentId === 'pi') return 'Pi'
    if (agentId === 'grok') return 'Grok'
 -  if (agentId === 'opencode') return 'OpenCode'
 +  if (isOpenCodeFamily(agentId)) return OPENCODE_FAMILY_VARS[agentId].brandName
    if (agentId === 'dsh') return 'DeepSeek Harness'
-   if (agentId === 'zcode') return 'ZCode'
    return 'Claude Code'
-@@ -781,8 +785,8 @@ export class CodingAgentRunManager {
+ }
+@@ -786,8 +790,8 @@ export class CodingAgentRunManager {
            ? 'Pi'
            : launch.agentId === 'grok'
              ? 'Grok'
@@ -500,7 +660,7 @@ index 9f48865..3d3ac4d 100644
              : launch.agentId === 'dsh'
                ? 'DeepSeek Harness'
              : launch.agentId === 'antigravity'
-@@ -924,7 +928,7 @@ export class CodingAgentRunManager {
+@@ -926,7 +930,7 @@ export class CodingAgentRunManager {
        this.startDshTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
@@ -509,16 +669,16 @@ index 9f48865..3d3ac4d 100644
        this.startOpenCodeTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
-@@ -1216,7 +1220,7 @@ export class CodingAgentRunManager {
+@@ -1218,7 +1222,7 @@ export class CodingAgentRunManager {
        // for transport and usage accounting only.
        return
      }
--    if ((run.launch.agentId === 'opencode' || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity') && !run.acceptingPrintEvent) {
-+    if ((isOpenCodeFamily(run.launch.agentId) || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity') && !run.acceptingPrintEvent) {
+-    if ((run.launch.agentId === 'opencode' || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity' || isNativeCodingAgent(run.launch.agentId)) && !run.acceptingPrintEvent) {
++    if ((isOpenCodeFamily(run.launch.agentId) || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity' || isNativeCodingAgent(run.launch.agentId)) && !run.acceptingPrintEvent) {
        // Native JSON/ACP stdout is the authoritative turn stream. A single
        // turn can contain several provider requests, so treating each
        // proxy response.completed event as the turn boundary duplicates output
-@@ -1282,7 +1286,7 @@ export class CodingAgentRunManager {
+@@ -1284,7 +1288,7 @@ export class CodingAgentRunManager {
      if (isTerminalEvent) {
        run.assistantMessageId = this.persistTerminalResponse(run)
        const final = (storageSafeResponseEvent.data as any).response || storageSafeResponseEvent.data
@@ -527,49 +687,28 @@ index 9f48865..3d3ac4d 100644
          this.captureUsage(run, () => {
            const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
            this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
-@@ -3150,8 +3154,9 @@ export class CodingAgentRunManager {
-     systemPrompt = '',
-     images: CodingAgentImageInput[] = [],
-   ) {
-+    const familyVars = OPENCODE_FAMILY_VARS[run.launch.agentId as 'opencode' | 'mimo']
-     if (childIsRunning(run.currentChild)) {
--      throw new Error('OpenCode is still processing the previous input')
-+      throw new Error(`${familyVars.brandName} is still processing the previous input`)
-     }
- 
-     const responseId = `resp_${Date.now()}`
-@@ -3179,7 +3184,8 @@ export class CodingAgentRunManager {
-       'run',
-       '--format', 'json',
-       '--agent', 'build',
--      '--auto',
-+      // MiMo-Code（OpenCode fork）已移除 --auto 旗标
-+      ...(familyVars.runSupportsAutoFlag ? ['--auto'] : []),
-       '--thinking',
-       ...run.launch.args,
-       ...(run.launch.agentNativeSessionId && run.nativeResumeReady
-@@ -3227,7 +3233,7 @@ export class CodingAgentRunManager {
-       }
-       if (run.printCompleted) return
-       if (code === 0) this.completeClaudePrintTurn(run)
--      else this.failClaudePrintTurn(run, exitErrorMessage('OpenCode', code, run.currentChildStderr))
-+      else this.failClaudePrintTurn(run, exitErrorMessage(familyVars.brandName, code, run.currentChildStderr))
-     })
-   }
- 
+@@ -3059,7 +3063,7 @@ export class CodingAgentRunManager {
+     return {
+       spawn: spawnCodingAgentChild, isRunning: childIsRunning, terminate: terminateChildProcess,
+       processError: error => childProcessErrorMessage(error, run.launch.agentId),
+-      exitError: (code, stderr) => exitErrorMessage('OpenCode', code, stderr),
++      exitError: (code, stderr) => exitErrorMessage(OPENCODE_FAMILY_VARS[isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'].brandName, code, stderr),
+       errorMessage: responseErrorMessage, sanitizeOutput: sanitizeCodingAgentTerminalOutput,
+       appendedTextDelta, truncateToolOutput: truncateCodingAgentToolOutputForStorage,
+       touch: () => this.touch(run), line: line => this.handleOpenCodeLine(run, line),
 diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
-index 27b1ef7..94d75c7 100644
+index 82f31fd1..32d141ff 100644
 --- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
 +++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
 @@ -1,9 +1,9 @@
  import type { AgentFamily } from './family'
  
--export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'zcode'] as const
-+export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'zcode'] as const
+-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'] as const
++export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'] as const
  
  export type AgentRuntime = typeof AGENT_RUNTIMES[number]
--export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'>
-+export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'>
+-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'>
++export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'>
  
  const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
  
@@ -580,36 +719,36 @@ index 27b1ef7..94d75c7 100644
 +  mimo: 'coding',
    cursor: 'coding',
    antigravity: 'coding',
-   zcode: 'coding',
+   qwen: 'coding',
 diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
-index 048f8ae..18385bf 100644
+index 8332ccd8..000d61bd 100644
 --- a/packages/server/src/modules/studio/contracts/runs/session.ts
 +++ b/packages/server/src/modules/studio/contracts/runs/session.ts
-@@ -167,7 +167,7 @@ export interface SessionState {
+@@ -169,7 +169,7 @@ export interface SessionState {
    queueInsertion?: QueueInsertionControl
    responseRun?: ResponseRunState
    source?: ChatRunSource
--  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity'
+-  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
    webhookRoomId?: string
    webhookWorkflowId?: string
    webhookWorkflowNodeId?: string
-@@ -215,7 +215,7 @@ export interface BridgeContextState {
+@@ -217,7 +217,7 @@ export interface BridgeContextState {
  }
  
- export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
--export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko-agent'
-+export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko-agent'
+ export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'builtin_agent' | 'global_agent' | 'workflow' | 'group_chat'
+-export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko-agent'
++export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko-agent'
  
  export interface BridgeCompressionResult {
    messages: ChatMessage[]
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-index c1aa11c..d479875 100644
+index b24c684e..5f4009ba 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
 @@ -1,4 +1,4 @@
--export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
-+export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
  
  export type AgentStatusSource =
    | 'managed-runtime'
@@ -617,12 +756,12 @@ index c1aa11c..d479875 100644
    agents: AgentAvailabilityRecord[]
  }
  
--const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'zcode']
-+const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'zcode']
+-const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode']
++const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode']
  
  const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
-   hermes: {
-@@ -61,6 +61,18 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+   qwen: { id: 'qwen', name: 'Qwen Code', provider: 'Alibaba', kind: 'coding-agent', installed: false, version: '', source: 'not-installed', path: '', error: '', installations: [] },
+@@ -67,6 +67,18 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
      error: '',
      installations: [],
    },
@@ -638,11 +777,11 @@ index c1aa11c..d479875 100644
 +    error: '',
 +    installations: [],
 +  },
-   zcode: {
-     id: 'zcode',
-     name: 'ZCode',
+   'ekko-agent': {
+     id: 'ekko-agent',
+     name: 'Ekko',
 diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
-index a1cf13d..969d34e 100644
+index 5df0ec7d..1d30d85e 100644
 --- a/packages/server/src/modules/studio/services/agent-availability.ts
 +++ b/packages/server/src/modules/studio/services/agent-availability.ts
 @@ -14,6 +14,7 @@ const AGENT_ALIASES: Record<string, AgentStatusId> = {
@@ -652,8 +791,8 @@ index a1cf13d..969d34e 100644
 +  mimo: 'mimo',
    cursor: 'cursor',
    antigravity: 'antigravity',
- }
-@@ -26,6 +27,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
+   qwen: 'qwen',
+@@ -33,6 +34,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
    pi: 'Pi',
    grok: 'Grok',
    opencode: 'OpenCode',
@@ -662,28 +801,28 @@ index a1cf13d..969d34e 100644
    cursor: 'Cursor',
    antigravity: 'Antigravity',
 diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-index adad4a3..c56e57a 100644
+index 113240db..baef4ff5 100644
 --- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 +++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 @@ -22,7 +22,7 @@ export interface RecordSessionUsageInput {
    /** Model request duration in seconds, excluding tool execution. */
    apiDuration?: number
    source: 'hermes' | 'coding_agent' | 'ekko_agent'
--  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko_agent'
-+  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko_agent'
+-  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko_agent'
++  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko_agent'
    profile?: string | null
    model?: string | null
    provider?: string | null
 diff --git a/packages/server/src/modules/studio/services/webhooks/envelope.ts b/packages/server/src/modules/studio/services/webhooks/envelope.ts
-index 9f11828..7cd05a0 100644
+index 74853a37..09d507d7 100644
 --- a/packages/server/src/modules/studio/services/webhooks/envelope.ts
 +++ b/packages/server/src/modules/studio/services/webhooks/envelope.ts
 @@ -6,7 +6,7 @@ export const CHAT_WEBHOOK_SCHEMA_VERSION = 1
  export const MAX_WEBHOOK_CONTENT_BYTES = 64 * 1024
  
- export type ChatRunWebhookSource = 'chat' | 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
--export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
-+export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity'
+ export type ChatRunWebhookSource = 'chat' | 'api_server' | 'cli' | 'coding_agent' | 'builtin_agent' | 'global_agent' | 'workflow' | 'group_chat'
+-export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
++export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
  export type ChatWebhookLifecycleStatus = 'created' | 'queued' | 'started' | 'requested' | 'resolved' | 'completed' | 'failed' | 'updated'
  export type ChatWebhookMessageRole = 'user' | 'command' | 'assistant'
  

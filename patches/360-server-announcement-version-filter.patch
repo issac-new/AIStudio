@@ -1,3 +1,5 @@
+diff --git a/packages/server/src/modules/studio/controllers/announcements.ts b/packages/server/src/modules/studio/controllers/announcements.ts
+index 2d230949..b5bc0375 100644
 --- a/packages/server/src/modules/studio/controllers/announcements.ts
 +++ b/packages/server/src/modules/studio/controllers/announcements.ts
 @@ -1,10 +1,15 @@

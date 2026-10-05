@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/public/safe-file-store.ts b/packages/server/src/modules/studio/public/safe-file-store.ts
-index c457462..cb0562c 100644
+index c4574625..cb0562c8 100644
 --- a/packages/server/src/modules/studio/public/safe-file-store.ts
 +++ b/packages/server/src/modules/studio/public/safe-file-store.ts
 @@ -23,11 +23,11 @@ type MultiTextUpdater<T = void> = (

@@ -1,4 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index a81265bd..9b287844 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -9,7 +10,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
  copyright: Copyright © 2026
  
  directories:
-@@ -14,7 +14,7 @@
+@@ -14,7 +14,7 @@ publish:
  buildDependenciesFromSource: false
  nodeGypRebuild: false
  npmRebuild: false
@@ -18,7 +19,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
  
  files:
    - "dist/**/*"
-@@ -89,15 +89,15 @@
+@@ -89,15 +89,15 @@ mac:
    entitlements: build/entitlements.mac.plist
    entitlementsInherit: build/entitlements.mac.inherit.plist
    extendInfo:
@@ -37,7 +38,7 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
  
  linux:
    icon: build/icons
-@@ -107,7 +107,7 @@
+@@ -107,7 +107,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development

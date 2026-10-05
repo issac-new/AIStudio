@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 54058db..927f095 100644
+index 54058db6..927f095b 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -27,6 +27,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd

@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index acc0304b..1dd50a5d 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -727,6 +727,32 @@
+@@ -727,6 +727,32 @@ export async function archiveTasks(taskIds: string[], opts?: KanbanBoardOptions)
    )
  }
  
@@ -34,7 +35,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
  async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions): Promise<void> {
    switch (opts.status) {
      case undefined:
-@@ -749,6 +775,13 @@
+@@ -749,6 +775,13 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions
        )
        return
      }
@@ -48,7 +49,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
      default:
        throw new Error(`Bulk status ${opts.status} is not supported by the CLI bridge`)
    }
-@@ -843,10 +876,20 @@
+@@ -843,10 +876,20 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
    }
  }
  
@@ -71,7 +72,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
      return true
    } catch (err: any) {
      logger.error(err, 'Hermes CLI: kanban delete task failed')
-@@ -909,7 +952,11 @@
+@@ -909,7 +952,11 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
        await archiveTasks([taskId], { board })
      } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
        // Use bulk update for direct status writes

@@ -1,9 +1,5 @@
-# 505（卡抽屉 UI：body/评论 Markdown 渲染）：upstream hermes kanban 抽屉 detail.task.body
-#   /comment.body 此前用 {{ }} 裸插值——**加粗**/## 标题/```yaml 代码块全部当字面量显示
-#   （run2 评审卡 t_ea68c462 抽屉实拍实证）。改走 @/custom KanbanMarkdown（既有单一
-#   事实源渲染器，upstream→custom 引用沿 GatewayNoticeBanner 先例）。
 diff --git a/packages/client/src/components/hermes/kanban/KanbanTaskDrawer.vue b/packages/client/src/components/hermes/kanban/KanbanTaskDrawer.vue
-index 58774143..0c382e4d 100644
+index 2238e17b..d45ea730 100644
 --- a/packages/client/src/components/hermes/kanban/KanbanTaskDrawer.vue
 +++ b/packages/client/src/components/hermes/kanban/KanbanTaskDrawer.vue
 @@ -10,6 +10,8 @@ import { useFilesStore } from '@/stores/hermes/files'

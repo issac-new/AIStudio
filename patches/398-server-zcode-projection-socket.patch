@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index d4f5697f..72136f4e 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -21,6 +21,8 @@
+@@ -21,6 +21,8 @@ import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
  // overlay[loop-socket]: Loop Engineering Socket.IO namespace
  import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
@@ -10,7 +11,7 @@ diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstr
  // overlay[command-post]: 2.13 指挥中心 —— 舰队 WS + 看板聚合 WS
  import { setupCommandPostWebSockets } from '../custom/services/hermes/command-post'
  import { authenticateUserToken as authenticateUserTokenForCommandPost, isAuthEnabled as isAuthEnabledForCommandPost } from '../modules/studio/public/auth'
-@@ -787,6 +789,8 @@
+@@ -789,6 +791,8 @@ export async function bootstrap() {
  
    // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
    setupLoopSocketNamespace(activeGroupChatServer.getIO())

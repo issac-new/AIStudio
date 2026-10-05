@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
+index 3433ab1b..a8544bb2 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -323,6 +323,15 @@
+@@ -325,6 +325,15 @@ const workspaceModalVisible = ref(false)
  const workspacePickerTarget = ref<'active' | 'create'>('active')
  const activeWorkflowId = ref('')
  const { expanded: showWorkflowSidebar, isMobile } = usePageSidebarState()

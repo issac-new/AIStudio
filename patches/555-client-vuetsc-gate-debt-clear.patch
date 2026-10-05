@@ -1,4 +1,4 @@
-diff --git a/tmp/p554/App.vue.pre b/packages/client/src/App.vue
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
 index 46bedbc0..6e8f3429 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
@@ -10,7 +10,7 @@ index 46bedbc0..6e8f3429 100644
  const isFullscreen = computed(() => route.meta?.fullscreen === true);
  const usesHermesConfigSidebar = computed(
    () => route.meta?.hermesConfig === true,
-diff --git a/tmp/p554/kanban.ts.pre b/packages/client/src/stores/hermes/kanban.ts
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
 index d780aea8..b1ba1956 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts

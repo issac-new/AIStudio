@@ -1,19 +1,5 @@
-diff --git a/package.json b/package.json
---- a/package.json
-+++ b/package.json
-@@ -52,8 +52,8 @@
-     "test:ekko-agent": "vitest run tests/ekko-agent",
-     "build:ekko-agent": "npm --prefix packages/ekko-agent run build",
-     "verify:sharp-runtime": "node scripts/verify-sharp-runtime.mjs",
--    "prepare": "[ -d dist ] || npm run build",
--    "preview": "NODE_ENV=production vite preview",
-+    "prepare": "node -e \"require('node:fs').existsSync('dist') || process.exit(1)\" || npm run build",
-+    "preview": "cross-env NODE_ENV=production vite preview",
-     "test": "vitest run",
-     "test:watch": "vitest",
-     "test:coverage": "vitest run --coverage",
 diff --git a/package-lock.json b/package-lock.json
-index 1f3ab190..c591ea7f 100644
+index 955ef5e4..494bd39b 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -23,11 +23,17 @@
@@ -808,3 +794,18 @@ index 1f3ab190..c591ea7f 100644
        "license": "0BSD"
      }
    }
+diff --git a/package.json b/package.json
+index d6c429e4..0e00ddcf 100644
+--- a/package.json
++++ b/package.json
+@@ -52,8 +52,8 @@
+     "test:ekko-agent": "vitest run tests/ekko-agent",
+     "build:ekko-agent": "npm --prefix packages/ekko-agent run build",
+     "verify:sharp-runtime": "node scripts/verify-sharp-runtime.mjs",
+-    "prepare": "[ -d dist ] || npm run build",
+-    "preview": "NODE_ENV=production vite preview",
++    "prepare": "node -e \"require('node:fs').existsSync('dist') || process.exit(1)\" || npm run build",
++    "preview": "cross-env NODE_ENV=production vite preview",
+     "test": "vitest run",
+     "test:watch": "vitest",
+     "test:coverage": "vitest run --coverage",

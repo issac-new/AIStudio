@@ -1,7 +1,9 @@
 diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
+index 1186ee19..b5442931 100644
 --- a/packages/client/src/styles/variables.scss
 +++ b/packages/client/src/styles/variables.scss
-@@ -243,2 +243,72 @@
+@@ -260,3 +260,73 @@ $error-rgb: var(--error-rgb);
+ $warning-rgb: var(--warning-rgb);
  $accent-info-rgb: var(--accent-info-rgb);
  // HERMES_CUSTOM[Branding] END
 +

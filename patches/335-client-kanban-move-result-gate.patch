@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+index dda8b0e3..b55fe52b 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
-@@ -568,14 +568,27 @@
+@@ -568,14 +568,27 @@ export const useKanbanStore = defineStore('kanban', () => {
        case 'archived':
          // These statuses need an explicit PATCH via bulkUpdate, NOT unblock
          // (unblock always sets status=ready server-side, which would desync)

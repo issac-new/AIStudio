@@ -1,25 +1,16 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 477ff73..503abf3 100644
+index d4664c5a..ed3d51e2 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -31,7 +31,7 @@ export type ContentBlock = ContentBlockImport
- export const LIVE_CHAT_MESSAGE_PAGE_SIZE = 150
- export const LIVE_CHAT_MAX_LOADED_MESSAGES = 300
- const LEGACY_WORKSPACE_RUN_CHANGE_MESSAGE_PREFIX = 'workspace-run-change:'
--type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'ekko-agent'
-+type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'zcode' | 'ekko-agent'
- 
- function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
-   if (agent === 'codex') return 'codex'
-@@ -41,6 +41,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+@@ -46,6 +46,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
    if (agent === 'opencode') return 'opencode'
    if (agent === 'antigravity') return 'antigravity'
    if (agent === 'cursor') return 'cursor'
 +  if (agent === 'zcode') return 'zcode'
    if (agent === 'claude') return 'claude-code'
-   if (agent === 'ekko-agent') return 'ekko-agent'
+   if (['ekko', 'ekko_agent', 'ekko-agent'].includes(agent || '')) return 'ekko-agent'
    return undefined
-@@ -55,6 +56,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+@@ -61,6 +62,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
    if (id === 'antigravity') return 'antigravity'
    if (id === 'cursor') return 'cursor'
    if (id === 'claude-code') return 'claude'
@@ -27,7 +18,7 @@ index 477ff73..503abf3 100644
    if (id === 'ekko-agent') return 'ekko-agent'
    return undefined
  }
-@@ -1391,6 +1393,11 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1397,6 +1399,11 @@ export const useChatStore = defineStore('chat', () => {
    const pendingForkCommands = ref<Set<string>>(new Set())
    /** Sessions that completed while the user was viewing another session. */
    const completedUnreadSessions = ref<Set<string>>(new Set())
@@ -39,7 +30,7 @@ index 477ff73..503abf3 100644
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1549,6 +1556,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1555,6 +1562,8 @@ export const useChatStore = defineStore('chat', () => {
      sessions.value = []
      pendingRunUsage.clear()
      completedUnreadSessions.value = new Set()
@@ -48,7 +39,7 @@ index 477ff73..503abf3 100644
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      queueInsertionStates.value = new Map()
-@@ -1655,8 +1664,50 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1661,8 +1670,50 @@ export const useChatStore = defineStore('chat', () => {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -99,7 +90,7 @@ index 477ff73..503abf3 100644
    function clearActiveSession() {
      activeSelectionSequence++
      const sid = activeSessionId.value
-@@ -2071,6 +2122,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -2077,6 +2128,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -108,7 +99,7 @@ index 477ff73..503abf3 100644
  
      if (!activeSession.value) return false
  
-@@ -3161,6 +3214,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3171,6 +3224,7 @@ export const useChatStore = defineStore('chat', () => {
        runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
        queueId,
        runtime: raw.runtime === 'ekko'
@@ -116,7 +107,7 @@ index 477ff73..503abf3 100644
          || raw.runtime === 'claude-code'
          || raw.runtime === 'codex'
          || raw.runtime === 'pi'
-@@ -3582,6 +3636,9 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3592,6 +3646,9 @@ export const useChatStore = defineStore('chat', () => {
      if (codingAgentId === 'codex') {
        return { icon: '/coding-agents/codex-openai.png' }
      }
@@ -126,7 +117,7 @@ index 477ff73..503abf3 100644
      if (codingAgentId === 'claude-code') {
        return { icon: '/coding-agents/claude-code.svg' }
      }
-@@ -4229,6 +4286,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4247,6 +4304,8 @@ export const useChatStore = defineStore('chat', () => {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -135,7 +126,7 @@ index 477ff73..503abf3 100644
                }
  
                break
-@@ -4890,6 +4949,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4908,6 +4967,8 @@ export const useChatStore = defineStore('chat', () => {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -144,7 +135,7 @@ index 477ff73..503abf3 100644
            }
  
            break
-@@ -5245,6 +5306,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5263,6 +5324,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
@@ -153,7 +144,7 @@ index 477ff73..503abf3 100644
      if (evt.event === 'approval.requested') return setPendingApproval(evt)
      if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
      if (evt.event === 'clarify.requested') return setPendingClarify(evt)
-@@ -5585,6 +5648,13 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5603,6 +5666,13 @@ export const useChatStore = defineStore('chat', () => {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

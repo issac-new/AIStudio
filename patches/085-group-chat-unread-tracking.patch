@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
-index c7ca883..8494460 100644
+index bcdfb3ef..5c9d41ba 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
-@@ -211,6 +211,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+@@ -227,6 +227,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
          return `${roomId}:${clarifyId}`
      }
      const totalMessages = ref(0)
@@ -15,7 +15,7 @@ index c7ca883..8494460 100644
      const loadedMessageCount = ref(0)
      const hasMoreBefore = ref(false)
      const isLoadingOlderMessages = ref(false)
-@@ -1897,6 +1903,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+@@ -2001,6 +2007,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
      }
  
      return {

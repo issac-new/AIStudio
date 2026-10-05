@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
-index 2505dfe..e6e1622 100644
+index 2505dfe2..e6e16222 100644
 --- a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 +++ b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 @@ -1,17 +1,89 @@
@@ -192,10 +192,10 @@ index 2505dfe..e6e1622 100644
  }
  </style>
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index 29bb08c..aacd8ab 100644
+index ab94da2a..7611fe0a 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
-@@ -222,6 +222,45 @@ function getContentFileUrl(file: DisplayContentFile): string {
+@@ -231,6 +231,45 @@ function getContentFileUrl(file: DisplayContentFile): string {
  const toolExpanded = ref(false);
  const expandedWorkspaceChangeIds = ref(new Set<string>());
  const previewUrl = ref<string | null>(null);
@@ -241,7 +241,7 @@ index 29bb08c..aacd8ab 100644
  const selectedToolChangeFileId = ref<number | null>(null);
  
  const chatStore = useChatStore();
-@@ -1060,7 +1099,7 @@ onBeforeUnmount(() => {
+@@ -1069,7 +1108,7 @@ onBeforeUnmount(() => {
                      :src="att.url"
                      :alt="att.name"
                      class="msg-attachment-thumb"
@@ -250,7 +250,7 @@ index 29bb08c..aacd8ab 100644
                    />
                  </template>
                  <template v-else-if="message.role === 'user' && isVideo(att.type, att.name) && att.url">
-@@ -1077,7 +1116,7 @@ onBeforeUnmount(() => {
+@@ -1086,7 +1125,7 @@ onBeforeUnmount(() => {
                    </div>
                  </template>
                  <template v-else>
@@ -259,7 +259,7 @@ index 29bb08c..aacd8ab 100644
                      <svg
                        width="16"
                        height="16"
-@@ -1169,7 +1208,7 @@ onBeforeUnmount(() => {
+@@ -1178,7 +1217,7 @@ onBeforeUnmount(() => {
                          :src="getContentFileUrl(file)"
                          :alt="file.name"
                          class="msg-attachment-thumb"
@@ -268,7 +268,7 @@ index 29bb08c..aacd8ab 100644
                        />
                      </template>
                      <template v-else-if="file.type === 'video'">
-@@ -1187,9 +1226,9 @@ onBeforeUnmount(() => {
+@@ -1196,9 +1235,9 @@ onBeforeUnmount(() => {
                      <template v-else>
                        <div
                          class="msg-attachment-file"
@@ -280,7 +280,7 @@ index 29bb08c..aacd8ab 100644
                        >
                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-@@ -1322,9 +1361,30 @@ onBeforeUnmount(() => {
+@@ -1333,9 +1372,30 @@ onBeforeUnmount(() => {
    <ImagePreviewOverlay
      v-if="previewUrl"
      :src="previewUrl"
@@ -312,7 +312,7 @@ index 29bb08c..aacd8ab 100644
  </template>
  
  <style scoped lang="scss">
-@@ -2151,4 +2211,74 @@ onBeforeUnmount(() => {
+@@ -2162,4 +2222,74 @@ onBeforeUnmount(() => {
      padding-inline-end: 8px !important;
    }
  }

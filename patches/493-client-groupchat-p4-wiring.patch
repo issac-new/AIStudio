@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
+index c21a67ef..7c66972d 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
-@@ -13,6 +13,10 @@
+@@ -13,6 +13,10 @@ import {
  } from '../chat/highlight'
  import { parseThinking, countThinkingChars } from '@/utils/thinking-parser'
  import { isGatewayNotice as isGatewayNoticeText } from '@/custom/chat/gateway-notice'
@@ -12,7 +13,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.v
  import { useGlobalSpeech } from '@/composables/useSpeech'
  import { useVoiceSettings } from '@/composables/useVoiceSettings'
  import { speedToEdgeRate, hzToEdgePitch } from '@/utils/ttsHelpers'
-@@ -131,7 +135,13 @@
+@@ -130,7 +134,13 @@ const avatarDisplayName = computed(() => {
      return props.message.senderName || props.message.senderId || 'user'
  })
  
@@ -27,7 +28,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.v
  const parsedThinking = computed(() => parseThinking(props.message.content || '', { streaming: !!props.message.isStreaming }))
  const hasReasoningField = computed(() => !!(props.message.reasoning && props.message.reasoning.length > 0))
  const hasThinking = computed(() => hasReasoningField.value || parsedThinking.value.hasThinking)
-@@ -217,6 +227,9 @@
+@@ -216,6 +226,9 @@ const displayBody = computed(() => {
          .join('\n')
  })
  const renderedDisplayBody = ref(displayBody.value)
@@ -37,7 +38,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.v
  let streamingMarkdownTimer: ReturnType<typeof setTimeout> | null = null
  
  function clearStreamingMarkdownTimer() {
-@@ -833,8 +847,8 @@
+@@ -832,7 +845,7 @@ onBeforeUnmount(() => {
                      <MarkdownRenderer :content="referencedContentMarkdown" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
                      <MarkdownRenderer v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
                  </template>
@@ -46,4 +47,3 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.v
                  <slot name="before-workspace-changes" />
                  <ToolChangeCard
                      v-for="change in assistantWorkspaceChanges"
-                     :key="change.change_id"

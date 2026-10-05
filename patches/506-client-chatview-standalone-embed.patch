@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
+index d00fc781..11f9bf68 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
-@@ -25,7 +25,9 @@
+@@ -25,7 +25,9 @@ const routeProfile = computed(() => {
    return typeof value === 'string' && value.trim() ? value : null
  })
  
@@ -11,7 +13,7 @@
  type ChatContentMode = 'chat' | 'connections' | 'agents' | 'models'
  
  const contentMode = computed<ChatContentMode>(() => {
-@@ -61,7 +63,8 @@
+@@ -61,7 +63,8 @@ async function loadRouteSession() {
    const sessionId = routeSessionId.value
    await chatStore.loadSessions(chatStore.sessionProfileFilter, sessionId)
    if (!disposed && sessionId && routeSessionId.value === sessionId && chatStore.activeSessionId !== sessionId) {

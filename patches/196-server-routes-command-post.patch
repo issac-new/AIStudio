@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index dd5f792c..b7a3063d 100644
+index c0b8f20c..2f882799 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -71,6 +71,12 @@ import { petRoutes } from '../modules/studio/routes/pets'
+@@ -74,6 +74,12 @@ import { petRoutes } from '../modules/studio/routes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
  // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
  import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
@@ -15,7 +15,7 @@ index dd5f792c..b7a3063d 100644
  // overlay[loop-routes]: Loop Engineering REST API
  import { createLoopRouter } from '../custom/loop/controllers/loop'
  import { createGraphRouter } from '../custom/loop/controllers/graph'
-@@ -116,6 +122,17 @@ const loopEngine = new LoopEngine({
+@@ -119,6 +125,17 @@ const loopEngine = new LoopEngine({
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
  const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
  const graphRouter = createGraphRouter(lazyStore)
@@ -33,7 +33,7 @@ index dd5f792c..b7a3063d 100644
  async function initLoopSubsystem(): Promise<void> {
    if (loopStore) return
    const { store, adapterType, detectedFrom } = await createStateStore()
-@@ -190,6 +207,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -194,6 +211,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(jobRoutes.routes())
    app.use(cronHistoryRoutes.routes())
    app.use(kanbanDashboardUrlRoutes.routes())

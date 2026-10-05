@@ -1,8 +1,8 @@
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
-index 8aeadf24..e352e0cd 100644
+index ef33038e..fcda9a36 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
-@@ -22,6 +22,21 @@ const handlers = {
+@@ -24,6 +24,21 @@ const handlers = {
    addComment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    taskLog: vi.fn(async (ctx: any) => { ctx.body = { log: '' } }),
    diagnostics: vi.fn(async (ctx: any) => { ctx.body = { diagnostics: [] } }),

@@ -1,15 +1,8 @@
-# 539: /hermes/history 悬空链接根治（2026-10-02 IDE Fork 走查实锤）
-# 背景：patch 071 摘除了 /hermes/history 路由族（历史页 v12 平移 /app/history），
-# 但上游组件残留两类悬空引用：MessageList 的历史归档/父会话链接（#/hermes/history/*，
-# 点击 404）、HistoryView 内部 4 处 router.replace({name:'hermes.history'})（触发
-# "No match for {name:'hermes.history'}" 页面错误）。本补丁把两类指向 /app/history
-# 真身路由（ia2.collabHistory/ia2.collabHistorySession）；profile 查询串原样透传。
-# PageSidebarNav:37 同名导航在 studio embed 态隐藏（零触达）不修，此处记档。
-# 2026-10-03 回归补遗：openHistorySession 的 name:'hermes.historySession' push 同病
-# （补丁 297 已摘该路由名，点击历史会话触发 No match for）——一并改路径式导航。
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index 8702c553..fc55363c 100644
-@@ -347,9 +348,9 @@ const showHistoryArchiveLink = computed(() => {
+index b9a7d258..41781627 100644
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -349,9 +349,9 @@ const showHistoryArchiveLink = computed(() => {
  
  const historyArchiveHref = computed(() => {
    const session = chatStore.activeSession;
@@ -21,7 +14,7 @@ index 8702c553..fc55363c 100644
  });
  
  const forkLineage = computed(() => {
-@@ -358,7 +359,7 @@ const forkLineage = computed(() => {
+@@ -360,7 +360,7 @@ const forkLineage = computed(() => {
    return {
      parentSessionId: session.parentSessionId,
      parentTitle: session.parentTitle || session.parentSessionId,
@@ -31,8 +24,11 @@ index 8702c553..fc55363c 100644
      lastRole: session.parentLastMessageRole || "",
      lastMessage: session.parentLastMessage || "",
 diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
-index 21e9eac5..b96805fd 100644
-@@ -345,7 +345,6 @@ function openHistorySession(sessionId: string, profile?: string | null) {
+index 7abc0430..cb774c10 100644
+--- a/packages/client/src/views/hermes/HistoryView.vue
++++ b/packages/client/src/views/hermes/HistoryView.vue
+@@ -333,8 +333,7 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
+ 
  function openHistorySession(sessionId: string, profile?: string | null) {
    return router.push({
 -    name: 'hermes.historySession',
@@ -41,7 +37,7 @@ index 21e9eac5..b96805fd 100644
      query: profile ? { profile } : undefined,
    })
  }
-@@ -363,7 +363,7 @@ async function openDefaultHistorySession(replace = false) {
+@@ -350,7 +349,7 @@ async function openDefaultHistorySession(replace = false) {
    if (!firstSession) {
      historySessionId.value = null
      historySession.value = null
@@ -50,7 +46,7 @@ index 21e9eac5..b96805fd 100644
      return
    }
  
-@@ -388,7 +388,7 @@ async function syncRouteSession() {
+@@ -375,7 +374,7 @@ async function syncRouteSession() {
    if (!summary) {
      historySessionId.value = null
      historySession.value = null
@@ -59,7 +55,7 @@ index 21e9eac5..b96805fd 100644
      return
    }
  
-@@ -776,7 +776,7 @@ async function handleContextMenuSelect(key: string) {
+@@ -767,7 +766,7 @@ async function handleContextMenuSelect(key: string) {
      if (!findHistorySession(contextSessionId.value)) {
        historySessionId.value = null
        historySession.value = null
@@ -68,7 +64,7 @@ index 21e9eac5..b96805fd 100644
        await openDefaultHistorySession(true)
      }
    }
-@@ -804,7 +804,7 @@ async function handleDeleteSession(id: string, profile?: string | null) {
+@@ -796,7 +795,7 @@ async function handleDeleteSession(id: string, profile?: string | null) {
      historySession.value = null
      const next = historySessions.value[0]
      if (next) await handleSessionClick(next.id, next.profile)

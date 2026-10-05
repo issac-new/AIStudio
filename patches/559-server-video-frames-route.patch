@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index bbb71926..6d98010e 100644
+index 1cbe578c..b2fecbfd 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -84,6 +84,7 @@ import ideSessionShareRouter from '../custom/controllers/ide/session-share'

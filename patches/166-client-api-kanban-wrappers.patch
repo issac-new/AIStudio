@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index d1667855..976435a2 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
-@@ -701,3 +701,110 @@ export async function unsubscribeHomeChannel(
+@@ -707,3 +707,110 @@ export async function unsubscribeHomeChannel(
      { method: 'DELETE' },
    )
  }

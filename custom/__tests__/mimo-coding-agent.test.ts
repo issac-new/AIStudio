@@ -61,8 +61,9 @@ describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
 
   it('394 客户端联合 + 新建会话选项 + 头像资源（注入态树直断）', () => {
     const api = readFileSync(resolve(UPSTREAM_CLIENT, 'api/coding-agents.ts'), 'utf8')
-    // 0.7.29 上游在 cursor 与 zcode 之间新增 'antigravity'，断言随基线对齐
-    expect(api).toContain("export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'zcode'")
+    // 0.7.30 上游新增六个原生 Agent（qwen/kimi/codebuddy/qoder/copilot/zcode），
+    // mimo 联合入上游超集（opencode 之后），断言随基线对齐
+    expect(api).toContain("export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'")
     // 上游 #3199 将各处 Agent 选项收敛为 AGENT_OPTIONS 单一事实源（utils/agent-options.ts）
     const agentOptions = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/agent-options.ts'), 'utf8')
     expect(agentOptions).toContain("{ label: 'MiMo Code', value: 'mimo' }")

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/settings/UserManagementSettings.vue b/packages/client/src/components/hermes/settings/UserManagementSettings.vue
-index 33adeab8..44270b53 100644
+index f53207ba..4999219f 100644
 --- a/packages/client/src/components/hermes/settings/UserManagementSettings.vue
 +++ b/packages/client/src/components/hermes/settings/UserManagementSettings.vue
 @@ -3,11 +3,13 @@ import { computed, h, onMounted, reactive, ref } from 'vue'
@@ -247,7 +247,7 @@ index 33adeab8..44270b53 100644
          h(NButton, {
            size: 'small',
            type: row.status === 'active' ? 'warning' : 'primary',
-@@ -238,12 +277,15 @@ onMounted(loadUsers)
+@@ -240,12 +279,15 @@ onMounted(loadUsers)
  
      <NModal v-model:show="showModal" preset="dialog" :title="editingUser ? t('users.edit') : t('users.create')">
        <NForm label-placement="top">
@@ -266,7 +266,7 @@ index 33adeab8..44270b53 100644
          <NFormItem :label="t('users.role')">
            <NSelect v-model:value="form.role" :options="roleOptions" />
          </NFormItem>
-@@ -265,6 +307,19 @@ onMounted(loadUsers)
+@@ -267,6 +309,19 @@ onMounted(loadUsers)
          <NButton type="primary" :loading="saving" @click="submit">{{ t('common.save') }}</NButton>
        </template>
      </NModal>
@@ -286,7 +286,7 @@ index 33adeab8..44270b53 100644
    </div>
  </template>
  
-@@ -299,4 +354,9 @@ onMounted(loadUsers)
+@@ -301,4 +356,9 @@ onMounted(loadUsers)
  :deep(.muted) {
    color: $text-muted;
  }

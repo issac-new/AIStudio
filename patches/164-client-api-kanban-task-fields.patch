@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index 52eda1a3..d1667855 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
-@@ -20,6 +20,25 @@ export interface KanbanTask {
+@@ -21,6 +21,25 @@ export interface KanbanTask {
    project_id: string | null
    result: string | null
    skills: string[] | null

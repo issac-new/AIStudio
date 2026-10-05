@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py b/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
+index 6070323e..8deab760 100644
 --- a/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
 +++ b/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
-@@ -474,7 +474,11 @@
+@@ -474,7 +474,11 @@ def _profile_dotenv_keys() -> set[str]:
  
  
  def _set_path_env(agent_root: str | None = None, hermes_home: str | None = None) -> None:

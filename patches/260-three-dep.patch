@@ -1,8 +1,8 @@
 diff --git a/package.json b/package.json
-index d9620451..c7fed305 100644
+index c0af9984..d6c429e4 100644
 --- a/package.json
 +++ b/package.json
-@@ -108,6 +108,7 @@
+@@ -112,6 +112,7 @@
      "smol-toml": "^1.8.0",
      "socket.io": "^4.8.3",
      "socket.io-client": "^4.8.3",

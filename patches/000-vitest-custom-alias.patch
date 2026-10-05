@@ -1,8 +1,8 @@
 diff --git a/vitest.config.ts b/vitest.config.ts
-index fe333408..a8a081f5 100644
+index 1d26304f..f2703819 100644
 --- a/vitest.config.ts
 +++ b/vitest.config.ts
-@@ -6,7 +6,9 @@ export default defineConfig({
+@@ -6,6 +6,8 @@ export default defineConfig({
    plugins: [vue()],
    resolve: {
      alias: {
@@ -11,4 +11,3 @@ index fe333408..a8a081f5 100644
        '@': resolve(__dirname, 'packages/client/src'),
        electron: resolve(__dirname, 'tests/mocks/electron.ts'),
        'electron-updater': resolve(__dirname, 'tests/mocks/electron-updater.ts'),
-       '/logo.png': resolve(__dirname, 'packages/client/public/logo.png'),

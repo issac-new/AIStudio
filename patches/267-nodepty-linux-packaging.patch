@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
-index b4774cd..92cdfdd 100644
+index b4774cdf..92cdfdd4 100644
 --- a/packages/desktop/scripts/after-pack-combined.cjs
 +++ b/packages/desktop/scripts/after-pack-combined.cjs
 @@ -1,7 +1,8 @@

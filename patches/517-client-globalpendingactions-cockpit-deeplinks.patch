@@ -1,7 +1,9 @@
 diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
+index 1823085c..e3926840 100644
 --- a/packages/client/src/components/layout/GlobalPendingActions.vue
 +++ b/packages/client/src/components/layout/GlobalPendingActions.vue
-@@ -316,10 +316,13 @@ function openPendingSource(action: GlobalPendingAction) {
+@@ -314,11 +314,14 @@ function openPendingSource(action: GlobalPendingAction) {
+     return
    }
    if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
 -    void router.push({ name: 'hermes.groupChatRoom', params: { roomId: action.pending.roomId } })
@@ -17,8 +19,7 @@ diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/pa
      query: { workflowId: action.workflowId, runId: action.runId, nodeId: action.nodeId, executionId: action.executionId },
    })
  }
-@@ -344,15 +347,17 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
-       ? `/app/collab/global-agent/session/${sessionId}${profileQuery}`
+@@ -342,7 +345,8 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
        : `/app/collab/session/${sessionId}${profileQuery}`
    }
    if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
@@ -28,8 +29,7 @@ diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/pa
    }
    const query = new URLSearchParams({
      profile: action.profile,
-     workflowId: action.workflowId,
-     runId: action.runId,
+@@ -351,7 +355,8 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
      nodeId: action.nodeId,
      ...(action.executionId ? { executionId: action.executionId } : {}),
    })
@@ -37,3 +37,5 @@ diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/pa
 +  // overlay[nav]: 工作流通知点击 URL 迁审批收件箱（V5 补遗⑤ M4）
 +  return `/app/inbox?${query.toString()}`
  }
+ 
+ function notifyPendingAction(action: GlobalPendingAction) {

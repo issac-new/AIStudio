@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 52060557..04847ed0 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -46,5 +46,24 @@ export interface KanbanTask {
+@@ -50,6 +50,25 @@ export interface KanbanTask {
    project_id: string | null
    result: string | null
    skills: string[] | null
@@ -26,3 +27,4 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
 +  claim_expires?: number | null
    goal_mode?: boolean
  }
+ 

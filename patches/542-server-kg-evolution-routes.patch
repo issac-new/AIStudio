@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 00b465c..d02eb77 100644
+index 00b465ca..d02eb773 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -103,6 +103,9 @@ import { changeGovRoutes } from '../custom/governance/change-governance-controll

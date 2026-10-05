@@ -1,12 +1,9 @@
-# 551: HistoryView 剩余两处 hermes.historySession 悬空引用（539 补遗，2026-10-03 回归实锤）
-# 539 根治了 openHistorySession 等处的 hermes.history/historySession 悬空导航，但
-# openDefaultHistorySession 的 location 对象与 buildHistorySessionUrl（复制链接）仍按
-# 名导航到已被 297 摘除的 hermes.historySession——冷进 /app/history 自动选会话即触发
-# "No match for" 页面错误。两处一并改路径式（/app/history/session/:id 真身路由）。
 diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
+index cb774c10..bb05d274 100644
 --- a/packages/client/src/views/hermes/HistoryView.vue
 +++ b/packages/client/src/views/hermes/HistoryView.vue
-@@ -371,7 +371,6 @@
+@@ -358,8 +358,7 @@ async function openDefaultHistorySession(replace = false) {
+   }
  
    const location = {
 -    name: 'hermes.historySession',
@@ -15,7 +12,7 @@ diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/
      query: firstSession.profile ? { profile: firstSession.profile } : undefined,
    }
    if (replace) await router.replace(location)
-@@ -701,8 +700,7 @@
+@@ -692,8 +691,7 @@ function historySessionProfile(sessionId: string): string | null {
  
  function buildHistorySessionUrl(sessionId: string, profile?: string | null) {
    const href = router.resolve({

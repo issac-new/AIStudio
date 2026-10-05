@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 50188f1..d8ec35f 100644
+index 73bb08c9..ee41e953 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -2,294 +2,384 @@ import { socialMessagesEn } from '../social-messages'
+@@ -2,278 +2,311 @@ import { socialMessagesEn } from '../social-messages'
  
  export default {
    jev: {
@@ -581,91 +581,15 @@ index 50188f1..d8ec35f 100644
    },
    socialMessages: socialMessagesEn,
    browser: {
--    title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in Ekko Studio Desktop.', newTab: 'New Tab',
--    back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
--    undoAnnotation: 'Undo last', deleteAnnotation: 'Delete annotation {index}',
--    selectElement: 'Select element', selectRegion: 'Select region', annotationPlaceholder: 'Describe what the Agent should inspect or change…', selectionData: 'Browser selection data', annotationAdded: 'Screenshot added to the chat composer', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Clear annotations', finishAnnotation: 'Done',
--    agent: 'Agent', agentControlling: '{agent} is controlling this tab', agentWaiting: '{agent} is waiting for your confirmation', takeOver: 'Take over', tabCrashed: 'This tab crashed.', recoverTab: 'Reload tab', profiles: 'Profiles', profileName: 'Profile name', addProfile: 'Add profile', currentProfile: 'Active profile', switchProfile: 'Switch profile', editProfile: 'Edit profile',
--    profileDirectory: 'Profile data directory', downloadDirectory: 'Download directory', profileRootDirectory: 'Profile root directory', chooseProfileRootDirectory: 'Choose an empty directory', profileRootDirectoryHint: 'Choose an empty directory. Browser data will use {data}; downloads will use {download}.', proxy: 'Proxy', proxyMode: 'Proxy mode', proxyDirect: 'Direct connection', proxySystem: 'System proxy', proxyCustom: 'Custom proxy', proxyServer: 'Proxy server', proxyServerPlaceholder: 'For example: http://127.0.0.1:7890 or socks5://127.0.0.1:1080',
--    askBeforeDownload: 'Ask where to save each file', downloadConflictPolicy: 'Duplicate file names', uniquifyDownloads: 'Create a unique file name', askOnConflict: 'Ask when a file exists', downloads: 'Downloads', downloadStateProgressing: 'Downloading', downloadStateCompleted: 'Completed', downloadStateCancelled: 'Cancelled', downloadStateInterrupted: 'Interrupted', downloadStateBlocked: 'Blocked', permissions: 'Permissions', permissionsHint: 'Remote page permissions are denied by default and listed here for audit.', blocked: 'Blocked',
--    profileSwitchTitle: 'Switch browser profile?', profileSwitchWarning: '{agents} Agent operation(s), {downloads} download(s), and {annotations} annotation(s) may be interrupted.',
--    deleteProfileTitle: 'Delete browser profile?', deleteProfileWarning: 'Managed profile data will be moved to the system Trash. Custom directories are left untouched.', clearCache: 'Clear cache', clearPermissionAudit: 'Clear permission log', clearSiteData: 'Clear site data', clearSiteDataWarning: 'This signs the selected profile out of websites and clears cookies and local storage.', dataCleared: 'Browser data cleared', loadFailed: 'Failed to start the embedded browser',
-+    title: 'Browser',
-+    settings: 'Browser Settings',
-+    desktopOnly: 'The embedded browser is available only in SwarmStudio Desktop.',
-+    newTab: 'New Tab',
-+    back: 'Back',
-+    forward: 'Forward',
-+    reload: 'Reload',
-+    stop: 'Stop',
-+    addressPlaceholder: 'Search or enter an address',
-+    undoAnnotation: 'Undo last',
-+    deleteAnnotation: 'Delete annotation {index}',
-+    selectElement: 'Select element',
-+    selectRegion: 'Select region',
-+    annotationPlaceholder: 'Describe what the Agent should inspect or change…',
-+    selectionData: 'Browser selection data',
-+    annotationAdded: 'Screenshot added to the chat composer',
-+    annotationCount: '{count} annotation(s)',
-+    annotationLabel: 'Annotation {index}',
-+    clearAnnotations: 'Clear annotations',
-+    finishAnnotation: 'Done',
-+    agent: 'Agent',
-+    agentControlling: '{agent} is controlling this tab',
-+    agentWaiting: '{agent} is waiting for your confirmation',
-+    takeOver: 'Take over',
-+    tabCrashed: 'This tab crashed.',
-+    recoverTab: 'Reload tab',
-+    profiles: 'Profiles',
-+    profileName: 'Profile name',
-+    addProfile: 'Add profile',
-+    currentProfile: 'Active profile',
-+    switchProfile: 'Switch profile',
-+    editProfile: 'Edit profile',
-+    profileDirectory: 'Profile data directory',
-+    downloadDirectory: 'Download directory',
-+    profileRootDirectory: 'Profile root directory',
-+    chooseProfileRootDirectory: 'Choose an empty directory',
-+    profileRootDirectoryHint: 'Choose an empty directory. Browser data will use {data}; downloads will use {download}.',
-+    proxy: 'Proxy',
-+    proxyMode: 'Proxy mode',
-+    proxyDirect: 'Direct connection',
-+    proxySystem: 'System proxy',
-+    proxyCustom: 'Custom proxy',
-+    proxyServer: 'Proxy server',
-+    proxyServerPlaceholder: 'For example: http://127.0.0.1:7890 or socks5://127.0.0.1:1080',
-+    askBeforeDownload: 'Ask where to save each file',
-+    downloadConflictPolicy: 'Duplicate file names',
-+    uniquifyDownloads: 'Create a unique file name',
-+    askOnConflict: 'Ask when a file exists',
-+    downloads: 'Downloads',
-+    downloadStateProgressing: 'Downloading',
-+    downloadStateCompleted: 'Completed',
-+    downloadStateCancelled: 'Cancelled',
-+    downloadStateInterrupted: 'Interrupted',
-+    downloadStateBlocked: 'Blocked',
-+    permissions: 'Permissions',
-+    permissionsHint: 'Remote page permissions are denied by default and listed here for audit.',
-+    blocked: 'Blocked',
-+    profileSwitchTitle: 'Switch browser profile?',
-+    profileSwitchWarning: '{agents} Agent operation(s), {downloads} download(s), and {annotations} annotation(s) may be interrupted.',
-+    deleteProfileTitle: 'Delete browser profile?',
-+    deleteProfileWarning: 'Managed profile data will be moved to the system Trash. Custom directories are left untouched.',
-+    clearCache: 'Clear cache',
-+    clearPermissionAudit: 'Clear permission log',
-+    clearSiteData: 'Clear site data',
-+    clearSiteDataWarning: 'This signs the selected profile out of websites and clears cookies and local storage.',
-+    dataCleared: 'Browser data cleared',
-+    loadFailed: 'Failed to start the embedded browser'
+@@ -287,7 +320,6 @@ export default {
+     profileSwitchTitle: 'Switch browser profile?', profileSwitchWarning: '{agents} Agent operation(s), {downloads} download(s), and {annotations} annotation(s) may be interrupted.',
+     deleteProfileTitle: 'Delete browser profile?', deleteProfileWarning: 'Managed profile data will be moved to the system Trash. Custom directories are left untouched.', clearCache: 'Clear cache', clearPermissionAudit: 'Clear permission log', clearSiteData: 'Clear site data', clearSiteDataWarning: 'This signs the selected profile out of websites and clears cookies and local storage.', dataCleared: 'Browser data cleared', loadFailed: 'Failed to start the embedded browser',
    },
 -  // Login
    login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
+     title: 'SwarmStudio',
      description: 'Enter your username and password to continue.',
-     placeholder: 'Access token',
-     submit: 'Login',
-@@ -333,8 +423,17 @@ export default {
+@@ -333,8 +365,17 @@ export default {
      defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
      defaultCredentialAction: 'Update now',
      defaultCredentialLater: 'Remind me later',
@@ -684,7 +608,7 @@ index 50188f1..d8ec35f 100644
    users: {
      title: 'Account Management',
      description: 'Create users, assign roles, and control which profiles regular admins can access.',
-@@ -355,15 +454,18 @@ export default {
+@@ -355,15 +396,18 @@ export default {
      disable: 'Disable',
      roles: {
        superAdmin: 'Super Admin',
@@ -707,7 +631,7 @@ index 50188f1..d8ec35f 100644
    common: {
      close: 'Close',
      loading: 'Loading...',
-@@ -394,9 +496,12 @@ export default {
+@@ -394,9 +438,12 @@ export default {
      collapse: 'Collapse',
      start: 'Start',
      stop: 'Stop',
@@ -722,7 +646,7 @@ index 50188f1..d8ec35f 100644
    mcp: {
      title: 'MCP Servers',
      loadFailed: 'Failed to load MCP servers',
-@@ -421,8 +526,8 @@ export default {
+@@ -421,8 +468,8 @@ export default {
      updateFailed: 'Failed to update server',
      saveFailed: 'Save failed',
      serverRemoved: 'Removed "{name}"',
@@ -733,43 +657,18 @@ index 50188f1..d8ec35f 100644
      connectedStatus: 'Connected',
      disconnectedStatus: 'Disconnected',
      disabledStatus: 'Disabled',
-@@ -465,50 +570,20 @@ export default {
+@@ -465,7 +512,7 @@ export default {
      toolsSelectAll: 'Select all',
      toolsClearSelection: 'Clear selection',
      toolsExcludeAll: 'Exclude all',
 -    toolsClearExcluded: 'Clear excluded',
 +    toolsClearExcluded: 'Clear excluded'
    },
--
--  // Sidebar
--  apiRelay: {
--    title: "API Relay",
--    headline: "Leading AI models, one gateway",
--    description: "APIKEY.FAN is Ekko Studio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
--    zhipu: "Zhipu",
--    viewNow: "View now",
--    apiCompatible: "Official API compatibility",
--    usageTitle: "Key usage",
--    usageScope: "Includes your accessible profiles. The same service and key share one card; different keys are shown separately.",
--    loadFailed: "Unable to load usage. Refresh to try again.",
--    remaining: "Remaining quota",
--    sources: "Configured in",
--    keyActive: "Key active",
--    keyInactive: "Key inactive",
--    requests: "Requests",
--    spend: "Spend",
--    today: "Today",
--    total: "Total",
--    modelUsage: "Usage by model",
--    model: "Model",
--    errors: {
--      unauthorized: "Key authentication failed. Check the configured key.",
--      timeout: "The usage request timed out. Refresh to try again.",
--      unavailable: "The usage service is unavailable. Refresh to try again.",
--      invalid_response: "The service returned an unrecognized usage response.",
--    },
--  },
--
+ 
+   // Sidebar
+@@ -498,17 +545,17 @@ export default {
+   },
+ 
    sidebar: {
 -    desktopUpdatePreparing: "Preparing update",
 -    desktopUpdateStopping: "Stopping download…",
@@ -796,7 +695,7 @@ index 50188f1..d8ec35f 100644
      chat: 'Chat',
      backToChat: 'Back',
      search: 'Search',
-@@ -551,9 +626,9 @@ export default {
+@@ -551,9 +598,9 @@ export default {
      groupMonitoring: 'Monitoring',
      groupMonitoringShort: 'Mon',
      groupTools: 'Tools',
@@ -809,7 +708,7 @@ index 50188f1..d8ec35f 100644
      theme: 'Theme',
      settings: 'Settings',
      connected: 'Connected',
-@@ -575,8 +650,1599 @@ export default {
+@@ -575,8 +622,1599 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -2410,16 +2309,7 @@ index 50188f1..d8ec35f 100644
    agentManager: {
      title: 'Agent Manager',
      subtitle: 'Discover and manage the Agents available on this device.',
-@@ -590,7 +2256,7 @@ export default {
-     agentVersion: 'Hermes Agent version',
-     path: 'Path',
-     userCli: 'Hermes CLI',
--    userCliReadonly: 'Ekko Studio checks the current environment for a CLI first; CLI installations remain user managed.',
-+    userCliReadonly: 'SwarmStudio checks the current environment for a CLI first; CLI installations remain user managed.',
-     readOnly: 'Read only',
-     noUserCli: 'No available Hermes CLI was detected',
-     unknownVersion: 'Unknown version',
-@@ -599,9 +2265,8 @@ export default {
+@@ -599,9 +2237,8 @@ export default {
      ekkoDescription: 'Ekko ships with Studio and does not need separate installation, updates, or removal.',
      version: 'Version',
      codingAgentDescription: 'Studio can install, check for updates, and remove this Agent.',
@@ -2430,22 +2320,18 @@ index 50188f1..d8ec35f 100644
      updateToVersion: 'Update to {version}',
      deleteConfirm: 'Remove {name}?',
      installOperation: 'installation',
-@@ -611,18 +2276,18 @@ export default {
+@@ -611,7 +2248,7 @@ export default {
      aiHelpDialogPositive: 'Ask AI',
      aiHelpDrawerTitle: 'Ekko · Agent troubleshooting',
      aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
 -    aiHelpPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.',
 +    aiHelpPrompt: "Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.",
      legacyDataMigrationTitle: 'Legacy Hermes data found',
--    legacyDataMigrationDescription: 'Ekko Studio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-+    legacyDataMigrationDescription: 'SwarmStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
+     legacyDataMigrationDescription: 'SwarmStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
      legacyDataMigrationSource: 'Legacy directory',
-     legacyDataMigrationTarget: 'Current directory',
-     legacyDataMigrationWarning: 'Studio will restart after confirmation and, before local services start, overwrite matching files with the legacy copies while preserving current-only files. This question is shown only once.',
-     legacyDataMigrationPositive: 'Migrate legacy data',
+@@ -621,8 +2258,8 @@ export default {
      legacyDataMigrationNegative: 'Do not migrate',
--    legacyDataMigrationSuccess: 'Migration scheduled. Ekko Studio will restart and migrate the data before starting local services.',
-+    legacyDataMigrationSuccess: 'Migration scheduled. SwarmStudio will restart and migrate the data before starting local services.',
+     legacyDataMigrationSuccess: 'Migration scheduled. SwarmStudio will restart and migrate the data before starting local services.',
      legacyDataMigrationFailed: 'Legacy Hermes data migration failed: {error}',
 +    antigravityDescription: 'Install Antigravity CLI (agy) using the official guide and sign in from a terminal, then refresh. Global and scoped modes; installation, updates and removal are managed outside Studio.'
    },
@@ -2453,40 +2339,7 @@ index 50188f1..d8ec35f 100644
    runtimeVersions: {
      title: 'Version Management',
      runtimeTitle: 'Hermes Runtime',
-@@ -639,8 +2304,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (Desktop / terminal)',
-     dataDirectoryEnvLinux: 'Linux (login environment)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Fully quit and reopen Ekko Studio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the Ekko Studio desktop app or Web UI. Fully quit Ekko Studio before running:',
-+    dataDirectoryEnvRestart: 'Fully quit and reopen SwarmStudio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the SwarmStudio desktop app or Web UI. Fully quit SwarmStudio before running:',
-     webUiTitle: 'Web UI',
-     platform: 'Platform',
-     currentWebUi: 'Current Web UI',
-@@ -649,10 +2314,10 @@ export default {
-     chooseRuntimeDirectory: 'Choose directory',
-     resetRuntimeDirectory: 'Use system default',
-     runtimeDirectoryHint: 'The current Runtime is copied and verified before local services start on the next restart. Old storage is retained, and future Runtime downloads are stored here.',
--    runtimeDirectorySaved: 'Runtime migration scheduled. Restart Ekko Studio to apply it.',
-+    runtimeDirectorySaved: 'Runtime migration scheduled. Restart SwarmStudio to apply it.',
-     runtimeMigrationPending: 'Pending migration destination: {directory}',
-     runtimeMigrationFailed: 'Storage migration failed; the previous storage remains active',
--    runtimeActivationFailed: 'The selected Runtime could not start, so Ekko Studio used another installed version',
-+    runtimeActivationFailed: 'The selected Runtime could not start, so SwarmStudio used another installed version',
-     active: 'Active',
-     installed: 'Installed',
-     download: 'Download',
-@@ -671,7 +2336,7 @@ export default {
-     remoteLoadFailed: 'Failed to load remote versions',
-     downloadTasks: 'Download tasks',
-     downloadStarted: 'Download started',
--    activateSuccess: 'Version selection saved. Restart Ekko Studio to use it.',
-+    activateSuccess: 'Version selection saved. Restart SwarmStudio to use it.',
-     restartPromptTitle: 'Runtime ready',
-     restartPromptContent: 'Hermes Runtime {version} has been installed. Restart now to use it?',
-     restartLater: 'Later',
-@@ -681,7 +2346,7 @@ export default {
+@@ -681,7 +2318,7 @@ export default {
        queued: 'Queued',
        running: 'Running',
        completed: 'Completed',
@@ -2495,7 +2348,7 @@ index 50188f1..d8ec35f 100644
      },
      jobStageStatus: {
        queued: 'Queued',
-@@ -691,7 +2356,7 @@ export default {
+@@ -691,7 +2328,7 @@ export default {
        extract: 'Extracting',
        install: 'Installing',
        completed: 'Completed',
@@ -2504,7 +2357,7 @@ index 50188f1..d8ec35f 100644
      },
      jobStage: {
        queued: 'Queued',
-@@ -705,10 +2370,9 @@ export default {
+@@ -705,10 +2342,9 @@ export default {
        extractWebUi: 'Extracting Web UI archive',
        installWebUi: 'Installing Web UI',
        completed: 'Completed',
@@ -2517,7 +2370,7 @@ index 50188f1..d8ec35f 100644
    mcuDevices: {
      title: 'Little Box',
      subtitle: 'Manage Little Box voice interaction devices and connections',
-@@ -748,15 +2412,14 @@ export default {
+@@ -748,15 +2384,14 @@ export default {
      deleted: 'MCU device deleted',
      deleteFailed: 'Failed to delete MCU device',
      loadFailed: 'Failed to load MCU devices',
@@ -2535,19 +2388,7 @@ index 50188f1..d8ec35f 100644
      },
      app: {
        subtitle: 'Connect the App to your devices',
-@@ -764,9 +2427,9 @@ export default {
-       viewList: 'List',
-       viewDownload: 'Download',
-       viewMessages: 'Message Push',
--      downloadTitle: 'Ekko Studio on your phone',
-+      downloadTitle: 'SwarmStudio on your phone',
-       downloadDescription: 'We are currently in closed beta. A registration code is required to sign up, and we will share a limited number of codes on our social media channels.',
--      downloadPaidDescription: 'The Ekko Studio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-+      downloadPaidDescription: 'The SwarmStudio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-       downloadScan: 'Scan with your phone',
-       downloadScanHint: 'Android download available now',
-       available: 'Available',
-@@ -805,19 +2468,19 @@ export default {
+@@ -805,7 +2440,7 @@ export default {
          internal: 'Internal testing',
          public_beta: 'Public beta',
          paid: 'Paid',
@@ -2556,12 +2397,7 @@ index 50188f1..d8ec35f 100644
        },
        accessFailures: {
          tokenExpired: 'Token expired',
-         paidAccountRequired: 'The current account is not a paid account and cannot use this feature',
--        cloudSubscriptionRequired: 'This account does not have Ekko Studio Cloud access',
-+        cloudSubscriptionRequired: 'This account does not have SwarmStudio Cloud access',
-         appAccessExpired: 'This internal test or public beta access has expired',
-         required: 'The App did not provide an access entitlement',
-         invalid: 'The App access entitlement is invalid',
+@@ -817,7 +2452,7 @@ export default {
          expired: 'The App access entitlement has expired',
          accountMismatch: 'The entitlement account does not match the current App account',
          deviceMismatch: 'The entitlement device code does not match this device',
@@ -2570,7 +2406,7 @@ index 50188f1..d8ec35f 100644
        },
        deviceName: 'Device name',
        deviceBrand: 'Device brand',
-@@ -828,13 +2491,13 @@ export default {
+@@ -828,13 +2463,13 @@ export default {
        authorizedUser: 'Authorizing user',
        connectionTypes: {
          lan: 'LAN',
@@ -2588,7 +2424,7 @@ index 50188f1..d8ec35f 100644
        online: 'Online',
        offline: 'Offline',
        active: 'Active',
-@@ -845,10 +2508,9 @@ export default {
+@@ -845,10 +2480,9 @@ export default {
        deleted: 'App connection deleted',
        deleteFailed: 'Failed to delete App connection',
        empty: 'No connected Apps',
@@ -2601,7 +2437,7 @@ index 50188f1..d8ec35f 100644
    devices: {
      title: 'Devices',
      subtitle: 'Manage connected devices, pairing requests, and remote access',
-@@ -904,22 +2566,21 @@ export default {
+@@ -904,22 +2538,21 @@ export default {
        pending: 'Pending',
        approved: 'Approved',
        rejected: 'Rejected',
@@ -2628,7 +2464,7 @@ index 50188f1..d8ec35f 100644
    performance: {
      title: 'Performance',
      subtitle: 'Inspect system resources, bridge broker, workers, and active sessions',
-@@ -947,9 +2608,8 @@ export default {
+@@ -947,9 +2580,8 @@ export default {
      status: 'Status',
      noWorkers: 'No workers',
      sessionsByProfile: 'Sessions by Profile',
@@ -2639,7 +2475,7 @@ index 50188f1..d8ec35f 100644
    journey: {
      title: 'Learning Journey',
      play: 'Play journey',
-@@ -979,21 +2639,28 @@ export default {
+@@ -979,21 +2611,28 @@ export default {
      useCount: 'Use count',
      createdBy: 'Created by',
      timestamp: 'Time',
@@ -2677,7 +2513,7 @@ index 50188f1..d8ec35f 100644
    realtimeVoice: {
      title: 'Realtime Voice',
      mode: 'Voice mode',
-@@ -1016,7 +2683,15 @@ export default {
+@@ -1016,7 +2655,15 @@ export default {
      finishTurn: 'Finish turn',
      speak: 'Start speaking',
      end: 'End',
@@ -2694,7 +2530,7 @@ index 50188f1..d8ec35f 100644
      hint: {
        idle: 'Tap the center to begin a voice turn',
        paused: 'Turn the microphone back on when you are ready',
-@@ -1025,25 +2700,23 @@ export default {
+@@ -1025,25 +2672,23 @@ export default {
        processing: 'Converting your voice into text',
        thinking: 'Your message was sent to the current conversation',
        speaking: 'You can interrupt at any time',
@@ -2735,7 +2571,7 @@ index 50188f1..d8ec35f 100644
      contextRemaining: 'remaining',
      contextClickToEdit: 'Click to edit context length',
      contextEditTitle: 'Edit Context Length',
-@@ -1070,7 +2743,7 @@ export default {
+@@ -1070,7 +2715,7 @@ export default {
      slashCommandArgs: {
        message: '<message>',
        title: '<title>',
@@ -2744,7 +2580,7 @@ index 50188f1..d8ec35f 100644
      },
      slashCommands: {
        usage: 'Calculate current session usage',
-@@ -1100,7 +2773,7 @@ export default {
+@@ -1100,7 +2745,7 @@ export default {
        reloadMcp: 'Reload MCP servers',
        reloadSkills: 'Reload skill commands',
        bundles: 'Browse skill bundles',
@@ -2753,7 +2589,7 @@ index 50188f1..d8ec35f 100644
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1115,7 +2788,7 @@ export default {
+@@ -1115,7 +2760,7 @@ export default {
        deleteFailed: 'Failed to delete bundle',
        deleted: 'Bundle deleted',
        noBundles: 'No bundles yet. Create one to combine multiple skills.',
@@ -2762,7 +2598,7 @@ index 50188f1..d8ec35f 100644
      },
      bundleCreator: {
        title: 'Create Skill Bundle',
-@@ -1131,7 +2804,7 @@ export default {
+@@ -1131,7 +2776,7 @@ export default {
        skillsRequired: 'Select at least one skill',
        skillsLoadFailed: 'Failed to load skills',
        createFailed: 'Failed to create bundle',
@@ -2771,7 +2607,7 @@ index 50188f1..d8ec35f 100644
      },
      attachFiles: 'Attach files',
      reasoningEffort: {
-@@ -1147,8 +2820,8 @@ export default {
+@@ -1147,8 +2792,8 @@ export default {
          high: 'High',
          max: 'Max',
          xhigh: 'Extra high',
@@ -2782,7 +2618,7 @@ index 50188f1..d8ec35f 100644
      },
      autoPlaySpeech: 'Auto-play voice',
      voiceInput: {
-@@ -1164,17 +2837,17 @@ export default {
+@@ -1164,13 +2809,13 @@ export default {
          capturing: 'Capturing',
          transcribing: 'Transcribing',
          sending: 'Adding to input',
@@ -2798,12 +2634,7 @@ index 50188f1..d8ec35f 100644
      },
      showToolCalls: 'Show tool calls',
      pushEnabled: 'Enable push',
--    pushNotConfigured: 'Configure Message Push in Ekko Studio “Device Connections” before enabling it.',
-+    pushNotConfigured: 'Configure Message Push in SwarmStudio “Device Connections” before enabling it.',
-     hideToolCalls: 'Hide tool calls',
-     messageQueue: 'Message queue',
-     removeQueuedMessage: 'Remove queued message',
-@@ -1203,7 +2876,7 @@ export default {
+@@ -1203,7 +2848,7 @@ export default {
      searchTitle: 'Search Sessions',
      searchSubtitle: 'Search by title or message content',
      searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
@@ -2812,7 +2643,7 @@ index 50188f1..d8ec35f 100644
      searchPlaceholder: 'Search sessions...',
      searchEmpty: 'Recent sessions',
      searchRecent: 'Recent session',
-@@ -1254,9 +2927,7 @@ export default {
+@@ -1254,9 +2899,7 @@ export default {
      newCliChat: 'New CLI',
      deleteSession: 'Delete this session?',
      sessionDeleted: 'Session deleted',
@@ -2823,7 +2654,7 @@ index 50188f1..d8ec35f 100644
      toggleBatchMode: 'Batch selection',
      selectAll: 'Select all',
      confirmBatchDelete: 'Delete {count} selected sessions?',
-@@ -1358,11 +3029,32 @@ export default {
+@@ -1359,11 +3002,32 @@ export default {
      resumeSpeech: 'Resume',
      stopSpeech: 'Stop',
      speechNotSupported: 'Voice playback not supported in this browser',
@@ -2859,7 +2690,7 @@ index 50188f1..d8ec35f 100644
      title: 'Workflow',
      profile: 'Profile',
      namePlaceholder: 'Workflow name',
-@@ -1370,7 +3062,7 @@ export default {
+@@ -1371,7 +3035,7 @@ export default {
      workspace: {
        title: 'Select Workspace',
        select: 'Select workspace',
@@ -2868,7 +2699,7 @@ index 50188f1..d8ec35f 100644
      },
      actions: {
        newWorkflow: 'New Workflow',
-@@ -1396,99 +3088,356 @@ export default {
+@@ -1397,99 +3061,356 @@ export default {
        imported: 'Workflow imported',
        exported: 'Workflow exported',
        importFailed: 'Workflow import failed',
@@ -3278,7 +3109,7 @@ index 50188f1..d8ec35f 100644
        },
        jsonFieldOperatorHelp: {
          equals: 'Reads the value at {path}. Matches only when that field value exactly equals “{value}”; it never compares the field name.',
-@@ -1496,14 +3445,18 @@ export default {
+@@ -1497,14 +3418,18 @@ export default {
          contains: 'Reads the value at {path} and checks whether that field value contains “{value}”; it never searches the field name.',
          not_contains: 'Reads the value at {path}. Matches only when that field value does not contain “{value}”; it never searches the field name.',
          exists: 'Matches when the JSON field at {path} exists. It does not compare the field value.',
@@ -3302,7 +3133,7 @@ index 50188f1..d8ec35f 100644
      },
      batch: {
        toggle: 'Batch selection',
-@@ -1511,7 +3464,7 @@ export default {
+@@ -1512,7 +3437,7 @@ export default {
        confirmDelete: 'Delete {count} selected workflows?',
        deleteSuccess: 'Deleted {count} workflows',
        deletePartial: '{failed} workflows failed to delete',
@@ -3311,7 +3142,7 @@ index 50188f1..d8ec35f 100644
      },
      validation: {
        nodesRequired: 'Add at least one node',
-@@ -1524,7 +3477,7 @@ export default {
+@@ -1525,7 +3450,7 @@ export default {
        invalidConnectionDirection: 'Connections must go from the right output to the left input',
        orphanNode: 'Node {node} is not connected to the workflow',
        disconnectedFlow: 'The workflow cannot be split into multiple disconnected flows',
@@ -3320,7 +3151,7 @@ index 50188f1..d8ec35f 100644
      },
      node: {
        title: 'Node name',
-@@ -1540,7 +3493,7 @@ export default {
+@@ -1541,7 +3466,7 @@ export default {
        joinAnyHelp: 'Runs once when the first incoming route is taken; skips only if every route is decided and none matches. Example: continue after either reviewer approves.',
        promptPlaceholder: 'Describe what this agent should do...',
        skillsPlaceholder: 'Skills, press Enter to add',
@@ -3329,7 +3160,7 @@ index 50188f1..d8ec35f 100644
      },
      status: {
        idle: 'Idle',
-@@ -1551,7 +3504,7 @@ export default {
+@@ -1552,7 +3477,7 @@ export default {
        skipped: 'Skipped',
        failed: 'Failed',
        approval_rejected: 'Approval rejected',
@@ -3338,7 +3169,7 @@ index 50188f1..d8ec35f 100644
      },
      runs: {
        title: 'Run Records',
-@@ -1568,26 +3521,26 @@ export default {
+@@ -1569,26 +3494,26 @@ export default {
        stopRequested: 'Stop requested',
        stopFailed: 'Failed to stop run',
        delete: 'Delete record',
@@ -3370,7 +3201,7 @@ index 50188f1..d8ec35f 100644
      },
      initialNodes: {
        node1: 'Node 1',
-@@ -1595,7 +3548,7 @@ export default {
+@@ -1596,7 +3521,7 @@ export default {
        node3: 'Node 3',
        plan: 'Plan',
        execute: 'Execute',
@@ -3379,7 +3210,7 @@ index 50188f1..d8ec35f 100644
      },
      initialPrompts: {
        node1: 'Enter this node input.',
-@@ -1603,12 +3556,11 @@ export default {
+@@ -1604,12 +3529,11 @@ export default {
        node3: 'Enter this node input.',
        plan: 'Break the request into actionable steps.',
        execute: 'Run the implementation steps and produce artifacts.',
@@ -3394,7 +3225,7 @@ index 50188f1..d8ec35f 100644
    kanban: {
      title: 'Kanban Board',
      createTask: 'New Task',
-@@ -1625,6 +3577,22 @@ export default {
+@@ -1626,6 +3550,22 @@ export default {
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
        defaultArchiveUnavailable: 'The default board cannot be archived',
@@ -3417,7 +3248,7 @@ index 50188f1..d8ec35f 100644
      },
      columns: {
        triage: 'Triage',
-@@ -1635,7 +3603,7 @@ export default {
+@@ -1636,7 +3576,7 @@ export default {
        blocked: 'Blocked',
        review: 'Review',
        done: 'Done',
@@ -3426,7 +3257,7 @@ index 50188f1..d8ec35f 100644
      },
      form: {
        title: 'Title',
-@@ -1667,20 +3635,29 @@ export default {
+@@ -1668,20 +3608,29 @@ export default {
        maxRetriesPlaceholder: 'Number of retries',
        goalMaxTurns: 'Goal max turns',
        goalMaxTurnsPlaceholder: 'Maximum turns',
@@ -3459,7 +3290,7 @@ index 50188f1..d8ec35f 100644
      },
      detail: {
        status: 'Status',
-@@ -1703,7 +3680,7 @@ export default {
+@@ -1704,7 +3653,7 @@ export default {
        noLog: 'No log found for this task.',
        addComment: 'Add Comment',
        commentPlaceholder: 'Write a task comment...',
@@ -3468,7 +3299,7 @@ index 50188f1..d8ec35f 100644
      },
      action: {
        title: 'Actions',
-@@ -1712,7 +3689,6 @@ export default {
+@@ -1713,7 +3662,6 @@ export default {
        block: 'Block',
        blockReason: 'Reason for blocking',
        unblock: 'Unblock',
@@ -3476,7 +3307,7 @@ index 50188f1..d8ec35f 100644
        archiveConfirm: 'Archive this completed task?',
        assign: 'Assign',
        assignTo: 'Assign to...',
-@@ -1723,6 +3699,11 @@ export default {
+@@ -1724,6 +3672,11 @@ export default {
        specify: 'Specify',
        loadLog: 'Load Log',
        loadDiagnostics: 'Load Diagnostics',
@@ -3488,7 +3319,7 @@ index 50188f1..d8ec35f 100644
      },
      message: {
        taskCreated: 'Task created',
-@@ -1737,15 +3718,202 @@ export default {
+@@ -1738,15 +3691,202 @@ export default {
        taskReassigned: 'Task reassigned',
        taskSpecified: 'Task specified',
        loadFailed: 'Failed to load task',
@@ -3521,7 +3352,7 @@ index 50188f1..d8ec35f 100644
        total: 'Total',
 -      tasks: 'Tasks',
 +      tasks: 'Tasks'
-+    },
+     },
 +    noAttachments: 'No attachments',
 +    unassigned: 'Unassigned',
 +    taskNeedsAttention: 'Task needs attention',
@@ -3679,7 +3510,7 @@ index 50188f1..d8ec35f 100644
 +      approver: 'Approver',
 +      consulted: 'Consulted',
 +      informed: 'Informed'
-     },
++    },
 +    mineOnly: 'Needs my action'
 +  },
 +  scheduleBuilder: {
@@ -3695,7 +3526,7 @@ index 50188f1..d8ec35f 100644
    jobs: {
      title: 'Scheduled Jobs',
      createJob: 'Create Job',
-@@ -1806,7 +3974,7 @@ export default {
+@@ -1807,7 +3947,7 @@ export default {
        running: 'Running',
        paused: 'Paused',
        disabled: 'Disabled',
@@ -3704,7 +3535,7 @@ index 50188f1..d8ec35f 100644
      },
      info: {
        model: 'Model',
-@@ -1815,7 +3983,7 @@ export default {
+@@ -1816,7 +3956,7 @@ export default {
        lastRun: 'Last Run',
        nextRun: 'Next Run',
        deliver: 'Deliver',
@@ -3713,7 +3544,7 @@ index 50188f1..d8ec35f 100644
      },
      action: {
        pause: 'Pause',
-@@ -1823,24 +3991,21 @@ export default {
+@@ -1824,24 +3964,21 @@ export default {
        resume: 'Resume',
        resumeJob: 'Resume job',
        runNow: 'Run Now',
@@ -3742,7 +3573,7 @@ index 50188f1..d8ec35f 100644
      },
      searchPlaceholder: 'Search skills...',
      noMatch: 'No skills match your search',
-@@ -1865,7 +4030,7 @@ export default {
+@@ -1866,7 +4003,7 @@ export default {
        builtin: 'Builtin',
        hub: 'Hub',
        local: 'Local',
@@ -3751,7 +3582,7 @@ index 50188f1..d8ec35f 100644
      },
      delete: 'Delete',
      deleteConfirm: 'Delete skill "{name}"? This cannot be undone.',
-@@ -1888,7 +4053,7 @@ export default {
+@@ -1889,7 +4026,7 @@ export default {
      importFailed: 'Failed to import skill',
      path: {
        local: 'Local',
@@ -3760,7 +3591,7 @@ index 50188f1..d8ec35f 100644
      },
      externalDirs: {
        manage: 'External dirs',
-@@ -1902,7 +4067,7 @@ export default {
+@@ -1903,7 +4040,7 @@ export default {
        saveSuccess: 'External dirs saved',
        saveFailed: 'Save failed',
        loadFailed: 'Failed to load external dirs',
@@ -3769,7 +3600,7 @@ index 50188f1..d8ec35f 100644
      },
      pathCopied: 'Path copied',
      pathCopyFailed: 'Failed to copy path',
-@@ -1934,9 +4099,8 @@ export default {
+@@ -1935,9 +4072,8 @@ export default {
      writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
      writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
      writeApprovalRemoveFile: 'This approval removes {file} from skill {skill}.',
@@ -3780,7 +3611,7 @@ index 50188f1..d8ec35f 100644
    plugins: {
      title: 'Plugins',
      refresh: 'Refresh',
-@@ -1962,28 +4126,28 @@ export default {
+@@ -1963,28 +4099,28 @@ export default {
        active: 'Enabled / auto',
        inactive: 'Inactive',
        disabled: 'Disabled',
@@ -3816,7 +3647,7 @@ index 50188f1..d8ec35f 100644
      },
      table: {
        plugin: 'Plugin',
-@@ -1992,21 +4156,20 @@ export default {
+@@ -1993,21 +4129,20 @@ export default {
        kind: 'Kind',
        capabilities: 'Capabilities',
        path: 'Path / entrypoint',
@@ -3842,7 +3673,7 @@ index 50188f1..d8ec35f 100644
    petdex: {
      title: 'Petdex Pets',
      subtitle: 'Browse the public petdex catalog used by Hermes desktop pets.',
-@@ -2026,11 +4189,9 @@ export default {
+@@ -2027,11 +4162,9 @@ export default {
        total: 'Catalog total',
        visible: 'Matching',
        kinds: 'Kinds',
@@ -3856,7 +3687,7 @@ index 50188f1..d8ec35f 100644
    memory: {
      title: 'Memory',
      refresh: 'Refresh',
-@@ -2043,15 +4204,13 @@ export default {
+@@ -2044,10 +4177,8 @@ export default {
      profilePlaceholder: 'Write your profile...',
      soul: 'Soul',
      noSoul: 'No soul configuration yet.',
@@ -3866,18 +3697,9 @@ index 50188f1..d8ec35f 100644
 -
 -  // Models
    models: {
--    opencodeFreeHint: "No account or API key required. Free models may be rate limited.",
--    opencodeFreeLoading: "Loading free models in the background…",
--    opencodeFreeRetry: "Free provider check or catalog refresh failed. Retrying automatically; cached models are retained.",
--    opencodeFreeUpgrade: "Update Hermes Agent to use OpenCode Free.",
-+    opencodeFreeHint: 'No account or API key required. Free models may be rate limited.',
-+    opencodeFreeLoading: 'Loading free models in the background…',
-+    opencodeFreeRetry: 'Free provider check or catalog refresh failed. Retrying automatically; cached models are retained.',
-+    opencodeFreeUpgrade: 'Update Hermes Agent to use OpenCode Free.',
      title: 'Models',
      searchPlaceholder: 'Search models...',
-     noResults: 'No results',
-@@ -2198,7 +4357,7 @@ export default {
+@@ -2195,7 +4326,7 @@ export default {
      customBadge: 'CUSTOM',
      previewBadge: 'PREVIEW',
      disabledBadge: 'UNAVAILABLE',
@@ -3886,7 +3708,7 @@ index 50188f1..d8ec35f 100644
      customModelPlaceholder: 'Unlisted model ID',
      customModelHint: 'For provider-supported models not returned by the API; not a display rename. Press Enter to load.',
      removeCustomModel: 'Remove this unlisted model',
-@@ -2329,17 +4488,15 @@ export default {
+@@ -2326,17 +4457,15 @@ export default {
      enterBaseUrl: 'Please enter Base URL first',
      unexpectedFormat: 'Unexpected response format',
      foundModels: 'Found {count} models',
@@ -3906,7 +3728,7 @@ index 50188f1..d8ec35f 100644
    },
    profiles: {
      title: 'Profiles',
-@@ -2404,7 +4561,7 @@ export default {
+@@ -2401,7 +4530,7 @@ export default {
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Default avatar restored',
@@ -3915,7 +3737,7 @@ index 50188f1..d8ec35f 100644
      },
      runtime: {
        activeProfile: 'Active: {name}',
-@@ -2422,24 +4579,20 @@ export default {
+@@ -2419,24 +4548,20 @@ export default {
        gatewayRestarted: 'Gateway restarted: {name}',
        gatewayRestartFailed: 'Failed to restart gateway',
        profileRestarted: 'Profile restarted: {name}',
@@ -3946,7 +3768,7 @@ index 50188f1..d8ec35f 100644
    theme: {
      title: 'Theme',
      saved: 'Theme saved',
-@@ -2479,7 +4632,7 @@ export default {
+@@ -2476,7 +4601,7 @@ export default {
      preview: 'Preview',
      previewTitle: 'Your workspace, your atmosphere',
      previewText: 'Text and selection colors update throughout the interface.',
@@ -3955,7 +3777,7 @@ index 50188f1..d8ec35f 100644
    },
    settings: {
      title: 'Settings',
-@@ -2499,6 +4652,7 @@ export default {
+@@ -2496,6 +4621,7 @@ export default {
        apiServer: 'API Server',
        models: 'Models',
        voice: 'Voice',
@@ -3963,7 +3785,7 @@ index 50188f1..d8ec35f 100644
      },
      webhooks: {
        title: 'Webhooks',
-@@ -2524,10 +4678,13 @@ export default {
+@@ -2521,10 +4647,13 @@ export default {
          receivedAt: 'Received at',
          event: 'Event',
          eventId: 'Event ID',
@@ -3979,7 +3801,7 @@ index 50188f1..d8ec35f 100644
          runQueued: 'Run queued',
          runStarted: 'Run started',
          toolStarted: 'Tool started',
-@@ -2538,11 +4695,11 @@ export default {
+@@ -2535,11 +4664,11 @@ export default {
          clarificationRequested: 'Clarification requested',
          clarificationResolved: 'Clarification resolved',
          completed: 'Run completed',
@@ -3993,7 +3815,7 @@ index 50188f1..d8ec35f 100644
        },
        runtime: {
          idle: 'Idle',
-@@ -2550,7 +4707,7 @@ export default {
+@@ -2547,7 +4676,7 @@ export default {
          retrying: 'Retrying',
          success: 'Delivered',
          failed: 'Failed',
@@ -4002,7 +3824,7 @@ index 50188f1..d8ec35f 100644
        },
        actions: {
          add: 'Add Webhook',
-@@ -2560,7 +4717,7 @@ export default {
+@@ -2557,7 +4686,7 @@ export default {
          disable: 'Disable',
          refresh: 'Refresh',
          clear: 'Clear',
@@ -4011,7 +3833,7 @@ index 50188f1..d8ec35f 100644
        },
        form: {
          name: 'Name',
-@@ -2581,7 +4738,7 @@ export default {
+@@ -2578,7 +4707,7 @@ export default {
          includeUserContentHint: 'User messages may contain sensitive information. This is disabled by default and does not include system prompts, reasoning, tool arguments, or tool results.',
          allowPrivateNetwork: 'Allow private or local network addresses',
          allowPrivateNetworkHint: 'Only enable this for trusted internal endpoints. DNS is checked again for every delivery.',
@@ -4020,7 +3842,7 @@ index 50188f1..d8ec35f 100644
        },
        messages: {
          required: 'Name and URL are required',
-@@ -2596,8 +4753,8 @@ export default {
+@@ -2593,8 +4722,8 @@ export default {
          localTestFailed: 'Failed to create the local test receiver',
          inboxLoadFailed: 'Failed to load local test events',
          inboxCleared: 'Local test events cleared',
@@ -4031,7 +3853,7 @@ index 50188f1..d8ec35f 100644
      },
      models: {
        apiKey: 'API Key',
-@@ -2605,7 +4762,7 @@ export default {
+@@ -2602,7 +4731,7 @@ export default {
        save: 'Save',
        saved: 'Saved',
        saveFailed: 'Save failed',
@@ -4040,27 +3862,7 @@ index 50188f1..d8ec35f 100644
      },
      display: {
        streaming: 'Stream Responses',
-@@ -2631,7 +4788,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Show a system notification when AI finishes',
-       notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
-       notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -2653,8 +4810,8 @@ export default {
-       chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
-       linkOpenTarget: 'Open web links in',
-       linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
--      linkOpenTargetDefaultBrowser: 'Default browser',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-+      linkOpenTargetDefaultBrowser: 'Default browser'
-     },
-     agent: {
-       maxTurns: 'Max Turns',
-@@ -2667,7 +4824,7 @@ export default {
+@@ -2664,7 +4793,7 @@ export default {
        toolEnforcementHint: 'Control tool call execution mode',
        auto: 'Auto',
        always: 'Always',
@@ -4069,7 +3871,7 @@ index 50188f1..d8ec35f 100644
      },
      gatewayAutoStart: {
        title: 'Gateway Auto-Start',
-@@ -2687,7 +4844,7 @@ export default {
+@@ -2684,7 +4813,7 @@ export default {
        includeHint: 'Comma-separated profile names. In include mode, an empty list starts none.',
        exclude: 'Excluded profiles',
        excludeHint: 'Comma-separated profile names to skip after the include/all policy is applied.',
@@ -4078,7 +3880,7 @@ index 50188f1..d8ec35f 100644
      },
      proxy: {
        title: 'Gateway Proxy',
-@@ -2700,7 +4857,7 @@ export default {
+@@ -2697,7 +4826,7 @@ export default {
        allProxyHint: 'Fallback proxy used when a protocol-specific proxy is not set.',
        noProxy: 'NO_PROXY',
        noProxyHint: 'Comma-separated hosts or domains that should bypass the proxy.',
@@ -4087,7 +3889,7 @@ index 50188f1..d8ec35f 100644
      },
      memory: {
        enabled: 'Enable Memory',
-@@ -2710,7 +4867,7 @@ export default {
+@@ -2707,7 +4836,7 @@ export default {
        charLimit: 'Memory Char Limit',
        charLimitHint: 'Max characters for MEMORY.md',
        userCharLimit: 'User Profile Char Limit',
@@ -4096,7 +3898,7 @@ index 50188f1..d8ec35f 100644
      },
      compression: {
        enabled: 'Enable Compression',
-@@ -2722,7 +4879,7 @@ export default {
+@@ -2719,7 +4848,7 @@ export default {
        protectLastN: 'Protect Recent Messages',
        protectLastNHint: 'Keep this many latest messages uncompressed',
        protectFirstN: 'Protect First Messages',
@@ -4105,7 +3907,7 @@ index 50188f1..d8ec35f 100644
      },
      session: {
        mode: 'Reset Mode',
-@@ -2771,11 +4928,11 @@ export default {
+@@ -2768,11 +4897,11 @@ export default {
        writeApprovalRequestedOldString: 'Requested old_string',
        writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
        writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
@@ -4119,7 +3921,7 @@ index 50188f1..d8ec35f 100644
      },
      apiServer: {
        enable: 'Enable',
-@@ -2787,7 +4944,7 @@ export default {
+@@ -2784,7 +4913,7 @@ export default {
        key: 'Key',
        keyHint: 'API access key',
        cors: 'CORS Origins',
@@ -4128,7 +3930,7 @@ index 50188f1..d8ec35f 100644
      },
      lockedIps: {
        title: 'Locked IPs',
-@@ -2801,8 +4958,8 @@ export default {
+@@ -2798,8 +4927,8 @@ export default {
        type: {
          password: 'Password',
          token: 'API token',
@@ -4139,7 +3941,7 @@ index 50188f1..d8ec35f 100644
      },
      userAvatar: {
        title: 'User Avatar',
-@@ -2815,7 +4972,7 @@ export default {
+@@ -2812,7 +4941,7 @@ export default {
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Avatar reset to default',
@@ -4148,7 +3950,7 @@ index 50188f1..d8ec35f 100644
      },
      voice: {
        activeTtsApi: 'Active TTS API',
-@@ -2847,13 +5004,13 @@ export default {
+@@ -2844,7 +4973,7 @@ export default {
          validate: 'Validating model runtime…',
          install: 'Installing model…',
          completed: 'Model is ready',
@@ -4156,25 +3958,8 @@ index 50188f1..d8ec35f 100644
 +        failed: 'Download failed'
        },
        hermesConfigTitle: 'Hermes Agent configuration',
--      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as Ekko Studio.',
-+      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as SwarmStudio.',
-       hermesActiveProvider: 'Active provider',
-       hermesConfiguredProviders: 'Configured providers',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Speed',
-       providerSampleRate: 'Sample rate',
-       providerBitRate: 'Bit rate',
-@@ -2867,7 +5024,7 @@ export default {
-       optionDisabled: 'Disabled',
-       nativeProvider: 'Hermes native provider',
-       selectNativeProvider: 'Select a Hermes native provider',
--      useHermesStudioProvider: 'Use Ekko Studio provider',
-+      useHermesStudioProvider: 'Use SwarmStudio provider',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-@@ -3024,27 +5181,16 @@ export default {
+       hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as SwarmStudio.',
+@@ -3021,27 +5150,16 @@ export default {
        sttTestEmpty: 'No audio was captured for the STT test.',
        sttTestSucceeded: 'STT test succeeded.',
        sttTestFailed: 'STT test failed: {error} — {hint}',
@@ -4202,7 +3987,7 @@ index 50188f1..d8ec35f 100644
        sttFailureHintGeneric: 'Check API key, model, and provider account access, then retry.',
        sttTestRecordFailed: 'Could not start microphone recording: {error}',
        sttTestTranscript: 'Transcript: {text}',
-@@ -3054,13 +5200,9 @@ export default {
+@@ -3051,13 +5169,9 @@ export default {
        providerOpenai: 'OpenAI TTS',
        providerCustom: 'Custom Endpoint (OpenAI-compatible)',
        providerEdge: 'Edge TTS (Free, no API Key)',
@@ -4216,7 +4001,7 @@ index 50188f1..d8ec35f 100644
        openaiKey: 'API Key',
        openaiKeyHint: 'Your OpenAI API key with TTS access',
        openaiUrl: 'API Base URL',
-@@ -3069,8 +5211,6 @@ export default {
+@@ -3066,8 +5180,6 @@ export default {
        openaiModelHint: 'tts-1 (faster) / tts-1-hd (higher quality)',
        openaiVoice: 'Voice',
        openaiVoiceHint: 'Voice to use for synthesis',
@@ -4225,7 +4010,7 @@ index 50188f1..d8ec35f 100644
        customHint: 'Use any OpenAI-compatible TTS API — works with GPT-SoVITS, CosyVoice, etc.',
        customUrl: 'API URL',
        customUrlHint: 'Base URL of your TTS service',
-@@ -3078,7 +5218,6 @@ export default {
+@@ -3075,7 +5187,6 @@ export default {
        customApiKey: 'API Key (Optional)',
        customApiKeyHint: 'Some custom endpoints require authentication',
        customApiKeyPlaceholder: 'Leave blank if not needed',
@@ -4233,7 +4018,7 @@ index 50188f1..d8ec35f 100644
        edgeHint: 'Powered by Microsoft Edge TTS (node-edge-tts).',
        edgeUrl: 'Adapter URL',
        edgeUrlHint: 'Address of your Edge TTS adapter, e.g. http://127.0.0.1:9882',
-@@ -3089,8 +5228,6 @@ export default {
+@@ -3086,8 +5197,6 @@ export default {
        edgeRateHint: 'Adjust speech speed (0.5x ~ 2.0x)',
        edgePitch: 'Pitch',
        edgePitchHint: 'Adjust speech pitch (-20 ~ +20 Hz)',
@@ -4242,7 +4027,7 @@ index 50188f1..d8ec35f 100644
        testTitle: 'Test Voice',
        testText: 'Test Text',
        testTextPlaceholder: 'Enter text to test...',
-@@ -3098,8 +5235,6 @@ export default {
+@@ -3095,8 +5204,6 @@ export default {
        testButton: 'Test',
        testButtonPlaying: 'Playing...',
        testFailed: 'Test failed: {error}',
@@ -4251,7 +4036,7 @@ index 50188f1..d8ec35f 100644
        providerMimo: 'MiMo TTS',
        mimoHint: 'Xiaomi MiMo TTS — supports preset voices, voice design, and voice clone modes',
        mimoApiKey: 'API Key',
-@@ -3128,136 +5263,144 @@ export default {
+@@ -3125,136 +5232,144 @@ export default {
        mimoCloneAudioClear: 'Clear',
        mimoStylePrompt: 'Style Prompt',
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
@@ -4515,7 +4300,7 @@ index 50188f1..d8ec35f 100644
    platform: {
      requireMention: "Require {'@'}Mention",
      requireMentionGroup: "Require {'@'}mention in groups to respond",
-@@ -3338,7 +5481,6 @@ export default {
+@@ -3335,7 +5450,6 @@ export default {
      qrFetching: 'Fetching QR code...',
      qrScanHint: 'Scan with WeChat to login',
      qrScanedHint: 'Scaned, please confirm on phone...',
@@ -4523,7 +4308,7 @@ index 50188f1..d8ec35f 100644
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ Open Platform Bot App ID',
      qqAppSecret: 'App Secret',
-@@ -3347,17 +5489,13 @@ export default {
+@@ -3344,17 +5458,13 @@ export default {
      qqMarkdownHint: 'Enable Markdown formatted messages (some clients may not support)',
      qqSandbox: 'Sandbox Mode',
      qqSandboxHint: 'Enable sandbox environment (for testing)',
@@ -4543,7 +4328,7 @@ index 50188f1..d8ec35f 100644
    terminal: {
      sessions: 'Sessions',
      newTab: 'New Terminal',
-@@ -3367,20 +5505,26 @@ export default {
+@@ -3364,20 +5474,26 @@ export default {
      noSessions: 'No terminal sessions',
      connectionFailed: 'Terminal service connection failed',
      connectionClosed: 'Terminal connection closed',
@@ -4577,7 +4362,7 @@ index 50188f1..d8ec35f 100644
      agentPreset: 'Agent preset',
      agentPresets: 'Agent presets',
      agentPresetPlaceholder: 'Select a preset',
-@@ -3502,7 +5646,12 @@ export default {
+@@ -3499,7 +5615,12 @@ export default {
      allAgents: 'All Agents',
      addAgent: 'Add Agent',
      agentType: 'Agent',
@@ -4591,7 +4376,7 @@ index 50188f1..d8ec35f 100644
      selectProfile: 'Select a profile',
      agentAdded: 'Agent added',
      selectRoomFirst: 'Please select a room first',
-@@ -3586,7 +5735,12 @@ export default {
+@@ -3583,7 +5704,12 @@ export default {
      summaryConfigurationOwnerRequired: 'This room has no summarizer yet. Ask a room administrator to configure it before sending messages.',
      saveSummaryConfig: 'Save summary settings',
      currentSummary: 'Current Summary',
@@ -4605,7 +4390,7 @@ index 50188f1..d8ec35f 100644
      summaryUpdatedAt: 'Last updated',
      summarizedTurns: 'Summarized effective utterances',
      summaryAnchor: 'Summary anchor',
-@@ -3598,31 +5752,9 @@ export default {
+@@ -3595,31 +5721,9 @@ export default {
      saveSummary: 'Save summary',
      summaryUpdated: 'Summary updated',
      summaryNever: 'Never',
@@ -4638,7 +4423,7 @@ index 50188f1..d8ec35f 100644
      title: 'Usage Statistics',
      refresh: 'Refresh',
      totalTokens: 'Total Tokens',
-@@ -3634,7 +5766,20 @@ export default {
+@@ -3631,7 +5735,20 @@ export default {
      cacheHitRate: 'Cache Hit Rate',
      modelBreakdown: 'Model Breakdown',
      agentBreakdown: 'Agent Breakdown',
@@ -4660,7 +4445,7 @@ index 50188f1..d8ec35f 100644
      dailyTrend: 'Daily Usage',
      date: 'Date',
      tokens: 'Tokens',
-@@ -3644,6 +5789,26 @@ export default {
+@@ -3641,6 +5758,26 @@ export default {
      sessions: 'Sessions',
      cost: 'Cost',
      noData: 'No usage data',
@@ -4687,7 +4472,7 @@ index 50188f1..d8ec35f 100644
    },
    skillsUsage: {
      title: 'Skills Usage',
-@@ -3664,10 +5829,8 @@ export default {
+@@ -3661,10 +5798,8 @@ export default {
      lastUsed: 'Last Used',
      noData: 'No skill usage data',
      loadFailed: 'Failed to load skill usage',
@@ -4699,7 +4484,7 @@ index 50188f1..d8ec35f 100644
    files: {
      title: 'Files',
      fileTree: 'File Tree',
-@@ -3735,8 +5898,8 @@ export default {
+@@ -3732,8 +5867,8 @@ export default {
      zoom: 'Zoom',
      pdfPageLimit: 'Preview is limited to the first {count} pages.',
      tableTruncated: 'The preview was truncated to keep the interface responsive. Download the file to inspect all rows and columns.',
@@ -4709,7 +4494,7 @@ index 50188f1..d8ec35f 100644
    download: {
      downloading: 'Downloading...',
      downloadFailed: 'Download failed',
-@@ -3748,35 +5911,9 @@ export default {
+@@ -3745,10 +5880,8 @@ export default {
      invalidPath: 'Invalid file path',
      contentDisplay: 'Content display',
      download: 'Download',
@@ -4719,712 +4504,11 @@ index 50188f1..d8ec35f 100644
 -
 -  // Changelog
    changelog: {
--    new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
--    new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
--    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
--    new_0_7_28_2: 'Added an APIKEY.FAN relay page with balance, daily and total usage, and model breakdowns for configured API keys (#3257)',
--    new_0_7_28_3: 'Fixed Coding Agent manual update status and detection of the updated CLI version, with protection for active sessions (#3261)',
--    new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
--    new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
--    new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
--    new_0_7_27_1: 'Added persisted per-turn usage cards showing tokens, cache hits, costs, and token speed (#3241)',
--    new_0_7_27_2: 'Fixed Coding Agent usage attribution, per-call costs, and cumulative totals; retained interrupted-run usage and updated late accounting (#3246)',
--    new_0_7_27_3: 'Added per-turn usage cards inside group chat reply bubbles, with usage restored when loading history (#3248)',
--    new_0_7_27_4: 'Added configured provider and model selection for custom pricing, with manual ID entry and clearer loading errors (#3253)',
--    new_0_7_27_5: 'Recovered Codex sessions after context overflow: the next message starts with fresh context while keeping Studio history and the workspace (#3204)',
--    new_0_7_27_6: 'Fixed Grok message role compatibility when using DeepSeek Chat Completions (#3244)',
--    new_0_7_27_7: 'Fixed blank conversation history when switching profiles on the same connection (#3242)',
--    new_0_7_27_8: 'Unified Studio drawer sizes and workspace picker layouts, fixed group Agent settings drawer layering and loading, and prevented accidental session renaming with Enter (#3247)',
--    new_0_7_26_1: 'Unified Studio navigation, page headers, and list actions, with improved mobile layouts (#3232)',
--    new_0_7_26_2: 'Unified page loading feedback and improved logo loading visibility, including reduced-motion mode (#3232, #3236)',
--    new_0_7_26_3: 'Improved custom backgrounds and glass layers, fixed window edges and rounded corners, and made microphone buttons follow theme colors (#3236)',
--    new_0_7_26_4: 'Adjusted desktop window control placement and styling by platform while preserving native Windows rounded corners (#3234, #3235)',
--    new_0_7_26_5: 'Made Gateway auto-start opt-in, removed CLI checks from Profile list loading, and fixed initial message bubble rendering (#3233)',
--    new_0_7_26_6: 'Added usage cost recording and custom model pricing, with estimates from the local model catalog and improved context-limit matching (#3226)',
--    new_0_7_26_7: 'Added compatibility with DSH registry presets and native plugin configuration, and fixed plugin pages not filling the available space (#3218)',
--    new_0_7_26_8: 'Fixed Cursor logo visibility on light Agent Manager cards (#3222)',
-     new_0_7_25_1: 'Added Cursor CLI support for chat, group chats, and workflows, with native settings, skills management, and isolated Studio MCP (#3110)',
-     new_0_7_25_2: 'Added configurable JEV memory recall, relevance filtering, write review, skill matching, and learning preflight (#3159, #3161, #3169)',
-     new_0_7_25_3: 'Added optional JEV browser target matching and action verification, group summary review and message routing, and workflow quality checks (#3208, #3211)',
-@@ -3810,7 +5947,7 @@ export default {
-     new_0_7_22_5: 'Restored Studio MCP tools in global Coding Agent sessions and improved executable search paths and missing-command errors (#3044, #3055)',
-     new_0_7_22_6: 'Added version declarations to Studio-generated DSH plugin manifests for compatibility (#3038)',
-     new_0_7_22_7: 'Fixed API URL configuration migration reading the next line when BASE_URL is empty (#3046)',
--    new_0_7_22_8: 'Unified OpenRouter application attribution under Ekko Studio (#3056)',
-+    new_0_7_22_8: 'Unified OpenRouter application attribution under SwarmStudio (#3056)',
-     new_0_7_22_9: 'Fixed truncated or incorrectly split multi-line arrays, strings and arrays of tables in scoped Grok session configuration (#3072)',
-     new_0_7_22_10: 'Fixed lost browser executable permissions and symbolic links in desktop runtime bundles, added Hermes 0.21.3 compatibility, and prevented runtime releases from replacing the latest desktop release marker (#3073)',
-     new_0_7_21_1: 'Fixed DSH plugin configuration and Agent preset pages failing to open on Windows when startup selected the wrong command script (#3026)',
-@@ -3827,7 +5964,7 @@ export default {
-     new_0_7_20_10: 'Fixed approval session association for Hermes Agent 0.21 and later while retaining compatibility with older runtimes (#3018)',
-     new_0_7_20_11: 'Updated default apikey domains to apikey.fan and added a one-time startup migration of old endpoints in existing Hermes configurations, preserving paths, keys, and model settings (#3022)',
-     new_0_7_20_12: 'Improved Linux launcher and window icons with rounded corners and transparent margins for a more balanced visual size (#3008)',
--    new_0_7_19_1: 'Rebranded as Ekko Studio with unified app icons, website domains, CLI commands, and product documentation (#2966, #2980, #2981, #2992, #2994)',
-+    new_0_7_19_1: 'Rebranded as SwarmStudio with unified app icons, website domains, CLI commands, and product documentation (#2966, #2980, #2981, #2992, #2994)',
-     new_0_7_19_2: 'Fixed desktop restart loops, interrupted updates, and startup failures; preserved sign-in and browser data across upgrades and migrated Windows startup settings (#2931, #2979, #2988)',
-     new_0_7_19_3: 'Added native OpenCode Free with keyless chat creation and Coding Agent access; available models load in the background (#2932)',
-     new_0_7_19_4: 'Fixed OpenCode session compatibility for Ekko and Coding Agents routed through Studio; Hermes still requires a runtime upgrade (#2996)',
-@@ -3863,7 +6000,7 @@ export default {
-     new_0_7_16_1: 'Desktop now handles Runtime restart requests from its bundled Web UI through Electron, using a clean relaunch with duplicate protection while standalone Web UI restarts continue to work (#2827)',
-     new_0_7_16_2: 'Workflows and group chats can now launch Claude, Codex, and Pi Agents in scoped or global mode; global runs keep Studio-managed prompts and environments isolated while preserving user configuration (#2828)',
-     new_0_7_16_3: 'Grok CLI is now a first-class Coding Agent with scoped proxy models, isolated global mode, native session resume, usage tracking, Skills, workflows, and group chat support (#2832)',
--    new_0_7_16_4: 'On Windows, Agent Manager now offers a one-time migration of legacy Hermes configuration, authentication, memory, Skills, and databases from AppData to %USERPROFILE%\\.hermes while preserving the original data (#2834)',
-+    new_0_7_16_4: "On Windows, Agent Manager now offers a one-time migration of legacy Hermes configuration, authentication, memory, Skills, and databases from AppData to %USERPROFILE%\\.hermes while preserving the original data (#2834)",
-     new_0_7_16_5: 'Windows legacy data migration now copies only user data and database sidecars with validation and rollback, excluding replaceable Runtimes, sessions, and logs to avoid locked-file failures (#2836)',
-     new_0_7_15_1: 'Hermes Runtime version detection now probes the selected local environment directly without triggering network update checks, keeping startup and Version Management reliable offline (#2822)',
-     new_0_7_15_2: 'Activating or installing a Runtime now asks whether to restart immediately; choosing “next launch” no longer restarts the desktop or standalone Web UI automatically (#2822)',
-@@ -3872,7 +6009,7 @@ export default {
-     new_0_7_13_1: 'Windows Runtime installation and cleanup now retry files temporarily locked by Defender or indexers, preventing EACCES, EBUSY, ENOTEMPTY, and EPERM failures when removing or activating downloaded versions (#2801)',
-     new_0_7_13_2: 'Creating Hermes chats now reuses the lightweight Agent availability status; only administrators are sent to installation when Hermes is missing, and failed status checks no longer block chat creation (#2805)',
-     new_0_7_13_3: 'Desktop, the backend Bridge, and CLI now share one locked Hermes environment selection; Version Management shows the active CLI, environment details, and data-directory override guidance, and can install a missing Runtime on demand (#2808)',
--    new_0_7_12_1: 'Windows now consistently uses %USERPROFILE%\\.hermes for Hermes data while honoring HERMES_HOME, keeping Desktop and backend profiles aligned (#2795)',
-+    new_0_7_12_1: "Windows now consistently uses %USERPROFILE%\\.hermes for Hermes data while honoring HERMES_HOME, keeping Desktop and backend profiles aligned (#2795)",
-     new_0_7_12_2: 'Windows Ekko and Hermes startup now defers locked Skill resets for retry and launches command shims correctly, preventing EPERM and spawn EINVAL startup failures (#2796)',
-     new_0_7_12_3: 'Ekko now rejects incomplete model tool calls and removes invalid tool-call history before retrying, preventing empty function, name, or arguments failures across compatible models (#2796)',
-     new_0_7_12_4: 'Database, Skills, memory, and logs now fail independently: Core chat remains available, unavailable modules are marked degraded, and each incident exposes its cause and repair context (#2797)',
-@@ -3896,5 +6033,860 @@ export default {
-     new_0_7_0_9: 'Server ownership is now divided into canonical Studio, Hermes, Ekko, and Coding Agent modules, while legacy MCU routes remain compatible and shutdown reliably cleans up Studio-owned process trees (#2744, #2746, #2747)',
-     new_0_7_0_10: 'The English and Chinese READMEs now document the five runtimes, three Agent families, module ownership, canonical APIs, and current development and validation workflows (#2745)',
-     new_0_7_0_11: 'Device Connections now shows only Android and iOS download cards; official Apple releases are labeled App Store instead of TestFlight · App Store',
-+    new_0_7_26_1: 'Unified Studio navigation, page headers, and list actions, with improved mobile layouts (#3232)',
-+    new_0_7_26_2: 'Unified page loading feedback and improved logo loading visibility, including reduced-motion mode (#3232, #3236)',
-+    new_0_7_26_3: 'Improved custom backgrounds and glass layers, fixed window edges and rounded corners, and made microphone buttons follow theme colors (#3236)',
-+    new_0_7_26_4: 'Adjusted desktop window control placement and styling by platform while preserving native Windows rounded corners (#3234, #3235)',
-+    new_0_7_26_5: 'Made Gateway auto-start opt-in, removed CLI checks from Profile list loading, and fixed initial message bubble rendering (#3233)',
-+    new_0_7_26_6: 'Added usage cost recording and custom model pricing, with estimates from the local model catalog and improved context-limit matching (#3226)',
-+    new_0_7_26_7: 'Added compatibility with DSH registry presets and native plugin configuration, and fixed plugin pages not filling the available space (#3218)',
-+    new_0_7_26_8: 'Fixed Cursor logo visibility on light Agent Manager cards (#3222)',
-+    new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
-+    new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
-+    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
-+    new_0_7_28_2: 'Added an APIKEY.FAN relay page with balance, daily and total usage, and model breakdowns for configured API keys (#3257)',
-+    new_0_7_28_3: 'Fixed Coding Agent manual update status and detection of the updated CLI version, with protection for active sessions (#3261)',
-+    new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
-+    new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
-+    new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
-+    new_0_7_27_1: 'Added persisted per-turn usage cards showing tokens, cache hits, costs, and token speed (#3241)',
-+    new_0_7_27_2: 'Fixed Coding Agent usage attribution, per-call costs, and cumulative totals; retained interrupted-run usage and updated late accounting (#3246)',
-+    new_0_7_27_3: 'Added per-turn usage cards inside group chat reply bubbles, with usage restored when loading history (#3248)',
-+    new_0_7_27_4: 'Added configured provider and model selection for custom pricing, with manual ID entry and clearer loading errors (#3253)',
-+    new_0_7_27_5: 'Recovered Codex sessions after context overflow: the next message starts with fresh context while keeping Studio history and the workspace (#3204)',
-+    new_0_7_27_6: 'Fixed Grok message role compatibility when using DeepSeek Chat Completions (#3244)',
-+    new_0_7_27_7: 'Fixed blank conversation history when switching profiles on the same connection (#3242)',
-+    new_0_7_27_8: 'Unified Studio drawer sizes and workspace picker layouts, fixed group Agent settings drawer layering and loading, and prevented accidental session renaming with Enter (#3247)'
-+  },
-+  matrix: {
-+    options: 'Options',
-+    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
-+    undecryptable: 'Unable to decrypt message',
-+    historyLoadError: 'Server error, unable to load earlier history'
-+  },
-+  cockpit: {
-+    modeWorkspace: 'Workspace',
-+    editTitlePlaceholder: 'Title',
-+    actions: 'Actions',
-+    specify: 'Specify',
-+    decompose: 'Decompose',
-+    moveToTriage: 'Move to triage',
-+    moveToReady: 'Move to ready',
-+    moveToBlocked: 'Mark blocked',
-+    moveToDone: 'Mark done',
-+    moveToArchived: 'Archive',
-+    unblock: 'Unblock',
-+    reclaim: 'Reclaim',
-+    reassign: 'Reassign',
-+    reassignProfile: 'Reassign profile',
-+    recovery: 'Recovery',
-+    diagnostics: 'Diagnostics',
-+    notifyHomeChannels: 'Notify home channels',
-+    subscribe: 'Subscribe',
-+    unsubscribe: 'Unsubscribe',
-+    comments: 'Comments',
-+    addCommentPlaceholder: 'Add a comment…',
-+    confirmDone: 'Mark this task as done? This will complete the task in the kanban board.',
-+    confirmArchive: 'Archive this task? Archived tasks are hidden from the board but can be restored.',
-+    confirmBlocked: 'Mark this task as blocked? Blocked tasks are paused until unblocked.',
-+    completionSummaryRequired: 'Completion summary is required before marking a task as done.',
-+    evaluation: 'Evaluation',
-+    saveDraft: 'Save draft',
-+    parentTasks: 'Parent tasks',
-+    childTasks: 'Child tasks',
-+    parentIdPlaceholder: 'Parent task id',
-+    childIdPlaceholder: 'Child task id',
-+    pendingLinksHint: 'pending link changes',
-+    assignee: 'Assignee',
-+    selectAssignee: 'Select assignee…',
-+    description: 'Description',
-+    descriptionPlaceholder: 'Task description…',
-+    add: 'Add',
-+    attachments: 'Attachments',
-+    noAttachments: 'No attachments',
-+    uploadFile: 'Upload file',
-+    none: 'None',
-+    historySearchPlaceholder: 'Search history…',
-+    historyToday: 'Today',
-+    historyWeek: 'This Week',
-+    historyMonth: 'This Month',
-+    historyCategory: 'Category',
-+    historyCatEvent: 'Events',
-+    historyCatComment: 'Comments',
-+    historyActive: 'Active',
-+    historyDone: 'Done',
-+    notifyTitle: 'Notifications',
-+    notifyUnread: 'unread',
-+    notifySource: 'Source',
-+    notifyAll: 'All',
-+    notifyMatrix: 'Matrix',
-+    notifyChat: 'Chat',
-+    notifyGroup: 'Group',
-+    notifyEmpty: 'No unread messages',
-+    notifyClickHint: 'Click an item to open the chat',
-+    notifyReadAll: 'Mark all as read',
-+    attention: 'Attention',
-+    backToWork: 'Back to Work',
-+    openFull: 'Open Full Page',
-+    saySomething: 'Say something...',
-+    send: 'Send',
-+    noTaskSelected: 'No task selected',
-+    collabWith: 'Collab with',
-+    addCollab: 'Chat & Collab',
-+    addCollabTitle: 'Add Collaborator',
-+    collaborationMap: 'Collaboration Map',
-+    handleLater: 'Handle Later',
-+    taskFiles: 'Task Files',
-+    currentTaskWorkspace: 'Current task workspace',
-+    filterFiles: 'Filter files...',
-+    history: 'History',
-+    historyTitle: 'History',
-+    historyTime: 'Time',
-+    historyAction: 'Action',
-+    historyStatus: 'Status',
-+    historyArchived: 'Archived',
-+    restore: 'Restore',
-+    maximize: 'Maximize',
-+    modeWork: 'Work',
-+    modeTerm: 'Terminal',
-+    schedule: 'Schedule',
-+    today: 'Today',
-+    scheduleEvents: 'Schedule Events',
-+    scheduleEmpty: 'No events for this date',
-+    scheduleAddTodo: 'Add Todo',
-+    scheduleTodoPlaceholder: 'What needs to be done?',
-+    templateManager: 'Template Manager',
-+    templateName: 'Template name...',
-+    saveAsTemplate: 'Save as Template',
-+    applyTemplate: 'Apply',
-+    deleteTemplate: 'Delete',
-+    noTemplates: 'No templates saved',
-+    termExit: 'Exit Terminal',
-+    timeline: 'Timeline',
-+    pending: 'Pending',
-+    done: 'Done',
-+    olderHistory: '{n} older entries',
-+    search: 'Search',
-+    priority: 'Priority',
-+    yourDecision: 'Your Decision',
-+    recommend: 'Recommended',
-+    riskTags: 'Risk Tags',
-+    agentPrefilled: 'Agent pre-filled',
-+    reviewOpinion: 'Review Opinion',
-+    submit: 'Submit',
-+    newCollabFromArchive: 'New Collab from Template',
-+    readOnly: 'Read Only',
-+    noMessages: 'No messages',
-+    connected: 'Connected',
-+    disconnected: 'Disconnected',
-+    searchPlaceholder: 'Search sessions/tasks/rooms',
-+    gatewayProbeTitle: 'Click to view Connected Platforms details',
-+    countdownTitle: 'Next auto-detect countdown',
-+    notifications: 'Notifications',
-+    defaultUser: 'You',
-+    refreshFailed: 'Refresh failed, click to retry',
-+    refreshAll: 'Refresh all boards ({n}s)',
-+    noAttention: 'No pending items',
-+    mapHint: 'Scroll to zoom · Drag nodes/canvas · Click to navigate',
-+    legendBlocked: 'Blocked',
-+    legendTodo: 'To Do',
-+    legendTriage: 'Triage',
-+    legendReview: 'Review',
-+    filterBoard: 'Board',
-+    filterPriority: 'Priority',
-+    filterStatus: 'Status',
-+    filterAssignee: 'Assignee',
-+    filterTenant: 'Tenant',
-+    totalCount: '{n} items total',
-+    clearFilters: 'Clear filters',
-+    backToSessions: 'Back to session list',
-+    aggregateMode: 'Aggregate mode: merge related task sessions into one view',
-+    aggregate: 'Aggregate',
-+    close: 'Close',
-+    justNow: 'just now',
-+    minutesAgo: '{n}m ago',
-+    hoursAgo: '{n}h ago',
-+    daysAgo: '{n}d ago',
-+    weekPrefix: 'Wk',
-+    modeFleet: 'Fleet',
-+    fleetTitle: 'Session Fleet',
-+    fleetLive: 'live',
-+    fleetOffline: 'disconnected',
-+    fleetWorking: '{n} running',
-+    fleetTotal: '{n} sessions',
-+    fleetAttention: '{n} pending',
-+    fleetSearchPlaceholder: 'Search sessions/profiles/output…',
-+    fleetWorkingOnly: 'Active + pending only',
-+    fleetEmpty: 'No matching sessions',
-+    fleetOfflineEmpty: 'Fleet stream not connected (server 2.13+)',
-+    fleetQueued: 'queue {n}',
-+    fleetAborting: 'aborting',
-+    fleetApproval: 'Tool approval',
-+    fleetApprove: 'Approve',
-+    fleetAlways: 'Always allow',
-+    fleetDeny: 'Deny',
-+    fleetClarify: 'Clarify',
-+    fleetAnswer: 'Answer',
-+    fleetClarifyPrompt: 'Reply to this clarification:',
-+    teamAll: 'All teams',
-+    teamNew: 'New team',
-+    teamEdit: 'Edit',
-+    teamName: 'Name',
-+    teamNamePlaceholder: 'Team name',
-+    teamNameRequired: 'Name is required',
-+    teamDescription: 'Description',
-+    teamColor: 'Color',
-+    teamProfiles: 'Member profiles',
-+    teamBoards: 'Boards',
-+    teamNoProfiles: '(no profiles found)',
-+    teamDelete: 'Delete',
-+    teamCancel: 'Cancel',
-+    teamSave: 'Save',
-+    inboxTitle: 'Command Inbox',
-+    inboxPending: 'pending',
-+    inboxClear: 'All clear',
-+    inboxKind_approval: 'Approval',
-+    inboxKind_blocked: 'Blocked',
-+    inboxKind_clarify: 'Clarify',
-+    inboxKind_review: 'Review',
-+    inboxKind_triage: 'Triage',
-+    inboxKind_chat: 'Chat',
-+    inboxKind_matrix: 'Matrix',
-+    inboxKind_group: 'Group',
-+    inboxKind_reminder: 'Reminder',
-+    fleetSubagents: 'Sub-agents',
-+    fleetSubagentsRun: '{n} running',
-+    traceUsageSummary: 'Session usage totals (L2 aggregate, continuous across runs)',
-+    inboxKind_mcp: 'MCP degraded',
-+    completionSummary: 'Completion summary',
-+    completionSummaryHint: 'Enter a summary for this task. It is stored as the task result.',
-+    scheduleTitle: 'Schedule',
-+    yearLabel: 'Year',
-+    itemCount: '{n} items',
-+    aggregateSessions: 'Aggregate linked sessions',
-+    termTool: 'Terminal tool',
-+    termToolNotInstalled: 'not installed',
-+    accurate: 'Accurate',
-+    allTasks: 'All Tasks',
-+    applyTimeFilter: 'Apply Time Filter',
-+    archived: 'Archived',
-+    backToAllTasks: 'Back to All Tasks',
-+    childTask: 'Child Task',
-+    collaborationSequence: 'Collaboration',
-+    collapseCollabMap: 'Collapse Map',
-+    collapseSidebar: 'Collapse Sidebar',
-+    collapseTimeline: 'Collapse Timeline',
-+    completed: 'Completed',
-+    config: 'Config',
-+    configUnavailable: 'Config Unavailable',
-+    content: 'Content',
-+    copyTaskId: 'Copy Task ID',
-+    createdAt: 'Created At',
-+    createdBy: 'Created By',
-+    creator: 'Creator',
-+    detecting: 'Detecting',
-+    duration: 'Duration',
-+    editMode: 'Edit Mode',
-+    empty: 'Empty',
-+    endTime: 'End Time',
-+    entryPoint: 'Entry Point',
-+    env: 'Environment',
-+    eventCount: 'Events',
-+    evidenceLevel: 'Evidence',
-+    executionCount: 'Executions',
-+    expandCollabMap: 'Expand Map',
-+    expandDayBackward: 'Previous Day',
-+    expandDayForward: 'Next Day',
-+    expandTimeline: 'Expand Timeline',
-+    exportDossier: 'Export Dossier',
-+    globalTimeline: 'Global Timeline',
-+    inference: 'Inference',
-+    liveMode: 'Live',
-+    loadConfig: 'Load Config',
-+    loadingAggregate: 'Loading...',
-+    model: 'Model',
-+    moreInfo: 'More Info',
-+    nextYear: 'Next Year',
-+    noData: 'No Data',
-+    noExecutionData: 'No Execution Data',
-+    noMatchingTasks: 'No Matching Tasks',
-+    noReminder: 'No Reminder',
-+    noTasksOnPage: 'No tasks on this page',
-+    parameter: 'Parameter',
-+    parentTask: 'Parent Task',
-+    path: 'Path',
-+    playPause: 'Play/Pause',
-+    playbackHint: 'Use play button to replay events',
-+    prevYear: 'Previous Year',
-+    previewMode: 'Preview',
-+    projectId: 'Project ID',
-+    reloadArchived: 'Reload Archived',
-+    reloadCompleted: 'Reload Completed',
-+    replayMode: 'Replay',
-+    result: 'Result',
-+    runObservatory: 'Observatory',
-+    scrollZoom: 'Scroll to zoom',
-+    searchEvents: 'Search events...',
-+    selectNodeForDetail: 'Select a node to view details',
-+    sessionRecords: 'Session Records',
-+    skill: 'Skill',
-+    skillCount: 'Skills',
-+    source: 'Source',
-+    startTime: 'Start Time',
-+    summary: 'Summary',
-+    switchSpeed: 'Speed',
-+    taskDetail: 'Task Detail',
-+    taskStatus: 'Status',
-+    taskSwimlane: 'Task Swimlane',
-+    taskTimeline: 'Task Timeline',
-+    taskTopology: 'Task Topology',
-+    focusTask: ' · focused {id}',
-+    tenant: 'Tenant',
-+    timeWindow: 'Time Window',
-+    timelinePrefix: 'Timeline',
-+    title: 'Title',
-+    type: 'Type',
-+    unassignedTask: 'Unassigned',
-+    unspecified: 'Unspecified',
-+    newMatrix: 'New Matrix room',
-+    newMatrixDesc: 'Create a Matrix collaboration room and invite members',
-+    newChat: 'New chat',
-+    newChatDesc: 'Start a new agent chat',
-+    newGroup: 'New group chat',
-+    newGroupDesc: 'Create a multi-party group room',
-+    workspaceNotFound: 'Workspace directory not found (not created yet or already cleaned)',
-+    retry: 'Retry',
-+    actionApprove: 'Approve',
-+    actionDecide: 'Decide',
-+    actionSupplement: 'Supplement',
-+    actionEvaluate: 'Evaluate',
-+    actionDelegate: 'Delegate',
-+    decisionConditional: 'Conditionally approved',
-+    decisionConditionalDesc: 'Proceed with conditions tracked as tasks',
-+    decisionReject: 'Reject',
-+    decisionApprove: 'Approve',
-+    workerHealth: 'Worker',
-+    heartbeat: 'heartbeat',
-+    maxRuntime: 'max runtime',
-+    failureCircuit: 'Failures',
-+    circuitTripped: 'circuit tripped',
-+    claimLock: 'Claim',
-+    workflow: 'Workflow',
-+    goalMode: 'goal mode',
-+    derivation: 'Origin',
-+    events: 'Events',
-+    runHistory: 'Run history',
-+    lifecycleTitle: 'Task lifecycle',
-+    lifecycleMedian: 'Median completion',
-+    lifecycleBottleneckHint: 'State where active tasks dwell longest on average',
-+    lifecycleBottleneck: 'Bottleneck',
-+    lifecycleFunnel: 'Status distribution (active vs all)',
-+    lifecycleDwell: 'Average dwell per active status',
-+    lifecycleHeat: 'Priority × status'
-+  },
-+  matrixChat: {
-+    actionDelete: 'Delete',
-+    adminTools: 'Admin Tools',
-+    actionEdit: 'Edit',
-+    actionReply: 'Reply',
-+    addReaction: 'Add Reaction',
-+    addTopic: 'Add Topic',
-+    allThreads: 'All Threads',
-+    backToThreads: 'Back to Threads',
-+    banUser: 'Ban',
-+    bold: 'Bold',
-+    cancel: 'Cancel',
-+    changeAvatar: 'Change Avatar',
-+    code: 'Code',
-+    codeBlock: 'Code Block',
-+    comingSoon: 'Coming Soon',
-+    clearAllMessages: 'Clear All Messages',
-+    clearAllMessagesConfirm: 'Are you sure you want to clear all messages in "{room}"?',
-+    clearAllMessagesWarning: 'This will redact all visible messages you have permission to delete. This action cannot be undone.',
-+    clearMessagesFailed: 'Failed to clear messages',
-+    clearMessagesResult: '{deleted} messages cleared, {failed} failed',
-+    confirmDelete: 'Confirm Delete',
-+    confirmDeleteAction: 'Are you sure you want to delete this message?',
-+    confirmLeave: 'Click again to confirm',
-+    copyLink: 'Copy Link',
-+    copyText: 'Copy Text',
-+    createRoom: 'Create Room',
-+    delete: 'Delete',
-+    deleteReasonPlaceholder: 'Reason (optional)',
-+    disabled: 'Disabled',
-+    edit: 'Edit',
-+    editMessagePlaceholder: 'Edit message...',
-+    edited: 'edited',
-+    editingMessage: 'Editing message',
-+    emoji: 'Emoji',
-+    enabled: 'Enabled',
-+    encryption: 'Encryption',
-+    e2eVerified: 'Encryption verified',
-+    eventNotFound: 'Event not found',
-+    exportChatMenu: 'Export Chat',
-+    exportChatDescription: 'Export all messages from this room as a JSON file.',
-+    exportFailed: 'Failed to export chat',
-+    exportSuccess: '{count} messages exported',
-+    exporting: 'Exporting...',
-+    extensionsMenu: 'Extensions',
-+    failed: 'Failed',
-+    favorite: 'Favorite',
-+    filesMenu: 'Files',
-+    forward: 'Forward',
-+    forwardMessage: 'Forward Message',
-+    forwardingMessage: 'Forwarding message...',
-+    historyLoadError: 'Server error, unable to load earlier history',
-+    historyWorldReadable: 'History visible to anyone',
-+    historyShared: 'History visible to members since they joined',
-+    historyInvited: 'History visible to invited members',
-+    historyJoined: 'History visible to members',
-+    ignoreUser: 'Ignore User',
-+    inviteFailed: 'Invite failed',
-+    inviteSending: 'Sending invite...',
-+    inviteToRoom: 'Invite to Room',
-+    inviteUser: 'Invite User',
-+    italic: 'Italic',
-+    joinRoom: 'Join Room',
-+    kickUser: 'Kick User',
-+    leaveRoom: 'Leave Room',
-+    leaveFailed: 'Failed to leave room',
-+    leaveRoomConfirm: 'Are you sure you want to leave "{room}"?',
-+    linkCopied: 'Link copied',
-+    loading: 'Loading...',
-+    loadMore: 'Load more',
-+    loadingThreads: 'Loading threads...',
-+    markAllThreadsRead: 'Mark all threads as read',
-+    memberAdmin: 'Admin',
-+    memberCount: '{count} members',
-+    memberDefault: 'Member',
-+    memberInvited: 'Invited',
-+    memberMod: 'Moderator',
-+    memberSearch: 'Search members',
-+    members: 'Members',
-+    messageSendFailed: 'Failed to send message',
-+    messageSending: 'Sending...',
-+    minutesAgo: '{n}m ago',
-+    hoursAgo: '{n}h ago',
-+    daysAgo: '{n}d ago',
-+    justNow: 'just now',
-+    myThreads: 'My Threads',
-+    newMessages: 'New messages',
-+    noExtensions: 'No integrations',
-+    noExtensionsHint: 'Add integrations from the integration manager',
-+    noFilesFound: 'No files found',
-+    noMembersFound: 'No members found',
-+    noPinnedMessages: 'No pinned messages',
-+    noResults: 'No results',
-+    noRoomSelected: 'No room selected',
-+    noRooms: 'No rooms',
-+    noThreadsDesc: 'No threads in this room yet',
-+    noThreadsTitle: 'No Threads',
-+    noUsersFound: 'No users found',
-+    noTopic: 'No topic set',
-+    notAuthenticated: 'Not authenticated',
-+    notifications: 'Notifications',
-+    notifyAllMessages: 'All messages',
-+    notifyMentions: 'Mentions only',
-+    notifyNone: 'None',
-+    notTrusted: 'Not trusted',
-+    offline: 'Offline',
-+    online: 'Online',
-+    openWidget: 'Open widget',
-+    options: 'Options',
-+    paginateLoading: 'Loading more...',
-+    people: 'People',
-+    pinnedMessages: 'Pinned Messages',
-+    pollsMenu: 'Polls',
-+    pollEnded: 'Closed',
-+    pollActive: 'Active',
-+    noPolls: 'No polls yet',
-+    untitledPoll: 'Untitled Poll',
-+    votes: 'votes',
-+    powerLevel: 'Power Level',
-+    powerLevelValue: '{level}',
-+    publicRoom: 'Public Room',
-+    replyInThread: 'Reply in Thread',
-+    replyMessagePlaceholder: 'Reply...',
-+    reportFailed: 'Failed to submit report',
-+    reportReason: 'Reason for report...',
-+    reportRoom: 'Report Room',
-+    reportRoomDescription: 'Report this room to the server administrator. Please describe the issue.',
-+    reportSpamAbuse: 'Spam or abuse',
-+    roomAlias: 'Room Alias',
-+    roomEncryption: 'Encrypted room',
-+    roomId: 'Room ID',
-+    roomIdOrAlias: 'Room ID or alias',
-+    roomInfo: 'Room Info',
-+    roomMembers: 'Room Members',
-+    roomName: 'Room Name',
-+    roomPublic: 'Public',
-+    roomSettings: 'Room Settings',
-+    roomTopic: 'Topic',
-+    save: 'Save',
-+    saving: 'Saving...',
-+    search: 'Search',
-+    searchHint: 'Search rooms and people',
-+    searchResultCount: '{count} results',
-+    searchRooms: 'Search Rooms',
-+    searchUsers: 'Search Users',
-+    searchUsersHint: 'Search by username or display name',
-+    send: 'Send',
-+    sendMessage: 'Send Message',
-+    sent: 'Sent',
-+    showAll: 'Show All',
-+    showLess: 'Show Less',
-+    shareRoom: 'Share Room',
-+    startChat: 'Start Chat',
-+    stateBanned: 'banned',
-+    stateChangedName: 'changed display name',
-+    stateInvited: 'was invited',
-+    stateJoined: 'joined',
-+    stateKicked: 'was kicked',
-+    stateLeft: 'left',
-+    stateLoadingOlder: 'Loading older messages...',
-+    stateNoMoreHistory: 'No more history',
-+    stateReason: 'Reason',
-+    stateRejectedInvite: 'rejected the invitation',
-+    stateRoomCreated: 'Room created',
-+    stateUnbanned: 'was unbanned',
-+    stateWithdrewInvite: 'withdrew invitation',
-+    stateNameSet: '{sender} set the room name to "{name}"',
-+    stateNameChanged: '{sender} changed the room name from "{oldName}" to "{newName}"',
-+    stateNameRemoved: '{sender} removed the room name "{oldName}"',
-+    stateTopicSet: '{sender} set the topic to "{topic}"',
-+    stateTopicChanged: '{sender} changed the topic from "{oldTopic}" to "{newTopic}"',
-+    stateTopicRemoved: '{sender} removed the topic',
-+    stateAvatarChanged: '{sender} changed the room avatar',
-+    stateAliasSet: '{sender} set the main address to {alias}',
-+    stateAliasChanged: '{sender} changed the main address from {oldAlias} to {alias}',
-+    stateAliasRemoved: '{sender} removed the main address {oldAlias}',
-+    statePowerLevelChanged: '{sender} changed the power level requirements',
-+    stateMadePublic: '{sender} made the room public to anyone who knows the link',
-+    stateMadePrivate: '{sender} made the room invite only',
-+    stateJoinRulesChanged: '{sender} changed the join rules',
-+    stateHistoryVisibilityChanged: '{sender} changed the history visibility',
-+    stateEncryptionEnabled: '{sender} turned on end-to-end encryption',
-+    statePinnedMessages: '{sender} pinned {count} messages',
-+    stateUnpinnedMessages: '{sender} unpinned some messages ({count} pinned)',
-+    stateClearedPinned: '{sender} cleared all pinned messages',
-+    stateRoomUpgraded: '{sender} upgraded the room',
-+    suggestions: 'Suggestions',
-+    submitting: 'Submitting...',
-+    syncConnecting: 'Connecting...',
-+    syncError: 'Connection error',
-+    thread: 'Thread',
-+    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
-+    threads: 'Threads',
-+    threadsMenu: 'Threads',
-+    typingMany: '{n} people are typing...',
-+    typingOne: '{user} is typing...',
-+    typingTwo: '{user1} and {user2} are typing...',
-+    trusted: 'Trusted',
-+    unavailable: 'Unavailable',
-+    undecryptable: 'Unable to decrypt message',
-+    unencrypted: 'Unencrypted',
-+    unignoreUser: 'Unignore User',
-+    unpinAll: 'Unpin all',
-+    unpinMessage: 'Unpin message',
-+    unknownFile: 'Unknown file',
-+    uploadFile: 'Upload File',
-+    videoCall: 'Video Call',
-+    voiceCall: 'Voice Call'
-+  },
-+  approvals: {
-+    title: 'Approval inbox',
-+    pageTitle: 'Approval Inbox',
-+    navLabel: 'Approvals',
-+    empty: 'No pending approvals',
-+    pendingCount: '{n} pending',
-+    kindCommand: 'Command approvals',
-+    kindReview: 'Review cards',
-+    objectPrefix: 'Object',
-+    reviewUncommitted: 'No uncommitted changes were submitted',
-+    reviewBaseline: 'Baseline diff {ref}',
-+    history: 'Decision history',
-+    historyEmpty: 'No decisions yet',
-+    colTime: 'Time',
-+    colActor: 'Actor',
-+    colTarget: 'Target',
-+    colDecision: 'Decision',
-+    colNote: 'Note',
-+    loadFailed: 'Load failed',
-+    viewDiff: 'View diff',
-+    choice: {
-+      once: 'Approve',
-+      session: 'Allow for session',
-+      always: 'Always allow',
-+      deny: 'Deny',
-+      approve: 'Approve',
-+      request_changes: 'Request changes'
-+    },
-+    colRisk: 'Risk tier',
-+    risk: {
-+      high: 'High risk',
-+      medium: 'Standard',
-+      low: 'Low risk',
-+      highHint: 'Decide individually',
-+      autoSample: 'Auto-approvable · sampled'
-+    }
-+  },
-+  loopCockpit: {
-+    title: 'Loop Cockpit',
-+    tagline: 'Live loop growth',
-+    back: 'Back to cockpit',
-+    scene: {
-+      overview: 'Overview',
-+      manage: 'Manage',
-+      code: 'Code',
-+      ops: 'Ops'
-+    },
-+    status: {
-+      connected: 'Live',
-+      disconnected: 'Offline'
-+    },
-+    kpi: {
-+      loopsActive: 'Active loops',
-+      runsRunning: 'Running',
-+      awaiting: 'Awaiting',
-+      done7d: 'Done · 7d',
-+      avg7d: 'Avg · 7d'
-+    },
-+    inbox: {
-+      title: 'Interventions',
-+      empty: 'Nothing awaiting your decision',
-+      all: 'All interventions'
-+    },
-+    loops: {
-+      title: 'Loops',
-+      newLoop: 'New loop',
-+      deleteConfirm: 'Delete this loop? This cannot be undone.'
-+    },
-+    viz: {
-+      core: 'Core',
-+      empty: 'No loops growing yet — create one, or instantiate from a template in Orchestrate.',
-+      emptyCta: 'New loop',
-+      emptyCta2: 'Orchestrate',
-+      legendRunning: 'Running',
-+      legendAwaiting: 'Awaiting',
-+      legendDone: 'Done',
-+      legendFailed: 'Failed',
-+      moreLoops: '{n} more loops hidden'
-+    }
+     new_0_7_30_1: 'Added Qwen Code, Kimi Code, CodeBuddy, Qoder, GitHub Copilot, and ZCode for chats, group chats, and workflows; Qoder uses global mode, while the other five also support scoped models (#3280)',
+     new_0_7_30_2: 'Ekko chats now appear under Built-in Agent in history and search, with /context, /usage, /status, and /compact commands (#3276)',
+@@ -3767,4 +5900,220 @@ export default {
+     new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
+     new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
    },
 +  loopScenes: {
 +    manage: {
@@ -5644,10 +4728,10 @@ index 50188f1..d8ec35f 100644
 +  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 940946d..92c25da 100644
+index f54acac5..9ddab268 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -2,294 +2,384 @@ import { socialMessagesZh } from '../social-messages'
+@@ -2,278 +2,311 @@ import { socialMessagesZh } from '../social-messages'
  
  export default {
    jev: {
@@ -6226,91 +5310,15 @@ index 940946d..92c25da 100644
    },
    socialMessages: socialMessagesZh,
    browser: {
--    title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 Ekko Studio 桌面端可用。', newTab: '新标签页',
--    back: '后退', forward: '前进', reload: '刷新', stop: '停止', addressPlaceholder: '搜索或输入网址',
--    undoAnnotation: '撤销上一个', deleteAnnotation: '删除标注 {index}',
--    selectElement: '选择元素', selectRegion: '框选区域', annotationPlaceholder: '描述希望 Agent 检查或修改的内容…', selectionData: '浏览器选区数据', annotationAdded: '截图已添加到对话输入框', annotationCount: '已标注 {count} 处', annotationLabel: '标注 {index}', clearAnnotations: '清除标注', finishAnnotation: '完成',
--    agent: 'Agent', agentControlling: '{agent} 正在控制此标签页', agentWaiting: '{agent} 正在等待你的确认', takeOver: '接管', tabCrashed: '此标签页已崩溃。', recoverTab: '重新加载', profiles: '配置档案', profileName: '配置名称', addProfile: '添加配置', currentProfile: '当前使用', switchProfile: '切换使用', editProfile: '编辑配置',
--    profileDirectory: 'Profile 数据目录', downloadDirectory: '下载目录', profileRootDirectory: '配置根目录', chooseProfileRootDirectory: '选择空目录', profileRootDirectoryHint: '请选择空目录。浏览器数据使用 {data}，下载文件使用 {download}。', proxy: '代理', proxyMode: '代理模式', proxyDirect: '直连', proxySystem: '系统代理', proxyCustom: '自定义代理', proxyServer: '代理服务器', proxyServerPlaceholder: '例如：http://127.0.0.1:7890 或 socks5://127.0.0.1:1080',
--    askBeforeDownload: '每次下载前询问保存位置', downloadConflictPolicy: '文件重名处理', uniquifyDownloads: '自动生成唯一文件名', askOnConflict: '文件已存在时询问', downloads: '下载记录', downloadStateProgressing: '下载中', downloadStateCompleted: '已完成', downloadStateCancelled: '已取消', downloadStateInterrupted: '已中断', downloadStateBlocked: '已阻止', permissions: '网站权限', permissionsHint: '远程页面权限默认全部拒绝，并在此处保留审计记录。', blocked: '已阻止',
--    profileSwitchTitle: '切换浏览器 Profile？', profileSwitchWarning: '可能中断 {agents} 个 Agent 操作、{downloads} 个下载任务和 {annotations} 个批注任务。',
--    deleteProfileTitle: '删除浏览器 Profile？', deleteProfileWarning: '托管的 Profile 数据将移入系统废纸篓，自定义目录不会被删除。', clearCache: '清除缓存', clearPermissionAudit: '清除权限记录', clearSiteData: '清除站点数据', clearSiteDataWarning: '这会退出所选 Profile 中的网站登录，并清除 Cookie 和本地存储。', dataCleared: '浏览器数据已清除', loadFailed: '内置浏览器启动失败',
-+    title: '浏览器',
-+    settings: '浏览器设置',
-+    desktopOnly: '内置浏览器仅在 SwarmStudio 桌面端可用。',
-+    newTab: '新标签页',
-+    back: '后退',
-+    forward: '前进',
-+    reload: '刷新',
-+    stop: '停止',
-+    addressPlaceholder: '搜索或输入网址',
-+    undoAnnotation: '撤销上一个',
-+    deleteAnnotation: '删除标注 {index}',
-+    selectElement: '选择元素',
-+    selectRegion: '框选区域',
-+    annotationPlaceholder: '描述希望 Agent 检查或修改的内容…',
-+    selectionData: '浏览器选区数据',
-+    annotationAdded: '截图已添加到对话输入框',
-+    annotationCount: '已标注 {count} 处',
-+    annotationLabel: '标注 {index}',
-+    clearAnnotations: '清除标注',
-+    finishAnnotation: '完成',
-+    agent: 'Agent',
-+    agentControlling: '{agent} 正在控制此标签页',
-+    agentWaiting: '{agent} 正在等待你的确认',
-+    takeOver: '接管',
-+    tabCrashed: '此标签页已崩溃。',
-+    recoverTab: '重新加载',
-+    profiles: '配置档案',
-+    profileName: '配置名称',
-+    addProfile: '添加配置',
-+    currentProfile: '当前使用',
-+    switchProfile: '切换使用',
-+    editProfile: '编辑配置',
-+    profileDirectory: 'Profile 数据目录',
-+    downloadDirectory: '下载目录',
-+    profileRootDirectory: '配置根目录',
-+    chooseProfileRootDirectory: '选择空目录',
-+    profileRootDirectoryHint: '请选择空目录。浏览器数据使用 {data}，下载文件使用 {download}。',
-+    proxy: '代理',
-+    proxyMode: '代理模式',
-+    proxyDirect: '直连',
-+    proxySystem: '系统代理',
-+    proxyCustom: '自定义代理',
-+    proxyServer: '代理服务器',
-+    proxyServerPlaceholder: '例如：http://127.0.0.1:7890 或 socks5://127.0.0.1:1080',
-+    askBeforeDownload: '每次下载前询问保存位置',
-+    downloadConflictPolicy: '文件重名处理',
-+    uniquifyDownloads: '自动生成唯一文件名',
-+    askOnConflict: '文件已存在时询问',
-+    downloads: '下载记录',
-+    downloadStateProgressing: '下载中',
-+    downloadStateCompleted: '已完成',
-+    downloadStateCancelled: '已取消',
-+    downloadStateInterrupted: '已中断',
-+    downloadStateBlocked: '已阻止',
-+    permissions: '网站权限',
-+    permissionsHint: '远程页面权限默认全部拒绝，并在此处保留审计记录。',
-+    blocked: '已阻止',
-+    profileSwitchTitle: '切换浏览器 Profile？',
-+    profileSwitchWarning: '可能中断 {agents} 个 Agent 操作、{downloads} 个下载任务和 {annotations} 个批注任务。',
-+    deleteProfileTitle: '删除浏览器 Profile？',
-+    deleteProfileWarning: '托管的 Profile 数据将移入系统废纸篓，自定义目录不会被删除。',
-+    clearCache: '清除缓存',
-+    clearPermissionAudit: '清除权限记录',
-+    clearSiteData: '清除站点数据',
-+    clearSiteDataWarning: '这会退出所选 Profile 中的网站登录，并清除 Cookie 和本地存储。',
-+    dataCleared: '浏览器数据已清除',
-+    loadFailed: '内置浏览器启动失败'
+@@ -287,7 +320,6 @@ export default {
+     profileSwitchTitle: '切换浏览器 Profile？', profileSwitchWarning: '可能中断 {agents} 个 Agent 操作、{downloads} 个下载任务和 {annotations} 个批注任务。',
+     deleteProfileTitle: '删除浏览器 Profile？', deleteProfileWarning: '托管的 Profile 数据将移入系统废纸篓，自定义目录不会被删除。', clearCache: '清除缓存', clearPermissionAudit: '清除权限记录', clearSiteData: '清除站点数据', clearSiteDataWarning: '这会退出所选 Profile 中的网站登录，并清除 Cookie 和本地存储。', dataCleared: '浏览器数据已清除', loadFailed: '内置浏览器启动失败',
    },
 -  // 登录
    login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
+     title: 'SwarmStudio',
      description: '输入用户名和密码以继续。',
-     placeholder: '访问令牌',
-     submit: '登录',
-@@ -333,8 +423,17 @@ export default {
+@@ -333,8 +365,17 @@ export default {
      defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
      defaultCredentialAction: '去修改',
      defaultCredentialLater: '稍后提醒',
@@ -6329,7 +5337,7 @@ index 940946d..92c25da 100644
    users: {
      title: '账户管理',
      description: '创建用户、分配角色，并控制普通管理员可访问的配置。',
-@@ -355,15 +454,18 @@ export default {
+@@ -355,15 +396,18 @@ export default {
      disable: '禁用',
      roles: {
        superAdmin: '超级管理员',
@@ -6352,7 +5360,7 @@ index 940946d..92c25da 100644
    common: {
      close: '关闭',
      loading: '加载中...',
-@@ -394,10 +496,12 @@ export default {
+@@ -394,10 +438,12 @@ export default {
      collapse: '收起',
      start: '启动',
      stop: '停止',
@@ -6368,7 +5376,7 @@ index 940946d..92c25da 100644
    mcp: {
      title: 'MCP 服务器',
      loadFailed: '加载 MCP 服务器失败',
-@@ -422,8 +526,8 @@ export default {
+@@ -422,8 +468,8 @@ export default {
      updateFailed: '更新服务器失败',
      saveFailed: '保存失败',
      serverRemoved: '已移除 "{name}"',
@@ -6379,42 +5387,18 @@ index 940946d..92c25da 100644
      connectedStatus: '已连接',
      disconnectedStatus: '未连接',
      disabledStatus: '已禁用',
-@@ -466,49 +570,20 @@ export default {
+@@ -466,7 +512,7 @@ export default {
      toolsSelectAll: '全选',
      toolsClearSelection: '取消全选',
      toolsExcludeAll: '全部排除',
 -    toolsClearExcluded: '清空排除',
 +    toolsClearExcluded: '清空排除'
    },
--
--  apiRelay: {
--    title: "API 中转",
--    headline: "一站接入主流 AI 模型",
--    description: "APIKEY.FAN 是 Ekko Studio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
--    zhipu: "智谱",
--    viewNow: "立即查看",
--    apiCompatible: "官方 API 兼容",
--    usageTitle: "密钥用量",
--    usageScope: "涵盖有权限访问的 Profile。同一服务和密钥合并展示，不同密钥分别统计。",
--    loadFailed: "用量加载失败，请点击刷新重试。",
--    remaining: "剩余额度",
--    sources: "配置来源",
--    keyActive: "密钥有效",
--    keyInactive: "密钥已失效",
--    requests: "请求数",
--    spend: "费用",
--    today: "今日",
--    total: "累计",
--    modelUsage: "按模型查看用量",
--    model: "模型",
--    errors: {
--      unauthorized: "密钥认证失败，请检查配置的密钥。",
--      timeout: "用量查询超时，请点击刷新重试。",
--      unavailable: "暂时无法连接用量服务，请点击刷新重试。",
--      invalid_response: "用量接口返回的数据格式无法识别。",
--    },
--  },
--
+ 
+   apiRelay: {
+@@ -498,17 +544,17 @@ export default {
+   },
+ 
    sidebar: {
 -    desktopUpdatePreparing: "正在准备更新",
 -    desktopUpdateStopping: "正在停止下载…",
@@ -6441,7 +5425,7 @@ index 940946d..92c25da 100644
      chat: '对话',
      backToChat: '返回',
      search: '搜索',
-@@ -551,9 +626,9 @@ export default {
+@@ -551,9 +597,9 @@ export default {
      groupMonitoring: '监控',
      groupMonitoringShort: '监控',
      groupTools: '工具',
@@ -6454,7 +5438,7 @@ index 940946d..92c25da 100644
      theme: '主题',
      settings: '设置',
      connected: '已连接',
-@@ -575,8 +650,1599 @@ export default {
+@@ -575,8 +621,1599 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -8055,7 +7039,7 @@ index 940946d..92c25da 100644
    agentManager: {
      title: 'Agent 管理',
      subtitle: '统一发现和管理这台设备上的 Agent。',
-@@ -599,7 +2265,6 @@ export default {
+@@ -599,7 +2236,6 @@ export default {
      ekkoDescription: 'Ekko 随 Studio 提供，无需单独安装、升级或删除。',
      version: '版本',
      codingAgentDescription: '可由 Studio 安装、检查更新和删除。',
@@ -8063,22 +7047,18 @@ index 940946d..92c25da 100644
      cursorDescription: '请从 https://cursor.com/install 安装 Cursor CLI（`agent`），然后刷新。Studio 不会用 npm 安装。',
      cursorNoManagedConfig: '启动不会改写 ~/.cursor/mcp.json。托管服务写在本次会话的运行时副本里。',
      updateToVersion: '更新到 {version}',
-@@ -611,18 +2276,18 @@ export default {
+@@ -611,7 +2247,7 @@ export default {
      aiHelpDialogPositive: '询问 AI',
      aiHelpDrawerTitle: 'Ekko · Agent 管理排障',
      aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
 -    aiHelpPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。',
 +    aiHelpPrompt: "请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。",
      legacyDataMigrationTitle: '发现旧版 Hermes 数据',
--    legacyDataMigrationDescription: 'Ekko Studio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-+    legacyDataMigrationDescription: 'SwarmStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
+     legacyDataMigrationDescription: 'SwarmStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
      legacyDataMigrationSource: '旧目录',
-     legacyDataMigrationTarget: '当前目录',
-     legacyDataMigrationWarning: '同意后 Studio 将自动重启，并在服务启动前用旧目录中的同名文件覆盖当前目录；当前目录独有的文件会保留。此询问只会显示一次。',
-     legacyDataMigrationPositive: '迁移旧数据',
+@@ -621,8 +2257,8 @@ export default {
      legacyDataMigrationNegative: '不迁移',
--    legacyDataMigrationSuccess: '已记录迁移选择，Ekko Studio 将重启并在服务启动前迁移数据。',
-+    legacyDataMigrationSuccess: '已记录迁移选择，SwarmStudio 将重启并在服务启动前迁移数据。',
+     legacyDataMigrationSuccess: '已记录迁移选择，SwarmStudio 将重启并在服务启动前迁移数据。',
      legacyDataMigrationFailed: '旧版 Hermes 数据迁移失败：{error}',
 +    antigravityDescription: '通过官方安装指南安装 Antigravity CLI（agy）并在终端完成登录，再刷新。支持全局和模型隔离模式；Studio 不托管安装、更新或卸载。'
    },
@@ -8086,40 +7066,7 @@ index 940946d..92c25da 100644
    runtimeVersions: {
      title: '版本管理',
      runtimeTitle: 'Hermes Runtime',
-@@ -639,8 +2304,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS（桌面端 / 终端）',
-     dataDirectoryEnvLinux: 'Linux（登录环境）',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 Ekko Studio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 Ekko Studio 桌面端或 Web UI。执行前请先完全退出 Ekko Studio：',
-+    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 SwarmStudio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 SwarmStudio 桌面端或 Web UI。执行前请先完全退出 SwarmStudio：',
-     webUiTitle: 'Web UI',
-     platform: '平台',
-     currentWebUi: '当前 Web UI',
-@@ -649,10 +2314,10 @@ export default {
-     chooseRuntimeDirectory: '选择目录',
-     resetRuntimeDirectory: '恢复系统默认',
-     runtimeDirectoryHint: '下次重启时会在本地服务启动前复制并校验当前 Runtime，旧目录会保留；后续 Runtime 下载也会保存在这里。',
--    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 Ekko Studio 后执行。',
-+    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 SwarmStudio 后执行。',
-     runtimeMigrationPending: '待迁移到：{directory}',
-     runtimeMigrationFailed: '存储目录迁移失败，已继续使用原目录',
--    runtimeActivationFailed: '所选 Runtime 无法启动，Ekko Studio 已改用其他已安装版本',
-+    runtimeActivationFailed: '所选 Runtime 无法启动，SwarmStudio 已改用其他已安装版本',
-     active: '已启用',
-     installed: '已安装',
-     download: '下载',
-@@ -671,7 +2336,7 @@ export default {
-     remoteLoadFailed: '远程版本加载失败',
-     downloadTasks: '下载任务',
-     downloadStarted: '已开始下载',
--    activateSuccess: '版本选择已保存，重启 Ekko Studio 后生效。',
-+    activateSuccess: '版本选择已保存，重启 SwarmStudio 后生效。',
-     restartPromptTitle: 'Runtime 已就绪',
-     restartPromptContent: 'Hermes Runtime {version} 已安装完成，是否立即重启并使用该版本？',
-     restartLater: '稍后',
-@@ -681,7 +2346,7 @@ export default {
+@@ -681,7 +2317,7 @@ export default {
        queued: '排队中',
        running: '下载中',
        completed: '已完成',
@@ -8128,7 +7075,7 @@ index 940946d..92c25da 100644
      },
      jobStageStatus: {
        queued: '排队中',
-@@ -691,7 +2356,7 @@ export default {
+@@ -691,7 +2327,7 @@ export default {
        extract: '解压中',
        install: '安装中',
        completed: '已完成',
@@ -8137,7 +7084,7 @@ index 940946d..92c25da 100644
      },
      jobStage: {
        queued: '排队中',
-@@ -705,10 +2370,9 @@ export default {
+@@ -705,10 +2341,9 @@ export default {
        extractWebUi: '正在解压 Web UI 压缩包',
        installWebUi: '正在安装 Web UI',
        completed: '已完成',
@@ -8150,7 +7097,7 @@ index 940946d..92c25da 100644
    mcuDevices: {
      title: '小方盒',
      subtitle: '管理小方盒语音交互设备及其连接',
-@@ -748,15 +2412,14 @@ export default {
+@@ -748,15 +2383,14 @@ export default {
      deleted: 'MCU 设备已删除',
      deleteFailed: '删除 MCU 设备失败',
      loadFailed: '加载 MCU 设备失败',
@@ -8168,19 +7115,7 @@ index 940946d..92c25da 100644
      },
      app: {
        subtitle: '让 App 连接你的设备',
-@@ -764,9 +2427,9 @@ export default {
-       viewList: '列表',
-       viewDownload: '下载',
-       viewMessages: '消息推送',
--      downloadTitle: '在手机上使用 Ekko Studio',
-+      downloadTitle: '在手机上使用 SwarmStudio',
-       downloadDescription: '我们正在内测阶段，需要注册码才有办法注册，我们会在社交媒体放出一部分注册码。',
--      downloadPaidDescription: 'Ekko Studio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-+      downloadPaidDescription: 'SwarmStudio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-       downloadScan: '手机扫码下载',
-       downloadScanHint: '当前提供 Android 安装包',
-       available: '可下载',
-@@ -805,19 +2468,19 @@ export default {
+@@ -805,7 +2439,7 @@ export default {
          internal: '内测',
          public_beta: '公测',
          paid: '收费',
@@ -8189,12 +7124,7 @@ index 940946d..92c25da 100644
        },
        accessFailures: {
          tokenExpired: 'Token 已失效',
-         paidAccountRequired: '当前账户不是付费账号，无法使用该功能',
--        cloudSubscriptionRequired: '当前账号未开通 Ekko Studio Cloud，无法使用云端连接',
-+        cloudSubscriptionRequired: '当前账号未开通 SwarmStudio Cloud，无法使用云端连接',
-         appAccessExpired: '当前内测或公测资格已过期，无法使用云端连接',
-         required: 'App 未携带访问授权签名',
-         invalid: 'App 访问授权签名无效',
+@@ -817,7 +2451,7 @@ export default {
          expired: 'App 访问授权已过期',
          accountMismatch: '签名账号与当前 App 账号不一致',
          deviceMismatch: '签名设备码与当前设备不一致',
@@ -8203,7 +7133,7 @@ index 940946d..92c25da 100644
        },
        deviceName: '设备名称',
        deviceBrand: '设备品牌',
-@@ -828,13 +2491,13 @@ export default {
+@@ -828,13 +2462,13 @@ export default {
        authorizedUser: '授权用户',
        connectionTypes: {
          lan: '局域网',
@@ -8221,7 +7151,7 @@ index 940946d..92c25da 100644
        online: '在线',
        offline: '离线',
        active: '有效',
-@@ -845,10 +2508,9 @@ export default {
+@@ -845,10 +2479,9 @@ export default {
        deleted: 'App 连接已删除',
        deleteFailed: '删除 App 连接失败',
        empty: '暂无已连接 App',
@@ -8234,7 +7164,7 @@ index 940946d..92c25da 100644
    devices: {
      title: '设备',
      subtitle: '管理已连接设备、配对请求及远程访问',
-@@ -904,22 +2566,21 @@ export default {
+@@ -904,22 +2537,21 @@ export default {
        pending: '待处理',
        approved: '已通过',
        rejected: '已拒绝',
@@ -8261,7 +7191,7 @@ index 940946d..92c25da 100644
    performance: {
      title: '性能监控',
      subtitle: '查看系统资源、Bridge Broker、Workers 和活跃会话',
-@@ -947,9 +2608,8 @@ export default {
+@@ -947,9 +2579,8 @@ export default {
      status: '状态',
      noWorkers: '暂无 Worker',
      sessionsByProfile: '按 Profile 统计会话',
@@ -8272,7 +7202,7 @@ index 940946d..92c25da 100644
    journey: {
      title: '学习轨迹',
      play: '播放学习轨迹',
-@@ -979,21 +2639,28 @@ export default {
+@@ -979,21 +2610,28 @@ export default {
      useCount: '使用次数',
      createdBy: '创建来源',
      timestamp: '时间',
@@ -8310,7 +7240,7 @@ index 940946d..92c25da 100644
    realtimeVoice: {
      title: '实时语音',
      mode: '语音模式',
-@@ -1016,7 +2683,15 @@ export default {
+@@ -1016,7 +2654,15 @@ export default {
      finishTurn: '结束本轮',
      speak: '开始说话',
      end: '结束',
@@ -8327,7 +7257,7 @@ index 940946d..92c25da 100644
      hint: {
        idle: '轻触中央区域开始一轮语音',
        paused: '准备好后重新打开麦克风',
-@@ -1025,25 +2700,23 @@ export default {
+@@ -1025,25 +2671,23 @@ export default {
        processing: '正在将你的语音转换为文字',
        thinking: '消息已发送到当前对话',
        speaking: '你可以随时打断回答',
@@ -8368,7 +7298,7 @@ index 940946d..92c25da 100644
      contextRemaining: '剩余',
      contextClickToEdit: '点击编辑上下文长度',
      contextEditTitle: '编辑上下文长度',
-@@ -1070,7 +2743,7 @@ export default {
+@@ -1070,7 +2714,7 @@ export default {
      slashCommandArgs: {
        message: '<消息>',
        title: '<标题>',
@@ -8377,7 +7307,7 @@ index 940946d..92c25da 100644
      },
      slashCommands: {
        usage: '计算当前会话用量',
-@@ -1100,7 +2773,7 @@ export default {
+@@ -1100,7 +2744,7 @@ export default {
        reloadMcp: '重载 MCP 服务器',
        reloadSkills: '重载技能命令',
        bundles: '查看 Skill Bundle',
@@ -8386,7 +7316,7 @@ index 940946d..92c25da 100644
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1115,7 +2788,7 @@ export default {
+@@ -1115,7 +2759,7 @@ export default {
        deleteFailed: '删除 Bundle 失败',
        deleted: 'Bundle 已删除',
        noBundles: '还没有 Bundle，可创建一个来组合多个 Skills。',
@@ -8395,7 +7325,7 @@ index 940946d..92c25da 100644
      },
      bundleCreator: {
        title: '创建 Skill Bundle',
-@@ -1131,7 +2804,7 @@ export default {
+@@ -1131,7 +2775,7 @@ export default {
        skillsRequired: '请至少选择一个 Skill',
        skillsLoadFailed: '加载 Skills 失败',
        createFailed: '创建 Bundle 失败',
@@ -8404,7 +7334,7 @@ index 940946d..92c25da 100644
      },
      attachFiles: '添加附件',
      reasoningEffort: {
-@@ -1147,8 +2820,8 @@ export default {
+@@ -1147,8 +2791,8 @@ export default {
          high: '高',
          max: 'Max',
          xhigh: '超高',
@@ -8415,7 +7345,7 @@ index 940946d..92c25da 100644
      },
      autoPlaySpeech: '自动播放语音',
      voiceInput: {
-@@ -1164,17 +2837,17 @@ export default {
+@@ -1164,13 +2808,13 @@ export default {
          capturing: '正在聆听',
          transcribing: '正在转写',
          sending: '正在插入输入框',
@@ -8431,12 +7361,7 @@ index 940946d..92c25da 100644
      },
      showToolCalls: '显示工具调用',
      pushEnabled: '是否推送',
--    pushNotConfigured: '请先到 Ekko Studio「设备互联」中配置消息推送。',
-+    pushNotConfigured: '请先到 SwarmStudio「设备互联」中配置消息推送。',
-     hideToolCalls: '隐藏工具调用',
-     messageQueue: '消息队列',
-     removeQueuedMessage: '移除队列消息',
-@@ -1203,7 +2876,7 @@ export default {
+@@ -1203,7 +2847,7 @@ export default {
      searchTitle: '搜索会话',
      searchSubtitle: '按标题或消息内容搜索',
      searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
@@ -8445,7 +7370,7 @@ index 940946d..92c25da 100644
      searchPlaceholder: '搜索会话...',
      searchEmpty: '最近会话',
      searchRecent: '最近会话',
-@@ -1254,9 +2927,7 @@ export default {
+@@ -1254,9 +2898,7 @@ export default {
      newCliChat: '新建 CLI',
      deleteSession: '确定删除此会话？',
      sessionDeleted: '会话已删除',
@@ -8456,7 +7381,7 @@ index 940946d..92c25da 100644
      toggleBatchMode: '批量选择',
      selectAll: '全选',
      confirmBatchDelete: '确定删除选中的 {count} 个会话？',
-@@ -1358,11 +3029,32 @@ export default {
+@@ -1359,11 +3001,32 @@ export default {
      resumeSpeech: '继续',
      stopSpeech: '停止',
      speechNotSupported: '此浏览器不支持语音播放',
@@ -8492,7 +7417,7 @@ index 940946d..92c25da 100644
      title: '工作流',
      profile: '配置',
      namePlaceholder: '工作流名称',
-@@ -1370,7 +3062,7 @@ export default {
+@@ -1371,7 +3034,7 @@ export default {
      workspace: {
        title: '选择工作区',
        select: '选择工作区',
@@ -8501,7 +7426,7 @@ index 940946d..92c25da 100644
      },
      actions: {
        newWorkflow: '新建工作流',
-@@ -1396,145 +3088,356 @@ export default {
+@@ -1397,145 +3060,356 @@ export default {
        imported: 'Workflow 导入成功',
        exported: 'Workflow 导出成功',
        importFailed: 'Workflow 导入失败',
@@ -8955,7 +7880,7 @@ index 940946d..92c25da 100644
        },
        jsonFieldOperatorHelp: {
          equals: '读取 {path} 对应的字段 value。只有该字段值与“{value}”完全相同时才匹配；不会比较字段名。',
-@@ -1542,14 +3445,18 @@ export default {
+@@ -1543,14 +3417,18 @@ export default {
          contains: '读取 {path} 对应的字段 value，并检查这个值是否包含“{value}”；不会搜索字段名。',
          not_contains: '读取 {path} 对应的字段 value。只有这个值不包含“{value}”时才匹配；不会搜索字段名。',
          exists: '{path} 对应的 JSON 字段存在时匹配，不比较字段 value。',
@@ -8979,7 +7904,7 @@ index 940946d..92c25da 100644
      },
      batch: {
        toggle: '批量选择',
-@@ -1557,7 +3464,7 @@ export default {
+@@ -1558,7 +3436,7 @@ export default {
        confirmDelete: '确定删除选中的 {count} 个工作流？',
        deleteSuccess: '已删除 {count} 个工作流',
        deletePartial: '{failed} 个工作流删除失败',
@@ -8988,7 +7913,7 @@ index 940946d..92c25da 100644
      },
      validation: {
        nodesRequired: '请至少添加一个节点',
-@@ -1570,7 +3477,7 @@ export default {
+@@ -1571,7 +3449,7 @@ export default {
        invalidConnectionDirection: '连接线只能从右侧输出连接到左侧输入',
        orphanNode: '节点 {node} 没有连接到流程',
        disconnectedFlow: '流程不能拆成多条互不连接的链路',
@@ -8997,7 +7922,7 @@ index 940946d..92c25da 100644
      },
      node: {
        title: '节点名称',
-@@ -1586,7 +3493,7 @@ export default {
+@@ -1587,7 +3465,7 @@ export default {
        joinAnyHelp: '任一入线生效就执行一次；只有全部都不匹配才跳过。示例：任一审核人批准后继续。',
        promptPlaceholder: '描述这个 Agent 要做什么...',
        skillsPlaceholder: '技能，按 Enter 添加',
@@ -9006,7 +7931,7 @@ index 940946d..92c25da 100644
      },
      status: {
        idle: '空闲',
-@@ -1597,7 +3504,7 @@ export default {
+@@ -1598,7 +3476,7 @@ export default {
        skipped: '已跳过',
        failed: '失败',
        approval_rejected: '审批拒绝',
@@ -9015,7 +7940,7 @@ index 940946d..92c25da 100644
      },
      runs: {
        title: '执行记录',
-@@ -1614,26 +3521,26 @@ export default {
+@@ -1615,26 +3493,26 @@ export default {
        stopRequested: '已请求停止执行',
        stopFailed: '停止执行失败',
        delete: '删除记录',
@@ -9047,7 +7972,7 @@ index 940946d..92c25da 100644
      },
      initialNodes: {
        node1: '节点 1',
-@@ -1641,7 +3548,7 @@ export default {
+@@ -1642,7 +3520,7 @@ export default {
        node3: '节点 3',
        plan: '规划',
        execute: '执行',
@@ -9056,7 +7981,7 @@ index 940946d..92c25da 100644
      },
      initialPrompts: {
        node1: '输入这个节点的内容。',
-@@ -1649,12 +3556,11 @@ export default {
+@@ -1650,12 +3528,11 @@ export default {
        node3: '输入这个节点的内容。',
        plan: '把需求拆成可执行步骤。',
        execute: '执行实现步骤并产出结果。',
@@ -9071,7 +7996,7 @@ index 940946d..92c25da 100644
    kanban: {
      title: '看板',
      createTask: '新建任务',
-@@ -1671,6 +3577,22 @@ export default {
+@@ -1672,6 +3549,22 @@ export default {
        archived: '看板已归档',
        archiveConfirm: '确定归档当前看板？',
        defaultArchiveUnavailable: '默认看板不能归档',
@@ -9094,7 +8019,7 @@ index 940946d..92c25da 100644
      },
      columns: {
        triage: '待分拣',
-@@ -1681,7 +3603,7 @@ export default {
+@@ -1682,7 +3575,7 @@ export default {
        blocked: '阻塞',
        review: '待审查',
        done: '已完成',
@@ -9103,7 +8028,7 @@ index 940946d..92c25da 100644
      },
      form: {
        title: '标题',
-@@ -1713,20 +3635,29 @@ export default {
+@@ -1714,20 +3607,29 @@ export default {
        maxRetriesPlaceholder: '重试次数',
        goalMaxTurns: '目标最大轮次',
        goalMaxTurnsPlaceholder: '最大轮次',
@@ -9136,7 +8061,7 @@ index 940946d..92c25da 100644
      },
      detail: {
        status: '状态',
-@@ -1749,7 +3680,7 @@ export default {
+@@ -1750,7 +3652,7 @@ export default {
        noLog: '未找到该任务的日志。',
        addComment: '添加评论',
        commentPlaceholder: '输入任务评论...',
@@ -9145,7 +8070,7 @@ index 940946d..92c25da 100644
      },
      action: {
        title: '操作',
-@@ -1758,7 +3689,6 @@ export default {
+@@ -1759,7 +3661,6 @@ export default {
        block: '阻塞',
        blockReason: '阻塞原因',
        unblock: '解除阻塞',
@@ -9153,7 +8078,7 @@ index 940946d..92c25da 100644
        archiveConfirm: '确定归档这个已完成任务？',
        assign: '分配',
        assignTo: '分配给...',
-@@ -1769,6 +3699,11 @@ export default {
+@@ -1770,6 +3671,11 @@ export default {
        specify: '细化',
        loadLog: '加载日志',
        loadDiagnostics: '加载诊断',
@@ -9165,7 +8090,7 @@ index 940946d..92c25da 100644
      },
      message: {
        taskCreated: '任务已创建',
-@@ -1783,15 +3718,202 @@ export default {
+@@ -1784,15 +3690,202 @@ export default {
        taskReassigned: '任务已重新分配',
        taskSpecified: '任务已细化',
        loadFailed: '加载任务失败',
@@ -9229,7 +8154,7 @@ index 940946d..92c25da 100644
 +      completeConfirm: '完成 {count} 个任务？',
 +      archiveConfirm: '归档 {count} 个任务？',
 +      reclaimFirst: '先回收'
-+    },
+     },
 +    selectAllVisible: '全选',
 +    columnSubtitles: {
 +      triage: '原始想法——由规格撰写人补全规格',
@@ -9282,7 +8207,7 @@ index 940946d..92c25da 100644
 +      save: '保存',
 +      autoGenerateTitle: '根据该 profile 的技能与近期使用自动生成描述',
 +      generating: '生成中…'
-     },
++    },
 +    reclaim: {
 +      confirm: '释放当前 worker 的认领？任务将回到 ready 等待重新派发。',
 +      success: '认领已释放——任务回到 ready',
@@ -9372,7 +8297,7 @@ index 940946d..92c25da 100644
    jobs: {
      title: '定时任务',
      createJob: '创建任务',
-@@ -1852,7 +3974,7 @@ export default {
+@@ -1853,7 +3946,7 @@ export default {
        running: '运行中',
        paused: '已暂停',
        disabled: '已禁用',
@@ -9381,7 +8306,7 @@ index 940946d..92c25da 100644
      },
      info: {
        model: '模型',
-@@ -1861,7 +3983,7 @@ export default {
+@@ -1862,7 +3955,7 @@ export default {
        lastRun: '上次运行',
        nextRun: '下次运行',
        deliver: '投递',
@@ -9390,7 +8315,7 @@ index 940946d..92c25da 100644
      },
      action: {
        pause: '暂停',
-@@ -1869,24 +3991,21 @@ export default {
+@@ -1870,24 +3963,21 @@ export default {
        resume: '恢复',
        resumeJob: '恢复任务',
        runNow: '立即运行',
@@ -9419,7 +8344,7 @@ index 940946d..92c25da 100644
      },
      searchPlaceholder: '搜索技能...',
      noMatch: '没有匹配的技能',
-@@ -1911,7 +4030,7 @@ export default {
+@@ -1912,7 +4002,7 @@ export default {
        builtin: '内置',
        hub: 'Hub 安装',
        local: '本地安装',
@@ -9428,7 +8353,7 @@ index 940946d..92c25da 100644
      },
      delete: '删除',
      deleteConfirm: '确定要删除技能 "{name}" 吗？此操作不可撤销。',
-@@ -1934,7 +4053,7 @@ export default {
+@@ -1935,7 +4025,7 @@ export default {
      importFailed: '导入失败',
      path: {
        local: '本地',
@@ -9437,7 +8362,7 @@ index 940946d..92c25da 100644
      },
      externalDirs: {
        manage: '外部目录',
-@@ -1948,7 +4067,7 @@ export default {
+@@ -1949,7 +4039,7 @@ export default {
        saveSuccess: '外部目录已保存',
        saveFailed: '保存失败',
        loadFailed: '加载外部目录失败',
@@ -9446,7 +8371,7 @@ index 940946d..92c25da 100644
      },
      pathCopied: '路径已复制',
      pathCopyFailed: '复制路径失败',
-@@ -1980,9 +4099,8 @@ export default {
+@@ -1981,9 +4071,8 @@ export default {
      writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
      writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
      writeApprovalRemoveFile: '这次审批会从技能 {skill} 中移除文件 {file}。',
@@ -9457,7 +8382,7 @@ index 940946d..92c25da 100644
    plugins: {
      title: '插件',
      refresh: '刷新',
-@@ -2008,28 +4126,28 @@ export default {
+@@ -2009,28 +4098,28 @@ export default {
        active: '已启用 / 自动',
        inactive: '未启用',
        disabled: '已禁用',
@@ -9493,7 +8418,7 @@ index 940946d..92c25da 100644
      },
      table: {
        plugin: '插件',
-@@ -2038,21 +4156,20 @@ export default {
+@@ -2039,21 +4128,20 @@ export default {
        kind: '类型',
        capabilities: '能力',
        path: '路径 / 入口',
@@ -9519,7 +8444,7 @@ index 940946d..92c25da 100644
    petdex: {
      title: 'Petdex 宠物',
      subtitle: '浏览 Hermes 桌宠使用的 petdex 公共图库。',
-@@ -2072,11 +4189,9 @@ export default {
+@@ -2073,11 +4161,9 @@ export default {
        total: '图库总数',
        visible: '匹配数量',
        kinds: '类型数',
@@ -9533,7 +8458,7 @@ index 940946d..92c25da 100644
    memory: {
      title: '记忆',
      refresh: '刷新',
-@@ -2089,15 +4204,13 @@ export default {
+@@ -2090,10 +4176,8 @@ export default {
      profilePlaceholder: '输入用户画像...',
      soul: '灵魂',
      noSoul: '暂无灵魂配置。',
@@ -9543,18 +8468,9 @@ index 940946d..92c25da 100644
 -
 -  // 模型
    models: {
--    opencodeFreeHint: "无需账号或 API key，免费模型可能受到限流。",
--    opencodeFreeLoading: "正在后台加载免费模型…",
--    opencodeFreeRetry: "免费提供商检测或目录刷新失败，将自动重试并保留缓存模型。",
--    opencodeFreeUpgrade: "请更新 Hermes Agent 以使用 OpenCode Free。",
-+    opencodeFreeHint: '无需账号或 API key，免费模型可能受到限流。',
-+    opencodeFreeLoading: '正在后台加载免费模型…',
-+    opencodeFreeRetry: '免费提供商检测或目录刷新失败，将自动重试并保留缓存模型。',
-+    opencodeFreeUpgrade: '请更新 Hermes Agent 以使用 OpenCode Free。',
      title: '模型',
      searchPlaceholder: '搜索模型...',
-     noResults: '无结果',
-@@ -2244,7 +4357,7 @@ export default {
+@@ -2241,7 +4325,7 @@ export default {
      customBadge: '自定义',
      previewBadge: '预览',
      disabledBadge: '不可用',
@@ -9563,7 +8479,7 @@ index 940946d..92c25da 100644
      customModelPlaceholder: '未列出的模型 ID',
      customModelHint: '仅用于 provider 支持但未返回的模型；不是重命名。按回车加载。',
      removeCustomModel: '移除这个未列出的模型',
-@@ -2375,10 +4488,8 @@ export default {
+@@ -2372,10 +4456,8 @@ export default {
      enterBaseUrl: '请先输入 Base URL',
      unexpectedFormat: '响应格式异常',
      foundModels: '找到 {count} 个模型',
@@ -9575,7 +8491,7 @@ index 940946d..92c25da 100644
    profiles: {
      title: '配置',
      create: '创建配置',
-@@ -2442,7 +4553,7 @@ export default {
+@@ -2439,7 +4521,7 @@ export default {
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -9584,7 +8500,7 @@ index 940946d..92c25da 100644
      },
      runtime: {
        activeProfile: '当前：{name}',
-@@ -2460,24 +4571,20 @@ export default {
+@@ -2457,24 +4539,20 @@ export default {
        gatewayRestarted: '网关已重启：{name}',
        gatewayRestartFailed: '重启网关失败',
        profileRestarted: '配置已重启：{name}',
@@ -9615,7 +8531,7 @@ index 940946d..92c25da 100644
    theme: {
      title: '主题',
      saved: '主题已保存',
-@@ -2517,7 +4624,7 @@ export default {
+@@ -2514,7 +4592,7 @@ export default {
      preview: '预览',
      previewTitle: '打造属于你的工作空间',
      previewText: '文字和选中颜色会同步应用到整个界面。',
@@ -9624,7 +8540,7 @@ index 940946d..92c25da 100644
    },
    settings: {
      title: '设置',
-@@ -2537,6 +4644,7 @@ export default {
+@@ -2534,6 +4612,7 @@ export default {
        apiServer: 'API 服务器',
        models: '模型',
        voice: '语音',
@@ -9632,7 +8548,7 @@ index 940946d..92c25da 100644
      },
      webhooks: {
        title: 'Webhook',
-@@ -2562,10 +4670,13 @@ export default {
+@@ -2559,10 +4638,13 @@ export default {
          receivedAt: '接收时间',
          event: '事件',
          eventId: 'Event ID',
@@ -9648,7 +8564,7 @@ index 940946d..92c25da 100644
          runQueued: '运行已排队',
          runStarted: '运行已开始',
          toolStarted: '工具已开始',
-@@ -2576,11 +4687,11 @@ export default {
+@@ -2573,11 +4655,11 @@ export default {
          clarificationRequested: '请求澄清',
          clarificationResolved: '澄清已处理',
          completed: '运行完成',
@@ -9662,7 +8578,7 @@ index 940946d..92c25da 100644
        },
        runtime: {
          idle: '空闲',
-@@ -2588,7 +4699,7 @@ export default {
+@@ -2585,7 +4667,7 @@ export default {
          retrying: '等待重试',
          success: '已送达',
          failed: '投递失败',
@@ -9671,7 +8587,7 @@ index 940946d..92c25da 100644
        },
        actions: {
          add: '添加 Webhook',
-@@ -2598,7 +4709,7 @@ export default {
+@@ -2595,7 +4677,7 @@ export default {
          disable: '停用',
          refresh: '刷新',
          clear: '清空',
@@ -9680,7 +8596,7 @@ index 940946d..92c25da 100644
        },
        form: {
          name: '名称',
-@@ -2619,7 +4730,7 @@ export default {
+@@ -2616,7 +4698,7 @@ export default {
          includeUserContentHint: '用户消息可能包含敏感信息，默认关闭。系统提示词、推理过程、工具参数和工具结果不会随此开关发送。',
          allowPrivateNetwork: '允许私网或本机地址',
          allowPrivateNetworkHint: '仅对可信的内部接收端开启；每次投递前都会重新检查 DNS。',
@@ -9689,7 +8605,7 @@ index 940946d..92c25da 100644
        },
        messages: {
          required: '名称和 URL 不能为空',
-@@ -2634,8 +4745,8 @@ export default {
+@@ -2631,8 +4713,8 @@ export default {
          localTestFailed: '创建本机测试接收器失败',
          inboxLoadFailed: '加载本机测试事件失败',
          inboxCleared: '本机测试事件已清空',
@@ -9700,7 +8616,7 @@ index 940946d..92c25da 100644
      },
      models: {
        apiKey: 'API Key',
-@@ -2643,7 +4754,7 @@ export default {
+@@ -2640,7 +4722,7 @@ export default {
        save: '保存',
        saved: '已保存',
        saveFailed: '保存失败',
@@ -9709,35 +8625,7 @@ index 940946d..92c25da 100644
      },
      display: {
        streaming: '流式响应',
-@@ -2662,14 +4773,14 @@ export default {
-       approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
-       notifyOnComplete: '完成弹窗通知',
-       notifyOnApproval: '审批桌面通知',
--      notifyOnApprovalHint: 'Ekko Studio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-+      notifyOnApprovalHint: 'SwarmStudio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-       notifyOnApprovalTest: '审批桌面通知已启用。',
-       notifyOnApprovalTestButton: '测试',
-       notifyOnApprovalTestSent: '审批通知已发送',
-       notifyOnApprovalTestFailed: '审批通知发送失败',
-       approvalNotificationTitle: '需要审批',
-       approvalNotificationClarifyTitle: '需要澄清',
--      approvalNotificationBody: '打开 Ekko Studio 查看并处理。',
-+      approvalNotificationBody: '打开 SwarmStudio 查看并处理。',
-       notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
-       notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
-       notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -2691,8 +4802,8 @@ export default {
-       chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
-       linkOpenTarget: '网页链接打开方式',
-       linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
--      linkOpenTargetDefaultBrowser: '默认浏览器',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-+      linkOpenTargetDefaultBrowser: '默认浏览器'
-     },
-     agent: {
-       maxTurns: '最大轮次',
-@@ -2705,7 +4816,7 @@ export default {
+@@ -2702,7 +4784,7 @@ export default {
        toolEnforcementHint: '控制工具调用的执行模式',
        auto: '自动',
        always: '始终',
@@ -9746,7 +8634,7 @@ index 940946d..92c25da 100644
      },
      gatewayAutoStart: {
        title: 'Gateway 自动启动',
-@@ -2725,7 +4836,7 @@ export default {
+@@ -2722,7 +4804,7 @@ export default {
        includeHint: '逗号分隔 profile 名。白名单模式下留空表示不自动启动任何 profile。',
        exclude: '排除 profiles',
        excludeHint: '逗号分隔 profile 名；会在白名单/全量策略之后再排除。',
@@ -9755,7 +8643,7 @@ index 940946d..92c25da 100644
      },
      proxy: {
        title: 'Gateway 代理',
-@@ -2738,7 +4849,7 @@ export default {
+@@ -2735,7 +4817,7 @@ export default {
        allProxyHint: '未设置协议专用代理时使用的兜底代理。',
        noProxy: 'NO_PROXY',
        noProxyHint: '不走代理的主机或域名，使用逗号分隔。',
@@ -9764,7 +8652,7 @@ index 940946d..92c25da 100644
      },
      memory: {
        enabled: '启用记忆',
-@@ -2748,7 +4859,7 @@ export default {
+@@ -2745,7 +4827,7 @@ export default {
        charLimit: '记忆字符上限',
        charLimitHint: 'MEMORY.md 最大字符数',
        userCharLimit: '用户画像字符上限',
@@ -9773,7 +8661,7 @@ index 940946d..92c25da 100644
      },
      compression: {
        enabled: '启用压缩',
-@@ -2760,7 +4871,7 @@ export default {
+@@ -2757,7 +4839,7 @@ export default {
        protectLastN: '保护最近消息',
        protectLastNHint: '最近多少条消息不参与压缩',
        protectFirstN: '保护开头消息',
@@ -9782,7 +8670,7 @@ index 940946d..92c25da 100644
      },
      session: {
        mode: '重置模式',
-@@ -2809,11 +4920,11 @@ export default {
+@@ -2806,11 +4888,11 @@ export default {
        writeApprovalRequestedOldString: '本次请求匹配的 old_string',
        writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
        writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
@@ -9796,7 +8684,7 @@ index 940946d..92c25da 100644
      },
      apiServer: {
        enable: '启用',
-@@ -2825,7 +4936,7 @@ export default {
+@@ -2822,7 +4904,7 @@ export default {
        key: '密钥',
        keyHint: 'API 访问密钥',
        cors: 'CORS 来源',
@@ -9805,7 +8693,7 @@ index 940946d..92c25da 100644
      },
      lockedIps: {
        title: '锁定 IP 管理',
-@@ -2839,8 +4950,8 @@ export default {
+@@ -2836,8 +4918,8 @@ export default {
        type: {
          password: '密码',
          token: 'API Token',
@@ -9816,7 +8704,7 @@ index 940946d..92c25da 100644
      },
      userAvatar: {
        title: '用户头像',
-@@ -2853,7 +4964,7 @@ export default {
+@@ -2850,7 +4932,7 @@ export default {
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -9825,7 +8713,7 @@ index 940946d..92c25da 100644
      },
      voice: {
        activeTtsApi: '当前 TTS API',
-@@ -2885,13 +4996,13 @@ export default {
+@@ -2882,7 +4964,7 @@ export default {
          validate: '正在验证模型可用性……',
          install: '正在安装模型……',
          completed: '模型已可用',
@@ -9833,25 +8721,8 @@ index 940946d..92c25da 100644
 +        failed: '下载失败'
        },
        hermesConfigTitle: 'Hermes Agent 配置',
--      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 Ekko Studio。',
-+      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 SwarmStudio。',
-       hermesActiveProvider: '当前提供商',
-       hermesConfiguredProviders: '已配置提供商',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: '语速',
-       providerSampleRate: '采样率',
-       providerBitRate: '比特率',
-@@ -2905,7 +5016,7 @@ export default {
-       optionDisabled: '停用',
-       nativeProvider: 'Hermes 原生提供商',
-       selectNativeProvider: '选择 Hermes 原生提供商',
--      useHermesStudioProvider: '使用 Ekko Studio 提供商',
-+      useHermesStudioProvider: '使用 SwarmStudio 提供商',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-@@ -3062,27 +5173,16 @@ export default {
+       hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 SwarmStudio。',
+@@ -3059,27 +5141,16 @@ export default {
        sttTestEmpty: '没有录到可用于 STT 测试的音频。',
        sttTestSucceeded: 'STT 测试成功。',
        sttTestFailed: 'STT 测试失败：{error} —— {hint}',
@@ -9879,7 +8750,7 @@ index 940946d..92c25da 100644
        sttFailureHintGeneric: '请检查 API key、模型和 provider 账号权限后重试。',
        sttTestRecordFailed: '无法开始麦克风录音：{error}',
        sttTestTranscript: '转写结果：{text}',
-@@ -3092,13 +5192,9 @@ export default {
+@@ -3089,13 +5160,9 @@ export default {
        providerOpenai: 'OpenAI TTS',
        providerCustom: '自定义端点（兼容 OpenAI）',
        providerEdge: 'Edge TTS（免费，无需 API Key）',
@@ -9893,7 +8764,7 @@ index 940946d..92c25da 100644
        openaiKey: 'API 密钥',
        openaiKeyHint: '具有 TTS 权限的 OpenAI API Key',
        openaiUrl: 'API 基础地址',
-@@ -3107,8 +5203,6 @@ export default {
+@@ -3104,8 +5171,6 @@ export default {
        openaiModelHint: 'tts-1（快速）/ tts-1-hd（高音质）',
        openaiVoice: '音色',
        openaiVoiceHint: '用于语音合成的音色',
@@ -9902,7 +8773,7 @@ index 940946d..92c25da 100644
        customHint: '支持任何 OpenAI 兼容的 TTS 服务——可用于 GPT-SoVITS、CosyVoice 等自部署服务。',
        customUrl: 'API 地址',
        customUrlHint: 'TTS 服务的完整基础地址',
-@@ -3116,7 +5210,6 @@ export default {
+@@ -3113,7 +5178,6 @@ export default {
        customApiKey: 'API 密钥（可选）',
        customApiKeyHint: '部分自部署服务需要身份验证',
        customApiKeyPlaceholder: '不需要则留空',
@@ -9910,7 +8781,7 @@ index 940946d..92c25da 100644
        edgeHint: '由 Microsoft Edge TTS 驱动（node-edge-tts）。',
        edgeUrl: '适配器地址',
        edgeUrlHint: 'Edge TTS 适配器地址，例如 http://127.0.0.1:9882',
-@@ -3127,8 +5220,6 @@ export default {
+@@ -3124,8 +5188,6 @@ export default {
        edgeRateHint: '调整语音速度（0.5～2.0 倍）',
        edgePitch: '音调',
        edgePitchHint: '调整语音音调（-20～+20 Hz）',
@@ -9919,7 +8790,7 @@ index 940946d..92c25da 100644
        testTitle: '试听测试',
        testText: '测试文本',
        testTextPlaceholder: '输入测试文本...',
-@@ -3136,8 +5227,6 @@ export default {
+@@ -3133,8 +5195,6 @@ export default {
        testButton: '试听',
        testButtonPlaying: '播放中...',
        testFailed: '测试失败：{error}',
@@ -9928,7 +8799,7 @@ index 940946d..92c25da 100644
        providerMimo: 'MiMo TTS',
        mimoHint: '小米 MiMo TTS，支持预置音色、音色设计、音色复刻三种模式',
        mimoApiKey: 'API Key',
-@@ -3166,136 +5255,144 @@ export default {
+@@ -3163,136 +5223,144 @@ export default {
        mimoCloneAudioClear: '清除音频',
        mimoStylePrompt: '风格指令',
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
@@ -10192,7 +9063,7 @@ index 940946d..92c25da 100644
    platform: {
      requireMention: "需要 {'@'}提及",
      requireMentionGroup: "群组中需要 {'@'}机器人 才会响应",
-@@ -3376,7 +5473,6 @@ export default {
+@@ -3373,7 +5441,6 @@ export default {
      qrFetching: '正在获取二维码...',
      qrScanHint: '使用微信扫描二维码登录',
      qrScanedHint: '已扫描，请在手机上确认...',
@@ -10200,7 +9071,7 @@ index 940946d..92c25da 100644
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ 开放平台机器人 App ID',
      qqAppSecret: 'App Secret',
-@@ -3385,27 +5481,21 @@ export default {
+@@ -3382,27 +5449,21 @@ export default {
      qqMarkdownHint: '启用 Markdown 格式消息（部分客户端可能不支持）',
      qqSandbox: '沙箱模式',
      qqSandboxHint: '启用沙箱环境（测试用）',
@@ -10231,7 +9102,7 @@ index 940946d..92c25da 100644
    terminal: {
      sessions: '会话',
      newTab: '新建终端',
-@@ -3415,20 +5505,26 @@ export default {
+@@ -3412,20 +5473,26 @@ export default {
      noSessions: '暂无终端会话',
      connectionFailed: '终端服务连接失败',
      connectionClosed: '终端连接已关闭',
@@ -10265,7 +9136,7 @@ index 940946d..92c25da 100644
      agentPreset: 'Agent 预设',
      agentPresets: 'Agent 预设',
      agentPresetPlaceholder: '选择预设',
-@@ -3550,7 +5646,12 @@ export default {
+@@ -3547,7 +5614,12 @@ export default {
      allAgents: '所有 Agent',
      addAgent: '添加智能体',
      agentType: 'Agent 类型',
@@ -10279,7 +9150,7 @@ index 940946d..92c25da 100644
      selectProfile: '选择一个配置',
      agentAdded: '智能体已添加',
      selectRoomFirst: '请先选择一个群组',
-@@ -3634,7 +5735,12 @@ export default {
+@@ -3631,7 +5703,12 @@ export default {
      summaryConfigurationOwnerRequired: '该群聊尚未配置总结器，请联系房间管理员完成配置后再发送消息。',
      saveSummaryConfig: '保存总结设置',
      currentSummary: '当前总结',
@@ -10293,7 +9164,7 @@ index 940946d..92c25da 100644
      summaryUpdatedAt: '最后更新',
      summarizedTurns: '已总结有效发言',
      summaryAnchor: '总结锚点',
-@@ -3646,31 +5752,9 @@ export default {
+@@ -3643,31 +5720,9 @@ export default {
      saveSummary: '保存总结',
      summaryUpdated: '总结已更新',
      summaryNever: '从未',
@@ -10326,7 +9197,7 @@ index 940946d..92c25da 100644
      title: '用量统计',
      refresh: '刷新',
      totalTokens: '总 Token 数',
-@@ -3682,7 +5766,19 @@ export default {
+@@ -3679,7 +5734,19 @@ export default {
      cacheHitRate: '缓存命中率',
      modelBreakdown: '模型分布',
      agentBreakdown: 'Agent 分布',
@@ -10347,7 +9218,7 @@ index 940946d..92c25da 100644
      dailyTrend: '每日用量',
      date: '日期',
      tokens: 'Token',
-@@ -3692,6 +5788,26 @@ export default {
+@@ -3689,6 +5756,26 @@ export default {
      sessions: '会话',
      cost: '费用',
      noData: '暂无用量数据',
@@ -10374,7 +9245,7 @@ index 940946d..92c25da 100644
    },
    skillsUsage: {
      title: '技能用量',
-@@ -3712,10 +5828,8 @@ export default {
+@@ -3709,10 +5796,8 @@ export default {
      lastUsed: '最近',
      noData: '暂无技能用量数据',
      loadFailed: '技能用量加载失败',
@@ -10386,7 +9257,7 @@ index 940946d..92c25da 100644
    files: {
      title: '文件',
      fileTree: '文件树',
-@@ -3783,8 +5897,8 @@ export default {
+@@ -3780,8 +5865,8 @@ export default {
      zoom: '缩放',
      pdfPageLimit: '仅预览前 {count} 页。',
      tableTruncated: '为保持界面流畅，表格预览已截断。请下载文件查看全部行列。',
@@ -10396,7 +9267,7 @@ index 940946d..92c25da 100644
    download: {
      downloading: '正在下载...',
      downloadFailed: '下载失败',
-@@ -3796,35 +5910,9 @@ export default {
+@@ -3793,10 +5878,8 @@ export default {
      invalidPath: '无效的文件路径',
      contentDisplay: '内容展示',
      download: '下载',
@@ -10406,901 +9277,11 @@ index 940946d..92c25da 100644
 -
 -  // 更新日志
    changelog: {
--    new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
--    new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
--    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',
--    new_0_7_28_2: '新增 APIKEY.FAN 中转服务页面，可按已配置的 API Key 查看余额、今日与累计用量及模型明细 (#3257)',
--    new_0_7_28_3: '修复编程 Agent 手动检查更新后的状态和更新版本识别，并保护正在运行的会话 (#3261)',
--    new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
--    new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
--    new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
--    new_0_7_27_1: '聊天新增持久化的每轮用量卡片，显示 Token、缓存命中、费用与输出速度 (#3241)',
--    new_0_7_27_2: '修复编程 Agent 用量归属、单次费用与累计统计，保留中断任务用量并更新延迟返回的统计 (#3246)',
--    new_0_7_27_3: '群聊回复气泡新增每轮用量卡片，加载历史消息时可恢复显示 (#3248)',
--    new_0_7_27_4: '自定义模型定价支持选择已配置的供应商和模型，保留手动输入 ID 并改善加载失败提示 (#3253)',
--    new_0_7_27_5: '修复 Codex 上下文超限后的会话恢复，下一条消息使用新上下文继续，并保留 Studio 历史与工作区 (#3204)',
--    new_0_7_27_6: '修复 Grok 使用 DeepSeek Chat Completions 时的消息角色兼容问题 (#3244)',
--    new_0_7_27_7: '修复同一连接切换 Profile 后会话历史空白的问题 (#3242)',
--    new_0_7_27_8: '统一 Studio 抽屉尺寸和工作区选择器布局，修复群聊 Agent 设置抽屉的遮挡与加载问题，并避免回车误提交会话重命名 (#3247)',
--    new_0_7_26_1: '统一 Studio 导航栏、页面标题与列表操作，并优化移动端布局 (#3232)',
--    new_0_7_26_2: '统一页面加载反馈，改进 Logo 加载动画及减少动态效果模式下的可见性 (#3232、#3236)',
--    new_0_7_26_3: '优化自定义背景与毛玻璃层次，修复窗口边缘和圆角衔接，并让麦克风按钮跟随主题配色 (#3236)',
--    new_0_7_26_4: '按平台调整桌面窗口控制按钮的位置与样式，并保留 Windows 原生窗口圆角 (#3234、#3235)',
--    new_0_7_26_5: 'Gateway 自动启动改为显式开启，Profile 列表加载不再等待 CLI 检查，并修复消息气泡首次渲染 (#3233)',
--    new_0_7_26_6: '用量统计新增费用记录与自定义模型单价，支持基于本地模型目录估算费用，并改进模型上下文限制匹配 (#3226)',
--    new_0_7_26_7: '兼容 DSH 注册表预设与原生插件配置，修复插件页面未填满可用区域的问题 (#3218)',
--    new_0_7_26_8: '修复 Agent 管理器中 Cursor 图标在浅色卡片上的显示 (#3222)',
-     new_0_7_25_1: '新增 Cursor CLI 支持，可用于聊天、群聊和工作流，并提供原生设置、技能管理与独立的 Studio MCP 配置 (#3110)',
-     new_0_7_25_2: '新增可配置的 JEV 记忆召回、相关性过滤、写入审核、技能匹配与学习预检查 (#3159、#3161、#3169)',
-     new_0_7_25_3: '新增可选的 JEV 浏览器目标匹配与操作验证、群聊摘要审核与消息路由，以及工作流质量检查 (#3208、#3211)',
-@@ -3858,7 +5946,7 @@ export default {
-     new_0_7_22_5: '补齐全局 Coding Agent 会话的 Studio MCP 工具，改进启动命令搜索路径及未安装可执行程序时的错误提示 (#3044, #3055)',
-     new_0_7_22_6: '为 Studio 生成的 DSH 插件声明版本号，修复插件清单兼容性 (#3038)',
-     new_0_7_22_7: '修复 API 地址配置迁移时，空 BASE_URL 错误读取下一行配置的问题 (#3046)',
--    new_0_7_22_8: 'OpenRouter 请求中的应用归属统一显示为 Ekko Studio (#3056)',
-+    new_0_7_22_8: 'OpenRouter 请求中的应用归属统一显示为 SwarmStudio (#3056)',
-     new_0_7_22_9: '修复 Grok 独立会话配置中的多行数组、长文本和表数组被截断或错误拆分的问题 (#3072)',
-     new_0_7_22_10: '修复桌面运行时打包时浏览器执行权限和符号链接丢失的问题，兼容 Hermes 0.21.3；运行时发布不再覆盖桌面端的最新版本标记 (#3073)',
-     new_0_7_21_1: '修复 Windows 下因选错启动脚本导致 DSH 插件配置和 Agent 预设页面无法打开的问题 (#3026)',
-@@ -3875,7 +5963,7 @@ export default {
-     new_0_7_20_10: '修复 Hermes Agent 0.21 及后续版本的审批会话关联，兼容旧版运行时 (#3018)',
-     new_0_7_20_11: '将 apikey 默认域名更新为 apikey.fan，启动时一次性迁移已有 Hermes 配置中的旧端点，保留路径、密钥和模型设置 (#3022)',
-     new_0_7_20_12: '优化 Linux 启动器和窗口图标的圆角与透明留白，使显示尺寸更协调 (#3008)',
--    new_0_7_19_1: '品牌升级为 Ekko Studio，统一应用图标、官网域名、CLI 命令与产品文档 (#2966, #2980, #2981, #2992, #2994)',
-+    new_0_7_19_1: '品牌升级为 SwarmStudio，统一应用图标、官网域名、CLI 命令与产品文档 (#2966, #2980, #2981, #2992, #2994)',
-     new_0_7_19_2: '修复桌面端反复重启、更新中断与启动失败；升级后保留登录及浏览器数据，并迁移 Windows 开机启动设置 (#2931, #2979, #2988)',
-     new_0_7_19_3: '新增原生 OpenCode Free 提供商，无需 API Key 即可建聊和供 Coding Agent 使用，可用模型在后台加载 (#2932)',
-     new_0_7_19_4: '修复 Ekko 与 Studio 代理的 Coding Agent 请求 OpenCode 时的会话兼容性；Hermes 仍需升级运行时 (#2996)',
-@@ -3911,7 +5999,7 @@ export default {
-     new_0_7_16_1: '桌面端现在会通过 Electron 处理内置 Web UI 发起的 Runtime 重启请求，使用带重复请求保护的干净重启，同时保留独立 Web UI 的重启行为（#2827）',
-     new_0_7_16_2: '工作流和群聊现在可用 scoped 或 global 模式启动 Claude、Codex 和 Pi Agent；global 模式会隔离 Studio 管理的提示词和运行环境，同时保留用户配置（#2828）',
-     new_0_7_16_3: 'Grok CLI 现作为一等 Coding Agent 集成，支持 scoped 代理模型、隔离 global 模式、原生会话续接、用量统计、Skills、工作流和群聊（#2832）',
--    new_0_7_16_4: 'Windows Agent 管理器现在会一次性提示将旧 AppData 中的 Hermes 配置、认证、记忆、Skills 和数据库迁移到 %USERPROFILE%\\.hermes，并保留原始数据（#2834）',
-+    new_0_7_16_4: "Windows Agent 管理器现在会一次性提示将旧 AppData 中的 Hermes 配置、认证、记忆、Skills 和数据库迁移到 %USERPROFILE%\\.hermes，并保留原始数据（#2834）",
-     new_0_7_16_5: 'Windows 旧数据迁移现在只复制用户数据和数据库 sidecar，通过校验和回滚保护结果，并排除可替换的 Runtime、会话和日志，避免锁文件导致迁移失败（#2836）',
-     new_0_7_15_1: 'Hermes Runtime 版本检测现在会直接探测选中的本地环境，不再触发网络更新检查，让离线启动和版本管理更加可靠（#2822）',
-     new_0_7_15_2: '启用或安装 Runtime 后现在会询问是否立即重启；选择“下次启动使用”不再自动重启桌面端或独立 Web UI（#2822）',
-@@ -3920,7 +6008,7 @@ export default {
-     new_0_7_13_1: 'Windows Runtime 安装和清理现在会重试被 Defender 或索引器暂时锁定的文件，避免在删除或启用已下载版本时因 EACCES、EBUSY、ENOTEMPTY 或 EPERM 失败 (#2801)',
-     new_0_7_13_2: '创建 Hermes 聊天现在会复用轻量级 Agent 可用状态；仅在 Hermes 未安装时引导管理员前往安装，状态检查失败也不再阻止创建聊天 (#2805)',
-     new_0_7_13_3: 'Desktop、后端 Bridge 和 CLI 现在共享同一套锁定的 Hermes 环境选择；版本管理会显示当前 CLI、环境详情和数据目录覆盖说明，并可按需安装缺失的 Runtime (#2808)',
--    new_0_7_12_1: 'Windows 现在统一使用 %USERPROFILE%\\.hermes 存放 Hermes 数据，同时继续支持 HERMES_HOME，确保 Desktop 与后端使用同一套 Profile（#2795）',
-+    new_0_7_12_1: "Windows 现在统一使用 %USERPROFILE%\\.hermes 存放 Hermes 数据，同时继续支持 HERMES_HOME，确保 Desktop 与后端使用同一套 Profile（#2795）",
-     new_0_7_12_2: 'Windows 上的 Ekko 与 Hermes 启动流程现会延后重试被占用的 Skill 重置，并正确启动命令包装脚本，避免 EPERM 与 spawn EINVAL 导致启动失败（#2796）',
-     new_0_7_12_3: 'Ekko 现会拒绝模型生成的不完整工具调用，并在重试前清理无效工具调用历史，避免兼容模型因 function、name 或 arguments 为空而失败（#2796）',
-     new_0_7_12_4: '数据库、Skills、记忆和日志现可独立降级：核心对话保持可用，不可用模块会明确标记，每个故障都会提供原因与修复上下文（#2797）',
-@@ -3944,5 +6032,860 @@ export default {
-     new_0_7_0_9: '服务端职责现规范划分到 Studio、Hermes、Ekko 与 Coding Agent 模块；旧版 MCU 路由继续兼容，关闭 Studio 时也会可靠清理其创建的进程树（#2744、#2746、#2747）',
-     new_0_7_0_10: '中英文 README 已更新，完整说明五种运行时、三类 Agent、模块归属、规范 API，以及当前开发和验证流程（#2745）',
-     new_0_7_0_11: '“设备互联”现仅显示 Android 和 iOS 下载卡片；Apple 正式版只标记为 App Store，不再显示 TestFlight · App Store',
-+    new_0_7_26_1: '统一 Studio 导航栏、页面标题与列表操作，并优化移动端布局 (#3232)',
-+    new_0_7_26_2: '统一页面加载反馈，改进 Logo 加载动画及减少动态效果模式下的可见性 (#3232、#3236)',
-+    new_0_7_26_3: '优化自定义背景与毛玻璃层次，修复窗口边缘和圆角衔接，并让麦克风按钮跟随主题配色 (#3236)',
-+    new_0_7_26_4: '按平台调整桌面窗口控制按钮的位置与样式，并保留 Windows 原生窗口圆角 (#3234、#3235)',
-+    new_0_7_26_5: 'Gateway 自动启动改为显式开启，Profile 列表加载不再等待 CLI 检查，并修复消息气泡首次渲染 (#3233)',
-+    new_0_7_26_6: '用量统计新增费用记录与自定义模型单价，支持基于本地模型目录估算费用，并改进模型上下文限制匹配 (#3226)',
-+    new_0_7_26_7: '兼容 DSH 注册表预设与原生插件配置，修复插件页面未填满可用区域的问题 (#3218)',
-+    new_0_7_26_8: '修复 Agent 管理器中 Cursor 图标在浅色卡片上的显示 (#3222)',
-+    new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
-+    new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
-+    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',
-+    new_0_7_28_2: '新增 APIKEY.FAN 中转服务页面，可按已配置的 API Key 查看余额、今日与累计用量及模型明细 (#3257)',
-+    new_0_7_28_3: '修复编程 Agent 手动检查更新后的状态和更新版本识别，并保护正在运行的会话 (#3261)',
-+    new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
-+    new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
-+    new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
-+    new_0_7_27_1: '聊天新增持久化的每轮用量卡片，显示 Token、缓存命中、费用与输出速度 (#3241)',
-+    new_0_7_27_2: '修复编程 Agent 用量归属、单次费用与累计统计，保留中断任务用量并更新延迟返回的统计 (#3246)',
-+    new_0_7_27_3: '群聊回复气泡新增每轮用量卡片，加载历史消息时可恢复显示 (#3248)',
-+    new_0_7_27_4: '自定义模型定价支持选择已配置的供应商和模型，保留手动输入 ID 并改善加载失败提示 (#3253)',
-+    new_0_7_27_5: '修复 Codex 上下文超限后的会话恢复，下一条消息使用新上下文继续，并保留 Studio 历史与工作区 (#3204)',
-+    new_0_7_27_6: '修复 Grok 使用 DeepSeek Chat Completions 时的消息角色兼容问题 (#3244)',
-+    new_0_7_27_7: '修复同一连接切换 Profile 后会话历史空白的问题 (#3242)',
-+    new_0_7_27_8: '统一 Studio 抽屉尺寸和工作区选择器布局，修复群聊 Agent 设置抽屉的遮挡与加载问题，并避免回车误提交会话重命名 (#3247)'
-+  },
-+  matrix: {
-+    options: '选项',
-+    threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题',
-+    undecryptable: '无法解密此消息',
-+    historyLoadError: '服务器错误，无法加载更早的历史'
-+  },
-+  cockpit: {
-+    modeWorkspace: '工作区',
-+    editTitlePlaceholder: '标题',
-+    actions: '操作',
-+    specify: '细化',
-+    decompose: '分解',
-+    moveToTriage: '转入分诊',
-+    moveToReady: '转入就绪',
-+    moveToBlocked: '标记阻塞',
-+    moveToDone: '标记完成',
-+    moveToArchived: '归档',
-+    unblock: '取消阻塞',
-+    reclaim: '回收',
-+    reassign: '改派',
-+    reassignProfile: '改派 profile',
-+    recovery: '恢复',
-+    diagnostics: '诊断',
-+    notifyHomeChannels: '主页通知频道',
-+    subscribe: '订阅',
-+    unsubscribe: '退订',
-+    comments: '评论',
-+    addCommentPlaceholder: '写评论…',
-+    confirmDone: '确认将此任务标记为完成？',
-+    confirmArchive: '归档此任务？归档后可从看板隐藏但仍可恢复。',
-+    confirmBlocked: '标记此任务为阻塞？',
-+    completionSummaryRequired: '标记完成前必须填写完成摘要。',
-+    evaluation: '评估',
-+    saveDraft: '保存草稿',
-+    parentTasks: '父任务',
-+    childTasks: '子任务',
-+    parentIdPlaceholder: '父任务 id',
-+    childIdPlaceholder: '子任务 id',
-+    pendingLinksHint: '个待提交的关联变更',
-+    assignee: '负责人',
-+    selectAssignee: '选择负责人…',
-+    description: '描述',
-+    descriptionPlaceholder: '任务描述…',
-+    add: '添加',
-+    attachments: '附件',
-+    noAttachments: '暂无附件',
-+    uploadFile: '上传文件',
-+    none: '无',
-+    historySearchPlaceholder: '搜索历史事件…',
-+    historyToday: '今天',
-+    historyWeek: '本周',
-+    historyMonth: '本月',
-+    historyCategory: '类别',
-+    historyCatEvent: '事件',
-+    historyCatComment: '评论',
-+    historyActive: '进行中',
-+    historyDone: '已完成',
-+    notifyTitle: '通知',
-+    notifyUnread: '条未读',
-+    notifySource: '来源',
-+    notifyAll: '全部',
-+    notifyMatrix: 'Matrix',
-+    notifyChat: '单聊',
-+    notifyGroup: '群聊',
-+    notifyEmpty: '没有未读消息',
-+    notifyClickHint: '点击条目进入对应聊天',
-+    notifyReadAll: '全部标为已读',
-+    attention: '注意力',
-+    backToWork: '返回工作',
-+    openFull: '全屏打开',
-+    saySomething: '输入消息...',
-+    send: '发送',
-+    noTaskSelected: '未选择任务',
-+    collabWith: '协作对象',
-+    addCollab: '沟通协作',
-+    addCollabTitle: '添加协作者',
-+    collaborationMap: '协作地图',
-+    handleLater: '稍后处理',
-+    taskFiles: '任务文件',
-+    currentTaskWorkspace: '当前任务工作区',
-+    filterFiles: '过滤文件...',
-+    history: '历史',
-+    historyTitle: '历史记录',
-+    historyTime: '时间',
-+    historyAction: '操作',
-+    historyStatus: '状态',
-+    historyArchived: '已归档',
-+    restore: '恢复',
-+    maximize: '最大化',
-+    modeWork: '工作',
-+    modeTerm: '终端',
-+    schedule: '日程',
-+    today: '今天',
-+    scheduleEvents: '日程事件',
-+    scheduleEmpty: '此日期无事件',
-+    scheduleAddTodo: '添加待办',
-+    scheduleTodoPlaceholder: '需要做什么？',
-+    templateManager: '模板管理',
-+    templateName: '模板名称...',
-+    saveAsTemplate: '保存为模板',
-+    applyTemplate: '应用',
-+    deleteTemplate: '删除',
-+    noTemplates: '暂无保存的模板',
-+    termExit: '退出终端',
-+    timeline: '时间线',
-+    pending: '待处理',
-+    done: '已完成',
-+    olderHistory: '{n} 条更早记录',
-+    search: '搜索',
-+    priority: '优先级',
-+    yourDecision: '你的决定',
-+    recommend: '推荐',
-+    riskTags: '风险标签',
-+    agentPrefilled: 'Agent 预填',
-+    reviewOpinion: '审核意见',
-+    submit: '提交',
-+    newCollabFromArchive: '从模板新建协作',
-+    readOnly: '只读',
-+    noMessages: '暂无消息',
-+    connected: '已连接',
-+    disconnected: '未连接',
-+    searchPlaceholder: '搜索 会话/任务/房间',
-+    gatewayProbeTitle: '点击查看 Connected Platforms 详情',
-+    countdownTitle: '下次自动检测倒计时',
-+    notifications: '通知',
-+    defaultUser: '你',
-+    refreshFailed: '刷新失败，点击重试',
-+    refreshAll: '刷新全部看板 ({n}s)',
-+    noAttention: '无待处理事项',
-+    mapHint: '滚轮缩放 · 拖拽节点/画布 · 点击联动',
-+    legendBlocked: '阻塞',
-+    legendTodo: '待办',
-+    legendTriage: '分诊',
-+    legendReview: '待审核',
-+    filterBoard: '看板',
-+    filterPriority: '优先',
-+    filterStatus: '状态',
-+    filterAssignee: '负责',
-+    filterTenant: '租户',
-+    totalCount: '共 {n} 条',
-+    clearFilters: '清除筛选',
-+    backToSessions: '返回会话列表',
-+    aggregateMode: '聚合模式：合并关联任务会话到同一视图',
-+    aggregate: '聚合',
-+    close: '关闭',
-+    justNow: '刚刚',
-+    minutesAgo: '{n}分钟前',
-+    hoursAgo: '{n}小时前',
-+    daysAgo: '{n}天前',
-+    weekPrefix: '周',
-+    modeFleet: '舰队',
-+    fleetTitle: '会话舰队',
-+    fleetLive: '实时推送中',
-+    fleetOffline: '未连接',
-+    fleetWorking: '{n} 运行',
-+    fleetTotal: '{n} 会话',
-+    fleetAttention: '{n} 待处理',
-+    fleetSearchPlaceholder: '搜索会话/profile/输出…',
-+    fleetWorkingOnly: '只看运行+待办',
-+    fleetEmpty: '没有符合条件的会话',
-+    fleetOfflineEmpty: '舰队流未连接（需服务端 2.13+）',
-+    fleetQueued: '队列 {n}',
-+    fleetAborting: '中止中',
-+    fleetApproval: '工具审批',
-+    fleetApprove: '批准',
-+    fleetAlways: '始终允许',
-+    fleetDeny: '拒绝',
-+    fleetClarify: '待澄清',
-+    fleetAnswer: '回答',
-+    fleetClarifyPrompt: '输入对该澄清的回复：',
-+    teamAll: '全部团队',
-+    teamNew: '新建团队',
-+    teamEdit: '编辑',
-+    teamName: '名称',
-+    teamNamePlaceholder: '团队名称',
-+    teamNameRequired: '名称必填',
-+    teamDescription: '描述',
-+    teamColor: '颜色',
-+    teamProfiles: '成员 Profiles',
-+    teamBoards: '看板 Boards',
-+    teamNoProfiles: '（未发现 profiles）',
-+    teamDelete: '删除',
-+    teamCancel: '取消',
-+    teamSave: '保存',
-+    inboxTitle: '指挥收件箱',
-+    inboxPending: '项待处理',
-+    inboxClear: '全部处理完毕',
-+    inboxKind_approval: '审批',
-+    inboxKind_blocked: '阻塞',
-+    inboxKind_clarify: '澄清',
-+    inboxKind_review: '待审',
-+    inboxKind_triage: '分诊',
-+    inboxKind_chat: '会话',
-+    inboxKind_matrix: 'Matrix',
-+    inboxKind_group: '群聊',
-+    inboxKind_reminder: '提醒',
-+    fleetSubagents: '子代理',
-+    fleetSubagentsRun: '{n} 运行中',
-+    traceUsageSummary: '会话累计用量（L2 汇总，跨运行连续）',
-+    inboxKind_mcp: 'MCP 降级',
-+    completionSummary: '完成摘要',
-+    completionSummaryHint: '输入此任务的摘要，将存为任务结果。',
-+    scheduleTitle: '日程',
-+    yearLabel: '年',
-+    itemCount: '{n} 项',
-+    aggregateSessions: '聚合关联会话',
-+    termTool: '终端工具',
-+    termToolNotInstalled: '未安装',
-+    accurate: '精确',
-+    allTasks: '全部任务',
-+    applyTimeFilter: '应用时间筛选',
-+    archived: '已归档',
-+    backToAllTasks: '返回全部任务',
-+    childTask: '子任务',
-+    collaborationSequence: '协作序列',
-+    collapseCollabMap: '收起协作图',
-+    collapseSidebar: '收起侧栏',
-+    collapseTimeline: '收起时间线',
-+    completed: '已完成',
-+    config: '配置',
-+    configUnavailable: '配置不可用',
-+    content: '内容',
-+    copyTaskId: '复制任务 ID',
-+    createdAt: '创建时间',
-+    createdBy: '创建者',
-+    creator: '创建者',
-+    detecting: '检测中',
-+    duration: '耗时',
-+    editMode: '编辑模式',
-+    empty: '空',
-+    endTime: '结束时间',
-+    entryPoint: '入口',
-+    env: '环境',
-+    eventCount: '事件数',
-+    evidenceLevel: '证据级别',
-+    executionCount: '执行次数',
-+    expandCollabMap: '展开协作图',
-+    expandDayBackward: '前一天',
-+    expandDayForward: '后一天',
-+    expandTimeline: '展开时间线',
-+    exportDossier: '导出档案',
-+    globalTimeline: '全局时间线',
-+    inference: '推理',
-+    liveMode: '实时',
-+    loadConfig: '加载配置',
-+    loadingAggregate: '加载中...',
-+    model: '模型',
-+    moreInfo: '更多信息',
-+    nextYear: '下一年',
-+    noData: '暂无数据',
-+    noExecutionData: '暂无执行数据',
-+    noMatchingTasks: '无匹配任务',
-+    noReminder: '无提醒',
-+    noTasksOnPage: '本页暂无任务',
-+    parameter: '参数',
-+    parentTask: '父任务',
-+    path: '路径',
-+    playPause: '播放/暂停',
-+    playbackHint: '点击播放按钮回放事件',
-+    prevYear: '上一年',
-+    previewMode: '预览',
-+    projectId: '项目 ID',
-+    reloadArchived: '重新加载归档',
-+    reloadCompleted: '重新加载完成',
-+    replayMode: '回放',
-+    result: '结果',
-+    runObservatory: '运行观察台',
-+    scrollZoom: '滚轮缩放',
-+    searchEvents: '搜索事件...',
-+    selectNodeForDetail: '选择节点查看详情',
-+    sessionRecords: '会话记录',
-+    skill: '技能',
-+    skillCount: '技能数',
-+    source: '来源',
-+    startTime: '开始时间',
-+    summary: '摘要',
-+    switchSpeed: '切换速度',
-+    taskDetail: '任务详情',
-+    taskStatus: '状态',
-+    taskSwimlane: '任务泳道',
-+    taskTimeline: '任务时间线',
-+    taskTopology: '任务拓扑',
-+    focusTask: ' · 聚焦 {id}',
-+    tenant: '租户',
-+    timeWindow: '时间窗口',
-+    timelinePrefix: '时间线',
-+    title: '标题',
-+    type: '类型',
-+    unassignedTask: '未分配',
-+    unspecified: '未指定',
-+    newMatrix: '新建 Matrix 群',
-+    newMatrixDesc: '创建一个 Matrix 协作群并拉入相关成员',
-+    newChat: '新建会话',
-+    newChatDesc: '发起一个新的 Agent 会话',
-+    newGroup: '新建群聊',
-+    newGroupDesc: '创建多人群聊房间',
-+    workspaceNotFound: '工作区目录不存在（尚未创建或已被清理）',
-+    retry: '重试',
-+    actionApprove: '批准',
-+    actionDecide: '裁决',
-+    actionSupplement: '补充',
-+    actionEvaluate: '评估',
-+    actionDelegate: '委派',
-+    decisionConditional: '有条件通过',
-+    decisionConditionalDesc: '人工附加条件后放行，条件落卡跟踪',
-+    decisionReject: '驳回',
-+    decisionApprove: '批准',
-+    workerHealth: 'Worker',
-+    heartbeat: '心跳',
-+    maxRuntime: '最长运行',
-+    failureCircuit: '失败',
-+    circuitTripped: '熔断',
-+    claimLock: 'Claim 锁',
-+    workflow: '工作流',
-+    goalMode: 'goal 模式',
-+    derivation: '溯源',
-+    events: '事件',
-+    runHistory: '运行历史',
-+    lifecycleTitle: '任务生命周期',
-+    lifecycleMedian: '中位完成',
-+    lifecycleBottleneckHint: '活跃任务平均停留最长的状态',
-+    lifecycleBottleneck: '瓶颈',
-+    lifecycleFunnel: '状态分布（active vs all）',
-+    lifecycleDwell: '活跃状态平均停留',
-+    lifecycleHeat: '优先级 × 状态'
-+  },
-+  matrixChat: {
-+    actionDelete: '删除',
-+    adminTools: '管理工具',
-+    actionEdit: '编辑',
-+    actionReply: '回复',
-+    addReaction: '添加回应',
-+    addTopic: '添加主题',
-+    allThreads: '全部话题',
-+    backToThreads: '返回话题',
-+    banUser: '封禁用户',
-+    bold: '粗体',
-+    cancel: '取消',
-+    changeAvatar: '更换头像',
-+    code: '代码',
-+    codeBlock: '代码块',
-+    comingSoon: '即将推出',
-+    clearAllMessages: '清空全部消息',
-+    clearAllMessagesConfirm: '确定要清空「{room}」中的所有消息吗？',
-+    clearAllMessagesWarning: '此操作将撤回你有权限删除的所有可见消息，且不可撤销。',
-+    clearMessagesFailed: '清空消息失败',
-+    clearMessagesResult: '已清空 {deleted} 条消息，{failed} 条失败',
-+    confirmDelete: '确认删除',
-+    confirmDeleteAction: '确定要删除此消息吗？',
-+    confirmLeave: '再次点击确认',
-+    copyLink: '复制链接',
-+    copyText: '复制文本',
-+    createRoom: '创建房间',
-+    delete: '删除',
-+    deleteReasonPlaceholder: '原因（可选）',
-+    disabled: '已禁用',
-+    edit: '编辑',
-+    editMessagePlaceholder: '编辑消息...',
-+    edited: '已编辑',
-+    editingMessage: '正在编辑消息',
-+    emoji: '表情',
-+    enabled: '已启用',
-+    encryption: '加密',
-+    e2eVerified: '已通过加密验证',
-+    eventNotFound: '事件未找到',
-+    exportChatMenu: '导出聊天',
-+    exportChatDescription: '将此房间的所有消息导出为 JSON 文件。',
-+    exportFailed: '导出失败',
-+    exportSuccess: '{count} 条消息已导出',
-+    exporting: '导出中...',
-+    extensionsMenu: '集成',
-+    failed: '失败',
-+    favorite: '收藏',
-+    filesMenu: '文件',
-+    forward: '转发',
-+    forwardMessage: '转发消息',
-+    forwardingMessage: '转发消息中...',
-+    historyLoadError: '服务器错误，无法加载更早的历史',
-+    historyWorldReadable: '历史对任何人可见',
-+    historyShared: '历史对加入后的成员可见',
-+    historyInvited: '历史对受邀成员可见',
-+    historyJoined: '历史对成员可见',
-+    ignoreUser: '忽略用户',
-+    inviteFailed: '邀请失败',
-+    inviteSending: '发送邀请中...',
-+    inviteToRoom: '邀请加入房间',
-+    inviteUser: '邀请用户',
-+    italic: '斜体',
-+    joinRoom: '加入房间',
-+    kickUser: '踢出用户',
-+    leaveRoom: '离开房间',
-+    leaveFailed: '离开房间失败',
-+    leaveRoomConfirm: '确定要离开「{room}」吗？',
-+    linkCopied: '链接已复制',
-+    loading: '加载中...',
-+    loadMore: '加载更多',
-+    loadingThreads: '加载话题中...',
-+    markAllThreadsRead: '将所有话题标记为已读',
-+    memberAdmin: '管理员',
-+    memberCount: '{count} 名成员',
-+    memberDefault: '成员',
-+    memberInvited: '已邀请',
-+    memberMod: '版主',
-+    memberSearch: '搜索成员',
-+    members: '成员',
-+    messageSendFailed: '消息发送失败',
-+    messageSending: '发送中...',
-+    minutesAgo: '{n}分钟前',
-+    hoursAgo: '{n}小时前',
-+    daysAgo: '{n}天前',
-+    justNow: '刚刚',
-+    myThreads: '我的话题',
-+    newMessages: '新消息',
-+    noExtensions: '暂无集成',
-+    noExtensionsHint: '从集成管理器添加集成',
-+    noFilesFound: '未找到文件',
-+    noMembersFound: '未找到成员',
-+    noPinnedMessages: '暂无已固定消息',
-+    noResults: '无结果',
-+    noRoomSelected: '未选择房间',
-+    noRooms: '暂无房间',
-+    noThreadsDesc: '此房间暂无话题',
-+    noThreadsTitle: '暂无话题',
-+    noUsersFound: '未找到用户',
-+    noTopic: '未设置主题',
-+    notAuthenticated: '未认证',
-+    notifications: '通知',
-+    notifyAllMessages: '所有消息',
-+    notifyMentions: '仅提及',
-+    notifyNone: '无',
-+    notTrusted: '未信任',
-+    offline: '离线',
-+    online: '在线',
-+    openWidget: '打开小部件',
-+    options: '选项',
-+    paginateLoading: '加载更多...',
-+    people: '成员',
-+    pinnedMessages: '已固定消息',
-+    pollsMenu: '投票',
-+    pollEnded: '已结束',
-+    pollActive: '进行中',
-+    noPolls: '暂无投票',
-+    untitledPoll: '无标题投票',
-+    votes: '票',
-+    powerLevel: '权限等级',
-+    powerLevelValue: '{level}',
-+    publicRoom: '公开房间',
-+    replyInThread: '在话题中回复',
-+    replyMessagePlaceholder: '回复...',
-+    reportFailed: '举报提交失败',
-+    reportReason: '举报原因...',
-+    reportRoom: '举报房间',
-+    reportRoomDescription: '向服务器管理员举报此房间。请描述问题。',
-+    reportSpamAbuse: '垃圾信息或滥用',
-+    roomAlias: '房间别名',
-+    roomEncryption: '已加密房间',
-+    roomId: '房间 ID',
-+    roomIdOrAlias: '房间 ID 或别名',
-+    roomInfo: '房间信息',
-+    roomMembers: '房间成员',
-+    roomName: '房间名称',
-+    roomPublic: '公开',
-+    roomSettings: '房间设置',
-+    roomTopic: '话题',
-+    save: '保存',
-+    saving: '保存中...',
-+    search: '搜索',
-+    searchHint: '搜索房间和联系人',
-+    searchResultCount: '{count} 条结果',
-+    searchRooms: '搜索房间',
-+    searchUsers: '搜索用户',
-+    searchUsersHint: '按用户名或显示名搜索',
-+    send: '发送',
-+    sendMessage: '发送消息',
-+    sent: '已发送',
-+    showAll: '显示全部',
-+    showLess: '收起',
-+    shareRoom: '分享房间',
-+    startChat: '开始聊天',
-+    stateBanned: '被封禁',
-+    stateChangedName: '修改了显示名称',
-+    stateInvited: '被邀请',
-+    stateJoined: '加入了',
-+    stateKicked: '被踢出',
-+    stateLeft: '离开了',
-+    stateLoadingOlder: '加载更早的消息...',
-+    stateNoMoreHistory: '没有更多历史',
-+    stateReason: '原因',
-+    stateRejectedInvite: '拒绝了邀请',
-+    stateRoomCreated: '房间已创建',
-+    stateUnbanned: '被解封',
-+    stateWithdrewInvite: '撤销了邀请',
-+    stateNameSet: '{sender} 将房间名称设置为「{name}」',
-+    stateNameChanged: '{sender} 将房间名称从「{oldName}」改为「{newName}」',
-+    stateNameRemoved: '{sender} 移除了房间名称「{oldName}」',
-+    stateTopicSet: '{sender} 将主题设置为「{topic}」',
-+    stateTopicChanged: '{sender} 将主题从「{oldTopic}」改为「{newTopic}」',
-+    stateTopicRemoved: '{sender} 移除了主题',
-+    stateAvatarChanged: '{sender} 更换了房间头像',
-+    stateAliasSet: '{sender} 将主地址设置为 {alias}',
-+    stateAliasChanged: '{sender} 将主地址从 {oldAlias} 改为 {alias}',
-+    stateAliasRemoved: '{sender} 移除了主地址 {oldAlias}',
-+    statePowerLevelChanged: '{sender} 修改了权限等级',
-+    stateMadePublic: '{sender} 将房间设为公开',
-+    stateMadePrivate: '{sender} 将房间设为仅邀请',
-+    stateJoinRulesChanged: '{sender} 修改了加入规则',
-+    stateHistoryVisibilityChanged: '{sender} 修改了历史可见性',
-+    stateEncryptionEnabled: '{sender} 开启了端到端加密',
-+    statePinnedMessages: '{sender} 固定了 {count} 条消息',
-+    stateUnpinnedMessages: '{sender} 取消了部分固定消息（{count} 条已固定）',
-+    stateClearedPinned: '{sender} 清空了所有固定消息',
-+    stateRoomUpgraded: '{sender} 升级了房间',
-+    suggestions: '建议',
-+    submitting: '提交中...',
-+    syncConnecting: '连接中...',
-+    syncError: '连接错误',
-+    thread: '话题',
-+    threadStartDisabled: '无法基于已有关系的消息发起话题',
-+    threads: '话题',
-+    threadsMenu: '话题',
-+    typingMany: '{n} 人正在输入...',
-+    typingOne: '{user} 正在输入...',
-+    typingTwo: '{user1} 和 {user2} 正在输入...',
-+    trusted: '已信任',
-+    unavailable: '离开',
-+    undecryptable: '无法解密此消息',
-+    unencrypted: '未加密',
-+    unignoreUser: '取消忽略',
-+    unpinAll: '全部取消固定',
-+    unpinMessage: '取消固定',
-+    unknownFile: '未知文件',
-+    uploadFile: '上传文件',
-+    videoCall: '视频通话',
-+    voiceCall: '语音通话'
-+  },
-+  approvals: {
-+    title: '审批收件箱',
-+    pageTitle: '审批收件箱',
-+    navLabel: '待审收件箱',
-+    empty: '暂无待审事项',
-+    pendingCount: '{n} 项待审',
-+    kindCommand: '命令审批',
-+    kindReview: '评审卡',
-+    objectPrefix: '对象',
-+    reviewUncommitted: '未提交变更',
-+    reviewBaseline: '基线对照 {ref}',
-+    history: '审批历史',
-+    historyEmpty: '暂无记录',
-+    colTime: '时间',
-+    colActor: '操作人',
-+    colTarget: '操作对象',
-+    colDecision: '结果',
-+    colNote: '备注',
-+    loadFailed: '加载失败',
-+    viewDiff: '查看变更',
-+    choice: {
-+      once: '批准',
-+      session: '本会话允许',
-+      always: '总是允许',
-+      deny: '拒绝',
-+      approve: '批准',
-+      request_changes: '打回返工'
-+    },
-+    colRisk: '风险档',
-+    risk: {
-+      high: '高风险',
-+      medium: '标准',
-+      low: '低风险',
-+      highHint: '须逐条人审',
-+      autoSample: '可自动放行 · 抽检'
-+    }
-+  },
-+  loopCockpit: {
-+    title: '循环驾驶舱',
-+    tagline: '循环生长态势 · 实时',
-+    back: '返回驾驶舱',
-+    scene: {
-+      overview: '总览',
-+      manage: '管理',
-+      code: '编码',
-+      ops: '运维'
-+    },
-+    status: {
-+      connected: '实时',
-+      disconnected: '离线'
-+    },
-+    kpi: {
-+      loopsActive: '活跃循环',
-+      runsRunning: '运行中',
-+      awaiting: '待介入',
-+      done7d: '7日完成',
-+      avg7d: '7日均耗时'
-+    },
-+    inbox: {
-+      title: '介入收件箱',
-+      empty: '没有等待你的决策',
-+      all: '全部介入'
-+    },
-+    loops: {
-+      title: '循环',
-+      newLoop: '新建循环',
-+      deleteConfirm: '确定删除该循环？此操作不可撤销。'
-+    },
-+    viz: {
-+      core: '核心引擎',
-+      empty: '还没有循环在生长——新建一个循环，或到编排区从模板实例化。',
-+      emptyCta: '新建循环',
-+      emptyCta2: '去编排',
-+      legendRunning: '运行中',
-+      legendAwaiting: '待介入',
-+      legendDone: '已完成',
-+      legendFailed: '失败',
-+      moreLoops: '另有 {n} 个循环未展示'
-+    }
-+  },
-+  loopScenes: {
-+    manage: {
-+      people: '人员',
-+      unassigned: '未指派',
-+      gotoBoard: '全屏看板',
-+      rooms: '任务群组',
-+      noRooms: '暂无关联群组',
-+      trace: '追溯矩阵',
-+      openCount: '在办',
-+      tabDuty: '任务与值守',
-+      tabTeams: 'Teams 管理'
-+    },
-+    code: {
-+      selectTask: '选择任务',
-+      noTask: '从上方选择任务以打开工作区与终端',
-+      noWorkspace: '任务尚未领取 workspace，等待 agent claim 后重试',
-+      context: '任务上下文',
-+      openDrawer: '任务详情',
-+      openChat: '完整 Chat',
-+      runs: '关联运行'
-+    },
-+    ops: {
-+      duty: '值班台',
-+      quickActions: '快捷动作',
-+      newLoop: '新建循环',
-+      schedule: '日程管理',
-+      cockpitLink: '协作中心',
-+      activeRuns: '进行中运行'
-+    }
-+  },
-+  teams: {
-+    title: 'Teams 管理',
-+    matrixOffline: 'Matrix 未连接，Teams 管理不可用',
-+    registry: {
-+      none: '尚未配置团队注册房间',
-+      create: '创建注册房间',
-+      setName: '注册房间名称',
-+      inviteIds: '邀请成员（Matrix ID，逗号分隔，可留空）',
-+      candidates: '检测到含团队数据的已加入房间',
-+      useThis: '设为注册房间',
-+      room: '注册房间'
-+    },
-+    accounts: {
-+      empty: '暂无成员声明 agent teams'
-+    },
-+    leader: {
-+      badge: 'leader',
-+      manage: 'leader 管理',
-+      add: '添加 leader'
-+    },
-+    invite: {
-+      button: '邀请'
-+    },
-+    self: {
-+      hint: '编辑本账号的 agent teams'
-+    },
-+    agentTeams: {
-+      add: '新增 team',
-+      name: '名称',
-+      profiles: 'Profiles',
-+      defaultProfile: '默认 profile',
-+      save: '保存声明'
-+    },
-+    duty: {
-+      title: '群聊值守',
-+      chooseRoom: '选择房间',
-+      to: '指派给',
-+      assign: '指派',
-+      clear: '取消值守',
-+      mine: '值守',
-+      assignFailed: '值守指派失败，请重试'
-+    },
-+    dispatch: {
-+      title: '外派任务',
-+      titleField: '标题',
-+      body: '描述',
-+      target: '目标账号',
-+      profile: '指定 profile（可选）',
-+      send: '发出',
-+      empty: '暂无外派任务',
-+      status: {
-+        created: '已建卡',
-+        running: '执行中',
-+        done: '已完成',
-+        failed: '失败',
-+        pending: '待回执'
-+      },
-+      issuedBy: '指派人'
-+    }
-+  },
-+  loopMind: {
-+    title: '思维大脑',
-+    tagline: '活动思维 · 自适应生长',
-+    core: '核心思维',
-+    loops: {
-+      title: '思维',
-+      empty: '尚未形成思维活动'
-+    },
-+    viz: {
-+      empty: '思维网络尚未形成——运行会自发生长，无需人工编排。',
-+      emptyCta: '去看介入',
-+      retry: '重新加载思维网络'
-+    },
-+    viewRuns: '查看运行',
-+    view3d: '立体',
-+    viewCortex: '皮层',
-+    view2d: '平面',
-+    "3dHint": '拖拽旋转 · 滚轮缩放 · 左侧切层',
-+    protoB: '方案 B · 思维皮层原型',
-+    clusterTasks: '{n} 个任务',
-+    clusterTasksUnit: '个任务',
-+    detail: {
-+      title: '详情',
-+      close: '收起',
-+      status: '状态',
-+      cluster: '所属族',
-+      runs: '运行史',
-+      relations: '关联',
-+      retry: '重新加载',
-+      refreshing: '加载中…'
-+    },
-+    status: {
-+      running: '进行中',
-+      blocked: '阻塞',
-+      "awaiting-review": '待审',
-+      "awaiting-input": '待介入',
-+      completed: '已完成',
-+      failed: '失败',
-+      idle: '空闲',
-+      archived: '已归档',
-+      unknown: '未知'
-+    },
-+    zone: {
-+      all: '总览',
-+      running: '进行中',
-+      awaiting: '待介入',
-+      blocked: '阻塞',
-+      failed: '失败',
-+      completed: '已完成',
-+      idle: '静止',
-+      archived: '已归档'
-+    }
-+  },
-+  graph: {
-+    title: '图工程',
-+    empty: '暂无图实例',
-+    fork: '分叉',
-+    interrupts: {
-+      title: '中断'
-+    },
-+    sidebar: {
-+      all: '全部',
-+      running: '运行中',
-+      awaiting: '等待输入',
-+      completed: '已完成',
-+      failed: '已失败'
-+    },
-+    table: {
-+      name: '名称',
-+      status: '状态',
-+      step: '步骤',
-+      cost: '成本',
-+      actions: '操作'
-+    },
-+    actions: {
-+      run: '运行',
-+      pause: '暂停',
-+      fork: '分叉',
-+      delete: '删除'
-+    },
-+    detail: {
-+      back: '返回',
-+      cost: '成本',
-+      currentStep: '当前步骤',
-+      level: '级别',
-+      pattern: '模式',
-+      step: '步骤',
-+      thread: '线程'
-+    },
-+    checkpoints: {
-+      empty: '暂无检查点'
-+    }
-+  },
-+  graphFork: {
-+    title: '分叉图',
-+    name: '名称',
-+    confirm: '确认',
-+    cancel: '取消'
+     new_0_7_30_1: '新增 Qwen Code、Kimi Code、CodeBuddy、Qoder、GitHub Copilot 和 ZCode，接入聊天、群聊及工作流；Qoder 使用全局模式，其余五种也支持独立配置模型 (#3280)',
+     new_0_7_30_2: 'Ekko 会话在历史和搜索中归入内置 Agent，并支持 /context、/usage、/status 和 /compact 命令 (#3276)',
+@@ -3815,4 +5898,31 @@ export default {
+     new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
+     new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
    },
 +  apiRelay: {
 +    title: 'API 中转',

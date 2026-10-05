@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index a51c042..e73770e 100644
+index 9eb2abe2..730704a9 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,7 +1,7 @@

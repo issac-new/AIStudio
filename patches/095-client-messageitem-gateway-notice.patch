@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index 5a17a5f5..8827d081 100644
+index c2dc7375..ab94da2a 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
-@@ -48,6 +48,7 @@ const toast = useMessage();
+@@ -63,6 +63,7 @@ const toast = useMessage();
  
  const isSystem = computed(() => props.message.role === "system");
  const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
@@ -10,7 +10,7 @@ index 5a17a5f5..8827d081 100644
  
  const effectiveHeadingIdPrefix = computed(() => props.headingIdPrefix || `msg-${props.message.id}`);
  const isCommandMessage = computed(() => props.message.role === "command" || props.message.systemType === "command");
-@@ -965,6 +966,7 @@ onBeforeUnmount(() => {
+@@ -1046,6 +1047,7 @@ onBeforeUnmount(() => {
              :class="{
                system: isSystem,
                'agent-error': isAgentError,

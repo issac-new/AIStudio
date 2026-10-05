@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index 976435a2..ace59681 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
-@@ -606,10 +606,11 @@
+@@ -590,10 +590,11 @@ export async function uploadAttachment(
    return res.attachment
  }
  
@@ -15,7 +16,7 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
    const headers: Record<string, string> = {}
    const apiKey = getApiKey()
    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
-@@ -618,9 +619,12 @@
+@@ -602,9 +603,12 @@ export async function downloadAttachment(attachmentId: number, opts?: KanbanBoar
    return res.blob()
  }
  
@@ -31,9 +32,10 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
        method: 'DELETE',
      },
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+index 879139cc..382da8df 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
-@@ -694,7 +694,7 @@
+@@ -703,7 +703,7 @@ export const useKanbanStore = defineStore('kanban', () => {
  
    async function deleteTaskAttachment(taskId: string, attachmentId: number) {
      const board = selectedBoard.value
@@ -42,7 +44,7 @@ diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/s
      if (board === selectedBoard.value) {
        const list = attachments.value[taskId] || []
        attachments.value[taskId] = list.filter(a => a.id !== attachmentId)
-@@ -705,8 +705,8 @@
+@@ -714,8 +714,8 @@ export const useKanbanStore = defineStore('kanban', () => {
      return startEventStream()
    }
  

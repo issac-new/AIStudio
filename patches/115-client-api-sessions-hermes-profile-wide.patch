@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
+index 7e9396dc..ffb14dcb 100644
 --- a/packages/client/src/api/client.ts
 +++ b/packages/client/src/api/client.ts
-@@ -106,6 +106,7 @@ function isProfileWideSessionCollection(pathname: string): boolean {
+@@ -152,6 +152,7 @@ function shouldAttachProfileHeader(path: string, options: RequestInit): boolean
  function isProfileWideSessionCollection(pathname: string): boolean {
    return pathname === '/api/studio/sessions' ||
      pathname === '/api/studio/sessions/batch-delete' ||

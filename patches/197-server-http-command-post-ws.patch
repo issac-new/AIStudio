@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index 6accde39..5d8a8b59 100644
+index 955b69b0..bd2ac6e6 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -17,6 +17,10 @@ import './chat-agent-runtime-adapter'
+@@ -21,6 +21,10 @@ import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
  // overlay[loop-socket]: Loop Engineering Socket.IO namespace
  import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
@@ -13,7 +13,7 @@ index 6accde39..5d8a8b59 100644
  import { setChatRunServer } from '../modules/studio/public/chat-run'
  import { GroupChatServer } from '../modules/studio/public/group-chat'
  import {
-@@ -664,6 +668,19 @@ export async function bootstrap() {
+@@ -692,6 +696,19 @@ export async function bootstrap() {
      close: () => kanbanEventsWebSocket.close(),
      forceClose: () => kanbanEventsWebSocket.forceClose(),
    })

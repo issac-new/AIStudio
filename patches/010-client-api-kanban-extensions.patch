@@ -1,4 +1,5 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index 54d800c4..52eda1a3 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
 @@ -18,8 +18,10 @@ export interface KanbanTask {
@@ -17,12 +18,6 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
  }
  
 -export interface KanbanTaskLog {
--  task_id: string
--  path: string | null
--  exists: boolean
--  size_bytes: number
--  content: string
--  truncated: boolean
 +// KanbanAttachment 复用 v0.6.35 上游内置定义（id/filename/content_type/size/uploaded_by/created_at）
 +
 +export interface KanbanDiagnosticAction {
@@ -44,7 +39,12 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
 +}
 +
 +export interface KanbanDiagnostic {
-+  task_id: string
+   task_id: string
+-  path: string | null
+-  exists: boolean
+-  size_bytes: number
+-  content: string
+-  truncated: boolean
 +  task_title: string
 +  task_status: string
 +  task_assignee: string | null
@@ -74,7 +74,7 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
  }
  
  export interface KanbanCreateRequest {
-@@ -166,6 +220,7 @@ export interface KanbanCreateRequest {
+@@ -164,6 +207,7 @@ export interface KanbanCreateRequest {
    assignee?: string
    priority?: number
    tenant?: string
@@ -82,7 +82,7 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
    workspace?: string
    branch?: string
    triage?: boolean
-@@ -193,6 +248,14 @@ export interface KanbanTaskLogOptions extends KanbanBoardOptions {
+@@ -194,6 +238,14 @@ export interface KanbanTaskLogOptions extends KanbanBoardOptions {
    tail?: number
  }
  
@@ -97,7 +97,7 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
  export interface KanbanDiagnosticsOptions extends KanbanBoardOptions {
    task?: string
    severity?: 'warning' | 'error' | 'critical'
-@@ -427,14 +490,6 @@ export async function getTaskLog(taskId: string, opts?: KanbanTaskLogOptions): P
+@@ -424,14 +476,6 @@ export async function getTaskLog(taskId: string, opts?: KanbanTaskLogOptions): P
    return request<KanbanTaskLog>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/log`, params))
  }
  
@@ -112,7 +112,7 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
  export async function reclaimTask(taskId: string, opts?: KanbanReclaimOptions): Promise<{ ok: boolean; output?: string }> {
    return request<{ ok: boolean; output?: string }>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/reclaim`, boardParams(opts?.board)), {
      method: 'POST',
-@@ -471,3 +526,175 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
+@@ -472,3 +516,175 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
    const res = await request<{ assignees: KanbanAssignee[] }>(appendQuery('/api/hermes/kanban/assignees', boardParams(opts?.board)))
    return res.assignees
  }

@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts b/packages/server/src/modules/hermes/services/history/sessions-db.ts
+index 28a43454..547e5820 100644
 --- a/packages/server/src/modules/hermes/services/history/sessions-db.ts
 +++ b/packages/server/src/modules/hermes/services/history/sessions-db.ts
-@@ -34,6 +34,7 @@ export interface HermesSessionRow {
+@@ -36,6 +36,7 @@ export interface HermesSessionRow {
    cost_status: string
    preview: string
    last_active: number
@@ -9,7 +10,7 @@ diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts 
  }
  
  export interface HermesSessionSearchRow extends HermesSessionRow {
-@@ -418,9 +419,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
+@@ -420,9 +421,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
  function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
    const latest = latestSessionInChain(chain)
    const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
@@ -21,7 +22,7 @@ diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts 
      id: latest.id,
      model: latest.model || root.model,
      title: latest.title || root.title || titleFromPreview(firstPreview),
-@@ -439,7 +442,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
+@@ -441,7 +444,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
      cost_status: latest.cost_status,
      preview: latest.preview || root.preview || firstPreview || '',
      last_active: latest.last_active || root.last_active,
@@ -30,7 +31,7 @@ diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts 
  }
  
  // --- In-memory session index for chain traversal ---
-@@ -1501,7 +1504,7 @@ export async function getUsageStatsFromDb(
+@@ -1602,7 +1605,7 @@ export async function getUsageStatsFromDb(
    }
  }
  
@@ -39,7 +40,7 @@ diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts 
    if (!SQLITE_AVAILABLE) {
      throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
    }
-@@ -1515,6 +1518,7 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
+@@ -1616,6 +1619,7 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
      return [...idx.byId.values()]
        .filter(session => !source || session.source === source)
        .filter(session => !isCompressionContinuationChild(session, idx))
@@ -48,20 +49,23 @@ diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts 
        .sort(compareSessionSummariesNewestFirst)
        .slice(0, limit)
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
+index dbc9a7af..f0d208f4 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
-@@ -565,8 +565,9 @@ export async function listHermesSessions(ctx: any) {
+@@ -634,6 +634,7 @@ export async function listHermesSessions(ctx: any) {
    const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
    const paginated = Boolean(source) || normalizedOffset > 0
    const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
 +  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
-   const localSessions = localListSessions(profile, source, candidateLimit)
--  const allSessions = isHermesAgentAvailable()
+   // Opt in so released clients that group by the raw source keep their contract.
+   const agentGroups = ctx.query.agent_groups === '1'
+   const allowedProfiles = allowedProfileSet(ctx)
+@@ -645,7 +646,7 @@ export async function listHermesSessions(ctx: any) {
+       })
+     : localListSessions(profile, source, candidateLimit)
+   const allSessions = isHermesAgentAvailable() && !(agentGroups && source === 'builtin_agent')
 -    ? await listHermesSessionSummaries(source, candidateLimit, profile)
--    : []
-+  const allSessions = isHermesAgentAvailable()
 +    ? await listHermesSessionSummaries(source, candidateLimit, profile, includeChildren)
-+    : []
-   const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
- 
-   if (paginated) {
+     : []
+   if (agentGroups && allSessions.length) {
+     localSessions.push(...localListSessions(profile, undefined, allSessions.length, {

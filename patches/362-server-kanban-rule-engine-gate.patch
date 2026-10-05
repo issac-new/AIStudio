@@ -1,14 +1,18 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index db4d56af..1396e850 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -8,5 +8,6 @@ import { detectHermesRootHome } from '../runtime/path'
+@@ -8,6 +8,7 @@ import { execHermes, spawnHermes } from '../runtime/process'
  import { safeFileStore } from '../../../studio/public/safe-file-store'
  import { getActiveProfileName, getProfileDir } from '../profiles/profile'
  import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
 +import { evaluateRules } from '../../../../custom/loop/engine/architecture-engine'
  
  const execOpts = { windowsHide: true }
-@@ -653,7 +654,21 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+@@ -721,6 +722,20 @@ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions)
+ }
+ 
  export async function assignTask(taskId: string, profile: string, opts?: KanbanBoardOptions): Promise<void> {
 +  // HERMES_CUSTOM[aipaydev] BEGIN: 架构规则引擎派发前校验（规则熔断：报错阻断，升级人工）
 +  {
@@ -27,6 +31,3 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
    await execKanbanMutation(
      [...boardArgs(opts?.board), 'assign', taskId, profile],
      'Hermes CLI: kanban assign failed',
-     'Failed to assign kanban task',
-   )
- }

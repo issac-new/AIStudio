@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index 0be463b..001a620 100644
+index bd2ac6e6..d4f5697f 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -802,6 +802,9 @@ export async function bootstrap() {
+@@ -815,6 +815,9 @@ export async function bootstrap() {
        if (!dshPluginUi.handlesUpgrade(req) &&
          url.pathname !== '/api/hermes/terminal' &&
          url.pathname !== '/api/hermes/kanban/events' &&

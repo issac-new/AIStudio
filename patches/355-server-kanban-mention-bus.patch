@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index e41288be..2dbfa562 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
-@@ -647,6 +647,23 @@
+@@ -647,6 +647,23 @@ export async function addComment(ctx: Context) {
    try {
      if (!await authorizeTaskIds(ctx, board, [ctx.params.id])) return
      ctx.body = await kanbanCli.addComment(ctx.params.id, body.value!, { board, author: author.value })

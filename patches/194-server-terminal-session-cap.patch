@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/sockets/terminal.ts b/packages/server/src/modules/hermes/sockets/terminal.ts
-index 840b889..77340a8 100644
+index 184c36f5..1ec268e9 100644
 --- a/packages/server/src/modules/hermes/sockets/terminal.ts
 +++ b/packages/server/src/modules/hermes/sockets/terminal.ts
-@@ -99,6 +99,13 @@ export function resolveTerminalCwd(
+@@ -17,6 +17,13 @@ function shellName(shell: string): string { return shell.split('/').pop() || 'sh
  
  // ─── Session types ──────────────────────────────────────────────
  
@@ -16,7 +16,7 @@ index 840b889..77340a8 100644
  interface PtySession {
    id: string
    pty: { pid: number; onData: (cb: (data: string) => void) => void; onExit: (cb: (e: { exitCode: number }) => void) => void; write: (data: string) => void; kill: (signal?: string) => void; resize: (cols: number, rows: number) => void }
-@@ -120,6 +127,11 @@ function generateId(): string {
+@@ -38,6 +45,11 @@ function generateId(): string {
  }
  
  function createSession(shell: string): PtySession {
@@ -28,7 +28,7 @@ index 840b889..77340a8 100644
    const id = generateId()
    let ptyProcess: PtySession['pty']
    try {
-@@ -140,6 +152,7 @@ function createSession(shell: string): PtySession {
+@@ -58,6 +70,7 @@ function createSession(shell: string): PtySession {
      pid: ptyProcess.pid,
      createdAt: Date.now(),
    }
@@ -36,7 +36,7 @@ index 840b889..77340a8 100644
  
    return session
  }
-@@ -148,6 +161,7 @@ function killPtySession(session: PtySession): void {
+@@ -66,6 +79,7 @@ function killPtySession(session: PtySession): void {
    try {
      killOwnedProcessTree(session.pid, () => session.pty.kill())
    } catch { }
@@ -44,7 +44,7 @@ index 840b889..77340a8 100644
  }
  
  // ─── WebSocket server setup ─────────────────────────────────────
-@@ -231,6 +245,7 @@ export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
+@@ -149,6 +163,7 @@ export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
  
        session.pty.onExit(({ exitCode }: { exitCode: number }) => {
          conn.outputBuffers.delete(session.id)

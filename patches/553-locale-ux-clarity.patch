@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 45594ca..1f5cc5a 100644
+index 525f1973..1069abb6 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -587,7 +587,7 @@ export default {
+@@ -559,7 +559,7 @@ export default {
      chat: 'Chat',
      backToChat: 'Back',
      search: 'Search',
@@ -11,7 +11,7 @@ index 45594ca..1f5cc5a 100644
      history: 'History',
      jobs: 'Jobs',
      kanban: 'Kanban',
-@@ -1538,7 +1538,7 @@ export default {
+@@ -1510,7 +1510,7 @@ export default {
      },
      brand: 'Cockpit',
      flow: {
@@ -21,10 +21,9 @@ index 45594ca..1f5cc5a 100644
          all: 'All',
          session: 'Sessions',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 7762768..030eecf 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -587,7 +587,7 @@ export default {
+@@ -558,7 +558,7 @@
      chat: '对话',
      backToChat: '返回',
      search: '搜索',
@@ -33,7 +32,7 @@ index 7762768..030eecf 100644
      history: '历史',
      jobs: '任务',
      kanban: '看板',
-@@ -1538,7 +1538,7 @@ export default {
+@@ -1508,7 +1508,7 @@
      },
      brand: '驾驶舱',
      flow: {
@@ -42,12 +41,12 @@ index 7762768..030eecf 100644
        filter: {
          all: '全部',
          session: '会话',
-@@ -1556,7 +1556,7 @@ export default {
+@@ -1526,7 +1526,7 @@
        clusterRooms: '房间',
        clusterGroups: '群聊',
        clusterChats: '会话',
--      groupAgents: 'Agents',
-+      groupAgents: '智能体',
-       chatSection: '聊天',
-       newChat: '新聊天',
-       newAgentChat: 'Agent 单聊',
+-      groupAgents: 'Agents'
++      groupAgents: '智能体'
+     },
+     loop: {
+       stage: {

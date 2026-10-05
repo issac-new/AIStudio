@@ -14,6 +14,8 @@ function readOverlay(rel: string): string {
   return readFileSync(resolve(OVERLAY_ROOT, rel), 'utf8')
 }
 
+const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src')
+
 describe('S3 功能开关默认关（B 档：构建可再开，组件与 API 全保留）', () => {
   it('六个 S3 开关默认全关 + ekko 默认开（2026-10-02 用户裁定开门：评估体系启用，VITE_CUSTOM_EKKO=false 可关）', () => {
     expect(features.voice).toBe(false)
@@ -85,7 +87,10 @@ describe('S3 入口补齐 patch 523 守门（cockpit-s3 轮：语音入口/ekko 
   })
 
   it('ekko 卡片（AgentManagerView）+路由守卫第二层在位', () => {
-    expect(patch).toContain('v-if="features.ekko" class="agent-card coding-agent-card"')
+    // 0.7.30 迁移：AgentManagerView 段已并入上游重排版（patch 中不再逐字出现），
+    // 改为注入态树直断；路由守卫仍出自本 patch。
+    const agentManager = readFileSync(resolve(UPSTREAM_CLIENT, 'views/hermes/AgentManagerView.vue'), 'utf8')
+    expect(agentManager).toContain('v-if="features.ekko" class="agent-card coding-agent-card"')
     expect(patch).toContain('to.meta.ekkoConfig && !features.ekko')
   })
 
