@@ -59,7 +59,7 @@ if '--print-paths' in sys.argv:
     print(f'R18={R18F}')
     sys.exit(0)
 # ── 方案原文解析 ──
-# R22（V8 §5.5）：PLAN_PATH 必须指向当前正本——正本换代时同步切换并记档。
+# 验收线（正本 §5.5 反凑数·方案解析源单一）：PLAN_PATH 必须指向当前正本——正本换代时同步切换并记档。
 # 解析链：MX_PLAN_PATH 覆盖 → 主工作树 V8（正本所在）→ NVMe 镜像树 V8 兜底
 # （两棵工作树并存的分叉实录见 2026-10-05-v7-plan-structure-audit.md §二）。
 # 块终止符扩到 h2/h3（V8 结构分离版逐步节后接 ### 小节，只认 ^## 会吞块）。
@@ -758,7 +758,7 @@ STEPS_META_RUN8 = {
     24: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 核验',
             narrative='IDE 核验三真值通过（00:14 前）；本轮驾驶舱配套（后台任务执行感知三件套+辅助栏分组整合）已合 main，下轮快照生效。', imgs=[]),
     25: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
-            narrative='报告链 00:14 首跑被按轮叙事集硬闸拦下（R17 防顶包设计如常）→run8 叙事集注册后本页生成；R18 全量呈现本轮未采图（0 图如实标注，补拍留收官链）。', imgs=[]),
+            narrative='报告链 00:14 首跑被按轮叙事集硬闸拦下（按轮注册防旧轮顶包，设计如常）→run8 叙事集注册后本页生成；全量呈现本轮未采图（0 图如实标注，补拍留收官链）。', imgs=[]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 终局',
             narrative='接力器 RELAY-FINISHED 判定链：全部 gates 执行完毕。全程 07:09-00:1x≈17h；六型 bash set -u/e 坑+两产品根因（响应投递丢弃/驾驶舱盲区）当场根治入档——本轮推演的核心产出即这份事故-根因-修复账本。', imgs=[]),
 }
@@ -934,7 +934,7 @@ def img_tags(imgs):
                 f'<figcaption><span class="shot-kind" style="background:{kb};color:{kf}">{kt}</span>{H.escape(cap)}</figcaption></label>')
     return ''.join(out)
 
-# ── R18 全量呈现（V7.2 §9.3 R18）：对话全文 / 操作前后帧 / 环节效果实证 ──
+# ── 全量呈现（正本 §5.5）：对话全文 / 操作前后帧 / 环节效果实证 ──
 def _r18_msg_html(m):
     sender = H.escape(str(m.get('sender', '?')))
     ts = H.escape(str(m.get('ts', '')))
@@ -969,11 +969,11 @@ def r18_block(n: int) -> str:
     effect = payload.get('effect') or {}
     counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0}'
     if not (dialogs or ops or effect):
-        return (f'<details class="st-r18 r18-empty"><summary>R18 全量呈现</summary>'
+        return (f'<details class="st-r18 r18-empty"><summary>全量呈现（未采集）</summary>'
                 f'<div class="r18-body" data-r18="{counts}">'
                 f'<p class="no-evidence">R18 载荷未采集（对话全文/操作前后帧/环节效果三缺）'
                 f'——V7.2 起为验收线，按线打回（r18-collect.py 采集）</p></div></details>')
-    parts = [f'<details class="st-r18"><summary>R18 全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}）</summary>',
+    parts = [f'<details class="st-r18"><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}）</summary>',
              f'<div class="r18-body" data-r18="{counts}">']
     for d in dialogs:
         anchor = str(d.get('anchor', ''))
@@ -1598,7 +1598,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .gate-body{{padding:8px 14px 12px;font-size:12px;line-height:1.8;color:var(--text);border-top:1px solid var(--border)}}
 .step.gate-step .gate-body{{color:#78350f}}
 
-/* ── R18 全量呈现（V7.2）：对话全文/操作前后帧/环节效果 ── */
+/* ── 全量呈现：对话全文/操作前后帧/环节效果 ── */
 .st-r18{{margin:8px 0 8px 44px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}}
 .st-r18 summary{{padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;background:var(--bg)}}
 .st-r18 summary::before{{content:'▸';transition:transform .2s}}
@@ -1737,7 +1737,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
-      <div class="hstat"><b>{r18_coverage()}</b><span>R18 全量呈现覆盖</span></div>
+      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
@@ -1778,13 +1778,13 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
     <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）{_BASELINE_NOTE}</td></tr></table>
   </div>
 
-  <h2 class="section-hd" id="artifact-panorama">交付物全景（8.6 矩阵）</h2>
-  <p class="stat-note">V5 方案 8.6（补遗③/R11）落地：各步交付物真容自中央仓实读渲染嵌入（见各步"📦 交付物真容与模版核对"折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=re.search 逐项命中 ✅/缺（红）。{art_stat}。</p>
+  <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
+  <p class="stat-note">各步交付物真容自中央仓实读渲染嵌入（见各步"📦 交付物真容与模版核对"折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
   {art_tbl}
   <p class="stat-note">{art_note_g5}</p>
 
   <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）<br>
-全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 2026-09-28 内容级审计改版：叙事化（人/AI 角色+结果锚点）+ matcher 修正 + 问题单口径对齐<br>2026-09-29 run2 收口改版：判词真值化（G5 判回滚/UAT 有条件验收）+ 独立审计 10 项处置挂接 + 报告路由 H7 重生成<br>2026-09-29 补遗③落地：交付物视图段（8.6/R11）——各步交付物真容渲染+模版核对+文末交付物全景矩阵</div>
+全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本，交付物自中央仓实读，问题单与计数自台账实算</div>
 </main>
 </div>
 </body></html>'''
