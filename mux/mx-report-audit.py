@@ -40,7 +40,15 @@ SIM = Path(os.environ.get('AIPAY_SIM_ROOT', str(SIM)))
 EVID = SIM / 'runs' / RUN_ID / 'evidence'
 REPORT = EVID / 'simulation-report.html'
 R18F = EVID / 'r18-steps.json'
-PLAN = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
+# R22（V8 §5.5）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → NVMe 镜像兜底），
+# 勿再硬编码旧版路径——正本与审计源分叉即验收缺陷（V3 分叉实录见结构排查 §二.1）。
+_plan_candidates = [
+    os.environ.get('MX_PLAN_PATH', ''),
+    '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    '/Volumes/nvme2230/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+]
+PLAN = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
+            Path(_plan_candidates[1]))
 STATE = SIM / 'runs' / RUN_ID / 'state.env'
 
 fails, warns = [], []

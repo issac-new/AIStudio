@@ -58,7 +58,18 @@ if '--print-paths' in sys.argv:
     print(f'STEPS_DIR={STEPS_DIR}')
     print(f'R18={R18F}')
     sys.exit(0)
-PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
+# ── 方案原文解析 ──
+# R22（V8 §5.5）：PLAN_PATH 必须指向当前正本——正本换代时同步切换并记档。
+# 解析链：MX_PLAN_PATH 覆盖 → 主工作树 V8（正本所在）→ NVMe 镜像树 V8 兜底
+# （两棵工作树并存的分叉实录见 2026-10-05-v7-plan-structure-audit.md §二）。
+# 块终止符扩到 h2/h3（V8 结构分离版逐步节后接 ### 小节，只认 ^## 会吞块）。
+_plan_candidates = [
+    os.environ.get('MX_PLAN_PATH', ''),
+    '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    '/Volumes/nvme2230/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+]
+PLAN_PATH = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
+                 Path(_plan_candidates[1]))
 CEN = SIM / 'central/aipaydev'
 
 state = {}
@@ -91,7 +102,7 @@ if R18F.exists():
 # ── 方案原文解析 ──
 plan_text = PLAN_PATH.read_text(encoding='utf-8')
 plan_steps = {}
-for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^## |\Z)', plan_text, re.M | re.S):
+for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^#{2,3} |\Z)', plan_text, re.M | re.S):
     n = int(m.group(1))
     if n in plan_steps: continue
     block = m.group(2).strip()
