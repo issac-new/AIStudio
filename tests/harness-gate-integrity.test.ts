@@ -528,3 +528,61 @@ uat_evidence_body 1790930955`, root)
     expect(scen).toContain('sset preflight_ok 1')
   })
 })
+
+describe('⑫ 必采矩阵单一事实源（正本 §5.5：hero 统计=矩阵实算，分母 11，禁任一位在位即计）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  function py(code: string): string {
+    return execFileSync('python3', ['-c', `
+import sys; sys.path.insert(0, ${JSON.stringify(MX)})
+from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, TOTAL, evaluate
+${code}`], { encoding: 'utf-8' })
+  }
+
+  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24，分母=11', () => {
+    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), TOTAL)')
+    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] 11')
+  })
+
+  it('空载荷=0/11；达标载荷=11/11（操作每组≥2 实帧、效果带可反查锚）', () => {
+    const out = py(`
+good = {str(n): {'dialogs': [{'title': 'd'}]} for n in DIALOG_STEPS}
+good.update({str(n): {'ops': [{'frames': [f'{n}-op1-before.png', f'{n}-op1-after.png']}]} for n in OP_STEPS})
+good.update({str(n): {'effect': {'text': '工件入仓', 'evidence': [{'label': 'commit', 'anchor': 'a1b2c3d'}]}} for n in EFFECT_STEPS})
+m, t, _ = evaluate(good, frame_exists=lambda n: True)
+print(f'{m}/{t}')
+m0, t0, _ = evaluate({}, frame_exists=lambda n: True)
+print(f'{m0}/{t0}')`)
+    expect(out).toContain('11/11')
+    expect(out).toContain('0/11')
+  })
+
+  it('对话缺/单帧/帧文件缺失/效果无锚 → 对应项不计入；达标路径不受邻步影响', () => {
+    const out = py(`
+cases = {
+  9:  {'ops': [{'frames': ['9-x-before.png', '9-x-after.png']}]},   # 对话步无 dialogs
+  8:  {'ops': [{'frames': ['8-x-before.png']}]},                     # 仅 1 帧
+  10: {'ops': [{'frames': ['10-x-before.png', '10-x-after.png']}]},  # 2 帧但文件缺失
+  7:  {'effect': {'text': '纯文字一句话', 'evidence': []}},           # 效果无锚
+  11: {'dialogs': [{'messages': []}]},                               # dialogs 在位=达标
+}
+_, _, detail = evaluate({str(k): v for k, v in cases.items()},
+                        frame_exists=lambda n: not n.startswith('10-'))
+print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
+    expect(out).toContain('9:False')
+    expect(out).toContain('8:False')
+    expect(out).toContain('10:False')
+    expect(out).toContain('7:False')
+    expect(out).toContain('11:True')
+  })
+
+  it('绊线：生成器 hero 统计与审计器查 8 共用 r18_matrix，禁回退硬编码/任一位在位即计', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    expect(gen).toContain('import r18_matrix')
+    expect(gen).toContain('r18_matrix.evaluate')
+    expect(gen).not.toContain('任一位在位即计')
+    expect(audit).toContain('from r18_matrix import')
+    expect(audit).not.toContain('{9, 11, 17, 19, 21}')
+  })
+})
