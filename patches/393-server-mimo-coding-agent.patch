@@ -1,12 +1,12 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index b3439edb..fd9fc8fb 100644
+index b3439edb..ad73eb65 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
 @@ -1,6 +1,6 @@
  import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
  import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
 -import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, openCodeRuntimeEnv, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
-+import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
++import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, parseOpenCodeConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID, OPENCODE_SHARED_CONFIG_DIRS } from './opencode/config'
  import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
  import { NATIVE_CODING_AGENTS, prepareNativeScopedRuntime, nativeScopedUsesChatCompletions, checkNativeCodingAgentEnvironment, checkNativeCodingAgentPlatform } from './registry/native-agents'
  import { resolveZcodeCommand } from './zcode/installation'
@@ -48,7 +48,7 @@ index b3439edb..fd9fc8fb 100644
    }, null, 2)}\n`
  }
  
-+function opencodeRuntimeConfig(
++function opencodeFamilyRuntimeConfig(
 +  family: OpenCodeFamilyId,
 +  profile: string,
 +  runtime: {
@@ -263,10 +263,10 @@ index b3439edb..fd9fc8fb 100644
 +  await writeManagedPromptFile(promptFile, systemPrompt, '')
 +  await writeFile(
 +    configFile,
-+    opencodeRuntimeConfig(family, scope.profile, {}, globalConfig),
++    opencodeFamilyRuntimeConfig(family, scope.profile, {}, globalConfig),
 +    'utf-8',
 +  )
-+  const launcherRuntimeConfig = opencodeRuntimeConfig(family, scope.profile, { systemPrompt: promptFile })
++  const launcherRuntimeConfig = opencodeFamilyRuntimeConfig(family, scope.profile, { systemPrompt: promptFile })
 +  const env = openCodeRuntimeEnv(family, {
 +    configDir: rootDir,
 +    databasePath: join(rootDir, familyVars.databaseFile),
@@ -348,7 +348,7 @@ index b3439edb..fd9fc8fb 100644
 -        databasePath: join(prepared.rootDir, OPENCODE_DATABASE_FILE),
 -        runtimeConfig: opencodeRuntimeConfig(scope.profile, { systemPrompt: promptFile, studioMcpTokenFile: input.studioMcpTokenFile }),
 +        databasePath: join(prepared.rootDir, familyVars.databaseFile),
-+        runtimeConfig: opencodeRuntimeConfig(tool.id, scope.profile, { systemPrompt: promptFile, studioMcpTokenFile: input.studioMcpTokenFile }),
++        runtimeConfig: opencodeFamilyRuntimeConfig(tool.id, scope.profile, { systemPrompt: promptFile, studioMcpTokenFile: input.studioMcpTokenFile }),
        })
        const launcherFile = await writeLauncherScript({
          rootDir,
@@ -374,7 +374,7 @@ index b3439edb..fd9fc8fb 100644
      const promptPath = join(rootDir, 'AGENTS.md')
      await writeManagedPromptFile(promptPath, scopedSystemPrompt, '')
 -    const runtimeConfig = opencodeRuntimeConfig(scope.profile, {
-+    const runtimeConfig = opencodeRuntimeConfig(ocFamily, scope.profile, {
++    const runtimeConfig = opencodeFamilyRuntimeConfig(ocFamily, scope.profile, {
        studioMcpTokenFile: input.studioMcpTokenFile,
        provider,
        model,
@@ -578,14 +578,14 @@ index 53f0ff68..67700f56 100644
    cursor: CURSOR_CONFIG_FILES,
  }
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-index 1f9035df..721a7e83 100644
+index 1f9035df..d7097720 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 @@ -9,6 +9,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
  import { agentUpdateLocked, noteAgentActivity } from '../update-lock'
  import { dirname, join } from 'path'
  import { existsSync, accessSync, chmodSync, constants as fsConstants, readFileSync, writeFileSync } from 'fs'
-+import { OPENCODE_FAMILY_VARS, isOpenCodeFamily } from '../opencode-family'
++import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from '../opencode-family'
  import { homedir } from 'os'
  import { spawn, type ChildProcess } from 'child_process'
  import { createSession, addMessage, getSession, updateSession, updateSessionStats } from '../../../studio/public/sessions'

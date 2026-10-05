@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 4023f200..db922bce 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -828,7 +828,8 @@
+@@ -828,7 +828,8 @@ export default {
      pane: {
        fold: 'Fold to side',
        expand: 'Expand',
@@ -11,7 +12,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      working: 'Working',
      min: 'm',
-@@ -1505,7 +1506,8 @@
+@@ -1505,7 +1506,8 @@ export default {
        formRepo: 'Central repo URL',
        submit: 'Launch',
        readings: 'Network',
@@ -21,7 +22,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      brand: 'Cockpit',
      flow: {
-@@ -1527,7 +1529,17 @@
+@@ -1527,7 +1529,17 @@ export default {
        clusterRooms: 'Rooms',
        clusterGroups: 'Group Chats',
        clusterChats: 'Agent Chats',
@@ -40,7 +41,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      loop: {
        stage: {
-@@ -1548,6 +1560,7 @@
+@@ -1548,6 +1560,7 @@ export default {
        }
      },
      overviewDash: {
@@ -48,7 +49,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        title: 'Cockpit overview',
        navLabel: 'Overview',
        myTodo: 'My to-dos',
-@@ -1565,6 +1578,8 @@
+@@ -1565,6 +1578,8 @@ export default {
        open: 'Open'
      },
      tdp: {
@@ -57,7 +58,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        title: 'Tasks · Decisions',
        waiting: 'Waiting',
        all: 'All',
-@@ -1610,6 +1625,7 @@
+@@ -1610,6 +1625,7 @@ export default {
      },
      chain: {
        timeline: 'Timeline',
@@ -65,7 +66,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        openIde: 'Open in IDE',
        gateReview: 'Awaiting you'
      },
-@@ -1683,10 +1699,17 @@
+@@ -1683,10 +1699,17 @@ export default {
        panelBoards: ' boards',
        openManage: 'Open management',
        decideCount: '{n} to decide',
@@ -83,7 +84,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        title: 'Manage',
        back: 'Back',
        note: 'Governance overlays the screen; live badges in lists, history jumps to runs, actions on rows',
-@@ -1914,6 +1937,7 @@
+@@ -1914,6 +1937,7 @@ export default {
        metricPartial: 'partial data'
      },
      att: {
@@ -91,7 +92,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        subTaskBlocked: 'Task blocked',
        subSessionFailed: 'Session failed',
        subSessionBlocked: 'Session blocked',
-@@ -2169,7 +2193,7 @@
+@@ -2169,7 +2193,7 @@ export default {
        offline: 'Offline'
      },
      swp: {
@@ -100,7 +101,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        tasks: 'Task Cluster',
        noTasks: 'No linked tasks',
        participants: 'Participants'
-@@ -3570,7 +3594,7 @@
+@@ -3570,7 +3594,7 @@ export default {
        switchToNew: 'Switch to the new board after creating',
        createFailed: 'Failed to create board',
        archiveFailed: 'Failed to archive board',
@@ -109,7 +110,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        filterAll: 'All'
      },
      columns: {
-@@ -5905,6 +5929,642 @@
+@@ -5905,6 +5929,634 @@ export default {
      new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
      new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
      new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
@@ -120,15 +121,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    new_0_7_27_5: 'Recovered Codex sessions after context overflow: the next message starts with fresh context while keeping Studio history and the workspace (#3204)',
 +    new_0_7_27_6: 'Fixed Grok message role compatibility when using DeepSeek Chat Completions (#3244)',
 +    new_0_7_27_7: 'Fixed blank conversation history when switching profiles on the same connection (#3242)',
-+    new_0_7_27_8: 'Unified Studio drawer sizes and workspace picker layouts, fixed group Agent settings drawer layering and loading, and prevented accidental session renaming with Enter (#3247)',
-+    new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
-+    new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
-+    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
-+    new_0_7_28_2: 'Added an APIKEY.FAN relay page with balance, daily and total usage, and model breakdowns for configured API keys (#3257)',
-+    new_0_7_28_3: 'Fixed Coding Agent manual update status and detection of the updated CLI version, with protection for active sessions (#3261)',
-+    new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
-+    new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
-+    new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)'
++    new_0_7_27_8: 'Unified Studio drawer sizes and workspace picker layouts, fixed group Agent settings drawer layering and loading, and prevented accidental session renaming with Enter (#3247)'
 +  },
 +  matrix: {
 +    options: 'Options',
@@ -753,9 +746,10 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    loopScenes: {
      manage: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 8841e38c..7f6a3d7a 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -827,7 +827,8 @@
+@@ -827,7 +827,8 @@ export default {
      pane: {
        fold: '向侧边折叠',
        expand: '展开',
@@ -765,7 +759,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      working: '已工作',
      min: '分',
-@@ -1504,7 +1505,8 @@
+@@ -1504,7 +1505,8 @@ export default {
        formRepo: '中央仓地址',
        submit: '发起',
        readings: '网络读数',
@@ -775,7 +769,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      brand: '驾驶舱',
      flow: {
-@@ -1526,7 +1528,17 @@
+@@ -1526,7 +1528,17 @@ export default {
        clusterRooms: '房间',
        clusterGroups: '群聊',
        clusterChats: '会话',
@@ -794,7 +788,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      loop: {
        stage: {
-@@ -1547,6 +1559,7 @@
+@@ -1547,6 +1559,7 @@ export default {
        }
      },
      overviewDash: {
@@ -802,7 +796,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        title: '驾驶舱概览',
        navLabel: '概览',
        myTodo: '我的待办',
-@@ -1564,6 +1577,8 @@
+@@ -1564,6 +1577,8 @@ export default {
        open: '未开始'
      },
      tdp: {
@@ -811,7 +805,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        title: '任务 · 决策',
        waiting: '等我',
        all: '全部',
-@@ -1609,6 +1624,7 @@
+@@ -1609,6 +1624,7 @@ export default {
      },
      chain: {
        timeline: '时间线',
@@ -819,7 +813,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        openIde: '在 IDE 打开',
        gateReview: '等你验收'
      },
-@@ -1682,13 +1698,20 @@
+@@ -1682,13 +1698,20 @@ export default {
        panelBoards: '板',
        openManage: '打开管理台',
        decideCount: '待决策 {n}',
@@ -841,7 +835,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        section: {
          task: '📋 任务',
          session: '💬 会话',
-@@ -1913,6 +1936,7 @@
+@@ -1913,6 +1936,7 @@ export default {
        metricPartial: '部分数据'
      },
      att: {
@@ -849,7 +843,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        subTaskBlocked: '任务受阻',
        subSessionFailed: '会话失败',
        subSessionBlocked: '会话受阻',
-@@ -2168,7 +2192,7 @@
+@@ -2168,7 +2192,7 @@ export default {
        offline: '离线'
      },
      swp: {
@@ -858,7 +852,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        tasks: '任务簇',
        noTasks: '无挂接任务',
        participants: '参与方'
-@@ -3569,7 +3593,7 @@
+@@ -3569,7 +3593,7 @@ export default {
        switchToNew: '创建后切换到新看板',
        createFailed: '创建看板失败',
        archiveFailed: '归档看板失败',
@@ -867,7 +861,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        filterAll: '全部'
      },
      columns: {
-@@ -5903,6 +5927,831 @@
+@@ -5903,6 +5927,823 @@ export default {
      new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
      new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
      new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
@@ -878,15 +872,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    new_0_7_27_5: '修复 Codex 上下文超限后的会话恢复，下一条消息使用新上下文继续，并保留 Studio 历史与工作区 (#3204)',
 +    new_0_7_27_6: '修复 Grok 使用 DeepSeek Chat Completions 时的消息角色兼容问题 (#3244)',
 +    new_0_7_27_7: '修复同一连接切换 Profile 后会话历史空白的问题 (#3242)',
-+    new_0_7_27_8: '统一 Studio 抽屉尺寸和工作区选择器布局，修复群聊 Agent 设置抽屉的遮挡与加载问题，并避免回车误提交会话重命名 (#3247)',
-+    new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
-+    new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
-+    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',
-+    new_0_7_28_2: '新增 APIKEY.FAN 中转服务页面，可按已配置的 API Key 查看余额、今日与累计用量及模型明细 (#3257)',
-+    new_0_7_28_3: '修复编程 Agent 手动检查更新后的状态和更新版本识别，并保护正在运行的会话 (#3261)',
-+    new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
-+    new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
-+    new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)'
++    new_0_7_27_8: '统一 Studio 抽屉尺寸和工作区选择器布局，修复群聊 Agent 设置抽屉的遮挡与加载问题，并避免回车误提交会话重命名 (#3247)'
 +  },
 +  matrix: {
 +    options: '选项',
