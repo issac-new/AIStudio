@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import r18_matrix  # 必采矩阵单一事实源（审计器查 8 同表，守门测试 ⑫）
+
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
 # 亦支持隔离树回归测试（run7 实锤：写死路径使归档态 run6 无法离线回归）。
 SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
@@ -1002,11 +1004,14 @@ def r18_block(n: int) -> str:
     return ''.join(parts)
 
 def r18_coverage() -> str:
-    """hero 统计位：26 步中 R18 载荷覆盖数（任一位在位即计）。"""
-    hit = sum(1 for k in range(1, 27)
-              if ((R18.get(str(k)) or {}).get('dialogs') or (R18.get(str(k)) or {}).get('ops')
-                  or (R18.get(str(k)) or {}).get('effect')))
-    return f'{hit}/26'
+    """hero 统计位：必采矩阵实算（正本 §5.5——分子=达标项、分母=11，禁任一位在位即计）。
+
+    矩阵与审计器查 8 同表（r18_matrix 单一事实源）；帧文件按 STEPS_DIR 实查，
+    缺帧计未达标，与渲染侧"帧缺失"占位同口径。
+    """
+    met, total, _ = r18_matrix.evaluate(
+        R18, frame_exists=lambda name: (STEPS_DIR / name).exists())
+    return f'{met}/{total}'
 
 def issues_stats():
     """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。"""
@@ -1737,7 +1742,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
-      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖</span></div>
+      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 11 项实算</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
