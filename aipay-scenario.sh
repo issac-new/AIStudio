@@ -973,6 +973,13 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
              docs/test/${RFD_ID}-test-report.md; do
       if repo_has "$p"; then echo "- ✓ $p"; else echo "- ✗ 缺 $p"; fi
     done
+    echo
+    # 分类/优先级/依赖（§8.8 发布准出第⑦项：完备性检查防多漏错重的三个维度；
+    # run8 复盘：8.6 核对项原为商户接入文档字段误配，生成器补真维度对齐方案）
+    echo "## 分类/优先级/依赖完备性（防多漏错重）"
+    echo "- 分类清点（卡面族谱）：$(kanban_list fanfan | jq -r '.. | objects | select(has("title")) | .title' | grep -oE 'T10[0-9]|G5|评审|排期|主卡' | sort | uniq -c | sort -rn | awk '{printf "%s×%s ", $2, $1}' | sed 's/ $//')"
+    echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
+    echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)"
   } > "$EVID_DIR/completeness-check.md"
   DL_WT="$SIM_ROOT/var/templates-main-wt"
   mkdir -p "$SIM_ROOT/var"
