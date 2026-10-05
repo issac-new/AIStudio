@@ -36,6 +36,6 @@ export function mergeBuiltins(userList: readonly SlashCommand[]): Array<SlashCom
 }
 
 /** save 剥离：客户端回传里的内置条目不落用户存储（内置随版本演进，用户存储只存自己的）。 */
-export function stripBuiltins(list: readonly Array<SlashCommand & { builtin?: boolean }>): SlashCommand[] {
+export function stripBuiltins(list: readonly (SlashCommand & { builtin?: boolean })[]): SlashCommand[] {
   return list.filter((c) => !c.builtin).map(({ name, description, prompt }) => ({ name, description, prompt }))
 }

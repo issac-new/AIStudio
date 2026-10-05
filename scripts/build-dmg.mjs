@@ -32,7 +32,7 @@ process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
 const electronBuilderFlags = {
   // mac：identity=null 显式 ad-hoc（Apple Development 证书已吊销，见上注）；分发签名恢复时移除。
   // win：--x64 必带——electron-builder 缺省取宿主 arch（arm64 mac 上出 arm64 win 包必废）。
-  mac: '--mac --publish never -c.mac.identity=null',
+  mac: '--mac --publish never -c.mac.identity=null -c.mac.icon=build/icon.icns',
   win: '--win --x64 --publish never',
   linux: '--linux --publish never',
 }[platform];
