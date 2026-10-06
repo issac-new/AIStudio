@@ -74,6 +74,10 @@ fi
 case "$HERMES_BIN" in
   */*) export PATH="$(dirname "$HERMES_BIN"):$PATH" ;;
 esac
+# run10 02:0x 实锤：HERMES_BIN=SIM 快照包装器 hermes-sim 时，其目录无 `hermes` 入口，
+# PATH 前置后裸 `hermes` 仍 not found → kanban_list 恒空 → agent 已建卡被误判超时
+# （run9 走宿主 venv 目录内有真 hermes 故未踩）。函数转发兜全部库内裸调用面：
+hermes() { "$HERMES_BIN" "$@"; }
 # worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
 # PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
 # 隔离轮定案：worker/网关全走 hermes-sim wrapper（-I 语义），依赖取 venv 自身；
