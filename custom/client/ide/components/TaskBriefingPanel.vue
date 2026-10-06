@@ -83,6 +83,11 @@ function sendAux(): void {
     <header class="briefing-header">
       <span class="briefing-icon">📋</span>
       <span class="briefing-title">{{ t('ide.briefing.title', '任务简报') }}</span>
+      <!-- 驾驶舱联动：IDE 简报 ↔ 看板卡（board?task= 深链打开卡抽屉）——聊天消息里的
+           card=t_xxx 芯片已直达看板，此处补 IDE→看板回跳，三区构成闭环。 -->
+      <nav class="briefing-cplinks" data-testid="briefing-cplinks">
+        <a :href="boardHref" :title="`打开任务卡 ${task.id}`">看板卡 ↗</a>
+      </nav>
     </header>
 
     <!-- 区块 1：任务概览 -->
@@ -233,6 +238,8 @@ function sendAux(): void {
 
 .briefing-briefdiff { font-size: 10px; color: var(--text-muted, #9aa0aa); margin: 0; padding: 0 2px; }
 
+.briefing-cplinks { margin-left: auto; font-size: 11.5px; }
+.briefing-cplinks a { color: var(--accent-primary, #2563eb); text-decoration: none; border-bottom: 1px dotted currentColor; padding: 0 4px; }
 .briefing-header {
   display: flex;
   align-items: center;
