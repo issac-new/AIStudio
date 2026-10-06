@@ -1035,8 +1035,10 @@ def r18_block(n: int) -> str:
     sk_gen = skill.get('gen') or []
     sk_invoke = skill.get('invoke') or []
     sk_cnt = len(sk_gen) + len(sk_invoke)
-    counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0};s:{sk_cnt}'
-    if not (dialogs or ops or effect or sk_cnt):
+    dlv = payload.get('delivery') or {}
+    dlv_frames = dlv.get('frames') or []
+    counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0};s:{sk_cnt};v:{len(dlv_frames)}'
+    if not (dialogs or ops or effect or sk_cnt or dlv_frames):
         return (f'<details class="st-r18 r18-empty"><summary>全量呈现（未采集）</summary>'
                 f'<div class="r18-body" data-r18="{counts}">'
                 f'<p class="no-evidence">R18 载荷未采集（对话全文/操作前后帧/环节效果'
@@ -1044,6 +1046,7 @@ def r18_block(n: int) -> str:
                 f'——V7.2 起为验收线，按线打回（r18-collect.py 采集）</p></div></details>')
     parts = [f'<details class="st-r18"><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}'
              + (f' · skill {sk_cnt}' if n in r18_matrix.SKILL_STEPS or sk_cnt else '')
+             + (f' · 门禁灯 {len(dlv_frames)}' if n in r18_matrix.DELIVERY_STEPS or dlv_frames else '')
              + f'）</summary>',
              f'<div class="r18-body" data-r18="{counts}">']
     for d in dialogs:
@@ -1081,6 +1084,12 @@ def r18_block(n: int) -> str:
         if skill.get('note'):
             parts.append(f'<div class="r18-note">{md_bold(str(skill.get("note", "")))}</div>')
         parts.append('</div>')
+    if dlv_frames:
+        parts.append('<div class="r18-sec r18-delivery"><div class="r18-sec-hd">'
+                     '<b>delivery 门禁灯（R29/附录 F-4：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
+                     '<div class="st-shots r18-frames">' + _r18_frame_tags(dlv_frames, n) + '</div>'
+                     + (f'<div class="r18-note">{md_bold(str(dlv.get("note", "")))}</div>' if dlv.get('note') else '')
+                     + '</div>')
     parts.append('</div></details>')
     return ''.join(parts)
 

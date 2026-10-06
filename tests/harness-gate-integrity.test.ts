@@ -535,13 +535,13 @@ describe('⑫ 必采矩阵单一事实源（正本 §5.5+附录 F-4：hero 统�
   function py(code: string): string {
     return execFileSync('python3', ['-c', `
 import sys; sys.path.insert(0, ${JSON.stringify(MX)})
-from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, TOTAL, evaluate, step_ok
+from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVERY_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL, evaluate, step_ok
 ${code}`], { encoding: 'utf-8' })
   }
 
-  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2），分母=12', () => {
-    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, TOTAL)')
-    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] 3 2 12')
+  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2）+ delivery 门禁灯 23（≥1），分母=13', () => {
+    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), sorted(DELIVERY_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL)')
+    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] [23] 3 2 1 13')
   })
 
   it('空载荷=0/12；达标载荷=12/12（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
@@ -550,12 +550,13 @@ good = {str(n): {'dialogs': [{'title': 'd'}]} for n in DIALOG_STEPS}
 good.update({str(n): {'ops': [{'frames': [f'{n}-op1-before.png', f'{n}-op1-after.png']}]} for n in OP_STEPS})
 good.update({str(n): {'effect': {'text': '工件入仓', 'evidence': [{'label': 'commit', 'anchor': 'a1b2c3d'}]}} for n in EFFECT_STEPS})
 good['13'] = {'skill': {'gen': ['13-g1.png', '13-g2.png', '13-g3.png'], 'invoke': ['13-i1.png', '13-i2.png']}}
+good['23'] = {'delivery': {'frames': ['23-dlv1.png']}}
 m, t, _ = evaluate(good, frame_exists=lambda n: True)
 print(f'{m}/{t}')
 m0, t0, _ = evaluate({}, frame_exists=lambda n: True)
 print(f'{m0}/{t0}')`)
-    expect(out).toContain('12/12')
-    expect(out).toContain('0/12')
+    expect(out).toContain('13/13')
+    expect(out).toContain('0/13')
   })
 
   it('对话缺/单帧/帧文件缺失/效果无锚/skill 帧不足 → 对应项不计入；达标路径不受邻步影响', () => {
@@ -567,6 +568,7 @@ cases = {
   7:  {'effect': {'text': '纯文字一句话', 'evidence': []}},           # 效果无锚
   11: {'dialogs': [{'messages': []}]},                               # dialogs 在位=达标
   13: {'skill': {'gen': ['13-g1.png', '13-g2.png'], 'invoke': ['13-i1.png', '13-i2.png']}},  # 生成帧仅 2<3
+  23: {'delivery': {'frames': []}},                                          # 门禁灯帧空（R29）
 }
 _, _, detail = evaluate({str(k): v for k, v in cases.items()},
                         frame_exists=lambda n: not n.startswith('10-'))
@@ -577,6 +579,7 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(out).toContain('7:False')
     expect(out).toContain('11:True')
     expect(out).toContain('13:False')
+    expect(out).toContain('23:False')
   })
 
   it('绊线：生成器 hero 统计与审计器查 8 共用 r18_matrix，禁回退硬编码/任一位在位即计', () => {

@@ -130,6 +130,10 @@ def main():
     p_k.add_argument('--gen', nargs='*', default=[], help='xxx-dev 生成过程帧（附录 F-4：≥3）')
     p_k.add_argument('--invoke', nargs='*', default=[], help='开发调用过程帧（附录 F-4：≥2）')
     p_k.add_argument('--note', default='')
+    p_d = sub.add_parser('deliver')
+    p_d.add_argument('--step', type=int, default=23, help='delivery 门禁灯帧见证位（默认 23=审计步）')
+    p_d.add_argument('--frame', nargs='+', required=True, help='Delivery Cases 面板门禁灯帧（R29：≥1）')
+    p_d.add_argument('--note', default='')
     p_s = sub.add_parser('show')
     p_s.add_argument('--step', type=int)
     a = ap.parse_args()
@@ -173,6 +177,15 @@ def main():
             sk['note'] = a.note
         print(f'[r18-collect] step {a.step} skill 过程帧入载荷：gen {len(sk.get("gen") or [])} 帧 / invoke {len(sk.get("invoke") or [])} 帧'
               f'（附录 F-4 达标线 gen≥{3} invoke≥{2}）')
+    elif a.mode == 'deliver':
+        dlv = entry.setdefault('delivery', {'frames': []})
+        lst = dlv.setdefault('frames', [])
+        for f in a.frame:
+            if f not in lst:
+                lst.append(f)
+        if a.note:
+            dlv['note'] = a.note
+        print(f'[r18-collect] step {a.step} delivery 门禁灯帧入载荷：{len(lst)} 帧（R29 达标线 ≥1；MX_DELIVERY=1 面板实拍）')
     save_payload(a.run, data)
 
 
