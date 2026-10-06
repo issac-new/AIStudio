@@ -1026,18 +1026,25 @@ def _r18_frame_tags(frames, step):
     return ''.join(out)
 
 def r18_block(n: int) -> str:
-    """步骤 n 的 R18 三位载荷渲染。载荷空 → 诚实"未采集"章（审计查 8 按线打回）。"""
+    """步骤 n 的 R18 载荷渲染。载荷空 → 诚实"未采集"章（审计查 8 按线打回）。"""
     payload = R18.get(str(n)) or R18.get(n) or {}
     dialogs = payload.get('dialogs') or []
     ops = payload.get('ops') or []
     effect = payload.get('effect') or {}
-    counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0}'
-    if not (dialogs or ops or effect):
+    skill = payload.get('skill') or {}
+    sk_gen = skill.get('gen') or []
+    sk_invoke = skill.get('invoke') or []
+    sk_cnt = len(sk_gen) + len(sk_invoke)
+    counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0};s:{sk_cnt}'
+    if not (dialogs or ops or effect or sk_cnt):
         return (f'<details class="st-r18 r18-empty"><summary>全量呈现（未采集）</summary>'
                 f'<div class="r18-body" data-r18="{counts}">'
-                f'<p class="no-evidence">R18 载荷未采集（对话全文/操作前后帧/环节效果三缺）'
+                f'<p class="no-evidence">R18 载荷未采集（对话全文/操作前后帧/环节效果'
+                f'{"四" if n in r18_matrix.SKILL_STEPS else "三"}缺）'
                 f'——V7.2 起为验收线，按线打回（r18-collect.py 采集）</p></div></details>')
-    parts = [f'<details class="st-r18"><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}）</summary>',
+    parts = [f'<details class="st-r18"><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}'
+             + (f' · skill {sk_cnt}' if n in r18_matrix.SKILL_STEPS or sk_cnt else '')
+             + f'）</summary>',
              f'<div class="r18-body" data-r18="{counts}">']
     for d in dialogs:
         anchor = str(d.get('anchor', ''))
@@ -1062,11 +1069,23 @@ def r18_block(n: int) -> str:
             parts.append(f'<div class="r18-ev">◦ {H.escape(str(ev.get("label", "")))}：'
                          f'<code>{H.escape(str(ev.get("anchor", "")))}</code></div>')
         parts.append('</div>')
+    if sk_cnt:
+        parts.append('<div class="r18-sec r18-skill"><div class="r18-sec-hd">'
+                     f'<b>skill 过程（附录 F-4：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
+        if sk_gen:
+            parts.append('<div class="r18-entry">xxx-dev 生成过程：</div>'
+                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_gen, n) + '</div>')
+        if sk_invoke:
+            parts.append('<div class="r18-entry">开发调用过程：</div>'
+                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_invoke, n) + '</div>')
+        if skill.get('note'):
+            parts.append(f'<div class="r18-note">{md_bold(str(skill.get("note", "")))}</div>')
+        parts.append('</div>')
     parts.append('</div></details>')
     return ''.join(parts)
 
 def r18_coverage() -> str:
-    """hero 统计位：必采矩阵实算（正本 §5.5——分子=达标项、分母=11，禁任一位在位即计）。
+    """hero 统计位：必采矩阵实算（正本 §5.5+附录 F-4——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
 
     矩阵与审计器查 8 同表（r18_matrix 单一事实源）；帧文件按 STEPS_DIR 实查，
     缺帧计未达标，与渲染侧"帧缺失"占位同口径。
@@ -1804,7 +1823,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
-      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 11 项实算</span></div>
+      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 {r18_matrix.TOTAL} 项实算</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
