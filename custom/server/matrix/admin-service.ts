@@ -108,21 +108,26 @@ export async function createMatrixUser(
   userId: string,
   password: string,
   adminToken: string,
-  homeserverUrl: string
+  homeserverUrl: string,
+  displayName?: string
 ): Promise<boolean> {
   try {
     const origin = await safeMatrixOrigin(homeserverUrl)
-    const res = await fetch(`${origin}/_synapse/admin/v1/register`, {
-      method: 'POST',
+    // PUT v2/users = admin-token 建号/改号正道（create-or-update，新建 201/更新 200，幂等）。
+    // 勿回退 v1/register：那是共享密钥端点（需 GET nonce + HMAC mac），仅带 Bearer 必 400
+    // ——2026-10-06 前实为此形态：账号从未真建、调用方又忽略返回值=假成功
+    // （govprobe/r31probe 双复现：roster 已提交而 synapse 无此号）。
+    const res = await fetch(`${origin}/_synapse/admin/v2/users/${encodeURIComponent(userId)}`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${adminToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: userId.replace(/^@/, '').split(':')[0],
         password,
         admin: false,
-        user_type: null,
+        deactivated: false,
+        ...(displayName ? { displayname: displayName } : {}),
       }),
     })
     return res.ok
