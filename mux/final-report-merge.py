@@ -297,7 +297,7 @@ PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 <h2>研发全流程治理有效性（实算）</h2>
 <table>
 <tr><th>治理维度</th><th>本轮实算</th><th>口径来源</th></tr>
-<tr><td>六闸首过率</td><td class="ok"><b>6/6 全首过</b>（G1 00:26:07 / G2 03:17:38 / G3 04:32:54 / G4 06:11:45 / G5 06:27:47 / G6 18:04:55；run8 对照：G2 崩溃环 3h04m、G5 熔断两轮）</td><td>state.env 落键时戳</td></tr>
+<tr><td>六闸首过率</td><td class="ok"><b>6/6 全首过</b>（G1 00:26:07 / G2 03:17:38 / G3 04:32:54 / G4 06:11:45 / G5 06:27:47 / G6 18:04:55；run8 对照：G2 崩溃环 3h04m、G5 熔断两轮；口径=六闸全计。governance-report metrics 行按评审型闸只计 4/4——G3/G6 为落键型闸不计入其分母，两处分母差异在此声明）</td><td>state.env 落键时戳</td></tr>
 <tr><td>问题记录与处置</td><td>{{n_issue}} 条记录（{{n_key}} 个唯一键）DISP {{n_disp}} 条全处置（已修/已闭环/观察/延后分类在 issues.log 逐条）</td><td>evidence/issues.log 实算</td></tr>
 <tr><td>564 验证四线</td><td class="ok">交付 4/4≥3/4 · 假停摆 0（run8 五起）· 接力棒 2&lt;50 · 必采 11/11（run8 3/11）</td><td>V8 附录 D 验收线</td></tr>
 <tr><td>回执链路</td><td>receipt-missing 1 起（run8 ×4 同族对照）——564 投递兜底量级实证；dropped=0</td><td>relay 日志+issues.log</td></tr>

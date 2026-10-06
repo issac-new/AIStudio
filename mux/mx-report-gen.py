@@ -769,7 +769,7 @@ STEPS_META_RUN9 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='mx-clean 全清后 00:24:00 起跑（V8 终态正本首跑轮）；12 账号 token 真值核验一次过，预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
-            narrative='gateway :8801 + studio :8802 就绪；运维面实拍：网关在线、17 agent 活跃、4 个 Matrix 会话在线（2-op4）。relay 每拍自愈通道在位——564/533/534/390/391 五补丁全程零缺失（relay 日志逐拍实证）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
+            narrative='gateway :8801 + studio :8802 就绪；运维面实拍：网关在线、17 agent 活跃、4 个 Matrix 会话在线（2-op4）。relay 每拍自愈通道在位——五枚运行时补丁全程零缺失（564=网关响应投递兜底、533=网关并发闸风暴、534=出站通知护栏、390=看板首页默认板、391=看板团队围栏；relay 日志逐拍实证）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
             narrative='12 账号 matrix-login + 账号板 + 自动登录端点三真值一次过；设置·账户管理 roster 12 账号全列实拍（roster 12 账号：bella/fanfan/wei/mei/chen/hu/lin/xiao/qi/fei/arch/secops+AI 助理；state.env jwt_*×12 键锚，1-op2）。', imgs=[('1-op2-after', '设置·账户管理：roster 12 账号全列（人+AI 助理双账号契约可见）', 'ui')]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
@@ -815,7 +815,7 @@ STEPS_META_RUN9 = {
     24: dict(keys=['retro_done'], actor='ai', actorText='AI · G6 复盘',
             narrative='G6 复盘 18:04:55：问题单 10 起三族在案（RACI 双@×4/越序抢跑/AN-MP 首窗超时/integration 推送未达/NVMe 卷脱挂/runs 注册表空态/retro-open-items）；效果实证带锚见效果卡。', imgs=[('24-op4-after', '历史会话页（#/app/history）：G6 复盘期会话档案入口', 'ui')]),
     25: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 核验',
-            narrative='IDE 工作台双账号视角实拍（fanfan 25-op3 + arch 25-op6，锚：REL 三卡 t_23d7f58b/t_fa9bb595/t_f802193c 工件树可见）：RFD-001 主任务卡在顶条+任务管理面板+git 文件树（approvals/kanban/sessions/skills/hooks/plugins）；任务简报抽屉不随点击弹出（canvas 限制，如实记）。', imgs=[('25-op3-before', 'IDE 工作台（fanfan 视角）：RFD-001 主任务卡+任务管理面板+git 文件树', 'ui'), ('25-op6-after', 'IDE 工作台（arch 视角）：同工作台双账号渲染——简报抽屉不随点击弹出（canvas 限制如实记）', 'ui')]),
+            narrative='IDE 工作台三视角实拍：fanfan/arch 双账号工作台全景（25-op3/25-op6，锚：REL 三卡 t_23d7f58b/t_fa9bb595/t_f802193c 工件树可见）+ 方案 §2.5 指定入口 `#/app/ide?task=t_e35cd102` 深链——任务简报抽屉到达即自动展开（RACI 四元组/工作流/git/验收字段一屏齐，25-op7）。收官首轮曾误判「抽屉点不开=canvas 限制」，差异审计按指定入口实测反转，归因错误如实更正（见 2026-10-06-v8-design-intent-gap-audit.md P3）。', imgs=[('25-op3-before', 'IDE 工作台（fanfan 视角）：RFD-001 主任务卡+任务管理面板+git 文件树', 'ui'), ('25-op6-after', 'IDE 工作台（arch 视角）：同工作台双账号渲染', 'ui'), ('25-op7-after', 'IDE·任务简报抽屉（#/app/ide?task= 深链自动展开）：RACI 四元组/工作流/git/验收字段一屏齐——方案指定入口实测有效', 'ui')]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
             narrative='报告链实录：18:0x 首跑被按轮叙事集硬闸拦（R17 设计内——本轮叙事集未注册时拒绝出报告防旧轮顶包）→STEPS_META_RUN9 注册后 relay 下一拍自动完成第 26 步并 RELAY-FINISHED；全程 00:24-18:0x≈17.7h（含卷脱挂中断 8.5h，净执行≈9.2h）。564 验证轮四主命题全部落判：交付 4/4、假停摆零、接力棒 2 次、必采 11/11。', imgs=[('26-op6-after', '驾驶舱终局帧：run-progress 横幅 26/26 段（report_done 后补拍，H7 重生成挂接）', 'ui')]),
 }
