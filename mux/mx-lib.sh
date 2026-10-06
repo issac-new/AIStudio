@@ -269,8 +269,24 @@ studio() { # <method> <path> [jwt] [json-body]
   cat "/tmp/mx-api.$$"; rm -f "/tmp/mx-api.$$"
   [[ "$code" == 2* ]] || return 1
 }
-studio_login() { # 本地 admin（管理面）
-  studio POST /api/auth/login "" '{"username":"admin","password":"123456"}' | jq -r '.token'
+studio_login() { # 本地 admin（管理面）——matrix 交换链（2026-10-06 实测：静态口令 admin/123456
+  # 已在库中被废，/api/auth/login 拒绝；真实链路=synapse 登 admin → /api/auth/matrix-login
+  # 交换 super_admin JWT，与界面自动登录同源。P13 探针锚：registry PUT=9e1c670）
+  local mt
+  mt=$(mx_login admin "$(user_pass admin)" | tr -d '\n') || return 1
+  studio POST /api/auth/matrix-login "" "$(jq -n \
+    --arg tok "$mt" --arg uid "$(human_mxid admin)" --arg hs "$HS" \
+    '{matrixAccessToken:$tok, matrixUserId:$uid, homeserverUrl:$hs}')" | jq -r '.token // empty'
+}
+
+gov_registry_put() { # <kind> <md-file> <message>：注册表经产品同源通道落档（P13 改回）
+  # 走界面所走端点 PUT /api/governance/registry/<kind>（保存即 git 提交，R13）——
+  # AccountAdminView/AppRegistryEditor/OrgEditor 的"保存（提交 git）"即此通道；
+  # 服务端 repoRoot=DIRECTOR_CLONE 同仓，调用后 repo_commit_main 推 origin/main 不变。
+  local kind="$1" f="$2" msg="$3" tok body
+  tok=$(studio_login) || return 1
+  body=$(jq -n --arg md "$(cat "$f")" --arg m "$msg" '{markdown:$md,message:$m,actor:"scenario-director"}')
+  studio PUT "/api/governance/registry/$kind" "$tok" "$body" | jq -e '.commit' >/dev/null
 }
 studio_matrix_login() { # <user-human-localpart> → jwt（matrix 账号换 JWT）
   local u="$1"
