@@ -64,3 +64,19 @@
 3. 未亲验项：simharness 守门套件本轮未重跑；run9 报告 md5 全互异为抽查口径（71 张实存计数属实，逐张比对未做）。
 
 **边界声明**：run9 执行期记录与 evidence 产物（双报告、governance-report.md、issues.log）本轮一律不改——P18/P19/P20 属报告链生成器改造项，落改后以 run10 产物验证；理由=run9 双正本已收官并被多轮审计引用，重生成在工具改造未完成前会引入新的口径漂移。本清单不改写 agent 原始记录，只做记账与改造项立项。
+
+## 四、处置终态（2026-10-06 21:1x 增补，用户拍板重生成轮）
+
+用户拍板「run9 双报告补一次重生成以消除 P18/P19/P20 三处失真口径」，已执行：
+
+| 项 | 处置 | 锚 |
+|---|---|---|
+| P17 | final-report-merge.py 帧数改实算注入（{{n_frames}}/{{uniq_note}}），重生成后报告=71 张实拍帧 md5 全互异（实算） | simharness 4da0b54 |
+| P18 | governance-report.md 重生成=台账终态口径（共 13 条/10 条 DISP），metrics 五项齐+首过率统一六闸全计 6/6，与 PART1「13 条记录（10 唯一键）DISP 10 条」三方一致 | gov_report() 21:04 重跑 |
+| P19 | 步 6/8 叙事锚+步 26/_L3_A/_L3_B 实值化（!cVtpmUOAfqakogcEPF/00:26:10，scenario.log:15 实证）；编制 12→15 人×双账号（org.md 00:25:39 实锚，P11 族残留一并修）；r18-steps.json 步 6 条目勘误+_errata 留痕；必采口径全部双标注（旧口径 11/11 达成 vs 现矩阵 11/13，缺 skill/门禁灯 2 项记单） | simharness 4da0b54 |
+| P20 | 重生成后 final-report `#/app/gov` 活口径 0 命中（生成器侧 steps_entry.py 已由并行会话更正，本轮产物随动） | 双报告 21:04 重生成 |
+| 派生物 | steps-extract.txt/simulation-report.txt/final-report.txt 三份 txt 镜像同步重生成（旧口径清零；仓库无该派生物写入器=漂移源，建议随报告链改造补提取器或废止） | 21:1x 重生成 |
+
+**复验**：mx-report-audit 26 步块全在位、图 71/71 md5 互异、标题逐字 26/26；FAIL 2 条=预期基线（步 13 skill 帧=P4 缺口 F-4 硬断言、步 23 门禁灯帧=R29 新查项对 run9 未开 MX_DELIVERY 的已记单缺口），WARN 1 条=既有 R6 步 2 缺锚（与前轮同，非回归）；simharness 守门 54/54 全绿。
+
+**P21/P22 终态**：P21（术语释义全量）仍挂 run10 报告链改造；P22 四条（A-1/B-2/B-3/D-2）已由本补遗记账，处置指针 R-A7~R-A9 不变。另：run9 档案「看板 canvas 渲染」系误记（实为 DOM，缺口=testid 覆盖）已由并行会话 F-2 勘误（overlay 8cb7aa9b），本补遗 P7 相关表述以勘误版为准。
