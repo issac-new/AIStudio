@@ -54,6 +54,15 @@ for (const sub of ['pricing', 'roster']) {
 }
 console.log('[overlay-build] ▶ 运行时配置资源 → dist/server/runtime/{pricing,roster}');
 
+// 5b. decisiongraph semantica 桥（.py 运行时资产）：board-graph bridge 按
+// <dist>/server/semantica-bridge.py 用 HERMES_BIN python 直调——构建不拷则装机
+// 产物里 bridge 进程全灭（2026-10-06 重建实锤：product-dist rsync --delete 清掉
+// 历史手工补放件后日志连刷 "can't open file semantica-bridge.py"）。
+const semBridgeSrc = resolve(overlayRoot, 'custom/server/decisiongraph/semantica-bridge.py');
+if (!existsSync(semBridgeSrc)) throw new Error(`[overlay-build] semantica 桥缺失: ${semBridgeSrc}`);
+cpSync(semBridgeSrc, resolve(upstream, 'packages/server/dist/server/semantica-bridge.py'));
+console.log('[overlay-build] ▶ decisiongraph semantica 桥 → dist/server/semantica-bridge.py');
+
 console.log('\n[overlay-build] ✓ 完整构建完成:');
 console.log('  dist/client/  — 客户端(含自定义矩阵/看板/品牌)');
 console.log('  dist/server/  — 服务端');
