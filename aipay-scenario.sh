@@ -26,11 +26,11 @@ source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
 # Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
-# product-surface-degraded 降级（附录 F-2，禁静默关旗标跑全程）；映射与断言见
+# product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
 # docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 if ! dlv_enabled; then
-  echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：附录 F-2 降级口径记单，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
+  echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径记单，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
 fi
 
 # backlog① 观察员接线：harness 建房（mx-lib mx_create_room）与产品派发
@@ -149,7 +149,7 @@ if step_reached smoke; then
     note "[R28] 编制三方对账不一致（已记单，继续）：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}"
   fi
   # R29 delivery 协议面小冒烟（P15 拍板：禁静默关旗标——MX_DELIVERY=1 时冒烟段即验
-  # 事件落房+读回；产品门禁灯帧按附录 F-4 矩阵步 23 在报告链采集）
+  # 事件落房+读回；产品门禁灯帧按§5.6 必采矩阵 矩阵步 23 在报告链采集）
   dlv_enabled && dlv_smoke
   note "[真值] 步骤 1-5 全部完成 ✓"
   sset smoke_done 1
@@ -177,11 +177,11 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
   app_registry_gen > "$REG"
   # P13 改回（2026-10-06 用户裁决「界面上线是必须要求」）：注册表经产品同源通道落档
   # ——界面「保存（提交 git）」所走端点 PUT /api/governance/registry/app-registry
-  # （gov_registry_put：admin matrix 交换 super_admin）；失败按附录 F-2 记单降级回直写，禁静默。
+  # （gov_registry_put：admin matrix 交换 super_admin）；失败按§5.6 采集纪律⑩ 记单降级回直写，禁静默。
   if gov_registry_put app-registry "$REG" "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）"; then
     note "[M1] registry 经产品通道落档（PUT /api/governance/registry/app-registry 保存即 git 提交——界面同源承载）"
   else
-    echo "ISSUE|product-channel-degraded|studio|M1 registry 产品通道 PUT 失败，按附录 F-2 记单降级直写" >> "$EVID_DIR/issues.log"
+    echo "ISSUE|product-channel-degraded|studio|M1 registry 产品通道 PUT 失败，按§5.6 采集纪律⑩ 记单降级直写" >> "$EVID_DIR/issues.log"
     note "[M1] 产品通道失败（记单降级，直写保底）"
   fi
   # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法（当前分支 commit
@@ -213,7 +213,7 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   if gov_registry_put org "$ORG" "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）"; then
     note "[M2] org 经产品通道落档（PUT /api/governance/registry/org 保存即 git 提交——界面同源承载）"
   else
-    echo "ISSUE|product-channel-degraded|studio|M2 org 产品通道 PUT 失败，按附录 F-2 记单降级直写" >> "$EVID_DIR/issues.log"
+    echo "ISSUE|product-channel-degraded|studio|M2 org 产品通道 PUT 失败，按§5.6 采集纪律⑩ 记单降级直写" >> "$EVID_DIR/issues.log"
     note "[M2] 产品通道失败（记单降级，直写保底）"
   fi
   # 落 main 走 repo_commit_main（P4/Z1）：同 appinit——HEAD 在 integration 时旧写法提交
