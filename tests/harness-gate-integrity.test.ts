@@ -656,6 +656,15 @@ describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）',
     const scen = read(join(HARNESS, 'aipay-scenario.sh'))
     expect(scen).toContain('product-surface-degraded|delivery-cases')
   })
+
+  it('dlv_smoke 读回用完整事件类型（2026-10-06 实跑抓到的裸字面量 bug）', () => {
+    // dlv_events 按 .type 全等过滤；dlv_smoke 曾传裸词 'gate'，而真实事件类型是
+    // com.swarmstudio.delivery.gate——读回恒空、冒烟必记单失败。钉死：读回调用必须
+    // 传 "$DLV_GATE_TYPE"，防字面量漂移复发。
+    const dlv = read(join(MX, 'mx-delivery-lib.sh'))
+    expect(dlv).toContain('dlv_events fanfan "$room" "$DLV_GATE_TYPE"')
+    expect(dlv).not.toMatch(/dlv_events fanfan "\$room" gate /)
+  })
 })
 
 describe('⑬ runtime 副本须包含补丁面（部署通道不得静默回退已打补丁）', () => {

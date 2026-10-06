@@ -177,7 +177,7 @@ dlv_smoke() { # R29 小冒烟（P15 拍板）：案例房开张+stage/gate 事�
   [[ -z "$room" || -z "$case_id" ]] && { note "[R29] delivery 冒烟前置缺失（room/case 未落键），跳过"; return 0; }
   dlv_stage fanfan "$room" "$case_id" P1 fanfan done - >/dev/null 2>&1 || true
   dlv_gate fanfan "$room" "$case_id" G1 pass human "R29 冒烟：G1 灯位事件（${RUN_ID:-run}）" >/dev/null 2>&1 || true
-  if dlv_events fanfan "$room" gate 2>/dev/null | grep -q 'G1'; then
+  if dlv_events fanfan "$room" "$DLV_GATE_TYPE" 2>/dev/null | grep -q 'G1'; then
     note "[R29] delivery 小冒烟 ✓：case=${case_id} room=${room} 事件落房可读回；门禁灯帧=r18-frames 面板实拍+r18-collect.py deliver 登记（附录 F-4 矩阵步 23）"
   else
     echo "ISSUE|delivery-protocol-smoke|product|delivery 冒烟事件落房读回失败（P15/R29）——面板投影存疑，门禁灯帧按附录 F-2 记单降级" >> "$EVID_DIR/issues.log"
