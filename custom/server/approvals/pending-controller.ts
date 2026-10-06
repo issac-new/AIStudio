@@ -93,6 +93,89 @@ function readPendingFileQueue(): PendingItem[] {
   return outAll
 }
 
+// ── mx 审批通道（backlog ③ 审批面统一·产品侧读+裁决，2026-10-06）──
+// harness（Matrix/推演）审批请求经 <approvals>/mx-requests.jsonl 入队（每行
+// {eid,title,detail,sessionId?,profile?,createdAt}，eid=Matrix $event_id 全局幂等锚）；
+// 裁决走 mx: decide 分支写 mx-responses/<safe-eid>.json（tmp+rename 原子，与
+// fleetfile 同款），harness 侧轮询消费（③b）。防双通道重批三重幂等闸：
+// ①approved.events 行首 eid 命中（Matrix 反应通道已批）②mx-responses 响应文件在
+// （本通道已批）③decide 分支二次复核（读路径与裁决路径同口径）。
+interface MxRequestEntry {
+  eid: string
+  title?: string
+  detail?: string
+  sessionId?: string
+  profile?: string
+  createdAt?: number
+}
+
+/** Matrix $event_id 含 $/: 等文件名不安全字符——响应文件名统一转义（harness ③b 同约定） */
+function mxSafeEid(eid: string): string {
+  return eid.replace(/[^A-Za-z0-9_-]/g, '_')
+}
+
+/** approved.events 各目录已裁决 eid 集（行首请求 eid 列；读失败=空集不阻断） */
+function mxDecidedEids(): Set<string> {
+  const eids = new Set<string>()
+  for (const dir of approvalsDirs()) {
+    try {
+      for (const line of readFileSync(join(dir, 'approved.events'), 'utf8').split('\n')) {
+        const e = line.trim().split(/\s+/)[0]
+        if (e) eids.add(e)
+      }
+    } catch { /* 台账缺失忽略 */ }
+  }
+  return eids
+}
+
+/** mx 通道待审源：入队请求 −（反应通道已批 ∪ 本通道已批） */
+function readMxApprovalChannel(): PendingItem[] {
+  const decided = mxDecidedEids()
+  const out: PendingItem[] = []
+  for (const dir of approvalsDirs()) {
+    const queue = join(dir, 'mx-requests.jsonl')
+    if (!existsSync(queue)) continue
+    let lines: string[] = []
+    try { lines = readFileSync(queue, 'utf8').split('\n') } catch { continue }
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      let entry: MxRequestEntry
+      try { entry = JSON.parse(trimmed) as MxRequestEntry } catch { continue }
+      if (!entry.eid || decided.has(entry.eid)) continue
+      if (existsSync(join(dir, 'mx-responses', `${mxSafeEid(entry.eid)}.json`))) continue
+      out.push({
+        id: `mx:${entry.eid}`,
+        kind: 'command',
+        title: entry.title || entry.eid,
+        detail: entry.detail || '',
+        ...(entry.sessionId ? { sessionId: entry.sessionId } : {}),
+        ...(entry.profile ? { profile: entry.profile } : {}),
+        createdAt: entry.createdAt ?? 0,
+        risk: classifyApprovalRisk({ kind: 'command', detail: entry.detail || '', title: entry.title || entry.eid }),
+      })
+    }
+  }
+  return out
+}
+
+/** mx 请求所在目录（decide 回写响应用）；找不到 = null。 */
+function mxRequestDirOf(eid: string): string | null {
+  for (const dir of approvalsDirs()) {
+    const queue = join(dir, 'mx-requests.jsonl')
+    try {
+      for (const line of readFileSync(queue, 'utf8').split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          if ((JSON.parse(trimmed) as MxRequestEntry).eid === eid) return dir
+        } catch { continue }
+      }
+    } catch { continue }
+  }
+  return null
+}
+
 /** 该请求所在的队列目录（decide 回写响应用）；找不到 = null。 */
 function queueDirOfRequest(requestId: string): string | null {
   for (const dir of approvalsDirs()) {
@@ -178,6 +261,9 @@ function collectPendingItems(): PendingItem[] {
   const items: PendingItem[] = []
   // 文件队列源（patch 490 unattended 传输；读失败不阻断其余聚合）
   try { items.push(...readPendingFileQueue()) } catch { /* 队列不可读忽略 */ }
+
+  // mx 通道源（backlog ③：Matrix/harness 审批事件翻成 PendingItem，eid 幂等防双通道重批）
+  try { items.push(...readMxApprovalChannel()) } catch { /* mx 通道不可读忽略 */ }
 
   // fleet 命令审批（agent 工具调用等）
   try {
@@ -302,6 +388,44 @@ router.post('/:id/decide', async (ctx) => {
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
       targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
+    })
+    ctx.body = { ok: true, entry }
+    return
+  }
+
+  if (id.startsWith('mx:')) {
+    const eid = id.slice('mx:'.length)
+    if (!eid || !FLEET_CHOICES.has(decision)) {
+      ctx.status = 400
+      ctx.body = { ok: false, detail: 'mx 决策须为 once|session|always|deny，id 形如 mx:<eid>' }
+      return
+    }
+    // 幂等闸①：Matrix 反应通道已批（approved.events 在案）——一次定音，禁双通道重批
+    if (mxDecidedEids().has(eid)) {
+      ctx.status = 409
+      ctx.body = { ok: false, detail: '该审批已经 Matrix 反应通道裁决（approved.events 在案），一次定音' }
+      return
+    }
+    const dir = mxRequestDirOf(eid)
+    if (!dir) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '审批请求不在 mx 通道（已裁决或不存在）' }
+      return
+    }
+    // 幂等闸②：本通道已批（响应文件在）
+    const respFile = join(dir, 'mx-responses', `${mxSafeEid(eid)}.json`)
+    if (existsSync(respFile)) {
+      ctx.status = 409
+      ctx.body = { ok: false, detail: '该审批已经收件箱裁决（响应文件在案），一次定音' }
+      return
+    }
+    mkdirSync(join(dir, 'mx-responses'), { recursive: true })
+    const tmp = `${respFile}.tmp-${process.pid}-${Date.now()}`
+    writeFileSync(tmp, JSON.stringify({ request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' }), 'utf8')
+    renameSync(tmp, respFile)
+    const entry = await appendApprovalLog({
+      id, actor, targetKind: 'command', targetId: eid,
+      targetTitle: note || eid, decision, note,
     })
     ctx.body = { ok: true, entry }
     return

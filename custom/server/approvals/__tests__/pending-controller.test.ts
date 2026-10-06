@@ -169,6 +169,56 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     expect(res.status).toBe(404)
   })
 
+  it('mx 通道源：未批在列、反应通道已批/本通道已批不在列；decide 写响应+幂等 409（backlog ③）', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    const { writeFileSync, mkdirSync } = await import('fs')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'mx-requests.jsonl'), [
+      JSON.stringify({ eid: '$req1:matrix.test', title: 'git push origin main', detail: 'chen 推送 DEV-PAYCORE', createdAt: 1000 }),
+      JSON.stringify({ eid: '$req2:matrix.test', title: 'react-approved' }),
+      JSON.stringify({ eid: '$req3:matrix.test', title: 'inbox-approved' }),
+    ].join('\n') + '\n')
+    // 反应通道已批（approved.events 行首 eid 命中）
+    writeFileSync(join(dir, 'approved.events'), '$req2:matrix.test $reply2:matrix.test @fanfan:matrix.test 1791200000\n')
+    // 本通道已批（响应文件在）
+    mkdirSync(join(dir, 'mx-responses'), { recursive: true })
+    writeFileSync(join(dir, 'mx-responses', '_req3_matrix_test.json'), JSON.stringify({ request_id: '$req3:matrix.test', decision: 'deny' }))
+
+    const pending = await fetchJson(base, '/api/approvals/pending')
+    const ids = (pending.body.items as Array<{ id: string }>).map(i => i.id)
+    expect(ids).toContain('mx:$req1:matrix.test')
+    expect(ids).not.toContain('mx:$req2:matrix.test')
+    expect(ids).not.toContain('mx:$req3:matrix.test')
+
+    // decide 成功：响应文件按转义 eid 写入、决策/操作人/通道在案、历史落账
+    const decide = await fetchJson(base, '/api/approvals/mx:$req1:matrix.test/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'once', note: '收件箱放行' }),
+    })
+    expect(decide.status).toBe(200)
+    const resp = JSON.parse(readFileSync(join(dir, 'mx-responses', '_req1_matrix_test.json'), 'utf8')) as Record<string, unknown>
+    expect(resp.request_id).toBe('$req1:matrix.test')
+    expect(resp.decision).toBe('once')
+    expect(resp.actor).toBe('qa-lead')
+    expect(resp.channel).toBe('inbox')
+
+    // 幂等闸②：重复 decide → 409（一次定音）
+    const again = await fetchJson(base, '/api/approvals/mx:$req1:matrix.test/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'deny' }),
+    })
+    expect(again.status).toBe(409)
+    // 幂等闸①：反应通道已批的 eid 走 decide → 409（禁双通道重批）
+    const cross = await fetchJson(base, '/api/approvals/mx:$req2:matrix.test/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'once' }),
+    })
+    expect(cross.status).toBe(409)
+    // 已答后不再在列
+    const after = await fetchJson(base, '/api/approvals/pending')
+    expect((after.body.items as Array<{ id: string }>).map(i => i.id)).not.toContain('mx:$req1:matrix.test')
+  })
+
   it('fleet decide：非词表决策 400；id 缺会话段 400', async () => {
     const bad1 = await fetchJson(base, '/api/approvals/fleet:s1/decide', {
       method: 'POST', headers: { 'content-type': 'application/json' },
