@@ -97,7 +97,16 @@
 - **根因共性**：产出（governance-report/issues.log/复盘）与归档（中央仓 ISSUES-LOG/metrics-log）之间无原子化通道——每环都"生成了"但"没落账"，且无审计项查归档侧。
 - **修正（已落地）**：R-A2 ISSUES-LOG 回灌 run9 段、R-A5 metrics-log 回写 M1 行（schema 修正：score=数值）、C-4 漏账对账补记、R-A3/R-A4 复盘勘误版 v2（数字/raci 主体/逐单归因/owner+具体期限）——四件全进 origin/main（90024c1+5fcb59f）；机制项=R26 扩展（metrics 回写通道+记单落账原子化+归档侧审计项）。
 
+### P15【初衷级旁路·补】Delivery Cases 协议面零演练：六闸全过而产品门禁灯无事件可投
 
+- **现象**：方案 §4.1 把「协议事件 MX_DELIVERY=1」列为可选旗标；harness 默认关（simharness mux/mx-delivery-lib.sh:83-84，注释「缺省零行为」）；run9 state.env 无此键、驱动日志零命中，本轮全程未开。产品侧 Delivery Cases 面板正是为六闸场景而建：协议事件投影、G1-G6 门禁灯、证据抽屉（overlay/README.md:109-117，挂 /app/eng 第三 tab，深链 /app/cases）；其事实源裁决是「跨机协作的唯一事实源为 Matrix 房间 com.swarmstudio.delivery.* 协议事件」（2026-09-19-swarm-cockpit-architecture-design.md:37 裁决 A）。
+- **初衷对照**：六闸全首过的轮次，专为六闸设计的产品投影面零输入，门禁灯无事件可投。与 P6（运行注册表空态）合看：可观测性卖点（README:17-18 证据图与 RunTraceView；loop graph 一图三用，2026-09-09-loop-graph-aihub-redesign-design.md:12）在 26 步中无一处正向实证，机制跑在 harness 里，产品呈现层对治理过程零承载。
+- **修正**：run10 前置候选 R29。先小冒烟验证 delivery.* 事件落房且面板正确投影，再全程开启并把门禁灯帧入必采矩阵；产品面未就绪则按附录 F-2 记单降级，禁静默关旗标跑全程。
+
+### P16【方案边界·补】跨机联邦形态未声明为边界
+
+- **现象**：§1.3 边界三条（不接真实资金流/不测性能容量/不多需求并行）不含跨机形态。§2.4 步 2 以「单 gateway 多路复用等价每台电脑独立 gateway」作单机妥协；run9 NVMe 单卷脱挂 8.5h 全灭（issues.log infra-nvme-volume-drop）实证「谁离线不影响全网」（2026-09-18-distributed-delivery-network-design.md:16）在 harness 拓扑下不成立；G4「测试者≠写码者」在单机是账号级分离，对照该 spec 目标 4「作者不评审自己的产出升级为跨机结构性分离」未达成。
+- **修正**：§1.3 增列边界声明一条（本轮不验证跨机联邦形态，独立性分离为账号级）。属边界澄清，不改契约层语义，建议随下次正本修订落版（候选 R30）；长线记档项增「双机最小联邦轮」。
 
 ## 三、修正落位总表（两轮合并）
 
@@ -108,6 +117,7 @@
 | 立即·方案 | V8 附录 F（F-1 路由版本校验/F-2 采集降级口径/F-3 产品面承载率+F-4 步级承诺入矩阵） | 已落地（overlay be5034f） |
 | 立即·中央仓 | P11 roster 三岗补正；P14 R-A2 台账归档回灌+R-A5 metrics 回写+C-4 漏账补记；R-A3/R-A4 复盘勘误版 v2 | 已落地（origin/main 90024c1+5fcb59f） |
 | run10 前置 | R25 必采矩阵扩步 13；R26 度量面五项+基线行+回写通道+记单落账原子化；R27 承载面符合性审计项（含冒烟四组逐项帧）；R28 冒烟 roster×org×matrix 三方对账断言 | 待工具配套（起跑前落位） |
+| run10 前置（第三轮新增候选） | R29 Delivery Cases 协议面小冒烟→全程开启→门禁灯帧入必采矩阵（P15）；R30 §1.3 增列跨机联邦形态边界声明（P16，随下次正本修订落版） | 待裁决 |
 | 产品 backlog | 房间列表同步/runs 注册表接入/审批收件箱与反应审批统一/看板 DOM 化或测试钩子/治理域路由归宿+P13 承诺步通道勘误 | 记 issues+档案件 §五 |
 
 ## 四、本轮修正的执行锚（两轮合并记录）
@@ -118,5 +128,9 @@
   - run 目录：issues.log 补记 roster-stale-governance-roles 与 push-retry-integration 两键（ISSUE+DISP，收官对账补记缘由在行内）；终态 13 记录/10 唯一键/DISP 10 条全处置。
   - simharness mx-report-gen.py：步 1（30 账号真值+roster 断裂如实记）、步 3（14 jwt 键口径+UI 12 行根因）、步 4（冒烟②缺口如实记+4-op8 帧挂接）——H7 重生成+final-report-merge+审计零 FAIL（71 帧全互异，R6 WARN 缩至步 2 一处）。
   - 独立审计 R-A1~R-A10 执行态：R-A1/R-A2/R-A3/R-A4/R-A5 已执行（本审计两轮）；R-A6~R-A10 按建议原文挂 run10 前或产品 backlog。
+- **第三轮**（独立复核会话追加，2026-10-06 20:0x）：
+  - 第一、二轮落地声称抽查复跑属实：报告两次重生成在位（387.9K→389.0K→390.9K，帧池 66→68→71）、simharness c68087f 与 552e10f、中央仓 90024c1/5fcb59f、issues.log 补记两键（roster-stale-governance-roles、push-retry-integration 各 ISSUE+DISP）、附录 F-1~F-4 与档案件 §五第 11 条在位。未亲验项：守门 47/47 与审计零 FAIL 复跑（本复核未重跑守门套件，依据前序会话自报与产物时间戳）。
+  - 新增 P15/P16 入 §二，对应 run10 前置候选 R29/R30 入 §三总表；档案件 §五补第 12 条。
+  - 遗留观察：中央仓工作区复核时仍处独立审计 D-1 所述漂移态（integration/RFD-001 分支上 M docs/acceptance/RFD-001-acceptance.md、M work-report.md、未跟踪 docs/retro/20261006-v8-run9-audit-opinion.md）。处置权归中央仓 owner，本复核不动执行期现场，仅提示收口时一并清理。
 
 **边界声明**：本审计不回改 run9 执行期记录（state/scenario.log 保持当轮原貌）；issues 台账仅按收官补账纪律增记（缘由在行内自声明，不改写 agent 原始记录）；报告修正走 H7 设计内重生成通道；复盘勘误版 v2 走既定勘误先例（初版 git 历史留痕）。
