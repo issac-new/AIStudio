@@ -228,6 +228,59 @@ review_state_del() { # <eid>（sed 免疫点号通配：用 awk 精确首列）
 }
 review_state_set() { echo "$1|$2|$3|$4|$(date +%s)" >> "$REVIEW_STATE"; } # <eid> <state> <ask_eid> <u>
 
+# ── ③b 审批面统一·harness 侧（backlog ③，2026-10-06）──────────────────────
+# 镜像入队：审批请求在 Matrix 房间出现即同步写入产品收件箱通道
+# （$HERMES_ROOT/approvals/mx-requests.jsonl，产品 pending-controller 第四源读取，
+# id=mx:<eid>）；消费收敛：轮询 mx-responses/<safe-eid>.json（产品裁决产物），
+# 命中即回 Matrix 执行反应+线程批准/拒绝（与 auto 通道同语义），双通道台账一致。
+# 幂等边界：本侧以 APPROVED_LOG 为已决真值；产品侧以 approved.events+响应文件为
+# 已决真值（其 decide 分支对反应通道已批 409，本侧消费后亦落 approved.events）。
+# MX_INBOX_MIRROR=0 可显式关闭（保真偏离须记单，与 delivery 旗标同纪律）。
+MXQ_DIR="$HERMES_ROOT/approvals"
+MXQ_QUEUE="$MXQ_DIR/mx-requests.jsonl"
+MXQ_RESP_DIR="$MXQ_DIR/mx-responses"
+
+mxq_safe_eid() { printf '%s' "$1" | tr -c 'A-Za-z0-9_-' '_'; }  # 与产品 mxSafeEid 同约定
+
+mxq_enqueue() { # <user> <room> <eid>：镜像入队（幂等；显式关闭或已在队/已决即跳过）
+  [[ "${MX_INBOX_MIRROR:-1}" == "1" ]] || return 0
+  local u="$1" room="$2" eid="$3" body title
+  mkdir -p "$MXQ_DIR" 2>/dev/null || return 0
+  touch "$MXQ_QUEUE"
+  grep -qF '"eid":"'"$eid"'"' "$MXQ_QUEUE" 2>/dev/null && return 0
+  grep -qF "$eid " "$APPROVED_LOG" 2>/dev/null && return 0
+  body=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg e "$eid"     '[.[] | select(.event_id == $e)][0].content.body // ""' 2>/dev/null | head -c 200 | jq -Rs .) || body='"（正文拉取失败）"'
+  title="[${u}] Matrix 审批请求（房间 ${room}）"
+  jq -nc --arg e "$eid" --arg t "$title" --argjson d "${body:-""}" --arg sid "$room" --arg p "$u"     '{eid:$e, title:$t, detail:$d, sessionId:$sid, profile:$p, createdAt:(now*1000|floor)}' >> "$MXQ_QUEUE" 2>/dev/null || true
+}
+
+mxq_consume() { # 消费收件箱裁决：响应文件命中且未决 → 回 Matrix 执行批准/拒绝
+  [[ "${MX_INBOX_MIRROR:-1}" == "1" ]] || return 0
+  [[ -d "$MXQ_RESP_DIR" ]] || return 0
+  local f eid decision u room
+  for f in "$MXQ_RESP_DIR"/*.json; do
+    [[ -f "$f" ]] || continue
+    eid=$(jq -r '.request_id // empty' "$f" 2>/dev/null) || continue
+    [[ -n "$eid" ]] || continue
+    grep -qF "$eid " "$APPROVED_LOG" 2>/dev/null && continue   # 已决（任一通道）跳过
+    decision=$(jq -r '.decision // "once"' "$f" 2>/dev/null)
+    # 请求房间与账号：自 mx-requests 行回取（入队时落了 sessionId/profile）
+    room=$(jq -r --arg e "$eid" 'select(.eid == $e) | .sessionId // empty' "$MXQ_QUEUE" 2>/dev/null | head -1)
+    u=$(jq -r --arg e "$eid" 'select(.eid == $e) | .profile // empty' "$MXQ_QUEUE" 2>/dev/null | head -1)
+    [[ -n "$room" && -n "$u" ]] || continue
+    local react_eid="" reply_eid="" root verb
+    if [[ "$decision" == "deny" ]]; then verb="!deny"; else verb="!approve"; fi
+    [[ "$decision" != "deny" ]] && react_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.reaction"       "{"m.relates_to":{"rel_type":"m.annotation","event_id":"$eid","key":"✅"}}"       | jq -r '.event_id // empty' 2>/dev/null) || true
+    root=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg e "$eid"       '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || root="$eid"
+    reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message"       "{"msgtype":"m.text","body":"$verb","m.relates_to":{"rel_type":"m.thread","event_id":"$root","is_falling_back":true,"m.in_reply_to":{"event_id":"$eid"}}}"       | jq -r '.event_id // empty' 2>/dev/null) || true
+    if [[ -z "$reply_eid" ]]; then
+      reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message"         "{"msgtype":"m.text","body":"$verb"}" | jq -r '.event_id // empty' 2>/dev/null) || true
+    fi
+    echo "$eid ${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
+    note "[③b] 收件箱裁决已收敛回 Matrix（请求 ${eid} 决策 ${decision} → ${verb} ${reply_eid:-NO_REPLY}${react_eid:+ 反应=${react_eid}}）"
+  done
+}
+
 approve_is_critical() { # <body> → 0=关键(挂真人) 1=过程性
   local low; low=$(printf '%s' "$1" | tr 'A-Z' 'a-z')
   if printf '%s' "$low" | grep -qE \
@@ -322,6 +375,7 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
   # 大小写归一+非法值 fail-closed（2026-10-02 审查批）：配置漂移（Manual/HYBRID 等）
   # 不得静默落 auto"扫到即批"——未知的值按 manual 全挂起处理并记单。
   MODE="$(printf '%s' "$MODE" | tr 'A-Z' 'a-z')"
+  mxq_consume   # ③b：先消费收件箱裁决（manual 模式同样收敛——裁决已发生须回 Matrix）
   case "$MODE" in
     manual) return 0 ;;
     auto|hybrid) ;;
@@ -340,6 +394,7 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK"))) | .event_id' 2>/dev/null \
       | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
+      mxq_enqueue "$u" "$room" "$eid"   # ③b：镜像入产品收件箱（auto/manual/hybrid 双可见）
       if [[ "$MODE" == "hybrid" ]]; then
         local body line rc
         body=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg e "$eid" \
