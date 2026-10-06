@@ -1,17 +1,21 @@
 #!/bin/bash
-# 启动本地 Clef 27B (MLX 4bit) SystemOne 决策服务
-# 模型来源：LM Studio 下载目录（勿用 LM Studio 界面跑，决策头只有 clef_mlx.py 会加载）
-# 服务：POST http://127.0.0.1:8001/v1/systemone（兼容 Jev/SystemOne 协议）
+# 启动本地 Clef SystemOne 决策服务
+# 主力：clef-flash-4bit（9B，端口 8000）——Laya 退役后的默认判定端
+# 备件：clef-4bit 27B（端口 8001）——CLEF_MODEL=27b 时启用，仅异步低频场景
+# 注意：LM Studio 只当下载器，服务必须经 clef_mlx.py（决策头只有它认）
 set -e
-CLEF_DIR=/Volumes/nvme2230/lm-studio-model/mlx-community/clef-4bit
+MODE="${CLEF_MODEL:-flash}"
+BASE=/Volumes/nvme2230/lm-studio-model/mlx-community
 PY=/Users/cuishi/lab/clef-runtime/venv/bin/python
 
-# 分片未下完时给出明确提示（.part 文件存在即未完成）
-if ls "$CLEF"/downloading_*.part >/dev/null 2>&1; then
-  DONE=$(ls "$CLEF"/model-*.safetensors 2>/dev/null | wc -l | tr -d ' ')
-  echo "模型还在下载中（$DONE/3 分片完成），稍后再试。查看进度："
-  du -sh "$CLEF"
-  exit 1
+if [ "$MODE" = "27b" ]; then
+  DIR="$BASE/clef-4bit"; PORT="${CLEF_PORT:-8001}"
+else
+  DIR="$BASE/clef-flash-4bit"; PORT="${CLEF_PORT:-8000}"
 fi
 
-exec "$PY" "$CLEF_DIR/clef_mlx.py" serve --port 8001
+if ls "$DIR"/downloading_*.part >/dev/null 2>&1; then
+  echo "模型还在下载中：$DIR"; du -sh "$DIR"; exit 1
+fi
+
+exec "$PY" "$DIR/clef_mlx.py" serve --port "$PORT"

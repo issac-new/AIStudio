@@ -1,9 +1,9 @@
 // overlay[toolresultguard] P1a 端到端实测（真判定端点，默认跳过）。
-// 用法（M1 Pro 实测 653 token schema 单判 ~163s，TRG_TIMEOUT_MS 必须给足）：
-//   TRG_E2E=1 TRG_ENABLED=1 TRG_BASE_URL=http://127.0.0.1:8001 TRG_TIMEOUT_MS=300000 \
+// 用法（M1 Pro 实测 flash 主力守卫 schema ~9s（27B 备件 163s））：
+//   TRG_E2E=1 TRG_ENABLED=1 TRG_BASE_URL=http://127.0.0.1:8000 TRG_TIMEOUT_MS=60000 \
 //   npx vitest run custom/server/toolresultguard/__tests__/e2e.live --testTimeout=600000
-// 前提：本地 clef 服务已起（runtime/clef/start-clef.sh，端口 8001——8000 被 Laya 占用）。
-// CI/常规套件恒跳过；生产同步路径默认 TRG_TIMEOUT_MS=3000 fail-open（见 runtime/clef/README）。
+// 前提：本地 clef 服务已起（runtime/clef/start-clef.sh，端口 8000 flash 主力）。
+// CI/常规套件恒跳过；生产默认 TRG_TIMEOUT_MS=12000（flash 实测守卫 schema 8.8s，见 runtime/clef/README）。
 import { describe, it, expect } from 'vitest'
 import { guardUserInput, guardToolResult, readAudit, _useAuditDirForTests } from '../index'
 

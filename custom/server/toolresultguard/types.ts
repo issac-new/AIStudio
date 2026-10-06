@@ -75,8 +75,12 @@ export interface GuardConfig {
 export const DEFAULT_CONFIG: GuardConfig = {
   enabled: false,
   baseUrl: 'http://127.0.0.1:8000',
-  model: 'clef-4bit',
-  timeoutMs: 3000,
+  // 主力 = clef-flash-4bit（9B，M1 Pro 实测 287tok 3.3-3.6s / 守卫 schema 646tok 8.8s）；
+  // clef-4bit 27B 为备件（13-163s，仅异步低频场景手动切）
+  model: 'clef-flash-4bit',
+  // 2026-10-06 定 12000：flash 上守卫 schema 实测 8.8s，3s 会全部超时 fail-open；
+  // 12s 让 S1 真正可达，仅 S0 命中的可疑内容才付这个延迟
+  timeoutMs: 12000,
   tauHigh: 0.85,
   tauLow: 0.25,
   s0Gate: 1,

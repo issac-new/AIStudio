@@ -2,7 +2,7 @@
 # Clef 27B 本地服务验证：健康检查 + 上游同款三原语样例 + 延迟实测
 # 用法：bash verify-clef.sh（需服务已启动：bash start-clef.sh）
 set -e
-BASE=http://127.0.0.1:8001
+BASE=${CLEF_BASE:-http://127.0.0.1:8000}
 
 echo "=== 1. 健康检查 ==="
 curl -s --max-time 5 "$BASE/health" && echo
