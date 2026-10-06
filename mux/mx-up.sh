@@ -41,8 +41,7 @@ else
   # （No module named hermes_cli，评审卡 run2-9 连崩实录）。
   PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
     HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
-    KANBAN_GATE_GUARD_FILE="$SIM_ROOT/var/current-state.env" KANBAN_GATE_GUARD_KEYS="${MX_GATE_GUARD_KEYS:-g2_arch_pass}" \
-    nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
+    ${MX_GATE_GUARD:+KANBAN_GATE_GUARD_FILE="$SIM_ROOT/var/current-state.env" KANBAN_GATE_GUARD_KEYS="$MX_GATE_GUARD" }nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
 fi
