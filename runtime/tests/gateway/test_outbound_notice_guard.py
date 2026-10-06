@@ -173,12 +173,6 @@ def _bare_adapter() -> BasePlatformAdapter:
     return adapter
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="wiring never landed: _apply_outbound_notice_throttle on BasePlatformAdapter "
-           "and the inline reply sink (module itself is complete and tested); "
-           "XPASS here means the wiring arrived — remove these markers",
-)
 def test_helper_throttles_and_returns_digest():
     clock = FakeClock()
     adapter = _bare_adapter()
@@ -188,12 +182,6 @@ def test_helper_throttles_and_returns_digest():
     assert adapter._apply_outbound_notice_throttle(event, LIMIT_TEXT) is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="wiring never landed: _apply_outbound_notice_throttle on BasePlatformAdapter "
-           "and the inline reply sink (module itself is complete and tested); "
-           "XPASS here means the wiring arrived — remove these markers",
-)
 def test_helper_fails_open():
     class _Broken:
         def decide(self, *_a, **_k):
@@ -204,12 +192,6 @@ def test_helper_fails_open():
     assert adapter._apply_outbound_notice_throttle(_make_event(), LIMIT_TEXT) == LIMIT_TEXT
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="wiring never landed: _apply_outbound_notice_throttle on BasePlatformAdapter "
-           "and the inline reply sink (module itself is complete and tested); "
-           "XPASS here means the wiring arrived — remove these markers",
-)
 def test_inline_reply_sink_suppresses_echoed_notices():
     """End-to-end at the dispatch sink: five identical handler replies produce one
     send — the echo feedback edge a storm needs is severed at the sink itself."""
