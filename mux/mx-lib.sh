@@ -232,6 +232,13 @@ mx_wait_sender() { # <token> <roomId> <sender-mxid> <marker-event-id> <timeout> 
 }
 mx_create_room() { # <token> <name> [invite-csv] → room_id
   local token="$1" name="$2" invite="${3:-}"
+  # backlog① 观察员位（2026-10-06）：env MATRIX_ROOM_OBSERVERS（逗号/空白分隔 mxid）
+  # 并入邀请名单——不在邀请名单的账号房间不进其 /sync、产品房间列表不可见
+  # （导演/观察账号靠此入房）。缺省未设=行为不变。与产品侧 resolveRoomObservers 同名同义。
+  if [[ -n "${MATRIX_ROOM_OBSERVERS:-}" ]]; then
+    invite="${invite:+$invite,}${MATRIX_ROOM_OBSERVERS}"
+    invite=$(echo "$invite" | tr ',' '\n' | tr -s '[:space:]' '\n' | sed '/^$/d' | sort -u | paste -sd, -)
+  fi
   local invites='[]'
   [[ -n "$invite" ]] && invites=$(echo "$invite" | tr ',' '\n' | jq -R . | jq -s .)
   # 建群邀请分批（2026-10-01 run6 实锤）：synapse 对 createRoom 单请求 invite 数有
@@ -251,6 +258,11 @@ mx_create_room() { # <token> <name> [invite-csv] → room_id
   echo "$rid"
 }
 mx_join() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1 || true; }
+# mx_join 的检错+退避重试变体（2026-10-06 实锤：Synapse 限流 burst 下 join/invite
+# 静默失败，尾部账号掉队无人知——delivery 案例房 28 账号缺 12、run9 房间缺员同族）。
+# 循环里成批入房一律用 mx_join_retry；mx_join 保留给"失败无碍"的宽容路径。
+mx_join_check() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1; }
+mx_join_retry() { local i; for i in 1 2 3 4; do mx_join_check "$1" "$2" && return 0; sleep 1; done; return 1; }
 
 # ── 临时物清理（Z6）：studio() 的 /tmp/mx-api.$$ 正常路径即用即删，EXIT trap 兜住
 #    中途退出/被杀时的残留。引用本库的脚本可重定义 mx_cleanup 扩展清理面（trap 只挂
