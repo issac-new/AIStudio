@@ -1106,5 +1106,117 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
   echo "$out"
 }
 
+gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+ISSUES-LOG 同提交推送+回读验证）
+  # 「产出了没落账」根治：治理报告的 metrics 行与 issues 唯一键在此一并写入中央仓
+  # origin/main（docs/governance/metrics-log.csv + docs/issues/ISSUES-LOG.md 单提交），
+  # 推送后回读 origin/main 验证——写、提、推、验四环一体，失败记单返回 1 不击杀驱动。
+  # 幂等：metrics 行按内容去重；ISSUES-LOG 的 ## <RUN>（ 段存在则替换不追加。
+  local run="${RUN_ID:-default}" rfd="${RFD_ID:-RFD-001}"
+  local _ilog="$EVID_DIR/issues.log"
+  [ -f "$_ilog" ] || { echo "[gov_archive] issues.log 缺席，跳过落账" >&2; return 0; }
+  gov_report >/dev/null || true   # 先刷新治理报告，metrics 取终态
+  # metrics 实算（与 gov_report 同口径；score 须数值——R-A5 metrics-log schema 先例）
+  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0
+  grep -qE '^ISSUE\|g1-(review|freeze|gate)' "$_ilog" 2>/dev/null && _g1f=1 || true
+  grep -qE '^ISSUE\|g2-' "$_ilog" 2>/dev/null && _g2f=1 || true
+  grep -qE '^ISSUE\|g3-' "$_ilog" 2>/dev/null && _g3f=1 || true
+  grep -qE '^ISSUE\|g4-' "$_ilog" 2>/dev/null && _g4f=1 || true
+  grep -qE '^ISSUE\|g5-' "$_ilog" 2>/dev/null && _g5f=1 || true
+  grep -qE '^ISSUE\|g6-' "$_ilog" 2>/dev/null && _g6f=1 || true
+  local _fp=$((6-_g1f-_g2f-_g3f-_g4f-_g5f-_g6f))
+  local _done_keys _evmiss _reject _human _today
+  _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
+  _evmiss=$({ grep -cE '^ISSUE\|(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)' "$_ilog" 2>/dev/null || true; })
+  _reject=$({ grep -cE '^ISSUE\|.*(打回|拒收|熔断)' "$_ilog" 2>/dev/null || true; })
+  _human=$({ grep -cE '^DISP\|.*导演' "$_ilog" 2>/dev/null || true; })
+  _today=$(date +%F)
+  local _m1 _m3 _m4 _m5
+  _m1="${_today},${rfd},M1,$(awk "BEGIN{printf \"%.3f\", ${_fp}/6}"),${_fp}/6,${_today}..${_today},state.env 落键实算,六闸全计（G3/G6 落键型无记单即首过；gov_archive_commit 机制化落账）"
+  _m3=""
+  if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
+    _m3="${_today},${rfd},M3,$(awk "BEGIN{printf \"%.3f\", (${_done_keys}-${_evmiss})/${_done_keys}}"),$((_done_keys-_evmiss))/${_done_keys},${_today}..${_today},issues.log+state.env 实算,证据一次通过率=1-凭证缺件记单/完成环节键"
+  fi
+  _m4="${_today},${rfd},M4,${_reject},${_reject},${_today}..${_today},issues.log 实算,打回次数=打回/拒收/熔断行计数"
+  _m5="${_today},${rfd},M5,${_human},${_human},${_today}..${_today},issues.log 实算,人工介入=DISP 注明导演计数（AI 主理占比 ⬜ 待协议事件结构化）"
+  # ── 临时 worktree（origin/main detached）内落账，不碰 DIRECTOR_CLONE 工作区 ──
+  # 作业形态与 repo_commit_main 同构：固定 wt 路径+EXIT trap 拆区，不留注册残留
+  local _wt="$SIM_ROOT/var/main-archive-wt" _rc=0
+  mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || {
+    echo "ISSUE|archive-commit-failed|director|治理归档落账：中央仓 fetch 失败（${run}）" >> "$_ilog"
+    return 1
+  }
+  rm -rf "$_wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
+  if ! git -C "$DIRECTOR_CLONE" worktree add -q --detach "$_wt" origin/main 2>/dev/null; then
+    echo "ISSUE|archive-commit-failed|director|治理归档落账：临时 worktree 建立失败（${run}）" >> "$_ilog"
+    return 1
+  fi
+  # metrics-log 追加（内容级去重幂等）
+  local _mlog="$_wt/docs/governance/metrics-log.csv" _row
+  mkdir -p "$(dirname "$_mlog")"
+  [ -f "$_mlog" ] || printf 'date,change,gate,score,ratio,window,source,note\n' > "$_mlog"
+  for _row in "$_m1" "$_m3" "$_m4" "$_m5"; do
+    [ -z "$_row" ] && continue
+    grep -qF "$_row" "$_mlog" 2>/dev/null || printf '%s\n' "$_row" >> "$_mlog"
+  done
+  # ISSUES-LOG run 段 upsert（段在=替换，段缺=追加；台账计数实算）
+  python3 - "$_wt/docs/issues/ISSUES-LOG.md" "$run" "$_ilog" <<'PYEOF'
+import re, sys, collections
+path, run, ilog = sys.argv[1], sys.argv[2], sys.argv[3]
+lines = open(ilog, encoding='utf-8').read().splitlines()
+iss = [l.split('|', 3) for l in lines if l.startswith('ISSUE|')]
+disp = [l.split('|', 3) for l in lines if l.startswith('DISP|')]
+keys, order = set(), []
+for p in iss:
+    k = f'{p[1]}·{p[2]}'
+    if k not in keys:
+        keys.add(k); order.append(k)
+buckets = collections.Counter()
+for p in disp:
+    d = p[3] if len(p) > 3 else ''
+    tag = '其他'
+    for t in ('已修', '已闭环', '观察', '延后'):
+        if d.startswith(t):
+            tag = t; break
+    buckets[tag] += 1
+disp_str = ' / '.join(f'{t} {buckets[t]}' for t in ('已修', '已闭环', '观察', '延后', '其他') if buckets[t])
+section = [f'## {run}（机制化落账；gov_archive_commit 原子化回灌）', '',
+           f'- 台账：{len(iss)} 行 ISSUE（唯一键 {len(keys)}）/ DISP {len(disp)} 条（{disp_str or "无"}）——台账本体=runs/{run}/evidence/issues.log',
+           '- 唯一键清单：'] + [f'  - {k}' for k in order]
+body = open(path, encoding='utf-8').read() if __import__('os').path.exists(path) else '# 推演问题台账（issues.log 归档）\n'
+pat = re.compile(rf'\n## {re.escape(run)}（.*?(?=\n## |\Z)', re.S)
+body = pat.sub('\n', body).rstrip() + '\n\n' + '\n'.join(section) + '\n'
+open(path, 'w', encoding='utf-8').write(body)
+PYEOF
+  # 单提交推送 + 回读验证（四环一体）
+  git -C "$_wt" add docs/governance/metrics-log.csv docs/issues/ISSUES-LOG.md 2>/dev/null
+  if git -C "$_wt" diff --cached --quiet 2>/dev/null; then
+    echo "[gov_archive] 归档已是最新（幂等命中，无新提交）"
+  else
+    git -C "$_wt" -c user.name="director (G6 archive)" -c user.email="director@aipaydev.local" \
+      commit -qm "docs(governance): ${run} 治理归档落账——metrics-log+ISSUES-LOG 机制化回灌（P14/R26 原子化）" || _rc=1
+    if [ "$_rc" = 0 ] && ! git -C "$_wt" push -q origin HEAD:main 2>/dev/null; then
+      # 非快进=main 已前移：fetch+rebase 重试一次，再败记单
+      git -C "$_wt" fetch -q origin 2>/dev/null || true
+      git -C "$_wt" rebase -q origin/main 2>/dev/null || true
+      git -C "$_wt" push -q origin HEAD:main 2>/dev/null || _rc=1
+    fi
+  fi
+  # local main 快进到同一提交（与 repo_commit_main 同口径：它是后续推送源，落后即空推/被拒）
+  git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true
+  if [ "$_rc" = 0 ]; then
+    git -C "$DIRECTOR_CLONE" show origin/main:docs/issues/ISSUES-LOG.md 2>/dev/null | grep -qF "## ${run}（" || _rc=1
+    git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null | grep -qF ",${rfd},M1," || _rc=1
+  fi
+  rm -rf "$_wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
+  if [ "$_rc" != 0 ]; then
+    echo "ISSUE|archive-commit-failed|director|治理归档落账原子化失败（${run}：提交/推送/回读三环其一未过，台账与 metrics 未上 origin/main）" >> "$_ilog"
+    echo "[gov_archive] 落账失败已记单（archive-commit-failed）" >&2
+    return 1
+  fi
+  echo "[gov_archive] 归档落账完成：metrics-log+ISSUES-LOG 已上 origin/main 并回读验证（${run}）"
+  return 0
+}
+
 # 场景脚本沿用 V1 快失败语义：mx-lib 的 set -uo 在 source 时会降级掉 -e，在此恢复
 set -euo pipefail

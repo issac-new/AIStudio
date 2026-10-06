@@ -80,8 +80,11 @@ dlv_assert() { # <desc> <expr...>：断言失败即 fail（M3 验收门）
   note "[M3 断言] $desc ✓"
 }
 
-# ── M3 场景事件化（aipay-scenario 接入面；MX_DELIVERY=1 启用，缺省零行为）──
-dlv_enabled() { [[ "${MX_DELIVERY:-}" == "1" ]]; }
+# ── M3 场景事件化（aipay-scenario 接入面；缺省启用=产品真实形态，R29 全程开启）──
+# 差距审计 P15/R29（2026-10-06 拍板）：delivery 协议面默认开启——保真形态原则
+# （正本 §4.3）下，产品既有的 Delivery Cases 面板应被协议事件真实喂数；MX_DELIVERY=0
+# 显式关闭由 scenario 自动记单 product-surface-degraded（附录 F-2 降级口径）。
+dlv_enabled() { [[ "${MX_DELIVERY:-1}" == "1" ]]; }
 
 dlv_scenario_open() { # <caseTitle> <repoUrl>：开案例房+邀全员+join（幂等：sset dlv_room）
   local title="$1" repo="$2" u room case_id

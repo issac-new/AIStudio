@@ -24,9 +24,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
-# M3 事件化：delivery.* 协议事件层（MX_DELIVERY=1 启用，缺省零行为变化；映射与
-# 断言见 docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
+# M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
+# Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
+# product-surface-degraded 降级（附录 F-2，禁静默关旗标跑全程）；映射与断言见
+# docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
+if ! dlv_enabled; then
+  echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：附录 F-2 降级口径记单，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
+fi
 
 # 单驱动锁（P0，2026-09-28；判活根治 2026-09-29）：双会话双开推演是实测最高频
 # 互踩源——共享 state.env/板库/房间双写互踩。锁实现收敛在 mx-scenario-lib
@@ -1292,6 +1297,13 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     note "[G6] 记忆沉淀探针 ✓（hindsight 健康，家族 bank=${fam_bank}——本轮经验可召回，下轮同名 RFD 验证）"
   else
     echo "ISSUE|retro-memory-probe|director|hindsight 探针失败（bank=${fam_bank}）" >> "$EVID_DIR/issues.log"
+  fi
+  # 归档落账原子化（P14/R26）：metrics-log+ISSUES-LOG 同提交上 origin/main 并回读验证——
+  # 「产出了没落账」自此有机制通道；失败记单 archive-commit-failed 不击杀驱动（纪律 18）
+  if gov_archive_commit; then
+    note "[G6] 治理归档落账完成（metrics-log+ISSUES-LOG @ origin/main，回读验证过）"
+  else
+    note "[观察] 治理归档落账未过（已记单 archive-commit-failed，挂收官回灌清单）"
   fi
   sset retro_done "$(date +%s)"
 fi
