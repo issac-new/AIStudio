@@ -54,6 +54,14 @@ describe('registry-admin（P6-P8）', () => {
     expect(r.rosterCommit).toBe('abc1234')
   })
 
+  it('防假成功：建号失败（createMatrixUser=false）即 reject 且不产生任何 roster 提交', async () => {
+    createMock.mockResolvedValueOnce(false as never)
+    await expect(provisionMatrixAccount({ localName: 'bad', role: '研发', password: 'Pw1!', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' }))
+      .rejects.toThrow('建号失败')
+    const calls = execMock.mock.calls.map((c: unknown[]) => (c[1] as string[]).join(' '))
+    expect(calls.some((s: string) => s.includes('commit'))).toBe(false)
+  })
+
   it('离职三步：移交工单提交 → 停用双号 → 审计留痕提交', async () => {
     const r = await offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: ['t_1', 't_2'], reason: '转岗', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' })
     expect(deactivateMock).toHaveBeenCalledTimes(2)

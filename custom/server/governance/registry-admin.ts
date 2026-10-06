@@ -76,10 +76,16 @@ export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
   const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
   const human = `${name}:${serverName}`
   const base = { password: inp.password, adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl }
-  await createMatrixUser(`@${human}`, inp.password, inp.adminToken, inp.homeserverUrl)
+  // 建号失败即拒写 roster（2026-10-06 修复：此前忽略返回值=假成功，roster 提交了而
+  // synapse 无此号；v2 PUT 幂等，agent 步失败重跑无残留）
+  const humanCreate = await createMatrixUser(
+    `@${human}`, inp.password, inp.adminToken, inp.homeserverUrl, inp.displayName || undefined)
+  if (!humanCreate) throw new Error(`建号失败：@${human}（synapse v2 users PUT 未过）——已拒绝写 roster（防假成功）`)
   created.push(`@${human}`)
   if (inp.withAgent !== false) {
-    await createMatrixUser(`@${name}-agent:${serverName}`, inp.password + '-agent', inp.adminToken, inp.homeserverUrl)
+    const agentCreate = await createMatrixUser(
+      `@${name}-agent:${serverName}`, inp.password + '-agent', inp.adminToken, inp.homeserverUrl)
+    if (!agentCreate) throw new Error(`建号失败：@${name}-agent:${serverName}——已拒绝写 roster（人类号已建，v2 PUT 幂等可重跑）`)
     created.push(`@${name}-agent:${serverName}`)
   }
   const { markdown } = await readRegistry('roster')
