@@ -11,7 +11,7 @@
 // 测试方式：bash 子进程 source 真实 mx-lib/mx-scenario-lib（AIPAY_SIM_ROOT 指向
 // 临时目录，不碰真实 sim 栈），断言函数行为本身而非复制实现。
 import { execFileSync } from 'child_process'
-import { mkdtempSync, writeFileSync, rmSync } from 'fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it, afterAll } from 'vitest'
@@ -728,10 +728,19 @@ print(len(ns))
     expect(out).toBe('26')
   })
 
-  it('叙事骨架生成器在位且对 run9 可跑（⑤骨架自动+人工润色）', () => {
+  it('叙事骨架生成器在位且可跑（⑤骨架自动+人工润色；fixture 封闭不依赖在架轮次）', () => {
+    // 2026-10-07 实锤：旧版硬编码 run9——mx-clean 每轮把 runs/<旧轮> 归档后本用例必红
+    // （真轮次证据是易失依赖）。封闭化：自建微型 SIM_ROOT fixture（state.env 三键），
+    // 生成器经 AIPAY_SIM_ROOT 指向它（与 mx-lib.sh:44-50 的 env 约定同源）。
     const sk = join(MX_DIR, 'mx-narrative-skeleton.py')
-    const out = execFileSync('python3', [sk, '--run', '20261006-v8-run9'], { encoding: 'utf-8' })
-    expect(out).toContain('STEPS_META_')
+    const tmp = mkdtempSync(join(tmpdir(), 'mxskel-'))
+    const runDir = join(tmp, 'runs', '20990101-v9-fixture')
+    mkdirSync(runDir, { recursive: true })
+    writeFileSync(join(runDir, 'state.env'), 'smoke_done=1\nappinit_done=1791300000\ng1_frozen=1791300100\n')
+    const out = execFileSync('python3', [sk, '--run', '20990101-v9-fixture'], {
+      encoding: 'utf-8', env: { ...process.env, AIPAY_SIM_ROOT: tmp },
+    })
+    expect(out).toContain('STEPS_META_20990101_V9_FIXTURE')
     expect(out).toContain('TODO')
   })
 })
@@ -819,18 +828,38 @@ for name in patches:
     if not pf.exists():
         bad.append(f'{name}: patch 文件缺失'); continue
     text = pf.read_text()
-    for target in re.findall(r'^diff --git a/(\\S+) b/(\\S+)$', text, re.M):
-        path = target[1]
+    # 按文件切 hunk——旧版 flat 扫描让 A 文件的新增行能替 B 文件顶包（391 漏检实锤）
+    files = {}
+    cur = None
+    for line in text.splitlines():
+        dm = re.match(r'^diff --git a/\\S+ b/(\\S+)$', line)
+        if dm:
+            cur = dm.group(1); files.setdefault(cur, [])
+        elif cur and line.startswith('+') and not line.startswith('+++'):
+            v = line[1:].strip()
+            if len(v) >= 20:
+                files[cur].append(v)
+    for path, added in files.items():
         rt = ovl / 'runtime' / path
         if not rt.exists():
             continue  # 无 runtime 副本=不经部署通道，不受回退面影响
         rt_text = rt.read_text()
-        added = [l[1:].strip() for l in text.splitlines()
-                 if l.startswith('+') and not l.startswith('+++') and len(l[1:].strip()) >= 20]
-        if added and not any(a in rt_text for a in added):
+        # 强锚=该文件 hunk 首个新增 def/class 名（与 mx_apply_agent_patches 语义检查同源）；
+        # 无 def/class 才退化 any() 行锚。391 实锤：弱 any() 锚被无关新增行绕过，
+        # 副本缺主 hunk 仍判过——部署回退漏检一整轮。
+        marker = None
+        for v in added:
+            mm = re.match(r'(?:def|class)\\s+([A-Za-z_0-9]+)', v)
+            if mm:
+                marker = mm.group(1); break
+        if marker:
+            if marker not in rt_text:
+                bad.append(f'{name} → runtime/{path}: 副本缺补丁语义锚 {marker}（部署将回退该补丁）')
+        elif added and not any(a in rt_text for a in added):
             bad.append(f'{name} → runtime/{path}: 副本不含任何补丁新增行（部署将回退该补丁）')
 print('\\n'.join(bad) if bad else 'ALL_SYNCED patches=%d' % len(patches))`], { encoding: 'utf-8' })
     expect(out).not.toContain('副本不含任何补丁新增行')
+    expect(out).not.toContain('缺补丁语义锚')
     expect(out).not.toContain('PARSE_FAIL')
     expect(out).not.toContain('patch 文件缺失')
     expect(out).toMatch(/ALL_SYNCED patches=\d+/)
