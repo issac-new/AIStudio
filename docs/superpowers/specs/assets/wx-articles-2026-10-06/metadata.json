@@ -1,0 +1,36 @@
+{
+  "title": "拿下 45.2k Star，记忆准确率 94.6%！Vectorize 开源 Agent 记忆引擎",
+  "account": "开源小聪明",
+  "author": "开源小聪明",
+  "desc": "最近登上了 GitHub 热榜的一个新开源项目 Hindsight，目前已经拿下了 45.2K 的 Star。",
+  "publish_time": "2026/10/04 15:30:48",
+  "url": "https://mp.weixin.qq.com/s/G7N5d2yRoxPKItRi7BgXzQ"
+}{
+  "title": "给Jev装上眼睛！多模态Jev部署教程发布！",
+  "account": "Datawhale",
+  "author": "Datawhale",
+  "desc": "&nbsp;Datawhale干货&nbsp;部署教程：多模态Jev上一篇开源版 Jev 的教程发出去后，有读者在评论区留言说「可惜没有多模态」。那必须安排。这篇就带大家在本地把多模态版本的 Jev 跑起来，文本、图像、音频、视频都能测。实际业务里这类需求很常见，比如视频审核要看...",
+  "publish_time": "2026/10/04 23:03:54",
+  "url": "https://mp.weixin.qq.com/s/tabPKzFy73bTmTBs9OyUVw"
+}{
+  "title": "智能体怎么学会\"组队协作\"？——自组织智能体团队（SAT）论文通俗解读",
+  "account": "峥嵘岁月AI",
+  "author": "峥嵘岁月AI",
+  "desc": "智能体怎么学会\"组队协作\"？——自组织智能体团队（SAT）论文的通俗解读\r\n\r\n原文：Self-Organizi",
+  "publish_time": "2026/09/29 18:30:00",
+  "url": "https://mp.weixin.qq.com/s/uljPBjXgN3dqbODnBHG9Nw"
+}{
+  "title": "Hinton等人系统拆解RSI：递归机制、五个瓶颈、三类风险与治理思路(2026.9)",
+  "account": "模安局",
+  "author": "面向未来AI治理的",
+  "desc": "人类研发下一代 AI 的流程，正在多大程度上变成 AI 研发下一代 AI 的流程。",
+  "publish_time": "2026/10/06 12:12:00",
+  "url": "https://mp.weixin.qq.com/s/-fUMR80oG3ESmywvtHvvrg"
+}{
+  "title": "基于 Jev 决策模型的 AI 安全围栏设计文档",
+  "account": "AI安全推进计划",
+  "author": "H",
+  "desc": "1  设计总纲 1.1  一句话定位本方案用 Jev 决策模型作为围栏的**快判内核**：把每一次请求的安全判",
+  "publish_time": "2026/10/06 17:08:18",
+  "url": "https://mp.weixin.qq.com/s/hctTjRmof2OIM29jmKgJSQ"
+}
