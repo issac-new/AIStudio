@@ -73,6 +73,13 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
   const loaded = ref(false)
 
   async function refresh() {
+    // client 就绪兜底（2026-10-06 R29 实证）：/app/cases 深链直达时 js-sdk client
+    // 从未 init（initClient 此前仅 MatrixChatPanel/MatrixRoomCanvas 调用），
+    // 15s 零 /sync 请求、协议事件全落房而面板恒空——与 MatrixRoomCanvas 同款兜底，
+    // client 空先 init 再投影；init 幂等（真 store 内 client 在则直接返回）。
+    if (!matrixStore.client && typeof matrixStore.initClient === 'function') {
+      await matrixStore.initClient()
+    }
     const client = matrixStore.client as MatrixClient | null
     if (!client) { cases.value = []; return }
     const rooms: Room[] = []
