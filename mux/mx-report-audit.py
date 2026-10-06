@@ -116,8 +116,7 @@ for blk in blocks:
     elif 'st-gate' not in blk or '把关' not in blk:
         gate_missing.append(n)
     done = '<span class="ok">✅</span>' in blk
-    shots = block_field(blk, r'<div class="st-shots">(.*?)</div>\s*</article>')
-    has_img = '<img' in shots
+    has_img = '<img' in blk  # V8.2 四段布局：截图区不再是末元素，整块找（帧与实拍同权）
     if not has_img:
         (done_no_img if done else pending_no_img).append(n)
 
@@ -253,7 +252,7 @@ else:
 # ── 查 7：V5 补遗⑥ R15/R16 断言（R16 旅程版逐步操作入口；R15 统一版第 0 章协作总述）──
 _entry_hit = sum(1 for b in blocks if 'class="st-entry"' in b)
 if PLAN_V82:
-    # V8.2（正本 §5.5 操作记录真值化+§5.7）：操作路径表降附录《产品操作手册》并标注
+    # V8.2（正本 §5.5 操作记录真值化）：操作路径表降附录《产品操作手册》并标注
     # "非本轮实录"，步块正文以「① 这步做什么」承载本轮实录——断言附录在场+标注语句。
     if '产品操作手册' not in rep or '非本轮实录' not in rep:
         fails.append('V8.2 附录《产品操作手册》缺失或缺"非本轮实录"标注（steps_entry 降附录=§5.5 验收线）')
@@ -325,14 +324,14 @@ for blk in blocks:
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         fails.append(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）')
     if n in _R18_SKILL_STEPS:
-        # 附录 F-4：步级承载面承诺入必采矩阵——skill 过程帧 gen≥3+invoke≥2，
+        # §5.6 必采矩阵：步级承载面承诺入必采矩阵——skill 过程帧 gen≥3+invoke≥2，
         # 载荷侧实算（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
         if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                        frame_exists=lambda name: (steps_dir / name).exists()):
-            fails.append(f'R18 步 {n} skill 过程帧未达标（附录 F-4：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）')
+            fails.append(f'R18 步 {n} skill 过程帧未达标（§5.6 必采矩阵：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）')
     if n in _R18_DELIVERY_STEPS:
         # R29（P15）：delivery 门禁灯帧 ≥1（MX_DELIVERY=1 全程开启+面板实拍+r18-collect
-        # deliver 登记）；产品面未就绪按附录 F-2 记单降级（P15/delivery-protocol 键命中即降
+        # deliver 登记）；产品面未就绪按§5.6 采集纪律⑩ 记单降级（P15/delivery-protocol 键命中即降
         # WARN），禁静默关旗标跑全程
         _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                           frame_exists=lambda name: (steps_dir / name).exists())
@@ -340,15 +339,15 @@ for blk in blocks:
         _degraded = any(('P15' in l) or ('delivery-protocol' in l) for l in _ilines)
         if not _dlv_ok:
             if _degraded:
-                warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已记单，按附录 F-2 降级——产品面/旗标修复后补帧）')
+                warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已记单，按§5.6 采集纪律⑩ 降级——产品面/旗标修复后补帧）')
             else:
-                fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按附录 F-2 记单降级）')
+                fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按§5.6 采集纪律⑩ 记单降级）')
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
         fails.append(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）')
 
-# ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × 附录 F-2 降级口径；差距审计 P8→R27）──
+# ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有
 # product-surface-degraded 记单声明合规降级（记单+最接近真实功能页补拍+图注三件套）；
 # 二者皆缺 → WARN 起步（连续两轮未处置转 FAIL，转硬评估挂 run11 前置）。
@@ -369,7 +368,7 @@ for blk in blocks:
         continue
     if len(re.findall(r'class="shot', blk)) == 0 and not _degraded9:
         warns.append(f'承载面符合性：步 {n} 在 §2.5 有产品承载面承诺但报告零 UI 实拍帧，'
-                     f'且 issues.log 无 product-surface-degraded 降级记单——补拍或按附录 F-2 合规降级记单')
+                     f'且 issues.log 无 product-surface-degraded 降级记单——补拍或按§5.6 采集纪律⑩ 合规降级记单')
 
 # ── 汇总 ──
 print(f'报告：{REPORT}')

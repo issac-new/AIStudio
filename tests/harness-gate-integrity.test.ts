@@ -529,7 +529,7 @@ uat_evidence_body 1790930955`, root)
   })
 })
 
-describe('⑫ 必采矩阵单一事实源（正本 §5.5+§5.7 F-4：hero 统计=矩阵实算，分母 12，禁任一位在位即计）', () => {
+describe('⑫ 必采矩阵单一事实源（正本 §5.5+§5.6 必采矩阵：hero 统计=矩阵实算，分母 12，禁任一位在位即计）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
 
   function py(code: string): string {
@@ -595,7 +595,7 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(audit).not.toContain('{9, 11, 17, 19, 21}')
   })
 
-  it('绊线：采集器 skill 子命令登记 gen/invoke 帧（§5.7 F-4 采集链闭环）', () => {
+  it('绊线：采集器 skill 子命令登记 gen/invoke 帧（§5.6 必采矩阵 采集链闭环）', () => {
     const coll = read(join(MX, 'r18-collect.py'))
     expect(coll).toContain("add_parser('skill')")
     expect(coll).toContain("'--gen'")

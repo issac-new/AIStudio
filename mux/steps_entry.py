@@ -9,7 +9,7 @@
 /app/gov 与 /app/dash 退役；治理域=/app/board 的五个平级页签
 （gov-org 组织与知识/gov-registry/gov-audit/gov-docs/gov-harness），
 /app/gov 保留重定向至 gov-org。锚=overlay/custom/client/ia2/routes.ts:222、
-TasksView.vue:39-68；起跑前以正本§5.7 F-1 实弹校验为准。
+TasksView.vue:39-68；起跑前以正本§4.1 前置⑤ 实弹校验为准。
 """
 
 STEP_ENTRIES = {

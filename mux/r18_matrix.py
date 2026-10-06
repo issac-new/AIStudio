@@ -1,15 +1,15 @@
-"""r18_matrix.py — R18 必采矩阵（单一事实源；正本 §5.5 必采矩阵与收官判据③、§5.7 F-4）
+"""r18_matrix.py — R18 必采矩阵（单一事实源；正本 §5.5 必采矩阵与收官判据③、§5.6 必采矩阵）
 
-矩阵（正本 2026-10-05-mux-v8-fullflow-plan.md §5.5 + §5.7 F-4）：
+矩阵（正本 2026-10-05-mux-v8-fullflow-plan.md §5.5 + §5.6 必采矩阵）：
   对话全文 = {步 9/11/17/19/21}，dialogs 非空即达标；
   操作前后帧 = {步 8/10/25}，每组 ops ≥2 帧（操作前+系统响应）且帧文件在位；
   环节效果 = {步 7/20/24}，陈述非空且 evidence 至少一条带可反查锚
   （commit/event/文件路径——纯文字一句话不计入）；
-  skill 过程帧（§5.7 F-4，§2.5 步级承载面承诺入矩阵）= {步 13}：
+  skill 过程帧（§5.6 必采矩阵，§2.5 步级承载面承诺入矩阵）= {步 13}：
     payload['skill'] 的 gen 帧 ≥3（xxx-dev 生成过程）且 invoke 帧 ≥2（开发调用
     过程），帧文件在位方计数（r18-frames.mjs 实拍，r18-collect.py skill 登记）。
 delivery 门禁灯帧（R29/P15）= {步 23}：payload['delivery']['frames'] ≥1 且帧在位
-  （MX_DELIVERY=1 全程开启，产品 Delivery Cases 面板实拍；产品面未就绪按§5.7 F-2 记单降级）。
+  （MX_DELIVERY=1 全程开启，产品 Delivery Cases 面板实拍；产品面未就绪按§5.6 采集纪律⑩ 记单降级）。
 分母 = 13（5+3+3+1+1）；分子 = 达标项数。禁"任一载荷键在位即计"。
 
 消费方：mx-report-gen.py hero 统计「全量呈现覆盖」、mx-report-audit.py 查 8。
@@ -22,7 +22,7 @@ EFFECT_STEPS = frozenset({7, 20, 24})
 SKILL_STEPS = frozenset({13})
 SKILL_GEN_MIN = 3
 SKILL_INVOKE_MIN = 2
-# delivery 协议面门禁灯帧（R29/P15，§5.7 F-4）：绑步 23（审计独立见证位——六闸门禁灯
+# delivery 协议面门禁灯帧（R29/P15，§5.6 必采矩阵）：绑步 23（审计独立见证位——六闸门禁灯
 # 在产品 Delivery Cases 面板的投影帧；不与效果类步重叠，evaluate 每步只判一次）
 DELIVERY_STEPS = frozenset({23})
 DELIVERY_MIN = 1
