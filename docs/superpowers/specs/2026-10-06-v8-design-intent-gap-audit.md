@@ -55,7 +55,7 @@
 
 ### P7【采集面真相未入正本】hash 路由/canvas 点击不穿透/多视角采集三教训停在记忆层
 
-- **现象**：run9 补拍批 k=1 因 path 形式 URL 全落默认会话页报废重拍；看板 canvas 渲染 DOM 点击不穿透；帧互异最终靠"多账号视角+多路由"实现。三条实测真相只在会话记忆与档案件 §五，方案 §2.5/§5.6 未收录——run10 采集还会踩。
+- **现象**：run9 补拍批 k=1 因 path 形式 URL 全落默认会话页报废重拍；看板 DOM 文本选择器点击不可靠；帧互异最终靠"多账号视角+多路由"实现。三条实测真相只在会话记忆与档案件 §五，方案 §2.5/§5.6 未收录——run10 采集还会踩。（2026-10-06 勘误：本条原述"看板 canvas 渲染"系采集侧误判，代码面实测看板为 DOM 渲染——卡根 div role="button"（KanbanTaskCard.vue:160）、页签已带 data-testid，真缺口=testid 覆盖不全；更正已落 F-2，测试钩子补全见 backlog 排期文档④。）
 - **修正**：附录 F-2 采集纪律条款（详见修正二）；r18-frames.mjs 文档头注记三真相。
 
 ### P8【审计盲区】审计器无承载面符合性查项——P1/P3/P4 全部漏网
@@ -118,7 +118,7 @@
 | 立即·中央仓 | P11 roster 三岗补正；P14 R-A2 台账归档回灌+R-A5 metrics 回写+C-4 漏账补记；R-A3/R-A4 复盘勘误版 v2 | 已落地（origin/main 90024c1+5fcb59f） |
 | run10 前置 R25-R28 | R25 必采矩阵扩步 13（SKILL_STEPS）；R26 度量面五项+基线行+回写通道+记单落账原子化；R27 承载面符合性审计项（product-surface-degraded 降级口径）；R28 冒烟 roster×org×matrix 三方对账断言 | 全部落位：R25-R27=simharness f4689b9（merge d385a66，守门 51/51）；R26 记单落账原子化（gov_archive_commit，沙箱端到端验证）=simharness 39ce1f2（merge 681a9c4）；R28=simharness 71f7ca5 |
 | run10 前置（第三轮新增） | R29 delivery 协议面小冒烟+门禁灯帧入必采矩阵（P15）；R30 §1.3 跨机联邦形态边界声明（P16） | 已落位：R29 矩阵/采集/审计面=simharness 71f7ca5（DELIVERY_STEPS={23} 分母 13+collect deliver 子命令+dlv_smoke 冒烟+审计禁静默关旗标/F-2 记单降级），R29 全程开启（缺省启用+MX_DELIVERY=0 自动记单降级）=simharness 39ce1f2（merge 681a9c4）；R30=overlay 53162fc9。P13 承诺步勘误三注记=overlay 101bc93。run10 起跑面就绪（协议面缺省启用，无需旗标） |
-| 产品 backlog | 房间列表同步/runs 注册表接入/审批收件箱与反应审批统一/看板 DOM 化或测试钩子/治理域路由归宿+P13 承诺步通道勘误 | 记 issues+档案件 §五 |
+| 产品 backlog | 房间列表同步/runs 注册表接入/审批收件箱与反应审批统一/看板 DOM 化或测试钩子/治理域路由归宿+P13 承诺步通道勘误 | 排期完成（《2026-10-06-product-backlog-schedule.md》：⑤关闭/④前提纠偏=DOM 非 canvas+R29 身份缝列批次 1/①②批次 2/③+P13 残余缺陷批次 3） |
 
 ## 四、本轮修正的执行锚（两轮合并记录）
 
