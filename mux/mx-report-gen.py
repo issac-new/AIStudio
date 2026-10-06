@@ -1074,7 +1074,7 @@ def r18_block(n: int) -> str:
         parts.append('</div>')
     if sk_cnt:
         parts.append('<div class="r18-sec r18-skill"><div class="r18-sec-hd">'
-                     f'<b>skill 过程（附录 F-4：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
+                     f'<b>skill 过程（§5.7 F-4：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
         if sk_gen:
             parts.append('<div class="r18-entry">xxx-dev 生成过程：</div>'
                          '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_gen, n) + '</div>')
@@ -1086,7 +1086,7 @@ def r18_block(n: int) -> str:
         parts.append('</div>')
     if dlv_frames:
         parts.append('<div class="r18-sec r18-delivery"><div class="r18-sec-hd">'
-                     '<b>delivery 门禁灯（R29/附录 F-4：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
+                     '<b>delivery 门禁灯（R29/§5.7 F-4：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
                      '<div class="st-shots r18-frames">' + _r18_frame_tags(dlv_frames, n) + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(dlv.get("note", "")))}</div>' if dlv.get('note') else '')
                      + '</div>')
@@ -1094,7 +1094,7 @@ def r18_block(n: int) -> str:
     return ''.join(parts)
 
 def r18_coverage() -> str:
-    """hero 统计位：必采矩阵实算（正本 §5.5+附录 F-4——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
+    """hero 统计位：必采矩阵实算（正本 §5.5+§5.7 F-4——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
 
     矩阵与审计器查 8 同表（r18_matrix 单一事实源）；帧文件按 STEPS_DIR 实查，
     缺帧计未达标，与渲染侧"帧缺失"占位同口径。

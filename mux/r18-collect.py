@@ -9,7 +9,7 @@ mx-report-gen.py 与审计器 mx-report-audit.py 查 8 的共同数据源）：
   op      操作序列——登记"操作入口（路由/点击序列）+前后帧文件名"
           （帧由 r18-frames.mjs 拍摄：`<step>-op<k>-{before,action,after}.png`）。
   effect  环节效果——一句话效果陈述+证据锚列表（commit/event/卡号）。
-  skill   skill 过程帧（正本附录 F-4，步 13 承诺入必采矩阵）——
+  skill   skill 过程帧（正本§5.7 F-4，步 13 承诺入必采矩阵）——
           gen=xxx-dev 生成过程帧（≥3）、invoke=开发调用过程帧（≥2）。
 
 用法（SIM 根与生成器同源：AIPAY_SIM_ROOT 可覆盖；--run 必带）：
@@ -127,8 +127,8 @@ def main():
     p_e.add_argument('--ev', action='append', default=[], help='label=anchor（可多次）')
     p_k = sub.add_parser('skill')
     p_k.add_argument('--step', type=int, required=True)
-    p_k.add_argument('--gen', nargs='*', default=[], help='xxx-dev 生成过程帧（附录 F-4：≥3）')
-    p_k.add_argument('--invoke', nargs='*', default=[], help='开发调用过程帧（附录 F-4：≥2）')
+    p_k.add_argument('--gen', nargs='*', default=[], help='xxx-dev 生成过程帧（§5.7 F-4：≥3）')
+    p_k.add_argument('--invoke', nargs='*', default=[], help='开发调用过程帧（§5.7 F-4：≥2）')
     p_k.add_argument('--note', default='')
     p_d = sub.add_parser('deliver')
     p_d.add_argument('--step', type=int, default=23, help='delivery 门禁灯帧见证位（默认 23=审计步）')
@@ -176,7 +176,7 @@ def main():
         if a.note:
             sk['note'] = a.note
         print(f'[r18-collect] step {a.step} skill 过程帧入载荷：gen {len(sk.get("gen") or [])} 帧 / invoke {len(sk.get("invoke") or [])} 帧'
-              f'（附录 F-4 达标线 gen≥{3} invoke≥{2}）')
+              f'（§5.7 F-4 达标线 gen≥{3} invoke≥{2}）')
     elif a.mode == 'deliver':
         dlv = entry.setdefault('delivery', {'frames': []})
         lst = dlv.setdefault('frames', [])

@@ -101,7 +101,7 @@ dlv_assert() { # <desc> <expr...>：断言失败即 fail（M3 验收门）
 # ── M3 场景事件化（aipay-scenario 接入面；缺省启用=产品真实形态，R29 全程开启）──
 # 差距审计 P15/R29（2026-10-06 拍板）：delivery 协议面默认开启——保真形态原则
 # （正本 §4.3）下，产品既有的 Delivery Cases 面板应被协议事件真实喂数；MX_DELIVERY=0
-# 显式关闭由 scenario 自动记单 product-surface-degraded（附录 F-2 降级口径）。
+# 显式关闭由 scenario 自动记单 product-surface-degraded（§5.7 F-2 降级口径）。
 dlv_enabled() { [[ "${MX_DELIVERY:-1}" == "1" ]]; }
 
 dlv_scenario_open() { # <caseTitle> <repoUrl>：开案例房+邀全员+join（幂等：sset dlv_room）
@@ -214,9 +214,9 @@ dlv_smoke() { # R29 小冒烟（P15 拍板）：案例房开张+stage/gate 事�
   dlv_stage fanfan "$room" "$case_id" P1 fanfan done - >/dev/null 2>&1 || true
   dlv_gate fanfan "$room" "$case_id" G1 pass human "R29 冒烟：G1 灯位事件（${RUN_ID:-run}）" >/dev/null 2>&1 || true
   if dlv_events fanfan "$room" "$DLV_GATE_TYPE" 2>/dev/null | grep -q 'G1'; then
-    note "[R29] delivery 小冒烟 ✓：case=${case_id} room=${room} 事件落房可读回；门禁灯帧=r18-frames 面板实拍+r18-collect.py deliver 登记（附录 F-4 矩阵步 23）"
+    note "[R29] delivery 小冒烟 ✓：case=${case_id} room=${room} 事件落房可读回；门禁灯帧=r18-frames 面板实拍+r18-collect.py deliver 登记（§5.7 F-4 矩阵步 23）"
   else
-    echo "ISSUE|delivery-protocol-smoke|product|delivery 冒烟事件落房读回失败（P15/R29）——面板投影存疑，门禁灯帧按附录 F-2 记单降级" >> "$EVID_DIR/issues.log"
+    echo "ISSUE|delivery-protocol-smoke|product|delivery 冒烟事件落房读回失败（P15/R29）——面板投影存疑，门禁灯帧按§5.7 F-2 记单降级" >> "$EVID_DIR/issues.log"
     note "[R29] delivery 小冒烟读回失败（已记单，继续）"
   fi
 }
