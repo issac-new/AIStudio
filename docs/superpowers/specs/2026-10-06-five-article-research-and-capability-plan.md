@@ -32,7 +32,13 @@
 - OneJev-27B 在 MLX 约束下出局（全家族只有 GGUF/ONNX，无 MLX 量化；bartowski/GGUF Q4 约 16 GB 走 llama.cpp 是放宽约束后的多模态备选）。Laya 出局（Decision Index 6.04 排 63/73、非 SystemOne 接口、上下文 512，仅剩 5.8 ms 延迟一个优点，量级不缺）。
 - 接线方式：SwarmStudio Models 页 JEV tab 的 API root 指向 `http://127.0.0.1:8000`（上游 `jev.md` 约定 root 不带 `/v1`；`client.ts:58` 要求 apiKey 非空，本地服务无鉴权填任意串即可）。字段级兼容性仍按 P2 实测确认。
 
-**本机环境就绪记录（2026-10-06 晚）**：模型经 LM Studio 下载至 `/Volumes/nvme2230/lm-studio-model/mlx-community/clef-4bit`（注意：LM Studio 界面无法运行决策头，仅作下载器；运行必须走 `clef_mlx.py`）。运行环境 `/Users/cuishi/lab/clef-runtime/venv`（python3.12 + mlx 0.32.3 + mlx-vlm 0.7.6，均为 clef_mlx 声明的测试版本）。`clef_mlx.py` 已人工审阅：默认仅绑 127.0.0.1、无 shell 调用、带预热与单请求锁，唯一外联点是请求内含图片 URL 时会拉取该 URL（本仓用法纯文本，不触达）。joint_head 冒烟测试通过（128.1M 参数严格加载，hidden_size 5120 与 Qwen3.8-27B 吻合）。请求/响应字段已对照上游 `client.ts` parseJevRequest 与 `jev.md` 样例逐项核对一致（choice/score/noul 三原语、answers.{qid}.choice/confidence/probabilities、score 期望值语义）。启动与验证脚本：`clef-runtime/start-clef.sh`、`clef-runtime/verify-clef.sh`（健康检查 + 三原语样例 + 短/长 state 延迟实测）。待模型分片下完后执行，产出即 P2 的本机实测数据。
+**本机实测数据（2026-10-06 深夜，M1 Pro 32GB，clef-4bit 常驻 17GB、系统 34% 空闲无交换）**：
+
+- 兼容性：**验证通过**——上游 `jev.md` 同款三原语样例语义全对（billing 0.9491 / Urgent 0.8176 / actionable 0.9799），响应结构与 SDK 契约逐字段一致。
+- 判定质量：**验证通过**——注入样本 is_attack p=0.9906、归类 A1_direct_override、severity 3.75/4，全部正确。
+- **延迟（关键修正）**：287 token 样例稳态 13.1-14.0 s；toolresultguard 中文问句 schema（653 token）实测 **163 s**。此前"短 state 1-3 s"的预估错了 1-2 个数量级，M1 Pro 对 27B 4bit 的 prefill 就是这个速度（模型卡"基础 M 系慢数倍"的警告实测是 ~10 倍）。**本机 27B 只能做异步低频判定，不能做任何同步路径判定。**
+- 操作结论修正：①第 0 步四门切换收窄为**低频异步门**——摘要复审、工作流质量评审（完成态）可切；群聊路由（每条消息）、记忆召回过滤/重排（每次召回）**不切**（13 s+ 不可接受）。②P1a 守卫默认 `TRG_TIMEOUT_MS=3000` 在本机语义正确：S1 判定必然超时 fail-open，实际生效的是 **S0 规则层**（正则拦截+审计），27B 判定留给未来的快后端或异步复核路径。③同步判定要可用需换档：云端 Workers AI Clef（外部付费依赖，用户倾向本地开源故列为备选）或等待更强本机硬件。
+- 端口事实：本机 8000 被用户先起的 Laya MLX 服务（`~/.hermes/scripts/laya_mlx_serve.py`）占用，clef 服务落在 **8001**；`TRG_BASE_URL` 与四门切换的 API root 均按 8001。
 
 **私有能力对照（2026-10-06 模型卡口径，延迟为 H200 官方数据）**：
 
