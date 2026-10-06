@@ -326,11 +326,18 @@ if step_reached room; then
     RID=$(mx_create_room "$(load_token fanfan)" "支付收银台需求分析讨论群" "$INVITE_CSV")
     [[ "$RID" == '!'* ]] || fail "建群失败: $RID"
     sset room_analysis "$RID"
-    mx_join "$(load_token fanfan-agent)" "$RID"
+    # 入房一律检错重试（mx_join 静默吞错实锤：限流 burst 尾部账号掉队无人知，
+    # run9 ops/ Bella-agent 缺员即此族）；缺员记单不静默。
+    _room_missing=""
+    mx_join_retry "$(load_token fanfan-agent)" "$RID" || _room_missing="$_room_missing $(agent_mxid fanfan)"
     for m in $ASSOCIATES; do
-      mx_join "$(load_token "$m")" "$RID"
-      mx_join "$(load_token "$m-agent")" "$RID"
+      mx_join_retry "$(load_token "$m")" "$RID" || _room_missing="$_room_missing $(human_mxid "$m")"
+      mx_join_retry "$(load_token "$m-agent")" "$RID" || _room_missing="$_room_missing $(agent_mxid "$m")"
     done
+    if [[ -n "$_room_missing" ]]; then
+      echo "ISSUE|room-join-missing|director|需求群建群预邀缺员（退避重试后仍未入）：${_room_missing}（join 静默失败族根治前的同类缺口）" >> "$EVID_DIR/issues.log"
+      note "[问题] 需求群预邀缺员记单：${_room_missing}"
+    fi
     note "[fanfan] 已建「支付收银台需求分析讨论群」 $RID 并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）"
   fi
 fi
