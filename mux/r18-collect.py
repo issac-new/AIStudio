@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """r18-collect.py — R18 全量呈现载荷采集器（V7.2 §9.3 R18 配套）
 
-把三类"不可缩略"素材登记进 runs/<RUN>/evidence/r18-steps.json（生成器
+把"不可缩略"素材登记进 runs/<RUN>/evidence/r18-steps.json（生成器
 mx-report-gen.py 与审计器 mx-report-audit.py 查 8 的共同数据源）：
 
   dialog  对话全文——按锚事件从 matrix 拉取上下文消息（/context API），
@@ -9,6 +9,8 @@ mx-report-gen.py 与审计器 mx-report-audit.py 查 8 的共同数据源）：
   op      操作序列——登记"操作入口（路由/点击序列）+前后帧文件名"
           （帧由 r18-frames.mjs 拍摄：`<step>-op<k>-{before,action,after}.png`）。
   effect  环节效果——一句话效果陈述+证据锚列表（commit/event/卡号）。
+  skill   skill 过程帧（正本附录 F-4，步 13 承诺入必采矩阵）——
+          gen=xxx-dev 生成过程帧（≥3）、invoke=开发调用过程帧（≥2）。
 
 用法（SIM 根与生成器同源：AIPAY_SIM_ROOT 可覆盖；--run 必带）：
   r18-collect.py --run <id> dialog  --step 9 --room '!x:matrix.test' \\
@@ -17,9 +19,13 @@ mx-report-gen.py 与审计器 mx-report-audit.py 查 8 的共同数据源）：
       --entry '#/app/board → 卡右栏 ⌨IDE' --frames 25-op1-before.png 25-op1-after.png
   r18-collect.py --run <id> effect  --step 20 --text 'G5 七项全过、REL 双卡登记' \\
       --ev '发布计划=docs/delivery/...@abc1234' --ev '批准事件=approved.events'
+  r18-collect.py --run <id> skill   --step 13 \\
+      --gen 13-sg1-after.png 13-sg2-after.png 13-sg3-after.png \\
+      --invoke 18-si1-after.png 18-si2-after.png
   r18-collect.py --run <id> show [--step N]
 
-幂等性：dialog/op 追加（同 anchor 去重）；effect 整体替换；坏 JSON 拒写不覆盖。
+幂等性：dialog/op 追加（同 anchor 去重）；skill 按 gen/invoke 追加去重；
+effect 整体替换；坏 JSON 拒写不覆盖。
 """
 import argparse
 import json
@@ -119,6 +125,11 @@ def main():
     p_e.add_argument('--step', type=int, required=True)
     p_e.add_argument('--text', required=True)
     p_e.add_argument('--ev', action='append', default=[], help='label=anchor（可多次）')
+    p_k = sub.add_parser('skill')
+    p_k.add_argument('--step', type=int, required=True)
+    p_k.add_argument('--gen', nargs='*', default=[], help='xxx-dev 生成过程帧（附录 F-4：≥3）')
+    p_k.add_argument('--invoke', nargs='*', default=[], help='开发调用过程帧（附录 F-4：≥2）')
+    p_k.add_argument('--note', default='')
     p_s = sub.add_parser('show')
     p_s.add_argument('--step', type=int)
     a = ap.parse_args()
@@ -149,6 +160,19 @@ def main():
         entry['effect'] = {'text': a.text,
                            'evidence': [dict(zip(('label', 'anchor'), ev.split('=', 1))) for ev in a.ev]}
         print(f'[r18-collect] step {a.step} 环节效果入载荷：{len(a.ev)} 证据锚')
+    elif a.mode == 'skill':
+        if not a.gen and not a.invoke:
+            die('skill 登记须至少带一帧（--gen 生成过程 / --invoke 开发调用）')
+        sk = entry.setdefault('skill', {'gen': [], 'invoke': []})
+        for bucket, frames in (('gen', a.gen), ('invoke', a.invoke)):
+            lst = sk.setdefault(bucket, [])
+            for f in frames:
+                if f not in lst:
+                    lst.append(f)
+        if a.note:
+            sk['note'] = a.note
+        print(f'[r18-collect] step {a.step} skill 过程帧入载荷：gen {len(sk.get("gen") or [])} 帧 / invoke {len(sk.get("invoke") or [])} 帧'
+              f'（附录 F-4 达标线 gen≥{3} invoke≥{2}）')
     save_payload(a.run, data)
 
 
