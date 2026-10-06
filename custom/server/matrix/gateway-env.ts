@@ -153,6 +153,18 @@ export const DEFAULT_GATEWAY_CONFIG = {
   homeserverUrl: 'http://localhost:8008',
   userId: '@leader:localhost',
   roomPrefix: 'raci-task',
+  /** 固定观察员 mxid 名单（backlog① 房间列表同步：任务房间对导演/观察者可见，
+   *  不在其 /sync 邀请名单=房间不进其房间列表）。隐私面：观察员非 RACI 当事人、
+   *  入房即可读全部房间内容——默认空（不外扩可见面），部署侧显式配置才启用。 */
+  roomObservers: [] as string[],
+}
+
+/** 观察员名单解析：env MATRIX_ROOM_OBSERVERS（逗号/空白分隔）优先于配置默认；
+ *  只收合法 mxid（@user:server），非法项静默丢弃。 */
+export function resolveRoomObservers(env: Record<string, string | undefined> = process.env): string[] {
+  const raw = env.MATRIX_ROOM_OBSERVERS?.trim()
+  const list = raw ? raw.split(/[\s,]+/) : DEFAULT_GATEWAY_CONFIG.roomObservers
+  return [...new Set(list.map(s => s.trim()).filter(s => /^@[^:\s]+:[^\s]+$/.test(s)))]
 }
 
 /** 生成房间名 */

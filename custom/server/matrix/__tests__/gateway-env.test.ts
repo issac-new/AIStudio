@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
-import { parseDotenv, hermesHomePath, gatewayEnvFilePath, resolveGatewayProfile, readGatewayMatrixEnv } from '../gateway-env'
+import { parseDotenv, hermesHomePath, gatewayEnvFilePath, resolveGatewayProfile, readGatewayMatrixEnv, resolveRoomObservers } from '../gateway-env'
 
 let hermesHome: string
 let env: Record<string, string | undefined>
@@ -104,5 +104,17 @@ describe('readGatewayMatrixEnv', () => {
       homeserverUrl: 'http://x', accessToken: 't', userId: '@u:x',
       homeRoom: undefined, homeRoomThreadId: undefined,
     })
+  })
+})
+
+describe('resolveRoomObservers（backlog① 观察员名单）', () => {
+  it('缺省空名单（隐私默认：不外扩可见面）', () => {
+    expect(resolveRoomObservers({})).toEqual([])
+  })
+
+  it('env 逗号/空白分隔解析+合法 mxid 过滤+去重', () => {
+    expect(resolveRoomObservers({ MATRIX_ROOM_OBSERVERS: '@admin:x, @auditor:x @admin:x bad-id' }))
+      .toEqual(['@admin:x', '@auditor:x'])
+    expect(resolveRoomObservers({ MATRIX_ROOM_OBSERVERS: '  ' })).toEqual([])
   })
 })

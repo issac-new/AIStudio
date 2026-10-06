@@ -19,7 +19,7 @@
 // §6-T1 裁决并同步守门清单。
 
 import type { RACITuple } from './gateway-env'
-import { readGatewayMatrixEnv } from './gateway-env'
+import { readGatewayMatrixEnv, resolveRoomObservers } from './gateway-env'
 import { safeMatrixOrigin } from './admin-service'
 
 export interface MatrixDispatchEnv {
@@ -147,4 +147,13 @@ export function raciInviteeIds(raci: RACITuple): string[] {
     ...raci.consulted,
     ...raci.informed,
   ])]
+}
+
+/** 任务房建房/补邀完整名单（backlog① 房间列表同步）：RACI 四元组 ∪ 固定观察员，去重。
+ *  不在邀请名单的账号房间不进其 /sync 流、房间列表不可见——导演/观察账号靠观察员位入房。 */
+export function taskRoomInvitees(
+  raci: RACITuple,
+  env: Record<string, string | undefined> = process.env,
+): string[] {
+  return [...new Set([...raciInviteeIds(raci), ...resolveRoomObservers(env)])]
 }

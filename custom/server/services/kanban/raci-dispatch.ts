@@ -29,6 +29,7 @@ import {
   matrixSendMessage,
   matrixSendProtocolEvent,
   raciInviteeIds,
+  taskRoomInvitees,
   type MatrixDispatchEnv,
 } from '../../matrix/raci-matrix'
 import { TASK_ASSIGN_EVENT_TYPE, buildAssignContent } from '../../matrix/task-protocol'
@@ -152,7 +153,9 @@ export class RACIDispatchService {
     raci: RACITuple,
   ): Promise<string> {
     const roomName = createRoomName(task.id, task.title)
-    const invitees = raciInviteeIds(raci)
+    // backlog①：观察员（导演/固定观察账号）并入邀请名单——不在邀请名单的账号
+    // 房间不进其 /sync 流，房间列表即不可见
+    const invitees = taskRoomInvitees(raci)
     const roomId = await matrixCreateTaskRoom(env, roomName, invitees)
     // 补邀（建房 invite 已含，此处幂等兜底已在房/漏邀场景）
     for (const uid of invitees) await matrixInviteUser(env, roomId, uid)
@@ -182,7 +185,7 @@ export class RACIDispatchService {
   /** 内存模拟派发（无凭据环境；保留原行为供测试/无网关回落） */
   private static async dispatchSimulated(task: RaciDispatchTask, raci: RACITuple): Promise<string> {
     const roomName = createRoomName(task.id, task.title)
-    const room = await simulateCreateRoom(roomName, DEFAULT_GATEWAY_CONFIG.userId, raciInviteeIds(raci))
+    const room = await simulateCreateRoom(roomName, DEFAULT_GATEWAY_CONFIG.userId, taskRoomInvitees(raci))
     await simulateSendMessage(room.roomId, DEFAULT_GATEWAY_CONFIG.userId, RACIDispatchService.buildDispatchText(task, raci))
     return room.roomId
   }
