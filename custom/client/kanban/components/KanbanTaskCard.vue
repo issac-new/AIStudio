@@ -161,6 +161,8 @@ function handleDragEnd(e: DragEvent) {
   <div
     class="kanban-task-card"
     :class="[stalenessClass, { selected }]"
+    :data-testid="`kanban-card-${task.id}`"
+    :data-task-id="task.id"
     draggable="true"
     tabindex="0"
     role="button"

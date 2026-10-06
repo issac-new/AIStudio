@@ -123,10 +123,11 @@ function handleInlineCreateCancel() {
   <div
     class="kanban-column"
     :data-status="status"
+    :data-testid="`kanban-column-${status}`"
     @dragover="handleDragOver"
     @drop="handleDrop"
   >
-    <div class="column-header">
+    <div class="column-header" data-testid="kanban-column-header">
       <div class="column-title-row">
         <div class="column-title">
           <NCheckbox
