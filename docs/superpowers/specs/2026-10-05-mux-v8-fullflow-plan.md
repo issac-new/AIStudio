@@ -110,7 +110,7 @@ graph TB
 >
 > 阶段导航：环境准备 1-4（账号→配置→登录→冒烟）｜需求管理 5-7（资产表→组织矩阵→G1 上锁）｜需求分析 8-14（建群预邀→派发→登记→拆分→分诊→四路系分→汇总定稿）｜设计评审与排期 15-17（G2 评审→收官→排期）｜编码 18（G3 门禁）｜测试与交付 19-21（G4 独立验证→G5 发布准出→UAT 对账）｜治理与复盘 22-26（台账→G6 复盘→IDE 介入→HTML 报告）。
 
-1、管理员为所有用户分配 matrix 账号，账号信息包括 matrix 地址、账号、access token、登录密码等。编制 15 名成员（主管 admin、BA、产品经理A、4 名研发、2 名测试、架构治理、安全 secops、运维 ops、合规审计 audit），各配人类账号与 AI 助理账号，共 30 个 matrix 账号。账号创建/分配在设置→账户管理界面完成（synapse 管理 API），本机↔matrix 双账号管理联动，roster 由界面维护并导出入仓，不依赖脚本直建。【2026-10-06 改回（用户裁决「界面上线是必须要求」，通道实测打通）：账户管理产品通道在位——#/app/accounts 界面建号/绑定/停用，POST /api/governance/matrix-users 建号即 roster 提交（探针锚 rosterCommit=edc6ed2，2026-10-06）；mx-setup 的 synapse 批量预置属环境预置层（拓扑前置：gateway 配置需账号先在位，R31 评估预置层亦切端点需重排起动序）；run 内新增账号一律走产品端点；R28 三方对账断言在位防编制漂移。】
+1、管理员为所有用户分配 matrix 账号，账号信息包括 matrix 地址、账号、access token、登录密码等。编制 15 名成员（主管 admin、BA、产品经理A、4 名研发、2 名测试、架构治理、安全 secops、运维 ops、合规审计 audit），各配人类账号与 AI 助理账号，共 30 个 matrix 账号。账号创建/分配在设置→账户管理界面完成（synapse 管理 API），本机↔matrix 双账号管理联动，roster 由界面维护并导出入仓，不依赖脚本直建。【2026-10-06 改回（用户裁决「界面上线是必须要求」，通道实测打通）：账户管理产品通道在位——#/app/accounts 界面建号/绑定/停用，POST /api/governance/matrix-users 建号即 roster 提交（探针锚 rosterCommit=edc6ed2，2026-10-06）；R31 已落地（2026-10-06 用户裁决直接评估实施）：mx-setup 批量供给全部改走产品端点——synapse 直建仅剩系统引导账号 @admin 一处（端点无法自举第一个 admin，docker exec 幂等保底）；studio 先于 gateway 拉（/health/ready 只看自身 bootstrap，实测反转起动序成立）；账号在位即跳过（appendTableRow 不去重，重复调会加重复 roster 行）；R28 三方对账断言兜底。全链验证锚：供给=5f6dca7（建号即 roster 提交）、撤离=e6b2cc4/fa4ea70（三步向导）；观察点=向导停用步两次返回空数组（govprobe/r31probe 复现，产品缺陷记档）。】
 （把关：凭据=30 账号逐一登录验证通过、账号清单入档 roster；合格线=账号与人员编制表一一对应。）
 
 2、每个用户配置初始化：hermes agent gateway 配置 Orchestrator agent channel（matrix 地址、账号、access token；本机为单 gateway 多路复用，等价于每台电脑独立 gateway，每用户仅账号与配置不同）；同时装配协作 kanban（每人 2 块独立看板，每块挂自己的研发专职 agent 团队，看板认领白名单锁定——别人的 agent 认领不了你的任务）与独立记忆库。
