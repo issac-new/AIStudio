@@ -1675,7 +1675,61 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
     return bool(to) and "from" in data and data["from"] != to
 
 
-def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
+def _board_json_unreadable(board: str) -> bool:
+    """``board.json`` exists but cannot be read (corrupt / not a JSON object) →
+    True; readable or file absent → False. ``read_board_metadata`` never raises
+    (a bad file degrades to a synthesized dict without ``profiles``), so telling
+    "corrupt" from "unconfigured" needs a probe of the raw file."""
+    import json
+    try:
+        path = _kb.board_metadata_path(board)
+        if not path.is_file():
+            return False
+        return not isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
+    except (OSError, ValueError):
+        return True  # 在但读不动：按损坏处理（fail-closed）
+
+
+def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
+    """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
+    ``board.json`` ``profiles`` key. ``None`` = key absent (no fence, upstream
+    behavior). A present value is fail-closed: an empty list or unreadable
+    board.json claims nothing — a corrupt/misconfigured board must never widen
+    this dispatcher's claim scope.
+
+    ``read_board_metadata`` swallows every read error, so the ``except`` below is
+    only a last resort; the corrupt case is settled by probing the raw file via
+    :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
+    并 log；文件不存在或合法空配置（无 ``profiles`` 键）→ ``None`` 无围栏。"""
+    if not board:
+        return None
+    try:
+        meta = _kb.read_board_metadata(board)
+    except Exception as exc:
+        _kb._log.warning(
+            "kanban: cannot read board.json team for %r (%s) — claiming no cards on it",
+            board, exc,
+        )
+        return frozenset()
+    raw = meta.get("profiles") if isinstance(meta, dict) else None
+    if raw is None:
+        if _board_json_unreadable(board):
+            _kb._log.warning(
+                "kanban: board.json for %r is unreadable — claiming no cards on it", board,
+            )
+            return frozenset()
+        return None
+    names = [str(n) for n in raw] if isinstance(raw, (list, tuple)) else str(raw).split(",")
+    allowed = set()
+    for n in names:
+        try:
+            allowed.add(normalize_profile_name(n))
+        except ValueError:
+            continue
+    return frozenset(allowed)
+
+
+def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
     """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
     imported (local import avoids a cycle; callers fall back to trusting the
     assignee).
@@ -1684,13 +1738,20 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
     additionally requires the assignee to be listed, fail-closed — so a card
     assigned to ``default`` is only claimable by homes that opted into it.
     Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
+
+    HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
+    list in its ``board.json``, the predicate additionally requires the assignee
+    to be on that board's team (fail-closed) — a card can only be claimed by the
+    agent team mounted on its board. Health probes pass no board and stay
+    unfenced (historic fail-open telemetry).
     """
     try:
         from hermes_cli.profiles import normalize_profile_name, profile_exists
     except Exception:
         return None
     allowlist = _dispatch_profile_allowlist(normalize_profile_name)
-    if allowlist is None:
+    team = _board_team_allowlist(normalize_profile_name, board)
+    if allowlist is None and team is None:
         return profile_exists
 
     def _gated(name: str) -> bool:
@@ -1698,7 +1759,11 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
             canon = normalize_profile_name(name)
         except ValueError:
             return False
-        return canon in allowlist and bool(profile_exists(name))
+        if allowlist is not None and canon not in allowlist:
+            return False
+        if team is not None and canon not in team:
+            return False
+        return bool(profile_exists(name))
 
     return _gated
 
@@ -2073,7 +2138,7 @@ def _dispatch_lane_task(
     # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
     # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
     # it by assigning a profile, and health telemetry suppresses "stuck" for it.
-    profile_exists = _profile_exists_fn()
+    profile_exists = _profile_exists_fn(board)  # HERMES_CUSTOM[board-team-fence]: 板级 team 围栏
     if profile_exists is not None and not profile_exists(assignee):
         result.skipped_nonspawnable.append(task_id)
         return False
@@ -2295,6 +2360,7 @@ def _any_spawnable_review(
     *,
     per_profile_cap: Optional[int] = None,
     per_profile_running: Optional[dict[str, int]] = None,
+    board: Optional[str] = None,
 ) -> bool:
     """Mirror review dispatch gates before reserving ready-lane capacity.
 
@@ -2306,7 +2372,7 @@ def _any_spawnable_review(
     """
     if not review_rows:
         return False
-    profile_exists = _profile_exists_fn()
+    profile_exists = _profile_exists_fn(board)
     running = per_profile_running or {}
     for row in review_rows:
         assignee = row["assignee"]
@@ -2321,7 +2387,7 @@ def _any_spawnable_review(
     return False
 
 
-def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
+def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
     gate). Otherwise ``None`` so an unassigned shared-board card is never
@@ -2330,7 +2396,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
     as nonspawnable."""
     name = (default_assignee or "").strip() or None
     if name:
-        profile_exists = _profile_exists_fn()
+        profile_exists = _profile_exists_fn(board)
         if profile_exists is not None and not profile_exists(name):
             return None
     return name
@@ -2409,6 +2475,7 @@ def _dispatch_once_locked(
     if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
         conn, review_rows,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
+        board=board,
     ):
         ready_budget = max(spawn_budget - 1, 0)
     lane_kwargs: dict[str, Any] = dict(
@@ -2416,7 +2483,7 @@ def _dispatch_once_locked(
         failure_limit=failure_limit, spawn_fn=spawn_fn,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
     )
-    default_assignee = _resolve_default_assignee(default_assignee)
+    default_assignee = _resolve_default_assignee(default_assignee, board)
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:
