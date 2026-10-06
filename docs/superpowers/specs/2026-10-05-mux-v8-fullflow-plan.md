@@ -462,7 +462,7 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 
 **F-1 承载面路由锚版本校验**：§2.5 引用的每条路由/入口在起跑前预检（mx-setup 阶段）实弹校验——HTTP 可达+目标组件非空渲染；失效路由记问题单并按 F-2 降级，禁静默改拍近似页冒充。历史实锚（2026-10-06 拍板定案）：v0.7.30 治理中心独立路由 `/app/gov` 退役为**重定向**（落 `/app/board?tab=gov-org`），治理域=`/app/board` 五平级页签（gov-org/gov-registry/gov-audit/gov-docs/gov-harness），`/app/dash`、`/app/inbox`、`/app/cases` 均在位——锚=构建产物 routes chunk（product-dist `routes-*.js` 实弹提取）与 `custom/client/ia2/routes.ts:222-244`、`TasksView.vue:39-68`；§2.5 已按此定案更正（差异审计 P1 初判"并入 /app/settings"系 chunk 提取不全误判，已勘误）。路由事实以源码与构建产物双源为准，预检实弹校验仍按本条执行。
 
-**F-2 采集降级口径与三真相**：①SPA 为 hash 路由（`#/app/...`），path 形式 URL 一律落默认会话页（假帧）；路由事实以懒加载 chunk 全量提取为准（主 routes chunk 不全）。②看板为 canvas 渲染，DOM 文本选择器点击不穿透——凡"操作前后帧"以方案指定入口（如步 25 `?task=` 深链、步 10 看板入口）+多账号视角差异化实现帧互异，禁以"产品点不开"下判（run9 步 25 归因错误先例：指定入口实测有效）。③驱动所建房间不进产品房间列表（对话证据走 Matrix API 直采+记单）。承载面不可达时：记单（类型=product-surface-degraded）+以最接近的真实功能页补拍+图注如实标注降级语义，三者齐才算合规降级。
+**F-2 采集降级口径与三真相**：①SPA 为 hash 路由（`#/app/...`），path 形式 URL 一律落默认会话页（假帧）；路由事实以懒加载 chunk 全量提取为准（主 routes chunk 不全）。②看板实为 DOM 渲染（KanbanTaskCard.vue:160 卡根 div role="button"+原生 click；TasksView 页签已带 data-testid 且支持 `?tab=`/`?task=` 深链预选）——"canvas 渲染"系采集侧经验误判（2026-10-06 代码面测绘更正：全客户端唯一真 canvas 是 IDE 画板 IdeWhiteboardPane.vue）；DOM 文本选择器点击不可靠为事实，凡"操作前后帧"以方案指定入口（步 25 `?task=` 深链、步 10 看板入口）+data-testid/深链选择器+多账号视角差异化实现帧互异，禁以"产品点不开"下判（run9 步 25 归因错误先例：指定入口实测有效）。③驱动所建房间不进产品房间列表（对话证据走 Matrix API 直采+记单）。承载面不可达时：记单（类型=product-surface-degraded）+以最接近的真实功能页补拍+图注如实标注降级语义，三者齐才算合规降级。
 
 **F-3 产品面承载率指标**：假设 1 的五个产品面（沟通/任务/审批/度量/编码）各计 UI 实拍或产品内操作证据；报告 PART1 增"产品面承载率"行（n/5+逐面一句判定）。run10 起验收线 ≥4/5（编码面允许 CLI 作业+IDE 走查组合计达）。承载率不达标不阻断收官，但必须逐面记单并进入下轮前置清单。
 
