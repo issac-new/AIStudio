@@ -768,9 +768,9 @@ function statusDotClass(status: string): string {
     placement="right"
     @update:show="emit('update:show', $event)"
   >
-    <NDrawerContent :native-scrollbar="false" closable @close="handleClose" class="kanban-drawer-content">
+    <NDrawerContent :native-scrollbar="false" closable @close="handleClose" class="kanban-drawer-content" data-testid="kanban-task-drawer">
       <template #header>
-        <div class="drawer-header">
+        <div class="drawer-header" data-testid="kanban-drawer-header">
           <span class="drawer-task-id">{{ taskId }}</span>
           <div class="drawer-header-actions">
             <NButton
