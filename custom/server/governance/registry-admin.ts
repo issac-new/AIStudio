@@ -129,7 +129,9 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   // ② 停用 matrix 双账号
   const deactivated: string[] = []
   const failed: string[] = []
-  for (const uid of [`@${name}:matrix.test`, `@${name}-agent:matrix.test`]) {  // 停用端点按完整 userId，server 名经管理端自解析
+  // server 名与 provisionMatrixAccount 同口径推导（此前硬编码 matrix.test，换 homeserver 即停错对象）
+  const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
+  for (const uid of [`@${name}:${serverName}`, `@${name}-agent:${serverName}`]) {
     // 空数组静默成功实锤（2026-10-06 govprobe/r31probe 两轮复现）：先探存在性——
     // missing/deactivated 跳过；存在但停用被拒（权限不足/端点异常）必须炸出来，
     // 不得记成"已停用"（审计留痕会写下错误事实）。
