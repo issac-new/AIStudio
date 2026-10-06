@@ -31,6 +31,7 @@ function writeCredsEnv(): void {
 }
 
 import { RACIDispatchService } from '../../services/kanban/raci-dispatch'
+import { taskRoomInvitees } from '../raci-matrix'
 
 function mkTask(body: Record<string, unknown> | null) {
   return {
@@ -119,5 +120,18 @@ describe('RACI 真实 Matrix 派发（room-invite-gap 根治）', () => {
     expect(res.ok).toBe(true)
     expect(res.mode).toBe('simulated')
     expect(fetchSpy).not.toHaveBeenCalled() // 无凭据绝不出网
+  })
+})
+
+describe('taskRoomInvitees（backlog① 房间列表同步）', () => {
+  const raci = { responsible: ['@a:x'], approver: ['@b:x'], consulted: ['@a:x'], informed: [] } as any
+
+  it('RACI 四元组 ∪ 观察员去重合并', () => {
+    expect(taskRoomInvitees(raci, { MATRIX_ROOM_OBSERVERS: '@obs:x, @a:x' }))
+      .toEqual(['@a:x', '@b:x', '@obs:x'])
+  })
+
+  it('无观察员配置时=纯 RACI 名单（现行为不变）', () => {
+    expect(taskRoomInvitees(raci, {})).toEqual(['@a:x', '@b:x'])
   })
 })
