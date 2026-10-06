@@ -20,6 +20,26 @@ docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAP
 curl -sf -m 3 "${MX_HINDSIGHT_API:-http://localhost:8888}/health" >/dev/null \
   || fail "hindsight 记忆服务（${MX_HINDSIGHT_API:-http://localhost:8888}）不可用——家族共享记忆依赖它（用户裁决 2026-09-25），请先拉起 hindsight-api 再跑"
 
+# ── 0a. 判定服务探活（F-7，2026-10-06 五文轮；fail-open 同 F-2 三真相同纪律）──
+# 四门 JEV 调用与 toolresultguard 均有 fail-open 降级：判定后端离线=记单不阻断。
+# 探活同时快照版本三元组（mlx / mlx-vlm / 模型目录名）入 evidence——复现留痕锚。
+MX_DECISION_API="${MX_DECISION_API:-http://127.0.0.1:8000}"
+mkdir -p "$SIM_ROOT/evidence"
+if curl -sf -m 3 "$MX_DECISION_API/health" >/dev/null 2>&1; then
+  {
+    echo "# 判定后端版本三元组快照（F-7，$(date '+%F %T')）"
+    echo "- endpoint: $MX_DECISION_API/health ✓ 在线"
+    "$HOME/lab/clef-runtime/venv/bin/python" -c 'import mlx.core as m, mlx_vlm; print(f"- mlx: {m.__version__}"); print(f"- mlx-vlm: {mlx_vlm.__version__}")' 2>/dev/null \
+      || echo "- mlx/mlx-vlm 版本探测失败（venv 不在 ~/lab/clef-runtime，如实记）"
+    ls -1 ~/.cache/huggingface/hub 2>/dev/null | grep -i clef | sed 's/^/- model-snapshot: /' | head -2 \
+      || echo "- 模型快照目录未探测到（HF 缓存路径异常，如实记）"
+  } > "$SIM_ROOT/evidence/decision-backend-snapshot.txt"
+  log "判定后端在线（$MX_DECISION_API）——版本三元组快照落 evidence/decision-backend-snapshot.txt"
+else
+  echo "ISSUE|decision-backend-degraded|product|判定后端（$MX_DECISION_API/health）探活失败——四门 JEV 与 toolresultguard 走 fail-open 降级（F-7 口径，不阻断起跑；起跑前可拉 ~/lab/clef-runtime/start-clef.sh）" >> "$SIM_ROOT/evidence/issues.log"
+  log "WARN 判定后端离线（fail-open 记单 decision-backend-degraded，不阻断）"
+fi
+
 # ── 0b. SIM 执行面快照供给（隔离轮 2026-10-03）：先快照后打补丁——
 #     agent 源码快照就位后，390/391/533/534 与 runtime manifest 全部落 SIM 自有树，
 #     宿主 ~/.hermes/hermes-agent 不再被推演写入。dist 快照使 studio 与活注入树解耦。

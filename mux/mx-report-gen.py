@@ -1054,6 +1054,27 @@ def md_bold(t):
     """转义后把 **…** 渲染为加粗（关键判词强调；防注入先整体转义）。"""
     return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', H.escape(t))
 
+# ── 术语词表（P21/F-6①）：内部代号首现自动展开——单一事实源 mux/glossary.txt，
+#    STEPS_META 叙事渲染共用；无释义代号=审计 WARN（词表先补再用）。──
+GLOSSARY = {}
+_gl_path = Path(__file__).parent / 'glossary.txt'
+if _gl_path.exists():
+    for _ln in _gl_path.read_text(encoding='utf-8').splitlines():
+        if _ln.startswith('#') or ':' not in _ln:
+            continue
+        _k, _v = _ln.split(':', 1)
+        GLOSSARY[_k.strip()] = _v.strip()
+
+def _gloss_sub(m, k):
+    return f'{k}（{GLOSSARY[k]}）'
+
+def gloss_first_use(escaped_text):
+    """叙事文本（已转义纯文本）的代号首现释义：全文每个代号只展开第一次。"""
+    for k in sorted(GLOSSARY, key=len, reverse=True):
+        pat = re.compile(r'(?<![\w（])(?!（)' + re.escape(k) + r'(?![\w-])')
+        escaped_text = pat.sub(lambda m, _k=k: _gloss_sub(m, _k), escaped_text, count=1)
+    return escaped_text
+
 def img_tags(imgs):
     out = []
     for pre, cap, kind in imgs:
@@ -1659,7 +1680,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             gate_label = '质量判据（方案步条·交付物及质量判据段）'
             body_html = f'''
   <div class="st-sec"><div class="st-sec-hd">① 这步做什么</div>
-    <p class="st-story">{H.escape(meta["narrative"])}</p>
+    <p class="st-story">{gloss_first_use(H.escape(meta["narrative"]))}</p>
     {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
     {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
     {r18_block(n)}
@@ -1678,7 +1699,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   </div>'''
         else:
             body_html = f'''
-  <p class="st-story">{H.escape(meta["narrative"])}</p>
+  <p class="st-story">{gloss_first_use(H.escape(meta["narrative"]))}</p>
   {_entry_html(n)}
   {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
   {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
@@ -2003,3 +2024,42 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
 OUT.write_text(html, encoding='utf-8')
 print(f'report written: {OUT} ({len(html)} bytes, {total_imgs} images)')
+
+# ── txt 派生物写入器（F-6②，2026-10-06 入库）：HTML→纯文本三件套，随生成链产出
+#    ——run9 曾人工刷新 txt 但仓库无写入器（不可复现=下次生成必漂移，P21 同族教训）。──
+def _html_to_text(h):
+    h = re.sub(r'<style.*?</style>|<script.*?</script>', '', h, flags=re.S)
+    h = re.sub(r'</(p|div|tr|li|h[1-6]|summary|table)>', '\n', h)
+    h = re.sub(r'</t[dh]>', ' | ', h)
+    h = re.sub(r'<br\s*/?>', '\n', h)
+    h = re.sub(r'<[^>]+>', '', h)
+    h = html_mod.unescape(h)
+    h = re.sub(r'[ \t]+', ' ', h)
+    h = re.sub(r'\n\s*\n+', '\n\n', h)
+    return h.strip() + '\n'
+
+import html as html_mod
+(EVID / 'simulation-report.txt').write_text(_html_to_text(html), encoding='utf-8')
+print(f'txt written: {EVID}/simulation-report.txt')
+
+# steps-extract.txt：26 步结构化摘录（TITLE/META/STORY/ENTRY/GATE/SHOTS）
+import io
+_buf = io.StringIO()
+for n, title, gate_text, meta in STEPS:
+    done = any(state.get(k) for k in meta['keys']) or n == 26
+    _buf.write('=' * 88 + f'\nSTEP {n}\n')
+    _buf.write(f'TITLE: {title}\n')
+    _buf.write(f"META: {'✅' if done else '⬜'} {meta.get("actorText", "")}\n")
+    _buf.write(f"STORY: {meta["narrative"]}\n")
+    e = STEP_ENTRIES.get(n)
+    if e:
+        _buf.write(f'ENTRY: {e[0]} | {e[1]} | {e[2]}\n')
+    if gate_text:
+        _buf.write(f'GATE: {gate_text}\n')
+    if meta.get('imgs'):
+        _buf.write(f"SHOTS ({len(meta['imgs'])}):\n")
+        for pre, cap, kind in meta['imgs']:
+            _buf.write(f'   - screenshots/steps/{pre}.png | {cap}\n')
+    _buf.write('\n')
+(EVID / 'steps-extract.txt').write_text(_buf.getvalue(), encoding='utf-8')
+print(f'txt written: {EVID}/steps-extract.txt')
