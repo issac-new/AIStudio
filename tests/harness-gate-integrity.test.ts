@@ -667,6 +667,37 @@ describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）',
   })
 })
 
+describe('⑫d run10 前置接线（①观察员/569 gate-guard/③b 审批镜像）', () => {
+  // ①MATRIX_ROOM_OBSERVERS 写入 profile .env+scenario 默认导出（导演可见驱动房间）；
+  // 569 env 注入 gateway 启动链+守卫文件固定路径链接；③b mxq 镜像入队/消费挂进
+  // auto_approve（审批群内与收件箱双可见、裁决双向收敛）。
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('① MATRIX_ROOM_OBSERVERS 写入 profile .env+scenario 默认导出', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    expect(lib).toContain('MATRIX_ROOM_OBSERVERS=${MATRIX_ROOM_OBSERVERS:-@admin:$SERVER_NAME}')
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('export MATRIX_ROOM_OBSERVERS=')
+  })
+
+  it('569 gate-guard 接线：mx-up 注入 env+守卫文件固定路径链接+补丁入应用清单', () => {
+    const up = read(join(MX, 'mx-up.sh'))
+    expect(up).toContain('KANBAN_GATE_GUARD_FILE=')
+    expect(up).toContain('KANBAN_GATE_GUARD_KEYS=')
+    const lib = read(join(MX, 'mx-lib.sh'))
+    expect(lib).toContain('current-state.env')
+    expect(lib).toContain('569-agent-kanban-gate-guard.patch')
+  })
+
+  it('③b 审批镜像：mxq_enqueue/mxq_consume 挂进 auto_approve', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('mxq_enqueue()')
+    expect(lib).toContain('mxq_consume()')
+    expect(lib).toContain('mx-requests.jsonl')
+    expect(lib).toContain('mx-responses')
+  })
+})
+
 describe('⑬ runtime 副本须包含补丁面（部署通道不得静默回退已打补丁）', () => {
   // 2026-10-05 实锤：mx-setup 先打补丁后 deploy-agent-runtime --apply，runtime 清单内
   // gateway/platforms/base.py 副本停在 564 之前——每次部署把 564 静默覆盖回去

@@ -33,6 +33,11 @@ if ! dlv_enabled; then
   echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：附录 F-2 降级口径记单，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
 fi
 
+# backlog① 观察员接线：harness 建房（mx-lib mx_create_room）与产品派发
+# （resolveRoomObservers）同名同义——默认导演 admin 为固定观察员（可 env 覆盖），
+# 产品房间列表对导演可见的实证链随本轮生效。
+export MATRIX_ROOM_OBSERVERS="${MATRIX_ROOM_OBSERVERS:-@admin:$SERVER_NAME}"
+
 # 单驱动锁（P0，2026-09-28；判活根治 2026-09-29）：双会话双开推演是实测最高频
 # 互踩源——共享 state.env/板库/房间双写互踩。锁实现收敛在 mx-scenario-lib
 # （mx_driver_lock_acquire 单一事实源，可单测）；陈锁只在持锁 pid 真死时接管，

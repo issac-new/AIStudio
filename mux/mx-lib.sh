@@ -456,7 +456,7 @@ mx_provision_product_dist() {
 mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch; do
+  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch; do
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
@@ -668,6 +668,7 @@ MATRIX_E2EE_MODE=off
 MATRIX_AUTO_THREAD=true
 MATRIX_APPROVAL_TIMEOUT_SECONDS=1800
 API_SERVER_KEY=$api_key
+MATRIX_ROOM_OBSERVERS=${MATRIX_ROOM_OBSERVERS:-@admin:$SERVER_NAME}
 ENVEOF
   chmod 600 "$PROF/.env"
 }
@@ -868,6 +869,11 @@ else
 fi
 STATE="$RUN_DIR/state.env"
 EVID_DIR="${MX_EVID_DIR:-$RUN_DIR/evidence}"
+# 569 gate-guard 接线（run10 前置）：gateway 以固定路径读守卫文件——每 tick 惰性
+# 读文件无需重启即可感知键落位；本链接把"当前轮 state.env"钉到固定路径。
+# 未配 KANBAN_GATE_GUARD_KEYS 时守卫整体惰性（mx-up 默认键=g2_arch_pass）。
+mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+ln -sfn "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null || true
 NCWK="$NCWK_ROOT"
 DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
 GH_REPO="issac-new/aipaydev"
