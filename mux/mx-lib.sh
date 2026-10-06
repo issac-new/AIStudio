@@ -288,6 +288,57 @@ gov_registry_put() { # <kind> <md-file> <message>：注册表经产品同源通�
   body=$(jq -n --arg md "$(cat "$f")" --arg m "$msg" '{markdown:$md,message:$m,actor:"scenario-director"}')
   studio PUT "/api/governance/registry/$kind" "$tok" "$body" | jq -e '.commit' >/dev/null
 }
+
+gov_role_of() { # <user> → org_gen 同源角色（R31 产品通道 provision 的 role 字段）
+  case "$1" in
+    bella)  echo "需求分析师（BA）" ;;
+    fanfan) echo "项目管理（PM）+ 系统分析主持" ;;
+    wei)    echo "支付后端 lead（系统分析师）" ;;
+    mei)    echo "前端 lead" ;;
+    chen|hu|lin|xiao) echo "研发（系统分析执行+编码）" ;;
+    qi|fei) echo "测试（独立验证）" ;;
+    arch)   echo "系统架构（G2 架构治理）" ;;
+    secops) echo "安全管理（ISO27001/涉敏评估/发布安全）" ;;
+    ops)    echo "运维管理（ITIL/服务目录/发布执行/回滚）" ;;
+    audit)  echo "合规及审计管理（门禁留痕/凭证抽检/合规意见）" ;;
+    *)      echo "成员" ;;
+  esac
+}
+
+ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/health/ready 只看自身 bootstrap，
+  # 不探 gateway；env 与 mx-up 同款，单一事实源=本函数，mx-up 亦调用）
+  curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
+  local api_key; api_key=$(api_server_key)
+  ( cd "$SIM_ROOT" && \
+  NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" \
+  HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
+  HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$GW_PORT" GATEWAY_PORT="$GW_PORT" \
+  HERMES_BIN="$HERMES_BIN" API_SERVER_KEY="$api_key" \
+    nohup node "$STUDIO_DIST/server/index.js" > "$LOGS_DIR/studio.log" 2>&1 & \
+  echo $! > "$PIDS_DIR/studio.pid" )
+  local deadline=$(( $(date +%s) + 120 ))
+  while (( $(date +%s) < deadline )); do
+    curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  return 1
+}
+
+gov_provision_user() { # <user>：账号经产品通道供给（R31，#/app/accounts「创建并登记 roster」
+  # 同源端点 POST /api/governance/matrix-users——建号即 roster 提交）。幂等：账号在位即跳过
+  # （appendTableRow 不去重，端点重复调会加重复 roster 行——在位跳过是硬约束，R28 对账兜底）。
+  local u="$1" tok body
+  if synapse_list_users | grep -qx "@$u:$SERVER_NAME"; then
+    return 0
+  fi
+  tok=$(studio_login); [[ -n "$tok" ]] || { log "gov_provision_user: studio 登录失败"; return 1; }
+  local mt; mt=$(mx_login admin "$(user_pass admin)" | tr -d '\n')
+  [[ -n "$mt" && "$mt" != "null" ]] || { log "gov_provision_user: admin matrix 登录失败"; return 1; }
+  body=$(jq -n --arg n "$u" --arg role "$(gov_role_of "$u")" \
+    --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" \
+    '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$n}')
+  studio POST /api/governance/matrix-users "$tok" "$body" | jq -e '.rosterCommit' >/dev/null
+}
 studio_matrix_login() { # <user-human-localpart> → jwt（matrix 账号换 JWT）
   local u="$1"
   studio POST /api/auth/matrix-login "" "$(jq -n \

@@ -36,10 +36,20 @@ if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
     || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
 fi
 
-# ── 2. matrix 账号（幂等）+ token ───────────────────────
+# ── 2. matrix 账号（产品通道供给，R31 2026-10-06 用户裁决直接落地）────
+# 界面上线是必须要求：除系统引导账号 @admin（产品端点无法自举第一个 admin，
+# docker exec 幂等保底）外，全部账号经 POST /api/governance/matrix-users 供给
+# ——#/app/accounts「创建并登记 roster」同源，建号即 roster 提交（probe 锚
+# rosterCommit=edc6ed2）。studio 先于 gateway 拉（/health/ready 只看自身
+# bootstrap，不探 gateway）；账号在位即跳过（appendTableRow 不去重，重复
+# 调会加重复 roster 行）；synapse 直建仅剩 admin 一处=系统引导语义。
+synapse_register "admin" "$(user_pass admin)"
+ensure_studio_up || fail "studio 提前拉起失败（R31 产品通道前置；查 $LOGS_DIR/studio.log）"
+log "studio 就绪（:${STUDIO_PORT}，产品通道前置）"
 for u in "${USERS[@]}"; do
-  synapse_register "$u" "$(user_pass "$u")"
-  synapse_register "$u-agent" "$(user_pass "$u-agent")"
+  [[ "$u" == "admin" ]] && continue
+  gov_provision_user "$u" || fail "产品通道供给失败：$u（端点/鉴权链查 studio.log；禁回退 synapse 直建——排查后重试）"
+  log "账号供给（产品通道）：$u + $u-agent（建号即 roster 提交）"
 done
 for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
   localpart="${n%-agent}"; suffix=""
