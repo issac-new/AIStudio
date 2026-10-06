@@ -658,7 +658,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
   # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
   # verdict_combined（FAIL 优先，不放宽）。
-  if wait_truth "G2 结论（房间行或评审卡 body，双源）" 1800 mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
+  if wait_truth "G2 结论（房间行或评审卡 body，双源）" ${MX_GATE_WAIT:-3600} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
     # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
       kanban_walk_done arch "$AGID"
