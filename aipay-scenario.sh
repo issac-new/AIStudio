@@ -125,6 +125,22 @@ if step_reached smoke; then
     done
   done
   note "[真值] profiles 清单 + 每板 team 围栏装载 ✓（步骤 5）"
+  # R28 编制三方对账（gap-audit P11 防复发）：roster.md × org.md × matrix 实际人类账号
+  # 计数一致才算"账号与人员编制表一一对应"（方案步 1 合格线）；不一致记单不炸——
+  # run9 实锤：roster 停首签 12 人版横跨六轮无人拦，根因=无对账断言。
+  _roster_n=$(grep -cE '^\| @[a-z]+:matrix\.test \|' "$DIRECTOR_CLONE/docs/admin/roster.md" 2>/dev/null); _roster_n=${_roster_n:-0}
+  _org_n=$(grep -E '^\| [a-z]' "$DIRECTOR_CLONE/docs/admin/org.md" 2>/dev/null | grep -Evc '^\| 账号' || true); _org_n=${_org_n:-0}
+  _jwt_n=$(grep -c '^jwt_' "$STATE" 2>/dev/null); _jwt_n=${_jwt_n:-0}
+  _mx_n=$(( _jwt_n + 1 ))   # jwt_* 人类账号 + admin（独立凭证）
+  if [[ "$_roster_n" == "$_org_n" && "$_org_n" == "$_mx_n" && "$_mx_n" -gt 0 ]]; then
+    note "[R28] 编制三方对账一致：roster=${_roster_n} × org=${_org_n} × matrix=${_mx_n} ✓"
+  else
+    echo "ISSUE|roster-org-matrix-mismatch|director|编制三方对账不一致：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}（R28 断言；防 run9 roster 停旧版六轮无人拦复发）" >> "$EVID_DIR/issues.log"
+    note "[R28] 编制三方对账不一致（已记单，继续）：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}"
+  fi
+  # R29 delivery 协议面小冒烟（P15 拍板：禁静默关旗标——MX_DELIVERY=1 时冒烟段即验
+  # 事件落房+读回；产品门禁灯帧按附录 F-4 矩阵步 23 在报告链采集）
+  dlv_enabled && dlv_smoke
   note "[真值] 步骤 1-5 全部完成 ✓"
   sset smoke_done 1
 fi

@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-from r18_matrix import DIALOG_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok  # 必采矩阵单一事实源（与生成器 hero 统计同表）
+from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok  # 必采矩阵单一事实源（与生成器 hero 统计同表）
 
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
@@ -267,6 +267,7 @@ _R18_DIALOG_STEPS = DIALOG_STEPS
 _R18_OP_STEPS = OP_STEPS
 _R18_EFFECT_STEPS = EFFECT_STEPS
 _R18_SKILL_STEPS = SKILL_STEPS
+_R18_DELIVERY_STEPS = DELIVERY_STEPS
 _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
 if _r18_missing_file:
@@ -283,9 +284,10 @@ for blk in blocks:
     n = int(n_s)
     if '<span class="no">⬜</span>' in blk[:400]:
         continue  # 未执行步不要求 R18（无现场可采）
-    m18 = re.search(r'data-r18="d:(\d+);o:(\d+);e:(\d+)(?:;s:(\d+))?"', blk)
+    m18 = re.search(r'data-r18="d:(\d+);o:(\d+);e:(\d+)(?:;s:(\d+))?(?:;v:(\d+))?"', blk)
     d_cnt, o_cnt, e_cnt = (int(m18.group(i)) for i in (1, 2, 3)) if m18 else (0, 0, 0)
     s_cnt = int(m18.group(4)) if m18 and m18.group(4) else 0
+    v_cnt = int(m18.group(5)) if m18 and m18.group(5) else 0
     # 帧数核验：ops 组内引用的帧文件须真实存在（生成器对缺帧渲染"帧缺失"占位——报告侧可检出）
     frames_missing = len(re.findall(r'帧缺失：', blk))
     if frames_missing:
@@ -307,10 +309,23 @@ for blk in blocks:
         if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                        frame_exists=lambda name: (steps_dir / name).exists()):
             fails.append(f'R18 步 {n} skill 过程帧未达标（附录 F-4：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）')
+    if n in _R18_DELIVERY_STEPS:
+        # R29（P15）：delivery 门禁灯帧 ≥1（MX_DELIVERY=1 全程开启+面板实拍+r18-collect
+        # deliver 登记）；产品面未就绪按附录 F-2 记单降级（P15/delivery-protocol 键命中即降
+        # WARN），禁静默关旗标跑全程
+        _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
+                          frame_exists=lambda name: (steps_dir / name).exists())
+        _ilines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
+        _degraded = any(('P15' in l) or ('delivery-protocol' in l) for l in _ilines)
+        if not _dlv_ok:
+            if _degraded:
+                warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已记单，按附录 F-2 降级——产品面/旗标修复后补帧）')
+            else:
+                fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按附录 F-2 记单降级）')
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
-            and n not in _R18_SKILL_STEPS \
-            and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and not _r18_missing_file:
-        fails.append(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill 任一在位即可）')
+            and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
+            and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
+        fails.append(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）')
 
 # ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × 附录 F-2 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有

@@ -8,7 +8,9 @@
   skill 过程帧（附录 F-4，§2.5 步级承载面承诺入矩阵）= {步 13}：
     payload['skill'] 的 gen 帧 ≥3（xxx-dev 生成过程）且 invoke 帧 ≥2（开发调用
     过程），帧文件在位方计数（r18-frames.mjs 实拍，r18-collect.py skill 登记）。
-分母 = 12（5+3+3+1）；分子 = 达标项数。禁"任一载荷键在位即计"。
+delivery 门禁灯帧（R29/P15）= {步 23}：payload['delivery']['frames'] ≥1 且帧在位
+  （MX_DELIVERY=1 全程开启，产品 Delivery Cases 面板实拍；产品面未就绪按附录 F-2 记单降级）。
+分母 = 13（5+3+3+1+1）；分子 = 达标项数。禁"任一载荷键在位即计"。
 
 消费方：mx-report-gen.py hero 统计「全量呈现覆盖」、mx-report-audit.py 查 8。
 改任一端，tests/harness-gate-integrity.test.ts ⑫ 当场失败。
@@ -20,7 +22,11 @@ EFFECT_STEPS = frozenset({7, 20, 24})
 SKILL_STEPS = frozenset({13})
 SKILL_GEN_MIN = 3
 SKILL_INVOKE_MIN = 2
-TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS) + len(SKILL_STEPS)  # 12
+# delivery 协议面门禁灯帧（R29/P15，附录 F-4）：绑步 23（审计独立见证位——六闸门禁灯
+# 在产品 Delivery Cases 面板的投影帧；不与效果类步重叠，evaluate 每步只判一次）
+DELIVERY_STEPS = frozenset({23})
+DELIVERY_MIN = 1
+TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS) + len(SKILL_STEPS) + len(DELIVERY_STEPS)  # 13
 
 
 def _png(name: str) -> str:
@@ -52,6 +58,11 @@ def step_ok(n, payload, frame_exists=None):
             return False
         return any(str(e.get('anchor', '')).strip()
                    for e in (eff.get('evidence') or []))
+    if n in DELIVERY_STEPS:
+        fe = frame_exists or (lambda _name: True)
+        dlv = payload.get('delivery') or {}
+        frames = [f for f in (dlv.get('frames') or []) if fe(_png(str(f)))]
+        return len(frames) >= DELIVERY_MIN
     if n in SKILL_STEPS:
         sk = payload.get('skill') or {}
         fe = frame_exists or (lambda _name: True)
@@ -66,7 +77,7 @@ def evaluate(steps, frame_exists=None):
     steps = steps or {}
     detail = []
     met = 0
-    for n in sorted(DIALOG_STEPS | OP_STEPS | EFFECT_STEPS | SKILL_STEPS):
+    for n in sorted(DIALOG_STEPS | OP_STEPS | EFFECT_STEPS | SKILL_STEPS | DELIVERY_STEPS):
         ok = bool(step_ok(n, steps.get(str(n)) or steps.get(n), frame_exists))
         met += 1 if ok else 0
         detail.append((n, ok))
