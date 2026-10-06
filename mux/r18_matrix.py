@@ -1,11 +1,14 @@
-"""r18_matrix.py — R18 必采矩阵（单一事实源；正本 §5.5 必采矩阵与收官判据③）
+"""r18_matrix.py — R18 必采矩阵（单一事实源；正本 §5.5 必采矩阵与收官判据③、附录 F-4）
 
-矩阵（正本 2026-10-05-mux-v8-fullflow-plan.md §5.5）：
+矩阵（正本 2026-10-05-mux-v8-fullflow-plan.md §5.5 + 附录 F-4）：
   对话全文 = {步 9/11/17/19/21}，dialogs 非空即达标；
   操作前后帧 = {步 8/10/25}，每组 ops ≥2 帧（操作前+系统响应）且帧文件在位；
   环节效果 = {步 7/20/24}，陈述非空且 evidence 至少一条带可反查锚
-  （commit/event/文件路径——纯文字一句话不计入）。
-分母 = 11（5+3+3）；分子 = 达标项数。禁"任一载荷键在位即计"。
+  （commit/event/文件路径——纯文字一句话不计入）；
+  skill 过程帧（附录 F-4，§2.5 步级承载面承诺入矩阵）= {步 13}：
+    payload['skill'] 的 gen 帧 ≥3（xxx-dev 生成过程）且 invoke 帧 ≥2（开发调用
+    过程），帧文件在位方计数（r18-frames.mjs 实拍，r18-collect.py skill 登记）。
+分母 = 12（5+3+3+1）；分子 = 达标项数。禁"任一载荷键在位即计"。
 
 消费方：mx-report-gen.py hero 统计「全量呈现覆盖」、mx-report-audit.py 查 8。
 改任一端，tests/harness-gate-integrity.test.ts ⑫ 当场失败。
@@ -14,7 +17,10 @@
 DIALOG_STEPS = frozenset({9, 11, 17, 19, 21})
 OP_STEPS = frozenset({8, 10, 25})
 EFFECT_STEPS = frozenset({7, 20, 24})
-TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS)  # 11
+SKILL_STEPS = frozenset({13})
+SKILL_GEN_MIN = 3
+SKILL_INVOKE_MIN = 2
+TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS) + len(SKILL_STEPS)  # 12
 
 
 def _png(name: str) -> str:
@@ -46,6 +52,12 @@ def step_ok(n, payload, frame_exists=None):
             return False
         return any(str(e.get('anchor', '')).strip()
                    for e in (eff.get('evidence') or []))
+    if n in SKILL_STEPS:
+        sk = payload.get('skill') or {}
+        fe = frame_exists or (lambda _name: True)
+        gen = [f for f in (sk.get('gen') or []) if fe(_png(str(f)))]
+        invoke = [f for f in (sk.get('invoke') or []) if fe(_png(str(f)))]
+        return len(gen) >= SKILL_GEN_MIN and len(invoke) >= SKILL_INVOKE_MIN
     return None
 
 
@@ -54,7 +66,7 @@ def evaluate(steps, frame_exists=None):
     steps = steps or {}
     detail = []
     met = 0
-    for n in sorted(DIALOG_STEPS | OP_STEPS | EFFECT_STEPS):
+    for n in sorted(DIALOG_STEPS | OP_STEPS | EFFECT_STEPS | SKILL_STEPS):
         ok = bool(step_ok(n, steps.get(str(n)) or steps.get(n), frame_exists))
         met += 1 if ok else 0
         detail.append((n, ok))
