@@ -170,6 +170,15 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
   REG="$DIRECTOR_CLONE/docs/admin/app-registry.md"
   mkdir -p "$(dirname "$REG")"
   app_registry_gen > "$REG"
+  # P13 改回（2026-10-06 用户裁决「界面上线是必须要求」）：注册表经产品同源通道落档
+  # ——界面「保存（提交 git）」所走端点 PUT /api/governance/registry/app-registry
+  # （gov_registry_put：admin matrix 交换 super_admin）；失败按附录 F-2 记单降级回直写，禁静默。
+  if gov_registry_put app-registry "$REG" "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）"; then
+    note "[M1] registry 经产品通道落档（PUT /api/governance/registry/app-registry 保存即 git 提交——界面同源承载）"
+  else
+    echo "ISSUE|product-channel-degraded|studio|M1 registry 产品通道 PUT 失败，按附录 F-2 记单降级直写" >> "$EVID_DIR/issues.log"
+    note "[M1] 产品通道失败（记单降级，直写保底）"
+  fi
   # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法（当前分支 commit
   # + pull --rebase + push origin main）提交落错分支、push 空推/非快进暴毙；失败记问题单
   # 不中止（对齐 uat/audit/retro 修后风格，入仓缺口由 audit 步对账查漏）。
@@ -195,6 +204,13 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   fi
   ORG="$DIRECTOR_CLONE/docs/admin/org.md"
   org_gen > "$ORG"
+  # P13 改回：同 M1——org.md 经产品同源通道（OrgEditor「保存（提交 git）」端点）落档
+  if gov_registry_put org "$ORG" "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）"; then
+    note "[M2] org 经产品通道落档（PUT /api/governance/registry/org 保存即 git 提交——界面同源承载）"
+  else
+    echo "ISSUE|product-channel-degraded|studio|M2 org 产品通道 PUT 失败，按附录 F-2 记单降级直写" >> "$EVID_DIR/issues.log"
+    note "[M2] 产品通道失败（记单降级，直写保底）"
+  fi
   # 落 main 走 repo_commit_main（P4/Z1）：同 appinit——HEAD 在 integration 时旧写法提交
   # 落错分支、push 空推/非快进暴毙；失败记问题单不中止。
   if repo_commit_main "docs/admin/org.md" "director (M2)" "director@aipaydev.local" \
