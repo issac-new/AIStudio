@@ -686,6 +686,56 @@ describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）',
   })
 })
 
+describe('⑭ V8.2 四段式切换（生成器配套六件落位守门）', () => {
+  // 2026-10-06 用户指令推动落地。配套：①双格式解析+缺步拒跑 ②四段渲染 ③操作手册
+  // 降附录 ⑤叙事骨架生成器 ⑥本守门+审计器双格式断言。④字段级核对此前已在位。
+  const MX_DIR = join(MX)
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+  const PLAN = join(process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay'),
+    'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
+
+  it('正本=V8.2 四段式（步条 `**步 N｜`+四段标记）', () => {
+    const plan = read(PLAN)
+    expect(plan).toContain('**步 1｜')
+    expect(plan).toContain('**这步做什么**：')
+    expect(plan).toContain('**交付物及质量判据**：')
+    expect(plan).toContain('**已知问题**：')
+    expect(plan).toContain('**改进项**：')
+  })
+
+  it('生成器+审计器双格式解析同源（改任一端当场红）', () => {
+    const gen = read(join(MX_DIR, 'mx-report-gen.py'))
+    const aud = read(join(MX_DIR, 'mx-report-audit.py'))
+    for (const f of [gen, aud]) {
+      expect(f).toContain("PLAN_V82 = '**步 1｜' in plan_text")
+    }
+    expect(gen).toContain('_v82_sec')
+    expect(gen).toContain('manual_appendix')   // ③产品操作手册降附录
+    expect(gen).toContain('_step_issues_html') // ②段三逐步问题面板
+    expect(aud).toContain('这步做什么')        // ⑥审计四段锚
+  })
+
+  it('解析自检：正本实解析 26 步齐（双格式任一，缺步拒出报告）', () => {
+    const out = execFileSync('python3', ['-c', `
+import re, pathlib
+t = pathlib.Path(${JSON.stringify(PLAN)}).read_text()
+if '**步 1｜' in t:
+    ns = set(int(m.group(1)) for m in re.finditer(r'^\\*\\*步 (\\d{1,2})｜', t, re.M))
+else:
+    ns = set(int(m.group(1)) for m in re.finditer(r'^(\\d{1,2})、', t, re.M))
+print(len(ns))
+`], { encoding: 'utf-8' }).trim()
+    expect(out).toBe('26')
+  })
+
+  it('叙事骨架生成器在位且对 run9 可跑（⑤骨架自动+人工润色）', () => {
+    const sk = join(MX_DIR, 'mx-narrative-skeleton.py')
+    const out = execFileSync('python3', [sk, '--run', '20261006-v8-run9'], { encoding: 'utf-8' })
+    expect(out).toContain('STEPS_META_')
+    expect(out).toContain('TODO')
+  })
+})
+
 describe('⑫d run10 前置接线（①观察员/569 gate-guard/③b 审批镜像）', () => {
   // ①MATRIX_ROOM_OBSERVERS 写入 profile .env+scenario 默认导出（导演可见驱动房间）；
   // 569 env 注入 gateway 启动链+守卫文件固定路径链接；③b mxq 镜像入队/消费挂进

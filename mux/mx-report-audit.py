@@ -56,19 +56,29 @@ STATE = SIM / 'runs' / RUN_ID / 'state.env'
 
 fails, warns = [], []
 
-# ── 方案解析（与生成器同源：首句、96 字截断） ──
+# ── 方案解析（与生成器同源；双格式：V8 `N、`｜V8.2 `**步 N｜标题**`） ──
 plan_text = PLAN.read_text(encoding='utf-8')
+PLAN_V82 = '**步 1｜' in plan_text
 plan_steps = {}
-for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^## |\Z)', plan_text, re.M | re.S):
-    n = int(m.group(1))
-    if n in plan_steps:
-        continue
-    block = m.group(2).strip()
-    body_head = block.split('（把关')[0]
-    first = re.sub(r'\s+', ' ', body_head).strip().split('。')[0]
-    if len(first) > 96:
-        first = first[:96] + '…'
-    plan_steps[n] = first
+if PLAN_V82:
+    for m in re.finditer(r'^\*\*步 (\d{1,2})｜(.+?)\*\*\s*$', plan_text, re.M):
+        n = int(m.group(1))
+        if n not in plan_steps:
+            plan_steps[n] = m.group(2).strip()
+else:
+    for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^## |\Z)', plan_text, re.M | re.S):
+        n = int(m.group(1))
+        if n in plan_steps:
+            continue
+        block = m.group(2).strip()
+        body_head = block.split('（把关')[0]
+        first = re.sub(r'\s+', ' ', body_head).strip().split('。')[0]
+        if len(first) > 96:
+            first = first[:96] + '…'
+        plan_steps[n] = first
+
+if len(plan_steps) != 26:
+    fails.append(f'方案解析步数 {len(plan_steps)} ≠ 26（PLAN={PLAN.name}，格式 {"V8.2" if PLAN_V82 else "V8"}）——解析锚断裂')
 
 if not REPORT.exists():
     sys.exit(f'[audit] 报告不存在：{REPORT}')
@@ -98,7 +108,12 @@ for blk in blocks:
     title = html.unescape(re.sub(r'<[^>]+>', '', h3)).strip()
     if n in plan_steps and title != plan_steps[n]:
         title_mismatch.append(n)
-    if 'st-gate' not in blk or '把关' not in blk:
+    if PLAN_V82:
+        # V8.2：步块必含四段锚（与 §2.4 步条目同构，正本 §5.4）
+        for sec in ('这步做什么', '交付物及质量判据', '已知问题', '改进项'):
+            if sec not in blk:
+                gate_missing.append(f'{n}:{sec}')
+    elif 'st-gate' not in blk or '把关' not in blk:
         gate_missing.append(n)
     done = '<span class="ok">✅</span>' in blk
     shots = block_field(blk, r'<div class="st-shots">(.*?)</div>\s*</article>')
@@ -109,7 +124,8 @@ for blk in blocks:
 if title_mismatch:
     fails.append(f'标题与方案不逐字（步骤）：{title_mismatch}')
 if gate_missing:
-    fails.append(f'把关段缺失/无锚词（步骤）：{gate_missing}')
+    _lbl = '四段锚缺失（步骤:段）' if PLAN_V82 else '把关段缺失/无锚词（步骤）'
+    fails.append(f'{_lbl}：{gate_missing}')
 if done_no_img:
     fails.append(f'已完成步缺图：{done_no_img}')
 if pending_no_img:
@@ -236,7 +252,12 @@ else:
 
 # ── 查 7：V5 补遗⑥ R15/R16 断言（R16 旅程版逐步操作入口；R15 统一版第 0 章协作总述）──
 _entry_hit = sum(1 for b in blocks if 'class="st-entry"' in b)
-if blocks and _entry_hit == len(blocks):
+if PLAN_V82:
+    # V8.2（正本 §5.5 操作记录真值化+§5.7）：操作路径表降附录《产品操作手册》并标注
+    # "非本轮实录"，步块正文以「① 这步做什么」承载本轮实录——断言附录在场+标注语句。
+    if '产品操作手册' not in rep or '非本轮实录' not in rep:
+        fails.append('V8.2 附录《产品操作手册》缺失或缺"非本轮实录"标注（steps_entry 降附录=§5.5 验收线）')
+elif blocks and _entry_hit == len(blocks):
     pass
 elif _entry_hit > 0:
     fails.append(f'R16 操作入口缺失：{_entry_hit}/{len(blocks)} 步块含入口行——26 步须全量可复现路径')
