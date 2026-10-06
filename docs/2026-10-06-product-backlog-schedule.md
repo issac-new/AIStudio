@@ -78,6 +78,21 @@
 | ② runs 注册表接入 | **已落+测试过** | overlay eeb8936c：run-ingest 快照摄取（run.started/progress/completed、sim- 前缀、幂等以事件日志为真值）+event-log-registry 共用实例+详情骨架免 404；顺带根治一处边界：终态后 sset 仍刷 updated_ts 会致状态回摆（摄取侧停追进度+推导终态粘滞）。回归 400/400、全量 3816/3816 零失败 |
 | ① 房间列表同步 | **已落（产品+harness 双侧）+测试过** | overlay a48675f7：resolveRoomObservers（env MATRIX_ROOM_OBSERVERS）+taskRoomInvitees 合并两路建房；simharness mx-lib mx_create_room 同名同义观察员位。隐私面一句话结论：观察员非 RACI 当事人、入房全读，默认空名单不外扩可见面，显式配置才启用。「导演可见驱动房间」实证随 run10 配 MATRIX_ROOM_OBSERVERS |
 | P13 承诺步残余（停用步静默） | **已修（live 终验）** | 并行会话：档案件 §五.12 实录（f0667bcd）——registry-admin server-name 对齐+admin-service 失败可见化 |
-| ③ 审批面统一 | **未开工，按本排期留批次 3** | 协议面双向收敛含 hermes 线程/超时 m.replace 编辑语义（mx-scenario-lib auto_approve 实况），盲做会造出「只进列表不收敛」半截态（§五.2 自堵的风险）；改动点与验收判据原文不动，建议随 run10 hybrid 模式小样验证后实施 |
+| ③ 审批面统一 | **产品侧已落（读+裁决+三重幂等）；harness 入队/消费=③b 挂 run10 前置** | overlay 4c9af88a（merge 5ceac0f2）：第四源 mx-requests.jsonl 翻 PendingItem（eid 全局锚）+decide mx: 分支（四态校验/反应通道已批 409/本通道重批 409/响应文件原子写/历史落账）；三重幂等闸防双通道重批；守门 pending-controller 11/11。③b（harness 入队+轮询 mx-responses 消费）随 run10 hybrid 小样验证实施——与上行原建议同口径 |
 
 **验证口径声明**：①②④ 服务端逻辑=新增/扩展单测 17 项+相邻回归（graph+sim 400/400、matrix+services 106/106、全量 3816/3816）+vite build 编译门；**浏览器实拍验收（testid 取帧/导演视角房间列表/运行中心 sim-* 条目）与 run10 起跑 smoke 未在本轮执行**——属排期验收判据的实证项，如实标注不冒充达成。
+
+## 七、P9 治理边界两件评估（2026-10-06 用户指令「全做」执行轮）
+
+差异审计 P9 的两处"机制靠闸后甄别非事前拦截"，评估与落位：
+
+### P9a prework 门禁前置——**已落（569 gate-guard）**
+
+- **评估**：run9 五 agent 上板即自启、越 G2 序位抢推 8 分支（G2/G3 闸后甄别兜住未污染主线），根因=认领即 spawn 无闸门序位概念。两候选机制：①看板卡 ready 在 G2 落键前不派 spawn 信号；②dispatcher 增 gate-guard。采②——`kanban_watchers_common._kanban_dispatch_allowed` 是每 tick spawn 前唯一检查点，语义集中且无需看板侧改动。
+- **落位**：overlay 4c9af88a（merge 5ceac0f2）——`KANBAN_GATE_GUARD_FILE`（state.env 式文件）+`KANBAN_GATE_GUARD_KEYS`（逗号必填键）声明时键未齐 spawn 暂停；未配=惰性，生产零行为变化（保真形态不污染）。补丁 569+runtime manifest 收编+守门⑬同步断言；git apply 干净；功能五例全过。
+- **run10 接线（前置）**：mx-up 给 gateway .env 写 `KANBAN_GATE_GUARD_FILE=$SIM_ROOT/runs/<RUN>/state.env`、`KANBAN_GATE_GUARD_KEYS=g2_arch_pass`（harness 仓落）；复验判据=G2 落键前零 agent spawn 抢跑（对照 run9 的 8 分支先例）。
+
+### P9b RACI 双@同源——run10 复验口径（评估结论，机制不另改）
+
+- **评估**：run9 四条 RACI 双@（责任人+团队负责人）走回灌通道非同源（raci-dispatch-missing×4，DISP 延后复验）。根因两候选：a) 指令遵循缺口——fanfan-agent 的 Orchestrator 未按派发词执行双@输出；b) 投递可见性缺口——房间消息对部分账号不可见。564 投递兜底已在位，b 类若再犯以**房间 event 视角为真值**（拉房间消息验证，不取账号收件视角），避免把"收件不可见"误判为"未派发"。
+- **run10 复验口径**：①系分拆步后在分析房间按任务逐条拉取验证双@文本在房（event_id 可反查），缺则当场记单（不等收官回灌）；②四条全部房间可见、零回灌补发为达标；③若复发 a 类，派发词模板把双@从"要求"改为"逐条输出格式"（结构化字段先行）；复发 b 类按投递层缺口记单升格。
