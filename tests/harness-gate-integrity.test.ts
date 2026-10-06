@@ -19,7 +19,7 @@ import { describe, expect, it, afterAll } from 'vitest'
 // 隔离轮迁址（2026-10-03）：测试随 harness 仓走，MX=本仓 mux/；vitest 借道 overlay 的 node_modules（run-gates.sh --root）
 const HARNESS = join(__dirname, '..')
 const MX = join(HARNESS, 'mux')
-const PRODUCT = join(HARNESS, '..', 'overlay')  // 产品仓只读消费位（patches/探针）
+const PRODUCT = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')  // 产品仓只读消费位（patches/探针；worktree 内相对位失效，用 MX_OVERLAY_ROOT 指向主树 overlay）
 
 const roots: string[] = []
 afterAll(() => roots.forEach((d) => rmSync(d, { recursive: true, force: true })))
@@ -529,35 +529,36 @@ uat_evidence_body 1790930955`, root)
   })
 })
 
-describe('⑫ 必采矩阵单一事实源（正本 §5.5：hero 统计=矩阵实算，分母 11，禁任一位在位即计）', () => {
+describe('⑫ 必采矩阵单一事实源（正本 §5.5+附录 F-4：hero 统计=矩阵实算，分母 12，禁任一位在位即计）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
 
   function py(code: string): string {
     return execFileSync('python3', ['-c', `
 import sys; sys.path.insert(0, ${JSON.stringify(MX)})
-from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, TOTAL, evaluate
+from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, TOTAL, evaluate, step_ok
 ${code}`], { encoding: 'utf-8' })
   }
 
-  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24，分母=11', () => {
-    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), TOTAL)')
-    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] 11')
+  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2），分母=12', () => {
+    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, TOTAL)')
+    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] 3 2 12')
   })
 
-  it('空载荷=0/11；达标载荷=11/11（操作每组≥2 实帧、效果带可反查锚）', () => {
+  it('空载荷=0/12；达标载荷=12/12（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
     const out = py(`
 good = {str(n): {'dialogs': [{'title': 'd'}]} for n in DIALOG_STEPS}
 good.update({str(n): {'ops': [{'frames': [f'{n}-op1-before.png', f'{n}-op1-after.png']}]} for n in OP_STEPS})
 good.update({str(n): {'effect': {'text': '工件入仓', 'evidence': [{'label': 'commit', 'anchor': 'a1b2c3d'}]}} for n in EFFECT_STEPS})
+good['13'] = {'skill': {'gen': ['13-g1.png', '13-g2.png', '13-g3.png'], 'invoke': ['13-i1.png', '13-i2.png']}}
 m, t, _ = evaluate(good, frame_exists=lambda n: True)
 print(f'{m}/{t}')
 m0, t0, _ = evaluate({}, frame_exists=lambda n: True)
 print(f'{m0}/{t0}')`)
-    expect(out).toContain('11/11')
-    expect(out).toContain('0/11')
+    expect(out).toContain('12/12')
+    expect(out).toContain('0/12')
   })
 
-  it('对话缺/单帧/帧文件缺失/效果无锚 → 对应项不计入；达标路径不受邻步影响', () => {
+  it('对话缺/单帧/帧文件缺失/效果无锚/skill 帧不足 → 对应项不计入；达标路径不受邻步影响', () => {
     const out = py(`
 cases = {
   9:  {'ops': [{'frames': ['9-x-before.png', '9-x-after.png']}]},   # 对话步无 dialogs
@@ -565,6 +566,7 @@ cases = {
   10: {'ops': [{'frames': ['10-x-before.png', '10-x-after.png']}]},  # 2 帧但文件缺失
   7:  {'effect': {'text': '纯文字一句话', 'evidence': []}},           # 效果无锚
   11: {'dialogs': [{'messages': []}]},                               # dialogs 在位=达标
+  13: {'skill': {'gen': ['13-g1.png', '13-g2.png'], 'invoke': ['13-i1.png', '13-i2.png']}},  # 生成帧仅 2<3
 }
 _, _, detail = evaluate({str(k): v for k, v in cases.items()},
                         frame_exists=lambda n: not n.startswith('10-'))
@@ -574,6 +576,7 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(out).toContain('10:False')
     expect(out).toContain('7:False')
     expect(out).toContain('11:True')
+    expect(out).toContain('13:False')
   })
 
   it('绊线：生成器 hero 统计与审计器查 8 共用 r18_matrix，禁回退硬编码/任一位在位即计', () => {
@@ -581,10 +584,49 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     const audit = read(join(MX, 'mx-report-audit.py'))
     expect(gen).toContain('import r18_matrix')
     expect(gen).toContain('r18_matrix.evaluate')
-    expect(gen).toContain('必采 11 项实算')
+    expect(gen).toContain('必采 {r18_matrix.TOTAL} 项实算')
+    expect(gen).not.toContain('必采 11 项实算')
     expect(gen).not.toContain('{hit}/26')
     expect(audit).toContain('from r18_matrix import')
+    expect(audit).toContain('step_ok')
     expect(audit).not.toContain('{9, 11, 17, 19, 21}')
+  })
+
+  it('绊线：采集器 skill 子命令登记 gen/invoke 帧（附录 F-4 采集链闭环）', () => {
+    const coll = read(join(MX, 'r18-collect.py'))
+    expect(coll).toContain("add_parser('skill')")
+    expect(coll).toContain("'--gen'")
+    expect(coll).toContain("'--invoke'")
+  })
+})
+
+describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10 前置 R26/R27）', () => {
+  // R26：gov_report 度量面补齐 §2.6.5/6 五项+基线对比行——run9 只兑现首过率一项且
+  // 分母口径分裂（评审型 4 分母 vs PART1 六闸），run10 起统一六闸全计+基线行机制化。
+  // R27：mx-report-audit 查 9 承载面符合性——§2.5 有承载面承诺的 ✅ 步须 UI 实拍帧
+  // 或 product-surface-degraded 合规降级记单，二者皆缺 WARN（P8：P1/P3/P4 曾全漏网）。
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('gov_report 五项度量齐（首过率/证据一次通过率/缺陷密度/打回次数/人工介入）+首过率六闸全计', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    for (const k of ['首过率', '证据一次通过率', '缺陷密度', '打回次数', '人工介入']) {
+      expect(lib).toContain(k)
+    }
+    expect(lib).toContain('六闸全计')
+    expect(lib).not.toContain('${_fp}/4')
+  })
+
+  it('gov_report 基线对比行（§2.6.5 上次基线+1：读上轮治理报告首过率）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('基线对比')
+    expect(lib).toContain('governance-report.md')
+  })
+
+  it('审计器查 9 承载面符合性（§2.5 步集解析 × product-surface-degraded 降级口径）', () => {
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    expect(audit).toContain('承载面符合性')
+    expect(audit).toContain('product-surface-degraded')
+    expect(audit).toContain('### 2\\.5')
   })
 })
 

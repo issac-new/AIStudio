@@ -1030,15 +1030,50 @@ reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 
 
 gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metrics-log 口径）
   local out="$EVID_DIR/governance-report.md" total fixed observed deferred
-  total=$(grep -c "^ISSUE|" "$EVID_DIR/issues.log" 2>/dev/null || echo 0)
+  total=$({ grep -c "^ISSUE|" "$EVID_DIR/issues.log" 2>/dev/null || true; })
   # 首过率实算（09-26）：组外预计算，set -euo pipefail 安全（grep -q && v=1 || true）
-  local _g1f=0 _g2f=0 _g4f=0 _g5f=0
+  # 口径=六闸全计（2026-10-06 差距审计 P5→R26：G3/G6 为落键型闸、无对应记单即首过；
+  # 原 metrics 行按评审型四闸 4 分母，与 PART1「六闸全首过」口径分裂——run10 起统一六分母）
+  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0
   grep -qE '^ISSUE\|g1-(review|freeze|gate)' "$EVID_DIR/issues.log" 2>/dev/null && _g1f=1 || true
   grep -qE '^ISSUE\|g2-' "$EVID_DIR/issues.log" 2>/dev/null && _g2f=1 || true
+  grep -qE '^ISSUE\|g3-' "$EVID_DIR/issues.log" 2>/dev/null && _g3f=1 || true
   grep -qE '^ISSUE\|g4-' "$EVID_DIR/issues.log" 2>/dev/null && _g4f=1 || true
   grep -qE '^ISSUE\|g5-' "$EVID_DIR/issues.log" 2>/dev/null && _g5f=1 || true
-  local _fp=$((4-_g1f-_g2f-_g4f-_g5f))
-  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/4（G1$([ $_g1f = 0 ] && echo 首过 || echo 打回) G2$([ $_g2f = 0 ] && echo 首过 || echo 打回) G4$([ $_g4f = 0 ] && echo 首过 || echo 打回) G5$([ $_g5f = 0 ] && echo 首过 || echo 打回)）,$(date +%F)..$(date +%F),issues.log 实算,自动统计"
+  grep -qE '^ISSUE\|g6-' "$EVID_DIR/issues.log" 2>/dev/null && _g6f=1 || true
+  local _fp=$((6-_g1f-_g2f-_g3f-_g4f-_g5f-_g6f))
+  local _gate_detail="G1$([ $_g1f = 0 ] && echo 首过 || echo 打回) G2$([ $_g2f = 0 ] && echo 首过 || echo 打回) G3$([ $_g3f = 0 ] && echo 首过 || echo 打回) G4$([ $_g4f = 0 ] && echo 首过 || echo 打回) G5$([ $_g5f = 0 ] && echo 首过 || echo 打回) G6$([ $_g6f = 0 ] && echo 首过 || echo 打回)"
+  # 证据一次通过率：凭证族记单（回执/派发/系分文档/凭证缺件）与完成任务环节键对账
+  local _done_keys _evmiss _evrate
+  _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
+  _evmiss=$({ grep -cE '^ISSUE\|(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)' "$EVID_DIR/issues.log" 2>/dev/null || true; })
+  if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
+    _evrate="$((_done_keys-_evmiss))/${_done_keys}（凭证族记单 ${_evmiss} 起）"
+  else
+    _evrate="⬜（state.env 完成环节键=0，分母缺席如实留空）"
+  fi
+  # 打回次数：ISSUE 行含打回/拒收/熔断实算（闸门打回与凭证打回合并口径）
+  local _reject
+  _reject=$({ grep -cE '^ISSUE\|.*(打回|拒收|熔断)' "$EVID_DIR/issues.log" 2>/dev/null || true; })
+  # 人工介入：DISP 行注明导演（补账/代投/补推）实算；AI 主理回合占比=⬜（回合级留痕未结构化）
+  local _human
+  _human=$({ grep -cE '^DISP\|.*导演' "$EVID_DIR/issues.log" 2>/dev/null || true; })
+  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记单即首过）
+$(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件记单/完成环节键
+$(date +%F),${RFD_ID},全程,缺陷密度,⬜,$(date +%F)..$(date +%F),取不到显式 ⬜,缺陷/用例真值在中央仓测试报告——harness 侧无结构化副本，挂接后实算
+$(date +%F),${RFD_ID},全程,打回次数,${_reject},$(date +%F)..$(date +%F),issues.log 实算,打回/拒收/熔断行计数
+$(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 ⬜）,$(date +%F)..$(date +%F),issues.log 实算,DISP 注明导演计数；占比待 MX_DELIVERY=1 协议事件结构化"
+  # 基线对比行（R26：读上轮治理报告首过率行——「下次推演目标即上次基线+1」机制化，§2.6.5）
+  local _runs_dir _prev _baseline
+  _runs_dir="$(dirname "$(dirname "$EVID_DIR")")"
+  _prev=""
+  _baseline=""
+  if [ -n "${RUN_ID:-}" ]; then
+    _prev=$(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -v "/${RUN_ID}/" | sort | tail -1 || true)
+  fi
+  if [ -n "$_prev" ] && [ -f "${_prev}evidence/governance-report.md" ]; then
+    _baseline=$({ grep -E '首过率' "${_prev}evidence/governance-report.md" 2>/dev/null || true; } | tail -1)
+  fi
   {
     echo "# ${RFD_ID} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
     echo
@@ -1049,16 +1084,24 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
       echo "- $k: $(sget "$k" || echo 未落)"
     done
     echo
-    echo "## 问题单台账（共 ${total} 条；处置记账 $(grep -c '^DISP|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0) 条 DISP——键=类型·主体，缺行=待处置）"
+    echo "## 问题单台账（共 ${total} 条；处置记账 $({ grep -c '^DISP|' "$EVID_DIR/issues.log" 2>/dev/null || true; }) 条 DISP——键=类型·主体，缺行=待处置）"
     awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
     echo
     echo "## 凭证与回灌"
-    echo "- state 闸门键：$(grep -cE "^(jwt_|room_|card_|.*_done|g1_|g2_|g4_|g5_|uat_|retro_)" "$STATE" 2>/dev/null || echo 0) 条"
+    echo "- state 闸门键：$({ grep -cE "^(jwt_|room_|card_|.*_done|g1_|g2_|g4_|g5_|uat_|retro_)" "$STATE" 2>/dev/null || true; }) 条"
     echo
     echo "## metrics 回写（metrics-log 口径：date,change,gate,score,ratio,window,source,note）"
     echo "\`\`\`csv"
     echo "$METRICS_CSV"
     echo "\`\`\`"
+    echo
+    echo "## 基线对比（§2.6.5 上次基线+1 机制）"
+    if [ -n "$_baseline" ]; then
+      echo "- 上轮（$(basename "$_prev")）：${_baseline}"
+      echo "- 本轮（${RUN_ID}）：首过率 ${_fp}/6（${_gate_detail}）"
+    else
+      echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
+    fi
   } > "$out"
   echo "$out"
 }

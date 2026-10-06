@@ -20,12 +20,13 @@
 """
 import hashlib
 import html
+import json
 import os
 import re
 import sys
 from pathlib import Path
 
-from r18_matrix import DIALOG_STEPS, EFFECT_STEPS, OP_STEPS  # 必采矩阵单一事实源（与生成器 hero 统计同表）
+from r18_matrix import DIALOG_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok  # 必采矩阵单一事实源（与生成器 hero 统计同表）
 
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
@@ -265,9 +266,16 @@ else:
 _R18_DIALOG_STEPS = DIALOG_STEPS
 _R18_OP_STEPS = OP_STEPS
 _R18_EFFECT_STEPS = EFFECT_STEPS
+_R18_SKILL_STEPS = SKILL_STEPS
 _r18_missing_file = not R18F.exists()
+_r18_payloads = {}
 if _r18_missing_file:
     fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）')
+else:
+    try:
+        _r18_payloads = json.loads(R18F.read_text(encoding='utf-8')).get('steps', {}) or {}
+    except json.JSONDecodeError as e:
+        fails.append(f'R18 载荷文件解析失败（r18-steps.json 坏 JSON）：{e}')
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
@@ -275,8 +283,9 @@ for blk in blocks:
     n = int(n_s)
     if '<span class="no">⬜</span>' in blk[:400]:
         continue  # 未执行步不要求 R18（无现场可采）
-    m18 = re.search(r'data-r18="d:(\d+);o:(\d+);e:(\d+)"', blk)
+    m18 = re.search(r'data-r18="d:(\d+);o:(\d+);e:(\d+)(?:;s:(\d+))?"', blk)
     d_cnt, o_cnt, e_cnt = (int(m18.group(i)) for i in (1, 2, 3)) if m18 else (0, 0, 0)
+    s_cnt = int(m18.group(4)) if m18 and m18.group(4) else 0
     # 帧数核验：ops 组内引用的帧文件须真实存在（生成器对缺帧渲染"帧缺失"占位——报告侧可检出）
     frames_missing = len(re.findall(r'帧缺失：', blk))
     if frames_missing:
@@ -292,9 +301,39 @@ for blk in blocks:
                 fails.append(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         fails.append(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）')
+    if n in _R18_SKILL_STEPS:
+        # 附录 F-4：步级承载面承诺入必采矩阵——skill 过程帧 gen≥3+invoke≥2，
+        # 载荷侧实算（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
+        if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
+                       frame_exists=lambda name: (steps_dir / name).exists()):
+            fails.append(f'R18 步 {n} skill 过程帧未达标（附录 F-4：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）')
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
-            and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and not _r18_missing_file:
-        fails.append(f'R18 步 {n} 三位载荷全缺（对话/操作/效果任一在位即可）')
+            and n not in _R18_SKILL_STEPS \
+            and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and not _r18_missing_file:
+        fails.append(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill 任一在位即可）')
+
+# ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × 附录 F-2 降级口径；差距审计 P8→R27）──
+# §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有
+# product-surface-degraded 记单声明合规降级（记单+最接近真实功能页补拍+图注三件套）；
+# 二者皆缺 → WARN 起步（连续两轮未处置转 FAIL，转硬评估挂 run11 前置）。
+_m25 = re.search(r'### 2\.5 [^\n]*\n(.*?)(?=\n### |\n## )', plan_text, re.S)
+_surface_steps = set()
+if _m25:
+    _surface_steps = {int(x) for x in re.findall(r'^\|\s*(\d+)\s*\|', _m25.group(1), re.M)}
+if not _surface_steps:
+    warns.append('方案 §2.5 承载面清单未解析到步号——查 9 空转（解析锚失效即验收缺陷，须修复解析或正本）')
+_issues_txt9 = _ilog.read_text(encoding='utf-8') if _ilog.exists() else ''
+_degraded9 = 'product-surface-degraded' in _issues_txt9
+for blk in blocks:
+    n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
+    if not n_s:
+        continue
+    n = int(n_s)
+    if n not in _surface_steps or '<span class="no">⬜</span>' in blk[:400]:
+        continue
+    if len(re.findall(r'class="shot', blk)) == 0 and not _degraded9:
+        warns.append(f'承载面符合性：步 {n} 在 §2.5 有产品承载面承诺但报告零 UI 实拍帧，'
+                     f'且 issues.log 无 product-surface-degraded 降级记单——补拍或按附录 F-2 合规降级记单')
 
 # ── 汇总 ──
 print(f'报告：{REPORT}')
