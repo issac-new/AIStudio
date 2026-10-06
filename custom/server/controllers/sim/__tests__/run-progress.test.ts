@@ -57,4 +57,39 @@ describe('sim run-progress（后台感知③）', () => {
       rmSync(home, { recursive: true, force: true })
     }
   })
+
+  it('摄取钩子（backlog②）：快照翻译注入调用；ingest:null 关闭；抛错不影响横幅响应', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'simrun-'))
+    process.env.HERMES_HOME = home
+    try {
+      writeFileSync(join(home, 'run-progress.json'), validRaw, 'utf8')
+
+      const calls: unknown[] = []
+      const routerHit: any = createSimRunRouter({ ingest: async (p) => { calls.push(p) } })
+      const hitHandler = routerHit.stack.find((l: any) => l.path === '/api/sim/run-progress').stack.slice(-1)[0]
+      const ctxHit: any = { body: undefined }
+      await hitHandler(ctxHit)
+      await new Promise(r => setTimeout(r, 10))
+      expect(ctxHit.body.ok).toBe(true)
+      expect(calls).toHaveLength(1)
+      expect((calls[0] as { runId: string }).runId).toBe('20261004-v7-run8')
+
+      const routerOff: any = createSimRunRouter({ ingest: null })
+      const offHandler = routerOff.stack.find((l: any) => l.path === '/api/sim/run-progress').stack.slice(-1)[0]
+      const ctxOff: any = { body: undefined }
+      await offHandler(ctxOff)
+      await new Promise(r => setTimeout(r, 10))
+      expect(calls).toHaveLength(1)
+
+      const routerThrow: any = createSimRunRouter({ ingest: async () => { throw new Error('registry down') } })
+      const throwHandler = routerThrow.stack.find((l: any) => l.path === '/api/sim/run-progress').stack.slice(-1)[0]
+      const ctxThrow: any = { body: undefined }
+      await throwHandler(ctxThrow)
+      await new Promise(r => setTimeout(r, 10))
+      expect(ctxThrow.body.ok).toBe(true)
+    } finally {
+      delete process.env.HERMES_HOME
+      rmSync(home, { recursive: true, force: true })
+    }
+  })
 })

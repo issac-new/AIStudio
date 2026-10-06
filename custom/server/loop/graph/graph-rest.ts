@@ -8,11 +8,38 @@
 import Router from '@koa/router'
 import { promises as fs } from 'fs'
 import type { GraphService } from './graph-service'
-import type { EventLogStore } from './event-log-store'
+import type { EventLogStore, GraphLogEvent } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
+
+/** 外部源 run 骨架应答的事件上限（详情页时间轴规模内一次拉全量，与 replay 同语义） */
+const EXTERNAL_RUN_EVENT_LIMIT = 10_000
+
+/** 事件 kind → run 状态（与前端 runs store 的日志词汇同表；取最后一个可判状态的事件） */
+const STATUS_BY_KIND: Record<string, string> = {
+  'run.started': 'running',
+  'node.started': 'running',
+  'interrupt.resumed': 'running',
+  'run.progress': 'running',
+  'interrupt.raised': 'awaiting-input',
+  'run.completed': 'completed',
+  'run.failed': 'failed',
+}
+
+function externalRunStatus(events: GraphLogEvent[]): string {
+  // 时序行走+终态粘滞：completed/failed 之后的 running 族事件（如收官后 sset
+  // 仍在刷 run-progress.json 的 updated_ts）不回摆状态
+  let status = 'unknown'
+  for (const e of events) {
+    const s = STATUS_BY_KIND[e.kind]
+    if (!s) continue
+    if (status === 'completed' || status === 'failed') continue
+    status = s
+  }
+  return status
+}
 
 /**
  * 审批身份服务端盖章（2026-09-10 风险审查 #1）：把 resume 值中的 approver 覆写为认证主体
@@ -164,8 +191,23 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   router.get('/api/graph/runs/:id', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
     const rec = deps.graphService.getRun(ctx.params.id)
-    if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
-    ctx.body = { runId: ctx.params.id, graphId: rec.graphId, instance: rec.instance }
+    if (rec) { ctx.body = { runId: ctx.params.id, graphId: rec.graphId, instance: rec.instance }; return }
+    // 外部源 run（sim-* 等：无内存实例、只有事件骨架）：按事件流回放骨架应答，
+    // 不再 404——「列表有、详情 404」半截态根治（backlog②；列表本就由事件日志派生）。
+    // 前端 RunDetailView 对 graphDefId 缺席有空图兜底（specMissing），时间轴直接吃事件。
+    const events = await deps.eventLog.query(ctx.params.id, { limit: EXTERNAL_RUN_EVENT_LIMIT })
+    if (!events.length) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
+    ctx.body = {
+      runId: ctx.params.id,
+      graphId: events[0].graphId,
+      instance: {
+        status: externalRunStatus(events),
+        updatedAt: new Date(events[events.length - 1].ts).toISOString(),
+        graphDefId: null,
+        external: true,
+        eventCount: events.length,
+      },
+    }
   })
 
   // POST /api/graph/runs/:id/resume — HITL 闭环：应答 interrupt
