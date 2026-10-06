@@ -489,3 +489,6 @@
 # 568=P12 讨好者防线(hermes-agent python 侧，原 564 撞号让位)：system_prompt.py stable 层追加 HERMES_DISCLOSURE_GUIDELINES(与 563 同文)。
 568-agent-disclosure-limits-prompt.patch
 570-client-vuetsc-convergence-fixes.patch
+
+# 571 toolresultguard P1a：ekko 单聊入口输入侧围栏（S0 预筛+S1 本地 Clef，默认关 fail-open）
+571-server-chatrun-input-guard.patch
