@@ -77,7 +77,7 @@
 | R29 身份缝 | **已落** | simharness mx-delivery-lib：dlv_scenario_open 邀 agentMxid+join、dlv_index_update_acct 人/bot 双写面；R29 冒烟 bab1cda 转绿 |
 | ② runs 注册表接入 | **已落+测试过** | overlay eeb8936c：run-ingest 快照摄取（run.started/progress/completed、sim- 前缀、幂等以事件日志为真值）+event-log-registry 共用实例+详情骨架免 404；顺带根治一处边界：终态后 sset 仍刷 updated_ts 会致状态回摆（摄取侧停追进度+推导终态粘滞）。回归 400/400、全量 3816/3816 零失败 |
 | ① 房间列表同步 | **已落（产品+harness 双侧）+测试过** | overlay a48675f7：resolveRoomObservers（env MATRIX_ROOM_OBSERVERS）+taskRoomInvitees 合并两路建房；simharness mx-lib mx_create_room 同名同义观察员位。隐私面一句话结论：观察员非 RACI 当事人、入房全读，默认空名单不外扩可见面，显式配置才启用。「导演可见驱动房间」实证随 run10 配 MATRIX_ROOM_OBSERVERS |
-| P13 承诺步残余（停用步静默） | **已修（live 终验）** | 并行会话：档案件 §五.12 实录（f0667bcd）——registry-admin server-name 对齐+admin-service 失败可见化 |
+| P13 承诺步残余（停用步静默） | **已根治+测试过** | overlay d1ebc8c5+7959a291：getMatrixUserState 存在性探测（missing/deactivated 跳过、403 带状态炸出）+停用被拒响亮报错+server 名推导对齐 provision；守门③④新增 3 例，全量 3823/3823 零失败 |
 | ③ 审批面统一 | **产品侧已落（读+裁决+三重幂等）；harness 入队/消费=③b 挂 run10 前置** | overlay 4c9af88a（merge 5ceac0f2）：第四源 mx-requests.jsonl 翻 PendingItem（eid 全局锚）+decide mx: 分支（四态校验/反应通道已批 409/本通道重批 409/响应文件原子写/历史落账）；三重幂等闸防双通道重批；守门 pending-controller 11/11。③b（harness 入队+轮询 mx-responses 消费）随 run10 hybrid 小样验证实施——与上行原建议同口径 |
 
 **验证口径声明**：①②④ 服务端逻辑=新增/扩展单测 17 项+相邻回归（graph+sim 400/400、matrix+services 106/106、全量 3816/3816）+vite build 编译门；**浏览器实拍验收（testid 取帧/导演视角房间列表/运行中心 sim-* 条目）与 run10 起跑 smoke 未在本轮执行**——属排期验收判据的实证项，如实标注不冒充达成。
