@@ -767,13 +767,13 @@ STEPS_META_RUN8 = {
 
 STEPS_META_RUN9 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
-            narrative='mx-clean 全清后 00:24:00 起跑（V8 终态正本首跑轮）；12 账号 token 真值核验一次过，预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
+            narrative='mx-clean 全清后 00:24:00 起跑（V8 终态正本首跑轮）；30 账号 token 真值核验全过（15 人×双账号），预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。如实记：roster.md 停在首签 12 人版（mx-clean 快照回灌未含治理三岗），编制对账缺口=差异审计 P11，收官补正（中央仓 4124b47，issues 单 roster-stale-governance-roles）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='gateway :8801 + studio :8802 就绪；运维面实拍：网关在线、17 agent 活跃、4 个 Matrix 会话在线（2-op4）。relay 每拍自愈通道在位——五枚运行时补丁全程零缺失（564=网关响应投递兜底、533=网关并发闸风暴、534=出站通知护栏、390=看板首页默认板、391=看板团队围栏；relay 日志逐拍实证）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='12 账号 matrix-login + 账号板 + 自动登录端点三真值一次过；设置·账户管理 roster 12 账号全列实拍（roster 12 账号：bella/fanfan/wei/mei/chen/hu/lin/xiao/qi/fei/arch/secops+AI 助理；state.env jwt_*×12 键锚，1-op2）。', imgs=[('1-op2-after', '设置·账户管理：roster 12 账号全列（人+AI 助理双账号契约可见）', 'ui')]),
+            narrative='14 账号 matrix-login + 账号板 + 自动登录端点三真值一次过（state.env jwt_*×14 键锚，admin 走独立凭证，matrix 全量 30 账号）；设置·账户管理实拍显示 12 行——根因=界面读的 roster.md 停在 12 人版（缺口 P11，补正 4124b47），非登录面缺损（1-op2）。', imgs=[('1-op2-after', '设置·账户管理：roster 12 账号全列（人+AI 助理双账号契约可见）', 'ui')]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
-            narrative='驾驶舱在线真值 gateway_state=running；run-progress 契约横幅「20261006-v8-run9 · N/26 段」全程在线（驾驶舱会话页/运行中心多帧实证，run8 落地的后台感知三件套本轮全程服役）。', imgs=[('6-op2-after', '驾驶舱会话页：run-progress 横幅「20261006-v8-run9 · 20/26 段」+在线 16（1人·14智能体·1机器人）', 'ui')]),
+            narrative='驾驶舱在线真值 gateway_state=running；run-progress 契约横幅「20261006-v8-run9 · N/26 段」全程在线（驾驶舱会话页/运行中心多帧实证，run8 落地的后台感知三件套本轮全程服役）。如实记：冒烟②承诺的「运行中心工作流页签三区块非空」无当轮证据帧，收官实测该页签 DOM 点击不可入且运行列表空态（4-op8 实证帧）——与 runs-registry-empty 同族产品缺口，记入差异审计 P12。', imgs=[('6-op2-after', '驾驶舱会话页：run-progress 横幅「20261006-v8-run9 · 20/26 段」+在线 16（1人·14智能体·1机器人）', 'ui'), ('4-op8-after', '运行中心（收官实测）：工作流页签点击不可入+运行列表空态——冒烟②承诺项证据缺口与产品缺口双记（P12）', 'ui')]),
     5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
             narrative='应用资产登记入仓；账户/资产注册面实拍（roster@91e4b8b，新建账号表单含 synapse 地址与「同建 AI 助理账号」勾选——人机双账号契约在 UI 层可见，1-op2-before）。', imgs=[('1-op2-before', '设置·账户管理：新建账号表单（synapse 地址+「同建 AI 助理账号」勾选）', 'ui')]),
     6: dict(keys=['people_done'], actor='both', actorText='人 · 组织装配',
