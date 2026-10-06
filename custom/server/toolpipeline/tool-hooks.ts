@@ -10,6 +10,7 @@
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { ekkoGuardHook } from '../toolresultguard'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -51,22 +52,25 @@ function appendEntry(entry: ToolExecAuditEntry): void {
 }
 
 /** 观测钩子（v1）：pre 记键名，post 记结局。 */
-export const ekkoToolExecuteHooks = [
-  {
-    async preExecute(name: string, input: Record<string, unknown>) {
-      appendEntry({ ts: Date.now(), phase: 'pre', tool: name, inputKeys: Object.keys(input ?? {}).slice(0, 20) })
-    },
-    async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string }) {
-      appendEntry({
-        ts: Date.now(),
-        phase: 'post',
-        tool: name,
-        ok: typeof result?.ok === 'boolean' ? result.ok : undefined,
-        error: typeof result?.error === 'string' ? result.error.slice(0, 200) : undefined,
-      })
-    },
+const auditHook = {
+  async preExecute(name: string, input: Record<string, unknown>) {
+    appendEntry({ ts: Date.now(), phase: 'pre', tool: name, inputKeys: Object.keys(input ?? {}).slice(0, 20) })
   },
-]
+  async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string }) {
+    appendEntry({
+      ts: Date.now(),
+      phase: 'post',
+      tool: name,
+      ok: typeof result?.ok === 'boolean' ? result.ok : undefined,
+      error: typeof result?.error === 'string' ? result.error.slice(0, 200) : undefined,
+    })
+  },
+}
+
+// toolresultguard P1a（2026-10-06 五文轮）：postExecute 增加注入判定/隔离改写
+// （结果回填模型前）。守卫默认关（TRG_ENABLED=0 时零行为变化），超时/离线
+// fail-open，S0 预筛兜底——关闭态与既有 v1 观测语义完全一致。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook()]
 
 /** 读尾部（测试/消费面）。 */
 export function readToolExecAudit(limit = 100): ToolExecAuditEntry[] {

@@ -1,0 +1,33 @@
+diff --git a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
+--- a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
++++ b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
+@@ -50,6 +50,8 @@ import { buildCompressedHistory, getOrCreateSession } from './compression'
+ import { handleEkkoSessionCommand, parseEkkoRunCommand } from './ekko-session-command'
+ import { resolveBridgeRunModelConfig, type RunModelGroup } from './model-config'
+ import { persistRunMessages, type RunMessageDraft } from './message-persistence'
++// HERMES_CUSTOM[toolresultguard] 输入侧围栏（2026-10-06 五文轮 P1a）
++import { guardUserInput } from '../../../../custom/toolresultguard'
+ import { buildOutboundRunEvent } from './resume-payload'
+ import { estimateUsageTokensFromMessages } from './usage'
+ import type { BackgroundContinuationContext, ChatCodingAgentId, ContentBlock, QueuedRun, SessionState } from './types'
+@@ -444,6 +446,19 @@ export async function handleEkkoAgentRun(
+     return
+   }
+   const authenticatedUserId = socket.data?.user?.id == null ? undefined : String(socket.data.user.id)
++  // HERMES_CUSTOM[toolresultguard] P1a（2026-10-06 五文轮）：输入侧围栏。
++  // S0 正则预筛近零延迟，可疑才升级本地 Clef 判定（TRG_ENABLED 默认关；
++  // 超时/离线 fail-open 放行并留痕）。位于 session 状态创建之前——拒绝路径
++  // 与上方参数校验失败同构（emit + return，无需清理 isWorking/队列）。
++  const inputGuard = await guardUserInput(contentBlocksToString(data.input), {
++    sessionId,
++    profile,
++    source: 'ekko_chat',
++  })
++  if (inputGuard.blocked) {
++    socket.emit('run.failed', { event: 'run.failed', session_id: sessionId, error: `input guard blocked: ${inputGuard.reason}` })
++    return
++  }
+ 
+   socket.join(`session:${sessionId}`)
+   const state = getOrCreateSession(sessionMap, sessionId)
+ 
