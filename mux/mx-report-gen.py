@@ -1842,7 +1842,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
   <h2 class="section-hd">六域审计 · 每域一个交付问题（逐域实测）</h2>
   {domains_table()}
-  <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/gov）「六域体检」可在真实流程中随时重跑并累积台账</p>
+  <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/board 治理页签组，v0.7.30 起 /app/gov 重定向至此）「六域体检」可在真实流程中随时重跑并累积台账</p>
 
   <h2 class="section-hd">问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
