@@ -1,45 +1,32 @@
 # 五文深读与 SwarmStudio 能力完善方案
 
-日期：2026-10-06
+日期：2026-10-06（v3 终态整理，同日深夜）
 原文存档：`specs/assets/wx-articles-2026-10-06/`（1-5.txt 全文 + metadata.json）
-状态：调研完成，方案待选做（编号清单见第 4 节，等点名执行）
+状态：**P1a 已落地合入 main**（工具结果+输入双拦截点、S0/S1/缓存/熔断/fail-open/审计全链路，flash 主力 e2e 3/3）；判定后端定型 flash-4bit 主力；余序 P2 校准 → P1b → P3 → P4 → P5 → P6（§3 执行表）
 
 ## 0. 结论
 
 五篇文章按"对 SwarmStudio 当前缺口的命中度 × 落地代价"排序，价值从高到低是：
 
-1. **文 5（Jev 安全围栏设计）命中度最高**。SwarmStudio 的安全零件齐全（审批八态、风险分级、SSRF、PII 脱敏），但零件没有组成流水线：缺置信度三段门控、缺工具结果回注检测、缺输出侧流式围栏、缺 REWRITE 态。这篇文章等于一份现成的组装图。
+1. **文 5（Jev 安全围栏设计）命中度最高**。SwarmStudio 的安全零件齐全（审批八态、风险分级、SSRF、PII 脱敏），但零件没有组成流水线：缺置信度三段门控、缺工具结果回注检测、缺输出侧流式围栏、缺 REWRITE 态。这篇文章等于一份现成的组装图——**其输入侧+工具结果侧两拦截点已由 P1a 落地**（§4）。
 2. **文 2（Jev-Omni）交付的不是模型而是纪律**：置信度必须校准后才配做门控阈值。SwarmStudio 已有四处 JEV 集成，但没有任何一处测过校准误差（ECE）。
 3. **文 1（Hindsight 记忆引擎）指认了一个具体浪费**：`memory_embeddings` 表建了但全仓零写入零查询，向量检索是"有表无引擎"状态；召回纯词法。
 4. **文 4（RSI 治理）与既有 rsi-maturity 自检衔接最顺**：分级已钉在 L1-L5，缺的是运行时四指标采集与时间窗节奏门。
 5. **文 3（SAT 自组织团队）理念最前沿但全量代价最大**：策略学习回路不适合一期；其"独立作答→声明审计→裁决"模式与"少数派保护"规则可先做成群聊可选 preset。
 
-全部方案编号 P1-P6 见第 4 节，建议优先级 P1 > P2 > P4 > P3 > P5 > P6。
+全部方案编号 P1-P6 见第 4 节。**判定后端选型过程（用户三轮裁决）**：JEV 闭源指认 → 开源对照（Clef/OneJev/Laya，见下表）→ 27B 定选（实测延迟 163s 不可同步）→ **终态 flash-4bit 主力 + 27B 备件 + Laya 退役**。
 
-**更正（2026-10-06 用户指认）**：JEV（TypeSafe AI）是闭源托管 API，上游集成依赖 `@typesafe-ai/sdk@0.6.0`、须配 API key（`services/jev/client.ts:60-62`，baseUrl/model 为配置项）。凡本文涉及"JEV 快判"处，判定内核一律改为可插拔后端，开源可用项：
+**判定后端定选与实测终态（2026-10-06 深夜，M1 Pro 32GB）**：
 
-- **Cloudflare Clef / Clef-flash**（2026-10-01 发布，Apache 2.0）：Clef 27B（Qwen3.8-27B 后训练 + joint schema head，BF16 约 54.7 GB）；Clef-flash 9B（Qwen3.5-9B 后训练，多模态，BF16 约 18.8 GB，中位 38.8 ms）。模型卡称 API 与 Jev 的 SystemOne 接口完全兼容（POST /v1/systemone 同构，choice/score/noul 三原语）。私有化部署官方支持 vLLM / SGLang / Transformers / Docker Model Runner，另有社区 GGUF 量化（clef 20 个、clef-flash 34 个）可跑 llama.cpp / Ollama。也可走 Workers AI 托管。**兼容性声明未经本机实测，P2 第一件事就是验证。**
-- **OneJev 家族（OmniJev，27B 卡 Apache 2.0）**：多模态 System One 决策模型，四档尺寸 0.8B / 4B / 9B / 27B 全开源权重。27B 为 Qwen3.8-27B 全量微调（99,193 题，真实 agent 运行数据），BF16 约 54.7 GB，另有 FP8 版 30.4 GB（单张 48 GB 卡可跑，与 16 位答案一致率 98.7%）。官方自带服务端（`qev serve`，实现 SystemOne API 并扩展 media 字段），支持 vLLM / SGLang / Transformers / GGUF。H200 上单题 189 ms（含 1280x720 截图），单请求 10 题共 324 ms。小尺寸家族页未标许可证，选用前须到各模型卡确认。
-- **Laya**：开源判别式模型（ModernBERT 双向编码器，421M 参数，单次判定约 33ms，可本地部署），适合高频短文本判定。限制：非 SystemOne 接口（需自写适配层）、上下文默认 512 token（输入必须先归一化裁剪）、候选选项数有限。
-- 托管 Jev 仅在用户已持 key 时作为可选后端，不作为默认依赖。
+| 档位 | 模型 | 端口 | 实测延迟 | 用途 |
+|---|---|---|---|---|
+| **主力** | `mlx-community/clef-flash-4bit`（9B，Apache 2.0） | **8000** | 287tok 3.3-3.6s；守卫 schema 646tok 8.8s | 一切判定含守卫同步路径 |
+| 备件 | `mlx-community/clef-4bit`（27B） | 8001 | 287tok 13-14s；646tok 163s | 异步低频高质量判定（`CLEF_MODEL=27b` 手动起，与主力不同时跑） |
 
-**本机后端定选（2026-10-06，约束：M1 Pro 32 GB / 仅 MLX 4bit / 不用 flash）**：
-
-- 唯一同时满足全部约束的候选是 **`mlx-community/clef-4bit`**（Clef 27B 的 MLX 4bit 量化版，Apache 2.0）。决策头 joint_head 未量化原样保留（bf16），自带 `clef_mlx.py serve` 起本地 `POST /v1/systemone` 服务（兼容 Jev/SystemOne 协议，默认仅绑 127.0.0.1、无鉴权、无批处理）。
-- 量化代价（模型卡口径）：Decision Index 抽样 4bit 57.02 vs 8bit 57.96（同答案率 98.1%），与官方 61.21 的差距主要来自评测框架差异；文本 10/10 顶层答案与 bf16 一致（最大概率差 0.037）。
-- **内存边界**：下载 16.3 GB，峰值 17.1 / 17.5 / 19.6 GB（1k/4k/16k token），官方最低要求即 32 GB Mac——本机正好压线。判定 state 须裁剪在 4k token 内（对应 P1 的 L2 归一化裁剪设计），16k 长输入与日常开发负载并行有挤爆风险。
-- **延迟预期**：官方基准 M5 Max 上 1k token 1.4 s、16k 26 s，并警告基础 M 系芯片慢数倍；M1 Pro（200 GB/s 带宽）按 2.5-4 倍折算，短 state（几百 token）单次判定预计 1-3 s，**须实测**。适合门禁/复审/注入检测等异步判定；同步逐条消息路由要评估体感。
-- OneJev-27B 在 MLX 约束下出局（全家族只有 GGUF/ONNX，无 MLX 量化；bartowski/GGUF Q4 约 16 GB 走 llama.cpp 是放宽约束后的多模态备选）。Laya 出局（Decision Index 6.04 排 63/73、非 SystemOne 接口、上下文 512，仅剩 5.8 ms 延迟一个优点，量级不缺）。
-- 接线方式：SwarmStudio Models 页 JEV tab 的 API root 指向 `http://127.0.0.1:8000`（上游 `jev.md` 约定 root 不带 `/v1`；`client.ts:58` 要求 apiKey 非空，本地服务无鉴权填任意串即可）。字段级兼容性仍按 P2 实测确认。
-
-**本机实测数据与最终拓扑（2026-10-06 深夜终态，M1 Pro 32GB）**：
-
-- **拓扑（用户裁决）**：Laya 退役（plist/脚本归档 `~/.hermes/backup/laya-retired-20261006/`，venv 与 HF 缓存重复副本已删、腾 7G）；**主力 = clef-flash-4bit（9B）on 8000**，27B 降备件（8001，`CLEF_MODEL=27b` 手动起，两档不同时跑）。
-- 兼容性：**验证通过**——上游 `jev.md` 同款三原语样例两档语义全对（27B：billing 0.9491；flash：billing 0.9872），响应结构与 SDK 契约逐字段一致。
-- 判定质量：**两档均验证通过**——注入样本 27B p=0.9906/A1、flash p=0.9508/A7（该样本同时含覆盖指令与窃取指令，两归类皆合理）；技术文档难负例不误杀。
-- **延迟实测**：flash 287tok 稳态 3.3-3.6s、守卫 schema 646tok 8.8s；27B 287tok 13-14s、646tok 163s。原"短 state 1-3s"预估对 27B 错 1-2 个数量级（M1 Pro 对 27B 4bit 的 prefill 实测为模型卡警告的 ~10 倍），flash 档兑现了该预估。
-- 操作结论（终版）：①flash 主力下守卫同步路径**可用**——`TRG_TIMEOUT_MS` 默认已定 12000（S1 真正可达，仅 S0 命中的可疑内容付 ~9s）；②四门切换在 flash 档全部可切（3.3-3.6s/条），路由类门的体感由 suggest 模式先观察；③27B 备件仅用于异步低频高质量判定（摘要复审/工作流质量/回合完成态复核）。
-- 端到端：27B 档 e2e 3/3 过（163s 判定实证全链路）；flash 档见 e2e.live 复跑记录。
+- 退役：Laya（服务停、plist/脚本归档 `~/.hermes/backup/laya-retired-20261006/`、venv 1.2G + HF 缓存重复副本 5.8G 已删腾 7G）；闭源 Jev 不作依赖（用户已持 key 时可作可选后端）；OneJev 出局（全家族无 MLX 量化）。
+- 验证结论：兼容性过（上游 `jev.md` 三原语样例两档语义全对，响应结构与 SDK 契约逐字段一致）；判定质量过（注入样本 27B p=0.9906/A1、flash p=0.9508/A7；技术文档难负例不误杀）；e2e 两档均 3/3 过（flash 全套 27s）。
+- 操作含义：守卫默认 `TRG_TIMEOUT_MS=12000`（S1 真正可达）；四门切换 flash 档全部可切，路由类门先 suggest 观察体感；27B 仅回合完成态复核类异步场景。
+- 运行手册与脚本正本：`overlay/runtime/clef/`（start-clef.sh 双模 / verify-clef.sh / README 含全部纪律）。
 
 **私有能力对照（2026-10-06 模型卡口径，延迟为 H200 官方数据）**：
 
@@ -136,18 +123,18 @@ Hinton、Bengio 等 22 人论文（arXiv:2609.36054）解读。要点：
 
 按"补最薄拦截点优先、复用现有零件优先、代价从低到高"排序。每项一句代价，详细设计入选做后另立 spec。
 
-**v2（2026-10-06 晚，Clef 定选后调整）**：判定后端确定为本地 `mlx-community/clef-4bit`（约束：M1 Pro 32GB、短 state 预计 1-3s/次待实测、单请求无批处理、峰值内存 17GB 须与开发负载错峰）。调整后执行序（**落地状态 2026-10-06 深夜**：步 1 代码已落 feat/toolresultguard 并合入 main——S0/S1/门控/缓存/熔断/fail-open/审计 + 工具结果侧零 patch 接线 + patch 571 输入侧；单测 24/24、全量 vitest 3847 过、server tsc 0 错；**默认关**，启用等步 2 实测；步 0 等 clef 分片下完后 verify-clef.sh 再切）：
+**v3 执行表（2026-10-06 深夜终态）**——步 1 全量完成（含 v2 时列为"补排"的输入侧与缓存）、步 2 的 bring-up/延迟/e2e/版本锁定已完成、判定后端 flash 主力定型：
 
-| 步 | 内容 | 一句代价 | 性质 |
+| 步 | 内容 | 状态（2026-10-06 深夜） | 余项 |
 |---|---|---|---|
-| 0 | 上游四门 JEV 调用切本地 Clef（改配置） | 零代码：Models 页 JEV tab API root 指 127.0.0.1:8000 | 配置 |
-| 1 | P1a 工具结果回注检测 | 中：overlay 新域 + 小 patch，问句合并/裁剪/队列三纪律 | A类+小B |
-| 2 | P2 判定服务落地体检（收窄版） | 小：verify 脚本 + ECE 校准 + 延迟画像 + 版本锁定 | 伴随 0/1 |
-| 3 | P1b 输出围栏保守版 | 中：会话完成态整段判定与风险标记，不动流式管线 | A类优先 |
-| 4 | P3 RSI 指标面板 + 节奏门 | 中：指标采集 + 治理面板 + loop 窗口闸 | A类 |
-| 5 | P4 记忆混合检索 | 中-大：embedding 走远程 API（避让 32GB 内存），召回四路融合 | A类+小B |
-| 6 | P5 SAT 结构化协作 preset | 中：clef 批量 noul 问句恰好匹配声明裁决形态，成本较原估下降 | A类 |
-| 7 | P6 跨 CLI 共享记忆库 | 大：MCP server 化 + 多 CLI 验证面 | A类 |
+| 0 | 上游四门 JEV 调用切本地 Clef（改配置） | **待做**（零代码：Models 页 JEV tab API root 指 127.0.0.1:8000；flash 档四门全可切） | 用户操作或随 run10 预检执行 |
+| 1 | P1a 工具结果回注检测 + 输入侧围栏 + 缓存 | **已合入 main**（域 `custom/server/toolresultguard/` + patch 571 + 工具瀑布零 patch 接线；默认关；单测 24/24 全量 3847 过 tsc 0 错 e2e 3/3） | 生产启用（TRG_ENABLED=1）随步 0 |
+| 2 | P2 判定服务落地体检 | **大部分完成**：verify 脚本过、延迟画像入档（§0）、版本三元组锁定、e2e 两档 3/3 | ECE 校准集（100-300 条带真值样本）+ 阈值出处落库 |
+| 3 | P1b 输出围栏保守版 | 待做（回合完成态整段判定+风险标记，不动流式；27B 备件正合适此场景） | — |
+| 4 | P3 RSI 指标面板 + 节奏门 | 待做；围栏指标看板（误杀率/低置信率/灰区占比）并入本步 | 与推演报告同源取数（§6 风险） |
+| 5 | P4 记忆混合检索 | 待做（embedding 强制远程 API） | — |
+| 6 | P5 SAT 结构化协作 preset | 待做（clef 批量 noul 问句匹配声明裁决形态） | 验收含生成/选择分离指标 |
+| 7 | P6 跨 CLI 共享记忆库 | 待做 | — |
 
 | 编号 | 名称 | 来源 | 原一句代价（v1） |
 |---|---|---|---|
@@ -160,21 +147,17 @@ Hinton、Bengio 等 22 人论文（arXiv:2609.36054）解读。要点：
 
 ## 4. 方案要点
 
-### P1a/P1b 工具结果回注检测 + 输出围栏（文 5，v2 按 Clef 本地约束改写）
+### P1a/P1b 工具结果回注检测 + 输出围栏（文 5；P1a 已落地，本节为终态记录）
 
-现状最薄的两个拦截点不变：工具结果只做体积消毒就进入上下文（A5 间接注入无语义检测）；模型输出直通前端无逐段检查。**v2 调整**：判定内核定为本地 clef-4bit 后，1-3s 级延迟与"单请求无批处理"重塑了两个拦截点的设计与先后——回注检测先行（异步关口，延迟无感），流式围栏降级为保守版（完成态判定）。
+**P1a 已落地（2026-10-06 合入 main，merge 至 1b22e790）**，实际范围比 v2 计划多两项（输入侧 + 结果缓存，v2 §4.5 原列为"补排"）：
 
-**P1a 工具结果回注检测（先行）**，三条 Clef 约束纪律：
+- **域**：`custom/server/toolresultguard/`（types/rules/questions/client/cache/audit/decide/index 八文件）——S0 中英双语注入特征规则库 15 条权重分级（预筛灵敏、判定定罪分层：S0 只决定"值不值得付一次判定"，命中 ≠ 攻击成立）；S1 本地 Clef SystemOne 三问合一调用（is_attack noul + attack_category A0-A8 choice + severity score，单请求多问句纪律）；τ 三段门控（0.85/0.25）四态裁决（input 高置信 BLOCK / tool_result 高置信 REWRITE 隔离改写 / 灰区 CONFIRM 警示标记放行 / 低置信 PASS）；TTL 结果缓存；熔断器（5 连败开 120s）；超时 12s fail-open；JSONL 审计（sha1 脱敏不落原文）。
+- **接线**：工具结果侧组合进 patch 565/566 既有瀑布钩子（零新增 patch，postExecute 在结果回填模型前改写/标记）；输入侧 patch 571（handle-ekko-agent-run 入口、session 状态创建前、拒绝路径与参数校验同构）。
+- **配置**：默认关（`TRG_ENABLED=0` 零行为变化）；env 全量可调（TRG_BASE_URL 默认 8000/flash、TRG_TIMEOUT_MS 默认 12000、TRG_TAU_HIGH/LOW、TRG_S0_GATE 等）；刻意不走上游 JEV facade/@typesafe-ai/sdk（与 Studio JEV Profile 解耦，不在 jev-harness 契约面）。
+- **门禁与验证**：域单测 24/24（公共面测试封闭化——不依赖真端点存活）、全量 vitest 534 文件 3847 过、server tsc 0 错、e2e 真端点 3/3（flash 档全套 27s，27B 档 163s 判定实证）；注入样本 flash p=0.95 正确检出、技术文档难负例不误杀。
+- **余项**：验收用的注入样本集扩到 30-50 条（当前 e2e 三条 + 单测十余条）随 P2 校准集一起建。
 
-- **问句合并**：clef 一次只处理一个请求，但单请求可并发多问句——把 `is_tool_result_injection`（noul）+ `injection_category`（choice，A5/A6 枚举）+ `severity`（score）打包成一次 `/v1/systemone` 调用，不做多次往返。
-- **输入裁剪**：工具结果先归一化截断（取头尾、去 base64 大块，复用 `tool-result-sanitizer` 已有逻辑），state 控制在 4k token 内——防 16k 截断失真，也防 17GB 常驻之上再顶内存峰值。
-- **队列与降级**：全部判定过上游 sidecar 队列排队（避免并发打爆单锁服务）；超时 3s fail-open 并留痕告警——初版工具结果检测宁可放行也不拖死主流程，灰区升级 S2 复核（S2 即普通 LLM 调用）。
-
-落点：overlay 新域 `custom/server/toolresultguard/`（A 类，S0 规则 + 问句构造 + 四态裁决 + 留痕），挂接复用 patch 565/566 的工具执行瀑布 hook（小 B 类 patch 一处）。命中处置：高置信注入 REWRITE（剥离指令段后回注）或 BLOCK（拒注+告警），留痕入 toolpipeline 审计。
-
-验收：注入样本集（30-50 条：网页/文件内容夹带"忽略之前指令"、伪装系统消息、工具输出投毒）拦截率 ≥ 90%；难负例（含指令样式的合法技术文档，如本 spec 这类）误杀 ≤ 2%；每次判定延迟与降级事件留痕可查。
-
-**P1b 输出围栏保守版（后行）**：流式逐段判定在本地延迟下不可行（每段 1-3s 会毁掉流式体验），v1 的"逐段送判、命中即中断"降级为：会话/回合完成态整段（裁剪至 4k）判定 `is_response_unsafe` + 风险标记 + 高危通知（复用 webhooks 事件总线推 group.chat.completed 类事件），不动上游流式热路径（零 B 类大 patch）。若未来判定后端换低延迟档（云端 Clef 或更小本地方案），再升级回实时版。
+**P1b 输出围栏保守版（后行）**：流式逐段判定在本地延迟下不可行（每段秒级会毁掉流式体验），"逐段送判、命中即中断"降级为：会话/回合完成态整段（裁剪至 4k）判定 `is_response_unsafe` + 风险标记 + 高危通知（复用 webhooks 事件总线），不动上游流式热路径（零 B 类大 patch）。**flash 主力（8.8s/守卫 schema）与 27B 备件（163s）都适配此异步形态；27B 的 RAGTruth 优势（79.4 vs 35.6）在输出内容真伪判定上更对口。**若未来判定后端换低延迟档，再升级回实时版。
 
 ### P2 判定服务落地体检（v2 收窄：选型已定，只剩落地验证）
 
@@ -202,7 +185,7 @@ rsi-maturity 已把现状钉在 L1-L5 分级表上（静态）。文 4 补的是
 
 `memory_embeddings` 是建了两年的表（夸张说法，实为预留 schema），启用它。
 
-落地路径：embedding provider 接入（复用 provider 配置体系）。**v2 约束：embedding 一律走远程 API，不在本地再跑 embedding 模型**——clef-4bit 已占 17GB，32GB 机器上叠加任何本地模型都会互相挤兑；无 provider 时优雅回退纯词法，不阻塞。写入时机挂在现有记忆写入事务后异步补；召回改为词法（FTS5）+ 向量 + 时序（created_at 过滤）+ 邻接（supersedesId 链与知识图谱实体关联）四路 RRF 融合；新增 `memory_reflect` 工具：按问题拉相关记忆子图，查取代代冲突与低置信矛盾节点，产出矛盾清单（LLM 或 JEV 复核）。记忆演化时间线视图（supersedes 链可视化）作为 UI 增项顺带落。
+落地路径：embedding provider 接入（复用 provider 配置体系）。**v2/v3 约束：embedding 一律走远程 API，不在本地再跑 embedding 模型**——32GB 机器上本地模型名额已给判定服务（flash 主力约 7-8.6GB），叠加 embedding 模型会互相挤兑；无 provider 时优雅回退纯词法，不阻塞。写入时机挂在现有记忆写入事务后异步补；召回改为词法（FTS5）+ 向量 + 时序（created_at 过滤）+ 邻接（supersedesId 链与知识图谱实体关联）四路 RRF 融合；新增 `memory_reflect` 工具：按问题拉相关记忆子图，查取代代冲突与低置信矛盾节点，产出矛盾清单（LLM 或 JEV 复核）。记忆演化时间线视图（supersedes 链可视化）作为 UI 增项顺带落。
 
 边界（文 1 自己声明的限制照收）：提炼与向量化有额外 token 成本，配置开关默认关，按 profile 开。
 
@@ -224,16 +207,16 @@ Hindsight 最出圈的能力在开发场景：Claude Code 里排查过的模块�
 
 验收：两个 CLI 同 bank 写后读一致；未绑定 bank 的 CLI 行为零变化。
 
-## 4.5 缺口清点（2026-10-06 v2 后对账）
+## 4.5 缺口清点（2026-10-06 v3 终态对账）
 
-调研对照表（第 2 节）全部缺口对 v2 执行序逐条对账后，仍在计划外的如下：
+调研对照表（第 2 节）全部缺口对 v3 执行表逐条对账：
 
-**建议补排（代价小、收益直接）**：
+**已并入落地（原"建议补排"四项的两项）**：
 
-- **输入侧围栏（文 5 F01，提示词攻击/越狱检测）**：v2 只排了工具结果（P1a）与输出侧（P1b 保守版），用户输入侧漏了。群聊有远程 agent 接入（agent-relay），攻击面真实存在。补法：并入 `toolresultguard` 域加 `stage=input` 判定点，同一套问句模式（is_prompt_attack + attack_category + severity），代价小。
-- **判定结果缓存（文 5 接口幂等设计）**：同一 state 指纹 + 问句集在 TTL 内直接回缓存结果。对本地 1-3s 延迟的 clef 收益直接（重复判定免排队）。上游 sidecar 未见缓存设施（services/jev/ 仅 budget/contract/payload/queue/sidecar 五文件，核实后定），可并入 P1a 落地。
-- **围栏指标看板与告警阈值（文 5 监控指标）**：误杀率、低置信率、灰区占比、判定延迟分布。并入 P3 治理面板一并列出，不单独立项。
-- **SAT 生成/选择分离指标（文 3）**：团队覆盖率 vs 最终准确率两口径。P5 验收加一项即可（方案池含正确答案比例 vs 裁决选中比例）。
+- **输入侧围栏**：已随 P1a 落地（stage=input 判定点 + patch 571，§4 P1a 节）。
+- **判定结果缓存**：已随 P1a 落地（TtlCache，state 指纹 + 问句集键）。
+- **围栏指标看板与告警阈值（文 5 监控指标）**：仍并入 P3 治理面板一并列出（误杀率/低置信率/灰区占比/延迟分布，数据源=toolresultguard JSONL 审计台账）。
+- **SAT 生成/选择分离指标（文 3）**：仍并入 P5 验收（方案池含正确答案比例 vs 裁决选中比例）。
 
 **明确不排（带理由）**：
 
@@ -255,8 +238,9 @@ Hindsight 最出圈的能力在开发场景：Claude Code 里排查过的模块�
 ## 6. 风险
 
 - **patch 面继续扩大**：series 已 294 条 active，P1（输出流式围栏触及上游 group-chat socket）与 P5（触及群聊模式字段）难免 B 类 patch，按 A 类优先原则尽量走 custom/ + 注册表。
-- **判定后端依赖**：已定选本地 `mlx-community/clef-4bit`（Apache 2.0，无外部服务依赖）。剩余风险是版本敏感（clef_mlx 依赖 mlx-vlm 内部接口，三元组 mlx 0.32.3 / mlx-vlm 0.7.6 / 快照日期锁定，升级须过 P1a 样本回归）与量化损失（Decision Index 抽样较 8bit 约 -1 分，靠 P2 自有样本 ECE 实测定阈值）。fail-open/fail-closed 按场景可配（核心审批链 fail-closed，一般对话与工具结果初版 fail-open）。
-- **内存共存（v2 新增）**：clef 常驻约 17GB，与 SwarmStudio dev（node/electron/vite/浏览器）叠加时 32GB 无余量。纪律：决策 state ≤4k token；16k 输入禁用；判定服务按需启停（start-clef.sh + /health 探活，不在线即降级 fail-open）；不在本机再跑其他本地模型（P4 embedding 走远程 API）。
+- **判定后端依赖**：已定选本地 Clef 家族（主力 flash-4bit + 备件 27B，均 Apache 2.0，无外部服务依赖）。剩余风险是版本敏感（clef_mlx 依赖 mlx-vlm 内部接口，三元组 mlx 0.32.3 / mlx-vlm 0.7.6 / 快照日期锁定，升级须过 P1a 样本回归）与量化损失（flash 4bit Decision Index 抽样约 -1 分，靠 P2 自有样本 ECE 实测定阈值）。fail-open/fail-closed 按场景可配（核心审批链 fail-closed，一般对话与工具结果初版 fail-open）。
+- **内存共存（v3 终态）**：主力 flash 常驻约 7-8.6GB（32GB 宽裕）；27B 备件峰值 17.1-19.6GB 压线，**与主力不同时跑**且不与大型开发负载叠加。纪律：决策 state ≤4k token；16k 输入禁用；判定服务 /health 探活，不在线即降级 fail-open；不在本机再跑其他本地模型（P4 embedding 走远程 API；Laya 已退役不再回潮）。
+- **测试封闭性与门禁（v3 新增，当晚实锤教训）**：公共面测试不得依赖"判定端点未起"这类环境假设（端点常驻后打真模型超时）——mock 判定端或指向关闭端口；shell 管道 `| tail` 会吞 vitest 退出码，门禁必须显式核验 `$?`。
 - **记忆向量化外发隐私**：embedding 调用会把记忆内容送出 provider，P4 默认关、开启时在配置面明示。
 - **推演口径分叉**：P3 指标若另起炉灶会与 simharness 报告对不上账，必须同源取数（此为 run9 报告一致性残余 P17-P22 的教训）。
 
