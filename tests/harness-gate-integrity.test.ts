@@ -665,6 +665,25 @@ describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）',
     expect(dlv).toContain('dlv_events fanfan "$room" "$DLV_GATE_TYPE"')
     expect(dlv).not.toMatch(/dlv_events fanfan "\$room" gate /)
   })
+
+  it('R29 身份缝：案例房邀 bot+index 按账号双写（产品免密=bot 身份，不邀=面板空态）', () => {
+    // 2026-10-06 实锤：产品步 3 免密登录用 gateway Orchestrator channel=bot 账号，
+    // 而 dlv_scenario_open 只邀人类账号+index 只写人类——bot 登录下面板空态。
+    // 钉死：建房循环必须邀 agent_mxid 并用 bot token join；index 有 _acct 双写面。
+    const dlv = read(join(MX, 'mx-delivery-lib.sh'))
+    expect(dlv).toContain('dlv_invite_retry fanfan "$room" "$(agent_mxid "$u")"')
+    expect(dlv).toContain('dlv_index_update_acct "$u-agent" "$(agent_mxid "$u")" "$room"')
+    expect(dlv).toContain('dlv_index_update_acct()')
+  })
+
+  it('delivery 邀入限流兜底：邀请/入房带退避重试+缺员记单（28 账号曾静默缺 12）', () => {
+    // 2026-10-06 实锤：双身份邀请风暴下 Synapse 限流，dlv_invite 的 >/dev/null 与
+    // 无检错 join 把尾部账号静默吞掉。钉死：_retry 族存在+缺员 ISSUE 记单键。
+    const dlv = read(join(MX, 'mx-delivery-lib.sh'))
+    expect(dlv).toContain('dlv_invite_retry()')
+    expect(dlv).toContain('dlv_join_retry()')
+    expect(dlv).toContain('delivery-room-member-missing')
+  })
 })
 
 describe('⑬ runtime 副本须包含补丁面（部署通道不得静默回退已打补丁）', () => {
