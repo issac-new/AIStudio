@@ -1687,6 +1687,74 @@ def gate_cards():
 </div>''')
     return ''.join(cards)
 
+# ── 驾驶舱联动地图（路演版，2026-10-07 用户反馈"UI 联动感不强"）──
+# 三层：①顶部六功能区分区导航（点击跳步）②四条跨区链路（沟通/看板/审批/运行/治理/IDE
+# 同屏串联，每个节点锚点可跳）③步块内"联动"行（本步与哪些区的哪些步同源——从链路
+# 自动反查，双向）。锚点全为页内 #stepN，跨区故事一眼可讲。
+COCKPIT_ZONE_COLOR = {'沟通': '#0369a1', '看板': '#047857', '审批': '#b45309',
+                      '运行': '#7c3aed', '治理': '#334155', 'IDE': '#be185d'}
+COCKPIT_ZONES = {
+    '沟通': [(8, '建群'), (9, '@派发'), (19, '缺陷对话'), (21, 'UAT 对账')],
+    '看板': [(10, '主卡+RACI'), (12, '分诊'), (13, '系分卡'), (17, '排期'), (20, 'REL 三卡')],
+    '审批': [(12, 'lead 确认'), (20, 'G5 准出+人工批准')],
+    '运行': [(4, 'run 横幅'), (23, '审计取证')],
+    '治理': [(5, '资产'), (7, 'G1 冻结'), (15, 'G2 评审'), (22, '台账'), (24, '复盘')],
+    'IDE': [(18, '五步编码'), (25, '任务简报')],
+}
+LINKAGE_CHAINS = [
+    ('需求怎么流动', '一条需求从群里发出到变成看板任务',
+     [(8, '沟通', '建群全量预邀'), (9, '沟通', '@派发+证据要求'), (10, '看板', '主卡落板 RACI 字段'), (12, '看板', '分诊到人')]),
+    ('代码怎么产出', '从评审到编码全程可追溯',
+     [(15, '治理', 'G2 评审卡把关'), (17, '看板', '排期上卡'), (18, 'IDE', 'worktree 五步编码'), (18, '治理', 'G3 门禁+testlog')]),
+    ('质量怎么守住', '缺陷、准出、验收三道闭环',
+     [(19, '沟通', '缺陷对话回流'), (19, '看板', 'commit 回填关联卡'), (20, '审批', 'G5 七项+人工批准'), (21, '沟通', 'UAT 逐条对账')]),
+    ('全程怎么监督', '运行可见、账实相符、经验沉淀',
+     [(4, '运行', 'run 横幅 N/26'), (22, '治理', '工作台账'), (23, '治理', '独立审计'), (24, '治理', '复盘+记忆沉淀')]),
+]
+
+_STEP_LINKS = {}
+for _cname, _cd, _nodes in LINKAGE_CHAINS:
+    for _i, (_n, _z, _lb) in enumerate(_nodes):
+        _STEP_LINKS.setdefault(_n, [])
+        for _m, _z2, _l2 in _nodes:
+            if _m != _n and _m not in [x[0] for x in _STEP_LINKS[_n]]:
+                _STEP_LINKS[_n].append((_m, _z2, _l2, _cname))
+
+def _ck_zone_html():
+    cells = []
+    for zone, items in COCKPIT_ZONES.items():
+        c = COCKPIT_ZONE_COLOR[zone]
+        links = ' '.join(f'<a href="#step{n}">{n}·{H.escape(lb)}</a>' for n, lb in items)
+        cells.append(f'<div class="ck-zone" style="--zc:{c}"><div class="ck-zone-hd">{zone}</div>'
+                     f'<div class="ck-zone-links">{links}</div></div>')
+    chains = []
+    for cname, cdesc, nodes in LINKAGE_CHAINS:
+        seg = ' <span class="ck-arrow">→</span> '.join(
+            f'<a href="#step{n}" class="ck-node" style="--zc:{COCKPIT_ZONE_COLOR[z]}">'
+            f'<span class="ck-node-z">{z}</span>{n} {H.escape(lb)}</a>' for n, z, lb in nodes)
+        chains.append(f'<div class="ck-chain"><div class="ck-chain-hd"><b>{H.escape(cname)}</b>'
+                      f'<span class="ck-chain-desc">{H.escape(cdesc)}</span></div>'
+                      f'<div class="ck-chain-nodes">{seg}</div></div>')
+    return ('<section class="ck-map"><div class="ck-map-hd">驾驶舱联动地图'
+            '<span class="ck-map-sub">同一张驾驶舱，六个功能区协同工作——点击任一节点直达对应步骤档案</span></div>'
+            '<div class="ck-zones">' + ''.join(cells) + '</div>'
+            + ''.join(chains) + '</section>')
+
+def _link_line(n):
+    """步块内联动行：本步与链路上哪些区/步同源（反查自动生成，双向可跳）。"""
+    ls = _STEP_LINKS.get(n) or []
+    if not ls:
+        return ''
+    seen, parts = set(), []
+    for m, z, lb, cn in ls:
+        if m in seen:
+            continue
+        seen.add(m)
+        parts.append(f'<a href="#step{m}" style="color:{COCKPIT_ZONE_COLOR[z]}">{z}·步{m} {H.escape(lb)}</a>')
+    return ('<div class="st-linkline"><b>⟶ 驾驶舱联动</b>（同链路可互跳）：'
+            + ' · '.join(parts) + '</div>')
+
+
 # ── 生成侧栏导航 + 主内容 ──
 nav_items = []
 content_parts = []
@@ -1715,6 +1783,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             body_html = f'''
   <div class="st-sec"><div class="st-sec-hd">① 这步做什么</div>
     <p class="st-story">{gloss_first_use(H.escape(meta["narrative"]))}</p>
+    {_link_line(n)}
     {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
     {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
     {r18_block(n)}
@@ -1757,7 +1826,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
 </section>''')
 
 nav_html = '\n'.join(nav_items)
-content_html = '\n'.join(content_parts)
+content_html = _ck_zone_html() + '\n'.join(content_parts)
 
 def manual_appendix():
     """V8.2 配套③：产品路径参考表（steps_entry）降附录《产品操作手册》——
