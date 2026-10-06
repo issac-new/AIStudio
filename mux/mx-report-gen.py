@@ -657,7 +657,7 @@ STEPS_META_RUN6 = {
     16: dict(keys=['close_done'], actor='ai', actorText='AI · fanfan',
             narrative='fanfan 账号板 RFD-001 主卡 done（18:57 真值）；主卡 body 汇总四 AN 稿+tasklist 链路。', imgs=[]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · fanfan PM',
-            narrative='排期步七连超时根治实录（本轮主线治理素材）：①2400s 窗口<40-60min 任务时长（接力重启即换会话丢进度=结构性不可能过闸）②派发词未写 push 目标而真值盯 origin/main ③账户级限流+网关换血。修复=窗口 7200→活性等待+派发词明示 push origin main（588928b6）+用户裁决"重载任务不限时长只防空转/先拆分再编码"（c84b7909）→fanfan 30 分钟交卷：docs/plan/RFD-001-schedule.md 121 行（4971243，08:43）含 ≥2 人日子任务拆分纪律+DEV/TEST 固定 ID 映射+kanban 建卡+六路派发回执 PLAN-DONE。', imgs=[]),
+            narrative='排期步七连超时根治实录（本轮主线治理素材）：①2400s 窗口<40-60min 任务时长（接力重启即换会话丢进度=结构性不可能过闸）②派发词未写 push 目标而真值盯 origin/main ③账户级限流+网关换血。修复=窗口 7200→活性等待+派发词明示 push origin main（588928b6）+排期执行口径改为"不限绝对时长、以空转判据兜底；先拆分再编码"（c84b7909）→fanfan 30 分钟交卷：docs/plan/RFD-001-schedule.md 121 行（4971243，08:43）含 ≥2 人日子任务拆分纪律+DEV/TEST 固定 ID 映射+kanban 建卡+六路派发回执 PLAN-DONE。', imgs=[]),
     18: dict(keys=['devimpl_done'], actor='ai', actorText='AI · 四开发',
             narrative='假真值披露+真交付并行：四分支存在性检查被 run5 旧分支秒过（08:43:59-08:44:20，devimpl 5 秒连过=分支版新鲜度缺口，branch_fresh 守门 c75cfdb8 已根治未来轮）；同批四 agent 收到 run6 新任务书（含拆分纪律）真实开工——chen DEV-PAYCORE 47 分钟交付（主卡 t_e2a0a099+5 子卡全 done+testlog，28c3517，09:23 推送）、lin DEV-CHALI（10:15）、hu DEV-CHWX（S1/S2/S3 子任务提交，11:38）、xiao DEV-MP 在途。', imgs=[]),
     19: dict(keys=['testpass_done'], actor='ai', actorText='AI · 集成+qi/fei 测试',
@@ -874,7 +874,7 @@ _BASELINE_NOTE={'20261004-v7-run8':('run8 基线=mx-clean 20261004-065954 三旗
 
 
 
-# ── 六域审计（用户指令 2026-09-28：六域各自回答一个交付问题）──
+# ── 六域审计（每域各自回答一个交付问题）──
 DOMAINS = [
     ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass',
      '无漏做（26 步 UI 覆盖逐条核对为零缺图）。两处如实记账边界：邮件通道本期禁用改 matrix 私信；fleet-manifest 四件套无专属界面，步骤 2 以 profiles 配置页承载并在此声明。',
@@ -1435,7 +1435,7 @@ def _art_read(rel: str):
     return raw
 
 def _art_checks_html(raw: str, checks):
-    """模版字段核对（P17 用户反馈升级：呈现字段值摘录，不只 ✅/缺）——
+    """模版字段核对（字段级呈现：字段值摘录，不只 ✅/缺）——
     模版作为标准输入输出的质量标准必须看得见：每个字段名旁给命中值首行摘录
     （≤60 字），未命中保持红"缺"。核对判定跑全文不受截断影响。"""
     ok_all = True
@@ -1687,7 +1687,7 @@ def gate_cards():
 </div>''')
     return ''.join(cards)
 
-# ── 驾驶舱联动地图（路演版，2026-10-07 用户反馈"UI 联动感不强"）──
+# ── 驾驶舱联动地图（路演版：跨区链路+互跳锚点）──
 # 三层：①顶部六功能区分区导航（点击跳步）②四条跨区链路（沟通/看板/审批/运行/治理/IDE
 # 同屏串联，每个节点锚点可跳）③步块内"联动"行（本步与哪些区的哪些步同源——从链路
 # 自动反查，双向）。锚点全为页内 #stepN，跨区故事一眼可讲。
