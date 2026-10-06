@@ -7,6 +7,7 @@ import Router from '@koa/router'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { ingestRunProgress } from './run-ingest'
 
 export interface SimRunProgress {
   runId: string
@@ -33,12 +34,20 @@ export function runProgressPath(homeDir = process.env.HERMES_HOME?.trim() || joi
   return join(homeDir, 'run-progress.json')
 }
 
-export function createSimRunRouter(): Router {
+export function createSimRunRouter(opts?: {
+  /** 推演快照 → 运行注册表摄取钩子（backlog②）；null=关闭（测试/降级），缺省=run-ingest 实现 */
+  ingest?: ((p: SimRunProgress) => Promise<unknown>) | null
+}): Router {
   const router = new Router()
   router.get('/api/sim/run-progress', async (ctx) => {
     try {
       const raw = readFileSync(runProgressPath(), 'utf8')
       const run = parseRunProgress(raw)
+      if (run && opts?.ingest !== null) {
+        const ingest = opts?.ingest ?? ingestRunProgress
+        // fail-soft：注册表摄取失败不影响横幅契约（横幅/注册表两通道各自独立可用）
+        void Promise.resolve(ingest(run)).catch(() => {})
+      }
       ctx.body = { ok: !!run, ts: Date.now(), run: run ? { ...run, staleMin: Math.max(0, Math.floor((Date.now() / 1000 - run.updatedTs) / 60)) } : null }
     } catch {
       ctx.body = { ok: false, ts: Date.now(), run: null }

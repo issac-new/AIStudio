@@ -8,6 +8,7 @@
 // - on：RunSpawner 接管调度（REST loop tick → spawner.tickNow），写回/熔断生效
 
 import { createEventLogStore, type EventLogStore } from './event-log-store'
+import { registerEventLogStore } from './event-log-registry'
 import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
 import { isCronBridgeEnabled, setCronBridgeTick, ensureLoopTickCronJob } from './cron-bridge'
@@ -137,6 +138,9 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   // (事件/重放/checkpoint 全部失持久化且无任何告警)。
   const loopBase = resolveLoopBaseDir()
   const eventLog = opts.eventLog ?? createEventLogStore(join(loopBase, 'graph-events.db'))
+  // 共享注册簿（backlog②）：run-progress 摄取适配器共用本实例写运行注册表，
+  // 推演 run 与图 run 同库可见（不自建第二连接）
+  registerEventLogStore(eventLog)
   const shadowEventLog = opts.shadowEventLog ?? createEventLogStore(join(loopBase, 'graph-shadow.db'))
   const autoResumeIds = new Set<string>()
   let started = false
