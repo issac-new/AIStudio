@@ -48,14 +48,8 @@ dlv_invite_retry() { # <owner> <room> <mxid>
   return 1
 }
 
-dlv_join_retry() { # <tokenUser> <room>
-  local tok; tok=$(load_token "$1")
-  local i
-  for i in 1 2 3 4; do
-    mx_join "$tok" "$2" 2>/dev/null && return 0
-    sleep 1
-  done
-  return 1
+dlv_join_retry() { # <tokenUser> <room>（实现委托 mx-lib 通用件 mx_join_retry）
+  mx_join_retry "$(load_token "$1")" "$2"
 }
 
 dlv_joined() { # <who> <room> → 已 join 的 mxid 列表（newline 分隔）
