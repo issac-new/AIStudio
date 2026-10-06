@@ -736,6 +736,34 @@ print(len(ns))
   })
 })
 
+describe('⑮ F-6/F-7 run10 前置（词表/txt 写入器/判定探活）', () => {
+  // F-6①：术语词表单一事实源+生成器首现释义；F-6②：txt 派生物写入器入库
+  // （run9 人工刷新不可复现的根治）；F-7：mx-setup 判定服务探活 fail-open 记单。
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('F-6① 词表在位且生成器接线（glossary.txt+gloss_first_use 渲染）', () => {
+    const gl = read(join(MX, 'glossary.txt'))
+    expect(gl).toContain('564: 网关响应投递兜底补丁')
+    expect(gl).toContain('state.env: 推演状态键值文件')
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('gloss_first_use(H.escape(meta["narrative"]))')
+  })
+
+  it('F-6② txt 写入器随生成链（simulation-report.txt+steps-extract.txt）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('_html_to_text')
+    expect(gen).toContain("steps-extract.txt")
+    expect(gen).toContain("simulation-report.txt")
+  })
+
+  it('F-7 判定服务探活：在线快照三元组+离线 fail-open 记单', () => {
+    const setup = read(join(MX, 'mx-setup.sh'))
+    expect(setup).toContain('MX_DECISION_API')
+    expect(setup).toContain('decision-backend-degraded')
+    expect(setup).toContain('decision-backend-snapshot.txt')
+  })
+})
+
 describe('⑫d run10 前置接线（①观察员/569 gate-guard/③b 审批镜像）', () => {
   // ①MATRIX_ROOM_OBSERVERS 写入 profile .env+scenario 默认导出（导演可见驱动房间）；
   // 569 env 注入 gateway 启动链+守卫文件固定路径链接；③b mxq 镜像入队/消费挂进
