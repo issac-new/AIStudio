@@ -90,6 +90,32 @@ describe('delivery-cases store 投影', () => {
     expect(store.cases.map(c => c.caseId)).toEqual(['dlv-2'])
     expect(store.loaded).toBe(true)
   })
+
+  it('client 未 init 时 refresh 先兜底 initClient 再投影（/app/cases 深链直达实证缺口）', async () => {
+    // 2026-10-06 R29 实证：initClient 此前仅 MatrixChatPanel/MatrixRoomCanvas 调用，
+    // 深链直落 /app/cases 时 client 恒 null、协议事件全落房而面板零投影。
+    const caseRoom = fakeRoom('!c3:m.x', {
+      schemaVersion: 2, caseId: 'dlv-3', title: 't', repoUrl: 'https://x',
+      tier: 'standard', stage: 'P1', ownerAccount: 'fanfan',
+      createdAt: 1, updatedAt: 2, updatedBy: 'fanfan',
+    }, [])
+    clientHolder.client = null
+    const holder = clientHolder as { client: unknown; initClient?: unknown }
+    holder.initClient = vi.fn(async () => {
+      holder.client = {
+        getAccountDataFromServer: vi.fn().mockResolvedValue({
+          schemaVersion: 2, roomIds: ['!c3:m.x'], updatedBy: 'fanfan', updatedAt: 1,
+        }),
+        getRoom: (rid: string) => (rid === '!c3:m.x' ? caseRoom : null),
+        getRooms: () => [caseRoom],
+      }
+    })
+    const { useDeliveryCasesStore } = await import('../stores/delivery-cases')
+    const store = useDeliveryCasesStore()
+    await store.refresh()
+    expect(holder.initClient).toHaveBeenCalledTimes(1)
+    expect(store.cases.map(c => c.caseId)).toEqual(['dlv-3'])
+  })
 })
 
 describe('发起向导 createCase（M2）', () => {
