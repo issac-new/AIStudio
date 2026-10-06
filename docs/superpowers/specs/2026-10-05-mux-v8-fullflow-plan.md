@@ -122,7 +122,7 @@ graph TB
 4、环境冒烟：账号/服务/登录/看板/团队围栏/记忆库冒烟清单全绿，推演正式开始。主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 操作不出 /app 路由树，登录页除外。冒烟四组：①页头「任务」「在线」chips 下拉核对；②日程按钮+运行中心「工作流」页签三区块加载非空；③吸收面（Spotlight 混合搜索/群聊跳未读条/通知未读线程聚合/治理运行态卡）；④逐项截图入档。
 （把关：凭据=冒烟清单全绿；合格线=零红灯，环境问题如实记问题单不算产品缺陷。）
 
-5、应用初始化：hermes agent 安装后已默认存在一批智能体（hermes profiles）；对本项目研发的 4 个应用模块（csw-pay-core 支付核心、csw-channel-wechat 微信渠道、csw-channel-alipay 支付宝渠道、csw-cashier-mp 小程序收银台）逐一登记资产表（应用/负责人/专属看板/技术栈/SLA 级别/测试骨架在位核对）。新立项、退役同表管理。登记在治理中心·应用资产界面完成（六列表单），保存即提交 git。【2026-10-06 改回（用户裁决，通道实测打通）：应用资产登记产品通道在位——gov-registry 页签 AppRegistryEditor 七列表单（应用/负责人/专属看板/技术栈/SLA/状态/门禁骨架）「保存（提交 git）」，PUT /api/governance/registry/app-registry 探针锚=9e1c670；M1 起驱动走产品同源端点（gov_registry_put），失败按附录 F-2 记单降级禁静默。】
+5、应用初始化：hermes agent 安装后已默认存在一批智能体（hermes profiles）；对本项目研发的 4 个应用模块（csw-pay-core 支付核心、csw-channel-wechat 微信渠道、csw-channel-alipay 支付宝渠道、csw-cashier-mp 小程序收银台）逐一登记资产表（应用/负责人/专属看板/技术栈/SLA 级别/测试骨架在位核对）。新立项、退役同表管理。登记在治理中心·应用资产界面完成（六列表单），保存即提交 git。【2026-10-06 改回（用户裁决，通道实测打通）：应用资产登记产品通道在位——gov-registry 页签 AppRegistryEditor 七列表单（应用/负责人/专属看板/技术栈/SLA/状态/门禁骨架）「保存（提交 git）」，PUT /api/governance/registry/app-registry 探针锚=9e1c670；M1 起驱动走产品同源端点（gov_registry_put），失败按 §5.7 F-2 记单降级禁静默。】
 （把关：凭据=应用资产表 app-registry.md 入仓库；合格线=每应用有负责人/专属看板/测试骨架，缺件记问题单不得静默。）
 
 6、研发人员管理：生成组织与权限矩阵（人员×角色×汇报线×看板×团队×matrix 账号+权限规则+入职/转岗/离职流程+能力清单），与实际账号/看板/智能体逐项对账。角色全覆盖：需求分析师、系统分析师、项目管理、系统架构、安全管理、运维管理、合规及审计。关系维护在治理中心·组织界面；三流程走三步向导（任务移交→账号停用→审计留痕）。【2026-10-06 改回（用户裁决，通道实测打通）：组织维护产品通道在位——gov-org 页签 OrgEditor 含离职三步向导（①任务移交②停用双账号③审计留痕，服务端原子序逐步 commit），offboard 探针锚=handover c2be916/audit b390258（停用步返回空数组记观察点）；M2 起 org.md 走产品同源端点落档。】
@@ -207,7 +207,7 @@ graph TB
 | 25 | IDE 画布路由归一 /app/ide（IaShell 子路由全屏画布），任务右栏 ⌨IDE 与页头视图切换进入，旧 /ide 深链兼容重定向；ide?task= 到达即自动展开任务简报抽屉；🕘 History 浏览器（定位/复制/编辑重发/fork）；运行中心蓝图画廊；治理工件可编辑（保存即本地 git 提交+新鲜度徽标）；会话上下文无损滚存（旧窗 verbatim 归档召回+跨窗笔记） |
 | 26 | 截图口径「三界面」=驾驶舱三功能区（工作台/看板/IDE 画布），capture 断言统一 ^/app；新观测面各 ≥1 帧按 §5.6 快门守门；desktop 深链 swarmstudio://（白名单 /app 与 /matrix 树） |
 
-> 路由事实勘误（2026-10-06 用户拍板落版，差异审计 P1）：v0.7.30 起治理中心独立路由 /app/gov 退役，治理域=/app/board 的五个平级页签（gov-org 组织与知识/gov-registry/gov-audit/gov-docs/gov-harness），/app/gov 保留重定向至 gov-org（旧深链不死链）；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。锚=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68。具体工件落哪个页签以起跑前附录 F-1 实弹校验为准。
+> 路由事实勘误（2026-10-06 用户拍板落版，差异审计 P1）：v0.7.30 起治理中心独立路由 /app/gov 退役，治理域=/app/board 的五个平级页签（gov-org 组织与知识/gov-registry/gov-audit/gov-docs/gov-harness），/app/gov 保留重定向至 gov-org（旧深链不死链）；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。锚=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68。具体工件落哪个页签以起跑前 §5.7 F-1 实弹校验为准。
 
 ### 2.6 治理机制（设计性条款）
 
@@ -297,7 +297,7 @@ bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记�
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 # 断点续跑 START_STEP=<步名>；区间上界 UNTIL_STEP=<步名>；换需求轮 RFD_ID=RFD-00X
-# delivery 协议事件缺省启用=产品真实形态（附录 F-5；MX_DELIVERY=0 显式关闭会自动记单降级，禁静默关旗标跑全程）
+# delivery 协议事件缺省启用=产品真实形态（§5.7 F-5；MX_DELIVERY=0 显式关闭会自动记单降级，禁静默关旗标跑全程）
 ```
 
 0→1 清环境：`bash mux/mx-clean.sh --apply --reset-central --reset-workspaces [--reset-memory]` 后 setup+up+scenario。旗标语义：`--reset-central`=中央仓九目录清空（admin 注册表保留）+清空提交推 origin/main+快照 tag+删旧轮分支；`--reset-workspaces`=agent 工作区 tar 归档后删；`--reset-memory`=14 家族记忆 bank 清场（pg_dump 归档前置）。看板整树归档重置、hermes 运行态清零（pending_messages/sessions/approvals/state*/cron）、synapse 房间 v2 purge 为缺省动作。
@@ -459,11 +459,13 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 
 快门守门七条：①截图前断言目标组件非空，空态/加载中重试或记缺陷不照拍；②拍前去噪（关 toast/收下拉/防末行裁切）；③文件名-内容对齐校验；④同画面去重与"拍而未嵌"治理；⑤工件新鲜度同上；⑥头部计数=实际嵌入数；⑦后台标签页动画冻结会造成"不渲染"假象，判缺陷前必以前台复核。
 
-**必采矩阵**：对话全文={步 9/11/17/19/21}；操作前后帧={步 8/10/25} 每组 ≥2 帧；效果实证={步 7/20/24} 各带可反查锚；skill 过程帧={步 13}（附录 F-4：生成 ≥3 帧+调用 ≥2 帧）；delivery 门禁灯帧={步 23}（附录 F-5：/app/cases 面板六闸灯 ≥1 帧）；其余 ✅ 步任一位在位。
+**必采矩阵**：对话全文={步 9/11/17/19/21}；操作前后帧={步 8/10/25} 每组 ≥2 帧；效果实证={步 7/20/24} 各带可反查锚；skill 过程帧={步 13}（§5.7 F-4：生成 ≥3 帧+调用 ≥2 帧）；delivery 门禁灯帧={步 23}（§5.7 F-5：/app/cases 面板六闸灯 ≥1 帧）；其余 ✅ 步任一位在位。
 
 **收官判据（一轮宣告完成的全部门槛）**：①26 步状态与六闸落键真实，步态推导键与 §3.3 映射一致；②mx-report-audit 对 §5.5 逐项断言零 FAIL（WARN 逐条有处置）——**审计 FAIL 即不得收官，报告不得持久化交付**；③必采矩阵达标，未达标按反凑数条款计缺口并逐条记问题单；④交付物全景矩阵全绿（文件域无独立工件的按步注记除外）；⑤问题单 100% DISP 且按步可见；⑥simharness 守门套件全过（tests/run-gates.sh+isolation-boundary 三断言）；⑦报告持久化（runs/ 目录双正本）；⑧收官回灌（中央仓补件）逐条带 DISP 记账。**全绿只是准入；零新缺陷的完整收官轮才算达成**。
 
-### 附录 F 产品承载面校验与采集降级口径（2026-10-06 增补；起因=run9 对照设计初衷差异审计，详见《2026-10-06-v8-design-intent-gap-audit.md》）
+### 5.7 产品承载面校验与采集降级口径（2026-10-06 增补，同日晚并入第五部分；编号 F-1~F-5 沿用，外部引用不动）
+
+> 本节原以"附录 F"形态落版（run9 收官夜差异审计的增量着陆区），因内容全属验收与采集规则，并入第五部分；五部分结构自此无附录。起因与问题谱系详见《2026-10-06-v8-design-intent-gap-audit.md》。
 
 **F-1 承载面路由锚版本校验**：§2.5 引用的每条路由/入口在起跑前预检（mx-setup 阶段）实弹校验——HTTP 可达+目标组件非空渲染；失效路由记问题单并按 F-2 降级，禁静默改拍近似页冒充。历史实锚（2026-10-06 拍板定案）：v0.7.30 治理中心独立路由 `/app/gov` 退役为**重定向**（落 `/app/board?tab=gov-org`），治理域=`/app/board` 五平级页签（gov-org/gov-registry/gov-audit/gov-docs/gov-harness），`/app/dash`、`/app/inbox`、`/app/cases` 均在位——锚=构建产物 routes chunk（product-dist `routes-*.js` 实弹提取）与 `custom/client/ia2/routes.ts:222-244`、`TasksView.vue:39-68`；§2.5 已按此定案更正（差异审计 P1 初判"并入 /app/settings"系 chunk 提取不全误判，已勘误）。路由事实以源码与构建产物双源为准，预检实弹校验仍按本条执行。
 
@@ -473,4 +475,4 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 
 **F-4 步级承载面承诺入矩阵**：§2.5 有明文帧数承诺的步（当前=步 13：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧）纳入必采矩阵分母；矩阵单一事实源 r18_matrix.py 同步扩项，审计器按扩项矩阵断言。
 
-**F-5 delivery 协议面全程开启与门禁灯帧入矩阵**（2026-10-06 拍板，差异审计 P15/R29）：①delivery.\* 协议事件层缺省启用=产品真实形态（scenario 不再缺省零行为；`MX_DELIVERY=0` 显式关闭自动记单 product-surface-degraded|delivery-cases，禁静默关旗标跑全程）；②冒烟段自动跑 delivery 小冒烟（案例房开张+stage/gate 事件落房读回）；③门禁灯帧入必采矩阵 DELIVERY_STEPS={23}（审计独立见证位：`/app/cases` 面板六闸门禁灯 ≥1 帧，分母 13）；④面板未就绪按 F-2 记单降级，审计器缺帧 FAIL 降 WARN；⑤R 系列评审门（R1-R4+会签 signoff+评审中心 UI，09-19 架构设计 §5.4 已批）与门禁灯同属 delivery.\* 协议面，就绪度随本项一并评估，未就绪同口径记单。
+**F-5 delivery 协议面全程开启与门禁灯帧入矩阵**（2026-10-06 拍板，差异审计 P15/R29）：①delivery.\* 协议事件层缺省启用=产品真实形态（scenario 不再缺省零行为；`MX_DELIVERY=0` 显式关闭自动记单 product-surface-degraded|delivery-cases，禁静默关旗标跑全程）；②冒烟段自动跑 delivery 小冒烟（案例房开张+stage/gate 事件落房读回）；③门禁灯帧入必采矩阵 DELIVERY_STEPS={23}（审计独立见证位：`/app/cases` 面板六闸门禁灯 ≥1 帧，分母 13）；④面板未就绪按本节 F-2 记单降级，审计器缺帧 FAIL 降 WARN；⑤R 系列评审门（R1-R4+会签 signoff+评审中心 UI，09-19 架构设计 §5.4 已批）与门禁灯同属 delivery.\* 协议面，就绪度随本项一并评估，未就绪同口径记单。
