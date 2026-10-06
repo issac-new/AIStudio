@@ -67,3 +67,17 @@
 1. 批次 1 无外部依赖，立即可做；批次 2 依赖批次 1 的采集口径（帧断言要照得到①②的面）；批次 3 依赖批次 2 的①（审批事件要先在可见房间里）。
 2. ②的桥接若只进列表不喂详情骨架会制造新的半截态，验收判据已堵；③双通道并存期重批风险用 eid 幂等键堵（approved.events 已有 eid 锚约定）。
 3. 每件完成以"验收判据抄进任务卡+过守门"为关闭标准；关闭后在差异审计文档 §三总表销账。
+
+## 六、执行状态（2026-10-06 21:3x 收口记账，用户指令「排期完成」执行轮）
+
+| 件 | 状态 | 锚 |
+|---|---|---|
+| ⑤ 治理域路由归宿 | 已关闭 | 正本 §2.5 勘误注（overlay 53162fc9） |
+| ④ 看板 testid | **已落+测试过** | overlay b27820b8：卡根 `kanban-card-<taskId>`+`data-task-id`、列根 `kanban-column-<status>`、抽屉 `kanban-task-drawer`；「testid 取帧无人工干预」属 run10 采集验收 |
+| R29 身份缝 | **已落** | simharness mx-delivery-lib：dlv_scenario_open 邀 agentMxid+join、dlv_index_update_acct 人/bot 双写面；R29 冒烟 bab1cda 转绿 |
+| ② runs 注册表接入 | **已落+测试过** | overlay eeb8936c：run-ingest 快照摄取（run.started/progress/completed、sim- 前缀、幂等以事件日志为真值）+event-log-registry 共用实例+详情骨架免 404；顺带根治一处边界：终态后 sset 仍刷 updated_ts 会致状态回摆（摄取侧停追进度+推导终态粘滞）。回归 400/400、全量 3816/3816 零失败 |
+| ① 房间列表同步 | **已落（产品+harness 双侧）+测试过** | overlay a48675f7：resolveRoomObservers（env MATRIX_ROOM_OBSERVERS）+taskRoomInvitees 合并两路建房；simharness mx-lib mx_create_room 同名同义观察员位。隐私面一句话结论：观察员非 RACI 当事人、入房全读，默认空名单不外扩可见面，显式配置才启用。「导演可见驱动房间」实证随 run10 配 MATRIX_ROOM_OBSERVERS |
+| P13 承诺步残余（停用步静默） | **已修（live 终验）** | 并行会话：档案件 §五.12 实录（f0667bcd）——registry-admin server-name 对齐+admin-service 失败可见化 |
+| ③ 审批面统一 | **未开工，按本排期留批次 3** | 协议面双向收敛含 hermes 线程/超时 m.replace 编辑语义（mx-scenario-lib auto_approve 实况），盲做会造出「只进列表不收敛」半截态（§五.2 自堵的风险）；改动点与验收判据原文不动，建议随 run10 hybrid 模式小样验证后实施 |
+
+**验证口径声明**：①②④ 服务端逻辑=新增/扩展单测 17 项+相邻回归（graph+sim 400/400、matrix+services 106/106、全量 3816/3816）+vite build 编译门；**浏览器实拍验收（testid 取帧/导演视角房间列表/运行中心 sim-* 条目）与 run10 起跑 smoke 未在本轮执行**——属排期验收判据的实证项，如实标注不冒充达成。
