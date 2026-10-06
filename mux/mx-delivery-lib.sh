@@ -34,6 +34,30 @@ dlv_invite() { # <owner> <room> <mxid...>（首版漏 load_token 把用户名当
   for m in "$@"; do mx "$tok" POST "rooms/$room/invite" "{\"user_id\":\"$m\"}" >/dev/null; done
 }
 
+# 限流兜底（2026-10-06 实锤：14 人×双身份邀请风暴下 Synapse 限流，dlv_invite 的
+# >/dev/null 与 mx_join 无检错把尾部账号静默吞掉——28 账号仅 16 在房）。邀请与
+# 入房都带退避重试，循环后按人头核验，缺员记单不静默。
+dlv_invite_retry() { # <owner> <room> <mxid>
+  local tok; tok=$(load_token "$1")
+  local i out
+  for i in 1 2 3 4; do
+    out=$(mx "$tok" POST "rooms/$2/invite" "{\"user_id\":\"$3\"}" 2>/dev/null)
+    [[ -n "$out" && "$out" != *'"errcode"'* ]] && return 0
+    sleep 1
+  done
+  return 1
+}
+
+dlv_join_retry() { # <tokenUser> <room>
+  local tok; tok=$(load_token "$1")
+  local i
+  for i in 1 2 3 4; do
+    mx_join "$tok" "$2" 2>/dev/null && return 0
+    sleep 1
+  done
+  return 1
+}
+
 dlv_joined() { # <who> <room> → 已 join 的 mxid 列表（newline 分隔）
   mx "$(load_token "$1")" GET "rooms/$2/joined_members" | jq -r '.joined | keys[]'
 }
@@ -91,18 +115,32 @@ dlv_scenario_open() { # <caseTitle> <repoUrl>：开案例房+邀全员+join（�
   [[ -n "$(sget dlv_room)" ]] && { note "[M3] delivery 案例已开（$(sget dlv_room)），跳过"; return 0; }
   case_id="dlv-${RUN_ID:-run}-$(date +%H%M%S)"
   room=$(dlv_room fanfan "$case_id" "$title")
+  local missing=""
   for u in "${INSTANCED_USERS[@]}"; do
     # 幂等：先查在房名单（建房者已在房，重复邀会被 Synapse 400）
     if ! dlv_joined fanfan "$room" | grep -q "^$(human_mxid "$u")$"; then
-      dlv_invite fanfan "$room" "$(human_mxid "$u")"
-      mx_join "$(load_token "$u")" "$room"
+      dlv_invite_retry fanfan "$room" "$(human_mxid "$u")" && dlv_join_retry "$u" "$room" \
+        || missing="$missing $u"
     fi
+    # R29 身份缝修复（backlog 批次 1，2026-10-06 用户裁决）：产品免密登录用 bot
+    # 身份（@<user>-agent，gateway Orchestrator channel），不邀 bot=案例面板在
+    # 真实登录形态下空态。bot 同步邀+join+index 双写（index 按账号各写一份，
+    # 面板读的是登录账号自己的 account-data）。
+    if ! dlv_joined fanfan "$room" | grep -q "^$(agent_mxid "$u")$"; then
+      dlv_invite_retry fanfan "$room" "$(agent_mxid "$u")" && dlv_join_retry "$u-agent" "$room" \
+        || missing="$missing $u-agent"
+    fi
+    dlv_index_update_acct "$u-agent" "$(agent_mxid "$u")" "$room" 2>/dev/null || true
   done
+  [[ -n "$missing" ]] && {
+    echo "ISSUE|delivery-room-member-missing|director|delivery 案例房邀入缺员（限流退避后仍缺）：${missing}（R29 冒烟）" >> "$EVID_DIR/issues.log"
+    note "[M3] delivery 案例房缺员记单：${missing}"
+  }
   sset dlv_room "$room"; sset dlv_case "$case_id"
   dlv_case_state fanfan "$room" "$case_id" "$(dlv_event case --case-id "$case_id" --title "$title" \
     --repo-url "$repo" --tier standard --stage P1 --owner fanfan --updated-by fanfan)"
   dlv_index_update fanfan "$room"
-  note "[M3] delivery 案例已开：$case_id → ${room}（全员人类账号已邀+join+index 登记；agent bot 入房留 M4）"
+  note "[M3] delivery 案例已开：$case_id → ${room}（人类+bot 双身份已邀+join+index 双写）"
 }
 
 dlv_scenario_phase() { # <stage> <stageWorker> <gate> <decider> <evidKind> <summary> <nextStage|->
@@ -162,12 +200,16 @@ dlv_scenario_advance() { # <stage> <worker> <nextStage> [artifactRef]：只发 s
 }
 
 dlv_index_update() { # <who> <roomId>：案例发现机制——account-data index 幂等并入 roomId
-  local who="$1" rid="$2" cur rooms tok uid
-  tok=$(load_token "$who"); uid=$(human_mxid "$who")
+  dlv_index_update_acct "$1" "$(human_mxid "$1")" "$2"
+}
+
+dlv_index_update_acct() { # <tokenUser> <mxid> <roomId>：人/bot 通用的 index 写入（R29 双写面）
+  local who="$1" uid="$2" rid="$3" cur rooms tok
+  tok=$(load_token "$who")
   cur=$(curl -sf "$HS/_matrix/client/v3/user/$uid/account_data/com.swarmstudio.delivery.index?access_token=$tok" 2>/dev/null || echo '{}')
   rooms=$(jq -c --arg r "$rid" '(.roomIds // []) + [$r] | unique' <<<"$cur")
   curl -sf -X PUT "$HS/_matrix/client/v3/user/$uid/account_data/com.swarmstudio.delivery.index?access_token=$tok" \
-    -H 'Content-Type: application/json' -d "$(jq -nc --argjson rs "$rooms" --arg by "$who" \
+    -H 'Content-Type: application/json' -d "$(jq -nc --argjson rs "$rooms" --arg by "$uid" \
       '{schemaVersion:2, roomIds:$rs, updatedBy:$by, updatedAt:(now*1000|floor)}')" >/dev/null
 }
 
