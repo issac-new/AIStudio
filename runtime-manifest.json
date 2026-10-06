@@ -117,6 +117,11 @@
       "source": "gateway/noise_filter.py",
       "dest": "gateway/noise_filter.py",
       "note": "噪声过滤层：matrix adapter/weixin 平台消费（宿主未跟踪文件，manifest 分发通道；2026-10-03 隔离轮补）"
+    },
+    {
+      "source": "gateway/kanban_watchers_common.py",
+      "dest": "gateway/kanban_watchers_common.py",
+      "note": "569 gate-guard：闸门键未齐 spawn 暂停（run9 P9 越序抢跑前置拦截；KANBAN_GATE_GUARD_FILE/KEYS 未配=惰性，生产零行为变化）"
     }
   ],
   "notes": [
