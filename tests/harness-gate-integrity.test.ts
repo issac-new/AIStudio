@@ -633,6 +633,31 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
   })
 })
 
+describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）', () => {
+  // R26 原子化：gov_archive_commit——metrics-log+ISSUES-LOG 同提交推送+回读验证，
+  // 「产出了没落账」（P14：metrics 未回写/归档断链/漏账）自此有机制通道。
+  // R29 全程开启：delivery 协议面缺省启用（P15）——保真形态原则下产品面板应被
+  // 协议事件喂数；MX_DELIVERY=0 显式关闭由 scenario 自动记单降级（禁静默关旗标）。
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('gov_archive_commit 落账原子化（metrics+issues 同提交+回读验证+失败记单）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('gov_archive_commit()')
+    expect(lib).toContain('metrics-log.csv')
+    expect(lib).toContain('ISSUES-LOG.md')
+    expect(lib).toContain('archive-commit-failed')
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('gov_archive_commit')
+  })
+
+  it('delivery 协议面缺省启用+显式关闭记单（P15/R29 全程开启）', () => {
+    const dlv = read(join(MX, 'mx-delivery-lib.sh'))
+    expect(dlv).toContain('MX_DELIVERY:-1')
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('product-surface-degraded|delivery-cases')
+  })
+})
+
 describe('⑬ runtime 副本须包含补丁面（部署通道不得静默回退已打补丁）', () => {
   // 2026-10-05 实锤：mx-setup 先打补丁后 deploy-agent-runtime --apply，runtime 清单内
   // gateway/platforms/base.py 副本停在 564 之前——每次部署把 564 静默覆盖回去
