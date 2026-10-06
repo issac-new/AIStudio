@@ -21,16 +21,18 @@ vi.mock('node:fs/promises', () => ({
 const createMock = vi.fn(async () => ({ userId: '', created: true }))
 const deactivateMock = vi.fn(async () => true)
 const whoamiMock = vi.fn(async () => ({ userId: '@admin:matrix.test', deviceId: '' }))
+const stateMock = vi.fn(async () => 'active')
 vi.mock('../../matrix/admin-service', () => ({
   createMatrixUser: (...a: unknown[]) => createMock(...a),
   setMatrixUserActive: (...a: unknown[]) => deactivateMock(...a),
   validateMatrixToken: (...a: unknown[]) => whoamiMock(...a),
+  getMatrixUserState: (...a: unknown[]) => stateMock(...a),
 }))
 vi.mock('../governance-controller', () => ({ repoRoot: () => '/tmp/fake-repo' }))
 
 import { readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, appendTableRow } from '../registry-admin'
 
-beforeEach(() => { execMock.mockClear(); createMock.mockClear(); deactivateMock.mockClear(); whoamiMock.mockClear() })
+beforeEach(() => { execMock.mockClear(); createMock.mockClear(); deactivateMock.mockClear(); whoamiMock.mockClear(); stateMock.mockClear(); stateMock.mockResolvedValue('active') })
 
 describe('registry-admin（P6-P8）', () => {
   it('保存即提交：write → git add <path> → git commit（R13 链）', async () => {
@@ -82,6 +84,23 @@ describe('registry-admin（P6-P8）', () => {
     await expect(offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 'bad', homeserverUrl: 'http://127.0.0.1:8008' }))
       .rejects.toThrow('adminToken 无效')
     expect(execMock).not.toHaveBeenCalled()
+    expect(deactivateMock).not.toHaveBeenCalled()
+  })
+
+  it('离职守门③：停用被拒（存在但 deactivate=false）炸出报错，不静默记空数组', async () => {
+    deactivateMock.mockResolvedValue(false)
+    await expect(offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' }))
+      .rejects.toThrow('停用失败')
+  })
+
+  it('离职守门④：账号不存在（missing）跳过不炸；已停用（deactivated）幂等跳过', async () => {
+    stateMock.mockResolvedValue('missing')
+    const r = await offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' })
+    expect(r.deactivated).toHaveLength(0)
+    expect(deactivateMock).not.toHaveBeenCalled()
+    stateMock.mockResolvedValue('deactivated')
+    const r2 = await offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' })
+    expect(r2.deactivated).toHaveLength(0)
     expect(deactivateMock).not.toHaveBeenCalled()
   })
 

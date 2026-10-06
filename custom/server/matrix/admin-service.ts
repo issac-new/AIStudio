@@ -182,6 +182,28 @@ export async function setMatrixUserActive(
   }
 }
 
+/**
+ * 账号状态探测（v2 users GET）：'missing'（404）|'active'|'deactivated'。
+ * 403 等鉴权失败必须炸出来（带 HTTP 状态）——调用方拿它区分「无此号」与
+ * 「权限不足」，前者跳过、后者不得静默（offboard 空数组静默成功实锤的根治面）。
+ */
+export async function getMatrixUserState(
+  userId: string,
+  adminToken: string,
+  homeserverUrl: string
+): Promise<'active' | 'deactivated' | 'missing'> {
+  const origin = await safeMatrixOrigin(homeserverUrl)
+  const res = await fetch(`${origin}/_synapse/admin/v2/users/${encodeURIComponent(userId)}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  })
+  if (res.status === 404) return 'missing'
+  if (!res.ok) {
+    throw new Error(`用户状态探测失败（HTTP ${res.status}）：${userId}——检查 adminToken 是否为服务端管理员`)
+  }
+  const body = await res.json().catch(() => ({} as { deactivated?: boolean }))
+  return body?.deactivated ? 'deactivated' : 'active'
+}
+
 export async function deleteMatrixUser(
   userId: string,
   adminToken: string,

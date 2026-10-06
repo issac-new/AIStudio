@@ -7,7 +7,7 @@ import { promisify } from 'node:util'
 import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { repoRoot } from './governance-controller'
-import { createMatrixUser, setMatrixUserActive, validateMatrixToken } from '../matrix/admin-service'
+import { createMatrixUser, setMatrixUserActive, validateMatrixToken, getMatrixUserState } from '../matrix/admin-service'
 
 const exec = promisify(execFile)
 
@@ -128,10 +128,18 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   const handoverCommit = await currentCommit()
   // ② 停用 matrix 双账号
   const deactivated: string[] = []
+  const failed: string[] = []
   for (const uid of [`@${name}:matrix.test`, `@${name}-agent:matrix.test`]) {  // 停用端点按完整 userId，server 名经管理端自解析
-    try {
-      if (await setMatrixUserActive(uid, false, base.adminToken, base.homeserverUrl)) deactivated.push(uid)
-    } catch (e) { if (!/not found|404/i.test(String(e))) throw e }
+    // 空数组静默成功实锤（2026-10-06 govprobe/r31probe 两轮复现）：先探存在性——
+    // missing/deactivated 跳过；存在但停用被拒（权限不足/端点异常）必须炸出来，
+    // 不得记成"已停用"（审计留痕会写下错误事实）。
+    const st = await getMatrixUserState(uid, base.adminToken, base.homeserverUrl)
+    if (st !== 'active') continue
+    if (await setMatrixUserActive(uid, false, base.adminToken, base.homeserverUrl)) deactivated.push(uid)
+    else failed.push(uid)
+  }
+  if (failed.length) {
+    throw new Error(`停用失败：${failed.join('、')}（synapse 拒绝——①移交工单已提交，②停用未完成，处理后重跑即可，三步幂等）`)
   }
   // ③ 审计留痕（append-only 台账）：appendFile 直追加，不做读-改-写全量覆写
   //（并发 offboard 各自读旧全文再覆写会互相丢行）。
