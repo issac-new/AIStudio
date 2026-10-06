@@ -317,3 +317,4 @@
 快门守门七条：①截图前断言目标组件非空，空态/加载中重试或记缺陷不照拍；②拍前去噪（关 toast/收下拉/防末行裁切）；③文件名-内容对齐校验；④同画面去重与"拍而未嵌"治理；⑤工件新鲜度同上；⑥头部计数=实际嵌入数；⑦后台标签页动画冻结会造成"不渲染"假象，判缺陷前必以前台复核。
 
 **必采矩阵**：对话全文={步 9/11/17/19/21}；操作前后帧={步 8/10/25} 每组 ≥2 帧；效果实证={步 7/20/24} 各带可反查锚；其余 ✅ 步任一位在位。
+12. **产品建号通道假成功缺陷修复（2026-10-06 晚，用户指令轮）**：R31 落地复测发现探针"供给 ✓"为假成功——createMatrixUser 误用 /_synapse/admin/v1/register（共享密钥端点，需 nonce+mac，仅 Bearer 必 400），建号从未真发生；provisionMatrixAccount 忽略返回值照样写 roster；"停用步空数组"实为号不存在的正确响应。修复（overlay 01045c39）：改 PUT /_synapse/admin/v2/users（幂等）+建号失败拒写 roster+测试 18/18（admin-service.test.ts 钉 v2 PUT+v1/register 绊线）；build:full 重建 dist→product-dist 刷新→studio 换血（老进程 pid 失配 kill -9）；live 终验 r31fix2 双号真实在位+offboard deactivated×2（handover=f8a5db4）。环境教训：overlay 下 npm i --no-save 炸 node_modules 软链（重建实体目录）——删目录重建软链恢复；凡建号/写入类端点验证必须核销端侧真实状态，禁只看返回 JSON。
