@@ -555,3 +555,15 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 **F-4 步级承载面承诺入矩阵**：§2.5 有明文帧数承诺的步（当前=步 13：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧）纳入必采矩阵分母；矩阵单一事实源 r18_matrix.py 同步扩项，审计器按扩项矩阵断言。
 
 **F-5 delivery 协议面全程开启与门禁灯帧入矩阵**（2026-10-06 拍板，差异审计 P15/R29）：①delivery.\* 协议事件层缺省启用=产品真实形态（scenario 不再缺省零行为；`MX_DELIVERY=0` 显式关闭自动记单 product-surface-degraded|delivery-cases，禁静默关旗标跑全程）；②冒烟段自动跑 delivery 小冒烟（案例房开张+stage/gate 事件落房读回）；③门禁灯帧入必采矩阵 DELIVERY_STEPS={23}（审计独立见证位：`/app/cases` 面板六闸门禁灯 ≥1 帧，分母 13）；④面板未就绪按本节 F-2 记单降级，审计器缺帧 FAIL 降 WARN；⑤R 系列评审门（R1-R4+会签 signoff+评审中心 UI，09-19 架构设计 §5.4 已批）与门禁灯同属 delivery.\* 协议面，就绪度随本项一并评估，未就绪同口径记单。
+
+### 5.8 run10 增补：报告链改造余项与五文轮能力注入（2026-10-06 五文轮后；编号 F-6~F-9 沿用 F 系列）
+
+> 增补背景：run9 收官后能力侧新增（toolresultguard 双拦截点围栏 + 本地 Clef 判定后端，正本=《2026-10-06-five-article-research-and-capability-plan.md》v3），与 run9 报告一致性残余的 run10 切入点（P17-P22，正本=《2026-10-06-v8-report-consistency-residual.md》）。本节全部为执行/验收层增补，**不触碰契约层**（26 步主链、六闸、治理机制、交付物模板字段语义不变）。
+
+**F-6 报告链改造余项（run10 前置清单）**：run9 残余 P17-P20 已闭环（帧数实算/治理报告三方对账/叙事锚实值化/路由勘误重生成，simharness 4da0b54 + 双报告 2026-10-06 21:04 重生成，守门 54/54）。run10 起跑前须清：①**P21 术语词表**——§5.5"术语规范"条款的内部代号（补丁号/事故昵称/流程俚语）配套词表进生成器与 STEPS_META 派生面，释义禁逐条手编；②**txt 派生物写入器入库**——run9 txt 已人工刷新但仓库无写入器（不可复现=下次生成必漂移），写入器随报告生成链落 simharness；③**P22 独立审计四条补记账核销**（A-1/B-2/B-3/D-2 一般级发现）。
+
+**F-7 判定后端本地化（推演基础设施变更）**：上游四门 JEV 调用（路由/摘要复审/工作流质量/记忆门）切换本地 `clef-flash-4bit`（`http://127.0.0.1:8000`，Models 页 JEV tab API root，零代码）——推演全程判定不再依赖闭源 TypeSafe API。mx-setup 预检增**判定服务探活**：GET /health 不在线=记单（type=decision-backend-degraded）不阻断（四门与 toolresultguard 均有 fail-open 降级，与 F-2 三真相同纪律）；预检同时快照版本三元组（mlx / mlx-vlm / 模型快照）。内存纪律：主力 flash（约 7-8.6GB）与 27B 备件（约 17-19.6GB）不同时跑；换备件须记档。运行手册=`overlay/runtime/clef/`。
+
+**F-8 注入攻击演练位（toolresultguard 实战视界，R 系列演练事件）**：run10 起每轮**可选**一处演练——scenario 侧在既有步的工具返回或外部内容中植入注入载荷（建议步 9/11 检索类步的工具结果夹带"忽略之前指令"段），起跑前 `TRG_ENABLED=1`（mx-setup 记录配置快照）。验证三条路径：①拦截路径——S0 命中 + S1 判定 BLOCK/REWRITE，toolresultguard 审计台账（`~/.hermes-web-ui/toolresultguard-audit/`）有对应记录且内容 sha1 可反查；②降级路径——判定服务离线时 fail-open 不阻断主链且留痕；③零误伤——同批正常工具结果 PASS。验收=审计台账记录 + 问题单（type=injection-drill）+ 报告问题单章可见；演练帧可作实证加分位，**不计入六闸、不进必采矩阵分母**。
+
+**F-9 RSI 四指标同源取数（P3 预埋）**：run10 起推演报告度量章的人工介入次数、自主任务时长等组织数字，与治理中心 RSI 面板（能力方案 P3，落地后）**同源取数**——run9 P17-P22 的教训（手编计数三口径并存）不得在指标面重演；P3 落地前推演报告沿用现有实算口径，并在本轮口径章注明"RSI 四指标面板待 P3 接入"。凡报告内新增数字先查取数脚本是否实算，禁 STEPS_META/merge 侧手编。
