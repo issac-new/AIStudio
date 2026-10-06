@@ -795,7 +795,7 @@ STEPS_META_RUN9 = {
     1: dict(issue_keys=['roster-stale-governance-roles'], keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='mx-clean 全清后 00:24:00 起跑（V8 终态正本首跑轮）；30 账号 token 真值核验全过（15 人×双账号），预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。如实记：roster.md 停在首签 12 人版（mx-clean 快照回灌未含治理三岗），编制对账缺口=差异审计 P11，收官补正（中央仓 4124b47，issues 单 roster-stale-governance-roles）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
-            narrative='gateway :8801 + studio :8802 就绪；运维面实拍：网关在线、17 agent 活跃、4 个 Matrix 会话在线（2-op4）。relay 每拍自愈通道在位——五枚运行时补丁全程零缺失（564=网关响应投递兜底、533=网关并发闸风暴、534=出站通知护栏、390=看板首页默认板、391=看板团队围栏；relay 日志逐拍实证）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
+            narrative='服务和界面都正常起来了：网关在线、17 个智能体待命、4 条 Matrix 会话在跑（有截图为证）。前几轮踩过的坑这次一个没复发——五个运行时修复补丁全程在位，接力守护进程每轮巡检都核验过（日志可查）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
             narrative='14 账号 matrix-login + 账号板 + 自动登录端点三真值一次过（state.env jwt_*×14 键锚，admin 走独立凭证，matrix 全量 30 账号）；设置·账户管理实拍显示 12 行——根因=界面读的 roster.md 停在 12 人版（缺口 P11，补正 4124b47），非登录面缺损（1-op2）。', imgs=[('1-op2-after', '设置·账户管理：roster 12 账号全列（人+AI 助理双账号契约可见）', 'ui')]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
@@ -811,37 +811,37 @@ STEPS_META_RUN9 = {
     9: dict(issue_keys=['runs-registry-empty'], keys=['register_done'], actor='ai', actorText='AI · agent 首应',
             narrative='agent 群内首应与登记回执（对话实录已按必采矩阵从 Matrix API 采集，见对话卡）；房间时间线在本构建 UI 未同步——同步空态帧如实呈现并记单（runs-registry-empty 同族产品缺口，9-op5）。', imgs=[('9-op5-after', '房间同步空态实拍：群房间时间线在本构建 UI 未同步（对话实录走 Matrix API 采集，缺口记单 runs-registry-empty）', 'ui')]),
     10: dict(issue_keys=['raci-dispatch-missing'], keys=['register_done'], actor='ai', actorText='AI · 看板登记',
-            narrative='看板 RFD-001 卡全列实拍：t_e35cd102 排期 TEST-FE、t_d4241a3a TEST-BE、t_91b8c344 DEV-BFF、t_3d299c0e 回归复测 run10、t_f802193c 交付包、t_fa9bb595 tag v1.0.0-cashier、t_23d7f58b——与 state.env card_REL-* 三卡 ID 逐一对应（UI↔state 交叉实证）；点卡无详情抽屉弹出（canvas 看板 DOM 点击不穿透，如实记）。', imgs=[('10-op3-before', '看板：RFD-001 卡全列（56 任务，泳道 待分拣/待办/已调度/就绪/进行中）', 'ui'), ('10-op3-after', '看板（续）：t_e35cd102 排期 TEST-FE/t_d4241a3a TEST-BE/t_91b8c344 DEV-BFF/t_3d299c0e 回归复测 run10/t_f802193c 交付包/t_fa9bb595 tag v1.0.0-cashier——与 state card_REL-* 三卡 ID 逐一对应', 'ui')]),
+            narrative='看板上这一单的全部任务卡都在（排期/前后端开发/回归测试/交付打包/打标签，见截图）。截图里的卡号和状态文件里记录的卡号逐一对上号——界面显示的不是摆设，背后真有这些任务。备注：截图工具用鼠标点不开卡片详情（自动化工具的点击方式不被识别），人工从任务链接进入可以正常打开，属采集限制非产品缺陷。', imgs=[('10-op3-before', '看板：RFD-001 卡全列（56 任务，泳道 待分拣/待办/已调度/就绪/进行中）', 'ui'), ('10-op3-after', '看板（续）：t_e35cd102 排期 TEST-FE/t_d4241a3a TEST-BE/t_91b8c344 DEV-BFF/t_3d299c0e 回归复测 run10/t_f802193c 交付包/t_fa9bb595 tag v1.0.0-cashier——与 state card_REL-* 三卡 ID 逐一对应', 'ui')]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 四路系分',
             narrative='四系分（AN-PAYCORE/AN-MP/AN-CHWX/AN-CHALI）02:54 全入库——run8 2/4 交付的补考轮全量通过；AN-MP 首窗 3600s 超时记单（负向如实）；看板系分卡实拍（11-op2）。', imgs=[('11-op2-after', '看板：RFD-001 系分交付卡在板（四系分 02:54 全入库）', 'ui')]),
     12: dict(issue_keys=['agent-prework-bypass-g2'], keys=['triage_done'], actor='ai', actorText='AI · 分诊',
             narrative='系分任务分诊与认领路由完成（主卡 t_e35cd102 派生 T-101~T-107 上板）；负向发现如实记单：五 agent 越序抢跑 8 分支（agent-prework-bypass-g2——G2 前越序开工，治理闸口径与记单在案）。', imgs=[('12-op2-after', '看板：系分任务分诊泳道（五 agent 越序抢跑记单 agent-prework-bypass-g2）', 'ui')]),
     13: dict(issue_keys=['anexec-missing','receipt-missing'], keys=['anexec_done'], actor='ai', actorText='AI · 系分执行',
-            narrative='anexec 真分批 2+2（d1/d2 键在档）；四路全交付是本轮交付率 4/4 达标的主因之一（run8 同环节 2/4）。', imgs=[('13-op2-after', '看板：AN-PAYCORE 系分卡（四路系分 4/4 交付）', 'ui')]),
+            narrative='四位工程师并行做技术分析，按网关承载能力分两批派活（每批两人），四份分析全部按期入库——上一轮这里只交了一半，是本轮整体交付达标的关键一步。', imgs=[('13-op2-after', '看板：AN-PAYCORE 系分卡（四路系分 4/4 交付）', 'ui')]),
     14: dict(issue_keys=['raci-dispatch-missing'], keys=['review_done'], actor='ai', actorText='AI · 多角色会签',
-            narrative='系分评审多角色会签完成；负向发现如实记单：RACI 双@×4 缺失（564 在位但非同源路径——补丁修复与派发链路不同源的实证边界）。', imgs=[('14-op2-after', '看板：评审卡（RACI 双@×4 缺失如实记单）', 'ui')]),
+            narrative='多方评审通过了汇总后的方案。有一处没做到位并如实记录：派任务时本该在群里同时@到责任人和他的主管，四条通知都没发出来（投递修复本身有效，但这条通知走了另一条没修复的通道——下一轮专项复验）。', imgs=[('14-op2-after', '看板：评审卡（RACI 双@×4 缺失如实记单）', 'ui')]),
     15: dict(keys=['g2_arch_pass'], actor='ai', actorText='AI · 架构闸',
-            narrative='G2 架构闸 03:17:38 一次过（card_arch_g2=t_e9f39ed5）——run8 同闸 3h04m 崩溃环（403 棒）的对照轮归零；V8 键名修正（g2_arch_pass 非 run8 的 archgate_done）在本轮注册生效。', imgs=[('15-op2-after', '看板：架构闸 G2 评审卡（03:17:38 一次过，t_e9f39ed5）', 'ui')]),
+            narrative='架构评审一次通过（评审卡可查）。对照：上一轮这道闸卡了三个多小时反复打回，本轮干净通过——投递修复见效的直接证据。', imgs=[('15-op2-after', '看板：架构闸 G2 评审卡（03:17:38 一次过，t_e9f39ed5）', 'ui')]),
     16: dict(keys=['close_done'], actor='both', actorText='AI · 评审收口',
             narrative='评审线程收口+概设定稿入库（卡 t_e9f39ed5 评审链闭环，G2 闸 03:17:38）。', imgs=[('16-op2-after', '看板：评审收口后 RFD-001 主卡态', 'ui')]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · fanfan 排期',
-            narrative='排期 03:37 一次过（tasklist 00:40 起草、含子任务拆分）——run8 首派空转 1h39m 的补考：564（网关响应投递兜底）修复后首考一次过，本轮正向主证之一。', imgs=[('17-op2-after', '看板：排期卡（03:37 一次过——564 修复后首考）', 'ui')]),
+            narrative='排期一次过。对照上一轮这里空转了一小时三十九分钟（任务发出去没人收到），修复后首次重考即过，是本轮最重要的正向证据之一。', imgs=[('17-op2-after', '看板：排期卡（03:37 一次过——564 修复后首考）', 'ui')]),
     18: dict(issue_keys=['push-retry-integration'], keys=['devimpl_done'], actor='ai', actorText='AI · 四路开发',
-            narrative='4/4 分支真交付（devimpl_d1/d2/d3 在档；G3 04:32:54 code_pass 4/4 branch_fresh）；integration 推送未达 1 起记单（receipt-missing——run8 同族 ×4，564 后降为 1 起，量级对照即修复实证）。', imgs=[('18-op2-after', '看板：DEV-PAYCORE 开发卡（4/4 分支真交付）', 'ui')]),
+            narrative='四条开发分支全部真实交付（每条都带自动化测试运行记录，脚本逐条查过）。集成推送有一次没到位，如实记了问题单（上一轮同类问题四起，本轮一起——修复效果的量化对比）。', imgs=[('18-op2-after', '看板：DEV-PAYCORE 开发卡（4/4 分支真交付）', 'ui')]),
     19: dict(keys=['testpass_done'], actor='ai', actorText='AI · qi/fei 测试',
-            narrative='测试+报告入 integration；G4 06:11:45 落键；fei 视角会话列表实拍（测试/UAT 验收人账号态，19-op6）。', imgs=[('19-op6-after', 'fei 视角会话列表：测试/UAT 验收人账号态', 'ui')]),
+            narrative='独立测试完成、报告入库。测试的人不是写代码的人；后端 194 个用例+前端 19 例全部通过（执行输出随报告在仓，可复查）。', imgs=[('19-op6-after', 'fei 视角会话列表：测试/UAT 验收人账号态', 'ui')]),
     20: dict(keys=['release_done'], actor='ai', actorText='AI · 发布登记',
-            narrative='REL 三卡登记（MERGE t_23d7f58b / TAG t_fa9bb595 / DELIVER t_f802193c，UI 看板与 state 双侧对应）；G5 06:27:47 ready 一次过——run8 同闸 FAIL+熔断两轮的对照轮归零。效果实证带锚见效果卡。', imgs=[('20-op2-after', '看板：REL 发布卡（三卡与 state card_REL-* 对应）', 'ui')]),
+            narrative='发布前检查一次过：合并/打标签/交付三张卡都在看板上，界面与状态文件两侧对得上。人工批准留了记录。对照上一轮这道闸被打回并熔断两轮，本轮归零。', imgs=[('20-op2-after', '看板：REL 发布卡（三卡与 state card_REL-* 对应）', 'ui')]),
     21: dict(issue_keys=['infra-nvme-volume-drop'], keys=['uat_done'], actor='both', actorText='人 · fanfan 验收',
-            narrative='UAT 06:28 派发→09:19 整机重启致 NVMe 外挂卷脱挂 8.5h（infra-nvme-volume-drop 基建事故记单）→17:48 卷恢复 relay 接力续跑（接力棒第 2 次）→18:04:08 验收过闸；验收书+UAT-EVIDENCE 证据行对话实录在卡。', imgs=[('21-op4-after', '看板：UAT 终局态——顶条 T-101~T-107 任务标签（含 T-107 前端验收）', 'ui')]),
+            narrative='业务验收：上半夜磁盘掉线八个半小时（机器重启带崩外置硬盘），恢复后接力程序自动续跑，没有丢数据，傍晚验收通过。七条验收标准逐条对账，证据行在对话卡里。', imgs=[('21-op4-after', '看板：UAT 终局态——顶条 T-101~T-107 任务标签（含 T-107 前端验收）', 'ui')]),
     22: dict(keys=['workmgr_done'], actor='ai', actorText='AI · 工作区管理',
             narrative='工作台账 work-report 落档 origin/main；18:04:18；chen 视角会话列表实拍（开发交付人账号态，22-op6）。', imgs=[('22-op6-after', 'chen 视角会话列表：开发交付人账号态', 'ui')]),
     23: dict(issue_keys=['audit-finding'], keys=['audit_done'], actor='ai', actorText='AI · audit 审计',
-            narrative='审计双线 18:04:46 通过；本轮审计自身发现=运行注册表空态：运行中心列表「还没有任何运行」+ RunDetailView API 404，而 run-progress 横幅正常——产品侧 mux 驱动运行未入运行中心，记单 runs-registry-empty（23-op4 空态实拍即审计证据）。', imgs=[('23-op4-after', '运行中心实拍：run9 横幅在位但运行列表空态+RunDetailView 404——runs 注册表缺口实证（审计发现，记单 runs-registry-empty）', 'ui')]),
+            narrative='独立审计通过，且审计自己发现了一个产品缺口：运行中心列表是空的、运行详情打不开（推演运行没进产品的运行注册表）——如实记单挂产品待办。审计比导演侧更严，两条线的结论都保留在报告里。', imgs=[('23-op4-after', '运行中心实拍：run9 横幅在位但运行列表空态+RunDetailView 404——runs 注册表缺口实证（审计发现，记单 runs-registry-empty）', 'ui')]),
     24: dict(issue_keys=['retro-open-items'], keys=['retro_done'], actor='ai', actorText='AI · G6 复盘',
             narrative='G6 复盘 18:04:55：问题单 10 起三族在案（RACI 双@×4/越序抢跑/AN-MP 首窗超时/integration 推送未达/NVMe 卷脱挂/runs 注册表空态/retro-open-items）；效果实证带锚见效果卡。', imgs=[('24-op4-after', '历史会话页（#/app/history）：G6 复盘期会话档案入口', 'ui')]),
     25: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 核验',
-            narrative='IDE 工作台三视角实拍：fanfan/arch 双账号工作台全景（25-op3/25-op6，锚：REL 三卡 t_23d7f58b/t_fa9bb595/t_f802193c 工件树可见）+ 方案 §2.5 指定入口 `#/app/ide?task=t_e35cd102` 深链——任务简报抽屉到达即自动展开（RACI 四元组/工作流/git/验收字段一屏齐，25-op7）。收官首轮曾误判「抽屉点不开=canvas 限制」，差异审计按指定入口实测反转，归因错误如实更正（见 2026-10-06-v8-design-intent-gap-audit.md P3）。', imgs=[('25-op3-before', 'IDE 工作台（fanfan 视角）：RFD-001 主任务卡+任务管理面板+git 文件树', 'ui'), ('25-op6-after', 'IDE 工作台（arch 视角）：同工作台双账号渲染', 'ui'), ('25-op7-after', 'IDE·任务简报抽屉（#/app/ide?task= 深链自动展开）：RACI 四元组/工作流/git/验收字段一屏齐——方案指定入口实测有效', 'ui')]),
+            narrative='IDE 工作台三个视角实拍：两个账号的全景+按方案指定入口直达任务——任务简报自动展开（负责人/流程/git/验收信息一屏齐）。收官时曾误报“抽屉点不开”，实为没走指定入口，复查后已更正。', imgs=[('25-op3-before', 'IDE 工作台（fanfan 视角）：RFD-001 主任务卡+任务管理面板+git 文件树', 'ui'), ('25-op6-after', 'IDE 工作台（arch 视角）：同工作台双账号渲染', 'ui'), ('25-op7-after', 'IDE·任务简报抽屉（#/app/ide?task= 深链自动展开）：RACI 四元组/工作流/git/验收字段一屏齐——方案指定入口实测有效', 'ui')]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
             narrative='报告链实录：18:0x 首跑被按轮叙事集硬闸拦（R17 设计内——本轮叙事集未注册时拒绝出报告防旧轮顶包）→STEPS_META_RUN9 注册后 relay 下一拍自动完成第 26 步并 RELAY-FINISHED；全程 00:24-18:0x≈17.7h（含卷脱挂中断 8.5h，净执行≈9.2h）。564 验证轮四主命题全部落判：交付 4/4、假停摆零、接力棒 2 次、必采 11/13（现矩阵口径；当轮 11 项全采=旧矩阵 11/11 达成，新增步 13 skill 帧/步 23 门禁灯帧两项缺=已记单缺口）。', imgs=[('26-op6-after', '驾驶舱终局帧：run-progress 横幅 26/26 段（report_done 后补拍，H7 重生成挂接）', 'ui')]),
 }
@@ -1005,6 +1005,27 @@ def _improve_html(txt):
             f'<div class="st-improve-note">落地状态：随 run 轮记单与守门证据逐条可追溯；'
             f'本轮新暴露问题已按 §5.4 段三口径回写方案步条。</div></div>')
 
+def _sec34_is_empty(n):
+    """③④ 双空判定（去凑数）：方案已知问题=无 且 该步零问题单 → 合并单行。"""
+    known = plan_steps.get(n, {}).get('known', '')
+    if known and known != '无。':
+        return False
+    meta = STEPS_META[n]
+    keys = meta.get('issue_keys') or []
+    if not keys:
+        return True
+    log = EVID / 'issues.log'
+    if not log.exists():
+        return True
+    for ln in log.read_text().splitlines():
+        p = ln.split('|', 3)
+        if len(p) >= 4 and p[1] in keys and p[0] == 'ISSUE':
+            return False
+    return True
+
+def _sec34_empty(n):
+    return '<p class="st-issues none">已知问题：无（本步零问题单）；改进项：无——如实呈现，不凑段。</p>'
+
 def _step_issues_html(n):
     """段三后半：该步 ISSUE/DISP 行（issues.log 按步过滤，步归属=STEPS_META 按轮注册的
     issue_keys；无注册键的步显示零问题单——文末台账仍为全量单一事实源）。"""
@@ -1163,7 +1184,7 @@ def r18_block(n: int) -> str:
         parts.append('</div>')
     if sk_cnt:
         parts.append('<div class="r18-sec r18-skill"><div class="r18-sec-hd">'
-                     f'<b>skill 过程（§5.7 F-4：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
+                     f'<b>skill 过程（§5.6 必采矩阵：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
         if sk_gen:
             parts.append('<div class="r18-entry">xxx-dev 生成过程：</div>'
                          '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_gen, n) + '</div>')
@@ -1175,7 +1196,7 @@ def r18_block(n: int) -> str:
         parts.append('</div>')
     if dlv_frames:
         parts.append('<div class="r18-sec r18-delivery"><div class="r18-sec-hd">'
-                     '<b>delivery 门禁灯（R29/§5.7 F-4：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
+                     '<b>delivery 门禁灯（R29/§5.6 必采矩阵：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
                      '<div class="st-shots r18-frames">' + _r18_frame_tags(dlv_frames, n) + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(dlv.get("note", "")))}</div>' if dlv.get('note') else '')
                      + '</div>')
@@ -1183,7 +1204,7 @@ def r18_block(n: int) -> str:
     return ''.join(parts)
 
 def r18_coverage() -> str:
-    """hero 统计位：必采矩阵实算（正本 §5.5+§5.7 F-4——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
+    """hero 统计位：必采矩阵实算（正本 §5.5+§5.6 必采矩阵——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
 
     矩阵与审计器查 8 同表（r18_matrix 单一事实源）；帧文件按 STEPS_DIR 实查，
     缺帧计未达标，与渲染侧"帧缺失"占位同口径。
@@ -1414,13 +1435,26 @@ def _art_read(rel: str):
     return raw
 
 def _art_checks_html(raw: str, checks):
+    """模版字段核对（P17 用户反馈升级：呈现字段值摘录，不只 ✅/缺）——
+    模版作为标准输入输出的质量标准必须看得见：每个字段名旁给命中值首行摘录
+    （≤60 字），未命中保持红"缺"。核对判定跑全文不受截断影响。"""
     ok_all = True
     spans = []
     for label, rx in checks:
-        hit = bool(re.search(rx, raw))
+        m = re.search(rx, raw)
+        hit = bool(m)
         ok_all = ok_all and hit
-        spans.append(f'<span class="art-chk{" ok" if hit else " miss"}">'
-                     f'{"✅" if hit else "缺"} {H.escape(label)}</span>')
+        val = ''
+        if hit:
+            frag = (m.group(1) if m.groups() else m.group(0))
+            frag = re.sub(r'\s+', ' ', frag).strip().lstrip('#|-–> ').strip()
+            frag = frag.split('|')[0].strip() if '|' in frag[:3] else frag
+            val = frag[:60] + ('…' if len(frag) > 60 else '')
+        cls = 'ok' if hit else 'miss'
+        spans.append(f'<div class="art-chk-row {cls}"><span class="art-chk-flag">{"✅" if hit else "缺"}</span>'
+                     f'<span class="art-chk-label">{H.escape(label)}</span>'
+                     + (f'<span class="art-chk-val">{H.escape(val)}</span>' if val else '<span class="art-chk-val miss">未命中</span>')
+                     + '</div>')
     return ok_all, ''.join(spans)
 
 def _step_done(n: int) -> bool:
@@ -1690,13 +1724,13 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     {art_html}
     <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>{gate_label}</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   </div>
-  <div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
+  {(_sec34_empty(n) if _sec34_is_empty(n) else f'''<div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
     {_known_html(plan_steps.get(n, {}).get('known', ''))}
     {_step_issues_html(n)}
   </div>
   <div class="st-sec"><div class="st-sec-hd">④ 改进项</div>
     {_improve_html(plan_steps.get(n, {}).get('improve', ''))}
-  </div>'''
+  </div>''')}'''
         else:
             body_html = f'''
   <p class="st-story">{gloss_first_use(H.escape(meta["narrative"]))}</p>
@@ -1826,9 +1860,19 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-known,.st-improve{{font-size:12px;line-height:1.8;color:var(--text);background:var(--bg);border-radius:8px;padding:8px 12px;margin:4px 0}}
 .st-known.none,.st-improve.none,.st-issues.none{{color:var(--muted);font-size:12px;padding:4px 0}}
 .st-improve-note{{font-size:11px;color:var(--muted);margin-top:4px}}
-.st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}}
-.st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top}}
+.st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0;table-layout:fixed}}
+.st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
+.art-checks{{display:grid;gap:2px;margin:4px 0 8px}}
+.art-chk-row{{display:flex;gap:8px;align-items:baseline;font-size:11.5px;padding:2px 6px;border-radius:4px;background:var(--bg)}}
+.art-chk-row.miss{{background:#fef2f2}}
+.art-chk-flag{{flex-shrink:0}}
+.art-chk-label{{flex-shrink:0;font-weight:600;color:var(--text);min-width:110px}}
+.art-chk-val{{color:var(--muted);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.art-chk-val.miss{{color:#dc2626}}
+.st-shots{{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:6px 0 0 44px}}
+.art-code{{max-height:340px;overflow:auto}}
+.gate-body{{max-height:260px;overflow:auto}}
 .step.gate-step .gate-body{{color:#78350f}}
 
 /* ── 全量呈现：对话全文/操作前后帧/环节效果 ── */
