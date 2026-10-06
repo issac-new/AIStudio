@@ -282,9 +282,37 @@ PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 
 </div>'''
 
+PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>V8 终态正本的首跑轮，同时是 564 补丁（网关响应投递兜底）的统一验证轮。run8 定因了五起"AI 员工集体偷懒"实为网关静默丢回复；run9 的四道验收线：交付率 ≥3/4、假停摆零复发、接力棒 &lt;50、必采证据矩阵 11/11 当轮采集。</div>
+
+<div class="card ok"><b>本轮的诚实结论——主命题全过：</b>26 步全部走完，<b>六道闸全部一次过</b>（G1 00:26 / G2 03:17 / G3 04:32 / G4 06:11 / G5 06:27 / G6 18:04——run8 的 G2 崩溃环 3h04m 与 G5 熔断两轮在本轮对照归零）；四道验收线全绿：交付 4/4、假停摆 0、接力棒 2 次（均在设计语义内：预重启 1 次+卷恢复续跑 1 次）、必采 11/11（run8 3/11）。回执缺失从 run8 的 4 起降到 1 起——564 修复的量级实证。</div>
+
+<div class="card warn"><b>真实发生的逆境（全部记单在案）：</b>① 09:19 整机重启带崩 NVMe 外置盘，脱挂 8.5 小时——17:48 卷恢复后接力器自动续跑收官，数据面零丢失（事故全记录在主树 run9-incident-nvme-drop-20261006.md）；② 五名 agent 把"干净工作区"误读为丢件，越序抢跑推了 8 个测试分支（被 G2/G3 甄别，未污染主线）；③ RACI 双@通知 ×4 未发（564 在位但通知走非同源路径——run10 复验项）；④ 产品侧缺口：运行中心列表空态+运行详情 404（mux 驱动的运行没进注册表，如实记单挂产品 backlog）。</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（66 张实拍界面帧全互异，UI 看板卡 ID 与 state 键逐一可对账）；房间对话证据从 Matrix API 直采（产品客户端不显示驱动所建房间——缺口如实记单，不冒充）。</div>
+
+<h2>研发全流程治理有效性（实算）</h2>
+<table>
+<tr><th>治理维度</th><th>本轮实算</th><th>口径来源</th></tr>
+<tr><td>六闸首过率</td><td class="ok"><b>6/6 全首过</b>（G1 00:26:07 / G2 03:17:38 / G3 04:32:54 / G4 06:11:45 / G5 06:27:47 / G6 18:04:55；run8 对照：G2 崩溃环 3h04m、G5 熔断两轮）</td><td>state.env 落键时戳</td></tr>
+<tr><td>问题记录与处置</td><td>{{n_issue}} 条记录（{{n_key}} 个唯一键）DISP {{n_disp}} 条全处置（已修/已闭环/观察/延后分类在 issues.log 逐条）</td><td>evidence/issues.log 实算</td></tr>
+<tr><td>564 验证四线</td><td class="ok">交付 4/4≥3/4 · 假停摆 0（run8 五起）· 接力棒 2&lt;50 · 必采 11/11（run8 3/11）</td><td>V8 附录 D 验收线</td></tr>
+<tr><td>回执链路</td><td>receipt-missing 1 起（run8 ×4 同族对照）——564 投递兜底量级实证；dropped=0</td><td>relay 日志+issues.log</td></tr>
+<tr><td>测试独立性</td><td>测试者 qi/fei ≠ 写码者四开发；测试报告入 integration 过 G4</td><td>origin/integration/RFD-001</td></tr>
+<tr><td>验收闭环</td><td>G1 冻结 AC → UAT 证据行过闸 18:04:08（中断 8.5h 后接力续跑达成）</td><td>docs/acceptance/</td></tr>
+<tr><td>可复现性</td><td>26 步全键落位（含步 15 g2_arch_pass 键名修正）；66 实拍帧 md5 全互异；UI 卡 ID 与 state 双侧可对账</td><td>runs/{{run_id}}/evidence/</td></tr>
+</table>
+
+{{ch0}}
+'''
+
 # R17 硬闸（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
 # 防旧轮叙事顶包新轮报告。新轮正本=人工按该轮实锚编写后注册。
 PART1_BY_RUN = {
+    '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
     '20261004-v7-run8': PART1_RUN8,
     '20261002-v5-run7': PART1_RUN7,
