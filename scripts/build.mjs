@@ -60,7 +60,7 @@ console.log('[overlay-build] ▶ 运行时配置资源 → dist/server/runtime/{
 // 历史手工补放件后日志连刷 "can't open file semantica-bridge.py"）。
 const semBridgeSrc = resolve(overlayRoot, 'custom/server/decisiongraph/semantica-bridge.py');
 if (!existsSync(semBridgeSrc)) throw new Error(`[overlay-build] semantica 桥缺失: ${semBridgeSrc}`);
-cpSync(semBridgeSrc, resolve(upstream, 'packages/server/dist/server/semantica-bridge.py'));
+cpSync(semBridgeSrc, resolve(upstream, 'dist/server/semantica-bridge.py'));
 console.log('[overlay-build] ▶ decisiongraph semantica 桥 → dist/server/semantica-bridge.py');
 
 console.log('\n[overlay-build] ✓ 完整构建完成:');
