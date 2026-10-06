@@ -101,22 +101,48 @@ if R18F.exists():
     except (json.JSONDecodeError, OSError) as e:
         print(f'[mx-report-gen] WARN r18-steps.json 解析失败按空载荷处理：{e}', file=sys.stderr)
 
-# ── 方案原文解析 ──
+# ── 方案原文解析（双格式，V8.2 配套①）──
+# V8.2 四段式：标题行 `**步 N｜标题**`，四段 **这步做什么**/**交付物及质量判据**/
+# **已知问题**/**改进项**；旧版 V8：`N、`正文+（把关：…）尾行。正本换代先落解析适配
+# 再切换（档案 §七裁决），两种格式并存期内自动识别。
 plan_text = PLAN_PATH.read_text(encoding='utf-8')
+PLAN_V82 = '**步 1｜' in plan_text
+
+def _v82_sec(body, name):
+    sm = re.search(r'\*\*' + name + r'\*\*：(.+?)(?=\*\*(?:这步做什么|交付物及质量判据|已知问题|改进项)\*\*：|\Z)',
+                   body, re.S)
+    return re.sub(r'\s+', ' ', sm.group(1)).strip() if sm else ''
+
 plan_steps = {}
-for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^#{2,3} |\Z)', plan_text, re.M | re.S):
-    n = int(m.group(1))
-    if n in plan_steps: continue
-    block = m.group(2).strip()
-    gate = ''
-    gm = re.search(r'（(把关[^：]*?)：(.+?)）\s*$', block, re.S)
-    if gm:
-        label, body = gm.group(1), re.sub(r'\s+', ' ', gm.group(2)).strip()
-        gate = (label + '：' + body) if '【' in label else body
-    body_head = block.split('（把关')[0]
-    first = re.sub(r'\s+', ' ', body_head).strip().split('。')[0]
-    if len(first) > 96: first = first[:96] + '…'
-    plan_steps[n] = (first, gate)
+if PLAN_V82:
+    for m in re.finditer(r'^\*\*步 (\d{1,2})｜(.+?)\*\*\s*$(.+?)(?=^\*\*步 \d{1,2}｜|^#{2,3} |\Z)',
+                         plan_text, re.M | re.S):
+        n = int(m.group(1))
+        if n in plan_steps: continue
+        body = m.group(3)
+        plan_steps[n] = dict(title=m.group(2).strip(),
+                             gate=_v82_sec(body, '交付物及质量判据'),
+                             known=_v82_sec(body, '已知问题'),
+                             improve=_v82_sec(body, '改进项'))
+else:
+    for m in re.finditer(r'^(\d{1,2})、(.+?)(?=^\d{1,2}、|^#{2,3} |\Z)', plan_text, re.M | re.S):
+        n = int(m.group(1))
+        if n in plan_steps: continue
+        block = m.group(2).strip()
+        gate = ''
+        gm = re.search(r'（(把关[^：]*?)：(.+?)）\s*$', block, re.S)
+        if gm:
+            label, body = gm.group(1), re.sub(r'\s+', ' ', gm.group(2)).strip()
+            gate = (label + '：' + body) if '【' in label else body
+        body_head = block.split('（把关')[0]
+        first = re.sub(r'\s+', ' ', body_head).strip().split('。')[0]
+        if len(first) > 96: first = first[:96] + '…'
+        plan_steps[n] = dict(title=first, gate=gate, known='', improve='')
+
+# 解析自检（V8.2 配套①）：26 步缺步即拒跑——解析锚断=报告全员假标题，宁缺毋滥
+_missing = [n for n in range(1, 27) if n not in plan_steps]
+if _missing:
+    sys.exit(f'[mx-report-gen] 方案解析缺步：{_missing}（PLAN_PATH={PLAN_PATH}，格式 {"V8.2" if PLAN_V82 else "V8"}）——解析锚断裂，拒出报告')
 
 # ── 六阶段分组（对齐方案叙事结构）──
 PHASES = [
@@ -766,7 +792,7 @@ STEPS_META_RUN8 = {
 }
 
 STEPS_META_RUN9 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(issue_keys=['roster-stale-governance-roles'], keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='mx-clean 全清后 00:24:00 起跑（V8 终态正本首跑轮）；30 账号 token 真值核验全过（15 人×双账号），预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。如实记：roster.md 停在首签 12 人版（mx-clean 快照回灌未含治理三岗），编制对账缺口=差异审计 P11，收官补正（中央仓 4124b47，issues 单 roster-stale-governance-roles）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='gateway :8801 + studio :8802 就绪；运维面实拍：网关在线、17 agent 活跃、4 个 Matrix 会话在线（2-op4）。relay 每拍自愈通道在位——五枚运行时补丁全程零缺失（564=网关响应投递兜底、533=网关并发闸风暴、534=出站通知护栏、390=看板首页默认板、391=看板团队围栏；relay 日志逐拍实证）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
@@ -782,17 +808,17 @@ STEPS_META_RUN9 = {
             narrative='RFD-001 收单商户多端小程序支付收银台需求文档发出；G1 需求上锁+AC 清单冻结 00:26:07 一次过（起跑后 2 分钟）。效果实证带锚见对话/效果卡；冻结后需求全景看板实拍（RFD-001 全家桶卡在板，7-op4）。', imgs=[('7-op4-after', '看板：G1 冻结后 RFD-001 全家桶卡全景（排期/开发/测试/交付/发布卡在板）', 'ui')]),
     8: dict(keys=['register_done'], actor='human', actorText='人 · fanfan 发单',
             narrative='fanfan 驾驶舱发单+凭证登记；IDE 工作台任务·决策侧栏实拍：run9 任务流水 20+ 条全列（评审概设/DEV-MP/tag v1.0.0-cashier/回归复测 run10/缺陷重做 P3——发单链派生任务全景；锚：房间 !cVtpmUOAfqakogcEPF 建群 00:26:10+主任务卡 t_e35cd102，8-op3 对帧）。', imgs=[('8-op3-before', 'IDE 工作台·任务·决策侧栏：run9 任务流水 20+ 条（发单链派生任务全景）', 'ui'), ('8-op3-after', 'IDE 工作台·任务·决策侧栏（续）：评审概设/DEV-MP/tag/回归复测 run10/缺陷重做 P3 在列', 'ui')]),
-    9: dict(keys=['register_done'], actor='ai', actorText='AI · agent 首应',
+    9: dict(issue_keys=['runs-registry-empty'], keys=['register_done'], actor='ai', actorText='AI · agent 首应',
             narrative='agent 群内首应与登记回执（对话实录已按必采矩阵从 Matrix API 采集，见对话卡）；房间时间线在本构建 UI 未同步——同步空态帧如实呈现并记单（runs-registry-empty 同族产品缺口，9-op5）。', imgs=[('9-op5-after', '房间同步空态实拍：群房间时间线在本构建 UI 未同步（对话实录走 Matrix API 采集，缺口记单 runs-registry-empty）', 'ui')]),
-    10: dict(keys=['register_done'], actor='ai', actorText='AI · 看板登记',
+    10: dict(issue_keys=['raci-dispatch-missing'], keys=['register_done'], actor='ai', actorText='AI · 看板登记',
             narrative='看板 RFD-001 卡全列实拍：t_e35cd102 排期 TEST-FE、t_d4241a3a TEST-BE、t_91b8c344 DEV-BFF、t_3d299c0e 回归复测 run10、t_f802193c 交付包、t_fa9bb595 tag v1.0.0-cashier、t_23d7f58b——与 state.env card_REL-* 三卡 ID 逐一对应（UI↔state 交叉实证）；点卡无详情抽屉弹出（canvas 看板 DOM 点击不穿透，如实记）。', imgs=[('10-op3-before', '看板：RFD-001 卡全列（56 任务，泳道 待分拣/待办/已调度/就绪/进行中）', 'ui'), ('10-op3-after', '看板（续）：t_e35cd102 排期 TEST-FE/t_d4241a3a TEST-BE/t_91b8c344 DEV-BFF/t_3d299c0e 回归复测 run10/t_f802193c 交付包/t_fa9bb595 tag v1.0.0-cashier——与 state card_REL-* 三卡 ID 逐一对应', 'ui')]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 四路系分',
             narrative='四系分（AN-PAYCORE/AN-MP/AN-CHWX/AN-CHALI）02:54 全入库——run8 2/4 交付的补考轮全量通过；AN-MP 首窗 3600s 超时记单（负向如实）；看板系分卡实拍（11-op2）。', imgs=[('11-op2-after', '看板：RFD-001 系分交付卡在板（四系分 02:54 全入库）', 'ui')]),
-    12: dict(keys=['triage_done'], actor='ai', actorText='AI · 分诊',
+    12: dict(issue_keys=['agent-prework-bypass-g2'], keys=['triage_done'], actor='ai', actorText='AI · 分诊',
             narrative='系分任务分诊与认领路由完成（主卡 t_e35cd102 派生 T-101~T-107 上板）；负向发现如实记单：五 agent 越序抢跑 8 分支（agent-prework-bypass-g2——G2 前越序开工，治理闸口径与记单在案）。', imgs=[('12-op2-after', '看板：系分任务分诊泳道（五 agent 越序抢跑记单 agent-prework-bypass-g2）', 'ui')]),
-    13: dict(keys=['anexec_done'], actor='ai', actorText='AI · 系分执行',
+    13: dict(issue_keys=['anexec-missing','receipt-missing'], keys=['anexec_done'], actor='ai', actorText='AI · 系分执行',
             narrative='anexec 真分批 2+2（d1/d2 键在档）；四路全交付是本轮交付率 4/4 达标的主因之一（run8 同环节 2/4）。', imgs=[('13-op2-after', '看板：AN-PAYCORE 系分卡（四路系分 4/4 交付）', 'ui')]),
-    14: dict(keys=['review_done'], actor='ai', actorText='AI · 多角色会签',
+    14: dict(issue_keys=['raci-dispatch-missing'], keys=['review_done'], actor='ai', actorText='AI · 多角色会签',
             narrative='系分评审多角色会签完成；负向发现如实记单：RACI 双@×4 缺失（564 在位但非同源路径——补丁修复与派发链路不同源的实证边界）。', imgs=[('14-op2-after', '看板：评审卡（RACI 双@×4 缺失如实记单）', 'ui')]),
     15: dict(keys=['g2_arch_pass'], actor='ai', actorText='AI · 架构闸',
             narrative='G2 架构闸 03:17:38 一次过（card_arch_g2=t_e9f39ed5）——run8 同闸 3h04m 崩溃环（403 棒）的对照轮归零；V8 键名修正（g2_arch_pass 非 run8 的 archgate_done）在本轮注册生效。', imgs=[('15-op2-after', '看板：架构闸 G2 评审卡（03:17:38 一次过，t_e9f39ed5）', 'ui')]),
@@ -800,19 +826,19 @@ STEPS_META_RUN9 = {
             narrative='评审线程收口+概设定稿入库（卡 t_e9f39ed5 评审链闭环，G2 闸 03:17:38）。', imgs=[('16-op2-after', '看板：评审收口后 RFD-001 主卡态', 'ui')]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · fanfan 排期',
             narrative='排期 03:37 一次过（tasklist 00:40 起草、含子任务拆分）——run8 首派空转 1h39m 的补考：564（网关响应投递兜底）修复后首考一次过，本轮正向主证之一。', imgs=[('17-op2-after', '看板：排期卡（03:37 一次过——564 修复后首考）', 'ui')]),
-    18: dict(keys=['devimpl_done'], actor='ai', actorText='AI · 四路开发',
+    18: dict(issue_keys=['push-retry-integration'], keys=['devimpl_done'], actor='ai', actorText='AI · 四路开发',
             narrative='4/4 分支真交付（devimpl_d1/d2/d3 在档；G3 04:32:54 code_pass 4/4 branch_fresh）；integration 推送未达 1 起记单（receipt-missing——run8 同族 ×4，564 后降为 1 起，量级对照即修复实证）。', imgs=[('18-op2-after', '看板：DEV-PAYCORE 开发卡（4/4 分支真交付）', 'ui')]),
     19: dict(keys=['testpass_done'], actor='ai', actorText='AI · qi/fei 测试',
             narrative='测试+报告入 integration；G4 06:11:45 落键；fei 视角会话列表实拍（测试/UAT 验收人账号态，19-op6）。', imgs=[('19-op6-after', 'fei 视角会话列表：测试/UAT 验收人账号态', 'ui')]),
     20: dict(keys=['release_done'], actor='ai', actorText='AI · 发布登记',
             narrative='REL 三卡登记（MERGE t_23d7f58b / TAG t_fa9bb595 / DELIVER t_f802193c，UI 看板与 state 双侧对应）；G5 06:27:47 ready 一次过——run8 同闸 FAIL+熔断两轮的对照轮归零。效果实证带锚见效果卡。', imgs=[('20-op2-after', '看板：REL 发布卡（三卡与 state card_REL-* 对应）', 'ui')]),
-    21: dict(keys=['uat_done'], actor='both', actorText='人 · fanfan 验收',
+    21: dict(issue_keys=['infra-nvme-volume-drop'], keys=['uat_done'], actor='both', actorText='人 · fanfan 验收',
             narrative='UAT 06:28 派发→09:19 整机重启致 NVMe 外挂卷脱挂 8.5h（infra-nvme-volume-drop 基建事故记单）→17:48 卷恢复 relay 接力续跑（接力棒第 2 次）→18:04:08 验收过闸；验收书+UAT-EVIDENCE 证据行对话实录在卡。', imgs=[('21-op4-after', '看板：UAT 终局态——顶条 T-101~T-107 任务标签（含 T-107 前端验收）', 'ui')]),
     22: dict(keys=['workmgr_done'], actor='ai', actorText='AI · 工作区管理',
             narrative='工作台账 work-report 落档 origin/main；18:04:18；chen 视角会话列表实拍（开发交付人账号态，22-op6）。', imgs=[('22-op6-after', 'chen 视角会话列表：开发交付人账号态', 'ui')]),
-    23: dict(keys=['audit_done'], actor='ai', actorText='AI · audit 审计',
+    23: dict(issue_keys=['audit-finding'], keys=['audit_done'], actor='ai', actorText='AI · audit 审计',
             narrative='审计双线 18:04:46 通过；本轮审计自身发现=运行注册表空态：运行中心列表「还没有任何运行」+ RunDetailView API 404，而 run-progress 横幅正常——产品侧 mux 驱动运行未入运行中心，记单 runs-registry-empty（23-op4 空态实拍即审计证据）。', imgs=[('23-op4-after', '运行中心实拍：run9 横幅在位但运行列表空态+RunDetailView 404——runs 注册表缺口实证（审计发现，记单 runs-registry-empty）', 'ui')]),
-    24: dict(keys=['retro_done'], actor='ai', actorText='AI · G6 复盘',
+    24: dict(issue_keys=['retro-open-items'], keys=['retro_done'], actor='ai', actorText='AI · G6 复盘',
             narrative='G6 复盘 18:04:55：问题单 10 起三族在案（RACI 双@×4/越序抢跑/AN-MP 首窗超时/integration 推送未达/NVMe 卷脱挂/runs 注册表空态/retro-open-items）；效果实证带锚见效果卡。', imgs=[('24-op4-after', '历史会话页（#/app/history）：G6 复盘期会话档案入口', 'ui')]),
     25: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 核验',
             narrative='IDE 工作台三视角实拍：fanfan/arch 双账号工作台全景（25-op3/25-op6，锚：REL 三卡 t_23d7f58b/t_fa9bb595/t_f802193c 工件树可见）+ 方案 §2.5 指定入口 `#/app/ide?task=t_e35cd102` 深链——任务简报抽屉到达即自动展开（RACI 四元组/工作流/git/验收字段一屏齐，25-op7）。收官首轮曾误判「抽屉点不开=canvas 限制」，差异审计按指定入口实测反转，归因错误如实更正（见 2026-10-06-v8-design-intent-gap-audit.md P3）。', imgs=[('25-op3-before', 'IDE 工作台（fanfan 视角）：RFD-001 主任务卡+任务管理面板+git 文件树', 'ui'), ('25-op6-after', 'IDE 工作台（arch 视角）：同工作台双账号渲染', 'ui'), ('25-op7-after', 'IDE·任务简报抽屉（#/app/ide?task= 深链自动展开）：RACI 四元组/工作流/git/验收字段一屏齐——方案指定入口实测有效', 'ui')]),
@@ -957,9 +983,51 @@ def _entry_html(n):
 
 STEPS = []
 for n in range(1, 27):
-    title, gate = plan_steps.get(n, (f'步骤 {n}', ''))
+    ps = plan_steps.get(n) or {}
+    title = ps.get('title', f'步骤 {n}')
+    gate = ps.get('gate', '')
     meta = STEPS_META[n]
     STEPS.append((n, title, gate, meta))
+
+# ── V8.2 四段渲染辅助（配套②）──
+def _known_html(txt):
+    """段三前半：方案层已知问题（历轮实锤），如实呈现并标注本轮语境。"""
+    if not txt or txt == '无。':
+        return '<p class="st-known none">方案层已知问题：无。</p>'
+    return (f'<div class="st-known"><b>方案层已知问题（历轮实锤，本轮复现状态见叙事与记单）：</b>'
+            f'{md_bold(txt)}</div>')
+
+def _improve_html(txt):
+    """段四：改进项（方案步条原文+落地状态注记——状态自记单/守门证据取，取不到如实标）。"""
+    if not txt or txt == '无。':
+        return '<p class="st-improve none">改进项：无。</p>'
+    return (f'<div class="st-improve"><b>改进项（方案步条）：</b>{md_bold(txt)}'
+            f'<div class="st-improve-note">落地状态：随 run 轮记单与守门证据逐条可追溯；'
+            f'本轮新暴露问题已按 §5.4 段三口径回写方案步条。</div></div>')
+
+def _step_issues_html(n):
+    """段三后半：该步 ISSUE/DISP 行（issues.log 按步过滤，步归属=STEPS_META 按轮注册的
+    issue_keys；无注册键的步显示零问题单——文末台账仍为全量单一事实源）。"""
+    meta = STEPS_META[n]
+    keys = meta.get('issue_keys') or []
+    if not keys:
+        return '<p class="st-issues none">本步零问题单（按轮注册键过滤；全量见文末问题单终态）。</p>'
+    log = EVID / 'issues.log'
+    if not log.exists():
+        return '<p class="st-issues none">issues.log 缺席（如实标注）。</p>'
+    rows = []
+    for ln in log.read_text().splitlines():
+        p = ln.split('|', 3)
+        if len(p) < 4:
+            continue
+        if p[1] in keys:
+            cls = 'd-ok' if p[0] == 'DISP' and p[3].startswith('已修') else 'd-warn'
+            rows.append(f'<tr><td>{H.escape(p[0])}</td><td>{H.escape(p[1])}·{H.escape(p[2])}</td>'
+                        f'<td class="{cls}">{H.escape(p[3][:160])}</td></tr>')
+    if not rows:
+        return '<p class="st-issues none">本步零问题单（注册键本轮未触发）。</p>'
+    return ('<table class="st-issues-tbl"><thead><tr><th>类</th><th>键</th><th>内容</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>')
 
 def fmt_ts(key):
     v = state.get(key, '')
@@ -1586,13 +1654,30 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         art_html = artifact_block(n)  # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对
         abg, afg, atxt = ACTOR_STYLE[meta['actor']]
-        step_cards.append(f'''
-<article class="step{" gate-step" if n in GATE_BY_STEP else ""}" id="step{n}" style="--pc:{c1}">
-  <div class="st-hd">
-    <span class="st-num">{n}</span>
-    <div class="st-title"><h3>{H.escape(title)}{gate_mark}</h3>
-    <span class="st-meta">{status}{f" · {ts}" if ts else ""} <span class="actor" style="background:{abg};color:{afg}">{atxt}｜{H.escape(meta["actorText"])}</span></span></div>
+        if PLAN_V82:
+            # V8.2 四段（与方案 §2.4 步条目同构；§5.4）：操作路径表不入正文（附录《产品操作手册》）
+            gate_label = '质量判据（方案步条·交付物及质量判据段）'
+            body_html = f'''
+  <div class="st-sec"><div class="st-sec-hd">① 这步做什么</div>
+    <p class="st-story">{H.escape(meta["narrative"])}</p>
+    {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
+    {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
+    {r18_block(n)}
+    <div class="st-shots">{imgs_html}</div>
   </div>
+  <div class="st-sec"><div class="st-sec-hd">② 交付物及质量判据</div>
+    {art_html}
+    <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>{gate_label}</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
+  </div>
+  <div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
+    {_known_html(plan_steps.get(n, {}).get('known', ''))}
+    {_step_issues_html(n)}
+  </div>
+  <div class="st-sec"><div class="st-sec-hd">④ 改进项</div>
+    {_improve_html(plan_steps.get(n, {}).get('improve', ''))}
+  </div>'''
+        else:
+            body_html = f'''
   <p class="st-story">{H.escape(meta["narrative"])}</p>
   {_entry_html(n)}
   {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
@@ -1600,7 +1685,14 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   {art_html}
   {r18_block(n)}
-  <div class="st-shots">{imgs_html}</div>
+  <div class="st-shots">{imgs_html}</div>'''
+        step_cards.append(f'''
+<article class="step{" gate-step" if n in GATE_BY_STEP else ""}" id="step{n}" style="--pc:{c1}">
+  <div class="st-hd">
+    <span class="st-num">{n}</span>
+    <div class="st-title"><h3>{H.escape(title)}{gate_mark}</h3>
+    <span class="st-meta">{status}{f" · {ts}" if ts else ""} <span class="actor" style="background:{abg};color:{afg}">{atxt}｜{H.escape(meta["actorText"])}</span></span></div>
+  </div>{body_html}
 </article>''')
     nav_items.append('</div>')
     content_parts.append(f'''
@@ -1611,6 +1703,22 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
 
 nav_html = '\n'.join(nav_items)
 content_html = '\n'.join(content_parts)
+
+def manual_appendix():
+    """V8.2 配套③：产品路径参考表（steps_entry）降附录《产品操作手册》——
+    轮次无关的产品事实，非本轮实录（正本 §5.5 操作记录真值化）。"""
+    if not STEP_ENTRIES:
+        return ''
+    rows = ''.join(
+        f'<tr><td>步 {n}</td><td>{H.escape(w)}</td><td>{H.escape(p)}</td><td>{H.escape(o)}</td></tr>'
+        for n, (w, p, o) in sorted(STEP_ENTRIES.items()))
+    return (f'<section class="phase"><header class="ph-hd"><div class="ph-num">附</div><div>'
+            f'<h2>产品操作手册</h2><p>轮次无关的产品事实，非本轮实录——本轮实际动作以各步「① 这步做什么」为准（正本 §5.5）</p></div></header>'
+            f'<table class="st-issues-tbl"><thead><tr><th>步</th><th>身份</th><th>入口</th><th>操作序列</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></section>')
+
+if PLAN_V82:
+    content_html += manual_appendix()
 art_tbl, art_stat, art_note_g5 = artifact_panorama()
 
 html = f'''<!DOCTYPE html>
@@ -1691,6 +1799,15 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-gate[open] summary::before{{transform:rotate(90deg)}}
 .st-gate summary::marker{{display:none}}
 .gate-body{{padding:8px 14px 12px;font-size:12px;line-height:1.8;color:var(--text);border-top:1px solid var(--border)}}
+.st-sec{{margin:10px 0 0 44px;border-top:1px dashed var(--border);padding-top:8px}}
+.st-sec-hd{{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;margin-bottom:4px}}
+.st-sec .st-story{{margin-left:0}}
+.st-known,.st-improve{{font-size:12px;line-height:1.8;color:var(--text);background:var(--bg);border-radius:8px;padding:8px 12px;margin:4px 0}}
+.st-known.none,.st-improve.none,.st-issues.none{{color:var(--muted);font-size:12px;padding:4px 0}}
+.st-improve-note{{font-size:11px;color:var(--muted);margin-top:4px}}
+.st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}}
+.st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top}}
+.st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
 .step.gate-step .gate-body{{color:#78350f}}
 
 /* ── 全量呈现：对话全文/操作前后帧/环节效果 ── */
