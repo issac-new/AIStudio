@@ -24,7 +24,7 @@
 2. **治理靠机制不靠自觉**：每个"完成"必须带双凭证（代码提交号+任务卡号）并被系统反向核验；六道硬闸守住不可逆决策；问题全记账、复盘全处置。
 3. **过程可完整重现给第三方**：一份自包含的 HTML 报告让不熟悉本项目的人看懂"一张需求单怎么变成上线功能"，且每个结论可按锚点反查。
 
-关键数字：26 步标准流程｜6 道硬闸（G1-G6）｜4 类 AI 员工｜15 人编制（30 个 matrix 账号、42 个智能体 profile）｜驾驶舱单面六功能区｜双 loop（skill 内循环×swarm 外循环）｜交付门禁 45 门按域裁剪。
+关键数字：26 步标准流程｜6 道硬闸（G1-G6）｜4 类 AI 员工｜15 人编制（30 个 matrix 账号、42 个智能体 profile）｜驾驶舱单壳多区（看板+治理页签/沟通/审批收件箱/运行中心/IDE 画布/账户，IA 2.0）｜双 loop（skill 内循环×swarm 外循环）｜交付门禁 45 门按域裁剪。
 
 ### 1.2 完成后系统真实能力（效果清单，验收锚=测试报告用例/执行输出/UAT 判词）
 
@@ -49,7 +49,7 @@
 
 | 组件 | 是什么 | 设计初衷 | 在 26 步中的角色 |
 |---|---|---|---|
-| Swarm Studio（产品面） | 桌面应用（Electron+Vue），驾驶舱单面六功能区（沟通/看板/审批/治理/IDE/账户）；服务端治理域（治理中心/变更治理/知识图谱治理/驾驭工程/无损换窗/看板/审批/运行观测）工件保存即提交 git | 把"为可监督性设计"做成产品功能；工件必须真实可编辑，禁只读摆设件 | 层①人机入口：全流程唯一操作面；治理中心承载六闸工件与复盘度量；IDE 工作台承载第 25 步 |
+| Swarm Studio（产品面） | 桌面应用（Electron+Vue），驾驶舱单壳多区：/app 路由树内看板（含治理五页签）/沟通/审批收件箱/运行中心/IDE 画布/账户管理（IA 2.0，2026-10-06 起表述以此为准）；服务端治理域（变更治理/知识图谱治理/驾驭工程/无损换窗/看板/审批/运行观测）工件保存即提交 git；Delivery Cases 交付案例面板（/app/cases）承载六闸协议事件投影 | 把"为可监督性设计"做成产品功能；工件必须真实可编辑，禁只读摆设件 | 层①人机入口：全流程唯一操作面；治理中心承载六闸工件与复盘度量；IDE 工作台承载第 25 步 |
 | hermes agent（运行时） | 自改进个人 agent 运行时，单网关进程多平台接入（一机一网关服务全部 profile）；kanban 引擎（约 20 CLI 模块+watchers/dispatcher，认领即 spawn）；skills 引擎（slash 命令体系）；审批传输（once/session/always/deny 四态，超时 fail-closed）；矩阵集成（反应审批/`!` 命令路由/线程） | 两大不变量：逐会话前缀缓存神圣（中途变更历史/工具集/记忆=毁缓存翻倍成本，唯一例外压缩）；核心是窄腰、能力在边缘 | 层③调度与看板：认领即 spawn、消息即指令的执行底座；层⑥记忆沉淀宿主 |
 | Matrix（协作底座） | docker matrix-synapse 承载全部账号的房间/线程/反应/DM 协作语义；element-web 交互模式按需吸收（Spotlight 混合搜索/跳未读条/permalink 内链等） | 指令通道与数据通道分离；消息/反应/线程都是可反查凭证；群聊=分布式协作一等现场 | 层②分布式协作层：步 8-19 的派发/回执/审批/缺陷对话现场 |
 | swarm yuan skill（能力层） | 元技能生成器：对任意代码仓库跑一次，产出项目专属研发能力技能；五步研发能力内建（①认知地图②规格先行③代码纪律④知识池⑤质量门禁）；xxx-dev 定制技能生成机制（lite/standard/compliance 三档六段式骨架） | AI 瓶颈在"懂不懂项目"：不懂规矩交给门禁、想错逻辑交给验证；宿主管循环与沙箱，技能只管项目上下文 | 层④能力层：步 13 系分与步 18 编码五步能力的内建来源 |
@@ -77,7 +77,7 @@
 graph TB
     subgraph L1["① 人机入口层 · 15 人 + Studio :8802"]
         U["15 人编制（BA/PM/架构/研发×4/测试×2/治理×3）"]
-        ST["驾驶舱单面六功能区（沟通/看板/审批/治理/IDE/账户）<br/>matrix 免密登录→JWT→只见本账号档案"]
+        ST["驾驶舱单壳多区（看板+治理页签/沟通/审批/运行/IDE/账户）<br/>matrix 免密登录→JWT→只见本账号档案；交付案例面板投六闸门禁灯"]
     end
     subgraph L2["② 分布式协作层 · Matrix Synapse :8008"]
         MX["30 账号 · 群聊 · @派发=RACI 四元组<br/>双兜底回执 · 缺陷回流（消息即指令）"]
@@ -296,7 +296,8 @@ cd simharness                         # 推演 harness 独立仓（运维规范�
 bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
-# 断点续跑 START_STEP=<步名>；区间上界 UNTIL_STEP=<步名>；换需求轮 RFD_ID=RFD-00X；协议事件 MX_DELIVERY=1
+# 断点续跑 START_STEP=<步名>；区间上界 UNTIL_STEP=<步名>；换需求轮 RFD_ID=RFD-00X
+# delivery 协议事件缺省启用=产品真实形态（附录 F-5；MX_DELIVERY=0 显式关闭会自动记单降级，禁静默关旗标跑全程）
 ```
 
 0→1 清环境：`bash mux/mx-clean.sh --apply --reset-central --reset-workspaces [--reset-memory]` 后 setup+up+scenario。旗标语义：`--reset-central`=中央仓九目录清空（admin 注册表保留）+清空提交推 origin/main+快照 tag+删旧轮分支；`--reset-workspaces`=agent 工作区 tar 归档后删；`--reset-memory`=14 家族记忆 bank 清场（pg_dump 归档前置）。看板整树归档重置、hermes 运行态清零（pending_messages/sessions/approvals/state*/cron）、synapse 房间 v2 purge 为缺省动作。
@@ -351,6 +352,10 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 **采集与报告**
 21. 全量呈现三载荷（对话全文/操作前后帧/环节效果）的采集动作挂在驱动步内：派发即采对话，帧由巡检自动化在步骤进行中执行——跑完才补采则帧类无法补。
 22. 报告导读层骨架自动生成自 state.env+scenario.log 时间线，人工只润色；按轮注册硬闸保留（禁编造叙事、禁旧轮顶包）。
+
+**成员装配与端点写入（2026-10-06 增补）**
+23. 成批邀入房/装配成员一律用检错退避重试件（mx_join_retry/dlv_invite_retry 族）；裸 mx_join、dlv_invite 的静默吞错写法（`|| true`、`>/dev/null`）禁用于成员装配路径——限流 burst 下尾部账号静默掉队（28 缺 12 实锤）。循环后按人头核验，缺员记单（room-join-missing / delivery-room-member-missing）。
+24. 建号/停用/写入类端点验证必须核销端侧真实状态（synapse admin GET/仓内反查），禁只看返回 JSON（假成功实锤：v1/register 误用 roster 提交了而 synapse 无号）；探测三态分清（无此号/已停用/被拒），被拒必须响亮报错不得空数组静默成功。
 
 **保真形态默认**：推演=真实场景的复刻实验，偏离默认行为的"优化"污染实验效度。不设 MX_* 环境变量即保真：background_review 每 turn 自动 fork 关闭（MX_BGREVIEW=0），沉淀收敛到治理卡点（`!refine <闸>`）；审批 auto 全自动（可选 hybrid=关键动作真人手批/过程性代审复核；manual=全真人）；推理档位保持宿主默认。KG 演化与无损换窗开关推演中默认全开=产品真实形态。
 
