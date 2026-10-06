@@ -1,0 +1,48 @@
+diff --git a/gateway/kanban_watchers_common.py b/gateway/kanban_watchers_common.py
+index 0000000..0000001 100644
+--- a/gateway/kanban_watchers_common.py
++++ b/gateway/kanban_watchers_common.py
+@@ -107,7 +107,42 @@
+         from agent.estop import check_paused
+     except ImportError:
+         return True
+-    return not check_paused("kanban", logger)
++    if check_paused("kanban", logger):
++        return False
++    return _kanban_gate_guard_allowed()
++
++
++def _kanban_gate_guard_allowed() -> bool:
++    """Sim-run gate-guard (patch 569; run9 P9 prework-bypass prevention).
++
++    When the harness declares ``KANBAN_GATE_GUARD_FILE`` (a state.env-style
++    ``KEY=value`` file) and ``KANBAN_GATE_GUARD_KEYS`` (comma-separated required
++    keys), spawning stays paused until every listed key is present in the file —
++    run9 lesson: five agents self-started on card registration and pushed eight
++    branches ahead of the G2 architecture review, caught only after the fact by
++    G2/G3 screening. Production is unchanged: with either env unset the guard is
++    inert and this returns True without touching the filesystem.
++    """
++    import os
++
++    guard_file = (os.environ.get("KANBAN_GATE_GUARD_FILE") or "").strip()
++    guard_keys = (os.environ.get("KANBAN_GATE_GUARD_KEYS") or "").strip()
++    if not guard_file or not guard_keys:
++        return True
++    required = [k.strip() for k in guard_keys.split(",") if k.strip()]
++    if not required:
++        return True
++    try:
++        with open(guard_file, "r", encoding="utf-8") as fh:
++            present = {line.split("=", 1)[0].strip() for line in fh if "=" in line}
++    except OSError:
++        present = set()
++    missing = [k for k in required if k not in present]
++    if missing:
++        logger.info("kanban gate-guard: spawn paused, awaiting gate keys %s in %s",
++                    ",".join(missing), guard_file)
++        return False
++    return True
+ 
+ 
+ def _acquire_singleton_lock(lock_path) -> "tuple[Optional[object], str]":
