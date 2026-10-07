@@ -184,7 +184,7 @@ interface OutcomeCheckDecl { verifier: 'file_exists'|'content_contains'|'repo_co
 - **运行中心页**：发起运行（选集+target+k+session 映射）、进度、pass@k 聚合。
 - **报告页**：四层卡（Result/Trajectory/Efficiency/Risk，Risk 一票否决显式呈现）+ 断言级明细（verdict 来源徽章 S0/S1/人工/conflict）+ 归因双 Loop 双按钮 + Rubric 迭代历史。
 - **UI Oracle 页**（M3）：用例管理 + 两阶段结果（预测 vs 实际对照帧 + 像素/DOM diff 高亮）。
-- i18n：zh/en 手写全量，其余 9 locale 经 scripts/add-i18n-keys.mjs 补齐（ARCHITECTURE 纪律）。
+- i18n：模块内独立词条文件（zh/en 双表 + 组件按 locale 选表）——governance 域同款先例，不动 patch 473 的 locale 单一事实源面；其余 locale 经 vue-i18n en 兜底。M2 落地口径（原计划"11 语言 add-i18n-keys"据此收敛，键齐平由测试锁定）。
 - server 路由挂载走 1 条 patch（patch 452/558 既有挂载模式：bootstrap/routes.ts 追加 controller）。
 
 ## 5. Non-goals（本可做但不做）

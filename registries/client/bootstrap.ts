@@ -49,6 +49,12 @@ export async function bootstrapClient(app: App): Promise<void> {
   // 登录默认落点由 patch 071 守卫直落 /app。
   registrations.push(import('../../custom/client/ia2').then(m => m.registerIa2(app)))
 
+  // Eval Studio 评测工作台（M2，spec 2026-10-07-eval-studio-design.md）：默认关，
+  // VITE_CUSTOM_EVAL=true 再开。导航入口（FlowNavPanel 内 EvalNavEntry）同经 features.eval 门控。
+  if (features.eval) {
+    registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
+  }
+
   await Promise.all(registrations)
 
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
