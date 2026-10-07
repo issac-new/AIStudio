@@ -1,5 +1,5 @@
 diff --git a/packages/client/index.html b/packages/client/index.html
-index 35fa2a39..39f162f4 100644
+index e93d1d33..6679414c 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
 @@ -9,9 +9,9 @@
@@ -54,7 +54,7 @@ index b8ba7945..0f7d9704 100644
                </div>
              </div>
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index ba02056a..3994eb5f 100644
+index beb614c9..841e616a 100644
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
 @@ -277,7 +277,7 @@ export default {
@@ -204,7 +204,7 @@ index ba02056a..3994eb5f 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index a8bb4ee5..68a3f548 100644
+index dc19c01f..8d89aed1 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
 @@ -277,7 +277,7 @@ export default {
@@ -354,7 +354,7 @@ index a8bb4ee5..68a3f548 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 2e2648da..73bb08c9 100644
+index 5facd745..bfb5adc1 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -277,7 +277,7 @@ export default {
@@ -513,7 +513,7 @@ index 2e2648da..73bb08c9 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index d7431ca0..b72bbbed 100644
+index 59e3fe99..1972e4ec 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
 @@ -277,7 +277,7 @@ export default {
@@ -663,7 +663,7 @@ index d7431ca0..b72bbbed 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 41b1ddef..7b1acd87 100644
+index 35e35c48..7e1680c0 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
 @@ -277,7 +277,7 @@ export default {
@@ -813,7 +813,7 @@ index 41b1ddef..7b1acd87 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index 0b91cbb9..df1018ca 100644
+index 7dbb77a2..f807e9d4 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
 @@ -277,7 +277,7 @@ export default {
@@ -956,7 +956,7 @@ index 0b91cbb9..df1018ca 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 90e2acde..4540e51f 100644
+index 52621c7a..4f97d78c 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1099,7 +1099,7 @@ index 90e2acde..4540e51f 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index ffd53584..2cea907e 100644
+index 959d6a30..40f37d5e 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1249,7 +1249,7 @@ index ffd53584..2cea907e 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index 79e2053a..84010af8 100644
+index 529df96a..d0bf0448 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1399,7 +1399,7 @@ index 79e2053a..84010af8 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index 4230c5e1..c064298e 100644
+index 56fe5051..caecbdcb 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1557,7 +1557,7 @@ index 4230c5e1..c064298e 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 12e80a83..f54acac5 100644
+index 7ffa4169..303f3a25 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -277,7 +277,7 @@ export default {
@@ -2630,7 +2630,7 @@ index 7ced8697..7b6c0612 100644
   */
  export async function microcontrollerLogin(ctx: Context) {
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
-index fa202476..cef319cb 100644
+index 7759d399..2b771e3b 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
 @@ -201,7 +201,7 @@ function mergeHermesHistorySessions(
@@ -2747,10 +2747,10 @@ index 9ab4b62c..082b36de 100644
  
  export function studioMcpUsageGuidelines(capabilities?: StudioMcpCapabilities): string {
 diff --git a/packages/server/src/modules/studio/services/app-relay/server.ts b/packages/server/src/modules/studio/services/app-relay/server.ts
-index a79b0cf0..bff94deb 100644
+index 326e4ddf..3911c371 100644
 --- a/packages/server/src/modules/studio/services/app-relay/server.ts
 +++ b/packages/server/src/modules/studio/services/app-relay/server.ts
-@@ -137,7 +137,7 @@ type NormalizedBody = {
+@@ -138,7 +138,7 @@ type NormalizedBody = {
  }
  
  /**
@@ -2759,7 +2759,7 @@ index a79b0cf0..bff94deb 100644
   *
   * The cloud relay uses the same App events but forwards them through the
   * outbound AppRelayClient. On a LAN connection this server terminates those
-@@ -373,7 +373,7 @@ export class LocalAppRelayServer {
+@@ -399,7 +399,7 @@ export class LocalAppRelayServer {
      }
      const authenticated = Boolean(socket.data.localUserToken) && await this.authorized(socket)
      if (!authenticated && !loginRequest) {

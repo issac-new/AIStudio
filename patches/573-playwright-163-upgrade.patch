@@ -1,14 +1,5 @@
---- a/package.json
-+++ b/package.json
-@@ -129,7 +129,7 @@
-     "@koa/cors": "^5.0.0",
-     "@koa/router": "^15.4.0",
-     "@pinia/testing": "^1.0.3",
--    "@playwright/test": "^1.60.0",
-+    "@playwright/test": "^1.63.0",
-     "@types/adm-zip": "^0.5.8",
-     "@types/eventsource": "^1.1.15",
-     "@types/js-yaml": "^4.0.9",
+diff --git a/package-lock.json b/package-lock.json
+index 4cc97624..7a1287dc 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -39,6 +39,7 @@
@@ -16,10 +7,10 @@
          "socket.io": "^4.8.3",
          "socket.io-client": "^4.8.3",
 +        "three": "^0.170.0",
+         "werift": "0.24.4",
          "yaml": "^2.9.0"
        },
-       "bin": {
-@@ -54,7 +55,7 @@
+@@ -55,7 +56,7 @@
          "@koa/cors": "^5.0.0",
          "@koa/router": "^15.4.0",
          "@pinia/testing": "^1.0.3",
@@ -28,7 +19,7 @@
          "@types/adm-zip": "^0.5.8",
          "@types/eventsource": "^1.1.15",
          "@types/js-yaml": "^4.0.9",
-@@ -2815,19 +2816,19 @@
+@@ -3058,19 +3059,19 @@
        }
      },
      "node_modules/@playwright/test": {
@@ -53,7 +44,7 @@
        }
      },
      "node_modules/@protobufjs/aspromise": {
-@@ -9931,50 +9932,32 @@
+@@ -10339,50 +10340,32 @@
        }
      },
      "node_modules/playwright": {
@@ -113,7 +104,7 @@
        }
      },
      "node_modules/pngjs": {
-@@ -11794,6 +11777,12 @@
+@@ -12219,6 +12202,12 @@
        "dev": true,
        "license": "MIT"
      },
@@ -123,6 +114,19 @@
 +      "integrity": "sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==",
 +      "license": "MIT"
 +    },
-     "node_modules/tinybench": {
-       "version": "2.9.0",
-       "resolved": "https://registry.npmjs.org/tinybench/-/tinybench-2.9.0.tgz",
+     "node_modules/thunky": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/thunky/-/thunky-1.1.0.tgz",
+diff --git a/package.json b/package.json
+index 6da89bae..28e14f0d 100644
+--- a/package.json
++++ b/package.json
+@@ -130,7 +130,7 @@
+     "@koa/cors": "^5.0.0",
+     "@koa/router": "^15.4.0",
+     "@pinia/testing": "^1.0.3",
+-    "@playwright/test": "^1.60.0",
++    "@playwright/test": "^1.63.0",
+     "@types/adm-zip": "^0.5.8",
+     "@types/eventsource": "^1.1.15",
+     "@types/js-yaml": "^4.0.9",

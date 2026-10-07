@@ -49,7 +49,7 @@ index 28a43454..547e5820 100644
        .sort(compareSessionSummariesNewestFirst)
        .slice(0, limit)
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
-index dbc9a7af..f0d208f4 100644
+index 3e001b8d..c39aa556 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
 @@ -634,6 +634,7 @@ export async function listHermesSessions(ctx: any) {
