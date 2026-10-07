@@ -251,6 +251,12 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     git -C "$CEN" status --porcelain > "$ARC/central-status.txt" 2>/dev/null || true
     # cd 失败必须中止整个子 shell：否则 git clean/git commit 落在调用者 cwd（run 复现过删调用仓未跟踪文件）
     ( cd "$CEN" || exit 0
+      # 清空提交必须落 main（run11 实锤：HEAD 停 integration 时提交落错分支，随后
+      # push origin main 因 up-to-date 退出 0 报"已推"=假成功，run10 四份系分稿+
+      # tasklist 带进 run11 基座）。显式切 main 并对齐远端 tip 再清空提交。
+      git fetch -q origin main 2>/dev/null || true
+      git checkout -q main 2>/dev/null || git checkout -q -b main origin/main 2>/dev/null || true
+      git reset -q --hard origin/main 2>/dev/null || true
       git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       # 基础注册表保留（2026-10-03 文档评审 404 实锤：roster/app-registry/org 是组织编制
@@ -310,10 +316,29 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       fi )
     # ── 4b2) 清空提交落远端（2026-10-03 实锤：本地 commit 不 push → origin/main 仍带
     #     run6/7 全部旧稿 → mx-setup 重克隆工作区旧稿整体复活，清了等于没清）。
-    #     快照 tag 一并上推（可恢复锚点必须在远端，本地 tag 会随 worktree 清理丢）。──
-    git -C "$CEN" push -q origin main 2>/dev/null \
-      && say "✓ 中央仓清空提交已推 origin/main" \
-      || say "⚠ push origin main 失败（重克隆将带回旧稿——起跑前必须人工 push）"
+    #     快照 tag 一并上推（可恢复锚点必须在远端，本地 tag 会随 worktree 清理丢）。
+    #     回读验证（run11 实锤）：push 退出 0 ≠ 推达——up-to-date/推错分支都退出 0；
+    #     必须重 fetch 后断言 origin/main == 本地清空提交 tip，不一致即响亮报警。──
+    if git -C "$CEN" push -q origin main 2>/dev/null; then
+      git -C "$CEN" fetch -q origin main 2>/dev/null || true
+      _ct="$(git -C "$CEN" rev-parse main 2>/dev/null || true)"
+      _rt="$(git -C "$CEN" rev-parse origin/main 2>/dev/null || true)"
+      if [ -n "$_ct" ] && [ "$_ct" = "$_rt" ]; then
+        say "✓ 中央仓清空提交已推 origin/main（回读验证一致 ${_ct:0:7}）"
+      else
+        say "⚠ push 后回读不一致：local main=${_ct:0:7} vs origin/main=${_rt:0:7}——远端未达清空态，起跑前必须人工核（勿带旧稿起跑）"
+      fi
+      # tip 树正向断言（run11 实锤教训：工作树 find 核验过≠远端 tip 干净；head 截断
+      # 式人工核验亦有盲区——这里对回读后的 origin/main 树做全量正向检查）。
+      _poll="$(git -C "$CEN" ls-tree -r --name-only origin/main -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null | grep -vE 'docs/admin/(roster|app-registry|org)\.md$' | head -3 || true)"
+      if [ -n "$_poll" ]; then
+        say "⚠ 回读 origin/main tip 树仍有交付物残留：${_poll}（勿带旧稿起跑）"
+      else
+        say "✓ 回读 tip 树九目录零残留（admin 基础注册表除外）"
+      fi
+    else
+      say "⚠ push origin main 失败（重克隆将带回旧稿——起跑前必须人工 push）"
+    fi
     git -C "$CEN" push -q origin "mx-clean-${TS}" "mx-clean-${TS}-branches" 2>/dev/null || true
   fi
 else
