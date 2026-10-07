@@ -2436,8 +2436,6 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
   {_narrative_html}
 
-  <div class="gates">{gate_cards()}</div>
-
   <h2 class="section-hd" id="checkpoints">六道关卡 · 谁在什么时间把住了什么关</h2>
   <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
@@ -2459,6 +2457,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
 
   <h2 class="section-hd">闭环治理终态</h2>
+  <div class="gates">{gate_cards()}</div>
   <div class="govgrid">
     <table><tr><th>硬闸</th><th>把关点</th><th>终态</th><th>落键时间</th></tr>
     {gov_final_rows()}
