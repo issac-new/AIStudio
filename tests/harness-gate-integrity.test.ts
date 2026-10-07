@@ -870,3 +870,21 @@ print('\\n'.join(bad) if bad else 'ALL_SYNCED patches=%d' % len(patches))`], { e
     expect(rt).toContain('response_delivery_fallback')
   })
 })
+
+describe('⑯ run10 接线事故根治守门（hermes 转发/gate-guard 显式化/概设活性窗）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+  it('hermes() 函数转发在位（裸调用面失明根治——agent 已建卡被误判超时实锤）', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    expect(lib).toContain('hermes() { "$HERMES_BIN" "$@"; }')
+  })
+  it('gate-guard 仅显式启用（全局误拦系分期 spawn 死锁根治）', () => {
+    const up = read(join(MX, 'mx-up.sh'))
+    expect(up).toContain('${MX_GATE_GUARD:+')
+    expect(up).not.toMatch(/KANBAN_GATE_GUARD_KEYS="\$\{MX_GATE_GUARD_KEYS:-/)
+  })
+  it('agent-交付型朴素窗已活性化（概设窗走 wait_alive_truth）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).not.toContain('概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 2400')
+    expect(scen).toContain('概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 1800 fanfan')
+  })
+})
