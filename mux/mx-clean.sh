@@ -266,8 +266,10 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       fi
       git reset -q --hard origin/main 2>/dev/null || true
       # docs/evidence 旧轮测试日志（run11 实锤盲区：九目录清单不含它，run3-run10
-      # 的 testlog/vitest 输出历轮全数幸存——G3 真查口径下旧证据文件是假真值温床）
-      git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 'docs/evidence' 2>/dev/null || true
+      # 的 testlog/vitest 输出历轮全数幸存——G3 真查口径下旧证据文件是假真值温床）；
+      # materials/ 同族盲区（run11 二次实锤：run9 材料基线包跟踪机制 c105989 与
+      # 零污染铁律未对齐，run10 分析稿经 materials/AN-CHWX/ 残留进本轮 agent 工作区）
+      git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 'docs/evidence' 'materials' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       # 基础注册表保留（2026-10-03 文档评审 404 实锤：roster/app-registry/org 是组织编制
       # 基建非轮次工件，/api/governance/registry/:kind 直接读它们；清了文档评审页管理区必空。
