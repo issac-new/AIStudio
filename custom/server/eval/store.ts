@@ -12,11 +12,14 @@ import { join } from 'path'
 import type {
   EvalRun, EvalSet, EvalSetMeta, EvalTask, RubricAssertion, RubricIterationLog,
 } from './types'
+import type { OracleCase, OracleRunRecord } from './uioracle'
 
 interface StoreShape {
   sets: EvalSet[]
   runs: EvalRun[]
   rubricIterations: RubricIterationLog[]
+  oracleCases: OracleCase[]
+  oracleRuns: OracleRunRecord[]
   nextSeq: number
 }
 
@@ -37,7 +40,7 @@ function readStore(): StoreShape {
     // 仅"首装无文件"按空账处理；损坏/占用如实上抛（静默当空账会让下一次全量
     // writeStore 把评测资产整体覆写清零且 nextSeq 重置撞号）。
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { sets: [], runs: [], rubricIterations: [], nextSeq: 1 }
+      return { sets: [], runs: [], rubricIterations: [], oracleCases: [], oracleRuns: [], nextSeq: 1 }
     }
     throw e
   }
@@ -45,6 +48,8 @@ function readStore(): StoreShape {
     sets: Array.isArray(raw.sets) ? raw.sets : [],
     runs: Array.isArray(raw.runs) ? raw.runs : [],
     rubricIterations: Array.isArray(raw.rubricIterations) ? raw.rubricIterations : [],
+    oracleCases: Array.isArray(raw.oracleCases) ? raw.oracleCases : [],
+    oracleRuns: Array.isArray(raw.oracleRuns) ? raw.oracleRuns : [],
     nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
   }
 }
@@ -317,6 +322,69 @@ export function appendIteration(
 export function listIterations(runId?: string): RubricIterationLog[] {
   const store = readStore()
   return runId ? store.rubricIterations.filter((it) => it.runId === runId) : store.rubricIterations
+}
+
+// ---------- UI Oracle（M3：KuiTest 两阶段用例） ----------
+
+export interface CreateOracleCaseInput {
+  name: string
+  targetUrl: string
+  action: { kind: string; somIndex?: number; selector?: string }
+  expectText?: string
+}
+
+export function listOracleCases(): OracleCase[] {
+  return readStore().oracleCases
+}
+
+export function getOracleCase(id: string): OracleCase | undefined {
+  return readStore().oracleCases.find((c) => c.id === id)
+}
+
+export function createOracleCase(
+  input: CreateOracleCaseInput,
+  createdBy?: string,
+): { ok: true; case: OracleCase } | { ok: false; problems: string[] } {
+  const problems: string[] = []
+  const name = (input?.name ?? '').trim()
+  if (!name || name.length > 64) problems.push('name 必填（≤64 字符）')
+  const url = (input?.targetUrl ?? '').trim()
+  if (!/^https?:\/\//.test(url)) problems.push('targetUrl 须为 http(s) 地址')
+  if (input?.action?.kind !== 'click') problems.push('action.kind v1 仅支持 click')
+  const hasSelector = typeof input?.action?.selector === 'string' && input.action.selector.trim()
+  const som = input?.action?.somIndex
+  if (!hasSelector && !(typeof som === 'number' && Number.isInteger(som) && som >= 1)) {
+    problems.push('action 须带 selector 或 somIndex(≥1)')
+  }
+  if (problems.length) return { ok: false, problems }
+  const store = readStore()
+  const oracleCase: OracleCase = {
+    id: `oracle-${String(store.nextSeq).padStart(3, '0')}`,
+    name,
+    targetUrl: url,
+    action: {
+      kind: 'click',
+      ...(hasSelector ? { selector: input.action.selector!.trim() } : { somIndex: som as number }),
+    },
+    ...(input.expectText?.trim() ? { expectText: input.expectText.trim() } : {}),
+    createdAt: Date.now(),
+    ...(createdBy ? { createdBy } : {}),
+  }
+  store.oracleCases.push(oracleCase)
+  store.nextSeq += 1
+  writeStore(store)
+  return { ok: true, case: oracleCase }
+}
+
+export function appendOracleRun(record: OracleRunRecord): void {
+  const store = readStore()
+  store.oracleRuns.push(record)
+  writeStore(store)
+}
+
+export function listOracleRuns(caseId?: string): OracleRunRecord[] {
+  const store = readStore()
+  return caseId ? store.oracleRuns.filter((r) => r.caseId === caseId) : store.oracleRuns
 }
 
 /** 导入导出（仅非密封集：密封集内容不出库）。 */
