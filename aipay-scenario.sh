@@ -598,8 +598,8 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
 3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），提交 push
 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
-    wait_truth "概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 2400 \
-      repo_has docs/design/${RFD_ID}-architecture-design.md || fail "复核稿超时"
+    wait_alive_truth "概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 1800 fanfan \
+      repo_has docs/design/${RFD_ID}-architecture-design.md || fail "复核稿空转（fanfan 日志 1800s 零增长）"
   fi
   # 线下人工评审（虚拟架构小组），导演代 fanfan 手工更新
   RID=$(kanban_list fanfan | jq -r --arg rfd "$RFD_ID" '[.. | objects | select(has("title")) | select((.title // "") | contains($rfd + "-评审")) | .id][0] // empty')
