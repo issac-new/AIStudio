@@ -139,4 +139,12 @@ export const evalApi = {
   listIterations: (runId: string) =>
     req<{ iterations: IterationDto[] }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/iterations`),
   listVerifiers: () => req<{ verifiers: string[] }>('/api/hermes/eval/outcome-verifiers'),
+  // —— UI Oracle（M3）——
+  listOracleCases: () => req<{ cases: unknown[] }>('/api/hermes/eval/oracle/cases'),
+  createOracleCase: (input: { name: string; targetUrl: string; action: { kind: string; somIndex?: number; selector?: string }; expectText?: string }) =>
+    req<{ case: unknown }>('/api/hermes/eval/oracle/cases', { method: 'POST', body: JSON.stringify(input) }),
+  runOracleCase: (id: string) =>
+    req<{ run: unknown }>(`/api/hermes/eval/oracle/cases/${encodeURIComponent(id)}/run`, { method: 'POST' }),
+  listOracleRuns: (caseId?: string) =>
+    req<{ runs: unknown[] }>(caseId ? `/api/hermes/eval/oracle/runs?caseId=${encodeURIComponent(caseId)}` : '/api/hermes/eval/oracle/runs'),
 }
