@@ -500,10 +500,36 @@ uat_evidence_body 1790930955`, root)
 
   it('C：派发幂等 marker 全集在场（重启防整批重派）', () => {
     const scen = read(SCEN)
-    for (const k of ['anexec_d1', 'anexec_d2', 'devimpl_d1', 'devimpl_d2', 'devimpl_d3',
+    // run11 流水线改造后：anexec 单 marker 四路齐发（anexec_d2 退役）、devimpl 双
+    // marker 触发链（devimpl_d3 退役并入 d1）、新增 test_prep_d1（用例前移）与
+    // review_prewrote（概设预写，run11 纪律 27①②⑥）。
+    for (const k of ['anexec_d1', 'devimpl_d1', 'devimpl_d2', 'test_prep_d1', 'review_prewrote',
                      'defect_dispatched', 'audit_dispatched', 'preflight_ok', 'g5_rgid']) {
       expect(scen).toContain(k)
     }
+    expect(scen).not.toContain('anexec_d2')
+    expect(scen).not.toContain('devimpl_d3')
+  })
+
+  it('⑲：流式流水线机制四断言（run11 §4.2/纪律 27——MX_FAST 真实现/四路齐发/预写与前移/审批节流）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    const scen = read(SCEN)
+    // ①快模式实现体在原语层（run10 报告叙事超前于实现的病根根治：缺省开+双档节拍）
+    expect(lib).toContain('MX_FAST="${MX_FAST:-1}"')
+    expect(lib).toMatch(/MX_POLL_IVAL=5/)
+    expect(lib).toMatch(/MX_POLL_IVAL=15/)
+    expect(lib).toContain('sleep "$MX_POLL_IVAL"')
+    expect(lib).toContain('MX_APPROVE_SCAN_IVAL')
+    // ②系分四路齐发：anexec_d1 块内四任务派发、无第二批 marker
+    expect(scen).toMatch(/anexec：四路齐发/)
+    const d1 = scen.slice(scen.indexOf('if [[ -z "$(sget anexec_d1)" ]]'), scen.indexOf('sset anexec_d1 1'))
+    for (const t of ['AN-PAYCORE', 'AN-MP', 'AN-CHWX', 'AN-CHALI']) expect(d1).toContain(t)
+    // ③概设预写（次稿触发）+用例前移（编码并行预备轮）+渠道批触发锚
+    expect(scen).toContain('概设预写（纪律 27①')
+    expect(scen).toContain('测试预备轮（流式流水线，不执行不交付）')
+    expect(scen).toContain('渠道批触发锚')
+    // ④RACI 双@结构化解析脚注（P9b：双@致非执行方抢跑的根治位）
+    expect(lib).toContain('[RACI 解析]')
   })
 
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
