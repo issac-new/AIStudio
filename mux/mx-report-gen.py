@@ -94,6 +94,7 @@ if SNAP.exists():
 
 # ── R18 载荷加载（缺失/坏 JSON=空载荷，渲染诚实缺席、审计打回；不让生成器崩）──
 R18 = {}
+R18_FILE_OK = R18F.exists()
 if R18F.exists():
     try:
         _r18raw = json.loads(R18F.read_text(encoding='utf-8'))
@@ -1014,7 +1015,31 @@ CHECKPOINTS = [
 ]
 
 GATE_BY_STEP = {7: 'G1', 15: 'G2', 18: 'G3', 19: 'G4', 20: 'G5', 24: 'G6'}
-GATE_STATE_KEY = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'devimpl_done', 'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
+GATE_STATE_KEY = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'g3_code_pass', 'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
+# 闸键兜底链（2026-10-07 修复：G3 真时间戳键=g3_code_pass，devimpl_done=布尔旗标
+# 只作旧轮归档兜底——布尔值渲"—"曾致 G3 落键时间整列缺失）。
+GATE_STATE_FALLBACK = {'G3': ('devimpl_done',)}
+
+def _gate_value(g):
+    """闸键取值（主键→兜底链），返回 state 值或 ''。"""
+    v = state.get(GATE_STATE_KEY[g], '')
+    if v:
+        return v
+    for k in GATE_STATE_FALLBACK.get(g, ()):
+        v = state.get(k, '')
+        if v:
+            return v
+    return ''
+
+def _gate_passed(g):
+    return bool(_gate_value(g))
+
+def _gate_ts(g):
+    """闸落键墙钟：真时间戳键优先；兜底键为布尔旗标时如实空串（不拿旗标冒时间）。"""
+    v = state.get(GATE_STATE_KEY[g], '')
+    if v.isdigit() and len(v) >= 10:
+        return fmt_ts(GATE_STATE_KEY[g])
+    return ''
 GATE_DESC = {
     'G1': '需求上锁：验收标准可判定才许开工',
     'G2': '架构评审：不评审不排期',
@@ -1269,8 +1294,21 @@ def r18_coverage() -> str:
         R18, frame_exists=lambda name: (STEPS_DIR / name).exists())
     return f'{met}/{total}'
 
+def _r18_hero_badge() -> str:
+    """hero R18 徽章：载荷文件缺席时 ⬜ 明示（0/13 不是"实算达标"是"未采集"），
+    并给出记单键（§5.5 空态条款：空态在报告头计未采集 N 项并逐项对应问题单编号）。"""
+    if not R18_FILE_OK:
+        return (f'<b>⬜ {r18_coverage()}</b><span>全量呈现载荷未采集（r18-steps.json 未产出）'
+                f'· 必采 {r18_matrix.TOTAL} 项缺口记单 r18-collection-missing</span>')
+    return f'<b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 {r18_matrix.TOTAL} 项实算</span>'
+
 def issues_stats():
-    """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。"""
+    """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。
+
+    DISP 连接键=类型段（2026-10-07 修复：ISSUE 主体与 DISP 主体措辞差（harness/网关 vs
+    harness/审计会话）曾致 join 全断、"观察 1"被吞成"待处置 11"；同一类型多主体时
+    DISP 按类型归属到该类型全部唯一键——台账三态处置本就按类型记账）。
+    """
     lines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
     iss, disp, order = {}, {}, []
     raw_i = raw_d = 0
@@ -1285,21 +1323,26 @@ def issues_stats():
         elif l.startswith('DISP|'):
             raw_d += 1
             p = l.split('|', 4)
-            disp[f'{p[1]}·{p[2]}'] = p[3] if len(p) > 3 else ''
-    closed = [k for k in order if k in disp and disp[k].startswith('已修')]
-    observed = [k for k in order if k in disp and not disp[k].startswith('已修')]
-    open_k = [k for k in order if k not in disp]
+            disp[p[1]] = p[3] if len(p) > 3 else ''
+    closed = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('已修')]
+    observed = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('观察')]
+    deferred = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('延后')]
+    open_k = [k for k in order if k.split('·')[0] not in disp]
     rows = []
     for k in order:
-        if k not in disp: continue
-        d = disp[k]
+        t = k.split('·')[0]
+        if t not in disp:
+            continue
+        d = disp[t]
         cls = 'd-ok' if d.startswith('已修') else 'd-warn'
         rows.append(f'<tr><td>{H.escape(k)}</td><td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
-    stat = f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 待处置 {len(open_k)}'
+    if not rows:
+        rows.append('<tr><td colspan="3" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记单）</td></tr>')
+    stat = f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)} · 待处置 {len(open_k)}'
     note = f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收口。'
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
-    return stat, note, '\n'.join(rows), len(closed)
+    return stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order), len(open_k)
 
 def main_head():
     try:
@@ -1308,7 +1351,7 @@ def main_head():
     except Exception:
         return ''
 
-stat, stat_note, itable, n_closed = issues_stats()
+stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open = issues_stats()
 main_sha = main_head()
 
 # ── 8.6 交付物视图（补遗③，R11）─────────────────────────────────────────
@@ -1632,7 +1675,7 @@ gov_metrics_rows = (_GOV_METRICS_RUN6 if RUN_ID == '20261001-v5-run6'
 # hero 统计卡第三格按轮取值（run2 的 R-A3 闭环史曾硬编码渲进 run6——按轮隔离根治）；
 # 缺省从 state 六闸落键实算，不编造。
 def _hero_gate_default():
-    n_pass = sum(1 for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] if state.get(GATE_STATE_KEY[g]))
+    n_pass = sum(1 for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] if _gate_passed(g))
     return (f'<b>六闸全过</b><span>G1–G6 全部落键通过</span>' if n_pass == 6
             else f'<b>{n_pass}/6</b><span>闸门落键（未达项如实 ⬜）</span>')
 
@@ -1659,17 +1702,30 @@ def gov_final_rows():
         ovr = _GOV_FINAL_OVERRIDES_BY_RUN.get(RUN_ID, {}).get(g)
         if ovr:
             cls, verdict = ovr
-        elif state.get(GATE_STATE_KEY[g]):
+        elif _gate_passed(g):
             cls, verdict = 'ok', '✓'
         else:
             cls, verdict = 'gpending', '○ 未达'
         rows.append(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td>'
-                    f'<td class="{cls}">{verdict}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>')
+                    f'<td class="{cls}">{verdict}</td><td>{_gate_ts(g) or "—"}</td></tr>')
     return ''.join(rows)
 
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists()})
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
+# 图数对账（2026-10-07 run10 实锤：注册引用∩盘态与目录实态两套口径并存，曾渲 17 图/9 步
+# "截图缺失"而盘上 29 图全在）：盘上未引用=漏配 WARN，注册缺文件=冒配红标，均落生成日志。
+_disk_pngs = {p.stem for p in STEPS_DIR.glob('*.png')} if STEPS_DIR.exists() else set()
+_registered = {pre for _, _, _, m in STEPS for pre, _, _ in m['imgs']}
+_unreferenced = sorted(_disk_pngs - {p for p in _registered if (STEPS_DIR / f'{p}.png').exists()})
+_missing_ref = sorted(p for p in _registered if not (STEPS_DIR / f'{p}.png').exists())
+if _unreferenced:
+    print(f'[mx-report-gen] WARN 盘上未引用帧 {len(_unreferenced)} 张（漏配，如实列出）: {", ".join(_unreferenced)}')
+if _missing_ref:
+    print(f'[mx-report-gen] WARN 注册但缺文件 {len(_missing_ref)} 张（冒配，报告内红标）: {", ".join(_missing_ref)}')
+# 补拍帧检测：图注自报"收官后补拍"即 hero/页脚如实带补拍语义（"全部实拍"不冒充当轮实时帧）
+_reshoot = any('补拍' in cap for _, _, _, m in STEPS for _, cap, _ in m['imgs'])
+_img_honest_note = ' · 全部实拍（收官后补拍，非当轮实时帧——采集链未挂驱动，记单 r18-collection-missing）' if _reshoot else (' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）')
 
 ckpt_intro_note = ('九个人工卡点按流程顺序排列——每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。'
                    if total_imgs > 0 else
@@ -1711,7 +1767,9 @@ def checkpoints_html():
 
 def gate_cards():
     # 打回/判回滚记录按轮隔离（run6 实锤漏网根治：run2 的 R-A1 判回滚史曾渲进 run6 门禁卡）。
-    # 某轮有真实打回环才登记该轮条目；无条目=该轮一次通过，如实渲染。
+    # 静态注册表只作文字注解；打回事实改从 issues.log+state 实算（2026-10-07 run10 实锤：
+    # 未注册轮被默认成"一次通过"，G2/G5 台账打回在案仍渲喜报——"无条目=首过"的默认是
+    # 静态模板冒充实录族病根）。实算命中优先于静态默认；两者并存时拼接。
     _GATE_REJ_BY_RUN = {
         '20260929-v4-run2': {'G5': '误过→R-A1 判回滚→R-A3 闭环复审 PASS（r8 @ 5c1a02d）'},
     }
@@ -1721,12 +1779,36 @@ def gate_cards():
     _G5_BADGE_BY_RUN = {
         '20260929-v4-run2': '✓ 已通过（复审 r8）',
     }
-    rejected = _GATE_REJ_BY_RUN.get(RUN_ID, {})
+    rejected = dict(_GATE_REJ_BY_RUN.get(RUN_ID, {}))
     annot = _GATE_ANNOT_BY_RUN.get(RUN_ID, {})
+    # 实算：闸门类记单键族（g1-/g2-/g3-/g4-/g5-/g6- 前缀 + review-card/gate 族）
+    _gate_issue_hits = {g: [] for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']}
+    _ilog = EVID / 'issues.log'
+    if _ilog.exists():
+        for ln in _ilog.read_text().splitlines():
+            p = ln.split('|', 3)
+            if len(p) < 4 or p[0] != 'ISSUE':
+                continue
+            m = re.match(r'^(g[1-6])[-_]', p[1])
+            if m:
+                _gate_issue_hits[m.group(1).upper()].append(p[1])
+            elif p[1].startswith('review-card'):
+                _gate_issue_hits['G2'].append(p[1])
+            elif p[1] == 'retro-open-items':
+                _gate_issue_hits['G6'].append(p[1])
+    for g, keys in _gate_issue_hits.items():
+        if keys and g not in rejected:
+            uniq = sorted(set(keys))
+            rejected[g] = f'打回/缺口记单 {len(keys)} 起（{"、".join(uniq[:3])}），回灌复补后过闸——台账可反查'
+    # 实算：state 打回轮次计数键（如 g5_fail_rounds）
+    for g, fk in (('G5', 'g5_fail_rounds'),):
+        fr = state.get(fk, '')
+        if fr.isdigit() and int(fr) > 0 and g not in rejected:
+            rejected[g] = f'FAIL×{fr} 轮后补齐过闸（state {fk}={fr} 实算）'
     cards = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
-        ts = fmt_ts(GATE_STATE_KEY[g])
-        passed = bool(state.get(GATE_STATE_KEY[g]))
+        ts = _gate_ts(g)
+        passed = _gate_passed(g)
         if g == 'G5' and passed and RUN_ID in _G5_BADGE_BY_RUN:
             cls, badge = 'gpass', _G5_BADGE_BY_RUN[RUN_ID]
         else:
@@ -2136,10 +2218,10 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
     推演轮次 {RUN_ID or 'V3 基线轮'} · 锚定本轮 state 落键时间窗 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
-      <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{f' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'}</span></div>
+      <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{_img_honest_note}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
-      <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
-      <div class="hstat"><b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 {r18_matrix.TOTAL} 项实算</span></div>
+      <div class="hstat"><b>{n_closed}/{n_issue_keys}</b><span>问题单已闭环（已修+观察+延后）{f' · 待处置 {n_issue_open}' if n_issue_open else ''}</span></div>
+      <div class="hstat">{_r18_hero_badge()}</div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
