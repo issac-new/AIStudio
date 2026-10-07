@@ -175,7 +175,7 @@ interface OutcomeCheckDecl { verifier: 'file_exists'|'content_contains'|'repo_co
 
 - qgate gate pack `behavior/eval-regression.yaml`：指定评测集（默认回归集）在门禁序列执行，pass@k ≥ 阈值→PASS；< 阈值→FAIL；判定后端离线或 k<2→INCONCLUSIVE（绝不冒 PASS）。
 - `npm run test:eval`：跑默认回归评测集（离线回放形态，CI 友好）。
-- harness:check 契约注册：eval 域 controller 路由与 gate pack 登记进 scripts/harness-check.mjs 检查清单（新能力必须注册+带回归测试的既有治理范式）。
+- **落地偏差（M4 收口记录）**：原计划"注册进 scripts/harness-check.mjs 检查清单"——该脚本是 upstream 资产（扩展须新增 B 类 patch），按 A 类优先纪律收敛为 **qgate 链内注册**：gate pack 入库（behavior.* 通配自动纳管 feature-close/high-assurance 两 profile）+ 回归门观察面测试（含红线负例守门）+ 观察文件证据链。评测域自带回归测试 44 例即为"新能力必须带回归测试"契约的满足面。
 
 ### 4.8 工作台前端（M2）
 
