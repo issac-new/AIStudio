@@ -1,0 +1,33 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: behavior.eval-regression
+  version: 0.1.0
+  description: >
+    Eval Studio 内置回归评测集（spec 2026-10-07-eval-studio-design.md §4.7，美团评测
+    范式启示⑦：门禁必须嵌入流程）。跑 `npm run test:eval`：纯 S0 断言集（regex/
+    threshold + 红线负例守门），零判定端依赖——CI 与门禁链内可复跑。评测管线
+    （S0 规则/判分组装/聚合 pass@k/Risk 一票否决清洁面）任何回归翻转期望即 FAIL；
+    判定端在线性由 behavior.eval-live 类门另立（不在本门冒充）。观察产物：
+    .qgate/observations/eval-regression.json。
+spec:
+  domain: L3
+  claims:
+    - behavior.eval-pipeline-regression-clean
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: eval-regression
+      type: command
+      command: ["npm", "run", "test:eval"]
+      evidenceType: eval-regression-result
+      timeoutMs: 300000
+  evidence:
+    required:
+      - eval-regression-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

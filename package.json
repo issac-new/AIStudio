@@ -18,6 +18,7 @@
     "//dev:lan": "多实例演练用：--host 全网卡监听。devAutoLogin（registries/client/entry.mts）会以 admin/123456 免密换 JWT，同网段任意设备访问 :8649 即得 super_admin 会话——仅限可信局域网；日常开发用 npm run dev（只绑 localhost）",
     "predev": "node scripts/ensure-injected.mjs",
     "test": "vitest run",
+    "test:eval": "vitest run custom/server/eval/__tests__/eval-regression.test.ts",
     "build:full": "node scripts/build.mjs",
     "build:dmg": "node scripts/build-dmg.mjs",
     "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
