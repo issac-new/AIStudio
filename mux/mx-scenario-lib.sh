@@ -868,7 +868,7 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
     fi
   done
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2
-[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，须重新执行或核验并回执结论行；判定重复也必须回执合并回执，禁止静默。
+[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，接收方须**从零重新执行**本任务——历史轮产物、git 历史提交（含悬空提交）与前轮遗留文件均不得引用、恢复或作为完成依据；若发现疑似历史遗留，如实说明并忽略之。判定重复也必须回执合并回执，禁止静默。
 [RACI 解析] 本任务唯一执行人=任务书正文被指名执行的主责 agent（首个 @）；其余 @ 为 RACI 会签/评审角色（lead 等），不执行本任务、仅知情与确认。结论行只由执行人发。" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"

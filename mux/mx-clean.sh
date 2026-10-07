@@ -265,10 +265,10 @@ if [ "$RESET_CENTRAL" = 1 ]; then
         fi
       fi
       git reset -q --hard origin/main 2>/dev/null || true
-      # docs/evidence 旧轮测试日志（run11 实锤盲区：九目录清单不含它，run3-run10
-      # 的 testlog/vitest 输出历轮全数幸存——G3 真查口径下旧证据文件是假真值温床）；
-      # materials/ 同族盲区（run11 二次实锤：run9 材料基线包跟踪机制 c105989 与
-      # 零污染铁律未对齐，run10 分析稿经 materials/AN-CHWX/ 残留进本轮 agent 工作区）
+      # 孤儿分支重立（run11 attempt-2 实锤：agent 恢复 run9 悬空提交 96a64a1 拼装
+      # 本轮交付——清空树不清历史=考古面仍在。清空态树重立为无历史孤儿 main：前轮
+      # 提交从 origin/main 不可达；旧历史经 tag mx-clean-<TS>-pretrunc 保全可反查）。
+      git checkout -q --orphan "__mxclean_orphan" 2>/dev/null || true
       git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 'docs/evidence' 'materials' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       # 基础注册表保留（2026-10-03 文档评审 404 实锤：roster/app-registry/org 是组织编制
@@ -278,7 +278,10 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       # 治理基线保留（2026-10-04 台账与规则页 404 实锤）：runtime/governance 是产品治理面
       # 数据源（能力台账/决策规则/状态本体，正本=overlay runtime 分发），非轮次工件，随轮保留。
       git checkout "mx-clean-${TS}" -- runtime/governance 2>/dev/null || true
-      git commit -q -m "mx-clean：推演工件全目录清空（保留 admin 基础注册表；快照 tag mx-clean-${TS}）" 2>/dev/null || true )
+      git commit -q -m "mx-clean：中央仓孤儿重立（推演工件清空+历史截断，admin 基础注册表保留；前轮历史见 tag mx-clean-${TS}-pretrunc）" 2>/dev/null || true
+      # 旧 main（含全部前轮历史）先打保全 tag 再让位：孤儿分支顶替 main 名号
+      git tag -f "mx-clean-${TS}-pretrunc" main 2>/dev/null || true
+      git branch -M main 2>/dev/null || true )
     # 九目录骨架重建（run6 实锤：git rm -rf 连目录一起删，freeze 等直写路径炸 ENOENT）
     ( cd "$CEN" && mkdir -p docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin )
     # 合格线自检：九目录除 admin 三张基础注册表外零文件（旧稿残留=repo_has 假真值温床）；
@@ -330,8 +333,10 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     #     run6/7 全部旧稿 → mx-setup 重克隆工作区旧稿整体复活，清了等于没清）。
     #     快照 tag 一并上推（可恢复锚点必须在远端，本地 tag 会随 worktree 清理丢）。
     #     回读验证（run11 实锤）：push 退出 0 ≠ 推达——up-to-date/推错分支都退出 0；
-    #     必须重 fetch 后断言 origin/main == 本地清空提交 tip，不一致即响亮报警。──
-    if git -C "$CEN" push -q origin main 2>/dev/null; then
+    #     必须重 fetch 后断言 origin/main == 本地清空提交 tip，不一致即响亮报警。
+    #     孤儿重立后历史与远端分叉：force-with-lease 是清场语境的受控重置（旧历史已
+    #     由 pretrunc tag 保全），lease 防与并行推送互踩。──
+    if git -C "$CEN" push -q --force-with-lease=main origin main 2>/dev/null; then
       git -C "$CEN" fetch -q origin main 2>/dev/null || true
       _ct="$(git -C "$CEN" rev-parse main 2>/dev/null || true)"
       _rt="$(git -C "$CEN" rev-parse origin/main 2>/dev/null || true)"
@@ -339,6 +344,13 @@ if [ "$RESET_CENTRAL" = 1 ]; then
         say "✓ 中央仓清空提交已推 origin/main（回读验证一致 ${_ct:0:7}）"
       else
         say "⚠ push 后回读不一致：local main=${_ct:0:7} vs origin/main=${_rt:0:7}——远端未达清空态，起跑前必须人工核（勿带旧稿起跑）"
+      fi
+      # 历史深度断言（孤儿重立的实效核验：origin/main 提交数 ≤2——截断失败=考古面仍在）
+      _depth="$(git -C "$CEN" rev-list --count origin/main 2>/dev/null || echo 999)"
+      if [ "${_depth:-999}" -le 2 ]; then
+        say "✓ 历史截断核验：origin/main 深度=${_depth}（前轮提交不可达）"
+      else
+        say "⚠ 历史截断未达预期：origin/main 深度=${_depth}（>2——考古面仍在，人工核查）"
       fi
       # tip 树正向断言（run11 实锤教训：工作树 find 核验过≠远端 tip 干净；head 截断
       # 式人工核验亦有盲区——这里对回读后的 origin/main 树做全量正向检查）。
@@ -351,7 +363,7 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     else
       say "⚠ push origin main 失败（重克隆将带回旧稿——起跑前必须人工 push）"
     fi
-    git -C "$CEN" push -q origin "mx-clean-${TS}" "mx-clean-${TS}-branches" 2>/dev/null || true
+    git -C "$CEN" push -q origin "mx-clean-${TS}" "mx-clean-${TS}-branches" "mx-clean-${TS}-pretrunc" 2>/dev/null || true
   fi
 else
   say "中央仓保留（未指定 --reset-central）"
