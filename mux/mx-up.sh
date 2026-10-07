@@ -39,9 +39,16 @@ else
   # spawn worker 时 $HERMES_BIN 优先于 "-m hermes_cli.main" 模块形式——缺它时用
   # sys.executable（SIM tools python）跑 -m，模块不在其 path 上=worker 必崩
   # （No module named hermes_cli，评审卡 run2-9 连崩实录）。
+  # gate-guard 注入走 env 命令（run11 attempt-3 实锤：${VAR:+K=...} 与数组展开词
+  # 都不会被 bash 重新识别为环境赋值——赋值只在解析期识别，展开产物必须经 env
+  # 命令作参数转交；否则整词被当命令名执行"No such file or directory"）。
+  _gg=(env)
+  if [ -n "${MX_GATE_GUARD:-}" ]; then
+    _gg+=("KANBAN_GATE_GUARD_FILE=$SIM_ROOT/var/current-state.env" "KANBAN_GATE_GUARD_KEYS=$MX_GATE_GUARD")
+  fi
   PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
     HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
-    ${MX_GATE_GUARD:+KANBAN_GATE_GUARD_FILE="$SIM_ROOT/var/current-state.env" KANBAN_GATE_GUARD_KEYS="$MX_GATE_GUARD" }nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
+    "${_gg[@]}" nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
 fi
