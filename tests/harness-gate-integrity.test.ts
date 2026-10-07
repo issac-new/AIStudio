@@ -532,6 +532,19 @@ uat_evidence_body 1790930955`, root)
     expect(lib).toContain('[RACI 解析]')
   })
 
+  it('⑳：mx-clean 中央重置三断言（run11 假成功实锤——清空提交落错分支/push 空转报✓/工作树核验≠远端 tip）', () => {
+    const clean = read(join(MX, 'mx-clean.sh'))
+    // ①清空提交显式落 main（fetch→checkout main→reset origin/main 后才 rm/commit）
+    expect(clean).toContain('git checkout -q main')
+    expect(clean).toContain('git reset -q --hard origin/main')
+    // ②push 回读验证（push 退出 0 ≠ 推达——up-to-date 亦退出 0）
+    expect(clean).toContain('回读验证一致')
+    expect(clean).toMatch(/rev-parse main/)
+    expect(clean).toMatch(/rev-parse origin\/main/)
+    // ③回读 tip 树正向断言（九目录零残留，非工作树 find 口径）
+    expect(clean).toContain('ls-tree -r --name-only origin/main')
+  })
+
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
     const scen = read(SCEN)
     expect(scen).toContain('g5_pass_finalize()')
