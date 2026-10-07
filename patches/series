@@ -495,3 +495,6 @@
 
 # 572 eval M2：Eval Studio 评测域路由挂载（/api/hermes/eval/*）
 572-server-eval-routes.patch
+
+# 573 遗留清偿：playwright 1.60→1.63（对齐缓存构建消除 oracle Chrome 回退；顺带补齐 260 three 的 lock 条目）
+573-playwright-163-upgrade.patch
