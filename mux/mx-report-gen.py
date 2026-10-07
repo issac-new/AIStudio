@@ -1713,6 +1713,8 @@ def artifact_panorama():
     return html_tbl, stat, note_g5
 
 # 叙事层（V4 §四：终版报告=叙事层+旅程层单文件；失败显式降级不阻断）
+_narrative_html = ''
+_ch0_html = _ch1_html = _ch2_html = _ch3_html = _ch4_html = ''
 try:
     import html as _H
     from report_narrative import render_narrative, render_chapter0, render_intent_chain
