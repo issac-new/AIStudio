@@ -1619,6 +1619,28 @@ def _step_done(n: int) -> bool:
     meta = STEPS_META.get(n) or {}
     return any(state.get(k) for k in meta.get('keys', []))
 
+def _step_artifact_status(n: int):
+    """交付物维度判定（§5.5 步态双轨，2026-10-07 落版）：生成时实查该步交付物在仓
+    与模版字段核对，返回 (档位, 标签)；无交付物映射步返回 None（不渲 chip）。
+    档位：ok=全齐 / warn=有缺（缺件或模版不符——记单在文末矩阵与步③可见）。"""
+    views = ARTIFACT_VIEWS.get(n)
+    if not views:
+        return None
+    total = len(views)
+    bad = 0
+    for _name, rel, checks in views:
+        raw, _aref, _asha = _art_resolve(rel)
+        if raw is None:
+            bad += 1
+            continue
+        for _lb, rx in checks:
+            if not re.search(rx, raw):
+                bad += 1
+                break
+    if bad:
+        return ('warn', f'交付物 🟡 缺/不符 {bad}/{total}（详见本步②与文末矩阵·记单在案）')
+    return ('ok', f'交付物 ✅ {total}/{total} 模版符合')
+
 def artifact_block(n: int) -> str:
     """单步交付物视图 <details> 块（真容渲染+模版核对）；无映射步返回 ''。
 
@@ -2078,6 +2100,11 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                      | r18_matrix.SKILL_STEPS | r18_matrix.DELIVERY_STEPS)
         if n in _r18_must and not (R18.get(str(n)) or R18.get(n)):
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">R18 未采集·记单在案</span>'
+        # 交付物维度 chip（§5.5 步态双轨：机制✅不遮交付物缺）
+        _ast = _step_artifact_status(n)
+        if _ast:
+            _acls = 'background:#d1fae5;color:#047857' if _ast[0] == 'ok' else 'background:#fef3c7;color:#b45309'
+            status += f'<span class="gmark" style="{_acls}">{H.escape(_ast[1])}</span>'
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         art_html = artifact_block(n)  # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对
