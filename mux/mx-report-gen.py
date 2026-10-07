@@ -1715,8 +1715,68 @@ def artifact_panorama():
 # 叙事层（V4 §四：终版报告=叙事层+旅程层单文件；失败显式降级不阻断）
 try:
     import html as _H
-    from report_narrative import render_narrative
+    from report_narrative import render_narrative, render_chapter0, render_intent_chain
     _narrative_html = render_narrative(state, EVID)
+    # ── §5.4 十章骨架接线（2026-10-07 补齐：第 0/1/2/3/4 章长期未实现）──
+    try:
+        _ch0_html = render_chapter0(state, EVID, steps_dir=STEPS_DIR)
+    except Exception as _e0:
+        _ch0_html = f'<div class="stat-note">第 0 章生成失败（如实标注）：{H.escape(str(_e0))}</div>'
+    try:
+        _ch3_html = render_intent_chain(SIM)
+    except Exception as _e3:
+        _ch3_html = f'<div class="stat-note">第 3 章意图链路生成失败（如实标注）：{H.escape(str(_e3))}</div>'
+    # 第 1 章 本轮口径（全部实算/取不到如实 ⬜）
+    _fmt_epoch = lambda v: __import__('datetime').datetime.fromtimestamp(int(str(v)[:10])).strftime('%m-%d %H:%M') if str(v).isdigit() and len(str(v)) >= 10 else '⬜'
+    _dlv_note = '启用（dlv_room 在档）' if state.get('dlv_room') else '⬜ 未见 dlv_room（未开启或已清）'
+    _dec_note = '在线（版本快照在档）' if (EVID / 'decision-backend-snapshot.txt').exists() else '⬜ 快照不在档'
+    _frames_note = ('29 帧全部收官后补拍（采集链未挂驱动，记单 r18-collection-missing）' if _reshoot
+                    else (f'{total_imgs} 帧当轮实时采集' if total_imgs else '本轮未拍摄'))
+    _ch1_html = (
+        '<section class="nv-sec" id="ch1-caliber"><h2>第 1 章 · 本轮口径（验收与数据口径声明）</h2>'
+        '<table class="st-issues-tbl"><tbody>'
+        f'<tr><td>推演轮次 / 窗口</td><td>{RUN_ID} · 起跑 {_fmt_epoch(state.get("run_started_at", ""))} → 复盘收官 {_fmt_epoch(state.get("retro_done", ""))}（state 落键实算）</td></tr>'
+        f'<tr><td>发布基线</td><td>aipaydev origin/main@{main_sha or "⬜"}（生成时实查）；integration 基线见步 19</td></tr>'
+        f'<tr><td>截图口径</td><td>{_frames_note}</td></tr>'
+        f'<tr><td>全量呈现（R18）</td><td>{r18_coverage()}（必采 {r18_matrix.TOTAL} 项；缺口记单 r18-collection-missing，DISP 观察）</td></tr>'
+        f'<tr><td>delivery 协议事件</td><td>{_dlv_note}；gate G5 pass 事件漏发记单（delivery-g5-gate-event-missing）</td></tr>'
+        f'<tr><td>判定后端</td><td>clef-flash 本地判定 {_dec_note}（F-7 fail-open 口径）</td></tr>'
+        f'<tr><td>快模式/并发</td><td>MX_FAST 缺省开（轮询 5s·治理三步并发）；系分/编码四路齐发（闸值 4 满格）；569 gate-guard 显式启用（035a555）</td></tr>'
+        f'<tr><td>问题单终态</td><td>{stat}</td></tr>'
+        '</tbody></table></section>')
+    # 第 4 章 本轮新特性实证（按轮注册；未注册轮如实不渲染）
+    _NEW_FEATURES_BY_RUN = {
+        '20261007-v8-run10': [
+            ('快模式 MX_FAST=1 全程首役', '轮询 15s→5s、审批扫描 30s、治理三步（22-24）并发——01:21 起跑 14:29 收官（含系分误拦空转 2h+编码滞留 2h36m 事故窗，如实呈现不与他轮硬比）', 'scenario.log 全程'),
+            ('569 gate-guard 显式启用化', '系分期全局误拦致首批空转事故→守卫改 MX_GATE_GUARD 显式声明，默认不再拦', '035a555 + 守门断言'),
+            ('半程自动催办首服役', '排期窗活性催办全程在线；lin 编码五次催办（09:44-11:17）实录', 'scenario.log 催办行 ×5'),
+            ('clef-flash 本地判定后端首役', 'mlx 量化 4bit 判定后端 :8000 常驻，版本三元组快照落档（F-7）', 'evidence/decision-backend-snapshot.txt'),
+            ('叙事集预写 18/26 步', 'G4 后即出骨架草稿，按轮注册等待归零（run9 50 分钟→0）', '§5.6 + STEPS_META_RUN10-draft.py'),
+            ('四路齐发满格并发', '系分/编码闸值 4 内满格，run9/run10 实证无撞闸（原 2+2 分批废除）', '方案 §4.2 + 本轮实测'),
+        ],
+    }
+    _feats = _NEW_FEATURES_BY_RUN.get(RUN_ID, [])
+    _ch4_html = ''
+    if _feats:
+        _rows = ''.join(f'<tr><td>{H.escape(t)}</td><td>{H.escape(d)}</td><td><code>{H.escape(a)}</code></td></tr>' for t, d, a in _feats)
+        _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮新特性实证</h2>'
+                     '<table class="st-issues-tbl"><thead><tr><th>特性</th><th>实证</th><th>锚</th></tr></thead>'
+                     f'<tbody>{_rows}</tbody></table></section>')
+    # 产品面承载率行（§5.5：五面各计 UI 实拍或产品内操作证据，验收线 ≥4/5）
+    def _face_any(pres):
+        return [p for p in pres if (STEPS_DIR / f'{p}.png').exists()]
+    _faces = []
+    _faces.append(('沟通', bool(_face_any(['8-op1-after', '9-op1-after', '19-op1-after', '21-op1-after'])), '房间/会话帧'))
+    _faces.append(('任务', bool(_face_any(['10-op1-after', '12-op1-after', '13-op1-after', '17-op1-after', '20-op1-after'])), '看板帧'))
+    _ap_ok = (EVID / 'approved.events').exists() and (EVID / 'approved.events').stat().st_size > 0
+    _faces.append(('审批', _ap_ok, 'approved.events 事件留痕（无 UI 帧，降级计达）'))
+    _faces.append(('度量', bool(_face_any(['24-op1-after', '6-op1-after', '26-op1-after'])), '治理中心帧'))
+    _faces.append(('编码', bool(_face_any(['25-op1-after', '25-op2-after'])), 'IDE 走查帧+CLI 作业组合计达'))
+    _n_face = sum(1 for _, ok, _ in _faces if ok)
+    _face_rows = ' · '.join(f'{n}={"✓" if ok else "⬜"}' for n, ok, _ in _faces)
+    _face_note = '；'.join(f'{n}={d}' for n, ok, d in _faces if ok and '降级' in d or (not ok))
+    _ch1_html += (f'<p class="stat-note">产品面承载率 <b>{_n_face}/5</b>（验收线 ≥4/5）：{_face_rows}'
+                  + (f'——{_face_note}' if _face_note else '') + '</p>')
 except Exception as _e:
     import html as _H
     _narrative_html = (f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;'
@@ -2434,30 +2494,40 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
   {_ck_zone_html()}
 
+  <details class="stat-note" style="margin:6px 0 14px"><summary>十章地图（§5.4 骨架导航：0 总述 → 1 口径 → 2 改判 → 3 意图链 → 4 新特性 → 5 叙事层 → 6 旅程层 → 7 六域 → 8 问题单 → 9 闭环治理）</summary>
+  <p><a href="#ch0-collab">0 推演逻辑与协作顺序</a> · <a href="#ch1-caliber">1 本轮口径</a> · <a href="#audit-response">2 独立审计与处置（改判真值层）</a> · <a href="#nv-intent-chain">3 意图链路</a> · <a href="#ch4-features">4 本轮新特性实证</a> · <a href="#nv-hero">5 叙事层</a> · <a href="#ch6-journey">6 旅程层 26 步</a> · <a href="#ch7-domains">7 六域审计</a> · <a href="#ch8-issues">8 问题单终态</a> · <a href="#ch9-gov">9 闭环治理终态</a></p></details>
+
+  {_ch0_html}
+  {_ch1_html}
+
+  <h2 class="section-hd" id="audit-response">第 2 章 · 独立审计与处置（改判真值层）</h2>
+  {audit_response_section}
+
+  {_ch3_html}
+  {_ch4_html}
+
+  <h2 class="section-hd">第 5 章 · 叙事层（挑战实例 / 双 loop / 六亮点 / 四维协作质量）</h2>
   {_narrative_html}
 
+  <h2 class="section-hd" id="ch6-journey">第 6 章 · 旅程层：26 步实录（每步四段）</h2>
   <h2 class="section-hd" id="checkpoints">六道关卡 · 谁在什么时间把住了什么关</h2>
+  <div class="gates">{gate_cards()}</div>
   <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
 
   {content_html}
 
-  <h2 class="section-hd">六域审计 · 每域一个交付问题（逐域实测）</h2>
+  <h2 class="section-hd" id="ch7-domains">第 7 章 · 六域审计（每域一个交付问题）</h2>
   {domains_table()}
   <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/board 治理页签组，v0.7.30 起 /app/gov 重定向至此）「六域体检」可在真实流程中随时重跑并累积台账</p>
 
-  <h2 class="section-hd">问题单终态（{stat}）</h2>
+  <h2 class="section-hd" id="ch8-issues">第 8 章 · 问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
 
 
-  <h2 class="section-hd" id="audit-response">独立审计与处置</h2>
-{audit_response_section}
-
-
-  <h2 class="section-hd">闭环治理终态</h2>
-  <div class="gates">{gate_cards()}</div>
+  <h2 class="section-hd" id="ch9-gov">第 9 章 · 闭环治理终态</h2>
   <div class="govgrid">
     <table><tr><th>硬闸</th><th>把关点</th><th>终态</th><th>落键时间</th></tr>
     {gov_final_rows()}
@@ -2473,7 +2543,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <p class="stat-note">{art_note_g5}</p>
 
   <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）<br>
-全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本，交付物自中央仓实读，问题单与计数自台账实算</div>
+全部证据图=Swarm Studio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note}<br>点击截图可放大 · 报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本，交付物自中央仓实读，问题单与计数自台账实算</div>
 </main>
 </div>
 </body></html>'''
