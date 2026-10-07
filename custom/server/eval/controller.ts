@@ -301,14 +301,19 @@ router.post('/oracle/cases/:id/run', async (ctx) => {
   }
   try {
     const browser = await playwrightBrowser()
-    const output = await runOracleCase(oracleCase, {
-      config: loadEvalConfig(),
-      browser,
-    })
-    record.stage1 = output.stage1
-    record.stage2 = output.stage2
-    record.frames = output.frames
-    record.verdict = output.verdict
+    try {
+      const output = await runOracleCase(oracleCase, {
+        config: loadEvalConfig(),
+        browser,
+      })
+      record.stage1 = output.stage1
+      record.stage2 = output.stage2
+      record.frames = output.frames
+      record.verdict = output.verdict
+    } finally {
+      // 每次运行起的 chromium 实例用完即关（进程级泄漏防护）
+      await browser.close().catch(() => undefined)
+    }
   } catch (e) {
     record.status = 'failed'
     record.verdict = 'failed'

@@ -55,6 +55,7 @@ function fakeBrowser(script: FakePageScript): OracleBrowser & { clicks: string[]
         async close() { /* no-op */ },
       }
     },
+    async close() { /* no-op */ },
   }
 }
 

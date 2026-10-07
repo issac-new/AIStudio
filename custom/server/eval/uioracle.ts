@@ -97,6 +97,8 @@ export interface OraclePage {
 
 export interface OracleBrowser {
   newPage(url: string): Promise<OraclePage>
+  /** 关闭浏览器实例（每次运行起一个实例，用完必须关——进程级泄漏） */
+  close(): Promise<void>
 }
 
 export interface OracleDeps {
@@ -164,6 +166,7 @@ export async function playwrightBrowser(): Promise<OracleBrowser> {
         async close() { await page.close() },
       }
     },
+    async close() { await browserInstance.close() },
   }
 }
 
