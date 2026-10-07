@@ -889,6 +889,46 @@ describe('⑯ run10 接线事故根治守门（hermes 转发/gate-guard 显式�
   })
 })
 
+describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 门禁灯事件漏发实锤）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('G5 补齐轮收口走 g5_pass_finalize（不漏 dlv_gate G5 pass 事件）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    // 补齐轮 wait_truth 块内必须调 g5_pass_finalize（内联 kanban_walk_done+sset 曾绕过 dlv 事件）
+    const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
+    expect(retry).toBeTruthy()
+    expect(retry![0]).toContain('g5_pass_finalize')
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,900}?\n  \}/)
+    expect(fin).toBeTruthy()
+    expect(fin![0]).toContain('dlv_gate')
+  })
+
+  it('report_done 落键前硬跑 mx-report-audit（§5.7 收官判据②接线）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    const reportBlk = scen.match(/if step_reached report[\s\S]*?sset report_done/)
+    expect(reportBlk).toBeTruthy()
+    const blk = reportBlk![0]
+    const iGen = blk.indexOf('mx-report-gen.py')
+    const iAudit = blk.indexOf('mx-report-audit.py')
+    const iSet = blk.indexOf('sset report_done')
+    expect(iGen).toBeGreaterThan(-1)
+    expect(iAudit).toBeGreaterThan(iGen)
+    expect(iSet).toBeGreaterThan(iAudit)
+    // 审计失败必须 fail 熔断（不允许 || true 静默）
+    expect(blk).toMatch(/mx-report-audit\.py[^\n]*\n?\s*\|\| fail/)
+  })
+
+  it('report_done 落键前跑 final-report-merge（§5.4 双正本缺一即违例）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    const reportBlk = scen.match(/if step_reached report[\s\S]*?sset report_done/)
+    expect(reportBlk).toBeTruthy()
+    const blk = reportBlk![0]
+    expect(blk).toContain('final-report-merge.py')
+    expect(blk).toMatch(/final-report-merge\.py[^\n]*\n?\s*\|\| fail/)
+  })
+})
+
 describe('⑰ 帧采集焊死守门（run10 教训：13h 零实时帧=报告空壳）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
 
