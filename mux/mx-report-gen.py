@@ -1783,7 +1783,7 @@ def checkpoints_html():
                      f'<div class="gate-desc">{title}：{desc}</div>'
                      f'<div style="font-size:11px;color:var(--muted)">把关人：{who}</div>'
                      f'</div>')
-    return ''.join(cards) + '</div>'
+    return '<div class="ck-wrap">' + ''.join(cards) + '</div>' + '</div>'
 
 def gate_cards():
     # 打回/判回滚记录按轮隔离（run6 实锤漏网根治：run2 的 R-A1 判回滚史曾渲进 run6 门禁卡）。
@@ -2090,6 +2090,24 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
+.ck-wrap{{margin:0 0 16px}}
+.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
+.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
+.ck-map-sub{{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}}
+.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
+.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
+.ck-zone-hd{{font-size:12px;font-weight:700;color:var(--zc);margin-bottom:4px}}
+.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
+.ck-zone-links a{{font-size:11px;color:var(--muted);text-decoration:none}}
+.ck-zone-links a:hover{{color:var(--zc)}}
+.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
+.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
+.ck-chain-desc{{font-size:11px;color:var(--muted);margin-left:8px}}
+.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
+.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
+.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
+.ck-node-z{{font-size:9px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
+.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
 /* ── 驾驶舱联动地图 ── */
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow)}}
 .ck-map-hd{{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}}
