@@ -980,11 +980,6 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     }
   }
 
-  /** Get file events from room timeline (stub — for future FilePanel). */
-  function getRoomFiles(_room: any): any[] {
-    // TODO: Implement file listing from room timeline filtered by m.file type
-    return []
-  }
 
   /** Search the user directory for matching users */
   async function searchUserDirectory(query: string): Promise<Array<{ userId: string; displayName: string | null; avatarUrl: string | null }>> {
@@ -1309,7 +1304,6 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     toggleRoomFavorite, canEditTopic, setRoomTopic,
     getHistoryVisibility, getE2EStatus, isDirectMessage, isVideoRoom,
     canInviteToRoom, getPinnedEventCount, getPinnedEventIds,
-    getRoomFiles,
     searchUserDirectory, getUserPresence,
     createRoom, joinRoom, leaveRoom, paginateMessages,
     getRoomUnreadCount, getRoomNotificationLevel, getEventReadReceipts,

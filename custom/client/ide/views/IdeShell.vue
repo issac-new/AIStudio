@@ -75,6 +75,7 @@ watch(() => route.query.session, async (sessionId) => {
 const briefingTaskResolved = ref<null | {
   id: string; title: string; status: string
   priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null; raci?: Record<string, string[]> | null
+  parents?: string[]; children?: string[]
 }>(null)
 async function resolveBriefingCrossBoard(id: string): Promise<void> {
   const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
@@ -99,6 +100,8 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
           body: hit.body ?? null,
           raci: (hit as { raci?: Record<string, string[]> | null }).raci ?? null,
           workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
+          parents: (hit as { parents?: string[] }).parents ?? [],
+          children: (hit as { children?: string[] }).children ?? [],
         }
         return
       }
@@ -124,6 +127,8 @@ const briefingTask = computed(() => {
     body: hit.body ?? null,
     raci: (hit as { raci?: Record<string, string[]> | null }).raci ?? null,
     workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
+    parents: (hit as { parents?: string[] }).parents ?? [],
+    children: (hit as { children?: string[] }).children ?? [],
   }
 })
 
@@ -389,10 +394,12 @@ async function loadBriefingRetry(): Promise<void> {
 const briefingWorkflow = computed(() => {
   const task = briefingTask.value
   if (!task) return { stage: '', parentIds: [], childIds: [], blocked: false, retryCount: 0 }
+  // 父子依赖=看板任务 parents/children 真字段（kanban.ts:113-114，随 listTasks 返回）——
+  // 2026-10-07 修复恒空硬编码（run10 推演报告实证发现 D1：简报"Kanban 状态"块骨架冒充实现）
   return {
     stage: task.status,
-    parentIds: [],
-    childIds: [],
+    parentIds: task.parents ?? [],
+    childIds: task.children ?? [],
     blocked: task.status === 'blocked',
     retryCount: briefingRetry.value,
   }
