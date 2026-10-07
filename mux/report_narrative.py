@@ -34,6 +34,11 @@ def _state_mark(state: dict, key: str) -> str:
     if not v:
         return '<span class="nv-miss">⬜ 未取得</span>'
     v = str(v)
+    if len(v) <= 2:
+        return '<span class="nv-ok">✅</span> <span>已落键</span>'
+    if v.isdigit() and len(v) >= 10:
+        import datetime
+        return f'<span class="nv-ok">✅</span> <code>{datetime.datetime.fromtimestamp(int(v[:10])).strftime("%m-%d %H:%M:%S")}</code>'
     if len(v) > 42:
         v = v[:42] + '…'
     return f'<span class="nv-ok">✅</span> <code>{ESC(v)}</code>'
@@ -85,8 +90,8 @@ def render_narrative(state: dict, evid: Path) -> str:
         return note if (ledger_found and n == 0) else ''
     total_issues = sum(counts.values())
     n_invite = counts.get('room-invite-gap', 0)
-    n_evidence = counts.get('done-without-verifiable-evidence', 0)
-    n_gate = counts.get('g2-review-missing', 0) + counts.get('review-card-missing', 0) + counts.get('g3-local-gate-missing', 0)
+    n_evidence = counts.get('done-without-verifiable-evidence', 0) + counts.get('kanban-registration-skipped', 0)
+    n_gate = sum(v for k, v in counts.items() if re.match(r'^(g[1-6]-|review-card)', k))  # 闸门键族（2026-10-07 修复硬编码白名单漏 g5-ready-fail）
 
     # ── ① 价值主张 hero ──
     hero = f'''
@@ -114,11 +119,12 @@ def render_narrative(state: dict, evid: Path) -> str:
         ),
         (
             '挑战 B：大模型"完成"幻觉',
-            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮走拒收回灌环实录（600s 超时→重报通过，02:27/02:31）")}"无凭证报完成"被打回——'
+            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮无同期记单")}"无凭证报完成"被打回——'
             '智能体宣称任务完成，但提交号/卡号反向核验查无实据（RFD-001 两轮拒收实例）。',
             '协同机制：一切"完成"必须带代码提交号+任务卡号双凭证，系统反向核验，查不到打回限期重报，两轮不过记问题单中止。'
             '验证优先于生成：客观执行信号作准出，自我评价不作数。',
-            _state_mark(state, 'register_done'),
+            (('<span class="nv-ok">✅</span> 记单 <code>kanban-registration-skipped·fanfan-agent</code>（issues.log 台账）')
+             if counts.get('kanban-registration-skipped') else _state_mark(state, 'register_done')),
         ),
         (
             '挑战 C：审查不沦为橡皮图章',
@@ -134,7 +140,7 @@ def render_narrative(state: dict, evid: Path) -> str:
             '协同机制：本地捕获代理截获 79KB 真实载荷逐项重放对照（原样 400 / 去掉 200 / 降档 200），'
             '实锤元凶为非标参数 reasoning_effort="max"（仅 gpt-5.6 层线上值接受）；配置改 high 后通道恢复、'
             'agent 回合全通。模型通道问题不猜不改盲试——载荷级实证定位，一修即愈。',
-            _state_mark(state, 'analysis_done'),
+            '<span class="nv-ok">✅</span> 历轮证据档 <code>20260928-v4-run1</code>（2026-09-28 通道事故复盘，本案例为对照引用非本轮记单）',
         ),
     ]
     case_html = ''.join(
@@ -148,8 +154,8 @@ def render_narrative(state: dict, evid: Path) -> str:
     )
     challenge = f'''
 <section class="nv-sec" id="nv-challenge">
-  <h2>挑战与协同：三个来自本轮推演的真实案例</h2>
-  <p class="nv-lead">多智能体研发的关键问题出在人与智能体系统的交界处。以下案例全部取自本轮问题单台账（issues.log 实算），不是假想场景。</p>
+  <h2>挑战与协同：三个本轮真实案例 + 一个历轮对照案例</h2>
+  <p class="nv-lead">多智能体研发的关键问题出在人与智能体系统的交界处。案例 A/B/C 取自本轮问题单台账（issues.log 实算）；案例 D 为历轮（V4-run1）对照实录——均非假想场景。</p>
   <div class="nv-cases">{case_html}</div>
   <p class="nv-note">演进方向：RSI（递归自改进内核，见 2026-09-18-rsi-kernel-design）将把"纠错飞轮"从流程机制沉淀为运行时内核能力——本报告不作现态承诺。</p>
 </section>'''
