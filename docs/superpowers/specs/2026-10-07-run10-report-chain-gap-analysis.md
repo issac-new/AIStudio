@@ -115,20 +115,22 @@
 
 ## 七、遗留项（点名挂账）
 
-**run11 前置（机制类）**：
-1. 收官判据②接线——aipay-scenario.sh 在 report_done 落键前硬跑 mx-report-audit 熔断（方案 §5.7 已修订，harness 未接线）。
-2. ready/release 段补 gate G5 pass delivery 事件发射+事件序列完整性守门断言（delivery-g5-gate-event-missing DISP 延后项）。
-3. AN-PAYCORE/AN-MP 两稿重灌或按"祖先版声明"口径收口（anexec-missing DISP 延后项）；merchant-onboarding-v1.0.0-cashier.md 补件（audit-finding DISP 延后项）。
-4. 治理报告/复盘文档生成时点后移至收官补记之后（P18 族，A3b 审计 WARN 已立）。
-5. 步态双轨的生成器 chip（交付物维度判定，§5.5 步态双轨条款）。
+**run11 前置（机制类）**——以下 1-6 已于 2026-10-07 傍晚清偿（销账锚在各行）：
+1. ~~收官判据②接线~~ **已清偿（simharness 4bec9eb）**：aipay-scenario.sh 在 report_done 落键前硬跑 mx-report-audit 熔断（FAIL 即不得收官）+ final-report-merge 双正本熔断，守门⑱三断言 75/75 钉住。
+2. ~~ready/release 段补 gate G5 pass delivery 事件发射~~ **已清偿（simharness 4bec9eb）**：G5 补齐轮收口改走 g5_pass_finalize（曾内联收口绕开 dlv_gate 发射——案例面板 G5 灯灰根因），事件序列完整性守门断言随 ⑱ 落位；delivery-g5-gate-event-missing 记单闭环（已修）。
+3. ~~AN-PAYCORE/AN-MP 重灌+merchant 补件~~ **已清偿（aipaydev c2c0b18，origin/main）**：两稿分别恢复自 run9 r12（a351a9b）与 run8（5d2c7dd）；merchant-onboarding-v1.0.0-cashier.md 按概设 §5 冻结契约导演代拟（ops 复核后转正）——交付物矩阵 45 件全绿零缺件，两记单闭环（已修）。
+4. ~~治理报告/复盘文档生成时点后移~~ **部分清偿**：run10 治理报告已按台账终态重生成（17:30，22 ISSUE/28 DISP）；机制侧=report 步 gov_report 已是全链最后调用点，收官补记后人工重跑即本例（P18 族 A3b 审计 WARN 常驻观察）。
+5. ~~步态双轨生成器 chip~~ **已清偿（simharness 1ba4ace）**：_step_artifact_status 实查交付物在仓+模版核对，步头 chip 分档 ✅/🟡（run10 重生成 15 枚全 ✅）。
+6. ~~IDE 默认模型移除时回退到可用项~~ **已清偿（overlay 4af0d69c）**：firstAvailableModel 归一+横幅"回退到 {model}"一键按钮（scoped/global 双路径），i18n patch 575，单测 +2。
 
-**产品 backlog**：
-6. IDE 默认模型指向已移除项时回退到可用项（25-op1 横幅实锤）。
-7. IDE 体检条 rules/memory/automations 三维接入（D4）。
-8. 手册未覆盖功能面的文档补齐（D5 余项）。
+**run11 待验（执行类，无法离线清偿）**：
+7. capture_step 帧采集首跑验证（94aa2fc 已接线，run11 首跑观察 23 条 R18 降级 WARN 自然消退）。
+8. GraphSpec 图执行首跑（overlay 876a458 编译器已在，待 fire→派发对接层）。
+9. RACI 双@派发词结构化改造（raci-dispatch-missing 延后项）。
+10. 治理报告时点后移的自动化（收官补记触发自动重生成，当前=人工重跑口径）。
 
 **观察项（不行动）**：
-9. R18 帧类缺口 run10 不可补采——23 条审计 WARN 常驻至 run11 采集链首跑（94aa2fc 已接线）自然消退。
-10. 交付案例面板在"stage done 而 gate 灯灰"时无引导提示（非缺陷，产品诚实；如加提示属增强不属修复）。
+11. 交付案例面板在"stage done 而 gate 灯灰"时无引导提示（非缺陷，产品诚实；如加提示属增强不属修复）。
+12. IDE 体检条 rules/memory/automations 三维接入（D4，产品 backlog）。
 
-**边界声明**：本轮不改写 agent 原始记录（scenario.log/state.env/复盘文档/治理报告原件）；issues.log 只追加导演补记与勘误（原行留痕）；run10 截图为收官后补拍已逐帧标注，不作为当轮实时帧引用；并行会话在 simharness 的提交（帧采集焊死/DISP 补记/第 9 章重写/布局修复）与本勘误合并收敛，冲突处置留 mux/EDITING-IN-PROGRESS.md 告示存档。
+**边界声明**：本轮不改写 agent 原始记录（scenario.log/state.env/复盘文档原件）；issues.log 只追加导演补记与勘误（原行留痕）；run10 截图为收官后补拍已逐帧标注，不作为当轮实时帧引用；并行会话在 simharness 的提交（帧采集焊死/DISP 补记/第 9 章重写/布局修复）与本勘误合并收敛，冲突处置留 mux/EDITING-IN-PROGRESS.md 告示存档（用毕已删）。
