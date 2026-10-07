@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-index 2dcbde59..02e262ae 100644
+index d090a66a..b5dd542b 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-@@ -16,7 +16,18 @@ import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
+@@ -17,7 +17,18 @@ import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
  
  import '@vue-flow/node-resizer/dist/style.css'
  

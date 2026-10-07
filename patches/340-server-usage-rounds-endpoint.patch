@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
-index cef319cb..f10a258e 100644
+index 2b771e3b..18ab272c 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
 @@ -42,6 +42,7 @@ import {

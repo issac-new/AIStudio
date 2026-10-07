@@ -30,7 +30,7 @@ index 05f9690c..47824eea 100644
        e.preventDefault()
        openSessionSearch()
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index 3994eb5f..bb85379a 100644
+index 841e616a..53f6e40c 100644
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
 @@ -1196,7 +1196,7 @@ export default {
@@ -43,7 +43,7 @@ index 3994eb5f..bb85379a 100644
      searchEmpty: 'الجلسات الأخيرة',
      searchRecent: 'جلسة أخيرة',
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index 68a3f548..7306196f 100644
+index 8d89aed1..3ff3f913 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -56,7 +56,7 @@ index 68a3f548..7306196f 100644
      searchFailed: 'Sitzungssuche fehlgeschlagen',
      searchNoSnippet: 'Keine Vorschau verfügbar',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index b72bbbed..102c65d6 100644
+index 1972e4ec..e73584ab 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -69,7 +69,7 @@ index b72bbbed..102c65d6 100644
      searchFailed: 'No se pudieron buscar sesiones',
      searchNoSnippet: 'No hay resumen disponible',
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 7b1acd87..dbf617b8 100644
+index 7e1680c0..8eeb003a 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -82,7 +82,7 @@ index 7b1acd87..dbf617b8 100644
      searchFailed: 'Échec de la recherche de sessions',
      searchNoSnippet: 'Aucun extrait disponible',
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index df1018ca..dd33d75c 100644
+index f807e9d4..5889a5b4 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -95,7 +95,7 @@ index df1018ca..dd33d75c 100644
      searchFailed: 'セッション検索に失敗しました',
      searchNoSnippet: '表示できる要約がありません',
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 4540e51f..731e8bc6 100644
+index 4f97d78c..6cb4a526 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -108,7 +108,7 @@ index 4540e51f..731e8bc6 100644
      searchFailed: '세션 검색 실패',
      searchNoSnippet: '표시할 요약이 없습니다',
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index 2cea907e..4291fea8 100644
+index 40f37d5e..0907c874 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
 @@ -1271,7 +1271,7 @@ export default {
@@ -121,7 +121,7 @@ index 2cea907e..4291fea8 100644
      searchFailed: 'Falha ao pesquisar sessões',
      searchNoSnippet: 'Nenhum resumo disponível',
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index 84010af8..2eda8cc8 100644
+index d0bf0448..960ea327 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
 @@ -1092,7 +1092,7 @@ export default {
@@ -134,7 +134,7 @@ index 84010af8..2eda8cc8 100644
      searchEmpty: 'Недавние сеансы',
      searchRecent: 'Недавние сеансы',
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index c064298e..1b7b5a2c 100644
+index caecbdcb..f0545242 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
 @@ -1194,7 +1194,7 @@ export default {

@@ -34,10 +34,10 @@ index e7187198..f90f502f 100644
      priorAgentMode?: 'scoped' | 'global' | ''
      profile: string
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 87ce44f4..bed8578b 100644
+index df98a669..440d4f34 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -251,7 +251,7 @@ const profileOptions = computed(() =>
+@@ -252,7 +252,7 @@ const profileOptions = computed(() =>
      profilesStore.profiles.map(p => ({ label: p.name, value: p.name }))
  )
  
@@ -47,13 +47,13 @@ index 87ce44f4..bed8578b 100644
  const groupAgentTypeDefinitions = GROUP_AGENT_OPTIONS
  
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-index 02e262ae..4c917042 100644
+index b5dd542b..1bb080a1 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-@@ -2,7 +2,7 @@
+@@ -3,7 +3,7 @@ import { modelReasoningEfforts } from '@/utils/model-reasoning-effort'
  import { isGlobalOnlyCodingAgent } from "@/utils/agent-catalog"
  import DshSessionPresetSelect from "@/components/coding-agents/dsh/DshSessionPresetSelect.vue"
- import { computed, ref } from 'vue'
+ import { computed, ref, watch } from 'vue'
 -import { Handle, Position, type NodeProps } from '@vue-flow/core'
 +import { Handle, Position } from '@vue-flow/core'
  import { NodeResizer } from '@vue-flow/node-resizer'

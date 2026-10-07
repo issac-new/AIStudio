@@ -504,3 +504,4 @@
 
 # 575 IDE 模型失效横幅一键回退 i18n（run10 实证 D 区产品改进项：模型移除应回退到可用项）
 575-i18n-modelinvalid-fallback.patch
+576-chromium-bidi-build-dep.patch
