@@ -2090,6 +2090,27 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
+/* ── 驾驶舱联动地图 ── */
+.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow)}}
+.ck-map-hd{{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}}
+.ck-map-sub{{font-size:12px;color:var(--muted);font-weight:400}}
+.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:16px}}
+.ck-zone{{border:1px solid color-mix(in srgb,var(--zc) 35%,var(--border));border-left:4px solid var(--zc);border-radius:8px;padding:8px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
+.ck-zone-hd{{font-size:12px;font-weight:700;color:var(--zc);margin-bottom:6px;letter-spacing:.03em}}
+.ck-zone-links{{display:flex;flex-wrap:wrap;gap:4px 8px}}
+.ck-zone-links a{{font-size:11px;color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--border);padding:1px 0}}
+.ck-zone-links a:hover{{color:var(--zc);border-bottom-color:var(--zc)}}
+.ck-chain{{border-top:1px dashed var(--border);padding:12px 0 4px}}
+.ck-chain-hd{{font-size:13px;margin-bottom:8px}}
+.ck-chain-hd b{{color:var(--text)}}
+.ck-chain-desc{{font-size:11px;color:var(--muted);margin-left:8px}}
+.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:6px}}
+.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:16px;padding:3px 10px;transition:all .15s}}
+.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card));border-color:var(--zc)}}
+.ck-node-z{{font-size:9.5px;color:#fff;background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
+.ck-arrow{{color:var(--muted);font-size:14px;margin:0 2px;font-weight:300}}
+.st-linkline{{font-size:11px;color:var(--muted);margin:4px 0 0;padding:4px 8px;background:var(--bg);border-radius:6px}}
+.st-linkline a{{text-decoration:none;border-bottom:1px dotted currentColor}}
 .art-checks{{display:grid;gap:2px;margin:4px 0 8px}}
 .art-chk-row{{display:flex;gap:8px;align-items:baseline;font-size:11.5px;padding:2px 6px;border-radius:4px;background:var(--bg)}}
 .art-chk-row.miss{{background:#fef2f2}}
