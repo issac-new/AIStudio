@@ -2195,7 +2195,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .pb-label{{font-size:9px;color:#94a3b8;text-align:center;margin-top:4px;white-space:nowrap}}
 
 /* ── 六道闸仪表盘（人的审核把关）── */
-.gates{{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:-12px 0 28px}}
+.gates{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 20px}}
 .gate-card{{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow);border-top:3px solid var(--border)}}
 .gate-card.gpass{{border-top-color:var(--ok)}}
 .gate-card.gpending{{border-top-color:#cbd5e1;opacity:.75}}
@@ -2530,10 +2530,8 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
 
   <h2 class="section-hd" id="ch9-gov">第 9 章 · 闭环治理终态</h2>
+  <p class="stat-note">问题单闭环率与发布基线（六道关卡详情见上方「六道关卡」节）</p>
   <div class="govgrid">
-    <table><tr><th>硬闸</th><th>把关点</th><th>终态</th><th>落键时间</th></tr>
-    {gov_final_rows()}
-    </table>
     <table><tr><th>度量</th><th>终态值</th></tr>
     {gov_metrics_rows}
     <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）{_BASELINE_NOTE}</td></tr></table>
