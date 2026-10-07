@@ -525,7 +525,7 @@ SCAN_ROOM="$(sget room_analysis)"
 
 # ══ 步骤 12：各主责系分执行（worktree + 分析文档 + 双兜底回执）══
 if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
-  note "── anexec：派发 4 个系分执行任务（真分批 2+2，V7 P1 并发预算实装——闸值 4 下首批 2 路占 2 槽留余量，首批交付后再派第二批，杜绝 run7 三发 nudge 实录的四路齐发撞闸）"
+  note "── anexec：四路齐发（run11 §4.2 流水线：原 2+2 真分批废除——run9/run10 实证闸值 4 满格无撞闸；分批省下的撞闸风险不及等批浪费的墙钟）"
   # COMMON 双引号定义：模板内仅 ${RFD_DOC}/${RFD_ID} 需展开，其余全是字面量
   # （已核对无 $、无反引号）；单引号会把这两处变量原样发给 agent（P2）。
   # %WS% 是唯一随派单变化的占位，在使用点 ${COMMON//%WS%/$WS} 替换。
@@ -550,24 +550,49 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid chen),$(agent_mxid wei)"
     WS=$(workspace xiao)
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid xiao),$(agent_mxid mei)"
-    sset anexec_d1 1
-  fi
-  # 首批交付等待（真分批）：两路入仓才派第二批——并发预算与交付节奏双收
-  for t in AN-PAYCORE AN-MP; do
-    wait_truth "首批：仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
-      || { note "[观察] 首批 $t 分析文档未达（记问题单，第二批照派）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
-  done
-  if [[ -z "$(sget anexec_d2)" ]]; then
     WS=$(workspace hu)
     dispatch_in_room hu "@hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid hu),$(agent_mxid wei)"
     WS=$(workspace lin)
     dispatch_in_room lin "@lin-agent:matrix.test 执行任务 AN-CHALI（csw-channel-alipay 支付宝渠道系分）。
 ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
-    sset anexec_d2 1
+    sset anexec_d1 1
   fi
 
-  for t in AN-CHWX AN-CHALI; do
+  # 概设预写（纪律 27①，run11 流水线）：次份系分稿入仓即派 fanfan 起概设骨架
+  # （消歧/消冲突可先做，四稿齐后补合定稿）——不等末稿再起笔。触发锚=第二份入仓：
+  # 此时至多 2 路系分在途，fanfan 并入后并发 ≤4（闸值满格内不撞闸）。预写失败/未触发
+  # 由 review 步原集中派发兜底（该步 repo_has 守卫仍在）。
+  if [[ -z "$(sget review_prewrote)" ]]; then
+    _pw_n=0
+    _pw_deadline=$(( $(date +%s) + 3600 ))
+    while (( $(date +%s) < _pw_deadline )); do
+      _pw_n=0
+      for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
+        repo_has "docs/analysis/$t-analysis.md" && _pw_n=$((_pw_n+1))
+      done
+      (( _pw_n >= 2 )) && break
+      auto_approve "$SCAN_ROOM" || true
+      sleep "$MX_POLL_IVAL"
+    done
+    if (( _pw_n >= 2 )); then
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test 【概设预写（流式流水线预备轮）】四份系分任务并行执行中，已有 ${_pw_n} 份入库、其余在途。请现在加载 requirements-analyst 技能起概设骨架，不等末稿：
+1) 先读已入库的 docs/analysis/AN-*.md（先 git pull 拉最新）、${RFD_DOC}、docs/analysis/${RFD_ID}-tasklist.md
+2) 可先做消歧与冲突处理（重点：金额单位统一明确为「分」(int64)；接口契约字段命名统一 snake_case），整理结构层次
+3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）提交 push
+4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
+结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
+      sset review_prewrote 1
+      note "[流水线] 概设预写已派（${_pw_n} 份系分在仓即起笔，纪律 27①）"
+    else
+      note "[观察] 概设预写触发锚未达（3600s 内次份系分稿未入仓）——回退 review 步集中派发（记问题单）"
+      echo "ISSUE|design-prewrite-skipped|fanfan|次份系分稿 3600s 未入仓，概设预写未触发（回退集中模式）" >> "$EVID_DIR/issues.log"
+      sset review_prewrote 0
+    fi
+  fi
+
+  # 四路齐发后的逐稿等待（并发已在前：这里只是逐个确认，先完成先过）
+  for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
     wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
       || { note "[观察] $t 分析文档未达（记问题单）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
   done
@@ -735,12 +760,13 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   sset plan_done 1
 fi
 
-# ══ 步骤 16：开发实施（真实编码，错峰）═══════════════
+# ══ 步骤 16：开发实施（真实编码，run11 触发链：独立即派+依赖随上游落地派）═══
 if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
-  note "── devimpl：后端核心先行，渠道/前端随后"
+  note "── devimpl：DEV-PAYCORE 与 DEV-MP 即派（互不依赖）；DEV-CHWX/DEV-CHALI 分支基于 pay-core 契约，随 feat/DEV-PAYCORE 落地即派（模块就绪即触发，run11 §4.2/纪律 27⑥——废除 run7 时代错峰分批）"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
 
-  # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1/d2），三批各一键。
+  # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
+  # 各自 origin/main 起建）；d2=依赖双路（hu/lin，feat/DEV-PAYCORE 落地触发）。
   if [[ -z "$(sget devimpl_d1)" ]]; then
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core，3 人日重度任务）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：按工作量与复杂度把本任务拆成 3-6 件子任务（每件 ≤1 人日、有独立验收口径），kanban 建 DEV-PAYCORE 主卡并把子任务建为 link 子卡（含工作量与 --raci 字段）；逐子任务实现，每件子任务至少一个独立 commit（消息含子任务 ID），全部子任务完成后再进入整体自测。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
@@ -748,16 +774,41 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
 4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+
+    dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
+1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
+2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
-  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支（本轮新鲜）" 1800 chen branch_fresh "feat/DEV-PAYCORE" \
+  # 用例前移（纪律 27②，run11 流水线）：编码进行中即派测试预备轮——用例起草+测试环境
+  # 预备与编码并行，正式执行任务书（defect 步）到时核对即跑而非从零起。并发账：此刻
+  # chen+xiao 编码（2）+qi+fei 预备（2）=4 满格；预备轮短（起草量级 ≤20min），chen
+  # 落地（d2 触发锚）时预备多已收口，瞬态超额由容量排队泵兜底（§4.2 容量语义）。
+  # 预备轮只起草不执行不交付——步 19 谓词/门禁语义不变；defect 步任务书自含兜底措辞
+  #（未起草则从零写），预备缺失不构成缺件。
+  if [[ -z "$(sget test_prep_d1)" ]]; then
+    dispatch_in_room qi "@qi-agent:matrix.test 【测试预备轮（流式流水线，不执行不交付）】开发四路编码进行中，集成分支尚未建立。请现在做测试预备：
+1) 工作区 $(workspace qi)：git pull origin main，读 docs/design/${RFD_ID}-architecture-design.md 契约与冻结 AC
+2) 按概设契约起草后端集成测试用例（下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单）到 test-drafts/TEST-BE-draft.md（每条：步骤+断言+所需夹具，标注对应契约条目）
+3) 附测试环境预备说明（依赖安装/运行入口/mock 端点）。不执行测试、不建分支、不 push。正式执行任务书稍后另发（届时以集成分支为准核对用例后执行）。无需结论行，完成即止。" "$(agent_mxid qi),$(agent_mxid wei)"
+
+    dispatch_in_room fei "@fei-agent:matrix.test 【测试预备轮（流式流水线，不执行不交付）】开发四路编码进行中，集成分支尚未建立。请现在做测试预备：
+1) 工作区 $(workspace fei)：git pull origin main，读 docs/design/${RFD_ID}-architecture-design.md 契约
+2) 起草收银台前端逻辑层测试用例（支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态）到 test-drafts/TEST-FE-draft.md（每条：步骤+断言）。不执行测试、不建分支、不 push。正式执行任务书稍后另发。无需结论行，完成即止。" "$(agent_mxid fei),$(agent_mxid mei)"
+    sset test_prep_d1 1
+    note "[流水线] 测试预备轮已派（用例前移，纪律 27②）"
+  fi
+
+  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支（本轮新鲜，渠道批触发锚）" 1800 chen branch_fresh "feat/DEV-PAYCORE" \
     || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
 
   # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
   # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
-  # 真分批（V7 P1 并发预算实装）：chen（上方已 wait）+hu+lin=3 会话峰值≤闸值 4；
-  # 渠道两分支交付后再派 xiao（第四会话），杜绝 run7 devimpl 十一次拒收实录的四路齐发。
+  # 触发链（run11 纪律 27⑥）：feat/DEV-PAYCORE 入 origin 即派渠道双路（其分支基于
+  # pay-core 契约分支起建=真实模块依赖，就绪即触发不等全齐）。
   if [[ -z "$(sget devimpl_d2)" ]]; then
     for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
                 "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
@@ -772,17 +823,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   for ba in "DEV-CHWX|hu" "DEV-CHALI|lin"; do
     IFS='|' read -r b bowner <<< "$ba"
     wait_alive_truth "渠道批：origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
-      || { note "[观察] $b 分支未达（第二批照派）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
+      || { note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
   done
-
-  if [[ -z "$(sget devimpl_d3)" ]]; then
-    dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
-工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
-1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
-2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
-    sset devimpl_d3 1
-  fi
 
   wait_alive_truth "origin 出现 feat/DEV-MP 分支（本轮新鲜）" 1800 xiao branch_fresh "feat/DEV-MP" \
     || { note "[观察] DEV-MP 分支未达"; echo "ISSUE|dev-branch-missing|DEV-MP|分支未推送" >> "$EVID_DIR/issues.log"; }
@@ -893,12 +935,14 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 
   if [[ -z "$(sget defect_dispatched)" ]]; then
     dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
+（预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。" "$(agent_mxid qi),$(agent_mxid wei)"
 
     dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
+（预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
 2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。" "$(agent_mxid fei),$(agent_mxid mei)"

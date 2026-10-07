@@ -38,6 +38,19 @@ STEPS="smoke appinit people ba reqgate room dispatch register analysis triage an
 START_STEP="${START_STEP:-smoke}"
 UNTIL_STEP="${UNTIL_STEP:-}"
 step_pos() { echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1; }
+
+# ── 快模式节拍（run11 §4.2/纪律 27⑤：MX_FAST=1 缺省开——轮询 15s→5s）──────
+# run10 报告曾叙事「快模式 MX_FAST=1 已开」而驱动/原语零实现（叙事超前于实现的
+# 实锤病根）——本块即实现体。MX_FAST=0 显式回退 15s 慢档（保真对照轮用）。
+# 审批扫描降频独立节拍（§4.2：auto 批量扫描 30s，防轮询加密后 Matrix 扫描风暴）。
+MX_FAST="${MX_FAST:-1}"
+if [[ "$MX_FAST" == "1" ]]; then
+  MX_POLL_IVAL=5
+else
+  MX_POLL_IVAL=15
+fi
+MX_APPROVE_SCAN_IVAL="${MX_APPROVE_SCAN_IVAL:-30}"
+export MX_FAST MX_POLL_IVAL MX_APPROVE_SCAN_IVAL
 step_reached() { # 步骤 $1 是否在 [START_STEP, UNTIL_STEP] 执行区间内
   local a b u
   a=$(step_pos "$1")
@@ -371,6 +384,14 @@ approve_review_poll() { # <u> <room> <eid> <state-line> → 0=流转中/已处�
 auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发（auto/manual/hybrid）
   # manual：全部挂起等真人；hybrid：关键挂真人+过程性 agent 代审（见上块注释）；
   # auto：历史行为——扫到即批（反应+线程内 !approve 双通道）。
+  # 快模式节流（run11 §4.2）：轮询加密到 5s 后，全账号扫描若逢轮必跑会放大成
+  # Matrix 请求风暴（15 账号×消息窗）；按 MX_APPROVE_SCAN_IVAL（缺省 30s）节流，
+  # 两次扫描间的调用直接返回（审批延迟上界=节拍值，run10 实测 15s 节奏下无积压）。
+  local _aa_now=$(( $(date +%s) ))
+  if [[ -n "${_AA_LAST_TS:-}" ]] && (( _aa_now - _AA_LAST_TS < MX_APPROVE_SCAN_IVAL )); then
+    return 0
+  fi
+  _AA_LAST_TS=$_aa_now
   local MODE="${MX_APPROVE_MODE:-auto}" room="$1"
   # 大小写归一+非法值 fail-closed（2026-10-02 审查批）：配置漂移（Manual/HYBRID 等）
   # 不得静默落 auto"扫到即批"——未知的值按 manual 全挂起处理并记单。
@@ -485,7 +506,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   while (( $(date +%s) < deadline )); do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
-    sleep 15
+    sleep "$MX_POLL_IVAL"
   done
   note "[真值] $desc ✗（${timeout}s 超时）"
   return 1
@@ -573,7 +594,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
       return 1
     fi
-    sleep 15
+    sleep "$MX_POLL_IVAL"
   done
 }
 
@@ -847,7 +868,8 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
     fi
   done
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2
-[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，须重新执行或核验并回执结论行；判定重复也必须回执合并回执，禁止静默。" "$3")
+[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，须重新执行或核验并回执结论行；判定重复也必须回执合并回执，禁止静默。
+[RACI 解析] 本任务唯一执行人=任务书正文被指名执行的主责 agent（首个 @）；其余 @ 为 RACI 会签/评审角色（lead 等），不执行本任务、仅知情与确认。结论行只由执行人发。" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
 }
