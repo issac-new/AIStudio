@@ -200,6 +200,8 @@ if _main_repo.exists():
             fails.append(f'R4 发布基线非快进重建：{_old[:8]}→{_m.group(1)[:8]}（丢线事故，须回补重验）')
 
 # R5 问题单 100% DISP：issues.log 中 ISSUE 唯一键全有 DISP
+# 连接键=类型段（2026-10-07 与生成器 issues_stats 同源修复：ISSUE/DISP 主体措辞差
+# 曾致 join 全断——"harness/网关"vs"harness/审计会话"；处置按类型记账，类型段为准）。
 _ilog = EVID / 'issues.log'
 if _ilog.exists():
     _iss, _disp = [], set()
@@ -210,10 +212,15 @@ if _ilog.exists():
                 _iss.append(f'{_p[1]}·{_p[2]}')
         elif _l.startswith('DISP|'):
             _p = _l.split('|', 3)
-            _disp.add(f'{_p[1]}·{_p[2]}')
-    _open = [k for k in _iss if k not in _disp]
+            _disp.add(_p[1])
+    _open = [k for k in _iss if k.split('·')[0] not in _disp]
     if _open:
         fails.append(f'R5 问题单缺 DISP（{len(_open)}/{len(_iss)} 待处置）：{_open[:6]}——违反第 24 步合格线')
+    # 悬挂 DISP（DISP 类型无对应 ISSUE）=台账卫生 WARN（导演补账须有 ISSUE 在先）
+    _iss_types = {k.split('·')[0] for k in _iss}
+    _hanging = sorted(t for t in _disp if t not in _iss_types)
+    if _hanging:
+        warns.append(f'R5b 悬挂 DISP（有处置无记单，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
 
 # R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号）
 _anchor_pat = re.compile(r'\$[A-Za-z0-9_-]{25,}|\bt_[0-9a-f]{8}\b|\b[0-9a-f]{7,10}\b')
@@ -248,6 +255,76 @@ if _b26:
         warns.append('R9 第 26 步未挂 simulation-report.html 产物锚点')
 else:
     warns.append('R9 未定位第 26 步块（结构漂移？）')
+
+# ── 查 6.5：run10 报告链勘误配套断言（2026-10-07 落版；生成器同源修复的守门）──
+# A3 三源计数：复盘文档成文数 × issues.log 事件流 × 报告唯一键（P18/R29 承诺兑现——
+# 方案声称"复盘三源计数一致性入审计断言已落地"但无代码，本断言即补位）。
+if _ilog.exists():
+    _iss_lines = [l for l in _ilog.read_text().splitlines() if l.startswith('ISSUE|')]
+    _m_rep = re.search(r'唯一键\s*(\d+)', rep)
+    if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
+        fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实算（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
+    _retro = EVID.parent.parent / 'central' / 'aipaydev' / 'docs' / 'retro'
+    import datetime as _dt
+    _date8 = RUN_ID[:8]
+    _cands = list(_retro.glob(f'{_date8}-*-RFD-001-retrospective.md')) if _retro.exists() else []
+    if _cands:
+        _rt = _cands[0].read_text(encoding='utf-8', errors='replace')
+        _mr = re.search(r'问题单台账（(\d+)\s*条', _rt)
+        if _mr and int(_mr.group(1)) != len(_iss_lines):
+            warns.append(f'A3b 复盘文档成文计数（{_mr.group(1)} 条）≠ issues.log 终态（{len(_iss_lines)} 行）——成文时滞族 P18（治理报告/复盘时点后移机制挂 run11）；收官补记在后属预期，在前即计数失真')
+
+# A4 闸门"一次通过"徽章实算：报告渲染数 = 6 − 闸门类记单键数 − state 打回轮次键
+if _ilog.exists():
+    _gate_hit = set()
+    for _l in _ilog.read_text().splitlines():
+        _p = _l.split('|', 3)
+        if len(_p) >= 4 and _p[0] == 'ISSUE':
+            _gm = re.match(r'^(g[1-6])[-_]', _p[1])
+            if _gm:
+                _gate_hit.add(_gm.group(1).upper())
+            elif _p[1].startswith('review-card'):
+                _gate_hit.add('G2')
+            elif _p[1] == 'retro-open-items':
+                _gate_hit.add('G6')
+    for _g, _fk in (('G5', 'g5_fail_rounds'),):
+        if state_keys.get(_fk, '').isdigit() and int(state_keys[_fk]) > 0:
+            _gate_hit.add(_g)
+    _first_pass_rendered = len(re.findall(r'gate-rej ok1">一次通过', rep))
+    _expected = 6 - len(_gate_hit)
+    if _first_pass_rendered != _expected:
+        fails.append(f'A4 闸门"一次通过"徽章渲染 {_first_pass_rendered} 个 ≠ 实算 {_expected} 个（台账闸门记单键：{sorted(_gate_hit)}）——静态注册表默认报喜族守门')
+
+# A5 图数对账：盘上 PNG × 报告 <img> 引用（生成器同逻辑守门；§5.6 快门守门⑥ 头部计数=实际嵌入数）
+_steps_dir_a = EVID / 'screenshots' / 'steps'
+if _steps_dir_a.exists():
+    _disk = {p.stem for p in _steps_dir_a.glob('*.png')}
+    _refs = set(re.findall(r'screenshots/steps/([A-Za-z0-9_-]+)\.png', rep))
+    _unref = sorted(_disk - _refs)
+    _miss = sorted(r for r in _refs if r not in _disk)
+    if _unref:
+        warns.append(f'A5a 盘上未引用帧 {len(_unref)} 张（漏配）：{_unref[:6]}——拍而未嵌须挂接或归档')
+    if _miss:
+        fails.append(f'A5b 报告引用但文件缺失 {len(_miss)} 张（冒配）：{_miss[:6]}')
+    if '（截图缺失）' in rep or '注册帧缺文件' in rep:
+        fails.append('A5c 报告含缺图占位（"截图缺失"/"注册帧缺文件"）——§5.5 空态禁渲染/冒配红标未消化')
+
+# A6 叙事时间锚抽检：st-story 所引 HH:MM 时刻须在 scenario.log 有命中（"02:27/04:27"族守门）
+_scen = EVID / 'scenario.log'
+if _scen.exists():
+    _scen_txt = _scen.read_text(encoding='utf-8', errors='replace')
+    _bad_ts = []
+    for _i, _blk in enumerate(blocks, 1):
+        _story = re.search(r'<p class="st-story">(.*?)</p>', _blk, re.S)
+        if not _story:
+            continue
+        _plain = re.sub(r'<[^>]+>', '', _story.group(1))
+        for _tm in re.findall(r'(?<![\d:])(\d{2}:\d{2})(?::\d{2})?(?![\d:])', _plain):
+            if _tm not in _scen_txt:
+                _n = re.search(r'<span class="st-num">(\d+)</span>', _blk)
+                _bad_ts.append(f'步{_n.group(1) if _n else _i}·{_tm}')
+    if _bad_ts:
+        warns.append(f'A6 叙事所引时刻在 scenario.log 零命中（手编时间锚族）：{_bad_ts[:6]}——叙事锚点须可反查')
 
 # ── 查 7：V5 补遗⑥ R15/R16 断言（R16 旅程版逐步操作入口；R15 统一版第 0 章协作总述）──
 _entry_hit = sum(1 for b in blocks if 'class="st-entry"' in b)
@@ -290,8 +367,13 @@ _R18_SKILL_STEPS = SKILL_STEPS
 _R18_DELIVERY_STEPS = DELIVERY_STEPS
 _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
+_ilines_r18 = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
+_r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
 if _r18_missing_file:
-    fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）')
+    if _r18_degraded:
+        warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已记单 r18-collection-missing 按§5.6 采集纪律⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
+    else:
+        fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）；缺口须记单 r18-collection-missing 方可降级')
 else:
     try:
         _r18_payloads = json.loads(R18F.read_text(encoding='utf-8')).get('steps', {}) or {}
@@ -312,23 +394,25 @@ for blk in blocks:
     frames_missing = len(re.findall(r'帧缺失：', blk))
     if frames_missing:
         fails.append(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐')
+    _r18_rep = warns.append if _r18_degraded else fails.append
+    _r18_suffix = '（已记单 r18-collection-missing 降级）' if _r18_degraded else ''
     if n in _R18_DIALOG_STEPS and d_cnt == 0:
-        fails.append(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）')
+        _r18_rep(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）{_r18_suffix}')
     if n in _R18_OP_STEPS:
         if o_cnt == 0:
-            fails.append(f'R18 步 {n} 缺「操作前后帧」（真 UI 操作步必采——r18-frames.mjs 拍摄+collect op）')
+            _r18_rep(f'R18 步 {n} 缺「操作前后帧」（真 UI 操作步必采——r18-frames.mjs 拍摄+collect op）{_r18_suffix}')
         else:
             _fr = len(re.findall(r'class="shot r18-shot"', blk))
             if _fr < 2 * o_cnt:
                 fails.append(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
-        fails.append(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）')
+        _r18_rep(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）{_r18_suffix}')
     if n in _R18_SKILL_STEPS:
         # §5.6 必采矩阵：步级承载面承诺入必采矩阵——skill 过程帧 gen≥3+invoke≥2，
         # 载荷侧实算（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
         if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                        frame_exists=lambda name: (steps_dir / name).exists()):
-            fails.append(f'R18 步 {n} skill 过程帧未达标（§5.6 必采矩阵：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）')
+            _r18_rep(f'R18 步 {n} skill 过程帧未达标（§5.6 必采矩阵：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）{_r18_suffix}')
     if n in _R18_DELIVERY_STEPS:
         # R29（P15）：delivery 门禁灯帧 ≥1（MX_DELIVERY=1 全程开启+面板实拍+r18-collect
         # deliver 登记）；产品面未就绪按§5.6 采集纪律⑩ 记单降级（P15/delivery-protocol 键命中即降
@@ -336,7 +420,7 @@ for blk in blocks:
         _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                           frame_exists=lambda name: (steps_dir / name).exists())
         _ilines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
-        _degraded = any(('P15' in l) or ('delivery-protocol' in l) for l in _ilines)
+        _degraded = any(('P15' in l) or ('delivery-protocol' in l) or ('r18-collection-missing' in l) for l in _ilines)
         if not _dlv_ok:
             if _degraded:
                 warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已记单，按§5.6 采集纪律⑩ 降级——产品面/旗标修复后补帧）')
@@ -345,7 +429,7 @@ for blk in blocks:
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
-        fails.append(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）')
+        _r18_rep(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）{_r18_suffix}')
 
 # ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有
