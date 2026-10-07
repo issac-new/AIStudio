@@ -501,3 +501,6 @@
 
 # 574 登录页不预填账号/口令（025 引入的推演测试凭据默认值移除——run10 代码核验 D2 生产安全缺陷）
 574-loginview-no-prefilled-credentials.patch
+
+# 575 IDE 模型失效横幅一键回退 i18n（run10 实证 D 区产品改进项：模型移除应回退到可用项）
+575-i18n-modelinvalid-fallback.patch

@@ -64,7 +64,7 @@ import {
   type OpenSubagentStreamDetail,
 } from '@/utils/hermes/subagent-stream'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
-import { isSessionModelInvalid } from '../utils/modelInvalid'
+import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
@@ -170,6 +170,22 @@ const activeModelInvalid = computed(() =>
 const showModelInvalid = computed(() => activeModelInvalid.value && !modelInvalidDismissed.value)
 function goReselectModel(): void {
   router.push({ name: 'hermes.settings' })
+}
+
+// 一键回退（2026-10-07 run10 实证修复）：模型被移除时横幅内直接回退到目录首个
+// 可用模型，不强制跳设置页；复用 pickModel 的 scoped/global 双路径。
+const fallbackModelTarget = computed(() => firstAvailableModel(modelGroupsView.value))
+async function onFallbackModel(): Promise<void> {
+  const target = fallbackModelTarget.value
+  if (!target) return
+  const sid = chatStore.activeSessionId
+  if (sid) {
+    const ok = await chatStore.switchSessionModel(target.id, target.provider, sid)
+    if (!ok) await appStore.switchModel(target.id, target.provider)
+  } else {
+    await appStore.switchModel(target.id, target.provider)
+  }
+  modelInvalidDismissed.value = true
 }
 
 // ── R2 批准即学习（codex ApprovedForSession + minimax 五档语义）──
@@ -577,6 +593,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <span class="ide-chat__model-invalid-text">
         {{ t('ide.modelInvalid.title') }}（{{ chatStore.activeSession?.model }}）— {{ t('ide.modelInvalid.hint') }}
       </span>
+      <button
+        v-if="fallbackModelTarget"
+        type="button"
+        class="ide-chat__model-invalid-btn"
+        data-testid="ide-model-invalid-fallback"
+        @click="onFallbackModel"
+      >{{ t('ide.modelInvalid.fallback', { model: fallbackModelTarget.id }) }}</button>
       <button type="button" class="ide-chat__model-invalid-btn" @click="goReselectModel">{{ t('ide.modelInvalid.reselect') }}</button>
       <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
     </div>

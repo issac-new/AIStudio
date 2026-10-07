@@ -27,3 +27,22 @@ export function isSessionModelInvalid(
   if (!groups.length) return false
   return !groups.some(group => group.models?.includes(model))
 }
+
+// 失效态一键回退目标（2026-10-07，run10 实证：IDE 默认模型被移除后只剩横幅无快
+// 速修复路径）：取目录首个可用模型。模型条目有 string 与 {id} 两种形态
+// （appStore.modelGroups 为 string[]，独立引擎 engineGroups 为对象组）——统一归一。
+export interface FallbackModelTarget {
+  provider: string
+  id: string
+}
+
+export function firstAvailableModel(
+  modelGroups: Array<{ provider?: string; models: unknown[] }> | null | undefined,
+): FallbackModelTarget | null {
+  for (const group of modelGroups || []) {
+    const first = group?.models?.[0]
+    const id = typeof first === 'string' ? first : (first as { id?: string } | undefined)?.id
+    if (id) return { provider: group.provider ?? '', id }
+  }
+  return null
+}
