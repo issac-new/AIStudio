@@ -8,8 +8,25 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
-import { isSessionModelInvalid } from '../utils/modelInvalid'
+import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import ImagePreviewOverlay from '@/components/hermes/chat/ImagePreviewOverlay.vue'
+
+describe('firstAvailableModel（模型失效一键回退目标，2026-10-07 run10 实证）', () => {
+  it('空目录/空组 → null（回退按钮不出现）', () => {
+    expect(firstAvailableModel(null)).toBeNull()
+    expect(firstAvailableModel([])).toBeNull()
+    expect(firstAvailableModel([{ provider: 'p', models: [] }])).toBeNull()
+  })
+
+  it('取目录首个可用模型；string 与 {id} 两种形态归一', () => {
+    expect(firstAvailableModel([{ provider: 'p1', models: ['a', 'b'] }]))
+      .toEqual({ provider: 'p1', id: 'a' })
+    expect(firstAvailableModel([
+      { provider: 'p0', models: [] },
+      { provider: 'p2', models: [{ id: 'x1' }, { id: 'x2' }] },
+    ])).toEqual({ provider: 'p2', id: 'x1' })
+  })
+})
 
 describe('isSessionModelInvalid（M1.6 模型失效判定）', () => {
   it('model 缺失 / 目录未加载 / 空目录 → 不误报', () => {

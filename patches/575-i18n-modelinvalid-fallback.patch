@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 1111111..2222222 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -737,6 +737,7 @@
+     modelInvalid: {
+       title: '当前模型已不可用',
+       hint: '该模型已从可用列表移除，请重新选择后继续',
++      fallback: '回退到 {model}',
+       reselect: '去设置重选',
+       dismiss: '忽略'
+     },
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 3333333..4444444 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -737,6 +737,7 @@
+     modelInvalid: {
+       title: 'Current model unavailable',
+       hint: 'This model was removed from the available list; please reselect to continue',
++      fallback: 'Fall back to {model}',
+       reselect: 'Reselect in settings',
+       dismiss: 'Dismiss'
+     },
