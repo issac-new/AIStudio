@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 4023f200..db922bce 100644
+index 84d8db49..0dbf89c7 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -828,7 +828,8 @@ export default {
@@ -110,10 +110,16 @@ index 4023f200..db922bce 100644
        filterAll: 'All'
      },
      columns: {
-@@ -5905,6 +5929,634 @@ export default {
-     new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
-     new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
-     new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
+@@ -5904,6 +5928,640 @@ export default {
+     new_0_7_30_8: 'Removed the retired OpenCode Free provider and its model entry points (#3277)',
+     new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
+     new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
++    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
++    new_0_7_28_2: 'Added an APIKEY.FAN relay page with balance, daily and total usage, and model breakdowns for configured API keys (#3257)',
++    new_0_7_28_3: 'Fixed Coding Agent manual update status and detection of the updated CLI version, with protection for active sessions (#3261)',
++    new_0_7_28_4: 'Fixed early completion, missing text, and duplicate Claude replies, preserving the complete final output (#3260, #3263)',
++    new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
++    new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
 +    new_0_7_27_1: 'Added persisted per-turn usage cards showing tokens, cache hits, costs, and token speed (#3241)',
 +    new_0_7_27_2: 'Fixed Coding Agent usage attribution, per-call costs, and cumulative totals; retained interrupted-run usage and updated late accounting (#3246)',
 +    new_0_7_27_3: 'Added per-turn usage cards inside group chat reply bubbles, with usage restored when loading history (#3248)',
@@ -746,7 +752,7 @@ index 4023f200..db922bce 100644
    loopScenes: {
      manage: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 8841e38c..7f6a3d7a 100644
+index 26a1f15a..6718dd87 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -827,7 +827,8 @@ export default {
@@ -861,10 +867,16 @@ index 8841e38c..7f6a3d7a 100644
        filterAll: '全部'
      },
      columns: {
-@@ -5903,6 +5927,823 @@ export default {
-     new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
-     new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
-     new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
+@@ -5902,6 +5926,829 @@ export default {
+     new_0_7_30_8: '移除已停用的 OpenCode Free 供应商及其模型入口 (#3277)',
+     new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
+     new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
++    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',
++    new_0_7_28_2: '新增 APIKEY.FAN 中转服务页面，可按已配置的 API Key 查看余额、今日与累计用量及模型明细 (#3257)',
++    new_0_7_28_3: '修复编程 Agent 手动检查更新后的状态和更新版本识别，并保护正在运行的会话 (#3261)',
++    new_0_7_28_4: '修复 Claude 回复提前结束、内容缺失或重复的问题，完整保存最终输出 (#3260、#3263)',
++    new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
++    new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
 +    new_0_7_27_1: '聊天新增持久化的每轮用量卡片，显示 Token、缓存命中、费用与输出速度 (#3241)',
 +    new_0_7_27_2: '修复编程 Agent 用量归属、单次费用与累计统计，保留中断任务用量并更新延迟返回的统计 (#3246)',
 +    new_0_7_27_3: '群聊回复气泡新增每轮用量卡片，加载历史消息时可恢复显示 (#3248)',

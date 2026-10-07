@@ -1,5 +1,5 @@
 diff --git a/package.json b/package.json
-index c0af9984..d6c429e4 100644
+index d59ebf60..805b44df 100644
 --- a/package.json
 +++ b/package.json
 @@ -112,6 +112,7 @@
@@ -7,6 +7,6 @@ index c0af9984..d6c429e4 100644
      "socket.io": "^4.8.3",
      "socket.io-client": "^4.8.3",
 +    "three": "^0.170.0",
+     "werift": "0.24.4",
      "yaml": "^2.9.0"
    },
-   "optionalDependencies": {
