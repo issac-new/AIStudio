@@ -55,10 +55,36 @@ describe('推演 GraphSpec 模板', () => {
   it('每模块子流水线：analysis→review→coding→testing 四节点串联', () => {
     for (const mod of ['pay-core', 'channel-wechat', 'channel-alipay', 'cashier-mp']) {
       const chain = ['analysis', 'review', 'coding', 'testing']
-      for (let i = 0; i < chain.length - 1; i++) {
+      for (let i = 0; i < chain.length - 1; i += 1) {
         const edge = spec.edges.find(e =>
           e.from === `${chain[i]}-${mod}` && e.to === `${chain[i + 1]}-${mod}`)
         expect(edge).toBeDefined()
+      }
+    }
+  })
+
+  it('条件防走空：全部条件/终止谓词的取值路径都在通道表内（防再写 $x.y 幽灵路径）', () => {
+    const channelNames = new Set(Object.keys(spec.channels))
+    const predicates: Array<{ expr: unknown; where: string }> = []
+    for (const e of spec.edges) {
+      if (e.condition) predicates.push({ expr: e.condition, where: `edge ${e.from}→${e.to}` })
+      if (e.guard?.breakCondition) predicates.push({ expr: e.guard.breakCondition, where: `guard ${e.from}→${e.to}` })
+    }
+    if (spec.endCondition) predicates.push({ expr: spec.endCondition, where: 'endCondition' })
+    expect(predicates.length).toBeGreaterThan(0)
+    const collectPaths = (expr: unknown, out: string[]): void => {
+      const e = expr as { op?: string; path?: string; exprs?: unknown[]; expr?: unknown }
+      if (e.path) out.push(e.path)
+      if (Array.isArray(e.exprs)) e.exprs.forEach((sub) => collectPaths(sub, out))
+      if (e.expr) collectPaths(e.expr, out)
+    }
+    for (const { expr, where } of predicates) {
+      const paths: string[] = []
+      collectPaths(expr, paths)
+      expect(paths.length, where).toBeGreaterThan(0)
+      for (const p of paths) {
+        // 通道名 + 可选点路径（appendById 数组下钻）；首段必须命中声明的通道
+        expect(channelNames.has(p.split('.')[0]), `${where} 引用未声明通道：${p}`).toBe(true)
       }
     }
   })
