@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { evalApi, type EvalSetMetaDto, type RunSummaryDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
+import EvalOraclePanel from '@/custom/eval/components/EvalOraclePanel.vue'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -15,7 +16,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? evalMessages.zh.eval : evalMessages.en.eval
 })
 
-type Tab = 'sets' | 'runs'
+type Tab = 'sets' | 'runs' | 'oracle'
 const tab = ref<Tab>('sets')
 const sets = ref<EvalSetMetaDto[]>([])
 const runs = ref<RunSummaryDto[]>([])
@@ -153,6 +154,7 @@ function selectRun(id: string): void {
       <nav class="eval-view__tabs">
         <button type="button" :class="{ active: tab === 'sets' }" data-testid="eval-tab-sets" @click="tab = 'sets'">{{ L.tabs.sets }}</button>
         <button type="button" :class="{ active: tab === 'runs' }" data-testid="eval-tab-runs" @click="tab = 'runs'">{{ L.tabs.runs }}</button>
+        <button type="button" :class="{ active: tab === 'oracle' }" data-testid="eval-tab-oracle" @click="tab = 'oracle'">{{ L.tabs.oracle }}</button>
       </nav>
     </header>
 
@@ -295,6 +297,9 @@ function selectRun(id: string): void {
 
       <EvalReportPanel v-if="selectedRunId" :run-id="selectedRunId" @changed="refresh" />
     </div>
+
+    <!-- ── UI Oracle 页签 ── -->
+    <EvalOraclePanel v-if="tab === 'oracle'" />
   </section>
 </template>
 

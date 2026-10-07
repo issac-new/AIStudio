@@ -102,6 +102,55 @@ export function parseJudgeAnswers(body: unknown): EvalJudgeAnswers {
   return out
 }
 
+/** 混合答案：noul → number；choice → string（UI Oracle 预测问句用）。 */
+export type MixedJudgeAnswers = Record<string, number | string>
+
+export function parseMixedJudgeAnswers(body: unknown): MixedJudgeAnswers {
+  if (!body || typeof body !== 'object') throw new JudgeUnavailableError('judge response is not an object')
+  const answers = (body as { answers?: Record<string, unknown> }).answers
+  if (!answers || typeof answers !== 'object') throw new JudgeUnavailableError('judge response missing answers')
+  const out: MixedJudgeAnswers = {}
+  for (const [key, raw] of Object.entries(answers)) {
+    const entry = raw as { noul?: unknown; choice?: unknown } | undefined
+    const p = asFiniteNumber(entry?.noul)
+    if (p !== null) {
+      out[key] = p
+      continue
+    }
+    if (typeof entry?.choice === 'string' && entry.choice) out[key] = entry.choice
+  }
+  return out
+}
+
+/** 调本地 clef（混合问句集：noul+choice）。 */
+export async function clefAskMixed(
+  request: EvalJudgeRequest,
+  config: EvalConfig,
+  deps: ClefJudgeDeps = {},
+): Promise<MixedJudgeAnswers> {
+  const doFetch = deps.fetchImpl ?? fetch
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), config.judgeTimeoutMs)
+  try {
+    const response = await doFetch(`${config.judgeBaseUrl}/v1/systemone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new JudgeUnavailableError(`judge endpoint HTTP ${response.status}`)
+    return parseMixedJudgeAnswers(await response.json())
+  } catch (error) {
+    if (error instanceof JudgeUnavailableError) throw error
+    throw new JudgeUnavailableError(
+      `judge endpoint unreachable: ${error instanceof Error ? error.message : String(error)}`,
+      error,
+    )
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** 调本地 clef 的 /v1/systemone。任何失败（网络/超时/形状）都抛 JudgeUnavailableError。 */
 export async function clefAsk(
   request: EvalJudgeRequest,
