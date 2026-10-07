@@ -1011,8 +1011,9 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
         dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
-          kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
-          echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+          # 补齐轮与复用/首轮同一收口（2026-10-07 run10 实锤：本路径曾内联收口漏发
+          # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）
+          g5_pass_finalize
         else
           mx_gate_breaker_trip g5 "G5 发布准出" 1
           fail "G5 两轮未过，不得发布（V3 硬闸）"
@@ -1409,6 +1410,15 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   # 出"状态真实"的假报告，且落盘路径与下方 note 不符（run2 2026-09-29 05:15 实锤）。
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
+  # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
+  # report_done、报告不得持久化交付（run10 实锤：15 项 FAIL 下报告曾被产出交付，判据②
+  # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
+  python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
+    || fail "报告审计 FAIL（§5.7 收官判据②——缺口记单+DISP 降级后重试）"
+  # 双正本制（§5.4）：final-report.html（人读正本）缺一即违例——run10 收官时未产出实锤；
+  # PART1 未注册时合并器会给出注册指引（按轮人工正本，禁旧轮顶包）。
+  python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
+    || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册时先编写注册）"
   sset report_done "$(date +%s)"
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
   dlv_enabled && dlv_scenario_assert
