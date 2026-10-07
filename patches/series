@@ -498,3 +498,6 @@
 
 # 573 遗留清偿：playwright 1.60→1.63（对齐缓存构建消除 oracle Chrome 回退；顺带补齐 260 three 的 lock 条目）
 573-playwright-163-upgrade.patch
+
+# 574 登录页不预填账号/口令（025 引入的推演测试凭据默认值移除——run10 代码核验 D2 生产安全缺陷）
+574-loginview-no-prefilled-credentials.patch
