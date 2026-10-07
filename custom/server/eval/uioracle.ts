@@ -131,7 +131,14 @@ export async function playwrightBrowser(): Promise<OracleBrowser> {
     async newPage(url: string): Promise<OraclePage> {
       const page = await browserInstance.newPage()
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
-      await page.waitForTimeout(800)
+      // SPA 就绪信号：可交互元素出现才算渲染完成（固定 sleep 在 dev 冷编译/新
+      // playwright 启动时序下会采到空页——2026-10-07 升级 1.63 实测暴露）。
+      for (let i = 0; i < 10; i += 1) {
+        const count = await page.evaluate(`document.querySelectorAll('button, a[href], [role="button"], input, select').length`)
+        if (Number(count) > 0) break
+        await page.waitForTimeout(1000)
+      }
+      await page.waitForTimeout(400)
       return {
         async url() { return page.url() },
         async screenshot() { return (await page.screenshot({ type: 'jpeg', quality: 45, fullPage: false })) as Buffer },
@@ -161,6 +168,15 @@ export async function playwrightBrowser(): Promise<OracleBrowser> {
           if (!(await hasOverlay())) return false
           await page.keyboard.press('Escape')
           await page.waitForTimeout(500)
+          if (!(await hasOverlay())) return false
+          // Esc 关不掉的强提醒（如默认凭据安全横幅）：点"稍后/关闭"类按钮兜底
+          const dismissedByButton = await page.evaluate(`(() => {
+            const btns = [...document.querySelectorAll('button')];
+            const b = btns.find(x => /remind me later|稍后提醒|稍后处理|稍后|not now|close|关闭|dismiss/i.test((x.innerText || '').trim()) && x.offsetParent !== null);
+            if (b) { b.click(); return true; }
+            return false;
+          })()`)
+          if (dismissedByButton) await page.waitForTimeout(500)
           return hasOverlay()
         },
         async close() { await page.close() },
