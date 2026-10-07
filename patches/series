@@ -495,3 +495,6 @@
 
 # 572 eval M2：Eval Studio 评测域路由挂载（/api/hermes/eval/*）
 572-server-eval-routes.patch
+
+# 574 登录页不预填账号/口令（025 引入的推演测试凭据默认值移除——run10 代码核验 D2 生产安全缺陷）
+574-loginview-no-prefilled-credentials.patch
