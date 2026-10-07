@@ -254,10 +254,20 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       # 清空提交必须落 main（run11 实锤：HEAD 停 integration 时提交落错分支，随后
       # push origin main 因 up-to-date 退出 0 报"已推"=假成功，run10 四份系分稿+
       # tasklist 带进 run11 基座）。显式切 main 并对齐远端 tip 再清空提交。
+      # checkout 失败必须响亮中止（未跟踪冲突会让 checkout 拒绝——沿 || true 静默
+      # 滑回 integration 提交=同病复发，run11 重清轮实锤二次踩坑）；先 clean 清障。
+      git clean -fdq 2>/dev/null || true
       git fetch -q origin main 2>/dev/null || true
-      git checkout -q main 2>/dev/null || git checkout -q -b main origin/main 2>/dev/null || true
+      if ! git checkout -q main 2>/dev/null; then
+        if git checkout -q -b main origin/main 2>/dev/null; then :; else
+          say "⚠ 无法切到 main（checkout 被拒）——清空提交无处落，中央仓重置中止（人工处置）"
+          exit 1
+        fi
+      fi
       git reset -q --hard origin/main 2>/dev/null || true
-      git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
+      # docs/evidence 旧轮测试日志（run11 实锤盲区：九目录清单不含它，run3-run10
+      # 的 testlog/vitest 输出历轮全数幸存——G3 真查口径下旧证据文件是假真值温床）
+      git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 'docs/evidence' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       # 基础注册表保留（2026-10-03 文档评审 404 实锤：roster/app-registry/org 是组织编制
       # 基建非轮次工件，/api/governance/registry/:kind 直接读它们；清了文档评审页管理区必空。
