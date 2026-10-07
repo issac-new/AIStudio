@@ -1,0 +1,15 @@
+{
+  "title": "美团 Agent 评测体系技术拆解：从答案评测到行为评测的工程范式",
+  "account": "银翼AI评测室",
+  "author": "银翼",
+  "desc": "近 200 个指标、人机一致率 99%：Rubric 二元化、Pass@k 门禁、归因双 Loop、四步判分管线——8 条可直接搬走的工程启示。",
+  "publish_time": "2026/10/07 06:55:23",
+  "url": "https://mp.weixin.qq.com/s/uvV3X03HOveY-pIrpW8i0g",
+  "references": [
+    "《Agent 评测白皮书》系列 01（tech.meituan.com，2026-09）",
+    "《Agent 评测漫谈》（tech.meituan.com，2026-08）",
+    "KuiTest（ICSE 2025）",
+    "WOWService Technical Report（arXiv:2510.13291）",
+    "ICML 2026 美团论文精选（AJ-Bench / AgentNoiseBench / TRIP-Bench / ScaleEnv / VitaBench 2.0 / EvoCUA）"
+  ]
+}
