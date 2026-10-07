@@ -16,6 +16,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { features } from '../../../../../config/features'
 import { filterStreams, LOOP_STAGE_ORDER, sortFlowRows, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type FlowSortMode, type StreamSelection } from '../../adapters/flow'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
 import { useMsgSurfaceText } from '../../i18n-msg-surface'
@@ -24,6 +25,7 @@ import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
 import GovernanceNavEntry from '../GovernanceNavEntry.vue'
+import EvalNavEntry from '../EvalNavEntry.vue'
 import AccountsNavEntry from '../AccountsNavEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
@@ -144,6 +146,8 @@ function submitCreateRoom(): void {
     <InboxNavEntry />
     <!-- 治理中心入口（六闸工件+待裁决徽标；自含轮询） -->
     <GovernanceNavEntry />
+    <!-- 评测工作台入口（M2；features.eval 门控，VITE_CUSTOM_EVAL=true 开） -->
+    <EvalNavEntry v-if="features.eval" />
     <AccountsNavEntry />
 
     <div class="flow-nav__filters" data-testid="flow-filters">
