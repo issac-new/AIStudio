@@ -1752,18 +1752,38 @@ def domains_table():
             + ''.join(rows) + '</table>')
 
 def checkpoints_html():
+    import datetime
     cards = []
-    for cid, name, semantics, who, img, evidence in CHECKPOINTS:
-        if not (STEPS_DIR / f'{img}.png').exists():
-            continue
-        cards.append(
-            '<div class="cp-card" id="' + cid + '">'
-            '<div class="cp-head"><span class="cp-name">' + H.escape(name) + '</span><span class="cp-who">' + H.escape(who) + '</span></div>'
-            '<label class="cp-shot"><input type="checkbox"><img src="screenshots/steps/' + img + '.png" alt="' + H.escape(name) + '" loading="lazy"></label>'
-            '<div class="cp-sem">' + H.escape(semantics) + '</div>'
-            '<div class="cp-ev">' + H.escape(evidence) + '</div>'
-            '</div>')
-    return '<div class="cp-grid">' + ''.join(cards) + '</div>'
+    gate_info = [
+        ('G1', '需求上锁', '验收标准可判定才许开工', 'BA + 产品经理'),
+        ('G2', '架构评审', '五项检查，不评审不排期', '架构治理 arch'),
+        ('G3', '编码门禁', '测试证据随分支，无设计不编码', '门禁脚本 + 研发'),
+        ('G4', '独立验证', '测试者不等于写码者，缺陷全闭环', '测试 qi/fei'),
+        ('G5', '发布准出', '七项检查 + 人工批准', '产品经理 + 评审卡'),
+        ('G6', '复盘处置', '问题 100% 记账，经验入库', '全员 + 治理'),
+    ]
+    for g, title, desc, who in gate_info:
+        key = GATE_STATE_KEY[g]
+        ts_val = state.get(key, '')
+        if ts_val and ts_val not in ('1', 'true', 'True'):
+            try:
+                ts = datetime.datetime.fromtimestamp(int(ts_val[:10])).strftime('%m-%d %H:%M')
+            except (ValueError, OSError):
+                ts = '—'
+        else:
+            ts = '—'
+        v = _gate_value(g)
+        passed = bool(v)
+        cls = 'ok' if passed else 'miss'
+        badge = '✓ 已通过' if passed else '○ 未达'
+        cards.append(f'<div class="gate-card {cls}">'
+                     f'<div class="gate-name">{g}</div>'
+                     f'<div class="gate-state">{badge}</div>'
+                     f'<div class="gate-ts">{ts}</div>'
+                     f'<div class="gate-desc">{title}：{desc}</div>'
+                     f'<div style="font-size:11px;color:var(--muted)">把关人：{who}</div>'
+                     f'</div>')
+    return ''.join(cards) + '</div>'
 
 def gate_cards():
     # 打回/判回滚记录按轮隔离（run6 实锤漏网根治：run2 的 R-A1 判回滚史曾渲进 run6 门禁卡）。
@@ -2232,7 +2252,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 
   <div class="gates">{gate_cards()}</div>
 
-  <h2 class="section-hd" id="checkpoints">关键卡点 · 人工把关实拍现场</h2>
+  <h2 class="section-hd" id="checkpoints">六道关卡 · 谁在什么时间把住了什么关</h2>
   <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
 
