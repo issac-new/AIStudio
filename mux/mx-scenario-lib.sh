@@ -514,6 +514,24 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 # 连续 <idle-sec> 无日志增长才判空转/死循环退出。长生成/长测试的单次静默
 # 远小于阈值（run6 实测大生成 6 分钟级），1800s 足够宽容；真死循环（429 退避
 # 风暴、工具卡死）会在阈值内暴露。无可观测日志面时退化为 86400s 硬窗并告警。
+
+# ── 帧采集焊死进驱动（2026-10-07 run10 教训：13h 推演零实时帧=报告空壳）──
+# 每步末尾自动调用 r18-frames.mjs 拍当轮实时帧；不设任何跳过开关。
+# 采集失败不阻断流程（记单），但报告生成器有硬闸：帧数=0 拒出报告。
+capture_step() { # <step> <url> [action] [user]
+  local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
+  local rc=0
+  if [[ -n "$action" ]]; then
+    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --action "$action" --user "$user" >/dev/null 2>&1 || rc=$?
+  else
+    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --user "$user" >/dev/null 2>&1 || rc=$?
+  fi
+  if (( rc != 0 )); then
+    note "[帧采集] 步 $step 采集失败（rc=$rc，记单不阻断）"
+    echo "ISSUE|frame-capture-failed|step-$step|r18-frames 采集失败 rc=$rc（url=$url）" >> "$EVID_DIR/issues.log"
+  fi
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   local -a logs=()

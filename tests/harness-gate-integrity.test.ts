@@ -888,3 +888,25 @@ describe('⑯ run10 接线事故根治守门（hermes 转发/gate-guard 显式�
     expect(scen).toContain('概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 1800 fanfan')
   })
 })
+
+describe('⑰ 帧采集焊死守门（run10 教训：13h 零实时帧=报告空壳）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('capture_step 函数在位（mx-scenario-lib）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('capture_step()')
+    expect(lib).toContain('r18-frames.mjs')
+  })
+
+  it('驱动每个关键步挂了 capture_step（aipay-scenario ≥16 处调用）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    const calls = (scen.match(/capture_step /g) || []).length
+    expect(calls).toBeGreaterThanOrEqual(16)
+  })
+
+  it('报告生成器有帧硬闸（零帧拒出报告）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('硬闸：本轮零实时帧')
+    expect(gen).toContain('禁出空壳报告')
+  })
+})
