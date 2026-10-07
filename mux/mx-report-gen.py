@@ -2191,6 +2191,15 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
 </div>
 </body></html>'''
 
+
+# ── 帧硬闸（2026-10-07 run10 教训：无实时帧的报告是空壳，禁出）──
+_real_frames = list(STEPS_DIR.glob('*.png')) if STEPS_DIR.exists() else []
+if len(_real_frames) == 0:
+    sys.exit(f'[mx-report-gen] 硬闸：本轮零实时帧（{STEPS_DIR} 无 PNG）——'
+             f'推演执行期间 capture_step 未触发或全部失败。'
+             f'禁出空壳报告。修复：确保 aipay-scenario.sh 每步调 capture_step，'
+             f'且 studio :8802 在线。不要用收官后补拍冒充实时帧。')
+
 OUT.write_text(html, encoding='utf-8')
 print(f'report written: {OUT} ({len(html)} bytes, {total_imgs} images)')
 

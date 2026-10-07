@@ -152,6 +152,8 @@ if step_reached smoke; then
   # 事件落房+读回；产品门禁灯帧按§5.6 必采矩阵 矩阵步 23 在报告链采集）
   dlv_enabled && dlv_smoke
   note "[真值] 步骤 1-5 全部完成 ✓"
+  capture_step "smoke_done" "/app"
+
   sset smoke_done 1
 fi
 
@@ -194,6 +196,8 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
     echo "ISSUE|appinit-push|director|app-registry 推送 origin/main 失败（留存 ${REG}）" >> "$EVID_DIR/issues.log"
     note "[观察] app-registry 推送失败（留存本地，记问题单）"
   fi
+  capture_step "appinit_done" "/app/board?tab=gov-registry"
+
   sset appinit_done "$(date +%s)"
 fi
 
@@ -225,6 +229,8 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
     echo "ISSUE|people-push|director|org.md 推送 origin/main 失败（留存 ${ORG}）" >> "$EVID_DIR/issues.log"
     note "[观察] org.md 推送失败（留存本地，记问题单）"
   fi
+  capture_step "people_done" "/app/board?tab=gov-org"
+
   sset people_done "$(date +%s)"
 fi
 
@@ -395,6 +401,8 @@ if step_reached register; then
       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
   fi
+  capture_step "register_done" "/app/board"
+
   sset register_done 1
 fi
 
@@ -486,6 +494,8 @@ if step_reached analysis; then
     fi
   done
   note "[步骤10] 系统分析派发阶段完成"
+  capture_step "analysis_done" "/app/board"
+
   sset analysis_done 1
 fi
 
@@ -504,6 +514,8 @@ if step_reached triage; then
       | while read -r id; do kanban_status_as "$lead" "$id" todo || true; done
     note "[$lead] lead 分诊确认完成（triage→todo）"
   done
+  capture_step "triage_done" "/app/board"
+
   sset triage_done 1
 fi
 
@@ -585,6 +597,8 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
   gate_review hu "系分执行-AN-CHWX"
   gate_review lin "系分执行-AN-CHALI"
   gate_review xiao "系分执行-AN-MP"
+  capture_step "anexec_done" "/app/board"
+
   sset anexec_done 1
 fi
 
@@ -626,6 +640,8 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     fi
   fi
   gate_review fanfan "G2-系分评审闸"
+  capture_step "review_done" "/app/board"
+
   sset review_done 1
 fi
 
@@ -696,6 +712,8 @@ if step_reached close && [[ -z "$(sget close_done)" ]]; then
       || note "[观察] 主卡未置 done（记问题单）"
   fi
   gate_review arch "概设收口闸"
+  capture_step "close_done" "/app/board"
+
   sset close_done 1
 fi
 
@@ -712,6 +730,8 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
+  capture_step "plan_done" "/app/board"
+
   sset plan_done 1
 fi
 
@@ -776,6 +796,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   gate_review hu "G3-代码实现闸-csw-channel-wechat"
   gate_review lin "G3-代码实现闸-csw-channel-alipay"
   gate_review xiao "G3-代码实现闸-csw-cashier-mp"
+  capture_step "devimpl_done" "/app/ide"
+
   sset devimpl_done 1
   sset g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
@@ -923,6 +945,8 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
   fi
   gate_review qi "G4-测试过闸"
+  capture_step "testpass_done" "/app/board"
+
   sset testpass_done 1
   sset g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
@@ -1202,6 +1226,8 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
     echo "ISSUE|workreport-push|director|工作台账落档 origin/main 失败（留存 $EVID_DIR/work-report.md）" >> "$EVID_DIR/issues.log"
     note "[观察] 工作台账落档失败（留存本地，记问题单）"
   fi
+  capture_step "workmgr_done" "/app/s/chat"
+
   sset workmgr_done "$(date +%s)"
   note "[M3] 报告落 $(echo "$WR" | tail -1)"
 fi
@@ -1267,6 +1293,8 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   else
     note "[观察] 意见书推送失败（留存本地）"
   fi
+  capture_step "audit_done" "/app/runs"
+
   sset audit_done "$(date +%s)"
 fi
 
@@ -1333,6 +1361,8 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   else
     note "[观察] 治理归档落账未过（已记单 archive-commit-failed，挂收官回灌清单）"
   fi
+  capture_step "retro_done" "/app/board?tab=gov-harness"
+
   sset retro_done "$(date +%s)"
 fi
 
@@ -1359,6 +1389,8 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
     echo "ISSUE|ide-brief|client|任务接入 IDE 自动简报生成功能未见（步骤 20 要求）" >> "$EVID_DIR/issues.log"
     note "[观察] IDE 任务简报自动生成功能未见（记问题单）"
   fi
+  capture_step "ide_done" "/app/ide"
+
   sset ide_done 1
 fi
 
