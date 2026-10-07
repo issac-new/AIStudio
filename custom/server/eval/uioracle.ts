@@ -134,7 +134,7 @@ export async function playwrightBrowser(): Promise<OracleBrowser> {
       await page.waitForTimeout(800)
       return {
         async url() { return page.url() },
-        async screenshot() { return (await page.screenshot({ fullPage: false })) as Buffer },
+        async screenshot() { return (await page.screenshot({ type: 'jpeg', quality: 45, fullPage: false })) as Buffer },
         async domProjection() {
           return page.evaluate(`(() => {
             const lines = [];
@@ -258,11 +258,14 @@ export function domLineDiff(before: string[], after: string[]): { added: string[
   }
 }
 
-/** S1 实际 vs 预测一致性（语义判词；判定端不可用 → unknown）。 */
+/** S1 实际 vs 预测一致性。带真帧（vision 开）时顶层 images=[before,after]——clef
+ * serve 约定图片插在 STATE 文本前（clef_mlx.py encode_record），state 里说明两帧语义。
+ * 判定端不可用 → unknown。 */
 export async function oracleVerifyMatch(
   predicted: { willChange: Binary; changeKind: string | null },
   actual: { urlChanged: boolean; pixelUnchanged: boolean | null; diff: { added: string[]; removed: string[] } },
   deps: Pick<OracleDeps, 'config' | 'ask'>,
+  frames?: { beforeDataUrl: string; afterDataUrl: string },
 ): Promise<{ matchVerdict: 'match' | 'mismatch' | 'unknown'; visionAttempted: boolean; online: boolean }> {
   // 预测未知 → 无从判"不符"，S1 不比对（判 mismatch 需要一个明确的预测作靶子）
   if (predicted.willChange === 'unknown') {
@@ -270,24 +273,30 @@ export async function oracleVerifyMatch(
   }
   const ask = deps.ask
   if (!ask) return { matchVerdict: 'unknown', visionAttempted: false, online: false }
-  const state = {
-    predicted_change: predicted.willChange === 'yes' ? `有响应（类型：${predicted.changeKind ?? '未判'}）` : predicted.willChange === 'no' ? '无响应' : '未知',
+  const state: Record<string, unknown> = {
+    ...(frames
+      ? { frames_note: 'STATE 文本前依次有两张图片：第 1 张=动作前帧，第 2 张=动作后帧。请结合图片与下方 DOM 变化判断。' }
+      : {}),
+    predicted_change: predicted.willChange === 'yes' ? `有响应（类型：${predicted.changeKind ?? '未判'}）` : '无响应',
     actual_url_changed: actual.urlChanged,
     actual_pixel_unchanged: actual.pixelUnchanged,
     dom_added: actual.diff.added.slice(0, 20),
     dom_removed: actual.diff.removed.slice(0, 20),
   }
   const questions = {
-    response_matches_prediction: { type: 'noul', instructions: '实际页面响应是否与预测一致（响应发生与否及类型大体相符即算一致）？' },
+    response_matches_prediction: { type: 'noul', instructions: '实际页面响应（图片与 DOM 变化）是否与预测一致（响应发生与否及类型大体相符即算一致）？' },
   }
   try {
-    const answers = await ask({ model: deps.config.judgeModel, state, questions }, deps.config)
+    const answers = await ask(
+      { model: deps.config.judgeModel, state, questions, ...(frames ? { images: [frames.beforeDataUrl, frames.afterDataUrl] } : {}) },
+      deps.config,
+    )
     const p = answers.response_matches_prediction
-    if (typeof p !== 'number') return { matchVerdict: 'unknown', visionAttempted: true, online: false }
+    if (typeof p !== 'number') return { matchVerdict: 'unknown', visionAttempted: Boolean(frames), online: false }
     const verdict = p >= deps.config.tauYes ? 'match' : p <= deps.config.tauNo ? 'mismatch' : 'unknown'
-    return { matchVerdict: verdict, visionAttempted: true, online: true }
+    return { matchVerdict: verdict, visionAttempted: Boolean(frames), online: true }
   } catch {
-    return { matchVerdict: 'unknown', visionAttempted: true, online: false }
+    return { matchVerdict: 'unknown', visionAttempted: Boolean(frames), online: false }
   }
 }
 
@@ -367,8 +376,15 @@ export async function runOracleCase(
     const urlChanged = beforeUrl !== afterUrl
     const actualChangeKind = classifyActualChange(urlChanged, pixelUnchanged, diff)
 
-    // ── S1：实际 vs 预测 ──
-    const match = await oracleVerifyMatch({ willChange: prediction.willChange, changeKind: prediction.changeKind }, { urlChanged, pixelUnchanged, diff }, runtimeDeps)
+    // ── S1：实际 vs 预测（视觉开=真帧进 images；判定端无视觉/离线自动降级文本态） ──
+    const visionOn = process.env.EVAL_ORACLE_VISION !== '0'
+    const toDataUrl = (buf: Buffer): string => `data:image/jpeg;base64,${buf.toString('base64')}`
+    const match = await oracleVerifyMatch(
+      { willChange: prediction.willChange, changeKind: prediction.changeKind },
+      { urlChanged, pixelUnchanged, diff },
+      runtimeDeps,
+      visionOn ? { beforeDataUrl: toDataUrl(beforeShot), afterDataUrl: toDataUrl(afterShot) } : undefined,
+    )
     const stage2: OracleStage2 = {
       pixelUnchanged,
       domDiff: diff,

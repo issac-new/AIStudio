@@ -74,6 +74,14 @@ export interface EvalJudgeRequest {
   model: string
   state: Record<string, unknown>
   questions: Record<string, EvalJudgeQuestion>
+  /**
+   * 视觉输入（clef serve 约定，源码级锚定 clef_mlx.py do_POST）：
+   * 请求体顶层 images 数组，每项 data URL / 裸 base64 / http(s) URL；serve 层
+   * _decode_image 解码（拒绝本地路径）。图片统一插在 STATE 文本之前（encode_record:
+   * prefix("STATE:\n") + media_ids + state_ids），state 文本无需占位符。
+   * body 上限默认 64MB（--max-body-mb）。
+   */
+  images?: string[]
 }
 
 /** 问句 id → P(yes)；缺失/非数值的问句不在结果里（调用方按 unknown 处理）。 */
