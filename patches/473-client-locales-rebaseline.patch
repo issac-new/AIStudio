@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 73bb08c9..ee41e953 100644
+index bfb5adc1..858aadd7 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -2,278 +2,311 @@ import { socialMessagesEn } from '../social-messages'
@@ -4504,11 +4504,11 @@ index 73bb08c9..ee41e953 100644
 -
 -  // Changelog
    changelog: {
-     new_0_7_30_1: 'Added Qwen Code, Kimi Code, CodeBuddy, Qoder, GitHub Copilot, and ZCode for chats, group chats, and workflows; Qoder uses global mode, while the other five also support scoped models (#3280)',
-     new_0_7_30_2: 'Ekko chats now appear under Built-in Agent in history and search, with /context, /usage, /status, and /compact commands (#3276)',
-@@ -3767,4 +5900,220 @@ export default {
-     new_0_7_28_5: 'Fixed native login credential access for Antigravity global mode on macOS and corrected the sign-in hint (#3266)',
-     new_0_7_28_6: 'Updated Device Connections navigation to a monitor and phone icon for a clearer connection entry point (#3262)',
+     new_0_7_31_1: 'Added authenticated P2P connections between the App and Studio, with automatic cloud relay fallback when direct connections are unavailable (#3290)',
+     new_0_7_31_2: 'Improved P2P connections on systems with multiple network interfaces and in Docker, and fixed direct connection failures caused by proxy fake-IP DNS (#3292, #3303)',
+@@ -3766,4 +5899,220 @@ export default {
+     new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
+     new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
    },
 +  loopScenes: {
 +    manage: {
@@ -4728,7 +4728,7 @@ index 73bb08c9..ee41e953 100644
 +  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f54acac5..9ddab268 100644
+index 303f3a25..4fb7dcbd 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -2,278 +2,311 @@ import { socialMessagesZh } from '../social-messages'
@@ -9277,11 +9277,11 @@ index f54acac5..9ddab268 100644
 -
 -  // 更新日志
    changelog: {
-     new_0_7_30_1: '新增 Qwen Code、Kimi Code、CodeBuddy、Qoder、GitHub Copilot 和 ZCode，接入聊天、群聊及工作流；Qoder 使用全局模式，其余五种也支持独立配置模型 (#3280)',
-     new_0_7_30_2: 'Ekko 会话在历史和搜索中归入内置 Agent，并支持 /context、/usage、/status 和 /compact 命令 (#3276)',
-@@ -3815,4 +5898,31 @@ export default {
-     new_0_7_28_5: '修复 macOS 上 Antigravity 全局模式无法读取原生登录凭据的问题，并更正登录提示 (#3266)',
-     new_0_7_28_6: '设备连接导航改用显示器与手机图标，更清晰地区分连接入口 (#3262)',
+     new_0_7_31_1: '新增 App 与 Studio 的鉴权 P2P 直连，直连不可用时自动回退云端中转 (#3290)',
+     new_0_7_31_2: '改善多网卡和 Docker 环境的 P2P 连接，并修复代理 fake-IP DNS 导致的直连失败 (#3292、#3303)',
+@@ -3814,4 +5897,31 @@ export default {
+     new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
+     new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
    },
 +  apiRelay: {
 +    title: 'API 中转',
