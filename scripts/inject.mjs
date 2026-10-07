@@ -541,6 +541,17 @@ function main() {
     if (precheck && patches.length > 0) {
       console.error('[inject] 上游工作树不干净,先运行 npm run clean:');
       console.error(precheck);
+      // 已知漂移类（2026-10-07 根因定位）：README 开发流程在注入树上跑 npm install，
+      // 会改写 package-lock（镜像源 resolved 条目）；clean 无法还原这两个文件
+      // （lock 逐行 churn 逆放必败，10-02/09-29 stash 前例）。此时 clean 无效，
+      // 直接给出对症命令，避免"跑了 clean 还是卡"的误导循环。
+      const onlyInstallChurn = precheck.split('\n').every((l) =>
+        /package(-lock)?\.json/.test(l) && !l.startsWith('??'));
+      if (onlyInstallChurn) {
+        console.error('[inject] 判定为 npm install 产物漂移（clean 无法还原）：');
+        console.error('  git stash push -m "install-churn <date>" -- package.json package-lock.json  # 存档（仓库惯例）');
+        console.error('  或确认无用后: git checkout -- package.json package-lock.json');
+      }
       process.exit(1);
     }
     // 0. 校验通过 → 清理 inject/build 自身可能遗留的产物(此时删除是安全的)。
