@@ -311,7 +311,34 @@ PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 
 # R17 硬闸（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
 # 防旧轮叙事顶包新轮报告。新轮正本=人工按该轮实锚编写后注册。
+PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>V8 终态正本的第二跑，mx-clean 整库重置后的首轮 0→1 全量重建；同时是五件新机制的首役场：快模式 MX_FAST=1（轮询 5s/治理三步并发）、系分与编码四路齐发（闸值 4 满格）、569 gate-guard 显式启用、半程自动催办、clef-flash 本地判定后端（mlx 量化 4bit）。</div>
+
+<div class="card ok"><b>本轮的诚实结论——主链全通但不粉饰：</b>26 步全部走完、六闸全部落键，但<b>不是全部一次过</b>——G2 首轮 1800s 结论窗超时（arch 到期前仍在产出，窗误杀族，窗调 3600 后第二轮 6 分 09 秒过）、G5 首轮 READY-GATE FAIL（缺回滚阈值/灰度/发布说明，补齐后 14:12 过）；首过率 4/6 实算落账 metrics-log。UAT 七条验收标准逐条对账全过；integration 汇总复跑 224 用例全绿；四开发分支全部本轮新推 origin（代码零变更复跑锚定轮）。</div>
+
+<div class="card warn"><b>真实发生的缺口（全部记单在案，不藏）：</b>① 系分四稿只有两稿在 origin/main（PAYCORE/MP 缺件——概设以 main 祖先版如实声明，不冒充四稿齐）；② RACI 双@通知 ×4 未补发（run9 同模式复现）；③ R18 全量呈现必采矩阵 0/13——帧采集链没挂进驱动（§4.3 第 21 条未执行），本报告 {{n_frames}} 张界面帧全部是收官后补拍、非当轮实时帧（记单 r18-collection-missing，run11 已接线采集链）；④ G5 过闸的 delivery 门禁灯事件漏发，交付案例面板 G5 灯灰=产品如实呈现事件缺口（不是面板缺陷）；⑤ 报告验收线（mx-report-audit）15 项 FAIL 下报告曾被产出交付——验收链绕行记单 report-acceptance-bypass，本版即勘误重生成版；⑥ 起跑前 391 板级围栏补丁曾遭部署通道静默回退（双树修复+守门强化）。</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 md5 {{uniq_note}}，图注逐帧标注"收官后补拍"）；每步四段=本轮实录/交付物真容+模板核对/已知问题/改进项；全部计数自 issues.log 与 state.env 实算，取不到显式 ⬜。</div>
+
+<h2>研发全流程治理有效性（实算）</h2>
+<table>
+<tr><th>治理维度</th><th>本轮实算</th><th>口径来源</th></tr>
+<tr><td>六闸首过率</td><td class="warn"><b>4/6</b>（G1 01:23 / G2 07:35 第二轮 / G3 11:39 / G4 13:49 / G5 14:12 第二轮 / G6 14:29；口径=六闸全计，G3/G6 落键型无记单即首过）</td><td>state.env 落键时戳+issues.log</td></tr>
+<tr><td>问题记录与处置</td><td>{{n_issue}} 条记录（{{n_key}} 个唯一键）DISP {{n_disp}} 条（已修/观察/延后三态；含导演收官补记与勘误——两条"已闭环"处置经 git 实查证伪后勘误改判，事件流留痕不改写）</td><td>evidence/issues.log 实算</td></tr>
+<tr><td>打回与熔断</td><td>G2 窗超时打回 1 轮 · G5 FAIL 熔断 1 轮 · 看板登记拒收 2 轮（2400s×2，驱动查询失明误判与延迟登记两定性并存如实记）</td><td>scenario.log+state g5_fail_rounds</td></tr>
+<tr><td>测试独立性</td><td>测试者 qi/fei ≠ 写码者四开发；测试报告 @1e4f4e6 入 integration 过 G4（224/224 绿）</td><td>origin/integration/RFD-001</td></tr>
+<tr><td>验收闭环</td><td>G1 冻结 AC-1~7 → UAT 判词 7/7 通过（14:28，验收书 @ origin/main）</td><td>docs/acceptance/</td></tr>
+<tr><td>可复现性</td><td>26 步全键落位；{{n_frames}} 实拍帧 md5 {{uniq_note}}（全部收官后补拍，逐帧图注声明）；交付物矩阵 19/22 在仓、3 缺全记单</td><td>runs/{{run_id}}/evidence/</td></tr>
+</table>
+
+{{ch0}}
+'''
+
 PART1_BY_RUN = {
+    '20261007-v8-run10': PART1_RUN10,
     '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
     '20261004-v7-run8': PART1_RUN8,

@@ -851,11 +851,11 @@ STEPS_META_RUN10 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='mx-clean 全清后 01:21 起跑；30 账号预检全过，三方对账 15=15=15 一次过（run9 编制缺口未复发）。起跑前审计记单 1 条（391 补丁曾遭部署回退，已修，处置观察）。', imgs=[('1-op1-after', '设置页：账号管理/开发者设置（admin 视角）（收官后补拍，非当轮实时帧）', 'ui'), ('1-op2-after', '账户管理：roster 15 账号全列（收官后补拍，非当轮实时帧）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
-            narrative='gateway :8801 + studio :8802 就绪；判定后端探活在线（本轮首次启用本地 clef-flash，版本三元组快照落档）。', imgs=[('2-op1-after', '运维面：网关 8801 在线·agent 活跃·Matrix 会话（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='gateway :8801 + studio :8802 就绪；判定后端探活在线（本轮首次启用本地 clef-flash（mlx 量化 4bit，:8000 常驻），版本三元组快照落档 evidence/decision-backend-snapshot.txt）；装配走产品同源端点（mx-setup 探针 rosterCommit=edc6ed2 同源链）。', imgs=[('2-op1-after', '运维面：网关 8801 在线·agent 活跃·Matrix 会话（收官后补拍，非当轮实时帧）', 'ui')]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='14 账号登录链全通；产品免密走 bot 身份（R29 身份缝修复后 bot 在案例房与聊天列表均可见）。', imgs=[('3-op1-after', 'chen 登录后驾驶舱首页（只见本账号档案）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='14 账号登录链全通（roster 账号清单 @4071cf1 在档，逐一验证）；产品免密走 bot 身份（R29 身份缝修复后 bot 在案例房与聊天列表均可见）。', imgs=[('3-op1-after', 'chen 登录后驾驶舱首页（只见本账号档案）（收官后补拍，非当轮实时帧）', 'ui')]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
-            narrative='驾驶舱在线、run 横幅 N/26 全程在线。', imgs=[('4-op1-after', '驾驶舱工作台：run 横幅+注意力条（收官后补拍，非当轮实时帧）', 'ui'), ('4-op2-after', '运行中心：运行列表+工作流页签（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='驾驶舱在线、run 横幅 N/26 全程在线；冒烟三方对账 roster×org×matrix 15=15=15（@4071cf1 在档）。', imgs=[('4-op1-after', '驾驶舱工作台：run 横幅+注意力条（收官后补拍，非当轮实时帧）', 'ui'), ('4-op2-after', '运行中心：运行列表+工作流页签（收官后补拍，非当轮实时帧）', 'ui')]),
     5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
             narrative='应用资产经产品端点登记入仓。', imgs=[('5-op1-after', '治理中心·应用资产页签（收官后补拍，非当轮实时帧）', 'ui')]),
     6: dict(keys=['people_done'], actor='both', actorText='人 · 组织装配',
@@ -863,15 +863,15 @@ STEPS_META_RUN10 = {
     7: dict(keys=['g1_frozen'], actor='human', actorText='人 · bella 产品',
             narrative='G1 冻结 01:23 落键（起跑 2 分钟）；delivery 案例房开张+协议事件开始投递——门禁灯本轮首次激活。', imgs=[('7-op1-after', '看板：G1 冻结后全家桶卡（收官后补拍，非当轮实时帧）', 'ui')]),
     8: dict(keys=['room_analysis'], actor='human', actorText='人 · fanfan 发单',
-            narrative='建群全量预邀 0 缺口（人类+bot 双身份，限流重试族护送）。', imgs=[('8-op1-after', '沟通区：支付收银台讨论群在列（chen 视角）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='建群全量预邀 0 缺口（人类+bot 双身份，限流重试族护送）；房间 !ohmaPGEzJSqVMvQIrQ:matrix.test 落档（全量预邀机制 overlay f8382131）。', imgs=[('8-op1-after', '沟通区：支付收银台讨论群在列（chen 视角）（收官后补拍，非当轮实时帧）', 'ui')]),
     9: dict(keys=['dispatch_marker'], actor='ai', actorText='AI · agent 首应',
-            narrative='@派发带证据要求发出。', imgs=[('9-op1-after', '群内 @派发消息（chen 视角会话详情）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='@派发带证据要求发出（派发事件锚 $PLKX5sslSoYjYDu4pOmUsVOLnuaD3fVbmwu_m5AxtnI 落档）。', imgs=[('9-op1-after', '群内 @派发消息（chen 视角会话详情）（收官后补拍，非当轮实时帧）', 'ui')]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · 看板登记',
             narrative='主卡 01:37 已建（!approve 回执旁证）；驱动看板查询通道失明（hermes 裸调用 bug）两轮 2400s 超时拒收（02:03/02:43），回灌后 02:45 修复重查 3 秒过（a44ad19 函数转发根治）。台账对“未登记”与“驱动误判”两种定性并存如实保留（kanban-registration-skipped 记单在案）。', imgs=[('10-op1-after', '看板：RFD-001 主卡+子卡（收官后补拍，非当轮实时帧）', 'ui')], issue_keys=['kanban-registration-skipped']),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系分拆分',
             narrative='任务清单 v10 全量重建入仓；RACI 双@四组缺失记单（与 run9 同模式）。', imgs=[('11-op1-after', '看板：chen 板系分任务卡（AN-PAYCORE）（收官后补拍，非当轮实时帧）', 'ui')], issue_keys=['raci-dispatch-missing']),
     12: dict(keys=['triage_done'], actor='ai', actorText='AI · 分诊',
-            narrative='分诊完成；五 AI 员工无越序抢跑。', imgs=[('12-op1-after', '看板：chen 泳道（分诊→待办→进行中）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='分诊完成；五 AI 员工无越序抢跑（569 gate-guard 显式启用 035a555 前置拦截生效；主卡 t_2a2bab79 及四主责板任务卡在板）。', imgs=[('12-op1-after', '看板：chen 泳道（分诊→待办→进行中）（收官后补拍，非当轮实时帧）', 'ui')]),
     13: dict(keys=['anexec_done'], actor='ai', actorText='AI · 系分执行',
             narrative='四路系分：首批 03:07 派发后撞 gate-guard 误拦（场外修复 035a555 显式启用化），3600s 超时窗×2 串行空转，05:08 第二批重发；AN-CHWX 05:23 首达。CHWX/CHALI 两稿入 origin/main，PAYCORE/MP 两稿缺件记单（anexec-missing×2——git ls-tree 实查，概设 §0.3 以 main 祖先版如实声明）。', imgs=[('13-op1-after', '看板：hu 板系分卡（AN-CHWX）（收官后补拍，非当轮实时帧）', 'ui')], issue_keys=['anexec-missing','anexec-redeliver-gateway-restart']),
     14: dict(keys=['review_done'], actor='ai', actorText='AI · 汇总复核',
@@ -879,7 +879,7 @@ STEPS_META_RUN10 = {
     15: dict(keys=['g2_arch_pass'], actor='ai', actorText='AI · 架构闸',
             narrative='G2 架构评审：首轮 06:57 派发后 1800s 结论窗超时记单（g2-review-missing——arch 到期前仍在产出，窗误杀族）；窗改 MX_GATE_WAIT 缺省 3600（fb934e1）后 07:29 续跑重派，第二轮 6 分 09 秒过，07:35 落键。run8 崩溃环未复发。', imgs=[('15-op1-after', '看板：G2 架构评审卡（收官后补拍，非当轮实时帧）', 'ui')]),
     16: dict(keys=['close_done'], actor='ai', actorText='AI · 评审收口',
-            narrative='评审收口、主卡归档关闭。', imgs=[('16-op1-after', '看板：主任务卡 done 态（lin 视角）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='评审收口、主任务卡 t_2a2bab79 done 态归档关闭。', imgs=[('16-op1-after', '看板：主任务卡 done 态（lin 视角）（收官后补拍，非当轮实时帧）', 'ui')]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · 排期',
             narrative='排期完成（活性窗+半程自动催办首次全程服役）。', imgs=[('17-op1-after', '看板：排期板（收官后补拍，非当轮实时帧）', 'ui')]),
     18: dict(keys=['devimpl_done'], actor='gate', actorText='硬闸 G3 · 编码门禁',
@@ -897,7 +897,7 @@ STEPS_META_RUN10 = {
     24: dict(keys=['retro_done'], actor='gate', actorText='硬闸 G6 · 复盘',
             narrative='G6 复盘 14:29 完成；治理归档落账（metrics-log+ISSUES-LOG @ origin/main）。', imgs=[('24-op1-after', '治理中心·harness 页签（收官后补拍，非当轮实时帧）', 'ui')]),
     25: dict(keys=['ide_done'], actor='human', actorText='人 · IDE 核验',
-            narrative='IDE 核验：/ide 路由 200、ide?task 深链参数处理、简报组件三项在位核验通过；收官补拍实证 ?task= 深链自动展开任务简报六区块（25-op2 帧：任务概览/需求上下文/Git 活动/Kanban 状态/协作动态/辅助会话）。简报“Kanban 状态”块父子依赖列恒空=产品半成品如实记（产品改进项 D1）；IDE 默认模型指向已移除项的横幅可见（产品配置缺陷）。', imgs=[('25-op1-after', 'IDE 画布全景（收官后补拍，非当轮实时帧）', 'ui'), ('25-op2-after', 'IDE 任务简报（深链展开）（收官后补拍，非当轮实时帧）', 'ui')]),
+            narrative='IDE 核验：/ide 路由 200、ide?task 深链参数处理、简报组件三项在位核验通过；收官补拍实证 ?task= 深链自动展开任务简报六区块（?task=t_2a2bab79 深链，25-op2 帧：任务概览/需求上下文/Git 活动/Kanban 状态/协作动态/辅助会话）。简报“Kanban 状态”块父子依赖列恒空=产品半成品如实记（产品改进项 D1）；IDE 默认模型指向已移除项的横幅可见（产品配置缺陷）。', imgs=[('25-op1-after', 'IDE 画布全景（收官后补拍，非当轮实时帧）', 'ui'), ('25-op2-after', 'IDE 任务简报（深链展开）（收官后补拍，非当轮实时帧）', 'ui')]),
     26: dict(keys=['report_done'], actor='ai', actorText='工具 · 报告生成',
             narrative='本报告由生成器产出；叙事集预写 18/26 步。帧采集缺口如实声明：run10 执行期间 capture-ui 未挂进驱动链，当轮无实时帧，必采矩阵 0/13 记单 r18-collection-missing（DISP 观察）；全部截图为收官后补拍，图注逐一标注。run11 修正：帧采集挂驱动步内（94aa2fc 已接线）。', imgs=[('26-op1-after', '交付案例面板：门禁灯投影（收官后补拍，非当轮实时帧）', 'ui')]),
 }
@@ -1732,8 +1732,10 @@ try:
     _fmt_epoch = lambda v: __import__('datetime').datetime.fromtimestamp(int(str(v)[:10])).strftime('%m-%d %H:%M') if str(v).isdigit() and len(str(v)) >= 10 else '⬜'
     _dlv_note = '启用（dlv_room 在档）' if state.get('dlv_room') else '⬜ 未见 dlv_room（未开启或已清）'
     _dec_note = '在线（版本快照在档）' if (EVID / 'decision-backend-snapshot.txt').exists() else '⬜ 快照不在档'
-    _frames_note = ('29 帧全部收官后补拍（采集链未挂驱动，记单 r18-collection-missing）' if _reshoot
-                    else (f'{total_imgs} 帧当轮实时采集' if total_imgs else '本轮未拍摄'))
+    _reshoot_c1 = any('补拍' in cap for _, _, _, m in STEPS for _, cap, _ in m['imgs'])
+    _total_c1 = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
+    _frames_note = (f'{_total_c1} 帧全部收官后补拍（采集链未挂驱动，记单 r18-collection-missing）' if _reshoot_c1
+                    else (f'{_total_c1} 帧当轮实时采集' if _total_c1 else '本轮未拍摄'))
     _ch1_html = (
         '<section class="nv-sec" id="ch1-caliber"><h2>第 1 章 · 本轮口径（验收与数据口径声明）</h2>'
         '<table class="st-issues-tbl"><tbody>'
