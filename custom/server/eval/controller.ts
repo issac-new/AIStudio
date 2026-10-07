@@ -23,8 +23,10 @@ import type { Context } from 'koa'
 import { aggregateRun } from './aggregate'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
+import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
-  appendIteration, createSet, exportSet, getRun, getSet, listIterations, listRuns, listSets,
+  appendIteration, appendOracleRun, createOracleCase, createSet, exportSet, getOracleCase,
+  getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns, listSets,
   recordHumanVerdict, reviseRubric, sealSet,
 } from './store'
 import { loadEvalConfig } from './types'
@@ -262,6 +264,64 @@ router.get('/runs/:id/iterations', async (ctx) => {
 
 router.get('/iterations', async (ctx) => {
   ctx.body = { ok: true, iterations: listIterations() }
+})
+
+// ---------- UI Oracle（M3：KuiTest 两阶段「预测→验证」） ----------
+
+router.get('/oracle/cases', async (ctx) => {
+  ctx.body = { ok: true, cases: listOracleCases() }
+})
+
+router.post('/oracle/cases', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const result = createOracleCase(body as never, actorOf(ctx))
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = 201
+  ctx.body = { ok: true, case: result.case }
+})
+
+router.post('/oracle/cases/:id/run', async (ctx) => {
+  const oracleCase = getOracleCase(ctx.params.id)
+  if (!oracleCase) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['用例不存在'] }
+    return
+  }
+  const record: OracleRunRecord = {
+    id: `orun-${Date.now().toString(36)}`,
+    caseId: oracleCase.id,
+    status: 'done',
+    verdict: 'unknown',
+    createdAt: Date.now(),
+    ...(actorOf(ctx) ? { createdBy: actorOf(ctx) } : {}),
+  }
+  try {
+    const browser = await playwrightBrowser()
+    const output = await runOracleCase(oracleCase, {
+      config: loadEvalConfig(),
+      browser,
+    })
+    record.stage1 = output.stage1
+    record.stage2 = output.stage2
+    record.frames = output.frames
+    record.verdict = output.verdict
+  } catch (e) {
+    record.status = 'failed'
+    record.verdict = 'failed'
+    record.error = (e as Error).message
+  }
+  appendOracleRun(record)
+  ctx.status = 201
+  ctx.body = { ok: true, run: record }
+})
+
+router.get('/oracle/runs', async (ctx) => {
+  const caseId = typeof ctx.query.caseId === 'string' ? ctx.query.caseId : undefined
+  ctx.body = { ok: true, runs: listOracleRuns(caseId) }
 })
 
 // ---------- 辅助 ----------
