@@ -492,3 +492,6 @@
 
 # 571 toolresultguard P1a：ekko 单聊入口输入侧围栏（S0 预筛+S1 本地 Clef，默认关 fail-open）
 571-server-chatrun-input-guard.patch
+
+# 572 eval M2：Eval Studio 评测域路由挂载（/api/hermes/eval/*）
+572-server-eval-routes.patch

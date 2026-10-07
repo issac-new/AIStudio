@@ -40,6 +40,9 @@ export interface FeatureConfig {
   /** S3：图像生成辅助模型面板（ModelsView auxiliary tab）。
    *  VITE_CUSTOM_IMAGE_ASSIST=true 再开。 */
   imageAssist: boolean;
+  /** Eval Studio 评测工作台（M2，/app/eval + FlowNav 入口；spec
+   *  2026-10-07-eval-studio-design.md）。默认关，VITE_CUSTOM_EVAL=true 再开。 */
+  eval: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -59,6 +62,7 @@ export const features: FeatureConfig = {
   agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
   externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
   imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',
+  eval: import.meta.env.VITE_CUSTOM_EVAL === 'true',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {
