@@ -230,4 +230,49 @@ describe('问句反偏置', () => {
   })
 })
 
+// ---------- 视觉帧接线 ----------
+
+describe('S1 视觉帧接线（clef serve 顶层 images 约定）', () => {
+  it('vision 开（默认）：S1 请求携带两帧 data URL', async () => {
+    delete process.env.EVAL_ORACLE_VISION
+    const browser = fakeBrowser({ beforeLines: BASE_LINES, afterLines: [...BASE_LINES, '新列表'], beforeShot: SAME_SHOT, afterShot: OTHER_SHOT })
+    const requests: Array<{ images?: string[] }> = []
+    const result = await runOracleCase(makeCase(), {
+      config: CONFIG,
+      browser,
+      ask: async (req) => {
+        requests.push(req as { images?: string[] })
+        return { will_change: 0.93, change_kind: 'content_update', response_matches_prediction: 0.9 }
+      },
+    })
+    expect(requests.length).toBe(2)
+    const verifyReq = requests[1]
+    expect(verifyReq.images?.length).toBe(2)
+    expect(verifyReq.images?.[0].startsWith('data:image/jpeg;base64,')).toBe(true)
+    expect(result.stage2.visionAttempted).toBe(true)
+    expect(result.stage2.online).toBe(true)
+  })
+
+  it('vision 关（EVAL_ORACLE_VISION=0）：退文本比对，不带 images', async () => {
+    process.env.EVAL_ORACLE_VISION = '0'
+    try {
+      const browser = fakeBrowser({ beforeLines: BASE_LINES, afterLines: [...BASE_LINES, '新列表'], beforeShot: SAME_SHOT, afterShot: OTHER_SHOT })
+      const requests: Array<{ images?: string[] }> = []
+      const result = await runOracleCase(makeCase(), {
+        config: CONFIG,
+        browser,
+        ask: async (req) => {
+          requests.push(req as { images?: string[] })
+          return { will_change: 0.93, change_kind: 'content_update', response_matches_prediction: 0.9 }
+        },
+      })
+      expect(requests.every((r) => r.images === undefined)).toBe(true)
+      expect(result.stage2.visionAttempted).toBe(false)
+      expect(result.verdict).toBe('clean')
+    } finally {
+      delete process.env.EVAL_ORACLE_VISION
+    }
+  })
+})
+
 _resetJudgeDefaultsForTests()

@@ -166,10 +166,11 @@ interface OutcomeCheckDecl { verifier: 'file_exists'|'content_contains'|'repo_co
 
 ### 4.6 LLM-as-Oracle UI 测试（uioracle.ts，M3，对齐 KuiTest 两阶段）
 
-- **Stage 1 可供性预测**：输入=截图（PNG data URL）+ DOM/a11y 树文本投影 + SoM 序号标记（复用 scripts/regression/ 截图链，Playwright `locator` 枚举打标）→ clef 视觉判定输出：目标组件功能描述 + 预测交互后 UI 状态（结构化 JSON）。
-- **Stage 2 响应验证**：执行动作→**像素 diff 前置**（帧差为零→"UI 无响应"缺陷，零判定费）→ DOM 态 diff（S0：元素树/文本/aria 变化集）→ clef 视觉判定"实际响应 vs 预测响应"（S1，两帧图片 data URL 对照）。
+- **Stage 1 可供性预测**：输入=DOM 投影 + 编号元素清单（SoM 文本形态，v1 不画图上标，如实声明与 KuiTest 图像 SoM 的差异）→ clef 混合问句（noul+choice）输出：预测点击后响应类型（will_change + change_kind 六类）。
+- **Stage 2 响应验证**：执行动作→**像素 diff 前置**（帧字节等同→无视觉变化，零判定费）→ DOM 态 diff（S0：元素树/文本增删集 + 响应类型启发式分类）→ clef 判定"实际响应 vs 预测响应"（S1）。
+- **视觉帧已接通（遗留③收口，2026-10-07）**：clef serve 图片约定源码级锚定（clef_mlx.py do_POST/_decode_image/encode_record）——请求体**顶层 `images` 数组**（data URL/base64/http URL，serve 层解码拒本地路径；图片统一插在 STATE 文本前无需占位符；body 上限默认 64MB）。S1 验证调用携带 before/after 两帧 JPEG（q45）data URL；`EVAL_ORACLE_VISION=0` 可退纯文本比对。真机实测：视觉路径在线判词 clean（帧经 mlx-vlm 视觉塔，延迟高于纯文本属预期）。
 - 判定接入复用上游 browser-verify JEV 模式（met/not met/unknown 三态）。
-- **内存纪律**：视觉判定走 flash 档；图片输入按需、单帧 ≤4k token 等价；不与 27B 并跑（五文方案 §6 纪律继承）；clef 离线→S0-only（像素/DOM diff）+ 预测阶段 unknown，fail-open。
+- **内存纪律**：视觉判定走 flash 档；JPEG q45 控体积；不与 27B 并跑（五文方案 §6 纪律继承）；clef 离线→S0-only+unknown，fail-open 不阻塞。
 
 ### 4.7 CI 门禁集成（M4，启示⑦）
 
