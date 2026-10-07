@@ -543,6 +543,22 @@ uat_evidence_body 1790930955`, root)
     expect(clean).toMatch(/rev-parse origin\/main/)
     // ③回读 tip 树正向断言（九目录零残留，非工作树 find 口径）
     expect(clean).toContain('ls-tree -r --name-only origin/main')
+    // ④孤儿重立（run11 attempt-2 考古实锤：清空树不清历史=考古面仍在）——
+    //   历史截断+pretrunc 保全+深度断言+受控 force-with-lease
+    expect(clean).toContain('--orphan')
+    expect(clean).toContain('pretrunc')
+    expect(clean).toContain('rev-list --count origin/main')
+    expect(clean).toContain('--force-with-lease=main')
+  })
+
+  it('㉑：跨轮考古防线（run11 attempt-2 实锤——派发词"或核验"许可恢复历史产物）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    const scen = read(SCEN)
+    // 派发去重脚注与步 9 转派条款均必须禁引用/恢复历史产物，"或核验"措辞退役
+    expect(lib).toContain('从零重新执行')
+    expect(lib).toContain('不得引用、恢复或作为完成依据')
+    expect(lib).not.toContain('重新执行或核验')
+    expect(scen).not.toContain('重新执行或核验')
   })
 
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
