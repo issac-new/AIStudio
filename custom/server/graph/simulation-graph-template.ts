@@ -9,10 +9,13 @@
 // - 缺陷循环=守卫回边（测试失败→修复→重测，maxIterations 有限终止）
 // - 治理步=与集成并发（joinMode:'any' 任一前驱即触发）
 
-import type { GraphSpec, NodeSpec, EdgeSpec } from '../../loop/graph/graph-spec'
+import type { GraphSpec, NodeSpec, EdgeSpec } from '../loop/graph/graph-spec'
 
 // ── 通道（节点间传数据的变量）──
-const SIM_CHANNELS: GraphSpec['channels'] = {
+// 判定通道（review/test/g5/g6 verdict）是条件边与 endCondition 的取值面：模板此前的
+// 条件引用了不存在的 `$review.verdict` 等路径（且 op 形态不合 predicate API），
+// 这里按真实 PredicateExpr API（op:'cmp'+path+value）补全通道与条件的对应关系。
+const SIM_BASE_CHANNELS: GraphSpec['channels'] = {
   rfd_id: { reducer: 'overwrite', default: '' },
   rfd_doc: { reducer: 'overwrite', default: '' },
   modules: { reducer: 'overwrite', default: [] as string[] },
@@ -21,6 +24,18 @@ const SIM_CHANNELS: GraphSpec['channels'] = {
   dev_branches: { reducer: 'appendById', default: [] },
   test_report: { reducer: 'overwrite', default: '' },
   issues: { reducer: 'appendById', default: [] },
+  g5_verdict: { reducer: 'overwrite', default: '' },
+  g6_verdict: { reducer: 'overwrite', default: '' },
+}
+
+/** 按模块清单装配通道：基础通道 + 每模块 review/test 判定通道（条件边取值面）。 */
+function simChannels(modules: string[]): GraphSpec['channels'] {
+  const channels: GraphSpec['channels'] = { ...SIM_BASE_CHANNELS }
+  for (const m of modules) {
+    channels[`review_verdict_${m}`] = { reducer: 'overwrite', default: '' }
+    channels[`test_verdict_${m}`] = { reducer: 'overwrite', default: '' }
+  }
+  return channels
 }
 
 // ── 节点工厂：按模块生成四段子流水线（分析→评审→编码→测试）──
@@ -60,11 +75,11 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
   ]
   const edges: EdgeSpec[] = [
     { from: `analysis-${p}`, to: `review-${p}` },
-    { from: `review-${p}`, to: `coding-${p}`, condition: { op: 'eq', lhs: '$review.verdict', rhs: 'PASS' } },
+    { from: `review-${p}`, to: `coding-${p}`, condition: { op: 'cmp', path: `review_verdict_${p}`, cmp: 'eq', value: 'PASS' } },
     // 缺陷修复回边：测试不过→修复→重测（有限循环）
     { from: `coding-${p}`, to: `testing-${p}` },
-    { from: `testing-${p}`, to: `coding-${p}`, condition: { op: 'eq', lhs: '$test.verdict', rhs: 'FAIL' },
-      guard: { maxIterations: 3, breakCondition: { op: 'eq', lhs: '$test.verdict', rhs: 'PASS' } },
+    { from: `testing-${p}`, to: `coding-${p}`, condition: { op: 'cmp', path: `test_verdict_${p}`, cmp: 'eq', value: 'FAIL' },
+      guard: { maxIterations: 3, breakCondition: { op: 'cmp', path: `test_verdict_${p}`, cmp: 'eq', value: 'PASS' } },
       label: '缺陷回流修复' },
   ]
   return { nodes, edges }
@@ -115,7 +130,7 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
     // fan-in：每模块的 testing→integration-test
     ...modules.map(m => ({ from: `testing-${m}`, to: 'integration-test' })),
     { from: 'integration-test', to: 'g5-release' },
-    { from: 'g5-release', to: 'uat', condition: { op: 'eq', lhs: '$g5.verdict', rhs: 'PASS' } },
+    { from: 'g5-release', to: 'uat', condition: { op: 'cmp', path: 'g5_verdict', cmp: 'eq', value: 'PASS' } },
     // 治理三步并发（g5 过后即触发，joinMode:'any' 不互等）
     { from: 'g5-release', to: 'work-report' },
     { from: 'g5-release', to: 'audit' },
@@ -154,11 +169,11 @@ export function compileRequirementToGraph(req: RequirementInput): GraphSpec {
   return {
     id: `sim-${Date.now()}`,
     version: 1,
-    channels: SIM_CHANNELS,
+    channels: simChannels(modules),
     nodes: [...allModuleNodes, ...global.nodes],
     edges: [...allModuleEdges, ...global.edges],
     entryNode: 'g1-lock',
-    endCondition: { op: 'eq', lhs: '$g6.verdict', rhs: 'PASS' },
+    endCondition: { op: 'cmp', path: 'g6_verdict', cmp: 'eq', value: 'PASS' },
     limits: { maxSteps: 500, maxCost: 100, maxDurationMs: 4 * 60 * 60 * 1000 },
     description: `推演全流程：${req.title}（${modules.length} 模块并行流水）`,
     meta: { goal: req.title, permissionLevel: 'standard',
