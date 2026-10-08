@@ -585,6 +585,7 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 9. **治理证据接线（六文调研能力入推演证据链，§2.5 治理证据面/§2.6-10）**：步 23 导出事故报告汇编落 `evidence/incident-report.md`；步 24 导出自治度对账+虚拟损益表落 `evidence/autonomy-reconcile.txt`、`evidence/virtual-pl.txt`——生成器透传块已备（在位才渲染，未接线轮零影响）；H3 引擎拦截轮以自治度对账偏差黄条为需求锚点决定是否开轮。
 10. **报告链能力产品化收口（§5.4 形式契约）**：`custom/server/report/` 三件（验收断言/证据透传/PART1 骨架）+REST 已接线（patch 580：`POST /api/hermes/report/part1-skeleton` 出骨架稿、`POST /api/hermes/report/acceptance` 出验收断言结论；clean→全量重放 304 项 0 失败）；run12 图执行转译完成后 mx-report-gen/audit 对应段退役，语义正本单源在产品。
 11. **并行根治 patch 落盘（run11 收官即 git apply）**：simharness `mux/run12-devimpl-parallel.patch`（PAYCORE 三拆/契约件锚/双段多锚等待/G5 窗宽 1800→3600/G3+integration 六分支清单）——apply --check 已过、副本 bash -n 已过；apply 后跑守门套件。
+11b. **失败左移五件（2026-10-08 落地）**：a preflight 容量自检（mx-up 起跑前断言并发≥13+年龄锚标记在位，不过拒跑）；b 卡死早检（静默过半+日志尾错误态→提前判死）；c RACI 回灌窗降级 fire-and-forget（副作用证据不占关键路径）；d DEV 任务书 testlog 完成前自检句；e G5 评审分节落卡（缺项边评边补，禁终态打回）——a/b 已落库文件，c/d/e 在 `mux/run12-leftshift-after-parallel.patch`（应用序：先 parallel 后 leftshift）。
 12. **团队并行能力一二期已合 main（overlay 418fe874，未部署运行时）**：图节点六执行器（模板首可跑）/estimate --persist 落库+派发按在途工作量加权/HttpKanbanBridge 真桥——run12 图执行轮底座；起跑前按部署清单 deploy+网关重启（年龄锚修复同批生效）。
 13. **run12 报告补并行度实算指标**：devimpl 段"活跃 agent·分钟/墙钟分钟"入报告③段实算（基线=run11 实测 ~50%，验收线≥2×，§5.5 同批挂断言）。
 
