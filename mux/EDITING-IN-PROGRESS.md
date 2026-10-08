@@ -108,3 +108,17 @@
   改造用。串行 for 等待的病灶实录见本文件 15:3x 节与 run11 复盘。
 - **PAYCORE 三拆 + 渠道批依赖改挂契约件（预备，G6 后落 aipay-scenario.sh）**：
   见 mux/run12-prep-paycore-split.md（任务书全文+锚定义；运行中禁改主脚本）。
+
+## 2026-10-08 登记⑤：耗时问题根治轮（用户点名"直接落地根治所有"）
+
+- **根治①网关年龄锚（已落全链）**：run_busy._capacity_retry_anchor 稳定键
+  （event_id 替 id(event)，run11 一条广播重入 300+ 次零过期的放大器根除）——
+  overlay/runtime 正本+pytest 4 断言+SIM 快照同步+宿主 deploy（.bak 备份齐，
+  网关重启生效）。
+- **根治②判活真化+派发可达性校验（已落 mx-scenario-lib）**：wait_alive_truth/
+  _multi 判活改"真实工作行时间戳"（API call/tool/Turn，噪音免疫）；
+  dispatch_in_room 后接 _verify_dispatch_delivery（容量丢弃/排队→自动重递+
+  记单）。已 source 完毕改后登记；语义冒烟双路径过。
+- **根治③aipay-scenario.sh patch 备好待收官**（纪律 25 运行中禁改磁盘）：
+  mux/run12-devimpl-parallel.patch——PAYCORE 三拆/契约件锚/multi 等待/G5 窗宽
+  1800→3600/integration 六分支清单。run11 收官（G6 或驱动退出）即 git apply。
