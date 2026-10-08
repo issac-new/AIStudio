@@ -330,6 +330,8 @@ graph TB
 >
 > **页签词表勘误**：/app/board 实为**九个**平级页签——看板/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）（文案锚=overlay/custom/client/ia2/i18n-tasks-tabs.ts:14-23）。「应用资产」不是独立页签，=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」是数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」过滤=patch 558/547 服务端可见性（392 只做 profile 授权收敛，旧归因勘正）；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签（旧文"三区块"漏算任务运行）。
 
+> **治理证据面（2026-10-08 六文调研落地，不键控步骤——步 23/24 证据可引用）**：事故报告汇编器（`/api/incident/sessions/:id/report[.md]`，三类 17 要素、七源只读实取、缺席要素如实标 absent）、理论/实际自治度对账（`/api/incident/sessions/:id/autonomy`，偏差黄条）、AI 虚拟损益表（`/api/hermes/virtual-pl`）、治理事件总线（`/api/hermes/governance-events`，六域三级 append-only）、机器执法判定流（`/api/governance/qgate-verdicts`，见上）。推演报告侧消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）、步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）——生成器在位即透传（§4.4-9）。
+
 ### 2.6 治理机制（设计性条款）
 
 1. 四道锁直接拦：需求未上锁不分析（G1/步 7）、设计未评审不排期（G2/步 15）、测试未过不发布（G4/步 19）、发布检查未过不上线（G5/步 20）——锁不过，后续步骤脚本直接拒绝执行。
@@ -341,6 +343,7 @@ graph TB
 7. 指令通道与数据通道分离：agent 只响应 @本人 指令语义，文档正文不作指令执行。
 8. 交付协议事件全程开启：delivery.* 协议事件层缺省启用=产品真实形态（交付案例面板由协议事件喂数）；显式关闭（MX_DELIVERY=0）自动记单降级，禁静默关旗标跑全程。
 9. **delivery 事件序列完整性**：每个 stage done 事件必须随该阶段 gate pass 事件成对发射——漏发即记单（delivery-*-event-missing）；交付案例面板门禁灯只投影已发射事件，灯灰=事件缺口的如实呈现，禁止用叙事把缺口写成已发生。
+10. **治理证据与度量能力（2026-10-08 六文调研落地；能力正本=《2026-10-08-six-article-research-capabilities.md》，本条只立契约）**：①事故报告汇编——任一会话三类 17 要素一键汇编，七源只读实取，缺席要素如实标 absent 不造数；②自治度对账——理论面（自治阶梯→身份白名单→审批历史）vs 实际面（轨迹/消息/审批窗口），偏差黄条呈现；③证据 hash 链防篡改——hash(n)=sha256(前链+规范化记录体)，不重算/重算掩蔽双攻击面可检出；④缺陷二分分诊——product_gap vs implementation_gap 入证据台账（缺陷归因在"已修/观察/延后"三态外的产品/实施维度）；⑤AI 虚拟损益表——成本面（session_usage×价目）∪ 交付面（看板实耗），单位产出成本交付为零时如实缺席；⑥治理事件总线——append-only 六域三级，审批/证据裁决自动入流，只读查询面不开公开 emit（防伪造事件流）；⑦Eval 校准度量——判词自报把握 p 的分桶+ECE+Brier（/app/eval 底座）；⑧工具事件业务语义层+自治阶梯配置面（insight/assist/auto 三档+人工确认点，auto 档与确认点语义矛盾拒收）。引擎级拦截（工具瀑布钩子 fail-closed、permmodes v4 通道）为后续轮——阶梯对账偏差 0 黄条持续呈现其需求锚点。
 
 ### 2.7 交付物体系与模板字段（缺一打回的唯一依据）
 
@@ -574,7 +577,8 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 5. **模板批次迁移**：simharness templates-pending/（公文技法样张+迁移规程）→ 中央仓 templates/ + harness 内嵌模板同步；迁移后零污染清场复核（旧轮模板不得残留 agent 工作区）。
 6. **PART1 骨架链路**：`mx-narrative-skeleton.py --part1` 出本轮草稿 → 人工润色 → 注册 PART1_BY_RUN；未注册拒绝合并（禁旧轮顶包）。
 7. **产品面承载率**：验收线 ≥4/5（§5.5）；不达标不阻断收官，逐面记单入下轮前置（审计查 11 在位）。
-8. **Eval Studio 底座**：/app/eval 默认关、`test:eval` 门禁全绿——图执行评测以它为底座。
+8. **Eval Studio 底座**：/app/eval 默认关、`test:eval` 门禁全绿——图执行评测以它为底座（校准度 ECE/Brier 断言挂其判词 p）。
+9. **治理证据接线（六文调研能力入推演证据链，§2.5 治理证据面/§2.6-10）**：步 23 导出事故报告汇编落 `evidence/incident-report.md`；步 24 导出自治度对账+虚拟损益表落 `evidence/autonomy-reconcile.txt`、`evidence/virtual-pl.txt`——生成器透传块已备（在位才渲染，未接线轮零影响）；H3 引擎拦截轮以自治度对账偏差黄条为需求锚点决定是否开轮。
 
 ## 第五部分 验收标准（唯一事实源）
 
