@@ -354,7 +354,24 @@ PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
+PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>五件新机制的首役场——①帧采集焊死驱动（capture_step 逐步实拍+零帧拒出报告+守门⑰，run10"13 小时零实时帧"红线的机制兑现）；②R18 必采矩阵采集链接线（run10 0/13 缺口的本轮兑现，对话/操作/效果三类载荷当轮实时落盘）；③系分四路齐发不分批（§4.2 流水线改革：run9/10 实证闸值 4 满格无撞闸，废除 2+2 分批）；④报告验收熔断全程值守（mx-report-audit FAIL 即禁出报告，§5.7 收官判据②）；⑤交付物模板公文技法批次迁移（13 张入中央仓 templates/，commit 9f517a5）。</div>
+
+<div class="card ok"><b>本轮的诚实结论——数字全实算，不粉饰：</b>26 步 {{steps_done}}/26 落键（第 26 步落键随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实算自 issues.log 闸键记单）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。G1 需求冻结 02:29 一次过；G2 架构评审 09:36 过闸但带打回环（结论行 1800s 未达记单 g2-review-missing，回灌补齐后过——非首过）。UAT 七条验收标准逐条三态判词见第 21 步块（禁"全部通过"式总括）。{{n_frames}} 张界面帧全部当轮实时采集（首帧 03:xx 起随步落盘，{{uniq_note}}）——与 run10 全程补拍有本质区别。</div>
+
+<div class="card warn"><b>真实发生的缺口（全部记单在案，不藏）：</b>① 编码通道设计意图背离（acp-coding-backend-divergence，用户 13:50 当轮指认）——方案 §2.4 步 18 明文"hermes 经 ACP 挂外部编码工具"，实跑是 hermes 直连 LLM+write_file 自主编码（chen 回合 model=aim 直调、pay-core 434 行直接落盘），ACP 通道零参与；IDE 工作台的 ACP 编码底座本轮未验证，产品面记单转下轮。② 网关容量记账僵尸（capacity-queue-drop-zombie）——anexec 派发后四槽被占但 active_agents=1，容量重试队列 64 满开始丢消息（chen 单侧 106 条 drop），AN-CHWX/AN-CHALI 派发 83 分钟零工作分支；网关日志零 Stream stale，定位为会话记账未释放（非通道挂死）。③ RACI 双 @ 通知 ×4 第三轮同模式复现（raci-dispatch-missing，run9/10/11 三连）。④ 四路系分两稿未入库+四路回执未见（anexec-missing ×2、receipt-missing ×4——入库真值与回执双兜底缺口，概设以两稿汇总如实声明不冒充四稿齐）。⑤ DEV-PAYCORE 分支未推送（dev-branch-missing，回灌补推）。类型分布实算：{{type_top}}。</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}，图注标注当轮实时采集）；每步四段=本轮实录/交付物真容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实算，取不到显式 ⬜。治理证据导出件（事故报告汇编/自治度对账/虚拟损益表）按 §2.5 治理证据面在位即透传。</div>
+
+<h2>研发全流程治理有效性（实算）</h2>
+{{ch0}}
+'''
+
 PART1_BY_RUN = {
+    '20261007-v8-run11': PART1_RUN11,
     '20261007-v8-run10': PART1_RUN10,
     '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
@@ -449,6 +466,47 @@ def main():
             '[final-report-merge] 无该轮说人话叙事: ' + args.run
             + '（已知: ' + ', '.join(sorted(PART1_BY_RUN))
             + '）——PART 1 为逐轮人工正本，禁旧轮顶包；请按本轮实锚编写后注册 PART1_BY_RUN')
+
+    # ── PART1 实算槽（2026-10-08 PART1 骨架链路配套）：数字合入时自 state/issues.log
+    #    现算，注册稿只写语境句——数字永不落伍（方案 §5.4 PART1 模板"数字一律实算槽"）。
+    #    步态键/闸键映射=§3.3 唯一事实源的只读消费（与 mx-narrative-skeleton STEP_KEYS 同源）。
+    _STEP_KEYS = {
+        1: ['smoke_done'], 2: ['smoke_done'], 3: ['smoke_done'], 4: ['smoke_done'],
+        5: ['appinit_done'], 6: ['people_done'], 7: ['g1_frozen'], 8: ['room_analysis'],
+        9: ['dispatch_marker'], 10: ['register_done'], 11: ['analysis_done', 'analysis_verified'],
+        12: ['triage_done'], 13: ['anexec_done'], 14: ['review_done'], 15: ['g2_arch_pass'],
+        16: ['close_done'], 17: ['plan_done'], 18: ['devimpl_done'],
+        19: ['defect_done', 'testpass_done'], 20: ['ready_done', 'release_done'],
+        21: ['uat_done'], 22: ['workmgr_done'], 23: ['audit_done'], 24: ['retro_done'],
+        25: ['ide_done'], 26: ['report_done'],
+    }
+    _GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'g3_code_pass',
+                  'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
+    steps_done = sum(1 for ks in _STEP_KEYS.values() if any(state.get(k) for k in ks))
+    gates_pass = [g for g, k in _GATE_KEYS.items() if state.get(k)]
+    _ilog_txt = (evid / 'issues.log').read_text(encoding='utf-8', errors='replace') if (evid / 'issues.log').exists() else ''
+    _gate_hit = {g: 0 for g in _GATE_KEYS}
+    _type_cnt, _disp_cnt = {}, {'已修': 0, '观察': 0, '延后': 0}
+    for _ln in _ilog_txt.splitlines():
+        _p = _ln.split('|')
+        if len(_p) >= 4 and _p[0] == 'ISSUE':
+            _m = re.match(r'^(g[1-6])[-_]', _p[1])
+            if _m:
+                _gate_hit['G' + _m.group(1)[1]] += 1
+            _t = _p[1].split('-')[0]
+            _type_cnt[_t] = _type_cnt.get(_t, 0) + 1
+        elif len(_p) >= 4 and _p[0] == 'DISP':
+            _dm = re.match(r'^(已修|观察|延后)', _p[3].strip())
+            if _dm:
+                _disp_cnt[_dm.group(1)] += 1
+    first_pass = sum(1 for g in gates_pass if _gate_hit[g] == 0)
+    _ts = [int(v) for v in state.values() if v.isdigit() and len(v) == 10]
+    window_txt = (datetime.datetime.fromtimestamp(min(_ts)).strftime('%m-%d %H:%M')
+                  + ' → ' + datetime.datetime.fromtimestamp(max(_ts)).strftime('%m-%d %H:%M')
+                  + f'（约 {round((max(_ts) - min(_ts)) / 3600, 1)} 小时）') if _ts else '—'
+    type_top = '、'.join(f'{k}×{v}' for k, v in sorted(_type_cnt.items(), key=lambda x: -x[1])[:5]) or '零问题单'
+    disp_sum = '，'.join(f'{k} {v}' for k, v in _disp_cnt.items())
+
     part1 = (part1_tmpl
              .replace('{{run_id}}', args.run)
              .replace('{{gen_time}}', gen_time)
@@ -457,6 +515,12 @@ def main():
              .replace('{{n_disp}}', str(n_disp))
              .replace('{{n_frames}}', str(n_frames))
              .replace('{{uniq_note}}', uniq_note)
+             .replace('{{steps_done}}', str(steps_done))
+             .replace('{{gates_pass}}', str(len(gates_pass)))
+             .replace('{{first_pass}}', str(first_pass))
+             .replace('{{window}}', window_txt)
+             .replace('{{type_top}}', type_top)
+             .replace('{{disp_sum}}', disp_sum)
              .replace('{{ch0}}', ch0)
              .replace('<h2>研发全流程治理有效性（实算）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实算）</h2>')
              .replace('<div class="guide" ', '<div class="guide" id="part1-top" ', 1))
