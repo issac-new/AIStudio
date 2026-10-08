@@ -99,3 +99,12 @@
   ——xiao/lin 在飞不扰）。另：lin 15:13:40 推了 origin/feat/T03（其 T03=DEV-CHALI
   判断），驱动真值锚 feat/DEV-CHALI 是否达成看其收口动作， mismatch 则驱动会记
   dev-branch-missing|DEV-CHALI（如实呈现，不代伪造）。
+
+## 2026-10-08 登记④：run12 前置建设（A 轨，run11 复盘粒度问题立项）
+
+- **mx-scenario-lib.sh 新增 wait_alive_truth_multi（已完成）**：并发多锚 wait-all
+  （锚过即记 ✓、空转催办齐发滞后锚负责人、谓词 eval 当前 shell 可引 branch_fresh）。
+  已 source 完毕改后登记（纪律 25 允许面）；run11 不受影响，run12 devimpl 等待段
+  改造用。串行 for 等待的病灶实录见本文件 15:3x 节与 run11 复盘。
+- **PAYCORE 三拆 + 渠道批依赖改挂契约件（预备，G6 后落 aipay-scenario.sh）**：
+  见 mux/run12-prep-paycore-split.md（任务书全文+锚定义；运行中禁改主脚本）。
