@@ -64,6 +64,14 @@ function parseRecord(taskId: string, body: Record<string, unknown>, actor?: stri
     rec.verdict = body.verdict as VerificationVerdict  // 上面已过 isVerificationVerdict
     if (typeof body.basis === 'string') rec.basis = body.basis
   }
+  // 缺陷二分法（六文调研轮 D，FDE 文章 Product Gap vs Implementation Gap）：
+  // 产品能力缺口→反馈产品研发；客户实施缺口→现场补齐。混谈会让 workaround 固化成负债。
+  if (body.gapClass !== undefined) {
+    if (body.gapClass !== 'product_gap' && body.gapClass !== 'implementation_gap') {
+      return { error: 'gapClass 须为 product_gap/implementation_gap' }
+    }
+    rec.gapClass = body.gapClass
+  }
   return rec
 }
 
@@ -102,6 +110,21 @@ router.get('/:taskId/verdict', async (ctx) => {
 router.get('/:taskId/chain', async (ctx) => {
   // 防篡改链校验（六文调研轮 C）：intact=false 即有改写/伪造/断链，firstBroken 指位。
   ctx.body = { ok: true, verification: verifyEvidenceChain(ctx.params.taskId) }
+})
+
+router.get('/:taskId/gaps', async (ctx) => {
+  // 缺陷二分法统计（六文调研轮 D）：product_gap 反馈产品研发，implementation_gap 现场补齐。
+  const records = listEvidence(ctx.params.taskId, undefined, 500)
+  const tagged = records.filter((r) => r.gapClass)
+  ctx.body = {
+    ok: true,
+    counts: {
+      product_gap: tagged.filter((r) => r.gapClass === 'product_gap').length,
+      implementation_gap: tagged.filter((r) => r.gapClass === 'implementation_gap').length,
+      untagged: records.length - tagged.length,
+    },
+    records: tagged.map((r) => ({ evidenceId: r.evidenceId, gapClass: r.gapClass, ref: r.ref, note: r.note, at: r.at })),
+  }
 })
 
 router.get('/:taskId', async (ctx) => {
