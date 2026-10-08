@@ -577,16 +577,16 @@ uat_evidence_body 1790930955`, root)
     expect(scen).toContain('materials/delegate-log.txt')
   })
 
-  it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 577）', () => {
+  it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 586——撞号清理 577→586 后引用同步）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    const patchPath = join(HARNESS, '..', 'overlay', 'patches', '577-agent-gateway-wedged-agent-sweep.patch')
+    const patchPath = join(HARNESS, '..', 'overlay', 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
     // ①patch 文件在位且含核心语义件
     const patch577 = read(patchPath)
     expect(patch577).toContain('_housekeeping_wedged_agent_sweep')
     expect(patch577).toContain('call_soon_threadsafe')
     expect(patch577).toContain('_snapshot_running_agents')
     // ②harness 部署清单挂载（否则快照树永不应用）
-    expect(lib).toContain('577-agent-gateway-wedged-agent-sweep.patch')
+    expect(lib).toContain('586-agent-gateway-wedged-agent-sweep.patch')
     // ③驱逐判定复用快路径原语（语义一致，不另立判据）
     expect(patch577).toContain('_hm_evict_idle_stale_agent')
   })
@@ -983,8 +983,8 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
-    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,900}?\n  \}/)
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 2400：QGate 证据接线入函数后体积增大，2026-10-09）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,2400}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
   })
