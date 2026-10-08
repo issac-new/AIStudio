@@ -223,6 +223,10 @@ export interface Evidence {
       逐测试点身份与状态。RTM 元门按 AC 绑定逐用例复核——无关成功门禁从此不能充当 AC 证据。
       现有产出面：command+rawOutput（TAP/JUnit 逐点重解析）、behavior cases（逐用例深比较）。 */
   caseOutcomes?: Array<{ id: string; status: 'pass' | 'fail' | 'skip' }>
+  /** 度量（v0.3.1，上游 visual diffSource 本地方言）：visual 门像素差的可核验来源——
+      exact-bytes（内核 SHA 相等）/ kernel-recompute（内核解码重算）/ self-reported（非 PNG
+      声明边界的自报，仅配合容差判定）。来源信号分级与报告呈现消费此字段。 */
+  metrics?: { diffSource: 'exact-bytes' | 'kernel-recompute' | 'self-reported'; diffPixels: number; totalPixels: number }
 }
 
 export interface GateRun {

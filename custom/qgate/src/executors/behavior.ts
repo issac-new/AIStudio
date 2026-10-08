@@ -16,6 +16,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { jsonPointerDiff, evaluateAssertion, getPath, type AssertionSpec } from '../core/diff.js'
+import { pixelDiff, isPng } from '../core/png.js'
 
 export interface BehaviorExecutorInput {
   runId: string
@@ -282,11 +283,45 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
     if (aStat.length === 0 || bStat.length === 0) return done('error', 'visual artifacts must be non-empty')
     const aSha = createHash('sha256').update(aStat).digest('hex')
     const bSha = createHash('sha256').update(bStat).digest('hex')
-    if (aSha === bSha) return done('pass', `visual exact match (sha256 ${aSha.slice(0, 12)}…, ${aStat.length}B)`)
-    // 字节不一致：有容差声明才可比像素，容差度量须由观察文件回报（度量本身也是被核验的声明）
+    if (aSha === bSha) {
+      ev.metrics = { diffSource: 'exact-bytes', diffPixels: 0, totalPixels: 0 }
+      return done('pass', `visual exact match (sha256 ${aSha.slice(0, 12)}…, ${aStat.length}B) — kernel byte-identical`)
+    }
+    // 字节不一致 + 容差声明：两侧均为 PNG 时内核解码重算像素差（上游 v1.29 W4 本地方言）——
+    // 容差判定不再依赖 runner 自报；自报仍在时交叉核验（不符即 error，声明即核验模式）。
+    // 任一侧非 PNG：维持自报协议（dataFile 必带）——声明边界，不猜格式。
     if (executor.maxDiffPixels !== undefined || executor.maxDiffRatio !== undefined) {
+      if (isPng(aStat) && isPng(bStat)) {
+        let diff: { pixels: number; totalPixels: number }
+        try {
+          diff = pixelDiff(bStat, aStat)
+        } catch (e) {
+          return done('error', `kernel PNG recompute failed: ${(e as Error).message} (fail-closed, not approximated)`)
+        }
+        const metricsFile = rel(executor.dataFile)
+        if (metricsFile && existsSync(metricsFile)) {
+          const m = readJson(metricsFile)
+          if ('error' in m) return done('error', `pixel metrics malformed: ${m.error}`)
+          const mv = m.value as Record<string, unknown>
+          const declared = mv.diff as Record<string, unknown> | undefined
+          const dPixels = declared && typeof declared.pixels === 'number' ? declared.pixels : undefined
+          const dTotal = declared && typeof declared.totalPixels === 'number' ? declared.totalPixels : undefined
+          if (dPixels === undefined || dTotal === undefined || dTotal <= 0) return done('error', 'pixel metrics must carry diff:{pixels,totalPixels>0}')
+          if (dPixels !== diff.pixels || dTotal !== diff.totalPixels) {
+            return done('error', `declared pixel metrics disagree with kernel recompute: declared ${dPixels}/${dTotal}px vs recomputed ${diff.pixels}/${diff.totalPixels}px — exit-side self-report is not evidence`)
+          }
+        }
+        ev.metrics = { diffSource: 'kernel-recompute', diffPixels: diff.pixels, totalPixels: diff.totalPixels }
+        if (executor.maxDiffPixels !== undefined && diff.pixels > executor.maxDiffPixels) {
+          return done('fail', `visual diff ${diff.pixels}px > maxDiffPixels ${executor.maxDiffPixels} (kernel-recompute)`)
+        }
+        if (executor.maxDiffRatio !== undefined && diff.pixels / diff.totalPixels > executor.maxDiffRatio) {
+          return done('fail', `visual diff ratio ${(diff.pixels / diff.totalPixels).toFixed(4)} > maxDiffRatio ${executor.maxDiffRatio} (kernel-recompute)`)
+        }
+        return done('pass', `visual within tolerance: ${diff.pixels}/${diff.totalPixels}px (sha differs, kernel-recompute pixel diff)`)
+      }
       const metricsFile = rel(executor.dataFile)
-      if (!metricsFile || !existsSync(metricsFile)) return done('error', 'tolerance declared but pixel metrics file missing (dataFile)')
+      if (!metricsFile || !existsSync(metricsFile)) return done('error', 'tolerance declared but pixel metrics file missing (dataFile) — or make both artifacts PNG for kernel recompute')
       const m = readJson(metricsFile)
       if ('error' in m) return done('error', `pixel metrics malformed: ${m.error}`)
       const mv = m.value as Record<string, unknown>
@@ -294,13 +329,14 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
       const pixels = diff && typeof diff.pixels === 'number' ? diff.pixels : undefined
       const totalPixels = diff && typeof diff.totalPixels === 'number' ? diff.totalPixels : undefined
       if (pixels === undefined || totalPixels === undefined || totalPixels <= 0) return done('error', 'pixel metrics must carry diff:{pixels,totalPixels>0}')
+      ev.metrics = { diffSource: 'self-reported', diffPixels: pixels, totalPixels }
       if (executor.maxDiffPixels !== undefined && pixels > executor.maxDiffPixels) {
         return done('fail', `visual diff ${pixels}px > maxDiffPixels ${executor.maxDiffPixels}`)
       }
       if (executor.maxDiffRatio !== undefined && pixels / totalPixels > executor.maxDiffRatio) {
         return done('fail', `visual diff ratio ${(pixels / totalPixels).toFixed(4)} > maxDiffRatio ${executor.maxDiffRatio}`)
       }
-      return done('pass', `visual within tolerance: ${pixels}/${totalPixels}px (sha differs, pixel-diff mode)`)
+      return done('pass', `visual within tolerance: ${pixels}/${totalPixels}px (sha differs, self-reported pixel-diff; non-PNG declared boundary)`)
     }
     return done('fail', `visual byte mismatch: actual ${aSha.slice(0, 12)}… vs baseline ${bSha.slice(0, 12)}… (no tolerance declared → exact-bytes mode)`)
   }

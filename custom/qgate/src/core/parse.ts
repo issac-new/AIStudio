@@ -465,6 +465,17 @@ export function parseEvidence(raw: unknown): import('./types.js').Evidence | nul
   const independence = enumOf(raw.independence, INDEPENDENCE)
   const summary = str(raw.summary)
   const artifacts = strList(raw.artifacts, 100)
+  // 度量透传（v0.3.1 visual diffSource）：畸形形状整条证据拒收（fail-closed，不静默丢字段）
+  let metrics: import('./types.js').Evidence['metrics']
+  if (raw.metrics !== undefined) {
+    const m = raw.metrics as { diffSource?: unknown; diffPixels?: unknown; totalPixels?: unknown }
+    if (!isRecord(raw.metrics)) return null
+    const ds = enumOf(m.diffSource, ['exact-bytes', 'kernel-recompute', 'self-reported'] as const)
+    const dp = num(m.diffPixels)
+    const tp = num(m.totalPixels)
+    if (!ds || dp === undefined || tp === undefined || dp < 0 || tp < 0) return null
+    metrics = { diffSource: ds, diffPixels: dp, totalPixels: tp }
+  }
   // 逐用例身份（v0.3.1 case binding）：白名单透传——畸形条目整字段拒收（fail-closed，不猜形状）
   let caseOutcomes: import('./types.js').Evidence['caseOutcomes']
   if (raw.caseOutcomes !== undefined) {
@@ -480,6 +491,7 @@ export function parseEvidence(raw: unknown): import('./types.js').Evidence | nul
   }
   return {
     id, runId, gateId, type, producer, result, execution, independence, summary,
+    metrics,
     provenance: {
       startedAt,
       endedAt: num(raw.provenance.endedAt),

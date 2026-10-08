@@ -272,23 +272,45 @@ export function runSemanticExecutor(executor: ExecutorSpec, input: SemanticExecu
         if (!reasoning!.byIri.has(side)) problems.push(`unknownConcept: ${side}`)
       }
     }
-    // 满足判定：观察三元组 (s,p,o) 满足期望 (S,P,O) 当 s=S 且 o=O 且
-    // p ∈ closure(P)（子属性）或 p = inverseOf(P)（逆，双向）或 P 传递且存在链。
-    const satisfies = (s: string, p: string, obj: string, S: string, P: string, O: string): boolean => {
-      if (s !== S || obj !== O) return false
-      if (reasoning!.propertyClosure(p).has(P)) return true
+    // 满足判定（v0.3.1 重构+收紧，上游 v1.30 F03 + v1.29 W6 本地方言根治）：
+    // 期望 (S,P,O) 被观察边集满足当且仅当——
+    //   ① 同向直边：存在观察边 (S,p,O) 且 p ∈ closure(P)（子属性闭包）；
+    //   ② 互逆反向（F03 根治）：存在观察边 (O,p,S) 且 p ∈ closure(inv(P))——逆属性必须
+    //      显式声明 inverseOf 才翻转论元方向；对称语义须显式声明 P.inverseOf=P。
+    //      旧实现接受同方向逆谓词 (S, inv(P), O)，语义不成立（逆翻转的是方向不是谓词位），已废除；
+    //   ③ 传递（W6 根治）：P 传递时，沿 closure(P) 谓词的观察边做真可达闭包（从 S 出边
+    //      BFS，S 须真实环回才算可达自身）——旧实现只找单中转且须存在横跨 S→O 的单条
+    //      观察三元组，多跳 A→B→C→D 漏报 missingRelation。
+    const edges = observedRel.map((r) => ({ s: String(r.subject), p: String(r.predicate), o: String(r.object) }))
+    const satisfiesExpected = (S: string, P: string, O: string): boolean => {
+      // 观察谓词 p ⊑ P（子属性闭包含期望谓词）：propertyClosure(p).has(P)
+      if (edges.some((e) => e.s === S && e.o === O && reasoning!.propertyClosure(e.p).has(P))) return true
       const inv = reasoning!.inverseOf(P)
-      if (inv && p === inv) return true
+      if (inv && edges.some((e) => e.s === O && e.o === S && reasoning!.propertyClosure(e.p).has(inv))) return true
       if (reasoning!.isTransitive(P)) {
-        // 传递链：存在中转 m 使 (s,p,m) 与 (m,p,o) 均被观察
-        return observedRel.some((mid) => String(mid.subject) === s && String(mid.predicate) === p && String(mid.object) !== obj
-          && observedRel.some((tail) => String(tail.subject) === String(mid.object) && String(tail.predicate) === p && String(tail.object) === obj))
+        const adjacency = new Map<string, string[]>()
+        for (const e of edges) {
+          if (!reasoning!.propertyClosure(e.p).has(P)) continue
+          const list = adjacency.get(e.s) ?? []
+          list.push(e.o)
+          adjacency.set(e.s, list)
+        }
+        const visited = new Set<string>()
+        const queue = [...(adjacency.get(S) ?? [])]
+        while (queue.length > 0) {
+          const cur = queue.shift()!
+          if (visited.has(cur)) continue
+          visited.add(cur)
+          if (cur === O) return true
+          queue.push(...(adjacency.get(cur) ?? []))
+        }
       }
       return false
     }
     for (const e of expected) {
-      const hit = observedRel.some((r) => satisfies(String(r.subject), String(r.predicate), String(r.object), e.subject, e.predicate, e.object))
-      if (!hit) problems.push(`missingRelation: ${e.subject} --${e.predicate}--> ${e.object}`)
+      if (!satisfiesExpected(e.subject, e.predicate, e.object)) {
+        problems.push(`missingRelation: ${e.subject} --${e.predicate}--> ${e.object}`)
+      }
     }
     const declaredPredicates = new Set<string>([
       ...reasoning!.catalog.properties.map((p) => p.predicate),
