@@ -7,6 +7,7 @@
 - **AC→用例绑定**——requirements AC `cases:[{gateId,caseIds}]` 绑定到绑定门当轮证据的逐用例身份（command rawOutput 逐点重解析 + behavior cases 深比较）；acCaseMissing/Failed/Skipped/Unbound 四形态，无关成功门禁不再能充当 AC 证据；`requireCaseBinding` 开关
 - **报告诚实呈现**——声明关联（逐 Claim 实况判定 + 未验证成因 no-gate/gate-not-run）+ advisory 可见面 + active waivers 行 + fix-first 纪律（放松验收不作为修复选项）
 - **预算执法**——`run --budget-ms N` 宿主预算下启动前比剩余，不足不启动落 error 证据（fail-closed 非 SKIP）
+- **延后七件清偿（同日第二轮）**——PNG 像素内核重算（visual 门三通道 diffSource：exact-bytes/kernel-recompute/self-reported，自报不符即 error）；OpenAPI 契约提取器（`qgate extract-openapi`，fail-closed 子集）；requireLive 来源约束（contract 三模式 liveModeBlock）；零扫描可见性（conventions/symbols/writing-style 零文件=error）；文风检查器 WS-1/2/3（`ops writing-style` 门，advisory 档由 policy.warn 承载）；OWL/SHACL 组合 oracle 守门（22 固定种子朴素独立 oracle 对照——逮住并根治传递性不随 subPropertyOf 继承的内核缺陷）；双真测 demo（resilience-process 真实 kill/重启计时 + architecture-dependency 状态机依赖图测量）
 
 ## 组成
 
