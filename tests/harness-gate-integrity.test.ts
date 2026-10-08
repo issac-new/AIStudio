@@ -749,13 +749,13 @@ describe('⑭ V8.2 四段式切换（生成器配套六件落位守门）', () =
   const PLAN = join(process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay'),
     'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
 
-  it('正本=V8.2 四段式（步条 `**步 N｜`+四段标记）', () => {
+  it('正本=V8.3 两段式（步条 `**步 N｜`+两段标记；历史层在工程档案，2026-10-08 终态剥离）', () => {
     const plan = read(PLAN)
     expect(plan).toContain('**步 1｜')
     expect(plan).toContain('**这步做什么**：')
     expect(plan).toContain('**交付物及质量判据**：')
-    expect(plan).toContain('**已知问题**：')
-    expect(plan).toContain('**改进项**：')
+    expect(plan).not.toContain('**改进项**：')  // 步条历史层已剥（'已知问题'字样仅存于 §5.4 报告③段定义，合法）
+    expect(read(PLAN.replace('2026-10-05-mux-v8-fullflow-plan.md', '2026-10-05-mux-history-and-engineering-archive.md'))).toContain('方案步条历史层')
   })
 
   it('生成器+审计器双格式解析同源（改任一端当场红）', () => {

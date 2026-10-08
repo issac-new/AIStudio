@@ -109,8 +109,8 @@ for blk in blocks:
     if n in plan_steps and title != plan_steps[n]:
         title_mismatch.append(n)
     if PLAN_V82:
-        # V8.2：步块必含四段锚（与 §2.4 步条目同构，正本 §5.4）
-        for sec in ('这步做什么', '交付物及质量判据', '已知问题', '改进项'):
+        # V8.3：①②与步条同构；③④自台账/档案实算（正本两段式，2026-10-08 终态剥离）
+        for sec in ('这步做什么', '交付物及质量判据', '已知问题', '处置与改进'):
             if sec not in blk:
                 gate_missing.append(f'{n}:{sec}')
     elif 'st-gate' not in blk or '把关' not in blk:

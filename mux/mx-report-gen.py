@@ -1121,15 +1121,15 @@ for n in range(1, 27):
 def _known_html(txt):
     """段三前半：方案层已知问题（历轮实锤），如实呈现并标注本轮语境。"""
     if not txt or txt == '无。':
-        return '<p class="st-known none">方案层已知问题：无。</p>'
-    return (f'<div class="st-known"><b>方案层已知问题（历轮实锤，本轮复现状态见叙事与记单）：</b>'
+        return '<p class="st-known none">方案层已知问题：正本不含历史层（历轮实锤台账见工程档案"方案步条历史层"章）；本步问题单如下。</p>'
+    return (f'<div class="st-known"><b>方案层已知问题（工程档案历史层在本轮的复现记录）：</b>'
             f'{md_bold(txt)}</div>')
 
 def _improve_html(txt):
     """段四：改进项（方案步条原文+落地状态注记——状态自记单/守门证据取，取不到如实标）。"""
     if not txt or txt == '无。':
-        return '<p class="st-improve none">改进项：无。</p>'
-    return (f'<div class="st-improve"><b>改进项（方案步条）：</b>{md_bold(txt)}'
+        return '<p class="st-improve none">处置与改进：无（本轮处置见上方问题单 DISP；历轮改进项台账见工程档案）。</p>'
+    return (f'<div class="st-improve"><b>处置与改进（档案台账+本轮 DISP）：</b>{md_bold(txt)}'
             f'<div class="st-improve-note">落地状态：随 run 轮记单与守门证据逐条可追溯；'
             f'本轮新暴露问题已按 §5.4 段三口径回写方案步条。</div></div>')
 
@@ -1152,7 +1152,7 @@ def _sec34_is_empty(n):
     return True
 
 def _sec34_empty(n):
-    return '<p class="st-issues none">已知问题：无（本步零问题单）；改进项：无——如实呈现，不凑段。</p>'
+    return '<p class="st-issues none">已知问题：无（本步零问题单）；处置与改进：无（历轮台账见工程档案）——如实呈现，不凑段。</p>'
 
 def _step_issues_html(n):
     """段三后半：该步 ISSUE/DISP 行（issues.log 按步过滤，步归属=STEPS_META 按轮注册的
@@ -1839,10 +1839,44 @@ _GOV_FINAL_OVERRIDES_BY_RUN = {
     '20260929-v4-run2': {
         'G5': ('err', '✗ 判回滚（R-A1，实物 FAIL）→ R-A3 闭环复审 PASS（r8）'),
     },
-    '20261001-v5-run6': {
+        '20261001-v5-run6': {
         'G5': ('ok', '✓ READY-GATE-PASS（t_3aaacf2d 七项全过）'),
     },
 }
+
+# 第 9 章「证据二/证据三」按轮注册表（2026-10-08 公文技法轮根治：run10 的「四起接线
+# 事故」「run11 目标」等当轮叙事曾写死在固定文案层，下一轮再生成报告会原样复述旧轮
+# 故事）。当轮内容入注册表；未登记轮给诚实兜底文案，指真实数据源，不编造。
+_GOV_EVIDENCE_BY_RUN = {
+    '20261007-v8-run10': (
+        '本轮四起接线事故的根因与修复已存入家族记忆库——下轮推演时 AI 员工会自动回忆这些教训，不会再踩同一个坑。这正是 SwarmStudio"治理靠机制不靠自觉"的实装：问题不只被修掉，还被记住。',
+        'run9 六闸全首过、交付率 4/4；run10 在四起接线事故下仍然六闸全过、26 步走完——治理系统在逆境中的鲁棒性得到验证。run11 目标：零事故+流式并行（净墙钟 ≤3h）。',
+    ),
+}
+
+
+def _gov_evidence():
+    """证据二（记忆沉淀）/证据三（度量对照）文案：按轮注册，未登记轮诚实兜底。"""
+    return _GOV_EVIDENCE_BY_RUN.get(RUN_ID, (
+        '本轮经验沉淀以 retro 步记忆探针与家族记忆库留痕为准（探针失败记单 retro-memory-probe）；当轮教训由复盘文档承载，本节不代写。',
+        '与上轮的对照以治理报告「基线对比」节实算为准（evidence/governance-report.md，上轮首过率行对本轮）；本节不手编战绩。',
+    ))
+
+
+# 第 9 章结论块实算（同块曾硬编码「16 个问题」——run10 的计数渲进任何一轮都是假值）。
+# 闭环判定三要素：问题单零待处置、六闸全落键通过；缺一即如实判未成立。
+_gates_all = all(_gate_passed(g) for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'])
+_n_gate_pass = sum(1 for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] if _gate_passed(g))
+_gov_ok = (n_issue_open == 0 and _gates_all)
+_gov_verdict_color = '#047857' if _gov_ok else '#b45309'
+_gov_verdict_title = '闭环成立' if _gov_ok else '闭环未成立（如实呈现）'
+_gov_verdict_body = (
+    f'{n_issue_keys} 个问题单全部有处置结论（零待处置），六道关卡全部过关。'
+    f'支撑这个结论的三件证据如下。'
+    if _gov_ok else
+    f'待处置问题单 {n_issue_open} 条，闸门落键 {_n_gate_pass}/6。'
+    f'缺口即下轮行动项，以复盘文档为准；三件证据节如实呈现当前状态。')
+_gov_ev2, _gov_ev3 = _gov_evidence()
 
 def gov_final_rows():
     rows = []
@@ -1875,9 +1909,9 @@ if _missing_ref:
 _reshoot = any('补拍' in cap for _, _, _, m in STEPS for _, cap, _ in m['imgs'])
 _img_honest_note = ' · 全部实拍（收官后补拍，非当轮实时帧——采集链未挂驱动，记单 r18-collection-missing）' if _reshoot else (' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）')
 
-ckpt_intro_note = ('九个人工卡点按流程顺序排列——每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。'
+ckpt_intro_note = (f'{len(CHECKPOINTS)} 个人工卡点按流程顺序排列，每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。'
                    if total_imgs > 0 else
-                   '九个人工卡点按流程顺序排列——谁在把关、把什么关、证据在哪。本轮未拍摄界面截图（推演主验证流程与协作，界面沿用既有版本）：卡点证据以过程日志与仓内锚点为准，配图位留空不冒充实拍。')
+                   f'{len(CHECKPOINTS)} 个人工卡点按流程顺序排列，谁在把关、把什么关、证据在哪。本轮未拍摄界面截图（推演主验证流程与协作，界面沿用既有版本）：卡点证据以过程日志与仓内锚点为准，配图位留空不冒充实拍。')
 
 
 # ── 闸门仪表盘 ──
@@ -1900,7 +1934,7 @@ def domains_table():
             + ''.join(rows) + '</table>')
 
 def checkpoints_html():
-    """九个人工卡点卡：配真实帧（按轮注册帧池映射）+证据行+闸门状态 chip。
+    """人工卡点卡（数量随 CHECKPOINTS 实算）：配真实帧（按轮注册帧池映射）+证据行+闸门状态 chip。
 
     2026-10-07 修复：原实现只认 ui-*.png 专用帧池（本轮不存在→整节空白），
     并行会话曾改为第二闸门仪表盘（与 gate_cards 重复+悬 div）——改为映射本轮
@@ -2129,7 +2163,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     {_known_html(plan_steps.get(n, {}).get('known', ''))}
     {_step_issues_html(n)}
   </div>
-  <div class="st-sec"><div class="st-sec-hd">④ 改进项</div>
+  <div class="st-sec"><div class="st-sec-hd">④ 处置与改进</div>
     {_improve_html(plan_steps.get(n, {}).get('improve', ''))}
   </div>''')}'''
         else:
@@ -2561,9 +2595,8 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <h2 class="section-hd" id="ch9-gov">第 9 章 · 闭环治理终态——治理系统工作了吗？</h2>
   <p class="stat-note">本章回答一个问题：SwarmStudio 的治理机制在真实研发中是否形成了闭环（问题 100% 处置、经验沉淀、度量可追踪）。</p>
 
-  <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid #047857">
-    <b style="color:#047857">结论：闭环成立</b>——16 个问题全部有处置结论（零待处置），六道关卡全部过关，
-    经验已存入家族记忆库（下轮同需求自动回忆），治理度量与上轮可对比。以下是支撑这个结论的三件证据。
+  <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {_gov_verdict_color}">
+    <b style="color:{_gov_verdict_color}">结论：{_gov_verdict_title}</b>——{_gov_verdict_body}
   </div>
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据一：问题全部处置（看板留痕）</h3>
@@ -2577,18 +2610,18 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，SwarmStudio 治理中心的台账区可随时回查。</p>
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据二：经验沉淀（记忆库）</h3>
-  <p style="font-size:12px;color:var(--text)">本轮四起接线事故的根因与修复已存入家族记忆库——下轮推演时 AI 员工会自动回忆这些教训，不会再踩同一个坑。这正是 SwarmStudio"治理靠机制不靠自觉"的实装：问题不只被修掉，还被记住。</p>
+  <p style="font-size:12px;color:var(--text)">{_gov_ev2}</p>
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据三：度量可追踪（对照上轮）</h3>
-  <p style="font-size:12px;color:var(--text)">run9 六闸全首过、交付率 4/4；run10 在四起接线事故下仍然六闸全过、26 步走完——治理系统在逆境中的鲁棒性得到验证。run11 目标：零事故+流式并行（净墙钟 ≤3h）。</p>
+  <p style="font-size:12px;color:var(--text)">{_gov_ev3}</p>
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物真容自中央仓实读渲染嵌入（见各步"📦 交付物真容与模版核对"折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
   {art_tbl}
   <p class="stat-note">{art_note_g5}</p>
 
-  <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）<br>
-全部证据图=Swarm Studio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note}<br>点击截图可放大 · 报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本，交付物自中央仓实读，问题单与计数自台账实算</div>
+  <div class="footer">报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本（单一事实源），交付物自中央仓实读，问题单与计数自台账实算<br>
+全部证据图=Swarm Studio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
 </main>
 </div>
 </body></html>'''
