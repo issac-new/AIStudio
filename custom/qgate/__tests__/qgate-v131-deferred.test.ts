@@ -6,7 +6,7 @@
 //  ⑤文风检查器——WS-1/2/3 正反例/代码块豁免/表格单元格/零文件
 //  ⑦两 demo——进程故障三场景真实计时/依赖图三场景真实扫描+注入清理
 // （⑥组合 oracle 见 qgate-v131-combinatorial.test.ts）
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -22,6 +22,7 @@ import { runContractExecutor } from '../src/executors/contract.js'
 import { runOpsExecutor } from '../src/executors/ops.js'
 import { runBehaviorExecutor } from '../src/executors/behavior.js'
 import type { ExecutorSpec } from '../src/core/types.js'
+import { ensureDist } from './ensure-dist'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const qgateRoot = resolve(here, '..')
@@ -143,6 +144,8 @@ describe('①PNG 内核解码（结构防线 fail-closed）', () => {
 })
 
 describe('②OpenAPI 提取器（fail-closed 子集）', () => {
+  beforeAll(async () => { await ensureDist() })
+
   const SPEC = {
     openapi: '3.0.3',
     paths: {
