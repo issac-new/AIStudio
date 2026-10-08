@@ -23,6 +23,9 @@ function kanbanDiagnosticsProvider(): (() => Promise<Array<Record<string, unknow
   })
 }
 
+// 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
+export { startInspectorIfEnabled } from './inspector'
+
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
   const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), ...deps })
