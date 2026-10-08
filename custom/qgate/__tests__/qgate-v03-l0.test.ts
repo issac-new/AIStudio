@@ -1,6 +1,6 @@
 // v0.3 L0 门族守门：traceability 元门 / task-intent 登记与漂移对账 / register 登记簿核验 / CLI intent。
 // 负例先行：链接门未 PASS、登记被篡改、越界变更、裸空登记、逾期决策——都不得 PASS。
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -17,10 +17,11 @@ import { parseGateSpec } from '../src/core/parse.js'
 import { readFileSync as readYaml } from 'node:fs'
 import { parse as parseYaml } from 'yaml'
 import type { ExecutorSpec, GateSpec } from '../src/core/types.js'
+import { distCli, ensureDist } from './ensure-dist'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const distCli = join(here, '..', 'dist', 'cli.js')
 const packsRoot = join(here, '..', 'gate-packs')
+beforeAll(async () => { await ensureDist() })
 
 function tmpProject(): { dir: string; qgateDir: string } {
   const dir = mkdtempSync(join(tmpdir(), 'qgate-v03l0-'))

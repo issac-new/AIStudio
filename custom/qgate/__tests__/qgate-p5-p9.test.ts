@@ -1,6 +1,6 @@
 // P5-P9 单测：豁免（WAIVED）/ Ontology Provider / 语义门 v0 / files executor /
 // release-report / MCP server。全部真执行（tmp 目录夹具 + 子进程），无 mock 内核。
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -15,9 +15,10 @@ import { runFilesExecutor } from '../src/executors/files.js'
 import { buildReleaseReport, renderReleaseReportMd } from '../src/core/report.js'
 import { loadProject } from '../src/core/loader.js'
 import type { ExecutorSpec, GateSpec } from '../src/core/types.js'
+import { distCli, ensureDist } from './ensure-dist'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const distCli = join(here, '..', 'dist', 'cli.js')
+beforeAll(async () => { await ensureDist() })
 
 const gateSpec = (over: Partial<GateSpec['spec']> = {}): GateSpec => ({
   apiVersion: 'qgate/v1alpha1',
