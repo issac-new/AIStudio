@@ -32,7 +32,17 @@ CH0_CSS = '''<style>
 .guide table.idx{font-size:12px}
 </style>'''
 
-GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:960px;margin:0 auto;padding:36px 26px;color:#222;background:#fbfbfa;line-height:1.75}
+GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:#fbfbfa;line-height:1.75}
+.guide .card{max-width:1200px;margin:0 auto}
+.guide-layout{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto}
+.gside{position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff;border-right:1px solid #e2e8f0;padding:20px 12px;box-sizing:border-box}
+.gside .gnav-hd{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.08em;margin:2px 0 10px}
+.gside a{display:block;padding:5px 10px;margin:1px 0;border-radius:8px;font-size:12.5px;color:#475569;text-decoration:none;line-height:1.5}
+.gside a:hover{background:#dbeafe;color:#1d4ed8}
+.gside .gpart{margin:12px 0 4px;font-size:11px;font-weight:700;color:#0a7d43}
+@media(max-width:980px){.guide-layout{grid-template-columns:1fr}.gside{display:none}}
+.guide h1{max-width:1200px;margin:0 auto 14px}
+.guide table{max-width:1200px;margin:0 auto 16px}
 .guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid #0a7d43;padding-bottom:12px;margin-bottom:6px}
 .guide h2{font-size:19px;margin-top:40px;color:#0a7d43;border-left:5px solid #0a7d43;padding-left:10px}
 .guide h3{font-size:16px;margin:22px 0 8px}
@@ -430,7 +440,9 @@ def main():
              .replace('{{n_disp}}', str(n_disp))
              .replace('{{n_frames}}', str(n_frames))
              .replace('{{uniq_note}}', uniq_note)
-             .replace('{{ch0}}', ch0))
+             .replace('{{ch0}}', ch0)
+             .replace('<h2>研发全流程治理有效性（实算）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实算）</h2>')
+             .replace('<div class="guide" ', '<div class="guide" id="part1-top" ', 1))
 
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -439,8 +451,23 @@ def main():
 {GUIDE_CSS}
 {CH0_CSS}
 </head><body>
+<div class="guide-layout">
+<aside class="gside">
+  <div class="gnav-hd">最终报告导航</div>
+  <div class="gpart">PART 1</div>
+  <a href="#part1-top">一页读懂（说人话版）</a>
+  <a href="#part1-metrics">治理有效性实算</a>
+  <div class="gpart">PART 2</div>
+  <a href="#part2">26 步明细与全部证据</a>
+  <a href="#ch0-collab">第 0 章 · 协作总述</a>
+  <a href="#step1">旅程层 26 步</a>
+  <a href="#ch8-issues">问题单终态</a>
+  <a href="#artifact-panorama">交付物全景矩阵</a>
+</aside>
 {part1}
-<div style="margin:56px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
+</div>
+</div>
+<div id="part2" style="margin:56px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
 <h1 style="font-size:20px;margin:0">PART 2 · 26 步明细与全部证据（机器逐步报告全文）</h1>
 <p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成于本处置轮（三类渲染缺陷根治后），此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物真容核对本章自明。</p>
 </div>

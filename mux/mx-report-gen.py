@@ -2231,7 +2231,7 @@ html = f'''<!DOCTYPE html>
 html{{scroll-behavior:smooth}}
 body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;letter-spacing:-.01em}}
 
-.layout{{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:1400px;margin:0 auto;min-height:100vh}}
+.layout{{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto;min-height:100vh}}
 .sidebar{{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--card);border-right:1px solid var(--border);padding:20px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}}
 .main{{padding:0 32px 60px;min-width:0}}
 
@@ -2308,7 +2308,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 32px 22px;box-shadow:var(--shadow);max-width:1100px;box-sizing:border-box}}
+.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 32px 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
 .ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
 .ck-map-sub{{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}}
 .ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px}}
