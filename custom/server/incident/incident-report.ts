@@ -281,11 +281,12 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
     elements.push(el('effective_tool_use', 'capability', 'absent', '实际工具调用未采集', [], '无轨迹证据'))
   }
 
-  const osTools = bundle.trace ? bundle.trace.toolCalls.filter((t) => /^(terminal_exec|code_exec|write_file)/.test(t.name)) : []
-  if (osTools.length > 0) {
+  const traceNonNull = bundle.trace
+  const osTools = traceNonNull ? traceNonNull.toolCalls.filter((t) => /^(terminal_exec|code_exec|write_file)/.test(t.name)) : []
+  if (osTools.length > 0 && traceNonNull) {
     elements.push(el('os_interactions', 'capability', 'collected',
       `底层系统操作 ${osTools.length} 次（terminal/code_exec/write_file 族），失败 ${osTools.filter((t) => t.status === 'error').length} 次`,
-      [`${bundle.trace.file}#tool_span`, `${dbLabel}#workspace_run_changes`],
+      [`${traceNonNull.file}#tool_span`, `${dbLabel}#workspace_run_changes`],
       'workspace 文件变更逐 run 落档（workspace_run_changes）；shell 命令全文在消息表 tool 行',
       { count: osTools.length, errors: osTools.filter((t) => t.status === 'error').length }))
   } else {

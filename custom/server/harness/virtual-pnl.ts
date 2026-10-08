@@ -191,7 +191,7 @@ export async function buildVirtualPnl(opts?: {
         }
       } catch { /* 日序列失败：异常面缺席 */ }
     } finally {
-      try { db.close() } catch { /* 已关 */ }
+      try { (db as { close(): void } | undefined)?.close() } catch { /* 已关 */ }
     }
   }
 

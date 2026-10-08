@@ -8,6 +8,7 @@ import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
 import DecisionRulesSection from '@/custom/governance/components/DecisionRulesSection.vue'
 import AgentIdentitySection from '@/custom/governance/components/AgentIdentitySection.vue'
+import AutonomyLadderSection from '@/custom/governance/components/AutonomyLadderSection.vue'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
 const tabText = useTasksTabsText()
@@ -18,7 +19,7 @@ const tabText = useTasksTabsText()
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovRegistry }}</h2>
-        <p class="gov-view__sub">能力台账 · 状态本体 · 规则闸 · 运行态</p>
+        <p class="gov-view__sub">能力台账 · 状态本体 · 规则闸 · 运行态 · 自治阶梯</p>
       </div>
     </header>
     <div class="gov-view__body">
@@ -27,6 +28,7 @@ const tabText = useTasksTabsText()
       <DecisionRulesSection />
       <RuntimeSection />
       <AgentIdentitySection />
+      <AutonomyLadderSection />
     </div>
   </div>
 </template>
