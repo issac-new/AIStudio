@@ -137,6 +137,8 @@ export interface RunAggregates {
   statisticallyInsufficient: boolean
   /** 本次运行 S1 判定端是否在线（离线=纯 S0 + unknown，fail-open）。 */
   judgeOnline: boolean
+  /** 校准度（六文调研轮 G）：消费判词 p 留痕的信心 vs 命中分析；无 p 判词时 samples=0 如实缺席。 */
+  calibration?: import('./calibration').CalibrationSummary
 }
 
 export interface EvalRunTarget {

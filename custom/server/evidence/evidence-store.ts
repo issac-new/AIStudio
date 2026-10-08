@@ -319,7 +319,39 @@ export function appendEvidence(rec: EvidenceRecord): AppendEvidenceResult {
     console.warn(`[evidence-store] 台账写入失败：${err instanceof Error ? err.message : String(err)}`)
     return { added: false, total: before, evicted: 0, code: 'write_failed' }
   }
+  emitEvidenceGovEvent(chainedRec)
   return { added: true, total: file.records.length, evicted }
+}
+
+/** 治理事件总线桥（六文调研轮 F）：验证裁决 fail → quality 域 high 事件（真实"质量 P0"信号面）。
+ *  动态 import 单例（vitest ESM 下 require 加载含 import 语句的模块会静默失败）+
+ *  fire-and-forget 异步——事件最终落盘，不阻断台账主链路。 */
+function emitEvidenceGovEvent(rec: EvidenceRecord): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      if (rec.kind === 'verification') {
+        appendGovEvent({
+          domain: 'quality',
+          severity: rec.verdict === 'fail' ? 'high' : 'info',
+          type: `evidence.verdict_${rec.verdict}`,
+          source: 'evidence/evidence-store',
+          summary: `任务 ${rec.taskId} 验证裁决 ${rec.verdict}${rec.basis ? `（依据 ${rec.basis.slice(0, 80)}）` : ''}`,
+          refs: { taskId: rec.taskId, evidenceId: rec.evidenceId },
+          payload: { verdict: rec.verdict },
+        })
+      } else if (rec.gapClass) {
+        appendGovEvent({
+          domain: 'quality',
+          severity: 'info',
+          type: `evidence.gap_${rec.gapClass}`,
+          source: 'evidence/evidence-store',
+          summary: `任务 ${rec.taskId} 新增${rec.gapClass === 'product_gap' ? '产品能力缺口' : '实施缺口'}标记`,
+          refs: { taskId: rec.taskId, evidenceId: rec.evidenceId },
+          payload: { gapClass: rec.gapClass },
+        })
+      }
+    })
+    .catch(() => { /* fail-soft：总线故障不影响台账主链路 */ })
 }
 
 /** 最新验证裁决（verdict 序列取最后一条；无则 null）。缺裁决的残条不当裁决（防遮蔽真实裁决）。 */
