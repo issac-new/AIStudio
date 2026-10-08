@@ -21,6 +21,7 @@ import { runOpsExecutor } from '../executors/ops.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 import { cacheKeyFor, cacheGet, cachePut, markCached } from './cache.js'
 import { inputGlobsOf, snapshotForGlobs, snapshotsEqual } from './snapshot.js'
+import { classifyGateSource } from './sources.js'
 
 export interface RunInput {
   spec: GateSpec
@@ -190,7 +191,53 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     failureSummary: decision.failureSummary,
     inputSnapshot,
     inputsStable,
+    sourceSignal: classifyGateSource({ spec, evidence, cached, verdict }),
   }
   saveRun(paths, run, evidence)
   return { run, evidence, decision }
+}
+
+/** 门声明预算（毫秒）：command 类按 timeoutMs（默认 120s）；内核侧 executor 无子进程，
+    每个记固定开销。预算执法（上游 v1.30 F01 本地方言）只在宿主给出预算时生效。 */
+export function declaredBudgetMs(spec: GateSpec): number {
+  let total = 0
+  for (const executor of spec.spec.executors) {
+    if (executor.type === 'command') total += executor.timeoutMs ?? 120_000
+    else total += 5_000
+  }
+  return total
+}
+
+/** 预算耗尽记录（fail-closed）：不启动门，落 error 证据 → INCONCLUSIVE（不是 SKIP——
+    预算未知/不足不接受静默放行）。 */
+export function recordBudgetExhausted(input: RunInput, declaredMs: number, remainingMs: number): RunResult {
+  const runId = `run-${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}-${randomUUID().slice(0, 8)}`
+  const startedAt = Date.now()
+  const evidence: Evidence = {
+    id: `ev-${randomUUID().slice(0, 12)}-budget`,
+    runId,
+    gateId: input.spec.metadata.id,
+    type: input.spec.spec.evidence.required[0] ?? 'budget',
+    producer: 'qgate-kernel',
+    result: 'error',
+    execution: 'wired',
+    summary: `budget-exhausted: declared ${declaredMs}ms > remaining ${remainingMs}ms — gate not started (fail-closed, not skipped)`,
+    provenance: { startedAt, endedAt: Date.now(), cwd: input.workspace },
+  }
+  const decision = decide(input.spec, [evidence], input.effectivePolicy)
+  const run: GateRun = {
+    runId,
+    gateId: input.spec.metadata.id,
+    gateVersion: input.spec.metadata.version,
+    trigger: input.trigger,
+    workspace: input.workspace,
+    startedAt,
+    endedAt: Date.now(),
+    verdict: decision.verdict,
+    conditions: decision.conditions,
+    evidenceIds: [evidence.id],
+    failureSummary: decision.failureSummary,
+  }
+  saveRun(storePaths(input.qgateDir), run, [evidence])
+  return { run, evidence: [evidence], decision }
 }

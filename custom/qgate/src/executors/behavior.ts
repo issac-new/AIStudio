@@ -108,15 +108,21 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
       const baselineCases = parseCases(b.value)
       if ('error' in baselineCases) return done('error', `replay baseline invalid: ${baselineCases.error}`)
       const problems: string[] = []
+      const outcomes: Array<{ id: string; status: 'pass' | 'fail' | 'skip' }> = []
       for (const bc of baselineCases) {
         const cur = byId.get(bc.id)
-        if (!cur) { problems.push(`${bc.id}: missing in current observation`); continue }
+        if (!cur) { problems.push(`${bc.id}: missing in current observation`); outcomes.push({ id: bc.id, status: 'fail' }); continue }
         const diffs = jsonPointerDiff(bc.actual, cur.actual)
-        if (diffs.length > 0) problems.push(`${bc.id}: replay-drift ${summarizeDiffs(diffs)}`)
+        if (diffs.length > 0) { problems.push(`${bc.id}: replay-drift ${summarizeDiffs(diffs)}`); outcomes.push({ id: bc.id, status: 'fail' }) }
+        else outcomes.push({ id: bc.id, status: 'pass' })
       }
       const extra = cases.filter((c) => !baselineCases.some((b2) => b2.id === c.id)).map((c) => c.id)
       if (extra.length > 0) problems.push(`extra cases vs baseline: ${extra.join(', ')}`)
-      if (problems.length > 0) return done('fail', `replay drift (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
+      if (problems.length > 0) {
+        ev.caseOutcomes = outcomes
+        return done('fail', `replay drift (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
+      }
+      ev.caseOutcomes = outcomes
       return done('pass', `replay matches baseline: ${baselineCases.length} cases identical to ${rb.file}`)
     }
 
@@ -154,7 +160,14 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
         if (exp !== undefined && jsonPointerDiff(exp, base.actual).length > 0) violations.push(`p2p-baseline-failed: ${id} (regression was already there)`)
         if (exp !== undefined && jsonPointerDiff(exp, cur.actual).length > 0) violations.push(`p2p-current-failed: ${id} (${summarizeDiffs(jsonPointerDiff(exp, cur.actual))})`)
       }
-      if (violations.length > 0) return done('fail', `f2p/p2p violations (${violations.length}): ${violations.slice(0, 6).join(' | ')}`, violations)
+      if (violations.length > 0) {
+        ev.caseOutcomes = [...f2p, ...p2p].map((id) => ({
+          id,
+          status: violations.some((v) => v.includes(`: ${id}`) || v.startsWith(`${id}:`)) ? 'fail' as const : 'pass' as const,
+        }))
+        return done('fail', `f2p/p2p violations (${violations.length}): ${violations.slice(0, 6).join(' | ')}`, violations)
+      }
+      ev.caseOutcomes = [...f2p, ...p2p].map((id) => ({ id, status: 'pass' as const }))
       return done('pass', `f2p/p2p clean: ${f2p.length} f2p + ${p2p.length} p2p honored (baseline ${executor.baselineFile})`, [...f2p, ...p2p])
     }
 
@@ -162,15 +175,18 @@ export function runBehaviorExecutor(executor: ExecutorSpec, input: BehaviorExecu
     const declared = executor.cases ?? []
     if (declared.length === 0) return done('error', 'behavior cases requires cases[] (or f2p/p2p + baselineFile)')
     const problems: string[] = []
+    const outcomes: Array<{ id: string; status: 'pass' | 'fail' | 'skip' }> = []
     for (const c of declared) {
       const actual = byId.get(c.id)
-      if (!actual) { problems.push(`${c.id}: missing observation`); continue }
-      if (c.expected === undefined) continue
+      if (!actual) { problems.push(`${c.id}: missing observation`); outcomes.push({ id: c.id, status: 'fail' }); continue }
+      if (c.expected === undefined) { outcomes.push({ id: c.id, status: 'pass' }); continue }
       const diffs = jsonPointerDiff(c.expected, actual.actual)
-      if (diffs.length > 0) problems.push(`${c.id}: ${summarizeDiffs(diffs)}`)
+      if (diffs.length > 0) { problems.push(`${c.id}: ${summarizeDiffs(diffs)}`); outcomes.push({ id: c.id, status: 'fail' }) }
+      else outcomes.push({ id: c.id, status: 'pass' })
     }
     const unexpectedObs = cases.filter((c) => !declared.some((d) => d.id === c.id)).map((c) => c.id)
     if (unexpectedObs.length > 0) problems.push(`unexpected observed cases: ${unexpectedObs.join(', ')}`)
+    ev.caseOutcomes = outcomes
     if (problems.length > 0) return done('fail', `case drift (${problems.length}): ${problems.slice(0, 6).join(' | ')}`, problems)
     return done('pass', `${declared.length} cases match expected`, declared.map((c) => c.id))
   }

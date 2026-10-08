@@ -80,6 +80,10 @@ export interface ExecutorSpec {
     | 'conventions' | 'consistency' | 'configuration' | 'documentation' | 'symbols'
   /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
   requirementsFile?: string
+  /** traceability（v0.3.1，上游 v1.31 requireCaseBinding 本地方言）：开启后未声明
+      cases 绑定的 AC FAIL（acCaseUnbound）——AC 必须绑定到真实执行且通过的用例身份，
+      无关成功门禁（如只 exit 0 的 command）从此不能充当 AC 证据。默认 false（旧语义零变化）。 */
+  requireCaseBinding?: boolean
   /** register：登记簿种类（debt/assumptions/decisions，可多类合一证据）与登记文件路径（单类时可覆盖）。 */
   register?: Array<'debt' | 'assumptions' | 'decisions'>
   registerFile?: string
@@ -215,6 +219,10 @@ export interface Evidence {
     affectedPaths?: string[]
   }
   artifacts?: string[]
+  /** 逐用例结果（v0.3.1，上游 v1.31 case binding 本地方言）：内核计算/重解析出的
+      逐测试点身份与状态。RTM 元门按 AC 绑定逐用例复核——无关成功门禁从此不能充当 AC 证据。
+      现有产出面：command+rawOutput（TAP/JUnit 逐点重解析）、behavior cases（逐用例深比较）。 */
+  caseOutcomes?: Array<{ id: string; status: 'pass' | 'fail' | 'skip' }>
 }
 
 export interface GateRun {
@@ -237,6 +245,9 @@ export interface GateRun {
   inputSnapshot?: Record<string, string>
   /** 执行前后两次快照一致（门自身没有改写自己的输入）。 */
   inputsStable?: boolean
+  /** 来源信号（v0.3.1，上游 v1.26/v1.31 本地方言）：PASS/CONDITIONAL/WAIVED 的证据
+      来源分级（核验/声明/降级/无信号）；FAIL/INCONCLUSIVE/NOT_APPLICABLE 不分类（—）。 */
+  sourceSignal?: { labels: Array<'verified' | 'declared' | 'degraded'>; bucket: 'verified' | 'declared' | 'degraded' | 'none' }
 }
 
 export interface Risk {

@@ -91,6 +91,15 @@ if (cwd) {
       writeSessionBaseline(qgateDir, sessionId, status.gates, status.profile)
       const gates = (status.gates ?? []).map((g) => `${g.gateId}[${g.verdict}]`).join(', ')
       line += ` Profile: ${status.profile ?? '(all)'}${status.tier ? ` (tier=${status.tier})` : ''}. Gates: ${gates || '(none configured)'}.`
+      // 来源分布行（上游 v1.26 诚实读法）：混合来源 ≠ 全部已核验
+      const dist = status.sourceDistribution
+      if (dist) {
+        line += ` Source distribution: 核验 ${dist.verified ?? 0} · 声明 ${dist.declared ?? 0} · 降级 ${dist.degraded ?? 0} · 无信号 ${dist.none ?? 0}（非 PASS 门禁不计入）.`
+      }
+      const advisory = status.advisory ?? []
+      if (advisory.length > 0) {
+        line += ` Advisory (non-blocking, must not be silenced): ${advisory.map((a) => `${a.gateId}: ${(a.conditions ?? []).join('; ')}`).join(' | ')}.`
+      }
       line += ' Before finishing, run the gates (e.g. `qgate run --all` via the /qgate-run command) and fix failures.'
     } catch { /* 状态读失败 → 只发基线声明 */ }
   }
