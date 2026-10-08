@@ -1047,6 +1047,16 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
     echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
     note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
+    # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
+    # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
+    # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
+    if ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 \
+       && cp "$DIRECTOR_CLONE/.qgate/release-report.md" "$EVID_DIR/qgate-release-report.txt" 2>/dev/null; then
+      note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行）"
+    else
+      echo "ISSUE|qgate-evidence|step20|QGate release-report 落盘失败（CLI 缺失或骨架未部署）——门禁证据缺席记单" >> "$EVID_DIR/issues.log"
+      note "[G5] QGate release-report 落盘失败（记问题单）"
+    fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
     dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
     return 0   # dlv 未启用时末行 && 列表返回 1，函数调用是裸命令会被 set -e 击杀（包装引入的差异）
@@ -1317,6 +1327,17 @@ fi
 # 门禁留痕完整性 + 问题单格式 + 凭证抽检 → 合规意见书入仓（audit 账号签名线）。
 # 导演侧机械化审计为主；@audit-agent 独立复核结论行（额度恢复后补充，不阻断导演侧意见书）。
 if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
+  # §4.4-9 治理证据①（六文调研轮 A+B）：事故报告汇编导出（sessionId=本轮 RUN_ID，
+  # 产品面 /api/incident/sessions/:id/report.md，17 要素+自治度对账 B 面）。
+  # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口记单。
+  GOV_TOK=$(studio_login)
+  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md" "$GOV_TOK"); then
+    printf '%s\n' "$GOV_IR" > "$EVID_DIR/incident-report.md"
+    note "[audit] 事故报告汇编已导出（evidence/incident-report.md，17 要素）"
+  else
+    echo "ISSUE|gov-incident-export|step23|事故报告汇编导出失败（端点 404/未部署或会话无数据）" >> "$EVID_DIR/issues.log"
+    note "[audit] 事故报告汇编导出失败（记问题单）"
+  fi
   AUD=$(audit_check || true)
   if [[ -n "$AUD" ]]; then
     echo "ISSUE|audit-finding|director|审计发现：${AUD}" >> "$EVID_DIR/issues.log"
@@ -1386,6 +1407,22 @@ fi
 # 三段式复盘（现象/规律/下轮验证）+ 行动项四元组 + 治理报告与 metrics 回写 + ITIL 资产回写 + 记忆沉淀探针。
 if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   gate_blocked uat_done retro
+  # §4.4-9 治理证据②③（六文调研轮 E+B）：AI 虚拟损益表 + 自治度对账导出
+  # （/api/hermes/virtual-pl?days=30 与 /api/incident/sessions/:id/autonomy 原文；
+  #  收益面无数据源时产品侧如实声明不编造——透传即合规）
+  GOV_TOK=$(studio_login)
+  if GOV_VP=$(studio GET "/api/hermes/virtual-pl?days=30" "$GOV_TOK"); then
+    printf '%s\n' "$GOV_VP" > "$EVID_DIR/virtual-pl.txt"
+    note "[G6] AI 虚拟损益表已导出（evidence/virtual-pl.txt）"
+  else
+    echo "ISSUE|gov-virtualpl-export|step24|虚拟损益表导出失败（端点未部署）" >> "$EVID_DIR/issues.log"
+  fi
+  if GOV_AR=$(studio GET "/api/incident/sessions/${RUN_ID}/autonomy" "$GOV_TOK"); then
+    printf '%s\n' "$GOV_AR" > "$EVID_DIR/autonomy-reconcile.txt"
+    note "[G6] 自治度对账已导出（evidence/autonomy-reconcile.txt，理论 vs 实际）"
+  else
+    echo "ISSUE|gov-autonomy-export|step24|自治度对账导出失败（端点未部署或会话无数据）" >> "$EVID_DIR/issues.log"
+  fi
   GR=$(gov_report)
   note "[G6] 治理报告已生成：$GR"
   read -r ISS_N DISP_N <<< "$(issue_disp_stat)"
