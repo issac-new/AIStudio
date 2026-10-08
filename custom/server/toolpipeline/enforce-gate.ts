@@ -121,7 +121,7 @@ export function evaluateEnforcement(
   const modeRaw = env.globalMode !== undefined
     ? env.globalMode
     : (process.env.HERMES_TOOL_ENFORCE_MODE as PermissionMode | undefined ?? null)
-  const ladder = (env.ladderOf ?? ladderForProfile)(profileId)
+  const ladder = (env.ladderOf ?? ((p?: string) => ladderForProfile(p ?? '')))(profileId)
   if (!ladder && !modeRaw) return { enforcing: false, rule: 'no-config' }
 
   // 策略链 1：自治阶梯（配置了阶梯则阶梯优先——更具体的 per-profile 约束胜出全局模式）
