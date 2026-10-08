@@ -151,7 +151,7 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
         const len = Math.min(buf.length, st.size)
         require('node:fs').readSync(fd, buf, 0, len, Math.max(0, st.size - len))
         require('node:fs').closeSync(fd)
-        const tail = buf.toString('utf-8').split('\n').filter(Boolean).pop() ?? ''
+        const tail = buf.toString('utf-8', 0, len).replace(/\0+$/, '').split('\n').filter(Boolean).pop() ?? ''
         face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs })
       } catch {
         // 单 profile 无日志/读失败：跳过（fail-soft 到 profile 粒度）
