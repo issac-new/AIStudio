@@ -579,6 +579,7 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 7. **产品面承载率**：验收线 ≥4/5（§5.5）；不达标不阻断收官，逐面记单入下轮前置（审计查 11 在位）。
 8. **Eval Studio 底座**：/app/eval 默认关、`test:eval` 门禁全绿——图执行评测以它为底座（校准度 ECE/Brier 断言挂其判词 p）。
 9. **治理证据接线（六文调研能力入推演证据链，§2.5 治理证据面/§2.6-10）**：步 23 导出事故报告汇编落 `evidence/incident-report.md`；步 24 导出自治度对账+虚拟损益表落 `evidence/autonomy-reconcile.txt`、`evidence/virtual-pl.txt`——生成器透传块已备（在位才渲染，未接线轮零影响）；H3 引擎拦截轮以自治度对账偏差黄条为需求锚点决定是否开轮。
+10. **报告链能力产品化收口（§5.4 形式契约）**：`custom/server/report/` 三件（验收断言/证据透传/PART1 骨架）已移植落地带测试；REST 接线（`/api/hermes/report/*` 出骨架与验收结论）待路由通道空闲（H3 引擎轮占用 routes patch 序列）即挂；挂通后 mx-report-gen/audit 对应段退役，语义正本单源在产品。
 
 ## 第五部分 验收标准（唯一事实源）
 
@@ -630,7 +631,7 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 
 ### 5.4 报告规范（形式与每步结构）
 
-**形式**：单文件 HTML 双正本制——`final-report.html`=唯一人读正本（导读层+机器报告全文嵌入）；`simulation-report.html`=机器档案（生成器直出，重生成后重嵌入正本）；均落 runs/＜RUN_ID＞/evidence/。生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）；合并=final-report-merge.py。元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含；页内锚 #step1-26 与 #cp-g1..g6 互链。
+**形式**：单文件 HTML 双正本制——`final-report.html`=唯一人读正本（导读层+机器报告全文嵌入）；`simulation-report.html`=机器档案（生成器直出，重生成后重嵌入正本）；均落 runs/＜RUN_ID＞/evidence/。生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）；合并=final-report-merge.py。**报告链能力正本=overlay 产品侧 `custom/server/report/`（2026-10-08 移植落地：验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）——simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）；run12 图执行轮起报告由产品侧生成，harness 对应段随转译完成退役。**元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含；页内锚 #step1-26 与 #cp-g1..g6 互链。
 
 **每步四段（固定结构，顺序不得变；①②与 §2.4 步条同构，③④自台账/档案实算）**——报告每个步块必须依次呈现：
 
