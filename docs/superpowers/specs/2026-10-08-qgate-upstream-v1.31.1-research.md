@@ -42,17 +42,26 @@
 | Stop 诚实措辞（1.26 #5） | new-only 已留痕但未明示"本次仍非全绿" | **吸收**：new-only 消息加 "The report for this session is still NOT all-PASS" |
 | SwarmStudio 集成面（本地独有维度） | qgate-bridge 换算面已实现但 reportVerdict **无生产调用方**（判定流断头）；治理 gateStats 无来源维度 | **接线**：server `GET /api/governance/qgate-verdicts`（逐门最新判定+六态→三态+来源桶）；bridge 时间线学习挂 RoomEvent.Timeline + `syncVerdictsToCase` 批量上报；交付案例卡「同步 QGate 判定」动作；治理健康页「机器执法实况」条（G1-G6 域映射+来源分布，G2/G6 人工域灰态如实） |
 
-## 3. 明确延后项（含理由，待选做）
+## 3. 延后项清偿（2026-10-08 同日第二执行令：七件全部转已落地）
 
-| 上游能力 | 延后理由 |
-|---|---|
-| PNG 像素差内核重算（1.29 W4/1.30 F04/1.31.1） | 本地无 visual 基线基建（帧对比走 simharness 采集链）；qgate visual 方言属 behavior.visual 门但无 PNG 解码需求场景。帧采集红线（当轮实时截图）由 capture_step 驱动保障，与像素重算正交 |
-| OpenAPI 契约提取器（1.29 W8/1.30 F06） | 本地 contract 门走手写 expectedFile 对账；提取器价值在"真实 OpenAPI→期望"自动化，待出现真实 API 契约消费场景再引入 |
-| 文风检查器 WS-1/2/3（1.27） | 报告文风治理有价值，但本地报告链（mx-report-gen）有自己的骨架与审计器；接入点应是推演报告侧（ops.conventions 规则或 simharness 守门），非 qgate 内核——列入推演侧待选做 |
-| 真实进程故障/依赖图测量 demo（1.29 W2/W3） | 本地 persistence executor 已有真回读协议；architecture 域由 ops.symbols 接地承担。demo 属上游验收基建，本地无对应缺口 |
-| OWL/SHACL 组合 oracle（1.29 W6） | 本地 semantic 族是上游方言子集（无独立第二实现）；上游已修复的传递闭包缺陷（BFS 起点预置）在本地实现中不存在同款代码路径——已核对 `src/executors/semantic.ts` 无 visited 预置写法 |
-| requireLive 缺失 mode=FAIL（1.30 F02）/ 反向认可收紧（F03） | 本地 contract 消费面无 live/static 观察模式声明协议（上游 alignment 专属）；semantic-relation 本地方言无认可层（sanction）概念。无对应消费方，不引入空协议 |
-| 零扫描可见性（1.27/1.28） | 本地 ops.symbols 已有零文件面处理约定；banned-words 类扫描本地无对应门。随文风检查器同批考虑 |
+初版本节为"明确延后项（含理由，待选做）"七件；用户当日裁定"立刻做"，全部落地
+（overlay commit f26c075 + dd60dd0，qgate 套件 196/196 绿）。原延后理由与新落地面：
+
+| 上游能力 | 原延后理由（初版） | 落地面（2026-10-08 第二轮） |
+|---|---|---|
+| PNG 像素差内核重算（1.29 W4/1.30 F04/1.31.1） | 无 visual 基线基建 | `src/core/png.ts` 完整解码器（chunk CRC32/IEND 末尾/未知关键 chunk/tRNS 透明键+RGBA 禁 tRNS+重复拒/解压上限）；visual 门三通道（exact-bytes/kernel-recompute/self-reported），自报不符即 error |
+| OpenAPI 契约提取器（1.29 W8/1.30 F06） | 无真实契约消费场景 | `src/core/openapi.ts` + CLI `extract-openapi`（子集外 exit 3 指名；无项目 opt-in 约束的工具命令） |
+| 文风检查器 WS-1/2/3（1.27） | 接入点应在推演侧 | `src/core/writing-style.ts` + ops `writing-style` 门先行入内核；推演侧接入（mx-report-gen 骨架/审计器）仍列待选做 |
+| 真实进程故障/依赖图 demo（1.29 W2/W3） | demo 属上游验收基建 | `examples/resilience-process-demo`（真实 kill/重启/健康轮询计时，kill-no-restart 3 秒端口静默不可伪造）+ `examples/architecture-dependency-demo`（状态机分类：注释/字符串/模板/正则不误计，副作用 import/export-from 不漏计，DFS 三色环检测，注入场景 finally 清理） |
+| OWL/SHACL 组合 oracle（1.29 W6） | 无独立第二实现 | `__tests__/qgate-v131-combinatorial.test.ts`：22 固定种子 × 朴素独立 oracle 对照。**oracle 逮住并根治一枚内核真缺陷：传递性不随 subPropertyOf 继承**（P1 ⊑ P0(传递) 应传递，旧实现只看自身旗标）；F03/W6 镜像缺陷（互逆同方向误受/传递单跳漏报）在 semantic 重写轮根治并有针对性反例 |
+| requireLive（1.30 F02）/ 反向认可（F03） | 无对应消费方 | contract diff/breaking/matrix 三模式共用 liveModeBlock（缺失=FAIL/static=FAIL/畸形=ERROR，live 的 mode 元字段 diff 前剥除）；F03 由 relation 重写承担 |
+| 零扫描可见性（1.27/1.28） | 随文风检查器同批 | conventions 规则级 scope-empty + symbols 扫描面零文件 → error（与 writing-style 同口径） |
+
+实施过程实锤并修复的本地暗坑：①service.mjs 注册 SIGKILL handler 在 Node 即抛
+（SIGKILL 不可捕获）；②demo runner `process.exit` 不跑 finally——注入文件清理必须
+退出延后；③文风样例标记 `qgate-style:example` 原实现为全文级豁免（样例行在文档任何
+位置关掉整份检查），收敛为行级豁免；④requireLive 开启时 live 观察的 mode 协议元字段
+若不剥除，观察必然漂移。四坑均为测试/走查逮住后当场根治。
 
 ## 4. 吸收实施与验证（2026-10-08）
 
