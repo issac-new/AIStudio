@@ -51,6 +51,12 @@ export interface EvidenceRecord {
   verdict?: VerificationVerdict
   /** 验证命令/依据（validatorCommand 同语义）。 */
   basis?: string
+  /** 防篡改链（六文调研轮 C，arXiv 2609.24515 反取证）：指向前一条的 hash；首条为 GENESIS。 */
+  prevHash?: string
+  /** 本条链哈希 = sha256(prevHash + 规范化记录体)；旧记录（前链时代）无此字段。 */
+  hash?: string
+  /** 缺陷分诊（六文调研轮 D）：product_gap=产品能力缺口 / implementation_gap=客户实施缺口。 */
+  gapClass?: 'product_gap' | 'implementation_gap'
 }
 
 export interface EvidenceFile {
@@ -200,6 +206,91 @@ export function loadEvidence(taskId: string): EvidenceFile {
   return readLedger(taskId).file
 }
 
+// ---------- 防篡改 hash 链（六文调研轮 C） ----------
+//
+// 论文反取证判断：当事故日志成为调查依据，日志本身就是攻击面——被控 Agent 可能
+// 改写历史让攻击"在报告里看起来不存在"。对策 = tamper-evident 前向链：
+//   hash(n) = sha256( hash(n-1) + canonicalJSON(record_n 去链字段) )
+// 改任何一条历史记录 → 其后所有 hash 断链，一次校验即可发现。
+//
+// 纪律边界：旧记录（升级前落账）按"证据只增不改"不加回头哈希——校验如实标注
+// unchained（前链时代）；环形挤出（MAX_RECORDS）后首条剩余记录的 prevHash 指向
+// 已挤出条目，属预期断锚（anchorDangling）不算篡改。
+
+/** 规范化序列化（键序稳定，递归排序；链字段与 gapClass 之外的变性字段全量入哈希）。 */
+function canonicalJson(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null'
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(',')}]`
+  const keys = Object.keys(v as Record<string, unknown>).sort()
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson((v as Record<string, unknown>)[k])}`).join(',')}}`
+}
+
+/** 计算一条记录的链哈希。body = 记录去掉 hash/prevHash 后的规范化体。 */
+export function hashEvidenceRecord(rec: EvidenceRecord): string {
+  const { hash: _h, prevHash: _p, ...body } = rec
+  return createHash('sha256').update(`${rec.prevHash ?? 'GENESIS'}|${canonicalJson(body)}`).digest('hex')
+}
+
+export interface ChainCheck {
+  /** 单条校验结果。 */
+  index: number
+  evidenceId: string
+  status: 'chained_ok' | 'unchained' | 'hash_mismatch' | 'link_broken' | 'anchor_dangling'
+  note?: string
+}
+
+export interface ChainVerification {
+  taskId: string
+  chained: number
+  unchained: number
+  /** 前链时代记录数（升级前落账，无哈希字段——如实呈现不算缺陷）。 */
+  intact: boolean
+  firstBroken: number | null
+  checks: ChainCheck[]
+  at: number
+}
+
+/** 校验台账 hash 链：改写历史/删除中插/伪造追加都会在断链处现形。 */
+export function verifyEvidenceChain(taskId: string): ChainVerification {
+  const records = loadEvidence(taskId).records
+  const checks: ChainCheck[] = []
+  let chained = 0
+  let unchained = 0
+  let intact = true
+  let firstBroken: number | null = null
+  let prevHash: string | null = null  // 上一条链记录的 hash（null=链尚未开始）
+  let sawChained = false
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]
+    if (!r.hash || !r.prevHash) {
+      unchained += 1
+      checks.push({ index: i, evidenceId: r.evidenceId, status: 'unchained', note: '前链时代记录（升级前落账，未回填哈希）' })
+      continue
+    }
+    // 链接校验：非首条链记录，prevHash 必须等于上一条链记录的 hash
+    if (sawChained && r.prevHash !== prevHash) {
+      intact = false
+      if (firstBroken === null) firstBroken = i
+      checks.push({ index: i, evidenceId: r.evidenceId, status: 'link_broken', note: `prevHash 与前条 hash 不符（链在此断开）` })
+      // 断链后从本条重新锚定继续查（后续 hash 自身仍逐一验）
+    } else if (!sawChained && r.prevHash !== 'GENESIS') {
+      checks.push({ index: i, evidenceId: r.evidenceId, status: 'anchor_dangling', note: '链首 prevHash 非 GENESIS：环形挤出后的断锚（预期行为，不算篡改）' })
+    }
+    // 自身哈希校验
+    if (hashEvidenceRecord(r) !== r.hash) {
+      intact = false
+      if (firstBroken === null) firstBroken = i
+      checks.push({ index: i, evidenceId: r.evidenceId, status: 'hash_mismatch', note: '记录体与哈希不符（内容被改写或伪造）' })
+    } else {
+      chained += 1
+      checks.push({ index: i, evidenceId: r.evidenceId, status: 'chained_ok' })
+    }
+    prevHash = r.hash
+    sawChained = true
+  }
+  return { taskId, chained, unchained, intact, firstBroken, checks, at: Date.now() }
+}
+
 /** 追加一条证据。幂等：同 evidenceId 已在则跳过——**幂等键只在环内有效**，被环形挤出的
  *  旧条目再次 append 会当新条入库（丢弃有 evicted 计数可循；需要全史请另落外部存档）。 */
 export function appendEvidence(rec: EvidenceRecord): AppendEvidenceResult {
@@ -211,6 +302,11 @@ export function appendEvidence(rec: EvidenceRecord): AppendEvidenceResult {
     return { added: false, total: before, evicted: 0 }
   }
   file.records.push(clipRecord(rec))
+  // 防篡改链（六文调研轮 C）：追加即挂链——prevHash 接最后一条链记录（无链记录时 GENESIS）
+  const lastChained = [...file.records].reverse().find((r) => r.hash)
+  const chainedRec = file.records[file.records.length - 1]
+  chainedRec.prevHash = lastChained?.hash ?? 'GENESIS'
+  chainedRec.hash = hashEvidenceRecord(chainedRec)
   let evicted = 0
   while (file.records.length > MAX_RECORDS) {
     file.records.shift()
@@ -223,7 +319,39 @@ export function appendEvidence(rec: EvidenceRecord): AppendEvidenceResult {
     console.warn(`[evidence-store] 台账写入失败：${err instanceof Error ? err.message : String(err)}`)
     return { added: false, total: before, evicted: 0, code: 'write_failed' }
   }
+  emitEvidenceGovEvent(chainedRec)
   return { added: true, total: file.records.length, evicted }
+}
+
+/** 治理事件总线桥（六文调研轮 F）：验证裁决 fail → quality 域 high 事件（真实"质量 P0"信号面）。
+ *  动态 import 单例（vitest ESM 下 require 加载含 import 语句的模块会静默失败）+
+ *  fire-and-forget 异步——事件最终落盘，不阻断台账主链路。 */
+function emitEvidenceGovEvent(rec: EvidenceRecord): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      if (rec.kind === 'verification') {
+        appendGovEvent({
+          domain: 'quality',
+          severity: rec.verdict === 'fail' ? 'high' : 'info',
+          type: `evidence.verdict_${rec.verdict}`,
+          source: 'evidence/evidence-store',
+          summary: `任务 ${rec.taskId} 验证裁决 ${rec.verdict}${rec.basis ? `（依据 ${rec.basis.slice(0, 80)}）` : ''}`,
+          refs: { taskId: rec.taskId, evidenceId: rec.evidenceId },
+          payload: { verdict: rec.verdict },
+        })
+      } else if (rec.gapClass) {
+        appendGovEvent({
+          domain: 'quality',
+          severity: 'info',
+          type: `evidence.gap_${rec.gapClass}`,
+          source: 'evidence/evidence-store',
+          summary: `任务 ${rec.taskId} 新增${rec.gapClass === 'product_gap' ? '产品能力缺口' : '实施缺口'}标记`,
+          refs: { taskId: rec.taskId, evidenceId: rec.evidenceId },
+          payload: { gapClass: rec.gapClass },
+        })
+      }
+    })
+    .catch(() => { /* fail-soft：总线故障不影响台账主链路 */ })
 }
 
 /** 最新验证裁决（verdict 序列取最后一条；无则 null）。缺裁决的残条不当裁决（防遮蔽真实裁决）。 */

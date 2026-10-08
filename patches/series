@@ -508,3 +508,9 @@
 
 # 577 incident 域路由挂载（六文调研轮 A+B）：/api/incident/sessions/:id/report[.md] + /autonomy
 577-server-incident-routes.patch
+
+# 578 六文调研轮 E+F 路由挂载：/api/hermes/virtual-pl + /api/hermes/governance-events
+578-server-virtualpl-govbus-routes.patch
+
+# 579 六文调研轮 H2 路由挂载：/api/hermes/autonomy-ladder（自治阶梯配置面）
+579-server-autonomy-ladder-routes.patch
