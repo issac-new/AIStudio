@@ -933,7 +933,7 @@ STEPS_META_RUN11 = {
             narrative='分析群 !HmQhMNMivoYKiKtTcV 建群 02:33:51 并 RACI 全量预邀（fanfan-agent+8 关联人及各自 agent），观察员契约 MATRIX_ROOM_OBSERVERS 生效。', imgs=[('room_done-op1-before','群聊/建群面（收官后补拍，非当轮实时帧）','ui'),('room_done-op1-after','案例群消息流在册（收官后补拍）','ui')]),
     9: dict(keys=['dispatch_marker'], ts_override='1',
             actor='human', actorText='人 · fanfan',
-            narrative='需求派发 02:33:51（$9ij2dKfP…）：任务书含三清单匹配/SMART 拆分/RACI 双@/结论行二选一带凭证/防虚报条款；去重脚注为本轮新措辞（从零重新执行+历史产物禁引用——考古防线）。', imgs=[('disp_done-op1-before','看板派工态（收官后补拍）','ui'),('disp_done-op1-after','任务卡与分派在册（收官后补拍）','ui')]),
+            narrative='需求派发 02:33:51（$9ij2dKfP…）：任务书含三清单匹配/SMART 拆分/RACI 双@/结论行二选一带凭证/防虚报条款；去重脚注为本轮新措辞（从零重新执行+历史产物禁引用——考古防线）。', imgs=[('disp_done-op1-after','看板任务卡与分派在册（收官后补拍·派工后态）','ui')]),
     10: dict(keys=['register_done'], ts_override='1',
             actor='ai', actorText='AI · fanfan-agent',
             narrative='主任务卡登记 02:44:28（attempt-1 同步死穴 16 分钟攻克）；tasklist v12.0 入仓 02:44:42（六任务 13.5 人日，输入基线零漂移自证）。', imgs=[('register_done-op1-before','主卡登记前','ui'),('register_done-op1-after','主卡 t_…在板','ui')]),
