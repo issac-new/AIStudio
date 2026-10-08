@@ -5,6 +5,7 @@
 //   Risk 一票否决 = 任一 attempt 任一 risk 断言 value≠expect 且非 unknown → 整 run FAIL。
 //   unknownRatio > 阈值 → rubricDrilldownHint（Rubric 定义不充分的诊断信号）。
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
+import { calibrationReport } from './calibration'
 
 /** attempt 是否通过（断言全对 + outcome 通过）。 */
 export function attemptPassed(task: EvalTask, attempt: Attempt): boolean {
@@ -121,6 +122,8 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     riskVeto,
     statisticallyInsufficient: run.k < 2,
     judgeOnline,
+    // 校准度（六文调研轮 G）：判词有 p 留痕即生成；全无 p 时 samples=0 如实缺席（不造数）
+    calibration: calibrationReport(set, run.attempts),
   }
 
   // Risk 一票否决：整 run FAIL（status 保留原值，passed 语义在 aggregates.riskVeto）

@@ -20,6 +20,7 @@ import {
   type ApprovalWindow, type IdentitySnapshot, type MemoryAuditWindow,
   type SessionMessages, type ToolAuditWindow, type TraceSummary, type WorkflowEvidence,
 } from './incident-sources'
+import { ladderForProfile, LADDER_LEVEL_TITLES } from '../autonomyladder/autonomy-ladder'
 
 export interface IncidentOpts {
   dbPath?: string
@@ -68,6 +69,18 @@ export function loadSources(sessionId: string, opts: IncidentOpts = {}): Inciden
 function theoreticalFace(bundle: IncidentSourceBundle, sessionId: string): AutonomyFace {
   const sources: string[] = []
   const facts: string[] = []
+  // 配置面 0（H2 起最高优先）：自治阶梯配置（BCG 洞察/辅助/自动执行 + 人工确认点清单）
+  let ladderNote: string | undefined
+  try {
+    // 动态 import 防循环依赖；fail-soft（配置域故障不拖垮报告）
+    const ladder = ladderForProfile(bundle.overview?.profile ?? '')
+    if (ladder) {
+      sources.push('~/.hermes-web-ui/autonomy-ladder/ladder.json')
+      facts.push(`自治阶梯=${ladder.level}（${LADDER_LEVEL_TITLES[ladder.level]}）`)
+      if (ladder.approvalPoints.length > 0) facts.push(`人工确认点 ${ladder.approvalPoints.length} 个：${ladder.approvalPoints.slice(0, 5).join('、')}`)
+      facts.push(`允许的最高风险档=${ladder.maxRiskTier}`)
+    }
+  } catch { ladderNote = '自治阶梯配置读取失败（按缺席处理）' }
   // 配置面 1：agentidentity 声明的工具白名单（空=未声明，不等于无限制——域内口径）
   for (const m of bundle.identity.matched) {
     sources.push('agent-identity/identities.json')
@@ -85,8 +98,8 @@ function theoreticalFace(bundle: IncidentSourceBundle, sessionId: string): Auton
     if (always === 0 && deny === 0) facts.push('历史审批无 always/deny——授权宽度未扩展，逐次审批面为主')
   }
   // 已知缺口如实注记（permmodes v4 通道未开——理论面不完整，不装完整）
-  const note = '会话级权限模式（permmodes 七档）引擎通道未开（v4 缺口，permission-modes.ts 记档），Goal 自主档为逐 goal 配置不随 session 落档——理论面按身份白名单+审批历史两配置面拼合，覆盖不全'
-  if (facts.length === 0) return { sources, facts: ['无任何配置面证据（身份未注册、审批历史为空）'], status: 'absent', note }
+  const note = ladderNote ?? '会话级权限模式（permmodes 七档）引擎通道未开（v4 缺口，permission-modes.ts 记档）；自治阶梯为配置呈现面（执行拦截是 H3 待接轮）——理论面按自治阶梯+身份白名单+审批历史拼合'
+  if (facts.length === 0) return { sources, facts: ['无任何配置面证据（身份未注册、审批历史为空、无自治阶梯配置）'], status: 'absent', note }
   return { sources, facts, status: facts.length >= 2 ? 'collected' : 'partial', note }
 }
 
@@ -117,6 +130,17 @@ function effectiveFace(bundle: IncidentSourceBundle, sessionId: string): Autonom
 
 function reconcile(theoretical: AutonomyFace, effective: AutonomyFace, bundle: IncidentSourceBundle): AutonomyDivergence[] {
   const out: AutonomyDivergence[] = []
+  // 偏差 0（H2 阶梯对账）：配置面限 insight/assist，轨迹面却深度自主执行
+  try {
+    const ladder = ladderForProfile(bundle.overview?.profile ?? '')
+    if (ladder && ladder.level !== 'auto' && bundle.trace && bundle.trace.toolCalls.length > 10) {
+      out.push({
+        finding: `自治阶梯配置=${ladder.level}（应有${ladder.level === 'insight' ? '人工决策' : '人工确认关键步'}），但轨迹实际执行工具调用 ${bundle.trace.toolCalls.length} 次（深度自主形态）——配置未被执行面约束（H3 拦截通道未接的现实证据）`,
+        severity: 'warn',
+        evidence: ['~/.hermes-web-ui/autonomy-ladder/ladder.json', bundle.trace.file],
+      })
+    }
+  } catch { /* 配置域故障不影响其余对账 */ }
   // 偏差 1：声明了工具白名单，但轨迹里出现了白名单外的工具
   const allow = new Set(bundle.identity.matched.flatMap((m) => m.toolAllowlist))
   if (allow.size > 0 && bundle.trace) {
@@ -242,11 +266,17 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
   if (bundle.trace && bundle.trace.toolCalls.length > 0) {
     const byName: Record<string, number> = {}
     for (const t of bundle.trace.toolCalls) byName[t.name] = (byName[t.name] ?? 0) + 1
+    // H1 语义层：前 8 条业务动作短语（人话先行；坐标级/未留痕的如实标注语义鸿沟）
+    const semanticLines = bundle.trace.toolCalls
+      .filter((t) => t.semantic)
+      .slice(0, 8)
+      .map((t) => t.semantic!.phrase)
     elements.push(el('effective_tool_use', 'capability', 'collected',
-      `实际调用 ${bundle.trace.toolCalls.length} 次，覆盖 ${Object.keys(byName).length} 种工具：${Object.entries(byName).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([n, c]) => `${n}×${c}`).join('、')}`,
+      `实际调用 ${bundle.trace.toolCalls.length} 次，覆盖 ${Object.keys(byName).length} 种工具：${Object.entries(byName).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([n, c]) => `${n}×${c}`).join('、')}` +
+      (semanticLines.length > 0 ? `；业务语义：${[...new Set(semanticLines)].slice(0, 5).join('、')}` : ''),
       [`${bundle.trace.file}#tool_span`, 'tool-exec-audit（全局窗口，未按 session 绑定）'],
       bundle.toolAudit.entries > 0 ? undefined : '工具执行审计账缺席（tool-exec.jsonl 未生成）',
-      { byName, auditEntries: bundle.toolAudit.entries, auditErrors: bundle.toolAudit.errors.slice(0, 10) }))
+      { byName, semanticLines: [...new Set(semanticLines)], auditEntries: bundle.toolAudit.entries, auditErrors: bundle.toolAudit.errors.slice(0, 10) }))
   } else {
     elements.push(el('effective_tool_use', 'capability', 'absent', '实际工具调用未采集', [], '无轨迹证据'))
   }
