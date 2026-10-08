@@ -525,6 +525,8 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
     }
   }
   const inputsStable = typeof raw.inputsStable === 'boolean' ? raw.inputsStable : undefined
+  // 质量域（v0.3.1 补录）：旧 run 缺省 undefined（消费端回退无域路径）
+  const domain = enumOf(raw.domain, ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'] as const)
   // 来源信号（v0.3.1）：白名单透传；畸形形状整字段拒收
   let sourceSignal: import('./types.js').GateRun['sourceSignal']
   if (raw.sourceSignal !== undefined) {
@@ -540,6 +542,7 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
   return {
     runId, gateId, gateVersion, trigger, workspace, startedAt,
     endedAt: num(raw.endedAt),
+    domain,
     verdict,
     conditions,
     evidenceIds,
