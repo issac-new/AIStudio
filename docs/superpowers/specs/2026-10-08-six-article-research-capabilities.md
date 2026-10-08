@@ -98,6 +98,7 @@ API 客户端 `custom/client/governance/api/incident-suite.ts`（DTO 即契约�
 1. ts-node 全量编译（服务端启动）比 vitest 宽松模式严格——抓出 3 处真实类型缺口（enforce-gate/incident-report/virtual-pnl）。**结论：服务端新域必须过一次真实 8647 启动，vitest 绿≠可启动**。
 2. 长页下方面板的 Playwright click 会被遮挡超时——DOM evaluate 直驱可绕（渲染断言已证时足够）。
 3. 并行会话现场（report 域 untracked + series 580）会挡后端启动：只修其类型错一行（帮过编译、语义零变化），不碰其余现场、不代提交。
+4. （续收轮实测）上条现场收口时 controller 误入 `__tests__/` 提交且未带 TS7053 修复，正本路径只剩 untracked 遮蔽——干净 checkout/inject 重放即挂。**两个盲区叠加**：服务端 tsconfig `exclude src/custom/**/__tests__/**` 让错位副本逃过编译守门；upstream 树（产物）已带修复造成"树是好的"错觉。修复=a1efb809 回移 69 行版归位。**结论：并行会话收口后必查 untracked 是否清零（`git status` 非空即有未回移正本的内容）**。
 
 - 单域测试：incident 20 + autonomyladder 3 + tool-semantics 6 + evidence 41（含 chain 7/gaps 2）+ govbus 7 + virtual-pnl 6 + eval-calibration 6 = 新增 89 用例全绿
 - 全量套件：feat 3994 passed / 1 failed——该失败（qgate-v131-deferred OpenAPI CLI 冒烟）在 main 上逐字复现（dist 构建态既有问题），非本轮回归；main 基线本身另有 ~99 注入态/环境类既有失败（两分支失败清单差集=1 个 python 集成 flaky，单跑全过）
