@@ -29,9 +29,9 @@
 | 5 | 系分 2/4 缺件（CHWX/CHALI 马拉松 4h+ 未交付） | hermes/流程 | 观察：报告如实红标+记单；judged-dead 重派语义已落（61576dc 多锚等待） |
 | 6 | R18 采集登记未挂驱动步（op/对话/效果收官后补登记；skill/门禁灯帧不可补采） | harness 采集链 | ✅ run12 已落（并行会话 592c02f：capture_step 补五步承载帧+r18 载荷全类型挂载） |
 | 7 | 产品面承载率 1/5<验收线 4/5 | 采集/产品 | 部分：帧位扩展随 6；五面语义审查挂 run12 |
-| 8 | 会话 hindsight 交互卡死×3（prefetch 超时后回合挂起，无判死信号） | hermes 运行时 | ⬜ run12 头号：turn 心跳断言/prefetch 失败不阻塞推进——正本=issues.log gateway-slot-inflation 同族 |
+| 8 | 会话 hindsight 交互卡死×3（prefetch 超时后回合挂起，无判死信号） | hermes 运行时 | ✅ patch 577（3ffd9ba5+simharness 656ce06）：网关挂死槽周期扫——housekeeping 每 5min 扫全部 running 槽复用 HERMES_AGENT_TIMEOUT 活动钟驱逐判定（loop 线程编排；守门㉓ 89/89）；prefetch 深层根因（hindsight 服务端 retain 可见性）另列 run12 观察 |
 
-**升级轮遗留（非本轮引入，已核 A/B）**：tests/server/kanban-controller 与 hermes-kanban-service 8 failed/39（剥除 576 后同败——v0.7.32 升级轮断言滞后，属并行会话 upgrade 回归面）。
+**升级轮遗留收口（本轮完成）**：tests/server/kanban 两文件 8 failed→39/39 全绿（patch 578 aeda6e0c）——四根因：①mock Once 残队串台（clearAllMocks 不清未消费桩——"Completed task-1" 出现在 JSON 解析位的实锤根因，beforeEach 补 mockReset）②logging mock 缺 warn/info（规则引擎路径 TypeError）③assign 前置 getTask 动态化（固定桩序脆弱→args 分派 mock）④未指派任务全 profile 可见语义+patch 576 提示语入期望。
 
 ## 三、验证账
 
@@ -41,4 +41,4 @@
 
 ## 四、run12 前置（本复盘更新版）
 
-①hindsight 会话卡死根因（头号）②ACP L2 评估（随 hermes 升级轮）③zcode headless（L3，产品 backlog）④升级轮 8 测试回归收口⑤承载率五面语义。
+①hindsight 服务端 retain 可见性深层根因（577 已结构性兜底：挂死槽 ≤35min 自动驱逐）②ACP L2 评估（随 hermes 升级轮）③zcode headless（L3，产品 backlog）④承载率五面语义。（原"升级轮 8 测试回归"已由 patch 578 收口。）
