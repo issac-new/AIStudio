@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """公文增强二段：①26 步主链卡片化（①-④ 四段结构化）②mermaid 图形渲染（本地引擎）。
 只动渲染产物，不碰正本；幂等：标记在位即跳过对应项。"""
+import os
 import re
 import shutil
 import sys
@@ -79,6 +80,23 @@ elif 'mermaid.init' in s:
     print('② 已在位')
 else:
     print('② mermaid.min.js 缺失，跳过', file=sys.stderr)
+
+# ── ③ 正文归拢（根治 grid 行拉伸空白：目录树与正文首题共行，行高被目录撑到 ~600px，
+#      h1 与"文档定位"间出现大片空白）——nav 前置到横幅正下方独占左列，
+#      其余全部正文（导读卡/术语卡/h1/正文/脚本）包进 main.doc-main，顺序流式排版 ──
+if '<main class="doc-main">' not in s:
+    m = re.search(r'<nav id="TOC"[^>]*>.*?</nav>', s, re.S)
+    assert m, 'nav#TOC 未命中'
+    nav = m.group(0)
+    s = s.replace(nav, '', 1)
+    s = s.replace('</header>', '</header>' + nav, 1)
+    m2 = re.search(r'(</nav>)(.*?)(</body>)', s, re.S)
+    assert m2, '正文归拢锚未命中'
+    s = (s[:m2.start()] + m2.group(1) + '<main class="doc-main">'
+         + m2.group(2) + '</main>' + m2.group(3) + s[m2.end():])
+    print('③ 正文归拢：nav 前置 + main 包裹')
+else:
+    print('③ 已在位')
 
 F.write_text(s, encoding='utf-8')
 print('二段增强完成')
