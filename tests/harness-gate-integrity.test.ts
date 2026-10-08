@@ -1005,3 +1005,42 @@ describe('⑰ 帧采集焊死守门（run10 教训：13h 零实时帧=报告空�
     expect(gen).toContain('禁出空壳报告')
   })
 })
+
+describe('⑲ 方案↔报告一致性断言（2026-10-08 一致性轮：§5.4 六件/§5.5 承载率行/QGate 纪律/PART1 骨架）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('审计器查 10 六闸工件视图（§5.4 必备六件缺一打回）+ 视图数量底线 15 类 WARN', () => {
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    expect(audit).toContain('六闸工件视图缺位')
+    expect(audit).toContain('G2 评审卡')
+    expect(audit).toContain('无文件域交付物')
+    expect(audit).toContain('数量底线 15')
+  })
+
+  it('审计器查 11 承载率行（§5.5 n/5 缺行 FAIL；<4/5 WARN 逐面记单）', () => {
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    expect(audit).toContain('承载率行缺位')
+    expect(audit).toContain('验收线 4/5')
+  })
+
+  it('审计器查 12 QGate 证据纪律（§5.5 v1.31.1：来源分布随行；未验证/advisory 禁全绿）+ 生成器透传块', () => {
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(audit).toContain('QGate 证据块缺来源分布行')
+    expect(gen).toContain('qgate-release-report.txt')
+    expect(gen).toContain('st-qgate')
+  })
+
+  it('生成器无文件域声明覆盖全部无映射步（§5.4 第二段）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('_NO_FILE_DOMAIN')
+    expect(gen).toContain('本步无文件域交付物')
+  })
+
+  it('骨架生成器双产物（STEPS_META + --part1 人读层骨架，禁逐轮手搓 PART1）', () => {
+    const skel = read(join(MX, 'mx-narrative-skeleton.py'))
+    expect(skel).toContain('--part1')
+    expect(skel).toContain('PART1_BY_RUN')
+    expect(skel).toContain('首过')
+  })
+})

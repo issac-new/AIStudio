@@ -454,6 +454,41 @@ for blk in blocks:
         warns.append(f'承载面符合性：步 {n} 在 §2.5 有产品承载面承诺但报告零 UI 实拍帧，'
                      f'且 issues.log 无 product-surface-degraded 降级记单——补拍或按§5.6 采集纪律⑩ 合规降级记单')
 
+# ── 查 10：六闸工件视图（§5.4 必备六件：G1 冻结/G2 评审/G3 testlog/G4 测试报告/G5 发布计划/G6 复盘）──
+# 步 7/15/18/19/20/24 步块须含交付物视图（st-artifact）或"无文件域交付物"声明（§5.4 第二段）。
+_gv_steps = {7: 'G1 冻结件', 15: 'G2 评审卡', 18: 'G3 testlog', 19: 'G4 测试报告', 20: 'G5 发布计划', 24: 'G6 复盘'}
+_gv_missing = []
+for blk in blocks:
+    n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
+    if not n_s:
+        continue
+    n = int(n_s)
+    if n in _gv_steps and 'st-artifact' not in blk and '无文件域交付物' not in blk:
+        _gv_missing.append(f'步{n}({_gv_steps[n]})')
+if _gv_missing:
+    fails.append(f'六闸工件视图缺位（§5.4 必备六件缺一打回）：{"、".join(_gv_missing)}')
+_n_views = len(re.findall(r'class="art-item"', rep))
+if _n_views < 15:
+    warns.append(f'交付物视图 {_n_views} 类 < §5.4 数量底线 15 类——逐条记单入下轮前置（不阻断，缺件须在视图或记单中如实可见）')
+
+# ── 查 11：产品面承载率行（§5.5：ch1 须含"产品面承载率 n/5"+五面逐面判定；验收线 ≥4/5 不阻断但逐面记单）──
+_fr = re.search(r'产品面承载率 <b>(\d)/5</b>', rep)
+if not _fr:
+    fails.append('承载率行缺位（§5.5：第 1 章须含"产品面承载率 n/5"+五面逐面一句判定）')
+elif int(_fr.group(1)) < 4:
+    warns.append(f'产品面承载率 {_fr.group(1)}/5 < 验收线 4/5——不阻断收官，逐面记单入下轮前置（§5.5）')
+
+# ── 查 12：QGate 证据纪律（§5.5 v1.31.1 条款：引用须带来源分布；桶非零/未验证/advisory 未清禁"全绿/已核验"）──
+for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', rep, re.S):
+    _qb = _qm.group(0)
+    if '来源分布' not in _qb and 'source' not in _qb.lower():
+        fails.append('QGate 证据块缺来源分布行（§5.5 门禁证据引用）——透传 release-report 原文即可满足')
+    _qb_out = re.sub(r'<pre.*?</pre>', '', _qb, flags=re.S)  # 判定只看报告侧声明，原文桶数据不计
+    _dirty = any(k in _qb for k in ('未验证', 'advisory', 'gate-not-run', 'no-gate'))
+    if _dirty and ('全绿' in _qb_out or '已核验' in _qb_out):
+        fails.append('QGate 证据含未验证声明/advisory 未清，报告侧却表述"全绿/已核验"（§5.5 v1.31.1 吸收轮起）')
+    break  # 块唯一（步 20），只判一次
+
 # ── 汇总 ──
 print(f'报告：{REPORT}')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')

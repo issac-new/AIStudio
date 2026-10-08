@@ -1117,7 +1117,7 @@ for n in range(1, 27):
     meta = STEPS_META[n]
     STEPS.append((n, title, gate, meta))
 
-# ── V8.2 四段渲染辅助（配套②）──
+# ── 四段渲染辅助（V8.3：①②与方案两段式步条同构；③④自台账/工程档案实算）──
 def _known_html(txt):
     """段三前半：方案层已知问题（历轮实锤），如实呈现并标注本轮语境。"""
     if not txt or txt == '无。':
@@ -1126,7 +1126,7 @@ def _known_html(txt):
             f'{md_bold(txt)}</div>')
 
 def _improve_html(txt):
-    """段四：改进项（方案步条原文+落地状态注记——状态自记单/守门证据取，取不到如实标）。"""
+    """段四：处置与改进（V8.3：方案正本不含历史层——本段自本轮 DISP+工程档案台账派生；取不到如实标"无"）。"""
     if not txt or txt == '无。':
         return '<p class="st-improve none">处置与改进：无（本轮处置见上方问题单 DISP；历轮改进项台账见工程档案）。</p>'
     return (f'<div class="st-improve"><b>处置与改进（档案台账+本轮 DISP）：</b>{md_bold(txt)}'
@@ -1641,6 +1641,39 @@ def _step_artifact_status(n: int):
         return ('warn', f'交付物 🟡 缺/不符 {bad}/{total}（详见本步②与文末矩阵·记单在案）')
     return ('ok', f'交付物 ✅ {total}/{total} 模版符合')
 
+# ── 无文件域声明（§5.4 第二段：无交付物的步明示"本步无文件域交付物"及其实际产出在哪）──
+_NO_FILE_DOMAIN = {
+    2: '冒烟事件与运行横幅（事件流+hero 帧）',
+    3: '账号/看板/团队注册（产品配置域，帧+事件）',
+    4: '冒烟四组核验记录（帧+运行横幅）',
+    8: '分析群与全量预邀（matrix 房间/成员事件）',
+    9: '群内派发词与回执（matrix 事件全文，R18 载荷在位）',
+    10: '四账号 T 系任务卡+lead 分诊（看板卡，帧+卡号锚）',
+    12: '分诊台登记与 lead 确认（看板事件流）',
+    15: 'G2 评审记录在 arch 板评审卡 body（review-record 结构：检查项×证据×结论），判词行 ARCH-GATE-PASS/FAIL——闸门判词唯一凭据（§5.5）',
+    16: '主任务卡归档关闭（看板事件）',
+    25: 'IDE 走查记录（消息+帧）',
+    26: '本步交付物=报告三件套（本报告自身：final-report/simulation-report/txt）',
+}
+
+def _no_artifact_note(n: int) -> str:
+    where = _NO_FILE_DOMAIN.get(n, '卡/消息/事件流（锚点见本步①段）')
+    return (f'<p class="stat-note">📦 本步无文件域交付物——实际产出：{where}。</p>')
+
+def qgate_block(n: int) -> str:
+    """§5.5 门禁证据引用（v1.31.1 吸收轮起）：QGate 判定证据原文透传+来源分布随行，
+    禁手抄"全绿"。evidence/qgate-release-report.txt 在位才渲染（未接线轮零影响）。"""
+    if n != 20:
+        return ''
+    qf = EVID / 'qgate-release-report.txt'
+    if not qf.exists():
+        return ''
+    raw = qf.read_text(encoding='utf-8', errors='replace').strip()
+    return ('<details class="st-artifact st-qgate"><summary>🛡 QGate 门禁证据'
+            '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
+            f'<pre class="art-code">{H.escape(raw)}</pre></details>')
+
+
 def artifact_block(n: int) -> str:
     """单步交付物视图 <details> 块（真容渲染+模版核对）；无映射步返回 ''。
 
@@ -2144,7 +2177,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             status += f'<span class="gmark" style="{_acls}">{H.escape(_ast[1])}</span>'
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
-        art_html = artifact_block(n)  # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对
+        # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
+        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n)
         abg, afg, atxt = ACTOR_STYLE[meta['actor']]
         if PLAN_V82:
             # V8.2 四段（与方案 §2.4 步条目同构；§5.4）：操作路径表不入正文（附录《产品操作手册》）
