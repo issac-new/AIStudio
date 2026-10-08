@@ -76,7 +76,7 @@
 ### H3 剩余边界（后续轮，非本轮欠账）
 
 1. **交互式审批桥**：assist 档确认点当前=拒绝+人话指引（Agent 转达人工走审批流后重试）；理想形态=deny 转挂起→审批通过自动续跑（需引擎瀑布支持挂起语义，ekko 侧扩展）
-2. **会话级权限模式存储**：permmodes v4 缺口的存储面（当前仅环境级全局模式）；需 sessions 表列或独立存储 + UI 切换器
+2. ~~会话级权限模式存储~~ **已落（2026-10-08 v4 会话档轮）**：per-profile 会话档=`permmodes/session-mode-store.ts`（env 目录 JSON 原子写，autonomyladder 同范式）；执法链升级 **阶梯＞会话档＞全局档**（会话档更具体恒胜全局，enforce-gate）；REST 查/切/清=`/api/hermes/permmodes/session-mode/*`（patch 581）。**引擎面实证接通**（upstream/zcode protocol-v4 command.ts）：createSession.config.mode（:39）建会话带档——mention-dispatch 建会话穿线 ENGINE_MODE_MAP；switchCollaborationMode（:216）会话内切档（引擎可切子集 build/edit/plan/yolo；auto 族仅建会话生效，REST 如实返 not_switchable）；PUT 带 sessionId+workspacePath 即发引擎切档信封。切档发 govbus autonomy 事件（auto/bypass=warn）。验证：permmodes/toolpipeline/zcode 三域 71/71
 3. **MCP 工具细分类**：未知工具按 write 保守归类，MCP 目录（工具元数据）可提供更细类别
 
 ## 三点五、UI 化（同日追加轮，merge 69cee6ba）
