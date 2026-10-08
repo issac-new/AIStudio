@@ -491,3 +491,13 @@
 
 ## §5.5 兜底条款规则化
 原：…禁沿用静态文本——"未注册=喜报"是 run10 闸门徽章"一次通过"与六域"DISP 6/6"旧账冒充的病根；
+
+## 2026-10-08 run11 轮：容量风暴三连与根治清单（工程档案补录）
+
+**时间线**：09:25 容量队列满（第三次僵尸，09:09 重启未净）→ 11:12 devimpl d1 派发全丢（chen/xiao/qi/fei 沉睡）→ 12:47 渠道批再丢+chen 误判死 → 13:20 affinity 重启+13:35 idle-nudge 唤醒 hu → 13:38 审批回声广播重入风暴（同一条消息重丢 302 次）→ 14:19 我方重启+三波任务书重递救活 → 16:15 并发 30 激活（queue full 归零、催办→开工<30s）→ G4 18:47 / G5 首轮 19:18 超时自愈 / 二轮在飞。
+
+**根因链**：①mx-lib 串行闸默认 max_concurrent_sessions=1（run4/run5 MGLM 429 时代实证值）×V8 并行流水线 13 路扇出失配；②run_busy 容量重试队列年龄锚按 id(event) 键控，跨进程拒绝回环换新对象→首见时间重置→20min 过期永不生效（风暴放大器）。
+
+**根治清单（全部已落）**：并发定标 30（用户口径 GLM-5.3 30/Flash 50；mx-lib 默认+config 双改）；年龄锚稳定键 event_id（overlay/runtime 正本+宿主部署+守门 4 断言）；判活真化（真实工作行时间戳，wait_alive_truth/multi 双修）；派发可达性校验（容量丢件自动重递+记单）；wait_alive_truth_multi 并发多锚等待；run12-devimpl-parallel.patch（PAYCORE 三拆/契约件锚/G5 窗宽 3600/六分支，收官即 apply）。
+
+**新坑入档**：网关重启撞锁（SIGTERM 后优雅排干 ~90s，起新实例必等旧 pid 死透）；CLI 起而不飞（拉起后挂起 2h 才首发请求，机制未明，催办可唤醒）；adapter 噪音行恒刷 agent.log mtime（一切判静默逻辑禁用 mtime）；槽位膨胀诊断（_running_agents 异常路径泄漏疑点，年龄锚修复后危害限界，专项轮记单 gateway-slot-inflation）。
