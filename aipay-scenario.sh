@@ -768,6 +768,13 @@ fi
 if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   note "── devimpl：DEV-PAYCORE 与 DEV-MP 即派（互不依赖）；DEV-CHWX/DEV-CHALI 分支基于 pay-core 契约，随 feat/DEV-PAYCORE 落地即派（模块就绪即触发，run11 §4.2/纪律 27⑥——废除 run7 时代错峰分批）"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
+  # ACP 编码后端 L1（MX_ACP_BACKEND=1 启用，缺省关=保真对照轮）：DEV 派发词声明
+  # 委托通道——实现经 coding-delegate 技能交外部编码引擎，委托日志=后端指纹。
+  ACP_NOTE=""
+  if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
+    ACP_NOTE="
+【编码后端=delegate】实现须经 coding-delegate 技能委托外部编码引擎执行（在 workspace 调用其 CLI，见技能卡流程四步）：你负责契约拆解/diff 评审/集成与 testlog，引擎负责实现；委托日志 tee 到 materials/delegate-log.txt 且必须随分支提交——缺日志=未走后端，G3 承载面记单。引擎不可用（CLI 缺失/超时 2 次）如实报 BLOCKED，禁止静默回退手写冒充委托。"
+  fi
 
   # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
   # 各自 origin/main 起建）；d2=依赖双路（hu/lin，feat/DEV-PAYCORE 落地触发）。
@@ -776,25 +783,25 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
-3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
@@ -831,7 +838,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
       dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE-C，基于 pay-core 契约件）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
@@ -846,11 +853,17 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     "origin 出现 feat/DEV-PAYCORE-S 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-S" \
     "origin 出现 feat/DEV-PAYCORE-N 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-N" \
     || { for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
-  # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）
+  # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）；
+  # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
     repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
       || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
+    if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
+      repo_branch_has "feat/$b" "materials/delegate-log.txt" \
+        || { note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"; \
+             echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"; }
+    fi
   done
   gate_review chen "G3-代码实现闸-csw-pay-core"
   gate_review hu "G3-代码实现闸-csw-channel-wechat"

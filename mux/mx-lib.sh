@@ -893,6 +893,15 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
     mkdir -p "$PROF/skills/$s"
     cp "$SKILLS_SRC/$s/SKILL.md" "$PROF/skills/$s/SKILL.md"
   done
+  # ACP 编码后端 L1 委托技能（2026-10-09 acp-coding-backend-divergence 根治件）：
+  # 正本=overlay/runtime/hermes-skills（产品侧技能面），harness 只读消费；缺位跳过
+  # （bare CI 无 overlay 检出），在位即随 profile 同构分发。
+  local _ovl="${MX_OVERLAY_ROOT:-}"
+  [[ -n "$_ovl" ]] || _ovl="$HARNESS_ROOT/../overlay"
+  if [[ -f "$_ovl/runtime/hermes-skills/coding-delegate/SKILL.md" ]]; then
+    rm -rf "$PROF/skills/coding-delegate"; mkdir -p "$PROF/skills/coding-delegate"
+    cp "$_ovl/runtime/hermes-skills/coding-delegate/SKILL.md" "$PROF/skills/coding-delegate/SKILL.md"
+  fi
 }
 
 # ═══════════════════════════════════════════════════════════
