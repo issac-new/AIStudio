@@ -520,3 +520,6 @@
 
 # 581 permmodes v4 通道轮：/api/hermes/permmodes/session-mode/*（会话权限档查/切/清+引擎 v4 切档）
 581-server-session-mode-routes.patch
+
+# 582 集群巡检官：/api/hermes/cluster-inspector（snapshot/run + 周期巡检环）路由挂载——能力正本=custom/server/clusterinspector/
+582-server-cluster-inspector-routes.patch
