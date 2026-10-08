@@ -185,6 +185,50 @@ export function evaluateEnforcement(
 
 // ---------- 钩子（挂进 ekkoToolExecuteHooks） ----------
 
+// ── H3 交互审批桥（2026-10-08 收口轮）──
+// 只转"需人工确认"类拒绝（RA 档/阶梯确认点）；硬边界（OFF/风险上限/insight 只读）
+// 不经桥——批单不越权。approved=同 callHash 批单在案且未消费（consume-on-pass）；
+// ticket=挂单信息（deny 文案带单号指引批后重试）。
+export const APPROVAL_CLASS_RULES: ReadonlySet<string> = new Set(['mode-needs-approval', 'ladder-approval-point'])
+
+export function applyApprovalBridge(
+  v: EnforceVerdict,
+  bridge: { approved: boolean; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null },
+): EnforceVerdict {
+  if (!(v.enforcing && v.allow === false) || !APPROVAL_CLASS_RULES.has(v.rule)) return v
+  if (bridge.approved) return { enforcing: true, allow: true, rule: 'approval-passed' }
+  if (bridge.ticket?.status === 'rejected') {
+    return { ...v, error: `${v.error}——审批单 ${bridge.ticket.id} 已被否决，请调整方案或降档后重试` }
+  }
+  const t = bridge.ticket ? `（审批单 ${bridge.ticket.id} 已挂入收件箱·执法审批区）` : ''
+  return { ...v, error: `${v.error}——批准后重试即放行（一单一执行）${t}` }
+}
+
+/** 桥事实采集（钩子层副作用，异步动态 import——vitest ESM 下 require 会静默失败，前车之鉴）：
+ *  approved=批单在案未消费（消费即真）；未批则挂单带回单号。仅确认类裁决调用方才采。 */
+async function approvalBridgeFacts(
+  tool: string,
+  input: Record<string, unknown>,
+  profileId: string | undefined,
+  rule: string,
+): Promise<{ approved: boolean; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null }> {
+  try {
+    const bridge = await import('./enforce-approvals')
+    const hash = bridge.callHashOf(tool, input, profileId ?? '')
+    if (bridge.consumeApprovalIfReady(hash)) return { approved: true }
+    const risk = riskOfCall(tool, input)
+    const rec = bridge.createEnforceApproval({
+      callHash: hash, tool,
+      inputPreview: bridge.inputPreviewOf(input),
+      profileId: profileId ?? '', rule,
+      risk: risk === 'low' ? 'low' : risk === 'high' ? 'high' : 'medium',
+    })
+    return { approved: false, ticket: { id: rec.id, status: rec.status } }
+  } catch {
+    return { approved: false } // 桥面故障=无单可指（裁决仍拒，不 fail-open 放行）
+  }
+}
+
 function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<EnforceVerdict, { enforcing: true; allow: false }>): void {
   import('../govbus/event-log')
     .then(({ appendGovEvent }) => {
@@ -208,8 +252,12 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
       let verdict: EnforceVerdict
       try {
         verdict = evaluateEnforcement(name, input, context?.profileId)
+        // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
+        if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
+          verdict = applyApprovalBridge(verdict, await approvalBridgeFacts(name, input, context?.profileId, verdict.rule))
+        }
       } catch {
-        return  // fail-open：裁决面异常不拦截
+        return  // fail-open：裁决面异常不拦截（桥面异常在助手内吞——裁决仍拒，不因桥坏放行）
       }
       if (verdict.enforcing && verdict.allow === false) {
         emitDenyEvent(name, context?.profileId, verdict)

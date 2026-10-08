@@ -266,3 +266,52 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     expect(entries.find((e) => e.targetId === 'rev-pending-1')?.risk).toBe('medium')
   })
 })
+
+describe('执法审批桥入收件箱（H3 收口轮：enf: 聚合+裁决）', () => {
+  it('挂单入 pending 清单；decide approve 走通并落台账', async () => {
+    const enfDir = `/tmp/enf-inbox-${process.pid}-${Date.now()}`
+    process.env.HERMES_ENFORCE_APPROVALS_DIR = enfDir
+    try {
+      const { createEnforceApproval, callHashOf } = await import('../../toolpipeline/enforce-approvals')
+      const hash = callHashOf('terminal_exec', { command: 'git push' }, 'hu')
+      createEnforceApproval({ callHash: hash, tool: 'terminal_exec', inputPreview: 'git push', profileId: 'hu', rule: 'mode-needs-approval', risk: 'medium' })
+
+      const app = new Koa()
+      app.use(async (ctx, next) => {
+        (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+        if (ctx.method === 'POST') {
+          const chunks: Buffer[] = []
+          for await (const c of ctx.req) chunks.push(c as Buffer)
+          try { ctx.request.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') } catch { ctx.request.body = {} }
+        }
+        await next()
+      })
+      const { approvalsRoutes } = await import('../pending-controller')
+      app.use(approvalsRoutes.routes())
+      const server = createServer(app.callback())
+      await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+      try {
+        const pend = await fetchJson(base, '/api/approvals/pending')
+        const enfItem = (pend.body.items as Array<{ id: string; title: string; risk: string }>)
+          .find((i) => i.id.startsWith('enf:'))
+        expect(enfItem).toBeTruthy()
+        expect(enfItem!.title).toContain('执法门')
+        expect(enfItem!.risk).toBe('medium')
+
+        const dec = await fetchJson(base, `/api/approvals/${enfItem!.id}/decide`, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ decision: 'approve' }),
+        })
+        expect(dec.status).toBe(200)
+        expect((dec.body.entry as { decision: string }).decision).toBe('approve')
+      } finally {
+        await new Promise<void>((r) => server.close(() => r()))
+      }
+    } finally {
+      delete process.env.HERMES_ENFORCE_APPROVALS_DIR
+      const { rmSync } = await import('fs')
+      rmSync(enfDir, { recursive: true, force: true })
+    }
+  })
+})
