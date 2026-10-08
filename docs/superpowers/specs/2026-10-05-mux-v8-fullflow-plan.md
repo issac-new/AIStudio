@@ -574,8 +574,8 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 2. **图引擎对接**：图执行器↔agent 派发（节点 fire→kanban 认领→spawn AI 员工）；checkpoint/resume 与断点续跑（START_STEP/UNTIL_STEP）语义对齐。
 3. **报告配套**：图执行证据三件入交付物视图（§5.4 呈现形态）；必采矩阵若增图执行帧位，改 r18_matrix.py 单一事实源+守门 ⑫ 同批。
 4. **QGate 证据接线**：步 20 落盘 `evidence/qgate-release-report.txt`（release-report 原文）；生成器透传块与审计断言已在位（§5.4/§5.5 v1.31.1 条款）。
-5. **模板批次迁移**：simharness templates-pending/（公文技法样张+迁移规程）→ 中央仓 templates/ + harness 内嵌模板同步；迁移后零污染清场复核（旧轮模板不得残留 agent 工作区）。
-6. **PART1 骨架链路**：`mx-narrative-skeleton.py --part1` 出本轮草稿 → 人工润色 → 注册 PART1_BY_RUN；未注册拒绝合并（禁旧轮顶包）。
+5. **模板批次迁移（已完成 2026-10-08，commit 9f517a5 @ 中央仓 origin/main）**：13 张公文技法模板全量入中央仓 templates/（四张前置 0b694cc+九张当轮直迁，DISP template-batch-migrate 锚 run11 issues.log）；harness 内嵌同步中 mx-scenario-lib.sh（sourced 安全）随批落、aipay-scenario.sh 内嵌段因驱动活进程逐行读文件禁改延后 run11 收官落（bash 语义约束，非纪律豁免）；零污染清场复核随 run11 收官复跑。
+6. **PART1 骨架链路（run11 已兑现）**：`--part1` 出槽版草稿（数字槽禁手填）→ 人工润色语境句 → 注册 PART1_BY_RUN；merge 六实算槽（steps_done/gates_pass/first_pass/window/type_top/disp_sum）合入时自 state/issues.log 现算——注册稿数字永不落伍；未注册轮拒绝合并（禁旧轮顶包）。run11 注册稿缺口卡五条全带当轮实锚（acp 通道背离/capacity 僵尸/raci 三连等）。
 7. **产品面承载率**：验收线 ≥4/5（§5.5）；不达标不阻断收官，逐面记单入下轮前置（审计查 11 在位）。
 8. **Eval Studio 底座**：/app/eval 默认关、`test:eval` 门禁全绿——图执行评测以它为底座（校准度 ECE/Brier 断言挂其判词 p）。
 9. **治理证据接线（六文调研能力入推演证据链，§2.5 治理证据面/§2.6-10）**：步 23 导出事故报告汇编落 `evidence/incident-report.md`；步 24 导出自治度对账+虚拟损益表落 `evidence/autonomy-reconcile.txt`、`evidence/virtual-pl.txt`——生成器透传块已备（在位才渲染，未接线轮零影响）；H3 引擎拦截轮以自治度对账偏差黄条为需求锚点决定是否开轮。
