@@ -231,6 +231,9 @@ export interface GateRun {
   gateVersion: string
   trigger: Trigger
   workspace: string
+  /** 质量域（v0.3.1 补录）：消费端（governance/bridge）按域映射交付门 G1-G6，不再回查门声明。
+      旧 run 无此字段（可选）；缺省时消费端走保守兜底路径。 */
+  domain?: QualityDomain
   startedAt: number
   endedAt?: number
   verdict: GateVerdict
