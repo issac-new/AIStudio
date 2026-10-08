@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { describeToolCall, type ToolSemantic } from './tool-semantics'
 
 // ---------- DB 路径候选 ----------
 
@@ -170,7 +171,7 @@ export interface TraceSummary {
   llmCalls: number
   inputTokens: number
   outputTokens: number
-  toolCalls: Array<{ name: string; status: string; durationMs?: number; turnId?: string }>
+  toolCalls: Array<{ name: string; status: string; durationMs?: number; turnId?: string; semantic?: ToolSemantic }>
   subagents: Array<{ label: string; status: string }>
   errorSpans: Array<{ name: string; message?: string }>
   /** 工具入参键清单（不落值——脱敏纪律，对齐 tool-hooks）。 */
@@ -213,7 +214,11 @@ export function readTraceSummary(explicitDir: string | undefined, sessionId: str
         summary.outputTokens += Number(c.usage?.output_tokens) || 0
       } else if (c.kind === 'tool_span' && c.tool_name) {
         const status = c.status ?? (c.error_message ? 'error' : 'unknown')
-        summary.toolCalls.push({ name: c.tool_name, status, durationMs: c.duration_ms, turnId: c.turn_id })
+        // H1 语义层：按实参生成业务动作短语（未识别工具不带 semantic 如实降级）
+        summary.toolCalls.push({
+          name: c.tool_name, status, durationMs: c.duration_ms, turnId: c.turn_id,
+          semantic: describeToolCall(c.tool_name, c.args) ?? undefined,
+        })
         if (c.args && typeof c.args === 'object') {
           summary.toolArgKeys[c.tool_name] = Object.keys(c.args as object).sort()
         }
