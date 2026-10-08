@@ -31,6 +31,7 @@ import { appendApprovalLog, queryApprovalLog } from './approval-log'
 import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
+import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -264,6 +265,21 @@ function collectPendingItems(): PendingItem[] {
 
   // mx 通道源（backlog ③：Matrix/harness 审批事件翻成 PendingItem，eid 幂等防双通道重批）
   try { items.push(...readMxApprovalChannel()) } catch { /* mx 通道不可读忽略 */ }
+  // 执法审批桥源（H3 收口轮）：执法门"需人工确认"类挂单（consume-on-pass 一单一执行）
+  try {
+    for (const r of listPendingEnforceApprovals()) {
+      items.push({
+        id: r.id,
+        kind: 'command',
+        title: `执法门·${r.tool}（${r.rule === 'ladder-approval-point' ? '阶梯确认点' : 'RA 档'}）`,
+        detail: `${r.inputPreview}｜profile ${r.profileId || '—'}｜批准后 agent 重试即放行（一单一执行）`,
+        profile: r.profileId || undefined,
+        choices: ['approve', 'reject'],
+        createdAt: r.createdAt,
+        risk: r.risk,
+      })
+    }
+  } catch { /* 执法审批源不可读不阻断其余聚合 */ }
 
   // fleet 命令审批（agent 工具调用等）
   try {
@@ -360,6 +376,31 @@ router.post('/:id/decide', async (ctx) => {
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : undefined
   const actor = actorOf(ctx as never)
   const id = String(ctx.params.id ?? '')
+
+  if (id.startsWith('enf:')) {
+    if (decision !== 'approve' && decision !== 'reject') {
+      ctx.status = 400
+      ctx.body = { ok: false, detail: '执法审批决策须为 approve|reject' }
+      return
+    }
+    const rec = decideEnforceApproval(id, decision, actor)
+    if (!rec) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '执法审批单不存在' }
+      return
+    }
+    if (rec.status === 'pending') {
+      ctx.status = 409
+      ctx.body = { ok: false, detail: '执法审批单状态异常（仍 pending）' }
+      return
+    }
+    const entry = await appendApprovalLog({
+      id, actor, targetKind: 'command', targetId: id,
+      targetTitle: `执法门·${rec.tool}`, decision, note, risk: rec.risk,
+    })
+    ctx.body = { ok: true, entry }
+    return
+  }
 
   if (id.startsWith('fleet:')) {
     const rest = id.slice('fleet:'.length)
