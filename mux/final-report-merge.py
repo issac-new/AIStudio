@@ -34,13 +34,13 @@ CH0_CSS = '''<style>
 
 GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:#fbfbfa;line-height:1.75}
 .guide .card{max-width:1200px;margin:0 auto}
-.guide-layout{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto}
-.gside{position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff;border-right:1px solid #e2e8f0;padding:20px 12px;box-sizing:border-box}
-.gside .gnav-hd{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.08em;margin:2px 0 10px}
-.gside a{display:block;padding:5px 10px;margin:1px 0;border-radius:8px;font-size:12.5px;color:#475569;text-decoration:none;line-height:1.5}
-.gside a:hover{background:#dbeafe;color:#1d4ed8}
-.gside .gpart{margin:12px 0 4px;font-size:11px;font-weight:700;color:#0a7d43}
-@media(max-width:980px){.guide-layout{grid-template-columns:1fr}.gside{display:none}}
+
+
+
+
+
+
+
 .guide h1{max-width:1200px;margin:0 auto 14px}
 .guide table{max-width:1200px;margin:0 auto 16px}
 .guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid #0a7d43;padding-bottom:12px;margin-bottom:6px}
@@ -399,6 +399,16 @@ def extract_machine_parts(sim_html: str):
     return styles, m.group(1)
 
 
+def split_layout(body_inner: str):
+    """body → (sidebar_nav_html, main_html, rest)。单栅格合并的拆解件：
+    sidebar（左目录）与 main（右正文）拆开，final-report 重组成一条侧栏贯穿的双层正本。"""
+    nav = re.search(r'<nav class="sidebar">.*?</nav>', body_inner, re.S)
+    main = re.search(r'<main class="main">(.*)</main>', body_inner, re.S)
+    if not (nav and main):
+        return '', body_inner, True  # 结构不符则退回整段嵌入（不炸）
+    return nav.group(0), main.group(1), False
+
+
 def main():
     ap = argparse.ArgumentParser(description='最终报告双层正本合并器')
     ap.add_argument('--run', required=True, help='RUN_ID（runs/ 目录名）')
@@ -420,6 +430,13 @@ def main():
     n_frames = len(frames)
     uniq_note = '全互异' if len(digests) == n_frames else f'仅 {len(digests)}/{n_frames} 互异（差异记单）'
     machine_styles, machine_body = extract_machine_parts(sim_html_path.read_text(encoding='utf-8'))
+    machine_nav, machine_main, fused = split_layout(machine_body)
+    if not fused:
+        machine_nav = machine_nav.replace('<nav class="sidebar">', 
+            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:#0a7d43;font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
+            '<a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">说人话版导读</a>'
+            '<a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实算表</a>'
+            '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">PART 2 · 全文档案</div>', 1)
 
     # 第 0 章（R15）：state 落键实算闸门态；协作时序自 scenario.log 实抽
     ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps')
@@ -451,27 +468,20 @@ def main():
 {GUIDE_CSS}
 {CH0_CSS}
 </head><body>
-<div class="guide-layout">
-<aside class="gside">
-  <div class="gnav-hd">最终报告导航</div>
-  <div class="gpart">PART 1</div>
-  <a href="#part1-top">一页读懂（说人话版）</a>
-  <a href="#part1-metrics">治理有效性实算</a>
-  <div class="gpart">PART 2</div>
-  <a href="#part2">26 步明细与全部证据</a>
-  <a href="#ch0-collab">第 0 章 · 协作总述</a>
-  <a href="#step1">旅程层 26 步</a>
-  <a href="#ch8-issues">问题单终态</a>
-  <a href="#artifact-panorama">交付物全景矩阵</a>
-</aside>
+<div class="layout">
+{machine_nav}
+<main class="main">
+<div class="guide" id="part1-top" style="padding:26px 6px 6px">
 {part1}
 </div>
-</div>
-<div id="part2" style="margin:56px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
+<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
 <h1 style="font-size:20px;margin:0">PART 2 · 26 步明细与全部证据（机器逐步报告全文）</h1>
-<p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成于本处置轮（三类渲染缺陷根治后），此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物真容核对本章自明。</p>
+<p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成，此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物真容核对本章自明。</p>
 </div>
-{machine_body}
+{machine_main}
+</main>
+</div>
+</body></html
 </body></html>'''
 
     out_path = evid / 'final-report.html'
