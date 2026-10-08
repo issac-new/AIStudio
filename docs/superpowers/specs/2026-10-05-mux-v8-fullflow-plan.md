@@ -330,7 +330,7 @@ graph TB
 >
 > **页签词表勘误**：/app/board 实为**九个**平级页签——看板/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）（文案锚=overlay/custom/client/ia2/i18n-tasks-tabs.ts:14-23）。「应用资产」不是独立页签，=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」是数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」过滤=patch 558/547 服务端可见性（392 只做 profile 授权收敛，旧归因勘正）；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签（旧文"三区块"漏算任务运行）。
 
-> **治理证据面（2026-10-08 六文调研落地，不键控步骤——步 23/24 证据可引用）**：事故报告汇编器（`/api/incident/sessions/:id/report[.md]`，三类 17 要素、七源只读实取、缺席要素如实标 absent）、理论/实际自治度对账（`/api/incident/sessions/:id/autonomy`，偏差黄条）、AI 虚拟损益表（`/api/hermes/virtual-pl`）、治理事件总线（`/api/hermes/governance-events`，六域三级 append-only）、机器执法判定流（`/api/governance/qgate-verdicts`，见上）。推演报告侧消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）、步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）——生成器在位即透传（§4.4-9）。
+> **治理证据面（2026-10-08 六文调研落地，不键控步骤——步 23/24 证据可引用）**：事故报告汇编器（`/api/incident/sessions/:id/report[.md]`，三类 17 要素、七源只读实取、缺席要素如实标 absent）、理论/实际自治度对账（`/api/incident/sessions/:id/autonomy`，偏差黄条）、AI 虚拟损益表（`/api/hermes/virtual-pl`）、治理事件总线（`/api/hermes/governance-events`，六域三级 append-only）、机器执法判定流（`/api/governance/qgate-verdicts`，见上）、报告链能力面（`/api/hermes/report/*`：PART1 骨架出稿+报告验收断言，§5.4 形式契约）。推演报告侧消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）、步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）——生成器在位即透传（§4.4-9）。
 
 ### 2.6 治理机制（设计性条款）
 
@@ -579,7 +579,7 @@ run12=推演自举轮（26 步转 GraphSpec、产品图引擎调度，§1.0.2 �
 7. **产品面承载率**：验收线 ≥4/5（§5.5）；不达标不阻断收官，逐面记单入下轮前置（审计查 11 在位）。
 8. **Eval Studio 底座**：/app/eval 默认关、`test:eval` 门禁全绿——图执行评测以它为底座（校准度 ECE/Brier 断言挂其判词 p）。
 9. **治理证据接线（六文调研能力入推演证据链，§2.5 治理证据面/§2.6-10）**：步 23 导出事故报告汇编落 `evidence/incident-report.md`；步 24 导出自治度对账+虚拟损益表落 `evidence/autonomy-reconcile.txt`、`evidence/virtual-pl.txt`——生成器透传块已备（在位才渲染，未接线轮零影响）；H3 引擎拦截轮以自治度对账偏差黄条为需求锚点决定是否开轮。
-10. **报告链能力产品化收口（§5.4 形式契约）**：`custom/server/report/` 三件（验收断言/证据透传/PART1 骨架）已移植落地带测试；REST 接线（`/api/hermes/report/*` 出骨架与验收结论）待路由通道空闲（H3 引擎轮占用 routes patch 序列）即挂；挂通后 mx-report-gen/audit 对应段退役，语义正本单源在产品。
+10. **报告链能力产品化收口（§5.4 形式契约）**：`custom/server/report/` 三件（验收断言/证据透传/PART1 骨架）+REST 已接线（patch 580：`POST /api/hermes/report/part1-skeleton` 出骨架稿、`POST /api/hermes/report/acceptance` 出验收断言结论；clean→全量重放 304 项 0 失败）；run12 图执行转译完成后 mx-report-gen/audit 对应段退役，语义正本单源在产品。
 
 ## 第五部分 验收标准（唯一事实源）
 

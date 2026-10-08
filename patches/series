@@ -514,3 +514,6 @@
 
 # 579 六文调研轮 H2 路由挂载：/api/hermes/autonomy-ladder（自治阶梯配置面）
 579-server-autonomy-ladder-routes.patch
+
+# 580 报告链落地轮：/api/hermes/report/*（PART1 骨架出稿+验收断言）路由挂载——能力正本=custom/server/report/
+580-server-report-routes.patch
