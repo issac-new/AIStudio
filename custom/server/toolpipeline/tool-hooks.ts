@@ -11,6 +11,7 @@ import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
 import { ekkoEnforceGateHook } from './enforce-gate'
+import { reportLostSuspensionsOnBoot } from './enforce-approvals'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -74,6 +75,10 @@ const auditHook = {
 // 阶梯/风险档/权限模式三级裁决，HERMES_TOOL_ENFORCE=1 才生效（默认零行为变化）。
 // "只观测不拦截"的 v1 边界自此收窄为"默认不拦截"（执法面显式开启后可拦）。
 export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), ekkoEnforceGateHook()]
+
+// H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
+// （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。
+void reportLostSuspensionsOnBoot()
 
 /** 读尾部（测试/消费面）。 */
 export function readToolExecAudit(limit = 100): ToolExecAuditEntry[] {
