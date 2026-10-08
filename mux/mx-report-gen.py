@@ -902,7 +902,92 @@ STEPS_META_RUN10 = {
             narrative='本报告由生成器产出；叙事集预写 18/26 步。帧采集缺口如实声明：run10 执行期间 capture-ui 未挂进驱动链，当轮无实时帧，必采矩阵 0/13 记单 r18-collection-missing（DISP 观察）；全部截图为收官后补拍，图注逐一标注。run11 修正：帧采集挂驱动步内（94aa2fc 已接线）。', imgs=[('26-op1-after', '交付案例面板：门禁灯投影（收官后补拍，非当轮实时帧）', 'ui')]),
 }
 
-_NARR={'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
+# ══ run11 叙事集（2026-10-08 注册；锚=state 落键/scenario.log/导演监控台账）══
+# 本轮三段起跑史（如实）：attempt-1 18:30-20:28 亡于模型池 aim 下线（agent 全哑）；
+# attempt-2 23:48-02:1x 亡于 mx-clean 假成功污染+历史考古（"恢复 run9 悬空提交"实锤）；
+# attempt-3 02:26 起零污染正跑（孤儿历史+禁考古措辞+闸卫三根治后）——本叙事集即 attempt-3。
+STEPS_META_RUN11 = {
+    1: dict(keys=['smoke_done'], ts_override='1',
+            narrative='账号与底座就绪：30 账号 token 逐个验证 ✓、单 gateway :8801+单 studio :8802 双健康 ✓、驾驶舱在线 headless 侧 gateway_state=running（connected_platforms=15）；冒烟 02:26:50-02:31 五分钟全绿（attempt-3 起跑 02:26:26），delivery 小冒烟开案例房 dlv-…-023449 并事件落房读回 ✓。', imgs=[('smoke_done-op1-before','冒烟前：驾驶舱入口（登录态待入）','ui'),('smoke_done-op1-after','冒烟后：30 账号全绿+在线三数>0','ui')]),
+    2: dict(keys=['smoke_done'], ts_override='1',
+            narrative='每用户四件套在位：14 账号 profile+42 档案+账号板 kanban 可达（matrix-login 全量验证）；profiles 清单与每板 team 围栏装载 ✓；R28 编制三方对账 roster=15×org=15×matrix=15 零偏差。', imgs=[('appinit_done-op1-before','账号板装载前','ui'),('appinit_done-op1-after','账号板+团队围栏装载后','ui')]),
+    3: dict(keys=['smoke_done'], ts_override='1',
+            narrative='全账号登录双模式通：免密 matrix-login（jwt 逐账号）与口令登录均可达；自动登录链路端点按契约应答 {"configured":false}（V2 单 studio 常态）。', imgs=[]),
+    4: dict(keys=['smoke_done'], ts_override='1',
+            narrative='功能就绪冒烟全绿：观测面计数语义（任务计数=看板实况、在线三数>0）双源合并通过；R29 delivery 协议面小冒烟（案例房+stage/gate 事件读回）✓；判定服务探活 clef-flash-4bit 在线。', imgs=[]),
+    5: dict(keys=['appinit_done'], ts_override='1791397727',
+            narrative='应用资产登记经产品通道落档：PUT /api/governance/registry/app-registry 保存即 git（界面同源承载），4 应用×负责人×专属板×SLA×门禁骨架入仓 02:33。', imgs=[('register_done-op1-before','资产登记前（registry 空）','ui'),('register_done-op1-after','资产登记后（4 应用在册）','ui')]),
+    6: dict(keys=['people_done'], ts_override='1',
+            narrative='组织与权限矩阵入仓：M2 产品通道 PUT registry/org 02:33，14 账号×profile×板×fleet-manifest 四方对账一致，七角色治理线（含 secops/ops/audit）齐备。', imgs=[('people_done-op1-before','组织矩阵登记前','ui'),('people_done-op1-after','组织矩阵登记后（14 账号七角色）','ui')]),
+    7: dict(keys=['g1_frozen'], ts_override='1791397771',
+            narrative='G1 需求冻结 02:29:30（起跑+3 分钟，历史最快）：RFD-001 收银台四要素（AC×7 可判定/Scope-Out/影响面/涉敏）freeze 文件入 origin/main；delivery 事件 stage P1 done+gate G1 pass 落案例房。bella→fanfan 需求私信送达 02:33:37。', imgs=[]),
+    8: dict(keys=['room_analysis'], ts_override='1',
+            narrative='分析群 !HmQhMNMivoYKiKtTcV 建群 02:33:51 并 RACI 全量预邀（fanfan-agent+8 关联人及各自 agent），观察员契约 MATRIX_ROOM_OBSERVERS 生效。', imgs=[]),
+    9: dict(keys=['dispatch_marker'], ts_override='1',
+            narrative='需求派发 02:33:51（$9ij2dKfP…）：任务书含三清单匹配/SMART 拆分/RACI 双@/结论行二选一带凭证/防虚报条款；去重脚注为本轮新措辞（从零重新执行+历史产物禁引用——考古防线）。', imgs=[]),
+    10: dict(keys=['register_done'], ts_override='1',
+            narrative='主任务卡登记 02:44:28（attempt-1 同步死穴 16 分钟攻克）；tasklist v12.0 入仓 02:44:42（六任务 13.5 人日，输入基线零漂移自证）。', imgs=[('register_done-op1-before','主卡登记前','ui'),('register_done-op1-after','主卡 t_…在板','ui')]),
+    11: dict(keys=['analysis_done','analysis_verified'], ts_override='1',
+            narrative='任务清单核验+RACI 双@核验：fanfan 派发四组双@消息 60s 窗未见→回灌重查 240s 仍缺（P9b 复现，4 笔记单——双@措辞与检出窗的错配挂复盘）；双凭证反向核验通过。', imgs=[('analysis_done-op1-before','任务清单核验前','ui'),('analysis_done-op1-after','tasklist v12.0 在仓+核验过','ui')]),
+    12: dict(keys=['triage_done'], ts_override='1',
+            narrative='分诊四路并发确认：四主责账号板出现 RFD-001 任务卡+lead（wei/mei）分诊确认（triage→todo）03:12 前；gate-guard（g2_arch_pass 键）挂闸生效——看板 DEV 卡在 G2 前暂停（attempt-2 越序抢跑的根治位）。', imgs=[('triage_done-op1-before','分诊前','ui'),('triage_done-op1-after','分诊后四卡就位','ui')]),
+    13: dict(keys=['anexec_done'], ts_override='1',
+            narrative='四路系分齐发 03:12:58（同秒四派——run11 流水线首验）：首次容量僵尸记账致 83 分钟零开工（106 条队列 drop 记单）→网关重启+重派 04:37 恢复；AN-PAYCORE 04:50/AN-MP 05:08 从零入仓；AN-CHWX/AN-CHALI 马拉松超窗记单（hu/lin 各 4h+ 未交付，概设以在仓稿汇总——零污染代价正确的慢，两稿 git 历史可反查于归档）。双兜底回执：PAYCORE/MP 回灌后仍缺记单（receipt-missing×2）；anexec_done 07:29。', imgs=[('anexec_done-op1-before','四路系分派发前','ui'),('anexec_done-op1-after','系分段收口（2/4 稿在仓）','ui')]),
+    14: dict(keys=['review_done'], ts_override='1',
+            narrative='概设方案 RFD-001-architecture-design.md 入仓（fanfan 汇总在仓稿+跨模块契约）约 08:00 前后；评审卡自登+线下评审通过，review_done 落键。', imgs=[('review_done-op1-before','概设汇总前','ui'),('review_done-op1-after','概设在仓+评审卡 done','ui')]),
+    15: dict(keys=['g2_arch_pass'], ts_override='1791423371',
+            narrative='G2 架构治理评审二轮过闸 09:36（键值 1791423371）：首轮容量饥饿（arch 评审回合被四槽占用静默排队 3600s 窗尽驱动中止 09:04）→网关重启+archgate 续跑 09:09 重派→ARCH-GATE-PASS 27 分钟；评审卡 t_637f6b1c@arch-governance → done。', imgs=[]),
+    16: dict(keys=['close_done'], ts_override='1',
+            narrative='主任务归档 09:36：fanfan 主卡汇总登记（四系分档案+tasklist+概设 git 路径）置 done；闸点沉淀 !refine 发进工作线程。', imgs=[('close_done-op1-before','主卡收口前','ui'),('close_done-op1-after','主卡 done+资产汇总在 body','ui')]),
+    17: dict(keys=['plan_done'], ts_override='1',
+            narrative='排期计划 v1.0 入仓（b4a4f49）：六任务 13.5 人日、测试线 2.3d（0.3 系数内）、15% 缓冲、里程碑 M1-M5；排期回合 09:36-11:0x（中途空转催办一次 10:57 后唤醒完成）；父子任务卡+逐条派发齐。', imgs=[('plan_done-op1-before','排期前','ui'),('plan_done-op1-after','排期 v1.0 在仓+子卡挂接','ui')]),
+    18: dict(keys=['devimpl_done'], ts_override='1',
+            narrative='编码触发链全验（run11 流水线核心）：DEV-PAYCORE/DEV-MP 即派 11:12（互不依赖）+测试预备轮同刻齐发（用例前移）；feat/DEV-PAYCORE 落地即触发渠道双路 d2 12:47（模块就绪即触发）；DEV-CHWX 14:02；DEV-CHALI 导演定向催办 16:08 后交付；四分支 origin 齐（每分支 testlog 随附）；G3 落键 16:27（键值 1791447646）+testlog 真查。ACP 面注记：编码由 hermes 直连 LLM+write_file 完成（acp-coding-backend-divergence 记单——方案步 18 ACP 编码后端意图未实装，run12 前置三件）。', imgs=[('devimpl_done-op1-before','编码段派发前','ui'),('devimpl_done-op1-after','四分支齐+G3 落键','ui')]),
+    19: dict(keys=['defect_done','testpass_done'], ts_override='1',
+            narrative='集成+测试：四分支增量合并 integration/RFD-001（f2968d0，丢线守卫过）；TEST-BE/FE 派发 16:21（预备轮衔接措辞在任务书）；缺陷回流闭环；TEST-BE 报告成稿于 qi 本地（228/228=基线 216+08 域增量 12，证据 sha256 d0c7da52…）但路径偏差未达 integration——testpass 静默降级记单后放行，导演代推归位 dfd44f0；G4 落键 18:47（键值 1791456472）。', imgs=[('testpass_done-op1-before','测试执行前','ui'),('testpass_done-op1-after','测试段收口+G4 落键','ui')]),
+    20: dict(keys=['ready_done','release_done'], ts_override='1',
+            narrative='G5 六轮长跑（本晚最重一段，全留痕）：r1 首评真 FAIL（缺回滚阈值/灰度/发布说明 20:25 退回）→r2-r4 会话卡死/窗错配连环（fanfan hindsight 交互缺陷×3+2400s 窗 vs 夜峰慢节奏）→导演三面处置=①发布三件套按真实测试数据代拟落 main 1f2c3bd+qi 报告归位 dfd44f0 ②缺项①a/①b 卡簿记代走（qi 执行卡 result+FE TP2/TP4/汇总卡 done）③终判行经 fanfan 账号通道落评审卡（步 13 代走先例，房间行未伪造）→判词复用放行 23:44 READY-GATE-PASS（评审卡 t_24ae1bc5→done，HumanGate 事件入 approved.events）；release 段完成 23:45（delivery-standard 引用+G5 gate 事件补发——run10 漏发缺陷的本轮验证）。', imgs=[]),
+    21: dict(keys=['uat_done'], ts_override='1791476458',
+            narrative='UAT 业务验收 23:47 派发→00:20 收口（键值 1791476458）：fanfan 逐条 AC-1~AC-7 证据行（commit/分支锚）；验收书逐条三态判词落仓（放行权归 bella 语义保留）；integration 冻结件前置自检过。', imgs=[]),
+    22: dict(keys=['workmgr_done'], ts_override='1791476497',
+            narrative='工作台账 00:21 落档：跨账号板状态分布/WIP 全员 ≤2/卡壳处置意见齐（work-report.md 入 main）。', imgs=[('workmgr_done-op1-before','台账生成前','ui'),('workmgr_done-op1-after','工作台账在仓','ui')]),
+    23: dict(keys=['audit_done'], ts_override='1791476730',
+            narrative='合规审计意见书 00:25 入仓：独立性声明+三凭证抽检（freeze/验收书/测试报告全实查）+导演侧机械化结论+@audit-agent 独立复核派发；本轮导演介入五笔（代投×3+代走×2）全部在 issues.log 留痕可反查——审计面对的正是这份完整的人工介入账。', imgs=[('audit_done-op1-before','审计前','ui'),('audit_done-op1-after','意见书在仓+签名线','ui')]),
+    24: dict(keys=['retro_done'], ts_override='1791476763',
+            narrative='G6 复盘 00:26 落键（六闸 6/6 收齐——首过率 3/6：G1/G3/G4 首过，G2 容量饥饿二轮/G5 六轮/UAT 长跑）：三段式复盘+治理报告+metrics/ISSUES-LOG 原子化落账；hindsight 记忆探针 ✓；头号复盘项=容量记账释放缺口+fanfan 会话不落结论（hindsight 交互）+G5 窗宽节奏错配三根因。', imgs=[('retro_done-op1-before','复盘前','ui'),('retro_done-op1-after','复盘+治理报告入仓','ui')]),
+    25: dict(keys=['ide_done'], ts_override='1',
+            narrative='IDE 工作台核验：/ide 路由 200+ide?task 参数处理代码在位+任务简报组件在位；IDE 模型失效横幅一键回退（run10 25-op1 修复件 patch 575）为 run11 帧位；ACP 编码链未验证记单（acp-coding-backend-divergence）——IDE 底层能力的充分验证列 run12 前置。', imgs=[('ide_done-op1-before','IDE 核验前','ui'),('ide_done-op1-after','IDE 核验后（简报在位）','ui')]),
+    26: dict(keys=['report_done'], ts_override='1',
+            narrative='报告步实录：00:26 首跑被按轮叙事集硬闸拦（设计内——本注册块即该闸的兑现）→注册后 report 续跑：mx-report-gen 生成+mx-report-audit 熔断硬跑（FAIL 即拒收官）+final-report-merge 双正本。全程（attempt-3）02:26-00:3x≈22h，含事故恢复四起（容量×2/会话卡死×2）与 G5 六轮——净执行与事故账分离落 metrics。', imgs=[]),
+}
+_DOMAINS_RUN11 = {
+    0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'warn',
+        '主链无漏做（AC 7 条全过 UAT）；但系分交付 2/4（CHWX/CHALI 马拉松超窗记单，概设按在仓稿汇总如实声明）；materials/ 目录携 run9/10 基线包残留暴露于本轮 agent 工作区（materials-pollution-blindspot 记单，mx-clean 清扫面已扩+diff 审计未证实实际引用）。',
+        '实测：AC 7/7 UAT 判词 · 系分 2/4 在仓（2 缺记单）· materials 7 件残留（引用未证实）',
+        'cp-g1,cp-g6'),
+    1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass',
+        '成立。四开发分支全部本轮从零新推（孤儿历史深度 1 下不可考古——禁考古措辞+闸卫双防线实证）；TEST-BE 228/228 全绿（基线 216 实跑复验+08 域增量 12，证据 sha256 可重跑）；发布三件套落 main 1f2c3bd（导演代拟但数据全真实）。',
+        '实测：feat/DEV-* 4/4 新推 · 228/228 绿 · 发布件 3/3 在仓',
+        'cp-g3,cp-g4,cp-g5'),
+    2: ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass',
+        '一致。tasklist v12.0 与排期/概设对齐；金额分 int64/snake_case 契约经 G2；integration 基线链 1886e43→fc9ae66→f2968d0 祖先关系实测。',
+        '实测：三方对账零偏差 · 基线祖先链双向实测',
+        'cp-g2,cp-g4'),
+    3: ('L3', '运行稳健性', '异常和边界是否被正确处理？', 'warn',
+        '逆境治理是本轮主线：attempt-1/2 事故链四病根全部根治落链（通道切换/孤儿重立/禁考古措辞/闸卫 env 修复，守门 ⑳⑳⑳ 78/78）；attempt-3 内容量僵尸记账×2（网关重启恢复）、fanfan 会话卡死×3（hindsight 交互）、G5 六轮（窗宽节奏错配）——全部记单+恢复动作留痕；处置代价=人工介入五笔。',
+        '实测：驱动死 4 起全恢复 · 容量 drop 106+ 条 · G5 六轮留痕 · 病根根治提交 4 件',
+        'cp-g2,cp-g5'),
+    4: ('L4', '安全合规', '权限、隔离与审计是否有效？', 'pass',
+        '有效。隔离边界三断言全过；零污染铁律经三度击穿后结构加固（孤儿历史+清扫面扩+守门断言）；导演五笔介入全部留痕计入人工度量；审计意见书三凭证实查。',
+        '实测：隔离三断言 · 人工介入 5 笔全留痕 · 抽检 3/3 实查',
+        'cp-g6'),
+    5: ('L5', '可监督性', '全程是否可复盘、可反查？', 'pass',
+        '可。六闸落键时间齐全（G1 02:29/G2 09:36/G3 16:27/G4 18:47/G5 23:44/G6 00:26）；当轮实时帧 17 步位 34 帧自动落档（capture_step 首役）；问题单 40+ 行 ISSUE/DISP 全留痕；看门狗台账与导演监控台账全程可反查。',
+        '实测：六闸时间戳 6/6 · 实时帧 34 张 · 台账 40+ 行',
+        'cp-g6'),
+}
+
+_NARR={'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
 if RUN_ID not in _NARR:
     # R17 按轮真值硬闸：未注册叙事集拒绝出报告（防旧轮账目顶包）；已知清单动态派生，
     # 免写死文案与注册表漂移（run6 实锤：提示只列 run1/run2，实有 5 轮在册）。
@@ -910,14 +995,14 @@ if RUN_ID not in _NARR:
 
 STEPS_META=_NARR[RUN_ID]
 
-_L3_A={'20261007-v8-run10':'run10 符合（全流程闭环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实算落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记单在案；叙事集预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采矩阵 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收口，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实锚）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判死重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），hu/xiao 停摆缺席如实记单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收官实锚）：G1→UAT 意图链路全闭环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（qi 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
+_L3_A={'20261007-v8-run11':'符合（零污染独立回归的正跑轮+逆境治理主战役）：attempt-3 26 步全走完（02:26 起跑→G6 00:26 六闸 6/6 收齐）；从零交付实证——孤儿历史（main 深度 1）+禁考古措辞+闸卫三防线下，四系分两稿从零入仓（PAYCORE/MP）、四开发分支全部本轮新推、TEST-BE 228/228 全绿、发布三件套+UAT 7/7 判词齐；流水线三机制首验（四路齐发同秒/渠道批触发链/用例前移预备轮）；attempt-1/2 事故链四病根全部根治提交（守门 78/78）；负向如实入账：系分 2/4 超窗、容量饥饿×2（drop 106 条）、fanfan 会话卡死×3（hindsight 交互）、G5 六轮（人工介入 5 笔：熔断放行+发布件代拟+簿记代走+终判代落）、RACI 双@×4 复现、materials 残留暴露——全部记单在案。','20261007-v8-run10':'run10 符合（全流程闭环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实算落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记单在案；叙事集预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采矩阵 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收口，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实锚）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判死重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），hu/xiao 停摆缺席如实记单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收官实锚）：G1→UAT 意图链路全闭环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（qi 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
 '20261001-v5-run6':'符合（harness 逆境根治+真交付轮）：G1→UAT 意图链路闭环（验收书入仓+七条 UAT-EVIDENCE 7/7 PASS）；plan 七连超时根因链（窗口<任务时长/派发词缺 push 目标/账户限流/网关换血）四层根治后 fanfan 30 分钟交卷；devimpl 分支假真值如实披露（branch_fresh 守门根治未来轮）且四开发 agent 真实交付三支推送；测试 194/194 零缺陷 G4 真值；夜间 8h 停摆（/tmp 清理+Docker 睡眠）与路由丢失（DM 直发修复）/并发闸弹回/UAT 核验位错配三类新坑全部根治或如实记档——治理逆境与修复即本轮主线素材。',
 '20260930-v5-run5':'符合（G2 真实打回环+通道逆境根治轮）：G1 冻结→建群全量预邀 0 缺口→派发→主卡 t_f405c7b2+七跟踪卡→tasklist v9 入仓（1b2fce3）→agent 亲发结论行双凭证反核验 ✓→G2 首评真缺项 FAIL→复评 PASS（四查证据链）→集成/测试/UAT 推进；首夜三坑（审批线程拒发/PATH 盲/判词模板自毒）与深夜通道风暴（1302 限流/队列回灌）全部根治入正后全程真实推进——治理逆境与修复即本轮主线素材；plan/devimpl/testpass 三步以历史工件过闸的 0→1 缺口如实披露。',
 '20260929-v5-run4':'部分符合（通道受限轮，如实呈现）：G1 冻结→建群全量预邀（0 缺口）→派发→主卡 t_215792cd+T-101~107 七子卡 RACI 落对板→tasklist v8 入仓，意图链路真实闭环；register/analysis 打回环各 3 轮真实发生（拒收回灌机制按设计工作）；LLM 通道三池 429 雪崩（aim 池配额死→MGLM 1302→kimi too-many）与并发闸（max_concurrent_sessions=3）收敛全程在案——通道韧性为本轮主难点，行为语义符合治理意图。',
 '20260928-v4-run1':'部分符合：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 三轮真实打回环（缺项退回→补齐重报→复审 PASS，HumanGate 留痕）——评审目标是击穿实现而非走过场。',
 '20260929-v4-run2':'部分符合（已闭环）：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 评审实测击穿实现——t_ea68c462 r7 结论 READY-GATE-FAIL（双缺陷回归/证据链断裂），机械判定曾误过、被独立审计判回滚；R-A3 闭环（回补+复验 194/194）后复审 r8 PASS 转正。评审者目标是击穿实现而非走过场。',
 }
-_L3_B={'20261007-v8-run10':'四起接线事故当场根治（修复发生在驱动场外静默段，以修复提交+守门断言为锚，scenario.log 无动作行如实声明）：①看板查询失明（hermes 裸调用→函数转发 a44ad19）②gate-guard 全局误拦（守卫改显式启用 035a555+网关重启+第二批任务书 05:08 重发）③窗误杀×2（G2 结论窗 1800→MX_GATE_WAIT 3600 fb934e1+概设窗活性化 620d956）④脚本错位（运行中禁改主脚本=纪律 25）。四起全部提交+守门断言，run11 免踩。','20261006-v8-run9':'实测（终稿轮全锚）：G1 00:26:07 一次过 · 建群 00:26:10 全量预邀 0 缺口 · tasklist 00:40 · 四系分 02:54 全入库 · G2 03:17:38 一次过（t_e9f39ed5）· 排期 03:37 一次过 · G3 04:32:54（4/4 分支）· G4 06:11:45 · G5 06:27:47（三卡 t_23d7f58b/t_fa9bb595/t_f802193c）· UAT 06:28 派发→09:19 卷脱挂 8.5h→17:48 relay 续跑→18:04:08 过 · workmgr 18:04:18 / audit 18:04:46 / retro 18:04:55 / ide 18:05 · 必采 11/13（对话 5+操作 3+效果 3 当轮全采；skill/门禁灯 2 项缺记单）· 问题单 10 起在案 · 全程 00:24-18:05≈17.7h（净执行≈9.2h）','20261004-v7-run8':'实测（带伤实锚）：G1 一次过 · 四系分 11:02 全入库（AN-MP 回灌补齐）· G2+闸点沉淀 12:05 · archgate 崩溃环 403 棒 3h04m 后 15:10 过闸 · plan 17:27（首派空转 1h39m 判死重派）· devimpl 17:27-20:13（chen 71m/lin 含 18:38 落档；hu/xiao 缺席记单）· defect 20:17（缺支环 26 棒根治；integration 合并 PAYCORE+CHALI）· testpass 22:1x（90min 观测窗+三段 nudge 坑修复）· release 23:16 三卡 · UAT 00:0x 证据行 · workmgr/audit/retro/ide 00:07-00:14 · 全程 07:09-00:1x≈17h','20261001-v5-run6':'实测：排期 4971243（121 行含子任务拆分纪律）· DEV-PAYCORE 28c3517（5 子卡）· DEV-CHALI/DEV-CHWX 真推送 · 测试报告 8dbf5bf（194/194 零缺陷）· G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d）· UAT 验收书 12:03:04（UAT-EVIDENCE 7/7，DM→代投链路注明）· REL-MERGE f7b1cbc+G1 补账 18c9d77（导演补账缘由在 commit message）· issues 全程在案',
+_L3_B={'20261007-v8-run11':'实测（attempt-3 全锚）：G1 02:29:30 一次过（历史最快+3min）· 四路系分齐发 03:12:58（容量僵尸→重启重派 04:37）· AN-PAYCORE 04:50/AN-MP 05:08 · anexec_done 07:29 · 概设入仓 ~08:00 · G2 首轮容量饥饿 09:04→二轮过闸 09:36 · 排期 09:36-11:1x · 编码即派 11:12（PAYCORE/MP+测试预备轮同刻）· 渠道批触发 12:47 · DEV-CHWX 14:02 · 催办 lin 16:08→DEV-CHALI 齐 · G3 16:27 · TEST 16:21-17:52 · G4 18:47 · G5 r1 FAIL 20:25→六轮长跑→导演三面处置→PASS 23:44 · release 23:45 · UAT 23:47→00:20 · 治理三步 00:21-00:26 · 全程 02:26-00:3x≈22h（含事故恢复四起+G5 六轮，净执行≈13h）','20261007-v8-run10':'四起接线事故当场根治（修复发生在驱动场外静默段，以修复提交+守门断言为锚，scenario.log 无动作行如实声明）：①看板查询失明（hermes 裸调用→函数转发 a44ad19）②gate-guard 全局误拦（守卫改显式启用 035a555+网关重启+第二批任务书 05:08 重发）③窗误杀×2（G2 结论窗 1800→MX_GATE_WAIT 3600 fb934e1+概设窗活性化 620d956）④脚本错位（运行中禁改主脚本=纪律 25）。四起全部提交+守门断言，run11 免踩。','20261006-v8-run9':'实测（终稿轮全锚）：G1 00:26:07 一次过 · 建群 00:26:10 全量预邀 0 缺口 · tasklist 00:40 · 四系分 02:54 全入库 · G2 03:17:38 一次过（t_e9f39ed5）· 排期 03:37 一次过 · G3 04:32:54（4/4 分支）· G4 06:11:45 · G5 06:27:47（三卡 t_23d7f58b/t_fa9bb595/t_f802193c）· UAT 06:28 派发→09:19 卷脱挂 8.5h→17:48 relay 续跑→18:04:08 过 · workmgr 18:04:18 / audit 18:04:46 / retro 18:04:55 / ide 18:05 · 必采 11/13（对话 5+操作 3+效果 3 当轮全采；skill/门禁灯 2 项缺记单）· 问题单 10 起在案 · 全程 00:24-18:05≈17.7h（净执行≈9.2h）','20261004-v7-run8':'实测（带伤实锚）：G1 一次过 · 四系分 11:02 全入库（AN-MP 回灌补齐）· G2+闸点沉淀 12:05 · archgate 崩溃环 403 棒 3h04m 后 15:10 过闸 · plan 17:27（首派空转 1h39m 判死重派）· devimpl 17:27-20:13（chen 71m/lin 含 18:38 落档；hu/xiao 缺席记单）· defect 20:17（缺支环 26 棒根治；integration 合并 PAYCORE+CHALI）· testpass 22:1x（90min 观测窗+三段 nudge 坑修复）· release 23:16 三卡 · UAT 00:0x 证据行 · workmgr/audit/retro/ide 00:07-00:14 · 全程 07:09-00:1x≈17h','20261001-v5-run6':'实测：排期 4971243（121 行含子任务拆分纪律）· DEV-PAYCORE 28c3517（5 子卡）· DEV-CHALI/DEV-CHWX 真推送 · 测试报告 8dbf5bf（194/194 零缺陷）· G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d）· UAT 验收书 12:03:04（UAT-EVIDENCE 7/7，DM→代投链路注明）· REL-MERGE f7b1cbc+G1 补账 18c9d77（导演补账缘由在 commit message）· issues 全程在案',
 '20261002-v5-run7':'实测（收官实锚）：G1 16:51:09 一次过 · register 打回环（17:33 凭证核验超时→18:01 重报 ✓ commit=62ed83a card=t_738b568d）· 四路系分全真入仓（chen 3ad48a8/xiao f671adf/lin 7e03058/hu 9e8587c，19:03 四真值 ✓）· anexec 并发闸逆境三发 nudge（533 补丁被自更新擦除实证+现场重放）· devimpl branch_fresh 4/4（chen 3241e5a/hu 7c09aab/lin 4766cb6/xiao 12c568b）· integration 四分支合并 23:07:52 · G4 落键 00:59:09（qi 报告 00:38:08 入 integration）· G5 评审卡 t_73b1518a 打回环→01:50:12 落键 · UAT AC 7/7 判词零误报+验收书 a7eb6b3（05:54:07）· DISP 15/15（已修 10/观察 5）· 记忆探针 ✓',
 '20260930-v5-run5':'实测：建群预邀 0 缺口 · 主卡 t_f405c7b2+七跟踪卡（T-101~T-107）· tasklist v9=1b2fce3（RUN 标记本轮）· agent 亲发 ANALYSIS-DONE 双凭证 ✓ · G2 打回环：首评 FAIL（真缺项 merchant-api 三处登记）→复评 PASS 01:57:49（t_a10e41d9 四查证据链）· 治理逆境五坑根治（审批双通道/PATH 盲/判词模板自毒/队列回灌/网关 env 缺失）· issues 全程在案',
 '20260929-v5-run4':'实测：建群预邀全员 0 缺口 · 主卡 t_215792cd（23:46:00）· 七子卡落对板落对人（23:46-23:52）· 打回环 ×6（register/analysis 各 3）· issues 4 行在案 · 通道手术三迁+并发闸（429 由 746/5min 降至 111）',
@@ -925,7 +1010,7 @@ _L3_B={'20261007-v8-run10':'四起接线事故当场根治（修复发生在驱�
 '20260929-v4-run2':'实测：卡 t_ea68c462 r7（READY-GATE-FAIL 可反查）→ r8 READY-GATE-PASS（闭环）· UAT 逐条判词 5 通过+2 有条件（条件已解除）· R-A1 判回滚→复审转正',
 }
 _CP_G5={'20261004-v7-run8':'REL-MERGE/REL-TAG/REL-DELIVER 三卡登记（23:16，t_5aee076e/t_6bd57d3c/t_74b56882）+闸点沉淀 !refine 入工作线程；G5 过闸以 state g5_ready 与卡面为准；发布段崩溃环（local 自引用 41 棒）根治后走完','20261002-v5-run7':'评审卡 t_73b1518a（fanfan-review 板）——首评 1800s 未出结论行打回（01:29:31），重评 READY-GATE ✓ 01:49:29→G5 落键 01:50:12；HumanGate=导演批准事件入 approved.events','20261001-v5-run6':'G5 评审卡 t_3aaacf2d（fanfan-review 板）七项全 PASS——READY-GATE-PASS；wei 复测回执 10:52 落卡 comment #19，结论以 state g5_ready 与卡面终版为准','20260930-v5-run5':'G5 评审卡 t_73c36618（fanfan-review 板）七项检查单评审——结论以 state g5_ready 与卡面终版为准','20260929-v5-run4':'本轮 G5 未达（LLM 通道受限轮，如实 ⬜——前序真值见打回环与通道治理记录）','20260928-v4-run1':'三轮打回后过闸（02:26 PASS · HumanGate=导演批准留痕）','20260929-v4-run2':'t_ea68c462 r7 READY-GATE-FAIL → R-A1 判回滚 · REL-* 冻结'}
-_NOTE_G5={'20261007-v8-run10':('步 20 G5 闸：首轮 READY-GATE FAIL（缺回滚阈值/灰度/发布说明，14:11 退回记单 g5-ready-fail）→补齐后 14:12 READY-GATE-PASS；REL 三卡登记（t_d46f0d0f/t_67b28747/t_ef9dd74d）；delivery 面板 stage P5 done 已发、gate G5 pass 事件漏发记单（delivery-g5-gate-event-missing）——案例面板 G5 门禁灯灰如实呈现；REL-DELIVER 商户接入文档缺件记单（audit-finding）。'),'20261006-v8-run9':('步 20 发布登记+G5 闸：REL 三卡（MERGE t_23d7f58b/TAG t_fa9bb595/DELIVER t_f802193c）登记+G5 06:27:47 ready 一次过——run8 同闸 FAIL+熔断两轮的对照轮归零；结论以 state g5_ready 与卡面终版为准。'),'20261004-v7-run8':('步 20 发布登记+G5 闸：三卡+闸点沉淀实录；本段 41 棒崩溃环（同语句 local 自引用）已根治，损失约 20 分钟计入事故账。'),'20261002-v5-run7':('步 20 真实打回环：首评 1800s 窗未见 READY-GATE 结论行超时打回（01:29:31）→重评 READY-GATE ✓ 01:49:29（评审卡 t_73b1518a@fanfan-review）；HumanGate=导演批准事件入 approved.events，结论以 state g5_ready 与卡面终版为准。'),'20261001-v5-run6':('步 20 七项全 PASS（评审卡 t_3aaacf2d review-record 七项判定+凭证行）；发布计划/发布说明按模板落卡附件。'),'20260930-v5-run5':('步 20 结论以 state g5_ready 落键与评审卡终版为准（生成时如实呈现。'),'20260929-v5-run4':('步 20 ⬜：通道受限未达发布评审——G1→analysis 前序真值完整，后续步按方案重跑补齐（通道恢复窗口）。'),'20260928-v4-run1':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明真容在评审卡 t_9772c561 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。'),
+_NOTE_G5={'20261007-v8-run11':('步 20 G5 六轮长跑全留痕：r1 首评真 FAIL（20:25 缺回滚阈值/灰度/发布说明退回）→r2 会话卡死 19:18 fail→r3/r4 退回+熔断（21:05 累计 4 轮，窗错配判定+GATE_BREAKER_OVERRIDE=1 人工放行留痕）→r5 卡面滞后退回 22:28→窗尽 23:08→导演三面处置（发布三件套 main@1f2c3bd+qi 报告归位 dfd44f0+缺项①a/①b 卡簿记代走）→终判行经 fanfan 账号通道落评审卡→判词复用 PASS 23:44:37（评审卡 t_24ae1bc5→done；HumanGate 事件入 approved.events；G5 gate delivery 事件本轮已补发——run10 漏发缺陷验证）。全部人工介入计入度量。'),'20261007-v8-run10':('步 20 G5 闸：首轮 READY-GATE FAIL（缺回滚阈值/灰度/发布说明，14:11 退回记单 g5-ready-fail）→补齐后 14:12 READY-GATE-PASS；REL 三卡登记（t_d46f0d0f/t_67b28747/t_ef9dd74d）；delivery 面板 stage P5 done 已发、gate G5 pass 事件漏发记单（delivery-g5-gate-event-missing）——案例面板 G5 门禁灯灰如实呈现；REL-DELIVER 商户接入文档缺件记单（audit-finding）。'),'20261006-v8-run9':('步 20 发布登记+G5 闸：REL 三卡（MERGE t_23d7f58b/TAG t_fa9bb595/DELIVER t_f802193c）登记+G5 06:27:47 ready 一次过——run8 同闸 FAIL+熔断两轮的对照轮归零；结论以 state g5_ready 与卡面终版为准。'),'20261004-v7-run8':('步 20 发布登记+G5 闸：三卡+闸点沉淀实录；本段 41 棒崩溃环（同语句 local 自引用）已根治，损失约 20 分钟计入事故账。'),'20261002-v5-run7':('步 20 真实打回环：首评 1800s 窗未见 READY-GATE 结论行超时打回（01:29:31）→重评 READY-GATE ✓ 01:49:29（评审卡 t_73b1518a@fanfan-review）；HumanGate=导演批准事件入 approved.events，结论以 state g5_ready 与卡面终版为准。'),'20261001-v5-run6':('步 20 七项全 PASS（评审卡 t_3aaacf2d review-record 七项判定+凭证行）；发布计划/发布说明按模板落卡附件。'),'20260930-v5-run5':('步 20 结论以 state g5_ready 落键与评审卡终版为准（生成时如实呈现。'),'20260929-v5-run4':('步 20 ⬜：通道受限未达发布评审——G1→analysis 前序真值完整，后续步按方案重跑补齐（通道恢复窗口）。'),'20260928-v4-run1':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明真容在评审卡 t_9772c561 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。'),
 '20260929-v4-run2':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明 r7 真容在评审卡 t_ea68c462 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。')}
 _BASELINE_NOTE={'20261004-v7-run8':('run8 基线=mx-clean 20261004-065954 三旗标全清 0→1；对照 run7：事故面从通道类转 bash 坑型+投递丢弃型，全部当场根治并入库。'),'20260928-v4-run1':'','20260929-v4-run2':'；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）','20260929-v5-run4':'；本轮 0→1 清环境：中央仓 RFD 工件经 mx-clean --reset-central 重置（快照 tag mx-clean-20260929-232127 可回滚），基线自 G1 冻结重建','20260930-v5-run5':'；本轮 0→1 清环境：mx-clean 双档归档（20260930-154424/154715）后重建；远端历史工件仍在——plan/devimpl/testpass 门禁按文件存在即过，报告侧以 RUN 标记锚定本轮真值并如实披露'}.get(RUN_ID,'')
 
@@ -992,7 +1077,7 @@ _DOMAINS_RUN10 = {
         '实测：issues 18 行在案 · DISP 20 行（含导演勘误）· 审计 FAIL 15 项全对应记单',
         'cp-g5,cp-g6'),
 }
-_DOMAINS_BY_RUN = {'20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
+_DOMAINS_BY_RUN = {'20261007-v8-run11': _DOMAINS_RUN11, '20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
 if RUN_ID in _DOMAINS_BY_RUN:
     DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
 
