@@ -548,8 +548,11 @@ capture_step() { # <step> <url> [action] [user]
     node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --user "$user" >/dev/null 2>&1 || rc=$?
   fi
   if (( rc != 0 )); then
-    note "[帧采集] 步 $step 采集失败（rc=$rc，记单不阻断）"
-    echo "ISSUE|frame-capture-failed|step-$step|r18-frames 采集失败 rc=$rc（url=$url）" >> "$EVID_DIR/issues.log"
+    # 花括号边界（2026-10-09 run12 实锤）：bash 3.2 在 UTF-8 locale 下把 $rc 后的
+    # 全角标点首字节吸入变量名（rc\xEF: unbound variable）击杀 set -u 驱动——
+    # 起跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
+    note "[帧采集] 步 ${step} 采集失败（rc=${rc}，记单不阻断）"
+    echo "ISSUE|frame-capture-failed|step-${step}|r18-frames 采集失败 rc=${rc}（url=${url}）" >> "$EVID_DIR/issues.log"
   fi
 }
 

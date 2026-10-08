@@ -18,6 +18,10 @@
 # 拓扑：单 gateway 多路复用 + 单 studio 多账号 + 每账号多 kanban（账号板寻址）。
 # 断点续跑: START_STEP=<step> bash aipay-scenario.sh
 # 区间执行: UNTIL_STEP=<step>（如 UNTIL_STEP=smoke 只实跑步骤 1-5）
+# 起跑纪律（2026-10-09 run12 实锤）：必须 LC_ALL=C 起跑——macOS bash 3.2 在 UTF-8
+#   locale 下把字符串内 $var 后的全角标点首字节吸入变量名（rc\xEF: unbound variable），
+#   set -u 直接击杀驱动；run12 attempt 起跑未带即死于 capture_step 失败路径。
+#   正确起跑：RUN_ID=<轮次> LC_ALL=C nohup bash aipay-scenario.sh > <SIM_ROOT>/logs/<轮次>-driver.log 2>&1 &
 # 步骤序: smoke → ba → room → dispatch → register → analysis → triage → anexec
 #        → review → close → plan → devimpl → defect → testpass → release → templates → ide
 set -euo pipefail
