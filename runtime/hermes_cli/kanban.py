@@ -727,6 +727,22 @@ def _run_estimate(title: str, body: Optional[str]) -> dict:
     }
 
 
+_ESTIMATE_DAYS_BY_COMPLEXITY = {"S": 0.5, "M": 1.0, "L": 2.0}
+
+
+def _estimate_days(result: dict) -> float:
+    """complexity → person-days（S=0.5/M=1/L=2）；complexity 缺失时按 est_tokens
+    兜底分档（>200k→L、>50k→M、其余 S）。团队并行二期起点标定值，后续按实测校准。"""
+    days = _ESTIMATE_DAYS_BY_COMPLEXITY.get(result.get("complexity") or "")
+    if days is not None:
+        return days
+    try:
+        tokens = int(result.get("est_tokens") or 0)
+    except (TypeError, ValueError):
+        tokens = 0
+    return 2.0 if tokens > 200_000 else (1.0 if tokens > 50_000 else 0.5)
+
+
 def _cmd_estimate(args: argparse.Namespace) -> int:
     title, body = args.title, args.body
     if args.task_id:
@@ -736,13 +752,34 @@ def _cmd_estimate(args: argparse.Namespace) -> int:
             return _err(f"no such task: {args.task_id}", 1)
         title, body = task.title, task.body
     result = _run_estimate(title or "", body)
+    persisted = None
+    if getattr(args, "persist", False):
+        # HERMES_CUSTOM[estimate]（团队并行二期）：估算落库（卡片人日列 + 元数据），
+        # 派发器按在途工作量加权排序时消费。仅 --task-id 估算可落库。
+        if not args.task_id:
+            return _err("--persist requires a task id (raw --title/--body has no card to update)", 2)
+        if result.get("ok"):
+            days = _estimate_days(result)
+            with kbc.connect_closing() as conn:
+                ok = kb.set_estimate(conn, args.task_id, days, {
+                    "complexity": result.get("complexity"),
+                    "est_tokens": result.get("est_tokens"),
+                    "rationale": result.get("rationale"),
+                    "model": result.get("model"),
+                    "estimated_at": int(time.time()),
+                })
+            persisted = args.task_id if ok else None
+        else:
+            return _err(f"estimate failed, nothing persisted: {result.get('reason')}", 1)
     if getattr(args, "json", False):
-        _print_json(result)
+        _print_json({**result, "persisted": persisted, "estimate_days": _estimate_days(result) if result.get("ok") else None})
     elif result.get("ok"):
         cx = result.get("complexity") or "?"
         line = f"~{result.get('est_tokens', 0)} tokens · {cx}"
         if result.get("rationale"):
             line += f" — {result['rationale']}"
+        if persisted:
+            line += f" · persisted {persisted} ({_estimate_days(result)}d)"
         print(line)
     else:
         print(f"estimate failed: {result.get('reason')}", file=sys.stderr)

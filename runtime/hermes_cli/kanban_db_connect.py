@@ -877,6 +877,10 @@ _LATER_TASK_COLUMNS = (
     ("block_recurrences", "block_recurrences INTEGER NOT NULL DEFAULT 0"),
     # Spawn-time start fingerprint of worker_pid (PID-reuse guard; NULL = legacy row).
     ("worker_started_at", "worker_started_at INTEGER"),
+    # HERMES_CUSTOM[estimate] workload columns (team-parallel phase two):
+    # person-days (REAL) + estimation metadata JSON (TEXT). NULL days = unestimated.
+    ("estimate_days", "estimate_days REAL"),
+    ("estimate_meta", "estimate_meta TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (

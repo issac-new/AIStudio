@@ -116,6 +116,9 @@ class DispatchResult:
     skipped_unassigned: list[str] = field(default_factory=list)
     """Ready task ids with no assignee at all — operator-actionable (usually a
     misfiled task waiting for routing)."""
+    workload_reordered: bool = False
+    """HERMES_CUSTOM[estimate]（团队并行二期）：本轮 ready 队列发生过同优先级层内
+    按在途工作量（SUM(estimate_days)）重排——可观测位，语义不变仅同层换序。"""
     # >>> swarm:kanban-guardrail-rearm >>> (t_2101cdd8 review fix: the patch
     # carried the gate but not this field declaration — 9996e5931b had both.
     # Without it the out-of-scope gate raises AttributeError on first
@@ -2346,12 +2349,56 @@ def _tick_spawn_budget(
 
 
 def _lane_rows(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
-    """Unclaimed rows of one lane in dispatch order."""
+    """Unclaimed rows of one lane in dispatch order. priority 列供
+    _reorder_ready_by_workload 分层（HERMES_CUSTOM[estimate]），其余调用方不受影响。"""
     return conn.execute(
-        "SELECT id, assignee FROM tasks "
+        "SELECT id, assignee, priority FROM tasks "
         f"WHERE status = '{status}' AND claim_lock IS NULL "
         "ORDER BY priority DESC, created_at ASC"
     ).fetchall()
+
+
+# HERMES_CUSTOM[estimate]（团队并行二期）：未评估卡在负载计算里的保守权重（人日）。
+_WORKLOAD_UNESTIMATED_DAYS = 1.0
+
+
+def _reorder_ready_by_workload(
+    conn: sqlite3.Connection, rows: list[sqlite3.Row],
+) -> tuple[list[sqlite3.Row], bool]:
+    """Workload-weighted ready ordering: WITHIN one priority tier, tasks whose
+    assignee carries the least in-flight workload go first. Workload = SUM of
+    running tasks' estimate_days per assignee (unestimated → 1 day
+    conservative). Unassigned rows sort last in-tier (they still need routing,
+    and their eventual default assignee's load is unknown here). priority DESC
+    tiers and created_at ASC stability are preserved — only same-tier order
+    flips. Returns (rows, changed)."""
+    if not rows:
+        return rows, False
+    workload: dict[str, float] = {}
+    for prow in conn.execute(
+        "SELECT assignee, SUM(COALESCE(estimate_days, ?)) AS w FROM tasks "
+        "WHERE status = 'running' AND assignee IS NOT NULL GROUP BY assignee",
+        (_WORKLOAD_UNESTIMATED_DAYS,),
+    ):
+        workload[str(prow["assignee"])] = float(prow["w"] or 0.0)
+    tiers: dict[int, list[sqlite3.Row]] = {}
+    for row in rows:
+        tiers.setdefault(int(row["priority"]), []).append(row)
+    reordered: list[sqlite3.Row] = []
+    changed = False
+    for priority in sorted(tiers, reverse=True):
+        tier = tiers[priority]
+        ordered = sorted(
+            tier,
+            key=lambda r: (
+                r["assignee"] is None,                      # unassigned last in-tier
+                workload.get(str(r["assignee"]), 0.0) if r["assignee"] else 0.0,
+            ),
+        )
+        if [r["id"] for r in ordered] != [r["id"] for r in tier]:
+            changed = True
+        reordered.extend(ordered)
+    return reordered, changed
 
 
 def _any_spawnable_review(
@@ -2484,6 +2531,11 @@ def _dispatch_once_locked(
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
     )
     default_assignee = _resolve_default_assignee(default_assignee, board)
+    # HERMES_CUSTOM[estimate]（团队并行二期）：同优先级层内按在途工作量重排
+    # （least-loaded assignee 先领）；priority/created_at 语义不变。
+    ready_rows, workload_reordered = _reorder_ready_by_workload(conn, ready_rows)
+    if workload_reordered:
+        result.workload_reordered = True
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:
