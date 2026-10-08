@@ -4,8 +4,9 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import {
   QGATE_TO_DELIVERY, toDeliveryGateContent, DOMAIN_TO_GATE,
-  useQGateBridgeStore, loadBridgeState, saveBridgeState,
+  useQGateBridgeStore,
 } from '../stores/qgate-bridge'
+import { loadBridgeState, saveBridgeState } from '../stores/qgate-bridge-state.node'
 import { parseGateContent, DELIVERY_EVENT_TYPES, validateGateSender } from '../delivery-protocol'
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -118,6 +119,31 @@ describe('qgate-bridge store 上报', () => {
     // ——这是有意的：机器判定标机械来源，不冒人（桥接语义，见 store 文件头注释）
     const errors = validateGateSender(content, '@qgate-bot-agent:sv')
     expect(errors.some((e) => e.includes('human'))).toBe(false)
+  })
+})
+
+describe('吸收轮：批量同步 syncVerdictsToCase（governance verdicts → 逐门 delivery.gate）', () => {
+  it('全量行逐门上报，来源桶与失败摘要素入 evidence；空行零事件', async () => {
+    const store = useQGateBridgeStore()
+    store.learnCaseRoom('case-s', '!case-s:sv')
+    const res = await store.syncVerdictsToCase('case-s', [
+      { gateId: 'engineering.basic-check', domain: 'L1', verdict: 'PASS', deliveryVerdict: 'pass', runId: 'run-1', sourceBucket: 'verified' },
+      { gateId: 'data.persistence-integrity', domain: 'L2', verdict: 'FAIL', deliveryVerdict: 'reject', failureSummary: 'field-diff:fail', conditions: ['fix db'] },
+    ])
+    expect(res).toEqual({ sent: 2, failed: 0 })
+    expect(sentEvents).toHaveLength(2)
+    expect(sentEvents[0].roomId).toBe('!case-s:sv')
+    const passEv = sentEvents[0].content as { evidence: { summary: string }; gate: string }
+    expect(passEv.gate).toBe('G3')
+    expect(passEv.evidence.summary).toContain('source=verified')
+    const failEv = sentEvents[1].content as { gate: string; verdict: string; reason: string }
+    expect(failEv.gate).toBe('G4')
+    expect(failEv.verdict).toBe('reject')
+    expect(failEv.reason).toContain('fix db')
+
+    const empty = await store.syncVerdictsToCase('case-s', [])
+    expect(empty).toEqual({ sent: 0, failed: 0 })
+    expect(sentEvents).toHaveLength(2)
   })
 })
 

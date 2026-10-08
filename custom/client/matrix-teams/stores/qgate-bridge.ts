@@ -7,10 +7,8 @@
 //   bridge-state.json（runs 索引下，本地，不入 git）。
 // 读端：review-center 已监听 delivery.gate 事件并聚合（无需本文件对接）。
 import { defineStore } from 'pinia'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { RoomEvent, type MatrixClient } from 'matrix-js-sdk'
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import {
   DELIVERY_EVENT_TYPES, DELIVERY_SCHEMA_VERSION,
@@ -18,6 +16,21 @@ import {
   type GateContent, type DeliveryGate,
 } from '../delivery-protocol'
 import { unwrapRef } from '../utils'
+// 注：bridge-state 离线持久化助手在 ./qgate-bridge-state.node.ts（node:fs 依赖
+// 不得进浏览器 bundle——本 store 被视图引用后曾把 node:path 顶层 import 带进
+// 页面，vite externalize 在 import 绑定即抛错，2026-10-08 吸收轮走查逮住）。
+
+/** 同步聚合的输入行（与 governance api QgateVerdictRow 同形；client 侧自持类型防跨域 import）。 */
+export interface QgateVerdictRowLike {
+  gateId: string
+  domain: string
+  verdict: QGateVerdictInput['verdict']
+  deliveryVerdict: 'pass' | 'conditional' | 'reject'
+  runId?: string
+  failureSummary?: string
+  conditions?: string[]
+  sourceBucket?: 'verified' | 'declared' | 'degraded' | 'none'
+}
 
 /** QGate 六态 → delivery 三态（与 qgate align.ts 同一张表，client 侧自管一份防跨仓 import）。 */
 export const QGATE_TO_DELIVERY: Record<string, 'pass' | 'conditional' | 'reject'> = {
@@ -93,6 +106,25 @@ export const useQGateBridgeStore = defineStore('matrix-qgate-bridge', () => {
     }
   }
 
+  // 时间线接线（吸收轮根治断头桥）：此前 reportVerdict 无任何生产调用方、
+  // caseRooms 学习也无人挂——判定流根本没进网络。挂法与 review-center 同款
+  // （store 顶层 watch client → RoomEvent.Timeline）。
+  let listening = false
+  function ensureListening(): void {
+    if (listening) return
+    listening = true
+    watch(clientRef, (client, prev) => {
+      if (prev) prev.off(RoomEvent.Timeline, onTimeline)
+      if (!client) return
+      client.on(RoomEvent.Timeline, onTimeline)
+    }, { immediate: true })
+  }
+  ensureListening()
+
+  async function onTimeline(event: unknown, room: unknown): Promise<void> {
+    await handleTimelineEvent(event, room)
+  }
+
   /** 上报一条 QGate 判定到案例房（或注册房兜底）。 */
   async function reportVerdict(input: QGateVerdictInput): Promise<{ ok: boolean; error?: 'no-client' | 'no-room' }> {
     const client = clientRef.value
@@ -109,31 +141,31 @@ export const useQGateBridgeStore = defineStore('matrix-qgate-bridge', () => {
     }
   }
 
-  return { handleTimelineEvent, reportVerdict, learnCaseRoom }
+  /** 批量同步：governance qgate-verdicts 全量行 → 逐门 delivery.gate 事件。
+   *  供交付案例面板"同步 QGate 判定"动作调用（流程闭环：qgate run → 案例房门禁灯）。 */
+  async function syncVerdictsToCase(caseId: string, rows: QgateVerdictRowLike[]): Promise<{ sent: number; failed: number; error?: 'no-client' | 'no-room' }> {
+    if (rows.length === 0) return { sent: 0, failed: 0 }
+    let sent = 0
+    let failed = 0
+    let lastError: 'no-client' | 'no-room' | undefined
+    for (const row of rows) {
+      const res = await reportVerdict({
+        caseId,
+        gateId: row.gateId,
+        domain: row.domain,
+        verdict: row.verdict,
+        runId: row.runId,
+        summary: [row.failureSummary, row.sourceBucket ? `source=${row.sourceBucket}` : undefined].filter(Boolean).join(' · ') || undefined,
+        conditions: row.conditions,
+      })
+      if (res.ok) sent += 1
+      else { failed += 1; lastError = res.error }
+    }
+    return { sent, failed, error: failed > 0 ? lastError : undefined }
+  }
+
+  return { handleTimelineEvent, reportVerdict, syncVerdictsToCase, learnCaseRoom }
 })
 
 // ── CLI/插件侧可复用的离线换算面（不依赖 Matrix）：判定 → GateContent JSON ──
 export { DOMAIN_TO_GATE }
-
-/** bridge-state 持久化（.qgate/bridge-state.json）：caseId→roomId 镜像。 */
-export function loadBridgeState(qgateDir: string): Record<string, string> {
-  try {
-    const raw = JSON.parse(readFileSync(join(qgateDir, 'bridge-state.json'), 'utf8')) as Record<string, unknown>
-    const out: Record<string, string> = {}
-    for (const [k, v] of Object.entries(raw)) if (typeof v === 'string') out[k] = v
-    return out
-  } catch {
-    return {}
-  }
-}
-
-export function saveBridgeState(qgateDir: string, state: Record<string, string>): void {
-  try {
-    mkdirSync(qgateDir, { recursive: true })
-    writeFileSync(join(qgateDir, 'bridge-state.json'), JSON.stringify(state, null, 2) + '\n', 'utf8')
-  } catch { /* 镜像写失败不阻断上报 */ }
-}
-
-export function bridgeStateExists(qgateDir: string): boolean {
-  return existsSync(join(qgateDir, 'bridge-state.json'))
-}

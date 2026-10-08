@@ -4,13 +4,21 @@
 // delivery-cases store（index 发现 + case state + timeline 事件投影）。
 // P0（09-28）：完成态（P6+G6 pass）分色+读数新口径（completed 不计在途/待审）+
 // 房间深链（跳 ia2 房间路由）+ 实时刷新（Room.timeline 监听，30s 兜底轮询）。
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { NButton, NCard, NEmpty, NSpin, NTag } from 'naive-ui'
 import { useDeliveryCasesStore, type DeliveryCaseView, type GateLight } from '../stores/delivery-cases'
+import { useQGateBridgeStore } from '../stores/qgate-bridge'
+import { fetchQgateVerdicts } from '@/custom/governance/api/governance'
 
+// v1.31.1 吸收轮：每案例"同步 QGate 判定"动作——governance qgate-verdicts →
+// qgate-bridge 逐门 delivery.gate 事件（机器执法判定流闭环，此前桥无生产调用方）。
 const store = useDeliveryCasesStore()
+const bridge = useQGateBridgeStore()
 const router = useRouter()
+const i18nCtx = useI18n()
+const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh').startsWith('zh'))
 const loading = ref(false)
 const drawer = ref<GateLight | null>(null)
 // 发起向导（M2）：标题/中央仓/档位 → 建案例房 + case state + index 登记
@@ -18,6 +26,28 @@ const formOpen = ref(false)
 const form = ref({ title: '', repoUrl: '', tier: 'standard' })
 const launching = ref(false)
 const launchError = ref('')
+// QGate 同步态（逐案例）：caseId → running / 结果行
+const syncing = ref<Record<string, boolean>>({})
+const syncResult = ref<Record<string, string>>({})
+
+async function syncQgateVerdicts(c: DeliveryCaseView) {
+  syncing.value = { ...syncing.value, [c.caseId]: true }
+  try {
+    const { verdicts } = await fetchQgateVerdicts()
+    if (verdicts.length === 0) {
+      syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? '无 QGate 判定在档（先跑 qgate run）' : 'no qgate runs on record' }
+      return
+    }
+    const res = await bridge.syncVerdictsToCase(c.caseId, verdicts)
+    if (res.error === 'no-client') syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? 'Matrix 未连接' : 'matrix client not connected' }
+    else if (res.error === 'no-room') syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? '无可上报房间（案例房/注册房缺失）' : 'no room to report to' }
+    else syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? `已上报 ${res.sent} 门${res.failed > 0 ? `，失败 ${res.failed}` : ''}` : `reported ${res.sent} gates${res.failed > 0 ? `, ${res.failed} failed` : ''}` }
+  } catch (e) {
+    syncResult.value = { ...syncResult.value, [c.caseId]: e instanceof Error ? e.message : String(e) }
+  } finally {
+    syncing.value = { ...syncing.value, [c.caseId]: false }
+  }
+}
 
 async function reload() {
   loading.value = true
@@ -116,6 +146,12 @@ function openRoom(roomId: string) {
           <NTag v-if="c.completed" size="small" type="success" :bordered="false">{{ $t('ia2.delivery.completed') }}</NTag>
           <NTag size="small" :bordered="false">{{ c.tier }}</NTag>
           <NTag size="small" type="info" :bordered="false">{{ c.caseId }}</NTag>
+          <NButton
+            size="tiny"
+            :loading="syncing[c.caseId]"
+            data-testid="qgate-sync-btn"
+            @click="syncQgateVerdicts(c)"
+          >{{ zh ? '同步 QGate 判定' : 'Sync QGate' }}</NButton>
         </template>
         <div class="stagebar">
           <span
@@ -138,6 +174,7 @@ function openRoom(roomId: string) {
         <div class="meta">
           {{ $t('ia2.delivery.owner') }}: <span :title="c.ownerAccount">{{ shortMatrixId(c.ownerAccount) }}</span> ·
           <a class="roomlink" :title="c.roomId" @click.prevent="openRoom(c.roomId)">{{ shortMatrixId(c.roomId) }}</a>
+          <span v-if="syncResult[c.caseId]" class="syncnote" :data-testid="`qgate-sync-note-${c.caseId}`">{{ syncResult[c.caseId] }}</span>
         </div>
       </NCard>
     </div>
@@ -174,6 +211,7 @@ function openRoom(roomId: string) {
 .light { width: 28px; height: 20px; border-radius: 10px; color: #fff; font-size: 11px;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .meta { color: #888; font-size: 12px; margin-top: 6px; }
+.syncnote { margin-left: 8px; color: #2563eb; font-size: 11px; }
 .evid { font-size: 13px; }
 .reason { margin-top: 6px; color: #b45309; font-size: 12px; }
 .drawer { position: sticky; bottom: 0; }

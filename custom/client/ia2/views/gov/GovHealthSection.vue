@@ -10,8 +10,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  fetchGovernanceOverview, runDomainAudit, fetchDomainAudit,
-  type GovernanceOverview, type DomainAuditSummary,
+  fetchGovernanceOverview, runDomainAudit, fetchDomainAudit, fetchQgateVerdicts, fetchUsage,
+  type GovernanceOverview, type DomainAuditSummary, type QgateVerdictRow,
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
 
@@ -22,10 +22,37 @@ const L = computed(() => {
   const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
   return loc.startsWith('zh') ? governanceMessages.zh.governance : governanceMessages.en.governance
 })
+const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh').startsWith('zh'))
 
 const overview = ref<GovernanceOverview | null>(null)
+const usage = ref<import('@/custom/governance/api/governance').UsageReport | null>(null)
 const error = ref('')
 const loading = ref(false)
+
+// ── 机器执法实况（v1.31.1 吸收轮）：qgate 逐门最新判定按域归 G 门 ──
+// 六闸卡上方的人工工件核查之外，机器门禁判定同屏可见——两套证据各表，不互相冒充。
+// G2（架构评审）/G6（复盘）是人工域：无机器判定属如实边界，灰态标注，不编造。
+const qgateVerdicts = ref<QgateVerdictRow[]>([])
+const QGATE_DOMAIN_TO_GATE: Record<string, string> = { L0: 'G1', L1: 'G3', L2: 'G4', L3: 'G4', L4: 'G5', L5: 'G5' }
+const machineGateCards = computed(() => {
+  const byGate = new Map<string, { worst: 'pass' | 'conditional' | 'reject'; count: number }>()
+  for (const v of qgateVerdicts.value) {
+    const gate = QGATE_DOMAIN_TO_GATE[v.domain] ?? 'G4'
+    const cur = byGate.get(gate)
+    const rank = (d: string): number => (d === 'reject' ? 3 : d === 'conditional' ? 2 : 1)
+    if (!cur) byGate.set(gate, { worst: v.deliveryVerdict, count: 1 })
+    else { byGate.set(gate, { worst: rank(v.deliveryVerdict) > rank(cur.worst) ? v.deliveryVerdict : cur.worst, count: cur.count + 1 }) }
+  }
+  return ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'].map((gate) => ({
+    gate,
+    machine: byGate.get(gate) ?? null,
+  }))
+})
+const sourceDistLine = computed(() => {
+  const d = usage.value?.gateStats?.sourceDistribution
+  if (!d) return ''
+  return `核验 ${d.verified} · 声明 ${d.declared} · 降级 ${d.degraded} · 无信号 ${d.none}`
+})
 
 // ── 六域体检（长期台账）──
 const audit = ref<DomainAuditSummary | null>(null)
@@ -76,6 +103,9 @@ async function refresh(): Promise<void> {
   try {
     overview.value = await fetchGovernanceOverview()
     audit.value = await fetchDomainAudit().catch(() => audit.value)
+    // gateStats（passRate/来源分布/advisory）在 /usage 报告里，与 RuntimeSection 同源
+    usage.value = await fetchUsage().catch(() => usage.value)
+    qgateVerdicts.value = (await fetchQgateVerdicts().catch(() => ({ verdicts: [] as QgateVerdictRow[] }))).verdicts
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -107,6 +137,20 @@ onMounted(() => void refresh())
         <div class="gov-health__gate-detail" :data-testid="`gov-gate-${card.gate}`">{{ card.ok ? L.inRepo : L.missing }} · {{ card.detail }}</div>
         <div v-if="card.latest" class="gov-health__gate-ts">{{ card.latest }}</div>
       </div>
+    </div>
+
+    <!-- 机器执法实况（qgate 判定 → G 门映射；与上方工件核查各表，两套证据不互相冒充） -->
+    <div class="gov-health__machine" data-testid="gov-qgate-verdicts">
+      <span class="gov-health__machine-title">{{ zh ? '机器执法实况' : 'Machine gates' }}</span>
+      <span
+        v-for="m in machineGateCards"
+        :key="m.gate"
+        class="gov-health__machine-chip"
+        :class="m.machine ? `is-${m.machine.worst}` : 'is-none'"
+        :data-testid="`gov-qgate-${m.gate}`"
+        :title="m.machine ? `${m.machine.count} qgate gate(s) · worst=${m.machine.worst}` : (zh ? '无机器判定（人工域或未在档）' : 'no machine verdict (human domain or not on record)')"
+      >{{ m.gate }}:{{ m.machine ? m.machine.worst : '—' }}</span>
+      <span v-if="sourceDistLine" class="gov-health__machine-dist" data-testid="gov-qgate-source-dist">{{ zh ? '来源分布' : 'sources' }}: {{ sourceDistLine }}</span>
     </div>
 
     <!-- 六域体检：真实流程中运行的判定引擎，台账跨轮累积 -->
@@ -178,6 +222,15 @@ onMounted(() => void refresh())
   &.is-ok { border-top-color: #16a34a; opacity: 1; }
 }
 .gov-health__gate-name { font-size: 14px; font-weight: 800; }
+
+.gov-health__machine { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gov-health__machine-title { font-size: 11px; font-weight: 700; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; }
+.gov-health__machine-chip { font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 8px; font-family: ui-monospace, monospace;
+  &.is-pass { color: #15803d; background: #dcfce7; }
+  &.is-conditional { color: #b45309; background: #fef3c7; }
+  &.is-reject { color: #b91c1c; background: #fee2e2; }
+  &.is-none { color: #64748b; background: #f1f5f9; } }
+.gov-health__machine-dist { font-size: 10.5px; color: var(--text-muted, #878c99); margin-left: auto; }
 .gov-health__gate-label { font-size: 11px; color: var(--text-primary, inherit); margin-top: 1px; }
 .gov-health__gate-detail { font-size: 10.5px; color: var(--text-muted, #878c99); margin-top: 3px; }
 .gov-health__gate-ts { font-size: 10px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }

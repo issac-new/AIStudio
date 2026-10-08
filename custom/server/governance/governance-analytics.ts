@@ -297,6 +297,12 @@ export interface GateStats {
   passRate: number | null
   lastAt: number | null
   roots: string[]
+  /** 来源分布（qgate v0.3.1 吸收轮，上游 quality-gate v1.26/1.31 方言）：
+      PASS/CONDITIONAL/WAIVED 门禁按证据来源分桶（核验/声明/降级/无信号）。
+      旧 run 无 sourceSignal 字段 → 不入桶（legacy 不冒充任何桶）。 */
+  sourceDistribution?: { verified: number; declared: number; degraded: number; none: number }
+  /** advisory（CONDITIONAL 非阻断）run 计数——不阻断但必须可见。 */
+  advisoryRuns?: number
 }
 
 function walkUp(rel: string, fromDir: string): string | null {
@@ -333,13 +339,25 @@ export function qgateRunRoots(): string[] {
   return roots
 }
 
-interface QgateRunRow { verdict?: string; endedAt?: number }
+interface QgateRunRow {
+  verdict?: string
+  endedAt?: number
+  gateId?: string
+  domain?: string
+  runId?: string
+  failureSummary?: string
+  conditions?: string[]
+  /** qgate v0.3.1：{labels, bucket}——PASS/CONDITIONAL/WAIVED 才有。 */
+  sourceSignal?: { labels?: string[]; bucket?: string }
+}
 
 export function collectQgateRuns(rootsOverride?: string[]): GateStats {
   const roots = rootsOverride ?? qgateRunRoots()
   const byVerdict: Record<string, number> = {}
   let runs = 0
   let lastAt: number | null = null
+  const sourceDistribution = { verified: 0, declared: 0, degraded: 0, none: 0 }
+  let advisoryRuns = 0
   for (const root of roots) {
     let files: string[] = []
     try {
@@ -351,13 +369,78 @@ export function collectQgateRuns(rootsOverride?: string[]): GateStats {
         const v = String(j.verdict ?? '').toLowerCase() || 'unknown'
         byVerdict[v] = (byVerdict[v] ?? 0) + 1
         runs += 1
+        if (v === 'conditional') advisoryRuns += 1
+        const bucket = j.sourceSignal?.bucket
+        if (bucket === 'verified' || bucket === 'declared' || bucket === 'degraded' || bucket === 'none') {
+          sourceDistribution[bucket] += 1
+        }
         if (typeof j.endedAt === 'number' && j.endedAt > (lastAt ?? 0)) lastAt = j.endedAt
       } catch { /* 坏文件跳过 */ }
     }
   }
   const na = byVerdict['not_applicable'] ?? 0
   const denominator = runs - na
-  return { runs, byVerdict, passRate: denominator > 0 ? (byVerdict['pass'] ?? 0) / denominator : null, lastAt, roots }
+  return { runs, byVerdict, passRate: denominator > 0 ? (byVerdict['pass'] ?? 0) / denominator : null, lastAt, roots, sourceDistribution, advisoryRuns }
+}
+
+// ---------- qgate 逐门最新判定（吸收轮：判定流进 SwarmStudio 的数据面） ----------
+
+export interface QgateVerdictRow {
+  gateId: string
+  domain: string
+  verdict: string
+  /** 六态→交付三态（与 client qgate-bridge QGATE_TO_DELIVERY 同表，server 侧自持一份防跨层 import）。 */
+  deliveryVerdict: 'pass' | 'conditional' | 'reject'
+  runId?: string
+  endedAt: number | null
+  failureSummary?: string
+  conditions?: string[]
+  sourceBucket?: 'verified' | 'declared' | 'degraded' | 'none'
+}
+
+const QGATE_TO_DELIVERY_SERVER: Record<string, 'pass' | 'conditional' | 'reject'> = {
+  PASS: 'pass',
+  CONDITIONAL: 'conditional',
+  WAIVED: 'conditional',
+  FAIL: 'reject',
+  INCONCLUSIVE: 'conditional',
+  NOT_APPLICABLE: 'conditional',
+}
+
+/** 逐门最新判定（endedAt 最大者）：供客户端桥（qgate-bridge→delivery.gate）与
+ *  治理健康页机器执法实况消费。旧 run 缺 domain/gateId 的字段如实缺省。 */
+export function collectQgateVerdicts(rootsOverride?: string[]): QgateVerdictRow[] {
+  const roots = rootsOverride ?? qgateRunRoots()
+  const latest = new Map<string, QgateVerdictRow>()
+  for (const root of roots) {
+    let files: string[] = []
+    try {
+      files = readdirSync(root).filter((f) => /^run-.*\.json$/.test(f))
+    } catch { continue }
+    for (const f of files) {
+      try {
+        const j = JSON.parse(readFileSync(join(root, f), 'utf8')) as QgateRunRow
+        const gateId = typeof j.gateId === 'string' && j.gateId.length > 0 ? j.gateId : null
+        const endedAt = typeof j.endedAt === 'number' ? j.endedAt : 0
+        if (!gateId) continue
+        const prev = latest.get(gateId)
+        if (prev && (prev.endedAt ?? 0) >= endedAt) continue
+        const verdict = String(j.verdict ?? '').toUpperCase() || 'INCONCLUSIVE'
+        latest.set(gateId, {
+          gateId,
+          domain: typeof j.domain === 'string' ? j.domain : '',
+          verdict,
+          deliveryVerdict: QGATE_TO_DELIVERY_SERVER[verdict] ?? 'conditional',
+          runId: j.runId,
+          endedAt: endedAt || null,
+          failureSummary: j.failureSummary,
+          conditions: j.conditions,
+          sourceBucket: j.sourceSignal?.bucket as QgateVerdictRow['sourceBucket'],
+        })
+      } catch { /* 坏文件跳过 */ }
+    }
+  }
+  return [...latest.values()].sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0))
 }
 
 // ---------- ③ SLO 实况 ----------
