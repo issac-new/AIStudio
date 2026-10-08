@@ -40,13 +40,17 @@ export function modeToPreset(mode: PermissionMode): 'readonly' | 'standard' | 'f
 }
 
 // ── 引擎档映射（2026-09-26 层 2）──
-// zcode 引擎任务权限档 ZCodeTaskMode 六档（zcode-task-mode-schema.ts:6：
-// yolo/plan/edit/auto/autoEdit/build）。七档→引擎档映射供任务派发（automation/
-// create 带 permissionMode）消费；**会话级 mode 的 v4 通道引擎未开**（createSession
-// 只收 workspacePath）——会话内切换器待引擎面扩展（记档）。
+// zcode 引擎任务权限档 ZCodeTaskMode 六档（yolo/plan/edit/auto/autoEdit/build）。
+// 七档→引擎档映射供任务派发（automation/create 带 permissionMode）与会话创建
+// （v4 createSession.config.mode）消费。**v4 通道已实证接通（2026-10-08 会话档轮）**：
+// 引擎 createSession.config.mode 收字符串档位、switchCollaborationMode 命令可切
+// build/edit/plan/yolo（auto 档引擎面不可切——映射到 auto/autoEdit 的档位仅建会话时
+// 生效），锚=upstream/zcode packages/shared/src/zcode-protocol-v4/command.ts:39/216。
+// 会话档存取=permmodes/session-mode-store（per-profile）；执法=enforce-gate 阶梯>
+// 会话档>全局档三级链。
 export type EngineTaskMode = 'yolo' | 'plan' | 'edit' | 'auto' | 'autoEdit' | 'build'
 
-const ENGINE_MODE_MAP: Record<PermissionMode, EngineTaskMode> = {
+export const ENGINE_MODE_MAP: Record<PermissionMode, EngineTaskMode> = {
   'readonly': 'plan',
   'plan': 'plan',
   'default': 'edit',
@@ -59,4 +63,16 @@ const ENGINE_MODE_MAP: Record<PermissionMode, EngineTaskMode> = {
 /** 七档 → 引擎任务档（ZCodeTaskMode 词表；派单/automation 消费）。 */
 export function toEngineTaskMode(mode: PermissionMode): EngineTaskMode {
   return ENGINE_MODE_MAP[mode]
+}
+
+// ── 引擎切档映射（v4 通道轮）──
+// switchCollaborationMode 引擎面只收 build/edit/plan/yolo（command.ts:216，
+// "auto 非用户可切"）；映射到 auto/autoEdit 的权限档返回 null=仅建会话时生效。
+export const ENGINE_SWITCHABLE: Record<Exclude<EngineTaskMode, 'auto' | 'autoEdit'>, true> = {
+  yolo: true, plan: true, edit: true, build: true,
+}
+
+export function toEngineSwitchMode(mode: PermissionMode): 'build' | 'edit' | 'plan' | 'yolo' | null {
+  const t = ENGINE_MODE_MAP[mode]
+  return t === 'auto' || t === 'autoEdit' ? null : (t as 'build' | 'edit' | 'plan' | 'yolo')
 }
