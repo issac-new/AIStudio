@@ -16,7 +16,7 @@ log "watcher up: waiting for idle window (all of ${PROFILES[*]} quiet >180s), de
 quiet_since=0
 while (( $(date +%s) < DEADLINE )); do
   now=$(date +%s)
-  oldest=$now
+  newest=0
   for p in "${PROFILES[@]}"; do
     f="$SIM_ROOT/hermes/profiles/$p/logs/agent.log"
     # 判静默看"真实工作行"（API call/tool/Turn）的最后时间戳——文件 mtime 会被
@@ -29,9 +29,12 @@ while (( $(date +%s) < DEADLINE )); do
     else
       t=0
     fi
-    (( t < oldest )) && oldest=$t
+    # 取三路里"最近"的活动时间（max）——三路都要静默才算静默窗；取 min 会拿最老
+    # 的一路恒判闲（16:12 实锤：chen 已静默 76min，watcher 秒触发、误杀了 xiao
+    # 的在飞回合——本脚本一次性已用完，此修复为留给复用者的地雷拆除）
+    (( t > newest )) && newest=$t
   done
-  idle=$(( now - oldest ))
+  idle=$(( now - newest ))
   if (( idle > 180 )); then
     log "idle window (quiet ${idle}s) — restarting gateway"
     GPID=$(cat "$SIM_ROOT/pids/gateway.pid" 2>/dev/null)
