@@ -528,5 +528,5 @@
 # TS1117 重复键 24 处阻断 desktop prepare 钩子的根级 vue-tsc——删 overlay 侧单引号副本。
 583-locale-runusage-dedup.patch
 
-# 576 看板完成闸 422 结构化（run11 实锤：completion_blocked 冒泡 500 不透明——CLI 拒绝分类打标+行动提示+complete 路由 422）
-576-server-kanban-complete-blocked-422.patch
+# 584 看板完成闸 422 结构化（run11 实锤；原 576 号让位给 chromium-bidi 在途方——编号唯一性守门）
+584-server-kanban-complete-blocked-422.patch
