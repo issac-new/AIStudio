@@ -934,7 +934,7 @@ describe('⑯ run10 接线事故根治守门（hermes 转发/gate-guard 显式�
   })
   it('gate-guard 仅显式启用（全局误拦系分期 spawn 死锁根治）', () => {
     const up = read(join(MX, 'mx-up.sh'))
-    expect(up).toContain('${MX_GATE_GUARD:+')
+    expect(up).toContain('${MX_GATE_GUARD:-}')  // fac97e2 写法（展开词不获赋值识别的 bash 语义实锤）
     expect(up).not.toMatch(/KANBAN_GATE_GUARD_KEYS="\$\{MX_GATE_GUARD_KEYS:-/)
   })
   it('agent-交付型朴素窗已活性化（概设窗走 wait_alive_truth）', () => {
