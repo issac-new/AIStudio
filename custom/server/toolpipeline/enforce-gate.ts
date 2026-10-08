@@ -19,6 +19,7 @@
 import { ladderForProfile, type AutonomyLadderEntry } from '../autonomyladder/autonomy-ladder'
 import { classifyApprovalRisk, type ApprovalRiskTier } from '../approvals/risk-tier'
 import { modeDecision, type PermissionMode, type ToolCategory } from '../permmodes/permission-modes'
+import { sessionModeOf } from '../permmodes/session-mode-store'
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
 interface PreExecuteVerdict { allow: false; error: string }
@@ -107,6 +108,8 @@ export function approvalPointHit(ladder: AutonomyLadderEntry, tool: string, inpu
 export interface EnforceEnv {
   masterOn?: boolean
   globalMode?: PermissionMode | null
+  /** 会话档取值（v4 通道轮）：per-profile 会话权限档，优先于全局档、让位于阶梯。 */
+  sessionModeOf?: (profileId?: string) => PermissionMode | null
   ladderOf?: (profileId?: string) => AutonomyLadderEntry | null
 }
 
@@ -118,9 +121,16 @@ export function evaluateEnforcement(
 ): EnforceVerdict {
   const masterOn = env.masterOn ?? (process.env.HERMES_TOOL_ENFORCE === '1')
   if (!masterOn) return { enforcing: false, rule: 'master-off' }
-  const modeRaw = env.globalMode !== undefined
+  // 档位解析三级链（阶梯＞会话档＞全局档）：会话档 per-profile 更具体故恒胜全局档
+  // （v4 通道轮）；全局档=env 注入位（测试用 globalMode / 运行用 HERMES_TOOL_ENFORCE_MODE）。
+  const sessionMode = env.sessionModeOf !== undefined
+    ? env.sessionModeOf(profileId)
+    : sessionModeOf(profileId ?? '')
+  const globalRaw = env.globalMode !== undefined
     ? env.globalMode
     : (process.env.HERMES_TOOL_ENFORCE_MODE as PermissionMode | undefined ?? null)
+  const modeRaw = sessionMode ?? globalRaw
+  const modeSource = sessionMode ? '会话档' : '全局档'
   const ladder = (env.ladderOf ?? ((p?: string) => ladderForProfile(p ?? '')))(profileId)
   if (!ladder && !modeRaw) return { enforcing: false, rule: 'no-config' }
 
@@ -161,13 +171,13 @@ export function evaluateEnforcement(
   if (!decision.allowed) {
     return {
       enforcing: true, allow: false, rule: 'mode-off',
-      error: `权限模式 ${mode} 不放行 ${toolCategoryOf(tool)} 类工具（${tool}）`,
+      error: `权限模式 ${mode}（${modeSource}）不放行 ${toolCategoryOf(tool)} 类工具（${tool}）`,
     }
   }
   if (decision.needsApproval) {
     return {
       enforcing: true, allow: false, rule: 'mode-needs-approval',
-      error: `权限模式 ${mode} 对 ${toolCategoryOf(tool)} 类工具要求人工审批（${tool}）——v1 无交互审批桥，请走审批流后重试（规格档 H3 待办）`,
+      error: `权限模式 ${mode}（${modeSource}）对 ${toolCategoryOf(tool)} 类工具要求人工审批（${tool}）——请走审批流后重试，或下调该 profile 会话档`,
     }
   }
   return { enforcing: true, allow: true, rule: 'mode-pass' }

@@ -18,6 +18,8 @@
 // 命令信封契约：upstream/zcode packages/shared/src/zcode-protocol-v4/command.ts:323
 // commandEnvelopeSchema（commandId uuid v7 风格客户端生成、createSession 时
 // sessionId=null、sendText payload={text,...}）。
+import { sessionModeOf } from '../permmodes/session-mode-store'
+import { ENGINE_MODE_MAP } from '../permmodes/permission-modes'
 import { randomUUID } from 'crypto'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 import {
@@ -61,7 +63,7 @@ export function parseMentions(text: string): MentionToken[] {
 
 export interface DispatchEnginePort {
   probe(): Promise<boolean>
-  createSession(params: { workspacePath: string }): Promise<{ session: { sessionId: string } }>
+  createSession(params: { workspacePath: string; config?: { mode?: string } }): Promise<{ session: { sessionId: string } }>
   sendCommand(params: { workspacePath: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string }>
 }
 
@@ -367,7 +369,13 @@ export class MentionDispatchService {
 
     let sessionId: string
     try {
-      const created = await this.engine.createSession({ workspacePath: params.workspacePath })
+      // v4 会话档穿线（2026-10-08）：执行 agent 的会话权限档在位 → 引擎建会话档位随建生效
+      // （七档→六档映射=permission-modes ENGINE_MODE_MAP；未配置不带 config=引擎默认，不装已治理）。
+      const smode = sessionModeOf(resolveRunsFor(token))
+      const created = await this.engine.createSession({
+        workspacePath: params.workspacePath,
+        ...(smode ? { config: { mode: ENGINE_MODE_MAP[smode] } } : {}),
+      })
       sessionId = created.session.sessionId
     } catch (err) {
       return emit({ ...envelope, reason: 'engine_unreachable', detail: wrapDetail(`createSession: ${err instanceof Error ? err.message : String(err)}`) })
