@@ -1,7 +1,7 @@
 # RFD-<ID> 系统概设方案（设计模板）
 
 > **模板来源**：templates/design.md（2026-10-04 run8 轮 G2 评审 G-2 跟进补建入库；基线 origin/main @ a1275f4，评审卡 t_382424d4@arch-governance）。
-> **2026-10-08 公文技法修订**（gongwen-bifa §5.5 文案质量条款配套）：①新增「填表人三问」总注；②§7 状态词对齐台账三态词表（已修/观察/延后，"已闭环"系表外词——§4.3 第 28 条）；③§7→§9 编号断档修复（原缺 §8）；④§1.1 补 Scope-Out 判据提示。修订版落 simharness mux/templates-pending/，run11 收官后迁入中央仓 templates/（迁移口径见同目录 README.md）。
+> **2026-10-08 公文技法修订**（gongwen-bifa §5.5 配套）共四项。①新增「填表人三问」总注。②§7 状态词改用台账三态——已修/观察/延后，"已闭环"系表外词（§4.3 第 28 条）。③修复 §7→§9 编号断档（原缺 §8）。④§1.1 补 Scope-Out 判据提示。修订版 2026-10-08 迁入中央仓 templates/（provenance=simharness mux/templates-pending；口径见同目录 README.md）。
 > **用法**：复制本文件为 `docs/design/RFD-<id>-architecture-design.md`，逐节填充后删除本段与各节灰色提示；概设完成后提请 arch-governance 评审（ARCH-GATE-PASS / ARCH-GATE-FAIL），评审卡 ID 回写 §0.2。
 > **编号纪律**：任务编号一律对齐 `docs/analysis/RFD-<id>-tasklist.md` 最新版终局编号；引用历史编号时必须在 §0.1 声明映射，未映射模块一律在 §10.2 显性挂账，不得静默。
 > **填表人三问（每节写完自检）**：①本节首句是判断句吗（说了"是什么/选什么"，而非"介绍了什么"）？②每个判据可机械化核对吗（存在性/正则/计数/时间锚，禁"完善/合理/清晰"虚词）？③黑话首现给一句话人话释义了吗？

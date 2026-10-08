@@ -1057,3 +1057,27 @@ describe('⑳ 六文调研治理能力入报告证据链（2026-10-08 整合轮�
     expect(gen).toContain('gov_evidence_block(n)')
   })
 })
+
+describe('㉑ PART1 实算槽链路（2026-10-08：注册稿只写语境句，数字合入时现算）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('merge 实算槽齐（steps_done/gates_pass/first_pass/window/type_top/disp_sum）', () => {
+    const m = read(join(MX, 'final-report-merge.py'))
+    for (const s of ['{{steps_done}}', '{{gates_pass}}', '{{first_pass}}', '{{window}}', '{{type_top}}', '{{disp_sum}}']) {
+      expect(m).toContain(s)
+    }
+    expect(m).toContain('_STEP_KEYS')
+  })
+
+  it('run11 PART1 已注册（未注册轮 merge 拒绝——run11 步 26 不卡壳）', () => {
+    const m = read(join(MX, 'final-report-merge.py'))
+    expect(m).toContain("'20261007-v8-run11': PART1_RUN11")
+    expect(m).toContain('acp-coding-backend-divergence') // 缺口卡头料=当轮实锚
+  })
+
+  it('骨架 --part1 出槽版（数字槽勿手填，与 merge 同槽名）', () => {
+    const sk = read(join(MX, 'mx-narrative-skeleton.py'))
+    expect(sk).toContain('{{steps_done}}')
+    expect(sk).toContain('禁手填')
+  })
+})
