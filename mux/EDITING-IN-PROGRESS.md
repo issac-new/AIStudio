@@ -93,3 +93,9 @@
   （不动 affinity 行）；③等 lin 回合间歇（active=0）重启网关激活——重启序列
   同 14:19 撞锁教训（等旧进程死透）。队列重入年龄锚（id(event) 重入即重置）
   记 run11 复盘跟进项，本轮不动网关代码。
+- **15:35 激活执行登记**：并发上限定标 30（用户口径：GLM-5.3 并发 30/Flash 50，
+  simharness 39fc9c8 + config.yaml 已改）。挂后台 idle 窗自动重启器（三路全静默
+  >180s 触发；锁安全序列=kill→等旧进程死透→起新→8801 健康→仅 chen 重发任务书
+  ——xiao/lin 在飞不扰）。另：lin 15:13:40 推了 origin/feat/T03（其 T03=DEV-CHALI
+  判断），驱动真值锚 feat/DEV-CHALI 是否达成看其收口动作， mismatch 则驱动会记
+  dev-branch-missing|DEV-CHALI（如实呈现，不代伪造）。
