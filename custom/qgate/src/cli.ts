@@ -18,6 +18,7 @@ import { declaredBudgetMs, recordBudgetExhausted } from './core/run.js'
 import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
 import { TASK_INTENT_DEFAULT_FILE, loadTaskIntent, writeTaskIntent } from './core/task-intent.js'
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { extractApiContract, SubsetError } from './core/openapi.js'
 import { cacheGc } from './core/cache.js'
 import type { GateSpec, Trigger } from './core/types.js'
 
@@ -39,6 +40,8 @@ commands:
   inspect                             只读体检：诊断/登记在档/判定新鲜度
   leftovers                           只读扫描 .qgate/ 未引用残留
   update --profile <id>               受控切档（改后即校验）
+  extract-openapi <openapi.json> [--out <file>]
+                                      OpenAPI 3.0.x JSON → contract 期望契约（kind:api，子集外退出码 3）
   release-report [--out <file>]       生成发布证据包（md + json）
   init                                在当前项目创建 .qgate/ 骨架`
 
@@ -82,6 +85,35 @@ async function main(): Promise<void> {
       fs.writeFileSync(cfg, 'profile: feature-close\nclaims: []\n', 'utf8')
     }
     process.stdout.write(`initialized ${resolve(workspace, '.qgate')} (gates/ registers/ observations/)\n`)
+    return
+  }
+
+  if (cmd === 'extract-openapi') {
+      const file = rest[0]
+      if (!file) fail('usage: extract-openapi <openapi.json> [--out <file>]')
+      const docPath = resolve(workspace, file)
+      if (!existsSync(docPath)) fail(`openapi document not found: ${file}`)
+      let spec: unknown
+      try {
+        spec = JSON.parse(readFileSync(docPath, 'utf8'))
+      } catch (e) {
+        process.stderr.write(`qgate: cannot read OpenAPI document: ${(e as Error).message}\n`)
+        process.exit(3)
+      }
+      let contract
+      try {
+        contract = extractApiContract(spec, file)
+      } catch (e) {
+        if (e instanceof SubsetError) {
+          process.stderr.write(`qgate: openapi subset violation: ${e.message}\n`)
+          process.exit(3)
+        }
+        throw e
+      }
+      const out = flag(rest, '--out') ?? resolve(workspace, file.replace(/\.json$/i, '') + '.contract.json')
+      mkdirSync(resolve(out, '..'), { recursive: true })
+      writeFileSync(out, JSON.stringify(contract, null, 2) + '\n', 'utf8')
+      process.stdout.write(`api contract extracted: ${contract.itemCount} items → ${out}\n`)
     return
   }
 

@@ -73,11 +73,11 @@ export interface ExecutorSpec {
   mustContain?: Array<{ file: string; markers: string[] }>
   /** 检查模式：scope/acceptance（scope executor）；diff/breaking/surface/matrix（contract）；
       cases/journey/property/visual/invariant（behavior，invariant=R8 上游 invariant 本地方言）；
-      metrics/budget/rerun/trace-continuity/resilience/topology/conventions/consistency/configuration/documentation/symbols（ops，
-      后五者为 R8 门类补齐：上游 convention-alignment/consistency 五类型/configuration/documentation/symbol-grounding）。 */
+      metrics/budget/rerun/trace-continuity/resilience/topology/conventions/consistency/configuration/documentation/symbols/writing-style（ops，
+      后五者为 R8 门类补齐；writing-style 为 v0.3.1 上游 v1.27 WS 文风检查本地方言：上游 convention-alignment/consistency 五类型/configuration/documentation/symbol-grounding）。 */
   mode?: 'scope' | 'acceptance' | 'diff' | 'breaking' | 'surface' | 'matrix' | 'cases' | 'journey' | 'property' | 'visual' | 'invariant'
     | 'metrics' | 'budget' | 'rerun' | 'trace-continuity' | 'resilience' | 'topology'
-    | 'conventions' | 'consistency' | 'configuration' | 'documentation' | 'symbols'
+    | 'conventions' | 'consistency' | 'configuration' | 'documentation' | 'symbols' | 'writing-style'
   /** traceability：需求登记文件（相对 workspace，默认 .qgate/registers/requirements.json）。 */
   requirementsFile?: string
   /** traceability（v0.3.1，上游 v1.31 requireCaseBinding 本地方言）：开启后未声明
@@ -101,6 +101,12 @@ export interface ExecutorSpec {
   surfaceFile?: string
   /** mode=matrix：消费者期望目录（每消费者一个 JSON）。 */
   consumersDir?: string
+  /** contract diff/breaking/matrix（v0.3.1，上游 v1.30 F02 requireLive 本地方言）：
+      开启后观察文件顶层须显式声明 mode:'live'|'static'——缺失同样 FAIL
+      （missingObservationMode：无法区分实时观察与不回报来源的旧 producer，
+      缺失不比诚实的 static 更易放行）；static 即 FAIL；畸形值 ERROR。
+      未开启时缺失＝未声明，保持兼容。 */
+  requireLive?: boolean
 
   // ── behavior（v0.3 R2：上游 behavior/journey/property/visual 本地方言；R7 F2P/P2P） ──
   cases?: Array<{ id: string; expected?: unknown }>

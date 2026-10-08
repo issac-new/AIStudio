@@ -245,7 +245,12 @@ export function buildReasoning(catalog: Catalog): ReasoningCatalog {
     return out
   }
   const inverseOf = (predicate: string): string | undefined => propByPredicate.get(predicate)?.inverseOf
-  const isTransitive = (predicate: string): boolean => propByPredicate.get(predicate)?.transitive === true
+  // 传递性继承（v0.3.1，组合 oracle 逮住的内核缺陷）：subPropertyOf 继承属性公理——
+  // 子谓词的祖先链上有任一 transitive 即传递（P1 ⊑ P0(传递) ⇒ P1 传递）。
+  // 旧实现只看自身旗标，子属性链式推导被静默丢失。
+  const isTransitive = (predicate: string): boolean => propertyClosure(predicate).has(
+    [...propertyClosure(predicate)].find((p) => propByPredicate.get(p)?.transitive === true) ?? ''
+  )
 
   return { catalog, byIri, labelIndex, ancestorsOf, disjointOf, subsumedBy, propertyClosure, inverseOf, isTransitive }
 }
