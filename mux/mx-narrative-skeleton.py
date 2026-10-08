@@ -84,5 +84,6 @@ for n in range(1, 27):
     imgs_repr = '[' + ', '.join(f"('{i}', 'TODO 图注', 'ui')" for i in imgs) + ']'
     print(f'    {n}: dict(keys={keys!r}, ts_override={ts!r},')
     print(f'            # 载荷：{("、".join(loads)) or "无"}')
-    print(f'            narrative=\'TODO（润色：本步实做了什么+锚点）\', imgs={imgs_repr}),')
+    print(f'            # 三问自检：判断句？带锚？人话？')
+    print(f'            narrative=\'TODO（三问过完再填：本步干成了什么+锚点 HH:MM/卡号/commit）\', imgs={imgs_repr}),')
 print('}')
