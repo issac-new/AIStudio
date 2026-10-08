@@ -480,7 +480,9 @@ elif int(_fr.group(1)) < 4:
 
 # ── 查 12：QGate 证据纪律（§5.5 v1.31.1 条款：引用须带来源分布；桶非零/未验证/advisory 未清禁"全绿/已核验"）──
 for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', rep, re.S):
-    _qb = _qm.group(0)
+    # 摘要是生成器自产固定文案（含"来源分布/全绿/未验证"字样）——不剔除会自我满足
+    # 存在性检查、又自我误伤脏桶判定（产品侧 report/acceptance.ts 移植测试逮出，双侧同修）
+    _qb = re.sub(r'<summary.*?</summary>', '', _qm.group(0), flags=re.S)
     if '来源分布' not in _qb and 'source' not in _qb.lower():
         fails.append('QGate 证据块缺来源分布行（§5.5 门禁证据引用）——透传 release-report 原文即可满足')
     _qb_out = re.sub(r'<pre.*?</pre>', '', _qb, flags=re.S)  # 判定只看报告侧声明，原文桶数据不计
