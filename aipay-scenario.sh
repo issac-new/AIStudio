@@ -451,12 +451,13 @@ if step_reached analysis; then
   # 接收方知晓任务的唯一正道（派发词明文要求），静默=任务失联风险。
   if [[ -n "${RACI_MISS_PAIRS:-}" ]]; then
     mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】以下 RACI 派发消息在群内未见：${RACI_MISS_PAIRS}。请立即在群内逐条补发（@责任人-agent @团队负责人-agent 附任务明细，用 m.mentions 提及）——群通知是接收方知晓任务的唯一正道，缺发记执行缺口。补发后无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
-    note "[回灌] RACI 双 @ 派发缺 ${RACI_MISS_PAIRS}——已要求 fanfan 补发，重查 300s"
-    sleep 60
+    # 左移件 c（真值锚优先级）：RACI 群通知=副作用证据，真值=主卡 raci 列（下段结构
+    # 化核验在查）。run11 双轮回灌等待窗（60s+4×240s ×2 轮≈40min）全烧在关键路径，
+    # 降级 fire-and-forget：补发要求已发即记单放行，验证归审计段/巡检。
+    note "[回灌] RACI 双 @ 派发缺 ${RACI_MISS_PAIRS}——补发要求已发（fire-and-forget，左移件 c 不占关键路径）"
     for pair in ${RACI_MISS_PAIRS}; do
       set -- $(echo "$pair" | tr '/' ' ')
-      wait_truth "回灌后房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 240 raci_dispatch_seen "${1}" "${2}" "${RID}" \
-        || { echo "ISSUE|raci-dispatch-missing|fanfan-agent|@${1}/@${2} RACI 双 @ 群通知回灌后仍未补发（执行率缺口）" >> "$EVID_DIR/issues.log"; note "[观察] @$1/@$2 回灌后仍未见（记问题单）"; }
+      echo "ISSUE|raci-dispatch-missing|fanfan-agent|@${1}/@${2} RACI 双 @ 群通知未见（补发要求已发；真值=主卡 raci 列，验证归审计段）" >> "$EVID_DIR/issues.log"
     done
   fi
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
@@ -768,17 +769,28 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
   # 各自 origin/main 起建）；d2=依赖双路（hu/lin，feat/DEV-PAYCORE 落地触发）。
   if [[ -z "$(sget devimpl_d1)" ]]; then
-    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE（csw-pay-core，3 人日重度任务）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：按工作量与复杂度把本任务拆成 3-6 件子任务（每件 ≤1 人日、有独立验收口径），kanban 建 DEV-PAYCORE 主卡并把子任务建为 link 子卡（含工作量与 --raci 字段）；逐子任务实现，每件子任务至少一个独立 commit（消息含子任务 ID），全部子任务完成后再进入整体自测。
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律：单卡直做（无需再拆子任务），kanban 建 DEV-PAYCORE-C 主卡（含 --raci）。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
-1) git checkout -b feat/DEV-PAYCORE
-2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
-3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
-4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+1) git checkout -b feat/DEV-PAYCORE-C
+2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
+3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+工作区 $(workspace chen)（先 git fetch）。
+1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
+2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
+3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+工作区 $(workspace chen)（先 git fetch）。
+1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
+2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
-2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
+2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
@@ -802,8 +814,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     note "[流水线] 测试预备轮已派（用例前移，纪律 27②）"
   fi
 
-  wait_alive_truth "origin 出现 feat/DEV-PAYCORE 分支（本轮新鲜，渠道批触发锚）" 1800 chen branch_fresh "feat/DEV-PAYCORE" \
-    || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
+  wait_alive_truth "origin 出现 feat/DEV-PAYCORE-C 契约件分支（渠道批触发锚——run12：依赖挂契约件不挂整腿，派发提前 1.5-2h）" 1800 chen branch_fresh "feat/DEV-PAYCORE-C" \
+    || { note "[观察] DEV-PAYCORE-C 契约件未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE-C|契约件分支未推送" >> "$EVID_DIR/issues.log"; }
 
   # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
   # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
@@ -814,22 +826,25 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
                 "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
       IFS='|' read -r who task app chan <<< "$spec"
       dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
-工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
+工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE-C，基于 pay-core 契约件）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
-  for ba in "DEV-CHWX|hu" "DEV-CHALI|lin"; do
-    IFS='|' read -r b bowner <<< "$ba"
-    wait_alive_truth "渠道批：origin 出现 feat/$b 分支（本轮新鲜）" 1800 "$bowner" branch_fresh "feat/$b" \
-      || { note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
-  done
-
-  wait_alive_truth "origin 出现 feat/DEV-MP 分支（本轮新鲜）" 1800 xiao branch_fresh "feat/DEV-MP" \
-    || { note "[观察] DEV-MP 分支未达"; echo "ISSUE|dev-branch-missing|DEV-MP|分支未推送" >> "$EVID_DIR/issues.log"; }
+  # 并发多锚等待（run11 根治③：串行 for 令滞后锚的催办排队——lin 沉睡 125min 实锤）
+  wait_alive_truth_multi 1800 "hu,lin,xiao" \
+    "渠道批：origin 出现 feat/DEV-CHWX 分支（本轮新鲜）@hu@branch_fresh feat/DEV-CHWX" \
+    "渠道批：origin 出现 feat/DEV-CHALI 分支（本轮新鲜）@lin@branch_fresh feat/DEV-CHALI" \
+    "origin 出现 feat/DEV-MP 分支（本轮新鲜）@xiao@branch_fresh feat/DEV-MP" \
+    || { for b in DEV-CHWX DEV-CHALI DEV-MP; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
+  wait_alive_truth_multi 1800 "chen" \
+    "origin 出现 feat/DEV-PAYCORE-C 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-C" \
+    "origin 出现 feat/DEV-PAYCORE-S 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-S" \
+    "origin 出现 feat/DEV-PAYCORE-N 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-N" \
+    || { for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）
-  for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
+  for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
     repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
       || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
@@ -907,7 +922,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       fi
     }
     merge_keep_history origin/main "origin-main"   # 主线同步（首建时 BASE=origin/main，空合幂等）
-    for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
+    for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
       # 分支缺席前置检查（2026-10-04 run8 实锤：hu/xiao 停摆未推分支，devimpl 按回灌语义
       # 记单放行后，此处对不存在 ref 的 merge 走 not-something-we-can-merge → abort 128 崩溃环）。
       # 缺席=跳过合并+如实记单，集成以已交付分支继续。
@@ -1040,10 +1055,10 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 5) 灰度计划：5%→25%→100% 与各档观察期
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
-评审记录落卡 body（review-record 结构）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
+评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-7) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
     # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
     # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
-    if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
+    if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
       # 判词合并（R-A2，run2 实锤）：房间行判词子串曾被「转述 stub 原文」消息命中
       # （"结论行 READY-GATE-PASS 或 READY-GATE-FAIL"）→ G5 误过；真实卡面结论是
       # READY-GATE-FAIL。双源合并 FAIL 优先，FAIL 不得置卡 done、不得落键。
@@ -1064,7 +1079,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
         fi
       fi
     else
-      echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
+      echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 3600s 未达" >> "$EVID_DIR/issues.log"
       fail "G5 发布准出超时，中止（V3 硬闸）"
     fi
   fi
