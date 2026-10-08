@@ -1377,6 +1377,62 @@ def _r18_frame_tags(frames, step):
             out.append(f'<p class="no-evidence">帧缺失：{H.escape(name)}（采集位空——按 R18 补拍）</p>')
     return ''.join(out)
 
+# ── §4.4-13 并行度实算（run12 起）：devimpl 段"活跃 agent·分钟/墙钟分钟" ——
+#    数据源=四路 dev agent（chen/hu/lin/xiao）agent.log 真实工作行（判据与驱动判活
+#    同源：API call/tool 完成/Turn 起止）+ scenario.log 段界（── devimpl → ── defect）。
+#    归一化口径：÷（墙钟分钟×编制 4）——run11 复盘基线 ~50%（=平均 2 路在活）同口径，
+#    验收线 ≥2× 基线（§5.5）；不达标不阻断收官，如实呈现记复盘。数字实算禁手填。
+DEV_AGENTS = ('chen', 'hu', 'lin', 'xiao')
+_PL_WORK_LINE = re.compile(r'API call|tool [a-z_]+ completed|Turn (started|ended)')
+_PL_TS = re.compile(r'^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2}):(\d{2})')
+
+def devimpl_parallelism_html(n: int) -> str:
+    if n != 18:
+        return ''
+    slog = EVID / 'scenario.log'
+    if not slog.exists():
+        return '<p class="stat-note">并行度实算：scenario.log 缺席，无法取窗（如实标注）。</p>'
+    t0 = t1 = None
+    for ln in slog.read_text(encoding='utf-8', errors='replace').splitlines():
+        m = re.match(r'\[mux (\d{2}):(\d{2}):(\d{2})\]', ln)
+        if not m:
+            continue
+        sec = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+        if t0 is None and '── devimpl' in ln:
+            t0 = sec
+        elif t0 is not None and t1 is None and ('── defect' in ln or '── testpass' in ln):
+            t1 = sec
+    if t0 is None or t1 is None or t1 <= t0:
+        if t0 is None or t1 is None:
+            return '<p class="stat-note">并行度实算：devimpl/defect 段界行未见（段未完成或缺行），本轮不出并行度行。</p>'
+        t1 += 86400  # 跨午夜窗修正（scenario.log 行首无日期）
+    wall_min = max(1, (t1 - t0) // 60)
+    active_pairs = set()
+    day0 = None
+    for a in DEV_AGENTS:
+        lg = SIM / 'hermes' / 'profiles' / a / 'logs' / 'agent.log'
+        if not lg.exists():
+            continue
+        for ln in lg.read_text(encoding='utf-8', errors='replace').splitlines():
+            if not _PL_WORK_LINE.search(ln):
+                continue
+            m = _PL_TS.match(ln)
+            if not m:
+                continue
+            if day0 is None:
+                day0 = m.group(1)
+            sec = int(m.group(2)) * 3600 + int(m.group(3)) * 60 + int(m.group(4))
+            if m.group(1) != day0:
+                sec += 86400
+            if t0 <= sec <= t1:
+                active_pairs.add((a, sec // 60))
+    cap = wall_min * len(DEV_AGENTS)
+    pct = len(active_pairs) / cap * 100 if cap else 0.0
+    verdict = '达标（≥2× 基线）' if pct >= 100.0 else '未达验收线（记复盘，不阻断收官）'
+    return (f'<div class="st-pl"><b>并行度实算（§4.4-13）</b>：{pct:.0f}%'
+            f'（活跃 agent·分钟 {len(active_pairs)} ÷ 墙钟 {wall_min} 分钟 × 编制 {len(DEV_AGENTS)} 路，归一化；'
+            f'run11 基线 ~50% 复盘口径同参 —— {verdict}）</div>')
+
 def r18_block(n: int) -> str:
     """步骤 n 的 R18 载荷渲染。载荷空 → 诚实"未采集"章（审计查 8 按线打回）。"""
     payload = R18.get(str(n)) or R18.get(n) or {}
@@ -2332,6 +2388,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
     {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
     {r18_block(n)}
+    {devimpl_parallelism_html(n)}
     <div class="st-shots">{imgs_html}</div>
   </div>
   <div class="st-sec"><div class="st-sec-hd">② 交付物及质量判据</div>
@@ -2354,6 +2411,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   {art_html}
   {r18_block(n)}
+  {devimpl_parallelism_html(n)}
   <div class="st-shots">{imgs_html}</div>'''
         step_cards.append(f'''
 <article class="step{" gate-step" if n in GATE_BY_STEP else ""}" id="step{n}" style="--pc:{c1}">

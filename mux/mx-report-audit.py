@@ -491,6 +491,12 @@ for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', re
         fails.append('QGate 证据含未验证声明/advisory 未清，报告侧却表述"全绿/已核验"（§5.5 v1.31.1 吸收轮起）')
     break  # 块唯一（步 20），只判一次
 
+# ── 查 13：并行度实算行（§4.4-13/§5.5，run12 起生效）：步 18 卡须含实算行；
+#    缺行 FAIL（数字实算禁手填，渲染层生成器产）；"段界未见"诚实声明=devimpl 段
+#    未完成的轮次特征，收官轮必在 → 只认缺行 FAIL，不另设阈值闸（不达标记复盘）。──
+if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep and '并行度实算（§4.4-13）' not in rep:
+    fails.append('步 18 缺并行度实算行（§4.4-13：devimpl 段"活跃 agent·分钟/墙钟分钟"须实算呈现）')
+
 # ── 汇总 ──
 print(f'报告：{REPORT}')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')
