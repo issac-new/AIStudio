@@ -58,15 +58,26 @@
 - 配置变更发 govbus autonomy 事件（auto 档=warn）
 - incident B 对账接入：理论面优先消费；偏差 0=配 insight/assist 但轨迹深度自主（黄条）
 
-## 三、H3 待办（单独开轮，涉引擎 patch）
+## 三、H3 执行面（v1 已落地，2026-10-08 当日追加轮）
 
-按仓库纪律（patch 565/566 面 + permmodes v4 通道）不在本轮硬做：
-1. 工具瀑布钩子从只观测升级为可拦截（tool-hooks.ts v1 边界注释记档：fail-open）
-2. 会话级权限模式引擎通道打通（permission-modes.ts 注释："v4 通道引擎未开"）
-3. 阶梯配置执行面：assist 档确认点触发真审批、auto 档 maxRiskTier 联动审批风险档
+**关键侦查结论**：patch 565 的引擎瀑布早已支持 preExecute 返回 `{allow:false}` 拦截（registry.ts 拒绝即短路、工具本体不执行）——H3 引擎通道本已就绪，缺的只是 overlay 钩子从"只观测"升级为"按策略裁决"。因此 **H3 v1 零新引擎 patch**，全部落在 overlay：
 
-前置条件：ekko registry 瀑布 patch 设计（authorizer 与 preExecute 之间插策略执行点）+ 守门测试。
-H2 的偏差 0 黄条会在每次事故报告里持续呈现"配置未被执行面约束"的现实证据，作为 H3 的需求锚点。
+### 落地件：`toolpipeline/enforce-gate.ts`（挂进既有钩子链末位）
+
+- **三级策略链**（先命中先裁决，阶梯优先于全局模式——具体配置胜出，口径已记测试注释）：
+  1. 自治阶梯（per profile）：insight=只放 read 类；assist=放行但命中确认点（字面匹配或高危自动命中）即拒；auto=仅风险上限；风险超 maxRiskTier 恒拒（**硬边界先于软确认**——确认后仍过不了上限，先报硬边界更有行动性）
+  2. 全局权限模式（`HERMES_TOOL_ENFORCE_MODE`，七档矩阵）：OFF 拒；RA 拒并指引走审批流（v1 无交互桥）
+  3. 无配置不执法（不装已治理）
+- **风险分档复用审批域单一事实源**（risk-tier.ts classifyCommand）；未知工具（含 MCP 动态）保守归 write 类
+- **总闸 `HERMES_TOOL_ENFORCE=1` 才生效**（默认 0 零行为变化，对齐 toolresultguard 先例）；裁决面异常 fail-open
+- **每次拒绝发 govbus security/high 事件**（type=tool.denied_<rule>）
+- 验证：单域 13 用例 + **真实瀑布集成 3 用例**（注入树 registry × overlay 钩子：deny 短路时工具本体 executed.flag=false 实证）
+
+### H3 剩余边界（后续轮，非本轮欠账）
+
+1. **交互式审批桥**：assist 档确认点当前=拒绝+人话指引（Agent 转达人工走审批流后重试）；理想形态=deny 转挂起→审批通过自动续跑（需引擎瀑布支持挂起语义，ekko 侧扩展）
+2. **会话级权限模式存储**：permmodes v4 缺口的存储面（当前仅环境级全局模式）；需 sessions 表列或独立存储 + UI 切换器
+3. **MCP 工具细分类**：未知工具按 write 保守归类，MCP 目录（工具元数据）可提供更细类别
 
 ## 四、验证记录
 
