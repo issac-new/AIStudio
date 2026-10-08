@@ -511,10 +511,14 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['gateway'] = {'multiplex_profiles': True}   # 单 gateway 多路复用（方案 §2.2 #1）
-# LLM 通道并发闸（run4/run5 双轮实锤）：MGLM 单池仅耐 1-2 并发，多 agent 并发打满
-# 1302 限流形成重试风暴（run5 00:18-00:22 实测 msgs=217/tokens≈104K 连三重试全 429）；
-# 串行闸 1 是 run4 续跑轮"零 429"实证值。MX_MAX_CONCURRENT=0 可显式关闸。
-_mcs = os.environ.get('MX_MAX_CONCURRENT', '1').strip()
+# LLM 通道并发闸：run4/run5 时代 MGLM 单池仅耐 1-2 并发（1302 限流 429 重试风暴），
+# 串行闸 1 是当时实证值。2026-10-08 run11 三轮容量事故钉死策略失配：V8 方案 §4.2
+# 并行流水线设计容量=4（编码 2+测试预备 2），max=1 使 64 位容量重试队列被 13 路群
+# 消息扇出瞬间灌满、真派发（任务书/催办）入队即丢（run11 issues.log
+# capacity-queue-drop-devimpl 键，400+ 丢件）。现通道=aim/cc-switch 多级降级池，
+# 当日四路并发实跑无 429。默认对齐方案=4；MX_MAX_CONCURRENT 仍可显式覆盖（设 1
+# 回滚串行闸；设 0 关闸）。回滚判据：日志再现成串 429 重试风暴。
+_mcs = os.environ.get('MX_MAX_CONCURRENT', '4').strip()
 if _mcs.isdigit() and int(_mcs) > 0:
     out['gateway']['max_concurrent_sessions'] = int(_mcs)
 out['platforms'] = {
