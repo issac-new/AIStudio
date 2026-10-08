@@ -8,7 +8,7 @@
 //   --action 支持 click:<playwright选择器> 或 key:<键名>；缺省只拍 before/after 两帧。
 // 前提：sim studio :8802 / gateway :8801 / synapse :8008 在跑（与 capture-ui.mjs 同）。
 import { chromium } from 'playwright'
-import { readFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, mkdirSync, writeFileSync, appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const arg = (k, d) => {
@@ -25,6 +25,16 @@ if (!STEP || !URL) { console.error('需要 --step <n> --url <路由>'); process.
 const BASE = 'http://127.0.0.1:8802'
 const OUT = join('/Volumes/nvme2230/lab/ncwk-sim-mux', 'runs', RUN, 'evidence', 'screenshots', 'steps')
 mkdirSync(OUT, { recursive: true })
+// 失败留痕（run12 实锤：capture_step 把 stderr 丢 /dev/null，rc=1 无从归因）——
+// 顶层 await 抛错/未捕获拒绝统一落侧车日志后再退 1，后续失败可直接归因。
+const ERRLOG = join(OUT, '..', 'r18-frames-errors.log')
+const logErr = (tag, e) => {
+  try {
+    appendFileSync(ERRLOG, `[${new Date().toISOString()}] ${tag} step=${STEP} url=${URL} user=${USER}: ${(e && e.stack) || e}\n`)
+  } catch {}
+}
+process.on('uncaughtException', (e) => { logErr('uncaughtException', e); process.exit(1) })
+process.on('unhandledRejection', (e) => { logErr('unhandledRejection', e); process.exit(1) })
 const mtok = readFileSync(`/Volumes/nvme2230/lab/ncwk-sim-mux/creds/${USER}.token`, 'utf8').split('\n')[0].trim()
 
 const loginRes = await fetch(`${BASE}/api/auth/matrix-login`, {
