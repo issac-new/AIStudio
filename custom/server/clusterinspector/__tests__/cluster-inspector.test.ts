@@ -135,3 +135,65 @@ describe('二期：容量泵 D6 + safe-act', () => {
     expect(r2.actions ?? []).toEqual([])  // off：不动手（anomaly 仍报）
   })
 })
+
+describe('二期②③：matrix 催办 + destructive 审批联动', () => {
+  // D1 high（网关不可达）+ D4 stalled（fanfan 尾错误态且静默）双异常夹具
+  function deadGatewaySnap() {
+    return snap({
+      gateway: { ok: false, error: 'probe failed' },
+      profiles: { ok: true, tails: [{ profile: 'fanfan', tail: '... TimeoutError', mtimeMs: 1 }] },
+    })
+  }
+  it('② NUDGE=on 时 session.stalled 触发催办（mentions 经凭据链由注入桩代验）', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, utimesSync } = require('node:fs')
+    const { join } = require('node:path')
+    const { tmpdir } = require('node:os')
+    const home = mkdtempSync(join(tmpdir(), 'ci-home-'))
+    const logDir = join(home, 'profiles', 'fanfan', 'logs')
+    mkdirSync(logDir, { recursive: true })
+    const log = join(logDir, 'agent.log')
+    writeFileSync(log, '2026-10-08 18:18:00 ERROR hindsight prefetch TimeoutError\n')
+    utimesSync(log, new Date(Date.now() - 400_000), new Date(Date.now() - 400_000))
+    const nudged: Array<[string, string]> = []
+    const insp = new ClusterInspector({
+      emitGovEvent: () => {}, hermesHome: home, gatewayBase: 'http://127.0.0.1:1',
+      nudge: async (pf, sum) => { nudged.push([pf, sum]); return 'nudged' },
+      now: () => 1,
+    })
+    process.env.CLUSTER_INSPECTOR_NUDGE = 'on'
+    process.env.CLUSTER_INSPECTOR_NUDGE_ROOM = '!room:x'
+    try {
+      await insp.runOnce()
+      expect(nudged).toEqual([['fanfan', expect.stringContaining('卡死')]])  // 注入桩收 a.summary；催办话术在缺省发送体内
+    } finally { delete process.env.CLUSTER_INSPECTOR_NUDGE; delete process.env.CLUSTER_INSPECTOR_NUDGE_ROOM }
+  })
+
+  it('③ destructive：high 网关异常→入审批队列；approve→重启一次；reject→不动', async () => {
+    const { mkdtempSync, writeFileSync, mkdirSync, readFileSync } = require('node:fs')
+    const { join } = require('node:path')
+    const { tmpdir } = require('node:os')
+    const dir = mkdtempSync(join(tmpdir(), 'ci-appr-'))
+    const restarts: string[] = []
+    const mkInsp = () => new ClusterInspector({
+      emitGovEvent: () => {}, hermesHome: '/nonexistent', gatewayBase: 'http://127.0.0.1:1',
+      approvalsDir: dir, restartGateway: async (pf) => { restarts.push(pf); return { running: true, profile: pf } },
+      now: () => 1,
+    })
+    process.env.CLUSTER_INSPECTOR_DESTRUCTIVE = 'approval'
+    try {
+      const r1 = await mkInsp().runOnce()
+      expect(r1.actions?.some((a) => a.startsWith('approval-requested:'))).toBe(true)
+      const q = readFileSync(join(dir, 'mx-requests.jsonl'), 'utf-8')
+      const eid = (JSON.parse(q.trim().split('\n')[0]) as { eid: string }).eid
+      // 裁决 approve → 下一轮重启
+      mkdirSync(join(dir, 'responses'), { recursive: true })
+      writeFileSync(join(dir, 'responses', `${eid}.json`), JSON.stringify({ decision: 'approve' }))
+      const r2 = await mkInsp().runOnce()
+      expect(r2.actions).toContain('gateway-restarted:default')
+      expect(restarts).toEqual(['default'])
+      // 已处理：第三轮不再动作
+      const r3 = await mkInsp().runOnce()
+      expect(r3.actions?.some((a) => a.startsWith('gateway-restarted'))).toBeFalsy()
+    } finally { delete process.env.CLUSTER_INSPECTOR_DESTRUCTIVE }
+  })
+})

@@ -8,6 +8,7 @@
 import type { ClusterSnapshot } from './collectors'
 import { collectGateway, collectProfiles, collectSessions } from './collectors'
 import { detectAll, type Anomaly } from './detectors'
+type TimedAnomaly = Anomaly & { ts?: number }
 
 export type RunOutcome = {
   ts: number
@@ -24,6 +25,12 @@ export interface InspectorDeps {
   gatewayBase?: string
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
+  /** safe-act 注入：matrix 催办（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
+  nudge?: (profile: string, summary: string) => Promise<string | undefined>
+  /** destructive 注入：审批放行后的网关重启（缺省动态 require autostart.restartGatewayForProfile；测试可stub） */
+  restartGateway?: (profile: string) => Promise<unknown>
+  /** 审批队列目录注入（destructive 请求/裁决文件面；缺省 ~/.hermes/approvals） */
+  approvalsDir?: string
   /** safe-act 注入：僵尸任务回收（缺省 CLI 桥 hermes kanban reclaim；测试可stub） */
   reclaimTask?: (taskId: string) => Promise<string | undefined>
   /** govbus 发事件注入（缺省动态 require fail-soft） */
@@ -63,6 +70,101 @@ export class ClusterInspector {
     } catch {
       // govbus 不可用：事件丢弃（巡检本体不受影响）
     }
+  }
+
+  /** ②matrix 催办（CLUSTER_INSPECTOR_NUDGE=on + ROOM 配置时）：会话卡死 → @agent 群消息唤醒 */
+  private async nudgeStalled(anomalies: Anomaly[]): Promise<string[]> {
+    const acted: string[] = []
+    if (process.env.CLUSTER_INSPECTOR_NUDGE !== 'on' || !process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted
+    const nudge = this.deps.nudge ?? (async (profile: string, summary: string) => {
+      try {
+        const { readGatewayMatrixEnv } = require('../matrix/gateway-env')
+        const { matrixSend } = require('../matrix/chat-bridge')
+        const sendEnv = readGatewayMatrixEnv(process.env)          // 发送者凭据（orchestrator/默认）
+        const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
+        if (!sendEnv || !agentEnv?.userId) return undefined
+        const body = `⏰ 集群巡检催办：${summary}。若仍在处理请继续；若已卡住请收口或回执阻塞原因。`
+        await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
+          { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
+          globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)
+        return 'nudged'
+      } catch { return undefined }
+    })
+    for (const a of anomalies) {
+      if (a.detector !== 'session.stalled') continue
+      const profile = a.subject.replace(/^profile:/, '')
+      const r = await nudge(profile, a.summary)
+      acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
+    }
+    return acted
+  }
+
+  /** ③destructive 审批联动（CLUSTER_INSPECTOR_DESTRUCTIVE=approval）：high 级网关类异常
+   *  → 追加审批收件箱 mx-requests.jsonl 请求；后续轮询 responses/<eid>.json，approve 即
+   *  调 autostart.restartGatewayForProfile（上游现成编排：stop→start→waitForRunning）。 */
+  private destructiveQueue = new Map<string, string>() // eid → profile
+  private async destructiveGuard(anomalies: Anomaly[]): Promise<string[]> {
+    const acted: string[] = []
+    if (process.env.CLUSTER_INSPECTOR_DESTRUCTIVE !== 'approval') return acted
+    const { join } = require('node:path')
+    const { appendFileSync, existsSync, readFileSync, mkdirSync } = require('node:fs')
+    const dir = this.deps.approvalsDir ?? join(process.env.HERMES_HOME || require('node:os').homedir() + '/.hermes', 'approvals')
+    // 重建挂起集（跨实例/重启恢复）：扫队列文件中未裁决的 cluster-inspector-* 请求
+    try {
+      const q0 = join(dir, 'mx-requests.jsonl')
+      if (existsSync(q0)) {
+        for (const line of readFileSync(q0, 'utf-8').split('\n').filter(Boolean)) {
+          try {
+            const e = JSON.parse(line) as { eid?: string; profile?: string }
+            const actedMarker = join(dir, 'responses', `${e.eid}.ci-acted.json`)
+            if (e.eid?.startsWith('cluster-inspector-') && !existsSync(actedMarker)) {
+              this.destructiveQueue.set(e.eid, e.profile ?? 'default')
+            }
+          } catch { /* 坏行跳过 */ }
+        }
+      }
+    } catch { /* fail-soft */ }
+    // 新请求：high 级且 detector 指向网关本体
+    for (const a of anomalies as TimedAnomaly[]) {
+      if (a.severity !== 'high' || !a.detector.startsWith('gateway.')) continue
+      const eid = `cluster-inspector-${a.ts ?? Date.now()}-${a.detector.replace(/\W+/g, '_')}`
+      try {
+        mkdirSync(dir, { recursive: true })
+        const q = join(dir, 'mx-requests.jsonl')
+        if (existsSync(q) && (readFileSync(q, 'utf-8').includes(eid) || this.destructiveQueue.has(eid))) continue
+        appendFileSync(q, `${JSON.stringify({ eid, title: `集群巡检：建议重启网关（${a.detector}）`, detail: a.summary, profile: 'default', createdAt: new Date().toISOString() })}
+`)
+        this.destructiveQueue.set(eid, 'default')
+        acted.push(`approval-requested:${eid}`)
+      } catch { /* fail-soft */ }
+    }
+    // 裁决轮询：approve → 重启一次
+    for (const [eid, profile] of [...this.destructiveQueue]) {
+      const resp = join(dir, 'responses', `${eid}.json`)
+      try {
+        if (!existsSync(resp)) continue
+        const decision = JSON.parse(readFileSync(resp, 'utf-8')) as { decision?: string }
+        this.destructiveQueue.delete(eid)
+        try { require('node:fs').writeFileSync(join(dir, 'responses', `${eid}.ci-acted.json`), JSON.stringify({ ts: Date.now() })) } catch { /* fail-soft */ }
+        if (String(decision.decision ?? '').toLowerCase().startsWith('approve')) {
+          const restart = this.deps.restartGateway ?? (async (pf: string) => {
+            const { restartGatewayForProfile } = // 运行树位于 <upstream>/packages/server/src/custom/server/clusterinspector（inject 落位），
+            // 上溯四级到 src/modules；vitest 下由 deps.restartGateway 注入不触此路径
+            require('../../../../modules/hermes/services/gateway/autostart')
+            return restartGatewayForProfile(pf)
+          })
+          try {
+            await restart(profile)
+            acted.push(`gateway-restarted:${profile}`)
+          } catch (e) {
+            acted.push(`gateway-restart-failed:${(e as Error).message.slice(0, 80)}`)
+          }
+        } else {
+          acted.push(`approval-rejected:${eid}`)
+        }
+      } catch { /* fail-soft */ }
+    }
+    return acted
   }
 
   private async safeAct(anomalies: Anomaly[]): Promise<string[]> {
@@ -112,7 +214,7 @@ export class ClusterInspector {
         kanban: { ok: kanbanOk, error: kanbanErr, rows: kanbanRows },
       }
       this.lastSnapshot = snap
-      const anomalies = detectAll(snap)
+      const anomalies: TimedAnomaly[] = detectAll(snap).map((a) => ({ ...a, ts: snap.ts }))
       const now = this.deps.now?.() ?? Date.now()
       let emitted = 0
       let suppressed = 0
@@ -127,7 +229,7 @@ export class ClusterInspector {
         this.emit(a)
         emitted += 1
       }
-      const actions = await this.safeAct(anomalies)
+      const actions = [...(await this.safeAct(anomalies)), ...(await this.nudgeStalled(anomalies)), ...(await this.destructiveGuard(anomalies))]
       outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
