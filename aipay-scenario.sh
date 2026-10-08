@@ -232,6 +232,7 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   capture_step "people_done" "/app/board?tab=gov-org"
 
   sset people_done "$(date +%s)"
+  capture_step "login_done" "/app/board?tab=accounts"   # 步3 承载面
 fi
 
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
@@ -322,6 +323,7 @@ if step_reached reqgate; then
       note "[观察] G1 冻结文件推送失败（留存本地，记问题单）"
     fi
     sset g1_frozen "$(date +%s)"
+    capture_step "g1_frozen" "/app/board?tab=trace"   # 步7 承载面
   fi
 fi
 
@@ -746,12 +748,13 @@ fi
 # ══ 步骤 15：排期（pm-planning）══════════════════════
 if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   if ! repo_has docs/plan/${RFD_ID}-schedule.md; then
-    dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
+    _m17=$(dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
 1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；工作量 ≥2 人日的任务须同步给出子任务拆分（子任务 ID/内容/工作量，每件 ≤1 人日）写入文档；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
 3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
-结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)"
+结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$_m17" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
     wait_alive_truth "docs/plan/${RFD_ID}-schedule.md 入库" 1800 fanfan repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期空转（fanfan 日志 1800s 零增长）"
   fi
   repo_pull
@@ -949,12 +952,13 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
 
   if [[ -z "$(sget defect_dispatched)" ]]; then
-    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
+    _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
-3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。" "$(agent_mxid qi),$(agent_mxid wei)"
+3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。" "$(agent_mxid qi),$(agent_mxid wei)")
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$_m19" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
 
     dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
@@ -1150,6 +1154,8 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
   done
   gate_review fanfan "G5-发布闸"
   sset release_done 1
+  capture_step "release_done" "/app/board"   # 步20 承载面
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡登记" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
 fi
 
 # ══ 步骤 22：uat（业务验收，V3 新增）══════════════════
@@ -1185,7 +1191,8 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     # 证据复用：本轮既有结论行且逐条覆盖全部 AC——不重派，直接进核验
     note "[真值] UAT 证据复用（本轮既有合格结论行，不重派验收）✓"
   else
-    dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)"
+    _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$_m21" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
     # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
@@ -1253,6 +1260,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       note "[观察] 验收文档推送失败（留存本地，记问题单）"
     fi
     sset uat_done "$(date +%s)"
+    capture_step "uat_done" "/app/board?tab=trace"   # 步21 承载面
     if [[ $UAT_ALL_PASS == 1 ]]; then
       note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
     else
@@ -1356,6 +1364,9 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   capture_step "audit_done" "/app/runs"
 
   sset audit_done "$(date +%s)"
+  capture_step "deliver_gate" "/app/runs"   # 步23 R29 delivery 面板灯
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 24 --text "独立审计完成（工件见 evidence）" --ev "state=audit_done" >/dev/null 2>&1 || true
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 23 --title "delivery 案例面板门禁灯" --entry "/app/runs → 案例面板" --frames deliver_gate-op1-before.png deliver_gate-op1-after.png >/dev/null 2>&1 || true
 fi
 
 # ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
@@ -1450,6 +1461,7 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
     note "[观察] IDE 任务简报自动生成功能未见（记问题单）"
   fi
   capture_step "ide_done" "/app/ide"
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 25 --title "任务跳转 IDE 工作台" --entry "/app/ide → IDE 视图" --frames ide_done-op1-before.png ide_done-op1-after.png >/dev/null 2>&1 || true
 
   sset ide_done 1
 fi
@@ -1479,6 +1491,7 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册时先编写注册）"
   sset report_done "$(date +%s)"
+  capture_step "report_view" "/app/runs"   # 步26 承载面
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
   dlv_enabled && dlv_scenario_assert
 fi
