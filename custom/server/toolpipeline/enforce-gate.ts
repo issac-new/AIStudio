@@ -38,11 +38,12 @@ export type EnforceRule =
   | 'ladder-risk-cap'        // 风险超阶梯 maxRiskTier
   | 'mode-off'               // 全局模式矩阵判 OFF
   | 'mode-needs-approval'    // 全局模式矩阵判 RA（需审批，v1 无交互桥→拒并指引）
+  | 'approval-passed'        // 审批桥放行（批单在案且未消费，consume-on-pass；applyApprovalBridge 终态）
 
 export type EnforceVerdict =
   | { enforcing: false; rule: Extract<EnforceRule, 'master-off' | 'no-config'> }
-  | { enforcing: true; allow: true; rule: Extract<EnforceRule, 'ladder-pass' | 'mode-pass'> }
-  | { enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'ladder-pass' | 'mode-pass'>; error: string }
+  | { enforcing: true; allow: true; rule: Extract<EnforceRule, 'ladder-pass' | 'mode-pass' | 'approval-passed'> }
+  | { enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'ladder-pass' | 'mode-pass' | 'approval-passed'>; error: string }
 
 // ---------- 工具类别映射（permmodes 四类口径） ----------
 
