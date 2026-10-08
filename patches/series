@@ -532,7 +532,7 @@
 584-server-kanban-complete-blocked-422.patch
 
 # 578 看板测试 0.7.32 对齐——Once 残队卫生（mockReset）+assign/complete 前置 getTask 动态分派桩+未指派可见语义+576 提示语（8 失败收口，39/39）
-578-test-kanban-v0732-realign.patch
+585-test-kanban-v0732-realign.patch
 
 # 577 网关挂死槽周期扫（run11 三次容量饥饿根因补口：驱逐检查原只挂同 key 入站快路径——无新消息的挂死槽永不被扫；复用 HERMES_AGENT_TIMEOUT 活动钟判定+loop 线程编排）
-577-agent-gateway-wedged-agent-sweep.patch
+586-agent-gateway-wedged-agent-sweep.patch
