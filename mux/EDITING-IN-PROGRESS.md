@@ -69,3 +69,8 @@
   账号 token（与 dispatch_in_room 同源），room=room_analysis。
 - **不动清单**：aipay-scenario.sh/mx-lib.sh/mx-scenario-lib.sh（纪律 25）、
   state.env 幂等标记、hu 在飞会话、网关进程。
+- **14:1x 补记（同干预第二步）**：重递消息 13:59:49 入房后未唤醒 chen/lin——
+  容量重试队列被 $xiXrMUAR 审批回声风暴的重入条目占满（64 满持续丢弃、泵零重派）。
+  处置=网关一次性重启清队列清记账（affinity 脚本同款 env，active==0 安全窗执行）
+  + FORCE 重发三份任务书（不重复记账）。hu 已于 14:07:21 完成 DEV-CHWX
+  （commit=80113a2），驱动 14:02:50 放行 CHWX 等待。

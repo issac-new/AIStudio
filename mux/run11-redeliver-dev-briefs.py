@@ -80,8 +80,9 @@ def send(sender: str, body: str, mentions) -> str:
 
 
 def main() -> None:
-    if ISSUE_KEY in ISSUES.read_text(encoding='utf-8'):
-        print('already-done: %s 已在 issues.log，跳过' % ISSUE_KEY)
+    force = bool(os.environ.get('FORCE'))
+    if not force and ISSUE_KEY in ISSUES.read_text(encoding='utf-8'):
+        print('already-done: %s 已在 issues.log，跳过（FORCE=1 可强制重发不记账）' % ISSUE_KEY)
         return
 
     src = SRC.read_text(encoding='utf-8')
@@ -139,7 +140,7 @@ def main() -> None:
         return
 
     stamp = time.strftime('%H:%M:%S')
-    lines = [
+    lines = [] if force else [
         ('ISSUE|%s|网关容量记账|09:25 起容量重试队列满 64（第三次容量僵尸，09:09 重启未清净），'
          '11:12 d1 派发与 12:47 渠道批派发的 agent 拉起被容量拒绝后队列溢出丢弃'
          '（消息本体在房：chen=$7RQBmyBlsUqsV8cvC0t_AEBCTUBglNxC8jJ6WzTTlRQ '
@@ -156,7 +157,10 @@ def main() -> None:
     with ISSUES.open('a', encoding='utf-8') as f:
         for ln in lines:
             f.write(ln + '\n')
-    print('issues.log appended (%d lines)' % len(lines))
+    if lines:
+        print('issues.log appended (%d lines)' % len(lines))
+    else:
+        print('FORCE: 台账不重复记账（首笔 DISP 已在）')
     if any(v == 'SEND-FAILED' for v in results.values()):
         sys.exit('SEND-FAILED present — 检查上方 event id 后手工补发')
 
