@@ -84,3 +84,12 @@
   14:55-56 结束且零实绩零进程——按 lin 先例立即短催办（fanfan→@chen-agent/
   @xiao-agent，指向各自任务书+分支期待）。网关 302 条 queue full，风暴慢速
   续烧，有活人，不动。
+- **15:3x 根因修复登记（用户点名"修复网关风暴"）**：风暴根因=config.yaml
+  `max_concurrent_sessions: 1`（mx-lib write_root_config 的 run4/run5 串行闸默认）
+  与 V8 §4.2 并行流水线设计容量 4 失配——max=1 下 13 路群消息扇出灌满 64 位
+  容量重试队列，真派发入队即丢（今日三轮事故共同根因，400+ 丢件实锤）。
+  处置：①mx-lib.sh `_mcs` 默认 1→4（注释含回滚判据：再遇成串 429 即回 1；
+  MX_MAX_CONCURRENT 覆盖通道保留）；②热改 SIM_ROOT/hermes/config.yaml 1→4
+  （不动 affinity 行）；③等 lin 回合间歇（active=0）重启网关激活——重启序列
+  同 14:19 撞锁教训（等旧进程死透）。队列重入年龄锚（id(event) 重入即重置）
+  记 run11 复盘跟进项，本轮不动网关代码。
