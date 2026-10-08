@@ -62,6 +62,7 @@ describe('钩子端到端（拒→挂单→批→重试放行→再试拒）', (
     const gate = await import('../enforce-gate')
     const store = await import('../enforce-approvals')
     process.env.HERMES_TOOL_ENFORCE_MODE = 'default' // default 档 exec=RA
+    process.env.HERMES_ENFORCE_SUSPEND = '0' // 本用例测"拒→重试"快速路径；挂起语义见下节
     try {
       const hook = gate.ekkoEnforceGateHook()
       const input = { command: 'npm test' }
@@ -82,6 +83,91 @@ describe('钩子端到端（拒→挂单→批→重试放行→再试拒）', (
       expect(d3).toMatchObject({ allow: false }) // 一单一执行：第三次重新挂单拒绝
     } finally {
       delete process.env.HERMES_TOOL_ENFORCE_MODE
+      delete process.env.HERMES_ENFORCE_SUSPEND
     }
+  })
+})
+
+describe('瀑布级挂起（H3 理想形态：拒→挂起→批→自动续跑，agent 无需重试）', () => {
+  it('挂起中批准→钩子放行（续跑）且批单已消费', async () => {
+    const gate = await import('../enforce-gate')
+    const store = await import('../enforce-approvals')
+    process.env.HERMES_TOOL_ENFORCE_MODE = 'default'
+    process.env.HERMES_ENFORCE_SUSPEND_POLL_MS = '50'
+    try {
+      const hook = gate.ekkoEnforceGateHook()
+      const input = { command: 'npm run deploy:prod' }
+      const ctx = { profileId: 'suspend-e2e' }
+      const p = hook.preExecute!('terminal_exec', input, ctx) // 不 await——此刻应挂起
+      await new Promise((r) => setTimeout(r, 150))            // 挂起窗口
+      const ticket = store.listPendingEnforceApprovals(5).find((t) => t.profileId === 'suspend-e2e')
+      expect(ticket).toBeTruthy()
+      store.decideEnforceApproval(ticket!.id, 'approve', 'qa-lead')
+      const v = await p // 批准即续跑：undefined=放行（瀑布继续执行工具本体）
+      expect(v).toBeUndefined()
+    } finally {
+      delete process.env.HERMES_TOOL_ENFORCE_MODE
+      delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
+    }
+  })
+
+  it('挂起中否决→拒且文案如实', async () => {
+    const gate = await import('../enforce-gate')
+    const store = await import('../enforce-approvals')
+    process.env.HERMES_TOOL_ENFORCE_MODE = 'default'
+    process.env.HERMES_ENFORCE_SUSPEND_POLL_MS = '50'
+    try {
+      const hook = gate.ekkoEnforceGateHook()
+      const input = { command: 'curl -X POST bank.api/transfer' }
+      const ctx = { profileId: 'suspend-reject' }
+      const p = hook.preExecute!('terminal_exec', input, ctx)
+      await new Promise((r) => setTimeout(r, 150))
+      const ticket = store.listPendingEnforceApprovals(5).find((t) => t.profileId === 'suspend-reject')
+      store.decideEnforceApproval(ticket!.id, 'reject', 'qa-lead')
+      const v = (await p) as { allow: boolean; error: string }
+      expect(v.allow).toBe(false)
+      expect(v.error).toContain('已被否决')
+    } finally {
+      delete process.env.HERMES_TOOL_ENFORCE_MODE
+      delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
+    }
+  })
+
+  it('TTL 超时→拒但单留收件箱（活性等待有封顶，方案 §4.3-26）', async () => {
+    const gate = await import('../enforce-gate')
+    const store = await import('../enforce-approvals')
+    process.env.HERMES_TOOL_ENFORCE_MODE = 'default'
+    process.env.HERMES_ENFORCE_SUSPEND_TTL_MS = '200'
+    process.env.HERMES_ENFORCE_SUSPEND_POLL_MS = '50'
+    try {
+      const hook = gate.ekkoEnforceGateHook()
+      const input = { command: 'bash risky.sh' }
+      const ctx = { profileId: 'suspend-timeout' }
+      const v = (await hook.preExecute!('terminal_exec', input, ctx)) as { allow: boolean; error: string }
+      expect(v.allow).toBe(false)
+      expect(v.error).toContain('超时')
+      const ticket = store.listPendingEnforceApprovals(5).find((t) => t.profileId === 'suspend-timeout')
+      expect(ticket).toBeTruthy() // 单不撤——批后重试即放行
+    } finally {
+      delete process.env.HERMES_TOOL_ENFORCE_MODE
+      delete process.env.HERMES_ENFORCE_SUSPEND_TTL_MS
+      delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
+    }
+  })
+
+  it('waitEnforceDecision 同进程即时唤醒（不等轮询拍）', async () => {
+    const store = await import('../enforce-approvals')
+    const hash = store.callHashOf('terminal_exec', { command: 'wake-test' }, 'waker')
+    store.createEnforceApproval({ callHash: hash, tool: 'terminal_exec', inputPreview: 'wake', profileId: 'waker', rule: 'mode-needs-approval', risk: 'medium' })
+    process.env.HERMES_ENFORCE_SUSPEND_POLL_MS = '5000' // 轮询拍拉大——只靠即时唤醒
+    const t0 = Date.now()
+    setTimeout(() => {
+      const rec = store.listPendingEnforceApprovals(10).find((r) => r.profileId === 'waker')
+      store.decideEnforceApproval(rec!.id, 'approve', 'qa')
+    }, 80)
+    const out = await store.waitEnforceDecision(hash, 4000)
+    expect(out).toBe('approved')
+    expect(Date.now() - t0).toBeLessThan(2000) // 5s 轮询拍下亚秒返回=唤醒生效
+    delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
   })
 })
