@@ -3,7 +3,7 @@
 - 日期：2026-10-08（run11 复盘立项，用户裁决："核心不是本次推演的需求场景，而是
   长期的任务拆分、工作量评估及并行开发能力或模式的建设，落地在 SwarmStudio 或
   hermes agent teams"）
-- 状态：设计定稿，实施分三期（见 §5）
+- 状态：设计定稿；一期+二期已合 overlay main（418fe874，410 vitest+13 pytest 全绿）；网关容量年龄锚根治同批部署（run_busy event_id 稳定键，重启生效）。三期（图执行轮）待 run12
 - 关联正本：`2026-10-05-mux-v8-fullflow-plan.md` §1.0.2 北极星（:81 待建件③即本文
   的对接层）；run11 复盘粒度病灶分析（2026-10-08 会话）
 
@@ -65,7 +65,7 @@ GraphRuntime super-step 调度（现有）
 
 ## 3. 分期实施
 
-### 一期（本 feature 分支）：对接层 + 模板可跑（北极星首跑前置）
+### 一期（已合 overlay main 418fe874；未部署运行时——deploy 留 mx-setup/明确部署轮）：对接层 + 模板可跑（北极星首跑前置）
 - `node-executors/agent-task.ts`：create_task（body 带
   `{estimate_days, raci, graph_node, branch_hint, acceptance}`）→ 轮询
   `GET /api/hermes/kanban/...` 卡状态（done/blocked 终态；blocked→onError 路径）
