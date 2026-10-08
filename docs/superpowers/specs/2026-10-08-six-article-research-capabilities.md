@@ -79,14 +79,32 @@
 2. **会话级权限模式存储**：permmodes v4 缺口的存储面（当前仅环境级全局模式）；需 sessions 表列或独立存储 + UI 切换器
 3. **MCP 工具细分类**：未知工具按 write 保守归类，MCP 目录（工具元数据）可提供更细类别
 
-## 四、验证记录
+## 三点五、UI 化（同日追加轮，merge 69cee6ba）
+
+四个治理面板挂进 /app/board 单层页签（用户可见面——REST 只是半成品）：
+
+| 面板 | 组件 | 宿主页签 |
+|---|---|---|
+| 事故报告（会话选择→17 要素分组渲染→对账黄条→md 下载） | IncidentReportSection | 审计与变更 |
+| 治理事件流（域 chips+严重级过滤，high 红徽标） | GovEventStreamSection | 审计与变更 |
+| 虚拟损益表（成本区间/单位成本/异常/源缺席注记） | VirtualPnlSection | 工程效能（CostAccounts 同页） |
+| 自治阶梯（三档表单；auto 档确认点置灰；执法门状态提示） | AutonomyLadderSection | 能力与规则 |
+
+API 客户端 `custom/client/governance/api/incident-suite.ts`（DTO 即契约）。守门测试 `incident-suite-sections.test.ts` 7 用例（mock 渲染/降级诚实/三视图聚合浅挂载）。
+
+**浏览器实测记录**（8649 热更新 + 重启后 8647，Playwright 直驱对齐 uioracle 先例）：四面板渲染零 console error；登录态下事故报告对真实会话完整生成（17 要素 3 采/2 部/12 缺）、事件流 200 行真实事件、损益表含真实 38 profile 行。截图存档 /tmp/ui-walkthrough/（会话级）。
+
+**本轮实测坑**：
+1. ts-node 全量编译（服务端启动）比 vitest 宽松模式严格——抓出 3 处真实类型缺口（enforce-gate/incident-report/virtual-pnl）。**结论：服务端新域必须过一次真实 8647 启动，vitest 绿≠可启动**。
+2. 长页下方面板的 Playwright click 会被遮挡超时——DOM evaluate 直驱可绕（渲染断言已证时足够）。
+3. 并行会话现场（report 域 untracked + series 580）会挡后端启动：只修其类型错一行（帮过编译、语义零变化），不碰其余现场、不代提交。
 
 - 单域测试：incident 20 + autonomyladder 3 + tool-semantics 6 + evidence 41（含 chain 7/gaps 2）+ govbus 7 + virtual-pnl 6 + eval-calibration 6 = 新增 89 用例全绿
 - 全量套件：feat 3994 passed / 1 failed——该失败（qgate-v131-deferred OpenAPI CLI 冒烟）在 main 上逐字复现（dist 构建态既有问题），非本轮回归；main 基线本身另有 ~99 注入态/环境类既有失败（两分支失败清单差集=1 个 python 集成 flaky，单跑全过）
 - inject：000-579 全量重放 0 失败；.overlay-injected.json 登记 303 条
 - 端到端 HTTP 冒烟（一次性 Koa 实例挂载真实 registerRoutes，免 auth）：10/10 探针 200（含 PUT 写路径 + govbus 实时事件 + virtual-pl 真实数据 orchestrator 交付 116 件）
 
-## 五、坑与纪律沉淀
+## 五、验证记录（A-H3 服务端轮）
 
 1. **vitest ESM 下动态 require 会静默失败**：require 加载含 import 语句的 TS 模块抛错被 fail-soft 吞——跨域桥一律用动态 import().then().catch()
 2. **describe 体在收集阶段立即执行**：fixture 依赖的 report 构造必须放 beforeAll（本轮 incident 测试首跑 7 败的根因）
