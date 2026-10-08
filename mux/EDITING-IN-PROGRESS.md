@@ -42,13 +42,13 @@
   另：mux/tests/r18-capability.test.sh 有一处陈旧断言 FAIL（非本轮引入，HEAD 即无
   该串），已在 templates-pending/README.md 挂账。
 
-## 2026-10-08 登记②：中央仓补件 + 守门测试修复（用户点名执行）
+## 2026-10-08 登记②：中央仓补件 + 守门测试修复（用户点名执行，已完成）
 
-- **中央仓操作**：templates/ 前置补件四张（prd/review-record/release-plan/
-  release-notes，templates-pending 修订稿逐字迁入，prd 头部暂存注改为迁入注），
-  落 main 直推 origin。补件理由=方案 §2.7 步 20 约定（步 20 前模板库须在位）。
-  提交带 provenance，DISP 锚入 run11 issues.log。
-- **mux/tests/r18-capability.test.sh 修复**（陈旧断言，非行为变更）：①生成器断言
-  `R18 载荷未采集`→`全量呈现（未采集·必采步缺口）`；②审计断言
-  `R18 步 5 三位载荷全缺`→`R18 步 5 载荷全缺`。均对齐生成器/审计器现行文案，
-  测试意图（空载荷诚实缺席+必采步打回+已采步零误报）不变。
+- **中央仓操作（已完成）**：templates/ 前置补件四张（prd/review-record/release-plan/
+  release-notes，templates-pending 修订稿逐字迁入），commit `0b694cc` 已推
+  origin/main 并回读验证（ls-tree 五张齐）。本地 main 停在 dc0abff 与 origin 分岔
+  （attempt-2 重建所致），本次操作走临时 worktree 直挂 origin/main，未动本地分支。
+  DISP 台账已入 run11 issues.log（template-backfill 键，带 provenance）。
+- **mux/tests/r18-capability.test.sh 修复（已完成）**：两处陈旧断言对齐现行文案
+  （`全量呈现（未采集·必采步缺口）`、`R18 步 5 载荷全缺`），测试意图不变。
+  验证：本测试三段全过；vitest 78/78 复跑仍全过；repo-has-freshness 过。

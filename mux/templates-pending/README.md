@@ -24,11 +24,11 @@
 | retrospective.md | 复盘治理（24/G6） | aipay-scenario.sh 步 23 复盘 heredoc |
 | work-report.md | 工作台账（22） | mx-scenario-lib.sh `work_report_gen` 输出契约 |
 
-## 迁移口径（收官后执行，一句一动作）
+## 迁移口径（收官后执行，一句一动作；四张已前置迁入，本口径管剩余九张）
 
 1. `cd <central>/aipaydev && git checkout main && git pull`。
 2. 逐文件显式拷贝：`cp <simharness>/mux/templates-pending/<文件> templates/<文件>`。禁 `git add -A`。
-3. 提交：`git commit -m "docs(templates): 交付物模板公文技法修订（12 张）"`。
+3. 提交：`git commit -m "docs(templates): 交付物模板公文技法修订（剩余九张）"`。
 4. `git push origin main`。记 DISP 锚入当轮 issues.log（补件带 provenance 纪律）。
 5. 按上表「harness 同步位」逐处同步 scenario 内嵌 heredoc/派发词与 mx-scenario-lib.sh 生成函数。改完跑守门测试并同批更新（步 20 约定：模板与产物双向同步，只修一边=下次复发）。
 
