@@ -577,6 +577,20 @@ uat_evidence_body 1790930955`, root)
     expect(scen).toContain('materials/delegate-log.txt')
   })
 
+  it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 577）', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    const patchPath = join(HARNESS, '..', 'overlay', 'patches', '577-agent-gateway-wedged-agent-sweep.patch')
+    // ①patch 文件在位且含核心语义件
+    const patch577 = read(patchPath)
+    expect(patch577).toContain('_housekeeping_wedged_agent_sweep')
+    expect(patch577).toContain('call_soon_threadsafe')
+    expect(patch577).toContain('_snapshot_running_agents')
+    // ②harness 部署清单挂载（否则快照树永不应用）
+    expect(lib).toContain('577-agent-gateway-wedged-agent-sweep.patch')
+    // ③驱逐判定复用快路径原语（语义一致，不另立判据）
+    expect(patch577).toContain('_hm_evict_idle_stale_agent')
+  })
+
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
     const scen = read(SCEN)
     expect(scen).toContain('g5_pass_finalize()')
