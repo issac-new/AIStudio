@@ -101,7 +101,7 @@ API 客户端 `custom/client/governance/api/incident-suite.ts`（DTO 即契约�
 4. （续收轮实测）上条现场收口时 controller 误入 `__tests__/` 提交且未带 TS7053 修复，正本路径只剩 untracked 遮蔽——干净 checkout/inject 重放即挂。**两个盲区叠加**：服务端 tsconfig `exclude src/custom/**/__tests__/**` 让错位副本逃过编译守门；upstream 树（产物）已带修复造成"树是好的"错觉。修复=a1efb809 回移 69 行版归位。**结论：并行会话收口后必查 untracked 是否清零（`git status` 非空即有未回移正本的内容）**。
 
 - 单域测试：incident 20 + autonomyladder 3 + tool-semantics 6 + evidence 41（含 chain 7/gaps 2）+ govbus 7 + virtual-pnl 6 + eval-calibration 6 = 新增 89 用例全绿
-- 全量套件：feat 3994 passed / 1 failed——该失败（qgate-v131-deferred OpenAPI CLI 冒烟）在 main 上逐字复现（dist 构建态既有问题），非本轮回归；main 基线本身另有 ~99 注入态/环境类既有失败（两分支失败清单差集=1 个 python 集成 flaky，单跑全过）
+- 全量套件：feat 3994 passed / 1 failed——该失败（qgate-v131-deferred OpenAPI CLI 冒烟）在 main 上逐字复现（dist 构建态既有问题；**2026-10-08 下午已根治**：`__tests__/ensure-dist.ts` 前置自愈——dist 缺失/mtime 旧于 src 时原地 `npm run build`，文件锁防并发，4 个消费 dist 的测试文件 beforeAll 接入，merge 3d827c65），非本轮回归；main 基线本身另有 ~99 注入态/环境类既有失败（两分支失败清单差集=1 个 python 集成 flaky，单跑全过）
 - inject：000-579 全量重放 0 失败；.overlay-injected.json 登记 303 条
 - 端到端 HTTP 冒烟（一次性 Koa 实例挂载真实 registerRoutes，免 auth）：10/10 探针 200（含 PUT 写路径 + govbus 实时事件 + virtual-pl 真实数据 orchestrator 交付 116 件）
 
