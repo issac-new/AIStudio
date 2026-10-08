@@ -81,7 +81,8 @@ describe('ClusterInspector（冷却去重/重入/fail-soft）', () => {
 
   it('同 type+subject 冷却窗内只发一次；检测仍每轮全量', async () => {
     const events: Array<{ type: string }> = []
-    const insp = new ClusterInspector({ emitGovEvent: (e) => events.push(e), hermesHome: '/nonexistent', now: () => 1_000_000 })
+    // gatewayBase 指不可达端口：单测须与宿主真实网关（如 SIM 8801 在跑）隔离，防环境泄漏翻转断言
+    const insp = new ClusterInspector({ emitGovEvent: (e) => events.push(e), hermesHome: '/nonexistent', gatewayBase: 'http://127.0.0.1:1', now: () => 1_000_000 })
     const r1 = await insp.runOnce()
     expect(r1.anomalies.length).toBeGreaterThan(0)
     expect(r1.emitted).toBe(r1.anomalies.length)
@@ -93,7 +94,7 @@ describe('ClusterInspector（冷却去重/重入/fail-soft）', () => {
   })
 
   it('govbus 缺席 fail-soft（不抛错）', async () => {
-    const insp = new ClusterInspector({ hermesHome: '/nonexistent', now: () => 1 })
+    const insp = new ClusterInspector({ hermesHome: '/nonexistent', gatewayBase: 'http://127.0.0.1:1', now: () => 1 })
     await expect(insp.runOnce()).resolves.toBeTruthy()
   })
 
