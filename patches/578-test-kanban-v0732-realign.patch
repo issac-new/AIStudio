@@ -1,0 +1,142 @@
+--- a/tests/server/hermes-kanban-service.test.ts	2026-10-09 01:26:00
++++ b/tests/server/hermes-kanban-service.test.ts	2026-10-09 01:29:22
+@@ -3,6 +3,10 @@
+ const mockExecFileAsync = vi.hoisted(() => vi.fn())
+ const mockSpawnHermes = vi.hoisted(() => vi.fn())
+ const mockLoggerError = vi.hoisted(() => vi.fn())
++// 0.7.32 对齐：规则引擎/完成闸路径会调 logger.warn（架构规则 verdict/RetryGuard
++// Leader 介入提示）——mock 只供 error 时整链 TypeError，补全常用三面。
++const mockLoggerWarn = vi.hoisted(() => vi.fn())
++const mockLoggerInfo = vi.hoisted(() => vi.fn())
+ 
+ vi.mock('../../packages/server/src/modules/hermes/services/runtime/process', () => ({
+   execHermes: (args: string[], options: unknown) => mockExecFileAsync('hermes', args, options),
+@@ -12,6 +16,8 @@
+ vi.mock('../../packages/server/src/modules/studio/public/logging', () => ({
+   logger: {
+     error: mockLoggerError,
++    warn: mockLoggerWarn,
++    info: mockLoggerInfo,
+   },
+ }))
+ 
+@@ -65,27 +71,44 @@
+   })
+ 
+   it('builds link/unlink and bulk-equivalent task commands with explicit board', async () => {
+-    mockExecFileAsync
+-      .mockResolvedValueOnce({ stdout: 'linked\n' })
+-      .mockResolvedValueOnce({ stdout: 'unlinked\n' })
+-      .mockResolvedValueOnce({ stdout: '' })
+-      .mockResolvedValueOnce({ stdout: '' })
+-      .mockRejectedValueOnce(new Error('cannot complete task-2'))
++    // 0.7.32 对齐：assign/complete 前置校验会产生动态数量 getTask（规则引擎依赖
++    // 状态查询）——固定 Once 桩序脆弱，改按 args 分派的确定性 mock。
++    const detailJson = { task: { id: 'task-1', status: 'running' }, comments: [], events: [], runs: [] }
++    const callLog: string[][] = []
++    mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
++      callLog.push(args)
++      const bi = args.indexOf('--board')
++      const vi = bi >= 0 ? bi + 2 : 1
++      const verb = args[vi]
++      const target = args[vi + 1]
++      if (verb === 'link') return Promise.resolve({ stdout: 'linked\n' })
++      if (verb === 'unlink') return Promise.resolve({ stdout: 'unlinked\n' })
++      if (verb === 'show') return Promise.resolve({ stdout: JSON.stringify(detailJson) })
++      if (verb === 'complete') {
++        return target === 'task-2'
++          ? Promise.reject(new Error('cannot complete task-2'))
++          : Promise.resolve({ stdout: '' })
++      }
++      return Promise.resolve({ stdout: '' })
++    })
+ 
+     await expect(service.linkTasks('task-1', 'task-2', { board: 'project-a' })).resolves.toEqual({ ok: true, output: 'linked\n' })
+     await expect(service.unlinkTasks('task-1', 'task-2', { board: 'project-a' })).resolves.toEqual({ ok: true, output: 'unlinked\n' })
+     await expect(service.bulkUpdateTasks({ board: 'project-a', ids: ['task-1', 'task-2'], status: 'done', assignee: 'alice', summary: 'closed' })).resolves.toEqual({
+       results: [
+         { id: 'task-1', ok: true },
+-        { id: 'task-2', ok: false, error: 'Failed to complete kanban tasks: cannot complete task-2' },
++        // patch 576：完成闸拒绝附行动提示（非 empty_result 分支话术）
++        { id: 'task-2', ok: false, error: 'Failed to complete kanban tasks: cannot complete task-2（完成闸：完成前置未满足——检查前置依赖/评审项后重试）' },
+       ],
+     })
+ 
+-    expect(mockExecFileAsync.mock.calls[0][1]).toEqual(['kanban', '--board', 'project-a', 'link', 'task-1', 'task-2'])
+-    expect(mockExecFileAsync.mock.calls[1][1]).toEqual(['kanban', '--board', 'project-a', 'unlink', 'task-1', 'task-2'])
+-    expect(mockExecFileAsync.mock.calls[2][1]).toEqual(['kanban', '--board', 'project-a', 'complete', 'task-1', '--summary', 'closed'])
+-    expect(mockExecFileAsync.mock.calls[3][1]).toEqual(['kanban', '--board', 'project-a', 'assign', 'task-1', 'alice'])
+-    expect(mockExecFileAsync.mock.calls[4][1]).toEqual(['kanban', '--board', 'project-a', 'complete', 'task-2', '--summary', 'closed'])
++    expect(callLog[0]).toEqual(['kanban', '--board', 'project-a', 'link', 'task-1', 'task-2'])
++    expect(callLog[1]).toEqual(['kanban', '--board', 'project-a', 'unlink', 'task-1', 'task-2'])
++    expect(callLog[2]).toEqual(['kanban', '--board', 'project-a', 'complete', 'task-1', '--summary', 'closed'])
++    expect(callLog.at(-1)).toEqual(['kanban', '--board', 'project-a', 'complete', 'task-2', '--summary', 'closed'])
++    // t1 的 assign 链在 complete 与末次 complete 之间（含动态 getTask 前置，只验关键动词序）
++    expect(callLog.some(c => c[3] === 'show' && c[4] === 'task-1' && c[5] === '--json')).toBe(true)
++    expect(callLog.some(c => c[3] === 'assign' && c[4] === 'task-1' && c[5] === 'alice')).toBe(true)
+   })
+ 
+   it('treats zero-exit stderr from mutation CLI calls as failures', async () => {
+@@ -212,13 +235,17 @@
+   })
+ 
+   it('builds action CLI calls and maps not-found show to null', async () => {
+-    mockExecFileAsync
+-      .mockRejectedValueOnce({ code: 1 })
+-      .mockResolvedValueOnce({})
+-      .mockResolvedValueOnce({})
+-      .mockResolvedValueOnce({})
+-      .mockResolvedValueOnce({})
+-      .mockResolvedValueOnce({ stdout: JSON.stringify([{ name: 'alice' }]) })
++    // 0.7.32 对齐：args 分派 mock（assign 前置 getTask 动态化，固定桩序脆弱）
++    mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
++      const bi = args.indexOf('--board')
++      const vi = bi >= 0 ? bi + 2 : 1
++      const verb = args[vi]
++      const target = args[vi + 1]
++      if (verb === 'show' && target === 'missing') return Promise.reject({ code: 1 })
++      if (verb === 'show') return Promise.resolve({ stdout: JSON.stringify({ task: { id: 'task-1', status: 'running' }, comments: [], events: [], runs: [] }) })
++      if (verb === 'assignees') return Promise.resolve({ stdout: JSON.stringify([{ name: 'alice' }]) })
++      return Promise.resolve({ stdout: '' })
++    })
+ 
+     await expect(service.getTask('missing', { board: 'default' })).resolves.toBeNull()
+     await service.completeTasks(['task-1'], 'done', { board: 'default' })
+@@ -227,12 +254,14 @@
+     await service.assignTask('task-1', 'alice', { board: 'default' })
+     await expect(service.getAssignees({ board: 'default' })).resolves.toEqual([{ name: 'alice' }])
+ 
+-    expect(mockExecFileAsync.mock.calls[0][1]).toEqual(['kanban', '--board', 'default', 'show', 'missing', '--json'])
+-    expect(mockExecFileAsync.mock.calls[1][1]).toEqual(['kanban', '--board', 'default', 'complete', 'task-1', '--summary', 'done'])
+-    expect(mockExecFileAsync.mock.calls[2][1]).toEqual(['kanban', '--board', 'default', 'block', 'task-1', 'wait'])
+-    expect(mockExecFileAsync.mock.calls[3][1]).toEqual(['kanban', '--board', 'default', 'unblock', 'task-1'])
+-    expect(mockExecFileAsync.mock.calls[4][1]).toEqual(['kanban', '--board', 'default', 'assign', 'task-1', 'alice'])
+-    expect(mockExecFileAsync.mock.calls[5][1]).toEqual(['kanban', '--board', 'default', 'assignees', '--json'])
++    const verbs = mockExecFileAsync.mock.calls.map((c: unknown[]) => {
++      const a = c[1] as string[]
++      const bi = a.indexOf('--board')
++      return a[bi >= 0 ? bi + 2 : 1]
++    })
++    expect(verbs[0]).toBe('show')
++    expect(verbs).toEqual(expect.arrayContaining(['complete', 'block', 'unblock', 'assign', 'assignees']))
++    expect(mockExecFileAsync.mock.calls.at(-1)?.[1]).toEqual(['kanban', '--board', 'default', 'assignees', '--json'])
+   })
+ 
+   it('normalizes 0.19 detail ids and lists durable attachments', async () => {
+--- a/tests/server/kanban-controller.test.ts	2026-10-09 01:26:00
++++ b/tests/server/kanban-controller.test.ts	2026-10-09 01:30:02
+@@ -168,11 +168,12 @@
+     const state = { user: { id: 7, role: 'admin' }, profile: { name: 'research' } }
+     const listCtx = ctx({ state, query: { board: 'default', includeArchived: 'true' } })
+     await ctrl.list(listCtx)
+-    expect(listCtx.body).toEqual({ tasks: [tasks[0]] })
++    // 0.7.32 对齐：未指派任务（assignee=null）对所有 bound profile 可见
++    expect(listCtx.body).toEqual({ tasks: [tasks[0], tasks[2]] })
+ 
+     const statsCtx = ctx({ state, query: { board: 'default' } })
+     await ctrl.stats(statsCtx)
+-    expect(statsCtx.body).toEqual({ stats: { by_status: { todo: 1 }, by_assignee: { research: 1 }, total: 1 } })
++    expect(statsCtx.body).toEqual({ stats: { by_status: { todo: 1, blocked: 1 }, by_assignee: { research: 1, default: 1 }, total: 2 } })
+ 
+     const assigneesCtx = ctx({ state, query: { board: 'default' } })
+     await ctrl.assignees(assigneesCtx)

@@ -530,3 +530,6 @@
 
 # 584 看板完成闸 422 结构化（run11 实锤；原 576 号让位给 chromium-bidi 在途方——编号唯一性守门）
 584-server-kanban-complete-blocked-422.patch
+
+# 578 看板测试 0.7.32 对齐——Once 残队卫生（mockReset）+assign/complete 前置 getTask 动态分派桩+未指派可见语义+576 提示语（8 失败收口，39/39）
+578-test-kanban-v0732-realign.patch
