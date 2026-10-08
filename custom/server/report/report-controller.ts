@@ -31,7 +31,9 @@ reportRoutes.post('/part1-skeleton', (ctx) => {
     ctx.body = { ok: false, detail: `RunFacts 缺字段：${missing.join('/') || '(body 空)'}` }
     return
   }
-  const disp = (b as unknown as RunFacts).disp
+  // 索引面按 Record 收窄（ts-node 严格模式 TS7053：string 不能索引字面量键类型）——
+  // 语义不变：仍是"disp 须为三数字"校验
+  const disp = (b as unknown as RunFacts).disp as unknown as Record<string, unknown> | undefined
   if (typeof disp !== 'object' || ['已修', '观察', '延后'].some((k) => typeof disp?.[k] !== 'number')) {
     ctx.status = 400
     ctx.body = { ok: false, detail: 'disp 须为 { 已修, 观察, 延后 } 三数字' }
