@@ -21,6 +21,7 @@ const TASKS_TABS_TEXT = {
     tabGovAudit: '审计与变更',
     tabGovDocs: '文档评审',
     tabGovHarness: '工程效能',
+    tabGovCluster: '集群健康',
   },
   en: {
     tabBoard: 'Board',
@@ -32,6 +33,7 @@ const TASKS_TABS_TEXT = {
     tabGovAudit: 'Audit & Changes',
     tabGovDocs: 'Doc Review',
     tabGovHarness: 'Engineering Metrics',
+    tabGovCluster: 'Cluster Health',
   },
 } as const
 

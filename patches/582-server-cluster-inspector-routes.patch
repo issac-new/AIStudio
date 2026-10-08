@@ -1,0 +1,17 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -113,6 +113,9 @@ import { govBusRoutes } from '../custom/govbus/govbus-controller'
+ // overlay[autonomy-ladder]（六文调研轮 H2）：自治阶梯配置面（洞察/辅助/自动执行 +
+ // 人工确认点清单；执行面拦截是 H3 单独轮）。/api/hermes/autonomy-ladder
+ import { autonomyLadderRoutes } from '../custom/autonomyladder/autonomy-ladder-controller'
++// overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
++// 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
++import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
+ // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
+ import { reviewRoutes } from '../custom/review/review-controller'
+@@ -360,6 +363,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(govBusRoutes.routes())                  // 治理事件总线：查询面 + compact（六文调研轮 F）
+   app.use(autonomyLadderRoutes.routes())          // 自治阶梯：配置面 CRUD + govbus 审计（六文调研轮 H2）
++  startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
++  app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
+   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
