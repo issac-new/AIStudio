@@ -18,6 +18,7 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { projectMindAggregated } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
+import { registerSimulationNodeTypes } from '../../graph/node-executors'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -287,13 +288,20 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
 
   // P4：自建 spec 起跑器（编辑器试跑链路）。gate 命令白名单来自
   // LOOP_GATE_COMMANDS（逗号分隔；未配置=空表，gate 节点带命令即拒——安全缺省）
+  // 一期对接层：26 步模板六种节点类型注册（agent-task 等；KanbanBridge 缺省
+  // DryRun——真桥（REST/进程内）二期按 GRAPH_KANBAN_BASE 接线；设计正本
+  // 2026-10-08-team-parallel-dev-capability.md）
+  const simRegistry = createSpecRuntimeRegistry({
+    gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+  })
+  registerSimulationNodeTypes(simRegistry, {
+    log: (msg) => log?.(`[sim-node] ${msg}`),
+  })
   const specRuntime = mode === 'on'
     ? new CustomSpecRuntime({
         specStore,
         graphService,
-        registry: createSpecRuntimeRegistry({
-          gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
-        }),
+        registry: simRegistry,
         log,
       })
     : null
