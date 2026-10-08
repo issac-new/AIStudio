@@ -2309,7 +2309,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
         art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + gov_evidence_block(n)
-        abg, afg, atxt = ACTOR_STYLE[meta['actor']]
+        # 防御性回退（run11 实锤：STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
+        abg, afg, atxt = ACTOR_STYLE.get(meta.get('actor'), ACTOR_STYLE['both'])
         if PLAN_V82:
             # V8.2 四段（与方案 §2.4 步条目同构；§5.4）：操作路径表不入正文（附录《产品操作手册》）
             gate_label = '质量判据（方案步条·交付物及质量判据段）'
