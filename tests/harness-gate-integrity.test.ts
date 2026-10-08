@@ -561,10 +561,26 @@ uat_evidence_body 1790930955`, root)
     expect(scen).not.toContain('重新执行或核验')
   })
 
+  it('㉒：ACP 编码后端 L1 通道三断言（run11 acp-coding-backend-divergence 根治件）', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    const scen = read(SCEN)
+    // ①技能分发：install_skills 消费 overlay/runtime/hermes-skills/coding-delegate（只读消费+缺位跳过）
+    expect(lib).toContain('hermes-skills/coding-delegate')
+    expect(lib).toMatch(/缺位跳过|\]\] || continue/)
+    // ②派发词门控：MX_ACP_BACKEND=1 时 DEV 派发词注入后端段（缺省关=保真对照）
+    expect(scen).toContain('MX_ACP_BACKEND')
+    expect(scen).toContain('【编码后端=delegate】')
+    const wired = (scen.match(/结论行 DEV-DONE-[A-Za-z${}-]+。\$\{ACP_NOTE\}/g) || []).length
+    expect(wired).toBe(5) // PAYCORE-C/S/N+渠道双路(task)+MP
+    // ③G3 后端指纹真查：启用时分支须含 materials/delegate-log.txt（缺=记单）
+    expect(scen).toContain('acp-backend-delegate-log-missing')
+    expect(scen).toContain('materials/delegate-log.txt')
+  })
+
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
     const scen = read(SCEN)
     expect(scen).toContain('g5_pass_finalize()')
-    expect(scen).toContain('wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 fanfan')
+    expect(scen).toContain('wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan')
     expect(scen).toContain('G5 判词复用（本轮既有 PASS 结论行，不重派评审）')
     expect(scen).toContain('G5_TS=$(( $(sget run_started_at) * 1000 ))')
   })
