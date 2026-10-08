@@ -1,0 +1,49 @@
+--- a/gateway/run.py	2026-10-09 01:32:19
++++ b/gateway/run.py	2026-10-09 01:32:19
+@@ -4809,6 +4809,37 @@
+             cron_scheduler.drain_delivery_queue(profile_adapters, loop)
+ 
+ 
++def _housekeeping_wedged_agent_sweep(runner, loop=None) -> None:
++    """run11 实锤（capacity-queue-drop-zombie / g5-session-stall）：hindsight 交互
++    卡死或马拉松回合长期占槽时，槽位驱逐检查只挂在同 key 的下一条入站消息快路径
++    上——挂死 key 无新消息则永不被扫，容量被占到人工重启网关（run11 三次实锤）。
++    本 chore 周期扫全部 running 槽并复用 _hm_evict_idle_stale_agent 的同一判定
++    （HERMES_AGENT_TIMEOUT 活动钟 + 无活动面墙钟兜底），驱逐语义与快路径完全一
++    致；有事件循环时经 call_soon_threadsafe 编排到 loop 线程执行（eviction 非线
++    程安全）。"""
++    sweep = getattr(runner, "_hm_evict_idle_stale_agent", None)
++    snapshot = getattr(runner, "_snapshot_running_agents", None)
++    if not callable(sweep) or not callable(snapshot):
++        return
++    try:
++        keys = list(snapshot() or {})
++    except Exception:
++        logger.debug("wedged-agent sweep snapshot failed", exc_info=True)
++        return
++    for key in keys:
++        if loop is not None:
++            loop.call_soon_threadsafe(_wedged_sweep_one, sweep, key)
++        else:
++            _wedged_sweep_one(sweep, key)
++
++
++def _wedged_sweep_one(sweep, key) -> None:
++    try:
++        sweep(key)
++    except Exception:
++        logger.debug("wedged-agent sweep failed for %s", key, exc_info=True)
++
++
+ def _start_gateway_housekeeping(
+     stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
+     cron_thread=None,
+@@ -4830,6 +4861,8 @@
+         chores.append((1, DRAIN_LABEL, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner)))
+     chores += [
+         (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),
++        # run11 根治件：挂死 running 槽周期扫（无入站也扫，驱逐判定复用快路径）
++        (5, "Wedged running-agent sweep", lambda: _housekeeping_wedged_agent_sweep(runner, loop)),
+         (60, "Media cache cleanup", _housekeeping_media_caches),
+         (60, "Paste sweep", _housekeeping_paste_sweep)]
+     if cron_provider is not None:
