@@ -15,6 +15,7 @@ import Router from '@koa/router'
 import type { Context } from 'koa'
 import {
   appendEvidence, isEvidenceKind, isVerificationVerdict, latestVerdict, listEvidence,
+  verifyEvidenceChain,
   type EvidenceRecord, type VerificationVerdict,
 } from './evidence-store'
 import { buildResultCard, changedFilesByTurn } from './result-card'
@@ -96,6 +97,11 @@ router.get('/:taskId/changed-files', async (ctx) => {
 
 router.get('/:taskId/verdict', async (ctx) => {
   ctx.body = { ok: true, verdict: latestVerdict(ctx.params.taskId) }
+})
+
+router.get('/:taskId/chain', async (ctx) => {
+  // 防篡改链校验（六文调研轮 C）：intact=false 即有改写/伪造/断链，firstBroken 指位。
+  ctx.body = { ok: true, verification: verifyEvidenceChain(ctx.params.taskId) }
 })
 
 router.get('/:taskId', async (ctx) => {
