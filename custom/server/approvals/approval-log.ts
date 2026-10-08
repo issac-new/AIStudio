@@ -23,6 +23,26 @@ function recordToDecisionGraph(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: numb
   } catch { /* fail-soft：落账失败不影响审批日志主链路 */ }
 }
 
+// 治理事件总线桥（六文调研轮 F）：审批裁决 → govbus 事件流。动态 import（vitest ESM
+// 环境下 require 加载内含 import 语句的模块会抛错被吞——动态 import 单例可靠）；
+// fire-and-forget 异步落总线（事件最终落盘，不阻断审批主链路）。
+function emitToGovBus(full: ApprovalLogEntry): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      const high = /deny|reject|blocked/i.test(full.decision)
+      appendGovEvent({
+        domain: 'approval',
+        severity: full.risk === 'high' || high ? 'high' : 'info',
+        type: `approval.${full.decision}`,
+        source: 'approvals/approval-log',
+        summary: `${full.actor} 对 ${full.targetKind}「${full.targetTitle || full.targetId}」裁决 ${full.decision}${full.risk ? `（风险 ${full.risk}）` : ''}`,
+        refs: { targetId: full.targetId },
+        payload: { decision: full.decision, risk: full.risk, targetKind: full.targetKind },
+      })
+    })
+    .catch(() => { /* fail-soft：总线故障不影响审批日志主链路 */ })
+}
+
 export interface ApprovalLogEntry {
   id: string
   ts: number
@@ -74,6 +94,7 @@ function isEntry(v: unknown): v is ApprovalLogEntry {
 export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: number }): ApprovalLogEntry {
   const full: ApprovalLogEntry = { ts: Date.now(), ...entry }
   recordToDecisionGraph(entry)
+  emitToGovBus(full)
   const list = load()
   list.push(full)
   const trimmed = list.length > CAP ? list.slice(list.length - CAP) : list
