@@ -122,3 +122,17 @@
 - **根治③aipay-scenario.sh patch 备好待收官**（纪律 25 运行中禁改磁盘）：
   mux/run12-devimpl-parallel.patch——PAYCORE 三拆/契约件锚/multi 等待/G5 窗宽
   1800→3600/integration 六分支清单。run11 收官（G6 或驱动退出）即 git apply。
+
+## 2026-10-08 登记⑥：失败左移五件落地（用户点名"按建议落地"）
+
+- **a preflight 容量自检（已落 mx-lib+mx-up）**：起跑前双断言——并发闸≥13
+  扇出上限 + 网关源含 _capacity_retry_anchor；不过即拒跑。对当前 SIM_ROOT
+  实测过（30≥13+锚在位）。
+- **b 卡死早检（已落 mx-scenario-lib）**：静默>idle_half 且日志尾错误态
+  （ERROR/Traceback/timeout/gave_up）→ 提前判死不等窗满；wait_alive_truth/
+  multi 双接线，冒烟过（clean 不误伤/dead 命中）。
+- **c/d/e 主脚本第二 patch（mux/run12-leftshift-after-parallel.patch，4 hunk）**：
+  c=RACI 回灌窗降级 fire-and-forget（40min 关键路径→0）；d=DEV 任务书 testlog
+  完成前自检句×4；e=G5 评审分节落卡（缺项边评边补禁终态打回）。**应用顺序：
+  先 run12-devimpl-parallel.patch 再本 patch**（后者基于前者副本生成）；终版
+  副本 bash -n 过。

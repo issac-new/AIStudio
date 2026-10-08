@@ -28,6 +28,7 @@ else
 fi
 
 # ── 单 gateway（multiplex 全部 profile）────────────────
+preflight_capacity_assert   # run11 左移件 a：容量类故障起跑前拒绝（并发闸/年龄锚双断言）
 if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
