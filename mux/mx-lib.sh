@@ -515,10 +515,11 @@ out['gateway'] = {'multiplex_profiles': True}   # 单 gateway 多路复用（方
 # 串行闸 1 是当时实证值。2026-10-08 run11 三轮容量事故钉死策略失配：V8 方案 §4.2
 # 并行流水线设计容量=4（编码 2+测试预备 2），max=1 使 64 位容量重试队列被 13 路群
 # 消息扇出瞬间灌满、真派发（任务书/催办）入队即丢（run11 issues.log
-# capacity-queue-drop-devimpl 键，400+ 丢件）。现通道=aim/cc-switch 多级降级池，
-# 当日四路并发实跑无 429。默认对齐方案=4；MX_MAX_CONCURRENT 仍可显式覆盖（设 1
+# capacity-queue-drop-devimpl 键，400+ 丢件）。并发上限按通道实力量级设定（用户
+# 口径 2026-10-08：GLM-5.3 并发 30 / GLM-5.3-Flash 并发 50）→ 默认 30（>13 路
+# agent 扇出上限，队列不再因扇出灌满）。MX_MAX_CONCURRENT 仍可显式覆盖（设 1
 # 回滚串行闸；设 0 关闸）。回滚判据：日志再现成串 429 重试风暴。
-_mcs = os.environ.get('MX_MAX_CONCURRENT', '4').strip()
+_mcs = os.environ.get('MX_MAX_CONCURRENT', '30').strip()
 if _mcs.isdigit() and int(_mcs) > 0:
     out['gateway']['max_concurrent_sessions'] = int(_mcs)
 out['platforms'] = {
