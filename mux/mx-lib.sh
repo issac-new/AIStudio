@@ -113,6 +113,30 @@ log()  { echo "[mux $(date +%H:%M:%S)] $*"; }
 fail() { echo "[mux FAIL $(date +%H:%M:%S)] $*" >&2; exit 1; }
 save_token() { mkdir -p "$CREDS_DIR"; chmod 700 "$CREDS_DIR"; printf '%s' "$2" > "$CREDS_DIR/$1.token"; chmod 600 "$CREDS_DIR/$1.token"; }
 load_token() { cat "$CREDS_DIR/$1.token"; }
+
+# ── preflight 容量自检（2026-10-08 run11 左移件 a）：容量类故障当日累计损失
+# 4-5h、全部在起跑后数小时才以"等待窗耗尽"形态暴露——左移到起跑前拒绝。
+# 断言①并发闸 ≥ 扇出上限（13=12 agent+fanfan 编制口径；run4/run5 串行闸默认 1
+# 与并行流水线失配是三轮容量僵尸根因）；②网关源含年龄锚修复标记（run_busy
+# _capacity_retry_anchor——缺失则风暴消息重入永不过期）。两断言任一不过即 fail。
+preflight_capacity_assert() {
+  local mc anchor_ok
+  mc=$(python3 -c "
+import yaml,sys
+try: c=yaml.safe_load(open('$HERMES_ROOT/config.yaml')) or {}
+except Exception as e: print('ERR:'+str(e)); sys.exit(0)
+g=c.get('gateway') or {}
+print(g.get('max_concurrent_sessions') or c.get('max_concurrent_sessions') or 0)" 2>/dev/null || echo ERR)
+  if [[ "$mc" != "${mc#[Ee][Rr][Rr]}" || "$mc" -lt 13 ]] 2>/dev/null; then
+    fail "preflight：max_concurrent_sessions=${mc} < 13（编制扇出上限）——并发闸失配（run11 三轮容量僵尸根因），先修 config（MX_MAX_CONCURRENT 或 mx-lib write_root_config 默认）再起跑"
+  fi
+  if grep -q "_capacity_retry_anchor" "$AGENT_SRC/gateway/run_busy.py" 2>/dev/null; then
+    anchor_ok=1
+  else
+    fail "preflight：$AGENT_SRC/gateway/run_busy.py 缺 _capacity_retry_anchor（年龄锚修复标记）——风暴消息重入将永不过期（run11 302 次重丢根因），先同步 overlay/runtime/gateway/run_busy.py 再起跑"
+  fi
+  log "preflight 容量自检过：并发=${mc}≥13、年龄锚在位"
+}
 human_mxid() { echo "@$1:$SERVER_NAME"; }
 agent_mxid() { echo "@$1-agent:$SERVER_NAME"; }
 user_pass()  { echo "Aipay_$1_2026"; }

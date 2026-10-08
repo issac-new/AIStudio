@@ -564,6 +564,20 @@ _agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时�
   date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
 }
 
+# 卡死早检（run11 左移件 b）：G5 首轮实录——fanfan 会话 18:18 即死（尾部=hindsight
+# prefetch 超时），19:18 窗满才判，60min 死窗零干预。静默过半且日志尾为错误态
+# （ERROR/Traceback/timeout/gave_up）即提前判死，不陪跑到窗满。
+_agent_log_tail_stalled() { # <agent.log> → 0=尾部错误态（疑似卡死）
+  local tail_line
+  tail_line=$(tail -1 "$1" 2>/dev/null)
+  [[ -n "$tail_line" ]] && printf '%s' "$tail_line" | grep -qE "ERROR |Traceback|TimeoutError|timed? ?out|gave_up"
+}
+_any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
+  local a
+  for a in "$@"; do _agent_log_tail_stalled "$a" && return 0; done
+  return 1
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   local -a logs=()
@@ -600,6 +614,10 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "${_nmentions}" >/dev/null 2>&1 || true
       note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次"
       nudged=1
+    fi
+    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+      note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 $agents）"
+      return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
       note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
@@ -665,6 +683,12 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
       note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次"
       nudged=1
+    fi
+    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+      for i in "${!exprs[@]}"; do
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：日志尾错误态——左移件 b；负责人 ${owners[$i]}）"
+      done
+      return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
       for i in "${!exprs[@]}"; do
