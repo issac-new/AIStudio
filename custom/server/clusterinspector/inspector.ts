@@ -148,9 +148,11 @@ export class ClusterInspector {
         try { require('node:fs').writeFileSync(join(dir, 'responses', `${eid}.ci-acted.json`), JSON.stringify({ ts: Date.now() })) } catch { /* fail-soft */ }
         if (String(decision.decision ?? '').toLowerCase().startsWith('approve')) {
           const restart = this.deps.restartGateway ?? (async (pf: string) => {
-            const { restartGatewayForProfile } = // 运行树位于 <upstream>/packages/server/src/custom/server/clusterinspector（inject 落位），
-            // 上溯四级到 src/modules；vitest 下由 deps.restartGateway 注入不触此路径
-            require('../../../../modules/hermes/services/gateway/autostart')
+            // 兄弟布局字面量 require（patch 525 build-escape 同款前缀，任意布局经
+            // build-server.mjs 的 overlay-upstream-escape 插件重锚到本仓根解析）；
+            // vitest 下由 deps.restartGateway 注入不触此路径
+            const { restartGatewayForProfile } =
+            require('../../../../upstream/hermes-studio/packages/server/src/modules/hermes/services/gateway/autostart')
             return restartGatewayForProfile(pf)
           })
           try {
