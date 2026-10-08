@@ -137,7 +137,7 @@ export async function runGate(input: RunInput): Promise<RunResult> {
       } else if (executor.type === 'semantic') {
         evidence.push(runSemanticExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       } else if (executor.type === 'ops') {
-        evidence.push(runOpsExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+        evidence.push(await runOpsExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       }
     }
     // error 证据=基础设施瞬时故障（超时/网络/子进程异常），不是确定性判定——

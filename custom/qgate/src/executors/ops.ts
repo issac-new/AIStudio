@@ -70,7 +70,7 @@ function readJson(file: string): { value: unknown } | { error: string } {
 
 const TRACEPARENT_RE = /^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
 
-export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput): Evidence {
+export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput): Promise<Evidence> {
   const startedAt = Date.now()
   const ev: Evidence = {
     id: `ev-${randomUUID().slice(0, 12)}-ops`,
@@ -339,6 +339,41 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
 
   // ── R8 门类补齐（上游 convention-alignment/consistency/configuration/documentation/symbol-grounding） ──
 
+  if (executor.mode === 'writing-style') {
+    // 文风检查（v0.3.1，上游 v1.27 WS-1/2/3 本地方言）：确定性规则扫描 markdown——
+    // 长句（中文 >160 字/英文 >45 词）、模糊词字面量表、多动作列表行（启发式）。
+    // 代码块/行内代码豁免；表格逐单元格；findings 封顶 200 标注截断；样例行
+    // qgate-style:example 豁免。advisory 语义由门 policy.warn 档承载（CONDITIONAL
+    // 不阻断但可见）——检查器命中是观察数据不是质量失败（上游同款声明）。
+    // 扫描面零文件 = error（零文件不构成符合规范的证据，与 scope-empty 同口径）。
+    const { checkMarkdown } = await import('../core/writing-style.js')
+    const paths = executor.scan && executor.scan.length > 0 ? executor.scan : ['**/*.md']
+    const files = listWorkspaceFilesSafe(input.workspace).filter((rel) => paths.some((p) => globSafe(p, rel)))
+    if (files.length === 0) return done('error', `writing-style scope-empty — 0 files matched ${JSON.stringify(paths)} (zero files are not evidence of compliance)`)
+    const findings = []
+    let truncated = false
+    for (const rel of files) {
+      let content: string
+      try {
+        content = readFileSync(join(input.workspace, rel), 'utf8')
+      } catch {
+        continue
+      }
+      const found = checkMarkdown(content, rel)
+      for (const f of found) {
+        if (findings.length >= 200) { truncated = true; break }
+        findings.push(f)
+      }
+      if (truncated) break
+    }
+    if (findings.length > 0) {
+      const byRule = { 'WS-1': 0, 'WS-2': 0, 'WS-3': 0 }
+      for (const f of findings) byRule[f.rule]++
+      return done('fail', `writing-style findings ${findings.length} (WS-1 长句 ${byRule['WS-1']} / WS-2 模糊词 ${byRule['WS-2']} / WS-3 多动作 ${byRule['WS-3']}) over ${files.length} files${truncated ? ' — truncated at 200' : ''}: ${findings.slice(0, 5).map((f) => `${f.file}:${f.line} ${f.detail}`).join(' | ')}`, findings.map((f) => `${f.file}:${f.line}`))
+    }
+    return done('pass', `writing-style clean over ${files.length} files (WS-1/2/3)`)
+  }
+
   if (executor.mode === 'conventions') {
     // 约定对齐：conventions.json 规则（include 正则 + paths glob + severity）扫描命中即报。
     const d = loadRel(executor.dataFile ?? executor.observedFile, 'conventions')
@@ -360,8 +395,10 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
         return done('error', `${id}: include regex invalid: ${(e as Error).message}`)
       }
       let hits = 0
+      let scanned = 0
       for (const rel of files) {
         if (!paths.some((p) => globSafe(p, rel))) continue
+        scanned++
         let content: string
         try {
           content = readFileSync(join(input.workspace, rel), 'utf8')
@@ -374,6 +411,9 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
           if (severity === 'fail') problems.push(`${id}: /${include}/ hits ${rel}${m.index !== undefined ? `:${1 + content.slice(0, m.index).split('\n').length - 1}` : ''}`)
         }
       }
+      // 零扫描可见性（v0.3.1，上游 v1.27/v1.28 本地方言）：范围 glob 过滤后零文件 =
+      // 范围配置失效（路径写错/文件被挪走），零文件不构成检查证据——error 而非 pass。
+      if (scanned === 0) return done('error', `${id}: scope-empty — 0 files matched paths ${JSON.stringify(paths)} (zero files are not evidence of compliance; fix the scope)`)
       if (severity === 'fail' && hits > 0) continue
       if (severity === 'warn' && hits > 0) problems.push(`${id}(warn): /${include}/ hits ${hits} file(s)`)
     }
@@ -577,6 +617,8 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
     const changed = (executor.observedFile === undefined)
     const files = listWorkspaceFilesSafe(input.workspace).filter((f) => /\.(ts|tsx|js|mjs|vue)$/.test(f))
     const target = changed ? files : files // 全仓走读（增量面由 appliesWhen 承担）
+    // 零扫描可见性（v0.3.1，上游 v1.28 本地方言）：include/exclude 过滤后零代码文件
+    // ＝范围配置失效——零文件不构成"接地干净"的证据（与 conventions scope-empty 同口径）。
     // 依赖清单来源：默认 workspace package.json；depsFile 可指向上游——符号链借用架构
     //（node_modules 实为上游树的链接）时声明的事实源在上游 package.json，借用必须显式指认；
     // 指认的清单缺失 → error（链接架构漂移是异常，不是"没有依赖"）
@@ -726,6 +768,7 @@ export function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorInput):
     }
     const problems = [...unresolved, ...unresolvedMember]
     if (problems.length > 0) return done('fail', `symbol grounding violations (${problems.length}): ${problems.slice(0, 8).join(' | ')}${problems.length > 8 ? ` …+${problems.length - 8}` : ''}`, problems)
+    if (target.length === 0) return done('error', 'symbols scope-empty — 0 code files matched the scan face (zero files are not evidence of grounding; fix the scope)')
     return done('pass', `all imports grounded across ${target.length} files (${importsChecked} resolvable imports; deps ${pkgDeps.size})`)
   }
 

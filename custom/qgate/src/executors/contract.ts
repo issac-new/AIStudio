@@ -29,6 +29,20 @@ function readJson(file: string): { value: unknown } | { error: string } {
   }
 }
 
+/** requireLive 来源约束（v0.3.1，上游 v1.30 F02 liveModeBlock 本地方言）：
+    开启后观察文件顶层须显式 mode:'live'|'static'——缺失同样 fail（无法区分实时观察
+    与不回报来源的旧 producer，缺失不比诚实的 static 更易放行）；static 即 fail；
+    畸形值 error（fail-closed）。未开启时缺失＝未声明，保持兼容。
+    diff/breaking/matrix 三消费路径共用同一判定（上游 alignment 同构）。 */
+function liveModeBlock(observedDoc: unknown): { block: 'fail' | 'error'; reason: string } | null {
+  const v = observedDoc as Record<string, unknown> | null
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return { block: 'error', reason: 'observation not an object — cannot read mode declaration' }
+  if (v.mode === undefined) return { block: 'fail', reason: 'missingObservationMode: observation lacks mode:"live"|"static" — undeclared source is no better than honest static' }
+  if (v.mode === 'live') return null
+  if (v.mode === 'static') return { block: 'fail', reason: 'static observation: requireLive demands live observation, static is not acceptable evidence' }
+  return { block: 'error', reason: `invalid observation mode: ${JSON.stringify(v.mode)} (expected "live"|"static")` }
+}
+
 interface Endpoint { method: string; path: string }
 
 function endpointsOfOpenApi(doc: unknown): Endpoint[] | { error: string } {
@@ -79,6 +93,16 @@ export function runContractExecutor(executor: ExecutorSpec, input: ContractExecu
     const o = readJson(observed)
     if ('error' in e) return done('error', `expected contract malformed: ${e.error}`)
     if ('error' in o) return done('error', `observed contract malformed: ${o.error}`)
+    if (executor.requireLive) {
+      const live = liveModeBlock(o.value)
+      if (live) return done(live.block, live.reason)
+      // mode 是来源声明（协议元字段），不是契约内容——diff 前剥除，否则 live 观察必然漂移
+      const stripped = { ...(o.value as Record<string, unknown>) }
+      delete stripped.mode
+      const diffs = jsonPointerDiff(e.value, stripped, executor.ignorePaths ?? [])
+      if (diffs.length === 0) return done('pass', `observed contract matches expected (${executor.expectedFile}, live mode)`)
+      return done('fail', `contract drift (${diffs.length}): ${diffs.slice(0, 6).map((d) => `${d.pointer} ${d.kind} (${d.detail})`).join(' | ')}${diffs.length > 6 ? ` …+${diffs.length - 6}` : ''}`, diffs.map((d) => d.pointer))
+    }
     const diffs = jsonPointerDiff(e.value, o.value, executor.ignorePaths ?? [])
     if (diffs.length === 0) return done('pass', `observed contract matches expected (${executor.expectedFile}), ${executor.ignorePaths?.length ?? 0} ignore paths`)
     return done('fail', `contract drift (${diffs.length}): ${diffs.slice(0, 6).map((d) => `${d.pointer} ${d.kind} (${d.detail})`).join(' | ')}${diffs.length > 6 ? ` …+${diffs.length - 6}` : ''}`, diffs.map((d) => d.pointer))
@@ -92,6 +116,10 @@ export function runContractExecutor(executor: ExecutorSpec, input: ContractExecu
     if ('error' in o) return done('error', `diff report malformed: ${o.error}`)
     const v = o.value as Record<string, unknown>
     if (v.checked !== true) return done('error', `diff report not checked (checked=${JSON.stringify(v.checked)}) — tool must declare checked:true`)
+    if (executor.requireLive) {
+      const live = liveModeBlock(o.value)
+      if (live) return done(live.block, live.reason)
+    }
     const breaking = Array.isArray(v.breaking) ? (v.breaking as unknown[]).filter((x): x is string => typeof x === 'string') : undefined
     if (breaking === undefined) return done('error', 'diff report lacks breaking[] array')
     if (breaking.length === 0) return done('pass', `no breaking changes (checked, ${breaking.length} breaking)`)
@@ -138,6 +166,10 @@ export function runContractExecutor(executor: ExecutorSpec, input: ContractExecu
     const prov = readJson(observed)
     if ('error' in prov) return done('error', `provider surface malformed: ${prov.error}`)
     const pv = prov.value as Record<string, unknown>
+    if (executor.requireLive) {
+      const live = liveModeBlock(prov.value)
+      if (live) return done(live.block, live.reason)
+    }
     const provEndpoints = Array.isArray(pv.endpoints)
       ? pv.endpoints.filter((e): e is Record<string, unknown> => typeof e === 'object' && e !== null)
       : undefined

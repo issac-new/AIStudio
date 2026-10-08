@@ -15,7 +15,7 @@ import { storePaths, saveRun } from '../src/core/store.js'
 import type { ExecutorSpec, GateRun } from '../src/core/types.js'
 
 const tmp = (): string => mkdtempSync(join(tmpdir(), 'qgate-72h-'))
-const runOps = (e: ExecutorSpec, ws: string) => runOpsExecutor(e, { runId: 'r', gateId: 'g', workspace: ws })
+const runOps = async (e: ExecutorSpec, ws: string) => runOpsExecutor(e, { runId: 'r', gateId: 'g', workspace: ws })
 
 const gate = (over: Record<string, unknown>) => ({
   apiVersion: 'qgate/v1alpha1',
@@ -58,24 +58,24 @@ describe('parse 保留 allowWaiver:false（72h 审查轮）', () => {
 describe('ops symbols 悬空 default import（72h 审查轮）', () => {
   const exec: ExecutorSpec = { id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }
 
-  it('裸 default import 指向无 default 导出的模块 → fail 并点名 default', () => {
+  it('裸 default import 指向无 default 导出的模块 → fail 并点名 default', async () => {
     const ws = tmp()
     mkdirSync(join(ws, 'src'), { recursive: true })
     writeFileSync(join(ws, 'package.json'), JSON.stringify({ dependencies: {} }))
     writeFileSync(join(ws, 'src', 'util.ts'), 'export function helper(): number { return 1 }\n')
     writeFileSync(join(ws, 'src', 'app.ts'), "import Solo from './util'\nexport function main(): void { Solo }\n")
-    const res = runOps(exec, ws)
+    const res = await runOps(exec, ws)
     expect(res.result).toBe('fail')
     expect(res.summary).toContain("default")
   })
 
-  it('目标确有 default 导出 → pass（正例不回归）', () => {
+  it('目标确有 default 导出 → pass（正例不回归）', async () => {
     const ws = tmp()
     mkdirSync(join(ws, 'src'), { recursive: true })
     writeFileSync(join(ws, 'package.json'), JSON.stringify({ dependencies: {} }))
     writeFileSync(join(ws, 'src', 'util.ts'), 'export default function solo(): number { return 1 }\n')
     writeFileSync(join(ws, 'src', 'app.ts'), "import Solo from './util'\nexport function main(): void { Solo }\n")
-    expect(runOps(exec, ws).result).toBe('pass')
+    expect((await runOps(exec, ws)).result).toBe('pass')
   })
 })
 
