@@ -1,5 +1,5 @@
 diff --git a/vitest.config.ts b/vitest.config.ts
-index 1d26304f..f2703819 100644
+index dd913938..5a8d318d 100644
 --- a/vitest.config.ts
 +++ b/vitest.config.ts
 @@ -6,6 +6,8 @@ export default defineConfig({
@@ -10,4 +10,4 @@ index 1d26304f..f2703819 100644
 +      '@custom': resolve(__dirname, '../../overlay/custom/client'),
        '@': resolve(__dirname, 'packages/client/src'),
        electron: resolve(__dirname, 'tests/mocks/electron.ts'),
-       'electron-updater': resolve(__dirname, 'tests/mocks/electron-updater.ts'),
+       'dbus-next': resolve(__dirname, 'tests/mocks/dbus-next.ts'),

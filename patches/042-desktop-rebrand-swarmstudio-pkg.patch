@@ -1,12 +1,13 @@
 diff --git a/packages/desktop/package.json b/packages/desktop/package.json
-index 76c84159..9d147e8b 100644
+index 8fddc337..614883ca 100644
 --- a/packages/desktop/package.json
 +++ b/packages/desktop/package.json
-@@ -1,11 +1,11 @@
+@@ -1,12 +1,12 @@
  {
 -  "name": "hermes-studio",
 +  "name": "swarmstudio",
-   "version": "0.7.31",
+   "desktopName": "com.hermeswebui.studio.desktop",
+   "version": "0.7.32",
 -  "description": "Ekko Studio desktop app for multi-agent chat, coding, and visual workflows, with bundled local runtimes.",
 -  "homepage": "https://ekkostudio.xyz",
 +  "description": "SwarmStudio desktop distribution with bundled Python runtime and hermes-agent",

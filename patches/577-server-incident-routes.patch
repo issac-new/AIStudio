@@ -1,3 +1,5 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index f60ebf0a..d9966d54 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -113,6 +113,9 @@ import simRunRouter from '../custom/controllers/sim/run-progress'

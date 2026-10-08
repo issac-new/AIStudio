@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index a81265bd..9b287844 100644
+index ff225d35..dc535904 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -37,8 +37,8 @@ index a81265bd..9b287844 100644
 +  artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  
  linux:
-   icon: build/icons
-@@ -107,7 +107,7 @@ linux:
+   syncDesktopName: true
+@@ -108,7 +108,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development

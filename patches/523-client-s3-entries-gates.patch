@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
-index 44064b30..5c21e133 100644
+index ca38dcb0..00a1a647 100644
 --- a/packages/client/src/components/hermes/chat/ChatInput.vue
 +++ b/packages/client/src/components/hermes/chat/ChatInput.vue
 @@ -17,6 +17,8 @@ import { useI18n } from 'vue-i18n'
@@ -11,7 +11,7 @@ index 44064b30..5c21e133 100644
  import BundleCreateModal from './BundleCreateModal.vue'
  import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
  import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
-@@ -462,14 +464,15 @@ function startResize(e: MouseEvent) {
+@@ -463,14 +465,15 @@ function startResize(e: MouseEvent) {
  }
  
  const inputSettingsOptions = computed<DropdownOption[]>(() => [
@@ -29,7 +29,7 @@ index 44064b30..5c21e133 100644
    {
      label: t('chat.showToolCalls'),
      key: 'toolTrace',
-@@ -1391,6 +1394,7 @@ function openAttachmentPreview(attachment: Attachment) {
+@@ -1394,6 +1397,7 @@ function openAttachmentPreview(attachment: Attachment) {
          </div>
          <div class="input-actions">
            <VoiceDialogueControls
