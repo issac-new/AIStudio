@@ -15,6 +15,7 @@ export type RunOutcome = {
   anomalies: Anomaly[]
   emitted: number
   suppressedByCooldown: number
+  actions?: string[]
   error?: string
 }
 
@@ -23,6 +24,8 @@ export interface InspectorDeps {
   gatewayBase?: string
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
+  /** safe-act 注入：僵尸任务回收（缺省 CLI 桥 hermes kanban reclaim；测试可stub） */
+  reclaimTask?: (taskId: string) => Promise<string | undefined>
   /** govbus 发事件注入（缺省动态 require fail-soft） */
   emitGovEvent?: (e: { domain: 'system'; severity: 'info' | 'warn' | 'high'; type: string; source: string; summary: string; payload?: Record<string, unknown> }) => void
   now?: () => number
@@ -60,6 +63,23 @@ export class ClusterInspector {
     } catch {
       // govbus 不可用：事件丢弃（巡检本体不受影响）
     }
+  }
+
+  private async safeAct(anomalies: Anomaly[]): Promise<string[]> {
+    const acted: string[] = []
+    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
+    const reclaim = this.deps.reclaimTask ?? ((id: string) => new Promise<string | undefined>((resolve) => {
+      try {
+        const { execFile } = require('node:child_process')
+        execFile('hermes', ['kanban', 'reclaim', id, 'cluster-inspector-stale'], { timeout: 15_000 }, (e?: Error | null, out?: string) => resolve(e ? undefined : String(out ?? '').slice(0, 200)))
+      } catch { resolve(undefined) }
+    }))
+    for (const a of anomalies) {
+      if (a.detector !== 'kanban.stale-worker' || a.subject === 'board') continue
+      const r = await reclaim(a.subject)
+      acted.push(`${a.subject}:${r ? 'reclaimed' : 'reclaim-failed'}`)
+    }
+    return acted
   }
 
   async runOnce(): Promise<RunOutcome> {
@@ -107,7 +127,8 @@ export class ClusterInspector {
         this.emit(a)
         emitted += 1
       }
-      outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies, emitted, suppressedByCooldown: suppressed }
+      const actions = await this.safeAct(anomalies)
+      outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
     } finally {
