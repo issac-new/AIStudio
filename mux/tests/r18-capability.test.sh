@@ -80,7 +80,7 @@ check t "25-op1-before.png"                                   # 前后帧渲染
 check t "25-op1-after.png"
 check t "操作入口：#/app/board → 卡右栏 ⌨IDE"                 # 操作入口复现路径
 check t "主任务卡 t_fixture9 落 fanfan-pm-plan 板"            # 环节效果实证
-check t "R18 载荷未采集"                                       # 空载荷步诚实缺席章
+check t "全量呈现（未采集·必采步缺口）"                      # 空载荷步诚实缺席章（生成器现行文案）
 check t "全量呈现覆盖"                                     # hero 覆盖率位
 echo "PASS ①生成器：对话全文/前后帧/效果/诚实缺席/覆盖位 全渲染"
 
@@ -90,7 +90,7 @@ must_fail() { echo "$AUD" | grep -qF "$1" || { echo "FAIL 审计应打回：$1";
 must_fail "R18 步 11 缺「对话全文」"       # 对话必采步 done 且无载荷 → 打回
 must_fail "R18 步 8 缺「操作前后帧」"      # 操作必采步
 must_fail "R18 步 7 缺「环节效果」"        # 效果必采步
-must_fail "R18 步 5 三位载荷全缺"          # 其余 done 步任一位在位即可（17/21 属对话必采集走上一类文案）
+must_fail "R18 步 5 载荷全缺"              # 其余 done 步任一位在位即可（17/21 属对话必采集走上一类文案）
 if echo "$AUD" | grep -qE "R18 步 (9|25) "; then
   echo "FAIL 审计误打回已采步 9/25"; echo "$AUD"; exit 1
 fi
