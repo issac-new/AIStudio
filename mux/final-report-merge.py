@@ -370,9 +370,27 @@ PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
+
+PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>新机制首跑验证轮——帧采集焊死（capture_step）、审计熔断、双正本、PART1 骨架链四件报告链新制与流式流水线（测试预备轮+模块就绪即触发）首次全链实跑；当日另完成容量体系根治（并发闸 1→30 定标、队列年龄锚稳定键）并在本轮后半段生效。</div>
+
+<div class="card ok"><b>本轮的诚实结论：</b>26 步 {{steps_done}}/26 落键（第 26 步落键随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实算自 issues.log 闸键记单）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。UAT 按 G1 冻结的 AC-1/2/3 逐条验收判词通过、发布登记三卡齐（REL-MERGE/TAG/DELIVER）；最大的非粉饰事实：全程五次 attempt 才走完——G5 六轮打回与三轮容量事故合计烧掉约 9 小时，最终 attempt-5 在"并发 30 + G5 窗宽 3600 + 分节评审"语义下一次通过（其中 G5 段为 23:39 落地的 run12 补丁语义，偏差已记单入复盘）。</div>
+
+<div class="card warn"><b>真实发生的缺口（全部记单在案）：</b>①容量派发丢失 400+ 件（capacity-queue-drop-devimpl，根因双修已部署：并发 30+年龄锚）；②PAYCORE 整腿缺席集成（dev-branch-missing/integration-branch-missing，run12 三拆+契约件锚根治）；③载荷型证据采集未随 capture_step 全接线（r18-collection-missing，八步降级记单）；④五步证据帧为收官后补拍、已图注如实标注（frame-backfill-labeled，红线不冒充）；⑤G5 评审六轮打回暴露终态评审结构性低效（g5-ready-fail 等，左移件 e"分节落卡"已落地 run12）；⑥网关槽位记账膨胀疑点持续观察（gateway-slot-inflation，cluster-inspector D2 产品化观测）。（类型分布实算：{{type_top}}）</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物真容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实算，取不到显式 ⬜。</div>
+
+<h2>研发全流程治理有效性（实算）</h2>
+{{ch0}}
+'''
+
 PART1_BY_RUN = {
     '20261007-v8-run11': PART1_RUN11,
     '20261007-v8-run10': PART1_RUN10,
+    '20261007-v8-run11': PART1_RUN11,
     '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
     '20261004-v7-run8': PART1_RUN8,
