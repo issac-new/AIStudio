@@ -517,3 +517,6 @@
 
 # 580 报告链落地轮：/api/hermes/report/*（PART1 骨架出稿+验收断言）路由挂载——能力正本=custom/server/report/
 580-server-report-routes.patch
+
+# 581 permmodes v4 通道轮：/api/hermes/permmodes/session-mode/*（会话权限档查/切/清+引擎 v4 切档）
+581-server-session-mode-routes.patch
