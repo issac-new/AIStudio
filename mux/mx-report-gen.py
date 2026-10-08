@@ -2037,7 +2037,10 @@ def gate_cards():
   <div class="gate-desc">{GATE_DESC[g]}</div>
   {rej}
 </div>''')
-    return '<div ' + 'class="ck-wrap">' + ''.join(cards) + '</div>'
+    # 直接返回六张卡：外层 .gates（唯一调用点 L2579）已是 3 列 grid——
+    # 曾多包一层块级 .ck-wrap，六卡全挤进 grid 首格（左 1/3 窄列、右 2/3 空白，
+    # 2026-10-08 用户截图实锤）。ck-wrap 层与对应 CSS 一并废除。
+    return ''.join(cards)
 
 # ── 驾驶舱联动地图（路演版：跨区链路+互跳锚点）──
 # 三层：①顶部六功能区分区导航（点击跳步）②四条跨区链路（沟通/看板/审批/运行/治理/IDE
@@ -2342,7 +2345,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
 .ck-node-z{{font-size:9px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
 .ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-wrap{{margin:0 0 16px}}
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
 .ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
 .ck-map-sub{{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}}
@@ -2360,7 +2362,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
 .ck-node-z{{font-size:9px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
 .ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-wrap{{margin:0 0 16px}}
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
 .ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
 .ck-map-sub{{font-size:12px;color:var(--muted);font-weight:400;margin-left:10px}}
