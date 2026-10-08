@@ -104,6 +104,20 @@ export function detectSessionStall(snap: ClusterSnapshot, opts: DetectOptions = 
   return out
 }
 
+/** D6 容量泵拥塞（二期内省）：sidecar 深度占容量比——≥75% warn、≥90% high（run11 队列 64 满丢 400+ 件实录） */
+export function detectCapacityPump(snap: ClusterSnapshot): Anomaly[] {
+  const c = snap.gateway.capacity
+  if (!c || !c.cap) return []
+  const pct = c.depth / c.cap
+  if (pct < 0.75) return []
+  return [{
+    detector: 'gateway.capacity-pump', subject: 'gateway',
+    severity: pct >= 0.9 ? 'high' : 'warn',
+    summary: `容量重试队列拥塞：${c.depth}/${c.cap}（${Math.round(pct * 100)}%）`,
+    detail: { ...c },
+  }]
+}
+
 /** D5 异常风暴：单轮内同检测器异常 ≥N 个主体 → 追加一条 high 聚簇事件（run11 反应风暴形态） */
 export function detectStorm(anomalies: Anomaly[], opts: DetectOptions = {}): Anomaly[] {
   const size = opts.stormClusterSize ?? 3
@@ -128,6 +142,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectSlotInflation(snap, opts),
     ...detectStaleWorkers(snap),
     ...detectSessionStall(snap, opts),
+    ...detectCapacityPump(snap),
   ]
   return [...base, ...detectStorm(base, opts)]
 }

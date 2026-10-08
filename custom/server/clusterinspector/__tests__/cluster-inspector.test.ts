@@ -107,3 +107,31 @@ describe('ClusterInspector（冷却去重/重入/fail-soft）', () => {
     expect(true).toBe(true)
   })
 })
+
+describe('二期：容量泵 D6 + safe-act', () => {
+  it('D6：depth/cap ≥75% warn、≥90% high；<75% 无事件', () => {
+    const mk = (depth: number) => snap({ gateway: { ok: true, capacity: { ts: Date.now() / 1000, depth, anchors: depth, cap: 64 } } })
+    const only = (n: number) => detectAll(mk(n)).filter((a) => a.detector === 'gateway.capacity-pump')
+    expect(only(50)[0]?.severity).toBe('warn')      // 78%
+    expect(only(60)[0]).toMatchObject({ severity: 'high' })  // 94%
+    expect(only(47)).toHaveLength(0)                // 73% 线内
+    expect(only(10)).toHaveLength(0)
+  })
+
+  it('safe-act：SAFE_ACT=on 僵尸卡触发 reclaim；off 不动', async () => {
+    const reclaimed: string[] = []
+    const mkInsp = () => new ClusterInspector({
+      emitGovEvent: () => {}, hermesHome: '/nonexistent', gatewayBase: 'http://127.0.0.1:1',
+      getKanbanDiagnostics: async () => [{ task_id: 't9', diagnostics: [{ severity: 'critical', title: '心跳陈旧' }] }],
+      reclaimTask: async (id) => { reclaimed.push(id); return 'ok' },
+      now: () => 1_000_000,
+    })
+    process.env.CLUSTER_INSPECTOR_SAFE_ACT = 'on'
+    const r1 = await mkInsp().runOnce()
+    delete process.env.CLUSTER_INSPECTOR_SAFE_ACT
+    expect(r1.actions).toEqual(['t9:reclaimed'])
+    expect(reclaimed).toEqual(['t9'])
+    const r2 = await mkInsp().runOnce()
+    expect(r2.actions ?? []).toEqual([])  // off：不动手（anomaly 仍报）
+  })
+})

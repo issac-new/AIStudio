@@ -85,3 +85,21 @@ class TestAnchor:
         r._capacity_retry_since[key] = 1.0
         r._capacity_retry_since.pop(_capacity_retry_anchor(_FakeEvent(event_id="$k")))
         assert key not in r._capacity_retry_since
+
+
+class TestCapacitySidecar:
+    def test_enqueue_writes_depth_sidecar_throttled(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        class _DP:
+            def done(self): return True
+            def cancelled(self): return False
+            def exception(self): return None
+        monkeypatch.setattr("gateway.run_busy.asyncio.create_task", lambda coro: _DP())
+        r = _FakeRunner()
+        r._queue_capacity_retry(_FakeEvent(event_id="$a"), None, "agent:x")
+        r._queue_capacity_retry(_FakeEvent(event_id="$b"), None, "agent:y")
+        import json as _j, pathlib as _pl
+        f = _pl.Path(tmp_path) / "runtime" / "capacity_retry.json"
+        assert f.exists()
+        d = _j.loads(f.read_text())
+        assert d["cap"] == 64 and d["anchors"] >= 1
