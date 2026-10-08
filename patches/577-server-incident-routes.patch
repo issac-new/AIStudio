@@ -1,0 +1,20 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -113,6 +113,9 @@ import simRunRouter from '../custom/controllers/sim/run-progress'
+ import { evalRoutes } from '../custom/eval/controller'
+ // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
+ import { evidenceRoutes } from '../custom/evidence/evidence-controller'
++// overlay[incident]: Agent 事故报告汇编器（六文调研轮 A+B，arXiv 2609.24515 三类
++// 17 要素 + 理论/实际自治度对账；/api/incident/sessions/:id/report[.md]、/autonomy）
++import { incidentRoutes } from '../custom/incident/incident-controller'
+ // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
+ import { reviewRoutes } from '../custom/review/review-controller'
+ // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
+@@ -382,6 +385,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(simRunRouter.routes())                   // 推演运行态（后台感知③）：run-progress.json 只读
+   app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
+   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
++  app.use(incidentRoutes.routes())                // 事故报告：17 要素汇编 + 自治度对账（六文调研轮 A+B）
+   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
+   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
+   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
