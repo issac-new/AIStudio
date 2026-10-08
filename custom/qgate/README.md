@@ -2,7 +2,11 @@
 
 面向 Code Agent 的可裁剪软件交付质量门禁：**没有证据不得 PASS**。
 设计文档：`overlay/docs/superpowers/specs/2026-09-23-qgate-universal-delivery-gate-design.md`（v0.2，上游 v0.1 见 `ncwk/docs/universal-delivery-gate-zcode-design-v0.1.md`）。
-状态：**P0-P9 + 收尾件收口；2026-09-24 复盘轮修复虚报项**（§34 三钩子重写为可用、§49 缓存真接线、overlay 仓内嵌 .qgate/、demo 补齐、MCP schema 1210 事故修复 8cbcfa1）。
+状态：**P0-P9 + 收尾件收口；2026-09-24 复盘轮修复虚报项；2026-10-08 v1.31.1 吸收轮**（上游七版增量本地方言落地，调研正本 `docs/superpowers/specs/2026-10-08-qgate-upstream-v1.31.1-research.md`）：
+- **来源信号四桶**——PASS 门禁标注 核验（内核重算/计算）/声明（退出码等自报）/降级（present 级/缓存）/无信号；status·run·release-report·Stop·治理 UI 全链呈现，混合来源不可能被读成全部已核验
+- **AC→用例绑定**——requirements AC `cases:[{gateId,caseIds}]` 绑定到绑定门当轮证据的逐用例身份（command rawOutput 逐点重解析 + behavior cases 深比较）；acCaseMissing/Failed/Skipped/Unbound 四形态，无关成功门禁不再能充当 AC 证据；`requireCaseBinding` 开关
+- **报告诚实呈现**——声明关联（逐 Claim 实况判定 + 未验证成因 no-gate/gate-not-run）+ advisory 可见面 + active waivers 行 + fix-first 纪律（放松验收不作为修复选项）
+- **预算执法**——`run --budget-ms N` 宿主预算下启动前比剩余，不足不启动落 error 证据（fail-closed 非 SKIP）
 
 ## 组成
 
