@@ -48,16 +48,34 @@ await page.evaluate(([token]) => {
 }, [loginRes.token])
 
 async function dismissPopups() {
-  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒']) {
+  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒', '开始使用', '立即体验', '跳过']) {
     const btn = page.locator(`button:has-text("${txt}")`).first()
     if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(400) }
   }
+  for (const aria of ['close', '关闭', 'Close']) {
+    const btn = page.locator(`[aria-label="${aria}"], button:has-text("×")`).first()
+    if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(300) }
+  }
+}
+// 拍后自检（run11 实锤：多帧拍到"没有权限/群聊升级说明"页）：读到坏页即强关弹窗
+// 重载重拍一次；仍坏则写 .bad.txt 侧车留证并继续（不阻断，如实可查）。
+async function pageLooksBad() {
+  const t = await page.evaluate(() => document.body.innerText.slice(0, 4000)).catch(() => '')
+  return /没有权限|无权限访问|群聊升级|升级说明|登录到 Hermes|Login to/.test(t) ? t : null
 }
 
 const pre = `${STEP}-op${K}`
 await page.goto(BASE + URL)
 await page.waitForTimeout(SETTLE)
 await dismissPopups()
+if (await pageLooksBad()) {
+  await dismissPopups()
+  await page.goto(BASE + URL).catch(() => {})
+  await page.waitForTimeout(SETTLE)
+  await dismissPopups()
+  const bad = await pageLooksBad()
+  if (bad) writeFileSync(join(OUT, `${pre}.bad.txt`), bad.slice(0, 500), 'utf8')
+}
 await page.screenshot({ path: `${OUT}/${pre}-before.png` })
 console.log(`shot: ${pre}-before`)
 

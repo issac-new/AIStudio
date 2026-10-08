@@ -927,7 +927,7 @@ STEPS_META_RUN11 = {
             narrative='组织与权限矩阵入仓：M2 产品通道 PUT registry/org 02:33，14 账号×profile×板×fleet-manifest 四方对账一致，七角色治理线（含 secops/ops/audit）齐备。', imgs=[('people_done-op1-before','组织矩阵登记前','ui'),('people_done-op1-after','组织矩阵登记后（14 账号七角色）','ui')]),
     7: dict(keys=['g1_frozen'], ts_override='1791397771',
             actor='human', actorText='人 · bella+fanfan',
-            narrative='G1 需求冻结 02:29:30（起跑+3 分钟，历史最快）：RFD-001 收银台四要素（AC×7 可判定/Scope-Out/影响面/涉敏）freeze 文件入 origin/main；delivery 事件 stage P1 done+gate G1 pass 落案例房。bella→fanfan 需求私信送达 02:33:37。', imgs=[('7-op1-before','G1 冻结要素页（收官后补拍载荷帧·前）','ui'),('7-op1-after','G1 冻结要素页（收官后补拍载荷帧·后）','ui')]),
+            narrative='G1 需求冻结 02:29:30（起跑+3 分钟，历史最快）：RFD-001 收银台四要素（AC×7 可判定/Scope-Out/影响面/涉敏）freeze 文件入 origin/main；delivery 事件 stage P1 done+gate G1 pass 落案例房。bella→fanfan 需求私信送达 02:33:37。', imgs=[('7-op1-before','G1 冻结要素页（收官后补拍载荷帧·前）','ui'),('7-op1-after','G1 冻结要素页（收官后补拍载荷帧·后）','ui'),('docs_view-op1-before','需求/设计文档评审面（收官后补拍）','ui'),('docs_view-op1-after','RFD-001 文档在册（收官后补拍）','ui')]),
     8: dict(keys=['room_analysis'], ts_override='1',
             actor='ai', actorText='AI · fanfan-agent',
             narrative='分析群 !HmQhMNMivoYKiKtTcV 建群 02:33:51 并 RACI 全量预邀（fanfan-agent+8 关联人及各自 agent），观察员契约 MATRIX_ROOM_OBSERVERS 生效。', imgs=[('room_done-op1-before','群聊/建群面（收官后补拍，非当轮实时帧）','ui'),('room_done-op1-after','案例群消息流在册（收官后补拍）','ui')]),
@@ -2112,6 +2112,17 @@ def checkpoints_html():
     }
     fr_map = _CP_FRAME_BY_RUN.get(RUN_ID, {})
     _CP_GATE_OF = {'cp-g1': 'G1', 'cp-g2': 'G2', 'cp-g3': 'G3', 'cp-g4': 'G4', 'cp-g5': 'G5', 'cp-g6': 'G6'}
+    if not fr_map:
+        # 无帧轮（run11 用户指认整合）：六闸已由 gate_cards 完整呈现，此处压缩为
+        # 闸间人工确认点紧凑表——去大卡/占位帧/与闸重复行，保留语义与证据锚。
+        rows = []
+        for cid, name, semantics, who, img, evidence in CHECKPOINTS:
+            g = _CP_GATE_OF.get(cid)
+            chip = f'{g} {"✓" if _gate_passed(g) else "○"}' if g else '闸间'
+            rows.append(f'<tr><td>{name}</td><td>{chip}</td><td>{semantics}</td><td>{who}</td><td style="font-size:12px">{evidence}</td></tr>')
+        return ('<details class="audit" style="margin-top:8px"><summary>▶ 闸间人工确认点（与六闸互补，紧凑视图）</summary>'
+                '<table style="margin-top:8px"><tr><th>卡点</th><th>闸</th><th>把关什么</th><th>把关人</th><th>证据锚</th></tr>'
+                + ''.join(rows) + '</table></details>')
     cards = []
     for cid, name, semantics, who, img, evidence in CHECKPOINTS:
         g = _CP_GATE_OF.get(cid)
