@@ -14,6 +14,8 @@ export interface GatewayFace {
   probe?: { status: string; latencyMs: number }
   /** gateway_state.json 内容（active_agents/platforms/gateway_state） */
   state?: Record<string, unknown>
+  /** 容量泵 sidecar（run_busy 二期内省：<home>/runtime/capacity_retry.json） */
+  capacity?: { ts: number; depth: number; anchors: number; cap: number }
 }
 
 export interface SessionsFace {
@@ -85,6 +87,13 @@ export async function collectGateway(deps: CollectorDeps = {}): Promise<GatewayF
   } catch (e) {
     face.error = `health probe failed: ${(e as Error).message}`
   }
+  try {
+    const capPath = join(deps.hermesHome || hermesHomeDefault(), 'runtime', 'capacity_retry.json')
+    if (existsSync(capPath)) {
+      const c = JSON.parse(readFileSync(capPath, 'utf-8')) as { ts: number; depth: number; anchors: number; cap: number }
+      if (Date.now() - c.ts * 1000 < 600_000) face.capacity = c  // 10min 陈化丢弃
+    }
+  } catch { /* sidecar fail-soft */ }
   try {
     const statePath = join(deps.hermesHome || hermesHomeDefault(), 'gateway_state.json')
     if (existsSync(statePath)) {
