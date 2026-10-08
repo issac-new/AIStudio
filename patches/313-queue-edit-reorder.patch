@@ -136,7 +136,7 @@ index 93aefb9c..17aa7a6c 100644
    display: flex;
    align-items: center;
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 8cb44694..dd50db7a 100644
+index 573c76c6..6c7e9fe2 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -418,6 +418,18 @@ function boundedMobileCalendarTimeout(value: unknown): number {

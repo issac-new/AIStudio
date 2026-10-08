@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index b34de716..7de8b2b6 100644
+index 7ba40003..47912064 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -150,6 +150,50 @@ function showMainWindow() {
+@@ -180,6 +180,50 @@ function showMainWindow() {
    showWindowWithFade(true)
  }
  
@@ -53,7 +53,7 @@ index b34de716..7de8b2b6 100644
  function quitApp() {
    appLifecycle.quit()
  }
-@@ -1453,9 +1497,21 @@ function runDesktopApp() {
+@@ -1552,9 +1596,21 @@ function runDesktopApp() {
        quitApp()
        return
      }
@@ -75,8 +75,8 @@ index b34de716..7de8b2b6 100644
    app.whenReady().then(async () => {
      if (QUIT_EXISTING) {
        quitApp()
-@@ -1473,6 +1529,14 @@ function runDesktopApp() {
-       console.warn('[desktop] failed to migrate the Windows login item:', error)
+@@ -1577,6 +1633,14 @@ function runDesktopApp() {
+       console.warn('[desktop] failed to refresh the Linux login item:', error)
      }
      installMicrophonePermissionHandler()
 +    // SwarmStudio 深链协议注册（537 吸收批 #8）
@@ -89,12 +89,12 @@ index b34de716..7de8b2b6 100644
 +    }
      createTray()
      await createWindow()
-     await initializeDesktopBrowser().catch(error => {
+     screenshotShortcut.restore(screenshotEnvironment().hideWindows)
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
-index ebb7a152..cba2a692 100644
+index deadce60..c9e114f7 100644
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
-@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
    restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
    selectRuntimeDirectory: (defaultPath?: string): Promise<string | null> => ipcRenderer.invoke('hermes-desktop:select-runtime-directory', defaultPath),
    notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),

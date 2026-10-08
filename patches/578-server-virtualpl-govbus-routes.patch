@@ -1,6 +1,8 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index d9966d54..9b0182ae 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -106,6 +106,10 @@ import { evidenceRoutes } from '../custom/evidence/evidence-controller'
+@@ -116,6 +116,10 @@ import { evidenceRoutes } from '../custom/evidence/evidence-controller'
  // overlay[incident]: Agent 事故报告汇编器（六文调研轮 A+B，arXiv 2609.24515 三类
  // 17 要素 + 理论/实际自治度对账；/api/incident/sessions/:id/report[.md]、/autonomy）
  import { incidentRoutes } from '../custom/incident/incident-controller'
@@ -11,7 +13,7 @@
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
  import { reviewRoutes } from '../custom/review/review-controller'
  // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
-@@ -348,6 +352,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -386,6 +390,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
    app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
    app.use(incidentRoutes.routes())                // 事故报告：17 要素汇编 + 自治度对账（六文调研轮 A+B）

@@ -1,15 +1,15 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 0dbf89c7..91a1ea45 100644
+index f29b0a9c..1933d87e 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -6752,31 +6752,4 @@ export default {
+@@ -6817,31 +6817,4 @@ export default {
      confirm: 'Confirm',
      cancel: 'Cancel'
    },
 -  apiRelay: {
 -    title: 'API Relay',
 -    headline: 'Leading AI models, one gateway',
--    description: 'APIKEY.FAN is Ekko Studio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.',
+-    description: 'APIKEY.FAN is SwarmStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.',
 -    zhipu: 'Zhipu',
 -    viewNow: 'View now',
 -    apiCompatible: 'Official API compatibility',
@@ -35,17 +35,17 @@ index 0dbf89c7..91a1ea45 100644
 -  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 6718dd87..2c4bb219 100644
+index b6e954e5..c2faba60 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -6750,31 +6750,4 @@ export default {
+@@ -6815,31 +6815,4 @@ export default {
      confirm: '确认',
      cancel: '取消'
    },
 -  apiRelay: {
 -    title: 'API 中转',
 -    headline: '一站接入主流 AI 模型',
--    description: 'APIKEY.FAN 是 Ekko Studio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。',
+-    description: 'APIKEY.FAN 是 SwarmStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。',
 -    zhipu: '智谱',
 -    viewNow: '立即查看',
 -    apiCompatible: '官方 API 兼容',
