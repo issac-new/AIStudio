@@ -1,0 +1,20 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -110,6 +110,9 @@ import { incidentRoutes } from '../custom/incident/incident-controller'
+ // + 治理事件总线查询面（/api/hermes/governance-events）
+ import { virtualPlRoutes } from '../custom/harness/virtual-pl-controller'
+ import { govBusRoutes } from '../custom/govbus/govbus-controller'
++// overlay[autonomy-ladder]（六文调研轮 H2）：自治阶梯配置面（洞察/辅助/自动执行 +
++// 人工确认点清单；执行面拦截是 H3 单独轮）。/api/hermes/autonomy-ladder
++import { autonomyLadderRoutes } from '../custom/autonomyladder/autonomy-ladder-controller'
+ // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
+ import { reviewRoutes } from '../custom/review/review-controller'
+ // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
+@@ -354,6 +357,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(incidentRoutes.routes())                // 事故报告：17 要素汇编 + 自治度对账（六文调研轮 A+B）
+   app.use(virtualPlRoutes.routes())               // AI 虚拟损益表：单位产出成本 + 日成本异常（六文调研轮 E）
+   app.use(govBusRoutes.routes())                  // 治理事件总线：查询面 + compact（六文调研轮 F）
++  app.use(autonomyLadderRoutes.routes())          // 自治阶梯：配置面 CRUD + govbus 审计（六文调研轮 H2）
+   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
+   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
+   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）

@@ -12,6 +12,7 @@ import type { IncidentElement, IncidentReport } from '../incident-types'
 
 let dbDir: string
 let traceDir: string
+let ladderDir: string
 let dbFile: string
 let report: IncidentReport
 
@@ -20,6 +21,9 @@ const SESSION = 'sess-incident-test-1'
 beforeAll(() => {
   dbDir = mkdtempSync(join(tmpdir(), 'incident-db-'))
   traceDir = mkdtempSync(join(tmpdir(), 'incident-trace-'))
+  // 阶梯配置域隔离（H2 接入后理论面会读配置——测试不读真实家目录）
+  ladderDir = mkdtempSync(join(tmpdir(), 'incident-ladder-'))
+  process.env.HERMES_AUTONOMY_LADDER_DIR = ladderDir
   mkdirSync(join(dbDir, 'data'), { recursive: true })
   dbFile = join(dbDir, 'data', 'hermes-web-ui.db')
   const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
@@ -73,6 +77,8 @@ beforeAll(() => {
 afterAll(() => {
   rmSync(dbDir, { recursive: true, force: true })
   rmSync(traceDir, { recursive: true, force: true })
+  rmSync(ladderDir, { recursive: true, force: true })
+  delete process.env.HERMES_AUTONOMY_LADDER_DIR
 })
 
 function byKey(elements: IncidentElement[], key: string): IncidentElement {
