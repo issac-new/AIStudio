@@ -1044,3 +1044,16 @@ describe('⑲ 方案↔报告一致性断言（2026-10-08 一致性轮：§5.4 �
     expect(skel).toContain('首过')
   })
 })
+
+describe('⑳ 六文调研治理能力入报告证据链（2026-10-08 整合轮：§2.5 治理证据面/§2.6-10）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('生成器步 23/24 治理证据透传块（incident/autonomy/virtual-pl 导出件在位才渲染）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('_GOV_EVIDENCE')
+    expect(gen).toContain('incident-report.md')
+    expect(gen).toContain('autonomy-reconcile.txt')
+    expect(gen).toContain('virtual-pl.txt')
+    expect(gen).toContain('gov_evidence_block(n)')
+  })
+})

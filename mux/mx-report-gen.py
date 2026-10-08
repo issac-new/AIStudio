@@ -1673,6 +1673,25 @@ def qgate_block(n: int) -> str:
             '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
             f'<pre class="art-code">{H.escape(raw)}</pre></details>')
 
+# 六文调研治理能力入报告证据链（方案 §2.5 治理证据面/§2.6-10/§4.4-9）：
+# 步 23 事故报告汇编、步 24 自治度对账+虚拟损益表——evidence/ 导出件在位才透传。
+_GOV_EVIDENCE = {
+    23: [('incident-report.md', '事故报告汇编（三类 17 要素，/api/incident/sessions/:id/report 导出件）')],
+    24: [('autonomy-reconcile.txt', '理论/实际自治度对账（/autonomy 导出件，偏差黄条）'),
+         ('virtual-pl.txt', 'AI 虚拟损益表（/api/hermes/virtual-pl 导出件）')],
+}
+
+def gov_evidence_block(n: int) -> str:
+    outs = []
+    for fname, label in _GOV_EVIDENCE.get(n, ()):
+        f = EVID / fname
+        if not f.exists():
+            continue
+        raw = f.read_text(encoding='utf-8', errors='replace').strip()
+        outs.append(f'<details class="st-artifact st-gov"><summary>🧾 {label}'
+                    f'（原文透传）</summary><pre class="art-code">{H.escape(raw)}</pre></details>')
+    return ''.join(outs)
+
 
 def artifact_block(n: int) -> str:
     """单步交付物视图 <details> 块（真容渲染+模版核对）；无映射步返回 ''。
@@ -2178,7 +2197,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         # 8.6 交付物视图（补遗③ R11）：真容渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
-        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n)
+        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + gov_evidence_block(n)
         abg, afg, atxt = ACTOR_STYLE[meta['actor']]
         if PLAN_V82:
             # V8.2 四段（与方案 §2.4 步条目同构；§5.4）：操作路径表不入正文（附录《产品操作手册》）
