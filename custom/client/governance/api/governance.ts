@@ -184,7 +184,27 @@ export interface UsageReport {
     passRate: number | null
     lastAt: number | null
     roots: string[]
+    /** qgate v0.3.1 吸收轮：来源分布（核验/声明/降级/无信号，旧 run 不入桶）与 advisory run 数。 */
+    sourceDistribution?: { verified: number; declared: number; degraded: number; none: number }
+    advisoryRuns?: number
   }
+}
+
+// ── qgate 逐门最新判定（吸收轮：机器判定进交付网络/治理实况的数据面）──
+export interface QgateVerdictRow {
+  gateId: string
+  domain: string
+  verdict: string
+  deliveryVerdict: 'pass' | 'conditional' | 'reject'
+  runId?: string
+  endedAt: number | null
+  failureSummary?: string
+  conditions?: string[]
+  sourceBucket?: 'verified' | 'declared' | 'degraded' | 'none'
+}
+
+export function fetchQgateVerdicts(): Promise<{ ok: boolean; verdicts: QgateVerdictRow[] }> {
+  return request<{ ok: boolean; verdicts: QgateVerdictRow[] }>('/api/governance/qgate-verdicts')
 }
 export interface SloTierReport {
   tier: string

@@ -155,6 +155,58 @@ describe('门禁通过率（collectQgateRuns：.qgate/runs 扫描）', () => {
     expect(stats.runs).toBe(0)
     expect(stats.passRate).toBeNull()
   })
+
+  it('吸收轮：sourceDistribution 分桶（旧 run 无 sourceSignal 不入桶）+ advisoryRuns 计数', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gov-qgate31-'))
+    tmpDirs.push(dir)
+    const mk = (name: string, verdict: string, endedAt: number, extra?: Record<string, unknown>) =>
+      writeFileSync(join(dir, name), JSON.stringify({ runId: name, verdict, endedAt, ...extra }))
+    mk('run-1.json', 'PASS', 1000, { sourceSignal: { labels: ['verified'], bucket: 'verified' } })
+    mk('run-2.json', 'PASS', 2000, { sourceSignal: { labels: ['declared'], bucket: 'declared' } })
+    mk('run-3.json', 'PASS', 3000, { sourceSignal: { labels: ['degraded', 'verified'], bucket: 'degraded' } })
+    mk('run-4.json', 'PASS', 4000, { sourceSignal: { labels: [], bucket: 'none' } })
+    mk('run-5.json', 'CONDITIONAL', 5000, { sourceSignal: { labels: ['verified'], bucket: 'verified' } })
+    mk('run-6.json', 'PASS', 6000) // 旧 run：无 sourceSignal
+    mk('run-7.json', 'FAIL', 7000) // 非 PASS：不入桶
+    const stats = collectQgateRuns([dir])
+    expect(stats.sourceDistribution).toEqual({ verified: 2, declared: 1, degraded: 1, none: 1 })
+    expect(stats.advisoryRuns).toBe(1)
+  })
+})
+
+describe('qgate 逐门最新判定（collectQgateVerdicts：吸收轮判定流数据面）', () => {
+  it('逐门取 endedAt 最新；六态→交付三态；domain/来源桶/条件透传；坏文件跳过', async () => {
+    const { collectQgateVerdicts } = await import('../governance-analytics')
+    const dir = mkdtempSync(join(tmpdir(), 'gov-qgatev-'))
+    tmpDirs.push(dir)
+    const mk = (name: string, row: Record<string, unknown>) =>
+      writeFileSync(join(dir, name), JSON.stringify({ runId: name.replace(/\.json$/, ''), ...row }))
+    // 同门两轮：新者胜
+    mk('run-a1.json', { gateId: 'engineering.lint', domain: 'L1', verdict: 'FAIL', endedAt: 1000 })
+    mk('run-a2.json', { gateId: 'engineering.lint', domain: 'L1', verdict: 'PASS', endedAt: 9000, sourceSignal: { labels: ['verified'], bucket: 'verified' } })
+    mk('run-b.json', { gateId: 'l0.requirement-trace', domain: 'L0', verdict: 'CONDITIONAL', endedAt: 5000, conditions: ['clear it'] })
+    mk('run-c.json', { gateId: 'delivery.debt', domain: 'L5', verdict: 'WAIVED', endedAt: 4000 })
+    writeFileSync(join(dir, 'run-bad.json'), '{not json')
+    const rows = collectQgateVerdicts([dir])
+    expect(rows).toHaveLength(3)
+    const lint = rows.find((r) => r.gateId === 'engineering.lint')!
+    expect(lint.verdict).toBe('PASS')
+    expect(lint.deliveryVerdict).toBe('pass')
+    expect(lint.sourceBucket).toBe('verified')
+    expect(lint.endedAt).toBe(9000)
+    const rtm = rows.find((r) => r.gateId === 'l0.requirement-trace')!
+    expect(rtm.deliveryVerdict).toBe('conditional')
+    expect(rtm.conditions).toEqual(['clear it'])
+    const waived = rows.find((r) => r.gateId === 'delivery.debt')!
+    expect(waived.deliveryVerdict).toBe('conditional') // WAIVED≠pass，不洗白
+    // 排序：endedAt 降序
+    expect(rows[0].gateId).toBe('engineering.lint')
+  })
+
+  it('无 run → 空数组（如实，不编造）', async () => {
+    const { collectQgateVerdicts } = await import('../governance-analytics')
+    expect(collectQgateVerdicts(['/nonexistent'])).toEqual([])
+  })
 })
 
 describe('成本能力维度归集（byCapability：profile→unit→capability）', () => {

@@ -29,7 +29,7 @@ import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionCon
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
 import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
-import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
+import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { auditLog } from './governance-audit'
 import { orgDiagnosis } from './org-diagnosis'
 import { qgateRunRoots } from './governance-analytics'
@@ -412,6 +412,12 @@ router.get('/decision-graph/chain', async (ctx) => {
     return
   }
   ctx.body = { ok: true, chain: await causalChain(id) }
+})
+
+/** qgate 逐门最新判定（吸收轮，只读）：客户端 qgate-bridge 据此把机器判定上报为
+ *  delivery.gate 事件；治理健康页机器执法实况同源。缺数据如实空数组，不编造。 */
+router.get('/qgate-verdicts', async (ctx) => {
+  ctx.body = { ok: true, verdicts: collectQgateVerdicts() }
 })
 
 /** qgate 门禁判定摄取（乙4·gate 面）：新 run 落 KG，seen 标记防重（marker 文件）。 */
