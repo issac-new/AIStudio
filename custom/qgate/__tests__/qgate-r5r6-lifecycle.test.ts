@@ -1,5 +1,5 @@
 // v0.3 R5/R6 守门：CLI 生命周期四命令 + Stop new-only 降级与会话基线。
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -7,9 +7,9 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 import { isNewOnly, writeSessionBaseline, stopBudgetState } from '../plugin/hooks/qgate-lib.mjs'
+import { distCli, ensureDist } from './ensure-dist'
 
-const here = dirname(fileURLToPath(import.meta.url))
-const distCli = join(here, '..', 'dist', 'cli.js')
+beforeAll(async () => { await ensureDist() })
 
 function tmpProject(profile = 'vibe-fast'): string {
   const dir = mkdtempSync(join(tmpdir(), 'qgate-r5r6-'))
