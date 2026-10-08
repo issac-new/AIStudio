@@ -598,6 +598,73 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   done
 }
 
+# ── 并发多锚等待（2026-10-08 run11 复盘立项：串行 for 等待令滞后锚的催办被
+# 排队——lin 沉睡 125min 一半是"还没轮到催他"。语义=wait-all：全部锚过真值才
+# 返回 0；复用 defect 步多条件合并轮询范式 + wait_alive_truth 的日志增长判活/
+# 空转催办。锚过即记 ✓（不等全齐），空转催办对"全部未过锚的负责人"齐发。
+# 注意：谓词经 eval 在当前 shell 求值（可引用 branch_fresh 等 shell 函数）——
+# 勿改 bash -c（函数不跨子进程继承，子进程 127 恒假实锤见 raci_dispatch_seen 注释）。
+wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
+  # anchor-spec = "desc@agent@predicate-expr"（@ 分隔三段；desc 不含 @）
+  local idle="$1" agents="$2"; shift 2
+  local -a descs=() owners=() exprs=() done_flag=()
+  local s d o e a i
+  for s in "$@"; do
+    d="${s%%@*}"; s="${s#*@}"; o="${s%%@*}"; e="${s#*@}"
+    descs+=("$d"); owners+=("$o"); exprs+=("$e"); done_flag+=(0)
+  done
+  local -a logs=()
+  for a in ${agents//,/ }; do
+    [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+  done
+  if (( ${#logs[@]} == 0 )); then
+    note "[观察] wait_alive_truth_multi 无日志面（agents=$agents），退化为 86400s 硬窗串行等待"
+    local rc=0
+    for i in "${!exprs[@]}"; do
+      wait_truth "${descs[$i]}" 86400 eval "${exprs[$i]}" || rc=1
+    done
+    return $rc
+  fi
+  local last_sig=0 last_size=-1 cur_size sz nudged=0 idle_half=$(( idle / 2 )) all_done
+  local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
+  local _nmentions=""
+  for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
+  while true; do
+    [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+    all_done=1
+    for i in "${!exprs[@]}"; do
+      (( done_flag[$i] == 1 )) && continue
+      if eval "${exprs[$i]}" >/dev/null 2>&1; then
+        done_flag[$i]=1; note "[真值] ${descs[$i]} ✓"
+      else
+        all_done=0
+      fi
+    done
+    (( all_done == 1 )) && return 0
+    cur_size=0
+    for a in ${logs[@]+"${logs[@]}"}; do
+      sz=$(stat -f%z "$a" 2>/dev/null || stat -c%s "$a" 2>/dev/null || echo 0)
+      cur_size=$(( cur_size + sz ))
+    done
+    if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
+    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; nudged=0; fi
+    if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
+      local lag=""
+      for i in "${!owners[@]}"; do (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"; done
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
+      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次"
+      nudged=1
+    fi
+    if (( $(date +%s) - last_sig > idle )); then
+      for i in "${!exprs[@]}"; do
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 空转判死；负责人 ${owners[$i]}）"
+      done
+      return 1
+    fi
+    sleep "$MX_POLL_IVAL"
+  done
+}
+
 # ── 完成凭证反向核验（账号板断言）────────────────────────
 mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b 翻页直抵 since 时刻
   # 消息洪后固定窗口失效（run4 实锤：500 条只回溯到当天上午，昨日派发被挤出）。
