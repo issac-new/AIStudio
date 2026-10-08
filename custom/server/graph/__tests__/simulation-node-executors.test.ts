@@ -7,6 +7,7 @@ import { NodeRegistry } from '../../loop/graph/node-registry'
 import { hydrateGraphSpec } from '../../loop/graph/graph-spec'
 import {
   DryRunKanbanBridge,
+  HttpKanbanBridge,
   SIMULATION_NODE_TYPES,
   SIMULATION_REDUCERS,
   registerSimulationNodeTypes,
@@ -91,5 +92,29 @@ describe('registerSimulationNodeTypes', () => {
     const { registry } = makeRegistry()
     const node = registry.create('report-gen', { id: 'rep' })
     await expect(node.execute({}, { threadId: 't', deps: {} } as never)).rejects.toThrow(/fnTable/)
+  })
+
+  it('HttpKanbanBridge：REST 建卡/查卡路径与响应归一（二期真桥）', async () => {
+    const calls: Array<{ url: string; method?: string; body?: unknown }> = []
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      if (url.endsWith('/api/hermes/kanban') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ task: { id: 'tk-9', status: 'todo' } }), { status: 200 })
+      }
+      if (url.includes('/api/hermes/kanban/tk-9')) {
+        return new Response(JSON.stringify({ id: 'tk-9', status: 'done' }), { status: 200 })
+      }
+      return new Response('nope', { status: 404 })
+    }) as unknown as typeof fetch
+    const bridge = new HttpKanbanBridge({ baseUrl: 'http://127.0.0.1:8802/', fetchImpl, board: 'sim' })
+    const ref = await bridge.createTask({
+      title: 'pay-core', body: { estimate_days: 1 }, assignee: 'chen', board: 'sim',
+      idempotencyKey: 'graph_node:r1:n1',
+    })
+    expect(ref).toEqual({ id: 'tk-9', status: 'todo' })
+    expect(calls[0].url).toBe('http://127.0.0.1:8802/api/hermes/kanban')
+    expect(calls[0].body).toMatchObject({ title: 'pay-core', assignee: 'chen', board: 'sim' })
+    expect(await bridge.getTask('tk-9')).toEqual({ id: 'tk-9', status: 'done' })
+    await expect(bridge.getTask('missing')).rejects.toThrow(/404/)
   })
 })

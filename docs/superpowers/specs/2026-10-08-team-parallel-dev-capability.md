@@ -79,9 +79,10 @@ GraphRuntime super-step 调度（现有）
 - 验收锚：`simulation-graph-template` 26 节点在 shadow 引擎下全部节点可 fire
   （不真 spawn，验证接线与 join 语义）。
 
-### 二期：工作量闭环
-- kanban CLI `estimate --persist`：结果回写卡片 `estimate_days`（body JSON 字段
-  + tasks 表列），人日换算=complexity 映射（S=0.5/M=1/L=2 起步，可校准）。
+### 二期：工作量闭环（2026-10-08 已落地：--persist 落库/派发加权/HttpKanbanBridge 真桥；decompose 人日字段因镜像链挂三期前）
+- kanban CLI `estimate --persist`：结果回写卡片 `estimate_days`（REAL 列+
+  estimate_meta JSON，_LATER_TASK_COLUMNS 自动迁移），人日换算=complexity 映射
+  （S=0.5/M=1/L=2；complexity 缺失按 est_tokens 分档兜底）。
 - 派发器加权：ready 队列排序从 priority 单键 →
   `priority, assignee 在途人日和最小者胜`（负载均衡）；per-profile 并发帽保留。
 - decompose 升级：输出每卡 `estimate_days≤1`（超限自动再拆一层）+ 兄弟依赖边
