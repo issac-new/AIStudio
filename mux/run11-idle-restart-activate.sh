@@ -19,8 +19,16 @@ while (( $(date +%s) < DEADLINE )); do
   oldest=$now
   for p in "${PROFILES[@]}"; do
     f="$SIM_ROOT/hermes/profiles/$p/logs/agent.log"
-    # 任一行（含 adapter 噪音）都算"有活动"——保守：噪音也推迟重启
-    t=$(stat -f%m "$f" 2>/dev/null || echo "$now")
+    # 判静默看"真实工作行"（API call/tool/Turn）的最后时间戳——文件 mtime 会被
+    # 网关 adapter 噪音（reaction/redaction 风暴）持续刷新，mtime 判据恒假活
+    # （16:10 巡检实锤：三路 mtime 分钟级跳动，真实工作 lin 已静默 50min）。
+    last_line=$(grep -E "API call|tool [a-z_]+ completed|Turn (started|ended)" "$f" 2>/dev/null | tail -1)
+    if [[ -n "$last_line" ]]; then
+      ts=$(printf '%s' "$last_line" | cut -c1-19)
+      t=$(date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo "$now")
+    else
+      t=0
+    fi
     (( t < oldest )) && oldest=$t
   done
   idle=$(( now - oldest ))
@@ -50,18 +58,23 @@ while (( $(date +%s) < DEADLINE )); do
     done
     log "restart health_ok=$OK"
     if (( OK )); then
-      # 仅 chen 短催办（两轮催办均在 max=1 饥饿期发出未达；重启后 30 槽即投即达。
-      # 不对 lin/xiao 发——FORCE 全量重发会把"从零重新执行"带给回合间隙中的他们）
+      # 重启后双催办（30 槽下即投即达）：
+      # - chen：两轮催办均在 max=1 饥饿期发出未达，重启后重新拉起
+      # - lin：DEV-CHALI 分支名对齐（15:13 推的是 feat/T03，驱动真值锚=feat/DEV-CHALI，
+      #   不对齐则该等待永悬）。同内容改名推送不算伪造（`git push origin feat/T03:refs/heads/feat/DEV-CHALI`）
       sleep 10
       out=$(python3 -c "
 import json, urllib.request
 tok=open('$SIM_ROOT/creds/fanfan.token').read().strip()
-body='⏰ 催办（通道已修复）：DEV-PAYCORE 任务书见 14:19 群内重递件。请开始执行：拆分子任务→kanban 建 DEV-PAYCORE 主卡+link 子卡→逐子任务实现（每件独立 commit）→vitest ≥8 用例全绿→push origin feat/DEV-PAYCORE→结论行 DEV-DONE-DEV-PAYCORE。若遇阻塞请在群里说明。[RUN=20261007-v8-run11]'
-payload={'msgtype':'m.text','body':body,'m.mentions':{'user_ids':['@chen-agent:matrix.test']}}
-req=urllib.request.Request('http://127.0.0.1:8008/_matrix/client/v3/rooms/!HmQhMNMivoYKiKtTcV:matrix.test/send/m.room.message?access_token='+tok, data=json.dumps(payload,ensure_ascii=False).encode(), headers={'Content-Type':'application/json'}, method='POST')
-print(json.load(urllib.request.urlopen(req,timeout=20)).get('event_id'))
+def send(body, mentions):
+    payload={'msgtype':'m.text','body':body,'m.mentions':{'user_ids':mentions}}
+    req=urllib.request.Request('http://127.0.0.1:8008/_matrix/client/v3/rooms/!HmQhMNMivoYKiKtTcV:matrix.test/send/m.room.message?access_token='+tok, data=json.dumps(payload,ensure_ascii=False).encode(), headers={'Content-Type':'application/json'}, method='POST')
+    return json.load(urllib.request.urlopen(req,timeout=20)).get('event_id')
+r1=send('⏰ 催办（通道已修复）：DEV-PAYCORE 任务书见 14:19 群内重递件。请开始执行：拆分子任务→kanban 建 DEV-PAYCORE 主卡+link 子卡→逐子任务实现（每件独立 commit）→vitest ≥8 用例全绿→push origin feat/DEV-PAYCORE→结论行 DEV-DONE-DEV-PAYCORE。若遇阻塞请在群里说明。[RUN=20261007-v8-run11]', ['@chen-agent:matrix.test'])
+r2=send('📌 交付口径对齐：DEV-CHALI 的驱动真值锚=origin 分支名 feat/DEV-CHALI。你 15:13 推的 feat/T03 内容已认可，但需按任务书口径补一条同名分支（同内容改名推送即可：git push origin feat/T03:refs/heads/feat/DEV-CHALI，不重做工作），并在群里发结论行 DEV-DONE-DEV-CHALI。[RUN=20261007-v8-run11]', ['@lin-agent:matrix.test'])
+print('chen:', r1, '| lin:', r2)
 " 2>&1)
-      log "chen nudge post-restart: $out"
+      log "post-restart nudges: $out"
       log "ACTIVATE-DONE"
       echo ACTIVATE-DONE
       exit 0
