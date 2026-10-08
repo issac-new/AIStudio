@@ -211,11 +211,11 @@ async function approvalBridgeFacts(
   input: Record<string, unknown>,
   profileId: string | undefined,
   rule: string,
-): Promise<{ approved: boolean; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null }> {
+): Promise<{ approved: boolean; callHash: string; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null }> {
   try {
     const bridge = await import('./enforce-approvals')
     const hash = bridge.callHashOf(tool, input, profileId ?? '')
-    if (bridge.consumeApprovalIfReady(hash)) return { approved: true }
+    if (bridge.consumeApprovalIfReady(hash)) return { approved: true, callHash: hash }
     const risk = riskOfCall(tool, input)
     const rec = bridge.createEnforceApproval({
       callHash: hash, tool,
@@ -223,10 +223,31 @@ async function approvalBridgeFacts(
       profileId: profileId ?? '', rule,
       risk: risk === 'low' ? 'low' : risk === 'high' ? 'high' : 'medium',
     })
-    return { approved: false, ticket: { id: rec.id, status: rec.status } }
+    return { approved: false, callHash: hash, ticket: { id: rec.id, status: rec.status } }
   } catch {
-    return { approved: false } // 桥面故障=无单可指（裁决仍拒，不 fail-open 放行）
+    return { approved: false, callHash: '' } // 桥面故障=无单可指（裁决仍拒，不 fail-open 放行）
   }
+}
+
+/** 挂起/续跑/超时留痕（govbus approval 域——审批链路事实，与 deny 的 security 域分面）。 */
+function emitSuspendEvent(tool: string, profileId: string | undefined, ticketId: string, phase: 'suspend' | 'resume' | 'timeout'): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      appendGovEvent({
+        domain: 'approval',
+        severity: phase === 'timeout' ? 'warn' : 'info',
+        type: `tool.enforce_${phase}`,
+        source: 'toolpipeline/enforce-gate',
+        summary: phase === 'suspend'
+          ? `执法门挂起 ${profileId ? `profile ${profileId} 的 ` : ''}工具调用 ${tool}（审批单 ${ticketId}，瀑布级等待）`
+          : phase === 'resume'
+            ? `审批通过自动续跑：${profileId ? `profile ${profileId} 的 ` : ''}工具调用 ${tool}（审批单 ${ticketId}）`
+            : `审批等待超时（单 ${ticketId} 留收件箱）：${profileId ?? ''} ${tool}`,
+        refs: profileId ? { profileId, ticketId } : { ticketId },
+        payload: { tool, ticketId, phase },
+      })
+    })
+    .catch(() => { /* fail-soft */ })
 }
 
 function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<EnforceVerdict, { enforcing: true; allow: false }>): void {
@@ -250,14 +271,41 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
   return {
     async preExecute(name: string, input: Record<string, unknown>, context?: { profileId?: string }) {
       let verdict: EnforceVerdict
+      let bridgeFacts: Awaited<ReturnType<typeof approvalBridgeFacts>> | null = null
       try {
         verdict = evaluateEnforcement(name, input, context?.profileId)
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
-          verdict = applyApprovalBridge(verdict, await approvalBridgeFacts(name, input, context?.profileId, verdict.rule))
+          bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule)
+          verdict = applyApprovalBridge(verdict, bridgeFacts)
         }
       } catch {
         return  // fail-open：裁决面异常不拦截（桥面异常在助手内吞——裁决仍拒，不因桥坏放行）
+      }
+      // ── 瀑布级挂起（H3 理想形态）：确认类+单在 pending+挂起开启 → 调用原地等待；
+      //    批准→consume→放行续跑（工具此刻执行，agent 无需重试）；否决/超时→拒（超时单留）。
+      //    瀑布 await preExecute 无超时（patch 565 实证）——挂起即真挂起。
+      if (
+        bridgeFacts && !bridgeFacts.approved &&
+        bridgeFacts.ticket?.status === 'pending' &&
+        verdict.enforcing && verdict.allow === false &&
+        process.env.HERMES_ENFORCE_SUSPEND !== '0'
+      ) {
+        const ap = await import('./enforce-approvals')
+        emitSuspendEvent(name, context?.profileId, bridgeFacts.ticket.id, 'suspend')
+        const outcome = await ap.waitEnforceDecision(bridgeFacts.callHash)
+        if (outcome === 'approved' && ap.consumeApprovalIfReady(bridgeFacts.callHash)) {
+          emitSuspendEvent(name, context?.profileId, bridgeFacts.ticket.id, 'resume')
+          return // 批准即续跑：瀑布继续执行工具本体
+        }
+        if (outcome === 'approved') {
+          verdict = { ...verdict, error: `审批单 ${bridgeFacts.ticket.id} 已被并发同调用消费——本次拒绝，重试将自动挂新单` }
+        } else if (outcome === 'rejected') {
+          verdict = { ...verdict, error: `审批单 ${bridgeFacts.ticket.id} 已被否决——调整方案或降档后重试` }
+        } else {
+          emitSuspendEvent(name, context?.profileId, bridgeFacts.ticket.id, 'timeout')
+          verdict = { ...verdict, error: `审批等待超时（TTL=${Math.round(ap.suspendTtlMs() / 1000)}s）——审批单 ${bridgeFacts.ticket.id} 仍在收件箱，批准后重试即放行` }
+        }
       }
       if (verdict.enforcing && verdict.allow === false) {
         emitDenyEvent(name, context?.profileId, verdict)
