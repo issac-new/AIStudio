@@ -553,6 +553,17 @@ capture_step() { # <step> <url> [action] [user]
   fi
 }
 
+# ── 判活真化（run11 根治②）：文件增长判活被 adapter 噪音行（reaction/redaction
+# 风暴）双骗——既把真挂起误判"零增长"（chen 挂 2h 被判死循环），又把纯噪音误判
+# "在干活"（lin 差点永悬）。真实工作行=API call/tool 完成/Turn 起止，噪音不含。
+_agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时间戳；无→0）
+  local line ts
+  line=$(grep -E "API call|tool [a-z_]+ completed|Turn (started|ended)" "$1" 2>/dev/null | tail -1)
+  [[ -n "$line" ]] || { echo 0; return; }
+  ts=$(printf '%s' "$line" | cut -c1-19)
+  date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   local -a logs=()
@@ -565,7 +576,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     wait_truth "$desc" 86400 "$@"
     return
   fi
-  local last_sig=0 last_size=-1 cur_size sz
+  local last_sig=0 last_work=-1 cur_work w
   # idle-nudge（2026-10-04 run8 plan 步实录：agent 审批后提前收工、静坐 1800s 才被判死重派，
   # 损失=30 分钟死窗+agent 重做上下文。中途轻推一次：空转过半时 @agent 催办，多数"提前收工"
   # 会被一条提醒拉回；催后仍静默才走原判死路径。agent 恢复活动则重新武装（新一轮静默可再催）。
@@ -576,13 +587,13 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
-    cur_size=0
+    cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
-      sz=$(stat -f%z "$a" 2>/dev/null || stat -c%s "$a" 2>/dev/null || echo 0)
-      cur_size=$(( cur_size + sz ))
+      w=$(_agent_log_last_work_ts "$a")
+      (( w > cur_work )) && cur_work=$w
     done
-    if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
-    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; nudged=0; fi
+    if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
+    if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     # 注意：字符串判空不能进算术上下文（run8 实锤：(( ... && -n "$x" )) 把 -n 解析成
     # "减变量 n"，set -u 下 n: unbound variable 击杀驱动）——[[ ]] 移出 (( ))。
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
@@ -625,7 +636,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
     done
     return $rc
   fi
-  local last_sig=0 last_size=-1 cur_size sz nudged=0 idle_half=$(( idle / 2 )) all_done
+  local last_sig=0 last_work=-1 cur_work w nudged=0 idle_half=$(( idle / 2 )) all_done
   local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
   local _nmentions=""
   for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
@@ -641,13 +652,13 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
       fi
     done
     (( all_done == 1 )) && return 0
-    cur_size=0
+    cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
-      sz=$(stat -f%z "$a" 2>/dev/null || stat -c%s "$a" 2>/dev/null || echo 0)
-      cur_size=$(( cur_size + sz ))
+      w=$(_agent_log_last_work_ts "$a")
+      (( w > cur_work )) && cur_work=$w
     done
-    if (( last_size < 0 )); then last_size=$cur_size; last_sig=$(date +%s); fi
-    if (( cur_size > last_size )); then last_sig=$(date +%s); last_size=$cur_size; nudged=0; fi
+    if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
+    if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       local lag=""
       for i in "${!owners[@]}"; do (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"; done
@@ -934,11 +945,35 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
       mx_join "$(load_token "$lp")" "$rid" >/dev/null 2>&1 || true
     fi
   done
-  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2
+  local _body="$2
 [派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，接收方须**从零重新执行**本任务——历史轮产物、git 历史提交（含悬空提交）与前轮遗留文件均不得引用、恢复或作为完成依据；若发现疑似历史遗留，如实说明并忽略之。判定重复也必须回执合并回执，禁止静默。
-[RACI 解析] 本任务唯一执行人=任务书正文被指名执行的主责 agent（首个 @）；其余 @ 为 RACI 会签/评审角色（lead 等），不执行本任务、仅知情与确认。结论行只由执行人发。" "$3")
+[RACI 解析] 本任务唯一执行人=任务书正文被指名执行的主责 agent（首个 @）；其余 @ 为 RACI 会签/评审角色（lead 等），不执行本任务、仅知情与确认。结论行只由执行人发。"
+  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3")
+  m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
+}
+
+# ── 派发可达性校验（run11 根治②b）：消息入房≠网关拉起 agent——容量重试队列
+# 满时网关静默丢弃/长持消息（当日 400+ 丢件，驱动持 event id 却蒙在鼓里）。
+# 派发后短窗查最新网关日志：该 event 伴随容量丢弃/排队 → 自动重递一次（带重递
+# 标记，语义等同原任务书）+ 记问题单。慢路径（held 20min 后丢）抓不到，由巡检
+# cron 兜底；本机制消灭的是"即时丢弃驱动不知情"这一主类（当日全部事故形态）。
+_verify_dispatch_delivery() { # <user> <event-id> <body> <mentions> → 生效 event id
+  local user="$1" ev="$2" body="$3" mentions="$4" gw_log m2
+  [[ -n "$ev" && "$ev" != "SEND-FAILED" ]] || { printf '%s' "$ev"; return 0; }
+  gw_log=$(ls -t "$LOGS_DIR"/gateway*.log 2>/dev/null | head -1)
+  [[ -n "$gw_log" ]] || { printf '%s' "$ev"; return 0; }
+  sleep 3
+  if { grep "dropping message for" "$gw_log" 2>/dev/null; grep "Capacity retry for" "$gw_log" 2>/dev/null; } | grep -qF "$ev"; then
+    echo "ISSUE|dispatch-capacity-drop|${user}|派发 ${ev} 遭容量丢弃/排队，已自动重递" >> "$EVID_DIR/issues.log"
+    note "[${user}] 派发 ${ev} 命中容量限制——自动重递一次"
+    m2=$(mx_send "$(load_token "$user")" "$(sget room_analysis)" "$body
+[重递标记] 上一条 ${ev} 遭网关容量限制未达，本条为同一任务书重递，语义等同；若上一条实际已处理，按去重键合并回执即可。" "$mentions")
+    printf '%s' "$m2"
+    return 0
+  fi
+  printf '%s' "$ev"
 }
 
 # ── 推演单驱动锁（单一事实源，可单测）────────────────────────
