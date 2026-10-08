@@ -1,0 +1,1 @@
+- 582 cluster-inspector 巡检环：60s setInterval .unref()（bootstrap routes 装配点启动，CLUSTER_INSPECTOR=off 可关；重入保护在 runOnce）——2026-10-08 集群巡检官轮
