@@ -86,6 +86,72 @@ export class DryRunKanbanBridge implements KanbanBridge {
 }
 
 // ============================================================================
+// HttpKanbanBridge — 真桥（二期）：走 SwarmStudio 既有 kanban REST
+// （POST /api/hermes/kanban 建卡、GET /api/hermes/kanban/:id 查卡；路由=上游
+// routes/kanban.ts:48-49）。卡状态是唯一完成真值——本桥只建/查，spawn 仍归
+// hermes-agent 派发器。结构化 body 经 JSON 字符串随卡落库（estimate_days 等）。
+// ============================================================================
+
+export interface HttpKanbanBridgeOpts {
+  baseUrl: string
+  fetchImpl?: typeof fetch
+  board?: string
+  log?: (msg: string) => void
+}
+
+export class HttpKanbanBridge implements KanbanBridge {
+  private readonly base: string
+  private readonly doFetch: typeof fetch
+  private readonly board?: string
+  private readonly log: (msg: string) => void
+
+  constructor(opts: HttpKanbanBridgeOpts) {
+    this.base = opts.baseUrl.replace(/\/+$/, '')
+    this.doFetch = opts.fetchImpl ?? globalThis.fetch.bind(globalThis)
+    this.board = opts.board
+    this.log = opts.log ?? (() => {})
+  }
+
+  private normalize(data: unknown): KanbanTaskRef {
+    const t = ((data as { task?: unknown })?.task ?? data) as Record<string, unknown>
+    const id = t?.id ?? t?.task_id
+    if (id === undefined || id === null) {
+      throw new Error(`HttpKanbanBridge: response carries no task id: ${JSON.stringify(data).slice(0, 200)}`)
+    }
+    return { id: String(id), status: String(t?.status ?? 'todo') }
+  }
+
+  private async json(url: string, init?: RequestInit): Promise<unknown> {
+    const res = await this.doFetch(url, init)
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`HttpKanbanBridge: ${init?.method ?? 'GET'} ${url} → ${res.status}: ${text.slice(0, 200)}`)
+    }
+    return res.json()
+  }
+
+  async createTask(req: KanbanCreateRequest): Promise<KanbanTaskRef> {
+    const payload: Record<string, unknown> = {
+      title: req.title,
+      body: JSON.stringify(req.body),
+      assignee: req.assignee,
+      idempotencyKey: req.idempotencyKey,
+    }
+    if (this.board) payload.board = this.board
+    this.log(`createTask POST ${this.base}/api/hermes/kanban (${req.title})`)
+    return this.normalize(await this.json(`${this.base}/api/hermes/kanban`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }))
+  }
+
+  async getTask(id: string): Promise<KanbanTaskRef> {
+    return this.normalize(await this.json(`${this.base}/api/hermes/kanban/${encodeURIComponent(id)}`))
+  }
+}
+
+// ============================================================================
 // 节点执行器注册
 // ============================================================================
 

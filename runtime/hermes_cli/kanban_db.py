@@ -1022,6 +1022,8 @@ class Task:
     block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
     completion_contract: Optional[str] = None
     raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
+    estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
+    estimate_meta: Optional[dict] = None     # HERMES_CUSTOM[estimate] JSON (complexity/est_tokens/…)
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "Task":
@@ -1030,6 +1032,13 @@ class Task:
         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
         raci_parsed = _json_or(g("raci"))
         raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
+        est_raw = g("estimate_days")
+        try:
+            estimate_days_value = float(est_raw) if est_raw not in (None, "") else None
+        except (TypeError, ValueError):
+            estimate_days_value = None
+        est_meta_parsed = _json_or(g("estimate_meta"))
+        estimate_meta_value = est_meta_parsed if isinstance(est_meta_parsed, dict) else None
         return cls(
             **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
             **{col: g(col) for col in _TASK_OPTIONAL_COLUMNS},
@@ -1040,6 +1049,8 @@ class Task:
             last_failure_error=g("last_failure_error", g("last_spawn_error")),
             skills=skills_value,
             raci=raci_value,
+            estimate_days=estimate_days_value,
+            estimate_meta=estimate_meta_value,
             goal_mode=bool(g("goal_mode")),
             block_recurrences=int(g("block_recurrences") or 0),
         )
@@ -1212,6 +1223,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     skills               TEXT,
     -- HERMES_CUSTOM[raci] Structured RACI (JSON {responsible,approver,consulted,informed}).
     raci                 TEXT,
+    -- HERMES_CUSTOM[estimate] Workload estimate (team-parallel phase two):
+    -- person-days + estimation metadata JSON (complexity/est_tokens/rationale/
+    -- model/estimated_at). NULL = no estimate; dispatcher weighs NULL as a
+    -- conservative default when workload-ordering ready tasks.
+    estimate_days        REAL,
+    estimate_meta        TEXT,
     -- Per-task model override. When set, the dispatcher passes -m <model>
     -- to the worker, overriding the profile's default model. NULL = use
     -- the profile default.
@@ -1923,6 +1940,34 @@ def set_reasoning_effort(conn: sqlite3.Connection, task_id: str, effort: Optiona
         conn, task_id, "UPDATE tasks SET reasoning_effort = ? WHERE id = ?", (effort,),
         "reasoning_effort_set", {"reasoning_effort": effort},
         ("reasoning_effort",), archived_msg="cannot set reasoning effort",
+    )
+
+
+def set_estimate(
+    conn: sqlite3.Connection, task_id: str,
+    days: Optional[float], meta: Optional[dict] = None,
+) -> bool:
+    """Set — or clear with ``days=None`` — the task's workload estimate
+    (person-days + metadata JSON; HERMES_CUSTOM[estimate], team-parallel
+    phase two). Read by dispatch-time workload ordering of ready tasks, so
+    settable while running: takes effect on the next dispatch decision."""
+    days_val: Optional[float]
+    if days is None:
+        days_val = None
+    else:
+        try:
+            days_val = round(float(days), 2)
+        except (TypeError, ValueError):
+            raise ValueError(f"estimate days must be numeric, got {days!r}")
+        if days_val < 0:
+            raise ValueError(f"estimate days must be >= 0, got {days_val}")
+    meta_val = json.dumps(meta, ensure_ascii=False) if isinstance(meta, dict) and meta else None
+    return _set_task_override(
+        conn, task_id,
+        "UPDATE tasks SET estimate_days = ?, estimate_meta = ? WHERE id = ?",
+        (days_val, meta_val),
+        "estimate_set", {"estimate_days": days_val, **(meta or {})},
+        ("estimate_days", "estimate_meta"), archived_msg="cannot set estimate",
     )
 
 
