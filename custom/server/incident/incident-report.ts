@@ -97,8 +97,8 @@ function theoreticalFace(bundle: IncidentSourceBundle, sessionId: string): Auton
     if (deny > 0) facts.push(`历史审批中 ${deny} 条 deny（明确拒绝面）`)
     if (always === 0 && deny === 0) facts.push('历史审批无 always/deny——授权宽度未扩展，逐次审批面为主')
   }
-  // 已知缺口如实注记（permmodes v4 通道未开——理论面不完整，不装完整）
-  const note = ladderNote ?? '会话级权限模式（permmodes 七档）引擎通道未开（v4 缺口，permission-modes.ts 记档）；自治阶梯为配置呈现面（执行拦截是 H3 待接轮）——理论面按自治阶梯+身份白名单+审批历史拼合'
+  // 已知缺口如实注记（H3 v1 落地后：拦截面存在但默认关——HERMES_TOOL_ENFORCE=1 才执法）
+  const note = ladderNote ?? '会话级权限模式（permmodes 七档）无会话级存储面（v4 缺口，现仅环境级全局模式 HERMES_TOOL_ENFORCE_MODE）；执法门默认关（HERMES_TOOL_ENFORCE）——理论面按自治阶梯+身份白名单+审批历史拼合，执行面拦截需显式开启'
   if (facts.length === 0) return { sources, facts: ['无任何配置面证据（身份未注册、审批历史为空、无自治阶梯配置）'], status: 'absent', note }
   return { sources, facts, status: facts.length >= 2 ? 'collected' : 'partial', note }
 }
@@ -135,7 +135,7 @@ function reconcile(theoretical: AutonomyFace, effective: AutonomyFace, bundle: I
     const ladder = ladderForProfile(bundle.overview?.profile ?? '')
     if (ladder && ladder.level !== 'auto' && bundle.trace && bundle.trace.toolCalls.length > 10) {
       out.push({
-        finding: `自治阶梯配置=${ladder.level}（应有${ladder.level === 'insight' ? '人工决策' : '人工确认关键步'}），但轨迹实际执行工具调用 ${bundle.trace.toolCalls.length} 次（深度自主形态）——配置未被执行面约束（H3 拦截通道未接的现实证据）`,
+        finding: `自治阶梯配置=${ladder.level}（应有${ladder.level === 'insight' ? '人工决策' : '人工确认关键步'}），但轨迹实际执行工具调用 ${bundle.trace.toolCalls.length} 次（深度自主形态）——若未开 HERMES_TOOL_ENFORCE=1，配置不被执行面约束（执法门默认关）`,
         severity: 'warn',
         evidence: ['~/.hermes-web-ui/autonomy-ladder/ladder.json', bundle.trace.file],
       })

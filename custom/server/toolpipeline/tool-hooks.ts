@@ -2,15 +2,15 @@
 // P1 工具执行瀑布的 overlay 消费面（2026-10-04 九源轮）。
 //
 // ekko registry 瀑布（patch 565/566：preExecute 在权限后、postExecute 在结果
-// 回填前）+ manager 注入（两处 createRuntime）。本模块 v1 = **观测钩子**：
-// pre 记调用（名称+入参键，不落值）；post 记结局（ok/error 摘要）到
-// append-only JSONL（CAP 500 行），供工具执行账/轨迹热点消费。
-// 只观测不拦截（v1 边界如实声明：deny/改写形态由后续轮按治理策略接入——
-// 钩子失败 fail-open，不阻断工具执行）。
+// 回填前）+ manager 注入（两处 createRuntime）。钩子链现状（2026-10-08 H3 v1 起）：
+// auditHook（观测）→ toolresultguard（结果围栏，默认关）→ enforce-gate（执法门，
+// HERMES_TOOL_ENFORCE=1 才生效）。审计面 fail-open 永不阻断；执法面显式开启后
+// 可拦（deny 语义见 enforce-gate.ts 三级策略链），未开启时零行为变化。
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
+import { ekkoEnforceGateHook } from './enforce-gate'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -70,7 +70,10 @@ const auditHook = {
 // toolresultguard P1a（2026-10-06 五文轮）：postExecute 增加注入判定/隔离改写
 // （结果回填模型前）。守卫默认关（TRG_ENABLED=0 时零行为变化），超时/离线
 // fail-open，S0 预筛兜底——关闭态与既有 v1 观测语义完全一致。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook()]
+// H3 v1（2026-10-08 六文调研轮）：enforce-gate 执法钩子排末位（紧贴真实执行）——
+// 阶梯/风险档/权限模式三级裁决，HERMES_TOOL_ENFORCE=1 才生效（默认零行为变化）。
+// "只观测不拦截"的 v1 边界自此收窄为"默认不拦截"（执法面显式开启后可拦）。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), ekkoEnforceGateHook()]
 
 /** 读尾部（测试/消费面）。 */
 export function readToolExecAudit(limit = 100): ToolExecAuditEntry[] {
