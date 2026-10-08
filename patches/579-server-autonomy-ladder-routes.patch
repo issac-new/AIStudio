@@ -1,6 +1,8 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 9b0182ae..b9e8fc95 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -110,6 +110,9 @@ import { incidentRoutes } from '../custom/incident/incident-controller'
+@@ -120,6 +120,9 @@ import { incidentRoutes } from '../custom/incident/incident-controller'
  // + 治理事件总线查询面（/api/hermes/governance-events）
  import { virtualPlRoutes } from '../custom/harness/virtual-pl-controller'
  import { govBusRoutes } from '../custom/govbus/govbus-controller'
@@ -10,7 +12,7 @@
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
  import { reviewRoutes } from '../custom/review/review-controller'
  // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
-@@ -354,6 +357,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -392,6 +395,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(incidentRoutes.routes())                // 事故报告：17 要素汇编 + 自治度对账（六文调研轮 A+B）
    app.use(virtualPlRoutes.routes())               // AI 虚拟损益表：单位产出成本 + 日成本异常（六文调研轮 E）
    app.use(govBusRoutes.routes())                  // 治理事件总线：查询面 + compact（六文调研轮 F）

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 858aadd7..212dcc19 100644
+index 1079cd60..4c283eb2 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -694,12 +694,12 @@ export default {
@@ -64,7 +64,7 @@ index 858aadd7..212dcc19 100644
        title: 'Delivery Cases',
        empty: 'No delivery cases yet',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 4fb7dcbd..2fc67611 100644
+index 4f99922f..e3915458 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -729,7 +729,10 @@ export default {

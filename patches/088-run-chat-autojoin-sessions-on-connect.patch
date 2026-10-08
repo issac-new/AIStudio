@@ -24,7 +24,7 @@ index 33e8efd8..5f1622a3 100644
    return value.replace(/[\\%_]/g, '\\$&')
  }
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index df880977..ef4daf2c 100644
+index 3304bb71..89e8e3f8 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -33,7 +33,7 @@ import type { Server, Socket } from 'socket.io'

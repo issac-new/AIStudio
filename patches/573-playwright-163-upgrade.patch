@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index 4cc97624..7a1287dc 100644
+index 6d16ac6c..2d8747d5 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -39,6 +39,7 @@
@@ -118,7 +118,7 @@ index 4cc97624..7a1287dc 100644
        "version": "1.1.0",
        "resolved": "https://registry.npmjs.org/thunky/-/thunky-1.1.0.tgz",
 diff --git a/package.json b/package.json
-index 6da89bae..28e14f0d 100644
+index 5f60793d..d5acdd14 100644
 --- a/package.json
 +++ b/package.json
 @@ -130,7 +130,7 @@

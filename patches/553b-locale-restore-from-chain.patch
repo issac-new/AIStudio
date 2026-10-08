@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 84d8db49..0dbf89c7 100644
+index 13c2a285..f29b0a9c 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -828,7 +828,8 @@ export default {
@@ -101,7 +101,7 @@ index 84d8db49..0dbf89c7 100644
        tasks: 'Task Cluster',
        noTasks: 'No linked tasks',
        participants: 'Participants'
-@@ -3570,7 +3594,7 @@ export default {
+@@ -3629,7 +3653,7 @@ export default {
        switchToNew: 'Switch to the new board after creating',
        createFailed: 'Failed to create board',
        archiveFailed: 'Failed to archive board',
@@ -110,10 +110,12 @@ index 84d8db49..0dbf89c7 100644
        filterAll: 'All'
      },
      columns: {
-@@ -5904,6 +5928,640 @@ export default {
+@@ -5967,6 +5991,642 @@ export default {
+     new_0_7_30_6: 'Fixed incomplete Copilot tool arguments when streaming through the Responses API (#3286)',
+     new_0_7_30_7: 'Fixed Claude tool execution without confirmation when running as root, with consistent launch permissions in global and scoped modes (#3287)',
      new_0_7_30_8: 'Removed the retired OpenCode Free provider and its model entry points (#3277)',
-     new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
-     new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
++    new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
++    new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
 +    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
 +    new_0_7_28_2: 'Added an APIKEY.FAN relay page with balance, daily and total usage, and model breakdowns for configured API keys (#3257)',
 +    new_0_7_28_3: 'Fixed Coding Agent manual update status and detection of the updated CLI version, with protection for active sessions (#3261)',
@@ -752,7 +754,7 @@ index 84d8db49..0dbf89c7 100644
    loopScenes: {
      manage: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 26a1f15a..6718dd87 100644
+index e40cc648..b6e954e5 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -827,7 +827,8 @@ export default {
@@ -858,7 +860,7 @@ index 26a1f15a..6718dd87 100644
        tasks: '任务簇',
        noTasks: '无挂接任务',
        participants: '参与方'
-@@ -3569,7 +3593,7 @@ export default {
+@@ -3628,7 +3652,7 @@ export default {
        switchToNew: '创建后切换到新看板',
        createFailed: '创建看板失败',
        archiveFailed: '归档看板失败',
@@ -867,10 +869,12 @@ index 26a1f15a..6718dd87 100644
        filterAll: '全部'
      },
      columns: {
-@@ -5902,6 +5926,829 @@ export default {
+@@ -5965,6 +5989,831 @@ export default {
+     new_0_7_30_6: '修复 Copilot 通过 Responses API 流式调用工具时参数不完整的问题 (#3286)',
+     new_0_7_30_7: '修复 Claude 在 root 环境中的免确认工具执行，并统一全局和独立模式启动权限 (#3287)',
      new_0_7_30_8: '移除已停用的 OpenCode Free 供应商及其模型入口 (#3277)',
-     new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
-     new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
++    new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
++    new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
 +    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',
 +    new_0_7_28_2: '新增 APIKEY.FAN 中转服务页面，可按已配置的 API Key 查看余额、今日与累计用量及模型明细 (#3257)',
 +    new_0_7_28_3: '修复编程 Agent 手动检查更新后的状态和更新版本识别，并保护正在运行的会话 (#3261)',

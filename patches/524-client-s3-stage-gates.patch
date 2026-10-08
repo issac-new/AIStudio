@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 990b7303..6bf6ab47 100644
+index 5980ec13..e7575f33 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
 @@ -54,6 +54,8 @@ import FolderPicker from "./FolderPicker.vue";
@@ -11,7 +11,7 @@ index 990b7303..6bf6ab47 100644
  import ConversationMonitorPane from "./ConversationMonitorPane.vue";
  import MessageList from "./MessageList.vue";
  import SessionListItem from "./SessionListItem.vue";
-@@ -3397,7 +3399,7 @@ async function handleSessionModelCustomSubmit() {
+@@ -3399,7 +3401,7 @@ async function handleSessionModelCustomSubmit() {
      </div>
      <Teleport to="body">
        <RealtimeVoiceStage

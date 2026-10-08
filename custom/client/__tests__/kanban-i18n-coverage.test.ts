@@ -13,7 +13,10 @@ const components = import.meta.glob('../**/*.vue', { query: '?raw', import: 'def
 
 function collectUsedKeys(): Map<string, string[]> {
   const used = new Map<string, string[]>()
-  const pattern = /['"`]kanban\.([A-Za-z0-9_.-]+)['"`]/g
+  // 扫描口径=本测试声明面：仅 t('kanban.*') 调用（含 t( 后空格变体）。裸字符串
+  // 'kanban.xxx'（如 GovClusterSection 的异常类型 ID）不是翻译引用，不在本门范围。
+  // 负向后顾排除 anomalyCount('kanban..') 这类"函数名以 t 结尾"的误匹配。
+  const pattern = /(?<![\w.$])t\(\s*['"`]kanban\.([A-Za-z0-9_.-]+)['"`]/g
   for (const [file, source] of Object.entries(components)) {
     if (file.includes('__tests__')) continue
     let m: RegExpExecArray | null
