@@ -260,6 +260,30 @@ class GatewayBusySessionMixin:
     CAPACITY_RETRY_MAX_AGE_SEC = 20 * 60.0
     CAPACITY_RETRY_MAX_PENDING = 64
 
+    _CAPACITY_SIDECAR_MIN_INTERVAL_S = 2.0
+
+    def _write_capacity_sidecar(self) -> None:
+        """二期容量内省：队列深度写 sidecar（<HERMES_HOME>/runtime/capacity_retry.json，
+        限频 ≥2s）。集群巡检官由此免改 api_server/run.py 即可观测容量泵状态。fail-soft。"""
+        now = time.monotonic()
+        last = getattr(self, "_capacity_sidecar_last", 0.0)
+        if now - last < self._CAPACITY_SIDECAR_MIN_INTERVAL_S:
+            return
+        self._capacity_sidecar_last = now
+        try:
+            import json as _json
+            from pathlib import Path as _P
+            home = _P(os.environ.get("HERMES_HOME") or _P.home() / ".hermes")
+            d = home / "runtime"
+            d.mkdir(parents=True, exist_ok=True)
+            q = getattr(self, "_capacity_retry_queue", None) or []
+            sm = getattr(self, "_capacity_retry_since", None) or {}
+            (d / "capacity_retry.json").write_text(
+                _json.dumps({"ts": time.time(), "depth": len(q), "anchors": len(sm),
+                             "cap": self.CAPACITY_RETRY_MAX_PENDING}), encoding="utf-8")
+        except Exception:
+            pass
+
     def _queue_capacity_retry(self, event: MessageEvent, source: SessionSource, session_key: str) -> bool:
         """Hold *event* for a silent retry when a session slot frees; False when the
         bounded queue is full (then the event is dropped WITH a log line, not silently)."""
@@ -292,6 +316,7 @@ class GatewayBusySessionMixin:
             for k in [k for k, v in since_map.items() if now - v > self.CAPACITY_RETRY_MAX_AGE_SEC]:
                 since_map.pop(k, None)
         pending.append((first_seen if first_seen is not None else now, event, source, session_key, not_before))
+        self._write_capacity_sidecar()
         pump = getattr(self, "_capacity_retry_task", None)
         if pump is None or pump.done():
             if pump is not None and not pump.cancelled():
@@ -313,6 +338,7 @@ class GatewayBusySessionMixin:
                 logger.warning(
                     "Capacity retry for %s expired after %.0fs; dropping",
                     session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)
+                self._write_capacity_sidecar()
                 continue
             if now < not_before:
                 await asyncio.sleep(min(self.CAPACITY_RETRY_POLL_SEC, not_before - now))
@@ -328,6 +354,7 @@ class GatewayBusySessionMixin:
                     logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
                     continue
                 await adapter.handle_message(event)
+                self._write_capacity_sidecar()
             except Exception:
                 logger.warning("Capacity retry dispatch failed for %s", session_key, exc_info=True)
 
