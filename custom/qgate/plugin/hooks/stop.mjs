@@ -52,12 +52,19 @@ try {
 // 不再对原始 verdict 做 OR 兜底：那会把 warn 档（advisory）的 never-run/INCONCLUSIVE
 // 也拦下，违背 D5 内嵌 advisory 语义（claude 双宿主实测逮住的残余缺陷）。
 const blocking = (status.gates ?? []).filter((g) => g.blocking === true)
+const advisory = (status.advisory ?? []).filter((a) => a && a.gateId)
 const state = stopBudgetState(qgateDir, sessionId)
+
+// advisory 可见性（上游 v1.26：advisory 不得静默）：approve 时若存在 CONDITIONAL 门，
+// 仍随行提示——放行不等于全绿，未解除条件必须对用户可见。
+const advisoryNote = advisory.length > 0
+  ? `QGate advisory (non-blocking, must not be silenced): ${advisory.map((a) => `${a.gateId}: ${(a.conditions ?? []).join('; ')}`).join(' | ')}`
+  : ''
 
 if (blocking.length === 0) {
   saveStopBudgetState(qgateDir, { sessionId, blocks: 0 })
-  log({ hook: 'Stop', at: new Date().toISOString(), outcome: 'approve', gates: (status.gates ?? []).length })
-  emit({ decision: 'approve' })
+  log({ hook: 'Stop', at: new Date().toISOString(), outcome: 'approve', gates: (status.gates ?? []).length, advisory: advisory.length })
+  emit(advisoryNote ? { decision: 'approve', systemMessage: advisoryNote } : { decision: 'approve' })
 }
 
 const detail = blocking
@@ -70,7 +77,8 @@ if (isNewOnly(blocking, state)) {
   log({ hook: 'Stop', at: new Date().toISOString(), outcome: 'approve-new-only', blocking: detail })
   emit({
     decision: 'approve',
-    systemMessage: `QGate new-only downgrade: blocking gates (${detail}) were already failing at session baseline with fresh evidence — no new regressions introduced this session. Known issues remain tracked; fix them before the next release gate.`,
+    // 上游 v1.26 边界表达：降级放行必须明示"本次报告仍为非 PASS"——不得被读成全绿。
+    systemMessage: `QGate new-only downgrade: blocking gates (${detail}) were already failing at session baseline with fresh evidence — no new regressions introduced this session. The report for this session is still NOT all-PASS. Known issues remain tracked; fix them before the next release gate.`,
   })
 }
 
@@ -94,5 +102,7 @@ emit({
   systemMessage:
     `QGate blocking gates: ${detail}.\n` +
     `Run gates now: \`node ${cli} run --all\` (cwd ${cwd}), fix the reported failures, then re-run until all gates PASS.\n` +
+    `fix-first: fix artifacts, not acceptance lines — disabling gates, loosening thresholds, adding waivers or rewriting acceptance criteria is an acceptance change requiring explicit registration (qgate waive/intent), never a fix action.\n` +
+    (advisoryNote ? `${advisoryNote}\n` : '') +
     (final ? 'This is the FINAL stop budget. If gates still fail on your next finish attempt, the task will be released with a registered risk.' : ''),
 })

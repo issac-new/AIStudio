@@ -106,6 +106,12 @@ export async function runCommandExecutor(
       return out
     }
     const tally = `${counts.parser}: ${counts.total} total/${counts.passed} passed/${counts.failed} failed/${counts.skipped} skipped`
+    // 逐用例身份（v0.3.1 case binding）：内核重解析出的逐测试点结果——RTM 元门按 AC
+    // 绑定逐用例复核的证据源（无关成功门禁不能充当 AC 证据）。
+    out.evidence.caseOutcomes = counts.cases.map((c) => ({
+      id: c.name,
+      status: c.status === 'passed' ? 'pass' : c.status === 'skipped' ? 'skip' : 'fail',
+    }))
     if (code === expectExit && counts.failed > 0) {
       out.evidence.result = 'error'
       out.evidence.summary = `exit ${code} but report has ${counts.failed} failed (${tally}) — exit code alone is not evidence`

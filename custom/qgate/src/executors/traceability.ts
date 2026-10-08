@@ -13,7 +13,7 @@ import type { Evidence, ExecutorSpec, GateSpec } from '../core/types.js'
 import { isRecord } from '../core/parse.js'
 import { isInside } from '../core/safe-path.js'
 import { loadProject } from '../core/loader.js'
-import { isFresh, latestRuns, loadRun, storePaths } from '../core/store.js'
+import { isFresh, latestRuns, loadRun, loadRunEvidence, storePaths } from '../core/store.js'
 import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from '../core/snapshot.js'
 
 export interface TraceabilityExecutorInput {
@@ -31,6 +31,9 @@ interface AcceptanceCriterion {
   codeFiles: string[]
   testGateIds: string[]
   type?: string
+  /** 用例绑定（v0.3.1，上游 v1.31 cases 本地方言）：AC → 绑定门内真实执行且通过的用例身份。
+      gateId 必须在本 AC 的 testGateIds 内（绑定深化既有门关联，不另立关联）。 */
+  cases?: Array<{ gateId: string; caseIds: string[] }>
 }
 
 interface Requirement {
@@ -74,7 +77,30 @@ function parseRequirements(raw: unknown): Requirement[] | { error: string } {
       if (!codeFiles || codeFiles.length === 0) return { error: `${acId}: codeFiles missing` }
       if (!testGateIds || testGateIds.length === 0) return { error: `${acId}: testGateIds missing` }
       const type = typeof a.type === 'string' ? a.type : undefined
-      acs.push({ id: acId, codeFiles, testGateIds, type })
+      // cases 绑定形状校验（fail-closed）：gateId ⊆ testGateIds、1..20 绑定、gateId 唯一、
+      // caseIds 1..50 唯一非空——畸形登记即 error（INCONCLUSIVE），不静默忽略。
+      let caseBindings: AcceptanceCriterion['cases']
+      if (a.cases !== undefined) {
+        if (!Array.isArray(a.cases) || a.cases.length === 0 || a.cases.length > 20) {
+          return { error: `${acId}: cases must be an array of 1..20 bindings` }
+        }
+        const seen = new Set<string>()
+        caseBindings = []
+        for (const [k, b] of a.cases.entries()) {
+          if (!isRecord(b)) return { error: `${acId}.cases[${k}] not an object` }
+          const gateId = typeof b.gateId === 'string' ? b.gateId : ''
+          if (!gateId || !testGateIds.includes(gateId)) {
+            return { error: `${acId}.cases[${k}]: gateId '${gateId}' must be within this AC's testGateIds` }
+          }
+          if (seen.has(gateId)) return { error: `${acId}.cases[${k}]: duplicate gateId '${gateId}'` }
+          seen.add(gateId)
+          const caseIds = strListOf(b.caseIds, 50)
+          if (!caseIds || caseIds.length === 0) return { error: `${acId}.cases[${k}] (${gateId}): caseIds must be 1..50 unique non-empty strings` }
+          if (new Set(caseIds).size !== caseIds.length) return { error: `${acId}.cases[${k}] (${gateId}): duplicate caseIds` }
+          caseBindings.push({ gateId, caseIds })
+        }
+      }
+      acs.push({ id: acId, codeFiles, testGateIds, type, cases: caseBindings })
     }
     out.push({ id, prdRef, requiredTypes, acceptanceCriteria: acs })
   }
@@ -122,6 +148,7 @@ export function runTraceabilityExecutor(executor: ExecutorSpec, input: Traceabil
   const sharedFiles = listWorkspaceFiles(input.workspace)
   const problems: string[] = []
   let acTotal = 0
+  let boundCases = 0
 
   for (const req of requirements) {
     if (req.prdRef) {
@@ -135,6 +162,7 @@ export function runTraceabilityExecutor(executor: ExecutorSpec, input: Traceabil
     }
     for (const ac of req.acceptanceCriteria) {
       acTotal++
+      boundCases += (ac.cases ?? []).reduce((n, b) => n + b.caseIds.length, 0)
       for (const cf of ac.codeFiles) {
         const resolved = join(input.workspace, cf)
         if (!isInside(input.workspace, resolved)) {
@@ -162,6 +190,35 @@ export function runTraceabilityExecutor(executor: ExecutorSpec, input: Traceabil
         }, spec.spec.policy.maxAgeHours ?? 24)
         if (!fresh) problems.push(`${ac.id}: testGate ${gid} evidence stale (re-run it)`)
       }
+      // AC→用例绑定复核（v0.3.1）：绑定门当轮证据中的逐用例身份逐条核对——
+      // 无关成功门禁（只 exit 0 的 command）从此不能充当 AC 证据。
+      // 用例身份来源=证据 caseOutcomes（command+rawOutput 重解析 / behavior cases 深比较）；
+      // 无该协议的证据形状落在 acCaseMissing（如实边界，不猜测形状）。
+      if (executor.requireCaseBinding && !ac.cases?.length) {
+        problems.push(`${ac.id}: acCaseUnbound (requireCaseBinding on — bind this AC to real case ids in the bound gate's evidence)`)
+      }
+      for (const binding of ac.cases ?? []) {
+        const entry = state[binding.gateId]
+        const run = entry ? loadRun(paths, entry.runId) : undefined
+        // 绑定门已在 testGateIds 循环核过 PASS+fresh；此处只做逐用例身份复核
+        const outcomes = new Map<string, 'pass' | 'fail' | 'skip'>()
+        if (run) {
+          for (const e of loadRunEvidence(paths, run.runId)) {
+            for (const c of e.caseOutcomes ?? []) {
+              const prev = outcomes.get(c.id)
+              // fail-closed 合并：同 id 冲突取更差（fail > skip > pass）
+              const worse = prev === 'fail' || c.status === 'fail' ? 'fail' : prev === 'skip' || c.status === 'skip' ? 'skip' : 'pass'
+              outcomes.set(c.id, worse)
+            }
+          }
+        }
+        for (const caseId of binding.caseIds) {
+          const st = outcomes.get(caseId)
+          if (st === undefined) problems.push(`${ac.id}: acCaseMissing ${caseId} (bound gate ${binding.gateId} reported no such case this run — an unrelated passing gate is not AC evidence)`)
+          else if (st === 'skip') problems.push(`${ac.id}: acCaseSkipped ${caseId} (a skipped case is not a pass)`)
+          else if (st === 'fail') problems.push(`${ac.id}: acCaseFailed ${caseId} (bound gate ${binding.gateId})`)
+        }
+      }
     }
     const coveredTypes = new Set(req.acceptanceCriteria.map((a) => a.type).filter((t): t is string => !!t))
     const missingTypes = req.requiredTypes.filter((t) => !coveredTypes.has(t))
@@ -177,6 +234,6 @@ export function runTraceabilityExecutor(executor: ExecutorSpec, input: Traceabil
     return ev
   }
   ev.result = 'pass'
-  ev.summary = `${requirements.length} requirements / ${acTotal} ACs fully traced (codeFiles exist, linked gates PASS & fresh, prdRefs resolve)`
+  ev.summary = `${requirements.length} requirements / ${acTotal} ACs fully traced (codeFiles exist, linked gates PASS & fresh, prdRefs resolve${boundCases > 0 ? `, ${boundCases} case bindings verified` : ''})`
   return ev
 }

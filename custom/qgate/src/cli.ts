@@ -12,7 +12,9 @@ import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks, s
 import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from './core/profile.js'
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
-import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
+import { buildReleaseReport, renderReleaseReportMd, FIX_FIRST_DISCIPLINE } from './core/report.js'
+import { SOURCE_LABEL_ZH, renderSourceDistribution, type SourceBucket } from './core/sources.js'
+import { declaredBudgetMs, recordBudgetExhausted } from './core/run.js'
 import { inputGlobsOf, listWorkspaceFiles, snapshotForGlobs } from './core/snapshot.js'
 import { TASK_INTENT_DEFAULT_FILE, loadTaskIntent, writeTaskIntent } from './core/task-intent.js'
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
@@ -204,6 +206,10 @@ async function main(): Promise<void> {
       const triggerArg = flag(rest, '--trigger') ?? 'task_close'
       const trigger = (TRIGGERS as string[]).includes(triggerArg) ? (triggerArg as Trigger) : 'task_close'
       const changedArg = flag(rest, '--changed')
+      const budgetArg = flag(rest, '--budget-ms')
+      const budgetMs = budgetArg !== undefined ? Number(budgetArg) : undefined
+      if (budgetMs !== undefined && (!Number.isFinite(budgetMs) || budgetMs <= 0)) fail('--budget-ms must be a positive number')
+      const deadline = budgetMs !== undefined ? Date.now() + budgetMs : undefined
       const git = gitContext(workspace)
       const changed = changedArg ? changedArg.split(',').filter(Boolean) : git.changedPaths
       const toRun: GateSpec[] =
@@ -215,7 +221,24 @@ async function main(): Promise<void> {
       const ordered = [...toRun.filter((g) => g.spec.meta !== true), ...toRun.filter((g) => g.spec.meta === true)]
       let blocking = 0
       const runIds: string[] = []
+      const buckets: Array<SourceBucket | undefined> = []
+      const advisoryLines: string[] = []
       for (const spec of ordered) {
+        // 预算执法（上游 v1.30 F01 本地方言）：宿主给出预算时，启动前比较剩余期限与
+        // 门声明预算——不足即不启动，落 error 证据（fail-closed，不是 SKIP）。
+        if (deadline !== undefined) {
+          const remaining = deadline - Date.now()
+          const declared = declaredBudgetMs(spec)
+          if (remaining < declared) {
+            const result = recordBudgetExhausted({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved) }, declared, remaining)
+            runIds.push(result.run.runId)
+            const policy = effectivePolicy(spec, resolved)
+            if ((result.run.verdict === 'FAIL' && policy.failure === 'block') || (result.run.verdict === 'INCONCLUSIVE' && policy.inconclusive === 'block')) blocking++
+            buckets.push(undefined)
+            process.stdout.write(`△ ${spec.metadata.id}: ${result.run.verdict} — ${result.run.failureSummary}\n`)
+            continue
+          }
+        }
         const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved) })
         runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
@@ -223,12 +246,21 @@ async function main(): Promise<void> {
           (result.run.verdict === 'FAIL' && policy.failure === 'block') ||
           (result.run.verdict === 'INCONCLUSIVE' && policy.inconclusive === 'block')
         if (isBlocking) blocking++
+        buckets.push(result.run.sourceSignal?.bucket)
+        if (result.run.verdict === 'CONDITIONAL') advisoryLines.push(`${spec.metadata.id}: ${(result.run.conditions ?? []).join('; ')}`)
+        const src = result.run.sourceSignal ? ` [来源 ${SOURCE_LABEL_ZH[result.run.sourceSignal.bucket]}]` : ''
         process.stdout.write(
-          `${isBlocking ? '✗' : result.run.verdict === 'PASS' ? '✓' : '△'} ${spec.metadata.id}: ${result.run.verdict}` +
+          `${isBlocking ? '✗' : result.run.verdict === 'PASS' ? '✓' : '△'} ${spec.metadata.id}: ${result.run.verdict}${src}` +
           `${result.run.conditions ? ` — ${result.run.conditions.join('; ')}` : ''}` +
           `${result.run.failureSummary ? ` — ${result.run.failureSummary}` : ''}\n`,
         )
       }
+      // 来源分布聚合行（上游 v1.26）：混合来源不可能被读成全部已核验
+      const dist = { verified: 0, declared: 0, degraded: 0, none: 0 }
+      for (const b of buckets) if (b) dist[b] += 1
+      process.stdout.write(`来源分布: ${renderSourceDistribution(dist)}（非 PASS 门禁不计入）\n`)
+      // advisory 可见性（上游 v1.26）：不阻断判定，但不得静默
+      if (advisoryLines.length > 0) process.stdout.write(`advisory（不阻断）: ${advisoryLines.join(' | ')}\n`)
       // §49 缓存生命周期：随 run 触发过期清理（此前 cacheGc 定义后无任何调用点，
       // .qgate/cache/evidence/ 按 key 无限累积）
       try { cacheGc(loaded.qgateDir) } catch { /* GC 失败不影响判定 */ }
@@ -244,6 +276,7 @@ async function main(): Promise<void> {
         }
         process.stdout.write(`evidence archived to docs/delivery-evidence/ (${runIds.length} runs)\n`)
       }
+      if (blocking > 0) process.stdout.write(`fix-first: ${FIX_FIRST_DISCIPLINE}\n`)
       process.exit(blocking > 0 ? 1 : 0)
       return
     }
@@ -329,13 +362,16 @@ async function main(): Promise<void> {
       const git = fresh ? gitContext(workspace) : undefined
       // 输入快照重算（v0.3 §3.2）：全门共享一次走树，逐门按 glob 面过滤比对。
       const sharedFiles = fresh ? listWorkspaceFiles(workspace) : undefined
+      // 变更面适用集（上游 v1.28 SKIP 成因显式化）：--fresh 时区分"不在变更面"与"从未执行"
+      const applicable = fresh && git ? new Set(selectGates(enabledGates, git.changedPaths).map((g) => g.metadata.id)) : null
       const report: Record<string, unknown>[] = []
+      const dist = { verified: 0, declared: 0, degraded: 0, none: 0 }
       for (const g of enabledGates) {
         const entry = state[g.metadata.id]
+        const run = entry ? loadRun(paths, entry.runId) : undefined
         const policy = effectivePolicy(g, resolved)
         let freshness: 'fresh' | 'stale' | 'never' = 'never'
         if (entry) {
-          const run = loadRun(paths, entry.runId)
           if (run && fresh && git) {
             const globs = inputGlobsOf(g)
             const currentSnapshot = globs.length > 0 ? snapshotForGlobs(workspace, globs, sharedFiles) : undefined
@@ -345,6 +381,12 @@ async function main(): Promise<void> {
             }, policy.maxAgeHours ?? 24) ? 'fresh' : 'stale'
           } else if (run) freshness = 'fresh'
         }
+        const sourceBucket = run?.sourceSignal?.bucket
+        if (sourceBucket) dist[sourceBucket] += 1
+        const skipCause: string | undefined =
+          applicable && !applicable.has(g.metadata.id) ? 'out-of-change-scope'
+            : !entry ? 'never-run'
+              : undefined
         const row = {
           gateId: g.metadata.id,
           domain: g.spec.domain,
@@ -352,16 +394,40 @@ async function main(): Promise<void> {
           delivery: VERDICT_TO_DELIVERY[entry?.verdict ?? 'INCONCLUSIVE'],
           freshness: fresh ? freshness : undefined,
           blocking: isBlockingVerdict(entry?.verdict ?? 'INCONCLUSIVE', effectivePolicy(g, resolved)),
+          source: sourceBucket ?? null,
+          skipCause,
         }
         report.push(row)
         if (!json) {
           process.stdout.write(
             `${row.blocking ? '✗' : '✓'} ${row.gateId} [${row.domain}]: ${row.verdict}` +
-            (fresh ? ` (${row.freshness})` : '') + '\n',
+            (sourceBucket ? ` [来源 ${SOURCE_LABEL_ZH[sourceBucket]}]` : '') +
+            (fresh ? ` (${row.freshness})` : '') +
+            (skipCause ? ` — ${skipCause === 'out-of-change-scope' ? '不在变更面（appliesWhen 未命中）' : '从未执行'}` : '') + '\n',
           )
         }
       }
-      if (json) process.stdout.write(JSON.stringify({ profile: resolved.profileId, tier: resolved.tier ?? tierOfProfile(resolved.profileId), gates: report }, null, 2) + '\n')
+      // advisory 可见面 + 有效豁免可见面（上游 v1.26：不隐藏，但不阻断判定）
+      const advisory = report
+        .filter((r) => r.verdict === 'CONDITIONAL')
+        .map((r) => ({ gateId: r.gateId as string, conditions: (loadRun(paths, state[r.gateId as string].runId)?.conditions) ?? [] }))
+      const now = Date.now()
+      const waivers = listWaivers(paths)
+        .filter((w) => w.expiresAt > now && enabledGates.some((g) => g.metadata.id === w.gateId))
+        .map((w) => ({ gateId: w.gateId, by: w.approver, expiresAt: w.expiresAt }))
+      if (!json) {
+        process.stdout.write(`来源分布: ${renderSourceDistribution(dist)}（非 PASS 门禁不计入）\n`)
+        if (advisory.length > 0) process.stdout.write(`advisory（不阻断）: ${advisory.map((a) => `${a.gateId}: ${a.conditions.join('; ')}`).join(' | ')}\n`)
+        if (waivers.length > 0) process.stdout.write(`active waivers: ${waivers.map((w) => `${w.gateId} by ${w.by}（不改变门禁判定，仅免于登记阻断，到期 ${new Date(w.expiresAt).toISOString()}）`).join(' | ')}\n`)
+      }
+      if (json) process.stdout.write(JSON.stringify({
+        profile: resolved.profileId,
+        tier: resolved.tier ?? tierOfProfile(resolved.profileId),
+        gates: report,
+        sourceDistribution: dist,
+        advisory,
+        waivers,
+      }, null, 2) + '\n')
       const anyBlocking = report.some((r) => r.blocking)
       process.exit(anyBlocking ? 1 : 0)
       return
@@ -387,6 +453,7 @@ async function main(): Promise<void> {
           (latest?.summary ? ` — ${latest.summary}` : '') + '\n',
         )
       }
+      if (run.verdict !== 'PASS') process.stdout.write(`  fix-first: ${FIX_FIRST_DISCIPLINE}\n`)
       return
     }
 

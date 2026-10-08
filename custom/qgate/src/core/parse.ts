@@ -465,6 +465,19 @@ export function parseEvidence(raw: unknown): import('./types.js').Evidence | nul
   const independence = enumOf(raw.independence, INDEPENDENCE)
   const summary = str(raw.summary)
   const artifacts = strList(raw.artifacts, 100)
+  // 逐用例身份（v0.3.1 case binding）：白名单透传——畸形条目整字段拒收（fail-closed，不猜形状）
+  let caseOutcomes: import('./types.js').Evidence['caseOutcomes']
+  if (raw.caseOutcomes !== undefined) {
+    if (!Array.isArray(raw.caseOutcomes) || raw.caseOutcomes.length > 5000) return null
+    caseOutcomes = []
+    for (const c of raw.caseOutcomes) {
+      if (!isRecord(c)) return null
+      const cid = str(c.id)
+      const status = enumOf(c.status, ['pass', 'fail', 'skip'] as const)
+      if (!cid || !status) return null
+      caseOutcomes.push({ id: cid, status })
+    }
+  }
   return {
     id, runId, gateId, type, producer, result, execution, independence, summary,
     provenance: {
@@ -478,6 +491,7 @@ export function parseEvidence(raw: unknown): import('./types.js').Evidence | nul
       affectedPaths: strList(raw.provenance.affectedPaths, 500),
     },
     artifacts,
+    caseOutcomes,
   }
 }
 
@@ -511,6 +525,18 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
     }
   }
   const inputsStable = typeof raw.inputsStable === 'boolean' ? raw.inputsStable : undefined
+  // 来源信号（v0.3.1）：白名单透传；畸形形状整字段拒收
+  let sourceSignal: import('./types.js').GateRun['sourceSignal']
+  if (raw.sourceSignal !== undefined) {
+    if (!isRecord(raw.sourceSignal)) return null
+    const bucket = enumOf(raw.sourceSignal.bucket, ['verified', 'declared', 'degraded', 'none'] as const)
+    const labelsRaw = Array.isArray(raw.sourceSignal.labels) ? raw.sourceSignal.labels : []
+    const labels = labelsRaw
+      .map((l) => enumOf(l, ['verified', 'declared', 'degraded'] as const))
+      .filter((l): l is 'verified' | 'declared' | 'degraded' => l !== undefined)
+    if (!bucket) return null
+    sourceSignal = { labels, bucket }
+  }
   return {
     runId, gateId, gateVersion, trigger, workspace, startedAt,
     endedAt: num(raw.endedAt),
@@ -523,5 +549,6 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
     failureSummary: str(raw.failureSummary),
     inputSnapshot,
     inputsStable,
+    sourceSignal,
   }
 }
