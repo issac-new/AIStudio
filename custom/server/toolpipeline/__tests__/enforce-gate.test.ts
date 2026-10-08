@@ -124,9 +124,11 @@ describe('执法钩子（ekkoEnforceGateHook）', () => {
     expect(v).toBeUndefined()
   })
 
-  it('开启+assist+确认点：返回 {allow:false} 且 govbus 发 security/high 事件', async () => {
+  it('开启+assist+确认点（挂起关）：返回 {allow:false} 且 govbus 发 security/high 事件', async () => {
     upsertLadder({ target: 'agent-x', level: 'assist', approvalPoints: ['数据库迁移'], maxRiskTier: 'medium' })
     process.env.HERMES_TOOL_ENFORCE = '1'
+    process.env.HERMES_ENFORCE_SUSPEND = '0' // 本用例测立即拒语义；挂起语义见审批桥专项
+    try {
     const hook = ekkoEnforceGateHook()
     const v = await hook.preExecute!('terminal_exec', { command: 'npm run db:migrate --tag 数据库迁移v2' }, { profileId: 'agent-x' })
     expect(v).toMatchObject({ allow: false })
@@ -134,6 +136,7 @@ describe('执法钩子（ekkoEnforceGateHook）', () => {
     const ev = queryGovEvents({ domain: 'security', minSeverity: 'high' })[0]
     expect(ev?.type).toBe('tool.denied_ladder-approval-point')
     expect(ev?.summary).toContain('terminal_exec')
+    } finally { delete process.env.HERMES_ENFORCE_SUSPEND }
   })
 
   it('裁决面异常 → fail-open（不拦截）', async () => {
