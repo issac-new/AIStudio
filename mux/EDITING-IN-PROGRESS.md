@@ -52,3 +52,20 @@
 - **mux/tests/r18-capability.test.sh 修复（已完成）**：两处陈旧断言对齐现行文案
   （`全量呈现（未采集·必采步缺口）`、`R18 步 5 载荷全缺`），测试意图不变。
   验证：本测试三段全过；vitest 78/78 复跑仍全过；repo-has-freshness 过。
+
+## 2026-10-08 登记③：devimpl 派发被容量队列丢弃——三份任务书重递（独立监控会话）
+
+- **事实链（13:5x 查实）**：容量重试队列 09:25:43 起满 64（第三次容量僵尸，
+  09:09 重启未清净），11:12 devimpl d1 派发（chen/xiao/qi/fei）与 12:47 渠道批
+  派发（hu/lin）消息本体均已入房（驱动持 event id），但网关侧 agent 拉起被容量
+  拒绝→队列溢出丢弃——chen/xiao/lin 全程沉睡；hu 由 13:35:54 idle-nudge 拉起
+  （session 20261008_133556，工作中，未动）。13:20:31 affinity 重启已清账，
+  此后零丢弃。
+- **处置（本会话执行）**：重递 chen（DEV-PAYCORE，d1 唯一死局——PAYCORE 等待
+  已于 12:47 判死且 d1 幂等标记已置，驱动不再触发）+ lin（DEV-CHALI）+
+  xiao（DEV-MP）三份任务书**原文**（自 aipay-scenario.sh L771-782/L817-820
+  逐字提取求值，含 dispatch_in_room 标准尾标；hu 不重发）。台账记
+  ISSUE|capacity-queue-drop-devimpl + DISP（导演补记）。发送凭据=各 human
+  账号 token（与 dispatch_in_room 同源），room=room_analysis。
+- **不动清单**：aipay-scenario.sh/mx-lib.sh/mx-scenario-lib.sh（纪律 25）、
+  state.env 幂等标记、hu 在飞会话、网关进程。
