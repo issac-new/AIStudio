@@ -1,11 +1,11 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index 9c1ee227..024c8217 100644
+index a1f35714..dbbaae09 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
-@@ -749,6 +749,14 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
- }
- 
- async function launchWebUiServer(webUiDirectory: string, entry: string, env: NodeJS.ProcessEnv, port: number): Promise<string> {
+@@ -756,6 +756,14 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
+     + `Electron ${process.versions.electron || '-'}; Node ${process.versions.node}\n`
+     + `Executable: ${process.execPath}\nWeb UI: ${webUiDirectory}\nEntry: ${entry}`,
+   )
 +  // overlay[fix-window-raise]: keep the Web UI server as a normal child so its
 +  // lifecycle stays bound to the Electron parent. A previous attempt used
 +  // `detached: true` + `unref()` so a child killed by antivirus (e.g. during

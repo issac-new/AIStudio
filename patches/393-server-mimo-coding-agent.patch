@@ -721,10 +721,10 @@ index 82f31fd1..32d141ff 100644
    antigravity: 'coding',
    qwen: 'coding',
 diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
-index 8332ccd8..000d61bd 100644
+index ef7974db..2d4c4708 100644
 --- a/packages/server/src/modules/studio/contracts/runs/session.ts
 +++ b/packages/server/src/modules/studio/contracts/runs/session.ts
-@@ -169,7 +169,7 @@ export interface SessionState {
+@@ -171,7 +171,7 @@ export interface SessionState {
    queueInsertion?: QueueInsertionControl
    responseRun?: ResponseRunState
    source?: ChatRunSource
@@ -733,7 +733,7 @@ index 8332ccd8..000d61bd 100644
    webhookRoomId?: string
    webhookWorkflowId?: string
    webhookWorkflowNodeId?: string
-@@ -217,7 +217,7 @@ export interface BridgeContextState {
+@@ -219,7 +219,7 @@ export interface BridgeContextState {
  }
  
  export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'builtin_agent' | 'global_agent' | 'workflow' | 'group_chat'

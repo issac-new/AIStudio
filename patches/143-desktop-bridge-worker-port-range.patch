@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index 024c8217..6769a39a 100644
+index dbbaae09..9f1f3bc0 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
-@@ -577,7 +577,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+@@ -578,7 +578,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
  
    const isWin = process.platform === 'win32'
    const bridgePort = await getFreeTcpPort()

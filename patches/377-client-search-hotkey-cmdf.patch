@@ -30,10 +30,10 @@ index 05f9690c..47824eea 100644
        e.preventDefault()
        openSessionSearch()
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index 841e616a..53f6e40c 100644
+index 740bcfb2..0b9810fd 100644
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
-@@ -1196,7 +1196,7 @@ export default {
+@@ -1242,7 +1242,7 @@ export default {
      searchTitle: 'البحث في الجلسات',
      searchSubtitle: 'ابحث بالعنوان أو بمحتوى الرسالة',
      searchScope: 'نطاق البحث: قاعدة بيانات جلسات واجهة الويب المحلية فقط. جلسات سجل Hermes للقراءة فقط غير مضمّنة.',
@@ -43,10 +43,10 @@ index 841e616a..53f6e40c 100644
      searchEmpty: 'الجلسات الأخيرة',
      searchRecent: 'جلسة أخيرة',
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index 8d89aed1..3ff3f913 100644
+index 67a26aa5..76bc9946 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: 'Stoppen',
      speechNotSupported: 'Sprachwiedergabe in diesem Browser nicht unterstützt',
      searchEnterHint: 'Enter zum Öffnen · Esc zum Schließen',
@@ -56,10 +56,10 @@ index 8d89aed1..3ff3f913 100644
      searchFailed: 'Sitzungssuche fehlgeschlagen',
      searchNoSnippet: 'Keine Vorschau verfügbar',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index 1972e4ec..e73584ab 100644
+index 6d9166f2..b5b0f903 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: 'Detener',
      speechNotSupported: 'Reproducción de voz no soportada en este navegador',
      searchEnterHint: 'Enter para abrir · Esc para cerrar',
@@ -69,10 +69,10 @@ index 1972e4ec..e73584ab 100644
      searchFailed: 'No se pudieron buscar sesiones',
      searchNoSnippet: 'No hay resumen disponible',
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 7e1680c0..8eeb003a 100644
+index 1a03b392..291a039a 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: 'Arrêter',
      speechNotSupported: 'Reproduction vocale non prise en charge dans ce navigateur',
      searchEnterHint: 'Entrée pour ouvrir · Échap pour fermer',
@@ -82,10 +82,10 @@ index 7e1680c0..8eeb003a 100644
      searchFailed: 'Échec de la recherche de sessions',
      searchNoSnippet: 'Aucun extrait disponible',
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index f807e9d4..5889a5b4 100644
+index a058042f..32a14dab 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: '停止',
      speechNotSupported: 'このブラウザは音声読み上げをサポートしていません',
      searchEnterHint: 'Enter で開く · Esc で閉じる',
@@ -95,10 +95,10 @@ index f807e9d4..5889a5b4 100644
      searchFailed: 'セッション検索に失敗しました',
      searchNoSnippet: '表示できる要約がありません',
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 4f97d78c..6cb4a526 100644
+index c1f488f7..0ccefeec 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: '중지',
      speechNotSupported: '이 브라우저는 음성 재생을 지원하지 않습니다',
      searchEnterHint: 'Enter로 열기 · Esc로 닫기',
@@ -108,10 +108,10 @@ index 4f97d78c..6cb4a526 100644
      searchFailed: '세션 검색 실패',
      searchNoSnippet: '표시할 요약이 없습니다',
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index 40f37d5e..0907c874 100644
+index 24a5807d..da720625 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
-@@ -1271,7 +1271,7 @@ export default {
+@@ -1317,7 +1317,7 @@ export default {
      stopSpeech: 'Parar',
      speechNotSupported: 'Reprodução de voz não suportada neste navegador',
      searchEnterHint: 'Enter para abrir · Esc para fechar',
@@ -121,10 +121,10 @@ index 40f37d5e..0907c874 100644
      searchFailed: 'Falha ao pesquisar sessões',
      searchNoSnippet: 'Nenhum resumo disponível',
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index d0bf0448..960ea327 100644
+index 52b34946..a8f536dc 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
-@@ -1092,7 +1092,7 @@ export default {
+@@ -1138,7 +1138,7 @@ export default {
      searchTitle: 'Поиск сеансов',
      searchSubtitle: 'Поиск по заголовку или содержимому сообщений',
      searchScope: 'Область поиска: только локальная библиотека сеансов Web UI; сеансы истории Hermes только для чтения не включаются.',
@@ -134,10 +134,10 @@ index d0bf0448..960ea327 100644
      searchEmpty: 'Недавние сеансы',
      searchRecent: 'Недавние сеансы',
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index caecbdcb..f0545242 100644
+index f3b7c22f..a0669699 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
-@@ -1194,7 +1194,7 @@ export default {
+@@ -1240,7 +1240,7 @@ export default {
      searchTitle: '搜尋工作階段',
      searchSubtitle: '依標題或訊息內容搜尋',
      searchScope: '搜尋範圍：僅 Web UI 本地工作階段資料庫；不包含唯讀 Hermes 歷史工作階段。',

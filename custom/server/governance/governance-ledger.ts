@@ -362,20 +362,37 @@ export interface StateModelDoc {
   eventSources: Array<{ id: string; authority: string; kind: string }>
 }
 
-/** upstream kanban_db.py 提取 VALID_STATUSES / _RUN_OUTCOME_TERMINAL_STATUS（事实面，不写死）。 */
+/** upstream kanban_db.py 提取 VALID_STATUSES / _RUN_OUTCOME_TERMINAL_STATUS（事实面，不写死）。
+ * 词表来源跨版本两形态：≤v2026.9.x 为 kanban_db.py 内字面量；v0.21.x 起 kanban_db 重构，
+ * VALID_STATUSES 变为 `from ...kanban_workflow import DEFAULT_STATUSES as VALID_STATUSES`
+ * （= DEFAULT_WORKFLOW 列词表 ∪ ARCHIVED）。两条路都解析，词表漂移即守门红。 */
 export function extractKanbanStatusFacts(kanbanDbPath: string): {
   validStatuses: string[]
   runOutcomeTerminal: Record<string, string>
 } | null {
   try {
     const src = readFileSync(kanbanDbPath, 'utf8')
-    const vm = src.match(/VALID_STATUSES\s*=\s*\{([^}]*)\}/)
     const om = src.match(/_RUN_OUTCOME_TERMINAL_STATUS\s*=\s*\{([^}]*)\}/)
-    if (!vm) return null
-    const validStatuses = [...vm[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
     const runOutcomeTerminal: Record<string, string> = {}
     if (om) for (const m of om[1].matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)) runOutcomeTerminal[m[1]] = m[2]
-    return { validStatuses, runOutcomeTerminal }
+    const vm = src.match(/VALID_STATUSES\s*=\s*\{([^}]*)\}/)
+    if (vm) {
+      return { validStatuses: [...vm[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]), runOutcomeTerminal }
+    }
+    const im = src.match(/from\s+[\w.]*kanban_workflow\s+import\s+DEFAULT_STATUSES\s+as\s+VALID_STATUSES/)
+    if (im) {
+      const wfPath = resolve(kanbanDbPath, '..', 'kanban_workflow.py')
+      const wf = readFileSync(wfPath, 'utf8')
+      const start = wf.search(/^DEFAULT_WORKFLOW = Workflow\(/m)
+      const end = wf.search(/^DEFAULT_STATUSES = /m)
+      if (start >= 0 && end > start) {
+        const block = wf.slice(start, end)
+        const cols = [...block.matchAll(/Column\("([a-z_]+)"/g)].map((m) => m[1])
+        const am = wf.match(/^ARCHIVED = "([a-z_]+)"$/m)
+        if (cols.length && am) return { validStatuses: [...cols, am[1]], runOutcomeTerminal }
+      }
+    }
+    return null
   } catch {
     return null
   }

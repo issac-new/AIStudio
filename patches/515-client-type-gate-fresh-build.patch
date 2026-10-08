@@ -34,10 +34,10 @@ index e7187198..f90f502f 100644
      priorAgentMode?: 'scoped' | 'global' | ''
      profile: string
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index df98a669..440d4f34 100644
+index 7854f7a8..7dfd3478 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -252,7 +252,7 @@ const profileOptions = computed(() =>
+@@ -248,7 +248,7 @@ const profileOptions = computed(() =>
      profilesStore.profiles.map(p => ({ label: p.name, value: p.name }))
  )
  
