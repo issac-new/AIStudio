@@ -171,3 +171,69 @@ describe('瀑布级挂起（H3 理想形态：拒→挂起→批→自动续跑�
     delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
   })
 })
+
+describe('重启遗留挂起扫描（中间态：waitingAt 标记+boot 提醒）', () => {
+  it('waitingAt 生命周期：等待中置位、结束清除', async () => {
+    const s = await import('../enforce-approvals')
+    const h = s.callHashOf('t', { c: 'lifecycle' }, 'wl')
+    s.createEnforceApproval({ callHash: h, tool: 't', inputPreview: 'x', profileId: 'wl', rule: 'r', risk: 'low' })
+    process.env.HERMES_ENFORCE_SUSPEND_POLL_MS = '50'
+    const rec0 = s.listPendingEnforceApprovals(10).find((r) => r.profileId === 'wl')!
+    const waitP = s.waitEnforceDecision(h, 5000)
+    await new Promise((r) => setTimeout(r, 120))
+    // 等待中：标记在案（直接读文件核——listPending 只回 pending 面）
+    const file = (await import('fs')).readFileSync(join(storeDirOf(), 'enforce-approvals.json'), 'utf-8')
+    expect(file).toContain('"waitingAt"')
+    s.decideEnforceApproval(rec0.id, 'approve', 'wl-qa')
+    await waitP
+    const file2 = (await import('fs')).readFileSync(join(storeDirOf(), 'enforce-approvals.json'), 'utf-8')
+    expect(file2).not.toContain('"waitingAt"')
+    delete process.env.HERMES_ENFORCE_SUSPEND_POLL_MS
+  }, 6000)
+
+  it('boot 扫描：遗留 waitingAt→govbus 提醒+清标记（幂等）；无标记单不报', async () => {
+    const { writeFileSync, mkdirSync, readFileSync } = await import('fs')
+    const govDir = `/tmp/gov-boot-${process.pid}-${Date.now()}`
+    process.env.HERMES_GOV_EVENT_DIR = govDir
+    try {
+      // 模拟崩溃现场：store 里留一张 waitingAt 在案的单
+      const h = s_hashOf('t', { c: 'crash' }, 'crash-profile')
+      writeStoreRaw({ seq: 1, records: { [`enf:${h.slice(0, 12)}`]: {
+        id: `enf:${h.slice(0, 12)}`, callHash: h, tool: 'terminal_exec', inputPreview: 'rm -rf /tmp/q',
+        profileId: 'crash-profile', rule: 'mode-needs-approval', risk: 'high',
+        status: 'pending', createdAt: Date.now() - 60_000, waitingAt: Date.now() - 30_000,
+      } } })
+      const s = await import('../enforce-approvals')
+      const n1 = await s.reportLostSuspensionsOnBoot()
+      expect(n1).toBe(1)
+      const { queryGovEvents } = await import('../../govbus/event-log')
+      const ev = queryGovEvents({ domain: 'approval' })[0]
+      expect(ev?.type).toBe('tool.enforce_suspend_lost')
+      expect(ev?.summary).toContain('仍在收件箱')
+      // 幂等：标记已清，再扫不重报
+      const n2 = await s.reportLostSuspensionsOnBoot()
+      expect(n2).toBe(0)
+      expect(readFileSync(join(storeDirOf(), 'enforce-approvals.json'), 'utf-8')).not.toContain('"waitingAt"')
+    } finally {
+      delete process.env.HERMES_GOV_EVENT_DIR
+      const { rmSync } = await import('fs')
+      rmSync(govDir, { recursive: true, force: true })
+    }
+  })
+})
+
+// 测试助手：直写 store 文件（模拟崩溃现场）与目录定位
+function storeDirOf(): string {
+  return process.env.HERMES_ENFORCE_APPROVALS_DIR!
+}
+import { join } from 'node:path'
+import { writeFileSync as _wf, mkdirSync as _md } from 'node:fs'
+function writeStoreRaw(shape: unknown): void {
+  _md(storeDirOf(), { recursive: true })
+  _wf(join(storeDirOf(), 'enforce-approvals.json'), JSON.stringify(shape, null, 2))
+}
+import { createHash } from 'node:crypto'
+function s_hashOf(tool: string, input: Record<string, unknown>, profileId: string): string {
+  const canonical = JSON.stringify(Object.keys(input).sort().reduce<Record<string, unknown>>((a, k) => { a[k] = input[k]; return a }, {}))
+  return createHash('sha256').update(`${profileId} ${tool} ${canonical}`).digest('hex')
+}
