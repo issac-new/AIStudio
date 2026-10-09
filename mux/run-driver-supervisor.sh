@@ -29,6 +29,28 @@ STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 LOGS="$SIM_ROOT/logs"
 STOPFLAG="$SIM_ROOT/var/$RUN_ID-supervisor.stop"
 LOCKDIR="$SIM_ROOT/.driver.lock.d"
+# 监控事件面（2026-10-09 任务层清杀 harness 后台任务实录后并入）：每周期把
+# issues 新行/驱动错误行/服务健康落到 monitor-events.log——harness 任务全灭时，
+# 监控证据仍在，任何一次唤起都能对账追平。
+MEV="$LOGS/$RUN_ID-monitor-events.log"
+_mev_prev_issues=0; _mev_prev_drv=0
+[ -f "$MEV" ] && { _mev_prev_issues=$(sed -n 's/^PREV_ISSUES=//p' "$MEV" | tail -1); _mev_prev_drv=$(sed -n 's/^PREV_DRV=//p' "$MEV" | tail -1); }
+
+monitor_events() {
+  ISS="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"; DRVL="$LOGS/$RUN_ID-driver.log"
+  ni=$(wc -l < "$ISS" 2>/dev/null | tr -d ' ' || echo 0); nd=$(wc -l < "$DRVL" 2>/dev/null | tr -d ' ' || echo 0)
+  if [ "${ni:-0}" -gt "${_mev_prev_issues:-0}" ]; then
+    tail -n $(( ni - _mev_prev_issues )) "$ISS" 2>/dev/null | while IFS= read -r l; do echo "[mev $(date '+%T')] ISSUE+ $l" >> "$MEV"; done
+  fi
+  if [ "${nd:-0}" -gt "${_mev_prev_drv:-0}" ]; then
+    tail -n $(( nd - _mev_prev_drv )) "$DRVL" 2>/dev/null | grep -E "FAIL|✗|Traceback|硬窗|Terminated" | while IFS= read -r l; do echo "[mev $(date '+%T')] DRV! $l" >> "$MEV"; done
+  fi
+  _mev_prev_issues=$ni; _mev_prev_drv=$nd
+  echo "PREV_ISSUES=$ni" >> "$MEV"; echo "PREV_DRV=$nd" >> "$MEV"
+  gw=$(curl -s -o /dev/null -w "%{http_code}" -m 8 "http://127.0.0.1:8801/health" 2>/dev/null)
+  [ "$gw" != "200" ] && echo "[mev $(date '+%T')] SVC gateway=$gw" >> "$MEV"
+  return 0
+}
 
 note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
 
@@ -54,6 +76,7 @@ while true; do
     fi
   done
   if [ -n "$DPIDS" ] && echo "$DPIDS" | grep -q ":${MYPGID}$"; then
+    monitor_events
     sleep 15
     continue
   fi
