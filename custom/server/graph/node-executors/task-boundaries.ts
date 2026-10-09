@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { composeBoundary, requirementsFrom, type AgentCapabilities } from './capability-composer'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -59,6 +60,18 @@ export function setBoundaryRegistry(roles: BoundaryTemplate[]): void {
   registry = roles.length > 0 ? roles : BUILTIN_ROLES
 }
 
+// ── 方案2 M2/M3：能力声明合成层（specs/2026-10-09-agent-capability-boundaries.md）──
+// 派发侧解析链升级：任务显式 boundaryRole（模板地板）> 能力声明否定式合成（若命中）
+// > agent 覆盖表 > 形状推导 > generic。合成条款叠加在模板地板之上（宁紧勿松：合成
+// 只增禁令不放松）。capabilitiesProvider 由装配层注入（读治理注册表 agent-capabilities）。
+let capabilitiesProvider: ((assignee: string | undefined) => AgentCapabilities | undefined) | null = null
+
+export function setCapabilitiesProvider(
+  fn: ((assignee: string | undefined) => AgentCapabilities | undefined) | null,
+): void {
+  capabilitiesProvider = fn
+}
+
 export function setAgentRoleOverrides(map: Record<string, string>): void {
   agentRoleOverrides = map
 }
@@ -84,6 +97,20 @@ export const ROLE_BOUNDARIES: Record<string, string> = new Proxy({}, {
 }) as Record<string, string>
 
 const MARK = '【边界纪律】'
+
+/** 派发边界合成入口（执行器唯一调用面）：模板地板 + 能力声明否定式条款（宁紧勿松） */
+export function applyBoundary(
+  brief: string,
+  cfg: { boundaryRole?: string; output?: string; branchHint?: string; assignee?: string },
+  kind: 'task' | 'review' | 'test',
+): string {
+  const base = (brief ?? '').trim()
+  if (base.includes(MARK)) return base
+  const floor = boundaryTextFor(deriveBoundaryRole(cfg, kind))
+  const extra = composeBoundary(requirementsFrom(cfg, kind), capabilitiesProvider?.(cfg.assignee))
+  const clause = extra ? `${floor}${extra}` : floor
+  return base ? `${base}\n\n${MARK}${clause}` : `${MARK}${clause}`
+}
 
 /** 幂等注入：brief 已含边界标记则原样返回（防重复叠加） */
 export function withBoundary(brief: string, role: string): string {
