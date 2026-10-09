@@ -40,7 +40,7 @@ index 3441a086..ba3aaaec 100644
        workspace: workspace.value,
        branch: branch.value,
        triage: triage.value,
-@@ -997,3 +1000,324 @@ export async function searchSessions(ctx: Context) {
+@@ -997,3 +1000,349 @@ export async function searchSessions(ctx: Context) {
      ctx.body = { error: err.message }
    }
  }
@@ -78,6 +78,26 @@ index 3441a086..ba3aaaec 100644
 +    const board = ctx.query.board as string | undefined
 +    const body = (ctx.request.body as any) || {}
 +    const result = await kanbanCli.decomposeTask(taskId, { board, author: body.author })
++    ctx.body = { result }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++// HERMES_CUSTOM[estimate-rest]（团队并行三期）：POST /:id/estimate
++// body {days?: number, persist?: boolean}——days 直设人日（跳过 LLM），或
++// persist=true 跑 LLM 估算并落库。二选一，驱动 workload 加权派发。
++export async function estimateTask(ctx: Context) {
++  try {
++    const taskId = ctx.params.id
++    const board = ctx.query.board as string | undefined
++    const body = (ctx.request.body as any) || {}
++    const result = await kanbanCli.estimateTask(taskId, {
++      board,
++      days: typeof body.days === 'number' ? body.days : undefined,
++      persist: body.persist === true,
++    })
 +    ctx.body = { result }
 +  } catch (err: any) {
 +    ctx.status = 500

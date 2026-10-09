@@ -285,6 +285,9 @@ _SPECS = [
         _arg("--persist", action="store_true",
              help="Persist the estimate onto the card (person-days + metadata; "
                   "requires task_id; consumed by workload-weighted dispatch)"),  # HERMES_CUSTOM[estimate]
+        _arg("--days", type=float,
+             help="Direct person-day override (skip the LLM estimate; requires "
+                  "task_id; implies persist)"),  # HERMES_CUSTOM[estimate-days]
     ], help="Rough token + complexity estimate via the auxiliary model"),
     _cmd("reclaim", [_TASK_ID, _RECLAIM_REASON], help="Release an active worker claim on a running task"),
     _cmd("reassign", [
