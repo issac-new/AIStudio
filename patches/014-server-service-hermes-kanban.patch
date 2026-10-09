@@ -52,7 +52,7 @@ index 2a3614bd..52060557 100644
    if (opts?.workspace) args.push('--workspace', opts.workspace)
    if (opts?.branch) args.push('--branch', opts.branch)
    if (opts?.triage) args.push('--triage')
-@@ -771,3 +777,285 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
+@@ -771,3 +777,290 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
      throw new Error(`Failed to get kanban assignees: ${err.message}`)
    }
  }
