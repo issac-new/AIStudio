@@ -1,0 +1,11 @@
+name: style-charter
+version: "1.0.0"
+description: >
+  Controlled-writing charter for every agent output (chat replies, room
+  messages, kanban cards, commit messages, deliverable docs). Registers one
+  frozen system-prompt section ("after_memory") from the style-charter.md
+  beside this manifest. Principles: ASD-STE100 controlled language plus
+  plain-language technical writing. Fixes the global jargon / jumpy / AI-tone
+  problem reported in full-flow runs.
+author: SwarmStudio overlay
+kind: backend
