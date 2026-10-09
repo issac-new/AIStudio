@@ -1,0 +1,5 @@
+{
+  "$schema": "agent-role-overrides",
+  "comment": "per-agent 角色覆盖表（解析链第二优先级：任务显式标注 > 本表[assignee] > 产物形状推导）。分布式 fleet 的长期态=org 注册表端点联动（见 specs/2026-10-09-agent-capability-boundaries.md），本文件是过渡承载。",
+  "assignees": {}
+}
