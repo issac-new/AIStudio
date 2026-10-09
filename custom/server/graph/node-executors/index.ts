@@ -155,6 +155,8 @@ export class HttpKanbanBridge implements KanbanBridge {
 // 节点执行器注册
 // ============================================================================
 
+import { withBoundary, deriveBoundaryRole } from './task-boundaries'
+
 export interface SimulationNodeOpts {
   bridge?: KanbanBridge
   /** agent-task 等卡轮询间隔 ms（缺省 15s；测试注小值） */
@@ -256,7 +258,9 @@ export function registerSimulationNodeTypes(
         const ref = await bridge.createTask({
           title,
           body: {
-            brief: cfg.brief ?? '',
+            // 边界纪律注入（过度交付盘查根因③产品化）：任务书按角色自动附加边界条款，
+            // 幂等（模板/bash 侧已带标记则不叠加）——run12 fanfan 越界实锤的结构性补口
+            brief: withBoundary(cfg.brief ?? '', deriveBoundaryRole(cfg, kind)),
             estimate_days: cfg.estimateDays,
             acceptance: cfg.acceptance,
             branch_hint: cfg.branchHint,
