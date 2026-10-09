@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 04847ed0..7f019e74 100644
+index 8fa9cb3..ef8c806 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -62,6 +62,10 @@ export interface KanbanTask {
@@ -70,7 +70,7 @@ index 04847ed0..7f019e74 100644
    for (const skill of opts?.skills || []) {
      if (skill.trim()) args.push('--skill', skill.trim())
    }
-@@ -833,6 +859,13 @@ export interface KanbanTaskPatchOptions extends KanbanBoardOptions {
+@@ -862,6 +888,13 @@ export interface KanbanTaskPatchOptions extends KanbanBoardOptions {
    result?: string
    block_reason?: string
    summary?: string
@@ -84,7 +84,7 @@ index 04847ed0..7f019e74 100644
  }
  
  export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions): Promise<KanbanTask | null> {
-@@ -865,6 +898,22 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+@@ -894,6 +927,22 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
    if (patch.priority !== undefined) {
      await bulkUpdateTasks({ ids: [taskId], priority: patch.priority, board })
    }
@@ -107,10 +107,10 @@ index 04847ed0..7f019e74 100644
    // For title/body edits, we don't have a direct CLI verb — use create+replace pattern
    // is not available, so title/body edits fall back to re-fetching.
    return (await getTask(taskId, { board }))?.task || null
-@@ -1054,3 +1103,100 @@ function parseDotEnv(raw: string): Record<string, string> {
-   }
-   return env
- }
+@@ -1078,3 +1127,83 @@ function parseDotEnv(raw: string): Record<string, string> {
+     // Strip surrounding quotes
+     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+       val = val.slice(1, -1)
 +
 +// ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project ────────
 +
@@ -123,24 +123,6 @@ index 04847ed0..7f019e74 100644
 +  reason?: string
 +}
 +
-+/**
-+ * Rough token + complexity estimate for an existing task via the agent's
-+ * auxiliary model (`hermes kanban estimate <id> --json`, patch 178). A non-OK
-+ * outcome is carried in the payload (exit code stays 0), never thrown.
-+ */
-+export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
-+  try {
-+    const { stdout } = await execHermes([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
-+      maxBuffer: 1024 * 1024,
-+      timeout: 90000,
-+      ...execOpts,
-+    })
-+    return JSON.parse(stdout.trim())
-+  } catch (err: any) {
-+    logger.error(err, 'Hermes CLI: kanban estimate failed')
-+    return { ok: false, reason: `estimate unavailable: ${err.message}` }
-+  }
-+}
 +
 +/**
 + * Estimate from raw title/body — used by the create dialog before a task
@@ -208,3 +190,4 @@ index 04847ed0..7f019e74 100644
 +}
 +
 +// ─── HERMES_CUSTOM[v020] END ──────────────────────────────────
++
