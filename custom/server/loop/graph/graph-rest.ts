@@ -11,6 +11,7 @@ import type { GraphService } from './graph-service'
 import type { EventLogStore, GraphLogEvent } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
+import { appendContractsById } from './phase-nodes'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -323,7 +324,9 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     }
     if (spec.origin === undefined) spec.origin = 'editor'
     try {
-      validateGraphSpec(spec)
+      // 与引擎内部调用方（compiler/shadow/assembly）同参：appendById 等领域 reducer
+      // 经第三参注入——缺此参则模板系 spec（analysis_docs/dev_branches 通道）恒 400
+      validateGraphSpec(spec, { appendById: appendContractsById })
     } catch (err) {
       ctx.status = 400
       ctx.body = { error: err instanceof Error ? err.message : String(err) }
