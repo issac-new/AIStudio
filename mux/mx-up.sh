@@ -29,6 +29,20 @@ fi
 
 # ── 单 gateway（multiplex 全部 profile）────────────────
 preflight_capacity_assert   # run11 左移件 a：容量类故障起跑前拒绝（并发闸/年龄锚双断言）
+
+# ── 推演期防休眠（提速方案⑥ 2026-10-09：04:55 主机重启事故后加护栏——睡眠/电源类
+#    中断是每轮最大非计划损耗；caffeinate -dims 阻止显示器/磁盘/系统睡眠，收口后 kill）──
+if ! pgrep -f "caffeinate -dims" >/dev/null 2>&1; then
+  nohup caffeinate -dims >/dev/null 2>&1 &
+  log "caffeinate -dims 已拉起（pid $!，推演期防休眠）"
+fi
+
+# ── 负载预检（提速方案⑤：外部负载竞争拖垮网关健康窗与 agent 工具调用——run12
+#    04:38 实测 loadavg 786 时 /health 10s 无应答。超阈值仅告警不拒跑，MX_LOAD_WARN 可调）──
+load_1m=$(uptime | sed -E 's/.*load averages?: ([0-9.]+).*/\1/')
+if [ -n "$load_1m" ] && awk "BEGIN{exit !($load_1m > ${MX_LOAD_WARN:-200})}"; then
+  log "负载预检告警：1 分钟负载均值 ${load_1m} 超阈值 ${MX_LOAD_WARN:-200}——外部负载竞争显著拖慢推演，建议错峰 armada/Docker 构建等重负载"
+fi
 if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
