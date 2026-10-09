@@ -61,7 +61,7 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
     {
       id: `coding-${p}`,
       type: 'agent-task',
-      config: { task: `开发 ${moduleName}`, assignee, skill: 'xxx-dev',
+      config: { task: `开发 ${moduleName}`, assignee, skill: 'aipaydev-dev',
         output: `feat/DEV-${moduleName.toUpperCase()}`,
         boundaryRole: 'dev',
         gate: { tests: '≥6', coverage: '分支覆盖', style: 'snake_case' } },
