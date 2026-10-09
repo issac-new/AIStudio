@@ -11,11 +11,13 @@
 // ——run12 实锤：fanfan 预写越界为全域集成者、chen 分析段写实现码、fei 预备轮建 worktree 跑测试。
 
 import { readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { composeBoundary, requirementsFrom, type AgentCapabilities } from './capability-composer'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
+// __dirname 双运行时口径（squad-protocol/semantica-client 先例）：server tsconfig 为
+// commonjs，import.meta 不可用（TS1343）；vitest 的 SSR 转换注入 __dirname。esbuild
+// 打包产物下 JSON 不随包时走 BUILTIN_ROLES 兜底（readJsonArray miss=null 既有语义）。
+const HERE = __dirname
 
 export type BoundaryRole = 'analyst' | 'dev' | 'reviewer' | 'tester' | 'governance' | 'generic'
 
