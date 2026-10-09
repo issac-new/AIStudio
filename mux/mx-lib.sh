@@ -691,8 +691,14 @@ if mu:
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
+# 共享线程提及门（2026-10-09 run12 碎聊根治）：群根消息的 require_mention 上游默认
+# 已开，但多 bot 共享线程内任何参与者的回复会经 in_bot_thread 旁路唤醒所有参与者，
+# thread_require_mention 默认关=回声环洞（run12 实证：末 11 条房间消息 10 条为线程
+# 回复互唤，「（静默）/待命」回执自续环；带此旗的 hu/chen 交付正常、未带的 lin/xiao
+# 陷环）。双旗显式落=防上游默认漂移。驱动侧唤醒路径（派发/催办/回灌）全带 @提及
+# 或 m.mentions（mx_send 第 4 参），协议不破；DM 天然豁免。
 out['platforms'] = {
-    'matrix': {'enabled': True},
+    'matrix': {'enabled': True, 'require_mention': True, 'thread_require_mention': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
 # background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
@@ -720,6 +726,8 @@ MATRIX_USER_ID=$(agent_mxid "$u")
 MATRIX_ALLOWED_USERS=$HUMANS,$AGENTS
 MATRIX_E2EE_MODE=off
 MATRIX_AUTO_THREAD=true
+MATRIX_REQUIRE_MENTION=true
+MATRIX_THREAD_REQUIRE_MENTION=true
 MATRIX_APPROVAL_TIMEOUT_SECONDS=1800
 API_SERVER_KEY=$api_key
 MATRIX_ROOM_OBSERVERS=${MATRIX_ROOM_OBSERVERS:-@admin:$SERVER_NAME}
