@@ -81,6 +81,19 @@ mux/unified-report-layer.py —— 只读叠加后处理层（不动 mx-report-g
   守门 tests/unified-report-layer.test.ts 4 测（内嵌 fixture 不依赖在架轮次），套件 98/98 绿。
 - 用法：python3 mux/unified-report-layer.py --run <RUN_ID> [--sim-root <path>]；幂等可重跑。
 
+## 过度交付盘查与守卫（2026-10-09 用户"A+C"决议）
+
+盘查实证（run12）：fanfan 预写越界为全域集成者（main 合并高速路+代写渠道测试 T02/T03）、
+chen 分析段内提交实现码（T01/T05）、fei 预备轮违反两条禁做（建 worktree 跑测试提交报告）、
+xiao/hu/lin 分支协议违反（worktree/T 号交付，feat/DEV-* 永不出现）、提交粒度 24-26/支 vs 口径 2-6、
+fei 预备轮 721 次工具调用。run11 对照：预写/预备机制未触发（design-prewrite-skipped×2）——
+过度交付是流水线左移引入的新病（给了"提前动手"许可、没给边界清单）。
+
+处置：A=运行中回灌（4 笔送达，event_id 见 issues.log DISP|over-delivery-refeed）；
+C=守卫固化 patch（mux/run13-boundary-guards.patch，下轮套用）：六路任务书加边界纪律条款
+（仅 feat/* 交付、禁直推 main、禁代做）、预写任务加禁做围栏、预备轮"不建分支"补 worktree
+漏洞、devimpl 入口记 main 基线+段末 main 污染反查（ISSUE|main-pollution）+提交粒度观察项。
+
 ## 质量补强（2026-10-09 用户"不牺牲质量"审计指令）
 
 - **硬窗档位放大**（mx-scenario-lib.sh）：下限 7200s 不变，idle>900 的长等待档×8 放大

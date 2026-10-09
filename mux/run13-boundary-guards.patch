@@ -1,0 +1,90 @@
+--- a/aipay-scenario.sh
++++ b/aipay-scenario.sh
+@@ -755,6 +755,12 @@
+ 
+ # ══ 步骤 16：开发实施（真实编码，run11 触发链：独立即派+依赖随上游落地派）═══
+ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
++  # 越界守卫（C 方案 2026-10-09 过度交付盘查）：记录本段入口的 origin/main 基线，
++  # 段末反查 main 是否被 DEV 域提交污染（run12 fanfan 合并高速路实锤）。
++  if [[ -z "$(sget devimpl_main_base)" ]]; then
++    repo_pull
++    sset devimpl_main_base "$(git -C "$DIRECTOR_CLONE" rev-parse origin/main)"
++  fi
+   note "── devimpl：六路齐发（提速② 2026-10-09）——DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX/DEV-CHALI 同刻即派；渠道独立部分先行，契约件分支落地后 rebase 对接（废除契约件锚等待，run11 §4.2/纪律 27⑥ 语义保留）"
+   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
+   # ACP 编码后端 L1（MX_ACP_BACKEND=1 启用，缺省关=保真对照轮）：DEV 派发词声明
+@@ -772,25 +778,25 @@
+ 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
+ 1) git checkout -b feat/DEV-PAYCORE-C
+ 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
+-3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
++3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+ 
+     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+ 工作区 $(workspace chen)（先 git fetch）。
+ 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
+ 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
+-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
++3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+ 
+     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+ 工作区 $(workspace chen)（先 git fetch）。
+ 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
+ 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
+-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
++3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+ 
+     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+ 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
+ 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
+ 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
+-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
++3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+     sset devimpl_d1 1
+   fi
+ 
+@@ -804,11 +810,11 @@
+     dispatch_in_room qi "@qi-agent:matrix.test 【测试预备轮（流式流水线，不执行不交付）】开发四路编码进行中，集成分支尚未建立。请现在做测试预备：
+ 1) 工作区 $(workspace qi)：git pull origin main，读 docs/design/${RFD_ID}-architecture-design.md 契约与冻结 AC
+ 2) 按概设契约起草后端集成测试用例（下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单）到 test-drafts/TEST-BE-draft.md（每条：步骤+断言+所需夹具，标注对应契约条目）
+-3) 附测试环境预备说明（依赖安装/运行入口/mock 端点）。不执行测试、不建分支、不 push。正式执行任务书稍后另发（届时以集成分支为准核对用例后执行）。无需结论行，完成即止。" "$(agent_mxid qi),$(agent_mxid wei)"
++3) 附测试环境预备说明（依赖安装/运行入口/mock 端点）。不执行测试、不建分支（含 worktree）、不 push（run12 fei 越界实锤：建 worktree 跑测试提交报告）。正式执行任务书稍后另发（届时以集成分支为准核对用例后执行）。无需结论行，完成即止。" "$(agent_mxid qi),$(agent_mxid wei)"
+ 
+     dispatch_in_room fei "@fei-agent:matrix.test 【测试预备轮（流式流水线，不执行不交付）】开发四路编码进行中，集成分支尚未建立。请现在做测试预备：
+ 1) 工作区 $(workspace fei)：git pull origin main，读 docs/design/${RFD_ID}-architecture-design.md 契约
+-2) 起草收银台前端逻辑层测试用例（支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态）到 test-drafts/TEST-FE-draft.md（每条：步骤+断言）。不执行测试、不建分支、不 push。正式执行任务书稍后另发。无需结论行，完成即止。" "$(agent_mxid fei),$(agent_mxid mei)"
++2) 起草收银台前端逻辑层测试用例（支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态）到 test-drafts/TEST-FE-draft.md（每条：步骤+断言）。不执行测试、不建分支（含 worktree）、不 push（run12 fei 越界实锤：建 worktree 跑测试提交报告）。正式执行任务书稍后另发。无需结论行，完成即止。" "$(agent_mxid fei),$(agent_mxid mei)"
+     sset test_prep_d1 1
+     note "[流水线] 测试预备轮已派（用例前移，纪律 27②）"
+   fi
+@@ -826,7 +832,7 @@
+       dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+ 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
+ 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
+-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
++2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+     done
+     sset devimpl_d2 1
+   fi
+@@ -845,6 +851,21 @@
+     "origin 出现 feat/DEV-PAYCORE-S 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-S" \
+     "origin 出现 feat/DEV-PAYCORE-N 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-N" \
+     || { for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
++  # 越界守卫：main 污染反查 + 提交粒度观察（过度交付盘查 C 件）
++  _mb="$(sget devimpl_main_base)"
++  if [[ -n "$_mb" ]]; then
++    _poll=$(git -C "$DIRECTOR_CLONE" log --format="%h|%an|%s" "$_mb"..origin/main -- apps/ docs/evidence/ 2>/dev/null | head -5)
++    if [[ -n "$_poll" ]]; then
++      note "[观察] origin/main 在开发段被直接推进（${_poll}）——记 main 污染问题单（集成应走 defect 步导演职权）"
++      echo "ISSUE|main-pollution|devimpl|开发段 origin/main 出现 DEV 域直推提交（首条：$(echo "$_poll" | head -1 | cut -d'|' -f1-3)）" >> "$EVID_DIR/issues.log"
++    fi
++  fi
++  for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
++    if git -C "$DIRECTOR_CLONE" show-ref --verify --quiet refs/remotes/origin/feat/$b; then
++      _n=$(git -C "$DIRECTOR_CLONE" rev-list --count origin/main..origin/feat/$b 2>/dev/null || echo 0)
++      (( _n > 12 )) && note "[观察] $b 提交粒度 ${_n} 个（任务书口径 2-6）——过度细分/返修循环观察项，记台账不判负"
++    fi
++  done
+   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）；
+   # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单
+   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
