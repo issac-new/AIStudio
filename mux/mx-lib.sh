@@ -362,6 +362,7 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
   HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$GW_PORT" GATEWAY_PORT="$GW_PORT" \
   HERMES_BIN="$HERMES_BIN" API_SERVER_KEY="$api_key" \
+  GRAPH_ENGINE="${MX_GRAPH_ENGINE:-shadow}" \
     nohup node "$STUDIO_DIST/server/index.js" > "$LOGS_DIR/studio.log" 2>&1 & \
   echo $! > "$PIDS_DIR/studio.pid" )
   local deadline=$(( $(date +%s) + 120 ))
