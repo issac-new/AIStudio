@@ -231,15 +231,6 @@ index 027cb1c5..27a29a13 100644
        const parsed = JSON.parse(stdout.trim())
        subs = Array.isArray(parsed) ? parsed : []
      } catch {
-@@ -1248,7 +1287,7 @@ export interface KanbanEstimateResult {
-  */
- export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
-   try {
--    const { stdout } = await execHermes([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
-+    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
-       maxBuffer: 1024 * 1024,
-       timeout: 90000,
-       ...execOpts,
 @@ -1268,7 +1307,7 @@ export async function estimateText(title: string, body?: string, opts?: KanbanBo
    const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
    pushOptional(args, '--body', body)
