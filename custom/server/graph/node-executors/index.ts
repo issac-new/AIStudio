@@ -166,6 +166,13 @@ export interface SimulationNodeOpts {
   /** 等卡默认超时 ms（缺省 4h，对齐模板 limits.maxDurationMs） */
   taskTimeoutMs?: number
   log?: (msg: string) => void
+  /**
+   * report-gen 注入表（三期）：key=节点 config.command（缺省 'reportGen'）。
+   * 未注入或 key 未命中时走默认建卡报告器（bridge 建「报告编写」卡+等完成，
+   * 产品语义=五类工作面之「报告编写」）；桥=DryRun 时即建即完（shadow 冒烟）。
+   * harness/CLI 侧生成器经此注入，不必改本文件。
+   */
+  reportFns?: Record<string, (state: unknown, ctx: unknown) => Promise<NodeResult>>
 }
 
 interface AgentTaskConfig {
@@ -321,13 +328,42 @@ export function registerSimulationNodeTypes(
     id: config.id as string,
     type: 'function' as const,
     label: (config.label as string) ?? (config.id as string),
-    execute: async (_state: unknown, ctx: { deps: { fnTable?: Record<string, unknown> } }): Promise<NodeResult> => {
+    execute: async (_state: unknown, ctx: { threadId: string; deps?: { fnTable?: Record<string, unknown> } }): Promise<NodeResult> => {
       const name = (config.command as string) ?? 'reportGen'
-      const fn = ctx.deps?.fnTable?.[name]
-      if (typeof fn !== 'function') {
-        throw new Error(`report-gen '${config.id}': deps.fnTable['${name}'] 未接线（报告生成器属 harness 侧，图执行轮接 CLI）`)
+      // 三层解析（三期）：注入表（reportFns）→ 运行时 deps.fnTable → 默认建卡报告器。
+      // 默认=「报告编写」工作卡（五类工作面之一）：建卡+等完成，与 agent-task 同真值
+      // 口径；DryRun 桥即建即完。彻底未接线（无桥场景不可能，保留兜底）才大声失败。
+      const injected = opts.reportFns?.[name]
+      if (typeof injected === 'function') {
+        return injected(_state, ctx)
       }
-      return (fn as (s: unknown, c: unknown) => Promise<NodeResult>)(_state, ctx)
+      const dynFn = ctx.deps?.fnTable?.[name]
+      if (typeof dynFn === 'function') {
+        return (dynFn as (s: unknown, c: unknown) => Promise<NodeResult>)(_state, ctx)
+      }
+      const id = config.id as string
+      const cfg = config as { format?: string; output?: string; assignee?: string; title?: string }
+      const ref = await bridge.createTask({
+        title: cfg.title ?? `final report (${cfg.format ?? 'html'})`,
+        body: {
+          brief: `生成终态报告（format=${cfg.format ?? 'html'}，output=${cfg.output ?? 'final-report.html'}）。`
+            + ' 报告编写纪律：按轮注册表取模板，产物落 evidence 目录，结论行如实。',
+          format: cfg.format ?? 'html',
+          output: cfg.output ?? 'final-report.html',
+          graph_node: `${ctx.threadId}:${id}`,
+        },
+        assignee: cfg.assignee,
+        idempotencyKey: `graph_node:${ctx.threadId}:${id}`,
+      })
+      log?.(`report-gen '${id}': report card ${ref.id} created (bridge=${bridge.constructor.name})`)
+      const done = await waitForCard(bridge, ref.id, poll, `report-gen '${id}'`, log)
+      return {
+        update: {
+          [(config.channel as string) ?? 'report.gen']: [
+            { node: id, task: done.id, format: cfg.format ?? 'html', ts: Date.now() },
+          ],
+        } as unknown as StateUpdate,
+      }
     },
     timeout: (config.timeoutMs as number) ?? 600_000,
   }))
