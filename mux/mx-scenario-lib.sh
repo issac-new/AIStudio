@@ -581,6 +581,25 @@ _any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
   return 1
 }
 
+# 干预点 B（2026-10-09）：长等待进度锚——等待环每轮调 MX_PROGRESS_FN（缺省关），
+# 本函数 180s 节流出一行「分支 commit 计数 + PROGRESS 中间锚」推进行进 scenario.log，
+# 根治"长编码 4h 静默盲窗"（run12 MP/CHWX/CHALI 实录：三腿全程零推进信号）。
+dev_progress_ping() {
+  local now last f b n line pg
+  f="$EVID_DIR/progress-ping.ts"; now=$(date +%s)
+  last=$(cat "$f" 2>/dev/null || echo 0)
+  (( now - last < 180 )) && return 0
+  echo "$now" > "$f"
+  line=""
+  for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-MP DEV-CHWX DEV-CHALI; do
+    n=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/feat/$b" 2>/dev/null || echo 0)
+    line="$line $b=$n"
+  done
+  pg=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 60 2>/dev/null \
+       | jq -r '[.[] | (.content.body // "") | scan("PROGRESS-[A-Za-z0-9-]+")] | flatten | unique | join(" ")' 2>/dev/null || true)
+  note "[进度锚] 分支 commit 计数：$line；PROGRESS-ANCHORS=${pg:-无}"
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   # 总时长硬窗（纪律 26 兜底，2026-10-09 提速轮根治）：idle 判据可被"房间噪音持续
@@ -609,6 +628,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+    [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
     cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
@@ -674,6 +694,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
   for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+    [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
     all_done=1
     for i in "${!exprs[@]}"; do
       (( done_flag[$i] == 1 )) && continue

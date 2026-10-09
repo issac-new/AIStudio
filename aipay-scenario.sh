@@ -787,6 +787,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
@@ -824,6 +825,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
                 "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
       IFS='|' read -r who task app chan <<< "$spec"
       dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
 2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
@@ -832,6 +834,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   fi
 
   # 契约件锚（提速② 后降级为观察锚：渠道已先行，S/N rebase 链与集成仍以契约为准）
+  MX_PROGRESS_FN=dev_progress_ping   # 干预点 B：长等待进度锚（180s 节流出推进行，根治静默盲窗）
   wait_alive_truth "origin 出现 feat/DEV-PAYCORE-C 契约件分支（S/N rebase 锚+集成依据）" 1800 chen branch_fresh "feat/DEV-PAYCORE-C" \
     || { note "[观察] DEV-PAYCORE-C 契约件未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE-C|契约件分支未推送" >> "$EVID_DIR/issues.log"; }
   # 并发多锚等待（run11 根治③：串行 for 令滞后锚的催办排队——lin 沉睡 125min 实锤）
@@ -845,6 +848,16 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     "origin 出现 feat/DEV-PAYCORE-S 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-S" \
     "origin 出现 feat/DEV-PAYCORE-N 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-N" \
     || { for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
+  unset MX_PROGRESS_FN
+  # 干预点 A 机械巡检（纪律 31 落地）：>1 人日腿拆分交付证据=分支 ≥2 commit（子件逐件提交）；
+  # 单 commit=拆分证据缺失记单不阻断——机械验收替代自觉，下轮派发词据此回灌收紧。
+  for b in DEV-MP DEV-CHWX DEV-CHALI; do
+    _sc=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/feat/$b" ^origin/main 2>/dev/null || echo 0)
+    if (( _sc < 2 )); then
+      echo "ISSUE|split-evidence-missing|$b|分支仅 ${_sc} commit（>1 人日腿按纪律 31 应逐子件提交，拆分证据缺失）" >> "$EVID_DIR/issues.log"
+      note "[观察] $b 拆分证据缺失（分支 ${_sc} commit，纪律 31 巡检记单）"
+    fi
+  done
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）；
   # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
@@ -962,14 +975,16 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
-3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。" "$(agent_mxid qi),$(agent_mxid wei)")
+3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
+干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$_m19" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
 
     dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
-2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。" "$(agent_mxid fei),$(agent_mxid mei)"
+2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
+干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
     sset defect_dispatched 1
   fi
 

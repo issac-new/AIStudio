@@ -1169,3 +1169,42 @@ describe('㉒ 受控写作条款分发（真源/插件/manifest/幂等换装）'
     expect(get('SWAP_BEGIN=')).toBe('1')                       // 新版唯一
   })
 })
+
+describe('㉔ 干预点四件（2026-10-09：拆卡巡检/PROGRESS 中间锚/骨架前移/进度可见性——长编码静默盲窗根治）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
+  const SCEN = join(HARNESS, 'aipay-scenario.sh')
+  const LIB = join(HARNESS, 'mux', 'mx-scenario-lib.sh')
+  it('B：DEV/TEST 任务书含增量 push+PROGRESS 中间锚+骨架评审（禁被删）', () => {
+    const scen = read(SCEN)
+    expect(scen).toContain('PROGRESS-<任务ID>-<子件ID>')
+    expect(scen).toContain('增量推送，不等全部完工')
+    expect(scen).toContain('首个 commit=骨架')
+    expect(scen).toContain('PROGRESS-TEST-BE-<组>')
+    expect(scen).toContain('用例先行')
+  })
+  it('B：驱动侧进度锚机制在位（dev_progress_ping+等待环 MX_PROGRESS_FN 钩子×2）', () => {
+    const lib = read(LIB)
+    expect(lib).toContain('dev_progress_ping()')
+    expect(lib).toContain('PROGRESS-ANCHORS')
+    const hooks = lib.match(/\[\[ -n "\$\{MX_PROGRESS_FN:-\}" \]\] && "\$MX_PROGRESS_FN" \|\| true/g)
+    expect(hooks).toBeTruthy()
+    expect(hooks!.length).toBeGreaterThanOrEqual(2)
+    const scen = read(SCEN)
+    expect(scen).toContain('MX_PROGRESS_FN=dev_progress_ping')
+    expect(scen).toContain('unset MX_PROGRESS_FN')
+  })
+  it('A：拆分证据机械巡检在位（split-evidence-missing，>1 人日腿分支 ≥2 commit 判据）', () => {
+    const scen = read(SCEN)
+    expect(scen).toContain('split-evidence-missing')
+    expect(scen).toContain('rev-list --count "origin/feat/$b" ^origin/main')
+  })
+  it('D：报告生成器分支落地时间线+PROGRESS 行渲染，审计查 13b 断言同批', () => {
+    const gen = read(join(HARNESS, 'mux', 'mx-report-gen.py'))
+    const aud = read(join(HARNESS, 'mux', 'mx-report-audit.py'))
+    expect(gen).toContain('分支落地时间线')
+    expect(gen).toContain('PROGRESS 中间锚')
+    expect(gen).toContain("if 'PROGRESS-' in ln")          // 解析口径=匹配 dev_progress_ping 注记行（PROGRESS-ANCHORS=）
+    expect(aud).toContain('分支落地时间线')
+    expect(aud).toContain('13b')
+  })
+})
