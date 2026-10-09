@@ -56,6 +56,18 @@ RUN_ID=20261010-v8-run13 LC_ALL=C START_STEP=devimpl nohup bash aipay-scenario.s
 - 提速⑤⑥（负载预检+防休眠）：mux/mx-up.sh（已落）
 - 守门⑲断言同步新不变量（六路齐发+rebase 对接），套用后 89/89 全绿
 
+## loop-graph 自驱动落实（2026-10-09 用户"立刻完成"指令）
+
+- **模板验证**：26 步推演 GraphSpec 模板+需求→图编译器经引擎同一 validateGraphSpec 校验通过
+  （appendById 领域 reducer 同参注入）；守门 graph-spec-smoke 3 测入套件（94/94 绿），模板↔校验器
+  漂移当场红。
+- **缺口修复**：REST spec 注册校验缺领域 reducer 表（模板系 spec 恒 400）——overlay a94ec57b 与
+  引擎内部调用方同参。
+- **shadow 武装**：mx-lib ensure_studio_up 起 studio 带 GRAPH_ENGINE（缺省 shadow 双跑，MX_GRAPH_ENGINE=on
+  切接管）——下次 studio 重启生效。run12 不中途换驱动（bash 保真轮在途）；run13 起跑 shadow 验证
+  等价性后切 on，图引擎接管调度即彻底自驱动。
+- 降级前提：SIM product-dist 重建后 REST 修复才进运行面（mx-setup 供给链）。
+
 ## 质量补强（2026-10-09 用户"不牺牲质量"审计指令）
 
 - **硬窗档位放大**（mx-scenario-lib.sh）：下限 7200s 不变，idle>900 的长等待档×8 放大
