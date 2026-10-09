@@ -2,7 +2,7 @@ diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.tes
 index fcda9a36..b48196a6 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
-@@ -32,10 +32,16 @@ const handlers = {
+@@ -32,10 +32,17 @@
    unsubscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    listAttachments: vi.fn(async (ctx: any) => { ctx.body = { attachments: [] } }),
    uploadAttachment: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),
@@ -16,6 +16,7 @@ index fcda9a36..b48196a6 100644
 +  estimateTask: vi.fn(async (ctx: any) => { ctx.body = { estimate: {} } }),
 +  estimateText: vi.fn(async (ctx: any) => { ctx.body = { estimate: {} } }),
 +  listProjects: vi.fn(async (ctx: any) => { ctx.body = { projects: [] } }),
++  reopenReview: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    decomposeTask: vi.fn(async (ctx: any) => { ctx.body = { result: {} } }),
    listWorkspaceFiles: vi.fn(async (ctx: any) => { ctx.body = { files: [] } }),
    listTimeline: vi.fn(async (ctx: any) => { ctx.body = { timeline: [] } }),
