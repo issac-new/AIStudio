@@ -524,10 +524,12 @@ uat_evidence_body 1790930955`, root)
     expect(scen).toMatch(/anexec：四路齐发/)
     const d1 = scen.slice(scen.indexOf('if [[ -z "$(sget anexec_d1)" ]]'), scen.indexOf('sset anexec_d1 1'))
     for (const t of ['AN-PAYCORE', 'AN-MP', 'AN-CHWX', 'AN-CHALI']) expect(d1).toContain(t)
-    // ③概设预写（次稿触发）+用例前移（编码并行预备轮）+渠道批触发锚
+    // ③概设预写（次稿触发）+用例前移（编码并行预备轮）+渠道批六路齐发（提速② 2026-10-09：
+    // 渠道双路不再等契约件触发锚，派发词自含接口契约、独立部分先行，契约件落地 rebase 对接）
     expect(scen).toContain('概设预写（纪律 27①')
     expect(scen).toContain('测试预备轮（流式流水线，不执行不交付）')
-    expect(scen).toContain('渠道批触发锚')
+    expect(scen).toContain('六路齐发（提速②')
+    expect(scen).toContain('rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接')
     // ④RACI 双@结构化解析脚注（P9b：双@致非执行方抢跑的根治位）
     expect(lib).toContain('[RACI 解析]')
   })

@@ -397,13 +397,13 @@ if step_reached register; then
   jwt_of fanfan >/dev/null
   # 超时不直接退出：把拒收原因回灌给 agent 再等一轮。否则核验方默默失败、agent 以为已
   # 交活，整轮只能靠人肉重跑（09-23 三连超时皆因此，第三次更是拿需求编号冒充卡ID）。
-  if ! wait_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}"; then
+  if ! wait_alive_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" 600 fanfan kanban_has fanfan "${RFD_ID}"; then
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
       "@$(agent_mxid fanfan) 验收拒收：你的结论行上报了完成，但你账号的板查无 ${RFD_ID} 任务卡。
       请先用协作看板登记主卡（建卡工具会返回真实卡 ID），再以 ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<该卡ID> 重报。
       填需求编号当卡 ID 会被判虚报。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 告知缺账号板卡，要求补登记后重报凭证"
-    wait_truth "补登记后账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}" \
+    wait_alive_truth "补登记后账号板出现 ${RFD_ID} 任务卡" 600 fanfan kanban_has fanfan "${RFD_ID}" \
       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
   fi
@@ -427,7 +427,7 @@ if step_reached analysis; then
   # （run10 之死：已完成态被重验，agent 不重报即两窗超时中止）。首验秒过即落键。
   if [[ -n "$(sget analysis_verified)" ]] && verify_done_evidence "${RFD_ID}"; then
     note "[凭证] 续跑：${RFD_ID} 凭证已核验过且仍成立，跳过回灌"
-  elif ! wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 600 \
+  elif ! wait_alive_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 300 fanfan \
       verify_done_evidence "${RFD_ID}"; then
     # 与步骤 9 同款回灌：只中止不告知，等于把"凭证错了"变成人肉重跑（09-23 实锤：
     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
@@ -437,7 +437,7 @@ if step_reached analysis; then
       请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
       只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
-    wait_truth "重报后凭证反向核验" "${MX_WAIT_RETRY:-2400}" verify_done_evidence "${RFD_ID}" \
+    wait_alive_truth "重报后凭证反向核验" 600 fanfan verify_done_evidence "${RFD_ID}" \
       || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
   fi
@@ -473,15 +473,10 @@ if step_reached analysis; then
     note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
   else
     mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
-    note "[回灌] 主卡缺结构化 raci——已要求 fanfan 补填，重查 300s"
-    sleep 60
-    RACI_JSON="$(wait_truth "主卡结构化 raci 补填" 240 kanban_raci_nonempty "${RFD_ID}" && kanban_raci_of fanfan "${RFD_ID}" || true)"
-    if [[ -n "$RACI_JSON" ]]; then
-      note "[真值] 回灌后主卡带结构化 raci ✓"
-    else
-      echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（回灌补填后仍缺，仍靠正文承载）" >> "$EVID_DIR/issues.log"
-      note "[观察] 主卡回灌后仍未带结构化 raci（记问题单，继续）"
-    fi
+    # 提速③ 免等窗（2026-10-09 提速决议）：结构化 raci 缺失属程序性（正文 raci 承载
+    # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻记单放行。
+    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻记单；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
+    note "[观察] 主卡缺结构化 raci（免等窗：回灌已发+记单放行）"
   fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
   # 判定语义（V4-run1 误报根治）：agent 职责=邀请发出（join|invite 均算履职）；
@@ -586,7 +581,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
       dispatch_in_room fanfan "@fanfan-agent:matrix.test 【概设预写（流式流水线预备轮）】四份系分任务并行执行中，已有 ${_pw_n} 份入库、其余在途。请现在加载 requirements-analyst 技能起概设骨架，不等末稿：
 1) 先读已入库的 docs/analysis/AN-*.md（先 git pull 拉最新）、${RFD_DOC}、docs/analysis/${RFD_ID}-tasklist.md
 2) 可先做消歧与冲突处理（重点：金额单位统一明确为「分」(int64)；接口契约字段命名统一 snake_case），整理结构层次
-3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）提交 push
+3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）并 push 到 origin main（推 feat 分支不命中入库真值——run12 design-push-gap 实锤）
 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
       sset review_prewrote 1
@@ -616,13 +611,10 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
       note "[真值] $t 完成回执在房间可见 ✓"
     else
       mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" >/dev/null 2>&1 || true
-      note "[回灌] $t 回执未见——已要求 ${owner} 补发，重查 300s"
-      if wait_truth "回灌后 $t 回执补发" 300 receipt_seen; then
-        note "[真值] $t 回灌后回执可见 ✓"
-      else
-        echo "ISSUE|receipt-missing|$t|完成回执未见（回灌补发后仍缺，双兜底缺口——入库真值在案）" >> "$EVID_DIR/issues.log"
-        note "[观察] $t 回灌后回执仍未见（记问题单）"
-      fi
+      # 提速③ 免等窗（2026-10-09 提速决议）：入库真值已核验在案，回执属程序性补账——
+      # 回灌保留训练信号但不再等 300s 重查（run12 四笔回执重查烧约 40min 实测），即刻记单放行。
+      echo "ISSUE|receipt-missing|$t|完成回执未见（免等窗即刻记单；回灌补发要求已发，入库真值在案）" >> "$EVID_DIR/issues.log"
+      note "[观察] $t 回执未见（免等窗：回灌已发+记单放行）"
     fi
   done
   gate_review chen "系分执行-AN-PAYCORE"
@@ -641,7 +633,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
 请加载 requirements-analyst 技能做汇总复核：
 1) git pull 读取四份 docs/analysis/AN-*.md
 2) 消除歧义与冲突（重点：金额单位必须统一明确为「分」(int64)；接口契约字段命名统一 snake_case）
-3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），提交 push
+3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），并 push 到 origin main（推 feat 分支不命中入库真值——run12 design-push-gap 实锤）
 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
     wait_alive_truth "概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 1800 fanfan \
@@ -656,20 +648,13 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # 评审人自登回灌（run8 遗留④：run7 直接导演补登——agent 自登能力从未被触发验证。
     # 先回灌 fanfan 在账号板自登评审卡（标题含 <RFD>-评审），重查一轮）。
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
-    note "[回灌] 评审卡未见——已要求 fanfan 自登，重查 300s"
-    wait_truth "回灌后 fanfan 板出现 ${RFD_ID} 评审卡" 300 kanban_has fanfan "${RFD_ID}-评审" || true
-    RID=$(kanban_list fanfan | jq -r --arg rfd "$RFD_ID" '[.. | objects | select(has("title")) | select((.title // "") | contains($rfd + "-评审")) | .id][0] // empty')
-    if [[ -n "$RID" ]]; then
-      kanban_walk_done fanfan "$RID"
-      note "[fanfan] 回灌自登评审卡 $RID → done（线下评审通过）"
-    else
+    note "[回灌] 评审卡未见——已要求 fanfan 自登（提速③ 免等窗：不等重查，直接导演补登记兜底）"
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
-    note "[观察] 回灌后评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
-    echo "ISSUE|review-card-missing|fanfan|agent 回灌自登后仍未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
-    fi
+    note "[观察] 评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
+    echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
   fi
   gate_review fanfan "G2-系分评审闸"
   capture_step "review_done" "/app/board"
@@ -770,7 +755,7 @@ fi
 
 # ══ 步骤 16：开发实施（真实编码，run11 触发链：独立即派+依赖随上游落地派）═══
 if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
-  note "── devimpl：DEV-PAYCORE 与 DEV-MP 即派（互不依赖）；DEV-CHWX/DEV-CHALI 分支基于 pay-core 契约，随 feat/DEV-PAYCORE 落地即派（模块就绪即触发，run11 §4.2/纪律 27⑥——废除 run7 时代错峰分批）"
+  note "── devimpl：六路齐发（提速② 2026-10-09）——DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX/DEV-CHALI 同刻即派；渠道独立部分先行，契约件分支落地后 rebase 对接（废除契约件锚等待，run11 §4.2/纪律 27⑥ 语义保留）"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
   # ACP 编码后端 L1（MX_ACP_BACKEND=1 启用，缺省关=保真对照轮）：DEV 派发词声明
   # 委托通道——实现经 coding-delegate 技能交外部编码引擎，委托日志=后端指纹。
@@ -828,24 +813,27 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     note "[流水线] 测试预备轮已派（用例前移，纪律 27②）"
   fi
 
-  wait_alive_truth "origin 出现 feat/DEV-PAYCORE-C 契约件分支（渠道批触发锚——run12：依赖挂契约件不挂整腿，派发提前 1.5-2h）" 1800 chen branch_fresh "feat/DEV-PAYCORE-C" \
-    || { note "[观察] DEV-PAYCORE-C 契约件未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE-C|契约件分支未推送" >> "$EVID_DIR/issues.log"; }
-
   # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
   # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
-  # 触发链（run11 纪律 27⑥）：feat/DEV-PAYCORE 入 origin 即派渠道双路（其分支基于
-  # pay-core 契约分支起建=真实模块依赖，就绪即触发不等全齐）。
+  # 提速② 六路齐发（2026-10-09 提速决议）：渠道双路不再等契约件分支——派发词自含
+  # ChannelAdapter 接口契约，独立部分（参数包/mock/骨架/纯逻辑）先行，契约件分支
+  # 落地后 rebase 补对接。省契约件锚等待窗（run11 实测 1.5-2h）；代价：rebase 合并
+  # 冲突风险上升，冲突以契约为准。
   if [[ -z "$(sget devimpl_d2)" ]]; then
     for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
                 "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
       IFS='|' read -r who task app chan <<< "$spec"
       dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
-工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE-C，基于 pay-core 契约件）。
+工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
 2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
+
+  # 契约件锚（提速② 后降级为观察锚：渠道已先行，S/N rebase 链与集成仍以契约为准）
+  wait_alive_truth "origin 出现 feat/DEV-PAYCORE-C 契约件分支（S/N rebase 锚+集成依据）" 1800 chen branch_fresh "feat/DEV-PAYCORE-C" \
+    || { note "[观察] DEV-PAYCORE-C 契约件未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE-C|契约件分支未推送" >> "$EVID_DIR/issues.log"; }
   # 并发多锚等待（run11 根治③：串行 for 令滞后锚的催办排队——lin 沉睡 125min 实锤）
   wait_alive_truth_multi 1800 "hu,lin,xiao" \
     "渠道批：origin 出现 feat/DEV-CHWX 分支（本轮新鲜）@hu@branch_fresh feat/DEV-CHWX" \
