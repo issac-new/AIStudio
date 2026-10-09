@@ -1,0 +1,4 @@
+ISSUE|receipt-missing|AN-X|完成回执未见（fixture）
+ISSUE|g3-local-gate-missing|DEV-X|分支缺 testlog（fixture）
+ISSUE|frame-capture-failed|step-x|采集失败（fixture）
+DISP|design-push-gap|fanfan|已修（fixture）
