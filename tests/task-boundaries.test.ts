@@ -5,7 +5,11 @@ import { describe, it, expect } from 'vitest'
 import {
   ROLE_BOUNDARIES, withBoundary, deriveBoundaryRole,
   roleBoundariesSnapshot, setBoundaryRegistry, setAgentRoleOverrides,
+  setCapabilitiesProvider, applyBoundary,
 } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/task-boundaries'
+import {
+  parseCapabilitiesTable, composeBoundary, requirementsFrom, capabilitiesRegistrySeed,
+} from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/capability-composer'
 import { compileRequirementToGraph } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/simulation-graph-template'
 import { registerSimulationNodeTypes } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/index'
 
@@ -78,5 +82,46 @@ describe('派发边界纪律（task-boundaries 产品能力）', () => {
     expect(withBoundary('处理告警', 'sre-oncall')).toContain('值班只做止血')
     expect(deriveBoundaryRole({ boundaryRole: 'sre-oncall' }, 'task')).toBe('sre-oncall')
     setBoundaryRegistry(restore) // 还原，不污染其他用例
+  })
+
+  it('M3 注册表解析：seed 表全量解析出四维声明', () => {
+    const table = parseCapabilitiesTable(capabilitiesRegistrySeed())
+    expect(table['chen']?.['vcs-scope']).toBe('own-branch-only')
+    expect(table['fanfan']?.['integration-authority']).toBe('none')
+    expect(table['qi']?.['deliverable-kinds']).toContain('test-report')
+    expect(table['no-such-agent']).toBeUndefined()
+  })
+
+  it('M3 否定式合成：未授权维度生成显式禁止；全授权不合成；无声明不合成（宁紧勿松）', () => {
+    // fanfan 声明 doc,report——要求写代码 → 禁代做
+    const c = composeBoundary(requirementsFrom({ output: 'feat/DEV-X' }, 'task'), {
+      'deliverable-kinds': ['doc', 'report'], 'vcs-scope': 'main-docs-only', 'integration-authority': 'none',
+    })
+    expect(c).toContain('未声明该类交付权限')
+    expect(c).toContain('不得提交代码')
+    // chen 声明 code——同任务全授权 → 不合成（模板地板仍会注入）
+    expect(composeBoundary(requirementsFrom({ output: 'feat/DEV-X' }, 'task'), {
+      'deliverable-kinds': ['code'], 'vcs-scope': 'own-branch-only',
+    })).toBeNull()
+    // 域不匹配（声明只管 pay-core，任务域 X）→ 转交
+    const d = composeBoundary(requirementsFrom({ output: 'feat/DEV-X' }, 'task'), {
+      'deliverable-kinds': ['code'], 'vcs-scope': 'own-branch-only', 'domain-scope': ['csw-pay-core'],
+    })
+    expect(d).toContain('须转交域内负责人')
+    // 无声明 → null（走模板链，不放松）
+    expect(composeBoundary(requirementsFrom({ output: 'feat/X' }, 'task'), undefined)).toBeNull()
+  })
+
+  it('M2 派发合成链：applyBoundary=模板地板+否定式条款叠加（provider 注入生效）', () => {
+    setCapabilitiesProvider((a) => (a === 'fanfan' ? {
+      'deliverable-kinds': ['doc', 'report'], 'vcs-scope': 'main-docs-only', 'integration-authority': 'none',
+    } : undefined))
+    const out = applyBoundary('开发收银台', { assignee: 'fanfan', output: 'feat/DEV-MP' }, 'task')
+    expect(out).toContain('【边界纪律】')
+    expect(out).toContain('不得直接推 origin/main')       // dev 模板地板
+    expect(out).toContain('未声明该类交付权限')            // 否定式叠加（宁紧勿松：只增禁令）
+    const unhooked = applyBoundary('做任务', { assignee: 'unknown-9', output: 'feat/X' }, 'task')
+    expect(unhooked).toContain('不得直接推 origin/main')   // 无声明走地板
+    setCapabilitiesProvider(null)
   })
 })
