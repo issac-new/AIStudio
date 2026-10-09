@@ -301,6 +301,23 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     ...(kanbanBase ? { bridge: new HttpKanbanBridge({ baseUrl: kanbanBase, log: (m) => log?.(`[sim-kanban] ${m}`) }) } : {}),
     log: (msg) => log?.(`[sim-node] ${msg}`),
   })
+  // 方案2 M2 接线（specs/2026-10-09-agent-capability-boundaries.md）：能力声明注册表
+  // （治理域 docs/admin/agent-capabilities.md，保存即提交=变更审计）→ 派发边界否定式
+  // 合成。异步注册表+同步 provider：60s 缓存刷新，读不到=空表（走角色模板地板，宁紧勿松）。
+  try {
+    const { setCapabilitiesProvider } = await import('../../graph/node-executors/task-boundaries')
+    const { parseCapabilitiesTable } = await import('../../graph/node-executors/capability-composer')
+    const { readRegistry } = await import('../../governance/registry-admin')
+    let table: Record<string, unknown> = {}
+    let lastRefresh = 0
+    const refresh = async () => {
+      try { table = parseCapabilitiesTable((await readRegistry('agent-capabilities' as never)).markdown) } catch { table = {} }
+      lastRefresh = Date.now()
+    }
+    await refresh()
+    setInterval(() => { void refresh() }, 60_000).unref?.()
+    setCapabilitiesProvider((assignee) => (assignee ? (table[assignee] as never) : undefined))
+  } catch { /* 注册表面不可用→合成层空转，模板地板兜底 */ }
   const specRuntime = mode === 'on'
     ? new CustomSpecRuntime({
         specStore,
