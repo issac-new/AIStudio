@@ -27,9 +27,14 @@ if 'class="step-card"' not in s:
             label, content = parts[i], parts[i + 1]
             disp = next((d for k, d in SEG_LABELS if k == label), label)
             content = content.lstrip('：: \n').strip()
-            segs_html.append(
-                f'<div class="step-sec"><div class="step-sec-hd">{disp}</div>'
-                f'<p>{content}</p></div>')
+            # 操作指引段：内含 markdown 表格（<table>）时直接嵌入不包 <p>
+            if '<table' in content:
+                segs_html.append(
+                    f'<div class="step-sec"><div class="step-sec-hd">{disp}</div>{content}</div>')
+            else:
+                segs_html.append(
+                    f'<div class="step-sec"><div class="step-sec-hd">{disp}</div>'
+                    f'<p>{content}</p></div>')
         gate = GATE_MAP.get(num)
         gate_chip = f'<span class="gate-chip">硬闸 {gate}</span>' if gate else ''
         return (f'<div class="step-card" data-step="{num}"{" data-gate=" + gate if gate else ""}>'
@@ -37,7 +42,23 @@ if 'class="step-card"' not in s:
                 f'<span class="step-title">{title}</span>{gate_chip}</div>'
                 + ''.join(segs_html) + '</div>')
 
-    s, n = re.subn(r'<p><strong>步 (\d+)｜([^<]*)</strong>(.*?)</p>', build_card, s, flags=re.S)
+    # 步块捕获扩到整块：从每个步头 <p> 到下一个步头（或 </main>），中间的表格/列表/段落全进卡片（操作指引表升级配套）
+    heads = list(re.finditer(r'<p><strong>步 (\d+)｜', s))
+    if heads:
+        out, last = [], 0
+        for k, h in enumerate(heads):
+            end = heads[k + 1].start() if k + 1 < len(heads) else s.find('</main>', h.end())
+            if end < 0:
+                end = len(s)
+            blk = s[h.start():end]
+            mm = re.match(r'<p><strong>步 (\d+)｜([^<]*)</strong>(.*)', blk, flags=re.S)
+            if mm:
+                out.append(s[last:h.start()])
+                out.append(build_card(mm))
+                last = end
+        out.append(s[last:])
+        s = ''.join(out)
+        n = len(heads)
     print(f'① 26 步卡片化：{n} 张')
 else:
     print('① 已在位')
