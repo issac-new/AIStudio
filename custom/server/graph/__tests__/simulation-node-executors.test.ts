@@ -88,10 +88,39 @@ describe('registerSimulationNodeTypes', () => {
     expect(upd['dispatch.mark'][0].targets).toBe('$modules')
   })
 
-  it('report-gen 未接 fnTable 时大声失败（不静默空跑）', async () => {
-    const { registry } = makeRegistry()
+  it('report-gen 默认建卡报告器：DryRun 桥建「报告编写」卡+完成信号+幂等（三期）', async () => {
+    const { registry, dry } = makeRegistry()
+    const node = registry.create('report-gen', { id: 'rep', format: 'html', output: 'final-report.html', channel: 'report.gen' })
+    const r1 = await node.execute({}, { threadId: 't' } as never)
+    const r2 = await node.execute({}, { threadId: 't' } as never)
+    expect(dry.created).toHaveLength(1) // 幂等：graph_node:<threadId>:<nodeId>
+    expect(dry.created[0].idempotencyKey).toBe('graph_node:t:rep')
+    expect(dry.created[0].body.format).toBe('html')
+    expect(dry.created[0].body.output).toBe('final-report.html')
+    const upd = r1.update as unknown as Record<string, Array<{ node: string; task: string; format: string }>>
+    expect(upd['report.gen'][0].node).toBe('rep')
+    expect(upd['report.gen'][0].task).toBe('dry-t1')
+    expect(upd['report.gen'][0].format).toBe('html')
+    expect(r2).toEqual(r1)
+  })
+
+  it('report-gen 注入 reportFns 优先；deps.fnTable 次之（三层解析，三期）', async () => {
+    const registry = new NodeRegistry()
+    const calls: string[] = []
+    registerSimulationNodeTypes(registry, {
+      bridge: new DryRunKanbanBridge(),
+      pollIntervalMs: 1, pollMaxIntervalMs: 1, taskTimeoutMs: 50,
+      reportFns: { reportGen: async () => { calls.push('injected'); return { update: {} } as never } },
+    })
     const node = registry.create('report-gen', { id: 'rep' })
-    await expect(node.execute({}, { threadId: 't', deps: {} } as never)).rejects.toThrow(/fnTable/)
+    await node.execute({}, { threadId: 't', deps: { fnTable: { reportGen: async () => { calls.push('dyn'); return { update: {} } as never } } } } as never)
+    expect(calls).toEqual(['injected']) // 注入表赢
+
+    const registry2 = new NodeRegistry()
+    registerSimulationNodeTypes(registry2, { bridge: new DryRunKanbanBridge(), pollIntervalMs: 1, pollMaxIntervalMs: 1, taskTimeoutMs: 50 })
+    const node2 = registry2.create('report-gen', { id: 'rep2', command: 'custom' })
+    await node2.execute({}, { threadId: 't', deps: { fnTable: { custom: async () => { calls.push('dyn2'); return { update: {} } as never } } } } as never)
+    expect(calls).toEqual(['injected', 'dyn2']) // 未注入该 key 时动态表接管
   })
 
   it('HttpKanbanBridge：REST 建卡/查卡路径与响应归一（二期真桥）', async () => {

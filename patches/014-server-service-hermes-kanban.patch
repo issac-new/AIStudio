@@ -52,7 +52,7 @@ index 2a3614bd..52060557 100644
    if (opts?.workspace) args.push('--workspace', opts.workspace)
    if (opts?.branch) args.push('--branch', opts.branch)
    if (opts?.triage) args.push('--triage')
-@@ -771,3 +777,261 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
+@@ -771,3 +777,285 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
      throw new Error(`Failed to get kanban assignees: ${err.message}`)
    }
  }
@@ -81,6 +81,35 @@ index 2a3614bd..52060557 100644
 +  } catch (err: any) {
 +    logger.error(err, 'Hermes CLI: kanban decompose failed')
 +    throw new Error(`Failed to decompose kanban task: ${err.message}`)
++  }
++}
++
++export interface KanbanEstimateOptions extends KanbanBoardOptions {
++  days?: number  // direct person-day override; omit to run the LLM estimate
++  persist?: boolean
++}
++
++// HERMES_CUSTOM[estimate-rest]（团队并行三期）：人日估算的 REST 面——days 直设
++// 旁路（--days）或 LLM 估算（--persist），供看板/派发预演消费 workload 数据。
++export async function estimateTask(taskId: string, opts?: KanbanEstimateOptions): Promise<unknown> {
++  const args = [...boardArgs(opts?.board), 'estimate', taskId, '--json']
++  if (opts?.days != null) {
++    args.push('--days', String(opts.days))
++  } else if (opts?.persist) {
++    args.push('--persist')
++  } else {
++    throw new Error('estimateTask requires either days (direct set) or persist (LLM estimate)')
++  }
++  try {
++    const { stdout } = await execHermes(args, {
++      maxBuffer: 50 * 1024 * 1024,
++      timeout: 120000,
++      ...execOpts,
++    })
++    return parseJsonPayload(stdout)
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban estimate failed')
++    throw new Error(`Failed to estimate kanban task: ${err.message}`)
 +  }
 +}
 +

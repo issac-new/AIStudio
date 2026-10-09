@@ -297,8 +297,23 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   // 真桥接线（二期）：GRAPH_KANBAN_BASE 指向 SwarmStudio 自身 base（如
   // http://127.0.0.1:8802）即走 REST 建卡/查卡；未设=DryRun（shadow 安全缺省）
   const kanbanBase = process.env.GRAPH_KANBAN_BASE
+  // report-gen 注入源（三期）：GRAPH_REPORT_MODULE=JS 模块路径（export reportFns）
+  // 未设=默认建卡报告器（bridge 建「报告编写」卡+等完成，产品语义五类工作面之一）。
+  // run13 图执行轮经此把 harness/CLI 报告生成器接进来，不动 node-executors。
+  let reportFns: Record<string, (state: unknown, ctx: unknown) => Promise<import('../../graph/node-executors').NodeResult>> | undefined
+  const reportModule = process.env.GRAPH_REPORT_MODULE
+  if (reportModule) {
+    try {
+      const mod = await import(/* @vite-ignore */ reportModule)
+      if (mod?.reportFns && typeof mod.reportFns === 'object') reportFns = mod.reportFns
+      else log?.(`[graph] GRAPH_REPORT_MODULE ${reportModule} 无 reportFns 导出——回退默认建卡报告器`)
+    } catch (err) {
+      log?.(`[graph] GRAPH_REPORT_MODULE 加载失败（${(err as Error).message}）——回退默认建卡报告器`)
+    }
+  }
   registerSimulationNodeTypes(simRegistry, {
     ...(kanbanBase ? { bridge: new HttpKanbanBridge({ baseUrl: kanbanBase, log: (m) => log?.(`[sim-kanban] ${m}`) }) } : {}),
+    ...(reportFns ? { reportFns } : {}),
     log: (msg) => log?.(`[sim-node] ${msg}`),
   })
   // 方案2 M2 接线（specs/2026-10-09-agent-capability-boundaries.md）：能力声明注册表
