@@ -83,7 +83,7 @@ flowchart TB
 ```
 
 已有件（产品侧已建）：GraphSpec 格式+事件驱动执行器+join 屏障+守卫回边+checkpoint/resume+人工介入中断（HITL）+编排器画布+运行中心+P4 模板库+每日简报模板（系统内置 GraphSpec 实例）；六个图节点执行器+KanbanBridge（DryRun/HTTP 真实桥接 GRAPH_KANBAN_BASE，26 步图模板可实例化跑通）；工作量估计写入数据库，派发时给任务多的执行者优先派活（加权）；角色边界注册表（图派发时自动给每个角色注入"只做什么、不做什么"）；能力声明注册表（角色能做什么写成清单，不该做的写明不做什么）；REST 接口校验；图执行影子模式（shadow：跟着驱动一起跑但不接管主流程，run13 起转为主执行通道）。
-待建件（缺口）：①**需求→GraphSpec 编译器**（AI 读需求→输出任务图 JSON——本质是需求分析的输出格式从 markdown 换成 GraphSpec）；②推演 26 步转译为标准图模板并转正为主执行通道（shadow→on）；③图执行器↔agent 派发对接的实战完善。分期路线见 2026-10-08-team-parallel-dev-capability.md；并行能力的需求正本=《2026-10-09-parallel-capability-foundation-spec.md》（五类工作都要"先估工作量、再拆小、并行做、最后合并成一份"，机制条款见 §4.2）。run12 已有第一个全流程并行实例：G5 整改测试分给三人同时做（matrix event $LlZZQ4HX；经验教训随轮次结束回填该 spec）。
+待建件（缺口）：①**需求→GraphSpec 编译器**（AI 读需求→输出任务图 JSON——本质是需求分析的输出格式从 markdown 换成 GraphSpec）；②推演 26 步转译为标准图模板并转正为主执行通道：先影子模式与驱动双跑验证结果等价，确认后 `MX_GRAPH_ENGINE=on` 切图引擎接管调度（run13 起）；③图执行器↔agent 派发对接的实战完善。分期路线见 2026-10-08-team-parallel-dev-capability.md；并行能力的需求正本=《2026-10-09-parallel-capability-foundation-spec.md》（五类工作都要"先估工作量、再拆小、并行做、最后合并成一份"，机制条款见 §4.2）。run12 已有第一个全流程并行实例：G5 整改测试分给三人同时做（matrix event $LlZZQ4HX；经验教训随轮次结束回填该 spec）。
 
 ### 1.0.2 全新环境独立回归（每轮推演的完整性铁律）
 
@@ -537,7 +537,7 @@ graph TB
 | 通道 | 看板评审卡（fanfan-review 板）+群派发+HumanGate 事件 |
 | 动作序列 | ①先查 `g4_pass` ②建 G5 评审卡（幂等 `g5_rgid`） ③派发七项检查单（骨架）："按 templates/release-plan.md 与 release-notes.md 产出：1) G4 证据挂卡 2) 构建同 commit 可复现 3) 依赖无新增 4) 回滚=数字阈值（如崩溃率>0.5%）+命令级步骤+72h 观察窗 5) 灰度 5%→25%→100% 各档观察期 6) 发布说明面向用户收益 7) HumanGate 人工批准。评审分节落卡边评边补，禁终态一次打回。结论行 `READY-GATE-PASS` 或 `READY-GATE-FAIL（附缺项）`。" ④PASS→置卡 done+人工批准事件 `G5-HUMANGATE-APPROVED` 落 approved.events+QGate release-report 落盘 ⑤release 子步=建 REL-MERGE/REL-TAG/REL-DELIVER 三张卡置 todo |
 | 等待信号 | `g5_ready`+`ready_done`+`release_done`（判词双源合并 FAIL 优先；本轮既有 PASS 不重派） |
-| 超时与失败 | 首评 3600s；退回补齐 2400s；两轮未过中止（不得发布） |
+| 超时与失败 | 首评 3600s；退回补齐 2400s；两轮未过熔断中止（不得发布，重试须 `GATE_BREAKER_OVERRIDE=1`）；窗口超时后终态复核判词一次（判词已到按末判词重判，不在才判超） |
 | 产出 | `evidence/qgate-release-report.txt`、`approved.events`、完备性检查入仓；三张 REL 卡 |
 
 **交付物及质量判据**：交付物=七项结论入群+准出卡关闭+完备性检查报告入仓；合格线=缺项打回一轮，两轮不过不得上线；HumanGate 批准事件入 approved.events 可反查。
@@ -723,7 +723,7 @@ graph TB
 
 可选演练位（换轮声明，默认关）：注入攻击演练——一轮至多一处，在检索类步的工具返回植入注入载荷，验证守卫拦截/降级/零误伤三路径；验收=守卫审计台账记录+问题单（type=injection-drill）+报告问题单章可见；不计六道关卡、不入必采清单分母。
 
-分层轮声明（换轮声明，默认 L2）：推演分 L2 全量轮与 L1 lite 裁剪轮（devimpl 启动的精简链条）；lite 证据带 lite_fixtures_from 溯源键，不与全量轮混同统计；分层设计与夹具语义见 simharness/mux/run13-lite-round-plan.md。
+分层轮声明（换轮声明，默认 L2）：推演分 L2 全量轮（全 26 步，里程碑/发版前跑）与 L1 lite 裁剪轮（devimpl→report 精简链条，日常产品回归迭代跑）。lite 轮跳过的步骤用夹具补环境与仓产物，状态键以 `lite_fixtures_from=<源轮次>` 显式标注来源；报告口径写明"lite 轮（夹具自 <源轮次>）"，不与全量轮混同统计。种子命令：`bash mux/mx-lite-seed.sh --to <本轮> --from <源轮次>`。产品契约有变时，跑 L1 前须先更新概设（否则开发按旧契约实施）。夹具三类（环境/仓/轮级状态）与边界代价见 simharness/mux/run13-lite-round-plan.md。
 
 ### 3.3 场景段与方案步号映射（唯一事实源）
 
@@ -872,9 +872,9 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 7. 完成凭证一体化：派发词结论行强制携带回执要素（如 AN-DONE-X commit=Y card=Z notified=已发），缺任一要素=未完成打回；核验侧退回重报为标准流程；RACI 回执窗降级为 fire-and-forget（副作用证据不占关键路径）。
 
 **判词与台账**
-8. 关卡结论只认评审卡/结构化结论字段（末判词赢/多行取最新/卡面与消息双源合并 FAIL 优先）；消息词面与转述不作凭据；FAIL 不将卡标记 done、不写标志、强制中止。
+8. 关卡结论只认评审卡/结构化结论字段（末判词赢/多行取最新/卡面与消息双源合并 FAIL 优先）；消息词面与转述不作凭据；FAIL 不将卡标记 done、不写标志、强制中止。**等待窗口是等待上限，不是判词有效期**：窗口超时后必须终态复核一次判词——复核时判词已存在则按末判词重判放行，确无判词才判超时。熔断纪律：同闸同轮的熔断问题单幂等记一次（重试不刷单）；驱动因熔断退出属正常退出，自愈监督器不得重启它，重试须人工设 `GATE_BREAKER_OVERRIDE=1` 后断点续跑。
 9. 六道强制关卡通过时间记录齐全入治理报告；缺失即报告违例。
-10. DISP 处置结论逐行回写 issues.log 台账本体（复盘全表不替代记账）；措辞用三态分桶词（已修/观察/延后）；复盘计数=台账实测，禁模板文案。
+10. DISP 处置结论逐行回写 issues.log 台账本体（复盘全表不替代记账）；措辞用三态分桶词（已修/观察/延后）；复盘计数=台账实测，禁模板文案。免等窗问题单族（回执缺失/结构化 RACI 缺）在审计段以当前真值终态复核：补账成功者追加 DISP 收尾行（原单保留不删改，两时点真值并存）。
 11. 问题单缺 DISP 时驱动脚本可按三态补账（注明缘由、计入人工介入度量、不改写 agent 原始记录）。
 
 **仓库与凭证**
@@ -913,6 +913,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 29. **并发多锚点等待**：同一阶段多分支实际状态锚点一律 wait_alive_truth_multi（锚点过即记 ✓、无进展等待超时提醒并行启动滞后锚点负责人）——串行 for 等待令滞后者超时提醒被排队。
 30. **派发可达性校验**：dispatch_in_room 派发后短窗查网关日志，该 event 命中容量丢弃/排队即自动重递一次（带重递标记+去重键合并语义）+记问题单——消息入房≠网关启动 agent；慢路径（held 20min 后丢）由巡检兜底。
 31. **任务拆分与依赖设置（五类工作通用，拆分规则见 §4.2 四步）**：单卡 ≤1 人日（单会话可吞上限实测 ≈2 人日）；大任务拆成"接口先行件（≤0.5 人日）+实现件"；依赖波次的触发条件关联到**接口先行件分支**而非整个大任务（整个大任务缺席时不可逆损失）。机械巡检：>1 人日腿分支须 ≥2 commit（逐子件提交即拆分证据），devimpl 收尾自动核验，缺证据记问题单 split-evidence-missing；派发词挂增量 push+PROGRESS 中间锚点+骨架评审；DEV 任务书带 testlog 完成前自检句。
+32. **交付边界（防过度交付）**：任务书随词注入边界纪律——只许 feat/* 分支交付，禁直推 main，禁代做他人任务；预写/预备轮只许做物料准备（草稿、用例草案），不建分支、不交付、不碰 main；devimpl 记 main 基线，段末反查 main 污染（记问题单 main-pollution）。"提前动手"的许可必须同时给边界清单——只给许可不给清单，就会产生越界交付。
 
 **台账记问题单口径**
 28. 同一问题的 ISSUE/DISP 以**类型段**为连接键（主体段不参与 join，防措辞差断链）；DISP 首词只用三态分桶词（已修/观察/延后），禁表外词；**"已修"处置必须带修复锚点（commit/event/文件路径）**，无锚点处置一律降为观察或待处置；悬挂 DISP（无对应 ISSUE）视为台账卫生缺陷，补 ISSUE 配对或标注别名归属。
@@ -971,7 +972,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 ### 5.4 报告规范（形式与每步结构）
 
-**形式**：单文件 HTML 双正本制——`final-report.html`=唯一人读正本（导读层+机器报告全文嵌入）；`simulation-report.html`=机器档案（生成器直出，重生成后重嵌入正本）；均落 runs/＜RUN_ID＞/evidence/。生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）；合并=final-report-merge.py。**报告能力正本=overlay 产品侧 `custom/server/report/`（验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）——simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。**元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含；页内锚点 #step1-26 与 #cp-g1..g6 互链。
+**形式**：单文件 HTML 双正本制——`final-report.html`=唯一人读正本（导读层+机器报告全文嵌入）；`simulation-report.html`=机器档案（生成器直出，重生成后重嵌入正本）；均落 runs/＜RUN_ID＞/evidence/。生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）；合并=final-report-merge.py。**报告能力正本=overlay 产品侧 `custom/server/report/`（验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）——simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。**元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含；页内锚点 #step1-26 与 #cp-g1..g6 互链。**二合一报告层（叠加后处理）**：`unified-report-layer.py --run` 只读叠加三层人读面——受众卡层（产品/需求分析/架构设计/研发设计/代码开发/测试/研发管理/平台八个视角各 4-6 张问答卡，数字实测）、完整审阅层（内嵌报告正本）、路演素材层（roadshow-outline 每块 headline/points/anchor 三字段 ≥10 块）——不动报告正本与审计断言面，缺项如实标"本轮未见该数据"。
 
 **每步四段（固定结构，顺序不得变；①②与 §2.4 步条同构，③④自台账/档案实测）**——报告每个步块必须依次呈现：
 
