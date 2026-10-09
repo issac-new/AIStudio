@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest'
 // 模板全节点标注，任一端漂移当场红。
 import {
   ROLE_BOUNDARIES, withBoundary, deriveBoundaryRole,
+  roleBoundariesSnapshot, setBoundaryRegistry, setAgentRoleOverrides,
 } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/task-boundaries'
 import { compileRequirementToGraph } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/simulation-graph-template'
 import { registerSimulationNodeTypes } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/index'
@@ -52,5 +53,30 @@ describe('派发边界纪律（task-boundaries 产品能力）', () => {
 
   it('执行器模块可加载（边界注入接线在位）', () => {
     expect(typeof registerSimulationNodeTypes).toBe('function')
+  })
+
+  it('v2 注册表文件化：注册表加载成功（六角色含 generic 兜底）', () => {
+    const snap = roleBoundariesSnapshot()
+    for (const r of ['analyst', 'dev', 'reviewer', 'tester', 'governance', 'generic']) {
+      expect(snap[r], `role ${r}`).toBeTruthy()
+    }
+  })
+
+  it('v2 解析链：任务显式 > agent 覆盖 > 形状推导 > generic', () => {
+    setAgentRoleOverrides({ 'new-agent-1': 'tester' })
+    expect(deriveBoundaryRole({ boundaryRole: 'governance', assignee: 'new-agent-1' }, 'task')).toBe('governance') // 显式最高
+    expect(deriveBoundaryRole({ assignee: 'new-agent-1', output: 'feat/X' }, 'task')).toBe('tester') // 覆盖层压过形状
+    expect(deriveBoundaryRole({ assignee: 'unknown-2', output: 'feat/X' }, 'task')).toBe('dev') // 无覆盖走形状
+    expect(deriveBoundaryRole({ assignee: 'unknown-2', output: 'bin/data' }, 'task')).toBe('generic') // 未知形状兜底
+    setAgentRoleOverrides({})
+  })
+
+  it('v2 新角色零代码接入：注册表加模板即生效（分布式 fleet 扩展路径）', () => {
+    const snapBefore = roleBoundariesSnapshot()
+    const restore = Object.entries(snapBefore).map(([role, text]) => ({ role, text }))
+    setBoundaryRegistry([...restore, { role: 'sre-oncall', text: '值班只做止血与升级；禁做功能开发与合并。' }])
+    expect(withBoundary('处理告警', 'sre-oncall')).toContain('值班只做止血')
+    expect(deriveBoundaryRole({ boundaryRole: 'sre-oncall' }, 'task')).toBe('sre-oncall')
+    setBoundaryRegistry(restore) // 还原，不污染其他用例
   })
 })
