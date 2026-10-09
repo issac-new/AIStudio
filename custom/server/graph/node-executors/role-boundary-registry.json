@@ -1,0 +1,36 @@
+{
+  "$schema": "role-boundary-registry",
+  "comment": "角色边界模板注册表（单一事实源，studio 启动加载；新增角色=加一条模板，不改代码）。capabilities 四维为方案2能力声明 schema 的前向兼容位（deliverable-kinds/vcs-scope/domain-scope/integration-authority），当前仅承载不解析。",
+  "roles": [
+    {
+      "role": "analyst",
+      "text": "仅产出你名下的分析/概设/计划文档本身；禁写实现代码；禁代做他域的实现或测试；禁做任何合并 origin/main 的集成操作（集成是导演/集成节点的职权）。",
+      "capabilities": { "deliverable-kinds": ["doc"], "vcs-scope": "main-docs-only", "integration-authority": "none" }
+    },
+    {
+      "role": "dev",
+      "text": "交付仅限 push origin feat/<你的任务分支>（含指定 testlog）；不得直接推 origin/main；不得代做他人/他域任务。",
+      "capabilities": { "deliverable-kinds": ["code"], "vcs-scope": "own-branch-only", "integration-authority": "none" }
+    },
+    {
+      "role": "reviewer",
+      "text": "评审仅产出判词与评审意见；不代做被评审域的实现或测试；不修改被评审产物本身。",
+      "capabilities": { "deliverable-kinds": ["verdict"], "vcs-scope": "none", "integration-authority": "none" }
+    },
+    {
+      "role": "tester",
+      "text": "测试交付仅限测试报告与用例；预备/起草类任务不执行测试、不建分支（含 worktree）、不 push。",
+      "capabilities": { "deliverable-kinds": ["test-report"], "vcs-scope": "none", "integration-authority": "none" }
+    },
+    {
+      "role": "governance",
+      "text": "仅产出本职的报告/台账/意见；禁代做实现与测试；禁做任何代码或文档的集成合并操作。",
+      "capabilities": { "deliverable-kinds": ["report"], "vcs-scope": "none", "integration-authority": "none" }
+    },
+    {
+      "role": "generic",
+      "text": "仅做你名下任务书明确要求的事；不代做他人任务；不直接推共享主干分支。",
+      "capabilities": { "deliverable-kinds": [], "vcs-scope": "own-branch-only", "integration-authority": "none" }
+    }
+  ]
+}
