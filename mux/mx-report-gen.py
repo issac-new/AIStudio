@@ -2013,6 +2013,43 @@ try:
         f'<tr><td>快模式/并发</td><td>MX_FAST 缺省开（轮询 5s·治理三步并发）；系分/编码四路齐发（闸值 4 满格）；569 gate-guard 显式启用（035a555）</td></tr>'
         f'<tr><td>问题单终态</td><td>{stat}</td></tr>'
         '</tbody></table></section>')
+    # 第 4 章 产品成效块（方案 §5.4"产品成效呈现"：交付物成效三件；证据在位才渲染，
+    # 缺席如实标注不编造——evidence/product-outcome/ 下 quality-summary.env（数字表，
+    # 驱动步 26 落盘）+ *.png（功能实证截图）+ idempotency.txt（幂等实测输出））
+    _PO_LABELS = {'n_tests': '单测条数', 'n_pass': '单测全绿', 'ac_cover': 'AC 覆盖',
+                  'uat_pass': 'UAT 通过', 'uat_cond': 'UAT 有条件通过', 'uat_fail': 'UAT 不通过',
+                  'defects_total': '缺陷总数', 'defects_fixed': '缺陷已修复',
+                  'doc_chain': '交付文档链（件）', 'branches': '合入基线分支（条）'}
+    _po_dir = EVID / 'product-outcome'
+    _po_nums, _po_imgs, _po_idem = {}, [], ''
+    if (_po_dir / 'quality-summary.env').exists():
+        for _ln in (_po_dir / 'quality-summary.env').read_text(encoding='utf-8').splitlines():
+            if '=' in _ln and not _ln.startswith('#'):
+                _k, _v = _ln.split('=', 1)
+                _po_nums[_k.strip()] = _v.strip()
+    if _po_dir.is_dir():
+        _po_imgs = sorted(p.name for p in _po_dir.glob('*.png'))
+    if (_po_dir / 'idempotency.txt').exists():
+        _po_idem = (_po_dir / 'idempotency.txt').read_text(encoding='utf-8').strip()
+    if _po_nums or _po_imgs or _po_idem:
+        _po_rows = ''.join(
+            f'<tr><td>{H.escape(_PO_LABELS.get(k, k))}</td><td><b>{H.escape(v)}</b></td></tr>'
+            for k, v in _po_nums.items())
+        _po_num_tbl = ('<table class="st-issues-tbl"><thead><tr><th>成效指标</th><th>实测值</th></tr></thead>'
+                       f'<tbody>{_po_rows}</tbody></table>') if _po_rows else ''
+        _po_img_html = ''.join(
+            f'<label class="shot"><input type="checkbox">'
+            f'<img src="product-outcome/{H.escape(n)}" alt="产品功能实证 {H.escape(n)}" loading="lazy">'
+            f'<figcaption><span class="shot-kind">功能实证</span>product-outcome/{H.escape(n)}</figcaption></label>'
+            for n in _po_imgs)
+        _po_idem_html = ('<details open><summary>幂等实测执行输出（idempotency.txt）</summary>'
+                         f'<pre>{H.escape(_po_idem)}</pre></details>') if _po_idem else ''
+        _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
+                    + _po_num_tbl + _po_img_html + _po_idem_html)
+    else:
+        _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
+                    '<p class="no-evidence">本轮产品成效证据未采集（evidence/product-outcome/ 为空）——'
+                    '三件采集 run13 起为必采（方案 §5.4 产品成效呈现；缺席记单 type=product-outcome-missing）。</p>')
     # 第 4 章 本轮新特性实证（按轮注册；未注册轮如实不渲染）
     _NEW_FEATURES_BY_RUN = {
         '20261007-v8-run10': [
@@ -2025,12 +2062,15 @@ try:
         ],
     }
     _feats = _NEW_FEATURES_BY_RUN.get(RUN_ID, [])
-    _ch4_html = ''
+    _feat_tbl = ''
     if _feats:
         _rows = ''.join(f'<tr><td>{H.escape(t)}</td><td>{H.escape(d)}</td><td><code>{H.escape(a)}</code></td></tr>' for t, d, a in _feats)
-        _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮新特性实证</h2>'
+        _feat_tbl = ('<h3>本轮新特性实证</h3>'
                      '<table class="st-issues-tbl"><thead><tr><th>特性</th><th>实证</th><th>锚</th></tr></thead>'
-                     f'<tbody>{_rows}</tbody></table></section>')
+                     f'<tbody>{_rows}</tbody></table>')
+    # 第 4 章常驻：产品成效块（§5.4）+ 新特性表（按轮注册）
+    _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮交付成效与新特性</h2>'
+                 + _po_html + _feat_tbl + '</section>')
     # 产品面承载率行（§5.5：五面各计 UI 实拍或产品内操作证据，验收线 ≥4/5）
     def _face_any(pres):
         return [p for p in pres if (STEPS_DIR / f'{p}.png').exists()]
@@ -2819,7 +2859,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   {_ck_zone_html()}
 
   <details class="stat-note" style="margin:6px 0 14px"><summary>十章地图（§5.4 骨架导航：0 总述 → 1 口径 → 2 改判 → 3 意图链 → 4 新特性 → 5 叙事层 → 6 旅程层 → 7 六域 → 8 问题单 → 9 闭环治理）</summary>
-  <p><a href="#ch0-collab">0 推演逻辑与协作顺序</a> · <a href="#ch1-caliber">1 本轮口径</a> · <a href="#audit-response">2 独立审计与处置（改判真值层）</a> · <a href="#nv-intent-chain">3 意图链路</a> · <a href="#ch4-features">4 本轮新特性实证</a> · <a href="#nv-hero">5 叙事层</a> · <a href="#ch6-journey">6 旅程层 26 步</a> · <a href="#ch7-domains">7 六域审计</a> · <a href="#ch8-issues">8 问题单终态</a> · <a href="#ch9-gov">9 闭环治理终态</a></p></details>
+  <p><a href="#ch0-collab">0 推演逻辑与协作顺序</a> · <a href="#ch1-caliber">1 本轮口径</a> · <a href="#audit-response">2 独立审计与处置（改判真值层）</a> · <a href="#nv-intent-chain">3 意图链路</a> · <a href="#ch4-features">4 本轮交付成效与新特性</a> · <a href="#nv-hero">5 叙事层</a> · <a href="#ch6-journey">6 旅程层 26 步</a> · <a href="#ch7-domains">7 六域审计</a> · <a href="#ch8-issues">8 问题单终态</a> · <a href="#ch9-gov">9 闭环治理终态</a></p></details>
 
   {_ch0_html}
   {_ch1_html}
