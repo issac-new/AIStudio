@@ -35,6 +35,14 @@ NCWK_ROOT="${MX_NCWK_ROOT:-$(_mx_root_walk "$MX_SCRIPT_DIR" || echo "$(cd "$HARN
 OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT/overlay}"
 PATCH_DIR="$OVERLAY_ROOT/patches"
 SKILLS_SRC="$HARNESS_ROOT/skills"
+# 受控写作条款真源（2026-10-09 全局文风根治轮：模型回复黑话多、思路跳跃、
+# AI 味重——run12 交付物实锤 W2/W13/系分口径类代号无展开、多事挤一行）。
+# 单一事实源=overlay/runtime/plugins/style-charter/style-charter.md（产品插件
+# 同源读它；harness 对 overlay 只读消费，同 coding-delegate 先例——bare CI 无
+# overlay 检出时缺位跳过，分发面不含条款）。分发两路：install_skills 追加进
+# 每个技能副本（交付物侧）；seed_soul_charter 幂等并入 SOUL.md（聊天回复侧）。
+# 条款文本不内嵌 bash（中文 heredoc 双重编码前科），bash 只做 marker 幂等与 cat。
+STYLE_CHARTER="$OVERLAY_ROOT/runtime/plugins/style-charter/style-charter.md"
 STUDIO_DIST_DEFERRED=1   # 执行面三参（STUDIO_DIST/HERMES_BIN/HERMES_PYTHONPATH）在 SIM_ROOT 定锚后统一定义（见下）
 
 # ── 拓扑常量 ────────────────────────────────────────────
@@ -885,13 +893,52 @@ print(f'board {board} team -> {agent}')
 PYEOF
 }
 
+# 条款块 marker 前缀（升版换装按前缀剥离，不锁定具体版本号）
+STYLE_CHARTER_BEGIN='<!-- style-charter:'
+STYLE_CHARTER_END='<!-- /style-charter:'
+
+style_charter_strip() { # <file>：删既有条款块（升版换装；无块原样返回）
+  # awk 而非 sed：BSD sed 地址定界符与 marker 内的 "/" 冲突（实测报
+  # "unescaped newline inside substitute pattern"→剥离失效→幂等破功双追加）
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  awk -v beg="$STYLE_CHARTER_BEGIN" -v end="$STYLE_CHARTER_END" '
+    index($0, beg) { skip = 1 }
+    skip && index($0, end) { skip = 0; next }
+    skip { next }
+    { print }
+  ' "$f" > "$f.tmp.$$" && mv "$f.tmp.$$" "$f"
+}
+
+seed_soul_charter() { # <profile-dir>：SOUL.md 并入条款（幂等；setup 期生效，不动在跑轮）
+  local PROF="$1" soul="$PROF/SOUL.md" idsrc="${MX_SOUL_IDENTITY_SRC:-$HOME/.hermes/SOUL.md}"
+  [[ -f "$STYLE_CHARTER" ]] || return 0
+  mkdir -p "$PROF"
+  if [[ ! -f "$soul" ]]; then
+    # 首跑 profile：hermes 首次 load_config 物化默认身份（_ensure_default_soul_md
+    # 只种缺失/legacy 模板，对已自定义文件不动）——先以宿主身份文本打底再并入
+    # 条款，避免条款独占身份槽顶掉「You are Hermes Agent」默认身份。
+    if [[ -f "$idsrc" ]]; then cp "$idsrc" "$soul"; else : > "$soul"; fi
+  fi
+  style_charter_strip "$soul"
+  printf '\n' >> "$soul"
+  cat "$STYLE_CHARTER" >> "$soul"
+}
+
 install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内容完全一样"）
   local PROF="$1" s
+  # 聊天回复侧全局钩子：SOUL.md 身份层并入条款（与技能分发同点位调用，
+  # mx-setup 每 profile 一次，幂等可重入）
+  seed_soul_charter "$PROF"
   for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop; do
     [[ -d "$SKILLS_SRC/$s" ]] || continue
     rm -rf "$PROF/skills/$s"
     mkdir -p "$PROF/skills/$s"
     cp "$SKILLS_SRC/$s/SKILL.md" "$PROF/skills/$s/SKILL.md"
+    # 交付物侧：条款追加进安装副本（仓内 SKILL.md 保持无条款，单一事实源=真源文件）
+    if [[ -f "$STYLE_CHARTER" ]]; then
+      cat "$STYLE_CHARTER" >> "$PROF/skills/$s/SKILL.md"
+    fi
   done
   # ACP 编码后端 L1 委托技能（2026-10-09 acp-coding-backend-divergence 根治件）：
   # 正本=overlay/runtime/hermes-skills（产品侧技能面），harness 只读消费；缺位跳过
@@ -901,6 +948,9 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
   if [[ -f "$_ovl/runtime/hermes-skills/coding-delegate/SKILL.md" ]]; then
     rm -rf "$PROF/skills/coding-delegate"; mkdir -p "$PROF/skills/coding-delegate"
     cp "$_ovl/runtime/hermes-skills/coding-delegate/SKILL.md" "$PROF/skills/coding-delegate/SKILL.md"
+    if [[ -f "$STYLE_CHARTER" ]]; then
+      cat "$STYLE_CHARTER" >> "$PROF/skills/coding-delegate/SKILL.md"
+    fi
   fi
 }
 

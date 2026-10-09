@@ -11,7 +11,7 @@
 // 测试方式：bash 子进程 source 真实 mx-lib/mx-scenario-lib（AIPAY_SIM_ROOT 指向
 // 临时目录，不碰真实 sim 栈），断言函数行为本身而非复制实现。
 import { execFileSync } from 'child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it, afterAll } from 'vitest'
@@ -1111,5 +1111,61 @@ describe('㉑ PART1 实算槽链路（2026-10-08：注册稿只写语境句，�
     const sk = read(join(MX, 'mx-narrative-skeleton.py'))
     expect(sk).toContain('{{steps_done}}')
     expect(sk).toContain('禁手填')
+  })
+})
+
+// ㉒ 受控写作条款分发（2026-10-09 全局文风根治轮：模型回复黑话/跳跃/AI 味，
+// 根因=提示词面零写作约束）。真源=overlay/runtime/plugins/style-charter/
+// style-charter.md，双路分发：插件（产品稳态，bundled backend 自动加载）+
+// install_skills/seed_soul_charter（推演侧技能副本与 SOUL.md）。本组守门：
+// 真源与插件面不被误删、manifest 登记不漂移、分发幂等可换装。
+describe('㉒ 受控写作条款分发（真源/插件/manifest/幂等换装）', () => {
+  const read = (f: string) => readFileSync(f, 'utf8')
+
+  it('真源 marker 配对唯一 + 插件三件套 + manifest 三条目登记', () => {
+    const dir = join(PRODUCT, 'runtime/plugins/style-charter')
+    const charter = read(join(dir, 'style-charter.md'))
+    expect((charter.match(/<!-- style-charter:/g) || []).length).toBe(1)
+    expect((charter.match(/<!-- \/style-charter:/g) || []).length).toBe(1)
+    // 插件段预算（上游 MAX_SYSTEM_PROMPT_SECTION_CHARS=4000）：超限段被丢弃=静默失效
+    expect(charter.trim().length).toBeLessThan(4000)
+    expect(read(join(dir, 'plugin.yaml'))).toMatch(/kind:\s*backend/)  // bundled 自动加载，零 plugins.enabled 门槛
+    const manifest = JSON.parse(read(join(PRODUCT, 'runtime-manifest.json')))
+    const srcs: string[] = manifest.files.map((x: { source: string }) => x.source)
+    for (const f of ['plugin.yaml', '__init__.py', 'style-charter.md']) {
+      expect(srcs).toContain(`plugins/style-charter/${f}`)
+    }
+  })
+
+  it('install_skills 分发进全部技能副本且幂等；SOUL.md 并入幂等 + 升版换装', () => {
+    const root = sandbox()
+    writeFileSync(join(root, 'id.md'), 'IDENTITY LINE\n')
+    const out = sh(`
+      PROF="$AIPAY_SIM_ROOT/profiles/sc"
+      install_skills "$PROF"
+      install_skills "$PROF"
+      echo "SOUL_BEGIN=$(grep -c '<!-- style-charter:' "$PROF/SOUL.md" || true)"
+      echo "SKILL_COUNT=$(find "$PROF/skills" -name SKILL.md | wc -l | tr -d ' ')"
+      find "$PROF/skills" -name SKILL.md | sort | while read -r f; do
+        echo "SKILL $(basename "$(dirname "$f")") $(grep -c '<!-- style-charter:' "$f" || true)"
+      done
+      # 升版换装：预置旧版条款块（v0），seed 后旧块剥离、新版唯一、身份行保留
+      printf 'CUSTOM SOUL\\n\\n<!-- style-charter:v0 -->\\nOLD BLOCK\\n<!-- /style-charter:v0 -->\\n' > "$PROF/SOUL.md"
+      seed_soul_charter "$PROF"
+      echo "SWAP_FIRST=$(head -1 "$PROF/SOUL.md")"
+      echo "SWAP_OLD=$(grep -c 'OLD BLOCK' "$PROF/SOUL.md" || true)"
+      echo "SWAP_BEGIN=$(grep -c '<!-- style-charter:' "$PROF/SOUL.md" || true)"
+    `, root, { MX_SOUL_IDENTITY_SRC: join(root, 'id.md') })
+
+    const lines = out.trim().split('\n')
+    const get = (p: string) => lines.find((l) => l.startsWith(p))!.split('=')[1]
+    expect(get('SOUL_BEGIN=')).toBe('1')                       // SOUL 并入幂等
+    expect(Number(get('SKILL_COUNT='))).toBeGreaterThanOrEqual(6)
+    for (const l of lines.filter((x) => x.startsWith('SKILL '))) {
+      expect(l.endsWith(' 1')).toBe(true)                      // 每份技能副本恰好一份条款
+    }
+    expect(get('SWAP_FIRST=')).toBe('CUSTOM SOUL')             // 已有身份不被顶掉
+    expect(get('SWAP_OLD=')).toBe('0')                         // 旧版块剥离干净
+    expect(get('SWAP_BEGIN=')).toBe('1')                       // 新版唯一
   })
 })
