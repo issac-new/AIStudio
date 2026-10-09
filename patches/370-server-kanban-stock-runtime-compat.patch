@@ -37,17 +37,6 @@ index 27a29a13..e1f6e320 100644
  export interface KanbanEstimateResult {
    ok: boolean
    est_tokens?: number
-@@ -1286,6 +1307,10 @@ export interface KanbanEstimateResult {
-  * outcome is carried in the payload (exit code stays 0), never thrown.
-  */
- export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
-+  // HERMES_CUSTOM[aipaydev]: stock runtime has no estimate verb — honest degrade.
-+  if (!(await kanbanCliSupportsV020())) {
-+    return { ok: false, reason: 'estimate needs the SwarmStudio-custom hermes CLI (stock runtime has no kanban estimate verb)' }
-+  }
-   try {
-     const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
-       maxBuffer: 1024 * 1024,
 @@ -1304,6 +1329,10 @@ export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): P
   * exists yet (`hermes kanban estimate --title ... --json`).
   */
