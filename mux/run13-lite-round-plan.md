@@ -55,3 +55,16 @@ RUN_ID=20261010-v8-run13 LC_ALL=C START_STEP=devimpl nohup bash aipay-scenario.s
 - 措辞根治（push 到 origin main）：mux/run13-speedup-wording.patch ——同上已套用
 - 提速⑤⑥（负载预检+防休眠）：mux/mx-up.sh（已落）
 - 守门⑲断言同步新不变量（六路齐发+rebase 对接），套用后 89/89 全绿
+
+## 质量补强（2026-10-09 用户"不牺牲质量"审计指令）
+
+- **硬窗档位放大**（mx-scenario-lib.sh）：下限 7200s 不变，idle>900 的长等待档×8 放大
+  （1800 档→14400s）——防 devimpl 链式腿（C→S→N 串行+渠道批，合法总时长 3-4h）被平顶
+  硬窗误杀（误杀=假问题单+降级运行）。env 设值绝对覆盖。
+- **免等窗终态复核 patch**（mux/run13-quality-audit-closure.patch，下轮套用）：免等窗
+  记单时点≠终态——审计段以当前真值复核 receipt-missing/raci-not-structured 两族问题单，
+  补账成功者追加 DISP 闭环行（原单保留，两时点真值并存不删改）。
+- 粒度核验：六任务全符合纪律 31"单卡≤1 人日"（C 0.5/S 1 拆2/N 1 拆2/MP 2 拆2-3/
+  CHWX 2 拆2-3/CHALI 2 拆2-3）；chen 的 C→S→N 串行是真实依赖链（契约→状态机→回调）
+  非可并行化损失；4 工作者×6 派发+测试预备 2 路前移=并发 6，远低于定标 30，排队泵
+  兜瞬态超额——并行利用在本剧情依赖结构下已充分。
