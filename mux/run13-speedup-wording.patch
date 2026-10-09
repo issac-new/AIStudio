@@ -1,0 +1,20 @@
+--- a/aipay-scenario.sh
++++ b/aipay-scenario.sh
+@@ -586,7 +586,7 @@
+       dispatch_in_room fanfan "@fanfan-agent:matrix.test 【概设预写（流式流水线预备轮）】四份系分任务并行执行中，已有 ${_pw_n} 份入库、其余在途。请现在加载 requirements-analyst 技能起概设骨架，不等末稿：
+ 1) 先读已入库的 docs/analysis/AN-*.md（先 git pull 拉最新）、${RFD_DOC}、docs/analysis/${RFD_ID}-tasklist.md
+ 2) 可先做消歧与冲突处理（重点：金额单位统一明确为「分」(int64)；接口契约字段命名统一 snake_case），整理结构层次
+-3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）提交 push
++3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）并 push 到 origin main（推 feat 分支不命中入库真值——run12 design-push-gap 实锤）
+ 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
+ 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
+       sset review_prewrote 1
+@@ -641,7 +641,7 @@
+ 请加载 requirements-analyst 技能做汇总复核：
+ 1) git pull 读取四份 docs/analysis/AN-*.md
+ 2) 消除歧义与冲突（重点：金额单位必须统一明确为「分」(int64)；接口契约字段命名统一 snake_case）
+-3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），提交 push
++3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），并 push 到 origin main（推 feat 分支不命中入库真值——run12 design-push-gap 实锤）
+ 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
+ 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
+     wait_alive_truth "概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 1800 fanfan \
