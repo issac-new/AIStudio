@@ -585,7 +585,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   # 总时长硬窗（纪律 26 兜底，2026-10-09 提速轮根治）：idle 判据可被"房间噪音持续
   # 刷新工作行"骗过（run12 design-push-gap 实锤），无硬窗则等待可无限挂。
-  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-10800}"
+  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-7200}"
   local -a logs=()
   local a
   for a in ${agents//,/ }; do
@@ -646,7 +646,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
 wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
   # anchor-spec = "desc@agent@predicate-expr"（@ 分隔三段；desc 不含 @）
   local idle="$1" agents="$2"; shift 2
-  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-10800}"   # 总时长硬窗（同 wait_alive_truth，纪律 26 兜底）
+  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-7200}"   # 总时长硬窗（同 wait_alive_truth，纪律 26 兜底）
   local -a descs=() owners=() exprs=() done_flag=()
   local s d o e a i
   for s in "$@"; do
