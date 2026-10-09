@@ -686,7 +686,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
 2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
 3) 验证计划前移：测试要点是否在设计期已列
 4) 备选方案 ≥2 且有取舍理由
-评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单）。不许谎报。" "$(agent_mxid arch)"
+评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid arch)"
   # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
   # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
@@ -1089,7 +1089,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 5) 灰度计划：5%→25%→100% 与各档观察期
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
-评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-7) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
+评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-7) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid fanfan)"
     # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
     # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
     if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
