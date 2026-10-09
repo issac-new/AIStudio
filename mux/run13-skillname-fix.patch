@@ -1,0 +1,11 @@
+--- a/aipay-scenario.sh
++++ b/aipay-scenario.sh
+@@ -533,7 +533,7 @@
+   # %WS% 是唯一随派单变化的占位，在使用点 ${COMMON//%WS%/$WS} 替换。
+   # 结论行=完成回执一体化（V7 总则 17 实装）：一行携带全部凭证要素，agent 报 DONE
+   # 与回执不再是分离动作（run7 四类尾部动作被丢的根治位）；核验侧双形态匹配天然兼容。
+-  COMMON="你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 xxx-dev skill 执行「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
++  COMMON="你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 aipaydev-dev skill 执行（历史任务书曾误写 xxx-dev=方案泛名占位，真名 aipaydev-dev）「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
+ 工作要求：
+ 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
+ 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
