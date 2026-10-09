@@ -1,0 +1,98 @@
+--- a/aipay-scenario.sh
++++ b/aipay-scenario.sh
+@@ -397,13 +397,13 @@
+   jwt_of fanfan >/dev/null
+   # 超时不直接退出：把拒收原因回灌给 agent 再等一轮。否则核验方默默失败、agent 以为已
+   # 交活，整轮只能靠人肉重跑（09-23 三连超时皆因此，第三次更是拿需求编号冒充卡ID）。
+-  if ! wait_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}"; then
++  if ! wait_alive_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" 600 fanfan kanban_has fanfan "${RFD_ID}"; then
+     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
+       "@$(agent_mxid fanfan) 验收拒收：你的结论行上报了完成，但你账号的板查无 ${RFD_ID} 任务卡。
+       请先用协作看板登记主卡（建卡工具会返回真实卡 ID），再以 ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<该卡ID> 重报。
+       填需求编号当卡 ID 会被判虚报。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+     note "[拒收回灌] 已 @fanfan-agent 告知缺账号板卡，要求补登记后重报凭证"
+-    wait_truth "补登记后账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}" \
++    wait_alive_truth "补登记后账号板出现 ${RFD_ID} 任务卡" 600 fanfan kanban_has fanfan "${RFD_ID}" \
+       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
+            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
+   fi
+@@ -427,7 +427,7 @@
+   # （run10 之死：已完成态被重验，agent 不重报即两窗超时中止）。首验秒过即落键。
+   if [[ -n "$(sget analysis_verified)" ]] && verify_done_evidence "${RFD_ID}"; then
+     note "[凭证] 续跑：${RFD_ID} 凭证已核验过且仍成立，跳过回灌"
+-  elif ! wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 600 \
++  elif ! wait_alive_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 300 fanfan \
+       verify_done_evidence "${RFD_ID}"; then
+     # 与步骤 9 同款回灌：只中止不告知，等于把"凭证错了"变成人肉重跑（09-23 实锤：
+     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
+@@ -437,7 +437,7 @@
+       请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
+       只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+     note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
+-    wait_truth "重报后凭证反向核验" "${MX_WAIT_RETRY:-2400}" verify_done_evidence "${RFD_ID}" \
++    wait_alive_truth "重报后凭证反向核验" 600 fanfan verify_done_evidence "${RFD_ID}" \
+       || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
+            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
+   fi
+@@ -473,15 +473,10 @@
+     note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
+   else
+     mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+-    note "[回灌] 主卡缺结构化 raci——已要求 fanfan 补填，重查 300s"
+-    sleep 60
+-    RACI_JSON="$(wait_truth "主卡结构化 raci 补填" 240 kanban_raci_nonempty "${RFD_ID}" && kanban_raci_of fanfan "${RFD_ID}" || true)"
+-    if [[ -n "$RACI_JSON" ]]; then
+-      note "[真值] 回灌后主卡带结构化 raci ✓"
+-    else
+-      echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（回灌补填后仍缺，仍靠正文承载）" >> "$EVID_DIR/issues.log"
+-      note "[观察] 主卡回灌后仍未带结构化 raci（记问题单，继续）"
+-    fi
++    # 提速③ 免等窗（2026-10-09 提速决议）：结构化 raci 缺失属程序性（正文 raci 承载
++    # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻记单放行。
++    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻记单；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
++    note "[观察] 主卡缺结构化 raci（免等窗：回灌已发+记单放行）"
+   fi
+   # 关联人进群核验（step 10 要求 agent 自动邀请）
+   # 判定语义（V4-run1 误报根治）：agent 职责=邀请发出（join|invite 均算履职）；
+@@ -616,13 +611,10 @@
+       note "[真值] $t 完成回执在房间可见 ✓"
+     else
+       mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" >/dev/null 2>&1 || true
+-      note "[回灌] $t 回执未见——已要求 ${owner} 补发，重查 300s"
+-      if wait_truth "回灌后 $t 回执补发" 300 receipt_seen; then
+-        note "[真值] $t 回灌后回执可见 ✓"
+-      else
+-        echo "ISSUE|receipt-missing|$t|完成回执未见（回灌补发后仍缺，双兜底缺口——入库真值在案）" >> "$EVID_DIR/issues.log"
+-        note "[观察] $t 回灌后回执仍未见（记问题单）"
+-      fi
++      # 提速③ 免等窗（2026-10-09 提速决议）：入库真值已核验在案，回执属程序性补账——
++      # 回灌保留训练信号但不再等 300s 重查（run12 四笔回执重查烧约 40min 实测），即刻记单放行。
++      echo "ISSUE|receipt-missing|$t|完成回执未见（免等窗即刻记单；回灌补发要求已发，入库真值在案）" >> "$EVID_DIR/issues.log"
++      note "[观察] $t 回执未见（免等窗：回灌已发+记单放行）"
+     fi
+   done
+   gate_review chen "系分执行-AN-PAYCORE"
+@@ -656,20 +648,13 @@
+     # 评审人自登回灌（run8 遗留④：run7 直接导演补登——agent 自登能力从未被触发验证。
+     # 先回灌 fanfan 在账号板自登评审卡（标题含 <RFD>-评审），重查一轮）。
+     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+-    note "[回灌] 评审卡未见——已要求 fanfan 自登，重查 300s"
+-    wait_truth "回灌后 fanfan 板出现 ${RFD_ID} 评审卡" 300 kanban_has fanfan "${RFD_ID}-评审" || true
+-    RID=$(kanban_list fanfan | jq -r --arg rfd "$RFD_ID" '[.. | objects | select(has("title")) | select((.title // "") | contains($rfd + "-评审")) | .id][0] // empty')
+-    if [[ -n "$RID" ]]; then
+-      kanban_walk_done fanfan "$RID"
+-      note "[fanfan] 回灌自登评审卡 $RID → done（线下评审通过）"
+-    else
++    note "[回灌] 评审卡未见——已要求 fanfan 自登（提速③ 免等窗：不等重查，直接导演补登记兜底）"
+     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
+     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
+     # 记录，不代表评审通过。
+     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
+-    note "[观察] 回灌后评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
+-    echo "ISSUE|review-card-missing|fanfan|agent 回灌自登后仍未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+-    fi
++    note "[观察] 评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
++    echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+   fi
+   gate_review fanfan "G2-系分评审闸"
+   capture_step "review_done" "/app/board"
