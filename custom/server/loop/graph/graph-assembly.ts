@@ -300,7 +300,10 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   // report-gen 注入源（三期）：GRAPH_REPORT_MODULE=JS 模块路径（export reportFns）
   // 未设=默认建卡报告器（bridge 建「报告编写」卡+等完成，产品语义五类工作面之一）。
   // run13 图执行轮经此把 harness/CLI 报告生成器接进来，不动 node-executors。
-  let reportFns: Record<string, (state: unknown, ctx: unknown) => Promise<import('../../graph/node-executors').NodeResult>> | undefined
+  // 动态 import+注册走 async IIFE：createGraphAssembly 保持同步签名，注册在微任务内
+  // 完成（registry 为共享可变对象，specRuntime 等持有引用的消费方按执行时查表，不受影响）。
+  void (async () => {
+  let reportFns: Record<string, (state: unknown, ctx: unknown) => Promise<import('./types').NodeResult>> | undefined
   const reportModule = process.env.GRAPH_REPORT_MODULE
   if (reportModule) {
     try {
@@ -333,6 +336,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     setInterval(() => { void refresh() }, 60_000).unref?.()
     setCapabilitiesProvider((assignee) => (assignee ? (table[assignee] as never) : undefined))
   } catch { /* 注册表面不可用→合成层空转，模板地板兜底 */ }
+  })()
   const specRuntime = mode === 'on'
     ? new CustomSpecRuntime({
         specStore,
