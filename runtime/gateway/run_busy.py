@@ -258,7 +258,9 @@ class GatewayBusySessionMixin:
     # burst cannot pile up unbounded waiters; one poller drains the whole queue.
     CAPACITY_RETRY_POLL_SEC = 2.0
     CAPACITY_RETRY_MAX_AGE_SEC = 20 * 60.0
-    CAPACITY_RETRY_MAX_PENDING = 64
+    # 2026-10-09 run12 实锤扩容：15 agent+审批风暴规模下 64 全天丢 4931 条消息
+    # （含派发/催办，agent 收不到指令）——上限提到 512（事件体小，内存无压力）。
+    CAPACITY_RETRY_MAX_PENDING = 512
 
     _CAPACITY_SIDECAR_MIN_INTERVAL_S = 2.0
 
@@ -291,10 +293,12 @@ class GatewayBusySessionMixin:
         if pending is None:
             pending = self._capacity_retry_queue = []
         if len(pending) >= self.CAPACITY_RETRY_MAX_PENDING:
+            # 满队淘汰最旧（2026-10-09）：拒收新到消息会把最新指令（催办/回灌）丢掉，
+            # 淘汰最旧保新鲜度——旧消息 20min 年龄锚本来也会过期，语义损失更小。
+            dropped = pending.pop(0)
             logger.warning(
-                "Capacity retry queue full (%d); dropping message for %s",
+                "Capacity retry queue full (%d): evicted oldest (for %s), keeping newest",
                 len(pending), session_key)
-            return False
         now = time.monotonic()
         # Age anchor + re-refusal backoff keyed on the event identity: a cross-process
         # refusal (slots held by another gateway process or a CLI exec) comes back
