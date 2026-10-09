@@ -68,9 +68,9 @@ n_frames_total = sum(len(v) for v in frames.values())
 
 
 def part1_skeleton() -> str:
-    """PART1 五段式骨架——数字一律实算槽（{{...}} 由 final-report-merge 合入时自
+    """PART1 六段式骨架——数字一律实算槽（{{...}} 由 final-report-merge 合入时自
     state/issues.log 现算填充，2026-10-08 起），语境句【TODO】人工。
-    槽位：steps_done/gates_pass/first_pass/window/type_top/disp_sum +
+    槽位：steps_done/gates_pass/first_pass/window/type_top/disp_sum + 产品成效四槽（n_tests_pass/ac_cover/idem_verdict/uat_sum，自 evidence/product-outcome/quality-summary.env，方案 §5.4 ④卡）+
     merge 原生 run_id/n_frames/uniq_note/ch0/n_issue/n_disp。
     人工润色=替换【TODO】为判断句；数字槽保持原样（禁手填，防落伍）。"""
     rfd = state.get('rfd_id') or 'RFD-001'
@@ -84,6 +84,8 @@ def part1_skeleton() -> str:
 <div class="card info"><b>这场推演在验证什么：</b>【TODO 一句：本轮特性组合与定位】</div>
 
 <div class="card ok"><b>本轮的诚实结论：</b>26 步 {{{{steps_done}}}}/26 落键（第 26 步落键随本报告产出）；六闸 {{{{gates_pass}}}}/6 过，首过 {{{{first_pass}}}}/6（首过实算自 issues.log 闸键记单）；问题单 {{{{n_issue}}}} 项（DISP：{{{{disp_sum}}}}）。【TODO 两句：UAT 逐条判词汇总一句+最大的非粉饰事实一句】</div>
+
+<div class="card ok"><b>本轮产品成效：</b>单测 {{{{n_tests_pass}}}}；AC 覆盖 {{{{ac_cover}}}}；幂等验证 {{{{idem_verdict}}}}；UAT 判词 {{{{uat_sum}}}}（三件详见第 4 章；数字自 evidence/product-outcome/quality-summary.env 实算，未采集轮如实 ⬜）。【TODO 一句：成效定性——哪条交付能力被本轮证明可用】</div>
 
 <div class="card warn"><b>真实发生的缺口（全部记单在案）：</b>【TODO 3-6 条，每条带问题单键】（类型分布实算：{{{{type_top}}}}）</div>
 

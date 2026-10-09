@@ -464,6 +464,19 @@ def main():
     digests = {hashlib.md5(p.read_bytes()).hexdigest() for p in frames}
     n_frames = len(frames)
     uniq_note = '全互异' if len(digests) == n_frames else f'仅 {len(digests)}/{n_frames} 互异（差异记单）'
+    # 产品成效槽（方案 §5.4 PART1 ④卡）：evidence/product-outcome/quality-summary.env 实算，
+    # 未采集轮四槽全部 ⬜（run12 过渡轮如实标注，不编造）
+    po = {}
+    po_env = evid / 'product-outcome' / 'quality-summary.env'
+    if po_env.exists():
+        for ln in po_env.read_text(encoding='utf-8').splitlines():
+            if '=' in ln and not ln.startswith('#'):
+                k, v = ln.split('=', 1)
+                po[k.strip()] = v.strip()
+    n_tests_pass = po.get('n_tests_pass', '⬜')
+    ac_cover = po.get('ac_cover', '⬜')
+    idem_verdict = po.get('idem_verdict', '⬜')
+    uat_sum = po.get('uat_sum', '⬜')
     machine_styles, machine_body = extract_machine_parts(sim_html_path.read_text(encoding='utf-8'))
     machine_nav, machine_main, fused = split_layout(machine_body)
     if not fused:
@@ -539,6 +552,10 @@ def main():
              .replace('{{window}}', window_txt)
              .replace('{{type_top}}', type_top)
              .replace('{{disp_sum}}', disp_sum)
+             .replace('{{n_tests_pass}}', n_tests_pass)
+             .replace('{{ac_cover}}', ac_cover)
+             .replace('{{idem_verdict}}', idem_verdict)
+             .replace('{{uat_sum}}', uat_sum)
              .replace('{{ch0}}', ch0)
              .replace('<h2>研发全流程治理有效性（实算）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实算）</h2>')
              .replace('<div class="guide" ', '<div class="guide" id="part1-top" ', 1))
