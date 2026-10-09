@@ -1207,4 +1207,19 @@ describe('㉔ 干预点四件（2026-10-09：拆卡巡检/PROGRESS 中间锚/骨
     expect(aud).toContain('分支落地时间线')
     expect(aud).toContain('13b')
   })
+
+  it('㉕：matrix 共享线程提及门（run12 碎聊根治——生成器双旗+env 兜底）', () => {
+    const lib = read(join(HARNESS, 'mux', 'mx-lib.sh'))
+    // ①write_user_profile 生成器：platforms.matrix 双旗显式落（防上游默认漂移）
+    expect(lib).toContain("'matrix': {'enabled': True, 'require_mention': True, 'thread_require_mention': True}")
+    // ②同函数 .env 段：scoped env 兜底（YAML extra 优先，env 为回落层）
+    expect(lib).toContain('MATRIX_REQUIRE_MENTION=true')
+    expect(lib).toContain('MATRIX_THREAD_REQUIRE_MENTION=true')
+    // ③根因注释在位（防后人误删：洞=thread_require_mention 默认关致多 bot 线程回声环）
+    expect(lib).toContain('in_bot_thread 旁路')
+    // ④驱动侧唤醒路径提及全覆盖不回归：催办必带 m.mentions 第 4 参（两处调用面，在 scenario-lib；${_nmentions}/$_nmentions 两种拼写）
+    const scenLib = read(LIB)
+    const nudgeWithMentions = scenLib.match(/mx_send "\$\(load_token fanfan\)" "\$_nroom" "[^"]*" "\$\{?_nmentions\}?"/g)
+    expect(nudgeWithMentions!.length).toBeGreaterThanOrEqual(2)
+  })
 })
