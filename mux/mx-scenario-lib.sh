@@ -583,14 +583,17 @@ _any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
 
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
+  # 总时长硬窗（纪律 26 兜底，2026-10-09 提速轮根治）：idle 判据可被"房间噪音持续
+  # 刷新工作行"骗过（run12 design-push-gap 实锤），无硬窗则等待可无限挂。
+  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-10800}"
   local -a logs=()
   local a
   for a in ${agents//,/ }; do
     [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
   done
   if (( ${#logs[@]} == 0 )); then
-    note "[观察] wait_alive_truth 无日志面可观测（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 86400s 硬窗"
-    wait_truth "$desc" 86400 "$@"
+    note "[观察] wait_alive_truth 无日志面可观测（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 ${hard}s 硬窗"
+    wait_truth "$desc" "$hard" "$@"
     return
   fi
   local last_sig=0 last_work=-1 cur_work w
@@ -626,6 +629,10 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
       return 1
     fi
+    if (( $(date +%s) - t0 > hard )); then
+      note "[真值] $desc ✗（硬窗 ${hard}s 满：活性等待总时长超限——纪律 26 兜底；负责人 $agents）"
+      return 1
+    fi
     sleep "$MX_POLL_IVAL"
   done
 }
@@ -639,6 +646,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
 wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
   # anchor-spec = "desc@agent@predicate-expr"（@ 分隔三段；desc 不含 @）
   local idle="$1" agents="$2"; shift 2
+  local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-10800}"   # 总时长硬窗（同 wait_alive_truth，纪律 26 兜底）
   local -a descs=() owners=() exprs=() done_flag=()
   local s d o e a i
   for s in "$@"; do
@@ -650,10 +658,10 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
     [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
   done
   if (( ${#logs[@]} == 0 )); then
-    note "[观察] wait_alive_truth_multi 无日志面（agents=$agents），退化为 86400s 硬窗串行等待"
+    note "[观察] wait_alive_truth_multi 无日志面（agents=$agents），退化为 ${hard}s 硬窗串行等待"
     local rc=0
     for i in "${!exprs[@]}"; do
-      wait_truth "${descs[$i]}" 86400 eval "${exprs[$i]}" || rc=1
+      wait_truth "${descs[$i]}" "$hard" eval "${exprs[$i]}" || rc=1
     done
     return $rc
   fi
@@ -696,6 +704,12 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
     if (( $(date +%s) - last_sig > idle )); then
       for i in "${!exprs[@]}"; do
         (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 空转判死；负责人 ${owners[$i]}）"
+      done
+      return 1
+    fi
+    if (( $(date +%s) - t0 > hard )); then
+      for i in "${!exprs[@]}"; do
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（硬窗 ${hard}s 满：总时长超限——纪律 26 兜底；负责人 ${owners[$i]}）"
       done
       return 1
     fi
