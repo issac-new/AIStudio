@@ -93,6 +93,8 @@ export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title:
   { kind: 'roster', path: 'docs/admin/roster.md', title: '账号清单（15 人编制）', gate: '', group: 'admin' },
   { kind: 'app-registry', path: 'docs/admin/app-registry.md', title: '应用资产登记表', gate: '', group: 'admin' },
   { kind: 'org', path: 'docs/admin/org.md', title: '组织与权限矩阵', gate: '', group: 'admin' },
+  // 方案2 M2：agent 能力声明（四维）注册表——派发边界否定式合成的数据面
+  { kind: 'agent-capabilities', path: 'docs/admin/agent-capabilities.md', title: 'Agent 能力声明（四维）', gate: '', group: 'admin' },
   // 分析档案（系统分析产物——步骤 11/13 的产品承载）
   { kind: 'tasklist', path: 'docs/analysis/RFD-001-tasklist.md', title: 'SMART 任务清单（T-101~108）', gate: '', group: 'analysis' },
   { kind: 'an-paycore', path: 'docs/analysis/AN-PAYCORE-analysis.md', title: '系分 · AN-PAYCORE 支付核心', gate: '', group: 'analysis' },

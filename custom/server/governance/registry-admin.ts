@@ -15,6 +15,10 @@ export const REGISTRY_KINDS = {
   roster: 'docs/admin/roster.md',
   'app-registry': 'docs/admin/app-registry.md',
   org: 'docs/admin/org.md',
+  // 方案2 M2（specs/2026-10-09-agent-capability-boundaries.md）：agent 能力声明注册表
+  // ——分布式 agent 上线即声明（四维），保存即提交=变更审计；派发侧经
+  // graph/node-executors 能力合成层消费（否定式边界生成）。
+  'agent-capabilities': 'docs/admin/agent-capabilities.md',
 } as const
 export type RegistryKind = keyof typeof REGISTRY_KINDS
 
