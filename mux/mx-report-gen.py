@@ -1429,9 +1429,33 @@ def devimpl_parallelism_html(n: int) -> str:
     cap = wall_min * len(DEV_AGENTS)
     pct = len(active_pairs) / cap * 100 if cap else 0.0
     verdict = '达标（≥2× 基线）' if pct >= 100.0 else '未达验收线（记复盘，不阻断收官）'
+    # 分支落地时间线（干预点证据，2026-10-09 干预点四件 D）：每分支落地时刻
+    # =分支 tip 提交时间（仓内可反查）；PROGRESS 中间锚行随行（B 件产出，无则不渲染）。
+    tl = []
+    _repo = SIM / 'central' / 'aipaydev'
+    try:
+        _out = subprocess.run(
+            ['git', '-C', str(_repo), 'for-each-ref', '--sort=committerdate',
+             '--format=%(refname:short) %(committerdate:format:%m-%d %H:%M)',
+             'refs/remotes/origin/feat/DEV-*'],
+            capture_output=True, text=True, timeout=10).stdout.strip()
+        for _ln in _out.splitlines():
+            _p = _ln.split()
+            if len(_p) >= 3:
+                tl.append(f'{_p[0].replace("origin/feat/", "")} {_p[1]} {_p[2]}')
+    except Exception:
+        pass
+    tl_html = (f'<div class="st-pl">分支落地时间线（tip 提交时间，仓内可反查）：'
+               f'{" · ".join(H.escape(x) for x in tl) if tl else "仓内无 feat/DEV-* 分支引用（如实标注）"}</div>')
+    prog = [ln for ln in slog.read_text(encoding='utf-8', errors='replace').splitlines()
+            if 'PROGRESS-' in ln]
+    prog_html = (f'<div class="st-pl">PROGRESS 中间锚（子件级推进信号，B 件产出）：{len(prog)} 行'
+                 + ('；最近：' + H.escape(prog[-1][:120]) if prog else '（本轮未产生——任务书加挂前的轮次特征）')
+                 + '</div>')
     return (f'<div class="st-pl"><b>并行度实算（§4.4-13）</b>：{pct:.0f}%'
             f'（活跃 agent·分钟 {len(active_pairs)} ÷ 墙钟 {wall_min} 分钟 × 编制 {len(DEV_AGENTS)} 路，归一化；'
-            f'run11 基线 ~50% 复盘口径同参 —— {verdict}）</div>')
+            f'run11 基线 ~50% 复盘口径同参 —— {verdict}）</div>'
+            + tl_html + prog_html)
 
 def r18_block(n: int) -> str:
     """步骤 n 的 R18 载荷渲染。载荷空 → 诚实"未采集"章（审计查 8 按线打回）。"""
