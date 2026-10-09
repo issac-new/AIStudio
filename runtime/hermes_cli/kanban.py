@@ -751,6 +751,30 @@ def _cmd_estimate(args: argparse.Namespace) -> int:
         if task is None:
             return _err(f"no such task: {args.task_id}", 1)
         title, body = task.title, task.body
+    # HERMES_CUSTOM[estimate-days]（团队并行三期）：--days N 直设旁路——跳过 LLM
+    # 估算，人工/上游（decompose、REST）直接定人日并落库。与 --persist 合用或单用
+    # （给 task_id 时单用即落库，语义=「按 N 人日记账」）。
+    days_override = getattr(args, "days", None)
+    if days_override is not None:
+        if not args.task_id:
+            return _err("--days requires a task id (raw --title/--body has no card to update)", 2)
+        try:
+            days_val = round(float(days_override), 2)
+        except (TypeError, ValueError):
+            return _err(f"--days must be numeric, got {days_override!r}", 2)
+        if days_val < 0:
+            return _err("--days must be >= 0", 2)
+        with kbc.connect_closing() as conn:
+            ok = kb.set_estimate(conn, args.task_id, days_val, {
+                "source": "manual", "set_at": int(time.time()),
+            })
+        persisted = args.task_id if ok else None
+        if getattr(args, "json", False):
+            _print_json({"ok": True, "source": "manual", "estimate_days": days_val, "persisted": persisted})
+        else:
+            print(f"set {args.task_id} = {days_val}d" + (f" · persisted {persisted}" if persisted else " · persist FAILED"))
+        return 0 if ok else 1
+    # HERMES_CUSTOM[estimate-days] END
     result = _run_estimate(title or "", body)
     persisted = None
     if getattr(args, "persist", False):
