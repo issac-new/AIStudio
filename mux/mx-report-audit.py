@@ -493,9 +493,14 @@ for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', re
 
 # ── 查 13：并行度实算行（§4.4-13/§5.5，run12 起生效）：步 18 卡须含实算行；
 #    缺行 FAIL（数字实算禁手填，渲染层生成器产）；"段界未见"诚实声明=devimpl 段
-#    未完成的轮次特征，收官轮必在 → 只认缺行 FAIL，不另设阈值闸（不达标记复盘）。──
-if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep and '并行度实算（§4.4-13）' not in rep:
-    fails.append('步 18 缺并行度实算行（§4.4-13：devimpl 段"活跃 agent·分钟/墙钟分钟"须实算呈现）')
+#    未完成的轮次特征，收官轮必在 → 只认缺行 FAIL，不另设阈值闸（不达标记复盘）。
+#    13b 分支落地时间线行（干预点四件 D，2026-10-09）：并行度行在则时间线行必在
+#    （同批渲染，禁只报利用率不报推进刻度）。──
+if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
+    if '并行度实算（§4.4-13）' not in rep:
+        fails.append('步 18 缺并行度实算行（§4.4-13：devimpl 段"活跃 agent·分钟/墙钟分钟"须实算呈现）')
+    elif '分支落地时间线' not in rep:
+        fails.append('步 18 缺分支落地时间线行（干预点 D：并行度行在则推进刻度行必在，同批渲染）')
 
 # ── 汇总 ──
 print(f'报告：{REPORT}')
