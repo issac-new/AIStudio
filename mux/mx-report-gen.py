@@ -1377,7 +1377,7 @@ def _r18_frame_tags(frames, step):
             out.append(f'<p class="no-evidence">帧缺失：{H.escape(name)}（采集位空——按 R18 补拍）</p>')
     return ''.join(out)
 
-# ── §4.4-13 并行度实算（run12 起）：devimpl 段"活跃 agent·分钟/墙钟分钟" ——
+# ── §5.5 并行度实测（run12 起）：devimpl 段"活跃 agent·分钟/墙钟分钟" ——
 #    数据源=四路 dev agent（chen/hu/lin/xiao）agent.log 真实工作行（判据与驱动判活
 #    同源：API call/tool 完成/Turn 起止）+ scenario.log 段界（── devimpl → ── defect）。
 #    归一化口径：÷（墙钟分钟×编制 4）——run11 复盘基线 ~50%（=平均 2 路在活）同口径，
@@ -1452,7 +1452,7 @@ def devimpl_parallelism_html(n: int) -> str:
     prog_html = (f'<div class="st-pl">PROGRESS 中间锚（子件级推进信号，B 件产出）：{len(prog)} 行'
                  + ('；最近：' + H.escape(prog[-1][:120]) if prog else '（本轮未产生——任务书加挂前的轮次特征）')
                  + '</div>')
-    return (f'<div class="st-pl"><b>并行度实算（§4.4-13）</b>：{pct:.0f}%'
+    return (f'<div class="st-pl"><b>并行度实测（§5.5）</b>：{pct:.0f}%'
             f'（活跃 agent·分钟 {len(active_pairs)} ÷ 墙钟 {wall_min} 分钟 × 编制 {len(DEV_AGENTS)} 路，归一化；'
             f'run11 基线 ~50% 复盘口径同参 —— {verdict}）</div>'
             + tl_html + prog_html)
@@ -1864,7 +1864,7 @@ def qgate_block(n: int) -> str:
             '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
             f'<pre class="art-code">{H.escape(raw)}</pre></details>')
 
-# 六文调研治理能力入报告证据链（方案 §2.5 治理证据面/§2.6-10/§4.4-9）：
+# 六文调研治理能力入报告证据链（方案 §2.5 治理证据端点注/§2.6-10）：
 # 步 23 事故报告汇编、步 24 自治度对账+虚拟损益表——evidence/ 导出件在位才透传。
 _GOV_EVIDENCE = {
     23: [('incident-report.md', '事故报告汇编（三类 17 要素，/api/incident/sessions/:id/report 导出件）')],
@@ -2052,6 +2052,12 @@ try:
                     '三件采集 run13 起为必采（方案 §5.4 产品成效呈现；缺席记单 type=product-outcome-missing）。</p>')
     # 第 4 章 本轮新特性实证（按轮注册；未注册轮如实不渲染）
     _NEW_FEATURES_BY_RUN = {
+        '20261009-v8-run12': [
+            ('编码六路并行首役', 'pay-core 拆三件+渠道双路+收银台同刻即派；接口先行件分支落地后 rebase 对接——步 18 并行度实测行以 agent 工作行实算（基线 run11 ~50%）', 'run13-speedup-devimpl.patch + scenario.log 段界'),
+            ('G5 整改测试按域三分并行（首个全流程并行实证）', '7 个 spec 按域分派：qi 主 01-03+汇总+结论行、wei 逐组报 04-07、fanfan 等待期预审②③——五类工作面四步闭环的测试面实例（并行能力基础化 spec）', 'matrix event $LlZZQ4HX'),
+            ('容量重试队列扩容', '队列 64→512+满队淘汰最旧——run12 全天丢弃 4931 条消息实测后的容量基础修复（并发 30 定标的配套）', 'overlay 826097e5'),
+            ('图执行 shadow 旁路试跑', '26 步图模板随驱动 shadow 模式试跑（不接管主链），run13 起转正为主执行通道', 'mx-lib.sh shadow 开关'),
+        ],
         '20261007-v8-run10': [
             ('快模式 MX_FAST=1 全程首役', '轮询 15s→5s、审批扫描 30s、治理三步（22-24）并发——01:21 起跑 14:29 收官（含系分误拦空转 2h+编码滞留 2h36m 事故窗，如实呈现不与他轮硬比）', 'scenario.log 全程'),
             ('569 gate-guard 显式启用化', '系分期全局误拦致首批空转事故→守卫改 MX_GATE_GUARD 显式声明，默认不再拦', '035a555 + 守门断言'),
