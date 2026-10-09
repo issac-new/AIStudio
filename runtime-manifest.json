@@ -122,6 +122,21 @@
       "source": "gateway/kanban_watchers_common.py",
       "dest": "gateway/kanban_watchers_common.py",
       "note": "569 gate-guard：闸门键未齐 spawn 暂停（run9 P9 越序抢跑前置拦截；KANBAN_GATE_GUARD_FILE/KEYS 未配=惰性，生产零行为变化）"
+    },
+    {
+      "source": "plugins/style-charter/plugin.yaml",
+      "dest": "plugins/style-charter/plugin.yaml",
+      "note": "受控写作条款插件声明（kind:backend bundled 自动加载，零 plugins.enabled 门槛）——全局文风根治轮 2026-10-09"
+    },
+    {
+      "source": "plugins/style-charter/__init__.py",
+      "dest": "plugins/style-charter/__init__.py",
+      "note": "注册 swarmstudio.style-charter 系统提示词段（after_memory，每新会话冻结注入）"
+    },
+    {
+      "source": "plugins/style-charter/style-charter.md",
+      "dest": "plugins/style-charter/style-charter.md",
+      "note": "受控写作条款唯一真源（ASD-STE100×公文笔法）；simharness mx-lib 同源只读消费"
     }
   ],
   "notes": [
