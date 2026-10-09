@@ -68,6 +68,19 @@ RUN_ID=20261010-v8-run13 LC_ALL=C START_STEP=devimpl nohup bash aipay-scenario.s
   等价性后切 on，图引擎接管调度即彻底自驱动。
 - 降级前提：SIM product-dist 重建后 REST 修复才进运行面（mx-setup 供给链）。
 
+## 二合一报告层（2026-10-09 用户"仿真报告×演示报告合一"指令）
+
+mux/unified-report-layer.py —— 只读叠加后处理层（不动 mx-report-gen/mx-report-audit 产物与断言面）：
+- **受众卡层**：8 视角（产品/需求分析/架构设计/研发设计/代码开发/测试/研发管理/平台）各 4-6 张卡，
+  每卡=受众会问的问题+一句判断句结论+数据锚+证据指针，数字实算自 r18-steps/issues/state/scenario
+  数据面，缺项如实标"本轮未见该数据"。
+- **完整审阅层**：内嵌既有报告 HTML 正文（审计正本不受影响），缺失时回落按步台账。
+- **路演素材层**：roadshow-outline.md 每块 headline/points/anchor 三字段（≥10 块），
+  供后续 PPT/视频生成器提取；unified-report.html 单文件含三层+问题台账。
+- 验证：run11 真数据实跑（20261007-v8-run11 → unified/ 三件：17 卡/10 块/364KB）；
+  守门 tests/unified-report-layer.test.ts 4 测（内嵌 fixture 不依赖在架轮次），套件 98/98 绿。
+- 用法：python3 mux/unified-report-layer.py --run <RUN_ID> [--sim-root <path>]；幂等可重跑。
+
 ## 质量补强（2026-10-09 用户"不牺牲质量"审计指令）
 
 - **硬窗档位放大**（mx-scenario-lib.sh）：下限 7200s 不变，idle>900 的长等待档×8 放大
