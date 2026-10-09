@@ -33,14 +33,28 @@ LOCKDIR="$SIM_ROOT/.driver.lock.d"
 note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
 
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
+MYPGID=$(ps -o pgid= -p $$ | tr -d ' ')
+note "本监督系进程组 pgid=$MYPGID（锁防御：非本组驱动=入侵者，清掉+记账）"
 while true; do
   [[ -f "$STOPFLAG" ]] && { note "stop 文件在位，监督器退出"; rm -f "$STOPFLAG"; exit 0; }
   if grep -q '^report_done=' "$STATE" 2>/dev/null; then
     note "report_done 已落键，监督器功成身退"
     exit 0
   fi
-  if pgrep -f "bash aipay-scenario.sh" >/dev/null 2>&1; then
-    sleep 30
+  # 锁防御（2026-10-09 双监管拉锯实录：抢驱方反复杀 incumbent+抢窗口启动）——
+  # 只认本监督系进程组的驱动；他组驱动=入侵者，一律 TERM+issues 记账（击杀失效化的
+  # 另一半：不许他方长驻）。子 shell 继承本组 pgid，精确区分本系/入侵。
+  DPIDS=$(ps -axo pid,pgid,command | awk -v g="$MYPGID" '$3=="bash" && /aipay-scenario\.sh/ && !/pgrep|grep|tail|awk|sed/ {print $1":"$2}')
+  for dp in $DPIDS; do
+    dpid="${dp%%:*}"; dpgid="${dp##*:}"
+    if [ "$dpgid" != "$MYPGID" ]; then
+      note "锁防御：入侵驱动 pid=$dpid pgid=$dpgid（非本系 $MYPGID）——TERM"
+      echo "ISSUE|driver-intruder|supervisor|入侵驱动 pid=$dpid pgid=$dpgid 被监督器清除（单驱动锁执行臂；本系 pgid=$MYPGID）" >> "$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+      kill -TERM "$dpid" 2>/dev/null
+    fi
+  done
+  if [ -n "$DPIDS" ] && echo "$DPIDS" | grep -q ":${MYPGID}$"; then
+    sleep 15
     continue
   fi
   # 陈锁兜底（持锁者已死才清——活锁不动，防误清在跑驱动的锁）
