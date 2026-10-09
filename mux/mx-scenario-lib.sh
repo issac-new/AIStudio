@@ -508,6 +508,8 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
     if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
     sleep "$MX_POLL_IVAL"
   done
+  # 终态复核（方案纪律 8：等待窗口是等待上限，不是判词有效期）——窗满再判一次
+  if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
   note "[真值] $desc ✗（${timeout}s 超时）"
   return 1
 }
@@ -645,14 +647,17 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 $agents）"
       return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
       return 1
     fi
     if (( $(date +%s) - t0 > hard )); then
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（硬窗 ${hard}s 满：活性等待总时长超限——纪律 26 兜底；负责人 $agents）"
       return 1
     fi
@@ -928,24 +933,62 @@ room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
 # 是显式判词：调用方必须熔断，不得置卡 done、不得落键（R-A2）。
 mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=无判词）
   local out
-  # errexit 自守（本库 773 行 set -euo pipefail 是运行态）：grep -vE 全滤空/grep -oE
-  # 零匹配都退 1，裸赋值管道会炸掉整个调用方脚本——无判词是常态输入不是错误。
-  out=$(printf '%s' "$2" | { grep -vE "$1-PASS.*$1-FAIL|$1-FAIL.*$1-PASS" || true; } | { grep -oE "$1-(PASS|FAIL)" || true; } | tail -1)
+  # errexit 自守（本库 set -euo pipefail 是运行态）：无判词是常态输入不是错误。
+  # 判词语义（方案纪律 8；四案归一：run2 转述污染/f1979781 卡面自毒/run12 模板
+  # 字面+「conclusion: X-FAIL → 复审改判 X-PASS」过渡行被成对过滤误杀；run12 卡
+  # body 实证 t_c560939f）：
+  #   成对行（同现 PASS 与 FAIL）分两种——含「或/二选一」=协议二选一模板或转述，
+  #   整行不作判词；含「→/改判/修正」=旧判词→新判词过渡叙述，取末 token（末判词赢）；
+  #   其余成对=语境不明，保守整行弃（不产生假过）。
+  #   单 token 行仅两种上下文可判：行首（前导仅格式符/编号），或紧邻「结论/判词/
+  #   conclusion/verdict/closing」锚点（锚点与 token 之间只允许格式符与可选为/是；
+  #   「结论行写 X」类指令文本拒）。多条结论行取最后一条。
+  out=$(printf '%s\n' "$2" | awk -v g="$1" '
+    {
+      line = $0
+      P = (index(line, g "-PASS") > 0); F = (index(line, g "-FAIL") > 0)
+      if (P && F) {
+        if (line ~ /或|二选一/) next
+        if (line ~ /->|→|改判|改写|修正|覆写|已解决|已修复|已补/) {
+          rest = line; v = ""
+          while (match(rest, g "-(PASS|FAIL)")) {
+            v = substr(rest, RSTART + length(g) + 1, 4)
+            rest = substr(rest, RSTART + RLENGTH)
+          }
+          last = v
+        }
+        next
+      }
+      if (!P && !F) next
+      tok = (P ? "PASS" : "FAIL")
+      pos = index(line, g "-" tok)
+      pre = substr(line, 1, pos - 1)
+      if (pre ~ /^[[:space:]*_+>.#|~-]*([0-9]+[.)][[:space:]]*)?$/) { last = tok; next }
+      if (pre ~ /(结论|判词|conclusion|verdict|closing)[[:space:]:=*_·「」<>#|~.-]*(为|是)?[[:space:]:=*_·「」<>#|~.-]*$/) { last = tok; next }
+    }
+    END { print last }
+  ')
   case "$out" in
-    *-PASS) echo PASS ;;
-    *-FAIL) echo FAIL ;;
+    PASS) echo PASS ;;
+    FAIL) echo FAIL ;;
     *) echo "" ;;
   esac
 }
 
 mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
-  local room="$1" sender="$2" gate="$3" since="${4:-0}"
-  mx_messages "$(load_token fanfan)" "$room" 200 2>/dev/null | jq -r --arg s "$sender" --arg g "$gate" --argjson since "$since" '
-    [ .[] | select((.origin_server_ts // 0) > $since and .sender == $s)
-      | {ts: (.origin_server_ts // 0),
-         v: ((.content.body // "") | [match($g + "-(PASS|FAIL)"; "g") | .captures[0].string] | last // empty)}
-      | select(.v != "") ]
-    | sort_by(.ts) | last | .v // empty'
+  # 单一事实源：判词语义只在 mx_text_gate_verdict（结构锚定）；本函数只按发件人/
+  # 时刻选消息并逐条取判词，末判词赢（时间序最后一条）。
+  local room="$1" sender="$2" gate="$3" since="${4:-0}" last="" ts b64 body v
+  while read -r ts b64; do
+    [[ "$ts" =~ ^[0-9]+$ ]] || continue
+    (( ts > since )) || continue
+    body=$(printf '%s' "$b64" | { base64 -d 2>/dev/null || base64 -D 2>/dev/null || true; })
+    v=$(mx_text_gate_verdict "$gate" "$body")
+    [[ -n "$v" ]] && last="$v"
+  done < <(mx_messages "$(load_token fanfan)" "$room" 200 2>/dev/null | jq -r --arg s "$sender" '
+    [.[] | select(.sender == $s) | [(.origin_server_ts // 0), ((.content.body // "") | @base64)]]
+    | sort_by(.[0]) | .[] | @tsv' 2>/dev/null || true)
+  echo "$last"
 }
 
 kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> → stdout: PASS|FAIL|空
@@ -975,9 +1018,15 @@ mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <ca
   # 房间行 + 评审卡 body 双源合并（R-A2）：FAIL 任一出现即 FAIL（保守不放行），
   # 仅当无 FAIL 且任一 PASS 才 PASS。卡 body 是权威载体（review-record 在卡）；
   # 复审轮必须同步更新卡结论行，否则旧 FAIL 判词持续拦门（安全方向）。
+  # 判词送达确认（方案纪律 8）：卡面有判词而房间行缺失=发送哑火——代发一条显式
+  # 标注的对照行补房间记录（转写卡面判词并注明来源，不改判词语义；每闸至多一次）。
   local rv cv
   rv="$(mx_room_gate_verdict "$1" "$2" "$3" "$4")"
   cv="$(kanban_card_gate_verdict "$5" "$6" "$3")"
+  if [[ -n "$cv" && -z "$rv" && "$(sget "verdict_relay_${3}")" != "1" ]]; then
+    sset "verdict_relay_${3}" 1
+    mx_send "$(load_token fanfan)" "$(sget room_analysis)" "[判词对照行·relay] ${3}-${cv}（来源=评审卡 ${6} body 结论行；房间原行未达，代发对照行补记录）" >/dev/null 2>&1 || true
+  fi
   if [[ "$rv" == "FAIL" || "$cv" == "FAIL" ]]; then echo FAIL; return 0; fi
   if [[ "$rv" == "PASS" || "$cv" == "PASS" ]]; then echo PASS; return 0; fi
   echo ""
@@ -1078,19 +1127,51 @@ mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未�
   local key="$1" label="$2" n="${3:-1}" cur
   cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
   sset "${key}_fail_rounds" $(( cur + n ))
+  sset "${key}_trip_sig" "$(_mx_gate_evidence_sig "$label")"
   note "[熔断] ${label} 累计 $(( cur + n )) 轮未过（阈值 2）"
 }
 
-mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝，除非 GATE_BREAKER_OVERRIDE=1
-  local key="$1" label="$2" cur
+mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝；复位=证据变化或人工复议
+  local key="$1" label="$2" cur sig trip_sig reason
   cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
   (( cur < 2 )) && return 0
-  if [[ "${GATE_BREAKER_OVERRIDE:-0}" == "1" ]]; then
-    echo "ISSUE|gate-breaker-override|director|${label} 熔断已触发（${cur} 轮未过），人工 GATE_BREAKER_OVERRIDE=1 显式放行重试" >> "$EVID_DIR/issues.log"
+  # 复位=证据变化（方案纪律 8）：trip 时记录证据签名，check 自比对——出现新派发/
+  # 判词/复审/补齐证据即新尝试，自动放行；证据零变化的重复尝试继续拦截（熔断只拦
+  # 空转，不拦改进）。
+  sig=$(_mx_gate_evidence_sig "$label")
+  trip_sig=$(sget "${key}_trip_sig")
+  if [[ -n "$trip_sig" && "$sig" != "$trip_sig" ]]; then
+    sset "${key}_fail_rounds" 0
+    sset "${key}_tripped_logged" 0
+    echo "ISSUE|gate-breaker-reset|director|${label} 证据变化复位（签名 ${trip_sig}→${sig}）：新尝试放行" >> "$EVID_DIR/issues.log"
+    note "[熔断] ${label} 证据变化复位（签名 ${trip_sig}→${sig}）"
     return 0
   fi
-  echo "ISSUE|gate-breaker-tripped|director|${label} 熔断（${cur} 轮未过），本轮拒绝执行；重试须人工 GATE_BREAKER_OVERRIDE=1（断点续跑不得静默绕过）" >> "$EVID_DIR/issues.log"
-  fail "${label} 打回熔断（${cur} 轮未过，V3 硬闸）：不得继续。人工确认可重试时以 GATE_BREAKER_OVERRIDE=1 重启。"
+  if [[ "${GATE_BREAKER_OVERRIDE:-0}" == "1" ]]; then
+    # 人工复议留痕（方案纪律 8）：须带原因；事件入 approved.events；复议后仍走正常判词
+    reason="${GATE_BREAKER_REASON:-}"
+    if [[ -z "$reason" ]]; then
+      echo "ISSUE|gate-breaker-override-refused|director|${label} 复议缺 GATE_BREAKER_REASON（须记原因+变化证据），拒绝放行" >> "$EVID_DIR/issues.log"
+      fail "${label} 熔断复议缺原因：GATE_BREAKER_OVERRIDE=1 必须与 GATE_BREAKER_REASON=<原因/变化证据> 同时给出"
+    fi
+    echo "ISSUE|gate-breaker-override|director|${label} 熔断复议放行（${cur} 轮未过）：${reason}" >> "$EVID_DIR/issues.log"
+    echo "humangate:${key} GATE-BREAKER-REVIEW director-human $(date +%s) reason=${reason}" >> "$EVID_DIR/approved.events"
+    sset "${key}_fail_rounds" 0
+    sset "${key}_tripped_logged" 0
+    return 0
+  fi
+  # 幂等记单（方案纪律 8）：同闸熔断只记一次，重试不刷单（run12 214 条重复记单根治）
+  if [[ "$(sget "${key}_tripped_logged")" != "1" ]]; then
+    sset "${key}_tripped_logged" 1
+    echo "ISSUE|gate-breaker-tripped|director|${label} 熔断（${cur} 轮未过），本轮拒绝执行；复位条件=证据变化自动复位或人工复议（GATE_BREAKER_OVERRIDE=1 + GATE_BREAKER_REASON=<原因>）" >> "$EVID_DIR/issues.log"
+  fi
+  fail "${label} 打回熔断（${cur} 轮未过，V3 硬闸）：不得继续。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
+}
+
+_mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 中该闸派发/判词/复审类证据行数
+  local label="$1" c
+  c=$(grep -cE "(派发|判词|结论|补齐|复审|评审|回执).{0,120}${label}|${label}.{0,120}(派发|判词|结论|补齐|复审|评审|回执)" "$EVID_DIR/scenario.log" 2>/dev/null || true)
+  echo "${c:-0}"
 }
 
 # ── V3 生命周期治理助手 ─────────────────────────────────
