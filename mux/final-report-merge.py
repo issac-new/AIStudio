@@ -531,12 +531,22 @@ def _load_jargon_words():
 
 def jargon_gate(human_text: str):
     """人读层（PART1/叙事层/步叙事）HARD 扫描。括注（术语卡首现释义等）不计入——
-    括注即释义位，扫描它等于惩罚合规行为。返回违规清单 [(词, 语境)]。"""
+    括注即释义位，扫描它等于惩罚合规行为。返回违规清单 [(词, 语境)]。
+    引证原文豁免（run13 实锤）：驱动日志行（HH:MM:SS 起头的时间戳表格行）是逐字
+    证据引文，禁改写（证据纪律）——扫它等于惩罚如实引证。人话义务由 PART1 术语
+    对照卡承担（引证原文+导读术语对照，run12 已裁定的组合形态）。"""
     hard, meta_quote = _load_jargon_words()
-    plain = html.unescape(re.sub(r'<[^>]+>', ' ', human_text))
+    # 表格/代码块=机器数据行（scenario.log 时间线、台账、日志原文），非人读文案——
+    # 扫描前剥离（12:18 run13 实锤：时间线事件类型「闸点沉淀」13 处误伤，词表罚数据行）。
+    _txt = re.sub(r'<table.*?</table>', ' ', human_text, flags=re.S)
+    _txt = re.sub(r'<pre.*?</pre>', ' ', _txt, flags=re.S)
+    plain = html.unescape(re.sub(r'<[^>]+>', ' ', _txt))
     plain = re.sub(r'（[^（）]*）', ' ', plain)  # 括注（含 gloss 展开）豁免
+    log_row = re.compile(r'^\s*\d{1,2}:\d{2}:\d{2}\b')  # 驱动日志引证行签名
     hits = []
     for ln in plain.splitlines() or [plain]:
+        if log_row.match(ln):
+            continue
         for w in hard:
             if w in ln and not any(m in ln for m in meta_quote):
                 hits.append((w, ln.strip()[:60]))
