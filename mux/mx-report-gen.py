@@ -1153,25 +1153,25 @@ STEPS_META_RUN13 = {
             narrative='lite 轮夹具带：排期计划 docs/plan/RFD-001-schedule.md 在仓（六任务人日+子任务拆分为源轮真值），本轮 DEV/TEST 任务 ID 沿用。', imgs=[]),
     18: dict(keys=['devimpl_done'], ts_override='1',
             actor='ai', actorText='AI · 四开发 agent',
-            narrative='lite 轮当轮执行·开发实施：六路齐发（DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX+DEV-CHALI 同刻即派，提速②），派发词首带边界纪律条款（仅 feat/* 交付/禁直推 main/禁代做）；段入口记 origin/main 基线+段末 main 污染反查+提交粒度观察（过度交付守卫 C 件首役）；GRAPH_ENGINE=on 图执行引擎接管调度（loop-graph 自驱动，产品面 0b149770+REST 修复 a94ec57b）。【run13 实锚·报告步回填：派发时刻/分支落地时间线/边界守卫观察结果/G3 键值】', imgs=[('devimpl_done-op1-before','六路齐发前（IDE 面）','ui'),('devimpl_done-op1-after','G3 落键+集成','ui')]),
+            narrative='lite 轮当轮执行·开发实施：六路齐发（DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX+DEV-CHALI 同刻即派，提速②），派发词首带边界纪律条款（仅 feat/* 交付/禁直推 main/禁代做）；段入口记 origin/main 基线+段末 main 污染反查+提交粒度观察（过度交付守卫 C 件首役）；GRAPH_ENGINE=on 图执行引擎接管调度（loop-graph 自驱动，产品面 0b149770+REST 修复 a94ec57b）。【run13 实锚·报告步回填：派发时刻/分支落地时间线/边界守卫观察结果/G3 键值】', imgs=[('devimpl_done-op1-before','六路齐发前（IDE 面）','ui'),('devimpl_done-op1-after','看板开发段视图·G3 状态绿','ui')]),
     19: dict(keys=['defect_done','testpass_done'], ts_override='1',
             actor='ai', actorText='AI · qi/fei agent',
-            narrative='lite 轮当轮执行·集成与测试：TEST-BE（qi）/TEST-FE（fei）自预备轮用例核对即跑（用例前移纪律 27②）；诚实账语义沿用——测试未执行=如实报告不谎报 PASS（run12 G5 缺项①教训）。【run13 实锚·报告步回填：首派时刻/G4 键值/测试成绩单】', imgs=[('testpass_done-op1-before','测试段派发前','ui'),('testpass_done-op1-after','G4 落键+测试报告入仓','ui')]),
+            narrative='lite 轮当轮执行·集成与测试：TEST-BE（qi）/TEST-FE（fei）自预备轮用例核对即跑（用例前移纪律 27②）；诚实账语义沿用——测试未执行=如实报告不谎报 PASS（run12 G5 缺项①教训）。【run13 实锚·报告步回填：首派时刻/G4 键值/测试成绩单】', imgs=[('testpass_done-op1-before','测试段派发前','ui'),('testpass_done-op1-after','测试报告视图·G4 状态绿','ui')]),
     20: dict(keys=['ready_done','release_done'], ts_override='1',
             actor='ai', actorText='AI · fanfan-agent 评审',
             narrative='lite 轮当轮执行·发布准出与登记：判词纪律落地首验（派发词已补「结论行行首+改改判句式+发出后回读确认」，f3d7bb9；判词污染 run12 教训应用——模板字样不入被解析面）。【run13 实锚·报告步回填：G5 轮次/REL 三卡号/过闸时刻】', imgs=[('release_done-op1-before','发布登记前','ui'),('release_done-op1-after','发布三卡在板','ui'),('deliver_gate-op1-after','delivery 门禁灯态','ui')]),
     21: dict(keys=['uat_done'], ts_override='1',
             actor='human', actorText='人 · bella 验收',
-            narrative='lite 轮当轮执行·UAT 验收：AC-1~7 逐条证据行；AC-5（重复回调处理）为 run12 已知不通过项（整改在 backlog）——本轮判词须如实三态，条件放行语义保留（放行权归 bella）。【run13 实锚·报告步回填：判词分布/验收书锚】', imgs=[('uat_done-op1-before','UAT 验收前','ui'),('uat_done-op1-after','验收书在仓','ui')]),
+            narrative='lite 轮当轮执行·UAT 验收：AC-1~7 逐条证据行；AC-5（重复回调处理）为 run12 已知不通过项（整改在 backlog）——本轮判词须如实三态，条件放行语义保留（放行权归 bella）。【run13 实锚·报告步回填：判词分布/验收书锚】', imgs=[('uat_done-op1-before','UAT 验收前','ui'),('uat_done-op1-after','验收书卡面视图','ui')]),
     22: dict(keys=['workmgr_done'], ts_override='1',
             actor='ai', actorText='AI · 导演侧',
-            narrative='lite 轮当轮执行·工作台账。【run13 实锚·报告步回填：落档时刻/键值】', imgs=[('workmgr_done-op1-before','台账生成前','ui'),('workmgr_done-op1-after','工作台账在仓','ui')]),
+            narrative='lite 轮当轮执行·工作台账。【run13 实锚·报告步回填：落档时刻/键值】', imgs=[('workmgr_done-op1-before','台账生成前','ui'),('workmgr_done-op1-after','工作台账文件视图','ui')]),
     23: dict(keys=['audit_done'], ts_override='1',
             actor='ai', actorText='AI · audit+导演',
-            narrative='lite 轮当轮执行·合规审计：免等窗终态复核段首验（a0113d2——记单后补账成功者审计段以当前真值闭环）。【run13 实锚·报告步回填：意见书锚/复核结果】', imgs=[('audit_done-op1-before','审计前','ui'),('audit_done-op1-after','意见书在仓','ui')]),
+            narrative='lite 轮当轮执行·合规审计：免等窗终态复核段首验（a0113d2——记单后补账成功者审计段以当前真值闭环）。【run13 实锚·报告步回填：意见书锚/复核结果】', imgs=[('audit_done-op1-before','审计前','ui'),('audit_done-op1-after','审计意见书视图','ui')]),
     24: dict(keys=['retro_done'], ts_override='1',
             actor='ai', actorText='AI · 导演+治理',
-            narrative='lite 轮当轮执行·G6 复盘与治理归档。【run13 实锚·报告步回填：落键时刻/头号复盘项】', imgs=[('retro_done-op1-before','复盘前','ui'),('retro_done-op1-after','G6 落键','ui')]),
+            narrative='lite 轮当轮执行·G6 复盘与治理归档。【run13 实锚·报告步回填：落键时刻/头号复盘项】', imgs=[('retro_done-op1-before','复盘前','ui'),('retro_done-op1-after','复盘闸门卡视图·G6 状态绿','ui')]),
     25: dict(keys=['ide_done'], ts_override='1',
             actor='human', actorText='人 · 研发走查',
             narrative='lite 轮当轮执行·IDE 工作台核验。【run13 实锚·报告步回填：核验真值行/代码锚】', imgs=[('ide_done-op1-before','IDE 核验前','ui'),('ide_done-op1-after','IDE 核验后','ui')]),
@@ -1567,8 +1567,9 @@ def img_tags(imgs):
                 f'<img src="screenshots/steps/{pre}.png" alt="{H.escape(cap)}" loading="lazy">'
                 f'<figcaption><span class="shot-kind" style="background:{kb};color:{kf}">{kt}</span>{H.escape(cap)}</figcaption></label>')
         else:
-            # 注册但缺文件=冒配：红标占位（2026-10-07 修复静默丢弃——丢图不可见即漏检）
-            out.append(f'<p class="no-evidence">注册帧缺文件：{H.escape(pre)}.png（{H.escape(cap)}）——采集/挂接缺口，如实红标</p>')
+            # 注册但缺文件=冒配：红标占位（2026-10-07 修复静默丢弃——丢图不可见即漏检）；
+            # V8.4 §5.6 ⑩：缺帧不补拍，记单+无帧明示（补拍件只落 frames-degraded/ 档案）
+            out.append(f'<p class="no-evidence">注册帧缺文件：{H.escape(pre)}.png（{H.escape(cap)}）——按 §5.6 采集纪律⑩ 记单 frame-capture-failed，不补拍不嵌替代页</p>')
     return ''.join(out)
 
 # ── 全量呈现（正本 §5.5）：对话全文 / 操作前后帧 / 环节效果实证 ──
@@ -1580,22 +1581,25 @@ def _r18_msg_html(m):
             + (f'<span class="r18-ts">{ts}</span>' if ts else '')
             + '</div><div class="r18-msg-body">' + H.escape(body).replace('\n', '<br>') + '</div></div>')
 
-def _r18_frame_tags(frames, step):
+def _r18_frame_tags(frames, step, view=''):
     out = []
     for f in frames:
         name = str(f)
         if not name.endswith('.png'):
             name += '.png'
         p = STEPS_DIR / name
-        cap = {'before': '① 操作前', 'action': '② 操作动作', 'after': '③ 系统响应'}.get(
+        # V8.4 §5.5 截图红线①（2026-10-10 接线轮）：图注=画面描述——操作帧图注须含
+        # 画面落点（操作标题/视图名），禁纯模板序号（"① 操作前"是位序不是画面）。
+        _pos = {'before': '操作前', 'action': '操作动作', 'after': '系统响应'}.get(
             name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
+        cap = f'{view}·{_pos}' if (view and _pos) else (name[:-4] if not _pos else f'操作序列画面·{_pos}')
         if p.exists():
             out.append(
                 f'<label class="shot r18-shot"><input type="checkbox">'
-                f'<img src="screenshots/steps/{name}" alt="{H.escape(cap or name)}" loading="lazy">'
-                f'<figcaption>{H.escape(cap or name)}</figcaption></label>')
+                f'<img src="screenshots/steps/{name}" alt="{H.escape(cap)}" loading="lazy">'
+                f'<figcaption>{H.escape(cap)}</figcaption></label>')
         else:
-            out.append(f'<p class="no-evidence">帧缺失：{H.escape(name)}（采集位空——按 R18 补拍）</p>')
+            out.append(f'<p class="no-evidence">帧缺失：{H.escape(name)}（采集位空——按 §5.6 采集纪律⑩ 记单 frame-capture-failed，不补拍）</p>')
     return ''.join(out)
 
 # ── §5.5 并行度实测（run12 起）：devimpl 段"活跃 agent·分钟/墙钟分钟" ——
@@ -1734,7 +1738,7 @@ def r18_block(n: int) -> str:
         parts.append('<div class="r18-sec r18-op"><div class="r18-sec-hd">'
                      f'<b>{H.escape(str(op.get("title", "操作")))}</b></div>'
                      + (f'<div class="r18-entry">操作入口：{H.escape(str(op.get("entry", "")))}</div>' if op.get('entry') else '')
-                     + '<div class="st-shots r18-frames">' + _r18_frame_tags(op.get('frames') or [], n) + '</div>'
+                     + '<div class="st-shots r18-frames">' + _r18_frame_tags(op.get('frames') or [], n, view=str(op.get('title') or '')) + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(op.get("note", "")))}</div>' if op.get('note') else '')
                      + '</div>')
     if effect:
@@ -1749,17 +1753,17 @@ def r18_block(n: int) -> str:
                      f'<b>skill 过程（§5.6 必采矩阵：生成 ≥{r18_matrix.SKILL_GEN_MIN} 帧 + 调用 ≥{r18_matrix.SKILL_INVOKE_MIN} 帧）</b></div>')
         if sk_gen:
             parts.append('<div class="r18-entry">xxx-dev 生成过程：</div>'
-                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_gen, n) + '</div>')
+                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_gen, n, view='skill 生成过程画面') + '</div>')
         if sk_invoke:
             parts.append('<div class="r18-entry">开发调用过程：</div>'
-                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_invoke, n) + '</div>')
+                         '<div class="st-shots r18-frames">' + _r18_frame_tags(sk_invoke, n, view='开发调用过程画面') + '</div>')
         if skill.get('note'):
             parts.append(f'<div class="r18-note">{md_bold(str(skill.get("note", "")))}</div>')
         parts.append('</div>')
     if dlv_frames:
         parts.append('<div class="r18-sec r18-delivery"><div class="r18-sec-hd">'
                      '<b>delivery 门禁灯（R29/§5.6 必采矩阵：Delivery Cases 面板投影 ≥1 帧——MX_DELIVERY=1 全程开启）</b></div>'
-                     '<div class="st-shots r18-frames">' + _r18_frame_tags(dlv_frames, n) + '</div>'
+                     '<div class="st-shots r18-frames">' + _r18_frame_tags(dlv_frames, n, view='delivery 门禁灯面板') + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(dlv.get("note", "")))}</div>' if dlv.get('note') else '')
                      + '</div>')
     parts.append('</div></details>')
@@ -2493,15 +2497,14 @@ def checkpoints_html():
             state_chip = (f'<div style="font-size:13px;margin-top:2px;color:{"#047857" if ok else "#b45309"}">'
                           f'{"✓ 已通过" if ok else "○ 未达"}{f" · {ts}" if ts else ""}</div>')
         shot = ''
-        pre = fr_map.get(cid)
-        if pre and (STEPS_DIR / f'{pre}.png').exists():
-            shot = (f'<label class="cp-shot"><input type="checkbox">'
-                    f'<img src="screenshots/steps/{pre}.png" alt="{H.escape(name)}（收官后补拍，非当轮实时帧）" loading="lazy"></label>')
-        elif (STEPS_DIR / f'{img}.png').exists():
+        # V8.4 §5.6 ⑩（2026-10-10 接线轮）：补拍帧禁入正本——原 fr_map 收官补拍嵌入通道
+        # 拆除，只嵌当轮实时帧（CHECKPOINTS 注册帧名）；无帧=记单+明示（补拍件归
+        # runs/<RUN_ID>/frames-degraded/ 档案目录，evidence/ 之外生成器结构性禁读）。
+        if (STEPS_DIR / f'{img}.png').exists():
             shot = ('<label class="cp-shot"><input type="checkbox">'
                     f'<img src="screenshots/steps/{img}.png" alt="{H.escape(name)}" loading="lazy"></label>')
         else:
-            shot = '<div class="stat-note" style="font-size:13px">（本卡点无界面帧——审批类卡点以 approved.events 留痕为证，如实不冒图）</div>'
+            shot = '<div class="stat-note" style="font-size:13px">（本卡点无当轮实时帧——按 §5.6 采集纪律⑩ 记问题单+无帧明示；审批类卡点以 approved.events 留痕为证，不冒图）</div>'
         cards.append(
             '<div class="cp-card" id="' + cid + '">'
             '<div class="cp-head"><span class="cp-name">' + H.escape(name) + '</span><span class="cp-who">' + H.escape(who) + '</span></div>'
