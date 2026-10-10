@@ -659,6 +659,8 @@ graph TB
 | 25 | IDE 画布路由归一 /app/ide（IaShell 子路由全屏画布），任务右栏 ⌨IDE 与页头视图切换进入，旧 /ide 深层链接兼容重定向；ide?task= 到达即自动展开任务简报抽屉；🕘 History 浏览器（定位/复制/编辑重发/fork）；运行中心蓝图画廊；治理工件可编辑（保存即本地 git 提交+新鲜度徽标）；会话上下文无损滚存（旧会话 verbatim 归档找回+跨会话笔记） |
 | 26 | 截图口径「三界面」=驾驶舱三功能区（工作台/看板/IDE 画布），capture 断言统一 ^/app；新观测面各 ≥1 张截图按 §5.6 截图门禁；desktop 深层链接 swarmstudio://（白名单 /app 与 /matrix 树） |
 
+> **截图拍摄位可执行正本**（2026-10-10 用户指令「按 UI 功能规划、不乱拍凑数」）：本表是语义正本；每步实际拍哪个页面/页签/账号由 simharness `mux/capture-plan.env` 注册表单一供源，采集射手（r18-frames）按步覆盖执行并留痕——禁止以非本表页面顶替（已知错位先例：交付门禁灯拍成运行中心、工作台账拍成沟通页；`?tab=accounts` 是交付健康页签而非账户管理页）。
+
 > **路由与页签事实**（锚点=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68、i18n-tasks-tabs.ts:14-23；启动前实际访问校验见 §4.1 前置⑤）：/app/board 为九个平级页签——看板/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）；治理中心独立路由 /app/gov 已退役，重定向至 gov-org（旧深层链接不死链）。「应用资产」=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」=数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」=服务端可见性过滤；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。
 >
 > **QGate 判定流产品面（两处）**：①交付案例卡「同步 QGate 判定」（#/app/cases）——governance `GET /api/governance/qgate-verdicts`（逐门最新判定，六态→交付三态，带来源桶）→ qgate-bridge 逐门 delivery.gate 事件入案例房；空档/Matrix 未连/无房间三态如实提示。②治理健康页「机器执法实况」条（#/app/board?tab=accounts）——G1-G6 按 qgate 域映射（L0→G1、L1→G3、L2/L3→G4、L4/L5→G5）chip+来源分布行（核验/声明/降级/无信号）；G2/G6 为人工域，灰态"—"不编造。锚点=custom/server/governance/governance-controller.ts（/qgate-verdicts）、custom/client/matrix-teams/stores/qgate-bridge.ts、custom/client/ia2/views/gov/GovHealthSection.vue。
