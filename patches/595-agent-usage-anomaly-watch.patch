@@ -1,0 +1,70 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index 1111111..2222222 100644
+@@ -1705,7 +1705,55 @@
+         result.update(error=_COMPRESSION_TIMEOUT_FINAL_RESPONSE, partial=True, compression_exhausted=True)
+     return result
+ 
++
++def _profile_usage_watch(agent) -> None:
++    """Usage anomaly watch: statistics surface + warnings only — never blocks a turn
++    (user ruling 2026-10-10: no quota enforcement). Soft reference line in
++    HERMES_HOME/usage-warn.txt (plain integer). Crossing 50/80/95% appends one line
++    per band to <home>/state/usage-anomalies.jsonl and warns; idempotent within a
++    band. Absent/invalid line or unavailable DB = no judgment at all."""
++    try:
++        import json as _json
++        import time as _time
++        from pathlib import Path as _P
++
++        from hermes_constants import get_hermes_home
+ 
++        home = _P(get_hermes_home())
++        try:
++            line_val = int((home / "usage-warn.txt").read_text(encoding="utf-8").strip())
++        except (OSError, ValueError):
++            return
++        if line_val <= 0:
++            return
++        db = getattr(agent, "_get_session_db_for_recall", lambda: None)()
++        if db is None:
++            return
++        used = int(db.usage_totals().get("tokens", 0))
++        pct = used * 100.0 / line_val
++        band = 3 if pct >= 95 else 2 if pct >= 80 else 1 if pct >= 50 else 0
++        if band == 0:
++            return
++        af = home / "state" / "usage-anomalies.jsonl"
++        last_band = None
++        try:
++            lines = af.read_text(encoding="utf-8").strip().splitlines()
++            if lines:
++                last_band = _json.loads(lines[-1]).get("band")
++        except Exception:
++            last_band = None
++        if last_band == band:
++            return
++        af.parent.mkdir(parents=True, exist_ok=True)
++        with af.open("a", encoding="utf-8") as fh:
++            fh.write(_json.dumps({"ts": int(_time.time() * 1000), "band": band,
++                                  "used": used, "line": line_val, "pct": round(pct, 1)}) + "\n")
++        logger.warning("Usage anomaly band %d: %s / %s tokens (%.1f%%) — warn only, not a quota",
++                       band, used, line_val, pct)  # 同档只记一次（含日志），跨档再记
++    except Exception:
++        return
++
++
+ def run_conversation(
+     agent,
+     user_message: Any,
+@@ -1736,6 +1784,11 @@
+ 
+     # Steer / redirect / interrupt set this mid-turn; the result reports whether the turn ran untouched.
+     agent._turn_user_intervened = False
++    # Per-profile usage anomaly watch (2026-10-10 用户裁定：统计+预警，不限额不阻断)：
++    # 可选 HERMES_HOME/usage-warn.txt 为软参考线（纯整数）；越过 50/80/95% 各记一条
++    # 预警到 state/usage-anomalies.jsonl 并 logger.warning（同档幂等只记一次）。
++    # 无参考线文件=不作任何判定——累计用量统计由 state DB（usage_totals）原生承载。
++    _profile_usage_watch(agent)
+     # Images attached natively to this user turn stay visible to vision_analyze for the turn, so
+     # it does not embed the same pixels a second time into the same request (#76411).
+     with native_turn_images(user_message):
