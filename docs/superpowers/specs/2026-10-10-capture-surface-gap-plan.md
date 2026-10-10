@@ -44,11 +44,16 @@
 
 **根因**：run-progress.json（mx_write_progress）只报 done/total，无轮型 scope 信息；横幅按全量 26 步渲染。
 
-**方案**：state.env 已有 lite_round/lite_fixtures_from 键——mx_write_progress 增加 scope 字段（lite 轮报执行段集如 9 步），横幅渲染「lite 轮 x/9（夹具自 run12）」；更新时间戳语义不变。
+**方案**：state.env 已有 lite_round/lite_fixtures_from 键——mx_write_progress 增加 scope 字段（lite 轮报执行段集（11 个完成键）），横幅渲染「lite 轮 x/9（夹具自 run12）」；更新时间戳语义不变。
 
 **验收判据**：lite 轮进行中横幅显示 x/9 且随完成键递增；全量轮显示不变（x/26）。
 
 **工作量**：S（0.5 人日；progress JSON 加字段+横幅渲染分支）。
+
+## 落地状态（2026-10-10 11:30 更新）
+
+- **G2/G3/G4 已写完并验证**（overlay feat/capture-surface-gaps，build:full 全过+临时后端/dev 前端实证：board-status 29 板真实计数、横幅「lite 轮 2/11 段（夹具自 …）」、availability hermesReady=true）；G1 由并行会话同窗口实施（IDE 落地面板+任务速选，已实证非聊天壳）。
+- **SIM 生效时点**：推演运行中不重启 8802——run13 跑完后重建 product-dist+重启 studio，四项进入推演产品面；此后 capture-plan.env 步 22 撤 none 改「交付健康页签」实拍位（run13 当轮仍按 none 如实声明：功能在当轮执行窗口内不存在）。
 
 ## 落地顺序与归属
 

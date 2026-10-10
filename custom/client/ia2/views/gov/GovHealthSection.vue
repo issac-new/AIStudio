@@ -10,8 +10,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  fetchGovernanceOverview, runDomainAudit, fetchDomainAudit, fetchQgateVerdicts, fetchUsage,
-  type GovernanceOverview, type DomainAuditSummary, type QgateVerdictRow,
+  fetchGovernanceOverview, runDomainAudit, fetchDomainAudit, fetchQgateVerdicts, fetchUsage, fetchBoardStatus,
+  type GovernanceOverview, type DomainAuditSummary, type QgateVerdictRow, type BoardStatusEntry,
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
 
@@ -25,6 +25,9 @@ const L = computed(() => {
 const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh').startsWith('zh'))
 
 const overview = ref<GovernanceOverview | null>(null)
+// 跨账号板状态分布（G3 2026-10-10）：步 22 工作台账产品面——全板分状态计数+WIP。
+const boardStatus = ref<BoardStatusEntry[] | null>(null)
+const BOARD_COLS = ['todo', 'doing', 'review', 'blocked', 'done'] as const
 const usage = ref<import('@/custom/governance/api/governance').UsageReport | null>(null)
 const error = ref('')
 const loading = ref(false)
@@ -105,6 +108,7 @@ async function refresh(): Promise<void> {
     audit.value = await fetchDomainAudit().catch(() => audit.value)
     // gateStats（passRate/来源分布/advisory）在 /usage 报告里，与 RuntimeSection 同源
     usage.value = await fetchUsage().catch(() => usage.value)
+    boardStatus.value = (await fetchBoardStatus().catch(() => null))?.boards ?? []
     qgateVerdicts.value = (await fetchQgateVerdicts().catch(() => ({ verdicts: [] as QgateVerdictRow[] }))).verdicts
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -128,6 +132,33 @@ onMounted(() => void refresh())
       </button>
     </div>
     <div v-if="error" class="gov-health__error" data-testid="gov-error">{{ L.loadFailed }}：{{ error }}</div>
+
+    <!-- 跨账号板状态分布（G3 2026-10-10 缺失功能实施方案）：步 22 工作台账产品面 -->
+    <div class="gov-board-status" data-testid="gov-board-status">
+      <h4 class="gov-board-status__title">{{ (L as any).health.boardStatusTitle }}</h4>
+      <p class="gov-board-status__sub">{{ (L as any).health.boardStatusSub }}</p>
+      <p v-if="boardStatus && boardStatus.length === 0" class="gov-board-status__empty">{{ (L as any).health.boardStatusEmpty }}</p>
+      <table v-else-if="boardStatus" class="gov-board-status__tbl" data-testid="gov-board-status-table">
+        <thead>
+          <tr>
+            <th>{{ (L as any).health.boardStatusCols.board }}</th>
+            <th>{{ (L as any).health.boardStatusCols.total }}</th>
+            <th v-for="c in BOARD_COLS" :key="c">{{ (L as any).health.boardStatusCols[c] }}</th>
+            <th>{{ (L as any).health.boardStatusCols.wip }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in boardStatus" :key="b.slug" :class="{ 'is-unavailable': !b.available }" :data-board="b.slug">
+            <td class="gov-board-status__name" :title="b.available ? b.slug : (L as any).health.boardUnavailable">
+              {{ b.name }}<template v-if="!b.available"> · {{ (L as any).health.boardUnavailable }}</template>
+            </td>
+            <td>{{ b.available ? b.total : '—' }}</td>
+            <td v-for="c in BOARD_COLS" :key="c">{{ b.available ? (b.statuses[c] ?? 0) : '—' }}</td>
+            <td :class="{ 'is-wip-hot': b.available && b.wip >= 3 }">{{ b.available ? b.wip : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- 六闸卡 -->
     <div class="gov-health__gates" data-testid="gov-gates">
@@ -261,4 +292,17 @@ onMounted(() => void refresh())
   .gov-health__gates { grid-template-columns: repeat(3, 1fr); }
   .gov-health__audit-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* G3 跨账号板状态分布 */
+.gov-board-status { margin: 14px 0; }
+.gov-board-status__title { margin: 0 0 2px; font-size: 14px; }
+.gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--muted, #888); }
+.gov-board-status__empty { font-size: 12px; color: var(--muted, #888); padding: 8px 0; }
+.gov-board-status__tbl { border-collapse: collapse; width: 100%; font-size: 12px; }
+.gov-board-status__tbl th, .gov-board-status__tbl td { border: 1px solid var(--border-color, rgba(0,0,0,.08)); padding: 4px 8px; text-align: right; }
+.gov-board-status__tbl th:first-child, .gov-board-status__tbl td:first-child { text-align: left; }
+.gov-board-status__tbl th { background: rgba(127,127,127,.06); }
+.gov-board-status__tbl tr.is-unavailable td { color: var(--muted, #999); }
+.gov-board-status__tbl td.is-wip-hot { color: #b45309; font-weight: 600; }
+
 </style>
