@@ -13,6 +13,7 @@ n=$(awk '/^auto_approve\(\)/,/^}/' "$LIB" | grep -c '"$room" 60')
 [ "$n" -ge 2 ] || { echo "FAIL 审批臂扫描窗口未扩到 60（找到 ${n} 处，需 ≥2——窗口过窄请求滚页卡死）"; fails=1; }
 # ② 二层散文征求引导在位
 grep -q '征求同意|征求批准|请求批准' "$LIB" || { echo "FAIL 二层散文征求匹配器缺席（run14 chen 卡死面复发）"; fails=1; }
+grep -q '待会签' "$LIB" || { echo "FAIL 会签类等待匹配缺席（run14 20:5x fei 用例骨架待签静默退出面复发）"; fails=1; }
 grep -q 'GUIDED ' "$LIB" || { echo "FAIL GUIDED 去重台账写入缺席（引导风暴面）"; fails=1; }
 grep -q 'approve-nudge-last.ts' "$LIB" || { echo "FAIL 引导全局节流缺席"; fails=1; }
 # ③ 引导 JSON 走 jq 构造（禁手写反斜杠转义——run14 实锤语法击杀）
