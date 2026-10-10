@@ -124,6 +124,34 @@ async function exportRun(): Promise<void> {
   }
 }
 
+// ── 任务工厂沉淀（2026-10-10 麦肯锡概念二轮）：完成 run 一键转可复用模板 ──
+// 入口只对已完成 run 开放（服务端同校验，409 文案直显）；台账登记失败不回滚
+// 模板——registered=false 时提示可联系管理员补登（registryError 原因直显）。
+const depositOpen = ref(false)
+const depositName = ref('')
+const depositNote = ref('')
+const depositing = ref(false)
+const depositDone = ref<{ templateId: string; registered: boolean; registryError?: string } | null>(null)
+const canDeposit = computed(() => status.value === 'completed')
+
+async function depositTemplate(): Promise<void> {
+  const id = runId.value
+  if (!id || depositing.value) return
+  depositing.value = true
+  try {
+    const res = await runRest.depositTemplate(id, {
+      ...(depositName.value ? { name: depositName.value } : {}),
+      ...(depositNote.value ? { note: depositNote.value } : {}),
+    })
+    depositDone.value = res
+    depositOpen.value = false
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    depositing.value = false
+  }
+}
+
 function goBack(): void {
   // 2026-09-18 统一导航：运行中心落运行场景枢纽（ia2.ops runs tab），
   // hermes.loopRuns 旧落点已直删（Task 5 守卫退役），页内返回直进枢纽
@@ -223,6 +251,37 @@ function onLoopOpenTask(taskId: string): void {
       >
         {{ exporting ? t('runcenter.detail.exporting') : t('runcenter.detail.export') }}
       </button>
+      <!-- 任务工厂沉淀：完成 run → 可复用模板（origin='factory'+台账行） -->
+      <button
+        v-if="canDeposit"
+        class="rd-view__deposit"
+        data-testid="rd-deposit-template"
+        :disabled="depositing"
+        @click="depositOpen = !depositOpen"
+      >
+        {{ depositing ? '沉淀中…' : '沉淀为模板' }}
+      </button>
+    </div>
+
+    <!-- 沉淀表单（内联条：模板名 + 备注 → 确认） -->
+    <div v-if="canDeposit && depositOpen" class="rd-view__deposit-form" data-testid="rd-deposit-form">
+      <input
+        v-model="depositName" class="rd-view__deposit-input" type="text"
+        placeholder="模板名称（留空取 run 描述）" maxlength="80"
+      >
+      <input
+        v-model="depositNote" class="rd-view__deposit-input" type="text"
+        placeholder="备注（沉淀原因/适用场景，进台账）" maxlength="200"
+      >
+      <button type="button" class="rd-view__deposit-go" data-testid="rd-deposit-confirm" :disabled="depositing" @click="depositTemplate">
+        确认沉淀
+      </button>
+      <button type="button" class="rd-view__deposit-cancel" @click="depositOpen = false">取消</button>
+    </div>
+    <div v-if="depositDone" class="rd-view__deposit-done" data-testid="rd-deposit-done">
+      模板 {{ depositDone.templateId }} 已入库。
+      <template v-if="depositDone.registered">台账已登记（docs/admin/mission-templates.md）。</template>
+      <template v-else>台账登记失败（{{ depositDone.registryError }}）——模板可用，请稍后补登。</template>
     </div>
 
     <div v-if="error" class="rd-view__error">
@@ -379,6 +438,67 @@ function onLoopOpenTask(taskId: string): void {
 .rd-view__export:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* 任务工厂沉淀（2026-10-10） */
+.rd-view__deposit {
+  padding: 4px 10px;
+  border: 1px solid #b45309;
+  border-radius: var(--radius-micro, 3px);
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rd-view__deposit:disabled { opacity: 0.6; cursor: default; }
+.rd-view__deposit-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px dashed #f59e0b;
+  border-radius: var(--radius-micro, 3px);
+}
+.rd-view__deposit-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: var(--bg-primary, transparent);
+  color: inherit;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rd-view__deposit-go {
+  padding: 4px 12px;
+  border: 1px solid #b45309;
+  border-radius: var(--radius-micro, 3px);
+  background: #f59e0b;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rd-view__deposit-go:disabled { opacity: 0.6; cursor: default; }
+.rd-view__deposit-cancel {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rd-view__deposit-done {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
 }
 
 .rd-view__error {

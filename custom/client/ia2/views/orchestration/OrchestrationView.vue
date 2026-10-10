@@ -234,10 +234,16 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 
         <section class="orch__q">
           <h4>5. 可复用资产</h4>
-          <p v-if="fiveQ.assets.specs.length === 0" class="orch__q-note">当前无可复用图规格登记。</p>
-          <ul v-else class="orch__list">
-            <li v-for="s in fiveQ.assets.specs" :key="s.id">{{ s.goal || s.id }}</li>
-          </ul>
+          <template v-if="fiveQ.assets.factoryTemplates.length > 0">
+            <p class="orch__q-note">任务工厂模板（复用次数）：</p>
+            <ul class="orch__list">
+              <li v-for="s in fiveQ.assets.factoryTemplates" :key="s.id">
+                {{ s.name }} · 复用 {{ s.reuseCount }} 次<span v-if="s.sourceRunId">（来源 run {{ s.sourceRunId }}）</span>
+              </li>
+            </ul>
+          </template>
+          <p v-if="fiveQ.assets.loopTemplates.length > 0" class="orch__q-note">循环模板：{{ fiveQ.assets.loopTemplates.map(s => s.goal || s.id).slice(0, 3).join('、') }}<template v-if="fiveQ.assets.loopTemplates.length > 3"> 等 {{ fiveQ.assets.loopTemplates.length }} 件</template></p>
+          <p v-if="fiveQ.assets.factoryTemplates.length === 0 && fiveQ.assets.loopTemplates.length === 0" class="orch__q-note">当前无可复用图模板登记。</p>
           <p class="orch__q-note">{{ fiveQ.assets.factoryNote }}</p>
         </section>
 

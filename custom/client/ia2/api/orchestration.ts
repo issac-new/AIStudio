@@ -44,11 +44,13 @@ export interface EscalationRecord {
   at?: number | string
 }
 
+/** GET /api/graph/specs 列表项（裸 GraphSpec 形状——列表不带 {spec} 包装，单取端点才有） */
 export interface StoredSpecSummary {
   id: string
   version: number
-  updatedAt?: string
-  spec: { id: string; description?: string; meta?: { goal?: string }; origin?: string }
+  description?: string
+  origin?: string
+  meta?: { goal?: string; factory?: { sourceRunId: string; reuseCount: number; depositedAt?: string; lastReusedAt?: string } }
 }
 
 // ── 纯函数：分类与推导 ──
@@ -213,7 +215,13 @@ export interface FiveQuestions {
     linkedToMission: number
     examples: Array<{ fromAgent: string; urgency: string; reason: string }>
   }
-  assets: { specs: Array<{ id: string; goal: string }>; factoryNote: string }
+  assets: {
+    /** 任务工厂模板（origin='factory'，带复用计数），最新沉淀在前 */
+    factoryTemplates: Array<{ id: string; name: string; sourceRunId: string; reuseCount: number }>
+    /** loop 编译模板（origin='template'） */
+    loopTemplates: Array<{ id: string; goal: string }>
+    factoryNote: string
+  }
 }
 
 /** 麦肯锡五问面板推导（纯函数）：结果责任/人机分工/确认点/异常升级/可复用资产。 */
@@ -255,12 +263,21 @@ export function deriveFiveQuestions(
       examples: linked.slice(0, 3).map(e => ({ fromAgent: e.fromAgent, urgency: e.urgency, reason: e.reason })),
     },
     assets: {
-      specs: specs
-        .filter(s => s.spec?.origin === 'template' || s.spec?.origin === 'factory')
-        .slice(0, 8)
-        .map(s => ({ id: s.id, goal: s.spec?.meta?.goal ?? s.spec?.description ?? '' })),
-      // 任务工厂（run→模板沉淀）未上线前的诚实占位；Phase 2 落地后接 factory 台账
-      factoryNote: '任务工厂模板沉淀待启用（Phase 2）；当前列运行图中已登记的可复用图规格。',
+      factoryTemplates: specs
+        .filter(s => s.origin === 'factory')
+        .map(s => ({
+          id: s.id,
+          name: s.description ?? s.id,
+          sourceRunId: s.meta?.factory?.sourceRunId ?? '',
+          reuseCount: s.meta?.factory?.reuseCount ?? 0,
+        }))
+        .sort((a, b) => b.reuseCount - a.reuseCount)
+        .slice(0, 8),
+      loopTemplates: specs
+        .filter(s => s.origin === 'template')
+        .slice(0, 6)
+        .map(s => ({ id: s.id, goal: s.meta?.goal ?? s.description ?? '' })),
+      factoryNote: '沉淀入口在运行详情页（完成 run →「沉淀为模板」）；台账 docs/admin/mission-templates.md，保存即提交可回溯。',
     },
   }
 }
