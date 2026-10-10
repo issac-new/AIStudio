@@ -50,7 +50,10 @@ async function refresh(): Promise<void> {
 onMounted(() => void refresh())
 
 // —— 模式页 ——
-const groupedTypes = computed<Array<{ category: string; types: EntityType[] }>(() => {
+// 注意：SFC 编译链里 computed<泛型> 会被拆成比较表达式（本机实锤：groupedTypes
+// 曾写 computed<Array<…>> 产出 "computed < Array(() =>"，v-for 恒空）——SFC 内
+// computed 一律无泛型写法（graphNodes 同款先例）
+const groupedTypes = computed(() => {
   const by = new Map<string, EntityType[]>()
   for (const t of spec.value?.entityTypes ?? []) {
     const c = t.category ?? '未分组'
@@ -114,20 +117,32 @@ const editorViolations = ref<Violation[]>([])
 const relationTargets = ref<string[]>([])
 async function openEditor(inst?: OntologyInstance): Promise<void> {
   const types = spec.value?.entityTypes ?? []
-  editing.value = inst ? JSON.parse(JSON.stringify(inst)) : { id: '', type: types[0]?.id ?? '', label: '', data: {}, relations: [], updatedAt: 0 }
+  editing.value = inst
+    ? JSON.parse(JSON.stringify(inst))
+    : { id: '', type: types[0]?.id ?? '', label: '', data: defaultDataFor(types[0]?.id ?? ''), relations: [], updatedAt: 0 }
   editorViolations.value = []
   showEditor.value = true
   relationTargets.value = (await ontologyApi.listInstances().catch(() => ({ instances: [] as OntologyInstance[] }))).instances.map((x) => x.id)
 }
 const editingType = computed<EntityType | null>(() => (spec.value?.entityTypes ?? []).find((t) => t.id === editing.value?.type) ?? null)
-/** 类型可用属性（含继承链） */
-const editingProps = computed(() => {
+/** 类型可用属性（含继承链；seen 守卫防 parent 环） */
+function propsForType(typeId: string) {
   const chain: string[] = []
-  let cur = editingType.value
   const seen = new Set<string>()
+  let cur = (spec.value?.entityTypes ?? []).find((t) => t.id === typeId) ?? null
   while (cur && !seen.has(cur.id)) { seen.add(cur.id); chain.unshift(cur.id); cur = (spec.value?.entityTypes ?? []).find((t) => t.id === cur!.parent) ?? null }
   return chain.flatMap((tid) => (spec.value?.entityTypes ?? []).find((t) => t.id === tid)?.dataProperties ?? [])
-})
+}
+const editingProps = computed(() => (editing.value ? propsForType(editing.value.type) : []))
+/** 编辑器初始 data：枚举属性落第一项——select 显示态 ≠ v-model 绑定值（undefined
+ *  会让"看着选了"的必填枚举在提交时缺失，UI 数据契约预检误报 field:required） */
+function defaultDataFor(typeId: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const p of propsForType(typeId)) {
+    if (p.enum && p.enum.length > 0) out[p.id] = p.enum[0]
+  }
+  return out
+}
 const domainProps = computed(() => (spec.value?.objectProperties ?? []).filter((p) => editing.value && p.domain.includes(editing.value.type)))
 
 async function precheck(): Promise<boolean> {
@@ -379,7 +394,7 @@ function fmtBytes(b: number): string {
             <label>{{ L.instances.id }}</label>
             <input v-model="editing.id" class="onto__input" :disabled="instances.some((x) => x.id === editing.id)" />
             <label>{{ L.instances.type }}</label>
-            <select v-model="editing.type" class="onto__select" @change="editing.data = {}; editing.relations = []">
+            <select v-model="editing.type" class="onto__select" @change="editing.data = defaultDataFor(editing.type); editing.relations = []">
               <option v-for="t in spec?.entityTypes ?? []" :key="t.id" :value="t.id">{{ t.label }}（{{ t.id }}）</option>
             </select>
             <label>{{ L.instances.label }}</label>

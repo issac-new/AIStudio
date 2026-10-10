@@ -11,13 +11,15 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, p?: Record<string,
 
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
-import type { AttentionRow } from '../adapters/activity'
+import type { AttentionRow } from '../adapters/overview'
 import type { FlowLoopRow, FlowSessionRow } from '../adapters/flow'
 
 const NOW = Date.now()
 
+// 行模型=overview.AttentionRow（2026-10-03 裁决 B 单一装配；2026-10-10 AttentionList
+// 迁移对齐——此前测试仍锚旧 activity 模型 subKey 字段，与现实装配脱节）
 function attRow(over: Partial<AttentionRow> & { id: string }): AttentionRow {
-  return { kind: 'task-blocked', title: `t-${over.id}`, subKey: 'ia2.att.subTaskBlocked', ts: NOW - 600_000, ...over }
+  return { taskId: '', kind: 'task', title: `t-${over.id}`, status: 'blocked', severity: 'high', priority: 3, createdAt: NOW - 600_000, ...over }
 }
 
 const BASE_PANEL_PROPS = {
@@ -37,8 +39,8 @@ describe('TaskDecisionPanel — v13 需关注（并入「待我处理」节，UX
       props: {
         ...BASE_PANEL_PROPS,
         attentionRows: [
-          attRow({ id: 'task:t1', kind: 'task-blocked', taskId: 't1' }),
-          attRow({ id: 'run:r9', kind: 'run-failed', runId: 'r9', subKey: 'ia2.att.subRunFailed' }),
+          attRow({ id: 'task:t1', kind: 'task', status: 'blocked', taskId: 't1' }),
+          attRow({ id: 'run:r9', kind: 'run', status: 'review', severity: 'medium' }),
         ],
       },
     })
@@ -50,7 +52,7 @@ describe('TaskDecisionPanel — v13 需关注（并入「待我处理」节，UX
     await w.find('[data-testid="att-run:r9"]').trigger('click')
     const emitted = w.emitted('open-attention')
     expect(emitted).toHaveLength(1)
-    expect(emitted![0][0]).toMatchObject({ runId: 'r9', kind: 'run-failed' })
+    expect(emitted![0][0]).toMatchObject({ id: 'run:r9', kind: 'run' })
   })
 
   it('无行时子块整体隐藏（裁决 D：合并后不再单独出需关注空态）；缺省 attentionRows 不炸', () => {

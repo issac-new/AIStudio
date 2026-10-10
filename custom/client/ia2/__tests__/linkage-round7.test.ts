@@ -75,9 +75,11 @@ describe('R7 接线锚点（源码存在性守门）', () => {
     expect(wb).toContain('sessionAttention')
     expect(wb).toContain("name: 'ide.shell', query: { session: row.sessionId }")
     expect(wb).toContain('row.sessionId')
-    // session-failed 词在 adapter/AttentionList 词表（点击分派只看 sessionId）
+    // 会话副文键在 AttentionList 词表（2026-10-10 迁移后 kind=session × status 派生；
+    // 点击分派走 id 前缀，不依赖旧模型 sessionId 字段）
     const att = readFileSync(resolve(overlayRoot, 'custom/client/ia2/components/flow/AttentionList.vue'), 'utf8')
-    expect(att).toContain("'session-failed'")
+    expect(att).toContain('subSessionFailed')
+    expect(att).toContain('session:')
   })
 
   it('353 双语含 att 会话键 + tdp.session（注入态词表直断）', () => {
