@@ -2,7 +2,7 @@
  * PART1 人读导读层骨架（方案 §5.4 公文五段式模板——正本自 simharness
  * mx-narrative-skeleton.py --part1 移植，2026-10-08 落地产品侧）。
  *
- * 纪律：数字一律实算（调用方从本轮 state/issues.log/帧清单算出 RunFacts 传入），
+ * 纪律：数字一律实测（调用方从本轮 state/issues.log/帧清单算出 RunFacts 传入），
  * 人工只写语境句——骨架里全部留【TODO】标记并附三问自检（判断句？带锚？人话？）。
  * {{run_id}}/{{n_frames}}/{{uniq_note}}/{{ch0}} 为合并层实时替换槽，保持原样。
  */
@@ -16,7 +16,7 @@ export interface RunFacts {
   featureFlags: string
   stepsDone: number
   gatesPassed: number
-  /** 首过数（issues.log 无该闸 gN- 前缀记单且闸已落键） */
+  /** 首过数（issues.log 无该闸 gN- 前缀登记且闸已落盘） */
   firstPass: number
   issuesTotal: number
   disp: { 已修: number; 观察: number; 延后: number }
@@ -32,13 +32,13 @@ export function part1Skeleton(f: RunFacts): string {
 
 <div class="card info"><b>这场推演在验证什么：</b>【TODO 一句】（特性旗标实抽：${f.featureFlags}）</div>
 
-<div class="card ok"><b>本轮的诚实结论：</b>26 步 ${f.stepsDone}/26 落键；六闸 ${f.gatesPassed}/6 过，首过 ${f.firstPass}/6（实算自 issues.log 闸键记单）；问题单 ${f.issuesTotal} 项（DISP：${dispSum}）。【TODO 两句：UAT 逐条判词汇总一句+最大的非粉饰事实一句】</div>
+<div class="card ok"><b>本轮的诚实结论：</b>26 步 ${f.stepsDone}/26 落盘；六闸 ${f.gatesPassed}/6 过，首过 ${f.firstPass}/6（实测自 issues.log 闸键登记）；问题单 ${f.issuesTotal} 项（DISP：${dispSum}）。【TODO 两句：UAT 逐条判词汇总一句+最大的非粉饰事实一句】</div>
 
-<div class="card warn"><b>真实发生的缺口（全部记单在案）：</b>【TODO 3-6 条，每条带问题单键】（类型分布实抽：${f.typeTop}）</div>
+<div class="card warn"><b>真实发生的缺口（全部登记在案）：</b>【TODO 3-6 条，每条带问题单键】（类型分布实抽：${f.typeTop}）</div>
 
-<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物真容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实算，取不到显式 ⬜。</div>
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物实际内容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测，取不到显式 ⬜。</div>
 
-<h2>研发全流程治理有效性（实算）</h2>
+<h2>研发全流程治理有效性（实测）</h2>
 {{ch0}}
 `
 }

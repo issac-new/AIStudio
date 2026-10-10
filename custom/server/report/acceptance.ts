@@ -6,7 +6,7 @@
  *  ①六闸工件视图——步 7/15/18/19/20/24 步块须含交付物视图（st-artifact）或
  *    "无文件域交付物"声明（§5.4 必备六件缺一打回）；
  *  ②产品面承载率行——报告须含"产品面承载率 n/5"行（缺行即违例；<4/5 记预警，
- *    不阻断收官——§5.5 口径）；
+ *    不阻断收尾——§5.5 口径）；
  *  ③QGate 证据纪律——QGate 证据块须带来源分布；含未验证声明/advisory 未清时
  *    报告侧声明文字（透传原文 <pre> 之外）禁"全绿/已核验"（v1.31.1 吸收轮起）。
  *
@@ -62,7 +62,7 @@ export interface FaceRateVerdict {
   missing: boolean
   /** 实测 n/5；行缺位时为 null */
   n: number | null
-  /** n<4（验收线之下=预警级，不阻断，逐面记单） */
+  /** n<4（验收线之下=预警级，不阻断，逐面登记） */
   belowLine: boolean
   ok: boolean
 }
@@ -106,15 +106,19 @@ export function checkQgateDiscipline(html: string): QgateVerdict {
 
 /** 画面词=可指认的画面落点；结果词=步结论字样（"freeze 在仓"是结论不是画面） */
 const PICTURE_WORDS = ['面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱']
-const OUTCOME_WORDS = ['在仓', '入仓', '落键', '过闸', '全绿', '核验过', '分齐', '登记完成']
-const BACKFILL_MARKERS = ['frames-degraded', '收官后补拍', '（补拍）']
+const OUTCOME_WORDS = ['在仓', '入仓', '落盘', '过闸', '全绿', '核验过', '分齐', '登记完成']
+/** ④b 隔离区帧禁入正本（V8.4 §5.6 ⑩ 2026-10-10 修订：准确补拍解禁——带时点
+ *  图注的补拍帧合规，晚拍降级归 ③ 侧；仍禁=隔离区帧嵌入正本，检测收窄到
+ *  img src/figcaption 上下文——叙事与问题单正文提及目录名是合法 provenance，
+ *  不误杀。与 simharness mx-report-audit.py ④ 同语义，差异即缺陷。） */
+const FRAMES_DEGRADED_EMBEDDED = /(?:src="[^"]*frames-degraded|<figcaption>(?:(?!<\/figcaption>).)*frames-degraded)/s
 
 export interface FrameEvidenceVerdict {
   /** ①图注非画面描述（步结果式/纯位序模板） */
   badCaptions: string[]
   /** ②同一 src 多处嵌入（run12 实锤：同帧双图注双嵌） */
   duplicatedSources: string[]
-  /** ④b 补拍标记入场（V8.4 §5.6 ⑩ 补拍件禁入正本） */
+  /** ④b 隔离区帧嵌入正本（src/figcaption 上下文含 frames-degraded） */
   backfillMarker: string | null
   ok: boolean
 }
@@ -136,6 +140,6 @@ export function checkFrameEvidence(html: string): FrameEvidenceVerdict {
   const counts = new Map<string, number>()
   for (const s of srcs) counts.set(s, (counts.get(s) || 0) + 1)
   const duplicatedSources = [...counts.entries()].filter(([, c]) => c > 1).map(([s]) => s)
-  const backfillMarker = BACKFILL_MARKERS.find((b) => html.includes(b)) ?? null
+  const backfillMarker = FRAMES_DEGRADED_EMBEDDED.test(html) ? 'frames-degraded' : null
   return { badCaptions, duplicatedSources, backfillMarker, ok: !badCaptions.length && !duplicatedSources.length && !backfillMarker }
 }
