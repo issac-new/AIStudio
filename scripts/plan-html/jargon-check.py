@@ -36,6 +36,9 @@ ALLOW_EXACT = {
     '闭环治理终态',   # 报告第九章章名（已生成产物的实际名称）
 }
 META_QUOTE = ('空话黑名单（', '黑名单（', '词表')
+# 定义行豁免：报告导读里的术语对照行（「记单」=记入问题清单）是教学行，
+# 引号内出现被查词是故意的——与 META_QUOTE 同理不违规（2026-10-10 run12 报告轮新增）。
+DEF_LINE = re.compile(r'「[^」]{1,12}」[＝=]')
 ALLOW_SUBSTR = {'一起跑'}  # 含被查词但语义无关的常见组合  # 引用黑名单本身教育读者的行，豁免
 SOFT = [
     '落地', '收口', '对账', '口径', '赋能', '生态', '架构', '治理',  # 语境判断
@@ -51,7 +54,7 @@ def check(path: str) -> int:
     hits = 0
     text = p.read_text(encoding='utf-8')
     for i, line in enumerate(text.splitlines(), 1):
-        meta = any(m in line for m in META_QUOTE)
+        meta = any(m in line for m in META_QUOTE) or bool(DEF_LINE.search(line))
         # 跳过代码块/命令语法行（机器锚区）
         if line.strip().startswith(('#', '```', 'bash ', '| 闸')):
             pass
