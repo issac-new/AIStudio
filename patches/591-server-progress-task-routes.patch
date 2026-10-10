@@ -1,0 +1,19 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 885b4aff..9d68fceb 100644
+@@ -109,6 +109,8 @@
+ // overlay[harness]: 驾驭工程治理面（能力目录/六类成本账/成熟度自检/八原语对账）
+ import { harnessRoutes } from '../custom/harness/harness-controller'
+ import simRunRouter from '../custom/controllers/sim/run-progress'
++// overlay[progress]: 按任务的研发进度（台账×会话投影聚合，进度可感知链）
++import { progressRoutes } from '../custom/progress/task-progress-controller'
+ // overlay[eval]: Eval Studio 评测域（/api/hermes/eval/*：评测集/运行/人工仲裁/归因双 Loop）
+ import { evalRoutes } from '../custom/eval/controller'
+ // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
+@@ -404,6 +406,7 @@
+   app.use(kgEvolutionRoutes.routes())             // KG 演化治理：status/tick/arm/disarm/versions/rollback（A1/A4）
+   app.use(harnessRoutes.routes())                // 驾驭工程：capability-catalog/cost-accounts/maturity/primitives
+   app.use(simRunRouter.routes())                   // 推演运行态（后台感知③）：run-progress.json 只读
++  app.use(progressRoutes.routes())                  // 研发任务进度：/api/progress/tasks（taskId 联表）
+   app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
+   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
+   app.use(incidentRoutes.routes())                // 事故报告：17 要素汇编 + 自治度对账（六文调研轮 A+B）

@@ -14,6 +14,7 @@ import type {
   BriefingCollabMessage,
   BriefingRecap,
   BriefingContextFile,
+  BriefingEngineProgress,
 } from './briefing-types'
 
 const props = defineProps<{
@@ -25,6 +26,8 @@ const props = defineProps<{
   recap?: BriefingRecap
   /** P3.2 上下文文件列表（需求/概设/排期等关键文档） */
   contextFiles?: BriefingContextFile[]
+  /** 研发进度（引擎侧阶段时间线，进度可感知链·件 2c；IdeShell 注入） */
+  engineProgress?: BriefingEngineProgress | null
 }>()
 
 const emit = defineEmits<{
@@ -84,7 +87,7 @@ function sendAux(): void {
       <span class="briefing-icon">📋</span>
       <span class="briefing-title">{{ t('ide.briefing.title', '任务简报') }}</span>
       <!-- 驾驶舱联动：IDE 简报 ↔ 看板卡（board?task= 深链打开卡抽屉）——聊天消息里的
-           card=t_xxx 芯片已直达看板，此处补 IDE→看板回跳，三区构成闭环。 -->
+           card=t_xxx 芯片已直达看板，此处补 IDE→看板回跳，三区互相可达。 -->
       <nav class="briefing-cplinks" data-testid="briefing-cplinks">
         <a :href="boardHref" :title="`打开任务卡 ${task.id}`">看板卡 ↗</a>
       </nav>
@@ -109,6 +112,34 @@ function sendAux(): void {
             C: {{ raciView.consulted.join(', ') || '—' }} ·
             I: {{ raciView.informed.join(', ') || '—' }}
           </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 区块 1b：研发进度（引擎站点时间线，进度可感知链）——会话面暂缺/无站点
+         时整块不渲染（诚实缺席，不占版面不编造） -->
+    <section
+      v-if="engineProgress && engineProgress.sessionKnown && engineProgress.phases.length > 0"
+      class="briefing-section" data-testid="briefing-engine-progress"
+    >
+      <button class="section-toggle" type="button" @click="toggle('engine')">
+        <span>{{ t('ide.briefing.engineBlock', '研发进度') }}</span>
+        <span class="chev">{{ collapsed.engine ? '▸' : '▾' }}</span>
+      </button>
+      <div v-if="!collapsed.engine" class="section-body">
+        <ol class="phase-line" data-testid="briefing-phase-line">
+          <li v-for="(p, i) in engineProgress.phases" :key="i" class="phase-step" :class="`phase-step--${p.status}`">
+            <span class="phase-glyph">{{ p.status === 'done' ? '✓' : p.status === 'running' ? '▶' : p.status === 'failed' ? '✕' : '○' }}</span>
+            <span class="phase-name">{{ p.name }}</span>
+          </li>
+        </ol>
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.engineState', '引擎状态') }}</span>
+          <span class="v">{{ engineProgress.sessionPhase || '—' }}<template v-if="engineProgress.goalStatus"> · {{ engineProgress.goalStatus }}</template></span>
+        </div>
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.engineDispatch', '派发') }}</span>
+          <span class="v">{{ engineProgress.dispatchOkCount }}/{{ engineProgress.dispatchCount }}</span>
         </div>
       </div>
     </section>
@@ -404,4 +435,17 @@ function sendAux(): void {
     font-size: 12px;
   }
 }
+.phase-line {
+  list-style: none; margin: 4px 0; padding: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.phase-step {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #64748b;
+}
+.phase-step--done { color: #15803d; }
+.phase-step--running { color: #1d4ed8; font-weight: 600; }
+.phase-step--failed { color: #b91c1c; }
+.phase-glyph { width: 14px; text-align: center; }
+
 </style>

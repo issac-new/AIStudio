@@ -56,6 +56,24 @@ export interface BriefingRecap {
   todos: string[]
 }
 
+/** 研发进度（引擎侧，进度可感知链·件 2c）：任务卡的编码引擎阶段时间线 */
+export interface BriefingEngineProgress {
+  /** 当前 workflow 站点（引擎 phase 名） */
+  currentPhase?: string
+  /** 站点时间线（pending/running/done/failed） */
+  phases: { name: string; status: 'pending' | 'running' | 'done' | 'failed' }[]
+  /** 引擎会话六态（running/completedSuccess/error…） */
+  sessionPhase?: string
+  /** 引擎目标状态（active/verifying/verified…） */
+  goalStatus?: string
+  active: boolean
+  /** 会话面是否在位（冷窗=false：如实呈现「暂缺」不编造） */
+  sessionKnown: boolean
+  lastActivityAt?: number
+  dispatchCount: number
+  dispatchOkCount: number
+}
+
 /** 辅助会话追问组装：带任务上下文前缀发往主会话（同 IdeTaskContextBar assistant 模式） */
 export function buildAuxMessage(task: BriefingTask | null | undefined, text: string): string {
   const trimmed = text.trim()
