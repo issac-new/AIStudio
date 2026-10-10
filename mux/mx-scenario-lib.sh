@@ -488,13 +488,13 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
     if [[ ! -f "$EVID_DIR/approve-nudge-last.ts" ]] || (( _ga_now - $(cat "$EVID_DIR/approve-nudge-last.ts" 2>/dev/null || echo 0) >= 300 )); then
       local _ga_eid
       _ga_eid=$(mx_messages "$(load_token "$u")" "$room" 60 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
-        '.[] | select(.sender == $agent and ((.content.body // "") | test("征求同意|征求批准|请求批准|请批准|等待批准|等待确认|未获.{0,6}(响应|回复|批准)|被.{0,4}(门禁|审批).{0,4}阻塞")) and ((.content.body // "") | test("needs your OK") | not)) | .event_id' 2>/dev/null \
+        '.[] | select(.sender == $agent and ((.content.body // "") | test("征求同意|征求批准|请求批准|请批准|等待批准|等待确认|待会签|等待会签|会签请求|未获.{0,6}(响应|回复|批准)|被.{0,4}(门禁|审批).{0,4}阻塞")) and ((.content.body // "") | test("needs your OK") | not)) | .event_id' 2>/dev/null \
         | while read -r geid; do grep -qFx "GUIDED $geid" "$APPROVED_LOG" || echo "$geid"; done | head -1) || true
       if [[ -n "${_ga_eid:-}" ]]; then
         echo "$_ga_now" > "$EVID_DIR/approve-nudge-last.ts"
         echo "GUIDED $_ga_eid $u $_ga_now" >> "$APPROVED_LOG"
         local _ga_body _ga_json
-        _ga_body="@$(agent_mxid "$u") 审批通道说明：普通聊天消息不会被自动批准程序识别。需要执行许可请直接调用运行时工具触发标准审批请求（needs your OK 格式），发出后约 30 秒内自动批准；已发出的标准请求如超时请重发。"
+        _ga_body="@$(agent_mxid "$u") 审批通道说明：普通聊天消息不会被自动批准程序识别。需要执行许可请直接调用运行时工具触发标准审批请求（needs your OK 格式），发出后约 30 秒内自动批准；已发出的标准请求如超时请重发。若是会签/确认类等待（如测试用例骨架待签）：请直接在群里 @fanfan @wei 重发会签请求，15 分钟无回应再重发一次，不要静默等待或退出。"
         _ga_json=$(jq -nc --arg b "$_ga_body" --arg m "$(agent_mxid "$u")" '{"msgtype":"m.text","body":$b,"m.mentions":{"user_ids":[$m]}}')
         mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" "$_ga_json" >/dev/null 2>&1 || true
         note "[审批引导] ${u}-agent 散文式征求已引导改标准格式（锚 ${_ga_eid}）"
