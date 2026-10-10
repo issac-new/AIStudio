@@ -111,8 +111,16 @@ async function dismissPopups() {
     const btn = page.locator(`button:has-text("${txt}")`).first()
     if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(400) }
   }
+  // 关闭钮只点对话框容器内的（run13 步19 实锤：裸 [aria-label=close] 横扫把看板
+  // 页签本体关掉——URL 从 /#/app/board 被点到 /#/app，qi 落会话空态拍出壳页；
+  // fanfan 驾驶舱首页默认带看板故历史帧侥幸正常）。模态/抽屉/通知浮层的关闭钮
+  // 均在 [role=dialog]/modal/drawer 类容器内，页面骨架的关闭钮不在。
   for (const aria of ['close', '关闭', 'Close']) {
-    const btn = page.locator(`[aria-label="${aria}"], button:has-text("×")`).first()
+    const btn = page.locator(
+      `[role="dialog"] [aria-label="${aria}"], [class*="modal" i] [aria-label="${aria}"], `
+      + `[class*="drawer" i] [aria-label="${aria}"], [class*="modal" i] button:has-text("×"), `
+      + `[class*="drawer" i] button:has-text("×")`,
+    ).first()
     if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(300) }
   }
 }
