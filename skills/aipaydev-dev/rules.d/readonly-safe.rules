@@ -1,0 +1,11 @@
+# readonly-safe.rules — 只读命令白名单（Codex "git 不天然安全"的反向：只读才 allow）
+git status        → allow   # 只读
+git log *         → allow   # 只读
+git diff *        → allow   # 只读
+ls *              → allow   # 只读
+cat *             → allow   # 只读
+grep *            → allow   # 只读
+rg *              → allow   # 只读
+find *            → allow   # 只读
+wc *              → allow   # 只读
+bash scripts/precheck.sh * → allow # 自家门禁可随时跑
