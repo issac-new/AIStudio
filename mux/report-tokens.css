@@ -1,0 +1,39 @@
+/* design tokens v1 —— 方案页与报告页共享样式基准
+ * 单一事实源=overlay/scripts/plan-html/tokens.css；simharness 副本=mux/report-tokens.css
+ * （两文件字节级同文；overlay render.sh 渲染前与兄弟副本 diff，不一致打漂移警告；
+ *   simharness 侧守门=tests/report-three-elements.test.ts。改任一侧必须同步另一侧。）
+ */
+:root{
+  --bg:#f6f8fb;
+  --surface:#ffffff;
+  --surface-2:#f8fafc;
+  --surface-3:#f1f5f9;
+  --ink:#1e293b;
+  --ink-strong:#0f172a;
+  --muted:#64748b;
+  --line:#e2e8f0;
+  --line-soft:#eef2f7;
+  --accent:#2563eb;
+  --accent-deep:#1e3a8a;
+  --accent-soft:#dbeafe;
+  --ok:#059669;
+  --ok-soft:#ecfdf5;
+  --warn:#b45309;
+  --warn-soft:#fef3c7;
+  --danger:#b91c1c;
+  --danger-soft:#fee2e2;
+  --code-bg:#0f172a;
+  --code-ink:#e2e8f0;
+  --grad-hero:linear-gradient(135deg,#0f172a,#1e3a5f);
+  --radius:10px;
+  --radius-lg:14px;
+  --shadow-sm:0 2px 8px rgba(15,23,42,.05);
+  --shadow-md:0 6px 18px rgba(15,23,42,.14);
+  --measure:1100px;
+  --fs-body:15px;
+  --fs-sm:13px;
+  --fs-h4:16px;
+  --fs-h3:18.5px;
+  --fs-h2:23px;
+  --font-mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}

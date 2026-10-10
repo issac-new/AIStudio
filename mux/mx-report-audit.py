@@ -580,7 +580,11 @@ for blk in blocks:
 # exec 项（幂等/下单执行输出件）缺席=FAIL——执行输出无 UI 亦可产出，无降级通道；
 # frames 项（下单流程帧 ≥2）缺席：台账在位 product-outcome-missing 族记单=§5.6 采集
 # 纪律⑩ 降级 WARN（逻辑层 SDK 无 UI 面属「功能不存在」声明态），未记单=FAIL。
-_po = product_outcome_status(EVID, issue_log_text='\n'.join(_ilines_r18))
+# 轮次闸（2026-10-10 三要素合并轮补）：本查 run13 起入分母（§5.5「run12 不回溯」
+# 一次性历史条款）——run12 及更早轮无 product-outcome 采集义务，误咬=历史轮全部 FAIL
+_po = {'exec_met': True, 'frames_met': True, 'degraded': False}
+if RUN_ID >= '20261010-v8-run13':
+    _po = product_outcome_status(EVID, issue_log_text='\n'.join(_ilines_r18))
 if not _po['exec_met']:
     fails.append('产品成效 exec 项缺席（evidence/product-outcome/ 无幂等/下单执行输出件）——'
                  '§5.4 ①件必采：product-outcome-summary.py 落盘或 testlog 实跑摘录，禁手抄')
