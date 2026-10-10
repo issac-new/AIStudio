@@ -19,7 +19,7 @@ const { activity, activeProfiles, releaseAgentActivity } = useAgentActivity()
 const activeCount = computed(() => activeProfiles.value.length)
 
 // ── 推演运行态（③）：/api/sim/run-progress 30s 轮询 ──
-interface RunProgress { runId: string; done: number; total: number; doneSteps: string[]; updatedTs: number }
+interface RunProgress { runId: string; done: number; total: number; doneSteps: string[]; updatedTs: number; scope?: 'lite'; fixturesFrom?: string }
 const run = ref<RunProgress | null>(null)
 const now = ref(Math.floor(Date.now() / 1000))
 let timer: ReturnType<typeof setInterval> | null = null
@@ -29,7 +29,7 @@ async function refreshRun(): Promise<void> {
   try {
     const res = await authFetch('/api/sim/run-progress')
     if (!res.ok) { run.value = null; return }
-    const data = (await res.json()) as { ok?: boolean; run?: { runId: string; done: number; total: number; doneSteps?: string[]; updatedTs: number } | null }
+    const data = (await res.json()) as { ok?: boolean; run?: { runId: string; done: number; total: number; doneSteps?: string[]; updatedTs: number; scope?: 'lite'; fixturesFrom?: string } | null }
     run.value = data.ok && data.run ? { ...data.run, doneSteps: data.run.doneSteps ?? [] } : null
   } catch { run.value = null }
 }
@@ -66,7 +66,7 @@ function gotoBoard(): void { void router.push({ name: 'ia2.board' }) }
       @{{ p }}<template v-if="lastActiveSecOf(p) !== null"> · {{ lastActiveSecOf(p) }}s</template>
     </span>
     <span v-if="run" class="bchip bchip--run" data-testid="bgwork-run" :title="fmt(L.updatedAgo, { sec: Math.max(0, now - run.updatedTs) })">
-      {{ L.runTitle }} {{ run.runId }} · {{ fmt(L.runMeta, { done: run.done, total: run.total, step: latestStep || '—' }) }}
+      {{ L.runTitle }} {{ run.runId }}<template v-if="run.scope === 'lite'"> · {{ fmt(L.runMetaLite, { done: run.done, total: run.total, step: latestStep || '—', from: run.fixturesFrom || '—' }) }}</template><template v-else> · {{ fmt(L.runMeta, { done: run.done, total: run.total, step: latestStep || '—' }) }}</template>
       <template v-if="runStaleMin >= 5"> · {{ fmt(L.stale, { min: runStaleMin }) }}</template>
     </span>
   </div>
