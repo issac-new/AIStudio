@@ -28,6 +28,8 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
+import IdeLandingHero from '../components/IdeLandingHero.vue'
+import { shouldShowLandingHero } from '../utils/landingHero'
 import { listFiles } from '@/api/studio/files'
 import { useFilesStore } from '@/stores/hermes/files'
 import type { BriefingContextFile } from '../components/briefing-types'
@@ -289,6 +291,29 @@ const briefingOpen = ref(false)
 watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
+
+// ── 裸落地引导空态（run13 步18 错帧修复配套：/app/ide 是登录默认落点，深链
+// 才有任务上下文——裸落地此前直落会话栏自动恢复，新用户零引导）──
+// 判定纯函数=utils/landingHero（守门测试同源）；engage 后本次访问不再打扰。
+const landingEngaged = ref(false)
+const showLandingHero = computed(() => shouldShowLandingHero({
+  activeTaskId: ide.activeTaskId,
+  queryTask: route.query.task,
+  querySession: route.query.session,
+  engaged: landingEngaged.value,
+}))
+// 最近任务速选来源=当前板任务列（侧栏装载后自动到位；空板显示空态引导文案）
+const landingTasks = computed(() =>
+  ((kanbanStore.tasks ?? []) as { id: string; title: string; status?: string }[]).slice(0, 5))
+function landingPickTask(id: string) {
+  landingEngaged.value = true
+  ide.setActiveTask(id)
+  ide.setDimension('task')
+  briefingOpen.value = true // 与 ?task 深链同款：跳转意图即"看这个任务"（run6 复盘）
+}
+function landingEnterWorkspace() {
+  landingEngaged.value = true
+}
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 // 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
 // （同一 resolveBriefingCrossBoard，当前板缓存优先零额外请求），随后刷新 Git 块。
@@ -457,7 +482,8 @@ onUnmounted(() => {
               @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
             />
           </div>
-          <IdeChatPane class="ide-shell__colbody" />
+          <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" />
+          <IdeChatPane v-else class="ide-shell__colbody" />
         </div>
       </div>
       <div v-show="sidepaneShown" class="ide-shell__panewrap" :style="sidepaneWidthStyle">

@@ -14,6 +14,7 @@ import { createPinia } from 'pinia'
 import router from '@/router'
 import { i18nReady } from '@/i18n'
 import App from '@/App.vue'
+import { hashDeeplinkTarget } from './deeplink'
 import '@/styles/global.scss'
 import 'katex/dist/katex.min.css'
 
@@ -32,17 +33,18 @@ if (isDark) document.documentElement.classList.add('dark')
 if (isComic) document.documentElement.classList.add('comic')
 if (isDesktopShell) document.documentElement.classList.add('hermes-desktop-shell')
 
-// overlay[aipaydev]: hash 路由吞掉路径形态深链的 search 参数（/ide?task=x 落 /app 后
-// task 丢失，推演实锤 ide-deeplink-loses-task）。与 patches/368（upstream main.ts 侧）
-// 同步的同一迁移：router 初始化前把 pathname+search 迁为 hash 形态。
+// overlay[aipaydev]: hash 路由吞掉路径形态深链（run13 步18 实锤：/app/ide 裸路径
+// 冷启动落登录链→#/app→被带进最近群聊房，拍出房间视图错帧）。与 patches/368
+// （upstream main.ts 侧）同步的同一迁移：router 初始化前把 pathname+search 迁为
+// hash 形态。判定单一事实源=registries/client/deeplink.ts（旧版仅带 query 迁移，
+// 2026-10-10 放宽到全部非根路径）。
 // entry.mts 是 dev/运行时实际入口，此处是主落点；368 保 upstream 直入口路径兼容。
 // 注意 hash==='#/' 是 ESM import 链里 router 模块初始化写的空路由默认值（import 提升
 // 先于本模块体执行），须视为「未导航」；真路由（#/app 等）才豁免迁移。
 {
-  const { origin, pathname, search, hash } = window.location
-  const notNavigated = hash === '' || hash === '#' || hash === '#/'
-  if (search.length > 1 && notNavigated) {
-    window.location.replace(`${origin}/#${pathname}${search}`)
+  const target = hashDeeplinkTarget(window.location)
+  if (target) {
+    window.location.replace(`${window.location.origin}/${target}`)
   }
 }
 
