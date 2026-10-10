@@ -11,15 +11,6 @@ import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings
 const open = ref(false)
 const recording = ref<string | null>(null)
 
-const OVERRIDES_KEY = 'ide_keymap_overrides_v1'  // 遗留裸键（#13 批三迁入 ide.keymapOverrides）
-// 分层读（含一次性收养）：返回归一后的覆盖数组
-function readOverrides(): KeyBinding[] {
-  try {
-    adoptLegacySetting('ide.keymapOverrides', OVERRIDES_KEY)
-    const raw = readSetting<KeyBinding[]>('ide.keymapOverrides', []).value
-    return Array.isArray(raw) ? raw : []
-  } catch { return [] }
-}
 function loadOverrides(): KeyBinding[] {
   try {
     const raw = readOverrides()
@@ -72,6 +63,20 @@ function resetAll(): void {
 
 <script lang="ts">
 // 生效查询面导出（模块级，供输入处理复用——SFC 双 script 保持 export）。
+// 注意：readOverrides/OVERRIDES_KEY 必须留在本模块作用域块——曾定义在
+// <script setup> 内，此处调用是运行时 ReferenceError，被 catch 吞成空串，
+// ⌘K 等全局键位永远不匹配（命令面板键盘入口失效，浏览器实测定位）。
+const OVERRIDES_KEY = 'ide_keymap_overrides_v1'  // 遗留裸键（#13 批三迁入 ide.keymapOverrides）
+// 分层读（含一次性收养）：返回归一后的覆盖数组
+function readOverrides(): KeyBinding[] {
+  try {
+    adoptLegacySetting('ide.keymapOverrides', OVERRIDES_KEY)
+    const raw = readSetting<KeyBinding[]>('ide.keymapOverrides', []).value
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
 export function useKeyBinding(context: string, action: string): () => string {
   return () => {
     try {

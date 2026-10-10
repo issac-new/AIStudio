@@ -65,8 +65,13 @@ const searchInputEl = ref<HTMLInputElement | null>(null)
 
 // UX 裁决 F（2026-10-03）：协作侧命令面板快捷键——⌘K/Ctrl+K 唤起混合搜索（命令/会话/任务），
 // 与 IDE 壳 ⌘K 命令面板对称。焦点进输入框，Spotlight 键盘导航即刻可用。
+// 对称的另一半（2026-10-10 wiki 回归 D6 实锤）：IDE 路由下本壳仍挂载，两处
+// window keydown 同抢 ⌘K，协作侧聚焦搜索框会掠走 IDE 面板 input 的焦点，
+// 回车执行不了面板命令——IDE 工作台路由（ide.shell，含 /ide 旧深链）让位。
 function onGlobalPaletteKey(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+    const route = router.currentRoute.value
+    if (route.name === 'ide.shell' || route.path === '/app/ide' || route.path.startsWith('/ide')) return
     e.preventDefault()
     spotOpen.value = true
     nextTick(() => searchInputEl.value?.focus())
