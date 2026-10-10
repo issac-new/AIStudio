@@ -132,6 +132,8 @@
   padding: 0 16px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  // 2026-10-10 根治轮：组件内隐藏测量行（position:absolute）以本条为定位锚
+  position: relative;
 }
 
 // v12.4：标签改 swarm kanban 双击入口（交互态给指针与悬停反馈）
@@ -220,6 +222,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
+}
+
+// 2026-10-10 根治轮：「+N」汇总 chip（自适应限量显示的溢出位）——复用条目 chip
+// 基础形态，视觉弱化为"还有更多"提示；悬浮梯队摘要+点击进看板在组件层。
+.ia-attn__more {
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-secondary, var(--bg-primary));
+  font-weight: 600;
+  min-width: 40px;
 }
 
 // v12.3（R2 注意力条改管理入口）：尾部 ⚙管理常驻、空态不消失
