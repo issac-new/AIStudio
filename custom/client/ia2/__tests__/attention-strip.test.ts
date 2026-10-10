@@ -51,3 +51,67 @@ describe('AttentionStrip — swarm kanban 标签（v12.4）', () => {
     expect(tierBlock).toContain('max-width: 56px')
   })
 })
+
+describe('AttentionStrip — 自适应限量显示（2026-10-10 根治轮）', () => {
+  // jsdom 无布局：stub offsetWidth/clientWidth 让测量行/容器有确定宽度。
+  function stubLayout(offsets: number, client: number): () => void {
+    const off = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')
+    const cli = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => offsets })
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => client })
+    return () => {
+      if (off) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', off)
+      if (cli) Object.defineProperty(HTMLElement.prototype, 'clientWidth', cli)
+    }
+  }
+
+  const rows: AttentionRow[] = Array.from({ length: 6 }, (_, i) => ({
+    id: `att-t${i}`, taskId: `t${i}`, title: `任务 ${i}`,
+    status: i < 4 ? 'blocked' : 'review', severity: 'high', priority: i + 1, createdAt: 1,
+  }))
+
+  it('放得下 → 全量渲染，无 +N chip；测量行 aria-hidden 存在', async () => {
+    const restore = stubLayout(100, 2000)
+    try {
+      const w = mount(AttentionStrip, { props: { items: rows } })
+      await new Promise(r => setTimeout(r, 0))
+      expect(w.findAll('.ia-attn__items .ia-attn__item:not(.ia-attn__more)')).toHaveLength(6)
+      expect(w.find('[data-testid="ia-attn-more"]').exists()).toBe(false)
+      expect(w.find('.ia-attn__measure').attributes('aria-hidden')).toBe('true')
+      w.unmount()
+    } finally { restore() }
+  })
+
+  it('放不下 → 前缀切片 + 「+N」chip（计数正确、点击 emit open-board、悬浮含梯队摘要）', async () => {
+    // 每个 chip 100px、容器 300：预算 300-56-6=238 → 可见 2、+4
+    const restore = stubLayout(100, 300)
+    try {
+      const w = mount(AttentionStrip, { props: { items: rows } })
+      await new Promise(r => setTimeout(r, 0))
+      const visible = w.findAll('.ia-attn__items .ia-attn__item:not(.ia-attn__more)')
+      expect(visible).toHaveLength(2)
+      const more = w.find('[data-testid="ia-attn-more"]')
+      expect(more.text()).toBe('+4')
+      expect(more.attributes('title')).toContain('ia2.overview.tierBlocked 2')
+      await more.trigger('click')
+      expect(w.emitted('open-board')).toHaveLength(1)
+      w.unmount()
+    } finally { restore() }
+  })
+
+  it('量不到宽度（jsdom 缺省 0）→ 兜底全显示，不出 +N', async () => {
+    const w = mount(AttentionStrip, { props: { items: rows } })
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.findAll('.ia-attn__items .ia-attn__item:not(.ia-attn__more)')).toHaveLength(6)
+    expect(w.find('[data-testid="ia-attn-more"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('守门：ia2.scss 保留单行纪律与 +N chip 样式（根治轮锚）', () => {
+    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    expect(scss).toContain('.ia-attn__more')
+    // 测量行锚定：条本体须为定位上下文
+    const attnBlock = scss.slice(scss.indexOf('.ia-attn {'), scss.indexOf('.ia-attn__label'))
+    expect(attnBlock).toContain('position: relative')
+  })
+})
