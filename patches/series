@@ -558,3 +558,5 @@
 # 593/594 agent 运行时补丁（mx_apply_agent_patches 走 harness 通道不进 inject，此处登记仅为编号守门对账）
 593-agent-per-tool-allowlist.patch
 594-agent-tool-audit-ledger.patch
+595-agent-token-quota.patch
+596-agent-write-fence-roots.patch
