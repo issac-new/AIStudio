@@ -163,4 +163,4 @@ status: draft
 交付工作区内启用：`mkdir -p .githooks && ln -sf "$PWD/../<技能路径>/scripts/spec-first-pre-commit.sh" .githooks/pre-commit && git config core.hooksPath .githooks`，并在本技能 `scripts/precheck.conf` 设 `SPEC_REQUIRED=1`（判定库/WRITABLE_DIRS 同 conf）。关闭=删链接或恢复 hooksPath。判据与四层拦截同源（scripts/spec-first-lib.sh）；`--no-verify` 逃生门由门禁与状态机兜底，拦截落 gate-deny.jsonl 可审计。
 
 ### 里程碑上报（进度可感知）
-每个九节点离开时：`bash <本技能>/scripts/trace-log.sh --milestone "<节点标准名>" --status done --note "<一句话产出>"`（详况见 references/workflow.md 全节点通用纪律）。
+每个九节点离开时：`bash <本技能>/scripts/trace-log.sh --milestone "<节点标准名>" --task <当前任务卡ID> --status done --note "<一句话产出>"`（--task 必带——驾驶舱按任务卡聚合进度）（详况见 references/workflow.md 全节点通用纪律）。
