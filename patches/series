@@ -560,3 +560,6 @@
 594-agent-tool-audit-ledger.patch
 595-agent-token-quota.patch
 596-agent-write-fence-roots.patch
+
+# 597 技能治理域挂载（swarm-yuan 生成器产品面+角色映射+教训库；SkillgovSection 于 TasksView accounts 页签）
+597-server-skillgov-routes.patch
