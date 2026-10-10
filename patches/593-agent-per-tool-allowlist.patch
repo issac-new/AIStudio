@@ -1,0 +1,58 @@
+diff --git a/model_tools.py b/model_tools.py
+index 1111111..2222222 100644
+@@ -276,6 +276,7 @@
+         frozenset(disabled_toolsets) if disabled_toolsets else None, registry._generation, cfg_fp,
+         bool(os.environ.get("HERMES_KANBAN_TASK")), bool(skip_tool_search_assembly),
+         _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope,
++        _profile_tool_filter(),
+     )
+ 
+ 
+@@ -310,8 +311,32 @@
+         (tools.difference_update if disable else tools.update)(resolved)
+         if not quiet_mode:
+             print(f"{icon} {label} '{name}': {', '.join(resolved) if resolved else 'no tools'}")
++
+ 
++def _profile_tool_filter() -> tuple:
++    """Per-tool allow/deny lists (finer than toolset scope): one tool name per
++    line in <HERMES_HOME>/tool-allowlist.txt / tool-denylist.txt (# comments).
++    None = file absent/empty (no filtering). Read per call so the multiplex
++    gateway's per-turn HERMES_HOME switch is honored; results are part of the
++    tool-defs cache key, so profiles in one process never share a filter."""
++    try:
++        from pathlib import Path as _P
++        from hermes_constants import get_hermes_home
+ 
++        def _read(name: str):
++            f = _P(get_hermes_home()) / name
++            try:
++                lines = f.read_text(encoding="utf-8").splitlines()
++            except OSError:
++                return None
++            names = {ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith("#")}
++            return frozenset(names) if names else None
++
++        return _read("tool-allowlist.txt"), _read("tool-denylist.txt")
++    except Exception:
++        return None, None
++
++
+ def _select_tool_names(enabled_toolsets: Optional[list[str]], disabled_toolsets: Optional[list[str]], quiet_mode: bool) -> set:
+     """Tool names requested by the toolset selection (before check_fn filtering)."""
+     tools: set = set()
+@@ -334,6 +359,14 @@
+     # disabled toolset are strictly stripped out. See issue #17309.
+     if disabled_toolsets:
+         _apply_toolset_selection(tools, disabled_toolsets, quiet_mode, disable=True)
++    # Per-tool allow/deny (finer than toolset scope; files under HERMES_HOME).
++    _allow, _deny = _profile_tool_filter()
++    if _allow is not None:
++        tools &= _allow
++    if _deny is not None:
++        tools -= _deny
++    if not quiet_mode and (_allow is not None or _deny is not None):
++        print(f"🛡  Per-tool filter: allow={len(_allow) if _allow else '—'} deny={len(_deny) if _deny else '—'} → {len(tools)} tools")
+     return tools
+ 
+ 
