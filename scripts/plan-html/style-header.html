@@ -74,8 +74,9 @@ thead th{
   padding:8px 12px; border-bottom:2px solid var(--line);
 }
 td{padding:7px 12px; border-bottom:1px solid var(--line-soft); vertical-align:top}
-/* 首列下限：CJK 逐字断行使短标签列可被压成单字竖排（「贴近真/实」型折行），4em 下限兜住 */
-td:first-child{min-width:4em}
+/* 首列下限：CJK 逐字断行使短标签列可被压成单字竖排（「贴近真/实」型折行）。
+   border-box 下 4em 会被 19px 内边距吃掉（内容宽仅剩 2.5 字），6em 兜住四字词 */
+td:first-child{min-width:6em}
 tbody tr:nth-child(even){background:var(--surface-2)}
 tbody tr:hover{background:var(--accent-soft)}
 /* ── 代码：行内码=中性（旧琥珀棕刺眼已撤），块码=深色卡片 ── */
