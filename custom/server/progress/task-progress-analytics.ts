@@ -81,7 +81,7 @@ export function taskProgressOverview(
     // 站点时间线：取最近一条 run（任务卡粒度一次派一个 run；多 run 时最新者为准）。
     const run = runs[runs.length - 1]
     const phases: TaskPhaseTimelineItem[] = (run?.phases ?? []).map((p) => ({ name: p.name, status: p.status }))
-    // 技能侧里程碑联合（消费收口）：--task 归本卡的条目进任务时间线；引擎站点面
+    // 技能侧里程碑联合（消费侧接线补全）：--task 归本卡的条目进任务时间线；引擎站点面
     // 缺席时以最近一条里程碑作为 currentPhase 回退（手工/非引擎任务也有进度可读）。
     const wsMilestones = (withSession?.workspaceId ?? last.workspaceId)
       ? (opts.milestonesByWorkspace?.get((withSession?.workspaceId ?? last.workspaceId) as string) ?? []).filter((m) => m.task === taskId)

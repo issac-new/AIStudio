@@ -20,7 +20,7 @@ router.get('/tasks', async (ctx) => {
   try {
     const ledger = readDispatchLedger(2000).filter((e) => e.taskId)
     const sessions = getSessionStore(getZcodeProjectionRuntime())
-    // 里程碑面（消费收口）：按台账出现的 distinct workspace 各读一次（有界 fail-soft），
+    // 里程碑面（消费侧接线补全）：按台账出现的 distinct workspace 各读一次（有界 fail-soft），
     // 传聚合联合——引擎站点面缺席的任务以里程碑回退呈现进度。
     const milestonesByWorkspace = new Map<string, ReturnType<typeof readWorkspaceMilestones>>()
     for (const e of ledger) {
