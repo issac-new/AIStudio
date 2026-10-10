@@ -324,11 +324,15 @@ function focusMainChat(): void {
   gap: 2px;
   padding: 4px 6px;
   border-bottom: 1px solid var(--border-color, #e0e0e0);
+  /* 全部组 17 签曾把 max/close 钮挤到 ~12px（flex 收缩）——换行 + 页签
+   * 不可收缩，按钮保持 30px 可点（2026-10-10 回归轮 UX-1） */
+  flex-wrap: wrap;
 }
 
 .ide-sidepane__tab {
   width: 30px;
   height: 26px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;

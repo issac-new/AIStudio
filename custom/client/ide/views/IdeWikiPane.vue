@@ -139,7 +139,7 @@ watch(() => ide.workspace, () => void loadPages())
   <div class="ide-wiki" data-testid="ide-wiki-pane">
     <div class="ide-wiki__toolbar">
       <span class="ide-wiki__title">{{ t('ide.wiki.panelTitle') }}</span>
-      <button type="button" class="ide-wiki__btn" :title="t('ide.wiki.referenceWiki')" @click="referenceWhole">{{ t('ide.wiki.referenceWiki') }}</button>
+      <button type="button" class="ide-wiki__btn" :disabled="!pages.length" :title="t('ide.wiki.referenceWiki')" @click="referenceWhole">{{ t('ide.wiki.referenceWiki') }}</button>
       <button type="button" class="ide-wiki__btn" :disabled="!selected" :title="t('ide.wiki.referencePage')" @click="referencePage">{{ t('ide.wiki.referencePage') }}</button>
       <button type="button" class="ide-wiki__btn" :disabled="!hasWorkspace" :title="t('ide.wiki.pipeline')" data-testid="ide-wiki-pipeline" @click="runPipeline">{{ t('ide.wiki.pipeline') }}</button>
       <button type="button" class="ide-wiki__btn ide-wiki__btn--primary" :title="t('ide.wiki.generate')" data-testid="ide-wiki-generate" @click="copyGeneratePrompt">{{ t('ide.wiki.generate') }}</button>
