@@ -71,7 +71,7 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const r = await request('GET', '/api/hermes/cluster-inspector/snapshot')
+    const r = await request('/api/hermes/cluster-inspector/snapshot')
     anomalies.value = (r as { anomalies?: Anomaly[] }).anomalies ?? []
     snapshot.value = (r as { snapshot?: Snapshot }).snapshot ?? null
     lastRun.value = (r as { inspector?: { lastRunAt?: number } } & Record<string, unknown>)?.lastRun ?? (r as Record<string, unknown>).outcome ?? null
@@ -85,7 +85,7 @@ async function runInspect() {
   running.value = true
   error.value = ''
   try {
-    const r = await request('POST', '/api/hermes/cluster-inspector/run')
+    const r = await request('/api/hermes/cluster-inspector/run', { method: 'POST' })
     const o = (r as { outcome?: { anomalies?: Anomaly[]; emitted?: number; suppressedByCooldown?: number; ts?: number } }).outcome
     anomalies.value = o?.anomalies ?? []
     lastRun.value = o ?? null
