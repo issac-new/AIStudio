@@ -41,6 +41,26 @@ try {
   }
 } catch { /* 规划文件缺席=不覆盖（回落调用方参数） */ }
 
+// URL 形态归一（run13 步18 实锤：路径形态深链不带 query 时，entry.mts 的
+// pathname→hash 迁移不触发，冷启动落登录链→驾驶舱首页→被带进最近群聊房，
+// /app/ide 拍出房间视图错帧）。hash 形态实测全部稳定落页（scratch 探针 v5）。
+// 归一化覆盖规划覆盖与 --url 回落两侧，防后续轮次复发。
+if (PLAN_URL === 'none') {
+  // V8.4④ 三态之「功能不存在标注」：无拍摄位=无帧退出（不拍垃圾页冒充），
+  // 报告侧按缺帧 ⬜+记单呈现。rc=0（采集成功且按规划无帧，非失败）。
+  console.log(`plan=none: step ${STEP} 无拍摄位，零帧退出（V8.4④ 功能不存在标注）`)
+  process.exit(0)
+}
+if (PLAN_URL.startsWith('/') && !PLAN_URL.startsWith('/#')) {
+  const ORIG_URL = PLAN_URL
+  PLAN_URL = '/#' + PLAN_URL
+  try {
+    // OUT 尚未声明（TDZ），路径独立拼（与下方 plan-override 日志同目录）
+    appendFileSync(join('/Volumes/nvme2230/lab/ncwk-sim-mux', 'runs', RUN, 'evidence', 'screenshots', 'capture-plan.log'),
+      `[${new Date().toISOString()}] step=${STEP} url-normalize path→hash ${ORIG_URL}→${PLAN_URL}\n`)
+  } catch {}
+}
+
 const ACTION = arg('action', ''), ACTION_WAIT = parseInt(arg('action-wait', '400'), 10)
 const USER = PLAN_USER || arg('user', 'fanfan'), SETTLE = parseInt(arg('settle', '4000'), 10)
 if (!STEP || !PLAN_URL) { console.error('需要 --step <n> --url <路由>'); process.exit(1) }
