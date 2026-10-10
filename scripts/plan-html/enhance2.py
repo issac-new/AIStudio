@@ -119,5 +119,12 @@ if '<main class="doc-main">' not in s:
 else:
     print('③ 已在位')
 
+# ── ④ 表格横滚包裹（2026-10-10 版式修复：宽表在 --measure 行宽内不再挤压正文）──
+if 'class="tbl-wrap"' not in s:
+    s = re.sub(r'(<table.*?</table>)', r'<div class="tbl-wrap">\1</div>', s, flags=re.S)
+    print('④ 表格横滚包裹：%d 张' % len(re.findall(r'<table', s)))
+else:
+    print('④ 已在位')
+
 F.write_text(s, encoding='utf-8')
 print('二段增强完成')
