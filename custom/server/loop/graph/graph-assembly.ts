@@ -346,7 +346,24 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       })
     : null
 
-  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime })
+  // 任务工厂台账接线（2026-10-10）：治理注册表 mission-templates（保存即提交=变更审计）。
+  // 异步解析+同步签名（与能力注册表同款 IIFE 模式）：台账面不可用不阻塞装配——
+  // deposit 端点对未就绪/失败如实返回 registered=false，spec 落库不受影响。
+  let appendRowImpl: ((row: string[], message: string, actor?: string) => Promise<void>) | null = null
+  void (async () => {
+    try {
+      const { appendRegistryRow } = await import('../../governance/registry-admin')
+      appendRowImpl = async (row, message, actor) => { await appendRegistryRow('mission-templates', row, message, actor) }
+    } catch { /* 注册表面不可用 → 台账降级 */ }
+  })()
+  const missionRegistry = {
+    appendRow: async (row: string[], message: string, actor?: string): Promise<void> => {
+      if (!appendRowImpl) throw new Error('模板台账通道尚未就绪，请稍后重试')
+      await appendRowImpl(row, message, actor)
+    },
+  }
+
+  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime, missionRegistry })
 
   // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——设置页"图引擎策略"卡数据源。
   // 导出装配事实：当前模式 + 生效的默认审批超时/熔断阈值（只读展示；策略文件化

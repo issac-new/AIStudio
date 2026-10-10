@@ -106,7 +106,10 @@ describe('createKanbanOverview', () => {
     // default 主库 + aiteam 板库
     const mainDb = new DatabaseSync(join(root, 'kanban.db'))
     mainDb.exec('create table tasks (id text primary key, title text, status text)')
+    mainDb.exec('create table task_links (parent_id text, child_id text)')
     mainDb.prepare('insert into tasks values (?,?,?)').run('D-1', '主库卡', 'ready')
+    mainDb.prepare('insert into tasks values (?,?,?)').run('D-2', '主库子卡', 'todo')
+    mainDb.prepare('insert into task_links values (?,?)').run('D-1', 'D-2')
     mainDb.close()
     const teamDb = new DatabaseSync(join(boardsDir, 'aiteam', 'kanban.db'))
     teamDb.exec('create table tasks (id text primary key, title text, status text)')
@@ -120,16 +123,21 @@ describe('createKanbanOverview', () => {
     const slugs = result.boards.map(b => b.slug).sort()
     expect(slugs).toEqual(['aiteam', 'default'])
     expect(result.boards.find(b => b.slug === 'aiteam')?.name).toBe('AI 团队板')
-    expect(result.tasks.map(t => t.task.id).sort()).toEqual(['A-1', 'D-1'])
+    expect(result.tasks.map(t => t.task.id).sort()).toEqual(['A-1', 'D-1', 'D-2'])
     // 快道全命中：CLI 依赖零调用
     expect(ctx.listBoards).not.toHaveBeenCalled()
     expect(ctx.listTasks).not.toHaveBeenCalled()
     // tasks 行带 board 归属（与 CLI 形状一致的消费点）
     expect(result.tasks.find(t => t.task.id === 'A-1')?.board).toBe('aiteam')
+    // task_links 并入 parents/children（2026-10-10 任务协同图：聚合端依赖边不丢；
+    // 无链接表的板（aiteam 假库）空数组降级不拖垮任务快道）
+    expect(result.tasks.find(t => t.task.id === 'D-1')?.task).toMatchObject({ children: ['D-2'], parents: [] })
+    expect(result.tasks.find(t => t.task.id === 'D-2')?.task).toMatchObject({ parents: ['D-1'] })
+    expect(result.tasks.find(t => t.task.id === 'A-1')?.task).toMatchObject({ parents: [], children: [] })
 
     // 板库缺失的板（boards/ghost 无 kanban.db）→ 该板从 boards 列表消失，
     // 快道 boards 列表只含真实存在的板；CLI 老路径语义由旧测试覆盖。
     const result2 = await overview.getOverview()
-    expect(result2.tasks.length).toBe(2)
+    expect(result2.tasks.length).toBe(3) // A-1 + D-1 + D-2（链接种子新增子卡）
   })
 })

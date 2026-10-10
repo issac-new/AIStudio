@@ -164,6 +164,19 @@ export const runRest = {
     return request(`${BASE}/${encodeURIComponent(id)}/export`)
   },
 
+  /**
+   * POST /api/graph/runs/:id/deposit-template — 任务工厂沉淀（2026-10-10 麦肯锡概念二轮）：
+   * 完成 run 沉淀为可复用模板（origin='factory' + meta.factory 来源溯源 + mission-templates
+   * 台账行）。409 = run 未完成/规格缺失（message 可直显）；registered=false = 台账侧失败
+   * 但模板已落库（registryError 给原因，可重试登记）。
+   */
+  depositTemplate: async (id: string, body: { name?: string; note?: string }): Promise<{ ok: boolean; templateId: string; registered: boolean; registryError?: string }> => {
+    return request(`${BASE}/${encodeURIComponent(id)}/deposit-template`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+
   // ── P4 编排器编辑器（graph-rest.ts 自建 spec 契约）─────────────────────────
 
   /**

@@ -13,6 +13,7 @@ const TASKS_TABS_TEXT = {
   zh: {
     tabBoard: '看板',
     // 2026-10-04 说人话轮（用户裁定：除看板外页签全看不懂）——行业通用术语重命名+逐签导语
+    tabOrchestra: '任务协同',
     tabTrace: '需求追溯',
     tabAccounts: '交付健康',
     tabObservatory: '运行观测',
@@ -25,6 +26,7 @@ const TASKS_TABS_TEXT = {
   },
   en: {
     tabBoard: 'Board',
+    tabOrchestra: 'Orchestration',
     tabTrace: 'Requirements Trace',
     tabAccounts: 'Delivery Health',
     tabObservatory: 'Run Observatory',
