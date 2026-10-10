@@ -9,7 +9,12 @@ TITLE="${2:-Swarm Studio 全流程推演方案 V8.4（证据纪律修订版）}"
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
 # 「enhance 读死 /tmp/plan-view 误碰别的输出目录」的坑（2026-10-10 实锤摸到活页 mtime）
-cp "$ROOT/scripts/plan-html/style-header.html" "$OUT/style-header.html"
+# 头部样式=tokens.css（两页共享基准）+ style-header.html（本页组件）拼接
+SIM_TOKENS="$ROOT/../simharness/mux/report-tokens.css"
+if [ -f "$SIM_TOKENS" ] && ! diff -q "$ROOT/scripts/plan-html/tokens.css" "$SIM_TOKENS" >/dev/null 2>&1; then
+  echo "⚠ design tokens 漂移：overlay/scripts/plan-html/tokens.css 与 simharness/mux/report-tokens.css 不一致——两页样式将分叉，先同步再渲染" >&2
+fi
+cat "$ROOT/scripts/plan-html/tokens.css" "$ROOT/scripts/plan-html/style-header.html" > "$OUT/style-header.html"
 cd "$ROOT/docs/superpowers/specs"
 pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
   --include-in-header="$OUT/style-header.html" \
