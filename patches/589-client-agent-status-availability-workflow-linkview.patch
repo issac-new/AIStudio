@@ -1,0 +1,66 @@
+diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
+--- a/packages/client/src/views/hermes/WorkflowView.vue
++++ b/packages/client/src/views/hermes/WorkflowView.vue
+@@ -130,9 +130,9 @@
+ } from '@/components/hermes/workflow/types'
+ import type { AvailableModelGroup } from '@/api/hermes/system'
+ import {
+-  fetchAgentStatusSnapshot,
++  fetchAgentAvailabilitySnapshot,
+   isAgentStatusAvailable,
+-  type AgentStatusSnapshot,
++  type AgentAvailabilitySnapshot,
+ } from '@/api/agent-status'
+ 
+ import '@vue-flow/core/dist/style.css'
+@@ -164,7 +164,7 @@
+ const workflowImportPreview = ref<Awaited<ReturnType<typeof previewWorkflowImport>> | null>(null)
+ const workflowImportProfile = ref('default')
+ const workflowImportConfirming = ref(false)
+-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
++const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
+ const WORKFLOW_CHAT_PANEL_MIN_WIDTH = 360
+ const WORKFLOW_CHAT_PANEL_DEFAULT_WIDTH = 560
+ const WORKFLOW_CANVAS_MIN_WIDTH = 360
+@@ -451,7 +451,7 @@
+ 
+ async function refreshAgentAvailability() {
+   try {
+-    agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
++    agentStatusSnapshot.value = await fetchAgentAvailabilitySnapshot()
+   } catch {
+     agentStatusSnapshot.value = null
+   }
+diff --git a/packages/client/src/views/hermes/GroupChatLinkView.vue b/packages/client/src/views/hermes/GroupChatLinkView.vue
+--- a/packages/client/src/views/hermes/GroupChatLinkView.vue
++++ b/packages/client/src/views/hermes/GroupChatLinkView.vue
+@@ -32,9 +32,9 @@
+   type RemoteGroupAgentDescriptor,
+ } from '@/api/studio/group-chat-agent-link'
+ import {
+-  fetchAgentStatusSnapshot,
++  fetchAgentAvailabilitySnapshot,
+   isAgentStatusAvailable,
+-  type AgentStatusSnapshot,
++  type AgentAvailabilitySnapshot,
+ } from '@/api/agent-status'
+ 
+ const { t } = useI18n()
+@@ -43,7 +43,7 @@
+ const profilesStore = useProfilesStore()
+ const profileAgents = ref<RemoteGroupAgentDescriptor[]>([])
+ const connections = ref<LocalGroupAgentConnection[]>([])
+-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
++const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
+ type GroupAgentType = RemoteGroupAgentDescriptor['agent']
+ const selectedAgentType = ref<GroupAgentType>('hermes')
+ const selectedProfile = ref('')
+@@ -583,7 +583,7 @@
+       listLocalGroupAgentConnections(),
+       profilesStore.fetchProfiles(),
+       appStore.loadModels(),
+-      fetchAgentStatusSnapshot(),
++      fetchAgentAvailabilitySnapshot(),
+     ])
+     profileAgents.value = localAgents.agents
+     connections.value = localConnections.connections
