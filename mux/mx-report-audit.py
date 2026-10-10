@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok  # 必采矩阵单一事实源（与生成器 hero 统计同表）
+from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采矩阵单一事实源（与生成器 hero 统计同表）
 
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
@@ -575,6 +575,22 @@ for blk in blocks:
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
         _r18_rep(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）{_r18_suffix}')
+
+# ── 查 8b：产品成效两项（§5.4 产品成效呈现+§5.6 必采矩阵 run13 起入分母；run14 起接线）──
+# exec 项（幂等/下单执行输出件）缺席=FAIL——执行输出无 UI 亦可产出，无降级通道；
+# frames 项（下单流程帧 ≥2）缺席：台账在位 product-outcome-missing 族记单=§5.6 采集
+# 纪律⑩ 降级 WARN（逻辑层 SDK 无 UI 面属「功能不存在」声明态），未记单=FAIL。
+_po = product_outcome_status(EVID, issue_log_text='\n'.join(_ilines_r18))
+if not _po['exec_met']:
+    fails.append('产品成效 exec 项缺席（evidence/product-outcome/ 无幂等/下单执行输出件）——'
+                 '§5.4 ①件必采：product-outcome-summary.py 落盘或 testlog 实跑摘录，禁手抄')
+if not _po['frames_met']:
+    if _po['degraded']:
+        warns.append('产品成效 frames 项缺席（下单流程前后帧 <2）——已记单 product-outcome-missing '
+                     '按§5.6 采集纪律⑩ 降级（逻辑层 SDK 无 UI 面声明态）；产品提供可走查 UI 后实拍')
+    else:
+        fails.append('产品成效 frames 项缺席（下单流程前后帧 <2）且无 product-outcome-missing 记单——'
+                     '§5.6 采集纪律⑩：记单+明示或实拍，二选一必选')
 
 # ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有

@@ -1110,13 +1110,13 @@ STEPS_META_RUN13 = {
             narrative='回归轮（本步不在本轮执行范围）：治理注册表（apps/roster）与 14 账号板为环境夹具（源轮 M1/M2 产品通道真值），持续在位不重装配。', imgs=[]),
     3: dict(keys=[], mark_chip='沿用·run12',
             actor='human', actorText='人 · 各用户',
-            narrative='回归轮（本步不在本轮执行范围）：组织与权限矩阵 org.md 在仓（源轮 M2 真值），本轮不重走人员面。', imgs=[]),
+            narrative='回归轮（本步不在本轮执行范围）：30 账号 matrix 免密/密码双通道登录为源轮验证真值（roster 与 jwt 凭据键在档），本轮账号全量沿用不重登。', imgs=[]),
     4: dict(keys=[], mark_chip='沿用·run12',
             actor='ai', actorText='AI · 冒烟驱动',
             narrative='回归轮（本步不在本轮执行范围）：冒烟四组承载页面在源轮验证；本步不在 lite 执行范围，§2.5 承载页面承诺按 lite 口径如实呈现（零当轮实拍不冒充）。', imgs=[]),
     5: dict(keys=[], mark_chip='沿用·run12',
             actor='human', actorText='人 · BA bella',
-            narrative='回归轮（本步不在本轮执行范围）：G1 需求冻结=g1_frozen 夹具键（lite seed，provenance=源轮 20261009-v8-run12）；freeze 文件 docs/requirements/RFD-001.freeze.md 在 origin/main——本轮不重走需求面，闸门卡按夹具键显示已通过。', imgs=[]),
+            narrative='回归轮（本步不在本轮执行范围）：应用资产表 docs/admin/app-registry.md 在 origin/main（源轮真值，四应用负责人/专属看板/测试骨架齐），本轮不重走应用登记面。', imgs=[]),
     6: dict(keys=[], mark_chip='沿用·run12',
             actor='human', actorText='人 · PM fanfan',
             narrative='回归轮（本步不在本轮执行范围）：组织矩阵对账（roster=org=fleet-manifest 零偏差）为源轮真值。', imgs=[]),
@@ -1370,10 +1370,10 @@ CHECKPOINTS = [
     ('cp-g3', 'G3 编码门禁', '测试证据随分支提交，无设计不编码', '门禁脚本 + 研发', 'ui-gov-tlpaycore', 'testlog 分支锚 feat/DEV-* ×4'),
     # .get 兜底：旧轮（run1/run4/run5）离线再生成此前在 _CP_G4/_CP_UAT/_CP_G6 上 KeyError
     # 零输出（L22-27 声称支持的归档态回归场景直接崩）——缺失轮如实标注，不编造卡点记录
-    ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全完整循环', '人 · qi/fei 独立执行', 'ui-gov-test', _CP_G4.get(RUN_ID, '（该轮无 G4 checkpoint 留痕——归档轮离线再生成）')),
-    ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', _CP_G5.get(RUN_ID, '（该轮无 G5 checkpoint 留痕——归档轮离线再生成）')),
-    ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · bella 验收', 'ui-gov-uat', _CP_UAT.get(RUN_ID, '（该轮无 UAT checkpoint 留痕——归档轮离线再生成）')),
-    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '（该轮无 G6 checkpoint 留痕——归档轮离线再生成）')),
+    ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全完整循环', '人 · qi/fei 独立执行', 'ui-gov-test', _CP_G4.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；scenario.log/评审卡可反查）')),
+    ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', _CP_G5.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；评审卡/approved.events 可反查）')),
+    ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · bella 验收', 'ui-gov-uat', _CP_UAT.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；验收书/房间证据行可反查）')),
+    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；治理报告/记忆探针可反查）')),
 ]
 
 # 卡点证据行按轮覆写（2026-10-07 修复：静态行写死旧轮锚——"T-101~T-108"系 run9 前编号、
@@ -1663,8 +1663,13 @@ def devimpl_parallelism_html(n: int) -> str:
             return '<p class="stat-note">并行度实测统计：devimpl/defect 段界行未见（段未完成或缺行），本轮不出并行度行。</p>'
         t1 += 86400  # 跨午夜窗修正（scenario.log 行首无日期）
     wall_min = max(1, (t1 - t0) // 60)
+    # run13 复盘 A12：day0 锚定改本轮起跑日期——旧逻辑取日志首个工作行日期，
+    # SIM 持久化下日志含前轮残留（首行=10-09），本轮（10-10）工作行全被 +24h
+    # 移出窗口 → 并行度恒 0。锚定起跑日期后按行日期与锚日的差值天折算，跨午夜轮不受影响。
+    import datetime as _dt
+    _rs = state.get('run_started_at') or ''
+    _day0 = _dt.datetime.fromtimestamp(int(_rs)).strftime('%Y-%m-%d') if _rs.isdigit() else None
     active_pairs = set()
-    day0 = None
     for a in DEV_AGENTS:
         lg = SIM / 'hermes' / 'profiles' / a / 'logs' / 'agent.log'
         if not lg.exists():
@@ -1675,11 +1680,20 @@ def devimpl_parallelism_html(n: int) -> str:
             m = _PL_TS.match(ln)
             if not m:
                 continue
-            if day0 is None:
-                day0 = m.group(1)
             sec = int(m.group(2)) * 3600 + int(m.group(3)) * 60 + int(m.group(4))
-            if m.group(1) != day0:
-                sec += 86400
+            if _day0 is not None:
+                try:
+                    _dd = (_dt.datetime.strptime(m.group(1), '%Y-%m-%d') - _dt.datetime.strptime(_day0, '%Y-%m-%d')).days
+                except ValueError:
+                    continue
+                if _dd < 0:
+                    continue  # 前轮残留行（日志未轮转），不入本轮窗口
+                sec += _dd * 86400
+            else:
+                if day0 is None:
+                    day0 = m.group(1)
+                if m.group(1) != day0:
+                    sec += 86400
             if t0 <= sec <= t1:
                 active_pairs.add((a, sec // 60))
     cap = wall_min * len(DEV_AGENTS)
@@ -1791,10 +1805,14 @@ def r18_coverage() -> str:
     """hero 统计位：必采清单实测统计（正本 §5.5+§5.6 必采清单——分子=达标项、分母=r18_matrix.TOTAL，禁任一位在位即计）。
 
     矩阵与审计器查 8 同表（r18_matrix 单一事实源）；帧文件按 STEPS_DIR 实查，
-    缺帧计未达标，与渲染侧"帧缺失"占位同口径。
+    缺帧计未达标，与渲染侧"帧缺失"占位同口径。产品成效 2 项（run14 起入分母）：
+    exec=幂等执行输出件、frames=下单流程帧（记单降级口径见 r18_matrix.evaluate_full）。
     """
-    met, total, _ = r18_matrix.evaluate(
-        R18, frame_exists=lambda name: (STEPS_DIR / name).exists())
+    _ilog_path = EVID / 'issues.log'
+    _ilog = _ilog_path.read_text(encoding='utf-8', errors='replace') if _ilog_path.exists() else ''
+    met, total, _, _po = r18_matrix.evaluate_full(
+        R18, frame_exists=lambda name: (STEPS_DIR / name).exists(),
+        evid_dir=EVID, issue_log_text=_ilog)
     return f'{met}/{total}'
 
 def _r18_hero_badge() -> str:
@@ -1808,12 +1826,18 @@ def _r18_hero_badge() -> str:
 def issues_stats():
     """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。
 
-    DISP 连接键=类型段（2026-10-07 修复：ISSUE 主体与 DISP 主体措辞差（harness/网关 vs
-    harness/审计会话）曾致 join 全断、"观察 1"被吞成"待处置 11"；同一类型多主体时
-    DISP 按类型归属到该类型全部唯一键——台账三态处置本就按类型记账）。
+    DISP 连接键=类型段+主体精确优先（run13 复盘 A3/C1 修订：原「DISP 按类型归属到该
+    类型全部唯一键」在多主体同类型时错挂——r18-collection-missing 五主体全显示 step-23
+    的处置、PAYCORE-C 显示 CHWX 的处置）。配对次序：
+      ① type·subject 精确命中；
+      ② 同类型 DISP 主体为泛指（director/monitor/harness）→ 广播到该类型全部键；
+      ③ 该类型仅一个唯一键 → 容主体措辞差（2026-10-07 修复原意保留）；
+      ④ 其余=待处置。
+    三态计数（run13 复盘 A4/F6）：DISP 首词非三态分桶词（已修/观察/延后）的键计入
+    「表外词」单列——四桶+表外词求和=唯一键数，禁凭空消失。
     """
     lines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
-    iss, disp, order = {}, {}, []
+    iss, disp_exact, disp_generic, order = {}, {}, {}, []
     raw_i = raw_d = 0
     for l in lines:
         if l.startswith('ISSUE|'):
@@ -1826,26 +1850,50 @@ def issues_stats():
         elif l.startswith('DISP|'):
             raw_d += 1
             p = l.split('|', 4)
-            disp[p[1]] = p[3] if len(p) > 3 else ''
-    closed = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('已修')]
-    observed = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('观察')]
-    deferred = [k for k in order if k.split('·')[0] in disp and disp[k.split('·')[0]].startswith('延后')]
-    open_k = [k for k in order if k.split('·')[0] not in disp]
+            if len(p) > 3:
+                if p[2] in ('director', 'monitor', 'harness', '导演', '监控'):
+                    disp_generic[p[1]] = p[3]
+                else:
+                    disp_exact[(p[1], p[2])] = p[3]
+    types_of = {}
+    for k in order:
+        types_of.setdefault(k.split('·')[0], []).append(k)
+
+    def _disp_for(key):
+        t, s = key.split('·', 1)
+        if (t, s) in disp_exact:
+            return disp_exact[(t, s)]
+        if t in disp_generic:
+            return disp_generic[t]
+        if len(types_of.get(t, [])) == 1:
+            for (dt, ds), dv in disp_exact.items():
+                if dt == t:
+                    return dv
+        return None
+
+    disp_of = {k: _disp_for(k) for k in order}
+    closed = [k for k in order if disp_of[k] and disp_of[k].startswith('已修')]
+    observed = [k for k in order if disp_of[k] and disp_of[k].startswith('观察')]
+    deferred = [k for k in order if disp_of[k] and disp_of[k].startswith('延后')]
+    nonstd = [k for k in order if disp_of[k] and not disp_of[k].startswith(('已修', '观察', '延后'))]
+    open_k = [k for k in order if not disp_of[k]]
     rows = []
     for k in order:
-        t = k.split('·')[0]
-        if t not in disp:
+        d = disp_of[k]
+        if not d:
             continue
-        d = disp[t]
         cls = 'd-ok' if d.startswith('已修') else 'd-warn'
         rows.append(f'<tr><td>{H.escape(k)}</td><td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
     if not rows:
         rows.append('<tr><td colspan="3" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记入问题清单）</td></tr>')
-    stat = f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)} · 待处置 {len(open_k)}'
+    stat = (f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)}'
+            f' · 表外词 {len(nonstd)} · 待处置 {len(open_k)}')
+    if nonstd:
+        stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
     note = f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
-    return stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order), len(open_k)
+    return stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order), len(open_k), len(nonstd)
 
 def main_head():
     try:
@@ -1854,7 +1902,8 @@ def main_head():
     except Exception:
         return ''
 
-stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open = issues_stats()
+stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd = issues_stats()
+n_resolved = n_closed + (n_issue_keys - n_closed - n_issue_open - n_nonstd) + 0  # 已修+观察+延后（观察/延后=keys-closed-open-nonstd）
 main_sha = main_head()
 
 # ── 8.6 交付物视图（补遗③，R11）─────────────────────────────────────────
@@ -2227,7 +2276,7 @@ def artifact_panorama():
     note_g5 = _NOTE_G5[RUN_ID]
     html_tbl = ('<table><tr><th>步</th><th>交付物</th><th>模版核对结果</th><th>锚</th></tr>'
                 + ''.join(rows) + '</table>')
-    stat = (f'共 {len(rows)} 行：文件在仓 {n_files} 件——模版符合 {n_ok} · 模版不符/缺件 {n_bad}；'
+    stat = (f'共 {len(rows)} 行：在仓 {n_files} 件（模版符合 {n_ok} · 在仓不符 {n_files - n_ok if n_files >= n_ok else 0}）+ 缺件不在仓 {n_bad - (n_files - n_ok) if n_bad >= (n_files - n_ok) else n_bad} · 其余为无文件域声明；'
             f'另文件域无独立工件 {len(ART_NOFILE_NOTES)} 步'
             f'（{"/".join(str(k) for k in sorted(ART_NOFILE_NOTES))}，如实标注）。'
             f'行内锚=origin/main@{main_sha or "?"}（实查）· 生成时工作树 HEAD@{CEN_ANCHOR or "?"}')
@@ -2241,8 +2290,21 @@ try:
     from report_narrative import render_narrative, render_chapter0, render_intent_chain
     _narrative_html = render_narrative(state, EVID)
     # ── §5.4 十章骨架接线（2026-10-07 补齐：第 0/1/2/3/4 章长期未实现）──
+    # A7/F7bis：三功能区命中集——STEPS imgs（ui 帧图注，帧文件在位）双源判定
+    def _zone_hits():
+        _hits = {}
+        _pats = {'cockpit': '工作台|驾驶舱|冒烟|登录', 'kanban': '看板|board', 'ide': 'IDE|画布'}
+        for _key, _pat in _pats.items():
+            for _t in STEPS:
+                for _pre, _cap, _kind in _t[3]['imgs']:
+                    if _kind == 'ui' and (STEPS_DIR / f'{_pre}.png').exists() and re.search(_pat, _cap):
+                        _hits.setdefault(_key, _cap[:40])
+                        break
+                if _key in _hits:
+                    break
+        return _hits
     try:
-        _ch0_html = render_chapter0(state, EVID, steps_dir=STEPS_DIR)
+        _ch0_html = render_chapter0(state, EVID, steps_dir=STEPS_DIR, zone_hits=_zone_hits())
     except Exception as _e0:
         _ch0_html = f'<div class="stat-note">第 0 章生成失败（如实标注）：{H.escape(str(_e0))}</div>'
     try:
@@ -2257,6 +2319,11 @@ try:
     _total_c1 = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
     _frames_note = (f'{_total_c1} 帧全部收尾后补拍（采集链未挂驱动，记入问题清单 r18-collection-missing）' if _reshoot_c1
                     else (f'{_total_c1} 帧当轮实时采集' if _total_c1 else '本轮未拍摄'))
+    _ilog_k = (EVID / 'issues.log')
+    _ilog_t = _ilog_k.read_text(encoding='utf-8', errors='replace') if _ilog_k.exists() else ''
+    _dlv_g5miss_note = ('；gate G5 pass 事件漏发记入问题清单（delivery-g5-gate-event-missing）'
+                         if 'delivery-g5-gate-event-missing' in _ilog_t or 'delivery-*-event-missing' in _ilog_t
+                         else '；gate G5 pass 事件无漏发记单在案（声称须与台账一致——run13 复盘 A2）')
     _ch1_html = (
         '<section class="nv-sec" id="ch1-caliber"><h2>第 1 章 · 本轮口径（验收与数据口径声明）</h2>'
         '<table class="st-issues-tbl"><tbody>'
@@ -2264,7 +2331,7 @@ try:
         f'<tr><td>发布基线</td><td>aipaydev origin/main@{main_sha or "⬜"}（生成时实查）；integration 基线见步 19</td></tr>'
         f'<tr><td>截图口径</td><td>{_frames_note}</td></tr>'
         f'<tr><td>全量呈现（R18）</td><td>{r18_coverage()}（必采 {r18_matrix.TOTAL} 项；缺口记入问题清单 r18-collection-missing，DISP 观察）</td></tr>'
-        f'<tr><td>delivery 协议事件</td><td>{_dlv_note}；gate G5 pass 事件漏发记入问题清单（delivery-g5-gate-event-missing）</td></tr>'
+        f'<tr><td>delivery 协议事件</td><td>{_dlv_note}{_dlv_g5miss_note}</td></tr>'
         f'<tr><td>判定后端</td><td>clef-flash 本地判定 {_dec_note}（F-7 fail-open 口径）</td></tr>'
         f'<tr><td>快模式/并发</td><td>MX_FAST 缺省开（轮询 5s·治理三步并发）；系分/编码四路同时派出（闸值 4 占满）；569 gate-guard 显式启用（035a555）</td></tr>'
         f'<tr><td>问题单终态</td><td>{stat}</td></tr>'
@@ -2303,9 +2370,11 @@ try:
         _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
                     + _po_num_tbl + _po_img_html + _po_idem_html)
     else:
+        _po_claim = ('缺席记入问题清单 type=product-outcome-missing' if 'product-outcome-missing' in _ilog_t
+                     else '缺席（台账未见 product-outcome-missing 记单——声称与台账一致口径，run13 复盘 A2）')
         _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
-                    '<p class="no-evidence">本轮产品成效证据未采集（evidence/product-outcome/ 为空）——'
-                    '三件采集 run13 起为必采（方案 §5.4 产品成效呈现；缺席记入问题清单 type=product-outcome-missing）。</p>')
+                    f'<p class="no-evidence">本轮产品成效证据未采集（evidence/product-outcome/ 为空）——'
+                    f'三件采集 run13 起为必采（方案 §5.4 产品成效呈现；{_po_claim}）。</p>')
     # 第 4 章 本轮新特性实证（按轮注册；未注册轮如实不渲染）
     _NEW_FEATURES_BY_RUN = {
         '20261009-v8-run12': [
@@ -2580,14 +2649,44 @@ def gate_cards():
         if fr.isdigit() and int(fr) > 0 and g not in rejected:
             rejected[g] = f'FAIL×{fr} 轮后补齐过闸（state {fk}={fr} 实测统计）'
     cards = []
-    for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
+    # run13 复盘 A5/F1：回归轮夹具闸键分带——G1/G2 沿用源轮真值（g1g2_fixture 标记），
+    # 时刻取源轮 state 真值（种子侧已改携源轮时间；旧种子 $NOW 值=起跑时刻，与 run_started_at
+    # 相等即判伪值并标注勘误，回读源轮真值呈现）。禁以本轮起跑时刻冒充本轮过闸。
+    _lite_from = (state.get('lite_fixtures_from') or '').strip()
+    _run_start = (state.get('run_started_at') or '').strip()
+    _fixture_gates = set()
+    if _lite_from and _lite_from not in ('none',):
+        _fixture_gates = {'G1', 'G2'}
+    def _gate_ts_banded(g):
         ts = _gate_ts(g)
+        if g in _fixture_gates:
+            src_ts = ''
+            try:
+                _src = (SIM / 'runs' / _lite_from / 'state.env')
+                if _src.exists():
+                    _v = ''
+                    for _ln in _src.read_text(encoding='utf-8', errors='replace').splitlines():
+                        if _ln.startswith(GATE_STATE_KEY[g] + '='):
+                            _v = _ln.split('=', 1)[1].strip()
+                            break
+                    if _v.isdigit() and len(_v) >= 10:
+                        import datetime as _dt
+                        src_ts = _dt.datetime.fromtimestamp(int(_v[:10])).strftime('%m-%d %H:%M')
+            except Exception:
+                pass
+            if src_ts:
+                seeded = state.get(GATE_STATE_KEY[g], '')
+                fake = seeded == _run_start
+                return f'{src_ts} · 沿用源轮（{_lite_from}）' + ('〔种子值=起跑时刻已勘误〕' if fake else '')
+        return ts
+    for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
+        ts = _gate_ts_banded(g)
         passed = _gate_passed(g)
         if g == 'G5' and passed and RUN_ID in _G5_BADGE_BY_RUN:
             cls, badge = 'gpass', _G5_BADGE_BY_RUN[RUN_ID]
         else:
             cls = 'gpass' if passed else 'gpending'
-            badge = '✓ 已通过' if passed else '○ 未达'
+            badge = '✓ 已通过（沿用源轮）' if (passed and g in _fixture_gates) else ('✓ 已通过' if passed else '○ 未达')
         rej = f'<span class="gate-rej">打回环：{rejected[g]}</span>' if g in rejected else '<span class="gate-rej ok1">一次通过</span>'
         rej += (f'<span class="gate-rej">{annot[g]}</span>' if g in annot else '')
         cards.append(f'''<div class="gate-card {cls}">
@@ -2695,7 +2794,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         # 必采步 R18 载荷缺口的步级警示（§5.5 空态条款：步块可见+报告头计数+记入问题清单编号）
         _r18_must = (r18_matrix.DIALOG_STEPS | r18_matrix.OP_STEPS | r18_matrix.EFFECT_STEPS
                      | r18_matrix.SKILL_STEPS | r18_matrix.DELIVERY_STEPS)
-        if n in _r18_must and not (R18.get(str(n)) or R18.get(n)):
+        if n in _r18_must and done and not (R18.get(str(n)) or R18.get(n)):
+            # 仅当轮执行步挂未采集徽章；沿用步（done=False 夹具态）按 V8.4④ 显示「不在本轮执行范围」声明态
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">R18 未采集·记入问题清单在案</span>'
         # 交付物维度 chip（§5.5 节奏双轨：机制✅不遮交付物缺）
         _ast = _step_artifact_status(n)
@@ -3125,7 +3225,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
       <div class="hstat"><b>26</b><span>步骤</span></div>
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次{_img_honest_note}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
-      <div class="hstat"><b>{n_closed}/{n_issue_keys}</b><span>问题单已完整循环（已修+观察+延后）{f' · 待处置 {n_issue_open}' if n_issue_open else ''}</span></div>
+      <div class="hstat"><b>{n_resolved}/{n_issue_keys}</b><span>问题单已完整循环（已修+观察+延后；表外词 {n_nonstd} 键待归桶）{f' · 待处置 {n_issue_open}' if n_issue_open else ''}</span></div>
       <div class="hstat">{_r18_hero_badge()}</div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
@@ -3180,7 +3280,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
     <table><tr><th>度量</th><th>终态值</th><th>含义</th></tr>
     {gov_metrics_rows}
     <tr><td>发布基线</td><td>aipaydev main {main_sha}</td><td>构建可复现的锚点</td></tr>
-    <tr><td>处置完整循环率</td><td>{'100%' if n_issue_open == 0 else f'{n_closed}/{n_issue_keys}'}</td><td>每个问题都有结论，没有静默丢失</td></tr>
+    <tr><td>处置完整循环率</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
     </table>
   </div>
   <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，SwarmStudio 治理中心的台账区可随时回查。</p>

@@ -326,7 +326,7 @@ if step_reached reqgate; then
       echo "ISSUE|g1-push|director|$(freeze_doc) 推送 origin/main 失败（留存 ${FREEZE_LOCAL}）" >> "$EVID_DIR/issues.log"
       note "[观察] G1 冻结文件推送失败（留存本地，记问题单）"
     fi
-    sset g1_frozen "$(date +%s)"
+    sset_once g1_frozen "$(date +%s)"
     capture_step "g1_frozen" "/app/board?tab=trace"   # 步7 承载面
   fi
 fi
@@ -343,6 +343,8 @@ if step_reached room; then
     RID=$(mx_create_room "$(load_token fanfan)" "支付收银台需求分析讨论群" "$INVITE_CSV")
     [[ "$RID" == '!'* ]] || fail "建群失败: $RID"
     sset room_analysis "$RID"
+    # 必采操作帧（run13 复盘 F13/F16：步 8 原无拍摄位——沟通区会话列表为该步可拍面）
+    capture_step "room_done" "/app/s/chat"
     # 入房一律检错重试（mx_join 静默吞错实锤：限流 burst 尾部账号掉队无人知，
     # run9 ops/ Bella-agent 缺员即此族）；缺员记单不静默。
     _room_missing=""
@@ -388,6 +390,8 @@ if step_reached dispatch; then
 card 必须取自建卡工具返回的真实卡 ID（形如 t_1a2b3c4d），填需求编号一律判为虚报。两个凭证都会被反向核验：commit 须真实存在于 aipaydev origin 且该提交含分析稿，card 须在你账号的板（账号板）可查。动作若因输出长度被截断丢弃，就是还没做完——此时只准报 BLOCKED，不得报 DONE。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
+    # 必采对话挂钩（run13 复盘 B1：步 9 缺采集=载荷全缺收尾补记）
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 9 --room "$RID" --anchor "$M" --title "需求派发任务书全文（fanfan→fanfan-agent）" --user fanfan --limit 40 >/dev/null 2>&1 || true
   fi
 fi
 
@@ -496,6 +500,9 @@ if step_reached analysis; then
     fi
   done
   note "[步骤10] 系统分析派发阶段完成"
+  # 必采对话挂钩（run13 复盘 B1：步 11 缺采集；锚=需求派发事件，/context 后窗覆盖
+  # RACI 双 @ 派发与凭证核验回灌对话；与步 9 分步登记不冲突——dialog 去重键=步内锚）
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 11 --room "$RID" --anchor "$(sget dispatch_marker)" --title "系分拆分与 RACI 派发对话（fanfan-agent）" --user fanfan --limit 80 >/dev/null 2>&1 || true
   capture_step "analysis_done" "/app/board"
 
   sset analysis_done 1
@@ -669,6 +676,7 @@ fi
 # 硬闸：G2 未过，close/plan（L2）不得执行。
 if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   mx_gate_breaker_check g2 "G2 架构治理评审"   # 熔断：两轮未过不得开始 L2（跨调用持久）
+  capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
   # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
   # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
   # G2 mention 无法投递、1800s 硬闸必超时。照步骤 10 导演补邀惯用法双账号补齐。
@@ -696,7 +704,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
     # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
       kanban_walk_done arch "$AGID"
-      sset g2_arch_pass "$(date +%s)"
+      sset_once g2_arch_pass "$(date +%s)"
       note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
       # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
@@ -706,7 +714,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       G2_RETRY_TS=$(( $(date +%s) * 1000 ))
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
       if wait_truth "修订后 ARCH-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_RETRY_TS" arch "${RFD_ID} 架构治理评审"; then
-        kanban_walk_done arch "$AGID"; sset g2_arch_pass "$(date +%s)"
+        kanban_walk_done arch "$AGID"; sset_once g2_arch_pass "$(date +%s)"
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
         fail "G2 两轮未过，L2 不得开始（V3 硬闸）"
@@ -899,13 +907,15 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   capture_step "devimpl_done" "/app/ide"
 
   sset devimpl_done 1
-  sset g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
+  sset_once g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
   dlv_enabled && dlv_scenario_phase P3 chen G3 chen command-exit "devimpl 分支自测+评审过" P4
 fi
 
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
+  # 段界锚（run13 复盘 A12）：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
+  note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
   # 导演把三个后端分支+前端分支合入 integration 分支（模拟集成分支策略）
   # 分支状态机约定：本步起 HEAD 切到 integration/${RFD_ID} 并常驻（后续步骤用显式
   # ref 或临时 worktree 访问仓，不看 HEAD）；凡要进 origin/main 的提交一律走
@@ -1053,7 +1063,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   capture_step "testpass_done" "/app/board"
 
   sset testpass_done 1
-  sset g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
+  sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
   dlv_enabled && dlv_scenario_phase P4 qi G4 qi command-exit "testpass 测试报告入仓+G4 硬闸置位" P5
 fi
@@ -1071,7 +1081,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 过闸收口（复用与新评同一收口路径：置卡 done/落键/批准留痕/M3 事件——防两路漂移）
   g5_pass_finalize() {
     kanban_walk_done fanfan "$RGID"
-    sset g5_ready "$(date +%s)"
+    sset_once g5_ready "$(date +%s)"
     # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
     # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
     echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
@@ -1079,11 +1089,14 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
-    if ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 \
+    # run13 复盘 B2 根修：CLI 存在 unresolved 门时以 rc=1 退出但报告已写出——
+    # 以产物在位为准，不以 rc 判成败（run13 的 11 张「CLI 缺失」单全是此误诊）。
+    ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 || true
+    if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]] \
        && cp "$DIRECTOR_CLONE/.qgate/release-report.md" "$EVID_DIR/qgate-release-report.txt" 2>/dev/null; then
-      note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行）"
+      note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行；unresolved 门=无信号桶如实呈现）"
     else
-      echo "ISSUE|qgate-evidence|step20|QGate release-report 落盘失败（CLI 缺失或骨架未部署）——门禁证据缺席记单" >> "$EVID_DIR/issues.log"
+      issue_once qgate-evidence step20 "QGate release-report 落盘失败（CLI 缺失或骨架未部署）——门禁证据缺席记单"
       note "[G5] QGate release-report 落盘失败（记问题单）"
     fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
@@ -1235,7 +1248,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   test_report_on_integration "${RFD_ID}" || UAT_PRE="${UAT_PRE}测试报告缺失（integration）；"
   repo_has "$(freeze_doc)" || UAT_PRE="${UAT_PRE}G1 冻结文件缺失；"
   if [[ -n "$UAT_PRE" ]]; then
-    echo "ISSUE|uat-precheck|director|UAT 前置缺件（fail-fast 未派单）：${UAT_PRE}" >> "$EVID_DIR/issues.log"
+    issue_once uat-precheck director "UAT 前置缺件（fail-fast 未派单）：${UAT_PRE}"
     fail "UAT 前置缺件：${UAT_PRE}先修上游再验收（未派发 UAT 任务）"
   fi
   # 证据锚点=本轮起跑时刻（run8 优化 A）：派发时刻锚会把重启前已到的证据行排除在窗外，
@@ -1318,7 +1331,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
       note "[观察] 验收文档推送失败（留存本地，记问题单）"
     fi
-    sset uat_done "$(date +%s)"
+    sset_once uat_done "$(date +%s)"
     capture_step "uat_done" "/app/board?tab=trace"   # 步21 承载面
     if [[ $UAT_ALL_PASS == 1 ]]; then
       note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
@@ -1538,7 +1551,7 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   fi
   capture_step "retro_done" "/app/board?tab=gov-harness"
 
-  sset retro_done "$(date +%s)"
+  sset_once retro_done "$(date +%s)"
 fi
 
 # ══ 步骤 20：IDE 工作台接入核验（API/代码级；UI 走查由导演另行执行）══
@@ -1583,6 +1596,11 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   # evidence/screenshots/steps/ 逐步截图自动嵌入（真实界面走查+真实工件渲染）。
   # --run 必带（H7）：缺省时生成器回落 SIM 全局 state/evidence，拿旧轮 state
   # 出"状态真实"的假报告，且落盘路径与下方 note 不符（run2 2026-09-29 05:15 实锤）。
+  # §5.4 产品成效三件（run13 复盘 B6/F17：run13 起必采未接线根修）——报告生成前落
+  # evidence/product-outcome/（quality-summary.env 实算+幂等执行输出件；UI 帧缺席记单降级）
+  repo_pull
+  python3 "$SCRIPT_DIR/mux/product-outcome-summary.py" --run "${RUN_ID}" --rfd "${RFD_ID}" >/dev/null 2>&1 \
+    || issue_once product-outcome-missing step26 "产品成效 quality-summary 落盘失败（实算脚本异常）"
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落

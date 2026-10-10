@@ -302,30 +302,70 @@ def render_intent_chain(sim) -> str:
         except Exception:
             return ''
 
-    # 1) G1 冻结 AC 清单
+    # run13 复盘 A8/F18：链上工件改「git 引实取」——本地 clone 的 HEAD 常驻集成分支，
+    # main 侧新件（acceptance 等）不在工作树，原文件读=链路恒 ⬜；fetch 后按
+    # origin/main（+integration 兜底）读 blob，不依赖任何 checkout 状态。
+    import subprocess as _sp
+    def _git(*args):
+        try:
+            r = _sp.run(['git', '-C', str(central), *args], capture_output=True, text=True, timeout=20)
+            return r.stdout if r.returncode == 0 else ''
+        except Exception:
+            return ''
+    _git('fetch', '-q', 'origin')
+    def _ref_files(ref, pathspec):
+        return sorted(l for l in _git('ls-tree', '-r', '--name-only', ref, pathspec).splitlines() if l.strip())
+    def _ref_show(ref, path):
+        return _git('show', f'{ref}:{path}')
+    _MAINS = ('origin/main', f'origin/integration/RFD-001', 'HEAD')
+    def _ref_first(pattern_fun):
+        # pattern_fun(ref) -> 匹配文件列表；按 MAINS 优先级取第一个命中 ref 的首件
+        for ref in _MAINS:
+            hits = pattern_fun(ref)
+            if hits:
+                return ref, hits
+        return None, []
+    def _read_repo(rel_glob_dir, prefix='docs/requirements/'):
+        ref, hits = _ref_first(lambda r: _ref_files(r, rel_glob_dir))
+        return [(ref, h) for h in hits]
+
+    # 1) G1 冻结 AC 清单（origin/main 真值）
     acs = []
-    for fz in sorted(central.glob('docs/requirements/*.freeze.md')):
-        for ln in _read(fz).splitlines():
+    for ref, fz in _read_repo('docs/requirements/'):
+        if not fz.endswith('.freeze.md'):
+            continue
+        for ln in _ref_show(ref, fz).splitlines():
             m = _re.match(r'^- \*\*(AC-\d+)\s*([^*]+)\*\*[：:](.+)$', ln.strip())
             if m:
                 acs.append({'id': m.group(1), 'title': m.group(2).strip(), 'text': m.group(3).strip()})
-    # 2) UAT 逐条判定（acceptance 报告）
+    # 2) UAT 逐条判定（acceptance 报告——origin/main 新件不再依赖工作树）
     verdicts = {}
-    for ac in sorted(central.glob('docs/acceptance/*-acceptance.md')):
-        for ln in _read(ac).splitlines():
-            m = _re.match(r'^- \*\*(AC-\d+)[^*]+\*\*[：:].*?→\s*(通过|不通过|部分通过|待验收)', ln.strip())
+    for ref, acp in _read_repo('docs/acceptance/'):
+        if not acp.endswith('-acceptance.md'):
+            continue
+        for ln in _ref_show(ref, acp).splitlines():
+            m = _re.match(r'^- \*\*(AC-\d+)[^*]+\*\*[：:].*?→\s*判词[：:]\s*(通过|不通过|有条件通过|部分通过|待验收)', ln.strip())
             if m:
                 verdicts[m.group(1)] = m.group(2)
-    # 3) 链上工件（存在性 + 摘要）
+    # 3) 链上工件（存在性 + 摘要）——DEV testlog 模式含子件后缀（run13 实锤：
+    #    实件名 DEV-PAYCORE-S-testlog.txt，原模式 DEV-PAYCORE-testlog.txt 恒落空）
     def artifact(suffix_dir, pattern, summarizer=None):
-        hits = sorted(central.glob(pattern))
-        if not hits:
+        # glob（可含多个 *，* = 段内任意串）→ regex；ls-tree 的 pathspec 是字面路径非
+        # 前缀通配（run13 复盘 A8 实锤），取首星前最后目录段整列、Python 侧全模式匹配
+        if '*' not in pattern:
             return None
-        note = summarizer(hits[0]) if summarizer else ''
-        return (hits[0].name, note)
+        d = pattern[:pattern.rindex('/', 0, pattern.index('*')) + 1]
+        rx = _re.compile('^' + '[^/]*'.join(_re.escape(seg) for seg in pattern.split('*')) + '$')
+        for ref in _MAINS:
+            cand = sorted(f for f in _ref_files(ref, d) if rx.match(f))
+            if cand:
+                note = summarizer((ref, cand[0])) if summarizer else ''
+                return (cand[0].rsplit('/', 1)[-1], note)
+        return None
 
-    def testlog_summary(path):
-        txt = _read(path)
+    def testlog_summary(rt):
+        ref, path = rt
+        txt = _ref_show(ref, path)
         m = _re.search(r'Tests\s+(\d+) passed', txt)
         return f'{m.group(1)} 用例全绿' if m else '已保存'
 
@@ -335,14 +375,15 @@ def render_intent_chain(sim) -> str:
         if not apps:
             apps = ['PAYCORE', 'MP', 'CHWX', 'CHALI']  # 条款未点名应用=全链涉及（如实标注全量）
         chips = []
-        # 系分
-        an_ok = [a for a in apps if (central / f'docs/analysis/AN-{a}-analysis.md').exists()]
+        # 系分（F18：ref 实取，不依赖工作树 checkout 状态）
+        _an_files = {f for _r in _MAINS for f in _ref_files(_r, 'docs/analysis/')}
+        an_ok = [a for a in apps if f'docs/analysis/AN-{a}-analysis.md' in _an_files]
         chips.append(('系分', f"AN-{'/'.join(an_ok) if an_ok else ''}" if an_ok else None,
                       f"docs/analysis/AN-{'、'.join(an_ok)}" if an_ok else ''))
         # 开发测试日志（G3）
         dev_ok, dev_note = [], ''
         for a in apps:
-            hit = artifact(None, f'docs/evidence/DEV-{a}-testlog.txt', testlog_summary)
+            hit = artifact(None, f'docs/evidence/DEV-{a}*-testlog.txt', testlog_summary)
             if hit:
                 dev_ok.append(a)
                 dev_note = hit[1]
@@ -441,7 +482,7 @@ def parse_collab_events(evid):
     return evts
 
 
-def render_chapter0(state, evid, journey_html=None, steps_dir=None):
+def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=None):
     """R15 第 0 章 HTML 片段：产品定位一页 → 演示动线 → 六幕分幕总览 → RACI 协作时序线。"""
     evid = Path(evid)
     out = []
@@ -465,14 +506,16 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None):
                '产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），'
                '双 loop=skill 内循环 × swarm 外循环。</p></div>')
 
-    tri = [('ui-03-cockpit', '工作台（#/app）'), ('ui-10-kanban', '看板（#/app/board）'), ('ui-25-ide', 'IDE 画布（#/app/ide）')]
-    if steps_dir:
-        sd = Path(steps_dir)
-        tri_html = ' ｜ '.join(
-            (f'<b>{n}</b> <code>{s}.png</code>' if (sd / (s + '.png')).exists() else f'{n}（本轮未拍——如实标注）')
-            for s, n in tri)
-    else:
-        tri_html = '（截图目录未提供——如实标注）'
+    # run13 复盘 A7：三功能区证据改按「当轮帧注册表实查」——原逻辑查三个写死帧名
+    # （ui-03-cockpit 等），run13 实拍帧名不同即三面全误标「本轮未拍」。命中集由调用方
+    # （mx-report-gen）自 STEPS imgs（ui 帧图注）+ r18 ops 路由双源算得传入：
+    # zone_hits = {'cockpit': '…', 'kanban': '…', 'ide': '…'}（值=帧位描述；空=未拍）。
+    import re as _re
+    tri = [('工作台（#/app）', 'cockpit', _re.compile(r'工作台|驾驶舱|#/app(?!/)')), ('看板（#/app/board）', 'kanban', _re.compile(r'看板|/app/board')), ('IDE 画布（#/app/ide）', 'ide', _re.compile(r'IDE|/app/ide'))]
+    _zh = zone_hits or {}
+    tri_html = ' ｜ '.join(
+        (f'<b>{n}</b> <code>{H.escape(_zh.get(k, ""))}</code>' if _zh.get(k) else f'{n}（本轮未拍——如实标注）')
+        for n, k, _rx in tri)
     out.append('<div class="gatebox"><b style="font-size:14px">演示动线（驾驶舱单面）</b>'
                '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 驾驶舱工作台（任务/在线 chips·注意力条·中栏会话画布）'
                ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全程追踪页签） → IDE 画布（任务简报·交互编码）'

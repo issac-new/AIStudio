@@ -63,15 +63,24 @@ if [[ -f "$RDIR/state.env" ]] && ! grep -q '^lite_round=1' "$RDIR/state.env" 2>/
 fi
 mkdir -p "$RDIR/evidence"
 NOW=$(date +%s)
+# 夹具闸键携带源轮真值时刻（run13 复盘 A5：$NOW 冒充本轮过闸时刻=旧账冒充）。
+# 源轮 state.env 读不到/非数值时退回 $NOW 并打 WARN——报告侧按 g1g2_fixture=1 分带呈现。
+G2TS=""
+if [[ -n "$FROM" ]]; then
+  G2TS=$(sed -n 's/^g2_arch_pass=//p' "$SIM_ROOT/runs/$FROM/state.env" 2>/dev/null | head -1)
+  [[ "$G2TS" =~ ^[0-9]{10}$ ]] || { echo "SEED-WARN: 源轮 $FROM g2_arch_pass 非数值（${G2TS:-空}），G2 夹具时刻退回 \$NOW"; G2TS=""; }
+fi
+[[ -n "$G2TS" ]] || G2TS=$NOW
 cat > "$RDIR/state.env" <<EOF
 lite_round=1
 lite_fixtures_from=${FROM:-none}
+g1g2_fixture=1
 run_started_at=$NOW
 room_analysis=$ROOM
 g1_frozen=1
-g2_arch_pass=$NOW
+g2_arch_pass=$G2TS
 EOF
-ok "state.env 已种子: $RDIR/state.env（provenance: lite_fixtures_from=${FROM:-none}）"
+ok "state.env 已种子: $RDIR/state.env（provenance: lite_fixtures_from=${FROM:-none}，g2 夹具时刻=$G2TS）"
 
 cat <<EOF
 ── lite 轮起跑命令 ──────────────────────────────
