@@ -4,6 +4,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
@@ -113,5 +115,38 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     await w.find('[data-testid="ide-sidepane-assistant-copy"]').trigger('click')
     expect(writeText).toHaveBeenCalledWith('[ide.task.assistantKind_idea] 这个模块的职责是什么')
     expect(msgs.success).toHaveBeenCalled()
+  })
+
+  it('UX-3（回归轮遗留项）：最大化后 is-max 类恰好一次（父级重复绑定已去）', async () => {
+    const ide = useIdeStore()
+    ide.sidePane.open = true
+    const w = mountPane()
+    ide.toggleMax('sidepane')
+    await flushPromises()
+    const classes = w.find('[data-testid="ide-sidepane"]').classes()
+    expect(classes).toContain('is-max')
+    expect(classes.filter((c) => c === 'is-max')).toHaveLength(1)
+    ide.toggleMax('sidepane')
+    await flushPromises()
+    expect(w.find('[data-testid="ide-sidepane"]').classes()).not.toContain('is-max')
+  })
+})
+
+// ── 回归轮遗留项源码级守门（jsdom 不加载 scoped SCSS，样式契约走源断言）──
+describe('IdeSidePane 样式契约（UX-1）+ IdeShell 冗余类绑定（UX-3）', () => {
+  const sidePaneSrc = readFileSync(resolve(__dirname, '../views/IdeSidePane.vue'), 'utf8')
+  const shellSrc = readFileSync(resolve(__dirname, '../views/IdeShell.vue'), 'utf8')
+
+  it('UX-1：页签行 flex-wrap + 页签钮不可收缩（17 签不再挤瘪 max/close）', () => {
+    const tabsBlock = sidePaneSrc.match(/\.ide-sidepane__tabs\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(tabsBlock, 'tabs 行须 flex-wrap: wrap').toContain('flex-wrap: wrap')
+    const tabBlock = sidePaneSrc.match(/\.ide-sidepane__tab\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(tabBlock, '页签钮须 flex-shrink: 0').toContain('flex-shrink: 0')
+  })
+
+  it('UX-3：IdeShell 不再向 IdeSidePane 传 is-max 类（子根自绑，父传即重复）', () => {
+    const usage = shellSrc.match(/<IdeSidePane[^>]*>/g) ?? []
+    expect(usage.length).toBeGreaterThanOrEqual(1)
+    for (const tag of usage) expect(tag).not.toContain('is-max')
   })
 })
