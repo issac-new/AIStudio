@@ -1167,7 +1167,7 @@ STEPS_META_RUN13 = {
             narrative='本轮执行·UAT 验收：AC-1~7 逐条证据行；AC-5（重复回调处理）为 run12 已知不通过项（整改在 backlog）——本轮判词须如实三态，条件放行语义保留（放行权归 bella）。【run13 实测依据·报告步回填：判词分布/验收书锚】', imgs=[('uat_done-op1-before','UAT 验收前','ui'),('uat_done-op1-after','验收书卡面视图','ui')]),
     22: dict(keys=['workmgr_done'], ts_override='1',
             actor='ai', actorText='AI · 监控侧',
-            narrative='本轮执行·工作台账。本步无对应产品界面（拍摄位规划判定）：跨账号工作台账视图缺失——交付健康页签实测为审批工单类型分布+机器执法实况条（2026-10-10 视觉复核），已列缺失功能实施方案 G3，不拍无关页凑数。【run13 实测依据·报告步回填：保存时刻/键值】', imgs=[]),
+            narrative='本轮执行·工作台账：跨账号板状态分布视图原为本轮缺口（缺失功能 G3），于本轮执行中途 11:37 上线（推演中途重部署）——本步帧=交付健康页签上线后实拍，如实注记中途上线。【run13 实测依据·报告步回填：保存时刻/键值】', imgs=[('workmgr_done-op1-before','交付健康页签·跨账号板状态分布表视图·前','ui'),('workmgr_done-op1-after','交付健康页签·跨账号板状态分布表视图·后','ui')]),
     23: dict(keys=['audit_done'], ts_override='1',
             actor='ai', actorText='AI · audit+监控程序',
             narrative='本轮执行·合规审计：免等窗终态复核段首验（a0113d2——记入问题清单后补账成功者审计段以当前真值完整循环）。【run13 实测依据·报告步回填：意见书锚/复核结果】', imgs=[('audit_done-op1-before','审计前运行中心视图','ui'),('audit_done-op1-after','审计意见书视图','ui'),('deliver_gate-op1-before','交付案例面板·门禁灯视图·前','ui'),('deliver_gate-op1-after','交付案例面板·门禁灯视图','ui')]),
