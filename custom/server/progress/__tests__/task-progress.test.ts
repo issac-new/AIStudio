@@ -79,7 +79,7 @@ describe('task-progress REST 信封（控制器）', () => {
   })
 })
 
-describe('里程碑联合（消费收口）', () => {
+describe('里程碑联合（消费侧接线补全）', () => {
   const ledger2: DispatchLedgerEntry[] = [
     entry({ taskId: 't_manual', target: 'zcode', reason: 'queued', sessionId: 's9', ts: 100, workspaceId: '/ws/manual' }),
   ]

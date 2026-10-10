@@ -51,7 +51,7 @@ function readMilestoneFile(path: string): MilestoneEntry[] {
 }
 
 /**
- * 读一个工作区的里程碑面（进度可感知链·消费收口）：工作区根 .swarm-yuan/
+ * 读一个工作区的里程碑面（进度可感知链·消费侧接线补全）：工作区根 .swarm-yuan/
  * milestones.jsonl + 同级 wt-* 工作区副本（同任务多工作区并发是设计形态）。
  * 纯文件面 fail-soft；有界扫描防大目录拖端点。
  */

@@ -55,7 +55,7 @@ router.post('/dispatch', async (ctx) => {
   if (workspaceAccessDenied(ctx, workspacePath)) return
   try {
     // 共享派单单例（P-A(b)）：与 /mention REST 同一 pending 槽，跨入口不双跑。
-    // taskId（进度可感知链·生产者收口）：移动的是哪张卡由调用方传入——列派发
+    // taskId（进度可感知链·生产者侧接线补全）：移动的是哪张卡由调用方传入——列派发
     // 带上后 /api/progress/tasks 才能按卡聚合（消费端已在位）。
     const result = await dispatchColumnTransition(getMentionDispatch(), {
       from: typeof from === 'string' && from ? from : null,
