@@ -366,7 +366,9 @@ export function fetchOrgDiagnosis(): Promise<OrgDiagnosisResp> {
 export function attributeEscalation(id: string, gap: string, note?: string): Promise<{ ok: boolean; request?: unknown; detail?: string }> {
   return request<{ ok: boolean; request?: unknown; detail?: string }>(`/api/escalation/${encodeURIComponent(id)}/attribution`, {
     method: 'POST',
-    body: { gap, note, by: 'studio' },
+    // request() 不序列化对象 body（fetch 直传非字符串=bodyparser 400 Bad Request，
+    // 2026-10-10 本体轮走查实锤）——同文件三处对象 body 全部补 stringify
+    body: JSON.stringify({ gap, note, by: 'studio' }),
   })
 }
 
@@ -420,7 +422,7 @@ export function fetchConflictInbox(): Promise<{ ok: boolean; inbox: ConflictInbo
 export function resolveConflict(inboxId: string, action: 'keep-existing' | 'take-incoming'): Promise<{ ok: boolean; entry?: ConflictInboxDto; detail?: string }> {
   return request<{ ok: boolean; entry?: ConflictInboxDto; detail?: string }>('/api/governance/knowledge-graph/conflicts/resolve', {
     method: 'POST',
-    body: { inboxId, action },
+    body: JSON.stringify({ inboxId, action }),
   })
 }
 
@@ -467,7 +469,7 @@ export function fetchKgVersions(board: string): Promise<{ ok: boolean; board: st
 export function rollbackKg(board: string, ts: number): Promise<{ ok: boolean; board: string; ts: number; preRollback: string; detail?: string }> {
   return request<{ ok: boolean; board: string; ts: number; preRollback: string; detail?: string }>('/api/kg-evolution/rollback', {
     method: 'POST',
-    body: { board, ts },
+    body: JSON.stringify({ board, ts }),
   })
 }
 

@@ -111,9 +111,10 @@ const violationTop = computed(() => violations.value.slice(0, 50))
       <p class="ogov__hint">{{ L.ingestHint }}</p>
       <p v-if="sources.length" class="ogov__srcs">{{ sources.map(s => s.slug).join(' · ') }}</p>
       <div v-if="lastIngest" class="ogov__result" data-testid="gov-ontology-ingest-result">
-        <span>{{ L.lastIngest }}：{{ lastIngest.ingested.tasks }} {{ L.tasksUnit }} · {{ lastIngest.ingested.agents }} {{ L.agentsUnit }} · {{ lastIngest.ingested.relations }} {{ L.relationsUnit }}</span>
+        <span>{{ L.lastIngest }}：{{ lastIngest.ingested.tasks }} {{ L.tasksUnit }} · {{ lastIngest.ingested.agents }} {{ L.agentsUnit }} · {{ lastIngest.ingested.runs }} {{ L.runsUnit }} · {{ lastIngest.ingested.relations }} {{ L.relationsUnit }}</span>
         <span v-if="lastIngest.skipped.length" class="ogov-sev ogov-sev--error">{{ L.skipped }} {{ lastIngest.skipped.length }}</span>
         <span v-else class="ogov-sev ogov-sev--info">{{ L.skippedNone }}</span>
+        <span v-if="lastIngest.inboxPushed > 0" class="ogov-sev ogov-sev--error" data-testid="gov-ontology-inbox-pushed">{{ L.inboxPushed }} {{ lastIngest.inboxPushed }}</span>
       </div>
       <div v-for="(s, i) in lastIngest?.skipped.slice(0, 5) ?? []" :key="i" class="ogov__skip">
         <code>{{ s.code }}</code> {{ s.subject }}：{{ s.detail }}

@@ -166,10 +166,11 @@ export function seedSpec(now = Date.now()): OntologySpec {
       },
       {
         id: 'Run', label: '运行', labelEn: 'Run', category: '运行环境', modality: 'may', key: 'run_id',
-        description: '一次推演/执行（run13/run14 等全流程推演的语义锚点）',
+        description: '一次推演/执行（run13/run14 等全流程推演的语义锚点；graph_id=图执行面清单）',
         dataProperties: [
           { id: 'run_id', label: '运行号', datatype: 'string', required: true, modality: 'shall' },
           { id: 'status', label: '状态', datatype: 'string', enum: ['running', 'done', 'failed'], modality: 'should' },
+          { id: 'graph_id', label: '图标识', datatype: 'string', modality: 'may', description: 'loop-graph 事件日志的 graphId（摄取面带出）' },
           { id: 'started_at', label: '开始时间', datatype: 'datetime', modality: 'should' },
           { id: 'duration_ms', label: '时长(ms)', datatype: 'integer', min: 0, modality: 'may' },
         ],

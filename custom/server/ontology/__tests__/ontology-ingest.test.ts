@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ingestFromKanban, INGEST_PREFIX } from '../ontology-ingest'
 import { loadInstances, upsertInstance } from '../ontology-store'
+import { listConflictInbox } from '../../knowledge/board-graph'
 
 let home: string
 let ontoDir: string
@@ -19,6 +20,8 @@ beforeEach(() => {
   // kanbanDbFiles 按 <home>/kanban/boards 展开查找）
   process.env.HERMES_HOME = join(home, '.hermes')
   process.env.ONTOLOGY_DIR = ontoDir
+  // 收件箱指向 tmp（违规推送断言用）
+  process.env.GOVERNANCE_CONFLICT_INBOX = join(ontoDir, 'inbox.jsonl')
   const dbDir = join(home, '.hermes', 'kanban', 'boards', 'b1')
   mkdirSync(dbDir, { recursive: true })
   const db = new DatabaseSync(join(dbDir, 'kanban.db'))
@@ -35,6 +38,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.HERMES_HOME
   delete process.env.ONTOLOGY_DIR
+  delete process.env.GOVERNANCE_CONFLICT_INBOX
   rmSync(home, { recursive: true, force: true })
   rmSync(ontoDir, { recursive: true, force: true })
 })
@@ -74,5 +78,18 @@ describe('ingestFromKanban（看板 → 本体）', () => {
     // taskRef 唯一键公理不报（重跑不产生重复登记）
     const again = await ingestFromKanban()
     expect(again.summary.error).toBe(0)
+  })
+
+  it('error 违规推冲突收件箱（kind=ontology，按 code 聚合，幂等不重复刷）', async () => {
+    const r1 = await ingestFromKanban()
+    // fixture：t3 越枚举（field:enum）+ 其悬空边（rel:dangling-target）——聚合后 2 类
+    expect(r1.inboxPushed).toBeGreaterThanOrEqual(1)
+    const box1 = listConflictInbox().filter((e) => e.kind === 'ontology' && !e.resolved)
+    expect(box1.some((e) => e.field === 'field:enum' && String(e.incoming).includes('×1'))).toBe(true)
+    expect(box1.every((e) => e.entityId.startsWith('(聚合) '))).toBe(true)
+    // 重跑：同 code 未决不重复追加（幂等）
+    await ingestFromKanban()
+    const box2 = listConflictInbox().filter((e) => e.kind === 'ontology' && !e.resolved)
+    expect(box2.filter((e) => e.field === 'field:enum').length).toBe(1)
   })
 })
