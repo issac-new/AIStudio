@@ -166,6 +166,8 @@
   flex-shrink: 0;
   // 1280 视口只放得下 3-4 个 ~305px chip（2026-09-23 走查观察项）：整体限宽，
   // 标题经 .ia-attn__text 的 ellipsis 截断，完整标题保留在 title 悬浮提示。
+  // 2026-10-10 UI 审计补下限：无 min-width 时极端窄容器内可被压成 ~55px 竖排字。
+  min-width: 96px;
   max-width: 160px;
   display: flex;
   align-items: center;
