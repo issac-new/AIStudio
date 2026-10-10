@@ -54,6 +54,15 @@ export interface SpecResponse { ok: boolean; spec: OntologySpec; stats: Ontology
 export interface SaveSpecResponse { ok: boolean; spec?: OntologyInstance; detail?: string }
 export interface UpsertResponse { ok: boolean; saved?: OntologyInstance; violations?: Violation[] }
 export interface ValidateResponse { ok: boolean; persisted: boolean; count: number; violations: Violation[]; summary: Health }
+/** 摄取结果（服务端 ontology-ingest IngestResult 镜像）。 */
+export interface IngestResultDto {
+  ok: boolean
+  boards: Array<{ slug: string; tasks: number; links: number }>
+  ingested: { tasks: number; agents: number; boards: number; relations: number }
+  skipped: Violation[]
+  summary: Health
+  instanceTotal: number
+}
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return request<T & { ok?: boolean }>(path, { credentials: 'same-origin', ...init })
@@ -94,4 +103,8 @@ export const ontologyApi = {
   rollback: (ts: number) =>
     req<{ ok: boolean; restoredVersion?: number; detail?: string }>('/api/hermes/ontology/rollback', { method: 'POST', body: JSON.stringify({ ts }) }),
   resetSeed: () => req<{ ok: boolean; instanceCount: number }>('/api/hermes/ontology/seed', { method: 'POST' }),
+  kanbanOverview: () =>
+    req<{ ok: boolean; sources: Array<{ slug: string; path: string; exists: boolean }> }>('/api/hermes/ontology/kanban-overview'),
+  ingest: (board?: string) =>
+    req<{ ok: boolean; ingest: IngestResultDto }>('/api/hermes/ontology/ingest', { method: 'POST', body: JSON.stringify(board ? { board } : {}) }),
 }

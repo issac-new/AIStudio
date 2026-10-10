@@ -152,6 +152,14 @@ export function deleteInstance(id: string): boolean {
   return true
 }
 
+/** 摄取管线批量替换：删同前缀旧摄取实例 + 并入新批（原子写）。
+ *  前缀约定 `kb:`（kanban 摄取专属，与手工实例零交集）；校验由调用方（ingest）
+ *  在写前完成——store 只管持久化语义。 */
+export function replaceIngested(prefix: string, batch: OntologyInstance[]): void {
+  const kept = loadInstances().filter((x) => !x.id.startsWith(prefix))
+  writeAtomic(instancesPath(), JSON.stringify([...kept, ...batch], null, 2))
+}
+
 // ---- 版本快照（kg-version 同款：tmp+rename / meta 边车 / prune / 回滚另存） ----
 
 export type SnapshotLabel = 'pre-save' | 'manual' | 'rollback-restore' | 'pre-reset'

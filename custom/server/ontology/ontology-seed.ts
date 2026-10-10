@@ -64,10 +64,10 @@ export function seedSpec(now = Date.now()): OntologySpec {
       {
         id: 'Task', label: '任务', labelEn: 'Task', category: '工作对象', modality: 'shall', key: 'taskRef',
         disjointWith: ['Agent'],
-        description: '看板任务（estimate_days/parents/children 等字段与 kanban 快道对齐）',
+        description: '看板任务（estimate_days/parents/children 等字段与 kanban 快道对齐；状态枚举=upstream KanbanTaskStatus 九态原样对齐——摄取零映射损耗）',
         dataProperties: [
           { id: 'title', label: '标题', datatype: 'string', required: true, modality: 'shall' },
-          { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'doing', 'blocked', 'done'], modality: 'shall' },
+          { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived'], modality: 'shall' },
           { id: 'estimate_days', label: '人日估算', datatype: 'number', min: 0, modality: 'should' },
           { id: 'taskRef', label: '看板任务号', datatype: 'string', modality: 'should', description: 'kanban 任务 id（溯源挂接；同号任务唯一）' },
           { id: 'description', label: '说明', datatype: 'string', modality: 'may' },
