@@ -542,3 +542,6 @@
 
 # G2 缺失功能实施（2026-10-10）：普通账号不再触发 /api/agents/status 403 全局权限 toast——availability 端点补 hermesReady（服务端算好不泄漏 path），群聊面板/档案面改吃 availability（超管面 AgentManager 仍用 status）
 587-agent-status-availability-for-all.patch
+
+# 589 普通用户面 status 调用清零（run13 步18 根因收尾）：WorkflowView/GroupChatLinkView 换吃 availability（587 已改 profiles/GroupChatPanel，超管面 AgentManagerView 保留 status 正当调用；守门=agent-status-caller-whitelist.test）
+589-client-agent-status-availability-workflow-linkview.patch
