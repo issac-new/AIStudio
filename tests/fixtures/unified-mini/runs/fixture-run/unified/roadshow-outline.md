@@ -1,6 +1,6 @@
 # 路演素材大纲（roadshow-outline）
 
-> 生成：2026-10-10 13:34:47；数据源：/Users/cuishi/lab/ncwk/simharness/.claude/worktrees/report-three-elements/tests/fixtures/unified-mini/runs/fixture-run（实算，无编造）
+> 生成：2026-10-10 13:47:29；数据源：/Users/cuishi/lab/ncwk/simharness/.claude/worktrees/report-three-elements/tests/fixtures/unified-mini/runs/fixture-run（实算，无编造）
 
 ## 开场
 headline: 全流程推演：让 AI 团队把需求跑到发布
