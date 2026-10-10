@@ -98,6 +98,7 @@ def block_field(block, pat):
 title_mismatch, gate_missing = [], []
 done_no_img, pending_no_img = [], []
 done_noimg_ticketed = []
+declared_absent = []
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
@@ -119,10 +120,12 @@ for blk in blocks:
     done = '<span class="ok">✅</span>' in blk
     has_img = '<img' in blk  # V8.2 四段布局：截图区不再是末元素，整块找（帧与实拍同权）
     if not has_img:
-        # V8.4④（2026-10-10）：✅步无帧的合规降级=「记单在案」占位且问题单键配对
-        # （frame-capture-failed|step-<键> 或 r18-collection-missing）——先暂存，配对
-        # 判定在 issues 预解析后统一做；⬜ 步（未执行/夹具带）无帧明示本就预期内。
-        if done and '记单在案，无帧明示不补拍' in blk:
+        # 无帧三态（V8.4④ 2026-10-10 修订）：①声明态（功能不存在/夹具未执行）不计缺图；
+        # ②✅步「记单在案」占位须问题单键配对（frame-capture-failed|step-<键> 或
+        # r18-collection-missing）——预解析后统一判；③其余 ✅ 缺图仍 FAIL，⬜ 预期内。
+        if '本步无对应产品界面' in blk or 'lite 轮夹具带：本步未执行' in blk:
+            declared_absent.append(n)
+        elif done and ('记单在案，无帧明示' in blk or '记单在案，无帧明示不补拍' in blk):
             done_noimg_ticketed.append(blk)
         else:
             (done_no_img if done else pending_no_img).append(n)
@@ -143,9 +146,11 @@ for _blk in done_noimg_ticketed:
     _km = re.search(r'（截图缺失·([A-Za-z0-9_]+)', _blk)
     _key = _km.group(1) if _km else ''
     if _r18_pre or (f'step-{_key}' in _fc_pre):
-        warns.append(f'V8.4④ ✅步无帧已记单降级：{_key}（采集失败记单在案，无帧明示不补拍）')
+        warns.append(f'V8.4④ ✅步无帧已记单降级：{_key}（采集失败记单在案；补拍须按拍摄位规划准确补拍+图注明示时点）')
     else:
         done_noimg_unpaired.append(_key or '?')
+if declared_absent:
+    warns.append(f'V8.4④ 声明态无帧 {len(declared_absent)} 步（功能不存在/夹具未执行，拍摄位规划判定）')
 
 if title_mismatch:
     fails.append(f'标题与方案不逐字（步骤）：{title_mismatch}')
@@ -386,43 +391,55 @@ if RUN_ID >= '20261010-v8-run13':
     if _idle_noframe:
         warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 未执行/夹具带，lite 轮口径合规呈现）')
     # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
-    #    在 state 有 epoch 落键者，帧须 ≤ 键值+120s（事后补拍即穿帮）。flag 键（=1 无时刻）与
-    #    scenario.log 全段界对账为二阶强化，暂不设 FAIL 防误杀。
+    #    在 state 有 epoch 落键者，帧须 ≤ 键值+120s。2026-10-10 用户指令修订：补拍解禁但
+    #    必须准确——图注明示「补拍」的窗外/晚拍帧=合规降级 WARN（页面准确性由拍摄位规划+
+    #    视觉抽检承担）；无补拍标注的窗外帧=冒充实时 FAIL。flag 键与 scenario.log 全段界
+    #    对账为二阶强化，暂不设 FAIL 防误杀。
     _run_start = state_keys.get('run_started_at', '')
     _steps_dir_v3 = EVID / 'screenshots' / 'steps'
     _refs_v3 = set(re.findall(r'screenshots/steps/([A-Za-z0-9_-]+)\.png', rep))
     if _run_start.isdigit() and _steps_dir_v3.exists():
+        # 帧→图注映射（label 块内 img 先于 figcaption）
+        _cap_map = {}
+        for _lm in re.finditer(r'<img src="screenshots/steps/([^"]+)"[^>]*>.*?<figcaption>(.*?)</figcaption>', rep, re.S):
+            _cap_map[_lm.group(1)] = html.unescape(re.sub(r'<[^>]+>', '', _lm.group(2)))
+        _cap_of = lambda r: _cap_map.get(r if r.endswith('.png') else r + '.png', _cap_map.get(f'{r}.png', ''))
         _t0, _t1 = int(_run_start), int((_steps_dir_v3.parent.parent / 'simulation-report.html').stat().st_mtime
                     if (_steps_dir_v3.parent.parent / 'simulation-report.html').exists() else _time.time())
-        _out_win, _late = [], []
+        _out_win, _late, _retro_ok = [], [], []
         for _r in _refs_v3:
             _fp = _steps_dir_v3 / f'{_r}.png'
             if not _fp.exists():
                 continue
             _mt = int(_fp.stat().st_mtime)
+            _retro = '补拍' in _cap_of(_r)
             if _mt < _t0 or _mt > _t1 + 60:
-                _out_win.append(_r)
+                (_retro_ok if _retro else _out_win).append(_r)
                 continue
-            _k = re.split(r'-op\d+$', _r)[0]
+            # 帧名→步键：<step-key>-op<k>-{before,action,after}——split('-op') 剥操作段
+            #（旧正则 -op\d+$ 匹配不到 -op1-before 尾缀，晚拍检测休眠未生效，本测试逮出）
+            _k = _r.split('-op')[0]
             _kv = state_keys.get(_k, '')
             if _kv.isdigit() and int(_kv) > 1e9 and _mt > int(_kv) + 120:
-                _late.append(f'{_r}(>{_k} +{_mt - int(_kv)}s)')
+                (_retro_ok if _retro else _late).append(f'{_r}(>{_k} +{_mt - int(_kv)}s)')
         if _out_win:
-            fails.append(f'V8.4③ 帧时刻窗外（run 区间外）：{_out_win[:6]}——采集时刻须在本轮执行区间内')
+            fails.append(f'V8.4③ 帧时刻窗外且无补拍标注（run 区间外）：{_out_win[:6]}——补拍帧必须图注明示补拍，否则视为冒充实时')
         if _late:
-            fails.append(f'V8.4③ 帧晚于所属步落键：{_late[:4]}——键落定后补拍即穿帮（§5.6 采集纪律⑩ 禁补拍）')
+            fails.append(f'V8.4③ 帧晚于所属步落键且无补拍标注：{_late[:4]}——步后补拍须图注明示（准确补拍=按拍摄位规划页面+标注时点）')
+        if _retro_ok:
+            warns.append(f'V8.4③ 带补拍标注的窗外/晚拍帧 {len(_retro_ok)} 张（合规降级：准确补拍允许，图注已明示）')
 
 # ── A5g：V8.4 ① 图注=画面描述（§5.5 截图红线①，run13 起）──
 # figcaption（剥 shot-kind 角标后）禁两类：纯位序模板（"① 操作前"是位序不是画面）；
 # 步结果式（含 在仓/落键/过闸 等结果词且无任何画面词——"freeze 在仓"是步结论不是画面）。
 # 画面词=可指认的画面落点（面/页/视图/板/窗/列表/面板/看板/房间/灯/画布/台账/报告/IDE/环境/入口/矩阵/收件箱）。
 if RUN_ID >= '20261010-v8-run13':
-    # ④b 补拍标记禁入：任何名义的补拍帧标记入场即违例（§5.6 ⑩；run12 实锤 38 处
-    #     "收官后补拍"图注——V8.4 起补拍件只落降级档案目录，正本零容忍）
-    for _bad in ('frames-degraded', '收官后补拍', '（补拍）'):
-        if _bad in rep:
-            fails.append(f'V8.4④ 补拍禁入：报告含「{_bad}」标记——补拍件只落降级档案目录（evidence/ 外，生成器禁读），禁嵌正本')
-            break
+    # ④b 补拍纪律（2026-10-10 用户指令修订 V8.4）：准确补拍解禁——补拍帧必须 ①图注明示
+    #     「补拍」时点（③ 据此降级 WARN）②页面按拍摄位规划（capture-plan.env，视觉抽检
+    #     复核）。仍禁：隔离区帧被嵌入正本——检测收窄到 img src/figcaption 上下文（叙事
+    #     与问题单正文里的目录名提及是合法 provenance，不误杀）。无标注补拍由 ③ 兜杀。
+    if re.search(r'src="[^"]*frames-degraded|<figcaption>[^<]*frames-degraded', rep):
+        fails.append('V8.4④ 隔离区帧嵌入正本：img/图注含「frames-degraded」——错页/不合格帧归档区禁入报告，准确补拍请按拍摄位规划重拍')
     _PIC_W = ('面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱')
     _OUT_W = ('在仓', '入仓', '落键', '过闸', '全绿', '核验过', '分齐', '登记完成')
     _bad_caps = []

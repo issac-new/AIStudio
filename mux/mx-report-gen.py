@@ -1166,7 +1166,7 @@ STEPS_META_RUN13 = {
             narrative='lite 轮当轮执行·UAT 验收：AC-1~7 逐条证据行；AC-5（重复回调处理）为 run12 已知不通过项（整改在 backlog）——本轮判词须如实三态，条件放行语义保留（放行权归 bella）。【run13 实测依据·报告步回填：判词分布/验收书锚】', imgs=[('uat_done-op1-before','UAT 验收前','ui'),('uat_done-op1-after','验收书卡面视图','ui')]),
     22: dict(keys=['workmgr_done'], ts_override='1',
             actor='ai', actorText='AI · 监控侧',
-            narrative='lite 轮当轮执行·工作台账。【run13 实测依据·报告步回填：保存时刻/键值】', imgs=[('workmgr_done-op1-before','交付健康页签·跨账号板状态分布视图·前','ui'),('workmgr_done-op1-after','交付健康页签·跨账号板状态分布视图·后','ui')]),
+            narrative='lite 轮当轮执行·工作台账。本步无对应产品界面（拍摄位规划判定）：跨账号工作台账视图缺失——交付健康页签实测为审批工单类型分布+机器执法实况条（2026-10-10 视觉复核），已列缺失功能实施方案 G3，不拍无关页凑数。【run13 实测依据·报告步回填：保存时刻/键值】', imgs=[]),
     23: dict(keys=['audit_done'], ts_override='1',
             actor='ai', actorText='AI · audit+监控程序',
             narrative='lite 轮当轮执行·合规审计：免等窗终态复核段首验（a0113d2——记入问题清单后补账成功者审计段以当前真值完整循环）。【run13 实测依据·报告步回填：意见书锚/复核结果】', imgs=[('audit_done-op1-before','审计前运行中心视图','ui'),('audit_done-op1-after','审计意见书视图','ui'),('deliver_gate-op1-before','交付案例面板·门禁灯视图·前','ui'),('deliver_gate-op1-after','交付案例面板·门禁灯视图','ui')]),
@@ -1442,6 +1442,22 @@ def _entry_html(n):
     who, path, ops = e
     return (f'<div class="st-entry"><b>操作入口</b>（{H.escape(who)}）：'
             f'{H.escape(path)} → {H.escape(ops)}</div>')
+
+# 拍摄位规划表（步状态键→('none', 理由) 或 ('page', url, user)）：报告侧只消费 none
+# 声明态（该步无对应产品界面——渲染功能不存在声明而非未采集）；url/user 覆盖由
+# r18-frames.mjs 采集侧执行（同一文件单一事实源，2026-10-10 拍摄位规划轮）。
+_CAPTURE_PLAN = {}
+try:
+    for _pl in (Path(__file__).resolve().parent / 'capture-plan.env').read_text(encoding='utf-8').split('\n'):
+        _pt = _pl.strip()
+        if not _pt or _pt.startswith('#'):
+            continue
+        _pb = re.split(r'\s+#', _pt, maxsplit=1)[0].strip()
+        _pp = _pb.split('|')
+        if len(_pp) >= 2 and _pp[1].strip() == 'none':
+            _CAPTURE_PLAN[_pp[0].strip()] = ('none', '|'.join(_pp[2:]).strip() or '产品暂无该界面')
+except Exception:
+    pass
 
 STEPS = []
 for n in range(1, 27):
@@ -2682,8 +2698,18 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             _acls = 'background:#d1fae5;color:#047857' if _ast[0] == 'ok' else 'background:#fef3c7;color:#b45309'
             status += f'<span class="gmark" style="{_acls}">{H.escape(_ast[1])}</span>'
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
+        # 无帧三态（V8.4④ 2026-10-10 修订，用户指令：未采集/功能不存在/夹具未执行分开标注，
+        # 禁无关图凑数；补拍允许但必须准确+图注明示补拍时点）：
         _bkey = (meta.get('keys') or [f'step{n}'])[0]
-        imgs_html = img_tags(meta['imgs']) or f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 记单在案，无帧明示不补拍）</p>'
+        if meta['imgs']:
+            imgs_html = img_tags(meta['imgs'])
+        elif (meta.get('mark_chip') or '').startswith('夹具'):
+            imgs_html = f'<p class="no-evidence">lite 轮夹具带：本步未执行（沿用源轮工件，见步卡夹具标签），无当轮帧——不适用未采集口径</p>'
+        elif _CAPTURE_PLAN.get(_bkey, ('',))[0] == 'none':
+            imgs_html = (f'<p class="no-evidence">本步无对应产品界面（拍摄位规划判定）：'
+                         f'{H.escape(_CAPTURE_PLAN[_bkey][1])}——缺失 UI 已列实施方案，不拍无关页凑数</p>')
+        else:
+            imgs_html = f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 记单在案，无帧明示；补拍须按拍摄位规划准确补拍+图注明示时点）</p>'
         # 8.6 交付物视图（补遗③ R11）：实物渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
         art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + gov_evidence_block(n)
         # 防御性回退（run11 实锤：STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）

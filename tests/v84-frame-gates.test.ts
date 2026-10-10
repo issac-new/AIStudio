@@ -38,7 +38,9 @@ function runAudit(run: string) {
 beforeAll(() => {
   rmSync(FIX, { recursive: true, force: true })
 
-  // 负向：步结果式图注 + 同源双嵌 + 补拍标记，三病同炉（run12 病灶最小化）
+  // 负向：步结果式图注 + 同源双嵌 + 隔离区帧嵌入，三病同炉（run12 病灶最小化；
+  // 2026-10-10 政策修订：准确补拍解禁——alt 上的补拍字样不再是断言面，④b 只咬 src/图注
+  // 上下文里的 frames-degraded 隔离区帧）
   const negSteps = buildRun(
     '20261010-v8-run13neg',
     `<body><main class="main"><article class="step" id="step20">
@@ -46,12 +48,30 @@ beforeAll(() => {
 <figure><img src="screenshots/steps/20-op1-before.png" alt=""><figcaption><span class="shot-kind">界面实拍</span>发布面板·前</figcaption></figure>
 <figure><img src="screenshots/steps/20-op1-after.png" alt=""><figcaption><span class="shot-kind">界面实拍</span>G6 落键</figcaption></figure>
 <figure><img src="screenshots/steps/20-op1-after.png" alt="收官后补拍"><figcaption><span class="shot-kind">界面实拍</span>发布面板·后</figcaption></figure>
+<figure><img src="frames-degraded/20-op2.png" alt=""><figcaption><span class="shot-kind">界面实拍</span>发布面板·补</figcaption></figure>
 </article></main></body>`,
     `ISSUE|frame-capture-failed|step-20-op2|fixture\nDISP|frame-capture-failed|x|已修\n`,
     { 20: { ops: [{ title: '发布面板', entry: '/app', frames: ['20-op1-before.png', '20-op1-after.png'], ts: NOW - 1800 }] } },
   )
   fakePng(negSteps, '20-op1-before.png', 'before-frame-aaaaaaaa')
   fakePng(negSteps, '20-op1-after.png', 'after-frame-bbbbbbbb')
+
+  // ③ 补拍标注分级（2026-10-10 修订）：晚于步键的帧——图注带「补拍」=WARN 合规，
+  // 无标注=FAIL 冒充实时。state 带步键 epoch（NOW-3000）使两帧（mtime=now）成晚拍。
+  const retroSteps = buildRun(
+    '20261010-v8-run13retro',
+    `<body><main class="main"><article class="step" id="step20">
+<span class="st-num">20</span><div class="st-title"><h3>发布准出</h3></div><span class="ok">✅</span>
+<figure><img src="screenshots/steps/release_done-op1-before.png" alt=""><figcaption><span class="shot-kind">界面实拍</span>发布面板·前</figcaption></figure>
+<figure><img src="screenshots/steps/release_done-op1-after.png" alt=""><figcaption><span class="shot-kind">界面实拍</span>发布面板·后（补拍）</figcaption></figure>
+</article></main></body>`,
+    `ISSUE|frame-capture-failed|step-release_done|fixture\nDISP|frame-capture-failed|x|已修\n`,
+    { 20: { ops: [{ title: '发布面板', entry: '/app', frames: ['release_done-op1-before.png', 'release_done-op1-after.png'], ts: NOW - 1800 }] } },
+  )
+  writeFileSync(join(FIX, 'runs', '20261010-v8-run13retro', 'state.env'),
+    `run_started_at=${NOW - 3600}\nrelease_done=${NOW - 3000}\nreport_done=${NOW}\n`, 'utf8')
+  fakePng(retroSteps, 'release_done-op1-before.png', 'retro-before-eeeeee')
+  fakePng(retroSteps, 'release_done-op1-after.png', 'retro-after-ffffff')
 
   // 正向：画面描述图注 + 单一用途 + 带记录带 ts + 无补拍标记——V8.4 断言零误杀
   const posSteps = buildRun(
@@ -69,20 +89,28 @@ beforeAll(() => {
 })
 
 describe('V8.4 帧四断言（审计器）', () => {
-  it('负向：①步结果式图注 / ②同源双嵌 / ④b 补拍标记，三断言齐咬', () => {
+  it('负向：①步结果式图注 / ②同源双嵌 / ④b 隔离区帧嵌入，三断言齐咬', () => {
     const r = runAudit('20261010-v8-run13neg')
     const out = r.stdout + r.stderr
     expect(r.status, out.slice(0, 400)).toBe(1)
     expect(out).toContain('V8.4① 图注非画面描述')
     expect(out).toContain('「G6 落键」步结果式')
     expect(out).toContain('V8.4② 同源帧多用途')
-    expect(out).toContain('V8.4④ 补拍禁入')
+    expect(out).toContain('V8.4④ 隔离区帧嵌入正本')
   })
 
   it('正向：画面描述图注+单一用途+记录在案 → V8.4 断言零误杀', () => {
     const r = runAudit('20261010-v8-run13pos')
     const out = r.stdout + r.stderr
     expect(out, out.slice(0, 400)).not.toMatch(/V8\.4[①②③④]/)
+  })
+
+  it('③ 补拍标注分级：无标注晚拍帧 FAIL 冒充，带补拍图注晚拍帧 WARN 合规', () => {
+    const r = runAudit('20261010-v8-run13retro')
+    const out = r.stdout + r.stderr
+    expect(out).toContain('V8.4③ 帧晚于所属步落键且无补拍标注')
+    expect(out).toContain('release_done-op1-before')
+    expect(out).toContain('带补拍标注的窗外/晚拍帧 1 张')
   })
 })
 
