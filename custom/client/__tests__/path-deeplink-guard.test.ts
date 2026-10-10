@@ -24,11 +24,11 @@ describe('patch 368 路径形态深链迁移（run13 步18 放宽版）', () => 
 
   it('upstream main.ts 已注入迁移块（inject 产物守门；须先 npm run inject）', () => {
     const src = readFileSync(UPSTREAM_MAIN, 'utf8')
-    expect(src).toContain('run13 步18 实锤')
+    expect(src).toContain('ide-deeplink-loses-task')
     expect(src).toContain('window.location.replace')
     expect(src).toContain('pathname+search 迁')
     // 迁移块必须先于 token 特例读取（router 初始化前生效）
-    expect(src.indexOf('run13 步18 实锤')).toBeLessThan(src.indexOf('Read token from URL'))
+    expect(src.indexOf('ide-deeplink-loses-task')).toBeLessThan(src.indexOf('Read token from URL'))
   })
 
   it.each([
