@@ -13,6 +13,11 @@ export interface TabIntro {
 
 export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
   zh: {
+    orchestra: {
+      what: '任务协同图：选一个业务结果（根任务），一张图看清这件事如何由人、智能体与控制点协同完成。',
+      source: '看板任务链（依赖边）+ RACI 审批 + 自主度阶梯审批点 + 升级记录，实时聚合；人/智能体按 -agent 后缀口径判定。',
+      act: '负责人核对五问：结果谁负责、人机怎么分工、哪里必须人确认、异常怎么升级、跑完沉淀什么可复用资产。',
+    },
     trace: {
       what: '每张任务卡与它的执行记录对照表：跑了几轮、每轮结果、最近完成时间。',
       source: '看板任务与其运行历史，实时聚合。',
@@ -55,6 +60,11 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     },
   },
   en: {
+    orchestra: {
+      what: 'Orchestration chart: pick a business outcome (root task) and see in one graph how people, agents and control points deliver it together.',
+      source: 'Kanban task chains (dependency edges) + RACI approvers + autonomy-ladder approval points + escalations, live; humans/agents classified by -agent suffix.',
+      act: 'Owners verify the five questions: who owns the outcome, how work splits human/agent, where humans must confirm, how anomalies escalate, what reusable assets remain.',
+    },
     trace: {
       what: 'Each task card mapped to its runs: rounds, outcomes, latest finish time.',
       source: 'Aggregated live from kanban tasks and run history.',

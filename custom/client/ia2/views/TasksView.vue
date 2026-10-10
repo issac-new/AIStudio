@@ -20,6 +20,7 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TabIntroBanner from '../components/TabIntroBanner.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
+import CapacitySection from '@/custom/kanban/components/CapacitySection.vue'
 import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
 import GovHealthSection from './gov/GovHealthSection.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
@@ -28,6 +29,7 @@ import GovAuditChangeView from './gov/GovAuditChangeView.vue'
 import GovDocsReviewView from './gov/GovDocsReviewView.vue'
 import GovHarnessView from './gov/GovHarnessView.vue'
 import GovClusterSection from './gov/GovClusterSection.vue'
+import OrchestrationView from './orchestration/OrchestrationView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
 
 const { t } = useI18n()
@@ -37,12 +39,13 @@ const kanban = useKanbanStore()
 const cockpit = useCockpitStore()
 
 /** 单层页签全集（2026-10-01）：文案单一事实源=i18n-tasks-tabs 模块字典 */
-type TabKey = 'board' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness' | 'gov-cluster'
+type TabKey = 'board' | 'orchestra' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness' | 'gov-cluster'
 const tab = ref<TabKey>('board')
 const tabText = useTasksTabsText()
 
 const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'board', testid: 'ia-tasks-tab-board' },
+  { key: 'orchestra', testid: 'ia-tasks-tab-orchestra' },
   { key: 'trace', testid: 'ia-tasks-tab-trace' },
   { key: 'accounts', testid: 'ia-tasks-tab-accounts' },
   { key: 'observatory', testid: 'ia-tasks-tab-observatory' },
@@ -53,9 +56,10 @@ const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'gov-harness', testid: 'ia-tasks-tab-gov-harness' },
   { key: 'gov-cluster', testid: 'ia-tasks-tab-gov-cluster' },
 ]
-type TabTextKey = 'tabBoard' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness'
+type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness' | 'tabGovCluster'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   board: 'tabBoard',
+  orchestra: 'tabOrchestra',
   trace: 'tabTrace',
   accounts: 'tabAccounts',
   observatory: 'tabObservatory',
@@ -177,6 +181,11 @@ function goInboxFromAccounts(): void {
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView :auto-open-create="autoOpenCreate" />
     </div>
+    <!-- 任务协同图（2026-10-10 麦肯锡概念一轮）：以业务结果根卡为锚的人-Agent-控制点
+         协同图 + 五问面板；容器只收溢出，视图根 flex:1 自适应 -->
+    <div v-else-if="tab === 'orchestra'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-orchestra">
+      <OrchestrationView />
+    </div>
     <!-- 三账与体检（2026-10-01 整合）：管理三账 + 治理体检同页签堆叠——
          同属管理者健康总览语义，滚动一屏读全 -->
     <div v-else-if="tab === 'accounts'" class="ia-area ia-tasks__panel" data-testid="ia-tasks-panel-accounts">
@@ -185,6 +194,7 @@ function goInboxFromAccounts(): void {
         @filter-assignee="filterAssigneeFromAccounts"
         @go-inbox="goInboxFromAccounts"
       />
+      <CapacitySection />
       <GovHealthSection />
     </div>
     <div v-else-if="tab === 'gov-org'" class="ia-area" data-testid="ia-tasks-panel-gov-org">

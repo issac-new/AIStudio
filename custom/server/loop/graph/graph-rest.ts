@@ -169,6 +169,9 @@ export interface GraphRestDeps {
   specStore?: GraphSpecStore | null
   /** P4：自建 spec 起跑器（编辑器"试跑"链路；缺省时 specs/:id/runs 返回 501） */
   specRuntime?: { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null
+  /** 任务工厂（2026-10-10）：模板台账追加入口（治理注册表 mission-templates，保存即提交）。
+   *  缺省时 deposit 仍存 spec，仅跳过台账登记（响应 registered=false 如实告示）。 */
+  missionRegistry?: { appendRow(row: string[], message: string, actor?: string): Promise<void> } | null
 }
 
 export function createGraphRunRouter(deps: GraphRestDeps): Router {
@@ -297,6 +300,87 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     ctx.body = { specs: deps.specStore?.list() ?? [] }
   })
 
+  // POST /api/graph/runs/:id/deposit-template — 任务工厂（2026-10-10 麦肯锡概念二轮）：
+  // 完成 run 一键沉淀为可复用模板——spec 去 run 化后以 origin='factory' 入 specs 表，
+  // meta.factory 记来源 run/经手人/复用计数；治理注册表 mission-templates 追加台账行
+  //（保存即提交=变更审计）。复用计数在 POST /specs/:id/runs 命中 factory 模板时累加。
+  router.post('/api/graph/runs/:id/deposit-template', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
+    if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
+    const body = ctx.request.body as { name?: string; note?: string } | undefined
+    const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 80) : ''
+    const note = typeof body?.note === 'string' ? body.note.trim().slice(0, 200) : ''
+
+    const rec = deps.graphService.getRun(ctx.params.id)
+    let sourceSpec: GraphSpec | null = null
+    let status: string | null = null
+    if (rec) {
+      status = rec.instance.status ?? null
+      sourceSpec = deps.specStore.get(rec.graphId) ?? null
+    } else {
+      // 外部源 run（sim-*）：事件流推导状态；spec 以首事件 graphId 回查
+      const events = await deps.eventLog.query(ctx.params.id, { limit: 50 })
+      if (events.length === 0) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
+      status = externalRunStatus(events)
+      sourceSpec = deps.specStore.get(events[0].graphId) ?? null
+    }
+    if (!status || status !== 'completed') {
+      ctx.status = 409
+      ctx.body = { error: `只有已完成的 run 才能沉淀为模板（当前状态：${status ?? 'unknown'}）` }
+      return
+    }
+    if (!sourceSpec) {
+      ctx.status = 409
+      ctx.body = { error: 'Run 对应的图规格不存在（specs 表无此 id），无法沉淀' }
+      return
+    }
+
+    const username = (ctx.state as { user?: { username?: string } }).user?.username
+    const depositedAt = new Date().toISOString()
+    const templateId = `factory-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    const template: GraphSpec = {
+      ...structuredClone(sourceSpec),
+      id: templateId,
+      version: 1,
+      origin: 'factory',
+      description: name || sourceSpec.description || `任务工厂模板（来源 run ${ctx.params.id}）`,
+      meta: {
+        ...structuredClone(sourceSpec.meta ?? {}),
+        factory: {
+          sourceRunId: ctx.params.id,
+          depositedAt,
+          ...(username !== undefined ? { depositedBy: username } : {}),
+          reuseCount: 0,
+        },
+      },
+    }
+    try {
+      validateGraphSpec(template, { appendById: appendContractsById })
+    } catch (err) {
+      ctx.status = 400
+      ctx.body = { error: `模板校验未过：${err instanceof Error ? err.message : String(err)}` }
+      return
+    }
+    await deps.specStore.save(template)
+
+    let registered = false
+    let registryError: string | null = null
+    if (deps.missionRegistry) {
+      try {
+        await deps.missionRegistry.appendRow(
+          [templateId, template.description ?? '', ctx.params.id, depositedAt, '0', note || '—'],
+          `任务工厂：run ${ctx.params.id} 沉淀为模板 ${templateId}`,
+          username ?? 'studio-ui',
+        )
+        registered = true
+      } catch (err) {
+        // spec 已落库，台账失败不回滚（可重补）——如实告示
+        registryError = err instanceof Error ? err.message : String(err)
+      }
+    }
+    ctx.body = { ok: true, templateId, registered, ...(registryError !== null ? { registryError } : {}) }
+  })
+
   // GET /api/graph/specs/:id — 单图规格（P3 台账 #25：前端按 id 直取，不再列表端 client 侧 find）
   router.get('/api/graph/specs/:id', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
@@ -319,8 +403,8 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!ID_RE.test(spec.id) || spec.id === SEED_MARKER_ID) {
       ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return
     }
-    if (spec.origin === 'template') {
-      ctx.status = 400; ctx.body = { error: 'origin "template" is reserved for loop-compiled specs' }; return
+    if (spec.origin === 'template' || spec.origin === 'factory') {
+      ctx.status = 400; ctx.body = { error: 'origin "template"/"factory" is reserved (loop-compiled / mission-factory deposit only)' }; return
     }
     if (spec.origin === undefined) spec.origin = 'editor'
     try {
@@ -352,6 +436,15 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!deps.specRuntime) { ctx.status = 501; ctx.body = { error: 'Spec runtime not configured (GRAPH_ENGINE=on required)' }; return }
     try {
       const { runId, instance } = await deps.specRuntime.startRun(ctx.params.id)
+      // 任务工厂复用计数：命中 factory 模板起跑即 +1（best-effort——计数失败不影响已起跑的 run）
+      try {
+        const spec = deps.specStore?.get(ctx.params.id)
+        if (spec?.origin === 'factory' && spec.meta?.factory) {
+          spec.meta.factory.reuseCount += 1
+          spec.meta.factory.lastReusedAt = new Date().toISOString()
+          await deps.specStore?.save(spec)
+        }
+      } catch { /* 计数失败静默：模板起跑成功是主语义 */ }
       ctx.body = { runId, instance }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

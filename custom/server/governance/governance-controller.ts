@@ -30,6 +30,7 @@ import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
 import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
+import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
 import { orgDiagnosis } from './org-diagnosis'
 import { qgateRunRoots } from './governance-analytics'
@@ -520,6 +521,13 @@ router.get('/decision-rules', async (ctx) => {
 // ---- 第六期：跨机派发账本聚合（服务端权威面；客户端 dispatch-kv 为同口径本机视图）----
 router.get('/dispatch-stats', async (ctx) => {
   ctx.body = { ok: true, ...crossMachineDispatchStats() }
+})
+
+// ---- 容量分析（2026-10-10 麦肯锡概念三轮「容量而非人数」）：按执行者聚合人日视图 ----
+router.get('/capacity/overview', async (ctx) => {
+  const rawDays = parseInt(String(ctx.query.days ?? ''), 10)
+  const days = Number.isFinite(rawDays) && rawDays >= 1 && rawDays <= 365 ? rawDays : 30
+  ctx.body = { ok: true, ...(await capacityOverview(days)) }
 })
 
 // ---- P6-P8 管理维护端点（补遗④；写操作以 body.adminToken 向 synapse 管理端鉴权）----
