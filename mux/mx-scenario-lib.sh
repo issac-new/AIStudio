@@ -14,16 +14,22 @@ SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
 sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
-# 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）
+# 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）。
+# lite 轮口径（2026-10-10 G4）：state 带 lite_round=1 时 total=执行段步数（夹具步不计），
+# 附 scope=lite+fixtures_from——产品横幅按此显示「lite 轮 x/N」而非误导性的 0/26。
 mx_write_progress() {
   [[ -n "${HERMES_ROOT:-}" && -n "${STATE:-}" ]] || return 0
   mkdir -p "$HERMES_ROOT" 2>/dev/null || true
-  local _n=0 _list="" _s
-  for _s in ${MX_STEP_ORDER:-}; do
+  local _n=0 _list="" _s _scope="" _order="${MX_STEP_ORDER:-}"
+  if grep -q "^lite_round=1" "$STATE" 2>/dev/null; then
+    _order="${MX_LITE_STEP_ORDER:-$_order}"
+    _scope="\"scope\":\"lite\",\"fixtures_from\":\"$(grep -s '^lite_fixtures_from=' "$STATE" | head -1 | cut -d= -f2-)\","
+  fi
+  for _s in $_order; do
     if grep -q "^${_s}_done=" "$STATE" 2>/dev/null; then _n=$((_n+1)); _list="${_list}\"$_s\","; fi
   done
-  printf '{"run_id":"%s","done":%d,"total":%d,"done_steps":[%s],"updated_ts":%d}\n' \
-    "${RUN_ID:-}" "$_n" "$(echo ${MX_STEP_ORDER:-} | wc -w | tr -d ' ')" "${_list%,}" "$(date +%s)" \
+  printf '{"run_id":"%s",%s"done":%d,"total":%d,"done_steps":[%s],"updated_ts":%d}\n' \
+    "${RUN_ID:-}" "$_scope" "$_n" "$(echo $_order | wc -w | tr -d ' ')" "${_list%,}" "$(date +%s)" \
     > "$HERMES_ROOT/run-progress.json.tmp" 2>/dev/null && mv "$HERMES_ROOT/run-progress.json.tmp" "$HERMES_ROOT/run-progress.json" 2>/dev/null || true
 }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; mx_write_progress; }
