@@ -939,16 +939,47 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
   # 聊天回复侧全局钩子：SOUL.md 身份层并入条款（与技能分发同点位调用，
   # mx-setup 每 profile 一次，幂等可重入）
   seed_soul_charter "$PROF"
+  # 2026-10-10 能力补齐轮：单文件拷贝 → 全目录拷贝（aipaydev-dev 已升 swarm-yuan
+  # standard 全骨架 116 文件——门禁/钩子脚本/方法论库随技能分发；单文件技能源仍
+  # 兼容旧路径）。条款追加逻辑不变（进安装副本 SKILL.md 尾部，仓内真源无条款）。
   for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop; do
     [[ -d "$SKILLS_SRC/$s" ]] || continue
     rm -rf "$PROF/skills/$s"
     mkdir -p "$PROF/skills/$s"
-    cp "$SKILLS_SRC/$s/SKILL.md" "$PROF/skills/$s/SKILL.md"
+    if compgen -G "$SKILLS_SRC/$s/*" >/dev/null 2>&1 && [[ -n "$(ls -A "$SKILLS_SRC/$s" | grep -v '^SKILL.md$')" ]]; then
+      cp -R "$SKILLS_SRC/$s/." "$PROF/skills/$s/"
+    else
+      cp "$SKILLS_SRC/$s/SKILL.md" "$PROF/skills/$s/SKILL.md"
+    fi
     # 交付物侧：条款追加进安装副本（仓内 SKILL.md 保持无条款，单一事实源=真源文件）
     if [[ -f "$STYLE_CHARTER" ]]; then
       cat "$STYLE_CHARTER" >> "$PROF/skills/$s/SKILL.md"
     fi
   done
+  # 角色技能映射（2026-10-10 能力补齐·差距二）：专属技能此前只在 Orchestrator 主
+  # profile（agent 推演中自著），实际干活的子 profile（*-tester/*-sys-analyst）没有
+  # ——能力错位靠派单词补偿，换会话/换触发词即丢。按档案名后缀从主 profile 源补装
+  # （源缺位跳过不阻塞；幂等重建；charter 同样追加）。
+  local _base _rh
+  _base=$(basename "$PROF")
+  _role_skill_install() { # <host-profile> <skill-name>
+    local host="$1" sn="$2"
+    [[ -d "$HERMES_ROOT/profiles/$host/skills/$sn" ]] || return 0
+    rm -rf "$PROF/skills/$sn"; mkdir -p "$PROF/skills/$sn"
+    cp -R "$HERMES_ROOT/profiles/$host/skills/$sn/." "$PROF/skills/$sn/"
+    if [[ -f "$STYLE_CHARTER" ]] && [[ -f "$PROF/skills/$sn/SKILL.md" ]]; then
+      cat "$STYLE_CHARTER" >> "$PROF/skills/$sn/SKILL.md"
+    fi
+  }
+  case "$_base" in
+    *-tester)
+      _role_skill_install qi backend-integration-testing
+      _role_skill_install xiao test-evidence-verification
+      ;;
+    *-sys-analyst)
+      _role_skill_install lin aipaydev-sys-analysis
+      ;;
+  esac
   # ACP 编码后端 L1 委托技能（2026-10-09 acp-coding-backend-divergence 根治件）：
   # 正本=overlay/runtime/hermes-skills（产品侧技能面），harness 只读消费；缺位跳过
   # （bare CI 无 overlay 检出），在位即随 profile 同构分发。
