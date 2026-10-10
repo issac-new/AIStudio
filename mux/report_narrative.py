@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # report-narrative.py — V4 路演报告叙事层（2026-09-28 V4 路演重构方案 §四）
 # 讨论意见三条落地：
-#   意见1 呈现具体化 → 挑战与协同章：真实案例（问题单台账实算数字）+ 机制点出 harness+multi-agent
+#   意见1 呈现具体化 → 挑战与协同章：真实案例（问题单台账实测统计数字）+ 机制点出 harness+multi-agent
 #   意见2 差异化亮点 → 六卡（对比行业通用方案），每条带证据锚点
 #   意见3 双 loop + 左移 + 四维协作质量 → HTML/CSS 循环图（免 mermaid，V3 实锤 mmdc 依赖脆弱）
-# 红线：所有数字生成时从 evidence 实算（issues.log / state.env）；取不到显式标 ⬜，不编造。
+# 红线：所有数字生成时从 evidence 实测统计（issues.log / state.env）；取不到显式标 ⬜，不编造。
 # 供 mx-report-gen.py import：render_narrative(state: dict, evid: Path) -> str（HTML 片段）。
 import html as H
 import re
@@ -16,7 +16,7 @@ ESC = lambda s: H.escape(str(s), quote=True)
 
 def _issue_counts(evid: Path) -> Counter:
     """（返回 (Counter, ledger_found) 语义由调用方组合——缺键=0 次≠数据缺失）"""
-    """问题单台账实算：ISSUE|类型|主体|描述 → 按类型计数。"""
+    """问题单台账实测统计：ISSUE|类型|主体|描述 → 按类型计数。"""
     f = evid / 'issues.log'
     c: Counter = Counter()
     if not f.exists():
@@ -35,7 +35,7 @@ def _state_mark(state: dict, key: str) -> str:
         return '<span class="nv-miss">⬜ 未取得</span>'
     v = str(v)
     if len(v) <= 2:
-        return '<span class="nv-ok">✅</span> <span>已落键</span>'
+        return '<span class="nv-ok">✅</span> <span>已写入通过标记</span>'
     if v.isdigit() and len(v) >= 10:
         import datetime
         return f'<span class="nv-ok">✅</span> <code>{datetime.datetime.fromtimestamp(int(v[:10])).strftime("%m-%d %H:%M:%S")}</code>'
@@ -97,10 +97,10 @@ def render_narrative(state: dict, evid: Path) -> str:
     hero = f'''
 <section class="nv-hero" id="nv-hero">
   <div class="nv-hero-title">人机协作的多智能体软件研发：一条需求从冻结到验收的完整旅程</div>
-  <div class="nv-hero-sub">人的角色从"生产者"转向"意图持有者、仲裁者和最终验证者"——AI 员工主理执行，六道硬闸守住意图对齐与不可逆决策。</div>
+  <div class="nv-hero-sub">人的角色从"生产者"转向"意图持有者、仲裁者和最终验证者"——AI 员工主理执行，六道强制关卡守住意图核对一致与不可逆决策。</div>
   <div class="nv-hero-metrics">
     <div class="nv-metric"><b>26</b><span>标准流程步</span></div>
-    <div class="nv-metric"><b>6</b><span>道硬闸（G1-G6）</span></div>
+    <div class="nv-metric"><b>6</b><span>道强制关卡（G1-G6）</span></div>
     <div class="nv-metric"><b>15×2</b><span>人编制 ×（人+AI 助理）账号</span></div>
     <div class="nv-metric"><b>4</b><span>类 AI 员工（需求设计/应用研发/质量测试/研发治理）</span></div>
     <div class="nv-metric"><b>{_c(total_issues)}</b><span>问题单台账条目（全程记账）</span></div>
@@ -113,23 +113,23 @@ def render_narrative(state: dict, evid: Path) -> str:
             '挑战 A：分布式协作的成员一致性',
             f'推演中问题单台账实记 <b>{_c(n_invite)}</b> 次{_z(n_invite)}"派发者不在群"缺口——'
             '智能体@责任人派发任务时，对方尚未入群，消息发不出去（Matrix 403）。',
-            '协同机制：导演模式检测缺口即刻补邀并记问题单，不静默丢失；随后根治为"建群即按 RACI 全量预邀 + G2 前补邀架构双账号"（overlay f8382131）。'
+            '协同机制：监控程序模式检测缺口即刻补邀并记问题单，不静默丢失；随后根治为"建群即按 RACI 全量预邀 + G2 前补邀架构双账号"（overlay f8382131）。'
             '这正是 harness（场景编排器）+ multi-agent 的交界处：通信基建的语义缺口，靠台账暴露、靠流程根治。',
             _state_mark(state, 'room_analysis'),
         ),
         (
             '挑战 B：大模型"完成"幻觉',
-            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮无同期记单")}"无凭证报完成"被打回——'
+            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮无同期记入问题清单")}"无凭证报完成"被打回——'
             '智能体宣称任务完成，但提交号/卡号反向核验查无实据（RFD-001 两轮拒收实例）。',
             '协同机制：一切"完成"必须带代码提交号+任务卡号双凭证，系统反向核验，查不到打回限期重报，两轮不过记问题单中止。'
             '验证优先于生成：客观执行信号作准出，自我评价不作数。',
-            (('<span class="nv-ok">✅</span> 记单 <code>kanban-registration-skipped·fanfan-agent</code>（issues.log 台账）')
+            (('<span class="nv-ok">✅</span> 记入问题清单 <code>kanban-registration-skipped·fanfan-agent</code>（issues.log 台账）')
              if counts.get('kanban-registration-skipped') else _state_mark(state, 'register_done')),
         ),
         (
             '挑战 C：审查不沦为橡皮图章',
             f'台账实记闸门相关缺口 <b>{_c(n_gate)}</b> 次（本轮；评审卡缺失/本地门禁缺件）{_z(n_gate)}。'
-            'G2 架构评审 FAIL 即打回修订复评，历史偏差红杠命中未回应即拦；G4 测试独立验证——测试的人不能是写代码的人。',
+            'G2 架构评审 FAIL 即打回修订复评，历史偏差标红命中未回应即拦；G4 测试独立验证——测试的人不能是写代码的人。',
             '协同机制：生成-验证分离且对抗性设计，验证者的目标是"击穿实现"；每道闸未过不得流入下游（显式状态机熔断错误级联）。',
             _state_mark(state, 'g2_arch_pass'),
         ),
@@ -140,7 +140,7 @@ def render_narrative(state: dict, evid: Path) -> str:
             '协同机制：本地捕获代理截获 79KB 真实载荷逐项重放对照（原样 400 / 去掉 200 / 降档 200），'
             '实锤元凶为非标参数 reasoning_effort="max"（仅 gpt-5.6 层线上值接受）；配置改 high 后通道恢复、'
             'agent 回合全通。模型通道问题不猜不改盲试——载荷级实证定位，一修即愈。',
-            '<span class="nv-ok">✅</span> 历轮证据档 <code>20260928-v4-run1</code>（2026-09-28 通道事故复盘，本案例为对照引用非本轮记单）',
+            '<span class="nv-ok">✅</span> 历轮证据档 <code>20260928-v4-run1</code>（2026-09-28 通道事故复盘，本案例为对照引用非本轮记入问题清单）',
         ),
     ]
     case_html = ''.join(
@@ -155,23 +155,23 @@ def render_narrative(state: dict, evid: Path) -> str:
     challenge = f'''
 <section class="nv-sec" id="nv-challenge">
   <h2>挑战与协同：三个本轮真实案例 + 一个历轮对照案例</h2>
-  <p class="nv-lead">多智能体研发的关键问题出在人与智能体系统的交界处。案例 A/B/C 取自本轮问题单台账（issues.log 实算）；案例 D 为历轮（V4-run1）对照实录——均非假想场景。</p>
+  <p class="nv-lead">多智能体研发的关键问题出在人与智能体系统的交界处。案例 A/B/C 取自本轮问题单台账（issues.log 实测统计）；案例 D 为历轮（V4-run1）对照实录——均非假想场景。</p>
   <div class="nv-cases">{case_html}</div>
-  <p class="nv-note">演进方向：RSI（递归自改进内核，见 2026-09-18-rsi-kernel-design）将把"纠错飞轮"从流程机制沉淀为运行时内核能力——本报告不作现态承诺。</p>
+  <p class="nv-note">演进方向：RSI（递归自改进内核，见 2026-09-18-rsi-kernel-design）将把"纠错飞轮"从流程机制积累为运行时内核能力——本报告不作现态承诺。</p>
 </section>'''
 
     # ── ③ 双 loop（意见3：skill loop 内循环 + swarm loop 外循环 + 左移）──
     skill_loop = _loop_diagram(
         ['认知地图', '规格先行', '代码纪律', '质量门禁', '知识池归档'],
         'skill loop<br/>单任务内循环',
-        '缺陷回流：质量门禁不过 → 回到规格先行/编码，缺陷不出循环；知识池归档入家族记忆库，下轮同类任务自动回忆。',
+        '缺陷回流：质量门禁不过 → 回到规格先行/编码，缺陷不出循环；知识池归档入跨轮记忆库，下轮同类任务自动回忆。',
         '编码五步内建于 swarm yuan 为仓库生成的 xxx-dev 技能——每个仓库有自己的定制化研发技能，流程随资产走。',
         '#059669',
     )
     swarm_loop = _loop_diagram(
-        ['需求冻结 G1', '系统分析', '架构评审 G2', '排期', '编码 G3', '独立测试 G4', '发布准出 G5', 'UAT 验收', '复盘 G6', '记忆沉淀'],
+        ['需求冻结 G1', '系统分析', '架构评审 G2', '排期', '编码 G3', '独立测试 G4', '发布准出 G5', 'UAT 验收', '复盘 G6', '记忆积累'],
         'swarm loop<br/>需求全流程外循环',
-        '记忆反哺：复盘经验、问题处置、度量基线沉淀入 hindsight 家族记忆库（虚线回流），下轮需求分析自动命中历史偏差红杠。',
+        '记忆反哺：复盘经验、问题处置、度量基线积累入 hindsight 跨轮记忆库（虚线回流），下轮需求分析自动命中历史偏差标红。',
         '左移：涉敏评估在需求期（G1④）、架构评审在排期前（G2）、测试要点在设计期（G2③）、安全扫描在编码门禁（G3）——"业务先行、技术债后补"模式全清，测试/架构/安全并入全流程迭代。',
         '#7c3aed',
     )
@@ -185,11 +185,11 @@ def render_narrative(state: dict, evid: Path) -> str:
     # ── ④ 差异化亮点（意见2：对比行业通用方案）──
     highlights = [
         ('流程随资产走', 'swarm yuan skill 为每个仓库生成专属 xxx-dev 研发技能，五步能力内建：流程跟着资产走，不是一套通用 prompt 打天下。', '步骤 13/18'),
-        ('六道硬闸把守质量', '六道硬闸脚本守门（G1-G6）：不过不流、不靠自觉；空话不上锁，"完成"必须带双凭证。', 'G1-G6 准出凭证'),
+        ('六道强制关卡把守质量', '六道强制关卡脚本自动检查（G1-G6）：不过不流、不靠自觉；空话不上锁，"完成"必须带双凭证。', 'G1-G6 准出凭证'),
         ('产物可直接开工', '冻结需求、系分、概设、排期、开发分支、测试报告六样全齐：全带提交号+卡号双凭证，可反查可审计。', 'aipaydev 仓库全程'),
         ('评估精度到人日', '结合历史数据与评估标准逐任务评估，人日精度到任务；测试工作量按 0.3 系数独立成项。', '步骤 13/16/17'),
         ('26 步固定 SOP', '26 步固定标准流程，每步写明把关：开始前满足什么、做完拿什么交差、到什么程度算合格，脚本自动检查。', '方案全文+断言报告'),
-        ('开头冻结即最终验收', '开头冻结的验收标准是最终验收的唯一依据，结尾 UAT 拿它逐条对账：需求到验收闭环，多级翻译不失真。', '步骤 7 ↔ 21'),
+        ('开头冻结即最终验收', '开头冻结的验收标准是最终验收的唯一依据，结尾 UAT 拿它逐条对账：需求到验收完整循环，多级翻译不失真。', '步骤 7 ↔ 21'),
     ]
     hl_html = ''.join(
         f'<div class="nv-hl"><div class="nv-hl-title">{ESC(t)}</div><div class="nv-hl-body">{b}</div><div class="nv-hl-anchor">{ESC(a)}</div></div>'
@@ -205,8 +205,8 @@ def render_narrative(state: dict, evid: Path) -> str:
     dims = [
         ('统一标准', '语义、评估基准、质量门禁三统一', '金额统一"分"（int64）、字段命名 snake_case；SMART 任务清单+0.3 测试系数；六道闸全编制同构。', '#2563eb'),
         ('效率', 'AI 驱动的分布式人机组织与资产互联共享', '15 人编制 30 账号 42 profile 单 gateway 多路复用；中央仓、技能模板、记忆库全编制共享，档案按账号隔离。', '#059669'),
-        ('风控', 'human-in-loop 控制责任和风险', '两道人工门（意图对齐：G1/G2/分诊确认；不可逆决策：G5 发布批准）+ 审批收件箱风险分级 + 审计独立签名线 + 全程双凭证可追溯。', '#dc2626'),
-        ('长期治理', '资产累积与全流程闭环治理迭代', '模版库回写、知识池归档、家族记忆库、纠错飞轮（人工纠正→规范条目/评估用例→下轮验证复发）。', '#7c3aed'),
+        ('风控', 'human-in-loop 控制责任和风险', '两道人工门（意图核对一致：G1/G2/分诊确认；不可逆决策：G5 发布批准）+ 审批收件箱风险分级 + 审计独立签名线 + 全程双凭证可追溯。', '#dc2626'),
+        ('长期治理', '资产累积与全流程完整循环治理迭代', '模版库回写、知识池归档、跨轮记忆库、纠错飞轮（人工纠正→规范条目/评估用例→下轮验证复发）。', '#7c3aed'),
     ]
     dim_html = ''.join(
         f'<div class="nv-dim" style="--dim:{c}"><div class="nv-dim-title">{ESC(t)}</div><div class="nv-dim-sub">{ESC(s)}</div><div class="nv-dim-body">{b}</div></div>'
@@ -279,7 +279,7 @@ if __name__ == '__main__':
     print(f'\n<!-- narrative bytes={len(html)} -->', file=sys.stderr)
 
 
-# ── 意图链路可视化（V4.1 §三 需求保真域缺口闭合：报告侧连线）──
+# ── 意图通路可视化（V4.1 §三 需求保真域缺口闭合：报告侧连线）──
 # 从中央仓真实工件解析：G1 冻结 AC → 系分稿（AN-*）→ 开发分支测试日志（G3）→
 # 独立测试报告（G4）→ UAT 逐条对账（acceptance）。取不到的环节显式 ⬜，不虚构。
 def render_intent_chain(sim) -> str:
@@ -327,7 +327,7 @@ def render_intent_chain(sim) -> str:
     def testlog_summary(path):
         txt = _read(path)
         m = _re.search(r'Tests\s+(\d+) passed', txt)
-        return f'{m.group(1)} 用例全绿' if m else '已落档'
+        return f'{m.group(1)} 用例全绿' if m else '已保存'
 
     rows = []
     for ac in acs:
@@ -377,7 +377,7 @@ def render_intent_chain(sim) -> str:
 
     return """
 <section class="nv-sec" id="nv-intent-chain">
-  <h2>意图链路：一条验收标准从冻结到对账的全程连线</h2>
+  <h2>意图通路：一条验收标准从冻结到对账的全程连线</h2>
   <p class="nv-lead">需求保真的证据不在"某人说过"，而在链上每个环节都留下可反查的工件。下图逐条连线 G1 冻结的验收标准（AC）→ 系分稿 → 编码门禁测试日志 → 独立测试报告 → UAT 对账判定；全部取自中央仓真实文件，缺失环节如实标 ⬜。</p>
   <div class="nv-ic-rows">""" + rows_html + """</div>
   <p class="nv-note">数据源：docs/requirements/*.freeze.md（G1 冻结）、docs/analysis/AN-*-analysis.md（系分）、docs/evidence/DEV-*-testlog.txt（G3 分支测试日志）、docs/test/*test-report*.md（G4 独立测试）、docs/acceptance/*-acceptance.md（UAT 逐条判定）——生成时程序化解析，非人工誊写。</p>
@@ -401,9 +401,9 @@ def render_intent_chain(sim) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# 第 0 章 推演逻辑与协作顺序总述（V5 §8.2 第 0 章 / 8.3 R15，补遗⑫收编）
+# 第 0 章 推演逻辑与协作顺序总述（V5 §8.2 第 0 章 / 8.3 R15，补遗⑫并入）
 # 单一事实源：unified-report-gen.py 的内联实现自本函数起为历史副本；
-# final-report-merge.py（双层正本）消费本函数。一切数字实算，取不到标 ⬜。
+# final-report-merge.py（双层正本）消费本函数。一切数字实测统计，取不到标 ⬜。
 # ══════════════════════════════════════════════════════════════════════
 
 _CH0_ACTS = [
@@ -461,7 +461,7 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None):
                '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
                '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
                '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'
-               '六道硬闸守住意图对齐与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
+               '六道强制关卡守住意图核对一致与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
                '产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），'
                '双 loop=skill 内循环 × swarm 外循环。</p></div>')
 
@@ -475,13 +475,13 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None):
         tri_html = '（截图目录未提供——如实标注）'
     out.append('<div class="gatebox"><b style="font-size:14px">演示动线（驾驶舱单面）</b>'
                '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 驾驶舱工作台（任务/在线 chips·注意力条·中栏会话画布）'
-               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全链路追踪页签） → IDE 画布（任务简报·交互编码）'
+               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全程追踪页签） → IDE 画布（任务简报·交互编码）'
                ' → 治理中心（六闸工件·应用资产·组织）——全流程不出 /app 路由树。</p>'
                f'<p style="margin:4px 0;font-size:12.5px;color:#57606a">三功能区证据（R7 核验口径）：{tri_html}</p></div>')
 
     out.append('<h3>26 步六阶段分幕总览</h3>'
                '<div class="meta">每幕一行：目标 · 主角（RACI 摘要）· 闸门位置；先读此表建立全局，再走下方 26 步实录。'
-               '闸门状态列自本轮闸门表/落键实抽。</div>'
+               '闸门状态列自本轮闸门表/写入通过标记实抽。</div>'
                '<table><tr><th>幕</th><th>步骤</th><th>目标</th><th>主角（谁在做什么）</th><th>闸门</th><th>本轮</th></tr>')
     for act, rng, goal, who, gates, gk in _CH0_ACTS:
         st = ''
@@ -489,14 +489,14 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None):
             if gate_ok.get(gk):
                 st = '<span style="color:#059669;font-weight:700">✓ 已过</span>'
             else:
-                st = '<span style="color:#b45309">未过/未落键（见审计叠加层）</span>'
+                st = '<span style="color:#b45309">未过/未写入通过标记（见审计叠加层）</span>'
         out.append(f'<tr><td><b>{act}</b></td><td>步 {rng}</td><td>{goal}</td>'
                    f'<td style="font-size:12px">{who}</td><td>{gates}</td><td>{st}</td></tr>')
     out.append('</table>')
 
     evts = parse_collab_events(evid)
     out.append(f'<h3>RACI 协作时序线（scenario.log 实抽，{len(evts)} 条）</h3>'
-               '<div class="meta">数据源=导演侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
+               '<div class="meta">数据源=监控侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
                '谁在何时发起、谁执行、谁把关、何处打回，时间线自明；锚点（event_id $xxx／t_ 卡号）可反查。</div>')
     if evts:
         out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
