@@ -10,6 +10,8 @@
 # 红线：一切数字自 issues.log / state.env 实算注入占位标记（{{...}}），取不到留 ⬜
 # 不编造；PART 1 措辞与处置终态对齐（已修项不得写"待修"）。
 import argparse
+import html
+import importlib.util
 import os
 import re
 import sys
@@ -481,6 +483,65 @@ def split_layout(body_inner: str):
     return nav.group(0), main.group(1), False
 
 
+# ── V8.4 机器明细折叠附录（§5.4 形式：折叠≠裁剪，全量数据在位、默认收起）──
+def fold_machine_appendix(machine_main: str, n_disp: int):
+    """第 8 章（问题单终态）台账明细折叠为 <details>：正文留章题+汇总，全量唯一键/DISP
+    明细表收进折叠区（可检索可反查）。返回 (html, 折叠表数)；章未命中返回 (原文, 0)。"""
+    m = re.search(r'<h2[^>]*id="ch8-issues"', machine_main)
+    if not m:
+        return machine_main, 0
+    start = m.start()
+    nxt = re.search(r'<h2[ >]', machine_main[start + 10:])
+    end = start + 10 + nxt.start() if nxt else len(machine_main)
+    sec = machine_main[start:end]
+    tables = re.findall(r'<table.*?</table>', sec, re.S)
+    if not tables:
+        return machine_main, 0
+    folded = ('<details class="machine-appendix" style="margin:8px 0">'
+              f'<summary style="cursor:pointer;font-weight:600;color:#475569">▶ 机器明细·问题单台账全量'
+              f'（DISP 明细 {n_disp} 条——默认收起，点击展开；全量在位可反查，非裁剪）</summary>'
+              + ''.join(tables) + '</details>')
+    head = sec[:sec.find(tables[0])] if tables[0] in sec else sec.split('<table')[0]
+    tail = sec[sec.rfind(tables[-1]) + len(tables[-1]):] if tables[-1] in sec else ''
+    new_sec = head + folded + tail
+    return machine_main[:start] + new_sec + machine_main[end:], len(tables)
+
+
+# ── V8.4 人读层 jargon 体检（§5.5 文案质量④：HARD>0 拒出报告；词表与
+#    overlay/scripts/plan-html/jargon-check.py 同源维护，禁复制词表防漂移）──
+_JARGON_CANDIDATES = [
+    os.environ.get('MX_JARGON_CHECK', ''),
+    str(Path(__file__).resolve().parent.parent / 'overlay' / 'scripts' / 'plan-html' / 'jargon-check.py'),
+    '/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
+    '/Volumes/nvme2230/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
+]
+
+
+def _load_jargon_words():
+    p = next((c for c in _JARGON_CANDIDATES if c and Path(c).exists()), None)
+    if not p:
+        raise SystemExit('[final-report-merge] jargon 词表未找到（overlay/scripts/plan-html/jargon-check.py；'
+                         '可用 MX_JARGON_CHECK 覆盖路径）——V8.4 体检 fail-closed，不静默跳过')
+    spec = importlib.util.spec_from_file_location('jargon_check', p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # 模块级常量；main 有 __name__ 守卫不执行
+    return mod.HARD, getattr(mod, 'META_QUOTE', ())
+
+
+def jargon_gate(human_text: str):
+    """人读层（PART1/叙事层/步叙事）HARD 扫描。括注（术语卡首现释义等）不计入——
+    括注即释义位，扫描它等于惩罚合规行为。返回违规清单 [(词, 语境)]。"""
+    hard, meta_quote = _load_jargon_words()
+    plain = html.unescape(re.sub(r'<[^>]+>', ' ', human_text))
+    plain = re.sub(r'（[^（）]*）', ' ', plain)  # 括注（含 gloss 展开）豁免
+    hits = []
+    for ln in plain.splitlines() or [plain]:
+        for w in hard:
+            if w in ln and not any(m in ln for m in meta_quote):
+                hits.append((w, ln.strip()[:60]))
+    return hits
+
+
 def main():
     ap = argparse.ArgumentParser(description='最终报告双层正本合并器')
     ap.add_argument('--run', required=True, help='RUN_ID（runs/ 目录名）')
@@ -525,6 +586,11 @@ def main():
 
     # 第 0 章（R15）：state 落键实算闸门态；协作时序自 scenario.log 实抽
     ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps')
+
+    # V8.4（run13 起）：机器明细折叠附录——第 8 章台账全量收进 <details>（折叠≠裁剪）
+    _n_fold = 0
+    if args.run >= '20261010-v8-run13':
+        machine_main, _n_fold = fold_machine_appendix(machine_main, n_disp)
 
     import datetime
     gen_time = datetime.datetime.now().strftime('%H:%M')
@@ -620,9 +686,21 @@ def main():
 </body></html
 </body></html>'''
 
+    # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。
+    #    扫描面=PART1+步叙事（st-story）；机器档案与折叠附录不在人读主线，不受此门约束。──
+    if args.run >= '20261010-v8-run13':
+        _story_txt = ' '.join(re.findall(r'<p class="st-story">(.*?)</p>', machine_main, re.S))
+        _hits = jargon_gate(part1 + ' ' + _story_txt)
+        if _hits:
+            for w, ctx in _hits[:10]:
+                print(f'[final-report-merge] jargon HARD 「{w}」 …{ctx}…', file=sys.stderr)
+            raise SystemExit(f'[final-report-merge] 人读层 jargon 体检 HARD {len(_hits)} 处>0——'
+                             '改成人话再合并（词表=overlay/scripts/plan-html/jargon-check.py 同源；final-report 不落盘）')
+
     out_path = evid / 'final-report.html'
     out_path.write_text(out, encoding='utf-8')
-    print(f'final report written: {out_path} ({len(out)} bytes; PART1 issues {n_issue} records/{n_key} keys, DISP {n_disp})')
+    print(f'final report written: {out_path} ({len(out)} bytes; PART1 issues {n_issue} records/{n_key} keys, DISP {n_disp}'
+          + (f', 机器明细折叠 {int(_n_fold)} 表)' if _n_fold else ')'))
 
 
 if __name__ == '__main__':
