@@ -305,6 +305,7 @@ const briefingEngineProgress = computed(() => {
     lastActivityAt: p.lastActivityAt,
     dispatchCount: p.dispatchCount,
     dispatchOkCount: p.dispatchOkCount,
+    milestones: p.milestones,
   }
 })
 const briefingOpen = ref(false)

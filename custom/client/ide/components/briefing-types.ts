@@ -72,6 +72,8 @@ export interface BriefingEngineProgress {
   lastActivityAt?: number
   dispatchCount: number
   dispatchOkCount: number
+  /** 技能侧里程碑时间线（引擎站点面缺席时的进度呈现） */
+  milestones?: Array<{ ts: string; milestone: string; status?: string; note?: string }>
 }
 
 /** 辅助会话追问组装：带任务上下文前缀发往主会话（同 IdeTaskContextBar assistant 模式） */
