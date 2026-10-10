@@ -31,6 +31,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -158,7 +159,8 @@ def main():
         print(f'[r18-collect] step {a.step} 对话入载荷：{len(msgs)} 条消息（全文未截断）')
     elif a.mode == 'op':
         entry.setdefault('ops', []).append(
-            {'title': a.title, 'entry': a.entry, 'frames': a.frames, 'note': a.note})
+            {'title': a.title, 'entry': a.entry, 'frames': a.frames, 'note': a.note,
+             'ts': int(time.time())})  # V8.4 §5.5 帧③时刻窗锚：采集时刻即真值（审计对 run 窗口核验）
         print(f'[r18-collect] step {a.step} 操作序列入载荷：{len(a.frames)} 帧')
     elif a.mode == 'effect':
         entry['effect'] = {'text': a.text,
@@ -168,6 +170,7 @@ def main():
         if not a.gen and not a.invoke:
             die('skill 登记须至少带一帧（--gen 生成过程 / --invoke 开发调用）')
         sk = entry.setdefault('skill', {'gen': [], 'invoke': []})
+        sk['ts'] = int(time.time())  # V8.4 帧③时刻窗锚（同 op）
         for bucket, frames in (('gen', a.gen), ('invoke', a.invoke)):
             lst = sk.setdefault(bucket, [])
             for f in frames:
@@ -179,6 +182,7 @@ def main():
               f'（§5.6 必采矩阵 达标线 gen≥{3} invoke≥{2}）')
     elif a.mode == 'deliver':
         dlv = entry.setdefault('delivery', {'frames': []})
+        dlv['ts'] = int(time.time())  # V8.4 帧③时刻窗锚（同 op）
         lst = dlv.setdefault('frames', [])
         for f in a.frame:
             if f not in lst:
