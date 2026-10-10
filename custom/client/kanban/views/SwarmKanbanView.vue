@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-// UX 裁决 E（2026-10-03）：?new=1 深链直开建卡表单——TasksView 传入后首列展开建卡器。
+// UX 裁决 E（2026-10-03）：?new=1 直达链接打开建卡表单——TasksView 传入后首列展开建卡器。
 const props = defineProps<{ autoOpenCreate?: boolean }>()
 import { ref, computed, onMounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
@@ -229,13 +229,31 @@ async function handleColumnDrop(status: KanbanTaskStatus | 'trash', e: DragEvent
 
   const entry = mergedEntries.value.find(x => x.task.id === taskId)
   if (!entry || entry.task.status === status) return
+  const fromStatus = entry.task.status
 
   try {
     await withBoard(taskId, () => store.moveTask(taskId, status))
     message.success(t('kanban.message.taskMoved'))
+    fireColumnAutomation(taskId, fromStatus, status, entry.task.workspace_path)
   } catch (err) {
     message.error(t('kanban.message.moveFailed'))
   }
+}
+
+// 列自动化触发器（进度可感知链·产品前端生产者）：拖卡移动成功后，带任务卡 ID
+// 调产品列派发端点——配置了该列编排即派发（无编排/无工作区关联则服务端空转），
+// 失败静默不打扰移动本身（fail-soft，与后台感知条同哲学）。幂等由服务端 pending
+// 槽与 commandId 台账兜底。
+async function fireColumnAutomation(taskId: string, from: string, to: string, workspacePath: string | null): Promise<void> {
+  if (!workspacePath) return
+  try {
+    const { authFetch } = await import('@/custom/ide/utils/auth-fetch')
+    await authFetch('/api/column-automation/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, workspacePath, taskId }),
+    })
+  } catch { /* 列自动化失败不回滚移动、不弹错（后台动作） */ }
 }
 
 function handleColumnDragOver(_status: KanbanTaskStatus | 'trash', e: DragEvent) {
