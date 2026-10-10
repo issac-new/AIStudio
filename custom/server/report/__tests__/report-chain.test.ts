@@ -4,6 +4,7 @@ import {
   GATE_VIEW_STEPS,
   MIN_ARTIFACT_VIEWS,
   checkFaceRateLine,
+  checkFrameEvidence,
   checkGateArtifacts,
   checkQgateDiscipline,
   countArtifactViews,
@@ -74,6 +75,37 @@ describe('报告验收断言（§5.4/§5.5 机器执法面，正本移植）', (
 
     const noDist = qgateBlock('只有结论没有分布行')
     expect(checkQgateDiscipline(noDist).ok).toBe(false)
+  })
+})
+
+describe('V8.4 截图红线（帧证据三断言——与 simharness A5d/A5g 双侧同语义）', () => {
+  const fig = (src: string, cap: string) =>
+    `<figure><img src="${src}"><figcaption><span class="shot-kind">界面实拍</span>${cap}</figcaption></figure>`
+
+  it('① 步结果式/纯位序模板图注打回，画面描述式过', () => {
+    expect(checkFrameEvidence(fig('screenshots/steps/7-op1-after.png', 'G1 冻结后（freeze 在仓）')).badCaptions)
+      .toEqual(['「G1 冻结后（freeze 在仓）」步结果式'])
+    expect(checkFrameEvidence(fig('screenshots/steps/25-op1-before.png', '① 操作前')).badCaptions)
+      .toEqual(['「① 操作前」纯位序模板'])
+    expect(checkFrameEvidence(fig('screenshots/steps/3-op1-before.png', '登录/账号面·前')).ok).toBe(true)
+  })
+
+  it('② 同源帧多处嵌入打回（run12 g1_frozen 双图注双嵌同型）', () => {
+    const h = fig('screenshots/steps/g1_frozen-op1-after.png', '冻结要素页·后') +
+      fig('screenshots/steps/g1_frozen-op1-after.png', 'G1 冻结后（另注）')
+    expect(checkFrameEvidence(h).duplicatedSources).toEqual(['screenshots/steps/g1_frozen-op1-after.png'])
+  })
+
+  it('④b 补拍标记入场打回（V8.4 §5.6 ⑩ 补拍件禁入正本）', () => {
+    expect(checkFrameEvidence(fig('screenshots/steps/26-op1-after.png', '报告面·后（补拍）')).backfillMarker)
+      .toBe('（补拍）')
+    expect(checkFrameEvidence('<div>alt 含收官后补拍</div>').backfillMarker).toBe('收官后补拍')
+  })
+
+  it('正向三断言零误杀', () => {
+    const h = fig('screenshots/steps/20-op1-before.png', '发布面板·前') +
+      fig('screenshots/steps/20-op1-after.png', '发布面板·后')
+    expect(checkFrameEvidence(h)).toMatchObject({ badCaptions: [], duplicatedSources: [], backfillMarker: null, ok: true })
   })
 })
 
