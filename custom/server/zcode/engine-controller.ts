@@ -99,6 +99,7 @@ export function getMentionDispatch(): MentionDispatchService {
     onOutcome: (o) => appendDispatchOutcome({
       kind: 'mention', target: o.target, mentionKind: o.mentionKind, reason: o.reason,
       commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
+      ...(o.taskId ? { taskId: o.taskId } : {}),
       detail: o.detail?.slice(0, 200),
     }),
   })
@@ -169,7 +170,7 @@ router.post('/projection/unwatch', async (ctx) => {
 })
 
 router.post('/mention', async (ctx) => {
-  const { workspacePath, text } = (ctx.request.body ?? {}) as { workspacePath?: string; text?: string }
+  const { workspacePath, text, taskId } = (ctx.request.body ?? {}) as { workspacePath?: string; text?: string; taskId?: string }
   if (typeof workspacePath !== 'string' || workspacePath.length === 0 || typeof text !== 'string' || text.length === 0) {
     ctx.status = 400
     ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 与 text 必填' }
@@ -180,7 +181,7 @@ router.post('/mention', async (ctx) => {
   const runtime = getZcodeProjectionRuntime()
   const service = getMentionDispatch()
   // 自触发抑制 per-request 取发起者（P-C(d)）：从 ctx.state.user 取，构造器字段废弃。
-  const outcomes = await service.dispatch({ workspacePath, text, mentionAuthor: callerOf(ctx)?.username })
+  const outcomes = await service.dispatch({ workspacePath, text, mentionAuthor: callerOf(ctx)?.username, ...(typeof taskId === 'string' && taskId ? { taskId } : {}) })
   // run 可追溯：成功派发的会话立即挂上投影（conversation topic → /zcode 房间）。
   for (const o of outcomes) {
     if (o.reason === 'queued' && o.sessionId) {
