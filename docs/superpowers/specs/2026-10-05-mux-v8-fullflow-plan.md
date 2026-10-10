@@ -27,7 +27,7 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的驾驶舱。这�
 
 **五个部分怎么读：** 先读第一部分（要什么）和第五部分（怎么算成），这是主干；第二部分是机制设计（怎么保证），给实现和评审的人；第三、四部分是每一轮的实例与操作细节，给执行的人。换需求单只换第三部分，其余不变。
 
-> **文档定位**：全流程推演唯一正本（V8.6 人机协同组织层同步版，2026-10-10 定稿：任务协同图页签/任务工厂模板入库与复用/容量分析面板三面入列 §1.2/§1.0.1/§2.5，页签事实勘误九→十一；本轮只增观察面与证据可引用项，不触 26 步主链/六道关卡/交付物模板等冻结面；概念映射与代码锚见《[2026-10-10-orchestration-capability-spec.md](2026-10-10-orchestration-capability-spec.md)》）。前一版 V8.5 回归轮口径修订（DISP 主体精确配对/回归轮三附加纪律/打回判词语义/登记幂等与闸键首过保护/并行度段界锚）修订明细见《[2026-10-10-run13-retrospective.md](../2026-10-10-run13-retrospective.md)》F 编号表。报告生成器与审计器以本文件为解析源；26 步主链、六道关卡、治理机制、交付物模板字段语义冻结，变更须整轮推演验证。历史沿革、历轮事故、补丁谱系一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-系统架构师Aive.md)》。
+> **文档定位**：全流程推演唯一正本（V8.7 本体语义层同步版，2026-10-10 定稿：本体工作台/看板摄取/语义体检页签/结卡校验三路线入列 §1.2/§2.5/§2.6.1，页签事实勘误十一→十二；本轮只增观察面与证据可引用项，不触 26 步主链/六道关卡/交付物模板等冻结面；概念与代码锚见《[2026-10-10-ontology-studio-spec.md](2026-10-10-ontology-studio-spec.md)》）。前一版 V8.6 人机协同组织层同步（任务协同图页签/任务工厂模板入库与复用/容量分析面板三面入列），概念映射与代码锚见《[2026-10-10-orchestration-capability-spec.md](2026-10-10-orchestration-capability-spec.md)》。前一版 V8.5 回归轮口径修订（DISP 主体精确配对/回归轮三附加纪律/打回判词语义/登记幂等与闸键首过保护/并行度段界锚）修订明细见《[2026-10-10-run13-retrospective.md](../2026-10-10-run13-retrospective.md)》F 编号表。报告生成器与审计器以本文件为解析源；26 步主链、六道关卡、治理机制、交付物模板字段语义冻结，变更须整轮推演验证。历史沿革、历轮事故、补丁谱系一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-系统架构师Aive.md)》。
 
 ## 第一部分 方案目标
 
@@ -136,6 +136,8 @@ flowchart TB
 **交付与协作（过程资产）**：完整入仓文档链（冻结单→资产表→组织矩阵→任务清单→系统分析稿→概要设计→排期→测试报告→发布计划与说明→完备性检查→验收报告→工作台账→审计意见书→复盘，字段级模板见 §2.7）；全过程留痕互链（matrix event_id／看板卡号／git commit 三源互链）；治理链条完整（六道关卡全部通过、问题单 100% 处置、经验入分组记忆库）。
 
 **人机协同组织面（2026-10-10 V8.6 入列）**：任务协同图：任一业务结果（根任务卡）一张图看清人、智能体与控制点如何协同完成，配五问面板（结果谁负责/人机怎么分工/哪里必须人确认/异常怎么升级/留下什么可复用资产）；任务工厂：完成运行一键转为可复用模板（来源可溯、复用计数累加、台账保存即提交）；容量分析：按人聚合估算人日/实际人日、智能体已承接人日与估算覆盖率（覆盖率与口径如实呈现，未估算不折算）。验收锚点=界面实拍帧+端点实测输出（§2.5 V8.6 块引）。
+
+**本体语义层（2026-10-10 V8.7 入列）**：知识资产以可校验语义契约形态存在——本体工作台（/app/ontology）五要素建模（实体类型/数据属性/对象属性带 Domain-Range/公理/规则）+ 写入即校验（error 拒写 422）+ IRI/版本快照回滚 + JSON-LD/SHACL/Turtle 三格式导出；看板数据自动进本体（一键摄取：任务/执行人/依赖/运行清单，替换语义幂等）；结卡校验双半环——轮询环（column_transition 增量→单任务校验→error 聚合推冲突收件箱，30s 档）与执行式门（agent 面 validatorExec 真跑校验，可拦卡；工具缺席 fail-open 放行留痕）。验收锚点=端点实测输出+结卡事件留痕（§2.5 V8.7 块引）。
 
 **呈现**：HTML 报告完整重现全过程（每步四段+全量呈现，见 §5.4/§5.5），并以第 4 章产品成效块集中呈现交付物成效（功能实证/质量数字/交付完整度，§5.4）。
 
@@ -665,13 +667,15 @@ graph TB
 
 > **截图拍摄位可执行正本**（2026-10-10 用户指令「按 UI 功能规划、不乱拍凑数」）：本表是语义正本；每步实际拍哪个页面/页签/账号由 simharness `mux/capture-plan.env` 注册表单一供源，采集射手（r18-frames）按步覆盖执行并留痕。禁止以非本表页面顶替（已知错位先例：交付门禁灯拍成运行中心、工作台账拍成沟通页；`?tab=accounts` 是交付健康页签而非账户管理页）。
 
-> **路由与页签事实**（锚点=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68、i18n-tasks-tabs.ts:14-23；启动前实际访问校验见 §4.1 前置⑤）：/app/board 为**十一个平级页签**（V8.6 勘误：原「九个」系集群健康/任务协同两轮入列后未同步）：看板/任务协同（orchestra，2026-10-10 入列）/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）/集群健康（gov-cluster）；治理中心独立路由 /app/gov 已退役，重定向至 gov-org（旧深层链接不死链）。「应用资产」=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」=数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」=服务端可见性过滤；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。
+> **路由与页签事实**（锚点=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68、i18n-tasks-tabs.ts:14-23；启动前实际访问校验见 §4.1 前置⑤）：/app/board 为**十二个平级页签**（V8.7 勘误：原「九个」→V8.6「十一个」→本轮语义体检入列后为十二个）：看板/任务协同（orchestra，2026-10-10 V8.6 入列）/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）/集群健康（gov-cluster）/语义体检（gov-ontology，2026-10-10 V8.7 入列：本体统计+契约健康度+看板一键摄取+全量违规表）；治理中心独立路由 /app/gov 已退役，重定向至 gov-org（旧深层链接不死链）。「应用资产」=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」=数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」=服务端可见性过滤；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。
 >
 > **QGate 判定流产品面（两处）**：①交付案例卡「同步 QGate 判定」（#/app/cases）：governance `GET /api/governance/qgate-verdicts`（逐门最新判定，六态→交付三态，带来源桶）→ qgate-bridge 逐门 delivery.gate 事件入案例房；空档/Matrix 未连/无房间三态如实提示。②治理健康页「机器执法实况」条（#/app/board?tab=accounts）——G1-G6 按 qgate 域映射（L0→G1、L1→G3、L2/L3→G4、L4/L5→G5）chip+来源分布行（核验/声明/降级/无信号）；G2/G6 为人工域，灰态"—"不编造。锚点=custom/server/governance/governance-controller.ts（/qgate-verdicts）、custom/client/matrix-teams/stores/qgate-bridge.ts、custom/client/ia2/views/gov/GovHealthSection.vue。
 >
 > **治理证据端点与推演侧消费**（步 23/24 证据可引用，不键控步骤）：事故报告汇编器 `/api/incident/sessions/:id/report[.md]`（三类 17 要素、七源只读实取、缺席要素如实标 absent）；自治度对账 `/api/incident/sessions/:id/autonomy`（偏差黄条）；AI 虚拟损益表 `/api/hermes/virtual-pl`；治理事件总线 `/api/hermes/governance-events`（六域三级 append-only）；机器执法判定流 `/api/governance/qgate-verdicts`；报告能力面 `/api/hermes/report/*`（PART1 骨架生成草稿+报告验收断言，§5.4 形式契约）。消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）、步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt），生成器在位即透传。
 >
 > **人机协同组织层证据面（2026-10-10 V8.6 入列，步 22/24 证据可引用，不键控步骤）**：容量分析 `GET /api/governance/capacity/overview?days=N`（SQLite 只读全库聚合：按人估算人日/已交付人日/实际人日/在途卡数+覆盖率汇总，口径注脚随响应下发）。步 22 可附导出件 evidence/capacity-overview.txt（估算覆盖率为 0 时如实呈现，是任务拆解采纳度的诚实信号而非缺陷）；任务工厂 `POST /api/graph/runs/:id/deposit-template`（完成 run 转存为 origin=factory 模板）+ 台账 `docs/admin/mission-templates.md`（治理注册表新 kind，保存即 git 提交）+ 协同图数据组合面（任务卡列表 parents/children/estimate_days 随列表带出，/api/hermes/autonomy-ladder + /api/escalation/pending + /api/graph/specs 三源客户端聚合）——步 24 复盘可引台账提交号佐证「跑过即资产」。锚点=custom/server/governance/capacity-analytics.ts、custom/server/loop/graph/graph-rest.ts（deposit-template）、custom/client/ia2/views/orchestration/OrchestrationView.vue；概念映射总正本=《2026-10-10-orchestration-capability-spec.md》。
+
+> **本体语义层证据面（2026-10-10 V8.7 入列，步 23/24 证据可引用，不键控步骤）**：本体正本与统计 `GET /api/hermes/ontology/spec`（五要素+IRI/版本+全量健康度）；看板摄取 `POST /api/hermes/ontology/ingest`（替换语义幂等，回执含任务/执行人/运行/关系四计数+被契约拦下的明细）；全量校验 `POST /api/hermes/ontology/validate`（违规三档+稳定 code）；结卡轮询环状态 `GET /api/hermes/ontology/watch/status`（lastTick=checked/ingested/violations/inboxPushed）；机器可读导出 `GET /api/hermes/ontology/export?format=jsonld|shacl|turtle`（SHACL shapes 可被外部 pyshacl 消费）。步 24 复盘可附导出件 evidence/ontology-health.txt（spec 端点输出）与 evidence/ontology-export.ttl（turtle 导出）佐证「语义资产可校验可流转」；结卡拦截实锤以 task_events 的 gate_blocked/column_transition 事件留痕（payload 含 validatorExec 结果与违规明细）。违规聚合推送进治理冲突收件箱（kind=ontology，待裁决徽标抬升=主动找人）。锚点=custom/server/ontology/（六件+watch+agent-bridge）、custom/client/ia2/views/gov/GovOntologySection.vue；方法论正本=《2026-10-10-ontology-studio-spec.md》（GB/T 48000.3 抄骨架不抄内容）。
 
 ### 2.6 治理机制（设计性条款）
 
@@ -687,6 +691,16 @@ graph TB
 8. 交付协议事件全程开启：delivery.* 协议事件层缺省启用=产品真实形态（交付案例面板由协议事件提供数据）；显式关闭（MX_DELIVERY=0）自动记问题单降级，禁静默关旗标跑全程。
 9. **delivery 事件序列完整性**：每个 stage done 事件必须随该阶段 gate pass 事件成对发射，漏发即记问题单（delivery-*-event-missing）；交付案例面板门禁灯只投影已发射事件，灯灰=事件缺口的如实呈现，禁止用叙事把缺口写成已发生。
 10. **治理证据与度量能力（能力正本=《2026-10-08-six-article-research-capabilities.md》，本条只立契约）**：①事故报告汇编：任一会话三类 17 要素一键汇编，七源只读实取，缺席要素如实标 absent 不造数；②自治度对账——理论面（自治阶梯→身份白名单→审批历史）vs 实际面（轨迹/消息/审批窗口），偏差黄条呈现；③证据 hash 链防篡改——hash(n)=sha256(前链+规范化记录体)，不重算/重算掩蔽双攻击面可检出；④缺陷二分分诊——product_gap vs implementation_gap 入证据台账（缺陷归因在"已修/观察/延后"三态外的产品/实施维度）；⑤AI 虚拟损益表——成本面（session_usage×价目）∪ 交付面（看板实耗），单位产出成本交付为零时如实缺席；⑥治理事件总线——append-only 六域三级，审批/证据裁决自动入流，只读查询面不开公开 emit（防伪造事件流）；⑦Eval 校准度量——判词自报把握 p 的分桶+ECE+Brier（以 /app/eval 为支撑）；⑧工具事件业务语义层+自治阶梯配置面（insight/assist/auto 三档+人工确认点，auto 档与确认点语义矛盾拒收）。引擎执法两段：H3-v1 执法门（瀑布 preExecute 拦截三级裁决）+permmodes v4 会话档通道（createSession.config.mode 建会话生效、switchCollaborationMode 会话内切；执法链=阶梯＞会话档＞全局档）。交互审批桥两段：待审批单入审批收件箱（一单一执行，硬边界不经桥）+瀑布级挂起（确认类裁决原地等待——批准即续跑、否决/超时（TTL 封顶）拒且单留、并发消费竞态如实拒；开关 HERMES_ENFORCE_SUSPEND 随执法总开关）。进程重启挂起即断（票据留存批后重试；跨重启续跑属引擎回合级持久化，未建前以启动扫描遗留挂起单发提醒事件缓解）。阶梯对账偏差 0 黄条持续呈现执行面证据。
+
+### 2.6.1 本体结卡校验（语义契约层，V8.7 入列）
+
+机制一句话：**结卡不止"人点头"，还要过"语义账"——任务的字段与关系在结卡时刻须通过本体数据契约**。与 §2.6 第 1 条四道锁的关系：四道锁拦流程（未评审不排期），本条拦数据（字段缺失/越枚举/关系断裂不许悄悄过关）；同属"不指望自觉、靠机制卡住"一族，但执法对象是数据形状而非流程次序。三路线各司其职（设计评估与落地实录见《2026-10-10-ontology-studio-spec.md》四阶段）：
+
+1. **轮询环（事后报告半环，默认开）**：studio 侧 30s 周期扫各板 task_events 的 column_transition 增量（断点状态文件续跑），status=done 即单任务增量摄取+校验，error 违规**按 code 聚合**推治理冲突收件箱（同码未决不重复刷；975 条实锤→聚合 1 条——逐条刷屏是治理反模式）。ONTOLOGY_WATCH=off 关。覆盖一切结卡路径（UI/CLI/agent），延迟≤轮询间隔。
+2. **执行式门（当场拦截半环，板级 opt-in）**：gates.json 给目标列声明 `validatorExec`，结卡事务内真跑 studio 单任务校验（agent 桥 `/api/ontology/agent-bridge/validate-task`，限本机回环+可选 ONTOLOGY_BRIDGE_TOKEN，cron-bridge 同款安全形态）；blocking 档违规即拦（gate_blocked 事件含违规明细），工具缺席 fail-open 放行并留痕（工具故障不是数据违规）。reason 复用 frozen 词表 validator_failed（UI 零改动）。
+3. **字面量门（轻约束，板级 opt-in）**：gates.json `validatorCommand` 要求结卡证据文本含本体校验结果字样（warning 档）——约束"证据要写校验结果"，与执行式门互补。
+
+边界（如实登记）：单任务校验为"邻居不连坐"语义（他实例存量违规不阻塞本任务结卡，由全量跑批另行呈现）；Run 实例仅登记清单（run_id/graph_id），状态字段日志面拿不到不硬造；本条为 V8.7 新增观察面，不计入六道关卡判据（§5.3 不变），证据可引用形态见 §2.5 V8.7 块。
 
 ### 2.7 交付物体系与模板字段（缺一打回的唯一依据）
 

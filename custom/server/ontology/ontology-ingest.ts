@@ -30,7 +30,7 @@ interface TaskRow {
   title: string | null
   assignee: string | null
   status: string
-  estimate_days: number | null
+  estimate_days?: number | null
 }
 
 interface LinkRow { parent_id: string; child_id: string }
@@ -76,7 +76,12 @@ export async function ingestFromKanban(opts?: { board?: string; homeDir?: string
     let db: Awaited<ReturnType<typeof openReadonly>> | undefined
     try {
       db = await openReadonly(dbPath)
-      rows = db.prepare('SELECT id, title, assignee, status, estimate_days FROM tasks').all() as unknown as TaskRow[]
+      // estimate_days 是估算轮迁移列——新建板无此列；列自适应防整板静默跳过
+      try {
+        rows = db.prepare('SELECT id, title, assignee, status, estimate_days FROM tasks').all() as unknown as TaskRow[]
+      } catch {
+        rows = db.prepare('SELECT id, title, assignee, status FROM tasks').all() as unknown as TaskRow[]
+      }
       try {
         links = db.prepare('SELECT parent_id, child_id FROM task_links').all() as unknown as LinkRow[]
       } catch { links = [] /* 无 task_links 表的老库：任务照搬，依赖关系如实缺席 */ }

@@ -24,6 +24,13 @@ import {
   deleteInstance, listSpecSnapshots, loadInstances, loadSpec, resetToSeed, rollbackSpec, saveSpec, upsertInstance,
 } from './ontology-store'
 import { ingestFromKanban, kanbanSourceOverview } from './ontology-ingest'
+import { ensureOntologyWatcher, ingestSingleTask, startOntologyWatchIfEnabled } from './ontology-watch'
+import { registerOntologyAgentBridgeRoutes } from './ontology-agent-bridge'
+
+// 轮询环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面，582 先例）
+export { startOntologyWatchIfEnabled } from './ontology-watch'
+// agent 桥注册转发（公开段挂载——cron-bridge 同款；validatorExec 的无鉴权通道）
+export { registerOntologyAgentBridgeRoutes } from './ontology-agent-bridge'
 import { exportOntology, type ExportFormat } from './ontology-export'
 import { validateInstances, validateSpec } from './ontology-validate'
 
@@ -200,6 +207,46 @@ router.post('/ingest', async (ctx) => {
     ctx.status = 500
     ctx.body = { ok: false, detail: `摄取失败：${e instanceof Error ? e.message : String(e)}` }
   }
+})
+
+// ---- 结卡校验面（四阶段三路线） ----
+
+/** 单任务增量摄取+校验（毫秒级；agent 面 validatorExec 校验器与调试共用）。 */
+router.post('/validate-task', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { board?: unknown; taskId?: unknown }
+  const board = typeof body.board === 'string' && body.board ? body.board : 'main'
+  const taskId = typeof body.taskId === 'string' && body.taskId ? body.taskId : ''
+  if (!taskId) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'taskId 必填；board 缺省 main' }
+    return
+  }
+  const r = await ingestSingleTask(board, taskId)
+  ctx.body = {
+    ok: r.ok, found: r.found, written: r.written,
+    violations: r.violations,
+    /** rc 形态（validatorExec 消费：0=过；1=违规；2=任务缺席——缺席不算违规） */
+    rc: r.ok ? 0 : 1,
+  }
+})
+
+/** 轮询环状态 + 手动兜底推进（force 绕节流立即跑一轮）。 */
+router.get('/watch/status', (ctx) => {
+  const w = ensureOntologyWatcher()
+  ctx.body = {
+    ok: true,
+    watch: {
+      enabled: process.env.ONTOLOGY_WATCH !== 'off',
+      intervalMs: Number(process.env.ONTOLOGY_WATCH_INTERVAL_MS ?? 30_000),
+      lastTick: w.lastTick,
+    },
+  }
+})
+
+router.post('/watch/tick', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const r = await ensureOntologyWatcher().runOnce()
+  ctx.body = { ok: !r.error, tick: r }
 })
 
 export const ontologyRoutes = router
