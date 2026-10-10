@@ -404,7 +404,26 @@ PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
+PART1_RUN13 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · lite 轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 起跑（lite 轮，约 6-9 小时）</span></h1>
+
+<div class="card info"><b>这轮和全量轮有什么不同：</b>这是第一次「lite 轮」（分层提速方案①）——需求和设计环节上一轮已经冻结归档，这轮直接从开发干起：六路开发齐发→集成测试→发布评审→验收→审计→报告。跳过的环节不装样子：报告里它们标着「夹具·run12」，意思是「沿用上一轮的真实成果，不是这轮做的」。</div>
+
+<div class="card info"><b>这场推演在验证什么：</b>① 产品迭代的真实节奏——日常回归不需要每次重走全程；② 三件新东西的首跑：给六张开发卡发「边界纪律」（只许交自己的分支、不许替别人干活——上一轮有人越界帮倒忙）、图执行引擎正式接管调度（GRAPH_ENGINE=on）、判词纪律（防上一轮的模板字样误伤）；③ 报告叙事集起跑前预写（上一轮报告步骤空等一场的教训）。</div>
+
+<div class="card ok"><b>本轮结论：</b>【收官链回填：主链是否全通、哪几关一次过/打回、六路开发交付几张、测试成绩单】</div>
+
+<div class="card warn"><b>真实发生的缺口（记单在案，不藏）：</b>【收官链回填：AC-5 为源轮已知不通过项（本轮判词如实呈现）；其余当轮新缺口实录】</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 前半（步 1-17）是夹具带——灰色「夹具·run12」标签逐标注明来源；后半（步 18-26）是本轮真实执行的九步，{{n_frames}} 张实拍帧全部来自当轮。全部计数自 issues.log 与 state.env 实算。</div>
+
+<h2>研发全流程治理有效性（实算）</h2>
+{{ch0}}
+'''
+
 PART1_BY_RUN = {
+    '20261010-v8-run13': PART1_RUN13,
     '20261009-v8-run12': PART1_RUN12,
     '20261007-v8-run11': PART1_RUN11,
     '20261007-v8-run10': PART1_RUN10,
