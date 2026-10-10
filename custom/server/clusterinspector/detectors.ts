@@ -21,6 +21,8 @@ export interface DetectOptions {
   inflateHigh?: number
   /** D4 静默判卡阈值 ms（默认 300000=5min） */
   stallQuietMs?: number
+  /** D7 在办卡·档案静默阈值 ms（默认 900000=15min；日志尾无错也算） */
+  agentSilentMs?: number
   /** D5 轮内同检测器异常数达到该值即追加风暴事件（默认 3） */
   stormClusterSize?: number
   nowMs?: number
@@ -136,6 +138,38 @@ export function detectStorm(anomalies: Anomaly[], opts: DetectOptions = {}): Ano
 }
 
 /** 全量检测入口 */
+/** D7 在办任务·档案静默交叉（run14 三次停摆实战：日志无错但人走了）：
+ * 在办卡（running）的 assignee 档案日志静默超阈即报——不要求日志尾为错误态
+ * （区别于 D4）。真空闲档案无在办卡不误报。 */
+export function detectTaskAgentSilence(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const quiet = opts.agentSilentMs ?? 900_000
+  const now = opts.nowMs ?? Date.now()
+  if (!snap.runningCards.ok || !snap.profiles.ok) return []
+  const byProfile = new Map<string, { mtimeMs: number; cards: string[] }>()
+  for (const c of snap.runningCards.cards) {
+    const a = (c.assignee ?? '').trim()
+    if (!a) continue
+    const cur = byProfile.get(a) ?? { mtimeMs: 0, cards: [] }
+    cur.cards.push(c.id)
+    byProfile.set(a, cur)
+  }
+  const out: Anomaly[] = []
+  for (const t of snap.profiles.tails) {
+    const hit = byProfile.get(t.profile)
+    if (!hit) continue
+    const silent = now - t.mtimeMs
+    if (silent > quiet) {
+      out.push({
+        detector: 'task.agent-silent', subject: `profile:${t.profile}`,
+        severity: 'warn',
+        summary: `在办任务但档案静默：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）`,
+        detail: { cards: hit.cards, quietMs: quiet },
+      })
+    }
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -143,6 +177,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectStaleWorkers(snap),
     ...detectSessionStall(snap, opts),
     ...detectCapacityPump(snap),
+    ...detectTaskAgentSilence(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
