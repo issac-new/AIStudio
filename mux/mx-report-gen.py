@@ -2276,10 +2276,13 @@ def qgate_block(n: int) -> str:
 
 # 六文调研治理能力入报告证据链（方案 §2.5 治理证据端点注/§2.6-10）：
 # 步 23 事故报告汇编、步 24 自治度对账+虚拟损益表——evidence/ 导出件在位才透传。
+# V8.7（2026-10-10 本体语义层，方案 §2.5 V8.7 块）：步 24 追加本体体检+Turtle 导出。
 _GOV_EVIDENCE = {
     23: [('incident-report.md', '事故报告汇编（三类 17 要素，/api/incident/sessions/:id/report 导出件）')],
     24: [('autonomy-reconcile.txt', '理论/实际自治度对账（/autonomy 导出件，偏差黄条）'),
-         ('virtual-pl.txt', 'AI 虚拟损益表（/api/hermes/virtual-pl 导出件）')],
+         ('virtual-pl.txt', 'AI 虚拟损益表（/api/hermes/virtual-pl 导出件）'),
+         ('ontology-health.txt', '本体语义层体检（/api/hermes/ontology/spec 导出件：五要素统计+IRI/版本+契约健康度三档）'),
+         ('ontology-export.ttl', '本体 Turtle 导出（机器可读语义资产，SHACL/JSON-LD 同源经 ?format= 切换）')],
 }
 
 def gov_evidence_block(n: int) -> str:
