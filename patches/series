@@ -545,3 +545,9 @@
 
 # 589 普通用户面 status 调用清零（run13 步18 根因收尾）：WorkflowView/GroupChatLinkView 换吃 availability（587 已改 profiles/GroupChatPanel，超管面 AgentManagerView 保留 status 正当调用；守门=agent-status-caller-whitelist.test）
 589-client-agent-status-availability-workflow-linkview.patch
+
+# 590 本体工作台路由挂载（补登：patch 文件已随 0c119fe7 提交但漏登 series——不登记则新鲜构建 ontology 路由不挂载；此处补全对方交付）
+590-server-ontology-routes.patch
+
+# 591 研发进度可感知（三件全做轮）：/api/progress/tasks 按任务聚合（派发台账 taskId × 会话投影阶段时间线）；配套 mention taskId 贯通（task 级推送房间激活）
+591-server-progress-task-routes.patch

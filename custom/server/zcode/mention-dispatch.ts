@@ -78,6 +78,8 @@ export interface MentionOutcome {
   detail?: string
   sessionId?: string
   commandId?: string
+  /** 关联看板任务卡（t_xxx，进度可感知链）：入参透传，供 task 级推送房间与进度聚合。 */
+  taskId?: string
   at: number
 }
 
@@ -114,6 +116,8 @@ export interface DispatchParams {
   text: string
   /** 派单发起者（自触发抑制判定；缺省回退构造器字段，再缺省视为系统发起不禁停）。 */
   mentionAuthor?: string
+  /** 关联看板任务卡 ID（可选）：透传到 MentionOutcome/台账/task 级推送房间（zcode:<ws>:t:<taskId>）。 */
+  taskId?: string
 }
 
 // ── 纯判定核（P-A(d)）────────────────────────────────────────────────────────
@@ -294,6 +298,7 @@ export class MentionDispatchService {
       workspaceId: params.workspacePath,
       target: token.target,
       mentionKind: token.kind,
+      ...(params.taskId ? { taskId: params.taskId } : {}),
       at: this.now(),
     }
     const emit = (o: MentionOutcome) => { this.onOutcome(o); return o }

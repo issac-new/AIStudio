@@ -31,6 +31,8 @@ export interface DispatchLedgerEntry {
   commandId?: string
   sessionId?: string
   workspaceId?: string
+  /** 关联看板任务卡（进度可感知链）：mention 入参透传，进度聚合按此键关联引擎 run。 */
+  taskId?: string
   detail?: string
 }
 
