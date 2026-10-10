@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/plan-view}"
 SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
-TITLE="${2:-Swarm Studio 全流程推演方案 V8.4（证据纪律修订版）}"
+TITLE="${2:-Swarm Studio 全流程推演方案 V8.5（回归轮口径修订版）}"
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
 # 「enhance 读死 /tmp/plan-view 误碰别的输出目录」的坑（2026-10-10 实锤摸到活页 mtime）
