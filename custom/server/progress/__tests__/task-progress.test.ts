@@ -78,3 +78,45 @@ describe('task-progress REST 信封（控制器）', () => {
     expect(String((mod.progressRoutes as unknown as { opts?: { prefix?: string } }).opts?.prefix)).toBe('/api/progress')
   })
 })
+
+describe('里程碑联合（消费侧接线补全）', () => {
+  const ledger2: DispatchLedgerEntry[] = [
+    entry({ taskId: 't_manual', target: 'zcode', reason: 'queued', sessionId: 's9', ts: 100, workspaceId: '/ws/manual' }),
+  ]
+  it('无引擎站点面时以 --task 归卡里程碑回退 currentPhase；非本卡条目不入', () => {
+    const idx = new Map([['/ws/manual', [
+      { ts: '2026-10-10T10:00:00Z', milestone: '需求理解', status: 'done', note: '四要素过', task: 't_manual' },
+      { ts: '2026-10-10T11:00:00Z', milestone: '编码实现', status: 'done', note: 'T01 全绿', task: 't_manual' },
+      { ts: '2026-10-10T11:30:00Z', milestone: '测试验证', status: 'started', task: 't_other' },
+    ]]])
+    const r = taskProgressOverview(ledger2, new Map(), { milestonesByWorkspace: idx })
+    const m = r.tasks.find((x) => x.taskId === 't_manual')!
+    expect(m.milestones.length).toBe(2)
+    expect(m.milestones[1]!.milestone).toBe('编码实现')
+    expect(m.currentPhase).toBe('编码实现') // 引擎面缺席 → 最近里程碑回退
+    expect(m.phases.length).toBe(0)
+  })
+  it('引擎站点面在位时 currentPhase 不被里程碑覆盖', () => {
+    const sessions = new Map([['s9', session({ sessionId: 's9', phase: 'running', workflowActivity: { runs: [{ runId: 'r1', status: 'running', currentPhase: '站点X', phases: [{ name: '站点X', status: 'running' }] }] } })]])
+    const idx = new Map([['/ws/manual', [{ ts: '2026-10-10T10:00:00Z', milestone: '需求理解', status: 'done', task: 't_manual' }]]])
+    const r = taskProgressOverview(ledger2, sessions, { milestonesByWorkspace: idx })
+    expect(r.tasks[0]!.currentPhase).toBe('站点X')
+  })
+  it('里程碑文件读取：工作区根+wt-* 兄弟，坏行跳过有界', async () => {
+    const { readWorkspaceMilestones } = await import('../task-progress-store')
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const root = mkdtempSync(join(tmpdir(), 'ms-'))
+    mkdirSync(join(root, 'wsA', '.swarm-yuan'), { recursive: true })
+    writeFileSync(join(root, 'wsA', '.swarm-yuan', 'milestones.jsonl'),
+      '{"ts":"2026-10-10T10:00:00Z","milestone":"需求理解","status":"done","task":"t_a"}\nnot-json\n')
+    mkdirSync(join(root, 'wt-t_a', '.swarm-yuan'), { recursive: true })
+    writeFileSync(join(root, 'wt-t_a', '.swarm-yuan', 'milestones.jsonl'),
+      '{"ts":"2026-10-10T12:00:00Z","milestone":"测试验证","status":"done","task":"t_a"}\n')
+    const got = readWorkspaceMilestones(join(root, 'wsA'))
+    expect(got.length).toBe(2)
+    expect(got[0]!.milestone).toBe('需求理解')
+    expect(got[1]!.milestone).toBe('测试验证')
+  })
+})

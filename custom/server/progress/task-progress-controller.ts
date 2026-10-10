@@ -8,7 +8,7 @@
 import Router from '@koa/router'
 import { readDispatchLedger } from '../governance/dispatch-ledger'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
-import { getSessionStore } from './task-progress-store'
+import { getSessionStore, readWorkspaceMilestones } from './task-progress-store'
 import { taskProgressOverview } from './task-progress-analytics'
 
 const router = new Router({ prefix: '/api/progress' })
@@ -20,7 +20,15 @@ router.get('/tasks', async (ctx) => {
   try {
     const ledger = readDispatchLedger(2000).filter((e) => e.taskId)
     const sessions = getSessionStore(getZcodeProjectionRuntime())
-    const overview = taskProgressOverview(ledger, sessions, { activeOnly, limit })
+    // 里程碑面（消费侧接线补全）：按台账出现的 distinct workspace 各读一次（有界 fail-soft），
+    // 传聚合联合——引擎站点面缺席的任务以里程碑回退呈现进度。
+    const milestonesByWorkspace = new Map<string, ReturnType<typeof readWorkspaceMilestones>>()
+    for (const e of ledger) {
+      if (e.workspaceId && !milestonesByWorkspace.has(e.workspaceId)) {
+        milestonesByWorkspace.set(e.workspaceId, readWorkspaceMilestones(e.workspaceId))
+      }
+    }
+    const overview = taskProgressOverview(ledger, sessions, { activeOnly, limit, milestonesByWorkspace })
     ctx.body = { ok: true, ts: Date.now(), ...overview }
   } catch (err) {
     ctx.body = { ok: false, ts: Date.now(), tasks: [], total: 0, activeCount: 0, sessionPendingCount: 0, reason: 'progress_read_failed', detail: err instanceof Error ? err.message : String(err) }

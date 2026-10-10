@@ -125,7 +125,7 @@ function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], in
  */
 export async function dispatchColumnTransition(
   service: MentionDispatchService,
-  params: { from: string | null; to: string; workspacePath: string },
+  params: { from: string | null; to: string; workspacePath: string; taskId?: string },
 ): Promise<ColumnDispatchResult> {
   const triggers = matchColumnTransition(params.from, params.to)
   for (const trigger of triggers) {
@@ -163,7 +163,7 @@ export async function dispatchColumnTransition(
       precedents.push({ stepId: step.id, line: precedentLine })
       // step→agent 派单：provider 已过词表校验才拼进目标 token；简报文本同理。
       const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine)}`
-      const stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text })
+      const stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
       outcomes.push(...stepOutcomes)
       for (const o of stepOutcomes) {
         appendDispatchOutcome({

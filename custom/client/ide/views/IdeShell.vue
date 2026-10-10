@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // IdeShell — IDE 工作台主页面壳（/ide，fullscreen 自带壳）。
 //
-// 布局（ZCode 3.12.3 对齐，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
+// 布局（布局沿用 ZCode 3.12.3，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
 //   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部驾驶舱入口）
 //   | 会话列（IdeChatPane）| 右辅助面板（IdeSidePane，终端在其页签）
 // 加 IdeStatusBar；顶区 = 共享 IaGlobalTop（页头+注意力条，与沟通协作一致，
@@ -52,7 +52,7 @@ const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
 const kanbanStore = useKanbanStore()
 
-// ── v12 任务维度深链（/ide?task=<id>，工作台 ⌨ / 管理台 ⌨ 入口）──
+// ── v12 任务维度直达链接（/ide?task=<id>，工作台 ⌨ / 管理台 ⌨ 入口）──
 // 绑定任务维度并尽力切到任务挂靠的 agent 会话（session_id 命中即 switch）。
 watch(() => route.query.task, (taskId) => {
   const id = typeof taskId === 'string' && taskId.trim() ? taskId.trim() : null
@@ -60,7 +60,7 @@ watch(() => route.query.task, (taskId) => {
   if (id) ide.setDimension('task')
 }, { immediate: true })
 
-// ── 会话深链（/ide?session=<id>，沟通协作页「需关注」会话行 R7-B 入口）──
+// ── 会话直达链接（/ide?session=<id>，沟通协作页「需关注」会话行 R7-B 入口）──
 // 此前 WorkbenchView 发出 session 参数但本侧零消费，跳转后静默丢弃。
 // 会话列表未装载时先装载再切换；未知 id 由 switchSession 自身容错（不崩溃）。
 watch(() => route.query.session, async (sessionId) => {
@@ -70,11 +70,11 @@ watch(() => route.query.session, async (sessionId) => {
   await chatStore.switchSession(id)
 }, { immediate: true })
 
-// 深链绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
+// 直达链接绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
 // kanbanStore.tasks 只装当前选中板，agent 自建板（如 aipay-rfd）的任务会解析
-// 失败致简报抽屉空态。这里主动逐板查询（当前板缓存优先，一次深链最多 +N 次
+// 失败致简报抽屉空态。这里主动逐板查询（当前板缓存优先，一次直达链接最多 +N 次
 // 只读请求），命中后回填并把选中板切过去（简报后续数据均走正确板）。
-// resolveBriefingCrossBoard 同时供深链 watch（eager）与简报抽屉打开时兜底重试。
+// resolveBriefingCrossBoard 同时供直达链接 watch（eager）与简报抽屉打开时兜底重试。
 const briefingTaskResolved = ref<null | {
   id: string; title: string; status: string
   priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null; raci?: Record<string, string[]> | null
@@ -93,7 +93,7 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
       const hit = (await listTasks({ board: slug }).catch(() => []))
         .find(task => task.id === id || task.session_id === id)
       if (hit) {
-        // stale 守卫：逐板请求期间深链又切了任务，旧结果不回填
+        // stale 守卫：逐板请求期间直达链接又切了任务，旧结果不回填
         if (ide.activeTaskId !== id) return
         kanbanStore.setBoard(slug)
         briefingTaskResolved.value = {
@@ -305,19 +305,20 @@ const briefingEngineProgress = computed(() => {
     lastActivityAt: p.lastActivityAt,
     dispatchCount: p.dispatchCount,
     dispatchOkCount: p.dispatchOkCount,
+    milestones: p.milestones,
   }
 })
 const briefingOpen = ref(false)
-// 深链到达即展开简报（run6 复盘 UX 缺口：ide?task= 只绑定不展开，用户落地还需
-// 自寻按钮——跳转意图即"看这个任务"）。单独 watch 且置于声明后：早处深链
+// 直达链接到达即展开简报（run6 复盘 UX 缺口：ide?task= 只绑定不展开，用户落地还需
+// 自寻按钮——跳转意图即"看这个任务"）。单独 watch 且置于声明后：早处直达链接
 // watch 是 immediate 的，setup 期执行时本 ref 尚未声明（TDZ）。
 watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
 
-// ── 裸落地引导空态（run13 步18 错帧修复配套：/app/ide 是登录默认落点，深链
+// ── 裸落地引导空态（run13 步18 错帧修复配套：/app/ide 是登录默认落点，直达链接
 // 才有任务上下文——裸落地此前直落会话栏自动恢复，新用户零引导）──
-// 判定纯函数=utils/landingHero（守门测试同源）；engage 后本次访问不再打扰。
+// 判定纯函数=utils/landingHero（门禁测试同源）；engage 后本次访问不再打扰。
 const landingEngaged = ref(false)
 const showLandingHero = computed(() => shouldShowLandingHero({
   activeTaskId: ide.activeTaskId,
@@ -332,7 +333,7 @@ function landingPickTask(id: string) {
   landingEngaged.value = true
   ide.setActiveTask(id)
   ide.setDimension('task')
-  briefingOpen.value = true // 与 ?task 深链同款：跳转意图即"看这个任务"（run6 复盘）
+  briefingOpen.value = true // 与 ?task 直达链接同款：跳转意图即"看这个任务"（run6 复盘）
 }
 function landingEnterWorkspace() {
   landingEngaged.value = true
@@ -460,7 +461,7 @@ watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
 })
 function onAuxSend(text: string): void {
   // 辅助会话回传：组装任务上下文前缀发往主会话（chat.sendMessage 无活跃会话
-  // 时自动建会话；模式对齐 IdeTaskContextBar assistant「带入主会话」裁决）
+  // 时自动建会话；模式与 IdeTask 一致ContextBar assistant「带入主会话」裁决）
   const message = buildAuxMessage(briefingTask.value, text)
   if (message) void chatStore.sendMessage(message)
 }
@@ -667,7 +668,7 @@ onUnmounted(() => {
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
-/* 最大化时 panewrap 须接管剩余空间——常态宽度在内联 style 上，不放开会钉死在拖拽宽 */
+/* 最大化时 panewrap 须接管剩余空间——常态宽度在内联 style 上，不放开则固定为拖拽宽 */
 .ide-shell__main.has-max-sidepane .ide-shell__panewrap { flex: 1; }
 .ide-shell__main.has-max-sidepane .ide-sidepane { flex: 1; width: auto !important; }
 
