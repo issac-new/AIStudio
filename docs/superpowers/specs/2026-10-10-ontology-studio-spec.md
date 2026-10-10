@@ -5,6 +5,17 @@
 - 来源：DClusterAI《本体建模写进国家标准：GB/T 48000.3 解读与工程落地》（2026-09-28，mp.weixin.qq.com/s/S96QcNYnY14UJ-Dn9B69LA）及文中引用的标准族（GB/T 48000.1/.2/.4、GB/T 42131-2022、GB/T 45628-2025、GB/T 45256-2025）
 - 一句话：把 SwarmStudio 的知识层从「文档」升级为「可校验的语义资产」——按国标五要素骨架建领域本体，SHACL 式约束做写入前数据契约，IRI+版本管理让语义变更可查询，JSON-LD/SHACL/Turtle 导出让外部机器可消费。
 
+## 0. 二阶段（同日追加）：× 看板治理整合——让本体不"虚"
+
+用户裁定：一阶段是手工字典，虚。二阶段把双向流打通：
+
+1. **看板数据自动进本体**（ontology-ingest.ts）：tasks/assignee/task_links → Task/Agent/Board 实例 + assignedTo/belongsTo/dependsOn 关系；`kb:` 前缀批替换语义（幂等重跑，手工实例零交集）；taskRef=`<slug>#<tid>` 唯一键防重；写前校验剔除 error 实例（连带悬空边）进 skipped 呈现。REST：POST /ingest、GET /kanban-overview。
+2. **Task.status 枚举对齐 upstream KanbanTaskStatus 九态**（triage/todo/scheduled/ready/running/blocked/review/done/archived）——摄取零映射损耗；曾误造 'doing' 值（真实状态机无此态），真数据冒烟咬出 'ready' 越枚举后修正。
+3. **语义体检页签**（/app/board gov-ontology，TasksView 第 12 页签，orchestra 零 patch 先例）：本体统计卡 + 契约健康度 + 源概览 + 一键摄取（结果/零拦截徽标/skipped 明细）+ 全量违规表 + 跳本体工作台。文案=ontology/i18n.ts gov 节。
+4. 真数据实绩：14 板 975 任务 38 执行人 2357 关系摄取、零剔除、健康度 0/0/0。
+
+以下为一阶段正文。
+
 ## 1. 为什么做
 
 文章诊断的失败模式恰是 SwarmStudio 知识层的现状：wiki 页面写得很全，但无法被任何程序消费，也就无法产生复利。群体协作场景里「语义巴别塔」直接变现：不同 agent/任务对 Task、Gate、边界、口径的理解不一致，就是过度交付与边界漂移的根因（over-delivery-boundaries 轮实证）。

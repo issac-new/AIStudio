@@ -23,6 +23,7 @@ import { violationSummary } from './ontology-validate'
 import {
   deleteInstance, listSpecSnapshots, loadInstances, loadSpec, resetToSeed, rollbackSpec, saveSpec, upsertInstance,
 } from './ontology-store'
+import { ingestFromKanban, kanbanSourceOverview } from './ontology-ingest'
 import { exportOntology, type ExportFormat } from './ontology-export'
 import { validateInstances, validateSpec } from './ontology-validate'
 
@@ -178,6 +179,27 @@ router.post('/seed', (ctx) => {
   if (superAdminDenied(ctx)) return
   const r = resetToSeed()
   ctx.body = { ok: true, snapshot: r.snapshot, spec: r.spec, instanceCount: r.instances.length }
+})
+
+// ---- 摄取面（kanban → 本体；让本体吃真实数据而非手工字典） ----
+
+/** 看板数据源概览（不读任务体）。 */
+router.get('/kanban-overview', (ctx) => {
+  ctx.body = { ok: true, sources: kanbanSourceOverview() }
+})
+
+/** 摄取：body.board 指定单板，缺省全板。替换语义（kb: 前缀批），幂等可重跑。 */
+router.post('/ingest', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const body = (ctx.request.body ?? {}) as { board?: unknown }
+  const board = typeof body.board === 'string' && body.board ? body.board : undefined
+  try {
+    const r = await ingestFromKanban(board ? { board } : undefined)
+    ctx.body = { ok: r.ok, ingest: r }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, detail: `摄取失败：${e instanceof Error ? e.message : String(e)}` }
+  }
 })
 
 export const ontologyRoutes = router

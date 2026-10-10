@@ -39,7 +39,7 @@ describe('toShaclShapes', () => {
     const props = taskShape!['sh:property'] as Array<Record<string, any>>
     const status = props.find((p) => String(p['sh:path']['@id']).endsWith('Task.status'))
     expect(status['sh:minCount']).toBe(1)
-    expect((status['sh:in']['@list'] as string[]).join(',')).toBe('todo,doing,blocked,done')
+    expect((status['sh:in']['@list'] as string[]).join(',')).toBe('triage,todo,scheduled,ready,running,blocked,review,done,archived')
     const assigned = props.find((p) => String(p['sh:path']['@id']).endsWith('assignedTo'))
     expect(assigned['sh:or'].length).toBe(2)  // range 联合（Agent|Human）
     expect(assigned['sh:maxCount']).toBe(1)

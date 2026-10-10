@@ -48,7 +48,7 @@ describe('validateSpec（模式层自检）', () => {
       id: 'SubTask', label: '子任务', parent: 'Task', category: '工作对象', modality: 'shall',
       dataProperties: [
         { id: 'title', label: '标题', datatype: 'string', modality: 'shall' },          // required 被移除
-        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'doing', 'blocked', 'done', 'zzz'], modality: 'shall' }, // enum 放宽
+        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'done', 'zzz'], modality: 'shall' }, // enum 放宽
       ],
     })
     const hits = validateSpec(spec).filter((v) => v.code === 'spec:inherit-widen')
@@ -63,7 +63,7 @@ describe('validateSpec（模式层自检）', () => {
       disjointWith: ['Agent'],
       dataProperties: [
         { id: 'title', label: '标题', datatype: 'string', required: true, modality: 'shall' },
-        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'doing', 'blocked', 'done'], modality: 'shall' },
+        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'done'], modality: 'shall' },
       ],
     })
     expect(validateSpec(spec).filter((v) => v.code === 'spec:inherit-widen')).toEqual([])
@@ -72,7 +72,7 @@ describe('validateSpec（模式层自检）', () => {
       id: 'SubTask', label: '子任务', parent: 'Task', category: '工作对象', modality: 'shall',
       dataProperties: [
         { id: 'title', label: '标题', datatype: 'string', required: true, modality: 'shall' },
-        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'doing', 'blocked', 'done'], modality: 'shall' },
+        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'done'], modality: 'shall' },
       ],
     })
     expect(validateSpec(spec2).some((v) => v.code === 'spec:inherit-widen' && v.subject === 'SubTask')).toBe(true)
@@ -129,7 +129,7 @@ describe('validateInstances（实例数据契约——闭世界）', () => {
       disjointWith: ['Agent'],
       dataProperties: [
         { id: 'title', label: '标题', datatype: 'string', required: true, modality: 'shall' },
-        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'doing', 'blocked', 'done'], modality: 'shall' },
+        { id: 'status', label: '状态', datatype: 'string', required: true, enum: ['todo', 'done'], modality: 'shall' },
       ],
     })
     const rt = inst({ id: 'r1', type: 'ReviewTask', data: { title: 'x', status: 'todo' } })
