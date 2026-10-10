@@ -20,6 +20,7 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TabIntroBanner from '../components/TabIntroBanner.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
+import CapacitySection from '@/custom/kanban/components/CapacitySection.vue'
 import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
 import GovHealthSection from './gov/GovHealthSection.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
@@ -193,6 +194,7 @@ function goInboxFromAccounts(): void {
         @filter-assignee="filterAssigneeFromAccounts"
         @go-inbox="goInboxFromAccounts"
       />
+      <CapacitySection />
       <GovHealthSection />
     </div>
     <div v-else-if="tab === 'gov-org'" class="ia-area" data-testid="ia-tasks-panel-gov-org">
