@@ -1823,6 +1823,17 @@ def _r18_hero_badge() -> str:
                 f'· 必采 {r18_matrix.TOTAL} 项缺口记入问题清单 r18-collection-missing</span>')
     return f'<b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 {r18_matrix.TOTAL} 项实测统计</span>'
 
+def _issue_level(t):
+    """问题单级别（报告三要素改造 2026-10-10）：按类型码族派生——闸门族正则与审计器
+    闸键判定（mx-report-audit.py A4）同源（^(g[1-6])[-_] + review-card + retro-open-items），
+    防两处判定漂移；采集降级族与审计查 3 缺图豁免口径同族。"""
+    if re.match(r'^(g[1-6])[-_]', t) or t.startswith('review-card') or t.startswith('retro-open-items'):
+        return '闸门级'
+    if t.startswith(('frame-', 'r18-', 'product-surface', 'capture-')):
+        return '采集级'
+    return '过程级'
+
+
 def issues_stats():
     """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。
 
@@ -1835,15 +1846,19 @@ def issues_stats():
       ④ 其余=待处置。
     三态计数（run13 复盘 A4/F6）：DISP 首词非三态分桶词（已修/观察/延后）的键计入
     「表外词」单列——四桶+表外词求和=唯一键数，禁凭空消失。
+    频次列（2026-10-10 三要素改造）：同一唯一键在事件流中的出现次数——run12 的
+    gate-breaker-tripped 单键 227 行被压成一行无频次，读者无法知道它刷了多少次。
     """
     lines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
     iss, disp_exact, disp_generic, order = {}, {}, {}, []
+    freq = {}
     raw_i = raw_d = 0
     for l in lines:
         if l.startswith('ISSUE|'):
             raw_i += 1
             p = l.split('|', 3)
             key = f'{p[1]}·{p[2]}'
+            freq[key] = freq.get(key, 0) + 1
             if key not in iss:
                 iss[key] = p[3] if len(p) > 3 else ''
                 order.append(key)
@@ -1882,15 +1897,19 @@ def issues_stats():
         d = disp_of[k]
         if not d:
             continue
+        t = k.split('·')[0]
         cls = 'd-ok' if d.startswith('已修') else 'd-warn'
-        rows.append(f'<tr><td>{H.escape(k)}</td><td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
+        rows.append(f'<tr><td>{H.escape(k)}</td><td style="white-space:nowrap">{freq.get(k, 1)} 次</td>'
+                    f'<td style="white-space:nowrap">{_issue_level(t)}</td>'
+                    f'<td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
     if not rows:
-        rows.append('<tr><td colspan="3" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记入问题清单）</td></tr>')
+        rows.append('<tr><td colspan="5" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记入问题清单）</td></tr>')
     stat = (f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)}'
             f' · 表外词 {len(nonstd)} · 待处置 {len(open_k)}')
     if nonstd:
         stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
-    note = f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
+    note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
+            '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。')
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
     return stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order), len(open_k), len(nonstd)
@@ -2287,7 +2306,7 @@ _narrative_html = ''
 _ch0_html = _ch1_html = _ch2_html = _ch3_html = _ch4_html = ''
 try:
     import html as _H
-    from report_narrative import render_narrative, render_chapter0, render_intent_chain
+    from report_narrative import render_narrative, render_chapter0, render_intent_chain, spec_params_html
     _narrative_html = render_narrative(state, EVID)
     # ── §5.4 十章骨架接线（2026-10-07 补齐：第 0/1/2/3/4 章长期未实现）──
     # A7/F7bis：三功能区命中集——STEPS imgs（ui 帧图注，帧文件在位）双源判定
@@ -2336,6 +2355,9 @@ try:
         f'<tr><td>快模式/并发</td><td>MX_FAST 缺省开（轮询 5s·治理三步并发）；系分/编码四路同时派出（闸值 4 占满）；569 gate-guard 显式启用（035a555）</td></tr>'
         f'<tr><td>问题单终态</td><td>{stat}</td></tr>'
         '</tbody></table></section>')
+    # 关键技术规范参数卡（报告三要素之一，2026-10-10）：spec-params.env 单一事实源渲染，
+    # 与方案 §4.4 总表同源——机器档案与人读正本同卡
+    _ch1_html = _ch1_html + spec_params_html()
     # 第 4 章 产品成效块（方案 §5.4"产品成效呈现"：交付物成效三件；证据在位才渲染，
     # 缺席如实标注不编造——evidence/product-outcome/ 下 quality-summary.env（数字表，
     # 驱动步 26 落盘）+ *.png（功能实证截图）+ idempotency.txt（幂等实测输出））
@@ -2428,8 +2450,26 @@ except Exception as _e:
                        f'color:#92400e">叙事层生成失败（如实标注）：{_H.escape(str(_e))}</div>')
 _AUDIT_RUN2_BLOCK_HD = '<p class="stat-note"><b>以下为 v4-run2（2026-09-29）轮独立审计史实</b></p>'
 _AUDIT_RUN2_BLOCK = '  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与监控侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收尾轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。<b>收尾追记（2026-09-29 10:52）：R1-R4 完整循环、G5 复审 r8 READY-GATE-PASS、REL-* 解冻、UAT 条件解除</b>——判废口径经完整循环转正，全链锚点见处置表。</p>\n  <details class="audit" open><summary>▶ 独立审计 10 项判定与处置</summary>\n  <table style="margin-top:8px"><tr><th>#</th><th>发现</th><th>判定</th><th>处置</th></tr>\n  <tr><td>1</td><td>G5 写入通过标记"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入自动检查用例；步 20 判回滚→复审 r8 PASS（完整循环）</td></tr>\n  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修+已完整循环：H11 机制根治；回补 merge 67a1a95（丢线整线回归）+同基线复验 194/194+6/6+42/42+220（2026-09-29）</td></tr>\n  <tr><td>3</td><td>UAT"全过"与证据行矛盾（AC-4/AC-7 有条件通过）+基线锚断裂</td><td>属实</td><td>已修（根因）：H9 逐条判词（有条件≠无条件验收，放行权归 bella）；验收书勘误入 origin/main</td></tr>\n  <tr><td>4</td><td>G3 硬门无写入通过标记，治理报告跳过 G3/G6</td><td>属实</td><td>已修：H10 g3_code_pass 写入通过标记+治理报告六闸全列</td></tr>\n  <tr><td>5</td><td>评审卡缺失由监控程序登记即标记完成</td><td>属实</td><td>已修（R-A4）：补登记卡保留"评审记录待补"，不自批标记完成</td></tr>\n  <tr><td>6</td><td>G5 HumanGate 自评自批；approved.events 无 G5 审批事件</td><td>属实（部分环境局限）</td><td>部分已修：HumanGate 批准事件入 approved.events 可反查；审批人独立性=单操作者推演局限，观察记档</td></tr>\n  <tr><td>7</td><td>问题单 DISP 0 条；ISSUES-LOG 未收录；复盘计数 5≠6</td><td>属实</td><td>已修（R-A5）：DISP 6/6 补记+ISSUES-LOG 回灌+复盘计数勘误</td></tr>\n  <tr><td>8</td><td>完备性检查留痕未受控删行；台账同名 G5 卡双态</td><td>部分属实</td><td>删行来源未查明→已回滚恢复留痕原貌（快照不可变）；双态卡=各轮卡并存，观察记档</td></tr>\n  <tr><td>9</td><td>G6 复盘模板话术/交叉引用断链/metrics 口径偏离</td><td>属实</td><td>部分已修：复盘逐单归类+断链修正+行动项补 R-A1..R-A6；metrics 口径重出延后（行动项）</td></tr>\n  <tr><td>10</td><td>监控侧意见书"通过（无发现）"不成立</td><td>属实</td><td>已修（R-A6）：意见书勘误改判"有保留（待整改）"，以独立意见为准</td></tr>\n  </table></details>\n  <p class="stat-note">抽检通过项（独立审计留痕）：G1 四要素真实可判 · G2 留痕完整（t_11e182b3 独立评审人）· 测试内容真实性（testlog 实物与报告数字一致）· 复盘对事不对人口径 · 评审人如实报 FAIL 附取证。另有收尾补充处置：报告路由缺陷 H7（05:15 首次生成落全局目录拿旧轮 state）已修并重生成本报告；双驱动污染窗口 02:26:04–02:37:56（run1 ready 续跑误抢活锁，H1 已修）如实记档。</p>'
-audit_response_section = (_AUDIT_RUN2_BLOCK_HD + _AUDIT_RUN2_BLOCK) if RUN_ID == '20260929-v4-run2' else (
-    '<p class="stat-note">本轮（RUN=' + RUN_ID + '）无独立审计处置段——该段为 v4-run2 轮专属治理史，对其他轮渲染属旧账冒充，2026-10-02 根治。本轮独立审计结论见仓库 docs/audit/ 合规意见书。</p>')
+def _audit_outcome_html():
+    """第 2 章实查化（报告三要素改造 2026-10-10）：中央仓 docs/audit/ 实查本轮窗口内的
+    意见书文件——在位=实文件清单；缺席=如实缺位（旧版一句话占位是「报告粗糙」指认点之一）。"""
+    try:
+        docs_audit = CEN / 'docs' / 'audit'
+        started = int(state.get('run_started_at') or 0)
+        files = [f for f in sorted(docs_audit.glob('*.md'))
+                 if f.stat().st_mtime >= started - 3600] if docs_audit.exists() else []
+    except Exception:
+        files = []
+    if files:
+        rows = ''.join(f'<tr><td>{H.escape(f.name)}</td><td>{f.stat().st_size} B</td></tr>' for f in files[:6])
+        return ('<p class="stat-note">本轮独立审计产出（中央仓 docs/audit/ 实查，限本轮窗口内文件）：</p>'
+                '<table class="st-issues-tbl"><tr><th>意见书文件</th><th>大小</th></tr>' + rows + '</table>')
+    return ('<p class="stat-note">本轮（RUN=' + RUN_ID + '）无独立审计处置段——该段为 v4-run2 轮专属治理史，'
+            '对其他轮渲染属旧账冒充（2026-10-02 根治）。中央仓 docs/audit/ 本轮窗口内未见意见书文件（如实标注）；'
+            '机器审计结论按方案 §5.6 收尾判据之二执行——mx-report-audit 零 FAIL 才许收尾。</p>')
+
+
+audit_response_section = (_AUDIT_RUN2_BLOCK_HD + _AUDIT_RUN2_BLOCK) if RUN_ID == '20260929-v4-run2' else _audit_outcome_html()
 
 _GOV_METRICS_RUN2 = '<tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚（R-A1）→ R-A3 完整循环复审 PASS（r8）</b>；"4/4 首过"口径判废后经完整循环转正 · G3 写入通过标记缺失（R-A4 已修）</td></tr>\n    <tr><td>问题单终态</td><td>{stat}</td></tr>\n    <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>\n    <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>\n    <tr><td>发布状态</td><td><b>R-A3 已完整循环、发布解冻</b>（2026-09-29 10:52）：G5 复审 r8 READY-GATE-PASS（独立评审），REL-* 三卡 blocked→ready（解冻批准入 approved.events）；放行后动作 R5（RELEASE.md 替换）随发布执行</td></tr>'
 _GOV_METRICS_RUN6 = '<tr><td>闸门判定</td><td><b>六闸全过</b>：G1 10-01 08:23（推送失败当日补账 18c9d77）· G2 10-01 18:57 · G3 10-02 08:44 · G4 10:15:43 · G5 READY-GATE-PASS（t_3aaacf2d 七项全过）· G6 12:03:24</td></tr>\n<tr><td>问题单终态</td><td>{stat}</td></tr>\n<tr><td>测试口径</td><td>TEST-BE 194/194 全绿零缺陷（报告 8dbf5bf，被测 8ec13c3）· TEST-FE 全绿（TEST-PASS-TEST-FE 13:50，push 039a6da）——测试者独立于开发线</td></tr>\n<tr><td>UAT 判词</td><td><b>七条 AC 证据 7/7 PASS</b>（UAT-EVIDENCE 行 $V_jLqhvn）；验收书初版判词列"未见"系判词器模板解析口径缺陷（证据行在案）——已根治（uat_ac_verdict 括号注/段首归属耐受）并出勘误版验收书</td></tr>\n<tr><td>发布状态</td><td><b>已发版</b>：REL-MERGE 合 main（f7b1cbc，监控程序补账留痕）· REL-DELIVER 卡 t_5f8c2d25 · 验收书入仓 12:03:04</td></tr>'
@@ -2899,19 +2939,29 @@ if PLAN_V82:
     content_html += manual_appendix()
 art_tbl, art_stat, art_note_g5 = artifact_panorama()
 
+# ── tokens 单源（报告 CSS 统一改造 2026-10-10）：mux/report-tokens.css 与
+#    overlay/scripts/plan-html/tokens.css 字节级同文（两文件 cmp 守门；改任一侧
+#    必须同步另一侧）。运行时实读注入 style 块顶部——禁在生成器内再手抄一份
+#    token 值（手抄即第二事实源，必漂移）。──
+_REPORT_TOKENS = (Path(__file__).resolve().parent / 'report-tokens.css').read_text(encoding='utf-8')
+
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Swarm Studio 全流程推演报告 · RFD-001</title>
 <style>
+{_REPORT_TOKENS}
 *{{margin:0;padding:0;box-sizing:border-box}}
-:root{{--bg:#f8fafc;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--accent:#3b82f6;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04)}}
+/* 机器样式别名层（2026-10-10 CSS 统一改造）：token 单源在前（report-tokens.css），
+   此处只保留 token 未覆盖的本地别名——与 token 同名且取值不同者（--accent/--ok/--warn/--muted）
+   不再重复声明，交由 token 定值，消除双事实源 */
+:root{{--bg:var(--surface-2);--card:var(--surface);--text:var(--ink);--border:var(--line);--err:var(--danger);--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04)}}
 html{{scroll-behavior:smooth}}
 body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.75;letter-spacing:0}}
 
 .layout{{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto;min-height:100vh}}
 .sidebar{{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--card);border-right:1px solid var(--border);padding:20px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}}
-.main{{padding:0 32px 60px;min-width:0}}
+.main{{padding:0 32px 60px;min-width:0;max-width:1180px}}
 
 .nav-title{{font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;padding:0 8px;line-height:1.3}}
 .nav-phase{{margin-bottom:8px}}
@@ -2923,16 +2973,16 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .nav-step .no{{color:#cbd5e1;flex-shrink:0}}
 .gmark{{font-size:11px;font-weight:700;color:var(--warn);background:#fef3c7;border-radius:3px;padding:0 3px;flex-shrink:0}}
 
-.hero{{background:linear-gradient(135deg,#1e293b 0%,#334155 50%,#475569 100%);color:#fff;border-radius:0 0 24px 24px;padding:32px 36px 24px;margin:0 -32px 28px}}
+.hero{{background:var(--grad-hero);color:var(--surface);border-radius:0 0 24px 24px;padding:32px 36px 24px;margin:0 -32px 28px}}
 .hero h1{{font-size:24px;font-weight:700;letter-spacing:-.02em}}
 .hero .sub{{font-size:13px;color:#94a3b8;margin-top:6px;line-height:1.7}}
 .hero-stats{{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}}
 .hstat{{text-align:center}}
-.hstat b{{display:block;font-size:22px;font-weight:800;color:#fff}}
+.hstat b{{display:block;font-size:22px;font-weight:800;color:var(--surface)}}
 .hstat span{{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}}
 .phase-bar{{display:flex;gap:0;margin-top:20px;align-items:center}}
 .pb-seg{{flex:1;height:4px;border-radius:2px;position:relative}}
-.pb-dot{{width:10px;height:10px;border-radius:50%;background:#fff;flex-shrink:0;margin:0 4px}}
+.pb-dot{{width:10px;height:10px;border-radius:50%;background:var(--surface);flex-shrink:0;margin:0 4px}}
 .pb-label{{font-size:11px;color:#94a3b8;text-align:center;margin-top:4px;white-space:nowrap}}
 
 /* ── 六道闸仪表盘（人的审核把关）── */
@@ -2944,8 +2994,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .gate-card.gpass .gate-state{{color:var(--ok)}}
 .gate-state{{font-size:13px;font-weight:700;margin-top:2px}}
 .gate-ts{{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}}
-.gate-desc{{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}}
-.gate-rej{{display:inline-block;font-size:9.5px;margin-top:5px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#b45309}}
+.gate-desc{{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}}
+.gate-rej{{display:inline-block;font-size:11px;margin-top:5px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:var(--warn)}}
 .gate-rej.ok1{{background:#dcfce7;color:#15803d}}
 .gate-card.gfail{{border-top-color:var(--err)}}
 .gate-card.gfail .gate-state{{color:var(--err)}}
@@ -2955,16 +3005,16 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 
 .phase{{margin-bottom:32px}}
 .ph-hd{{display:flex;align-items:center;gap:14px;padding:16px 0 12px;margin-bottom:4px;border-bottom:2px solid var(--pc,var(--border))}}
-.ph-num{{width:36px;height:36px;border-radius:50%;background:var(--pc,var(--border));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}}
+.ph-num{{width:36px;height:36px;border-radius:50%;background:var(--pc,var(--border));color:var(--surface);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}}
 .ph-hd h2{{font-size:17px;color:var(--text);letter-spacing:-.01em}}
 .ph-hd p{{font-size:13px;color:var(--muted)}}
 
 .step{{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:12px 0;box-shadow:var(--shadow);position:relative;overflow:hidden}}
 .step::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--border));opacity:.6}}
-.step.gate-step{{border-color:#fbbf24;background:linear-gradient(135deg,#fffbeb 0%,#fff 30%)}}
+.step.gate-step{{border-color:#fbbf24;background:linear-gradient(135deg,#fffbeb 0%,var(--surface) 30%)}}
 .step.gate-step::before{{background:#f59e0b;width:4px;opacity:1}}
 .st-hd{{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}}
-.st-num{{width:32px;height:32px;border-radius:8px;background:var(--pc,var(--border));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}}
+.st-num{{width:32px;height:32px;border-radius:8px;background:var(--pc,var(--border));color:var(--surface);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}}
 .step.gate-step .st-num{{background:#f59e0b}}
 .st-title h3{{font-size:14px;line-height:1.5;color:var(--text);letter-spacing:-.005em}}
 .st-meta{{font-size:13px;color:var(--muted)}}
@@ -2986,79 +3036,11 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 32px 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
+/* ── 驾驶舱联动地图（单一定义：原五处重复块合并——非冲突声明取并集、margin 冲突取 0 0 22px） ── */
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-/* ── 驾驶舱联动地图 ── */
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow)}}
 .ck-map-hd{{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:16px}}
+.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
+.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
 .ck-zone{{border:1px solid color-mix(in srgb,var(--zc) 35%,var(--border));border-left:4px solid var(--zc);border-radius:8px;padding:8px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
 .ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:6px;letter-spacing:.03em}}
 .ck-zone-links{{display:flex;flex-wrap:wrap;gap:4px 8px}}
@@ -3071,7 +3053,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:6px}}
 .ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:16px;padding:3px 10px;transition:all .15s}}
 .ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card));border-color:var(--zc)}}
-.ck-node-z{{font-size:9.5px;color:#fff;background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
+.ck-node-z{{font-size:11px;color:var(--surface);background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
 .ck-arrow{{color:var(--muted);font-size:14px;margin:0 2px;font-weight:300}}
 .st-linkline{{font-size:13px;color:var(--muted);margin:4px 0 0;padding:4px 8px;background:var(--bg);border-radius:6px}}
 .st-linkline a{{text-decoration:none;border-bottom:1px dotted currentColor}}
@@ -3081,7 +3063,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-chk-flag{{flex-shrink:0}}
 .art-chk-label{{flex-shrink:0;font-weight:600;color:var(--text);min-width:110px}}
 .art-chk-val{{color:var(--muted);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.art-chk-val.miss{{color:#dc2626}}
+.art-chk-val.miss{{color:var(--danger)}}
 .st-shots{{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:6px 0 0 44px}}
 .art-code{{max-height:340px;overflow:auto}}
 .gate-body{{max-height:260px;overflow:auto}}
@@ -3134,24 +3116,24 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-body p{{font-size:12.5px;margin:4px 0;line-height:1.7;color:#334155;word-break:break-word}}
 .art-body ul{{margin:4px 0 4px 18px;font-size:12.5px;line-height:1.7;color:#334155}}
 .art-body li{{margin:2px 0}}
-.art-body code{{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0 4px;font-family:ui-monospace,monospace;font-size:10.5px}}
+.art-body code{{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0 4px;font-family:ui-monospace,monospace;font-size:11px}}
 .art-quote{{border-left:3px solid var(--border);margin:6px 0;padding:4px 10px;color:var(--muted);font-size:13px;background:var(--card);border-radius:4px}}
-.art-tbl{{width:100%;border-collapse:collapse;font-size:10.5px;margin:6px 0;border:1px solid var(--border);border-radius:6px;overflow:hidden}}
+.art-tbl{{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;border:1px solid var(--border);border-radius:6px;overflow:hidden}}
 .art-tbl th,.art-tbl td{{border:1px solid var(--border);padding:3px 6px;text-align:left;vertical-align:top;line-height:1.6}}
 .art-tbl th{{background:var(--bg);font-weight:600}}
-.art-code{{background:#0f172a;color:#e2e8f0;border-radius:6px;padding:8px 10px;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;margin:6px 0;max-height:340px;overflow-y:auto}}
+.art-code{{background:var(--ink-strong);color:var(--line);border-radius:6px;padding:8px 10px;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;margin:6px 0;max-height:340px;overflow-y:auto}}
 .art-trunc{{font-size:11px;color:var(--warn);margin-top:4px}}
 @media (max-width: 900px) {{ .st-artifact{{margin-left:0}} }}
 
-.st-shots{{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}}
+/* .st-shots 单一定义=上方 grid 版（原此处 flex 版与 grid 版双定义打架，删 flex 保 grid） */
 .shot{{flex:1 1 400px;max-width:520px;position:relative;cursor:zoom-in}}
 .shot img{{width:100%;max-height:420px;object-fit:cover;object-position:top;border:1px solid var(--border);border-radius:8px;display:block;transition:box-shadow .2s}}
 .shot:hover img{{box-shadow:0 4px 16px rgba(0,0,0,.12)}}
 .shot figcaption{{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}}
-.shot-kind{{display:inline-block;font-size:9.5px;font-weight:700;border-radius:3px;padding:0 5px;margin-right:5px;vertical-align:1px;letter-spacing:.02em}}
+.shot-kind{{display:inline-block;font-size:11px;font-weight:700;border-radius:3px;padding:0 5px;margin-right:5px;vertical-align:1px;letter-spacing:.02em}}
 .shot input{{display:none}}
-.shot input:checked ~ img{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:90vh;max-width:92vw;width:auto;object-fit:contain;z-index:9999;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.3);border-radius:8px}}
-.shot input:checked ~ figcaption{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#1e293b;color:#fff;padding:4px 12px;border-radius:6px;font-size:13px}}
+.shot input:checked ~ img{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:90vh;max-width:92vw;width:auto;object-fit:contain;z-index:9999;background:var(--surface);box-shadow:0 8px 40px rgba(0,0,0,.3);border-radius:8px}}
+.shot input:checked ~ figcaption{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:var(--ink);color:var(--surface);padding:4px 12px;border-radius:6px;font-size:13px}}
 .no-evidence{{font-size:13px;color:var(--muted);padding:8px 0}}
 
 h2.section-hd{{font-size:18px;font-weight:700;color:var(--text);margin:32px 0 16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}}
@@ -3164,13 +3146,13 @@ th{{background:var(--bg);font-weight:600;font-size:13px;text-transform:uppercase
 .cp-card {{ border:1px solid var(--border); border-radius:10px; background:var(--card); padding:10px 12px; box-shadow:var(--shadow) }}
 .cp-head {{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px }}
 .cp-name {{ font-size:13px; font-weight:700 }}
-.cp-who {{ font-size:10.5px; color:var(--warn); font-weight:600; white-space:nowrap }}
+.cp-who {{ font-size:11px; color:var(--warn); font-weight:600; white-space:nowrap }}
 .cp-shot {{ display:block; cursor:zoom-in; margin:2px 0 6px }}
 .cp-shot img {{ width:100%; height:118px; object-fit:cover; object-position:top; border:1px solid var(--border); border-radius:6px; display:block }}
 .cp-shot input {{ display:none }}
 .cp-shot input:checked ~ img {{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); height:auto; max-height:88vh; max-width:90vw; width:auto; object-fit:contain; z-index:9999; box-shadow:0 8px 40px rgba(0,0,0,.3); border-radius:8px }}
 .cp-sem {{ font-size:12.5px; color:#334155; line-height:1.5 }}
-.cp-ev {{ font-size:10.5px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace }}
+.cp-ev {{ font-size:11px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace }}
 .dm-badge {{ display:inline-block; font-size:11px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:4px; padding:1px 7px; margin-right:7px; vertical-align:1px }}
 a.dm-cp {{ display:inline-block; font-size:11px; color:var(--accent); text-decoration:none; margin:1px 3px 1px 0; border:1px solid var(--border); border-radius:4px; padding:1px 6px }}
 a.dm-cp:hover {{ background:var(--bg) }}
@@ -3189,21 +3171,25 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
 @media (max-width: 900px) {{
   .layout{{grid-template-columns:1fr}}
-  .sidebar{{display:none}}
+  /* 窄屏侧栏不再消失：顶置横滚条形态（类名不变，只改布局形态） */
+  nav.sidebar{{position:static;width:100%;height:auto;max-height:none;display:flex;gap:4px;overflow-x:auto;padding:8px 12px;border-right:none;border-bottom:1px solid var(--line)}}
+  .nav-title,.nav-phase{{flex:0 0 auto}}
+  .nav-phase{{display:contents}}
+  .nav-pname{{flex:0 0 auto}}
+  .nav-step{{flex:0 0 auto}}
   .main{{padding:0 16px 40px}}
   .hero{{margin:0 -16px 20px;padding:24px 20px 20px;border-radius:0 0 16px 16px}}
   .govgrid{{grid-template-columns:1fr}}
   .gates{{grid-template-columns:repeat(2,1fr)}}
   .st-story,.st-gate{{margin-left:0;padding-left:0}}
 }}
-/* ── 图版面（分析轮 P-6/P-8）：图放大可读 + 占位防懒加载漂移 + 锚点滚动偏移 ── */
-/* 证据图=产品界面实拍，不得裁剪（object-fit:cover 会裁掉下半屏内容——P-19）；
-   满栏呈现保证截图内文字可读（P-6：520px 上限→满栏） */
+/* ── 图版面（分析轮 P-6/P-8）：图放大可读 + 锚点滚动偏移 ── */
+/* 证据图=产品界面实拍，不得裁剪：自然比例呈现（2026-10-10 撤 16:10 信箱灰垫——
+   aspect-ratio 占位与实拍比例不一致时上下留灰边），描边+浅阴影承载版面 */
 label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
-label.shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;object-position:top;background:#f1f5f9;border-radius:8px}}
-.cp-shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;background:#f1f5f9}}
+label.shot img{{width:100%;height:auto;max-height:none;object-position:top;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
+.cp-shot img{{width:100%;height:auto;max-height:none;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 .step,.section-hd{{scroll-margin-top:16px}}
-html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落点漂移（P-8），改即时 */
 @media print {{
   .sidebar{{display:none}}
   .layout{{grid-template-columns:1fr}}
@@ -3265,7 +3251,7 @@ html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落�
   <h2 class="section-hd" id="ch8-issues">第 8 章 · 问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
-  <table style="margin-top:8px"><tr><th>类型·主体</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
+  <table style="margin-top:8px"><tr><th>类型·主体</th><th>频次</th><th>级别</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
 
 
   <h2 class="section-hd" id="ch9-gov">第 9 章 · 完整循环治理终态——治理系统工作了吗？</h2>

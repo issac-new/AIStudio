@@ -18,23 +18,28 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from report_narrative import render_chapter0  # noqa: E402
+from report_narrative import render_chapter0, spec_params_html  # noqa: E402
 
 SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 
-# ── 第 0 章宿主样式（gatebox/meta/idx/gap 与 unified-report-gen 同源，机器报告无此类名不冲突）──
+# ── 第 0 章宿主样式（gatebox/meta/idx/gap 与 unified-report-gen 同源，机器报告无此类名不冲突）
+#    2026-10-10 token 化：色值改引 report-tokens.css 变量（final-report head 的
+#    machine_styles 已含 tokens，直接 var() 引用；#fde68a 暂无 token 对应，保留字面值） ──
 CH0_CSS = '''<style>
-.meta{color:#57606a;font-size:13px;line-height:1.8}
-.gap{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin:8px 0}
-.gatebox{background:#fff;border:1px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin:12px 0}
+.meta{color:var(--muted);font-size:13px;line-height:1.8}
+.gap{background:var(--warn-soft);border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin:8px 0}
+.gatebox{background:var(--surface);border:1px solid var(--accent-soft);border-radius:10px;padding:14px 16px;margin:12px 0}
 .gatebox p{margin:6px 0;font-size:13.5px;line-height:1.8}
 .idx{font-size:12px}
-.idx th{background:#eef2ff;font-weight:600}
-.idx td,.idx th{border:1px solid #e0e7ff;padding:6px 10px;text-align:left;font-size:12px;line-height:1.7}
+.idx th{background:var(--accent-soft);font-weight:600}
+.idx td,.idx th{border:1px solid var(--line);padding:6px 10px;text-align:left;font-size:12px;line-height:1.7}
 .guide table.idx{font-size:12px}
 </style>'''
 
-GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:#fbfbfa;line-height:1.75}
+# ── GUIDE_CSS（2026-10-10 token 化）：PART1 绿皮肤（#0a7d43 系）撤换为 token
+#    中性系——标题/强调色统一 var(--accent-deep)，边框 var(--line)，底色 var(--surface-2)，
+#    卡片底 var(--surface)；排版（字号/边距/结构）不动。bad/mid 警示色保留语义色相。 ──
+GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:var(--surface-2);line-height:1.75}
 .guide .card{max-width:1200px;margin:0 auto}
 
 
@@ -45,24 +50,24 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 
 .guide h1{max-width:1200px;margin:0 auto 14px}
 .guide table{max-width:1200px;margin:0 auto 16px}
-.guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid #0a7d43;padding-bottom:12px;margin-bottom:6px}
-.guide h2{font-size:19px;margin-top:40px;color:#0a7d43;border-left:5px solid #0a7d43;padding-left:10px}
+.guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid var(--accent-deep);padding-bottom:12px;margin-bottom:6px}
+.guide h2{font-size:19px;margin-top:40px;color:var(--accent-deep);border-left:5px solid var(--accent-deep);padding-left:10px}
 .guide h3{font-size:16px;margin:22px 0 8px}
 .guide .sub{color:#678;font-size:13.5px}
-.guide table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;background:#fff}
-.guide th, .guide td{border:1px solid #ddd;padding:7px 10px;text-align:left;vertical-align:top}
-.guide th{background:#eef6ef}
-.guide .ok{color:#0a7d43;font-weight:600}
+.guide table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;background:var(--surface)}
+.guide th, .guide td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.guide th{background:var(--surface-3)}
+.guide .ok{color:var(--ok);font-weight:600}
 .guide .bad{color:#c0392b;font-weight:600}
 .guide .mid{color:#b9770e;font-weight:600}
-.guide .card{background:#fff;border:1px solid #e3e3e0;border-radius:8px;padding:14px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.guide .card.good{border-left:5px solid #0a7d43}
+.guide .card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.guide .card.good{border-left:5px solid var(--accent-deep)}
 .guide .card.warn{border-left:5px solid #b9770e}
 .guide .card.bad{border-left:5px solid #c0392b}
 .guide .card.info{border-left:5px solid #2563a8}
 .guide .tl{list-style:none;padding-left:0}
 .guide .tl li{position:relative;padding:4px 0 4px 18px;border-left:2px solid #cde;margin-left:8px}
-.guide .tl li::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:#0a7d43}
+.guide .tl li::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--accent-deep)}
 .guide .tl li.warn::before{background:#b9770e}
 .guide code{background:#f1f1ee;padding:1px 6px;border-radius:4px;font-size:12.5px}
 .guide .note{font-size:12.5px;color:#889}</style>'''
@@ -71,7 +76,7 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 # 说人话叙事是逐轮人工正本（时间线/故事/提交锚皆该轮真值），禁旧轮冒充；
 # 占位标记 {{n_*}} 由 main() 实测统计替换；正文为普通字符串（非 f-string），CSS 花括号安全。
 # run6 正本（处置口径与 2026-10-02 处置轮终态核对一致）：
-PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN6 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
 
@@ -170,7 +175,7 @@ PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 </div>'''
 
 
-PART1_RUN8 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN8 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
 
@@ -183,7 +188,7 @@ PART1_RUN8 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 {{ch0}}
 '''
 
-PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN7 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
 
@@ -294,7 +299,7 @@ PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 
 </div>'''
 
-PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN9 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
 
@@ -330,7 +335,7 @@ PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 # 写法三问：判断句？带锚（时刻/commit/记入问题清单键）？人话（黑话首现释义）？
 # R17 强制关卡（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
 # 防旧轮叙事冒充新轮报告。新轮正本=人工按该轮实测依据编写后注册。
-PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN10 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
 
@@ -356,7 +361,7 @@ PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
-PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN11 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
 
@@ -369,28 +374,13 @@ PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}，图注标注当轮实时采集）；每步四段=本轮实录/交付物实物+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测统计，取不到显式 ⬜。治理证据导出件（事故报告汇编/自治度对账/虚拟损益表）按 §2.5 治理证据面在位即透传。</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
 
-PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
-
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
-
-<div class="card info"><b>这场推演在验证什么：</b>新机制首跑验证轮——帧采集固定死（capture_step）、审计熔断、双正本、PART1 骨架链四件报告链新制与流式流水线（测试预备轮+模块就绪即触发）首次全链实跑；当日另完成容量体系根治（并发闸 1→30 定标、队列时长锚点稳定键）并在本轮后半段生效。</div>
-
-<div class="card ok"><b>本轮的诚实结论：</b>26 步 {{steps_done}}/26 写入通过标记（第 26 步写入通过标记随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实测统计自 issues.log 闸键记入问题清单）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。UAT 按 G1 冻结的 AC-1/2/3 逐条验收判词通过、发布登记三卡齐（REL-MERGE/TAG/DELIVER）；最大的非粉饰事实：全程五次 attempt 才走完——G5 六轮打回与三轮容量事故合计烧掉约 9 小时，最终 attempt-5 在"并发 30 + G5 窗宽 3600 + 分节评审"语义下一次通过（其中 G5 段为 23:39 落地的 run12 补丁语义，偏差已记入问题清单入复盘）。</div>
-
-<div class="card warn"><b>真实发生的缺口（全部记入问题清单在案）：</b>①容量派发丢失 400+ 件（capacity-queue-drop-devimpl，根因双修已部署：并发 30+时长锚点）；②PAYCORE 整组缺席集成（dev-branch-missing/integration-branch-missing，run12 三拆+接口契约任务锚根治）；③载荷型证据采集未随 capture_step 全接线（r18-collection-missing，八步降级记入问题清单）；④五步证据帧为收尾后补拍、已图注如实标注（frame-backfill-labeled，红线不冒充）；⑤G5 评审六轮打回暴露终态评审结构性低效（g5-ready-fail 等，左移件 e"分节落卡"已落地 run12）；⑥网关槽位记账膨胀疑点持续观察（gateway-slot-inflation，cluster-inspector D2 产品化观测）。（类型分布实测统计：{{type_top}}）</div>
-
-<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物实物+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测统计，取不到显式 ⬜。</div>
-
-<h2>研发全流程治理有效性（实测统计）</h2>
-{{ch0}}
-'''
-
-
-PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN12 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-09 02:29 → 10-10 03:39（约 25 小时）</span></h1>
 
@@ -403,11 +393,13 @@ PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面截图，图注逐帧标注拍摄时态：当轮实拍或收尾后补拍）；每步四段=本轮实录/交付物+模板核对/已知问题/改进项；全部计数自 issues.log 与 state.env 实测统计，取不到的显式标 ⬜。中途的抢救与提醒动作全部标注为「人工介入」并留痕，不混入自动化成绩。正文里引号内的日志与问题单原文可能保留项目内部用语（「记单」=记入问题清单、「落键」=写入通过标记、「起跑」=开始执行），引文一律按原文呈现、不做改写，保证证据可核。</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
 
-PART1_RUN13 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN13 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 回归轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 开跑（回归轮）</span></h1>
 
@@ -424,6 +416,8 @@ PART1_RUN13 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>过程日志术语对照（正文时间线里的日志行是系统原话，逐字保留）：</b>（观察＝系统旁白）（真值＝与实际状态核对过的确认）（闸点沉淀＝关卡通过后归档的检查记录）（收口＝收尾合并完成）（齐发＝多分支同时开工）（契约件＝接口定义文件）（六路＝六个并行开发分支）（判词＝验收结论行）</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
@@ -432,7 +426,6 @@ PART1_BY_RUN = {
     '20261009-v8-run12': PART1_RUN12,
     '20261007-v8-run11': PART1_RUN11,
     '20261007-v8-run10': PART1_RUN10,
-    '20261007-v8-run11': PART1_RUN11,
     '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
     '20261004-v7-run8': PART1_RUN8,
@@ -592,13 +585,14 @@ def main():
     machine_nav, machine_main, fused = split_layout(machine_body)
     if not fused:
         machine_nav = machine_nav.replace('<nav class="sidebar">', 
-            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:#0a7d43;font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
+            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:var(--accent-deep);font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
             '<a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">说人话版导读</a>'
             '<a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实测统计表</a>'
             '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">PART 2 · 全文档案</div>', 1)
 
-    # 第 0 章（R15）：state 写入通过标记实测统计闸门态；协作时序自 scenario.log 实抽
-    ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps')
+    # 第 0 章（R15）：state 写入通过标记实测统计闸门态；协作时序自 scenario.log 实抽。
+    # compact=True=人读层精简（时序只留开头段，全量由 PART2 承载——run12 双份 899 行去重）
+    ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps', compact=True)
 
     # V8.4（run13 起）：机器明细折叠附录——第 8 章台账全量收进 <details>（折叠≠裁剪）
     _n_fold = 0
@@ -662,6 +656,25 @@ def main():
     type_top = '、'.join(f'{k}×{v}' for k, v in sorted(_type_cnt.items(), key=lambda x: -x[1])[:5]) or '零问题单'
     disp_sum = '，'.join(f'{k} {v}' for k, v in _disp_cnt.items())
 
+    # ── 治理有效性实测统计表（报告三要素改造 2026-10-10）：此前 PART1 该节是空标题
+    #    （h2 直接顶上第 0 章），现以三列表实算填充——RUN10 版式（治理维度|本轮实测|口径来源）。
+    #    全部数字复用上方实算槽，禁手编；表格内文案不进 jargon 扫描面（门禁豁免 table）。──
+    gate_hits_txt = '、'.join(f'{g}×{n}' for g, n in _gate_hit.items() if n) or '零打回'
+    metrics_tbl = (
+        '<table class="st-issues-tbl" id="metrics-tbl">'
+        '<tr><th>治理维度</th><th>本轮实测</th><th>口径来源</th></tr>'
+        f'<tr><td>流程完成度</td><td>26 步 {steps_done}/26</td><td>state.env 状态键（方案 §3.3 映射）</td></tr>'
+        f'<tr><td>六道关卡</td><td>{len(gates_pass)}/6 过 · 一次通过 {first_pass}/6 · 打回 {gate_hits_txt}</td>'
+        '<td>state 关卡键 + issues.log 闸键</td></tr>'
+        f'<tr><td>流程窗口</td><td>{window_txt}</td><td>state 时间戳</td></tr>'
+        f'<tr><td>问题单台账</td><td>{n_issue} 条记录 · {n_key} 个键 · 处置 {disp_sum}</td><td>issues.log 全量</td></tr>'
+        f'<tr><td>类型分布 TOP</td><td>{type_top}</td><td>issues.log 类型段</td></tr>'
+        f'<tr><td>证据帧</td><td>{n_frames} 张 · {uniq_note}</td><td>screenshots/steps/ 实查 + md5 互异</td></tr>'
+        f'<tr><td>测试与产品成效</td><td>单测 {n_tests_pass} · AC 覆盖 {ac_cover} · 幂等 {idem_verdict} · UAT {uat_sum}</td>'
+        '<td>product-outcome/quality-summary.env（未采集即 ⬜）</td></tr>'
+        '</table>')
+    spec_tbl = spec_params_html()
+
     part1 = (part1_tmpl
              .replace('{{run_id}}', args.run)
              .replace('{{gen_time}}', gen_time)
@@ -680,9 +693,13 @@ def main():
              .replace('{{ac_cover}}', ac_cover)
              .replace('{{idem_verdict}}', idem_verdict)
              .replace('{{uat_sum}}', uat_sum)
+             .replace('{{metrics_tbl}}', metrics_tbl)
+             .replace('{{spec_tbl}}', spec_tbl)
              .replace('{{ch0}}', ch0)
-             .replace('<h2>研发全流程治理有效性（实测统计）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实测统计）</h2>')
-             .replace('<div class="guide" ', '<div class="guide" id="part1-top" ', 1))
+             .replace('<h2>研发全流程治理有效性（实测统计）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实测统计）</h2>'))
+    # 模板自身的 guide 开标签剥除（2026-10-10 修复）：外层 wrapper 已承载 id 与底色，
+    # 旧写法给模板 div 再挂 id="part1-top" 造成双层嵌套 + 同 id 重复两次
+    part1 = re.sub(r'<div class="guide"[^>]*>\s*', '', part1, count=1)
 
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -694,17 +711,16 @@ def main():
 <div class="layout">
 {machine_nav}
 <main class="main">
-<div class="guide" id="part1-top" style="padding:26px 6px 6px">
+<div class="guide" id="part1-top" style="background:var(--surface-2);padding:26px 6px 6px">
 {part1}
 </div>
-<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
+<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:var(--grad-hero);color:#fff;border-radius:8px 8px 0 0">
 <h1 style="font-size:20px;margin:0">PART 2 · 26 步明细与全部证据（机器逐步报告全文）</h1>
 <p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成，此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物实物核对本章自明。</p>
 </div>
 {machine_main}
 </main>
 </div>
-</body></html
 </body></html>'''
 
     # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。

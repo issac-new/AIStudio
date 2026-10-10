@@ -584,7 +584,10 @@ uat_evidence_body 1790930955`, root)
 
   it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 586——撞号清理 577→586 后引用同步）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    const patchPath = join(HARNESS, '..', 'overlay', 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
+    // overlay 仓路径走 MX_OVERLAY_ROOT 逃生门（与 run-gates.sh 同源）：worktree 内跑套件时
+    // `../overlay` 兄弟路径不存在（2026-10-10 实锤：report-three-elements 轮全套件在此挂）
+    const OVERLAY = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')
+    const patchPath = join(OVERLAY, 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
     // ①patch 文件在位且含核心语义件
     const patch577 = read(patchPath)
     expect(patch577).toContain('_housekeeping_wedged_agent_sweep')
