@@ -3119,7 +3119,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-body code{{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0 4px;font-family:ui-monospace,monospace;font-size:11px}}
 .art-quote{{border-left:3px solid var(--border);margin:6px 0;padding:4px 10px;color:var(--muted);font-size:13px;background:var(--card);border-radius:4px}}
 .art-tbl{{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;border:1px solid var(--border);border-radius:6px;overflow:hidden}}
-.art-tbl th,.art-tbl td{{border:1px solid var(--border);padding:3px 6px;text-align:left;vertical-align:top;line-height:1.6}}
+.art-tbl th,.art-tbl td{{border:1px solid var(--border);padding:3px 6px;text-align:left;vertical-align:top;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}}
 .art-tbl th{{background:var(--bg);font-weight:600}}
 .art-code{{background:var(--ink-strong);color:var(--line);border-radius:6px;padding:8px 10px;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;margin:6px 0;max-height:340px;overflow-y:auto}}
 .art-trunc{{font-size:11px;color:var(--warn);margin-top:4px}}
