@@ -96,10 +96,16 @@ describe('V8.4 截图红线（帧证据三断言——与 simharness A5d/A5g 双
     expect(checkFrameEvidence(h).duplicatedSources).toEqual(['screenshots/steps/g1_frozen-op1-after.png'])
   })
 
-  it('④b 补拍标记入场打回（V8.4 §5.6 ⑩ 补拍件禁入正本）', () => {
-    expect(checkFrameEvidence(fig('screenshots/steps/26-op1-after.png', '报告面·后（补拍）')).backfillMarker)
-      .toBe('（补拍）')
-    expect(checkFrameEvidence('<div>alt 含收官后补拍</div>').backfillMarker).toBe('收官后补拍')
+  it('④b 隔离区帧嵌入打回；带图注补拍与正文提及不误杀（V8.4 §5.6 ⑩ 修订语义）', () => {
+    // 隔离区帧（frames-degraded）出现在 src 或 figcaption → 违例
+    expect(checkFrameEvidence(fig('frames-degraded/26-op1-after.png', '报告面·后')).backfillMarker)
+      .toBe('frames-degraded')
+    expect(checkFrameEvidence(fig('screenshots/steps/26-op1-after.png', '补拍帧归档 frames-degraded 目录')).backfillMarker)
+      .toBe('frames-degraded')
+    // 修订解禁面：带时点图注的准确补拍帧合规（晚拍降级归 ③ 侧）；正文提及目录名=合法 provenance
+    expect(checkFrameEvidence(fig('screenshots/steps/26-op1-after.png', '报告面·后（补拍 15:01）')).backfillMarker)
+      .toBe(null)
+    expect(checkFrameEvidence('<div>叙事提及 收尾后补拍 说明</div>').backfillMarker).toBe(null)
   })
 
   it('正向三断言零误杀', () => {
@@ -129,10 +135,10 @@ describe('证据透传块（导出件原文，禁手抄）', () => {
   })
 })
 
-describe('PART1 五段式骨架（数字实算槽+语境 TODO）', () => {
+describe('PART1 五段式骨架（数字实测槽+语境 TODO）', () => {
   it('run10 口径数字全嵌入，合并槽保持原样', () => {
     const h = part1Skeleton(RUN10_FACTS)
-    expect(h).toContain('26 步 25/26 落键')
+    expect(h).toContain('26 步 25/26 落盘')
     expect(h).toContain('六闸 6/6 过，首过 4/6')
     expect(h).toContain('问题单 22 项（DISP：已修 19，观察 6，延后 4）')
     expect(h).toContain('raci×4、anexec×3')
