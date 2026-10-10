@@ -518,14 +518,45 @@ gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
   fi
 }
 
+# 产物等待责任人提醒（run14 步10 根治件）：repo_has 型等待静默过半时向任务群发
+# 短提醒。run14 实录：fanfan 会话完成分析后静默消失（推送/结论行未落），2400s
+# 全窗空等判中止损失约 50 分钟；监控侧手工群提醒后 8 分钟即补完。本函数把该手工
+# 动作机制化：对活会话是无害短提醒，对死会话=复活通道（top-level 新线程开新会话，
+# run12 手册验证形态）。全局 480s 节流防连环等待提醒风暴。
+_artifact_nudge() { # <desc> <checkpoint-label>
+  local f="$EVID_DIR/artifact-nudge-last.ts" now room tok
+  now=$(date +%s)
+  { [ -f "$f" ] && (( now - $(cat "$f" 2>/dev/null || echo 0) < 480 )); } && return 0
+  room=$(sget room_analysis); [[ -n "$room" ]] || room=$(sget dlv_room)
+  [[ -n "$room" ]] || return 0
+  tok=$(load_token fanfan 2>/dev/null) || return 0
+  echo "$now" > "$f"
+  mx_send "$tok" "$room" "等待提醒（$2）：仍在等「$1」。已完成请立即入库推送并按派单格式回结论行；受阻请回 BLOCKED 与原因；责任侧已无人处理时请明说，勿静默。" "@fanfan-agent:matrix.test" >/dev/null 2>&1 || true
+  note "[跟进] 产物等待提醒已发（$2）：$1"
+}
+
 wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   local desc="$1" timeout="$2"; shift 2
   local deadline=$(( $(date +%s) + timeout ))
-  while (( $(date +%s) < deadline )); do
-    [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
-    if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
-    sleep "$MX_POLL_IVAL"
-  done
+  local _ws _n1=0 _n2=0
+  _ws=$(date +%s)
+  # repo_has 型=产物等待（闸门等待是正常忙期不打扰）；50%/75% 两检查点各提醒一次
+  if [[ "$1" = "repo_has" ]]; then
+    while (( $(date +%s) < deadline )); do
+      [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+      local _el=$(( $(date +%s) - _ws ))
+      if (( _n1 == 0 && _el * 2 >= timeout )); then _n1=1; _artifact_nudge "$desc" "半窗"
+      elif (( _n2 == 0 && _el * 4 >= timeout * 3 )); then _n2=1; _artifact_nudge "$desc" "窗 75%"; fi
+      sleep "$MX_POLL_IVAL"
+    done
+  else
+    while (( $(date +%s) < deadline )); do
+      [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+      sleep "$MX_POLL_IVAL"
+    done
+  fi
   # 终态复核（方案纪律 8：等待窗口是等待上限，不是判词有效期）——窗满再判一次
   if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
   note "[真值] $desc ✗（${timeout}s 超时）"

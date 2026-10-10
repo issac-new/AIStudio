@@ -438,7 +438,7 @@ if RUN_ID >= '20261010-v8-run13':
     #     「补拍」时点（③ 据此降级 WARN）②页面按拍摄位规划（capture-plan.env，视觉抽检
     #     复核）。仍禁：隔离区帧被嵌入正本——检测收窄到 img src/figcaption 上下文（叙事
     #     与问题单正文里的目录名提及是合法 provenance，不误杀）。无标注补拍由 ③ 兜杀。
-    if re.search(r'src="[^"]*frames-degraded|<figcaption>[^<]*frames-degraded', rep):
+    if re.search(r'src="[^"]*frames-degraded|<figcaption>(?:(?!</figcaption>).)*frames-degraded', rep, re.S):
         fails.append('V8.4④ 隔离区帧嵌入正本：img/图注含「frames-degraded」——错页/不合格帧归档区禁入报告，准确补拍请按拍摄位规划重拍')
     _PIC_W = ('面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱')
     _OUT_W = ('在仓', '入仓', '落盘', '过闸', '全绿', '核验过', '分齐', '登记完成')
