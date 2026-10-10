@@ -24,4 +24,15 @@ describe('@提及统一解析（六源+派单合并口径）', () => {
     const refs = resolveMentions('@file:a @skill:b @zcode @squad/s')
     expect(mentionSummary(refs)).toEqual({ sixSource: 2, dispatch: 2, unresolved: 1 })  // squad 前缀已解析，仅裸 @zcode 待派单解析
   })
+
+  // 2026-10-10 wiki 深化轮：@wiki 第七源（字面量约定式——代理按 AGENTS.md 受管块处理）
+  it('@wiki 前缀解析为 wiki kind，计入引用源汇总', () => {
+    const refs = resolveMentions('@wiki:auth @wiki/modules/architecture')
+    expect(refs.map((r) => [r.kind, r.target])).toEqual([
+      ['wiki', 'auth'], ['wiki', 'modules/architecture'],
+    ])
+    expect(refs.every((r) => r.resolved)).toBe(true)
+    expect(mentionSummary(refs).sixSource).toBe(2)
+    expect(mentionSummary(refs).dispatch).toBe(0)
+  })
 })

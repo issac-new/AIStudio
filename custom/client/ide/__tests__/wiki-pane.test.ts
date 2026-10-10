@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, p?: Record<string, unknown>) => (p && Object.values(p).length ? `${k}:${JSON.stringify(p)}` : k) }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, p?: Record<string, unknown>) => (p && Object.values(p).length ? `${k}:${JSON.stringify(p)}` : k), locale: { value: 'zh' } }) }))
 const msgs = { success: vi.fn(), error: vi.fn() }
 vi.mock('naive-ui', () => ({ useMessage: () => msgs }))
 vi.mock('@/components/hermes/chat/MarkdownRenderer.vue', () => ({ default: { name: 'MarkdownRenderer', props: ['content'], template: '<div class="md-stub">{{ content }}</div>' } }))
@@ -57,6 +57,16 @@ vi.mock('@/api/studio/files', () => ({
 const chatSend = vi.fn(async () => {})
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({ sendMessage: chatSend, activeSessionId: null, sessions: [] }),
+}))
+
+// git api 桩（v2 陈旧度状态行数据源）：默认 head=aaa111、工作区干净。
+// meta 边车在既有夹具里读不到（readFile 返回非 JSON）→ hasBaseline=false，状态行隐藏。
+const gitState = { head: 'aaa111', changes: [] as Array<{ path: string }> }
+vi.mock('../api/git', () => ({
+  ideGitApi: {
+    log: vi.fn(async () => ({ commits: [{ hash: gitState.head, short: 'aaa111', isHead: true }] })),
+    status: vi.fn(async () => ({ repoRoot: '/ws/demo', branch: 'main', upstream: null, ahead: 0, behind: 0, detached: false, changes: gitState.changes })),
+  },
 }))
 
 const writeText = vi.fn(async () => {})
@@ -117,12 +127,19 @@ describe('IdeWikiPane（repo wiki 回归轮）', () => {
     w.unmount()
   })
 
-  it('点击页签读正文：readFile 按路径取内容（子目录页可读）', async () => {
+  it('点击页签读正文：readFile 按路径取内容（子目录页可读）；装载期 front matter 批读+meta 边车读取', async () => {
     const w = mountPane()
     await flushPromises()
     await w.find('[data-testid="ide-wiki-page-ide-sidepane"]').trigger('click')
     await flushPromises()
-    expect(readCalls).toEqual(['docs/wiki/modules/ide-sidepane.md'])
+    // v2 装载序列：fm 批读（按收集序）→ meta 边车 → 点击正文
+    expect(readCalls).toEqual([
+      'docs/wiki/modules/ide-sidepane.md',
+      'docs/wiki/modules/wiki-pipeline.md',
+      'docs/wiki/index.md',
+      'docs/wiki/.wiki-meta.json',
+      'docs/wiki/modules/ide-sidepane.md',
+    ])
     expect(w.find('.md-stub').text()).toContain('wiki-fixture-body')
     w.unmount()
   })
@@ -166,9 +183,15 @@ describe('IdeWikiPane（repo wiki 回归轮）', () => {
     const w = mountPane()
     await flushPromises()
     await w.find('[data-testid="ide-wiki-pipeline"]').trigger('click')
+    await flushPromises()
     expect(chatSend).toHaveBeenCalledTimes(1)
+    // v2：meta 边车读不到（夹具非 JSON）→ meta=null 走旧式增量；config 走 store 默认值
     const sent = chatSend.mock.calls[0][0] as string
-    expect(sent).toBe(buildWikiPipelinePrompt({ existingPages: ['docs/wiki/modules/ide-sidepane.md', 'docs/wiki/modules/wiki-pipeline.md', 'docs/wiki/index.md'] }))
+    expect(sent).toBe(buildWikiPipelinePrompt({
+      existingPages: ['docs/wiki/modules/ide-sidepane.md', 'docs/wiki/modules/wiki-pipeline.md', 'docs/wiki/index.md'],
+      meta: null,
+      config: { language: 'zh', diagrams: true, maxPages: 8 },
+    }))
     expect(sent).toContain('模式：增量更新')
     expect(ide.layout.chat.folded).toBe(false)
     w.unmount()

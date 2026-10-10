@@ -4,7 +4,9 @@
 // ChatInput 的 @ 引用统一解析——**六源引用**（file/sessions/skills/plugins/subagents/
 // whiteboard）与**派单目标**（agent/squad）同一解析口径，不再两套 @ 语法。
 // 每条 @ 具带 kind+target+resolved 是否可解析；解析器纯函数，UI 提示/自动补全消费。
-export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad'
+// 2026-10-10 wiki 深化轮：+wiki 第七源（@wiki:页名 / @wiki 整册目录）——字面量
+// 约定式通道，代理按仓库 AGENTS.md 受管块处理（与 @file 字面量先例一致）。
+export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad' | 'wiki'
 
 export interface MentionRef {
   raw: string
@@ -14,7 +16,7 @@ export interface MentionRef {
   resolved: boolean
 }
 
-/** 前缀→kind 映射（zcode 六源 + 派单）。 */
+/** 前缀→kind 映射（zcode 六源 + 派单 + wiki 第七源）。 */
 const PREFIX_KIND: Record<string, MentionKind> = {
   file: 'file', f: 'file',
   session: 'session', sess: 'session',
@@ -23,6 +25,7 @@ const PREFIX_KIND: Record<string, MentionKind> = {
   subagent: 'subagent', sub: 'subagent',
   whiteboard: 'whiteboard', wb: 'whiteboard',
   squad: 'squad',
+  wiki: 'wiki',
 }
 
 /** @ 引用统一解析（前缀形式 @kind:target 或 @kind/target；裸 @word=派单 agent）。 */
