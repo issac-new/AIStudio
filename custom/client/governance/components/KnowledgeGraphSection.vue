@@ -212,6 +212,7 @@ onMounted(() => {
       <div v-for="c in pendingConflicts" :key="c.inboxId" class="kg__conflict" :data-testid="`kg-conflict-${c.inboxId}`">
         <div class="kg__conflict-main">
           <span v-if="c.kind === 'merge-review'" class="kg__kind-tag" data-testid="kg-merge-review-tag">{{ L?.mergeReviewTag }}<template v-if="typeof c.similarity === 'number'"> {{ c.similarity.toFixed(2) }}</template></span>
+          <span v-else-if="c.kind === 'ontology'" class="kg__kind-tag kg__kind-tag--onto" data-testid="kg-ontology-tag">{{ L?.ontologyTag ?? '语义契约' }}</span>
           <b>{{ c.entityId }}</b> · {{ c.field }}：<code>{{ JSON.stringify(c.existing) }}</code> → <code>{{ JSON.stringify(c.incoming) }}</code>
           <span class="kg__conflict-board">（{{ c.board }}）</span>
         </div>
@@ -259,6 +260,7 @@ onMounted(() => {
 .kg__conflict-actions button { font-size: 11px; cursor: pointer; }
 .kg__resolved { font-size: 11px; opacity: 0.6; }
 .kg__kind-tag { font-size: 10px; font-family: monospace; border: 1px solid var(--warning, #f59e0b); color: var(--warning-ink, #92400e); border-radius: 8px; padding: 0 5px; margin-right: 4px; }
+.kg__kind-tag--onto { border-color: #0369a1; color: #0369a1; }
 .kg__autosync { border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .kg__autosync-row { font-size: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .kg__autosync-state { font-weight: 600; }

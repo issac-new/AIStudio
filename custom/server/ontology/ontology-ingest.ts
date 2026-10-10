@@ -17,6 +17,8 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { existsSync } from 'node:fs'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { appendConflictInbox, listConflictInbox } from '../knowledge/board-graph'
+import { getEventLogStore } from '../loop/graph/event-log-registry'
 import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
 import { validateInstances } from './ontology-validate'
 import type { OntologyInstance, Violation } from './ontology-types'
@@ -42,19 +44,21 @@ function slugOf(dbPath: string): string {
 export interface IngestResult {
   ok: boolean
   boards: Array<{ slug: string; tasks: number; links: number }>
-  ingested: { tasks: number; agents: number; boards: number; relations: number }
+  ingested: { tasks: number; agents: number; boards: number; runs: number; relations: number }
   /** 校验剔除的任务（error 级违规，呈现给人） */
   skipped: Violation[]
   /** 写入后的全量健康度 */
   summary: { error: number; warning: number; info: number }
   instanceTotal: number
+  /** 推送进冲突收件箱的本体违规条数（去重后新增；error 级才进——主动找人） */
+  inboxPushed: number
 }
 
 /** 单板/全板摄取。board 指定 slug 只跑该板；缺省全板。 */
 export async function ingestFromKanban(opts?: { board?: string; homeDir?: string }, now = Date.now()): Promise<IngestResult> {
   const res: IngestResult = {
-    ok: true, boards: [], ingested: { tasks: 0, agents: 0, boards: 0, relations: 0 },
-    skipped: [], summary: { error: 0, warning: 0, info: 0 }, instanceTotal: 0,
+    ok: true, boards: [], ingested: { tasks: 0, agents: 0, boards: 0, runs: 0, relations: 0 },
+    skipped: [], summary: { error: 0, warning: 0, info: 0 }, instanceTotal: 0, inboxPushed: 0,
   }
   const files = kanbanDbFiles(opts?.homeDir).filter((f) => (opts?.board ? slugOf(f) === opts.board : true))
   const spec = loadSpec()
@@ -121,6 +125,20 @@ export async function ingestFromKanban(opts?: { board?: string; homeDir?: string
     }
   }
 
+  // Run 实例（推演/图运行清单——共享注册簿直读，fail-soft：未装配即跳过）
+  try {
+    const log = getEventLogStore()
+    if (log) {
+      const runs = await log.listRuns()
+      for (const r of runs) {
+        batch.push({
+          id: `kb:run:${r.runId}`, type: 'Run', label: r.runId,
+          data: { run_id: r.runId, graph_id: r.graphId }, relations: [], updatedAt: now,
+        })
+      }
+    }
+  } catch { /* 运行面缺席不影响看板摄取 */ }
+
   batch.push(...boards.values(), ...agents.values())
 
   // 写前校验：error 涉及的实例剔除出批（最多两轮收敛——剔除可能消除悬空边）
@@ -140,6 +158,7 @@ export async function ingestFromKanban(opts?: { board?: string; homeDir?: string
     tasks: candidates.filter((x) => x.type === 'Task').length,
     agents: candidates.filter((x) => x.type === 'Agent').length,
     boards: candidates.filter((x) => x.type === 'Board').length,
+    runs: candidates.filter((x) => x.type === 'Run').length,
     relations: candidates.reduce((n, x) => n + x.relations.length, 0),
   }
   res.summary = {
@@ -148,6 +167,31 @@ export async function ingestFromKanban(opts?: { board?: string; homeDir?: string
     info: finalV.filter((v) => v.severity === 'info').length,
   }
   res.instanceTotal = finalInstances.length
+
+  // error 级违规推冲突收件箱（本体轮三阶段「主动找人」：治理中心待裁决徽标即抬升）。
+  // **按违规 code 聚合**：人裁决的是「这类约束怎么处置」而非逐条实例——同 code 的
+  // N 条违规聚成一条（entityId=(聚合) code，incoming=样例+计数），避免一次摄取
+  // 刷屏 975 条（真数据实锤）。幂等：同 code 未决不重复追加；两键裁决均为知悉
+  // 语义，不写板 KG。
+  const errors = [...res.skipped, ...finalV.filter((v) => v.severity === 'error')]
+  if (errors.length > 0) {
+    const byCode = new Map<string, { n: number; sample: string }>()
+    for (const v of errors) {
+      const hit = byCode.get(v.code) ?? { n: 0, sample: v.detail }
+      hit.n += 1
+      byCode.set(v.code, hit)
+    }
+    const openCodes = new Set(listConflictInbox().filter((e) => !e.resolved && e.kind === 'ontology').map((e) => e.field))
+    for (const [code, { n, sample }] of byCode) {
+      if (openCodes.has(code)) continue
+      openCodes.add(code)
+      appendConflictInbox({
+        board: 'ontology', entityId: `(聚合) ${code}`, field: code,
+        existing: '(本体数据契约)', incoming: `×${n}：${sample}`, kind: 'ontology',
+      })
+      res.inboxPushed += 1
+    }
+  }
   return res
 }
 

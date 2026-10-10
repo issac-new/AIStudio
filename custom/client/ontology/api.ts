@@ -58,10 +58,11 @@ export interface ValidateResponse { ok: boolean; persisted: boolean; count: numb
 export interface IngestResultDto {
   ok: boolean
   boards: Array<{ slug: string; tasks: number; links: number }>
-  ingested: { tasks: number; agents: number; boards: number; relations: number }
+  ingested: { tasks: number; agents: number; boards: number; runs: number; relations: number }
   skipped: Violation[]
   summary: Health
   instanceTotal: number
+  inboxPushed: number
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {

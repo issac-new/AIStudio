@@ -46,8 +46,10 @@ export interface InboxEntry {
   existing: unknown
   incoming: unknown
   resolved: false | { action: 'keep-existing' | 'take-incoming'; at: number }
-  /** additive（KG 演化治理 2026-10-02）：条目类别。旧数据/旧写入路径无此字段。 */
-  kind?: 'field-conflict' | 'merge-review' | 'quality-gate'
+  /** additive（KG 演化治理 2026-10-02）：条目类别。旧数据/旧写入路径无此字段。
+   *  ontology（2026-10-10 本体轮三阶段）：本体数据契约违规推送——非实体属性
+   *  冲突，entityId=违规 subject（kb: 前缀实例），incoming=violation detail。 */
+  kind?: 'field-conflict' | 'merge-review' | 'quality-gate' | 'ontology'
   /** additive：merge-review 的名称相似度（仅 A2 去重评审档有值）。 */
   similarity?: number
 }
@@ -175,12 +177,14 @@ export function resolveConflictInbox(inboxId: string, action: 'keep-existing' | 
   const entries = listConflictInbox().reverse()
   const hit = entries.find((e) => e.inboxId === inboxId)
   if (!hit || hit.resolved) return hit ?? null
-  if (action === 'take-incoming' && hit.kind !== 'quality-gate') {
+  if (action === 'take-incoming' && hit.kind !== 'quality-gate' && hit.kind !== 'ontology') {
     // force 重写实体（裁决"取新值"）：经 bridge 写回，board 从 entityId 前缀 task:/agent: 推断。
     // quality-gate 类除外：其 entityId=board:<slug>、field='quality-gate'、incoming=分数，
     // 不是实体属性——走此路径会向板 KG 新建 board 垃圾节点（bridge 对不存在的 id 直接
-    // 创建）且该 id 不进 marker，下轮同步再产一条假冲突。merge-review 的 force 写入是
-    // 裁决闭环设计语义（merge-review-closure.test.ts 守门），必须保留
+    // 创建）且该 id 不进 marker，下轮同步再产一条假冲突。ontology 同理（本体违规非
+    // 实体属性，subject 是 kb: 前缀本体实例 id——两键裁决语义均为"已知悉/标记处理"，
+    // 不写板 KG）。merge-review 的 force 写入是裁决闭环设计语义（merge-review-closure.test.ts
+    // 守门），必须保留
     const board = hit.board
     const props: Record<string, unknown> = { [hit.field]: hit.incoming, type: hit.entityId.split(':')[0] === 'task' ? 'task' : 'agent' }
     void runKgOp('entity', boardKgPath(board), { id: hit.entityId, type: props.type as string, props, force: true })
