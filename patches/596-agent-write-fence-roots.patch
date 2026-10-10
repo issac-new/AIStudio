@@ -1,0 +1,33 @@
+diff --git a/agent/file_safety.py b/agent/file_safety.py
+index 1111111..2222222 100644
+@@ -220,11 +220,29 @@
+ 
+ 
+ def get_safe_write_roots() -> set[str]:
+-    """Resolved HERMES_WRITE_SAFE_ROOT paths (``os.pathsep``-separated list)."""
++    """Resolved HERMES_WRITE_SAFE_ROOT paths (``os.pathsep``-separated list), plus
++    per-profile fence roots from <HERMES_HOME>/write-fence-roots.txt (one absolute
++    dir per line, # comments). File roots let the multiplex gateway fence each
++    profile separately without a process-wide env; env and file union when both set.
++    Empty file = no fence (fail-open, same as unset env)."""
+     roots: set[str] = set()
+     for path in filter(None, os.getenv("HERMES_WRITE_SAFE_ROOT", "").split(os.pathsep)):
+         with suppress(OSError, ValueError):
+             roots.add(os.path.realpath(os.path.expanduser(path)))
++    with suppress(Exception):
++        from hermes_constants import get_hermes_home
++        from pathlib import Path as _P
++
++        fence = _P(get_hermes_home()) / "write-fence-roots.txt"
++        try:
++            lines = fence.read_text(encoding="utf-8").splitlines()
++        except OSError:
++            lines = []
++        for line in lines:
++            ln = line.strip()
++            if ln and not ln.startswith("#"):
++                with suppress(OSError, ValueError):
++                    roots.add(os.path.realpath(os.path.expanduser(ln)))
+     return roots
+ 
+ 
