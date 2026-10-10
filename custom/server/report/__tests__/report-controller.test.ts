@@ -1,5 +1,5 @@
-// 报告链 REST 守门（建设实施落地轮）：真实 Koa 挂载 reportRoutes，两个 POST
-// 入口的正反例——字段校验 400、骨架出稿含实算数字、验收断言违例逐项可见。
+// 报告链 REST 门禁（建设实施落地轮）：真实 Koa 挂载 reportRoutes，两个 POST
+// 入口的正反例——字段校验 400、骨架出稿含实测数字、验收断言违例逐项可见。
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
@@ -44,12 +44,12 @@ async function post(path: string, body: unknown) {
 }
 
 describe('POST /api/hermes/report/part1-skeleton', () => {
-  it('run10 口径 facts → 骨架含实算数字与合并槽', async () => {
+  it('run10 口径 facts → 骨架含实测数字与合并槽', async () => {
     const { status, json } = await post('/api/hermes/report/part1-skeleton', RUN10_FACTS)
     expect(status).toBe(200)
     expect(json.ok).toBe(true)
     const html = json.html as string
-    expect(html).toContain('26 步 25/26 落键')
+    expect(html).toContain('26 步 25/26 落盘')
     expect(html).toContain('首过 4/6')
     expect(html).toContain('{{run_id}}')
   })
