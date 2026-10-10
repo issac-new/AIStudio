@@ -491,7 +491,8 @@ onUnmounted(() => {
       <div v-show="sidepaneShown" class="ide-shell__panewrap" :style="sidepaneWidthStyle">
         <!-- R6 补充：右栏左缘拖拽分割条（调整右辅助面板宽度） -->
         <div class="ide-shell__split ide-shell__split--r" data-testid="ide-split-r" @mousedown="startIdeDrag('sidepane', $event)" />
-        <IdeSidePane :class="{ 'is-max': ide.layout.sidepane.maximized }" />
+        <!-- is-max 由 IdeSidePane 根节点自绑；此处再传会合并出 is-max is-max 重复类 -->
+        <IdeSidePane />
       </div>
       <!-- v12.6：侧板收起态右缘导轨（侧栏 footer 功能行退役后的重开入口） -->
       <div v-if="!ide.sidePane.open && !anyMax" class="ide-shell__pane-rail" data-testid="ide-sidepane-rail">
