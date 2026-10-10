@@ -27,7 +27,7 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的驾驶舱。这�
 
 **五个部分怎么读：** 先读第一部分（要什么）和第五部分（怎么算成），这是主干；第二部分是机制设计（怎么保证），给实现和评审的人；第三、四部分是每一轮的实例与操作细节，给执行的人。换需求单只换第三部分，其余不变。
 
-> **文档定位**：全流程推演唯一正本（V8.5 回归轮口径修订版，2026-10-10 定稿——run13 回归轮复盘五处条款修订：DISP 主体精确配对/回归轮三附加纪律/打回判词语义/登记幂等与闸键首过保护/并行度段界锚；修订明细见《[2026-10-10-run13-retrospective.md](../2026-10-10-run13-retrospective.md)》F 编号表）。报告生成器与审计器以本文件为解析源；26 步主链、六道关卡、治理机制、交付物模板字段语义冻结，变更须整轮推演验证。历史沿革、历轮事故、补丁谱系一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-archive.md)》。
+> **文档定位**：全流程推演唯一正本（V8.6 人机协同组织层同步版，2026-10-10 定稿——任务协同图页签/任务工厂模板入库与复用/容量分析面板三面入列 §1.2/§1.0.1/§2.5，页签事实勘误九→十一；本轮只增观察面与证据可引用项，不触 26 步主链/六道关卡/交付物模板等冻结面；概念映射与代码锚见《[2026-10-10-orchestration-capability-spec.md](2026-10-10-orchestration-capability-spec.md)》）。前一版 V8.5 回归轮口径修订（DISP 主体精确配对/回归轮三附加纪律/打回判词语义/登记幂等与闸键首过保护/并行度段界锚）修订明细见《[2026-10-10-run13-retrospective.md](../2026-10-10-run13-retrospective.md)》F 编号表。报告生成器与审计器以本文件为解析源；26 步主链、六道关卡、治理机制、交付物模板字段语义冻结，变更须整轮推演验证。历史沿革、历轮事故、补丁谱系一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-archive.md)》。
 
 ## 第一部分 方案目标
 
@@ -82,7 +82,7 @@ flowchart TB
     RUN -->|"驾驶舱（已有：六功能区）"| VIS["全程可视：执行图实时渲染 ＋ HITL 审批 ＋ 治理度量 ＋ 时间轴回放审计"]
 ```
 
-已有件（产品侧已建）：GraphSpec 格式+事件驱动执行器+join 屏障+守卫回边+checkpoint/resume+人工介入中断（HITL）+编排器画布+运行中心+P4 模板库+每日简报模板（系统内置 GraphSpec 实例）；六个图节点执行器+KanbanBridge（DryRun/HTTP 真实桥接 GRAPH_KANBAN_BASE，26 步图模板可实例化跑通）；工作量估计写入数据库，派发时给任务多的执行者优先派活（加权）；角色边界注册表（图派发时自动给每个角色注入"只做什么、不做什么"）；能力声明注册表（角色能做什么写成清单，不该做的写明不做什么）；REST 接口校验；图执行影子模式（shadow：跟着驱动一启动但不接管主流程，run13 起转为主执行通道）。
+已有件（产品侧已建）：GraphSpec 格式+事件驱动执行器+join 屏障+守卫回边+checkpoint/resume+人工介入中断（HITL）+编排器画布+运行中心+P4 模板库+每日简报模板（系统内置 GraphSpec 实例）；六个图节点执行器+KanbanBridge（DryRun/HTTP 真实桥接 GRAPH_KANBAN_BASE，26 步图模板可实例化跑通）；工作量估计写入数据库，派发时给任务多的执行者优先派活（加权）；角色边界注册表（图派发时自动给每个角色注入"只做什么、不做什么"）；能力声明注册表（角色能做什么写成清单，不该做的写明不做什么）；REST 接口校验；图执行影子模式（shadow：跟着驱动一启动但不接管主流程，run13 起转为主执行通道）；**任务工厂资产回路（2026-10-10 入列）**——完成 run 一键「沉淀为模板」（origin=factory，来源 run 可溯+复用计数随模板起跑累加，mission-templates 台账保存即提交），图执行从「每轮手写 GraphSpec」走向「跑过即资产、下轮以模板派生」，为 26 步标准图模板的沉淀与复用提供产品闭环。
 待建件（缺口）：①**需求→GraphSpec 编译器**（AI 读需求→输出任务图 JSON——本质是需求分析的输出格式从 markdown 换成 GraphSpec）；②推演 26 步转译为标准图模板并转正为主执行通道：先影子模式与驱动双跑验证结果等价，确认后 `MX_GRAPH_ENGINE=on` 切图引擎接管调度（run13 起）；③图执行器↔agent 派发对接的实战完善。分期路线见 2026-10-08-team-parallel-dev-capability.md；并行能力的需求正本=《2026-10-09-parallel-capability-foundation-spec.md》（五类工作都要"先估工作量、再拆小、并行做、最后合并成一份"，机制条款见 §4.2）。run12 已有第一个全流程并行实例：G5 整改测试分给三人同时做（matrix event $LlZZQ4HX；经验教训随轮次结束回填该 spec）。
 
 ### 1.0.2 全新环境独立回归（每轮推演的完整性铁律）
@@ -134,6 +134,8 @@ flowchart TB
 **质量（可复核数字）**：支付核心单测 ≥8 条、其余模块各 ≥6 条，全部执行且全绿（执行输出随分支提交，脚本实际核验）；每条验收标准有对应用例（需求-代码-测试一一对应）；缺陷报→修→验全关才准出且只认本轮记录；开发分支全部合入集成分支，基线可追溯（只许快进或 merge 增量）。
 
 **交付与协作（过程资产）**：完整入仓文档链（冻结单→资产表→组织矩阵→任务清单→系统分析稿→概要设计→排期→测试报告→发布计划与说明→完备性检查→验收报告→工作台账→审计意见书→复盘，字段级模板见 §2.7）；全过程留痕互链（matrix event_id／看板卡号／git commit 三源互链）；治理链条完整（六道关卡全部通过、问题单 100% 处置、经验入分组记忆库）。
+
+**人机协同组织面（2026-10-10 V8.6 入列）**：任务协同图——任一业务结果（根任务卡）一张图看清人、智能体与控制点如何协同完成，配五问面板（结果谁负责/人机怎么分工/哪里必须人确认/异常怎么升级/留下什么可复用资产）；任务工厂——完成运行一键转为可复用模板（来源可溯、复用计数累加、台账保存即提交）；容量分析——按人聚合估算人日/实际人日、智能体已承接人日与估算覆盖率（覆盖率与口径如实呈现，未估算不折算）。验收锚点=界面实拍帧+端点实测输出（§2.5 V8.6 块引）。
 
 **呈现**：HTML 报告完整重现全过程（每步四段+全量呈现，见 §5.4/§5.5），并以第 4 章产品成效块集中呈现交付物成效（功能实证/质量数字/交付完整度，§5.4）。
 
@@ -649,23 +651,27 @@ graph TB
 | 6 | 治理中心·组织界面；三步向导（移交→停用→留痕）；org.md 同步入仓 |
 | 7 | 治理中心 G1 工件区（#/app/board 治理页签组）；冻结标记入仓（锁后不许改） |
 | 9 | 消息操作栏「复制链接」产出 studio 内链（#/app/s/room/:roomId?event=:id）派发原文锚点直跳取证；≥3 条系统事件折叠一行可展开 |
-| 10 | 看板页 /app/board，入口=注意力条最左「swarm kanban」；第四页签「全链条追踪」（?tab=observatory）拓扑/时间筛选/检索/下钻；列编排 columns.yaml 可声明 requiredArtifacts（缺件不过列）；板级 KG 随任务结案自动同步（KG_AUTO_SYNC 总开关/三档去重/版本快照） |
+| 10 | 看板页 /app/board，入口=注意力条最左「swarm kanban」；第二页签「任务协同」（?tab=orchestra，2026-10-10 V8.6 入列）：根任务卡选择+人（蓝）/智能体（紫）/控制点（橙描边）协同画布+五问面板（RACI 审批人/自主度审批点/升级记录聚合推导）；第五页签「全链条追踪」（?tab=observatory，orchestra 插位后顺延）拓扑/时间筛选/检索/下钻；列编排 columns.yaml 可声明 requiredArtifacts（缺件不过列）；板级 KG 随任务结案自动同步（KG_AUTO_SYNC 总开关/三档去重/版本快照） |
 | 13 | skill 过程展示位：xxx-dev 生成 ≥3 张截图+开发调用 ≥2 张截图入报告 |
 | 15 | arch-governance 板评审卡；结论行回房+评审卡判词同步 |
 | 17 | 排期板 fanfan-pm-plan |
 | 18 | 运行观测面：IDE 侧栏「∿ 轨迹」会话轨迹账本、运行中心「常驻意图」卡、治理运行态凭证池卡（G3 运行证据可视化补充，不替代 testlog 权威记录）；保真形态下 background_review 集中为治理确认点（工作线程纯命令 body `!refine <闸>` 显式触发） |
 | 19 | 取证链：测试案例/数据/执行输出/报告逐项截屏，环节流转现场逐节点截屏；IDE History ⋐ 网关真分叉（confirm 明示不可逆→POST /api/sessions/{id}/fork；zcode 会话 404 降级剪贴板） |
+| 22 | 交付健康页签（?tab=accounts）容量分析节（2026-10-10 V8.6 入列）：时间窗 7/30/90 天切换、按人估算人日/实际人日柱状、智能体已承接人日与估算覆盖率汇总卡（口径注脚如实：估算仅任务拆解建的卡、实际人日为墙上时长上界） |
+| 23 | 运行详情页（#/app/runs/:runId）任务工厂沉淀（2026-10-10 V8.6 入列）：完成 run 显示「沉淀为模板」按钮（名称/备注→origin=factory 模板入库+mission-templates 台账行，保存即 git 提交可回溯）；模板起跑复用计数累加，GRAPH_ENGINE 非 on 时降级提示不假装可用 |
 | 24 | 治理中心=/app/board 治理页签组（gov-org 组织与知识/gov-registry/gov-audit/gov-docs/gov-harness 五页签）；治理报告度量面挂驾驭工程四件（六类成本账/L1-L5 自检/能力目录/八原语对账）；KG 演化治理态在知识分区 |
 | 25 | IDE 画布路由归一 /app/ide（IaShell 子路由全屏画布），任务右栏 ⌨IDE 与页头视图切换进入，旧 /ide 深层链接兼容重定向；ide?task= 到达即自动展开任务简报抽屉；🕘 History 浏览器（定位/复制/编辑重发/fork）；运行中心蓝图画廊；治理工件可编辑（保存即本地 git 提交+新鲜度徽标）；会话上下文无损滚存（旧会话 verbatim 归档找回+跨会话笔记） |
 | 26 | 截图口径「三界面」=驾驶舱三功能区（工作台/看板/IDE 画布），capture 断言统一 ^/app；新观测面各 ≥1 张截图按 §5.6 截图门禁；desktop 深层链接 swarmstudio://（白名单 /app 与 /matrix 树） |
 
 > **截图拍摄位可执行正本**（2026-10-10 用户指令「按 UI 功能规划、不乱拍凑数」）：本表是语义正本；每步实际拍哪个页面/页签/账号由 simharness `mux/capture-plan.env` 注册表单一供源，采集射手（r18-frames）按步覆盖执行并留痕——禁止以非本表页面顶替（已知错位先例：交付门禁灯拍成运行中心、工作台账拍成沟通页；`?tab=accounts` 是交付健康页签而非账户管理页）。
 
-> **路由与页签事实**（锚点=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68、i18n-tasks-tabs.ts:14-23；启动前实际访问校验见 §4.1 前置⑤）：/app/board 为九个平级页签——看板/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）；治理中心独立路由 /app/gov 已退役，重定向至 gov-org（旧深层链接不死链）。「应用资产」=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」=数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」=服务端可见性过滤；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。
+> **路由与页签事实**（锚点=overlay/custom/client/ia2/routes.ts:222-244、TasksView.vue:39-68、i18n-tasks-tabs.ts:14-23；启动前实际访问校验见 §4.1 前置⑤）：/app/board 为**十一个平级页签**（V8.6 勘误：原「九个」系集群健康/任务协同两轮入列后未同步）——看板/任务协同（orchestra，2026-10-10 入列）/需求追溯/交付健康/运行观测/协作与知识（gov-org）/能力与规则（gov-registry）/审计与变更（gov-audit）/文档评审（gov-docs）/工程效能（gov-harness）/集群健康（gov-cluster）；治理中心独立路由 /app/gov 已退役，重定向至 gov-org（旧深层链接不死链）。「应用资产」=gov-registry 页签内 AppRegistryEditor 编辑器；「REL-* 三卡」=数据级任务卡（REL- 前缀卡号），非独立产品功能；看板「每人只见本账号板」=服务端可见性过滤；运行中心（#/app/runs）=运行/介入收件箱/任务运行/工作流四页签；账户管理=#/app/accounts；交付案例=#/app/cases（/app/eng 重定向）。
 >
 > **QGate 判定流产品面（两处）**：①交付案例卡「同步 QGate 判定」（#/app/cases）——governance `GET /api/governance/qgate-verdicts`（逐门最新判定，六态→交付三态，带来源桶）→ qgate-bridge 逐门 delivery.gate 事件入案例房；空档/Matrix 未连/无房间三态如实提示。②治理健康页「机器执法实况」条（#/app/board?tab=accounts）——G1-G6 按 qgate 域映射（L0→G1、L1→G3、L2/L3→G4、L4/L5→G5）chip+来源分布行（核验/声明/降级/无信号）；G2/G6 为人工域，灰态"—"不编造。锚点=custom/server/governance/governance-controller.ts（/qgate-verdicts）、custom/client/matrix-teams/stores/qgate-bridge.ts、custom/client/ia2/views/gov/GovHealthSection.vue。
 >
 > **治理证据端点与推演侧消费**（步 23/24 证据可引用，不键控步骤）：事故报告汇编器 `/api/incident/sessions/:id/report[.md]`（三类 17 要素、七源只读实取、缺席要素如实标 absent）；自治度对账 `/api/incident/sessions/:id/autonomy`（偏差黄条）；AI 虚拟损益表 `/api/hermes/virtual-pl`；治理事件总线 `/api/hermes/governance-events`（六域三级 append-only）；机器执法判定流 `/api/governance/qgate-verdicts`；报告能力面 `/api/hermes/report/*`（PART1 骨架生成草稿+报告验收断言，§5.4 形式契约）。消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）、步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）——生成器在位即透传。
+>
+> **人机协同组织层证据面（2026-10-10 V8.6 入列，步 22/24 证据可引用，不键控步骤）**：容量分析 `GET /api/governance/capacity/overview?days=N`（SQLite 只读全库聚合：按人估算人日/已交付人日/实际人日/在途卡数+覆盖率汇总，口径注脚随响应下发）——步 22 可附导出件 evidence/capacity-overview.txt（估算覆盖率为 0 时如实呈现，是任务拆解采纳度的诚实信号而非缺陷）；任务工厂 `POST /api/graph/runs/:id/deposit-template`（完成 run 转存为 origin=factory 模板）+ 台账 `docs/admin/mission-templates.md`（治理注册表新 kind，保存即 git 提交）+ 协同图数据组合面（任务卡列表 parents/children/estimate_days 随列表带出，/api/hermes/autonomy-ladder + /api/escalation/pending + /api/graph/specs 三源客户端聚合）——步 24 复盘可引台账提交号佐证「跑过即资产」。锚点=custom/server/governance/capacity-analytics.ts、custom/server/loop/graph/graph-rest.ts（deposit-template）、custom/client/ia2/views/orchestration/OrchestrationView.vue；概念映射总正本=《2026-10-10-orchestration-capability-spec.md》。
 
 ### 2.6 治理机制（设计性条款）
 

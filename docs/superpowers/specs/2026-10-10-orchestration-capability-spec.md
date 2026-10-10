@@ -62,3 +62,7 @@
 - vitest：orchestration 10 例 / mission-factory 5 例 / capacity 2 例 / ia-views 页签断言更新 / kanban-read-cache 回归——合计 45/45 绿。
 - 浏览器走查（dev 8649 热更新链路）：任务协同页签（根卡/画布/五问）、运行详情沉淀按钮与表单、交付健康容量节（含滚动截图留档 /tmp/orch-*.png）。
 - 运行时部署：`deploy-agent-runtime --apply` 三文件同步（kanban_db/kanban/kanban_output），CLI list JSON 四字段实测带出。
+
+## 推演方案同步
+
+全流程推演方案正本已升 V8.6（2026-10-10）：三面入列 §1.2 能力清单/§1.0.1 图执行已有件/§2.5 产品界面支撑清单（步 10 协同图、步 22 容量分析、步 23 任务工厂行+证据面块引）；页签事实勘误九→十一；拍摄位投影（simharness mux/capture-plan.env）以注释形态给出三个候选位待 run14 全量轮预注册采纳。
