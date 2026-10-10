@@ -12,17 +12,20 @@ index 8005dc30..5c88b4b9 100644
  // HERMES_CUSTOM[SecFileRootSandbox] END
  import { createAppImagePreview } from '../services/files/app-image-preview'
  
-@@ -84,6 +87,9 @@ export async function download(ctx: any) {
+@@ -84,6 +87,12 @@ export async function download(ctx: any) {
  
    try {
      const profile = requestedProfile(ctx)
-+    // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 预热任务 workspace 缓存
-+    if (root) await primeTaskWorkspaceCache()
++    // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
++    // 沙箱内路径不再被任务 workspace CLI 预热拖住（与 files.ts list 同修）
++    if (root && !isPathWithin(resolve(root, filePath), getHermesBaseDir())) {
++      await primeTaskWorkspaceCache()
++    }
 +    // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
      // Validate the path first
      // Support both absolute and relative paths
      // Support both absolute and relative paths; when a root is provided,
-@@ -102,7 +108,9 @@ export async function download(ctx: any) {
+@@ -102,7 +111,9 @@ export async function download(ctx: any) {
        }
        const hermesBase = getHermesBaseDir()
        const candidate = resolve(root, filePath)
@@ -58,12 +61,17 @@ index 9b663546..f3ae5280 100644
        throw Object.assign(new Error('Requested path is outside the hermes base sandbox'), { code: 'invalid_path' })
      }
      return candidate
-@@ -82,6 +87,9 @@ function handleError(ctx: any, err: any) {
+@@ -82,6 +87,14 @@ function handleError(ctx: any, err: any) {
  export async function list(ctx: any) {
    const relativePath = (ctx.query.path as string) || ''
    const root = requestedRoot(ctx)
-+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 预热任务 workspace 缓存
-+  if (root) await primeTaskWorkspaceCache()
++  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
++  // 沙箱内路径不再被任务 workspace CLI 预热拖住（冷刷新 ~9s 曾落在每个 TTL
++  // 窗口的首个带 root 请求上，repo wiki 列表首开即 9s+）
++  if (root) {
++    const candidate = relativePath ? join(root, relativePath) : root
++    if (!isPathWithin(candidate, getHermesBaseDir())) await primeTaskWorkspaceCache()
++  }
 +  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
    // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
    if (root && ctx.state.user?.role !== 'super_admin') {

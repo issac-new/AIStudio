@@ -39,20 +39,23 @@ async function loadPages(): Promise<void> {
   loading.value = true
   loadError.value = null
   try {
-    // 目录树较浅（分组一层），两轮遍历足够 MVP；更深的层级随生成规范固定
+    // 目录树较浅（分组一层为主）；深度上限防符号链接环把遍历挂死。
+    // entries 的目录字段是 isDir（FileEntry 契约，api/studio/workspace-files.ts）——
+    // 曾误用 entry.type === 'directory'（恒 undefined），子目录页静默丢失。
+    const MAX_DEPTH = 4
     const root = await listFiles(WIKI_DIR, ide.workspace!)
     const collected: WikiPage[] = []
-    const walk = async (dirPath: string): Promise<void> => {
+    const walk = async (dirPath: string, depth: number): Promise<void> => {
       const res = await listFiles(dirPath, ide.workspace!)
       for (const entry of res.entries) {
-        if (entry.type === 'directory') await walk(`${dirPath}/${entry.name}`)
-        else if (entry.name.endsWith('.md')) {
+        if (entry.isDir && depth < MAX_DEPTH) await walk(`${dirPath}/${entry.name}`, depth + 1)
+        else if (!entry.isDir && entry.name.endsWith('.md')) {
           collected.push({ path: `${dirPath}/${entry.name}`, name: entry.name.replace(/\.md$/, '') })
         }
       }
     }
     for (const entry of root.entries) {
-      if (entry.type === 'directory') await walk(`${WIKI_DIR}/${entry.name}`)
+      if (entry.isDir) await walk(`${WIKI_DIR}/${entry.name}`, 1)
       else if (entry.name.endsWith('.md')) {
         collected.push({ path: `${WIKI_DIR}/${entry.name}`, name: entry.name.replace(/\.md$/, '') })
       }

@@ -162,7 +162,9 @@ async function loadBriefingContextFiles(): Promise<void> {
     for (const root of roots) {
       const res = await listFiles(root, ws)
       for (const entry of res.entries ?? []) {
-        if (entry.type !== 'file' || !/\.(md|txt|docx?|pdf)$/i.test(entry.name)) continue
+        // FileEntry 契约字段是 isDir（无 type 字段）——曾用 entry.type !== 'file'
+        // （恒真）把所有条目 continue 掉，简报上下文文件永远为空。
+        if (entry.isDir || !/\.(md|txt|docx?|pdf)$/i.test(entry.name)) continue
         const hit = CONTEXT_PATTERNS.find((p) => p.re.test(entry.name))
         if (!hit) continue
         if ((perKind[hit.kind] ?? 0) >= 3) continue
