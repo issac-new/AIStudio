@@ -750,7 +750,7 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
 
   it('审计器查 9 承载面符合性（§2.5 步集解析 × product-surface-degraded 降级口径）', () => {
     const audit = read(join(MX, 'mx-report-audit.py'))
-    expect(audit).toContain('承载面符合性')
+    expect(audit).toContain('承载范围符合性')
     expect(audit).toContain('product-surface-degraded')
     expect(audit).toContain('### 2\\.5')
   })

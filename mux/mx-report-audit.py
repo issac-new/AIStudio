@@ -8,7 +8,7 @@
 3. 每步图非零：已完成（✅）步缺图=FAIL；未完成（⬜）步缺图=WARN（闸门阻断轮的
    后续步本就无证据，不该误报）——报告自身状态标级联判定，不出假红
 4. 截图自证：PNG 均非空、非同 md5（假重复检测）；报告引用但文件缺失=FAIL
-5. 状态真实性：报告 ✅ 步与 state.env 落键一致（不出假绿）；闸门卡与 state 一致
+5. 状态真实性：报告 ✅ 步与 state.env 落盘一致（不出假绿）；闸门卡与 state 一致
 
 选择器锚定生成器 mx-report-gen.py 的真实 DOM（2026-09-29 修复版）：
   步块=<article class="step"|"step gate-step">，步号=<span class="st-num">，
@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采矩阵单一事实源（与生成器 hero 统计同表）
+from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采证据表单一事实源（与生成器 hero 统计同表）
 
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
@@ -111,7 +111,7 @@ for blk in blocks:
     if n in plan_steps and title != plan_steps[n]:
         title_mismatch.append(n)
     if PLAN_V82:
-        # V8.3：①②与步条同构；③④自台账/档案实算（正本两段式，2026-10-08 终态剥离）
+        # V8.3：①②与步条同构；③④自台账/档案实测（正本两段式，2026-10-08 终态剥离）
         for sec in ('这步做什么', '交付物及质量判据', '已知问题', '处置与改进'):
             if sec not in blk:
                 gate_missing.append(f'{n}:{sec}')
@@ -121,11 +121,11 @@ for blk in blocks:
     has_img = '<img' in blk  # V8.2 四段布局：截图区不再是末元素，整块找（帧与实拍同权）
     if not has_img:
         # 无帧三态（V8.4④ 2026-10-10 修订）：①声明态（功能不存在/夹具未执行）不计缺图；
-        # ②✅步「记单在案」占位须问题单键配对（frame-capture-failed|step-<键> 或
+        # ②✅步「登记在案」占位须问题单键配对（frame-capture-failed|step-<键> 或
         # r18-collection-missing）——预解析后统一判；③其余 ✅ 缺图仍 FAIL，⬜ 预期内。
         if '本步无对应产品界面' in blk or '回归轮（本步不在本轮执行范围）' in blk:
             declared_absent.append(n)
-        elif done and ('记单在案，无帧明示' in blk or '记单在案，无帧明示不补拍' in blk):
+        elif done and ('登记在案，无帧明示' in blk or '登记在案，无帧明示不补拍' in blk):
             done_noimg_ticketed.append(blk)
         else:
             (done_no_img if done else pending_no_img).append(n)
@@ -146,7 +146,7 @@ for _blk in done_noimg_ticketed:
     _km = re.search(r'（截图缺失·([A-Za-z0-9_]+)', _blk)
     _key = _km.group(1) if _km else ''
     if _r18_pre or (f'step-{_key}' in _fc_pre):
-        warns.append(f'V8.4④ ✅步无帧已记单降级：{_key}（采集失败记单在案；补拍须按拍摄位规划准确补拍+图注明示时点）')
+        warns.append(f'V8.4④ ✅步无帧已登记降级：{_key}（采集失败登记在案；补拍须按拍摄位规划准确补拍+图注明示时点）')
     else:
         done_noimg_unpaired.append(_key or '?')
 if declared_absent:
@@ -183,7 +183,7 @@ missing = [m.group(1) for m in re.finditer(r'src="screenshots/steps/([^"]+)"', r
 if missing:
     fails.append(f'报告引用但缺文件：{sorted(set(missing))[:6]}')
 
-# ── 查 5：状态真实（报告 ✅/闸门卡 与 state 落键一致） ──
+# ── 查 5：状态真实（报告 ✅/闸门卡 与 state 落盘一致） ──
 state_keys = {}
 for line in STATE.read_text().splitlines():
     if '=' in line and not line.startswith('jwt_'):
@@ -197,21 +197,21 @@ for g, k in GATE_KEYS.items():
     m = re.search(rf'{g}</div>\s*<div class="gate-state">([^<]+)', rep)
     rep_state = m.group(1) if m else ''
     rep_pass = '已通过' in rep_state
-    # 声明式判回滚（独立审计判词，如 run2 G5/R-A1）：state 落键保留原值（执行流水
+    # 声明式判回滚（独立审计判词，如 run2 G5/R-A1）：state 落盘保留原值（执行流水
     # 不改写），判定以报告+处置表为准——此类 state≠report 是声明更正，降 WARN 不 FAIL。
     if '判回滚' in rep_state:
         if rep_pass:
             fails.append(f'{g} 判回滚卡不得显示已通过')
         else:
-            warns.append(f'{g} 声明判回滚（state 落键保留原值为执行流水，判定以报告/处置表为准）')
+            warns.append(f'{g} 声明判回滚（state 落盘保留原值为执行流水，判定以报告/处置表为准）')
         continue
     if in_state != rep_pass:
         fails.append(f'{g} 状态不一致：state={in_state} report={rep_pass}（报告疑为闸前旧生成，须重生成）')
 
-# ── 查 6：V5 §8.3 硬性要求断言（R3-R9；R1 判词语义/R2 落键由 harness H8-H11 与查 5 覆盖） ──
+# ── 查 6：V5 §8.3 硬性要求断言（R3-R9；R1 判词语义/R2 落盘由 harness H8-H11 与查 5 覆盖） ──
 # R3 UAT 逐条判词：判定范围=验收书判词载体（UAT 步块+交付物渲染区），禁全文共查——
 # 沿革表 run2 史实行（"UAT 有条件验收"）与验收书 7/7 原文（"全部 AC 通过"）合法同页共存，
-# 全文共查会误伤（run7 实录：验收书原文真容渲染触发假 FAIL）。本意=验收书自身禁总括矛盾。
+# 全文共查会误伤（run7 实录：验收书原文实际内容渲染触发假 FAIL）。本意=验收书自身禁总括矛盾。
 _uat_blocks = [b for b in blocks if '<span class="st-num">21</span>' in b]
 _r3_txt = ''.join(_uat_blocks)
 if re.search(r'全部\s*AC\s*通过', _r3_txt) and '有条件' in _r3_txt:
@@ -250,11 +250,11 @@ if _ilog.exists():
     _open = [k for k in _iss if k.split('·')[0] not in _disp]
     if _open:
         fails.append(f'R5 问题单缺 DISP（{len(_open)}/{len(_iss)} 待处置）：{_open[:6]}——违反第 24 步合格线')
-    # 悬挂 DISP（DISP 类型无对应 ISSUE）=台账卫生 WARN（导演补账须有 ISSUE 在先）
+    # 悬挂 DISP（DISP 类型无对应 ISSUE）=台账卫生 WARN（补账须先有 ISSUE 在案）
     _iss_types = {k.split('·')[0] for k in _iss}
     _hanging = sorted(t for t in _disp if t not in _iss_types)
     if _hanging:
-        warns.append(f'R5b 悬挂 DISP（有处置无记单，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
+        warns.append(f'R5b 悬挂 DISP（有处置无登记，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
 
 # R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号）
 _anchor_pat = re.compile(r'\$[A-Za-z0-9_-]{25,}|\bt_[0-9a-f]{8}\b|\b[0-9a-f]{7,10}\b')
@@ -273,12 +273,12 @@ _ui_cnt = sum(1 for b in _done_blocks if '界面实拍' in b)
 if _done_blocks and _ui_cnt == 0:
     warns.append('R7 完成步无一帧"界面实拍"角标——疑文档/CLI 凑数，须人工视觉复核')
 
-# R8 数字实算：报告内计数类字样与 issues.log 一致（问题单唯一键数）
+# R8 数字实测：报告内计数类字样与 issues.log 一致（问题单唯一键数）
 if _ilog.exists() and '问题单终态' in rep:
     _uniq = len(set(_iss))
     _m3 = re.search(rf'唯一键\s*(\d+)', rep)
     if _m3 and int(_m3.group(1)) != _uniq:
-        fails.append(f'R8 问题单计数不实：报告唯一键 {_m3.group(1)} ≠ issues.log 实算 {_uniq}')
+        fails.append(f'R8 问题单计数不实：报告唯一键 {_m3.group(1)} ≠ issues.log 实测 {_uniq}')
 
 # R9 报告步自证：第 26 步须 ✅（生成器对本步恒真）且带生成产物锚点
 _b26 = next((b for b in blocks if '<span class="st-num">26</span>' in b), '')
@@ -290,14 +290,14 @@ if _b26:
 else:
     warns.append('R9 未定位第 26 步块（结构漂移？）')
 
-# ── 查 6.5：run10 报告链勘误配套断言（2026-10-07 落版；生成器同源修复的守门）──
+# ── 查 6.5：run10 报告链勘误配套断言（2026-10-07 落版；生成器同源修复的门禁）──
 # A3 三源计数：复盘文档成文数 × issues.log 事件流 × 报告唯一键（P18/R29 承诺兑现——
 # 方案声称"复盘三源计数一致性入审计断言已落地"但无代码，本断言即补位）。
 if _ilog.exists():
     _iss_lines = [l for l in _ilog.read_text().splitlines() if l.startswith('ISSUE|')]
     _m_rep = re.search(r'唯一键\s*(\d+)', rep)
     if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
-        fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实算（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
+        fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实测（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
     _retro = EVID.parent.parent / 'central' / 'aipaydev' / 'docs' / 'retro'
     import datetime as _dt
     _date8 = RUN_ID[:8]
@@ -306,9 +306,9 @@ if _ilog.exists():
         _rt = _cands[0].read_text(encoding='utf-8', errors='replace')
         _mr = re.search(r'问题单台账（(\d+)\s*条', _rt)
         if _mr and int(_mr.group(1)) != len(_iss_lines):
-            warns.append(f'A3b 复盘文档成文计数（{_mr.group(1)} 条）≠ issues.log 终态（{len(_iss_lines)} 行）——成文时滞族 P18（治理报告/复盘时点后移机制挂 run11）；收官补记在后属预期，在前即计数失真')
+            warns.append(f'A3b 复盘文档成文计数（{_mr.group(1)} 条）≠ issues.log 终态（{len(_iss_lines)} 行）——成文时滞族 P18（治理报告/复盘时点后移机制挂 run11）；收尾补记在后属预期，在前即计数失真')
 
-# A4 闸门"一次通过"徽章实算：报告渲染数 = 6 − 闸门类记单键数 − state 打回轮次键
+# A4 闸门"一次通过"徽章实测：报告渲染数 = 6 − 闸门类登记键数 − state 打回轮次键
 if _ilog.exists():
     _gate_hit = set()
     for _l in _ilog.read_text().splitlines():
@@ -327,9 +327,9 @@ if _ilog.exists():
     _first_pass_rendered = len(re.findall(r'gate-rej ok1">一次通过', rep))
     _expected = 6 - len(_gate_hit)
     if _first_pass_rendered != _expected:
-        fails.append(f'A4 闸门"一次通过"徽章渲染 {_first_pass_rendered} 个 ≠ 实算 {_expected} 个（台账闸门记单键：{sorted(_gate_hit)}）——静态注册表默认报喜族守门')
+        fails.append(f'A4 闸门"一次通过"徽章渲染 {_first_pass_rendered} 个 ≠ 实测 {_expected} 个（台账闸门登记键：{sorted(_gate_hit)}）——静态注册表默认报喜族门禁')
 
-# A5 图数对账：盘上 PNG × 报告 <img> 引用（生成器同逻辑守门；§5.6 快门守门⑥ 头部计数=实际嵌入数）
+# A5 图数对账：盘上 PNG × 报告 <img> 引用（生成器同逻辑门禁；§5.6 快门门禁⑥ 头部计数=实际嵌入数）
 _steps_dir_a = EVID / 'screenshots' / 'steps'
 if _steps_dir_a.exists():
     _disk = {p.stem for p in _steps_dir_a.glob('*.png')}
@@ -340,7 +340,7 @@ if _steps_dir_a.exists():
         warns.append(f'A5a 盘上未引用帧 {len(_unref)} 张（漏配）：{_unref[:6]}——拍而未嵌须挂接或归档')
     if _miss:
         fails.append(f'A5b 报告引用但文件缺失 {len(_miss)} 张（冒配）：{_miss[:6]}')
-    # A5c 旧口径（run13 前专属）：run13 起生成器按 V8.4 ④渲染"记单+无帧明示"（文案仍含
+    # A5c 旧口径（run13 前专属）：run13 起生成器按 V8.4 ④渲染"登记+无帧明示"（文案仍含
     # 该前缀字样），由下方 A5d/e/f 按"占位↔问题单配对"新口径判，不再按字样一刀切。
     if RUN_ID < '20261010-v8-run13' and ('（截图缺失）' in rep or '注册帧缺文件' in rep):
         fails.append('A5c 报告含缺图占位（"截图缺失"/"注册帧缺文件"）——§5.5 空态禁渲染/冒配红标未消化')
@@ -356,7 +356,7 @@ if RUN_ID >= '20261010-v8-run13':
     _dup_src = sorted(s for s, c in _src_cnt.items() if c > 1)
     if _dup_src:
         fails.append(f'V8.4② 同源帧多用途：{_dup_src}——同一图像文件只许一处嵌入配一个图注（run12 步20/23 双挂 deliver_gate 即此类）')
-    # ④ 缺帧占位必须配问题单：注册帧缺文件/帧缺失/采集位空 → 按 §5.6 采集纪律⑩ 记单，
+    # ④ 缺帧占位必须配问题单：注册帧缺文件/帧缺失/采集位空 → 按 §5.6 采集纪律⑩ 登记，
     #    帧名前缀键 ↔ issues.log 的 frame-capture-failed|step-<键>（或 r18-collection-missing 族）
     #    精确配对；✅ 步含"（截图缺失）"裸占位=FAIL（⬜ 未执行/夹具带的无帧明示不阻断、汇总一条 WARN）
     _fc_step_keys = set()
@@ -375,7 +375,7 @@ if RUN_ID >= '20261010-v8-run13':
         _n = int(_n_m.group(1)) if _n_m else -1
         _done_blk = '<span class="ok">✅</span>' in _blk
         if '（截图缺失·' in _blk or '（截图缺失）' in _blk:
-            # 新版占位自带步键并声明记单——配对判定由查3 预解析统一承担；此处只分类计数
+            # 新版占位自带步键并声明登记——配对判定由查3 预解析统一承担；此处只分类计数
             if _done_blk:
                 _idle_noframe_done += 1
             else:
@@ -385,13 +385,13 @@ if RUN_ID >= '20261010-v8-run13':
             if (f'step-{_key}' not in _fc_step_keys) and not _has_r18_degrade:
                 _ph_unpaired.append(f'步{_n}:{_m.group(1)}')
     if _idle_noframe_done:
-        warns.append(f'V8.4④ ✅步无帧（占位带记单声明）{_idle_noframe_done} 步——查3 已按配对判定，此处计数复核')
+        warns.append(f'V8.4④ ✅步无帧（占位带登记声明）{_idle_noframe_done} 步——查3 已按配对判定，此处计数复核')
     if _ph_unpaired:
-        fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 记单 frame-capture-failed|step-<键> 后降级呈现')
+        fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 登记 frame-capture-failed|step-<键> 后降级呈现')
     if _idle_noframe:
         warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 不在本轮执行范围/沿用带，回归轮口径合规呈现）')
     # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
-    #    在 state 有 epoch 落键者，帧须 ≤ 键值+120s。2026-10-10 用户指令修订：补拍解禁但
+    #    在 state 有 epoch 落盘者，帧须 ≤ 键值+120s。2026-10-10 用户指令修订：补拍解禁但
     #    必须准确——图注明示「补拍」的窗外/晚拍帧=合规降级 WARN（页面准确性由拍摄位规划+
     #    视觉抽检承担）；无补拍标注的窗外帧=冒充实时 FAIL。flag 键与 scenario.log 全段界
     #    对账为二阶强化，暂不设 FAIL 防误杀。
@@ -425,13 +425,13 @@ if RUN_ID >= '20261010-v8-run13':
         if _out_win:
             fails.append(f'V8.4③ 帧时刻窗外且无补拍标注（run 区间外）：{_out_win[:6]}——补拍帧必须图注明示补拍，否则视为冒充实时')
         if _late:
-            fails.append(f'V8.4③ 帧晚于所属步落键且无补拍标注：{_late[:4]}——步后补拍须图注明示（准确补拍=按拍摄位规划页面+标注时点）')
+            fails.append(f'V8.4③ 帧晚于所属步落盘且无补拍标注：{_late[:4]}——步后补拍须图注明示（准确补拍=按拍摄位规划页面+标注时点）')
         if _retro_ok:
             warns.append(f'V8.4③ 带补拍标注的窗外/晚拍帧 {len(_retro_ok)} 张（合规降级：准确补拍允许，图注已明示）')
 
 # ── A5g：V8.4 ① 图注=画面描述（§5.5 截图红线①，run13 起）──
 # figcaption（剥 shot-kind 角标后）禁两类：纯位序模板（"① 操作前"是位序不是画面）；
-# 步结果式（含 在仓/落键/过闸 等结果词且无任何画面词——"freeze 在仓"是步结论不是画面）。
+# 步结果式（含 在仓/落盘/过闸 等结果词且无任何画面词——"freeze 在仓"是步结论不是画面）。
 # 画面词=可指认的画面落点（面/页/视图/板/窗/列表/面板/看板/房间/灯/画布/台账/报告/IDE/环境/入口/矩阵/收件箱）。
 if RUN_ID >= '20261010-v8-run13':
     # ④b 补拍纪律（2026-10-10 用户指令修订 V8.4）：准确补拍解禁——补拍帧必须 ①图注明示
@@ -441,7 +441,7 @@ if RUN_ID >= '20261010-v8-run13':
     if re.search(r'src="[^"]*frames-degraded|<figcaption>[^<]*frames-degraded', rep):
         fails.append('V8.4④ 隔离区帧嵌入正本：img/图注含「frames-degraded」——错页/不合格帧归档区禁入报告，准确补拍请按拍摄位规划重拍')
     _PIC_W = ('面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱')
-    _OUT_W = ('在仓', '入仓', '落键', '过闸', '全绿', '核验过', '分齐', '登记完成')
+    _OUT_W = ('在仓', '入仓', '落盘', '过闸', '全绿', '核验过', '分齐', '登记完成')
     _bad_caps = []
     for _cm in re.finditer(r'<figcaption>(.*?)</figcaption>', rep, re.S):
         _c = re.sub(r'<span class="shot-kind".*?</span>', '', _cm.group(1), flags=re.S)
@@ -452,9 +452,9 @@ if RUN_ID >= '20261010-v8-run13':
             _bad_caps.append(f'「{_c}」步结果式')
     if _bad_caps:
         fails.append(f'V8.4① 图注非画面描述：{_bad_caps[:5]}——图注写画面可见内容（哪个页面/哪个区域/状态条读数），'
-                     '步结果不作图注；图注↔画面一致性视觉抽检位（每轮 ≥3 帧）另由报告链收官承担')
+                     '步结果不作图注；图注↔画面一致性视觉抽检位（每轮 ≥3 帧）另由报告链收尾承担')
 
-# A6 叙事时间锚抽检：st-story 所引 HH:MM 时刻须在 scenario.log 有命中（"02:27/04:27"族守门）
+# A6 叙事时间锚抽检：st-story 所引 HH:MM 时刻须在 scenario.log 有命中（"02:27/04:27"族门禁）
 _scen = EVID / 'scenario.log'
 if _scen.exists():
     _scen_txt = _scen.read_text(encoding='utf-8', errors='replace')
@@ -497,12 +497,12 @@ if _r15.exists():
     elif 'scenario.log 实抽' not in _u:
         warns.append('R15 第 0 章在位但协作时序线标记缺失（scenario.log 实抽注记）')
     if '研发全流程治理有效性' not in _u:
-        warns.append('正本缺「研发全流程治理有效性」实算节')
+        warns.append('正本缺「研发全流程治理有效性」实测节')
 else:
     warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
 
 # ── 查 8：R18 全量呈现（正本 §5.5 验收线：对话全文/操作前后帧/环节效果实证）──
-# 按步型必采矩阵（步集自 r18_matrix 单一事实源——生成器 hero 统计同表，守门测试 ⑫）：
+# 按步型必采证据表（步集自 r18_matrix 单一事实源——生成器 hero 统计同表，门禁测试 ⑫）：
 #   对话必采=派发/回执/审批/缺陷/验收对账步；操作必采=建群/看板/IDE 等真 UI 操作步
 #   （每组 ops 须 ≥2 帧=前后帧下限）；效果必采=工件产出闸步；其余 ✅ 步任一位在位即可。
 _R18_DIALOG_STEPS = DIALOG_STEPS
@@ -516,9 +516,9 @@ _ilines_r18 = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.
 _r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
 if _r18_missing_file:
     if _r18_degraded:
-        warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已记单 r18-collection-missing 按§5.6 采集纪律⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
+        warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按§5.6 采集纪律⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
     else:
-        fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）；缺口须记单 r18-collection-missing 方可降级')
+        fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）；缺口须登记 r18-collection-missing 方可降级')
 else:
     try:
         _r18_payloads = json.loads(R18F.read_text(encoding='utf-8')).get('steps', {}) or {}
@@ -540,7 +540,7 @@ for blk in blocks:
     if frames_missing:
         fails.append(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐')
     _r18_rep = warns.append if _r18_degraded else fails.append
-    _r18_suffix = '（已记单 r18-collection-missing 降级）' if _r18_degraded else ''
+    _r18_suffix = '（已登记 r18-collection-missing 降级）' if _r18_degraded else ''
     if n in _R18_DIALOG_STEPS and d_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）{_r18_suffix}')
     if n in _R18_OP_STEPS:
@@ -553,14 +553,14 @@ for blk in blocks:
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）{_r18_suffix}')
     if n in _R18_SKILL_STEPS:
-        # §5.6 必采矩阵：步级承载面承诺入必采矩阵——skill 过程帧 gen≥3+invoke≥2，
-        # 载荷侧实算（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
+        # §5.6 必采证据表：步级承载范围承诺入必采证据表——skill 过程帧 gen≥3+invoke≥2，
+        # 载荷侧实测（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
         if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                        frame_exists=lambda name: (steps_dir / name).exists()):
-            _r18_rep(f'R18 步 {n} skill 过程帧未达标（§5.6 必采矩阵：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）{_r18_suffix}')
+            _r18_rep(f'R18 步 {n} skill 过程帧未达标（§5.6 必采证据表：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）{_r18_suffix}')
     if n in _R18_DELIVERY_STEPS:
         # R29（P15）：delivery 门禁灯帧 ≥1（MX_DELIVERY=1 全程开启+面板实拍+r18-collect
-        # deliver 登记）；产品面未就绪按§5.6 采集纪律⑩ 记单降级（P15/delivery-protocol 键命中即降
+        # deliver 登记）；产品面未就绪按§5.6 采集纪律⑩ 登记降级（P15/delivery-protocol 键命中即降
         # WARN），禁静默关旗标跑全程
         _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                           frame_exists=lambda name: (steps_dir / name).exists())
@@ -568,18 +568,18 @@ for blk in blocks:
         _degraded = any(('P15' in l) or ('delivery-protocol' in l) or ('r18-collection-missing' in l) for l in _ilines)
         if not _dlv_ok:
             if _degraded:
-                warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已记单，按§5.6 采集纪律⑩ 降级——产品面/旗标修复后补帧）')
+                warns.append(f'R18 步 {n} delivery 门禁灯帧缺（P15 已登记，按§5.6 采集纪律⑩ 降级——产品面/旗标修复后补帧）')
             else:
-                fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按§5.6 采集纪律⑩ 记单降级）')
+                fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按§5.6 采集纪律⑩ 登记降级）')
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
         _r18_rep(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）{_r18_suffix}')
 
-# ── 查 8b：产品成效两项（§5.4 产品成效呈现+§5.6 必采矩阵 run13 起入分母；run14 起接线）──
+# ── 查 8b：产品成效两项（§5.4 产品成效呈现+§5.6 必采证据表 run13 起入分母；run14 起接线）──
 # exec 项（幂等/下单执行输出件）缺席=FAIL——执行输出无 UI 亦可产出，无降级通道；
-# frames 项（下单流程帧 ≥2）缺席：台账在位 product-outcome-missing 族记单=§5.6 采集
-# 纪律⑩ 降级 WARN（逻辑层 SDK 无 UI 面属「功能不存在」声明态），未记单=FAIL。
+# frames 项（下单流程帧 ≥2）缺席：台账在位 product-outcome-missing 族登记=§5.6 采集
+# 纪律⑩ 降级 WARN（逻辑层 SDK 无 UI 面属「功能不存在」声明态），未登记=FAIL。
 # 轮次闸（2026-10-10 三要素合并轮补）：本查 run13 起入分母（§5.5「run12 不回溯」
 # 一次性历史条款）——run12 及更早轮无 product-outcome 采集义务，误咬=历史轮全部 FAIL
 _po = {'exec_met': True, 'frames_met': True, 'degraded': False}
@@ -590,22 +590,22 @@ if not _po['exec_met']:
                  '§5.4 ①件必采：product-outcome-summary.py 落盘或 testlog 实跑摘录，禁手抄')
 if not _po['frames_met']:
     if _po['degraded']:
-        warns.append('产品成效 frames 项缺席（下单流程前后帧 <2）——已记单 product-outcome-missing '
+        warns.append('产品成效 frames 项缺席（下单流程前后帧 <2）——已登记 product-outcome-missing '
                      '按§5.6 采集纪律⑩ 降级（逻辑层 SDK 无 UI 面声明态）；产品提供可走查 UI 后实拍')
     else:
-        fails.append('产品成效 frames 项缺席（下单流程前后帧 <2）且无 product-outcome-missing 记单——'
-                     '§5.6 采集纪律⑩：记单+明示或实拍，二选一必选')
+        fails.append('产品成效 frames 项缺席（下单流程前后帧 <2）且无 product-outcome-missing 登记——'
+                     '§5.6 采集纪律⑩：登记+明示或实拍，二选一必选')
 
-# ── 查 9：承载面符合性（正本 §2.5 产品承载面清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
+# ── 查 9：承载范围符合性（正本 §2.5 产品承载范围清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有
-# product-surface-degraded 记单声明合规降级（记单+最接近真实功能页补拍+图注三件套）；
+# product-surface-degraded 登记声明合规降级（登记+最接近真实功能页补拍+图注三件套）；
 # 二者皆缺 → WARN 起步（连续两轮未处置转 FAIL，转硬评估挂 run11 前置）。
 _m25 = re.search(r'### 2\.5 [^\n]*\n(.*?)(?=\n### |\n## )', plan_text, re.S)
 _surface_steps = set()
 if _m25:
     _surface_steps = {int(x) for x in re.findall(r'^\|\s*(\d+)\s*\|', _m25.group(1), re.M)}
 if not _surface_steps:
-    warns.append('方案 §2.5 承载面清单未解析到步号——查 9 空转（解析锚失效即验收缺陷，须修复解析或正本）')
+    warns.append('方案 §2.5 承载范围清单未解析到步号——查 9 空转（解析锚失效即验收缺陷，须修复解析或正本）')
 _issues_txt9 = _ilog.read_text(encoding='utf-8') if _ilog.exists() else ''
 _degraded9 = 'product-surface-degraded' in _issues_txt9
 for blk in blocks:
@@ -616,8 +616,8 @@ for blk in blocks:
     if n not in _surface_steps or '<span class="no">⬜</span>' in blk[:400]:
         continue
     if len(re.findall(r'class="shot', blk)) == 0 and not _degraded9:
-        warns.append(f'承载面符合性：步 {n} 在 §2.5 有产品承载面承诺但报告零 UI 实拍帧，'
-                     f'且 issues.log 无 product-surface-degraded 降级记单——补拍或按§5.6 采集纪律⑩ 合规降级记单')
+        warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧，'
+                     f'且 issues.log 无 product-surface-degraded 降级登记——补拍或按§5.6 采集纪律⑩ 合规降级登记')
 
 # ── 查 10：六闸工件视图（§5.4 必备六件：G1 冻结/G2 评审/G3 testlog/G4 测试报告/G5 发布计划/G6 复盘）──
 # 步 7/15/18/19/20/24 步块须含交付物视图（st-artifact）或"无文件域交付物"声明（§5.4 第二段）。
@@ -634,14 +634,14 @@ if _gv_missing:
     fails.append(f'六闸工件视图缺位（§5.4 必备六件缺一打回）：{"、".join(_gv_missing)}')
 _n_views = len(re.findall(r'class="art-item"', rep))
 if _n_views < 15:
-    warns.append(f'交付物视图 {_n_views} 类 < §5.4 数量底线 15 类——逐条记单入下轮前置（不阻断，缺件须在视图或记单中如实可见）')
+    warns.append(f'交付物视图 {_n_views} 类 < §5.4 数量底线 15 类——逐条登记入下轮前置（不阻断，缺件须在视图或登记中如实可见）')
 
-# ── 查 11：产品面承载率行（§5.5：ch1 须含"产品面承载率 n/5"+五面逐面判定；验收线 ≥4/5 不阻断但逐面记单）──
+# ── 查 11：产品面承载率行（§5.5：ch1 须含"产品面承载率 n/5"+五面逐面判定；验收线 ≥4/5 不阻断但逐面登记）──
 _fr = re.search(r'产品面承载率 <b>(\d)/5</b>', rep)
 if not _fr:
     fails.append('承载率行缺位（§5.5：第 1 章须含"产品面承载率 n/5"+五面逐面一句判定）')
 elif int(_fr.group(1)) < 4:
-    warns.append(f'产品面承载率 {_fr.group(1)}/5 < 验收线 4/5——不阻断收官，逐面记单入下轮前置（§5.5）')
+    warns.append(f'产品面承载率 {_fr.group(1)}/5 < 验收线 4/5——不阻断收尾，逐面登记入下轮前置（§5.5）')
 
 # ── 查 12：QGate 证据纪律（§5.5 v1.31.1 条款：引用须带来源分布；桶非零/未验证/advisory 未清禁"全绿/已核验"）──
 for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', rep, re.S):
@@ -657,8 +657,8 @@ for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', re
     break  # 块唯一（步 20），只判一次
 
 # ── 查 13：并行度实测行（§5.5，run12 起生效）：步 18 卡须含实测行；
-#    缺行 FAIL（数字实算禁手填，渲染层生成器产）；"段界未见"诚实声明=devimpl 段
-#    未完成的轮次特征，收官轮必在 → 只认缺行 FAIL，不另设阈值闸（不达标记复盘）。
+#    缺行 FAIL（数字实测禁手填，渲染层生成器产）；"段界未见"诚实声明=devimpl 段
+#    未完成的轮次特征，收尾轮必在 → 只认缺行 FAIL，不另设阈值闸（不达标记复盘）。
 #    13b 分支落地时间线行（干预点四件 D，2026-10-09）：并行度行在则时间线行必在
 #    （同批渲染，禁只报利用率不报推进刻度）。──
 if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
