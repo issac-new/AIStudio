@@ -94,7 +94,7 @@ describe('IdeWikiPane（repo wiki 回归轮）', () => {
     w.unmount()
   })
 
-  it('docs/wiki 缺失（ENOENT）是空态不是错误', async () => {
+  it('docs/wiki 缺失（ENOENT）是空态不是错误；引用整册随空列表禁用（UX-2）', async () => {
     const ide = useIdeStore()
     noWikiWs = '/ws/empty'
     ide.setWorkspace('/ws/empty')
@@ -102,6 +102,8 @@ describe('IdeWikiPane（repo wiki 回归轮）', () => {
     await flushPromises()
     expect(w.text()).toContain('ide.wiki.empty')
     expect(w.text()).not.toContain('ide.wiki.loadFailed')
+    // UX-2（回归轮遗留项）：空列表时引用整册禁用，避免点了没反馈
+    expect(w.find('button[title="ide.wiki.referenceWiki"]').attributes('disabled')).toBeDefined()
     w.unmount()
   })
 
