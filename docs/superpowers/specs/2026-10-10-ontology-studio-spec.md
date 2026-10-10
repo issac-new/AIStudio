@@ -14,6 +14,13 @@
 3. **语义体检页签**（/app/board gov-ontology，TasksView 第 12 页签，orchestra 零 patch 先例）：本体统计卡 + 契约健康度 + 源概览 + 一键摄取（结果/零拦截徽标/skipped 明细）+ 全量违规表 + 跳本体工作台。文案=ontology/i18n.ts gov 节。
 4. 真数据实绩：14 板 975 任务 38 执行人 2357 关系摄取、零剔除、健康度 0/0/0。
 
+### 三阶段（同日）：主动找人闭环
+
+1. **error 违规聚合推冲突收件箱**（kind='ontology'）：按违规 code 聚合（975 条→1 条，entityId=`(聚合) <code>`、incoming=`×N：样例`）；幂等（同 code 未决不重复追加）；裁决两键均为知悉语义（resolveConflictInbox 的 take-incoming 排除 ontology，同 quality-gate——不写板 KG）。治理中心待裁决徽标即抬升=主动找人。
+2. **Run 实例摄取**：eventLog 共享注册簿（event-log-registry）直读 listRuns，fail-soft；Run.graph_id 种子属性（may 级）。
+3. **既有缺陷根治**：governance/api 三处对象 body（resolveConflict/rollbackKg/attributeEscalation）未 JSON.stringify——request() 不序列化对象 body，UI 裁决/回滚按钮恒 400 从未成功（走查实锤+页面内最小复现）。
+4. 验证：走查 5 断言（摄取 runs 单元/聚合推送徽标/语义契约标签/×975 聚合/裁决闭环标签消失）ALL PASS；全量回归 579 文件/4211 用例绿。
+
 以下为一阶段正文。
 
 ## 1. 为什么做
