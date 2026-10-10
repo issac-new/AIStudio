@@ -1087,7 +1087,14 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       note "[G5] QGate release-report 落盘失败（记问题单）"
     fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
-    dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
+    # lite 轮守卫（run13 实锤：夹具跳过早期步时 dlv_room/dlv_case 未初始化，直调
+    # dlv_gate 缺参 exit 4 被 set -e 击杀驱动成重启循环）：与 dlv_scenario_phase
+    # 同款「无案例房即跳过」，跳过如实记 note（报告侧按缺事件呈现，不补造）。
+    if [[ -n "$(sget dlv_room)" && -n "$(sget dlv_case)" ]]; then
+      dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
+    else
+      note "[M3] delivery 未启用（无案例房），跳过 G5 gate 事件（lite 轮：早期步夹具跳过致案例未开）"
+    fi
     return 0   # dlv 未启用时末行 && 列表返回 1，函数调用是裸命令会被 set -e 击杀（包装引入的差异）
   }
   # 评审卡幂等（run8 优化 E）：卡 ID 落 state，重启复用不再重复建卡
