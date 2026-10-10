@@ -660,7 +660,7 @@ _any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
 # 本函数 180s 节流出一行「分支 commit 计数 + PROGRESS 中间锚」推进行进 scenario.log，
 # 根治"长编码 4h 静默盲窗"（run12 MP/CHWX/CHALI 实录：三腿全程零推进信号）。
 dev_progress_ping() {
-  local now last f b n line pg
+  local now last f b n line pg wtn wtline
   f="$EVID_DIR/progress-ping.ts"; now=$(date +%s)
   last=$(cat "$f" 2>/dev/null || echo 0)
   (( now - last < 180 )) && return 0
@@ -670,9 +670,17 @@ dev_progress_ping() {
     n=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/feat/$b" 2>/dev/null || echo 0)
     line="$line $b=$n"
   done
+  # 工作区分支在途计数（run14 18:5x 用户纠偏实锤：同 agent 多工作区并发开发是设计
+  # 形态——进行中提交全在 wt/t_*，只数 feat/DEV-* 交付分支会把活跃并发误读成「零
+  # 进展」）。wt/t_*@任务 → 计数+末笔摘要，与交付分支计数并列呈现。
+  wtline=$(git -C "$DIRECTOR_CLONE" for-each-ref --format='%(refname:short)' 'refs/remotes/origin/wt/t_*' 2>/dev/null \
+    | while read -r wb; do
+        c=$(git -C "$DIRECTOR_CLONE" rev-list --count "$wb" 2>/dev/null || echo 0)
+        (( c > 0 )) && printf '%s(%s) ' "${wb#origin/wt/t_}" "$c"
+      done | awk '{print $0}' )
   pg=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 60 2>/dev/null \
        | jq -r '[.[] | (.content.body // "") | scan("PROGRESS-[A-Za-z0-9-]+")] | flatten | unique | join(" ")' 2>/dev/null || true)
-  note "[进度锚] 分支 commit 计数：$line；PROGRESS-ANCHORS=${pg:-无}"
+  note "[进度锚] 交付分支：$line；工作区在途：${wtline:-无}；PROGRESS-ANCHORS=${pg:-无}"
 }
 
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
