@@ -78,15 +78,15 @@ describe('视图壳内嵌接线', () => {
     await router.push('/app/board')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    // 单层纪律：恰 11 个平级页签（2026-10-08 集群健康入列；2026-10-10 任务协同图入列），
-    // 无二级页签行（gov-subtabs 随 GovernanceView 退役）
+    // 单层纪律：恰 12 个平级页签（2026-10-08 集群健康入列；2026-10-10 任务协同图入列、
+    // 语义体检入列——本体×看板治理整合），无二级页签行（gov-subtabs 随 GovernanceView 退役）
     const tabs = wrapper.findAll('.ia-tasks__tab')
-    expect(tabs).toHaveLength(11)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(11)
+    expect(tabs).toHaveLength(12)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(12)
     expect(wrapper.find('[data-testid="gov-subtabs"]').exists()).toBe(false)
     expect(tabs.map(x => x.text())).toEqual([
-      // 2026-10-04 说人话轮：行业通用术语重命名（用户裁定）；2026-10-10 任务协同图插位第 2
-      '看板', '任务协同', '需求追溯', '交付健康', '运行观测', '协作与知识', '能力与规则', '审计与变更', '文档评审', '工程效能', '集群健康',
+      // 2026-10-04 说人话轮：行业通用术语重命名（用户裁定）；2026-10-10 任务协同图插位第 2、语义体检列尾
+      '看板', '任务协同', '需求追溯', '交付健康', '运行观测', '协作与知识', '能力与规则', '审计与变更', '文档评审', '工程效能', '集群健康', '语义体检',
     ])
     // 治理首分区：点击=页内切换（URL 不变 + 内嵌渲染 + 页签仍在）
     const govOrgTab = wrapper.find('[data-testid="ia-tasks-tab-gov-org"]')
