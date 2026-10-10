@@ -72,11 +72,11 @@ try:
 except Exception as e:
     narrative_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">叙事层生成失败（如实标注）：{html.escape(str(e))}</div>'
 
-# 意图链路（V4.1 §三 需求保真域缺口闭合）：G1 冻结 AC → 系分 → 编码门禁 → 独立测试 → UAT
+# 意图通路（V4.1 §三 需求保真域缺口闭合）：G1 冻结 AC → 系分 → 编码门禁 → 独立测试 → UAT
 try:
     intent_html = render_intent_chain(SIM)
 except Exception as e:
-    intent_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">意图链路生成失败（如实标注）：{html.escape(str(e))}</div>'
+    intent_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">意图通路生成失败（如实标注）：{html.escape(str(e))}</div>'
 
 # ── ① 方案原文把关解析（与 mx-report-gen 同源正则）──
 plan_steps = {}
@@ -97,7 +97,7 @@ if PLAN_PATH.exists():
                 gate = re.sub(r'\s+', ' ', gm2.group(1)).strip()
         plan_steps[n] = gate
 
-# 演示步 → 方案步映射（两线步骤语义对齐；多方案步合并展示）
+# 演示步 → 方案步映射（两线步骤语义核对一致；多方案步合并展示）
 PLAN_MAP = {
     '1': [1, 2, 3, 4], '2': [5], '3': [6], '4': [7], '5': [7], '6': [8], '7': [9, 10],
     '8': [10, 11], '9': [11], '10': [12], '11': [13], '12': [14], '13': [15], '14': [16],
@@ -138,7 +138,7 @@ if _scen.exists():
         if _body.startswith('──') or _body.startswith('====='):
             _actor, _rest = '阶段', _body
         collab_events.append((_ts, _actor, _rest or _body))
-# 治理有效性实算（R15 配套：打回环/审批留痕/人工放行——全部在档实数）
+# 治理有效性实测统计（R15 配套：打回环/审批留痕/人工放行——全部在档实数）
 _gov_stats = {'rework': 0, 'approve_receipts': 0, 'gate_override': 0, 'collab_total': len(collab_events)}
 for _ts, _a, _b in collab_events:
     if re.search(r'熔断|退回|拒收|打回', _b):
@@ -185,7 +185,7 @@ def b64(name):
 
 out = []
 out.append('''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
-<title>Swarm Studio 全流程推演 · 统一版报告（方案对齐 × 产品实操__TITLE_RUN__）</title>
+<title>Swarm Studio 全流程推演 · 统一版报告（方案核对一致 × 产品实操__TITLE_RUN__）</title>
 <style>
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:1080px;margin:0 auto;padding:28px;color:#1f2328;background:#fafafa}
 h1{font-size:26px;border-bottom:3px solid #2563eb;padding-bottom:10px}
@@ -214,7 +214,7 @@ _title_run = f' · RUN_ID={_RUN_ID}' if _RUN_ID else ' · 20260928 两线合并�
 _truth_total = len(truth_imgs)
 _step_total = len(STEPS) if not RUN_BODY else 26
 out.append('<h1>Swarm Studio 全流程推演 · 统一版报告</h1>')
-out.append(f'<div class="meta">生成：{GEN_TS}（实查）｜ 合并两线：旅程线（26 步对齐方案原文+闸门仪表盘+{_truth_total} 张步骤真证据）× 实操线（叙事层+{_step_total} 步产品 UI 实拍+六域审计）<br>'
+out.append(f'<div class="meta">生成：{GEN_TS}（实查）｜ 合并两线：旅程线（26 步核对一致方案原文+闸门仪表盘+{_truth_total} 张步骤真证据）× 实操线（叙事层+{_step_total} 步产品 UI 实拍+六域审计）<br>'
            f'方案基准：V5 整合版（唯一正本，操作主链沿用 V3 原文解析）｜ 环境：SwarmStudio :8802 + gateway :8801 + matrix :8008 ｜ 中央仓 issac-new/aipaydev'
            + (f' ｜ 基线：overlay HEAD <code>{html.escape(OVERLAY_HEAD)}</code>' if OVERLAY_HEAD else '') + '<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
@@ -245,12 +245,12 @@ if RUN_BODY:
                '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
                '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
                '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'
-               '六道硬闸守住意图对齐与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
+               '六道强制关卡守住意图核对一致与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
                '产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），'
                '双 loop=skill 内循环 × swarm 外循环。</p></div>')
     out.append('<div class="gatebox"><b style="font-size:14px">演示动线（补遗⑤ 驾驶舱单面）</b>'
                '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 驾驶舱工作台（任务/在线 chips·注意力条·中栏会话画布）'
-               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全链路追踪页签） → IDE 画布（任务简报·交互编码）'
+               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全程追踪页签） → IDE 画布（任务简报·交互编码）'
                ' → 治理中心（六闸工件·应用资产·组织）——全流程不出 /app 路由树。</p>'
                f'<p style="margin:4px 0;font-size:12.5px;color:#57606a">三功能区证据（R7 核验口径）：{_tri_html}</p></div>')
     out.append('<h3>26 步六阶段分幕总览</h3>'
@@ -258,7 +258,7 @@ if RUN_BODY:
                '<table><tr><th>幕</th><th>步骤</th><th>目标</th><th>主角（谁在做什么）</th><th>闸门</th><th>本轮</th></tr>'
                + ''.join(_acts_rows) + '</table>')
     out.append('<h3>RACI 协作时序线（scenario.log 实抽，' + str(len(collab_events)) + ' 条）</h3>'
-               '<div class="meta">数据源=导演侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
+               '<div class="meta">数据源=监控侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
                '谁在何时发起、谁执行、谁把关、何处打回，时间线自明；锚点（event_id $xxx／t_ 卡号）可反查。</div>')
     if collab_events:
         out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
@@ -270,7 +270,7 @@ if RUN_BODY:
     else:
         out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 scenario.log 无可解析协作事件（如实标注，禁编造）。</div>')
 
-# 叙事层 + 意图链路（V4.1 需求保真域；run 模式下叙事层由旅程线正文自带，去重）
+# 叙事层 + 意图通路（V4.1 需求保真域；run 模式下叙事层由旅程线正文自带，去重）
 if not RUN_BODY:
     out.append(narrative_html)
 if intent_html:
@@ -279,26 +279,26 @@ if intent_html:
 # ── run 模式：本轮真值节（审计改判/新特性实证/探针标注）→ 旅程线正文整体嵌入 ──
 if RUN_BODY:
     out.append(f'<h2>本轮口径（RUN_ID={html.escape(_RUN_ID)}）</h2>')
-    out.append('<div class="meta">本报告=叙事层+意图链路+本轮真值+旅程线 26 步全文（下方"推演实录"段）。'
+    out.append('<div class="meta">本报告=叙事层+意图通路+本轮真值+旅程线 26 步全文（下方"推演实录"段）。'
                '旅程线四查（标题逐字 26/26·把关齐·完成步图齐·无假重复·引用无缺·闸门与 state 一致）已过；'
                '真实性叠加层见下方"独立审计改判"节——闸门状态与 state 一致 ≠ 实质通过，判词以审计复核为准。</div>')
 
     # ── 补遗④十项调整落实核查表（用户验收清单：要求→状态→产品/证据锚点）──
     _ten = [
         ('1. 清理环境、0→1 推演全流程', '✅ 已落实',
-         'mx-clean 双档归档（20260930-154424/154715）后 run5 自 smoke 起跑，26 步全真值（16:41:59–03:59:12，state 键全落）'),
+         'mx-clean 双档归档（20260930-154424/154715）后 run5 自 smoke 开跑，26 步全真值（16:41:59–03:59:12，state 键全落）'),
         ('2. 账号分配=matrix 管理员功能（设置·账户管理，本机↔matrix 联动）', '✅ 已落实（P6）',
          '#/app/accounts 界面实拍（ui-01-accounts）；30 账号=15 人×双账号，smoke 16:41:28 token 全验'),
         ('3. 驾驶舱「任务/在线」下拉功能回归验证', '✅ 已落实（含本轮根治）',
-         'ui-04a/ui-04b 双下拉实拍+计数断言：任务=看板实况 14、在线 16（1 人/14 智能体/1 机器）——「在线恒零」真根因（投影 schema 错位）本轮修复，守门 12/12'),
+         'ui-04a/ui-04b 双下拉实拍+计数断言：任务=看板实况 14、在线 16（1 人/14 智能体/1 机器）——「在线恒零」真根因（投影 schema 错位）本轮修复，自动检查 12/12'),
         ('4. 应用资产登记表 UI 可维护', '✅ 已落实（P7）',
          '治理中心·应用资产六列表单（登记/变更/退役，保存即 git 提交）；实拍 ui-gov-center；本轮 registry 入仓锚 2739627'),
         ('5. 研发人员管理 UI 可维护（账号/团队/负责人）', '✅ 已落实（P8）',
          '治理中心·组织关系维护+入职/转岗/离职三步向导（移交→停用→审计留痕）；本轮 org 矩阵入仓锚 e817490'),
         ('6. 各关把关标准明确列出', '✅ 已落实',
          '报告「六闸把关标准清单（V5 §4.4 显性化）」节逐条列 G1-G6 准入准出；每步把关段逐字取自方案正本'),
-        ('7. 截图必须真实操作界面、不凑数占位', '✅ 已落实（快门守门+事故记档）',
-         '全部证据图为真实界面实拍；快门守门拒拍空态/错页/加载态；本轮补房间画布空态拒拍守门（覆盖事故防复发，事故帧已删、证据由幸存真图承载并记档）'),
+        ('7. 截图必须真实操作界面、不凑数占位', '✅ 已落实（快门自动检查+事故记档）',
+         '全部证据图为真实界面实拍；快门自动检查拒拍空态/错页/加载态；本轮补房间画布空态拒拍自动检查（覆盖事故防复发，事故帧已删、证据由幸存真图承载并记档）'),
         ('8. 文档/设计/方案=真实产出物、可编辑保存提交 git', '✅ 已落实（R13）',
          '治理中心内可编辑、保存即 git 提交；本轮真值链全部 origin 可反查（冻结/registry/org/验收 9cc4422/复盘）'),
         ('9. swarm yuan 定制 skill 及开发过程截屏展示', '✅ 已落实（R14，本轮补齐驱动帧）',
@@ -307,7 +307,7 @@ if RUN_BODY:
          '「交付物全景（8.6 矩阵）」节+「步骤真证据索引」（21+2 张，event_id/commit/卡号可反查）+流转现场帧（冻结/缺陷/UAT）按时间线串联'),
     ]
     out.append('<h2>方案调整十项落实核查（验收清单）</h2>')
-    out.append('<table class="gap"><tr><th style="width:290px">调整要求</th><th style="width:120px">状态</th><th>落实锚点（产品/证据）</th></tr>')
+    out.append('<table class="gap"><tr><th style="width:290px">调整要求</th><th style="width:120px">状态</th><th>落实测依据点（产品/证据）</th></tr>')
     for a, b, c in _ten:
         out.append(f'<tr><td>{html.escape(a)}</td><td>{html.escape(b)}</td><td>{html.escape(c)}</td></tr>')
     out.append('</table>')
@@ -318,27 +318,27 @@ if RUN_BODY:
         '<div class="meta"><b>推演逻辑一句话</b>：以真实支付需求（收单商户双端小程序支付收银台）驱动，'
         '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
         '按 26 步标准流程跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
-        '<b>人是意图持有者、仲裁者与最终验证者；AI 员工主理执行；六道硬闸守住意图对齐与不可逆决策；'
+        '<b>人是意图持有者、仲裁者与最终验证者；AI 员工主理执行；六道强制关卡守住意图核对一致与不可逆决策；'
         '一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验</b>——治幻觉的硬手段。</div>')
     out.append(
-        '<h4>① 协作发生在哪：六层链路（自上而下=一次任务的完整旅程）</h4>'
+        '<h4>① 协作发生在哪：六层通路（自上而下=一次任务的完整旅程）</h4>'
         '<table class="gap"><tr><th style="width:150px">层</th><th>谁在协作</th><th>协作载体</th></tr>'
         '<tr><td>① 人机入口层</td><td>15 人经 studio 驾驶舱登录（matrix 免密→JWT→只见本账号档案）</td><td>驾驶舱 /app 单面（补遗⑤）</td></tr>'
-        '<tr><td>② 分布式协作层</td><td>人 @AI 助理派单；AI 之间回执/缺陷回流/审批请求</td><td>Matrix 群（消息即指令，双兜底回执）</td></tr>'
+        '<tr><td>② 分布式协作层</td><td>人 @AI 助理派单；AI 之间回执/缺陷回流/审批请求</td><td>Matrix 群（消息即指令，双重保底回执）</td></tr>'
         '<tr><td>③ 调度与看板层</td><td>28 kanban 一板一库、team 围栏、认领即 spawn agent</td><td>单 gateway :8801 多路复用 42 profile</td></tr>'
         '<tr><td>④ 能力层</td><td>四类 AI 员工共用 swarm yuan 生成的 xxx-dev 技能（认知地图/规格先行/代码纪律/知识池/质量门禁五步）</td><td>worktree 工作区</td></tr>'
         '<tr><td>⑤ 产物与证据层</td><td>冻结→系分→概设→排期→分支→测试→验收→审计→复盘全程入仓</td><td>GitHub aipaydev 中央仓</td></tr>'
-        '<tr><td>⑥ 记忆沉淀层</td><td>复盘经验入家族记忆库，下轮同需求自动回忆（历史偏差红杠 G2 检查项⑤）</td><td>hindsight :8888</td></tr></table>')
+        '<tr><td>⑥ 记忆积累层</td><td>复盘经验入跨轮记忆库，下轮同需求自动回忆（历史偏差标红 G2 检查项⑤）</td><td>hindsight :8888</td></tr></table>')
     out.append(
         '<h4>② 协作顺序：谁发起 → 谁执行 → 谁把关 → 产物去哪（26 步六阶段）</h4>'
-        '<table class="gap"><tr><th style="width:120px">阶段（步）</th><th style="width:170px">人（发起/把关）</th><th style="width:230px">AI 员工（执行）</th><th>硬闸与产物</th></tr>'
+        '<table class="gap"><tr><th style="width:120px">阶段（步）</th><th style="width:170px">人（发起/把关）</th><th style="width:230px">AI 员工（执行）</th><th>强制关卡与产物</th></tr>'
         '<tr><td>筹备 1-6</td><td>admin 建账号；负责人登记资产/组织</td><td>装配脚本自检（30 token/围栏/板库真值）</td><td>冒烟准出（在线三数阻断位）→ registry/org 入仓</td></tr>'
         '<tr><td>需求 7-9</td><td><b>bella</b>（BA）私信交需求</td><td>fanfan-agent 建群全量预邀、接派发</td><td><b>G1 人审上锁</b>（冻结件 AC 机械化）→ 建群 → 派发指令（证据纪律随单）</td></tr>'
         '<tr><td>分析 10-13</td><td>wei/mei（lead）分诊确认</td><td>fanfan-agent 系统分析（三清单+SMART）；chen/hu/lin/xiao 四路系分</td><td>主卡+七跟踪卡落板；tasklist v9 入仓（1b2fce3）；双凭证反向核验</td></tr>'
         '<tr><td>设计 14-16</td><td><b>arch</b>（架构师）治理评审</td><td>fanfan-agent 汇总复核产概设</td><td><b>G2 架构评审</b>（本轮真实打回环：首评 FAIL 真缺项→修订→复评 PASS）→ 主任务归档</td></tr>'
         '<tr><td>研发 17-19</td><td>—</td><td>chen/hu/lin/xiao 并行开发（xxx-dev 技能五步）；qi/fei 独立测试+缺陷回流</td><td><b>G3 编码门禁</b>（testlog 随分支）→ <b>G4 独立验证</b>（非实现者测试）→ integration 合并</td></tr>'
-        '<tr><td>发布验收 20-23</td><td><b>导演 HumanGate</b> 批准发布；<b>bella</b> UAT 逐条验收</td><td>fanfan-agent 七项准出评审（同 commit 复现台架实测）</td><td><b>G5 发布准出</b>（回滚阈值/灰度/观察窗）→ REL 三卡 → <b>UAT AC 逐条判词</b>（7/7 全过）</td></tr>'
-        '<tr><td>治理 22-26</td><td><b>audit</b> 独立签名线</td><td>台账/审计/复盘/报告</td><td><b>G6 复盘</b>（三段式+DISP 100% 记账）→ 记忆沉淀 → 本报告</td></tr></table>')
+        '<tr><td>发布验收 20-23</td><td><b>监控程序 HumanGate</b> 批准发布；<b>bella</b> UAT 逐条验收</td><td>fanfan-agent 七项准出评审（同 commit 复现台架实测）</td><td><b>G5 发布准出</b>（回滚阈值/灰度/观察窗）→ REL 三卡 → <b>UAT AC 逐条判词</b>（7/7 全过）</td></tr>'
+        '<tr><td>治理 22-26</td><td><b>audit</b> 独立签名线</td><td>台账/审计/复盘/报告</td><td><b>G6 复盘</b>（三段式+DISP 100% 记账）→ 记忆积累 → 本报告</td></tr></table>')
     out.append(
         '<h4>③ 协作的三条铁律（演示讲解口径）</h4>'
         '<div class="meta">'
@@ -356,7 +356,7 @@ if RUN_BODY:
          '治理中心双表：应用资产六列表单（登记/变更/退役，保存即 git 提交，app-registry.md 为界面产物）与组织关系维护'
          '（账号↔团队↔负责人 + 入职/转岗/离职三步向导：移交→停用→审计留痕）——第 5/6 步资产登记与组织对账的产品面。'),
         ('ui-03-cockpit', 'P9/P10 驾驶舱聚焦单面 + 精简批（补遗⑤）',
-         '推演 UI 面限定驾驶舱：IDE 归一 /app/ide、看板归一 /app/board、审批深链迁 /app 树、RunCanvas 并入运行详情；'
+         '推演 UI 面限定驾驶舱：IDE 归一 /app/ide、看板归一 /app/board、审批直达链接迁 /app 树、RunCanvas 并入运行详情；'
          '主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 动线不出 /app 路由树。'
          'S 档精简：16 个驾驶舱孤儿组件退役、/app/eng 页退役重定向、系统组三入口摘除、WebPet 默认关。'),
         ('ui-08d-members', '建群全量预邀（room-invite-gap 终清）',
@@ -380,7 +380,7 @@ if RUN_BODY:
         out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮未出数的实证位（如实标注，不计通过）：'
                    + '；'.join(html.escape(t) for t in _miss_feats) + '</div>')
 
-    # 研发全流程治理有效性（补遗⑥：重点难点突出——治理逆境实数，全部在档实算）
+    # 研发全流程治理有效性（补遗⑥：重点难点突出——治理逆境实数，全部在档实测统计）
     _ilog_p = EVID / 'issues.log'
     _iss_n = _disp_n = 0
     if _ilog_p.exists():
@@ -402,7 +402,7 @@ if RUN_BODY:
         ('熔断人工放行', _gov_stats['gate_override'], 'GATE_BREAKER_OVERRIDE 显式放行记档（治理逆境素材）'),
         ('问题单处置率', f'{_disp_n}/{_iss_n}' if _iss_n else '0/0', 'issues.log 唯一键 DISP 回写'),
     ]
-    out.append('<h2>研发全流程治理有效性（实算）</h2>'
+    out.append('<h2>研发全流程治理有效性（实测统计）</h2>'
                '<div class="meta">"有效应用及治理"的量化呈现：打回环=闸门真实拦截的证据；人工放行=逆境下的人机接力（均在 issues.log 留痕可反查）。</div>'
                '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">')
     for _t, _v, _d in _gov_cards:
@@ -423,9 +423,9 @@ if RUN_BODY:
                    + 'padding:10px;border-radius:6px;border:1px solid #e5e7eb;margin:6px 0">'
                    + html.escape('\n'.join(_lines[:60])) + '</pre></div>')
     else:
-        out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 report-audit.txt 尚未落档——统一报告生成先于审计时如实标注，审计后须重生成。</div>')
+        out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 report-audit.txt 尚未保存——统一报告生成先于审计时如实标注，审计后须重生成。</div>')
     if _disp.exists():
-        out.append(f'<div class="meta">审计处置单一事实源：<code>{_disp.name}</code>（本 evidence 目录）——独立意见与导演侧不一致时以独立意见为准，改判留痕。</div>')
+        out.append(f'<div class="meta">审计处置单一事实源：<code>{_disp.name}</code>（本 evidence 目录）——独立意见与监控侧不一致时以独立意见为准，改判留痕。</div>')
     else:
         out.append('<div class="meta">本轮无 audit-response-disposition.md（审计无保留意见时不出具）。</div>')
 
@@ -453,7 +453,7 @@ if not RUN_BODY:
 
 # 29 步实操实录（每步附把关原文；run 模式跳过——旅程线 26 步全文为本轮实录）
 if not RUN_BODY:
-  out.append('<h2>推演实录（产品 UI 实操 × 方案把关对齐）</h2>')
+  out.append('<h2>推演实录（产品 UI 实操 × 方案把关核对一致）</h2>')
 for no, name, img, typ, desc in (STEPS if not RUN_BODY else []):
     cls = {"实操作": "a", "实状态": "s"}.get(typ, "g")
     gates = [plan_steps[n] for n in PLAN_MAP.get(no, []) if plan_steps.get(n)]
@@ -482,7 +482,7 @@ out.append('</table>')
 # 缺口台账 + 验证链
 out.append('<h2>本轮已知缺口（诚实台账）</h2><table class="gap"><tr><th style="width:220px">缺口</th><th>说明</th></tr>')
 if RUN_BODY:
-    # run4 起数据驱动：issues.log 未闭环键实算 + run-facts.env 声明的记档项；缺源=如实空表
+    # run4 起数据驱动：issues.log 未完整循环键实测统计 + run-facts.env 声明的记档项；缺源=如实空表
     _ilog = EVID / 'issues.log'
     _iss, _disp = [], set()
     if _ilog.exists():
@@ -496,7 +496,7 @@ if RUN_BODY:
                 if len(_p) >= 3:
                     _disp.add(f'{_p[1]}·{_p[2]}')
     _open = [k for k in _iss if k not in _disp]
-    gaps_show = [(f'未闭环问题单（{len(_open)}/{len(_iss)}）', '；'.join(_open) if _open else '无——全部已处置（DISP 回写台账）')]
+    gaps_show = [(f'未完整循环问题单（{len(_open)}/{len(_iss)}）', '；'.join(_open) if _open else '无——全部已处置（DISP 回写台账）')]
     for _gi, _gd in [tuple(x.split('=', 1)) for x in FACTS.get('limitation', '').split(';;') if '=' in x]:
         gaps_show.append((_gi.strip(), _gd.strip()))
     if not _ilog.exists():
@@ -507,17 +507,17 @@ for g, d in gaps_show:
     out.append(f'<tr><td>{html.escape(g)}</td><td>{d}</td></tr>')
 out.append('</table>')
 
-# 六闸把关标准清单（V5 §4.4 显性化——报告侧可核对表格：逐项标准×本轮状态）
+# 六闸把关标准清单（V5 §4.4 显性化——报告侧可核核对格：逐项标准×本轮状态）
 if RUN_BODY and gate_rows:
     _gate_status = {g: ('✓' in (cells[1] if len(cells) > 1 else '')) for g, cells in gate_rows}
     _gate_ts = {g: (cells[2] if len(cells) > 2 else '') for g, cells in gate_rows}
     SIXGATE_SPEC = [
         ('G1', '需求上锁', '①逐条验收标准可机械判定（≥3 条）②范围外清单 ③影响面 ④涉敏评估 ⑤两轮不齐不得开工'),
-        ('G2', '架构治理评审', '①设计五要素 ②爆炸半径排查 ③验证计划前移 ④备选方案≥2 有取舍 ⑤历史偏差红杠显式回应'),
-        ('G3', '编码门禁', '①无设计不编码 ②需求-代码-测试一一对应 ③单测阈值全绿 ④金额分（int64）⑤渠道本地 mock ⑥testlog 脚本真查 ⑦落键 g3_code_pass'),
+        ('G2', '架构治理评审', '①设计五要素 ②爆炸半径排查 ③验证计划前移 ④备选方案≥2 有取舍 ⑤历史偏差标红显式回应'),
+        ('G3', '编码门禁', '①无设计不编码 ②需求-代码-测试一一对应 ③单测阈值全绿 ④金额分（int64）⑤渠道本地 mock ⑥testlog 脚本真实核查 ⑦写入通过标记 g3_code_pass'),
         ('G4', '独立验证', '①测试者≠写码者 ②缺陷报修验全关 ③只认本轮派发后记录 ④测试报告六要素 ⑤执行输出摘要 ⑥实跑 commit 与基线同祖'),
         ('G5', '发布准出', '①测试证据挂卡 ②构建同 commit 可复现 ③依赖无新增 ④回滚方案具体化 ⑤灰度三档观察 ⑥发布说明面向用户 ⑦HumanGate 批准可反查 ⑦\'判词只认评审卡结构化字段 ⑧FAIL 即发布冻结'),
-        ('G6', '复盘', '①三段式 ②行动项四要素 ③治理度量实算 ④问题单 100% DISP 回写台账 ⑤经验入家族记忆库'),
+        ('G6', '复盘', '①三段式 ②行动项四要素 ③治理度量实测统计 ④问题单 100% DISP 回写台账 ⑤经验入跨轮记忆库'),
     ]
     out.append('<h2>六闸把关标准清单（V5 §4.4 显性化）</h2>'
                '<div class="meta">每道闸的逐项检查标准（唯一事实源=方案 §4.4）；状态列自本轮闸门表实抽，判词真值见审计叠加层。</div>'
@@ -532,12 +532,12 @@ if RUN_BODY:
     # 验证链（run4 起由 run-facts.env 在档键派生，缺键省略）
     _vl = []
     for _k, _fmt in [('code_line', '服务面代码线：{}'), ('inject_count', '补丁注入：{}（私有上游沙箱隔离重放）'),
-                     ('build', '构建：{}'), ('vitest', '测试：{}'), ('run_window', '推演执行：{}（真实 LLM 回合+导演侧断言）'),
+                     ('build', '构建：{}'), ('vitest', '测试：{}'), ('run_window', '推演执行：{}（真实 LLM 回合+监控侧断言）'),
                      ('baseline', '发布基线：{}'), ('stack', '环境：{}')]:
         if FACTS.get(_k):
             _vl.append(_fmt.format(html.escape(FACTS[_k])))
-    out.append('<h2>验证链</h2><div class="meta">' + '<br>'.join(_vl if _vl else ['（run-facts.env 未落档——如实省略，禁编造）'])
-               + f'<br>截图：<code>screenshots/steps/</code>（{len(truth_imgs)} 张，:8802 真实渲染+快门守门）｜ 旅程线报告：<code>simulation-report.html</code>｜ 本报告：<code>evidence/unified-roadshow-report.html</code>（UNIFIED_RUN_ID 模式）</div>')
+    out.append('<h2>验证链</h2><div class="meta">' + '<br>'.join(_vl if _vl else ['（run-facts.env 未保存——如实省略，禁编造）'])
+               + f'<br>截图：<code>screenshots/steps/</code>（{len(truth_imgs)} 张，:8802 真实渲染+快门自动检查）｜ 旅程线报告：<code>simulation-report.html</code>｜ 本报告：<code>evidence/unified-roadshow-report.html</code>（UNIFIED_RUN_ID 模式）</div>')
 else:
     out.append('<h2>验证链</h2><div class="meta">干净重放 inject（全 series）→ vitest 413 文件 3034 用例（1 例负载抖动隔离复跑过）→ build:full 绿（index.html 4141B）→ '
                '实机登录/审批/看板/IDE/概览操作实录。<br>实操截图：<code>20260928-product-demo/shots/</code>（27 张，:8802 真实渲染）｜ 真证据：<code>screenshots/steps/</code>（38 张）｜'
