@@ -429,7 +429,9 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
     # 只匹配原始请求（"needs your OK" 提示头）：超时后 hermes 会把请求 m.replace 编辑成
     # "Approval timed out…"，旧模式 `needs your OK|approval` 会把编辑事件也当请求，对
     # 带 relation 的编辑事件开线程必被 Synapse 拒（run4/run5 实锤 18/19 NO_REPLY）。
-    pend=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
+    # 窗口 20→60（run14 实锤：六路并发+模型降级噪音下 20 条几十秒翻页，正式请求在
+    # 30s 节拍的下一扫前滚出窗口→超时卡死，chen 两次请求全丢）；去重台账防重批不变。
+    pend=$(mx_messages "$(load_token "$u")" "$room" 60 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK"))) | .event_id' 2>/dev/null \
       | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
@@ -476,6 +478,28 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
       echo "$eid ${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
       note "[$u] 线程内回复 !approve（请求 ${eid} → 回执 ${reply_eid:-NO_REPLY}${react_eid:+ 反应=${react_eid}}）"
     done
+    # ── 二层：散文式征求识别（run14 18:1x chen 卡死根治件）─────────────────
+    # agent 用普通聊天消息征求批准（"征求同意/请批准/等待批准/未获响应"类）时，
+    # 正式格式匹配器看不见→请求超时→验证被门禁卡死。本层**不盲批散文**（安全边界：
+    # 任意文本不可当审批凭证），只做一次性格式引导：回复"请改发标准格式请求"，
+    # 把沉默卡死变成一轮内的自愈。去重走同一台账（GUIDED 前缀），全局 300s 节流
+    # 防引导风暴；仅认 agent 自己的消息、且不含正式请求头（那类归一层处理）。
+    local _ga_now=$(( $(date +%s) ))
+    if [[ ! -f "$EVID_DIR/approve-nudge-last.ts" ]] || (( _ga_now - $(cat "$EVID_DIR/approve-nudge-last.ts" 2>/dev/null || echo 0) >= 300 )); then
+      local _ga_eid
+      _ga_eid=$(mx_messages "$(load_token "$u")" "$room" 60 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
+        '.[] | select(.sender == $agent and ((.content.body // "") | test("征求同意|征求批准|请求批准|请批准|等待批准|等待确认|未获.{0,6}(响应|回复|批准)|被.{0,4}(门禁|审批).{0,4}阻塞")) and ((.content.body // "") | test("needs your OK") | not)) | .event_id' 2>/dev/null \
+        | while read -r geid; do grep -qFx "GUIDED $geid" "$APPROVED_LOG" || echo "$geid"; done | head -1) || true
+      if [[ -n "${_ga_eid:-}" ]]; then
+        echo "$_ga_now" > "$EVID_DIR/approve-nudge-last.ts"
+        echo "GUIDED $_ga_eid $u $_ga_now" >> "$APPROVED_LOG"
+        local _ga_body _ga_json
+        _ga_body="@$(agent_mxid "$u") 审批通道说明：普通聊天消息不会被自动批准程序识别。需要执行许可请直接调用运行时工具触发标准审批请求（needs your OK 格式），发出后约 30 秒内自动批准；已发出的标准请求如超时请重发。"
+        _ga_json=$(jq -nc --arg b "$_ga_body" --arg m "$(agent_mxid "$u")" '{"msgtype":"m.text","body":$b,"m.mentions":{"user_ids":[$m]}}')
+        mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" "$_ga_json" >/dev/null 2>&1 || true
+        note "[审批引导] ${u}-agent 散文式征求已引导改标准格式（锚 ${_ga_eid}）"
+      fi
+    fi
   done
 }
 
