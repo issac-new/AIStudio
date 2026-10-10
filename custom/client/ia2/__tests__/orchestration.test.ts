@@ -93,8 +93,10 @@ describe('deriveFiveQuestions', () => {
     { escalationId: 'e3', fromAgent: 'y-agent', urgency: 'normal', reason: '已决', taskId: 'c1', state: 'approved' },
   ]
   const specs: StoredSpecSummary[] = [
-    { id: 's1', version: 1, spec: { id: 's1', origin: 'template', meta: { goal: '支付回归图' } } },
-    { id: 's2', version: 1, spec: { id: 's2', origin: 'editor' } },
+    { id: 's1', version: 1, origin: 'template', meta: { goal: '支付回归图' } },
+    { id: 's2', version: 1, origin: 'editor' },
+    { id: 'f9', version: 1, origin: 'factory', description: '收单对账模板', meta: { factory: { sourceRunId: 'r9', reuseCount: 2 } } },
+    { id: 'f8', version: 1, origin: 'factory', description: '客服排班模板', meta: { factory: { sourceRunId: 'r8', reuseCount: 5 } } },
   ]
 
   it('五问各字段如实：负责人/审批人、人机卡数与人日、覆盖率、关联升级、模板资产', () => {
@@ -104,7 +106,10 @@ describe('deriveFiveQuestions', () => {
     expect(q.division.coverage).toBeCloseTo(2 / 4)
     expect(q.escalation).toMatchObject({ pendingTotal: 2, linkedToMission: 1 })
     expect(q.escalation.examples[0]).toMatchObject({ fromAgent: 'hu-agent' })
-    expect(q.assets.specs.map(s => s.id)).toEqual(['s1']) // editor origin 不入资产列
+    // 资产分桶：factory 模板带复用计数且按复用次数排序；loop 模板单独列；editor 不入
+    expect(q.assets.factoryTemplates.map(s => s.id)).toEqual(['f8', 'f9'])
+    expect(q.assets.factoryTemplates[0]).toMatchObject({ name: '客服排班模板', reuseCount: 5, sourceRunId: 'r8' })
+    expect(q.assets.loopTemplates.map(s => s.id)).toEqual(['s1'])
   })
   it('无控制点/无升级时给空态而非 undefined 崩', () => {
     // 独立最小链（无 RACI/无 review/无阶梯）：控制点与升级才是真空态
@@ -116,7 +121,8 @@ describe('deriveFiveQuestions', () => {
     const q = deriveFiveQuestions(plainTree, { id: 'p', title: 'x', status: 'todo', owner: 'chen', approver: null }, [], [])
     expect(q.checkpoints.length).toBe(0)
     expect(q.escalation.pendingTotal).toBe(0)
-    expect(q.assets.specs).toEqual([])
+    expect(q.assets.factoryTemplates).toEqual([])
+    expect(q.assets.loopTemplates).toEqual([])
   })
 })
 

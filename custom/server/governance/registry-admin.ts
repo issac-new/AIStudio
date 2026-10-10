@@ -19,6 +19,9 @@ export const REGISTRY_KINDS = {
   // ——分布式 agent 上线即声明（四维），保存即提交=变更审计；派发侧经
   // graph/node-executors 能力合成层消费（否定式边界生成）。
   'agent-capabilities': 'docs/admin/agent-capabilities.md',
+  // 任务工厂（2026-10-10 麦肯锡概念二轮）：完成 run 沉淀为可复用模板的登记处
+  // ——来源 run 可溯、复用计数随 specs/:id/runs 累加、保存即提交=变更审计。
+  'mission-templates': 'docs/admin/mission-templates.md',
 } as const
 export type RegistryKind = keyof typeof REGISTRY_KINDS
 
@@ -62,6 +65,33 @@ export function appendTableRow(markdown: string, row: string[]): string {
   if (lastTableRow < 0) return markdown + '\n' + line + '\n'
   lines.splice(lastTableRow + 1, 0, line)
   return lines.join('\n')
+}
+
+/** 首次写入的表头种子（新注册表 kind 首行落表前文件不存在——种子保证台账可读）。 */
+const REGISTRY_TABLE_SEEDS: Partial<Record<RegistryKind, string>> = {
+  'mission-templates': [
+    '# 任务工厂模板台账（mission-templates）',
+    '',
+    '完成 run 沉淀为可复用图模板的登记处：来源 run 可溯（事件日志导出可复核）、复用计数随模板起跑自动累加、保存即提交=变更审计。',
+    '',
+    '| 模板 id | 名称 | 来源 run | 沉淀时间 | 复用次数 | 备注 |',
+    '| --- | --- | --- | --- | --- | --- |',
+    '',
+  ].join('\n'),
+}
+
+/** 读-追加-提交一体化（文件缺失时先落种子表头再追加）。 */
+export async function appendRegistryRow(
+  kind: RegistryKind, row: string[], message: string, actor = 'studio-ui',
+): Promise<{ commit: string }> {
+  let markdown: string
+  try {
+    ({ markdown } = await readRegistry(kind))
+  } catch {
+    markdown = REGISTRY_TABLE_SEEDS[kind] ?? ''
+  }
+  const next = appendTableRow(markdown, row)
+  return writeRegistry(kind, next, message, actor)
 }
 
 export interface ProvisionInput {

@@ -40,8 +40,9 @@ export interface GraphSpec {
   meta?: GraphSpecMeta
   /** P4：loop 容器可视化元数据（子图框 + 迭代徽标）；环本身仍由守卫回边表达 */
   containers?: SpecContainer[]
-  /** P4：spec 来源——'editor'=画布编辑器自建（可编辑/可删），'template'=loop 编译模板（只读） */
-  origin?: 'editor' | 'template'
+  /** P4：spec 来源——'editor'=画布编辑器自建（可编辑/可删），'template'=loop 编译模板（只读），
+   *  'factory'=任务工厂沉淀模板（2026-10-10 麦肯锡概念二轮：完成 run 沉淀为可复用资产，溯源见 meta.factory） */
+  origin?: 'editor' | 'template' | 'factory'
 }
 
 export interface SpecContainer {
@@ -57,6 +58,15 @@ export interface GraphSpecMeta {
   sensitivePaths?: string[]
   worktreePolicy?: 'auto' | 'manual' | 'shared'
   gateCommands?: string[]
+  /** 任务工厂溯源与复用计量（origin='factory' 时有效；复用计数在 specs/:id/runs 命中时累加） */
+  factory?: {
+    sourceRunId: string
+    depositedAt: string
+    depositedBy?: string
+    outcome?: string
+    reuseCount: number
+    lastReusedAt?: string
+  }
 }
 
 /** P4 编辑守卫——警告级问题（不阻断 hydrate，编辑器实时渲染；错误级仍走 validateGraphSpec throw） */
@@ -158,8 +168,8 @@ export function validateGraphSpec(spec: GraphSpec, customReducers?: CustomReduce
       }
     }
   }
-  if (spec.origin !== undefined && spec.origin !== 'editor' && spec.origin !== 'template') {
-    throw new GraphSpecError(`Invalid spec origin: ${spec.origin} (expected 'editor' | 'template')`)
+  if (spec.origin !== undefined && spec.origin !== 'editor' && spec.origin !== 'template' && spec.origin !== 'factory') {
+    throw new GraphSpecError(`Invalid spec origin: ${spec.origin} (expected 'editor' | 'template' | 'factory')`)
   }
 }
 
