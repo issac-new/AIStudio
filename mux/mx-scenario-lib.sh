@@ -1159,7 +1159,36 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3")
   m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
+  _progress_ledger_record "$1" "$2" "${3:-}" "$m"
   echo "$m"
+}
+
+# 派发事实进产品进度台账（进度可感知链·推演侧点亮件，2026-10-10 ①）：任务派发
+# 正文带任务码（AN-/DEV-/TEST- 前缀）时，向产品 dispatch-ledger.jsonl 追加一行
+# kind=mention 带 taskId 的记录——/api/progress/tasks 据此按卡聚合（会话面由
+# 引擎投影提供，缺席时里程碑回退；里程碑文件在执行者工作区由技能侧上报）。
+# 幂等性：同 event-id 重放由读侧 commandId 去重兜底；本侧只追加不重写。
+_progress_ledger_record() { # <dispatcher> <body> <mentions-csv> <event-id>
+  local dispatcher="$1" body="$2" mentions="$3" ev="$4" tid lp ws
+  tid=$(printf '%s' "$body" | grep -oE '\b(AN|DEV|TEST)-[A-Za-z0-9-]+' | head -1)
+  [[ -n "$tid" ]] || return 0
+  [[ -n "$ev" && "$ev" != "SEND-FAILED" ]] || return 0
+  # 执行者=首个 mention 的 localpart；工作区按约定 workspaces/<执行者>/aipaydev
+  lp=$(printf '%s' "$mentions" | cut -d, -f1 | sed -E 's/^@//; s/:.*//; s/-agent$//')
+  ws="${SIM_ROOT}/workspaces/${lp}/aipaydev"
+  [[ -d "$ws" ]] || ws=""
+  local ledger="${GOVERNANCE_DISPATCH_LEDGER:-$HOME/.hermes-web-ui/overlay/dispatch-ledger.jsonl}"
+  mkdir -p "$(dirname "$ledger")" 2>/dev/null || return 0
+  printf '%s\n' "$(jq -nc \
+    --arg ts "$(date +%s000)" \
+    --arg kind "mention" \
+    --arg target "${lp:-$dispatcher}" \
+    --arg reason "queued" \
+    --arg cmd "$ev" \
+    --arg tid "$tid" \
+    --arg ws "$ws" \
+    --arg det "sim-dispatch by ${dispatcher}" \
+    '{ts:($ts|tonumber),kind:$kind,target:$target,reason:$reason,commandId:$cmd,taskId:$tid,workspaceId:(if $ws=="" then null else $ws end),detail:$det}')" >> "$ledger" 2>/dev/null || true
 }
 
 # ── 派发可达性校验（run11 根治②b）：消息入房≠网关拉起 agent——容量重试队列
