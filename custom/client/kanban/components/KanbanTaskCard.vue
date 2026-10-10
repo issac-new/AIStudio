@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAgentActivity, agentActivityOf } from '@/custom/ia2/composables/useAgentActivity'
+import { useTaskProgress, taskProgressOf, phaseProgressText } from '@/custom/ia2/composables/useTaskProgress'
 import { pickBgworkMessages } from '@/custom/ia2/i18n-bgwork'
 import { computed } from 'vue'
 import { NCheckbox } from 'naive-ui'
@@ -36,6 +37,11 @@ const { t } = i18nCtx
 // 后台执行态徽章（2026-10-04 三件套①）：assignee 有 working 会话即显示活体点+最近产出
 const { activity: agentActivity } = useAgentActivity()
 const liveActivity = computed(() => agentActivityOf(agentActivity.value, props.task.assignee))
+// 研发进度徽章（进度可感知链·件 2a）：任务卡有引擎侧进度（阶段时间线）即显示
+// 当前阶段 + 站点完成计数；会话面冷窗（sessionKnown=false）不显示不编造。
+const { progressMap: taskProgressMap } = useTaskProgress()
+const taskProg = computed(() => taskProgressOf(taskProgressMap.value, props.task.id))
+const phaseText = computed(() => phaseProgressText(taskProg.value))
 const liveL = computed(() => pickBgworkMessages((i18nCtx as { locale?: { value?: string } })?.locale?.value))
 const liveSec = computed(() => {
   const a = liveActivity.value
@@ -222,6 +228,15 @@ function handleDragEnd(e: DragEvent) {
         :title="`@${task.assignee}: ${liveActivity.working} working session(s), last output ${liveSec ?? '—'}s ago`"
       >
         <span class="meta-live__dot" />{{ liveL.live }}<template v-if="liveSec !== null"> · {{ liveSec }}s</template>
+      </span>
+      <span
+        v-if="taskProg && taskProg.sessionKnown && taskProg.currentPhase"
+        class="meta-phase"
+        data-testid="card-phase-badge"
+        :class="{ 'meta-phase--active': taskProg.active }"
+        :title="`Engine progress: ${taskProg.phases.map((p) => `${p.name}(${p.status})`).join(' → ')}`"
+      >
+        {{ taskProg.currentPhase }}<template v-if="phaseText"> · {{ phaseText }}</template>
       </span>
       <span v-else class="meta-unassigned">{{ t('kanban.card.unassigned') }}</span>
       <span
@@ -469,4 +484,14 @@ function handleDragEnd(e: DragEvent) {
   animation: card-live-pulse 1.6s ease-in-out infinite;
 }
 @keyframes card-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.meta-phase {
+  display: inline-flex; align-items: center;
+  color: #1d4ed8; font-size: 10.5px; font-weight: 600;
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: #eff6ff; border-radius: 3px; padding: 0 4px;
+}
+.meta-phase--active {
+  background: #dbeafe;
+}
 </style>

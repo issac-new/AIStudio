@@ -28,6 +28,7 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
+import { useTaskProgress, taskProgressOf } from '@/custom/ia2/composables/useTaskProgress'
 import IdeLandingHero from '../components/IdeLandingHero.vue'
 import { shouldShowLandingHero } from '../utils/landingHero'
 import { listFiles } from '@/api/studio/files'
@@ -286,6 +287,26 @@ type BriefingTaskView = {
 // RACI 块：无结构化字段时回退解析 assignee/正文行（排期卡「责任人：chen」、
 // 派单式「团队负责人 @wei」），否则简报恒显 R:—·A:—（aipaydev 实证缺陷）。
 const briefingRaci = computed(() => parseRaciFromTask(briefingTask.value))
+// 研发进度块（进度可感知链·件 2c）：引擎侧阶段时间线按当前任务注入简报；
+// 单例轮询 composable（useAgentActivity 同款），无进度数据时面板整块不渲染。
+const { progressMap: briefingTaskProgressMap } = useTaskProgress()
+const briefingEngineProgress = computed(() => {
+  const t = briefingTask.value
+  if (!t) return null
+  const p = taskProgressOf(briefingTaskProgressMap.value, t.id)
+  if (!p) return null
+  return {
+    currentPhase: p.currentPhase,
+    phases: p.phases,
+    sessionPhase: p.sessionPhase,
+    goalStatus: p.goalStatus,
+    active: p.active,
+    sessionKnown: p.sessionKnown,
+    lastActivityAt: p.lastActivityAt,
+    dispatchCount: p.dispatchCount,
+    dispatchOkCount: p.dispatchOkCount,
+  }
+})
 const briefingOpen = ref(false)
 // 深链到达即展开简报（run6 复盘 UX 缺口：ide?task= 只绑定不展开，用户落地还需
 // 自寻按钮——跳转意图即"看这个任务"）。单独 watch 且置于声明后：早处深链
@@ -516,7 +537,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" :context-files="briefingContextFiles" @aux-send="onAuxSend" @open-file="openBriefingFile" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" :context-files="briefingContextFiles" :engine-progress="briefingEngineProgress" @aux-send="onAuxSend" @open-file="openBriefingFile" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>
