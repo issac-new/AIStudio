@@ -35,4 +35,15 @@ describe('@提及统一解析（六源+派单合并口径）', () => {
     expect(mentionSummary(refs).sixSource).toBe(2)
     expect(mentionSummary(refs).dispatch).toBe(0)
   })
+
+  // 2026-10-10 本体轮：@ontology 第八源（代理按本体工作台语义约束作答）
+  it('@ontology 前缀解析为 ontology kind（类型名/整册），计入引用源汇总', () => {
+    const refs = resolveMentions('@ontology:Task @ontology/Deliverable')
+    expect(refs.map((r) => [r.kind, r.target])).toEqual([
+      ['ontology', 'Task'], ['ontology', 'Deliverable'],
+    ])
+    expect(refs.every((r) => r.resolved)).toBe(true)
+    expect(mentionSummary(refs).sixSource).toBe(2)
+    expect(mentionSummary(refs).dispatch).toBe(0)
+  })
 })

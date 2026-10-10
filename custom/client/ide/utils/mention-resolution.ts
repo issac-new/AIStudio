@@ -6,7 +6,9 @@
 // 每条 @ 具带 kind+target+resolved 是否可解析；解析器纯函数，UI 提示/自动补全消费。
 // 2026-10-10 wiki 深化轮：+wiki 第七源（@wiki:页名 / @wiki 整册目录）——字面量
 // 约定式通道，代理按仓库 AGENTS.md 受管块处理（与 @file 字面量先例一致）。
-export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad' | 'wiki'
+// 2026-10-10 本体轮：+ontology 第八源（@ontology:实体类型 / @ontology 本体总览）
+// ——代理按本体工作台（/app/ontology）的语义约束作答（Domain/Range/公理可查）。
+export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad' | 'wiki' | 'ontology'
 
 export interface MentionRef {
   raw: string
@@ -26,6 +28,7 @@ const PREFIX_KIND: Record<string, MentionKind> = {
   whiteboard: 'whiteboard', wb: 'whiteboard',
   squad: 'squad',
   wiki: 'wiki',
+  ontology: 'ontology',
 }
 
 /** @ 引用统一解析（前缀形式 @kind:target 或 @kind/target；裸 @word=派单 agent）。 */
