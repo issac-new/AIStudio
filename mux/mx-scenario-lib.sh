@@ -1163,6 +1163,21 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   echo "$m"
 }
 
+# 缺陷卡认领真伪核验（2026-10-11 边界语义轮 R1，run14 00:3x 实证：占位值 default
+# 过了必填校验但认领围栏按档案名精确匹配→卡无人可领烂在 todo 一小时）。驱动在缺陷
+# 等待环调用；占位/不在编制的 assignee 记问题单并打回建卡人重填。
+defect_cards_assignee_check() { # <board> → stdout: 卡ID:assignee 违规清单（空=全过）
+  local board="$1" out="" line aid asg
+  while IFS='|' read -r aid asg; do
+    [[ -n "$aid" ]] || continue
+    if ! printf '%s\n' "${INSTANCED_USERS[@]}" | grep -qxF "$asg"; then
+      out="${out}${aid}:${asg} "
+    fi
+  done < <(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" list --json 2>/dev/null     | jq -r '.[]? // empty | select((.title // "") | startswith("【缺陷】")) | select(.status == "todo" or .status == "ready") | [.task_id // .id, (.assignee // "")] | @tsv' 2>/dev/null | tr '\t' '|')
+  [[ -n "$out" ]] && note "[核验] 缺陷卡 assignee 违规（${board}）：${out}——占位/不在编制，打回建卡人重填（run14 A1 形态）"
+  printf '%s' "$out"
+}
+
 # 派发事实进产品进度台账（进度可感知链·推演侧点亮件，2026-10-10 ①）：任务派发
 # 正文带任务码（AN-/DEV-/TEST- 前缀）时，向产品 dispatch-ledger.jsonl 追加一行
 # kind=mention 带 taskId 的记录——/api/progress/tasks 据此按卡聚合（会话面由
