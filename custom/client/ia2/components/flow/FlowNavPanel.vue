@@ -26,6 +26,7 @@ import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
 import GovernanceNavEntry from '../GovernanceNavEntry.vue'
 import EvalNavEntry from '../EvalNavEntry.vue'
+import OntologyNavEntry from '../OntologyNavEntry.vue'
 import AccountsNavEntry from '../AccountsNavEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
@@ -148,6 +149,8 @@ function submitCreateRoom(): void {
     <GovernanceNavEntry />
     <!-- 评测工作台入口（M2；features.eval 门控，VITE_CUSTOM_EVAL=true 开） -->
     <EvalNavEntry v-if="features.eval" />
+    <!-- 本体工作台入口（GB/T 48000.3 方法论；features.ontology 默认开） -->
+    <OntologyNavEntry v-if="features.ontology" />
     <AccountsNavEntry />
 
     <div class="flow-nav__filters" data-testid="flow-filters">

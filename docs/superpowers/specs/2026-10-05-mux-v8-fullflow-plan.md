@@ -172,7 +172,7 @@ flowchart TB
 | 需求设计 | 把模糊业务诉求转成可开发的设计包 | 7-16 | requirements-analyst（金融支付领域知识+OCR 双路提取）+架构设计技能 | G1 上锁、G2 评审、定稿 |
 | 应用研发 | 在流水线中自动完成编码与自评审 | 17-18 | xxx-dev（swarm yuan 为仓库生成的定制研发技能） | 分诊确认、提测 |
 | 质量测试 | 用例生成、智能回归与缺陷归因 | 19-21 | defect-loop（报→修→验完整处理）+测试 agent | UAT 逐条核对、发版人工批准 |
-| 研发治理（本方案延伸） | 台账、审计、复盘与度量 | 22-24 | pm-planning、capability-report | 复盘确认、行动项认领 |
+| 研发治理 | 台账、审计、复盘与度量 | 22-24 | pm-planning、capability-report | 复盘确认、行动项认领 |
 
 AI 员工干活有两大风险，本方案各有一套应对。
 
@@ -424,7 +424,7 @@ graph TB
 |---|---|
 | 操作者 | chen/xiao/hu/lin 各自人类账号四路同发（@各自 agent+lead agent） |
 | 通道 | 群消息 dispatch_in_room（自动附去重脚注+RACI 解析脚注；发送后查网关日志，命中容量丢弃自动重递一次） |
-| 动作序列 | ①四路系分派发（任务号固定：AN-PAYCORE=chen 支付核心、AN-MP=xiao 收银台前端、AN-CHWX=hu 微信渠道、AN-CHALI=lin 支付宝渠道）。派发词骨架："执行系统分析（用 xxx-dev 技能+分组记忆库历史数据做工作量评估）：1) 工作区建 worktree 分支 2) 先读需求/架构/组织/任务清单四件 3) 输出 docs/analysis/AN-<任务>-analysis.md（初步结论/待澄清/概设含接口签名+数据模型+错误码+幂等键/前置依赖/风险/人日） 4) 提交并 push 到 origin main 5) 群内发唯一一行：`AN-DONE-<任务ID> commit=<id> done=<一句话摘要>`。缺任一要素=未完成会被打回。不许谎报。" ②2 份分析稿入仓后即派 产品经理A 概设预写（不等四稿齐） |
+| 动作序列 | ①四路系分派发（任务号固定：AN-PAYCORE=chen 支付核心、AN-MP=xiao 收银台前端、AN-CHWX=hu 微信渠道、AN-CHALI=lin 支付宝渠道）。派发词骨架："执行系统分析（用 xxx-dev 技能+分组记忆库历史数据做工作量评估）：1) 工作区建 worktree 分支 2) 先读需求/架构/组织/任务清单四件 3) 输出 docs/analysis/AN-<任务>-analysis.md（初步结论/待澄清/概设含接口签名+数据模型+错误码+幂等键/前置依赖/风险/人日） 4) 提交并 push 到 origin main 5) 群内发唯一一行：`AN-DONE-<任务ID> commit=<id> done=<一句话摘要>`。缺任一要素=未完成会被打回。不许谎报。" ②2 份分析稿入仓后即派产品经理A概设预写（不等四稿齐） |
 | 等待信号 | 四稿逐个 `repo_has` 入仓；回执=群内 AN-DONE 行 |
 | 超时与失败 | 概设预写窗 3600s；每稿 wait 3600s；稿未达记 `anexec-missing` 继续；回执缺→回灌+记问题单放行；预写未触发→记问题单回退到步 14 集中派发 |
 | 产出 | `anexec_d1`/`review_prewrote`/`anexec_done`；四份 AN-*.md 入仓；`!refine` 治理线程四条 |
@@ -439,7 +439,7 @@ graph TB
 |---|---|
 | 操作者 | 产品经理A 派发汇总复核；线下虚拟架构小组评审由驱动脚本代走板 |
 | 通道 | 群消息+git 入仓等待+看板评审卡 |
-| 动作序列 | ①四稿齐后派 产品经理A："加载 requirements-analyst 技能做汇总复核：读四份 AN-*.md→消除歧义与冲突（金额统一'分'int64、字段 snake_case）→形成 docs/design/RFD-001-architecture-design.md→push 到 origin main（推 feat 分支不算入库）→账号板登记评审任务卡。结论行 REVIEW-DOC-DONE 开头。不许谎报。" ②活性等待概设文档入仓 ③评审卡出现→走 todo→review→done |
+| 动作序列 | ①四稿齐后派产品经理A："加载 requirements-analyst 技能做汇总复核：读四份 AN-*.md→消除歧义与冲突（金额统一'分'int64、字段 snake_case）→形成 docs/design/RFD-001-architecture-design.md→push 到 origin main（推 feat 分支不算入库）→账号板登记评审任务卡。结论行 REVIEW-DOC-DONE 开头。不许谎报。" ②活性等待概设文档入仓 ③评审卡出现→走 todo→review→done |
 | 等待信号 | `repo_has docs/design/…-architecture-design.md`+fanfan 板评审卡 |
 | 超时与失败 | 1800s；日志空转即中止；评审卡未见→回灌 产品经理A 自登（免等）→驱动兜底补登记但不标记 done（留"评审记录待补"）记 `review-card-missing` |
 | 产出 | 概设文档入仓；`review_done`；截图 |
@@ -522,7 +522,7 @@ graph TB
 |---|---|
 | 操作者 | 驱动脚本做集成合并（git）；测试工程师A/测试工程师B 派发测试 |
 | 通道 | git 集成分支+群派发+缺陷对话 |
-| 动作序列 | ①驱动建 `integration/RFD-001` 分支，六条 feat 增量 merge（续建禁强推，testlog 冲突取 ours 解决） ②派 测试工程师A（TEST-BE 后端集成测试）："若 test-drafts 已有草稿核对后补齐执行，否则从零写（两态均正常）：1) 按概设契约编 vitest 用例（放 apps/test-integration/：下单幂等/双渠道参数/回调验签拒绝/重复回调幂等/超时关单） 2) 执行全量；缺陷走 defect-loop：本群发【缺陷】消息 @对应研发（P 级/复现/期望实际/分支 commit） 3) 结论行 `TEST-PASS-TEST-BE` 或 `TEST-FAIL（附用例数）`。"测试工程师B 同构（前端） ③缺陷修复计数：群内【缺陷】数 vs FIX-DONE 数 ④测试过→派测试报告："汇总结果写 docs/test/RFD-001-test-report.md→push integration 分支→通过的 commit id 回填全部关联卡。结论行 REPORT-DONE。" |
+| 动作序列 | ①驱动建 `integration/RFD-001` 分支，六条 feat 增量 merge（续建禁强推，testlog 冲突取 ours 解决） ②派测试工程师A（TEST-BE 后端集成测试）："若 test-drafts 已有草稿核对后补齐执行，否则从零写（两态均正常）：1) 按概设契约编 vitest 用例（放 apps/test-integration/：下单幂等/双渠道参数/回调验签拒绝/重复回调幂等/超时关单） 2) 执行全量；缺陷走 defect-loop：本群发【缺陷】消息 @对应研发（P 级/复现/期望实际/分支 commit） 3) 结论行 `TEST-PASS-TEST-BE` 或 `TEST-FAIL（附用例数）`。"测试工程师B 同构（前端） ③缺陷修复计数：群内【缺陷】数 vs FIX-DONE 数 ④测试过→派测试报告："汇总结果写 docs/test/RFD-001-test-report.md→push integration 分支→通过的 commit id 回填全部关联卡。结论行 REPORT-DONE。" |
 | 等待信号 | `defect_done`（缺陷数=修复数且双结论行在）；`testpass_done`+`g4_pass`（报告在 integration 分支可查） |
 | 超时与失败 | 缺陷观测窗 5400s（轮询 30s）；报告 1800s 活性等待；分支缺席跳过合并记问题单 |
 | 产出 | 测试报告入仓；`g4_pass`；dlv P4→P5；步 19 对话全文留档 |
@@ -575,7 +575,7 @@ graph TB
 **交付物及质量判据**：交付物=`work-report.md` 存档（字段见 §2.7）；合格线=每人状态分布、WIP、停滞 72h 清单均实际核验数据；超负载记问题单、停滞任务 100% 有处置意见。
 
 **步 23｜合规审计**
-**这步做什么**：合规及审计管理（审计师A 账号独立签名线；**快速模式下与步 22/24 并发执行**）：审计门禁留痕完整性（每道关卡冻结凭证在仓）、问题单台账格式、取证目录在位；出具合规审计意见书入仓；对可疑凭证抽检，另抽 AI 结论（每轮 3 条"完成"反核，幻觉率入治理报告）。审计与开发/测试线独立。意见书分层：驱动脚本侧机械化检查与独立复核结论分列，不一致以独立意见为准并勘误改判留痕；发现与改判逐条入处置台账写回 issues.log。
+**这步做什么**：合规及审计管理（审计师A，audit 账号，独立签名线；**快速模式下与步 22/24 并发执行**）：审计门禁留痕完整性（每道关卡冻结凭证在仓）、问题单台账格式、取证目录在位；出具合规审计意见书入仓；对可疑凭证抽检，另抽 AI 结论（每轮 3 条"完成"反核，幻觉率入治理报告）。审计与开发/测试线独立。意见书分层：驱动脚本侧机械化检查与独立复核结论分列，不一致以独立意见为准并勘误改判留痕；发现与改判逐条入处置台账写回 issues.log。
 **操作指引**（驱动脚本按此执行，源=aipay-scenario.sh；人读操作路径同此）
 
 | 项 | 内容 |
@@ -713,7 +713,7 @@ graph TB
 
 ### 2.8 agent 组织关系与流程衔接（谁把任务交给谁）
 
-一条需求单在 agent 之间的完整交接链如下图。每个箭头都是一次正式交接：交出方给物料，接收方给回执，断了走断链处置（下表末列）。组织关系：团队负责人A 带 研发工程师A/研发工程师B/研发工程师C 三名研发，团队负责人B 带 研发工程师D（分组依据=RACI 四组派发对）；测试工程师A/测试工程师B 测试双线由产品经理A按排期直接派工；系统架构师A/审计师A 独立线不隶属研发组。
+一条需求单在 agent 之间的完整交接链如下图。每个箭头都是一次正式交接：交出方给物料，接收方给回执，断了走断链处置（下表末列）。组织关系：团队负责人A带研发工程师A/B/C 三名研发，团队负责人B带研发工程师D（分组依据=RACI 四组派发对）；测试工程师A/测试工程师B 测试双线由产品经理A按排期直接派工；系统架构师A/审计师A 独立线不隶属研发组。
 
 ```mermaid
 sequenceDiagram
@@ -813,7 +813,7 @@ sequenceDiagram
 | 20 | ready + release | ready_done / release_done（关卡标志 g5_ready，评审卡 g5_rgid） | 发布准出 G5 |
 | 21 | uat | uat_done | UAT 验收 |
 | 22 | workmgr | workmgr_done | 工作台账 |
-| 23 | 审计师A | audit_done（另锚点 audit_dispatched） | 合规审计 |
+| 23 | audit | audit_done（另锚点 audit_dispatched） | 合规审计 |
 | 24 | retro | retro_done | 复盘 G6 |
 | 25 | ide | ide_done | IDE 工作台 |
 | 26 | report | report_done | HTML 报告 |
