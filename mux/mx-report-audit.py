@@ -97,6 +97,7 @@ def block_field(block, pat):
 # ── 查 1+2+3：标题逐字 + 把关锚词 + 状态级联缺图判定 ──
 title_mismatch, gate_missing = [], []
 done_no_img, pending_no_img = [], []
+done_noimg_ticketed = []
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
@@ -118,7 +119,33 @@ for blk in blocks:
     done = '<span class="ok">✅</span>' in blk
     has_img = '<img' in blk  # V8.2 四段布局：截图区不再是末元素，整块找（帧与实拍同权）
     if not has_img:
-        (done_no_img if done else pending_no_img).append(n)
+        # V8.4④（2026-10-10）：✅步无帧的合规降级=「记单在案」占位且问题单键配对
+        # （frame-capture-failed|step-<键> 或 r18-collection-missing）——先暂存，配对
+        # 判定在 issues 预解析后统一做；⬜ 步（未执行/夹具带）无帧明示本就预期内。
+        if done and '记单在案，无帧明示不补拍' in blk:
+            done_noimg_ticketed.append(blk)
+        else:
+            (done_no_img if done else pending_no_img).append(n)
+
+# issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
+_ilog = EVID / 'issues.log'
+_fc_pre = set(); _r18_pre = False
+if _ilog.exists():
+    for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
+        _p = _l.split('|', 3)
+        if len(_p) >= 4 and _p[0] == 'ISSUE':
+            if _p[1] == 'frame-capture-failed':
+                _fc_pre.add(_p[2])
+            elif _p[1] == 'r18-collection-missing':
+                _r18_pre = True
+done_noimg_unpaired = []
+for _blk in done_noimg_ticketed:
+    _km = re.search(r'（截图缺失·([A-Za-z0-9_]+)', _blk)
+    _key = _km.group(1) if _km else ''
+    if _r18_pre or (f'step-{_key}' in _fc_pre):
+        warns.append(f'V8.4④ ✅步无帧已记单降级：{_key}（采集失败记单在案，无帧明示不补拍）')
+    else:
+        done_noimg_unpaired.append(_key or '?')
 
 if title_mismatch:
     fails.append(f'标题与方案不逐字（步骤）：{title_mismatch}')
@@ -127,6 +154,8 @@ if gate_missing:
     fails.append(f'{_lbl}：{gate_missing}')
 if done_no_img:
     fails.append(f'已完成步缺图：{done_no_img}')
+if done_noimg_unpaired:
+    fails.append(f'已完成步无帧且占位未配对问题单：{done_noimg_unpaired}——须记 frame-capture-failed|step-<键> 后方可降级（V8.4④）')
 if pending_no_img:
     warns.append(f'未完成步缺图（预期内，不阻断）：{pending_no_img}')
 
@@ -335,22 +364,23 @@ if RUN_ID >= '20261010-v8-run13':
                     _fc_step_keys.add(_p[2])            # 形如 step-devimpl_done
                 elif _p[1] == 'r18-collection-missing':
                     _has_r18_degrade = True
-    _ph_unpaired, _done_bare, _idle_noframe = [], [], 0
+    _ph_unpaired, _idle_noframe, _idle_noframe_done = [], 0, 0
     for _blk in blocks:
         _n_m = re.search(r'<span class="st-num">(\d+)</span>', _blk)
         _n = int(_n_m.group(1)) if _n_m else -1
         _done_blk = '<span class="ok">✅</span>' in _blk
-        if '（截图缺失）' in _blk:
+        if '（截图缺失·' in _blk or '（截图缺失）' in _blk:
+            # 新版占位自带步键并声明记单——配对判定由查3 预解析统一承担；此处只分类计数
             if _done_blk:
-                _done_bare.append(_n)
+                _idle_noframe_done += 1
             else:
                 _idle_noframe += 1                      # ⬜ 夹具带/未执行带：无帧明示，合规
         for _m in re.finditer(r'(?:注册帧缺文件|帧缺失|本位无帧|本步无帧)：([A-Za-z0-9_]+)', _blk):
             _key = re.split(r'-op\d+$', _m.group(1))[0]
             if (f'step-{_key}' not in _fc_step_keys) and not _has_r18_degrade:
                 _ph_unpaired.append(f'步{_n}:{_m.group(1)}')
-    if _done_bare:
-        fails.append(f'V8.4④ ✅步含裸截图缺失占位：{_done_bare}——✅步无帧必须"无帧明示+问题单"，不得占位')
+    if _idle_noframe_done:
+        warns.append(f'V8.4④ ✅步无帧（占位带记单声明）{_idle_noframe_done} 步——查3 已按配对判定，此处计数复核')
     if _ph_unpaired:
         fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 记单 frame-capture-failed|step-<键> 后降级呈现')
     if _idle_noframe:

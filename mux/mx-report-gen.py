@@ -1154,7 +1154,7 @@ STEPS_META_RUN13 = {
             narrative='lite 轮夹具带：排期计划 docs/plan/RFD-001-schedule.md 在仓（六任务人日+子任务拆分为源轮真值），本轮 DEV/TEST 任务 ID 沿用。', imgs=[]),
     18: dict(keys=['devimpl_done'], ts_override='1',
             actor='ai', actorText='AI · 四开发 agent',
-            narrative='lite 轮当轮执行·开发实施：六路同时派出（DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX+DEV-CHALI 同刻即派，提速②），派发词首带边界纪律条款（仅 feat/* 交付/禁直推 main/禁代做）；段入口记 origin/main 基线+段末 main 污染反查+提交粒度观察（过度交付守卫 C 件首次实战）；GRAPH_ENGINE=on 图执行引擎接管调度（loop-graph 自驱动，产品面 0b149770+REST 修复 a94ec57b）。【run13 实测依据·报告步回填：派发时刻/分支落地时间线/边界守卫观察结果/G3 键值】', imgs=[('devimpl_done-op1-before','IDE 画布·开发工作区视图（G3 时点实拍）','ui'),('devimpl_done-op1-after','IDE 画布·开发段收口视图（G3 时点实拍）','ui')]),
+            narrative='lite 轮当轮执行·开发实施：六路同时派出（DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX+DEV-CHALI 同刻即派，提速②），派发词首带边界纪律条款（仅 feat/* 交付/禁直推 main/禁代做）；段入口记 origin/main 基线+段末 main 污染反查+提交粒度观察（过度交付守卫 C 件首次实战）；GRAPH_ENGINE=on 图执行引擎接管调度（loop-graph 自驱动，产品面 0b149770+REST 修复 a94ec57b）。【run13 实测依据·报告步回填：派发时刻/分支落地时间线/边界守卫观察结果/G3 键值】', imgs=[]),
     19: dict(keys=['defect_done','testpass_done'], ts_override='1',
             actor='ai', actorText='AI · qi/fei agent',
             narrative='lite 轮当轮执行·集成与测试：TEST-BE（qi）/TEST-FE（fei）自预备轮用例核对即跑（用例前移纪律 27②）；诚实账语义沿用——测试未执行=如实报告不谎报 PASS（run12 G5 缺项①教训）。【run13 实测依据·报告步回填：首派时刻/G4 键值/测试成绩单】', imgs=[('testpass_done-op1-before','qi 看板·测试任务卡（TEST-BE/TEST-FE）视图·前','ui'),('testpass_done-op1-after','qi 看板·测试任务卡（TEST-BE/TEST-FE）视图·后','ui')]),
@@ -2682,7 +2682,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             _acls = 'background:#d1fae5;color:#047857' if _ast[0] == 'ok' else 'background:#fef3c7;color:#b45309'
             status += f'<span class="gmark" style="{_acls}">{H.escape(_ast[1])}</span>'
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
-        imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
+        _bkey = (meta.get('keys') or [f'step{n}'])[0]
+        imgs_html = img_tags(meta['imgs']) or f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 记单在案，无帧明示不补拍）</p>'
         # 8.6 交付物视图（补遗③ R11）：实物渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
         art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + gov_evidence_block(n)
         # 防御性回退（run11 实锤：STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
