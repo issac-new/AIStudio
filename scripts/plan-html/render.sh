@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/plan-view}"
 SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
-TITLE="${2:-Swarm Studio 全流程推演方案 V8.3（终态版）}"
+TITLE="${2:-Swarm Studio 全流程推演方案 V8.4（证据纪律修订版）}"
 mkdir -p "$OUT"
 cd "$ROOT/docs/superpowers/specs"
 pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
