@@ -4,7 +4,7 @@
 // 刻意不跨包 import server 类型（域自包含，eval api 同款纪律）。
 // 422（写入即校验拒写）在 request 层抛错；UI 写前先走 validate（临时校验
 // 不入库）拿违规清单展示，再提交——服务端 422 仍是最终闸。
-import { request, getBaseUrlValue } from '@/api/client'
+import { request, getApiKey, getBaseUrlValue } from '@/api/client'
 
 export type Modality = 'shall' | 'should' | 'may'
 export type Severity = 'error' | 'warning' | 'info'
@@ -75,11 +75,20 @@ export const ontologyApi = {
   /** instances 传值=临时校验不入库（写前预检）；缺省=全量跑批。 */
   validate: (instances?: OntologyInstance[]) =>
     req<ValidateResponse>('/api/hermes/ontology/validate', { method: 'POST', body: JSON.stringify(instances ? { instances } : {}) }),
-  /** jsonld/shacl 返回 JSON；turtle 是文本——直 fetch（request 恒 res.json()）。 */
+  /** jsonld/shacl 走 request（恒 res.json()，带 Bearer）；turtle 是文本——裸 fetch
+   *  须自带 Authorization（token 在 localStorage 不在 cookie，same-origin 不够）。 */
   exportText: async (format: 'jsonld' | 'shacl' | 'turtle'): Promise<string> => {
-    const res = await fetch(`${getBaseUrlValue()}/api/hermes/ontology/export?format=${format}`, { credentials: 'same-origin' })
+    if (format !== 'turtle') {
+      const j = await req<Record<string, unknown>>(`/api/hermes/ontology/export?format=${format}`)
+      return JSON.stringify(j, null, 2)
+    }
+    const key = getApiKey()
+    const res = await fetch(`${getBaseUrlValue()}/api/hermes/ontology/export?format=turtle`, {
+      credentials: 'same-origin',
+      headers: key ? { Authorization: `Bearer ${key}` } : {},
+    })
     if (!res.ok) throw new Error(`导出失败 ${res.status}`)
-    return format === 'turtle' ? res.text() : JSON.stringify(await res.json(), null, 2)
+    return res.text()
   },
   listVersions: () => req<{ ok: boolean; versions: SpecSnapshotMeta[] }>('/api/hermes/ontology/versions'),
   rollback: (ts: number) =>
