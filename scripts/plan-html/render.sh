@@ -9,7 +9,10 @@ TITLE="${2:-Swarm Studio 全流程推演方案 V8.5（回归轮口径修订版�
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
 # 「enhance 读死 /tmp/plan-view 误碰别的输出目录」的坑（2026-10-10 实锤摸到活页 mtime）
-cp "$ROOT/scripts/plan-html/style-header.html" "$OUT/style-header.html"
+# 头部样式=tokens.css（两页共享基准）+ style-header.html（本页组件）拼接；
+# tokens 须包 <style>——裸 CSS 会被 pandoc include-in-header 当正文注入页首
+# （2026-10-10 视觉验收实锤：整段 CSS 源码排进左栏、横幅被挤飞）
+{ printf '<style>\n'; cat "$ROOT/scripts/plan-html/tokens.css"; printf '\n</style>\n'; cat "$ROOT/scripts/plan-html/style-header.html"; } > "$OUT/style-header.html"
 cd "$ROOT/docs/superpowers/specs"
 pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
   --include-in-header="$OUT/style-header.html" \
