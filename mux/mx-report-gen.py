@@ -2334,16 +2334,21 @@ try:
     # 第 4 章常驻：产品成效块（§5.4）+ 新特性表（按轮注册）
     _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮交付成效与新特性</h2>'
                  + _po_html + _feat_tbl + '</section>')
-    # 产品面承载率行（§5.5：五面各计 UI 实拍或产品内操作证据，验收线 ≥4/5）
-    def _face_any(pres):
-        return [p for p in pres if (STEPS_DIR / f'{p}.png').exists()]
+    # 产品面承载率行（§5.5：五面各计 UI 实拍或产品内操作证据，验收线 ≥4/5）。
+    # 2026-10-10 修订：候选帧改为按步号查当轮注册帧位（STEPS_META[n].imgs 实存）——
+    # 帧名前缀按轮而异（全量轮数字前缀/回归轮状态键前缀），写死数字前缀在回归轮
+    # 会五面全空误报（步 22 拍位规划轮实锤）；沿用带步（步 4/6/9/15 等）当轮无帧
+    # 自然不计——回归轮承载面以当轮执行带为准，口径如实。
+    def _face_step(ns):
+        return [f'{n}:{pre}' for n in ns for (pre, _c, _k) in STEPS_META[n]['imgs']
+                if (STEPS_DIR / f'{pre}.png').exists()]
     _faces = []
-    _faces.append(('沟通', bool(_face_any(['8-op1-after', '9-op1-after', '19-op1-after', '21-op1-after'])), '房间/会话帧'))
-    _faces.append(('任务', bool(_face_any(['10-op1-after', '12-op1-after', '13-op1-after', '17-op1-after', '20-op1-after'])), '看板帧'))
+    _faces.append(('沟通', bool(_face_step([8, 9, 19, 21])), '房间/会话帧'))
+    _faces.append(('任务', bool(_face_step([10, 12, 13, 17, 20, 22])), '看板帧'))
     _ap_ok = (EVID / 'approved.events').exists() and (EVID / 'approved.events').stat().st_size > 0
     _faces.append(('审批', _ap_ok, 'approved.events 事件留痕（无 UI 帧，降级计达）'))
-    _faces.append(('度量', bool(_face_any(['24-op1-after', '6-op1-after', '26-op1-after'])), '治理中心帧'))
-    _faces.append(('编码', bool(_face_any(['25-op1-after', '25-op2-after'])), 'IDE 走查帧+CLI 作业组合计达'))
+    _faces.append(('度量', bool(_face_step([24, 6, 26])), '治理中心帧'))
+    _faces.append(('编码', bool(_face_step([25, 18])), 'IDE 走查帧+CLI 作业组合计达'))
     _n_face = sum(1 for _, ok, _ in _faces if ok)
     _face_rows = ' · '.join(f'{n}={"✓" if ok else "⬜"}' for n, ok, _ in _faces)
     _face_note = '；'.join(f'{n}={d}' for n, ok, d in _faces if ok and '降级' in d or (not ok))
