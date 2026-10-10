@@ -306,8 +306,81 @@ if _steps_dir_a.exists():
         warns.append(f'A5a 盘上未引用帧 {len(_unref)} 张（漏配）：{_unref[:6]}——拍而未嵌须挂接或归档')
     if _miss:
         fails.append(f'A5b 报告引用但文件缺失 {len(_miss)} 张（冒配）：{_miss[:6]}')
-    if '（截图缺失）' in rep or '注册帧缺文件' in rep:
+    # A5c 旧口径（run13 前专属）：run13 起生成器按 V8.4 ④渲染"记单+无帧明示"（文案仍含
+    # 该前缀字样），由下方 A5d/e/f 按"占位↔问题单配对"新口径判，不再按字样一刀切。
+    if RUN_ID < '20261010-v8-run13' and ('（截图缺失）' in rep or '注册帧缺文件' in rep):
         fails.append('A5c 报告含缺图占位（"截图缺失"/"注册帧缺文件"）——§5.5 空态禁渲染/冒配红标未消化')
+
+# ── A5d/e/f：V8.4 §5.5 截图红线 ②③④（2026-10-10 接线轮，run13 起——RUN_ID 门控防旧轮回溯破坏）──
+if RUN_ID >= '20261010-v8-run13':
+    import time as _time
+    # ② 同源帧单一用途：同一图文件在报告内只许嵌入一次（按 src 计数；盘上同 md5 已由查 4 覆盖）
+    _src_all = re.findall(r'<img src="(screenshots/steps/[^"]+)"', rep)
+    _src_cnt: dict = {}
+    for _s in _src_all:
+        _src_cnt[_s] = _src_cnt.get(_s, 0) + 1
+    _dup_src = sorted(s for s, c in _src_cnt.items() if c > 1)
+    if _dup_src:
+        fails.append(f'V8.4② 同源帧多用途：{_dup_src}——同一图像文件只许一处嵌入配一个图注（run12 步20/23 双挂 deliver_gate 即此类）')
+    # ④ 缺帧占位必须配问题单：注册帧缺文件/帧缺失/采集位空 → 按 §5.6 采集纪律⑩ 记单，
+    #    帧名前缀键 ↔ issues.log 的 frame-capture-failed|step-<键>（或 r18-collection-missing 族）
+    #    精确配对；✅ 步含"（截图缺失）"裸占位=FAIL（⬜ 未执行/夹具带的无帧明示不阻断、汇总一条 WARN）
+    _fc_step_keys = set()
+    _has_r18_degrade = False
+    if _ilog.exists():
+        for _l in _ilog.read_text().splitlines():
+            _p = _l.split('|', 3)
+            if len(_p) >= 4 and _p[0] == 'ISSUE':
+                if _p[1] == 'frame-capture-failed':
+                    _fc_step_keys.add(_p[2])            # 形如 step-devimpl_done
+                elif _p[1] == 'r18-collection-missing':
+                    _has_r18_degrade = True
+    _ph_unpaired, _done_bare, _idle_noframe = [], [], 0
+    for _blk in blocks:
+        _n_m = re.search(r'<span class="st-num">(\d+)</span>', _blk)
+        _n = int(_n_m.group(1)) if _n_m else -1
+        _done_blk = '<span class="ok">✅</span>' in _blk
+        if '（截图缺失）' in _blk:
+            if _done_blk:
+                _done_bare.append(_n)
+            else:
+                _idle_noframe += 1                      # ⬜ 夹具带/未执行带：无帧明示，合规
+        for _m in re.finditer(r'(?:注册帧缺文件|帧缺失|本位无帧|本步无帧)：([A-Za-z0-9_]+)', _blk):
+            _key = re.split(r'-op\d+$', _m.group(1))[0]
+            if (f'step-{_key}' not in _fc_step_keys) and not _has_r18_degrade:
+                _ph_unpaired.append(f'步{_n}:{_m.group(1)}')
+    if _done_bare:
+        fails.append(f'V8.4④ ✅步含裸截图缺失占位：{_done_bare}——✅步无帧必须"无帧明示+问题单"，不得占位')
+    if _ph_unpaired:
+        fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 记单 frame-capture-failed|step-<键> 后降级呈现')
+    if _idle_noframe:
+        warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 未执行/夹具带，lite 轮口径合规呈现）')
+    # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
+    #    在 state 有 epoch 落键者，帧须 ≤ 键值+120s（事后补拍即穿帮）。flag 键（=1 无时刻）与
+    #    scenario.log 全段界对账为二阶强化，暂不设 FAIL 防误杀。
+    _run_start = state_keys.get('run_started_at', '')
+    _steps_dir_v3 = EVID / 'screenshots' / 'steps'
+    _refs_v3 = set(re.findall(r'screenshots/steps/([A-Za-z0-9_-]+)\.png', rep))
+    if _run_start.isdigit() and _steps_dir_v3.exists():
+        _t0, _t1 = int(_run_start), int((_steps_dir_v3.parent.parent / 'simulation-report.html').stat().st_mtime
+                    if (_steps_dir_v3.parent.parent / 'simulation-report.html').exists() else _time.time())
+        _out_win, _late = [], []
+        for _r in _refs_v3:
+            _fp = _steps_dir_v3 / f'{_r}.png'
+            if not _fp.exists():
+                continue
+            _mt = int(_fp.stat().st_mtime)
+            if _mt < _t0 or _mt > _t1 + 60:
+                _out_win.append(_r)
+                continue
+            _k = re.split(r'-op\d+$', _r)[0]
+            _kv = state_keys.get(_k, '')
+            if _kv.isdigit() and int(_kv) > 1e9 and _mt > int(_kv) + 120:
+                _late.append(f'{_r}(>{_k} +{_mt - int(_kv)}s)')
+        if _out_win:
+            fails.append(f'V8.4③ 帧时刻窗外（run 区间外）：{_out_win[:6]}——采集时刻须在本轮执行区间内')
+        if _late:
+            fails.append(f'V8.4③ 帧晚于所属步落键：{_late[:4]}——键落定后补拍即穿帮（§5.6 采集纪律⑩ 禁补拍）')
 
 # A6 叙事时间锚抽检：st-story 所引 HH:MM 时刻须在 scenario.log 有命中（"02:27/04:27"族守门）
 _scen = EVID / 'scenario.log'
