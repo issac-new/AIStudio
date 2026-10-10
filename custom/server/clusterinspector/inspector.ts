@@ -23,6 +23,8 @@ export type RunOutcome = {
 export interface InspectorDeps {
   hermesHome?: string
   gatewayBase?: string
+  /** 在办卡注入（控制器接 kanban list --status running --json；缺省=该面 not wired） */
+  getRunningCards?: () => Promise<Array<Record<string, unknown>>>
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
   /** safe-act 注入：matrix 催办（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
@@ -91,7 +93,7 @@ export class ClusterInspector {
       } catch { return undefined }
     })
     for (const a of anomalies) {
-      if (a.detector !== 'session.stalled') continue
+      if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent') continue
       const profile = a.subject.replace(/^profile:/, '')
       const r = await nudge(profile, a.summary)
       acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
@@ -208,12 +210,32 @@ export class ClusterInspector {
         kanbanOk = false
         kanbanErr = 'not wired'
       }
+      let cards: Array<Record<string, unknown>> = []
+      let cardsOk = true
+      let cardsErr: string | undefined
+      if (this.deps.getRunningCards) {
+        try {
+          cards = await this.deps.getRunningCards()
+        } catch (e) {
+          cardsOk = false
+          cardsErr = (e as Error).message
+        }
+      } else {
+        cardsOk = false
+        cardsErr = 'not wired'
+      }
+      const runningCards = cards.map((c) => ({
+        id: String(c.task_id ?? c.id ?? ''),
+        assignee: typeof c.assignee === 'string' ? c.assignee : undefined,
+        title: typeof c.title === 'string' ? c.title : undefined,
+      })).filter((c) => c.id)
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
         sessions: collectSessions(this.deps),
         profiles: collectProfiles(this.deps),
         kanban: { ok: kanbanOk, error: kanbanErr, rows: kanbanRows },
+        runningCards: { ok: cardsOk, error: cardsErr, cards: runningCards },
       }
       this.lastSnapshot = snap
       const anomalies: TimedAnomaly[] = detectAll(snap).map((a) => ({ ...a, ts: snap.ts }))
