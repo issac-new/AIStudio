@@ -55,6 +55,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
   }
 
+  // 本体工作台（GB/T 48000.3 方法论产品化，spec 2026-10-10-ontology-studio-spec.md）：
+  // 默认开，VITE_CUSTOM_ONTOLOGY=false 显式关。导航入口（FlowNavPanel 内 OntologyNavEntry）。
+  if (features.ontology) {
+    registrations.push(import('../../custom/client/ontology').then(m => m.registerOntology(app)))
+  }
+
   await Promise.all(registrations)
 
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
