@@ -42,6 +42,7 @@ import {
   boardGraphSummary, listConflictInbox, resolveConflictInbox, syncAllBoardGraphs, syncBoardGraph,
 } from '../knowledge/board-graph'
 import { readDispatchLedger } from './dispatch-ledger'
+import { collectBoardStatus } from './board-status'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -675,6 +676,12 @@ router.post('/heldout/sets/:id/score', async (ctx) => {
   const res = scoreSet(String(ctx.params.id ?? ''), answers, govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems, attemptsLeft: res.attemptsLeft }; return }
   ctx.body = res
+})
+
+// 跨账号板状态分布（G3 2026-10-10，缺失功能实施方案）：看板 sqlite 快道只读聚合，
+// 逐板 fail-soft（available:false 如实呈现），零板=空数组由前端空态承接。
+router.get('/board-status', (ctx) => {
+  ctx.body = { ok: true, ...collectBoardStatus() }
 })
 
 export const governanceRoutes = router
