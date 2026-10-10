@@ -942,7 +942,7 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
   # 2026-10-10 能力补齐轮：单文件拷贝 → 全目录拷贝（aipaydev-dev 已升 swarm-yuan
   # standard 全骨架 116 文件——门禁/钩子脚本/方法论库随技能分发；单文件技能源仍
   # 兼容旧路径）。条款追加逻辑不变（进安装副本 SKILL.md 尾部，仓内真源无条款）。
-  for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop; do
+  for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop testing-shift-left; do
     [[ -d "$SKILLS_SRC/$s" ]] || continue
     rm -rf "$PROF/skills/$s"
     mkdir -p "$PROF/skills/$s"
