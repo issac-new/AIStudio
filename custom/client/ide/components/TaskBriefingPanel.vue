@@ -119,7 +119,7 @@ function sendAux(): void {
     <!-- 区块 1b：研发进度（引擎站点时间线，进度可感知链）——会话面暂缺/无站点
          时整块不渲染（诚实缺席，不占版面不编造） -->
     <section
-      v-if="engineProgress && engineProgress.sessionKnown && engineProgress.phases.length > 0"
+      v-if="engineProgress && (engineProgress.phases.length > 0 || (engineProgress.milestones?.length ?? 0) > 0)"
       class="briefing-section" data-testid="briefing-engine-progress"
     >
       <button class="section-toggle" type="button" @click="toggle('engine')">
@@ -127,10 +127,17 @@ function sendAux(): void {
         <span class="chev">{{ collapsed.engine ? '▸' : '▾' }}</span>
       </button>
       <div v-if="!collapsed.engine" class="section-body">
-        <ol class="phase-line" data-testid="briefing-phase-line">
+        <ol v-if="engineProgress.phases.length > 0" class="phase-line" data-testid="briefing-phase-line">
           <li v-for="(p, i) in engineProgress.phases" :key="i" class="phase-step" :class="`phase-step--${p.status}`">
             <span class="phase-glyph">{{ p.status === 'done' ? '✓' : p.status === 'running' ? '▶' : p.status === 'failed' ? '✕' : '○' }}</span>
             <span class="phase-name">{{ p.name }}</span>
+          </li>
+        </ol>
+        <!-- 技能侧里程碑（无引擎站点面时的进度呈现：每节点离场一条） -->
+        <ol v-if="(engineProgress.milestones?.length ?? 0) > 0" class="phase-line" data-testid="briefing-milestone-line">
+          <li v-for="(m, i) in engineProgress.milestones" :key="`m-${i}`" class="phase-step" :class="m.status === 'fail' ? 'phase-step--failed' : 'phase-step--done'">
+            <span class="phase-glyph">{{ m.status === 'fail' ? '✕' : '✓' }}</span>
+            <span class="phase-name">{{ m.milestone }}<template v-if="m.note"> — {{ m.note }}</template></span>
           </li>
         </ol>
         <div class="kv">

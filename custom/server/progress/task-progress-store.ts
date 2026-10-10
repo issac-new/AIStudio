@@ -9,9 +9,66 @@
  * watch 的 workspace 会重订阅，引擎推送当前快照后即恢复）——不是数据丢失，
  * 是恢复延迟；恢复期间进度端点如实返回「会话面暂缺」，不编造。
  */
+import { readFileSync, statSync, readdirSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import type { ProjectionSession } from '../zcode/session-projection'
 
 const MAX_SESSIONS = 500
+
+/** 技能侧里程碑行（.swarm-yuan/milestones.jsonl，trace-log --milestone 产出） */
+export interface MilestoneEntry {
+  ts: string
+  milestone: string
+  actor?: string
+  status?: string
+  note?: string
+  /** 任务卡关联（trace-log --task 透传；缺席=工作区级环境里程碑） */
+  task?: string
+}
+
+const MILESTONE_MAX_BYTES = 65_536
+const MILESTONE_MAX_ENTRIES = 50
+const WT_DIR_SCAN_LIMIT = 16
+
+function readMilestoneFile(path: string): MilestoneEntry[] {
+  try {
+    const st = statSync(path)
+    if (!st.isFile() || st.size === 0 || st.size > MILESTONE_MAX_BYTES) return []
+    const out: MilestoneEntry[] = []
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+      const s = line.trim()
+      if (!s) continue
+      try {
+        const j = JSON.parse(s) as MilestoneEntry
+        if (j && typeof j.milestone === 'string' && j.milestone) out.push(j)
+      } catch { /* 坏行跳过（fail-soft） */ }
+      if (out.length >= MILESTONE_MAX_ENTRIES) break
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 读一个工作区的里程碑面（进度可感知链·消费侧接线补全）：工作区根 .swarm-yuan/
+ * milestones.jsonl + 同级 wt-* 工作区副本（同任务多工作区并发是设计形态）。
+ * 纯文件面 fail-soft；有界扫描防大目录拖端点。
+ */
+export function readWorkspaceMilestones(workspaceId: string): MilestoneEntry[] {
+  if (!workspaceId || typeof workspaceId !== 'string') return []
+  const entries: MilestoneEntry[] = []
+  entries.push(...readMilestoneFile(join(workspaceId, '.swarm-yuan', 'milestones.jsonl')))
+  try {
+    const parent = dirname(workspaceId)
+    const siblings = readdirSync(parent).filter((d) => d.startsWith('wt-')).slice(0, WT_DIR_SCAN_LIMIT)
+    for (const d of siblings) {
+      entries.push(...readMilestoneFile(join(parent, d, '.swarm-yuan', 'milestones.jsonl')))
+    }
+  } catch { /* 兄弟扫描失败=只有根文件 */ }
+  entries.sort((a, b) => (a.ts < b.ts ? -1 : 1))
+  return entries
+}
 
 interface ProgressRuntimeLike {
   onEvent(cb: (event: { type: string; sessionId?: string; session?: ProjectionSession }) => void): { dispose(): void }

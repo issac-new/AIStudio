@@ -44,7 +44,7 @@ router.get('/match', async (ctx) => {
 router.post('/dispatch', async (ctx) => {
   // 执行半环（routa §七#2）：列流转→匹配→每 step 派单到 provider（zcode 引擎）。
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
-  const { from, to, workspacePath } = body as Record<string, unknown>
+  const { from, to, workspacePath, taskId } = body as Record<string, unknown>
   if (typeof to !== 'string' || !to || typeof workspacePath !== 'string' || !workspacePath) {
     ctx.status = 400
     ctx.body = { ok: false, detail: 'to 与 workspacePath 必填（from 可空）' }
@@ -55,10 +55,13 @@ router.post('/dispatch', async (ctx) => {
   if (workspaceAccessDenied(ctx, workspacePath)) return
   try {
     // 共享派单单例（P-A(b)）：与 /mention REST 同一 pending 槽，跨入口不双跑。
+    // taskId（进度可感知链·生产者侧接线补全）：移动的是哪张卡由调用方传入——列派发
+    // 带上后 /api/progress/tasks 才能按卡聚合（消费端已在位）。
     const result = await dispatchColumnTransition(getMentionDispatch(), {
       from: typeof from === 'string' && from ? from : null,
       to,
       workspacePath,
+      ...(typeof taskId === 'string' && taskId ? { taskId } : {}),
     })
     ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes, delegation: result.delegation }
   } catch (err) {
