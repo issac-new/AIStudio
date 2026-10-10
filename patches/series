@@ -551,3 +551,6 @@
 
 # 591 研发进度可感知（三件全做轮）：/api/progress/tasks 按任务聚合（派发台账 taskId × 会话投影阶段时间线）；配套 mention taskId 贯通（task 级推送房间激活）
 591-server-progress-task-routes.patch
+
+# 592 本体结卡校验·路线二（agent 面）：kanban_gates validatorExec 执行式校验器——结卡真跑 studio agent 桥 /api/ontology/agent-bridge/validate-task（限回环+可选 token；fail-open：工具缺席放行留痕）；与 590 watcher（事后报告半环）互补；reason 复用 frozen 词表 validator_failed（591 已被进度轮占用，让号）
+592-agent-ontology-validator-exec.patch

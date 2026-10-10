@@ -1,23 +1,36 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 22d64cf..3aca7de 100644
+index 22d64cf..a18bdde 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -133,6 +133,10 @@ import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
+@@ -133,6 +133,12 @@ import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
  // overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
  // 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
  import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
 +// overlay[ontology]（本体工作台）：GB/T 48000.3 方法论产品化——五要素本体
 +// （类型/数据属性/对象属性/公理/规则）+ SHACL 式写入校验 + IRI/版本管理 +
 +// JSON-LD/SHACL/Turtle 导出。/api/hermes/ontology
-+import { ontologyRoutes } from '../custom/ontology/ontology-controller'
++// 四阶段：+结卡校验面（watcher 轮询 column_transition→单任务校验→收件箱；
++// ONTOLOGY_WATCH=off 关，30s 档）
++import { ontologyRoutes, registerOntologyAgentBridgeRoutes, startOntologyWatchIfEnabled } from '../custom/ontology/ontology-controller'
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
  import { reviewRoutes } from '../custom/review/review-controller'
  // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
-@@ -410,6 +414,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -301,6 +307,9 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   registerMatrixRoutes(app)
+   // overlay[cron-bridge]: hermes cron no-agent 脚本的到期回调（认证前挂载，自带 token 校验）。
+   registerLoopCronBridgeRoutes(app)
++  // overlay[ontology-agent-bridge]（本体轮四阶段）：agent validatorExec 的无鉴权
++  // 通道——限本机回环 + 可选 ONTOLOGY_BRIDGE_TOKEN（cron-bridge 同款安全形态）。
++  registerOntologyAgentBridgeRoutes(app)
+ 
+   // --- Auth middleware: all routes below require authentication ---
+   authMiddleware.forEach((middleware) => app.use(middleware))
+@@ -410,6 +419,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
    startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
    app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
 +  app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
++  startOntologyWatchIfEnabled()                   // 本体结卡校验环：column_transition 增量→单任务校验→收件箱（四阶段路线一）
    app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
    app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
    app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
