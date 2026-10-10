@@ -2939,19 +2939,29 @@ if PLAN_V82:
     content_html += manual_appendix()
 art_tbl, art_stat, art_note_g5 = artifact_panorama()
 
+# ── tokens 单源（报告 CSS 统一改造 2026-10-10）：mux/report-tokens.css 与
+#    overlay/scripts/plan-html/tokens.css 字节级同文（两文件 cmp 守门；改任一侧
+#    必须同步另一侧）。运行时实读注入 style 块顶部——禁在生成器内再手抄一份
+#    token 值（手抄即第二事实源，必漂移）。──
+_REPORT_TOKENS = (Path(__file__).resolve().parent / 'report-tokens.css').read_text(encoding='utf-8')
+
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Swarm Studio 全流程推演报告 · RFD-001</title>
 <style>
+{_REPORT_TOKENS}
 *{{margin:0;padding:0;box-sizing:border-box}}
-:root{{--bg:#f8fafc;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--accent:#3b82f6;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04)}}
+/* 机器样式别名层（2026-10-10 CSS 统一改造）：token 单源在前（report-tokens.css），
+   此处只保留 token 未覆盖的本地别名——与 token 同名且取值不同者（--accent/--ok/--warn/--muted）
+   不再重复声明，交由 token 定值，消除双事实源 */
+:root{{--bg:var(--surface-2);--card:var(--surface);--text:var(--ink);--border:var(--line);--err:var(--danger);--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04)}}
 html{{scroll-behavior:smooth}}
 body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.75;letter-spacing:0}}
 
 .layout{{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto;min-height:100vh}}
 .sidebar{{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--card);border-right:1px solid var(--border);padding:20px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}}
-.main{{padding:0 32px 60px;min-width:0}}
+.main{{padding:0 32px 60px;min-width:0;max-width:1180px}}
 
 .nav-title{{font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;padding:0 8px;line-height:1.3}}
 .nav-phase{{margin-bottom:8px}}
@@ -2963,16 +2973,16 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .nav-step .no{{color:#cbd5e1;flex-shrink:0}}
 .gmark{{font-size:11px;font-weight:700;color:var(--warn);background:#fef3c7;border-radius:3px;padding:0 3px;flex-shrink:0}}
 
-.hero{{background:linear-gradient(135deg,#1e293b 0%,#334155 50%,#475569 100%);color:#fff;border-radius:0 0 24px 24px;padding:32px 36px 24px;margin:0 -32px 28px}}
+.hero{{background:var(--grad-hero);color:var(--surface);border-radius:0 0 24px 24px;padding:32px 36px 24px;margin:0 -32px 28px}}
 .hero h1{{font-size:24px;font-weight:700;letter-spacing:-.02em}}
 .hero .sub{{font-size:13px;color:#94a3b8;margin-top:6px;line-height:1.7}}
 .hero-stats{{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}}
 .hstat{{text-align:center}}
-.hstat b{{display:block;font-size:22px;font-weight:800;color:#fff}}
+.hstat b{{display:block;font-size:22px;font-weight:800;color:var(--surface)}}
 .hstat span{{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}}
 .phase-bar{{display:flex;gap:0;margin-top:20px;align-items:center}}
 .pb-seg{{flex:1;height:4px;border-radius:2px;position:relative}}
-.pb-dot{{width:10px;height:10px;border-radius:50%;background:#fff;flex-shrink:0;margin:0 4px}}
+.pb-dot{{width:10px;height:10px;border-radius:50%;background:var(--surface);flex-shrink:0;margin:0 4px}}
 .pb-label{{font-size:11px;color:#94a3b8;text-align:center;margin-top:4px;white-space:nowrap}}
 
 /* ── 六道闸仪表盘（人的审核把关）── */
@@ -2984,8 +2994,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .gate-card.gpass .gate-state{{color:var(--ok)}}
 .gate-state{{font-size:13px;font-weight:700;margin-top:2px}}
 .gate-ts{{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}}
-.gate-desc{{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}}
-.gate-rej{{display:inline-block;font-size:9.5px;margin-top:5px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#b45309}}
+.gate-desc{{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}}
+.gate-rej{{display:inline-block;font-size:11px;margin-top:5px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:var(--warn)}}
 .gate-rej.ok1{{background:#dcfce7;color:#15803d}}
 .gate-card.gfail{{border-top-color:var(--err)}}
 .gate-card.gfail .gate-state{{color:var(--err)}}
@@ -2995,16 +3005,16 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 
 .phase{{margin-bottom:32px}}
 .ph-hd{{display:flex;align-items:center;gap:14px;padding:16px 0 12px;margin-bottom:4px;border-bottom:2px solid var(--pc,var(--border))}}
-.ph-num{{width:36px;height:36px;border-radius:50%;background:var(--pc,var(--border));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}}
+.ph-num{{width:36px;height:36px;border-radius:50%;background:var(--pc,var(--border));color:var(--surface);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}}
 .ph-hd h2{{font-size:17px;color:var(--text);letter-spacing:-.01em}}
 .ph-hd p{{font-size:13px;color:var(--muted)}}
 
 .step{{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:12px 0;box-shadow:var(--shadow);position:relative;overflow:hidden}}
 .step::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--border));opacity:.6}}
-.step.gate-step{{border-color:#fbbf24;background:linear-gradient(135deg,#fffbeb 0%,#fff 30%)}}
+.step.gate-step{{border-color:#fbbf24;background:linear-gradient(135deg,#fffbeb 0%,var(--surface) 30%)}}
 .step.gate-step::before{{background:#f59e0b;width:4px;opacity:1}}
 .st-hd{{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}}
-.st-num{{width:32px;height:32px;border-radius:8px;background:var(--pc,var(--border));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}}
+.st-num{{width:32px;height:32px;border-radius:8px;background:var(--pc,var(--border));color:var(--surface);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}}
 .step.gate-step .st-num{{background:#f59e0b}}
 .st-title h3{{font-size:14px;line-height:1.5;color:var(--text);letter-spacing:-.005em}}
 .st-meta{{font-size:13px;color:var(--muted)}}
@@ -3026,79 +3036,11 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 32px 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
+/* ── 驾驶舱联动地图（单一定义：原五处重复块合并——非冲突声明取并集、margin 冲突取 0 0 22px） ── */
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
-.ck-map-hd{{font-size:15px;font-weight:700;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
-.ck-zone{{border-left:4px solid var(--zc);border-radius:6px;padding:6px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
-.ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:4px}}
-.ck-zone-links{{display:flex;flex-wrap:wrap;gap:3px 8px}}
-.ck-zone-links a{{font-size:13px;color:var(--muted);text-decoration:none}}
-.ck-zone-links a:hover{{color:var(--zc)}}
-.ck-chain{{border-top:1px dashed var(--border);padding:10px 0 4px}}
-.ck-chain-hd{{font-size:13px;margin-bottom:6px}}
-.ck-chain-desc{{font-size:13px;color:var(--muted);margin-left:8px}}
-.ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:4px}}
-.ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:14px;padding:2px 8px}}
-.ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card))}}
-.ck-node-z{{font-size:11px;color:#fff;background:var(--zc);border-radius:7px;padding:0 4px;font-weight:600}}
-.ck-arrow{{color:var(--muted);font-size:13px;margin:0 2px}}
-/* ── 驾驶舱联动地图 ── */
-.ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow)}}
 .ck-map-hd{{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}}
-.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400}}
-.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:16px}}
+.ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}
+.ck-zones{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:16px;max-width:100%}}
 .ck-zone{{border:1px solid color-mix(in srgb,var(--zc) 35%,var(--border));border-left:4px solid var(--zc);border-radius:8px;padding:8px 10px;background:color-mix(in srgb,var(--zc) 4%,var(--card))}}
 .ck-zone-hd{{font-size:13px;font-weight:700;color:var(--zc);margin-bottom:6px;letter-spacing:.03em}}
 .ck-zone-links{{display:flex;flex-wrap:wrap;gap:4px 8px}}
@@ -3111,7 +3053,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:6px}}
 .ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:16px;padding:3px 10px;transition:all .15s}}
 .ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card));border-color:var(--zc)}}
-.ck-node-z{{font-size:9.5px;color:#fff;background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
+.ck-node-z{{font-size:11px;color:var(--surface);background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
 .ck-arrow{{color:var(--muted);font-size:14px;margin:0 2px;font-weight:300}}
 .st-linkline{{font-size:13px;color:var(--muted);margin:4px 0 0;padding:4px 8px;background:var(--bg);border-radius:6px}}
 .st-linkline a{{text-decoration:none;border-bottom:1px dotted currentColor}}
@@ -3121,7 +3063,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-chk-flag{{flex-shrink:0}}
 .art-chk-label{{flex-shrink:0;font-weight:600;color:var(--text);min-width:110px}}
 .art-chk-val{{color:var(--muted);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.art-chk-val.miss{{color:#dc2626}}
+.art-chk-val.miss{{color:var(--danger)}}
 .st-shots{{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:6px 0 0 44px}}
 .art-code{{max-height:340px;overflow:auto}}
 .gate-body{{max-height:260px;overflow:auto}}
@@ -3174,24 +3116,24 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-body p{{font-size:12.5px;margin:4px 0;line-height:1.7;color:#334155;word-break:break-word}}
 .art-body ul{{margin:4px 0 4px 18px;font-size:12.5px;line-height:1.7;color:#334155}}
 .art-body li{{margin:2px 0}}
-.art-body code{{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0 4px;font-family:ui-monospace,monospace;font-size:10.5px}}
+.art-body code{{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0 4px;font-family:ui-monospace,monospace;font-size:11px}}
 .art-quote{{border-left:3px solid var(--border);margin:6px 0;padding:4px 10px;color:var(--muted);font-size:13px;background:var(--card);border-radius:4px}}
-.art-tbl{{width:100%;border-collapse:collapse;font-size:10.5px;margin:6px 0;border:1px solid var(--border);border-radius:6px;overflow:hidden}}
+.art-tbl{{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;border:1px solid var(--border);border-radius:6px;overflow:hidden}}
 .art-tbl th,.art-tbl td{{border:1px solid var(--border);padding:3px 6px;text-align:left;vertical-align:top;line-height:1.6}}
 .art-tbl th{{background:var(--bg);font-weight:600}}
-.art-code{{background:#0f172a;color:#e2e8f0;border-radius:6px;padding:8px 10px;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;margin:6px 0;max-height:340px;overflow-y:auto}}
+.art-code{{background:var(--ink-strong);color:var(--line);border-radius:6px;padding:8px 10px;font-size:11px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;margin:6px 0;max-height:340px;overflow-y:auto}}
 .art-trunc{{font-size:11px;color:var(--warn);margin-top:4px}}
 @media (max-width: 900px) {{ .st-artifact{{margin-left:0}} }}
 
-.st-shots{{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}}
+/* .st-shots 单一定义=上方 grid 版（原此处 flex 版与 grid 版双定义打架，删 flex 保 grid） */
 .shot{{flex:1 1 400px;max-width:520px;position:relative;cursor:zoom-in}}
 .shot img{{width:100%;max-height:420px;object-fit:cover;object-position:top;border:1px solid var(--border);border-radius:8px;display:block;transition:box-shadow .2s}}
 .shot:hover img{{box-shadow:0 4px 16px rgba(0,0,0,.12)}}
 .shot figcaption{{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}}
-.shot-kind{{display:inline-block;font-size:9.5px;font-weight:700;border-radius:3px;padding:0 5px;margin-right:5px;vertical-align:1px;letter-spacing:.02em}}
+.shot-kind{{display:inline-block;font-size:11px;font-weight:700;border-radius:3px;padding:0 5px;margin-right:5px;vertical-align:1px;letter-spacing:.02em}}
 .shot input{{display:none}}
-.shot input:checked ~ img{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:90vh;max-width:92vw;width:auto;object-fit:contain;z-index:9999;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.3);border-radius:8px}}
-.shot input:checked ~ figcaption{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#1e293b;color:#fff;padding:4px 12px;border-radius:6px;font-size:13px}}
+.shot input:checked ~ img{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:90vh;max-width:92vw;width:auto;object-fit:contain;z-index:9999;background:var(--surface);box-shadow:0 8px 40px rgba(0,0,0,.3);border-radius:8px}}
+.shot input:checked ~ figcaption{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:var(--ink);color:var(--surface);padding:4px 12px;border-radius:6px;font-size:13px}}
 .no-evidence{{font-size:13px;color:var(--muted);padding:8px 0}}
 
 h2.section-hd{{font-size:18px;font-weight:700;color:var(--text);margin:32px 0 16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}}
@@ -3204,13 +3146,13 @@ th{{background:var(--bg);font-weight:600;font-size:13px;text-transform:uppercase
 .cp-card {{ border:1px solid var(--border); border-radius:10px; background:var(--card); padding:10px 12px; box-shadow:var(--shadow) }}
 .cp-head {{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px }}
 .cp-name {{ font-size:13px; font-weight:700 }}
-.cp-who {{ font-size:10.5px; color:var(--warn); font-weight:600; white-space:nowrap }}
+.cp-who {{ font-size:11px; color:var(--warn); font-weight:600; white-space:nowrap }}
 .cp-shot {{ display:block; cursor:zoom-in; margin:2px 0 6px }}
 .cp-shot img {{ width:100%; height:118px; object-fit:cover; object-position:top; border:1px solid var(--border); border-radius:6px; display:block }}
 .cp-shot input {{ display:none }}
 .cp-shot input:checked ~ img {{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); height:auto; max-height:88vh; max-width:90vw; width:auto; object-fit:contain; z-index:9999; box-shadow:0 8px 40px rgba(0,0,0,.3); border-radius:8px }}
 .cp-sem {{ font-size:12.5px; color:#334155; line-height:1.5 }}
-.cp-ev {{ font-size:10.5px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace }}
+.cp-ev {{ font-size:11px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace }}
 .dm-badge {{ display:inline-block; font-size:11px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:4px; padding:1px 7px; margin-right:7px; vertical-align:1px }}
 a.dm-cp {{ display:inline-block; font-size:11px; color:var(--accent); text-decoration:none; margin:1px 3px 1px 0; border:1px solid var(--border); border-radius:4px; padding:1px 6px }}
 a.dm-cp:hover {{ background:var(--bg) }}
@@ -3229,21 +3171,25 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
 @media (max-width: 900px) {{
   .layout{{grid-template-columns:1fr}}
-  .sidebar{{display:none}}
+  /* 窄屏侧栏不再消失：顶置横滚条形态（类名不变，只改布局形态） */
+  nav.sidebar{{position:static;width:100%;height:auto;max-height:none;display:flex;gap:4px;overflow-x:auto;padding:8px 12px;border-right:none;border-bottom:1px solid var(--line)}}
+  .nav-title,.nav-phase{{flex:0 0 auto}}
+  .nav-phase{{display:contents}}
+  .nav-pname{{flex:0 0 auto}}
+  .nav-step{{flex:0 0 auto}}
   .main{{padding:0 16px 40px}}
   .hero{{margin:0 -16px 20px;padding:24px 20px 20px;border-radius:0 0 16px 16px}}
   .govgrid{{grid-template-columns:1fr}}
   .gates{{grid-template-columns:repeat(2,1fr)}}
   .st-story,.st-gate{{margin-left:0;padding-left:0}}
 }}
-/* ── 图版面（分析轮 P-6/P-8）：图放大可读 + 占位防懒加载漂移 + 锚点滚动偏移 ── */
-/* 证据图=产品界面实拍，不得裁剪（object-fit:cover 会裁掉下半屏内容——P-19）；
-   满栏呈现保证截图内文字可读（P-6：520px 上限→满栏） */
+/* ── 图版面（分析轮 P-6/P-8）：图放大可读 + 锚点滚动偏移 ── */
+/* 证据图=产品界面实拍，不得裁剪：自然比例呈现（2026-10-10 撤 16:10 信箱灰垫——
+   aspect-ratio 占位与实拍比例不一致时上下留灰边），描边+浅阴影承载版面 */
 label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
-label.shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;object-position:top;background:#f1f5f9;border-radius:8px}}
-.cp-shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;background:#f1f5f9}}
+label.shot img{{width:100%;height:auto;max-height:none;object-position:top;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
+.cp-shot img{{width:100%;height:auto;max-height:none;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 .step,.section-hd{{scroll-margin-top:16px}}
-html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落点漂移（P-8），改即时 */
 @media print {{
   .sidebar{{display:none}}
   .layout{{grid-template-columns:1fr}}

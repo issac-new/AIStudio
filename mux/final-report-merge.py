@@ -22,19 +22,24 @@ from report_narrative import render_chapter0, spec_params_html  # noqa: E402
 
 SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 
-# ── 第 0 章宿主样式（gatebox/meta/idx/gap 与 unified-report-gen 同源，机器报告无此类名不冲突）──
+# ── 第 0 章宿主样式（gatebox/meta/idx/gap 与 unified-report-gen 同源，机器报告无此类名不冲突）
+#    2026-10-10 token 化：色值改引 report-tokens.css 变量（final-report head 的
+#    machine_styles 已含 tokens，直接 var() 引用；#fde68a 暂无 token 对应，保留字面值） ──
 CH0_CSS = '''<style>
-.meta{color:#57606a;font-size:13px;line-height:1.8}
-.gap{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin:8px 0}
-.gatebox{background:#fff;border:1px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin:12px 0}
+.meta{color:var(--muted);font-size:13px;line-height:1.8}
+.gap{background:var(--warn-soft);border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin:8px 0}
+.gatebox{background:var(--surface);border:1px solid var(--accent-soft);border-radius:10px;padding:14px 16px;margin:12px 0}
 .gatebox p{margin:6px 0;font-size:13.5px;line-height:1.8}
 .idx{font-size:12px}
-.idx th{background:#eef2ff;font-weight:600}
-.idx td,.idx th{border:1px solid #e0e7ff;padding:6px 10px;text-align:left;font-size:12px;line-height:1.7}
+.idx th{background:var(--accent-soft);font-weight:600}
+.idx td,.idx th{border:1px solid var(--line);padding:6px 10px;text-align:left;font-size:12px;line-height:1.7}
 .guide table.idx{font-size:12px}
 </style>'''
 
-GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:#fbfbfa;line-height:1.75}
+# ── GUIDE_CSS（2026-10-10 token 化）：PART1 绿皮肤（#0a7d43 系）撤换为 token
+#    中性系——标题/强调色统一 var(--accent-deep)，边框 var(--line)，底色 var(--surface-2)，
+#    卡片底 var(--surface)；排版（字号/边距/结构）不动。bad/mid 警示色保留语义色相。 ──
+GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:var(--surface-2);line-height:1.75}
 .guide .card{max-width:1200px;margin:0 auto}
 
 
@@ -45,24 +50,24 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 
 .guide h1{max-width:1200px;margin:0 auto 14px}
 .guide table{max-width:1200px;margin:0 auto 16px}
-.guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid #0a7d43;padding-bottom:12px;margin-bottom:6px}
-.guide h2{font-size:19px;margin-top:40px;color:#0a7d43;border-left:5px solid #0a7d43;padding-left:10px}
+.guide h1{font-size:25px;line-height:1.4;border-bottom:3px solid var(--accent-deep);padding-bottom:12px;margin-bottom:6px}
+.guide h2{font-size:19px;margin-top:40px;color:var(--accent-deep);border-left:5px solid var(--accent-deep);padding-left:10px}
 .guide h3{font-size:16px;margin:22px 0 8px}
 .guide .sub{color:#678;font-size:13.5px}
-.guide table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;background:#fff}
-.guide th, .guide td{border:1px solid #ddd;padding:7px 10px;text-align:left;vertical-align:top}
-.guide th{background:#eef6ef}
-.guide .ok{color:#0a7d43;font-weight:600}
+.guide table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;background:var(--surface)}
+.guide th, .guide td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.guide th{background:var(--surface-3)}
+.guide .ok{color:var(--ok);font-weight:600}
 .guide .bad{color:#c0392b;font-weight:600}
 .guide .mid{color:#b9770e;font-weight:600}
-.guide .card{background:#fff;border:1px solid #e3e3e0;border-radius:8px;padding:14px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.guide .card.good{border-left:5px solid #0a7d43}
+.guide .card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.guide .card.good{border-left:5px solid var(--accent-deep)}
 .guide .card.warn{border-left:5px solid #b9770e}
 .guide .card.bad{border-left:5px solid #c0392b}
 .guide .card.info{border-left:5px solid #2563a8}
 .guide .tl{list-style:none;padding-left:0}
 .guide .tl li{position:relative;padding:4px 0 4px 18px;border-left:2px solid #cde;margin-left:8px}
-.guide .tl li::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:#0a7d43}
+.guide .tl li::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--accent-deep)}
 .guide .tl li.warn::before{background:#b9770e}
 .guide code{background:#f1f1ee;padding:1px 6px;border-radius:4px;font-size:12.5px}
 .guide .note{font-size:12.5px;color:#889}</style>'''
@@ -71,7 +76,7 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 # 说人话叙事是逐轮人工正本（时间线/故事/提交锚皆该轮真值），禁旧轮冒充；
 # 占位标记 {{n_*}} 由 main() 实测统计替换；正文为普通字符串（非 f-string），CSS 花括号安全。
 # run6 正本（处置口径与 2026-10-02 处置轮终态核对一致）：
-PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN6 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
 
@@ -170,7 +175,7 @@ PART1_RUN6 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 </div>'''
 
 
-PART1_RUN8 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN8 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
 
@@ -183,7 +188,7 @@ PART1_RUN8 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 {{ch0}}
 '''
 
-PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN7 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
 
@@ -294,7 +299,7 @@ PART1_RUN7 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 
 </div>'''
 
-PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN9 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
 
@@ -330,7 +335,7 @@ PART1_RUN9 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px"
 # 写法三问：判断句？带锚（时刻/commit/记入问题清单键）？人话（黑话首现释义）？
 # R17 强制关卡（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
 # 防旧轮叙事冒充新轮报告。新轮正本=人工按该轮实测依据编写后注册。
-PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN10 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
 
@@ -356,7 +361,7 @@ PART1_RUN10 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
-PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN11 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
 
@@ -375,7 +380,7 @@ PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 '''
 
 
-PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN12 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-09 02:29 → 10-10 03:39（约 25 小时）</span></h1>
 
@@ -394,7 +399,7 @@ PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 '''
 
 
-PART1_RUN13 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN13 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 回归轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 开跑（回归轮）</span></h1>
 
@@ -580,7 +585,7 @@ def main():
     machine_nav, machine_main, fused = split_layout(machine_body)
     if not fused:
         machine_nav = machine_nav.replace('<nav class="sidebar">', 
-            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:#0a7d43;font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
+            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:var(--accent-deep);font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
             '<a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">说人话版导读</a>'
             '<a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实测统计表</a>'
             '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">PART 2 · 全文档案</div>', 1)
@@ -706,10 +711,10 @@ def main():
 <div class="layout">
 {machine_nav}
 <main class="main">
-<div class="guide" id="part1-top" style="background:#fbfbfa;padding:26px 6px 6px">
+<div class="guide" id="part1-top" style="background:var(--surface-2);padding:26px 6px 6px">
 {part1}
 </div>
-<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
+<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:var(--grad-hero);color:#fff;border-radius:8px 8px 0 0">
 <h1 style="font-size:20px;margin:0">PART 2 · 26 步明细与全部证据（机器逐步报告全文）</h1>
 <p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成，此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物实物核对本章自明。</p>
 </div>

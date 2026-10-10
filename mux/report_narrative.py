@@ -218,9 +218,12 @@ def render_narrative(state: dict, evid: Path) -> str:
   <div class="nv-dims">{dim_html}</div>
 </section>'''
 
+    # 2026-10-10 token 化：色值改引 report-tokens.css 变量（机器报告 style 块顶部已注入
+    # tokens，本层嵌入其 body 内 var() 全局可解析）；紫 note 撤专色统一 var(--accent-deep)，
+    # 双 loop 图的语义区分色（绿/紫）作为数据传入保留，不进皮肤层。
     css = '''
 <style>
-.nv-hero{padding:34px 38px;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;border-radius:14px;margin-bottom:26px}
+.nv-hero{padding:34px 38px;background:var(--grad-hero);color:var(--surface);border-radius:14px;margin-bottom:26px}
 .nv-hero-title{font-size:24px;font-weight:700;letter-spacing:.01em}
 .nv-hero-sub{margin-top:10px;font-size:13.5px;opacity:.85;line-height:1.7}
 .nv-hero-metrics{display:flex;gap:26px;margin-top:20px;flex-wrap:wrap}
@@ -231,32 +234,32 @@ def render_narrative(state: dict, evid: Path) -> str:
 .nv-sec h2{font-size:18px;margin:0 0 8px}
 .nv-lead{color:#475569;font-size:13px;line-height:1.7;margin:0 0 14px}
 .nv-cases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.nv-case{border:1px solid #e2e8f0;border-radius:10px;padding:14px;background:#fff}
+.nv-case{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface)}
 .nv-case-head{font-weight:700;font-size:13.5px;margin-bottom:8px}
 .nv-case-body{font-size:12.5px;line-height:1.7;color:#334155}
-.nv-case-mech{font-size:12.5px;line-height:1.7;color:#0f766e;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px}
-.nv-case-anchor{font-size:11.5px;color:#64748b;margin-top:8px}
-.nv-note{font-size:12px;color:#7c3aed;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-top:12px}
+.nv-case-mech{font-size:12.5px;line-height:1.7;color:#0f766e;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.nv-case-anchor{font-size:11.5px;color:var(--muted);margin-top:8px}
+.nv-note{font-size:12px;color:var(--accent-deep);background:var(--accent-soft);border-radius:8px;padding:8px 12px;margin-top:12px}
 .nv-miss{color:#94a3b8}
-.nv-ok{color:#059669}
+.nv-ok{color:var(--ok)}
 .nv-loops{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.nv-loop-wrap{display:flex;gap:16px;align-items:center;border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff}
+.nv-loop-wrap{display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface)}
 .nv-loop{position:relative;flex-shrink:0}
 .nv-loop-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:12px;font-weight:700;color:var(--accent);width:110px;line-height:1.5}
-.nv-loop-node{position:absolute;transform:translate(-50%,-50%);background:#fff;border:1.5px solid var(--accent);color:#0f172a;border-radius:999px;padding:4px 10px;font-size:11.5px;white-space:nowrap;display:flex;align-items:center;gap:5px}
-.nv-loop-idx{display:inline-flex;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;align-items:center;justify-content:center}
+.nv-loop-node{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1.5px solid var(--accent);color:var(--ink-strong);border-radius:999px;padding:4px 10px;font-size:11.5px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.nv-loop-idx{display:inline-flex;width:15px;height:15px;border-radius:50%;background:var(--accent);color:var(--surface);font-size:11px;align-items:center;justify-content:center}
 .nv-loop-side{min-width:0}
-.nv-loop-back{font-size:12px;color:#b45309;background:#fffbeb;border:1px dashed #f59e0b;border-radius:8px;padding:7px 10px;line-height:1.6}
+.nv-loop-back{font-size:12px;color:var(--warn);background:#fffbeb;border:1px dashed #f59e0b;border-radius:8px;padding:7px 10px;line-height:1.6}
 .nv-loop-caption{font-size:12px;color:#475569;line-height:1.7;margin-top:10px}
 .nv-hls{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.nv-hl{border:1px solid #e2e8f0;border-radius:10px;padding:14px;background:linear-gradient(180deg,#fff,#f8fafc)}
+.nv-hl{border:1px solid var(--line);border-radius:10px;padding:14px;background:linear-gradient(180deg,var(--surface),var(--surface-2))}
 .nv-hl-title{font-weight:700;font-size:13.5px;color:#1e40af}
 .nv-hl-body{font-size:12.5px;line-height:1.7;color:#334155;margin-top:6px}
-.nv-hl-anchor{font-size:11px;color:#64748b;margin-top:8px}
+.nv-hl-anchor{font-size:11px;color:var(--muted);margin-top:8px}
 .nv-dims{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-.nv-dim{border-left:4px solid var(--dim);border-radius:8px;padding:12px 14px;background:#fff;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.nv-dim{border-left:4px solid var(--dim);border-radius:8px;padding:12px 14px;background:var(--surface);border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
 .nv-dim-title{font-weight:700;font-size:14px;color:var(--dim)}
-.nv-dim-sub{font-size:12px;color:#64748b;margin-top:2px}
+.nv-dim-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .nv-dim-body{font-size:12.5px;line-height:1.7;color:#334155;margin-top:6px}
 @media(max-width:1100px){.nv-cases,.nv-hls{grid-template-columns:1fr}.nv-loops,.nv-dims{grid-template-columns:1fr}}
 </style>'''
@@ -425,17 +428,17 @@ def render_intent_chain(sim) -> str:
 </section>
 <style>
 .nv-ic-rows{display:flex;flex-direction:column;gap:10px}
-.nv-ic-row{display:grid;grid-template-columns:300px 1fr;gap:14px;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#fff;align-items:center}
+.nv-ic-row{display:grid;grid-template-columns:300px 1fr;gap:14px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface);align-items:center}
 .nv-ic-ac b{color:#1e40af;font-size:13px;margin-right:8px}
 .nv-ic-title{font-weight:600;font-size:13px}
-.nv-ic-text{font-size:11.5px;color:#64748b;margin-top:4px;line-height:1.6}
+.nv-ic-text{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6}
 .nv-ic-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .nv-ic-chip{display:flex;flex-direction:column;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:5px 10px;min-width:86px}
-.nv-ic-chip b{font-size:10.5px;color:#166534;text-transform:uppercase;letter-spacing:.03em}
-.nv-ic-chip span{font-size:12px;color:#0f172a;font-weight:600}
-.nv-ic-chip--miss{border-color:#e2e8f0;background:#f8fafc}
+.nv-ic-chip b{font-size:11px;color:#166534;text-transform:uppercase;letter-spacing:.03em}
+.nv-ic-chip span{font-size:12px;color:var(--ink-strong);font-weight:600}
+.nv-ic-chip--miss{border-color:var(--line);background:var(--surface-2)}
 .nv-ic-chip--miss b,.nv-ic-chip--miss span{color:#94a3b8}
-.nv-ic-note{font-size:10.5px;color:#64748b;font-weight:400}
+.nv-ic-note{font-size:11px;color:var(--muted);font-weight:400}
 .nv-ic-arrow{color:#94a3b8;font-size:14px}
 </style>
 """
@@ -557,9 +560,9 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=No
         st = ''
         if gk:
             if gate_ok.get(gk):
-                st = '<span style="color:#059669;font-weight:700">✓ 已过</span>'
+                st = '<span style="color:var(--ok);font-weight:700">✓ 已过</span>'
             else:
-                st = '<span style="color:#b45309">未过/未写入通过标记（见审计叠加层）</span>'
+                st = '<span style="color:var(--warn)">未过/未写入通过标记（见审计叠加层）</span>'
         out.append(f'<tr><td><b>{act}</b></td><td>步 {rng}</td><td>{goal}</td>'
                    f'<td style="font-size:12px">{who}</td><td>{gates}</td><td>{st}</td></tr>')
     out.append('</table>')
