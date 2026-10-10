@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from report_narrative import render_chapter0  # noqa: E402
+from report_narrative import render_chapter0, spec_params_html  # noqa: E402
 
 SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 
@@ -369,23 +369,8 @@ PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}，图注标注当轮实时采集）；每步四段=本轮实录/交付物实物+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测统计，取不到显式 ⬜。治理证据导出件（事故报告汇编/自治度对账/虚拟损益表）按 §2.5 治理证据面在位即透传。</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
-{{ch0}}
-'''
-
-
-PART1_RUN11 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
-
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
-
-<div class="card info"><b>这场推演在验证什么：</b>新机制首跑验证轮——帧采集固定死（capture_step）、审计熔断、双正本、PART1 骨架链四件报告链新制与流式流水线（测试预备轮+模块就绪即触发）首次全链实跑；当日另完成容量体系根治（并发闸 1→30 定标、队列时长锚点稳定键）并在本轮后半段生效。</div>
-
-<div class="card ok"><b>本轮的诚实结论：</b>26 步 {{steps_done}}/26 写入通过标记（第 26 步写入通过标记随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实测统计自 issues.log 闸键记入问题清单）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。UAT 按 G1 冻结的 AC-1/2/3 逐条验收判词通过、发布登记三卡齐（REL-MERGE/TAG/DELIVER）；最大的非粉饰事实：全程五次 attempt 才走完——G5 六轮打回与三轮容量事故合计烧掉约 9 小时，最终 attempt-5 在"并发 30 + G5 窗宽 3600 + 分节评审"语义下一次通过（其中 G5 段为 23:39 落地的 run12 补丁语义，偏差已记入问题清单入复盘）。</div>
-
-<div class="card warn"><b>真实发生的缺口（全部记入问题清单在案）：</b>①容量派发丢失 400+ 件（capacity-queue-drop-devimpl，根因双修已部署：并发 30+时长锚点）；②PAYCORE 整组缺席集成（dev-branch-missing/integration-branch-missing，run12 三拆+接口契约任务锚根治）；③载荷型证据采集未随 capture_step 全接线（r18-collection-missing，八步降级记入问题清单）；④五步证据帧为收尾后补拍、已图注如实标注（frame-backfill-labeled，红线不冒充）；⑤G5 评审六轮打回暴露终态评审结构性低效（g5-ready-fail 等，左移件 e"分节落卡"已落地 run12）；⑥网关槽位记账膨胀疑点持续观察（gateway-slot-inflation，cluster-inspector D2 产品化观测）。（类型分布实测统计：{{type_top}}）</div>
-
-<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物实物+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测统计，取不到显式 ⬜。</div>
-
-<h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
@@ -403,6 +388,8 @@ PART1_RUN12 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面截图，图注逐帧标注拍摄时态：当轮实拍或收尾后补拍）；每步四段=本轮实录/交付物+模板核对/已知问题/改进项；全部计数自 issues.log 与 state.env 实测统计，取不到的显式标 ⬜。中途的抢救与提醒动作全部标注为「人工介入」并留痕，不混入自动化成绩。正文里引号内的日志与问题单原文可能保留项目内部用语（「记单」=记入问题清单、「落键」=写入通过标记、「起跑」=开始执行），引文一律按原文呈现、不做改写，保证证据可核。</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
@@ -424,6 +411,8 @@ PART1_RUN13 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>过程日志术语对照（正文时间线里的日志行是系统原话，逐字保留）：</b>（观察＝系统旁白）（真值＝与实际状态核对过的确认）（闸点沉淀＝关卡通过后归档的检查记录）（收口＝收尾合并完成）（齐发＝多分支同时开工）（契约件＝接口定义文件）（六路＝六个并行开发分支）（判词＝验收结论行）</div>
 
 <h2>研发全流程治理有效性（实测统计）</h2>
+{{metrics_tbl}}
+{{spec_tbl}}
 {{ch0}}
 '''
 
@@ -432,7 +421,6 @@ PART1_BY_RUN = {
     '20261009-v8-run12': PART1_RUN12,
     '20261007-v8-run11': PART1_RUN11,
     '20261007-v8-run10': PART1_RUN10,
-    '20261007-v8-run11': PART1_RUN11,
     '20261006-v8-run9': PART1_RUN9,
     '20261001-v5-run6': PART1_RUN6,
     '20261004-v7-run8': PART1_RUN8,
@@ -597,8 +585,9 @@ def main():
             '<a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实测统计表</a>'
             '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">PART 2 · 全文档案</div>', 1)
 
-    # 第 0 章（R15）：state 写入通过标记实测统计闸门态；协作时序自 scenario.log 实抽
-    ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps')
+    # 第 0 章（R15）：state 写入通过标记实测统计闸门态；协作时序自 scenario.log 实抽。
+    # compact=True=人读层精简（时序只留开头段，全量由 PART2 承载——run12 双份 899 行去重）
+    ch0 = render_chapter0(state, evid, journey_html=None, steps_dir=evid / 'screenshots' / 'steps', compact=True)
 
     # V8.4（run13 起）：机器明细折叠附录——第 8 章台账全量收进 <details>（折叠≠裁剪）
     _n_fold = 0
@@ -662,6 +651,25 @@ def main():
     type_top = '、'.join(f'{k}×{v}' for k, v in sorted(_type_cnt.items(), key=lambda x: -x[1])[:5]) or '零问题单'
     disp_sum = '，'.join(f'{k} {v}' for k, v in _disp_cnt.items())
 
+    # ── 治理有效性实测统计表（报告三要素改造 2026-10-10）：此前 PART1 该节是空标题
+    #    （h2 直接顶上第 0 章），现以三列表实算填充——RUN10 版式（治理维度|本轮实测|口径来源）。
+    #    全部数字复用上方实算槽，禁手编；表格内文案不进 jargon 扫描面（门禁豁免 table）。──
+    gate_hits_txt = '、'.join(f'{g}×{n}' for g, n in _gate_hit.items() if n) or '零打回'
+    metrics_tbl = (
+        '<table class="st-issues-tbl" id="metrics-tbl">'
+        '<tr><th>治理维度</th><th>本轮实测</th><th>口径来源</th></tr>'
+        f'<tr><td>流程完成度</td><td>26 步 {steps_done}/26</td><td>state.env 状态键（方案 §3.3 映射）</td></tr>'
+        f'<tr><td>六道关卡</td><td>{len(gates_pass)}/6 过 · 一次通过 {first_pass}/6 · 打回 {gate_hits_txt}</td>'
+        '<td>state 关卡键 + issues.log 闸键</td></tr>'
+        f'<tr><td>流程窗口</td><td>{window_txt}</td><td>state 时间戳</td></tr>'
+        f'<tr><td>问题单台账</td><td>{n_issue} 条记录 · {n_key} 个键 · 处置 {disp_sum}</td><td>issues.log 全量</td></tr>'
+        f'<tr><td>类型分布 TOP</td><td>{type_top}</td><td>issues.log 类型段</td></tr>'
+        f'<tr><td>证据帧</td><td>{n_frames} 张 · {uniq_note}</td><td>screenshots/steps/ 实查 + md5 互异</td></tr>'
+        f'<tr><td>测试与产品成效</td><td>单测 {n_tests_pass} · AC 覆盖 {ac_cover} · 幂等 {idem_verdict} · UAT {uat_sum}</td>'
+        '<td>product-outcome/quality-summary.env（未采集即 ⬜）</td></tr>'
+        '</table>')
+    spec_tbl = spec_params_html()
+
     part1 = (part1_tmpl
              .replace('{{run_id}}', args.run)
              .replace('{{gen_time}}', gen_time)
@@ -680,9 +688,13 @@ def main():
              .replace('{{ac_cover}}', ac_cover)
              .replace('{{idem_verdict}}', idem_verdict)
              .replace('{{uat_sum}}', uat_sum)
+             .replace('{{metrics_tbl}}', metrics_tbl)
+             .replace('{{spec_tbl}}', spec_tbl)
              .replace('{{ch0}}', ch0)
-             .replace('<h2>研发全流程治理有效性（实测统计）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实测统计）</h2>')
-             .replace('<div class="guide" ', '<div class="guide" id="part1-top" ', 1))
+             .replace('<h2>研发全流程治理有效性（实测统计）</h2>', '<h2 id="part1-metrics">研发全流程治理有效性（实测统计）</h2>'))
+    # 模板自身的 guide 开标签剥除（2026-10-10 修复）：外层 wrapper 已承载 id 与底色，
+    # 旧写法给模板 div 再挂 id="part1-top" 造成双层嵌套 + 同 id 重复两次
+    part1 = re.sub(r'<div class="guide"[^>]*>\s*', '', part1, count=1)
 
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -694,7 +706,7 @@ def main():
 <div class="layout">
 {machine_nav}
 <main class="main">
-<div class="guide" id="part1-top" style="padding:26px 6px 6px">
+<div class="guide" id="part1-top" style="background:#fbfbfa;padding:26px 6px 6px">
 {part1}
 </div>
 <div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:#0a7d43;color:#fff;border-radius:8px 8px 0 0">
@@ -704,7 +716,6 @@ def main():
 {machine_main}
 </main>
 </div>
-</body></html
 </body></html>'''
 
     # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。

@@ -482,8 +482,35 @@ def parse_collab_events(evid):
     return evts
 
 
-def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=None):
-    """R15 第 0 章 HTML 片段：产品定位一页 → 演示动线 → 六幕分幕总览 → RACI 协作时序线。"""
+def spec_params_html():
+    """关键技术规范参数卡（报告三要素之一，2026-10-10）：单一事实源=mux/spec-params.env，
+    与方案 §4.4 技术规范总表同源维护。缺文件=如实缺位声明，禁静默跳过。"""
+    f = Path(__file__).resolve().parent / 'spec-params.env'
+    if not f.exists():
+        return '<div class="gap" style="padding:10px 14px;font-size:13px">关键技术规范参数卡缺位（mux/spec-params.env 不存在——如实标注，禁编造）。</div>'
+    rows = []
+    for ln in f.read_text(encoding='utf-8').splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith('#'):
+            continue
+        p = ln.split('|')
+        if len(p) != 4:
+            continue
+        grp, name, val, note = (x.strip() for x in p)
+        rows.append(f'<tr><td style="white-space:nowrap">{ESC(grp)}</td><td><b>{ESC(name)}</b></td>'
+                    f'<td style="white-space:nowrap"><code>{ESC(val)}</code></td>'
+                    f'<td style="font-size:12px">{ESC(note)}</td></tr>')
+    return ('<div class="gatebox" id="spec-params"><b style="font-size:14px">关键技术规范（参数速查）</b>'
+            '<p style="margin:6px 0 4px;font-size:12.5px;color:#57606a">'
+            '运行参数集中呈现：端口、等待窗口、门禁阈值、容量预算、采集判定。正本=方案 §4.4 技术规范总表，本卡与其同源维护。</p>'
+            '<table class="idx"><tr><th>组</th><th>参数</th><th>值</th><th>说明</th></tr>'
+            + ''.join(rows) + '</table></div>')
+
+
+def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=None, compact=False):
+    """R15 第 0 章 HTML 片段：产品定位一页 → 演示动线 → 六幕分幕总览 → RACI 协作时序线。
+    compact=True 供人读层（PART1）精简用：时序线只保留开头一段并指向机器报告全表——
+    run12 报告里同一段 899 行时序在 PART1/PART2 双份完整呈现（约 55% 篇幅），2026-10-10 去重。"""
     evid = Path(evid)
     out = []
     gate_ok = {}
@@ -542,14 +569,27 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=No
                '<div class="meta">数据源=监控侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
                '谁在何时发起、谁执行、谁把关、何处打回，时间线自明；锚点（event_id $xxx／t_ 卡号）可反查。</div>')
     if evts:
-        out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
-                   '<table class="idx" style="max-height:520px;overflow:auto;display:block">'
-                   '<tr><th>时间</th><th>主体</th><th>协作事件（含锚点）</th></tr>')
-        for ts, actor, body in evts:
-            out.append(f'<tr><td style="white-space:nowrap">{ESC(ts)}</td>'
-                       f'<td style="white-space:nowrap">{ESC(actor)}</td>'
-                       f'<td style="font-size:11.5px">{ESC(body[:220])}</td></tr>')
-        out.append('</table></details>')
+        if compact:
+            # 人读层精简视图：同源全量在 PART 2 第 0 章（R15-a/b 断言由 PART2 副本承载）
+            head_n = min(40, len(evts))
+            rows = ''.join(
+                f'<tr><td style="white-space:nowrap">{ESC(ts)}</td>'
+                f'<td style="white-space:nowrap">{ESC(actor)}</td>'
+                f'<td style="font-size:11.5px">{ESC(body[:220])}</td></tr>'
+                for ts, actor, body in evts[:head_n])
+            out.append(f'<p class="meta">人读层精简视图：此处只列前 {head_n} 条；'
+                       f'全部 {len(evts)} 条时序见 PART 2 第 0 章全表（同一数据源，不双份长表）。</p>'
+                       '<table class="idx" style="max-height:420px;overflow:auto;display:block">'
+                       '<tr><th>时间</th><th>主体</th><th>协作事件（含锚点）</th></tr>' + rows + '</table>')
+        else:
+            out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
+                       '<table class="idx" style="max-height:520px;overflow:auto;display:block">'
+                       '<tr><th>时间</th><th>主体</th><th>协作事件（含锚点）</th></tr>')
+            for ts, actor, body in evts:
+                out.append(f'<tr><td style="white-space:nowrap">{ESC(ts)}</td>'
+                           f'<td style="white-space:nowrap">{ESC(actor)}</td>'
+                           f'<td style="font-size:11.5px">{ESC(body[:220])}</td></tr>')
+            out.append('</table></details>')
     else:
         out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 scenario.log 无可解析协作事件（如实标注，禁编造）。</div>')
     return '\n'.join(out)

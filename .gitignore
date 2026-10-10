@@ -3,3 +3,4 @@ node_modules/
 __pycache__/
 *.pyc
 tests/fixtures/v84-gates/
+.claude/
