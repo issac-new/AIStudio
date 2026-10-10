@@ -40,6 +40,18 @@ export interface ProfilesFace {
   tails: ProfileTail[]
 }
 
+export interface RunningCard {
+  id: string
+  assignee?: string
+  title?: string
+}
+
+export interface RunningCardsFace {
+  ok: boolean
+  error?: string
+  cards: RunningCard[]
+}
+
 export interface ClusterSnapshot {
   ts: number
   gateway: GatewayFace
@@ -47,6 +59,8 @@ export interface ClusterSnapshot {
   profiles: ProfilesFace
   /** kanban 诊断行（severity error/critical 的卡）——控制器注入，未接线=ok:false */
   kanban: { ok: boolean; error?: string; rows: Array<Record<string, unknown>> }
+  /** 在办卡（status=running，含 assignee）——控制器注入（kanban list --json），未接线=ok:false */
+  runningCards: RunningCardsFace
 }
 
 export interface CollectorDeps {
