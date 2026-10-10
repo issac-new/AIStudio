@@ -536,3 +536,9 @@
 
 # 577 网关挂死槽周期扫（run11 三次容量饥饿根因补口：驱逐检查原只挂同 key 入站快路径——无新消息的挂死槽永不被扫；复用 HERMES_AGENT_TIMEOUT 活动钟判定+loop 线程编排）
 586-agent-gateway-wedged-agent-sweep.patch
+
+# 588 agents/status 轮询 403 静默降级（run13 步18 实锤：群聊房冷载弹全局无权限 toast——matrix 登录账号无本地 agent 可见性属降级非异常，消费方已自降级；与 587 服务端方案互补：587 让普通账号改吃 availability，588 兜底 suppression）
+588-client-agent-status-forbidden-silent.patch
+
+# G2 缺失功能实施（2026-10-10）：普通账号不再触发 /api/agents/status 403 全局权限 toast——availability 端点补 hermesReady（服务端算好不泄漏 path），群聊面板/档案面改吃 availability（超管面 AgentManager 仍用 status）
+587-agent-status-availability-for-all.patch
