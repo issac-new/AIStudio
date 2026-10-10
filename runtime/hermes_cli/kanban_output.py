@@ -23,6 +23,7 @@ _TASK_DICT_FIELDS = (
     "reasoning_effort",  # HERMES_CUSTOM[v020]
     "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
+    "estimate_days", "estimate_meta",  # HERMES_CUSTOM[estimate] 人日估算随卡带出（协同图/容量分析共用）
 )
 _SHOW_RUN_FIELDS = (
     "id", "profile", "step_key", "status", "outcome", "summary", "error",

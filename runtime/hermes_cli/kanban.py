@@ -452,8 +452,22 @@ def _cmd_list(args: argparse.Namespace) -> int:
             include_archived=args.archived, order_by=getattr(args, "sort", None),
             workflow_template_id=args.workflow_template_id, current_step_key=args.current_step_key,
         )
-    if _json_out(args, [_task_to_dict(t) for t in tasks]):
-        return 0
+        if getattr(args, "json", False):
+            # HERMES_CUSTOM[orchestration] JSON 分支在连接存活期内补齐任务树字段：
+            # parents/children 批量带出（task_graph_contexts 分块 ≤500），调用方
+            # （看板列表/任务协同图）免逐卡 show 的 N+1 detail 请求。
+            rows = [_task_to_dict(t) for t in tasks]
+            ids = [r["id"] for r in rows]
+            links: dict[str, dict] = {}
+            for i in range(0, len(ids), 500):
+                links.update(kb.task_graph_contexts(conn, ids[i:i + 500]))
+            for row in rows:
+                ctx = links.get(row["id"])
+                if ctx:
+                    row["parents"] = [p["id"] for p in ctx["parents"]]
+                    row["children"] = [c["id"] for c in ctx["children"]]
+            _print_json(rows)
+            return 0
     # Passive discoverability: only multi-board users see which board this is.
     try:
         all_boards = kb.list_boards(include_archived=False)

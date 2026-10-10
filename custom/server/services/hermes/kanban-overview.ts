@@ -135,7 +135,9 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     }
   }
 
-  /** 快道单板任务：tasks 全行（CLI 同款 rows）。板库不存在或读失败返回 null。 */
+  /** 快道单板任务：tasks 全行（CLI 同款 rows）+ task_links 并入 parents/children
+   *  （2026-10-10 任务协同图：依赖边与 CLI list --json 同口径，聚合端不再丢链接；
+   *   链接表一次全查、按 id 分桶，单板量级下开销可忽略）。板库不存在或读失败返回 null。 */
   function listTasksFast(board: string): any[] | null {
     const home = typeof deps.kanbanDir === 'function' ? deps.kanbanDir() : deps.kanbanDir
     if (!home) return null
@@ -143,9 +145,23 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
       ? fastMainDb(home)
       : (() => { const d = fastBoardsDir(home); return d ? join(d, board, 'kanban.db') : null })()
     if (!dbPath || !existsSync(dbPath)) return board === 'default' ? [] : null
-    return queryBoardDb(dbPath, db =>
-      db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board })),
-    )
+    return queryBoardDb(dbPath, db => {
+      const tasks: any[] = db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board }))
+      const links = db.prepare('select parent_id, child_id from task_links').all() as Array<{ parent_id: string; child_id: string }>
+      const parentsOf = new Map<string, string[]>()
+      const childrenOf = new Map<string, string[]>()
+      for (const l of links) {
+        let ps = parentsOf.get(l.child_id); if (!ps) { ps = []; parentsOf.set(l.child_id, ps) }
+        ps.push(l.parent_id)
+        let cs = childrenOf.get(l.parent_id); if (!cs) { cs = []; childrenOf.set(l.parent_id, cs) }
+        cs.push(l.child_id)
+      }
+      for (const t of tasks) {
+        t.parents = parentsOf.get(t.id) ?? []
+        t.children = childrenOf.get(t.id) ?? []
+      }
+      return tasks
+    })
   }
 
   function listBoardsCached(): Promise<any[]> {
