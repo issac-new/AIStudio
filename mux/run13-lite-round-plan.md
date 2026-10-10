@@ -90,18 +90,21 @@ fei 预备轮 721 次工具调用。run11 对照：预写/预备机制未触发�
 过度交付是流水线左移引入的新病（给了"提前动手"许可、没给边界清单）。
 
 处置：A=运行中回灌（4 笔送达，event_id 见 issues.log DISP|over-delivery-refeed）；
-C=守卫固化 patch（mux/run13-boundary-guards.patch，下轮套用）：六路任务书加边界纪律条款
-（仅 feat/* 交付、禁直推 main、禁代做）、预写任务加禁做围栏、预备轮"不建分支"补 worktree
-漏洞、devimpl 入口记 main 基线+段末 main 污染反查（ISSUE|main-pollution）+提交粒度观察项。
+C=守卫固化——**2026-10-10 已套用入 aipay-scenario.sh（补丁文件删除，单一事实源）**：六路任务书
+加边界纪律条款（仅 feat/* 交付、禁直推 main、禁代做）、概设预写任务加禁做围栏（run13 lite 不经
+该段，L2 全量轮生效）、预备轮"不建分支"补 worktree 漏洞、devimpl 入口记 main 基线+段末 main
+污染反查（ISSUE|main-pollution）+提交粒度观察项。套用时 hunk2/4/5 因干预点四件轮上下文漂移，
+按当前文件补上下文行后应用（+28/-7 与声明一致，vitest 128/128 绿）。
 
 ## 质量补强（2026-10-09 用户"不牺牲质量"审计指令）
 
 - **硬窗档位放大**（mx-scenario-lib.sh）：下限 7200s 不变，idle>900 的长等待档×8 放大
   （1800 档→14400s）——防 devimpl 链式腿（C→S→N 串行+渠道批，合法总时长 3-4h）被平顶
   硬窗误杀（误杀=假问题单+降级运行）。env 设值绝对覆盖。
-- **免等窗终态复核 patch**（mux/run13-quality-audit-closure.patch，下轮套用）：免等窗
-  记单时点≠终态——审计段以当前真值复核 receipt-missing/raci-not-structured 两族问题单，
-  补账成功者追加 DISP 闭环行（原单保留，两时点真值并存不删改）。
+- **免等窗终态复核**——**已入 aipay-scenario.sh（a0113d2，run12 archgate 断点换装窗口套用；
+  2026-10-10 删除补丁文件，单一事实源）**：免等窗记单时点≠终态——审计段以当前真值复核
+  receipt-missing/raci-not-structured 两族问题单，补账成功者追加 DISP 闭环行（原单保留，
+  两时点真值并存不删改）。
 - 粒度核验：六任务全符合纪律 31"单卡≤1 人日"（C 0.5/S 1 拆2/N 1 拆2/MP 2 拆2-3/
   CHWX 2 拆2-3/CHALI 2 拆2-3）；chen 的 C→S→N 串行是真实依赖链（契约→状态机→回调）
   非可并行化损失；4 工作者×6 派发+测试预备 2 路前移=并发 6，远低于定标 30，排队泵
