@@ -156,7 +156,7 @@ normalize_assignee() { # <assignee> → 短名
   local a="${1:-}"
   a="${a#@}"                    # 去 @
   a="${a%:matrix.test}"        # 去 :matrix.test
-  a="${a%-agent}"              # 去 -agent 后缀（@fanfan-agent → fanfan）
+  a="${a%-agent}"              # 去 -agent 后缀（@fanfan-agent → 产品经理A）
   printf '%s' "$a"
 }
 
@@ -246,7 +246,7 @@ APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 #                 =hybrid  关键操作挂起真人复核 + 过程性操作由代审 agent 先审后批
 # 关键=主干写入与破坏性（git push origin main/master、rm -rf、--force、drop table、
 # unlink(）；MX_APPROVE_CRITICAL_EXTRA 可追加扩展正则（对小写正文匹配）。
-# 代审者=MX_REVIEW_AGENT（默认 fanfan，其 orchestrator agent 收审阅 DM；语义=审批
+# 代审者=MX_REVIEW_AGENT（默认 产品经理A，其 orchestrator agent 收审阅 DM；语义=审批
 # 复核人代过程性审批，非请求主人本人——保真偏差如实记档）。agent 复核回复
 # APPROVE→执行原批准双通道；REJECT <理由>→线程内 !deny（hermes 会把理由回传请求
 # agent 使其调整）；代审超时 MX_REVIEW_TIMEOUT（默认 1800s）→转人工挂起兜底。
@@ -519,7 +519,7 @@ gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
 }
 
 # 产物等待责任人提醒（run14 步10 根治件）：repo_has 型等待静默过半时向任务群发
-# 短提醒。run14 实录：fanfan 会话完成分析后静默消失（推送/结论行未落），2400s
+# 短提醒。run14 实录：产品经理A 会话完成分析后静默消失（推送/结论行未落），2400s
 # 全窗空等判中止损失约 50 分钟；监控侧手工群提醒后 8 分钟即补完。本函数把该手工
 # 动作机制化：对活会话是无害短提醒，对死会话=复活通道（top-level 新线程开新会话，
 # run12 手册验证形态）。全局 480s 节流防连环等待提醒风暴。
@@ -608,8 +608,8 @@ capture_step() { # <step> <url> [action] [user]
 }
 
 # ── 判活真化（run11 根治②）：文件增长判活被 adapter 噪音行（reaction/redaction
-# 风暴）双骗——既把真挂起误判"零增长"（chen 挂 2h 被判死循环），又把纯噪音误判
-# "在干活"（lin 差点永悬）。真实工作行=API call/tool 完成/Turn 起止，噪音不含。
+# 风暴）双骗——既把真挂起误判"零增长"（研发工程师A 挂 2h 被判死循环），又把纯噪音误判
+# "在干活"（研发工程师C 差点永悬）。真实工作行=API call/tool 完成/Turn 起止，噪音不含。
 _agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时间戳；无→0）
   local line ts
   line=$(grep -E "API call|tool [a-z_]+ completed|Turn (started|ended)" "$1" 2>/dev/null | tail -1)
@@ -618,7 +618,7 @@ _agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时�
   date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
 }
 
-# 卡死早检（run11 左移件 b）：G5 首轮实录——fanfan 会话 18:18 即死（尾部=hindsight
+# 卡死早检（run11 左移件 b）：G5 首轮实录——产品经理A 会话 18:18 即死（尾部=hindsight
 # prefetch 超时），19:18 窗满才判，60min 死窗零干预。静默过半且日志尾为错误态
 # （ERROR/Traceback/timeout/gave_up）即提前判死，不陪跑到窗满。
 _agent_log_tail_stalled() { # <agent.log> → 0=尾部错误态（疑似卡死）
@@ -715,7 +715,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
 }
 
 # ── 并发多锚等待（2026-10-08 run11 复盘立项：串行 for 等待令滞后锚的催办被
-# 排队——lin 沉睡 125min 一半是"还没轮到催他"。语义=wait-all：全部锚过真值才
+# 排队——研发工程师C 沉睡 125min 一半是"还没轮到催他"。语义=wait-all：全部锚过真值才
 # 返回 0；复用 defect 步多条件合并轮询范式 + wait_alive_truth 的日志增长判活/
 # 空转催办。锚过即记 ✓（不等全齐），空转催办对"全部未过锚的负责人"齐发。
 # 注意：谓词经 eval 在当前 shell 求值（可引用 branch_fresh 等 shell 函数）——
@@ -814,7 +814,7 @@ mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b �
   printf '%s' "$out"
 }
 
-kanban_raci_nonempty() { # <needle> → 0=任一 fanfan 板匹配卡带非空 raci（回灌重查谓词）
+kanban_raci_nonempty() { # <needle> → 0=任一 产品经理A 板匹配卡带非空 raci（回灌重查谓词）
   [[ -n "$(kanban_raci_of fanfan "$1")" ]]
 }
 
@@ -822,7 +822,7 @@ raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派�
   # 勿经 bash -c 包装本函数：shell 函数不跨子进程继承（未 export -f），子进程必 127 恒假。
   # 提及判定=正文 OR m.mentions 字段（run7 实锤：派发消息正文只含被派人 mxid，
   # 团队负责人经 content."m.mentions".user_ids 附带——任务书明确要求"用 m.mentions 提及"，
-  # 只查正文对合规消息恒假阴性；深翻页另证 17:20-18:10 无 fanfan 双 @ 正文消息，
+  # 只查正文对合规消息恒假阴性；深翻页另证 17:20-18:10 无 产品经理A 双 @ 正文消息，
   # 观察 4 条的真因是消息未发而非窗口外）。
   mx_messages_deep "$(load_token fanfan)" "$3" $(( $(date +%s) - 3600 )) 3 \
     | jq -e --arg u1 "@$1-agent" --arg u2 "@$2-agent" \
@@ -835,7 +835,7 @@ raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派�
 
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
   # 只认"可反向核验"的完成：结论行里的 commit 必须真在 aipaydev origin 上、
-  # 且该 commit 确实含分析稿；card 必须能在 fanfan 账号的板（账号板）查到。
+  # 且该 commit 确实含分析稿；card 必须能在 产品经理A 账号的板（账号板）查到。
   # 空喊"完成"不计入。
   local rfd="$1" body sha card
   # 注释必须写在命令替换之外：续行 \` 之后的注释行会吞掉续行，| jq 成为行首管道，
@@ -878,8 +878,8 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     fi
   done
   [[ $card_found -eq 0 ]] \
-    || { note "[凭证] fanfan 账号板查无卡片 ${card}（含 archived）—— 虚报"; return 1; }
-  note "[凭证] $rfd 完成证据成立（card 在 fanfan 账号板可查）：commit=$sha card=$card"
+    || { note "[凭证] 产品经理A 账号板查无卡片 ${card}（含 archived）—— 虚报"; return 1; }
+  note "[凭证] $rfd 完成证据成立（card 在 产品经理A 账号板可查）：commit=$sha card=$card"
   return 0
 }
 
@@ -922,7 +922,7 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1
 }
 
-uat_evidence_body() { # 本轮（run_started_at 起）fanfan 发的最新一条 UAT-EVIDENCE 结论行 body；
+uat_evidence_body() { # 本轮（run_started_at 起）产品经理A 发的最新一条 UAT-EVIDENCE 结论行 body；
   # 无则输出空串。证据复用（run8 优化 A）与等待后取样共用同一取法，保证"复用判定"与
   # "正式核验"看到同一行。按 origin_server_ts 排序取最新（结论行以最终一条为准），
   # 与 mx_messages 返回序解耦。
@@ -944,7 +944,7 @@ repo_pull() {
 # ── 分支状态机约定（P4）──────────────────────────────────────
 # DIRECTOR_CLONE 的 HEAD 归属：defect 步 `checkout -B integration/${RFD_ID}` 后停在
 # integration 分支，后续步骤都用显式 ref（origin/integration/...）或临时 worktree 访问
-# 仓库，不看 HEAD。凡**要进 origin/main 的提交**（uat 验收书/audit 意见书/retro 复盘）
+# 仓库，不看 HEAD。凡**要进 origin/main 的提交**（uat 验收书/审计师A 意见书/retro 复盘）
 # 一律走本函数：不切分支、不动 HEAD/local main、全程无 rebase——在临时 detached 工作区
 # 基于 origin/main 把该文件提交进去再 push HEAD:main。为什么不能沿用旧写法
 # "integration 上 commit 后 `git push origin main`"：推的是落后的 local main，非快进被拒
@@ -1067,7 +1067,7 @@ mx_gate_verdict_seen() { # <room> <sender> <gate> [since-ms] → 0 当出现任�
 }
 
 mx_gate_verdict_dual_seen() { # <room> <sender> <gate> <since-ms> <card-user> <card-needle> → 0 房间行或卡面任一出现判词
-  # 双源到达判定（run4）：arch 评审可经 kanban worker 执行（写卡不发房）——只盯房间行
+  # 双源到达判定（run4）：系统架构师A 评审可经 kanban worker 执行（写卡不发房）——只盯房间行
   # 会让真实结论永远等不到。到达=任一源出现；判 PASS/FAIL 仍由 combined 保守合并。
   [[ -n "$(mx_gate_verdict_combined "$@")" ]]
 }
@@ -1105,7 +1105,7 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   # 成员保障 v2（09-26 v1 只保派发者；09-29 重构轮扩展到全部被 @ 责任人）：
   # 指令必达前置——被 @ 者不在群则 mention 不可达、其 agent 无从接单
   # （V4-run1 room-invite-gap ×8 复发实锤：接收方而非派发方缺位）。
-  # 不在群则 fanfan 补邀 + 该账号自入（join 按 mxid localpart 取 token）。
+  # 不在群则 产品经理A 补邀 + 该账号自入（join 按 mxid localpart 取 token）。
   uids=("$uid")
   if [[ -n "${3:-}" ]]; then
     local IFS=','
@@ -1319,12 +1319,12 @@ org_gen() { # → stdout：org.md 内容（编制×角色×汇报线×板×team�
   echo "## 权限矩阵"
   echo "- 看板可见性：studio ACL 按 matrix 账号收敛——每人只见本账号 profile 与账号板（patch 392）。"
   echo "- 认领围栏：板 board.json profiles 白名单，板外 assignee 拒认领（patch 391）。"
-  echo "- 审批权：lead（wei/mei）分诊确认；G5 对外发布 HumanGate=导演批准；安全管理复核（secops）与审计意见（audit）为独立签名线。"
+  echo "- 审批权：lead（团队负责人A/团队负责人B）分诊确认；G5 对外发布 HumanGate=导演批准；安全管理复核（安全工程师A）与审计意见（审计师A）为独立签名线。"
   echo
   echo "## 入职/转岗/离职流程"
   echo "- 入职：mx-setup 幂等供给（matrix 账号+profile+技能+板授权+ACL+家族记忆 bank），入职卡登记本表。"
   echo "- 转岗：改编制表（boards_of）后重跑 mx-setup + 本对账步。"
-  echo "- 离职：卡片 reassign 给接手人、板 owner 变更、账号禁用（synapse deactivate）、本表移除并在 audit 步留痕。"
+  echo "- 离职：卡片 reassign 给接手人、板 owner 变更、账号禁用（synapse deactivate）、本表移除并在 审计师A 步留痕。"
   echo
   echo "## 能力矩阵"
   echo "- capability-report 技能按 machine-manifest 上报；系分=requirements-analyst/aipaydev-dev、测试=defect-loop、安全=iso27001 检查单、运维=release-plan/ITIL。"
@@ -1374,13 +1374,13 @@ work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账
     echo "## 治理口径"
     echo "- WIP 上限：每人 running 并行 ≤2，超限记问题单（容量过载信号）。"
     echo "- stale 卡：非 done 且 updated_at 超 72h 的卡清点（本轮 $(date +%s) 为基准）。"
-    echo "- 跨轮衔接：retro 后未完结卡由 PM（fanfan）决定挂起/移交下轮。"
+    echo "- 跨轮衔接：retro 后未完结卡由 PM（产品经理A）决定挂起/移交下轮。"
   } > "$out"
   [[ -n "$wip_warn" ]] && echo "WIP_OVERLOAD"
   echo "$out"
 }
 
-# ── 合规及审计（audit）：门禁留痕完整性 + 凭证抽检 + 合规意见书 ──
+# ── 合规及审计（审计师A）：门禁留痕完整性 + 凭证抽检 + 合规意见书 ──
 audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
   local bad=0
   # 门禁留痕：state 硬闸键已落的必须有对应仓内凭证
