@@ -23,12 +23,28 @@ function kanbanDiagnosticsProvider(): (() => Promise<Array<Record<string, unknow
   })
 }
 
+/** 在办卡接线（D7 在办任务·档案静默交叉）：CLI 桥 list --status running，fail-soft。 */
+function runningCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
+  return () => new Promise((resolve, reject) => {
+    execFile('hermes', ['kanban', 'list', '--status', 'running', '--json'], {
+      timeout: 30_000,
+      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
+    }, (err, stdout) => {
+      if (err) { reject(err); return }
+      try {
+        const out = JSON.parse(stdout) as unknown
+        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
+      } catch (e) { reject(e as Error) }
+    })
+  })
+}
+
 // 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
 export { startInspectorIfEnabled } from './inspector'
 
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
-  const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), ...deps })
+  const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun

@@ -11,6 +11,7 @@ function snap(partial: Partial<ClusterSnapshot>): ClusterSnapshot {
     sessions: { ok: true, entries: 0, live: 0, dead: [] },
     profiles: { ok: true, tails: [] },
     kanban: { ok: false, rows: [] },
+    runningCards: { ok: false, cards: [] },
     ...partial,
   }
 }
@@ -195,5 +196,30 @@ describe('二期②③：matrix 催办 + destructive 审批联动', () => {
       const r3 = await mkInsp().runOnce()
       expect(r3.actions?.some((a) => a.startsWith('gateway-restarted'))).toBeFalsy()
     } finally { delete process.env.CLUSTER_INSPECTOR_DESTRUCTIVE }
+  })
+})
+
+describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', () => {
+  const now = 1_000_000_000_000
+  const mk = (mtime: number) => snap({
+    ts: now,
+    profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'INFO agent ok', mtimeMs: mtime }] },
+    runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }, { id: 't_fix2', assignee: 'chen-csw-pay-core' }] },
+  })
+  it('在办卡+档案静默超阈 → 报 task.agent-silent（不要求日志尾错误态）', () => {
+    const a = detectAll(mk(now - 1200_000), { nowMs: now })
+    const hit = a.find((x) => x.detector === 'task.agent-silent')
+    expect(hit).toBeTruthy()
+    expect(hit!.subject).toBe('profile:chen-csw-pay-core')
+    expect(hit!.summary).toContain('2 张在办卡')
+  })
+  it('档案活跃（刚写日志）→ 不报；无在办卡的静默档案 → 不报（真空闲不误报）', () => {
+    expect(detectAll(mk(now - 60_000), { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+    const idle = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'ops', tail: 'x', mtimeMs: now - 9999_000 }] }, runningCards: { ok: true, cards: [] } })
+    expect(detectAll(idle, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+  })
+  it('runningCards 面未接线 → 零误报', () => {
+    const off = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'a', tail: 'x', mtimeMs: 0 }] }, runningCards: { ok: false, cards: [] } })
+    expect(detectAll(off, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
   })
 })
