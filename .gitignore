@@ -2,3 +2,4 @@ node_modules/
 .vite/
 __pycache__/
 *.pyc
+tests/fixtures/v84-gates/
