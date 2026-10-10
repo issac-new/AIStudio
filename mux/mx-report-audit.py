@@ -123,7 +123,7 @@ for blk in blocks:
         # 无帧三态（V8.4④ 2026-10-10 修订）：①声明态（功能不存在/夹具未执行）不计缺图；
         # ②✅步「记单在案」占位须问题单键配对（frame-capture-failed|step-<键> 或
         # r18-collection-missing）——预解析后统一判；③其余 ✅ 缺图仍 FAIL，⬜ 预期内。
-        if '本步无对应产品界面' in blk or 'lite 轮夹具带：本步未执行' in blk:
+        if '本步无对应产品界面' in blk or '回归轮（本步不在本轮执行范围）' in blk:
             declared_absent.append(n)
         elif done and ('记单在案，无帧明示' in blk or '记单在案，无帧明示不补拍' in blk):
             done_noimg_ticketed.append(blk)
@@ -389,7 +389,7 @@ if RUN_ID >= '20261010-v8-run13':
     if _ph_unpaired:
         fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 记单 frame-capture-failed|step-<键> 后降级呈现')
     if _idle_noframe:
-        warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 未执行/夹具带，lite 轮口径合规呈现）')
+        warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 不在本轮执行范围/沿用带，回归轮口径合规呈现）')
     # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
     #    在 state 有 epoch 落键者，帧须 ≤ 键值+120s。2026-10-10 用户指令修订：补拍解禁但
     #    必须准确——图注明示「补拍」的窗外/晚拍帧=合规降级 WARN（页面准确性由拍摄位规划+
