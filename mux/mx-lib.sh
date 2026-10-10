@@ -972,6 +972,8 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
 # sset 每次写 state.env 后同步刷 $HERMES_ROOT/run-progress.json 供 studio 驾驶舱读
 # （文件契约：harness 单写、产品只读；缺文件=无推演在跑，产品侧隐藏 widget）。
 MX_STEP_ORDER="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report"
+# lite 轮执行段（提速方案① L1：devimpl→report 九步；run-progress total 用此口径，G4 2026-10-10）
+MX_LITE_STEP_ORDER="devimpl defect testpass ready release uat workmgr audit retro ide report"
 
 RUN_ID="${RUN_ID:-}"
 if [[ -n "$RUN_ID" ]]; then
