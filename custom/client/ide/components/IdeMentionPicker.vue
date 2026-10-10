@@ -5,9 +5,11 @@
 // chip 暂存→发送时拼入消息（与派单裸 @ 语法同源）。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useIdeStore } from '../store/ide'
 import { resolveMentions, type MentionKind } from '../utils/mention-resolution'
 
 const chatStore = useChatStore()
+const ide = useIdeStore()
 const open = ref(false)
 const kind = ref<MentionKind>('file')
 const target = ref('')
@@ -21,7 +23,20 @@ const SOURCES: Array<{ kind: MentionKind; label: string; hint: string }> = [
   { kind: 'plugin', label: '插件', hint: '插件名' },
   { kind: 'subagent', label: '子代理', hint: '子代理 id' },
   { kind: 'whiteboard', label: '画板', hint: '画板区域引用' },
+  // wiki 第七源（2026-10-10 深化轮）：@wiki:页名 字面量约定式引用——
+  // 代理按仓库 AGENTS.md 受管块处理（先读 docs/wiki/<页名>.md 再作答）
+  { kind: 'wiki', label: 'Wiki', hint: '页名，如 auth 或 modules/auth' },
 ]
+
+/** wiki 源目标匹配预览：对 store 的 wikiPages 缓存做页名/路径模糊匹配 */
+const wikiMatch = computed(() => {
+  if (kind.value !== 'wiki' || !target.value.trim()) return null
+  const q = target.value.trim().toLowerCase()
+  const hit = ide.wikiPages.find(
+    (p) => p.name.toLowerCase() === q || p.name.toLowerCase().includes(q) || p.path.toLowerCase().includes(q),
+  )
+  return hit ?? null
+})
 
 function stage(): void {
   const raw = `@${kind.value}:${target.value.trim()}`
@@ -82,9 +97,14 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
         <input v-model="target" class="ide-mention__target" :placeholder="SOURCES.find((x) => x.kind === kind)?.hint" :data-testid="'ide-mention-target'" @keydown.enter.prevent="stage" />
         <button type="button" class="ide-mention__stage" data-testid="ide-mention-stage" @click="stage">加入引用</button>
       </div>
+      <div v-if="kind === 'wiki'" class="ide-mention__wiki-hint" data-testid="ide-mention-wiki-hint">
+        <template v-if="wikiMatch">已匹配：{{ wikiMatch.path }}</template>
+        <template v-else-if="ide.wikiPages.length">当前 wiki 共 {{ ide.wikiPages.length }} 页（面板 Wiki 页签装载后可匹配）</template>
+        <template v-else>本工作区尚无 wiki 页缓存（打开 Wiki 面板后可匹配）</template>
+      </div>
     </div>
     <div v-if="preview.length" class="ide-mention__preview" data-testid="ide-mention-preview">
-      {{ preview.length }} 条引用 · 六源 {{ preview.filter((r) => r.resolved).length }} 可解析
+      {{ preview.length }} 条引用 · 引用源 {{ preview.filter((r) => r.resolved).length }} 可解析
     </div>
   </div>
 </template>
@@ -139,4 +159,5 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
   border-radius: 4px; padding: 4px 10px; cursor: pointer;
 }
 .ide-mention__preview { color: var(--text-color-3, #999); font-size: 11px; margin-top: 2px; }
+.ide-mention__wiki-hint { color: var(--text-color-3, #999); font-size: 11px; margin-top: 6px; word-break: break-all; }
 </style>
