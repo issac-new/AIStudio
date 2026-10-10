@@ -34,7 +34,7 @@ D_REVERSIBILITY=""; D_CONFIDENCE=""; D_OUTCOME=""
 # --key-node 模式变量（关键节点化）
 KEY_NODE_MODE=0; KEY_NODE_NAME=""
 # --milestone 模式变量（里程碑上报，进度可感知链）：节点出口里程碑落盘
-MILESTONE_MODE=0; MILESTONE_NAME=""
+MILESTONE_MODE=0; MILESTONE_NAME=""; MILESTONE_TASK=""
 # --verify-chain 模式变量（semantica 溯源哈希链吸收）
 VERIFY_CHAIN_MODE=0
 while [[ $# -gt 0 ]]; do
@@ -46,6 +46,7 @@ while [[ $# -gt 0 ]]; do
     --note)   NOTE="${2:-}";   shift 2 ;;
     --key-node) KEY_NODE_MODE=1; KEY_NODE_NAME="${2:-}"; shift 2 ;;
     --milestone) MILESTONE_MODE=1; MILESTONE_NAME="${2:-}"; shift 2 ;;
+    --task) MILESTONE_TASK="${2:-}"; shift 2 ;;
     --verify-chain) VERIFY_CHAIN_MODE=1; shift ;;
     --decision)  DECISION_MODE=1; shift ;;
     --goal)      D_GOAL="${2:-}"; shift 2 ;;
@@ -164,9 +165,9 @@ if [[ "$MILESTONE_MODE" -eq 1 ]]; then
   STATE_DIR="${PROJECT_DIR:-$(pwd)}/.swarm-yuan"
   if mkdir -p "$STATE_DIR" 2>/dev/null; then
     ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-    _ms_line=$(printf '{"ts":"%s","milestone":"%s","actor":"%s","status":"%s","note":"%s"}' \
+    _ms_line=$(printf '{"ts":"%s","milestone":"%s","actor":"%s","status":"%s","note":"%s","task":"%s"}' \
       "$ts" "$(_json_esc "$MILESTONE_NAME")" "$(_json_esc "${ACTOR:-swarm-yuan/ai}")" \
-      "$(_json_esc "$STATUS")" "$(_json_esc "$NOTE")")
+      "$(_json_esc "$STATUS")" "$(_json_esc "$NOTE")" "$(_json_esc "$MILESTONE_TASK")")
     if ! printf '%s\n' "$_ms_line" >> "$STATE_DIR/milestones.jsonl" 2>/dev/null; then
       echo "⚠ trace-log: milestones.jsonl 落盘失败（不阻塞）" >&2
     else
