@@ -14,7 +14,7 @@ fails=0
 
 # ── ① 产品零反向依赖 ──
 bad=$(grep -rn "simharness\|scripts/aipay" "$OVERLAY/custom" "$OVERLAY/patches" 2>/dev/null \
-  | grep -vE '^\s*[^:]+:[0-9]+:\s*(//|/\*|\*|<!--|#)' | grep -vE '\.(md|test)\.' | head -5 || true)
+  | grep -vE '^\s*[^:]+:[0-9]+:\s*(\+?(//|/\*|\*|<!--|#))' | grep -vE '\.(md|test)\.' | head -5 || true)
 if [[ -n "$bad" ]]; then
   echo "FAIL ① 产品运行时代码反向引用 harness："; echo "$bad"; fails=1
 else
@@ -22,7 +22,9 @@ else
 fi
 
 # ── ② harness 消费白名单 ──
-wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|package\.json|\.overlay-injected|rev-parse'
+# 白名单=只读消费面（run13 复盘补：custom/qgate 只读 CLI 执行〔release-report 证据〕、
+# runtime/plugins 只读配置读取〔style-charter〕——均为 harness→产品只读方向，非反向依赖）
+wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|package\.json|\.overlay-injected|rev-parse'
 bad2=$(grep -rn 'OVERLAY_ROOT' "$HERE"/*.sh "$HERE"/mux/*.sh 2>/dev/null \
   | grep -vE "^\S+:\s*#" \
   | grep '\$OVERLAY_ROOT' | grep -vE "$wl" | head -5 || true)

@@ -33,6 +33,18 @@ mx_write_progress() {
     > "$HERMES_ROOT/run-progress.json.tmp" 2>/dev/null && mv "$HERMES_ROOT/run-progress.json.tmp" "$HERMES_ROOT/run-progress.json" 2>/dev/null || true
 }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; mx_write_progress; }
+# 闸键首过保护（run13 复盘 A15）：G5 等闸键在重启循环中每圈重写，首过时刻被最后一次
+# 覆写（11:30:41 首过→仪表盘显示 11:37）。闸类状态键一律 sset_once——已有值不覆盖。
+sset_once() { grep -q "^$1=" "$STATE" 2>/dev/null && return 0; sset "$1" "$2"; }
+# 幂等记单（run13 复盘 B3）：重启循环每圈重放记单点，qgate-evidence ×11/uat-precheck ×5
+# 刷单污染台账。同类型+主体已有 ISSUE 行即跳过（处置语义：重复发生记次数无收益，事故账
+# 由 scenario.log 时间线承载）。冲突处理：必要时先显式删旧行再记新单。
+issue_once() { # issue_once <type> <subject> <desc>
+  local _f="$EVID_DIR/issues.log"
+  mkdir -p "$EVID_DIR"
+  grep -qF "ISSUE|$1|$2|" "$_f" 2>/dev/null && return 0
+  echo "ISSUE|$1|$2|$3" >> "$_f"
+}
 # 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
 # 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
 mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
@@ -1396,15 +1408,19 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   # 首过率实算（09-26）：组外预计算，set -euo pipefail 安全（grep -q && v=1 || true）
   # 口径=六闸全计（2026-10-06 差距审计 P5→R26：G3/G6 为落键型闸、无对应记单即首过；
   # 原 metrics 行按评审型四闸 4 分母，与 PART1「六闸全首过」口径分裂——run10 起统一六分母）
-  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0
-  grep -qE '^ISSUE\|g1-(review|freeze|gate)' "$EVID_DIR/issues.log" 2>/dev/null && _g1f=1 || true
-  grep -qE '^ISSUE\|g2-' "$EVID_DIR/issues.log" 2>/dev/null && _g2f=1 || true
-  grep -qE '^ISSUE\|g3-' "$EVID_DIR/issues.log" 2>/dev/null && _g3f=1 || true
-  grep -qE '^ISSUE\|g4-' "$EVID_DIR/issues.log" 2>/dev/null && _g4f=1 || true
-  grep -qE '^ISSUE\|g5-' "$EVID_DIR/issues.log" 2>/dev/null && _g5f=1 || true
-  grep -qE '^ISSUE\|g6-' "$EVID_DIR/issues.log" 2>/dev/null && _g6f=1 || true
+  # run13 复盘 C3 修订：打回只认判词 FAIL/显式打回语义行（fail/打回/拒收/熔断/退回），
+  # 闸段其余问题单（如 testlog 缺件/重启循环事故）另列「闸段问题单 N 起」不计打回——
+  # 否则 G5 一轮过会被同段事故单计成打回，治理报告与报告叙事两套口径打架。
+  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0 _gseg=0 _n
+  local _segcnt
+  for _n in 1 2 3 4 5 6; do
+    _segcnt=$({ grep -cE "^ISSUE\\|g${_n}-" "$EVID_DIR/issues.log" 2>/dev/null || true; })
+    [ "$_segcnt" -gt 0 ] 2>/dev/null && _gseg=$((_gseg+_segcnt)) || true
+    { grep -E "^ISSUE\\|g${_n}-" "$EVID_DIR/issues.log" 2>/dev/null | grep -qE '(fail|FAIL|打回|拒收|熔断|退回)'; } && eval "_g${_n}f=1" || true
+  done
   local _fp=$((6-_g1f-_g2f-_g3f-_g4f-_g5f-_g6f))
   local _gate_detail="G1$([ $_g1f = 0 ] && echo 首过 || echo 打回) G2$([ $_g2f = 0 ] && echo 首过 || echo 打回) G3$([ $_g3f = 0 ] && echo 首过 || echo 打回) G4$([ $_g4f = 0 ] && echo 首过 || echo 打回) G5$([ $_g5f = 0 ] && echo 首过 || echo 打回) G6$([ $_g6f = 0 ] && echo 首过 || echo 打回)"
+  [ "$_gseg" -gt 0 ] && _gate_detail="${_gate_detail}（闸段问题单 ${_gseg} 起，不计打回）" || true
   # 证据一次通过率：凭证族记单（回执/派发/系分文档/凭证缺件）与完成任务环节键对账
   local _done_keys _evmiss _evrate
   _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
@@ -1431,7 +1447,8 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
   _prev=""
   _baseline=""
   if [ -n "${RUN_ID:-}" ]; then
-    _prev=$(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -v "/${RUN_ID}/" | sort | tail -1 || true)
+    # run13 复盘 A14：runs/ 下非轮次目录（_wtest 等）字典序排后会顶掉真实上轮——只认轮次命名目录
+    _prev=$(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9]+/$' | grep -v "/${RUN_ID}/" | sort | tail -1 || true)
   fi
   if [ -n "$_prev" ] && [ -f "${_prev}evidence/governance-report.md" ]; then
     _baseline=$({ grep -E '首过率' "${_prev}evidence/governance-report.md" 2>/dev/null || true; } | tail -1)

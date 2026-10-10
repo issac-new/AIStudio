@@ -10,7 +10,12 @@
     过程），帧文件在位方计数（r18-frames.mjs 实拍，r18-collect.py skill 登记）。
 delivery 门禁灯帧（R29/P15）= {步 23}：payload['delivery']['frames'] ≥1 且帧在位
   （MX_DELIVERY=1 全程开启，产品 Delivery Cases 面板实拍；产品面未就绪按§5.6 采集纪律⑩ 记单降级）。
-分母 = 13（5+3+3+1+1）；分子 = 达标项数。禁"任一载荷键在位即计"。
+产品成效（§5.4 产品成效呈现 + §5.6 必采矩阵「run13 起入分母」——run13 轮缺席记单收尾，
+  run14 起接线）：2 项，不绑步，数据源=evidence/product-outcome/：
+    exec 项：幂等/下单执行输出件 ≥1（实跑输出原文，禁手抄）；
+    frames 项：下单流程帧 ≥2 张（真实产品 UI 前后帧；交付物无 UI 面〔逻辑层 SDK〕
+    按 §5.6 采集纪律⑩ 记单降级——issue 在位 product-outcome-missing 族即降级不 FAIL）。
+分母 = 15（5+3+3+1+1+2）；分子 = 达标项数。禁"任一载荷键在位即计"。
 
 消费方：mx-report-gen.py hero 统计「全量呈现覆盖」、mx-report-audit.py 查 8。
 改任一端，tests/harness-gate-integrity.test.ts ⑫ 当场失败。
@@ -26,7 +31,15 @@ SKILL_INVOKE_MIN = 2
 # 在产品 Delivery Cases 面板的投影帧；不与效果类步重叠，evaluate 每步只判一次）
 DELIVERY_STEPS = frozenset({23})
 DELIVERY_MIN = 1
-TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS) + len(SKILL_STEPS) + len(DELIVERY_STEPS)  # 13
+# 产品成效两项（§5.4/§5.6，run13 起入分母）
+PRODUCT_OUTCOME_EXEC_MIN = 1
+PRODUCT_OUTCOME_FRAME_MIN = 2
+STEP_TOTAL = len(DIALOG_STEPS) + len(OP_STEPS) + len(EFFECT_STEPS) + len(SKILL_STEPS) + len(DELIVERY_STEPS)  # 13
+PRODUCT_OUTCOME_TOTAL = 2
+TOTAL = STEP_TOTAL + PRODUCT_OUTCOME_TOTAL  # 15
+import re as _re
+
+_PO_EXEC_RE = _re.compile(r'idempot|幂等|order-flow|下单', _re.IGNORECASE)
 
 
 def _png(name: str) -> str:
@@ -82,3 +95,46 @@ def evaluate(steps, frame_exists=None):
         met += 1 if ok else 0
         detail.append((n, ok))
     return met, TOTAL, detail
+
+
+def product_outcome_status(evid_dir, issue_log_text=None):
+    """产品成效两项实算（§5.4/§5.6，run13 起入分母）。
+
+    evid_dir = runs/<RUN>/evidence 目录（Path 或 str）。返回 dict：
+      exec_met  幂等/下单执行输出件 ≥1（evidence/product-outcome/ 下非 env 输出件）
+      frames_met 下单流程帧 ≥2 张（product-outcome/ 下 png）
+      degraded  台账在位 product-outcome-missing/-degraded 族问题单（§5.6⑩ 记单降级口径，
+                审计降 WARN 不 FAIL；frames 缺席且未记单=FAIL 由审计侧执行）
+    """
+    from pathlib import Path as _P
+    po = _P(evid_dir) / 'product-outcome'
+    files = [f.name for f in po.iterdir() if f.is_file()] if po.exists() else []
+    execs = [f for f in files
+             if not f.endswith('.png') and not f.endswith('.env')
+             and _PO_EXEC_RE.search(f)]
+    if not execs:
+        # 兜底：目录在且存在任意非 png/env 输出件（命名规范外的实跑输出也算——文件名
+        # 匹配是加速判，不是否认件本身）
+        execs = [f for f in files if not f.endswith('.png') and not f.endswith('.env')]
+    frames = [f for f in files if f.endswith('.png')]
+    txt = issue_log_text or ''
+    degraded = ('product-outcome-missing' in txt) or ('product-outcome-degraded' in txt)
+    return {
+        'exec_met': len(execs) >= PRODUCT_OUTCOME_EXEC_MIN,
+        'frames_met': len(frames) >= PRODUCT_OUTCOME_FRAME_MIN,
+        'degraded': degraded,
+        'exec_files': execs,
+        'frame_files': frames,
+    }
+
+
+def evaluate_full(steps, frame_exists, evid_dir, issue_log_text=None):
+    """步绑定 13 项 + 产品成效 2 项合并实算：返回 (达标数, 分母, 步明细, 产品成效 dict)。
+
+    产品成效记单降级口径：frames 缺席但 degraded=True 时该项计达标（WARN 口径），
+    exec 项不适用降级（执行输出可无 UI 面亦产出，缺席即真缺口）。
+    """
+    met, _, detail = evaluate(steps, frame_exists)
+    po = product_outcome_status(evid_dir, issue_log_text)
+    po_met = (1 if po['exec_met'] else 0) + (1 if (po['frames_met'] or po['degraded']) else 0)
+    return met + po_met, TOTAL, detail, po

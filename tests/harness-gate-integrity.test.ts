@@ -625,16 +625,46 @@ describe('⑫ 必采矩阵单一事实源（正本 §5.5+§5.6 必采矩阵：he
   function py(code: string): string {
     return execFileSync('python3', ['-c', `
 import sys; sys.path.insert(0, ${JSON.stringify(MX)})
-from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVERY_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL, evaluate, step_ok
+from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVERY_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL, STEP_TOTAL, PRODUCT_OUTCOME_TOTAL, evaluate, evaluate_full, step_ok, product_outcome_status
 ${code}`], { encoding: 'utf-8' })
   }
 
-  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2）+ delivery 门禁灯 23（≥1），分母=13', () => {
-    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), sorted(DELIVERY_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL)')
-    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] [23] 3 2 1 13')
+  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2）+ delivery 门禁灯 23（≥1）+ 产品成效 2 项（run14 起，§5.6），分母=15', () => {
+    const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), sorted(DELIVERY_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, STEP_TOTAL, PRODUCT_OUTCOME_TOTAL, TOTAL)')
+    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] [23] 3 2 1 13 2 15')
   })
 
-  it('空载荷=0/12；达标载荷=12/12（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
+  it('产品成效两项（run13 复盘 B6/F17）：exec=幂等执行输出件≥1、frames=下单流程帧≥2；记单降级只免 frames 项', () => {
+    const out = py(`
+import tempfile, os
+from pathlib import Path
+d = tempfile.mkdtemp()
+po = Path(d) / 'product-outcome'
+po.mkdir()
+r0 = product_outcome_status(d, issue_log_text='')
+print('empty:', r0['exec_met'], r0['frames_met'], r0['degraded'])
+(po / 'idempotency.txt').write_text('Tests 8 passed')
+r1 = product_outcome_status(d, issue_log_text='')
+print('exec-only:', r1['exec_met'], r1['frames_met'], r1['degraded'])
+(po / 'order-1.png').write_text('x'); (po / 'order-2.png').write_text('x')
+r2 = product_outcome_status(d, issue_log_text='')
+print('full:', r2['exec_met'], r2['frames_met'], r2['degraded'])
+d2 = tempfile.mkdtemp()
+(po2 := Path(d2) / 'product-outcome').mkdir()
+(po2 / 'idempotency.txt').write_text('Tests 8 passed')
+r3 = product_outcome_status(d2, issue_log_text='ISSUE|product-outcome-missing|step26-frames|x')
+print('degraded-ticket:', r3['exec_met'], r3['frames_met'], r3['degraded'])
+m, t, _, _po = evaluate_full({}, lambda n: True, d2, 'ISSUE|product-outcome-missing|step26-frames|x')
+print('eval-full:', m, t)`)
+    expect(out).toContain('empty: False False False')
+    expect(out).toContain('exec-only: True False False')
+    expect(out).toContain('full: True True False')
+    expect(out).toContain('degraded-ticket: True False True')
+    // evaluate_full：步 13 项全缺 + exec 达标 + frames 记单降级 = 2/15
+    expect(out).toContain('eval-full: 2 15')
+  })
+
+  it('空载荷=0/15；步绑定达标载荷=13/15（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
     const out = py(`
 good = {str(n): {'dialogs': [{'title': 'd'}]} for n in DIALOG_STEPS}
 good.update({str(n): {'ops': [{'frames': [f'{n}-op1-before.png', f'{n}-op1-after.png']}]} for n in OP_STEPS})
@@ -645,8 +675,8 @@ m, t, _ = evaluate(good, frame_exists=lambda n: True)
 print(f'{m}/{t}')
 m0, t0, _ = evaluate({}, frame_exists=lambda n: True)
 print(f'{m0}/{t0}')`)
-    expect(out).toContain('13/13')
-    expect(out).toContain('0/13')
+    expect(out).toContain('13/15')
+    expect(out).toContain('0/15')
   })
 
   it('对话缺/单帧/帧文件缺失/效果无锚/skill 帧不足 → 对应项不计入；达标路径不受邻步影响', () => {
