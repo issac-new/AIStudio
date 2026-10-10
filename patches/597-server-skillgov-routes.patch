@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 3333333..4444444 100644
+@@ -139,6 +139,9 @@
+ // 四阶段：+结卡校验面（watcher 轮询 column_transition→单任务校验→收件箱；
+ // ONTOLOGY_WATCH=off 关，30s 档）
+ import { ontologyRoutes, registerOntologyAgentBridgeRoutes, startOntologyWatchIfEnabled } from '../custom/ontology/ontology-controller'
++// overlay[skillgov]: 技能治理（swarm-yuan 生成器产品面+角色映射+教训库）
++import skillgovGeneratorRoutes from '../custom/skillgov/skillgov-controller'
++import { router as skillgovStoreRoutes } from '../custom/skillgov/skillgov-store'
+ // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
+ import { reviewRoutes } from '../custom/review/review-controller'
+ // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
+@@ -420,6 +423,8 @@
+   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
++  app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
++  app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库
+   startOntologyWatchIfEnabled()                   // 本体结卡校验环：column_transition 增量→单任务校验→收件箱（四阶段路线一）
+   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
+   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
