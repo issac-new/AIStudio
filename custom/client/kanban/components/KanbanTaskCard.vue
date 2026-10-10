@@ -319,7 +319,14 @@ function handleDragEnd(e: DragEvent) {
   font-size: 0.65rem;
   color: $text-muted;
   letter-spacing: 0.03em;
+  /* 默认隐去、悬停显现（2026-10-10 UI 审计）：裸 ID 常驻每卡=纯噪声；
+     可反查性保留——卡片悬停即见，aria-label 始终携带完整 id */
+  opacity: 0;
+  transition: opacity .12s ease;
 }
+
+.kanban-task-card:hover .task-id,
+.kanban-task-card:focus-within .task-id { opacity: 1; }
 
 .priority-badge {
   font-size: 0.6rem;
