@@ -1,7 +1,12 @@
 // 复刻批 S1-S4 守门：inline diff/@提及面板/分段水位条/后台代理三分区。
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
+
+// 2026-10-10 wiki 深化轮：@提及面板 +wiki 源后消费 ide store（wikiPages 匹配预览），
+// 本套件需激活 pinia。
+beforeEach(() => { setActivePinia(createPinia()) })
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 const chatState: Record<string, unknown> = {
