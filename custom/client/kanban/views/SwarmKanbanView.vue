@@ -512,7 +512,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         :data-testid="`kanban-board-chip-${b.slug}`"
         :title="b.slug"
         @click="toggleBoard(b.slug)"
-      >{{ boardChecked(b.slug) ? '✓ ' : '' }}{{ b.name }}<span class="kanban-boardbar__n">{{ b.total }}</span></button>
+      >{{ b.name }}<span class="kanban-boardbar__n">{{ b.total }}</span></button>
     </div>
 
     <KanbanToolbar
@@ -642,14 +642,19 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   background: transparent; color: var(--text-secondary, inherit);
   font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap;
   &:hover { color: var(--text-primary, inherit); border-color: var(--text-muted, #999); }
+  /* 选中态降噪（2026-10-10 UI 审计）：实心主色块 30 枚占满三行是全页最重视觉块——
+     改主色 10% 底+主色描边+主色字，筛选器不再与内容争强调层级 */
   &.is-on {
-    background: var(--primary-color, var(--accent-primary, #3b82f6));
-    border-color: transparent; color: var(--text-on-accent);
+    background: color-mix(in srgb, var(--primary-color, #3b82f6) 10%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color, #3b82f6) 45%, transparent);
+    color: var(--primary-color, #3b82f6);
+    font-weight: 600;
   }
+  &:not(.is-on) { opacity: .62; }
 }
 .kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary, inherit); border-color: var(--primary-color, #3b82f6); }
 .kanban-boardbar__n {
-  font-size: 10px; opacity: 0.75; font-variant-numeric: tabular-nums;
+  font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums;
 }
 
 .board-container {

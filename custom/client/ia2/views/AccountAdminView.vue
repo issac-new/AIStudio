@@ -45,25 +45,25 @@ function delRow(i: number) { rows.value.splice(i, 1) }
 
 <template>
   <div class="aac" data-testid="account-admin">
-    <h2>设置 · 账户管理 <span class="aac__meta">roster @{{ commit || '…' }}</span></h2>
+    <h2>设置 · 账户管理 <span class="aac__meta">中央仓 @{{ commit || '…' }}</span></h2>
     <p class="aac__sub">matrix 系统管理员功能：创建/分配 matrix 账号（人类+AI 助理双账号），维护本机账号 ↔ matrix 账号绑定；一切变更提交中央仓可回溯。</p>
 
     <div class="aac__create" data-testid="aac-create">
       <h3>新建账号</h3>
       <div class="aac__grid">
-        <input v-model="form.localName" placeholder="本机账号名（如 zhang）" data-testid="aac-name" />
-        <input v-model="form.role" placeholder="角色（如 研发·csw-pay-core）" data-testid="aac-role" />
-        <input v-model="form.password" type="password" placeholder="初始密码（安全渠道另行下发）" />
-        <input v-model="form.homeserverUrl" placeholder="homeserver" />
-        <input v-model="form.adminToken" type="password" placeholder="synapse 管理员 access token（以此鉴权）" data-testid="aac-token" />
-        <label><input v-model="form.withAgent" type="checkbox" /> 同建 AI 助理账号</label>
+        <label class="aac__field">本机账号名<input v-model="form.localName" placeholder="如 zhang" data-testid="aac-name" /></label>
+        <label class="aac__field">角色<input v-model="form.role" placeholder="如 研发·csw-pay-core" data-testid="aac-role" /></label>
+        <label class="aac__field">初始密码<input v-model="form.password" type="password" placeholder="安全渠道另行下发" /></label>
+        <label class="aac__field">服务器地址<input v-model="form.homeserverUrl" placeholder="homeserver URL" /></label>
+        <label class="aac__field">管理员凭证<input v-model="form.adminToken" type="password" placeholder="synapse 管理员 access token" data-testid="aac-token" /></label>
+        <label class="aac__check"><input v-model="form.withAgent" type="checkbox" /> 同建 AI 助理账号</label>
       </div>
-      <button data-testid="aac-create-btn" :disabled="busy" @click="create">创建并登记 roster</button>
+      <button data-testid="aac-create-btn" :disabled="busy" @click="create">创建账号</button>
     </div>
 
     <div class="aac__tbl">
-      <h3>账号绑定（roster）
-        <button data-testid="aac-save" :disabled="busy" @click="saveRoster">保存（提交 git）</button></h3>
+      <h3>账号绑定
+        <button data-testid="aac-save" :disabled="busy" title="保存并提交到中央仓（可回溯）" @click="saveRoster">保存修改</button></h3>
       <table>
         <thead><tr><th v-for="c in COLS" :key="c">{{ c }}</th><th /></tr></thead>
         <tbody>
@@ -80,12 +80,18 @@ function delRow(i: number) { rows.value.splice(i, 1) }
 
 <style scoped lang="scss">
 .aac { padding: 14px 18px; overflow: auto; h2 { margin: 0 0 4px; font-size: 16px; } h3 { font-size: 13px; margin: 0 0 6px; } }
-.aac__meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+.aac__meta { font-size: 11px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
 .aac__sub { font-size: 12px; color: var(--text-muted, #878c99); margin: 0 0 12px; }
 .aac__create { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
-.aac__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; input { padding: 5px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; font-size: 12px; } label { font-size: 12px; display: flex; align-items: center; gap: 4px; } }
-.aac__create > button { margin-top: 8px; font-size: 12px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); cursor: pointer; }
+.aac__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.aac__field { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-muted, #878c99); input { padding: 5px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; font-size: 12px; } }
+.aac__check { font-size: 12px; display: flex; align-items: end; gap: 4px; padding-bottom: 3px; }
+.aac__create > button { margin-top: 8px; font-size: 12px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--primary-color, #3b82f6); color: var(--primary-color, #3b82f6); background: color-mix(in srgb, var(--primary-color, #3b82f6) 8%, transparent); cursor: pointer; font-weight: 600; }
 .aac__tbl h3 button { margin-left: 8px; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); cursor: pointer; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color, #e5e7eb); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
+.aac__tbl td:last-child, .aac__tbl th:last-child { width: 40px; text-align: center; }
+.aac__tbl td button { border: none; background: none; color: var(--text-muted, #878c99); cursor: pointer; font-size: 12px; opacity: .4; padding: 2px 6px; border-radius: 4px; }
+.aac__tbl tr:hover td button { opacity: 1; }
+.aac__tbl td button:hover { color: var(--danger, #dc2626); background: color-mix(in srgb, var(--danger, #dc2626) 8%, transparent); }
 .aac__msg { font-size: 12px; color: var(--text-muted, #878c99); }
 </style>

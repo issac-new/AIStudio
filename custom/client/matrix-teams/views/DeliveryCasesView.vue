@@ -99,16 +99,18 @@ function openRoom(roomId: string) {
   <div class="delivery-cases">
     <div class="head">
       <h2>{{ $t('ia2.delivery.title') }}</h2>
-      <NButton size="small" :loading="loading" @click="reload">{{ $t('common.refresh') }}</NButton>
-      <NButton size="small" type="primary" @click="formOpen = !formOpen">{{ $t('ia2.delivery.launch') }}</NButton>
+      <div class="head__actions">
+        <NButton size="small" :loading="loading" @click="reload">{{ $t('common.refresh') }}</NButton>
+        <NButton size="small" type="primary" @click="formOpen = !formOpen">{{ $t('ia2.delivery.launch') }}</NButton>
+      </div>
     </div>
 
     <div class="readings">
-      {{ $t('ia2.delivery.readings') }}:
-      {{ $t('ia2.delivery.inFlight') }}={{ store.networkReadings.inFlight }}
-      <span v-for="(n, st) in store.networkReadings.byStage" :key="st" class="chip">{{ st }}={{ n }}</span>
-      · {{ $t('ia2.delivery.completed') }}={{ store.networkReadings.completed }}
-      · {{ $t('ia2.delivery.pendingHuman') }}={{ store.networkReadings.pendingHumanGates }}
+      <span class="readings__label">{{ $t('ia2.delivery.readings') }}</span>
+      <span class="chip"><em>{{ store.networkReadings.inFlight }}</em>{{ $t('ia2.delivery.inFlight') }}</span>
+      <span v-for="(n, st) in store.networkReadings.byStage" :key="st" class="chip"><em>{{ n }}</em>{{ st }}</span>
+      <span class="chip"><em>{{ store.networkReadings.completed }}</em>{{ $t('ia2.delivery.completed') }}</span>
+      <span class="chip"><em>{{ store.networkReadings.pendingHumanGates }}</em>{{ $t('ia2.delivery.pendingHuman') }}</span>
     </div>
 
     <NCard v-if="formOpen" size="small" :title="$t('ia2.delivery.launch')">
@@ -132,7 +134,11 @@ function openRoom(roomId: string) {
       v-else-if="store.cases.length === 0"
       :description="$t('ia2.delivery.empty')"
       class="empty"
-    />
+    >
+      <template #extra>
+        <NButton size="small" type="primary" @click="formOpen = !formOpen">{{ $t('ia2.delivery.launch') }}</NButton>
+      </template>
+    </NEmpty>
     <div v-else class="list">
       <NCard
         v-for="c in store.cases"
@@ -195,9 +201,12 @@ function openRoom(roomId: string) {
 
 <style scoped>
 .delivery-cases { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%; overflow: auto; }
-.head { display: flex; align-items: center; justify-content: space-between; }
+.head { display: flex; align-items: center; gap: 8px; }
+.head__actions { margin-left: auto; display: flex; gap: 8px; }
 .readings { font-size: 12px; color: #666; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.readings__label { color: #999; }
 .chip { background: #f3f4f6; border-radius: 8px; padding: 1px 8px; }
+.chip em { font-style: normal; font-weight: 700; color: #111; margin-right: 4px; font-variant-numeric: tabular-nums; }
 .form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .in { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
 .list { display: flex; flex-direction: column; gap: 10px; }
@@ -216,4 +225,5 @@ function openRoom(roomId: string) {
 .reason { margin-top: 6px; color: #b45309; font-size: 12px; }
 .drawer { position: sticky; bottom: 0; }
 .spin, .empty { margin: auto; }
+.empty { padding: 48px 0; }
 </style>
