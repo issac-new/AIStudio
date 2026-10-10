@@ -100,3 +100,42 @@ export function checkQgateDiscipline(html: string): QgateVerdict {
   }
   return { violations, ok: violations.length === 0 }
 }
+
+// ── V8.4 截图红线（§5.5，2026-10-10 接线轮；与 simharness mx-report-audit.py
+//    A5d/A5g 同语义——两侧判定必须一致，差异即缺陷）──
+
+/** 画面词=可指认的画面落点；结果词=步结论字样（"freeze 在仓"是结论不是画面） */
+const PICTURE_WORDS = ['面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱']
+const OUTCOME_WORDS = ['在仓', '入仓', '落键', '过闸', '全绿', '核验过', '分齐', '登记完成']
+const BACKFILL_MARKERS = ['frames-degraded', '收官后补拍', '（补拍）']
+
+export interface FrameEvidenceVerdict {
+  /** ①图注非画面描述（步结果式/纯位序模板） */
+  badCaptions: string[]
+  /** ②同一 src 多处嵌入（run12 实锤：同帧双图注双嵌） */
+  duplicatedSources: string[]
+  /** ④b 补拍标记入场（V8.4 §5.6 ⑩ 补拍件禁入正本） */
+  backfillMarker: string | null
+  ok: boolean
+}
+
+/** 断言④：帧证据三断言（HTML 纯函数）。③帧时刻窗（r18 采集记录 ts 对 run 窗口）
+ *  依赖运行上下文，执法面在 simharness A5e/f——语义同源，载体各司其职。 */
+export function checkFrameEvidence(html: string): FrameEvidenceVerdict {
+  const badCaptions: string[] = []
+  for (const m of html.matchAll(/<figcaption>([\s\S]*?)<\/figcaption>/g)) {
+    let c = (m[1] || '').replace(/<span class="shot-kind"[\s\S]*?<\/span>/g, '')
+    c = c.replace(/<[^>]+>/g, '').trim()
+    if (/^[①②③]?\s*(操作前|操作动作|系统响应)$/.test(c)) {
+      badCaptions.push(`「${c}」纯位序模板`)
+    } else if (c && OUTCOME_WORDS.some((w) => c.includes(w)) && !PICTURE_WORDS.some((w) => c.includes(w))) {
+      badCaptions.push(`「${c}」步结果式`)
+    }
+  }
+  const srcs = [...html.matchAll(/src="((?:screenshots\/steps|product-outcome)\/[^"]+)"/g)].map((m) => m[1] as string)
+  const counts = new Map<string, number>()
+  for (const s of srcs) counts.set(s, (counts.get(s) || 0) + 1)
+  const duplicatedSources = [...counts.entries()].filter(([, c]) => c > 1).map(([s]) => s)
+  const backfillMarker = BACKFILL_MARKERS.find((b) => html.includes(b)) ?? null
+  return { badCaptions, duplicatedSources, backfillMarker, ok: !badCaptions.length && !duplicatedSources.length && !backfillMarker }
+}
