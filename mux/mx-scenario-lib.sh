@@ -849,6 +849,19 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   # run_started_at 缺键（旧轮 state）时保持旧语义并告警，不静默放行新代码路径。
   local _rs
   _rs="$(sget run_started_at)"
+  # lite 轮基线（run13 实锤：夹具继承的 G1 冻结件天然早于本轮起跑，按全量轮
+  # 语义判旧稿=UAT 前置永败重启循环）：lite_round=1 且夹具源轮 state 可读时，
+  # 基线改夹具源轮起跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜，更早
+  # 旧稿仍被拒。夹具源 state 异常回落本轮基线（保守，宁可再 fail 不放水）。
+  if [ "$(sget lite_round)" = "1" ]; then
+    local _fx_rs
+    _fx_rs="$(sed -n 's/^run_started_at=//p' "$SIM_ROOT/runs/$(sget lite_fixtures_from)/state.env" 2>/dev/null | head -1)"
+    if [ -n "$_fx_rs" ]; then
+      _rs="$_fx_rs"
+    else
+      log "[观察] lite 轮夹具源 state 不可读（$(sget lite_fixtures_from)），新鲜度基线回落本轮起跑：$1"
+    fi
+  fi
   if [ -z "$_rs" ]; then
     log "[观察] repo_has 无 run_started_at 键（旧 state 兼容），跳过新鲜度窗口：$1"
     return 0
