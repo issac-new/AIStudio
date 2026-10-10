@@ -22,6 +22,8 @@ export interface TaskProgressInfo {
   lastActivityAt?: number
   dispatchCount: number
   dispatchOkCount: number
+  /** 技能侧里程碑（无引擎站点面时的进度回退源） */
+  milestones?: Array<{ ts: string; milestone: string; status?: string; note?: string }>
 }
 
 const byTask = ref<Record<string, TaskProgressInfo>>({})
