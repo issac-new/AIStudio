@@ -1,0 +1,16 @@
+diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
+--- a/packages/client/src/api/client.ts
++++ b/packages/client/src/api/client.ts
+@@ -290,7 +290,11 @@
+     if (res.status === 403 && isLocalBff) {
+       if (text.includes('User is disabled or does not exist')) {
+         triggerAuthRecheck()
+-      } else {
++      } else if (!path.startsWith('/api/agents/status') && !path.startsWith('/api/agents/availability')) {
++        // overlay[run13]: status/availability 为状态轮询端点，403 属降级信号而非异常
++        // （matrix 登录账号无本地 agent 安装可见性，消费方均已 allSettled/try-catch
++        // 降级）——静默降级，不弹全局「无权限」toast。run13 步18 帧采集实锤：
++        // 群聊房视图冷载即弹「你没有权限访问该资源」。
+         emitAuthNotice('forbidden')
+       }
+     }

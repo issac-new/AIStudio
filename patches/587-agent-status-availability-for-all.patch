@@ -1,0 +1,120 @@
+--- a/packages/server/src/modules/studio/public/agent-status-registry.ts
++++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
+@@ -44,6 +44,9 @@
+   revision: number
+   updatedAt: string
+   agents: AgentAvailabilityRecord[]
++  /** hermes 本体就绪（installed+source 就绪+path 在位）——普通账号可用性判定用，
++   *  不泄漏 path 本身（G2 2026-10-10：/api/agents/status 仅超管，群聊/档案面改吃本端点） */
++  hermesReady?: boolean
+ }
+ 
+ const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode']
+@@ -224,7 +227,9 @@
+ }
+ 
+ export function getAgentAvailabilitySnapshot(): AgentAvailabilitySnapshot {
++  const hermes = records.get('hermes')
+   return {
++    hermesReady: Boolean(hermes?.installed && hermes.source !== 'not-installed' && hermes.path),
+     revision,
+     updatedAt,
+     agents: AGENT_ORDER.map(id => {
+--- a/packages/client/src/api/agent-status.ts
++++ b/packages/client/src/api/agent-status.ts
+@@ -28,6 +28,7 @@
+   revision: number
+   updatedAt: string
+   agents: AgentAvailabilityRecord[]
++  hermesReady?: boolean
+ }
+ 
+ export type AgentInstallationState = 'installed' | 'not-installed' | 'unknown'
+@@ -58,14 +59,16 @@
+ }
+ 
+ export function isAgentStatusAvailable(
+-  snapshot: AgentStatusSnapshot | null | undefined,
++  snapshot: AgentStatusSnapshot | AgentAvailabilitySnapshot | null | undefined,
+   agent: string,
+ ): boolean {
+   const id = resolveAgentStatusId(agent)
+   if (!id) return false
+   const status = snapshot?.agents.find(item => item.id === id)
+   if (!status?.installed || status.source === 'not-installed') return false
+-  return id !== 'hermes' || Boolean(status.path)
++  if (id !== 'hermes') return true
++  // G2（2026-10-10）：status 快照有 path 用 path；availability 快照（普通账号）用服务端算好的 hermesReady
++  return 'path' in status && status.path ? true : Boolean((snapshot as AgentAvailabilitySnapshot).hermesReady)
+ }
+ 
+ export function agentInstallationState(
+--- a/packages/client/src/stores/hermes/profiles.ts
++++ b/packages/client/src/stores/hermes/profiles.ts
+@@ -2,7 +2,7 @@
+ import { ref } from 'vue'
+ import * as profilesApi from '@/api/hermes/profiles'
+ import type { HermesProfile, HermesProfileDetail } from '@/api/hermes/profiles'
+-import { fetchAgentStatusSnapshot } from '@/api/agent-status'
++import { fetchAgentAvailabilitySnapshot } from '@/api/agent-status'
+ import { useAppStore } from './app'
+ 
+ const ACTIVE_PROFILE_STORAGE_KEY = 'hermes_active_profile_name'
+@@ -65,19 +65,16 @@
+   async function fetchHermesProfiles() {
+     loading.value = true
+     try {
+-      const [profilesResult, statusResult] = await Promise.allSettled([
++      // G2（2026-10-10）：改吃无超管闸的 availability 端点（hermesReady 服务端算好，
++      // 不泄漏 path）——普通账号不再触发 /api/agents/status 403 全局权限 toast。
++      const [profilesResult, availResult] = await Promise.allSettled([
+         profilesApi.fetchProfiles(),
+-        fetchAgentStatusSnapshot(),
++        fetchAgentAvailabilitySnapshot(),
+       ])
+       if (profilesResult.status === 'rejected') throw profilesResult.reason
+       profiles.value = profilesResult.value
+-      const hermes = statusResult.status === 'fulfilled'
+-        ? statusResult.value.agents.find(agent => agent.id === 'hermes')
+-        : undefined
+       hermesAvailable.value = Boolean(
+-        hermes?.installed
+-        && hermes.source !== 'not-installed'
+-        && hermes.path,
++        availResult.status === 'fulfilled' && availResult.value.hermesReady,
+       )
+       activeProfile.value = profiles.value.find(profile => profile.active) ?? null
+       clearAllSessionCaches()
+--- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+@@ -86,9 +86,9 @@
+ import { handoffErrorTranslationKey } from './handoff-presentation'
+ import { clearGroupChatRoomDraft } from './group-chat-room-drafts'
+ import {
+-    fetchAgentStatusSnapshot,
++    fetchAgentAvailabilitySnapshot,
+     isAgentStatusAvailable,
+-    type AgentStatusSnapshot,
++    type AgentAvailabilitySnapshot,
+ } from '@/api/agent-status'
+ 
+ const FilesPanel = defineAsyncComponent(async () => (await import('@/components/hermes/chat/FilesPanel.vue')).default)
+@@ -133,7 +133,8 @@
+ const isSavingAgent = ref(false)
+ const isLoadingAgentForm = ref(false)
+ let agentDrawerLoadSequence = 0
+-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
++// G2（2026-10-10）：改吃 availability 端点（无超管闸）——普通账号进群聊不再 403 toast
++const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
+ let agentStatusRequest: Promise<void> | null = null
+ const showRoomSettingsModal = ref(false)
+ const showUserProfileModal = ref(false)
+@@ -282,7 +283,7 @@
+     if (agentStatusRequest) return agentStatusRequest
+     agentStatusRequest = (async () => {
+         try {
+-            agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
++            agentStatusSnapshot.value = await fetchAgentAvailabilitySnapshot()
+         } catch {
+             agentStatusSnapshot.value = null
+         }
