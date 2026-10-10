@@ -15,6 +15,10 @@ export interface SimRunProgress {
   total: number
   doneSteps: string[]
   updatedTs: number
+  /** lite 轮口径（G4 2026-10-10）：harness 写 scope=lite 时透传，横幅显示「lite 轮 x/N」
+   *  而非误导性的 0/26（lite 夹具步不计 total，按执行段计）。 */
+  scope?: 'lite' | 'full'
+  fixturesFrom?: string
 }
 
 export function parseRunProgress(raw: string): SimRunProgress | null {
@@ -27,7 +31,9 @@ export function parseRunProgress(raw: string): SimRunProgress | null {
   const updatedTs = Number(data.updated_ts)
   if (!runId || !Number.isFinite(done) || !Number.isFinite(total) || total <= 0 || !Number.isFinite(updatedTs)) return null
   const doneSteps = Array.isArray(data.done_steps) ? data.done_steps.filter((s: unknown) => typeof s === 'string') : []
-  return { runId, done, total, doneSteps, updatedTs }
+  const scope = data.scope === 'lite' ? 'lite' as const : undefined
+  const fixturesFrom = typeof data.fixtures_from === 'string' && data.fixtures_from ? data.fixtures_from : undefined
+  return { runId, done, total, doneSteps, updatedTs, ...(scope ? { scope } : {}), ...(fixturesFrom ? { fixturesFrom } : {}) }
 }
 
 export function runProgressPath(homeDir = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')): string {

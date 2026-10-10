@@ -264,6 +264,25 @@ export interface AuditLogResult {
 export function fetchUsage(): Promise<UsageReport> {
   return request<UsageReport>('/api/governance/usage')
 }
+
+/** 跨账号板状态分布（G3 2026-10-10）：全部板的分状态计数与 WIP，逐板 fail-soft */
+export interface BoardStatusEntry {
+  slug: string
+  name: string
+  available: boolean
+  total: number
+  statuses: Record<string, number>
+  wip: number
+  updatedAt?: number
+}
+export interface BoardStatusResult {
+  ok: boolean
+  boards: BoardStatusEntry[]
+  fetchedAt: number
+}
+export function fetchBoardStatus(): Promise<BoardStatusResult> {
+  return request<BoardStatusResult>('/api/governance/board-status')
+}
 export function fetchSlo(): Promise<SloReport> {
   return request<SloReport>('/api/governance/slo')
 }
