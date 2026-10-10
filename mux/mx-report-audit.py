@@ -382,6 +382,25 @@ if RUN_ID >= '20261010-v8-run13':
         if _late:
             fails.append(f'V8.4③ 帧晚于所属步落键：{_late[:4]}——键落定后补拍即穿帮（§5.6 采集纪律⑩ 禁补拍）')
 
+# ── A5g：V8.4 ① 图注=画面描述（§5.5 截图红线①，run13 起）──
+# figcaption（剥 shot-kind 角标后）禁两类：纯位序模板（"① 操作前"是位序不是画面）；
+# 步结果式（含 在仓/落键/过闸 等结果词且无任何画面词——"freeze 在仓"是步结论不是画面）。
+# 画面词=可指认的画面落点（面/页/视图/板/窗/列表/面板/看板/房间/灯/画布/台账/报告/IDE/环境/入口/矩阵/收件箱）。
+if RUN_ID >= '20261010-v8-run13':
+    _PIC_W = ('面', '页', '视图', '板', '窗', '列表', '面板', '看板', '房间', '灯', '画布', '台账', '报告', 'IDE', '环境', '入口', '矩阵', '收件箱')
+    _OUT_W = ('在仓', '入仓', '落键', '过闸', '全绿', '核验过', '分齐', '登记完成')
+    _bad_caps = []
+    for _cm in re.finditer(r'<figcaption>(.*?)</figcaption>', rep, re.S):
+        _c = re.sub(r'<span class="shot-kind".*?</span>', '', _cm.group(1), flags=re.S)
+        _c = html.unescape(re.sub(r'<[^>]+>', '', _c)).strip()
+        if re.fullmatch(r'[①②③]?\s*(操作前|操作动作|系统响应)', _c or 'x'):
+            _bad_caps.append(f'「{_c}」纯位序模板')
+        elif _c and any(w in _c for w in _OUT_W) and not any(w in _c for w in _PIC_W):
+            _bad_caps.append(f'「{_c}」步结果式')
+    if _bad_caps:
+        fails.append(f'V8.4① 图注非画面描述：{_bad_caps[:5]}——图注写画面可见内容（哪个页面/哪个区域/状态条读数），'
+                     '步结果不作图注；图注↔画面一致性视觉抽检位（每轮 ≥3 帧）另由报告链收官承担')
+
 # A6 叙事时间锚抽检：st-story 所引 HH:MM 时刻须在 scenario.log 有命中（"02:27/04:27"族守门）
 _scen = EVID / 'scenario.log'
 if _scen.exists():
