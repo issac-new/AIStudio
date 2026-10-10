@@ -13,6 +13,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { CodingAgentId } from '@/api/coding-agents'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
+import { DEFAULT_WIKI_GEN_CONFIG, type WikiGenConfig } from '../utils/wikiPipeline'
 
 const WORKSPACE_KEY = 'hermes_ide_workspace'
 const AGENT_KEY = 'hermes_ide_agent'
@@ -170,6 +171,23 @@ export const useIdeStore = defineStore('ide', () => {
   const activeTaskId = ref<string | null>(null)
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
   const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false })
+  // wiki 深化轮（2026-10-10）：@wiki 消费闭环配套——
+  //   wikiPages = 当前工作区 docs/wiki/ 页面缓存（IdeWikiPane 装载时写入，
+  //   IdeMentionPicker 选 wiki 源时做页名模糊匹配预览；瞬态不持久化）；
+  //   genConfig = 生成配置（语言/图表/页数上限），settings-layers user 层持久化。
+  const wikiPages = ref<Array<{ path: string; name: string }>>([])
+  const genConfig = ref<WikiGenConfig>(loadJson<WikiGenConfig>('ide.wiki.genConfig', DEFAULT_WIKI_GEN_CONFIG))
+
+  function setWikiPages(pages: Array<{ path: string; name: string }>): void {
+    wikiPages.value = pages
+  }
+
+  function setWikiGenConfig(patch: Partial<WikiGenConfig>): void {
+    genConfig.value = { ...genConfig.value, ...patch }
+    try {
+      writeSetting('user', 'ide.wiki.genConfig', genConfig.value)
+    } catch { /* 存储满等异常不阻塞 UI */ }
+  }
 
   function setWorkspace(path: string | null): void {
     workspace.value = path?.trim() ? path.trim() : null
@@ -271,6 +289,10 @@ export const useIdeStore = defineStore('ide', () => {
     activeTaskId,
     floats,
     terminalCwd,
+    wikiPages,
+    genConfig,
+    setWikiPages,
+    setWikiGenConfig,
     setWorkspace,
     setAgentId,
     setDimension,
