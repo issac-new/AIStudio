@@ -1,4 +1,4 @@
-// 集群巡检官守门：五检测器（run11 实录形态夹具）+ 冷却去重 + 巡检环重入保护。
+// 集群巡检官测试：六检测器（run11 实录形态夹具）+ 冷却去重 + 巡检环重入保护。
 import { describe, expect, it } from 'vitest'
 import type { ClusterSnapshot } from '../collectors'
 import { detectAll, detectGateway, detectSessionStall, detectSlotInflation, detectStorm } from '../detectors'
@@ -137,7 +137,7 @@ describe('二期：容量泵 D6 + safe-act', () => {
   })
 })
 
-describe('二期②③：matrix 催办 + destructive 审批联动', () => {
+describe('二期②③：matrix 提醒 + destructive 审批联动', () => {
   // D1 high（网关不可达）+ D4 stalled（fanfan 尾错误态且静默）双异常夹具
   function deadGatewaySnap() {
     return snap({
@@ -145,7 +145,7 @@ describe('二期②③：matrix 催办 + destructive 审批联动', () => {
       profiles: { ok: true, tails: [{ profile: 'fanfan', tail: '... TimeoutError', mtimeMs: 1 }] },
     })
   }
-  it('② NUDGE=on 时 session.stalled 触发催办（mentions 经凭据链由注入桩代验）', async () => {
+  it('② NUDGE=on 时 session.stalled 触发提醒（mentions 经凭据链由注入桩代验）', async () => {
     const { mkdtempSync, mkdirSync, writeFileSync, utimesSync } = require('node:fs')
     const { join } = require('node:path')
     const { tmpdir } = require('node:os')
@@ -165,7 +165,7 @@ describe('二期②③：matrix 催办 + destructive 审批联动', () => {
     process.env.CLUSTER_INSPECTOR_NUDGE_ROOM = '!room:x'
     try {
       await insp.runOnce()
-      expect(nudged).toEqual([['fanfan', expect.stringContaining('卡死')]])  // 注入桩收 a.summary；催办话术在缺省发送体内
+      expect(nudged).toEqual([['fanfan', expect.stringContaining('卡死')]])  // 注入桩收 a.summary；提醒话术在缺省发送体内
     } finally { delete process.env.CLUSTER_INSPECTOR_NUDGE; delete process.env.CLUSTER_INSPECTOR_NUDGE_ROOM }
   })
 

@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process'
 import { hermesHomeDefault } from './collectors'
 import { ensureInspector, type InspectorDeps } from './inspector'
 
-/** kanban 诊断接线（v1 缺口收口）：CLI 桥（kanban-service 同款先例），fail-soft。 */
+/** kanban 诊断接线（v1 缺口补齐）：CLI 桥（kanban-service 同款先例），fail-soft。 */
 function kanbanDiagnosticsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
   return () => new Promise((resolve, reject) => {
     execFile('hermes', ['kanban', 'diagnostics', '--json'], {

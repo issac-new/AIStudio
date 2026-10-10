@@ -145,7 +145,7 @@ export function collectSessions(deps: CollectorDeps = {}): SessionsFace {
   return face
 }
 
-/** ④ profile 日志尾（D4 会话卡死的观测面：尾行内容+mtime；判死逻辑在 detectors） */
+/** ④ profile 日志尾（D4 会话卡死的观测面：尾行内容+mtime；停摆判定逻辑在 detectors） */
 export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
   const face: ProfilesFace = { ok: false, tails: [] }
   const cap = deps.maxProfiles ?? 40

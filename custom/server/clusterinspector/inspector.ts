@@ -27,7 +27,7 @@ export interface InspectorDeps {
   getRunningCards?: () => Promise<Array<Record<string, unknown>>>
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
-  /** safe-act 注入：matrix 催办（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
+  /** safe-act 注入：matrix 跟进提醒（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
   nudge?: (profile: string, summary: string) => Promise<string | undefined>
   /** destructive 注入：审批放行后的网关重启（缺省动态 require autostart.restartGatewayForProfile；测试可stub） */
   restartGateway?: (profile: string) => Promise<unknown>
@@ -74,7 +74,7 @@ export class ClusterInspector {
     }
   }
 
-  /** ②matrix 催办（CLUSTER_INSPECTOR_NUDGE=on + ROOM 配置时）：会话卡死 → @agent 群消息唤醒 */
+  /** ②matrix 跟进提醒（CLUSTER_INSPECTOR_NUDGE=on + ROOM 配置时）：会话卡死 → @agent 群消息唤醒 */
   private async nudgeStalled(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
     if (process.env.CLUSTER_INSPECTOR_NUDGE !== 'on' || !process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted
@@ -85,7 +85,7 @@ export class ClusterInspector {
         const sendEnv = readGatewayMatrixEnv(process.env)          // 发送者凭据（orchestrator/默认）
         const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
         if (!sendEnv || !agentEnv?.userId) return undefined
-        const body = `⏰ 集群巡检催办：${summary}。若仍在处理请继续；若已卡住请收口或回执阻塞原因。`
+        const body = `⏰ 集群巡检提醒：${summary}。若仍在处理请继续；若已卡住请了结当前任务或回执阻塞原因。`
         await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
           { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
           globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)
