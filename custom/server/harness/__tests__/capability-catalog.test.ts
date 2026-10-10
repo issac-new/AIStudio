@@ -162,9 +162,13 @@ describe('收集器：registry-admin（git 假注册表仓）', () => {
     expect(roster.find((r) => r.id === '@b:matrix.test')!.permissionBound).toBe(false) // 末列 '—'
     expect(roster[0].registeredAt).toBeGreaterThan(0)
     expect(roster[0].auditTrail).toMatch(/^git:[0-9a-f]+@docs\/admin\/roster\.md$/)
-    // app-registry/org 缺席：该系仍有 roster 在档 → available 汇总为真（聚合层判断）
+    // app-registry/org 等缺席：该系仍有 roster 在档 → available 汇总为真（聚合层判断）。
+    // 不可用数按 KINDS 全集推导（fixture 只种 roster.md）——此前硬编码 2 在
+    // agent-capabilities/mission-templates 两轮加 kind 后陈化失真（main 实证红，
+    // 2026-10-10 根治：断言随注册表 kind 集自适应）
+    const { REGISTRY_KINDS } = await import('../../governance/registry-admin')
     expect(infos.some((i) => i.available)).toBe(true)
-    expect(infos.filter((i) => !i.available).length).toBe(2)
+    expect(infos.filter((i) => !i.available).length).toBe(Object.keys(REGISTRY_KINDS).length - 1)
   })
 })
 

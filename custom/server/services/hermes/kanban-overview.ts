@@ -147,7 +147,13 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     if (!dbPath || !existsSync(dbPath)) return board === 'default' ? [] : null
     return queryBoardDb(dbPath, db => {
       const tasks: any[] = db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board }))
-      const links = db.prepare('select parent_id, child_id from task_links').all() as Array<{ parent_id: string; child_id: string }>
+      // 链接表读取独立降级：缺表/损坏只丢 parents/children（回 CLI 老路径也无此数据），
+      // 不拖垮整板任务快道（2026-10-10 任务协同图轮实测教训：链接查询失败曾把
+      // 整板打回 CLI 慢道）
+      let links: Array<{ parent_id: string; child_id: string }> = []
+      try {
+        links = db.prepare('select parent_id, child_id from task_links').all() as Array<{ parent_id: string; child_id: string }>
+      } catch { /* 无链接表 → 空链接 */ }
       const parentsOf = new Map<string, string[]>()
       const childrenOf = new Map<string, string[]>()
       for (const l of links) {
