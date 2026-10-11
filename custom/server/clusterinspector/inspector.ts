@@ -77,7 +77,9 @@ export class ClusterInspector {
   /** ②matrix 跟进提醒（CLUSTER_INSPECTOR_NUDGE=on + ROOM 配置时）：会话卡死 → @agent 群消息唤醒 */
   private async nudgeStalled(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
-    if (process.env.CLUSTER_INSPECTOR_NUDGE !== 'on' || !process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted
+    // 2026-10-11 默认开（用户指令；run14 六小时停摆实录：能力在而默认关=形同没有）。
+    // CLUSTER_INSPECTOR_NUDGE=off 显式关；未配 ROOM 时静默跳过（安全缺省）。
+    if (process.env.CLUSTER_INSPECTOR_NUDGE === 'off' || !process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted
     const nudge = this.deps.nudge ?? (async (profile: string, summary: string) => {
       try {
         const { readGatewayMatrixEnv } = require('../matrix/gateway-env')

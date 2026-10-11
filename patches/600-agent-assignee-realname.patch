@@ -1,0 +1,17 @@
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index aaaaaaa.bbbbbbb 100644
+@@ -1101,6 +1101,14 @@
+     assignee = args.get("assignee")
+     _check(assignee, "assignee is required — name the profile that should execute this "
+                      "task (the dispatcher will only spawn tasks with an assignee)")
++    # G2 真伪校验（2026-10-11 产品缺口补齐）：占位值（default/空串/纯符号）能过非空
++    # 校验但无人能领（run14 实锤：三卡烂待办一小时）——拒绝占位值，要求真档案名。
++    import re as _re
++    if not _re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{1,63}", str(assignee)) or str(assignee).lower() in ("default", "none", "null", "todo"):
++        raise ValueError(
++            f"assignee '{assignee}' is a placeholder, not a real profile name — "
++            "name the executing profile (placeholder cards can never be claimed)"
++        )
+     # Workspace sharing is always explicit: omitted fields mean a fresh scratch workspace
+     # even for a dispatcher-spawned creator (reusing the parent's path would let a child
+     # mutate review evidence or race its checkout). Project identity is the one safe thing

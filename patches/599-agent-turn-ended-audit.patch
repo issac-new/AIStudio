@@ -1,0 +1,16 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index aaaaaaa.bbbbbbb 100644
+@@ -1758,6 +1758,13 @@
+                 prelude=prelude,
+             )
+         finally:
++            # G4 回合结束遥测（2026-10-11 产品缺口补齐）：回合结束即入审计台账——
++            # 零交付收场（末轮短句无工具调用）由此可观测（run14 六小时停摆的可观测根因）。
++            try:
++                from agent.tool_executor import _tool_audit_append as _ta
++                _ta('turn.ended', False, 0.0)
++            except Exception:
++                pass
+             end_voice_turn_route(agent)
+     result = export_current_turn_boundary(agent, result, user_message)
+     if isinstance(result, dict):

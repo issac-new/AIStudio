@@ -563,3 +563,7 @@
 
 # 597 技能治理域挂载（swarm-yuan 生成器产品面+角色映射+教训库；SkillgovSection 于 TasksView accounts 页签）
 597-server-skillgov-routes.patch
+
+# 597/598 agent 运行时（mx_apply_agent_patches 通道，同 593-596）——turn ended 审计+建卡占位拒绝
+599-agent-turn-ended-audit.patch
+600-agent-assignee-realname.patch
