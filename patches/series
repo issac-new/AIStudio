@@ -599,3 +599,7 @@
 # 配套 test_kanban_guardrail_contract 守门：connect 引用的 _kb 符号必须可解析 +
 # fail-closed 行为（裸连接 prepare 期即拒）。
 607-agent-kanban-guardrail-absorb.patch
+# 三目标轮⑭：606 runtime-verify 的 miniprogram-automator 惰性 require 在 esbuild bundle 期
+# 被静态解析拒绝（未装 SDK 即构建失败）。按 node-pty/sharp 先例外置——运行期由探针
+# require.resolve 判在位性，缺装走 CAPABILITY_ABSENT 降级（设计语义不变）。
+608-server-build-external-miniprogram.patch

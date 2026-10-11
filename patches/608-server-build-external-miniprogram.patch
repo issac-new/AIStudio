@@ -1,0 +1,14 @@
+diff --git a/scripts/build-server.mjs b/scripts/build-server.mjs
+--- a/scripts/build-server.mjs
++++ b/scripts/build-server.mjs
+@@ -37,7 +37,9 @@
+   target: 'node23',
+   format: 'cjs',
+   outfile: resolve(serverOutDir, 'index.js'),
+-  external: ['node-pty', 'node:sqlite', 'sharp', 'socket.io'],
++  // miniprogram-automator（patch 608）：runtime-verify 的可选 SDK，未装时探针降级
++  // automatorSdk:false、verify 报 CAPABILITY_ABSENT——bundle 期外置，运行期解析。
++  external: ['node-pty', 'node:sqlite', 'sharp', 'socket.io', 'miniprogram-automator'],
+   define: {
+     __APP_VERSION__: JSON.stringify(version),
+   },
