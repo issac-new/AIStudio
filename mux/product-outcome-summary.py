@@ -130,7 +130,7 @@ def main():
     # ① 总数主源=中央仓测试报告缺陷清单行（| DEF-X | 表行实读，结构化真值）；
     # ② issues.log 的 ^ISSUE|defect 前缀兜底（defect-cards-assignee 类字段流转单不是
     #    缺陷本体——旧正则 ^DISP|defect 把它的"已修"误计成 defects_fixed=1）；
-    # ③ 已修数=测试报告状态列（已修/VERIFIED/已验证），状态定格在报告落库时点，
+    # ③ 已修数=测试报告状态列（已修/VERIFIED/已验证），状态定格在报告入仓时点，
     #    修复链闭合的终局证据以 integration tip 复验判词为准（见 defects_note）。
     treport = git(repo, 'show', f'origin/integration/{a.rfd}:docs/test/{a.rfd}-test-report.md') \
         or git(repo, 'show', f'origin/main:docs/test/{a.rfd}-test-report.md')
@@ -148,7 +148,7 @@ def main():
         + (f' + integration@{integration_tip}' if integration_tip else '') + '）',
         '# 口径：n_tests/n_pass 扫 integration 分支 docs/evidence/*-testlog.txt 输出行累计'
         '（含修复过程历史输出，非仅终态；n_fail=差值即历史失败快照计入）；'
-        '缺陷计数主源=测试报告缺陷清单表行，defects_fixed=其状态列（定格在报告落库时点）',
+        '缺陷计数主源=测试报告缺陷清单表行，defects_fixed=其状态列（定格在报告入仓时点）',
         f'n_tests={ut_total}',
         f'n_pass={ut_green}',
         f'n_fail={ut_total - ut_green}',
@@ -158,7 +158,7 @@ def main():
         f'uat_fail={ac_dist["不通过"]}',
         f'defects_total={defects}',
         f'defects_fixed={defects_fixed}',
-        'defects_note=状态列定格在测试报告落库时点（拆派态）；修复终局以 integration tip '
+        'defects_note=状态列定格在测试报告入仓时点（拆开派单时的状态）；修复终局以 integration tip '
         '复验判词为准（TEST-INT testlog 全绿即修复链闭合）——两时点真值并存，禁只看其一',
         'doc_chain=见报告交付物全景矩阵（§2.7 全链实查）',
         'branches=见分支落地时间线（步 18）',

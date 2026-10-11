@@ -1189,7 +1189,7 @@ STEPS_META_RUN13 = {
 STEPS_META_RUN14 = {
     1: dict(keys=['smoke_done'],
             actor='human', actorText='人 · admin 管理员',
-            narrative='账号与基础设施就绪：mx-clean 三旗标全清（中央仓清空提交 bd887da @ 2026-10-10 13:44:54，时刻以 commit 时间戳为准；clean 发生在驱动起跑前故 scenario.log 无对应行——run14 复盘 A7 修正手编时刻）后 0→1 重建；24 个账号的登录凭证逐个验证通过，单网关 :8801+单 studio :8802 双健康探测通过。14:15:55 开跑（START_STEP=smoke 全量启动，监督器托底）。', imgs=[('smoke_done-op1-before','账户管理页·30 账号在列（账号分配承载面）·前','ui'), ('smoke_done-op1-after','账户管理页·账号清单与角色列全量·后','ui')]),
+            narrative='账号与基础设施就绪：mx-clean 三旗标全清（中央仓清空提交 bd887da @ 2026-10-10 13:44:54，时刻以 commit 时间戳为准；clean 发生在驱动起跑前故 scenario.log 无对应行——run14 复盘 A7 修正手编时刻）后 0→1 重建；24 个账号的登录凭证逐个验证通过，单网关 :8801+单 studio :8802 双健康探测通过。14:15:55 开跑（START_STEP=smoke 全量启动，监督器托底）。', imgs=[('smoke_done-op1-before','账户管理页·30 账号在列（账号就在这里分配）·前','ui'), ('smoke_done-op1-after','账户管理页·账号清单与角色列全量·后','ui')]),
     2: dict(keys=['smoke_done'],
             actor='ai', actorText='AI · 装配脚本',
             narrative='本步无对应产品界面：每用户四件套装配（账号/配置/看板/团队/记忆库）为后台装配动作，无独立操作界面（§2.5 无步 2 界面承载承诺；装配真值=profiles 清单+板装载日志 14:16:36）。本步无三源锚（声明态）——真值锚=装配实物（hermes/kanban/boards/ 板库 26 板在位+board.json 团队围栏可反查）。实测依据：profiles 清单+每板 team 围栏装载 ✓（14:16:36）。', imgs=[]),
@@ -1240,7 +1240,7 @@ STEPS_META_RUN14 = {
             narrative='排期：docs/plan/RFD-001-schedule.md 入仓（任务×时间窗口×依赖；测试=开发×0.3 独立成项；整体+15% 缓冲）+父子卡+逐条派发。实测依据：收尾链按 scenario.log 回填。', imgs=[('plan_done-op1-before','fanfan 看板·排期父卡挂接·前','ui'), ('plan_done-op1-after','排期时间窗口与依赖列·后','ui')]),
     18: dict(keys=['devimpl_done'],
             actor='ai', actorText='AI · 四开发 agent',
-            narrative='编码（G3）六路并行：DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX/DEV-CHALI 同刻即派（提速②），边界纪律条款随词注入；并行度段界锚行实测（V8.5 §5.5 修订——defect 段入口「── defect」锚，run13 复盘 F12 接线首验）；GRAPH_ENGINE=on 图执行调度全程在位。实测依据：收尾链按 scenario.log 回填（含并行度实测行）。', imgs=[('devimpl_done-op1-before','IDE 画布·任务简报抽屉（?task= 深链）·前','ui'), ('devimpl_done-op1-after','简报区块与交互编码入口·后','ui')]),
+            narrative='编码（G3）六路并行：DEV-PAYCORE-C/S/N+DEV-MP+DEV-CHWX/DEV-CHALI 同刻即派（提速②），边界纪律条款随词注入；并行度段界锚行实测（V8.5 §5.5 修订——defect 段入口「── defect」锚，run13 复盘 F12 接线首验）；GRAPH_ENGINE=on 图执行调度全程在位。实测依据：收尾链按 scenario.log 回填（含并行度实测行）。', imgs=[('devimpl_done-op1-before','IDE 画布·任务简报抽屉（?task= 直达链接）·前','ui'), ('devimpl_done-op1-after','简报区块与交互编码入口·后','ui')]),
     19: dict(keys=['defect_done','testpass_done'],
             actor='ai', actorText='AI · 测试工程师A/测试工程师B agent',
             narrative='独立测试（G4）：TEST-BE（测试工程师A）/TEST-FE（测试工程师B）用例前移预备即跑；缺陷报→修→验全关；测试报告入 integration 分支+commit 回填关联卡。测试者≠写码者。实测依据：收尾链按 scenario.log 回填。', imgs=[('testpass_done-op1-before','qi 看板·TEST-BE/TEST-FE 测试卡·前','ui'), ('testpass_done-op1-after','测试卡结论与 commit 回填·后','ui')]),
@@ -1593,6 +1593,72 @@ for n in range(1, 27):
     gate = ps.get('gate', '')
     meta = STEPS_META[n]
     STEPS.append((n, title, gate, meta))
+
+# ── 质量判据具体化（2026-10-11 用户指令：不只列名字——具体标准+人话+交付物证明优先）──
+# §5.2 逐步验收表 / §5.3 关卡判据表自方案正本解析（单一事实源，不手抄第二份）。
+def _parse_tbl(sec_re, row_re):
+    sec = re.search(sec_re, plan_text, re.S)
+    if not sec:
+        return {}
+    return {k: v for k, v in ((int(a) if a.isdigit() else a, (b.strip(), c.strip()))
+            for a, b, c in re.findall(row_re, sec.group(0), re.M)) if k}
+
+PLAN_52 = _parse_tbl(r'### 5\.2 .*?### 5\.3', r'^\|\s*(\d{1,2})\s*\|([^|]+)\|([^|]+)\|')
+PLAN_53 = _parse_tbl(r'### 5\.3 .*?### 5\.4', r'^\|\s*(G\d)[^|]*\|([^|]+)\|([^|]+)\|')
+_GATE_STATE_KEY = {7: 'g1_frozen', 15: 'g2_arch_pass', 18: 'g3_code_pass',
+                   19: 'g4_pass', 20: 'g5_ready', 24: 'retro_done'}
+
+def _split_items(cell):
+    """合格线单元格拆条：保留 ①②③ 编号项整条；其余按 ；与。拆。"""
+    cell = cell.strip().rstrip('。')
+    # 序号标记与其后内容保持一体：在标记前切，不在标记后切
+    parts = re.split(r'(?<=[；。])|(?=[①②③④⑤⑥⑦⑧⑨])', cell)
+    return [x.strip(' ；。') for x in parts if x.strip(' ；。')]
+
+def _fmt_ts(v):
+    try:
+        import datetime as _dt
+        return _dt.datetime.fromtimestamp(int(v)).strftime('%m-%d %H:%M')
+    except (ValueError, OSError, TypeError):
+        return str(v)[:16]
+
+def criteria_block(n):
+    """② 段合格线块：标准全文（人话化）+ 判定证据行（交付物实物优先，关卡判词其次）。"""
+    row52 = PLAN_52.get(n)
+    if not row52:
+        return ''
+    zhun, line = row52
+    items = _split_items(line)
+    lis = ''.join(f'<li>{gloss_first_use(H.escape(x))}</li>' for x in items) or '<li>（方案未单列）</li>'
+    # 判定证据（诚实口径：不逐条造判定——证据=实物核对计数+关卡判词时间戳）
+    ev = []
+    ok, total = ART_OK.get(n, (None, None))
+    if total:
+        ev.append(f'交付物实物核对 {ok}/{total} 件模版符合（逐件核对见下方实物区）')
+    elif _no_artifact_note(n):
+        ev.append('本步无文件域工件（产出=卡/消息/事件，见①段记录）')
+    g = GATE_BY_STEP.get(n)
+    if g:
+        k = _GATE_STATE_KEY.get(n, '')
+        if k and state.get(k):
+            ev.append(f'{g} 判词通过（通过标记写入 {_fmt_ts(state[k])}）')
+        else:
+            ev.append(f'{g} 判词见六道关卡仪表盘（本步无独立通过标记键）')
+    gate_html = ''
+    if g and PLAN_53.get(g):
+        gitems = _split_items(PLAN_53[g][0])
+        glis = ''.join(f'<li>{gloss_first_use(H.escape(x))}</li>' for x in gitems)
+        gate_html = (f'<div class="st-crit-g"><b>{g} 关卡判据（{g} 不过不放行）：</b>'
+                     f'<ul>{glis}</ul></div>')
+    ev_html = (' · '.join(ev)) or '判定证据见下方实物区'
+    return (f'<div class="st-crit"><div class="st-crit-hd">合格线——做成什么样算合格'
+            f'<span class="st-crit-src">（方案 §5.2 全文，说人话展开）</span></div>'
+            f'<div class="st-crit-zhun">这步交差要交出：<b>{gloss_first_use(H.escape(zhun))}</b></div>'
+            f'<ul>{lis}</ul>{gate_html}'
+            f'<div class="st-crit-ev">判定证据：{ev_html}</div></div>')
+
+# 判据块的实物核对计数来源：artifact_block 内逐件核对时记账
+ART_OK = {}
 
 # ── 四段渲染辅助（V8.3：①②与方案两段式步条同构；③④自台账/工程档案实测统计）──
 def _known_html(txt):
@@ -2414,6 +2480,8 @@ def artifact_block(n: int) -> str:
         content = ('<pre class="art-code">' + H.escape(body) + '</pre>') if rel.endswith('.txt') \
             else art_md_to_html(body)
         ok_all, chk = _art_checks_html(raw, checks)  # 核对跑全文（不受展示截断影响）
+        _ok_n, _ok_t = ART_OK.get(n, (0, 0))
+        ART_OK[n] = (_ok_n + (1 if ok_all else 0), _ok_t + 1)
         trunc_note = (f'<div class="art-trunc">已截断（{len(raw)}→{ART_TRUNC} 字符），'
                       f'全文见中央仓 {H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</div>') if truncated else ''
         pieces.append(
@@ -2564,11 +2632,22 @@ try:
         _po_num_tbl = ('<table class="st-issues-tbl"><thead><tr><th>成效指标</th><th>实测值</th></tr></thead>'
                        f'<tbody>{_po_rows}</tbody></table>') if _po_rows else ''
         # 系列帧版面=1/4 宽四列缩略网格（2026-10-11 用户排版指令）；点击全屏放大沿用 .shot 缩放交互
+        # 帧功能标注（2026-10-11 用户红线：图片必须和功能描述对得上）——已知帧中文标注，
+        # 未知帧降级用文件名并标「未标注」供审计点名（A11 断言）
+        _PO_SHOT_LABELS = {
+            'cashier-devtools-p1-order.png': '微信开发者工具·收银台首页（下单成功，真数据）',
+            'cashier-devtools-p2-paid.png': '微信开发者工具·支付成功（含渠道流水号）',
+            'cashier-devtools-p2-fail-retry.png': '微信开发者工具·支付失败（可重试）',
+            'cashier-devtools-p2-closed.png': '微信开发者工具·订单超时关闭（不可重试）',
+            'cashier-devtools-alipay-p1-order.png': '支付宝开发者工具·收银台首页（下单成功，真数据）',
+            'cashier-devtools-alipay-p2-paid.png': '支付宝开发者工具·支付成功',
+            'cashier-p3-idempotent.png': '幂等实证（重复提交返回同一单号）',
+        }
         _po_img_html = ('<div class="po-shots">' + ''.join(
             f'<label class="shot"><input type="checkbox">'
-            f'<img src="product-outcome/{H.escape(n)}" alt="产品功能实证 {H.escape(n)}" loading="lazy">'
-            f'<figcaption><span class="shot-kind">功能实证</span>{H.escape(n.rsplit(".", 1)[0])}</figcaption></label>'
-            for n in _po_imgs) + '</div>')
+            f'<img src="product-outcome/{H.escape(fn)}" alt="{H.escape(_PO_SHOT_LABELS.get(fn, "功能实证（未标注）"))}" loading="lazy">'
+            f'<figcaption><span class="shot-kind">功能实证</span>{H.escape(_PO_SHOT_LABELS.get(fn, fn.rsplit(".", 1)[0] + "（未标注）"))}</figcaption></label>'
+            for fn in _po_imgs) + '</div>')
         # 人话导读（2026-10-11 用户指令：报告说人话讲重点，日志默认折叠+配导读）
         import re as _re_idem
         _idem_suites = _re_idem.findall(r'Test Files\s+(\d+) passed', _po_idem)
@@ -3096,8 +3175,9 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     <div class="st-shots">{imgs_html}</div>
   </div>
   <div class="st-sec"><div class="st-sec-hd">② 交付物及质量判据</div>
+    {criteria_block(n)}
     {art_html}
-    <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>{gate_label}</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
+    <details class="st-gate"><summary>方案步条原文（一行摘要，反查用）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   </div>
   {(_sec34_empty(n) if _sec34_is_empty(n) else f'''<div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
     {_known_html(plan_steps.get(n, {}).get('known', ''))}
@@ -3415,6 +3495,15 @@ label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
 label.shot img{{width:100%;height:auto;max-height:none;object-position:top;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 .cp-shot img{{width:100%;height:auto;max-height:none;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 /* 产品成效系列帧：1/4 宽四列缩略网格（自然比例不裁剪；点击全屏放大沿用 .shot 交互） */
+.st-crit{{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:4px 0 10px;background:var(--surface)}}
+.st-crit-hd{{font-weight:700;font-size:13.5px;margin-bottom:6px}}
+.st-crit-src{{font-weight:400;font-size:11px;color:var(--muted);margin-left:6px}}
+.st-crit-zhun{{font-size:13px;margin-bottom:6px}}
+.st-crit ul{{margin:4px 0 6px 18px;padding:0}}
+.st-crit li{{font-size:13px;line-height:1.7;margin:3px 0}}
+.st-crit-g{{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);font-size:13px}}
+.st-crit-g ul{{margin:4px 0 0 18px}}
+.st-crit-ev{{margin-top:8px;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px}}
 .po-plain{{font-size:13.5px;line-height:1.7;margin:6px 0 10px;color:var(--ink)}}
 .hero-terms{{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}}
 .po-shots{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}}
