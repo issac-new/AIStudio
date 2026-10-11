@@ -1412,7 +1412,36 @@ _DOMAINS_RUN10 = {
         '实测：issues 18 行在案 · DISP 20 行（含监控程序勘误）· 审计 FAIL 15 项全对应记入问题清单',
         'cp-g5,cp-g6'),
 }
-_DOMAINS_BY_RUN = {'20261010-v8-run13': _DOMAINS_RUN13, '20261009-v8-run12': _DOMAINS_RUN12, '20261007-v8-run11': _DOMAINS_RUN11, '20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
+
+# ── run14 六域按轮注册（V8.5 首个全量轮；收官链预写，L3/L5 时间锚以 scenario.log 实测为准）──
+_DOMAINS_RUN14 = {
+    0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'warn',
+        '全量轮 26 步全新环境（mx-clean 20261010-134331 三旗标 0→1，中央仓清空提交 bd887da）：需求→分析→设计→编码→测试→发布→验收全链当轮重做，无夹具沿用。已知中断账如实：10-10 夜 G5 两轮退回熔断+重启循环 85 圈（今日根修三件）、模型通道 429 会话风暴（27 会话，队列 20min 过期自愈）、中央仓分叉 push 拒（重置+完备性补推 583a69b）——全部记单在案。AC 判词以 UAT 实测为准。',
+        '实测：G1 10-10 14:19 冻结（AC-1~7）· 开发支 6/6 · 集成修复链三缺陷全闭（63/63 @1e32d79）· UAT 判词见第 3/4 章',
+        'cp-g1,cp-g6'),
+    1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass',
+        '成立（当轮修复链实证）：DEF-BE-003 pay-core 契约恢复（6fc6182）+DEF-BE-004 渠道台架依赖恢复（59285aa）+DEF-BE-005 用例失配修复，三修复合入 integration/RFD-001；集成复验 63/63 全绿 @1e32d79（tsc 0 错，testlog docs/evidence/TEST-INT-testlog.txt 入库）。',
+        '实测：integration tip 1e32d79 · TEST-INT 63/63 · tsc 0 错 · testlog 在仓',
+        'cp-g3,cp-g4'),
+    2: ('L2', '系统一致性', 'API，Schema 与实际数据是否一致？', 'pass',
+        '一致（当轮工件链全在 origin/main）：需求书/冻结/四系分 AN-*/概设 v1.0/排期 v1.0 均当轮提交可反查；测试报告在 origin/integration；完备性检查补推落位（583a69b）；金额分 int64/snake_case 契约沿用。',
+        '实测：origin/main 工件链齐（264c487→3da8dc7）· 完备性检查 583a69b · RELEASE.md 替换见 R4 注记',
+        'cp-g1,cp-g5'),
+    3: ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'warn',
+        '大体符合但两段中断计入：G5 首评真 FAIL（六件缺项）→补齐链因复测停滞+通道 429 拖延约 13 小时→证据变化复位后判词复用过闸；UAT 判词三态以当轮实测呈现（含已知风险项 AC-1/5/6 的复测结果）。',
+        '实测全锚：开跑 10-10 14:15 · G1 14:19 · G2 16:44 · G3 19:36 · G4 21:26 · G5 过闸 10-11 11:41（判词复用）· UAT/治理/报告锚见时间线',
+        'cp-g2,cp-gate,cp-uat'),
+    4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'warn',
+        '可接受：GRAPH_ENGINE=on 全程在位零调度分叉；渠道本地 mock/密钥不出服务端沿用；本轮新增事故面（监督器盲重启/熔断签名窄/审批臂内嵌驱动/派单记账 pipefail）全部当日根治并入库（4be3a3b/32ff696/13b5739/f909780）——推演工程自身的纠错飞轮实证。安全探针未复测（如实）。',
+        '实测：GRAPH_ENGINE=on 全程 · 四根修提交 · 六域体检本轮未跑（声明源=R11 兜底）',
+        'cp-gate,cp-g3'),
+    5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn',
+        '可追责：问题单全记账（含今日 restart-loop-spam/429 风暴/r18 缺口四单等事故账，DISP 三态收尾链清账）；R5 HumanGate 由导演批准留痕（approved.events）；REL 三卡 11:41 登记（t_a6033745/t_ee8d1d35/t_7f6c3809）；过度交付守卫零 main 污染。',
+        '实测：REL 三卡在板 · approved.events 留痕 · 台账 DISP 全键覆盖（收官链终值）',
+        'cp-g5,cp-g6'),
+}
+
+_DOMAINS_BY_RUN = {'20261010-v8-run14': _DOMAINS_RUN14, '20261010-v8-run13': _DOMAINS_RUN13, '20261009-v8-run12': _DOMAINS_RUN12, '20261007-v8-run11': _DOMAINS_RUN11, '20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
 if RUN_ID in _DOMAINS_BY_RUN:
     DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
 
