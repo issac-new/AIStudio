@@ -33,6 +33,7 @@ const MCH = 'MCH001'
 const env = pcEnv.buildEnv()
 // id→（merchant/subject/invoke_params）登记表：GET 按 id 查询时补 merchant_id 与富化字段
 const reg = new Map<string, { merchant_id: string; subject: string; invoke_params: unknown }>()
+const regByOut = new Map<string, { merchant_id: string; subject: string }>()  // out_trade_no → 富化信息（P1 查单入参形态）
 
 async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = []
@@ -81,6 +82,7 @@ createServer(async (req, res) => {
         payer_open_id: b.channel_hint === 'ALIPAY' ? undefined : (b.payer_open_id || 'oDemoCashierPreview0001'),
       })
       reg.set(r.pay_order_id, { merchant_id: b.merchant_id, subject: b.subject, invoke_params: r.invoke_params })
+      regByOut.set(b.out_trade_no, { merchant_id: b.merchant_id, subject: b.subject })
       return json(res, 200, ok({
         ...r, subject: b.subject, merchant_name: '示例商户', available_channels: ['WECHAT', 'ALIPAY'],
       }))
@@ -90,16 +92,17 @@ createServer(async (req, res) => {
       const id = decodeURIComponent(gById[1])
       const info = reg.get(id)
       const r = await env.svc.queryPaymentOrder({ merchant_id: info?.merchant_id || MCH, pay_order_id: id })
-      return json(res, 200, ok({ ...r, subject: info?.subject || '', merchant_name: '示例商户' }))
+      return json(res, 200, ok({ ...r, subject: info?.subject || '', merchant_name: '示例商户', available_channels: ['WECHAT', 'ALIPAY'] }))
     }
     const gByKey = p === '/bff/cashier/v1/orders' && req.method === 'GET'
     if (gByKey) {
+      const out = u.searchParams.get('out_trade_no') || ''
       const r = await env.svc.queryPaymentOrder({
         merchant_id: u.searchParams.get('merchant_id') || MCH,
-        out_trade_no: u.searchParams.get('out_trade_no') || undefined,
+        out_trade_no: out || undefined,
       })
-      const info = [...reg.values()].find(x => x.subject !== undefined) // 富化字段尽力而为
-      return json(res, 200, ok({ ...r, subject: info?.subject || '', merchant_name: '示例商户' }))
+      const info = regByOut.get(out)
+      return json(res, 200, ok({ ...r, subject: info?.subject || '', merchant_name: '示例商户', available_channels: ['WECHAT', 'ALIPAY'] }))
     }
     const inv = /^\/bff\/cashier\/v1\/orders\/([^/]+)\/invoke-params$/.exec(p)
     if (inv && req.method === 'POST') {
