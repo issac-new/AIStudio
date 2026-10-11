@@ -583,6 +583,18 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   fi
   # 终态复核（方案纪律 8：等待窗口是等待上限，不是判词有效期）——窗满再判一次
   if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
+  # 宽限等待（run15 根治「窗严物迟」：AN-MP 实测迟到 12min 落仓，驱动却按窗 ✗ 触发
+  # 回退重派=重复劳动）：repo_has 型产物常在超时点后数分钟内落仓——宽限期内继续复查，
+  # 落仓即 ✓（标注宽限期命中，诚实记录迟达）；宽限仍无物才 ✗。MX_ARTIFACT_GRACE=0
+  # 关闭（回旧语义）。仅 repo_has 型享受宽限（闸门判词等待不走此路径）。
+  if [[ "$1" = "repo_has" && "${MX_ARTIFACT_GRACE:-900}" -gt 0 ]]; then
+    local _gd=$(( $(date +%s) + ${MX_ARTIFACT_GRACE:-900} ))
+    while (( $(date +%s) < _gd )); do
+      [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（超时后宽限期落仓，迟达如实记）"; return 0; fi
+      sleep "$MX_POLL_IVAL"
+    done
+  fi
   note "[真值] $desc ✗（${timeout}s 超时）"
   return 1
 }
@@ -1084,6 +1096,10 @@ mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=
 mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
   # 单一事实源：判词语义只在 mx_text_gate_verdict（结构锚定）；本函数只按发件人/
   # 时刻选消息并逐条取判词，末判词赢（时间序最后一条）。
+  # 深翻页（run15 根治判词分页盲区）：原 mx_messages 固定 200 条，审批/回执噪音下
+  # 只回溯约 50 分钟——since 锚早于该窗时旧判词被挤出页外=「判词存在但扫描不见」，
+  # 等待环对已有判词失明（run15 04:08 FAIL 判词 05:0x 实测页外）。改用
+  # mx_messages_deep 翻页直抵 since 时刻（页上限 8×500，翻到即停——常规 1-2 页）。
   local room="$1" sender="$2" gate="$3" since="${4:-0}" last="" ts b64 body v
   while read -r ts b64; do
     [[ "$ts" =~ ^[0-9]+$ ]] || continue
@@ -1091,7 +1107,7 @@ mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → std
     body=$(printf '%s' "$b64" | { base64 -d 2>/dev/null || base64 -D 2>/dev/null || true; })
     v=$(mx_text_gate_verdict "$gate" "$body")
     [[ -n "$v" ]] && last="$v"
-  done < <(mx_messages "$(load_token fanfan)" "$room" 200 2>/dev/null | jq -r --arg s "$sender" '
+  done < <(mx_messages_deep "$(load_token fanfan)" "$room" $(( since / 1000 )) 8 2>/dev/null | jq -r --arg s "$sender" '
     [.[] | select(.sender == $s) | [(.origin_server_ts // 0), ((.content.body // "") | @base64)]]
     | sort_by(.[0]) | .[] | @tsv' 2>/dev/null || true)
   echo "$last"

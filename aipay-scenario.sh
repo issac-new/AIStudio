@@ -721,7 +721,12 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   # ── 涉敏需求安全评审卡前置（run15 前置 P3-7①，审计 B 案：安全合规最薄的强制面）──
   # freeze 涉敏段非「无/否」时，G2 放行前须有 secops 安全评审卡+结论行——缺卡即拦，
   # 补齐后复核放行（security_review_done 键幂等）。非涉敏轮零影响（键直接落 1）。
-  SEC_TS=$(( $(date +%s) * 1000 ))   # 顶层块非函数——普通赋值（bash 顶层 local 运行时报错）
+  # 幂等时间锚（run15 根治「重启白等 40min」）：锚随 state 持久化——重放沿用派发时刻，
+  # 旧判词对重放可见（原实现每轮重置 TS，旧 FAIL 判词变不可见且卡已存在不重派，
+  # 驱动干等整窗等一个不会来的「新」结论，40min 一循环；末判词赢语义见
+  # mx_room_gate_verdict，复审 PASS 落房即翻正）
+  SEC_TS=$(sget security_anchor_ts)
+  if [[ -z "$SEC_TS" ]]; then SEC_TS=$(( $(date +%s) * 1000 )); sset security_anchor_ts "$SEC_TS"; fi
   if [[ -z "$(sget security_review_done)" ]]; then
     _sens=$(git -C "$DIRECTOR_CLONE" show "origin/main:docs/requirements/${RFD_ID}.freeze.md" 2>/dev/null | grep -E '涉敏' | head -1)
     if printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)'; then
@@ -740,8 +745,21 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
           kanban_walk_done secops "$SGID"; sset security_review_done 1
           note "[安全] 涉敏安全评审通过（secops 板 ${SGID} → done）——G2 放行前置满足"
         else
-          echo "ISSUE|security-review-fail|secops-agent|${RFD_ID} 涉敏安全评审 FAIL（缺项见评审卡），G2 不放行" >> "$EVID_DIR/issues.log"
-          fail "${RFD_ID} 涉敏安全评审 FAIL——缺项补齐并复审 PASS 后 G2 方可放行（P3-7① 强制面）"
+          # FAIL→复审改判等待环（run15 根治）：原实现 FAIL 即 fail 退出，靠监督器 40min
+          # 一轮的重启循环等复审——改判词到达前驱动空转。改：FAIL 记单后原地等待末判词
+          # 翻 PASS（派修/复审由组织面推进，run15 04:11 实证自组织已派 chen 修复）；
+          # 复审窗口仍满未翻正才 fail。重放进入本分支零重复记单（security_fail_logged 幂等键）。
+          if [[ "$(sget security_fail_logged)" != "1" ]]; then
+            echo "ISSUE|security-review-fail|secops-agent|${RFD_ID} 涉敏安全评审 FAIL（缺项见评审卡），进入复审改判等待环（组织面派修→复审 PASS 即放行）" >> "$EVID_DIR/issues.log"
+            sset security_fail_logged 1
+          fi
+          note "[安全] 涉敏评审 FAIL 已在案——进入复审改判等待（等末判词翻 PASS）"
+          if wait_truth "涉敏安全复审改判 PASS（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
+            kanban_walk_done secops "$SGID"; sset security_review_done 1
+            note "[安全] 涉敏安全复审改判 PASS——G2 放行前置满足（fail→pass 全程留痕）"
+          else
+            fail "${RFD_ID} 涉敏安全评审 FAIL 且复审窗口内未翻正——G2 不放行（P3-7① 强制面）"
+          fi
         fi
       else
         echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_GATE_WAIT:-2400}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
