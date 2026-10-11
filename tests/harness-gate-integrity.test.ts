@@ -1349,7 +1349,8 @@ _mx_sig1=$(sget g5_trip_sig)
 echo "[mux] [fanfan] 派发：G5 发布准出评审补齐后重报" >> "$EVID_DIR/scenario.log"
 _mx_rc=0; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || _mx_rc=$?
 echo "sig=$_mx_sig1 rounds=$(sget g5_fail_rounds) rc=$_mx_rc"`, root)
-    const m = out.trim().match(/sig=(\d+) rounds=(\d+) rc=(\d+)/)
+    // 签名自 13b5739 全口径化为复合格式（c:itip:x）——正则取非空白串，不锁数字形态
+    const m = out.trim().match(/sig=(\S+) rounds=(\d+) rc=(\d+)/)
     expect(m).not.toBeNull()
     expect(Number(m![2])).toBe(0)   // fail_rounds 复位
     expect(m![3]).toBe('0')          // check 放行

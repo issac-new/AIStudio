@@ -28,6 +28,8 @@ fi
 # 方案正本与 TS 层读「已提交内容」（git show main:path）——主树工作副本可能承载并行
 # 会话的在途草稿（run14 实锤：16:0x 他人未提交方案稿带 4 处 HARD 把全仓守门拦红）。
 # 门禁语义=「HARD=0 才提交」：查提交态，工作副本与提交态不一致时 WARN 提示作者提交前重跑。
+OV="/Users/cuishi/lab/ncwk/overlay"
+[ -d "$OV/custom/server/report" ] || OV="/Volumes/nvme2230/lab/ncwk/overlay"
 _ov_committed() { # <repo> <path> → 临时文件路径（已提交内容），失败回退工作副本
   git -C "$1" show "main:$2" > "$TMP_PLAN_DIR/$(basename "$2")" 2>/dev/null && \
     { [ "$1" != "$OV" ] || ! cmp -s "$TMP_PLAN_DIR/$(basename "$2")" "$1/$2" && \
@@ -49,8 +51,6 @@ rc=$?
 # 产品 TS 报告层（overlay custom/server/report/——REST 接线的语义正本）：主树缺席时
 # 镜像树兜底；两层都缺席（独立克隆跑守门）则跳过并 WARN，不 fail-closed（python 五
 # 文件+方案才是推演链路本体，TS 层缺席不阻断推演侧守门）。同样只查提交态。
-OV="/Users/cuishi/lab/ncwk/overlay"
-[ -d "$OV/custom/server/report" ] || OV="/Volumes/nvme2230/lab/ncwk/overlay"
 if [ -d "$OV/custom/server/report" ]; then
   TS_DIR="$TMP_PLAN_DIR/ts"; mkdir -p "$TS_DIR"
   for f in "$OV"/custom/server/report/*.ts "$OV"/custom/server/report/__tests__/*.ts; do

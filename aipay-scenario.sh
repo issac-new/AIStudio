@@ -91,6 +91,26 @@ if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$STA
   sset preflight_ok 1
 fi
 
+# ── 采集链起跑预检（run14 复盘 A1/B4 根修，§4.3-25a 实时帧红线的门前守卫）──
+# run14 实锤：playwright 依赖被带名 no-save 安装清件，capture_step 全程 rc=1，40 帧
+# 全部收尾补拍（实时帧=0），跑完才知道。预检=起跑时试拍 1 帧：失败即拒绝起跑，
+# 修复后再来；两连败直接正常退出（防监督器自愈环空转）。幂等：预检通过键持久化。
+if [[ -z "$(sget capture_preflight_ok)" ]]; then
+  if node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step capture-precheck --k 1 --url "/app" --user fanfan >/dev/null 2>&1; then
+    sset capture_preflight_ok 1
+    note "[预检] 采集链健康 ✓（playwright 试拍 1 帧成功——实时帧链路在位，§4.3-25a）"
+  else
+    echo "ISSUE|capture-preflight-failed|director|采集链起跑预检失败（r18-frames 试拍 rc≠0：playwright 依赖或浏览器链路坏——run14 全补拍事故的同族根因）" >> "$EVID_DIR/issues.log"
+    note "[FAIL] 采集链起跑预检失败——实时帧链路不可用，拒绝带病起跑（修复指引：simharness npm install（playwright 已在 devDependencies）；浏览器 channel 检查）"
+    if [[ -n "$(sget capture_preflight_failed)" ]]; then
+      note "[FAIL] 采集链预检两连败——正常退出停跑（监督器自愈环不空转），人工修复后手动重跑"
+      exit 0
+    fi
+    sset capture_preflight_failed 1
+    fail "采集链起跑预检失败（实时帧红线 §4.3-25a）"
+  fi
+fi
+
 # ══ 步骤 1-5：账号/配置/登录/功能就绪冒烟 ═════════════
 if step_reached smoke; then
   note "── smoke：账号×24、单 gateway 多路复用 + 单 studio 多账号、登录×2 模式、账号板就绪"
@@ -390,8 +410,18 @@ if step_reached dispatch; then
 card 必须取自建卡工具返回的真实卡 ID（形如 t_1a2b3c4d），填需求编号一律判为虚报。两个凭证都会被反向核验：commit 须真实存在于 aipaydev origin 且该提交含分析稿，card 须在你账号的板（账号板）可查。动作若因输出长度被截断丢弃，就是还没做完——此时只准报 BLOCKED，不得报 DONE。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
-    # 必采对话挂钩（run13 复盘 B1：步 9 缺采集=载荷全缺收尾补记）
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 9 --room "$RID" --anchor "$M" --title "需求派发任务书全文（fanfan→fanfan-agent）" --user fanfan --limit 40 >/dev/null 2>&1 || true
+  fi
+  # 必采对话挂钩（run13 复盘 B1 + run14 复盘 B3 抗重启加固）：挂钩在幂等块外，
+  # 重启重入段即补采（r18-collect 按锚点幂等拒重，重复调用无副作用）——
+  # run14 实锤 plan/test 段挂钩错过即整轮载荷缺。
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 9 --room "$RID" --anchor "$(sget dispatch_marker)" --title "需求派发任务书全文（fanfan→fanfan-agent）" --user fanfan --limit 40 >/dev/null 2>&1 || true
+  # ── V8.8 纪律 33：测试左移① UC 用户案例（触发=G1 冻结+分析群在位；run15 首验）──
+  # 与系统分析并行：测试线拿到冻结 AC 即起笔用户案例，G4 不再从零开始。
+  if [[ -z "$(sget uc_dispatched)" ]]; then
+    dispatch_in_room qi "@qi-agent:matrix.test 测试左移任务 UC-${RFD_ID}（用户案例设计，与系统分析并行推进，不等分析稿）：
+产出 docs/test-design/${RFD_ID}-uc.md（中央仓 origin/main）：每条 AC 至少 1 个用户案例（角色/前置/步骤/期望结果，逐条挂 AC 编号），可直接作为后续集成用例与 UAT 对账的母版。
+结论行 UC-DONE-${RFD_ID} cases=N（行首，N=案例条数）。工作区 $(workspace qi)：git checkout -b test/UC-${RFD_ID} origin/main。完成即 push+结论行。不许谎报。" "$(agent_mxid qi),$(agent_mxid mei)" \
+      && sset uc_dispatched 1
   fi
 fi
 
@@ -737,6 +767,14 @@ fi
 # ══ 步骤 14：主任务归档关闭 ═══════════════════════════
 if step_reached close && [[ -z "$(sget close_done)" ]]; then
   gate_blocked g2_arch_pass close   # V3 硬闸：G2 未过不进 L2
+  # ── V8.8 纪律 33：测试左移② INT 集成案例（触发=G2 过闸按概设接口契约起笔；run15 首验）──
+  # UC=用户视角、INT=接口视角，两段互斥不重复；INT 挂概设工件可反查。
+  if [[ -n "$(sget g2_arch_pass)" && -z "$(sget int_dispatched)" ]]; then
+    dispatch_in_room qi "@qi-agent:matrix.test 测试左移任务 INT-${RFD_ID}（集成案例设计，按概设接口契约起笔）：
+产出 docs/test-design/${RFD_ID}-int-cases.md（中央仓 origin/main）：按概设（docs/design/RFD-001-architecture-design.md）接口签名逐端点列集成案例（正常/边界/错误三态各 ≥1，逐条挂接口名），与 UC 案例互斥（UC=用户视角/INT=接口视角，不重复覆盖）。
+结论行 INT-CASES-DONE-${RFD_ID} cases=N（行首，N=案例条数）。工作区 $(workspace qi)（UC 分支续用或新起 test/INT-${RFD_ID}）。完成即 push+结论行。不许谎报。" "$(agent_mxid qi),$(agent_mxid mei)" \
+      && sset int_dispatched 1
+  fi
   if [[ "$(kanban_status_of fanfan ${RFD_ID})" != "done" ]]; then
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 评审已通过。请收尾 ${RFD_ID} 主任务：
 1) 把全部关联子任务与过程档案（4 份 AN-*.md、tasklist、概设方案 git 路径+commit）汇总登记进主任务卡 body，便于回溯审计
@@ -760,8 +798,13 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
 3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
 结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$_m17" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
+    sset m17_marker "$_m17"
     wait_alive_truth "docs/plan/${RFD_ID}-schedule.md 入库" 1800 fanfan repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期空转（fanfan 日志 1800s 零增长）"
+  fi
+  # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重，
+  # 重启重入段即补采——run14 实锤 plan 段挂钩错过即整轮载荷缺）
+  if [[ -n "$(sget m17_marker)" ]]; then
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(sget m17_marker)" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
@@ -1010,6 +1053,14 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
 
   if [[ -z "$(sget defect_dispatched)" ]]; then
+    # ── V8.8 纪律 33：测试左移③ QUALITY 质量合规检验（触发=DEV-DONE+integration 就绪；
+    # run15 首验）。段-段族分工：研发自测=核心 11 项门禁、QUALITY 段=全 56 项四族。──
+    if [[ -z "$(sget quality_dispatched)" ]]; then
+      dispatch_in_room mei "@mei-agent:matrix.test 测试左移任务 QUALITY-${RFD_ID}（质量合规检验，全 56 门禁四族——研发自测已跑核心 11 项，你跑全量不重复研发面）：
+在 integration/${RFD_ID} 合并基线上执行门禁套件 precheck --all-full（execute_code 单回合），报告原文落 docs/evidence/QUALITY-${RFD_ID}-report.md（随 integration 分支提交）；FUNC 功能白盒（覆盖率+关键路径抽检）由测试线随后按 INT 案例执行，不在本任务。
+结论行 QUALITY-DONE-${RFD_ID} gates=M/N（行首，M=通过门禁数/N=总门禁数；未绑执行器的门禁计入无信号桶如实呈现，禁虚报全绿）。工作区 $(workspace mei)。不许谎报。" "$(agent_mxid mei),$(agent_mxid qi)" \
+        && sset quality_dispatched 1
+    fi
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
@@ -1017,8 +1068,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$_m19" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
-
+    sset m19_marker "$_m19"
     dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
@@ -1026,6 +1076,10 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
     sset defect_dispatched 1
+  fi
+  # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重）
+  if [[ -n "$(sget m19_marker)" ]]; then
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(sget m19_marker)" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
   fi
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
@@ -1035,8 +1089,25 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 
   # 缺陷流观测窗：房间出现【缺陷】则等待对应 FIX-DONE 回执
   DEFECT_WINDOW_END=$(( $(date +%s) + 5400 ))
+  _last_nudge_ts=0
+  _last_fixed_count=0
+  _stall_rounds=0
   while (( $(date +%s) < DEFECT_WINDOW_END )); do
     auto_approve "$SCAN_ROOM" || true
+    # V8.8 纪律 34⑤：缺陷卡建卡真伪校验（每 ~5 分钟一轮；占位/不在编制的 assignee
+    # 记单+群内催办重填——run14 实证三卡烂待办一小时根因）。输出重定向防 set -e。
+    if (( $(date +%s) - _last_nudge_ts >= 300 )); then
+      _assignee_bad=""
+      for _b in qi-test-pay fei-test-fe; do
+        _v=$(defect_cards_assignee_check "$_b" 2>/dev/null) || true
+        [[ -n "${_v:-}" ]] && _assignee_bad="${_assignee_bad} ${_b}:${_v}"
+      done
+      if [[ -n "$_assignee_bad" ]]; then
+        echo "ISSUE|defect-cards-assignee|testers|缺陷卡 assignee 占位/不在编制（${_assignee_bad}）——建卡真伪校验打回，催办重填（V8.8 纪律 34⑤）" >> "$EVID_DIR/issues.log"
+        mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@qi-agent @fei-agent 缺陷卡 assignee 核验未过（${_assignee_bad}）：占位值（default/空/不在板团队名单）过得了必填校验但无人能领。请立即用板 board.json 团队名单里的 agent 档案名重填 assignee（板级认领围栏按实名精确匹配），重填后一行回执 ASSIGNEE-FIXED <卡ID>。禁静默。" "$(agent_mxid qi),$(agent_mxid fei)" >/dev/null 2>&1 || true
+      fi
+      _last_nudge_ts=$(date +%s)
+    fi
     # 瞬时 Synapse/curl 失败经 pipefail 传导会中途杀脚本：失败本轮作废、续等
     DEFECTS=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | startswith("【缺陷】"))) | .event_id] | length') || { sleep 30; continue; }
     FIXED=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | contains("FIX-DONE")))] | length') || { sleep 30; continue; }
@@ -1047,6 +1118,24 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     fi
     if (( DEFECTS == 0 && BOTH_DONE > 0 && FE_DONE > 0 )); then
       note "[真值] 零缺陷轮：双测试结论已出，缺陷流未触发（如实记录）"; break
+    fi
+    # V8.8 纪律 34④：环内禁静默——缺陷在途（DEFECTS>FIXED）且 15 分钟无新 FIX-DONE
+    # 即群内重发提醒；再 15 分钟仍无进展报 LOOP-BLOCKED（记单不中止，窗口到期兜底）。
+    if (( DEFECTS > FIXED )); then
+      if (( FIXED > _last_fixed_count )); then
+        _last_fixed_count=$FIXED; _stall_rounds=0
+      else
+        _stall_rounds=$(( _stall_rounds + 1 ))
+        if (( _stall_rounds == 30 )); then
+          mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@qi-agent @fei-agent 缺陷修复环在途静默约 15 分钟（在途 ${DEFECTS} 缺陷 / 已修 ${FIXED}）：请对应研发档案回执进度（FIX-DONE-DEF-X commit=<id> branch=<名> 或一句「修复中，预计 N 分钟」），复测侧收到 FIXED 即拉取复测。禁静默。" "$(agent_mxid qi),$(agent_mxid fei)" >/dev/null 2>&1 || true
+          note "[催办] 缺陷环静默 15 分钟，已重发提醒（纪律 34④）"
+        elif (( _stall_rounds == 60 )); then
+          echo "ISSUE|defect-loop-blocked|testers|缺陷修复环连续 30 分钟无新 FIX-DONE（在途 ${DEFECTS}/已修 ${FIXED}）——按纪律 34④ 如实报 LOOP-BLOCKED，等待窗口到期或人工介入" >> "$EVID_DIR/issues.log"
+          note "[问题] 缺陷环 LOOP-BLOCKED 记单（纪律 34④）"
+        fi
+      fi
+    else
+      _stall_rounds=0
     fi
     sleep 30
   done
@@ -1196,7 +1285,10 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     echo "## 分类/优先级/依赖完备性（防多漏错重）"
     echo "- 分类清点（卡面族谱）：$(kanban_list fanfan | jq -r '.. | objects | select(has("title")) | .title' | grep -oE 'T10[0-9]|G5|评审|排期|主卡' | sort | uniq -c | sort -rn | awk '{printf "%s×%s ", $2, $1}' | sed 's/ $//')"
     echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
-    echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)"
+    # 依赖核对空值兜底（run14 复盘 A10 根修）：tasklist 无独立"依赖"节时 sed 输出空，
+    # 截断成半行——兜底指向排期文档依赖列，不留空尾。
+    _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)
+    echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：${_dep_txt:-（tasklist 无独立依赖节——依赖声明在 docs/plan/RFD-001-schedule.md 依赖列，以该列反查卡覆盖）}"
   } > "$EVID_DIR/completeness-check.md"
   DL_WT="$SIM_ROOT/var/templates-main-wt"
   mkdir -p "$SIM_ROOT/var"
@@ -1272,7 +1364,9 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     note "[真值] UAT 证据复用（本轮既有合格结论行，不重派验收）✓"
   else
     _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$_m21" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
+    sset m21_marker "$_m21"
+    # 必采对话挂钩随派发即时采+marker 持久化（run14 复盘 B3：重启重入可补采）
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(sget m21_marker)" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
     # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，

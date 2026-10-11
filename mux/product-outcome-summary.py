@@ -88,9 +88,18 @@ def main():
         m2 = re.findall(r'(\d+)\s*failed', txt)
         if m2:
             ut_total += sum(int(x) for x in m2)
-    # 缺陷统计：issues.log 缺陷族
-    defects = len(re.findall(r'^ISSUE\|defect', issues_txt, re.M))
-    defects_fixed = len(re.findall(r'^DISP\|defect[^\n]*?已修', issues_txt, re.M))
+    # 缺陷统计（run14 复盘 A2 根修——双源窄口径）：
+    # ① 总数主源=中央仓测试报告缺陷清单行（| DEF-X | 表行实读，结构化真值）；
+    # ② issues.log 的 ^ISSUE|defect 前缀兜底（defect-cards-assignee 类字段流转单不是
+    #    缺陷本体——run14 实锤：旧正则 ^DISP|defect 把它的"已修"误计成 defects_fixed=1）；
+    # ③ 已修数=测试报告状态列（已修/VERIFIED/已验证），状态定格在报告落库时点，
+    #    修复链闭合的终局证据以 integration tip 复验判词为准（见 defects_note）。
+    treport = git(repo, 'show', f'origin/integration/{a.rfd}:docs/test/{a.rfd}-test-report.md') \
+        or git(repo, 'show', f'origin/main:docs/test/{a.rfd}-test-report.md')
+    defect_lines = [ln for ln in (treport.splitlines() if treport else [])
+                    if re.match(r'^\|\s*DEF-[A-Za-z0-9-]+\s*\|', ln)]
+    defects = len(defect_lines) or len(re.findall(r'^ISSUE\|defect-[a-z-]+\|', issues_txt, re.M))
+    defects_fixed = sum(1 for ln in defect_lines if re.search(r'已修|VERIFIED|已验证', ln))
     integration_tip = git(repo, 'rev-parse', '--short', f'origin/integration/{a.rfd}').strip()
     main_tip = git(repo, 'rev-parse', '--short', 'origin/main').strip()
 
@@ -99,14 +108,20 @@ def main():
     env_lines = [
         f'# 产品成效质量摘要（{a.run}，实算自中央仓 origin/main@{main_tip}'
         + (f' + integration@{integration_tip}' if integration_tip else '') + '）',
+        '# 口径：n_tests/n_pass 扫 integration 分支 docs/evidence/*-testlog.txt 输出行累计'
+        '（含修复过程历史输出，非仅终态；n_fail=差值即历史失败快照计入）；'
+        '缺陷计数主源=测试报告缺陷清单表行，defects_fixed=其状态列（定格在报告落库时点）',
         f'n_tests={ut_total}',
         f'n_pass={ut_green}',
+        f'n_fail={ut_total - ut_green}',
         'ac_cover=⬜（AC↔用例映射未结构化，判词分布如下）',
         f'uat_pass={ac_dist["通过"]}',
         f'uat_cond={ac_dist["有条件通过"]}',
         f'uat_fail={ac_dist["不通过"]}',
         f'defects_total={defects}',
         f'defects_fixed={defects_fixed}',
+        'defects_note=状态列定格在测试报告落库时点（拆派态）；修复终局以 integration tip '
+        '复验判词为准（TEST-INT testlog 全绿即修复链闭合）——两时点真值并存，禁只看其一',
         'doc_chain=见报告交付物全景矩阵（§2.7 全链实查）',
         'branches=见分支落地时间线（步 18）',
         f'ac_total={ac_total}',
