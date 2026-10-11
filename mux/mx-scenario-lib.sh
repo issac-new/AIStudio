@@ -1330,10 +1330,24 @@ mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝；复�
   fail "${label} 打回熔断（${cur} 轮未过，V3 硬闸）：不得继续。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
 }
 
-_mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 中该闸派发/判词/复审类证据行数
-  local label="$1" c
+_mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+integration tip+评审卡面哈希
+  local label="$1" c extra=""
   c=$(grep -cE "(派发|判词|结论|补齐|复审|评审|回执).{0,120}${label}|${label}.{0,120}(派发|判词|结论|补齐|复审|评审|回执)" "$EVID_DIR/scenario.log" 2>/dev/null || true)
-  echo "${c:-0}"
+  # 纪律 8 全口径（run14 实锤根因）：旧签名只数 scenario.log 行——驱动停着日志不涨，
+  # 外部证据（新提交/新判词/卡面更新）全盲，熔断 85 圈循环永不复位。并入 integration
+  # tip 与该闸评审卡 body 哈希，三类复位证据（提交/判词/卡面）全覆盖。
+  local repo="$SIM_ROOT/central/aipaydev"
+  git -C "$repo" fetch -q origin 2>/dev/null
+  extra="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
+  if [[ "$label" == *G5* ]]; then
+    local rgid db
+    rgid=$(sget card_g5_ready 2>/dev/null || true)
+    if [[ -n "${rgid:-}" ]]; then
+      db="$SIM_ROOT/hermes/kanban/boards/fanfan-review/kanban.db"
+      extra="${extra} card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='${rgid}';" 2>/dev/null | shasum | cut -c1-12)"
+    fi
+  fi
+  echo "${c:-0}:${extra}"
 }
 
 # ── V3 生命周期治理助手 ─────────────────────────────────
