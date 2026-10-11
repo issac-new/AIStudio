@@ -31,8 +31,8 @@ AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
 # custom/server/__tests__/ensure-injected-delta-guard.test.ts 双向断言，增删不同步即红。
 # 当前全集：
 #   hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/
-#   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/
-AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/|hermes_state)'
+#   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/ model_tools.py
+AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/|hermes_state|model_tools.py)'
 
 # 要部署的 patch：位置参数优先，否则用默认清单（空格分隔，可用 AIPAY_AGENT_PATCHES 覆盖）
 DEFAULT_PATCHES="372-agent-tick-socket-fallback.patch 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch"
@@ -52,8 +52,12 @@ for p in "${WANT[@]}"; do
   [[ -n "$p" ]] || continue
   [[ -f "$PATCHDIR/$p" ]] || { echo "  ! 缺 patch 文件: $p" >&2; conflicts=$((conflicts+1)); CONFLICT_LIST+=("$p (缺 patch 文件)"); continue; }
 
-  # 只看第一个目标路径，判定归属（与 inject.mjs 同规则）
+  # 只看第一个目标路径，判定归属（与 inject.mjs 同规则；2026-10-11 同步 diff --git
+  # 行回退——594/595/596/599/600 手写补丁无 ---/+++ 头，仅靠头匹配会静默跳过）
   target=$(grep -m1 -E '^(---|\+\+\+) [ab]/' "$PATCHDIR/$p" | sed -E 's/^(---|\+\+\+) [ab]\///; s/[[:space:]].*$//')
+  if [[ -z "$target" ]]; then
+    target=$(grep -m1 -E '^diff --git a/' "$PATCHDIR/$p" | sed -E 's/^diff --git a\///; s/ b\/.*$//')
+  fi
   if ! printf '%s' "$target" | grep -qE "$AGENT_PREFIXES"; then
     continue                                   # 属 hermes-studio，由 npm run inject 负责
   fi
