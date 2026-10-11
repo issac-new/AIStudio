@@ -72,6 +72,8 @@ ck "成效 真工具采集器在位" mux/cashier-devtools/capture-wechat.mjs 'mi
 # 根治件断言（2026-10-11 真工具演示轮）：缺陷根治在产品能力+agent 技能定义面，非 harness 补足
 ck "根治 agent 纪律8 运行时自证" skills/aipaydev-dev/SKILL.md '目标运行时自证'
 ck "根治 agent 契约测试纪律" skills/testing-shift-left/SKILL.md '跨模块契约测试'
+ck "根治 pm-planning 形态字段" skills/pm-planning/SKILL.md '交付形态字段'
+ck "根治 排期模板形态列" mux/templates-pending/schedule.md '交付形态字段'
 
 # 演示素材层断言（2026-10-11 视角轮，方案 §5.4.6）：生成器+方案条款双锚，
 # 防「素材层被无声删除」；demo-kit.html 由 demo-kit-gen.py 只读消费真实轮数据产出。
