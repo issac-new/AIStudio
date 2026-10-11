@@ -728,7 +728,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       SGID=$(sget security_rgid)
       if [[ -z "$SGID" ]]; then
         SGID=$(kanban_create_as secops security_review "${RFD_ID} 安全评审（涉敏=${_sens:-未标注}）" \
-          "涉敏需求安全评审单（run15 前置 P3-7①）：密钥管理/验签链路/数据落库字段/回调来源校验四项检查。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-board secops-security)
+          "涉敏需求安全评审单（run15 前置 P3-7①）：密钥管理/验签链路/数据落库字段/回调来源校验四项检查。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
         sset security_rgid "$SGID"
         dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分为评审输入。不许谎报。" "$(agent_mxid secops)"
       fi
