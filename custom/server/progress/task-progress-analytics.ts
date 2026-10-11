@@ -45,6 +45,8 @@ export interface TaskProgress {
   active: boolean
   /** 技能侧里程碑（--milestone --task 归本卡的条目；无引擎站点面时的进度回退源）。 */
   milestones: Array<{ ts: string; milestone: string; status?: string; note?: string }>
+  /** git 进度锚：里程碑/回执 note 中最新 commit= 短哈希（任务卡的代码侧进度源；缺席=该卡尚无代码交付锚，如实 undefined）。 */
+  gitAnchor?: string
 }
 
 export interface TaskProgressSummary {
@@ -104,6 +106,7 @@ export function taskProgressOverview(
       sessionKnown: Boolean(session),
       active: session ? isSessionActive(session) : false,
       milestones: wsMilestones.map((m) => ({ ts: m.ts, milestone: m.milestone, status: m.status, note: m.note })),
+      gitAnchor: latestGitAnchor(wsMilestones),
     })
   }
   // 活跃优先，其次最近派发。
@@ -121,4 +124,13 @@ export function taskProgressOverview(
 function isSessionActive(session: ProjectionSession): boolean {
   if (session.sessionEnded) return false
   return session.phase === 'running' || session.phase === 'prewarming' || Boolean(session.hasBackgroundWork)
+}
+
+/** 里程碑 note 中的最新 commit 锚（按时间序倒查第一条 commit=<hash>；口径：≥7 位十六进制）。 */
+function latestGitAnchor(milestones: MilestoneEntry[]): string | undefined {
+  for (let i = milestones.length - 1; i >= 0; i--) {
+    const m = milestones[i].note?.match(/commit=([0-9a-f]{7,40})/i)
+    if (m) return m[1]
+  }
+  return undefined
 }
