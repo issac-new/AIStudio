@@ -591,3 +591,11 @@
 # 606 runtime-verify 路由挂载（B5 悬空件补登）：/api/hermes/runtime-verify/*
 # （health/verifiers 注册表/miniprogram）——模块早落而路由从未进 routes.ts。
 606-server-runtime-verify-routes.patch
+
+# 607 看板写闸层收编（宿主 sanction 契约事故根治，2026-10-11 深夜轮）：宿主自更新后的
+# kanban_db_connect.py 依赖 register_write_sanction_udf/install_guardrail_triggers 等
+# guardrail 符号，series 版缺它会被 manifest 部署通道打崩宿主看板（23:12 事故实录）。
+# 本补丁把写闸子系统（两函数+触发器命名+守护表清单）从宿主已知良好态移植进 series；
+# 配套 test_kanban_guardrail_contract 守门：connect 引用的 _kb 符号必须可解析 +
+# fail-closed 行为（裸连接 prepare 期即拒）。
+607-agent-kanban-guardrail-absorb.patch
