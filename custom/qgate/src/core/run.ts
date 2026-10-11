@@ -10,6 +10,7 @@ import { runCommandExecutor } from '../executors/command.js'
 import { runPersistenceExecutor } from '../executors/persistence.js'
 import { runOntologyExecutor } from '../executors/ontology.js'
 import { runFilesExecutor } from '../executors/files.js'
+import { runRuntimeProofExecutor } from '../executors/runtime-proof.js'
 import { runLlmExecutor } from '../executors/llm.js'
 import { runScopeExecutor } from '../executors/scope.js'
 import { runRegisterExecutor } from '../executors/register.js'
@@ -138,6 +139,8 @@ export async function runGate(input: RunInput): Promise<RunResult> {
         evidence.push(runSemanticExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       } else if (executor.type === 'ops') {
         evidence.push(await runOpsExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+      } else if (executor.type === 'runtime-proof') {
+        evidence.push(runRuntimeProofExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       }
     }
     // error 证据=基础设施瞬时故障（超时/网络/子进程异常），不是确定性判定——

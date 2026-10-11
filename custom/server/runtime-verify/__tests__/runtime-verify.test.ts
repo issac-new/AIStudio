@@ -61,3 +61,20 @@ describe('runtime-verify：目标运行时验证能力（真工具演示轮根�
     rmSync(out, { recursive: true, force: true })
   })
 })
+
+// ── 长会话治理 B5：注册表 ────────────────────────────────────────────────────
+
+describe('verifier registry (B5)', () => {
+  it('miniprogram is registered and enumerable via describeVerifiers', async () => {
+    // runtime-verify 模块加载即完成登记（副作用 import）
+    await import('../runtime-verify')
+    const { describeVerifiers, getVerifier } = await import('../verifier-registry')
+    const list = describeVerifiers()
+    const mp = list.find((v) => v.id === 'miniprogram-wechat')
+    expect(mp).toBeDefined()
+    expect(mp!.kind).toBe('runtime-proof')
+    expect(typeof mp!.probe.installed).toBe('boolean')
+    expect(typeof mp!.probe.detail).toBe('string')
+    expect(typeof getVerifier('miniprogram-wechat')!.verify).toBe('function')
+  })
+})

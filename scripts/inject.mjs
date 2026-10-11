@@ -91,6 +91,9 @@ export const HERMES_AGENT_PATCH_PREFIXES = [
   // hermes-agent 仓库根层的 hermes_state_*.py 族(patch 485 起):studio 无此文件,
   // 误路由 studio 会因 "No such file" 硬失败阻断整个 inject。
   'hermes_state',
+  // 根层 model_tools.py(patch 593 起):同上——593 曾被误路由到 studio,下次 inject
+  // 在 "No such file" 上硬死(长会话治理轮发现的拦路雷,此处根治;shell 镜像同步改)。
+  'model_tools.py',
 ];
 
 /** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */
@@ -100,10 +103,20 @@ export function isHermesAgentPatchPath(targetPath) {
 
 // 由 patch 文本首个 ---/+++ 目标路径判定路由目标根目录。
 // 解析失败(读不到/无目标行)时默认 hermes-studio,与历史行为一致。
+// 2026-10-11 长会话治理轮补:594/595/596/599/600 等手写补丁无 ---/+++ 头(仅
+// diff --git + hunk),正则匹配不到即误路由 studio 硬死——加 diff --git 行回退,
+// 两处取首个 [ab]/ 路径,语义一致。
 export function resolvePatchTargetRoot(patchText) {
-  const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
-  if (!firstTargetMatch) return hermesStudioRoot;
-  return isHermesAgentPatchPath(firstTargetMatch[1]) ? hermesAgentRoot : hermesStudioRoot;
+  let targetPath = null;
+  const headerMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+  if (headerMatch) {
+    targetPath = headerMatch[1];
+  } else {
+    const gitLineMatch = patchText.match(/^diff --git a\/(.+?) b\/.+$/m);
+    if (gitLineMatch) targetPath = gitLineMatch[1];
+  }
+  if (!targetPath) return hermesStudioRoot;
+  return isHermesAgentPatchPath(targetPath) ? hermesAgentRoot : hermesStudioRoot;
 }
 
 function applyPatches() {
