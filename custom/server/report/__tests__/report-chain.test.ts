@@ -5,12 +5,14 @@ import {
   MIN_ARTIFACT_VIEWS,
   checkFaceRateLine,
   checkFrameEvidence,
+  checkEnvMasking,
   checkGateArtifacts,
+  checkProductOutcomeGrid,
   checkQgateDiscipline,
   countArtifactViews,
   type StepBlock,
 } from '../acceptance'
-import { GOV_EVIDENCE_FILES, govEvidenceBlocks, qgateBlock } from '../evidence-blocks'
+import { GOV_EVIDENCE_FILES, govEvidenceBlocks, maskEnvPaths, productOutcomeShots, qgateBlock } from '../evidence-blocks'
 import { part1Skeleton, type RunFacts } from '../part1-skeleton'
 
 /** run10 实测口径的步块样本（st-artifact 视图/无文件域声明两形态） */
@@ -149,3 +151,32 @@ describe('PART1 五段式骨架（数字实测槽+语境 TODO）', () => {
     expect((h.match(/【TODO/g) || []).length).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe('2026-10-11 同步轮：宿主脱敏+产品成效系列版面（§5.4.3/§5.4.4）', () => {
+  it('maskEnvPaths：家目录/外置卷 → 占位形；正常文本不动', () => {
+    expect(maskEnvPaths('留存 /Users/cuishi/x/a.md 与 /Volumes/nvme2230/y/b.txt')).toBe('留存 [宿主家目录]/x/a.md 与 [宿主卷]/y/b.txt')
+    expect(maskEnvPaths('PO20261011 已支付')).toBe('PO20261011 已支付')
+  })
+  it('qgateBlock/govEvidenceBlocks 透传时自动脱敏', () => {
+    expect(qgateBlock('/Users/cuishi/log.txt 内容')).not.toContain('/Users/')
+    expect(govEvidenceBlocks([{ label: 'L', raw: '/Volumes/nvme/out.txt' }])).not.toContain('/Volumes/')
+  })
+  it('productOutcomeShots：四列网格容器+短图注', () => {
+    const html = productOutcomeShots([{ file: 'cashier-p1-order.png' }, { file: 'cashier-p2-paid.png' }])
+    expect(html).toContain('class="po-shots"')
+    expect(html).toContain('src="product-outcome/cashier-p1-order.png"')
+    expect(html).toContain('>cashier-p1-order</figcaption>')
+  })
+  it('checkEnvMasking：泄漏即违例（A9 等价）', () => {
+    expect(checkEnvMasking('<p>/Users/cuishi/a</p>').ok).toBe(false)
+    expect(checkEnvMasking('<p>干净</p>').ok).toBe(true)
+  })
+  it('checkProductOutcomeGrid：成效帧在位须四列网格+图注', () => {
+    const bad = '<figure><img alt="产品功能实证 x"><figcaption></figcaption></figure>'
+    expect(checkProductOutcomeGrid(bad).ok).toBe(false)
+    const good = productOutcomeShots([{ file: 'cashier-p2-paid.png' }])
+    expect(checkProductOutcomeGrid(good).ok).toBe(true)
+    expect(checkProductOutcomeGrid('<p>无成效节</p>').ok).toBe(true)
+  })
+})
+
