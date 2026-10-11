@@ -42,6 +42,22 @@ META_QUOTE = ('空话黑名单（', '黑名单（', '词表')
 DEF_LINE = re.compile(r'[「（][^」）]{1,16}[」）]?[＝=]')
 # 含被查词但语义无关的组合；ASCII 引号形=python 字面量提及（角色元组等机器锚），非散文
 ALLOW_SUBSTR = {'一起跑', "'导演'"}
+# 引号区间豁免（2026-10-11 立，run14 语言执法轮）：ASCII 引号（'/"/`）内的命中词=字面量
+# 提及——测试夹具喂黑话断言执法（report-chain.test.ts '<p>本步落键…</p>'）、角色元组、
+# 教学引用均属此类，非散文表述。整行引号内区间预计算，命中落在区间内即豁免；区间外
+# 散文照常拦。中文引号「」（）不属本豁免（走 DEF_LINE 教学行判定）。
+def _quote_spans(line: str):
+    spans, start, quote = [], -1, ''
+    for i, ch in enumerate(line):
+        if ch in '\'"`':
+            if start >= 0 and ch == quote:
+                spans.append((start, i))  # 闭合区间
+                start, quote = -1, ''
+            elif start < 0:
+                start, quote = i, ch
+    if start >= 0:
+        spans.append((start, len(line)))  # 未闭合（跨行字符串/行尾截断）按到行尾
+    return spans
 SOFT = [
     '落地', '收口', '对账', '口径', '赋能', '生态', '架构', '治理',  # 语境判断
     '归一化',  # 统计术语，优先改"折算成百分比"
@@ -57,6 +73,7 @@ def check(path: str) -> int:
     text = p.read_text(encoding='utf-8')
     for i, line in enumerate(text.splitlines(), 1):
         meta = any(m in line for m in META_QUOTE) or bool(DEF_LINE.search(line))
+        qspans = _quote_spans(line)
         # 跳过代码块/命令语法行（机器锚区）
         if line.strip().startswith(('#', '```', 'bash ', '| 闸')):
             pass
@@ -70,7 +87,8 @@ def check(path: str) -> int:
                     break
                 # 专名豁免：命中词是允许短语的一部分
                 ctx = line[max(0, j-8):j+len(w)+8]
-                if any(a in ctx for a in ALLOW_EXACT):
+                if any(a in ctx for a in ALLOW_EXACT) or \
+                        any(s <= j < e for s, e in qspans):
                     start = j + len(w)
                     continue
                 print(f'{path}:{i}: [HARD] {w} …{ctx.strip()}…')
