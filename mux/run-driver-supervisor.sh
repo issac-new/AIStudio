@@ -54,6 +54,21 @@ monitor_events() {
 
 note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
 
+# 熔断证据指纹（纪律 8 复位判据的监督器侧投影）：integration tip + G5 评审卡 body 哈希。
+# 任一变化=「新提交/新判词/卡 body 更新」成立，熔断复位放行新尝试。
+_g5_evidence_fp() {
+  local fp="" repo rgid db
+  repo="$SIM_ROOT/central/aipaydev"
+  git -C "$repo" fetch -q origin 2>/dev/null
+  fp="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
+  rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
+  if [[ -n "$rgid" ]]; then
+    db="$SIM_ROOT/hermes/kanban/boards/fanfan-review/kanban.db"
+    fp="$fp card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='$rgid';" 2>/dev/null | shasum | cut -c1-12)"
+  fi
+  printf '%s' "$fp"
+}
+
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
 MYPGID=$(ps -o pgid= -p $$ | tr -d ' ')
 note "本监督系进程组 pgid=$MYPGID（锁防御：非本组驱动=入侵者，清掉+记账）"
@@ -93,8 +108,28 @@ while true; do
     fi
   fi
   note "驱动缺席，断点续跑（START_STEP=$START_STEP）"
+  _loff=$(stat -f %z "$LOGS/$RUN_ID-driver.log" 2>/dev/null || echo 0)
   ( cd "$SCRIPT_DIR/.." && RUN_ID="$RUN_ID" START_STEP="$START_STEP" bash aipay-scenario.sh >> "$LOGS/$RUN_ID-driver.log" 2>&1 )
   RC=$?
+  # 纪律 8 可执行化（run14 实锤：熔断退出被盲目重启 85 圈——每圈刷单+回灌轰炸 agent）：
+  # 驱动因熔断退出=正常退出，不 sleep-30 重启；进入证据等待模式，指纹变化
+  # （新提交/新判词/评审卡 body 更新=熔断复位条件）才作为新尝试重启驱动。
+  if tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -q "打回熔断"; then
+    note "驱动 rc=$RC 因熔断退出——证据等待模式（复位=integration tip/评审卡面变化；stop 文件/report_done 仍即退）"
+    _fp0=$(_g5_evidence_fp); _wd=0
+    while true; do
+      [[ -f "$STOPFLAG" ]] && { note "stop 文件在位（证据等待中），监督器退出"; rm -f "$STOPFLAG"; exit 0; }
+      grep -q '^report_done=' "$STATE" 2>/dev/null && { note "report_done 已落键，监督器功成身退"; exit 0; }
+      sleep 120; _wd=$((_wd+120))
+      _fp1=$(_g5_evidence_fp)
+      if [[ "$_fp1" != "$_fp0" ]]; then
+        note "证据变化（${_fp0} → ${_fp1}）——熔断复位，重启驱动（新尝试）"
+        break
+      fi
+      if [ $((_wd % 600)) -eq 0 ]; then note "证据等待 ${_wd}s（指纹不变：${_fp1}）"; fi
+    done
+    continue
+  fi
   note "驱动退出 rc=$RC（${STATE} 无 report_done 键——30s 后按断点续跑）"
   sleep 30
 done
