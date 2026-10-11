@@ -1520,6 +1520,7 @@ work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账
       zero_deliver=$zd_n
     fi
   } > "$out"
+  mask_env_paths "$out"
   [[ -n "$wip_warn" ]] && echo "WIP_OVERLOAD"
   [[ "${zero_deliver:-0}" -gt 0 ]] && echo "ZERO_DELIVER:${zero_deliver}"
   echo "$out"
@@ -1576,6 +1577,12 @@ reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 
   grep -qE "涉敏|ISO27001|iso27001" "$doc" || miss="${miss}涉敏判定缺失；"
   [[ -z "$miss" ]] && return 0
   echo "$miss"; return 1
+}
+
+
+# 宿主环境脱敏（§5.4.3）：报告与衍生呈现件禁露家目录/外置卷路径——生成后原地掩码
+mask_env_paths() { # <file...>
+  perl -pi -e 's{/Users/[A-Za-z0-9_.-]+}{[宿主家目录]}g; s{/Volumes/[A-Za-z0-9_.-]+}{[宿主卷]}g' "$@"
 }
 
 gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metrics-log 口径）
@@ -1695,6 +1702,7 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
       echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
     fi
   } > "$out"
+  mask_env_paths "$out"
   echo "$out"
 }
 
