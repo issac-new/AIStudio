@@ -338,7 +338,7 @@ if _ilog.exists():
     if _first_pass_rendered != _expected:
         fails.append(f'A4 闸门"一次通过"徽章渲染 {_first_pass_rendered} 个 ≠ 实测 {_expected} 个（台账闸门登记键：{sorted(_gate_hit)}）——静态注册表默认报喜族门禁')
 
-# A5 图数对账：盘上 PNG × 报告 <img> 引用（生成器同逻辑门禁；§5.6 快门门禁⑥ 头部计数=实际嵌入数）
+# A5 图数对账：盘上 PNG × 报告 <img> 引用（生成器同逻辑门禁；纪律 40⑥ 头部计数=实际嵌入数）
 _steps_dir_a = EVID / 'screenshots' / 'steps'
 if _steps_dir_a.exists():
     _disk = {p.stem for p in _steps_dir_a.glob('*.png')}
@@ -365,7 +365,7 @@ if RUN_ID >= '20261010-v8-run13':
     _dup_src = sorted(s for s, c in _src_cnt.items() if c > 1)
     if _dup_src:
         fails.append(f'V8.4② 同源帧多用途：{_dup_src}——同一图像文件只许一处嵌入配一个图注（run12 步20/23 双挂 deliver_gate 即此类）')
-    # ④ 缺帧占位必须配问题单：注册帧缺文件/帧缺失/采集位空 → 按 §5.6 采集纪律⑩ 登记，
+    # ④ 缺帧占位必须配问题单：注册帧缺文件/帧缺失/采集位空 → 按纪律 40⑩ 登记，
     #    帧名前缀键 ↔ issues.log 的 frame-capture-failed|step-<键>（或 r18-collection-missing 族）
     #    精确配对；✅ 步含"（截图缺失）"裸占位=FAIL（⬜ 未执行/夹具带的无帧明示不阻断、汇总一条 WARN）
     _fc_step_keys = set()
@@ -396,7 +396,7 @@ if RUN_ID >= '20261010-v8-run13':
     if _idle_noframe_done:
         warns.append(f'V8.4④ ✅步无帧（占位带登记声明）{_idle_noframe_done} 步——查3 已按配对判定，此处计数复核')
     if _ph_unpaired:
-        fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按 §5.6 采集纪律⑩ 登记 frame-capture-failed|step-<键> 后降级呈现')
+        fails.append(f'V8.4④ 缺帧占位无配对问题单：{_ph_unpaired[:6]}——按纪律 40⑩ 登记 frame-capture-failed|step-<键> 后降级呈现')
     if _idle_noframe:
         warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 不在本轮执行范围/沿用带，回归轮口径合规呈现）')
     # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
@@ -534,7 +534,7 @@ for _l18 in _ilines_r18:
             _r18_degraded_steps.add(int(_m18s.group(1)))
 if _r18_missing_file:
     if _r18_degraded:
-        warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按§5.6 采集纪律⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
+        warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按纪律 40⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
     else:
         fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）；缺口须登记 r18-collection-missing 方可降级')
 else:
