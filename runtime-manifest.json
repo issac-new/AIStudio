@@ -16,7 +16,7 @@
     {
       "source": "hermes_cli/kanban_db.py",
       "dest": "hermes_cli/kanban_db.py",
-      "note": "C3 raci TEXT 列（schema/Task/create_task/INSERT）+ R2 task_id 段校验 + R3/V1 暂存副本清理 + R4 原子写 + 399 流转门禁接线 + staging TOCTOU 守卫"
+      "note": "C3 raci TEXT 列 + R2/R3/R4 原子写 + 399 流转门禁接线 + 604 交接检查点段 + guardrail 层（register_write_sanction_udf/install_guardrail_triggers/SCHEMA_SQL，宿主自更新带入的写闸）——2026-10-11 长会话治理轮实锤：宿主 connect.py 已依赖 sanction 契约，series 版缺它会被本通道部署打崩宿主看板；镜像基线=SIM 黄金合体版（快照+390/391+C3+399+guardrail）+604 移植块。series 树自身缺 guardrail 待 607 移植收编。"
     },
     {
       "source": "hermes_cli/kanban_db_connect.py",
