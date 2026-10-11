@@ -1210,7 +1210,7 @@ STEPS_META_RUN14 = {
             narrative='需求上锁（G1）：需求分析师A 需求书经 matrix 私信送达 产品经理A（DM 房 !HgaPKBGJqvHUhrfYB，送达标记 $gpLzjyw1nzqwYz2Io9C9SN4haNfg_oe3eG-V8rQnadQ）；四要素判读通过后冻结标记入仓。实测依据：g1_frozen 14:19:06；delivery 事件 stage P1 done+gate G1 pass 同刻落案例房（case→P2）。', imgs=[('g1_frozen-op1-before','需求追溯页签·G1 冻结工件与 AC·前','ui'), ('g1_frozen-op1-after','冻结标记与 AC 列·后','ui')]),
     8: dict(keys=['room_analysis'],
             actor='ai', actorText='AI · fanfan-agent',
-            narrative='建群与全量预邀：分析群 !OStFtevDUpLrHgePBY:matrix.test（14:19:31），fanfan-agent+8 关联人（chen/hu/lin/xiao/wei/mei/qi/fei）及各自 agent 一次性预邀（方案 §8 全量预邀纪律）。', imgs=[('room_done-op1-before','沟通区·会话列表（分析群在列）·前','ui'), ('room_done-op1-after','会话列表·群成员概览·后','ui')]),
+            narrative='建群与全量预邀：分析群 !OStFtevDUpLrHgePBY:matrix.test（14:19:31），fanfan-agent+8 关联人（chen/hu/lin/xiao/wei/mei/qi/fei）及各自 agent 一次性预邀（方案 §8 全量预邀纪律）。', imgs=[]),
     9: dict(keys=['dispatch_marker'],
             actor='human', actorText='人 · 产品经理A',
             narrative='本步无对应产品界面（派发锚点房间深链在采集环境不可达——capture-plan 规划注记在案，事件锚直跳待产品实现）：对话全文已入 r18 载荷（步 9 必采 ✓）。派发词含需求信息/材料地址/双凭证证据要求/派发标识 RUN=20261010-v8-run14。实测依据：派发事件 $lCg7puyg43plN7d13I1LmkHuVaYQAsT2TuRl1zpcs3M（14:19:32）；对话全文挂钩 r18-collect（步 9 必采，run13 复盘 F13 接线首验）。', imgs=[]),
