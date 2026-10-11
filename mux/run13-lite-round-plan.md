@@ -55,11 +55,10 @@ RUN_ID=20261010-v8-run13 LC_ALL=C START_STEP=devimpl nohup bash aipay-scenario.s
 
 ## 归档
 
-- 提速②（devimpl 六路齐发）：mux/run13-speedup-devimpl.patch ——**2026-10-09 10:10 已套用**（run12 archgate 断点换装，用户批准"未开始环节直接应用"）
-- 提速③④（免等窗+残余窗活性化）：mux/run13-speedup-receipts.patch ——同上已套用
-- 措辞根治（push 到 origin main）：mux/run13-speedup-wording.patch ——同上已套用
-- 提速⑤⑥（负载预检+防休眠）：mux/mx-up.sh（已落）
-- 守门⑲断言同步新不变量（六路齐发+rebase 对接），套用后 89/89 全绿
+提速补丁三件（devimpl 六路齐发／免等窗+残余窗活性化／push 措辞根治）已于 2026-10-09
+全部套用并入 aipay-scenario.sh 主脚本，原件存 git 历史（mux/run1[23]-speedup-*.patch 已删）；
+提速⑤⑥（负载预检+防休眠）直接落在 mux/mx-up.sh；守门⑲断言同步新不变量（六路齐发+rebase
+对接），套用后 89/89 全绿。
 
 ## loop-graph 自驱动落实（2026-10-09 用户"立刻完成"指令）
 
