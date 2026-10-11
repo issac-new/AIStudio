@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index acc0304b..1dd50a5d 100644
+index c1bc0b68..916e3f4a 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -727,6 +727,32 @@ export async function archiveTasks(taskIds: string[], opts?: KanbanBoardOptions)
@@ -72,7 +72,7 @@ index acc0304b..1dd50a5d 100644
      return true
    } catch (err: any) {
      logger.error(err, 'Hermes CLI: kanban delete task failed')
-@@ -909,7 +952,11 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+@@ -938,7 +981,11 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
        await archiveTasks([taskId], { board })
      } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
        // Use bulk update for direct status writes

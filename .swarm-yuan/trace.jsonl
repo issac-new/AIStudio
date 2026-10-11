@@ -60,3 +60,7 @@
 {"ts":"2026-09-16T07:02:04Z","node":"⑨终检","actor":"主AI","tool":"verify-completeness --strict + mark-active","status":"done","note":"ncwk-dev 已激活（standard 档）；STABILITY_WARN advisory 留档"}
 {"ts":"2026-09-17T01:48:27Z","node":"门禁","actor":"","tool":"check_branch","status":"started","note":""}
 {"ts":"2026-09-17T01:48:28Z","node":"门禁","actor":"","tool":"check_branch","status":"fail","note":""}
+{"ts":"2026-10-11T13:00:55Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/tmp/gen-out/smoke-deliv"}
+{"ts":"2026-10-11T13:01:35Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/tmp/gen-out/smoke-deliv"}
+{"ts":"2026-10-11T13:02:01Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/tmp/gen-out/smoke-deliv"}
+{"ts":"2026-10-11T13:02:05Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/gen-out/smoke-deliv"}

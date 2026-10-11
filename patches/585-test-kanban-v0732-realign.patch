@@ -1,6 +1,8 @@
---- a/tests/server/hermes-kanban-service.test.ts	2026-10-09 01:26:00
-+++ b/tests/server/hermes-kanban-service.test.ts	2026-10-09 01:29:22
-@@ -3,6 +3,10 @@
+diff --git a/tests/server/hermes-kanban-service.test.ts b/tests/server/hermes-kanban-service.test.ts
+index ba1331ac..90b6a0af 100644
+--- a/tests/server/hermes-kanban-service.test.ts
++++ b/tests/server/hermes-kanban-service.test.ts
+@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  const mockExecFileAsync = vi.hoisted(() => vi.fn())
  const mockSpawnHermes = vi.hoisted(() => vi.fn())
  const mockLoggerError = vi.hoisted(() => vi.fn())
@@ -11,7 +13,7 @@
  
  vi.mock('../../packages/server/src/modules/hermes/services/runtime/process', () => ({
    execHermes: (args: string[], options: unknown) => mockExecFileAsync('hermes', args, options),
-@@ -12,6 +16,8 @@
+@@ -12,6 +16,8 @@ vi.mock('../../packages/server/src/modules/hermes/services/runtime/process', ()
  vi.mock('../../packages/server/src/modules/studio/public/logging', () => ({
    logger: {
      error: mockLoggerError,
@@ -20,7 +22,7 @@
    },
  }))
  
-@@ -65,27 +71,44 @@
+@@ -65,27 +71,44 @@ describe('hermes kanban service', () => {
    })
  
    it('builds link/unlink and bulk-equivalent task commands with explicit board', async () => {
@@ -77,7 +79,7 @@
    })
  
    it('treats zero-exit stderr from mutation CLI calls as failures', async () => {
-@@ -212,13 +235,17 @@
+@@ -212,13 +235,17 @@ describe('hermes kanban service', () => {
    })
  
    it('builds action CLI calls and maps not-found show to null', async () => {
@@ -102,7 +104,7 @@
  
      await expect(service.getTask('missing', { board: 'default' })).resolves.toBeNull()
      await service.completeTasks(['task-1'], 'done', { board: 'default' })
-@@ -227,12 +254,14 @@
+@@ -227,12 +254,14 @@ describe('hermes kanban service', () => {
      await service.assignTask('task-1', 'alice', { board: 'default' })
      await expect(service.getAssignees({ board: 'default' })).resolves.toEqual([{ name: 'alice' }])
  
@@ -123,9 +125,11 @@
    })
  
    it('normalizes 0.19 detail ids and lists durable attachments', async () => {
---- a/tests/server/kanban-controller.test.ts	2026-10-09 01:26:00
-+++ b/tests/server/kanban-controller.test.ts	2026-10-09 01:30:02
-@@ -168,11 +168,12 @@
+diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
+index d57d0da6..c6dd6982 100644
+--- a/tests/server/kanban-controller.test.ts
++++ b/tests/server/kanban-controller.test.ts
+@@ -168,11 +168,12 @@ describe('kanban controller', () => {
      const state = { user: { id: 7, role: 'admin' }, profile: { name: 'research' } }
      const listCtx = ctx({ state, query: { board: 'default', includeArchived: 'true' } })
      await ctrl.list(listCtx)
