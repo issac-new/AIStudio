@@ -6,6 +6,16 @@
  * 敏感内容不加工——只做 HTML 转义与容器包装。
  */
 
+/**
+ * 宿主环境脱敏（§5.4.3，2026-10-11 立法）：报告与全部衍生呈现件禁出现宿主机个人环境标识。
+ * 语义正本在此，simharness mx-report-gen._mask_env / mask_env_paths 为兼容消费实现——两侧判定必须一致。
+ */
+export function maskEnvPaths(s: string): string {
+  return s
+    .replace(/\/Users\/[A-Za-z0-9_.-]+/g, '[宿主家目录]')
+    .replace(/\/Volumes\/[A-Za-z0-9_.-]+/g, '[宿主卷]')
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -16,10 +26,11 @@ function escapeHtml(s: string): string {
 
 /** QGate 门禁证据块（步 20）：release-report 原文透传+来源分布随行 */
 export function qgateBlock(rawReleaseReport: string): string {
+  const raw = maskEnvPaths(rawReleaseReport)
   return (
     '<details class="st-artifact st-qgate"><summary>🛡 QGate 门禁证据' +
     '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>' +
-    `<pre class="art-code">${escapeHtml(rawReleaseReport.trim())}</pre></details>`
+    `<pre class="art-code">${escapeHtml(raw.trim())}</pre></details>`
   )
 }
 
@@ -36,9 +47,37 @@ export function govEvidenceBlocks(items: GovEvidenceItem[]): string {
     .map(
       (it) =>
         `<details class="st-artifact st-gov"><summary>🧾 ${escapeHtml(it.label)}` +
-        `（原文透传）</summary><pre class="art-code">${escapeHtml(it.raw.trim())}</pre></details>`,
+        `（原文透传）</summary><pre class="art-code">${escapeHtml(maskEnvPaths(it.raw).trim())}</pre></details>`,
     )
     .join('')
+}
+
+export interface ProductOutcomeShot {
+  /** 帧文件名（如 cashier-p1-order.png；图注取去扩展名短名） */
+  file: string
+  /** 相对报告的证据目录前缀（如 product-outcome/） */
+  dir?: string
+}
+
+/**
+ * 产品成效系列帧网格（§5.4.4 系列完整性 + 2026-10-11 版面指令）：
+ * 四分之一宽四列缩略网格（.po-shots），自然比例不裁剪，点击全屏放大（.shot 缩放交互）。
+ * 系列覆盖=P1 首页+P2 结果页三态（成功/失败可重试/超时关闭）+幂等，双渠道主状态各 ≥1 程。
+ */
+export function productOutcomeShots(shots: ProductOutcomeShot[]): string {
+  const d = shots[0]?.dir ?? 'product-outcome/'
+  return (
+    '<div class="po-shots">' +
+    shots
+      .map(
+        (s) =>
+          `<label class="shot"><input type="checkbox">` +
+          `<img src="${escapeHtml(d + s.file)}" alt="产品功能实证 ${escapeHtml(s.file)}" loading="lazy">` +
+          `<figcaption><span class="shot-kind">功能实证</span>${escapeHtml(s.file.replace(/\.[a-z]+$/, ''))}</figcaption></label>`,
+      )
+      .join('') +
+    '</div>'
+  )
 }
 
 /** 步 23/24 治理证据导出件清单（文件名→展示名；采集端按此落盘 evidence/） */

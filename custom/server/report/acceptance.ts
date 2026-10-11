@@ -143,3 +143,43 @@ export function checkFrameEvidence(html: string): FrameEvidenceVerdict {
   const backfillMarker = FRAMES_DEGRADED_EMBEDDED.test(html) ? 'frames-degraded' : null
   return { badCaptions, duplicatedSources, backfillMarker, ok: !badCaptions.length && !duplicatedSources.length && !backfillMarker }
 }
+
+/** ── 2026-10-11 新增两组断言（与 simharness mx-report-audit A9/产品成效系列对齐）── */
+
+export interface EnvMaskVerdict {
+  /** 泄漏样例（最多 3 条） */
+  leaks: string[]
+  ok: boolean
+}
+
+/**
+ * 断言④（A9 等价，§5.4.3 宿主环境脱敏）：报告 HTML 禁出现家目录/外置卷路径。
+ * 与 maskEnvPaths（evidence-blocks）同规则——渲染层漏掩码在此拦截。
+ */
+export function checkEnvMasking(html: string): EnvMaskVerdict {
+  const leaks = (html.match(/\/Users\/[A-Za-z0-9_.-]+|\/Volumes\/[A-Za-z0-9_.-]+/g) || []).slice(0, 3)
+  return { leaks, ok: leaks.length === 0 }
+}
+
+export interface ProductOutcomeGridVerdict {
+  violations: string[]
+  ok: boolean
+}
+
+/**
+ * 断言⑤（§5.4.4 系列完整性版面）：产品成效节在位时——
+ * ①须为四列缩略网格（.po-shots）承载系列帧，禁整宽单帧平铺；
+ * ②每帧图注非空（figcaption 有文本）。
+ */
+export function checkProductOutcomeGrid(html: string): ProductOutcomeGridVerdict {
+  const violations: string[] = []
+  if (html.includes('产品功能实证')) {
+    if (!html.includes('class="po-shots"')) violations.push('产品成效帧未用四列缩略网格 .po-shots（§5.4.4 版面：1/4 宽网格+点击放大）')
+    const captions = html.match(/<figcaption><span class="shot-kind">功能实证<\/span>([^<]*)<\/figcaption>/g) || []
+    if (captions.length === 0 || captions.some((c) => c.replace(/<[^>]+>/g, '').trim().length < 3)) {
+      violations.push('产品成效帧图注缺失或为空（帧名短图注，禁长路径前缀）')
+    }
+  }
+  return { violations, ok: violations.length === 0 }
+}
+
