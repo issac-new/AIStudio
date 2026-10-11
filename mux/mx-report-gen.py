@@ -21,7 +21,7 @@ from pathlib import Path
 import r18_matrix  # 必采清单单一事实源（审计器查 8 同表，自动检查测试 ⑫）
 
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
-# 亦支持隔离树回归测试（run7 实锤：写死路径使归档态 run6 无法离线回归）。
+# 亦支持隔离树回归测试（写死路径使归档态 run6 无法离线回归）。
 SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 # RUN_ID 参数化（V4-run1 起）：MX_RUN_ID=<id> 或 --run <id> → state/evidence/出报告
 # 全部指向 runs/<id>/；缺省回落 SIM 根（V3 兼容）。生成终版报告必须带本轮
@@ -1325,7 +1325,7 @@ _DOMAINS_RUN12 = {
 _NARR={'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
 if RUN_ID not in _NARR:
     # R17 按轮真值强制关卡：未注册叙事文案拒绝出报告（防旧轮账目冒充）；已知清单动态派生，
-    # 免写死文案与注册表漂移（run6 实锤：提示只列 run1/run2，实有 5 轮在册）。
+    # 免写死文案与注册表漂移（提示只列 run1/run2，实有 5 轮在册）。
     sys.exit('[mx-report-gen] 无该轮叙事文案: '+RUN_ID+'（已知: '+', '.join(sorted(_NARR))+'）')
 
 STEPS_META=_NARR[RUN_ID]
@@ -1379,7 +1379,7 @@ DOMAINS = [
      'cp-g5,cp-g6'),
 ]
 
-# ── 六域按轮覆写（2026-10-02 run6 实锤：静态兜底是 run5 旧账，直接渲染=旧账冒充本轮）──
+# ── 六域按轮覆写（2026-10-02 静态兜底是 run5 旧账，直接渲染=旧账冒充本轮）──
 _DOMAINS_RUN6 = {0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass', '无漏做。验收标准 7 条可判定（freeze 18c9d77 补推后在仓）；如实边界：两份渠道系分（微信/支付宝）超时未入库已记问题单，代码实现在开发线补齐。', '实测：AC 判定 7 条 · freeze 在仓（18c9d77）· 渠道系分 2/4 入库（超时 2 记入问题清单）', 'cp-g1,cp-g6'), 1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass', '成立（本轮真实提交实证）。四开发分支全部含本轮 commit 与 testlog（研发工程师A 28c3517 五子卡/研发工程师B S1-S3/研发工程师C/研发工程师D 8c0207f），集成复跑 194/194 全绿零缺陷。', '实测：四分支 run6 commit 锚 · 测试报告 8dbf5bf（194/194）', 'cp-g3,cp-g4'), 2: ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass', '一致（对账沿用+本轮反查）。契约口径（snake_case/金额分 int64/渠道 mock）在概设定稿，测试用例按契约反查一致；本轮未重跑治理 API 全量巡检（沿用既有实测，如实标注）。', '实测：概设契约×测试用例反查一致 · 治理 API 巡检本轮未重跑（沿用声明）', 'cp-g1,cp-g5'), 4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass', '可接受。安全探针（无 token/伪造 token→401）沿用既有实测，本轮未重跑（如实标注）；渠道端点全 mock、密钥不出服务端、金额分 int64 沿契约。', '实测：本轮未重跑安全探针（沿用既有 401 双探针结论，声明来源）', 'cp-gate,cp-g3'), 5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn', '可追责但记账有缺口：19 问题单全部在案、DISP 处置记账 0 条（缺口如实，复盘记入问题清单；终版合并报告已分档处置）；REL-MERGE/G1 推送/UAT 结论行三笔监控程序补账均留痕注明；UAT 七条证据 7/7 在案。', '实测：issues 19 条在案 · DISP 0（缺口记入问题清单）· 三笔补账留痕（f7b1cbc/18c9d77/$V_jLqhvn）', 'cp-g5,cp-g6')}
 # 六域按轮覆写注册表（R17）：逐轮叙事按轮编写后在此注册；未注册轮走下方台账/静态兜底
 # 并在表头声明来源（台账命中则判定/证据取最新轮真值）。
@@ -2111,7 +2111,7 @@ ARTIFACT_VIEWS = {
           [('现象段', r'现象'), ('规律段', r'规律'), ('行动项', r'行动项'), ('DISP 处置', r'DISP')])],
 }
 # run14 起派发词任务号为 DEV-PAYCORE-C/S/N 三腿（方案步 18 六路派发），矩阵预期路径
-# 须与派发词一致（run14 复盘 C4 根修：单件名预期令 agent 按词全交也判缺件）；
+# 须与派发词一致；
 # run13 及更早轮沿用单件名口径不回溯。
 _m_runno = re.search(r'-run(\d+)$', RUN_ID or '')
 if _m_runno and int(_m_runno.group(1)) >= 14:
@@ -2743,7 +2743,7 @@ def gov_final_rows():
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists()})
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
-# 图数对账（2026-10-07 run10 实锤：注册引用∩盘态与目录实态两套口径并存，曾渲 17 图/9 步
+# 图数对账（2026-10-07 注册引用∩盘态与目录实态两套口径并存，曾渲 17 图/9 步
 # "截图缺失"而盘上 29 图全在）：盘上未引用=漏配 WARN，注册缺文件=冒配红标，均落生成日志。
 _disk_pngs = {p.stem for p in STEPS_DIR.glob('*.png')} if STEPS_DIR.exists() else set()
 _registered = {pre for _, _, _, m in STEPS for pre, _, _ in m['imgs']}
@@ -2839,7 +2839,7 @@ def checkpoints_html():
 
 def gate_cards():
     # 打回/判回滚记录按轮隔离（run6 实锤漏网根治：run2 的 R-A1 判回滚史曾渲进 run6 门禁卡）。
-    # 静态注册表只作文字注解；打回事实改从 issues.log+state 实测统计（2026-10-07 run10 实锤：
+    # 静态注册表只作文字注解；打回事实改从 issues.log+state 实测统计（2026-10-07 
     # 未注册轮被默认成"一次通过"，G2/G5 台账打回在案仍渲喜报——"无条目=首过"的默认是
     # 静态模板冒充实录族病根）。实测统计命中优先于静态默认；两者并存时拼接。
     _GATE_REJ_BY_RUN = {
@@ -3046,7 +3046,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             imgs_html = f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 登记在案，无帧明示；补拍须按拍摄位规划准确补拍+图注明示时点）</p>'
         # 8.6 交付物视图（补遗③ R11）：实物渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
         art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + contract_block(n) + gov_evidence_block(n)
-        # 防御性回退（run11 实锤：STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
+        # 防御性回退（STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
         abg, afg, atxt = ACTOR_STYLE.get(meta.get('actor'), ACTOR_STYLE['both'])
         if PLAN_V82:
             # V8.2 四段（与方案 §2.4 步条目同构；§5.4）：操作路径表不入正文（附录《产品操作手册》）

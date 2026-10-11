@@ -560,7 +560,7 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# background_review 终局（用户指令）：每 turn 自动 review fork 关闭
 # （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
 # 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
 # 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
@@ -701,7 +701,7 @@ out['platforms'] = {
     'matrix': {'enabled': True, 'require_mention': True, 'thread_require_mention': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
-# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# background_review 终局（用户指令）：每 turn 自动 review fork 关闭
 # （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
 # 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
 # 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
@@ -766,7 +766,7 @@ if mu:
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
-# background_review 终局（2026-10-02 用户指令）：每 turn 自动 review fork 关闭
+# background_review 终局（用户指令）：每 turn 自动 review fork 关闭
 # （run7 实测占单 agent LLM 时间 79%）；沉淀保留在恰当卡点——治理闸通过后由
 # 场景脚本 gate_review 以 !refine 显式触发（slash_commands_goals /refine 路径，
 # 不查本开关）。MX_BGREVIEW=1 可恢复历史"每 turn 自动"形态。
@@ -1120,7 +1120,7 @@ model_preflight_report() { # 检查全部实例，额度/鉴权异常即 fail
     [[ "$st" == "ok" ]] || bad+=("$u:$st")
   done
   if (( ${#bad[@]} > 0 )); then
-    # 429 瞬时抖动鉴别（2026-09-28 V4-run1 实锤：14 连发探针 + 在跑 agent 回合同窗
+    # 429 瞬时抖动鉴别（2026-09-28 V4-14 连发探针 + 在跑 agent 回合同窗
     # 挤通道，尾部探针被 RPM 限流误判 quota；全停 30s 冷却后复查——真额度耗尽仍
     # 会失败，瞬发限流则恢复）。仅对 quota 态重试，auth/unreachable/noreply 不重试。
     local retriable=0 e

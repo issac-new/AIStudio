@@ -553,7 +553,7 @@ def jargon_gate(human_text: str):
     对照卡承担（引证原文+导读术语对照，run12 已裁定的组合形态）。"""
     hard, meta_quote = _load_jargon_words()
     # 表格/代码块=机器数据行（scenario.log 时间线、台账、日志原文），非人读文案——
-    # 扫描前剥离（12:18 run13 实锤：时间线事件类型「闸点沉淀」13 处误伤，词表罚数据行）。
+    # 扫描前剥离（12:18 时间线事件类型「闸点沉淀」13 处误伤，词表罚数据行）。
     _txt = re.sub(r'<table.*?</table>', ' ', human_text, flags=re.S)
     _txt = re.sub(r'<pre.*?</pre>', ' ', _txt, flags=re.S)
     plain = html.unescape(re.sub(r'<[^>]+>', ' ', _txt))
@@ -629,7 +629,7 @@ def main():
             + '（已知: ' + ', '.join(sorted(PART1_BY_RUN))
             + '）——PART 1 为逐轮人工正本，禁旧轮冒充；请按本轮实测依据编写后注册 PART1_BY_RUN')
     # run13 复盘 A1/F-P1 闸：PART1 占位符残留拒出——【收尾链回填/【TODO 类占位出厂=导读层
-    # 核心结论卡空转（run13 实锤：两卡带占位交付）。占位符必须在收尾链回填后才许合并。
+    # 核心结论卡空转（两卡带占位交付）。占位符必须在收尾链回填后才许合并。
     import re as _re_ph
     _ph_hits = _re_ph.findall(r'【(?:收尾链回填|TODO)[^】]*】', part1_tmpl)
     if _ph_hits:

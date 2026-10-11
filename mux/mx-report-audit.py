@@ -400,7 +400,7 @@ if RUN_ID >= '20261010-v8-run13':
     if _idle_noframe:
         warns.append(f'V8.4④ 无帧明示 {_idle_noframe} 步（⬜ 不在本轮执行范围/沿用带，回归轮口径合规呈现）')
     # ③ 帧时刻一致性（first-cut）：帧 mtime 须在 [run_started_at, 报告生成时刻]；帧名前缀键
-    #    在 state 有 epoch 落盘者，帧须 ≤ 键值+120s。2026-10-10 用户指令修订：补拍解禁但
+    #    在 state 有 epoch 落盘者，帧须 ≤ 键值+120s。用户指令修订：补拍解禁但
     #    必须准确——图注明示「补拍」的窗外/晚拍帧=合规降级 WARN（页面准确性由拍摄位规划+
     #    视觉抽检承担）；无补拍标注的窗外帧=冒充实时 FAIL。flag 键与 scenario.log 全段界
     #    对账为二阶强化，暂不设 FAIL 防误杀。
@@ -443,7 +443,7 @@ if RUN_ID >= '20261010-v8-run13':
 # 步结果式（含 在仓/落盘/过闸 等结果词且无任何画面词——"freeze 在仓"是步结论不是画面）。
 # 画面词=可指认的画面落点（面/页/视图/板/窗/列表/面板/看板/房间/灯/画布/台账/报告/IDE/环境/入口/矩阵/收件箱）。
 if RUN_ID >= '20261010-v8-run13':
-    # ④b 补拍纪律（2026-10-10 用户指令修订 V8.4）：准确补拍解禁——补拍帧必须 ①图注明示
+    # ④b 补拍纪律（用户指令修订 V8.4）：准确补拍解禁——补拍帧必须 ①图注明示
     #     「补拍」时点（③ 据此降级 WARN）②页面按拍摄位规划（capture-plan.env，视觉抽检
     #     复核）。仍禁：隔离区帧被嵌入正本——检测收窄到 img src/figcaption 上下文（叙事
     #     与问题单正文里的目录名提及是合法 provenance，不误杀）。无标注补拍由 ③ 兜杀。
@@ -523,7 +523,7 @@ _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
 _ilines_r18 = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
 _r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
-# 降级窄口径（run14 复盘 A4 根修）：载荷文件在位时，r18-collection-missing 登记行只降级
+# 降级窄口径：载荷文件在位时，r18-collection-missing 登记行只降级
 # 其登记的步（ISSUE 第三段 step-N），不再全局豁免——run14 实锤 4 张登记把 20+ 步的
 # 载荷缺失全部漂白为 WARN。文件级缺失（整链缺位）才保留全局降级语义。
 _r18_degraded_steps = set()
@@ -687,7 +687,7 @@ if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
         fails.append('步 18 缺分支落地时间线行（干预点 D：并行度行在则推进刻度行必在，同批渲染）')
 
 # ── 汇总 ──
-# 工具版本锚（run14 复盘 B5 根修）：审计结论绑定工具版本——镜像树落后一代曾在同一份
+# 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。
 import subprocess as _sp
 try:
