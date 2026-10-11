@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index f29b0a9c..1933d87e 100644
+index 5ff44d57..d0762d4a 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -6817,31 +6817,4 @@ export default {
+@@ -6833,31 +6833,4 @@ export default {
      confirm: 'Confirm',
      cancel: 'Cancel'
    },
@@ -35,10 +35,10 @@ index f29b0a9c..1933d87e 100644
 -  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index b6e954e5..c2faba60 100644
+index 33f34496..73c566ca 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -6815,31 +6815,4 @@ export default {
+@@ -6831,31 +6831,4 @@ export default {
      confirm: '确认',
      cancel: '取消'
    },
@@ -71,7 +71,7 @@ index b6e954e5..c2faba60 100644
 -  }
  }
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 97fecc68..2925c2c7 100644
+index 8fa23089..810b2a08 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -62,7 +62,6 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {

@@ -1,8 +1,8 @@
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
-index fcda9a36..b48196a6 100644
+index fcda9a36..c79a39f6 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
-@@ -32,10 +32,17 @@
+@@ -32,10 +32,17 @@ const handlers = {
    unsubscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    listAttachments: vi.fn(async (ctx: any) => { ctx.body = { attachments: [] } }),
    uploadAttachment: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),

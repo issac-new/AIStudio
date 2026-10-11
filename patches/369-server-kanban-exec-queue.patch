@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 027cb1c5..27a29a13 100644
+index ed45c770..667a2298 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -12,6 +12,45 @@ import { evaluateRules } from '../../../../custom/loop/engine/architecture-engin
@@ -222,7 +222,7 @@ index 027cb1c5..27a29a13 100644
        maxBuffer: 50 * 1024 * 1024,
        timeout: 120000,
        ...execOpts,
-@@ -1066,7 +1105,7 @@ export async function getHomeChannels(taskId: string | null, opts?: KanbanBoardO
+@@ -1095,7 +1134,7 @@ export async function getHomeChannels(taskId: string | null, opts?: KanbanBoardO
    if (taskId) {
      try {
        const args = [...boardArgs(opts?.board), 'notify-list', taskId, '--json']
@@ -231,7 +231,7 @@ index 027cb1c5..27a29a13 100644
        const parsed = JSON.parse(stdout.trim())
        subs = Array.isArray(parsed) ? parsed : []
      } catch {
-@@ -1268,7 +1307,7 @@ export async function estimateText(title: string, body?: string, opts?: KanbanBo
+@@ -1279,7 +1318,7 @@ export async function estimateText(title: string, body?: string, opts?: KanbanBo
    const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
    pushOptional(args, '--body', body)
    try {
@@ -240,7 +240,7 @@ index 027cb1c5..27a29a13 100644
        maxBuffer: 1024 * 1024,
        timeout: 90000,
        ...execOpts,
-@@ -1295,7 +1334,7 @@ export interface KanbanProject {
+@@ -1306,7 +1345,7 @@ export interface KanbanProject {
  /** List first-class Hermes projects for board scoping (`hermes project list --json`, patch 179). */
  export async function listProjects(): Promise<KanbanProject[]> {
    try {
@@ -249,7 +249,7 @@ index 027cb1c5..27a29a13 100644
        maxBuffer: 5 * 1024 * 1024,
        timeout: 30000,
        ...execOpts,
-@@ -1314,7 +1353,7 @@ export async function setBoardProject(slugInput: string, projectRef: string | nu
+@@ -1325,7 +1364,7 @@ export async function setBoardProject(slugInput: string, projectRef: string | nu
    const args = ['kanban', 'boards', 'set-project', slug]
    args.push(projectRef?.trim() ? projectRef.trim() : 'none')
    try {

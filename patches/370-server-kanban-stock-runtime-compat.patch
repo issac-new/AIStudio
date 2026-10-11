@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 27a29a13..e1f6e320 100644
+index 667a2298..6c15a732 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -1071,6 +1071,10 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+@@ -1100,6 +1100,10 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
      await execKanbanMutation(args, 'Hermes CLI: kanban set-model failed', 'Failed to set model override')
    }
    if (patch.clear_reasoning_effort || patch.reasoning_effort !== undefined) {
@@ -13,7 +13,7 @@ index 27a29a13..e1f6e320 100644
      const effort = patch.clear_reasoning_effort ? 'clear' : (patch.reasoning_effort || 'clear')
      await execKanbanMutation(
        [...boardArgs(board), 'set-reasoning', taskId, effort],
-@@ -1271,6 +1275,23 @@ function parseDotEnv(raw: string): Record<string, string> {
+@@ -1300,6 +1304,23 @@ function parseDotEnv(raw: string): Record<string, string> {
  
  // ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project ────────
  
@@ -37,7 +37,7 @@ index 27a29a13..e1f6e320 100644
  export interface KanbanEstimateResult {
    ok: boolean
    est_tokens?: number
-@@ -1304,6 +1329,10 @@ export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): P
+@@ -1315,6 +1336,10 @@ export interface KanbanEstimateResult {
   * exists yet (`hermes kanban estimate --title ... --json`).
   */
  export async function estimateText(title: string, body?: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
@@ -48,7 +48,7 @@ index 27a29a13..e1f6e320 100644
    const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
    pushOptional(args, '--body', body)
    try {
-@@ -1331,8 +1360,41 @@ export interface KanbanProject {
+@@ -1342,8 +1367,41 @@ export interface KanbanProject {
    archived: boolean
  }
  
@@ -90,7 +90,7 @@ index 27a29a13..e1f6e320 100644
    try {
      const { stdout } = await execKanbanCli(['project', 'list', '--json'], {
        maxBuffer: 5 * 1024 * 1024,
-@@ -1350,6 +1412,21 @@ export async function listProjects(): Promise<KanbanProject[]> {
+@@ -1361,6 +1419,21 @@ export async function listProjects(): Promise<KanbanProject[]> {
  /** Scope a board to a project (or clear with null) via `kanban boards set-project` (patch 178). */
  export async function setBoardProject(slugInput: string, projectRef: string | null): Promise<void> {
    const slug = normalizeBoardSlug(slugInput)

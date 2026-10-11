@@ -51,7 +51,7 @@ index 205a8589..e41288be 100644
    const bodyResult = requestBody(ctx)
    if (rejectBadRequest(ctx, bodyResult.error)) return
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
-index 5cb0cb9e..29940763 100644
+index b4b1315e..ba73b3d1 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -49,6 +49,8 @@ kanbanRoutes.get('/api/hermes/kanban/:id', ctrl.get)
@@ -64,7 +64,7 @@ index 5cb0cb9e..29940763 100644
  kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
  kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 9eaaca98..acc0304b 100644
+index a488d8ac..c1bc0b68 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -693,6 +693,16 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa

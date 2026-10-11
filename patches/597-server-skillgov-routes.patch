@@ -1,6 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 3333333..4444444 100644
-@@ -139,6 +139,9 @@
+index 6d9cc1cb..9d10db5e 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -141,6 +141,9 @@ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clust
  // 四阶段：+结卡校验面（watcher 轮询 column_transition→单任务校验→收件箱；
  // ONTOLOGY_WATCH=off 关，30s 档）
  import { ontologyRoutes, registerOntologyAgentBridgeRoutes, startOntologyWatchIfEnabled } from '../custom/ontology/ontology-controller'
@@ -10,7 +12,7 @@ index 3333333..4444444 100644
  // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
  import { reviewRoutes } from '../custom/review/review-controller'
  // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
-@@ -420,6 +423,8 @@
+@@ -423,6 +426,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
    app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
    app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST

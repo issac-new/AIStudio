@@ -54,7 +54,7 @@ index b8ba7945..0f7d9704 100644
                </div>
              </div>
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index f904d2eb..740bcfb2 100644
+index b826de2f..7125e979 100644
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
 @@ -277,7 +277,7 @@ export default {
@@ -163,7 +163,7 @@ index f904d2eb..740bcfb2 100644
      hideToolCalls: 'إخفاء نداءات الأدوات',
      messageQueue: 'طابور الرسائل',
      removeQueuedMessage: 'إزالة الرسالة من الطابور',
-@@ -2668,7 +2668,7 @@ export default {
+@@ -2675,7 +2675,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -172,7 +172,7 @@ index f904d2eb..740bcfb2 100644
        notifyOnCompleteHint: 'إظهار إشعار من النظام عند انتهاء الذكاء الاصطناعي',
        notifyOnCompleteMacHint: 'على macOS، اسمح بإشعارات المتصفح من إعدادات النظام.',
        notifyOnCompleteDenied: 'تم رفض إذن الإشعارات',
-@@ -2690,7 +2690,7 @@ export default {
+@@ -2697,7 +2697,7 @@ export default {
        chatInputHeightHint: 'ارتفاع حقل إدخال المحادثة الافتراضي على سطح المكتب بالبكسل. يبقى الارتفاع تلقائياً على الجوال.',
        linkOpenTarget: 'فتح روابط الويب في',
        linkOpenTargetHint: 'اختر مكان فتح الروابط من الرسائل ومعاينات Markdown.',
@@ -181,7 +181,7 @@ index f904d2eb..740bcfb2 100644
        linkOpenTargetDefaultBrowser: 'المتصفح الافتراضي',
      },
      agent: {
-@@ -2880,10 +2880,10 @@ export default {
+@@ -2887,10 +2887,10 @@ export default {
          extract: 'جارٍ فك ضغط النموذج…', validate: 'جارٍ التحقق من النموذج…', install: 'جارٍ تثبيت النموذج…', completed: 'النموذج جاهز', failed: 'فشل التنزيل',
        },
        hermesConfigTitle: 'إعدادات Hermes Agent',
@@ -194,7 +194,7 @@ index f904d2eb..740bcfb2 100644
        providerSpeed: 'السرعة',
        providerSampleRate: 'معدل العيّنات',
        providerBitRate: 'معدل البِت',
-@@ -2897,7 +2897,7 @@ export default {
+@@ -2904,7 +2904,7 @@ export default {
        optionDisabled: 'مُعطّل',
        nativeProvider: 'مزوّد Hermes الأصلي',
        selectNativeProvider: 'اختر مزوّد Hermes أصلي',
@@ -204,7 +204,7 @@ index f904d2eb..740bcfb2 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index 3ec26072..67a26aa5 100644
+index 32a5e86c..92d3004e 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
 @@ -277,7 +277,7 @@ export default {
@@ -313,7 +313,7 @@ index 3ec26072..67a26aa5 100644
      hideToolCalls: 'Tool-Aufrufe ausblenden',
      messageQueue: 'Nachrichtenwarteschlange',
      removeQueuedMessage: 'Nachricht aus Warteschlange entfernen',
-@@ -2165,7 +2165,7 @@ jobTriggered: 'Job ausgelost',
+@@ -2172,7 +2172,7 @@ jobTriggered: 'Job ausgelost',
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -322,7 +322,7 @@ index 3ec26072..67a26aa5 100644
        notifyOnCompleteHint: 'Systembenachrichtigung anzeigen, wenn die KI fertig ist',
        notifyOnCompleteMacHint: 'Unter macOS Browserbenachrichtigungen in den Systemeinstellungen erlauben.',
        notifyOnCompleteDenied: 'Benachrichtigungsberechtigung wurde verweigert',
-@@ -2187,7 +2187,7 @@ jobTriggered: 'Job ausgelost',
+@@ -2194,7 +2194,7 @@ jobTriggered: 'Job ausgelost',
        chatInputHeightHint: 'Standardhöhe der Chat-Eingabe auf dem Desktop in Pixeln. Mobil bleibt die Höhe automatisch.',
        linkOpenTarget: 'Weblinks öffnen in',
        linkOpenTargetHint: 'Wählen Sie, wo Links aus Nachrichten und Markdown-Vorschauen geöffnet werden.',
@@ -331,7 +331,7 @@ index 3ec26072..67a26aa5 100644
        linkOpenTargetDefaultBrowser: 'Standardbrowser',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ jobTriggered: 'Job ausgelost',
+@@ -2356,10 +2356,10 @@ jobTriggered: 'Job ausgelost',
          extract: 'Modell wird entpackt…', validate: 'Modell wird validiert…', install: 'Modell wird installiert…', completed: 'Modell ist bereit', failed: 'Download fehlgeschlagen',
        },
        hermesConfigTitle: 'Hermes-Agent-Konfiguration',
@@ -344,7 +344,7 @@ index 3ec26072..67a26aa5 100644
        providerSpeed: 'Geschwindigkeit',
        providerSampleRate: 'Abtastrate',
        providerBitRate: 'Bitrate',
-@@ -2366,7 +2366,7 @@ jobTriggered: 'Job ausgelost',
+@@ -2373,7 +2373,7 @@ jobTriggered: 'Job ausgelost',
        optionDisabled: 'Deaktiviert',
        nativeProvider: 'Nativer Hermes-Anbieter',
        selectNativeProvider: 'Nativen Hermes-Anbieter waehlen',
@@ -354,7 +354,7 @@ index 3ec26072..67a26aa5 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index a346c9ad..0c08ef96 100644
+index a3fd2aca..86720423 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -277,7 +277,7 @@ export default {
@@ -472,7 +472,7 @@ index a346c9ad..0c08ef96 100644
      hideToolCalls: 'Hide tool calls',
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
-@@ -2674,7 +2674,7 @@ export default {
+@@ -2681,7 +2681,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -481,7 +481,7 @@ index a346c9ad..0c08ef96 100644
        notifyOnCompleteHint: 'Show a system notification when AI finishes',
        notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
        notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -2696,7 +2696,7 @@ export default {
+@@ -2703,7 +2703,7 @@ export default {
        chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
        linkOpenTarget: 'Open web links in',
        linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
@@ -490,7 +490,7 @@ index a346c9ad..0c08ef96 100644
        linkOpenTargetDefaultBrowser: 'Default browser',
      },
      agent: {
-@@ -2893,10 +2893,10 @@ export default {
+@@ -2900,10 +2900,10 @@ export default {
          failed: 'Download failed',
        },
        hermesConfigTitle: 'Hermes Agent configuration',
@@ -503,7 +503,7 @@ index a346c9ad..0c08ef96 100644
        providerSpeed: 'Speed',
        providerSampleRate: 'Sample rate',
        providerBitRate: 'Bit rate',
-@@ -2910,7 +2910,7 @@ export default {
+@@ -2917,7 +2917,7 @@ export default {
        optionDisabled: 'Disabled',
        nativeProvider: 'Hermes native provider',
        selectNativeProvider: 'Select a Hermes native provider',
@@ -513,7 +513,7 @@ index a346c9ad..0c08ef96 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index c9a6bab5..6d9166f2 100644
+index 003cf9c8..09735041 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
 @@ -277,7 +277,7 @@ export default {
@@ -622,7 +622,7 @@ index c9a6bab5..6d9166f2 100644
      hideToolCalls: 'Ocultar llamadas de herramientas',
      messageQueue: 'Cola de mensajes',
      removeQueuedMessage: 'Quitar mensaje de la cola',
-@@ -2165,7 +2165,7 @@ jobTriggered: 'Job ejecutado',
+@@ -2172,7 +2172,7 @@ jobTriggered: 'Job ejecutado',
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -631,7 +631,7 @@ index c9a6bab5..6d9166f2 100644
        notifyOnCompleteHint: 'Mostrar una notificacion del sistema cuando la IA termina',
        notifyOnCompleteMacHint: 'En macOS, permite las notificaciones del navegador en Ajustes del Sistema.',
        notifyOnCompleteDenied: 'Permiso de notificacion denegado',
-@@ -2187,7 +2187,7 @@ jobTriggered: 'Job ejecutado',
+@@ -2194,7 +2194,7 @@ jobTriggered: 'Job ejecutado',
        chatInputHeightHint: 'Altura predeterminada de la entrada del chat en escritorio, en píxeles. En móvil se mantiene automática.',
        linkOpenTarget: 'Abrir enlaces web en',
        linkOpenTargetHint: 'Elige dónde se abren los enlaces de mensajes y vistas previas de Markdown.',
@@ -640,7 +640,7 @@ index c9a6bab5..6d9166f2 100644
        linkOpenTargetDefaultBrowser: 'Navegador predeterminado',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ jobTriggered: 'Job ejecutado',
+@@ -2356,10 +2356,10 @@ jobTriggered: 'Job ejecutado',
          extract: 'Extrayendo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'El modelo está listo', failed: 'Descarga fallida',
        },
        hermesConfigTitle: 'Configuracion de Hermes Agent',
@@ -653,7 +653,7 @@ index c9a6bab5..6d9166f2 100644
        providerSpeed: 'Velocidad',
        providerSampleRate: 'Frecuencia de muestreo',
        providerBitRate: 'Tasa de bits',
-@@ -2366,7 +2366,7 @@ jobTriggered: 'Job ejecutado',
+@@ -2373,7 +2373,7 @@ jobTriggered: 'Job ejecutado',
        optionDisabled: 'Desactivado',
        nativeProvider: 'Proveedor nativo de Hermes',
        selectNativeProvider: 'Seleccionar proveedor nativo de Hermes',
@@ -663,7 +663,7 @@ index c9a6bab5..6d9166f2 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 6c7c1382..1a03b392 100644
+index 521ce174..a52bb67a 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
 @@ -277,7 +277,7 @@ export default {
@@ -772,7 +772,7 @@ index 6c7c1382..1a03b392 100644
      hideToolCalls: 'Masquer les appels d’outils',
      messageQueue: 'File de messages',
      removeQueuedMessage: 'Retirer le message de la file',
-@@ -2165,7 +2165,7 @@ jobTriggered: 'Job declenche',
+@@ -2172,7 +2172,7 @@ jobTriggered: 'Job declenche',
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -781,7 +781,7 @@ index 6c7c1382..1a03b392 100644
        notifyOnCompleteHint: 'Afficher une notification systeme lorsque l\'IA a termine',
        notifyOnCompleteMacHint: 'Sur macOS, autorisez les notifications du navigateur dans Reglages Systeme.',
        notifyOnCompleteDenied: 'Autorisation de notification refusee',
-@@ -2187,7 +2187,7 @@ jobTriggered: 'Job declenche',
+@@ -2194,7 +2194,7 @@ jobTriggered: 'Job declenche',
        chatInputHeightHint: 'Hauteur par défaut de la zone de saisie sur ordinateur, en pixels. Le mobile reste automatique.',
        linkOpenTarget: 'Ouvrir les liens web dans',
        linkOpenTargetHint: 'Choisissez où ouvrir les liens des messages et des aperçus Markdown.',
@@ -790,7 +790,7 @@ index 6c7c1382..1a03b392 100644
        linkOpenTargetDefaultBrowser: 'Navigateur par défaut',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ jobTriggered: 'Job declenche',
+@@ -2356,10 +2356,10 @@ jobTriggered: 'Job declenche',
          extract: 'Extraction du modèle…', validate: 'Validation du modèle…', install: 'Installation du modèle…', completed: 'Le modèle est prêt', failed: 'Échec du téléchargement',
        },
        hermesConfigTitle: 'Configuration de Hermes Agent',
@@ -803,7 +803,7 @@ index 6c7c1382..1a03b392 100644
        providerSpeed: 'Vitesse',
        providerSampleRate: 'Frequence d’echantillonnage',
        providerBitRate: 'Debit binaire',
-@@ -2366,7 +2366,7 @@ jobTriggered: 'Job declenche',
+@@ -2373,7 +2373,7 @@ jobTriggered: 'Job declenche',
        optionDisabled: 'Desactive',
        nativeProvider: 'Fournisseur natif Hermes',
        selectNativeProvider: 'Choisir un fournisseur natif Hermes',
@@ -813,7 +813,7 @@ index 6c7c1382..1a03b392 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index 88453678..a058042f 100644
+index f9455ab4..26036036 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
 @@ -277,7 +277,7 @@ export default {
@@ -915,7 +915,7 @@ index 88453678..a058042f 100644
      hideToolCalls: 'ツール呼び出しを非表示',
      messageQueue: 'メッセージキュー',
      removeQueuedMessage: 'キューのメッセージを削除',
-@@ -2165,7 +2165,7 @@ export default {
+@@ -2172,7 +2172,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -924,7 +924,7 @@ index 88453678..a058042f 100644
        notifyOnCompleteHint: 'AI の応答完了時にシステム通知を表示',
        notifyOnCompleteMacHint: 'macOS ではシステム設定でブラウザ通知を許可してください。',
        notifyOnCompleteDenied: '通知権限が拒否されました',
-@@ -2187,7 +2187,7 @@ export default {
+@@ -2194,7 +2194,7 @@ export default {
        chatInputHeightHint: 'デスクトップでの既定の入力欄高さ（px）。モバイルでは自動高さを維持します。',
        linkOpenTarget: 'Web リンクを開く場所',
        linkOpenTargetHint: 'メッセージと Markdown プレビュー内のリンクを開く場所を選択します。',
@@ -933,7 +933,7 @@ index 88453678..a058042f 100644
        linkOpenTargetDefaultBrowser: '既定のブラウザ',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ export default {
+@@ -2356,10 +2356,10 @@ export default {
          extract: 'モデルを展開中…', validate: 'モデルを検証中…', install: 'モデルをインストール中…', completed: 'モデルを利用できます', failed: 'ダウンロード失敗',
        },
        hermesConfigTitle: 'Hermes Agent 設定',
@@ -946,7 +946,7 @@ index 88453678..a058042f 100644
        providerSpeed: '速度',
        providerSampleRate: 'サンプルレート',
        providerBitRate: 'ビットレート',
-@@ -2366,7 +2366,7 @@ export default {
+@@ -2373,7 +2373,7 @@ export default {
        optionDisabled: '無効',
        nativeProvider: 'Hermes ネイティブプロバイダー',
        selectNativeProvider: 'Hermes ネイティブプロバイダーを選択',
@@ -956,7 +956,7 @@ index 88453678..a058042f 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index aa6232ae..c1f488f7 100644
+index 1f3b4413..9eb2462e 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1058,7 +1058,7 @@ index aa6232ae..c1f488f7 100644
      hideToolCalls: '도구 호출 숨기기',
      messageQueue: '메시지 대기열',
      removeQueuedMessage: '대기열 메시지 제거',
-@@ -2165,7 +2165,7 @@ export default {
+@@ -2172,7 +2172,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1067,7 +1067,7 @@ index aa6232ae..c1f488f7 100644
        notifyOnCompleteHint: 'AI 응답 완료 시 시스템 알림 표시',
        notifyOnCompleteMacHint: 'macOS 에서는 시스템 설정에서 브라우저 알림을 허용해야 합니다.',
        notifyOnCompleteDenied: '알림 권한이 거부되었습니다',
-@@ -2187,7 +2187,7 @@ export default {
+@@ -2194,7 +2194,7 @@ export default {
        chatInputHeightHint: '데스크톱 채팅 입력창 기본 높이(px). 모바일은 자동 높이를 유지합니다.',
        linkOpenTarget: '웹 링크 열기 위치',
        linkOpenTargetHint: '메시지와 Markdown 미리보기의 링크를 열 위치를 선택합니다.',
@@ -1076,7 +1076,7 @@ index aa6232ae..c1f488f7 100644
        linkOpenTargetDefaultBrowser: '기본 브라우저',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ export default {
+@@ -2356,10 +2356,10 @@ export default {
          extract: '모델 압축 해제 중…', validate: '모델 검증 중…', install: '모델 설치 중…', completed: '모델 사용 가능', failed: '다운로드 실패',
        },
        hermesConfigTitle: 'Hermes Agent 설정',
@@ -1089,7 +1089,7 @@ index aa6232ae..c1f488f7 100644
        providerSpeed: '속도',
        providerSampleRate: '샘플 레이트',
        providerBitRate: '비트 레이트',
-@@ -2366,7 +2366,7 @@ export default {
+@@ -2373,7 +2373,7 @@ export default {
        optionDisabled: '사용 안 함',
        nativeProvider: 'Hermes 네이티브 제공자',
        selectNativeProvider: 'Hermes 네이티브 제공자 선택',
@@ -1099,7 +1099,7 @@ index aa6232ae..c1f488f7 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index f6de3353..24a5807d 100644
+index 8a37adc1..ab4d56d6 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1208,7 +1208,7 @@ index f6de3353..24a5807d 100644
      hideToolCalls: 'Ocultar chamadas de ferramentas',
      messageQueue: 'Fila de mensagens',
      removeQueuedMessage: 'Remover mensagem da fila',
-@@ -2165,7 +2165,7 @@ jobTriggered: 'Job acionado',
+@@ -2172,7 +2172,7 @@ jobTriggered: 'Job acionado',
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1217,7 +1217,7 @@ index f6de3353..24a5807d 100644
        notifyOnCompleteHint: 'Mostrar notificação do sistema quando a IA terminar',
        notifyOnCompleteMacHint: 'No macOS, permita notificações do navegador nos Ajustes do Sistema.',
        notifyOnCompleteDenied: 'Permissão de notificação negada',
-@@ -2187,7 +2187,7 @@ jobTriggered: 'Job acionado',
+@@ -2194,7 +2194,7 @@ jobTriggered: 'Job acionado',
        chatInputHeightHint: 'Altura padrão da entrada do chat no desktop, em pixels. No celular permanece automática.',
        linkOpenTarget: 'Abrir links da web em',
        linkOpenTargetHint: 'Escolha onde abrir links de mensagens e prévias de Markdown.',
@@ -1226,7 +1226,7 @@ index f6de3353..24a5807d 100644
        linkOpenTargetDefaultBrowser: 'Navegador padrão',
      },
      agent: {
-@@ -2349,10 +2349,10 @@ jobTriggered: 'Job acionado',
+@@ -2356,10 +2356,10 @@ jobTriggered: 'Job acionado',
          extract: 'Extraindo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'Modelo pronto', failed: 'Falha no download',
        },
        hermesConfigTitle: 'Configuracao do Hermes Agent',
@@ -1239,7 +1239,7 @@ index f6de3353..24a5807d 100644
        providerSpeed: 'Velocidade',
        providerSampleRate: 'Taxa de amostragem',
        providerBitRate: 'Taxa de bits',
-@@ -2366,7 +2366,7 @@ jobTriggered: 'Job acionado',
+@@ -2373,7 +2373,7 @@ jobTriggered: 'Job acionado',
        optionDisabled: 'Desativado',
        nativeProvider: 'Provedor nativo Hermes',
        selectNativeProvider: 'Selecionar provedor nativo Hermes',
@@ -1249,7 +1249,7 @@ index f6de3353..24a5807d 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index 88e26c50..52b34946 100644
+index c4ab76dd..3b7d3dde 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1328,7 +1328,7 @@ index 88e26c50..52b34946 100644
      restartPromptTitle: 'Runtime готов',
      restartPromptContent: 'Hermes Runtime {version} установлен. Перезапустить сейчас, чтобы использовать его?',
      restartLater: 'Позже',
-@@ -700,9 +700,9 @@ export default {
+@@ -701,9 +701,9 @@ export default {
        viewList: 'Список',
        viewDownload: 'Скачать',
        viewMessages: 'Отправка сообщений',
@@ -1340,7 +1340,7 @@ index 88e26c50..52b34946 100644
        downloadScan: 'Сканировать телефоном',
        downloadScanHint: 'Версия для Android доступна',
        available: 'Доступно',
-@@ -738,7 +738,7 @@ export default {
+@@ -739,7 +739,7 @@ export default {
        accessFailures: {
          tokenExpired: 'Срок действия токена истёк',
          paidAccountRequired: 'Текущая учётная запись не является платной и не может использовать эту функцию',
@@ -1349,7 +1349,7 @@ index 88e26c50..52b34946 100644
          appAccessExpired: 'Срок доступа к внутреннему тестированию или публичной бета-версии истёк',
          required: 'App не предоставило разрешение на доступ',
          invalid: 'Разрешение на доступ App недействительно',
-@@ -1109,7 +1109,7 @@ export default {
+@@ -1110,7 +1110,7 @@ export default {
      },
      showToolCalls: 'Показать вызовы инструментов',
      pushEnabled: 'Включить отправку',
@@ -1358,7 +1358,7 @@ index 88e26c50..52b34946 100644
      hideToolCalls: 'Скрыть вызовы инструментов',
      messageQueue: 'Очередь сообщений',
      removeQueuedMessage: 'Удалить сообщение из очереди',
-@@ -2436,7 +2436,7 @@ export default {
+@@ -2444,7 +2444,7 @@ export default {
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1367,7 +1367,7 @@ index 88e26c50..52b34946 100644
        notifyOnCompleteHint: 'Показывать системное уведомление по окончании ответа AI',
        notifyOnCompleteMacHint: 'В macOS разрешите уведомления браузера в системных настройках.',
        notifyOnCompleteDenied: 'Разрешение на уведомления отклонено',
-@@ -2458,7 +2458,7 @@ export default {
+@@ -2466,7 +2466,7 @@ export default {
        chatInputHeightHint: 'Высота поля ввода чата на рабочем столе в пикселях. На мобильных остается авто.',
        linkOpenTarget: 'Открывать веб-ссылки в',
        linkOpenTargetHint: 'Выберите, где открывать ссылки из сообщений и предпросмотров Markdown.',
@@ -1376,7 +1376,7 @@ index 88e26c50..52b34946 100644
        linkOpenTargetDefaultBrowser: 'Браузер по умолчанию',
      },
      agent: {
-@@ -2648,10 +2648,10 @@ export default {
+@@ -2656,10 +2656,10 @@ export default {
          extract: 'Распаковка модели…', validate: 'Проверка модели…', install: 'Установка модели…', completed: 'Модель готова', failed: 'Ошибка загрузки',
        },
        hermesConfigTitle: 'Конфигурация Hermes Agent',
@@ -1389,7 +1389,7 @@ index 88e26c50..52b34946 100644
        providerSpeed: 'Скорость',
        providerSampleRate: 'Частота дискретизации',
        providerBitRate: 'Битрейт',
-@@ -2665,7 +2665,7 @@ export default {
+@@ -2673,7 +2673,7 @@ export default {
        optionDisabled: 'Выключено',
        nativeProvider: 'Нативный провайдер Hermes',
        selectNativeProvider: 'Выбрать нативный провайдер Hermes',
@@ -1399,7 +1399,7 @@ index 88e26c50..52b34946 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index f05c81dd..f3b7c22f 100644
+index 5cf0b2b7..6742204d 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1508,7 +1508,7 @@ index f05c81dd..f3b7c22f 100644
      hideToolCalls: '隱藏工具呼叫',
      messageQueue: '訊息佇列',
      removeQueuedMessage: '移除佇列訊息',
-@@ -2611,14 +2611,14 @@ export default {
+@@ -2618,14 +2618,14 @@ export default {
        approvalBellHint: '出現新的待處理審批或澄清時播放提示音',
        notifyOnComplete: '完成彈窗通知',
        notifyOnApproval: '審批桌面通知',
@@ -1525,7 +1525,7 @@ index f05c81dd..f3b7c22f 100644
        notifyOnCompleteHint: 'AI 回覆完成時顯示系統通知',
        notifyOnCompleteMacHint: 'macOS 需要在系統設定中允許瀏覽器通知。',
        notifyOnCompleteDenied: '通知權限已被拒絕',
-@@ -2640,7 +2640,7 @@ export default {
+@@ -2647,7 +2647,7 @@ export default {
        chatInputHeightHint: '桌面端聊天輸入框預設高度（像素）。行動端保持自動高度。',
        linkOpenTarget: '網頁連結開啟方式',
        linkOpenTargetHint: '選擇訊息與 Markdown 預覽中的網頁連結要在哪裡開啟。',
@@ -1534,7 +1534,7 @@ index f05c81dd..f3b7c22f 100644
        linkOpenTargetDefaultBrowser: '預設瀏覽器',
      },
      agent: {
-@@ -2830,10 +2830,10 @@ export default {
+@@ -2837,10 +2837,10 @@ export default {
          extract: '正在解壓縮模型……', validate: '正在驗證模型……', install: '正在安裝模型……', completed: '模型已可用', failed: '下載失敗',
        },
        hermesConfigTitle: 'Hermes Agent 設定',
@@ -1547,7 +1547,7 @@ index f05c81dd..f3b7c22f 100644
        providerSpeed: '語速',
        providerSampleRate: '取樣率',
        providerBitRate: '位元率',
-@@ -2847,7 +2847,7 @@ export default {
+@@ -2854,7 +2854,7 @@ export default {
        optionDisabled: '停用',
        nativeProvider: 'Hermes 原生提供商',
        selectNativeProvider: '選擇 Hermes 原生提供商',
@@ -1557,7 +1557,7 @@ index f05c81dd..f3b7c22f 100644
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d81239bf..40943bb0 100644
+index 3a15d572..4fadd167 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -277,7 +277,7 @@ export default {
@@ -1666,7 +1666,7 @@ index d81239bf..40943bb0 100644
      hideToolCalls: '隐藏工具调用',
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
-@@ -2705,14 +2705,14 @@ export default {
+@@ -2712,14 +2712,14 @@ export default {
        approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
        notifyOnComplete: '完成弹窗通知',
        notifyOnApproval: '审批桌面通知',
@@ -1683,7 +1683,7 @@ index d81239bf..40943bb0 100644
        notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
        notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
        notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -2734,7 +2734,7 @@ export default {
+@@ -2741,7 +2741,7 @@ export default {
        chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
        linkOpenTarget: '网页链接打开方式',
        linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
@@ -1692,7 +1692,7 @@ index d81239bf..40943bb0 100644
        linkOpenTargetDefaultBrowser: '默认浏览器',
      },
      agent: {
-@@ -2931,10 +2931,10 @@ export default {
+@@ -2938,10 +2938,10 @@ export default {
          failed: '下载失败',
        },
        hermesConfigTitle: 'Hermes Agent 配置',
@@ -1705,7 +1705,7 @@ index d81239bf..40943bb0 100644
        providerSpeed: '语速',
        providerSampleRate: '采样率',
        providerBitRate: '比特率',
-@@ -2948,7 +2948,7 @@ export default {
+@@ -2955,7 +2955,7 @@ export default {
        optionDisabled: '停用',
        nativeProvider: 'Hermes 原生提供商',
        selectNativeProvider: '选择 Hermes 原生提供商',
