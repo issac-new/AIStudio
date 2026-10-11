@@ -77,6 +77,12 @@ ck "根治 排期模板形态列" mux/templates-pending/schedule.md '交付形�
 ck "报告语言 人话导读在位" mux/mx-report-gen.py '幂等是什么'
 ck "报告语言 名词速查在位" mux/mx-report-gen.py '名词速查'
 
+# 质量判据呈现+图片相符断言（2026-10-11 用户裁定，方案 §5.4.3 第④⑤条）：
+# 判据禁只列名字——合格线全文展开+实物核对证据；图片与功能描述对得上（A11 三断言）。
+ck "判据 合格线块在位" mux/mx-report-gen.py 'st-crit-hd'
+ck "判据 实物核对证据行" mux/mx-report-gen.py '交付物实物核对'
+ck "判据 图片相符 A11 三断言" mux/mx-report-audit.py 'A11 图片与功能描述相符'
+
 # 演示素材层断言（2026-10-11 视角轮，方案 §5.4.6）：生成器+方案条款双锚，
 # 防「素材层被无声删除」；demo-kit.html 由 demo-kit-gen.py 只读消费真实轮数据产出。
 ck "素材层 生成器在位" mux/demo-kit-gen.py '^"""demo-kit-gen\.py'
