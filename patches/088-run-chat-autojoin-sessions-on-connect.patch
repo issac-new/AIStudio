@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
-index 33e8efd8..5f1622a3 100644
+index dfec48d2..a05c828c 100644
 --- a/packages/server/src/modules/studio/repositories/session-store.ts
 +++ b/packages/server/src/modules/studio/repositories/session-store.ts
-@@ -635,6 +635,20 @@ export function countSessions(
+@@ -638,6 +638,20 @@ export function countSessions(
    return Number(row.total)
  }
  

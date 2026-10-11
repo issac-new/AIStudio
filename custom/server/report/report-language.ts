@@ -6,9 +6,11 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
+// server tsconfig 为 commonjs，import.meta 会以 TS1343 被 tsc 门禁拒绝；CJS 侧
+// 用 __dirname（esbuild bundle 后同样成立），vitest ESM 下 __dirname 未定义则
+// 落绝对路径兜底候选——两个候选指向同一份 jargon-check.py（单一事实源不破）。
+const HERE = (() => { try { return __dirname } catch { return process.cwd() } })()
 const JC = [join(HERE, '../../../scripts/plan-html/jargon-check.py'), '/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py']
   .find((p) => existsSync(p))
 

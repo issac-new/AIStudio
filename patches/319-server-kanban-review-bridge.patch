@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 7f019e74..9eaaca98 100644
+index 0910b25b..a488d8ac 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -729,6 +729,16 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions
@@ -19,7 +19,7 @@ index 7f019e74..9eaaca98 100644
      default:
        throw new Error(`Bulk status ${opts.status} is not supported by the CLI bridge`)
    }
-@@ -890,6 +900,15 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+@@ -919,6 +929,15 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
      } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
        // Use bulk update for direct status writes
        await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })

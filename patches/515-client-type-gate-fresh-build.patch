@@ -109,7 +109,7 @@ index 47824eea..28d413e3 100644
  
    function handleKeydown(e: KeyboardEvent) {
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index ed3d51e2..97fecc68 100644
+index dfe896f9..8fa23089 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -114,7 +114,7 @@ export interface Message {

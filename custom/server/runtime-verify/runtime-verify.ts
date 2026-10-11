@@ -30,6 +30,9 @@ export interface DevtoolsProbe {
   /** miniprogram-automator SDK 可解析（产品仓未装则 verify 报 CAPABILITY_ABSENT 并给出安装指引） */
   automatorSdk: boolean
   detail: string
+  // 与 VerifierProbe 的开放面同构：无索引签名的 interface 不被隐式索引接受，
+  // 注册表 entry 会以 TS2322 拒绝（server tsc 门禁实录）。
+  [extra: string]: unknown
 }
 
 export function probeWechatDevtools(appDir = '/Applications'): DevtoolsProbe {

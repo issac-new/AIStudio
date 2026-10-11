@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 9c59f47a..027cb1c5 100644
+index 79f7b957..ed45c770 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -759,6 +759,14 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
