@@ -37,6 +37,9 @@ const URL_ALLOWED = [
   'server/matrix/admin-service.ts', // 管理面（whoami/displayname/synapse admin）
   'server/matrix/chat-bridge.ts', // v14 P2B 桥接通道（收敛补录，同 ALLOWED_CONSUMERS）
   'server/matrix/agent-identity.ts', // v14 P2A 身份面（收敛补录）
+  // 进度联邦通道（2026-10-11 补录，9044f1b1 落地时漏更本守门）：服务端跨机进度事件
+  // 上行/回读（federation 房 messages 读取+send），同属服务端直连面而非任务协作消息
+  'server/progress/federation.ts',
 ]
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'
