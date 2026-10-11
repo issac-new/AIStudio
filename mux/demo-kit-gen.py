@@ -226,6 +226,8 @@ td.ai{{color:#a78bfa}} td.hu{{color:#4ade80}}
 </body></html>'''
 
     out = evid / 'demo-kit.html'
+    html_doc = __import__('re').sub(r'/Users/[A-Za-z0-9_.\-]+', '[宿主家目录]', html_doc)
+    html_doc = __import__('re').sub(r'/Volumes/[A-Za-z0-9_.\-]+', '[宿主卷]', html_doc)
     out.write_text(html_doc, encoding='utf-8')
     print(f'[demo-kit] {out}（{len(tl_rows)} 时间轴行 / {len(intercepts)} 拦截卡 / '
           f'{len(approvals)} 审批 / {len(quotes)} 字幕卡）')
