@@ -50,5 +50,12 @@ ck "首过口径 G5 GAP 残留检测" aipay-scenario.sh 'sset_once g5_supplement
 ck "首过口径 metrics 三态" mux/mx-scenario-lib.sh '首过\+补过\+打回=6'
 ck "首过口径 补过键读取" mux/mx-scenario-lib.sh 'g\$\{_n\}_supplement'
 
+# QGate↔技能贯通断言（2026-10-12 贯通轮，对照表=mux/qgate-skill-map.md）
+ck "贯通 defect-loop 结卡门禁段" skills/defect-loop/SKILL.md 'task_close 触发面'
+ck "贯通 defect-loop trace 门引用" skills/defect-loop/SKILL.md 'L0.requirement-trace'
+ck "贯通 requirements-analyst 自证段" skills/requirements-analyst/SKILL.md 'L0.requirement-trace'
+ck "贯通 aipaydev-dev 门禁集成" skills/aipaydev-dev/SKILL.md '门禁|qgate'
+ck "贯通 对照表在位" mux/qgate-skill-map.md '七技能 × 门禁责任面'
+
 if (( FAILS > 0 )); then echo "FAIL：${FAILS} 项缺锚"; exit 1; fi
-echo "discipline-v88-810-gates：裸奔五条+首过三态+锚点抽验断言全过"
+echo "discipline-v88-810-gates：裸奔五条+首过三态+锚点抽验+技能贯通断言全过"
