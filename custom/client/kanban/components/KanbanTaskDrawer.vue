@@ -49,13 +49,24 @@ const matchedRoom = ref<RoomLike | null>(null)
 const roomPrefix = computed(() => (props.taskId ? taskRoomPrefix(props.taskId) : ''))
 const roomInitialName = computed(() => `${roomPrefix.value} ${task.value?.title ?? ''}`.trim())
 
-/** 匹配群刷新（matrix store 动态 import：抽屉在纯 kanban 测试环境不拉 matrix 重图） */
+/**
+ * 匹配群刷新（matrix store 动态 import：抽屉在纯 kanban 测试环境不拉 matrix 重图）。
+ * 优先级（run15 前置 P4-9）：①卡 body 的 room: 锚行（确定性——主卡派发锚直达讨论群，
+ * 派发词要求 agent 建卡时写入）②taskId 前 8 位群名前缀约定（子任务群弱锚点回落）。
+ */
 async function refreshMatchedRoom(): Promise<void> {
   matchedRoom.value = null
   if (!props.show || !props.taskId) return
   try {
     const { useMatrixRoomStore } = await import('@/custom/matrix-chat/stores/matrix-room')
-    matchedRoom.value = matchRoomByPrefix(useMatrixRoomStore().sortedRooms as RoomLike[], roomPrefix.value)
+    const rooms = useMatrixRoomStore().sortedRooms as RoomLike[]
+    const mAnchor = /(?:^|\n)room:\s*(![A-Za-z0-9._=+-]+:[A-Za-z0-9.-]+)/.exec(detail.value?.body ?? '')
+    if (mAnchor) {
+      const hit = rooms.find(r => r.roomId === mAnchor[1])
+      matchedRoom.value = hit ?? { roomId: mAnchor[1], name: undefined } as RoomLike
+      return
+    }
+    matchedRoom.value = matchRoomByPrefix(rooms, roomPrefix.value)
   } catch { /* matrix 未初始化：跳群按钮隐藏 */ }
 }
 watch(() => [props.show, props.taskId] as const, () => { void refreshMatchedRoom() }, { immediate: true })
@@ -261,6 +272,7 @@ async function loadDetail(taskId: string) {
   try {
     detail.value = await kanbanApi.getTask(taskId, { board: store.selectedBoard })
     resetEditors()
+    void refreshMatchedRoom()   // body room: 锚依赖 detail 在位（P4-9）
   } catch (err: any) {
     patchErr.value = err?.message || String(err)
     message.error(t('kanban.message.loadFailed'))
