@@ -51,9 +51,9 @@ describe('detectors（run11 实录形态）', () => {
   it('D4：尾行错误态+静默>5min 判卡；正常尾/刚更新不判', () => {
     const now = 1_000_000
     const tails = [
-      { profile: 'fanfan', tail: '2026-10-08 18:18:00 ERROR hindsight prefetch TimeoutError', mtimeMs: now - 400_000 },
-      { profile: 'hu', tail: '2026-10-08 18:18:00 INFO ok', mtimeMs: now - 400_000 },
-      { profile: 'lin', tail: '... Traceback ...', mtimeMs: now - 10_000 },
+      { profile: 'fanfan', tail: '2026-10-08 18:18:00 ERROR hindsight prefetch TimeoutError', mtimeMs: now - 400_000, workTsMs: now - 400_000 },
+      { profile: 'hu', tail: '2026-10-08 18:18:00 INFO ok', mtimeMs: now - 400_000, workTsMs: now - 400_000 },
+      { profile: 'lin', tail: '... Traceback ...', mtimeMs: now - 10_000, workTsMs: now - 10_000 },
     ]
     const out = detectSessionStall(snap({ profiles: { ok: true, tails } }), { nowMs: now })
     expect(out).toHaveLength(1)
@@ -76,7 +76,7 @@ describe('ClusterInspector（冷却去重/重入/fail-soft）', () => {
   function stalledSnap() {
     return snap({
       gateway: { ok: false, error: 'probe failed' },
-      profiles: { ok: true, tails: [{ profile: 'x', tail: '... TimeoutError', mtimeMs: 1 }] },
+      profiles: { ok: true, tails: [{ profile: 'x', tail: '... TimeoutError', mtimeMs: 1, workTsMs: 1 }] },
     })
   }
 
@@ -142,7 +142,7 @@ describe('二期②③：matrix 提醒 + destructive 审批联动', () => {
   function deadGatewaySnap() {
     return snap({
       gateway: { ok: false, error: 'probe failed' },
-      profiles: { ok: true, tails: [{ profile: 'fanfan', tail: '... TimeoutError', mtimeMs: 1 }] },
+      profiles: { ok: true, tails: [{ profile: 'fanfan', tail: '... TimeoutError', mtimeMs: 1, workTsMs: 1 }] },
     })
   }
   it('② NUDGE=on 时 session.stalled 触发提醒（mentions 经凭据链由注入桩代验）', async () => {
@@ -203,7 +203,7 @@ describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', ()
   const now = 1_000_000_000_000
   const mk = (mtime: number) => snap({
     ts: now,
-    profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'INFO agent ok', mtimeMs: mtime }] },
+    profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'INFO agent ok', mtimeMs: mtime, workTsMs: mtime }] },
     runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }, { id: 't_fix2', assignee: 'chen-csw-pay-core' }] },
   })
   it('在办卡+档案静默超阈 → 报 task.agent-silent（不要求日志尾错误态）', () => {
@@ -215,11 +215,26 @@ describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', ()
   })
   it('档案活跃（刚写日志）→ 不报；无在办卡的静默档案 → 不报（真空闲不误报）', () => {
     expect(detectAll(mk(now - 60_000), { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
-    const idle = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'ops', tail: 'x', mtimeMs: now - 9999_000 }] }, runningCards: { ok: true, cards: [] } })
+    const idle = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'ops', tail: 'x', mtimeMs: now - 9999_000, workTsMs: 0 }] }, runningCards: { ok: true, cards: [] } })
     expect(detectAll(idle, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
   })
+  it('假活跃防误判（run14 实锤形态）：mtime 被 reaction 噪音刷新但工作行已死 → 按 workTsMs 判停报', () => {
+    const fake = snap({
+      ts: now,
+      profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'Matrix: reaction ✅', mtimeMs: now - 60_000, workTsMs: now - 1200_000 }] },
+      runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }] },
+    })
+    const hit = detectAll(fake, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')
+    expect(hit).toBeTruthy() // mtime 60s 前（新鲜）但工作行 20min 前 → 仍报
+    const alive = snap({
+      ts: now,
+      profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'API call #5', mtimeMs: now - 60_000, workTsMs: now - 60_000 }] },
+      runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }] },
+    })
+    expect(detectAll(alive, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+  })
   it('runningCards 面未接线 → 零误报', () => {
-    const off = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'a', tail: 'x', mtimeMs: 0 }] }, runningCards: { ok: false, cards: [] } })
+    const off = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'a', tail: 'x', mtimeMs: 0, workTsMs: 0 }] }, runningCards: { ok: false, cards: [] } })
     expect(detectAll(off, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
   })
 })
