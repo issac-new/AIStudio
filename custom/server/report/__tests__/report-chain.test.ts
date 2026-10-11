@@ -13,6 +13,7 @@ import {
   type StepBlock,
 } from '../acceptance'
 import { GOV_EVIDENCE_FILES, govEvidenceBlocks, maskEnvPaths, productOutcomeShots, qgateBlock } from '../evidence-blocks'
+import { HARD_WORDS, checkCriteriaSection, checkFrameFunctionLabels, checkVisibleTextPlainLanguage } from '../report-language'
 import { part1Skeleton, type RunFacts } from '../part1-skeleton'
 
 /** run10 实测口径的步块样本（st-artifact 视图/无文件域声明两形态） */
@@ -165,7 +166,7 @@ describe('2026-10-11 同步轮：宿主脱敏+产品成效系列版面（§5.4.3
     const html = productOutcomeShots([{ file: 'cashier-p1-order.png' }, { file: 'cashier-p2-paid.png' }])
     expect(html).toContain('class="po-shots"')
     expect(html).toContain('src="product-outcome/cashier-p1-order.png"')
-    expect(html).toContain('>cashier-p1-order</figcaption>')
+    expect(html).toContain('>cashier-p1-order（未标注）</figcaption>') // 无 label 回退=文件名+未标注（A11 点名对象）
   })
   it('checkEnvMasking：泄漏即违例（A9 等价）', () => {
     expect(checkEnvMasking('<p>/Users/cuishi/a</p>').ok).toBe(false)
@@ -177,6 +178,36 @@ describe('2026-10-11 同步轮：宿主脱敏+产品成效系列版面（§5.4.3
     const good = productOutcomeShots([{ file: 'cashier-p2-paid.png' }])
     expect(checkProductOutcomeGrid(good).ok).toBe(true)
     expect(checkProductOutcomeGrid('<p>无成效节</p>').ok).toBe(true)
+  })
+})
+
+describe('2026-10-11 判据具体化轮：语言执法面（A10/A11/判据块 与 simharness 一致）', () => {
+  it('词表同步：从 jargon-check.py 解析 HARD ≥60 词（单一事实源防漂移）', () => {
+    expect(HARD_WORDS.length).toBeGreaterThanOrEqual(60)
+    expect(HARD_WORDS).toContain('落键')
+    expect(HARD_WORDS).toContain('闭环')
+  })
+  it('checkVisibleTextPlainLanguage：折叠区豁免、正文黑话即违例', () => {
+    const bad = '<p>本步落键完成闭环</p>'
+    expect(checkVisibleTextPlainLanguage(bad).ok).toBe(false)
+    const folded = '<details><summary>x</summary><pre>落键 落库 记单</pre></details><p>这步把状态写好了</p>'
+    expect(checkVisibleTextPlainLanguage(folded).ok).toBe(true)
+  })
+  it('checkCriteriaSection：标准条目+判定证据行缺一即不过', () => {
+    const good = '<div>合格线——做成什么样算合格</div><ul><li>单测全绿</li></ul><div>判定证据：交付物实物核对 2/2 件模版符合</div>'
+    expect(checkCriteriaSection(good).ok).toBe(true)
+    expect(checkCriteriaSection('<div>合格线</div><ul><li>a</li></ul>').ok).toBe(false)
+    expect(checkCriteriaSection('<ul><li>a</li></ul><div>判定证据：本步无文件域工件</div>').ok).toBe(false)
+  })
+  it('checkFrameFunctionLabels：alt 空/图注裸文件名=违例；功能标注过', () => {
+    const bad = '<img src="a.png" alt=""><figcaption><span class="shot-kind">功能实证</span>cashier-p1-order（未标注）</figcaption>'
+    expect(checkFrameFunctionLabels(bad).ok).toBe(false)
+    const good = productOutcomeShots([{ file: 'cashier-p2-paid.png', label: '微信开发者工具·支付成功' }])
+    expect(checkFrameFunctionLabels(good).ok).toBe(true)
+  })
+  it('productOutcomeShots：带 label 的帧 alt/图注同用功能语义', () => {
+    const html = productOutcomeShots([{ file: 'x.png', label: '支付宝开发者工具·收银台首页' }])
+    expect(html).toContain('alt="支付宝开发者工具·收银台首页"')
   })
 })
 

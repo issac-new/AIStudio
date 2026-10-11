@@ -1525,7 +1525,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - `final-report.html`=唯一人读正本：导读层+机器报告正文嵌入。问题单台账全量、原始事件流等机器明细折叠为附录区，默认收起、可检索可反查——折叠≠裁剪，全量数据在位，正文主线为人读层。
 - `simulation-report.html`=机器档案：生成器直出全文，重生成后重嵌入正本。
 - 生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）。合并=final-report-merge.py。
-- **报告能力正本=overlay 产品侧 `custom/server/report/`**（验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）。simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。
+- **报告能力正本=overlay 产品侧 `custom/server/report/`**（验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）。simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。判据块（合格线全文+判定证据行）、成效帧功能标注（report-language.ts 三断言：正文黑话/判据双要素/图注功能语义——词表单一事实源=jargon-check.py，两侧同频）同受本条约束。
 - 元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含。页内锚点 #step1-26 与 #cp-g1..g6 互链。
 - **二合一报告层（叠加后处理）**：`unified-report-layer.py --run` 只读叠加三层人读面。受众卡层=产品/需求分析/架构设计/研发设计/代码开发/测试/研发管理/平台八个视角各 4-6 张问答卡，数字实测。完整审阅层=内嵌报告正本。路演素材层=roadshow-outline 每块 headline/points/anchor 三字段 ≥10 块。不动报告正本与审计断言面，缺项如实标"本轮未见该数据"。
 - 本节与 §5.5/§5.6 的断言均须在生成器与审计器接线完成，未接线即出报告=违例。
