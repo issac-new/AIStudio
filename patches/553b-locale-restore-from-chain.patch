@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 13c2a285..f29b0a9c 100644
+index 762b6b40..5ff44d57 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -828,7 +828,8 @@ export default {
@@ -101,7 +101,7 @@ index 13c2a285..f29b0a9c 100644
        tasks: 'Task Cluster',
        noTasks: 'No linked tasks',
        participants: 'Participants'
-@@ -3629,7 +3653,7 @@ export default {
+@@ -3636,7 +3660,7 @@ export default {
        switchToNew: 'Switch to the new board after creating',
        createFailed: 'Failed to create board',
        archiveFailed: 'Failed to archive board',
@@ -110,10 +110,18 @@ index 13c2a285..f29b0a9c 100644
        filterAll: 'All'
      },
      columns: {
-@@ -5967,6 +5991,642 @@ export default {
-     new_0_7_30_6: 'Fixed incomplete Copilot tool arguments when streaming through the Responses API (#3286)',
-     new_0_7_30_7: 'Fixed Claude tool execution without confirmation when running as root, with consistent launch permissions in global and scoped modes (#3287)',
-     new_0_7_30_8: 'Removed the retired OpenCode Free provider and its model entry points (#3277)',
+@@ -5975,6 +5999,650 @@ export default {
+     new_0_7_31_3: 'Unified model context, reasoning effort, and pricing lookup, improved matching for custom endpoints and prefixed model IDs, and prioritized manually configured prices (#3298, #3300)',
+     new_0_7_31_4: 'Fixed context queries for custom endpoints in the App and added model aliases and reasoning options to shared sessions (#3299)',
+     new_0_7_31_5: 'Fixed Comic theme preferences being lost after refresh or restart; saved theme styles now return during loading (#3302)',
++    new_0_7_30_1: 'Added Qwen Code, Kimi Code, CodeBuddy, Qoder, GitHub Copilot, and ZCode for chats, group chats, and workflows; Qoder uses global mode, while the other five also support scoped models (#3280)',
++    new_0_7_30_2: 'Ekko chats now appear under Built-in Agent in history and search, with /context, /usage, /status, and /compact commands (#3276)',
++    new_0_7_30_3: 'New chats default to Ekko and show installed Agents without CLI probes; reopening unsent chats no longer waits for nonexistent history (#3284, #3288)',
++    new_0_7_30_4: 'Improved Coding Agent image input according to native capabilities, with long and multiline prompt support on Windows (#3285)',
++    new_0_7_30_5: 'Improved Windows Agent prerequisite checks and ZCode desktop CLI detection, with reliable launches from paths containing spaces or non-ASCII characters (#3281)',
++    new_0_7_30_6: 'Fixed incomplete Copilot tool arguments when streaming through the Responses API (#3286)',
++    new_0_7_30_7: 'Fixed Claude tool execution without confirmation when running as root, with consistent launch permissions in global and scoped modes (#3287)',
++    new_0_7_30_8: 'Removed the retired OpenCode Free provider and its model entry points (#3277)',
 +    new_0_7_29_1: 'Restored file downloads from workspace tree menus and diff toolbars in chats and group chats (#3268)',
 +    new_0_7_29_2: 'Fixed Antigravity being mislabeled as Ekko in Live Activity notifications (#3272)',
 +    new_0_7_28_1: 'Added Antigravity CLI for chat, group chats, and workflows in global and scoped modes, with native settings, MCP, and skills management (#3256)',
@@ -754,7 +762,7 @@ index 13c2a285..f29b0a9c 100644
    loopScenes: {
      manage: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index e40cc648..b6e954e5 100644
+index 3c535365..33f34496 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -827,7 +827,8 @@ export default {
@@ -860,7 +868,7 @@ index e40cc648..b6e954e5 100644
        tasks: '任务簇',
        noTasks: '无挂接任务',
        participants: '参与方'
-@@ -3628,7 +3652,7 @@ export default {
+@@ -3635,7 +3659,7 @@ export default {
        switchToNew: '创建后切换到新看板',
        createFailed: '创建看板失败',
        archiveFailed: '归档看板失败',
@@ -869,10 +877,18 @@ index e40cc648..b6e954e5 100644
        filterAll: '全部'
      },
      columns: {
-@@ -5965,6 +5989,831 @@ export default {
-     new_0_7_30_6: '修复 Copilot 通过 Responses API 流式调用工具时参数不完整的问题 (#3286)',
-     new_0_7_30_7: '修复 Claude 在 root 环境中的免确认工具执行，并统一全局和独立模式启动权限 (#3287)',
-     new_0_7_30_8: '移除已停用的 OpenCode Free 供应商及其模型入口 (#3277)',
+@@ -5973,6 +5997,839 @@ export default {
+     new_0_7_31_3: '统一模型上下文、推理强度和计费信息识别，改进自定义接口及带前缀模型 ID 的匹配，并优先使用手动设置的价格 (#3298、#3300)',
+     new_0_7_31_4: '修复 App 自定义接口的上下文查询，并为共享会话补充模型别名与推理选项 (#3299)',
+     new_0_7_31_5: '修复刷新或重启后丢失漫画主题选择的问题，加载时恢复已保存的主题风格 (#3302)',
++    new_0_7_30_1: '新增 Qwen Code、Kimi Code、CodeBuddy、Qoder、GitHub Copilot 和 ZCode，接入聊天、群聊及工作流；Qoder 使用全局模式，其余五种也支持独立配置模型 (#3280)',
++    new_0_7_30_2: 'Ekko 会话在历史和搜索中归入内置 Agent，并支持 /context、/usage、/status 和 /compact 命令 (#3276)',
++    new_0_7_30_3: '新建聊天默认选择 Ekko，直接展示已安装 Agent，避免 CLI 探测；重新打开未发送的聊天不再等待不存在的历史消息 (#3284、#3288)',
++    new_0_7_30_4: '完善编程 Agent 按原生能力传递图片输入，并支持 Windows 下的长文本和多行提示词 (#3285)',
++    new_0_7_30_5: '完善 Windows Agent 运行依赖检查和 ZCode 桌面 CLI 识别，修复含空格或非 ASCII 字符路径的启动问题 (#3281)',
++    new_0_7_30_6: '修复 Copilot 通过 Responses API 流式调用工具时参数不完整的问题 (#3286)',
++    new_0_7_30_7: '修复 Claude 在 root 环境中的免确认工具执行，并统一全局和独立模式启动权限 (#3287)',
++    new_0_7_30_8: '移除已停用的 OpenCode Free 供应商及其模型入口 (#3277)',
 +    new_0_7_29_1: '恢复聊天和群聊工作区文件树菜单及差异工具栏中的文件下载功能 (#3268)',
 +    new_0_7_29_2: '修复实时活动通知将 Antigravity 错误识别为 Ekko 的问题 (#3272)',
 +    new_0_7_28_1: '新增 Antigravity CLI，支持全局和独立配置模式下的聊天、群聊与工作流，并接入原生配置、MCP 和技能管理 (#3256)',

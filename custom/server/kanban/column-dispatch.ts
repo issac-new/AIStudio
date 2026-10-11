@@ -171,7 +171,7 @@ export async function dispatchColumnTransition(
       // B4 幂等闸：同 taskId+column+provider 在 30 分钟窗口内（或在途）已派发 → 跳过。
       const idemKey = params.taskId ? `${params.taskId}::${trigger.column}::${step.provider}` : ''
       if (idemKey && (inflight.has(idemKey) || hasRecentDispatch(
-        { taskId: params.taskId, kind: 'column', column: trigger.column, target: step.provider }))) {
+        { taskId: params.taskId as string, kind: 'column', column: trigger.column, target: step.provider }))) {
         deduped.push({ taskId: params.taskId as string, column: trigger.column, stepId: step.id, provider: step.provider })
         continue
       }

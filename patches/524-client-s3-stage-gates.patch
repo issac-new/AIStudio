@@ -1,17 +1,17 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 5980ec13..e7575f33 100644
+index 663cb59b..48e901ca 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -54,6 +54,8 @@ import FolderPicker from "./FolderPicker.vue";
- import StarIcon from "@/components/common/StarIcon.vue";
+@@ -53,6 +53,8 @@ import StarIcon from "@/components/common/StarIcon.vue";
  import ChatInput from "./ChatInput.vue";
+ import NewChatAgentCards from "./NewChatAgentCards.vue";
  import RealtimeVoiceStage from "./RealtimeVoiceStage.vue";
 +// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
 +import { features } from "@/custom/features";
  import ConversationMonitorPane from "./ConversationMonitorPane.vue";
  import MessageList from "./MessageList.vue";
  import SessionListItem from "./SessionListItem.vue";
-@@ -3399,7 +3401,7 @@ async function handleSessionModelCustomSubmit() {
+@@ -3414,7 +3416,7 @@ async function handleSessionModelCustomSubmit() {
      </div>
      <Teleport to="body">
        <RealtimeVoiceStage

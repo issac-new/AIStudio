@@ -32,10 +32,15 @@ const NEW_BRANCH = 'overlay-migrate-new';
 
 // 与 inject.mjs 同一事实源:hermes-agent 路由谓词
 const { HERMES_AGENT_PATCH_PREFIXES } = await import('./inject.mjs');
+// 与 inject.mjs resolvePatchTargetRoot 同一解析口径:---/+++ 头优先,手写补丁
+// (593 起 model_tools.py 等)无头时回退 diff --git 行——此前仅 ---/+++ 正则,
+// 手写 agent 补丁被误判进 old 链 studio 侧,"No such file" 硬死(三目标轮⑭实录)。
 const isAgentPatch = (patchText) => {
-  const m = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
-  if (!m) return false;
-  return HERMES_AGENT_PATCH_PREFIXES.some((p) => m[1].startsWith(p));
+  const targetPath = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m)?.[1]
+    ?? patchText.match(/^diff --git a\/(.+?) b\/.+$/m)?.[1]
+    ?? null;
+  if (!targetPath) return false;
+  return HERMES_AGENT_PATCH_PREFIXES.some((p) => targetPath.startsWith(p));
 };
 
 const sh = (cmd, cwd = studioRoot) => execSync(cmd, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
@@ -117,7 +122,7 @@ function main() {
   if (trySh(`git rev-parse --verify ${OLD_BRANCH}`).ok) {
     console.log('[migrate] old 链已存在,跳过重建');
   } else {
-    console.log('[migrate] 建 old 链(v0.7.29 + 全部旧 studio patch,逐个 commit)…');
+    console.log('[migrate] 建 old 链(${st.baseTag} + 全部旧 studio patch,逐个 commit)…');
     sh(`git checkout --force -B ${OLD_BRANCH} ${st.baseTag}`);
     sh('git clean -fdx');
     for (const p of series) {

@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
+index ffb14dcb..8fac971b 100644
 --- a/packages/client/src/api/client.ts
 +++ b/packages/client/src/api/client.ts
-@@ -290,7 +290,11 @@
+@@ -290,7 +290,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
      if (res.status === 403 && isLocalBff) {
        if (text.includes('User is disabled or does not exist')) {
          triggerAuthRecheck()
