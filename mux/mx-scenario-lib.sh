@@ -1612,7 +1612,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
     _dens="⬜（quality-summary.env 缺席——产品成效实算未落盘，如实留空）"
   fi
   _rejrate=$((6-_fp))
-  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记单即首过）
+  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记单即首过）；首过基准=任务书首次完整派发（方案 §2.6-5）：显式打回即非首过；PASS 前拆分/补交形态的采集信号 run15 接线后计「补过」
 $(date +%F),${RFD_ID},G1-G6,打回率,${_rejrate}/6（$(( _rejrate * 100 / 6 ))%）,$(date +%F)..$(date +%F),issues.log 实算,口径=6-首过数；判词 FAIL/打回/拒收/熔断/退回语义行
 $(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件记单/完成环节键
 $(date +%F),${RFD_ID},全程,缺陷密度,${_dens},$(date +%F)..$(date +%F),quality-summary.env 实算,口径=测试报告缺陷清单/用例计数（双源，run14 复盘 A2）
