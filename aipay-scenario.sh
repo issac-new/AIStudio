@@ -303,6 +303,9 @@ if step_reached reqgate; then
     JUDGE=$(reqgate_judge "$(rfd_doc_snapshot)" || true)
     if [[ -n "$JUDGE" ]]; then
       note "[G1] 需求书四要素判读未过：${JUDGE}——回灌 bella 补齐"
+      # 首过口径（方案 §2.6-5）：准入退回后补齐再冻=「补过」形态（无 FAIL 判词但闸前有补交），
+      # 记 g1_supplement 键供治理报告三态统计（首过/补过/打回），防拆分补交刷首过率。
+      sset g1_supplement 1
       mx_send "$(load_token bella)" "$(sget dm_bella_fanfan)" \
         "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。" >/dev/null 2>&1 || true
       # 二轮：等待补齐（导演侧重拉重判，900s×2）
@@ -1160,6 +1163,19 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg qi "$(agent_mxid qi)" '[.[] | select(.origin_server_ts > $since and .sender == $qi and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-BE")))] | length') || { sleep 30; continue; }
     FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg fei "$(agent_mxid fei)" '[.[] | select(.origin_server_ts > $since and .sender == $fei and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-FE")))] | length') || { sleep 30; continue; }
     if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE > 0 && FE_DONE > 0 )); then
+      # 纪律 34 驱动抽验（方案 34②/34⑥ 锚点级复验）：抽最近一条 FIX-DONE 行的
+      # commit= 锚点，核验中央仓可反查（未推送=未完成；防测试侧照单全收伪锚回执）。
+      # 分摊并行复测形态（wt-verify）run15 验证后同款接入。
+      _fxd="$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" \
+        '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | contains("FIX-DONE"))) | .content.body] | .[-1] // ""' 2>/dev/null \
+        | grep -oE 'commit=[0-9a-fA-F]{7,40}' | tail -1 | cut -d= -f2 || true)"
+      if [[ -n "$_fxd" ]] && ! git -C "$DIRECTOR_CLONE" cat-file -e "${_fxd}^{commit}" >/dev/null 2>&1; then
+        echo "ISSUE|defect-fixed-anchor-missing|drivers|FIX-DONE 锚点抽验未过：最近一条修复回执 commit=${_fxd} 在中央仓不可反查（未推送或伪锚），按纪律 34② 打回重报" >> "$EVID_DIR/issues.log"
+        mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@qi-agent @fei-agent 锚点抽验未过：最近 FIX-DONE 的 commit=${_fxd} 在中央仓查无（本地未推送=未完成）。请推送后重发一行带新 commit 的 FIX-DONE。禁静默。" "$(agent_mxid qi),$(agent_mxid fei)" >/dev/null 2>&1 || true
+        note "[真值] FIX-DONE 锚点抽验未过（commit=${_fxd} 不可反查，已记单回灌重报）"
+      else
+        note "[真值] FIX-DONE 锚点抽验过（commit=${_fxd:-本轮回执无 commit 锚，免抽}）"
+      fi
       note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
     if (( DEFECTS == 0 && BOTH_DONE > 0 && FE_DONE > 0 )); then
@@ -1223,6 +1239,15 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   G5_TS=$(( $(sget run_started_at) * 1000 ))
   # 过闸收口（复用与新评同一收口路径：置卡 done/落键/批准留痕/M3 事件——防两路漂移）
   g5_pass_finalize() {
+    # 首过口径（方案 §2.6-5）：PASS 判词与分节 GAP/TODO 残留并存=边评边补后过，
+    # 记 g5_supplement 键计「补过」不计首过（防拆卡刷首过率；GAP 残留同时是
+    # 分节未齐的如实呈现——七项全过才许发布，残留即评审不完整形态）。
+    _g5body="$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)"
+    if printf '%s' "$_g5body" | grep -qE '(GAP|TODO)[：:）)]|\| *(GAP|TODO) *'; then
+      sset_once g5_supplement 1
+      note "[G5] 补过口径：评审卡 body 存在 GAP/TODO 分节残留（边评边补后过）——治理报告计「补过」不计首过"
+    fi
     kanban_walk_done fanfan "$RGID"
     sset_once g5_ready "$(date +%s)"
     # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
