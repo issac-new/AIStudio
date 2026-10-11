@@ -1,0 +1,15 @@
+#!/bin/bash
+# jargon 提交门禁（G7，2026-10-11）：暂存面含 .ts/.vue/.md 时跑词表检查，
+# HARD>0 拒提交。绕过=git commit --no-verify（与 L2 spec-first 同逃生门哲学，
+# 绕过行为在评审可见）。启用：git config core.hooksPath scripts/githooks
+set -uo pipefail
+JC="$(dirname "$0")/../plan-html/jargon-check.py"
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|vue|md)$' || true)
+[ -z "$STAGED" ] && exit 0
+python3 "$JC" $STAGED
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "提交被 jargon 门禁拒绝（HARD>0）。改成人话再提交；确需绕过：git commit --no-verify" >&2
+  exit 1
+fi
+exit 0

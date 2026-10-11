@@ -10,6 +10,7 @@
  * 是恢复延迟；恢复期间进度端点如实返回「会话面暂缺」，不编造。
  */
 import { readFileSync, statSync, readdirSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { join, dirname } from 'node:path'
 import type { ProjectionSession } from '../zcode/session-projection'
 
@@ -48,6 +49,39 @@ function readMilestoneFile(path: string): MilestoneEntry[] {
   } catch {
     return []
   }
+}
+
+export interface GitActivityItem {
+  ref: string
+  commits: number
+  lastCommitAt?: string
+}
+
+const GIT_SCAN_LIMIT = 24
+
+/**
+ * 读一个工作区的 git 在途面（G1 产品缺口，2026-10-11 补齐）：同级 wt-* 工作区
+ * 各自分支的提交计数+末次提交时刻。run14 实锤：六路并发开发期"交付分支零提交
+ * ≠零进展"——不看 git 会把活跃并发误读成停摆。纯只读 fail-soft；execFile 有界。
+ */
+export function readWorkspaceGitActivity(workspaceId: string): GitActivityItem[] {
+  if (!workspaceId || typeof workspaceId !== 'string' || !workspaceId.startsWith('/')) return []
+  const out: GitActivityItem[] = []
+  try {
+    const parent = dirname(workspaceId)
+    const siblings = readdirSync(parent).filter((d) => d.startsWith('wt-')).slice(0, GIT_SCAN_LIMIT)
+    for (const d of siblings) {
+      try {
+        const wt = join(parent, d)
+        const br = execFileSync('git', ['-C', wt, 'rev-parse', '--abbrev-ref', 'HEAD'], { timeout: 3000, encoding: 'utf8' }).trim()
+        const n = parseInt(execFileSync('git', ['-C', wt, 'rev-list', '--count', 'HEAD'], { timeout: 3000, encoding: 'utf8' }).trim(), 10)
+        if (!Number.isFinite(n) || n <= 0) continue
+        const last = execFileSync('git', ['-C', wt, 'log', '-1', '--format=%cI'], { timeout: 3000, encoding: 'utf8' }).trim()
+        out.push({ ref: br, commits: n, lastCommitAt: last || undefined })
+      } catch { /* 单工作区失败跳过 */ }
+    }
+  } catch { /* 兄弟扫描失败返回空 */ }
+  return out.sort((a, b) => b.commits - a.commits)
 }
 
 /**
