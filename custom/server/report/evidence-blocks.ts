@@ -53,10 +53,13 @@ export function govEvidenceBlocks(items: GovEvidenceItem[]): string {
 }
 
 export interface ProductOutcomeShot {
-  /** 帧文件名（如 cashier-p1-order.png；图注取去扩展名短名） */
+  /** 帧文件名（如 cashier-p1-order.png） */
   file: string
   /** 相对报告的证据目录前缀（如 product-outcome/） */
   dir?: string
+  /** 功能语义标注（如「微信开发者工具·支付成功」——用户红线：图与描述对得上；
+   *  缺省回退文件名并标「未标注」，checkFrameFunctionLabels 将其判为违例 */
+  label?: string
 }
 
 /**
@@ -69,12 +72,14 @@ export function productOutcomeShots(shots: ProductOutcomeShot[]): string {
   return (
     '<div class="po-shots">' +
     shots
-      .map(
-        (s) =>
+      .map((s) => {
+        const label = s.label ?? s.file.replace(/\.[a-z]+$/, '') + '（未标注）'
+        return (
           `<label class="shot"><input type="checkbox">` +
-          `<img src="${escapeHtml(d + s.file)}" alt="产品功能实证 ${escapeHtml(s.file)}" loading="lazy">` +
-          `<figcaption><span class="shot-kind">功能实证</span>${escapeHtml(s.file.replace(/\.[a-z]+$/, ''))}</figcaption></label>`,
-      )
+          `<img src="${escapeHtml(d + s.file)}" alt="${escapeHtml(label)}" loading="lazy">` +
+          `<figcaption><span class="shot-kind">功能实证</span>${escapeHtml(label)}</figcaption></label>`
+        )
+      })
       .join('') +
     '</div>'
   )
