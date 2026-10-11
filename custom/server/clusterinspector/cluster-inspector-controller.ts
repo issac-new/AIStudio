@@ -44,7 +44,28 @@ export { startInspectorIfEnabled } from './inspector'
 
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
-  const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), ...deps })
+  // 联邦注册表快照（D8 跨机静默观测面）：读进度联邦注册表（有界内存快照，零 IO）。
+function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }) | undefined {
+  try {
+    // 动态 require（跨域桥接纪律同 emit/appendGovEvent；联邦模块缺席不炸）
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { registrySnapshot, federationEnabled } = require('../progress/federation')
+    return () => ({
+      ok: federationEnabled(),
+      nowMs: Date.now(),
+      machines: registrySnapshot().map((m: { machineId: string; lastSeenMs: number; lastEvent: { tasks?: unknown[]; activeAgents?: number } }) => ({
+        machineId: m.machineId,
+        lastSeenMs: m.lastSeenMs,
+        activeTasks: m.lastEvent.tasks?.length ?? 0,
+        activeAgents: m.lastEvent.activeAgents,
+      })),
+    })
+  } catch {
+    return undefined
+  }
+}
+
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun

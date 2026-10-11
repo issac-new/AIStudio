@@ -12,6 +12,7 @@ function snap(partial: Partial<ClusterSnapshot>): ClusterSnapshot {
     profiles: { ok: true, tails: [] },
     kanban: { ok: false, rows: [] },
     runningCards: { ok: false, cards: [] },
+    federation: { ok: false, nowMs: 1, machines: [] },
     ...partial,
   }
 }
@@ -196,6 +197,32 @@ describe('二期②③：matrix 提醒 + destructive 审批联动', () => {
       const r3 = await mkInsp().runOnce()
       expect(r3.actions?.some((a) => a.startsWith('gateway-restarted'))).toBeFalsy()
     } finally { delete process.env.CLUSTER_INSPECTOR_DESTRUCTIVE }
+  })
+})
+
+
+describe('D8 跨机静默（联邦三步之③）', () => {
+  const now = 1_000_000_000_000
+  const mk = (machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number }>) =>
+    snap({ ts: now, federation: { ok: true, nowMs: now, machines } })
+  it('机器静默超阈且带在途任务 → 报 machine.silent（附差分参照）', () => {
+    const a = detectAll(mk([
+      { machineId: 'mac-a', lastSeenMs: now - 1200_000, activeTasks: 3 },
+      { machineId: 'mac-b', lastSeenMs: now - 60_000, activeTasks: 1 },
+    ]), { nowMs: now })
+    const hit = a.find((x) => x.detector === 'machine.silent')
+    expect(hit).toBeTruthy()
+    expect(hit!.subject).toBe('machine:mac-a')
+    expect(hit!.summary).toContain('差分参照：其余 1/1')
+  })
+  it('空闲机器（0 在途）静默不报；活跃机器不报；面未接线零误报', () => {
+    const a = detectAll(mk([
+      { machineId: 'idle', lastSeenMs: now - 9999_000, activeTasks: 0 },
+      { machineId: 'busy', lastSeenMs: now - 60_000, activeTasks: 5 },
+    ]), { nowMs: now })
+    expect(a.find((x) => x.detector === 'machine.silent')).toBeUndefined()
+    const off = snap({ ts: now, federation: { ok: false, nowMs: now, machines: [{ machineId: 'x', lastSeenMs: 0, activeTasks: 9 }] } })
+    expect(detectAll(off, { nowMs: now }).find((x) => x.detector === 'machine.silent')).toBeUndefined()
   })
 })
 

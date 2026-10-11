@@ -23,6 +23,8 @@ export interface DetectOptions {
   stallQuietMs?: number
   /** D7 在办卡·档案静默阈值 ms（默认 900000=15min；日志尾无错也算） */
   agentSilentMs?: number
+  /** D8 跨机静默阈值 ms（默认 900000=15min；空闲机器不报） */
+  machineSilentMs?: number
   /** D5 轮内同检测器异常数达到该值即追加风暴事件（默认 3） */
   stormClusterSize?: number
   nowMs?: number
@@ -180,6 +182,30 @@ function diffContext(snap: ClusterSnapshot, now: number, exclude: string): strin
   return `［差分参照：其余 ${alive}/${others.length} 个档案 15 分钟内有工作行］`
 }
 
+/** D8 跨机静默（2026-10-11 联邦三步之③）：机器注册表里有过心跳（24h 内）但静默超阈
+ * 且最近一次上报带在途任务 → 报 machine.silent（附其余机器活跃数=差分参照）。 */
+export function detectMachineSilence(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const quiet = opts.machineSilentMs ?? 900_000
+  const now = snap.federation.nowMs || snap.ts
+  if (!snap.federation.ok) return []
+  const out: Anomaly[] = []
+  const actTs = (m: { lastSeenMs: number }) => m.lastSeenMs
+  const aliveOthers = (exclude: string) =>
+    snap.federation.machines.filter((m) => m.machineId !== exclude && now - actTs(m) < quiet).length
+  for (const m of snap.federation.machines) {
+    const silent = now - actTs(m)
+    if (silent < quiet) continue
+    if (m.activeTasks <= 0) continue // 空闲机器静默不报（零误报纪律）
+    out.push({
+      detector: 'machine.silent', subject: `machine:${m.machineId}`,
+      severity: 'warn',
+      summary: `跨机静默：机器 ${m.machineId} 上报 ${m.activeTasks} 张在途任务后已静默 ${Math.round(silent / 60000)} 分钟［差分参照：其余 ${aliveOthers(m.machineId)}/${snap.federation.machines.length - 1} 台机器 15 分钟内有心跳］`,
+      detail: { machineId: m.machineId, silentMs: silent, activeTasks: m.activeTasks },
+    })
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -188,6 +214,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectSessionStall(snap, opts),
     ...detectCapacityPump(snap),
     ...detectTaskAgentSilence(snap, opts),
+    ...detectMachineSilence(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
