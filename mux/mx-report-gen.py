@@ -2563,11 +2563,12 @@ try:
             for k, v in _po_nums.items())
         _po_num_tbl = ('<table class="st-issues-tbl"><thead><tr><th>成效指标</th><th>实测值</th></tr></thead>'
                        f'<tbody>{_po_rows}</tbody></table>') if _po_rows else ''
-        _po_img_html = ''.join(
+        # 系列帧版面=1/4 宽四列缩略网格（2026-10-11 用户排版指令）；点击全屏放大沿用 .shot 缩放交互
+        _po_img_html = ('<div class="po-shots">' + ''.join(
             f'<label class="shot"><input type="checkbox">'
             f'<img src="product-outcome/{H.escape(n)}" alt="产品功能实证 {H.escape(n)}" loading="lazy">'
-            f'<figcaption><span class="shot-kind">功能实证</span>product-outcome/{H.escape(n)}</figcaption></label>'
-            for n in _po_imgs)
+            f'<figcaption><span class="shot-kind">功能实证</span>{H.escape(n.rsplit(".", 1)[0])}</figcaption></label>'
+            for n in _po_imgs) + '</div>')
         _po_idem_html = ('<details open><summary>幂等实测执行输出（idempotency.txt）</summary>'
                          f'<pre>{H.escape(_po_idem)}</pre></details>') if _po_idem else ''
         _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
@@ -3399,6 +3400,12 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
 label.shot img{{width:100%;height:auto;max-height:none;object-position:top;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 .cp-shot img{{width:100%;height:auto;max-height:none;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
+/* 产品成效系列帧：1/4 宽四列缩略网格（自然比例不裁剪；点击全屏放大沿用 .shot 交互） */
+.po-shots{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}}
+.po-shots label.shot{{flex:none;max-width:none}}
+.po-shots label.shot img{{width:100%;height:auto;max-height:none;object-fit:contain}}
+.po-shots label.shot figcaption{{font-size:11px;word-break:break-all}}
+@media (max-width:900px){{.po-shots{{grid-template-columns:repeat(2,1fr)}}}}
 .step,.section-hd{{scroll-margin-top:16px}}
 @media print {{
   .sidebar{{display:none}}
