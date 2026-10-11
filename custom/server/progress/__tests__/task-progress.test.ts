@@ -120,3 +120,22 @@ describe('里程碑联合（消费侧接线补全）', () => {
     expect(got[1]!.milestone).toBe('测试验证')
   })
 })
+
+describe('git 进度锚（①git 进度源：里程碑 note 的 commit= 提取）', () => {
+  const ledger: DispatchLedgerEntry[] = [
+    entry({ taskId: 't_dev1', target: 'chen', reason: 'queued', sessionId: 's9', ts: 100, workspaceId: '/ws/c' }),
+  ]
+  const ms = (note?: string) => ({ ts: '2026-10-12T10:00:00Z', milestone: '编码', task: 't_dev1', note })
+
+  it('取最新一条 commit= 锚；早于后条的锚不干扰', () => {
+    const milestones = new Map([['/ws/c', [ms('PROGRESS c1 commit=aaa1111'), ms('DEV-DONE commit=bbb2222')]]])
+    const r = taskProgressOverview(ledger, new Map(), { milestonesByWorkspace: milestones })
+    expect(r.tasks[0]!.gitAnchor).toBe('bbb2222')
+  })
+
+  it('无 commit 锚时如实 undefined（不编造）', () => {
+    const milestones = new Map([['/ws/c', [ms('分析完成，无代码')]]])
+    const r = taskProgressOverview(ledger, new Map(), { milestonesByWorkspace: milestones })
+    expect(r.tasks[0]!.gitAnchor).toBeUndefined()
+  })
+})
