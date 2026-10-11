@@ -11,6 +11,7 @@ import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { getSessionStore, readWorkspaceMilestones, readWorkspaceGitActivity } from './task-progress-store'
 import { taskProgressOverview } from './task-progress-analytics'
 import { machinesView, ensureFederationPublisher } from './federation-controller'
+import { registrySnapshot } from './federation'
 
 const router = new Router({ prefix: '/api/progress' })
 
@@ -42,7 +43,15 @@ router.get('/tasks', async (ctx) => {
         milestonesByWorkspace.set(e.workspaceId, readWorkspaceMilestones(e.workspaceId))
       }
     }
-    const overview = taskProgressOverview(ledger, sessions, { activeOnly, limit, milestonesByWorkspace })
+    // 跨机同 taskId 合并（长会话治理 B2）：联邦注册表 machine → 上报任务列表
+    const tasksByMachine = new Map<string, string[]>()
+    try {
+      for (const m of registrySnapshot()) {
+        const tasks = (m.lastEvent?.tasks ?? []).map((t) => String(t.taskId)).filter(Boolean)
+        if (tasks.length > 0) tasksByMachine.set(m.machineId, [...new Set(tasks)])
+      }
+    } catch { /* 联邦面缺席=本机视角 */ }
+    const overview = taskProgressOverview(ledger, sessions, { activeOnly, limit, milestonesByWorkspace, tasksByMachine })
     // git 在途面（G1）：按台账 distinct workspace 各读一次（只读有界），独立字段透出——
     // 交付分支零提交 ≠ 零进展（run14 并发误读教训）。
     const gitActivity: Record<string, ReturnType<typeof readWorkspaceGitActivity>> = {}

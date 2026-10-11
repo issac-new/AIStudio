@@ -11,6 +11,7 @@ import { createEventLogStore, type EventLogStore } from './event-log-store'
 import { registerEventLogStore } from './event-log-registry'
 import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
+import { makeLoopFingerprint } from './stagnation-fingerprint'
 import { isCronBridgeEnabled, setCronBridgeTick, ensureLoopTickCronJob } from './cron-bridge'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
@@ -228,6 +229,9 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         graphService, store, eventLog,
         // T5：模板 gateCommands 逐 loop 并入编译 deps（见 withTemplateDeps）
         compile: loop => compileLoopToDef(loop, withTemplateDeps(opts.engineDeps, loop), { appendById: appendContractsById }),
+        // B3 停滞熔断外部指纹：任务卡入库集合 + 验证通过数（worktree git tip 待
+        // 装配解析器接入，见 stagnation-fingerprint.ts 的 worktreeDir 注入面）
+        fingerprint: makeLoopFingerprint(store),
         emitLoopEvent: bridgeLoopEvent,
         webhookEnqueue: webhookConnector
           ? (loopId, entry) => { webhookConnector.enqueue(loopId, entry) }

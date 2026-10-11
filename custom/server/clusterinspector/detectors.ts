@@ -27,6 +27,11 @@ export interface DetectOptions {
   machineSilentMs?: number
   /** D5 轮内同检测器异常数达到该值即追加风暴事件（默认 3） */
   stormClusterSize?: number
+  /** D9 上下文水位告警阈（百分比，默认 85；≥watermarkHighPct 升 high） */
+  watermarkWarnPct?: number
+  watermarkHighPct?: number
+  /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
+  emptyStreakLimit?: number
   nowMs?: number
 }
 
@@ -206,6 +211,67 @@ export function detectMachineSilence(snap: ClusterSnapshot, opts: DetectOptions 
   return out
 }
 
+/** D9 会话上下文水位（长会话治理 B1）：602 遥测 watermark_pct ≥ 阈（默认 85）。
+ *  高水位+多次轮换记录 = 压缩已压不住的会话——长会话质量衰减的先行指标。 */
+export function detectContextWatermark(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const warnAt = opts.watermarkWarnPct ?? 85
+  const highAt = opts.watermarkHighPct ?? 95
+  const te = snap.sessionTelemetry
+  if (!te?.ok) return []
+  const out: Anomaly[] = []
+  for (const e of te.entries) {
+    const pct = e.watermarkPct
+    if (pct === null || pct === undefined || pct < warnAt) continue
+    out.push({
+      detector: 'session.context-watermark', subject: `session:${e.sessionKey}`,
+      severity: pct >= highAt ? 'high' : 'warn',
+      summary: `会话上下文水位 ${pct}%（${e.platform ?? '?'} / ${e.model ?? '?'}，累计 ${e.cumApiCalls ?? 0} 次迭代${e.rotations ? `，已轮换 ${e.rotations} 次` : ''}）——压缩接近失效，指令遵循与产出质量将随稀释衰减`,
+      detail: { watermarkPct: pct, turns: e.turns, cumApiCalls: e.cumApiCalls, rotations: e.rotations ?? 0, sessionId: e.sessionId },
+    })
+  }
+  return out
+}
+
+/** D10 会话空转连击（长会话治理 B1）：连续 N 回合有 API 调用但零工具零产出
+ *  （602 遥测 empty_streak）。「大上下文短回复自了断」形态的机械判据（run14 第七形态）。 */
+export function detectEmptyStreak(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const limit = opts.emptyStreakLimit ?? 4
+  const te = snap.sessionTelemetry
+  if (!te?.ok) return []
+  const out: Anomaly[] = []
+  for (const e of te.entries) {
+    const streak = e.emptyStreak ?? 0
+    if (streak < limit) continue
+    out.push({
+      detector: 'session.empty-streak', subject: `session:${e.sessionKey}`,
+      severity: streak >= limit * 2 ? 'high' : 'warn',
+      summary: `会话空转连击 ${streak} 回合（有 API 调用但零工具零产出）——大上下文短回复自了断形态，建议按交接检查点轮换`,
+      detail: { emptyStreak: streak, turns: e.turns, cumApiCalls: e.cumApiCalls, watermarkPct: e.watermarkPct ?? null },
+    })
+  }
+  return out
+}
+
+/** D11 环检测信号（长会话治理 B1/A1）：601-605 遥测的 runaway 决策计数 ≥2
+ *  （同会话反复触发六信号处置）——工具级死循环正在被守卫拦，但根因未除。 */
+export function detectRunawayLoop(snap: ClusterSnapshot): Anomaly[] {
+  const te = snap.sessionTelemetry
+  if (!te?.ok) return []
+  const out: Anomaly[] = []
+  for (const e of te.entries) {
+    const rw = e.runaway
+    const decisions = rw?.decisions ?? 0
+    if (decisions < 2) continue
+    out.push({
+      detector: 'session.runaway-loop', subject: `session:${e.sessionKey}`,
+      severity: decisions >= 4 ? 'high' : 'warn',
+      summary: `环检测处置 ${decisions} 次（最近信号 ${rw?.signal ?? '?'} @ ${rw?.tool ?? '?'}）——工具级死循环反复出现，查该会话的任务路径根因`,
+      detail: { decisions, signal: rw?.signal ?? null, tool: rw?.tool ?? null, heartbeat: e.heartbeat ?? null },
+    })
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -215,6 +281,9 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectCapacityPump(snap),
     ...detectTaskAgentSilence(snap, opts),
     ...detectMachineSilence(snap, opts),
+    ...detectContextWatermark(snap, opts),
+    ...detectEmptyStreak(snap, opts),
+    ...detectRunawayLoop(snap),
   ]
   return [...base, ...detectStorm(base, opts)]
 }

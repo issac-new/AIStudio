@@ -30,6 +30,7 @@ import GovAuditChangeView from './gov/GovAuditChangeView.vue'
 import GovDocsReviewView from './gov/GovDocsReviewView.vue'
 import GovHarnessView from './gov/GovHarnessView.vue'
 import GovClusterSection from './gov/GovClusterSection.vue'
+import GovSessionHealthSection from './gov/GovSessionHealthSection.vue'
 import GovOntologySection from './gov/GovOntologySection.vue'
 import OrchestrationView from './orchestration/OrchestrationView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
@@ -41,7 +42,7 @@ const kanban = useKanbanStore()
 const cockpit = useCockpitStore()
 
 /** 单层页签全集（2026-10-01）：文案单一事实源=i18n-tasks-tabs 模块字典 */
-type TabKey = 'board' | 'orchestra' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness' | 'gov-cluster' | 'gov-ontology'
+type TabKey = 'board' | 'orchestra' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness' | 'gov-cluster' | 'gov-ontology' | 'gov-session-health'
 const tab = ref<TabKey>('board')
 const tabText = useTasksTabsText()
 
@@ -58,8 +59,9 @@ const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'gov-harness', testid: 'ia-tasks-tab-gov-harness' },
   { key: 'gov-cluster', testid: 'ia-tasks-tab-gov-cluster' },
   { key: 'gov-ontology', testid: 'ia-tasks-tab-gov-ontology' },
+  { key: 'gov-session-health', testid: 'ia-tasks-tab-gov-session-health' },
 ]
-type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness' | 'tabGovCluster' | 'tabGovOntology'
+type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness' | 'tabGovCluster' | 'tabGovOntology' | 'tabGovSessionHealth'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   board: 'tabBoard',
   orchestra: 'tabOrchestra',
@@ -73,6 +75,7 @@ const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   'gov-harness': 'tabGovHarness',
   'gov-cluster': 'tabGovCluster',
   'gov-ontology': 'tabGovOntology',
+  'gov-session-health': 'tabGovSessionHealth',
 }
 const TAB_KEYS: ReadonlySet<string> = new Set(TABS.map(x => x.key))
 /** 旧深链兼容：治理中心单页签时代的 ?tab=gov → 治理首分区 */
@@ -216,6 +219,10 @@ function goInboxFromAccounts(): void {
     </div>
     <div v-else-if="tab === 'gov-cluster'" class="ia-area" data-testid="ia-tasks-panel-gov-cluster">
       <GovClusterSection />
+    </div>
+    <!-- 会话健康（长会话治理 B2）：602 遥测 sidecar 的消费面——水位/空转/环处置 -->
+    <div v-else-if="tab === 'gov-session-health'" class="ia-area" data-testid="ia-tasks-panel-gov-session-health">
+      <GovSessionHealthSection />
     </div>
     <!-- 语义体检（本体轮二阶段 2026-10-10）：看板数据自动进本体 + 数据契约违规
          反哺治理面（摄取/校验/跳工作台三入口） -->
