@@ -163,7 +163,7 @@ export function detectTaskAgentSilence(snap: ClusterSnapshot, opts: DetectOption
       out.push({
         detector: 'task.agent-silent', subject: `profile:${t.profile}`,
         severity: 'warn',
-        summary: `在办任务但档案静默（按工作行判活）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）`,
+        summary: `在办任务但档案静默（按工作行判定活性）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）`,
         detail: { cards: hit.cards, quietMs: quiet },
       })
     }
