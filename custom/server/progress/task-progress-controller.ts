@@ -8,7 +8,7 @@
 import Router from '@koa/router'
 import { readDispatchLedger } from '../governance/dispatch-ledger'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
-import { getSessionStore, readWorkspaceMilestones } from './task-progress-store'
+import { getSessionStore, readWorkspaceMilestones, readWorkspaceGitActivity } from './task-progress-store'
 import { taskProgressOverview } from './task-progress-analytics'
 
 const router = new Router({ prefix: '/api/progress' })
@@ -29,7 +29,15 @@ router.get('/tasks', async (ctx) => {
       }
     }
     const overview = taskProgressOverview(ledger, sessions, { activeOnly, limit, milestonesByWorkspace })
-    ctx.body = { ok: true, ts: Date.now(), ...overview }
+    // git 在途面（G1）：按台账 distinct workspace 各读一次（只读有界），独立字段透出——
+    // 交付分支零提交 ≠ 零进展（run14 并发误读教训）。
+    const gitActivity: Record<string, ReturnType<typeof readWorkspaceGitActivity>> = {}
+    for (const e of ledger) {
+      if (e.workspaceId && !gitActivity[e.workspaceId]) {
+        gitActivity[e.workspaceId] = readWorkspaceGitActivity(e.workspaceId)
+      }
+    }
+    ctx.body = { ok: true, ts: Date.now(), ...overview, gitActivity }
   } catch (err) {
     ctx.body = { ok: false, ts: Date.now(), tasks: [], total: 0, activeCount: 0, sessionPendingCount: 0, reason: 'progress_read_failed', detail: err instanceof Error ? err.message : String(err) }
   }

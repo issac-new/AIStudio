@@ -38,6 +38,17 @@ columns:
         role: code-reviewer
         specialist: review-guard
         provider: zcode
+  # 缺陷验证列（G3，2026-10-11）：修复结论行落房后卡移入本列即自动派发复测——
+  # 字段流转机械化（此前只在技能纪律里，靠人翻卡）。配套约定：建卡测试员负责移列；
+  # 结论行仍由主测试员统一汇集（V8.8 纪律 34-⑥）。
+  verify:
+    timing: entry
+    autoAdvanceOnSuccess: false
+    steps:
+      - id: retest
+        role: qa
+        specialist: review-guard
+        provider: zcode
   done:
     timing: exit
     autoAdvanceOnSuccess: false

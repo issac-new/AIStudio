@@ -2,7 +2,7 @@
 // 检测层：纯函数，输入 ClusterSnapshot → Anomaly[]。五检测器对应 run11 实录病灶：
 // D1 网关失联/降级、D2 槽位膨胀、D3 僵尸 worker、D4 会话卡死、D5 异常风暴（轮内聚簇升级）。
 
-import type { ClusterSnapshot } from './collectors'
+import type { ClusterSnapshot, ProfileTail } from './collectors'
 
 export type AnomalySeverity = 'info' | 'warn' | 'high'
 
@@ -98,7 +98,7 @@ export function detectSessionStall(snap: ClusterSnapshot, opts: DetectOptions = 
       out.push({
         detector: 'session.stalled', subject: `profile:${t.profile}`,
         severity: 'warn',
-        summary: `会话疑似卡死：${t.profile} 日志尾错误态且静默 ${Math.round((now - t.mtimeMs) / 1000)}s`,
+        summary: `会话疑似卡死：${t.profile} 日志尾错误态且静默 ${Math.round((now - t.mtimeMs) / 1000)}s${diffContext(snap, now, t.profile)}`,
         detail: { tail: t.tail, quietMs: now - t.mtimeMs },
       })
     }
@@ -163,12 +163,21 @@ export function detectTaskAgentSilence(snap: ClusterSnapshot, opts: DetectOption
       out.push({
         detector: 'task.agent-silent', subject: `profile:${t.profile}`,
         severity: 'warn',
-        summary: `在办任务但档案静默（按工作行判定活性）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）`,
+        summary: `在办任务但档案静默（按工作行判定活性）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）${diffContext(snap, now, t.profile)}`,
         detail: { cards: hit.cards, quietMs: quiet },
       })
     }
   }
   return out
+}
+
+/** 差分上下文（run14 误诊根治面）：告警附「同时刻其余档案工作行活跃数/总数」——
+ * 监控者一眼可见环境级根因是否成立（多数活跃=个别档案问题；全体静默=环境问题）。 */
+function diffContext(snap: ClusterSnapshot, now: number, exclude: string): string {
+  const others = snap.profiles.tails.filter((t) => t.profile !== exclude)
+  const actTs = (t: ProfileTail) => (t.workTsMs && t.workTsMs > 0 ? t.workTsMs : t.mtimeMs)
+  const alive = others.filter((t) => now - actTs(t) < 900_000).length
+  return `［差分参照：其余 ${alive}/${others.length} 个档案 15 分钟内有工作行］`
 }
 
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
