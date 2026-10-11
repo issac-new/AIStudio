@@ -17,6 +17,16 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
 - 清算常识：T+1 对账、渠道账单 vs 平台流水双向对账、差错挂账处理。
 - 合规红线：密钥不出服务端、敏感信息（银行卡号/证件号）脱敏、接口幂等。
 
+## 需求门自证（L0.requirement-trace 一次自证）
+
+AC 清单定稿后跑需求可追溯门自证（每条 AC 后续可回查到用例与实现）：
+
+```
+node $OVERLAY_ROOT/custom/qgate/dist/cli.js run L0.requirement-trace --trigger pre_commit
+```
+
+产出证据入需求文档附录（gate run 的 evidence 引用），G1 冻结时随件。
+
 ## 协作看板是本平台自带能力（不是外部系统）
 
 登记/更新/查询任务卡一律使用本 profile 的 **kanban 工具组**（已随 profile 授权启用）。
