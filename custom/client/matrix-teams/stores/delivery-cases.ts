@@ -122,6 +122,15 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
       if (!client || typeof client.on !== 'function') return // 测试 mock client 无 on/off
       client.on(RoomEvent.Timeline, onTimeline)
     }, { immediate: true })
+    // sync 就绪即投影（run15 前置 P2-3 根修）：/app/cases 深链进入时 refresh 跑在
+    // 首轮 /sync 返回前，getRoom 全 null → 面板空态要等 60s 兜底轮询才自愈（实测
+    // 复拍 65s 后案例卡才出现）。挂 syncState 钩子立即重投影，深链首屏即出。
+    const stRef = (matrixStore as unknown as { syncState?: { value: string } }).syncState
+    if (stRef && typeof stRef === 'object') {
+      watch(() => stRef.value, (st) => {
+        if (st === 'PREPARED' || st === 'SYNCING') scheduleRefresh()
+      })
+    }
   }
   ensureListening() // store 顶层挂载（同 task-dispatch.ts 终审修复模式）
 
