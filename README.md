@@ -1,0 +1,46 @@
+# simharness — SwarmStudio 全流程推演 harness
+
+让 15 个 AI 员工组成一家虚拟软件公司，从拿到需求单到功能上线全程自动跑一遍，中途采集证据，最后产出一份第三方可反查的 HTML 报告。本仓是这场"考试"的驱动与工具链：主驱动脚本按 26 步推进，六道强制关卡（G1 需求冻结到 G6 复盘）不过不放行，全部结论带代码提交号+任务卡号双凭证。
+
+与 [overlay](../overlay) 的关系：overlay 是产品本体仓（SwarmStudio 二次开发），本仓只消费产品、不改动产品——隔离边界由 `tests/isolation-boundary.test.sh` 三断言看守。推演方案唯一正本=[《Swarm Studio 全流程推演方案》](../overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)（26 步主链、六道关卡、验收标准都在那里，本 README 不重复）。
+
+## 前置
+
+- macOS + bash 3.2 兼容（驱动内 `LC_ALL=C` 已焊死，勿改）
+- python3、node（playwright 走系统 Chrome，channel:'chrome' 免下载缓存）
+- 推演执行面 SIM_ROOT 挂载在 `/Volumes/nvme2230/lab/ncwk-sim-mux`（运行态、runs/、creds/ 都在那里，不写宿主 `~/.hermes`）
+
+## 快速上手
+
+```bash
+cd simharness
+bash mux/mx-setup.sh                  # 环境供给：账号/看板/团队/记忆库/中央仓，可反复跑
+bash mux/mx-up.sh                     # 起单 gateway(:8801) + 单 studio(:8802)
+bash mux/mx-prelaunch-check.sh        # 开跑前九项核验，全绿才开跑
+RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
+```
+
+断点续跑 `START_STEP=<步名>`，区间上界 `UNTIL_STEP=<步名>`，换需求轮 `RFD_ID=RFD-00X`。0→1 清环境用 `bash mux/mx-clean.sh --apply --reset-central --reset-workspaces [--reset-memory]`。
+
+## 目录导航
+
+| 路径 | 是什么 |
+|---|---|
+| `aipay-scenario.sh` | 主驱动：26 步逐段推进、关卡判读、凭证核验、回灌打回 |
+| `mux/` | 工具链：环境供给与清理（mx-setup/mx-up/mx-clean）、报告生成与审计（mx-report-gen/mx-report-audit/final-report-merge）、证据采集（r18-collect/r18-frames/capture-ui）、帧拍摄位注册表（capture-plan.env）、术语词表（glossary.txt） |
+| `materials/` | 需求单（RFD-001 收银台等，含 OCR 样张），换轮换单 |
+| `tests/` | 守门套件：vitest 143 测（run-gates.sh 入口）+ 隔离边界三断言 |
+| `mux/run13-lite-round-plan.md` | lite 回归轮设计正本（夹具三类与边界代价） |
+
+## 测试
+
+```bash
+bash tests/run-gates.sh              # 守门套件全量（每轮收尾前全绿是准入门槛）
+bash tests/isolation-boundary.test.sh
+```
+
+## 深入阅读
+
+- 推演方案（怎么考、怎么算过）：overlay 仓《2026-10-05-mux-v8-fullflow-plan.md》
+- 历史沿革与工程档案（历轮事故、补丁谱系、运维规范附录）：同目录《2026-10-05-mux-history-and-engineering-*.md》
+- 推演监控与断点续跑的运维手册：见工程档案附录 C
