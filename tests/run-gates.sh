@@ -10,10 +10,15 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 for t in "$HERE"/mux/tests/*.test.sh; do
   bash "$t"
 done
+# fixtures 防污染（run15 前置 P3-8）：vitest 会回写 fixtures 的时间戳/路径（run14 复盘
+# 实锤两次提交污染），退出时一律还原已跟踪 fixtures——测试自身不依赖运行期回写。
+restore_fixtures() { git -C "$HERE" checkout -- tests/fixtures/ 2>/dev/null || true; }
+trap restore_fixtures EXIT
 if [ -x "$HERE/node_modules/.bin/vitest" ]; then
-  exec "$HERE/node_modules/.bin/vitest" run --root "$HERE" "$@"
+  "$HERE/node_modules/.bin/vitest" run --root "$HERE" "$@"
+  exit $?
 fi
 MX_OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$(cd "$HERE/../overlay" 2>/dev/null && pwd)}"
 cd "$MX_OVERLAY_ROOT"
 export NODE_PATH="$MX_OVERLAY_ROOT/node_modules"
-exec npx vitest run --root "$HERE" "$@"
+npx vitest run --root "$HERE" "$@"
