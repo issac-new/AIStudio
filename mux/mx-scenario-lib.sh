@@ -1163,6 +1163,30 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   echo "$m"
 }
 
+# 空转收场检测（2026-10-11 停摆误诊根治轮，run14 六会话六小时实录）：会话
+# Turn ended: text_response 正常收场但零交付（末轮 ~6 token 短句自了断）——驱动在
+# 产物/缺陷等待环调用本函数，责任人档案命中该形态即记单+按微任务策略重派（一次
+# 1-2 个动作的短指令，与短回合存活形态对齐；禁整任务重派——长上下文会话同型复发）。
+_agent_last_work_ts() { # <agent.log> → epoch
+  local line ts
+  line=$(grep -E "API call #|tool [a-z_]+ completed" "$1" 2>/dev/null | tail -1)
+  [[ -n "$line" ]] || { echo 0; return; }
+  ts=$(printf '%s' "$line" | cut -c1-19)
+  date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
+}
+_agent_idle_ending() { # <profile> <within-sec=600> → 0=命中空转收场形态
+  local prof="$1" win="${2:-600}" log te wts now
+  log="$HERMES_ROOT/profiles/$prof/logs/agent.log"
+  [[ -f "$log" ]] || return 1
+  te=$(grep -E "Turn ended: reason=text_response" "$log" 2>/dev/null | tail -1 | cut -c1-19)
+  [[ -n "$te" ]] || return 1
+  now=$(date +%s)
+  te=$(date -j -f "%Y-%m-%d %H:%M:%S" "$te" +%s 2>/dev/null) || return 1
+  wts=$(_agent_last_work_ts "$log")
+  (( now - te < win )) && (( now - wts > 300 )) && return 0
+  return 1
+}
+
 # 缺陷卡认领真伪核验（2026-10-11 边界语义轮 R1，run14 00:3x 实证：占位值 default
 # 过了必填校验但认领围栏按档案名精确匹配→卡无人可领烂在 todo 一小时）。驱动在缺陷
 # 等待环调用；占位/不在编制的 assignee 记问题单并打回建卡人重填。
