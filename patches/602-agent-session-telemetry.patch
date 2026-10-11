@@ -1,0 +1,311 @@
+diff --git a/gateway/session_telemetry.py b/gateway/session_telemetry.py
+new file mode 100644
+index 0000000000..34b23b06b4
+--- /dev/null
++++ b/gateway/session_telemetry.py
+@@ -0,0 +1,188 @@
++"""会话遥测 sidecar（长会话治理 602）：每回合后把会话健康画像落到
++``<HERMES_HOME>/runtime/sessions-telemetry.json``，供 studio 集群巡检消费
++（D9 上下文水位 / D10 回合节奏 / D11 环检测信号）。
++
++设计要点：
++- **fail-open**：遥测失败只 warn，绝不影响回合路径（遥测是旁路，不是门禁）。
++- **进程内累计 + 落盘快照**：turns / cum_api_calls / 空转连击 / 轮换计数在模块态
++  累计（网关进程拥有会话），每次记录后原子写盘（tmp+rename），LRU 有界 64 会话。
++- **多 profile 感知**：落盘路径按调用时的 hermes home 解析（multiplex 网关每个
++  profile 各得一份 sidecar）。
++- **消费方零耦合**：studio 侧 fail-soft 读文件（同 capacity_retry.json 约定，
++  10 分钟陈旧度语义由消费方判定）。
++"""
++
++from __future__ import annotations
++
++import json
++import logging
++import os
++import tempfile
++import time
++from contextlib import suppress
++from pathlib import Path
++from typing import Any, Dict, Optional
++
++logger = logging.getLogger(__name__)
++
++SIDECAR_NAME = "sessions-telemetry.json"
++MAX_SESSIONS = 64
++_STALE_RESET_SEC = 7 * 24 * 3600  # 一周无更新即整条淘汰（防陈旧会话占坑）
++
++# 进程内累计态：session_key -> dict（turns/cum_api_calls/empty_streak/rotations/…）
++_STATE: Dict[str, Dict[str, Any]] = {}
++
++
++def _sidecar_path() -> Optional[Path]:
++    try:
++        from hermes_constants import get_hermes_home
++        runtime_dir = get_hermes_home() / "runtime"
++        runtime_dir.mkdir(parents=True, exist_ok=True)
++        return runtime_dir / SIDECAR_NAME
++    except Exception:  # noqa: BLE001
++        return None
++
++
++def _atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
++    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".sessions-telemetry.", suffix=".tmp")
++    try:
++        with os.fdopen(fd, "w", encoding="utf-8") as tmp:
++            json.dump(payload, tmp, ensure_ascii=False)
++        os.replace(tmp_name, path)
++    except Exception:  # noqa: BLE001
++        with suppress(OSError):
++            os.unlink(tmp_name)
++        raise
++
++
++def _cached_agent(gateway: Any, session_key: str) -> Any:
++    """从网关代理缓存取当前 agent 实例（读心跳/runaway 计数用）；锁内快读，失败返 None。"""
++    cache = getattr(gateway, "_agent_cache", None)
++    if not isinstance(cache, dict):
++        return None
++    lock = getattr(gateway, "_agent_cache_lock", None)
++    try:
++        if lock is not None:
++            with lock:
++                entry = cache.get(session_key)
++        else:
++            entry = cache.get(session_key)
++        return entry[0] if entry else None
++    except Exception:  # noqa: BLE001
++        return None
++
++
++def _agent_health_counters(agent: Any) -> Dict[str, Any]:
++    """心跳（601）与 runaway（401/605）计数；agent 缺席/属性缺席一律 fail-open。"""
++    out: Dict[str, Any] = {}
++    with suppress(Exception):
++        from agent.rule_heartbeat import heartbeat_counters
++        out["heartbeat"] = heartbeat_counters(agent)
++    guard = getattr(agent, "_runaway_guard", None)
++    last = getattr(agent, "_last_runaway_signal", None)
++    if last is not None:
++        out["runaway"] = {
++            "signal": getattr(last, "signal", None),
++            "tool": getattr(last, "tool", None),
++            "count": getattr(last, "count", None),
++            "decisions": getattr(agent, "_runaway_decisions", 0),
++        }
++    elif guard is not None:
++        out["runaway"] = {"signal": None, "decisions": getattr(agent, "_runaway_decisions", 0)}
++    return out
++
++
++def _int(value: Any) -> int:
++    try:
++        return int(value or 0)
++    except (TypeError, ValueError):
++        return 0
++
++
++def note_rotation(session_key: str, reason: str = "") -> None:
++    """轮换计数（603 调用；report/auto 两档都计）。ts 必补——缺席会被陈旧淘汰立即清除。"""
++    entry = _STATE.setdefault(session_key, {})
++    entry["rotations"] = _int(entry.get("rotations")) + 1
++    entry["last_rotation_reason"] = reason or entry.get("last_rotation_reason", "")
++    entry["ts"] = time.time()
++    _flush_entry(session_key, entry)
++
++
++def _flush_entry(session_key: str, entry: Dict[str, Any]) -> None:
++    path = _sidecar_path()
++    if path is None:
++        return
++    with suppress(Exception):
++        existing: Dict[str, Any] = {}
++        if path.is_file():
++            existing = json.loads(path.read_text(encoding="utf-8")) or {}
++        existing[session_key] = entry
++        # LRU 有界 + 陈旧淘汰（ts 缺席的条目不参与淘汰判定——防自清除）
++        now = time.time()
++        for key in list(existing.keys()):
++            if isinstance(existing.get(key), dict):
++                ts = existing[key].get("ts")
++                if isinstance(ts, (int, float)) and now - float(ts) > _STALE_RESET_SEC:
++                    del existing[key]
++        while len(existing) > MAX_SESSIONS:
++            oldest = min(existing.items(), key=lambda kv: float(kv[1].get("ts", 0)) if isinstance(kv[1], dict) else 0)
++            del existing[oldest[0]]
++        _atomic_write_json(path, existing)
++
++
++def record_turn_telemetry(
++    gateway: Any, session_entry: Any, agent_result: Any, source: Any,
++) -> None:
++    """回合后钩子（run_turn.py 调用，一处一行）；全函数 fail-open。"""
++    try:
++        if session_entry is None or not isinstance(agent_result, dict):
++            return
++        session_key = getattr(session_entry, "session_key", "") or ""
++        if not session_key:
++            return
++        api_calls = _int(agent_result.get("api_calls"))
++        final_response = agent_result.get("final_response") or agent_result.get("error") or ""
++        tools = agent_result.get("tools") or []
++        empty_turn = api_calls > 0 and not tools and not str(final_response).strip()
++
++        prompt_tokens = _int(agent_result.get("last_prompt_tokens"))
++        context_length = _int(agent_result.get("context_length"))
++        watermark_pct = round(prompt_tokens * 100.0 / context_length, 1) if context_length > 0 else None
++
++        entry = _STATE.setdefault(session_key, {})
++        entry["turns"] = _int(entry.get("turns")) + 1
++        entry["cum_api_calls"] = _int(entry.get("cum_api_calls")) + api_calls
++        entry["empty_streak"] = _int(entry.get("empty_streak")) + 1 if empty_turn else 0
++        entry["ts"] = time.time()
++        entry["session_id"] = getattr(session_entry, "session_id", "")
++        entry["platform"] = getattr(getattr(source, "platform", None), "value", "") or ""
++        entry["model"] = agent_result.get("model")
++        entry["last_prompt_tokens"] = prompt_tokens
++        entry["context_length"] = context_length
++        entry["watermark_pct"] = watermark_pct
++        entry["turn_api_calls"] = api_calls
++        entry["session_total_tokens"] = _int(getattr(session_entry, "total_tokens", 0))
++        entry["session_output_tokens"] = _int(getattr(session_entry, "output_tokens", 0))
++
++        agent = _cached_agent(gateway, session_key)
++        entry.update(_agent_health_counters(agent))
++        entry["rotations"] = _int(entry.get("rotations"))
++        _flush_entry(session_key, entry)
++    except Exception:  # noqa: BLE001 - 遥测旁路绝不冒泡
++        logger.debug("session telemetry record failed", exc_info=True)
++
++
++def read_state(session_key: str = "") -> Any:
++    """测试/诊断读数：无参返整个 sidecar dict，有参返该会话条目。"""
++    path = _sidecar_path()
++    if path is None or not path.is_file():
++        return {} if not session_key else None
++    with suppress(Exception):
++        data = json.loads(path.read_text(encoding="utf-8")) or {}
++        return data.get(session_key) if session_key else data
++    return {} if not session_key else None
++
++
++def reset_state() -> None:
++    """测试隔离：清进程内累计态（不动磁盘）。"""
++    _STATE.clear()
+diff --git a/gateway/run_turn.py b/gateway/run_turn.py
+index 8c5728884d..b8b0266119 100644
+--- a/gateway/run_turn.py
++++ b/gateway/run_turn.py
+@@ -2250,6 +2250,10 @@ class GatewayTurnMixin:
+             )
+             if agent_failed_early and not is_context_overflow_failure:
+                 response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))
++            # Session telemetry sidecar (602): post-turn health snapshot for the studio
++            # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
++            from gateway.session_telemetry import record_turn_telemetry
++            record_turn_telemetry(self, session_entry, agent_result, source)
+             response, session_entry = await self._hmwa_compression_exhaustion_reset(
+                 agent_result, response, session_entry, session_key, source,
+             )
+diff --git a/tests/gateway/test_session_telemetry.py b/tests/gateway/test_session_telemetry.py
+new file mode 100644
+index 0000000000..0535728070
+--- /dev/null
++++ b/tests/gateway/test_session_telemetry.py
+@@ -0,0 +1,96 @@
++"""会话遥测 sidecar（602）：累计口径、fail-open、LRU 有界、原子写。"""
++import zoneinfo  # noqa: F401 预导入：本机 venv 标准库位于真实 hermes home 下，护栏
++                 # 窗口内惰性导入 zoneinfo 会被 home_io_guard 误伤并级联炸掉报告器。
++from types import SimpleNamespace
++
++import pytest
++
++from gateway import session_telemetry as st
++
++
++@pytest.fixture(autouse=True)
++def _isolate(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++    st.reset_state()
++    yield
++    st.reset_state()
++
++
++def _session_entry(key="k1", sid="s1", total=12345):
++    return SimpleNamespace(session_key=key, session_id=sid, total_tokens=total, output_tokens=678)
++
++
++def _result(api=5, prompt=90000, ctx=100000, model="m1", final="done", tools=None):
++    return {
++        "api_calls": api, "last_prompt_tokens": prompt, "context_length": ctx,
++        "model": model, "final_response": final,
++        "tools": ["t"] if tools is None else tools,
++    }
++
++
++def test_records_watermark_and_cumulative():
++    gw = SimpleNamespace(_agent_cache={})
++    st.record_turn_telemetry(gw, _session_entry(), _result(), SimpleNamespace(platform=SimpleNamespace(value="matrix")))
++    entry = st.read_state("k1")
++    assert entry is not None
++    assert entry["watermark_pct"] == 90.0
++    assert entry["turns"] == 1 and entry["cum_api_calls"] == 5
++    assert entry["platform"] == "matrix" and entry["model"] == "m1"
++    assert entry["session_total_tokens"] == 12345
++    st.record_turn_telemetry(gw, _session_entry(), _result(api=3), SimpleNamespace(platform=None))
++    entry = st.read_state("k1")
++    assert entry["turns"] == 2 and entry["cum_api_calls"] == 8
++
++
++def test_empty_streak_resets_on_progress():
++    gw = SimpleNamespace(_agent_cache={})
++    empty = _result(api=4, final="", tools=[])
++    st.record_turn_telemetry(gw, _session_entry(), empty, None)
++    st.record_turn_telemetry(gw, _session_entry(), empty, None)
++    assert st.read_state("k1")["empty_streak"] == 2
++    st.record_turn_telemetry(gw, _session_entry(), _result(), None)
++    assert st.read_state("k1")["empty_streak"] == 0
++
++
++def test_rotation_note_increments():
++    st.note_rotation("k9", reason="watermark")
++    entry = st.read_state("k9")
++    assert entry["rotations"] == 1 and entry["last_rotation_reason"] == "watermark"
++
++
++def test_agent_health_counters_via_cache():
++    agent = SimpleNamespace(
++        _runaway_guard=object(),
++        _last_runaway_signal=SimpleNamespace(signal="polling_repeat", tool="t", count=4),
++        _runaway_decisions=2,
++        _rule_heartbeat_step=12, _rule_heartbeats_emitted=1, rule_heartbeat_interval=12,
++    )
++    lock_free_gw = SimpleNamespace(_agent_cache={"k1": (agent, "sig", 3, "s1")})
++    st.record_turn_telemetry(lock_free_gw, _session_entry(), _result(), None)
++    entry = st.read_state("k1")
++    assert entry["runaway"]["signal"] == "polling_repeat"
++    assert entry["runaway"]["decisions"] == 2
++    assert entry["heartbeat"]["emitted"] == 1
++
++
++def test_fail_open_on_bad_inputs():
++    st.record_turn_telemetry(None, None, None, None)  # 不得抛
++    st.record_turn_telemetry(SimpleNamespace(), _session_entry(), {"api_calls": "x"}, None)
++    assert st.read_state("k1") is None or st.read_state("k1").get("turns") == 1
++
++
++def test_lru_bound_and_stale_eviction(monkeypatch):
++    for i in range(st.MAX_SESSIONS + 5):
++        st.record_turn_telemetry(
++            SimpleNamespace(_agent_cache={}),
++            _session_entry(key=f"k{i:03d}"), _result(api=1), None,
++        )
++    data = st.read_state()
++    assert len(data) <= st.MAX_SESSIONS
++
++
++def test_wiring_run_turn_hook_present():
++    from pathlib import Path
++    import gateway.run_turn as rt
++    source = Path(rt.__file__).read_text(encoding="utf-8")
++    assert "from gateway.session_telemetry import record_turn_telemetry" in source

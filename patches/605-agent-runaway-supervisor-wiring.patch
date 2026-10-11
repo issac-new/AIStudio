@@ -1,0 +1,170 @@
+diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
+index a2bda853f2..3861cc06ab 100644
+--- a/agent/runaway_guard.py
++++ b/agent/runaway_guard.py
+@@ -237,4 +237,11 @@ def observe_tool_step(agent: Any, tool: str, args: Any, result: Any,
+                 agent.interrupt(f"runaway-guard: {signal.signal}")
+             except Exception:  # noqa: BLE001
+                 pass
++        # 605 监督决策面：report/watchdog_retry/ralph_loop 三模式处置（默认 report 只报）。
++        # 懒加载避免模块环；fail-open。
++        try:
++            from agent.runaway_supervisor import handle_runaway_signal
++            handle_runaway_signal(agent, signal)
++        except Exception:  # noqa: BLE001
++            pass
+     return signal
+diff --git a/agent/runaway_supervisor.py b/agent/runaway_supervisor.py
+index f355dbe8ef..fa7aa63458 100644
+--- a/agent/runaway_supervisor.py
++++ b/agent/runaway_supervisor.py
+@@ -16,7 +16,7 @@ from __future__ import annotations
+ 
+ import os
+ from dataclasses import dataclass
+-from typing import Literal, Optional
++from typing import Any, Literal, Optional
+ 
+ SupervisorMode = Literal["report", "watchdog_retry", "ralph_loop"]
+ SupervisorAction = Literal["report", "retry", "ralph_loop", "stop"]
+@@ -70,3 +70,69 @@ class RunawaySupervisor:
+ 
+     def reset(self) -> None:
+         self._attempts = 0
++
++
++# ── 执行面接线（长会话治理 605）：401 判定面的消费方 ──────────────────────────
++
++_ACTION_INTERRUPT_TEXT = {
++    "retry": (
++        "runaway supervisor (watchdog_retry): the last tool loop is repeating without "
++        "progress. Change approach or persist a done/left/blocked handoff; do not "
++        "re-issue the same failing call."
++    ),
++    "ralph_loop": (
++        "runaway supervisor (ralph_loop): the task needs a fresh restart from its "
++        "task card; summarize done/left/blocked before continuing."
++    ),
++    "stop": (
++        "runaway supervisor: bounded recovery attempts exhausted — stop autonomous "
++        "retries, persist a done/left/blocked handoff and surface the blocker for a human."
++    ),
++}
++
++
++def get_agent_supervisor(agent: Any) -> "RunawaySupervisor":
++    """每 agent 惰性单例（随会话生命周期；与 401 的 guard 单例同款挂法）。"""
++    supervisor = getattr(agent, "_runaway_supervisor", None)
++    if supervisor is None:
++        supervisor = RunawaySupervisor()
++        agent._runaway_supervisor = supervisor
++    return supervisor
++
++
++def handle_runaway_signal(agent: Any, signal: Any) -> Optional["SupervisorDecision"]:
++    """401 观测到六信号后的决策执行面（runaway_guard.observe_tool_step 调用）。
++
++    - report（默认）：monitoring 事件 + 计数，不干预执行链；
++    - watchdog_retry / ralph_loop / stop：调用 agent.interrupt() 带指引文本终止当前轮
++      （v1 语义：重试/重跑以"带指引的打断"落地，接手会话/下一轮按指引重启）；
++    - 与 401 自身的 HERMES_RUNAWAY_GUARD_INTERRUPT 直通打断独立：若守卫已打断，
++      supervisor 只补决策记录不再重复打断。
++    全函数 fail-open：决策面故障绝不影响执行链。
++    """
++    try:
++        supervisor = get_agent_supervisor(agent)
++        decision = supervisor.on_signal(getattr(signal, "signal", str(signal)))
++        agent._runaway_decisions = getattr(agent, "_runaway_decisions", 0) + 1
++        agent._last_runaway_decision = decision
++        try:
++            from agent.monitoring import emit
++            emit({
++                "event": "runaway_supervisor",
++                "signal": getattr(signal, "signal", None),
++                "tool": getattr(signal, "tool", None),
++                "count": getattr(signal, "count", None),
++                "decision": decision.action,
++                "attempts_used": decision.attempts_used,
++                "attempts_limit": decision.attempts_limit,
++            })
++        except Exception:  # noqa: BLE001 - 监控面缺席不阻断
++            pass
++        if decision.action in _ACTION_INTERRUPT_TEXT and not getattr(agent, "_interrupt_requested", False):
++            try:
++                agent.interrupt(_ACTION_INTERRUPT_TEXT[decision.action])
++            except Exception:  # noqa: BLE001
++                pass
++        return decision
++    except Exception:  # noqa: BLE001
++        return None
+diff --git a/tests/agent/test_runaway_supervisor.py b/tests/agent/test_runaway_supervisor.py
+index 6f25a51c60..c498821531 100644
+--- a/tests/agent/test_runaway_supervisor.py
++++ b/tests/agent/test_runaway_supervisor.py
+@@ -3,6 +3,8 @@
+ from __future__ import annotations
+ 
+ import sys
++import zoneinfo  # noqa: F401 预导入：本机 venv 标准库在真实 hermes home 下，护栏窗口内
++                 # 惰性导入会被 home_io_guard 误伤（长会话治理轮实测，同 602-604 测试）。
+ from pathlib import Path
+ 
+ import pytest
+@@ -45,3 +47,57 @@ class TestModes:
+         assert supervisor_mode() == "report"  # 非法回默认
+         monkeypatch.setenv("HERMES_RUNAWAY_MAX_RECOVERY", "0")
+         assert max_recovery() == 3  # 非法回默认
++
++
++# ── 605 执行面接线：handle_runaway_signal ─────────────────────────────────────
++
++def test_handle_signal_report_mode_no_interrupt():
++    import os
++    os.environ.pop("HERMES_RUNAWAY_SUPERVISOR", None)
++    from types import SimpleNamespace
++    from agent.runaway_supervisor import handle_runaway_signal, RunawaySupervisor
++
++    calls = []
++    agent = SimpleNamespace(interrupt=lambda reason=None: calls.append(reason),
++                            _interrupt_requested=False)
++    decision = handle_runaway_signal(agent, SimpleNamespace(signal="polling_repeat", tool="t", count=4))
++    assert decision is not None and decision.action == "report"
++    assert calls == []  # report 不干预
++    assert agent._runaway_decisions == 1
++
++
++def test_handle_signal_watchdog_retry_interrupts_with_guidance(monkeypatch):
++    monkeypatch.setenv("HERMES_RUNAWAY_SUPERVISOR", "watchdog_retry")
++    from types import SimpleNamespace
++    from agent.runaway_supervisor import handle_runaway_signal
++
++    calls = []
++    agent = SimpleNamespace(interrupt=lambda reason=None: calls.append(reason),
++                            _interrupt_requested=False)
++    d1 = handle_runaway_signal(agent, SimpleNamespace(signal="abab_action_cycle", tool="t", count=2))
++    assert d1.action == "retry" and calls and "watchdog_retry" in calls[-1]
++    # 已在打断态：不重复打断
++    agent._interrupt_requested = True
++    calls.clear()
++    d2 = handle_runaway_signal(agent, SimpleNamespace(signal="abab_action_cycle", tool="t", count=2))
++    assert d2.action == "retry" and calls == []
++
++
++def test_handle_signal_bounded_recovery_then_stop(monkeypatch):
++    monkeypatch.setenv("HERMES_RUNAWAY_SUPERVISOR", "watchdog_retry")
++    monkeypatch.setenv("HERMES_RUNAWAY_MAX_RECOVERY", "2")
++    from types import SimpleNamespace
++    from agent.runaway_supervisor import handle_runaway_signal
++
++    agent = SimpleNamespace(interrupt=lambda reason=None: None, _interrupt_requested=False)
++    assert handle_runaway_signal(agent, SimpleNamespace(signal="s", tool="t", count=1)).action == "retry"
++    assert handle_runaway_signal(agent, SimpleNamespace(signal="s", tool="t", count=1)).action == "retry"
++    d = handle_runaway_signal(agent, SimpleNamespace(signal="s", tool="t", count=1))
++    assert d.action == "stop" and d.attempts_used == 2  # 有界恢复→转人工
++
++
++def test_wiring_guard_calls_supervisor():
++    from pathlib import Path
++    import agent.runaway_guard as guard
++    source = Path(guard.__file__).read_text(encoding="utf-8")
++    assert "from agent.runaway_supervisor import handle_runaway_signal" in source

@@ -567,3 +567,27 @@
 # 597/598 agent 运行时（mx_apply_agent_patches 通道，同 593-596）——turn ended 审计+建卡占位拒绝
 599-agent-turn-ended-audit.patch
 600-agent-assignee-realname.patch
+
+# ── 长会话治理轮（2026-10-11，方案三九件套）：A 层运行时五笔 + B5 挂载件 ──
+# 定性：多轮长会话的稳定性/质量/指令遵循三类衰减——规则被淹没、故障静默化、对策散落
+# 不生效。601-605 治运行时（心跳再锚定/遥测 sidecar/会话轮换/交接检查点/环检测监督
+# 接线），全部进 SIM 通道（mx_apply_agent_patches）+ manifest 分发；行为类默认
+# report/observe 档，推演轮验证后翻转。
+# 601 规则心跳：每 N 迭代（默认 12，agent.rule_heartbeat_interval，0=关）把核心纪律
+# 重申进最新未持久化 tool 行——复用预算告警注入缝，前缀缓存零破坏。
+601-agent-rule-heartbeat.patch
+# 602 会话遥测 sidecar：网关每回合后落 <home>/runtime/sessions-telemetry.json
+# （水位/累计迭代/空转连击/心跳/runaway/轮换计数，LRU 64 原子写）——D9/D10/D11 观测面。
+602-agent-session-telemetry.patch
+# 603 会话轮换策略：累计迭代≥400 / 水位连击 / 空转连击三判据；report（默认，只报）
+# |auto（复用压缩耗尽漏斗+检查点+sidecar 连续性）两档；HERMES_SESSION_ROTATION 覆盖。
+603-agent-session-rotation.patch
+# 604 交接检查点：轮换/fork 边界落机械交接记录（目标指针/末次产出尾/累计计数/纪律
+# 重申，历史有界 8）；kanban worker 冷启动上下文与轮换后首回合 sidecar 消费。
+604-agent-handoff-checkpoint.patch
+# 605 runaway 监督接线：401 判定面接 457 决策面（report|watchdog_retry|ralph_loop
+# 有界恢复→转人工），monitoring 事件留痕；401/457 同时补登 manifest 与 SIM 通道。
+605-agent-runaway-supervisor-wiring.patch
+# 606 runtime-verify 路由挂载（B5 悬空件补登）：/api/hermes/runtime-verify/*
+# （health/verifiers 注册表/miniprogram）——模块早落而路由从未进 routes.ts。
+606-server-runtime-verify-routes.patch
