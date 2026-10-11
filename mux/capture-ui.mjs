@@ -24,7 +24,7 @@ console.log('login ok:', loginRes.user?.username)
 
 const only = process.argv[2]
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'zh-CN', timezoneId: 'Asia/Shanghai' })  // 推演 UI 始终中文：浏览器级 locale 焊死（localStorage hermes_locale=zh 为第二道保险）
 const page = await ctx.newPage()
 
 await page.goto(BASE + '/login')
