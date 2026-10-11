@@ -1114,7 +1114,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
-2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）
+2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
     sset m19_marker "$_m19"
@@ -1122,7 +1122,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 （预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
-2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
+2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit）；建卡后一行 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
     sset defect_dispatched 1
   fi
