@@ -26,6 +26,19 @@ description: 缺陷闭环：测试识别缺陷→matrix 反馈研发→测试智
 
 3. 本机 kanban 登记缺陷卡片（status=triage，body 同上）。
 
+## 结卡门禁（task_close 触发面——修完≠关卡，过门才关）
+
+缺陷卡关闭前跑 QGate task_close 触发门（关卡即触发 L0 门，缺证据拦关）：
+
+```
+node $OVERLAY_ROOT/custom/qgate/dist/cli.js plan --trigger task_close   # 列适用门
+node $OVERLAY_ROOT/custom/qgate/dist/cli.js run L0.requirement-trace --trigger task_close
+```
+
+- L0.requirement-trace：修复须能追溯到缺陷卡/AC（body 带 card=<卡ID>）。
+- L0.registers / L0.scope-check：改动范围与登记对得上（禁顺手改无关文件）。
+- 门不过：修原因再跑，禁 waive 绕行（豁免须 approver 显式批准）。
+
 ## 研发侧流程
 
 1. 收到缺陷消息后，本机测试智能体先复现确认（跑测试用例或按复现步骤执行）；
