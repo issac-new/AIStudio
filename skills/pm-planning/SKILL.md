@@ -5,6 +5,9 @@ description: 项目管理与研发治理：基于定稿系分与工作量评估�
 
 # PM Planning（排期与研发治理）
 
+## 交付形态字段（2026-10-11 平台根治，run14 教训）
+排期表与任务书必带「交付形态」列（六型：backend-service/web-frontend/mini-program/mobile-app/library-sdk/governance-doc，正本=Swarm Studio custom/server/delivery-contract）。每型任务的完成定义含对应运行证据：mini-program=真开发者工具 runtime-proof、web-frontend=浏览器走查帧、backend-service=启动冒烟+跨模块契约测试、mobile-app=模拟器启动证据。派发词随形态注入 DoD 与 RUNTIME-OK/RUNTIME-FAIL 结论行约定；QGate delivery.runtime-evidence 门在 task_close 按形态拦截缺证（单测全绿不等于可运行）。
+
 ## 触发
 
 产品经理（本机 owner）要求基于定稿的系分结果编排开发/测试计划时执行。
