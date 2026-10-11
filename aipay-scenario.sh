@@ -446,6 +446,12 @@ if step_reached analysis; then
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
   fi
   sset analysis_verified 1
+  # RACI 副作用复查一次性守卫（run14 实锤：G5 熔断重启循环 85 圈，每圈重放本段——
+  # 4×60s 白等 + 每圈 4 张重复单 + 每圈一条回灌消息轰炸群与 fanfan agent 回合。
+  # 副作用证据复查只做一次：done 键在位即整段跳过，首跑语义不变）。
+  if [[ -n "$(sget raci_sidework_done)" ]]; then
+    note "[续跑] RACI 副作用复查已做过（raci_sidework_done 在位）——跳过 4×60s 复查与回灌（run14 刷单事故根修）"
+  else
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
     # 消息洪窗口失效（run4 实锤：当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
@@ -467,7 +473,7 @@ if step_reached analysis; then
     note "[回灌] RACI 双 @ 派发缺 ${RACI_MISS_PAIRS}——补发要求已发（fire-and-forget，左移件 c 不占关键路径）"
     for pair in ${RACI_MISS_PAIRS}; do
       set -- $(echo "$pair" | tr '/' ' ')
-      echo "ISSUE|raci-dispatch-missing|fanfan-agent|@${1}/@${2} RACI 双 @ 群通知未见（补发要求已发；真值=主卡 raci 列，验证归审计段）" >> "$EVID_DIR/issues.log"
+      issue_once raci-dispatch-missing fanfan-agent "@${1}/@${2} RACI 双 @ 群通知未见（补发要求已发；真值=主卡 raci 列，验证归审计段）"
     done
   fi
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
@@ -481,6 +487,8 @@ if step_reached analysis; then
     # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻记单放行。
     echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻记单；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
     note "[观察] 主卡缺结构化 raci（免等窗：回灌已发+记单放行）"
+  fi
+  sset raci_sidework_done 1   # 一次性守卫收口（上方 else 分支配对）
   fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
   # 判定语义（V4-run1 误报根治）：agent 职责=邀请发出（join|invite 均算履职）；
