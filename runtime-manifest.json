@@ -137,6 +137,36 @@
       "source": "plugins/style-charter/style-charter.md",
       "dest": "plugins/style-charter/style-charter.md",
       "note": "受控写作条款唯一真源（ASD-STE100×公文笔法）；simharness mx-lib 同源只读消费"
+    },
+    {
+      "source": "agent/runaway_guard.py",
+      "dest": "agent/runaway_guard.py",
+      "note": "401 六信号死循环检测器（长会话治理轮补登 manifest——此前仅工作区树可达，SIM/宿主从未执行；observe_tool_step 由 tool_executor 钩入，605 接监督决策面）"
+    },
+    {
+      "source": "agent/runaway_supervisor.py",
+      "dest": "agent/runaway_supervisor.py",
+      "note": "457+605 监督决策/执行面：report|watchdog_retry|ralph_loop 三模式有界恢复（缺它 401 只观测不处置）"
+    },
+    {
+      "source": "agent/rule_heartbeat.py",
+      "dest": "agent/rule_heartbeat.py",
+      "note": "601 规则心跳：每 N 迭代把核心纪律重申进最新未持久化 tool 行（前缀缓存零破坏）"
+    },
+    {
+      "source": "agent/handoff_checkpoint.py",
+      "dest": "agent/handoff_checkpoint.py",
+      "note": "604 交接检查点：轮换/fork 边界落机械交接记录（<home>/session-checkpoints/，历史有界 8）"
+    },
+    {
+      "source": "gateway/session_telemetry.py",
+      "dest": "gateway/session_telemetry.py",
+      "note": "602 会话遥测 sidecar：<home>/runtime/sessions-telemetry.json——集群巡检 D9/D10/D11 的观测面"
+    },
+    {
+      "source": "gateway/session_rotation.py",
+      "dest": "gateway/session_rotation.py",
+      "note": "603 会话轮换策略：水位/累计迭代/空转三判据，report（默认）|auto 两档，auto 复用压缩耗尽漏斗+604 检查点"
     }
   ],
   "notes": [
