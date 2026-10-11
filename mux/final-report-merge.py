@@ -365,7 +365,7 @@ PART1_RUN11 = '''<div class="guide" style="background:var(--surface-2);padding:6
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
 
-<div class="card info"><b>这场推演在验证什么：</b>五件新机制的首次实战场——①帧采集固定死驱动（capture_step 逐步实拍+零帧拒出报告+自动检查⑰，run10"13 小时零实时帧"红线的机制兑现）；②R18 必采清单采集链接线（run10 0/13 缺口的本轮兑现，对话/操作/效果三类载荷当轮实时落盘）；③系分四路同时派出不分批（§4.2 流水线改革：run9/10 实证闸值 4 占满无撞闸，废除 2+2 分批）；④报告验收熔断全程值守（mx-report-audit FAIL 即禁出报告，§5.7 收尾判据②）；⑤交付物模板公文技法批次迁移（13 张入中央仓 templates/，commit 9f517a5）。</div>
+<div class="card info"><b>这场推演在验证什么：</b>五件新机制的首次实战场——①帧采集固定死驱动（capture_step 逐步实拍+零帧拒出报告+自动检查⑰，run10"13 小时零实时帧"红线的机制兑现）；②R18 必采清单采集链接线（run10 0/13 缺口的本轮兑现，对话/操作/效果三类载荷当轮实时落盘）；③系分四路同时派出不分批（§4.2 流水线改革：run9/10 实证闸值 4 占满无撞闸，废除 2+2 分批）；④报告验收熔断全程值守（mx-report-audit FAIL 即禁出报告，§5.6 收尾判据②）；⑤交付物模板公文技法批次迁移（13 张入中央仓 templates/，commit 9f517a5）。</div>
 
 <div class="card ok"><b>本轮的诚实结论——数字全实测统计，不粉饰：</b>26 步 {{steps_done}}/26 写入通过标记（第 26 步写入通过标记随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实测统计自 issues.log 闸键记入问题清单）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。G1 需求冻结 02:29 一次过；G2 架构评审 09:36 过闸但带打回环（结论行 1800s 未达记入问题清单 g2-review-missing，回灌补齐后过——非首过）。UAT 七条验收标准逐条三态判词见第 21 步块（禁"全部通过"式总括）。{{n_frames}} 张界面帧全部当轮实时采集（首帧 03:xx 起随步落盘，{{uniq_note}}）——与 run10 全程补拍有本质区别。</div>
 
