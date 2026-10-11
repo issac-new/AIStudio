@@ -33,10 +33,10 @@ mx_write_progress() {
     > "$HERMES_ROOT/run-progress.json.tmp" 2>/dev/null && mv "$HERMES_ROOT/run-progress.json.tmp" "$HERMES_ROOT/run-progress.json" 2>/dev/null || true
 }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; mx_write_progress; }
-# 闸键首过保护（run13 复盘 A15）：G5 等闸键在重启循环中每圈重写，首过时刻被最后一次
+# 闸键首过保护：G5 等闸键在重启循环中每圈重写，首过时刻被最后一次
 # 覆写（11:30:41 首过→仪表盘显示 11:37）。闸类状态键一律 sset_once——已有值不覆盖。
 sset_once() { grep -q "^$1=" "$STATE" 2>/dev/null && return 0; sset "$1" "$2"; }
-# 幂等记单（run13 复盘 B3）：重启循环每圈重放记单点，qgate-evidence ×11/uat-precheck ×5
+# 幂等记单：重启循环每圈重放记单点，qgate-evidence ×11/uat-precheck ×5
 # 刷单污染台账。同类型+主体已有 ISSUE 行即跳过（处置语义：重复发生记次数无收益，事故账
 # 由 scenario.log 时间线承载）。冲突处理：必要时先显式删旧行再记新单。
 issue_once() { # issue_once <type> <subject> <desc>
@@ -161,7 +161,7 @@ normalize_assignee() { # <assignee> → 短名
 }
 
 kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → id（state 缓存防重；缺省落该账号默认板）
-  # 09-26 run8 实锤：studio POST /api/hermes/kanban 写路径与读路径同病（tenant 面），
+  # 09-26 studio POST /api/hermes/kanban 写路径与读路径同病（tenant 面），
   # 导演兜底建卡直接 fail。改 CLI 直查（--json 返回卡对象，.id 即卡号，实测 t_8b84e215）。
   # assignee（第 6 参，可选）：未指派卡虽经 547 已对板内可见，但指派到板团队档案
   # （board.json profiles 之一）可同时过 477 围栏与 391 认领白名单——评审/准出类
@@ -240,7 +240,7 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
-# ── 审批复核人工介入（2026-10-02 用户裁决 C 混合模式）──────────────
+# ── 审批复核人工介入（用户裁决 C 混合模式）──────────────
 # MX_APPROVE_MODE=auto（默认）脚本扫到即批——历史行为
 #                 =manual 全部挂起等真人（element 以人类账号回复 !approve / !deny）
 #                 =hybrid  关键操作挂起真人复核 + 过程性操作由代审 agent 先审后批
@@ -429,7 +429,7 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
     # 只匹配原始请求（"needs your OK" 提示头）：超时后 hermes 会把请求 m.replace 编辑成
     # "Approval timed out…"，旧模式 `needs your OK|approval` 会把编辑事件也当请求，对
     # 带 relation 的编辑事件开线程必被 Synapse 拒（run4/run5 实锤 18/19 NO_REPLY）。
-    # 窗口 20→60（run14 实锤：六路并发+模型降级噪音下 20 条几十秒翻页，正式请求在
+    # 窗口 20→60（六路并发+模型降级噪音下 20 条几十秒翻页，正式请求在
     # 30s 节拍的下一扫前滚出窗口→超时卡死，chen 两次请求全丢）；去重台账防重批不变。
     pend=$(mx_messages "$(load_token "$u")" "$room" 60 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK"))) | .event_id' 2>/dev/null \
@@ -530,7 +530,7 @@ gate_review() { # <human-user> <gate-name> —— best-effort，不阻塞流程
   thread_root=$(mx_messages "$tok" "$room" 50 2>/dev/null | jq -r --arg e "$last_eid" \
     '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || thread_root="$last_eid"
   # jq 键名含点必须引号（m.relates_to/m.in_reply_to 裸键=语法错误，set -e 下击杀驱动
-  # ——run7 实锤：testpass 步 gate_review 死循环重启三连的根因）
+  # ——testpass 步 gate_review 死循环重启三连的根因）
   payload=$(jq -n --arg r "$thread_root" --arg e "$last_eid" \
     --arg m "!refine ${gate}" \
     '{"msgtype":"m.text", body:$m, "m.relates_to":{"rel_type":"m.thread", event_id:$r, is_falling_back:true, "m.in_reply_to":{event_id:$e}}}')
@@ -589,7 +589,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 
 
 
-# ── 分支新鲜度（2026-10-02 run6 实锤：run5 旧 feat/DEV-* 分支留存，devimpl 存在性
+# ── 分支新鲜度（2026-10-02 run5 旧 feat/DEV-* 分支留存，devimpl 存在性
 # 检查秒过=假真值，驱动用旧代码跑完后续步。与 repo_has 文件新鲜度同口径：分支 tip
 # 提交时间必须 ≥ run_started_at；缺键退化为存在性旧语义并告警。──
 branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提交时间在本轮开跑后）
@@ -605,7 +605,7 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
   [ -n "$ct" ] && [ "$ct" -ge "$rs" ] 2>/dev/null
 }
 
-# ── 活性等待（2026-10-01 用户裁决：重载任务不设绝对时长上限）─────────────
+# ── 活性等待（用户裁决：重载任务不设绝对时长上限）─────────────
 # 只要责任 agent 还在产出（profiles/<a>/logs/agent.log 持续增长）就一直等；
 # 连续 <idle-sec> 无日志增长才判空转/死循环退出。长生成/长测试的单次静默
 # 远小于阈值（run6 实测大生成 6 分钟级），1800s 足够宽容；真死循环（429 退避
@@ -628,7 +628,7 @@ capture_step() { # <step> <url> [action] [user]
     # 开跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
     note "[帧采集] 步 ${step} 采集失败（rc=${rc}，记单不阻断）"
     echo "ISSUE|frame-capture-failed|step-${step}|r18-frames 采集失败 rc=${rc}（url=${url}）" >> "$EVID_DIR/issues.log"
-    # 连续失败计数（run14 复盘 B4 根修）：单步抖动记单即可，≥3 连败=链路级故障
+    # 连续失败计数：单步抖动记单即可，≥3 连败=链路级故障
     # （run14 实锤 40 帧全补拍、实时帧=0），升级显著告警供监控侧即刻介入——
     # 开跑预检为何未拦同期复盘。
     _cfail=$(( $(sget capture_fail_streak 2>/dev/null || echo 0) + 1 ))
@@ -731,7 +731,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     done
     if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
     if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
-    # 注意：字符串判空不能进算术上下文（run8 实锤：(( ... && -n "$x" )) 把 -n 解析成
+    # 注意：字符串判空不能进算术上下文（(( ... && -n "$x" )) 把 -n 解析成
     # "减变量 n"，set -u 下 n: unbound variable 击杀驱动）——[[ ]] 移出 (( ))。
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "${_nmentions}" >/dev/null 2>&1 || true
@@ -840,7 +840,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
 
 # ── 完成凭证反向核验（账号板断言）────────────────────────
 mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b 翻页直抵 since 时刻
-  # 消息洪后固定窗口失效（run4 实锤：500 条只回溯到当天上午，昨日派发被挤出）。
+  # 消息洪后固定窗口失效（500 条只回溯到当天上午，昨日派发被挤出）。
   # 用 end token 连续翻页，直到某页最老消息早于 since 或页数耗尽；输出与 mx_messages 同构数组。
   local tok="$1" room="$2" since_ms=$(( $3 * 1000 )) pages="${4:-10}" out='[]' page_url chunk oldest end_tok
   page_url="$HS/_matrix/client/v3/rooms/$room/messages?access_token=$tok&dir=b&limit=500"
@@ -863,7 +863,7 @@ kanban_raci_nonempty() { # <needle> → 0=任一 产品经理A 板匹配卡带�
 
 raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派发消息（供 wait_truth 当前 shell 直调）
   # 勿经 bash -c 包装本函数：shell 函数不跨子进程继承（未 export -f），子进程必 127 恒假。
-  # 提及判定=正文 OR m.mentions 字段（run7 实锤：派发消息正文只含被派人 mxid，
+  # 提及判定=正文 OR m.mentions 字段（派发消息正文只含被派人 mxid，
   # 团队负责人经 content."m.mentions".user_ids 附带——任务书明确要求"用 m.mentions 提及"，
   # 只查正文对合规消息恒假阴性；深翻页另证 17:20-18:10 无 产品经理A 双 @ 正文消息，
   # 观察 4 条的真因是消息未发而非窗口外）。
@@ -935,7 +935,7 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   # run_started_at 缺键（旧轮 state）时保持旧语义并告警，不静默放行新代码路径。
   local _rs
   _rs="$(sget run_started_at)"
-  # lite 轮基线（run13 实锤：夹具继承的 G1 冻结件天然早于本轮开跑，按全量轮
+  # lite 轮基线（夹具继承的 G1 冻结件天然早于本轮开跑，按全量轮
   # 语义判旧稿=UAT 前置永败重启循环）：lite_round=1 且夹具源轮 state 可读时，
   # 基线改夹具源轮开跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜，更早
   # 旧稿仍被拒。夹具源 state 异常回落本轮基线（保守，宁可再 fail 不放水）。
@@ -958,7 +958,7 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   (( _ct >= _rs ))
 }
 test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd>（发布基线分支口径，
-  # 与 testpass 派发词 push 目标一致）。run7 实锤：testpass/uat 用 repo_has（origin/main
+  # 与 testpass 派发词 push 目标一致）。testpass/uat 用 repo_has（origin/main
   # 口径）查一份只进 integration 的报告=永假——testpass 六代重启代代白派、UAT 九连死循环
   # 3h45m 的共同根因位。冻结件仍走 repo_has（main 口径）。
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
@@ -1596,7 +1596,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   local _human
   _human=$({ grep -cE '^DISP\|.*导演' "$EVID_DIR/issues.log" 2>/dev/null || true; })
   # 缺陷密度+打回率实算（run15 前置 P2-5）：缺陷/用例真值取 quality-summary.env
-  # 双源口径（run14 复盘 A2 根修后）；env 缺席如实 ⬜ 不编造。密度单位=缺陷/千用例。
+  # 双源口径；env 缺席如实 ⬜ 不编造。密度单位=缺陷/千用例。
   local _poenv _def _nt _dens _rejrate
   _poenv="$EVID_DIR/product-outcome/quality-summary.env"
   if [ -f "$_poenv" ] && grep -q '^defects_total=' "$_poenv" && grep -q '^n_tests=' "$_poenv"; then

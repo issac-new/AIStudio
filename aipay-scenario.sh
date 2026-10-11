@@ -91,8 +91,8 @@ if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$STA
   sset preflight_ok 1
 fi
 
-# ── 采集链开跑预检（run14 复盘 A1/B4 根修，§4.3-25a 实时帧红线的门前守卫）──
-# run14 实锤：playwright 依赖被带名 no-save 安装清件，capture_step 全程 rc=1，40 帧
+# ── 采集链开跑预检──
+# playwright 依赖被带名 no-save 安装清件，capture_step 全程 rc=1，40 帧
 # 全部收尾补拍（实时帧=0），跑完才知道。预检=开跑时试拍 1 帧：失败即拒绝开跑，
 # 修复后再来；两连败直接正常退出（防监督器自愈环空转）。幂等：预检通过键持久化。
 if [[ -z "$(sget capture_preflight_ok)" ]]; then
@@ -161,7 +161,7 @@ if step_reached smoke; then
   note "[真值] profiles 清单 + 每板 team 围栏装载 ✓（步骤 5）"
   # R28 编制三方对账（gap-audit P11 防复发）：roster.md × org.md × matrix 实际人类账号
   # 计数一致才算"账号与人员编制表一一对应"（方案步 1 合格线）；不一致记单不炸——
-  # run9 实锤：roster 停首签 12 人版横跨六轮无人拦，根因=无对账断言。
+  # roster 停首签 12 人版横跨六轮无人拦，根因=无对账断言。
   _roster_n=$(grep -cE '^\| @[a-z]+:matrix\.test \|' "$DIRECTOR_CLONE/docs/admin/roster.md" 2>/dev/null); _roster_n=${_roster_n:-0}
   _org_n=$(grep -E '^\| [a-z]' "$DIRECTOR_CLONE/docs/admin/org.md" 2>/dev/null | grep -Evc '^\| 账号' || true); _org_n=${_org_n:-0}
   _jwt_n=$(grep -c '^jwt_' "$STATE" 2>/dev/null); _jwt_n=${_jwt_n:-0}
@@ -201,7 +201,7 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
   REG="$DIRECTOR_CLONE/docs/admin/app-registry.md"
   mkdir -p "$(dirname "$REG")"
   app_registry_gen > "$REG"
-  # P13 改回（2026-10-06 用户裁决「界面上线是必须要求」）：注册表经产品同源通道落档
+  # P13 改回（用户裁决「界面上线是必须要求」）：注册表经产品同源通道落档
   # ——界面「保存（提交 git）」所走端点 PUT /api/governance/registry/app-registry
   # （gov_registry_put：admin matrix 交换 super_admin）；失败按§5.6 采集纪律⑩ 记单降级回直写，禁静默。
   if gov_registry_put app-registry "$REG" "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）"; then
@@ -363,7 +363,7 @@ if step_reached room; then
     RID=$(mx_create_room "$(load_token fanfan)" "支付收银台需求分析讨论群" "$INVITE_CSV")
     [[ "$RID" == '!'* ]] || fail "建群失败: $RID"
     sset room_analysis "$RID"
-    # 必采操作帧（run13 复盘 F13/F16：步 8 原无拍摄位——沟通区会话列表为该步可拍面）
+    # 必采操作帧（步 8 原无拍摄位——沟通区会话列表为该步可拍面）
     capture_step "room_done" "/app/s/chat"
     # 入房一律检错重试（mx_join 静默吞错实锤：限流 burst 尾部账号掉队无人知，
     # run9 ops/ Bella-agent 缺员即此族）；缺员记单不静默。
@@ -412,7 +412,7 @@ card 必须取自建卡工具返回的真实卡 ID（形如 t_1a2b3c4d），填�
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
   fi
-  # 必采对话挂钩（run13 复盘 B1 + run14 复盘 B3 抗重启加固）：挂钩在幂等块外，
+  # 必采对话挂钩：挂钩在幂等块外，
   # 重启重入段即补采（r18-collect 按锚点幂等拒重，重复调用无副作用）——
   # run14 实锤 plan/test 段挂钩错过即整轮载荷缺。
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 9 --room "$RID" --anchor "$(sget dispatch_marker)" --title "需求派发任务书全文（fanfan→fanfan-agent）" --user fanfan --limit 40 >/dev/null 2>&1 || true
@@ -477,7 +477,7 @@ if step_reached analysis; then
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
   fi
   sset analysis_verified 1
-  # RACI 副作用复查一次性守卫（run14 实锤：G5 熔断重启循环 85 圈，每圈重放本段——
+  # RACI 副作用复查一次性守卫（G5 熔断重启循环 85 圈，每圈重放本段——
   # 4×60s 白等 + 每圈 4 张重复单 + 每圈一条回灌消息轰炸群与 fanfan agent 回合。
   # 副作用证据复查只做一次：done 键在位即整段跳过，首跑语义不变）。
   if [[ -n "$(sget raci_sidework_done)" ]]; then
@@ -485,7 +485,7 @@ if step_reached analysis; then
   else
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
-    # 消息洪窗口失效（run4 实锤：当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
+    # 消息洪窗口失效（当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
     # 数十页不经济）：派发真实性由 state dispatch_marker（事件 id 可反查）锚定，此处
     # 文本级复查按 60s 窗降级观察——结论不放宽，只省注定超时的等待。
     # 注意必须当前 shell 直调谓词函数：bash -c 起的子进程继承不到 shell 函数（未 export -f），
@@ -997,7 +997,7 @@ fi
 
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
-  # 段界锚（run13 复盘 A12）：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
+  # 段界锚：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
   # 导演把三个后端分支+前端分支合入 integration 分支（模拟集成分支策略）
   # 分支状态机约定：本步起 HEAD 切到 integration/${RFD_ID} 并常驻（后续步骤用显式
@@ -1059,7 +1059,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     }
     merge_keep_history origin/main "origin-main"   # 主线同步（首建时 BASE=origin/main，空合幂等）
     for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
-      # 分支缺席前置检查（2026-10-04 run8 实锤：hu/xiao 停摆未推分支，devimpl 按回灌语义
+      # 分支缺席前置检查（2026-10-04 hu/xiao 停摆未推分支，devimpl 按回灌语义
       # 记单放行后，此处对不存在 ref 的 merge 走 not-something-we-can-merge → abort 128 崩溃环）。
       # 缺席=跳过合并+如实记单，集成以已交付分支继续。
       if ! git rev-parse -q --verify "refs/remotes/origin/feat/$b" >/dev/null 2>&1; then
@@ -1123,7 +1123,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
     sset defect_dispatched 1
   fi
-  # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重）
+  # 必采对话挂钩在幂等块外（r18-collect 幂等拒重，重启重入即补采）
   if [[ -n "$(sget m19_marker)" ]]; then
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(sget m19_marker)" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
   fi
@@ -1232,7 +1232,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
-    # run13 复盘 B2 根修：CLI 存在 unresolved 门时以 rc=1 退出但报告已写出——
+    # CLI 存在 unresolved 门时以 rc=1 退出但报告已写出——
     # 以产物在位为准，不以 rc 判成败（run13 的 11 张「CLI 缺失」单全是此误诊）。
     ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 || true
     if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]] \
@@ -1243,7 +1243,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       note "[G5] QGate release-report 落盘失败（记问题单）"
     fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
-    # lite 轮守卫（run13 实锤：夹具跳过早期步时 dlv_room/dlv_case 未初始化，直调
+    # lite 轮守卫（夹具跳过早期步时 dlv_room/dlv_case 未初始化，直调
     # dlv_gate 缺参 exit 4 被 set -e 击杀驱动成重启循环）：与 dlv_scenario_phase
     # 同款「无案例房即跳过」，跳过如实记 note（报告侧按缺事件呈现，不补造）。
     if [[ -n "$(sget dlv_room)" && -n "$(sget dlv_case)" ]]; then
@@ -1289,7 +1289,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
         dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
-          # 补齐轮与复用/首轮同一收口（2026-10-07 run10 实锤：本路径曾内联收口漏发
+          # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）
           g5_pass_finalize
         else
@@ -1331,7 +1331,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     echo "## 分类/优先级/依赖完备性（防多漏错重）"
     echo "- 分类清点（卡面族谱）：$(kanban_list fanfan | jq -r '.. | objects | select(has("title")) | .title' | grep -oE 'T10[0-9]|G5|评审|排期|主卡' | sort | uniq -c | sort -rn | awk '{printf "%s×%s ", $2, $1}' | sed 's/ $//')"
     echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
-    # 依赖核对空值兜底（run14 复盘 A10 根修）：tasklist 无独立"依赖"节时 sed 输出空，
+    # 依赖核对空值兜底：tasklist 无独立"依赖"节时 sed 输出空，
     # 截断成半行——兜底指向排期文档依赖列，不留空尾。
     _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)
     echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：${_dep_txt:-（tasklist 无独立依赖节——依赖声明在 docs/plan/RFD-001-schedule.md 依赖列，以该列反查卡覆盖）}"
@@ -1411,7 +1411,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   else
     _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
     sset m21_marker "$_m21"
-    # 必采对话挂钩随派发即时采+marker 持久化（run14 复盘 B3：重启重入可补采）
+    # 必采对话挂钩随派发即时采+marker 持久化
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(sget m21_marker)" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
@@ -1757,7 +1757,7 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   # evidence/screenshots/steps/ 逐步截图自动嵌入（真实界面走查+真实工件渲染）。
   # --run 必带（H7）：缺省时生成器回落 SIM 全局 state/evidence，拿旧轮 state
   # 出"状态真实"的假报告，且落盘路径与下方 note 不符（run2 2026-09-29 05:15 实锤）。
-  # §5.4 产品成效三件（run13 复盘 B6/F17：run13 起必采未接线根修）——报告生成前落
+  # §5.4 产品成效三件——报告生成前落
   # evidence/product-outcome/（quality-summary.env 实算+幂等执行输出件；UI 帧缺席记单降级）
   repo_pull
   python3 "$SCRIPT_DIR/mux/product-outcome-summary.py" --run "${RUN_ID}" --rfd "${RFD_ID}" >/dev/null 2>&1 \
@@ -1765,7 +1765,7 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
-  # report_done、报告不得持久化交付（run10 实锤：15 项 FAIL 下报告曾被产出交付，判据②
+  # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
   # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
   python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "报告审计 FAIL（§5.7 收官判据②——缺口记单+DISP 降级后重试）"

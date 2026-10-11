@@ -126,10 +126,10 @@ def main():
         m2 = re.findall(r'(\d+)\s*failed', txt)
         if m2:
             ut_total += sum(int(x) for x in m2)
-    # 缺陷统计（run14 复盘 A2 根修——双源窄口径）：
+    # 缺陷统计：
     # ① 总数主源=中央仓测试报告缺陷清单行（| DEF-X | 表行实读，结构化真值）；
     # ② issues.log 的 ^ISSUE|defect 前缀兜底（defect-cards-assignee 类字段流转单不是
-    #    缺陷本体——run14 实锤：旧正则 ^DISP|defect 把它的"已修"误计成 defects_fixed=1）；
+    #    缺陷本体——旧正则 ^DISP|defect 把它的"已修"误计成 defects_fixed=1）；
     # ③ 已修数=测试报告状态列（已修/VERIFIED/已验证），状态定格在报告落库时点，
     #    修复链闭合的终局证据以 integration tip 复验判词为准（见 defects_note）。
     treport = git(repo, 'show', f'origin/integration/{a.rfd}:docs/test/{a.rfd}-test-report.md') \
