@@ -30,8 +30,12 @@ export interface ProfileTail {
   profile: string
   /** 日志尾行（截断） */
   tail: string
-  /** 尾行 mtime（epoch ms） */
+  /** 尾行 mtime（epoch ms）——注意被 Matrix reaction 等 adapter 噪音持续刷新，
+   *  会造成"假活跃"（run14 实锤：工作行已死 40min、mtime 仍新）。停摆判定一律用
+   *  workTsMs；mtimeMs 仅作文件存在性/粗粒度参考。 */
   mtimeMs: number
+  /** 最后工作行（API call #/tool completed）时间戳 epoch ms；无工作行=0 */
+  workTsMs: number
 }
 
 export interface ProfilesFace {
@@ -166,7 +170,22 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
         require('node:fs').readSync(fd, buf, 0, len, Math.max(0, st.size - len))
         require('node:fs').closeSync(fd)
         const tail = buf.toString('utf-8', 0, len).replace(/\0+$/, '').split('\n').filter(Boolean).pop() ?? ''
-        face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs })
+        // 工作行活性（run14 v3 watcher 根治面移植）：从日志尾部回扫找最后一条
+        // 工作行（API call #/tool completed）并解析其行首时间戳；mtime 不算活性。
+        let workTsMs = 0
+        try {
+          const head = Buffer.alloc(65536)
+          const hfd = require('node:fs').openSync(log, 'r')
+          const hlen = Math.min(head.length, st.size)
+          require('node:fs').readSync(hfd, head, 0, hlen, Math.max(0, st.size - hlen))
+          require('node:fs').closeSync(hfd)
+          const lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
+            if (m) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')); break }
+          }
+        } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
+        face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs, workTsMs })
       } catch {
         // 单 profile 无日志/读失败：跳过（fail-soft 到 profile 粒度）
       }
