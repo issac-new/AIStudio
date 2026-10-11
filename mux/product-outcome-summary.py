@@ -70,6 +70,44 @@ def main():
             ac_dist[key] += 1
     ac_total = sum(ac_dist.values())
 
+    # AC↔用例映射实算（run15 前置 P2-4，方案 §5.4 ac_cover 从 ⬜ 变实测）：
+    # 两源提取测试文件的 AC 锚——①文件名 acN 模式（t05-ac6-*.spec.ts / ac4-*.test.ts）
+    # ②文件头 40 行内「AC-N」或「验收 N」注释（集成 spec 头注释形态）。
+    # AC 全集=freeze 文档 AC-\d（正本）；未覆盖 AC 如实列出（映射缺口可见）。
+    freeze = git(repo, 'show', f'origin/main:docs/requirements/{a.rfd}.freeze.md')
+    ac_ids = sorted({int(n) for n in re.findall(r'AC-(\d+)', freeze or '')},
+                    key=int) if freeze else []
+    ac_files = {n: [] for n in ac_ids}
+    tfiles = git(repo, 'ls-tree', '-r', '--name-only',
+                 f'origin/integration/{a.rfd}', 'apps/').splitlines()
+    for p in tfiles:
+        # MP 自研断言脚本（verify-*.js / qa-*.js）无 .test 后缀，一并纳入（AC-7 面）
+        if not (re.search(r'/test/.*\.(spec|test)\.(ts|js)$', p)
+                or re.search(r'/test/(?:verify|qa)-[A-Za-z0-9-]+\.js$', p)):
+            continue
+        hit = set()
+        for n in re.finditer(r'(?<![A-Za-z0-9])ac(\d+)(?!\d)', p, re.I):
+            hit.add(int(n.group(1)))
+        head = git(repo, 'show', f'origin/integration/{a.rfd}:{p}').splitlines()[:40]
+        for h in head:
+            for m in re.finditer(r'AC-(\d+)|验收\s*(\d+)', h):
+                hit.add(int(m.group(1) or m.group(2)))
+        for n in hit & set(ac_ids):
+            ac_files[n].append(p.split('/')[-1])
+    ac_cov = sum(1 for v in ac_files.values() if v)
+    if ac_ids:
+        ac_cover_val = f'{ac_cov}/{len(ac_ids)}（映射明细见 product-outcome/ac-mapping.md）'
+        md = ['# AC↔用例映射（实算，run15 前置 P2-4）', '',
+              f'数据源=origin/integration/{a.rfd} 测试文件（文件名 acN + 头注释 AC-N/验收 N 两源提取）；',
+              f'AC 全集=freeze 文档（{len(ac_ids)} 条）。', '',
+              '| AC | 命中用例文件数 | 文件 |', '|---|---|---|']
+        for n in ac_ids:
+            fs = ac_files[n]
+            md.append(f'| AC-{n} | {len(fs)} | {", ".join(fs) if fs else "（无对应用例——映射缺口）"} |')
+        (po / 'ac-mapping.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
+    else:
+        ac_cover_val = '⬜（freeze 文档不可读，AC 全集缺失）'
+
     # testlog 用例计数：integration 分支 docs/evidence/*-testlog.txt 的 passed 汇总行
     itip = git(repo, 'show', f'origin/integration/{a.rfd}:.git/HEAD')  # probe（通常失败，无妨）
     logs = []
@@ -114,7 +152,7 @@ def main():
         f'n_tests={ut_total}',
         f'n_pass={ut_green}',
         f'n_fail={ut_total - ut_green}',
-        'ac_cover=⬜（AC↔用例映射未结构化，判词分布如下）',
+        'ac_cover=' + ac_cover_val,
         f'uat_pass={ac_dist["通过"]}',
         f'uat_cond={ac_dist["有条件通过"]}',
         f'uat_fail={ac_dist["不通过"]}',
