@@ -34,7 +34,7 @@
 | # | 问题 | 锚点 | 状态 |
 |---|---|---|---|
 | B1 | **TODO-A 三接线未落**：排期三段卡依赖（V8.8 纪律 33）、缺陷环 wait_alive_truth_multi、defect_cards_assignee_check 均未进 aipay-scenario.sh——V8.8 条款入方案但执行面缺位，run15 起跑前必须落 | aipay-scenario.sh 全文 grep（仅 devimpl 段有 multi） | 🔧 本轮修 |
-| B2 | **kanban UDF 根治欠账**：kanban_write_sanctioned 的网关内嵌 agent 路径注册错位未修（补丁未入 mx_apply_agent_patches 列表） | mx-lib.sh:505-510 补丁清单 | 📋 run15 观察项（影响面=板读取非关键路径，需网关重启窗口） |
+| B2 | **kanban UDF 根治欠账**：kanban_write_sanctioned 的网关内嵌 agent 路径注册错位未修（补丁未入 mx_apply_agent_patches 列表） | mx-lib.sh:505-510 补丁清单 | ✅ 已根治（2026-10-11 13:2x 用户授权重启窗口）：真凶=installs 环境 9de557bc 的代码副本停旧版（缺 UDF 注册，全 installs 唯一 stale），同步 kanban_db_connect/kanban_db 两文件后重启网关（mx-up 13:26 就绪，15 平台全连，xiao 板读取 ✓）；网关主程序代码本就全量注册 |
 | B3 | **R18 挂钩不抗重启**：r18-collect 挂钩在段内一次通过路径上，驱动重启重入段不补采（step-17/19/21 对话载荷因此缺失） | issues.log 56-58 行 | 🔧 本轮修（幂等补采） |
 | B4 | **采集链缺起跑预检**：起跑时不验证 capture 链健康（playwright 可用+试拍 1 帧），链路坏了要跑完全程才知道全补拍 | run14 全程实锤 | 🔧 本轮修 |
 | B5 | **镜像树漂移一代**：NVMe 侧 simharness 停在 run8 时代提交，在镜像树跑报告工具产出全错审计结果（标题逐字 0/26 假 FAIL）；无同步/校验机制 | /Volumes/nvme2230/lab/ncwk/simharness git log（bdedf97） | 🔧 本轮修（拉平+校验） |
