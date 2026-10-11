@@ -592,7 +592,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 # ── 分支新鲜度（2026-10-02 run6 实锤：run5 旧 feat/DEV-* 分支留存，devimpl 存在性
 # 检查秒过=假真值，驱动用旧代码跑完后续步。与 repo_has 文件新鲜度同口径：分支 tip
 # 提交时间必须 ≥ run_started_at；缺键退化为存在性旧语义并告警。──
-branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提交时间在本轮起跑后）
+branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提交时间在本轮开跑后）
   local br="$1" ct rs
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/$br" >/dev/null 2>&1 || return 1
@@ -625,12 +625,12 @@ capture_step() { # <step> <url> [action] [user]
   if (( rc != 0 )); then
     # 花括号边界（2026-10-09 run12 实锤）：bash 3.2 在 UTF-8 locale 下把 $rc 后的
     # 全角标点首字节吸入变量名（rc\xEF: unbound variable）击杀 set -u 驱动——
-    # 起跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
+    # 开跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
     note "[帧采集] 步 ${step} 采集失败（rc=${rc}，记单不阻断）"
     echo "ISSUE|frame-capture-failed|step-${step}|r18-frames 采集失败 rc=${rc}（url=${url}）" >> "$EVID_DIR/issues.log"
     # 连续失败计数（run14 复盘 B4 根修）：单步抖动记单即可，≥3 连败=链路级故障
     # （run14 实锤 40 帧全补拍、实时帧=0），升级显著告警供监控侧即刻介入——
-    # 起跑预检为何未拦同期复盘。
+    # 开跑预检为何未拦同期复盘。
     _cfail=$(( $(sget capture_fail_streak 2>/dev/null || echo 0) + 1 ))
     sset capture_fail_streak "${_cfail}"
     if (( _cfail >= 3 )); then
@@ -931,13 +931,13 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1 || return 1
   # 工件新鲜度（run5 教训：旧轮 AN-*/T-* 稿未被 mx-clean 清掉，"文件存在"被旧稿
-  # 满足=假真值）。文件在 origin/main 的最后提交时间必须 ≥ 本轮首次起跑时刻；
+  # 满足=假真值）。文件在 origin/main 的最后提交时间必须 ≥ 本轮首次开跑时刻；
   # run_started_at 缺键（旧轮 state）时保持旧语义并告警，不静默放行新代码路径。
   local _rs
   _rs="$(sget run_started_at)"
-  # lite 轮基线（run13 实锤：夹具继承的 G1 冻结件天然早于本轮起跑，按全量轮
+  # lite 轮基线（run13 实锤：夹具继承的 G1 冻结件天然早于本轮开跑，按全量轮
   # 语义判旧稿=UAT 前置永败重启循环）：lite_round=1 且夹具源轮 state 可读时，
-  # 基线改夹具源轮起跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜，更早
+  # 基线改夹具源轮开跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜，更早
   # 旧稿仍被拒。夹具源 state 异常回落本轮基线（保守，宁可再 fail 不放水）。
   if [ "$(sget lite_round)" = "1" ]; then
     local _fx_rs
@@ -945,7 +945,7 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
     if [ -n "$_fx_rs" ]; then
       _rs="$_fx_rs"
     else
-      log "[观察] lite 轮夹具源 state 不可读（$(sget lite_fixtures_from)），新鲜度基线回落本轮起跑：$1"
+      log "[观察] lite 轮夹具源 state 不可读（$(sget lite_fixtures_from)），新鲜度基线回落本轮开跑：$1"
     fi
   fi
   if [ -z "$_rs" ]; then
