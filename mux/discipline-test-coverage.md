@@ -1,0 +1,45 @@
+# 纪律↔守门测试覆盖对照表（2026-10-11 认知加固轮产出）
+
+> 用途：显式化 §4.3 各纪律条款的守门测试状态，防"立法即遗忘"（测试数只增不减防删测试，防不了新纪律无测试）。
+> 判定语料=simharness tests/ 与 mux/tests/ 全部 14 件 + overlay custom/**/__tests__ 586 件，按条款特征词 grep 判定。
+> 维护纪律：新纪律入列正本时，在本表同批登记测试状态（有测试锚/待首验配套）；run15 前置=裸奔五条补测试。
+
+## 一、有测试锚（26 条）
+
+| 纪律 | 测试锚（特征词命中处） |
+|---|---|
+| 1 重载任务时长 | harness-gate-integrity 活性/判活组 |
+| 2 活性判定口径 | 同上（判活真化） |
+| 4 派发丢失兜底 | 兜底/重发组 |
+| 8 判词与熔断 | ②硬闸打回熔断+⑥熔断复位语义（跨调用持久/OVERRIDE 留痕/证据变化复位） |
+| 10/11/28 台账口径 | DISP 三态/补账/jargon-source-gate、steps-meta-complete |
+| 12 入仓权威 | repo-has-freshness.test.sh |
+| 13 基线守卫 | merge-base/丢线守卫组 |
+| 14 工件新鲜度 | repo-has-freshness（branch_fresh/artifact_fresh） |
+| 19 静态扫描 | ⑩驱动静态自检（bash 语法+jq 编译） |
+| 21/25a 采集内置 | r18-capability+v84-frame-gates（帧四断言） |
+| 22/25b 骨架预写 | steps-meta-complete+骨架生成器 |
+| 23 检错退避 | mx_join_retry 缺员记单组 |
+| 24 端点核销 | overlay admin-service.test.ts（v2 PUT 绊线） |
+| 25c 独立回归 | isolation-boundary+mx-clean 语义 |
+| 32 交付边界 | task-boundaries.test.ts |
+| 35 里程碑 | overlay 进度面 milestone 组 |
+
+## 二、裸奔清单（5 条，全部为 V8.8-V8.10 新立，run15 前置补测试）
+
+| 纪律 | 条款 | 状态说明 |
+|---|---|---|
+| 29 | 并发多锚等待 wait_alive_truth_multi | 驱动静态自检只验语法不验语义；无专项断言 |
+| 33 | 测试左移四段并行 | UC-DONE/INT-CASES-DONE/QUALITY-DONE 三结论行无识别测试 |
+| 34 | 缺陷回流纪律 | FIXED-推送核验/字段流转/建卡真伪校验无专项测试（defect_cards_assignee_check 是驱动逻辑非测试） |
+| 38 | 涉敏安全评审卡前置 | SECURITY-GATE-PASS 判词与豁免键无测试 |
+| 39 | 契约执行观察影子 | contract-observe.mjs 行为（evidence 落盘/透传）无测试 |
+
+## 三、流程型条款（11 条，无机械断言面，靠执行留痕与审计覆盖）
+
+3（共因提示）/5（重发任务书）/6（预邀）/7（回执要素）/9（通过时间记录）/15（评审卡登记人）/16（分层审计）/17（审计判回滚）/18（错误隔离）/20（grep 派发行）/25（运行中禁改）/26（等待封顶）/27（流水线重叠）/30（可达性校验）/36（监控代行）/37（预检 fail-closed）
+——其中 30/36/37 属"驱动行为+问题单留痕"形态，如需机械化可在 run15 后评估补断言。
+
+## 统计
+
+42 条（含 25a/b/c）：有锚 26、裸奔 5（run15 前置）、流程型 11。
