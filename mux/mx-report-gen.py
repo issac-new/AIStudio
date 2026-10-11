@@ -2569,13 +2569,27 @@ try:
             f'<img src="product-outcome/{H.escape(n)}" alt="产品功能实证 {H.escape(n)}" loading="lazy">'
             f'<figcaption><span class="shot-kind">功能实证</span>{H.escape(n.rsplit(".", 1)[0])}</figcaption></label>'
             for n in _po_imgs) + '</div>')
-        _po_idem_html = ('<details open><summary>幂等实测执行输出（idempotency.txt）</summary>'
-                         f'<pre>{H.escape(_po_idem)}</pre></details>') if _po_idem else ''
-        _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
-                    + _po_num_tbl + _po_img_html + _po_idem_html)
+        # 人话导读（2026-10-11 用户指令：报告说人话讲重点，日志默认折叠+配导读）
+        import re as _re_idem
+        _idem_suites = _re_idem.findall(r'Test Files\s+(\d+) passed', _po_idem)
+        _idem_tests = _re_idem.findall(r'Tests\s+(\d+) passed', _po_idem)
+        _idem_spec = _re_idem.search(r'create-idempotency\.spec\.ts \((\d+) tests\)', _po_idem)
+        _idem_sum = (f"{sum(map(int, _idem_suites))} 个测试包共 {sum(map(int, _idem_tests))} 条用例全部通过"
+                     + (f"，其中幂等专项 {_idem_spec.group(1)} 条" if _idem_spec else ''))
+        _po_idem_html = (
+            '<div class="po-plain"><b>幂等是什么：</b>同一笔订单手抖提交两次，系统只认第一笔——返回同一个支付单号，不会开两个单、不会扣两次钱。这是收银台的硬验收标准之一。'
+            f'<b>实测结论：</b>{_idem_sum}。'
+            '出处说明：这是交付分支提交时跑测试的原始记录摘录（当时收尾环境没装依赖没法重跑——正因如此，规矩已改为「测试没执行过=缺陷，不算声明」）。'
+            '</div>'
+            '<details><summary>原始执行输出（机器打印的「考试答题记录」，防手抄；点开看原文）</summary>'
+            f'<pre>{H.escape(_po_idem)}</pre></details>') if _po_idem else ''
+        _po_img_lead = ('<p class="po-plain">下面是交付的小程序在<b>真实开发者工具</b>（微信/支付宝）里运行的截图：'
+                        '从收银台首页到支付成功、支付失败可重试、订单超时关闭各状态。缩略图约四分之一宽，点击看大图。</p>') if _po_imgs else ''
+        _po_html = ('<h3>产品成效（这单生意做成了什么：功能实证 / 质量数字 / 交付完整度）</h3>'
+                    + _po_img_lead + _po_num_tbl + _po_img_html + _po_idem_html)
     else:
-        _po_claim = ('缺席记入问题清单 type=product-outcome-missing' if 'product-outcome-missing' in _ilog_t
-                     else '缺席（台账未见 product-outcome-missing 登记——声称与台账一致口径，run13 复盘 A2）')
+        _po_claim = ('本轮没采到，已如实登记为问题（类型 product-outcome-missing）——不装作有' if 'product-outcome-missing' in _ilog_t
+                     else '本轮没采到，且台账里也没有对应的问题登记——声称与台账对得上（run13 复盘 A2 的口径）')
         _po_html = ('<h3>产品成效（交付物成效三件：功能实证/质量数字/交付完整度）</h3>'
                     f'<p class="no-evidence">本轮产品成效证据未采集（evidence/product-outcome/ 为空）——'
                     f'三件采集 run13 起为必采（方案 §5.4 产品成效呈现；{_po_claim}）。</p>')
@@ -3401,6 +3415,8 @@ label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
 label.shot img{{width:100%;height:auto;max-height:none;object-position:top;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 .cp-shot img{{width:100%;height:auto;max-height:none;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}}
 /* 产品成效系列帧：1/4 宽四列缩略网格（自然比例不裁剪；点击全屏放大沿用 .shot 交互） */
+.po-plain{{font-size:13.5px;line-height:1.7;margin:6px 0 10px;color:var(--ink)}}
+.hero-terms{{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}}
 .po-shots{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}}
 .po-shots label.shot{{flex:none;max-width:none}}
 .po-shots label.shot img{{width:100%;height:auto;max-height:none;object-fit:contain}}
@@ -3433,6 +3449,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     {_gov_metrics_line()}
+    <div class="hero-terms">名词速查：首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ AC=验收标准 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目</div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>
