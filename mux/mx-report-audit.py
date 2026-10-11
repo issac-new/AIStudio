@@ -22,6 +22,7 @@ import hashlib
 import html
 import json
 import os
+import tempfile
 import re
 import sys
 from pathlib import Path
@@ -691,6 +692,55 @@ import re as _re9
 _leak9 = _re9.findall(r'/Users/[A-Za-z0-9_.\-]+|/Volumes/[A-Za-z0-9_.\-]+', rep)
 if _leak9:
     fails.append(f'A9 宿主环境标识泄漏 {len(_leak9)} 处（如 {_leak9[0]}）——生成器 _mask_env 未覆盖或绕过（§5.4.3 脱敏纪律）')
+
+# ── A10 报告语言门（2026-10-11 用户裁定：所有日志折叠+每句说人话）──
+# 可见文本=剔除 <details> 折叠区/pre 代码块后的正文；过 plan-html 词表（同 jargon-source-gate
+# 的词源），HARD>0 即 FAIL——日志原文与机器锚在折叠区豁免（折叠≠裁剪，反查走附录）。
+import re as _re10
+# 由内向外逐层剥折叠区（嵌套 details 下非贪婪正则会漏剥，run14 实测误报四起）
+_vis = rep
+_INNER10 = _re10.compile(r'<details[^>]*>(?:(?!<details|</details>)[\s\S])*</details>', _re10.I)
+while True:
+    _n10 = _INNER10.subn(' ', _vis)
+    _vis = _n10[0]
+    if _n10[1] == 0:
+        break
+_vis = _re10.sub(r'<(script|style|pre)[\s\S]*?</\1>', ' ', _vis)
+_vis = _re10.sub(r'<[^>]+>', '\n', _vis)
+import html as _html10
+_vis = _html10.unescape(_vis)
+_JC10 = os.environ.get('MX_JARGON_CHECK') or next(
+    (p9 for p9 in ['/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
+                   '/Volumes/nvme2230/lab/ncwk/overlay/scripts/plan-html/jargon-check.py'] if os.path.exists(p9)), '')
+if _JC10:
+    import subprocess as _sp10
+    _tf10 = os.path.join(tempfile.gettempdir(), f'audit-visible-{RUN_ID}.txt')
+    open(_tf10, 'w', encoding='utf-8').write(_vis)
+    _r10 = _sp10.run(['python3', _JC10, _tf10], capture_output=True, text=True, timeout=60)
+    if 'HARD' in _r10.stdout and 'HARD=0' not in _r10.stdout and '无 HARD' not in _r10.stdout:
+        _hits10 = [l for l in _r10.stdout.splitlines() if 'HARD' in l][:4]
+        fails.append('A10 报告正文黑话：' + '；'.join(_hits10) + '——正文句句人话（§5.4.3 三规矩），机器锚只进折叠区')
+
+# ── A11 图片与功能描述相符（2026-10-11 用户红线：图片必须和功能及描述对得上）──
+# 三断言：①每个 <img> 有非空 alt；②产品成效帧图注含功能语义（中文标注，禁只留文件名）；
+# ③成效帧目录里的每张 png 都被报告引用（禁拍而未嵌/嵌而不存在）。
+_imgs11 = re.findall(r'<img [^>]*>', rep)
+_noalt = [x[:60] for x in _imgs11 if 'alt=""' in x or ' alt' not in x]
+if _noalt:
+    fails.append(f'A11 图片缺功能描述（alt 空）：{len(_noalt)} 处，如 {_noalt[0]}')
+_po_fig = re.findall(r'<figcaption><span class="shot-kind">功能实证</span>([^<]*)</figcaption>', rep)
+_unlabeled = [x for x in _po_fig if '（未标注）' in x or re.fullmatch(r'[A-Za-z0-9._-]+', x.strip())]
+if _unlabeled:
+    fails.append(f'A11 成效帧图注无功能语义（只留文件名/未标注）：{_unlabeled[:3]}——图注必须写功能（如「支付成功」），用户红线：图与描述对得上')
+_po_dir = EVID / 'product-outcome'
+if _po_dir.exists():
+    _pngs = sorted(f.name for f in _po_dir.glob('*.png'))
+    _missing_ref = [f for f in _pngs if f'product-outcome/{f}' not in rep]
+    if _missing_ref:
+        fails.append(f'A11 拍而未嵌：product-outcome 存在但报告未引用 {len(_missing_ref)} 张：{_missing_ref[:3]}')
+    _dangling = [m for m in re.findall(r'product-outcome/([A-Za-z0-9._-]+\.png)', rep) if not (_po_dir / m).exists()]
+    if _dangling:
+        fails.append(f'A11 嵌而不存在：报告引用但盘上无文件 {_dangling[:3]}')
 
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
