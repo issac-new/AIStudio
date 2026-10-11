@@ -357,14 +357,17 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   # 不探 gateway；env 与 mx-up 同款，单一事实源=本函数，mx-up 亦调用）
   curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
   local api_key; api_key=$(api_server_key)
+  # 双重 fork 脱钩（run12/run15 冷起两次实锤）：直接 `( nohup node & echo $! )` 经 bash
+  # 子壳优化后 node 成调用者直子、studio.pid 误记外层 pid，mx-up 收口 wait4 挂死
+  # （仅 kill 外层可解，studio 无恙）。内层 bash 托孤 launchd，$! 即 node 真身。
   ( cd "$SIM_ROOT" && \
   NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" \
   HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
   HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$GW_PORT" GATEWAY_PORT="$GW_PORT" \
   HERMES_BIN="$HERMES_BIN" API_SERVER_KEY="$api_key" \
   GRAPH_ENGINE="${MX_GRAPH_ENGINE:-shadow}" \
-    nohup node "$STUDIO_DIST/server/index.js" > "$LOGS_DIR/studio.log" 2>&1 & \
-  echo $! > "$PIDS_DIR/studio.pid" )
+    /bin/bash -c 'nohup node "$1" > "$2" 2>&1 < /dev/null & echo $! > "$3"' _ \
+    "$STUDIO_DIST/server/index.js" "$LOGS_DIR/studio.log" "$PIDS_DIR/studio.pid" )
   local deadline=$(( $(date +%s) + 120 ))
   while (( $(date +%s) < deadline )); do
     curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
