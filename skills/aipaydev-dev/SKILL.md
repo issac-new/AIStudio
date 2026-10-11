@@ -148,9 +148,11 @@ status: draft
 5. **Conventional Commits**：feat/fix/docs/test 前缀+作用域。
 6. **渠道本地 mock**：微信/支付宝渠道联调用本地 mock，禁外呼真实渠道。
 7. **测试报告是独立交付物**：testlog 原文入仓 `docs/evidence/<taskId>-testlog.txt`（完整运行输出，禁摘要改写）。
+8. **目标运行时自证（前端工程类交付强制，run15 起）**：csw-cashier-mp 等小程序/页面工程交付，单测全绿不等于可运行——必须经真实开发者工具验证：微信开发者工具自动化通道（产品能力 POST /api/hermes/runtime-verify/miniprogram，或 miniprogram-automator 直跑）编译+启动+首帧，产物 `docs/evidence/<taskId>-runtime-proof.json/.png` 随分支提交（记录含 launchOk/screenshot/checkedAt，validateRuntimeProof 可校验）。交付吃相对路径的 wx.request（无网络基址注入）=运行时自证必然失败，属联调未完成，禁声明 DEV-DONE。AppID 用运行副本注入（原件不动，记录声明）。
 
 ### 结论行格式（驱动门禁只认此格式，无凭证=未完成）
 - 开发：`DEV-DONE-<taskId> commit=<origin 上提交 id>` / `DEV-FAIL-<taskId> reason=<原因>`
+- 前端运行时：`RUNTIME-OK-<taskId> proof=<runtime-proof.json 路径>` / `RUNTIME-FAIL-<taskId> reason=<原因>`（小程序工程类交付必备，与 DEV-DONE 并立）
 - 测试：`TEST-PASS-<taskId> tests=<用例数>` / `TEST-FAIL-<taskId> failed=<清单>`
 - 系分：`AN-DONE-<taskId> commit=<id> done=<一句话摘要>`
 
