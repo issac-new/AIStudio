@@ -1222,7 +1222,7 @@ STEPS_META_RUN14 = {
             narrative='系统分析与拆分：tasklist 入仓（SMART 具体到人+三清单匹配）+四组 RACI 双 @ 派发核验+凭证双向核过。实测依据：收尾链按 scenario.log 回填。', imgs=[('analysis_done-op1-before','文档评审页签·tasklist 核验·前','ui'), ('analysis_done-op1-after','任务清单 T01~T08 行·后','ui')]),
     12: dict(keys=['triage_done'],
             actor='ai', actorText='AI · 四主责 agent',
-            narrative='分诊与派工：四主责账号板任务卡齐+lead 确认（质量指标：缺陷单 N 张/复审打回 M 次/复测 R 轮——issues.log 实算，收尾链回填）：（triage→todo）；重复派发 agent 自动合并去重。实测依据：收尾链按 scenario.log 回填。', imgs=[('triage_done-op1-before','chen 看板·分诊台任务卡·前','ui'), ('triage_done-op1-after','分诊确认后卡状态·后','ui')]),
+            narrative='分诊与派工：四主责账号板任务卡齐+lead 确认（质量指标以 issues.log 实测为准，收尾链回填）：（triage→todo）；重复派发 agent 自动合并去重。实测依据：收尾链按 scenario.log 回填。', imgs=[('triage_done-op1-before','chen 看板·分诊台任务卡·前','ui'), ('triage_done-op1-after','分诊确认后卡状态·后','ui')]),
     13: dict(keys=['anexec_done'],
             actor='ai', actorText='AI · 研发工程师A/研发工程师D/研发工程师B/研发工程师C agent',
             narrative='精准系分（四路并行）：worktree 工作区建分支、四份 AN-*.md（概设含接口签名/数据模型/错误码/幂等键+人日评估）入仓+AN-DONE 回执双通道。实测依据：收尾链按 scenario.log 回填。', imgs=[('anexec_done-op1-before','文档评审页签·四份系分稿在列·前','ui'), ('anexec_done-op1-after','系分稿核验视图·后','ui')]),
