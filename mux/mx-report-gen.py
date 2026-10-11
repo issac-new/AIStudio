@@ -2310,6 +2310,28 @@ def _no_artifact_note(n: int) -> str:
     where = _NO_FILE_DOMAIN.get(n, '卡/消息/事件流（锚点见本步①段）')
     return (f'<p class="stat-note">📦 本步无文件域交付物——实际产出：{where}。</p>')
 
+def contract_block(n: int) -> str:
+    """契约执行观察透传（run15 前置 P4-10 影子模式）：概设接口签名 vs 渠道实现
+    导出面 diff 结果原文（breaking 清单+观察面），步 19 呈现；文件缺席如实声明。"""
+    if n != 19:
+        return ''
+    cf = EVID / 'qgate-contract-observation.json'
+    if not cf.exists():
+        return ''
+    import json as _j
+    try:
+        d = _j.loads(cf.read_text(encoding='utf-8'))
+    except Exception:
+        return ''
+    rows = ''.join(f'<tr><td>{H.escape(b)}</td></tr>' for b in d.get('breaking', []))
+    verdict = '成立（breaking=0）' if not d.get('breaking') else f"{len(d['breaking'])} 项破坏性差异"
+    return (f'<details class="st-artifact"><summary>🧩 契约执行观察（影子模式——概设 ChannelAdapter 四方法 '
+            f'× 渠道实现导出面，判定：{verdict}；转正路径=run15 后 CLI 单门+G4 强制线）</summary>'
+            f'<div class="art-body"><div class="art-item"><div class="art-hd"><b>{H.escape(d.get("contract", ""))}</b>'
+            f'<span class="art-path">evidence/qgate-contract-observation.json（generatedAt {H.escape(d.get("generatedAt", "?"))}）</span></div>'
+            f'<table class="st-issues-tbl"><tbody>{rows or "<tr><td>零破坏性差异（双渠道四方法齐）</td></tr>"}</tbody></table></div></div></details>')
+
+
 def qgate_block(n: int) -> str:
     """§5.5 门禁证据引用（v1.31.1 吸收轮起）：QGate 判定证据原文透传+来源分布随行，
     禁手抄"全绿"。evidence/qgate-release-report.txt 在位才渲染（未接线轮零影响）。"""
@@ -3023,7 +3045,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         else:
             imgs_html = f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 登记在案，无帧明示；补拍须按拍摄位规划准确补拍+图注明示时点）</p>'
         # 8.6 交付物视图（补遗③ R11）：实物渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
-        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + gov_evidence_block(n)
+        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + contract_block(n) + gov_evidence_block(n)
         # 防御性回退（run11 实锤：STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
         abg, afg, atxt = ACTOR_STYLE.get(meta.get('actor'), ACTOR_STYLE['both'])
         if PLAN_V82:

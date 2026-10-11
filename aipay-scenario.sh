@@ -1084,6 +1084,20 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     note "[集成] integration/${RFD_ID} 本地合并完成、推送未达（已记问题单，见 issues.log）"
   fi
 
+  # ── 契约执行观察（run15 前置 P4-10，影子模式：产物落 evidence+报告透传，不进
+  # G4 强制线——概设接口签名 vs 渠道实现导出面 diff，qgate contract executor 同构
+  # 语义；run15 实测一轮后按方案 P4-10 转正路径换 CLI 单门+强制线）──
+  if node "$SCRIPT_DIR/mux/contract-observe.mjs" --run="${RUN_ID}" --rfd="${RFD_ID}" >/dev/null 2>&1; then
+    _cbreak=$(python3 -c "import json;print(len(json.load(open('$EVID_DIR/qgate-contract-observation.json')).get('breaking',[])))" 2>/dev/null || echo '?')
+    if [ "$_cbreak" = "0" ]; then
+      note "[契约] ChannelAdapter 契约面成立（观察器 breaking=0——期望 4 方法×双渠道实现齐；evidence/qgate-contract-observation.json，影子模式）"
+    else
+      note "[契约] 契约面 breaking=${_cbreak} 项（evidence/qgate-contract-observation.json——影子模式如实呈现，run15 转正后进 G4 强制线）"
+    fi
+  else
+    echo "ISSUE|contract-observe|defect|契约观察器执行失败（contract-observe.mjs）——影子模式记单不阻断" >> "$EVID_DIR/issues.log"
+  fi
+
   if [[ -z "$(sget defect_dispatched)" ]]; then
     # ── V8.8 纪律 33：测试左移③ QUALITY 质量合规检验（触发=DEV-DONE+integration 就绪；
     # run15 首验）。段-段族分工：研发自测=核心 11 项门禁、QUALITY 段=全 56 项四族。──
