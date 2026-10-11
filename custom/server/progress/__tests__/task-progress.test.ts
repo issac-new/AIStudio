@@ -35,7 +35,7 @@ describe('taskProgressOverview 聚合口径', () => {
     const sessions = new Map<string, ProjectionSession>([
       ['s1', session({
         sessionId: 's1', phase: 'running', goalStatus: 'verifying', lastActivityAt: 999,
-        workflowActivity: { runs: [{ runId: 'r1', status: 'running', startedAt: 90, currentPhase: '编码实现', phases: [
+        workflowActivity: { runs: [{ runId: 'r1', status: 'running', startedAt: 90, currentPhase: '编码实现', agentsWorking: 1, phases: [
           { name: '需求理解', status: 'done' }, { name: '编码实现', status: 'running' }, { name: '测试验证', status: 'pending' },
         ] }] },
       })],
@@ -97,7 +97,7 @@ describe('里程碑联合（消费侧接线补全）', () => {
     expect(m.phases.length).toBe(0)
   })
   it('引擎站点面在位时 currentPhase 不被里程碑覆盖', () => {
-    const sessions = new Map([['s9', session({ sessionId: 's9', phase: 'running', workflowActivity: { runs: [{ runId: 'r1', status: 'running', currentPhase: '站点X', phases: [{ name: '站点X', status: 'running' }] }] } })]])
+    const sessions = new Map([['s9', session({ sessionId: 's9', phase: 'running', workflowActivity: { runs: [{ runId: 'r1', status: 'running', currentPhase: '站点X', agentsWorking: 0, phases: [{ name: '站点X', status: 'running' }] }] } })]])
     const idx = new Map([['/ws/manual', [{ ts: '2026-10-10T10:00:00Z', milestone: '需求理解', status: 'done', task: 't_manual' }]]])
     const r = taskProgressOverview(ledger2, sessions, { milestonesByWorkspace: idx })
     expect(r.tasks[0]!.currentPhase).toBe('站点X')
