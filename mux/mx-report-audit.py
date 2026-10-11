@@ -514,6 +514,15 @@ _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
 _ilines_r18 = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
 _r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
+# 降级窄口径（run14 复盘 A4 根修）：载荷文件在位时，r18-collection-missing 登记行只降级
+# 其登记的步（ISSUE 第三段 step-N），不再全局豁免——run14 实锤 4 张登记把 20+ 步的
+# 载荷缺失全部漂白为 WARN。文件级缺失（整链缺位）才保留全局降级语义。
+_r18_degraded_steps = set()
+for _l18 in _ilines_r18:
+    if 'r18-collection-missing' in _l18:
+        _m18s = re.search(r'\|step-(\d+)\|', _l18)
+        if _m18s:
+            _r18_degraded_steps.add(int(_m18s.group(1)))
 if _r18_missing_file:
     if _r18_degraded:
         warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按§5.6 采集纪律⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
@@ -539,8 +548,9 @@ for blk in blocks:
     frames_missing = len(re.findall(r'帧缺失：', blk))
     if frames_missing:
         fails.append(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐')
-    _r18_rep = warns.append if _r18_degraded else fails.append
-    _r18_suffix = '（已登记 r18-collection-missing 降级）' if _r18_degraded else ''
+    _step_deg = _r18_degraded if _r18_missing_file else (n in _r18_degraded_steps)
+    _r18_rep = warns.append if _step_deg else fails.append
+    _r18_suffix = '（已登记 r18-collection-missing 降级）' if _step_deg else ''
     if n in _R18_DIALOG_STEPS and d_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）{_r18_suffix}')
     if n in _R18_OP_STEPS:
@@ -668,7 +678,16 @@ if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
         fails.append('步 18 缺分支落地时间线行（干预点 D：并行度行在则推进刻度行必在，同批渲染）')
 
 # ── 汇总 ──
+# 工具版本锚（run14 复盘 B5 根修）：审计结论绑定工具版本——镜像树落后一代曾在同一份
+# 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。
+import subprocess as _sp
+try:
+    _tool_ver = _sp.run(['git', '-C', str(Path(__file__).resolve().parent.parent), 'log', '-1', '--format=%h %s'],
+                        capture_output=True, text=True, timeout=5).stdout.strip()
+except Exception:
+    _tool_ver = '(git 不可用)'
 print(f'报告：{REPORT}')
+print(f'审计工具版本锚：{_tool_ver}（结论绑定工具版本，复现先对版本——镜像树漂移会产出全错结果）')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')
 print(f'标题逐字：{26 - len(title_mismatch)}/{len(plan_steps)}；缺图：✅步 {done_no_img or "无"}，⬜步 {pending_no_img or "无"}')
 for w in warns:

@@ -628,6 +628,17 @@ capture_step() { # <step> <url> [action] [user]
     # 起跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
     note "[帧采集] 步 ${step} 采集失败（rc=${rc}，记单不阻断）"
     echo "ISSUE|frame-capture-failed|step-${step}|r18-frames 采集失败 rc=${rc}（url=${url}）" >> "$EVID_DIR/issues.log"
+    # 连续失败计数（run14 复盘 B4 根修）：单步抖动记单即可，≥3 连败=链路级故障
+    # （run14 实锤 40 帧全补拍、实时帧=0），升级显著告警供监控侧即刻介入——
+    # 起跑预检为何未拦同期复盘。
+    _cfail=$(( $(sget capture_fail_streak 2>/dev/null || echo 0) + 1 ))
+    sset capture_fail_streak "${_cfail}"
+    if (( _cfail >= 3 )); then
+      echo "ISSUE|frame-capture-chain-down|director|采集链连续 ${_cfail} 步失败——链路级故障（playwright/浏览器），后续步将全补拍（§4.3-25a 实时帧红线）" >> "$EVID_DIR/issues.log"
+      note "[严重] 采集链连续 ${_cfail} 步失败——链路级故障告警（监控侧应介入；修复后帧链自动恢复）"
+    fi
+  else
+    sset capture_fail_streak 0
   fi
 }
 
