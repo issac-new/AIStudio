@@ -18,10 +18,10 @@
 # 拓扑：单 gateway 多路复用 + 单 studio 多账号 + 每账号多 kanban（账号板寻址）。
 # 断点续跑: START_STEP=<step> bash aipay-scenario.sh
 # 区间执行: UNTIL_STEP=<step>（如 UNTIL_STEP=smoke 只实跑步骤 1-5）
-# 起跑纪律（2026-10-09 run12 实锤）：必须 LC_ALL=C 起跑——macOS bash 3.2 在 UTF-8
+# 开跑纪律（2026-10-09 run12 实锤）：必须 LC_ALL=C 开跑——macOS bash 3.2 在 UTF-8
 #   locale 下把字符串内 $var 后的全角标点首字节吸入变量名（rc\xEF: unbound variable），
-#   set -u 直接击杀驱动；run12 attempt 起跑未带即死于 capture_step 失败路径。
-#   正确起跑：RUN_ID=<轮次> LC_ALL=C nohup bash aipay-scenario.sh > <SIM_ROOT>/logs/<轮次>-driver.log 2>&1 &
+#   set -u 直接击杀驱动；run12 attempt 开跑未带即死于 capture_step 失败路径。
+#   正确开跑：RUN_ID=<轮次> LC_ALL=C nohup bash aipay-scenario.sh > <SIM_ROOT>/logs/<轮次>-driver.log 2>&1 &
 # 步骤序: smoke → ba → room → dispatch → register → analysis → triage → anexec
 #        → review → close → plan → devimpl → defect → testpass → release → templates → ide
 set -euo pipefail
@@ -74,7 +74,7 @@ mx_cleanup() {
 }
 trap 'mx_cleanup' EXIT
 
-# 本轮首次起跑时刻（幂等：续跑轮不重置——repo_has 新鲜度窗口的锚点，run5 教训）
+# 本轮首次开跑时刻（幂等：续跑轮不重置——repo_has 新鲜度窗口的锚点，run5 教训）
 [ -n "$(sget run_started_at)" ] || sset run_started_at "$(date +%s)"
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
@@ -91,23 +91,23 @@ if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$STA
   sset preflight_ok 1
 fi
 
-# ── 采集链起跑预检（run14 复盘 A1/B4 根修，§4.3-25a 实时帧红线的门前守卫）──
+# ── 采集链开跑预检（run14 复盘 A1/B4 根修，§4.3-25a 实时帧红线的门前守卫）──
 # run14 实锤：playwright 依赖被带名 no-save 安装清件，capture_step 全程 rc=1，40 帧
-# 全部收尾补拍（实时帧=0），跑完才知道。预检=起跑时试拍 1 帧：失败即拒绝起跑，
+# 全部收尾补拍（实时帧=0），跑完才知道。预检=开跑时试拍 1 帧：失败即拒绝开跑，
 # 修复后再来；两连败直接正常退出（防监督器自愈环空转）。幂等：预检通过键持久化。
 if [[ -z "$(sget capture_preflight_ok)" ]]; then
   if node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step capture-precheck --k 1 --url "/app" --user fanfan >/dev/null 2>&1; then
     sset capture_preflight_ok 1
     note "[预检] 采集链健康 ✓（playwright 试拍 1 帧成功——实时帧链路在位，§4.3-25a）"
   else
-    echo "ISSUE|capture-preflight-failed|director|采集链起跑预检失败（r18-frames 试拍 rc≠0：playwright 依赖或浏览器链路坏——run14 全补拍事故的同族根因）" >> "$EVID_DIR/issues.log"
-    note "[FAIL] 采集链起跑预检失败——实时帧链路不可用，拒绝带病起跑（修复指引：simharness npm install（playwright 已在 devDependencies）；浏览器 channel 检查）"
+    echo "ISSUE|capture-preflight-failed|director|采集链开跑预检失败（r18-frames 试拍 rc≠0：playwright 依赖或浏览器链路坏——run14 全补拍事故的同族根因）" >> "$EVID_DIR/issues.log"
+    note "[FAIL] 采集链开跑预检失败——实时帧链路不可用，拒绝带病开跑（修复指引：simharness npm install（playwright 已在 devDependencies）；浏览器 channel 检查）"
     if [[ -n "$(sget capture_preflight_failed)" ]]; then
       note "[FAIL] 采集链预检两连败——正常退出停跑（监督器自愈环不空转），人工修复后手动重跑"
       exit 0
     fi
     sset capture_preflight_failed 1
-    fail "采集链起跑预检失败（实时帧红线 §4.3-25a）"
+    fail "采集链开跑预检失败（实时帧红线 §4.3-25a）"
   fi
 fi
 
@@ -1217,8 +1217,8 @@ fi
 # 硬闸：G4 未过不得评审；G5 未过不得发布。
 if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   gate_blocked g4_pass ready   # V3 硬闸：G4 未过不进发布准出
-  # 判词锚点=本轮起跑时刻（run8 优化 E）：派发时刻锚会把重启前已存在的结论行排除在
-  # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。起跑锚
+  # 判词锚点=本轮开跑时刻（run8 优化 E）：派发时刻锚会把重启前已存在的结论行排除在
+  # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。开跑锚
   # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
   G5_TS=$(( $(sget run_started_at) * 1000 ))
   # 过闸收口（复用与新评同一收口路径：置卡 done/落键/批准留痕/M3 事件——防两路漂移）
@@ -1397,7 +1397,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     issue_once uat-precheck director "UAT 前置缺件（fail-fast 未派单）：${UAT_PRE}"
     fail "UAT 前置缺件：${UAT_PRE}先修上游再验收（未派发 UAT 任务）"
   fi
-  # 证据锚点=本轮起跑时刻（run8 优化 A）：派发时刻锚会把重启前已到的证据行排除在窗外，
+  # 证据锚点=本轮开跑时刻（run8 优化 A）：派发时刻锚会把重启前已到的证据行排除在窗外，
   # relay 换代后 fanfan 被迫重生成证据（run7 首份合格证据 02:08 到位、05:53 才被
   # "看见"的 3h45m 实录）。
   UAT_SINCE_SEC=$(sget run_started_at)
