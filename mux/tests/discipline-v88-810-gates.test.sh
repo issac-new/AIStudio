@@ -56,6 +56,13 @@ ck "UI中文 capture-ui 浏览器级 locale" mux/capture-ui.mjs "locale: 'zh-CN'
 ck "UI中文 r18-frames localStorage 键" mux/r18-frames.mjs "hermes_locale', 'zh'"
 ck "UI中文 capture-ui localStorage 键" mux/capture-ui.mjs "hermes_locale', 'zh'"
 
+# 演示素材层断言（2026-10-11 视角轮，方案 §5.4.6）：生成器+方案条款双锚，
+# 防「素材层被无声删除」；demo-kit.html 由 demo-kit-gen.py 只读消费真实轮数据产出。
+ck "素材层 生成器在位" mux/demo-kit-gen.py '^"""demo-kit-gen\.py'
+ck "素材层 生成器声明 §5.4.6" mux/demo-kit-gen.py '§5\.4\.6'
+ck "素材层 六件套时间轴段" mux/demo-kit-gen.py '全程时间轴'
+ck "素材层 接力行字段映射" mux/demo-kit-gen.py '事件id 房间id 审批人 时间戳'
+
 # QGate↔技能贯通断言（2026-10-12 贯通轮，对照表=mux/qgate-skill-map.md）
 ck "贯通 defect-loop 结卡门禁段" skills/defect-loop/SKILL.md 'task_close 触发面'
 ck "贯通 defect-loop trace 门引用" skills/defect-loop/SKILL.md 'L0.requirement-trace'
