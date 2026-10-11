@@ -25,6 +25,11 @@ status: active
 | QUALITY- 质量合规检验 | 研发编码自测完成（DEV-DONE 落房） | 代码分支 | 跑门禁套件出报告（precheck --all-full，合规 19 项含依赖漏洞/密钥扫描）；`QUALITY-DONE-<RFD> gates=<M/N>`（有不过项=列清单，不阻断但须研发先答） |
 | FUNC 功能+白盒 | QUALITY 段结论行落房 | INT- 案例+代码分支 | 功能=INT 案例全跑；白盒=覆盖率数字（vitest coverage 进 testlog）+关键路径抽检；`TEST-PASS-<ID> tests=<N> cov=<%>` 或 `TEST-FAIL-<ID> failed=<清单>` |
 
+## 跨模块契约测试（INT 段执行纪律，run14 实锤根治）
+- INT 段不只跑页面/接口用例：**服务应用↔核心模块的接口契约必须双向实测**（BFF 调用方期望的方法名/参数形态 vs 核心模块真实导出）。run14 实锤：csw-merchant-api 调 `createUnifiedOrder`（camelCase 端口）而 pay-core 实为 `createPaymentOrder`（snake_case），该应用无 node_modules、集成测试从未执行，漂移漏到收尾后。
+- 执行形态：每个被消费接口一条契约用例（导入真实模块、调用、断言返回形状）；服务应用无依赖环境=先 `npm install` 再跑，装不上=记问题单（测试未执行属缺陷，禁当声明态跳过）。
+- 前端工程类交付加一条运行冒烟：真工具自动化通道启动+首帧（与研发侧 runtime-proof 同源消费）。
+
 ## 缺陷回流（测试→研发→复测，全程自动）
 
 1. **建卡即派发**：测试员发现缺陷→建卡（标题带【缺陷】+缺陷号 DEF-X+复现步骤）→群内一行 `DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>`。研发档案收到即开工，不等提醒。**assignee 必须填研发档案实名**（编制名单成员）——占位值（default/空/短名）过了建卡必填校验也无人能领，卡会烂在待办（run14 实证）；建错当场改卡重填。
