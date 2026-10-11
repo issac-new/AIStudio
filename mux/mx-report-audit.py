@@ -256,16 +256,25 @@ if _ilog.exists():
     if _hanging:
         warns.append(f'R5b 悬挂 DISP（有处置无登记，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
 
-# R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号）
-_anchor_pat = re.compile(r'\$[A-Za-z0-9_-]{25,}|\bt_[0-9a-f]{8}\b|\b[0-9a-f]{7,10}\b')
+# R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号 /
+# matrix 房间 ID——synapse state 可直查；run15 前置复盘完善扩展）。结构性无三源锚的步
+# （后台装配/登录验证/路由走查类）走声明态：步块明示「本步无三源锚（声明态）」+实物锚
+# 路径即降过计入声明计数——禁硬凑锚冒充（声明≠锚，只是如实标注锚不适用）。
+_anchor_pat = re.compile(r'\$[A-Za-z0-9_-]{25,}|\bt_[0-9a-f]{8}\b|\b[0-9a-f]{7,10}\b|![A-Za-z0-9_-]{10,}:[A-Za-z0-9.-]+')
+_no_anchor_decl = re.compile(r'本步无三源锚（声明态）')
 _done_blocks = [b for b in blocks if '✅' in b]
 _no_anchor = []
+_decl_cnt = 0
 for i, b in enumerate(blocks, 1):
     if '✅' in b and not _anchor_pat.search(b):
+        if _no_anchor_decl.search(b):
+            _decl_cnt += 1
+            continue
         _m2 = re.search(r'<span class="st-num">(\d+)</span>', b)
         _no_anchor.append(_m2.group(1) if _m2 else str(i))
 if _no_anchor:
-    warns.append(f'R6 完成步缺可反查锚点（event_id/commit/t_ 卡号）：步 {_no_anchor}')
+    warns.append(f'R6 完成步缺可反查锚点（event_id/commit/t_ 卡号/房间 ID）：步 {_no_anchor}'
+                 + (f'；另有 {_decl_cnt} 步声明态（无三源锚如实标注）' if _decl_cnt else ''))
 
 # R7 截图红线：完成步图须真实产品 UI——ui 类图占比抽查（doc/msg 类为工件允许）
 # （图面真实性以人工视觉审计为准，本断言只查"完成步全为 doc/msg 无一张界面实拍"的极端退化）

@@ -33,7 +33,7 @@ ck "④ 双仓工作区干净" "[ -z \"\$(git -C '$HERE' status --porcelain | gr
 ck "⑤ 服务健康（8801+8802）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null" "bash mux/mx-up.sh 拉起"
 
 # ⑥ 中央仓谱系（本地=远端或线性领先）
-ck "⑥ 中央仓 main 谱系" "git -C '$SR/central/aipaydev' fetch -q origin 2>/dev/null; git -C '$SR/central/aipaydev' merge-base --is-ancestor origin/main main 2>/dev/null" "中央仓分叉：git -C central/aipaydev log main..origin/main 看落后提交并收敛"
+ck "⑥ 中央仓 main 谱系" "git -C '$SR/central/aipaydev' fetch -q origin 2>/dev/null; _lb=\$(git -C '$SR/central/aipaydev' rev-list --count main..origin/main 2>/dev/null || echo 0); [ \"\$_lb\" = \"0\" ]" "中央仓本地 main 落后 origin N 提交：git -C central/aipaydev merge --ff-only origin/main 收敛"
 
 # ⑦ 采集链就绪（playwright 依赖在 devDependencies+模块可解析）
 ck "⑦ 采集链依赖（playwright）" "cd '$HERE' && node -e \"require.resolve('playwright')\"" "cd simharness && npm install（playwright 已在 devDependencies）"
