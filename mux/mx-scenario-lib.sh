@@ -1209,7 +1209,10 @@ defect_cards_assignee_check() { # <board> → stdout: 卡ID:assignee 违规清�
 # 幂等性：同 event-id 重放由读侧 commandId 去重兜底；本侧只追加不重写。
 _progress_ledger_record() { # <dispatcher> <body> <mentions-csv> <event-id>
   local dispatcher="$1" body="$2" mentions="$3" ev="$4" tid lp ws
-  tid=$(printf '%s' "$body" | grep -oE '\b(AN|DEV|TEST)-[A-Za-z0-9-]+' | head -1)
+  # run14 11:2x 实锤根因：派发词无任务号时 grep 零命中 rc=1，pipefail 下赋值语句
+  # 失败触发 set -e 静默杀驱动（G5 评审词无 AN/DEV/TEST 号——唯一必死派发，驱动
+  # note 同秒 rc=1 退场）。失败安全化：零命中=无任务号不记账，不杀调用方。
+  tid=$(printf '%s' "$body" | { grep -oE '\b(AN|DEV|TEST)-[A-Za-z0-9-]+' || true; } | head -1)
   [[ -n "$tid" ]] || return 0
   [[ -n "$ev" && "$ev" != "SEND-FAILED" ]] || return 0
   # 执行者=首个 mention 的 localpart；工作区按约定 workspaces/<执行者>/aipaydev
