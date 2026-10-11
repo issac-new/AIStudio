@@ -56,6 +56,21 @@ export interface RunningCardsFace {
   cards: RunningCard[]
 }
 
+export interface FederationMachine {
+  machineId: string
+  lastSeenMs: number
+  activeTasks: number
+  activeAgents?: number
+}
+
+/** 跨机联邦面（D8 的观测面）：联邦注册表快照——控制器注入（进度联邦模块），未接线=ok:false */
+export interface FederationFace {
+  ok: boolean
+  error?: string
+  nowMs: number
+  machines: FederationMachine[]
+}
+
 export interface ClusterSnapshot {
   ts: number
   gateway: GatewayFace
@@ -65,6 +80,8 @@ export interface ClusterSnapshot {
   kanban: { ok: boolean; error?: string; rows: Array<Record<string, unknown>> }
   /** 在办卡（status=running，含 assignee）——控制器注入（kanban list --json），未接线=ok:false */
   runningCards: RunningCardsFace
+  /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
+  federation: FederationFace
 }
 
 export interface CollectorDeps {
