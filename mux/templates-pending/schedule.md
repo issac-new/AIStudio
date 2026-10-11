@@ -34,3 +34,7 @@
 | 3 | ≥2 人日任务全部有子任务拆分，子任务每件 ≤1 人日 | 逐行扫工作量列 |
 | 4 | 时间窗口用 D<n> 相对日或绝对日期，全文一种口径 | 逐行正则 |
 | 5 | 依赖只引用本表或 tasklist 已存在 ID | 对照 docs/analysis/RFD-<id>-tasklist.md |
+
+## 交付形态字段（2026-10-11 平台根治）
+
+排期表任务行必带「交付形态」列（六型：backend-service/web-frontend/mini-program/mobile-app/library-sdk/governance-doc，正本=Swarm Studio custom/server/delivery-contract）；每型完成定义含对应运行证据（runtime-proof/走查帧/冒烟日志/契约用例），派发词随形态注入 DoD 与 RUNTIME-OK/RUNTIME-FAIL 结论行——单测全绿不等于可运行。
