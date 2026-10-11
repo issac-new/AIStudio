@@ -1,5 +1,5 @@
 // overlay/custom/server/report/report-controller.ts
-// 报告链 REST（2026-10-08 建设实施落地轮，方案 §5.4 形式契约/§4.4-10）：
+// 报告链 REST（2026-10-08 建设实施轮，方案 §5.4 形式契约/§4.4-10）：
 // 报告链能力正本在产品侧（本目录），推演 harness（simharness）为兼容消费壳。
 // 两个入口：
 //   POST /api/hermes/report/part1-skeleton —— PART1 五段式骨架出稿（RunFacts 实测数字入参）
