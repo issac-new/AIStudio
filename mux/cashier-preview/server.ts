@@ -112,15 +112,20 @@ createServer(async (req, res) => {
     }
     // ── 演示专用：模拟用户在渠道侧支付成功（mock 渠道签名回调→pay-core 状态机）──
     if (p === '/demo/channel-pay' && req.method === 'POST') {
-      const { out_trade_no, channel, amount } = JSON.parse(await readBody(req) || '{}')
+      const { out_trade_no, channel, amount, channel_status } = JSON.parse(await readBody(req) || '{}')
       const adapter = channel === 'ALIPAY' ? env.alipay : env.wechat
       const n = adapter.pushNotify({
-        out_trade_no, channel_status: 'SUCCESS',
+        out_trade_no, channel_status: channel_status === 'FAILED' ? 'FAILED' : 'SUCCESS',
         channel_transaction_id: `mock-txn-${Date.now()}`,
         paid_amount: amount, paid_at: new Date().toISOString(),
       })
       const ack = await env.svc.handleChannelNotify({ channel, headers: n.headers, raw_body: n.raw_body })
       return json(res, 200, { ok: true, ack })
+    }
+    if (p === '/demo/close' && req.method === 'POST') {
+      const { merchant_id, out_trade_no } = JSON.parse(await readBody(req) || '{}')
+      const r = await env.svc.closePaymentOrder({ merchant_id, out_trade_no })
+      return json(res, 200, { ok: true, ...r })
     }
     res.writeHead(404); res.end('not found')
   } catch (e) {

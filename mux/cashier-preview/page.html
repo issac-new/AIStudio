@@ -31,12 +31,13 @@
   .mono { font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
   .hint { font-size:12px; color:var(--sub); line-height:1.6; }
   .step { font-size:12px; color:var(--sub); padding:4px 0; border-bottom:1px dashed #eee; }
-  #p2 .row .v.mono { font-weight:500; }
+  .demo-row { display:flex; gap:8px; margin-top:8px; }
+  .demo-row .pay { font-size:13px; padding:9px 0; margin-top:0; }
 </style>
 </head>
 <body>
 <div class="phone">
-  <div class="banner">运行预览壳｜页面层=浏览器渲染 · 逻辑层=交付 shared 原样加载 · 接口层=交付 BFF+pay-core 真实执行（渠道=本地 mock）</div>
+  <div class="banner" id="banner">运行预览壳｜页面层=浏览器渲染 · 逻辑层=交付 shared 原样加载 · 接口层=交付 pay-core 真实执行（渠道=本地 mock）</div>
   <div class="hd"><span class="dot"></span>收银台 · 小程序运行预览</div>
   <div class="bd">
 
@@ -66,21 +67,28 @@
         <h3>支付渠道（下单路由结果 channel）</h3>
         <div class="ch"><button id="ch-shown" class="on">—</button></div>
         <button class="pay" id="btnPay">立即支付</button>
+        <div class="demo-row">
+          <button class="pay" id="btnPayFail" style="background:#ff4d4f">演示：支付失败</button>
+          <button class="pay" id="btnClose" style="background:#873800">演示：超时关单</button>
+        </div>
       </div>
     </div>
 
     <div id="p2" style="display:none">
       <div class="card">
-        <div class="ok-ic">✓</div>
-        <div class="res-t">支付成功</div>
+        <div class="ok-ic" id="r-ic">✓</div>
+        <div class="res-t" id="r-title">支付成功</div>
+        <div id="r-fail" class="hint" style="display:none;text-align:center;color:#cf1322;margin:-4px 0 10px"></div>
         <div class="row"><span>支付单号</span><span class="v mono" id="r-id"></span></div>
         <div class="row"><span>渠道</span><span class="v" id="r-ch"></span></div>
-        <div class="row"><span>渠道交易号</span><span class="v mono" id="r-txn"></span></div>
-        <div class="row"><span>支付时间</span><span class="v" id="r-paid"></span></div>
+        <div class="row" id="r-txn-row"><span>渠道交易号</span><span class="v mono" id="r-txn"></span></div>
+        <div class="row" id="r-paid-row"><span>支付时间</span><span class="v" id="r-paid"></span></div>
         <div class="row"><span>订单状态</span><span class="v" id="r-status"></span></div>
         <div class="row"><span>金额</span><span class="v" id="r-amt"></span></div>
+        <button class="pay" id="btnRetry" style="display:none;background:#1677ff">重试支付（复用原支付单，不新建）</button>
+        <button class="pay" id="btnBack" style="display:none;background:#5b6b7c;font-size:13px;padding:9px 0">返回商户</button>
       </div>
-      <div class="card">
+      <div class="card" id="idem-card">
         <h3>幂等实证（同一商户单号重复下单）</h3>
         <div class="hint" style="margin-bottom:8px">重放同一 out_trade_no 再下单，断言返回同一支付单号：</div>
         <button class="pay" id="btnIdem" style="background:#1677ff">重复提交同一单</button>
@@ -96,7 +104,6 @@
 (function () {
   var S = window.SHARED, logEl = document.getElementById('log');
   function log(s) { logEl.textContent = '▸ ' + s; }
-  // 交付 api-client：注入浏览器版 http（信封解析在交付代码内完成）
   var api = S['api-client'].createApiClient({
     http: function (opts) {
       return fetch(opts.url, {
@@ -112,7 +119,6 @@
   document.getElementById('btnCreate').onclick = async function () {
     var subject = document.getElementById('subject').value;
     var amount = Number(document.getElementById('amount').value);
-    var ep = S['entry-params'];
     var out = 'DEMO-' + Date.now().toString(36).toUpperCase();
     log('下单中…（out_trade_no=' + out + '）');
     var res = await api.createOrder({ merchantId: 'MCH001', outTradeNo: out, subject: subject, amount: amount, clientHost: channel === 'ALIPAY' ? 'ALIPAY_MP' : 'WECHAT_MP', channelHint: channel });
@@ -120,58 +126,99 @@
     window.__out = out; window.__amount = amount; window.__subject = subject; window.__channel = channel;
     document.getElementById('o-subject').textContent = subject;
     document.getElementById('o-amount').textContent = S.format.fenToYuan(order.amount);
-    document.getElementById('o-id').textContent = order.pay_order_id;
+    document.getElementById('o-id').textContent = order.pay_order_id;  // createOrder 返回原始 snake_case（api-client 不归一此端点）
     document.getElementById('o-out').textContent = out;
     document.getElementById('o-status').textContent = order.status;
-    var chs = order.available_channels || ['WECHAT', 'ALIPAY'];
-    var shown = document.getElementById('ch-shown');
-    shown.textContent = order.channel === 'WECHAT' ? '微信支付（已路由）' : '支付宝（已路由）';
-    channel = order.channel;
-    // 交付 format.formatRemain 驱动倒计时展示
     var left = Math.max(0, Math.floor((new Date(order.expire_at).getTime() - Date.now()) / 1000));
     document.getElementById('o-cd').textContent = S.format.formatRemain(left);
+    document.getElementById('ch-shown').textContent = order.channel === 'WECHAT' ? '微信支付（已路由）' : '支付宝（已路由）';
+    channel = order.channel;
     document.getElementById('p0').style.display = 'none';
     document.getElementById('p1').style.display = '';
-    log('P1 收银台首页就绪（available_channels=' + chs.join('/') + '）');
+    log('P1 收银台首页就绪（渠道已路由=' + channel + '）');
   };
 
-  document.getElementById('btnPay').onclick = async function () {
-    var btn = this; btn.disabled = true; btn.textContent = '支付中…';
-    log('② invoke-params（渠道=' + channel + '）');
-    var inv = await api.getInvokeParams({ payOrderId: order.pay_order_id, channel: channel });
-    var params = inv.invokeParams || inv.invoke_params || inv;
-    log('③ 支付调起（交付 pay-invoker，平台壳=mock 自动成功）');
-    var PI = S['pay-invoker'];
-    if (channel === 'WECHAT') {
-      await PI.invokeWechat({ requestPayment: function (o) { o.success && o.success(); } }, params);
-    } else {
-      await PI.invokeAlipay({ tradePay: function (o) { o.success && o.success({ resultCode: '9000' }); } }, params);
+  window.__payFlow = async function (outcome) {
+    var btn = document.getElementById('btnPay'); btn.disabled = true; btn.textContent = '支付中…';
+    if (outcome !== 'closed') {
+      log('② 调起参数（交付 api-client.getInvokeParams，渠道=' + channel + '）');
+      var inv = await api.getInvokeParams({ payOrderId: order.pay_order_id, channel: channel });
+      var params = inv.invokeParams || inv.invoke_params || inv;
+      log('③ 支付调起（交付 pay-invoker，平台壳=mock）');
+      var PI = S['pay-invoker'];
+      if (channel === 'WECHAT') {
+        await PI.invokeWechat({ requestPayment: function (o) { o.success && o.success(); } }, params);
+      } else {
+        await PI.invokeAlipay({ tradePay: function (o) { o.success && o.success({ resultCode: '9000' }); } }, params);
+      }
     }
-    log('④ 渠道回调→pay-core 状态机（/demo/channel-pay）');
-    await fetch('/demo/channel-pay', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ out_trade_no: window.__out, channel: channel, amount: window.__amount }),
-    });
-    // 交付 order-poller 轮询至 PAID
+    log('④ 渠道回调→pay-core 状态机（outcome=' + outcome + '）');
+    if (outcome === 'closed') {
+      await fetch('/demo/close', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ merchant_id: 'MCH001', out_trade_no: window.__out }) });
+    } else {
+      await fetch('/demo/channel-pay', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ out_trade_no: window.__out, channel: channel, amount: window.__amount, channel_status: outcome === 'fail' ? 'FAILED' : 'SUCCESS' }),
+      });
+    }
     await new Promise(function (resolve) {
       S['order-poller'].createOrderPoller({
         fetch: function () { return api.getOrder({ payOrderId: order.pay_order_id }); },
-        isTerminal: function (o) { return o.status === 'SUCCESS' || o.status === 'CLOSED'; },
+        isTerminal: function (o) { return S['status-mapper'].isTerminal(o.status); },
         intervalMs: 400, maxAttempts: 15,
-        onResult: function (o) { if (o.status === 'SUCCESS') resolve(); },
+        onResult: function (o) { if (S['status-mapper'].isTerminal(o.status)) resolve(); },
         onExhausted: resolve,
       }).start();
     });
     var fin = await api.getOrder({ payOrderId: order.pay_order_id });
-    document.getElementById('r-id').textContent = fin.pay_order_id;
-    document.getElementById('r-ch').textContent = fin.channel === 'WECHAT' ? '微信支付' : '支付宝';
-    document.getElementById('r-txn').textContent = fin.channel_transaction_id || '—';
-    document.getElementById('r-paid').textContent = (fin.paid_at || '').replace('T', ' ').slice(0, 19);
-    document.getElementById('r-status').textContent = fin.status + '（订单状态查询 GET orders?merchant_id+out_trade_no 同源）';
-    document.getElementById('r-amt').textContent = '￥' + S.format.fenToYuan(fin.amount);
+    renderP2(fin, outcome);
     document.getElementById('p1').style.display = 'none';
     document.getElementById('p2').style.display = '';
-    log('P2 支付结果页：SUCCESS ✓');
+  };
+
+  // 结果页三态视图=交付 status-mapper.toResultView 驱动（SUCCESS/FAILED 可重试/CLOSED 不可重试）
+  window.renderP2 = function (fin, outcome) {
+    var view = S['status-mapper'].toResultView(fin, S.format);
+    var ic = document.getElementById('r-ic');
+    document.getElementById('r-id').textContent = fin.payOrderId;
+    document.getElementById('r-ch').textContent = fin.channel === 'WECHAT' ? '微信支付' : '支付宝';
+    document.getElementById('r-status').textContent = fin.status;
+    document.getElementById('r-amt').textContent = '￥' + view.amountText;
+    document.getElementById('idem-card').style.display = view.status === 'SUCCESS' ? '' : 'none';
+    if (view.status === 'SUCCESS') {
+      ic.textContent = '✓'; ic.style.background = 'var(--brand)';
+      document.getElementById('r-title').textContent = '支付成功';
+      document.getElementById('r-txn').textContent = view.channelTransactionId || '—';
+      document.getElementById('r-paid').textContent = (view.paidAt || '').replace('T', ' ').slice(0, 19);
+      document.getElementById('r-fail').style.display = 'none';
+      document.getElementById('r-txn-row').style.display = '';
+      document.getElementById('r-paid-row').style.display = '';
+      document.getElementById('btnRetry').style.display = 'none';
+      log('P2 支付成功：SUCCESS ✓（三态视图=交付 status-mapper）');
+    } else {
+      ic.textContent = '✕'; ic.style.background = '#ff4d4f';
+      document.getElementById('r-title').textContent = view.canRetry ? '支付失败' : '订单已关闭';
+      document.getElementById('r-fail').style.display = '';
+      document.getElementById('r-fail').textContent = view.failReason;
+      document.getElementById('r-txn-row').style.display = 'none';
+      document.getElementById('r-paid-row').style.display = 'none';
+      document.getElementById('btnRetry').style.display = view.canRetry ? '' : 'none';
+      log('P2 ' + (view.canRetry ? '支付失败（可重试）' : '订单已关闭（不可重试）') + '：' + fin.status + '（三态视图=交付 status-mapper）');
+    }
+    document.getElementById('btnBack').style.display = '';
+  };
+
+  document.getElementById('btnPay').onclick = function () { window.__payFlow('success'); };
+  document.getElementById('btnPayFail').onclick = function () { window.__payFlow('fail'); };
+  document.getElementById('btnClose').onclick = function () { window.__payFlow('closed'); };
+  document.getElementById('btnRetry').onclick = function () {
+    document.getElementById('p2').style.display = 'none';
+    document.getElementById('p1').style.display = '';
+    var b = document.getElementById('btnPay'); b.disabled = false; b.textContent = '立即支付';
+    log('重试：回到 P1 复用原支付单（交付 getInvokeParams 重试复用原单语义）');
+  };
+  document.getElementById('btnBack').onclick = function () {
+    document.getElementById('banner').textContent = '已返回商户页（back-to-merchant-button 组件）——收银台流程结束';
   };
 
   document.getElementById('btnIdem').onclick = async function () {
