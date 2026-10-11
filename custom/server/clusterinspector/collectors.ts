@@ -63,6 +63,31 @@ export interface FederationMachine {
   activeAgents?: number
 }
 
+/** 会话遥测条目（长会话治理 602 sidecar：<home>/runtime/sessions-telemetry.json） */
+export interface SessionTelemetryEntry {
+  sessionKey: string
+  tsMs: number
+  sessionId?: string
+  platform?: string
+  model?: string | null
+  watermarkPct?: number | null
+  turns?: number
+  cumApiCalls?: number
+  emptyStreak?: number
+  turnApiCalls?: number
+  rotations?: number
+  lastRotationReason?: string
+  heartbeat?: { step?: number; emitted?: number; interval?: number }
+  runaway?: { signal?: string | null; tool?: string | null; count?: number | null; decisions?: number }
+}
+
+/** 会话遥测面（D9 水位 / D10 节奏 / D11 环检测的观测面） */
+export interface SessionTelemetryFace {
+  ok: boolean
+  error?: string
+  entries: SessionTelemetryEntry[]
+}
+
 /** 跨机联邦面（D8 的观测面）：联邦注册表快照——控制器注入（进度联邦模块），未接线=ok:false */
 export interface FederationFace {
   ok: boolean
@@ -82,6 +107,9 @@ export interface ClusterSnapshot {
   runningCards: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
+  /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；
+   *  可选：旧测试夹具/未升级快照不携带时 D9-D11 静默跳过（同 kanban 未接线语义） */
+  sessionTelemetry?: SessionTelemetryFace
 }
 
 export interface CollectorDeps {
@@ -206,6 +234,47 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
       } catch {
         // 单 profile 无日志/读失败：跳过（fail-soft 到 profile 粒度）
       }
+    }
+    face.ok = true
+  } catch (e) {
+    face.error = (e as Error).message
+  }
+  return face
+}
+
+/** ⑤ 会话遥测（长会话治理 B1）：读 602 sidecar（<home>/runtime/sessions-telemetry.json）。
+ *  与 capacity 同款 10 分钟陈化丢弃（ts 由网关每回合刷新）；缺文件=空态合法。 */
+export function collectSessionTelemetry(deps: CollectorDeps = {}): SessionTelemetryFace {
+  const face: SessionTelemetryFace = { ok: false, entries: [] }
+  try {
+    const p = join(deps.hermesHome || hermesHomeDefault(), 'runtime', 'sessions-telemetry.json')
+    if (!existsSync(p)) {
+      face.ok = true // sidecar 未生成=合法（网关未跑或 602 未部署）
+      return face
+    }
+    const raw = JSON.parse(readFileSync(p, 'utf-8')) as Record<string, Record<string, unknown>>
+    const now = Date.now()
+    for (const [key, v] of Object.entries(raw)) {
+      const tsMs = Number(v.ts ?? 0) * 1000
+      if (!Number.isFinite(tsMs) || now - tsMs > 600_000) continue // 10min 陈化丢弃
+      const hb = (v.heartbeat ?? {}) as SessionTelemetryEntry['heartbeat']
+      const rw = (v.runaway ?? {}) as SessionTelemetryEntry['runaway']
+      face.entries.push({
+        sessionKey: key,
+        tsMs,
+        sessionId: typeof v.session_id === 'string' ? v.session_id : undefined,
+        platform: typeof v.platform === 'string' ? v.platform : undefined,
+        model: typeof v.model === 'string' ? v.model : null,
+        watermarkPct: typeof v.watermark_pct === 'number' ? v.watermark_pct : null,
+        turns: typeof v.turns === 'number' ? v.turns : undefined,
+        cumApiCalls: typeof v.cum_api_calls === 'number' ? v.cum_api_calls : undefined,
+        emptyStreak: typeof v.empty_streak === 'number' ? v.empty_streak : undefined,
+        turnApiCalls: typeof v.turn_api_calls === 'number' ? v.turn_api_calls : undefined,
+        rotations: typeof v.rotations === 'number' ? v.rotations : undefined,
+        lastRotationReason: typeof v.last_rotation_reason === 'string' ? v.last_rotation_reason : undefined,
+        heartbeat: hb,
+        runaway: rw,
+      })
     }
     face.ok = true
   } catch (e) {

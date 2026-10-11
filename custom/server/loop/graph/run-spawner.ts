@@ -32,6 +32,13 @@ export interface RunSpawnerOpts {
    */
   stagnationLimit?: number
   /**
+   * 长会话治理 B3：外部状态指纹（13b5739 教训产品化）。注入后停滞判据升级：
+   * 指纹（任务卡入库集合 + 验证通过数 + 可选 worktree git tip）不变才算停滞，
+   * 变了即清零——外部证据真的动了就不误熔断；通道布尔降级为指纹缺席时的回退。
+   * 见 stagnation-fingerprint.ts。
+   */
+  fingerprint?: (loop: LoopInstance) => Promise<string | null>
+  /**
    * loop.* 兼容事件出口（装配层桥接：store 台账 + loop socket 房间，前端/matrix-bot 消费）。
    * 缺省直写 store（不走 socket）——仅为无装配的单测兜底。
    */
@@ -67,6 +74,8 @@ export class RunSpawner {
   private consecutiveFailures = new Map<string, number>()
   /** loopId → 连续无产出完成的 run 数（台账④停滞熔断计数） */
   private stagnantCount = new Map<string, number>()
+  /** loopId → 上次观测指纹（B3：指纹不变才算停滞；tripBreaker 清零） */
+  private lastFingerprint = new Map<string, string | null>()
   /** graphId → loopId：onEvent 回写时反查（编译器产物 id 固定为 `loop-<loopId>`） */
   private graphToLoop = new Map<string, string>()
   private readonly intervalMs: number
@@ -231,6 +240,7 @@ export class RunSpawner {
     })
     this.consecutiveFailures.set(loopId, 0)
     this.stagnantCount.set(loopId, 0)
+    this.lastFingerprint.delete(loopId)
     this.log(`run-spawner circuit breaker paused loop ${loopId}: ${reason}`)
   }
 
@@ -254,15 +264,33 @@ export class RunSpawner {
       if (!stopMet) {
         // 台账④：正常完成但不收敛的 run（stopMet 永假且 contracts/verifications
         // 双空）原来只重置失败计数、无限重排。此处计入停滞，达阈值走与失败
-        // 熔断同一条 paused 路径；有产出（任一通道非空）即清零。
-        const stagnant = this.runProducedOutput(e.finalState)
-          ? 0
-          : (this.stagnantCount.get(loopId) ?? 0) + 1
+        // 熔断同一条 paused 路径。
+        //
+        // B3 升级（13b5739 教训）：注入 fingerprint 时以外部状态指纹为准——
+        // 指纹变了 = 任务卡/验证/git 面真有进展，停滞清零（即使通道仍空）；
+        // 指纹不变才 +1。指纹缺席（null，如无契约）回退通道布尔语义。
+        let stagnant: number
+        let fpApplied = false
+        if (this.opts.fingerprint) {
+          const fp = await this.opts.fingerprint(loop)
+          const prev = this.lastFingerprint.get(loopId)
+          fpApplied = fp !== null
+          if (fp !== null && fp !== prev) {
+            stagnant = 0
+          } else {
+            stagnant = (this.stagnantCount.get(loopId) ?? 0) + 1
+          }
+          if (fp !== null) this.lastFingerprint.set(loopId, fp)
+        } else {
+          stagnant = this.runProducedOutput(e.finalState)
+            ? 0
+            : (this.stagnantCount.get(loopId) ?? 0) + 1
+        }
         this.stagnantCount.set(loopId, stagnant)
         if (stagnant >= this.stagnationLimit) {
           await this.tripBreaker(
             loopId,
-            `circuit breaker: ${stagnant} consecutive stagnant runs (completed with no new contracts/verifications)`)
+            `circuit breaker: ${stagnant} consecutive stagnant runs (${fpApplied ? 'external fingerprint unchanged' : 'completed with no new contracts/verifications'})`)
           this.emitTickComplete(loopId, loop.stats)
           return
         }

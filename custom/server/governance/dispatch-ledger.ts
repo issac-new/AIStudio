@@ -57,6 +57,30 @@ export function appendDispatchOutcome(entry: Omit<DispatchLedgerEntry, 'ts'> & {
   }
 }
 
+/** 派发幂等查询（长会话治理 B4）：窗口内是否已有同键派发。
+ *  键 = taskId + kind + column + target（run14 重启环重复副作用教训：重放先查账，
+ *  30 分钟窗口内的同任务同步骤派单直接跳过）。fail-soft：读失败=不去重（放行）。 */
+export function hasRecentDispatch(
+  match: { taskId: string; kind: 'mention' | 'column'; column?: string; target?: string },
+  windowMs = 30 * 60 * 1000,
+  now: number = Date.now(),
+): boolean {
+  try {
+    const entries = readDispatchLedger(CAP)
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i]
+      if (now - e.ts > windowMs) break
+      if (e.taskId !== match.taskId || e.kind !== match.kind) continue
+      if (match.column !== undefined && e.column !== match.column) continue
+      if (match.target !== undefined && e.target !== match.target) continue
+      return true
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
 function trimIfNeeded(file: string): void {
   try {
     const stat = readFileSync(file, 'utf8').split('\n').filter(Boolean)
