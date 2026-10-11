@@ -144,7 +144,7 @@ export function checkFrameEvidence(html: string): FrameEvidenceVerdict {
   return { badCaptions, duplicatedSources, backfillMarker, ok: !badCaptions.length && !duplicatedSources.length && !backfillMarker }
 }
 
-/** ── 2026-10-11 新增两组断言（与 simharness mx-report-audit A9/产品成效系列对齐）── */
+/** ── 2026-10-11 新增两组断言（与 simharness mx-report-audit A9/产品成效系列同款判定）── */
 
 export interface EnvMaskVerdict {
   /** 泄漏样例（最多 3 条） */
