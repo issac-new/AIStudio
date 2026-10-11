@@ -4,6 +4,7 @@
   "version": "1.1.0",
   "description": "推演 harness 独立仓（与 SwarmStudio 产品仓隔离，2026-10-03 分树）。守门依赖自持（2026-10-05：产品仓 v0.7.30 升级重装 node_modules 时 vitest 缺席，借道链断——守门套件改为本地自装优先，回退借道 overlay）",
   "devDependencies": {
+    "miniprogram-automator": "^0.12.1",
     "playwright": "^1.63.0",
     "vitest": "^3.2.4"
   }
