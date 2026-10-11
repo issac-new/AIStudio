@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Swarm Studio V3 全流程 0-1 推演测试方案 · 人与 AI 分布式集群协作研发交付生命周期</title>
+<style>
+  body{margin:0;background:#0e1116;color:#dbe2ef;font-family:"PingFang SC","Helvetica Neue",sans-serif;line-height:1.65}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 80px}
+  h1{font-size:26px;margin:0 0 6px;color:#fff}
+  .sub{color:#8b98ab;font-size:13px;margin-bottom:26px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 26px}
+  .tag{background:#1a2230;border:1px solid #2a3648;border-radius:6px;padding:3px 10px;font-size:12px;color:#9fb0c8}
+  .tag b{color:#e8eef8;font-weight:600}
+  .phase{margin:34px 0 10px;display:flex;align-items:center;gap:12px}
+  .phase .pnum{background:#2456d6;color:#fff;border-radius:8px;padding:4px 12px;font-weight:700;font-size:14px;white-space:nowrap}
+  .phase .ptitle{font-size:16px;font-weight:700;color:#fff}
+  .phase .pgate{color:#f5b455;font-size:13px}
+  .step{background:#151b24;border:1px solid #232d3d;border-radius:10px;margin:10px 0;overflow:hidden}
+  .step-head{display:flex;align-items:baseline;gap:10px;padding:10px 14px;background:#1a2230;border-bottom:1px solid #232d3d}
+  .num{color:#5f7290;font-family:ui-monospace,monospace;font-size:12px;min-width:52px}
+  .stitle{color:#fff;font-weight:650;font-size:14.5px}
+  .who{margin-left:auto;color:#7fd1a8;font-size:12px;white-space:nowrap}
+  .st{margin-left:10px;font-size:11px;border-radius:5px;padding:2px 8px;white-space:nowrap}
+  .ok{background:#123b26;color:#5fe0a0;border:1px solid #1d5c3c}
+  .dir{background:#153450;color:#7db8ff;border:1px solid #1f4f7d}
+  .wait{background:#3a2d12;color:#f0c37a;border:1px solid #5c4818}
+  .step-body{padding:10px 16px 12px;font-size:13px}
+  .row{margin:4px 0}
+  .row b{display:inline-block;min-width:44px;color:#8ea4c4;font-weight:600}
+  .evidence{background:#101720;border-left:3px solid #2456d6;padding:5px 10px;margin:7px 0 2px;border-radius:0 6px 6px 0;color:#a9b8ce;font-size:12px}
+  .gov{border:none;border-left:3px solid #b455f5;padding:5px 10px;margin:7px 0 2px;color:#c9b2e8;font-size:12px}
+  .chain{background:#101720;border:1px dashed #2c3a52;border-radius:10px;padding:12px 16px;margin:16px 0;font-size:13px;color:#9fb0c8}
+  .chain b{color:#f5b455}
+  .foot{margin-top:34px;border-top:1px solid #232d3d;padding-top:18px;color:#8b98ab;font-size:12.5px}
+  code{background:#0b0f15;border-radius:4px;padding:1px 6px;font-size:12px;color:#7fd1a8}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Swarm Studio V3 全流程 0-1 推演测试方案</h1>
+<div class="tag" style="margin:4px 0 0">权威口径：本方案 md 版「具体流程 1-26」（每步含把关）；推演运行产物为 simulation-report.html（推演报告）。本页为规格演示卡。</div>
+<div class="sub">人与 AI 分布式集群协作 · 需求研发交付全生命周期 · 每一步准入/准出/质量/治理 · 单 gateway 多路复用拓扑（matrix 账号模拟分布式多用户）</div>
+
+<div class="chain" style="border-style:solid;border-color:#3a5a8c">
+<b>说人话版（先读这段）</b>：给一个 14 人的虚拟研发公司（人和 AI 混编）写了份从接到需求到交付复盘的完整剧本，25 步。每步定死三件事——<b>什么条件才能开始</b>（如"需求文档写清怎么验收才许分析"）、<b>拿什么证明做完了</b>（不是嘴上说完成，必须交代码位置和任务卡号，系统自动查证）、<b>做到什么程度算合格</b>（如"测试至少 8 个用例、金额用整数分"）。流程：点名 → 登记家底（哪些软件/哪些人/谁管谁）→ <b>需求上锁</b>（验收标准一条条可判、明确不做什么、影响面、涉不涉敏，锁后不许改）→ 分析设计（<b>架构师评审</b>，不过打回）→ 排计划 → 写代码（没有设计不许写；测试输出留证据）→ 测试（<b>不能自己测自己</b>；bug 全关）→ 发布检查（<b>回滚要有数字标准和操作步骤</b>、灰度 5→25→100%、必须人批准）→ <b>验收</b>（需求提出人拿上锁标准逐条对账）→ 管人管活（每人同时在手 ≤2 件）→ 审计 → 复盘（不骂人、只改流程；问题 100% 有着落；经验存 AI 记忆库）。三条铁规矩：<b>①四道锁</b>系统直接拦（需求没锁不分析/设计没过不排期/测试没过不发布/检查没过不上线）；<b>②说话给证据</b>，查不到就打回；<b>③问题全记账</b>，复盘逐条清。
+</div>
+<div class="chain"><b>术语对照（黑话→人话）</b>：导演=自动化脚本扮演的真人方 ｜ 硬闸/门禁=质量关卡 ｜ 准入/准出=开始条件/完成条件 ｜ 真值=系统查证的事实 ｜ 回灌=打回重做 ｜ 账号板=每人的任务看板 ｜ 凭证=证据（代码提交号+任务卡号）｜ 落键=系统记下"这关过了" ｜ WIP=同时在手的活 ｜ HumanGate=必须人批准 ｜ RUN_ID=推演轮次编号</div>
+<div class="meta">
+  <span class="tag">对标基座 <b>~/.hermes/delivery 整树（G1-G6 门禁制 + 七件产物模板 + ISO27001 + ITIL）</b></span>
+  <span class="tag">载体 <b>21 步场景脚本（V2 板寻址口径）</b></span>
+  <span class="tag">日期 <b>2026-09-25</b></span>
+  <span class="tag">状态 <b>G1 实测冻结 ✓ · agent 侧待额度（quota 耗尽环境如实标注）</b></span>
+</div>
+
+<div class="chain"><b>四道硬闸（不过不放行）</b>：G1 需求冻结 → dispatch 不得派发 ｜ G2 架构治理 → close/plan 不得排期 ｜ G4 独立验证 → ready 不得评审 ｜ G5 发布准出 → release 不得发布。闭环治理：问题单台账（issues.log）→ retro 100% 清点 → 治理报告（metrics-log 口径）→ 家族 hindsight 记忆沉淀 → 下轮同名 RFD 召回。</div>
+
+<div class="chain"><b>七角色治理线（编制 14 实例账号）</b>：需求分析师=bella（ba/reqgate 回灌/uat）｜系统分析师=fanfan-sys-analyst + AN-* 执行者（tasklist/概设）｜项目管理=fanfan（排期/缺陷窗/工作台账）｜系统架构=arch（G2）｜<b>安全管理=secops（新增：ISO27001 涉敏复核/发布安全/留痕）</b>｜<b>运维管理=ops（新增：release 执行/回滚/ITIL SLA/资产回写）</b>｜<b>合规及审计=audit（新增：门禁留痕审计/凭证抽检/合规意见书）</b>。</div>
+
+<div class="phase"><span class="pnum" style="background:#7a3fd1">M1-M2</span><span class="ptitle">管理域 · 应用初始化与人员管理（交付流开局）</span><span class="pgate">全生命周期管理面</span></div>
+
+<div class="step"><div class="step-head"><span class="num">6</span><span class="stitle">appinit · 应用初始化配置【V3-mgmt 新增】</span><span class="st ok">实测 ✓</span><span class="who">导演+应用负责人</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 编制表含应用条目（apps_of：4 个 csw-* 应用）</div>
+    <div class="row"><b>动作</b> apps/&lt;app&gt;/ 脚手架核对（vitest 门禁骨架）→ <code>docs/admin/app-registry.md</code>（应用×负责人×专属板×栈×SLA×状态×门禁骨架）入仓 → 板/board.json/owner manifest 三方对账</div>
+    <div class="row"><b>准出</b> registry 入 origin/main，缺口 100% 记问题单（不代建——骨架属研发职责）</div>
+    <div class="row"><b>质量</b> 每应用必有 owner、专属看板、vitest 门禁骨架；新应用立项与退役同表管理</div>
+    <div class="gov">治理钩：app-init-incomplete</div>
+    <div class="evidence">实测：registry 真实入仓；真实发现 csw-cashier-mp 缺 vitest 骨架 → 问题单在册（治理在动作）</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">7</span><span class="stitle">people · 研发人员管理【V3-mgmt 新增】</span><span class="st ok">实测 ✓</span><span class="who">导演（组织对账）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> mx-setup 幂等供给完成（账号/profile/板/技能/ACL/记忆 bank）</div>
+    <div class="row"><b>动作</b> <code>docs/admin/org.md</code> 生成入仓：编制×角色×汇报线×板×team×matrix 账号 + <b>权限矩阵</b>（ACL/认领围栏/审批线）+ <b>入职/转岗/离职流程</b> + 能力矩阵；<b>三方对账</b>（编制表↔fleet-manifest↔profile/board 实况逐项断言）</div>
+    <div class="row"><b>准出</b> org 入仓且对账零缺</div>
+    <div class="row"><b>质量</b> 每人有角色/lead/板/team；权限显式；离职=卡片 reassign+板移交+账号禁用+audit 留痕</div>
+    <div class="gov">治理钩：people-org-mismatch</div>
+    <div class="evidence">实测：14 账号对账一致 ✓（含 secops/ops/audit 三治理账号），org.md 真实入仓</div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L0</span><span class="ptitle">需求准入（一句话需求 → 可验收 PRD）</span><span class="pgate">门禁 G1</span></div>
+
+<div class="step"><div class="step-head"><span class="num">1-5</span><span class="stitle">smoke · 环境与身份就绪</span><span class="st ok">实测 ✓</span><span class="who">导演</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> V2 拓扑在跑（单 gateway :8801 多路复用 33 profile / 单 studio :8802 多账号 / 22 账号板 + team 围栏 / 家族记忆 bank）</div>
+    <div class="row"><b>动作</b> 24 matrix 账号 whoami；11 账号 matrix-login；自动登录端点契约探针；profiles + 围栏装载核对</div>
+    <div class="row"><b>准出</b> 五项真值全绿（mx-smoke G1-G6 门禁 9/9）</div>
+    <div class="row"><b>质量</b> 无 LLM 依赖；环境类问题单如实记录</div>
+    <div class="evidence">实测：mx-smoke PASS=9 FAIL=0（evidence/20260924-205356）；本轮 v3 复跑同绿</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">6</span><span class="stitle">ba · 需求提出（BA 初稿）</span><span class="st ok">实测 ✓</span><span class="who">bella（BA）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> smoke 过</div>
+    <div class="row"><b>动作</b> bella 提交需求书入仓推送（email 禁用，matrix 私信送达 fanfan）——<b>内容比对幂等</b>：材料升级即重推（v3 修 bug①）</div>
+    <div class="row"><b>准出</b> 仓库 RFD_DOC = 最新材料（cmp 一致）+ 私信 event_id 落 state</div>
+    <div class="row"><b>质量</b> 需求书含背景/目标/功能范围</div>
+    <div class="gov">治理钩：rfd-material-missing</div>
+    <div class="evidence">实测：RFD-001 v2（G1 四要素版）已推 origin/main，私信送达 ✓</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">7</span><span class="stitle">reqgate · G1 需求冻结准入【V3 新增】</span><span class="st ok">实测 ✓</span><span class="who">导演（机械化判读）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> RFD_DOC 入仓（最新版）</div>
+    <div class="row"><b>动作</b> 机械化判读四要素（templates/prd.md 结构）：①验收标准逐条 AC 编号且可机械化判定（条目行禁模糊词——v3 修 bug②自指误报）②Scope-Out 清单 ③影响面（模块/接口/数据）④涉敏判定（支付域=内部-机密，ISO27001 风险评估摘要挂钩）。缺项回灌 bella 两轮；全过写 freeze 文件入仓</div>
+    <div class="row"><b>准出</b> <code>docs/requirements/&lt;RFD&gt;.freeze.md</code> 入 origin/main（含 AC-1..N 清单，UAT 按此回验）</div>
+    <div class="row"><b>质量</b> AC ≥3 条且全部机械化可判</div>
+    <div class="gov">治理钩：g1-acceptance-not-machine-checkable / g1-scope-out-missing / g1-impact-missing / g1-iso-risk-missing；<b>硬闸：G1 未过 dispatch 不得派发</b></div>
+    <div class="evidence">实测：G1 真拦截两次（旧版材料 / 模糊词误报）→ 修复后 RFD-001 冻结入仓（AC-1..7），g1_frozen=1790255901</div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L1</span><span class="ptitle">分析设计（PRD → 概设定稿）</span><span class="pgate">门禁 G2</span></div>
+
+<div class="step"><div class="step-head"><span class="num">8-12</span><span class="stitle">room · dispatch · register · analysis · triage</span><span class="st wait">待额度</span><span class="who">fanfan/编制</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> <b>G1 硬闸</b>（g1_frozen）——未冻结本段不得开始</div>
+    <div class="row"><b>动作</b> 建需求群 → @fanfan-agent 加载 requirements-analyst（对照 freeze 的 AC 逐条分析，建卡必须带结构化 raci）→ 账号板登记主卡 → 系统分析（tasklist 入仓 + 双凭证 DONE 行反向核验 + 四组 RACI 派发 + 关联人进群）→ 四主责账号板分诊 + lead 确认</div>
+    <div class="row"><b>准出</b> 主卡在账号板（900s×2 回灌）；tasklist 入仓（2400s 硬失败）；凭证核验（commit 真在 origin+含分析稿、card 真在账号板）；raci 结构化观察项；分诊卡齐（1800s）</div>
+    <div class="row"><b>质量</b> SMART 拆分、三清单齐、凭证不可空喊</div>
+    <div class="gov">治理钩：kanban-registration-skipped / analysis-artifacts-missing / done-without-verifiable-evidence / room-invite-gap / raci-not-structured</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">13-14</span><span class="stitle">anexec · review（四路系分 + 汇总复核）</span><span class="st wait">待额度</span><span class="who">chen/xiao/hu/lin → fanfan</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 分诊确认（triage→todo）</div>
+    <div class="row"><b>动作</b> 四路系分（账号工作区 worktree、AN-* 分析稿：结论/待澄清/概设含接口签名+数据模型+错误码+幂等键/依赖/风险/工作量人日、双兜底完成回执）→ 汇总复核（金额=分 int64、snake_case 消歧，概设入库，账号板登记评审卡）</div>
+    <div class="row"><b>准出</b> 四稿入库（各 3600s）+ 四回执 + 概设入库（2400s）</div>
+    <div class="row"><b>质量</b> 概设五要素雏形（G2 评审对象）</div>
+    <div class="gov">治理钩：anexec-missing / receipt-missing / review-card-missing</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">15</span><span class="stitle">archgate · G2 架构治理评审【V3 新增】</span><span class="st wait">待额度</span><span class="who">arch（架构治理）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 概设入库</div>
+    <div class="row"><b>动作</b> arch 账号板（arch-governance）登记评审卡，@arch-agent 四项检查单（templates/design.md + review-record.md）：①五要素 ②爆炸半径（影响模块 vs 三清单）③验证计划前移 ④备选方案 ≥2 及取舍；结论 ARCH-GATE-PASS/FAIL</div>
+    <div class="row"><b>准出</b> 结论行入群 + 评审卡 done（1800s）；FAIL 回灌修订复评一轮</div>
+    <div class="row"><b>质量</b> 四项检查逐条留痕（review-record 结构）</div>
+    <div class="gov">治理钩：g2-design-review-fail / g2-review-missing；<b>硬闸：G2 未过 close/plan 不得执行</b></div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L2</span><span class="ptitle">计划排期（概设 → 任务分解）</span></div>
+
+<div class="step"><div class="step-head"><span class="num">16-17</span><span class="stitle">close · plan（主卡归档 + 排期）</span><span class="st wait">待额度</span><span class="who">fanfan（pm-planning）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> <b>G2 硬闸</b>（g2_arch_pass）</div>
+    <div class="row"><b>动作</b> 主卡归档（子任务+档案入 body、置 done、测试工作量 ×0.3 口径）→ 排期（schedule：任务表+里程碑+时间窗口+依赖；+15% 缓冲；排期父卡/子卡带 raci；逐条派发）</div>
+    <div class="row"><b>准出</b> 主卡 done（1200s）；schedule 入库（2400s）</div>
+    <div class="row"><b>质量</b> 任务 ID 固定（DEV-*/TEST-*）；时间窗口明确</div>
+    <div class="gov">治理钩：plan-missing</div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L3</span><span class="ptitle">研发实现（排期 → 代码分支）</span><span class="pgate">门禁 G3</span></div>
+
+<div class="step"><div class="step-head"><span class="num">18</span><span class="stitle">devimpl · 真实编码（G3 编码门禁）</span><span class="st wait">待额度</span><span class="who">chen/hu/lin/xiao（错峰）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 排期子卡 ready + raci</div>
+    <div class="row"><b>动作</b> pay-core 先行（幂等下单/状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED/查单/关单/回调验签幂等）→ 双渠道 ChannelAdapter（mock）→ 收银台小程序；<b>无设计不编码</b>（commit 引概设）</div>
+    <div class="row"><b>准出</b> origin 四条 feat/DEV-* 分支（各 3600s）+ <b>本地门禁证据落盘</b>（vitest 输出入 evidence，用例数达标）</div>
+    <div class="row"><b>质量</b> pay-core ≥8 用例 / 其余 ≥6；金额分 int64；渠道 HTTP 一律 mock</div>
+    <div class="gov">治理钩：dev-branch-missing / g3-local-gate-missing（无测试输出证据）</div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L4</span><span class="ptitle">验证与缺陷治理（分支 → 可发布）</span><span class="pgate">门禁 G4</span></div>
+
+<div class="step"><div class="step-head"><span class="num">18b-19</span><span class="stitle">defect · 集成与缺陷闭环</span><span class="st wait">待额度</span><span class="who">导演 + qi/fei（独立测试）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 四条开发分支齐</div>
+    <div class="row"><b>动作</b> integration 分支合并推送；qi/fei 独立测试（测试者≠开发者=G4 独立性）；缺陷走 defect-loop（P 级/复现/期望实际/分支 commit）</div>
+    <div class="row"><b>准出</b> 观测窗 5400s：<b>只认派发时间戳后</b>的【缺陷】/FIX-DONE/TEST-PASS|FAIL 计数闭合（防历史残留假完成）</div>
+    <div class="row"><b>质量</b> 零缺陷轮如实记录；缺陷必带四要素</div>
+    <div class="gov">治理钩：merge-conflict / defect-loop-open</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">20</span><span class="stitle">testpass · 测试报告（G4）</span><span class="st wait">待额度</span><span class="who">qi</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 缺陷窗闭合</div>
+    <div class="row"><b>动作</b> 测试报告入 integration（范围/用例数/通过数/缺陷清单/结论/通过 commit id）；commit id 回写关联卡（跨账号 matrix 通知口径）</div>
+    <div class="row"><b>准出</b> 报告入库（2400s）→ 落 g4_pass 硬闸键</div>
+    <div class="row"><b>质量</b> 证据强度 <b>exercised</b>（测试真跑过，非"有测试代码"）——报告附执行输出摘要</div>
+    <div class="gov">治理钩：test-report-missing；<b>硬闸：G4 未过 ready 不得评审</b></div>
+  </div></div>
+
+<div class="phase"><span class="pnum">L5</span><span class="ptitle">发布交付与复盘（可发布 → 上线 → 沉淀）</span><span class="pgate">门禁 G5 / G6</span></div>
+
+<div class="step"><div class="step-head"><span class="num">21</span><span class="stitle">ready · G5 发布准出评审【V3 新增，吸收原 templates】</span><span class="st wait">待额度</span><span class="who">fanfan（fanfan-review 板）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> <b>G4 硬闸</b>（g4_pass）</div>
+    <div class="row"><b>动作</b> fanfan-review 板准出卡，@fanfan-agent 七项检查单（release-plan.md / release-notes.md）：①G4 证据挂卡 ②产物同 commit 可复现 ③依赖无新增 ④<b>回滚具体化</b>（数字阈值+命令级+72h 观察窗）⑤<b>灰度 5%→25%→100%</b> ⑥发布说明面向用户收益 ⑦对外发布 <b>HumanGate</b>（导演批准留痕）；并做交付模板完备性双口径检查（fanfan 板任务覆盖 + 仓库档案 9+2 项）与证据落 main</div>
+    <div class="row"><b>准出</b> READY-GATE-PASS 入群 + 准出卡 done（1800s）；缺项回灌一轮</div>
+    <div class="row"><b>质量</b> 检查单七项逐条留痕</div>
+    <div class="gov">治理钩：g5-rollback-not-concrete / g5-gray-missing / g5-release-notes-missing / template-missing；<b>硬闸：G5 未过 release 不得执行</b></div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">22</span><span class="stitle">release · 发布登记</span><span class="st wait">待额度</span><span class="who">fanfan</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> <b>G5 硬闸</b>（g5_ready）</div>
+    <div class="row"><b>动作</b> REL-MERGE / REL-TAG（v1.0.0-cashier + RELEASE.md）/ REL-DELIVER 三卡登记 todo（线下执行在册追踪）</div>
+    <div class="row"><b>准出</b> 三卡在册</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">23</span><span class="stitle">uat · 业务验收【V3 新增】</span><span class="st wait">待额度</span><span class="who">bella（需求提出方）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> release 三卡在册</div>
+    <div class="row"><b>动作</b> bella 以业务方身份按 <b>G1 freeze 的 AC-1..N 逐条回验</b>：@fanfan-agent 逐条给证据锚点（UAT-EVIDENCE 行）→ 导演逐条核对真值（integration 分支/测试报告/冻结文件存在性）→ 验收文档入仓（AC×证据×结论 + <b>ITIL SLA 登记</b>：服务目录 SVC-cashier/可用性 99.5%/P95 ≤800ms/P2 4h）</div>
+    <div class="row"><b>准出</b> 验收文档入 origin/main 且全部 AC=通过（2400s）</div>
+    <div class="row"><b>质量</b> 每条 AC 证据可反向核验——<b>G1 冻结标准的闭环回验（需求→验收同源）</b></div>
+    <div class="gov">治理钩：uat-ac-failed（缺陷回流 defect 语义）/ uat-evidence-missing / uat-no-ac</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">24</span><span class="stitle">retro · G6 复盘与知识沉淀【V3 新增】</span><span class="st dir">治理报告实测 ✓</span><span class="who">导演（+全员）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> uat 过（uat_done 硬闸）</div>
+    <div class="row"><b>动作</b> ①三段式复盘入仓（现象只写事实/规律机制归因<b>对事不对人</b>/下轮验证；行动项四元组=行动项/owner/期限/验证判据）②<b>治理报告</b>（对齐 metrics-log 口径：硬闸状态/问题单台账/凭证与回灌/首过率）③ITIL 资产回写（服务目录已在验收文档）④<b>记忆沉淀探针</b>：hindsight 家族 bank（用户名+MAC 分仓）健康 + 召回留给下轮同名 RFD</div>
+    <div class="row"><b>准出</b> 复盘文档入仓 + 治理报告生成 + 探针记录</div>
+    <div class="row"><b>质量</b> 问题单 100% 有处置结论（fixed/observed/deferred）</div>
+    <div class="gov">治理钩：retro-missing / retro-push / retro-memory-probe——<b>治理飞轮：本轮经验 → 家族记忆 → 下轮召回</b></div>
+    <div class="evidence">实测：gov_report 生成器真跑 ✓（runs/v3-验证/evidence/governance-report.md：硬闸状态表 + 问题单台账 2 条在册）</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">25</span><span class="stitle">ide · 工作台收尾核验</span><span class="st ok">实测 ✓</span><span class="who">导演</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> retro 过</div>
+    <div class="row"><b>动作</b> /ide 路由 200（单 studio）；ide?task= 跳转处理代码存在；简报组件存在（工具面完备性）</div>
+    <div class="evidence">历轮实测 ✓（V1/V2 轮同口径断言全绿）</div>
+  </div></div>
+
+<div class="phase"><span class="pnum" style="background:#7a3fd1">M3</span><span class="ptitle">管理域 · 工作管理与合规审计（收尾治理）</span></div>
+
+<div class="step"><div class="step-head"><span class="num">24</span><span class="stitle">workmgr · 研发工作管理【V3-mgmt 新增】</span><span class="st ok">实测 ✓</span><span class="who">导演（PM 台账）</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> 独立管理步（不绑发布硬闸，任意轮次可产出）</div>
+    <div class="row"><b>动作</b> 跨 14 账号全部板扫 SQLite → <code>evidence/work-report.md</code>：人×状态分布（todo/running/review/done）、WIP 统计、stale 口径、跨轮衔接（未完结卡 PM 决定挂起/移交）</div>
+    <div class="row"><b>准出</b> 报告生成</div>
+    <div class="row"><b>质量</b> WIP（running 并行）≤2/人；stale 卡（非 done 超 72h）清点</div>
+    <div class="gov">治理钩：wip-overload（容量过载信号）</div>
+    <div class="evidence">实测：14 账号台账真实生成，WIP 全员 ≤2 ✓</div>
+  </div></div>
+
+<div class="step"><div class="step-head"><span class="num">25</span><span class="stitle">audit · 合规及审计管理【V3-mgmt 新增】</span><span class="st ok">实测 ✓</span><span class="who">audit（签名线）+导演</span></div>
+  <div class="step-body">
+    <div class="row"><b>准入</b> workmgr 台账在册</div>
+    <div class="row"><b>动作</b> 导演侧机械化审计（G1 落键必有 freeze 在 origin、问题单四段格式、取证目录在位）+ @audit-agent 独立复核（AUDIT-OPINION-* 结论行，额度恢复后补充不阻断）→ <b>合规意见书入仓</b>（docs/retro/*-audit-opinion.md，audit 签名线）</div>
+    <div class="row"><b>准出</b> 意见书入仓 + 发现 100% 记问题单</div>
+    <div class="row"><b>质量</b> 审计与交付线独立（audit 账号不参与开发/测试）；留痕可回溯</div>
+    <div class="gov">治理钩：audit-finding——审计结果进 retro 治理报告</div>
+    <div class="evidence">实测：机械化审计通过 ✓，合规意见书真实入仓</div>
+  </div></div>
+
+<div class="foot">
+  <b>闭环治理总纲</b>：四道硬闸（G1/G2/G4/G5）不过不放行；一切 agent 准出超时→拒收回灌→限期重报→二轮败记问题单；DONE 凭证（commit+card）一律反向核验；问题单台账全流程统一、retro 100% 清点；治理报告按 metrics-log 口径度量（硬闸一次通过率/凭证一次通过率/缺陷统计/回灌次数）；家族 hindsight 记忆（用户名+MAC 分仓）承载跨轮沉淀。<br><br>
+  <b>实测状态说明（如实）</b>：本轮环境模型通道 11/11 quota 耗尽——导演侧全链（smoke/ba/reqgate/治理报告/硬闸拦截×2）真跑通过并修复三处真实 bug（材料重推/检查自指/预检豁免）；agent 侧步骤（8-23 的 LLM 回合）代码就绪、待额度恢复后 <code>RUN_ID=v3-验证 START_STEP=room bash scripts/aipay/aipay-scenario.sh</code> 断点续跑全流程。方案文档：2026-09-25-mux-v3-lifecycle-plan.md（本 HTML 的 md 源）；执行载体：overlay/scripts/aipay/（aipay-scenario.sh/2.sh + mux/）。
+</div>
+
+</div></body></html>
