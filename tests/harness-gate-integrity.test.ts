@@ -288,6 +288,7 @@ mx_messages() {
 ]
 JSON
 }
+mx_messages_deep() { mx_messages "$@"; }
 load_token() { echo tok; }
 mx_room_gate_verdict room "@a:matrix.test" READY-GATE 0`, root)
     expect(out.trim()).toBe('PASS')
@@ -1316,6 +1317,7 @@ mx_messages() {
 ]
 JSON
 }
+mx_messages_deep() { mx_messages "$@"; }
 load_token() { echo tok; }
 _mx_v=$(mx_room_gate_verdict room "@a:matrix.test" READY-GATE 0)
 echo "verdict=$_mx_v"`, root)
