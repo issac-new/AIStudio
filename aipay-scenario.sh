@@ -714,6 +714,37 @@ fi
 # 硬闸：G2 未过，close/plan（L2）不得执行。
 if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   mx_gate_breaker_check g2 "G2 架构治理评审"   # 熔断：两轮未过不得开始 L2（跨调用持久）
+  # ── 涉敏需求安全评审卡前置（run15 前置 P3-7①，审计 B 案：安全合规最薄的强制面）──
+  # freeze 涉敏段非「无/否」时，G2 放行前须有 secops 安全评审卡+结论行——缺卡即拦，
+  # 补齐后复核放行（security_review_done 键幂等）。非涉敏轮零影响（键直接落 1）。
+  SEC_TS=$(( $(date +%s) * 1000 ))   # 顶层块非函数——普通赋值（bash 顶层 local 运行时报错）
+  if [[ -z "$(sget security_review_done)" ]]; then
+    _sens=$(git -C "$DIRECTOR_CLONE" show "origin/main:docs/requirements/${RFD_ID}.freeze.md" 2>/dev/null | grep -E '涉敏' | head -1)
+    if printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)'; then
+      sset security_review_done 1
+      note "[安全] freeze 涉敏=无——安全评审卡豁免（非涉敏轮，P3-7① 前置直通）"
+    else
+      SGID=$(sget security_rgid)
+      if [[ -z "$SGID" ]]; then
+        SGID=$(kanban_create_as secops security_review "${RFD_ID} 安全评审（涉敏=${_sens:-未标注}）" \
+          "涉敏需求安全评审单（run15 前置 P3-7①）：密钥管理/验签链路/数据落库字段/回调来源校验四项检查。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-board secops-security)
+        sset security_rgid "$SGID"
+        dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分为评审输入。不许谎报。" "$(agent_mxid secops)"
+      fi
+      if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
+        if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审")" == "PASS" ]]; then
+          kanban_walk_done secops "$SGID"; sset security_review_done 1
+          note "[安全] 涉敏安全评审通过（secops 板 ${SGID} → done）——G2 放行前置满足"
+        else
+          echo "ISSUE|security-review-fail|secops-agent|${RFD_ID} 涉敏安全评审 FAIL（缺项见评审卡），G2 不放行" >> "$EVID_DIR/issues.log"
+          fail "${RFD_ID} 涉敏安全评审 FAIL——缺项补齐并复审 PASS 后 G2 方可放行（P3-7① 强制面）"
+        fi
+      else
+        echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_GATE_WAIT:-2400}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
+        fail "涉敏安全评审结论超时（P3-7①：涉敏需求缺安全评审卡即拦）"
+      fi
+    fi
+  fi
   capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
   # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
   # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
@@ -844,19 +875,19 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
-2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
+2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
@@ -894,7 +925,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
@@ -1478,6 +1509,19 @@ fi
 # 门禁留痕完整性 + 问题单格式 + 凭证抽检 → 合规意见书入仓（audit 账号签名线）。
 # 导演侧机械化审计为主；@audit-agent 独立复核结论行（额度恢复后补充，不阻断导演侧意见书）。
 if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
+  # ── 六域体检当轮跑（run15 前置 P3-6，B6 根治：run14 第 7 章是静态拼装非体检输出）──
+  # 产品端点 POST /api/governance/domains/run?run=<RUN_ID>：六域逐域实查+台账 jsonl 落
+  # 中央仓（GOVERNANCE_REPO 默认=本 SIM 中央仓）；驱动调完留 evidence 副本（离线重出
+  # 报告可读）。失败记单降级（报告回落按轮注册表，不编造当轮体检）。
+  if DOMAIN_JSON=$(curl -sf -m 30 -X POST -H "Authorization: Bearer ${GOV_TOK:-$(studio_login)}" \
+       "http://127.0.0.1:${STUDIO_PORT}/api/governance/domains/run?run=${RUN_ID}" 2>/dev/null) \
+     && printf '%s\n' "$DOMAIN_JSON" | python3 -c 'import json,sys; json.load(sys.stdin)["results"]' >/dev/null 2>&1; then
+    printf '%s\n' "$DOMAIN_JSON" > "$EVID_DIR/domain-audit-run.json"
+    note "[audit] 六域体检当轮已跑（evidence/domain-audit-run.json，六域判定+台账入中央仓 jsonl）"
+  else
+    echo "ISSUE|domain-audit-run|step23|六域体检端点调用失败（/api/governance/domains/run）——报告第 7 章回落按轮注册表，记单降级" >> "$EVID_DIR/issues.log"
+    note "[audit] 六域体检当轮跑失败（记单降级——报告回落静态注册）"
+  fi
   # §4.4-9 治理证据①（六文调研轮 A+B）：事故报告汇编导出（sessionId=本轮 RUN_ID，
   # 产品面 /api/incident/sessions/:id/report.md，17 要素+自治度对账 B 面）。
   # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口记单。

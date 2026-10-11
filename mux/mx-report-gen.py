@@ -1452,6 +1452,18 @@ DOMAIN_LEDGER_FILE = (SIM.parent / 'ncwk-sim-mux/central/aipaydev/docs/governanc
 DOMAIN_LEDGER_SOURCE = '内置实测（2026-09-28 手工命令留档）'
 try:
     _led = [__import__('json').loads(l) for l in DOMAIN_LEDGER_FILE.read_text(encoding='utf-8').splitlines() if l.strip()]
+    # evidence 副本兜底（run15 前置 P3-6）：离线重出（伪根）时中央仓 jsonl 未必在——
+    # 驱动留的 evidence/domain-audit-run.json 同口径并入（按 run+domain 去重）。
+    _da_copy = EVID / 'domain-audit-run.json'
+    if _da_copy.exists():
+        try:
+            _copy_rows = __import__('json').loads(_da_copy.read_text(encoding='utf-8')).get('results', [])
+            _seen = {(r.get('run'), r.get('domain')) for r in _led}
+            for _cr in _copy_rows:
+                if (_cr.get('run'), _cr.get('domain')) not in _seen:
+                    _led.append(_cr)
+        except Exception:
+            pass
     _latest = {}
     for _r in _led:
         _latest[_r['domain']] = _r  # JSONL 追加序=时间序（新在后），末见即最新
@@ -2549,9 +2561,30 @@ try:
         _feat_tbl = ('<h3>本轮新特性实证</h3>'
                      '<table class="st-issues-tbl"><thead><tr><th>特性</th><th>实证</th><th>锚</th></tr></thead>'
                      f'<tbody>{_rows}</tbody></table>')
-    # 第 4 章常驻：产品成效块（§5.4）+ 新特性表（按轮注册）
+    # 安全合规节（run15 前置 P3-7②，审计 B 案：报告安全面从无到有）——qgate
+    # release-report 安全族（security.*/dependency.*）原文透传+来源分布随行（§5.5
+    # 门禁证据纪律：无信号桶如实呈现，禁手抄全绿）；文件缺席如实声明不编造。
+    _sec_html = ''
+    _qf4 = EVID / 'qgate-release-report.txt'
+    if _qf4.exists():
+        _qraw4 = _qf4.read_text(encoding='utf-8', errors='replace')
+        _sec_rows = [ln for ln in _qraw4.splitlines()
+                     if ln.startswith('| ') and ('security.' in ln or 'dependency.' in ln)]
+        _src_line = next((ln for ln in _qraw4.splitlines() if 'source' in ln.lower() and 'distribution' in ln.lower()), '')
+        _rows_html = ''.join(f'<tr><td>{H.escape(r.strip("| "))}</td></tr>' for r in _sec_rows)
+        _sec_html = ('<section class="nv-sec" id="ch4-security"><h2>安全合规（QUALITY 段门禁透传）</h2>'
+                     '<p class="stat-note">安全族门禁判定原文（qgate release-report，来源分布随行；'
+                     'INCONCLUSIVE=该门未绑执行器属无信号桶，如实呈现非全绿——绑定真跑留 run15 QUALITY 段接线）</p>'
+                     f'<table class="st-issues-tbl"><tbody>{_rows_html or "<tr><td>（安全族门禁零行——report 无 security/dependency 行）</td></tr>"}</tbody></table>'
+                     + (f'<p class="stat-note">{H.escape(_src_line)}</p>' if _src_line else '')
+                     + '</section>')
+    else:
+        _sec_html = ('<section class="nv-sec" id="ch4-security"><h2>安全合规（QUALITY 段门禁透传）</h2>'
+                     '<p class="no-evidence">本轮无 qgate release-report（evidence/qgate-release-report.txt 缺席）——'
+                     '安全合规面零呈现如实声明（run15 起 QUALITY 段 precheck --all-full 落档后透传）。</p></section>')
+    # 第 4 章常驻：产品成效块（§5.4）+ 新特性表（按轮注册）+ 安全合规节（P3-7②）
     _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮交付成效与新特性</h2>'
-                 + _po_html + _feat_tbl + '</section>')
+                 + _po_html + _feat_tbl + '</section>' + _sec_html)
     # 产品面承载率行（§5.5：五面各计 UI 实拍或产品内操作证据，验收线 ≥4/5）。
     # 2026-10-10 修订：候选帧改为按步号查当轮注册帧位（STEPS_META[n].imgs 实存）——
     # 帧名前缀按轮而异（全量轮数字前缀/回归轮状态键前缀），写死数字前缀在回归轮
