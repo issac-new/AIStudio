@@ -1189,7 +1189,7 @@ STEPS_META_RUN13 = {
 STEPS_META_RUN14 = {
     1: dict(keys=['smoke_done'],
             actor='human', actorText='人 · admin 管理员',
-            narrative='账号与基础设施就绪：mx-clean 三旗标全清（2026-10-10 13:43，中央仓清空提交 bd887da）后 0→1 重建；24 账号登录凭证逐一验证通过，单网关 :8801+单 studio :8802 双健康。14:15:55 开跑（START_STEP=smoke 全量启动，监督器托底）。', imgs=[('smoke_done-op1-before','账户管理页·30 账号在列（账号分配承载面）·前','ui'), ('smoke_done-op1-after','账户管理页·账号清单与角色列全量·后','ui')]),
+            narrative='账号与基础设施就绪：mx-clean 三旗标全清（2026-10-10 13:43，中央仓清空提交 bd887da）后 0→1 重建；24 个账号的登录凭证逐个验证通过，单网关 :8801+单 studio :8802 双健康探测通过。14:15:55 开跑（START_STEP=smoke 全量启动，监督器托底）。', imgs=[('smoke_done-op1-before','账户管理页·30 账号在列（账号分配承载面）·前','ui'), ('smoke_done-op1-after','账户管理页·账号清单与角色列全量·后','ui')]),
     2: dict(keys=['smoke_done'],
             actor='ai', actorText='AI · 装配脚本',
             narrative='本步无对应产品界面：每用户四件套装配（账号/配置/看板/团队/记忆库）为后台装配动作，无独立操作界面（§2.5 无步 2 界面承载承诺；装配真值=profiles 清单+板装载日志 14:16:36）。实测依据：profiles 清单+每板 team 围栏装载 ✓（14:16:36）。', imgs=[]),
