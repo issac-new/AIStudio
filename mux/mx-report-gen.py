@@ -1950,6 +1950,25 @@ def _r18_hero_badge() -> str:
                 f'· 必采 {r18_matrix.TOTAL} 项缺口记入问题清单 r18-collection-missing</span>')
     return f'<b>{r18_coverage()}</b><span>全量呈现覆盖 · 必采 {r18_matrix.TOTAL} 项实测统计</span>'
 
+def _gov_metrics_line() -> str:
+    """⑥治理指标行（产品 backlog 八件落位）：自 evidence/governance-report.md 的 metrics 回写节
+    实读首过率/证据一次通过率/缺陷密度三行，渲染 hero 下方单行指标带。缺文件=如实缺席明示。"""
+    gr = EVID / 'governance-report.md'
+    if not gr.exists():
+        return '<div class="gov-metrics-line">治理指标：⬜ 治理报告未产出（指标行如实缺席）</div>'
+    txt = gr.read_text(encoding='utf-8', errors='replace')
+    import re as _re
+    def _pick(label):
+        for ln in txt.splitlines():
+            if ln.startswith(',') and label in ln:
+                parts = ln.split(',')
+                return parts[4] if len(parts) > 4 else '⬜'
+        return '⬜'
+    fp, ev, de = _pick('首过率'), _pick('证据一次通过率'), _pick('缺陷密度')
+    return (f'<div class="gov-metrics-line">治理指标 · 首过率 <b>{H.escape(fp)}</b>'
+            f' · 证据一次通过 <b>{H.escape(ev)}</b> · 缺陷密度 <b>{H.escape(de)}</b>'
+            f'（实读 governance-report metrics 节，禁手填）</div>')
+
 def _issue_level(t):
     """问题单级别（报告三要素改造 2026-10-10）：按类型码族派生——闸门族正则与审计器
     闸键判定（mx-report-audit.py A4）同源（^(g[1-6])[-_] + review-card + retro-open-items），
@@ -3166,6 +3185,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .hero h1{{font-size:24px;font-weight:700;letter-spacing:-.02em}}
 .hero .sub{{font-size:13px;color:#94a3b8;margin-top:6px;line-height:1.7}}
 .hero-stats{{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}}
+.gov-metrics-line{{margin-top:10px;font-size:13px;color:#5a6b7d;background:#f4f7fa;border-radius:8px;padding:6px 12px;display:inline-block}}
+.gov-metrics-line b{{color:#1f3a5f}}
 .hstat{{text-align:center}}
 .hstat b{{display:block;font-size:22px;font-weight:800;color:var(--surface)}}
 .hstat span{{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}}
@@ -3404,6 +3425,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
       <div class="hstat">{_r18_hero_badge()}</div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
+    {_gov_metrics_line()}
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>

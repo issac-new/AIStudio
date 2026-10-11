@@ -714,7 +714,8 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   fi
   local last_sig=0 last_work=-1 cur_work w
   # idle-nudge（2026-10-04 run8 plan 步实录：agent 审批后提前收工、静坐 1800s 才被判死重派，
-  # 损失=30 分钟死窗+agent 重做上下文。中途轻推一次：空转过半时 @agent 催办，多数"提前收工"
+  # ⑧催办边界（产品 backlog 八件落位）：催办=空转过半时单次轻推（设计内），无主动催办面、无重复催办——默认关形态。
+# 损失=30 分钟死窗+agent 重做上下文。中途轻推一次：空转过半时 @agent 催办，多数"提前收工"
   # 会被一条提醒拉回；催后仍静默才走原判死路径。agent 恢复活动则重新武装（新一轮静默可再催）。
   local nudged=0 idle_half=$(( idle / 2 ))
   local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
@@ -1472,7 +1473,7 @@ people_reconcile() { # 对账：org 生成源（编制表）↔ fleet-manifest �
 
 # ── M3 工作管理：跨板台账 + WIP/stale 治理（work-report 生成）────
 work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账号板）
-  local out="$EVID_DIR/work-report.md" u slug st total wip_warn=""
+  local out="$EVID_DIR/work-report.md" u slug st total wip_warn="" zero_deliver=0
   {
     echo "# 工作管理台账（work-report，$(date '+%F %T')）"
     echo
@@ -1503,8 +1504,24 @@ work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账
     echo "- WIP 上限：每人 running 并行 ≤2，超限记问题单（容量过载信号）。"
     echo "- stale 卡：非 done 且 updated_at 超 72h 的卡清点（本轮 $(date +%s) 为基准）。"
     echo "- 跨轮衔接：retro 后未完结卡由 PM（产品经理A）决定挂起/移交下轮。"
+    # ④零交付遥测：done 卡 body 无任何 commit= 锚=零交付形态（标记完成但无代码证据）
+    local zd_n=0
+    for u in "${INSTANCED_USERS[@]}"; do
+      for slug in $(account_boards "$u"); do
+        local db2="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
+        [[ -f "$db2" ]] || continue
+        zd_n=$((zd_n + $(sqlite3 "$db2" "select count(*) from tasks where status='done' and ifnull(body,'') not like '%commit=%'" 2>/dev/null || echo 0)))
+      done
+    done
+    if (( zd_n > 0 )); then
+      echo
+      echo "## 零交付遥测"
+      echo "- done 状态但卡 body 无 commit= 锚的卡：${zd_n} 张（标记完成却无代码证据——逐张人工判定：治理/台账类卡属合法无锚，研发交付类卡=零交付形态）。"
+      zero_deliver=$zd_n
+    fi
   } > "$out"
   [[ -n "$wip_warn" ]] && echo "WIP_OVERLOAD"
+  [[ "${zero_deliver:-0}" -gt 0 ]] && echo "ZERO_DELIVER:${zero_deliver}"
   echo "$out"
 }
 
@@ -1621,12 +1638,21 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   else
     _dens="⬜（quality-summary.env 缺席——产品成效实算未落盘，如实留空）"
   fi
+  # ⑤告警差分：基础设施/容量/网关族键聚合一行（新增键单列在治理报告正文）
+  local _alert_fam _alert_n=0 _alert_k
+  for _alert_k in $(grep -E '^ISSUE\|' "$EVID_DIR/issues.log" 2>/dev/null | cut -d'|' -f2 | sort -u); do
+    case "$_alert_k" in
+      gw-*|capacity-*|gateway-*|wip-overload|load-*|mx-load-*) _alert_n=$((_alert_n+1)) ;;
+    esac
+  done
+  _alertline="${_alert_n} 键（族内聚合）"
   _rejrate=$((6-_fp-_supp))
   local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记单即首过）；首过基准=任务书首次完整派发（方案 §2.6-5）：显式打回即非首过；PASS 前拆分/补交形态的采集信号 run15 接线后计「补过」
 $(date +%F),${RFD_ID},G1-G6,打回率,${_rejrate}/6（$(( _rejrate * 100 / 6 ))%）,$(date +%F)..$(date +%F),issues.log 实算,口径=打回数/6（三态：首过+补过+打回=6）；判词 FAIL/打回/拒收/熔断/退回语义行
 $(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件记单/完成环节键
 $(date +%F),${RFD_ID},全程,缺陷密度,${_dens},$(date +%F)..$(date +%F),quality-summary.env 实算,口径=测试报告缺陷清单/用例计数（双源，run14 复盘 A2）
 $(date +%F),${RFD_ID},全程,打回次数,${_reject},$(date +%F)..$(date +%F),issues.log 实算,打回/拒收/熔断行计数
+$(date +%F),${RFD_ID},全程,告警类问题单,${_alertline},$(date +%F)..$(date +%F),issues.log 实算,口径=基础设施/容量/网关族键按类型段聚合差分呈现（同族 N 键一行，新增键才单列——防告警刷屏淹没新信号）
 $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 ⬜）,$(date +%F)..$(date +%F),issues.log 实算,DISP 注明导演计数；占比待 MX_DELIVERY=1 协议事件结构化"
   # 基线对比行（R26：读上轮治理报告首过率行——「下次推演目标即上次基线+1」机制化，§2.6.5）
   local _runs_dir _prev _baseline

@@ -1176,6 +1176,17 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       else
         note "[真值] FIX-DONE 锚点抽验过（commit=${_fxd:-本轮回执无 commit 锚，免抽}）"
       fi
+      # ③字段流转核验（纪律 34③ 驱动侧）：DEF 卡复测段 assignee 应翻转为测试档案
+      # （qi/fei/mei）——未翻转=字段流转缺口，记单不阻塞（run15 首验）。
+      _flip_bad=$(kanban_list qi 2>/dev/null | jq -r '[.. | objects | select(has("title")) | select((.title // "") | test("DEF-")) | select(.status == "done" or .status == "review") | select((.assignee // "") | test("^(qi|fei|mei)$") | not)] | length' 2>/dev/null || echo 0)
+      _flip_bad2=$(kanban_list fei 2>/dev/null | jq -r '[.. | objects | select(has("title")) | select((.title // "") | test("DEF-")) | select(.status == "done" or .status == "review") | select((.assignee // "") | test("^(qi|fei|mei)$") | not)] | length' 2>/dev/null || echo 0)
+      _flip_bad=$((_flip_bad + _flip_bad2))
+      if (( _flip_bad > 0 )); then
+        echo "ISSUE|defect-assignee-not-flipped|testers|DEF 卡复测段 assignee 未翻转为测试档案 ${_flip_bad} 张（纪律 34③ 字段流转缺口——复测归属应回测试线）" >> "$EVID_DIR/issues.log"
+        note "[核验] 字段流转缺口：${_flip_bad} 张 DEF 卡 assignee 未回测试线（记单）"
+      else
+        note "[核验] DEF 卡字段流转核验过（复测段 assignee 均在测试线）"
+      fi
       note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
     if (( DEFECTS == 0 && BOTH_DONE > 0 && FE_DONE > 0 )); then
@@ -1528,6 +1539,12 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
     note "[M3] 工作台账生成，发现 WIP 超限（记问题单）"
   else
     note "[M3] 工作台账生成 ✓（${#INSTANCED_USERS[@]} 账号×状态分布，WIP 全员 ≤2）"
+  fi
+  # ④零交付遥测：done 卡无 commit 锚计数入单（人工判定研发类/治理类）
+  _zd=$(printf '%s\n' "$WR" | grep -oE 'ZERO_DELIVER:[0-9]+' | cut -d: -f2 || true)
+  if [[ -n "$_zd" && "$_zd" -gt 0 ]]; then
+    echo "ISSUE|zero-delivery|director|done 卡 body 无 commit= 锚 ${_zd} 张（零交付遥测：研发交付类卡须逐张判定，治理类合法）——见 work-report 零交付节" >> "$EVID_DIR/issues.log"
+    note "[遥测] 零交付形态 ${_zd} 张（记问题单，人工判定归属）"
   fi
   # 台账落档（run8 复盘根治：方案 §8.6 步 22 准出=work-report.md 落档，此前只写
   # evidence 致 8.6 矩阵"文件域无独立工件"）——repo_commit_main 口径进 origin/main，
