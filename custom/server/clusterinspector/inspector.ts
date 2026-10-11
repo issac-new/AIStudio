@@ -25,6 +25,8 @@ export interface InspectorDeps {
   gatewayBase?: string
   /** 在办卡注入（控制器接 kanban list --status running --json；缺省=该面 not wired） */
   getRunningCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
+  getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
   /** safe-act 注入：matrix 跟进提醒（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
@@ -238,6 +240,9 @@ export class ClusterInspector {
         profiles: collectProfiles(this.deps),
         kanban: { ok: kanbanOk, error: kanbanErr, rows: kanbanRows },
         runningCards: { ok: cardsOk, error: cardsErr, cards: runningCards },
+        federation: this.deps.getFederationSnapshot
+          ? this.deps.getFederationSnapshot()
+          : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
       }
       this.lastSnapshot = snap
       const anomalies: TimedAnomaly[] = detectAll(snap).map((a) => ({ ...a, ts: snap.ts }))

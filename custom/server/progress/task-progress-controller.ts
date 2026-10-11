@@ -10,10 +10,24 @@ import { readDispatchLedger } from '../governance/dispatch-ledger'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { getSessionStore, readWorkspaceMilestones, readWorkspaceGitActivity } from './task-progress-store'
 import { taskProgressOverview } from './task-progress-analytics'
+import { machinesView, ensureFederationPublisher } from './federation-controller'
 
 const router = new Router({ prefix: '/api/progress' })
 
+// 跨机联邦视图（2026-10-11 三步之②）：机器全局视图独立端点；/tasks 应答附 machines
+// 摘要（机器数+最近心跳；明细走 /machines）。首次命中惰性启动上行发布器。
+router.get('/machines', async (ctx) => {
+  try {
+    ensureFederationPublisher()
+    const view = await machinesView()
+    ctx.body = { ok: true, ts: Date.now(), ...view }
+  } catch (err) {
+    ctx.body = { ok: false, ts: Date.now(), wired: false, machines: [], reason: 'federation_read_failed', detail: err instanceof Error ? err.message : String(err) }
+  }
+})
+
 router.get('/tasks', async (ctx) => {
+  void ensureFederationPublisher()
   const activeOnly = ctx.query.active === '1' || ctx.query.active === 'true'
   const limitRaw = Number(Array.isArray(ctx.query.limit) ? ctx.query.limit[0] : ctx.query.limit)
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 200) : 50
@@ -37,7 +51,7 @@ router.get('/tasks', async (ctx) => {
         gitActivity[e.workspaceId] = readWorkspaceGitActivity(e.workspaceId)
       }
     }
-    ctx.body = { ok: true, ts: Date.now(), ...overview, gitActivity }
+    ctx.body = { ok: true, ts: Date.now(), ...overview, gitActivity, machinesSummary: (await machinesView()).machines.map((m) => ({ machineId: m.machineId, self: m.self, silentMin: m.silentMin, activeTasks: m.activeTasks })) }
   } catch (err) {
     ctx.body = { ok: false, ts: Date.now(), tasks: [], total: 0, activeCount: 0, sessionPendingCount: 0, reason: 'progress_read_failed', detail: err instanceof Error ? err.message : String(err) }
   }
