@@ -1,0 +1,44 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: delivery.runtime-evidence
+  version: 0.1.0
+  description: >
+    L5.8 交付形态运行证据（2026-10-11 平台根治，run14 实锤：小程序工程单测 161 绿
+    但从未在真开发者工具跑过——网络层无基址注入这类运行时缺陷单测测不到）。
+    变更命中小程序形态标记（wxml/axml/工程配置）时，runtime-proof 必须在档且
+    launchOk=true。files executor 只证 present——真跑背书由 Swarm Studio
+    runtime-verify 记录（launchOk/screenshot/checkedAt）承载；消费方亦可由
+    miniprogram-automator 等自动化通道产出同形记录。契约正本=
+    custom/server/delivery-contract（交付六型×每型运行证据）。
+spec:
+  domain: L5
+  claims:
+    - delivery.runtime-evidence-present
+  triggers:
+    - task_close
+    - pre_commit
+  appliesWhen:
+    changed:
+      any:
+        - "**/*.wxml"
+        - "**/*.axml"
+        - "**/project.config.json"
+        - "**/mini.project.json"
+  executors:
+    - id: runtime-proof-files
+      type: files
+      require:
+        - "docs/evidence/*runtime-proof.json"
+      mustContain:
+        - file: "docs/evidence/*runtime-proof.json"
+          markers: ['"launchOk": true']
+      evidenceType: runtime-proof-present
+  evidence:
+    required:
+      - runtime-proof-present
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 168

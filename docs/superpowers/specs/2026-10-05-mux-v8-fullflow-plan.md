@@ -893,6 +893,17 @@ graph TB
 
 边界（如实登记）：单任务校验为"邻居不连坐"语义（他实例存量违规不阻塞本任务结卡，由全量跑批另行呈现）。Run 实例仅登记清单（run_id/graph_id），状态字段日志面拿不到不硬造。本条为观察面，不计入六道关卡判据（§5.3 不变），证据可引用形态见 §2.5 本体证据面。
 
+### 2.6.2 交付形态感知治理（平台级，场景无关——2026-10-11 平台根治轮立法）
+
+> 根因（run14 严重缺陷复盘）：场景技能（aipaydev-dev）只是实例——生成它的平台层（swarm yuan 骨架/Swarm Studio 治理面/hermes 任务协议）没有「交付形态」概念，导致「单测全绿=可运行」的错觉在新场景复刻。本条把交付形态感知立为**平台约束**，单一事实源=产品侧 `custom/server/delivery-contract`（交付六型×每型运行证据），四方消费、任一漂移即缺陷：
+
+- **交付六型清单**：backend-service（启动冒烟+跨模块契约测试）｜web-frontend（浏览器走查帧）｜mini-program（真开发者工具 runtime-proof：编译+启动+首帧）｜mobile-app（模拟器/真机启动证据）｜library-sdk（幂等执行输出件+消费方契约）｜governance-doc（模板字段核对即证据面）。运行面四型一律声明「单测全绿不等于可运行」。
+- **swarm yuan 生成器**：生成任何项目技能时嗅探交付形态写入认知表（AUTO:detected，AI 核正），骨架 checklist 含 delivery 项（每型运行证据+RUNTIME-OK/RUNTIME-FAIL 结论行），workflow ⑤编码/⑥测试/⑨发布节点按形态写 DoD；激活校验对「嗅探到运行面形态而 workflow 无交付形态段」留痕拒绝。
+- **QGate 形态门**：`delivery.runtime-evidence`（task_close/pre_commit，变更命中形态标记即适用——wxml/axml/工程配置；runtime-proof 在档且 launchOk=true，缺证 block，waiver 通道保留）。
+- **hermes 任务协议**：排期表与任务书必带「交付形态」列（pm-planning 技能+排期模板）；派发词随形态注入 DoD 与结论行约定。
+- **看板证据契约**：列 requiredArtifacts 可经 `requiredArtifactsForDeliveryTypes` 按形态合成建议件（runtime-proof/走查帧/冒烟日志）。
+- 治理表述（演示视频主线同源）：AI 负责产出（每型工件真实可反查），人对结果负责（运行证据在关卡被人签收）——交付形态契约就是这条责任线的机器执法面。
+
 ### 2.7 交付物体系与模板字段（缺一打回的唯一依据）
 
 每个环节"拿什么交差"落到模板字段，是任务书/派发词/报告生成的唯一依据。报告侧嵌原文渲染并逐节核对。缺模板或模板不满足实际需要时，按步 20 约定直接完善模板库再用，不绕开。
