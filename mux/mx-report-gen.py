@@ -3508,6 +3508,19 @@ if len(_real_frames) == 0:
              f'禁出空壳报告。修复：确保 aipay-scenario.sh 每步调 capture_step，'
              f'且 studio :8802 在线。不要用收尾后补拍冒充实时帧。')
 
+# ── 宿主环境脱敏（方案 §5.4.3，2026-10-11 用户指令）：报告禁露个人电脑环境标识 ──
+# 家目录/外置卷路径以占位形呈现；占位语义=路径可见性让位于隐私，反查走 run 目录原文件。
+import re as _re
+_ENV_MASK_RULES = (
+    (_re.compile(r'/Users/[A-Za-z0-9_.\-]+'), '[宿主家目录]'),
+    (_re.compile(r'/Volumes/[A-Za-z0-9_.\-]+'), '[宿主卷]'),
+)
+def _mask_env(text: str) -> str:
+    for _rx, _ph in _ENV_MASK_RULES:
+        text = _rx.sub(_ph, text)
+    return text
+
+html = _mask_env(html)
 OUT.write_text(html, encoding='utf-8')
 print(f'report written: {OUT} ({len(html)} bytes, {total_imgs} images)')
 
@@ -3547,5 +3560,5 @@ for n, title, gate_text, meta in STEPS:
         for pre, cap, kind in meta['imgs']:
             _buf.write(f'   - screenshots/steps/{pre}.png | {cap}\n')
     _buf.write('\n')
-(EVID / 'steps-extract.txt').write_text(_buf.getvalue(), encoding='utf-8')
+(EVID / 'steps-extract.txt').write_text(_mask_env(_buf.getvalue()), encoding='utf-8')
 print(f'txt written: {EVID}/steps-extract.txt')

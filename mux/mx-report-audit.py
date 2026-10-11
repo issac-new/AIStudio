@@ -686,6 +686,12 @@ if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
     elif '分支落地时间线' not in rep:
         fails.append('步 18 缺分支落地时间线行（干预点 D：并行度行在则推进刻度行必在，同批渲染）')
 
+# ── A9 宿主环境脱敏（方案 §5.4.3，2026-10-11）：报告禁露个人电脑环境标识 ──
+import re as _re9
+_leak9 = _re9.findall(r'/Users/[A-Za-z0-9_.\-]+|/Volumes/[A-Za-z0-9_.\-]+', rep)
+if _leak9:
+    fails.append(f'A9 宿主环境标识泄漏 {len(_leak9)} 处（如 {_leak9[0]}）——生成器 _mask_env 未覆盖或绕过（§5.4.3 脱敏纪律）')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。
