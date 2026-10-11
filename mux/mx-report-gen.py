@@ -116,7 +116,7 @@ def _v82_sec(body, name):
 
 plan_steps = {}
 if PLAN_V82:
-    for m in re.finditer(r'^\*\*步 (\d{1,2})｜(.+?)\*\*\s*$(.+?)(?=^\*\*步 \d{1,2}｜|^#{2,3} |\Z)',
+    for m in re.finditer(r'^\*\*步 (\d{1,2})｜(.+?)\*\*\s*$(.+?)(?=^\*\*步 \d{1,2}｜|^#{2,3} |^#### |\Z)',
                          plan_text, re.M | re.S):
         n = int(m.group(1))
         if n in plan_steps: continue
