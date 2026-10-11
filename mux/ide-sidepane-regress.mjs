@@ -5,7 +5,7 @@
 //   node mux/ide-sidepane-regress.mjs
 //   BASE=http://localhost:8649 OUT=/tmp/x node mux/ide-sidepane-regress.mjs   # 可覆写
 // 依赖 simharness/node_modules 的 playwright；本机无 ms-playwright 缓存时走系统
-// Chrome（channel:'chrome'，capture-gov-stable.mjs 同款）。
+// Chrome（channel:'chrome' 系统浏览器，免下载缓存）。
 //
 // 已知环境事实（勿当缺陷报）：
 // - dev 自动登录 admin/123456 为 super_admin；默认口令提醒模态框每浏览器档案
