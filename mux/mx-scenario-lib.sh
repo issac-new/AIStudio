@@ -1654,7 +1654,7 @@ $(date +%F),${RFD_ID},全程,缺陷密度,${_dens},$(date +%F)..$(date +%F),qual
 $(date +%F),${RFD_ID},全程,打回次数,${_reject},$(date +%F)..$(date +%F),issues.log 实算,打回/拒收/熔断行计数
 $(date +%F),${RFD_ID},全程,告警类问题单,${_alertline},$(date +%F)..$(date +%F),issues.log 实算,口径=基础设施/容量/网关族键按类型段聚合差分呈现（同族 N 键一行，新增键才单列——防告警刷屏淹没新信号）
 $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 ⬜）,$(date +%F)..$(date +%F),issues.log 实算,DISP 注明导演计数；占比待 MX_DELIVERY=1 协议事件结构化"
-  # 基线对比行（R26：读上轮治理报告首过率行——「下次推演目标即上次基线+1」机制化，§2.6.5）
+  # 基线对比行（读上轮治理报告首过率行——「下次基线+1」机制化，§2.6-5）
   local _runs_dir _prev _baseline
   _runs_dir="$(dirname "$(dirname "$EVID_DIR")")"
   _prev=""
@@ -1687,7 +1687,7 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
     echo "$METRICS_CSV"
     echo "\`\`\`"
     echo
-    echo "## 基线对比（§2.6.5 上次基线+1 机制）"
+    echo "## 基线对比（§2.6-5 上次基线+1 机制）"
     if [ -n "$_baseline" ]; then
       echo "- 上轮（$(basename "$_prev")）：${_baseline}"
       echo "- 本轮（${RUN_ID}）：首过率 ${_fp}/6（${_gate_detail}）"
