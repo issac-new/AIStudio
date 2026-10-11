@@ -1,0 +1,23 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 9d10db5e..cae7fc44 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -135,6 +135,10 @@ import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
+ // overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
+ // 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
+ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
++// overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
++// /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
++// 挂载（悬空件），606 补登。
++import { runtimeVerifyRoutes } from '../custom/runtime-verify/runtime-verify'
+ // overlay[ontology]（本体工作台）：GB/T 48000.3 方法论产品化——五要素本体
+ // （类型/数据属性/对象属性/公理/规则）+ SHACL 式写入校验 + IRI/版本管理 +
+ // JSON-LD/SHACL/Turtle 导出。/api/hermes/ontology
+@@ -425,6 +429,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
+   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
++  app.use(runtimeVerifyRoutes.routes())           // runtime-verify：验证器注册表 REST（B5）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
+   app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库

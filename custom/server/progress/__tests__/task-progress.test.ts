@@ -139,3 +139,31 @@ describe('git 进度锚（①git 进度源：里程碑 note 的 commit= 提取�
     expect(r.tasks[0]!.gitAnchor).toBeUndefined()
   })
 })
+
+// ── 长会话治理 B2：同 taskId 跨机合并 ────────────────────────────────────────
+
+describe('taskProgressOverview machines merge (B2)', () => {
+  it('annotates tasks reported by federation machines; local-only tasks stay unannotated', () => {
+    const ledger = [
+      { ts: 1, taskId: 'T-1', target: 'a', reason: 'queued', sessionId: 's1', workspaceId: '/w' },
+      { ts: 2, taskId: 'T-2', target: 'b', reason: 'queued', sessionId: 's2', workspaceId: '/w' },
+    ] as unknown as DispatchLedgerEntry[]
+    const byMachine = new Map([
+      ['mac-a', ['T-1']],
+      ['mac-b', ['T-1', 'T-9']],
+    ])
+    const out = taskProgressOverview(ledger, new Map(), { tasksByMachine: byMachine })
+    const t1 = out.tasks.find((t) => t.taskId === 'T-1')!
+    const t2 = out.tasks.find((t) => t.taskId === 'T-2')!
+    expect(t1.machines).toEqual(['mac-a', 'mac-b']) // 跨机合并、稳定序
+    expect(t2.machines).toBeUndefined() // 本机独跑不标注
+  })
+
+  it('no federation input keeps the field absent everywhere', () => {
+    const ledger = [
+      { ts: 1, taskId: 'T-1', target: 'a', reason: 'queued', workspaceId: '/w' },
+    ] as unknown as DispatchLedgerEntry[]
+    const out = taskProgressOverview(ledger, new Map())
+    expect(out.tasks[0]!.machines).toBeUndefined()
+  })
+})

@@ -24,6 +24,7 @@ const TASKS_TABS_TEXT = {
     tabGovHarness: '工程效能',
     tabGovCluster: '集群健康',
     tabGovOntology: '语义体检',
+    tabGovSessionHealth: '会话健康',
   },
   en: {
     tabBoard: 'Board',
@@ -38,6 +39,7 @@ const TASKS_TABS_TEXT = {
     tabGovHarness: 'Engineering Metrics',
     tabGovCluster: 'Cluster Health',
     tabGovOntology: 'Semantic Health',
+    tabGovSessionHealth: 'Session Health',
   },
 } as const
 

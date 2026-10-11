@@ -16,7 +16,7 @@ import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type A
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
 import { checkDispatchBudget } from '../governance/governance-budget'
 import { loadActionContracts, buildDispatchSemanticContext, loadCapabilityLedger, loadMetricsDefs } from '../governance/governance-ledger'
-import { appendDispatchOutcome } from '../governance/dispatch-ledger'
+import { appendDispatchOutcome, hasRecentDispatch } from '../governance/dispatch-ledger'
 import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluation } from '../governance/decision-rules'
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 
@@ -32,6 +32,9 @@ export interface ColumnDispatchResult {
   rules: RuleEvaluation[]
   /** 先例检索是否注入（乙5）：null=KG 缺席/无先例。 */
   precedents: Array<{ stepId: string; line: string | null }>
+  /** 派发幂等去重（长会话治理 B4）：重放/重启环里被跳过的 step——
+   *  30 分钟窗口内同 taskId+column+provider 已派发过即跳（4be3a3b 教训产品化）。 */
+  deduped: Array<{ taskId: string; column: string; stepId: string; provider: string }>
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -148,6 +151,9 @@ export async function dispatchColumnTransition(
   const delegation: DelegationCheck[] = []
   const ruleEvals: RuleEvaluation[] = []
   const precedents: Array<{ stepId: string; line: string | null }> = []
+  const deduped: ColumnDispatchResult['deduped'] = []
+  // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
+  const inflight = new Set<string>()
   for (const trigger of triggers) {
     delegation.push(...delegationCompleteness(trigger.steps))
     for (const [index, step] of trigger.steps.entries()) {
@@ -162,14 +168,28 @@ export async function dispatchColumnTransition(
       const precedentLine = precedent?.line ?? null
       precedents.push({ stepId: step.id, line: precedentLine })
       // step→agent 派单：provider 已过词表校验才拼进目标 token；简报文本同理。
+      // B4 幂等闸：同 taskId+column+provider 在 30 分钟窗口内（或在途）已派发 → 跳过。
+      const idemKey = params.taskId ? `${params.taskId}::${trigger.column}::${step.provider}` : ''
+      if (idemKey && (inflight.has(idemKey) || hasRecentDispatch(
+        { taskId: params.taskId, kind: 'column', column: trigger.column, target: step.provider }))) {
+        deduped.push({ taskId: params.taskId as string, column: trigger.column, stepId: step.id, provider: step.provider })
+        continue
+      }
+      inflight.add(idemKey)
+      let stepOutcomes: MentionOutcome[]
       const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine)}`
-      const stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
+      try {
+        stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
+      } finally {
+        inflight.delete(idemKey)
+      }
       outcomes.push(...stepOutcomes)
       for (const o of stepOutcomes) {
         appendDispatchOutcome({
           kind: 'column', target: step.provider, specialist: step.specialist || undefined,
           role: step.role || undefined, column: trigger.column, reason: o.reason,
           commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
+          taskId: params.taskId,
           detail: o.detail?.slice(0, 200),
         })
         // 决策落账（乙4）：派发路由决策进 KG，fire-and-forget 不等不抛。
@@ -180,6 +200,6 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped }
 }
 

@@ -1,0 +1,372 @@
+diff --git a/agent/handoff_checkpoint.py b/agent/handoff_checkpoint.py
+new file mode 100644
+index 0000000000..4207885958
+--- /dev/null
++++ b/agent/handoff_checkpoint.py
+@@ -0,0 +1,185 @@
++"""交接检查点（长会话治理 604）：会话生命周期边界处落一份**机械**交接记录。
++
++落点：``<HERMES_HOME>/session-checkpoints/<safe-key>.json``（每键保留最近 8 条历史，
++原子写，fail-open）。写入方：603 会话轮换（auto 档）、fork API（api_server）、
++后续任何压缩边界调用方。消费方：603 轮换后回合 sidecar note、kanban worker 冷启动
++上下文（build_worker_context 的「最近会话交接检查点」段）。
++
++诚实边界：这是**机械检查点**，不是 LLM 摘要——客观字段（目标指针、末次产出尾部、
++累计计数、轮换原因）+ 纪律重申；done/left/blocked 的语义判断留给接手会话自行确认，
++模板不做编造。字段格式对齐 delegate 交接短语协议（patch 416：done/left/blocked 带
++file:line 锚点）与 kanban runs 表字段。
++"""
++
++from __future__ import annotations
++
++import json
++import logging
++import os
++import re
++import tempfile
++import time
++from contextlib import suppress
++from pathlib import Path
++from typing import Any, Dict, List, Optional
++
++logger = logging.getLogger(__name__)
++
++CHECKPOINTS_DIR = "session-checkpoints"
++HISTORY_CAP = 8
++_OUTPUT_TAIL_CHARS = 400
++_UNSAFE_KEY = re.compile(r"[^A-Za-z0-9._-]+")
++
++RULES_RESTATEMENT = (
++    "Standing rules: stay in role; every claim needs an evidence anchor "
++    "(file:line / command output / URL); no evidence, no PASS; a diff or commit "
++    "alone is not completion evidence; if blocked, persist done/left/blocked."
++)
++
++
++def _safe_key(key: str) -> str:
++    cleaned = _UNSAFE_KEY.sub("-", str(key or "session")).strip("-.") or "session"
++    return cleaned[:120]
++
++
++def _checkpoints_dir() -> Optional[Path]:
++    try:
++        from hermes_constants import get_hermes_home
++        directory = get_hermes_home() / CHECKPOINTS_DIR
++        directory.mkdir(parents=True, exist_ok=True)
++        return directory
++    except Exception:  # noqa: BLE001
++        return None
++
++
++def write_checkpoint(key: str, source: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
++    """追加一条检查点（历史有界）；返回写下的记录，失败返 None（fail-open）。"""
++    directory = _checkpoints_dir()
++    if directory is None:
++        return None
++    record = {"ts": time.time(), "source": str(source or "manual")}
++    record.update({k: v for k, v in (fields or {}).items() if k not in ("ts", "source")})
++    path = directory / f"{_safe_key(key)}.json"
++    try:
++        history: List[Dict[str, Any]] = []
++        if path.is_file():
++            with suppress(Exception):
++                history = (json.loads(path.read_text(encoding="utf-8")) or {}).get("history", [])
++        history.append(record)
++        history = history[-HISTORY_CAP:]
++        fd, tmp = tempfile.mkstemp(dir=str(directory), prefix=".ckpt.", suffix=".tmp")
++        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
++            json.dump({"key": _safe_key(key), "history": history}, tmp_file, ensure_ascii=False)
++        os.replace(tmp, path)
++        return record
++    except Exception:  # noqa: BLE001
++        logger.debug("handoff checkpoint write failed for %s", key, exc_info=True)
++        return None
++
++
++def read_latest(key: str) -> Optional[Dict[str, Any]]:
++    directory = _checkpoints_dir()
++    if directory is None:
++        return None
++    path = directory / f"{_safe_key(key)}.json"
++    with suppress(Exception):
++        history = (json.loads(path.read_text(encoding="utf-8")) or {}).get("history", [])
++        return history[-1] if history else None
++    return None
++
++
++def recent_checkpoints(limit: int = 3) -> List[Dict[str, Any]]:
++    """跨键最近检查点（mtime 序）——worker 上下文用。"""
++    directory = _checkpoints_dir()
++    if directory is None:
++        return []
++    records: List[Dict[str, Any]] = []
++    with suppress(Exception):
++        for path in directory.glob("*.json"):
++            with suppress(Exception):
++                history = (json.loads(path.read_text(encoding="utf-8")) or {}).get("history", [])
++                if history:
++                    item = dict(history[-1])
++                    item["key"] = path.stem
++                    records.append(item)
++    records.sort(key=lambda r: float(r.get("ts", 0)), reverse=True)
++    return records[:limit]
++
++
++def _tail(text: Any, limit: int = _OUTPUT_TAIL_CHARS) -> str:
++    s = str(text or "").strip()
++    return s[-limit:] if len(s) > limit else s
++
++
++def checkpoint_from_turn(
++    session_key: str, session_entry: Any, agent_result: Any,
++    telemetry_entry: Optional[Dict[str, Any]], reason: str,
++) -> Dict[str, Any]:
++    """机械采集轮换时刻的交接字段（不调用模型）。"""
++    final_response = ""
++    if isinstance(agent_result, dict):
++        final_response = agent_result.get("final_response") or agent_result.get("error") or ""
++    telemetry = telemetry_entry if isinstance(telemetry_entry, dict) else {}
++    return {
++        "objective": str(getattr(session_entry, "display_name", "") or ""),
++        "reason": str(reason or ""),
++        "pointers": {
++            "prev_session_id": str(getattr(session_entry, "session_id", "") or ""),
++            "session_key": str(session_key or ""),
++        },
++        "last_output_tail": _tail(final_response),
++        "counters": {
++            "turns": telemetry.get("turns"),
++            "cum_api_calls": telemetry.get("cum_api_calls"),
++            "heartbeats": (telemetry.get("heartbeat") or {}).get("emitted"),
++            "runaway_signal": (telemetry.get("runaway") or {}).get("signal"),
++            "rotations": telemetry.get("rotations"),
++        },
++        "left": "confirm by reading the previous transcript (see pointers) before continuing",
++        "blocked": "",
++        "rules": RULES_RESTATEMENT,
++    }
++
++
++def build_checkpoint_note(record: Optional[Dict[str, Any]]) -> str:
++    """轮换后首回合 sidecar note 文本（接手会话读）。"""
++    if not isinstance(record, dict) or not record:
++        return ""
++    pointers = record.get("pointers") or {}
++    counters = record.get("counters") or {}
++    lines = [
++        "[HANDOFF CHECKPOINT — session was rotated]",
++        f"reason: {record.get('reason', '')}",
++        f"objective: {record.get('objective', '') or '(untitled)'}",
++        f"previous session: {pointers.get('prev_session_id', '')} (key {pointers.get('session_key', '')})",
++    ]
++    if counters:
++        shown = " ".join(f"{k}={v}" for k, v in counters.items() if v is not None)
++        if shown:
++            lines.append(f"counters: {shown}")
++    tail = str(record.get("last_output_tail", "")).strip()
++    if tail:
++        lines.append(f"last output (tail): {tail}")
++    lines.append(f"next: {record.get('left', '')}")
++    lines.append(record.get("rules", RULES_RESTATEMENT))
++    return "\n".join(lines)
++
++
++def worker_context_block(limit: int = 3) -> str:
++    """kanban worker 冷启动上下文的「最近会话交接检查点」段（无检查点返回空串）。"""
++    records = recent_checkpoints(limit)
++    if not records:
++        return ""
++    lines = ["## Recent session handoff checkpoints"]
++    for item in records:
++        ts = time.strftime("%m-%d %H:%M", time.localtime(float(item.get("ts", 0) or 0)))
++        lines.append(
++            f"- [{ts}] {item.get('key', '?')} source={item.get('source', '?')} "
++            f"reason={item.get('reason', '-')}: "
++            f"left={str(item.get('left', ''))[:120]}"
++        )
++    lines.append(
++        "(mechanical checkpoints from rotated sessions; confirm details from the "
++        "pointers before relying on them)"
++    )
++    return "\n".join(lines)
+diff --git a/tests/agent/test_handoff_checkpoint.py b/tests/agent/test_handoff_checkpoint.py
+new file mode 100644
+index 0000000000..56bfa54402
+--- /dev/null
++++ b/tests/agent/test_handoff_checkpoint.py
+@@ -0,0 +1,105 @@
++"""交接检查点（604）：写读回环、note 构造、轮换/fork/worker 三接线。"""
++import zoneinfo  # noqa: F401 预导入：本机 venv 标准库在真实 hermes home 下，护栏窗口内
++                 # 惰性导入会被 home_io_guard 误伤（同 602/603 测试）。
++from types import SimpleNamespace
++
++import pytest
++
++from agent import handoff_checkpoint as hc
++
++
++@pytest.fixture(autouse=True)
++def _isolate(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++    yield
++
++
++def test_write_read_roundtrip_and_history_cap():
++    for i in range(10):
++        record = hc.write_checkpoint("sess/a b", "rotation", {"reason": f"r{i}", "left": "x"})
++        assert record is not None
++    latest = hc.read_latest("sess/a b")
++    assert latest["reason"] == "r9"
++    directory = hc._checkpoints_dir()
++    import json
++    data = json.loads((directory / "sess-a-b.json").read_text(encoding="utf-8"))
++    assert len(data["history"]) == hc.HISTORY_CAP  # 有界历史
++
++
++def test_missing_key_reads_none():
++    assert hc.read_latest("no-such") is None
++
++
++def test_checkpoint_from_turn_mechanical_fields():
++    entry = SimpleNamespace(session_key="k1", session_id="sid-9", display_name="支付网关")
++    telemetry = {"turns": 30, "cum_api_calls": 410,
++                 "heartbeat": {"emitted": 3}, "runaway": {"signal": "polling_repeat"}}
++    record = hc.checkpoint_from_turn(
++        "k1", entry, {"final_response": "step 7 done. next: step 8"}, telemetry, "cumulative-api-calls")
++    assert record["pointers"]["prev_session_id"] == "sid-9"
++    assert record["counters"]["cum_api_calls"] == 410
++    assert record["counters"]["runaway_signal"] == "polling_repeat"
++    assert "step 7 done" in record["last_output_tail"]
++    assert "evidence anchor" in record["rules"]
++
++
++def test_checkpoint_note_contains_pointer_and_rules():
++    record = hc.checkpoint_from_turn(
++        "k1", SimpleNamespace(session_key="k1", session_id="s1", display_name=""),
++        {"final_response": "tail text"}, None, "watermark-stuck")
++    note = hc.build_checkpoint_note(record)
++    assert "[HANDOFF CHECKPOINT" in note
++    assert "s1" in note
++    assert "no evidence, no PASS" in note
++
++
++def test_worker_context_block_lists_recent():
++    assert hc.worker_context_block() == ""  # 无检查点时空段
++    hc.write_checkpoint("alpha", "rotation", {"reason": "empty-streak", "left": "verify step 3"})
++    hc.write_checkpoint("beta", "fork", {"reason": "", "left": ""})
++    block = hc.worker_context_block(limit=2)
++    assert "## Recent session handoff checkpoints" in block
++    assert "alpha" in block and "beta" in block
++    assert "mechanical checkpoints" in block
++
++
++@pytest.mark.asyncio
++async def test_wiring_rotation_auto_writes_checkpoint_and_sidecar(tmp_path, monkeypatch):
++    from gateway import session_rotation as sr
++    from gateway import session_telemetry as st
++    sr.reset_book()
++    st.reset_state()
++    st._STATE["k1"] = {"turns": 20, "cum_api_calls": 401, "watermark_pct": 40.0, "empty_streak": 0}
++    monkeypatch.setenv("HERMES_SESSION_ROTATION", "auto")
++    sidecar_notes = []
++
++    class _Store:
++        async def reset_session(self, key, display_name=None):
++            return SimpleNamespace(session_key=key, session_id="fresh")
++
++    gw = SimpleNamespace(
++        async_session_store=_Store(),
++        _evict_cached_agent=lambda k: None,
++        _clear_conversation_scope=lambda k, reason=None: None,
++        _sync_telegram_topic_binding=lambda *a, **kw: None,
++        _set_pending_turn_sidecar_notes=lambda k, notes: sidecar_notes.extend(notes),
++    )
++    response, entry = await sr.maybe_rotate_session(
++        gw, {"api_calls": 2, "final_response": "working"},
++        "ok", SimpleNamespace(session_key="k1", session_id="old", display_name="目标"), "k1", None)
++    assert entry.session_id == "fresh"
++    assert sidecar_notes and "[HANDOFF CHECKPOINT" in sidecar_notes[0]
++    saved = hc.read_latest("k1")
++    assert saved is not None and saved["source"] == "rotation"
++    assert saved["counters"]["cum_api_calls"] == 401
++    assert "目标" in saved["objective"]
++
++
++def test_wiring_worker_context_and_fork_reference_module():
++    from pathlib import Path
++    import hermes_cli.kanban_db as kdb
++    source = Path(kdb.__file__).read_text(encoding="utf-8")
++    assert "from agent.handoff_checkpoint import worker_context_block" in source
++    import gateway.platforms.api_server as srv
++    source = Path(srv.__file__).read_text(encoding="utf-8")
++    assert "from agent.handoff_checkpoint import write_checkpoint" in source
+diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
+index 3945acfd86..663f1ba1a1 100644
+--- a/gateway/session_rotation.py
++++ b/gateway/session_rotation.py
+@@ -167,9 +167,18 @@ async def maybe_rotate_session(
+             )
+             return (response or "") + REPORT_NOTICE.format(reason=reason), session_entry
+ 
+-        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）
++        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）；
++        # 轮换前落交接检查点（604），轮换后把检查点 note 挂给新会话首回合 sidecar。
+         logger.info("Auto-rotating session %s (long-session limit: %s).", session_key, reason)
+         note_rotation(session_key, reason=f"auto:{reason}")
++        checkpoint_note = ""
++        with suppress(Exception):
++            from agent.handoff_checkpoint import (
++                build_checkpoint_note, checkpoint_from_turn, write_checkpoint,
++            )
++            record = checkpoint_from_turn(session_key, session_entry, agent_result, entry, reason)
++            if write_checkpoint(session_key, "rotation", record) is not None:
++                checkpoint_note = build_checkpoint_note(record)
+         new_entry = await gateway.async_session_store.reset_session(session_key)
+         gateway._evict_cached_agent(session_key)
+         gateway._clear_conversation_scope(session_key, reason=f"long_session_rotation:{reason}")
+@@ -180,6 +189,9 @@ async def maybe_rotate_session(
+                     gateway._sync_telegram_topic_binding, source, session_entry,
+                     reason="long-session-rotation",
+                 )
++        if checkpoint_note:
++            with suppress(Exception):
++                gateway._set_pending_turn_sidecar_notes(session_key, [checkpoint_note])
+         return (response or "") + AUTO_NOTICE.format(reason=reason), session_entry
+     except Exception:  # noqa: BLE001 - 轮换面故障绝不冒泡
+         logger.warning("session rotation check failed", exc_info=True)
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index e0ecf1b1b4..6214c504ad 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -3994,6 +3994,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
+     _ctx_parent_results(lines, conn, task_id, now)
+     _ctx_role_history(lines, conn, task, now)
+     _ctx_comments(lines, list_comments(conn, task_id), now)
++    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
++    with contextlib.suppress(Exception):
++        from agent.handoff_checkpoint import worker_context_block
++        _ckpt_block = worker_context_block()
++        if _ckpt_block:
++            lines.append(_ckpt_block)
+     return "\n".join(lines).rstrip() + "\n"
+ 
+ 
+diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
+index 38d4eef3d9..60514ed39d 100644
+--- a/gateway/platforms/api_server.py
++++ b/gateway/platforms/api_server.py
+@@ -3342,6 +3342,14 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+         except ValueError as exc:
+             return _error_response(str(exc), 400, code="invalid_title")
+         fork = await asyncio.to_thread(db.get_session, fork_id) or {"id": fork_id, "parent_session_id": source_id}
++        # 604 交接检查点写侧：fork 即生命周期边界，给子会话留机械指针（fail-open）
++        with suppress(Exception):
++            from agent.handoff_checkpoint import write_checkpoint
++            write_checkpoint(f"fork-{fork_id}", "fork", {
++                "objective": str(source.get("title") or ""),
++                "pointers": {"parent_session_id": source_id, "fork_session_id": fork_id},
++                "left": "the fork carries the parent transcript; confirm continuity from it",
++            })
+         return web.json_response({"object": "hermes.session", "session": self._session_response(fork)}, status=201)
+ 
+     async def _prepare_session_chat(self, request: "web.Request") -> tuple:

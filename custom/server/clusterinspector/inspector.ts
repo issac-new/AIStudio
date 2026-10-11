@@ -6,7 +6,7 @@
 // govbus 走"动态 require + fail-soft"（跨域桥接纪律，同 approvals/evidence 先例）。
 
 import type { ClusterSnapshot } from './collectors'
-import { collectGateway, collectProfiles, collectSessions } from './collectors'
+import { collectGateway, collectProfiles, collectSessionTelemetry, collectSessions } from './collectors'
 import { detectAll, type Anomaly } from './detectors'
 type TimedAnomaly = Anomaly & { ts?: number }
 
@@ -178,6 +178,8 @@ export class ClusterInspector {
   private async safeAct(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
     if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
+    // B4 幂等：同任务的 reclaim 进程内只做一次——重启环里巡检每轮都看到同一张
+    // 僵尸卡，重复 reclaim 是副作用风暴（4be3a3b 教训同源；跨进程靠 hermes CLI 自身幂等）。
     const reclaim = this.deps.reclaimTask ?? ((id: string) => new Promise<string | undefined>((resolve) => {
       try {
         const { execFile } = require('node:child_process')
@@ -186,11 +188,15 @@ export class ClusterInspector {
     }))
     for (const a of anomalies) {
       if (a.detector !== 'kanban.stale-worker' || a.subject === 'board') continue
+      if (this.safeActedSubjects.has(a.subject)) continue
+      this.safeActedSubjects.add(a.subject)
       const r = await reclaim(a.subject)
       acted.push(`${a.subject}:${r ? 'reclaimed' : 'reclaim-failed'}`)
     }
     return acted
   }
+  /** safe-act 已处置主体（进程内幂等键，B4） */
+  private safeActedSubjects = new Set<string>()
 
   async runOnce(): Promise<RunOutcome> {
     const t0 = Date.now()
@@ -243,6 +249,7 @@ export class ClusterInspector {
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
+        sessionTelemetry: collectSessionTelemetry(this.deps),
       }
       this.lastSnapshot = snap
       const anomalies: TimedAnomaly[] = detectAll(snap).map((a) => ({ ...a, ts: snap.ts }))

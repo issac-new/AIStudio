@@ -50,7 +50,7 @@ export interface Claim {
 export interface ExecutorSpec {
   id: string
   type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm' | 'scope' | 'traceability' | 'register'
-    | 'contract' | 'behavior' | 'semantic' | 'ops'
+    | 'contract' | 'behavior' | 'semantic' | 'ops' | 'runtime-proof'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
@@ -71,6 +71,11 @@ export interface ExecutorSpec {
   require?: string[]
   /** files：文件存在之外还须包含指定标记串（格式在档检查，仍为 present 级）。 */
   mustContain?: Array<{ file: string; markers: string[] }>
+  /** runtime-proof（长会话治理 B5）：runtime-verify 产物记录的路径（相对 workspace）；
+   *  校验 tool/appid/launchOk/screenshot/checkedAt 五要素 + 新鲜度（默认 24h）。
+   *  fail-closed：文件缺失/畸形/超龄/launchOk≠true 一律 FAIL，不降级。 */
+  proofFile?: string
+  proofMaxAgeHours?: number
   /** 检查模式：scope/acceptance（scope executor）；diff/breaking/surface/matrix（contract）；
       cases/journey/property/visual/invariant（behavior，invariant=R8 上游 invariant 本地方言）；
       metrics/budget/rerun/trace-continuity/resilience/topology/conventions/consistency/configuration/documentation/symbols/writing-style（ops，

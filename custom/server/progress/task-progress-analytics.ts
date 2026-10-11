@@ -47,6 +47,9 @@ export interface TaskProgress {
   milestones: Array<{ ts: string; milestone: string; status?: string; note?: string }>
   /** git 进度锚：里程碑/回执 note 中最新 commit= 短哈希（任务卡的代码侧进度源；缺席=该卡尚无代码交付锚，如实 undefined）。 */
   gitAnchor?: string
+  /** 跨机维度（长会话治理 B2）：联邦注册表里上报过该 taskId 的机器——同任务跨机
+   *  合并的呈现面（本机台账之外还有谁在跑这张卡）；本机独跑=仅本地视角，不标注。 */
+  machines?: string[]
 }
 
 export interface TaskProgressSummary {
@@ -63,7 +66,7 @@ const OK_REASONS = new Set(['queued', 'coalesced'])
 export function taskProgressOverview(
   ledger: DispatchLedgerEntry[],
   sessions: Map<string, ProjectionSession>,
-  opts: { activeOnly?: boolean; limit?: number; milestonesByWorkspace?: Map<string, MilestoneEntry[]> } = {},
+  opts: { activeOnly?: boolean; limit?: number; milestonesByWorkspace?: Map<string, MilestoneEntry[]>; tasksByMachine?: Map<string, string[]> } = {},
 ): TaskProgressSummary {
   const byTask = new Map<string, DispatchLedgerEntry[]>()
   for (const e of ledger) {
@@ -107,6 +110,7 @@ export function taskProgressOverview(
       active: session ? isSessionActive(session) : false,
       milestones: wsMilestones.map((m) => ({ ts: m.ts, milestone: m.milestone, status: m.status, note: m.note })),
       gitAnchor: latestGitAnchor(wsMilestones),
+      machines: machinesFor(taskId, opts.tasksByMachine),
     })
   }
   // 活跃优先，其次最近派发。
@@ -119,6 +123,16 @@ export function taskProgressOverview(
     activeCount: filtered.filter((t) => t.active).length,
     sessionPendingCount: filtered.filter((t) => !t.sessionKnown).length,
   }
+}
+
+/** 同 taskId 跨机合并（B2）：联邦注册表 taskId → 上报机器列表（去重稳定序）。 */
+function machinesFor(taskId: string, byMachine?: Map<string, string[]>): string[] | undefined {
+  if (!byMachine || byMachine.size === 0) return undefined
+  const machines = new Set<string>()
+  for (const [machine, tasks] of byMachine) {
+    if (tasks.includes(taskId)) machines.add(machine)
+  }
+  return machines.size > 0 ? [...machines].sort() : undefined
 }
 
 function isSessionActive(session: ProjectionSession): boolean {

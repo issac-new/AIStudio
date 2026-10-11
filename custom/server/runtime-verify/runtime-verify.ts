@@ -20,6 +20,7 @@ import { exec } from 'node:child_process'
 import { existsSync, cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import Router from '@koa/router'
+import { describeVerifiers, registerVerifier } from './verifier-registry'
 
 export const WECHAT_DEVTOOLS_CLI = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 
@@ -153,10 +154,24 @@ export async function verifyMiniProgram(opts: {
   }
 }
 
+// ── B5 注册表登记：小程序为首个 entry；新验证器=registerVerifier 一个调用 ──
+registerVerifier({
+  id: 'miniprogram-wechat',
+  kind: 'runtime-proof',
+  title: '微信小程序·真实开发者工具编译+启动+首帧',
+  probe: () => probeWechatDevtools(),
+  verify: (opts) => verifyMiniProgram(opts as Parameters<typeof verifyMiniProgram>[0]),
+})
+
 export const runtimeVerifyRoutes = new Router({ prefix: '/api/hermes/runtime-verify' })
 
 runtimeVerifyRoutes.get('/health', (ctx) => {
   ctx.body = probeWechatDevtools()
+})
+
+/** B5：注册表枚举（probe 只读执行；每 entry 带 kind 供 delivery-contract 对账） */
+runtimeVerifyRoutes.get('/verifiers', (ctx) => {
+  ctx.body = { ok: true, verifiers: describeVerifiers() }
 })
 
 runtimeVerifyRoutes.post('/miniprogram', async (ctx) => {
