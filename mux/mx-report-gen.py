@@ -2574,14 +2574,14 @@ try:
         _rows_html = ''.join(f'<tr><td>{H.escape(r.strip("| "))}</td></tr>' for r in _sec_rows)
         _sec_html = ('<section class="nv-sec" id="ch4-security"><h2>安全合规（QUALITY 段门禁透传）</h2>'
                      '<p class="stat-note">安全族门禁判定原文（qgate release-report，来源分布随行；'
-                     'INCONCLUSIVE=该门未绑执行器属无信号桶，如实呈现非全绿——绑定真跑留 run15 QUALITY 段接线）</p>'
+                     'INCONCLUSIVE=该门未绑执行器属无信号桶，如实呈现非全绿——绑定实跑留 run15 QUALITY 段接线）</p>'
                      f'<table class="st-issues-tbl"><tbody>{_rows_html or "<tr><td>（安全族门禁零行——report 无 security/dependency 行）</td></tr>"}</tbody></table>'
                      + (f'<p class="stat-note">{H.escape(_src_line)}</p>' if _src_line else '')
                      + '</section>')
     else:
         _sec_html = ('<section class="nv-sec" id="ch4-security"><h2>安全合规（QUALITY 段门禁透传）</h2>'
                      '<p class="no-evidence">本轮无 qgate release-report（evidence/qgate-release-report.txt 缺席）——'
-                     '安全合规面零呈现如实声明（run15 起 QUALITY 段 precheck --all-full 落档后透传）。</p></section>')
+                     '安全合规面零呈现如实声明（run15 起 QUALITY 段 precheck --all-full 出报告后透传）。</p></section>')
     # 第 4 章常驻：产品成效块（§5.4）+ 新特性表（按轮注册）+ 安全合规节（P3-7②）
     _ch4_html = ('<section class="nv-sec" id="ch4-features"><h2>第 4 章 · 本轮交付成效与新特性</h2>'
                  + _po_html + _feat_tbl + '</section>' + _sec_html)
