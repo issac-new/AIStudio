@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/utils/desktop-bridge.ts
-index 011f0e90..721bc4a7 100644
+index 2a13a58c0..4644a0771 100644
 --- a/packages/client/src/utils/desktop-bridge.ts
 +++ b/packages/client/src/utils/desktop-bridge.ts
 @@ -175,6 +175,8 @@ export interface HermesDesktopBridge {
@@ -11,10 +11,10 @@ index 011f0e90..721bc4a7 100644
    getWindowState: () => Promise<{ isMaximized: boolean }>
    windowControl: (action: 'minimize' | 'toggle-maximize' | 'close') => Promise<{ isMaximized: boolean }>
    onWindowStateChange?: (callback: (state: { isMaximized: boolean }) => void) => () => void
-@@ -185,7 +187,7 @@ export interface HermesDesktopBridge {
-   browser?: DesktopBrowserBridge
+@@ -186,7 +188,7 @@ export interface HermesDesktopBridge {
    platform: string
    isDesktop: boolean
+   remoteMode?: boolean
 -  windowKind?: 'main' | 'pet' | 'chat'
 +  windowKind?: 'main' | 'pet' | 'chat' | 'panel'
  }
