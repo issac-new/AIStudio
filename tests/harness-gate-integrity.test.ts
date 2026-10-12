@@ -1508,6 +1508,19 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(gen).toContain('监控代行实录')
   })
 
+  it('run16 中段硬化：mx_fetch 护栏+B0 双词形+审批环常驻件+prelaunch ⑬', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('mx_fetch()')
+    expect(lib).toContain('timeout 60 git')
+    const watch = read(join(MX, 'run-watch.sh'))
+    expect(watch).toContain('max_iterations_reached')
+    const proxy = read(join(MX, 'mx-approval-proxy.sh'))
+    expect(proxy).toContain('--ttl')
+    expect(proxy).toContain('report_done 在案，退场')
+    const pre = read(join(MX, 'mx-prelaunch-check.sh'))
+    expect(pre).toContain('⑬ 独立审批环可启动')
+  })
+
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
