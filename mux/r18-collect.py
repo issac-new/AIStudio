@@ -152,6 +152,8 @@ def main():
     entry = steps.setdefault(str(a.step), {})
     if a.mode == 'dialog':
         msgs = fetch_dialog(a.room, a.anchor, a.user, a.limit)
+        if not msgs:
+            _issue(a.run, a.step, '对话收集成功但 0 条消息（锚上下文空——anchor 指向/房间成员资格/时机核验；F2 空载荷记单）')
         dl = entry.setdefault('dialogs', [])
         if any(d.get('anchor') == a.anchor for d in dl):
             die(f'step {a.step} 已登记同锚对话（{a.anchor}）——幂等拒重，show 核对')
@@ -193,5 +195,32 @@ def main():
     save_payload(a.run, data)
 
 
+def _issue(run: str, step, msg: str):
+    """F2（run15 复盘）：收集失败此前被调用方 `|| true` 全静默——9 步载荷全缺直到报告
+    生成才暴露。中心化记单：任何 die()/异常/空载荷落 issues.log，监控与报告立即可见。"""
+    f = SIM / 'runs' / run / 'evidence' / 'issues.log'
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        with f.open('a', encoding='utf-8') as fh:
+            fh.write(f"ISSUE|r18-collect-failed|step-{step}|{msg}\n")
+    except OSError:
+        pass
+
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        msg = str(e.args[0]) if e.args and isinstance(e.args[0], str) else f'exit={e.code}'
+        if '幂等拒重' in msg:
+            raise  # 预期行为（重放补采命中已登记锚），不是失败
+        argv = sys.argv
+        try:
+            run = argv[argv.index('--run') + 1]
+        except (ValueError, IndexError):
+            run = 'unknown'
+        step = next((argv[i + 1] for i, v in enumerate(argv)
+                     if v == '--step' and i + 1 < len(argv)), '?')
+        if run != 'unknown':
+            _issue(run, step, f'收集失败：{msg}')
+        raise

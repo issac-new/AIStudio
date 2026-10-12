@@ -588,6 +588,7 @@ if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
 3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)
 4) git 提交并 push 到 origin main（worktree 内直接提交本文件即可，commit message: docs(analysis): <任务ID>）
+   交付有效口径（全新环境独立回归，§1.0.2）：交付 commit 须晚于本轮开跑时刻——旧轮同名产物不计数（即使内容未变，也须以本轮新提交刷新：文档内加一行「本轮复核记录：<日期> 内容经复核仍有效」再提交即可，不必重做分析）。
 5) 完成后在群内发唯一一行结论（此行即完成回执，缺任一要素=未完成会被打回）：
 AN-DONE-<任务ID> commit=<已推送的 commitId> done=<一句话交付摘要>
 不许谎报。"
@@ -763,9 +764,10 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       SGID=$(sget security_rgid)
       if [[ -z "$SGID" ]]; then
         SGID=$(kanban_create_as secops security_review "${RFD_ID} 安全评审（涉敏=${_sens:-未标注}）" \
-          "涉敏需求安全评审单（run15 前置 P3-7①）：密钥管理/验签链路/数据落库字段/回调来源校验四项检查。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
+          "涉敏需求安全评审单（V8.11 设计面口径）：密钥管理/验签链路/数据落库字段/回调来源校验四项——对着概设与系分稿判设计完备性。代码级已挂账缺陷不判 FAIL，走 SECURITY-COND 条目随 G5 复核。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
         sset security_rgid "$SGID"
-        dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分为评审输入。不许谎报。" "$(agent_mxid secops)"
+        dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。
+评审口径（V8.11 裁决 A，run15 复盘 F3）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
       fi
       if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审")" == "PASS" ]]; then
@@ -884,6 +886,10 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   fi
   note "── devimpl：六路齐发（提速② 2026-10-09）——DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX/DEV-CHALI 同刻即派；渠道独立部分先行，契约件分支落地后 rebase 对接（废除契约件锚等待，run11 §4.2/纪律 27⑥ 语义保留）"
   PYTEST_NOTE="测试用 vitest（npx vitest run）；渠道端点一律本地 mock，禁止真实请求。"
+  # F4+F11（run15 复盘）：交付新鲜度声明（旧轮分支/产物不计数——run15 xiao 干完不交卷
+  # 与 hu/lin 旧稿对峙两形态的统一预防）+ 结论行带 @ 复审人（chen SEC-FIX-DONE 未 @secops
+  # 致复审无触发、靠监控补发触发令的根治位）。
+  FRESH_NOTE="交付 commit 须晚于本轮开跑时刻（上轮遗留分支/同名产物不计数，须本轮新提交）；结论行请 @ 该任务 A 角复审人（无 A 角则 @fanfan-agent）。"
   # ACP 编码后端 L1（MX_ACP_BACKEND=1 启用，缺省关=保真对照轮）：DEV 派发词声明
   # 委托通道——实现经 coding-delegate 技能交外部编码引擎，委托日志=后端指纹。
   ACP_NOTE=""
@@ -899,26 +905,26 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
-3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
@@ -955,7 +961,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
@@ -980,6 +986,31 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     || { _fl="${MX_MULTI_FAILED_LEGS:-}"; [ -z "$_fl" ] && _fl="DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N";
          for b in $(printf '%s' "$_fl" | grep -oE 'DEV-[A-Z-]+' | sort -u); do
            note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
+  # F6（run15 复盘）：结论行缺口核验——分支锚（branch_fresh）被新提交满足≠结论行已发
+  # （xiao 干完不交卷 1h46m 实锤：DEV-MP 分支 06:39 证据齐、DEV-DONE 行迟迟未发，锚已过
+  # 无任何催办面）。分支达且 tip 静默 >600s 而结论行缺→定向交卷令（带分支 tip 证据），
+  # 每任务一次即记不复催；600s 内的新 tip 视为可能仍在收口，不打扰。
+  while read -r _t _o; do
+    git -C "$DIRECTOR_CLONE" show-ref --verify --quiet "refs/remotes/origin/feat/$_t" 2>/dev/null || continue
+    _tipct=$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/feat/$_t" 2>/dev/null || echo 0)
+    (( $(date +%s) - _tipct > 600 )) || continue
+    if ! mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 300 2>/dev/null \
+        | jq -e --arg t "$_t" --arg s "$(agent_mxid "$_o")" \
+          '[.[] | select(.sender == $s) | (.content.body // "")] | any(test("DEV-DONE-" + $t))' >/dev/null 2>&1; then
+      _tip=$(git -C "$DIRECTOR_CLONE" log -1 --format='%h' "origin/feat/$_t" 2>/dev/null)
+      mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
+        "@$(agent_mxid "$_o") 交卷令：feat/$_t 分支已达（tip $_tip）但群内未见 DEV-DONE-$_t 结论行。若分支即最终态，请立即发：DEV-DONE-$_t commit=<分支 tip 完整哈希>（附一行测试/证据摘要）；若还有未尽子项，先发已完成部分的结论行并列出剩余待办；实际未完成则如实报 BLOCKED。禁静默，勿重做已完成工作。" "$(agent_mxid "$_o")" >/dev/null 2>&1 || true
+      note "[观察] $_t 结论行缺口——已向 $_o 发交卷令（分支 tip ${_tip} 在案）"
+      echo "ISSUE|conclusion-gap|$_t|分支达而 DEV-DONE 结论行未发（交卷令已发；run15 复盘 F6）" >> "$EVID_DIR/issues.log"
+    fi
+  done <<'DEVSPECS'
+DEV-PAYCORE-C chen
+DEV-PAYCORE-S chen
+DEV-PAYCORE-N chen
+DEV-MP xiao
+DEV-CHWX hu
+DEV-CHALI lin
+DEVSPECS
   # 越界守卫：main 污染反查 + 提交粒度观察（过度交付盘查 C 件）
   _mb="$(sget devimpl_main_base)"
   if [[ -n "$_mb" ]]; then
@@ -1112,6 +1143,9 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
       || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
   # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已记单
+  # F7（run15 复盘）：判定前先 fetch——重放轮曾以陈旧本地 origin 引用误报「推送未达」
+  # （09:30 实录：origin 已达 0b9b769 但本地引用落后，竞态记单）
+  git -C "$DIRECTOR_CLONE" fetch -q origin "integration/${RFD_ID}" 2>/dev/null || true
   if git rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1; then
     note "[集成] integration/${RFD_ID} 四开发分支已合并并推送 ✓（origin 可反查）"
   else
@@ -1320,6 +1354,14 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。开跑锚
   # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
   G5_TS=$(( $(sget run_started_at) * 1000 ))
+  # 安全条件清单收割（V8.11 裁决 A，F3）：安全评审 SECURITY-COND 条目落 evidence 供
+  # G5 第 8 项逐条复核——代码级发现不拦 G2（设计面口径），但 G5 放行前必须对账。
+  _sec_conds=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 500 2>/dev/null \
+    | jq -r --argjson ts "${SEC_TS:-0}" '.[] | select((.origin_server_ts // 0) > $ts) | select(.sender | endswith("secops-agent:matrix.test")) | (.content.body // "") | split("\n")[] | select(test("^\\s*SECURITY-COND-"))' 2>/dev/null || true)
+  if [[ -n "$_sec_conds" ]]; then
+    printf '# %s 安全条件清单（安全评审 SECURITY-COND 条目收割，G5 第 8 项复核输入）\n\n%s\n' "${RFD_ID}" "$_sec_conds" > "$EVID_DIR/security-conditions.md"
+    note "[安全] SECURITY-COND 条目已收割（$(printf '%s\n' "$_sec_conds" | grep -c 'SECURITY-COND-') 条 → evidence/security-conditions.md，G5 第 8 项复核）"
+  fi
   # 过闸收口（复用与新评同一收口路径：置卡 done/落键/批准留痕/M3 事件——防两路漂移）
   g5_pass_finalize() {
     # 首过口径（方案 §2.6-5）：PASS 判词与分节 GAP/TODO 残留并存=边评边补后过，
@@ -1359,6 +1401,15 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     else
       note "[M3] delivery 未启用（无案例房），跳过 G5 gate 事件（lite 轮：早期步夹具跳过致案例未开）"
     fi
+    # 安全条件对账留痕（V8.11 裁决 A，F3）：G5 放行时 SECURITY-COND 清单的闭环状态入
+    # 台账（GAP:COND 残留=如实呈现为未闭环条件，与 GAP 分节同口径计「补过」形态）。
+    if [[ -f "$EVID_DIR/security-conditions.md" ]]; then
+      _cond_n=$(grep -c 'SECURITY-COND-' "$EVID_DIR/security-conditions.md" || true)
+      _cond_gap=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+        '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null \
+        | grep -c 'GAP:COND' || true)
+      note "[G5] 安全条件对账：清单 ${_cond_n} 条，其中未闭环（GAP:COND）${_cond_gap} 条——G5 按条件放行（未闭环项归属与计划见评审卡）"
+    fi
     return 0   # dlv 未启用时末行 && 列表返回 1，函数调用是裸命令会被 set -e 击杀（包装引入的差异）
   }
   # 评审卡幂等（run8 优化 E）：卡 ID 落 state，重启复用不再重复建卡
@@ -1382,7 +1433,8 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 5) 灰度计划：5%→25%→100% 与各档观察期
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
-评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-7) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid fanfan)"
+8) 安全条件复核（V8.11 裁决 A）：安全评审的 SECURITY-COND 条目（见 evidence/security-conditions.md，无则本项直接过）逐条核对——已修复的附修复 commit 锚；未修复的必须在卡 body 标 GAP:COND-<n> 并写明归属与计划（未闭环条件如实呈现，不掩盖）
+评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-8) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid fanfan)"
     # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
     # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
     if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
@@ -1866,6 +1918,21 @@ note "===== 下半场完成（到 ${START_STEP} 起全部门禁执行完）=====
 # chrome dev tools / computer use）在流程中捕获落档，本步自动嵌入。
 if step_reached report && [[ -z "$(sget report_done)" ]]; then
   gov_report >/dev/null
+  # F2（run15 复盘）：载荷缺口清扫（重放补采）——9 步载荷全缺直到报告才暴露的根治位。
+  # 对已登记锚的对话步重放 r18-collect（脚本内幂等拒重护住已采锚）；补采成功即入载荷，
+  # 仍缺的由 F2 记单面（r18-collect-failed）如实呈现。锚与房间全部取自 state（跨重放稳定）。
+  _pgr="$(sget room_analysis)"
+  while read -r _ps _pmk _ptitle; do
+    [[ -n "$_pmk" && "$_pmk" != "-" ]] || continue
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step "$_ps" \
+      --room "$_pgr" --anchor "$_pmk" --title "$_ptitle" --user fanfan --limit 60 >/dev/null 2>&1 || true
+  done <<'PAYSPECS'
+9 dispatch_marker 需求派发任务书全文（补采）
+11 dispatch_marker 系分拆分与 RACI 派发对话（补采）
+17 m17_marker 排期派发任务书全文（补采）
+19 m19_marker 测试执行派发全文（补采）
+21 m21_marker UAT 验收任务书全文（补采）
+PAYSPECS
   # 报告生成器外置 mux/mx-report-gen.py（09-26 重构：方案对齐 26 步+逐步截屏挂接）：
   # 步骤定义与方案"具体流程 1-26"一一对应，含把关（准出/合格线）与
   # evidence/screenshots/steps/ 逐步截图自动嵌入（真实界面走查+真实工件渲染）。

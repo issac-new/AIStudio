@@ -1022,8 +1022,8 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
-    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 2400：QGate 证据接线入函数后体积增大，2026-10-09）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,2400}?\n  \}/)
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 3200：QGate 接线与安全条件对账（V8.11 F3）入函数后体积增大，2026-10-12）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,3200}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
   })
