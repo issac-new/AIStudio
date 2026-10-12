@@ -169,8 +169,9 @@ def record_turn_telemetry(
         # 611（run16 实证）：本回合撞会话迭代上限标记——agent.max_iterations 耗尽
         # （Turn ended: max_iterations_reached）时 api_calls==上限，run16 21:18 该
         # 形态 60 分钟无人接管（603 三判据全不咬：60 调用 << 400 阈值）。轮换件消费。
-        _iter_cap = _int(getattr(agent, "max_iterations", 0))
-        entry["turn_hit_iter_cap"] = bool(_iter_cap and api_calls >= _iter_cap)
+        def _iter_cap_hit(calls, cap):
+            return bool(cap and calls >= cap)
+        entry["turn_hit_iter_cap"] = _iter_cap_hit(api_calls, _int(getattr(agent, "max_iterations", 0)))
         entry["rotations"] = _int(entry.get("rotations"))
         _flush_entry(session_key, entry)
     except Exception:  # noqa: BLE001 - 遥测旁路绝不冒泡

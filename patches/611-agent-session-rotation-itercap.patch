@@ -1,32 +1,45 @@
 --- a/gateway/session_telemetry.py
 +++ b/gateway/session_telemetry.py
-@@ -166,6 +166,11 @@
+@@ -166,6 +166,12 @@
  
          agent = _cached_agent(gateway, session_key)
          entry.update(_agent_health_counters(agent))
 +        # 611（run16 实证）：本回合撞会话迭代上限标记——agent.max_iterations 耗尽
 +        # （Turn ended: max_iterations_reached）时 api_calls==上限，run16 21:18 该
 +        # 形态 60 分钟无人接管（603 三判据全不咬：60 调用 << 400 阈值）。轮换件消费。
-+        _iter_cap = _int(getattr(agent, "max_iterations", 0))
-+        entry["turn_hit_iter_cap"] = bool(_iter_cap and api_calls >= _iter_cap)
++        def _iter_cap_hit(calls, cap):
++            return bool(cap and calls >= cap)
++        entry["turn_hit_iter_cap"] = _iter_cap_hit(api_calls, _int(getattr(agent, "max_iterations", 0)))
          entry["rotations"] = _int(entry.get("rotations"))
          _flush_entry(session_key, entry)
      except Exception:  # noqa: BLE001 - 遥测旁路绝不冒泡
 --- a/gateway/session_rotation.py
 +++ b/gateway/session_rotation.py
-@@ -112,6 +112,12 @@
-     if not reason and _int(entry.get("empty_streak")) >= settings["empty_streak_limit"]:
+@@ -89,6 +89,14 @@
+     return cfg
+ 
+ 
++def iter_cap_exit_reason(entry: Dict[str, Any]) -> str:
++    """611（run16 实证）：迭代上限出口触发——回合在 agent.max_iterations 耗尽处结束
++    （max_iterations_reached），任务多半进行到一半；auto 档即刻轮换+604 移交
++    检查点=运行时原生续作（run16 靠监控手工续作令 60 分钟的机制化替代）。
++    run16 21:18 fanfan G5 修订会话死于 60/60 上限、60 分钟无人接管的根治。"""
++    return "iteration-cap-exit" if entry.get("turn_hit_iter_cap") else ""
++
++
+ def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
+                   book: Dict[str, Any]) -> RotationDecision:
+     """纯判定（可测）：entry 为 602 遥测条目；book 为本模块簿记。"""
+@@ -113,6 +121,9 @@
          reason = "empty-streak"
  
-+    # 611（run16 实证）：迭代上限出口触发——回合在 agent.max_iterations 耗尽处结束
-+    # （max_iterations_reached），任务多半进行到一半；auto 档即刻轮换+604 移交
-+    # 检查点=运行时原生续作（run16 靠监控手工续作令 60 分钟的机制化替代）。
-+    if not reason and entry.get("turn_hit_iter_cap"):
-+        reason = "iteration-cap-exit"
-+
      if not reason:
++        reason = iter_cap_exit_reason(entry) or ""
++
++    if not reason:
          return RotationDecision(False)
  
+     # 冷却窗：上次轮换后 N 回合内不再触发（防轮换风暴）
 --- a/tests/gateway/test_session_rotation.py
 +++ b/tests/gateway/test_session_rotation.py
 @@ -148,3 +148,19 @@

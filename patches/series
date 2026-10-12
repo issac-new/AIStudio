@@ -636,3 +636,7 @@
 # 靠监控手工续作。遥测件记 turn_hit_iter_cap 标记，轮换判定消费；auto 档即刻
 # 轮换+604 移交检查点=运行时原生续作。
 611-agent-session-rotation-itercap.patch
+# [612] 容量重试年龄锚稳定键 event_id（120ba522 仓库正本收口的补丁化注册——此前纯
+# 运行时热修无 patch，2026-10-12 23:02「镜像刷新为现行 series 态」把 runtime 副本
+# 抹回 series 态致 SIM 安装树失锚，mx-up preflight 拦停实锤。补丁化=刷新不再可抹）。
+612-agent-capacity-retry-anchor.patch
