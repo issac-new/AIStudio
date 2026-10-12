@@ -45,5 +45,10 @@ ck "⑧ 上轮报告审计零 FAIL" "[ -n '${LAST_RUN:-}' ] && python3 '$HERE/mu
 # ⑨ run 间干净（无在途驱动/监督器/陈锁）
 ck "⑨ 无在途推演进程" "! pgrep -f 'aipay-scenario.sh' >/dev/null 2>&1 && ! pgrep -f 'run-driver-supervisor' >/dev/null 2>&1" "有残留驱动/监督器：确认后 touch stop 文件+kill（见独立监控手册）"
 
+# ⑩ 推演域分支无上轮残留（run15 根治：run13 遗留 feat/DEV-PAYCORE-S 使 branch_fresh 恒假，
+#    devimpl 等待环盲转 150min——锚读数也把陈旧提交当本路进展）。feat/DEV-* 是每轮开发
+#    交付域分支，上轮未清=本轮真值锚必踩同坑；integration/* 是设计内跨轮续建不在清理面。
+ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——run15 可开跑" || { echo "有红项——修复后再跑"; exit 1; }
