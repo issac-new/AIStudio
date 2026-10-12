@@ -540,8 +540,7 @@ _AUTO_HEARTBEAT_MIN_INTERVAL_SECONDS = 60.0
 _auto_heartbeat_last_attempt: float = 0.0
 _auto_heartbeat_fence_warned = False
 
-# >>> swarm:kanban-pid-adopt >>> restored 2026-09-28: upstream ships cli_single_query.py
-# calling this but kanban_tools.py without it; re-apply after every hermes update.
+
 def register_current_worker_from_env() -> bool:
     """Record this worker's pid on its run when the dispatcher died before it could
     (``adopt_worker_pid``). False only when the board says the run was already reclaimed:
@@ -558,7 +557,6 @@ def register_current_worker_from_env() -> bool:
     except Exception:
         logger.debug("kanban worker registration for %s failed", tid, exc_info=True)
         return True
-# <<< swarm:kanban-pid-adopt <<<
 
 
 def heartbeat_current_worker_from_env() -> bool:
@@ -1124,16 +1122,6 @@ def _handle_create(args: dict, **kw) -> str:
     _check(model_override or not provider_override, "'provider' requires 'model' to be set as well")
     parents = _coerce_str_list(args.get("parents") or [], "parents", "task ids")
     with _board(args.get("board")) as (kb, conn):
-        # >>> swarm:kanban-guardrail-rearm >>> (domain isolation create gate,
-        # t_62b2af6b from 9996e5931b): refuse creating a card whose assignee is
-        # outside the target board's profile_scope (and not in its
-        # dispatcher_bypass whitelist). Three operator exits in the error text.
-        _check(kb.profile_may_work_board(assignee, board=args.get("board")),
-               f"assignee '{assignee}' is outside this board's profile_scope "
-               "(domain isolation). Fix: (a) reassign to a profile in the board's "
-               "profile_scope, (b) add the profile to board.json profile_scope, "
-               "or (c) add it to dispatcher_bypass for cross-domain dispatch.")
-        # <<< swarm:kanban-guardrail-rearm <<<
         from gateway.session_context import get_session_env
         from tools.async_delegation import _current_origin_session_id
         self_tid = (os.environ.get("HERMES_KANBAN_TASK")
@@ -1154,8 +1142,7 @@ def _handle_create(args: dict, **kw) -> str:
             conn, title=str(title).strip(), body=args.get("body"), assignee=str(assignee),
             parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
             priority=_opt_int(args.get("priority"), 0),
-            workspace_kind=str(workspace_kind if workspace_kind is not None else "worktree"),
-            workspace_path=workspace_path, project_id=project_id,
+            workspace_kind=workspace_kind, workspace_path=workspace_path, project_id=project_id,
             # Board-project inheritance must read the board this call opened, not the
             # session's current board.
             board=args.get("board"),
@@ -1166,7 +1153,6 @@ def _handle_create(args: dict, **kw) -> str:
             model_override=model_override, provider_override=provider_override,
             goal_mode=goal_mode, goal_max_turns=_opt_int(args.get("goal_max_turns")),
             completion_contract=args.get("completion_contract"),
-            raci=(args.get("raci") if isinstance(args.get("raci"), dict) else None),
             initial_status=str(args.get("initial_status") or "running"),
             created_by=_persisted_identity(), session_id=session_id)
         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)

@@ -9,11 +9,9 @@ import time
 from typing import Any, Callable, Iterable, Optional
 
 from hermes_cli import kanban_db as kb
+from hermes_cli import kanban_workflow
 
-_STATUS_ICONS = {
-    "todo": "◻", "ready": "▶", "running": "●", "scheduled": "⏱",
-    "blocked": "⊘", "done": "✓", "archived": "—",
-}
+_STATUS_ICONS = {c.key: c.icon for c in kanban_workflow.DEFAULT_WORKFLOW} | {kanban_workflow.ARCHIVED: "—"}
 
 _TASK_DICT_FIELDS = (
     "id", "title", "body", "assignee", "status", "priority", "tenant",
@@ -21,9 +19,7 @@ _TASK_DICT_FIELDS = (
     "created_by", "created_at", "started_at", "completed_at", "result",
     "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
     "reasoning_effort",  # HERMES_CUSTOM[v020]
-    "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
-    "estimate_days", "estimate_meta",  # HERMES_CUSTOM[estimate] 人日估算随卡带出（协同图/容量分析共用）
 )
 _SHOW_RUN_FIELDS = (
     "id", "profile", "step_key", "status", "outcome", "summary", "error",

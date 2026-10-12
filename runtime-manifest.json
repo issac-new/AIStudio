@@ -167,6 +167,41 @@
       "source": "gateway/session_rotation.py",
       "dest": "gateway/session_rotation.py",
       "note": "603 会话轮换策略：水位/累计迭代/空转三判据，report（默认）|auto 两档，auto 复用压缩耗尽漏斗+604 检查点"
+    },
+    {
+      "source": "toolsets.py",
+      "dest": "toolsets.py",
+      "note": "611: obs_recall 进 _HERMES_CORE_TOOLS（默认工具面）"
+    },
+    {
+      "source": "tools/file_tools.py",
+      "dest": "tools/file_tools.py",
+      "note": "613: write_file/patch then_run 动作融合+内容哈希守卫"
+    },
+    {
+      "source": "tools/tool_result_storage.py",
+      "dest": "tools/tool_result_storage.py",
+      "note": "612: 溢出报文头+尾双摘录+召回句柄（obs_recall 数据面）"
+    },
+    {
+      "source": "tools/efficiency_ledger.py",
+      "dest": "tools/efficiency_ledger.py",
+      "note": "612: 机制账本 JSONL（efficiency/ledger.jsonl，studio 面板消费）"
+    },
+    {
+      "source": "tools/obs_recall_tool.py",
+      "dest": "tools/obs_recall_tool.py",
+      "note": "612: obs_recall 归档分页召回工具（路径限定归档目录）"
+    },
+    {
+      "source": "tools/evidence_reducer.py",
+      "dest": "tools/evidence_reducer.py",
+      "note": "614: 证据保全精简器（默认关；引文校验 fail-through）"
+    },
+    {
+      "source": "agent/tool_executor.py",
+      "dest": "agent/tool_executor.py",
+      "note": "614: 精简器接线观察提交点（maybe_persist 之前）"
     }
   ],
   "notes": [

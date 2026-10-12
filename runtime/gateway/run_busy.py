@@ -67,29 +67,6 @@ def _tail_has_slot(tail: str, slot: str) -> bool:
     return _strip_slot(tail, slot) is not None
 
 
-def _capacity_retry_anchor(event: Any) -> Any:
-    """Stable identity for a capacity-retry entry ACROSS re-entry round trips.
-
-    The original design keyed the age anchor on ``id(event)``, but a refused
-    message that comes back through ``handle_message`` arrives as a NEW object:
-    every hop minted a fresh ``id()`` → ``first_seen`` reset → MAX_AGE never
-    fired (run11 field evidence: one echo broadcast re-enqueued 300+ times,
-    queue stuck at capacity for hours while zero entries expired). Matrix
-    events carry a stable ``event_id`` — that survives object replacement.
-    Non-event payloads fall back to (sender, body) hashing, then ``id()``.
-    """
-    eid = getattr(event, "event_id", None)
-    if eid:
-        return eid
-    content = getattr(event, "content", None)
-    body = getattr(content, "body", None)
-    if body is None and isinstance(content, dict):
-        body = content.get("body")
-    if body is not None:
-        return ("body", str(getattr(event, "sender", "")), str(body)[:256])
-    return id(event)
-
-
 def _same_chat_key_slots(
     key: str, *, prefix: str, chat_id: str, scope_id: Optional[str],
 ) -> Optional[Tuple[str, str]]:
@@ -258,33 +235,7 @@ class GatewayBusySessionMixin:
     # burst cannot pile up unbounded waiters; one poller drains the whole queue.
     CAPACITY_RETRY_POLL_SEC = 2.0
     CAPACITY_RETRY_MAX_AGE_SEC = 20 * 60.0
-    # 2026-10-09 run12 实锤扩容：15 agent+审批风暴规模下 64 全天丢 4931 条消息
-    # （含派发/催办，agent 收不到指令）——上限提到 512（事件体小，内存无压力）。
-    CAPACITY_RETRY_MAX_PENDING = 512
-
-    _CAPACITY_SIDECAR_MIN_INTERVAL_S = 2.0
-
-    def _write_capacity_sidecar(self) -> None:
-        """二期容量内省：队列深度写 sidecar（<HERMES_HOME>/runtime/capacity_retry.json，
-        限频 ≥2s）。集群巡检官由此免改 api_server/run.py 即可观测容量泵状态。fail-soft。"""
-        now = time.monotonic()
-        last = getattr(self, "_capacity_sidecar_last", 0.0)
-        if now - last < self._CAPACITY_SIDECAR_MIN_INTERVAL_S:
-            return
-        self._capacity_sidecar_last = now
-        try:
-            import json as _json
-            from pathlib import Path as _P
-            home = _P(os.environ.get("HERMES_HOME") or _P.home() / ".hermes")
-            d = home / "runtime"
-            d.mkdir(parents=True, exist_ok=True)
-            q = getattr(self, "_capacity_retry_queue", None) or []
-            sm = getattr(self, "_capacity_retry_since", None) or {}
-            (d / "capacity_retry.json").write_text(
-                _json.dumps({"ts": time.time(), "depth": len(q), "anchors": len(sm),
-                             "cap": self.CAPACITY_RETRY_MAX_PENDING}), encoding="utf-8")
-        except Exception:
-            pass
+    CAPACITY_RETRY_MAX_PENDING = 64
 
     def _queue_capacity_retry(self, event: MessageEvent, source: SessionSource, session_key: str) -> bool:
         """Hold *event* for a silent retry when a session slot frees; False when the
@@ -293,12 +244,10 @@ class GatewayBusySessionMixin:
         if pending is None:
             pending = self._capacity_retry_queue = []
         if len(pending) >= self.CAPACITY_RETRY_MAX_PENDING:
-            # 满队淘汰最旧（2026-10-09）：拒收新到消息会把最新指令（催办/回灌）丢掉，
-            # 淘汰最旧保新鲜度——旧消息 20min 年龄锚本来也会过期，语义损失更小。
-            dropped = pending.pop(0)
             logger.warning(
-                "Capacity retry queue full (%d): evicted oldest (for %s), keeping newest",
+                "Capacity retry queue full (%d); dropping message for %s",
                 len(pending), session_key)
+            return False
         now = time.monotonic()
         # Age anchor + re-refusal backoff keyed on the event identity: a cross-process
         # refusal (slots held by another gateway process or a CLI exec) comes back
@@ -308,10 +257,9 @@ class GatewayBusySessionMixin:
         since_map = getattr(self, "_capacity_retry_since", None)
         if since_map is None:
             since_map = self._capacity_retry_since = {}
-        anchor_key = _capacity_retry_anchor(event)
-        first_seen = since_map.get(anchor_key)
+        first_seen = since_map.get(id(event))
         if first_seen is None:
-            since_map[anchor_key] = now
+            since_map[id(event)] = now
             not_before = now
         else:
             not_before = now + self.CAPACITY_RETRY_POLL_SEC
@@ -320,7 +268,6 @@ class GatewayBusySessionMixin:
             for k in [k for k, v in since_map.items() if now - v > self.CAPACITY_RETRY_MAX_AGE_SEC]:
                 since_map.pop(k, None)
         pending.append((first_seen if first_seen is not None else now, event, source, session_key, not_before))
-        self._write_capacity_sidecar()
         pump = getattr(self, "_capacity_retry_task", None)
         if pump is None or pump.done():
             if pump is not None and not pump.cancelled():
@@ -338,11 +285,10 @@ class GatewayBusySessionMixin:
                 queue.pop(0)
                 since_map = getattr(self, "_capacity_retry_since", None)
                 if since_map is not None:
-                    since_map.pop(_capacity_retry_anchor(event), None)
+                    since_map.pop(id(event), None)
                 logger.warning(
                     "Capacity retry for %s expired after %.0fs; dropping",
                     session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)
-                self._write_capacity_sidecar()
                 continue
             if now < not_before:
                 await asyncio.sleep(min(self.CAPACITY_RETRY_POLL_SEC, not_before - now))
@@ -358,7 +304,6 @@ class GatewayBusySessionMixin:
                     logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
                     continue
                 await adapter.handle_message(event)
-                self._write_capacity_sidecar()
             except Exception:
                 logger.warning("Capacity retry dispatch failed for %s", session_key, exc_info=True)
 

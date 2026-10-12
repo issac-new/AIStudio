@@ -215,8 +215,6 @@ _SPECS = [
              help="Pin the worker's thinking depth for this task "
                   "(minimal/low/medium/high/xhigh/max/ultra, or 'none' for thinking "
                   "off). Omit to use the assignee profile's agent.reasoning_effort."),
-        _arg("--raci", metavar="JSON",
-             help='Structured RACI as JSON object, e.g. {"responsible":["chen"],"approver":["wei"]}'),
         _arg("--completion-contract", metavar="CONTRACT",
              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
         _arg("--goal", action="store_true", dest="goal_mode",
@@ -282,12 +280,6 @@ _SPECS = [
         _arg("--title"),
         _arg("--body"),
         _json_flag(),
-        _arg("--persist", action="store_true",
-             help="Persist the estimate onto the card (person-days + metadata; "
-                  "requires task_id; consumed by workload-weighted dispatch)"),  # HERMES_CUSTOM[estimate]
-        _arg("--days", type=float,
-             help="Direct person-day override (skip the LLM estimate; requires "
-                  "task_id; implies persist)"),  # HERMES_CUSTOM[estimate-days]
     ], help="Rough token + complexity estimate via the auxiliary model"),
     _cmd("reclaim", [_TASK_ID, _RECLAIM_REASON], help="Release an active worker claim on a running task"),
     _cmd("reassign", [

@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
-import math
 import os
 import shlex
 import sys
@@ -23,6 +22,7 @@ from hermes_cli import kanban_db_dispatch as kbd
 from hermes_cli import kanban_db_workspace as kbw
 from hermes_cli import kanban_db_notify as kbn
 from hermes_cli import kanban_swarm as ks
+from hermes_cli import kanban_workflow
 from hermes_cli.kanban_output import (
     _ATTACHMENT_FIELDS, _RUNS_RUN_FIELDS, _SHOW_RUN_FIELDS, _bulk_apply, _err,
     _fmt_counts, _fmt_task_line, _fmt_ts, _json_out, _obj_dict, _print_json,
@@ -266,18 +266,14 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
 
 def _parse_duration(val) -> Optional[int]:
     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
-    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
+    ValueError on malformed input."""
     if val is None or val == "":
         return None
     s = str(val).strip().lower()
     try:
-        seconds = int(s)  # bare integer → seconds
+        return int(s)  # bare integer → seconds
     except ValueError:
         pass
-    else:
-        if seconds < 0:
-            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
-        return seconds
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     if not (s and s[-1] in units):
         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
@@ -285,14 +281,7 @@ def _parse_duration(val) -> Optional[int]:
         n = float(s[:-1])
     except ValueError as exc:
         raise ValueError(f"malformed duration {val!r}") from exc
-    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
-    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
-    # then raises OverflowError, which no caller catches. Refuse anything
-    # non-finite or negative before the conversion.
-    seconds = n * units[s[-1]]
-    if not math.isfinite(seconds) or seconds < 0:
-        raise ValueError(f"malformed duration {val!r}")
-    return int(seconds)
+    return int(n * units[s[-1]])
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -353,7 +342,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
         return _err("kanban: --body and --body-file are mutually exclusive", 2)
     if body_file is not None:
         try:
-            body = sys.stdin.read() if body_file == "-" else Path(body_file).read_text(encoding="utf-8")
+            body = sys.stdin.read() if body_file == "-" else Path(body_file).read_text(encoding="utf-8-sig")
         except OSError as exc:
             return _err(f"kanban: --body-file: {exc}", 2)
 
@@ -368,16 +357,6 @@ def _cmd_create(args: argparse.Namespace) -> int:
         max_runtime = _parse_duration(getattr(args, "max_runtime", None))
     except ValueError as exc:
         return _err(f"kanban: --max-runtime: {exc}", 2)
-    raci_raw = getattr(args, "raci", None)
-    raci = None
-    if raci_raw:
-        try:
-            parsed_raci = json.loads(raci_raw)
-            raci = parsed_raci if isinstance(parsed_raci, dict) else None
-        except (ValueError, TypeError):
-            return _err("kanban: --raci must be a JSON object", 2)
-        if raci is None:
-            return _err("kanban: --raci must be a JSON object", 2)
     max_retries = getattr(args, "max_retries", None)
     if max_retries is not None and max_retries < 1:
         return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
@@ -397,7 +376,6 @@ def _cmd_create(args: argparse.Namespace) -> int:
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             completion_contract=getattr(args, "completion_contract", None),
-            raci=raci,
             initial_status=getattr(args, "initial_status", "running"),
             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                              if is_dispatcher_owned_worker_context() else None),
@@ -452,22 +430,8 @@ def _cmd_list(args: argparse.Namespace) -> int:
             include_archived=args.archived, order_by=getattr(args, "sort", None),
             workflow_template_id=args.workflow_template_id, current_step_key=args.current_step_key,
         )
-        if getattr(args, "json", False):
-            # HERMES_CUSTOM[orchestration] JSON 分支在连接存活期内补齐任务树字段：
-            # parents/children 批量带出（task_graph_contexts 分块 ≤500），调用方
-            # （看板列表/任务协同图）免逐卡 show 的 N+1 detail 请求。
-            rows = [_task_to_dict(t) for t in tasks]
-            ids = [r["id"] for r in rows]
-            links: dict[str, dict] = {}
-            for i in range(0, len(ids), 500):
-                links.update(kb.task_graph_contexts(conn, ids[i:i + 500]))
-            for row in rows:
-                ctx = links.get(row["id"])
-                if ctx:
-                    row["parents"] = [p["id"] for p in ctx["parents"]]
-                    row["children"] = [c["id"] for c in ctx["children"]]
-            _print_json(rows)
-            return 0
+    if _json_out(args, [_task_to_dict(t) for t in tasks]):
+        return 0
     # Passive discoverability: only multi-board users see which board this is.
     try:
         all_boards = kb.list_boards(include_archived=False)
@@ -741,22 +705,6 @@ def _run_estimate(title: str, body: Optional[str]) -> dict:
     }
 
 
-_ESTIMATE_DAYS_BY_COMPLEXITY = {"S": 0.5, "M": 1.0, "L": 2.0}
-
-
-def _estimate_days(result: dict) -> float:
-    """complexity → person-days（S=0.5/M=1/L=2）；complexity 缺失时按 est_tokens
-    兜底分档（>200k→L、>50k→M、其余 S）。团队并行二期起点标定值，后续按实测校准。"""
-    days = _ESTIMATE_DAYS_BY_COMPLEXITY.get(result.get("complexity") or "")
-    if days is not None:
-        return days
-    try:
-        tokens = int(result.get("est_tokens") or 0)
-    except (TypeError, ValueError):
-        tokens = 0
-    return 2.0 if tokens > 200_000 else (1.0 if tokens > 50_000 else 0.5)
-
-
 def _cmd_estimate(args: argparse.Namespace) -> int:
     title, body = args.title, args.body
     if args.task_id:
@@ -765,59 +713,14 @@ def _cmd_estimate(args: argparse.Namespace) -> int:
         if task is None:
             return _err(f"no such task: {args.task_id}", 1)
         title, body = task.title, task.body
-    # HERMES_CUSTOM[estimate-days]（团队并行三期）：--days N 直设旁路——跳过 LLM
-    # 估算，人工/上游（decompose、REST）直接定人日并落库。与 --persist 合用或单用
-    # （给 task_id 时单用即落库，语义=「按 N 人日记账」）。
-    days_override = getattr(args, "days", None)
-    if days_override is not None:
-        if not args.task_id:
-            return _err("--days requires a task id (raw --title/--body has no card to update)", 2)
-        try:
-            days_val = round(float(days_override), 2)
-        except (TypeError, ValueError):
-            return _err(f"--days must be numeric, got {days_override!r}", 2)
-        if days_val < 0:
-            return _err("--days must be >= 0", 2)
-        with kbc.connect_closing() as conn:
-            ok = kb.set_estimate(conn, args.task_id, days_val, {
-                "source": "manual", "set_at": int(time.time()),
-            })
-        persisted = args.task_id if ok else None
-        if getattr(args, "json", False):
-            _print_json({"ok": True, "source": "manual", "estimate_days": days_val, "persisted": persisted})
-        else:
-            print(f"set {args.task_id} = {days_val}d" + (f" · persisted {persisted}" if persisted else " · persist FAILED"))
-        return 0 if ok else 1
-    # HERMES_CUSTOM[estimate-days] END
     result = _run_estimate(title or "", body)
-    persisted = None
-    if getattr(args, "persist", False):
-        # HERMES_CUSTOM[estimate]（团队并行二期）：估算落库（卡片人日列 + 元数据），
-        # 派发器按在途工作量加权排序时消费。仅 --task-id 估算可落库。
-        if not args.task_id:
-            return _err("--persist requires a task id (raw --title/--body has no card to update)", 2)
-        if result.get("ok"):
-            days = _estimate_days(result)
-            with kbc.connect_closing() as conn:
-                ok = kb.set_estimate(conn, args.task_id, days, {
-                    "complexity": result.get("complexity"),
-                    "est_tokens": result.get("est_tokens"),
-                    "rationale": result.get("rationale"),
-                    "model": result.get("model"),
-                    "estimated_at": int(time.time()),
-                })
-            persisted = args.task_id if ok else None
-        else:
-            return _err(f"estimate failed, nothing persisted: {result.get('reason')}", 1)
     if getattr(args, "json", False):
-        _print_json({**result, "persisted": persisted, "estimate_days": _estimate_days(result) if result.get("ok") else None})
+        _print_json(result)
     elif result.get("ok"):
         cx = result.get("complexity") or "?"
         line = f"~{result.get('est_tokens', 0)} tokens · {cx}"
         if result.get("rationale"):
             line += f" — {result['rationale']}"
-        if persisted:
-            line += f" · persisted {persisted} ({_estimate_days(result)}d)"
         print(line)
     else:
         print(f"estimate failed: {result.get('reason')}", file=sys.stderr)
@@ -1370,7 +1273,7 @@ def _cmd_stats(args: argparse.Namespace) -> int:
     if _json_out(args, stats):
         return 0
     print("By status:")
-    for k in ("triage", "todo", "scheduled", "ready", "running", "blocked", "done"):
+    for k in kanban_workflow.DEFAULT_WORKFLOW.keys():
         print(f"  {k:8s}  {stats['by_status'].get(k, 0)}")
     if stats["by_assignee"]:
         print("\nBy assignee:")
@@ -1603,9 +1506,20 @@ def run_slash(rest: str) -> str:
     stdout/stderr. Shared by the interactive CLI and the gateway so formatting is identical."""
     import io
 
-    tokens = shlex.split(rest) if rest and rest.strip() else []
-    # Bare ``/kanban`` / ``help`` / ``-h``: curated short block, not argparse's full tree (garbage
-    # in a chat bubble). ``/kanban foo -h`` still works.
+    # Non-posix split (Windows) keeps backslashes as path separators but
+    # leaves quote characters in the tokens — strip a fully wrapping pair
+    # so `"my task"` reaches argparse as `my task`, not `"my task"`.
+    tokens = []
+    if rest and rest.strip():
+        for tok in shlex.split(rest, posix=os.name == "posix"):
+            if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in ("'", '"'):
+                tok = tok[1:-1]
+            tokens.append(tok)
+
+    # Bare ``/kanban`` or ``/kanban help`` / ``--help`` / ``-h`` / ``?``:
+    # show the curated short-help block instead of dumping argparse's full
+    # usage tree (which is enormous and reads as garbage in a chat
+    # bubble).  Per-subcommand help still works via ``/kanban foo -h``.
     if not tokens or tokens[0] in {"help", "--help", "-h", "?"}:
         return _SLASH_KANBAN_HELP
     # build_parser() needs a subparsers action to attach to: build a throwaway one and drive
@@ -1654,11 +1568,3 @@ def run_slash(rest: str) -> str:
     if err and out:
         return f"{out}\n{err}"
     return err if err else (out or "(no output)")
-
-
-# ---- BEGIN PLUGIN-COMPAT (revert-scheduled; see COMPAT_MANIFEST.md) ----
-# Names external plugins imported from this module before the Sep 2026 decomposition.
-# Internal code MUST NOT use these (scripts/check_compat_pointers.py fails CI if it does).
-# The whole block is removed by reverting the commit that added it.
-from typing import Any  # noqa: F401,E402
-# ---- END PLUGIN-COMPAT ----
