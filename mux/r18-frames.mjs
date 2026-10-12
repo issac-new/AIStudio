@@ -133,7 +133,10 @@ async function dismissPopups() {
 // 重载重拍一次；仍坏则写 .bad.txt 侧车留证并继续（不阻断，如实可查）。
 async function pageLooksBad() {
   const t = await page.evaluate(() => document.body.innerText.slice(0, 4000)).catch(() => '')
-  return /没有权限|无权限访问|群聊升级|升级说明|登录到 Hermes|Login to/.test(t) ? t : null
+
+  // run16 实锤补签：采集会话被服务端弹回登录页的画面是「连接你的运行时/Connect your
+  // runtime」（22/48 帧同像素壳页的签名）——旧正则「登录到 Hermes|Login to」不匹配。
+  return /没有权限|无权限访问|群聊升级|升级说明|登录到 Hermes|Login to|连接你的运行时|Connect your runtime/.test(t) ? t : null
 }
 
 // F1（run15 复盘）：SPA 就绪强断言——hash 冷启动壳页陷阱根治（run15 24 帧壳页同帧摘除
@@ -156,6 +159,27 @@ async function waitSpaReady(capMs = 15000) {
   return false
 }
 
+// run16 复盘（fix/run16-report-truth）：会话失效自愈——matrix-login 重拉新 token 注入
+// localStorage。服务端把会话弹回 /login 时旧 token 已不可用，原重试只重 goto 不换
+// token=必再弹（22 帧登录壳页根因的采集端根治）。
+async function relaunchLogin() {
+  const r = await fetch(`${BASE}/api/auth/matrix-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      matrixAccessToken: mtok, matrixUserId: `@${USER}:${MX_SERVER_NAME}`,
+      deviceId: 'R18CAP', homeserverUrl: MX_HS_URL,
+    }),
+  }).then((r2) => r2.json()).catch(() => ({}))
+  if (!r.token) return false
+  await page.evaluate(([token]) => {
+    localStorage.setItem('hermes_api_key', token)
+    localStorage.setItem('hermes_server_url', location.origin)
+    localStorage.setItem('hermes_locale', 'zh')
+  }, [r.token]).catch(() => {})
+  return true
+}
+
 const pre = `${STEP}-op${K}`
 await page.goto(BASE + PLAN_URL)
 await waitSpaReady()
@@ -163,6 +187,7 @@ await page.waitForTimeout(SETTLE)
 await dismissPopups()
 if (await pageLooksBad()) {
   await dismissPopups()
+  await relaunchLogin()
   await page.goto(BASE + PLAN_URL).catch(() => {})
   await waitSpaReady()
   await page.waitForTimeout(SETTLE)

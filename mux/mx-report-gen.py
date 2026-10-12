@@ -1324,33 +1324,63 @@ _DOMAINS_RUN12 = {
 
 
 # ── run15（20261011-v8-run15，V8.10-V8.15 全栈首验轮+等待环三重盲区根治轮）──
+# run16 复盘修订（2026-10-13 fix/run16-report-truth）：keys 此前全空（收尾会话注册时漏填），
+# 致 25 步误渲染 ⬜、48 帧零挂接——本批按 §3.3 映射补齐；keys 兜底与审计一致性断言同批落地
+# （空 keys 防线见 _STEP_KEY_DEFAULTS）。imgs 只挂真实帧；28 张登录壳页帧已按纪律 40⑩
+# 归档 runs/<RUN_ID>/frames-degraded/（frame-capture-failed 47 单在案），不冒充实时帧。
 STEPS_META_20261012_V8_RUN16 = {
-    1: dict(keys=[], narrative='环境搭建一次到位：30 账号 token 全有效、单网关多路复用+单 studio 多账号就绪（16:33 开跑）。'),
-    2: dict(keys=[], narrative='每用户配置与团队围栏装载核对通过（16:36）。'),
-    3: dict(keys=[], narrative='14 账号 matrix 登录+看板全可达，自动登录端点按契约应答（16:36）。'),
-    4: dict(keys=[], narrative='环境冒烟全过：网关运行态+平台通道 15 在线+驾驶舱回归在线（16:37 入仓）。'),
-    5: dict(keys=[], narrative='4 应用资产经产品通道写入中央仓（16:37）；组织对账一笔不一致如实登记问题单（fleet-manifest 缺失，监控当场恢复）。'),
-    6: dict(keys=[], narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
-    7: dict(keys=[], narrative='G1 需求冻结 16:39 一次过（冻结稿入仓，stage P1+gate pass 落房）。'),
-    8: dict(keys=[], narrative='需求分析讨论群建成并全量预邀（16:39）。'),
-    9: dict(keys=[], narrative='需求派发任务书送达（16:39）；凭证反向核验首咬自愈（首报卡 ID 不实回灌重报通过）。'),
-    10: dict(keys=[], narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
-    11: dict(keys=[], narrative='系统分析拆分与 RACI 派发完成，主卡结构化 raci 已带。'),
-    12: dict(keys=[], narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
-    13: dict(keys=[], narrative='四路系分同刻开出（17:04 并发等待首验）；16 分钟四稿全入库+概设预写流水线完整走通（概设定稿 71a058d）。'),
-    14: dict(keys=[], narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
-    15: dict(keys=[], narrative='G2 双工位同刻：安全评审 7 分钟过闸（新设计面口径首验 17:56）；架构评审首轮真打回、修订 20 分钟复审过。'),
-    16: dict(keys=[], narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
-    17: dict(keys=[], narrative='排期完成，六路开发任务书+测试预备轮（用例前移）同刻派发（18:15）。'),
-    18: dict(keys=[], narrative='编码六路 19 分钟收段（分支真值 18:32 全齐）；G3 过闸。'),
-    19: dict(keys=[], narrative='缺陷+测试段：五路分片 20 分钟全交卷（18:34 派发/18:52 末行）；集成合并推送在案；G4 20:59 过闸。'),
-    20: dict(keys=[], narrative='G5 两轮真打回（两缺陷+复验报告缺位）触发熔断——监控修复链完整走通（lin/chen 修复+qi 复验+fanfan 复审），00:45 复审 PASS 复位续走；REL 三卡 00:36 登记。'),
-    21: dict(keys=[], narrative='UAT 验收 7 条 AC 全过（00:45 验收书入仓）——上轮 5/7 两缺口本轮补齐。'),
-    22: dict(keys=[], narrative='工作台账生成（14 账号×状态分布）。'),
-    23: dict(keys=[], narrative='独立审计完成（六域体检+凭证抽检+问题单台账）。'),
-    24: dict(keys=[], narrative='G6 复盘收尾，治理报告 00:46 生成入仓。'),
-    25: dict(keys=[], narrative='IDE 画布视图落位。'),
-    26: dict(keys=[], narrative='报告链收尾：R17 注册补齐+审计熔断+双正本合并收尾。'),
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 管理员把关',
+        narrative='环境搭建一次到位：30 账号 token 全有效、单网关多路复用+单 studio 多账号就绪（16:33 开跑）。'),
+    2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 冒烟驱动',
+        narrative='每用户配置与团队围栏装载核对通过（16:36）。'),
+    3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
+        narrative='14 账号 matrix 登录+看板全可达，自动登录端点按契约应答（16:36）。', imgs=[('login_done-op1-before','工作台·登录前（matrix 连接页）','ui'), ('login_done-op1-after','工作台·会话画布与左侧群组列表（登录后）','ui'),]),
+    4: dict(keys=['smoke_done'], actor='ai', actorText='AI · 冒烟驱动',
+        narrative='环境冒烟全过：网关运行态+平台通道 15 在线+驾驶舱回归在线（16:37 入仓）。', imgs=[('capture-precheck-op1-after','工作台·新会话欢迎页（采集链预检基线帧）','ui'), ('smoke_done-op1-after','账户管理页·15 人编制成员列表','ui'),]),
+    5: dict(keys=['appinit_done'], actor='ai', actorText='AI · 治理注册',
+        narrative='4 应用资产经产品通道写入中央仓（16:37）；组织对账一笔不一致如实登记问题单（fleet-manifest 缺失，监控当场恢复）。'),
+    6: dict(keys=['people_done'], actor='ai', actorText='AI · 治理注册',
+        narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
+    7: dict(keys=['g1_frozen'], actor='human', actorText='人 · 把关判读',
+        narrative='G1 需求冻结 16:39 一次过（冻结稿入仓，stage P1+gate pass 落房）。'),
+    8: dict(keys=['room_analysis'], actor='ai', actorText='AI · 需求分析师A',
+        narrative='需求分析讨论群建成并全量预邀（16:39）。', imgs=[],),
+    9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · 派发令',
+        narrative='需求派发任务书送达（16:39）；凭证反向核验首咬自愈（首报卡 ID 不实回灌重报通过）。'),
+    10: dict(keys=['register_done'], actor='ai', actorText='AI · 需求分析师A',
+        narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
+    11: dict(keys=['analysis_done','analysis_verified'], actor='ai', actorText='AI · 系统分析',
+        narrative='系统分析拆分与 RACI 派发完成，主卡结构化 raci 已带。'),
+    12: dict(keys=['triage_done'], actor='ai', actorText='AI · 分诊台',
+        narrative='（本步按方案执行，真值以 state 与 evidence 为准）', imgs=[('triage_done-op1-before','看板页·任务卡列（分诊前）','ui'), ('triage_done-op1-after','看板页·RFD 任务卡列与状态流转（分诊后）','ui'),]),
+    13: dict(keys=['anexec_done'], actor='ai', actorText='AI · 四路系分',
+        narrative='四路系分同刻开出（17:04 并发等待首验）；16 分钟四稿全入库+概设预写流水线完整走通（概设定稿 71a058d）。'),
+    14: dict(keys=['review_done'], actor='ai', actorText='AI · 需求分析师A',
+        narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
+    15: dict(keys=['g2_arch_pass'], actor='human', actorText='人 · 架构师A+安全工程师A',
+        narrative='G2 双工位同刻：安全评审 7 分钟过闸（新设计面口径首验 17:56）；架构评审首轮真打回、修订 20 分钟复审过。'),
+    16: dict(keys=['close_done'], actor='ai', actorText='AI · 需求收段',
+        narrative='（本步按方案执行，真值以 state 与 evidence 为准）'),
+    17: dict(keys=['plan_done'], actor='ai', actorText='AI · 产品经理A',
+        narrative='排期完成，六路开发任务书+测试预备轮（用例前移）同刻派发（18:15）。'),
+    18: dict(keys=['devimpl_done'], actor='ai', actorText='AI · 六路研发',
+        narrative='编码六路 19 分钟收段（分支真值 18:32 全齐）；G3 过闸。', imgs=[('devimpl_done-op1-before','IDE 工作台·任务列表与空画布（编码段起点）','ui'), ('devimpl_done-op1-after','IDE 工作台·自动化蓝图卡片网格','ui'),]),
+    19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
+        narrative='缺陷+测试段：五路分片 20 分钟全交卷（18:34 派发/18:52 末行）；集成合并推送在案；G4 20:59 过闸。', imgs=[],),
+    20: dict(keys=['ready_done','release_done'], actor='human', actorText='人 · 把关+HumanGate',
+        narrative='G5 两轮真打回（两缺陷+复验报告缺位）触发熔断——监控修复链完整走通（lin/chen 修复+qi 复验+fanfan 复审），00:45 复审 PASS 复位续走；REL 三卡 00:36 登记。'),
+    21: dict(keys=['uat_done'], actor='human', actorText='人 · 需求分析师A逐条判词',
+        narrative='UAT 验收 7 条 AC 全过（00:45 验收书入仓）——上轮 5/7 两缺口本轮补齐。'),
+    22: dict(keys=['workmgr_done'], actor='ai', actorText='AI · 研发治理',
+        narrative='工作台账生成（14 账号×状态分布）。'),
+    23: dict(keys=['audit_done'], actor='human', actorText='人 · 审计师A独立线',
+        narrative='独立审计完成（六域体检+凭证抽检+问题单台账）。', imgs=[('audit_done-op1-after','IDE 工作台·蓝图页（审计取证时段视图）','ui'),]),
+    24: dict(keys=['retro_done'], actor='human', actorText='人 · 复盘确认',
+        narrative='G6 复盘收尾，治理报告 00:46 生成入仓。'),
+    25: dict(keys=['ide_done'], actor='human', actorText='人 · 界面走查',
+        narrative='IDE 画布视图落位。', imgs=[],),
+    26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告链',
+        narrative='报告链收尾：R17 注册补齐+审计熔断+双正本合并收尾。'),
 }
 
 STEPS_META_RUN15 = {
@@ -1433,6 +1463,24 @@ if RUN_ID not in _NARR:
     STEPS_META=_narrative_fallback_skeleton(RUN_ID)
 else:
     STEPS_META=_NARR[RUN_ID]
+
+# ── run16 复盘防线（fix/run16-report-truth）：注册表 keys 为空=完成态推导全灭 ──
+# run16 实锤：收尾会话注册 STEPS_META 时 26 步 keys 全空 → _step_done() 恒 False →
+# 25 步误渲染 ⬜、48 张已拍帧零挂接、审计按「未完成步」口径放行。兜底：步 1-25 任一
+# keys 为空即回落 §3.3 默认映射键并 stderr 警示（步 26 由 _step_done 特判恒真）；
+# 审计器同批新增「state 键在位而报告步 ⬜」FAIL 断言，双保险。
+_STEP33_DEFAULT_KEYS = ['smoke_done','smoke_done','smoke_done','smoke_done','appinit_done','people_done',
+                        'g1_frozen','room_analysis','dispatch_marker','register_done','analysis_done','triage_done',
+                        'anexec_done','review_done','g2_arch_pass','close_done','plan_done','devimpl_done',
+                        'defect_done','ready_done','uat_done','workmgr_done','audit_done','retro_done','ide_done','report_done']
+_STEP33_MULTI_KEYS = {11: ['analysis_done', 'analysis_verified'],
+                      19: ['defect_done', 'testpass_done'],
+                      20: ['ready_done', 'release_done']}
+for _n, _meta in list(STEPS_META.items()):
+    if _n != 26 and not _meta.get('keys'):
+        _meta['keys'] = _STEP33_MULTI_KEYS.get(_n) or [_STEP33_DEFAULT_KEYS[_n - 1]]
+        sys.stderr.write('[mx-report-gen] 步 %s 叙事注册 keys 为空——回落 §3.3 默认键 %s（run16 实锤防线）\n'
+                         % (_n, '+'.join(_meta['keys'])))
 
 _L3_A={'20261012-v8-run16':'进行中（V8.17 复盘纪律版首验轮+监控驱动修复链轮）：六闸 6/6（G2 安全评审新口径 7 分钟过闸首验；G5 两轮真打回熔断后监控修复链完整走通复位）；UAT 7/7 全过（run15 两缺口补齐）；V8.16 饱和并行全谱首验；监控代行全链实战','20261011-v8-run15':'进行中（V8.10-V8.15 全栈首验轮+根治轮·监控哨叙事）：26 步全走完+六闸 6/6（首过 5/6——G2 涉敏安全前置首验真拦截后复审改判）；七件首验落地（三段卡×3/涉敏评审卡/六域当轮体检/契约观察影子 breaking=0/主卡 room 锚/判词复用/实时帧 48 张零补拍）；运行中当场根治四类真缺陷（安全闸三重盲区 bf9a955——80 秒收敛实证、进度锚陈旧分支盲转 c1e507d、多锚精确记单 36c7701、mx-up 冷起挂死 09c07f9）；监控代行定向令 6 发 6 中；全程 12h17m（对照 run14 净 22h，摩擦=锚冻结 150min+安全修复环 68min+监督器卡死 10min）','20261010-v8-run14':'进行中（V8.5 首个全量验证轮·预注册句）：mx-clean 三旗标 0→1 全新环境独立回归；V8.5 条款（DISP 主体精确配对/登记幂等/闸键首过保护/打回=判词语义/并行度段界锚）+G1-G4 产品面修复+GRAPH_ENGINE=on 的首个全量轮——L3 总评行由收尾链按当轮实测定稿','20261010-v8-run13':'符合（回归轮首航·诚实账）：本轮执行带九步全走完（开发→测试→发布→验收→审计→复盘→报告，全程 3 小时 04 分）；六闸全收齐（G3/G4/G5 当轮，G1/G2 沿用源轮真值分带呈现）；边界守卫首次实战通过（零 main 污染、零越界代做）；验收诚实账更严（AC-1/5/6 不通过如实判词，一手复测与 测试工程师A 报备双源一致）；事故账=repo_has×回归轮五连循环（根治 6959a2b）+步18 错页帧（G1/G2 中途上线修复）；回归轮口径首次全程落地','20261009-v8-run12':'run12 符合（逆境中的治理+诚实记账轮）：26 步全部走完、六道关卡全部通过（G1/G2/G3/G4 一次通过 4/6；G5 两轮不通过+强制暂停+复审转正；UAT 有条件通过、AC-5 如实标红）；诚实账=测试工程师A 如实报告「TEST-BE 未执行」→G5 第一轮追责→测试工程师A 真实执行 250/250 全绿完整循环——不谎报纪律全程可反查；六张开发卡同时派出（提速措施二）+测试并行拆分（测试工程师A/团队负责人A/产品经理A 三方）双双首次应用；网关四起事故+噪音风暴+会话中毒+结论行污染全部记入问题清单并全部恢复。','20261007-v8-run11':'符合（零残留独立回归的正跑轮+逆境治理主战役）：attempt-3 26 步全走完（02:26 开跑→G6 00:26 六闸 6/6 收齐）；从零交付实证——孤儿历史（main 深度 1）+禁考古措辞+闸卫三防线下，四系分两稿从零入仓（PAYCORE/MP）、四开发分支全部本轮新推、TEST-BE 228/228 全绿、发布三件套+UAT 7/7 判词齐；流水线三机制首验（四路同时派出同秒/渠道批触发链/用例前移预备轮）；attempt-1/2 事故链四病根全部根治提交（自动检查 78/78）；负向如实入账：系分 2/4 超窗、容量饥饿×2（drop 106 条）、产品经理A 会话卡死×3（hindsight 交互）、G5 六轮（人工介入 5 笔：熔断放行+发布件代拟+簿记代走+终判代落）、RACI 双@×4 复现、materials 残留暴露——全部记入问题清单在案。','20261007-v8-run10':'run10 符合（全流程完整循环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实测统计落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记入问题清单在案；叙事文案预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采清单 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记入问题清单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记入问题清单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收尾，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实测依据）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判停滞重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），研发工程师B/研发工程师D 停摆缺席如实记入问题清单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收尾实测依据）：G1→UAT 意图通路全完整循环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（测试工程师A 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记入问题清单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
 '20261001-v5-run6':'符合（harness 逆境根治+真交付轮）：G1→UAT 意图通路完整循环（验收书入仓+七条 UAT-EVIDENCE 7/7 PASS）；plan 七连超时根因链（窗口<任务时长/派发词缺 push 目标/账户限流/网关换血）四层根治后 产品经理A 30 分钟交卷；devimpl 分支假真值如实披露（branch_fresh 自动检查根治未来轮）且四开发 agent 真实交付三支推送；测试 194/194 零缺陷 G4 真值；夜间 8h 停摆（/tmp 清理+Docker 睡眠）与路由丢失（DM 直发修复）/并发闸弹回/UAT 核验位错配三类新坑全部根治或如实记档——治理逆境与修复即本轮主线素材。',
@@ -2160,10 +2208,14 @@ def _gov_metrics_line() -> str:
     txt = gr.read_text(encoding='utf-8', errors='replace')
     import re as _re
     def _pick(label):
+        # run16 实锤修订：metrics CSV 两种形态并存——run15 折行形（续行以 , 开头）与
+        # run16 整行形（date,rfid,scope,label,value,...）。按「标签域的下一域=值」定位，
+        # 两种形态通吃；值内 ASCII 逗号截断取首段（首段即数值头，如 4/6）。
         for ln in txt.splitlines():
-            if ln.startswith(',') and label in ln:
-                parts = ln.split(',')
-                return parts[4] if len(parts) > 4 else '⬜'
+            parts = ln.split(',')
+            for i, seg in enumerate(parts):
+                if label in seg and i + 1 < len(parts) and parts[i + 1].strip():
+                    return parts[i + 1].strip().replace('记单', '登记')
         return '⬜'
     fp, ev, de = _pick('首过率'), _pick('证据一次通过率'), _pick('缺陷密度')
     return (f'<div class="gov-metrics-line">治理指标 · 首过率 <b>{H.escape(fp)}</b>'
@@ -2239,6 +2291,14 @@ def issues_stats():
     deferred = [k for k in order if disp_of[k] and disp_of[k].startswith('延后')]
     nonstd = [k for k in order if disp_of[k] and not disp_of[k].startswith(('已修', '观察', '延后'))]
     open_k = [k for k in order if not disp_of[k]]
+    # 配对口径披露（run16 复盘，fix/run16-report-truth）：hero「n/n 已完整循环」的 n 取自
+    # 纪律 28 阶梯配对（①精确+②泛指广播+③单键容差），不披露口径会让读者误当逐键精确
+    # 处置（run16 实锤：hero 75/75 而精确配对仅 7 键，32 DISP 悬挂无 ISSUE——审计 WARN
+    # 台账卫生）。三数并呈，广播占比高的台账一眼可辨。
+    _exact_paired = sum(1 for k in order if disp_of[k] and tuple(k.split('·', 1)) in disp_exact)
+    _bcast_paired = (len(closed) + len(observed) + len(deferred) + len(nonstd)) - _exact_paired
+    _iss_key_set = set(order)
+    _dangling = sum(1 for (dt, ds) in disp_exact if f'{dt}·{ds}' not in _iss_key_set)
     rows = []
     for k in order:
         d = disp_of[k]
@@ -2259,7 +2319,8 @@ def issues_stats():
             '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。')
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
-    return stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order), len(open_k), len(nonstd)
+    return (stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order),
+            len(open_k), len(nonstd), _exact_paired, _bcast_paired, _dangling)
 
 def main_head():
     try:
@@ -2499,7 +2560,7 @@ def skill_duty_html():
             + '</details>')
 
 
-stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd = issues_stats()
+stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd, n_exact_pair, n_bcast_pair, n_dangling = issues_stats()
 n_resolved = n_closed + (n_issue_keys - n_closed - n_issue_open - n_nonstd) + 0  # 已修+观察+延后（观察/延后=keys-closed-open-nonstd）
 main_sha = main_head()
 
@@ -3971,7 +4032,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
       <div class="hstat"><b>26</b><span>步骤</span></div>
       <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次（口径=步位注册且盘上在位；审计器盘上全量 PNG 计数减此值=未挂接帧）{_img_honest_note}</span></div>
       <div class="hstat">{_HERO_GATE_HSTAT.get(RUN_ID, _hero_gate_default())}</div>
-      <div class="hstat"><b>{n_resolved}/{n_issue_keys}</b><span>问题单已完整循环（已修+观察+延后；表外词 {n_nonstd} 键待归桶）{f' · 待处置 {n_issue_open}' if n_issue_open else ''}</span></div>
+      <div class="hstat"><b>{n_resolved}/{n_issue_keys}</b><span>问题单已完整循环（已修+观察+延后；表外词 {n_nonstd} 键待归桶）{f' · 待处置 {n_issue_open}' if n_issue_open else ''}——配对口径=纪律 28 阶梯：精确 {n_exact_pair} 键+广播/单键 {n_bcast_pair} 键{f' · 悬挂 DISP {n_dangling} 键（台账卫生，见审计 WARN）' if n_dangling else ''}</span></div>
       <div class="hstat">{_r18_hero_badge()}</div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
