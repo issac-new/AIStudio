@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index 21bc5a47..aefa5326 100644
+index 21bc5a47d..aefa53266 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -331,7 +331,11 @@ export async function createBoard(ctx: Context) {

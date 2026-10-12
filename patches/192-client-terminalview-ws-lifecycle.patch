@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/TerminalView.vue b/packages/client/src/views/hermes/TerminalView.vue
-index 65858bf7..59aee3e8 100644
+index 65858bf7d..59aee3e8a 100644
 --- a/packages/client/src/views/hermes/TerminalView.vue
 +++ b/packages/client/src/views/hermes/TerminalView.vue
 @@ -246,6 +246,10 @@ let activeTerm: Terminal | null = null;

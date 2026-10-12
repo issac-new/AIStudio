@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index ced9744b..885b4aff 100644
+index ced9744b0..885b4aff0 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -124,6 +124,8 @@ import { escalationRoutes } from '../custom/escalation/escalation-controller'

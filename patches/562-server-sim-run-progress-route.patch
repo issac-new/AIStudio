@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 885b4aff..9d68fceb 100644
+index 885b4aff0..9d68fceb9 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -108,6 +108,7 @@ import { kgEvolutionRoutes } from '../custom/kgevolution/kg-evolution-controller

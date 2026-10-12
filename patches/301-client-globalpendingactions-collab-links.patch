@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
-index da7433ef..1823085c 100644
+index da7433efd..1823085c8 100644
 --- a/packages/client/src/components/layout/GlobalPendingActions.vue
 +++ b/packages/client/src/components/layout/GlobalPendingActions.vue
 @@ -152,7 +152,7 @@ function pendingSoundActionKeys(): string[] {

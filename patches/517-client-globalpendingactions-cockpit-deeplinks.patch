@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
-index 1823085c..e3926840 100644
+index 1823085c8..e39268402 100644
 --- a/packages/client/src/components/layout/GlobalPendingActions.vue
 +++ b/packages/client/src/components/layout/GlobalPendingActions.vue
 @@ -314,11 +314,14 @@ function openPendingSource(action: GlobalPendingAction) {

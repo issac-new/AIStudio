@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/bridge/manager.ts b/packages/server/src/modules/hermes/services/bridge/manager.ts
-index 9978dc7a..2fa44405 100644
+index 9978dc7a3..2fa444059 100644
 --- a/packages/server/src/modules/hermes/services/bridge/manager.ts
 +++ b/packages/server/src/modules/hermes/services/bridge/manager.ts
 @@ -1,7 +1,8 @@
@@ -112,7 +112,7 @@ index 9978dc7a..2fa44405 100644
      this.ready = false
 diff --git a/tests/server/agent-bridge-capture-log.test.ts b/tests/server/agent-bridge-capture-log.test.ts
 new file mode 100644
-index 00000000..0cc6f3de
+index 000000000..0cc6f3def
 --- /dev/null
 +++ b/tests/server/agent-bridge-capture-log.test.ts
 @@ -0,0 +1,77 @@

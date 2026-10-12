@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue b/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
-index 93aefb9c..17aa7a6c 100644
+index 93aefb9c1..17aa7a6cf 100644
 --- a/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
 @@ -1,4 +1,5 @@
@@ -136,7 +136,7 @@ index 93aefb9c..17aa7a6c 100644
    display: flex;
    align-items: center;
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 573c76c6..6c7e9fe2 100644
+index 573c76c6a..6c7e9fe28 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -418,6 +418,18 @@ function boundedMobileCalendarTimeout(value: unknown): number {

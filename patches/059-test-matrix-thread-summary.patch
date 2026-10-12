@@ -1,6 +1,6 @@
 diff --git a/tests/client/matrix-thread-summary.test.ts b/tests/client/matrix-thread-summary.test.ts
 new file mode 100644
-index 00000000..0423c2be
+index 000000000..0423c2beb
 --- /dev/null
 +++ b/tests/client/matrix-thread-summary.test.ts
 @@ -0,0 +1,71 @@

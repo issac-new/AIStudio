@@ -1,5 +1,5 @@
 diff --git a/packages/ekko-agent/src/runtime/runtime.ts b/packages/ekko-agent/src/runtime/runtime.ts
-index 3644aa0b..7dc682d5 100644
+index 3644aa0bf..7dc682d50 100644
 --- a/packages/ekko-agent/src/runtime/runtime.ts
 +++ b/packages/ekko-agent/src/runtime/runtime.ts
 @@ -20,7 +20,7 @@ import type { AgentSkill } from '../skills/types'
@@ -23,7 +23,7 @@ index 3644aa0b..7dc682d5 100644
      this.skillsAvailable = options.skillsAvailable
      this.skills = this.skillsEnabled ? options.skills ?? [] : []
 diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/runtime/types.ts
-index 5d2bc35f..a78098d1 100644
+index 5d2bc35f8..a78098d16 100644
 --- a/packages/ekko-agent/src/runtime/types.ts
 +++ b/packages/ekko-agent/src/runtime/types.ts
 @@ -2,7 +2,8 @@ import type { AgentMessage, ModelClient, ModelRequest } from '../model/types'
@@ -47,7 +47,7 @@ index 5d2bc35f..a78098d1 100644
    jev?: EkkoJevOverrides
    /** Fixed profile identity for tool and memory operations. Per-run input cannot override it. */
 diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src/tools/registry.ts
-index d65af413..de9317af 100644
+index d65af4133..de9317af1 100644
 --- a/packages/ekko-agent/src/tools/registry.ts
 +++ b/packages/ekko-agent/src/tools/registry.ts
 @@ -4,6 +4,7 @@ import type {
@@ -101,7 +101,7 @@ index d65af413..de9317af 100644
  }
  
 diff --git a/packages/ekko-agent/src/tools/types.ts b/packages/ekko-agent/src/tools/types.ts
-index 1819802e..5181edbc 100644
+index 1819802e3..5181edbc5 100644
 --- a/packages/ekko-agent/src/tools/types.ts
 +++ b/packages/ekko-agent/src/tools/types.ts
 @@ -122,3 +122,23 @@ export class AgentToolError extends Error {

@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 7ba40003..47912064 100644
+index f782c0994..aa8a8559a 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -180,6 +180,50 @@ function showMainWindow() {
+@@ -184,6 +184,50 @@ function showMainWindow() {
    showWindowWithFade(true)
  }
  
@@ -53,7 +53,7 @@ index 7ba40003..47912064 100644
  function quitApp() {
    appLifecycle.quit()
  }
-@@ -1552,9 +1596,21 @@ function runDesktopApp() {
+@@ -1585,9 +1629,21 @@ function runDesktopApp() {
        quitApp()
        return
      }
@@ -75,7 +75,7 @@ index 7ba40003..47912064 100644
    app.whenReady().then(async () => {
      if (QUIT_EXISTING) {
        quitApp()
-@@ -1577,6 +1633,14 @@ function runDesktopApp() {
+@@ -1610,6 +1666,14 @@ function runDesktopApp() {
        console.warn('[desktop] failed to refresh the Linux login item:', error)
      }
      installMicrophonePermissionHandler()
@@ -91,10 +91,10 @@ index 7ba40003..47912064 100644
      await createWindow()
      screenshotShortcut.restore(screenshotEnvironment().hideWindows)
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
-index deadce60..c9e114f7 100644
+index e1c7291eb..1acc28ebe 100644
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
-@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+@@ -53,6 +53,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
    restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
    selectRuntimeDirectory: (defaultPath?: string): Promise<string | null> => ipcRenderer.invoke('hermes-desktop:select-runtime-directory', defaultPath),
    notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),

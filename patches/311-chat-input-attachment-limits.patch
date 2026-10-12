@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
-index 9fb632e5..b2a323ea 100644
+index a51477ddd..d4a2d0277 100644
 --- a/packages/client/src/components/hermes/chat/ChatInput.vue
 +++ b/packages/client/src/components/hermes/chat/ChatInput.vue
-@@ -877,8 +877,25 @@ function formatTokens(n: number): string {
+@@ -897,8 +897,25 @@ function formatTokens(n: number): string {
  
  // --- File attachment helpers ---
  

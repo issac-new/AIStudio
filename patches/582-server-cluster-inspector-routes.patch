@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 7b83d327..22d64cf2 100644
+index 7b83d3275..22d64cf2f 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -130,6 +130,9 @@ import { reportRoutes } from '../custom/report/report-controller'

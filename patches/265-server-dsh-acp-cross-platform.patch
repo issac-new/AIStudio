@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/coding-agents/services/dsh/host.ts b/packages/server/src/modules/coding-agents/services/dsh/host.ts
-index 33d591aa..e5dcd6ed 100644
+index 33d591aa8..e5dcd6ed3 100644
 --- a/packages/server/src/modules/coding-agents/services/dsh/host.ts
 +++ b/packages/server/src/modules/coding-agents/services/dsh/host.ts
 @@ -45,6 +45,15 @@ export function createDshHost(host: DshHostCommands) {
@@ -28,7 +28,7 @@ index 33d591aa..e5dcd6ed 100644
        })
      })
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts b/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
-index dc1242a7..d2105d9a 100644
+index dc1242a79..d2105d9af 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
 @@ -10,6 +10,19 @@ const CODING_AGENT_CHILD_ENV_KEYS = new Set([

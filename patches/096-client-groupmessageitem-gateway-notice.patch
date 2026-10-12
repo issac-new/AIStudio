@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
-index 80720050..c21a67ef 100644
+index 807200506..c21a67efc 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
 @@ -12,6 +12,7 @@ import {

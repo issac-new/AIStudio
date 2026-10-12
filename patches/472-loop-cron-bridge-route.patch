@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index ed269461..3d67b892 100644
+index ed269461d..3d67b892e 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -76,6 +76,9 @@ import ideGitRoutes from '../custom/controllers/ide/git'

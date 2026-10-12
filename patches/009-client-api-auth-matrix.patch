@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/studio/auth.ts b/packages/client/src/api/studio/auth.ts
-index 4e1ff1de..36eea31e 100644
+index 4e1ff1dea..36eea31e8 100644
 --- a/packages/client/src/api/studio/auth.ts
 +++ b/packages/client/src/api/studio/auth.ts
 @@ -34,6 +34,29 @@ export async function loginWithPassword(username: string, password: string): Pro

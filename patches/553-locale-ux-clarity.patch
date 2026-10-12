@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 549d5fc9..762b6b40 100644
+index f58dd3aa2..465d5ee11 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -559,7 +559,7 @@ export default {
@@ -21,7 +21,7 @@ index 549d5fc9..762b6b40 100644
          all: 'All',
          session: 'Sessions',
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 4c585eee..3c535365 100644
+index 8013899c9..a2962de9f 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -558,7 +558,7 @@ export default {

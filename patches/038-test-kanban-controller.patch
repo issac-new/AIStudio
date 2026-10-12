@@ -1,5 +1,5 @@
 diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
-index 7da327da..e8007a07 100644
+index 7da327daf..e8007a07c 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
 @@ -38,6 +38,7 @@ vi.mock('fs/promises', async importOriginal => ({

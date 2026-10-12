@@ -1,5 +1,5 @@
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
-index ef33038e..fcda9a36 100644
+index ef33038e2..fcda9a362 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
 @@ -24,6 +24,21 @@ const handlers = {

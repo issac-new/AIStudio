@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/stores/hermes/auth.ts
-index 4abecf1e..655d63e7 100644
+index 4abecf1ef..655d63e7f 100644
 --- a/packages/client/src/stores/hermes/auth.ts
 +++ b/packages/client/src/stores/hermes/auth.ts
 @@ -61,6 +61,29 @@ export const useAuthStore = defineStore('hermes-auth', () => {
@@ -41,7 +41,7 @@ index 4abecf1e..655d63e7 100644
      fetchUser,
      logout,
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 9cfed10f..4440052b 100644
+index 9cfed10f3..4440052b3 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -79,9 +79,16 @@ function clearSavedCredentials(form: 'matrix' | 'local'): void {

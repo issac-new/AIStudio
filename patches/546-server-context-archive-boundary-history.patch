@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/repositories/compression-snapshot.ts b/packages/server/src/modules/studio/repositories/compression-snapshot.ts
-index 3ef102b6..6aa181d1 100644
+index 3ef102b62..6aa181d12 100644
 --- a/packages/server/src/modules/studio/repositories/compression-snapshot.ts
 +++ b/packages/server/src/modules/studio/repositories/compression-snapshot.ts
 @@ -119,6 +119,27 @@ export function saveCompressionSnapshot(

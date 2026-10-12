@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index fce92c54..22d8cda8 100644
+index fce92c540..22d8cda84 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -7,6 +7,7 @@ import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff
@@ -20,10 +20,10 @@ index fce92c54..22d8cda8 100644
          msg.role !== 'tool' ||
          toolTraceVisible.value ||
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 1fde5925..01f8e989 100644
+index 2d8fa9669..4ec60ba48 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
-@@ -57,6 +57,11 @@ function openGroupChat() {
+@@ -62,6 +62,11 @@ function openGroupChat() {
    void router.push({ name: 'hermes.groupChat' })
  }
  
@@ -37,7 +37,7 @@ index 1fde5925..01f8e989 100644
    void router.push({ name: 'hermes.workflow' })
 diff --git a/packages/client/src/custom-modules.d.ts b/packages/client/src/custom-modules.d.ts
 new file mode 100644
-index 00000000..10241d8f
+index 000000000..10241d8f3
 --- /dev/null
 +++ b/packages/client/src/custom-modules.d.ts
 @@ -0,0 +1,6 @@
@@ -48,7 +48,7 @@ index 00000000..10241d8f
 +declare module '@/custom/*'
 +declare module '@custom/*' 
 diff --git a/packages/client/src/utils/agent-options.ts b/packages/client/src/utils/agent-options.ts
-index 39bbd0d1..8c2f5aa3 100644
+index 39bbd0d1a..8c2f5aa3c 100644
 --- a/packages/client/src/utils/agent-options.ts
 +++ b/packages/client/src/utils/agent-options.ts
 @@ -4,9 +4,11 @@ export const AGENT_OPTIONS = [
@@ -64,10 +64,10 @@ index 39bbd0d1..8c2f5aa3 100644
    { label: 'Cursor', value: 'cursor' },
    { label: 'Antigravity', value: 'antigravity' },
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index 31aa391c..3433ab1b 100644
+index 5346e6273..cacf4a437 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -78,7 +78,6 @@ import MessageList from '@/components/hermes/chat/MessageList.vue'
+@@ -80,7 +80,6 @@ import MessageList from '@/components/hermes/chat/MessageList.vue'
  import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
  import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
  import ListActionsMenu from '@/components/layout/ListActionsMenu.vue'

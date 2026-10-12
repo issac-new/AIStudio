@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 6d9cc1cb..9d10db5e 100644
+index 6d9cc1cbb..9d10db5e6 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -141,6 +141,9 @@ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clust

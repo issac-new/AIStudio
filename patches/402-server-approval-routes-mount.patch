@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index f5820943..902604cc 100644
+index f58209439..902604cc8 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -79,6 +79,8 @@ import { registerMatrixRoutes } from '../custom/matrix'

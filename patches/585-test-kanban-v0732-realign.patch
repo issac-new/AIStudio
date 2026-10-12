@@ -1,5 +1,5 @@
 diff --git a/tests/server/hermes-kanban-service.test.ts b/tests/server/hermes-kanban-service.test.ts
-index ba1331ac..90b6a0af 100644
+index ba1331ace..90b6a0af6 100644
 --- a/tests/server/hermes-kanban-service.test.ts
 +++ b/tests/server/hermes-kanban-service.test.ts
 @@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -126,7 +126,7 @@ index ba1331ac..90b6a0af 100644
  
    it('normalizes 0.19 detail ids and lists durable attachments', async () => {
 diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
-index d57d0da6..c6dd6982 100644
+index d57d0da6d..c6dd69825 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
 @@ -168,11 +168,12 @@ describe('kanban controller', () => {

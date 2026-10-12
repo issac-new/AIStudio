@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index a1f35714..dbbaae09 100644
+index a1f357145..dbbaae09c 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
 @@ -756,6 +756,14 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod

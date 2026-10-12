@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/packages/server/src/modules/hermes/services/gateway/autostart.ts
-index 74dc6fb3..cd1bb593 100644
+index 74dc6fb34..cd1bb593f 100644
 --- a/packages/server/src/modules/hermes/services/gateway/autostart.ts
 +++ b/packages/server/src/modules/hermes/services/gateway/autostart.ts
 @@ -402,6 +402,22 @@ export async function isGatewayRunningForProfile(hermesBin: string, profileDir:

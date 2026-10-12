@@ -22,8 +22,15 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync } from 'fs'
 import { execSync } from 'child_process';
 import { resolve } from 'path';
 
-const overlayRoot = resolve(import.meta.dirname, '..');
-const studioRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+const overlayRoot = process.env.MIGRATE_OVERLAY_ROOT
+  ? resolve(process.env.MIGRATE_OVERLAY_ROOT)
+  : resolve(import.meta.dirname, '..');
+// MIGRATE_STUDIO_ROOT 允许把上游树换成独立 worktree 副本——默认口径保持
+// 运行中的共享树不被碰(run16/17 在飞进程锚定共享树,checkout --force/clean
+// 会摧毁它;三目标轮⑮实证)。
+const studioRoot = process.env.MIGRATE_STUDIO_ROOT
+  ? resolve(process.env.MIGRATE_STUDIO_ROOT)
+  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 const patchDir = resolve(overlayRoot, 'patches');
 const seriesFile = resolve(patchDir, 'series');
 const stateFile = resolve(overlayRoot, '.patch-migrate.json');

@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index a22fce83..35c5f672 100644
+index a22fce83a..35c5f6728 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
 @@ -19,6 +19,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'

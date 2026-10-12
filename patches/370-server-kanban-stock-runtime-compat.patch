@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 667a2298..6c15a732 100644
+index 667a22983..6c15a7324 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -1100,6 +1100,10 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):

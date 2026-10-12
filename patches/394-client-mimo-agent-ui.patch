@@ -1,6 +1,6 @@
 diff --git a/packages/client/public/coding-agents/mimo.svg b/packages/client/public/coding-agents/mimo.svg
 new file mode 100644
-index 00000000..f07f1beb
+index 000000000..f07f1beb8
 --- /dev/null
 +++ b/packages/client/public/coding-agents/mimo.svg
 @@ -0,0 +1,5 @@
@@ -10,7 +10,7 @@ index 00000000..f07f1beb
 +  <circle cx="24.5" cy="11.5" r="2" fill="#FF6900" fill-opacity=".85"/>
 +</svg>
 diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
-index a011e106..7fd1a206 100644
+index a011e106b..7fd1a2061 100644
 --- a/packages/client/src/api/agent-status.ts
 +++ b/packages/client/src/api/agent-status.ts
 @@ -1,6 +1,6 @@
@@ -30,7 +30,7 @@ index a011e106..7fd1a206 100644
    cursor: 'cursor',
    antigravity: 'antigravity',
 diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
-index d10b014c..105eee81 100644
+index a6d1954a4..80b765ae5 100644
 --- a/packages/client/src/api/coding-agents.ts
 +++ b/packages/client/src/api/coding-agents.ts
 @@ -1,7 +1,7 @@
@@ -43,7 +43,7 @@ index d10b014c..105eee81 100644
  export const CODING_AGENT_API_MODES = [
    'chat_completions',
 diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
-index 6724df2a..f378521b 100644
+index 6724df2a2..f378521b9 100644
 --- a/packages/client/src/api/studio/chat.ts
 +++ b/packages/client/src/api/studio/chat.ts
 @@ -138,7 +138,7 @@ export interface RunEvent {
@@ -65,7 +65,7 @@ index 6724df2a..f378521b 100644
      guarantee: 'strict' | 'immediate'
      requested_at: number
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 22d8cda8..b324ea98 100644
+index 22d8cda84..b324ea986 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -36,6 +36,7 @@ const emptyStateAgents = [
@@ -77,7 +77,7 @@ index 22d8cda8..b324ea98 100644
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index a1daf64f..a7cae438 100644
+index a1daf64fc..a7cae4381 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
 @@ -17,6 +17,8 @@ const AGENT_AVATARS = {
@@ -90,7 +90,7 @@ index a1daf64f..a7cae438 100644
    cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
    qwen: { label: 'Qwen Code', src: '/coding-agents/qwen-logo.svg' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index fdab86a3..4f051115 100644
+index fdab86a38..4f051115a 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
 @@ -9,6 +9,8 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
