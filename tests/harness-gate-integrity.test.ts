@@ -1459,6 +1459,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(s).toContain('set -euEo pipefail')
     expect(s).toContain('驱动异常退出 rc=$rc')
     expect(s).toContain('BASH_COMMAND:0:160')
+    expect(s).toContain('BASH_SUBSHELL')  // 子壳良性失败不刷异常退出噪音（run16 首跑实锤）
   })
 
   it('DISP 三态前缀：驱动两处收尾位点带「已修」+归桶件接线在报告步', () => {
@@ -1490,6 +1491,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 十一项')
+    expect(pre).toContain('prelaunch 十二项')
+    expect(pre).toContain('⑫ 账号板供给在位')
   })
 })
