@@ -24,10 +24,17 @@
 #   正确开跑：RUN_ID=<轮次> LC_ALL=C nohup bash aipay-scenario.sh > <SIM_ROOT>/logs/<轮次>-driver.log 2>&1 &
 # 步骤序: smoke → ba → room → dispatch → register → analysis → triage → anexec
 #        → review → close → plan → devimpl → defect → testpass → release → templates → ide
-set -euo pipefail
+set -euEo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
+# N4（run15 复盘，V8.17）：静默 rc=1 断根诊断——ERR trap。
+# set -e 下未受 if/||/&& 保护的失败命令先触发本 trap 再退出（受保护上下文不触发，
+# 与 set -e 判定同源；-E 令 trap 穿透函数体）。崩溃点从「日志尾部无 FAIL 行」变为
+# 「[ERR] aipay-scenario.sh:行号：命令」一跳定位。run15 实证：11:05-11:31 八轮
+# 4-7 分钟崩溃环（grep 空匹配 pipefail，dcc8a7a 修复）排查 26 分钟全靠 mtime 交叉
+# 定位——有此 trap 即一行日志的事。bash -x 离线重放始终未执行，本 trap 即其常驻替身。
+trap 'rc=$?; _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=$rc（aipay-scenario.sh:$LINENO：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi' ERR
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
 # Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
@@ -764,10 +771,10 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       SGID=$(sget security_rgid)
       if [[ -z "$SGID" ]]; then
         SGID=$(kanban_create_as secops security_review "${RFD_ID} 安全评审（涉敏=${_sens:-未标注}）" \
-          "涉敏需求安全评审单（V8.11 设计面口径）：密钥管理/验签链路/数据落库字段/回调来源校验四项——对着概设与系分稿判设计完备性。代码级已挂账缺陷不判 FAIL，走 SECURITY-COND 条目随 G5 复核。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
+          "涉敏需求安全评审单（V8.17 设计面口径）：密钥管理/验签链路/数据落库字段/回调来源校验四项——对着概设与系分稿判设计完备性。代码级已挂账缺陷不判 FAIL，走 SECURITY-COND 条目随 G5 复核。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
         sset security_rgid "$SGID"
         dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。
-评审口径（V8.11 裁决 A，run15 复盘 F3）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
+评审口径（V8.17 裁决 A，run15 复盘 F3——正本 V8.17 纪律 38 落条款）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
       fi
       if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审")" == "PASS" ]]; then
@@ -1354,7 +1361,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。开跑锚
   # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
   G5_TS=$(( $(sget run_started_at) * 1000 ))
-  # 安全条件清单收割（V8.11 裁决 A，F3）：安全评审 SECURITY-COND 条目落 evidence 供
+  # 安全条件清单收割（V8.17 裁决 A，F3）：安全评审 SECURITY-COND 条目落 evidence 供
   # G5 第 8 项逐条复核——代码级发现不拦 G2（设计面口径），但 G5 放行前必须对账。
   _sec_conds=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 500 2>/dev/null \
     | jq -r --argjson ts "${SEC_TS:-0}" '.[] | select((.origin_server_ts // 0) > $ts) | select(.sender | endswith("secops-agent:matrix.test")) | (.content.body // "") | split("\n")[] | select(test("^\\s*SECURITY-COND-"))' 2>/dev/null || true)
@@ -1401,7 +1408,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     else
       note "[M3] delivery 未启用（无案例房），跳过 G5 gate 事件（lite 轮：早期步夹具跳过致案例未开）"
     fi
-    # 安全条件对账留痕（V8.11 裁决 A，F3）：G5 放行时 SECURITY-COND 清单的闭环状态入
+    # 安全条件对账留痕（V8.17 裁决 A，F3）：G5 放行时 SECURITY-COND 清单的闭环状态入
     # 台账（GAP:COND 残留=如实呈现为未闭环条件，与 GAP 分节同口径计「补过」形态）。
     if [[ -f "$EVID_DIR/security-conditions.md" ]]; then
       _cond_n=$(grep -c 'SECURITY-COND-' "$EVID_DIR/security-conditions.md" || true)
@@ -1433,7 +1440,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 5) 灰度计划：5%→25%→100% 与各档观察期
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
-8) 安全条件复核（V8.11 裁决 A）：安全评审的 SECURITY-COND 条目（见 evidence/security-conditions.md，无则本项直接过）逐条核对——已修复的附修复 commit 锚；未修复的必须在卡 body 标 GAP:COND-<n> 并写明归属与计划（未闭环条件如实呈现，不掩盖）
+8) 安全条件复核（V8.17 裁决 A）：安全评审的 SECURITY-COND 条目（见 evidence/security-conditions.md，无则本项直接过）逐条核对——已修复的附修复 commit 锚；未修复的必须在卡 body 标 GAP:COND-<n> 并写明归属与计划（未闭环条件如实呈现，不掩盖）
 评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-8) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid fanfan)"
     # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
     # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
@@ -1730,13 +1737,13 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     if grep -qF "ISSUE|receipt-missing|${_ct}|" "$EVID_DIR/issues.log" 2>/dev/null; then
       if mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 | jq -e --arg t "${_ct}" \
         '[.[] | select(.sender == "'"$(agent_mxid "${_co}")"'") | select((.content.body // "") | (contains("完成回执") and contains($t)) or test("^\\s*AN-DONE-" + $t))] | length > 0' >/dev/null 2>&1; then
-        echo "DISP|receipt-missing|${_ct}|终态闭环：审计段复核回执已在房间可见（免等窗记单后补账成功）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
+        echo "DISP|receipt-missing|${_ct}|已修 终态闭环：审计段复核回执已在房间可见（免等窗记单后补账成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
         note "[audit] ${_ct} 回执终态闭环（记单后补账成功）"
       fi
     fi
   done
   if grep -qF "ISSUE|raci-not-structured|" "$EVID_DIR/issues.log" 2>/dev/null && [[ -n "$(kanban_raci_of fanfan "${RFD_ID}")" ]]; then
-    echo "DISP|raci-not-structured|终态闭环：审计段复核主卡已带结构化 raci（免等窗记单后补填成功）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
+    echo "DISP|raci-not-structured|fanfan-agent|已修 终态闭环：审计段复核主卡已带结构化 raci（免等窗记单后补填成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
     note "[audit] 主卡结构化 raci 终态闭环（记单后补填成功）"
   fi
   if [[ -z "$(sget audit_dispatched)" ]]; then
@@ -1943,6 +1950,12 @@ PAYSPECS
   repo_pull
   python3 "$SCRIPT_DIR/mux/product-outcome-summary.py" --run "${RUN_ID}" --rfd "${RFD_ID}" >/dev/null 2>&1 \
     || issue_once product-outcome-missing step26 "产品成效 quality-summary 落盘失败（实算脚本异常）"
+  # N2（run15 复盘，V8.17）：DISP 三态归桶收尾件——报告生成前把「有 DISP 但缺
+  # 三态前缀」的键补观察桶收尾行（幂等；已修禁自动升桶，纪律 28）。run15 实证
+  # 58/59 键表外词、四桶计数失真（已修 0/观察 1）。
+  python3 "$SCRIPT_DIR/mux/tri-disp-backfill.py" --run "${RUN_ID}" 2>/dev/null \
+    && note "[报告] DISP 三态归桶收尾件已执行（表外词键补观察桶，纪律 28）" \
+    || note "[观察] DISP 三态归桶件无产出（台账缺席或零表外词——非阻断）"
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落

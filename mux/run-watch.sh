@@ -156,7 +156,7 @@ print(n)" 2>/dev/null || echo 0)
             BODY="@${prof}-agent:matrix.test 续作令（watcher 迭代预算耗尽检测）：你的会话在迭代预算耗尽时已把实查结论 summarise，但代码未落。请基于该总结直接进入写码/落地（禁再做新一轮调研）：按总结里已确认的下一步逐件执行，每件完成即提交+发结论行（可分件分批报）；确有阻塞发 BLOCKED+原因。禁静默。"
             EV=$(curl -s -m 10 -X POST "http://127.0.0.1:8008/_matrix/client/v3/rooms/$NROOM/send/m.room.message?access_token=$TOK" -H 'Content-Type: application/json' -d "$(printf '{"msgtype":"m.text","body":"%s","m.mentions":{"user_ids":["@%s-agent:matrix.test"]}}' "$BODY" "$prof")" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
             echo "$(date '+%H:%M:%S') [budget-continue] $prof 迭代预算耗尽续作令已发（$EV，未结卡 ${OPEN_B}）"
-            echo "DISP|budget-exhausted-continue|$prof|watcher 续作令（$EV）：Iteration budget exhausted 后无工作行+${OPEN_B} 张未结卡；处置=唤醒令类代行（纪律 36），继续监控不退出" >> "$ISSUES"
+            echo "DISP|budget-exhausted-continue|$prof|观察 watcher 续作令（$EV）：Iteration budget exhausted 后无工作行+${OPEN_B} 张未结卡；处置=唤醒令类代行（纪律 36），继续监控不退出" >> "$ISSUES"
             eval "BUDGET_DONE_${prof}=1"
             sleep 120
           fi
@@ -207,7 +207,7 @@ print(n)" 2>/dev/null || echo 0)
           if [ -n "$TOK" ] && [ -n "$NROOM" ]; then
             EV=$(curl -s -m 10 -X POST "http://127.0.0.1:8008/_matrix/client/v3/rooms/$NROOM/send/m.room.message?access_token=$TOK" -H 'Content-Type: application/json' -d "$(printf '{"msgtype":"m.text","body":"%s","m.mentions":{"user_ids":["@%s-agent:matrix.test"]}}' "$NUDGE_BODY" "$prof")" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
             echo "$(date '+%H:%M:%S') [auto-nudge] $prof ${TAG} 已发（$EV，未结卡 ${OPEN}，第 ${NC} 次）"
-            echo "DISP|${TAG}|$prof|watcher v3 唤醒第 ${NC} 次（$EV）：未结卡 ${OPEN}；处置=唤醒令类代行（纪律 36），继续监控不退出" >> "$ISSUES"
+            echo "DISP|${TAG}|$prof|观察 watcher v3 唤醒第 ${NC} 次（$EV）：未结卡 ${OPEN}；处置=唤醒令类代行（纪律 36），继续监控不退出" >> "$ISSUES"
             sleep 300  # 冷却 5 分钟防连环唤醒
           else
             wake "idle-ending: $prof 空转收场但发令凭据缺失，需人工唤醒"

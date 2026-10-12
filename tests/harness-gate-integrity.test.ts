@@ -1449,3 +1449,47 @@ describe('㉕ V8.16 饱和并行（测试分片+并发等待+G2 双工位）', (
     expect(read(LIB)).toContain('在线工位=${_act}')
   })
 })
+
+describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/监控代行小节/prelaunch ⑪）', () => {
+  const SCEN = join(HARNESS, 'aipay-scenario.sh')
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('驱动 ERR trap：静默 rc=1 断根诊断（set -E + trap ERR 落行号命令）', () => {
+    const s = read(SCEN)
+    expect(s).toContain('set -euEo pipefail')
+    expect(s).toContain('驱动异常退出 rc=$rc')
+    expect(s).toContain('BASH_COMMAND:0:160')
+  })
+
+  it('DISP 三态前缀：驱动两处收尾位点带「已修」+归桶件接线在报告步', () => {
+    const s = read(SCEN)
+    expect(s).toContain('DISP|receipt-missing|${_ct}|已修 终态闭环')
+    expect(s).toContain('DISP|raci-not-structured|fanfan-agent|已修 终态闭环')
+    expect(s).toContain('tri-disp-backfill.py')
+  })
+
+  it('归桶件存在且禁自动升桶（一律观察，已修须人工带锚）', () => {
+    const py = read(join(MX, 'tri-disp-backfill.py'))
+    expect(py).toContain('观察（收尾归桶')
+    expect(py).toContain('禁脚本自动升桶')
+    expect(py).toContain("TRI = ('已修', '观察', '延后')")
+  })
+
+  it('审计查 9 三红线：承诺面零帧+零登记=FAIL（有降级键维持 WARN）', () => {
+    const audit = read(join(MX, 'mx-report-audit.py'))
+    expect(audit).toContain('承诺面零帧+零登记=FAIL')
+    expect(audit).toContain('合规降级维持 WARN')
+  })
+
+  it('报告模板：监控代行独立小节（纪律 36 代行事件全量在册）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('def monitor_proxy_html()')
+    expect(gen).toContain('监控代行实录')
+  })
+
+  it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
+    const pre = read(join(MX, 'mx-prelaunch-check.sh'))
+    expect(pre).toContain('⑪ 叙事注册与骨架兜底')
+    expect(pre).toContain('prelaunch 十一项')
+  })
+})

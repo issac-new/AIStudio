@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — run15 开跑前九项核验（一条命令收口，run15 前置 P3-8）。
+# mx-prelaunch-check.sh — 开跑前十一项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -56,5 +56,11 @@ ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . &&
 #    交付域分支，上轮未清=本轮真值锚必踩同坑；integration/* 是设计内跨轮续建不在清理面。
 ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
 
+# ⑪ 按轮叙事注册与骨架兜底在位（run15 复盘：连续两轮漏预写注册的机制化收口——
+#    ①上一完成轮已注册进合并器（每轮收官后推进键位，漏注册此处即红）②生成器 R17
+#    骨架兜底在位（未注册轮不再一票否决，防报告步失败循环）③骨架工具语法可用）。
+ck "⑪ 叙事注册与骨架兜底" "grep -q '20261011-v8-run15' '$HERE/mux/final-report-merge.py' && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "上轮 PART1 未注册（进 final-report-merge.py 的 PART1_BY_RUN）或骨架兜底符号缺失——按轮补注册后再跑"
+echo "  ↳ 起跑后第一收获窗内用 mx-narrative-skeleton.py 起稿本轮注册（R17 骨架兜底只防拒出报告，不替代真实叙事）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十一项）" || { echo "有红项——修复后再跑"; exit 1; }
