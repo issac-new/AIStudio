@@ -761,6 +761,42 @@ def main():
 {machine_main}
 </main>
 </div>
+<button id="back-top" title="回到顶部" aria-label="回到顶部" style="display:none;position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92">↑</button>
+<script>
+(function () {{
+  // 阅读位置感三件（2026-10-12 阅读习惯轮，与 mx-report-gen 同款）：侧栏高亮+回顶+平滑滚动
+  document.documentElement.style.scrollBehavior = 'smooth';
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-step, .sidebar a[href^="#"]'));
+  var byId = {{}};
+  navLinks.forEach(function (a) {{
+    var id = a.getAttribute('href').slice(1);
+    if (id) (byId[id] = byId[id] || []).push(a);
+  }});
+  var targets = Object.keys(byId).map(function (id) {{ return document.getElementById(id); }}).filter(Boolean);
+  if (targets.length && 'IntersectionObserver' in window) {{
+    var io = new IntersectionObserver(function (entries) {{
+      entries.forEach(function (e) {{
+        if (!e.isIntersecting) return;
+        navLinks.forEach(function (a) {{ a.style.background = ''; a.style.color = ''; a.style.borderLeftColor = ''; }});
+        (byId[e.target.id] || []).forEach(function (a) {{
+          a.style.background = 'var(--accent-soft)';
+          a.style.color = 'var(--accent-deep)';
+          a.style.borderLeftColor = 'var(--accent)';
+          a.style.fontWeight = '600';
+        }});
+      }});
+    }}, {{ rootMargin: '-12% 0px -70% 0px' }});
+    targets.forEach(function (t) {{ io.observe(t); }});
+  }}
+  var btn = document.getElementById('back-top');
+  if (btn) {{
+    var onScroll = function () {{ btn.style.display = window.scrollY > window.innerHeight ? 'block' : 'none'; }};
+    window.addEventListener('scroll', onScroll, {{ passive: true }});
+    onScroll();
+    btn.addEventListener('click', function () {{ window.scrollTo({{ top: 0, behavior: 'smooth' }}); }});
+  }}
+}})();
+</script>
 </body></html>'''
 
     # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。
