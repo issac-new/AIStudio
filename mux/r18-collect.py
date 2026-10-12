@@ -67,6 +67,12 @@ def _localpart(sender: str) -> str:
 
 
 def fetch_dialog(room: str, anchor: str, user: str, limit: int) -> list:
+    # run16 实锤防线（fix/run16-report-truth）：锚必须是 $ 开头的 matrix event_id。
+    # 此前清扫循环裸传 marker 键名字面 → /context 404 逐轮刷单 103 张；锚形态前置
+    # 校验把「参数错」与「服务 404」区分开，错误信息直接指出修复方向。
+    if not anchor.startswith('$'):
+        die(f'锚非 event_id 形态（收到 "{anchor[:40]}"）——须传 $… 开头的 matrix 事件号；'
+            f'marker 值请经 marker_eventid 提取（调用方参数错，非服务端故障）')
     tf = SIM / 'creds' / f'{user}.token'
     if not tf.exists():
         die(f'凭据缺失：{tf}（--user 指定持有该房 membership 的账号）')
@@ -197,12 +203,20 @@ def main():
 
 def _issue(run: str, step, msg: str):
     """F2（run15 复盘）：收集失败此前被调用方 `|| true` 全静默——9 步载荷全缺直到报告
-    生成才暴露。中心化记单：任何 die()/异常/空载荷落 issues.log，监控与报告立即可见。"""
+    生成才暴露。中心化记单：任何 die()/异常/空载荷落 issues.log，监控与报告立即可见。
+    run16 实锤修订（fix/run16-report-truth）：记单幂等——同 step 同错误指纹（msg 前 80
+    字符）已登记即跳过，防驱动重启循环重放时每轮刷单（run16 刷 103 单实锤）。"""
     f = SIM / 'runs' / run / 'evidence' / 'issues.log'
     try:
         f.parent.mkdir(parents=True, exist_ok=True)
+        _fp = f'ISSUE|r18-collect-failed|step-{step}|'
+        _sig = msg[:80]
+        if f.exists():
+            for _ln in f.read_text(encoding='utf-8', errors='replace').splitlines():
+                if _ln.startswith(_fp) and _sig in _ln:
+                    return  # 同指纹已登记，幂等拒重
         with f.open('a', encoding='utf-8') as fh:
-            fh.write(f"ISSUE|r18-collect-failed|step-{step}|{msg}\n")
+            fh.write(f"{_fp}{msg}\n")
     except OSError:
         pass
 
