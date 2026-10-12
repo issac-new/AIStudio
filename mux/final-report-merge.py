@@ -734,6 +734,13 @@ def main():
     # 旧写法给模板 div 再挂 id="part1-top" 造成双层嵌套 + 同 id 重复两次
     part1 = re.sub(r'<div class="guide"[^>]*>\s*', '', part1, count=1)
 
+    # 名词速查行（方案 §5.4 报告语言三规矩②「报告头部带名词速查一行」——2026-10-12
+    # 补齐缺件）：正文高频内部缩写在第一屏前载定义，读者无需翻查。
+    GLOSS_LINE = ('<p style="margin:0 0 10px;font-size:12.5px;color:#64748b;line-height:1.8">'
+                  '名词速查：G1-G6=六道关卡 · 判词=结构化结论行 · AC=验收标准 · UAT=用户验收测试 · '
+                  'RACI=责任分配矩阵 · ISSUE/DISP=问题登记行/处置结论行 · WIP=在制品</p>')
+    part1 = GLOSS_LINE + part1
+
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Swarm Studio 多智能体研发推演 · 最终报告（{args.run} · 合并版）</title>
