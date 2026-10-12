@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十一项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补）。
+# mx-prelaunch-check.sh — 开跑前十二项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -62,5 +62,10 @@ ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev'
 ck "⑪ 叙事注册与骨架兜底" "grep -q '20261011-v8-run15' '$HERE/mux/final-report-merge.py' && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "上轮 PART1 未注册（进 final-report-merge.py 的 PART1_BY_RUN）或骨架兜底符号缺失——按轮补注册后再跑"
 echo "  ↳ 起跑后第一收获窗内用 mx-narrative-skeleton.py 起稿本轮注册（R17 骨架兜底只防拒出报告，不替代真实叙事）"
 
+# ⑫ 账号板供给在位（run16 首跑实锤：mx-clean --apply 归档清走全部账号板，板供给在
+#     mx-setup 第 5 段——「clean 后首跑」路径缺供给即驱动步 5 必炸「板元数据缺失」）。
+#     判据/供给循环见 mux/mx-board-supply-check.sh 头注释。
+ck "⑫ 账号板供给在位" "bash '$HERE/mux/mx-board-supply-check.sh' | grep -q '账号板供给齐'" "缺板/缺围栏——按 mux/mx-board-supply-check.sh 头注释的供给循环补建（mx-setup 第 5 段同款幂等）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十一项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十二项）" || { echo "有红项——修复后再跑"; exit 1; }
