@@ -16,7 +16,7 @@ ck() { # <名> <命令串> <失败指引>
   fi
 }
 
-echo "=== run15 开跑前核验（$(date '+%F %T')）==="
+echo "=== 下一轮开跑前核验（$(date '+%F %T')）==="
 
 # ① 守门测试全绿（jargon/门禁/隔离三件套）
 ck "① 门禁测试套件" "bash '$HERE/tests/run-gates.sh' >/dev/null 2>&1" "跑 bash tests/run-gates.sh 看 FAIL 明细"
@@ -57,4 +57,4 @@ ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . &&
 ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——run15 可开跑" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十项）" || { echo "有红项——修复后再跑"; exit 1; }
