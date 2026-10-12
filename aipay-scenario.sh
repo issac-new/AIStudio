@@ -333,6 +333,8 @@ if step_reached reqgate; then
       fi
     fi
     # 写冻结标记（AC 清单提取 + 涉敏结论）并推送
+    # V8.20（方案 §5.8.2 需求冻结行，2026-10-12）：增五项声明行——验证级/质量属性/自检/支付铁线/
+    # 追溯，与 templates-pending/freeze.md 目标结构契约同步（该文件注明「以本文件为准修订 harness」）。
     FREEZE_LOCAL="$DIRECTOR_CLONE/$(freeze_doc)"
     mkdir -p "$(dirname "$FREEZE_LOCAL")"   # mx-clean 九目录全清后目录本体不存在（run6 实锤）
     {
@@ -342,6 +344,11 @@ if step_reached reqgate; then
       echo "- 验收标准（UAT 按此回验）："
       sed -n '/^## .*验收标准/,/^## /p' "$(rfd_doc_snapshot)" | grep -E "^\- \*\*AC-[0-9]" | sed 's/^- /  - /'
       echo "- 涉敏：支付资金域=内部-机密（ISO27001 风险评估摘要随需求书 §12）"
+      echo "- 验证级定级：ASVS L2（涉敏单默认档，理由：支付资金域）"
+      echo "- 质量属性需求：可靠性（AC-1/AC-5 重复提交与重复回调不产生两笔副作用）/功能适合性（AC-2 状态机全转移、AC-3 金额分 int64、AC-6 超时关单）/安全性（AC-5 验签失败拒绝）——验收值即各 AC 判定法"
+      echo "- 单条特性自检：AC 逐条过 ISO 29148 六特性（必要/无歧义/完整/单一/可行/可验证）——自检结论：过"
+      echo "- 支付铁线：敏感认证数据（CVV2/磁道/交易密码）授权后不得存储"
+      echo "- 追溯：上游=${RFD_DOC}（origin/main）；下游=AC×用例映射表（docs/test-design/）"
       echo "- frozen: true"
     } > "$FREEZE_LOCAL"
     # 落 main 走 repo_commit_main（P4/Z1）：HEAD 在 integration 时旧写法提交落错分支、
@@ -596,7 +603,7 @@ if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
 工作要求：
 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
-3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)
+3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)（注明估算口径：NESMA 功能点法或类比法，附 ±30% 误差带；方案 V8.20 §5.8）/备选方案 ≥2 及落选理由（先定评估准则再对比）/对外接口附 OpenAPI 一行描述（版本/标题/路径）
 4) git 提交并 push 到 origin main（worktree 内直接提交本文件即可，commit message: docs(analysis): <任务ID>）
    交付有效口径（全新环境独立回归，§1.0.2）：交付 commit 须晚于本轮开跑时刻——旧轮同名产物不计数（即使内容未变，也须以本轮新提交刷新：文档内加一行「本轮复核记录：<日期> 内容经复核仍有效」再提交即可，不必重做分析）。
 5) 完成后在群内发唯一一行结论（此行即完成回执，缺任一要素=未完成会被打回）：
