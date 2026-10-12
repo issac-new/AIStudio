@@ -91,6 +91,11 @@
 4. decision backend（JEV 门禁）fail-open：不可达只记 issue 不阻断。
 5. 网络抖动会放大等待窗；`MX_ALIVE_HARD_SEC` 可整体放宽。
 
+## 九、安全事项（迁移前必做）
+
+1. 轮换 GitHub token：历史 SIM_ROOT 的 `central/aipaydev` 与 `workspaces/*/aipaydev` 的 `remote.origin.url` 实测内嵌真实 token（`x-access-token:gho_...`）。换新 token 后重跑 `mx-setup`（`gh_clone_sanitize` 会落无凭据 remote）。
+2. `creds/` 目录含全部 matrix token 与 github.token：跨机同步只发目标档案所需的 token；不进任何归档或上传。
+
 ## 十、推演全新需求与全新团队（新场景）
 
 本套程序不绑定支付域。aipay 只是内联默认场景；全新团队按场景定义落位，库与工具零改动：
@@ -104,7 +109,11 @@
 
 已有边界（如实）：mx-scenario-lib 里的催办文案与审批引导词仍是 aipay 措辞（@fanfan @wei 等字样随场景驱动器自定义时覆盖）；报告链的支付域叙事模板（mx-report-gen 的 PART1 六域等）按新场景需求另行定制，本期未参数化。
 
-## 九、安全事项（迁移前必做）
+## 十一、两环境持续迭代（mac ↔ Windows 同步）
 
-1. 轮换 GitHub token：历史 SIM_ROOT 的 `central/aipaydev` 与 `workspaces/*/aipaydev` 的 `remote.origin.url` 实测内嵌真实 token（`x-access-token:gho_...`）。换新 token 后重跑 `mx-setup`（`gh_clone_sanitize` 会落无凭据 remote）。
-2. `creds/` 目录含全部 matrix token 与 github.token：跨机同步只发目标档案所需的 token；不进任何归档或上传。
+两台环境跑同一套代码（本仓 main）。mac 已合并双模式+场景层（2026-10-12，merge 7d0f096），迭代流转：
+
+1. 推演程序迭代：改 simharness 仓，mac 上守门（`bash tests/run-gates.sh`，vitest 需 `MX_OVERLAY_ROOT` 指主树 overlay），提交 main 后推 GitHub（`git push origin main`），Windows 各机 `git pull`。09 层的 bundle 只是首装快照，装好后以 GitHub 远端为准。
+2. 产品能力迭代（SwarmStudio/overlay）：改动发生在 overlay 仓（patch+custom）。mac 验证走 dev 链；Windows 侧要么用 08-source-bundles 的源码按 `windows-x64-setup.md` 起 dev 环境（npm 镜像三件套），要么 mac 重出 win 包替换 03。两环境的推演程序对 overlay 只读消费（patches/deploy-agent-runtime/style-charter），产品迭代后重跑 `mx-setup` 即可刷新 SIM 执行面快照。
+3. 场景与编制迭代：roster.env/scenario.sh 改动随仓走，两环境生效一致；matrix 侧账号差异由各环境自建（mac=docker 本机 synapse，Windows=远端服务器）。
+4. 回滚：本仓任一改动出问题，`git revert <合并/提交>` 即回；run15 在途合并前 state 键快照存于 `/tmp/run15-state-premerge-*.env` 供对账。
