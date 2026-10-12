@@ -961,12 +961,17 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     "渠道批：origin 出现 feat/DEV-CHWX 分支（本轮新鲜）@hu@branch_fresh feat/DEV-CHWX" \
     "渠道批：origin 出现 feat/DEV-CHALI 分支（本轮新鲜）@lin@branch_fresh feat/DEV-CHALI" \
     "origin 出现 feat/DEV-MP 分支（本轮新鲜）@xiao@branch_fresh feat/DEV-MP" \
-    || { for b in DEV-CHWX DEV-CHALI DEV-MP; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
+    || { _fl="${MX_MULTI_FAILED_LEGS:-}"; [ -z "$_fl" ] && _fl="DEV-CHWX DEV-CHALI DEV-MP";
+         # [run15 根治] 只记真实未达腿（multi 导出失败锚清单）——run15 实锤已过的 C/N 腿被 blanket 记单
+         for b in $(printf '%s' "$_fl" | grep -oE 'DEV-[A-Z-]+' | sort -u); do
+           note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
   wait_alive_truth_multi 1800 "chen" \
     "origin 出现 feat/DEV-PAYCORE-C 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-C" \
     "origin 出现 feat/DEV-PAYCORE-S 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-S" \
     "origin 出现 feat/DEV-PAYCORE-N 分支（本轮新鲜）@chen@branch_fresh feat/DEV-PAYCORE-N" \
-    || { for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N; do note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
+    || { _fl="${MX_MULTI_FAILED_LEGS:-}"; [ -z "$_fl" ] && _fl="DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N";
+         for b in $(printf '%s' "$_fl" | grep -oE 'DEV-[A-Z-]+' | sort -u); do
+           note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
   # 越界守卫：main 污染反查 + 提交粒度观察（过度交付盘查 C 件）
   _mb="$(sget devimpl_main_base)"
   if [[ -n "$_mb" ]]; then

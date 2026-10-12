@@ -234,6 +234,26 @@ else
   say "hindsight 记忆保留（未指定 --reset-memory；跨轮家族记忆=2026-09-25 用户裁决默认态）"
 fi
 
+# 3c) 中央仓推演域开发分支清理（默认执行；run15 根治：run13 遗留 feat/DEV-PAYCORE-S
+#     令 run15 devimpl 真值锚 branch_fresh 恒假盲转 150min——feat/DEV-* 是每轮一次性
+#     交付分支，跨轮残留必踩同坑；integration/* 是设计内跨轮续建不在清理面。先 tag
+#     快照再删，可回溯。--reset-central 的全量清理另行覆盖本段之后的范围。）
+say "中央仓推演域开发分支清理：feat/DEV-*（tag 快照 mx-clean-devbr-${TS} 后删远端）"
+if [ "$APPLY" = 1 ]; then
+  CEN3="$SIM_ROOT/central/aipaydev"
+  DEVBRS=$(git -C "$CEN3" for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | sed 's|^origin/||')
+  if [ -n "$DEVBRS" ]; then
+    git -C "$CEN3" fetch -q origin 2>/dev/null || true
+    git -C "$CEN3" tag "mx-clean-devbr-${TS}" 2>/dev/null || true
+    git -C "$CEN3" push -q origin "mx-clean-devbr-${TS}" 2>/dev/null || true
+    for _db in $DEVBRS; do
+      git -C "$CEN3" push -q origin --delete "$_db" 2>/dev/null && say "  删除 origin/$_db" || say "  删失败 origin/$_db（记日志继续）"
+    done
+  else
+    say "  无 feat/DEV-* 残留"
+  fi
+fi
+
 # 4) 中央仓按需重置（默认保留；--reset-central 清推演工件与 integration 分支）
 # 清空范围（run5 教训修订）：推演工件不止 RFD-* 前缀——系分稿 AN-*、任务稿 T-*、
 # admin 轮次台账同属轮次产物。0→1 语义=七个 docs 交付目录全清 + docs/admin +
