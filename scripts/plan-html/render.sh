@@ -19,7 +19,8 @@ pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
   --metadata title="$TITLE" -o "$OUT/mux-v8-plan.html"
 export PLAN_VIEW_DIR="$OUT"
 python3 "$ROOT/scripts/plan-html/enhance.py"; python3 "$ROOT/scripts/plan-html/enhance2.py"
-# mermaid 引擎本地化（缺则从 overlay node_modules 拷）
-[ -f "$OUT/mermaid.min.js" ] || cp "$ROOT/node_modules/mermaid/dist/mermaid.min.js" "$OUT/" 2>/dev/null || true
+# mermaid 引擎本地化（来源链：node_modules → 本仓 vendor 固化件，防 node_modules 漂移）
+[ -f "$OUT/mermaid.min.js" ] || cp "$ROOT/node_modules/mermaid/dist/mermaid.min.js" "$OUT/" 2>/dev/null \
+  || cp "$ROOT/scripts/plan-html/vendor/mermaid.min.js" "$OUT/" 2>/dev/null || true
 (cd "$OUT" && nohup python3 -m http.server 8931 --bind 127.0.0.1 >/dev/null 2>&1 &) 2>/dev/null || true
 echo "渲染完成：$OUT/mux-v8-plan.html（http://127.0.0.1:8931/mux-v8-plan.html）"
