@@ -1704,7 +1704,7 @@ def criteria_block(n):
         return ''
     zhun, line = row52
     items = _split_items(line)
-    lis = ''.join(f'<li>{gloss_first_use(H.escape(x))}</li>' for x in items) or '<li>（方案未单列）</li>'
+    lis = ''.join(f'<li>{_md_tags(gloss_first_use(H.escape(x)))}</li>' for x in items) or '<li>（方案未单列）</li>'
     # 判定证据（诚实口径：不逐条造判定——证据=实物核对计数+关卡判词时间戳）
     ev = []
     ok, total = ART_OK.get(n, (None, None))
@@ -1722,7 +1722,7 @@ def criteria_block(n):
     gate_html = ''
     if g and PLAN_53.get(g):
         gitems = _split_items(PLAN_53[g][0])
-        glis = ''.join(f'<li>{gloss_first_use(H.escape(x))}</li>' for x in gitems)
+        glis = ''.join(f'<li>{_md_tags(gloss_first_use(H.escape(x)))}</li>' for x in gitems)
         gate_html = (f'<div class="st-crit-g"><b>{g} 关卡判据（{g} 不过不放行）：</b>'
                      f'<ul>{glis}</ul></div>')
     ev_html = (' · '.join(ev)) or '判定证据见下方实物区'
@@ -1859,13 +1859,28 @@ def img_tags(imgs):
     return ''.join(out)
 
 # ── 全量呈现（正本 §5.5）：对话全文 / 操作前后帧 / 环节效果实证 ──
+def _md_tags(escaped: str) -> str:
+    """已转义文本的行内记号转换（**粗体**→<strong>；`代码`→<code>）——只改形式不改内容。"""
+    escaped = re.sub(r'\*\*([^*\n]+)\*\*', r'<strong>\1</strong>', escaped)
+    return re.sub(r'`([^`\n]+)`', r'<code>\1</code>', escaped)
+
+def md_inline(text: str) -> str:
+    """卡体/步条原文等内嵌文本的 markdown 星标记号转 HTML（只改形式不改内容——保真契约）。
+
+    **粗体**→<strong>；`代码`→<code>；行首「- 」列表符→「· 」。换行处理归调用方
+    （r18 卡体转 <br>，gate-body 走 pre-wrap 原样）。2026-10-12 视觉验收实锤：步条
+    原文与任务卡正文内嵌 md 未转换，字面星号直出报告（V8.18 文风修订配套）。"""
+    s = H.escape(text)
+    s = re.sub(r'(?m)^\s*-\s+', '· ', s)
+    return _md_tags(s)
+
 def _r18_msg_html(m):
     sender = H.escape(str(m.get('sender', '?')))
     ts = H.escape(str(m.get('ts', '')))
     body = str(m.get('body', '')).strip()
     return (f'<div class="r18-msg"><div class="r18-msg-hd"><b>{sender}</b>'
             + (f'<span class="r18-ts">{ts}</span>' if ts else '')
-            + '</div><div class="r18-msg-body">' + H.escape(body).replace('\n', '<br>') + '</div></div>')
+            + '</div><div class="r18-msg-body">' + md_inline(body).replace('\n', '<br>') + '</div></div>')
 
 def _r18_frame_tags(frames, step, view=''):
     out = []
@@ -2343,10 +2358,10 @@ def skill_duty_html():
         else 'retro-sink 回灌文件缺席（lessons.md 不存在——复盘回灌未跑或真源漂移，如实披露）'
     role_html = (f'\n  <p style="font-size:13px"><b>角色→技能</b>（源=场景库装载行）：{H.escape(role_line)}</p>'
                  if role_line else '')
-    return (f'\n  <p style="font-size:13px">能力层证据四件（V8.18 §5.4）：技能清单自真源清点、'
-            f'生成链带仓内提交锚、执勤留痕按当轮实存文件计、缺席项如实标红不凑段。</p>'
+    return (f'\n  <p style="font-size:13px">这一节回答：AI 员工的研发技能从哪来、谁生成的、干活时留了什么痕。'
+            f'四件事按磁盘上实际存在的文件清点：技能清单、生成链、执勤留痕、缺席披露。缺什么如实写，不渲染假账。</p>'
             f'\n  <details class="audit" id="ch9-skill-duty"><summary>▶ 技能执勤账'
-            f'（{len(rows)} 项技能在册——装载单=mx-lib.sh SKILLS_INSTALL，真源=simharness skills/）</summary>'
+            f'（{len(rows)} 项技能在册——清单来自技能存放目录 simharness skills/ 与装载清单 mx-lib.sh SKILLS_INSTALL）</summary>'
             f'\n  <table style="margin-top:8px"><tr><th>技能</th><th>骨架形态</th><th>profile 档</th><th>生成器锚</th></tr>'
             + ''.join(rows) + '</table>'
             f'\n  <p style="font-size:13px;margin:8px 0 2px"><b>生成链</b>（aipaydev-dev 仓内提交史，最新在前）：{H.escape(chain)}</p>'
@@ -3403,7 +3418,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   <div class="st-sec"><div class="st-sec-hd">② 交付物及质量判据</div>
     {criteria_block(n)}
     {art_html}
-    <details class="st-gate"><summary>方案步条原文（一行摘要，反查用）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
+    <details class="st-gate"><summary>方案步条原文（一行摘要，反查用）</summary><div class="gate-body">{md_inline(gate_text) if gate_text else "（未单列）"}</div></details>
   </div>
   {(_sec34_empty(n) if _sec34_is_empty(n) else f'''<div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
     {_known_html(plan_steps.get(n, {}).get('known', ''))}
