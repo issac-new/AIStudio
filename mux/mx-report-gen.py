@@ -1380,12 +1380,30 @@ STEPS_META_RUN15 = {
 }
 
 _NARR={'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
-if RUN_ID not in _NARR:
-    # R17 按轮真值强制关卡：未注册叙事文案拒绝出报告（防旧轮账目冒充）；已知清单动态派生，
-    # 免写死文案与注册表漂移（提示只列 run1/run2，实有 5 轮在册）。
-    sys.exit('[mx-report-gen] 无该轮叙事文案: '+RUN_ID+'（已知: '+', '.join(sorted(_NARR))+'）')
+def _narrative_fallback_skeleton(run_id):
+    """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
+    出 ⬜ 骨架占位叙事（明示待收尾链补注册），不携带任何历史轮文案，防冒充语义保留。
+    run15 实锤：一票否决在报告步触发驱动失败循环（注册靠收尾手工补写+预写环节又漏项）。"""
+    import re as _re
+    _keys26 = ['smoke_done','smoke_done','smoke_done','smoke_done','appinit_done','people_done',
+               'g1_frozen','room_analysis','dispatch_marker','register_done','analysis_done','triage_done',
+               'anexec_done','review_done','g2_arch_pass','close_done','plan_done','devimpl_done',
+               'defect_done','ready_done','uat_done','workmgr_done','audit_done','retro_done','ide_done','report_done']
+    _titles = _PLAN_STEP_TITLES if '_PLAN_STEP_TITLES' in dir() else {}
+    meta = {}
+    for _i, _k in enumerate(_keys26, 1):
+        meta[_i] = dict(keys=[_k], actor='ai', actorText='AI · 骨架占位',
+            narrative='【骨架占位·待补注册】本步叙事未注册（轮 '+run_id+' 走骨架兜底渲染）。真值以 state.env 步键与 evidence 实物为准；收尾链补注册后本占位被正式叙事覆盖。',
+            imgs=[])
+    return meta
 
-STEPS_META=_NARR[RUN_ID]
+if RUN_ID not in _NARR:
+    # R17 按轮真值强制关卡（run16 起骨架兜底修订）：防冒充语义保留（骨架零历史文案、
+    # 全步明示占位、页首横幅声明未注册态）；一票否决废除——报告步失败循环不再发生。
+    sys.stderr.write('[mx-report-gen] 无该轮叙事文案: '+RUN_ID+'（已知: '+', '.join(sorted(_NARR))+'）——按骨架兜底渲染，收尾链补注册后覆盖\n')
+    STEPS_META=_narrative_fallback_skeleton(RUN_ID)
+else:
+    STEPS_META=_NARR[RUN_ID]
 
 _L3_A={'20261011-v8-run15':'进行中（V8.10-V8.15 全栈首验轮+根治轮·监控哨叙事）：26 步全走完+六闸 6/6（首过 5/6——G2 涉敏安全前置首验真拦截后复审改判）；七件首验落地（三段卡×3/涉敏评审卡/六域当轮体检/契约观察影子 breaking=0/主卡 room 锚/判词复用/实时帧 48 张零补拍）；运行中当场根治四类真缺陷（安全闸三重盲区 bf9a955——80 秒收敛实证、进度锚陈旧分支盲转 c1e507d、多锚精确记单 36c7701、mx-up 冷起挂死 09c07f9）；监控代行定向令 6 发 6 中；全程 12h17m（对照 run14 净 22h，摩擦=锚冻结 150min+安全修复环 68min+监督器卡死 10min）','20261010-v8-run14':'进行中（V8.5 首个全量验证轮·预注册句）：mx-clean 三旗标 0→1 全新环境独立回归；V8.5 条款（DISP 主体精确配对/登记幂等/闸键首过保护/打回=判词语义/并行度段界锚）+G1-G4 产品面修复+GRAPH_ENGINE=on 的首个全量轮——L3 总评行由收尾链按当轮实测定稿','20261010-v8-run13':'符合（回归轮首航·诚实账）：本轮执行带九步全走完（开发→测试→发布→验收→审计→复盘→报告，全程 3 小时 04 分）；六闸全收齐（G3/G4/G5 当轮，G1/G2 沿用源轮真值分带呈现）；边界守卫首次实战通过（零 main 污染、零越界代做）；验收诚实账更严（AC-1/5/6 不通过如实判词，一手复测与 测试工程师A 报备双源一致）；事故账=repo_has×回归轮五连循环（根治 6959a2b）+步18 错页帧（G1/G2 中途上线修复）；回归轮口径首次全程落地','20261009-v8-run12':'run12 符合（逆境中的治理+诚实记账轮）：26 步全部走完、六道关卡全部通过（G1/G2/G3/G4 一次通过 4/6；G5 两轮不通过+强制暂停+复审转正；UAT 有条件通过、AC-5 如实标红）；诚实账=测试工程师A 如实报告「TEST-BE 未执行」→G5 第一轮追责→测试工程师A 真实执行 250/250 全绿完整循环——不谎报纪律全程可反查；六张开发卡同时派出（提速措施二）+测试并行拆分（测试工程师A/团队负责人A/产品经理A 三方）双双首次应用；网关四起事故+噪音风暴+会话中毒+结论行污染全部记入问题清单并全部恢复。','20261007-v8-run11':'符合（零残留独立回归的正跑轮+逆境治理主战役）：attempt-3 26 步全走完（02:26 开跑→G6 00:26 六闸 6/6 收齐）；从零交付实证——孤儿历史（main 深度 1）+禁考古措辞+闸卫三防线下，四系分两稿从零入仓（PAYCORE/MP）、四开发分支全部本轮新推、TEST-BE 228/228 全绿、发布三件套+UAT 7/7 判词齐；流水线三机制首验（四路同时派出同秒/渠道批触发链/用例前移预备轮）；attempt-1/2 事故链四病根全部根治提交（自动检查 78/78）；负向如实入账：系分 2/4 超窗、容量饥饿×2（drop 106 条）、产品经理A 会话卡死×3（hindsight 交互）、G5 六轮（人工介入 5 笔：熔断放行+发布件代拟+簿记代走+终判代落）、RACI 双@×4 复现、materials 残留暴露——全部记入问题清单在案。','20261007-v8-run10':'run10 符合（全流程完整循环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实测统计落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记入问题清单在案；叙事文案预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采清单 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记入问题清单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记入问题清单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收尾，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实测依据）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判停滞重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），研发工程师B/研发工程师D 停摆缺席如实记入问题清单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收尾实测依据）：G1→UAT 意图通路全完整循环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（测试工程师A 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记入问题清单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
 '20261001-v5-run6':'符合（harness 逆境根治+真交付轮）：G1→UAT 意图通路完整循环（验收书入仓+七条 UAT-EVIDENCE 7/7 PASS）；plan 七连超时根因链（窗口<任务时长/派发词缺 push 目标/账户限流/网关换血）四层根治后 产品经理A 30 分钟交卷；devimpl 分支假真值如实披露（branch_fresh 自动检查根治未来轮）且四开发 agent 真实交付三支推送；测试 194/194 零缺陷 G4 真值；夜间 8h 停摆（/tmp 清理+Docker 睡眠）与路由丢失（DM 直发修复）/并发闸弹回/UAT 核验位错配三类新坑全部根治或如实记档——治理逆境与修复即本轮主线素材。',
@@ -1423,8 +1441,8 @@ DOMAINS = [
      '实测：GET overview 200（20/20）· doc×5 200 · sqlite 同库直读',
      'cp-g1,cp-g5'),
     ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'warn',
-     _L3_A[RUN_ID],
-     _L3_B[RUN_ID],
+     _L3_A.get(RUN_ID,'【骨架占位·待补注册】L3-A 未注册（骨架兜底轮）'),
+     _L3_B.get(RUN_ID,'【骨架占位·待补注册】L3-B 未注册（骨架兜底轮）'),
      'cp-g2,cp-gate,cp-uat'),
     ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass',
      '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时；聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
@@ -2596,7 +2614,7 @@ def artifact_panorama():
             rows.append(f'<tr><td><b>{n}</b></td><td>{H.escape(label)}</td>'
                         f'<td><span class="art-verdict miss">文件域无独立工件</span>——{H.escape(note)}</td>'
                         f'<td>{anchor}</td></tr>')
-    note_g5 = _NOTE_G5[RUN_ID]
+    note_g5 = _NOTE_G5.get(RUN_ID, ('【骨架占位·待补注册】G5 注记未注册（骨架兜底轮）',))
     html_tbl = ('<table><tr><th>步</th><th>交付物</th><th>模版核对结果</th><th>锚</th></tr>'
                 + ''.join(rows) + '</table>')
     stat = (f'共 {len(rows)} 行：在仓 {n_files} 件（模版符合 {n_ok} · 在仓不符 {n_files - n_ok if n_files >= n_ok else 0}）+ 缺件不在仓 {n_bad - (n_files - n_ok) if n_bad >= (n_files - n_ok) else n_bad} · 其余为无文件域声明；'
