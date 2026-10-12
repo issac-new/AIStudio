@@ -636,4 +636,4 @@
 # 靠监控手工续作。遥测件记 turn_hit_iter_cap 标记，轮换判定消费；auto 档即刻
 # 轮换+604 移交检查点=运行时原生续作。
 611-agent-session-rotation-itercap.patch
-612-server-mimo-models-adapter.patch
+615-server-mimo-models-adapter.patch
