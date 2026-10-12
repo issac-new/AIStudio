@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 _REQUEST_TIMEOUT_SECONDS = 30
 _MAX_INVITES_PER_CALL = 50
 _MAX_MEMBER_REPORT = 40
-_MAX_ROOM_LIST = 50
 
 _MXID_RE = re.compile(r"^@[A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
 _ROOM_REF_RE = re.compile(r"^[!#][A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
@@ -151,14 +150,8 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
     if rooms is None:
         return _error("Could not list joined rooms from the homeserver")
 
-    # Every room costs two serial API calls (30s timeout each): an account on
-    # hundreds of rooms would pin the agent turn for minutes. Truncate and say
-    # so, like _MAX_INVITES_PER_CALL does for invites.
-    truncated = len(rooms) > _MAX_ROOM_LIST
-    listed = rooms[:_MAX_ROOM_LIST]
-
     out = []
-    for room_id in listed:
+    for room_id in rooms:
         path = f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}"
         # `/state/<type>` returns the event content directly; the untyped `/state`
         # form returns a bare list of events, which is easy to mis-read as a dict.
@@ -172,8 +165,7 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
             "members": joined[:_MAX_MEMBER_REPORT],
         })
 
-    return json.dumps({"count": len(out), "total": len(rooms), "truncated": truncated,
-                       "rooms": out}, ensure_ascii=False)
+    return json.dumps({"count": len(out), "rooms": out}, ensure_ascii=False)
 
 
 async def _invite_via_adapter(adapter: Any, room_id: str, users: list[str]) -> str:
@@ -205,16 +197,8 @@ async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
     raw_users = params.get("users") or params.get("user_id") or []
     if isinstance(raw_users, str):
         raw_users = [u.strip() for u in re.split(r"[,\s]+", raw_users) if u.strip()]
-    # Aliases are refused up front, for both delivery paths: the adapter builds
-    # mautrix RoomID(room_id) (upstream adapter.py invite_user), and the
-    # standalone calls address rooms by ID (the joined-rooms check below
-    # compares IDs), so an alias would surface as an unrelated
-    # "not joined to #alias" error instead of the real reason.
-    if room_id.startswith("#"):
-        return _error(f"room alias {room_id} is not supported; resolve it to a room ID (!...) "
-                      "first (matrix_room_list reports room IDs)")
     if not _ROOM_REF_RE.match(room_id):
-        return _error("room_id must be a Matrix room ID (!...)")
+        return _error("room_id must be a Matrix room ID (!...) or alias (#...)")
     if not isinstance(raw_users, list) or not raw_users:
         return _error("users must be a non-empty list of Matrix user IDs")
     if len(raw_users) > _MAX_INVITES_PER_CALL:
@@ -323,10 +307,7 @@ _TOOLS: dict[str, tuple] = {
         "Invite Matrix users into a room the assistant is already a member of. Use after "
         "splitting a requirement into per-owner tasks so each owner's account receives the "
         "assignment in the shared room. Accepts a list of user IDs; reports per-user results.",
-        {"room_id": {"type": "string",
-                     "description": "Target room ID (!...). Room aliases (#...) are not "
-                                    "supported yet: resolve them to a room ID first "
-                                    "(matrix_room_list reports room IDs)."},
+        {"room_id": {"type": "string", "description": "Target room ID (!...) or alias (#...)."},
          "users": {"type": "array", "items": {"type": "string"},
                    "description": "Matrix user IDs to invite, e.g. ['@chen:matrix.test']."}},
         ["room_id", "users"],
@@ -348,8 +329,7 @@ _TOOLS: dict[str, tuple] = {
     "matrix_room_list": (
         matrix_room_list,
         "List the Matrix rooms this account has joined, with names. Use to locate an existing "
-        "requirement room before creating a duplicate. Truncated to the first "
-        f"{_MAX_ROOM_LIST} rooms; `truncated`/`total` report the rest.",
+        "requirement room before creating a duplicate.",
         {},
         [],
         "📋",
@@ -365,4 +345,4 @@ def register_tools(ctx) -> None:
             parameters["required"] = required
         schema = {"name": name, "description": description, "parameters": parameters}
         ctx.register_tool(name=name, toolset="matrix", handler=handler, description=description,
-                          schema=schema, emoji=emoji, check_fn=_room_ops_available, is_async=True)
+                          schema=schema, emoji=emoji, check_fn=_room_ops_available)

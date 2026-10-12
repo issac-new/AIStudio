@@ -116,20 +116,6 @@ class DispatchResult:
     skipped_unassigned: list[str] = field(default_factory=list)
     """Ready task ids with no assignee at all — operator-actionable (usually a
     misfiled task waiting for routing)."""
-    workload_reordered: bool = False
-    """HERMES_CUSTOM[estimate]（团队并行二期）：本轮 ready 队列发生过同优先级层内
-    按在途工作量（SUM(estimate_days)）重排——可观测位，语义不变仅同层换序。"""
-    # >>> swarm:kanban-guardrail-rearm >>> (t_2101cdd8 review fix: the patch
-    # carried the gate but not this field declaration — 9996e5931b had both.
-    # Without it the out-of-scope gate raises AttributeError on first
-    # out-of-scope card and the dispatcher tick dies.)
-    skipped_out_of_scope: list[tuple[str, str]] = field(default_factory=list)
-    """Tasks skipped this tick because their assignee is outside the
-    board's ``profile_scope`` domain isolation (and not in the board's
-    ``dispatcher_bypass`` whitelist). Each entry is ``(task_id, assignee)``.
-    These cards sit in ready/review until reassigned or the board scope is
-    widened — dispatcher-side gate of the Q2 domain-isolation design."""
-    # <<< swarm:kanban-guardrail-rearm <<<
     auto_assigned_default: list[str] = field(default_factory=list)
     """Unassigned task ids that had ``kanban.default_assignee`` applied this
     tick before spawning, so telemetry/CLI/dashboard can show the dispatcher
@@ -997,10 +983,19 @@ _PROTOCOL_VIOLATION_ERROR = (
 )
 
 
-_EXIT_SUMMARY_MARKER = "Resume this session with:"
 # Rich panel/rule chrome around the rendered response, and the CLI's own preamble lines.
 _LOG_CHROME = re.compile(r"[─━═╭╮╰╯│┃┌┐└┘]+|☤\s*Hermes")
-_LOG_NOISE_PREFIXES = ("session_id:", "Query:", "Initializing agent")
+
+
+def _exit_summary_marker() -> str:
+    """The CLI exit-summary header (``cli_session_mixin.show_exit_summary``), in the active language."""
+    from agent.i18n import t
+    return t("cli.session.exit_resume_hint")
+
+
+def _log_noise_prefixes() -> tuple[str, ...]:
+    from agent.i18n import t
+    return ("session_id:", "Query:", t("cli.chat.initializing_agent"))
 
 
 def _worker_final_output(task_id: str, board: Optional[str] = None) -> str:
@@ -1025,13 +1020,13 @@ def _worker_final_output(task_id: str, board: Optional[str] = None) -> str:
     if not raw:
         return ""
     raw = _EXIT_TRAILER_RE.sub("", raw)
-    cut = raw.rfind(_EXIT_SUMMARY_MARKER)
+    cut = raw.rfind(_exit_summary_marker())
     if cut != -1:
         raw = raw[:cut]
     lines = []
     for ln in raw.splitlines():
         ln = _LOG_CHROME.sub("", ln).strip()
-        if ln and not ln.startswith(_LOG_NOISE_PREFIXES):
+        if ln and not ln.startswith(_log_noise_prefixes()):
             lines.append(ln)
     return " ".join(lines)[-400:]
 
@@ -1678,61 +1673,7 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
     return bool(to) and "from" in data and data["from"] != to
 
 
-def _board_json_unreadable(board: str) -> bool:
-    """``board.json`` exists but cannot be read (corrupt / not a JSON object) →
-    True; readable or file absent → False. ``read_board_metadata`` never raises
-    (a bad file degrades to a synthesized dict without ``profiles``), so telling
-    "corrupt" from "unconfigured" needs a probe of the raw file."""
-    import json
-    try:
-        path = _kb.board_metadata_path(board)
-        if not path.is_file():
-            return False
-        return not isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
-    except (OSError, ValueError):
-        return True  # 在但读不动：按损坏处理（fail-closed）
-
-
-def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
-    """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
-    ``board.json`` ``profiles`` key. ``None`` = key absent (no fence, upstream
-    behavior). A present value is fail-closed: an empty list or unreadable
-    board.json claims nothing — a corrupt/misconfigured board must never widen
-    this dispatcher's claim scope.
-
-    ``read_board_metadata`` swallows every read error, so the ``except`` below is
-    only a last resort; the corrupt case is settled by probing the raw file via
-    :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
-    并 log；文件不存在或合法空配置（无 ``profiles`` 键）→ ``None`` 无围栏。"""
-    if not board:
-        return None
-    try:
-        meta = _kb.read_board_metadata(board)
-    except Exception as exc:
-        _kb._log.warning(
-            "kanban: cannot read board.json team for %r (%s) — claiming no cards on it",
-            board, exc,
-        )
-        return frozenset()
-    raw = meta.get("profiles") if isinstance(meta, dict) else None
-    if raw is None:
-        if _board_json_unreadable(board):
-            _kb._log.warning(
-                "kanban: board.json for %r is unreadable — claiming no cards on it", board,
-            )
-            return frozenset()
-        return None
-    names = [str(n) for n in raw] if isinstance(raw, (list, tuple)) else str(raw).split(",")
-    allowed = set()
-    for n in names:
-        try:
-            allowed.add(normalize_profile_name(n))
-        except ValueError:
-            continue
-    return frozenset(allowed)
-
-
-def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
+def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
     """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
     imported (local import avoids a cycle; callers fall back to trusting the
     assignee).
@@ -1741,20 +1682,13 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
     additionally requires the assignee to be listed, fail-closed — so a card
     assigned to ``default`` is only claimable by homes that opted into it.
     Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
-
-    HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
-    list in its ``board.json``, the predicate additionally requires the assignee
-    to be on that board's team (fail-closed) — a card can only be claimed by the
-    agent team mounted on its board. Health probes pass no board and stay
-    unfenced (historic fail-open telemetry).
     """
     try:
         from hermes_cli.profiles import normalize_profile_name, profile_exists
     except Exception:
         return None
     allowlist = _dispatch_profile_allowlist(normalize_profile_name)
-    team = _board_team_allowlist(normalize_profile_name, board)
-    if allowlist is None and team is None:
+    if allowlist is None:
         return profile_exists
 
     def _gated(name: str) -> bool:
@@ -1762,11 +1696,7 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
             canon = normalize_profile_name(name)
         except ValueError:
             return False
-        if allowlist is not None and canon not in allowlist:
-            return False
-        if team is not None and canon not in team:
-            return False
-        return bool(profile_exists(name))
+        return canon in allowlist and bool(profile_exists(name))
 
     return _gated
 
@@ -2121,29 +2051,26 @@ def _dispatch_lane_task(
     skip is recorded on ``result``.
     """
     task_id = row["id"]
-    # >>> swarm:kanban-guardrail-rearm >>> (domain isolation dispatch gate,
-    # t_62b2af6b from 9996e5931b): assignee outside this board's profile_scope.
-    # Never auto-spawn cross-domain; leave an event once so ``hermes kanban
-    # tail`` shows WHY the card isn't moving. Single chokepoint covers BOTH
-    # the ready and review lanes (post-#102117 decomposition).
-    if not _kb.profile_may_work_board(assignee, board=board):
-        result.skipped_out_of_scope.append((task_id, assignee))
-        if not dry_run:
-            with _kb.write_txn(conn):
-                _kb._append_event(
-                    conn, task_id, "out_of_scope",
-                    {"assignee": assignee, "board": board or _kb.get_current_board(),
-                     "lane": lane},
-                )
-        return False
-    # <<< swarm:kanban-guardrail-rearm <<<
     # Non-profile assignees (control-plane lanes that pull via ``claim_task``)
     # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
     # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
     # it by assigning a profile, and health telemetry suppresses "stuck" for it.
-    profile_exists = _profile_exists_fn(board)  # HERMES_CUSTOM[board-team-fence]: 板级 team 围栏
+    profile_exists = _profile_exists_fn()
     if profile_exists is not None and not profile_exists(assignee):
         result.skipped_nonspawnable.append(task_id)
+        # Per-task diagnostic so ``show``/``tail`` name the missing profile instead of leaving
+        # the card in ``ready`` with zero board evidence (#122422). Unlike a respawn guard the
+        # condition never expires on its own, so write it once: a repeat only when something
+        # else happened on the card since (reassign, comment) — not one row per tick forever,
+        # and not one row per foreign home per tick on a shared board (#101015).
+        if not dry_run:
+            with _kb.write_txn(conn):
+                last = conn.execute(
+                    "SELECT kind, payload FROM task_events WHERE task_id = ? "
+                    "ORDER BY created_at DESC, id DESC LIMIT 1", (task_id,)).fetchone()
+                if (last is None or last["kind"] != "skipped_nonspawnable"
+                        or last["payload"] != _kb._json_or_null({"assignee": assignee})):
+                    _kb._append_event(conn, task_id, "skipped_nonspawnable", {"assignee": assignee})
         return False
     # Per-profile cap: one profile's local model / API quota / browser pool
     # must not be overwhelmed by a fan-out even with global headroom.
@@ -2349,56 +2276,12 @@ def _tick_spawn_budget(
 
 
 def _lane_rows(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
-    """Unclaimed rows of one lane in dispatch order. priority 列供
-    _reorder_ready_by_workload 分层（HERMES_CUSTOM[estimate]），其余调用方不受影响。"""
+    """Unclaimed rows of one lane in dispatch order."""
     return conn.execute(
-        "SELECT id, assignee, priority FROM tasks "
+        "SELECT id, assignee FROM tasks "
         f"WHERE status = '{status}' AND claim_lock IS NULL "
         "ORDER BY priority DESC, created_at ASC"
     ).fetchall()
-
-
-# HERMES_CUSTOM[estimate]（团队并行二期）：未评估卡在负载计算里的保守权重（人日）。
-_WORKLOAD_UNESTIMATED_DAYS = 1.0
-
-
-def _reorder_ready_by_workload(
-    conn: sqlite3.Connection, rows: list[sqlite3.Row],
-) -> tuple[list[sqlite3.Row], bool]:
-    """Workload-weighted ready ordering: WITHIN one priority tier, tasks whose
-    assignee carries the least in-flight workload go first. Workload = SUM of
-    running tasks' estimate_days per assignee (unestimated → 1 day
-    conservative). Unassigned rows sort last in-tier (they still need routing,
-    and their eventual default assignee's load is unknown here). priority DESC
-    tiers and created_at ASC stability are preserved — only same-tier order
-    flips. Returns (rows, changed)."""
-    if not rows:
-        return rows, False
-    workload: dict[str, float] = {}
-    for prow in conn.execute(
-        "SELECT assignee, SUM(COALESCE(estimate_days, ?)) AS w FROM tasks "
-        "WHERE status = 'running' AND assignee IS NOT NULL GROUP BY assignee",
-        (_WORKLOAD_UNESTIMATED_DAYS,),
-    ):
-        workload[str(prow["assignee"])] = float(prow["w"] or 0.0)
-    tiers: dict[int, list[sqlite3.Row]] = {}
-    for row in rows:
-        tiers.setdefault(int(row["priority"]), []).append(row)
-    reordered: list[sqlite3.Row] = []
-    changed = False
-    for priority in sorted(tiers, reverse=True):
-        tier = tiers[priority]
-        ordered = sorted(
-            tier,
-            key=lambda r: (
-                r["assignee"] is None,                      # unassigned last in-tier
-                workload.get(str(r["assignee"]), 0.0) if r["assignee"] else 0.0,
-            ),
-        )
-        if [r["id"] for r in ordered] != [r["id"] for r in tier]:
-            changed = True
-        reordered.extend(ordered)
-    return reordered, changed
 
 
 def _any_spawnable_review(
@@ -2407,7 +2290,6 @@ def _any_spawnable_review(
     *,
     per_profile_cap: Optional[int] = None,
     per_profile_running: Optional[dict[str, int]] = None,
-    board: Optional[str] = None,
 ) -> bool:
     """Mirror review dispatch gates before reserving ready-lane capacity.
 
@@ -2419,7 +2301,7 @@ def _any_spawnable_review(
     """
     if not review_rows:
         return False
-    profile_exists = _profile_exists_fn(board)
+    profile_exists = _profile_exists_fn()
     running = per_profile_running or {}
     for row in review_rows:
         assignee = row["assignee"]
@@ -2434,7 +2316,7 @@ def _any_spawnable_review(
     return False
 
 
-def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
+def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
     gate). Otherwise ``None`` so an unassigned shared-board card is never
@@ -2443,7 +2325,7 @@ def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[s
     as nonspawnable."""
     name = (default_assignee or "").strip() or None
     if name:
-        profile_exists = _profile_exists_fn(board)
+        profile_exists = _profile_exists_fn()
         if profile_exists is not None and not profile_exists(name):
             return None
     return name
@@ -2522,7 +2404,6 @@ def _dispatch_once_locked(
     if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
         conn, review_rows,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
-        board=board,
     ):
         ready_budget = max(spawn_budget - 1, 0)
     lane_kwargs: dict[str, Any] = dict(
@@ -2530,12 +2411,7 @@ def _dispatch_once_locked(
         failure_limit=failure_limit, spawn_fn=spawn_fn,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
     )
-    default_assignee = _resolve_default_assignee(default_assignee, board)
-    # HERMES_CUSTOM[estimate]（团队并行二期）：同优先级层内按在途工作量重排
-    # （least-loaded assignee 先领）；priority/created_at 语义不变。
-    ready_rows, workload_reordered = _reorder_ready_by_workload(conn, ready_rows)
-    if workload_reordered:
-        result.workload_reordered = True
+    default_assignee = _resolve_default_assignee(default_assignee)
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:
@@ -2633,6 +2509,26 @@ def _module_hermes_argv() -> list[str]:
     """Interpreter-bound Hermes CLI invocation (``hermes_cli.main`` is the
     console-script target — there is no top-level ``hermes`` package)."""
     return [sys.executable, "-m", "hermes_cli.main"]
+
+
+def _propagate_module_import_root(cmd: list[str], env: dict[str, str]) -> None:
+    """Put the running install's package root on a module-form worker's path.
+
+    ``_resolve_hermes_argv`` proves ``hermes_cli`` importable in THIS process,
+    where a store-python shim has the repo root on ``sys.path`` in-process;
+    the spawned child runs the bare ``sys.executable`` from the task workspace
+    with a scrubbed ``PYTHONPATH`` and cannot import the package the parent
+    just proved importable — it dies before any work and the board
+    auto-blocks (#122299, #122487, #122500). Same-interpreter child, so the
+    root is version-safe to propagate; ``hermes_cli.main``'s own bootstrap
+    then owns dependency activation as usual. A resolved shim path owns its
+    imports and is left alone. Same pin cron's external worker uses (#112729).
+    """
+    if cmd[1:3] != ["-m", "hermes_cli.main"]:
+        return
+    from cron.scheduler_worker_env import pin_hermes_tree_on_pythonpath
+
+    pin_hermes_tree_on_pythonpath(env, Path(__file__).resolve().parents[1])
 
 
 def _absolute_hermes_path(path: str) -> str:
@@ -2960,20 +2856,6 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     if not task.assignee:
         raise ValueError(f"task {task.id} has no assignee")
 
-    # swarm:tree-write-gate (t_b5f5f6be): a patch/update pipeline holding the
-    # tree write lock means the source tree is mid-replay (mixed old/new
-    # modules). Spawning a worker now guarantees an import-time crash — skip
-    # this tick; the dispatcher retries on the next one after the lock clears.
-    from hermes_constants import get_default_hermes_root
-    _lock_dir = Path(get_default_hermes_root()) / "hermes-agent" / ".write-lock"
-    if _lock_dir.exists():
-        logger.info(
-            "worker: skip spawn task=%s — source tree write lock held by pipeline (%s)",
-            task.id, (_lock_dir / "holder").read_text().strip()[:120] if (_lock_dir / "holder").exists() else "?",
-        )
-        return None
-
-
     from hermes_cli.profiles import normalize_profile_name, resolve_profile_env
 
     profile_arg = normalize_profile_name(task.assignee)
@@ -3072,6 +2954,9 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     env.pop("HERMES_TUI", None)
 
     cmd = _worker_argv(task, profile_arg, env.get("HERMES_HOME"))
+    # The module argv must carry the import context that made it resolvable:
+    # the shim's in-process path injection is invisible to the bare child.
+    _propagate_module_import_root(cmd, env)
     # A worker spawned by a managed systemd gateway must leave the gateway's
     # cgroup before startup; otherwise restarting the service kills the worker
     # that is performing the handoff.
