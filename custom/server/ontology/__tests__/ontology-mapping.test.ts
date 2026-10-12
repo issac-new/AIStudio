@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { seedSpec } from '../ontology-seed'
 
-const SRC = readFileSync(join(__dirname, '..', 'ontology-mapping.ts'), 'utf-8')
+const SRC = readFileSync(join(__dirname, '..', 'ontology-mapping.txt'), 'utf-8')
 const LINES = SRC.split('\n').filter((l) => l.startsWith('term-map:'))
 
 describe('本体映射注册表（P1-2）', () => {
