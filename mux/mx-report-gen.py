@@ -3196,6 +3196,10 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         if n in _r18_must and done and not (R18.get(str(n)) or R18.get(n)):
             # 仅当轮执行步挂未采集徽章；沿用步（done=False 夹具态）按 V8.4④ 显示「不在本轮执行范围」声明态
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">R18 未采集·记入问题清单在案</span>'
+        elif done and not (R18.get(str(n)) or R18.get(n)) and n < 26:
+            # V8.11（run15 复盘 F2）：非必采步的载荷全缺也挂黄标（审计契约=完成步任一载荷
+            # 在位即可；run15 实测 9 步全缺静默呈现为「正常步」——降级在案≠达标，须可见）
+            status += '<span class="gmark" style="background:#fef3c7;color:#b45309">载荷全缺（降级在案）</span>'
         # 交付物维度 chip（§5.5 节奏双轨：机制✅不遮交付物缺）
         _ast = _step_artifact_status(n)
         if _ast:
