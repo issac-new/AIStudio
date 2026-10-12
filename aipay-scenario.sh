@@ -34,7 +34,10 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # 「[ERR] aipay-scenario.sh:行号：命令」一跳定位。run15 实证：11:05-11:31 八轮
 # 4-7 分钟崩溃环（grep 空匹配 pipefail，dcc8a7a 修复）排查 26 分钟全靠 mtime 交叉
 # 定位——有此 trap 即一行日志的事。bash -x 离线重放始终未执行，本 trap 即其常驻替身。
-trap 'rc=$?; _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=$rc（aipay-scenario.sh:$LINENO：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi' ERR
+# 子壳过滤（首跑实锤）：-E 令 trap 穿透 $()/管道子壳，命令替换内的良性失败
+# （如 sget 对不存在的 state 键 grep rc=2）不杀驱动却会刷「异常退出」噪音——
+# BASH_SUBSHELL>0 一律静默；真杀死驱动的失败在主壳层（含赋值语句级）另行触发。
+trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then exit "$rc" 2>/dev/null || true; else _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=$rc（${BASH_SOURCE[0]##*/}:$LINENO：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi; fi' ERR
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
 # Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
