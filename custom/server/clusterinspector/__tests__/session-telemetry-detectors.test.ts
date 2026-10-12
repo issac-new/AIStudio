@@ -60,6 +60,32 @@ describe('collectSessionTelemetry', () => {
     expect(face.entries[0]?.watermarkPct).toBe(90)
     expect(face.entries[0]?.cumApiCalls).toBe(40)
   })
+
+  it('SoL-Pi 效能轮②：上下文绝对值齐全时出压缩三档（90% 线公式），缺任一绝对值不出档', () => {
+    writeSidecar({
+      full: { session_id: 's3', last_prompt_tokens: 190_000, context_length: 200_000, watermark_pct: 95 },
+      partial: { session_id: 's4', watermark_pct: 60 }, // 无绝对值：不出档不倒推
+    }, 0)
+    const face = collectSessionTelemetry({ hermesHome: HOME })
+    const full = face.entries.find((e) => e.sessionKey === 'full')
+    const partial = face.entries.find((e) => e.sessionKey === 'partial')
+    // 90% 线：reserve=8192+200000*5%=18192，容量=181808，触发线=163627；190000>容量→now
+    expect(full?.lastPromptTokens).toBe(190_000)
+    expect(full?.contextLength).toBe(200_000)
+    expect(full?.compaction?.level).toBe('now')
+    expect(full?.compaction?.reserveTokens).toBe(18_192)
+    expect(partial?.compaction).toBeUndefined()
+  })
+
+  it('档位边界：到 90% 触发线为 soon，线内为 under', () => {
+    writeSidecar({
+      soonS: { session_id: 's5', last_prompt_tokens: 163_627, context_length: 200_000 },
+      underS: { session_id: 's6', last_prompt_tokens: 100_000, context_length: 200_000 },
+    }, 0)
+    const face = collectSessionTelemetry({ hermesHome: HOME })
+    expect(face.entries.find((e) => e.sessionKey === 'soonS')?.compaction?.level).toBe('soon')
+    expect(face.entries.find((e) => e.sessionKey === 'underS')?.compaction?.level).toBe('under')
+  })
 })
 
 describe('D9 context watermark', () => {

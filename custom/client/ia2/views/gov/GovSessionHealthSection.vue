@@ -34,7 +34,7 @@
     <table v-if="entries.length" class="tbl">
       <thead>
         <tr>
-          <th>会话</th><th>平台/模型</th><th class="num">水位</th><th class="num">累计迭代</th>
+          <th>会话</th><th>平台/模型</th><th class="num">水位</th><th>压缩档位</th><th class="num">累计迭代</th>
           <th class="num">回合</th><th class="num">空转连击</th><th class="num">心跳</th>
           <th class="num">环处置</th><th class="num">轮换</th><th>最近活动</th>
         </tr>
@@ -44,6 +44,13 @@
           <td class="mono">{{ e.sessionKey }}</td>
           <td>{{ e.platform || '?' }} / {{ e.model || '?' }}</td>
           <td class="num">{{ e.watermarkPct == null ? '-' : e.watermarkPct + '%' }}</td>
+          <td>
+            <span v-if="e.compaction" :class="['lvl', `lvl--${e.compaction.level}`]"
+              :title="`触发线 ${(e.compaction.triggerTokens / 1000).toFixed(0)}K token（容量扣输出预留后的 90% 线），距线 ${(e.compaction.headroomTokens / 1000).toFixed(0)}K；输出预留按 8K 缺省估`">
+              {{ levelText(e.compaction.level) }}
+            </span>
+            <span v-else class="lvl lvl--na" title="遥测未携带上下文绝对值（旧 sidecar 或非回合采样），不出档位">—</span>
+          </td>
           <td class="num">{{ e.cumApiCalls ?? '-' }}</td>
           <td class="num">{{ e.turns ?? '-' }}</td>
           <td class="num">{{ e.emptyStreak ?? 0 }}</td>
@@ -65,7 +72,7 @@
       </tbody>
     </table>
 
-    <p class="hint">数据源：集群巡检快照的会话遥测面（运行时 602 sidecar）；D9 水位 / D10 空转 / D11 环检测判据同巡检。</p>
+    <p class="hint">数据源：集群巡检快照的会话遥测面（运行时 602 sidecar）；D9 水位 / D10 空转 / D11 环检测判据同巡检。压缩档位=容量扣输出预留（缺省 8K 估）后的 90% 线公式（compact-threshold 域），档位缺省=遥测未带上下文绝对值。</p>
   </section>
 </template>
 
@@ -86,6 +93,7 @@ interface TelemetryEntry {
   lastRotationReason?: string
   heartbeat?: { step?: number; emitted?: number; interval?: number }
   runaway?: { signal?: string | null; tool?: string | null; count?: number | null; decisions?: number }
+  compaction?: { level: 'under' | 'soon' | 'now'; triggerTokens: number; headroomTokens: number; reserveTokens: number }
 }
 interface Anomaly { detector: string; subject: string; severity: string; summary: string }
 
@@ -110,6 +118,11 @@ function ageText(tsMs: number): string {
   if (sec < 90) return `${sec}s 前`
   if (sec < 5400) return `${Math.round(sec / 60)} 分钟前`
   return `${Math.round(sec / 3600)} 小时前`
+}
+
+/** 压缩档位（compact-threshold 90% 线公式，服务端投影）：充裕/临近/立即 */
+function levelText(level: 'under' | 'soon' | 'now'): string {
+  return ({ under: '充裕', soon: '临近', now: '立即' } as const)[level]
 }
 
 async function refresh() {
@@ -150,6 +163,11 @@ onMounted(refresh)
 .tbl td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .tbl tr.high td { color: #b91c1c; }
 .tbl tr.warn td { color: #92400e; }
+.lvl { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 12px; }
+.lvl--under { background: #ecfdf5; color: #047857; }
+.lvl--soon { background: #fffbeb; color: #b45309; }
+.lvl--now { background: #fef2f2; color: #b91c1c; }
+.lvl--na { color: #9ca3af; }
 .err { color: #b91c1c; font-size: 13px; }
 .ok { color: #047857; }
 .hint { color: #9ca3af; font-size: 12px; margin: 0; }
