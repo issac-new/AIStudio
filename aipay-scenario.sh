@@ -1392,7 +1392,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
     # 依赖核对空值兜底：tasklist 无独立"依赖"节时 sed 输出空，
     # 截断成半行——兜底指向排期文档依赖列，不留空尾。
-    _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | grep -E '^- ' | head -1 | cut -c3-)
+    _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | { grep -E '^- ' || true; } | head -1 | cut -c3-)
     echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：${_dep_txt:-（tasklist 无独立依赖节——依赖声明在 docs/plan/RFD-001-schedule.md 依赖列，以该列反查卡覆盖）}"
   } > "$EVID_DIR/completeness-check.md"
   DL_WT="$SIM_ROOT/var/templates-main-wt"
