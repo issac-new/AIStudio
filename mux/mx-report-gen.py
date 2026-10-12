@@ -1427,7 +1427,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
     19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
         narrative='缺陷+测试段 04:22 起：集成合并六路（testlog 副本冲突族记单）；ChannelAdapter 契约观察器影子 breaking=0 在案；测试分片执行后 G4 段收口（qi 线执行在案）。', imgs=[('testpass_done-op1-before','测试段·驾驶舱前态','ui'), ('testpass_done-op1-after','测试段·驾驶舱收尾','ui')]),
     20: dict(keys=['ready_done'], actor='gate', actorText='强制关卡 G5 · 发布准出',
-        narrative='G5 判词复用 PASS（05:54：本轮既有 PASS 结论行不重派评审——lite 语义；评审卡 t_76fa0c86→done；HumanGate=导演批准入 approved.events）；QGate release-report 落盘。', imgs=[('deliver_gate-op1-before','发布闸门灯·前态','ui'), ('deliver_gate-op1-after','发布闸门灯·G5 后','ui')]),
+        narrative='G5 判词复用 PASS（05:54：本轮既有 PASS 结论行不重派评审——lite 语义；评审卡 t_76fa0c86→done；HumanGate=导演批准入 approved.events）；QGate release-report 落盘。', imgs=[]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · 需求分析师A 验收',
         narrative='UAT lite 段：验收文档留存（推送 origin/main 失败记单 uat-push，留存路径在案）。', imgs=[('uat_done-op1-before','UAT·验收前态','ui'), ('uat_done-op1-after','UAT·验收收尾','ui')]),
     22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作台账',
