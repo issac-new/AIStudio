@@ -2220,7 +2220,7 @@ def monitor_proxy_html():
         return ''
     rows = []
     for l in ilog.read_text(encoding='utf-8', errors='replace').splitlines():
-        if l.startswith('DISP|') and '监控代行' in l:
+        if l.startswith('DISP|') and '代行' in l:
             p4 = l.split('|', 4)
             if len(p4) > 3:
                 rows.append(f'<tr><td style="white-space:nowrap">{H.escape(p4[1])}</td>'
