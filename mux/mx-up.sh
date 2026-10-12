@@ -19,6 +19,46 @@ if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
 fi
 mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
 
+# ── 诊断抑制配置收敛（run15 复盘 S3：No home channel 噪音根治）────────────
+# agent 被 @ 唤醒但未设 home channel 时，先回一条「📬 No home channel…」诊断噪音再
+# 干活（run15 02:03 三档案同秒各回一条实锤）。上游已有 suppress_warning_notifications
+# 显示开关（warning_notifications.py），缺的只是 profiles 未配——每次 mx-up 幂等收敛：
+# 全档案 display.suppress_warning_notifications=true（诊断类通知静默，正常回复不受影响）。
+_mx_diag_suppress() {
+  local _py="${HERMES_AGENT_VENV:-$HOME/.hermes/hermes-agent/venv/bin/python}"
+  [[ -x "$_py" ]] || _py=$(command -v python3 || true)
+  [[ -n "$_py" ]] || return 0
+  "$_py" - "$HERMES_ROOT/profiles" <<'PY' 2>/dev/null || return 1
+import sys, glob, os
+try:
+    import yaml
+except ImportError:
+    raise SystemExit(1)
+root = sys.argv[1]
+changed = 0
+for conf in glob.glob(os.path.join(root, '*', 'config.yaml')):
+    try:
+        with open(conf, encoding='utf-8') as f:
+            cfg = yaml.safe_load(f) or {}
+        if not isinstance(cfg, dict):
+            continue
+        disp = cfg.get('display')
+        if not isinstance(disp, dict):
+            disp = {}
+        if disp.get('suppress_warning_notifications') is True:
+            continue
+        disp['suppress_warning_notifications'] = True
+        cfg['display'] = disp
+        with open(conf, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False)
+        changed += 1
+    except Exception:
+        continue
+print(f'diag-suppress converged: {changed} profile(s) updated')
+PY
+}
+_mx_diag_suppress || log "诊断抑制收敛告警（S3：No home channel 噪音可能复发——profiles config.yaml 手工补 display.suppress_warning_notifications=true）"
+
 # ── host 共存检查（G5 证据面）────────────────────────────
 host_health=$(curl -sf "$HOST_ORCH_HEALTH" -m 3 || true)
 if [[ -n "$host_health" ]]; then
