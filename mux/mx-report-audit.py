@@ -174,7 +174,23 @@ for p in pngs:
     md5.setdefault(h, []).append(p.name)
     if p.stat().st_size < 10240:
         fails.append(f'疑似空图（<10KB）：{p.name}')
-dups = {h: names for h, names in md5.items() if len(names) > 1}
+# [run15 根治] 同步前/后帧相同=页面未变化的真实观测（合法）；跨步同帧=同一画面冒充
+# 不同步的证据（假重复，仍 FAIL）。步键=文件名 -op1-before/after 前缀。
+# 已按 frame-capture-failed|step-<键> 登记的步（壳页/无效帧在案声明）不参与判罚——
+# 对已声明无效的帧二次判罚=双重记账；未登记步的跨步同帧照罚。
+def _step_key_of(name):
+    return name.split('-op1-')[0]
+_fc_md5_skip = set()
+if _ilog.exists():
+    for _lmd5 in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
+        _pmd5 = _lmd5.split('|', 3)
+        if len(_pmd5) >= 4 and _pmd5[0] == 'ISSUE' and _pmd5[1] == 'frame-capture-failed':
+            _fc_md5_skip.add(_pmd5[2].removeprefix('step-'))
+dups = {}
+for h, names in md5.items():
+    _cand = [n for n in names if _step_key_of(n) not in _fc_md5_skip]
+    if len(_cand) > 1 and len({_step_key_of(n) for n in _cand}) > 1:
+        dups[h] = _cand
 if dups:
     fails.append(f'md5 假重复：{list(dups.values())}')
 
