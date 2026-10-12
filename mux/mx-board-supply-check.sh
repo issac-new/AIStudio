@@ -31,8 +31,16 @@ for u in $(node_users); do
     fi
   done
 done
+# fleet-manifest（run16 首跑第二实锤：mx-clean 清走活树 manifest、无重建路径——
+# people_reconcile 的 jq 对账必失败记单。恢复法：cp 归档件回活树并核用户数=编制数）。
+FM="$SIM_ROOT/fleet-manifest.json"
+_n_inst=$(node_users | wc -l | tr -d ' ')
+if ! jq -e --argjson n "$_n_inst" '[.users[].user] | length == $n' "$FM" >/dev/null 2>&1; then
+  echo "fleet-manifest 缺失或用户数≠编制（${_n_inst}）——cp 归档件回 $FM 或重跑 write_fleet_manifest"
+  miss=$((miss+1))
+fi
 if [[ "$miss" -gt 0 ]]; then
   echo "账号板供给缺口 ${miss} 项（供给循环见本文件头注释）"
   exit 1
 fi
-echo "账号板供给齐（board.json+profiles 围栏）"
+echo "账号板供给齐（board.json+profiles 围栏+fleet-manifest）"
