@@ -59,12 +59,12 @@ note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
 # 任一变化=「新提交/新判词/卡 body 更新」成立，熔断复位放行新尝试。
 _g5_evidence_fp() {
   local fp="" repo rgid db
-  repo="$SIM_ROOT/central/aipaydev"
+  repo="$SIM_ROOT/central/${MX_CENTRAL_NAME:-aipaydev}"
   git -C "$repo" fetch -q origin 2>/dev/null
   fp="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
   rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
   if [[ -n "$rgid" ]]; then
-    db="$SIM_ROOT/hermes/kanban/boards/fanfan-review/kanban.db"
+    db="$SIM_ROOT/hermes/kanban/boards/${MX_ANCHOR_USER:-fanfan}-review/kanban.db"
     fp="$fp card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='$rgid';" 2>/dev/null | shasum | cut -c1-12)"
   fi
   printf '%s' "$fp"

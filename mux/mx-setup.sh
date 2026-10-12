@@ -183,7 +183,7 @@ fi
 # 24h 审查：原先嵌在首装守卫内——存量 SIM_ROOT（mx-clean 不删中央仓克隆）永不重放，
 # 404 只在全新装机被修；两条命令自身幂等，移出守卫每轮供给。
 mkdir -p "$SIM_ROOT/runtime"
-mxp_link_dir "$SIM_ROOT/central/aipaydev/runtime/governance" "$SIM_ROOT/runtime/governance"
+mxp_link_dir "$SIM_ROOT/central/$MX_CENTRAL_NAME/runtime/governance" "$SIM_ROOT/runtime/governance"
 for u in $(node_users); do
   WS=$(workspace "$u")
   if [[ ! -d "$WS/.git" ]]; then

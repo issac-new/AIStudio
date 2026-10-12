@@ -91,6 +91,19 @@
 4. decision backend（JEV 门禁）fail-open：不可达只记 issue 不阻断。
 5. 网络抖动会放大等待窗；`MX_ALIVE_HARD_SEC` 可整体放宽。
 
+## 十、推演全新需求与全新团队（新场景）
+
+本套程序不绑定支付域。aipay 只是内联默认场景；全新团队按场景定义落位，库与工具零改动：
+
+1. 建目录 `scenarios/<场景名>/`，从 `_template/roster.env` 复制并填写：新编制（USERS/INSTANCED_USERS）、板映射（boards_of 函数重定义）、新中央仓（MX_CENTRAL_REPO，先在 GitHub 建空仓）、锚档案对、技能清单。`example-minimal/` 是两档案最小样例可对照。
+2. 开发技能用 swarm-yuan 生成器按新项目生成（`swarm-yuan/scripts/generate-skill.sh`，目标项目=新中央仓 clone），产物放 `skills/<名>/` 并登进 SKILLS_INSTALL。
+3. 需求材料放 `scenarios/<场景名>/materials/`；驱动器从 `_template/scenario-skeleton.sh` 起步编排步骤；帧拍摄位按步登记 `mux/capture-plan.env`。
+4. 三处场景语义必须自己定义：完成凭证的标记串（aipay 是 ANALYSIS-DONE）、交付物文件名（aipay 是 `<RFD>-tasklist.md`）、派发任务书里的 RACI 与结论行格式。
+5. 起跑与监控加一个变量：`export MX_SCENARIO=<场景名>`，其余与第六节相同。矩阵预检、账号供给、板创建全部按新编制走。
+6. 三机切片照旧：每机的 `MX_NODE_USERS` 填新编制里本机档案名。
+
+已有边界（如实）：mx-scenario-lib 里的催办文案与审批引导词仍是 aipay 措辞（@fanfan @wei 等字样随场景驱动器自定义时覆盖）；报告链的支付域叙事模板（mx-report-gen 的 PART1 六域等）按新场景需求另行定制，本期未参数化。
+
 ## 九、安全事项（迁移前必做）
 
 1. 轮换 GitHub token：历史 SIM_ROOT 的 `central/aipaydev` 与 `workspaces/*/aipaydev` 的 `remote.origin.url` 实测内嵌真实 token（`x-access-token:gho_...`）。换新 token 后重跑 `mx-setup`（`gh_clone_sanitize` 会落无凭据 remote）。

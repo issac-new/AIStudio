@@ -982,7 +982,7 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
   # 2026-10-10 能力补齐轮：单文件拷贝 → 全目录拷贝（aipaydev-dev 已升 swarm-yuan
   # standard 全骨架 116 文件——门禁/钩子脚本/方法论库随技能分发；单文件技能源仍
   # 兼容旧路径）。条款追加逻辑不变（进安装副本 SKILL.md 尾部，仓内真源无条款）。
-  for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop testing-shift-left; do
+  for s in $SKILLS_INSTALL; do
     [[ -d "$SKILLS_SRC/$s" ]] || continue
     rm -rf "$PROF/skills/$s"
     mkdir -p "$PROF/skills/$s"
@@ -1073,8 +1073,31 @@ if ! ln -sfn "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null; then
   cp -f "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null || true
 fi
 NCWK="$NCWK_ROOT"
-DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
-GH_REPO="issac-new/aipaydev"
+
+# ── 场景层（2026-10-12 新场景轮）────────────────────────
+# aipay（支付域 26 步）保持内联默认——mac solo 回归与门禁锚不动。全新需求+全新团队
+# 走场景覆写：MX_SCENARIO=<名> 且 scenarios/<名>/roster.env 在位时，编制/板映射/
+# 中央仓/技能清单/锚档案全部按 roster 重定义（roster 在全部默认之后 source，覆写
+# 必然压住默认；boards_of 在 roster 里重定义函数即可）。模板=scenarios/_template/，
+# 最小样例=scenarios/example-minimal/。
+MX_SCENARIO="${MX_SCENARIO:-aipay}"
+if [[ "$MX_SCENARIO" != aipay ]]; then
+  _sc_roster="$HARNESS_ROOT/scenarios/$MX_SCENARIO/roster.env"
+  if [[ ! -f "$_sc_roster" ]]; then
+    echo "[mx-lib] FAIL 场景定义缺位：${_sc_roster}（模板见 scenarios/_template/）" >&2
+    exit 2
+  fi
+  # shellcheck disable=SC1090
+  source "$_sc_roster"
+fi
+unset _sc_roster
+MX_CENTRAL_REPO="${MX_CENTRAL_REPO:-issac-new/aipaydev}"
+MX_CENTRAL_NAME="${MX_CENTRAL_NAME:-aipaydev}"
+MX_ANCHOR_USER="${MX_ANCHOR_USER:-fanfan}"
+MX_ANCHOR_USER_B="${MX_ANCHOR_USER_B:-chen}"
+SKILLS_INSTALL="${SKILLS_INSTALL:-capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop testing-shift-left}"
+DIRECTOR_CLONE="$SIM_ROOT/central/$MX_CENTRAL_NAME"
+GH_REPO="$MX_CENTRAL_REPO"
 
 # ── 需求标识（推演轮次参数化，同 V1）────────────────────────
 RFD_ID="${RFD_ID:-RFD-001}"
