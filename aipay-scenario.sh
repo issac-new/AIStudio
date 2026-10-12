@@ -1978,15 +1978,17 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/tri-disp-backfill.py" --run "${RUN_ID}" 2>/dev/null \
     && note "[报告] DISP 三态归桶收尾件已执行（表外词键补观察桶，纪律 28）" \
     || note "[观察] DISP 三态归桶件无产出（台账缺席或零表外词——非阻断）"
-  python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
-  note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # lite 审计口径（2026-10-13 C 方案）：lite 轮的夹具步（G1/G2/群等）真值沿用源轮，
   # UI 帧不在 lite 采集面；报告步自身页收尾后生成无法当轮自拍；G5 判词复用形态无当轮
   # 评审面；payload 族（对话/操作帧/门禁灯）在 lite 的夹具步与采集 403 步不在采集面。
   # 按 §5.6 采集纪律⑩ 自动做合规降级登记——逐键幂等（键在案即跳过该键，不整块门控）。
   if grep -q '^lite_round=1' "$STATE" 2>/dev/null; then
-    _lite_reg() { # <唯一子串> <登记行> —— 幂等追加
-      grep -qF "$1" "$EVID_DIR/issues.log" 2>/dev/null || echo "$2" >> "$EVID_DIR/issues.log"
+    _lite_reg() { # <唯一子串> <登记行> —— 幂等追加 ISSUE+配套观察桶 DISP（同步记账省时序耦合）
+      if ! grep -qF "$1" "$EVID_DIR/issues.log" 2>/dev/null; then
+        echo "$2" >> "$EVID_DIR/issues.log"
+        _tk="$(printf '%s' "$2" | cut -d'|' -f2)"; _sk="$(printf '%s' "$2" | cut -d'|' -f3)"
+        echo "DISP|$_tk|$_sk|观察（lite 审计口径自动登记即观察桶——产品面/采集面修复后人工升桶）" >> "$EVID_DIR/issues.log"
+      fi
     }
     _lite_reg 'product-surface-degraded|lite-scope' \
       "ISSUE|product-surface-degraded|lite-scope|lite 轮夹具步与报告步 UI 帧不在本轮采集面（真值沿用源轮/报告页收尾后生成）——§5.6 采集纪律⑩ 合规降级登记（lite 审计口径自动记）"
@@ -2000,7 +2002,7 @@ PAYSPECS
     done
     # R18 payload 族：夹具步（7 冻结/8 建群/15 评审）真值源轮无当轮载荷；18/22 的
     # 采集链 403 族在案（r18-collect-failed）——凭证在案即黄标不二罚（V8.17 红线②口径）
-    for _pn in 7 8 15 18 22; do
+    for _pn in 7 8 15 18 22 26; do
       _lite_reg "r18-collection-missing|step-$_pn|" \
         "ISSUE|r18-collection-missing|step-$_pn|lite 轮该步载荷不在采集面（夹具步真值源轮/采集链 403 族在案——见 r18-collect-failed 单）——§5.6 采集纪律⑩ 降级登记（lite 审计口径自动记）"
     done
@@ -2008,6 +2010,8 @@ PAYSPECS
       "ISSUE|delivery-protocol|step-23|lite 轮 delivery 未启用（夹具跳过致案例未开，驱动日志多处「跳过」在案）——门禁灯帧按 §5.6 采集纪律⑩ 降级登记（lite 审计口径自动记）"
     note "[报告] lite 审计口径：逐键降级登记完成（承载面/帧配对/payload/门禁灯族）"
   fi
+  python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
+  note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
   # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
