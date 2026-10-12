@@ -3,6 +3,8 @@
  *
  * POST /api/token-meter/project   { attempts, pressure?, breakdown? } → 三投影一次算齐
  * POST /api/token-meter/zcode     { summary } → zcode rounds 契约互校（映射+对账）
+ * GET  /api/token-meter/runtime-ledger → 运行时效率机制账本（SoL-Pi 效能轮：
+ *         observation_archive/obs_recall/action_fusion/evidence_reduce 四机制聚合+最近事件）
  *
  * 挂载：B 类 patch 403 在 bootstrap/routes.ts（与 380/402 同款模式）。
  */
@@ -11,6 +13,7 @@ import {
   attemptLedger, cacheHitPercent, deriveContextBreakdown, deriveContextPressure,
   deriveTokenUsage, fromZcodeUsageSummary, type AttemptUsage, type TokenUsage,
 } from './meter-projections'
+import { readRuntimeLedger } from './runtime-ledger'
 import { estimateCost, loadPricingTable, matchPriceKey } from './pricing'
 
 const router = new Router({ prefix: '/api/token-meter' })
@@ -85,6 +88,12 @@ router.post('/zcode', async (ctx) => {
     reasoningTokens: num(s.reasoningTokens),
   })
   ctx.body = { ok: true, ...mapped, reconcileOk: mapped.reconcile.length === 0 }
+})
+
+router.get('/runtime-ledger', async (ctx) => {
+  // SoL-Pi 效能轮：四机制的 JSONL 审计线聚合。账本不存在=零事件（机制惰性常态），
+  // 不报错——面板空态引导去看导语，而不是让用户排障一个文件。
+  ctx.body = readRuntimeLedger(30)
 })
 
 router.post('/cost', async (ctx) => {
