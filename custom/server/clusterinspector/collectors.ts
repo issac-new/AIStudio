@@ -6,6 +6,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { compactThreshold } from '../compactthreshold/compact-threshold'
 
 export interface GatewayFace {
   ok: boolean
@@ -79,6 +80,15 @@ export interface SessionTelemetryEntry {
   lastRotationReason?: string
   heartbeat?: { step?: number; emitted?: number; interval?: number }
   runaway?: { signal?: string | null; tool?: string | null; count?: number | null; decisions?: number }
+  /** SoL-Pi 效能轮②：上下文绝对值（602 sidecar 自带，透传）+ 压缩三档投影 */
+  lastPromptTokens?: number
+  contextLength?: number
+  compaction?: {
+    level: 'under' | 'soon' | 'now'
+    triggerTokens: number
+    headroomTokens: number
+    reserveTokens: number
+  }
 }
 
 /** 会话遥测面（D9 水位 / D10 节奏 / D11 环检测的观测面） */
@@ -124,6 +134,39 @@ export interface CollectorDeps {
 
 export function hermesHomeDefault(): string {
   return process.env.HERMES_HOME || join(homedir(), '.hermes')
+}
+
+/** 压缩三档投影参数：输出预算缺省（602 sidecar 不带逐模型输出上限；保守 8K 并在 UI 披露）。
+ *  档位判定本身用 compactthreshold 域的 90% 线公式（单一事实源），此处只补输入。 */
+const COMPACTION_DEFAULT_OUTPUT_BUDGET = 8192
+
+/** 602 sidecar 原始条目 → { lastPromptTokens, contextLength, compaction? }。
+ *  两个绝对值任一缺席（旧 sidecar/非回合采样）即不出档位——百分比不倒推绝对值。 */
+function collectSessionCompaction(v: Record<string, unknown>): Pick<
+  SessionTelemetryEntry, 'lastPromptTokens' | 'contextLength' | 'compaction'
+> {
+  const promptTokens = v.last_prompt_tokens
+  const contextLength = v.context_length
+  const out: Pick<SessionTelemetryEntry, 'lastPromptTokens' | 'contextLength' | 'compaction'> = {}
+  if (typeof promptTokens === 'number' && Number.isFinite(promptTokens)) {
+    out.lastPromptTokens = promptTokens
+  }
+  if (typeof contextLength === 'number' && Number.isFinite(contextLength) && contextLength > 0) {
+    out.contextLength = contextLength
+  }
+  if (out.lastPromptTokens === undefined || out.contextLength === undefined) return out
+  const d = compactThreshold({
+    usedTokens: out.lastPromptTokens,
+    limitTokens: out.contextLength,
+    outputBudget: COMPACTION_DEFAULT_OUTPUT_BUDGET,
+  })
+  out.compaction = {
+    level: d.level,
+    triggerTokens: d.triggerTokens,
+    headroomTokens: d.headroom,
+    reserveTokens: d.reserveTokens,
+  }
+  return out
 }
 
 function pidAlive(pid: unknown): boolean {
@@ -274,6 +317,7 @@ export function collectSessionTelemetry(deps: CollectorDeps = {}): SessionTeleme
         lastRotationReason: typeof v.last_rotation_reason === 'string' ? v.last_rotation_reason : undefined,
         heartbeat: hb,
         runaway: rw,
+        ...collectSessionCompaction(v),
       })
     }
     face.ok = true

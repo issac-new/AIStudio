@@ -45,10 +45,13 @@ SoL-Pi 的自优化循环从 152 个候选方向筛到 4 个存活机制，存�
 
 **产品面板（overlay A 类改动，零补丁）**。工程效能页签（/app/board?tab=gov-harness）新增「运行时效率机制」分区，组件 `custom/client/governance/components/EfficiencyRuntimeSection.vue`。内容是四张机制卡加 Token 四账户卡，再加最近事件表。四账户数据来自既有 /api/studio/usage/stats。服务端新增 GET /api/token-meter/runtime-ledger，挂在既有 patch 403 控制器上，聚合逻辑在 `custom/server/tokens/runtime-ledger.ts` 纯函数。token-meter 域由此首次有了 UI 消费方。走查实录：四账户卡显示真实数据，近 30 天输入 495.8M、缓存读 1922.1M、命中率 79.5%、343 会话。机制卡如实显示零，因为本栈运行时尚未部署新机制，不做假数据。
 
+**压缩三档列（第二批，同日落地）**。会话健康页签每会话新增压缩档位列：充裕、临近、立即。数据链三段。第一段，602 遥测 sidecar 本就落了上下文绝对值（last_prompt_tokens 与 context_length）。集群巡检收集器此前只透传百分比，现在一并透传。第二段，档位判定在收集器内调用 compact-threshold 域的 90% 线公式：容量扣输出预留后的九成为触发线。输出预算用披露的 8K 缺省。第三段，UI 只渲染投影结果。绝对值缺席（旧 sidecar 或非回合采样）时不出档位，不拿百分比倒推。compact-threshold 纯函数由此获得第一个 UI 消费方。
+
 ## 三、验证证据
 
 - hermes-agent 侧 pytest：新增三个测试文件共 40 用例全绿，即 `tests/tools/test_observation_pack_recall.py`、`test_action_fusion_then_run.py`、`test_evidence_reducer.py`。相邻路径回归全绿：test_tool_result_storage.py 53 通过，test_file_tools.py 41 通过 2 跳过。
 - overlay 侧 vitest：`custom/server/tokens/__tests__/runtime-ledger.test.ts` 15 用例全绿，其中一例断言新路由确实挂在控制器上。
+- 第二批测试全绿。集群巡检域新增 3 用例：绝对值透传、三档边界、缺值不出档。会话健康组件测试 2 用例：三档渲染与占位、空态诚实。
 - 补丁重放验证：四个新补丁（611 至 614）先在基线快照树上 git apply。之后再与工作树逐文件比对，十个文件全部一致。此步防手改补丁静默截断。
 - 浏览器走查：隔离端口栈，后端 8657、前端 8659。DOM 快照确认分区渲染、端点通、空态与数据源脚注正常。走查中发现一处文案笔误并当场修正。
 - 功能冒烟走真实执行链：then_run 通过与失败两种裁决均正确合并。归档尾摘录含最终裁决行。obs_recall 跨页与末页正确。精简器默认关时原文直通。引文校验器还抓住了测试作者手写时间戳与生成器取模不一致的编造，机制按设计工作。
@@ -58,7 +61,7 @@ SoL-Pi 的自优化循环从 152 个候选方向筛到 4 个存活机制，存�
 1. **未做本机效率实测**。没有跑任何基准，省 45-49% 是论文数字，不是本机成绩。机制在本机省多少，要等部署后账本数据积累才有诚实答案。
 2. **未做前两次全量窗口**。SoL-Pi 观察打包在归档后前两次请求仍发全文，第三次起才换句柄。本机溢出在首次就替换并带摘录。实现该窗口需要逐消息请求计数与历史改写，侵入请求组装层，列为后续可选。
 3. **未做计划步边界压缩与经济闸门**。本机已有阈值触发压缩、微压缩、原生压缩三套等价能力。SoL-Pi 的增量是子任务边界时机加经济闸门。设计：在压缩阈值判定前加一道预检，重写成本小于预估未来节省才触发。留后续轮。
-4. **未部署运行时**。新机制在 ncwk upstream 树，`~/.hermes` 运行时副本未同步。studio 面板的机制计数在下次运行时部署前保持零。部署走既有 mx-setup 与 deploy 顺序，补丁先于 deploy，防回退。
+4. **运行时部署受阻（第二批核实的新发现）**。宿主 `~/.hermes/hermes-agent` 是 canary 通道树，版本 v0.21.6+canary.20261010T070026Z。它比补丁链基线多 136 个提交，类型标注现代化、工具集调整正落在我们改的同一批文件里。活网关经启动引导把该树直接插入 sys.path 导入。跨代覆盖核心文件会把 canary 侧演进打回旧代，不做。两条出路待裁定：把运行时回钉 stable v0.21.6 基线，或补丁链跟随 canary 重锚。裁定前 studio 面板机制计数保持零（诚实空态，不做假数据）。
 5. **精简器默认关闭**。需在 cli-config 配置廉价 provider 与 model 才启用。安全注记：收据生成会把日志内容发往所配模型，信任级别与压缩摘要相同。密形校验是放行前最后一道闸。
 6. **账本无轮转**。单文件追加，事件体有 4000 字符上限。按现有事件密度估计月级文件量在 MB 级，轮转留后续。
 
@@ -70,8 +73,8 @@ SoL-Pi 的自优化循环从 152 个候选方向筛到 4 个存活机制，存�
 
 ## 六、后续清单（按优先级）
 
-1. 运行时部署轮：同步 611-614 到 ~/.hermes 运行时，装机验证四机制在真实会话的表现，账本开始积累本机数据。
-2. 面板补会话维度。候选一：每会话压缩水位三档判定，compact-threshold 纯函数已有，缺 UI 消费方。候选二：团队五态条，team-summary-bar 同缺消费方。两者可并入会话健康或集群健康页签。
+1. 运行时部署：先裁定 canary 与 stable 的通道策略（见第四节第 4 条），再同步 611-614。本机当前无任何 602 sidecar 文件，说明活网关未载长会话治理补丁，与 canary 通道覆盖一致。
+2. 团队五态条：数据源缺 worker 失败态。kanban 状态词表没有 failed，blocked 不等于 failed，不硬映射。进程退出钩子也未进巡检快照。需先补 worker 生命周期的失败信号源，再接 team-summary-bar 投影。压缩三档已完成（见第二节）。
 3. 计划步边界压缩的经济闸门落码，设计见第四节第 3 条。
 4. 账本轮转与前两次全量窗口按数据决定是否做。
 
@@ -79,5 +82,6 @@ SoL-Pi 的自优化循环从 152 个候选方向筛到 4 个存活机制，存�
 
 - 补丁四个，series 已登记：611-agent-toolsets-obs-recall、612-agent-observation-pack-recall、613-agent-action-fusion-then-run、614-agent-evidence-reducer。.overlay-injected.json 已同步 609-614 实态。
 - inject.mjs 的 HERMES_AGENT_PATCH_PREFIXES 新增根层 toolsets.py 路由条目，仿照 model_tools.py 先例。
-- overlay 新文件：runtime-ledger.ts、runtime-ledger.test.ts、EfficiencyRuntimeSection.vue。修改：token-meter-controller.ts、GovHarnessView.vue。
+- overlay 新文件：runtime-ledger.ts、runtime-ledger.test.ts、EfficiencyRuntimeSection.vue、gov-session-health-compaction.test.ts。修改：token-meter-controller.ts、GovHarnessView.vue。
+- 第二批：collectors.ts（透传+档位投影）、GovSessionHealthSection.vue（档位列）、session-telemetry-detectors.test.ts（3 用例）。
 - 测试命令一：`uv run --with pytest python -m pytest tests/tools/test_observation_pack_recall.py tests/tools/test_evidence_reducer.py tests/tools/test_action_fusion_then_run.py -q`。命令二：`npx vitest run custom/server/tokens/__tests__/`。
