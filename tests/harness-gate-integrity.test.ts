@@ -11,7 +11,7 @@
 // 测试方式：bash 子进程 source 真实 mx-lib/mx-scenario-lib（AIPAY_SIM_ROOT 指向
 // 临时目录，不碰真实 sim 栈），断言函数行为本身而非复制实现。
 import { execFileSync } from 'child_process'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it, afterAll } from 'vitest'
@@ -598,6 +598,22 @@ uat_evidence_body 1790930955`, root)
     expect(lib).toContain('586-agent-gateway-wedged-agent-sweep.patch')
     // ③驱逐判定复用快路径原语（语义一致，不另立判据）
     expect(patch577).toContain('_hm_evict_idle_stale_agent')
+  })
+
+  it('㉔：Ycode 引擎驱动接线三断言（2026-10-12 hermes→ACP→Ycode 链路接线轮）', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    const OVERLAY = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')
+    const skillDir = join(OVERLAY, 'runtime/hermes-skills/coding-delegate')
+    const card = read(join(skillDir, 'SKILL.md'))
+    // ①技能卡引擎命令=自带驱动（zcode-acp-delegate.py），claude -p 旧形态退役
+    expect(card).toContain('scripts/zcode-acp-delegate.py')
+    expect(card).not.toContain('claude -p')
+    // ②驱动真源在位、可编译（真实工具链守门：语法坏=分发到 profile 也是死件）
+    const driver = join(skillDir, 'scripts/zcode-acp-delegate.py')
+    expect(existsSync(driver)).toBe(true)
+    execFileSync('python3', ['-m', 'py_compile', driver])
+    // ③分发整目录（cp -R …/coding-delegate/.）——单文件拷贝会漏 scripts/，技能卡命令不可执行
+    expect(lib).toMatch(/cp -R [^\n]*coding-delegate\/\./)
   })
 
   it('E：G5 活性等待+判词复用+过闸收口单一路径', () => {
