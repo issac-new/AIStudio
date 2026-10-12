@@ -643,11 +643,17 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     fi
   fi
 
-  # 四路齐发后的逐稿等待（并发已在前：这里只是逐个确认，先完成先过）
-  for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
-    wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
-      || { note "[观察] $t 分析文档未达（记问题单）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; }
-  done
+  # 四路并发等待（V8.16 饱和并行：原逐稿 for 串行——慢稿挡快稿的催办与记单时机，
+  # 且单稿 3600s 窗在最慢路上叠加；multi 同刻观测四锚，先完成先 ✓，滞后锚催办按
+  # owner 点名+陈旧分支诊断（c1e507d 件），失败退出导出失败稿清单精确记单）
+  wait_alive_truth_multi 3600 "chen,xiao,hu,lin" \
+    "仓库出现 docs/analysis/AN-PAYCORE-analysis.md@chen@repo_has docs/analysis/AN-PAYCORE-analysis.md" \
+    "仓库出现 docs/analysis/AN-MP-analysis.md@xiao@repo_has docs/analysis/AN-MP-analysis.md" \
+    "仓库出现 docs/analysis/AN-CHWX-analysis.md@hu@repo_has docs/analysis/AN-CHWX-analysis.md" \
+    "仓库出现 docs/analysis/AN-CHALI-analysis.md@lin@repo_has docs/analysis/AN-CHALI-analysis.md" \
+    || { _fl="${MX_MULTI_FAILED_LEGS:-}"; [ -z "$_fl" ] && _fl="AN-PAYCORE AN-MP AN-CHWX AN-CHALI";
+         for t in $(printf '%s' "$_fl" | grep -oE 'AN-[A-Z-]+' | sort -u); do
+           note "[观察] $t 分析文档未达（记问题单）"; echo "ISSUE|anexec-missing|$t|分析文档未入库" >> "$EVID_DIR/issues.log"; done; }
   # 双兜底回执核验（run8 遗留③：run7 三条回执未见——agent 重活完成即停 turn，
   # 回执动作被丢。双形态匹配【完成回执】或 AN-DONE-<ID> 结论行；未见先回灌
   # @任务 owner 补发，重查一轮仍缺才落单）。
@@ -721,6 +727,27 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   # ── 涉敏需求安全评审卡前置（run15 前置 P3-7①，审计 B 案：安全合规最薄的强制面）──
   # freeze 涉敏段非「无/否」时，G2 放行前须有 secops 安全评审卡+结论行——缺卡即拦，
   # 补齐后复核放行（security_review_done 键幂等）。非涉敏轮零影响（键直接落 1）。
+# [V8.16 饱和并行] G2 双工位：arch 评审与 secops 安全评审同刻起跑（arch 先行预热，
+  # 工作重叠；安全闸等待与 G2 判定序不变——安全 FAIL 仍 fail-closed 先出）
+  # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
+  # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
+  # G2 mention 无法投递、1800s 硬闸必超时。照步骤 10 导演补邀惯用法双账号补齐。
+  ARID=$(sget room_analysis)
+  for mxid in "$(human_mxid arch)" "$(agent_mxid arch)"; do
+    if ! mx_room_members "$(load_token fanfan)" "$ARID" | grep -qx "$mxid"; then
+      mx "$(load_token fanfan)" POST "rooms/$ARID/invite" "{\"user_id\":\"$mxid\"}" >/dev/null 2>&1 || true
+      [[ "$mxid" == *"-agent"* ]] || mx_join "$(load_token arch)" "$ARID"
+    fi
+  done
+  AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
+    "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
+  G2_TS=$(( $(date +%s) * 1000 ))
+  dispatch_in_room arch "@arch-agent:matrix.test 概设 docs/design/${RFD_ID}-architecture-design.md 已入库，请执行 G2 架构治理评审（评审卡 ${AGID}@arch-governance 板）：
+1) 设计五要素齐备（背景/方案/接口/数据/风险，对照 templates/design.md）
+2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
+3) 验证计划前移：测试要点是否在设计期已列
+4) 备选方案 ≥2 且有取舍理由
+评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid arch)"
   # 幂等时间锚（run15 根治「重启白等 40min」）：锚随 state 持久化——重放沿用派发时刻，
   # 旧判词对重放可见（原实现每轮重置 TS，旧 FAIL 判词变不可见且卡已存在不重派，
   # 驱动干等整窗等一个不会来的「新」结论，40min 一循环；末判词赢语义见
@@ -768,25 +795,6 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
     fi
   fi
   capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
-  # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
-  # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
-  # G2 mention 无法投递、1800s 硬闸必超时。照步骤 10 导演补邀惯用法双账号补齐。
-  ARID=$(sget room_analysis)
-  for mxid in "$(human_mxid arch)" "$(agent_mxid arch)"; do
-    if ! mx_room_members "$(load_token fanfan)" "$ARID" | grep -qx "$mxid"; then
-      mx "$(load_token fanfan)" POST "rooms/$ARID/invite" "{\"user_id\":\"$mxid\"}" >/dev/null 2>&1 || true
-      [[ "$mxid" == *"-agent"* ]] || mx_join "$(load_token arch)" "$ARID"
-    fi
-  done
-  AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
-    "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
-  G2_TS=$(( $(date +%s) * 1000 ))
-  dispatch_in_room arch "@arch-agent:matrix.test 概设 docs/design/${RFD_ID}-architecture-design.md 已入库，请执行 G2 架构治理评审（评审卡 ${AGID}@arch-governance 板）：
-1) 设计五要素齐备（背景/方案/接口/数据/风险，对照 templates/design.md）
-2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
-3) 验证计划前移：测试要点是否在设计期已列
-4) 备选方案 ≥2 且有取舍理由
-评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid arch)"
   # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
   # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
@@ -1133,11 +1141,49 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 结论行 QUALITY-DONE-${RFD_ID} gates=M/N（行首，M=通过门禁数/N=总门禁数；未绑执行器的门禁计入无信号桶如实呈现，禁虚报全绿）。工作区 $(workspace mei)。不许谎报。" "$(agent_mxid mei),$(agent_mxid qi)" \
         && sset quality_dispatched 1
     fi
+    # [V8.16 饱和并行] 测试段分片：BE 三片（qi 单档案三会话并行——run15 chen 双会话
+    # 实证：并行宽度=工位数非档案数）+FE 两片。MX_TEST_SHARDS=0 回旧单卡形态。
+    if [[ "${MX_TEST_SHARDS:-1}" == "1" ]]; then
+    _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S1（后端集成测试·支付核心片）。
+（预备轮衔接：test-drafts/TEST-BE-draft.md 草稿核对契约后取本片用例执行。）
+工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}
+1) 本片范围：下单幂等、超时关单（vitest 放 apps/test-integration/，按契约条目标注）
+2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S1-testlog.txt（随分支提交）
+3) 发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷研发侧串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>；修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因（本条流程对 S2/S3 片同样生效，按片内缺陷归你复测）
+4) 结论行 TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数）。不许谎报。
+干预点纪律：用例先行——骨架 @会签人 一句确认后展开；每组完成即 push+PROGRESS-TEST-BE-S1-<组>。" "$(agent_mxid qi),$(agent_mxid wei)")
+    sset m19_marker "$_m19"
+    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1 并行各自会话）。
+工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}
+1) 本片范围：回调验签拒绝、重复回调幂等（vitest 放 apps/test-integration/）
+2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S2-testlog.txt（随分支提交）
+3) 缺陷按 S1 任务书 defect-loop 流程办理（含 affected= 文件域）
+4) 结论行 TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数）。不许谎报；每组完成即 PROGRESS-TEST-BE-S2-<组>。" "$(agent_mxid qi),$(agent_mxid wei)"
+    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）。
+工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}
+1) 本片范围：双渠道调起参数、跨应用集成链路（vitest 放 apps/test-integration/）
+2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S3-testlog.txt（随分支提交）
+3) 缺陷按 S1 任务书 defect-loop 流程办理（含 affected= 文件域）
+4) 结论行 TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数）。不许谎报；每组完成即 PROGRESS-TEST-BE-S3-<组>。" "$(agent_mxid qi),$(agent_mxid wei)"
+    dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）。
+（预备轮衔接：test-drafts/TEST-FE-draft.md 草稿核对后取本片执行。）
+工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}
+1) 本片范围：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
+2) 执行本片全量；testlog 存 docs/evidence/TEST-FE-S1-testlog.txt（随分支提交）
+3) 缺陷走 defect-loop 发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit+affected=）；建卡后 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因
+4) 结论行 TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数）。不许谎报；PROGRESS-TEST-FE-S1-<组>。" "$(agent_mxid fei),$(agent_mxid mei)"
+    dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）。
+工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}
+1) 本片范围：静态检查面（模块依赖边界/禁入 API/双端对称断言）与守卫用例
+2) 执行本片全量；testlog 存 docs/evidence/TEST-FE-S2-testlog.txt（随分支提交）
+3) 缺陷按 S1 任务书 defect-loop 流程办理
+4) 结论行 TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数）。不许谎报；PROGRESS-TEST-FE-S2-<组>。" "$(agent_mxid fei),$(agent_mxid mei)"
+    else
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
-2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
+2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
     sset m19_marker "$_m19"
@@ -1145,8 +1191,9 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 （预备轮衔接：若你工作区 test-drafts/TEST-FE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
-2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit）；建卡后一行 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
+2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit+affected=）；建卡后一行 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
+    fi
     sset defect_dispatched 1
   fi
   # 必采对话挂钩在幂等块外（r18-collect 幂等拒重，重启重入即补采）
@@ -1183,9 +1230,11 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # 瞬时 Synapse/curl 失败经 pipefail 传导会中途杀脚本：失败本轮作废、续等
     DEFECTS=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | startswith("【缺陷】"))) | .event_id] | length') || { sleep 30; continue; }
     FIXED=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | contains("FIX-DONE")))] | length') || { sleep 30; continue; }
-    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg qi "$(agent_mxid qi)" '[.[] | select(.origin_server_ts > $since and .sender == $qi and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-BE")))] | length') || { sleep 30; continue; }
-    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg fei "$(agent_mxid fei)" '[.[] | select(.origin_server_ts > $since and .sender == $fei and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-FE")))] | length') || { sleep 30; continue; }
-    if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE > 0 && FE_DONE > 0 )); then
+    # [V8.16] 分片形态：按片唯一结论行计数（重发不虚增），阈值=片数；旧形态=1
+    if [[ "${MX_TEST_SHARDS:-1}" == "1" ]]; then _be_n=3; _fe_n=2; else _be_n=1; _fe_n=1; fi
+    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg qi "$(agent_mxid qi)" '[.[] | select(.origin_server_ts > $since and .sender == $qi) | (.content.body // "") | scan("TEST-(PASS|FAIL)-TEST-BE(-S[0-9]+)?")] | unique | length') || { sleep 30; continue; }
+    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg fei "$(agent_mxid fei)" '[.[] | select(.origin_server_ts > $since and .sender == $fei) | (.content.body // "") | scan("TEST-(PASS|FAIL)-TEST-FE(-S[0-9]+)?")] | unique | length') || { sleep 30; continue; }
+    if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE >= _be_n && FE_DONE >= _fe_n )); then
       # 纪律 34 驱动抽验（方案 34②/34⑥ 锚点级复验）：抽最近一条 FIX-DONE 行的
       # commit= 锚点，核验中央仓可反查（未推送=未完成；防测试侧照单全收伪锚回执）。
       # 分摊并行复测形态（wt-verify）run15 验证后同款接入。
@@ -1212,8 +1261,8 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       fi
       note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
-    if (( DEFECTS == 0 && BOTH_DONE > 0 && FE_DONE > 0 )); then
-      note "[真值] 零缺陷轮：双测试结论已出，缺陷流未触发（如实记录）"; break
+    if (( DEFECTS == 0 && BOTH_DONE >= _be_n && FE_DONE >= _fe_n )); then
+      note "[真值] 零缺陷轮：双测试结论已出（BE ${BOTH_DONE}/${_be_n} 片+FE ${FE_DONE}/${_fe_n} 片），缺陷流未触发（如实记录）"; break
     fi
     # V8.8 纪律 34④：环内禁静默——缺陷在途（DEFECTS>FIXED）且 15 分钟无新 FIX-DONE
     # 即群内重发提醒；再 15 分钟仍无进展报 LOOP-BLOCKED（记单不中止，窗口到期兜底）。
