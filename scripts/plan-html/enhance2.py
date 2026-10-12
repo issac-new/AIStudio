@@ -64,9 +64,16 @@ else:
     print('① 已在位')
 
 # ── ② mermaid 渲染 ──
-MERMAID_SRC = Path('/Users/cuishi/lab/ncwk/overlay/node_modules/mermaid/dist/mermaid.min.js')
+# 引擎来源链（自持优先，防 node_modules 漂移）：overlay node_modules → 本仓 vendor 固化件。
+# 2026-10-13 实锤：overlay node_modules 整体缺席（并行会话/升级冲掉），旧逻辑静默跳过注入，
+# 方案页 4 张图裸代码块直出——渲染依赖不得随产品仓 node_modules 漂移（同 run-gates 自持教训）。
+_MERMAID_CANDIDATES = [
+    Path('/Users/cuishi/lab/ncwk/overlay/node_modules/mermaid/dist/mermaid.min.js'),
+    Path(__file__).resolve().parent / 'vendor' / 'mermaid.min.js',
+]
+MERMAID_SRC = next((p for p in _MERMAID_CANDIDATES if p.exists()), None)
 MERMAID_JS = VIEW / 'mermaid.min.js'
-if 'mermaid.initialize' not in s and MERMAID_SRC.exists():
+if 'mermaid.initialize' not in s and MERMAID_SRC is not None:
     shutil.copy(MERMAID_SRC, MERMAID_JS)
     init = '''
 <script src="mermaid.min.js"></script>
@@ -125,6 +132,21 @@ if 'class="tbl-wrap"' not in s:
     print('④ 表格横滚包裹：%d 张' % len(re.findall(r'<table', s)))
 else:
     print('④ 已在位')
+
+# ── ⑤ 双标题去重（2026-10-13 用户实指「格式不统一」：pandoc 元数据横幅已带版本号，
+#      md 首行 h1 又渲染一次裸标题，且 TOC 首条重复指向它）——删正文 h1；TOC 的 h1 li
+#      内嵌全部 h2 子条目（pandoc 嵌套结构），只删其锚点链接保留子树（TOC 无圆点样式，
+#      空壳 li 渲染干净），TOC 首条目视觉上变为「总述」──
+_body_h1 = re.search(r'<h1 id="swarm-studio-[^"]*">.*?</h1>\s*', s)
+if _body_h1 and 'id="title-block-header"' in s:
+    _hid = re.search(r'<h1 id="([^"]+)"', _body_h1.group(0)).group(1)
+    s = s.replace(_body_h1.group(0), '', 1)
+    s = re.sub(r'<a href="#' + re.escape(_hid) + r'"[^>]*>[^<]*</a>\s*', '', s, count=1)
+    print('⑤ 双标题去重：正文 h1 + TOC 首条锚点已删')
+elif _body_h1 is None and 'title-block-header' in s:
+    print('⑤ 已在位')
+else:
+    print('⑤ 跳过（无横幅，正文 h1 保留为唯一标题）')
 
 F.write_text(s, encoding='utf-8')
 print('二段增强完成')
