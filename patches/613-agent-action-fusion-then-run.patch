@@ -1,0 +1,303 @@
+--- a/tools/file_tools.py
++++ b/tools/file_tools.py
+@@ -858,16 +858,89 @@
+         f"line(s) actually changed. Re-sending a {len(new_content):,}-char file costs output tokens for every "
+         "unchanged line; for edits like this use patch (old_string/new_string), which sends only the changed region."
+     )
++
++
++# --- Action Fusion (SoL-Pi) ------------------------------------------------
++# Fused edit+verify: write_file/patch accept ``then_run``, a validation command that
++# executes inside the SAME tool call once the write lands. Saves one model decision
++# round per edit→check cycle (SoL-Pi's Action Fusion mechanism: 3 API calls → 2).
++_THEN_RUN_TIMEOUT_S = 120
++_THEN_RUN_OUTPUT_HEAD = 4000
++_THEN_RUN_OUTPUT_TAIL = 2000
++
++
++def _then_run_hash_ok(file_ops, path: str, expected_sha: str | None) -> bool:
++    """Content-hash guard immediately before running ``then_run``: skip the fused
++    validation whenever anything modified the file between the write and the command —
++    checking different bytes than were written reports a phantom pass/fail the model
++    cannot distinguish from a real result. A backend that cannot hash fails closed
++    (skip the command, say why) rather than run unverified."""
++    if not expected_sha:
++        return False
++    try:
++        res = file_ops._exec(f"sha256sum {file_ops._escape_shell_arg(path)} 2>/dev/null")
++        first = str(getattr(res, "stdout", "") or "").strip().split()
++        return bool(first) and first[0] == expected_sha
++    except Exception:
++        return False
++
++
++def _run_then_run_fused(file_ops, command: str, guard_paths: list,
++                        session_id: str | None = None) -> dict:
++    """Execute the fused validation command; returns the ``then_run`` result block.
++
++    ``guard_paths``: ``[(path, expected_sha256)]`` — every entry must still match its
++    write-time hash (paths the write verified; ``expected_sha=None`` fails closed).
++    Output is bounded head+tail: compile/test noise is front-loaded, verdicts land at
++    the end. Ledger event either way (efficiency accounting counts skips too)."""
++    from tools.efficiency_ledger import record_efficiency_event
++
++    import time as _time
++    started = _time.monotonic()
++    for g_path, g_sha in guard_paths:
++        if not _then_run_hash_ok(file_ops, g_path, g_sha):
++            block = {"command": command, "skipped":
++                     f"content-hash guard: {g_path} changed on disk after the write "
++                     "(or its hash could not be verified); validation NOT run — "
++                     "re-check the file before trusting any result.", "path": g_path}
++            record_efficiency_event("action_fusion", command=command, outcome="skipped_guard",
++                                    session_id=session_id)
++            return block
++    try:
++        res = file_ops._exec(command, timeout=_THEN_RUN_TIMEOUT_S)
++        exit_code = int(getattr(res, "exit_code", 1))
++        output = str(getattr(res, "stdout", "") or "")
++    except Exception as exc:  # noqa: BLE001 — a failed validation is a result, not a tool crash
++        block = {"command": command, "exit_code": 1,
++                 "output": f"then_run execution failed: {type(exc).__name__}: {exc}"[:_THEN_RUN_OUTPUT_HEAD]}
++        record_efficiency_event("action_fusion", command=command, outcome="exec_error",
++                                session_id=session_id)
++        return block
++    if len(output) > _THEN_RUN_OUTPUT_HEAD + _THEN_RUN_OUTPUT_TAIL:
++        omitted = len(output) - _THEN_RUN_OUTPUT_HEAD - _THEN_RUN_OUTPUT_TAIL
++        output = (output[:_THEN_RUN_OUTPUT_HEAD]
++                  + f"\n[…{omitted:,} chars omitted…]\n"
++                  + output[-_THEN_RUN_OUTPUT_TAIL:])
++    duration = round(_time.monotonic() - started, 2)
++    record_efficiency_event("action_fusion", command=command, exit_code=exit_code,
++                            outcome="ran", duration_s=duration, session_id=session_id)
++    return {"command": command, "exit_code": exit_code, "output": output,
++            "duration_s": duration}
+ 
+ 
+ def write_file_tool(path: str, content: str, task_id: str = "default",
+                     cross_profile: bool = False,
+-                    session_id: str | None = None) -> str:
++                    session_id: str | None = None,
++                    then_run: str | None = None) -> str:
+     """Write content to a file.
+ 
+     ``cross_profile`` bypasses the sandbox-mirror lost-write guards only
+     (unadvertised in the schema; the mirror rejection error teaches it — the
+     cross-PROFILE guard it was named for no longer exists).
++
++    ``then_run`` (Action Fusion, SoL-Pi): optional validation command executed in
++    the same tool call right after a successful write — the edit+verify round
++    trip collapses from two model decisions into one.
+     """
+     # write_file checks the binary-document guard before the mirror guard.
+     err = (_check_sensitive_path(path, task_id)
+@@ -918,6 +991,11 @@
+                     # same-task writes stay unblocked (patch_tool carries it).
+                     _mark_full_write_baseline(_resolved, task_id, getattr(result, "_content_sha256", None))
+                 _note_edited(task_id, [path], path_to_resolved, session_id)
++                if then_run:
++                    result_dict["then_run"] = _run_then_run_fused(
++                        _get_file_ops(task_id), then_run,
++                        [(_resolved or path, getattr(result, "_content_sha256", None))],
++                        session_id=session_id)
+         return json.dumps(result_dict, ensure_ascii=False)
+     except Exception as e:
+         if _is_expected_write_exception(e):
+@@ -959,11 +1037,12 @@
+ def patch_tool(mode: str = "replace", path: str = None, old_string: str = None,
+                new_string: str = None, replace_all: bool = False, patch: str = None,
+                task_id: str = "default", cross_profile: bool = False,
+-               session_id: str | None = None) -> str:
++               session_id: str | None = None, then_run: str | None = None) -> str:
+     """Patch a file using replace mode or V4A patch format.
+ 
+     ``cross_profile``: same semantics as ``write_file``'s flag (mirror-guard
+-    bypass only; unadvertised).
++    bypass only; unadvertised). ``then_run``: fused validation command (Action
++    Fusion — see ``write_file_tool``).
+     """
+     _paths_to_check = [path] if path else []
+     _content_write_paths = list(_paths_to_check)
+@@ -1025,6 +1104,13 @@
+                 _carry_full_write_baselines(task_id, _known, getattr(result, "_writes", ()), _path_to_resolved)
+                 # Clear failure counters so a future miss starts a fresh count.
+                 _reset_patch_failures(task_id, [_r for _r in _path_to_resolved.values() if _r])
++                if then_run:
++                    # Guard on the write-time hashes the patch itself recorded (3rd
++                    # tuple slot = new-content sha, the bytes now on disk).
++                    result_dict["then_run"] = _run_then_run_fused(
++                        file_ops, then_run,
++                        [(_w[0], _w[2]) for _w in getattr(result, "_writes", ())],
++                        session_id=session_id)
+         # old_string-not-found hint. Failure escalation is tracked for replace
+         # mode only (V4A misses are rare); the generic hint is suppressed when
+         # patch_replace already attached a richer "Did you mean?" snippet.
+@@ -1179,6 +1265,7 @@
+         "properties": {
+             "path": {"type": "string", "description": "Path to the file to write (will be created if it doesn't exist, overwritten if it does)"},
+             "content": {"type": "string", "description": "Complete content to write to the file"},
++            "then_run": {"type": "string", "description": "Optional validation command fused into this call (runs in the current working directory, like the terminal tool): executed immediately after a successful write, guarded by a content-hash check that the written file is unchanged. Its exit code and output are merged into this result. Use it instead of a separate terminal round-trip, e.g. 'python -m py_compile main.py', 'node --check app.js', 'npm test -- --runTestsByPath tests/x.test.js'. Timeout 120s; output bounded to head+tail."},
+             # NOTE: the handler still accepts `cross_profile` (bool) — it now
+             # bypasses only the #32049 sandbox-mirror lost-write guards, whose
+             # rejection error teaches it. Unadvertised: the cross-PROFILE
+@@ -1225,6 +1312,7 @@
+                 "description": "Replace all occurrences instead of requiring a unique match (default: false)",
+                 "default": False,
+             },
++            "then_run": {"type": "string", "description": "Optional validation command fused into this call (runs in the current working directory, like the terminal tool): executed immediately after a successful edit, guarded by a content-hash check that the edited file is unchanged. Its exit code and output are merged into this result — collapses the edit→verify cycle into one call."},
+             # NOTE: handler still accepts `cross_profile` — see write_file's
+             # NOTE (mirror-guard bypass only; unadvertised by design).
+             # NOTE: handler still accepts `mode` + `patch` (V4A) from ANY
+@@ -1338,6 +1426,7 @@
+         path=args["path"], content=args["content"], task_id=tid,
+         cross_profile=bool(args.get("cross_profile", False)),
+         session_id=kw.get("session_id"),
++        then_run=args.get("then_run"),
+     ))
+ 
+ 
+@@ -1352,6 +1441,7 @@
+         replace_all=args.get("replace_all", False), patch=args.get("patch"), task_id=tid,
+         cross_profile=bool(args.get("cross_profile", False)),
+         session_id=kw.get("session_id"),
++        then_run=args.get("then_run"),
+     ))
+ 
+ 
+--- /dev/null
++++ b/tests/tools/test_action_fusion_then_run.py
+@@ -0,0 +1,134 @@
++"""Tests for Action Fusion (``then_run`` on write_file / patch) — SoL-Pi mechanism #1.
++
++The fused validation command runs inside the file tool's own execution path, under a
++content-hash guard that skips it when the written file changed on disk. These tests
++exercise the real local file_ops chain (write → hash guard → command → merged block).
++"""
++
++import json
++
++import pytest
++
++from hermes_constants import reset_hermes_home_override, set_hermes_home_override
++from tools import file_tools as ft
++
++
++@pytest.fixture(autouse=True)
++def isolated_home(tmp_path):
++    token = set_hermes_home_override(str(tmp_path / "hermes"))
++    yield tmp_path
++    reset_hermes_home_override(token)
++
++
++@pytest.fixture(autouse=True)
++def clean_task_state():
++    # Per-task read-tracking/baseline state is process-global; isolate the "fusion"
++    # task so stale baselines from other tests cannot refuse the writes.
++    from tools import file_state, file_tools_read_tracking as rt
++    rt._read_tracker.pop("fusion", None)
++    saved_locks = dict(getattr(file_state, "_task_locks", {}) or {})
++    yield
++    rt._read_tracker.pop("fusion", None)
++    file_state._task_locks = saved_locks
++
++
++class TestWriteFileFusion:
++    def test_passing_command_merges_output(self, tmp_path):
++        target = tmp_path / "ok.py"
++        out = json.loads(ft.write_file_tool(
++            path=str(target), content="print('hi')\n", task_id="fusion",
++            then_run=f"python3 -m py_compile {target} && echo COMPILED"))
++        assert not out.get("error"), out
++        block = out["then_run"]
++        assert block["exit_code"] == 0
++        assert "COMPILED" in block["output"]
++        assert block["command"].startswith("python3 -m py_compile")
++
++    def test_failing_command_reports_verdict(self, tmp_path):
++        target = tmp_path / "bad.py"
++        out = json.loads(ft.write_file_tool(
++            path=str(target), content="def broken(:\n", task_id="fusion",
++            then_run=f"python3 -m py_compile {target}"))
++        # The WRITE succeeded (content is valid text); the fused VALIDATION failed —
++        # exactly the signal the model would otherwise burn a terminal round on.
++        assert not out.get("error"), out
++        assert out["then_run"]["exit_code"] != 0
++
++    def test_hash_guard_skips_on_mismatch(self, tmp_path, monkeypatch):
++        target = tmp_path / "guard.py"
++        monkeypatch.setattr(ft, "_then_run_hash_ok", lambda *a, **k: False)
++        out = json.loads(ft.write_file_tool(
++            path=str(target), content="x = 1\n", task_id="fusion",
++            then_run="echo SHOULD-NOT-RUN"))
++        assert "skipped" in out["then_run"]
++        assert "content-hash guard" in out["then_run"]["skipped"]
++
++    def test_no_then_run_unchanged_shape(self, tmp_path):
++        target = tmp_path / "plain.txt"
++        out = json.loads(ft.write_file_tool(path=str(target), content="data\n", task_id="fusion"))
++        assert "then_run" not in out
++
++    def test_write_error_skips_command(self, tmp_path, monkeypatch):
++        blocker = tmp_path / "blocker.txt"
++        blocker.write_text("in the way")
++        calls = []
++        monkeypatch.setattr(ft, "_run_then_run_fused",
++                            lambda *a, **k: calls.append(1) or {})
++        out = json.loads(ft.write_file_tool(
++            # parent is a regular FILE: the write must fail before any validation.
++            path=str(blocker / "child.py"), content="x\n",
++            task_id="fusion", then_run="echo X"))
++        assert out.get("error") or out.get("_warning") or "then_run" not in out
++        assert not calls
++
++
++class TestPatchFusion:
++    def test_patch_replace_then_run(self, tmp_path):
++        target = tmp_path / "mod.py"
++        ft.write_file_tool(path=str(target), content="value = 1\n", task_id="fusion")
++        out = json.loads(ft.patch_tool(
++            path=str(target), old_string="value = 1", new_string="value = 2",
++            task_id="fusion", then_run=f"grep -q 'value = 2' {target} && echo PATCHED"))
++        assert out.get("success") or not out.get("error"), out
++        assert out["then_run"]["exit_code"] == 0
++        assert "PATCHED" in out["then_run"]["output"]
++
++
++class TestSchemas:
++    def test_write_schema_advertises_then_run(self):
++        prop = ft.WRITE_FILE_SCHEMA["parameters"]["properties"]["then_run"]
++        assert prop["type"] == "string"
++        assert "hash" in prop["description"].lower()
++
++    def test_patch_schema_advertises_then_run(self):
++        assert "then_run" in ft.PATCH_SCHEMA["parameters"]["properties"]
++
++    def test_handlers_pass_then_run(self, monkeypatch, tmp_path):
++        seen = {}
++        real = ft.write_file_tool
++
++        def spy(**kw):
++            seen.update(kw)
++            return real(**{k: v for k, v in kw.items() if k != "session_id" or True})
++
++        monkeypatch.setattr(ft, "write_file_tool", spy)
++        import hermes_cli.observability.shared_metrics_harness as smh
++        monkeypatch.setattr(smh, "record_file_edit",
++                            lambda name, mode, fn: fn())
++        ft._handle_write_file({"path": str(tmp_path / "h.txt"), "content": "c",
++                               "then_run": "echo hi"}, task_id="fusion")
++        assert seen.get("then_run") == "echo hi"
++
++
++class TestFusionLedger:
++    def test_ledger_records_ran_and_skipped(self, tmp_path, monkeypatch):
++        from tools.efficiency_ledger import ledger_path
++        verdicts = iter([False, True])  # first call trips the guard, second passes it
++        monkeypatch.setattr(ft, "_then_run_hash_ok", lambda *a, **k: next(verdicts))
++        ft.write_file_tool(path=str(tmp_path / "l1.py"), content="a=1\n", task_id="fusion",
++                           then_run="echo no")
++        ft.write_file_tool(path=str(tmp_path / "l2.py"), content="a=2\n", task_id="fusion",
++                           then_run="echo yes")
++        events = [json.loads(l) for l in ledger_path().read_text().splitlines()]
++        outcomes = {e.get("outcome") for e in events if e["kind"] == "action_fusion"}
++        assert {"skipped_guard", "ran"} <= outcomes
