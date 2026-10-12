@@ -2540,7 +2540,7 @@ if _m_runno and int(_m_runno.group(1)) >= 14:
     ARTIFACT_VIEWS[18] = [(f'G3 测试日志 {dev}', f'docs/evidence/DEV-{dev}-testlog.txt',
                            [('测试通过证据', r'passed|✓|Tests')])
                           for dev in ('PAYCORE-C', 'PAYCORE-S', 'PAYCORE-N', 'CHWX', 'CHALI', 'MP')]
-# ── V2 核对表（方案 §5.8 环节准入准出基线，V8.19）：run17 起按十环节准出清单扩展核对；
+# ── V2 核查清单（方案 §5.8 环节准入准出基线，V8.19）：run17 起按十环节准出清单扩展核查；
 #    run16 及以前维持 V1 原基线不改判（新表对旧轮工件必然大面积红，属口径变更非质量退化）。──
 _ART_V2_BY_STEP = {
     7: [('AC 可判定（附判定法）', r'AC-\d'), ('范围外清单', r'范围外|Scope-Out'),
