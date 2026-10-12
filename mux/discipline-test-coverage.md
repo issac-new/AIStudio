@@ -45,3 +45,13 @@
 ## 统计
 
 43 条（含 25a/b/c，2026-10-11 截图十条自 §5.6 迁入为纪律 40）：有锚 32（纪律 40 守门锚=帧四断言+门禁⑰）、流程型 11。首过三态信号（§2.6-5）与 FIX-DONE 锚点抽验同批入守门。
+
+## 四、V8.21 新增（run16 复盘，2026-10-13）
+
+| 纪律 | 条款 | 测试状态（2026-10-13 起） |
+|---|---|---|
+| 43 增补①②③ | 采集记单幂等/marker_eventid 锚单一事实源/锚形态预检 | ✅ r18-collect.py _issue 幂等（同指纹拒重）+fetch_dialog 锚预检+清扫循环 marker_eventid 调用——源码锚在 aipay-scenario.sh:1941+/r18-collect.py:70+（59a444f）；行为级首验=run17 清扫补采位 |
+| 44 | 报告链收尾稳定性（净化/容错/风暴护栏） | ✅ mx-log-sanitize.py 接线在 aipay-scenario.sh 报告段+监督器 _storm 计数/记单/退避三元（run-driver-supervisor.sh）；vitest ⑬ 复绿同批（160/160）——行为级首验=run17 |
+| 45 | 叙事注册与步骤状态一致性 | ✅ 生成器 _STEP33_DEFAULT_KEYS 兜底+审计器 state↔report 一致性 FAIL 断言与壳页 md5 结构性红线（mx-report-gen.py:1467+/mx-report-audit.py:614+）；run16 报告重出实证（25 ⬜→26 ✅）——首验已完成（复盘轮重出即验证） |
+
+统计更新：45 条（43 增补计原条），有锚 35、流程型 11。
