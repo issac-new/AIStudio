@@ -68,7 +68,7 @@ if '--print-paths' in sys.argv:
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
     '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    '/Volumes/nvme2230/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    os.environ.get('MX_OVERLAY_ROOT', '/Volumes/nvme2230/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN_PATH = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
                  Path(_plan_candidates[1]))

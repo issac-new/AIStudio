@@ -25,6 +25,7 @@ done
 [[ -n "$RUN_ID" ]] || { echo "need --run"; exit 2; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/mx-platform.sh"   # 独立进程：不 source mx-lib，平台原语显式挂载
 STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 LOGS="$SIM_ROOT/logs"
 STOPFLAG="$SIM_ROOT/var/$RUN_ID-supervisor.stop"
@@ -47,7 +48,7 @@ monitor_events() {
   fi
   _mev_prev_issues=$ni; _mev_prev_drv=$nd
   echo "PREV_ISSUES=$ni" >> "$MEV"; echo "PREV_DRV=$nd" >> "$MEV"
-  gw=$(curl -s -o /dev/null -w "%{http_code}" -m 8 "http://127.0.0.1:8801/health" 2>/dev/null)
+  gw=$(curl -s -o /dev/null -w "%{http_code}" -m 8 "http://127.0.0.1:${MX_GW_PORT:-8801}/health" 2>/dev/null)
   [ "$gw" != "200" ] && echo "[mev $(date '+%T')] SVC gateway=$gw" >> "$MEV"
   return 0
 }
@@ -70,8 +71,18 @@ _g5_evidence_fp() {
 }
 
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
-MYPGID=$(ps -o pgid= -p $$ | tr -d ' ')
-note "本监督系进程组 pgid=$MYPGID（锁防御：非本组驱动=入侵者，清掉+记账）"
+# 进程组防御平台分叉（2026-10-12 双模式轮）：mac 用 pgid 精确区分本系/入侵
+# （子 shell 继承本组）；Git Bash 无 POSIX 进程组语义——改「驱动同步执行 + 循环
+# 仅在本系驱动退出后才运行」的事实不变式：循环里发现的任何 aipay-scenario 都不是
+# 本系拉起的（本系在跑时会阻塞在同步 bash 调用里）；为防误杀接力器（mx-relay）
+# 合法拉起的驱动，relay 在跑时让位等待而非击杀。
+MYPGID=""
+if mxp_is_mac; then
+  MYPGID=$(ps -o pgid= -p $$ | tr -d ' ')
+  note "本监督系进程组 pgid=$MYPGID（锁防御：非本组驱动=入侵者，清掉+记账）"
+else
+  note "非 mac 平台：pgid 防御不可用——改用「同步执行不变式 + relay 让位」防御（见循环内）"
+fi
 while true; do
   [[ -f "$STOPFLAG" ]] && { note "stop 文件在位，监督器退出"; rm -f "$STOPFLAG"; exit 0; }
   if grep -q '^report_done=' "$STATE" 2>/dev/null; then
@@ -79,9 +90,17 @@ while true; do
     exit 0
   fi
   # 锁防御（2026-10-09 双监管拉锯实录：抢驱方反复杀 incumbent+抢窗口启动）——
-  # 只认本监督系进程组的驱动；他组驱动=入侵者，一律 TERM+issues 记账（击杀失效化的
-  # 另一半：不许他方长驻）。子 shell 继承本组 pgid，精确区分本系/入侵。
-  DPIDS=$(ps -axo pid,pgid,command | awk -v g="$MYPGID" '$3=="bash" && /aipay-scenario\.sh/ && !/pgrep|grep|tail|awk|sed/ {print $1":"$2}')
+  # 只认本监督系的驱动；他系驱动=入侵者，一律 TERM+issues 记账（击杀失效化的
+  # 另一半：不许他方长驻）。
+  if [[ -n "$MYPGID" ]]; then
+    DPIDS=$(ps -axo pid,pgid,command | awk -v g="$MYPGID" '$3=="bash" && /aipay-scenario\.sh/ && !/pgrep|grep|tail|awk|sed/ {print $1":"$2}')
+  else
+    if [[ -n "$(mxp_pgrep_f "mx-relay.sh")" ]]; then
+      note "接力器（mx-relay）在跑——让位等待，不抢驱动（防误杀 relay 拉起的合法驱动）"
+      monitor_events; sleep 30; continue
+    fi
+    DPIDS=$(mxp_pgrep_f "aipay-scenario\.sh" | awk '{print $1":foreign"}')
+  fi
   for dp in $DPIDS; do
     dpid="${dp%%:*}"; dpgid="${dp##*:}"
     if [ "$dpgid" != "$MYPGID" ]; then
@@ -90,7 +109,7 @@ while true; do
       kill -TERM "$dpid" 2>/dev/null
     fi
   done
-  if [ -n "$DPIDS" ] && echo "$DPIDS" | grep -q ":${MYPGID}$"; then
+  if [ -n "$DPIDS" ] && echo "$DPIDS" | grep -qE ":(${MYPGID}|foreign)$"; then
     monitor_events
     sleep 15
     continue
@@ -108,7 +127,7 @@ while true; do
     fi
   fi
   note "驱动缺席，断点续跑（START_STEP=$START_STEP）"
-  _loff=$(stat -f %z "$LOGS/$RUN_ID-driver.log" 2>/dev/null || echo 0)
+  _loff=$(mxp_file_size "$LOGS/$RUN_ID-driver.log")
   ( cd "$SCRIPT_DIR/.." && RUN_ID="$RUN_ID" START_STEP="$START_STEP" bash aipay-scenario.sh >> "$LOGS/$RUN_ID-driver.log" 2>&1 )
   RC=$?
   # 纪律 8 可执行化（run14 实锤：熔断退出被盲目重启 85 圈——每圈刷单+回灌轰炸 agent）：

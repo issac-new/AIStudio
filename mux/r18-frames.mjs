@@ -18,6 +18,11 @@ const arg = (k, d) => {
 const RUN = arg('run', process.env.MX_RUN_ID || '')
 if (!RUN) { console.error('需要 --run <RUN_ID>（帧落本轮 runs 目录，勿混轮）'); process.exit(1) }
 const STEP = arg("step", ""), K = arg("k", "1"), RAWURL = arg("url", "")
+// 跨端锚点（2026-10-12 双模式轮）：SIM_ROOT/studio/matrix 全走 env，Git Bash/远端
+// homeserver 均可覆盖；默认值与 mac 单机历史行为一致。
+const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Volumes/nvme2230/lab/ncwk-sim-mux'
+const MX_SERVER_NAME = process.env.MX_SERVER_NAME || 'matrix.test'
+const MX_HS_URL = process.env.MX_HS || 'http://127.0.0.1:8008'
 
 // 拍摄位规划覆盖（2026-10-10 用户指令"截图按 Swarm Studio UI 功能规划，不乱拍凑数"）：
 // mux/capture-plan.env = 步→界面单一事实源（语义正本=方案 §2.5）。本射手是唯一执行
@@ -56,7 +61,7 @@ if (PLAN_URL.startsWith('/') && !PLAN_URL.startsWith('/#')) {
   PLAN_URL = '/#' + PLAN_URL
   try {
     // OUT 尚未声明（TDZ），路径独立拼（与下方 plan-override 日志同目录）
-    appendFileSync(join('/Volumes/nvme2230/lab/ncwk-sim-mux', 'runs', RUN, 'evidence', 'screenshots', 'capture-plan.log'),
+    appendFileSync(join(SIM_ROOT, 'runs', RUN, 'evidence', 'screenshots', 'capture-plan.log'),
       `[${new Date().toISOString()}] step=${STEP} url-normalize path→hash ${ORIG_URL}→${PLAN_URL}\n`)
   } catch {}
 }
@@ -65,8 +70,8 @@ const ACTION = arg('action', ''), ACTION_WAIT = parseInt(arg('action-wait', '400
 const USER = PLAN_USER || arg('user', 'fanfan'), SETTLE = parseInt(arg('settle', '4000'), 10)
 if (!STEP || !PLAN_URL) { console.error('需要 --step <n> --url <路由>'); process.exit(1) }
 
-const BASE = 'http://127.0.0.1:8802'
-const OUT = join('/Volumes/nvme2230/lab/ncwk-sim-mux', 'runs', RUN, 'evidence', 'screenshots', 'steps')
+const BASE = process.env.MX_STUDIO_BASE || 'http://127.0.0.1:8802'
+const OUT = join(SIM_ROOT, 'runs', RUN, 'evidence', 'screenshots', 'steps')
 mkdirSync(OUT, { recursive: true })
 // 失败留痕（run12 实锤：capture_step 把 stderr 丢 /dev/null，rc=1 无从归因）——
 // 顶层 await 抛错/未捕获拒绝统一落侧车日志后再退 1，后续失败可直接归因。
@@ -84,14 +89,14 @@ if (PLAN_URL !== RAWURL || PLAN_USER) {
       `[${new Date().toISOString()}] step=${STEP} plan-override url=${RAWURL}→${PLAN_URL} user=${PLAN_USER || '(default)'}\n`)
   } catch {}
 }
-const mtok = readFileSync(`/Volumes/nvme2230/lab/ncwk-sim-mux/creds/${USER}.token`, 'utf8').split('\n')[0].trim()
+const mtok = readFileSync(join(SIM_ROOT, 'creds', `${USER}.token`), 'utf8').split('\n')[0].trim()
 
 const loginRes = await fetch(`${BASE}/api/auth/matrix-login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    matrixAccessToken: mtok, matrixUserId: `@${USER}:matrix.test`,
-    deviceId: 'R18CAP', homeserverUrl: 'http://127.0.0.1:8008',
+    matrixAccessToken: mtok, matrixUserId: `@${USER}:${MX_SERVER_NAME}`,
+    deviceId: 'R18CAP', homeserverUrl: MX_HS_URL,
   }),
 }).then((r) => r.json())
 if (!loginRes.token) throw new Error('matrix-login 失败: ' + JSON.stringify(loginRes))
