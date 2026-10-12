@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/studio/group-chat-agent-link.ts b/packages/client/src/api/studio/group-chat-agent-link.ts
-index b9c6eefe..aa08f95a 100644
+index b9c6eefe8..aa08f95aa 100644
 --- a/packages/client/src/api/studio/group-chat-agent-link.ts
 +++ b/packages/client/src/api/studio/group-chat-agent-link.ts
 @@ -1,7 +1,7 @@
@@ -12,7 +12,7 @@ index b9c6eefe..aa08f95a 100644
    priorAgentMode?: 'scoped' | 'global' | ''
    profile: string
 diff --git a/packages/client/src/api/studio/group-chat.ts b/packages/client/src/api/studio/group-chat.ts
-index e7187198..f90f502f 100644
+index e7187198a..f90f502f8 100644
 --- a/packages/client/src/api/studio/group-chat.ts
 +++ b/packages/client/src/api/studio/group-chat.ts
 @@ -100,7 +100,7 @@ export interface RoomAgent {
@@ -34,10 +34,10 @@ index e7187198..f90f502f 100644
      priorAgentMode?: 'scoped' | 'global' | ''
      profile: string
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 7854f7a8..7dfd3478 100644
+index 177116ec8..dd198a38f 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -248,7 +248,7 @@ const profileOptions = computed(() =>
+@@ -251,7 +251,7 @@ const profileOptions = computed(() =>
      profilesStore.profiles.map(p => ({ label: p.name, value: p.name }))
  )
  
@@ -47,10 +47,10 @@ index 7854f7a8..7dfd3478 100644
  const groupAgentTypeDefinitions = GROUP_AGENT_OPTIONS
  
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-index b5dd542b..1bb080a1 100644
+index 8a32e14bc..20308f3cb 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-@@ -3,7 +3,7 @@ import { modelReasoningEfforts } from '@/utils/model-reasoning-effort'
+@@ -4,7 +4,7 @@ import NativeCodingAgentModelFields from '@/components/hermes/models/NativeCodin
  import { isGlobalOnlyCodingAgent } from "@/utils/agent-catalog"
  import DshSessionPresetSelect from "@/components/coding-agents/dsh/DshSessionPresetSelect.vue"
  import { computed, ref, watch } from 'vue'
@@ -60,7 +60,7 @@ index b5dd542b..1bb080a1 100644
  import { NInput, NSelect, NSwitch, NTooltip, useMessage } from 'naive-ui'
  import { useI18n } from 'vue-i18n'
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
-index 1bd4888d..865e0320 100644
+index 1bd4888d2..865e03202 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 @@ -1,6 +1,6 @@
@@ -96,7 +96,7 @@ index 1bd4888d..865e0320 100644
  }>()
  const emit = defineEmits<{ edit: [edgeId: string] }>()
 diff --git a/packages/client/src/composables/useKeyboard.ts b/packages/client/src/composables/useKeyboard.ts
-index 47824eea..28d413e3 100644
+index 47824eea6..28d413e30 100644
 --- a/packages/client/src/composables/useKeyboard.ts
 +++ b/packages/client/src/composables/useKeyboard.ts
 @@ -11,7 +11,7 @@ export function useKeyboard() {
@@ -109,7 +109,7 @@ index 47824eea..28d413e3 100644
  
    function handleKeydown(e: KeyboardEvent) {
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index dfe896f9..8fa23089 100644
+index bfb9e04b0..28c7b6e1e 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -114,7 +114,7 @@ export interface Message {
@@ -131,7 +131,7 @@ index dfe896f9..8fa23089 100644
    guarantee: 'strict' | 'immediate'
    requestedAt: number
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index a7cae438..99b820fd 100644
+index a7cae4381..99b820fdd 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
 @@ -18,7 +18,6 @@ const AGENT_AVATARS = {
@@ -143,7 +143,7 @@ index a7cae438..99b820fd 100644
    cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
    qwen: { label: 'Qwen Code', src: '/coding-agents/qwen-logo.svg' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index 4f051115..24cc7656 100644
+index 4f051115a..24cc76563 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
 @@ -10,7 +10,6 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
@@ -163,7 +163,7 @@ index 4f051115..24cc7656 100644
  
  export function parseStoredAvatar(raw: unknown): ProfileAvatar | null {
 diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
-index 55151cb2..48e4ec31 100644
+index 55151cb2b..48e4ec318 100644
 --- a/packages/client/src/views/hermes/AgentManagerView.vue
 +++ b/packages/client/src/views/hermes/AgentManagerView.vue
 @@ -3,6 +3,8 @@ import { agentMetadata } from '@/utils/agent-catalog'
@@ -193,7 +193,7 @@ index 55151cb2..48e4ec31 100644
                  <div class="agent-identity">
                    <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />
 diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-index f90c0780..74bb37f4 100644
+index f90c07805..74bb37f44 100644
 --- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
 +++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
 @@ -48,6 +48,8 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>

@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index b143b17d..3694d4cd 100644
+index b143b17d5..3694d4cde 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -83,6 +83,8 @@ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'

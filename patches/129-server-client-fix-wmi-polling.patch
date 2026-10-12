@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/PerformanceView.vue b/packages/client/src/views/hermes/PerformanceView.vue
-index 240f5c57..d04e9406 100644
+index 240f5c570..d04e94060 100644
 --- a/packages/client/src/views/hermes/PerformanceView.vue
 +++ b/packages/client/src/views/hermes/PerformanceView.vue
 @@ -71,7 +71,10 @@ function setAutoRefresh(enabled: boolean) {
@@ -15,7 +15,7 @@ index 240f5c57..d04e9406 100644
  }
  
 diff --git a/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts b/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
-index 0b7335e8..bab2e100 100644
+index 0b7335e83..bab2e100e 100644
 --- a/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
 +++ b/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
 @@ -357,8 +357,24 @@ function sampleWindowsProcessCpuPercent(pid: number, cpuSeconds: number): number

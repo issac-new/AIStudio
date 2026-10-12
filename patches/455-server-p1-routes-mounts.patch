@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 01ac931d..ed269461 100644
+index 01ac931d3..ed269461d 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -87,6 +87,12 @@ import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'

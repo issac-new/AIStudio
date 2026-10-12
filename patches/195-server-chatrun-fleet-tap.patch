@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 89e8e3f8..573c76c6 100644
+index 89e8e3f84..573c76c6a 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -94,6 +94,8 @@ import {

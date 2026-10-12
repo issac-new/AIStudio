@@ -1,5 +1,5 @@
 diff --git a/packages/ekko-agent/src/config.ts b/packages/ekko-agent/src/config.ts
-index 9a8132c9..3721cb7c 100644
+index 9a8132c99..3721cb7cc 100644
 --- a/packages/ekko-agent/src/config.ts
 +++ b/packages/ekko-agent/src/config.ts
 @@ -135,6 +135,10 @@ export interface EkkoMcpServerConfig {
@@ -14,7 +14,7 @@ index 9a8132c9..3721cb7c 100644
  
  export interface EkkoMcpProfileConfig {
 diff --git a/packages/ekko-agent/src/tools/mcp.ts b/packages/ekko-agent/src/tools/mcp.ts
-index 65140e73..7aa342e0 100644
+index 65140e738..7aa342e09 100644
 --- a/packages/ekko-agent/src/tools/mcp.ts
 +++ b/packages/ekko-agent/src/tools/mcp.ts
 @@ -8,6 +8,7 @@ interface StdioMcpServerConfig {

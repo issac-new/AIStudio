@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
-index 77230d33..7ad7496a 100644
+index 77230d333..7ad7496a3 100644
 --- a/packages/server/src/modules/studio/sockets/group-chat.ts
 +++ b/packages/server/src/modules/studio/sockets/group-chat.ts
 @@ -2039,6 +2039,16 @@ class ChatStorage {

@@ -640,3 +640,4 @@
 # 运行时热修无 patch，2026-10-12 23:02「镜像刷新为现行 series 态」把 runtime 副本
 # 抹回 series 态致 SIM 安装树失锚，mx-up preflight 拦停实锤。补丁化=刷新不再可抹）。
 612-agent-capacity-retry-anchor.patch
+615-server-mimo-models-adapter.patch

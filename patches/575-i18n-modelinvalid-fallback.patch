@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index d0762d4a..dab1f7c3 100644
+index 77c9c2a27..152c24966 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -738,6 +738,7 @@ export default {
@@ -11,7 +11,7 @@ index d0762d4a..dab1f7c3 100644
        dismiss: 'Dismiss'
      },
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 73c566ca..f2f77673 100644
+index 3ff003e69..5db2d5a63 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -737,6 +737,7 @@ export default {

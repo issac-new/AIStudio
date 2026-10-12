@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index dab1f7c3..1461d193 100644
+index 152c24966..b4f17d999 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -3102,18 +3102,6 @@ export default {
+@@ -3104,18 +3104,6 @@ export default {
      sessionListActions: 'Session list actions',
      filterByProfile: 'Filter by Profile',
      selectedSessions: '{count} selected',
@@ -22,10 +22,10 @@ index dab1f7c3..1461d193 100644
    workflow: {
      quality: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f2f77673..af73a7d8 100644
+index 5db2d5a63..0943b2950 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -3101,18 +3101,6 @@ export default {
+@@ -3103,18 +3103,6 @@ export default {
      sessionListActions: '会话列表操作',
      filterByProfile: '按 Profile 筛选',
      selectedSessions: '已选 {count} 项',

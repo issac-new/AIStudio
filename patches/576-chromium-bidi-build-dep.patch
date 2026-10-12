@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index c691f9ed..b34c95f7 100644
+index 6b752f09d..a54647540 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -78,6 +78,7 @@
@@ -57,7 +57,7 @@ index c691f9ed..b34c95f7 100644
        "version": "4.0.4",
        "resolved": "https://registry.npmjs.org/diff/-/diff-4.0.4.tgz",
 diff --git a/package.json b/package.json
-index 609435a4..1b0ee8d4 100644
+index 7e160d794..8cc587a65 100644
 --- a/package.json
 +++ b/package.json
 @@ -152,6 +152,7 @@

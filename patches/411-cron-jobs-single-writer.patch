@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/jobs.ts b/packages/server/src/modules/hermes/controllers/jobs.ts
-index 2227a3ce..a48ae84c 100644
+index 2227a3ce5..a48ae84cc 100644
 --- a/packages/server/src/modules/hermes/controllers/jobs.ts
 +++ b/packages/server/src/modules/hermes/controllers/jobs.ts
 @@ -1,5 +1,5 @@

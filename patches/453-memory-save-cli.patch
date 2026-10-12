@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/memory.ts b/packages/server/src/modules/hermes/controllers/memory.ts
-index a4d50df7..c230c660 100644
+index a4d50df7c..c230c6609 100644
 --- a/packages/server/src/modules/hermes/controllers/memory.ts
 +++ b/packages/server/src/modules/hermes/controllers/memory.ts
 @@ -1,7 +1,10 @@

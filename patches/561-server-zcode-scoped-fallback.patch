@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/contracts/agents/native-coding-agents.ts b/packages/server/src/modules/studio/contracts/agents/native-coding-agents.ts
-index 08caf01d..5d2ad894 100644
+index 08caf01d6..5d2ad8949 100644
 --- a/packages/server/src/modules/studio/contracts/agents/native-coding-agents.ts
 +++ b/packages/server/src/modules/studio/contracts/agents/native-coding-agents.ts
 @@ -11,5 +11,7 @@ export function nativeCodingAgentSupportsScoped(value: unknown): value is Exclud

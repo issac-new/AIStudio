@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
-index 7fd1a206..e7d9000c 100644
+index 7fd1a2061..e7d9000c7 100644
 --- a/packages/client/src/api/agent-status.ts
 +++ b/packages/client/src/api/agent-status.ts
 @@ -28,6 +28,7 @@ export interface AgentAvailabilitySnapshot {
@@ -30,10 +30,10 @@ index 7fd1a206..e7d9000c 100644
  
  export function agentInstallationState(
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 7dfd3478..c4b8dbfc 100644
+index dd198a38f..7ebbb7a04 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -86,9 +86,9 @@ import { buildRemoteGroupChatRooms, type RemoteGroupChatRoom } from '@/utils/gro
+@@ -89,9 +89,9 @@ import { buildRemoteGroupChatRooms, type RemoteGroupChatRoom } from '@/utils/gro
  import { handoffErrorTranslationKey } from './handoff-presentation'
  import { clearGroupChatRoomDraft } from './group-chat-room-drafts'
  import {
@@ -45,7 +45,7 @@ index 7dfd3478..c4b8dbfc 100644
  } from '@/api/agent-status'
  
  const FilesPanel = defineAsyncComponent(async () => (await import('@/components/hermes/chat/FilesPanel.vue')).default)
-@@ -133,7 +133,8 @@ const editingAgent = ref<RoomAgent | null>(null)
+@@ -136,7 +136,8 @@ const editingAgent = ref<RoomAgent | null>(null)
  const isSavingAgent = ref(false)
  const isLoadingAgentForm = ref(false)
  let agentDrawerLoadSequence = 0
@@ -55,7 +55,7 @@ index 7dfd3478..c4b8dbfc 100644
  let agentStatusRequest: Promise<void> | null = null
  const showRoomSettingsModal = ref(false)
  const showUserProfileModal = ref(false)
-@@ -282,7 +283,7 @@ function refreshAgentAvailability(): Promise<void> {
+@@ -295,7 +296,7 @@ function refreshAgentAvailability(): Promise<void> {
      if (agentStatusRequest) return agentStatusRequest
      agentStatusRequest = (async () => {
          try {
@@ -65,7 +65,7 @@ index 7dfd3478..c4b8dbfc 100644
              agentStatusSnapshot.value = null
          }
 diff --git a/packages/client/src/stores/hermes/profiles.ts b/packages/client/src/stores/hermes/profiles.ts
-index bc66b766..d0c92e88 100644
+index bc66b7668..d0c92e882 100644
 --- a/packages/client/src/stores/hermes/profiles.ts
 +++ b/packages/client/src/stores/hermes/profiles.ts
 @@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
@@ -103,7 +103,7 @@ index bc66b766..d0c92e88 100644
        activeProfile.value = profiles.value.find(profile => profile.active) ?? null
        clearAllSessionCaches()
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-index 5f4009ba..26dc06b2 100644
+index 5f4009bab..26dc06b2e 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
 @@ -44,6 +44,9 @@ export interface AgentAvailabilitySnapshot {

@@ -1,5 +1,5 @@
 diff --git a/scripts/build-server.mjs b/scripts/build-server.mjs
-index 2ffdbd0d..3104e4b8 100644
+index 2ffdbd0d8..3104e4b8d 100644
 --- a/scripts/build-server.mjs
 +++ b/scripts/build-server.mjs
 @@ -11,7 +11,26 @@ const serverOutDir = resolve(rootDir, 'dist/server')

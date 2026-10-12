@@ -1,5 +1,5 @@
 diff --git a/tests/server/auth-routes-avatar.test.ts b/tests/server/auth-routes-avatar.test.ts
-index 8375882b..6edf8812 100644
+index 8375882b3..6edf8812f 100644
 --- a/tests/server/auth-routes-avatar.test.ts
 +++ b/tests/server/auth-routes-avatar.test.ts
 @@ -17,6 +17,13 @@ vi.mock('../../packages/server/src/modules/studio/controllers/auth', () => ({

@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/auth/DefaultCredentialPrompt.vue b/packages/client/src/components/auth/DefaultCredentialPrompt.vue
-index 2afd654c..390556a1 100644
+index 66ffc163f..13d78dc2f 100644
 --- a/packages/client/src/components/auth/DefaultCredentialPrompt.vue
 +++ b/packages/client/src/components/auth/DefaultCredentialPrompt.vue
-@@ -42,7 +42,10 @@ async function checkDefaultCredentials() {
+@@ -40,7 +40,10 @@ async function checkDefaultCredentials() {
    try {
      const user = await fetchCurrentUser();
      promptedUserId.value = user.id;
@@ -14,7 +14,7 @@ index 2afd654c..390556a1 100644
      show.value = !!user.requiresCredentialChange && !dismissed;
    } catch {
      show.value = false;
-@@ -53,7 +56,7 @@ async function checkDefaultCredentials() {
+@@ -51,7 +54,7 @@ async function checkDefaultCredentials() {
  
  function remindLater() {
    if (promptedUserId.value != null) {
@@ -24,7 +24,7 @@ index 2afd654c..390556a1 100644
    show.value = false;
  }
 diff --git a/packages/client/src/i18n/index.ts b/packages/client/src/i18n/index.ts
-index d3ea2745..7122cb94 100644
+index d3ea2745e..7122cb946 100644
 --- a/packages/client/src/i18n/index.ts
 +++ b/packages/client/src/i18n/index.ts
 @@ -3,7 +3,24 @@ import { loadLocaleMessages, mergeMessagesWithFallback, supportedLocales } from

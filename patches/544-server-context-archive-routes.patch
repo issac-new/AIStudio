@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 316ac4b8..ced9744b 100644
+index 316ac4b83..ced9744b0 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -122,6 +122,8 @@ import { askRoutes } from '../custom/ask/ask-controller'

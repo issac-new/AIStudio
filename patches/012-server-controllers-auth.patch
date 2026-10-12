@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
-index d949a5ec..7ced8697 100644
+index d949a5ec6..7ced8697e 100644
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
 @@ -6,14 +6,19 @@ import {

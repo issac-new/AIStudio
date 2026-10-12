@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 818e405d..083002af 100644
+index 818e405dd..083002afd 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -98,6 +98,8 @@ import { inboxRoutes } from '../custom/inbox/inbox-controller'

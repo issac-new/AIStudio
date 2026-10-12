@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index 2dbfa562..a6b52258 100644
+index 2dbfa562b..a6b522581 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -62,12 +62,45 @@ function filterTasksByVisibleProfiles(ctx: Context, tasks: kanbanCli.KanbanTask[
