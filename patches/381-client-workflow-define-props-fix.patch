@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-index d090a66a..b5dd542b 100644
+index 4371bfedc..8a32e14bc 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
-@@ -17,7 +17,18 @@ import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
+@@ -18,7 +18,18 @@ import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
  
  import '@vue-flow/node-resizer/dist/style.css'
  
@@ -23,7 +23,7 @@ index d090a66a..b5dd542b 100644
  const message = useMessage()
  const attachmentInputRef = ref<HTMLInputElement | null>(null)
 diff --git a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
-index eed35289..1bd4888d 100644
+index eed352892..1bd4888d2 100644
 --- a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 +++ b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
 @@ -7,7 +7,22 @@ import {

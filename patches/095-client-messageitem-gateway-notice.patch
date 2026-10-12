@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index c2dc7375..ab94da2a 100644
+index c2dc7375a..ab94da2ad 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
 @@ -63,6 +63,7 @@ const toast = useMessage();

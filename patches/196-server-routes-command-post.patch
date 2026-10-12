@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index c0b8f20c..2f882799 100644
+index c0b8f20ce..2f882799f 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -74,6 +74,12 @@ import { petRoutes } from '../modules/studio/routes/pets'

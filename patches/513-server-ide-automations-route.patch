@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 29036236..68b798bb 100644
+index 29036236f..68b798bbf 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -82,6 +82,7 @@ import { registerLoopCronBridgeRoutes } from '../custom/loop/graph/cron-bridge'

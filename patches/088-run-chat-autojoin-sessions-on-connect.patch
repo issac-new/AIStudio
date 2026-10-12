@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
-index dfec48d2..a05c828c 100644
+index 00534d5de..b30f5a43e 100644
 --- a/packages/server/src/modules/studio/repositories/session-store.ts
 +++ b/packages/server/src/modules/studio/repositories/session-store.ts
-@@ -638,6 +638,20 @@ export function countSessions(
+@@ -645,6 +645,20 @@ export function countSessions(
    return Number(row.total)
  }
  
@@ -24,7 +24,7 @@ index dfec48d2..a05c828c 100644
    return value.replace(/[\\%_]/g, '\\$&')
  }
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 3304bb71..89e8e3f8 100644
+index 3304bb710..89e8e3f84 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -33,7 +33,7 @@ import type { Server, Socket } from 'socket.io'

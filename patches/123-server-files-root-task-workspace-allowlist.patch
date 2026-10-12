@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
-index 8005dc30..0a9f41c3 100644
+index 8005dc30a..0a9f41c3c 100644
 --- a/packages/server/src/modules/studio/controllers/download.ts
 +++ b/packages/server/src/modules/studio/controllers/download.ts
 @@ -11,6 +11,9 @@ import { getActiveProfileName } from '../public/profile-config'
@@ -37,7 +37,7 @@ index 8005dc30..0a9f41c3 100644
          ctx.body = { error: 'Requested path is outside the hermes base sandbox', code: 'invalid_path' }
          return
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index 9b663546..bb7cccdb 100644
+index 9b6635468..bb7cccdb5 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -7,6 +7,9 @@ import {

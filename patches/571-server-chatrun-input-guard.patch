@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
-index 79970dbe..70295a06 100644
+index e3bcc4a11..bf6979fa2 100644
 --- a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
-@@ -50,6 +50,8 @@ import { buildCompressedHistory, getOrCreateSession } from './compression'
+@@ -51,6 +51,8 @@ import { buildCompressedHistory, getOrCreateSession } from './compression'
  import { handleEkkoSessionCommand, parseEkkoRunCommand } from './ekko-session-command'
  import { resolveBridgeRunModelConfig, type RunModelGroup } from './model-config'
  import { persistRunMessages, type RunMessageDraft } from './message-persistence'
@@ -11,7 +11,7 @@ index 79970dbe..70295a06 100644
  import { buildOutboundRunEvent } from './resume-payload'
  import { estimateUsageTokensFromMessages } from './usage'
  import type { BackgroundContinuationContext, ChatCodingAgentId, ContentBlock, QueuedRun, SessionState } from './types'
-@@ -444,6 +446,19 @@ export async function handleEkkoAgentRun(
+@@ -445,6 +447,19 @@ export async function handleEkkoAgentRun(
      return
    }
    const authenticatedUserId = socket.data?.user?.id == null ? undefined : String(socket.data.user.id)

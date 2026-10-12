@@ -1,6 +1,6 @@
 diff --git a/tests/client/matrix-room-threads.test.ts b/tests/client/matrix-room-threads.test.ts
 new file mode 100644
-index 00000000..792e427c
+index 000000000..792e427cd
 --- /dev/null
 +++ b/tests/client/matrix-room-threads.test.ts
 @@ -0,0 +1,69 @@

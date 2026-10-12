@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
-index cb774c10..bb05d274 100644
+index cb774c106..bb05d274e 100644
 --- a/packages/client/src/views/hermes/HistoryView.vue
 +++ b/packages/client/src/views/hermes/HistoryView.vue
 @@ -358,8 +358,7 @@ async function openDefaultHistorySession(replace = false) {

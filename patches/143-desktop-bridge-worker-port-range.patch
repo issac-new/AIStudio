@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index dbbaae09..9f1f3bc0 100644
+index dbbaae09c..9f1f3bc05 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
 @@ -578,7 +578,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {

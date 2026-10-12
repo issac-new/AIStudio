@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index f3da42fd..79f7b957 100644
+index f3da42fd7..79f7b9575 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -9,6 +9,7 @@ import { safeFileStore } from '../../../studio/public/safe-file-store'

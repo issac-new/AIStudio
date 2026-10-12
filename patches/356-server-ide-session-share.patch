@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 9210978f..b130abfa 100644
+index 9210978f4..b130abfa5 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -75,6 +75,7 @@ import traceRoutes from '../custom/controllers/hermes/trace'

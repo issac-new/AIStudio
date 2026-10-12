@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/ekko/services/manager.ts b/packages/server/src/modules/ekko/services/manager.ts
-index 1411b894..3f399fa5 100644
+index 1411b8949..3f399fa5c 100644
 --- a/packages/server/src/modules/ekko/services/manager.ts
 +++ b/packages/server/src/modules/ekko/services/manager.ts
 @@ -24,6 +24,8 @@ import {

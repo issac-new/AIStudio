@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index ba3aaaec..9eb2abe2 100644
+index ba3aaaec0..9eb2abe2a 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,8 +1,12 @@
@@ -100,7 +100,7 @@ index ba3aaaec..9eb2abe2 100644
      ctx.body = { ok: true }
    } catch (err: any) {
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
-index fe44cb36..66dff4e1 100644
+index fe44cb367..66dff4e1e 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -22,6 +22,8 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)

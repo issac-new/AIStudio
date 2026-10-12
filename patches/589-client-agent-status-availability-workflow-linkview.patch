@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/GroupChatLinkView.vue b/packages/client/src/views/hermes/GroupChatLinkView.vue
-index 235ed6e7..2a0a0ee2 100644
+index 235ed6e7e..2a0a0ee2b 100644
 --- a/packages/client/src/views/hermes/GroupChatLinkView.vue
 +++ b/packages/client/src/views/hermes/GroupChatLinkView.vue
 @@ -32,9 +32,9 @@ import {
@@ -33,10 +33,10 @@ index 235ed6e7..2a0a0ee2 100644
      profileAgents.value = localAgents.agents
      connections.value = localConnections.connections
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index a8544bb2..45e17b5b 100644
+index ff5f6021a..855be13d5 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -130,9 +130,9 @@ import type {
+@@ -132,9 +132,9 @@ import type {
  } from '@/components/hermes/workflow/types'
  import type { AvailableModelGroup } from '@/api/hermes/system'
  import {
@@ -48,7 +48,7 @@ index a8544bb2..45e17b5b 100644
  } from '@/api/agent-status'
  
  import '@vue-flow/core/dist/style.css'
-@@ -164,7 +164,7 @@ const workflowImportConfirmVisible = ref(false)
+@@ -166,7 +166,7 @@ const workflowImportConfirmVisible = ref(false)
  const workflowImportPreview = ref<Awaited<ReturnType<typeof previewWorkflowImport>> | null>(null)
  const workflowImportProfile = ref('default')
  const workflowImportConfirming = ref(false)
@@ -57,7 +57,7 @@ index a8544bb2..45e17b5b 100644
  const WORKFLOW_CHAT_PANEL_MIN_WIDTH = 360
  const WORKFLOW_CHAT_PANEL_DEFAULT_WIDTH = 560
  const WORKFLOW_CANVAS_MIN_WIDTH = 360
-@@ -451,7 +451,7 @@ function workflowAgentDisplayName(agent: string): string {
+@@ -453,7 +453,7 @@ function workflowAgentDisplayName(agent: string): string {
  
  async function refreshAgentAvailability() {
    try {

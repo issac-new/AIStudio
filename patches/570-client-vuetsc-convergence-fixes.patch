@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 5ff44d57..d0762d4a 100644
+index 7fee97834..77c9c2a27 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -6833,31 +6833,4 @@ export default {
+@@ -6887,31 +6887,4 @@ export default {
      confirm: 'Confirm',
      cancel: 'Cancel'
    },
@@ -35,10 +35,10 @@ index 5ff44d57..d0762d4a 100644
 -  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 33f34496..73c566ca 100644
+index a67111b94..3ff003e69 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -6831,31 +6831,4 @@ export default {
+@@ -6885,31 +6885,4 @@ export default {
      confirm: '确认',
      cancel: '取消'
    },
@@ -71,7 +71,7 @@ index 33f34496..73c566ca 100644
 -  }
  }
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 8fa23089..810b2a08 100644
+index 28c7b6e1e..197861be3 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -62,7 +62,6 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
@@ -83,7 +83,7 @@ index 8fa23089..810b2a08 100644
    return undefined
  }
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index 99b820fd..1548ead5 100644
+index 99b820fdd..1548ead5b 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
 @@ -1,5 +1,5 @@
@@ -94,7 +94,7 @@ index 99b820fd..1548ead5 100644
  }
  
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index 24cc7656..171f1caa 100644
+index 24cc76563..171f1caae 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
 @@ -19,7 +19,6 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
@@ -106,7 +106,7 @@ index 24cc7656..171f1caa 100644
  
  export function parseStoredAvatar(raw: unknown): ProfileAvatar | null {
 diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
-index 48e4ec31..31688898 100644
+index 48e4ec318..31688898c 100644
 --- a/packages/client/src/views/hermes/AgentManagerView.vue
 +++ b/packages/client/src/views/hermes/AgentManagerView.vue
 @@ -134,9 +134,9 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
@@ -123,7 +123,7 @@ index 48e4ec31..31688898 100644
    'claude-code': null,
    codex: null,
 diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-index 74bb37f4..d6916128 100644
+index 74bb37f44..d6916128a 100644
 --- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
 +++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
 @@ -46,7 +46,6 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>

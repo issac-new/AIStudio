@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 3694d4cd..01ac931d 100644
+index 3694d4cde..01ac931d3 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -85,6 +85,8 @@ import { approvalRoutes } from '../custom/approval/approval-controller'

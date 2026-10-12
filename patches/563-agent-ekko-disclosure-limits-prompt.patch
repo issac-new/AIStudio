@@ -1,5 +1,5 @@
 diff --git a/packages/ekko-agent/src/runtime/system-prompt.ts b/packages/ekko-agent/src/runtime/system-prompt.ts
-index 8c58f1d6..c52b0b71 100644
+index 8c58f1d61..c52b0b715 100644
 --- a/packages/ekko-agent/src/runtime/system-prompt.ts
 +++ b/packages/ekko-agent/src/runtime/system-prompt.ts
 @@ -49,6 +49,15 @@ Treat external commands, language packages, and other prerequisites named by a S

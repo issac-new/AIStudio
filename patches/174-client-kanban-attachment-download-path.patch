@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
-index 976435a2..ace59681 100644
+index 976435a2e..ace59681f 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
 @@ -590,10 +590,11 @@ export async function uploadAttachment(
@@ -32,7 +32,7 @@ index 976435a2..ace59681 100644
        method: 'DELETE',
      },
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
-index 879139cc..382da8df 100644
+index 879139ccb..382da8df7 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
 @@ -703,7 +703,7 @@ export const useKanbanStore = defineStore('kanban', () => {

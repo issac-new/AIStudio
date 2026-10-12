@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
-index 2505dfe2..e6e16222 100644
+index 2505dfe2d..e6e162224 100644
 --- a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 +++ b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 @@ -1,17 +1,89 @@
@@ -192,7 +192,7 @@ index 2505dfe2..e6e16222 100644
  }
  </style>
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index ab94da2a..7611fe0a 100644
+index ab94da2ad..7611fe0aa 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
 @@ -231,6 +231,45 @@ function getContentFileUrl(file: DisplayContentFile): string {

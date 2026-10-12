@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index a6b52258..fae8ccb5 100644
+index a6b522581..fae8ccb57 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -58,7 +58,10 @@ function taskAssigneeProfile(task: { assignee: string | null }): string {

@@ -1,7 +1,8 @@
 diff --git a/scripts/build-server.mjs b/scripts/build-server.mjs
+index 3104e4b8d..c1e18d96d 100644
 --- a/scripts/build-server.mjs
 +++ b/scripts/build-server.mjs
-@@ -37,7 +37,9 @@
+@@ -37,7 +37,9 @@ await esbuild.build({
    target: 'node23',
    format: 'cjs',
    outfile: resolve(serverOutDir, 'index.js'),

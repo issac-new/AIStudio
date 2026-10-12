@@ -1,5 +1,5 @@
 diff --git a/tests/server/hermes-kanban-service.test.ts b/tests/server/hermes-kanban-service.test.ts
-index 9fac7d84..ba1331ac 100644
+index 9fac7d844..ba1331ace 100644
 --- a/tests/server/hermes-kanban-service.test.ts
 +++ b/tests/server/hermes-kanban-service.test.ts
 @@ -48,7 +48,7 @@ describe('hermes kanban service', () => {

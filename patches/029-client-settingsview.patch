@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/SettingsView.vue b/packages/client/src/views/hermes/SettingsView.vue
-index 36838919..ebbbe78a 100644
+index 368389191..ebbbe78a7 100644
 --- a/packages/client/src/views/hermes/SettingsView.vue
 +++ b/packages/client/src/views/hermes/SettingsView.vue
 @@ -17,13 +17,14 @@ import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";

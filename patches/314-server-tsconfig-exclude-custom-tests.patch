@@ -1,5 +1,5 @@
 diff --git a/packages/server/tsconfig.json b/packages/server/tsconfig.json
-index ddc0adbf..86f9b050 100644
+index ddc0adbfe..86f9b0508 100644
 --- a/packages/server/tsconfig.json
 +++ b/packages/server/tsconfig.json
 @@ -8,5 +8,6 @@

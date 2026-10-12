@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
-index 8159efd5..1186ee19 100644
+index 8159efd5f..1186ee19e 100644
 --- a/packages/client/src/styles/variables.scss
 +++ b/packages/client/src/styles/variables.scss
 @@ -13,6 +13,7 @@

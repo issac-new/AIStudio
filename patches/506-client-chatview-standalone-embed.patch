@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
-index d00fc781..11f9bf68 100644
+index d00fc781c..11f9bf685 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
 @@ -25,7 +25,9 @@ const routeProfile = computed(() => {
