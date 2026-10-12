@@ -650,8 +650,10 @@ if not _po['frames_met']:
 
 # ── 查 9：承载范围符合性（正本 §2.5 产品承载范围清单 × §5.6 采集纪律⑩ 降级口径；差距审计 P8→R27）──
 # §2.5 列出的步，报告 ✅ 步块须有 ≥1 张 UI 实拍帧（class="shot"），或 issues.log 有
-# product-surface-degraded 登记声明合规降级（登记+最接近真实功能页补拍+图注三件套）；
-# 二者皆缺 → WARN 起步（连续两轮未处置转 FAIL，转硬评估挂 run11 前置）。
+# product-surface-degraded 登记声明合规降级（登记+最接近真实功能页补拍+图注三件套）。
+# V8.17 三红线（run15 复盘 R3 兑现）：承诺面零帧且无降级登记=FAIL——倒逼采集端根治
+# 或如实登记，禁「零帧+零登记」静默放行（run15 14 步零帧仅 WARN 是采集面实质退化的
+# 放行口）；有降级登记键则该面整段维持 WARN（合规降级在案）。
 _m25 = re.search(r'### 2\.5 [^\n]*\n(.*?)(?=\n### |\n## )', plan_text, re.S)
 _surface_steps = set()
 if _m25:
@@ -667,9 +669,14 @@ for blk in blocks:
     n = int(n_s)
     if n not in _surface_steps or '<span class="no">⬜</span>' in blk[:400]:
         continue
-    if len(re.findall(r'class="shot', blk)) == 0 and not _degraded9:
-        warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧，'
-                     f'且 issues.log 无 product-surface-degraded 降级登记——补拍或按§5.6 采集纪律⑩ 合规降级登记')
+    if len(re.findall(r'class="shot', blk)) == 0:
+        if _degraded9:
+            warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧'
+                         f'（product-surface-degraded 降级在案——合规降级维持 WARN）')
+        else:
+            fails.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧，'
+                         f'且 issues.log 无 product-surface-degraded 降级登记——V8.17 三红线：'
+                         f'承诺面零帧+零登记=FAIL（补拍或按§5.6 采集纪律⑩ 合规降级登记，二选一必选）')
 
 # ── 查 10：六闸工件视图（§5.4 必备六件：G1 冻结/G2 评审/G3 testlog/G4 测试报告/G5 发布计划/G6 复盘）──
 # 步 7/15/18/19/20/24 步块须含交付物视图（st-artifact）或"无文件域交付物"声明（§5.4 第二段）。

@@ -2208,6 +2208,32 @@ def main_head():
     except Exception:
         return ''
 
+
+def monitor_proxy_html():
+    """监控代行独立小节（run15 复盘 N5/复盘建议 §7.2，V8.17 §5.4 报告规范）。
+
+    纪律 36 框架内的监控代行事件全量在册：DISP 文本含「监控代行」标记的行归集
+    呈现（令文摘要+回执锚可反查 issues.log）。零代行=零渲染（如实，不凑段）。
+    """
+    ilog = EVID / 'issues.log'
+    if not ilog.exists():
+        return ''
+    rows = []
+    for l in ilog.read_text(encoding='utf-8', errors='replace').splitlines():
+        if l.startswith('DISP|') and '代行' in l:
+            p4 = l.split('|', 4)
+            if len(p4) > 3:
+                rows.append(f'<tr><td style="white-space:nowrap">{H.escape(p4[1])}</td>'
+                            f'<td style="white-space:nowrap">{H.escape(p4[2])}</td>'
+                            f'<td>{H.escape(p4[3][:200])}</td></tr>')
+    if not rows:
+        return ''
+    return (f'\n  <details class="audit" id="ch8-monitor-proxy"><summary>▶ 监控代行实录'
+            f'（{len(rows)} 次——纪律 36 框架内代行事件全量在册，令文摘要可反查 issues.log）</summary>'
+            f'\n  <table style="margin-top:8px"><tr><th>类型</th><th>主体</th><th>令文/处置摘要</th></tr>'
+            + ''.join(rows) + '</table></details>')
+
+
 stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd = issues_stats()
 n_resolved = n_closed + (n_issue_keys - n_closed - n_issue_open - n_nonstd) + 0  # 已修+观察+延后（观察/延后=keys-closed-open-nonstd）
 main_sha = main_head()
@@ -3215,7 +3241,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             # 仅当轮执行步挂未采集徽章；沿用步（done=False 夹具态）按 V8.4④ 显示「不在本轮执行范围」声明态
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">R18 未采集·记入问题清单在案</span>'
         elif done and not (R18.get(str(n)) or R18.get(n)) and n < 26:
-            # V8.11（run15 复盘 F2）：非必采步的载荷全缺也挂黄标（审计契约=完成步任一载荷
+            # V8.17 §5.5 三红线（run15 复盘 F2）：非必采步的载荷全缺也挂黄标（审计契约=完成步任一载荷
             # 在位即可；run15 实测 9 步全缺静默呈现为「正常步」——降级在案≠达标，须可见）
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">载荷全缺（降级在案）</span>'
         # 交付物维度 chip（§5.5 节奏双轨：机制✅不遮交付物缺）
@@ -3655,6 +3681,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <p class="stat-note">{stat_note}</p>
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>频次</th><th>级别</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
+  {monitor_proxy_html()}
 
 
   <h2 class="section-hd" id="ch9-gov">第 9 章 · 完整循环治理终态——治理系统工作了吗？</h2>
