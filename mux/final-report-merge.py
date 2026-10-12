@@ -443,13 +443,13 @@ PART1_RUN14 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 
 PART1_RUN15 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-11 23:54 开跑（V8.10-V8.15 全栈首验轮）</span></h1>
+<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-11 23:54 开跑</span></h1>
 
-<div class="card info"><b>这轮是什么：</b>一次完整的 26 步全流程推演（需求单→分析→设计→并行开发→测试→发布→验收→审计→报告，全程 {{steps_done}} 步走完、六道关卡 {{gates_pass}}/6）。这一轮的定位和以往不同：它是七个新机制的首验轮——三张左移任务卡（用例/集成/质量在开发前就开工）、涉敏需求安全评审前置（真拦截了两处代码缺陷）、六域健康体检当轮出数、接口契约观察器影子运行（零破坏）、任务卡直达群聊、既有评审结论复用不重派、以及全程零补拍的实时截图（当轮实拍 {{n_frames}} 张）。</div>
+<div class="card info"><b>这轮是什么：</b>一次完整的 26 步全流程推演（需求单→分析→设计→并行开发→测试→发布→验收→审计→报告，全程 {{steps_done}} 步走完、六道关卡 {{gates_pass}}/6）。本轮首次实装七项机制：三张左移任务卡（用例/集成/质量在开发前就开工）、涉敏需求安全评审前置（真拦截了两处代码缺陷）、六域健康体检当轮出数、接口契约观察器影子运行（零破坏）、任务卡直达群聊、既有评审结论复用不重派、以及全程零补拍的实时截图（当轮实拍 {{n_frames}} 张）。</div>
 
 <div class="card info"><b>诚实账（出了什么问题）：</b>本轮出了 {{n_issue}} 张问题单、监控代行处置 {{disp_sum}} 笔（每笔留痕可反查）。三件大事如实说：①安全闸拦到真缺陷后，驱动的等待机制存在三层盲区导致空转 68 分钟——监控当场根治（判词到放行 80 秒收敛实证）；②上一轮遗留的一条旧分支让开发段真值锚失明、进度面板盲转 150 分钟——当场根治并立了开跑前拦截；③个别员工（AI 档案）干完活不交卷或中途自了断共五次——监控定向督促令六发六中全部唤醒。六闸里 G2 的安全前置是先拦后放（缺陷修复后复审通过），其余五关首过。</div>
 
-<div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文说人话，机器细节在折叠区。</div>
+<div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
 PART1_BY_RUN = {
@@ -618,10 +618,10 @@ def main():
     machine_nav, machine_main, fused = split_layout(machine_body)
     if not fused:
         machine_nav = machine_nav.replace('<nav class="sidebar">', 
-            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:var(--accent-deep);font-weight:700;margin:0 0 8px">PART 1 · 一页读懂</div>'
-            '<a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">说人话版导读</a>'
+            '<nav class="sidebar"><div class="nav-title" style="font-size:11px;color:var(--accent-deep);font-weight:700;margin:0 0 8px">报告导读</div>'
+            '<a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">导读</a>'
             '<a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实测统计表</a>'
-            '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">PART 2 · 全文档案</div>', 1)
+            '<div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">全文档案</div>', 1)
 
     # 第 0 章（R15）：state 写入通过标记实测统计闸门态；协作时序自 scenario.log 实抽。
     # compact=True=人读层精简（时序只留开头段，全量由 PART2 承载——run12 双份 899 行去重）
