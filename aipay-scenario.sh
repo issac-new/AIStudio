@@ -1980,6 +1980,18 @@ PAYSPECS
     || note "[观察] DISP 三态归桶件无产出（台账缺席或零表外词——非阻断）"
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
+  # lite 审计口径（2026-10-13 C 方案）：lite 轮的夹具步（G1/G2/群等）真值沿用源轮，
+  # UI 帧不在 lite 采集面；报告步自身页收尾后生成无法当轮自拍。按 §5.6 采集纪律⑩
+  # 自动做合规降级登记（幂等——已含 lite 口径键不重复记），V8.17 三红线/V8.4④ 由此过。
+  if grep -q '^lite_round=1' "$STATE" 2>/dev/null; then
+    if ! grep -q 'product-surface-degraded|lite-scope' "$EVID_DIR/issues.log" 2>/dev/null; then
+      {
+        echo "ISSUE|product-surface-degraded|lite-scope|lite 轮夹具步与报告步 UI 帧不在本轮采集面（真值沿用源轮/报告页收尾后生成）——§5.6 采集纪律⑩ 合规降级登记（lite 审计口径自动记）"
+        echo "ISSUE|frame-capture-failed|step-report_done|报告步自身页收尾后生成，无法当轮自拍——V8.4④ 配对（lite 审计口径自动记）"
+      } >> "$EVID_DIR/issues.log"
+      note "[报告] lite 审计口径：降级登记已自动记入 issues.log（product-surface-degraded|lite-scope + report_done 配对）"
+    fi
+  fi
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
   # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
