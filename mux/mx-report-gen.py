@@ -1727,7 +1727,7 @@ def criteria_block(n):
                      f'<ul>{glis}</ul></div>')
     ev_html = (' · '.join(ev)) or '判定证据见下方实物区'
     return (f'<div class="st-crit"><div class="st-crit-hd">合格线——做成什么样算合格'
-            f'<span class="st-crit-src">（方案 §5.2 全文，说人话展开）</span></div>'
+            f'<span class="st-crit-src">（方案 §5.2 全文）</span></div>'
             f'<div class="st-crit-zhun">这步交差要交出：<b>{gloss_first_use(H.escape(zhun))}</b></div>'
             f'<ul>{lis}</ul>{gate_html}'
             f'<div class="st-crit-ev">判定证据：{ev_html}</div></div>')
@@ -2358,10 +2358,10 @@ def skill_duty_html():
         else 'retro-sink 回灌文件缺席（lessons.md 不存在——复盘回灌未跑或真源漂移，如实披露）'
     role_html = (f'\n  <p style="font-size:13px"><b>角色→技能</b>（源=场景库装载行）：{H.escape(role_line)}</p>'
                  if role_line else '')
-    return (f'\n  <p style="font-size:13px">这一节回答：AI 员工的研发技能从哪来、谁生成的、干活时留了什么痕。'
-            f'四件事按磁盘上实际存在的文件清点：技能清单、生成链、执勤留痕、缺席披露。缺什么如实写，不渲染假账。</p>'
+    return (f'\n  <p style="font-size:13px">AI 员工的研发技能由能力层提供：swarm yuan 生成器产出项目技能（本轮实例 aipaydev-dev），按角色映射装载到各职能。'
+            f'技能清单、生成链、执勤留痕、缺席项四件按磁盘实存文件记录。</p>'
             f'\n  <details class="audit" id="ch9-skill-duty"><summary>▶ 技能执勤账'
-            f'（{len(rows)} 项技能在册——清单来自技能存放目录 simharness skills/ 与装载清单 mx-lib.sh SKILLS_INSTALL）</summary>'
+            f'（{len(rows)} 项技能在册，清单与装载单对账）</summary>'
             f'\n  <table style="margin-top:8px"><tr><th>技能</th><th>骨架形态</th><th>profile 档</th><th>生成器锚</th></tr>'
             + ''.join(rows) + '</table>'
             f'\n  <p style="font-size:13px;margin:8px 0 2px"><b>生成链</b>（aipaydev-dev 仓内提交史，最新在前）：{H.escape(chain)}</p>'
@@ -3418,7 +3418,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
   <div class="st-sec"><div class="st-sec-hd">② 交付物及质量判据</div>
     {criteria_block(n)}
     {art_html}
-    <details class="st-gate"><summary>方案步条原文（一行摘要，反查用）</summary><div class="gate-body">{md_inline(gate_text) if gate_text else "（未单列）"}</div></details>
+    <details class="st-gate"><summary>方案步条原文（一行摘要）</summary><div class="gate-body">{md_inline(gate_text) if gate_text else "（未单列）"}</div></details>
   </div>
   {(_sec34_empty(n) if _sec34_is_empty(n) else f'''<div class="st-sec"><div class="st-sec-hd">③ 已知问题</div>
     {_known_html(plan_steps.get(n, {}).get('known', ''))}
