@@ -136,7 +136,10 @@ while true; do
       [ -f "$AG_LOG" ] || continue
       eval "BD=\${BUDGET_DONE_${prof}:-0}"
       [ "$BD" = "1" ] && continue
-      BE_AGO=$(( $(date +%s) - $({ BE=$(grep -E "Iteration budget exhausted" "$AG_LOG" | tail -1 | cut -c1-19); [ -n "$BE" ] && date -j -f "%Y-%m-%d %H:%M:%S" "$BE" +%s 2>/dev/null; } || echo 0) ))
+      # run16 实证（fanfan 21:18 G5 修订中断）：耗尽有两词形——「Iteration budget
+      # exhausted」（运行时预算面）与「max_iterations_reached」（会话迭代上限面），
+      # run16 后者出现时 B0 未咬=60 分钟无人续作。两词形同判。
+      BE_AGO=$(( $(date +%s) - $({ BE=$(grep -E "Iteration budget exhausted|max_iterations_reached" "$AG_LOG" | tail -1 | cut -c1-19); [ -n "$BE" ] && date -j -f "%Y-%m-%d %H:%M:%S" "$BE" +%s 2>/dev/null; } || echo 0) ))
       WL_AGO_B=$(( $(date +%s) - $(last_work_ts "$AG_LOG") ))
       if [ "$BE_AGO" -ge 0 ] && [ "$BE_AGO" -lt 1800 ] && [ "$WL_AGO_B" -gt 300 ]; then
         OPEN_B=$(python3 -c "
