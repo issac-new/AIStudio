@@ -876,10 +876,14 @@ describe('⑮ F-6/F-7 run10 前置（词表/txt 写入器/判定探活）', () =
 
   it('F-6① 词表在位且生成器接线（glossary.txt+gloss_first_use 渲染）', () => {
     const gl = read(join(MX, 'glossary.txt'))
-    expect(gl).toContain('564: 网关响应投递兜底补丁')
-    expect(gl).toContain('state.env: 推演状态键值文件')
+    expect(gl).toContain('term:patch-564 | 564 |')        // v2 五字段（P0-1 升维）
+    expect(gl).toContain('term:state-env | state.env |')
     const gen = read(join(MX, 'mx-report-gen.py'))
     expect(gen).toContain('gloss_first_use(H.escape(meta["narrative"]))')
+    expect(gen).toContain('GLOSSARY_SLUG')                // 五字段装载（ID/标准名/别名/定义/归属）
+    expect(gen).toContain('def ontology_html(')           // 证据五：本体证据面（P0-2）
+    expect(gen).toContain('{ontology_html()}')
+    expect(gen).toContain('ontology-health.txt')
   })
 
   it('F-6② txt 写入器随生成链（simulation-report.txt+steps-extract.txt）', () => {
