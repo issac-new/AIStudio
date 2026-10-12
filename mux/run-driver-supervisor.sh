@@ -71,6 +71,24 @@ _g5_evidence_fp() {
 }
 
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
+# ── 双操作者协同（run15 复盘：三轮神秘杀组+一轮锁竞争互退实锤=两个会话各自起监督器
+# 对同一 RUN 拉锯）。协议=注册表先到先得：启动时原子写 $SIM_ROOT/var/<RUN>-supervisor.owner；
+# 在位且持有人 pid 活着 → 本监督器是后来者，退让退出（不抢不杀——对方在正常值守）；
+# 持有人已死 → 接管覆写。退出前清自己的注册（防止陈尸注册挡后来者）。
+OWNER="$SIM_ROOT/var/$RUN_ID-supervisor.owner"
+_mso_take_or_yield() {
+  local opid
+  if [[ -f "$OWNER" ]]; then
+    opid=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$OWNER" 2>/dev/null | head -1)
+    if [[ -n "$opid" ]] && kill -0 "$opid" 2>/dev/null; then
+      note "注册表在位且持有人 pid=$opid 存活——本监督器退让（双操作者先到先得协议；若确认对方僵死：kill $opid 后重启本监督器）"
+      exit 4
+    fi
+  fi
+  { echo "pid=$$ pgid=$(ps -o pgid= -p $$ | tr -d ' ') started=$(date '+%F %T') cmdline=${0##*/}"; } > "$OWNER"
+}
+_mso_take_or_yield
+trap '_myowner=$(sed -n "s/^pid=\\([0-9]*\\).*/\\1/p" "$OWNER" 2>/dev/null | head -1); [[ "$_myowner" == "$$" ]] && rm -f "$OWNER"' EXIT
 # 进程组防御平台分叉（2026-10-12 双模式轮）：mac 用 pgid 精确区分本系/入侵
 # （子 shell 继承本组）；Git Bash 无 POSIX 进程组语义——改「驱动同步执行 + 循环
 # 仅在本系驱动退出后才运行」的事实不变式：循环里发现的任何 aipay-scenario 都不是
