@@ -5,6 +5,7 @@ set -u
 LC_ALL=C
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 SR="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+source "$HERE/mux/mx-platform.sh"   # 独立进程：pgrep/sqlite 走平台层（Git Bash 兼容）
 PASS=0; FAIL=0
 ck() { # <名> <命令串> <失败指引>
   local name="$1" cmd="$2" hint="$3" out
@@ -43,7 +44,7 @@ LAST_RUN=$(ls -1d "$SR"/runs/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9
 ck "⑧ 上轮报告审计零 FAIL" "[ -n '${LAST_RUN:-}' ] && python3 '$HERE/mux/mx-report-audit.py' --run \"\$(basename '${LAST_RUN:-/tmp/none}')\" 2>/dev/null | grep -q '四查全过'" "重跑 mx-report-audit --run <上轮> 看 FAIL"
 
 # ⑨ run 间干净（无在途驱动/监督器/陈锁）
-ck "⑨ 无在途推演进程" "! pgrep -f 'aipay-scenario.sh' >/dev/null 2>&1 && ! pgrep -f 'run-driver-supervisor' >/dev/null 2>&1" "有残留驱动/监督器：确认后 touch stop 文件+kill（见独立监控手册）"
+ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . && ! mxp_pgrep_f 'run-driver-supervisor' | grep -q ." "有残留驱动/监督器：确认后 touch stop 文件+kill（见独立监控手册）"
 
 # ⑩ 推演域分支无上轮残留（run15 根治：run13 遗留 feat/DEV-PAYCORE-S 使 branch_fresh 恒假，
 #    devimpl 等待环盲转 150min——锚读数也把陈旧提交当本路进展）。feat/DEV-* 是每轮开发

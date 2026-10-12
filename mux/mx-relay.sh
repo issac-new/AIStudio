@@ -25,8 +25,8 @@ RELAY_LOG="$LOGS_DIR/${RUN_ID}-relay.log"
 # 步骤序改用 mx-lib 单一事实源 MX_STEP_ORDER（2026-10-04 与 sset 进度 JSON 对齐）
 ORDER=(${MX_STEP_ORDER:-smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report})
 
-# 单实例守卫：除自身（$$）外已有 mx-relay 在跑即退出
-_others=$(pgrep -f "mx-relay.sh" | /usr/bin/grep -v "^$$\$" || true)
+# 单实例守卫：除自身（$$）外已有 mx-relay 在跑即退出（pgrep→平台层，Git Bash 走 wmic/ps 兜底）
+_others=$(mxp_pgrep_f "mx-relay.sh" | /usr/bin/grep -v "^$$\$" || true)
 if [[ -n "$_others" ]]; then
   echo "[relay] 已有 mx-relay 实例在跑（pid ${_others}），本实例退出（防双接力）"
   exit 0
@@ -48,7 +48,7 @@ while true; do
     echo "[relay $(date '+%F %H:%M:%S')] RELAY-FINISHED"
     exit 0
   fi
-  if ! pgrep -f "aipay-scenario" >/dev/null 2>&1; then
+  if ! mxp_pgrep_f "aipay-scenario" >/dev/null 2>&1; then
     # 运行面自愈：自更新擦补丁是驱动夜间死亡主因之一（run7 gate_review jq 崩溃之外的另一类）
     heal_runtime
     LAST=-1
