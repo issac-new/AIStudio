@@ -1538,6 +1538,15 @@ describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四
     expect(gen).toContain('md_inline(gate_text)')                    // 步条原文接线
   })
 
+  it('阅读习惯四件（2026-10-12：scrollspy 高亮+回顶+阅读宽度+斑马纹）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    const merge = read(join(MX, 'final-report-merge.py'))
+    expect(gen).toContain('back-top')            // 回顶按钮
+    expect(gen).toContain('IntersectionObserver') // 侧栏当前节高亮
+    expect(gen).toContain('max-width:62em')      // 正文行长舒适区
+    expect(merge).toContain('back-top')           // 人读层同款注入
+  })
+
   it('报告头部名词速查行（方案 §5.4 报告语言三规矩②——内部缩写第一屏前载定义）', () => {
     const merge = read(join(MX, 'final-report-merge.py'))
     expect(merge).toContain('名词速查：G1-G6=六道关卡')
