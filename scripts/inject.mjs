@@ -94,6 +94,9 @@ export const HERMES_AGENT_PATCH_PREFIXES = [
   // 根层 model_tools.py(patch 593 起):同上——593 曾被误路由到 studio,下次 inject
   // 在 "No such file" 上硬死(长会话治理轮发现的拦路雷,此处根治;shell 镜像同步改)。
   'model_tools.py',
+  // 根层 toolsets.py(patch 611 起):同上——obs_recall 进 _HERMES_CORE_TOOLS 的补丁
+  // 宿主在 hermes-agent 根层,误路由 studio 同样硬死(SoL-Pi 效能轮)。
+  'toolsets.py',
 ];
 
 /** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */

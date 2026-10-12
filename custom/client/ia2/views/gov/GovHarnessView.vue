@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CapabilityCatalogSection from '@/custom/governance/components/CapabilityCatalogSection.vue'
 import CostAccountsSection from '@/custom/governance/components/CostAccountsSection.vue'
+import EfficiencyRuntimeSection from '@/custom/governance/components/EfficiencyRuntimeSection.vue'
 import VirtualPnlSection from '@/custom/governance/components/VirtualPnlSection.vue'
 import MaturitySection from '@/custom/governance/components/MaturitySection.vue'
 import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.vue'
@@ -34,6 +35,7 @@ const L = computed(() => {
       </div>
     </header>
     <div class="gov-view__body">
+      <EfficiencyRuntimeSection />
       <CapabilityCatalogSection />
       <CostAccountsSection />
       <VirtualPnlSection />

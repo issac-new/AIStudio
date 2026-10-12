@@ -1,0 +1,456 @@
+--- a/tools/tool_result_storage.py
++++ b/tools/tool_result_storage.py
+@@ -20,6 +20,9 @@
+ logger = logging.getLogger(__name__)
+ PERSISTED_OUTPUT_TAG = "<persisted-output>"
+ PERSISTED_OUTPUT_CLOSING_TAG = "</persisted-output>"
++# ObservationPack tail excerpt (SoL-Pi: head+tail beats head-only — diagnostics live at
++# the end of logs). 512 chars ≈ 128-170 tokens, paid once per archived result.
++DEFAULT_TAIL_EXCERPT_CHARS = 512
+ STORAGE_DIR = os.path.join(tempfile.gettempdir(), "hermes-results")
+ SPILLOVER_SUBDIR = "cache/spillover"
+ SPILLOVER_MAX_AGE_HOURS = 24
+@@ -177,6 +180,19 @@
+         return content, False
+     last_nl = content.rfind("\n", 0, max_chars)
+     return content[:last_nl + 1 if last_nl > max_chars // 2 else max_chars], True
++
++
++def generate_tail_excerpt(content: str, max_chars: int = DEFAULT_TAIL_EXCERPT_CHARS) -> str:
++    """Last *max_chars* of *content* on a line boundary (SoL-Pi ObservationPack head+tail
++    excerpt). Diagnostics concentrate at the END of logs — stack traces, test summaries,
++    exit lines — so the tail is where a lossy preview pays for itself."""
++    if len(content) <= max_chars:
++        return ""
++    tail = content[-max_chars:]
++    first_nl = tail.find("\n")
++    if 0 < first_nl < max_chars // 2:
++        tail = tail[first_nl + 1:]
++    return tail
+ 
+ 
+ def _pageable_text(content: str) -> str:
+@@ -262,20 +278,29 @@
+ 
+ 
+ def _build_persisted_message(preview: str, has_more: bool, original_size: int,
+-                             file_path: str) -> str:
+-    """Build the <persisted-output> replacement block."""
++                             file_path: str, tail: str = "", tool_ref: str = "") -> str:
++    """Build the <persisted-output> replacement block.
++
++    ``tail``: end-of-output excerpt (lossy previews cut exactly where diagnostics live).
++    ``tool_ref``: the tool_call_id — the stable recall handle ``obs_recall`` keys on.
++    """
+     size_kb = original_size / 1024
+     size_str = f"{size_kb / 1024:.1f} MB" if size_kb >= 1024 else f"{size_kb:.1f} KB"
++    ref_line = (f"Result id for obs_recall: {tool_ref}\n" if tool_ref else "")
++    tail_block = ""
++    if tail:
++        tail_block = (f"\nTail (last {len(tail)} chars):\n{tail}\n")
+     return (
+         f"{PERSISTED_OUTPUT_TAG}\n"
+         f"This tool result was too large ({original_size:,} characters, {size_str}).\n"
+         f"Full output saved to: {file_path}\n"
+-        "Use the read_file tool with offset and limit to access specific sections of this output.\n"
+-        "Recovery: page through the saved file with read_file (offset/limit) or "
+-        "process it with execute_code — do NOT re-request the same data from the "
++        f"{ref_line}"
++        "Recall: obs_recall with the result id (paged, line-numbered) or read_file with "
++        "offset/limit on the saved path — do NOT re-request the same data from the "
+         "remote API; the full result is already on disk.\n\n"
+         f"Preview (first {len(preview)} chars):\n"
+         + preview + ("\n..." if has_more else "")
++        + tail_block
+         + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
+ 
+ 
+@@ -305,11 +330,19 @@
+     persisted_content = _pageable_text(content)
+     filename = _safe_result_filename(tool_use_id)
+     preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)
++    tail = generate_tail_excerpt(persisted_content)
+ 
+     def _persisted(path: str, host_suffix: str = "") -> str:
+         logger.info("Persisted large tool result: %s (%s, %d chars -> %s%s)",
+                     tool_name, tool_use_id, len(persisted_content), path, host_suffix)
+-        return _build_persisted_message(preview, has_more, len(persisted_content), path)
++        message = _build_persisted_message(preview, has_more, len(persisted_content), path,
++                                           tail=tail, tool_ref=str(tool_use_id))
++        from tools.efficiency_ledger import record_efficiency_event
++        record_efficiency_event(
++            "observation_archive", tool=tool_name, ref=str(tool_use_id),
++            chars_original=len(persisted_content), chars_inline=len(message),
++            archive=os.path.basename(path))
++        return message
+ 
+     # Always persist host-side first: cache/spillover is the single canonical home.
+     host_path = _write_to_spillover(persisted_content, filename)
+--- /dev/null
++++ b/tools/efficiency_ledger.py
+@@ -0,0 +1,79 @@
++"""Efficiency ledger — SoL-Pi-style JSONL audit trail for harness-efficiency mechanisms.
++
++Every ObservationPack archive / ``obs_recall`` page / Action-Fusion ``then_run`` /
++Evidence-Preserving-Reducer decision appends one JSON line here. Two consumers:
++
++* the SwarmStudio efficiency panel (overlay server reads ``<home>/efficiency/ledger.jsonl``);
++* post-hoc auditing — SoL-Pi keeps its ledger OUTSIDE the model's context so token
++  savings never cost audit fidelity (the paper's "full-fidelity audit trail outside
++  model input" governance rule).
++
++Design constraints:
++* NEVER raises, NEVER blocks: a telemetry write may not break a tool call. Every
++  failure is a ``logger.debug``.
++* One line per event, ``ensure_ascii=False``, atomic single ``write()`` of the full
++  line (appends below the pipe buffer are effectively indivisible for line readers).
++* Home follows ``get_hermes_home()`` (profile overrides / multiplexing respected).
++"""
++
++import json
++import logging
++import threading
++import time
++from pathlib import Path
++
++logger = logging.getLogger(__name__)
++
++LEDGER_SUBDIR = "efficiency"
++LEDGER_FILENAME = "ledger.jsonl"
++# Hard ceiling per event body: a receipt or command output pasted into an event must
++# not turn the ledger itself into the unbounded artifact it exists to prevent.
++_MAX_EVENT_CHARS = 4000
++
++_ledger_lock = threading.Lock()
++
++
++def ledger_path() -> Path:
++    """``<hermes home>/efficiency/ledger.jsonl`` (parent not created here)."""
++    from hermes_constants import get_hermes_home
++    return Path(get_hermes_home()) / LEDGER_SUBDIR / LEDGER_FILENAME
++
++
++def _bounded(value, _depth: int = 0):
++    """Recursively bound every string in an event body to ``_MAX_EVENT_CHARS``."""
++    if _depth > 4:
++        return "…"
++    if isinstance(value, str):
++        return value if len(value) <= _MAX_EVENT_CHARS else value[:_MAX_EVENT_CHARS] + "…[bounded]"
++    if isinstance(value, dict):
++        return {str(k): _bounded(v, _depth + 1) for k, v in value.items()}
++    if isinstance(value, (list, tuple)):
++        return [_bounded(v, _depth + 1) for v in value]
++    if isinstance(value, (int, float, bool)) or value is None:
++        return value
++    return str(value)
++
++
++def record_efficiency_event(kind: str, **fields) -> bool:
++    """Append one event line; returns True on success. Best-effort, never raises.
++
++    ``kind`` is one of ``observation_archive | obs_recall | action_fusion |
++    evidence_reduce``. Callers pass ``session_id``/``tool`` plus mechanism-specific
++    counters; everything is bounded by :func:`_bounded`.
++    """
++    event = {"ts": round(time.time(), 3), "kind": kind}
++    event.update(_bounded(fields))
++    try:
++        line = json.dumps(event, ensure_ascii=False)
++    except (TypeError, ValueError):
++        return False
++    try:
++        path = ledger_path()
++        with _ledger_lock:
++            path.parent.mkdir(parents=True, exist_ok=True)
++            with open(path, "a", encoding="utf-8") as fh:
++                fh.write(line + "\n")
++        return True
++    except Exception as exc:  # noqa: BLE001 — telemetry must never break the tool path
++        logger.debug("efficiency ledger write failed: %s", exc)
++        return False
+--- /dev/null
++++ b/tools/obs_recall_tool.py
+@@ -0,0 +1,148 @@
++"""``obs_recall`` — paged recall of archived tool observations (SoL-Pi ObservationPack parity).
++
++The spillover layer (``tools/tool_result_storage.py``) archives oversized tool results and
++leaves the model a handle + excerpt. Recall used to require ``read_file`` with the archive
++PATH — which the model loses under context pressure exactly when it needs the data, and
++which bypasses none of read_file's own guards when it guesses wrong. ``obs_recall`` keys on
++the ``tool_result`` id the model already has (every assistant tool_call carries it):
++
++* ``ref`` = tool_call_id (``toolu_...`` / ``toolu_xxx_part0`` budget spills) OR an archive
++  path exactly as printed inside a ``<persisted-output>`` block;
++* confinement: id-derived lookups resolve inside the canonical spillover dir only; path
++  refs must resolve INSIDE the spillover dir or a sandbox ``hermes-results`` temp dir —
++  this is a recall tool, not a second ``read_file`` with line numbers, so read_file's
++  device/proc deny lists must not be bypassable through it;
++* output is line-numbered and paginated like ``read_file`` (``LINE|CONTENT``), with
++  ``next_offset`` continuation.
++"""
++
++import logging
++import os
++
++from tools.registry import registry, tool_error, tool_result
++from tools.tool_result_storage import _safe_result_filename, get_spillover_dir
++
++logger = logging.getLogger(__name__)
++
++_MAX_RECALL_LIMIT = 500
++_DEFAULT_RECALL_LIMIT = 200
++_MAX_ARCHIVE_CHARS = 4_000_000  # 4 MB hard read ceiling; larger archives page anyway
++_SANDBOX_RESULT_DIRNAME = "hermes-results"
++
++
++def _expand(ref: str) -> str:
++    return os.path.abspath(os.path.expanduser(str(ref or "")))
++
++
++def _inside_dir(path: str, directory) -> bool:
++    try:
++        return os.path.commonpath([os.path.realpath(path), str(directory)]) == str(directory)
++    except ValueError:
++        return False
++
++
++def resolve_archive_ref(ref: str, env=None) -> str | None:
++    """Ref → archive path, or None when it cannot be recalled safely.
++
++    Order: (1) verbatim path (only when confined to the spillover dir or a sandbox
++    ``hermes-results`` temp dir); (2) spillover file named after the ref id.
++    """
++    if not ref or not str(ref).strip():
++        return None
++    raw = str(ref).strip()
++    spill_dir = get_spillover_dir()
++    candidate = _expand(raw)
++    if os.path.isfile(candidate) and (_inside_dir(candidate, spill_dir) or
++                                      os.path.basename(os.path.dirname(candidate)) == _SANDBOX_RESULT_DIRNAME):
++        return candidate
++    by_id = spill_dir / _safe_result_filename(raw)
++    if by_id.is_file():
++        return str(by_id)
++    return None
++
++
++def _recall_observation(ref: str, offset: int = 1, limit: int = _DEFAULT_RECALL_LIMIT,
++                        env=None) -> str:
++    from tools.efficiency_ledger import record_efficiency_event
++
++    path = resolve_archive_ref(ref, env)
++    if path is None:
++        return tool_error(
++            f"obs_recall: no archived observation for ref {ref!r}. Refs are the tool_call_id "
++            "of the original call or the path inside a <persisted-output> block; archives "
++            "live ~24h (spillover pruning). Re-run the tool if the archive expired.")
++    try:
++        size = os.path.getsize(path)
++        if size > _MAX_ARCHIVE_CHARS:
++            return tool_error(
++                f"obs_recall: archive {os.path.basename(path)} is {size:,} bytes (over the "
++                f"{_MAX_ARCHIVE_CHARS:,} read ceiling). Page it with read_file on the same path.")
++        with open(path, "r", encoding="utf-8", errors="replace") as fh:
++            lines = fh.read().split("\n")
++    except OSError as exc:
++        return tool_error(f"obs_recall: cannot read archive {os.path.basename(path)}: {exc}")
++
++    if lines and lines[-1] == "":
++        lines.pop()
++    total = len(lines)
++    offset = max(1, int(offset or 1))
++    limit = max(1, min(int(limit or _DEFAULT_RECALL_LIMIT), _MAX_RECALL_LIMIT))
++    start_idx = min(offset - 1, total)
++    end_idx = min(start_idx + limit, total)
++    numbered = "\n".join(
++        f"{lineno}|{lines[lineno - 1]}" for lineno in range(start_idx + 1, end_idx + 1))
++    truncated = end_idx < total
++    payload = {
++        "archive": path,
++        "offset": start_idx + 1,
++        "limit": limit,
++        "total_lines": total,
++        "content": numbered,
++        "truncated": truncated,
++    }
++    if truncated:
++        payload["next_offset"] = end_idx + 1
++        payload["hint"] = f"Showing lines {start_idx + 1}-{end_idx} of {total}. Use offset={end_idx + 1} to continue."
++    record_efficiency_event("obs_recall", ref=str(ref), lines=min(limit, max(0, end_idx - start_idx)),
++                            archive=os.path.basename(path))
++    return tool_result(payload)
++
++
++def _handle_obs_recall(args, **kw):
++    ref = args.get("ref", "")
++    if not isinstance(ref, str) or not ref.strip():
++        return tool_error("obs_recall: 'ref' is required — the tool_call_id of the archived "
++                          "result or the path from its <persisted-output> block.")
++    env = None
++    try:
++        from tools.terminal_tool_lifecycle import get_active_env
++        env = get_active_env(kw.get("task_id") or "default")
++    except Exception:
++        env = None
++    return _recall_observation(
++        ref=ref, offset=int(args.get("offset", 1) or 1),
++        limit=int(args.get("limit", _DEFAULT_RECALL_LIMIT) or _DEFAULT_RECALL_LIMIT), env=env)
++
++
++OBS_RECALL_SCHEMA = {
++    "name": "obs_recall",
++    "description": (
++        "Recall an archived large tool result (the ones replaced by a <persisted-output> "
++        "handle + excerpt) with line-numbered pagination. Pass the ORIGINAL tool_call_id "
++        "as ref, or the archive path printed in the <persisted-output> block. Use this "
++        "instead of re-running the original tool: the full output is already on disk. "
++        "Archives are pruned after ~24h; re-run the tool if expired."
++    ),
++    "parameters": {
++        "type": "object",
++        "properties": {
++            "ref": {"type": "string", "description": "tool_call_id of the archived result, or its archive file path"},
++            "offset": {"type": "integer", "description": "Line number to start from (1-indexed, default 1)", "default": 1, "minimum": 1},
++            "limit": {"type": "integer", "description": f"Maximum lines per page (default {_DEFAULT_RECALL_LIMIT}, max {_MAX_RECALL_LIMIT})", "default": _DEFAULT_RECALL_LIMIT, "maximum": _MAX_RECALL_LIMIT},
++        },
++        "required": ["ref"],
++    },
++}
++
++registry.register(name="obs_recall", toolset="file", schema=OBS_RECALL_SCHEMA,
++                  handler=_handle_obs_recall, emoji="🗃️", max_result_size_chars=100_000)
+--- /dev/null
++++ b/tests/tools/test_observation_pack_recall.py
+@@ -0,0 +1,132 @@
++"""Tests for SoL-Pi ObservationPack parity: tail excerpt, obs_recall paging, ledger.
++
++Covers ``tools/tool_result_storage.py`` (head+tail persisted message with the recall
++id) and ``tools/obs_recall_tool.py`` (id/path resolution confinement + pagination)
++plus the ``tools/efficiency_ledger.py`` JSONL trail.
++"""
++
++import json
++import os
++
++import pytest
++
++from hermes_constants import reset_hermes_home_override, set_hermes_home_override
++from tools.efficiency_ledger import ledger_path, record_efficiency_event
++from tools.tool_result_storage import (
++    PERSISTED_OUTPUT_TAG,
++    generate_tail_excerpt,
++    maybe_persist_tool_result,
++)
++from tools import obs_recall_tool as ort
++
++
++@pytest.fixture(autouse=True)
++def isolated_home(tmp_path):
++    token = set_hermes_home_override(str(tmp_path / "hermes"))
++    yield tmp_path
++    reset_hermes_home_override(token)
++
++
++def _big_log(lines: int = 900) -> str:
++    body = "\n".join(f"line-{i} diagnostic payload" for i in range(1, lines))
++    return body + "\nFINAL-VERDICT: 3 tests failed at assert x == y"
++
++
++class TestTailExcerpt:
++    def test_short_content_has_no_tail(self):
++        assert generate_tail_excerpt("short", max_chars=10) == ""
++
++    def test_tail_carries_the_end(self):
++        content = "\n".join(f"l{i}" for i in range(200))
++        tail = generate_tail_excerpt(content, max_chars=40)
++        assert tail
++        assert tail in content
++        assert "l199" in tail  # the end survives
++
++    def test_persisted_message_has_head_and_tail_and_ref(self):
++        msg = maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_tail_1", env=None, threshold=1000)
++        assert PERSISTED_OUTPUT_TAG in msg
++        assert "Result id for obs_recall: toolu_tail_1" in msg
++        assert "Preview (first" in msg
++        assert "Tail (last" in msg
++        assert "FINAL-VERDICT: 3 tests failed" in msg  # verdict lives at the end
++        assert "line-1 diagnostic" in msg            # head survives too
++
++    def test_extract_persisted_path_still_parses(self):
++        from tools.tool_result_storage import extract_persisted_path
++        msg = maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_tail_2", env=None, threshold=1000)
++        path = extract_persisted_path(msg)
++        assert path and os.path.isfile(path)
++
++
++class TestObsRecall:
++    def test_recall_by_id_paged(self):
++        maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_rec_1", env=None, threshold=1000)
++        res = json.loads(ort._recall_observation("toolu_rec_1", offset=895, limit=5))
++        assert res["content"].startswith("895|line-895")
++        assert res["truncated"] is True
++        assert res["next_offset"] == 900
++        assert res["total_lines"] == 900
++
++    def test_recall_last_page_not_truncated(self):
++        maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_rec_2", env=None, threshold=1000)
++        res = json.loads(ort._recall_observation("toolu_rec_2", offset=899, limit=5))
++        assert "900|FINAL-VERDICT" in res["content"]
++        assert res["truncated"] is False
++
++    def test_recall_by_archive_path(self):
++        msg = maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_rec_3", env=None, threshold=1000)
++        path = msg.split("Full output saved to: ")[1].splitlines()[0]
++        res = json.loads(ort._recall_observation(path, offset=1, limit=3))
++        assert res["content"].startswith("1|line-1")
++
++    def test_missing_ref_errors(self):
++        res = json.loads(ort._recall_observation("nope_missing"))
++        assert "error" in res
++
++    def test_arbitrary_paths_refused_outside_spillover(self):
++        # obs_recall must not become a second read_file: paths outside the
++        # spillover/hermes-results dirs are refused (read_file's deny lists
++        # would otherwise be bypassable through it).
++        for ref in ("/etc/hosts", str(__file__)):
++            res = json.loads(ort._recall_observation(ref))
++            assert "error" in res, ref
++
++    def test_handler_requires_ref(self):
++        res = json.loads(ort._handle_obs_recall({}))
++        assert "error" in res
++
++    def test_handler_end_to_end(self):
++        maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_rec_4", env=None, threshold=1000)
++        res = json.loads(ort._handle_obs_recall({"ref": "toolu_rec_4", "offset": 2, "limit": 2}))
++        assert "2|line-2" in res["content"] and "3|line-3" in res["content"]
++
++
++class TestLedger:
++    def test_events_land_in_isolated_home(self):
++        maybe_persist_tool_result(
++            content=_big_log(), tool_name="terminal",
++            tool_use_id="toolu_led_1", env=None, threshold=1000)
++        ort._recall_observation("toolu_led_1", offset=1, limit=10)
++        events = [json.loads(line) for line in ledger_path().read_text().splitlines()]
++        kinds = {e["kind"] for e in events}
++        assert {"observation_archive", "obs_recall"} <= kinds
++        arch = next(e for e in events if e["kind"] == "observation_archive")
++        assert arch["chars_original"] > arch["chars_inline"] > 0
++        assert arch["ref"] == "toolu_led_1"
++
++    def test_record_never_raises_on_bad_payload(self):
++        assert record_efficiency_event("weird", blob=object()) in (True, False)
++        assert record_efficiency_event("deep", nested={"a": {"b": {"c": {"d": {"e": "x"}}}}}) is True
