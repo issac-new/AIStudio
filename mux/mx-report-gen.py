@@ -2856,12 +2856,16 @@ def artifact_panorama():
             else:
                 n_files += 1
                 ok_all, _ = _art_checks_html(raw, checks)
-                miss = [lb for lb, rx in checks if not re.search(rx, raw)]
+                # 逐项呈现（2026-10-12 用户指令：符合与不符合项具体列出，不只计数）——
+                # 符合项绿 ✓+项名，缺项红 ✗+项名；行内联排，与步内折叠块字段级核对同源。
+                _items = ' '.join(
+                    (f'<span class="d-ok">✓{H.escape(lb)}</span>' if re.search(rx, raw)
+                     else f'<span class="d-warn" style="font-weight:700">✗{H.escape(lb)}（缺）</span>')
+                    for lb, rx in checks)
                 if ok_all:
-                    res, n_ok = '<span class="art-verdict ok">模版符合（全项 ✅）</span>', n_ok + 1
+                    res, n_ok = f'<span class="art-verdict ok">模版符合</span><br>{_items}', n_ok + 1
                 else:
-                    res, n_bad = (f'<span class="art-verdict miss">模版不符（缺：{H.escape("、".join(miss))}）</span>',
-                                  n_bad + 1)
+                    res, n_bad = f'<span class="art-verdict miss">模版不符</span><br>{_items}', n_bad + 1
                 anchor = f'<code>{H.escape(aref)}@{asha or "?"}</code>'
             rows.append(f'<tr><td><b>{n}</b></td><td>{H.escape(name)}<br>'
                         f'<span class="art-path">{H.escape(rel or "—")}</span></td><td>{res}</td><td>{anchor}</td></tr>')
