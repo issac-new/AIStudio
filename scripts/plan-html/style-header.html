@@ -154,4 +154,39 @@ div.mermaid{background:var(--surface); border:1px solid var(--line); border-radi
 .doc-main > h1{font-size:21px; margin:0; padding:2px 0 8px; border-bottom:2px solid var(--line); color:var(--ink-strong)}
 .doc-main > h1 + blockquote{margin-top:6px}
 .gw-terms{margin-bottom:6px}
+/* 阅读习惯件（2026-10-12）：长表斑马纹+行悬停+平滑滚动+回顶按钮+TOC 当前节高亮 */
+html{scroll-behavior:smooth}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:hover{background:var(--accent-soft)}
+#back-top{position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92;display:none}
+#TOC a.nav-on{background:var(--accent-soft);color:var(--accent-deep);font-weight:600}
 </style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('#TOC a[href^="#"]'));
+    var byId = {};
+    navLinks.forEach(function (a) {
+      var id = a.getAttribute("href").slice(1);
+      if (id && document.getElementById(id)) { (byId[id] = byId[id] || []).push(a); }
+    });
+    var targets = Object.keys(byId).map(function (id) { return document.getElementById(id); });
+    if (targets.length && "IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          navLinks.forEach(function (a) { a.classList.remove("nav-on"); });
+          (byId[e.target.id] || []).forEach(function (a) { a.classList.add("nav-on"); });
+        });
+      }, { rootMargin: "-12% 0px -70% 0px" });
+      targets.forEach(function (t) { io.observe(t); });
+    }
+    var btn = document.createElement("button");
+    btn.id = "back-top"; btn.title = "回到顶部"; btn.textContent = "↑";
+    document.body.appendChild(btn);
+    var onScroll = function () { btn.style.display = window.scrollY > window.innerHeight ? "block" : "none"; };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    btn.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+  });
+})();
+</script>
