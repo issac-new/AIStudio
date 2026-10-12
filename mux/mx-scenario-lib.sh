@@ -683,7 +683,7 @@ _any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
 # 本函数 180s 节流出一行「分支 commit 计数 + PROGRESS 中间锚」推进行进 scenario.log，
 # 根治"长编码 4h 静默盲窗"（run12 MP/CHWX/CHALI 实录：三腿全程零推进信号）。
 dev_progress_ping() {
-  local now last f b n line pg wtn wtline tip rs mark
+  local now last f b n line pg wtn wtline tip rs mark _act _ag _aw _p
   f="$EVID_DIR/progress-ping.ts"; now=$(date +%s)
   last=$(cat "$f" 2>/dev/null || echo 0)
   (( now - last < 180 )) && return 0
@@ -712,7 +712,16 @@ dev_progress_ping() {
       done | awk '{print $0}' )
   pg=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 60 2>/dev/null \
        | jq -r '[.[] | (.content.body // "") | scan("PROGRESS-[A-Za-z0-9-]+")] | flatten | unique | join(" ")' 2>/dev/null || true)
-  note "[进度锚] 交付分支：$line；工作区在途：${wtline:-无}；PROGRESS-ANCHORS=${pg:-无}"
+  # [V8.16 饱和度指标数据源] 在线工位=近 10 分钟有工作行的档案数（工位在位率=在线/应在线；
+  # 应在线由阶段定：devimpl=6/testpass 分片=6/其他按段。供报告 §5.7 曲线实算）
+  local _act=0 _ag _aw _p
+  for _p in fanfan hu lin chen xiao mei wei qi fei arch secops ops audit; do
+    _ag="$HERMES_ROOT/profiles/$_p/logs/agent.log"
+    [[ -f "$_ag" ]] || continue
+    _aw=$(_agent_log_last_work_ts "$_ag" 2>/dev/null || echo 0)
+    (( _aw > 0 && $(date +%s) - _aw < 600 )) && _act=$((_act+1))
+  done
+  note "[进度锚] 交付分支：$line；工作区在途：${wtline:-无}；在线工位=${_act}；PROGRESS-ANCHORS=${pg:-无}"
 }
 
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
