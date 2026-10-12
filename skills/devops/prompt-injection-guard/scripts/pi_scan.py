@@ -36,6 +36,18 @@ import codecs
 import json
 import re
 import sys
+import unicodedata
+
+# Invisible-Unicode table shared with sanitize_text.py (_INVISIBLE): zero-width,
+# bidi controls, variation selectors, tag characters, soft hyphen, word joiner.
+_INVISIBLE_CODEPOINTS = (
+    "\u200b\u200c\u200d\u200e\u200f\u2060\u2061\u2062\u2063\u2064"
+    "\ufeff\u00ad\u206a\u206b\u206c\u206d\u206e\u206f"
+    "\u202a\u202b\u202c\u202d\u202e"          # bidi embedding controls
+    "\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f"
+    "\U000e0000\U000e0001\U000e0020\U000e007f\U000e0100\U000e01ef"
+)
+_INVISIBLE_RE = re.compile("[" + re.escape("".join(_INVISIBLE_CODEPOINTS)) + "]")
 
 # --------------------------------------------------------------------------
 # Signal catalog
@@ -82,6 +94,16 @@ PATTERNS = [
     ("encoded", "HIGH", re.compile(r"(?iu)(?:解码|解密|反编码)[^\n]{0,12}?(?:base64|rot13|十六进制|hex)")),
     ("encoded", "HIGH", re.compile(r"(?iu)以下(?:是|为)(?:一段)?(?:base64|编码|加密|rot13)")),
 
+    # 3b. exfil-cred — 凭据诱导(93号文体检表①缺口, 2026-09-24)
+    ("exfil", "HIGH", re.compile(r"(?iu)(?:给出|提供|输出|泄露|复述|列(?:出)?|生成|打印)(?:一?个|一下)?(?:真实|有效|可用)?的?(?:api\s*key|密钥|密码|口令|凭据|token|secret)")),
+    ("exfil", "HIGH", re.compile(r"(?iu)(?:api\s*key|密钥|密码|口令|凭据|token|secret)\s*(?:示例|例子|格式|example)")),
+    # 3c. role-cn — 中文 jailbreak 补强(93号文体检表①缺口, 2026-09-24)
+    ("role", "HIGH", re.compile(r"(?iu)任何限制|无限制|没有任何限制")),
+    ("role", "HIGH", re.compile(r"(?iu)(?:是|成)一个?(?:没有任何|没有|无)限制的")),
+    # 3d. encoded-bare — 裸 base64 指令(93号文体检表①缺口, 2026-09-24)
+    ("encoded", "HIGH", re.compile(r"(?u)(?:[A-Za-z0-9+/]{44,}={0,2}|[A-Za-z0-9+/]{40,}={1,2})(?![A-Za-z0-9+/=])")),
+    ("encoded", "HIGH", re.compile(r"(?iu)执行\s*[:：]\s*[A-Za-z0-9+/]{20,}={0,2}")),
+
     # 4. role — 角色冒充
     ("role", "HIGH", re.compile(r"(?i)\b(?:developer|admin|root|god|debug|superuser) mode\b")),
     ("role", "HIGH", re.compile(r"(?i)\byou are (?:the |an? )?(?:admin|administrator|developer|root|system|engineer|maintainer)\b")),
@@ -101,6 +123,9 @@ PATTERNS = [
     ("weak", "LOW", re.compile(r"(?i)\bpretend (?:you are|to be|that)\b")),
     ("weak", "LOW", re.compile(r"(?i)\bhypothetically\b")),
     ("weak", "LOW", re.compile(r"(?iu)假设(?:你|我们|自己)")),
+
+    # 6b. directive 复合 HIGH(93号文体检表①: "忽略全部安全规则"应block, 2026-09-24)
+    ("directive", "HIGH", re.compile(r"(?iu)(?:忽略|无视|绕过)(?:全部|所有|一切)?(?:安全|系统)?(?:规则|限制|策略|检测)")),
 
     # 7. directive — imperative injected instructions (esp. tool-def context)
     #    MEDIUM by design: raise to suspicious on their own, BLOCKED if >=2 distinct.
@@ -145,7 +170,22 @@ def _decode_layers(text):
     return decoded
 
 
+def _strip_invisible(text: str) -> str:
+    """Remove invisible/homoglyph-adjacent Unicode before pattern matching.
+
+    Zero-width / bidi / variation-selector / tag / soft-hyphen chars split
+    instruction words ("sys\\u200btem") and defeat every surface pattern while
+    staying invisible to a human reader. Mirrors sanitize_text._INVISIBLE so
+    detect and sanitize agree on what counts as invisible. CJK/Latin content
+    is untouched (verified by the benign-control tests).
+    """
+    if not text:
+        return text
+    return _INVISIBLE_RE.sub("", unicodedata.normalize("NFKC", text))
+
+
 def scan_once(text):
+    text = _strip_invisible(text)
     hits = []
     for category, conf, rx in PATTERNS:
         for m in rx.finditer(text):

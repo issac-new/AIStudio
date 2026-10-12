@@ -1,5 +1,6 @@
 ---
 name: shared-charter-propagation
+version: 1.0.0
 description: "Use when a doctrine must reach all agent SOULs."
 metadata:
   hermes:

@@ -11,7 +11,7 @@ confidence: high
 stability: stable
 evidence:
   - doc: workspace/research/taobao-rd-harness/analysis-report.md §四
-  - human: 图爸（决策 B+A+B）
+  - human: 用户（决策 B+A+B）
 tags:
   - candidate-knowledge
   - knowledge-base

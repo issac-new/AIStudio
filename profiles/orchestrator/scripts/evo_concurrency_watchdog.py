@@ -51,7 +51,7 @@ T_L1_429, T_L2_429 = 3, 10
 T_L2_503 = 3
 
 LEVELS = {
-    "L0": {"max_in_progress": 12, "per_profile": 4},
+    "L0": {"max_in_progress": 8, "per_profile": 3},
     "L1": {"max_in_progress": 6, "per_profile": 2},
     "L2": {"max_in_progress": 2, "per_profile": 1},
 }

@@ -1,19 +1,19 @@
 # Matrix 协作防死循环与终止规则（防刷屏 / 防循环聊天 / 防算力浪费）
 
 > 适用范围：所有通过 Matrix 参与跨机 agent 协作的 profile
-> 强制级别：🟡 提示性纪律（引用声明依赖自律；orchestrator SOUL 内规则块为 🔴 价值红线豁免）——承担 Matrix 收发职责的 profile 的 SOUL.md 应引用本文件（2026-08-21 scope 精准化：当前仅 orchestrator 收发 Matrix，其余 profile 无此职责无需引用；未来新增 Matrix profile 须同步挂载）
+> 强制级别：🟡 提示性纪律（引用声明依赖自律；orchestrator SOUL 内规则块为 🔴 价值红线豁免）——承担 Matrix 收发职责的 profile 的 SOUL.md 应引用本文件（当前仅 orchestrator 收发 Matrix；未来新增 Matrix profile 须同步挂载）
 > 设计目标：防 bot↔bot 循环聊天、防消息刷屏、防无意义算力消耗
-> 阈值基线（2026-08-20 与图爸确认的保守档）：N=8 条无新信息 / 单任务消息上限 30 条 / 超时 30 分钟
+> 阈值基线（保守档）：N=8 条无新信息 / 单任务消息上限 30 条 / 超时 30 分钟
 
 ---
 
-## 〇、核心认知纠偏（2026-08-20，重要）
+## 〇、核心认知：防对话结构，不防身份
 
 **对端 Matrix 账号可能是人，也可能是 bot——MXID 无法区分。** 因此**按发送者身份设防（黑名单）必然误伤或漏防**：
 - 把人类 MXID 加黑名单 → bot 收不到人类指令，通讯中断；
 - 只按 MXID 屏蔽已知 bot → 新 bot / 人类刷屏漏防。
 
-**正确方向：按消息特征和对话结构设防。** 死循环的本质是「**对话无新增信息**」——这与发送者是人还是 bot 无关。本文件的七层防线（含 2026-08-20 增补的噪声过滤层）全部围绕「识别并阻断无信息增量的对话」设计，而非围绕「识别 bot」。
+**正确方向：按消息特征和对话结构设防。** 死循环的本质是「**对话无新增信息**」——这与发送者是人还是 bot 无关。七层防线全部围绕「识别并阻断无信息增量的对话」设计，不围绕「识别 bot」。
 
 ---
 
@@ -26,7 +26,7 @@
 3. **消息刷屏**：单个任务在房间里刷几十条无增量信息，淹没有效信号。
 4. **超时悬挂**：对端无响应但本机持续重发/等待，占住算力不放。
 
-## 二、七层防线（含 2026-08-20 增补的噪声过滤层）（从预防到检测到熔断）
+## 二、七层防线（从预防到检测到熔断）
 
 | 层 | 机制 | 位置 | 原理 | 防什么 |
 |----|------|------|------|--------|
@@ -38,11 +38,11 @@
 | **6** | 熔断：硬阈值 N=8/上限30/超时30min → `kanban_block` | 行为层 | 最后防线 | 前 5 层全失守时兜底 |
 | **7** | 噪声过滤：拦截基础设施环境噪声（不进 agent turn） | 源码层 | 混在 m.room.message 里的伪消息不烧 token | 心跳/加密失败/空消息/单字符误发/同步重放 |
 
-### 第 7 层：基础设施环境噪声过滤（源码层，2026-08-20 增补；方式 A 共享 util 重构）
+### 第 7 层：基础设施环境噪声过滤（源码层）
 
 **背景**：adapter 在事件订阅层只注册消息类 handler——typing/已读回执/presence/成员变动这些经典噪声天然不烧 token。真正漏进来的是混在消息流里的**伪消息**。
 
-**架构（方式 A 共享 util，2026-08-20）**：通用逻辑抽到共享模块 **`gateway/noise_filter.py`**（单一事实源），matrix / weixin adapter 各自 import 并按平台特性传参。**同一份代码，两个平台，token 节省覆盖 matrix + weixin**。
+**架构**：通用逻辑在共享模块 **`gateway/noise_filter.py`**（单一事实源），matrix / weixin adapter 各自 import 并按平台特性传参——同一份代码覆盖两个平台。
 
 **平台差异（按平台特性传参，非一刀切）**：
 
@@ -57,13 +57,13 @@
 | 撤回回声 | — | ✅ | weixin 特有 |
 | 纯表情 / 链接卡片无文字 | 记日志 | 记日志 | **语义级，默认不拦**（见下） |
 
-**微信保守策略（图爸 2026-08-20 决策）**：微信是日常通讯（含妈妈/家人），只拦**高置信度**噪声；语义级（纯表情/链接卡片）可能是真实人类意图，**默认只记日志不拦截**——要拦需显式设 `WEIXIN_NOISE_FILTER_SEMANTIC_EMOJI=true` 等。matrix 相对宽松（「宁可错杀」）。
+**微信保守策略**：微信是家人日常通讯，只拦**高置信度**噪声；语义级（纯表情/链接卡片）可能是真实人类意图，**默认只记日志不拦截**——要拦需显式设 `WEIXIN_NOISE_FILTER_SEMANTIC_EMOJI=true` 等。matrix 相对宽松。
 
 **机制**：在进 agent turn 之前调用 `noise_reason()` 判定，命中即拦截并打 debug 日志（含原因）。可观测 + 可回退。
 
 **开关命名**：`{PLATFORM}_NOISE_FILTER` 总开关 + `{PLATFORM}_NOISE_FILTER_{CLASS}` 子类开关（默认 true 开启；语义级 SEMANTIC_* 默认 false）。matrix 开关在 orchestrator/.env；weixin 开关在 orchestrator/.env + [已移除]-orchestrator/.env（两个 gateway 进程）。
 
-**已验证**（2026-08-20 单元测试）：matrix 路径 10 例、weixin 路径 9 例、语义级 2 例全部通过；平台差异精确生效（matrix 拦加密占位/同步重放、weixin 拦 STT 失败/撤回回声）。漂移→自动重打场景端到端验证通过。
+**已验证**：matrix 路径 10 例、weixin 路径 9 例、语义级 2 例单元测试全部通过；平台差异精确生效（matrix 拦加密占位/同步重放、weixin 拦 STT 失败/撤回回声）。漂移→自动重打场景端到端验证通过。
 
 ### 第 1 层：协议标记（源码层，根治规范 bot 互回）
 
@@ -71,7 +71,7 @@
 
 **原理**：Matrix 生态约定 `m.notice` 专为 bot 设计。遵守规范的 bot 收到 notice 不会响应——死循环从协议层被掐断。
 
-**adapter 现状**（2026-08-20 查证）：
+**adapter 现状**：
 - **收**：`adapter.py` L3333 已忽略 `m.notice`（`MATRIX_PROCESS_NOTICES` 默认 false）——收端已合规。
 - **发**：L2340 bot 回复发的是 `m.text`——发端**未合规**，需改为 `m.notice`。
 
@@ -140,13 +140,13 @@
 熔断后：
 - 把「为什么熔断、当前进展、需要什么人工输入」写进 `kanban_block` reason；
 - **不要**继续向房间发消息解释（那只会加剧刷屏）；
-- 等图爸或对端管理员解除，由 dispatcher 重新拉起。
+- 等用户或对端管理员解除，由 dispatcher 重新拉起。
 
 ## 三、辅助机制：入口黑名单（保留，仅针对已确认的纯 bot）
 
 `MATRIX_IGNORE_USER_PATTERNS` 黑名单**保留但仅用于已 100% 确认为纯 bot 的对端 MXID**（如对端明确部署的自动化 agent，无人类使用）。**人类账号一律不加**。
 
-> ⚠️ 黑名单是**辅助**而非主防——它无法区分人和 bot，主防永远靠七层防线（含 2026-08-20 增补的噪声过滤层）（特征+结构）。对端账号性质台账见 `_shared/knowledge/candidate/matrix-peers.md`（2026-08-25 从 `_shared/decisions/` 迁移）。**当前黑名单为空**（已知 @cuishi/@testuser2 均为人类账号）。
+> ⚠️ 黑名单是**辅助**而非主防——它无法区分人和 bot，主防永远靠七层防线（特征+结构）。对端账号性质台账见 `_shared/knowledge/candidate/matrix-peers.md`。**当前黑名单为空**（已知 @cuishi/@testuser2 均为人类账号）。
 
 ## 四、落地位置总览
 
@@ -180,7 +180,7 @@
 grep -n "m.notice" ~/.hermes/hermes-agent/plugins/platforms/matrix/adapter.py
 
 # 2. anti-loop 标记区块存在（发端 auto_generated + 收端检测）
-grep -c "swarm:anti-loop"  # 期望 4，2026-08-21 实机 2（两个 profile 的 watchdog 漂移未重打，属已知债务，weixin patch 待人工重建） ~/.hermes/hermes-agent/plugins/platforms/matrix/adapter.py   # 应为 4
+grep -c "swarm:anti-loop" ~/.hermes/hermes-agent/plugins/platforms/matrix/adapter.py   # 应为 4
 
 # 3. noise-filter 标记区块存在（第 7 层）
 grep -c "swarm:noise-filter" ~/.hermes/hermes-agent/plugins/platforms/matrix/adapter.py   # 应为 3

@@ -18,7 +18,7 @@
 
 **关键区分**：Harness 防"看起来完成"伪装成"真实完成"（四权分离：行动/自评/评分/环境修改）。
 
-### 顶层来源声明（G12，2026-08-21 增补）
+### 顶层来源声明（G12）
 
 > 本体顶层**不自研、只显式化**：骨架复用 Palantir 四要素模型（Data/Logic/Action/Security，palantir.com/docs/foundry/ontology/why-ontology），角色语义复用 UFO-C（Guizzardi 2005，Ontological Foundations for Structural Conceptual Models——agent/role/goal/commitment 社会性实体一等公民）。对象/动作/安全三层分别对应 Palantir 的 Object/Action/Marking types；27 profile 的 role 实例化遵循 OntoClean 准则（role ≠ subclass，见 §一-bis-2 审计表）。
 
@@ -33,10 +33,10 @@
 object_type: Task
 properties:
   title: {type: string, desc: "任务标题"}
-  status: {type: enum, values: [triage, todo, scheduled, ready, running, blocked, review, done, archived]}  # v1.3: 对齐 kanban_db.py:100 的 9 态实现（补 scheduled/review）
+  status: {type: enum, values: [triage, todo, scheduled, ready, running, blocked, review, done, archived]}  # 对齐 kanban_db.py:100 的 9 态实现
   assignee: {type: string, desc: "执行者 profile 名"}
   priority: {type: int, range: "0-30"}
-  board: {type: enum, values: [swarm, hack, product, ops, [已移除], platform, [已移除]]  # 2026-08-21 补 [已移除]（rules 强制跨板建卡）}
+  board: {type: enum, values: [swarm, hack, product, ops, [已移除], platform, [已移除]]}
   parents: {type: "list[ref:Task]", desc: "依赖的任务"}
   children: {type: "list[ref:Task]", desc: "派生的子任务"}
   created_at: {type: datetime}
@@ -154,9 +154,9 @@ links:
 
 ---
 
-> **已移档**（§一-bis Process Types/ValueChain，含产能三指标与 FDE GAP-1/2/3 提案）：本段内容见 `_shared/archive/ontology-academic-devices.md`（2026-09-08 教条排查裁决：无运行时消费方，移出契约层；复查条件：首个真实 Process 由 orchestrator 非测试路径创建时回迁）。
+> **已移档**（§一-bis Process Types/ValueChain，含产能三指标与 FDE GAP-1/2/3 提案）：本段内容见 `_shared/archive/ontology-academic-devices.md`。移档原因：无运行时消费方，不进契约层；复查条件：首个真实 Process 由 orchestrator 非测试路径创建时回迁。
 
-## 一-bis-2、Link Types（关系语义，G4，2026-08-21 增补）
+## 一-bis-2、Link Types（关系语义，G4）
 
 > 来源：Palantir Link type（一等公民关系，palantir.com/docs/foundry/ontology/core-concepts）。此前 Hermes 仅有 task_links 表的 parent-child 物理外键，语义未声明。
 
@@ -173,8 +173,9 @@ links:
 1. 关系语义写进 kanban_comment 时必须用上表动词原词（不用"参考了""来自"等同义改写）
 2. `derived_from` 是 markings 传播的触发器——引用 marked artifact 必须声明此 link
 3. 新增关系类型需走 ontology 演进评审（platform-ontology-curator）
+4. **Domain/Range 显式化（GB/T 48000.3 融合映射，2026-10-10）**：上表「约束」列即本集群的 Domain/Range 声明——depends_on 的两端必须是 Task，claims 的 evidence 必须真实存在（蓝军门 4）。「购买」连接「客户→商品」的防呆逻辑同构：link 写入时两端对象类型必须与权威关系定义一致，形状校验器按 `ontology-shapes.yaml` 逐 link 检查 domain/range，荒谬三元组（如 Artifact depends_on Profile）在写入巡检阶段拦截。
 
-**对象 schema 内 ad-hoc link 对账表（v1.3 增补，消除 MAJOR-2 契约漂移）**：
+**对象 schema 内 ad-hoc link 对账表**（消除 MAJOR-2 契约漂移）：
 
 对象 schema 里还存在以下 link 名，它们是六种权威关系的**特化（subtype）**，不是非法名：
 
@@ -188,7 +189,7 @@ links:
 
 **规则**：新写 schema 时一律用六种权威动词；既有 ad-hoc 名按本表映射解读，不再新增。
 
-> **已移档**（§一-bis-3 OntoClean 元性质审计表、§一-bis-4 同一性标准）：本段内容见 `_shared/archive/ontology-academic-devices.md`（2026-09-08 教条排查裁决：无运行时消费方，移出契约层；复查条件：出现真实脚本消费需求时回迁）。
+> **已移档**（§一-bis-3 OntoClean 元性质审计表、§一-bis-4 同一性标准）：本段内容见 `_shared/archive/ontology-academic-devices.md`。移档原因：无运行时消费方；复查条件：出现真实脚本消费需求时回迁。
 
 ---
 
@@ -224,7 +225,7 @@ actions:
   browser_type:    {side_effects: browser_action, reversible: false, level: shared_state}
 ```
 
-### Action 名与现行工具面映射（v1.4 增补）
+### Action 名与现行工具面映射
 
 上表 action 名为**语义层契约名**；现行工具面存在演化（browser_navigate/click/type → `browser_exec` / `computer_use` / `cua_browser_*` 命名）。判定 `reversible` 与 `level` 时按语义等价映射，不因工具改名而绕过 Staged Action 协议。新增工具默认归类：`reversible=false, level=shared_state`，直到在本表显式登记。
 
@@ -332,7 +333,7 @@ kanban_complete(
 
 ---
 
-## 六、能力问题清单（Competency Questions，G2，2026-08-21 增补）
+## 六、能力问题清单（Competency Questions）
 
 > 来源：Grüninger & Fox, "The role of competency questions in enterprise engineering"（TOVE 项目, 1995）。CQ 是本体的**范围契约与回归测试**：本体必须能回答的问题清单。每季度由 platform-ontology-curator 跑一遍，答不出 = 本体有 Gap 或对象缺失。
 
@@ -382,7 +383,7 @@ kanban_complete(
 
 ---
 
-## 七、运行时事实源演进状态（Gap-Closing Program, 2026-08-28）
+## 七、运行时事实源演进状态
 
 > 本段为 **加法演进**（v1.5 → v1.6），仅追加不删改 §一~§六 既有语义。记录「从 Prompt 软契约升级为运行时一等事实源 + fail-closed 强制控制」的工程计划、当前基线、子卡映射、演进原则。使跨板协作有单一事实源追踪状态。
 
@@ -402,62 +403,55 @@ kanban_complete(
 | **G10** | 稳定单元影响域弱连接 | worker 写 `impacted:[...]` 无校验 | 🟡 MEDIUM |
 | **G11** | TLP/CUI/SECRET 从未实际用 | clearances 配了但 0 次触发 | 🟡 MEDIUM |
 
-### 7.2 补齐计划（分三级，按 ROI 排序，C1-C4 对应父卡 t_65725399 子卡）
+### 7.2 补齐计划（分三级，按 ROI 排序）
 
 | 级别 | 措施 | 对应 Gap | 交付卡 | 状态 |
 |------|------|----------|--------|------|
-| **一级**（软约束变硬） | P1 补齐 4 board markings 列 | G7 | C1 `t_f6261b23` | ✅ done |
-| | P2 派发前 clearance fail-closed gate | G2 | C2 `t_fb1303ab` | ✅ done |
-| | P3 metadata 合规 CQ16 + watchdog + cron | G6, G8 | C3 `t_2b065768` | ⚠️ done 但 cron 未注册 |
-| **二级**（本体成运行时事实源） | P4 swarm ontology_objects/object_links 试点 | G1, G4 | C4 `t_7e2c0d8f` | ✅ done |
+| **一级**（软约束变硬） | P1 补齐 4 board markings 列 | G7 | ✅ done |
+| | P2 派发前 clearance fail-closed gate | G2 | ✅ done |
+| | P3 metadata 合规 CQ16 + watchdog + cron | G6, G8 | ⚠️ done 但 cron 未注册 |
+| **二级**（本体成运行时事实源） | P4 swarm ontology_objects/object_links 试点 | G1, G4 | ✅ done |
 | | P5 关系语义物理化（object_links + 触发器） | G4 | 后续卡 | 待定 |
 | | P6 Process/ValueChain 落地 | G5 | 后续卡 | 待定 |
 | **三级**（接入 LLM 推理） | P7 ontology_validate 工具 | G3 | 后续卡 | 待定 |
 | | P8 CQ 进闭环（curator 自动回填 OEL） | G3, G8 | 后续卡 | 待定 |
-| | P9 稳定单元影响域强约束 + 标记实战演练 | G9, G10, G11 | `t_44f56a7c` | ✅ done |
+| | P9 稳定单元影响域强约束 + 标记实战演练 | G9, G10, G11 | ✅ done |
 
 ### 7.3 演进原则
 
 1. **加法优先，向后兼容**：默认追加 type/property/link/action/marking，不破坏既有语义。破坏性变更须附迁移路径 + deprecation 标注 + 影响 profile 清单。
 2. **四要素完整性**：每个新增 object type 必须含 properties + links + markings 三段；涉及副作用的配 action type；涉及跨团队交接的配 interface type。只加 data 不加 logic/action/security = 未完成。
 3. **机械可验证**：所有契约变更、合规检查、审计均可脚本化复跑。不接受"目测一致"。
-4. **单一事实源**：gap 状态、子卡映射、基线数据仅在本段登记，子卡 body 引用本段（`ref: ontology.md §7.2`），不重复造轮子。
+4. **单一事实源**：gap 状态、子卡映射、基线数据仅在本段登记，子卡 body 引用本段（`ref: ontology.md §7.3`），不重复造轮子。
 5. **演进 = commit（P7，2026-08-29 落地）**：`~/.hermes/profiles/_shared/` 已纳入 git（独立子仓，非 symlink 破坏）。每次 ontology.md / marking-rules.md / output-contract.md 等共享契约演进 = 一次 `git commit`；Staged Action 执行步追加 commit 使变更可 git blame 追溯（temporal provenance）。`git -C ~/.hermes/profiles/_shared log -- ontology.md` 必须能查到演进 commit。
+6. **扩展红线（GB/T 48000.3 §9 融合，2026-10-10）**：新增/修改 object type 不得放宽既有约束——子类型的 link 域/值域只能收紧不能放宽（对应国标「扩展不破坏父类型 Domain/Range 约束」）；新词汇走新命名空间不与既有词汇冲突（集群口径：skill/对象名不与既有名同义冲突）；约束的继承是传递不是稀释。机械检查面：`~/.hermes/bin/ontology_shape_validator.py`（形状声明见 `_shared/02-org-orchestration/ontology-shapes.yaml`）。
 
-### 7.4 当前基线（2026-08-28 实测）
+### 7.4 当前基线
 
 - 7 board tasks 表 markings 列：7/7 存在、可写、事务回滚、NULL=0（C1 完成）
 - clearance fail-closed gate：`~/.hermes/bin/clearance_gate.py` hook 就绪，10/0 单测全绿，未触碰 kanban_tools.py 主路径（C2 完成）
-- swarm ontology_objects：Artifact=41, Finding=16, Decision=22；object_links: derived_from=44, based_on=142（C4 完成）
+- swarm ontology_objects：Artifact=19, Finding=19, Decision=43（含 26 条 2026-08 错标改型）；object_links: derived_from=6, based_on=0（治理 t_1279d6ff 2026-10-10：26 错标改型 + 25 枚举字段归位 + 142 Quote 端点内嵌 evidence_quotes 后删链 + 20 Path 端点 2 文件入库重连/14 失证删链 + 24 Task 端点内嵌删链；2 个文件入库新对象 79→81；shapes 校验 [PASS] violations=0）
 - CQ16 metadata 合规基线：137 done 任务仅 25 全齐 = 24.3% 合规（6/7 board <50%）
 - OEL 候选：3 行全 rejected（test data），无 pending 真实漂移
 
-### 7.5 子卡与契约依据映射
+### 7.5 契约依据映射
 
 | 子卡 | 依据本段条款 | 备注 |
 |------|--------------|------|
-| C1 `t_f6261b23` | §7.2 P1 / §7.4 第 1 条 | 仅 schema 迁移，幂等+dry-run |
-| C2 `t_fb1303ab` | §7.2 P2 / §7.4 第 2 条 | hook 形式，fail-closed |
-| C3 `t_2b065768` | §7.2 P3 / §7.4 第 4 条 | 需补注册 cron |
-| C4 `t_7e2c0d8f` | §7.2 P4 / §7.4 第 3 条 | 单点试点，评估后推广 |
+| P1 | 仅 schema 迁移，幂等+dry-run |
+| P2 | hook 形式，fail-closed |
+| P3 | 需补注册 cron |
+| P4 | 单点试点，评估后推广 |
 
 ---
 
-## 版本
-
-- v1.9 (2026-09-08): 教条排查裁决（kanban t_4eb5ebc3，证据 research/2026-09-08-dogma-audit-findings.json 条目 4/5/6）——移出三段无运行时消费方学术设备：§一-bis Process Types/ValueChain（含产能三指标、FDE GAP-1/2/3 提案）、§一-bis-3 OntoClean 元性质审计表、§一-bis-4 同一性标准；全文零丢失存档于 `_shared/archive/ontology-academic-devices.md`，正文各留一行指路。§一-bis-2 Link Types 保留原编号与正文不动；§六 CQ、§七 Gap 章节完好未动。
-- v1.7 (2026-08-29): P7 落地——`~/.hermes/profiles/_shared/` 纳入独立 git 子仓（.git 为本目录独立仓，不破坏既有 symlink/引用），共享契约演进=commit（temporal provenance）；§7.3 演进原则增第 5 条「演进=commit」。纯加法，不动 §一~§六 语义。
-- v1.8 (2026-08-29): P3 落地——§三 Decision/Finding 对象增补 PROV-O provenance 字段（recorded_by / source / confidence + provenance 复合字段），§3.3 新增 Provenance 规范段。回应 Semantica 启示三"每事实打溯源标记"（G2/G11 从装饰变证据）。纯加法演进，不动 §一~§六 语义；向后兼容（缺省置信度写入时不强制，但安全/PII finding 建议齐）。
-- v1.6 (2026-08-28): 新增 §七「运行时事实源演进状态」，记录 G1–G11 差距、三级补齐计划、C1-C4 子卡映射、当前基线、演进原则。加法演进，不删改 §一~§六 语义。
-- v1.5 (2026-08-27): 附录「稳定单元注册表」来源澄清——`stable-units.md` 与 `phase2-gap-analysis.md` 实为本体论四部曲调研档案（`research/ontology-four-books/phase2-gap-analysis.md`，非 _shared 合并产物）；F6 归并是把其正文吸收进本文件附录，原独立文件不再存在。引用标注改为指向 `research/` 档案源。
-- v1.1 (2026-08-21): 一-bis 增补 Process/ValueChain 流程级对象 + 产能三指标（融合自麦肯锡智能体驱动型组织框架）
-- v1.2 (2026-08-21): Gap 修补——顶层来源声明（G12）+ Link Types 六种关系语义（G4）+ OntoClean 元性质审计表（G5）+ 同一性标准（G11）+ 能力问题清单 15 问（G2）。依据：Palantir Link types、Guarino & Welty OntoClean (CACM 2002)、Quine identity criteria、Grüninger & Fox CQ (TOVE 1995)
-- v1.3 (2026-08-22): 五 lens 专家评审驱动的契约对齐——Task.status 补 scheduled/review（对齐 kanban_db.py 9 态实现）；Finding.evidence 补字段（消除 claims/同一性悬空引用）；Knowledge 补 markings（[已移除] 儿童 PII 通道）+ domain 枚举补 [已移除]/swarm；CQ9/CQ11 悬空引用修正（retwork→task_events 事实源；verification→metadata 动态键）；ad-hoc link 对账表（15 个 schema 内 link 名归映射到 6 权威关系）；Action Types 修订为 24 条（§二 实数）；示例 ontology_version 待全量更新为 1.3
-
+> 变更历史见 git log（本文件 2026-09-08 起纳入独立 git 子仓，演进=commit）。
 
 ---
 
-## 附录：稳定单元注册表（原 stable-units.md 正文，2026-08-25 F6 归并吸收进本文件；来源档案：`research/ontology-four-books/phase2-gap-analysis.md` G8）
+## 附录：稳定单元注册表
+
+> 来源档案：`research/ontology-four-books/phase2-gap-analysis.md` G8。
 
 > 配套：`marking-rules.md §6 标记沿调用链传播`——被标记为"稳定单元"的 artifact 变更时，worker 必须在 `kanban_complete(metadata)` 声明下游 1 跳影响域（`impacted: [...]`）。
 > 准入条件（满足其一）：① 共享 schema/契约文档；② 公开接口被 ≥2 profile 引用；③ 被 ≥2 任务依赖的 artifact。
@@ -468,12 +462,12 @@ kanban_complete(
 | 路径 | 类型 | 已知下游 |
 |---|---|---|
 | `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` | 共享对象模型契约 | 全部 27 profile SOUL（引用段） |
-| `~/.hermes/profiles/_shared/02-org-orchestration/marking-rules.md` | 标记传播规则 | 全部 27 profile SOUL（2026-08-24 接线） |
+| `~/.hermes/profiles/_shared/02-org-orchestration/marking-rules.md` | 标记传播规则 | 全部 profile SOUL |
 | `~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md` | 前线部署协议 | 全部 27 profile SOUL |
-|| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 输出契约 | 全部 47 profile SOUL |
-|| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 验证清单 | 全部 47 profile SOUL |
-|| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 共享规则索引 | orchestrator 等多数 SOUL |
-|| `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` | 语言规范 | 全部 47 profile SOUL（2026-09-09 部署） |
+| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 输出契约 | 全部 profile SOUL |
+| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 验证清单 | 全部 profile SOUL |
+| `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md` | 共享规则索引 | orchestrator 等多数 SOUL |
+| `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` | 语言规范 | 全部 profile SOUL |
 
 ## 接口层
 
@@ -494,6 +488,3 @@ kanban_complete(
 2. 下游任务开工前应确认已读 warn comment（ack 或 kanban_block 求澄清）。
 3. 本表条目变更本身 = 稳定单元变更，需 kanban_comment 声明。
 
-## 版本
-
-- v1.0 (2026-08-24): 初版，本体论四部曲调研 gap 分析 G8 落地（research/ontology-four-books/phase2-gap-analysis.md）

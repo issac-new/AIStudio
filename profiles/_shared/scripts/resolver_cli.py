@@ -71,6 +71,8 @@ VULN_KWS = {
     "supply chain", "供应链", "typosquatting", "dependency confusion", "malicious package",
     "prompt injection", "jailbreak", "data leakage", "agentic attack", "tool abuse",
     "lethal trifecta", "toxic flow", "untrusted input", "private data", "exfiltration",
+    "secret leak", "secret泄露", "密钥泄露", "ak泄露", "敏感信息", "敏感信息挖掘",
+    "js分析", "js chunk", "chunk瀑布", "js瀑布", "资产情报",
 }
 TASK_TYPE_KWS = {
     "scan": ["扫描", "scan", "漏洞扫描", "nuclei", "nessus", "openvas"],

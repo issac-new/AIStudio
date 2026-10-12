@@ -1,5 +1,6 @@
 ---
 name: provider-fallback-chain-management
+version: 1.0.0
 title: Provider & Fallback Chain Management in Multi-Profile Hermes
 description: Rewrite provider and fallback chain across profiles.
 triggers:

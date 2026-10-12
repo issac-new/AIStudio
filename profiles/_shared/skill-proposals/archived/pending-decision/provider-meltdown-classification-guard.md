@@ -1,8 +1,12 @@
 # SkillProposal: provider-meltdown-classification-guard [create]
 
 > **产出**： platform-skill-miner · 2026-08-31 · 半月全量窗口扫描（2026-08-17~2026-08-31，125 张 done 卡）
-> **状态**： ⏳ 待图爸最终裁决（本 job 只提议不落地，未调 skill_manage）
+> **状态**： ❌ REJECTED — 已实现（2026-09-25 最终裁决）
 > markings: [TLP:GREEN, EYES-ONLY:platform]
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现)** — `devops-worker/kanban-triage-stall-recovery/SKILL.md:153-155`（「熔断窗口…新 spawn worker 撞 429/503」+「死 fallback 换成同 proxy 健康通道」）+ `devops/orchestrator-worker-failure-triage/SKILL.md:25`（「provider 层熔断风暴：复位熔断 + 切 provider」）已覆盖「熔断分类 + 复位 + 切 provider」完整链路。grep 实测 `provider.*meltdown|error_classifier.*tempfail|_LOCAL_PROXY_MELTDOWN` 命中上述两 skill，确认等价实现存在。提案核心机制已有等价实现，无需新建 skill。
 
 ## 评审意见（2026-09-07，platform-skill-miner 同 job 评审通道）
 

@@ -48,7 +48,8 @@
 | evidence-labeled-research | 调研打证据标签 | researcher | active |
 | grounded-citations | 引用可溯源 | researcher | active |
 | llm-wiki | LLM Wiki 知识库 | researcher | active |
-| cognition-self-check | 8项偏差+压力升级 | 所有 profile | active |
+| cognition-self-check | （已退役 2026-10-11，并入 cognition-lattice §七/§七A） | — | retired→cognition-lattice |
+| cognition-lattice | 认知知识库 1969条+偏差清单+执行前守门 | 所有 profile | active |
 
 ### 专业能力层 (04)
 | Skill | 触发场景 | 适用 profile | 状态 |
@@ -63,6 +64,7 @@
 | code-review | 独立代码审查 | coder | active |
 | requesting-code-review | 提交前审查 | coder | active |
 | security-architecture-evaluation | 安全架构评估 | hack-auditor | active |
+| agentic-soc-defense | AI SOC/智能体系统防御编排方法论（六层架构/置信度双轨/六道防线/记忆投毒防御） | hack 团队 4 worker | active（2026-10-03 新增，源：微信 AI安全推进计划 AI SOC 深度报告，卡 t_d5a9af57） |
 | docx / pdf / powerpoint / xlsx | Office 文档生产 | 通用 | active |
 | executive-summary | SCQA 高管摘要 | 通用 | active |
 
@@ -81,9 +83,11 @@
 | spike | 快速验证想法 | coder | active |
 | dogfood | Web app 探索 QA | tester | active |
 | swarm-yuan-componentization | 五阶段组件化生产（survey→distill→assemble→gate-check→register） | orchestrator/coder | active |
+| swarm-yuan-as-target-library-generation | 目标库 skill 生成需求（capability-gap 流程A） | platform-worker | active |
 | architecture-design | 需求→技术方案 | coder | active |
 | deployment-automation | 安全交付 | ops | active |
 | mermaid-pdf-report / html-to-pdf-charts | 报告生成 | 通用 | active |
+| taskguard-avernet-fusion | Avernet taskguard 工作流引擎部署/升级/排障 | orchestrator | active |
 
 ### 观测治理层 (06)
 | Skill | 触发场景 | 适用 profile | 状态 |

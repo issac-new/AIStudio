@@ -1,0 +1,111 @@
+{
+  "jobs": [
+    {
+      "id": "992bf77f5c6a",
+      "name": "rc-watch-daily: Paimon/Fluss RC/GA 三信源巡检（零LLM）",
+      "prompt": "no_agent 脚本作业：本 prompt 不被 LLM 消费。每日跑 rc-watch.sh 三信源巡检，stdout 由 scheduler 原样存档（deliver=local）。",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "rc-watch-cron.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "40 7 * * *",
+        "display": "40 7 * * *"
+      },
+      "schedule_display": "40 7 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 5
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-09T03:01:57.054017+08:00",
+      "next_run_at": "2026-10-13T07:40:00+08:00",
+      "last_run_at": "2026-10-12T07:41:06.364139+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": {
+        "at": "2026-10-09T07:40:32.184119+08:00",
+        "detail": "Script exited with code 127\nstderr:\nmkdir: /Volumes/YOURVOLUME/lab: Permission denied\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 29: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 30: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch-last-events.txt: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 37: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 38: [: : integer expression expected\nstdout:\n[2026-10-09 07:40:31] rc-watch: 无摘要输出 rc=127"
+      },
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-12T07:40:00+08:00",
+        "dispatched_at": "2026-10-12T07:40:57.241786+08:00",
+        "lateness_seconds": 57.2,
+        "kind": "on_time"
+      }
+    },
+    {
+      "id": "f698f7b3e61a",
+      "name": "rc-watch-event-router: ga事件→评估卡分诊（monitor门控，零日常LLM）",
+      "prompt": "你是 data 板 RC/GA 事件路由消费者（upgrade-eval-checklist.md §3 阶段 0 分诊）。\n\n背景：/Volumes/YOURVOLUME/lab/data-stack/scripts/rc-watch.sh 每日 07:40 巡检 Apache Paimon/Fluss 三信源（downloads.apache.org / GitHub releases / Docker Hub），新版本事件写入 /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch-last-events.txt，事件行契约（冻结）：RC_EVENT component=<paimon|fluss> version=<x.y.z[-rcN]> kind=<ga|prerelease> sources=<n>\n\n步骤：\n1. 读事件文件。若为空或无 RC_EVENT 行：直接回复「无 RC 事件，跳过」结束，不做任何其他动作。\n2. 对每个 kind=ga 事件：读 /Users/YOURNAME/.hermes/profiles/data-infra/references/version-lock.md 核对现锁定版本——若事件版本不比锁定版本新（同版本或更旧），回复「版本不新于锁定，跳过」不建卡。若更新：用 kanban_create 在 board=data 建评估卡：title=「升级评估：<组件> <现锁版本> → <事件版本>」，assignee=data-orchestrator，body 按 upgrade-eval-checklist.md §5 评估卡模板（触发=RC_EVENT+T0=当日日期；必做：门1 GA 判据 G1-G5 逐条官方 URL 锚点、门3 兼容矩阵核对对照本栈 Flink 1.20.5、门2 verify-artifact.sh 制品校验、门4 风险预判 A-D+回滚预案、沙盒试跑 data-stack/regression/ 回归集零失败；边界：禁直接改 .env/version-lock，ADOPT 后才进 version-lock 流程 3-7 步；产出 VERDICT 枚举 ADOPT/WAIT/HOLD/REJECT）。\n3. kind=prerelease 事件：不建卡（rc-watch baseline 已自动登记 TRACK），仅在回复中列出确认。\n4. 同根因多事件聚合一条上报。\n\n边界：不修改 rc-watch.sh 与事件行格式；不外发任何数据到本机之外；建卡成功后把卡 id 写进回复。",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "monitor_script": "rc-watch-events-monitor.sh",
+      "monitor_url": null,
+      "monitor_state": {
+        "last_output_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "last_changed_at": "2026-10-09T04:00:21.479077+08:00"
+      },
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */2 * * *",
+        "display": "0 */2 * * *"
+      },
+      "schedule_display": "0 */2 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 41
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-09T03:11:25.301338+08:00",
+      "next_run_at": "2026-10-12T12:00:00+08:00",
+      "last_run_at": "2026-10-12T10:00:51.824174+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-12T10:00:00+08:00",
+        "dispatched_at": "2026-10-12T10:00:51.457473+08:00",
+        "lateness_seconds": 51.5,
+        "kind": "on_time"
+      }
+    }
+  ],
+  "updated_at": "2026-10-12T10:00:51.824722+08:00"
+}

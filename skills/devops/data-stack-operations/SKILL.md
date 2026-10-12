@@ -34,8 +34,8 @@ MinIO RELEASE.2025-09-07。
 | fluss-remote | Fluss（镜像自带 fluss-fs-s3 插件） | kv snapshot + remote log segment |
 | flink-checkpoints | Flink（flink-s3-fs-hadoop） | checkpoint/savepoint |
 
-- **用户裁决（09-04）**：RustFS 挂起等 1.0 正式发布再评估；MinIO 为唯一存储层，不做双轨。
-  两者 S3 协议一致，切换只改 endpoint（+RustFS 需 STS AssumeRole 凭证链）。
+- **用户裁决（09-04 挂起 → 09-17 复裁维持 MinIO）**：RustFS 1.0.0 PoC 已 GO（静态 AK/SK 直连、STS 门槛消除、兼容 MINIO_ROOT_* 别名）但不切换——GA 社区验证量低；复评触发条件见 version-lock.md。报告：/Volumes/YOURVOLUME/lab/data-stack/references/rustfs-poc-report.md
+  两者 S3 协议一致，切换只改 endpoint+凭证变量（RustFS 侧须 named volume，macOS bind-mount 会 FATAL）。
 - MinIO 凭证在 `.env`（`MINIO_ROOT_USER/PASSWORD`），**不是** minioadmin 默认值——
   SQL 里硬编码 minioadmin 会报 `S3Exception: Forbidden 403`。验证凭证：
   `docker exec minio sh -c 'mc alias set t http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" && mc ls t/<bucket>'`

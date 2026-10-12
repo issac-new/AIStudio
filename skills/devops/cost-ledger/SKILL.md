@@ -1,5 +1,6 @@
 ---
 name: cost-ledger
+version: 1.0.0
 description: 查 cc-switch 代理成本或预算告警时用：7天聚合+按模型/session 切片。
 ---
 

@@ -15,12 +15,12 @@ metadata:
 
 ## 版本锁定（唯一事实源：`~/.hermes/profiles/data-infra/references/version-lock.md`）
 
-Flink 1.20.5-scala_2.12 / Fluss 0.9.1-incubating（硬依赖 ZK 3.9.2）/ Flink CDC 3.6.0-1.20 / Paimon 2.0.0 / Dinky 1.2.5-flink1.20 / MySQL 8.4 LTS / Redis 8.10 / MinIO RELEASE-2025-09。Flink 2.3.0 官方最新但被 Fluss connector 排除（记备选）。所有版本结论以官方一手文档为据，禁止凭记忆。
+Flink 1.20.5-scala_2.12 / Fluss 0.9.1-incubating（硬依赖 ZK 3.9.2）/ Flink CDC 3.6.0-1.20 / Paimon 2.0.0 / Dinky 1.2.5-flink1.20 / MySQL 8.4 LTS / Redis 8.10 / MinIO RELEASE-2025-09。Flink 2.3.0 官方最新但被 Fluss connector 排除（记备选）。所有版本结论以官方一手文档为据，禁止凭记忆。已知口径差：.env 的 `FLINK_VERSION=1.20.5-java17` vs 锁定表镜像记 `scala_2.12`——同版本线不同 tag 后缀，升级时先对齐两处再动 compose。
 
 ## 核心架构决策（勿回退）
 
 - **存储双层制**：湖仓数据（Paimon warehouse / Fluss remote / Flink checkpoint）统一入 MinIO S3 三桶（paimon-warehouse / fluss-remote / flink-checkpoints）；MySQL/Redis/ZK/MinIO 自身仍 bind-mount `volumes/`（防容器更新损坏）。
-- **MinIO 而非 RustFS**：MinIO 有 Fluss 官方整篇教程 + Paimon 文档点名 + Flink plugin 原生 + arm64 原生；RustFS 要求 STS AssumeRole、社区验证少。两者 S3 协议一致，切换只改 endpoint。
+- **MinIO 而非 RustFS（09-17 复裁维持）**：MinIO 有 Fluss 官方整篇教程 + Paimon 文档点名 + Flink plugin 原生 + arm64 原生。RustFS 1.0.0 PoC 证明 STS 门槛已消除（静态 AK/SK + MINIO_ROOT_* 别名兼容），不切换因 GA 社区验证量低+压测/多节点未验证；若切换属纯配置工程（endpoint+凭证变量），RustFS 须 named volume（macOS bind-mount FATAL，rustfs#2434）。证据 references/rustfs-poc-report.md
 - **arm64 硬约束**：所有镜像 `docker pull --platform linux/arm64` 强制原生 manifest；aityp SWR 仅 amd64（备选）。
 
 ## 坑清单（实测排雷，全部复现过）

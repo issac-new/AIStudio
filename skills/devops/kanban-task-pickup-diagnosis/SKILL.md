@@ -1,7 +1,7 @@
 ---
 name: kanban-task-pickup-diagnosis
 description: "kanban 卡建成功但从未被 dispatcher 拾取时用：根库陷阱 + triage 父卡连锁死锁诊断与迁移重建。"
-version: 1.0.0
+version: 1.0.1
 metadata:
   hermes:
     tags: [kanban, dispatcher, troubleshooting, root-db-trap]
@@ -28,7 +28,13 @@ metadata:
 
 ## 诊断流程（建卡后 ~2 分钟无 running 即跑）
 
+**所有 CLI 与读操作都显式传 `--board <slug>`**；省略 board 会落到当前/default 板，可能读到另一张同样可见但不相关的卡，造成假进度。
+
 ```bash
+# 0. 先确认目标板与卡的完整状态；不要用默认板的 list 代替
+hermes kanban --board <board> show <tid>
+hermes kanban --board <board> runs <tid>
+
 # 1. 先定位卡真实落点（三个位置 + 最近被写的库）
 for d in ~/.hermes/kanban/boards/*/; do
   sqlite3 "$d/kanban.db" "SELECT id,status FROM tasks WHERE id='<tid>';" 2>/dev/null
@@ -54,8 +60,8 @@ ls -lt ~/.hermes/kanban/boards/<board>/logs/t_*.log | head -5
      WHERE id IN (...);"
    ```
 2. 在真实 board 重建任务链：无依赖卡**不设 parents/triage**（直接落 ready 被立即拾取）；依赖用 parents 表达
-3. sleep ~70s 后验证：分库 status=running + worker_pid 非空 + 日志有实质工具调用，才可向用户报「已启动」
-4. 向用户报告附事故复盘（误判根因 + 修正后预估），不等用户二次催问
+3. sleep ~70s 后验证：分库 status=running + `worker_pid`/run 记录非空 + 日志有实质工具调用；仅三者都满足，才可向用户报「已启动」。只有数据库状态变成 `running` 仍不足以证明 worker 已拾取。
+4. 向用户报告附事故复盘（误判根因 + 修正后预估），不等用户二次催问；若没有产物、测试或日志证据，不得把验收标准改写成已实现能力。
 
 ## 预防
 - 建卡后立即 SQL 确认落点是 board 分库（一条 SELECT 的事）
@@ -67,6 +73,7 @@ ls -lt ~/.hermes/kanban/boards/<board>/logs/t_*.log | head -5
 - 首轮进度报告只看 kanban_list 状态不验 DB 落点 = 把死锁报成「正常等待」，20 分钟后用户二次催问才暴露
 - 根库 UPDATE 后仍要重建——别以为 promote 根库卡就能被拾取
 - **kanban_comment 也会撞根库陷阱**：卡写进根库后，`kanban_comment` 工具若走 board 参数（如 swarm 板库）会报 `unknown task t_xxx`——不是卡丢了，是查错库。诊断顺序同 tasks 表：先确认卡真实落点（根库 vs board 分库），再选对通道写入。CLI 通道（`hermes kanban --board <slug> comment`）或 kanban_comment(board=) 参数必须与卡的实际所在库一致。
+- **不要把"规格化成功"当作"执行成功"**：`kanban specify` 只负责把 triage 卡转成可调度规格；随后必须重新读取目标板的卡状态、run 记录和日志，并分别报告"已规格化""已拾取""已有实质产出"三种证据等级。
 
 ## 坑：`no such function: kanban_write_sanctioned`（护栏代码-DB 时序窗，2026-09-04 实例）
 
@@ -76,6 +83,14 @@ ls -lt ~/.hermes/kanban/boards/<board>/logs/t_*.log | head -5
 - 修复 = **重启滞留进程**（launchd: `launchctl kickstart -k`；裸进程: kill → 等 `.dispatcher.lock` 释放 → terminal(background=true) 重拉 gateway），**不是修数据**——claim 的 INSERT 无论数据如何都撞触发器。
 - 会话内 kanban_* 工具全挂时：CLI 通道（`hermes kanban --board <slug> ...`）是合法恢复路径（terminal 子进程无 delegate 标记，护栏放行）；必须带 `--board`（会话 env 默认 default=根库，叠加根库陷阱）。CLI 命令挂起时加 timeout，先查 DB 是否已生效再重试。
 - triage 卡出口是 `kanban specify`（promote 只认 todo/blocked；complete 对 triage 卡报 unknown id）。
+
+## 坑：current 指针目录 symlink + default 板=活跃根库（2026-10-03 实证）
+
+- 解析链（`kanban_db.py get_current_board`）：override → `HERMES_KANBAN_BOARD` → per-home `kanban.default_board` → `<root>/kanban/current`（**只认一行 slug 文本**）→ default。env 一旦已设，current 被跳过。
+- 本机 `current` 曾是指向 boards/platform 的**目录 symlink**（旧机制残留）→ `read_text()` 抛 IsADirectoryError 被 `except OSError` 静默吞 → 落 default。判别：`python3 -c "from hermes_cli.kanban_db import *; print(get_current_board())"`；修复：`rm current && printf '<slug>\n' > current`（文本文件）。
+- **default 板的 DB = 根级 `~/.hermes/kanban.db`（不是 0 字节的 `kanban/kanban.db` 占位），且是活跃板**（gap 自动化卡落此）。「卡在其他板 + 调用不带 board」→ 落到真实存在但无此卡的根库 → unknown id。诊断先跑 `sqlite3 ~/.hermes/kanban.db "SELECT ..."` 确认卡是否在根库。
+- 追责写入者：`.bak.<epoch>` 孪生的毫秒时间戳 ↔ zcode `~/.zcode/cli/db/db.sqlite` 的 `tool_usage` 表 `started_at`（毫秒）对齐，可精确定位写入会话与其 todo/记忆文件（写者自述恢复配方）。
+- worker spawn 秒死 `No module named 'hermes_cli'`：tools python 的 `hermes-live-root.pth` 丢失所致，修复=`printf 'hermes-src-root\n/Users/YOURNAME/.hermes/hermes-agent\n' > <tools-python>/lib/python3.*/site-packages/hermes-live-root.pth`，再跑 `python-drift-watchdog.sh` 应 rc=0。修复后重置失败计数（认证连接 UPDATE status='ready', consecutive_failures=0）即可重派。
 
 ## 关联
 - 完整时间线与 runbook：`_shared/failures/2026-09-04-kanban-udf-stale-process-incident.md`

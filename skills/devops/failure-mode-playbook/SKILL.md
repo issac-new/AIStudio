@@ -1,7 +1,7 @@
 ---
 name: failure-mode-playbook
 description: 任务失败/阻塞时的模式识别与对策速查。触发：kanban_block/kanban_request_changes 前，或连败压力升级 L2+ 时查表定模式、选对策、打标签。
-version: 1.0.0
+version: 1.2.0
 metadata:
   hermes:
     tags: [kanban, failure-mode, playbook, pmo-fusion]
@@ -16,6 +16,19 @@ metadata:
 > ① kanban_block / kanban_request_changes 前**必须先查本表定模式**，reason 首行打标签 + 模式编号（如 `[capability-gap] FM-R2`）
 > ② 连败压力升级 L2+（pua-pressure-engine）时强制查表——同模式连败 = SPINNING，必须按「切换链」换对策
 > ③ 本表只收录**实锤发生过的模式**（锚点=事故/审计/实测），假想模式不入表；新模式经复盘确认后增补
+
+## 〇-2、问题回顾五步（融合万事网联《生产问题回顾机制和流程》V0.1，2026-09-11）
+
+> 触发：P2 级以上故障（= 集群里 blocked 复发 / gave_up / 看门狗命中 / 事故复盘需求）
+> 原型：故障处置结束 → 时间线回顾 → 根因方编写整改 → 审议督办 → 效果验证
+
+| 步 | 动作 | 集群形态 |
+|---|---|---|
+| 1 | 时间线回顾 | 运维方（incident-commander）依处置工单回顾 kanban task_events 时间线及关键节点 |
+| 2 | 补充细节 | 各关联方依据时间线补充细节、反思不足（kanban_comment 汇总） |
+| 3 | 根因整改 | 根因方（原 worker）编写根因分析+整改措施+计划（费曼标准：到 file:line，非「加强注意」；手法用**假设-反证**：列 ≥2 个候选根因假设，逐个找证据证实/证伪，全部证据指向唯一假设才定因——证据不足继续调查、不越界定因，防首因偏差定错根因。AgenticOps RCA 融合 2026-09-24） |
+| 4 | 审议督办 | 协同团队（orchestrator）审议报告、督办整改落实（kanban_create 整改子卡，parents 挂链） |
+| 5 | 整改验证 | 效果验证由独立方组织（worker-tester / 看门狗复跑），验证通过才算闭环——闭环记录写入 `_shared/failures/` 案例库（fm_modes 反链本表） |
 
 ## 〇、结构化案例库（`_shared/failures/`，OpenExecutive failures/ 同构融合 2026-09-03）
 
@@ -72,6 +85,7 @@ severity: critical|major|minor
 | FM-R2 | 并发上限排队（Kimi 并发=4） | 并行子任务>4 时延迟陡增 | 派工控制并行度 ≤4；重型分解按波次派发 | risk-register R-02 |
 | FM-R3 | 上下文溢出（SOUL 超限被截断） | profile 行为异常丢纪律；orchestrator SOUL 22,457>20,000 实测 | `orchestrator-soul-slimming` 瘦身；共享块外置 `_shared/` 引用化 | 设计文档 §四待裁决 |
 | FM-R4 | tool_output 截断丢失关键数据 | stdout 超 50KB 被 head/tail 截断 | spill 文件路径落盘，`read_file(offset=...)` 分页读；不依赖 inline 全文 | execute_code spill 机制 |
+| FM-R6 | 工具链故障误判为 capability 缺口（半更新致模块缺失，收尾被拒后转 capability blocker，触发 R2 补全卡空转 + gap_register 污染） | blocked reason 含指纹 `No module named` / `cannot import name` / `partially-updated`；4 例实锤（09-26×3 + 10-03×1，同一次 update 半更新事故） | 先 import 冒烟核验工具链现状再定性；已修复则记「缺口不存在+时间线」不建卡；capability-gap-watchdog `_scan_blocked` 已带指纹过滤（.bak-20261003） | capability-gap-r2-handoff 提案裁决 t_64052c03 2026-10-03 |
 
 ## 三、流程类（Process）
 
@@ -83,6 +97,8 @@ severity: critical|major|minor
 | FM-P4 | scratch 证据蒸发 | 卡 done 后工作区清理，产物丢失 | workspace_kind 禁 scratch（SOUL 强制规则）；产物即时 `kanban_attach` 或 dir 模式 | evals 事故 2026-09-01 |
 | FM-P5 | 长 base64 attach 字节错 | kanban_attach 报字节错误 | >2KB 走评论归档+小附件；附件 diff 校验 | evals 事故 2026-09-01（两次实测） |
 | FM-P6 | 运行中卡被终态化（创建方 archive / orchestrator 并发代验 complete） | kanban_complete 被拒 "unknown id or already terminal"；heartbeat 静默 | 停止重试终态动作；先 kanban_show 定终态来源——他人已完成→独立核验其 findings 属实（log/db 实证）后 kanban_comment 背书即退出，勿二次 complete | 祭品卡事故 2026-09-01；t_fe9af6bf 并发代验完结 2026-09-07 |
+| FM-P7 | skill 升级落地报告只报内容不报可见性——产物落库但零 profile 挂载，静默零效果 | 落地报告 grep 计数全绿；实际 isfile 穿透 0/47（devops-worker 类目全 fleet 无 symlink） | 升级既有 skill 必申报「变更前后可见性状态」（isfile 穿透计数）；变更前=0 属红线：先补链再交付或显式登记缺口；固化于 fusion-output-quality-gates 门 6 | pua 三 skill 3.5.1（t_8292467f 申报缺口，C4 回归 t_5dfc880a 实测 0/47）2026-10-03 |
+| FM-P8 | 设计态-运行态漂移：文档/skill 声明的行为与运行时实测不一致，影子数据只落不查 | actions 白名单（设计态）与 action_gate_shadow.jsonl（运行态影子，13,318 条）长期零对照；落地报告只 grep 文档不实测运行态 | 双态对照抽查（对照白名单与影子记录的 gap，月度随 failure-pattern 月报）+ 事故复盘按轨迹 checklist 补 8 要素 | action_gate_shadow 影子数据 13,318 条从未被周期查询（机制正主 `_shared/06-observability/agent-observability.md` §二）2026-10-08 |
 
 ## 四、执行类（Execution）
 
@@ -110,7 +126,25 @@ severity: critical|major|minor
 | `[context-gap]` | 需求类 FM-Q1/Q2/Q3 |
 | `[tool-failure]` | 资源类 FM-R1/R4 + 执行类 FM-E1 |
 | `[routing-error]` | 流程类 FM-P2/P3 |
-| `[capability-gap]` | 资源类 FM-R3 + 执行类 FM-E4 |
+| `[capability-gap]` | 资源类 FM-R3/R6 + 执行类 FM-E4 |
+
+## 六-2、需求/缺陷问题源二分（Product Gap vs Implementation Gap，FDE 融合 2026-10-08）
+
+> 来源：金融科技 FDE 模式（存档 `research/wechat-fusion-20261008/`，a6）。适用于：worker 交付物缺陷归因、能力缺口（capability-gap）定性、上游产品 vs 下游实施的责任切分。
+
+把「交付/运行不符合预期」先二分为两个正交来源，再决定修复路径——**混淆两者是金融 FDE 领域实测的两大反模式来源**：
+
+| 归类 | 判定 | 正确动作 | 错误动作（反模式） |
+|------|------|----------|-------------------|
+| **产品缺口**（Product Gap） | 缺陷源于通用能力/工具/产品本身缺失（换任何消费方都缺） | 登记产品侧问题：capability-ladder 补全卡 / skill 生成提案 / 上游 hermes 源码 issue | 在下游打临时 workaround 补丁——产品迭代后临时方案演变为**合规/漂移风险**（如绕过 update 机制的本地 hot-patch） |
+| **实施缺口**（Implementation Gap） | 缺陷源于特定消费环境的一次性适配问题（配置错/集成缝/用法偏） | 当场修配置/补桥接/校正用法，不登记为产品问题 | 上报为产品 bug——研发资源被无效消耗，产品路线图被单客户特例劫持 |
+
+集群判例对照：
+- FM-R6（工具链故障误判为 capability 缺口→R2 补全卡空转）= **把实施问题误报为产品缺口**的反模式实锤；
+- 反之，为单次任务在 skill 里硬编码某仓库特定路径 = **把产品缺口用实施 workaround 掩盖**，产品侧（skill 通用化）欠账仍在。
+- 轨迹侧接线：双态漂移（FM-P8）与轨迹 8 要素勾稽是缺口双向判定的第一手输入——机制正主见 `_shared/06-observability/agent-observability.md` §四。
+
+**二分自检问**：「这个问题换一个消费者/换一次任务还会出现吗？」——会=产品缺口走补全阶梯；不会=实施缺口就地修复。拿不准时：先按实施缺口最小修复恢复运转，同时 gap_register 登记观察项（标注「疑似产品缺口待二次复发确认」），二次复发即升级为补全卡——与 §七 排除表复核周期同构。
 
 ## 七、排除表复核周期（2026-09-07 提案3 增补，金书§1.5"记忆也会错误排除"）
 

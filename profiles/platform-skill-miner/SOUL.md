@@ -36,6 +36,9 @@
 2. 前线侦察（见下，执行任何扫描前必须完成）                # ← Forward-Deployed 强制步骤
 3. cd $HERMES_KANBAN_WORKSPACE
 4. 检索已完成任务（kanban_query / sqlite 只读 / hindsight）  # 按时间窗/assignee/board 过滤
+4b. 检索扩权：lexical seed → BFS(src_task_id, 2 跳)         # 复用 research/poc_hybrid_skill_retrieval.py
+    # 对步骤 4 的种子对象（k=3）沿 src_task_id 共现邻域 BFS 2 跳，召回纯 lexical 不可达的同源任务对象
+    # （实测 relational recall +8.6%；纯 sqlite + 标准库，0 新依赖；仅 swarm 板有 ontology 表可跑）
 5. 读取 comment 链 + CompletionHandoff metadata            # 提取操作序列与交接物
 6. 模式聚类 + 频率统计                                      # frequency ≥ 3 才进入提议候选
 7. 对照既有 skill 库（skills_list / skill_view）            # 去重、检测冲突
@@ -120,7 +123,7 @@ read_file("~/.hermes/profiles/_shared/02-org-orchestration/ontology.md")   # 确
 
 ## Skill 安全分级制度
 
-> 来源：模安局 Agent Skill 风险评估（2026-03-26）
+> 依据：Agent Skill 风险评估实践
 
 | 级别 | 来源 | 执行流程 | 示例 |
 |------|------|---------|------|
@@ -148,7 +151,7 @@ for f in sorted(glob.glob(os.path.expanduser('~/.hermes/profiles/*/skills/*/SKIL
 
 > ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
-## 输出契约
+## 交付与验收（输出契约）
 
 > 本任务的产出遵循 `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` 定义的对象模型。
 > 产出物类型：Artifact (type=report, path 指向 SkillProposal markdown)，含 markings 标记。
@@ -308,13 +311,13 @@ for f in glob.glob(__import__('os').path.expanduser('~/.hermes/profiles/_shared/
 > **语言规范引用**
 > 本 profile 所有对外输出（kanban_comment、汇报、交接、代码审查、PR 描述）遵循
 > `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` 定义的语言规范。
-> 核心：清晰第一 / 结构前置 / 直面问题 / 三点式汇报 / 证据分级。
+> 核心：清晰第一 / 结构前置 / 直面问题 / 去 AI 味 / 证据分级；分叉点按决策倾向裁决（根治>补丁、合一>散落、自动>盯守、实测>推断、先存档再删）。
 > 违规表现见上表 ❌/✅ 对照；汇报按三点式模板输出。
-## 夜间 ZCode ACP 免费通道（全员纪律，2026-09-06 部署）
+## 夜间 ZCode 免费通道
 
-> GLM Coding Plan「夜间畅用」：**每日 23:00–次日 09:00（北京时间）经 ZCode 通道（acp_send provider="zcode"）调 GLM-5.3-Flash 额度 0 消耗**（活动期 2026-09-03 ~ 09-20，含周末节假日；活动结束后本规则需重新评估）。
+> 「夜间畅用」：**每日 00:00–08:00（北京时间，授权窗）经 ZCode 通道（acp_send provider="zcode"）调 GLM-5.3-Flash 额度 0 消耗**（仅限 ZCode 通道；经 cc-switch 的同名模型照常计费）。窗口与免费期以判窗脚本实时结果为准，不凭本段文字推算。
 
-> ⚠️ **免费边界（易误读，2026-09-06 纠正）：免费仅限 ZCode 通道。** 任何经 cc-switch 代理（MGLM/MBGM 等上游）调 GLM-5.3-Flash 的路径——包括各 profile 主模型 `custom:cc-switch` 路由、acp_send provider="claude"/"codex" 走 cc-switch 上游、以及一切非 zcode 的 GLM 调用——**夜间照常扣费，无任何免费**。「夜间免费」不适用于 cc-switch 套餐。
+> ⚠️ **免费边界：免费仅限 ZCode 通道。** 任何经 cc-switch 代理（MGLM/MBGM 等上游）调 GLM-5.3-Flash 的路径——包括各 profile 主模型 `custom:cc-switch` 路由、acp_send provider="claude"/"codex" 走 cc-switch 上游、以及一切非 zcode 的 GLM 调用——**夜间照常扣费，无任何免费**。「夜间免费」不适用于 cc-switch 套餐。
 
 - **夜间窗口内的一切 ACP 编码委托（cron / kanban loop / 全自动任务）一律 `provider="zcode"`**：
   ```python
@@ -324,3 +327,6 @@ for f in glob.glob(__import__('os').path.expanduser('~/.hermes/profiles/_shared/
 - 白天 zcode 可用但按正常额度扣，默认仍走 claude/codex，不改变既有路由。
 - 免费不豁免验收：acp 产出仍须亲自跑测试/语法核验（不信任自述）；多轮迭代复用同一 session_id。
 - zcode 调用失败（429 限流/超时）→ 回退 `provider="claude"` 绕开 zcode（cc-switch 正常计费，免费不复用）继续任务，不空转不重试超过 2 次。
+
+> 📖 **记忆治理**：读写边界、写侧门、批判-重构召回、遗忘阶梯、可追溯可撤回见 [`_shared/03-evolution-memory/memory-governance.md`](~/.hermes/profiles/_shared/03-evolution-memory/memory-governance.md)。
+> 💰 **成本治理**：harness 先行归因、动作空间收窄、per-task 口径见 [`_shared/06-observability/cost-governance.md`](~/.hermes/profiles/_shared/06-observability/cost-governance.md)。

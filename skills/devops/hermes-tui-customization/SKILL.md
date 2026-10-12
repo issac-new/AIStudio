@@ -1,5 +1,6 @@
 ---
 name: hermes-tui-customization
+version: 1.0.0
 title: Customize the Hermes TUI — Widgets and Live Panels
 description: "Author TUI widgets and docked panels. Use for live panels."
 triggers:
@@ -153,6 +154,16 @@ hardcoded hexes — widgets must survive `/skin` and light/dark themes.
   the transcript and the status bar.
 - **A thrown `register()` is logged and skipped** — check
   `~/.hermes/logs/tui_gateway_crash.log` if a widget never appears.
+- **The built-in status BAR is not a widget** — the cc-switch segment and the
+  IP+weather readout are source code in `ui-tui/src/components/appLayout.tsx`,
+  carried by the local patch `~/.hermes/patches/tui-ccswitch-statusbar.patch`
+  (see hermes-source-patch-persistence), not a `tui-widgets/` file. A
+  status-bar change must sync the patch post-image in the same pass (a
+  source-only edit is reverted by the next update's patch replay), then
+  `npm run build` in `ui-tui/` and restart the TUI — dist is what loads, and
+  in-process caches (10-min weather) clear on restart.
+- **wttr.in defaults units by requester IP** — `?format=%c+%t` can answer in
+  °F. Append `&m` to force metric: `?format=%c+%t&m`.
 - **`/models` listing warning is benign for proxy mode** — when Hermes
   uses a local proxy (e.g. cc switch), the model name won't appear in the
   proxy's `/models` listing, but the proxy ignores the model field anyway.

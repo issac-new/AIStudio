@@ -1,8 +1,24 @@
 # SkillProposal: protected-write-crash-resume [create]
 
 > **产出**： platform-skill-miner · 2026-09-07 · 7 天窗口扫描（2026-08-31~2026-09-07，49 张 done 卡）
-> **状态**： ⏳ 待图爸最终裁决（本 job 只提议不落地，未调 skill_manage）
+> **状态**： ❌ REJECTED — 已实现（2026-09-25 最终裁决）
 > markings: [TLP:GREEN, EYES-ONLY:platform]
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现)** — `devops/kanban-crash-recovery/SKILL.md` + `devops/orchestrator-lessons/SKILL.md:15-17`（「崩溃恢复：先验证磁盘再写恢复包」）已完整覆盖「先核验已写集合→增量补写→防重复插入」四段式内容。grep 实测 `crash.*resume|崩溃.*交接|先核验.*再` 命中上述两 skill，确认等价实现存在。提案核心机制 100% 等价，无需新建 skill。
+
+## 评审意见（2026-09-14，platform-skill-miner 同 job 评审通道）
+
+**判定：✅ 批准（独立 create；与 `kanban-crash-recovery` 互引边界，交图爸裁决）**
+
+- **证据链复核**：5 条 task_id 均可回溯（t_313de14a [已移除] 显式崩溃交接 + t_018bf082 跨执行体同步 + t_4b19ed0c 重试核验 + t_44f56a7c/t_dc3022bc block 破局同机制；合并计数 7 跨板复发）。频率 4/49 独立计数达标（合并 7 为族谱口径）。
+- **本窗口存续实证（高强度）**：t_5399e911（重试恢复包 run 265 耗尽预算→run 270 采信落盘资产收尾）/ t_4eb5ebc3（orchestrator 恢复包：run 272 spawn_failed/run 274 crashed 后「勿重复定位根因、直接干活」）/ t_d2b36d3d（恢复包「前 10 个工具调用内先写骨架」）/ t_8f6811ea（超时 run267/run268 验证接力）/ t_633cbf1f（中断保全通知→磁盘真身核验「22:50:47 实测完整态，请重派前先核验」+「勿重复插入」）/ t_125bdf58（ hotspot + worktree 安检交接）。**恢复包/保全通知/验证接力三形态在本窗口 ≥6 卡成体系复发**，是全窗最有生命力的复用模式。
+- **与既有关系**：`kanban-crash-recovery`（worker-coder 执行面：crash 后重试/重派技术动作）vs 本提案（数据面：已写集合核验防重复插入/覆盖）。触发象限正交，建议独立 create 并在 When to Use 互写一行边界。
+- **特别价值**：[已移除] 儿童档案的重复插入是静默污染（伤害不可逆），同一机制在调研报告（22:48 增量落盘 vs 22:45 快照误诊）场景下防止了「诊断过期快照→丢弃已完成工作」的误判。本提案是**反误诊**机制，不止是效率工具。
+- **去重核查**：`worker-completion-independence-verification`（验收侧逐项复验）与本提案（执行侧先核验再动手）互补无冲突。
+
+---
 
 ## 触发条件
 

@@ -36,3 +36,7 @@
 - `~/.hermes/kanban/boards/*/kanban.db`（只读诊断，immutable=1 模式）
 - 其他 profile 的 `config.yaml` **仅 clearances/model 字段**（markings 校验用，禁止读其他段）
 - `_shared/knowledge/candidate/matrix-peers.md`（维护职责；2026-08-25 从 `_shared/decisions/` 迁移）
+
+### 自动生成交接面的 PII 自查（2026-10-02 增补，DSH 融合）
+
+agent **自动生成、且会自动传播/持久化**的内容面——`kanban_complete` summary/metadata、`kanban_comment`、压缩交接笔记、跨会话交接文件——在写入前自查一遍上述「信息泄露禁止」清单：这类内容会被下游 worker / 看板 / 事件流直接消费，泄漏即传播。命中 PII（用户名/路径用户名/手机号/邮箱等）→ 先脱敏再写入；无法脱敏的字段直接不写。范围仅限自动生成面；用户显式要求记录的原文不在此列。来源：头条文《DSH 信息零丢失压缩插件》强制脱敏机制（语义落地）。

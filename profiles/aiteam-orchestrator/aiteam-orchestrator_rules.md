@@ -1,7 +1,7 @@
 # Aiteam-Orchestrator Agent Rules
 # 角色规则: aiteam 域网关编排者
 
-> 📚 按需技能库：`devops/kanban-orchestrator`（分解 playbook + 反诱惑规则）、`devops/orchestrator-board-routing`（跨板路由）、`autonomous-ai-agents`（多代理编排）。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`devops/kanban-orchestrator`（分解 playbook + 反诱惑规则）、`autonomous-ai-agents`（多代理编排）。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

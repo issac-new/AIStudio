@@ -122,6 +122,18 @@ dsh 有完善的 `.agents/notes/implemented/` 树（architecture/bug-fix/feature
 | Scoped shadowing | profile 隔离 | 暂缓(已有等价) | - |
 | Ralph Loop | kanban goal_mode | 不采纳(已覆盖) | - |
 
+## 版本演进追踪（v0.2.1-alpha.1 增补，2026-10-04 实证）
+
+> 证据：git ls-remote 26 tags（dsh-v0.1.0-rc.8 → dsh-v0.2.1-alpha.1）+ release 页全文抓取存档 `research/harness-fusion-20261004/deepseek-harness-v0.2.1-alpha.1-release.md`。Stars 20,215（08-13）→ 241k（10-04）。
+
+**dsh-v0.2.1-alpha.1（Pre-release）关键项**：
+- **新增实验性 Claude Code Mods 兼容层**——官方明示当前目的是「验证 Mods API 功能大致为 Harness 插件能力的一个子集」，非完整兼容承诺（验证期，勿当生产依赖）。
+- 「让 Agent 创建插件」入口（Creator mode + 草稿保留）；`--public-url` 反向代理地址支持；开发者工具组合包（原始会话日志+双向定位）。
+- **破坏性变更**：移除运行时 invariant 插件及各包 `./invariant` 导出；输入区统计扩展拆为 activity/usage 两个注册 ID——依赖旧诊断入口的扩展需调整。
+- 自动化任务转 Web 内置能力（旧实验组合包自动清理）。
+
+**对集群的含义**：上表「对标差距分析」仍以 v0.1 架构为基准有效（Cordis/七层管线/Seam 未变）；Mods 兼容层说明 Claude Code 生态的 UI/行为扩展面正被 dsh 以子集方式收编——若未来评估「让 dsh 承载集群部分 worker」，Mods 生态是加分项不是迁移理由（集群禁切运行时，仅登记观察）。
+
 ## 深入阅读路径
 
 - README: https://github.com/deepseek-ai/deepseek-harness/blob/master/README.md

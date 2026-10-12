@@ -1,5 +1,6 @@
 ---
 name: free-window-nightly-pipeline
+version: 1.0.0
 description: "Use when nightly cron/LLM jobs must run in a free window."
 metadata:
   hermes:

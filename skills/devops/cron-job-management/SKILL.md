@@ -101,6 +101,26 @@ cronjob action=run job_id=<id>
 - `deliver=origin` 在 TUI 会话无投递渠道 → 改 `deliver=local` 或 `deliver=weixin`
 - 邮箱检查类 no_agent job → `deliver=local`（有未读才输出，本地留档）
 
+## 整批停役与恢复（复活看门狗优先）
+
+- 整批暂停夜间 job 前，先停会自动复活它们的看门狗：`cron暂停巡检自愈`(224b9f33d637)
+  白名单含主雷达+[已移除]+8领域夜间 job，每 6h 把 paused 的 resume 回去——不停它，暂停几小时内静默复活。
+- 用 pause（enabled=false + paused_reason）不用 remove；同批在 memory 记一条停役事件，
+  防后续会话把管道静默当故障。
+- 跨 profile 的 job 也要扫：nightly-radar 三件套在 ops-devops 的 jobs.json 里。
+  那边 schedule 是 dict（{kind,expr}），字符串正则扫描会静默漏掉。
+
+## 单 job 并入统一夜间 Loop（整合流程）
+
+把独立排程的能力并入统一 Loop 入口脚本（`~/.hermes/scripts/unified_nightly_loop.sh`）时按序：
+
+1. **先读既有同类实现再裁决去留**：并入前读竞品脚本——它可能是实战进化更完备的正典。整合按「各留所长」分工而非整替：新引擎删掉与正典重复的能力段（防同机制双实现漂移），正典脚本作为独立 step 入链。
+2. **run_step 入链**：loop 用 `run_step <名> <产物守卫> <命令>` 模式（幂等、步状态自动入 `unified_loop_YYYYMM.log` 快照）；基础设施步（清扫/回收）放负载步之前，当日 spawn 的 worker 直接受益。
+3. **退役旧排程清三处**：launchd（`launchctl unload -w` + 删 plist）、cron job（`.bak` 备份后从 jobs.json **删除**条目）、看门狗黑名单（见下）。
+4. **逐件冒烟**：`bash -n` 全部改动脚本 + 正典脚本空载实跑一次（应 rc=0 零动作）+ 确认入口 job 仍 enabled。
+
+**BANNED 黑名单语义 = 「已删除」tripwire，不是「已禁用」标记**：黑名单 grep 的是 `hermes cron list --all` 输出里的裸 job id——只 disable 未删除的 job 仍在列表里，grep 永久命中 = 每轮巡检 🔴 误报。把 job 记入 BANNED 前必须先从 jobs.json 删除（定义备份 .bak）；只想暂停保留 job 就绝不进 BANNED。
+
 ## jobs.json 直接编辑模式
 
 ```python
@@ -116,6 +136,12 @@ for job in d['jobs']:
 d['updated_at'] = datetime.datetime.now().isoformat()
 json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 ```
+
+**直改 `schedule.expr` 后持久 `next_run_at` 不会立即刷新**（`hermes cron tick` 也不重写该字段）——无需手工 resync：scheduler 触发判定检测到 expr 与持久 next_run_at 失配时自动 re-anchor 重算而不误触发（`cron/jobs.py` 的 `_reanchor_stale_cron`）。验证直改看 expr 本身即可，不要手改 next_run_at 去追 expr。
+
+## 触发时刻迁移的日期分裂坑
+
+把管道触发时刻改到跨日界（如挪到深夜 02:02）时，只改 cron 表达式不够：主链经日期锚（`NIGHT_DATE`）定标后，任何**自算日期**的下游脚本会与产物日期分裂——`date +%F` 午夜后拿到新一天，`HOUR<9 → 昨天` 类启发式会去查前一晚产物，心跳/对账全线误报缺失。迁移触发时刻前 grep 全部消费方脚本的 `date +%F` / `datetime.now()` / 小时启发式，统一改读管道日期锚。
 
 ## inventory_watchdog.py 解析器 pitfall
 

@@ -116,7 +116,7 @@ providers:
     default_cwd: /Users/YOURNAME/hermes-docker-sandbox/workspace
 ```
 
-Full integration detail: `references/zcode-acp.md`.
+Full integration detail + channel breakage taxonomy (4-layer diagnosis & recovery ladder): `references/zcode-acp.md`.
 
 ### Install codex-acp globally (eliminate npx cold-start)
 

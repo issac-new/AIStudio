@@ -103,6 +103,21 @@ metadata = redact_secrets(metadata)             # 未定义！
 > ⚠️ prompt 级建议，Hermes 无运行时强制。真正的强制靠 [具体工具]。
 ```
 
+### 门 6：可见性申报缺口（WARNING，2026-10-03 C4 蓝军 MAJOR-1 固化）
+
+**症状**：升级/patch 既有 skill 的落地报告只报"改了什么"，不报"谁能看到"——产物落库但零 profile 挂载（devops-worker 类目全 fleet 无 symlink 时 isfile 穿透 0/47），交付后静默零效果。
+
+**真实案例**：pua 三 skill 3.5.1 升级（t_8292467f）申报 grep 计数全绿，C4 回归（t_5dfc880a）实测变更前可见性 0/47；按角色子集补链 devops-worker → worker-coder/researcher/tester 后 3/47。
+
+**验证方法**：升级既有 skill 的落地报告必须申报「变更前后可见性状态」，口径为 isfile 穿透计数：
+```bash
+n=0; for p in ~/.hermes/profiles/*/; do
+  s="$p/skills/<category>/<skill-name>/SKILL.md"
+  [ -f "$s" ] || [ -L "$s" ] && n=$((n+1))
+done; echo "$n / $(ls -d ~/.hermes/profiles/*/ | grep -v _shared | wc -l | tr -d ' ')"
+```
+变更前计数 = 0 时属申报红线：必须先补链（symlink 或 fence 白名单）再交付，或在报告中显式登记「可见性缺口 + 补链卡」。
+
 ## 必跑验证清单
 
 在把任何 fusion 产出写入 _shared/ 或 skill 前，过一遍：

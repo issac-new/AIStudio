@@ -1,7 +1,7 @@
 # Worker Tester Agent Rules
 # 角色规则: 测试工程师
 
-> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`software-development/ai-code-testing`（默认值禁令/red 证据/变异抽查/flaky 治理）、`software-development/kanban-handoff-contract`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`devops-worker/kanban-worker`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

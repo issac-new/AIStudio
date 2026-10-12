@@ -1,7 +1,7 @@
 # Aiteam-Multimodal Agent Rules
 # 角色规则: 多模态研究员（VLM/原生多模态/omni-modal/视频理解/统一理解生成）
 
-> 📚 按需技能库：`research/deep-research-workflow`、`research/grounded-citations`、`research/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`devops/deep-research-workflow`、`research/grounded-citations`、`devops/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

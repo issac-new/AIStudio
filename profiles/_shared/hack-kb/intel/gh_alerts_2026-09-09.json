@@ -1,0 +1,156 @@
+{
+ "run_at": "2026-09-09T02:00:51.856352+00:00",
+ "keywords": [
+  "CVE-2026",
+  "exploit",
+  "0day",
+  "nuclei-template"
+ ],
+ "total_new_alerts": 12,
+ "alerts": [
+  {
+   "route": "cve",
+   "repo_full_name": "Deep-Sixed/ContextMesh",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/Deep-Sixed/ContextMesh",
+   "description": "ContextMesh is a typed context and reasoning graph for AI agents. It connects entities, claims, sources, decisions, assumptions, and evidence so agents can trac",
+   "stars": 1,
+   "created_at": "2026-08-25T22:02:56Z",
+   "pushed_at": "2026-09-09T01:57:38Z",
+   "author": "Deep-Sixed",
+   "fingerprint": "da6ded7fa8eff225"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "tamdao/tamdao",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/tamdao/tamdao",
+   "description": "",
+   "stars": 0,
+   "created_at": "2022-10-28T00:38:39Z",
+   "pushed_at": "2026-09-09T01:53:55Z",
+   "author": "tamdao",
+   "fingerprint": "150220d2af4c7061"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "LRGF-Sys/THM-Bolt-Writeup",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/LRGF-Sys/THM-Bolt-Writeup",
+   "description": "Detailed walkthrough of the Bolt machine on TryHackMe, demonstrating network reconnaissance, web exploitation (LFI), NFS misconfiguration abuse, and Linux privi",
+   "stars": 0,
+   "created_at": "2026-09-09T01:40:26Z",
+   "pushed_at": "2026-09-09T01:57:41Z",
+   "author": "LRGF-Sys",
+   "fingerprint": "ec83d9ba712b1e15"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "mrnickrushing/mow",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/mrnickrushing/mow",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-08-29T23:45:10Z",
+   "pushed_at": "2026-09-09T01:57:35Z",
+   "author": "mrnickrushing",
+   "fingerprint": "2726a812b2ce9a6a"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "dogger27/Upset-Alert",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/dogger27/Upset-Alert",
+   "description": "Upset Alert — Tennis fantasy league with live bracket draws and predictions",
+   "stars": 0,
+   "created_at": "2026-06-09T04:51:55Z",
+   "pushed_at": "2026-09-09T01:57:33Z",
+   "author": "dogger27",
+   "fingerprint": "28a22f22b37fd10c"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "InnovaeonLabs/kestrel-security-program",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/InnovaeonLabs/kestrel-security-program",
+   "description": "Detection-as-code security range for a fictional fintech: 23 tested Sigma detections over a DuckDB telemetry pipeline, 3 benign attack emulations (external / in",
+   "stars": 0,
+   "created_at": "2026-09-09T00:22:02Z",
+   "pushed_at": "2026-09-09T01:57:23Z",
+   "author": "InnovaeonLabs",
+   "fingerprint": "0c32992f2104c3b6"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "JayPVentures-LLC/jayventures-labs",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/JayPVentures-LLC/jayventures-labs",
+   "description": "Enterprise workspace for JPV experiments, prototypes, and internal tooling.",
+   "stars": 1,
+   "created_at": "2025-12-15T12:11:40Z",
+   "pushed_at": "2026-09-09T01:57:31Z",
+   "author": "JayPVentures-LLC",
+   "fingerprint": "b67da26bf0f17c94"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "giatient459-dotcom/GrimCompanion",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/giatient459-dotcom/GrimCompanion",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-09-03T10:45:48Z",
+   "pushed_at": "2026-09-09T01:57:15Z",
+   "author": "giatient459-dotcom",
+   "fingerprint": "7c8ce74f7bff5a10"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "JasonSonith/OSCP",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/JasonSonith/OSCP",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-08-05T03:48:32Z",
+   "pushed_at": "2026-09-09T01:57:10Z",
+   "author": "JasonSonith",
+   "fingerprint": "08288f836a8dde1e"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "dayDReam-10/dayDReam-10",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/dayDReam-10/dayDReam-10",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-04-03T04:51:59Z",
+   "pushed_at": "2026-09-09T01:57:09Z",
+   "author": "dayDReam-10",
+   "fingerprint": "32330fbe627e83d4"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "vpadival/sentinel-ops",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/vpadival/sentinel-ops",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-05-15T10:34:35Z",
+   "pushed_at": "2026-09-09T01:57:09Z",
+   "author": "vpadival",
+   "fingerprint": "155700d48e13867b"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "Danush-Aries/Danush-Aries",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/Danush-Aries/Danush-Aries",
+   "description": "Profile README",
+   "stars": 0,
+   "created_at": "2026-06-19T20:28:59Z",
+   "pushed_at": "2026-09-09T01:57:44Z",
+   "author": "Danush-Aries",
+   "fingerprint": "9a0b8379e2742324"
+  }
+ ]
+}

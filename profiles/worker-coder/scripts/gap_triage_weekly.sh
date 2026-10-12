@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# gap_triage_weekly.sh — gap_register 批量分诊周 cron shim（t_b2b587af）
+# 真源脚本在 life-workbench 仓库（版本化单一来源）；本 shim 仅为 cron scheduler
+# 路径逃逸防护（HERMES_HOME/scripts 内解析）而设，禁用 symlink。
+# 每周一 09:30 no_agent 触发：0 命中时 stdout 为空 = 静默；有命中时输出建卡报告。
+exec /usr/bin/env python3 /Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/scripts/gap_triage_weekly.py "$@"

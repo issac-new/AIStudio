@@ -57,7 +57,7 @@ adding one symlink if ever needed): `cybersecurity-defense`,
 - `cybersecurity-defense` = 156 hardening/building/auditing (unlinked)
 - `cybersecurity-compliance` = 7 CMMC/NIST/RMF (unlinked)
 - `devops` = 139 orchestrator-only cluster-governance meta-skills
-- `devops-worker` = 12 genuine worker skills (kanban-worker, pua-*, cognition-self-check, scope-discipline, report-data-verification, agent-harness-best-practices, release-gates)
+- `devops-worker` = 12 genuine worker skills (kanban-worker, pua-*, scope-discipline, report-data-verification, agent-harness-best-practices, release-gates)
 
 ## Apply / Repair Procedure
 

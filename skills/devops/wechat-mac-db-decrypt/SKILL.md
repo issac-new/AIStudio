@@ -1,5 +1,6 @@
 ---
 name: wechat-mac-db-decrypt
+version: 1.0.0
 description: 解密并导出 macOS 微信 4.x 本地聊天数据库做分析——密钥提取/解密/跨分库导出全链路。
 triggers:
   - "分析微信聊天记录"

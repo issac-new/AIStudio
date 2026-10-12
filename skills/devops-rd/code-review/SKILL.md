@@ -56,6 +56,10 @@ metadata:
 | 7 | **Blind Analysis** | 是否先盲推期望再对照证据？ | 先独立分析再对比，避免锚定 | ✅ |
 
 > **硬门（✅）**：门 1/3/4/7 必须通过才能进入下一步；软门（❌）允许有例外但需说明理由。
+>
+> **打回循环上限（NOW 档，v2.5，t_a4151cc9）**：同一任务**同一检查项累计第 3 次打回 → 强制 block 升级 orchestrator 裁决**（换执行者/换方案/裁剪验收标准三选一），禁止原地第 4 次打回——打回死循环是 kanban 真实故障模式（orchestrator-lessons 判例），循环本身说明「检查项与执行者能力不匹配」或「验收标准与任务体量不匹配」，继续循环只会烧预算。打回计数以 task_events 打回记录为准，可查。
+>
+> **门 4 证据独立性增补（QGate 融合 P1，2026-09-23）**：门 4「产物完整」的验证证据按来源独立性分级（I1 self-generated ~ I7 human-reviewed，分级表见 `_shared/03-evolution-memory/output-contract.md` §2.8）。仅 I1 自产自验证据不构成门 4 通过；I4 及以上才算独立验证。打回信号原有「证据是另一个 agent 的自述而非原始数据」即 I1 级信号的实例。
 
 ### 2.1b 双轴内容审查（Standards + Spec，融合自 mattpocock/skills code-review，2026-09-02）
 
@@ -80,6 +84,24 @@ metadata:
 **先判据后结论（格式互证）**——报告中每个 ❌/打回判定，必须先列判定要点（判据）再给结论；只有结论没有判据的条目退回重写。与 `codex-guardian-review` 的「先判据后结论」输出格式互证。
 >
 > 来源: synthesis-fusion-plan.md C9 / physics-3books-report.md ⑥（机工社官方编排特色 3「关键点及全部解答的详细步骤」原文，cmpedu.com/books/book/59932.htm，查询 2026-09-07）
+
+### 2.1d 结构·规范·留痕检查（QGate 复盘 P3 增补，2026-09-23 t_ca8d722c）
+
+> 来源：QGate v0.1 §L1.5/§L1.6/§L0.4 发现侧/§L5.5（存档 `workspace/research/qgate-fusion-20260923/`）。
+> 门禁性弱于 Diamond 7 门：按「发现即登记」执行，不逐项阻塞；但**发现不登记 = 门 1（Eligibility）失败**。
+
+四项内容审查（并入双轴产出区呈现）：
+
+1. **分层结构规则**（L1.5）：diff 是否突破项目既定分层（如 controller 直接连 DB、service 绕过
+   repository 直连 ORM）。项目无明文分层约定时 N/A 并注明；有约定而违反 → 登记为问题项。
+2. **仓库规范对齐**（L1.6）：新增代码与 repo 既有模式对照——exception 抛法、logging 方式、retry/
+   timeout 写法、命名约定、错误码风格。对齐方式：抽 2-3 个邻近文件对照，模式不一致 → 登记。
+3. **Open Decision 发现侧**（L0.4）：diff 中「agent 擅自选择但无依据的实现」——多个合理方案中
+   选了一个却没有任务卡依据的（如自行选定重试次数、自行引入新依赖、自行决定数据格式）。
+   每处 → 登记为 Open Decision（写入 `_shared/knowledge/candidate/` 或任务卡 comment），
+   交 release-plan 第 12 项在发布前裁决；**未登记的擅自选择 = 打回信号**。
+4. **技术债显式登记**（L5.5）：本次引入的 TODO/FIXME/临时绕过/已知不完整实现，逐条登记
+   （位置+原因+触发清理条件），禁止「顺手写个 TODO」不留痕。存量 TODO 不追。
 
 ### 2.2 具体检查命令
 
@@ -188,3 +210,6 @@ git diff --name-only | sort > /tmp/actual_files.txt
 | 2 | 2026-08-25 | 修正门编号：6 门→7 门，硬门 1/2/3/4→1/3/4/7（补 Blind Analysis），同步 description/报告模板/自检清单 | orchestrator |
 | 2.1 | 2026-09-02 | 增补 §2.1b 双轴内容审查（Standards+Spec，融合自 mattpocock/skills code-review） | orchestrator |
 | 2.2 | 2026-09-08 | 增补 §2.1c 论证谬误检查门（C1）+先判据后结论格式互证（C9），知识底座融合 P0 批 | worker-coder |
+| 2.3 | 2026-09-23 | 门 4 证据独立性增补（QGate 融合 P1，t_177caf7a）：I1~I7 分级引用 output-contract §2.8，仅 I1 自产自验不构成门 4 通过 | orchestrator |
+| 2.4 | 2026-09-23 | 增补 §2.1d 结构·规范·留痕检查（QGate 复盘 P3，t_ca8d722c）：分层结构/仓库规范/Open Decision 发现侧/技术债登记，发现即登记不登记即门1失败 | orchestrator |
+| 2.5 | 2026-09-23 | 打回循环上限（NOW 档 t_a4151cc9）：同任务同检查项第 3 次打回强制 block 升级，禁原地第 4 次 | orchestrator |

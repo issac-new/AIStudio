@@ -1,17 +1,17 @@
 ---
 name: pua-pressure-engine
-description: "执行中防线：terminal 命令连续失败时自动升级压力等级（L0-L4），检测失败模式（SPINNING/EXPLORING/MIXED），强制结构化应对。与 cognition-self-check（执行前防线）和 loop-engineering-gates（完成时防线）构成三道防线。"
-version: 1.0.0
+description: "执行中防线：terminal 命令连续失败时自动升级压力等级（L0-L4），检测失败模式（SPINNING/EXPLORING/MIXED），强制结构化应对。与 cognition-lattice §七A（执行前防线）和 loop-engineering-gates（完成时防线）构成三道防线。"
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, agent-behavior, pressure-escalation, failure-detection]
-    related_skills: [cognition-self-check, loop-engineering-gates, pua-methodology-router]
+    related_skills: [cognition-lattice, loop-engineering-gates, pua-methodology-router, acceptance-tri-state-protocol]
 ---
 
 # PUA 压力引擎 — 执行中防线
 
 > 来源：tanweai/pua 项目 `failure-detector.sh` + 压力升级系统，适配 Hermes Agent 集群。
-> 定位：与 `cognition-self-check`（执行前）和 `loop-engineering-gates`（完成时）构成认知→压力→验证三道防线。
+> 定位：与 `cognition-lattice` §七A（执行前）和 `loop-engineering-gates`（完成时）构成认知→压力→验证三道防线。
 
 ## 触发条件
 
@@ -60,6 +60,29 @@ metadata:
 - 隔离环境：新建临时目录/容器测试
 - 完全不同的技术栈：如果一直在用 Python，试试 Go/Rust/Shell
 
+### 外部 Oracle（完成声明前强制，v1.1.0 增补）
+
+> 来源：tanweai/pua 3.5.1 pua-loop「Oracle Isolation / 二阶 Gate」（skills/pua-loop/SKILL.md:16-41，
+> 经 t_9212f28e 报告 §一 D1 引入）。三态语义以
+> `_shared/02-org-orchestration/acceptance-tri-state-protocol.md` 为唯一口径，此处不复制。
+
+机制：Phase 1 模型自跑 build/test 自判完成；Phase 2 **验收方独立运行**验证命令（非模型自跑），
+exit 0 接受 / ≠0 拒绝并把验证输出喂回。两阶段分离防自欺——你的自跑结果只是素材，
+不是放行依据。Hermes 形态：完成声明（kanban_complete）前由 reviewer / 下游 worker /
+独立脚本执行外部验证；检查项按三态协议落 findings（PASS/BLOCKED/UNKNOWN）。
+
+保持 opt-in：阻断只存在于任务显式要求外部验证门时，日常任务不默认阻断（上游 CHANGELOG.md:22
+「不新增强制动作前阻断器」的同源约束）。
+
+### 上游增量未吸收项留痕（v3.5.1 融合，2026-09-23 C4 回归补记）
+
+以下 D1 pua-loop 机制**本版未吸收**（同源见 pua-harness-governance「上游同步通道」与 C2 报告 D1，裁决=P2 缓行防膨胀）：
+
+- **ASI 失败记忆**（上游 skills/pua-loop/SKILL.md:43-55）：每轮迭代追加 history.jsonl，git revert 撤代码不撤记忆，模型每轮读文件避免重复失败方案。
+- **Stall Detection**（:57-60）：promise_rejections 计数达阈值强制 REASSESS。
+
+判定口径：与失败模式检测节互为补充而非重复——上表检测"最近 3 次"，二者解决"跨会话长期重复失败"；待外部状态存储（非提示词形态）方案裁决后按增量卡合入。
+
 ## 失败模式检测
 
 分析最近 3 次 error signature（错误签名），分类注入：
@@ -76,6 +99,18 @@ metadata:
 - 错误信息是否相同？（相同 → SPINNING）
 - 错误信息是否每次不同？（全不同 → EXPLORING）
 - 部分重复部分新？（→ MIXED）
+
+### 失败计数语义（v1.1.0 增补，三条）
+
+> 来源：tanweai/pua 3.5.1 hooks/runtime-state.py:8-15 + CHANGELOG.md:13（D2 merge 理念，drop 原文件——Hermes 无 hook host）。
+
+1. **按「任务+会话」隔离计数**：失败计数不跨任务累积，新任务/新会话从 L0 起算；
+2. **同一失败去重**：同一次失败的重复观测（同一错误签名被多次上报）不重复计级；
+3. **成功调用不清零失败计数**：成功的普通工具调用不重置任务失败计数（v3.5.1 语义修复）——
+   只有完成外部验证门（De-escalation 条件）才降级。
+
+行为边界（对齐 Hermes 隐私纪律）：失败计数只基于错误签名（error signature），
+不读取 transcripts/prompts/推理内容/工具输入输出，不写长期记忆。
 
 ## 突破降压协议（De-escalation）
 
@@ -139,11 +174,17 @@ metadata:
 - [ ] 是否有更好的方案被忽略了？
 - [ ] 用户没明确说的部分，我是否主动补充了？
 
+## 施压话术红线（v1.1.0 增补）
+
+施压/鞭策话术**不得伪造事实**——「其他模型已经完成了」「同事们都在等你」这类无依据的事实陈述
+禁止使用；同强度压力必须用条件式表达（「如果 X 已发生，那么…」）。
+来源：tanweai/pua 3.5.1 CHANGELOG.md:19（D3 drop 形态留理念）。
+
 ## 与其他 skill 的联动
 
 | 防线 | Skill | 触发时机 |
 |------|-------|---------|
-| 执行前 | `cognition-self-check` | 任务开始前 5 秒自检 |
+| 执行前 | `cognition-lattice` §七A | 任务开始前 5 秒自检 |
 | 执行中 | `pua-pressure-engine`（本 skill） | terminal 连续失败时 |
 | 完成时 | `loop-engineering-gates` | kanban_complete 前 |
 | 方法选择 | `pua-methodology-router` | 任务类型判定时 |

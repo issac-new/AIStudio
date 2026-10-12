@@ -1,5 +1,6 @@
 ---
 name: evidence-labeled-research
+version: 1.0.0
 description: Tag claims with evidence source, re-read configs live first.
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: ccswitch-codex-provider-management
+version: 1.0.0
 description: Codex-side ccswitch provider add/reorder/model-mappings.
 triggers:
   - ccswitch codex provider

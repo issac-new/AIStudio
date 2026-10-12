@@ -98,6 +98,23 @@ clearances:
 
 无 `clearances` 字段的 profile 默认只有 `TLP:GREEN` 和 `TLP:CLEAR`。
 
+### 2.4 权限交集公式（子委托范围显式化）
+
+> 来源：handbook M5 权限交集公式 [p.58]。
+> 与现网 markings 合取传播（§1.2）+ clearances 校验（§2.3 / §3.1）同构：数学上是同一交集/合取语义，本节只做显式化，不新增机制。
+
+**公式**：一次委托（orchestrator→worker，或 parent→child）的有效权限 = 委托方 clearances ∩ 受托方 clearances ∩ 任务 markings 所需集合。
+
+```
+effective = clearances delegator ∩ clearances delegatee ∩ required(task.markings)
+effective ⊆ 上述任一集合 —— 子委托范围只能比上游更小，永不能更大
+```
+
+机械判据（并入既有 §3.1/§3.2 校验，无新脚本）：
+1. `required(task.markings) ⊄ clearances delegatee` → 拒绝委托（kanban_block capability，同 §3.1）
+2. 委托方为传递而临时扩受托方 clearances = **禁止**（交集不允许旁路；需要更高资格换有资格的 assignee，不是改资格）
+3. Task → SubTask 链上 effective 只减不增：子任务 markings 继承按 §1.2 合取 AND，天然单调不减；clearances 交集天然单调不增——两者夹出"下游 ≤ 上游"的硬界
+
 ---
 
 ## 三、机械校验点
@@ -208,20 +225,14 @@ markings 校验仅对 orchestrator 路由（跨 board / 跨 profile）生效。T
 
 ---
 
-## 版本
+## 六、标记沿调用链传播（机器执法增强）
 
-- v1.0 (2026-07-31): 初始版本
-
----
-
-## 六、标记沿调用链传播（机器执法增强，2026-08-06）
-
-> 来源：swarm-yuan 决策 28（`--stable-diff` 传播 warn + 特征卡 §11g 下游影响域），kanban task t_25432cc9 融合。
+> 来源：swarm-yuan 决策 28（`--stable-diff` 传播 warn + 特征卡 §11g 下游影响域）。
 > 本节在既有**静态声明**之上补充**动态传播机制**。
 
 ### 6.1 稳定单元变更的下游 1 跳 warn
 
-"稳定单元"的权威清单见 [`ontology.md`](ontology.md) 附录「稳定单元注册表」（注册表，2026-08-24 建立，2026-08-25 F6 并入 ontology）。当任务修改注册表内单元（或满足准入条件：stable API/公开接口/共享 schema/被 ≥2 任务依赖的 artifact）时：
+"稳定单元"的权威清单见 [`ontology.md`](ontology.md) 附录「稳定单元注册表」。当任务修改注册表内单元（或满足准入条件：stable API/公开接口/共享 schema/被 ≥2 任务依赖的 artifact）时：
 - worker 在 `kanban_complete(metadata)` 中列出**下游 1 跳影响域**（直接依赖方）
 - dispatcher/orchestrator 对下游任务发出 warn comment：`<file:line> 稳定单元变更，影响域: [...]`
 - 下游任务开工前必须确认已读 warn（在 comment 中 ack 或 `kanban_block` 求澄清）
@@ -235,7 +246,7 @@ markings 校验仅对 orchestrator 路由（跨 board / 跨 profile）生效。T
 
 两者正交：静态管"谁能看"，动态管"谁受影响"。
 
-### 6.4 实战演练记录（P9 `t_44f56a7c`，2026-08-29 落地）
+### 6.4 实战演练记录
 
 > 来源：P9 Gap-Closing 收尾，端到端验证标记沿 `derived_from` 传播 + `clearance_gate` 拦截/放行。
 

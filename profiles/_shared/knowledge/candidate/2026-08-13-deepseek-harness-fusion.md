@@ -11,7 +11,7 @@ confidence: high
 stability: stable
 evidence:
   - doc: workspace/research/deepseek-harness 调研材料
-  - human: 图爸（2026-08-13 决策授权 + 蓝军复盘修正）
+  - human: 用户（2026-08-13 决策授权 + 蓝军复盘修正）
 tags:
   - harness-fusion
   - decision-record

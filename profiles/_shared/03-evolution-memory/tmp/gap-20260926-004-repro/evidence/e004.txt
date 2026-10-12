@@ -1,0 +1,8 @@
+e004 — ENV prerequisite discovery: DB-less mode does NOT trigger the vulnerable fallback.
+1.83.3 auth path (litellm/proxy/auth/user_api_key_auth.py:1186-1193): with prisma_client None and a
+non-master key, raises ProxyException(code=400, "No connected db."); auth_checks.get_key_object with
+prisma None raises plain Exception("No DB Connected..."). Neither is a 401/403, so the vulnerable
+fallback (eats only 401/403) does NOT fire -> PoC would report INCONCLUSIVE under DB-less.
+With a real Postgres DB, an unknown sk- key yields ProxyException code=401 -> fallback fires.
+=> framework ENV step mandates a real DB (postgres container) for this CVE class.
+

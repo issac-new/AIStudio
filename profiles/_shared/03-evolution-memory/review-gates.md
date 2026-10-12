@@ -1,6 +1,6 @@
 # 评审门（L4 合并版）
 
-> 本文件由 F6 结构归并产生（2026-08-25），合并以下来源：
+> 本文件合并以下来源（历史归 git）：
 > `diamond-quality-gates.md` + `loop-engineering-gates.md` + `anti-patterns.md`
 > + `intervention-ledger.md`（§四）+ `worker-appeal-protocol.md`（§五）+ `kanban-advanced.md`（§附录 A）
 > 层级定位：L4 评审门——finding 质量门、验证门、反模式、干预追踪与申诉协议。
@@ -12,7 +12,7 @@
 
 > 来源：QoderAI Better Harness `skills/better-harness/references/findings-review.md:18-60`，Hermes 本地化适配
 > 适用：Diamond 编排模式的 Checker、delegate_task 蓝军审查、多 worker 并行后的合并审查
-> 版本：v1.0（2026-08-21，Hermes × Better Harness 融合 P1-1）
+> 来源：Hermes × Better Harness 融合 P1-1
 
 ### 1.0 使用场景
 
@@ -92,7 +92,7 @@
 
 > 门 1（资格）、门 3（隐私）、门 4（资产真实性）、门 7（盲分析）是**硬门**——任何一门不通过直接打回。门 2/5/6 是**软门**——可标注"待补充"后放行。
 
-### 1.9 block 自解释原则（2026-08-22，融合自 Playbook L1672）
+### 1.9 block 自解释原则（AI-Native SDLC Playbook）
 
 **任何门拦截时，拦截输出必须自解释**——同时包含：
 1. **为什么拦**：引用具体门的定义与被违反的事实（file:line 或命令输出）
@@ -137,7 +137,7 @@ kanban_show → hindsight_recall(教训) → 执行
 - 安全任务：工具输出非空 + 发现可复现
 - 部署任务：服务健康检查通过 + 端口可达 + 回滚方案就绪
 
-### 2.5 证据强度四分级（融合自 codex goals/continuation.md，2026-08-21）
+### 2.5 证据强度四分级（codex goals/continuation）
 
 验收时每条显式要求先定级，再决定放行：
 
@@ -176,13 +176,13 @@ kanban_show → hindsight_recall(教训) → 执行
 
 在原有验证门基础上增加：
 
-0. **冻结快照评审**（HoH 融合，2026-09-04）：重型交付物（合并报告/代码变更）提交评审时，评审必须针对**冻结的只读快照**（git commit / 文件 hash / 卡内 attach 版本锚点）进行——评审期间交付物禁止再修改；评审发现的修改项作为 rework 任务另行处理，而不是"边评边改边自评"。机械判据：评审意见中引用的交付物版本锚点必须与被评审对象一致，无锚点视为评审无效。
+0. **冻结快照评审**：重型交付物（合并报告/代码变更）提交评审时，评审必须针对**冻结的只读快照**（git commit / 文件 hash / 卡内 attach 版本锚点）进行——评审期间交付物禁止再修改；评审发现的修改项作为 rework 任务另行处理，而不是"边评边改边自评"。机械判据：评审意见中引用的交付物版本锚点必须与被评审对象一致，无锚点视为评审无效。
 1. **候选状态声明**：worker 是否声明候选状态（而非直接声称"已完成"）？
 2. **验证证据**：verify_commands 是否运行并贴出输出？
 3. **禁止资产检查**：是否触碰 forbidden 列表中的文件？
 4. **intent 对齐**：交付是否满足 task contract 的 intent（不只是 proxy）？
 5. **失败路径披露**：是否报告了失败路径和剩余风险？
-6. **侦察复述核对**（fdp v1.2 接线，2026-08-28）：核对 `kanban_comment` 侦察摘要中的「任务复述」——复述须逐条覆盖任务 body 冻结验收项（每条验收项在复述中有对应句子）。抽样口径：**重型任务（工具调用 ≥6）100% 核对**，缺失或覆盖率 <100% → 打回补侦察（候选 ≠ 通过）；**中等任务（3-5 次调用或写入 1-2 文件）抽 20% 核对**。机械判据见 `forward-deployed-protocol.md` §2.3（覆盖率检查表）与 §2.3.2（8-gram 照抄检测，>50% 重叠判照抄 = 打回）。轻量任务（≤2 次调用）豁免。
+6. **侦察复述核对**：核对 `kanban_comment` 侦察摘要中的「任务复述」——复述须逐条覆盖任务 body 冻结验收项（每条验收项在复述中有对应句子）。抽样口径：**重型任务（工具调用 ≥6）100% 核对**，缺失或覆盖率 <100% → 打回补侦察（候选 ≠ 通过）；**中等任务（3-5 次调用或写入 1-2 文件）抽 20% 核对**。机械判据见 `forward-deployed-protocol.md` §2.3（覆盖率检查表）与 §2.3.2（8-gram 照抄检测，>50% 重叠判照抄 = 打回）。轻量任务（≤2 次调用）豁免。
 
 #### 防作弊红线
 
@@ -243,6 +243,15 @@ kanban_show → hindsight_recall(教训) → 执行
 ## 下一步推荐操作
 ## 不要重做
 ```
+
+#### 交接时机与新鲜度门（DSH）
+
+> 来源：头条文《DSH 信息零丢失压缩插件》（存档 `research/article-fusion-20261002/`，裁决报告同目录 FUSION-REPORT.md）。吸收其「分级水位提醒 + 笔记新鲜度门（STALE）」两个机制的纪律语义，不迁移其工具。
+
+1. **压缩阈值交接纪律**：长任务（单会话工具调用 ≥30 或已收到上下文压缩征兆）中，**先落盘交接再继续**——把当前进度按上述模板写入 `kanban_comment` 或工作区存档文件，不赌「压缩摘要能保住关键细节」。hermes 压缩本身无损（归档行保留 + session_search 可回查），但压缩后的接续质量取决于交接笔记在压缩前已写好，滞后笔记会误导下游（DSH STALE 事故同型）。
+2. **交接新鲜度门**：任何交接产物（kanban_complete handoff / 压缩交接 / 存档交接文件）必须带**信息截止点**——最后核实时间 + 其后已知变化（哪怕是「其后无活动」一句）。下游消费交接前先核新鲜度：截止点之后有新事件（task_events / 文件 mtime 晚于交接时间）→ 以实况为准重核，不得直接信交接内容。
+
+机械判据：交接文本含「截至 <时间>」或等效截止声明视为过关；无截止点声明且任务有多轮活动 → 打回补声明。本条为检查项（语义层）；首次实战抓到坏样本后升级为已验证。
 
 > 完整 Harness 最佳实践见 `skill_view('agent-harness-best-practices')`。
 
@@ -349,7 +358,7 @@ kanban_show → hindsight_recall(教训) → 执行
 
 ### 2.11 Model-visible 可追溯性审计（借鉴 DeepSeek Harness）
 
-> 来源：deepseek-ai/deepseek-harness `docs/architecture.md` 原则「Model-visible ⟺ logged」（2026-08-13）。
+> 来源：deepseek-ai/deepseek-harness `docs/architecture.md` 原则「Model-visible ⟺ logged」。
 > 原文：「Anything that reaches a model request must be reconstructable from the session log.」
 > 适配：Hermes 的 context assembly 不完全持久化，此段补强可追溯性验证。
 
@@ -421,7 +430,7 @@ Model-visible 审计：验证决策依据是否可追溯（context provenance）
 
 ## 三、反模式（原 anti-patterns.md）
 
-> 融合自 Anthropic 官方反模式措辞
+> 措辞原型：Anthropic 官方反模式清单
 
 ### 3.1 三件套
 
@@ -462,7 +471,7 @@ Model-visible 审计：验证决策依据是否可追溯（context provenance）
 
 > 来源：QoderAI Better Harness `scripts/harness-analysis/intervention-ledger.mjs:3-32`，Hermes 本地化最小子集
 > 适用：跨任务/跨窗口追踪"治理干预"的成效（规则补齐、skill 演进、流程修复）
-> 版本：v1.0（2026-08-21，Hermes × Better Harness 融合 P1-3）
+> 版本：v1.0（Hermes × Better Harness P1-3）
 > 声明：本章为 Hermes 本地化最小子集（4 字段），非源 schema 完整复制
 
 ### 4.1 什么是 Intervention
@@ -561,7 +570,7 @@ owner: "orchestrator"
 
 ## 五、Worker 申诉协议（原 worker-appeal-protocol.md）
 
-> 2026-08-21，融合自麦肯锡绩效透明框架
+> 来源：麦肯锡绩效透明框架
 > 麦肯锡 F4："员工必须知道评价标准、数据来源、人工复核机制和申诉路径。"
 > Hermes 映射：worker 被 request_changes 打回后，有权要求复核——申诉不是对抗，是发现规则/分解/配置问题的信号。
 
@@ -588,7 +597,7 @@ worker 在自己任务卡上 `kanban_comment`，格式：
 
 - `kanban_complete`（申诉成立）
 - `kanban_request_changes`（维持打回，附更详细理由——必须回应申诉中的每条证据）
-- `kanban_block(kind="needs_input", reason="[申诉升级] 需要图爸裁决：<争议点>")`
+- `kanban_block(kind="needs_input", reason="[申诉升级] 需要用户裁决：<争议点>")`
 
 #### 3. 留痕
 

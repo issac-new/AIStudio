@@ -18,6 +18,17 @@ metadata:
 Operational procedures for running a single-gateway multi-profile Hermes
 deployment with dashboard, multi-board Kanban, and bulk cleanup.
 
+## launchd「坏掉」误判与 host-gateway 兜底实测（2026-09-27）
+
+`gateway.error.log` 满屏 `execution error: non-zero status (75)` + `launchctl print` 显示 `last exit code=1` **不等于 launchd 路径坏了**。真实机制：host-gateway 架构下（`One gateway per host serves every profile`），launchd 服务起 `gateway run` 时若检测到别的进程已在服务全部 profile，会让位退出（KeepAlive `SuccessfulExit=false` 正确停放）；75 刷屏是它与 SwarmStudio 手拉进程打架的历史产物。**判性必须实测**：kill 当前网关进程，launchd 会在 ~30-60s（ThrottleInterval）内自动拉起并重连全部平台（实测 api_server/matrix/weixin/[已移除]-weixin 全绿）。
+
+重启姿势（按官方指引实测）：
+1. `hermes gateway run --force` — 起新宿主接管（`--replace` 只接管「服务同一 profile」的 owner，对 SwarmStudio 拉的宿主无效）
+2. 停老进程：`kill -TERM <old_pid>`，新进程自动绑 8650
+3. 若 api_server 报 `address already in use` 被 park（老进程退干净前抢绑），端口释放后再起一次即恢复
+4. 注意：从 TUI 会话 `gateway run --force` 起的进程父链挂在 TUI 进程下（TUI 关闭可能连带死亡）；launchd 服务是持久兜底，两者并存时 launchd 让位、TUI 进程死后 launchd 接管
+5. 网关完整启动需 30-60s（multiplex 47 profile + 各平台连接），别在 10s 内判失败
+
 ## When to Use
 
 - Starting gateway + dashboard together under launchd
@@ -196,6 +207,33 @@ absolute file path, or create a new skill in the active profile.
 
 ---
 
+## 重启 gateway 的正确姿势（multiplex 宿主 + SwarmStudio 管控，2026-09 实测）
+
+本集群是 **multiplex 单宿主网关**：一个 `hermes gateway run` 进程服务全部 47 个 profile（不是每 profile 一个网关）。且它常由 **SwarmStudio 拉起**（父进程是 SwarmStudio，非 launchd），launchd plist 走 `osascript → exec hermes gateway run` 那层可能 `error 75` 反复重试（坏着），`launchctl kickstart` 挂起不生效。此时正确路径：
+
+```bash
+# 1. 起新宿主实例（--force 让它接管「服务全部 profile」的宿主；--replace 只接管服务同一 profile 的 owner，对 SwarmStudio 起的宿主无效）
+exec hermes gateway run --force >> <日志> 2>&1 &     # 后台长驻
+# 2. 等它绑端口（8650 是 api_server），再 SIGTERM 停老的宿主进程 → 新的接管
+# 3. 就绪验证（写在 orchestrator/logs/gateway.log，不是别的日志文件）
+grep -E 'Cron scheduler will tick 47 profile|api_server connected|holding singleton dispatcher lock' \
+  ~/.hermes/profiles/orchestrator/logs/gateway.log | tail
+lsof -nP -iTCP:8650 -sTCP:LISTEN        # api_server 已绑
+tail ~/.hermes/profiles/[已移除]-orchestrator/logs/gateway.log | grep -i 'weixin.*Connected'  # 妈妈微信通道
+```
+
+**坑：8650 抢绑失败 → api_server 被 park**。新实例启动时若老进程还占着 8650，`api_server` 报 `address already in use` 被 park、网关 DEGRADED（其余平台照常服务，如微信）。端口释放后它**不会自动重绑**——需再跑一次 `hermes gateway run --force` 或网关自检 `hermes gateway restart`。判断谁占着：`lsof -nP -iTCP:8650 -sTCP:LISTEN`。
+
+**坑：`hermes gateway restart` 前台阻塞**（drain 期可达数百秒）会触发 terminal 180s 超时；超时 ≠ 失败，但可能打断重启。multiplex 宿主场景优先用 `gateway run --force` 后台 + 轮询，别用阻塞式 restart。
+
+**坑：`--replace` vs `--force`**。`--replace` 只接管「服务同一 profile」的旧 owner；`--force` 才抢宿主（服务全部 profile 的那个）。SwarmStudio 拉起的全 profile 宿主进程用 `--replace` 接管不了。
+
+### 为什么必须重启才让配置改动生效（agent 构造时定格）
+
+`personality` 等 profile 配置不是每次请求重拼，而是 **agent 构造时**从 config 解析、定格进 `ephemeral_system_prompt`（`chat_completion_helpers.py`：`effective_system = agent._cached_system_prompt + "\\n\\n" + agent.ephemeral_system_prompt`）。config 文件读取带 mtime+size 缓存（改文件后缓存失效重读），但**已构造的 agent 不会重解析**——文件改对 ≠ 活进程用上。所以清完 config（尤其生成源）后必须重启 agent/网关进程，且**重启时刻要晚于 config 修改时刻**才保证新构造读到新值（`ps -p <pid> -o lstart` 对比 config `stat -f '%Sm'`）。
+
+**验证「真生效」不是「自报」**：不要只看「修复已提交/配置已改」的自报。实证 = ①新进程启动时间晚于 config 修改时间 ②新进程日志里 agent 重新连接（如 `weixin: restored ... Connected`）③全舰队 `grep -rl '<坏值>' profiles/*/config.yaml` 为 0。某次对话 dump 只在 LLM 调用失败时才落盘，**不能**用它证明风格生效（无 dump ≠ 无问题）。
+
 ## Gateway 重启的安全时序门控（2026-08-24 实例）
 
 > 实例：改 hermes 源码（kanban_db.py 增 metadata 列）需 gateway/dispatcher 重启
@@ -252,6 +290,23 @@ Matrix/Weixin 渠道收发 + 第三方管控），不要让 agent 盲目自主�
 **顺带收益**：若本次重启是为了让某个源码 patch（如新增 DB 列）生效，可在同一重启里
 一并恢复挂掉的主 gateway——一次重启解决两件事。
 
+### 代码更新后必须重启 gateway：惰性导入 ImportError 陷阱（2026-09-24 实例）
+
+主仓 git pull / 上游 commit 落盘后，**运行中的 gateway 进程仍是旧代码**。新模块在每条消息
+到达时惰性导入（如 `gateway/message_timestamps.py` → `from hermes_time import safe_strftime`），
+此时进程 `sys.modules` 里缓存的还是旧版 `hermes_time`（无该符号）→ ImportError → 用户端
+表现「Something went wrong and I couldn't finish this reply」。磁盘代码本身是好的。
+
+诊断签名（三条全中 = 纯进程陈旧，重启即愈）：
+- errors.log 每条消息一个相同 ImportError，全指向同一 import 点
+- 新解释器 `python3 -c "import gateway.message_timestamps"` OK → 磁盘自洽
+- 网关进程启动时间 **早于** 相关文件 mtime：`ps -p $(lsof -tiTCP:8650 -sTCP:LISTEN) -o lstart`
+
+修复：查 worker 空窗后 `launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway-orchestrator`；
+首次可能因旧进程锁退出码 1，launchd 会自动拉起，等 30s 看 8650 监听即可。
+验证 = 重启后 errors.log 无新增该 ImportError。同窗口期用户报错也可能是上游 429
+（cc-switch 级），按 cc-switch-failover-ops 分流，两种病因同现时分开归因。
+
 ### 🔴 Gateway 重启可能触发 git pull 冲掉主仓未提交改动（2026-08-25 实例）
 
 `gateway run --replace --force` 启动路径若带更新检查（或同日有独立更新机制），会把
@@ -278,7 +333,7 @@ venv/bin/pip install mautrix==0.21.1 aiosqlite==0.22.1 asyncpg==0.31.0 aiohttp-s
 ## Gateway lifecycle 通知抑制（gateway_restart_notification，2026-08-28 实例）
 
 > 实例：邮箱被 `Gateway online` / `shutting down` 类 home-channel 通知刷屏。
-> 同一收件箱（your@example.com）被 orchestrator + [已移除]-orchestrator 两个网关进程
+> 同一收件箱（your-inbox@example.com）被 orchestrator + [已移除]-orchestrator 两个网关进程
 > 各发一次，造成重复噪声。抑制后日志落 `Shutdown notification suppressed ...`。
 
 ### 机制
@@ -330,7 +385,7 @@ grep -h "Shutdown notification suppressed\|Sent home-channel startup" \
 config.yaml，但 `EMAIL_HOME_ADDRESS` 通常指向**同一收件箱**。只给 orchestrator 置
 false，[已移除] 进程仍会发那条通知——必须对所有启用 email 平台的 profile 都置 false，
 噪声才彻底消失。本集群实测：两 profile 的 `EMAIL_ADDRESS` / `EMAIL_HOME_ADDRESS`
-均为 `your@example.com`（账号相同，非不同账号）。
+均为 `your-inbox@example.com`（账号相同，非不同账号）。
 
 ### 坑：hermes gateway restart 可能前台超时
 

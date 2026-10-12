@@ -31,7 +31,7 @@ ACCOUNT SELECTION and account-scoped blocks.
 
 | Gateway | Port | Account | Binds to |
 |---------|------|---------|----------|
-| main (multiplex) | 8650 | `<main-bot-account-id>@im.bot` | 爸爸 WeChat `HK_DAD_WX@im.wechat` |
+| main (multiplex) | 8650 | `<main-bot-account-id>@im.bot` | 爸爸 WeChat `<dad-wechat-id>@im.wechat` |
 | [已移除] (launchd) | 8651 | `<[已移除]-bot-account-id>@im.bot` | 妈妈 WeChat `<mom-wechat-id>@im.wechat` |
 
 - Account credentials: main under `~/.hermes/weixin/accounts/<id>.json`;

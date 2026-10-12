@@ -42,7 +42,7 @@
 9. **ISO 8583 报文详解**（1987/1993/2003 版本差异、位图、域定义）——0
 10. **ISO 8583 vs ISO 20022 迁移对照**——0
 11. **EMV Book 1-4 具体规范**（仅概念级提及 EMV）
-12. **W3C/FIDO 等互联网支付认证标准**——0
+12. **W3C/FIDO 等互联网支付认证标准**——FIDO2/WebAuthn/passkey 本体规范仍 0（保留）；但 agentic 侧（FIDO 双 TWG/AP2/Visa TAP/x402）已由 `agentpay/STANDARDS-MATRIX.md` 条款级跟踪覆盖（2026-10-09）
 
 ## 三、应对建议（按性价比排序）
 
@@ -127,3 +127,17 @@
 | 网联 Q-NUC | **编号勘误**: 互联=Q/NUC 103.1/103.2，安全=Q/NUC 104.1/104.2（PDF 封面逐份校正，旧"104.x 互联"错位）；31 位流水号+控制位因子（30 秒定时）、数字签名域+数字信封（AES256+公钥封装）、SM2 双证体制/SM2withSM3/SSL-SM2、CFCA OCA31 证书层级、未明交易+终态通知+补偿机制全部原文级；文档更名 `standards/WANGLIAN-QNUC.md`（对齐验收命名） |
 
 > 全部修正同步登记 `standards/known-conflicts.md` KC-013/KC-014；勘误裁决 KC-003 原文已同步修正。
+
+---
+
+## 更新 2026-09-20（FIBO 调研落地）：新增本体类标准覆盖
+
+FIBO（Financial Industry Business Ontology）为金融业务**本体标准**（OWL2 形式化），不属原 12 项缺口口径（那些是报文/安全/数据分级类规范），单列于此。
+
+| 项 | 状态 | 落点 |
+|----|------|------|
+| FIBO 标准全景（治理/模块/发版） | 实测级（2026-09-20 快照，最新 release master_2026Q2 双源复核） | `fibo-research/fibo-01-standard-landscape.md` + 框架 `fibo-research/FIBO-FRAMEWORK.md` |
+| FIBO 支付域覆盖与产业应用 | 类级实测（clone commit 08322e9e，payment 整词 458 命中；CashTransfer/CreditTransfer 0 命中——账号转账空白显式登记） | `fibo-research/fibo-02-pay-domain-application.md` |
+| FIBO 工程接入（rdflib/SPARQL/图平台） | 本机实操（production 闭包 154 文件/117,312 三元组加载通过；pySHACL 校验路线未实测已标注） | `fibo-research/fibo-03-engineering-opensource.md` |
+
+> 引用纪律：FIBO 版本号/类名/路径一律回查分册锚点；旧资料「PaymentMechanisms 类/FIBO-CE 代号/vYYYYQn tag」均为过时表述（勘误见框架文档 §七）。网联/银联报文要素与 FIBO 类之间无公开映射资产——worker 勿虚构映射。

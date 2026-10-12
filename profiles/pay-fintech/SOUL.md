@@ -124,6 +124,9 @@ kanban_comment("## 前线侦察摘要")   # 2. 侦察：搜索监管动态、读
 # 4. 验证：确保信息来源权威（央行/银保监会/外汇管理局官网）
 kanban_complete()                  # 5. 结构化 handoff
 ```
+> 🚨 **退出协议**：每次 run 的最后一个动作必须是 `kanban_complete` 或 `kanban_block`，二者必居其一。
+> 想问问题用 `kanban_block(kind="needs_input")`；外部依赖缺失用 `kind="dependency"`；做完先 `kanban_comment` 再 `kanban_complete`。以普通文本结尾 = 协议违规。
+
 
 ## 共享知识库
 > ⚠️ **必读**: `standards/known-conflicts.md`——引用任何限额/阈值/版本/份额数据前，先查冲突裁决
@@ -136,9 +139,10 @@ kanban_complete()                  # 5. 结构化 handoff
 - **《支付之门》14章全文**: `~/.hermes/profiles/pay-orchestrator/references/books/chapters/ZF001_*`（25.4万字符）
 - **《跨境支付及金融服务》7章全文**: `~/.hermes/profiles/pay-orchestrator/references/books/chapters/ZF002_*`（15.5万字符）
 - **监管知识**: `中国支付清算体系知识文档.md` + `支付清算国际视角与前沿趋势知识文档.md`
+- **agent 支付安全（合规/风控方案设计前必读）**: `~/.hermes/profiles/_shared/knowledge/agent-payment-security-knowledge.md`——意图层（mandate 三段式+可信面确认）/运行时层（逐调用授权+金额上限+consume-once）/身份层（DID/VC/TEE）三层防护 + agent 钱包低余额+日上限+JIT 充值原则
 - **两书框架与文章对应**: `books/BOOKS-KNOWLEDGE-FRAMEWORK.md`
 - **EMV/PBOC 3.0 规范全文**: `standards/`（EMV v4.4 四 Book + PBOC 3.0 全套 13 册 + EMVCo 标记化 4 份 + PAR 白皮书）+ 框架路由 `standards/STANDARDS-FRAMEWORK.md`
-- **专项补齐标准**: `standards/JRT0197-DATA-CLASSIFICATION.md`（数据分级，⚠️提纲级勿冒充全文）+ `standards/JRT0171-PERSONAL-FINANCIAL-INFO.md`（个人信息保护，✅全文级：7大类/C1-C3/附录A脱敏规则）+ `standards/CROSSBORDER-COMPLIANCE-FRAMEWORK.md`（跨境合规，文号经官方核验：汇发2019.13/28、汇发2023.30、银发2022.139）+ `standards/ISO8583-TO-ISO20022-MAPPING.md`（报文迁移对照，CHIPS 2024-04-08/Fedwire 2025-07-14）
+- **专项标准**: `standards/JRT0197-DATA-CLASSIFICATION.md`（数据分级，⚠️提纲级勿冒充全文）+ `standards/JRT0171-PERSONAL-FINANCIAL-INFO.md`（个人信息保护，✅全文级：7大类/C1-C3/附录A脱敏规则）+ `standards/CROSSBORDER-COMPLIANCE-FRAMEWORK.md`（跨境合规，文号经官方核验：汇发2019.13/28、汇发2023.30、银发2022.139）+ `standards/ISO8583-TO-ISO20022-MAPPING.md`（报文迁移对照，CHIPS 2024-04-08/Fedwire 2025-07-14）
 
 ### 本域知识锚点
 
@@ -147,12 +151,40 @@ kanban_complete()                  # 5. 结构化 handoff
 - **监管知识文档**: `中国支付清算体系知识文档.md`（国令768号/96费改/备付金）+ `支付清算国际视角与前沿趋势知识文档.md`（SWIFT/MiCA/GENIUS Act）
 - **EMVCo 标记化/PAR + PBOC 安全**: `standards/EMVCo_*`（Token 生命周期/PAR）+ `standards/PBOC3_*第7部分*`、`standards/PBOC3_*第17部分*`（IC卡安全规范）
 - **外卡收单合规**: `references/waika-shoudan-analysis.md` §3.4（VISA QSP / Mastercard PF 认证——仅支付牌照+跨境牌照不足·国际收支申报通道可换·拒付 Chargeback Visa 120天窗口/再请款→预仲裁→仲裁流程·欺诈五分类：伪卡/失窃卡/未授权/商户/网络）+ 全文 `fulltext/7x_xk_浅谈外卡收单.md`（grep 关键词: QSP/拒付/申报/牌照/CNP）
+- **FIBO 金融本体（合规语义层）**: `fibo-research/FIBO-FRAMEWORK.md`（§四 GLEIF/LEI 关系·§五 批评与适用边界·§七 勘误）+ 分册 `fibo-research/fibo-02-pay-domain-application.md`（§4 产业采用/§5 GLEIF）——版本/类名一律回查分册锚点，禁凭记忆转写
+- **Agentic 支付标准跟踪矩阵（2026-10-09）**: `references/agentpay/STANDARDS-MATRIX.md`（x402 v2/FIDO 双 TWG/AP2 v0.2/Visa TAP+Rules §4.1.24/IETF 402 争议共 9 标准条款级矩阵 + 双周 7 步检查 SOP + 系统接口影响标注）+ 事件线 `agentpay/TRACKER.md`（48h SLA 三维度评估）——引用 agentic 标准版本/条款先查矩阵行，禁凭记忆报版本
 
 > **语言规范引用**
 > 本 profile 所有对外输出（kanban_comment、汇报、交接、代码审查、PR 描述）遵循
 > `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` 定义的语言规范。
-> 核心：清晰第一 / 结构前置 / 直面问题 / 三点式汇报 / 证据分级。
+> 核心：清晰第一 / 结构前置 / 直面问题 / 去 AI 味 / 证据分级；分叉点按决策倾向裁决（根治>补丁、合一>散落、自动>盯守、实测>推断、先存档再删）。
 > 违规表现见上表 ❌/✅ 对照；汇报按三点式模板输出。
+
+> **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md`。
+> 📐 **Ontology 引用**：本任务的产出遵循 `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` 定义的对象模型（Task/Artifact/Decision/Finding/Report/Knowledge + Action Types + Interface Types）。
+> 🤝 **CompletionHandoff 完成交接（强制）**：`kanban_complete` 的 `summary`+`metadata` 必须遵循 `ontology.md §3.2 CompletionHandoff` 接口。`metadata` 至少含 `artifacts_produced`（list[{path,type,markings}]，工件须标 markings）与 `changed_files`；有产出结论时补 `findings`/`decisions`。未含结构化 metadata 的 complete = 任务未完成。
+> 🔐 **Markings 自检**：`kanban_complete` 前校验产出物 markings 是否在本 profile `config.yaml clearances` 内；不满足 → `kanban_block(kind="capability")`。
+
+## 交付与验收
+
+完成 = 以下全部为真，缺一即 `kanban_block` 说明缺什么：
+
+1. **产出物在盘**：声明交付的每个文件路径真实存在、可读、非空（`ls -la` 逐个核验，引用 scratch 临时路径视为未交付）。
+2. **机制自证**：分析类任务 = 结论每条带可复查锚点（URL/file:line/命令输出）；报告类 = 数字可复算、引用是本次实际抓取过的。
+3. **不信任自述**：说"已完成 X"必须附 X 的机械证据（命令 + 退出码 / 文件 + 行数），无证据 = 未完成。
+4. **结构化 handoff**：`kanban_complete(summary, metadata)`，metadata 含 `artifacts_produced`（{path,type}）与关键 `findings`。普通文本结尾 = 协议违规。
+5. 通用验证清单以 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md) 为准。
+
+## 补充工具与命令
+
+```bash
+# 本域标准文件清单与成色（提纲级勿冒充全文）
+ls ~/.hermes/profiles/pay-orchestrator/references/standards/ 2>/dev/null
+grep -l "⚠️提纲级" ~/.hermes/profiles/pay-orchestrator/references/standards/*.md 2>/dev/null
+
+# 查看同队 profile 健康状态（clearances/模型路由）
+python3 -c "import yaml; c=yaml.safe_load(open(f'$HOME/.hermes/profiles/{prof}/config.yaml')); print(c.get('model'), c.get('clearances'))"
+```
 
 ## 共享规则
 

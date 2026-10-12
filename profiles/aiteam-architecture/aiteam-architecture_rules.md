@@ -1,7 +1,7 @@
 # Aiteam-Architecture Agent Rules
 # 角色规则: 架构研究员（Transformer/SSM/混合架构/线性注意力/MoE/长上下文/推理效率）
 
-> 📚 按需技能库：`research/deep-research-workflow`、`research/grounded-citations`、`research/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`devops/deep-research-workflow`、`research/grounded-citations`、`devops/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

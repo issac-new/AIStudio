@@ -1,0 +1,22 @@
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index e0d4a20bda7d..88a847b0d5a1 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -515,7 +515,8 @@ _AUTO_HEARTBEAT_MIN_INTERVAL_SECONDS = 60.0
+ _auto_heartbeat_last_attempt: float = 0.0
+ _auto_heartbeat_fence_warned = False
+ 
+-
++# >>> swarm:kanban-pid-adopt >>> restored 2026-09-28: upstream ships cli_single_query.py
++# calling this but kanban_tools.py without it; re-apply after every hermes update.
+ def register_current_worker_from_env() -> bool:
+     """Record this worker's pid on its run when the dispatcher died before it could
+     (``adopt_worker_pid``). False only when the board says the run was already reclaimed:
+@@ -532,6 +533,7 @@ def register_current_worker_from_env() -> bool:
+     except Exception:
+         logger.debug("kanban worker registration for %s failed", tid, exc_info=True)
+         return True
++# <<< swarm:kanban-pid-adopt <<<
+ 
+ 
+ def heartbeat_current_worker_from_env() -> bool:

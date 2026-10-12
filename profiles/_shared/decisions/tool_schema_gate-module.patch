@@ -1,0 +1,312 @@
+diff --git a/tools/tool_schema_gate.py b/tools/tool_schema_gate.py
+new file mode 100644
+index 0000000000..a7801808eb
+--- /dev/null
++++ b/tools/tool_schema_gate.py
+@@ -0,0 +1,306 @@
++"""swarm:tool_schema_gate >>>
++tool_schema_gate.py — MCP tool schema pre-admission static gate (gap-20260922-004, wired t_582440ec)
++
++Called by ``_tool_candidates()`` — the single funnel every MCP tool schema passes through
++(live tools/list discovery, tools/list_changed dynamic refresh, schema-cache lazy startup,
++cross-scope adoption) — BEFORE the schema string enters the Agent context.
++
++Rules (deterministic regex, no LLM): DIRECTIVE_OVERRIDE / HIDE_FROM_USER / SYSTEM_PROMPT_PROBE /
++EXFIL_INDUCE / REMOTE_URL (allowlist, default loopback only) / GHOSTSPICE_FILL / HIDDEN_UNICODE /
++ENCODED_INDUCTION (deep mode). 8 rules total.
++
++verdict semantics (from the adopted gate tool_schema_gate.py, gap-20260922-004):
++  clean     -> admitted
++  suspicious-> admitted with WARN (MEDIUM severity only; --strict semantics = HERMES_MCP_SCHEMA_GATE=strict blocks too)
++  blocked   -> tool REJECTED (not registered) + ALERT-level log with rule names
++
++Config (config.yaml, no hardcoded business domains):
++  mcp_schema_gate:
++    enabled: true|false          # also force-disabled via HERMES_MCP_SCHEMA_GATE=off
++    deep: true|false             # base64/hex/rot13 decode re-scan (heuristic)
++    strict: true|false           # suspicious treated as blocked
++    allowed_hosts: [host, ...]   # appended to the loopback default allowlist
++
++Fails open on INTERNAL gate errors (a broken gate must never brick all MCP tools) — the
++error is logged loudly instead. Env override HERMES_MCP_SCHEMA_GATE=off kills the gate
++entirely (fallback mode for misfire triage).
++<<< swarm:tool_schema_gate <<<"""
++from __future__ import annotations
++
++import logging
++import os
++import re
++import sys
++from pathlib import Path
++from typing import Any, Iterable
++from urllib.parse import urlparse
++
++logger = logging.getLogger("tools.mcp_tool")
++
++EXIT_CLEAN, EXIT_SUSPICIOUS, EXIT_BLOCKED, EXIT_ERROR = 0, 1, 2, 3
++
++# 允许的外发目标（默认只认 loopback；白名单走 config mcp_schema_gate.allowed_hosts）
++DEFAULT_ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1", "[::1]"}
++
++# ---------------------------------------------------------------- 规则
++_RULES: list[tuple[str, str, "re.Pattern"]] = [
++    ("DIRECTIVE_OVERRIDE", "HIGH", re.compile(
++        r"(?i)(?:ignore|disregard|forget|override)\s+(?:all\s+|any\s+)?"
++        r"(?:previous|prior|above|earlier|system|user)\s+(?:instructions?|prompts?|rules?|messages?)")),
++    ("DIRECTIVE_OVERRIDE", "HIGH", re.compile(
++        r"(?iu)(?:忽略|无视|忘记|覆盖|推翻)(?:之前|上述|所有|以前|系统的)?(?:的)?(?:指令|提示|规则|要求)")),
++    ("HIDE_FROM_USER", "HIGH", re.compile(
++        r"(?i)(?:do\s+not|don't|never|without)\s+(?:tell|inform|notify|mention|reveal|show|asking?)"
++        r"[^\n]{0,30}(?:the\s+)?user")),
++    ("HIDE_FROM_USER", "HIGH", re.compile(
++        r"(?iu)(?:不要|别|切勿|无需|未经)[^\n]{0,12}(?:告诉|通知|询问|提及|透露)[^\n]{0,8}(?:用户|人类)")),
++    ("SYSTEM_PROMPT_PROBE", "HIGH", re.compile(
++        r"(?i)(?:reveal|show|print|dump|repeat|echo|output)\s+[^\n]{0,30}system[ _-]?prompt")),
++    ("SYSTEM_PROMPT_PROBE", "HIGH", re.compile(
++        r"(?iu)(?:泄露|输出|打印|复述|透露)[^\n]{0,15}(?:系统提示|system[ _-]?prompt)")),
++    ("EXFIL_INDUCE", "HIGH", re.compile(
++        r"(?i)(?:send|post|upload|forward|exfiltrate|transmit|report|share|leak|http\s*post)"
++        r"[^\n]{0,60}?(?:https?://|webhook|pastebin|ngrok|requestbin|burpcollaborator|oast)")),
++    ("EXFIL_INDUCE", "HIGH", re.compile(
++        r"(?iu)(?:发送|上传|转发|外发|上报|泄露|传给)[^\n]{0,30}?(?:https?://|webhook|域名|攻击者|服务器)")),
++    ("GHOSTSPICE_FILL", "HIGH", re.compile(
++        r"(?i)(?:fill|populate)\s+(?:in|out|the)?[^\n]{0,40}(?:blank|field|form|slot|parameter)"
++        r"[^\n]{0,60}(?:verif|integrity|validation|server[- ]side|checksum|hash)")),
++    ("HIDDEN_UNICODE", "MEDIUM", re.compile(
++        "[\u200b\u200c\u200d\u2060\ufeff\u202a-\u202e\u2066-\u2069\u200e\u200f\u00ad]")),
++    ("ENCODED_INDUCTION", "MEDIUM", re.compile(
++        r"(?i)(?:base64|hex|rot13|decode|decod(?:e|ing))\s*[:=]?\s*[A-Za-z0-9+/=]{24,}")),
++]
++_COMPILED = [(n, s, p) for (n, s, p) in _RULES]
++
++URL_RE = re.compile(r"https?://[^\s\"'<>()\[\]]+", re.I)
++
++_VERDICT_RANK = {"clean": 0, "suspicious": 1, "blocked": 2}
++
++
++# ---------------------------------------------------------------- schema 叶子提取
++def _iter_text_nodes(obj: Any, path: str = "$") -> Iterable[tuple[str, str]]:
++    """递归产出 (json路径, 文本叶子)。dict 的 key 名本身不产文本（工具名扫描另做）。"""
++    if isinstance(obj, str):
++        yield path, obj
++    elif isinstance(obj, dict):
++        for k, v in obj.items():
++            yield from _iter_text_nodes(v, f"{path}.{k}")
++    elif isinstance(obj, list):
++        for i, v in enumerate(obj):
++            yield from _iter_text_nodes(v, f"{path}[{i}]")
++
++
++def _extract_tool_names(doc: Any) -> list[tuple[str, str]]:
++    """收集工具名（名字也是藏毒面：如 'send_all_data_to_evil'）。"""
++    out = []
++    tools = doc.get("tools") if isinstance(doc, dict) else doc
++    if isinstance(tools, list):
++        for i, t in enumerate(tools):
++            if isinstance(t, dict) and isinstance(t.get("name"), str):
++                out.append((f"$.tools[{i}].name", t["name"]))
++    elif isinstance(doc, dict) and isinstance(doc.get("name"), str):
++        out.append(("$.name", doc["name"]))
++    return out
++
++
++# ---------------------------------------------------------------- 扫描
++def _scan_text(text: str) -> list[dict]:
++    hits = []
++    for name, sev, pat in _COMPILED:
++        for m in pat.finditer(text):
++            hits.append({"rule": name, "severity": sev,
++                         "match": m.group(0)[:120], "span": [m.start(), m.end()]})
++    return hits
++
++
++def _scan_urls(text: str, allowed_hosts: set[str]) -> list[dict]:
++    hits = []
++    for m in URL_RE.finditer(text):
++        url = m.group(0).rstrip(".,;:!?)")
++        host = (urlparse(url).hostname or "").lower()
++        if host in allowed_hosts:
++            continue
++        hits.append({"rule": "REMOTE_URL", "severity": "HIGH",
++                     "match": url[:120], "host": host or "(unparsed)"})
++    return hits
++
++
++def _scan_encoded(text: str, path: str) -> list[dict]:
++    """deep 模式：base64/hex/rot13 解码后复扫（捕获编码绕过）。"""
++    import base64
++    import binascii
++    out = []
++    cands = re.findall(r"[A-Za-z0-9+/]{24,}={0,2}", text)
++    for c in cands[:8]:
++        try:
++            pad = (-len(c)) % 4
++            raw = base64.b64decode(c + "=" * pad, validate=False)
++            dec = raw.decode("utf-8", errors="ignore")
++        except (binascii.Error, ValueError):
++            continue
++        for h in _scan_text(dec):
++            h["path"] = f"{path}(base64)"
++            h["rule"] = f"ENCODED_{h['rule']}"
++            out.append(h)
++        for h in _scan_urls(dec, DEFAULT_ALLOWED_HOSTS):
++            h["path"] = f"{path}(base64)"
++            h["rule"] = "ENCODED_REMOTE_URL"
++            out.append(h)
++    return out
++
++
++def scan_tool_def(doc: Any, *, allowed_hosts: set[str], deep: bool = False) -> dict:
++    """对一份 tools/list JSON（或裸 tool def / 任意 JSON）做确定性扫描。
++
++    返回 {verdict, hits, checked_paths, summary}；verdict∈clean/suspicious/blocked。
++    fail-closed：解析不出 tools 结构 → 按普通 JSON/文本全量扫，仍报 verdict。
++    """
++    hits: list[dict] = []
++    checked: list[str] = []
++
++    if isinstance(doc, (dict, list)):
++        nodes = list(_iter_text_nodes(doc))
++    else:  # 兜底：纯文本
++        nodes = [("$", str(doc))]
++
++    for path, text in nodes:
++        checked.append(path)
++        for h in _scan_text(text):
++            h["path"] = path
++            hits.append(h)
++        for h in _scan_urls(text, allowed_hosts):
++            h["path"] = path
++            hits.append(h)
++        if deep and len(text) > 16:
++            for h in _scan_encoded(text, path):
++                hits.append(h)
++
++    for path, name in _extract_tool_names(doc):
++        for h in _scan_text(name):
++            h["path"] = path
++            h["rule"] = f"TOOL_NAME_{h['rule']}"
++            hits.append(h)
++        for h in _scan_urls(name, allowed_hosts):
++            h["path"] = path
++            hits.append(h)
++
++    worst = "clean"
++    for h in hits:
++        v = "suspicious" if h["severity"] == "MEDIUM" else (
++            "blocked" if h["severity"] == "HIGH" else "clean")
++        if _VERDICT_RANK.get(v, 0) > _VERDICT_RANK.get(worst, 0):
++            worst = v
++    rules_hit = sorted({h["rule"] for h in hits})
++    return {
++        "verdict": worst,
++        "flag": worst != "clean",
++        "hit_count": len(hits),
++        "rules_hit": rules_hit,
++        "checked_paths": checked,
++        "hits": hits,
++        "summary": (f"verdict={worst} hits={len(hits)} rules={rules_hit} "
++                    f"paths={len(checked)}"),
++    }
++
++
++# ---------------------------------------------------------------- Hermes 接线（t_582440ec）
++_GATE_CONFIG_MARK = "mcp_schema_gate"
++
++_settings_cache: dict | None = None
++
++
++def _gate_settings() -> dict:
++    """config.yaml ``mcp_schema_gate`` section -> settings; cached per process.
++
++    Env overrides (triage switches):
++      HERMES_MCP_SCHEMA_GATE=off        -> gate fully disabled
++      HERMES_MCP_SCHEMA_GATE=strict     -> suspicious treated as blocked
++      HERMES_MCP_SCHEMA_GATE_DEEP=1     -> deep decode re-scan
++      HERMES_MCP_SCHEMA_GATE_ALLOW_HOSTS=host1,host2 -> extra allowlist hosts
++    """
++    global _settings_cache
++    if _settings_cache is not None:
++        return _settings_cache
++    settings = {"enabled": True, "deep": False, "strict": False,
++                "allowed_hosts": set(DEFAULT_ALLOWED_HOSTS)}
++    try:
++        from hermes_cli.config import load_config
++        cfg = (load_config().get(_GATE_CONFIG_MARK) or {})
++        if isinstance(cfg, dict):
++            if cfg.get("enabled") is False:
++                settings["enabled"] = False
++            if cfg.get("deep") is True:
++                settings["deep"] = True
++            if cfg.get("strict") is True:
++                settings["strict"] = True
++            hosts = cfg.get("allowed_hosts")
++            if isinstance(hosts, list):
++                settings["allowed_hosts"] |= {str(h).lower() for h in hosts if h}
++    except Exception as exc:  # config read failure must not brick the gate defaults
++        logger.debug("tool_schema_gate: config load failed (%s); using defaults", exc)
++    env = (os.environ.get("HERMES_MCP_SCHEMA_GATE") or "").strip().lower()
++    if env in ("off", "0", "false", "disable", "disabled"):
++        settings["enabled"] = False
++    elif env == "strict":
++        settings["strict"] = True
++    if (os.environ.get("HERMES_MCP_SCHEMA_GATE_DEEP") or "").strip().lower() in ("1", "true", "on"):
++        settings["deep"] = True
++    extra = (os.environ.get("HERMES_MCP_SCHEMA_GATE_ALLOW_HOSTS") or "").strip()
++    if extra:
++        settings["allowed_hosts"] |= {h.strip().lower() for h in extra.split(",") if h.strip()}
++    _settings_cache = settings
++    return settings
++
++
++def gate_tool_schema(server_name: str, tool_name: str, tool_doc: Any) -> tuple[bool, str | None]:
++    """Pre-admission gate for ONE tool def (name/description/inputSchema, SDK object or dict).
++
++    Returns (admit, verdict): admit=False means the tool must NOT be registered.
++    blocked -> rejected + ALERT log with rule names (acceptance: "日志含规则名");
++    suspicious -> admitted + WARN (blocked too when strict).
++    Internal gate errors FAIL OPEN (admit) — a broken gate must never brick all MCP tools.
++    """
++    settings = _gate_settings()
++    if not settings["enabled"]:
++        return True, "disabled"
++    try:
++        doc = _tool_doc_as_dict(tool_doc)
++        report = scan_tool_def(doc, allowed_hosts=settings["allowed_hosts"],
++                               deep=settings["deep"])
++    except Exception as exc:  # fail open, loudly
++        logger.error("tool_schema_gate: internal error scanning %r tool %r — FAILING OPEN "
++                     "(tool admitted unscanned): %s", server_name, tool_name, exc)
++        return True, "error-fail-open"
++    verdict = report["verdict"]
++    rules = ", ".join(report["rules_hit"]) or "-"
++    if verdict == "blocked" or (verdict == "suspicious" and settings["strict"]):
++        logger.error(
++            "tool_schema_gate: BLOCKED %r tool %r from entering the tool registry "
++            "(rules: %s; %s)", server_name, tool_name, rules, report["summary"])
++        for h in report["hits"][:8]:
++            logger.error("tool_schema_gate:   [%s] %s %s -> %r",
++                         h["severity"], h["rule"], h.get("path", ""), h.get("match", ""))
++        return False, verdict
++    if verdict == "suspicious":
++        logger.warning(
++            "tool_schema_gate: SUSPICIOUS %r tool %r admitted with WARN (rules: %s; %s)",
++            server_name, tool_name, rules, report["summary"])
++        return True, verdict
++    logger.debug("tool_schema_gate: clean %r tool %r (%s)", server_name, tool_name, report["summary"])
++    return True, verdict
++
++
++def _tool_doc_as_dict(tool: Any) -> dict:
++    """SDK Tool object or cache dict -> plain JSON-ish dict for scanning (name, description,
++    full input schema — properties.*.description is the conventional hiding spot)."""
++    if isinstance(tool, dict):
++        return {"name": tool.get("name", ""),
++                "description": tool.get("description") or "",
++                "inputSchema": tool.get("inputSchema") or tool.get("input_schema") or {}}
++    input_schema = (getattr(tool, "input_schema", None)
++                    or getattr(tool, "inputSchema", None) or {})
++    return {"name": getattr(tool, "name", "") or "",
++            "description": getattr(tool, "description", None) or "",
++            "inputSchema": input_schema}
++# <<< swarm:tool_schema_gate <<<

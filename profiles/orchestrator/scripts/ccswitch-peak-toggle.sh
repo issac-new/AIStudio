@@ -28,6 +28,8 @@ SQL
 backup_db() {
   mkdir -p "$BACKUP_DIR"
   cp "$DB" "$BACKUP_DIR/peak_toggle_$(date +%Y%m%d_%H%M%S).db"
+  # keep only the newest 3 snapshots (210MB each; no-retention piled up 11G on 2026-10-08)
+  ls -t "$BACKUP_DIR"/peak_toggle_*.db 2>/dev/null | tail -n +4 | xargs rm -f
 }
 
 # Reassign sort_index to a clean 0,1,2,3 sequence (no gaps) via fixed CASE map.

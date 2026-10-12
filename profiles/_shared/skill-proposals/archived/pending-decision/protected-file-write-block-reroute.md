@@ -1,8 +1,12 @@
 # SkillProposal: protected-file-write-block-reroute [create]
 
 > **产出**： platform-skill-miner · 2026-08-31 · 半月全量窗口扫描（2026-08-17~2026-08-31，125 张 done 卡）
-> **状态**： ⏳ 待图爸最终裁决（本 job 只提议不落地，未调 skill_manage）
+> **状态**： ❌ REJECTED — 已实现（2026-09-25 最终裁决）
 > markings: [TLP:GREEN, EYES-ONLY:platform]
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现)** — 提案自述「与 `protected-write-crash-resume` 共享「独立磁盘核验」机制」，而 `devops/kanban-crash-recovery/SKILL.md` + `devops/orchestrator-lessons/SKILL.md:15-17`（「崩溃恢复：先验证磁盘再写恢复包」）已覆盖「独立核验→判断是否已达标→直接 complete 或 reroute」完整链路。差异仅在触发象限（block vs crash），核心机制 100% 等价。grep 实测 `crash.*resume|崩溃.*交接|先核验.*再` 命中上述两 skill，确认等价实现存在。无需新建 skill。
 
 ## 评审意见（2026-09-07，platform-skill-miner 同 job 评审通道）
 

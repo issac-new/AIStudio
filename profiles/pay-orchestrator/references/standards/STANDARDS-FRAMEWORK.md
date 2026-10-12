@@ -63,4 +63,5 @@
 - ✅ 缺口 #1 PBOC IC 卡规范 → **已全文**（13 册）
 - ✅ 缺口 #4 支付标记化技术框架 → **已全文**（EMVCo 4 份）
 - ✅ 缺口 #11 EMV Book 具体规范 → **已全文**（4 Books）
-- 仍缺口: ISO 8583 详解、银联/网联接口规范（Downloads 有 Q-NUC 系列待处理）、JR/T 数据分级、二维码规范、移动金融 HCE/SE/TSM、W3C/FIDO、8583→20022 对照
+- 仍缺口: ISO 8583 详解、银联/网联接口规范（Downloads 有 Q-NUC 系列待处理）、JR/T 数据分级、二维码规范、移动金融 HCE/SE/TSM、8583→20022 对照
+- ⚠️ 原缺口「W3C/FIDO 等互联网支付认证标准」→ 2026-10-09 降级为**条款级跟踪中**（非 0 覆盖）：FIDO Agentic Auth/Payments 双 TWG、AP2 v0.2、Visa TAP、x402 v2 的版本/条款由 `agentpay/STANDARDS-MATRIX.md` 承载（9 标准+3 观察项，双周更新）；FIDO2/WebAuthn/passkey 本体规范全文仍未入库，该部分缺口保留

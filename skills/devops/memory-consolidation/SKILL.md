@@ -1,7 +1,7 @@
 ---
 name: memory-consolidation
 description: "Systematically consolidate and prune Hermes Agent persistent memory (MEMORY.md + USER.md) when it fills up, goes stale after major config changes, or before migration. Covers the MEMORY↔Hindsight boundary (what stays in every-turn injection vs what delegates to vector recall), cross-file deduplication, batch operations, and character-budget targeting."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -61,6 +61,14 @@ hindsight_recall(query="15 profiles team structure swarm hack board")
 If Hindsight has the detail → safe to remove from MEMORY (it can be recalled on demand).
 If Hindsight does NOT have it → either retain in MEMORY, or `hindsight_retain` it first, then remove from MEMORY.
 
+When archiving an entry you are about to compress or remove, retain the FULL original text (not a summary — the summary defeats the purpose of archiving) with a standard payload shape so recall works months later:
+
+- `tags`: `["memory:archived-from-MEMORY", "<topic>"]`
+- `metadata`: `{"source": "MEMORY.md <entry topic>", "archived": "<date>"}`
+- `context`: 适用条件（什么场景需要这份细节）+ 时间锚
+
+If the hindsight tools are not in the session toolset, the daemon takes raw HTTP (verified on this machine): `POST http://127.0.0.1:8888/v1/default/banks/<bank>/memories` with `{"items": [...], "async": false}`; recall via `POST .../memories/recall` with `{"query": ..., "max_tokens": ...}`. Bank name is per-machine/per-profile — read it from hindsight config, don't guess.
+
 ### Step 3: Categorize each entry
 
 For each existing entry, assign one of:
@@ -98,7 +106,7 @@ read_file("~/.hermes/profiles/orchestrator/memories/MEMORY.md")
 read_file("~/.hermes/profiles/orchestrator/memories/USER.md")
 ```
 
-Count entries and characters. Target ~50% utilization to leave room for future entries.
+Count entries and compare against the intended count — more entries than intended means a separator-collision fragment (see Pitfalls). Characters: target ~50% utilization to leave room for future entries. Finally recall-verify every Hindsight archive a deletion relied on — deletion is only safe once recall returns the content.
 
 ## Cross-file deduplication
 
@@ -111,8 +119,9 @@ The same fact often ends up in both MEMORY.md and USER.md. Rules:
 | Model assignment (k3→hack, glm5.2→swarm) | MEMORY.md (affects every-turn behavior) |
 | User tool preferences (cc switch, executable commands) | USER.md (user preference) |
 | Memory vs Hindsight principle | USER.md (meta-fact about the system) |
+| Fact fully carried by the profile's SOUL.md (identity, doctrine, routing rules the SOUL restates) | SOUL.md only — remove the MEMORY.md copy |
 
-When deduplicating, keep the entry in the more appropriate file and remove from the other.
+When deduplicating, keep the entry in the more appropriate file and remove from the other. SOUL.md is a dedup target too: it is injected every turn just like MEMORY, so a MEMORY copy of identity/doctrine text the SOUL already carries adds zero information and burns budget.
 
 ## Character budget targeting
 
@@ -122,6 +131,8 @@ When deduplicating, keep the entry in the more appropriate file and remove from 
 
 ## Pitfalls
 
+- **条目内容禁含 § 字符**：MEMORY.md 用 § 作条目分隔符，内容里的章节引用符（`§7.3`）或带前缀的路径段都会撞分隔符把一条切成多条碎片（每片仍计字数且语义断裂）。章节引用写「7.3节」，路径写「同目录X.yaml」这类短形。污染入口不止一个，别枚举入口——防线是写后机械校验。
+- **写后必做 split-check**：批量写入后 read 磁盘文件按 § split，条目数必须等于预期条数；条目数变多=分隔符撞车碎片化，先合并复原再收工。memory 工具的 success 回执抓不住碎片。
 - **Deleting without Hindsight verification**: If you remove an entry and Hindsight doesn't have the detail, it's gone. Always `hindsight_recall` before removing anything non-trivial.
 - **Keeping too much detail**: Model pricing, token quotas, deployment step-by-step, and cost analysis are all available in Hindsight. They waste MEMORY's every-turn injection budget.
 - **Keeping stale TODOs**: "Skill欠账" (skill debt) entries that reference completed work are task progress, not durable facts. Remove them.

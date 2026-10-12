@@ -1,10 +1,8 @@
 # 动态工作流协议（Hermes 版 DynamicWorkflow）
 
-> **适用范围：orchestrator 工作流定义**（27 处 worker SOUL 引用系历史批量挂接，worker 日常任务不消费本协议——2026-09-08 dogma-audit 条目 14）
-
-> 来源：SenteLabsAI/OpenExecutive `workflows/dynamic.py:1-60` + `dynamic_models.py`（2026-09-03 源码级调研）
+> **适用范围：orchestrator 工作流定义**（worker 日常任务不消费本协议）
 > Hermes 适配：不改 kanban 源码——**工作流定义 = YAML 文件**，**执行 = orchestrator 按定义扇出 kanban 卡链**（kanban 原生依赖即 execution engine）
-> 定位：复杂多步交付（尽调/发版/合规审计/调研综合）的标准化复用
+> 定位：复杂多步交付（尽调/发版/合规审计/调研综合）的标准化复用。原型：SenteLabsAI/OpenExecutive workflows/dynamic.py
 
 ---
 
@@ -80,3 +78,19 @@ inputs 渲染进 goal 文本时：
 | `deep-research-synthesis` | 重型调研综合 | recon(fanout) → review → synthesis |
 | `payment-channel-audit` | 支付渠道合规审计 | recon(pay-infra) → review(pay-fintech+pay-clearing) → synthesis |
 | `release-with-review` | 发版前评审 | implement → review → approval_gate → release |
+
+## 八、图拓扑设计规则（指针）
+
+> 图拓扑纪律（fan-in 容错硬边/软依赖分层、barrier 节俭、循环收敛三判据）的规范正文落在
+> skill `devops/kanban-orchestrator` §Graph Engineering 派工纪律——
+> 分解时实际消费方在该 skill，此处只放指针不重复表述，防双源漂移。
+> Node Contract 交付 schema 纪律在 skill `devops/delegation-brief-format` §交付格式。
+
+## 九、工作流沉淀闭环
+
+成功的 diamond 分解是工程资产，不止是一次性卡图：
+
+- **触发器**：orchestrator 在 `kanban_complete` 一张 synthesis 卡（≥2 parents 且 metadata.deliverable）时执行沉淀动作——检查该卡图结构是否值得复用。
+- **沉淀判据**：该结构**第二次**成功复用后才升为独立 `_shared/workflows/<name>.yaml`（首跑即沉淀会囤积一次性管线；复跑验证后才算资产）。首跑成功先在任务 metadata 记 `workflow_candidate` 结构。
+- **格式**：沿用本协议 §一 YAML schema，不自造格式。
+- **版本化**：YAML 即版本控制单元，改动走 git；改名/删除须 grep 全库旧名引用。

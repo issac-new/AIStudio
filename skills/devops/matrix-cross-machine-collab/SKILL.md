@@ -1,5 +1,6 @@
 ---
 name: matrix-cross-machine-collab
+version: 1.0.0
 description: "Use for Matrix cross-machine agent collab + loop prevention."
 ---
 

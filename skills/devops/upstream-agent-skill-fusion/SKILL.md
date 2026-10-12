@@ -1,7 +1,7 @@
 ---
 name: upstream-agent-skill-fusion
 description: "融合上游 agent 工具/skill 进 Hermes：调研→裁剪安装→hermes 化→Exercised 验收。"
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     source: archify 融合（2026-09-01）实战蒸馏
@@ -14,7 +14,13 @@ metadata:
 首轮实践：tt-a1i/archify v2.16 → `~/.hermes/skills/devops/archify`（2026-09-01，全链 Exercised）。
 区别：`open-source-architecture-research` 管**调研**，本 skill 管**调研后的落地改装与验证**。
 
-## Workflow（6 步）
+## Workflow（7 步）
+
+### Step 0: 同域查重——默认合并进既有技能，不建平行技能
+调研后、安装前先盘本机同域技能：`grep -rl "<领域关键词>" ~/.hermes/skills/*/*/SKILL.md` + skills_list 扫 description。
+- 命中同域技能 → 默认动作是**合并**：上游运行时资产整体降级为既有技能的 `references/<name>/`，上游触发词并入其 frontmatter description，正文加分层/分节索引——不是新建平行技能。
+- 「多技能入口+互指分工表」不是融合是散落（用户裁决：合一>散落，「不要搞太多的同类技能」）——N 个同域入口 = N 次加载 + N 处版本漂移。仅当上游能力与既有技能正交（不同任务类）才新建独立技能。
+- 合并的具体执行步骤见 `skill-library-maintenance` Mode 5。
 
 ### Step 1: 获取源码（tarball 优先）
 ```bash

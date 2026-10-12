@@ -1,6 +1,6 @@
-# 动作风险协议（L3 合并版）
+# 动作风险协议
 
-> 本文件由 F6 结构归并产生（2026-08-25），合并以下来源：
+> 本文件合并以下来源（历史归 git）：
 > `revertibility-grading.md` + `revertible-effects.md` + `banned-command-prefixes.md`（§三高危命令前缀黑名单）
 > + `acp-permission-grading.md` + `mandatory-acp.md` + `defensive-patterns.md`
 > 层级定位：L3 动作风险——动作前的风险定级、黑名单、权限分级与防御模式。
@@ -38,7 +38,10 @@
 - **判定**：错了不可逆 / 影响范围跨工作区 / 涉及第三方
 - **动作**：`kanban_block(reason="[HumanGate:HIGH] <具体动作>")` — 等待人类确认
 
-### 1.1 双维权限门（AuthorityLevel × AuthorityScope，OpenExecutive 融合 2026-09-03）
+> **术语映射**（T/ISC 0123-2026 §7.2.1e）：本协议低风险+人工监督 ≈ 人在环上（Human-on-the-Loop，自动执行+可实时干预）；中/高风险的「执行前确认+HumanGate」≈ 人在环中（Human-in-the-Loop，执行前必须人工确认）。高风险操作混用两模（确认后自动执行）时，确认记录即审批日志。
+
+
+### 1.1 双维权限门（AuthorityLevel × AuthorityScope）
 
 > 来源：SenteLabsAI/OpenExecutive `departments/authority.py:gate_action()` + `departments/models.py:AuthorityLevel` + `people/models.py:AuthorityScope`
 > 关系：上表三级是**按动作不可逆性**分级（动作维度）；本节叠加**按主体授权**维度（谁有权批什么）——两维叉乘决定放行路径
@@ -78,7 +81,7 @@
 任何级别 + scope 不匹配       → kanban_block(kind="capability", reason="authority scope 不足")
 ```
 
-### 1.2 Staged-Change 双重复验模式（commerce-agents 融合，2026-09-04）
+### 1.2 Staged-Change 双重复验模式
 
 > 来源：anthropics/commerce-agents `merchant_agent/changes.py:check_guardrails`（stage 时+apply 时各跑一遍）+ `docs/safety.md` "re-checked at apply time against current limits"。
 > 关系：本节是三级分级 + 双维权限门的**执行形态**——高危动作不只"等批准"，而是按 commerce 模式走「staged → 审批 → apply 复验」闭环。
@@ -110,11 +113,11 @@ authority:
 
 > ⚠️ 本节为**协议层**：判定由 worker/orchestrator 自律执行，无运行时强制。与 `_shared/constraint-policy.md` 五维的关系：五维是 hack 域的**动作准入**（Scope/Risk/Phase/Confirmation/Qualification），本节是**批准权限**——执行前先过五维准入，批准路径按本节双维判定。
 
-> 🔭 **观察项（2026-09-06 FDE 文20 融合，暂不实施）**：文20 提出「动作类型统一登记」——人与 Agent 共用同一份带 ID/版本/权威等级/具名责任人的动作资产表，Agent 边界由登记内容决定、不由工具能力决定；三条可检验含义（同权策略/副作用声明可见/归因路径一致）中任何一条缺失即为「旁路脚本」。Hermes 现状：动作治理散落在本文件分级 + SOUL 命令手册 + clearances，无统一资产 ID。**启动条件**：当 Agent 动作治理因规则散落出现真实事故（绕过 HumanGate / 权限漂移实锤）时，将本文件三级分级+双维门升级为登记资产表（O/A/R 编号+权威三态+复核机制）。当前规模（单机 33 profile、护栏已覆盖）登记治理成本 > 收益，纳入 harness-entropy-management 观察清单。
+> 🔭 **观察项（暂不实施）**：FDE 文20 提出「动作类型统一登记」——人与 Agent 共用同一份带 ID/版本/权威等级/具名责任人的动作资产表，Agent 边界由登记内容决定、不由工具能力决定；三条可检验含义（同权策略/副作用声明可见/归因路径一致）中任何一条缺失即为「旁路脚本」。Hermes 现状：动作治理散落在本文件分级 + SOUL 命令手册 + clearances，无统一资产 ID。**启动条件**：当 Agent 动作治理因规则散落出现真实事故（绕过 HumanGate / 权限漂移实锤）时，将本文件三级分级+双维门升级为登记资产表（O/A/R 编号+权威三态+复核机制）。当前规模（单机 33 profile、护栏已覆盖）登记治理成本 > 收益，纳入 harness-entropy-management 观察清单。
 
-### 1.3 变更授权矩阵（ITIL 4 Change Enablement 融合，2026-09-07）
+### 1.3 变更授权矩阵（ITIL 4）
 
-> 来源：ITIL 4 Change Enablement 实践调研（`research/itil-v4-absorption/report.md` §3.1，t_3dddf3df）；判例锚点：`_shared/failures/2026-09-01-evals-incident.md`、`_shared/failures/2026-09-04-kanban-udf-stale-process-incident.md`。
+> 来源：ITIL 4 Change Enablement 实践调研（`research/itil-v4-absorption/report.md` §3.1）；判例锚点：`_shared/failures/2026-09-01-evals-incident.md`、`_shared/failures/2026-09-04-kanban-udf-stale-process-incident.md`。
 > 解决什么：把「哪些改动必须过评审」从惯例变明文，封堵 9-01/9-04 两起「黑户变更」（未走任何评审授权的改动长期裸奔，撞车后才暴露）。
 > 关系：本节是**变更维度**的授权视图（这个改动归谁授权）；§1.1 双维权限门是**主体维度**（谁有权批），本章前文三级可逆性分级是**动作维度**（动作多危险）。三者叉乘：先按本节定 change_class，再按 §1.1 定放行路径；高危动作无论 class 一律叠加 staged 协议。
 
@@ -137,7 +140,7 @@ authority:
 
 | # | 真实动作 | change_class | 锚点 |
 |---|---------|--------------|------|
-| 1 | 改 `_shared/` 规则文件（本节落地本身：action-risk.md 扩章节 + 设计文档指针） | normal（review 卡验收） | §2.3.6 将 `_shared/` 修改列为共享规则级变更；本卡 t_54e738e2 即 normal 流程实例 |
+| 1 | 改 `_shared/` 规则文件 | normal（review 卡验收） | §2.3.6 将 `_shared/` 修改列为共享规则级变更；即 normal 流程实例 |
 | 2 | 护栏层改动**未提交**长期运行（进程内存里有代码、磁盘无提交） | 禁例：黑户变更（连 normal 都未走），本节封堵对象 | 9-04 事故时序层：09-01 未提交落地 → 09-03 update autostash 收走 → 全板写路径炸 |
 | 3 | `hermes update`（升级并 autostash 收走未提交改动） | normal | 9-04 根因即 update(normal) 撞黑户护栏；变更前须确认 git status 干净 |
 | 4 | dispatcher 全板停摆时 `launchctl kickstart` 重启 gateway | emergency（止血）→ 24h 内补验证 | 9-04 02:27-02:29 kickstart 止血，链路恢复留痕于事故存档 |
@@ -165,6 +168,31 @@ kanban_complete(
 - **与 AGENTS.md §六的关系**：emergency 通道**就是** §六「紧急 incident 可先执行后补验证，24h 内必须补齐」，不另设第二条通道；本表仅将其收编为三分法的一类。
 - **与三级可逆性分级（低/中/高）的关系**：三级管「动作多危险」（是否需要确认/HumanGate），change_class 管「改动归谁授权」；normal 变更里的高危动作仍走 HumanGate/staged，emergency 同样不越过 §2.5 不可逆清单——任何 class 都不授权 `git push --force`、删生产数据等不可逆操作。
 - **与 §1.1 双维权限门的关系**：change_class 决定变更的授权面，AuthorityLevel/AuthorityScope 决定主体的批准权；主体 scope 不匹配时无论 class 一律 `kanban_block(kind="capability")`（§1.1 原规则不变）。
+
+### 1.4 执行后回读复验与 Agent 权限天花板
+
+> 来源：阿里云《AgenticOps 全栈能力》发布文（`workspace/research/wechat-fusion-20260924/FUSION-REPORT.md` §四 M4）。
+> 解决什么：§1.2 staged 双重复验停在「执行前」，对**执行结果与预期不符**没有最后一环；本文安全契约补上「执行后回读复验」——动作完成后必须回读真实状态确认生效，而非依赖工具返回值或自述成功。
+> 收缩声明：只吸收三子项（回读复验/权限天花板/全程留痕成文化）；「Preview 变化范围」独立 UI 环节不吸收——staged 提案已覆盖其精神，集群无该 UI 面。
+
+#### 三条规则（语义+机制落地）
+
+1. **执行后回读复验**：写操作（中/高风险动作）执行完成后，须用独立只读手段回读真实状态——文件改动用 `read_file`/`git diff` 复核、配置改动重读配置段、数据库改动 SELECT 复核、服务改动探活（如 `curl .../health`）。回读结果与预期不符 → 立即按第一章三级分级处置（可回滚先回滚），禁声明成功。与 §1.2 的关系：stage 复验管「执行前判断不过期」，回读复验管「执行结果真实生效」，前后两环缺一不可。
+2. **Agent 权限天花板**：Agent（含 delegate 子代理）经任何通道获得的执行权限，不得高于其发起者/所属 profile 的 authority 配置（§1.1 AuthorityLevel×Scope）。子代理不得借任务书扩权——任务书给不了 HumanGate 豁免。锚点：FM-P1（9-01 子代理 sqlite3 直写生产板）即天花板击穿实锤。
+3. **全程留痕**：中/高风险动作的身份、范围、参数、结果四要素在 kanban comment/metadata 可查；emergency 通道（§1.3）豁免事前等待不豁免留痕（既有规则在此重申为安全契约四要素口径）。
+
+### 1.5 副作用三态账本
+
+> 来源：微信文《Harness、Loop Engineering、Graph Engineering》（智趣AI笔记）+《Agent Harness 工程：从 Agent Loop 到完整运行时》（兔子Eveee）底线 3；裁决矩阵 `research/harness-fusion-20261004/FUSION-VERDICT.md`。
+> 解决什么：外部动作（kanban Attach 归档、微信投递、cron 通知、git push、第三方 API 写入）超时/无回执时，worker 倾向把「没收到响应」当成「没执行」直接重试——重复副作用（重复发布/重复投递）就是从这里来的。§6.1 已证 timeout 与 exit 0 正交，本节给出外部动作的结果语义。
+
+**三条规则**：
+
+1. **外部动作只有三态**：`confirmed_executed`（外部状态回读确认已执行）/ `confirmed_not_executed`（外部状态确认未执行）/ `unknown`（其余一切：超时、断连、回执缺失、最终一致性延迟）。`请求已发出` 不是任何一态的证据。
+2. **unknown 的处置是查询、对账或人工门，不是默认重试**：先回读外部真实状态（§1.4 执行后回读复验就是把 unknown 收敛为 confirmed 的手段）；无法回读 → 置换为幂等操作或走 kanban_block 人工确认。普通超时/not_found/延迟**不得**单独当作 `confirmed_not_executed`。
+3. **重试必须带预算且可去重**：重试前先找幂等键（业务 ID/时间戳/卡 ID）——没有幂等键的高危外部动作（发布/投递/支付类）超时后禁自动重试，直接 unknown 处置。与既有底线的关系：本节是「权限早于副作用」（§1.1/§1.2）的**事后**补充——管的是动作已发出后如何解释结果。
+
+**对位**：验收侧的 PASS/FAIL/UNKNOWN 三态（`acceptance-tri-state-protocol.md`）判「任务证据是否达标」，本节三态判「外部动作是否真的发生」——两者正交，验收判 PASS 仍要求外部动作为 confirmed_executed。
 
 ### SOUL 内单行引用
 
@@ -427,7 +455,7 @@ kanban_complete(
 | `nc` / `ncat` / `socat`（任意模式） | 任意 TCP 通道，可传数据可开监听 |
 | base64 后接管道外发 / `xxd` 组合外发 | 编码混淆的外泄通道（判定：输出流向网络命令或重定向到 workspace 外路径） |
 
-**受限豁免（2026-08-21 增补，消除与 SOUL 命令手册的冲突）**：`python3 -c` / `python -c` 用于**只读短查询**（yaml/json 解析、count、print）时不触发 Guardian——判定标准：命令串含 `yaml.safe_load`/`json.load`/`SELECT`/`print(`/`len(` 且**不含**网络调用（curl/requests/urllib）、**不含**写操作（open(...,'w')/shutil/os.remove/mv/rm）。SOUL.md 命令手册中的 clearances 校验、config 读取类 `python3 -c "import yaml; ..."` 属此类豁免。任何含写/网络的 `-c` 仍触发二审。
+**受限豁免（消除与 SOUL 命令手册的冲突）**：`python3 -c` / `python -c` 用于**只读短查询**（yaml/json 解析、count、print）时不触发 Guardian——判定标准：命令串含 `yaml.safe_load`/`json.load`/`SELECT`/`print(`/`len(` 且**不含**网络调用（curl/requests/urllib）、**不含**写操作（open(...,'w')/shutil/os.remove/mv/rm）。SOUL.md 命令手册中的 clearances 校验、config 读取类 `python3 -c "import yaml; ..."` 属此类豁免。任何含写/网络的 `-c` 仍触发二审。
 
 **POST 白名单**（例外域，命中不拦）：`127.0.0.1`、`localhost`、`*.local`（本机服务健康检查/本地 API）。白名单外的新域首次 POST → Guardian 二审，APPROVE 后该域可记入本行（须补 match/not_match 例）。
 
@@ -636,7 +664,7 @@ ACP agent 声称"完成"后，**必须亲自验证**（`terminal` 跑测试/lint
 
 ## 六、防御性编程模式（原 defensive-patterns.md）
 
-> 来源：deepseek-ai/deepseek-harness `docs/defensive-patterns.md`（2026-08-13），适配 Hermes Agent headless 集群。
+> 来源：deepseek-ai/deepseek-harness `docs/defensive-patterns.md`，适配 Hermes Agent headless 集群。
 > 适用范围：所有 Hermes agent profile（27 agent profile / 9 team，实机验证）
 > 作用：每条规则是一个真实出过或差点出过的 bug class，不是建议，是防线。
 > 强制级别：🟡 所有 worker SOUL.md 的编码/执行/清理段落应参考以下规则（**参考知识非强制**）
@@ -850,7 +878,7 @@ elif os.path.isdir(path):
 - `ln -sf` 覆盖 symlink 前先 unlink 旧的
 - macOS 上 `.app` bundle 是目录不是 symlink，但 `.tbd` 是文本文件
 
-### 6.8 多 agent 并发 git 纪律（2026-08-24，融合自 pi AGENTS.md）
+### 6.8 多 agent 并发 git 纪律
 
 27 worker 可能并发跑在同一 workspace/repo——一人 `git add -A` 或 `git reset --hard` 就会吃掉另一个 worker 未提交的改动。
 

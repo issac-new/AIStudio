@@ -1,7 +1,7 @@
 # Worker-Coder Agent Rules
 # 角色规则: 开发工程师
 
-> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`autonomous-ai-agents/kanban-acp-delegation`（ACP 委托原子化/停顿恢复/产出验证）、`software-development/kanban-goal-mode`、`software-development/kanban-handoff-contract`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`devops/delegation-brief-format`（ACP 委托原子化/停顿恢复/产出验证）、`devops-worker/kanban-worker`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

@@ -1,5 +1,6 @@
 ---
 name: time-based-model-downgrade
+version: 1.0.0
 title: Time-Based Model Downgrade via Cron + Bulk Profile Switch
 description: Schedule recurring model+provider switches across profiles.
 triggers:

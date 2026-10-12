@@ -1,5 +1,6 @@
 ---
 name: local-voice-model-selection
+version: 1.0.0
 description: "Use when choosing local offline STT/TTS models for Hermes."
 ---
 

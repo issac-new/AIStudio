@@ -1,5 +1,6 @@
 ---
 name: kanban-crash-recovery
+version: 1.0.0
 description: Use when kanban worker crashes mid-task or retries exhaust.
 ---
 

@@ -92,7 +92,7 @@ template_source: output-contract.md §1 + AGENTS.md §1.3
 
 ---
 
-## 写作纪律（AGENTS.md §1.3 + cognition-self-check）
+## 写作纪律（AGENTS.md §1.3 + cognition-lattice §七A 守门清单）
 
 ### DO
 

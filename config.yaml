@@ -122,7 +122,7 @@ auxiliary:
     provider: custom
     model: k3
     base_url: https://api.kimi.com/coding
-    api_key: HK_KEY_K2
+    api_key: ${AUX_KIMI_API_KEY}
     timeout: 120
     download_timeout: 30
     api_mode: anthropic_messages
@@ -506,7 +506,7 @@ custom_providers:
         context_length: 1048576
   - name: kimi-vision
     base_url: https://api.kimi.com/coding
-    api_key: HK_KEY_K2
+    api_key: ${AUX_KIMI_API_KEY}
     api_mode: anthropic_messages
     context_length: 200000
     models:

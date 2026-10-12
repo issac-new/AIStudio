@@ -1,7 +1,7 @@
 ---
 name: verify-requirement
 description: 应用级 requirement 开发契约验证——编码前的 fail-fast 检查
-version: 1.0.0
+version: 1.1.0
 platforms: [linux, macos]
 metadata:
   hermes:
@@ -116,6 +116,18 @@ grep -r "<field_name>" ~/.hermes/profiles/_shared/ontology.md
 4. 报告写入 kb 后 → 开始编码 → 编码完成跑 code-review
 ```
 
+### 项目级门禁裁剪声明 `.qa-checklist.md`（QGate §26 轻量版，NOW 档 t_a4151cc9）
+
+> QGate Profile/Tailoring 的零引擎等价物：不同 repo 该跑哪些检查项不该是隐性知识。进入一个
+> **陌生 repo** 编码前，先查 repo 根目录有无 `.qa-checklist.md`：
+
+- **有** → 本次任务的检查项以它为准（它声明该 repo 启用/禁用哪些检查+理由），验收按声明裁剪；
+- **无** → 默认全量检查项；若该 repo 确实不适配部分检查（如纯文档 repo 跳过 build 门），首次
+  编码任务收尾时**顺手生成**一份（列出：启用的检查/禁用的检查+各一行理由），提交进 repo——
+  下个任务即有裁剪依据，不用每次重新判断。
+
+模板四行：`# 项目验收裁剪` / `启用：<检查项清单>` / `禁用：<检查项> — <一行理由>` / `更新：<任务id+日期>`。禁用必须带理由（选择即证据），无理由的禁用按未声明处理（回退全量）。
+
 ---
 
 ## 四、验证清单（自检）
@@ -145,3 +157,4 @@ grep -r "<field_name>" ~/.hermes/profiles/_shared/ontology.md
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
 | 1 | 2026-08-25 | 初版（从 _shared/output-contract.md 验收标准冻结 + 文章 10 项检查清单对齐）| orchestrator |
+| 1.1.0 | 2026-09-23 | +项目级门禁裁剪声明 .qa-checklist.md 约定（QGate §26 轻量版，NOW 档 t_a4151cc9）：陌生 repo 编码前查裁剪声明，无则首次任务顺手生成，禁用必带理由 | orchestrator |

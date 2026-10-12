@@ -10,10 +10,10 @@
 
 ```bash
 cd <报告所在目录>   # --body-file / --attachment 只收 cwd 子树内相对路径
-agently-cli message +send --to your@example.com \
+agently-cli message +send --to your-inbox@example.com \
   --subject "…" --body-file report.md --body-format plain
 # 首调返回 data.confirmation_required=true + confirmation_token
-agently-cli message +send --to your@example.com \
+agently-cli message +send --to your-inbox@example.com \
   --subject "…" --body-file report.md --body-format plain \
   --confirmation-token <token>
 ```

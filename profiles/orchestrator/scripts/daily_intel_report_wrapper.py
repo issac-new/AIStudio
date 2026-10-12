@@ -26,7 +26,7 @@ import html as htmlmod
 from datetime import datetime, timedelta
 
 # ─── 路径配置 ───
-LIFE_DIR = "/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench"
+LIFE_DIR = "${HOME}/hermes-docker-sandbox/workspace/life-workbench"
 REPORTS_DIR = os.path.join(LIFE_DIR, "reports")
 WECHAT_DIR = os.path.join(LIFE_DIR, "wechat_daily")
 SCRIPTS_DIR = os.path.join(LIFE_DIR, "scripts")

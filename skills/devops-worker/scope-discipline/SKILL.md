@@ -15,7 +15,7 @@ metadata:
   hermes:
     tags: [scope-discipline, research, cognition, quality, enforcement]
     related_skills:
-      - cognition-self-check
+      - cognition-lattice
       - prompt-rule-enforcement
       - evidence-based-research
 ---
@@ -53,9 +53,9 @@ The deep research subagent (web_search for international standards, GitHub
 projects, industry analysis) hasn't been dispatched yet. The proposal is
 based on 3 article summaries, not industry research. This violates:
 
-- **cognition-self-check #1** (facts vs fabrication): proposal not based
+- **cognition-lattice §七A #1** (facts vs fabrication): proposal not based
   on real research data
-- **cognition-self-check #3** (inversion): what if the proposal is wrong
+- **cognition-lattice §七A #3** (inversion): what if the proposal is wrong
   after actual research?
 - **User trust**: user said "调研", got an unrequested proposal
 
@@ -107,7 +107,7 @@ If unsure whether the user wants research-only or research+proposal:
 
 ## SOUL.md Integration
 
-Add to the cognition-self-check high-frequency error scenarios:
+Add to the cognition-lattice §七A.2 high-frequency error scenarios:
 
 ```markdown
 - **提出方案/团队/架构建议** → 必须先完成调研（web_search/delegate_task
@@ -131,7 +131,7 @@ User corrected: "为什么会违反之前设置的全局规则！！，必须修
 
 ### Root cause
 
-- cognition-self-check was loaded but the "high-frequency error scenarios"
+- cognition-lattice §七A was loaded but the "high-frequency error scenarios"
   list didn't include "proposing solutions before research completes"
 - The agent treated article fetching as sufficient research, when the user
   asked for deep industry investigation (standards, GitHub, forums, etc.)
@@ -141,7 +141,7 @@ User corrected: "为什么会违反之前设置的全局规则！！，必须修
 ### Fix
 
 1. Created this skill to codify scope discipline
-2. Added two new items to cognition-self-check high-frequency scenarios:
+2. Added two new items to cognition-lattice §七A.2 high-frequency scenarios:
    - "提出方案/团队/架构建议 → 必须先完成调研"
    - "遵守用户明确的范围约束 → 用户说'只调研不开发'时不得包含开发计划"
 3. The correct sequence for this case would have been:
@@ -177,7 +177,7 @@ is off the table until I explicitly say otherwise".
 
 ## Related Skills
 
-- **cognition-self-check** — the 5-item checklist that catches fabricated
+- **cognition-lattice §七A** — the 5-item checklist that catches fabricated
   data; this skill extends it with scope-discipline scenarios
 - **prompt-rule-enforcement** — 3-layer pattern for enforcing mandatory
   rules; scope discipline should be enforced the same way (🔴 block +

@@ -27,7 +27,8 @@ metadata:
 |---|---|---|
 | **ocrmac (Apple Vision)** | 6.2s/页，中文印刷体近完美，免 GPU/免下载模型 | ✅ **首选** |
 | paddleocr 2.9.1 | `np.sctypes` 在 NumPy 2.0 被移除 → import 崩溃 | ❌ 环境冲突 |
-| easyocr / tesseract | 未装/质量一般 | 备选 |
+| tesseract (homebrew) | `chi_sim+eng --psm 3` 200dpi 中文印刷体语义完整（实测 600-1400 字符/页），`xargs -P4` 或 multiprocessing 并行提速 | ✅ 已装时的稳妥备选 |
+| easyocr | 未装 | 备选 |
 
 **判定无文本层**（先做，别盲目 OCR）：
 
@@ -73,8 +74,9 @@ grep -c '<!-- p' <out>/<某章>.md   # 锚点完整性
 
 ## Pitfalls
 
-1. **⚠️ 输出目录禁 /tmp**：OCR 全书产物是后续精读/回查的原证，放 `/tmp` 会被系统清理（见 `kanban-workspace-durability`）。`--out` 一律指向 default_workdir 持久子目录。
+1. **⚠️ 交付物禁 /tmp**：拼合全文/分章产物是后续精读/回查的原证，放 `/tmp` 会被系统清理（见 `kanban-workspace-durability`）——`--out` 与最终交付物一律指向 default_workdir 持久子目录。逐页中间产物可放 scratch/临时目录，但任务收尾前必须拼合落盘到持久层：kanban frozen 验收锚定的是持久层里的全文文件，中间目录被清理不算违规。
 2. **先查文本层再 OCR**：有文本层的 PDF 直接 `get_text()` 即可，OCR 是浪费。无文本层才走本流水线。
 3. **页码换算**：OCR `<!-- pN -->` 是 PDF 扫描页序，与书印刷页码常有固定偏移（本书约 +28-29），引用原书页码时需换算并在文档声明。
 4. **conda 探针噪音**：ocrmac 触发 conda 环境探针可能打印无害报错，只要 `[N/M] pg/min` 进度在涨即正常，别误判失败。
 5. **超大 PDF**：>50MB read_file 工具会拒，用 pymupdf；OCR 中途 dpi=200 足够（300 无显著增益但更慢）。
+6. **并行 OCR 的空文件是写入占位**：多进程逐页写出时空 txt 常是刚创建还没写完的占位——判进度看「非空文件数」而非文件总数，别把空文件当失败页；单页最终仍为空再对该页升 dpi 重试，终验以页数全 + 无 OCR ERROR 为准。

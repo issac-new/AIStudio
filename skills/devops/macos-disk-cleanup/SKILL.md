@@ -191,6 +191,20 @@ that was at 97% reclaims 40-65G and lands at 80-85%.
   user chat history. Tell the user to clean it from within WeChat.
 - **Orphan AI IDE dirs are the new normal.** Users try many AI coding tools;
   each leaves 1-5G. Always ASK which are still in use before bulk-deleting.
+- **Launchd background shells have a broken PATH.** `terminal(background=true)`
+  scripts failed on `basename`/`stat` (`command not found`). Use absolute paths
+  (`/usr/bin/basename`) or wrap the extraction loop in Python `subprocess`.
+- **git gc --aggressive can exceed 20 min on a 10G repo** (hit the 600s cap as
+  foreground). Plain `git gc --prune=now` finished the same rewrite in ~3 min.
+- **Big git blobs hide in branch fans, not main.** tupang workspace: .enc archives
+  pinned by `archive/t_*`, `backup/*`, `wt/*` branches, unreachable from main.
+  Before `gc --prune=now`: find ALL refs holding the blobs, extract via
+  `git cat-file blob`, verify SHA256+size (**not** `git hash-object` — mismatched
+  due to filters/eol), `git bundle create` the doomed branches to external disk,
+  then delete branches → `reflog expire --expire=now` → gc. Verified 10.4G→723M.
+- **Pause auto-commit launchd jobs during history rewrite.** Move the plist to
+  `~/Library/LaunchAgents/disabled-archive/` + `launchctl bootout`; `bootout`
+  alone can fail with `Bad request` — moving the plist is the reliable pause.
 
 ## Related Skills
 

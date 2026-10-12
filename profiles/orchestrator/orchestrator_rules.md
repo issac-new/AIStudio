@@ -29,7 +29,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
-- `your@example.com` — IMAP channel（gateway 原生 email adapter）
+- `your-inbox@example.com` — IMAP channel（gateway 原生 email adapter）
 - `your-bot@example.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
@@ -112,8 +112,8 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 | Weixin | 群聊 | `技术交流群:API重构讨论:oWxn4S1uW3:gh_abc123:msg_001:weixin` |
 | Weixin | 私信 | `weixin-dm::oWxn4S1uW3:weixin-dm:msg_001:weixin` |
 | API Server | 调用 | `chat/completions:summary-request:api-key-prod:req_abc123:req_001:api_server` |
-| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:your@example.com:msg_xxx:email` |
-| Email | DM 本质 | `email-dm::zhangsan@example.com:your@example.com:msg_xxx:email` |
+| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:your-inbox@example.com:msg_xxx:email` |
+| Email | DM 本质 | `email-dm::zhangsan@example.com:your-inbox@example.com:msg_xxx:email` |
 
 #### 0.2.3 重型任务路由
 
@@ -613,10 +613,10 @@ notification_sources: ['*']  # 或 ['orchestrator']
 
 ### §0.7.0 孩子记忆双写（2026-08-14确立，强制）
 
-orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（your-child）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
+orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
 
 **规则**：
-1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：your-child/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
+1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：孩子/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
    ```bash
    python3 ~/hermes-docker-sandbox/workspace/life-workbench/scripts/child_memory_sync.py
    ```

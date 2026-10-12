@@ -237,6 +237,18 @@ grep -oE '# [0-9]+\.' SOUL.md | sort | uniq -c | awk '$1>1'
 
 ## Pitfalls
 
+### 夜间报告 ≠ 实时状态：先复跑探针再动手（2026-10-07 实例）
+
+夜间 loop 报告生成后到人看到之间有 8-24h 窗口，期间并发 enricher 可能已补齐部分缺口。直接按报告动手会：(a) 重复插入已补齐的块，(b) 漏掉报告未覆盖的新缺口。正确顺序：**找到报告生成器的判定函数 → 原样复跑拿实时缺口清单 → 按实时清单批量补**。
+
+实例：evo 晨报报 7 profile 缺三节+ontology；复跑 `evo_nightly.py::_soul_check()` 发现三节已 47/47 齐但 **20 个 profile** 缺 ontology 引用（含报告漏报的 [已移除] 6 个）——报告既过期又不完整，两个方向都会误导。
+
+### 扫描器的精确子串匹配对装饰前缀标题误报
+
+SOUL 标题允许 emoji 装饰前缀（`## 🛠️ 具体操作命令手册`），扫描器用 `h not in text` 精确子串匹配会把它判成缺失（orchestrator 本体即中招）。修法：`re.search(r"^##\s*[^\w\s#]*\s*" + re.escape(h.lstrip("#").strip()) + r"\s*$", text, re.M)`。
+
+**二阶坑**：required 列表项自带 `"## "` 前缀时，别把 `h` 原样拼进已含 `^##` 的模式——双重前缀会 47/47 全量误判（本次 patch 第一版即中招，靠先在临时脚本复刻新逻辑验证才拦住，未污染扫描器）。**patch 扫描器前，先复刻验证一遍全量输出合理，再落 patch。**
+
 ### Anchor-text variants silently skip files (verify the FULL roster, not the patched count)
 
 Heading text varies across profiles: `## 共享规则引用` vs `## 共享规则引用（2026-08-22 补齐）` vs `## 共享规则`. A classifier or patcher that matches one exact string will silently skip every profile whose heading carries a suffix — the batch "succeeds" and the final count is short. Two defenses:

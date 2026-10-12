@@ -1,7 +1,7 @@
 ---
 name: orchestrator-scheduling-audit
 description: "Use when 检查 orchestrator 调度健康或 kanban 卡调度停滞时."
-version: "1.1.0"
+version: "1.2.0"
 metadata:
   hermes:
     tags: [devops, kanban, audit, scheduling]
@@ -11,6 +11,7 @@ metadata:
 
 > 2026-09-04 活体演练提炼（AI 现状报告三路并行调研 + 全局审计同场运行）。
 > v1.1：新增「读数判读」节——blocked ≠ 僵尸；脚本 C 段升级显示 parent 状态、新增 C2 段 blocked 挂起原因。
+> v1.2：新增「分类 4」——单卡被 respawn guard 长期扣留（provider 已愈但卡上旧 quota/auth 文案未清）。
 
 ## 触发条件
 
@@ -18,6 +19,13 @@ metadata:
 - 重型任务派发前后的例行自检；怀疑 dispatcher 停摆或僵尸卡
 
 ## 机械检查项（脚本一键跑）
+
+### Board-aware 状态查询纪律
+
+- 优先使用带明确 `board` 参数的 Kanban 工具读取和更新任务；不要凭记忆拼接 CLI 参数，也不要省略 board 后把“任务不存在”当成真实状态。
+- 查询单卡时先取得完整任务状态、父子依赖和事件，再读取工作区产物；不能只看 `running`/`blocked` 标签推断停滞原因。
+- 跨板任务引用必须保留 board + task id；若工具返回 not found，先核对板和 ID，再查数据库或文件系统，禁止创建重复卡。
+- 子任务尚未完成时，保持依赖复核卡等待；不要用“需要我介入吗”替代下一步机械检查，也不要在证据未收齐时向用户宣称项目完成。
 
 ```bash
 bash <本skill目录>/scripts/orchestrator_audit.sh
@@ -43,6 +51,31 @@ bash <本skill目录>/scripts/orchestrator_audit.sh
 1. **WAL 模式**：`sqlite3 "file:...?mode=ro"` 在无活跃 shm 时报 "unable to open database file (14)"——审计脚本必须普通打开（WAL 允许并发读，不会阻塞 dispatcher）。
 2. **无 `updated_at` 列**：卡新鲜度用 `last_heartbeat_at` / `created_at`（unix epoch 秒，需 `CAST(col AS INT)` 再 datetime/julianday）。
 3. **依赖在 `task_links` 表**（`parent_id`/`child_id`），不在 tasks 表的 parents 列；子卡仅在全部 parent done 后 promote——链头即调度停滞点。事件历史在 `task_events`（`kind`/`payload`）。
+
+## 分类 4：单卡被 respawn guard 长期扣留
+
+表象：watchdog 报某张 ready 卡十几个小时无人拾取，但同 assignee 其他卡正常流动，且该
+profile 冒烟 `hermes -p <assignee> --toolsets terminal chat -q "回复ok"` EXIT_RC=0
+（provider 链路已愈）。
+
+根因：卡的 `last_failure_error` 残留历史 run 的 quota/auth 文案（旧 provider 的
+403/429/kimi rejected 等），命中 dispatcher respawn guard 的 `_RESPAWN_BLOCKER_RE`
+（hermes_cli/kanban_db_dispatch.py），每 tick 静默跳过该卡。profile 侧切了 provider
+但卡上的旧错误文本不会随配置切换清除——**provider 修好 ≠ 卡自动解扣**。
+
+```bash
+# 判定：卡上有旧 provider 错误文本 = 被扣留
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db \
+  "SELECT substr(last_failure_error,1,200) FROM tasks WHERE id='<id>'"
+# 修复：先冒烟确认 provider 已愈，再清过期文本，下一 tick（60s）自动拾取
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db \
+  "UPDATE tasks SET last_failure_error=NULL WHERE id='<id>'"
+```
+
+坑：被扣留的卡不在 blockable 状态集，`kanban_block` 报 `unknown id or not in
+running/ready`——不是工具坏了，直接走上面的 SQL。与 scope 白名单静默的区分：
+scope 漏配按 assignee **整体**静默（该 assignee 所有卡都不动），本分类只扣**单卡**
+（卡上自己的旧错误文本）。
 
 ## 进阶诊断：MCP kanban 工具报 `no such function: kanban_write_sanctioned` 时
 

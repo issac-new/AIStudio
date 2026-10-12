@@ -34,6 +34,7 @@ nightly-radar-runbook 与 domain-nightly-ops；本 skill 管内容质量与源�
 - prompt 每条原料 400 字；硬约束「标题判断 ≤1 条；摘要为空的条目跳过，宁缺毋滥」。
 - 所有 LLM 调用走 `radar_llm.ask_llm_json`（3 次重试+线性退避+平衡括号 JSON 提取），禁止裸 spawn。
 - 关键词打分：ASCII 词 word-boundary、中文词 in——substring 会中文恒 False + `agent` 误中 `user-agent`。
+- GEO 投毒识别（来源：TC260《人工智能安全治理框架3.0》专栏四，2026-09-24 融合）：情报源被 GEO（生成式引擎优化）批量内容污染的信号——同一主张在多个低权威源集中出现、虚构评测数据、假冒专家身份、品牌评价异常密集。命中信号的条目降权或剔除，来源进拒收源清单；LLM 摘要不得把单一批量投放内容当成多源印证的共识。
 
 ## 邮件红线（always-on）
 

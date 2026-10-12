@@ -1,13 +1,13 @@
 # SwarmTeam — Hermes Agent Multi-Profile Distribution
 
 > A production-grade multi-agent system built on [Hermes Agent](https://hermes-agent.nousresearch.com).
-> **36 profiles** across 9 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> **40 profiles** across 10 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / hack / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
 
 ## Overview / 概览
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**36 profiles** · **9 teams** · **9 Kanban boards** · persistent worktree workspaces
+**40 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
 
 ### What changed in this release (v2.0)
 
@@ -18,7 +18,7 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ## Profile Roster / Profile 名册
 
-> 本次发布 36 个 profile，横跨 9 个领域团队。[已移除] 家庭团队（7 个）与 hack 安全团队（4 个）因隐私/敏感性不在此仓库。
+> 本次发布 40 个 profile，横跨 10 个领域团队（新增 hack 安全团队 4 个）。[已移除] 家庭团队（7 个）因家庭隐私不在此仓库。
 
 ### Swarm Team (4 profiles) — Software Engineering
 
@@ -96,6 +96,17 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 | `[已移除]` | 模拟混合信号 |
 | `[已移除]` | AI for [已移除] |
 
+### Hack Team (4 profiles) — 安全审计与红队（授权测试）
+
+| Profile | Role |
+|---------|------|
+| `hack-recon` | 被动侦察/资产测绘/OSINT |
+| `hack-auditor` | 代码审计/白盒分析 |
+| `hack-exploit` | PoC 验证/受控利用（仅授权范围） |
+| `hack-forensics` | 取证分析/逆向/证据固定 |
+
+> Hack 团队仅用于授权测试场景；所有派卡须过授权门判定（SOUL 红线）。
+
 ### Domain Gateway Pattern / 领域网关原则
 
 `aiteam` / `pay` / `data` / `[已移除]` 各有独立 orchestrator 作为领域网关，负责领域内子任务分解与路由；跨领域任务由顶层 `orchestrator` 统一调度，禁止跳过领域网关直派下游 worker。
@@ -117,7 +128,7 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
    (4)    (2)    (4)   (2)    (6)    (4)  (4)  (10)
 ```
 
-**9 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `[已移除]` (IC design), `worker` (general).
+**10 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `[已移除]` (IC design), `hack` (authorized security testing), `worker` (general).
 
 ## Key Features / 核心特性
 

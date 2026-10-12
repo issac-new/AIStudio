@@ -158,7 +158,7 @@ def can_route(assignee: str, inherited_markings: Set[str]) -> bool:
 |---------|--------------|------|
 | 编码/重构/测试 | claude-code (bypassPermissions) | 默认首选 |
 | 安全审计/渗透 | codex (Guardian 二审) | 高危命令需 Guardian 批准 |
-| 长上下文调研 | zcode (GLM-5.3-Flash) | 夜间 23:00-09:00 免费 |
+| 长上下文调研 | zcode (GLM-5.3-Flash) | 夜间 00:00-08:00 授权窗（免费以供应商活动窗为准） |
 | 结构化推理 | deepseek-harness (dsh) | 组件化工程规范场景 |
 
 ---

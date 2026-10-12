@@ -11,5 +11,5 @@
   "recall_types": "observation,world,experience",
   "recall_max_tokens": 4096,
   "bank_id_template": "",
-  "bank_id": "hermes-XXXXXXXXXXXX-product"
+  "bank_id": "hermes-b24d7ac5d9c4-product"
 }

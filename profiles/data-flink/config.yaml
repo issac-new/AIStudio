@@ -1,5 +1,5 @@
 model:
-  default: glm-5.3-flash
+  default: aim
   provider: custom:cc-switch
 custom_providers:
   - api_key: PROXY_MANAGED
@@ -34,7 +34,7 @@ compression:
   threshold: 0.35
 memory:
   memory_enabled: true
-  provider: hindsight
+  provider: ""
   user_profile_enabled: true
 kanban:
   auto_decompose: false
@@ -46,28 +46,47 @@ kanban:
   default_assignee: data-flink
 display:
   language: zh
-  personality: kawaii
   skin: daylight
 security:
   redact_secrets: true
-  tirith_enabled: true
 privacy:
   redact_pii: true
 approvals:
-  mode: smart
+  mode: "off"
 auxiliary:
   approval:
     model: glm-5.3-flash
     provider: custom:cc-switch
-  compression:
-    model: glm-5.3-flash
+  background_review:
     provider: custom:cc-switch
+    model: glm-5.3-flash
+  compression:
+    model: claude-opus-5
+    provider: custom:cc-switch
+  goal_judge:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  kanban_decomposer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_aggregator:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_reference:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  profile_describer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
   session_search:
     model: glm-5.3-flash
     provider: custom:cc-switch
   title_generation:
     model: glm-5.3-flash
     provider: custom:cc-switch
+  triage_specifier:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
   vision:
     model: glm-5.3-flash
     provider: custom:cc-switch
@@ -75,15 +94,17 @@ auxiliary:
     model: glm-5.3-flash
     provider: custom:cc-switch
 fallback_providers:
-  - provider: alibaba
-    model: qwen3-max
+  - provider: custom:cc-switch
+    model: aim
+    api_mode: anthropic_messages
 platforms:
   api_server:
     enabled: false
   matrix:
     enabled: false
 plugins:
-  disabled: []
+  disabled:
+    - hindsight
   enabled:
     - hindsight
     - run-trace
@@ -98,90 +119,91 @@ extra:
   skills_pinned:
     - skill-recall
 mcp_servers:
-  hermes-studio-api:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-api:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - api
     env:
-      ELECTRON_RUN_AS_NODE: '1'
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: data-flink
-      HERMES_MCP_SERVER_NAME: hermes-studio-api
+      HERMES_MCP_SERVER_NAME: ekko-studio-api
       HERMES_MCP_TOOLSET: api
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-browser:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-browser:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - browser
     env:
-      ELECTRON_RUN_AS_NODE: '1'
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: data-flink
-      HERMES_MCP_SERVER_NAME: hermes-studio-browser
+      HERMES_MCP_SERVER_NAME: ekko-studio-browser
       HERMES_MCP_TOOLSET: browser
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-devices:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-devices:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - devices
     env:
-      ELECTRON_RUN_AS_NODE: '1'
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: data-flink
-      HERMES_MCP_SERVER_NAME: hermes-studio-devices
+      HERMES_MCP_SERVER_NAME: ekko-studio-devices
       HERMES_MCP_TOOLSET: devices
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-use:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-use:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
-      ELECTRON_RUN_AS_NODE: '1'
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: data-flink
-      HERMES_MCP_SERVER_NAME: hermes-studio-use
+      HERMES_MCP_SERVER_NAME: ekko-studio-use
       HERMES_MCP_TOOLSET: use
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-_config_version: 41
+  ekko-studio-interaction:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    args:
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - plan
+    env:
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: data-flink
+      HERMES_MCP_SERVER_NAME: ekko-studio-interaction
+      HERMES_MCP_TOOLSET: plan
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
+    enabled: true
+onboarding:
+  seen:
+    tool_progress_prompt: true
+_config_version: 50
 clearances:
   - TLP:GREEN
   - TLP:CLEAR
-
-# ── Fallback Model ────────────────────────────────────────────────────
-# Automatic provider failover when primary is unavailable.
-# Uncomment and configure to enable. Triggers on rate limits (429),
-# overload (529), service errors (503), or connection failures.
-#
-# Supported providers:
-#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
-#   openai-codex (OAuth — hermes auth) — OpenAI Codex
-#   nous         (OAuth — hermes auth) — Nous Portal
-#   zai          (ZAI_API_KEY)         — Z.AI / GLM
-#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
-#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
-#   minimax      (MINIMAX_API_KEY)     — MiniMax
-#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
-#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
-#
-# For custom OpenAI-compatible endpoints, add base_url and key_env.
-#
-# fallback_model:
-#   provider: openrouter
-#   model: anthropic/claude-sonnet-4

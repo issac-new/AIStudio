@@ -8,6 +8,8 @@
       "skill": null,
       "model": null,
       "provider": null,
+      "provider_snapshot": null,
+      "model_snapshot": null,
       "base_url": null,
       "script": "skill_health_weekly_silent.sh",
       "no_agent": true,
@@ -17,25 +19,25 @@
       "context_from": null,
       "schedule": {
         "kind": "cron",
-        "expr": "0 3 * * 0",
-        "display": "0 3 * * 0"
+        "expr": "7 3 * * 0",
+        "display": "7 3 * * 0"
       },
       "schedule_display": "0 3 * * 0",
       "repeat": {
         "times": null,
-        "completed": 2
+        "completed": 7
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-29T23:54:32.036829+08:00",
-      "next_run_at": "2026-09-13T03:00:00+08:00",
-      "last_run_at": "2026-09-06T03:01:04.995826+08:00",
-      "last_status": "error",
-      "last_error": "RuntimeError: [drift_skip:silent] Skipped to prevent unintended spend: global inference config drifted since this job was created (model 'aim' -> 'glm-5.3-flash'), and this job is unpinned. No inference call was made. To run on the new config, on the host running Hermes pin it explicitly: `hermes cron edit 762bf6c7f6a9 --provider <provider> --model <model>` (or pin the original values to keep them). This alert is sent once; the job stays skipped until the config is pinned or restored. See #44585.",
+      "next_run_at": "2026-10-18T03:07:00+08:00",
+      "last_run_at": "2026-10-11T03:07:32.581353+08:00",
+      "last_status": "ok",
+      "last_error": null,
       "last_delivery_error": null,
-      "failure_streak": 2,
+      "failure_streak": 0,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
@@ -43,9 +45,9 @@
       "fire_claim": null,
       "drift_alerted": true,
       "last_dispatch": {
-        "scheduled_at": "2026-09-06T03:00:00+08:00",
-        "dispatched_at": "2026-09-06T03:00:52.972181+08:00",
-        "lateness_seconds": 53.0,
+        "scheduled_at": "2026-10-11T03:07:00+08:00",
+        "dispatched_at": "2026-10-11T03:07:29.524254+08:00",
+        "lateness_seconds": 29.5,
         "kind": "on_time"
       }
     },
@@ -57,6 +59,8 @@
       "skill": null,
       "model": null,
       "provider": null,
+      "provider_snapshot": null,
+      "model_snapshot": null,
       "base_url": null,
       "script": "skill-full-backup.sh",
       "no_agent": true,
@@ -66,21 +70,21 @@
       "context_from": null,
       "schedule": {
         "kind": "cron",
-        "expr": "0 4 * * *",
-        "display": "every day at 4am"
+        "expr": "7 4 * * *",
+        "display": "7 4 * * *"
       },
       "schedule_display": "every day at 4am",
       "repeat": {
         "times": null,
-        "completed": 8
+        "completed": 40
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-01T14:11:59.899224+08:00",
-      "next_run_at": "2026-09-10T04:00:00+08:00",
-      "last_run_at": "2026-09-09T04:00:47.551099+08:00",
+      "next_run_at": "2026-10-13T04:07:00+08:00",
+      "last_run_at": "2026-10-12T04:08:01.299825+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -90,13 +94,17 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-09-09T04:00:00+08:00",
-        "dispatched_at": "2026-09-09T04:00:45.539067+08:00",
-        "lateness_seconds": 45.5,
+        "scheduled_at": "2026-10-12T04:07:00+08:00",
+        "dispatched_at": "2026-10-12T04:07:58.007469+08:00",
+        "lateness_seconds": 58.0,
         "kind": "on_time"
       },
-      "fire_claim": null
+      "fire_claim": null,
+      "last_failure": {
+        "at": "2026-10-09T04:08:37.118925+08:00",
+        "detail": "Script exited with code 1\nstderr:\nmv: fastcopy: open() failed (to): /Volumes/YOURVOLUME/hermes-backups/skills/orch-skills-2026-10-08T20-08-28Z.tar.gz: Operation not permitted"
+      }
     }
   ],
-  "updated_at": "2026-09-09T04:00:47.551602+08:00"
+  "updated_at": "2026-10-12T04:08:01.300330+08:00"
 }

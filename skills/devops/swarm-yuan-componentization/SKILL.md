@@ -38,6 +38,7 @@ swarm-yuan skill
 - **输入**：目标仓库路径
 - **动作**：codebase-inspection（LOC/语言/依赖分布）→ 分层映射（entry/domain/infra）→ 定向深读核心链路
 - **产出**：`survey.md`（架构图 mermaid + file:line 锚点 + 工程规范清单初稿）
+- **产出（大型调研扩展）**：10+ 仓库 / 微服务级调研时，在 survey.md 之外追加标准化 G-doc 图谱模板族（G1 组件关系矩阵 / G2 数据流调用链 / G5 场景序列 / G6 多跳爆炸半径），模板与填写纪律见 `references/gdoc-templates.md`；小型单仓调研不需要 G-doc
 - **出口门**：能不看书回答「这个仓库改一个典型需求要动哪几层、跑什么命令验证」
 
 ### 阶段 2：规范提炼（Distill）

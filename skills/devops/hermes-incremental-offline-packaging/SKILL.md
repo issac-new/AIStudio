@@ -52,10 +52,10 @@ cp ~/.hermes/profiles/_shared/{marking-rules,shared-rules-reference}.md inc-new/
 
 ### 4. 脱敏（增量包也要全量扫描）
 
-增量包中的 rules 常含真实邮箱/路径（orchestrator_rules.md 里写死了 `your@example.com`）。**扫描模式必须包含邮箱与用户路径，不能只扫 API key**：
+增量包中的 rules 常含真实邮箱/路径（orchestrator_rules.md 里写死了 `your-inbox@example.com`）。**扫描模式必须包含邮箱与用户路径，不能只扫 API key**：
 
 ```bash
-grep -rnE "sk-[a-zA-Z0-9]{20,}|syt_[a-zA-Z0-9_]{20,}|/Users/YOURNAME|HK_MAIL@|swarmstudio@|<main-bot-account-id>" <pkg-dir>
+grep -rnE "sk-[a-zA-Z0-9]{20,}|syt_[a-zA-Z0-9_]{20,}|/Users/YOURNAME|your-inbox@|swarmstudio@|<main-bot-account-id>" <pkg-dir>
 # 命中邮箱 → sed 替换为 your@email.com 后重新打包
 ```
 
