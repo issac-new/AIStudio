@@ -136,13 +136,35 @@ async function pageLooksBad() {
   return /没有权限|无权限访问|群聊升级|升级说明|登录到 Hermes|Login to/.test(t) ? t : null
 }
 
+// F1（run15 复盘）：SPA 就绪强断言——hash 冷启动壳页陷阱根治（run15 24 帧壳页同帧摘除
+// 实锤：固定 SETTLE 等 4s 拍到的是未挂载路由的壳）。就绪=目标 hash 已挂 AND 正文有实
+// 内容；cap 内轮询，超 cap 仍拍（如实留证，配合 pageLooksBad 自检面）。
+const ROUTE_ASSERT = (() => {
+  const h = PLAN_URL.split('#')[1] || ''
+  return h.replace(/^\//, '')   // '/#/app/board' → 'app/board'
+})()
+async function waitSpaReady(capMs = 15000) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < capMs) {
+    const ok = await page.evaluate((route) => {
+      if (route && !location.hash.includes(route)) return false
+      return ((document.body && document.body.innerText) || '').trim().length > 150
+    }, ROUTE_ASSERT).catch(() => false)
+    if (ok) return true
+    await page.waitForTimeout(500)
+  }
+  return false
+}
+
 const pre = `${STEP}-op${K}`
 await page.goto(BASE + PLAN_URL)
+await waitSpaReady()
 await page.waitForTimeout(SETTLE)
 await dismissPopups()
 if (await pageLooksBad()) {
   await dismissPopups()
   await page.goto(BASE + PLAN_URL).catch(() => {})
+  await waitSpaReady()
   await page.waitForTimeout(SETTLE)
   await dismissPopups()
   const bad = await pageLooksBad()
