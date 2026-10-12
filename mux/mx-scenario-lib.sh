@@ -32,8 +32,11 @@ sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0;
 # 两类写入源并存：mx_send 返回纯 event_id（dispatch_marker）；dispatch_in_room 返回整行
 # note（含 "($id): …"——m17/m19/m21_marker 即此形态）。r18-collect 拿到非 $ 开头的锚
 # 必 404（run16 实锤 103 单）。统一经本助手解析，两类值都归一为 $… 首 token。
+# 2026-10-13 run18-lite 实锤：主 shell 赋值处调用时 grep 空手（lite 轮无该 marker 键）
+# 在 pipefail 下 rc=1 直杀驱动（报告段 _pan= 赋值行）——本函数语义=「尽力解析，无则空」，
+# 必须 || true 归零。
 marker_eventid() {
-  printf '%s' "$1" | LC_ALL=C grep -oE '\$[A-Za-z0-9_-]+' | head -1
+  printf '%s' "$1" | LC_ALL=C grep -oE '\$[A-Za-z0-9_-]+' | head -1 || true
 }
 # 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）。
 # lite 轮口径（2026-10-10 G4）：state 带 lite_round=1 时 total=执行段步数（夹具步不计），
