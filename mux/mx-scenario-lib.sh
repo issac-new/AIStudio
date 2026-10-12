@@ -1781,7 +1781,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
       _dens="⬜（n_tests=0 分母缺席）"
     fi
   else
-    _dens="⬜（quality-summary.env 缺席——产品成效实算未落盘，如实留空）"
+    _dens="⬜（quality-summary.env 缺席——产品成效数字未采集，如实留空）"
   fi
   # ⑤告警差分：基础设施/容量/网关族键聚合一行（新增键单列在治理报告正文）
   local _alert_fam _alert_n=0 _alert_k
