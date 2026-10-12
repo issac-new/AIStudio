@@ -117,3 +117,19 @@
 2. 产品能力迭代（SwarmStudio/overlay）：改动发生在 overlay 仓（patch+custom）。mac 验证走 dev 链；Windows 侧要么用 08-source-bundles 的源码按 `windows-x64-setup.md` 起 dev 环境（npm 镜像三件套），要么 mac 重出 win 包替换 03。两环境的推演程序对 overlay 只读消费（patches/deploy-agent-runtime/style-charter），产品迭代后重跑 `mx-setup` 即可刷新 SIM 执行面快照。
 3. 场景与编制迭代：roster.env/scenario.sh 改动随仓走，两环境生效一致；matrix 侧账号差异由各环境自建（mac=docker 本机 synapse，Windows=远端服务器）。
 4. 回滚：本仓任一改动出问题，`git revert <合并/提交>` 即回；run15 在途合并前 state 键快照存于 `/tmp/run15-state-premerge-*.env` 供对账。
+
+## 十二、判活心跳通道与帧归机点名（补强层）
+
+第七节记档的两项降级，本层补齐第一项（判活），第二项用归机点名零代码兜底。
+
+### 心跳通道（零新增服务，走 matrix 既有总线）
+
+1. 导演机建专用心跳房（一次性）：任意客户端建私密房（建议名 `sim-heartbeat`），取房间 id 填入三机环境变量 `MX_HB_ROOM`。可选 `MX_HB_READER`（导演机读房账号，缺省 fanfan）。
+2. 每机常驻采样守护：`nohup bash mux/mx-node-heartbeat.sh > /dev/null 2>&1 &`。默认 30 秒一拍（`MX_HB_INTERVAL`），把本机各档案的最近工作行时间戳/尾部错误态/日志字节以 `MXHB|` JSON 发进心跳房；日志在 `$SIM_ROOT/logs/heartbeat.log`；停守护=touch `$SIM_ROOT/var/hb-stop`。Windows 保活以常驻循环为主、schtasks 每分钟 `--once` 作复活兜底（发帖幂等，重复拍无害）。
+3. 导演机等待环自动接线，无需配置驱动：本地日志缺位的档案走心跳缓存判活，空转催办与卡死早判恢复；心跳三拍不可达自动降级硬窗（`MX_HB_STALE` 默认 120 秒调新鲜度），绝不假判死。
+4. solo 模式零影响：`MX_NODE` 未设时本层不激活，行为与历史轮一致（守门 node-heartbeat.test.sh 断言）。
+
+### 帧归机点名纪律
+
+studio 只在导演机，板帧只认导演机本地板。导演机 `MX_NODE_USERS` 必须包含 `mux/capture-plan.env` 中 user 列出现的全部档案名（aipay 场景=fanfan,chen,qi,arch），否则对应拍摄位帧缺、触发帧门禁记单。换新场景时按新 capture-plan 的 user 列重核点名（第十节流程在切片一步后加此核对）。
+
