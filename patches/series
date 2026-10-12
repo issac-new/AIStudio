@@ -603,3 +603,11 @@
 # 被静态解析拒绝（未装 SDK 即构建失败）。按 node-pty/sharp 先例外置——运行期由探针
 # require.resolve 判在位性，缺装走 CAPABILITY_ABSENT 降级（设计语义不变）。
 608-server-build-external-miniprogram.patch
+
+# [609] blocker_auth 阻塞退场：respawn guard 拦截持续达阈值（3600s 窗内 12 次）自动
+# block（needs_input 粘滞）——单张坏卡不再无限期堵塞派发器 ready 队列刷屏（run15 实锤
+# 121 ticks 告警零派发）；人工修凭据 unblock 即恢复。run15 复盘 F8 配套件。
+609-agent-kanban-blocker-auth-degrade.patch
+# [610] 脱敏计数豁免：1-4 位纯数字赋值值不打码——blocker_auth=1 等诊断计数不再塌成
+# ***（stuck 告警 121 ticks 零诊断信号根治）；真密钥形态不受影响（run15 复盘 S2）。
+610-agent-redact-counter-exempt.patch

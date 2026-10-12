@@ -1,0 +1,18 @@
+diff --git a/agent/redact.py b/agent/redact.py
+index 4822168a58..d9d9d6709f 100644
+--- a/agent/redact.py
++++ b/agent/redact.py
+@@ -399,6 +399,13 @@ def _should_redact_assignment(key: str, value: str, *, check_keyword: bool) -> b
+     # a code snippet, not a leaked secret value.
+     if _ENV_LOOKUP_VALUE_RE.match(value):
+         return False
++    # [610] Short bare-digit counters are telemetry, never credentials — suppression
++    # digests and health logs read ``blocker_auth=1``/``token=2`` where the lowercase
++    # ``auth``/``token`` keyword made the whole digest collapse to ``***`` (run15:
++    # dispatcher-stuck warnings carried zero diagnostic signal for 121 ticks).
++    # No real credential is 1-4 bare digits.
++    if re.fullmatch(r"\d{1,4}", value):
++        return False
+     # An earlier pass already masked this value (``***`` or the ``«redacted:…»`` sentinel). Masking it
+     # again only erases what the sentinel deliberately kept — the vendor label (``Digest ***`` →
+     # ``***``, ``«redacted:ghp_…»`` → ``«redacted-secret»``). Same guard _redact_python_repr_fields uses.
