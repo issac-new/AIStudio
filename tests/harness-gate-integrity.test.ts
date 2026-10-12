@@ -1495,3 +1495,23 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 })
+
+describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四四件实清点）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
+
+  it('报告模板：技能执勤账小节挂第 9 章证据四（函数+锚点在位）', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('def skill_duty_html()')
+    expect(gen).toContain('证据四：能力层在岗（技能执勤账）')
+    expect(gen).toContain('ch9-skill-duty')
+    expect(gen).toContain('{skill_duty_html()}')
+  })
+
+  it('数据源单一事实源+诚实降级：装载单/骨架判档/缺席标红不渲染假账', () => {
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('SKILLS_INSTALL="\\$\\{SKILLS_INSTALL:')  // 装载单解析锚（mx-lib.sh 单一事实源）
+    expect(gen).toContain('swarm-yuan 全骨架')                       // 骨架判档：rules.d+hooks
+    expect(gen).toContain('采集面欠账')                               // skill 专项帧缺席=红标
+    expect(gen).toContain('零数据不渲染假账')
+  })
+})

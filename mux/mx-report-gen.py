@@ -2234,6 +2234,127 @@ def monitor_proxy_html():
             + ''.join(rows) + '</table></details>')
 
 
+def skill_duty_html():
+    """技能执勤账小节（V8.18 §5.4 报告规范，能力层叙事配套）。
+
+    四件按实存文件清点：①技能清单（真源=simharness skills/ 目录×SKILLS_INSTALL
+    装载单，骨架判档：rules.d+hooks 在=swarm-yuan 全骨架，仅 SKILL.md=单文件）
+    ②生成链锚（目标技能头部生成器时间戳+profile 档+仓内提交史）③执勤留痕
+    （skill 专项帧/gate-deny 拦截/retro-sink 回灌，按实存文件计）④缺席披露
+    （应采未采如实标红，零数据不渲染假账）。"""
+    repo = Path(__file__).resolve().parent.parent
+    skills_dir = repo / 'skills'
+    # 装载单（单一事实源=mx-lib.sh SKILLS_INSTALL 默认清单）
+    inst = []
+    try:
+        _lib = (repo / 'mux' / 'mx-lib.sh').read_text(encoding='utf-8', errors='replace')
+        m = re.search(r'^SKILLS_INSTALL="\$\{SKILLS_INSTALL:-(.+)\}"', _lib, re.M)
+        if m:
+            inst = m.group(1).split()
+    except OSError:
+        pass
+    rows = []
+    for name in inst:
+        d = skills_dir / name
+        if not d.is_dir():
+            rows.append(f'<tr><td>{H.escape(name)}</td><td>—</td><td colspan="2">'
+                        '真源目录缺席（装载单与目录漂移，如实披露）</td></tr>')
+            continue
+        full = (d / 'rules.d').is_dir() and (d / 'hooks').is_dir()
+        tier = 'swarm-yuan 全骨架' if full else '单文件技能'
+        prof, gen_anchor = '', ''
+        sm = d / 'SKILL.md'
+        if sm.exists():
+            head = sm.read_text(encoding='utf-8', errors='replace')[:2500]
+            pm = re.search(r'^profile:\s*(\S+)', head, re.M)
+            prof = pm.group(1) if pm else ''
+            gm = re.search(r'由 swarm-yuan 生成器创建（([^，)]+)', head)
+            gen_anchor = gm.group(1) if gm else ''
+        rows.append(f'<tr><td>{H.escape(name)}</td><td>{H.escape(tier)}</td>'
+                    f'<td>{H.escape(prof or "—")}</td>'
+                    f'<td>{H.escape(gen_anchor or "—（非生成器产出，推演配套技能）")}</td></tr>')
+    if not rows:
+        return '\n  <p class="stat-note">技能执勤账：装载单不可读（mx-lib.sh SKILLS_INSTALL 未命中）——如实缺席，不渲染假账。</p>'
+    # 生成链锚：aipaydev-dev 仓内提交史（simharness 仓真源）
+    chain = '生成链档案不可读'
+    dev_dir = skills_dir / 'aipaydev-dev'
+    if dev_dir.is_dir():
+        try:
+            r = subprocess.run(['git', '-C', str(repo), 'log', '--oneline', '-2',
+                                '--', 'skills/aipaydev-dev'],
+                               capture_output=True, text=True, timeout=15)
+            shas = [l.split(':')[0].split(' ')[0] for l in r.stdout.splitlines() if l.strip()]
+        except Exception:
+            shas = []
+        chain = '、'.join(shas) if shas else '提交史不可读（非 git 检出？）'
+    # 角色→技能映射（单一事实源=场景库装载行）
+    role_line = ''
+    try:
+        _scn = (repo / 'mux' / 'mx-scenario-lib.sh').read_text(encoding='utf-8', errors='replace')
+        rm = re.search(r'系分=[^。"」]+、[^。"」]+。', _scn)
+        if rm:
+            role_line = rm.group(0)
+    except OSError:
+        pass
+    # 执勤留痕：skill 专项帧 / 开发过程帧 / gate-deny / retro-sink 回灌
+    skill_frames = sorted(p.name for p in STEPS_DIR.glob('*.png')
+                          if 'skill' in p.name.lower()) if STEPS_DIR.exists() else []
+    dev_frames = sorted(p.name for p in STEPS_DIR.glob('*.png')
+                        if 'devimpl' in p.name.lower()) if STEPS_DIR.exists() else []
+    deny_total, deny_paths = 0, []
+    for base in (SIM / 'workspaces', SIM / 'central'):
+        if not base.is_dir():
+            continue
+        try:
+            r = subprocess.run(['find', str(base), '-maxdepth', '6', '-name',
+                                'gate-deny.jsonl'], capture_output=True, text=True, timeout=30)
+            for pth in r.stdout.splitlines():
+                if pth.strip():
+                    deny_paths.append(pth.strip())
+                    try:
+                        deny_total += sum(1 for _ in open(pth, encoding='utf-8', errors='replace'))
+                    except OSError:
+                        pass
+        except Exception:
+            pass
+    lessons_n, lessons_sha = 0, ''
+    lm = skills_dir / 'aipaydev-dev' / 'references' / 'lessons.md'
+    if lm.exists():
+        try:
+            lessons_n = sum(1 for l in lm.read_text(encoding='utf-8', errors='replace').splitlines()
+                            if l.lstrip().startswith('- '))
+            r = subprocess.run(['git', '-C', str(repo), 'log', '-1', '--format=%h', '--',
+                                'skills/aipaydev-dev/references/lessons.md'],
+                               capture_output=True, text=True, timeout=15)
+            lessons_sha = r.stdout.strip()
+        except OSError:
+            pass
+    frame_line = (f'skill 专项帧 {len(skill_frames)} 张'
+                  + (f'（{", ".join(skill_frames[:4])}…）' if skill_frames else
+                     '（<b style="color:#b91c1c">采集面欠账：采集矩阵要求 xxx-dev 生成 ≥3 张+开发调用 ≥2 张，本轮未采到——'
+                     'V8.17 采集三红线 run16 起咬合</b>）')
+                  + f'；开发过程帧 {len(dev_frames)} 张在册（devimpl 键，非 skill 专项）')
+    deny_line = (f'gate-deny 拦截 {deny_total} 行（{len(deny_paths)} 个账本：'
+                 + ', '.join(d.replace(str(SIM) + '/', '') for d in deny_paths[:3])
+                 + '）' if deny_paths else
+                 'gate-deny 账本未检出（清场后 profile 工件不保留，或本轮无拦截触发——run16 起随实际拦截累积）')
+    sink_line = (f'retro-sink 经验回灌 {lessons_n} 条 → aipaydev-dev/references/lessons.md'
+                 + (f'（提交锚 {lessons_sha}）' if lessons_sha else '')) if lm.exists() \
+        else 'retro-sink 回灌文件缺席（lessons.md 不存在——复盘回灌未跑或真源漂移，如实披露）'
+    role_html = (f'\n  <p style="font-size:13px"><b>角色→技能</b>（源=场景库装载行）：{H.escape(role_line)}</p>'
+                 if role_line else '')
+    return (f'\n  <p style="font-size:13px">能力层证据四件（V8.18 §5.4）：技能清单自真源清点、'
+            f'生成链带仓内提交锚、执勤留痕按当轮实存文件计、缺席项如实标红不凑段。</p>'
+            f'\n  <details class="audit" id="ch9-skill-duty"><summary>▶ 技能执勤账'
+            f'（{len(rows)} 项技能在册——装载单=mx-lib.sh SKILLS_INSTALL，真源=simharness skills/）</summary>'
+            f'\n  <table style="margin-top:8px"><tr><th>技能</th><th>骨架形态</th><th>profile 档</th><th>生成器锚</th></tr>'
+            + ''.join(rows) + '</table>'
+            f'\n  <p style="font-size:13px;margin:8px 0 2px"><b>生成链</b>（aipaydev-dev 仓内提交史，最新在前）：{H.escape(chain)}</p>'
+            + role_html
+            + f'\n  <p style="font-size:13px"><b>执勤留痕</b>：{frame_line}；{deny_line}；{sink_line}。</p>'
+            + '</details>')
+
+
 stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd = issues_stats()
 n_resolved = n_closed + (n_issue_keys - n_closed - n_issue_open - n_nonstd) + 0  # 已修+观察+延后（观察/延后=keys-closed-open-nonstd）
 main_sha = main_head()
@@ -3706,6 +3827,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据三：度量可追踪（对照上轮）</h3>
   <p style="font-size:13px;color:var(--text)">{_gov_ev3}</p>
+
+  <h3 style="font-size:13px;margin:14px 0 6px">证据四：能力层在岗（技能执勤账）</h3>
+  {skill_duty_html()}
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步"📦 交付物实物与模版核对"折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
