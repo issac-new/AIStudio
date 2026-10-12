@@ -206,6 +206,22 @@ for line in STATE.read_text().splitlines():
     if '=' in line and not line.startswith('jwt_'):
         k, v = line.split('=', 1)
         state_keys[k.strip()] = v.strip()
+# F1（run15 复盘）：壳页帧占比断言——验收线「实时帧 ≥90%」机械化。壳页步占比 >10% 即
+# FAIL（逼采集端根治而非降级放行）；壳页步=frame-capture-failed 单含「壳页」签名的步键，
+# 分母=本轮已完成步（*_done=1 计数，与报告完成步同口径）。
+_shell_steps = set()
+if _ilog.exists():
+    for _lsh in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
+        _psh = _lsh.split('|', 3)
+        if len(_psh) >= 4 and _psh[0] == 'ISSUE' and _psh[1] == 'frame-capture-failed' and '壳页' in _psh[3]:
+            _shell_steps.add(_psh[2].removeprefix('step-'))
+_done_steps = {k[:-5] for k, v in state_keys.items() if k.endswith('_done') and v == '1'}
+if _done_steps and _shell_steps:
+    _shell_hit = len(_shell_steps & _done_steps)
+    _shell_ratio = _shell_hit / len(_done_steps)
+    if _shell_ratio > 0.10:
+        fails.append(f'壳页帧占比 {_shell_hit}/{len(_done_steps)}={_shell_ratio:.0%} 超验收线 10%'
+                     f'（实时帧 ≥90% 红线；采集端 SPA 就绪断言须根治——run15 复盘 F1）')
 GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'devimpl_done',
              'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
 for g, k in GATE_KEYS.items():
