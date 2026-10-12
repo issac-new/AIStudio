@@ -17,6 +17,7 @@
 set -uo pipefail
 
 SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+source "$(cd "$(dirname "$0")" && pwd)/mx-platform.sh"   # 独立进程：跨平台原语显式挂载
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8801/health}"
 GRACE="${GRACE:-120}"        # 启动宽限秒数（高负载机器上冷启动可超 60s）
 FAIL_NEED="${FAIL_NEED:-3}"  # 连续失败阈值
@@ -24,7 +25,14 @@ CHECK_INTERVAL="${CHECK_INTERVAL:-10}"
 LOG="$SIM_ROOT/logs/gateway-babysit.log"
 LOCK_JSON="$SIM_ROOT/gateway-locks/host-gateway.json"
 LOCK_DIR="$SIM_ROOT/gateway-locks/babysit.lock.d"
-HERMES_BIN="${HERMES_BIN:-/Users/cuishi/.hermes/hermes-agent/venv/bin/hermes}"
+# 宿主 venv 回落跨端（Git Bash=Scripts\hermes.exe；mx-lib 同款分支）
+if [[ -z "${HERMES_BIN:-}" ]]; then
+  if mxp_is_gbash; then
+    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/Scripts/hermes.exe"
+  else
+    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/bin/hermes"
+  fi
+fi
 
 mkdir -p "$SIM_ROOT/logs" "$SIM_ROOT/gateway-locks" "$SIM_ROOT/pids"
 

@@ -31,15 +31,13 @@ fi
 preflight_capacity_assert   # run11 左移件 a：容量类故障起跑前拒绝（并发闸/年龄锚双断言）
 
 # ── 推演期防休眠（提速方案⑥ 2026-10-09：04:55 主机重启事故后加护栏——睡眠/电源类
-#    中断是每轮最大非计划损耗；caffeinate -dims 阻止显示器/磁盘/系统睡眠，收口后 kill）──
-if ! pgrep -f "caffeinate -dims" >/dev/null 2>&1; then
-  nohup caffeinate -dims >/dev/null 2>&1 &
-  log "caffeinate -dims 已拉起（pid $!，推演期防休眠）"
-fi
+#    中断是每轮最大非计划损耗；mac 走 caffeinate -dims，Windows 提示电源策略（平台层）──
+mxp_prevent_sleep_on
 
 # ── 负载预检（提速方案⑤：外部负载竞争拖垮网关健康窗与 agent 工具调用——run12
-#    04:38 实测 loadavg 786 时 /health 10s 无应答。超阈值仅告警不拒跑，MX_LOAD_WARN 可调）──
-load_1m=$(uptime | sed -E 's/.*load averages?: ([0-9.]+).*/\1/')
+#    04:38 实测 loadavg 786 时 /health 10s 无应答。超阈值仅告警不拒跑，MX_LOAD_WARN 可调；
+#    非 mac 平台 loadavg 取不到=静默跳过（平台层）──
+load_1m=$(mxp_loadavg_1m)
 if [ -n "$load_1m" ] && awk "BEGIN{exit !($load_1m > ${MX_LOAD_WARN:-200})}"; then
   log "负载预检告警：1 分钟负载均值 ${load_1m} 超阈值 ${MX_LOAD_WARN:-200}——外部负载竞争显著拖慢推演，建议错峰 armada/Docker 构建等重负载"
 fi
@@ -68,8 +66,10 @@ else
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
 fi
 
-# ── 单 studio（matrix-login 多账号 + ACL）───────────────
-if curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1; then
+# ── 单 studio（matrix-login 多账号 + ACL；agent 节点不跑 studio）────
+if [[ "$MX_ROLE" == "agent" ]]; then
+  log "MX_ROLE=agent：studio 段跳过（studio 在导演机，本机只跑 gateway）"
+elif curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1; then
   log "studio 已在跑（:${STUDIO_PORT}），跳过"
 else
   ensure_studio_up && log "studio 启动中（pid $(cat "$PIDS_DIR/studio.pid")，日志 $LOGS_DIR/studio.log）" || fail "studio 拉起失败（ensure_studio_up）"
@@ -79,12 +79,14 @@ fi
 deadline=$(( $(date +%s) + 300 ))
 while (( $(date +%s) < deadline )); do
   g_ok=$(curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1 && echo 1 || echo 0)
-  s_ok=$(curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && echo 1 || echo 0)
+  if [[ "$MX_ROLE" == "agent" ]]; then s_ok=1; else s_ok=$(curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && echo 1 || echo 0); fi
   [[ "$g_ok" == 1 && "$s_ok" == 1 ]] && break
   sleep 3
 done
 [[ "${g_ok:-0}" == 1 ]] || fail "gateway 300s 内未就绪（$LOGS_DIR/gateway.log）"
-[[ "${s_ok:-0}" == 1 ]] || fail "studio 300s 内未就绪（$LOGS_DIR/studio.log）"
+if [[ "$MX_ROLE" != "agent" ]]; then
+  [[ "${s_ok:-0}" == 1 ]] || fail "studio 300s 内未就绪（$LOGS_DIR/studio.log）"
+fi
 
 # ── matrix 适配器自愈（pm 门控漂移/venv 缺依赖 → agent 全员哑火的根因面）──
 if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then

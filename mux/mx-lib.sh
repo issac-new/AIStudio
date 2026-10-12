@@ -43,6 +43,9 @@ SKILLS_SRC="$HARNESS_ROOT/skills"
 # 每个技能副本（交付物侧）；seed_soul_charter 幂等并入 SOUL.md（聊天回复侧）。
 # 条款文本不内嵌 bash（中文 heredoc 双重编码前科），bash 只做 marker 幂等与 cat。
 STYLE_CHARTER="$OVERLAY_ROOT/runtime/plugins/style-charter/style-charter.md"
+# 跨平台原语层（2026-10-12 双模式轮）：进程探测/日期解析/文件元数据/目录同步/
+# python3 命令名收敛——业务面禁止直写 lsof/pgrep/stat -f/date -j/rsync 等平台命令。
+source "$MX_SCRIPT_DIR/mx-platform.sh"
 STUDIO_DIST_DEFERRED=1   # 执行面三参（STUDIO_DIST/HERMES_BIN/HERMES_PYTHONPATH）在 SIM_ROOT 定锚后统一定义（见下）
 
 # ── 拓扑常量 ────────────────────────────────────────────
@@ -70,7 +73,12 @@ if [[ ! -d "$STUDIO_DIST/server" ]]; then
 fi
 HERMES_BIN="${HERMES_BIN:-$SIM_ROOT/bin/hermes-sim}"
 if [[ ! -x "$HERMES_BIN" ]]; then
-  HERMES_BIN="$HOME/.hermes/hermes-agent/venv/bin/hermes"
+  # 宿主 venv 回落路径跨端：mac=venv/bin/hermes；Git Bash=venv\\Scripts\\hermes
+  if mxp_is_gbash; then
+    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/Scripts/hermes.exe"
+  else
+    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/bin/hermes"
+  fi
   echo "[mx-lib] ⚠ hermes-sim wrapper 缺位，网关回落宿主 venv（执行面共享宿主源码树，自更新互擦风险——mx-setup 供给快照可根治）" >&2
 fi
 # 驱动 PATH 盲（run5 09-30 实锤再犯）：库内裸 `hermes` 调用面（kanban_list/
@@ -112,6 +120,10 @@ HOST_ORCH_HEALTH="${MX_HOST_ORCH_HEALTH:-http://127.0.0.1:8650/health}"
 # V1 编制不变（12 人类 + 12 -agent 机器人）
 USERS=(admin bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit)
 INSTANCED_USERS=(bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit)
+# 节点切片层（2026-10-12 三机真集群轮）：编制真相保持全量（驱动派活面跨机），
+# 本地执行面（profile 生成/板创建/本地判活/本地真值核验）按 node_users() 切片；
+# MX_NODE 未设＝solo 单机全编制（现状行为零变化）。
+source "$MX_SCRIPT_DIR/mx-node.sh"
 # 编制含三大治理角色（用户裁决 2026-09-25）：secops=安全管理（ISO27001）/
 # ops=运维管理（ITIL/发布执行）/ audit=合规及审计管理；需求分析师=bella、
 # 系统分析师=fanfan-sys-analyst+AN-* 执行者、项目管理=fanfan、系统架构=arch。
@@ -201,6 +213,26 @@ synapse_register() { # <localpart> <password>  幂等
     -c /data/homeserver.yaml -a -u "$u" -p "$p" >/dev/null 2>&1 \
     || fail "注册 matrix 用户 $u 失败"
   log "已注册 matrix 用户 @$u:$SERVER_NAME"
+}
+# 远端 homeserver 建号（MX_SYNAPSE_MODE=api）：synapse 注册 shared-secret 三步握手
+# （nonce → HMAC-SHA1(nonce\0user\0password, secret) → POST）。幂等：已可登录即跳过。
+synapse_register_api() { # <localpart> <password>
+  local u="$1" p="$2" nonce mac payload
+  if tok=$(mx_login "$u" "$p" 2>/dev/null) && [[ -n "$tok" && "$tok" != "null" ]]; then
+    log "matrix 用户 @$u:$SERVER_NAME 已在位（登录验证通过）"
+    return 0
+  fi
+  nonce=$(curl -sf -m 8 "$HS/_synapse/admin/v1/register" 2>/dev/null | jq -r .nonce 2>/dev/null)
+  [[ -n "$nonce" && "$nonce" != "null" ]] || fail "远端注册 nonce 获取失败（$HS/_synapse/admin/v1/register 未开放？核对 MX_REG_SECRET 与 synapse registration_shared_secret）"
+  mac=$(printf '%s\0%s\0%s' "$nonce" "$u" "$p" \
+    | openssl dgst -sha1 -hmac "$MX_REG_SECRET" -hex 2>/dev/null | awk '{print $NF}')
+  [[ -n "$mac" ]] || fail "注册 HMAC 计算失败（openssl 缺位？）"
+  payload=$(jq -n --arg n "$nonce" --arg u "$u" --arg p "$p" --arg m "$mac" \
+    '{nonce:$n, username:$u, password:$p, mac:$m, admin:true, type:"org.matrix.login.application_service"}')
+  curl -sf -m 10 -X POST -H 'Content-Type: application/json' -d "$payload" \
+    "$HS/_synapse/admin/v1/register" >/dev/null \
+    || fail "远端注册 matrix 用户 $u 失败（secret 不符或接口关闭）"
+  log "已注册 matrix 用户 @$u:$SERVER_NAME（远端注册 API）"
 }
 mx_login() { # <localpart> <password> → access_token
   curl -sf "$HS/_matrix/client/v3/login" \
@@ -441,7 +473,7 @@ mx_provision_agent_src() {
   local tmp="$AGENT_SRC.tmp.$$"
   rm -rf "$tmp"; mkdir -p "$tmp"
   git -C "$host_tree" ls-files -z > "$tmp.files0" \
-    && rsync -a --from0 --files-from="$tmp.files0" "$host_tree"/ "$tmp"/ \
+    && mxp_copy_git_tracked "$host_tree" "$tmp" "$tmp.files0" \
     && rm -f "$tmp.files0" || { rm -rf "$tmp"; fail "跟踪文件工作态快照失败"; }
   rm -rf "$AGENT_SRC"; mv "$tmp" "$AGENT_SRC"
   # git 化快照：mx_apply_agent_patches 的 git apply/反向幂等检查需要 .git（archive 是纯净抽出）
@@ -449,7 +481,12 @@ mx_provision_agent_src() {
     && git -C "$AGENT_SRC" -c user.name=sim-snapshot -c user.email=sim@snapshot commit -qm "snapshot @ $key" \
     || { rm -rf "$AGENT_SRC"; fail "快照 git 化失败"; }
   mkdir -p "$SIM_ROOT/bin"
-  local venv_py="$HOME/.hermes/hermes-agent/venv/bin/python"
+  local venv_py
+  if mxp_is_gbash; then
+    venv_py="$HOME/.hermes/hermes-agent/venv/Scripts/python.exe"
+  else
+    venv_py="$HOME/.hermes/hermes-agent/venv/bin/python"
+  fi
   [[ -x "$venv_py" ]] || fail "宿主 venv python 缺失（${venv_py}）——wrapper 依赖环境不可用"
   # wrapper 必须 -I 复刻官方 venv wrapper 语义（隔离轮实锤）：-I 无视 PYTHONPATH，
   # 依赖一律取自 venv 自身 site-packages——否则 installs 环境（py3.14）的原生扩展
@@ -480,17 +517,16 @@ mx_provision_product_dist() {
   local live="$NCWK_ROOT/upstream/hermes-studio/dist"
   [[ -f "$live/server/index.js" ]] || { log "⚠ 活注入树无构建产物（${live}）——跳过 dist 快照"; return 0; }
   local ovl; ovl=$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
-  # dist mtime 跨端取法：BSD `stat -f '%Sm' -t` / GNU `stat -c '%y'`（Linux 上
-  # BSD 语法静默失败回落 unknown，快照判旧失效——product-dist 每轮全量重拷）
-  local stamp; stamp=$(stat -f '%Sm' -t '%F %T' "$live/server/index.js" 2>/dev/null \
-    || stat -c '%y' "$live/server/index.js" 2>/dev/null | cut -d. -f1 || echo unknown)
+  # dist mtime 跨端取法收敛进平台层（BSD/GNU/python 三兜底；Git Bash 的 stat 是
+  # coreutils 版走 GNU 分支，纯 BSD 单边处不再静默失败）
+  local stamp; stamp=$(mxp_file_mtime "$live/server/index.js")
   local cur; cur=$(_mx_provenance "$PRODUCT_DIST.provenance.json" --read | sed -n 's/.*"dist_mtime": "\([^"\\]*\)".*/\1/p')
   if [[ "$cur" == "$stamp" && -f "$PRODUCT_DIST/server/index.js" ]]; then
     log "product-dist 快照已在位且同步（dist_mtime=${stamp}）——跳过"
   else
     log "供给 product-dist 快照：${live}（dist_mtime=$stamp, overlay=${ovl}）→ $PRODUCT_DIST"
     mkdir -p "$PRODUCT_DIST"
-    rsync -a --delete --exclude=node_modules "$live"/ "$PRODUCT_DIST"/ || fail "rsync dist 快照失败"
+    mxp_sync_dir "$live/" "$PRODUCT_DIST/" mirror node_modules || fail "dist 快照同步失败"
     _mx_provenance "$PRODUCT_DIST.provenance.json" "overlay_commit=$ovl" "dist_mtime=$stamp"
   fi
   # dist 是 bundle 但外部依赖（socket.io/node-pty 等 9 包+传递树）从仓库根 node_modules
@@ -500,7 +536,7 @@ mx_provision_product_dist() {
   local live_nm="$NCWK_ROOT/upstream/hermes-studio/node_modules"
   if [[ -d "$live_nm" && ! -d "$PRODUCT_DIST/node_modules/socket.io" ]]; then
     log "供给 node_modules 镜像：${live_nm} → $PRODUCT_DIST/node_modules（约 1.4G，一次性）"
-    rsync -a "$live_nm"/ "$PRODUCT_DIST/node_modules"/ || fail "rsync node_modules 失败"
+    mxp_sync_dir "$live_nm/" "$PRODUCT_DIST/node_modules/" || fail "node_modules 镜像同步失败"
   fi
   log "✓ product-dist 快照就绪"
 }
@@ -946,7 +982,7 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
   # 2026-10-10 能力补齐轮：单文件拷贝 → 全目录拷贝（aipaydev-dev 已升 swarm-yuan
   # standard 全骨架 116 文件——门禁/钩子脚本/方法论库随技能分发；单文件技能源仍
   # 兼容旧路径）。条款追加逻辑不变（进安装副本 SKILL.md 尾部，仓内真源无条款）。
-  for s in capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop testing-shift-left; do
+  for s in $SKILLS_INSTALL; do
     [[ -d "$SKILLS_SRC/$s" ]] || continue
     rm -rf "$PROF/skills/$s"
     mkdir -p "$PROF/skills/$s"
@@ -959,6 +995,14 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
     if [[ -f "$STYLE_CHARTER" ]]; then
       cat "$STYLE_CHARTER" >> "$PROF/skills/$s/SKILL.md"
     fi
+    # 跨端占位替换（2026-10-12 双模式轮）：技能真源里 __SIM_ROOT__ 占位（真源不得
+    # 硬编码 mac 绝对路径），安装到 profile 时按本节点 SIM_ROOT 实例化——agent 拿到的
+    # PROJECT_DIR 永远是本机可写路径。tmp+mv 原子替换（BSD/GNU sed 通用，同 wrapper 先例）。
+    local _tgt
+    for _tgt in "$PROF/skills/$s/SKILL.md" "$PROF/skills/$s/scripts/precheck.conf"; do
+      [[ -f "$_tgt" ]] || continue
+      sed "s|__SIM_ROOT__|$SIM_ROOT|g" "$_tgt" > "${_tgt}.tmp" && mv "${_tgt}.tmp" "$_tgt"
+    done
   done
   # 角色技能映射（2026-10-10 能力补齐·差距二）：专属技能此前只在 Orchestrator 主
   # profile（agent 推演中自著），实际干活的子 profile（*-tester/*-sys-analyst）没有
@@ -1023,10 +1067,37 @@ EVID_DIR="${MX_EVID_DIR:-$RUN_DIR/evidence}"
 # 读文件无需重启即可感知键落位；本链接把"当前轮 state.env"钉到固定路径。
 # 未配 KANBAN_GATE_GUARD_KEYS 时守卫整体惰性（mx-up 默认键=g2_arch_pass）。
 mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
-ln -sfn "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null || true
+# 跨端链接：mac 软链；Git Bash 文件软链需特权 → 回落拷贝（state.env 小文件，
+# 拷贝语义稍弱于链接但守卫只读键值，可接受）
+if ! ln -sfn "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null; then
+  cp -f "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null || true
+fi
 NCWK="$NCWK_ROOT"
-DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
-GH_REPO="issac-new/aipaydev"
+
+# ── 场景层（2026-10-12 新场景轮）────────────────────────
+# aipay（支付域 26 步）保持内联默认——mac solo 回归与门禁锚不动。全新需求+全新团队
+# 走场景覆写：MX_SCENARIO=<名> 且 scenarios/<名>/roster.env 在位时，编制/板映射/
+# 中央仓/技能清单/锚档案全部按 roster 重定义（roster 在全部默认之后 source，覆写
+# 必然压住默认；boards_of 在 roster 里重定义函数即可）。模板=scenarios/_template/，
+# 最小样例=scenarios/example-minimal/。
+MX_SCENARIO="${MX_SCENARIO:-aipay}"
+if [[ "$MX_SCENARIO" != aipay ]]; then
+  _sc_roster="$HARNESS_ROOT/scenarios/$MX_SCENARIO/roster.env"
+  if [[ ! -f "$_sc_roster" ]]; then
+    echo "[mx-lib] FAIL 场景定义缺位：${_sc_roster}（模板见 scenarios/_template/）" >&2
+    exit 2
+  fi
+  # shellcheck disable=SC1090
+  source "$_sc_roster"
+fi
+unset _sc_roster
+MX_CENTRAL_REPO="${MX_CENTRAL_REPO:-issac-new/aipaydev}"
+MX_CENTRAL_NAME="${MX_CENTRAL_NAME:-aipaydev}"
+MX_ANCHOR_USER="${MX_ANCHOR_USER:-fanfan}"
+MX_ANCHOR_USER_B="${MX_ANCHOR_USER_B:-chen}"
+SKILLS_INSTALL="${SKILLS_INSTALL:-capability-report requirements-analyst pm-planning aipaydev-dev inbox-dedup defect-loop testing-shift-left}"
+DIRECTOR_CLONE="$SIM_ROOT/central/$MX_CENTRAL_NAME"
+GH_REPO="$MX_CENTRAL_REPO"
 
 # ── 需求标识（推演轮次参数化，同 V1）────────────────────────
 RFD_ID="${RFD_ID:-RFD-001}"
