@@ -1821,19 +1821,35 @@ def md_bold(t):
     """转义后把 **…** 渲染为加粗（关键判词强调；防注入先整体转义）。"""
     return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', H.escape(t))
 
-# ── 术语词表（P21/F-6①）：内部代号首现自动展开——单一事实源 mux/glossary.txt，
-#    STEPS_META 叙事渲染共用；无释义代号=审计 WARN（词表先补再用）。──
+# ── 术语词表（P21/F-6① + P0-1 词汇表升维 v2）：内部代号首现自动展开——单一事实源
+#    mux/glossary.txt 五字段行（术语ID | 标准名 | 别名 | 定义 | 归属）；标准名与别名均参与
+#    首现匹配，展开形态=「别名（标准名=定义）」；无释义代号=审计 WARN（词表先补再用）。──
 GLOSSARY = {}
+GLOSSARY_OWNER = {}
+GLOSSARY_SLUG = {}
+GLOSSARY_CANON = {}
 _gl_path = Path(__file__).parent / 'glossary.txt'
 if _gl_path.exists():
-    for _ln in _gl_path.read_text(encoding='utf-8').splitlines():
-        if _ln.startswith('#') or ':' not in _ln:
+    for _ln in _gl_path.read_text(encoding='utf-8', errors='replace').splitlines():
+        _ln = _ln.strip()
+        if not _ln or _ln.startswith('#'):
             continue
-        _k, _v = _ln.split(':', 1)
-        GLOSSARY[_k.strip()] = _v.strip()
+        _parts = [p.strip() for p in _ln.split('|')]
+        if len(_parts) == 5 and _parts[0].startswith('term:'):
+            _slug, _std, _alias, _defn, _owner = _parts
+            GLOSSARY_SLUG[_slug] = _std
+            for _w in [_std] + [a for a in _alias.split(',') if a]:
+                GLOSSARY[_w] = _defn
+                GLOSSARY_OWNER[_w] = _owner
+                GLOSSARY_CANON[_w] = _std
+        elif ':' in _ln:
+            _k, _v = _ln.split(':', 1)
+            GLOSSARY[_k.strip()] = _v.strip()
 
 def _gloss_sub(m, k):
-    return f'{k}（{GLOSSARY[k]}）'
+    canon = GLOSSARY_CANON.get(k, '')
+    label = f'{canon}={GLOSSARY[k]}' if canon and canon != k else GLOSSARY[k]
+    return f'{k}（{label}）'
 
 def gloss_first_use(escaped_text):
     """叙事文本（已转义纯文本）的代号首现释义：全文每个代号只展开第一次。"""
@@ -2247,6 +2263,90 @@ def monitor_proxy_html():
             f'（{len(rows)} 次——纪律 36 框架内代行事件全量在册，令文摘要可反查 issues.log）</summary>'
             f'\n  <table style="margin-top:8px"><tr><th>类型</th><th>主体</th><th>令文/处置摘要</th></tr>'
             + ''.join(rows) + '</table></details>')
+
+
+def ontology_html():
+    """本体语义层证据小节（P0-2，本体论透镜分析：本体层在系统内执法但报告层不可见）。
+
+    三层数据源，全缺席=如实声明（run16 起预期在场）：①归档工件 ontology-health.txt
+    （五要素计数+健康度三档）②watch/status（工件优先、live 端点兜底）③issues.log
+    ontology 族行计数。本体证据面端点定义见方案 §2.5。"""
+    health_f = EVID / 'ontology-health.txt'
+    watch_f = EVID / 'ontology-watch-status.json'
+    stats_line, stats_src = '', ''
+    if health_f.exists():
+        try:
+            import json as _j
+            _h = _j.loads(health_f.read_text(encoding='utf-8', errors='replace'))
+            _st = _h.get('stats', {})
+            _hl = _h.get('health', {})
+            _bits = []
+            for _k, _lb in (('entityTypes', '实体类型'), ('objectProperties', '对象属性'),
+                            ('dataProperties', '数据属性'), ('axioms', '公理'), ('instances', '实例')):
+                if _k in _st:
+                    _bits.append(f'{_lb} {_st[_k]}')
+            _viol = '、'.join(f'{k} {_hl[k]}' for k in ('error', 'warning', 'notice') if k in _hl)
+            stats_line = '；'.join(filter(None, ['、'.join(_bits), f'健康度：{_viol}' if _viol else '']))
+            stats_src = '归档工件 ontology-health.txt（当轮 spec 端点落盘）'
+        except Exception:
+            stats_line = 'ontology-health.txt 解析失败（格式漂移）'
+            stats_src = '归档工件'
+    else:
+        # 兜底：种子正本静态计数（语义资产的仓内真值，非当轮运行证据）
+        try:
+            _seed = Path(os.environ.get('MX_OVERLAY_ROOT', '')) / \
+                'custom/server/ontology/ontology-seed.ts'
+            if not _seed.exists():
+                _seed = Path('/Users/cuishi/lab/ncwk/overlay/custom/server/ontology/ontology-seed.ts')
+            _txt = _seed.read_text(encoding='utf-8', errors='replace')
+            _et = len(re.findall(r"\bid: '\w+', label: '[^']+', labelEn:", _txt))
+            _op = len(re.findall(r"\bid: '\w+', label: '[^']+', domain: \[", _txt))
+            _ax = len(re.findall(r"\bid: 'ax-", _txt))
+            stats_line = f'语义层正本在册：实体类型 {_et}、对象属性 {_op}、公理 {_ax}（ontology-seed.ts 静态清点）'
+            stats_src = '种子正本静态清点（当轮运行证据缺席，如实降级）'
+        except Exception:
+            stats_line = ''
+    # watch/status：归档工件优先，live 端点兜底（2s 超时，不可达=如实缺席）
+    _wj, _wsrc = None, ''
+    if watch_f.exists():
+        try:
+            import json as _j
+            _wj = _j.loads(watch_f.read_text(encoding='utf-8', errors='replace'))
+            _wsrc = '归档工件 ontology-watch-status.json'
+        except Exception:
+            _wj = None
+    if _wj is None:
+        try:
+            import urllib.request as _u
+            import json as _j
+            with _u.urlopen('http://127.0.0.1:8802/api/hermes/ontology/watch/status', timeout=2) as _r:
+                _wj = _j.loads(_r.read().decode('utf-8'))
+                _wsrc = 'live 端点（报告生成时实测）'
+        except Exception:
+            _wj = None
+    watch_line = ''
+    if _wj:
+        _lt = _wj.get('lastTick', {})
+        watch_line = (f'checked {_lt.get("checked", "?")} / ingested {_lt.get("ingested", "?")} '
+                      f'/ violations {_lt.get("violations", "?")} / 收件箱推送 {_lt.get("inboxPushed", "?")}'
+                      f'（{_wsrc}）')
+    _ont_n = 0
+    ilog = EVID / 'issues.log'
+    if ilog.exists():
+        _ont_n = sum(1 for l in ilog.read_text(encoding='utf-8', errors='replace').splitlines()
+                     if 'ontology' in l.lower())
+    parts = []
+    if stats_line:
+        parts.append(f'<li><b>语义资产</b>：{H.escape(stats_line)}<span style="color:#94a3b8">（{H.escape(stats_src)}）</span></li>')
+    if watch_line:
+        parts.append(f'<li><b>结卡执法环</b>：{H.escape(watch_line)}</li>')
+    if _ont_n:
+        parts.append(f'<li><b>台账留痕</b>：ontology 族问题单 {_ont_n} 条（第 8 章台账可逐条反查）</li>')
+    if not parts:
+        return ('\n  <p class="stat-note">本体语义层证据：本轮无当轮运行工件（ontology-health.txt/'
+                'ontology-watch-status.json 均未落盘）且 live 端点不可达——本体层运行证据缺席如实登记'
+                '（方案 §2.5 已定义五端点与证据面，run16 起随轮出件）。</p>')
+    return ('\n  <ul style="margin:4px 0 10px;padding-left:20px">' + ''.join(parts) + '</ul>')
 
 
 def skill_duty_html():
@@ -3845,6 +3945,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据四：能力层在岗（技能执勤账）</h3>
   {skill_duty_html()}
+
+  <h3 style="font-size:13px;margin:14px 0 6px">证据五：语义层在工作（本体证据面）</h3>
+  {ontology_html()}
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步"📦 交付物实物与模版核对"折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
