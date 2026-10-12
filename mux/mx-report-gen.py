@@ -3603,7 +3603,7 @@ html = f'''<!DOCTYPE html>
 html{{scroll-behavior:smooth}}
 body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.75;letter-spacing:0}}
 
-.layout{{display:grid;grid-template-columns:220px 1fr;gap:0;max-width:none;margin:0 auto;min-height:100vh}}
+.layout{{display:grid;grid-template-columns:236px 1fr;gap:0;max-width:none;margin:0 auto;min-height:100vh}}
 .sidebar{{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--card);border-right:1px solid var(--border);padding:20px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}}
 .main{{padding:0 32px 60px;min-width:0;max-width:1180px}}
 
