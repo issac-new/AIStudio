@@ -657,27 +657,12 @@ capture_step() { # <step> <url> [action] [user]
 # ── 判活真化（run11 根治②）：文件增长判活被 adapter 噪音行（reaction/redaction
 # 风暴）双骗——既把真挂起误判"零增长"（研发工程师A 挂 2h 被判死循环），又把纯噪音误判
 # "在干活"（研发工程师C 差点永悬）。真实工作行=API call/tool 完成/Turn 起止，噪音不含。
-_agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时间戳；无→0）
-  local line ts
-  line=$(grep -E "API call|tool [a-z_]+ completed|Turn (started|ended)" "$1" 2>/dev/null | tail -1)
-  [[ -n "$line" ]] || { echo 0; return; }
-  ts=$(printf '%s' "$line" | cut -c1-19)
-  mxp_date_to_epoch "$ts"
-}
+# 判活计算三函数（_agent_log_last_work_ts/_agent_log_tail_stalled/_any_log_tail_stalled）
+# 移驻 mx-hb.sh 单一定义点（三机心跳补强层：驱动等待环与节点采样守护共用），
+# 并由其提供远程档案心跳判活（hb_* 系，见 mx-hb.sh 头注）。
+source "${MX_SCRIPT_DIR}/mx-hb.sh"
 
-# 卡死早检（run11 左移件 b）：G5 首轮实录——产品经理A 会话 18:18 即死（尾部=hindsight
-# prefetch 超时），19:18 窗满才判，60min 死窗零干预。静默过半且日志尾为错误态
-# （ERROR/Traceback/timeout/gave_up）即提前判死，不陪跑到窗满。
-_agent_log_tail_stalled() { # <agent.log> → 0=尾部错误态（疑似卡死）
-  local tail_line
-  tail_line=$(tail -1 "$1" 2>/dev/null)
-  [[ -n "$tail_line" ]] && printf '%s' "$tail_line" | grep -qE "ERROR |Traceback|TimeoutError|timed? ?out|gave_up"
-}
-_any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
-  local a
-  for a in "$@"; do _agent_log_tail_stalled "$a" && return 0; done
-  return 1
-}
+# 卡死早检语义注（函数体在 mx-hb.sh）：静默过半且日志尾为错误态即提前判死；run11 左移件 b。
 
 # 干预点 B（2026-10-09）：长等待进度锚——等待环每轮调 MX_PROGRESS_FN（缺省关），
 # 本函数 180s 节流出一行「分支 commit 计数 + PROGRESS 中间锚」推进行进 scenario.log，
@@ -732,15 +717,31 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   # （C→S→N 串行+渠道）合法总时长可达 3-4h，平顶 7200 会误杀慢而真在干活的腿
   # （误杀=假问题单+降级运行）。env 设值则绝对覆盖。
   local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-$(( idle > 900 ? idle * 8 : 7200 ))}"
-  local -a logs=()
+  local -a logs=() _hbag=()
   local a
   for a in ${agents//,/ }; do
-    [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+    if [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]]; then
+      logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+    elif hb_is_remote "$a"; then
+      _hbag+=("$a")
+    fi
   done
-  if (( ${#logs[@]} == 0 )); then
+  if (( ${#logs[@]} == 0 && ${#_hbag[@]} == 0 )); then
     note "[观察] wait_alive_truth 无日志面可观测（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 ${hard}s 硬窗"
     wait_truth "$desc" "$hard" "$@"
     return
+  fi
+  # 三机补强（mx-hb）：远程档案判活走心跳面；不可达→硬窗，绝不假判死
+  local _hb_on=0 _hb_miss=0
+  if (( ${#_hbag[@]} > 0 )); then
+    if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
+      _hb_on=1
+      note "[观察] 三机判活：远程档案 ${_hbag[*]} 走心跳面（MX_HB_ROOM）"
+    else
+      note "[观察] wait_alive_truth 远程档案（${_hbag[*]}）心跳不可达（MX_HB_ROOM 未配/无新鲜条目），退化为 ${hard}s 硬窗"
+      wait_truth "$desc" "$hard" "$@"
+      return
+    fi
   fi
   local last_sig=0 last_work=-1 cur_work w
   # idle-nudge（2026-10-04 run8 plan 步实录：agent 审批后提前收工、静坐 1800s 才被判死重派，
@@ -760,6 +761,22 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       w=$(_agent_log_last_work_ts "$a")
       (( w > cur_work )) && cur_work=$w
     done
+    if (( _hb_on == 1 )); then
+      if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
+        _hb_miss=0
+        for a in "${_hbag[@]}"; do
+          w=$(hb_agent_lw "$a")
+          (( w > cur_work )) && cur_work=$w
+        done
+      else
+        # 采样守护疑似停：三拍不可达即降级硬窗（硬窗内有终态复核，不误杀真在干活的腿）
+        (( ++_hb_miss >= 3 )) && {
+          note "[观察] 心跳连续 ${_hb_miss} 拍不可达，降级 ${hard}s 硬窗——不假判死"
+          wait_truth "$desc" "$hard" "$@"
+          return
+        }
+      fi
+    fi
     if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
     if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     # 注意：字符串判空不能进算术上下文（(( ... && -n "$x" )) 把 -n 解析成
@@ -769,7 +786,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次"
       nudged=1
     fi
-    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
       if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 $agents）"
       return 1
@@ -804,17 +821,36 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
     d="${s%%@*}"; s="${s#*@}"; o="${s%%@*}"; e="${s#*@}"
     descs+=("$d"); owners+=("$o"); exprs+=("$e"); done_flag+=(0)
   done
-  local -a logs=()
+  local -a logs=() _hbag=()
   for a in ${agents//,/ }; do
-    [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]] && logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+    if [[ -f "$HERMES_ROOT/profiles/$a/logs/agent.log" ]]; then
+      logs+=("$HERMES_ROOT/profiles/$a/logs/agent.log")
+    elif hb_is_remote "$a"; then
+      _hbag+=("$a")
+    fi
   done
-  if (( ${#logs[@]} == 0 )); then
+  if (( ${#logs[@]} == 0 && ${#_hbag[@]} == 0 )); then
     note "[观察] wait_alive_truth_multi 无日志面（agents=$agents），退化为 ${hard}s 硬窗串行等待"
     local rc=0
     for i in "${!exprs[@]}"; do
       wait_truth "${descs[$i]}" "$hard" eval "${exprs[$i]}" || rc=1
     done
     return $rc
+  fi
+  # 三机补强（mx-hb）：远程档案判活走心跳面；不可达→串行硬窗，绝不假判死
+  local _hb_on=0 _hb_miss=0
+  if (( ${#_hbag[@]} > 0 )); then
+    if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
+      _hb_on=1
+      note "[观察] 三机判活：远程档案 ${_hbag[*]} 走心跳面（MX_HB_ROOM）"
+    else
+      note "[观察] wait_alive_truth_multi 远程档案（${_hbag[*]}）心跳不可达（MX_HB_ROOM 未配/无新鲜条目），退化为 ${hard}s 硬窗串行等待"
+      local rc=0
+      for i in "${!exprs[@]}"; do
+        wait_truth "${descs[$i]}" "$hard" eval "${exprs[$i]}" || rc=1
+      done
+      return $rc
+    fi
   fi
   local last_sig=0 last_work=-1 cur_work w nudged=0 idle_half=$(( idle / 2 )) all_done
   local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
@@ -838,6 +874,26 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       w=$(_agent_log_last_work_ts "$a")
       (( w > cur_work )) && cur_work=$w
     done
+    if (( _hb_on == 1 )); then
+      if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
+        _hb_miss=0
+        for a in "${_hbag[@]}"; do
+          w=$(hb_agent_lw "$a")
+          (( w > cur_work )) && cur_work=$w
+        done
+      else
+        # 采样守护疑似停：三拍不可达即降级串行硬窗（不误杀真在干活的腿）
+        (( ++_hb_miss >= 3 )) && {
+          note "[观察] 心跳连续 ${_hb_miss} 拍不可达，降级 ${hard}s 硬窗串行等待——不假判死"
+          local rc=0
+          for i in "${!exprs[@]}"; do
+            (( done_flag[$i] == 1 )) && continue
+            wait_truth "${descs[$i]}" "$hard" eval "${exprs[$i]}" || rc=1
+          done
+          return $rc
+        }
+      fi
+    fi
     if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
     if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
@@ -861,7 +917,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次${hint:+（含陈旧分支诊断）}"
       nudged=1
     fi
-    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
       MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
         (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：日志尾错误态——左移件 b；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
