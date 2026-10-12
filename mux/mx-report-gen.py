@@ -2300,7 +2300,7 @@ def ontology_html():
                 _seed = Path('/Users/cuishi/lab/ncwk/overlay/custom/server/ontology/ontology-seed.ts')
             _txt = _seed.read_text(encoding='utf-8', errors='replace')
             _et = len(re.findall(r"\bid: '\w+', label: '[^']+', labelEn:", _txt))
-            _op = len(re.findall(r"\bid: '\w+', label: '[^']+', domain: \[", _txt))
+            _op = len(re.findall(r"domain: \[", _txt))
             _ax = len(re.findall(r"\bid: 'ax-", _txt))
             stats_line = f'语义层正本在册：实体类型 {_et}、对象属性 {_op}、公理 {_ax}（ontology-seed.ts 静态清点）'
             stats_src = '种子正本静态清点（当轮运行证据缺席，如实降级）'
