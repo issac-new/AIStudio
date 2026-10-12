@@ -1517,4 +1517,10 @@ describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四
     expect(gen).toContain('md_inline(body)')                         // r18 卡体接线
     expect(gen).toContain('md_inline(gate_text)')                    // 步条原文接线
   })
+
+  it('报告头部名词速查行（方案 §5.4 报告语言三规矩②——内部缩写第一屏前载定义）', () => {
+    const merge = read(join(MX, 'final-report-merge.py'))
+    expect(merge).toContain('名词速查：G1-G6=六道关卡')
+    expect(merge).toContain('GLOSS_LINE + part1')
+  })
 })
