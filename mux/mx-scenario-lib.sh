@@ -13,6 +13,20 @@
 SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
+# mx_fetch（run16 实证根修）：git fetch 挂起护栏——20:1x 一次 fetch 网络黑洞挂起
+# 42 分钟冻死驱动等待环（无 FAIL 行无超时，监控靠子进程 mtime 交叉定位才破案）。
+# 全部 fetch 走本函数：60s 超时强断（timeout 缺席环境回落裸跑并打点），失败照常
+# 返回非零由调用方原有 || true/记单逻辑兜住——挂起不再可能，慢网退化为可观测失败。
+mx_fetch() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 60 git "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 60 git "$@"
+  else
+    git "$@"
+  fi
+}
+
 sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
 # 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）。
 # lite 轮口径（2026-10-10 G4）：state 带 lite_round=1 时 total=执行段步数（夹具步不计），
@@ -606,7 +620,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 # 提交时间必须 ≥ run_started_at；缺键退化为存在性旧语义并告警。──
 branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提交时间在本轮开跑后）
   local br="$1" ct rs
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/$br" >/dev/null 2>&1 || return 1
   rs="$(sget run_started_at)"
   if [ -z "$rs" ]; then
@@ -1009,7 +1023,7 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # [A-Za-z0-9_-]，钉死字符集对加粗/代码块包裹免疫。
   card=$(printf '%s' "$body" | grep -oE 'card=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
   [[ -n "$sha" && -n "$card" ]] || { note "[凭证] DONE 行缺 commit/card 凭证：$body"; return 1; }
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" cat-file -e "$sha^{commit}" 2>/dev/null \
     || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
   git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
@@ -1039,7 +1053,7 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
 
 # ── 仓库/房间真值 ───────────────────────────────────────
 repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1 || return 1
   # 工件新鲜度（run5 教训：旧轮 AN-*/T-* 稿未被 mx-clean 清掉，"文件存在"被旧稿
   # 满足=假真值）。文件在 origin/main 的最后提交时间必须 ≥ 本轮首次开跑时刻；
@@ -1072,7 +1086,7 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   # 与 testpass 派发词 push 目标一致）。testpass/uat 用 repo_has（origin/main
   # 口径）查一份只进 integration 的报告=永假——testpass 六代重启代代白派、UAT 九连死循环
   # 3h45m 的共同根因位。冻结件仍走 repo_has（main 口径）。
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1
 }
 
@@ -1091,8 +1105,8 @@ uat_evidence_body() { # 本轮（run_started_at 起）产品经理A 发的最新
 # origin/*），再把本地 main 快进到 origin/main（供以本地 main 为基的路径用；main 在别处
 # 检出或非快进时 git 自行拒绝，静默跳过，与 repo_commit_main 的收尾口径一致）。
 repo_pull() {
-  git -C "$DIRECTOR_CLONE" fetch -q origin >/dev/null 2>&1 || true
-  git -C "$DIRECTOR_CLONE" fetch -q origin main:main >/dev/null 2>&1 || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin >/dev/null 2>&1 || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin main:main >/dev/null 2>&1 || true
 }
 
 # ── 分支状态机约定（P4）──────────────────────────────────────
@@ -1112,7 +1126,7 @@ repo_commit_main() { # <repo 相对路径> <author-name> <author-email> <commit-
   [[ -f "$DIRECTOR_CLONE/$path" ]] || return 1
   ( # 子 shell 作业：任何一步失败即退出非零，EXIT trap 统一拆工作区，不留注册残留
     trap 'rm -rf "$wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true' EXIT
-    git -C "$DIRECTOR_CLONE" fetch -q origin || exit 1
+    mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin || exit 1
     mkdir -p "$SIM_ROOT/var" || exit 1
     rm -rf "$wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
     git -C "$DIRECTOR_CLONE" worktree add -q --detach "$wt" origin/main || exit 1
@@ -1125,7 +1139,7 @@ repo_commit_main() { # <repo 相对路径> <author-name> <author-email> <commit-
       git -C "$wt" push -q origin HEAD:main || exit 1
     fi
     # local main 快进到同一提交：它是 `git push origin main` 的推送源，落后即空推/被拒
-    git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true )
+    mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true )
 }
 
 room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
@@ -1466,7 +1480,7 @@ _mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+in
   # 外部证据（新提交/新判词/卡面更新）全盲，熔断 85 圈循环永不复位。并入 integration
   # tip 与该闸评审卡 body 哈希，三类复位证据（提交/判词/卡面）全覆盖。
   local repo="$SIM_ROOT/central/aipaydev"
-  git -C "$repo" fetch -q origin 2>/dev/null
+  mx_fetch -C "$repo" fetch -q origin 2>/dev/null
   extra="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
   if [[ "$label" == *G5* ]]; then
     local rgid db
@@ -1490,7 +1504,7 @@ gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键�
 freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
 
 repo_branch_has() { # <branch> <path-in-repo>：远端分支上文件存在性（证据反查）
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" cat-file -e "refs/remotes/origin/$1:$2" 2>/dev/null
 }
 
@@ -1856,7 +1870,7 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   # 作业形态与 repo_commit_main 同构：固定 wt 路径+EXIT trap 拆区，不留注册残留
   local _wt="$SIM_ROOT/var/main-archive-wt" _rc=0
   mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || {
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || {
     echo "ISSUE|archive-commit-failed|director|治理归档落账：中央仓 fetch 失败（${run}）" >> "$_ilog"
     return 1
   }
@@ -1911,13 +1925,13 @@ PYEOF
       commit -qm "docs(governance): ${run} 治理归档落账——metrics-log+ISSUES-LOG 机制化回灌（P14/R26 原子化）" || _rc=1
     if [ "$_rc" = 0 ] && ! git -C "$_wt" push -q origin HEAD:main 2>/dev/null; then
       # 非快进=main 已前移：fetch+rebase 重试一次，再败记单
-      git -C "$_wt" fetch -q origin 2>/dev/null || true
+      mx_fetch -C "$_wt" fetch -q origin 2>/dev/null || true
       git -C "$_wt" rebase -q origin/main 2>/dev/null || true
       git -C "$_wt" push -q origin HEAD:main 2>/dev/null || _rc=1
     fi
   fi
   # local main 快进到同一提交（与 repo_commit_main 同口径：它是后续推送源，落后即空推/被拒）
-  git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true
   if [ "$_rc" = 0 ]; then
     git -C "$DIRECTOR_CLONE" show origin/main:docs/issues/ISSUES-LOG.md 2>/dev/null | grep -qF "## ${run}（" || _rc=1
     git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null | grep -qF ",${rfd},M1," || _rc=1

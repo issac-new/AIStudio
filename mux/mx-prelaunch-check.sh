@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十二项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补）。
+# mx-prelaunch-check.sh — 开跑前十三项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -67,5 +67,10 @@ echo "  ↳ 起跑后第一收获窗内用 mx-narrative-skeleton.py 起稿本轮
 #     判据/供给循环见 mux/mx-board-supply-check.sh 头注释。
 ck "⑫ 账号板供给在位" "bash '$HERE/mux/mx-board-supply-check.sh' | grep -q '账号板供给齐'" "缺板/缺围栏——按 mux/mx-board-supply-check.sh 头注释的供给循环补建（mx-setup 第 5 段同款幂等）"
 
+# ⑬ 独立审批环在位（run16 实证：审批臂内嵌驱动，熔断证据等待期修复链审批饿死——
+#     两笔 execute_code 被拒实锤。常驻件 mx-approval-proxy.sh 随监督器同刻起：
+#     nohup bash mux/mx-approval-proxy.sh --run <RUN_ID> >/dev/null 2>&1 &）
+ck "⑬ 独立审批环可启动" "bash -n '$HERE/mux/mx-approval-proxy.sh' && grep -q 'needs your OK' '$HERE/mux/mx-approval-proxy.sh'" "mx-approval-proxy.sh 缺席或语法坏——审批臂独立化的常驻件（run16 事故固化）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十二项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十三项）" || { echo "有红项——修复后再跑"; exit 1; }
