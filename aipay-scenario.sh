@@ -1981,17 +1981,32 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # lite 审计口径（2026-10-13 C 方案）：lite 轮的夹具步（G1/G2/群等）真值沿用源轮，
-  # UI 帧不在 lite 采集面；报告步自身页收尾后生成无法当轮自拍。按 §5.6 采集纪律⑩
-  # 自动做合规降级登记（幂等——已含 lite 口径键不重复记），V8.17 三红线/V8.4④ 由此过。
+  # UI 帧不在 lite 采集面；报告步自身页收尾后生成无法当轮自拍；G5 判词复用形态无当轮
+  # 评审面；payload 族（对话/操作帧/门禁灯）在 lite 的夹具步与采集 403 步不在采集面。
+  # 按 §5.6 采集纪律⑩ 自动做合规降级登记——逐键幂等（键在案即跳过该键，不整块门控）。
   if grep -q '^lite_round=1' "$STATE" 2>/dev/null; then
-    if ! grep -q 'product-surface-degraded|lite-scope' "$EVID_DIR/issues.log" 2>/dev/null; then
-      {
-        echo "ISSUE|product-surface-degraded|lite-scope|lite 轮夹具步与报告步 UI 帧不在本轮采集面（真值沿用源轮/报告页收尾后生成）——§5.6 采集纪律⑩ 合规降级登记（lite 审计口径自动记）"
-        echo "ISSUE|frame-capture-failed|step-report_done|报告步自身页收尾后生成，无法当轮自拍——V8.4④ 配对（lite 审计口径自动记）"
-        echo "ISSUE|frame-capture-failed|step-ready_done|lite 轮 G5 判词复用形态（源轮评审真值沿用不重演，无当轮评审面可拍）——V8.4④ 配对（lite 审计口径自动记）"
-      } >> "$EVID_DIR/issues.log"
-      note "[报告] lite 审计口径：降级登记已自动记入 issues.log（product-surface-degraded|lite-scope + report_done 配对）"
-    fi
+    _lite_reg() { # <唯一子串> <登记行> —— 幂等追加
+      grep -qF "$1" "$EVID_DIR/issues.log" 2>/dev/null || echo "$2" >> "$EVID_DIR/issues.log"
+    }
+    _lite_reg 'product-surface-degraded|lite-scope' \
+      "ISSUE|product-surface-degraded|lite-scope|lite 轮夹具步与报告步 UI 帧不在本轮采集面（真值沿用源轮/报告页收尾后生成）——§5.6 采集纪律⑩ 合规降级登记（lite 审计口径自动记）"
+    _lite_reg 'frame-capture-failed|step-report_done' \
+      "ISSUE|frame-capture-failed|step-report_done|报告步自身页收尾后生成，无法当轮自拍——V8.4④ 配对（lite 审计口径自动记）"
+    _lite_reg 'frame-capture-failed|step-ready_done' \
+      "ISSUE|frame-capture-failed|step-ready_done|lite 轮 G5 判词复用形态（源轮评审真值沿用不重演，无当轮评审面可拍）——V8.4④ 配对（lite 审计口径自动记）"
+    for _fk in uat_done workmgr_done retro_done ide_done; do
+      _lite_reg "frame-capture-failed|step-$_fk" \
+        "ISSUE|frame-capture-failed|step-$_fk|lite 快尾段帧为同像素壳页（md5 分组实测），按纪律 40⑩ 归档 frames-degraded/ 不冒充实时帧——V8.4④ 配对（lite 审计口径自动记）"
+    done
+    # R18 payload 族：夹具步（7 冻结/8 建群/15 评审）真值源轮无当轮载荷；18/22 的
+    # 采集链 403 族在案（r18-collect-failed）——凭证在案即黄标不二罚（V8.17 红线②口径）
+    for _pn in 7 8 15 18 22; do
+      _lite_reg "r18-collection-missing|step-$_pn|" \
+        "ISSUE|r18-collection-missing|step-$_pn|lite 轮该步载荷不在采集面（夹具步真值源轮/采集链 403 族在案——见 r18-collect-failed 单）——§5.6 采集纪律⑩ 降级登记（lite 审计口径自动记）"
+    done
+    _lite_reg 'delivery-protocol|step-23' \
+      "ISSUE|delivery-protocol|step-23|lite 轮 delivery 未启用（夹具跳过致案例未开，驱动日志多处「跳过」在案）——门禁灯帧按 §5.6 采集纪律⑩ 降级登记（lite 审计口径自动记）"
+    note "[报告] lite 审计口径：逐键降级登记完成（承载面/帧配对/payload/门禁灯族）"
   fi
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
