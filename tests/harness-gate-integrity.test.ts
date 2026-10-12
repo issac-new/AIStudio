@@ -1513,5 +1513,8 @@ describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四
     expect(gen).toContain('swarm-yuan 全骨架')                       // 骨架判档：rules.d+hooks
     expect(gen).toContain('采集面欠账')                               // skill 专项帧缺席=红标
     expect(gen).toContain('零数据不渲染假账')
+    expect(gen).toContain('def md_inline(')                          // 内嵌 md 星标转 HTML（V8.18 文风配套）
+    expect(gen).toContain('md_inline(body)')                         // r18 卡体接线
+    expect(gen).toContain('md_inline(gate_text)')                    // 步条原文接线
   })
 })
