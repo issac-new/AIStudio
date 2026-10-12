@@ -630,3 +630,9 @@
 # 任何一环不过即原文直出（能力下限红线）；原文先归档再精简（obs_recall 可整页取回）；
 # cli-config evidence_reducer 块配置，默认关闭。tool_executor 观察提交点接线。
 614-agent-evidence-reducer.patch
+# [611] 会话轮换第四触发（run16 实证）：回合撞 agent.max_iterations 耗尽出口
+# （Turn ended: max_iterations_reached）即建议轮换——603 三判据（api 调用数/水位/
+# 空转）对 60 调用级的上限耗尽全不咬，run16 21:18 fanfan G5 修订会话死停 60 分钟
+# 靠监控手工续作。遥测件记 turn_hit_iter_cap 标记，轮换判定消费；auto 档即刻
+# 轮换+604 移交检查点=运行时原生续作。
+611-agent-session-rotation-itercap.patch

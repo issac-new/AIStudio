@@ -112,6 +112,12 @@ def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
     if not reason and _int(entry.get("empty_streak")) >= settings["empty_streak_limit"]:
         reason = "empty-streak"
 
+    # 611（run16 实证）：迭代上限出口触发——回合在 agent.max_iterations 耗尽处结束
+    # （max_iterations_reached），任务多半进行到一半；auto 档即刻轮换+604 移交
+    # 检查点=运行时原生续作（run16 靠监控手工续作令 60 分钟的机制化替代）。
+    if not reason and entry.get("turn_hit_iter_cap"):
+        reason = "iteration-cap-exit"
+
     if not reason:
         return RotationDecision(False)
 
