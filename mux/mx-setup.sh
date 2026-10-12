@@ -9,11 +9,29 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mx-lib.sh"
 
-log "=== mx-setup：单 gateway 多路复用拓扑准备（SIM_ROOT=${SIM_ROOT}）==="
+log "=== mx-setup：多路复用拓扑准备（SIM_ROOT=${SIM_ROOT}；节点=$(node_mode_desc)）==="
 
 # ── 0. 前置检查 ─────────────────────────────────────────
-command -v docker >/dev/null || fail "docker 不可用"
-docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAPSE_CONTAINER 未运行"
+# matrix 接入三模式（2026-10-12 双模式轮）：
+#   MX_SYNAPSE_MODE=docker（默认，mac 单机现状）：docker exec 本机容器建 admin
+#   MX_SYNAPSE_MODE=api     ：远端 synapse，用 MX_REG_SECRET 走注册 API 建 admin
+#   MX_SYNAPSE_MODE=manual  ：远端 synapse 且不开放注册 API——admin 人工预建，
+#                             此处只验登录可用（密码走 user_pass 约定式）
+MX_SYNAPSE_MODE="${MX_SYNAPSE_MODE:-docker}"
+case "$MX_SYNAPSE_MODE" in
+  docker)
+    command -v docker >/dev/null || fail "docker 不可用"
+    docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAPSE_CONTAINER 未运行"
+    ;;
+  api)
+    [[ -n "${MX_REG_SECRET:-}" ]] || fail "MX_SYNAPSE_MODE=api 需要 MX_REG_SECRET（synapse registration_shared_secret）"
+    curl -sf -m 5 "$HS/_matrix/client/versions" >/dev/null || fail "远端 homeserver 不可达：$HS"
+    ;;
+  manual)
+    curl -sf -m 5 "$HS/_matrix/client/versions" >/dev/null || fail "远端 homeserver 不可达：$HS"
+    ;;
+  *) fail "未知 MX_SYNAPSE_MODE=$MX_SYNAPSE_MODE（docker|api|manual）" ;;
+esac
 [[ -x "$HERMES_BIN" ]] || fail "HERMES_BIN 不可执行：$HERMES_BIN"
 [[ -f "$HOME/.hermes/config.yaml" ]] || fail "宿主 config.yaml 不存在（模型配置来源）"
 [[ -f "$STUDIO_DIST/server/index.js" ]] || fail "studio 构建产物缺失：$STUDIO_DIST/server/index.js（先 npm run build:full）"
@@ -64,7 +82,28 @@ fi
 # rosterCommit=edc6ed2）。studio 先于 gateway 拉（/health/ready 只看自身
 # bootstrap，不探 gateway）；账号在位即跳过（appendTableRow 不去重，重复
 # 调会加重复 roster 行）；synapse 直建仅剩 admin 一处=系统引导语义。
-synapse_register "admin" "$(user_pass admin)"
+# admin 建号按模式分叉：docker=容器内 CLI（现状）；api=注册 shared-secret 三步握手；
+# manual=人工已建，验登录即可。其余 24 账号仍走产品通道（governance API，天然远端）。
+# 节点分工（2026-10-12 三机轮）：账号供给与 roster 登记只在导演机做一次（studio 在
+# 导演机，governance 单写者）；agent 节点跳过本段，只验本节点档案 token 已同步到位。
+if [[ "$MX_ROLE" == "agent" ]]; then
+  log "MX_ROLE=agent：跳过账号供给段（导演机已建）——校验本节点 creds"
+  for u in $(node_users); do
+    for n in "$u" "$u-agent"; do
+      [[ -s "$CREDS_DIR/$n.token" ]] || fail "creds/$n.token 缺位——先在导演机跑账号供给，再同步 creds/<档案>*.token 到本节点"
+    done
+  done
+  log "本节点 creds 校验通过（$(node_users | wc -l | tr -d ' ') 档案 ×2 token）"
+else
+case "$MX_SYNAPSE_MODE" in
+  docker) synapse_register "admin" "$(user_pass admin)" ;;
+  api)    synapse_register_api "admin" "$(user_pass admin)" ;;
+  manual)
+    tok=$(mx_login "admin" "$(user_pass admin)" 2>/dev/null | tr -d '\n')
+    [[ -n "$tok" && "$tok" != "null" ]] || fail "manual 模式：admin 登录失败——请在远端 homeserver 人工创建 admin（密码按 user_pass 约定式）后重跑"
+    log "manual 模式：admin 已在位（登录验证通过）"
+    ;;
+esac
 ensure_studio_up || fail "studio 提前拉起失败（R31 产品通道前置；查 $LOGS_DIR/studio.log）"
 log "studio 就绪（:${STUDIO_PORT}，产品通道前置）"
 for u in "${USERS[@]}"; do
@@ -92,12 +131,13 @@ log "$(( ${#USERS[@]} * 2 )) 账号就绪"
   done
 } > "$CREDS_DIR/roster.md"
 chmod 600 "$CREDS_DIR/roster.md"
+fi   # MX_ROLE=agent 跳段结束（导演机路径）
 
 # ── 3. 单 root 配置 ─────────────────────────────────────
 write_root_config
 
-# ── 4. profiles：12 Orchestrator + 22 研发专职 agent ────
-for u in "${INSTANCED_USERS[@]}"; do
+# ── 4. profiles：Orchestrator + 研发专职 agent（按节点切片；solo=全编制）──
+for u in $(node_users); do
   write_user_profile "$u"
   install_skills "$HERMES_ROOT/profiles/$u"
   write_user_manifest "$u"
@@ -109,8 +149,8 @@ done
 profile_count=$(find "$HERMES_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 log "profiles 就绪：${profile_count} 个（${#INSTANCED_USERS[@]} Orchestrator + agent，admin 不起实例）"
 
-# ── 5. 每账号 2 块独立 kanban + team 围栏 ───────────────
-for u in "${INSTANCED_USERS[@]}"; do
+# ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
+for u in $(node_users); do
   for b in $(boards_of "$u"); do
     slug="${b%%:*}"; agent="${b##*:}"
     if [[ ! -d "$HERMES_ROOT/kanban/boards/$slug" ]]; then
@@ -143,8 +183,8 @@ fi
 # 24h 审查：原先嵌在首装守卫内——存量 SIM_ROOT（mx-clean 不删中央仓克隆）永不重放，
 # 404 只在全新装机被修；两条命令自身幂等，移出守卫每轮供给。
 mkdir -p "$SIM_ROOT/runtime"
-ln -sfn "$SIM_ROOT/central/aipaydev/runtime/governance" "$SIM_ROOT/runtime/governance"
-for u in "${INSTANCED_USERS[@]}"; do
+mxp_link_dir "$SIM_ROOT/central/aipaydev/runtime/governance" "$SIM_ROOT/runtime/governance"
+for u in $(node_users); do
   WS=$(workspace "$u")
   if [[ ! -d "$WS/.git" ]]; then
     mkdir -p "$(dirname "$WS")"

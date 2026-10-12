@@ -29,7 +29,7 @@ from pathlib import Path
 
 from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采证据表单一事实源（与生成器 hero 统计同表）
 
-SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 RUN_ID = os.environ.get('MX_RUN_ID', '')
 if '--run' in sys.argv:
     _i = sys.argv.index('--run')
@@ -49,7 +49,7 @@ R18F = EVID / 'r18-steps.json'
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
     '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    '/Volumes/nvme2230/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    os.environ.get('MX_OVERLAY_ROOT', '/Volumes/nvme2230/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
             Path(_plan_candidates[1]))

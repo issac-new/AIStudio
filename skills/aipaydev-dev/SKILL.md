@@ -18,7 +18,7 @@ status: draft
 
 | 特征项 | 生成器检测值（AUTO:detected） |
 |--------|------------------------------|
-| 项目根 | /Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev |
+| 项目根 | __SIM_ROOT__/central/aipaydev |
 | 构建命令 |  |
 | 测试命令 | (cd apps/csw-cashier-mp && npm test) && (cd apps/csw-channel-alipay && npm test) && (cd apps/csw-channel-wechat && npm test) && (cd apps/csw-merchant-api && npm test) && (cd apps/csw-pay-core && npm test) && (cd apps/test-integration && npm test) |
 | 检测框架 | jest-vitest |

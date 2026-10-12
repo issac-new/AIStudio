@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/mx-lib.sh"
 
 TS=$(date +%Y%m%d-%H%M%S)
 RUN_EVID="$EVID_DIR/$TS"; mkdir -p "$RUN_EVID"
-PASS=0; FAIL=0; FAILED_GATES=()
+PASS=0; FAIL=0; SKIPPED=0; FAILED_GATES=()
 gate() { # <name> <ok:0|1> <detail>
   local name="$1" ok="$2" detail="$3"
   if [[ "$ok" == 1 ]]; then
@@ -21,27 +21,30 @@ gate() { # <name> <ok:0|1> <detail>
     FAIL=$((FAIL+1)); FAILED_GATES+=("$name"); log "✗ [$name] $detail"
   fi
 }
+gate_skip() { # <name> <reason>——节点切片下本机无该档案面：如实记跳过，不计 FAIL
+  SKIPPED=$((SKIPPED+1)); log "○ [$1] SKIP——$2"
+}
 
 board_db() { # default 板的 DB 在 <root>/kanban.db（上游约定），其余在 boards/<slug>/
   if [[ "$1" == "default" ]]; then echo "$HERMES_ROOT/kanban.db"; else echo "$HERMES_ROOT/kanban/boards/$1/kanban.db"; fi
 }
 board_count() { # <board> <where-sql>
-  sqlite3 "$(board_db "$1")" "select count(*) from tasks where $2" 2>/dev/null || echo -1
+  mxp_sqlite "$(board_db "$1")" "select count(*) from tasks where $2" || echo -1
 }
 
-log "=== mx-smoke 开始（取证目录 ${RUN_EVID}）==="
+log "=== mx-smoke 开始（取证目录 ${RUN_EVID}；节点=$(node_mode_desc)）==="
 
 # ═══ G5（起）：共存与启动形态 ════════════════════════════
 host_before=$(curl -sf "$HOST_ORCH_HEALTH" -m 3 || true)
 [[ -n "$host_before" ]] && gate G5 1 "真机 orchestrator 起始健康" || gate G5 1 "真机 orchestrator 未在线（非本方管辖，记录）"
 gw_pid=$(cat "$PIDS_DIR/gateway.pid" 2>/dev/null || true)
-if [[ -n "$gw_pid" ]] && ps -o command= -p "$gw_pid" 2>/dev/null | grep -q 'gateway run' \
-   && ! ps -o command= -p "$gw_pid" 2>/dev/null | grep -q -- '--force'; then
+if [[ -n "$gw_pid" ]] && mxp_ps_command "$gw_pid" | grep -q 'gateway run' \
+   && ! mxp_ps_command "$gw_pid" | grep -q -- '--force'; then
   gate G5 1 "gateway 以无 --force 形态运行（pid ${gw_pid}）"
 else
-  # pid 文件缺失误差：按端口反查
-  gw_pid=$(lsof -ti ":$GW_PORT" 2>/dev/null | head -1 || true)
-  if [[ -n "$gw_pid" ]] && ! ps -o command= -p "$gw_pid" 2>/dev/null | grep -q -- '--force'; then
+  # pid 文件缺失误差：按端口反查（平台层：mac lsof / Git Bash netstat）
+  gw_pid=$(mxp_port_pids "$GW_PORT" | head -1 || true)
+  if [[ -n "$gw_pid" ]] && ! mxp_ps_command "$gw_pid" | grep -q -- '--force'; then
     gate G5 1 "gateway 以无 --force 形态运行（pid $gw_pid 按端口反查）"
   else
     gate G5 0 "未能证实 gateway 启动形态（pid=${gw_pid}）"
@@ -49,12 +52,15 @@ else
 fi
 
 # ═══ G1：矩阵账号路由 ═══════════════════════════════════
+# 节点切片：whoami 走远端 HS 天然跨机，但 creds 只保证本节点档案+admin 在位——
+# 非本节点档案的 token 不在本机时不硬查（导演机 solo 态=全量，行为不变）。
 whoami_ok=1
-for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
+for n in admin $(node_users) $(for u in $(node_users); do echo "$u-agent"; done); do
   wid=$(mx "$(load_token "$n")" GET account/whoami | jq -r '.user_id' 2>/dev/null || true)
   [[ "$wid" == "@$n:$SERVER_NAME" ]] || { whoami_ok=0; log "whoami 不符：$n → $wid"; }
 done
-[[ $whoami_ok == 1 ]] && gate G1 1 "$(( ${#USERS[@]} * 2 )) 账号 whoami 全对" || gate G1 0 "whoami 存在不匹配（见上）"
+_wn=$(node_users | wc -l | tr -d ' ')
+[[ $whoami_ok == 1 ]] && gate G1 1 "$(( _wn + 1 ))+ 账号 whoami 全对" || gate G1 0 "whoami 存在不匹配（见上）"
 
 f_state_sha=$(shasum "$HERMES_ROOT/profiles/fanfan/state.db" 2>/dev/null | cut -d' ' -f1 || echo none)
 c_state_sha=$(shasum "$HERMES_ROOT/profiles/chen/state.db" 2>/dev/null | cut -d' ' -f1 || echo none)
@@ -82,6 +88,14 @@ done
                      || gate G1 0 "$route_detail"
 
 # ═══ G2：板隔离 + 钉板 + ACL ════════════════════════════
+# 节点切片：G2-G4 全部依赖 fanfan/chen 板在本地——非本节点档案整体跳段（gate_skip
+# 如实记档，不虚绿）；solo 态 node_has 恒真，行为与历史版逐字节一致。
+_G234=1
+if ! node_has fanfan || ! node_has chen; then
+  _G234=0
+  gate_skip G2 "fanfan/chen 档案不在本节点（$(node_mode_desc)）——本门禁需板在本地，请在对应节点自跑 mx-smoke"
+fi
+if [[ $_G234 == 1 ]]; then
 pin_ok=1; pin_detail=""
 # 2a 钉板：以 fanfan profile 身份、不带 --board 建卡 → 必须落 fanfan-pm-plan
 HERMES_HOME="$HERMES_ROOT/profiles/fanfan" env -u HERMES_KANBAN_BOARD -u HERMES_KANBAN_DB \
@@ -112,10 +126,10 @@ fence_title="fence-test-$TS"
 mx_kanban fanfan-pm-plan create "$fence_title" --assignee chen-csw-pay-core --created-by smoke \
   --body "SHOULD-NOT-RUN" > "$RUN_EVID/fence-create.log" 2>&1 || true
 sleep 60   # ≥2 个 dispatch tick
-fence_status=$(sqlite3 "$(board_db fanfan-pm-plan)" "select status from tasks where title='$fence_title'" 2>/dev/null || echo missing)
+fence_status=$(mxp_sqlite "$(board_db fanfan-pm-plan)" "select status from tasks where title='$fence_title'" || echo missing)
 fence_runs=$(board_count fanfan-pm-plan "id=(select id from tasks where title='$fence_title')" 2>/dev/null || echo -1)
-fence_runcount=$(sqlite3 "$(board_db fanfan-pm-plan)" \
-  "select count(*) from task_runs where task_id=(select id from tasks where title='$fence_title')" 2>/dev/null || echo -1)
+fence_runcount=$(mxp_sqlite "$(board_db fanfan-pm-plan)" \
+  "select count(*) from task_runs where task_id=(select id from tasks where title='$fence_title')" || echo -1)
 if [[ "$fence_status" == "ready" && "$fence_runcount" == "0" ]]; then
   gate G3 1 "板外 assignee（chen-csw-pay-core@fanfan-pm-plan）未被认领（status=$fence_status, runs=${fence_runcount}）"
 else
@@ -132,21 +146,22 @@ mx_kanban fanfan-pm-plan create "$run_title" --assignee fanfan-sys-analyst --cre
 g4_ok=0; g4_detail=""
 deadline=$(( $(date +%s) + 420 ))
 while (( $(date +%s) < deadline )); do
-  st=$(sqlite3 "$(board_db fanfan-pm-plan)" "select status from tasks where title='$run_title'" 2>/dev/null || echo missing)
+  st=$(mxp_sqlite "$(board_db fanfan-pm-plan)" "select status from tasks where title='$run_title'" || echo missing)
   if [[ "$st" == "done" ]]; then g4_ok=1; break; fi
   if [[ "$st" == "blocked" ]]; then break; fi
   sleep 15
 done
-g4_runs=$(sqlite3 "$(board_db fanfan-pm-plan)" \
-  "select ifnull(group_concat(profile,'+'),'') from task_runs where task_id=(select id from tasks where title='$run_title')" 2>/dev/null || echo "")
-g4_result=$(sqlite3 "$(board_db fanfan-pm-plan)" \
-  "select ifnull(result,'') from tasks where title='$run_title'" 2>/dev/null || echo "")
+g4_runs=$(mxp_sqlite "$(board_db fanfan-pm-plan)" \
+  "select ifnull(group_concat(profile,'+'),'') from task_runs where task_id=(select id from tasks where title='$run_title')" || echo "")
+g4_result=$(mxp_sqlite "$(board_db fanfan-pm-plan)" \
+  "select ifnull(result,'') from tasks where title='$run_title'" || echo "")
 if [[ $g4_ok == 1 && "$g4_runs" == *fanfan-sys-analyst* ]]; then
   g4_detail="team agent 实派生执行到 done（runs=${g4_runs}，marker 命中=$(echo "$g4_result" | grep -c "$marker")）"
   gate G4 1 "$g4_detail"
 else
   gate G4 0 "未在窗口内完成：status=${st:-?} runs=${g4_runs}（模型通道或派生异常，见 $LOGS_DIR/gateway.log）"
 fi
+fi   # _G234 本地档案段结束
 
 # ═══ G5（收）：真机共存 ═════════════════════════════════
 host_after=$(curl -sf "$HOST_ORCH_HEALTH" -m 3 || true)
@@ -165,7 +180,7 @@ g6_ok=1; g6_detail=""
 curl -sf -m 3 "$HINDSIGHT_API_URL/health" >/dev/null \
   || { g6_ok=0; g6_detail="hindsight 服务($HINDSIGHT_API_URL)不健康；"; }
 family_banks=""
-for u in "${INSTANCED_USERS[@]}"; do
+for u in $(node_users); do
   fam_bank=$(jq -r .bank_id "$HERMES_ROOT/profiles/$u/hindsight/config.json" 2>/dev/null || echo missing)
   [[ "$fam_bank" == "hermes-"*"-${u}" ]] || { g6_ok=0; g6_detail+="${u} 主 profile bank 异常(${fam_bank})；"; }
   for a in $(agents_of "$u"); do
@@ -177,19 +192,21 @@ for u in "${INSTANCED_USERS[@]}"; do
   family_banks="$family_banks $fam_bank"
 done
 distinct_banks=$(echo "$family_banks" | tr ' ' '\n' | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
-if [[ $g6_ok == 1 && "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]]; then
-  gate G6 1 "${#INSTANCED_USERS[@]} 家族各一 bank（用户名+MAC 区分）、成员共享、provider 全激活、服务健康 ✓"
+_nu=$(node_users | wc -l | tr -d ' ')
+if [[ $g6_ok == 1 && "$distinct_banks" == "$_nu" ]]; then
+  gate G6 1 "${_nu} 家族各一 bank（用户名+MAC 区分）、成员共享、provider 全激活、服务健康 ✓"
 else
-  [[ "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]] || g6_detail+="家族 bank 去重数 ${distinct_banks}≠${#INSTANCED_USERS[@]}；"
+  [[ "$distinct_banks" == "$_nu" ]] || g6_detail+="家族 bank 去重数 ${distinct_banks}≠${_nu}；"
   gate G6 0 "${g6_detail:-异常}"
 fi
 
 # ═══ 汇总取证 ═══════════════════════════════════════════
 {
-  echo "mx-smoke $TS  PASS=$PASS FAIL=$FAIL"
+  echo "mx-smoke $TS  PASS=$PASS FAIL=$FAIL SKIPPED=$SKIPPED"
   echo "failed gates: ${FAILED_GATES[*]:-none}"
+  echo "node: $(node_mode_desc)"
   echo "boards:"; HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards list 2>/dev/null || true
   echo "default board tasks: $(board_count default '1=1')"
 } > "$RUN_EVID/summary.txt"
-log "=== mx-smoke 结束：PASS=$PASS FAIL=${FAIL}（证据 ${RUN_EVID}）==="
+log "=== mx-smoke 结束：PASS=$PASS FAIL=${FAIL} SKIPPED=${SKIPPED}（证据 ${RUN_EVID}）==="
 [[ $FAIL == 0 ]] || { log "失败门禁：${FAILED_GATES[*]}"; exit 1; }

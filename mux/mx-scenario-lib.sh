@@ -662,7 +662,7 @@ _agent_log_last_work_ts() { # <agent.log> → epoch（最近真实工作行时�
   line=$(grep -E "API call|tool [a-z_]+ completed|Turn (started|ended)" "$1" 2>/dev/null | tail -1)
   [[ -n "$line" ]] || { echo 0; return; }
   ts=$(printf '%s' "$line" | cut -c1-19)
-  date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
+  mxp_date_to_epoch "$ts"
 }
 
 # 卡死早检（run11 左移件 b）：G5 首轮实录——产品经理A 会话 18:18 即死（尾部=hindsight
@@ -952,6 +952,13 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # 卡号反核含 archived（09-26 实锤 false negative）：agent 完成后归档卡属正常工作流，
   # kanban_list（默认活跃态 + studio API 面）都看不到 archived 真卡，曾把合格凭证
   # 误判"虚报"。改 CLI 直查全状态（活跃 + archived）；studio API 整板返空问题另记。
+  # 跨节点护栏（2026-10-12 三机轮）：fanfan 档案不在本节点时其板 DB 不在本地，
+  # CLI/本机 studio 都查不到——降级为「git 真值 + DONE 行凭证形态」双核（commit 反查
+  # 照旧强断言），卡面反查留档说明，不误杀也不虚放（虚报防线主要靠 commit 真值）。
+  if ! node_has fanfan; then
+    note "[凭证] fanfan 档案不在本节点（$(node_mode_desc)）——卡面反查降级跳过，git 真值已核：card=$card"
+    return 0
+  fi
   local slug card_found=1
   for slug in $(account_boards fanfan); do
     if HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
@@ -1226,7 +1233,7 @@ _agent_last_work_ts() { # <agent.log> → epoch
   line=$(grep -E "API call #|tool [a-z_]+ completed" "$1" 2>/dev/null | tail -1)
   [[ -n "$line" ]] || { echo 0; return; }
   ts=$(printf '%s' "$line" | cut -c1-19)
-  date -j -f "%Y-%m-%d %H:%M:%S" "$ts" +%s 2>/dev/null || echo 0
+  mxp_date_to_epoch "$ts"
 }
 _agent_idle_ending() { # <profile> <within-sec=600> → 0=命中空转收场形态
   local prof="$1" win="${2:-600}" log te wts now
@@ -1235,7 +1242,7 @@ _agent_idle_ending() { # <profile> <within-sec=600> → 0=命中空转收场形�
   te=$(grep -E "Turn ended: reason=text_response" "$log" 2>/dev/null | tail -1 | cut -c1-19)
   [[ -n "$te" ]] || return 1
   now=$(date +%s)
-  te=$(date -j -f "%Y-%m-%d %H:%M:%S" "$te" +%s 2>/dev/null) || return 1
+  te=$(mxp_date_to_epoch "$te")
   wts=$(_agent_last_work_ts "$log")
   (( now - te < win )) && (( now - wts > 300 )) && return 0
   return 1
