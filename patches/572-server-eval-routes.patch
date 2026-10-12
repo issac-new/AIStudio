@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 9d68fceb..f60ebf0a 100644
+index 9d68fceb9..f60ebf0a0 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -109,6 +109,8 @@ import { startKgAutoSync } from '../custom/kgtrigger/auto-sync'

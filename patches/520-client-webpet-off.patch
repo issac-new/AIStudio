@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 927f095b..46bedbc0 100644
+index 930737292..7a0e09a3f 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -210,6 +210,8 @@ const desktopTitleBarLeft = computed(() => {

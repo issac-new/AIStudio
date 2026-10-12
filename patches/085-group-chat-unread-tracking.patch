@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
-index bcdfb3ef..5c9d41ba 100644
+index bcdfb3efa..5c9d41bad 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
 @@ -227,6 +227,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {

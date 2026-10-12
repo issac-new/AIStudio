@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index ed45c770..667a2298 100644
+index ed45c7706..667a22983 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -12,6 +12,45 @@ import { evaluateRules } from '../../../../custom/loop/engine/architecture-engin

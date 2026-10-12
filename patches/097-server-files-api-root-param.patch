@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
-index 80fb44a2..8005dc30 100644
+index 80fb44a2c..8005dc30a 100644
 --- a/packages/server/src/modules/studio/controllers/download.ts
 +++ b/packages/server/src/modules/studio/controllers/download.ts
 @@ -1,5 +1,5 @@
@@ -65,7 +65,7 @@ index 80fb44a2..8005dc30 100644
      // Choose provider: always use local for upload directory files
      let data: Buffer
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index 32c38676..9b663546 100644
+index 32c386764..9b6635468 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -1,16 +1,38 @@

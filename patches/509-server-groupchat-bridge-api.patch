@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
-index 7ad7496a..d474d9b9 100644
+index 7ad7496a3..d474d9b9c 100644
 --- a/packages/server/src/modules/studio/sockets/group-chat.ts
 +++ b/packages/server/src/modules/studio/sockets/group-chat.ts
 @@ -8,6 +8,8 @@ import { bindLegacyAppEvents } from '../services/webhooks/legacy-app-events'

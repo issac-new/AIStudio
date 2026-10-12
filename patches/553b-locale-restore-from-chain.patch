@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 762b6b40..5ff44d57 100644
+index 465d5ee11..7fee97834 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -828,7 +828,8 @@ export default {
@@ -101,7 +101,7 @@ index 762b6b40..5ff44d57 100644
        tasks: 'Task Cluster',
        noTasks: 'No linked tasks',
        participants: 'Participants'
-@@ -3636,7 +3660,7 @@ export default {
+@@ -3638,7 +3662,7 @@ export default {
        switchToNew: 'Switch to the new board after creating',
        createFailed: 'Failed to create board',
        archiveFailed: 'Failed to archive board',
@@ -110,10 +110,15 @@ index 762b6b40..5ff44d57 100644
        filterAll: 'All'
      },
      columns: {
-@@ -5975,6 +5999,650 @@ export default {
-     new_0_7_31_3: 'Unified model context, reasoning effort, and pricing lookup, improved matching for custom endpoints and prefixed model IDs, and prioritized manually configured prices (#3298, #3300)',
-     new_0_7_31_4: 'Fixed context queries for custom endpoints in the App and added model aliases and reasoning options to shared sessions (#3299)',
-     new_0_7_31_5: 'Fixed Comic theme preferences being lost after refresh or restart; saved theme styles now return during loading (#3302)',
+@@ -6024,6 +6048,655 @@ export default {
+     new_0_7_32_6: 'Improved Hermes chat recovery after reconnects, fixed runs remaining busy after completion or stop, and ensured queued messages continue (#3321)',
+     new_0_7_32_7: 'Fixed Linux desktop Open at Login and improved error messages and diagnostics for desktop startup failures (#3307, #3308)',
+     new_0_7_32_8: 'Removed the outdated group chat upgrade notice (#3306)',
++    new_0_7_31_1: 'Added authenticated P2P connections between the App and Studio, with automatic cloud relay fallback when direct connections are unavailable (#3290)',
++    new_0_7_31_2: 'Improved P2P connections on systems with multiple network interfaces and in Docker, and fixed direct connection failures caused by proxy fake-IP DNS (#3292, #3303)',
++    new_0_7_31_3: 'Unified model context, reasoning effort, and pricing lookup, improved matching for custom endpoints and prefixed model IDs, and prioritized manually configured prices (#3298, #3300)',
++    new_0_7_31_4: 'Fixed context queries for custom endpoints in the App and added model aliases and reasoning options to shared sessions (#3299)',
++    new_0_7_31_5: 'Fixed Comic theme preferences being lost after refresh or restart; saved theme styles now return during loading (#3302)',
 +    new_0_7_30_1: 'Added Qwen Code, Kimi Code, CodeBuddy, Qoder, GitHub Copilot, and ZCode for chats, group chats, and workflows; Qoder uses global mode, while the other five also support scoped models (#3280)',
 +    new_0_7_30_2: 'Ekko chats now appear under Built-in Agent in history and search, with /context, /usage, /status, and /compact commands (#3276)',
 +    new_0_7_30_3: 'New chats default to Ekko and show installed Agents without CLI probes; reopening unsent chats no longer waits for nonexistent history (#3284, #3288)',
@@ -762,7 +767,7 @@ index 762b6b40..5ff44d57 100644
    loopScenes: {
      manage: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 3c535365..33f34496 100644
+index a2962de9f..a67111b94 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -827,7 +827,8 @@ export default {
@@ -868,7 +873,7 @@ index 3c535365..33f34496 100644
        tasks: '任务簇',
        noTasks: '无挂接任务',
        participants: '参与方'
-@@ -3635,7 +3659,7 @@ export default {
+@@ -3637,7 +3661,7 @@ export default {
        switchToNew: '创建后切换到新看板',
        createFailed: '创建看板失败',
        archiveFailed: '归档看板失败',
@@ -877,10 +882,15 @@ index 3c535365..33f34496 100644
        filterAll: '全部'
      },
      columns: {
-@@ -5973,6 +5997,839 @@ export default {
-     new_0_7_31_3: '统一模型上下文、推理强度和计费信息识别，改进自定义接口及带前缀模型 ID 的匹配，并优先使用手动设置的价格 (#3298、#3300)',
-     new_0_7_31_4: '修复 App 自定义接口的上下文查询，并为共享会话补充模型别名与推理选项 (#3299)',
-     new_0_7_31_5: '修复刷新或重启后丢失漫画主题选择的问题，加载时恢复已保存的主题风格 (#3302)',
+@@ -6022,6 +6046,844 @@ export default {
+     new_0_7_32_6: '改善 Hermes 聊天重连后的状态恢复，修复完成或停止后仍显示运行中的问题，并确保排队消息继续执行 (#3321)',
+     new_0_7_32_7: '修复 Linux 桌面端开机自启，并完善桌面启动失败时的错误提示与诊断信息 (#3307、#3308)',
+     new_0_7_32_8: '移除群聊中已过时的升级提示 (#3306)',
++    new_0_7_31_1: '新增 App 与 Studio 的鉴权 P2P 直连，直连不可用时自动回退云端中转 (#3290)',
++    new_0_7_31_2: '改善多网卡和 Docker 环境的 P2P 连接，并修复代理 fake-IP DNS 导致的直连失败 (#3292、#3303)',
++    new_0_7_31_3: '统一模型上下文、推理强度和计费信息识别，改进自定义接口及带前缀模型 ID 的匹配，并优先使用手动设置的价格 (#3298、#3300)',
++    new_0_7_31_4: '修复 App 自定义接口的上下文查询，并为共享会话补充模型别名与推理选项 (#3299)',
++    new_0_7_31_5: '修复刷新或重启后丢失漫画主题选择的问题，加载时恢复已保存的主题风格 (#3302)',
 +    new_0_7_30_1: '新增 Qwen Code、Kimi Code、CodeBuddy、Qoder、GitHub Copilot 和 ZCode，接入聊天、群聊及工作流；Qoder 使用全局模式，其余五种也支持独立配置模型 (#3280)',
 +    new_0_7_30_2: 'Ekko 会话在历史和搜索中归入内置 Agent，并支持 /context、/usage、/status 和 /compact 命令 (#3276)',
 +    new_0_7_30_3: '新建聊天默认选择 Ekko，直接展示已安装 Agent，避免 CLI 探测；重新打开未发送的聊天不再等待不存在的历史消息 (#3284、#3288)',

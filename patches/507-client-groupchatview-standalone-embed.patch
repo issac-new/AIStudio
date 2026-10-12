@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
-index 1547e2e8..d8df8cc4 100644
+index 1547e2e8b..d8df8cc42 100644
 --- a/packages/client/src/views/hermes/GroupChatView.vue
 +++ b/packages/client/src/views/hermes/GroupChatView.vue
 @@ -24,6 +24,9 @@ const routeRoomId = computed(() => {

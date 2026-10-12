@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/entry.ts b/packages/desktop/src/main/entry.ts
-index b1322f2f..2cfa9d3e 100644
+index b1322f2f4..2cfa9d3e2 100644
 --- a/packages/desktop/src/main/entry.ts
 +++ b/packages/desktop/src/main/entry.ts
 @@ -1,5 +1,18 @@
@@ -23,7 +23,7 @@ index b1322f2f..2cfa9d3e 100644
  // was persisted. Route those invocations before loading any GUI or updater code.
 diff --git a/packages/desktop/src/main/linux-sandbox.ts b/packages/desktop/src/main/linux-sandbox.ts
 new file mode 100644
-index 00000000..5cbb292d
+index 000000000..5cbb292d5
 --- /dev/null
 +++ b/packages/desktop/src/main/linux-sandbox.ts
 @@ -0,0 +1,65 @@

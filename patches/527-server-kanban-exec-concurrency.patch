@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 6c15a732..7f853df5 100644
+index 6c15a7324..7f853df50 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -18,7 +18,11 @@ const execOpts = { windowsHide: true }

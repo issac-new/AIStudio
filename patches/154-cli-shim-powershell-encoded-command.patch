@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
-index b75fdcd2..4e15c5a5 100644
+index b75fdcd2f..4e15c5a52 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
 @@ -440,7 +440,11 @@ function shellPathSnippet(platform: NodeJS.Platform, profilePath: string): strin

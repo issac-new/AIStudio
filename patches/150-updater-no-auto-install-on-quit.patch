@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/updater.ts b/packages/desktop/src/main/updater.ts
-index 5f7031bc..f0e659d5 100644
+index 5f7031bc8..f0e659d5c 100644
 --- a/packages/desktop/src/main/updater.ts
 +++ b/packages/desktop/src/main/updater.ts
 @@ -332,7 +332,10 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {

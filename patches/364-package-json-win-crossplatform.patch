@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index d0875434..5445c17d 100644
+index 0f4ae8616..bb218620f 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -23,11 +23,17 @@
@@ -795,7 +795,7 @@ index d0875434..5445c17d 100644
      }
    }
 diff --git a/package.json b/package.json
-index 04c2742e..819cd3fa 100644
+index b72de8037..61a02063d 100644
 --- a/package.json
 +++ b/package.json
 @@ -52,8 +52,8 @@

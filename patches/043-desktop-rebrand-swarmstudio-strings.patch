@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
-index e8443b52..52208b61 100644
+index e8443b52d..52208b616 100644
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
 @@ -112,7 +112,7 @@
@@ -12,10 +12,10 @@ index e8443b52..52208b61 100644
      Delete "$INSTDIR\${UNINSTALL_FILENAME}.hermes-repair"
      ClearErrors
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
-index 1413cf63..96f3edb2 100644
+index c9ac2c419..24a8a52c2 100644
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
-@@ -67,41 +67,41 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
+@@ -69,34 +69,34 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
  
  const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
    en: {
@@ -61,6 +61,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'Update information is not available for this platform yet.',
      'update.packagedOnlyMessage': 'Automatic updates are only available in the packaged desktop app.',
      'desktop.startingLocalServices': 'Starting local services...',
+@@ -105,7 +105,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'Select a runtime download source to start local services.',
      'desktop.downloadFailed': 'Download failed',
      'desktop.downloadCloudflareTitle': 'Download from Cloudflare',
@@ -69,7 +70,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'Download from GitHub',
      'desktop.downloadGithubDetail': 'Use the release asset directly from GitHub.',
      'desktop.failedPrepareRuntime': 'Failed to prepare Hermes runtime',
-@@ -120,7 +120,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -124,7 +124,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Select region',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -78,7 +79,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -128,41 +128,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -132,34 +132,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    zh: {
@@ -124,6 +125,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': '当前平台的更新信息暂不可用。',
      'update.packagedOnlyMessage': '自动更新仅在打包后的桌面应用中可用。',
      'desktop.startingLocalServices': '正在启动本地服务...',
+@@ -168,7 +168,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': '请选择运行时下载源以启动本地服务。',
      'desktop.downloadFailed': '下载失败',
      'desktop.downloadCloudflareTitle': '从 Cloudflare 下载',
@@ -132,7 +134,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': '从 GitHub 下载',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 资源。',
      'desktop.failedPrepareRuntime': '准备 Hermes 运行时失败',
-@@ -181,7 +181,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -187,7 +187,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '框选区域',
      'loginReset.confirmTitle': '重置登录',
      'loginReset.confirmMessage': '确认将登录重置为 admin / 123456？',
@@ -141,7 +143,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': '正在重置登录...',
      'loginReset.successTitle': '登录已重置',
      'loginReset.successMessage': '登录已重置为 {username} / {password}。',
-@@ -189,41 +189,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -195,34 +195,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '无法重置桌面端登录。',
    },
    'zh-TW': {
@@ -187,6 +189,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': '目前平台的更新資訊暫不可用。',
      'update.packagedOnlyMessage': '自動更新僅可在打包後的桌面應用中使用。',
      'desktop.startingLocalServices': '正在啟動本地服務...',
+@@ -231,7 +231,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': '請選擇運行時下載來源以啟動本地服務。',
      'desktop.downloadFailed': '下載失敗',
      'desktop.downloadCloudflareTitle': '從 Cloudflare 下載',
@@ -195,7 +198,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': '從 GitHub 下載',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 資源。',
      'desktop.failedPrepareRuntime': '準備 Hermes 運行時失敗',
-@@ -242,7 +242,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -250,7 +250,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '框選區域',
      'loginReset.confirmTitle': '重置登入',
      'loginReset.confirmMessage': '確認將登入重置為 admin / 123456？',
@@ -204,7 +207,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': '正在重置登入...',
      'loginReset.successTitle': '登入已重置',
      'loginReset.successMessage': '登入已重置為 {username} / {password}。',
-@@ -250,41 +250,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -258,34 +258,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '無法重置桌面端登入。',
    },
    ja: {
@@ -250,6 +253,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'このプラットフォームのアップデート情報はまだ利用できません。',
      'update.packagedOnlyMessage': '自動アップデートはパッケージ版デスクトップアプリでのみ利用できます。',
      'desktop.startingLocalServices': 'ローカルサービスを起動しています...',
+@@ -294,7 +294,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'ローカルサービスを開始するためのランタイムダウンロード元を選択してください。',
      'desktop.downloadFailed': 'ダウンロードに失敗しました',
      'desktop.downloadCloudflareTitle': 'Cloudflare からダウンロード',
@@ -258,7 +262,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'GitHub からダウンロード',
      'desktop.downloadGithubDetail': 'GitHub のリリースアセットを直接使用します。',
      'desktop.failedPrepareRuntime': 'Hermes ランタイムの準備に失敗しました',
-@@ -303,7 +303,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -313,7 +313,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '領域を選択',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -267,7 +271,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -311,41 +311,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -321,34 +321,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    ko: {
@@ -313,6 +317,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': '이 플랫폼의 업데이트 정보를 아직 사용할 수 없습니다.',
      'update.packagedOnlyMessage': '자동 업데이트는 패키징된 데스크톱 앱에서만 사용할 수 있습니다.',
      'desktop.startingLocalServices': '로컬 서비스를 시작하는 중...',
+@@ -357,7 +357,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': '로컬 서비스를 시작할 런타임 다운로드 소스를 선택하세요.',
      'desktop.downloadFailed': '다운로드 실패',
      'desktop.downloadCloudflareTitle': 'Cloudflare에서 다운로드',
@@ -321,7 +326,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'GitHub에서 다운로드',
      'desktop.downloadGithubDetail': 'GitHub 릴리스 자산을 직접 사용합니다.',
      'desktop.failedPrepareRuntime': 'Hermes 런타임 준비 실패',
-@@ -364,7 +364,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -376,7 +376,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '영역 선택',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -330,7 +335,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -372,41 +372,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -384,34 +384,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    fr: {
@@ -376,6 +381,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'Les informations de mise a jour ne sont pas encore disponibles pour cette plateforme.',
      'update.packagedOnlyMessage': 'Les mises a jour automatiques ne sont disponibles que dans l application de bureau packagee.',
      'desktop.startingLocalServices': 'Demarrage des services locaux...',
+@@ -420,7 +420,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'Selectionnez une source de telechargement du runtime pour demarrer les services locaux.',
      'desktop.downloadFailed': 'Echec du telechargement',
      'desktop.downloadCloudflareTitle': 'Telecharger depuis Cloudflare',
@@ -384,7 +390,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'Telecharger depuis GitHub',
      'desktop.downloadGithubDetail': 'Utilise directement l asset de release GitHub.',
      'desktop.failedPrepareRuntime': 'Echec de la preparation du runtime Hermes',
-@@ -425,7 +425,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -439,7 +439,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Sélectionner une zone',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -393,7 +399,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -433,41 +433,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -447,34 +447,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    es: {
@@ -439,6 +445,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'La informacion de actualizacion aun no esta disponible para esta plataforma.',
      'update.packagedOnlyMessage': 'Las actualizaciones automaticas solo estan disponibles en la app de escritorio empaquetada.',
      'desktop.startingLocalServices': 'Iniciando servicios locales...',
+@@ -483,7 +483,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'Selecciona una fuente de descarga del runtime para iniciar los servicios locales.',
      'desktop.downloadFailed': 'Error de descarga',
      'desktop.downloadCloudflareTitle': 'Descargar desde Cloudflare',
@@ -447,7 +454,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'Descargar desde GitHub',
      'desktop.downloadGithubDetail': 'Usa directamente el recurso de release de GitHub.',
      'desktop.failedPrepareRuntime': 'No se pudo preparar el runtime de Hermes',
-@@ -486,7 +486,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -502,7 +502,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Seleccionar región',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -456,7 +463,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -494,41 +494,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -510,34 +510,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    de: {
@@ -502,6 +509,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'Update-Informationen sind fur diese Plattform noch nicht verfugbar.',
      'update.packagedOnlyMessage': 'Automatische Updates sind nur in der paketierten Desktop-App verfugbar.',
      'desktop.startingLocalServices': 'Lokale Dienste werden gestartet...',
+@@ -546,7 +546,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'Wahlen Sie eine Runtime-Downloadquelle aus, um lokale Dienste zu starten.',
      'desktop.downloadFailed': 'Download fehlgeschlagen',
      'desktop.downloadCloudflareTitle': 'Von Cloudflare herunterladen',
@@ -510,7 +518,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'Von GitHub herunterladen',
      'desktop.downloadGithubDetail': 'Verwendet das Release-Asset direkt von GitHub.',
      'desktop.failedPrepareRuntime': 'Hermes Runtime konnte nicht vorbereitet werden',
-@@ -547,7 +547,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -565,7 +565,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Bereich auswählen',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -519,7 +527,7 @@ index 1413cf63..96f3edb2 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -555,41 +555,41 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -573,34 +573,34 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    pt: {
@@ -565,6 +573,7 @@ index 1413cf63..96f3edb2 100644
      'update.noUpdateInfoMessage': 'As informacoes de atualizacao ainda nao estao disponiveis para esta plataforma.',
      'update.packagedOnlyMessage': 'Atualizacoes automaticas estao disponiveis apenas no app desktop empacotado.',
      'desktop.startingLocalServices': 'Iniciando servicos locais...',
+@@ -609,7 +609,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'desktop.selectRuntimeSource': 'Selecione uma fonte de download do runtime para iniciar os servicos locais.',
      'desktop.downloadFailed': 'Falha no download',
      'desktop.downloadCloudflareTitle': 'Baixar pelo Cloudflare',
@@ -573,7 +582,7 @@ index 1413cf63..96f3edb2 100644
      'desktop.downloadGithubTitle': 'Baixar pelo GitHub',
      'desktop.downloadGithubDetail': 'Usa diretamente o asset de release do GitHub.',
      'desktop.failedPrepareRuntime': 'Falha ao preparar o runtime Hermes',
-@@ -608,7 +608,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -628,7 +628,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Selecionar região',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -583,19 +592,19 @@ index 1413cf63..96f3edb2 100644
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 5fb0745d..7ba40003 100644
+index f7ecfba91..f782c0994 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -81,6 +81,8 @@ let mainWindow: BrowserWindow | null = null
+@@ -82,6 +82,8 @@ let mainWindow: BrowserWindow | null = null
  let petWindow: BrowserWindow | null = null
  let petWindowLoadPromise: Promise<void> | null = null
  const chatWindows = new Map<string, BrowserWindow>()
 +// overlay[wm]: 驾驶舱操作页独立窗口（key = 路由路径含 query）
 +const panelWindows = new Map<string, BrowserWindow>()
  let serverUrl: string | null = null
- let tray: Tray | null = null
- let appShutdownPromise: Promise<void> | null = null
-@@ -510,7 +512,7 @@ function createTray() {
+ // Resolved once at startup so createWindow can flag remote mode into the main
+ // window's preload; bootstrap() re-resolves it on every (re)start attempt.
+@@ -514,7 +516,7 @@ function createTray() {
          quality: 'best',
        })
    tray = new Tray(icon)
@@ -604,7 +613,7 @@ index 5fb0745d..7ba40003 100644
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -524,7 +526,7 @@ async function createWindow(): Promise<void> {
+@@ -528,7 +530,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 769,
      minHeight: 600,
@@ -613,7 +622,7 @@ index 5fb0745d..7ba40003 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -644,7 +646,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
+@@ -649,7 +651,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
      height: 760,
      minWidth: 620,
      minHeight: 480,
@@ -622,7 +631,7 @@ index 5fb0745d..7ba40003 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -695,6 +697,101 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
+@@ -700,6 +702,101 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
    await chatWindow.loadURL(url)
  }
  
@@ -724,7 +733,7 @@ index 5fb0745d..7ba40003 100644
  async function initializeDesktopBrowser(): Promise<void> {
    if (!mainWindow || mainWindow.isDestroyed() || browserManager) return
    const root = join(webUiHome(), 'desktop-browser')
-@@ -769,7 +866,7 @@ function installMicrophonePermissionHandler() {
+@@ -774,7 +871,7 @@ function installMicrophonePermissionHandler() {
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
    const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
@@ -733,7 +742,7 @@ index 5fb0745d..7ba40003 100644
  <style>
    html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
    .surface{height:100%;background:#1a1a1a}
-@@ -786,7 +883,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+@@ -791,7 +888,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
    @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
  </style></head><body><main class="surface"><div class="wrap">
@@ -742,7 +751,7 @@ index 5fb0745d..7ba40003 100644
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
  <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
-@@ -850,7 +947,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -855,7 +952,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
@@ -751,7 +760,7 @@ index 5fb0745d..7ba40003 100644
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -878,7 +975,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -883,7 +980,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
  </style></head><body><main class="surface"><div class="wrap">
@@ -760,7 +769,7 @@ index 5fb0745d..7ba40003 100644
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -966,7 +1063,7 @@ async function installPackagedCommandShims(): Promise<void> {
+@@ -971,7 +1068,7 @@ async function installPackagedCommandShims(): Promise<void> {
    for (const result of results) {
      if (result.status === 'rejected') {
        console.warn(
@@ -769,7 +778,7 @@ index 5fb0745d..7ba40003 100644
          + `${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
        )
        continue
-@@ -1088,9 +1185,17 @@ ipcMain.handle('hermes-desktop:open-chat-window', (event, sessionId?: unknown, p
+@@ -1121,9 +1218,17 @@ ipcMain.handle('hermes-desktop:open-chat-window', (event, sessionId?: unknown, p
    }
    return openChatWindow(sessionId, profile)
  })
@@ -788,7 +797,7 @@ index 5fb0745d..7ba40003 100644
    return windows.some(window => window && !window.isDestroyed() && window.webContents === sender)
  }
  
-@@ -1383,7 +1488,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -1416,7 +1521,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()
@@ -797,7 +806,7 @@ index 5fb0745d..7ba40003 100644
    const body = typeof payload?.body === 'string' ? payload.body.trim().slice(0, 240) : ''
    const icon = resolveNotificationIcon(payload?.icon)
    const clickUrl = safeNotificationClickUrl(payload?.clickUrl)
-@@ -1501,7 +1606,7 @@ function runDesktopApp() {
+@@ -1534,7 +1639,7 @@ function runDesktopApp() {
      })
    }).catch(error => {
      console.error('[desktop] failed during Electron startup:', error)

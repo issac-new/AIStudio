@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
-index d29d1860..d0f797fc 100644
+index d29d18606..d0f797fc5 100644
 --- a/packages/server/src/modules/studio/middleware/auth.ts
 +++ b/packages/server/src/modules/studio/middleware/auth.ts
 @@ -23,6 +23,7 @@ export interface AuthenticatedUser {

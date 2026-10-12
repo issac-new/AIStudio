@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 46bedbc0..6e8f3429 100644
+index 7a0e09a3f..3c4be5246 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -146,7 +146,6 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
@@ -11,7 +11,7 @@ index 46bedbc0..6e8f3429 100644
  const usesHermesConfigSidebar = computed(
    () => route.meta?.hermesConfig === true,
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
-index d780aea8..b1ba1956 100644
+index d780aea8b..b1ba19561 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
 @@ -11,24 +11,6 @@ export const DEFAULT_KANBAN_BOARD = 'default'

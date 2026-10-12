@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index a74b7abd..4f74d910 100644
+index a74b7abd1..4f74d910e 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -584,6 +584,14 @@ export async function complete(ctx: Context) {
@@ -18,7 +18,7 @@ index a74b7abd..4f74d910 100644
      ctx.body = { error: err.message }
    }
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 7f853df5..30be381f 100644
+index 7f853df50..30be381ff 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -404,6 +404,21 @@ async function execKanbanMutation(

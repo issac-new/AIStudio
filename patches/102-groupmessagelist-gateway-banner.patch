@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index a6fb8677..fce92c54 100644
+index a6fb86775..fce92c540 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'

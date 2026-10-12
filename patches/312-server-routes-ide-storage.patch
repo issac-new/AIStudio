@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 14b39ab5..e3657daa 100644
+index 14b39ab5e..e3657daa5 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -73,6 +73,7 @@ import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petde

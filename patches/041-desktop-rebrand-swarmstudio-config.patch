@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index ff225d35..dc535904 100644
+index ff225d35c..dc5359042 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@

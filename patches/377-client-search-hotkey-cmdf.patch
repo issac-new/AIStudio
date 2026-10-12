@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/composables/useKeyboard.ts b/packages/client/src/composables/useKeyboard.ts
-index 05f9690c..47824eea 100644
+index 05f9690cc..47824eea6 100644
 --- a/packages/client/src/composables/useKeyboard.ts
 +++ b/packages/client/src/composables/useKeyboard.ts
 @@ -6,6 +6,14 @@ export function useKeyboard() {
@@ -30,10 +30,10 @@ index 05f9690c..47824eea 100644
        e.preventDefault()
        openSessionSearch()
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index 7125e979..fa23f585 100644
+index 838390220..b18f51439 100644
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
-@@ -1242,7 +1242,7 @@ export default {
+@@ -1244,7 +1244,7 @@ export default {
      searchTitle: 'البحث في الجلسات',
      searchSubtitle: 'ابحث بالعنوان أو بمحتوى الرسالة',
      searchScope: 'نطاق البحث: قاعدة بيانات جلسات واجهة الويب المحلية فقط. جلسات سجل Hermes للقراءة فقط غير مضمّنة.',
@@ -43,10 +43,10 @@ index 7125e979..fa23f585 100644
      searchEmpty: 'الجلسات الأخيرة',
      searchRecent: 'جلسة أخيرة',
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index 92d3004e..2d6d240e 100644
+index d52d6754a..fee017eb8 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: 'Stoppen',
      speechNotSupported: 'Sprachwiedergabe in diesem Browser nicht unterstützt',
      searchEnterHint: 'Enter zum Öffnen · Esc zum Schließen',
@@ -56,10 +56,10 @@ index 92d3004e..2d6d240e 100644
      searchFailed: 'Sitzungssuche fehlgeschlagen',
      searchNoSnippet: 'Keine Vorschau verfügbar',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index 09735041..66f74f11 100644
+index 606e826e6..4a952aa9d 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: 'Detener',
      speechNotSupported: 'Reproducción de voz no soportada en este navegador',
      searchEnterHint: 'Enter para abrir · Esc para cerrar',
@@ -69,10 +69,10 @@ index 09735041..66f74f11 100644
      searchFailed: 'No se pudieron buscar sesiones',
      searchNoSnippet: 'No hay resumen disponible',
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index a52bb67a..6e539401 100644
+index 450cd6b6b..51bafbd7b 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: 'Arrêter',
      speechNotSupported: 'Reproduction vocale non prise en charge dans ce navigateur',
      searchEnterHint: 'Entrée pour ouvrir · Échap pour fermer',
@@ -82,10 +82,10 @@ index a52bb67a..6e539401 100644
      searchFailed: 'Échec de la recherche de sessions',
      searchNoSnippet: 'Aucun extrait disponible',
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index 26036036..f2db83b3 100644
+index d9a3c92d4..cb8866649 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: '停止',
      speechNotSupported: 'このブラウザは音声読み上げをサポートしていません',
      searchEnterHint: 'Enter で開く · Esc で閉じる',
@@ -95,10 +95,10 @@ index 26036036..f2db83b3 100644
      searchFailed: 'セッション検索に失敗しました',
      searchNoSnippet: '表示できる要約がありません',
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 9eb2462e..024f527b 100644
+index a4c7e623b..e623d9638 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: '중지',
      speechNotSupported: '이 브라우저는 음성 재생을 지원하지 않습니다',
      searchEnterHint: 'Enter로 열기 · Esc로 닫기',
@@ -108,10 +108,10 @@ index 9eb2462e..024f527b 100644
      searchFailed: '세션 검색 실패',
      searchNoSnippet: '표시할 요약이 없습니다',
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index ab4d56d6..08770227 100644
+index 03f034702..35ddd2415 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
-@@ -1321,7 +1321,7 @@ export default {
+@@ -1323,7 +1323,7 @@ export default {
      stopSpeech: 'Parar',
      speechNotSupported: 'Reprodução de voz não suportada neste navegador',
      searchEnterHint: 'Enter para abrir · Esc para fechar',
@@ -121,10 +121,10 @@ index ab4d56d6..08770227 100644
      searchFailed: 'Falha ao pesquisar sessões',
      searchNoSnippet: 'Nenhum resumo disponível',
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index 3b7d3dde..c561b34d 100644
+index 75ad15520..51861cff4 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
-@@ -1139,7 +1139,7 @@ export default {
+@@ -1144,7 +1144,7 @@ export default {
      searchTitle: 'Поиск сеансов',
      searchSubtitle: 'Поиск по заголовку или содержимому сообщений',
      searchScope: 'Область поиска: только локальная библиотека сеансов Web UI; сеансы истории Hermes только для чтения не включаются.',
@@ -134,10 +134,10 @@ index 3b7d3dde..c561b34d 100644
      searchEmpty: 'Недавние сеансы',
      searchRecent: 'Недавние сеансы',
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index 6742204d..f7f08580 100644
+index 2ca06afae..93ea66523 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
-@@ -1240,7 +1240,7 @@ export default {
+@@ -1242,7 +1242,7 @@ export default {
      searchTitle: '搜尋工作階段',
      searchSubtitle: '依標題或訊息內容搜尋',
      searchScope: '搜尋範圍：僅 Web UI 本地工作階段資料庫；不包含唯讀 Hermes 歷史工作階段。',

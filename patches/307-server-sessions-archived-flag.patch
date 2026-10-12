@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
-index c39aa556..7759d399 100644
+index 0dc808698..ab47893cd 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
-@@ -420,7 +420,11 @@ export async function listConversations(ctx: any) {
+@@ -419,7 +419,11 @@ export async function listConversations(ctx: any) {
    const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
  
    const profile = explicitProfileFilter(ctx)

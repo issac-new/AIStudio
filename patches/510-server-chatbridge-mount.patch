@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index 72136f4e..04996b18 100644
+index 72136f4ef..04996b185 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
 @@ -726,6 +726,11 @@ export async function bootstrap() {

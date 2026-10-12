@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 9b0182ae..b9e8fc95 100644
+index 9b0182ae0..b9e8fc954 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -120,6 +120,9 @@ import { incidentRoutes } from '../custom/incident/incident-controller'

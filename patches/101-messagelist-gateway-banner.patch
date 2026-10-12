@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index e07b4179..b9a7d258 100644
+index e07b4179c..b9a7d2580 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
 @@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa

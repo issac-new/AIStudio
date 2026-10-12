@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 0910b25b..a488d8ac 100644
+index 0910b25b5..a488d8ac6 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -729,6 +729,16 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions

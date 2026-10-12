@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/desktop-identity.ts b/packages/desktop/src/main/desktop-identity.ts
-index 6e42845c..62434a95 100644
+index 6e42845cc..62434a95d 100644
 --- a/packages/desktop/src/main/desktop-identity.ts
 +++ b/packages/desktop/src/main/desktop-identity.ts
 @@ -5,5 +5,5 @@ export function configureDesktopIdentity(app: Pick<App, 'getPath' | 'setPath' |

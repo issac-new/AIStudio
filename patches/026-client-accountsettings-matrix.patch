@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/settings/AccountSettings.vue b/packages/client/src/components/hermes/settings/AccountSettings.vue
-index bae25a29..a1e7ddf4 100644
+index bae25a294..a1e7ddf4f 100644
 --- a/packages/client/src/components/hermes/settings/AccountSettings.vue
 +++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
 @@ -1,10 +1,11 @@

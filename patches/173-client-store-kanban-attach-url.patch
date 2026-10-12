@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
-index 638fce81..879139cc 100644
+index 638fce814..879139ccb 100644
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
 @@ -690,6 +690,17 @@ export const useKanbanStore = defineStore('kanban', () => {

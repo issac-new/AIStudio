@@ -1,8 +1,8 @@
 diff --git a/tests/server/sessions-controller.test.ts b/tests/server/sessions-controller.test.ts
-index 81b38bcf..7c44b8b4 100644
+index 6bf92df0a..1cafb9a08 100644
 --- a/tests/server/sessions-controller.test.ts
 +++ b/tests/server/sessions-controller.test.ts
-@@ -1278,7 +1278,7 @@ describe('session conversations controller', () => {
+@@ -1285,7 +1285,7 @@ describe('session conversations controller', () => {
      await mod.listHermesSessions(ctx)
  
      expect(localListSessionsMock).toHaveBeenCalledWith('travel', undefined, 2000)
@@ -11,7 +11,7 @@ index 81b38bcf..7c44b8b4 100644
      expect(ctx.body.sessions).toEqual([
        expect.objectContaining({ id: 'cli-1', profile: 'travel', webui_imported: true }),
        expect.objectContaining({ id: 'cli-2', profile: 'travel', webui_imported: false }),
-@@ -1397,7 +1397,7 @@ describe('session conversations controller', () => {
+@@ -1404,7 +1404,7 @@ describe('session conversations controller', () => {
      await mod.listHermesSessions(ctx)
  
      expect(localListSessionsMock).toHaveBeenCalledWith('travel', 'cli', 4)

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
-index 68fe80e8..3a8667d1 100644
+index 68fe80e8a..3a8667d15 100644
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
 @@ -462,6 +462,13 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
@@ -17,7 +17,7 @@ index 68fe80e8..3a8667d1 100644
    return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/unblock', boardParams(opts?.board)), {
      method: 'POST',
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index 205a8589..e41288be 100644
+index 205a85898..e41288bee 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -571,6 +571,29 @@ export async function block(ctx: Context) {
@@ -51,7 +51,7 @@ index 205a8589..e41288be 100644
    const bodyResult = requestBody(ctx)
    if (rejectBadRequest(ctx, bodyResult.error)) return
 diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
-index b4b1315e..ba73b3d1 100644
+index b4b1315ee..ba73b3d18 100644
 --- a/packages/server/src/modules/hermes/routes/kanban.ts
 +++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -49,6 +49,8 @@ kanbanRoutes.get('/api/hermes/kanban/:id', ctrl.get)
@@ -64,7 +64,7 @@ index b4b1315e..ba73b3d1 100644
  kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
  kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index a488d8ac..c1bc0b68 100644
+index a488d8ac6..c1bc0b681 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -693,6 +693,16 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
@@ -85,7 +85,7 @@ index a488d8ac..c1bc0b68 100644
    await execKanbanMutation(
      [...boardArgs(opts?.board), 'unblock', ...taskIds],
 diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
-index a75399ae..d57d0da6 100644
+index a75399aed..d57d0da6d 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
 @@ -16,6 +16,7 @@ const mockAddComment = vi.hoisted(() => vi.fn())

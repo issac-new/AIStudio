@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/api/studio/files.ts b/packages/client/src/api/studio/files.ts
-index 8ba42973..79661995 100644
+index 8ba42973c..796619956 100644
 --- a/packages/client/src/api/studio/files.ts
 +++ b/packages/client/src/api/studio/files.ts
 @@ -23,62 +23,69 @@ function appendProfile(params: URLSearchParams, profile?: string | null): void {

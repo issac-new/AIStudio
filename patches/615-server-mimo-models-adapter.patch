@@ -1,0 +1,46 @@
+diff --git a/packages/server/src/modules/coding-agents/services/mimo/models.ts b/packages/server/src/modules/coding-agents/services/mimo/models.ts
+new file mode 100644
+index 000000000..825bea976
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/mimo/models.ts
+@@ -0,0 +1,19 @@
++// overlay[mimo-agent]: MiMo Code 模型发现适配器——opencode 家族 fork,
++// `mimo models` 输出与 opencode 同构（provider/model 行），解析逻辑对齐
++// services/opencode/models.ts。0.7.34 上游新增 models/index.ts 全运行时
++// Record 强制注册（#3354），mimo 缺项即 server tsc TS2741。
++import { lines, modelId, requireModelOutput } from '../models/text'
++import type { ModelDiscoveryAdapter } from '../models/types'
++
++export const mimoModels: ModelDiscoveryAdapter = {
++  source: 'cli', scope: 'configured',
++  async discover(context) {
++    const { stdout } = await context.run(['models'])
++    const models = lines(stdout).flatMap(line => {
++      const id = modelId(line), separator = id?.indexOf('/') ?? -1
++      return id && separator > 0 ? [{ id, name: id.slice(separator + 1), provider: id.slice(0, separator) }] : []
++    })
++    if (stdout.trim()) requireModelOutput(models, stdout)
++    return { models }
++  },
++}
+diff --git a/packages/server/src/modules/coding-agents/services/models/index.ts b/packages/server/src/modules/coding-agents/services/models/index.ts
+index 31ed5d7ca..55cc21ffe 100644
+--- a/packages/server/src/modules/coding-agents/services/models/index.ts
++++ b/packages/server/src/modules/coding-agents/services/models/index.ts
+@@ -18,6 +18,7 @@ import { codeBuddyModels } from '../codebuddy/models'
+ import { copilotModels } from '../copilot/models'
+ import { dshModels } from '../dsh/models'
+ import { zcodeModels } from '../zcode/models'
++import { mimoModels } from '../mimo/models'
+ import { createModelDiscoveryContext, type ModelCommand } from './process'
+ import { discoveryError, normalizeModels, type ModelDiscoveryAdapter } from './types'
+ 
+@@ -25,7 +26,7 @@ const adapters: Record<CodingAgentRuntime, ModelDiscoveryAdapter> = {
+   codex: codexModels, 'claude-code': claudeCodeModels, pi: piModels, grok: grokModels,
+   opencode: openCodeModels, cursor: cursorModels, antigravity: antigravityModels, qoder: qoderModels,
+   qwen: qwenModels, kimi: kimiModels, codebuddy: codeBuddyModels, copilot: copilotModels,
+-  dsh: dshModels, zcode: zcodeModels,
++  dsh: dshModels, zcode: zcodeModels, mimo: mimoModels,
+ }
+ 
+ export interface CodingAgentModelsHost {

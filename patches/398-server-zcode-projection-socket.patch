@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index d4f5697f..72136f4e 100644
+index d4f5697f6..72136f4ef 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
 @@ -21,6 +21,8 @@ import './skill-files-adapter'

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 551dd0a3..dfe896f9 100644
+index 9aa0c4f69..bfb9e04b0 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -46,6 +46,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
@@ -107,7 +107,7 @@ index 551dd0a3..dfe896f9 100644
          || raw.runtime === 'claude-code'
          || raw.runtime === 'codex'
          || raw.runtime === 'pi'
-@@ -3596,6 +3650,9 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3598,6 +3652,9 @@ export const useChatStore = defineStore('chat', () => {
      if (codingAgentId === 'codex') {
        return { icon: '/coding-agents/codex-openai.png' }
      }
@@ -117,7 +117,7 @@ index 551dd0a3..dfe896f9 100644
      if (codingAgentId === 'claude-code') {
        return { icon: '/coding-agents/claude-code.svg' }
      }
-@@ -4251,6 +4308,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4248,6 +4305,8 @@ export const useChatStore = defineStore('chat', () => {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -126,7 +126,7 @@ index 551dd0a3..dfe896f9 100644
                }
  
                break
-@@ -4912,6 +4971,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4909,6 +4968,8 @@ export const useChatStore = defineStore('chat', () => {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -135,7 +135,7 @@ index 551dd0a3..dfe896f9 100644
            }
  
            break
-@@ -5267,6 +5328,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5264,6 +5325,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
@@ -144,7 +144,7 @@ index 551dd0a3..dfe896f9 100644
      if (evt.event === 'approval.requested') return setPendingApproval(evt)
      if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
      if (evt.event === 'clarify.requested') return setPendingClarify(evt)
-@@ -5607,6 +5670,13 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5613,6 +5676,13 @@ export const useChatStore = defineStore('chat', () => {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

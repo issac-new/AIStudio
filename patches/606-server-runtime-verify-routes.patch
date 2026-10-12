@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 9d10db5e..cae7fc44 100644
+index 9d10db5e6..cae7fc447 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -135,6 +135,10 @@ import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
