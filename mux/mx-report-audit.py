@@ -100,11 +100,13 @@ title_mismatch, gate_missing = [], []
 done_no_img, pending_no_img = [], []
 done_noimg_ticketed = []
 declared_absent = []
+_step_report_done = {}  # 步号→报告渲染态（True=✅），供 state↔report 一致性断言
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
         continue
     n = int(n_s)
+    _step_report_done[n] = '<span class="ok">✅</span>' in blk
     h3 = block_field(blk, r'<div class="st-title"><h3>(.*?)</h3>')
     # h3 内嵌 <span class="gmark">G1</span> 闸标——连内容一起剥除再剥标签+实体归一
     h3 = re.sub(r'<span class="gmark">.*?</span>', '', h3, flags=re.S)
@@ -202,7 +204,7 @@ if missing:
 
 # ── 查 5：状态真实（报告 ✅/闸门卡 与 state 落盘一致） ──
 state_keys = {}
-for line in STATE.read_text().splitlines():
+for line in STATE.read_text(encoding='utf-8', errors='replace').splitlines():
     if '=' in line and not line.startswith('jwt_'):
         k, v = line.split('=', 1)
         state_keys[k.strip()] = v.strip()
@@ -222,6 +224,30 @@ if _done_steps and _shell_steps:
     if _shell_ratio > 0.10:
         fails.append(f'壳页帧占比 {_shell_hit}/{len(_done_steps)}={_shell_ratio:.0%} 超验收线 10%'
                      f'（实时帧 ≥90% 红线；采集端 SPA 就绪断言须根治——run15 复盘 F1）')
+# ── 壳页红线②结构性锚定（run16 复盘，fix/run16-report-truth）──
+# run16 实锤：22/48 帧为同一登录壳页像素，但登记措辞是「跨步同帧/无效帧」不含
+# 「壳页」签名 → 词面红线零触发。词面匹配逐案打补丁堵不住（与 R8 判词词面污染同类
+# 教训），本断言直接对盘上帧做 md5 分组：单一像素组被 >10% 的帧位步键共用即 FAIL
+# （登录态丢失/壳页/复读机形态一网打尽，不依赖登记措辞）。frames-degraded/ 隔离区
+# 不在扫描面（隔离即豁免，纪律 40⑩）。
+import hashlib as _hl
+import collections as _cl
+_frames_dir = EVID / 'screenshots' / 'steps'
+if _frames_dir.exists():
+    _md5_keys = _cl.defaultdict(set)
+    for _fp in _frames_dir.glob('*.png'):
+        try:
+            _h = _hl.md5(_fp.read_bytes()).hexdigest()
+        except OSError:
+            continue
+        _md5_keys[_h].add(_fp.name.split('-op')[0])
+    _total_keys = len({k for v in _md5_keys.values() for k in v})
+    if _total_keys:
+        _max_share = max(len(v) for v in _md5_keys.values())
+        if _max_share >= 2 and _max_share / _total_keys > 0.10:
+            fails.append(f'同帧步结构性红线：单一像素帧组被 {_max_share}/{_total_keys}'
+                         f'={_max_share/_total_keys:.0%} 帧位步键共用（md5 分组实测>10%）'
+                         f'——登录壳页/复读帧形态（run16 实锤：词面签名被措辞绕过，自此结构性锚定）')
 GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'devimpl_done',
              'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
 for g, k in GATE_KEYS.items():
@@ -240,6 +266,26 @@ for g, k in GATE_KEYS.items():
         continue
     if in_state != rep_pass:
         fails.append(f'{g} 状态不一致：state={in_state} report={rep_pass}（报告疑为闸前旧生成，须重生成）')
+
+# ── run16 复盘新断言（fix/run16-report-truth）：步骤完成态 state↔report 一致性 ──
+# run16 实锤：叙事注册 keys 全空 → 25 步 state 键在位却渲染 ⬜（六闸仪表盘同页全过，
+# 自相矛盾），审计按「未完成步」口径放行。§5.5「步骤状态推导键与 §3.3 映射一致」
+# 自此有机械断言：全量轮 state §3.3 键在位而报告该步 ⬜ = FAIL。lite 轮豁免（夹具步
+# 键在位但「不在本轮执行范围」属合规声明态，lite_fixtures_from 标记判别）。
+if not state_keys.get('lite_fixtures_from'):
+    _STEP33 = {1: 'smoke_done', 2: 'smoke_done', 3: 'smoke_done', 4: 'smoke_done',
+               5: 'appinit_done', 6: 'people_done', 7: 'g1_frozen', 8: 'room_analysis',
+               9: 'dispatch_marker', 10: 'register_done', 11: 'analysis_done',
+               12: 'triage_done', 13: 'anexec_done', 14: 'review_done', 15: 'g2_arch_pass',
+               16: 'close_done', 17: 'plan_done', 18: 'devimpl_done', 19: 'defect_done',
+               20: 'ready_done', 21: 'uat_done', 22: 'workmgr_done', 23: 'audit_done',
+               24: 'retro_done', 25: 'ide_done'}
+    _mismatch = sorted(n for n, ok in _step_report_done.items()
+                       if not ok and n in _STEP33 and state_keys.get(_STEP33[n]))
+    if _mismatch:
+        fails.append('步骤完成态与 state 矛盾：步 ' + '、'.join(map(str, _mismatch)) +
+                     ' 的 §3.3 state 键在位但报告渲染 ⬜（叙事注册 keys 疑空/错配'
+                     '——§5.5 步骤状态推导键与 §3.3 映射一致；run16 实锤防线）')
 
 # ── 查 6：V5 §8.3 硬性要求断言（R3-R9；R1 判词语义/R2 落盘由 harness H8-H11 与查 5 覆盖） ──
 # R3 UAT 逐条判词：判定范围=验收书判词载体（UAT 步块+交付物渲染区），禁全文共查——
@@ -272,7 +318,7 @@ if _main_repo.exists():
 _ilog = EVID / 'issues.log'
 if _ilog.exists():
     _iss, _disp = [], set()
-    for _l in _ilog.read_text().splitlines():
+    for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
         if _l.startswith('ISSUE|'):
             _p = _l.split('|', 3)
             if f'{_p[1]}·{_p[2]}' not in _iss:
@@ -336,7 +382,7 @@ else:
 # A3 三源计数：复盘文档成文数 × issues.log 事件流 × 报告唯一键（P18/R29 承诺兑现——
 # 方案声称"复盘三源计数一致性入审计断言已落地"但无代码，本断言即补位）。
 if _ilog.exists():
-    _iss_lines = [l for l in _ilog.read_text().splitlines() if l.startswith('ISSUE|')]
+    _iss_lines = [l for l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines() if l.startswith('ISSUE|')]
     _m_rep = re.search(r'唯一键\s*(\d+)', rep)
     if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
         fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实测（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
@@ -353,7 +399,7 @@ if _ilog.exists():
 # A4 闸门"一次通过"徽章实测：报告渲染数 = 6 − 闸门类登记键数 − state 打回轮次键
 if _ilog.exists():
     _gate_hit = set()
-    for _l in _ilog.read_text().splitlines():
+    for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
         _p = _l.split('|', 3)
         if len(_p) >= 4 and _p[0] == 'ISSUE':
             _gm = re.match(r'^(g[1-6])[-_]', _p[1])
@@ -404,7 +450,7 @@ if RUN_ID >= '20261010-v8-run13':
     _fc_step_keys = set()
     _has_r18_degrade = False
     if _ilog.exists():
-        for _l in _ilog.read_text().splitlines():
+        for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
             _p = _l.split('|', 3)
             if len(_p) >= 4 and _p[0] == 'ISSUE':
                 if _p[1] == 'frame-capture-failed':
@@ -554,7 +600,7 @@ _R18_SKILL_STEPS = SKILL_STEPS
 _R18_DELIVERY_STEPS = DELIVERY_STEPS
 _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
-_ilines_r18 = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
+_ilines_r18 = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
 _r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
 # 降级窄口径：载荷文件在位时，r18-collection-missing 登记行只降级
 # 其登记的步（ISSUE 第三段 step-N），不再全局豁免——run14 实锤 4 张登记把 20+ 步的
@@ -565,6 +611,27 @@ for _l18 in _ilines_r18:
         _m18s = re.search(r'\|step-(\d+)\|', _l18)
         if _m18s:
             _r18_degraded_steps.add(int(_m18s.group(1)))
+# V8.17 红线②口径兑现（run16 复盘，fix/run16-report-truth）：非必采完成步「载荷全缺」的
+# 降级凭证族扩展——frame-capture-failed（采集失败在案登记）与 r18-collection-missing
+# 同为合规黄标凭证（红线②口径=黄标缺登记才 FAIL）。登记主体=step-<状态键/段名>，
+# 经别名表折算到步号；run16 实锤：修复 keys 后 17 个完成步因缺载荷被整批 FAIL，
+# 而它们的采集失败全程有 47 单在案——凭证在案即黄标，不二罚。
+_STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
+                      'appinit': (5,), 'appinit_done': (5,), 'people': (6,), 'people_done': (6,),
+                      'g1_frozen': (7,), 'room': (8,), 'room_done': (8,),
+                      'dispatch': (9,), 'dispatch_marker': (9,), 'register': (10,), 'register_done': (10,),
+                      'analysis': (11,), 'analysis_done': (11,), 'triage': (12,), 'triage_done': (12,),
+                      'anexec': (13,), 'anexec_done': (13,), 'review': (14,), 'review_done': (14,),
+                      'g2_arch_pass': (15,), 'close': (16,), 'close_done': (16,), 'plan': (17,), 'plan_done': (17,),
+                      'devimpl': (18,), 'devimpl_done': (18,), 'defect': (19,), 'defect_done': (19,),
+                      'testpass': (19,), 'testpass_done': (19,), 'ready': (20,), 'ready_done': (20,),
+                      'release': (20,), 'release_done': (20,), 'uat': (21,), 'uat_done': (21,),
+                      'workmgr': (22,), 'workmgr_done': (22,), 'audit': (23,), 'audit_done': (23,),
+                      'retro': (24,), 'retro_done': (24,), 'ide': (25,), 'ide_done': (25,), 'report': (26,)}
+for _l18 in _ilines_r18:
+    _p18 = _l18.split('|', 3)
+    if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] == 'frame-capture-failed':
+        _r18_degraded_steps.update(_STAGE_ALIAS_STEPS.get(_p18[2].removeprefix('step-'), ()))
 if _r18_missing_file:
     if _r18_degraded:
         warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按纪律 40⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
@@ -616,7 +683,7 @@ for blk in blocks:
         # WARN），禁静默关旗标跑全程
         _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
                           frame_exists=lambda name: (steps_dir / name).exists())
-        _ilines = (EVID / 'issues.log').read_text().splitlines() if (EVID / 'issues.log').exists() else []
+        _ilines = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
         _degraded = any(('P15' in l) or ('delivery-protocol' in l) or ('r18-collection-missing' in l) for l in _ilines)
         if not _dlv_ok:
             if _degraded:

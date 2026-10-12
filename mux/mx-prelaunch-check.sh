@@ -59,7 +59,7 @@ ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev'
 # ⑪ 按轮叙事注册与骨架兜底在位（run15 复盘：连续两轮漏预写注册的机制化收口——
 #    ①上一完成轮已注册进合并器（每轮收官后推进键位，漏注册此处即红）②生成器 R17
 #    骨架兜底在位（未注册轮不再一票否决，防报告步失败循环）③骨架工具语法可用）。
-ck "⑪ 叙事注册与骨架兜底" "grep -q '20261011-v8-run15' '$HERE/mux/final-report-merge.py' && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "上轮 PART1 未注册（进 final-report-merge.py 的 PART1_BY_RUN）或骨架兜底符号缺失——按轮补注册后再跑"
+ck "⑪ 叙事注册与骨架兜底" "grep -q '20261012-v8-run16' '$HERE/mux/final-report-merge.py' && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "上轮 PART1 未注册（进 final-report-merge.py 的 PART1_BY_RUN）或骨架兜底符号缺失——按轮补注册后再跑"
 echo "  ↳ 起跑后第一收获窗内用 mx-narrative-skeleton.py 起稿本轮注册（R17 骨架兜底只防拒出报告，不替代真实叙事）"
 
 # ⑫ 账号板供给在位（run16 首跑实锤：mx-clean --apply 归档清走全部账号板，板供给在

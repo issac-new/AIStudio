@@ -884,7 +884,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重，
   # 重启重入段即补采——run14 实锤 plan 段挂钩错过即整轮载荷缺）
   if [[ -n "$(sget m17_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(sget m17_marker)" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m17_marker)")" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
@@ -1249,7 +1249,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
   # 必采对话挂钩在幂等块外（r18-collect 幂等拒重，重启重入即补采）
   if [[ -n "$(sget m19_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(sget m19_marker)" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m19_marker)")" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
   fi
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
@@ -1589,7 +1589,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
     sset m21_marker "$_m21"
     # 必采对话挂钩随派发即时采+marker 持久化
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(sget m21_marker)" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m21_marker)")" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
     # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
@@ -1935,14 +1935,26 @@ note "===== 下半场完成（到 ${START_STEP} 起全部门禁执行完）=====
 # chrome dev tools / computer use）在流程中捕获落档，本步自动嵌入。
 if step_reached report && [[ -z "$(sget report_done)" ]]; then
   gov_report >/dev/null
+  # 台账 UTF-8 净化（run16 复盘，fix/run16-report-truth）：issues.log/state.env 混入坏
+  # 字节会让报告链消费方（report-gen/gov_archive/归桶件）逐一崩溃——驱动 rc=1×20 轮×
+  # 30s 的重启循环根因。报告链头部一次性净化（坏行隔离 .badbytes+替换 U+FFFD），
+  # 常态零开销（文件合法即零动作）。
+  _san_out="$(python3 "$SCRIPT_DIR/mux/mx-log-sanitize.py" --run "${RUN_ID}" 2>&1)" \
+    && note "[报告] 台账净化：$(printf '%s' "$_san_out" | tail -2 | tr '\n' ' ')" \
+    || note "[观察] 台账净化件异常（非阻断）：$_san_out"
   # F2（run15 复盘）：载荷缺口清扫（重放补采）——9 步载荷全缺直到报告才暴露的根治位。
   # 对已登记锚的对话步重放 r18-collect（脚本内幂等拒重护住已采锚）；补采成功即入载荷，
   # 仍缺的由 F2 记单面（r18-collect-failed）如实呈现。锚与房间全部取自 state（跨重放稳定）。
+  # run16 实锤修订（fix/run16-report-truth）：锚必须经 marker_eventid 解析——此前裸传
+  # marker 键名字面（"m17_marker"）必 404，20 轮重启循环刷 103 单；m17/m19/m21 marker
+  # 值为整行 note 形态，同样需提取纯 event_id。
   _pgr="$(sget room_analysis)"
   while read -r _ps _pmk _ptitle; do
     [[ -n "$_pmk" && "$_pmk" != "-" ]] || continue
+    _pan="$(marker_eventid "$(sget "$_pmk")")"
+    [[ -n "$_pan" ]] || continue
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step "$_ps" \
-      --room "$_pgr" --anchor "$_pmk" --title "$_ptitle" --user fanfan --limit 60 >/dev/null 2>&1 || true
+      --room "$_pgr" --anchor "$_pan" --title "$_ptitle" --user fanfan --limit 60 >/dev/null 2>&1 || true
   done <<'PAYSPECS'
 9 dispatch_marker 需求派发任务书全文（补采）
 11 dispatch_marker 系分拆分与 RACI 派发对话（补采）
