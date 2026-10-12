@@ -67,6 +67,29 @@ def _tail_has_slot(tail: str, slot: str) -> bool:
     return _strip_slot(tail, slot) is not None
 
 
+def _capacity_retry_anchor(event: Any) -> Any:
+    """Stable identity for a capacity-retry entry ACROSS re-entry round trips.
+
+    The original design keyed the age anchor on ``id(event)``, but a refused
+    message that comes back through ``handle_message`` arrives as a NEW object:
+    every hop minted a fresh ``id()`` → ``first_seen`` reset → MAX_AGE never
+    fired (run11 field evidence: one echo broadcast re-enqueued 300+ times,
+    queue stuck at capacity for hours while zero entries expired). Matrix
+    events carry a stable ``event_id`` — that survives object replacement.
+    Non-event payloads fall back to (sender, body) hashing, then ``id()``.
+    """
+    eid = getattr(event, "event_id", None)
+    if eid:
+        return eid
+    content = getattr(event, "content", None)
+    body = getattr(content, "body", None)
+    if body is None and isinstance(content, dict):
+        body = content.get("body")
+    if body is not None:
+        return ("body", str(getattr(event, "sender", "")), str(body)[:256])
+    return id(event)
+
+
 def _same_chat_key_slots(
     key: str, *, prefix: str, chat_id: str, scope_id: Optional[str],
 ) -> Optional[Tuple[str, str]]:
@@ -257,9 +280,10 @@ class GatewayBusySessionMixin:
         since_map = getattr(self, "_capacity_retry_since", None)
         if since_map is None:
             since_map = self._capacity_retry_since = {}
-        first_seen = since_map.get(id(event))
+        anchor_key = _capacity_retry_anchor(event)
+        first_seen = since_map.get(anchor_key)
         if first_seen is None:
-            since_map[id(event)] = now
+            since_map[anchor_key] = now
             not_before = now
         else:
             not_before = now + self.CAPACITY_RETRY_POLL_SEC
@@ -285,7 +309,7 @@ class GatewayBusySessionMixin:
                 queue.pop(0)
                 since_map = getattr(self, "_capacity_retry_since", None)
                 if since_map is not None:
-                    since_map.pop(id(event), None)
+                    since_map.pop(_capacity_retry_anchor(event), None)
                 logger.warning(
                     "Capacity retry for %s expired after %.0fs; dropping",
                     session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)

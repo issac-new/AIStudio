@@ -89,6 +89,14 @@ def _load_settings(gateway: Any) -> Dict[str, Any]:
     return cfg
 
 
+def iter_cap_exit_reason(entry: Dict[str, Any]) -> str:
+    """611（run16 实证）：迭代上限出口触发——回合在 agent.max_iterations 耗尽处结束
+    （max_iterations_reached），任务多半进行到一半；auto 档即刻轮换+604 移交
+    检查点=运行时原生续作（run16 靠监控手工续作令 60 分钟的机制化替代）。
+    run16 21:18 fanfan G5 修订会话死于 60/60 上限、60 分钟无人接管的根治。"""
+    return "iteration-cap-exit" if entry.get("turn_hit_iter_cap") else ""
+
+
 def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
                   book: Dict[str, Any]) -> RotationDecision:
     """纯判定（可测）：entry 为 602 遥测条目；book 为本模块簿记。"""
@@ -112,11 +120,8 @@ def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
     if not reason and _int(entry.get("empty_streak")) >= settings["empty_streak_limit"]:
         reason = "empty-streak"
 
-    # 611（run16 实证）：迭代上限出口触发——回合在 agent.max_iterations 耗尽处结束
-    # （max_iterations_reached），任务多半进行到一半；auto 档即刻轮换+604 移交
-    # 检查点=运行时原生续作（run16 靠监控手工续作令 60 分钟的机制化替代）。
-    if not reason and entry.get("turn_hit_iter_cap"):
-        reason = "iteration-cap-exit"
+    if not reason:
+        reason = iter_cap_exit_reason(entry) or ""
 
     if not reason:
         return RotationDecision(False)
