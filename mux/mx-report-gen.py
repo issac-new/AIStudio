@@ -3787,6 +3787,12 @@ h2.section-hd::before{{content:'';width:4px;height:20px;border-radius:2px;backgr
 table{{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;font-size:13px;border:1px solid var(--border)}}
 th,td{{border-bottom:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}}
 th{{background:var(--bg);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}}
+/* ── 阅读习惯三件（2026-10-12）：正文行长限 62em（中文约 40 字/行舒适区，表格与图不设限）；
+      长表斑马纹+行悬停（154 行台账的行追踪）；正文块呼吸间距 ── */
+.main p:not(.stat-note):not([class]){{max-width:62em}}
+.main ul{{max-width:62em}}
+tbody tr:nth-child(even){{background:var(--surface-2)}}
+tbody tr:hover{{background:var(--accent-soft)}}
 .d-ok{{color:var(--ok);font-weight:500}} .d-warn{{color:var(--warn)}}
 .cp-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px }}
 .cp-card {{ border:1px solid var(--border); border-radius:10px; background:var(--card); padding:10px 12px; box-shadow:var(--shadow) }}
@@ -3958,6 +3964,43 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 全部证据图=Swarm Studio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
 </main>
 </div>
+<button id="back-top" title="回到顶部" aria-label="回到顶部" style="display:none;position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92">↑</button>
+<script>
+(function () {{
+  // 阅读位置感三件（2026-10-12 阅读习惯轮）：侧栏当前节高亮 + 回顶按钮 + 平滑滚动
+  document.documentElement.style.scrollBehavior = 'smooth';
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-step, .sidebar a[href^="#"]'));
+  var byId = {{}};
+  navLinks.forEach(function (a) {{
+    var id = a.getAttribute('href').slice(1);
+    if (id && !byId[id]) byId[id] = [];
+    if (id) byId[id].push(a);
+  }});
+  var targets = Object.keys(byId).map(function (id) {{ return document.getElementById(id); }}).filter(Boolean);
+  if (targets.length && 'IntersectionObserver' in window) {{
+    var io = new IntersectionObserver(function (entries) {{
+      entries.forEach(function (e) {{
+        if (!e.isIntersecting) return;
+        navLinks.forEach(function (a) {{ a.style.background = ''; a.style.color = ''; a.style.borderLeftColor = ''; }});
+        (byId[e.target.id] || []).forEach(function (a) {{
+          a.style.background = 'var(--accent-soft)';
+          a.style.color = 'var(--accent-deep)';
+          a.style.borderLeftColor = 'var(--accent)';
+          a.style.fontWeight = '600';
+        }});
+      }});
+    }}, {{ rootMargin: '-12% 0px -70% 0px' }});
+    targets.forEach(function (t) {{ io.observe(t); }});
+  }}
+  var btn = document.getElementById('back-top');
+  if (btn) {{
+    var onScroll = function () {{ btn.style.display = window.scrollY > window.innerHeight ? 'block' : 'none'; }};
+    window.addEventListener('scroll', onScroll, {{ passive: true }});
+    onScroll();
+    btn.addEventListener('click', function () {{ window.scrollTo({{ top: 0, behavior: 'smooth' }}); }});
+  }}
+}})();
+</script>
 </body></html>'''
 
 
