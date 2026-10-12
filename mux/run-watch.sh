@@ -37,9 +37,10 @@ PREV_DRV_LINES=$PREV_DRV_LINES
 PREV_ALIVE=$PREV_ALIVE
 LAST_ACT_TS=$LAST_ACT_TS
 EOF
-    # F9：唤醒计数持久（同档案升级链跨重启保留）
+    # F9：唤醒计数持久（同档案升级链跨重启保留）；F10：预算续作令已发标记持久
     for _p in hu qi xiao chen fanfan lin wei fei; do
       eval "[ -n \"\${NUDGE_CNT_${_p}:-}\" ] && echo \"NUDGE_CNT_${_p}=\${NUDGE_CNT_${_p}}\""
+      eval "[ -n \"\${BUDGET_DONE_${_p}:-}\" ] && echo \"BUDGET_DONE_${_p}=\${BUDGET_DONE_${_p}}\""
     done
   } > "$STATE"
 }
@@ -124,6 +125,44 @@ while true; do
     if [ "$AGE" -gt "$STALL_SEC" ] && [ -z "$RD_NEW" ] && [ "$ANY_WORK" = "0" ]; then
       wake "work-line stall: driver idle ${AGE}s, no run-dir activity, no agent work-line in ${STALL_SEC}s (mtime 不算活性——v2 误诊二教训)"
     fi
+
+    # ── B0 迭代预算耗尽检测（F10，run15 复盘：chen 60/60 耗尽在「查完要写码」临界点，
+    # 会话 summarise 后结束、代码零改动，需人工续作令接力）──────────────────────
+    # 判据：日志尾窗出现「Iteration budget exhausted」+ 名下有未结卡 + 其后无新工作行
+    # 5min → 自动发续作令（跳过调研直接写码；上下文已由 summarise 沉淀，点名不重做）。
+    # 每 profiler 一次（NUDGE_CNT_* 计数器复用 F9 持久面，BUDGET_DONE_* 防重发）。
+    for prof in hu qi xiao chen fanfan lin wei fei; do
+      AG_LOG="$SR/hermes/profiles/$prof/logs/agent.log"
+      [ -f "$AG_LOG" ] || continue
+      eval "BD=\${BUDGET_DONE_${prof}:-0}"
+      [ "$BD" = "1" ] && continue
+      BE_AGO=$(( $(date +%s) - $({ BE=$(grep -E "Iteration budget exhausted" "$AG_LOG" | tail -1 | cut -c1-19); [ -n "$BE" ] && date -j -f "%Y-%m-%d %H:%M:%S" "$BE" +%s 2>/dev/null; } || echo 0) ))
+      WL_AGO_B=$(( $(date +%s) - $(last_work_ts "$AG_LOG") ))
+      if [ "$BE_AGO" -ge 0 ] && [ "$BE_AGO" -lt 1800 ] && [ "$WL_AGO_B" -gt 300 ]; then
+        OPEN_B=$(python3 -c "
+import sqlite3,glob
+n=0
+for db in glob.glob('$SR/hermes/kanban/boards/*/kanban.db'):
+    try:
+        c=sqlite3.connect(f'file:{db}?mode=ro',uri=True)
+        n+=c.execute(\"SELECT COUNT(*) FROM tasks WHERE assignee=? AND status IN ('todo','ready','running')\",('$prof',)).fetchone()[0]
+        c.close()
+    except Exception: pass
+print(n)" 2>/dev/null || echo 0)
+        if [ "$OPEN_B" -gt 0 ]; then
+          TOK=$(head -1 "$SR/creds/fanfan.token" 2>/dev/null)
+          NROOM=$(sed -n 's/^room_analysis=//p' "$RDIR/state.env" 2>/dev/null | tail -1)
+          if [ -n "$TOK" ] && [ -n "$NROOM" ]; then
+            BODY="@${prof}-agent:matrix.test 续作令（watcher 迭代预算耗尽检测）：你的会话在迭代预算耗尽时已把实查结论 summarise，但代码未落。请基于该总结直接进入写码/落地（禁再做新一轮调研）：按总结里已确认的下一步逐件执行，每件完成即提交+发结论行（可分件分批报）；确有阻塞发 BLOCKED+原因。禁静默。"
+            EV=$(curl -s -m 10 -X POST "http://127.0.0.1:8008/_matrix/client/v3/rooms/$NROOM/send/m.room.message?access_token=$TOK" -H 'Content-Type: application/json' -d "$(printf '{"msgtype":"m.text","body":"%s","m.mentions":{"user_ids":["@%s-agent:matrix.test"]}}' "$BODY" "$prof")" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
+            echo "$(date '+%H:%M:%S') [budget-continue] $prof 迭代预算耗尽续作令已发（$EV，未结卡 ${OPEN_B}）"
+            echo "DISP|budget-exhausted-continue|$prof|watcher 续作令（$EV）：Iteration budget exhausted 后无工作行+${OPEN_B} 张未结卡；处置=唤醒令类代行（纪律 36），继续监控不退出" >> "$ISSUES"
+            eval "BUDGET_DONE_${prof}=1"
+            sleep 120
+          fi
+        fi
+      fi
+    done
 
     # ── B 空转收场检测（Turn ended 且名下有在办卡 且群内近期无其结论行）──
     # F9（run15 复盘）双根修：①老形态——Turn ended 超过 10 分钟新鲜窗的干完静默型
