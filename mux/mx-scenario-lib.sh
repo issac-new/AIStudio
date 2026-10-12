@@ -683,15 +683,24 @@ _any_log_tail_stalled() { # <log...> → 0=任一日志尾为错误态
 # 本函数 180s 节流出一行「分支 commit 计数 + PROGRESS 中间锚」推进行进 scenario.log，
 # 根治"长编码 4h 静默盲窗"（run12 MP/CHWX/CHALI 实录：三腿全程零推进信号）。
 dev_progress_ping() {
-  local now last f b n line pg wtn wtline
+  local now last f b n line pg wtn wtline tip rs mark
   f="$EVID_DIR/progress-ping.ts"; now=$(date +%s)
   last=$(cat "$f" 2>/dev/null || echo 0)
   (( now - last < 180 )) && return 0
   echo "$now" > "$f"
   line=""
+  rs="$(sget run_started_at)"
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-MP DEV-CHWX DEV-CHALI; do
-    n=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/feat/$b" 2>/dev/null || echo 0)
-    line="$line $b=$n"
+    # 领先 main 计数（run15 根治：原裸 rev-list --count 数的是分支全部提交——上轮遗留
+    # 分支（如 run13 的 feat/DEV-PAYCORE-S）把陈旧提交数当本路进展显示，锚读数失真）；
+    # 附 STALE 标：tip 早于本轮开跑=上轮遗留（branch_fresh 永假→等待环空转的直接信号）
+    n=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/main..origin/feat/$b" 2>/dev/null || echo 0)
+    mark=""
+    if [[ -n "$rs" ]]; then
+      tip=$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/feat/$b" 2>/dev/null || echo 0)
+      [[ -n "$tip" && "$tip" -lt "$rs" ]] && mark="⚠STALE"
+    fi
+    line="$line $b=$n$mark"
   done
   # 工作区分支在途计数（run14 18:5x 用户纠偏实锤：同 agent 多工作区并发开发是设计
   # 形态——进行中提交全在 wt/t_*，只数 feat/DEV-* 交付分支会把活跃并发误读成「零
@@ -776,7 +785,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
 # 空转催办。锚过即记 ✓（不等全齐），空转催办对"全部未过锚的负责人"齐发。
 # 注意：谓词经 eval 在当前 shell 求值（可引用 branch_fresh 等 shell 函数）——
 # 勿改 bash -c（函数不跨子进程继承，子进程 127 恒假实锤见 raci_dispatch_seen 注释）。
-wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
+wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败退出时导出 MX_MULTI_FAILED_LEGS（未达锚 desc 逗号串，调用方回退记单用它防误记已过腿）
   # anchor-spec = "desc@agent@predicate-expr"（@ 分隔三段；desc 不含 @）
   local idle="$1" agents="$2"; shift 2
   local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-$(( idle > 900 ? idle * 8 : 7200 ))}"   # 总时长硬窗（同 wait_alive_truth：下限 7200+长 idle 档×8 放大防链式腿误杀，env 绝对覆盖）
@@ -823,27 +832,44 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...
     if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
     if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
-      local lag=""
-      for i in "${!owners[@]}"; do (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"; done
-      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
-      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次"
+      local lag="" hint="" br
+      for i in "${!owners[@]}"; do
+        (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"
+        # 可行动催办（run15 根治：陈旧分支盲催 150min 实锤——feat/DEV-X 存在上轮遗留提交
+        # 时 branch_fresh 恒假，owner 的本轮新提交常推去了 wt/t_* 工作区分支；催办必须
+        # 点破「分支在但 tip 是旧的」否则 owner 无从知道真值锚为何不亮）
+        case "${exprs[$i]}" in
+          *"branch_fresh feat/"*)
+            br="${exprs[$i]##*branch_fresh feat/}"; br="${br%% *}"
+            if [[ -n "$br" ]] && git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/feat/$br" >/dev/null 2>&1; then
+              hint="${hint:+$hint；}feat/$br 存在但 tip 早于本轮开跑（上轮遗留）——请把本轮新提交 push 到 feat/$br（勿只留在 wt/t_* 工作区分支）"
+            fi
+            ;;
+        esac
+      done
+      [[ -n "$hint" ]] && hint="诊断：$hint"
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_nmentions" >/dev/null 2>&1 || true
+      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次${hint:+（含陈旧分支诊断）}"
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && _any_log_tail_stalled "${logs[@]}"; then
+      MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
-        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：日志尾错误态——左移件 b；负责人 ${owners[$i]}）"
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：日志尾错误态——左移件 b；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
       done
       return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
+      MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
-        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 空转判死；负责人 ${owners[$i]}）"
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 空转判死；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
       done
       return 1
     fi
     if (( $(date +%s) - t0 > hard )); then
+      MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
-        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（硬窗 ${hard}s 满：总时长超限——纪律 26 兜底；负责人 ${owners[$i]}）"
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（硬窗 ${hard}s 满：总时长超限——纪律 26 兜底；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
       done
       return 1
     fi
