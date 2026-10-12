@@ -603,7 +603,7 @@ if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
 工作要求：
 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
-3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)
+3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)（注明估算口径：NESMA 功能点法或类比法，附 ±30% 误差带；方案 V8.20 §5.8）/备选方案 ≥2 及落选理由（先定评估准则再对比）/对外接口附 OpenAPI 一行描述（版本/标题/路径）
 4) git 提交并 push 到 origin main（worktree 内直接提交本文件即可，commit message: docs(analysis): <任务ID>）
    交付有效口径（全新环境独立回归，§1.0.2）：交付 commit 须晚于本轮开跑时刻——旧轮同名产物不计数（即使内容未变，也须以本轮新提交刷新：文档内加一行「本轮复核记录：<日期> 内容经复核仍有效」再提交即可，不必重做分析）。
 5) 完成后在群内发唯一一行结论（此行即完成回执，缺任一要素=未完成会被打回）：
