@@ -60,4 +60,17 @@ term:snake-case | snake_case | 下划线命名 | 字段名下划线小写风格 
 term:int64 | int64 |  | 64 位整数（金额单位=分，避免小数误差） | 工程约定
 term:mock | mock | 本地假渠道 | 本地假渠道（不碰真实微信/支付宝服务器） | 工程约定
 term:same-commit | 同 commit | 同一提交构建 | 用同一个提交号构建（可复现） | 工程约定
+# ── 判词入册（P2-1，本体论透镜分析：判词游离于词表即「规则不可查」）──
+# 判词=机器锚（行首判定语义），入册后首现自动释义；骨架参数（AN-<任务ID> 等）不入表（值由场景定）。
+term:verdict-ready-pass | READY-GATE-PASS | | 发布准出评审通过判词（G5 七项全 PASS） | 方案协议
+term:verdict-ready-fail | READY-GATE-FAIL | | 发布准出评审打回判词（缺项退回补正） | 方案协议
+term:verdict-arch-pass | ARCH-GATE-PASS | | 架构评审通过判词（G2 放行） | 方案协议
+term:verdict-security-fail | SECURITY-GATE-FAIL | | 涉敏安全评审打回判词（设计面四查缺项） | 方案协议
+term:verdict-test-pass | TEST-PASS | | 测试关卡通过判词（G4） | 方案协议
+term:verdict-test-fail | TEST-FAIL | | 测试关卡打回判词（G4 不过） | 方案协议
+term:verdict-analysis-done | ANALYSIS-DONE | | 系分任务交卷判词（行首+commit 锚+卡号） | 方案协议
+term:verdict-an-done | AN-DONE | | 分析任务完成判词（任务号参数化骨架的定型尾） | 方案协议
+term:verdict-plan-done | PLAN-DONE | | 排期任务交卷判词 | 方案协议
+term:verdict-delivery-complete | DELIVERY-STANDARD-COMPLETE | | 交付标准齐备判词（交付形态六型核对通过） | 方案协议
+term:verdict-review-dev-done | REVIEW-DEV-MP-DONE | | 开发评审任务交卷判词（MP=收银台前端域） | 方案协议
 term:completeness-check | 完备性检查 |  | 交付清单逐件核对防漏交付 | 工程约定
