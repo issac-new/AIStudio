@@ -1423,7 +1423,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
     17: dict(keys=['plan_done'], mark_chip='沿用·run16', actor='ai', actorText='AI · 骨架',
         narrative='lite 夹具步——不在本轮执行范围（真值源轮）。'),
     18: dict(keys=['devimpl_done'], actor='ai', actorText='AI · 六路研发（编码后端=delegate）',
-        narrative='ACP 编码后端首个实跑轮：六路任务书 03:08 同刻即派（含【编码后端=delegate】段）；仿真工程师按 coding-delegate 技能以 nohup 后台模式委托 Ycode 引擎（zcode-acp-server 0.43.2 stdio 桥）真实现——chen 链式三托（PAYCORE-C/S/N）+xiao/hu/lin 并行，引擎进程峰值 8。分支真值：PAYCORE-C 03:37 首推（9b708d3 携委托日志），六路 03:53-03:59 全齐。G3 04:21 过闸：承载面 5/6 分支带 materials/delegate-log.txt（4 份 RESULT exit=0 在案），DEV-MP 缺日志已登记问题单；CHWX/MP 缺 testlog 已登记问题单。', imgs=[('devimpl_done-op1-before','IDE 工作台·编码段起点（委托链首验轮）','ui'), ('devimpl_done-op1-after','IDE 工作台·编码段收尾','ui')]),
+        narrative='ACP 编码后端首个实跑轮：六路任务书 03:08 同刻即派（含【编码后端=delegate】段）；仿真工程师按 coding-delegate 技能以 nohup 后台模式委托 Ycode 引擎（zcode-acp-server 0.43.2 stdio 桥）真实现——chen 链式三托（PAYCORE-C/S/N）+xiao/hu/lin 并行，引擎进程峰值 8。分支真值：PAYCORE-C 03:37 首推（9b708d3 携委托日志），六路 03:53-03:59 全齐。G3 04:21 过闸：六条分支里五条带 materials/delegate-log.txt（4 份 RESULT exit=0 在案），DEV-MP 缺日志已登记问题单；CHWX/MP 缺 testlog 已登记问题单。', imgs=[('devimpl_done-op1-before','IDE 工作台·编码段起点（委托链首验轮）','ui'), ('devimpl_done-op1-after','IDE 工作台·编码段收尾','ui')]),
     19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
         narrative='缺陷+测试段 04:22 起：集成合并六路（testlog 副本冲突族已登记问题单）；ChannelAdapter 契约观察器影子 breaking=0 在案；测试分片执行后 G4 段完成（qi 线执行在案）。', imgs=[('testpass_done-op1-before','测试段·驾驶舱前态','ui'), ('testpass_done-op1-after','测试段·驾驶舱收尾','ui')]),
     20: dict(keys=['ready_done'], actor='gate', actorText='强制关卡 G5 · 发布准出',
