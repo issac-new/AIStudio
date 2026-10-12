@@ -1,4 +1,5 @@
 {
+  "$comment": "CHANGES-FREEZE 2026-10-08 (t_62938841): 本文件为 2026-09-04 历史调研快照，与 version-lock.md 已实质漂移（本文件记 Fluss 0.9.1-incubating / ZK 3.9.2 / Redis 8.10.1 / MySQL 浮动 tag，均被 version-lock 2026-10 更新取代：Fluss 1.0.0 GA / ZK 3.9.5 / Redis 8.10.2 / MySQL 8.4.11）。版本单一事实源=references/version-lock.md；本文件与 version-matrix.md 仅作调研档案保留，不再更新。",
   "collected_at": "2026-09-04",
   "host_arch": "arm64",
   "flink_version_decision": {
@@ -35,7 +36,12 @@
     "paimon": {
       "version": "2.0.0",
       "artifact": "paimon-flink-1.20-2.0.0.jar",
-      "available_flink_suffixes": ["1.20", "2.0", "2.1", "2.2"],
+      "available_flink_suffixes": [
+        "1.20",
+        "2.0",
+        "2.1",
+        "2.2"
+      ],
       "arm64": "jar (arch-independent)",
       "evidence": [
         "https://paimon.apache.org/docs/2.0/project/download/",
@@ -71,7 +77,17 @@
     "dinky": {
       "version": "1.2.5",
       "docker_tag": "dinkydocker/dinky-standalone-server:1.2.5-flink1.20",
-      "docker_tags_available": ["1.2.5-flink1.20", "1.2.5-flink1.19", "1.2.5-flink1.18", "1.2.5-flink1.17", "1.2.5-flink1.16", "1.2.5-flink1.15", "1.2.5-flink1.14", "1.2.4-flink1.20", "1.2-flink1.20"],
+      "docker_tags_available": [
+        "1.2.5-flink1.20",
+        "1.2.5-flink1.19",
+        "1.2.5-flink1.18",
+        "1.2.5-flink1.17",
+        "1.2.5-flink1.16",
+        "1.2.5-flink1.15",
+        "1.2.5-flink1.14",
+        "1.2.4-flink1.20",
+        "1.2-flink1.20"
+      ],
       "has_flink120_variant": true,
       "has_arm64": true,
       "release_date": "2025-11-05",
@@ -84,7 +100,10 @@
     "mysql": {
       "version": "8.4 (LTS)",
       "image": "mysql:8.4",
-      "alias_tags": ["lts", "lts-oraclelinux9"],
+      "alias_tags": [
+        "lts",
+        "lts-oraclelinux9"
+      ],
       "alternative": "8.0 (前一 LTS, 维护期)",
       "cdc_support": "5.7, 8.0.x, 8.4+",
       "arm64": true,
@@ -130,5 +149,44 @@
     "paimon": "wget https://repo.maven.apache.org/maven2/org/apache/paimon/paimon-flink-1.20/2.0.0/paimon-flink-1.20-2.0.0.jar",
     "fluss_connector": "wget https://repo1.maven.org/maven2/org/apache/fluss/fluss-flink-1.20/0.9.1-incubating/fluss-flink-1.20-0.9.1-incubating.jar",
     "flink_cdc_mysql": "wget https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-mysql-cdc/3.6.0/flink-sql-connector-mysql-cdc-3.6.0.jar"
+  },
+  "paimon20_upgrade_matrix": {
+    "$comment": "2026-10-09 增量 (gap-20260927-018 / t_a73559c1): Paimon 2.0 升级兼容矩阵与灰度 PoC 实测。文本正本见 version-matrix.md 「Paimon 2.0 升级兼容矩阵」节。",
+    "in_stack": {
+      "paimon": "2.0.0",
+      "flink": "1.20.5",
+      "connector_jar": "paimon-flink-1.20-2.0.0.jar",
+      "fs_jar": "paimon-s3-2.0.0.jar"
+    },
+    "official_flink_matrix_2_0_0": [
+      "1.16",
+      "1.17",
+      "1.18",
+      "1.19",
+      "1.20",
+      "2.0",
+      "2.1",
+      "2.2"
+    ],
+    "evidence": [
+      "https://paimon.apache.org/docs/2.0/project/download/",
+      "https://github.com/apache/paimon/releases/tag/release-2.0.0"
+    ],
+    "poc_result": {
+      "sandbox": "data-stack (非生产 compose)",
+      "cdc_pipeline": "PASS (customers/orders/order_items checksum md5 双侧一致)",
+      "features": {
+        "ddl_partitioned_pk": "PASS",
+        "insert_select": "PASS",
+        "update_mow": "PASS",
+        "delete_predicate": "PASS",
+        "partition_pruning": "PASS",
+        "schema_evolution_add_col": "PASS",
+        "merge_into_syntax": "FAIL(Flink1.20 planner unsupported)",
+        "merge_into_procedure": "PASS (CALL paimon.sys.merge_into named-args)"
+      },
+      "run_date": "2026-10-09"
+    },
+    "upgrade_window": "在栈即 2.0.0 无升级动作；下一评估对象 2.1.0(GA 后走 upgrade-eval-checklist 五阶段)；Flink 2.x 仍被 Dinky flink2.x tag 缺失阻塞"
   }
 }

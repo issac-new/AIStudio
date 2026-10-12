@@ -1,7 +1,7 @@
 # Aiteam-Scout Agent Rules
 # 角色规则: 情报侦察员（论文/博客/开源项目/arXiv 监测、周报月报、技术 radar）
 
-> 📚 按需技能库：`research/blogwatcher`、`research/arxiv`、`research/competitor-news-monitor`、`research/deep-research-workflow`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`research/arxiv`、`research/competitor-news-monitor`、`devops/deep-research-workflow`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

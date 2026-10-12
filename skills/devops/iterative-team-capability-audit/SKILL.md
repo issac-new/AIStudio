@@ -1,5 +1,6 @@
 ---
 name: iterative-team-capability-audit
+version: 1.0.0
 description: 多轮迭代检视 agent teams 能力与工具：结构/内容/定义/可操作性/增强一致性，每轮探针+修复+复验。
 triggers:
   - "深入复盘检视"

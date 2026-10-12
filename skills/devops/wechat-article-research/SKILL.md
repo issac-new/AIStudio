@@ -2,7 +2,7 @@
 name: wechat-article-research
 description: >-
   Fetch and extract content from WeChat Official Account (mp.weixin.qq.com) articles using curl + regex parsing, then produce structured analysis reports. Use when the user provides WeChat article URLs and asks for research, analysis, or content extraction.
-version: 1.0.0
+version: 1.1.0
 platforms: [macos, linux]
 metadata:
   hermes:
@@ -32,10 +32,10 @@ The `wechat-article-extractor` skill requires npm packages (cheerio, dayjs, requ
 import subprocess, re, html as html_module
 
 r = subprocess.run(
-    ["curl", "-sL", "-A",
+    ["curl", "-sL", "--max-time", "90", "-A",
      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
      url],
-    capture_output=True, text=True, timeout=30
+    capture_output=True, text=True, timeout=100
 )
 html = r.stdout
 
@@ -49,6 +49,16 @@ if content_match:
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = html_module.unescape(text.strip())
 ```
+
+> ⚠️ 上述正则的适用边界（2026-09-24 AgenticOps 文 3.6MB 实证）：正文区含**内联 `<script>`** 的文章会把边界锚到正文内第一个内联 script——抓回 1.6MB 尾部脚本而非正文。此时改用**标记切边法**（同日实证有效）：① `html.find('id="js_content"')` 定起点；② 从起点向后找后继标记 `['id="js_tags"', 'class="rich_media_tool', 'id="js_profile_qrcode"']`，取首个命中位截断；③ **先** `re.sub(r'<script[^>]*>.*?</script>', '', seg, flags=re.DOTALL)` 剥净 script 块，**再**去标签。另：30s subprocess timeout 对 3.6MB 页面不够（curl 超时实测），`--max-time 90` 经 terminal 一次成功。
+
+### 原文回源——中文转述文必须找原始出处
+
+微信技术文常是外文原文（X/Twitter 长文、博客）的中文转述。转述文只当导读：常省略代码示例、实现细节与尾节实操清单，拿它当唯一源做融合/复刻会吸收残缺版。
+
+- **找链接**：文首/文末常带「原文作者 + 原文链接」；无链接时用原标题 + 作者名 web_search 定位（X 长文常被聚合站镜像）。
+- **X 长文登录墙的镜像通道**：x.com 直抓与 firecrawl 均失败时，试 `https://threadnavigator.com/thread/<status_id>`——纯 curl + 浏览器 UA + 去标签即可拿到接近全文（实测 ~25K chars），status_id 取 x.com URL 路径段（`/status/<id>` 或 `/article/<id>`）。
+- **逐节保真度对照**：回源后将原文全文落盘存档（如 `research/<topic>/original-*.txt`），分析/融合引用以原文锚点为准，转述差异显式声明。
 
 ### Batch fetching
 

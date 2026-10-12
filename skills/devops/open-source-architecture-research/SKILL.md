@@ -1,7 +1,7 @@
 ---
 name: open-source-architecture-research
 description: "代码型开源仓库源码级调研。clone→分层映射→定向深读→file:line 引用。"
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, research, open-source, architecture, evidence]
@@ -22,12 +22,15 @@ metadata:
 
 ## Workflow（5 步）
 
-### Step 1: Shallow clone + 全景映射
+### Step 1: 获取源码 + 全景映射
 ```bash
-git clone --depth 1 https://github.com/X/Y /tmp/Y-research
+# 默认 shallow clone——落 workspace 持久层，禁 /tmp（file:line 引用核验可能跨会话）
+git clone --depth 1 https://github.com/X/Y ~/hermes-docker-sandbox/workspace/research/Y-src
+# 超大仓库 clone 慢且只需快照时，tarball 更快：
+# curl -L https://codeload.github.com/X/Y/tar.gz/refs/heads/main | tar xz
 find . -maxdepth 2 -type d -not -path './.git*' | sort
 ```
-先 `ls` 顶层包列表并计数（如 `ls codex-rs | wc -l` → 112），建立规模感。
+先 `ls` 顶层目录列表并计数，建立规模感。用 tarball 时报告头必须注明来源版本/tag——file:line 引用的可核验性锚定在该版本上。
 
 ### Step 2: 分层归类（防平推）
 把所有包/crate 归入 5 层，后续按调研问题选层深读，**不逐包平推**：
@@ -39,6 +42,10 @@ find . -maxdepth 2 -type d -not -path './.git*' | sort
 | 能力层 | skills/hooks/memories/plugin/mcp | SKILL.md/hook 配置 |
 | 持久层 | rollout/store/state/history | db/migration |
 
+5 层表是无自述架构仓库的兜底模板。仓库自带架构声明（AGENTS.md 依赖方向、docs/architecture.*）
+时先读声明、按其声明的依赖方向分层（如 domain←contracts←providers←application←入口），
+套通用 5 层反而失真；「provider 代码不进领域层」是常见铁律，声明里通常写明。
+
 ### Step 3: 定向深读（确定性优先）
 高信号目标（携带确定性行为，非 README 营销话术）：
 1. **根 AGENTS.md / CONTRIBUTING** — 工程纪律（如 codex 的 "resist adding code to codex-core"）
@@ -49,14 +56,24 @@ find . -maxdepth 2 -type d -not -path './.git*' | sort
 6. **review rubric / 评审清单** — 质量标准
 7. trait/接口定义文件（如 ContextualUserFragment）— 架构关键抽象
 
+agent 面向型工具（CLI/MCP 给 coding agent 用）追加三类高信号目标：
+8. 捆绑 agent skill（.agents/skills/*/SKILL.md）— 项目教 agent 用自己的方式，事实上的使用手册
+9. 契约/工具注册表（contracts/、official*Contracts）— caller 可见 schema 唯一事实源，工具数量在此数
+10. docs/roadmap.md + 准入标准 — 项目自认的能力边界，gap 分析的直接对照面；
+    「how we design X」方法论文档（tool-design 类）优先级等同工程纪律文档
+
 ### Step 4: 引用纪律
 - 每条事实断言带 `path/to/file.rs:LINE`（真实 clone 中可 grep 验证）
 - 报告写入 `<workspace>/research/<name>-research-report.md`，**写完再谈完成**（防中断丢产物）
 - 结构：全景→核心机制深读（每个机制：设计+file:line）→对照自有系统 gap→可移植清单（按防线归位+优先级）→不建议移植清单（防盲目搬运）
+- 附录放「关键 file:line 引用索引」两列表（断言→位置），蓝军抽查不必重扫全文
+- gap 三分类：真 gap / 有能力但依赖外部 provider（license/BYO，注明装什么才解锁）/ 与自有治理冲突（能力再好也不移植）；
+  带 BYO provider 的平台先盘免 provider 可用面再判 gap，防把「没装商业引擎」误报成「能力缺失」
 
 ### Step 5: 蓝军核查（禁自评自封）
 报告交付前 `delegate_task` 派独立审查：抽查 ≥10 处 file:line 引用（grep/read 核实）+
 挑战 gap 分析公允性（是否夸大缺失/贬低已有能力）。FAIL 项修正后再交付。
+delegate 带 output_schema 强制结构化回执：references_checked[{claim,result,spot_evidence}]、gap_fairness、verdict。
 
 ## Pitfalls
 

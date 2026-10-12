@@ -88,7 +88,7 @@ assert _weixin_noise_reason('[语音转文字失败]') == 'stt_failure'
 # 正常中文短消息 → 放行（不过度拦截）
 assert _weixin_noise_reason('好') is None
 assert _weixin_noise_reason('在吗') is None
-assert _weixin_noise_reason('your-child今天表现不错') is None
+assert _weixin_noise_reason('孩子今天表现不错') is None
 print('behavioral probe OK')
 "
 

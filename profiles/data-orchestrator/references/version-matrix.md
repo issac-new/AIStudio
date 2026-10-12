@@ -144,3 +144,47 @@ wget https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-mysql-c
 ---
 
 *文档生成时间: 2026-09-04 | 数据源: 官网下载页、Maven Central、Docker Hub、GitHub Releases、官方文档站*
+---
+
+## Paimon 2.0 升级兼容矩阵（Flink × 表格式 × connector，2026-10-09）
+
+> 来源：夜 gap-20260927-018 / 卡 t_a73559c1。本节为**增量节**：上方 v1 表格是 2026-09-04 调研快照（已被 version-lock.md 2026-10 更新部分取代），本节记录当前在栈组合的**升级兼容面**与灰度 PoC 实测结论。版本事实源仍是 `version-lock.md`。
+
+### 兼容矩阵（官方 + 实测）
+
+| 维度 | 在栈组合 | 官方支持面 | 实测（2026-10-09 data-stack 沙箱） |
+|------|---------|-----------|----------------------------------|
+| Flink | **1.20.5** | Paimon 2.0.0 提供 1.16/1.17/1.18/1.19/**1.20**/2.0/2.1/2.2 全后缀 jar（paimon.apache.org/docs/2.0/project/download/） | `paimon-flink-1.20-2.0.0.jar` + `paimon-s3-2.0.0.jar` 全链路通 |
+| connector 后缀 | `paimon-flink-1.20-2.0.0.jar` | 同族 2.0/2.1/2.2 后缀保留未来 Flink 2.x 升级路径 | jar 在 lib，与 flink-shaded-hadoop/fluss jar 无类冲突 |
+| 表格式 | Paimon 主键表（MoW）+ 分区表 | 2.0 格式与 1.x 格式同族（无格式断裂公告） | CDC 快照+回放 checksum 三表双侧一致 |
+| 对象存储 | RustFS 1.0.0 (S3 API) | paimon-s3-2.0.0.jar | s3.path-style-access 读写通 |
+| Flink CDC | 3.6.0 | 支持 Flink 1.20.* | 整库同步 customers/orders/order_items 回归零失败 |
+| Dinky | 1.2.5-flink1.20 | client 与集群对齐 | 不受影响 |
+
+### 实测特性面（Flink SQL 1.20.5 × Paimon 2.0.0）
+
+| 特性 | 结果 | 证据 |
+|------|------|------|
+| CDC 整库快照+增量回放 | ✅ 零失败 | checksum 三表 md5 双侧一致（t1t2-snapshot.json overall=true） |
+| 分区主键表 DDL / SHOW CREATE | ✅ | SHOW CREATE 输出含 PARTITIONED BY (dt) |
+| 批写 INSERT / SELECT | ✅ | 3 行批写读回一致 |
+| UPDATE（MoW） | ✅ | id=1 payload a→a2 终态一致 |
+| 谓词 DELETE | ✅ | id=3 终态消失 |
+| 分区裁剪 | ✅ | EXPLAIN 计划 filter=[=(dt,…)] 下推 TableSourceScan；dt 谓词只返回目标分区行 |
+| Schema 演进 ADD COLUMN | ✅ | 旧数据新列读 NULL，新数据 extra-val 读回 |
+| **MERGE INTO 语法** | ❌ **Flink 1.20 planner 不支持**（Unsupported query / ParseException；三种形态均败） | 本节实测 poc-t10 系列 |
+| MERGE INTO 替代路径 | ✅ **`CALL paimon.sys.merge_into`**（官方 procedure，Flink 1.19+ 命名参数形态） | matched-upsert 生效（payload d2→d3）+ not-matched 插入（id=7）终态一致 |
+
+### MERGE INTO 替代路径要点（踩坑记录）
+
+1. `source_table` 传**物理表全名**（如 `smoke2.s`），条件/upsert 表达式里用表名末段作引用前缀（`s.payload`）——`target_alias` 只作用于目标表。
+2. `matched_upsert_setting` 是**纯赋值串**：`payload = s.payload`（不要带 SET 关键字）。
+3. `not_matched_insert_values` **不要加外层括号**（`(s.id,…)` 会被 Calcite 包成 ROW 类型导致 schema 校验失败；官方 `'*'` 或 `s.id, s.dt, …` 均可）。
+4. source 表 schema 需与目标表**列数对齐**（T11 加列后 source 也要 4 列）。
+5. `INSERT INTO … VALUES (…, NULL)` 需 `CAST(NULL AS STRING)`。
+
+### 升级窗口判定（供 Q4 决策）
+
+- **现状即 2.0.0**：本栈 Paimon 已在 2.0.0 + Flink 1.20.5，**无升级动作**；窗口判断的真正对象是 2.1.0（rc-watch 跟踪中，2026-09-29「2.1.0-rc3」雷达条目经三信源核伪不存在）。
+- 2.1.0 GA 后按 `upgrade-eval-checklist.md` 五阶段走评估；本节矩阵+PoC 脚本即为阶段 2 沙盒试跑的复用底座（脚本在 gap workspace `poc-*.sh`）。
+- Flink 2.x 路径仍被 **Dinky 无 flink2.x tag** 阻塞（v1 备选组合结论 2026-10 仍成立）。

@@ -1,8 +1,24 @@
 # SkillProposal: headless-write-staging-reroute [create]
 
 > **产出**： platform-skill-miner · 2026-09-07 · 7 天窗口扫描（2026-08-31~2026-09-07，49 张 done 卡）
-> **状态**： ⏳ 待图爸最终裁决（本 job 只提议不落地，未调 skill_manage）
+> **状态**： ❌ REJECTED — 已实现（2026-09-25 最终裁决）
 > markings: [TLP:GREEN, EYES-ONLY:platform]
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现)** — `devops/multi-board-team-deployment/SKILL.md:186` 已有「绕行模式（workspace-staging）」完整段落（staged 文件名不触发守卫 + 安装通道三选一 + `deploy_mode: workspace-staging` 留痕），提案核心机制已被等价覆盖。grep 实测 `workspace.*staging|staging.*改道` 在 skills 目录命中该 skill，确认等价实现存在。无需新建 skill。
+
+## 评审意见（2026-09-14，platform-skill-miner 同 job 评审通道）
+
+**判定：✅ 批准（独立 create；与 `protected-file-write-block-reroute` 互引边界，交图爸按族打包裁决）**
+
+- **证据链复核**：6 条 task_id 均可回溯（t_018bf082/t_4b19ed0c/t_cc655ecb/t_5a115d3a/t_67f398c9/t_6b9af369，均 swarm 板 09-01 前后 comment 区）。频率 6/49 达标且跨三类 profile（worker-coder/orchestrator/platform-skill-miner）。
+- **本窗口存续实证**：t_8bf5e715（[已移除] 板，2026-09-09）——[已移除] SOUL.md patch 被无人值守审批门超时拦截 → run blocked → 第二轮字节级等效写入收尾。**受保护写故障在本窗口换板复发（swarm→[已移除]），且同一「无头模式无审批能力」根因**，证明预判改道象限的独立价值。
+- **与存量提案关系**：与 `protected-file-write-block-reroute`（block 后破局）~30% 步骤重叠但触发象限正交（写前预判改道 vs block 后核验破局）。批准双方并要求 When to Use 互写一行边界（或图爸裁决合并为「受保护写作业流」族谱 skill）。
+- **一处修正**：落点装载动作（TUI cp/mv、字节级重发）须加注「事后留痕卡 comment + frozen 验收逐条对照」，勿把「staging 改道」读成「绕过审批」（对齐无人值守审批门：批准后同操作重发即过）。
+- **去重核查**：`worker-completion-independence-verification`（验收侧）/`agent-soul-patching`（批量手法）均不覆盖「headless 预判改道」作业流，无冲突。
+
+---
 
 ## 触发条件
 

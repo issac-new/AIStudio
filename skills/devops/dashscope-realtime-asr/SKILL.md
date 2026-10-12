@@ -1,5 +1,6 @@
 ---
 name: dashscope-realtime-asr
+version: 1.0.0
 description: "DashScope 实时流式 ASR 与开源 Qwen3-ASR/FunASR 集成调研。"
 ---
 

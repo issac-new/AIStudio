@@ -29,9 +29,10 @@ three most common failure modes and their distinct fixes.
 ```
 send failed
   ├─ "rate limited; cooldown active 30s"
-  │    → curl iLink directly (see §1)
-  │       ├─ errcode -14 "session timeout" → §1a (gateway dead, token expired)
-  │       └─ errcode -2                     → §1b (genuine rate limit, wait)
+  │    → curl iLink directly (see §1) — READ THE RAW errmsg, do not act on -2 alone
+  │       ├─ errcode -14 "session timeout" → §1a (probe getconfig first: account vs context token)
+  │       └─ errcode -2 "prepare failed"   → §1c (server-side delivery block, do not retry)
+  │       └─ errcode -2 (any other errmsg) → §1b (genuine rate limit, classify duration)
   │
   ├─ "No home channel set for weixin"
   │    → §2 (set WEIXIN_HOME_CHANNEL env)
@@ -72,13 +73,22 @@ curl -sS -X POST "https://ilinkai.weixin.qq.com/ilink/bot/sendmessage" \
 | Response | Meaning | Fix |
 |----------|---------|-----|
 | `{"errcode":-14,"errmsg":"session timeout"}` | Token expired server-side | §1a below |
-| `{"errcode":-2,...}` | Genuine rate limit | §1b below |
+| `{"errcode":-2,"errmsg":"prepare failed"}` | Server-side delivery block for THAT chat | §1c below |
+| `{"errcode":-2,...}` (other errmsg) | Genuine rate limit | §1b below |
 
 ### §1a Session timeout fix (errcode -14)
 
-**Root cause**: The gateway was dead for hours/days. No inbound message
-refreshed the iLink `context_token`, so it expired on iLink's **server
-side**. Waiting 30s/5min does NOT help — only an inbound message can
+**Distinguish two depths of expiry first** — probe `getconfig`/`getupdates` on the
+SAME account token before assuming inbound can fix it:
+
+| Probe result | Depth | Recovery |
+|--------------|-------|----------|
+| `ret / errcode -14`, or the call itself fails to connect | **Account-level expiry** — the account cannot reach iLink's authenticated surface, so the inbound-poll loop never connects and can NOT refresh it | QR re-auth on the bound device; an inbound won't help |
+| `ret 0`, or a "missing required param"-style `-2` (auth reached) | Account reachable; only the `context_token` is stale | inbound refresh works (§1a fix below) |
+
+**Root cause (context-token staleness)**: The gateway was dead for hours/days. No
+inbound message refreshed the iLink `context_token`, so it expired on iLink's
+**server side**. Waiting 30s/5min does NOT help — only an inbound message can
 refresh it.
 
 **Fix**:
@@ -87,11 +97,34 @@ refresh it.
 3. That single inbound refreshes `context_token` server-side.
 4. Outbound sends work immediately after.
 
-### §1b Genuine rate limit fix (errcode -2)
+For **account-level expiry**, do NOT promise a retry/inbound will clear it — the
+send only recovers after QR re-auth. Full re-bind procedure (QR fetch, 30 s
+long-poll trap, credential file naming, .env swap, smoke test):
+`weixin-channel-configuration` → `references/qr-rebind.md`.
 
-`-2` means iLink's **server-side** frequency limiter rejected the send — the local
-30s cooldown circuit is just the adapter's reaction to it. Do NOT assume it is
-transient: verify with cheap read-only endpoints before choosing a strategy.
+### §1b Genuine rate limit fix (errcode -2, non-"prepare failed")
+
+`-2` with any errmsg other than `prepare failed` means iLink's **server-side**
+frequency limiter rejected the send — the local 30s cooldown circuit is just the
+adapter's reaction to it. Do NOT assume it is transient: verify with cheap
+read-only endpoints before choosing a strategy.
+
+### §1c `-2 "prepare failed"` — server-side delivery block, do not retry
+
+When the raw errmsg is exactly `prepare failed` on a **getconfig-healthy** account,
+it is a per-chat server-side delivery block, NOT a rate limit. The account can be
+fully authenticated yet still refuse to deliver to THAT chat — canonical case: a
+bot account bound to one WeChat (e.g. 爸爸's bot) cannot send into another bot's
+bound WeChat (妈妈's chat).
+
+- **Retrying is futile** — the block is per-chat, not a cooldown; looping only
+  re-opens the local 30s cooldown and burns time.
+- **A healthy sibling account is NOT a fallback delivery path** into another
+  account's chat. Route through the account actually bound to the target chat, or
+  escalate — never fall back to a sibling account and call deliverable arrival
+  that never happened.
+- Same wire rules as §1a for account-level expiry: if the bound account's getconfig
+  is -14, the block is upstream and needs QR re-auth before anything is sent.
 
 **Classify duration first** (same token, direct curl — read endpoints bypass the
 sendmessage limiter):
@@ -151,6 +184,24 @@ BEFORE re-queuing failed deliveries.
 
 The chat_id is in `~/.hermes/profiles/<profile>/channel_directory.json`
 under `platforms.weixin[].id` (or `hermes send --list weixin`).
+
+### Multi-profile deployments: the PROFILE-level config must mirror the block
+
+In multiplex deployments (cron delivering through a worker/orchestrator
+profile's gateway), the delivery path resolves the home channel from the
+**profile-level** `~/.hermes/profiles/<profile>/config.yaml`, not only the
+top-level `~/.hermes/config.yaml`. When the profile config lacks the
+`platforms.weixin` block entirely, every cron push fails with
+`no delivery target resolved` — which looks like "weixin is down" but is a
+config gap. Mirror the whole `platforms.weixin` block (enabled + home_channel)
+into the profile config, then restart that gateway.
+
+**Verification signature after the fix**: manually fire one delivery; a
+failure of `iLink rate limited; cooldown 30s` is SUCCESS, not a residual
+problem — it proves the target now resolves and the send genuinely reached
+iLink, with the cooldown being the adapter's normal transient protection
+circuit (the next scheduled tick delivers). Stop debugging at this signature;
+do not keep treating the cooldown as a failure.
 
 ## §3 gateway_state.json stale "running" after SIGTERM/SIGKILL
 

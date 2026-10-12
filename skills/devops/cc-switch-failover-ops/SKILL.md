@@ -110,7 +110,7 @@ MGLM baseline: p50 ≈ 3.9s — high but normal for BigModel flash; latency is n
 
 Column order: `app_type, proxy_enabled, listen_address, listen_port, enable_logging, enabled, auto_failover_enabled, max_retries, streaming_first_byte_timeout, streaming_idle_timeout, non_streaming_timeout, circuit_failure_threshold, circuit_success_threshold, circuit_timeout_seconds, circuit_error_rate_threshold, circuit_min_requests, ...`
 
-claude row (2026-09): retries=6, thresholds 20 / 2 / 90s, error_rate=0.9, min_requests=30. A high error_rate (0.9) + high min_requests (30) means the breaker is SLOW to trip on pure-rate-limit bursts — many real user requests eat 429s before protection kicks in.
+claude row current tuned values: retries=3, failure_threshold=10, timeout=120s, success_threshold=2, error_rate=0.5, min_requests=15. Pre-tuning (6/20/90s, 0.9/30) left real user requests eating 429s before protection kicked in; the tuned set trips early and sheds load. Treat values quoted in any skill as stale until verified — read live: `sqlite3 ~/.cc-switch/cc-switch.db "SELECT max_retries||'|'||circuit_failure_threshold||'|'||circuit_timeout_seconds||'|'||circuit_error_rate_threshold||'|'||circuit_min_requests FROM proxy_config WHERE app_type='claude';"`
 
 ## Fixes & prevention
 
@@ -119,6 +119,7 @@ claude row (2026-09): retries=6, thresholds 20 / 2 / 90s, error_rate=0.9, min_re
 3. **Stagger cron fleets** — the burst trigger was jobs converging on the same minute (23:57–23:59). Offset schedules across a window instead of fixed boundaries.
 4. **Tune claude breaker for rate-limit storms**: lowering `circuit_error_rate_threshold` (0.9 → ~0.5) trips earlier and sheds load sooner; raising `circuit_min_requests` avoids tripping on small samples.
 5. **Health table can look clean after the fact** (`is_healthy=1, consecutive_failures=0` post-cooldown) — always reconstruct from `proxy_request_logs`, never trust current health state for incident analysis.
+6. **proxy_config 参数 DB 直写后需重启装载**：cc-switch 只在启动时读熔断参数。重启 CC Switch（`osascript quit` + `sleep 4` + `open -a` + `/health` 探活）后直写值生效，且实测重启**不会**把内存态写回覆盖 proxy_config 参数行（写回风险集中在 is_current/failover 队列，不在参数）。装载走幂等脚本四闸：① 仅授权窗执行 + FORCE 逃生门；② DB 值 ≠ 期望指纹时拒绝重启（参数被回滚 = 先修 DB 再装载）；③ stamp 文件晚于参数写入时刻 → 已装载跳过；④ 挂每日 no_agent cron 空跳兜底，与参数漂移检测组成检测-装载闭环。现成脚本：`~/.hermes/profiles/orchestrator/scripts/ccswitch-param-apply-restart.sh`。
 
 ## sqlite gotchas hit in practice
 

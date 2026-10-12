@@ -1,5 +1,6 @@
 ---
 name: skill-library-slimming
+version: 1.0.0
 description: "Slim bloated skill libraries via team-scoped link boards."
 metadata:
   hermes:

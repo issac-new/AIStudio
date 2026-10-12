@@ -62,6 +62,16 @@ Working pattern:
 3. Harden the closing contract on the correction card — require per-item response and explicit wait-for-review — because the original card failed exactly that gate.
 4. Re-verify the correction with the same independent mechanical checks as the first review; do not accept the fix on self-report.
 
+## Dispatcher pickup race (self-card snatched mid-run)
+
+A self-owned trace card that lands in `running`/`ready` can be re-assigned within seconds (observed: ~12s after create) to a fresh worker run with its own run-row. Consequences and rules:
+
+- Your own `kanban_complete(task_id=t0)` then fails with a stale-run rejection even though you created the card this session — the card's run-row now belongs to the spawned worker. That is correct behavior, not a kernel bug.
+- Do NOT fight the pickup by completing from your side anyway: that is concurrent verification of your own work (FM-P6, forbidden). The picked-up run owns completion.
+- Make the race survivable at create time: when execution is done inline and the card is only a trace, write the body as a self-contained handoff — work-already-done statement + full anchor/artifact list + "grep-verify each item, then complete" — so whichever run picks it up can mechanically verify and finish it without your context.
+- Hand off via `kanban_comment` with the per-item acceptance checklist. On old-layout boards (`boards/<slug>/` layout, not the central root DB) `kanban_comment`/`kanban_complete` must carry `board=<slug>` or the call is rejected — omitting it is the usual second failure right after the stale-run rejection.
+- Confirm the end state by reading the card (`kanban_show` or SQL), never by assuming the worker finished; report the handoff, not the completion.
+
 ## What NOT to do
 
 - **Do NOT `sqlite3 ... UPDATE tasks SET status='done'`** to force-complete a stuck card. It bypasses the kernel's run-row accounting, heartbeat/reclaim bookkeeping, and event log. A direct SQL write makes the dashboard lie about how the card finished. (Done once under time pressure; recorded here so it isn't repeated.)

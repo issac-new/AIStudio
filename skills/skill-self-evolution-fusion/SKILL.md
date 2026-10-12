@@ -168,7 +168,7 @@ Output: OrchestrationPlan (steps + edges + missing_inputs + status)
 | `agent-harness-best-practices` | 5D 评估 = 完成时验证门的量化版本 |
 | `loop-engineering-gates` | beam 规划 = 验证门的 plan-time 增强 |
 | `pua-pressure-engine` | failure attribution = 压力升级的信号源 |
-| `cognition-self-check` | 5D 评估的 compliance 维度 = 认知自检的量化 |
+| `cognition-lattice`（§七A） | 5D 评估的 compliance 维度 = 认知自检的量化 |
 
 ## 与 Hermes 的集成映射
 

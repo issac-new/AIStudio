@@ -1,0 +1,7 @@
+e001 — LiteLLM CVE-2026-59822 affected-version + fix-version, 3-source triangulation.
+OSV query api.osv.dev (PyPI litellm): GHSA-7488-6r32-c95q -> CVE-2026-59822, modified 2026-09-10.
+web corgea.com/research/cve-2026-59822: "In litellm < 1.84.0 ... failed API-key check on an
+Authorization: Bearer ... could fall through to an empty UserAPIKeyAuth()". CISA KEV 2026-09-02.
+GHSA-7488-6r32-c95q (GitHub Advisory, published 2026-07-22). CVSS 8.8 HIGH, CWE-287/CWE-306.
+CONCLUSION: affected <1.84.0, fixed >=1.84.0. Triangulated (OSV+NVD/GHSA+Corgea) — consistent.
+

@@ -1,7 +1,7 @@
 # Forward-Deployed Protocol（前线部署协议）
 
-> 灵感来源：Palantir Forward Deployed Engineer (FDE) — 嵌入目标环境一线，获取隐性知识，快速产出可用原型
-> 适用范围：所有 Hermes worker profile（headless 模式下用「前线侦察」步骤适配）
+> 理念原型：Palantir Forward Deployed Engineer（FDE）——工程师嵌入客户一线，先拿隐性知识，再出可用原型。Hermes worker 是 headless 的，用「前线侦察」步骤拿等价物。
+> 适用范围：所有 Hermes worker profile
 > 强制级别：🟡 提示性纪律（依赖 worker 自律；无工具层 fail-closed）——所有 worker SOUL.md 的「标准作业循环」应包含前线侦察步骤
 
 ---
@@ -109,14 +109,14 @@ skills_list()
 **领域知识地图**: <仅当 §2.3.1 触发条件命中时必填：基础概念/结构逻辑/应用场景/关联依赖/拓展方向 五模块各一行；触发条件未命中可省略>
 ```
 
-**机械执行点**（三段独立检查，非单一「N 中取 M」，2026-08-28 认知融合修订）：
+**机械执行点**（三段独立检查，不是单一「N 中取 M」）：
 - `kanban_comment` 必须含 `## 前线侦察摘要` 标题
 - **基础 7 字段**（任务目标/上游交接物/本地代码现状/历史经验/适用 skill/风险与约束/执行计划）至少含 **5 个**
 - **任务复述必填**，且满足验收项覆盖率：任务 body 中冻结验收标准每一条在复述中有对应句子；照抄检测：与 body 原文的 8-gram 重叠 >50% = 照抄 = 打回重侦察
 - **领域知识地图条件必填**：§2.3.1 触发条件命中时必填，但不计入基础 7 字段计数
 - 未写侦察摘要就开始执行 = 任务未完成
 
-#### 2.3.1 领域知识地图触发启发式（FDE 融合认知方法，2026-08-28）
+#### 2.3.1 领域知识地图触发启发式
 
 「陌生领域」由机械启发式判定（满足其一即触发必填），不由 worker 自评自由裁量：
 
@@ -143,7 +143,7 @@ print(f"overlap: {len(b & r)/max(len(r),1):.0%}")
 EOF
 ```
 
-### 2.4 六层上下文映射（FDE 融合 P2-E，2026-08-25）
+### 2.4 六层上下文映射
 
 FDE 上下文框架把"当前任务所需的业务上下文"拆成六层。前线侦察四件套已覆盖大半，按此映射**缺哪层补哪个工具**：
 
@@ -186,6 +186,8 @@ FDE 上下文框架把"当前任务所需的业务上下文"拆成六层。前�
 | `browser_*` | ✅ 触发（浏览器操作） |
 | `terminal` (不可逆命令) | ✅ 触发（如 `git push`, `rm`, 部署） |
 
+**委托链累计校验**（来源 arXiv 2609.24515「设计态≠运行态」）：触发判定按**委托链累计后果**判，不只看当前层动作类型——「上级委托的任务」不豁免本级不可逆动作（Human→Agent→子Agent→工具 链上，权限/授权随链传递，每层都独立过触发表）；单层动作可逆但链路累计不可逆（如「读文件→生成补丁→自动 push」三步各自可逆/常规，链末态不可逆）时，末步必须 staged。取证口径见 `_shared/06-observability/agent-governance-baseline.md` §3.2。
+
 ### 3.3 Staged Action 流程
 
 ```
@@ -212,7 +214,7 @@ FDE 上下文框架把"当前任务所需的业务上下文"拆成六层。前�
   - 失败 → 回滚 → kanban_block(reason="staged action 失败，已回滚")
 ```
 
-### 3.4 源码改动 staged 协议增补
+### 3.4 源码改动的 staged 协议
 
 凡改 hermes 本体源码的 staged-action-proposal，除 3.3 通用字段外，必须额外包含以下两字段：
 
@@ -233,7 +235,7 @@ FDE 上下文框架把"当前任务所需的业务上下文"拆成六层。前�
 
 ## 四、Mission Coordinator（任务协调者）
 
-> ⚠️ **2026-09-01 FDE 融合审计修正**：本节原引用的 5 个 profile（project-manager / architect / worker-reviewer / worker-deployer / requirement-analyst）经 `ls ~/.hermes/profiles/<name>` 机械验证**全部不存在**——属文档腐烂（引用了从未落地或已删除的实体，正是文14「三条接缝」判据中"语义上下文断裂"的本地实例）。现按集群实际 27 profile 重写本节；旧 squad 表以删除线保留一轮供 diff 对照，下轮审计可清。
+> 本节 profile 清单以 `ls ~/.hermes/profiles/<name>` 实测为准；引用不存在的 profile = 文档腐烂，发现即改写本节。
 
 ### 4.1 与 Forward-Deployed 的关系
 
@@ -263,15 +265,7 @@ test -d ~/.hermes/profiles/<assignee> || echo "✗ assignee 不存在，禁止�
 
 ### 4.3 虚拟 Squad 编组（仅限真实 profile）
 
-~~每个 mission 动态组建 squad（从 8 个 worker 中选）：~~
-
-~~| 功能开发 | architect + worker-coder + worker-reviewer + worker-tester |~~
-~~| 部署发布 | worker-deployer + worker-tester + ops-sre |~~
-~~| 技术调研 | worker-researcher + architect |~~
-~~| 安全审计 | hack-auditor + worker-reviewer |~~
-~~| 缺陷修复 | worker-coder + worker-tester + worker-reviewer |~~
-
-修正后的合法 squad（全部经 `ls` 验证存在，2026-09-01）：
+合法 squad（全部经 `ls` 验证存在）：
 
 | Mission 类型 | 合法 squad |
 |---|---|
@@ -292,21 +286,21 @@ test -d ~/.hermes/profiles/<assignee> || echo "✗ assignee 不存在，禁止�
 ### 5.1 前线侦察验证
 
 ```bash
-# 验证所有 worker SOUL.md 含前线侦察步骤（数量动态化，2026-08-24 修正：原期望值 29 与集群实际 27 profile 漂移）
+# 验证所有 worker SOUL.md 含前线侦察步骤（数量动态统计，勿写死期望值）
 total=$(ls -d ~/.hermes/profiles/*/SOUL.md | wc -l | tr -d ' ')
 wired=$(grep -l "前线侦察" ~/.hermes/profiles/*/SOUL.md | wc -l | tr -d ' ')
 echo "$wired / $total profiles wired"
 # 期望: wired == total（orchestrator 作为路由入口可豁免 1）
 
-# 验证 SOUL 不内嵌侦察摘要模板全文（防止第二事实源漂移，2026-08-28 认知融合增补）
+# 验证 SOUL 不内嵌侦察摘要模板全文（防第二事实源漂移）
 # SOUL 只允许引用标题 "## 前线侦察摘要" + 指向 _shared/01-scheduling-bus/forward-deployed-protocol.md 的指针，
 # 不允许内嵌 **任务目标** 等字段模板全文（领域定制走「领域字段追加」而非全文复制）
 drift=$(grep -l '任务复述\*\*' ~/.hermes/profiles/*/SOUL.md 2>/dev/null | wc -l | tr -d ' ')
 echo "SOUL 内嵌模板全文数: $drift"
-# 期望: 0（内嵌 = 第二事实源，模板演进时必漂移——2026-08-28 蓝军 F1 判例）
+# 期望: 0（内嵌 = 第二事实源，模板演进时必漂移）
 ```
 
-### 5.1.1 模板演进同步校验（2026-08-28 增补）
+### 5.1.1 模板演进同步校验
 
 ```bash
 # 模板演进后校验：引用方 SOUL 无需改动（引用标题自动继承），
@@ -318,7 +312,7 @@ grep -rn '前线侦察摘要' ~/.hermes/profiles/*/SOUL.md | grep -v 'kanban_com
 ### 5.2 Staged Action 验证
 
 ```bash
-# 验证所有 worker SOUL.md 含 staged action 协议（数量动态化，2026-08-24 修正）
+# 验证所有 worker SOUL.md 含 staged action 协议（数量动态统计）
 grep -l "staged-action" ~/.hermes/profiles/*/SOUL.md | wc -l
 # 期望: 等于 profile 总数（ls -d ~/.hermes/profiles/*/SOUL.md | wc -l）
 ```
@@ -333,21 +327,10 @@ grep -l "Mission Coordinator" ~/.hermes/profiles/project-manager/SOUL.md | wc -l
 
 ---
 
-## 版本
+## 附录：reportDelivery 唤醒机制
 
-- v1.0 (2026-07-31): 初始版本
-- v1.1 (2026-08-24): §五验证脚本修正——期望值 29 与集群实际 27 profile 漂移导致恒假，改为动态统计（ls + grep 对比）
-- v1.2 (2026-08-28): 认知方法融合（微信文章《6大学习法则》×《6套思辨范式》+ 蓝军 5-lens 评审修订）——§2.3 新增「任务复述」（费曼技巧，判据=验收项覆盖率+8-gram 照抄检测）与「领域知识地图」（全局知识地图，条件必填）字段；§2.3.1 触发启发式；§2.3.2 照抄检测脚本；机械执行点改三段独立检查；§5.1 增补内嵌模板漂移校验；§5.1.1 模板演进同步校验
-
-
----
-
-## 附录：reportDelivery 唤醒机制（原 reportdelivery-protocol.md，2026-08-25 F6 并入，同属 FDE/子代理交互域）
-
-> 来源：DeepSeek Harness rc.8 `reportDelivery: 'next-step'` + Job Panel 统一管理
-> 融合日期：2026-08-21
-> 原则：零代码等效——全部走 prompt/规则层，不改 ACP 协议、不改 Python 源码
-> 核心痛点解决：ACP `acp_send` 超时后父任务不知子代理状态（5.5 小时悬挂案例）
+> 解决的问题：ACP `acp_send` 超时后父任务不知道子代理跑到哪了（曾有 5.5 小时悬挂案例）。
+> 原型：DeepSeek Harness rc.8 `reportDelivery: 'next-step'` + Job Panel。零代码等效——全部走 prompt/规则层，不改 ACP 协议、不改 Python 源码。
 
 ---
 

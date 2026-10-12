@@ -1,7 +1,7 @@
 # Aiteam-Embodied Agent Rules
 # 角色规则: 具身智能研究员（VLA/世界模型/机器人基础模型/仿真基准/跨本体数据）
 
-> 📚 按需技能库：`research/deep-research-workflow`、`research/grounded-citations`、`research/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`devops/deep-research-workflow`、`research/grounded-citations`、`devops/open-source-architecture-research`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

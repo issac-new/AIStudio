@@ -137,6 +137,15 @@ hermes profile list   # verify new profile appears
 
 ## Deleting a Profile
 
+### 安全下线 checklist（来源：TC260《人工智能安全治理框架3.0》附件2 §7 停用安全管理，2026-09-24 融合，裁决矩阵见 workspace/research/aisgf3.0-20260924/FUSION-VERDICT-20260924.md）
+
+机械执行 delete 命令**之前**，逐项过（防服务残留/凭证遗留/数据留存三类下线风险）：
+
+1. **全面关停**：终止该 profile 的 gateway/daemon 进程，逐项核验进程、端口、网络连接已退出；撤销其第三方应用授权与订阅（如有）
+2. **备份必要数据**：环境清理前备份仍需保留的会话记录、系统配置、知识库/技能产出、操作日志（`cp -R` 到 workspace 归档目录，先存档再删）
+3. **清理部署环境**：`hermes profile delete` + profiles.yaml 移除 + regenerate 之后，核查残留（skills symlinks、cron jobs、launchd plist、Hindsight bank、hindsight cron），发现即清
+4. **凭证与权限回收**：该 profile 独占的 API key、vault 条目、审批面授权在停用时同步撤销
+
 ```bash
 # Interactive prompt requires confirmation — pipe the profile name:
 echo "<profile-name>" | hermes profile delete <profile-name>
@@ -145,7 +154,21 @@ echo "<profile-name>" | hermes profile delete <profile-name>
 ~/.hermes/hermes-agent/venv/bin/python3 ~/.hermes/shared/generate-configs.py
 hermes -p orchestrator gateway restart
 hermes profile list   # verify profile is gone
+
+# 残留核查（安全下线第 3 步）
+ls ~/.hermes/profiles/ | grep <profile-name>                    # 目录残留
+grep -rl "<profile-name>" ~/.hermes/profiles/*/cron/ 2>/dev/null # cron 残留
+ls ~/Library/LaunchAgents/ | grep -i <profile-name>              # launchd 残留
+crontab -l | grep <profile-name>                                 # 系统 cron 残留
 ```
+
+### 升级/克隆时的权限收敛（来源：T/ISC 0123-2026 §7.3.3d，2026-09-24 融合）
+
+从既有 profile clone 新 profile、或大版本升级 profile 配置时，**旧的高危权限配置不得自动继承**：clone 后逐项复评 `skills_enabled` 白名单、toolset、approvals/mode、cron——无用即删，高危项（如 bypassPermissions、写面 toolset）须重新确认后保留；默认给新 profile 最小面，按渐进授权（security-domain-delegation §6）逐级放开。
+
+**版本切换/回滚一致性自测**（来源：T/ISC 0125-2026 §11.9f + 附录 B.8，2026-09-24 融合）：profile 升级、skill 增删、红线修改或回滚后，抽 2-3 条既有红线测试样本（如历史被拦截的越权请求、既往 HumanGate 触发例）重放，确认处置结果与升级前一致——不一致即回滚或 kanban_comment 留痕说明，禁"升级后红线静默失效"。
+
+
 
 ## Optimizing `skills_enabled` Across All Profiles
 

@@ -1,5 +1,6 @@
 ---
 name: cron-script-wrapper-pattern
+version: 1.0.0
 description: "Fix cron 'Script not found' when passing args to scripts."
 triggers:
   - "cron script not found"
@@ -90,6 +91,11 @@ Or recreate the job with `hermes cron create` using the wrapper name.
 # Check cron job definition
 grep -A 5 '"id": "<job_id>"' ~/.hermes/profiles/<profile>/cron/jobs.json | grep script
 ```
+
+### 死占位 job 与终态 guard（2026-10-10 实测）
+1. `schedule: "?"`、`next_run_at: null`、`last_run_at: null` 三联 = 从未接线的死占位 job（排程表达式坏 + script null）。修复它别走 edit/resume——completed 终态 job 会拒绝 update_job/edit/裸 resume（提示用 `cron resume --run-now/--at`），最省事是 `cronjob_manage remove` 后 `create` 重建（自执行工作先建留痕卡防重复派工）。
+2. cronjob_manage 的 script 参数强制相对路径（拒绝绝对/home 相对），脚本必须放 orchestrator `scripts/` 内。正本在 `~/.hermes/bin/` 保单一事实源的，在 scripts/ 放薄 wrapper `exec /Users/YOURNAME/.hermes/bin/<正本>.sh "$@"` 委托。
+3. 重建后必跑 `action='run'` 端到端验证（cron 引擎→wrapper→正本→静默退出全链），成功判据 = state 回 `scheduled` + next_run_at 有值 + 正本脚本手动跑 exit 0。
 
 ## Pitfalls
 

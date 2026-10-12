@@ -59,15 +59,23 @@ with open(START_SH) as f:
         env[key] = val
 
 # 3) Find the hindsight-api python tool
+# 2026-10-03 t_ecd27c18: ~/.local is a symlink to /Volumes/YOURVOLUME/cuishi-archive/local
+# (external HFS+ volume). Under launchd/xpcproxy parentage, exec'ing that uv python
+# hangs forever in dyld open() (TCC/provenance blocks mapping binaries from the
+# external volume). Interactive parentage works fine. This launchd chain MUST stay
+# on the internal disk, so only internal-disk tool paths are accepted here.
+# See skill devops/launchd-external-volume-gotchas + gap-20260925-024 hardening report §4.
 for candidate in [
-    Path.home() / ".local/share/uv/tools/hindsight-api-slim/bin/python",
-    Path.home() / ".local/share/uv/tools/hindsight-api-slim/bin/python3",
+    Path("/Users/YOURNAME/.hermes/uv-tools/hindsight-api-slim/bin/python"),
+    Path("/Users/YOURNAME/.hermes/uv-tools/hindsight-api-slim/bin/python3"),
 ]:
     if candidate.exists():
         python = str(candidate)
         break
 else:
-    print("ERROR: hindsight-api-slim tool not found", file=sys.stderr)
+    print("ERROR: hindsight-api-slim tool not found on internal disk "
+          "(/Users/YOURNAME/.hermes/uv-tools/hindsight-api-slim); refusing external-volume "
+          "toolchain under launchd (dyld hang).", file=sys.stderr)
     sys.exit(1)
 
 # 4) Ensure PostgreSQL container is running

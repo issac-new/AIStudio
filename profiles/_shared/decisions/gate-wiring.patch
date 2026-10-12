@@ -1,0 +1,215 @@
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index e847f0359c..b1c51102e0 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -8,9 +8,11 @@ shlex quoting of JSON metadata, structured-JSON failures). Humans use CLI/dashbo
+ from __future__ import annotations
+ 
+ import functools
++import importlib
+ import json
+ import logging
+ import os
++import sys
+ import time
+ from contextlib import contextmanager
+ from typing import Any, Callable, Optional
+@@ -26,6 +28,77 @@ from tools.kanban_tools_schemas import (
+     KANBAN_LIST_SCHEMA, KANBAN_REQUEST_CHANGES_SCHEMA, KANBAN_REQUEST_REVIEW_SCHEMA,
+     KANBAN_SHOW_SCHEMA, KANBAN_UNBLOCK_SCHEMA)
+ 
++# >>> swarm:gate-wiring >>>
++# gap-20260909-006-A (t_091b7f95): re-wire clearance_gate + ontology_validate into
++# the live kanban create/complete paths (fail-closed). Canonical gate tools live in
++# ~/.hermes/bin/ (outside this repo); import them via sys.path injection. An import
++# failure leaves _gates_failed set so create/complete fail CLOSED (tool_error)
++# instead of silently passing -- the silent-regression mode this wiring exists to
++# prevent. Persistence: marker block + ~/.hermes/scripts/drift-check-gate-wiring.sh
++# watchdog + decisions/gate-wiring.patch (drift replay).
++def _load_gate_tools():
++    try:
++        bin_dir = os.path.expanduser("~/.hermes/bin")
++        if bin_dir not in sys.path:
++            sys.path.insert(0, bin_dir)
++        return (importlib.import_module("clearance_gate"),
++                importlib.import_module("ontology_validate"), None)
++    except Exception as gate_exc:  # missing/corrupt gate tools -> fail closed
++        return None, None, f"gate tools unavailable: {gate_exc}"
++
++
++_clearance_gate_mod, _ontology_validate_mod, _gates_failed = _load_gate_tools()
++
++
++def _g2_lineage_markings(conn, task_id: str):
++    """Compute inherited markings for `task_id` using the gate module's own
++    parsing helpers, tolerating boards whose tasks table predates the
++    markings/metadata columns (SELECT falls back to (id, body); the gate's
++    column/metadata readers then yield empty sets and its §5.1 leaf default
++    {TLP:GREEN} applies — identical semantics to clearance_gate on a schema
++    where the columns exist). Returns None when a lineage node is unreadable
++    (same fail-closed contract as compute_inherited_markings)."""
++    import sqlite3 as _sq
++
++    gate = _clearance_gate_mod
++    seen, stack = set(), [task_id]
++    inherited = set()
++    while stack:
++        cur = stack.pop()
++        if cur in seen:
++            continue  # cycle-safe
++        seen.add(cur)
++        try:
++            cur_desc = conn.execute(
++                "SELECT id, markings, metadata, body FROM tasks WHERE id = ?",
++                (cur,)).description
++        except Exception:
++            cur_desc = None
++        want = [c[0] for c in cur_desc] if cur_desc else ["id", "body"]
++        try:
++            row = conn.execute(
++                f"SELECT {', '.join(want)} FROM tasks WHERE id = ?", (cur,)).fetchone()
++        except Exception:
++            row = None
++        if row is None:
++            return None  # unreadable/missing node -> fail-closed
++        d = dict(zip(want, row))
++        mk = gate._markings_from_column(d.get("markings"))
++        if not mk:
++            mk = gate._markings_from_metadata(d.get("metadata"))
++        if not mk:
++            mk = gate._markings_from_body(d.get("body") or "")
++        if not mk:
++            mk = {"TLP:GREEN"}  # gate §5.1 leaf default
++        inherited |= mk
++        try:
++            stack.extend(r[0] for r in conn.execute(
++                "SELECT parent_id FROM task_links WHERE child_id = ?", (cur,)))
++        except Exception:
++            pass  # no task_links table -> leaf
++    return inherited
++# <<< swarm:gate-wiring <<<
++
+ logger = logging.getLogger(__name__)
+ 
+ KANBAN_LIST_DEFAULT_LIMIT = 50
+@@ -585,6 +658,48 @@ def _handle_complete(args: dict, **kw) -> str:
+         # actually reachable — see _goal_judge_available for why an unavailable judge fails open.
+         task = kb.get_task(conn, tid)
+         _goal_gate("kanban_complete", task, tid, (summary or result or "").strip())
++        # >>> swarm:gate-wiring >>>
++        # G11 ontology pre-complete gate (gap-20260909-006-A): three-pillar +
++        # ontology_version + P9 stable-unit validation must pass before the
++        # completion write. Fail-closed: gate import failure, gate exception, or a
++        # not-passed verdict all refuse the handoff (tool_error); nothing is
++        # mutated. Tiered acceptance per _shared/03-evolution-memory/output-contract:
++        # (a) full three-pillar metadata passes; (b) test-execution shortcut --
++        # explicit tests_run/failures evidence (metadata.tests_run / metadata.
++        # test_results / a category=status finding whose evidence mentions tests)
++        # skips the findings pillar, so pure-test iterations complete as before;
++        # (c) everything else (legacy/infra completions with no evidence) is
++        # refused with actionable guidance.
++        # NOTE: this gate runs AFTER _goal_gate on purpose — the goal judge is
++        # the more specific refusal for goal-mode tasks ("work not done" beats
++        # "metadata incomplete"); both refuse pre-write, so fail-closed holds.
++        if _gates_failed:
++            return tool_error(
++                f"kanban_complete refused (fail-closed): {_gates_failed}. "
++                "Restore ~/.hermes/bin/clearance_gate.py / ontology_validate.py "
++                "before completing.")
++        gate_meta = metadata if isinstance(metadata, dict) else {}
++        gate_findings = gate_meta.get("findings") or []
++        gate_has_test_evidence = bool(
++            gate_meta.get("tests_run") or gate_meta.get("test_results")
++            or any(isinstance(f, dict) and str(f.get("category")) == "status"
++                   and "test" in str(f.get("evidence", "")).lower()
++                   for f in gate_findings))
++        try:
++            gate_passed, gate_errors, _gate_warn, _strength = (
++                _ontology_validate_mod.pre_complete(gate_meta, board=args.get("board")))
++        except Exception as gate_exc:
++            return tool_error(
++                f"kanban_complete refused (fail-closed): ontology_validate raised "
++                f"{gate_exc!r}. Nothing was written.")
++        if not gate_passed and not gate_has_test_evidence:
++            return tool_error(
++                "kanban_complete refused by ontology_validate (G3): "
++                + " | ".join(gate_errors)
++                + " -- provide metadata.artifacts_produced/findings/decisions per the "
++                  "output contract (or test evidence: findings[].category=status with "
++                  "tests_run), then retry.")
++        # <<< swarm:gate-wiring >>>
+         try:
+             ok = kb.complete_task(
+                 conn, tid, result=result, summary=summary, metadata=metadata,
+@@ -882,6 +997,61 @@ def _handle_create(args: dict, **kw) -> str:
+         # The worker/API runtime may be transient; the owning task's origin is durable.
+         session_id = (args.get("session_id") or (self_task.session_id if self_task else None)
+                       or _current_origin_session_id() or os.environ.get("HERMES_SESSION_ID"))
++        # >>> swarm:gate-wiring >>>
++        # G2 clearance gate (gap-20260909-006-A): fail-closed before dispatch.
++        # The new task does not exist yet, so inheritance is evaluated per
++        # declared parent (conjunctive AND over parent lineages, exactly the
++        # semantics clearance_gate applies to an existing task). Refuses when a
++        # parent lineage carries markings the assignee lacks, markings/DB are
++        # unresolvable, assignee clearances are unknown, or a parent id dangles
++        # (the kernel's task_links write does not validate parent existence).
++        # GREEN-only or parentless dispatch is unaffected (both default GREEN).
++        # Uses _g2_lineage_markings + HERMES_HOME-aware clearance resolution:
++        # the canonical gate module binds PROFILES_DIR/BOARDS_DIR at import
++        # time and its raw SELECTs break on boards predating the
++        # markings/metadata columns (measured: central kanban.db lacks both),
++        # which would fail-closed refuse every parented GREEN dispatch.
++        if _gates_failed:
++            raise _Reject(f"kanban_create refused (fail-closed): {_gates_failed}.")
++        gate_missing = (kb._missing_task_ids(conn, tuple(p for p in parents if p))
++                        if parents else [])
++        _check(not gate_missing,
++               f"parent task(s) not found: {', '.join(sorted(gate_missing))}")
++        if parents:
++            from hermes_cli.profiles import get_profile_dir
++            try:
++                gate_dir = get_profile_dir(str(assignee))
++            except ValueError:
++                gate_dir = None
++            gate_cfg = gate_dir / "config.yaml" if gate_dir is not None else None
++            if gate_cfg is not None and gate_cfg.is_file():
++                # Config exists: `clearances` field absent/malformed -> empty set
++                # union DEFAULT_CLEARANCES (marking-rules §2.3 GREEN+CLEAR default).
++                gate_cl_eff = ((_clearance_gate_mod.get_profile_clearances(
++                    str(assignee)) or set())
++                    | _clearance_gate_mod.DEFAULT_CLEARANCES)
++            elif gate_dir is not None and gate_dir.is_dir():
++                # Live profile dir, no readable config.yaml: §2.3 default.
++                gate_cl_eff = {"TLP:GREEN", "TLP:CLEAR"}
++            else:
++                # Assignee profile unresolvable (nonexistent): fail-closed
++                # marker — any parent lineage (even GREEN) refuses dispatch.
++                gate_cl_eff = set()
++            for gate_parent in parents:
++                gate_inherited = _g2_lineage_markings(conn, gate_parent)
++                if gate_inherited is None:
++                    raise _Reject(
++                        f"kanban_create refused by clearance gate (G2) "
++                        f"[parent {gate_parent}]: 任务或其祖先 markings 不可解析，"
++                        "fail-closed 拦截（未派发）. Dispatch was NOT performed.")
++                gate_missing_mk = gate_inherited - gate_cl_eff
++                if gate_missing_mk:
++                    raise _Reject(
++                        f"kanban_create refused by clearance gate (G2) "
++                        f"[parent {gate_parent}]: marking clearance 不足: "
++                        + ", ".join(sorted(gate_missing_mk))
++                        + ". Dispatch was NOT performed.")
++        # <<< swarm:gate-wiring <<<
+         if project_id is None and workspace_kind is None and workspace_path is None:
+             if self_task is not None and self_task.project_id:
+                 project_id, project_source_task_id = self_task.project_id, self_task.id
+@@ -889,7 +1059,8 @@ def _handle_create(args: dict, **kw) -> str:
+             conn, title=str(title).strip(), body=args.get("body"), assignee=str(assignee),
+             parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
+             priority=_opt_int(args.get("priority"), 0),
+-            workspace_kind=workspace_kind, workspace_path=workspace_path, project_id=project_id,
++            workspace_kind=str(workspace_kind if workspace_kind is not None else "worktree"),
++            workspace_path=workspace_path, project_id=project_id,
+             # Board-project inheritance must read the board this call opened, not the
+             # session's current board.
+             board=args.get("board"),

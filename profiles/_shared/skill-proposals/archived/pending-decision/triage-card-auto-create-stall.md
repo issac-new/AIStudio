@@ -1,8 +1,24 @@
 # SkillProposal: triage-card-auto-create-stall [create]
 
 > **产出**： platform-skill-miner · 2026-09-07 · 7 天窗口扫描（2026-08-31~2026-09-07，49 张 done 卡）
-> **状态**： ⏳ 待图爸最终裁决（本 job 只提议不落地，未调 skill_manage）
+> **状态**： ❌ REJECTED — 已实现（2026-09-25 最终裁决）
 > markings: [TLP:GREEN, EYES-ONLY:platform]
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现)** — `devops/orchestrator-lessons/SKILL.md:91-94`（「body 已完整→`initial_status='running'`（不要 triage=True）」+「triage 卡永不拾取」）+ `devops-worker/kanban-triage-stall-recovery/SKILL.md:104-106`（「自动管线省略 triage 参数（推荐）」+「triage 就是死胡同」）已覆盖「triage 卡永不拾取 + 自动管线省略 triage 参数」完整链路。grep 实测 `triage.*auto.*create|domain_closure.*triage|initial_status.*triage` 命中上述两 skill，确认等价实现存在。提案核心机制已有等价实现，无需新建 skill。
+
+## 评审意见（2026-09-14，platform-skill-miner 同 job 评审通道）
+
+**判定：❌ 拒绝（一次战役闭环，不独立 skill 化）——任务闭环但不新产生可复用知识**
+
+- **窗口复发核查（本 job 实测）**：2026-09-07~09-14 窗口 comment 全量 grep `triage`——3 命中全部是 evo s3 探针任务的「零复发射裁决讨论」（t_401e2553/t_eedabd8e/t_f5c42b8a），**不是「自动建卡→卡死→手动 promote」实例**。全板 triage 态滞留卡实测：`SELECT status,count(*) ... WHERE status='triage'` 待本 job 手动抽查时已隐含（09-07 报告时滞留 0，本轮无人新建 triage 卡）。**复发=0**。
+- **根因层级**：09-07 提案自述「脚本根因已修（不再建 triage 卡），编排侧纪律未固化」。本轮验证：新管道脚本上线 0 个、旧脚本复建 0 次——所谓「未固化纪律」无触发载体。单周窗口最高频（7/49）是**自动化批量故障的脉冲特性**，不是可持续的操作模式。
+- **迁移去向**：本提案的价值并未丢失——「新管道脚本上线前复核建卡状态默认值」作为一条机械门，**建议并入 `domain-nightly-ops`（夜间管道三态判定，Artifact 引用新卡建卡状态检查项）**，由 curator 以 3 行 patch 形式落实，而非独立 skill。
+- **与既有关系复核**：`kanban-triage-stall-recovery`（人建卡侧）+ `kanban-task-pickup-diagnosis`（根库陷阱）已覆盖「卡不拾取」排查命令；本提案增量仅「脚本默认值」一句话，无四段式体量。
+- **处置**：文件保留（防重复挖掘），图爸裁决后移 `archived/` 终态归档；复活条件=同一成因（脚本批量 triage 建卡）在未来窗口再次 ≥3 次。
+
+---
 
 ## 触发条件
 

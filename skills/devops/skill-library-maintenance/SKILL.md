@@ -1,7 +1,7 @@
 ---
 name: skill-library-maintenance
 description: "Audit, deduplicate, and repair a multi-profile Hermes skill library. Detect physical-copy redundancy across profiles, convert to symlinks, repair self-referencing symlink loops in shared, and restore lost content from GitHub distribution repo. Use when ~/.hermes/skills has broken loops, profiles have stale physical copies, or after a fusion/clawskills install leaves duplicates."
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [skills, maintenance, deduplication, symlinks, cleanup]
@@ -21,6 +21,8 @@ symlink loops, and lost custom skills.
 - When profiles have 10+ physical skill dirs that should be symlinks
 - When `~/.hermes/skills/<category>` is a self-referencing symlink loop
 - After a Hermes update leaves shared skill symlinks broken
+- When one domain has accumulated 2+ separate skills that are cross-linked by a
+  分工表 instead of being one entrance (see Mode 5)
 - Routine quarterly maintenance (entropy accumulates silently)
 
 ## The Three Failure Modes
@@ -102,6 +104,33 @@ grep -rln "GLM-5.3-Flash\|127.0.0.1:15721\|claude.*bypassPermissions" \
 
 判定纪律（对齐文18 验证三问）：①企业认不认 → 用户是否持续使用该 skill（引用面）；②沉淀了多少 →
 reusable_pattern/derived_from 标记密度（asset-compound-metrics.py 复用率代理）；③带不带得走 → 本 Mode。
+
+## Mode 5: Same-Domain Semantic Consolidation (合并同类技能，一域一入口)
+
+Mode 1 removes byte-identical copies. A different failure shape: N skills in the
+SAME domain kept as separate top-level entrances cross-linked by a 分工表.
+User ruling: 合一>散落 — merge into ONE entrance skill; do not keep a per-layer
+skill zoo (N entrances = N loads + N version-drift points).
+
+Procedure (validated on a 3→1 writing-skill merge):
+
+1. **Inventory each candidate's REAL disk assets** (`find <skill> -type f`), never
+   its self-description — zombie skills cite scripts/references that do not exist
+   on disk; drop those citations, do not absorb them.
+2. **Survivor = broadest trigger surface + deepest content.** Absorb the dying
+   skills' unique increments FIRST: keyword-diff each dying body against the
+   survivor (mechanical `in` checks, not eyeball), port deltas into the survivor's
+   matching section, and merge all trigger keywords into the survivor's frontmatter
+   description so one entrance covers the whole domain's trigger surface.
+3. **Downgrade the richest runtime asset tree** to `<survivor>/references/<name>/`
+   via `shutil.move` (preserves LICENSE/NOTICE copyright chain). Archive dying
+   originals to workspace `merged-away/`, then delete (先存档再删).
+4. **Rewrite survivor**: version bump; layer/topic table at top mapping old
+   entrances to sections; grep-fix every path that pointed at deleted dirs.
+5. **Verify 4-way**: ghost-reference grep for every deleted skill name across
+   `~/.hermes/skills` + `profiles/*/SOUL.md` + bin + cron; re-run runtime assets
+   (selftest/fixture/fail-closed) FROM THE NEW PATH; invoke once via a profile
+   symlink path; `skill_view` loads with the merged description.
 
 ## Category Classification
 
@@ -248,7 +277,13 @@ print(f"All profiles OK: {all_ok and broken_shared == 0}")
     symlink/canonical-path resolution — do NOT create the file twice in both
     locations; that creates divergent copies that the next session will
     inconsistently pick. Verify with `readlink -f` or `stat -f %i` (inode
-    check) before creating.
+    check) before creating. Farm-linked categories extend this across
+    profiles: `profiles/*/skills/<cat>` can resolve to the same physical dir
+    (same inode, `links=1`), so ONE write under the owning profile is already
+    visible from worker profiles' paths. `cp` between such paths reporting
+    `identical (not copied)` is the tell the farm link exists, not a cp
+    failure — verify propagation with cross-profile `shasum`, never by
+    whether cp copied.
 
 12. **`extra.skills_enabled_by_category` in config.yaml is DORMANT — never use
     it as evidence of what loads** (proven 2026-08-27, t_2f7729e4). The runtime

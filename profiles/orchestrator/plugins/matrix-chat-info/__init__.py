@@ -27,8 +27,14 @@ import types
 
 logger = logging.getLogger("plugins.matrix-chat-info")
 
-# Modules we may patch.
-_TARGET_MODULE_MATRIX = "gateway.platforms.matrix"
+# Modules we may patch. Upstream moved the Matrix platform from
+# gateway/platforms/matrix to plugins/platforms/matrix (2026-10 pull); the
+# adapter class lives in the adapter submodule there. The old path stays as a
+# fallback so the plugin also loads on a runtime that predates the move.
+_TARGET_MODULE_MATRIX_CANDIDATES = (
+    "plugins.platforms.matrix.adapter",
+    "gateway.platforms.matrix",
+)
 _TARGET_MODULE_SESSION = "gateway.session"
 
 # Sentinel so we can detect if our overrides are already installed.
@@ -202,16 +208,21 @@ def _install_patch():
             )
             logger.info("matrix-chat-info: patched build_session_context_prompt")
 
-    # --- Patch from gateway.platforms.matrix ---
+    # --- Patch the Matrix adapter module ---
     import importlib
 
-    try:
-        mod = importlib.import_module(_TARGET_MODULE_MATRIX)
-    except Exception as exc:
+    mod = None
+    for candidate in _TARGET_MODULE_MATRIX_CANDIDATES:
+        try:
+            mod = importlib.import_module(candidate)
+            break
+        except Exception:
+            continue
+    if mod is None:
         logger.warning(
-            "matrix-chat-info: cannot import %s (%s); patch skipped — "
+            "matrix-chat-info: cannot import any of %s; patch skipped — "
             "upstream layout may have changed.",
-            _TARGET_MODULE_MATRIX, exc,
+            ", ".join(_TARGET_MODULE_MATRIX_CANDIDATES),
         )
         return
 
@@ -225,7 +236,7 @@ def _install_patch():
     if adapter_cls is None:
         logger.warning(
             "matrix-chat-info: MatrixAdapter not found in %s; patch skipped.",
-            _TARGET_MODULE_MATRIX,
+            mod.__name__,
         )
         return
 
@@ -265,13 +276,13 @@ def _install_patch():
         logger.info(
             "matrix-chat-info: %d patches applied to %s.MatrixAdapter + session prompt.",
             patches_applied,
-            _TARGET_MODULE_MATRIX,
+            mod.__name__,
         )
     else:
         logger.warning(
             "matrix-chat-info: only %d/2 patches applied to %s.MatrixAdapter.",
             patches_applied,
-            _TARGET_MODULE_MATRIX,
+            mod.__name__,
         )
 
 

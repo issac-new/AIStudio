@@ -35,4 +35,4 @@ kanban 依赖链（parents 多级扇出）下，一个上游卡的坏产物会�
 
 - 跨板依赖（body 引用型）无 task_links 边，本协议回溯不到——跨板上游需按 body 中 `context_from` 引用人工展开。
 - `task_runs` 只留结果不留中间产物时，第 3 步证据可能不足：此时标注"证据不足，按最强假设处置"，禁止把假设写成结论。
-- 本协议不改 dispatcher 源码；机械化初筛工具已落地：`python3 ~/.hermes/bin/failure-boundary-scan.py`（只读扫失败链，输出首个异常事件/完成 run 可信区/三档恢复建议）——本协议的递归上游回溯与假设检验步骤仍按人工执行，脚本是入口不是替代。
+- 本协议不改 dispatcher 源码；机械化工具已落地两件：`python3 ~/.hermes/bin/failure-boundary-scan.py`（只读扫失败链，输出首个异常事件/完成 run 可信区/三档恢复建议）与 `python3 tools/failure-chain-backtrace.py --db ~/.hermes/kanban/boards/<board>/kanban.db --task <失败卡id>`（只读执行本协议第 2-4 步：`task_links` 多级向上闭包、逐级三查、根因候选=链上最深被证实异常级、证据不足诚实标注；支持 `--fixture <json>` 离线演练，8 项 pytest 回归）。两件工具是入口不是替代——第 1 步冻结现场与第 5-6 步归因修复仍按人工判断执行。

@@ -5,7 +5,7 @@ version: 1.0.0
 metadata:
   hermes:
     tags: [context-engineering, prompt-engineering, model-adapter, governance, fusion]
-    related_skills: [agent-harness-best-practices, skill-self-evolution-fusion, loop-engineering-gates, cognition-self-check]
+    related_skills: [agent-harness-best-practices, skill-self-evolution-fusion, loop-engineering-gates, cognition-lattice]
 ---
 
 # Prompt 即模型适配层 (Prompt as Model Adapter)
@@ -125,7 +125,7 @@ metadata:
 | `agent-harness-best-practices` | 规则分层放置审计 = Harness 10 条规则的补充框架 |
 | `skill-self-evolution-fusion` | 模型升级评估 = 5D 评估的具体应用场景 |
 | `loop-engineering-gates` | Delivering Work = 验证门的完成定义增强 |
-| `cognition-self-check` | Corrections 传播阈值 = 认知自检的输出控制 |
+| `cognition-lattice`（§七A） | Corrections 传播阈值 = 认知自检的输出控制 |
 | `scope-discipline` | Delivering Work 的范围漂移治理 = scope-discipline 的理论依据 |
 | `pua-pressure-engine` | 纠错噪声控制 = 压力升级中的突破降压机制 |
 

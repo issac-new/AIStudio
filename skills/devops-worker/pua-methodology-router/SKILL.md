@@ -1,7 +1,7 @@
 ---
 name: pua-methodology-router
 description: "14种问题解决方法论智能路由。按任务类型自动选择最优方法论，失败后按切换链不回头地尝试不同方法论。适配 Hermes 五看板环境。"
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, agent-behavior, methodology, routing]
@@ -10,8 +10,17 @@ metadata:
 
 # PUA 方法论智能路由
 
-> 来源：tanweai/pua `methodology-router.md`，适配 Hermes 五看板环境。
+> 来源：tanweai/pua `methodology-router.md`（3.5.1 增量对齐，2026-09-23 融合：v1.1.0 bump，
+> 本文件路由表与切换链无上游语义变更，属轻量对齐（头部融合标注 + X1 三态协议引用，
+> 增量裁决见 `research/2026-09-23-pua-upstream-delta.md` D 节）。版本 1.0.0→1.1.0
+> 按 Hermes skill 融合批版本对齐惯例取号（与同批 pressure-engine/harness-governance
+> 同批同版），非内容体量声明——2026-09-23 C4 回归 t_5dfc880a 澄清，C2 报告原建议
+> 为 patch 级（1.0.1）。
 > 核心原则：每种方法论不只是说话方式——它代表一套解决问题的思维框架。选对方法论 = 选对解决思路。
+>
+> **验收语义（X1 门控合一）**：本 skill 各 phase 的"完成/切换生效"判定遵循
+> `_shared/02-org-orchestration/acceptance-tri-state-protocol.md`（PASS/BLOCKED/UNKNOWN；
+> UNKNOWN 不能当 PASS；Agent 不得自改判定口径）。
 
 ## Phase 1：任务类型 → 起始方法论
 

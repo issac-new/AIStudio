@@ -282,6 +282,8 @@ For a 全书精读 + "完善 agent 能力" ask, this is a 重型 routing task:
 > 证据 E1-E16 / 三角验证 V1-V4 / 报告 R1-R12 / 伦理 L1-L8 + 12 判例对照表，
 > 全部带书源 pN 锚点）。本小节是骨架十条——**任何深研任务启动前与交付前各过一遍**。
 
+> **知识检索纪律**：hindsight_recall 前预检短路（无关任务/冷启动 bank 不硬调）、关键词中英双语扩展（language-neutral 不译）、召回命中≠知识覆盖（topically-adjacent 禁包装成答案，同题换词≤3 次超即判 gap）、无覆盖按 Rejected/Partial/Gaps 三段模板输出禁猜答案、按任务类型选 hindsight_recall/hindsight_reflect/web_search 不平推。详见 `~/.hermes/profiles/_shared/03-evolution-memory/recall-discipline.md`。
+
 1. **开题分型**：探索/描述/解释——探索型标注"不具代表性"，解释型必须过因果三问（p111-113）。
 2. **概念化**：模糊问题先列维度+操作定义；比较前先对齐口径，口径不一禁止直接对比（p146-150, p43）。
 3. **抽样框声明**：每条结论附来源集合+未覆盖声明；框错了样本量再大无用（《文学文摘》教训，p198, p215）。
@@ -346,4 +348,4 @@ final report was completed without re-dispatching.
 - **evidence-based-research** — anti-hallucination citation rules
 - **scope-discipline** — research-then-propose sequence enforcement
 - **wechat-article-research** — WeChat article fetching with curl+regex
-- **cognition-self-check** — pre-output quality gate
+- **cognition-lattice §七A** — pre-output quality gate

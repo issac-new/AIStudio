@@ -1,0 +1,54 @@
+"""register(ctx) wiring: the seven tools and the ``hermes spotify`` command go through the public plugin
+API with the exact names, toolset and schemas a migrated install depends on."""
+
+from __future__ import annotations
+
+import argparse
+
+import pytest
+
+import spotify_plugin
+from spotify_plugin import spotify_tools
+
+TOOL_NAMES = ["spotify_playback", "spotify_devices", "spotify_queue", "spotify_search",
+              "spotify_playlists", "spotify_albums", "spotify_library"]
+
+
+class RecordingCtx:
+    def __init__(self):
+        self.tools, self.cli = [], []
+
+    def register_tool(self, **kwargs):
+        self.tools.append(kwargs)
+
+    def register_cli_command(self, **kwargs):
+        self.cli.append(kwargs)
+
+
+@pytest.fixture
+def ctx():
+    c = RecordingCtx()
+    spotify_plugin.register(c)
+    return c
+
+
+def test_registers_the_seven_tools_in_the_spotify_toolset(ctx):
+    assert [t["name"] for t in ctx.tools] == TOOL_NAMES
+    for tool in ctx.tools:
+        assert tool["toolset"] == "spotify"
+        assert tool["schema"]["name"] == tool["name"]
+        assert tool["check_fn"] is spotify_tools._check_spotify_available
+
+
+def test_registers_the_spotify_cli_command(ctx):
+    (cmd,) = ctx.cli
+    assert cmd["name"] == "spotify"
+    parser = argparse.ArgumentParser()
+    cmd["setup_fn"](parser)
+    args = parser.parse_args(["status", "--no-browser"])
+    assert (args.action, args.no_browser) == ("status", True)
+    assert parser.parse_args([]).action == "login"
+
+
+def test_tools_are_unavailable_until_logged_in():
+    assert spotify_tools._check_spotify_available() is False

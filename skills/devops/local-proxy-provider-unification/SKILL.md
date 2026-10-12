@@ -1,5 +1,6 @@
 ---
 name: local-proxy-provider-unification
+version: 1.0.0
 title: Unify Hermes Model Providers Behind a Single Local Proxy
 description: "Collapse providers to one local proxy endpoint."
 triggers:

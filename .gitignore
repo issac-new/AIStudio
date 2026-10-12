@@ -67,3 +67,19 @@ __pycache__/
 .hub/
 state.db*
 kanban.db
+
+# v3.1: cron runtime state & pairing auth (never publish)
+cron/output/
+cron/ticker_*
+cron/ticker_heartbeat
+cron/ticker_last_success
+cron/catch_up_occurrences
+cron/usage_audit.jsonl
+cron/persisted_error_recoveries.jsonl
+cron/.jobs_*.tmp
+cron/.hb_*.tmp
+retired_jobs.json
+platforms/pairing/
+action_gate_shadow.jsonl
+child-profile.md
+jobs_wkmt*.tmp

@@ -52,13 +52,13 @@
 3. **方法问（可靠）**：判断是假设还是已验证？验收判据是什么、什么结果算证伪？——未验证不宣称；判据先于行动定死。
 4. **控制问（有效）**：目标与现状的偏差怎么测？出偏差拿什么纠？——无回滚不发布；只记录不消费的告警视同未闭环。
 
-四问之后过 8 项偏差清单（`cognition-self-check` skill）——四问管认识论，偏差清单管认识常见病，叠加使用。
+四问之后过 8 项偏差清单（`cognition-lattice` skill，读 `references/orchestrator_integration.md` §七）——四问管认识论，偏差清单管认识常见病，叠加使用。
 
-## 各论在集群内的抓手（要展开时读哪）
+## 各论的展开入口
 
 | 论 | 透镜 skill | 集群机制实例 |
 |---|---|---|
-| 系统论 | `systems-lens` | capability-graph 能力图、task_links 依赖链、structure-evolution 五步闭环、ontology 对象模型 |
+| 系统论 | `systems-lens` | capability-graph 能力图、task_links 依赖链、structure-evolution 六步闭环、ontology 对象模型 |
 | 信息论 | `information-lens` | S4 注入侧收敛、夜间雷达采样、audit 只读脚本、金书滤波六法（页锚在 cybernetics-dual-lens） |
 | 科学方法论 | （不单设——载体即验证工程本身） | rd-validate 三方对账、code-review Diamond 门、证据五档、验收标准 frozen 可二分 |
 | 控制论 | `cybernetics-dual-lens`（主镜） | meta-watchdog 交叉互检、异构 fallback、路由留痕→月度聚合→打回→复测、S6 回滚垫 |

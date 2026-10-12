@@ -4,12 +4,16 @@ description: Use when integrating AREX-Skill library or DisCo CLI into an agent 
 category: devops
 source_repo: https://github.com/VectorSpaceLab/AREX-Skill
 distilled: 2026-09-05
-status: DRAFT — pending platform-skill-curator review
+status: REJECTED — 无消费者场景（2026-09-25 最终裁决）
 ---
 
 # SkillProposal: arex-skill-library-usage [create]
 
 > Auto-drafted by repo-to-skill procedure (task t_a71fef4d). Not merged — curator review required.
+
+## 最终裁决（2026-09-25，platform-ontology-curator）
+
+**判定：❌ REJECT(已实现/无消费者)** — DisCo CLI 从未安装（`which disco` 零命中）、AREX-Skill 1000 skill 库从未接入集群、触发条件（"when an agent needs to install AREX-Skill"）在本集群无真实场景。grep 现有 skills 目录 `arex|disco|AREX|DisCo` 零命中，确认无等价 skill 但也无消费者——属**无消费者 skill**（同 triage 拒绝先例：机制存在、运行时无调用方）。复活条件：① DisCo CLI 实际安装且 `disco --version` 可用；② 至少 1 个真实业务任务用它消费过 skill 库。届时按本提案正文重新起草，并补「接入后首个实战任务」的 task_id 证据。
 
 ## 评审意见（2026-09-07，platform-skill-miner 同 job 评审通道）
 

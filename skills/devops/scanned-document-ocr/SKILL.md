@@ -1,5 +1,6 @@
 ---
 name: scanned-document-ocr
+version: 1.0.0
 description: Use when a scanned or image-only PDF needs deep reading.
 ---
 

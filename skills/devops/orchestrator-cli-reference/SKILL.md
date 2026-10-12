@@ -1,7 +1,7 @@
 ---
 name: orchestrator-cli-reference
 description: "Use when orchestrator needs kanban/markings/routing cmds."
-version: "1.0"
+version: "1.2"
 trigger: "orchestrator 需要命令速查"
 ---
 
@@ -51,14 +51,14 @@ import yaml, json, sys
 assignee = '<target_assignee>'
 c = yaml.safe_load(open(f'$HOME/.hermes/profiles/{assignee}/config.yaml'))
 clearances = set(c.get('clearances', ['TLP:GREEN', 'TLP:CLEAR']))
-inherited = set(json.loads(sys.argv[1]))  # 传入继承的 markings
+inherited = set(json.loads(sys.argv[1]))  # 传入的继承的 markings
 missing = inherited - clearances
 if missing:
     print(f'BLOCK: clearance 不足: {missing}')
     sys.exit(1)
 else:
     print('PASS')
-" '[\"TLP:AMBER\", \"PII\"]'
+" '[\\\"TLP:AMBER\\\", \\\"PII\\\"]'
 
 # 查看共享 ontology
 cat ~/.hermes/profiles/_shared/02-org-orchestration/ontology.md | head -50
@@ -149,7 +149,7 @@ python3 ~/.hermes/bin/failure-boundary-scan.py --task t_xxx  # 单任务深查
 # 1. 获取父任务 ID 及其所有子任务
 PARENT_TASK_ID=<parent_task_id>
 sqlite3 ~/.hermes/kanban/boards/hack/kanban.db \
-  "SELECT id FROM tasks WHERE parents LIKE '%$PARENT_TASK_ID%';" > /tmp/child_ids.txt
+  "SELECT id FROM tasks WHERE parents LIKE '%$PARENT_TASK_ID%';>" > /tmp/child_ids.txt
 
 # 2. 识别 recon 子任务（baseline）和 exploit/auditor 子任务（snapshot）
 #    约定：recon 阶段 assignee=hack-recon，exploit 阶段 assignee=hack-exploit
@@ -176,6 +176,67 @@ cat "$PARENT_WS/drift_comparison.md" >> "$PARENT_WS/merged_report.md"
 
 > 脚本位置：`_shared/scripts/drift_compare.py`（语法自检 OK）
 > 模板参考：`_shared/05-eng-execution/drift-comparison-template.md`
+
+## 报告产物与任务树核对
+```bash
+# 先定位报告，不凭记忆拼路径
+search_files --target files --path <workspace> --pattern '*report*'
+search_files --target files --path <workspace> --pattern '*.md'
+
+# 亲读 Markdown/JSON；报告存在不等于复核完成
+# macOS 直接打开（用户说"打开"时必须执行，而不是只贴摘要）
+open -a "Visual Studio Code" <absolute-report.md>
+open -a "Visual Studio Code" <absolute-report.json>
+
+# 收口前检查整棵任务树；Checker 仍 running/ready/blocked 时不能宣称最终完成
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db \
+  "SELECT id,status,title,assignee,completed_at FROM tasks WHERE id IN ('<recon>','<audit>','<checker>','<root>');"
+```
+
+交付报告时分开标注 `confirmed`、`confirmed-design-risk`、`candidate-trust-boundary`、`positive control` 和 `not tested`；shell sink 的静态存在不自动等于可利用漏洞，必须有不可信输入可达和影响证据。用户要求"打开"时同时返回已执行的查看命令与绝对路径。
+
+## CLI 创建卡（kanban_create 工具层 raci 注入 bug 时的绕道）
+```bash
+# kanban_create 工具层有 raci 注入 bug → 用 CLI 绕道；长 body 用 --body-file（支持内嵌换行/横杠行）
+# 语法:create 用 --workspace "dir:<abs_path>"（直接带值形式，等号/空格分隔符解析不一致）
+hermes kanban --board swarm create "<标题>" \
+  --assignee worker-researcher \
+  --priority 6 \
+  --workspace "dir:<abs_workspace>" \
+  --body-file <abs_body.md> --json
+
+# 派卡必验三件套：卡落库 + workspace_kind 非 scratch + 路由标记在位
+sqlite3 file:$HOME/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT id,status,assignee,workspace_kind,workspace_path FROM tasks WHERE id='<task_id>';"
+grep -c '^routed:heavy' <abs_body.md>
+```
+
+## 收卡与板旗（kanban complete 陷阱）
+```bash
+# --board 是 kanban 子命令级旗标，必须放在子命令前；complete 子命令自身没有 --board
+hermes kanban --board swarm show t_xxx        # ✓
+hermes kanban complete --force t_xxx ...      # ✗ 查 default 板 → 误报 unknown id or terminal state
+hermes kanban --board swarm complete --force t_xxx --summary "..." --metadata '{"k":"v"}'  # ✓
+
+# kanban_comment / kanban_complete 等写工具报 no such function: kanban_write_sanctioned
+#   → 整个写族退化，一律用 CLI：
+hermes kanban --board swarm comment t_xxx "<文本>" --author orchestrator   # ✓
+hermes kanban --board swarm show t_xxx                                      # ✓ 读工具仍可用
+
+# CLI comment 参数是位置参数（task_id + 文本），不是 --body；SQLite 表名是 task_comments（无 s）
+sqlite3 file:$HOME/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT count(*) FROM task_comments WHERE task_id='<task_id>';"
+
+# blocked 卡重开与归档同样走 CLI，--board 同样置于子命令前（kanban_* 工具层无 unblock/archive 动作）
+hermes kanban --board data unblock t_xxx    # blocked → ready（父门控自动判定）/ todo
+hermes kanban --board data archive t_xxx    # 归档（同族合一处置、终态收档用）；归档前先 kanban_comment 留处置依据
+
+# 自持卡收尾：kanban_complete 工具对 claim_lock=本会话自身 gateway 的卡也拒（报 live worker claim，
+# 工具参数无 expected_run_id）→ 直接走 CLI --force 收；收前可查 claim 归属判定是否 self-claim
+sqlite3 ~/.hermes/kanban/boards/<slug>/kanban.db "SELECT id,status,claim_lock FROM task_runs WHERE task_id='t_xxx' ORDER BY id DESC LIMIT 1;"
+
+# 板库定位：正库 = boards/<slug>/kanban.db；同目录 board.db / <slug>.db 可能是空文件红鲱鱼；收完 sqlite 验终态 done
+```
 
 ---
 

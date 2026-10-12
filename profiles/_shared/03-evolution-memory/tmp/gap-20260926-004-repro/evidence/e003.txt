@@ -1,0 +1,9 @@
+e003 — Patch logic in fixed version (litellm==1.104.2, same file).
+def _admission_failure_fallback(...) at user_api_key_auth_mcp.py:311:
+    Only returns anonymous UserAPIKeyAuth() when ALL hold:
+      _is_litellm_auth_admission_error(exc)  (genuine 401/403)
+      AND no client-supplied MCP auth headers
+      AND _is_mcp_passthrough_cold_start(...)   (RFC 9728 OAuth discovery, is_oauth_passthrough servers)
+    Otherwise: raise _gateway_dcr_challenge(...) or raise exc  (fail-closed).
+Diff vs 1.83.3: unconditional 401->UserAPIKeyAuth() replaced by gated cold-start-only bypass.
+

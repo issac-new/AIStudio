@@ -1,5 +1,6 @@
 ---
 name: model-fleet-migration
+version: 1.0.0
 title: Fleet-Wide Model/Provider Migration via profiles.yaml
 description: "Use when 统一模型 or migrating all profiles' model routing."
 triggers:

@@ -1,10 +1,10 @@
 ---
 name: pua-harness-governance
 description: "四权分离防作弊治理。行动权/自评权/评分权/环境修改权分离，防止 agent 把看起来完成伪装成真实完成。增强 kanban_complete 验证逻辑。"
-version: 1.0.0
+version: 1.1.1
 metadata:
   hermes:
-    tags: [devops, agent-behavior, governance, anti-cheating, kanban]
+    tags: [devops, agent-behavior, governance, anti-cheating, four-rights]
     related_skills: [pua-pressure-engine, pua-methodology-router, loop-engineering-gates]
 ---
 
@@ -39,6 +39,22 @@ Task Contract (intent / acceptance / forbidden / verify_commands)
    ↓
 [最终裁决] orchestrator / human gate → final verifier_status
 ```
+
+## 四权代理化（v1.1.0 增补）
+
+> 来源：tanweai/pua 3.5.1 `agents/pua-{action-executor,verifier,policy-guardian,self-reviewer}.md`（D5 merge）。
+> 上游把四权分离从原则落成"每权一个最小工具集子代理"；Hermes 等价实现 = `delegate_task` 子代理 + 工具集约束，
+> 不搬原文件（其 frontmatter 是 Claude Code agent 格式）。
+
+| 角色 | 持有的唯一权力 | 允许工具 | 禁止动作 |
+|---|---|---|---|
+| action-executor | 行动权 | 文件读写、terminal（除审批类） | 自评完成、改验证口径 |
+| verifier | 评分建议权 | 只读：read_file / search_files / terminal 只读命令 | 修改代码或状态（只提 review 结论） |
+| policy-guardian | 环境修改权 | 只读边界检查 | 改动 tests/CI/权限前必须先提请用户确认 |
+| self-reviewer | 自评权 | 只读 + 对抗视角清单 | 顺着实现者思路复核（必须攻击计划） |
+
+原则：子代理的权力范围只能比上游更小（权限交集公式）；一权一代理，禁止单代理同时持有
+行动权与最终评分权。
 
 ## Task Contract 最小格式
 
@@ -90,6 +106,12 @@ Task Contract (intent / acceptance / forbidden / verify_commands)
 4. 外部验证（kanban_complete 验证门 / delegate_task 独立审查 / human gate）独立验证
 5. 如果验证失败，只根据 fail report 修复，不改评分器逃避失败
 6. 交付报告必须包含：变更、验证命令、失败路径、剩余风险
+7. 验收五单列（v1.1.0 增补，来源：tanweai/pua 3.5.1 CHANGELOG.md:15 / D6）：
+   缺失证据、拒绝、回退、审批阻断、限流五种情形**分列计数**，不用传输成功替代行为通过。
+   独立功能检查由验收者在模型结束后运行——"验收者运行 ≠ 模型自己运行过"
+   （MODEL-MATRIX-20260909.md:21，2026-09-23 C4 回归勘误：原引 :12 实为 :21）。检查项状态语义按
+   `_shared/02-org-orchestration/acceptance-tri-state-protocol.md`（PASS/BLOCKED/UNKNOWN，
+   UNKNOWN 不能当 PASS）。
 
 ## 候选状态 vs 最终状态
 
@@ -213,6 +235,22 @@ kanban_complete 后，结果在 Hermes kanban DB 中持久化：
 | 最终审计/防篡改 | ⑦ result | 冻结 metadata |
 
 ---
+
+## 上游同步通道（v1.1.1 增补，3.5.1 融合配套）
+
+本 skill 与 `pua-pressure-engine`/`pua-methodology-router` 的上游是 tanweai/pua。
+增量锚点（2026-09-23 调研，`research/2026-09-23-pua-upstream-delta.md`）：
+`pinned_tag=v3.5.1, main=e6e6cd2`。
+
+检查上游是否有增量（**人工触发，无 cron**）：
+
+```bash
+python3 ~/.hermes/bin/pua-upstream-check.py          # 无更新 exit 0；检出更新 exit 1（附 diff 摘要与建议动作）；网络失败 exit 2（报 unknown，按 _shared/02-org-orchestration/acceptance-tri-state-protocol.md 记 UNKNOWN，不得当 PASS）
+python3 ~/.hermes/bin/pua-upstream-check.py --json   # 机器可读输出
+```
+
+检出更新后的动作：人工触发新一轮 C2 式增量调研（裁剪融合、本地语环境不回灌、
+融合标注 `grep -c '3\.5\.[0-9]'` 机械化验收），锚点随调研更新进本节。
 
 ## 可接受的"100% 信心"定义
 

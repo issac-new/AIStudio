@@ -54,3 +54,4 @@ echo $HOME/hermes-docker-sandbox/workspace   # 或读 config.yaml default_workdi
 1. **`dir` ≠ 持久**：`workspace_kind="dir"` 只是"共享目录模式"，路径仍由你指定——指向 `/tmp` 一样会丢。
 2. **PDF/大语料重跑成本高**：OCR 全书 ~10 min、爬取数小时——重跑代价越大，越要落持久路径并纳入 `artifacts`。
 3. **事后补救**：发现产物在易失路径，立即 `cp -r` 到 default_workdir 并在 kanban_comment 记录新路径，别等系统清理。
+4. **workspace_path 禁写 symlink 前缀——用解析后的真实绝对路径**：dispatcher/spawn 对该路径做直接存在性判定与排他创建，symlink shim 前缀让判定落在未解析路径上撞 `File exists`，spawn 反复失败直到预算烧尽。建卡前 `cd <path> && pwd -P` 取真实路径写入 body；卡已建则先改卡路径再解锁，别让 worker 带病重试。

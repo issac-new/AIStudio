@@ -1,6 +1,7 @@
 ---
 name: security-tool-acceptance-testing
-description: "安全工具脚本验收：回环 fixture 零外网测试+状态机复测。"
+version: 1.1.0
+description: "安全工具脚本验收：回环 fixture 零外网测试+状态机复测+工具形状边界自检。"
 platforms: [macos, linux]
 ---
 
@@ -51,6 +52,24 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 - run1 后检查 state 文件非空；run2 同参数 → 「无新告警 + 退出码=无发现」。
 - run2 允许极少量新增——外部源结果集有动态性；逐条可解释（不在 run1 结果集）即不算去重失效。
 - 无 token 匿名 API（如 GitHub Search 10 req/min）：脚本必须内置请求间隔 + 429/403 退避（Retry-After 优先、指数退避、重试 ≤2），验收时 grep 这些逻辑存在。
+
+## 配方四：工具形状边界自检（REA tool-design 方法论，2026-10-11 融合）
+
+自研/移植的安全工具脚本，交付前过一遍形状自检——工具边界模糊是「全能脚本腐化」的根因：
+
+| 形状 | 用途 | 反例（不该混进来） |
+|------|------|-------------------|
+| inspect | 单对象事实（返回字段+位置+覆盖面） | 顺带做发现或修改 |
+| search/list | 候选发现（稳定排序，需要时分页） | 顺带深入分析单个候选 |
+| trace | 跨证据关系（typed edges + 未解路径） | 顺带下结论 |
+| compare | 显式配对（身份+可比覆盖+受支持差异） | 隐式「和上次比」 |
+| workflow | 反复出现的多源组合（保留调用方选择权） | 首版就上 workflow |
+| observe/capture | 运行时行为（如实声明副作用与生命周期） | 静默启动子进程 |
+
+- **限制合法性**：限制必须来自真实格式/协议/权限/实测资源约束——「假设的 agent 预算」不是理由。先测量再定预算，在昂贵步骤前强制。
+- **产物证据化**：结论带 confidence（observed/derived/inferred）+ authority + limitations；「未覆盖」输出为 unknown，不是 absence。
+- **失败保真**：tagged error + 部分事实保留；降级必须显式（不可静默 fallback 到次优数据源）。
+- 原文：`~/hermes-docker-sandbox/workspace/research/rea-src/docs/tool-design.md`；调研报告同目录 `rea-research-report.md` §2.5。
 
 ## 已知坑
 

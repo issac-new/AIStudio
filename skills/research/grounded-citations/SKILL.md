@@ -243,6 +243,11 @@ and read the `info: stats:` line to see the counts before picking a number.
   retrieval, not more markers.
 - **Hand-editing the Sources block.** Use `render --replace-in <draft>`; slicing
   the file yourself risks a stale or duplicated block that `verify` then flags.
+- **URLs ending in `)`.** Markdown-style renders (`[title](url)`) truncate the
+  closing paren (e.g. `...respiratory-syncytial-virus-(rsv)`), and `verify`
+  then fails with a ledger-mismatch for that id. Register such URLs
+  percent-encoded (`%28rsv%29`) — or render with `--style plain` — so the
+  Sources block survives round-tripping.
 
 ## Verification
 

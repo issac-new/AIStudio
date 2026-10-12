@@ -1,8 +1,8 @@
 mcp_servers:
-  hermes-studio-api:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-api:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - api
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -10,14 +10,15 @@ mcp_servers:
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
-      HERMES_MCP_SERVER_NAME: hermes-studio-api
+      HERMES_MCP_SERVER_NAME: ekko-studio-api
       HERMES_MCP_TOOLSET: api
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-browser:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-browser:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - browser
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -25,14 +26,15 @@ mcp_servers:
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
-      HERMES_MCP_SERVER_NAME: hermes-studio-browser
+      HERMES_MCP_SERVER_NAME: ekko-studio-browser
       HERMES_MCP_TOOLSET: browser
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-devices:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-devices:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - devices
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -40,14 +42,15 @@ mcp_servers:
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
-      HERMES_MCP_SERVER_NAME: hermes-studio-devices
+      HERMES_MCP_SERVER_NAME: ekko-studio-devices
       HERMES_MCP_TOOLSET: devices
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-use:
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-use:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
@@ -56,33 +59,79 @@ mcp_servers:
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
-      HERMES_MCP_SERVER_NAME: hermes-studio-use
+      HERMES_MCP_SERVER_NAME: ekko-studio-use
       HERMES_MCP_TOOLSET: use
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
+    enabled: true
+  ekko-studio-interaction:
+    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    args:
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - plan
+    env:
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: _shared
+      HERMES_MCP_SERVER_NAME: ekko-studio-interaction
+      HERMES_MCP_TOOLSET: plan
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
 auxiliary:
   vision:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   compression:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   approval:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   title_generation:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   background_review:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   goal_judge:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   kanban_decomposer:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   moa_aggregator:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   moa_reference:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   profile_describer:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
   triage_specifier:
     api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  session_search:
+    provider: custom:cc-switch
+    model: aim
+  web_extract:
+    provider: custom:cc-switch
+    model: aim
 fallback_providers:
   - provider: custom:cc-switch
-    model: glm-5.3-flash
+    model: aim
+    api_mode: anthropic_messages

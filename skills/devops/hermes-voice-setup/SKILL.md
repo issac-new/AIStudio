@@ -1,5 +1,6 @@
 ---
 name: hermes-voice-setup
+version: 1.0.0
 description: "Use when setting up Hermes voice (STT/TTS/voice mode)."
 ---
 

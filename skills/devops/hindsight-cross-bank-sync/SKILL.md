@@ -25,7 +25,7 @@ this skill implements the topic bridge on top of it).
   (merging pollutes both sides with irrelevant domains)
 - Periodic or event-driven memory synchronization between banks
 
-## Verified case (2026-08, production)
+## Verified case (production)
 
 Orchestrator (swarm bank, 4692 nodes) vs [已移除]-orchestrator ([已移除] bank,
 20 nodes). Mom-side teachers could not recall any child-analysis memories
@@ -71,18 +71,49 @@ POST /v1/default/banks/<bank_id>/memories/recall  {"query": "<keywords>"}
 Recall returns results under `results` (or `items`). Spot-check the bridge
 with a query whose answer can only live in the source bank.
 
-## Working pattern (4 rules)
+## Working pattern (7 rules)
 
 1. **Broad→narrow direction needs a keyword filter.** The swarm bank mixes
    tech + family memories; filter by domain keywords (child name, family
    roles, domain terms) before writing. Narrow→broad ([已移除] is 100%
    child-themed) copies unfiltered.
-2. **Dedup by first ~80 chars of `text`** against the destination set —
-   makes the script idempotent for cron reruns.
-3. **Loop prevention via origin tags.** Tag writes `sync-from-<source>`;
-   filter tagged items OUT of the source list before syncing. Without this,
-   A→B then B→A ping-pongs forever.
-4. **Truncate** content ~2000 chars, context ~100 chars.
+2. 🔴 **Dedup against the DESTINATION's `documents.content_hash`** — never by
+   text prefix, never against memory_unit text. Every synced item becomes a
+   document + ≥1 LLM extraction call, and unit text drifts as extraction
+   merges/rewrites facts, so any unit-anchored match decays and the next run
+   re-imports the same content (a weak prefix match shipped 20%+ duplicate
+   documents that each paid an extraction). `content_hash` = sha256 of the
+   VERBATIM POSTed content — no whitespace normalization; hash the exact
+   string you POST. Endpoint:
+   `GET /v1/default/banks/<bank>/documents?limit=200&offset=N` (paged like
+   memories/list; items carry `content_hash`).
+3. 🔴 **Loop gate excludes ALL `sync-from-*` tags in BOTH directions.**
+   Filter `any(str(t).startswith("sync-from-"))` on the source list —
+   filtering only your own bank's tag lets copies bounce A→B→A forever, each
+   bounce spawning a fresh document + extraction (this grew one bank to 99%
+   sync copies).
+4. **Guard-gate before writing (two-phase).** Dry-compute the plan
+   (`do_post=False`), and if either direction exceeds ~100 items, exit
+   non-zero WITHOUT writing — a big plan means first-run backfill or a broken
+   dedup gate; require an explicit `--allow-backfill` to proceed. Never gate
+   on the post-write returned count: by then the writes happened.
+5. **Truncate** content ~2000 chars, context ~100 chars — and compute the
+   dedup hash on the truncated string (the anchor must equal what is stored).
+6. **Increment anchor = documents.created_at via a state file — never unit
+   timestamps.** memory_unit timestamps are all unusable for incremental windows:
+   `date` is truncated to midnight (event date, not write time),
+   `mentioned_at` is refreshed by every recall, `edited_at` is null on fresh
+   units — and unit text drifts as extraction merges facts, so a rolling
+   window over units re-admits stale drifts forever. v4 anchors on the last
+   successful sync time (state file `~/.hermes/state/child_memory_sync_state.json`,
+   first run = now ⇒ no historical backfill, per explicit user decision)
+   and syncs whole documents created after it, verbatim via
+   `documents/{id}` detail `original_text` — hash idempotent by construction.
+7. **Advance the anchor only after BOTH directions succeed**; on partial
+   failure keep it (hash dedup makes the retry a no-op for already-synced
+   docs). Async retain is invisible to an immediate re-read: the source
+   document row lands seconds later — a sync fired right after a POST sees
+   nothing; that's expected, the next run catches it.
 
 ## Delivery guarantees
 
@@ -94,8 +125,19 @@ with a query whose answer can only live in the source bank.
   sync covers analysis memories only. Files shared by path are always
   consistent; banks need the bridge.
 
-Reference implementation:
-`~/hermes-docker-sandbox/workspace/life-workbench/scripts/child_memory_sync.py`
+## Verify a sync-logic change end-to-end
+
+1. POST a tagged probe memory to the source bank (content marked as a test
+   item), then run the sync once.
+2. The probe must land in the destination carrying the `sync-from-` tag
+   (check the documents list/detail, not just the run's printed plan).
+3. Run the sync again — that direction's plan must be 0 (anchor advanced;
+   hash dedup makes the repeat a no-op). Both steps together prove
+   connectivity, extraction handoff, tagging, and idempotence.
+
+Reference implementation (v4: document-level incremental sync with state-file
+anchor + content-hash dedup + bidirectional loop gate + two-phase guard):
+`~/.hermes/profiles/orchestrator/scripts/child_memory_sync.py`
 
 ## Gotchas
 
@@ -108,6 +150,13 @@ Reference implementation:
   hermes CLI needed.
 - Hindsight retain can intermittently return empty/error (cc-switch
   circuit-breaker related): retry once — succeeds on second attempt.
+- **Sync volume IS LLM cost**: one document write triggers ≥1 extraction
+  call; a bulk import of hundreds of docs = thousands of calls and can
+  exhaust a cc-switch subscription quota by mid-morning. Keep daily deltas
+  small and cap what a single run may write.
+- Verify dedup health by counting duplicate hash groups (API documents
+  endpoint, or Postgres `SELECT count(*)-count(DISTINCT content_hash) FROM
+  documents WHERE bank_id='...'`) — should always be 0.
 
 ## Related Skills
 

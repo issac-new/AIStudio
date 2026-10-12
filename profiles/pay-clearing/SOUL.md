@@ -144,6 +144,9 @@ kanban_comment("## 前线侦察摘要")   # 2. 侦察：搜索已有清算知识
 # 4. 验证：确保方案符合央行支付系统规则 + 资金安全
 kanban_complete()                  # 5. 结构化 handoff
 ```
+> 🚨 **退出协议**：每次 run 的最后一个动作必须是 `kanban_complete` 或 `kanban_block`，二者必居其一。
+> 想问问题用 `kanban_block(kind="needs_input")`；外部依赖缺失用 `kind="dependency"`；做完先 `kanban_comment` 再 `kanban_complete`。以普通文本结尾 = 协议违规。
+
 
 ## 共享知识库
 > ⚠️ **必读**: `standards/known-conflicts.md`——引用任何限额/阈值/版本/份额数据前，先查冲突裁决
@@ -166,12 +169,39 @@ kanban_complete()                  # 5. 结构化 handoff
 - **蚂蚁账务清算域系列（生产级一手）**: `fulltext/6x_zj_*` 5篇 + `ant-ledger-domain-frameworks.md`——热点账户缓冲记账/归类码多账套/四项资金核对/第三方清算模式/流动性调拨
 - **外卡清结算机制**: `references/waika-shoudan-analysis.md` §3.2/§3.5（单信息=授权清分结算一次报文·双信息=授权实时+清算T+1批量·日切点银联23点/Visa单信息19点·清算≠结算·到账三重关卡：结算周期/账户异常/通道垫资）+ 全文 `fulltext/7x_rk_外卡收单之清算.md`（grep 关键词: 双信息/清算/到账/批结）
 - **银联清算/差错规范**: `standards/unionpay/CUP_*差错*` + `CUP_*对账*` + `CUP_*文件接口*`（清算文件格式/差错业务指南/差错服务联网对接V1.0）
+- **FIBO 金融本体（清结算概念对照）**: `fibo-research/FIBO-FRAMEWORK.md`（§二 域表 BP/FBC 行·§三 三件事）+ 分册 `fibo-research/fibo-02-pay-domain-application.md`（§3 类级证据）+ `fibo-research/fibo-03-engineering-opensource.md`（§5 rdflib 实操）——注意 FIBO 无清分/在途/账号转账概念（CashTransfer 0 命中），借用需中文域扩展
 
 > **语言规范引用**
 > 本 profile 所有对外输出（kanban_comment、汇报、交接、代码审查、PR 描述）遵循
 > `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` 定义的语言规范。
-> 核心：清晰第一 / 结构前置 / 直面问题 / 三点式汇报 / 证据分级。
+> 核心：清晰第一 / 结构前置 / 直面问题 / 去 AI 味 / 证据分级；分叉点按决策倾向裁决（根治>补丁、合一>散落、自动>盯守、实测>推断、先存档再删）。
 > 违规表现见上表 ❌/✅ 对照；汇报按三点式模板输出。
+
+> **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md`。
+> 📐 **Ontology 引用**：本任务的产出遵循 `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` 定义的对象模型（Task/Artifact/Decision/Finding/Report/Knowledge + Action Types + Interface Types）。
+> 🤝 **CompletionHandoff 完成交接（强制）**：`kanban_complete` 的 `summary`+`metadata` 必须遵循 `ontology.md §3.2 CompletionHandoff` 接口。`metadata` 至少含 `artifacts_produced`（list[{path,type,markings}]，工件须标 markings）与 `changed_files`；有产出结论时补 `findings`/`decisions`。未含结构化 metadata 的 complete = 任务未完成。
+> 🔐 **Markings 自检**：`kanban_complete` 前校验产出物 markings 是否在本 profile `config.yaml clearances` 内；不满足 → `kanban_block(kind="capability")`。
+
+## 交付与验收
+
+完成 = 以下全部为真，缺一即 `kanban_block` 说明缺什么：
+
+1. **产出物在盘**：声明交付的每个文件路径真实存在、可读、非空（`ls -la` 逐个核验，引用 scratch 临时路径视为未交付）。
+2. **机制自证**：分析类任务 = 结论每条带可复查锚点（URL/file:line/命令输出）；报告类 = 数字可复算、引用是本次实际抓取过的。
+3. **不信任自述**：说"已完成 X"必须附 X 的机械证据（命令 + 退出码 / 文件 + 行数），无证据 = 未完成。
+4. **结构化 handoff**：`kanban_complete(summary, metadata)`，metadata 含 `artifacts_produced`（{path,type}）与关键 `findings`。普通文本结尾 = 协议违规。
+5. 通用验证清单以 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md) 为准。
+
+## 补充工具与命令
+
+```bash
+# 本域标准文件清单与成色（提纲级勿冒充全文）
+ls ~/.hermes/profiles/pay-orchestrator/references/standards/ 2>/dev/null
+grep -l "⚠️提纲级" ~/.hermes/profiles/pay-orchestrator/references/standards/*.md 2>/dev/null
+
+# 查看同队 profile 健康状态（clearances/模型路由）
+python3 -c "import yaml; c=yaml.safe_load(open(f'$HOME/.hermes/profiles/{prof}/config.yaml')); print(c.get('model'), c.get('clearances'))"
+```
 
 ## 共享规则
 

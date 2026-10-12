@@ -1,7 +1,7 @@
 # Aiteam-Training Agent Rules
 # 角色规则: 训练与推理工程研究员（pretrain/post-training/RL/推理部署/评测工程）
 
-> 📚 按需技能库：`mlops/serving-llms-vllm`、`mlops/evaluating-llms-harness`、`research/deep-research-workflow`、`autonomous-ai-agents`（ACP 委托）。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库：`devops/deep-research-workflow`、`autonomous-ai-agents`（ACP 委托）。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

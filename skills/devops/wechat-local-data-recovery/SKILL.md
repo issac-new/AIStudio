@@ -1,5 +1,6 @@
 ---
 name: wechat-local-data-recovery
+version: 1.0.0
 description: 从微信 Mac 本地 msg/file 目录恢复丢失的产物文件。当 scratch 工作区清理导致产物丢失时使用。
 triggers:
   - "从微信恢复"

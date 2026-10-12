@@ -1,0 +1,109 @@
+{
+  "jobs": [
+    {
+      "id": "c8a13baddc1e",
+      "name": "egress-audit-watchdog: 出口写入审计日检+unknown超阈值告警",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "egress-audit-watchdog.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 6 * * *",
+        "display": "30 6 * * *"
+      },
+      "schedule_display": "30 6 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 26
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-18T03:22:41.315430+08:00",
+      "next_run_at": "2026-10-13T06:30:00+08:00",
+      "last_run_at": "2026-10-12T06:32:54.483904+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "failure_streak": 0,
+      "deliver": "weixin",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-12T06:30:00+08:00",
+        "dispatched_at": "2026-10-12T06:30:57.845145+08:00",
+        "lateness_seconds": 57.8,
+        "kind": "on_time"
+      },
+      "last_failure": {
+        "at": "2026-10-09T07:37:27.409058+08:00",
+        "detail": "Script exited with code 1\nstderr:\nmkdir: /Volumes/YOURVOLUME/lab: Permission denied\nTraceback (most recent call last):\n  File \"<stdin>\", line 6, in <module>\nFileNotFoundError: [Errno 2] No such file or directory: '/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench/gap_workspaces/gap-20260909-005/ops-sre-watchdog/egress-audit-alert-rules.yaml'"
+      }
+    },
+    {
+      "id": "a794cec53f0d",
+      "name": "STALE_BACKUP告警消费方",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "stale_backup_alert_consumer.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */6 * * *",
+        "display": "0 */6 * * *"
+      },
+      "schedule_display": "0 */6 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 43
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-03T12:22:52.970838+08:00",
+      "next_run_at": "2026-10-12T12:00:00+08:00",
+      "last_run_at": "2026-10-12T06:00:58.404245+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "failure_streak": 0,
+      "deliver": "weixin",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-12T06:00:00+08:00",
+        "dispatched_at": "2026-10-12T06:00:58.045380+08:00",
+        "lateness_seconds": 58.0,
+        "kind": "on_time"
+      }
+    }
+  ],
+  "updated_at": "2026-10-12T06:32:54.484327+08:00"
+}

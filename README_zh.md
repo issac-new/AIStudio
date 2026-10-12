@@ -1,13 +1,13 @@
 # SwarmTeam — Hermes Agent 多 Agent Profile 分发仓库
 
 > 基于 [Hermes Agent](https://hermes-agent.nousresearch.com) 的生产级多智能体系统。
-> **17 个 profile** 分布在 3 个团队（swarm/product/ops），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
+> **40 个 profile** 分布在 10 个团队（swarm/product/ops/platform/aiteam/pay/data/[已移除]/hack/worker），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
 
 ## 概览
 
 本仓库分发 Hermes Agent 多智能体团队配置。每个 profile 有独立的 SOUL.md 人格、config.yaml 配置和角色专属规则。Orchestrator 是所有 Gateway 消息（Matrix/Weixin/API Server/Email）的唯一入口，通过看板将任务路由到专家 profile。
 
-**17 个 profile** · **3 个团队** · **3 个看板** · skills（orchestrator 范围）
+**40 个 profile** · **10 个团队** · **10 个看板** · 全量 skills + 六层 _shared 共享规则
 
 ## Profile 名册
 

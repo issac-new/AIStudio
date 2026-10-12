@@ -1,5 +1,5 @@
 name: ops-eval
-version: 3.0.0
+version: 3.1.0
 description: "Workflow evaluator — metrics & improvement"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"

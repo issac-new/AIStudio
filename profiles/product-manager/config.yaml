@@ -1,5 +1,5 @@
 model:
-  default: glm-5.3-flash
+  default: aim
   provider: custom:cc-switch
 custom_providers:
   - api_key: PROXY_MANAGED
@@ -33,7 +33,7 @@ compression:
   threshold: 0.35
 memory:
   memory_enabled: true
-  provider: hindsight
+  provider: ''
   user_profile_enabled: true
 kanban:
   auto_decompose: false
@@ -45,28 +45,47 @@ kanban:
   default_assignee: product-manager
 display:
   language: zh
-  personality: kawaii
   skin: daylight
 security:
   redact_secrets: true
-  tirith_enabled: true
 privacy:
   redact_pii: true
 approvals:
-  mode: smart
+  mode: 'off'
 auxiliary:
   approval:
     model: glm-5.3-flash
     provider: custom:cc-switch
-  compression:
-    model: glm-5.3-flash
+  background_review:
     provider: custom:cc-switch
+    model: glm-5.3-flash
+  compression:
+    model: claude-opus-5
+    provider: custom:cc-switch
+  goal_judge:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  kanban_decomposer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_aggregator:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_reference:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  profile_describer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
   session_search:
     model: glm-5.3-flash
     provider: custom:cc-switch
   title_generation:
     model: glm-5.3-flash
     provider: custom:cc-switch
+  triage_specifier:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
   vision:
     model: glm-5.3-flash
     provider: custom:cc-switch
@@ -74,15 +93,17 @@ auxiliary:
     model: glm-5.3-flash
     provider: custom:cc-switch
 fallback_providers:
-  - provider: alibaba
-    model: qwen3-max
+  - provider: custom:cc-switch
+    model: aim
+    api_mode: anthropic_messages
 platforms:
   api_server:
     enabled: false
   matrix:
     enabled: false
 plugins:
-  disabled: []
+  disabled:
+    - hindsight
   enabled:
     - acp-client
     - hindsight
@@ -99,8 +120,230 @@ extra:
   skills_pinned:
     - skill-recall
     - cognition-lattice
+skills:
+  disabled:
+    - acp-provider-free-window-routing
+    - acp-provider-selection
+    - adversarial-review-lens
+    - agent-memory-curation
+    - agent-profile-lifecycle
+    - agent-profile-skill-audit
+    - agent-soul-patching
+    - ai-writing-detox
+    - api-server-third-party-clients-v2
+    - archify
+    - article-methodology-fusion
+    - as-is-design-doc
+    - batch-llm-concurrency-ops
+    - blocked-card-clearout
+    - cc-switch-failover-ops
+    - cc-switch-integration
+    - cc-switch-monitoring
+    - cc-switch-stats-analysis
+    - ccswitch-codex-provider-management
+    - ccswitch-native-responses-schema
+    - childrens-science-picturebook-material
+    - chinese-image-api-integration
+    - cloud-speech-provider-selection
+    - cluster-integrity-audit
+    - cluster-rules-audit
+    - codex-acp-troubleshooting
+    - codex-guardian-review
+    - codex-harness-patterns
+    - commerce-agents-trust-patterns
+    - context-compression
+    - cost-ledger
+    - cot-leakage-audit
+    - cron-job-management
+    - cron-script-wrapper-pattern
+    - cybernetics-dual-lens
+    - daily-intel-brief
+    - dashscope-realtime-asr
+    - data-stack-operations
+    - deep-research-workflow
+    - deepseek-harness-research
+    - defect-fix-acceptance
+    - delegation-brief-format
+    - design-doc-archaeology
+    - design-doc-closure
+    - design-doc-cross-chapter-bridge
+    - design-doc-derivation-chain
+    - design-doc-diagram-consistency
+    - design-doc-feynman-craft
+    - design-doc-interface-contracts
+    - design-doc-structure-standards
+    - design-doc-sync-audit
+    - design-doc-sync-audit-orch
+    - doc-runtime-consistency
+    - docker-compose-data-stack
+    - docker-desktop-mount-troubleshooting
+    - document-writing-craft
+    - dogma-audit
+    - dogma-correction-protocol
+    - domain-nightly-ops
+    - [已移除]
+    - encrypted-git-backup
+    - evidence-labeled-research
+    - fail-closed-gate-acceptance
+    - failure-mode-playbook
+    - family-travel-planner
+    - feynman-systems-autopsy
+    - fleet-artifact-sync
+    - fleet-framework-introduction
+    - free-window-nightly-pipeline
+    - fusion-delivery-pipeline
+    - fusion-doctrine-audit
+    - fusion-field-to-skill-flywheel
+    - fusion-governance-patterns
+    - fusion-landing-audit
+    - fusion-output-quality-gates
+    - fusion-residual-planning
+    - fusion-skill-placement
+    - gateway-notification-disposition
+    - goal-card-budget-recovery
+    - harness-entropy-management
+    - harness-fusion-patterns
+    - hermes-docker-sandbox
+    - hermes-env-perspective-diagnostics
+    - hermes-fleet-ops-lessons
+    - hermes-gateway-operations
+    - hermes-incremental-offline-packaging
+    - hermes-moa-configuration
+    - hermes-profile-config-regression-recovery
+    - hermes-profile-fleet-operations
+    - hermes-rules-effectiveness-audit
+    - hermes-skill-installation
+    - hermes-source-patch-persistence
+    - hermes-tool-dependencies
+    - hermes-tui-customization
+    - hermes-voice-configuration
+    - hermes-voice-offline-models
+    - hermes-voice-setup
+    - hindsight-bank-strategy
+    - hindsight-cross-bank-sync
+    - hindsight-daemon-orch
+    - hindsight-fleet-operations
+    - hindsight-model-configuration
+    - information-lens
+    - institution-fusion-patterns
+    - inter-agent-communication-architecture
+    - iterative-team-capability-audit
+    - [已移除]
+    - [已移除]
+    - [已移除]-context-profile-enrichment
+    - [已移除]-custom-learning-apps
+    - [已移除]-family-message-handling
+    - [已移除]-multitenant-family
+    - [已移除]-multitenant-orch
+    - [已移除]-observation-archiving
+    - [已移除]-parent-reply-style
+    - [已移除]-team-deployment
+    - kanban-batch-closeout
+    - kanban-blocked-card-disposition
+    - kanban-card-lifecycle-repair
+    - kanban-crash-recovery
+    - kanban-db-guarded-writes
+    - kanban-domain-isolation
+    - kanban-goal-card-recovery-orch
+    - kanban-orchestrator
+    - kanban-soul-authoring
+    - kanban-task-pickup-diagnosis
+    - kanban-triage-stall-recovery
+    - kanban-workspace-durability
+    - launchd-external-volume-gotchas
+    - laya-decision-points
+    - laya-shadow-verify
+    - llm-routing-redlines
+    - llm-usage-cost-audit
+    - local-proxy-provider-unification
+    - local-skill-fusion-routing
+    - local-voice-model-selection
+    - longhorizon-harness-research
+    - macos-disk-cleanup
+    - matrix-cross-machine-collab
+    - memory-consolidation
+    - model-fleet-migration
+    - model-provider-audit
+    - modelscope-offline-distribution
+    - multi-board-team-deployment
+    - nightly-intel-radar
+    - nightly-loop-ops
+    - nightly-radar-runbook
+    - nightly-report-delivery
+    - node-npm-install-mismatch
+    - okt-test-naming
+    - ontology-contract-injector
+    - open-source-architecture-research
+    - open-source-skill-fusion
+    - open-source-skill-fusion-v2
+    - operational-status-reporting
+    - orchestrator-cli-reference
+    - orchestrator-closeout-verification
+    - orchestrator-config-drift-crash
+    - orchestrator-kanban-tracing
+    - orchestrator-lessons
+    - orchestrator-profile-skill-writeback
+    - orchestrator-scheduling-audit
+    - orchestrator-team-hierarchy
+    - orchestrator-worker-failure-triage
+    - outbound-delivery-verification
+    - paimon-multimodal-sql
+    - pdf-scan-ocr-pipeline
+    - profile-skill-misplacement-detail
+    - prompt-injection-guard
+    - prompt-rule-enforcement
+    - protected-file-approval-handling
+    - provider-fallback-chain-management
+    - provider-route-diagnostics
+    - public-repo-release
+    - radar-quality-control
+    - rd-harness-fusion
+    - recurring-target-asset-inventory
+    - repo-bigfile-hygiene
+    - repo-to-skill
+    - research-ledger-reconciliation
+    - routine-self-reflect
+    - rules-effectiveness-audit
+    - scanned-document-ocr
+    - sdlc-review
+    - security-domain-delegation
+    - security-tool-acceptance-testing
+    - security-tool-landscape-tracking
+    - semantica-runtime
+    - shared-charter-propagation
+    - shared-workspace-git-commit
+    - skill-board-scoping
+    - skill-fleet-consistency-audit
+    - skill-library-maintenance
+    - skill-library-slimming
+    - soul-batch-patch-concurrency-safety
+    - soul-charter-propagation
+    - soul-framework-propagation
+    - soul-protocol-block-insertion
+    - swarm-yuan-componentization
+    - systems-lens
+    - taskguard-avernet-fusion
+    - tauri-blocked-fetch-mirror-bypass
+    - time-based-model-downgrade
+    - tool-inventory-baseline
+    - update-drift-remediation
+    - update-skill-library-repair
+    - update-time-inventory-self-healing
+    - upstream-agent-skill-fusion
+    - wechat-article-research
+    - wechat-local-data-recovery
+    - wechat-mac-db-decrypt
+    - wechat-research-patch-notes
+    - weixin-channel-configuration
+    - weixin-complaint-triage
+    - weixin-multi-account-delivery
+    - weixin-multiplex-orch
+    - weixin-qr-reauth
+    - weixin-send-troubleshooting
+    - worker-completion-independence-verification
+    - worktree-lifecycle-hygiene
 mcp_servers:
-  hermes-studio-api:
+  ekko-studio-api:
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - api
@@ -114,7 +357,7 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: '1'
       HERMES_WEB_UI_PROFILE: product-manager
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-  hermes-studio-browser:
+  ekko-studio-browser:
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - browser
@@ -128,7 +371,7 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: '1'
       HERMES_WEB_UI_PROFILE: product-manager
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-  hermes-studio-devices:
+  ekko-studio-devices:
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - devices
@@ -142,7 +385,7 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: '1'
       HERMES_WEB_UI_PROFILE: product-manager
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-  hermes-studio-use:
+  ekko-studio-use:
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - use
@@ -163,6 +406,7 @@ platform_toolsets:
     - clarify
     - code_execution
     - computer_use
+    - connections
     - cronjob
     - delegation
     - file
@@ -189,29 +433,7 @@ updates:
   backup_keep: 5
   non_interactive_local_changes: stash
   pre_update_backup: false
-_config_version: 41
+_config_version: 50
 clearances:
   - TLP:GREEN
   - TLP:CLEAR
-
-# ── Fallback Model ────────────────────────────────────────────────────
-# Automatic provider failover when primary is unavailable.
-# Uncomment and configure to enable. Triggers on rate limits (429),
-# overload (529), service errors (503), or connection failures.
-#
-# Supported providers:
-#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
-#   openai-codex (OAuth — hermes auth) — OpenAI Codex
-#   nous         (OAuth — hermes auth) — Nous Portal
-#   zai          (ZAI_API_KEY)         — Z.AI / GLM
-#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
-#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
-#   minimax      (MINIMAX_API_KEY)     — MiniMax
-#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
-#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
-#
-# For custom OpenAI-compatible endpoints, add base_url and key_env.
-#
-# fallback_model:
-#   provider: openrouter
-#   model: anthropic/claude-sonnet-4

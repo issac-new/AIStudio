@@ -83,3 +83,14 @@ Goal-Backward FORCE 立场（假设目标未达成直到证据证明）+ 并行�
 - **hermes-source-patch-persistence**（default）— patch 固化母本
 - **github-profile-distribution**（default）— 发布红线与 PII 清洗
 - **harness-fusion-patterns**（default）— 融合工作流母本
+
+
+## 三层落地成色纪律（QGate 复盘裁决升级，2026-09-23）
+
+融合产物的「落地」必须区分三种成色并在收尾报告显式标注，禁用「已落地」笼统表述：
+
+1. **语义落地**：规则/检查项写进 skill 或共享文档（证据=文件锚点）；
+2. **机制落地**：有机械执行面——执行者、触发时机、判定口径三者真实存在（证据=执行路径描述）；
+3. **效力落地**：有坏样本证明检查项能抓住它声称能抓的错（证据=Golden Prompts/构造样本实测）。
+
+只在 1 的融合按「提案」对待；到 2 才算「可用」；到 3 才允许在汇报中宣称「该检查项有效」。效力验证通道=`_shared/evals/baseline.md` T12-T17（QGate Golden Prompts，2026-09-23 起）。反面实锤：QGate 融合三轮产出 20+ 检查项全停在成色 2，被用户复盘质疑后经 DEEP-PLAN 裁决补 T12-T17 才闭合。详证 `workspace/research/qgate-fusion-20260923/DEEP-PLAN-20260923.md` §六。

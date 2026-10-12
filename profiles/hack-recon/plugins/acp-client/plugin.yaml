@@ -1,0 +1,7 @@
+manifest_version: 1
+name: acp-client
+version: 1.0.0
+description: Connect to ACP agents (OpenCode) via stdio — discover, prompt, and manage sessions
+author: yuqi
+provides:
+  tools: true

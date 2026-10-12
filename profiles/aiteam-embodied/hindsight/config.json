@@ -1,7 +1,7 @@
 {
   "mode": "local_external",
   "api_url": "http://localhost:8888",
-  "bank_id": "hermes-XXXXXXXXXXXX-aiteam",
+  "bank_id": "hermes-b24d7ac5d9c4-aiteam",
   "recall_budget": "mid",
   "recall_method": "recall",
   "auto_recall": true,

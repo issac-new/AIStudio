@@ -1,0 +1,54 @@
+From 7cd837689d05a68d73600984ce004092fdac8c9f Mon Sep 17 00:00:00 2001
+From: YourName <your-inbox@example.com>
+Date: Wed, 7 Oct 2026 08:21:06 +0800
+Subject: [PATCH] fix(kanban): re-arm guardrail UDF (3rd recurrence), self-heal
+ via tui-patch-watchdog
+
+---
+ hermes_cli/kanban_db_connect.py | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+index 0886ef47255..d31669d5866 100644
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -630,6 +630,22 @@ def _schema_is_present(conn: sqlite3.Connection) -> bool:
+     return row is not None
+ 
+ 
++
++# >>> swarm:kanban-write-guardrail >>> (restored 2026-09-10 from
++# research/guardrail-test-teardown/stash1-guardrail-udf-code-20260902.patch;
++# 09-05 apply script was lost in a later update — this re-arms the layer)
++GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
++
++
++def register_write_sanction_udf(conn: sqlite3.Connection) -> None:
++    """Attest this connection as a sanctioned writer (see trigger docs)."""
++    def guard_fn() -> int:
++        from agent.delegation_context import is_delegated_child_process_context
++        return 0 if is_delegated_child_process_context() else 1
++    conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
++# <<< swarm:kanban-write-guardrail <<<
++
++
+ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
+     """Open ``path`` with the kanban PRAGMA set, then run ``under_lock(conn)``.
+     WAL activation and ``under_lock`` share the ``_INIT_LOCK`` critical section:
+@@ -638,6 +654,13 @@ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
+     ``_INITIALIZED_PATHS`` is populated. Closed if anything raises."""
+     conn = _sqlite_connect(path)
+     try:
++        # Sanctioned-writer attestation must run on EVERY open (not just init):
++        # triggers persist in the DB file, so any connection without the UDF
++        # would see its writes scrubbed with "no such function".
++        try:
++            register_write_sanction_udf(conn)
++        except Exception:
++            pass
+         conn.row_factory = sqlite3.Row
+         conn.text_factory = _kb._lossy_text
+         with _INIT_LOCK:
+-- 
+2.56.0
+

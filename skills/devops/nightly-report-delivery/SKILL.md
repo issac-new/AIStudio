@@ -1,5 +1,6 @@
 ---
 name: nightly-report-delivery
+version: 1.0.0
 description: Use when delivering nightly report briefs or PDF emails.
 ---
 
@@ -10,8 +11,11 @@ description: Use when delivering nightly report briefs or PDF emails.
 
 ## 投递策略（用户裁定，永远生效）
 
-- **微信 = 纯文字要点简报**，禁止投 PDF 附件。简报必须是「有判断的内容」：域报告取「今日领域态势」整段，[已移除] 取「本周家庭重点+今日定制建议」，主雷达取文字摘要。
-- **邮件 = PDF 完整版唯一通道**，收件人 your@example.com，发件身份 **agent mail（your-bot@example.com）**，正文 **Markdown 渲染**。
+- **【2026-09-21 裁决覆盖以下两条旧策略】夜间 Loop = 一封合并邮件 + 一个合并 PDF**（`nightly_digest.py`），11 封独立邮件（主雷达/[已移除]/8域/evo）停发；**微信投递全停**（iLink 持续限流无意义）——报告管道不再有任何微信触点（心跳/域简报/[已移除]简报/loop-graph/docsync 的 deliver 已全部改 local，补投队列 tick 已 pause）。
+- 合并机制：各报告仍独立生成产物（md/PDF 不变，supervisor 补跑逻辑不变）；投递侧 `nightly_digest.py` 在 unified 入口末尾跑——PyMuPDF 拼接 10 份 PDF 成 `nightly_digest_<date>.pdf`（带书签 TOC）+ 正文聚合各报告 LLM 核心段（研判/周重点/领域态势/evo）成一封 agent mail。幂等 marker `cache/radar/.digest_sent_<date>.json`（含 pdf sha1）。
+- evo 晨报不另发：`evo_nightly_wrapper.sh` 只写 s6 状态文件（delivery=merged-into-digest），正文段由 digest 并入。
+- **微信 = 纯文字要点简报**（历史策略，通道恢复前不适用），禁止投 PDF 附件。简报必须是「有判断的内容」。
+- **邮件 = PDF 完整版唯一通道**，收件人 your-inbox@example.com，发件身份 **agent mail（your-bot@example.com）**，正文 **Markdown 渲染**。
 - **发件身份规则覆盖所有报告邮件管道**（主雷达/8域/[已移除]/evo-nightly 晨报/未来新报告）：新报告类型接线时必须 agent mail 主通道 + SMTP 显式回退；只接 SMTP 的发送器 = 通道缺陷。症状信号：同类报告 from 身份不一致（有的经 swarmstudio、有的是自发自收）= 有管道绕过了 agent mail，先查该管道自己的发送器。
 - 失败语义：**邮件失败 = 步骤失败**（PDF 唯一完整通道，必须送达，supervisor 补跑）；微信简报失败不阻断。
 - 正文质量标准（用户原话级要求）：「是一份内参而不是一份黄页摘录」——正文必须携带 LLM 的判断（态势/why/建议动作），禁止裸标题罗列、禁止只有「N源M条+详见PDF」的空壳。
@@ -30,10 +34,10 @@ description: Use when delivering nightly report briefs or PDF emails.
 - **evo wrapper 恒 exit 0**（真实输出全在 `~/.hermes/evo/logs/evo_<date>.log`）：cron last_status=ok ≠ 投递成功。验收 grep 当日日志的 `[agent-mail] sent` / `[smtp-fallback]` / `[error]` 行，并确认 s6 防重状态文件当日已生成。
 - 手工走 agently-cli 时：
   - 两步确认：`message +send` 首调返回 `confirmation_token`，二调带 `--confirmation-token` 且**参数逐字节一致**（内容一变即 `Request content modified` 拒发）。
-  - 附件与 `--body-file` 都只收相对路径（限 cwd 子树，绝对路径报 unsafe）——`cd` 到报告所在目录再执行，或先 `attachment +upload` 换 file_id。
+  - 附件与 `--body-file` 都只收相对路径（限 cwd 子树，绝对路径报 unsafe）——`cd` 到报告所在目录再执行，或先 `attachment +upload` 换 file_id；`--body-file` 必须指向实际 HTML 文件，不能误写成 PDF 附件名。
   - 限额：日 50 封 / 时 200 次 / 分 10 次；附件单件+总计 20MB。
   - 送达验证：`agently-cli message +list --dir sent` 查 from/subject/附件标志。
-- 正文必须是 Markdown（# 标题 / > 引用块数据底座 / **粗体信号名** / 列表 / --- 分隔线）；agently 自动检测格式。
+- 正文的内容源仍统一用 Markdown（# 标题 / > 引用块数据底座 / **粗体信号名** / 列表 / --- 分隔线），但发送前必须显式渲染为 HTML；不要把 Markdown 直接交给邮件 API 并假定客户端会渲染。HTML 正文应通过临时 `--body-file` 传入，SMTP 回退用 `MIMEText(html, 'html', 'utf-8')`。
 
 ## 管道契约（邮件正文的原料）
 

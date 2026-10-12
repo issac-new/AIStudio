@@ -1,0 +1,5 @@
+version: 1.0.0
+name: lcm
+description: "LCM (Lossless Context Management) context engine: compiles middle turns into typed knowledge nodes (decision/constraint/fact/artifact) with anchors to the original messages, instead of lossy summarization. Head/tail kept verbatim; node DAG persists in the profile cache; deterministic, zero LLM calls. Activate with context.engine: \"lcm\"; roll back with context.engine: \"compressor\"."
+author: Hermes swarm / worker-coder
+kind: context_engine

@@ -1,5 +1,6 @@
 ---
 name: cloud-speech-provider-selection
+version: 1.0.0
 description: "Use when evaluating cloud speech APIs for Hermes voice."
 ---
 

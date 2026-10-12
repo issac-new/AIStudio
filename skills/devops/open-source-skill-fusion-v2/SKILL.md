@@ -31,6 +31,9 @@ gh search repos <name> --limit 8 --json fullName,description,stargazersCount
 gh repo view <owner/repo> --json name,description,stargazerCount,primaryLanguage
 ```
 
+gh 未认证时的等价通道（公共仓库免 token）：匿名 GitHub REST API，请求只需带 `User-Agent` 头——
+`https://api.github.com/repos/<owner>/<repo>`（元数据/star/pushed_at）、`/contents/`（目录树）、`/commits?per_page=5`（近期活跃度与增量基线）、`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>`（原文文件）。侦察阶段的元数据/目录/提交历史/raw 文件全可拿，clone 只在进入深读时才需要。
+
 - 候选 ≤1 → 直接确认
 - 候选 ≥2 → `clarify` 让用户选
 - 用户直接给 URL → 跳过
@@ -54,6 +57,8 @@ ls <authoritative_path>/references/ | head -30
 ```
 
 侦察结果写入任务 body（权威副本路径、已知结构摘要、关键文件列表），**worker 不重复侦察**。
+
+本机**文件型源**（扫描 PDF/文档，非目录仓库）同样先侦察再建卡：存在性 + 文本层探测（多页 `get_text()` 抽样判是否图片型）+ 可行性试样（渲染 2-3 页实跑 OCR/解析验质量），试样结论与可复用脚本路径写进卡 body——worker 拿到卡即进入全量处理，不重复探路（零文本层 PDF 走 `pdf-scan-ocr-pipeline`）。
 
 ### Step 0c: 双通道分流框架（终态架构适配）
 
@@ -105,7 +110,7 @@ orchestrator 创建 N 个并行调研任务（worker-researcher）
 | 全新能力 | Hermes 无对应 | **创建 skill** |
 
 现有能力基线速查（2026-08 快照）：
-- 执行前：cognition-self-check, cognition-lattice(239偏差/712思维模型)
+- 执行前：cognition-lattice(239偏差/712思维模型, references/orchestrator_integration.md §七A守门+§七偏差)
 - 执行中：pua-pressure-engine(L0-L4), pua-methodology-router(14方法论)
 - 完成时：loop-engineering-gates, pua-harness-governance(四权分离)
 - 持续维护：harness-entropy-management
@@ -126,7 +131,7 @@ goal 四维度：
 要求蓝军用**被审协议自己的格式**输出报告（审查 LHH 融合就让蓝军出三行控制头），
 发现每条带 file:line + severity（BLOCKER/WARNING）。
 
-读取结果：完整报告在
+读取结果：background 派发的完整报告在子代理结束后**自动回投递会话**（以新消息形式送达），无需手动读文件；手动读取仅用于 live 模式或投递丢失兜底——完整报告在
 `~/.hermes/profiles/orchestrator/cache/delegation/subagent-summary-<task>-<ts>.txt`；
 live 日志（`live/<deleg_id>/task-N.log`）用 tail 看时长行会被显示截断（`…(+N chars)`），
 别把截断行当最终结论，以 summary 文件为准。
@@ -224,11 +229,20 @@ GitHub 页面抓取给的是碎片（README 截断、docs 目录页只有文件�
 - 网页抓取只用于 Step 0a 消歧和 LICENSE/README 元数据，不用于机制分析。
 - 分析完清理 /tmp clone，核心内容落 `references/<project>-source-analysis.md` 持久化。
 
+### 17. 融合后留「显式不吸收清单」防重复评估
+裁决矩阵（keep/new/downgrade/drop 逐机制判定）落进融合报告，**DROP 项必须连理由一起写明**（例：「AB/影子/巡检——batch=1 单人集群无线上流量，语境不适」）。否则后续会话拿到同一上游资料，会从零重评一遍已被否决的机制。吸收项落点遵循单一事实源：机制细节写进资产文件（如 evals baseline），设计文档正文只放一句增量摘要+文件锚，不双写。
+
+### 18. 年龄段/多版本数据集的查询 CLI 必须带消歧维度，示例命令同轮同步
+同名记录存在 N 个年龄段版本的数据集（实测一个词条 53 个候选），resolve 多命中**禁静默返回第一个**——首命中可能锚到高年龄段版本，下游按错误锚点备课且无任何报错。纪律：(1) 多命中先按数据的关键区分维过滤（如 `--age`），过滤后仍多命中把候选清单（含区分维取值）打 stderr 引导消歧；(2) 给 CLI 加消歧参数的**同一轮**同步更新 SKILL.md 全部示例命令——使用者按示例 copy-paste，示例不带消歧参数=批量复现错误锚点。
+
 ### 16. SOUL.md 受保护文件 guard 在无人值守会话会 approval 超时（2026-09-08 ARL-Next 实测）
-patch 任何 profile 的 SOUL.md 时 protected-file guard 会弹审批，headless/TUI 无人响应即 BLOCKED（"Silence is not consent"），且明令禁止换路径重试。**纪律**：SOUL 接线类变更放任务末尾单独做，被拦后立即 kanban_comment 挂起项详情（变更位置+内容+已落盘清单）+ kanban_create 留痕卡记录待批状态，绝不绕行（terminal/execute_code 改 SOUL 同属违规）。内容备好等用户批准后一次性补齐。
+patch 任何 profile 的 SOUL.md 时 protected-file guard 会弹审批，headless/TUI 无人响应即 BLOCKED（"Silence is not consent"），且明令禁止换路径重试。**纪律**：SOUL 接线类变更放任务末尾单独做，被拦后立即 kanban_comment 挂起项详情（变更位置+内容+已落盘清单）+ kanban_create 留痕卡记录待批状态，绝不绕行（terminal/execute_code 改 SOUL 同属违规）。内容备好等用户批准后一次性补齐。**接线优先 rules.md**：团队的行为承载文件是 rules.md 且不受 guard 保护——行为类接线（技能使用纪律/评估标准/红线）一律先写 rules.md 探针节，SOUL 仅在必须改人设/职责时才动，从源头避开此审批墙。
 
 ### 15b. 「框架定义字段」≠「插件实际填充」（README 富元数据宣传陷阱）
 ARL-Next xing 框架 BasePlugin 定义 severity/description/remediation 字段，README 据此宣传富元数据 PoC 库，但 grep 实测仅 2/219 插件填充。**纪律**：评估「可移植的元数据体系」前必须统计实际填充率（grep -rl 计数/总数），定义存在（Present）与被使用（Wired）分开计分——移植时按实态描述，不按 README。
+
+### 15b. 留痕卡 assignee=自身 profile 触发 dispatcher 重复派工（2026-09-17 teamai-cli 调研实测）
+orchestrator 先执行完调研再补建留痕卡且 assignee=orchestrator 时，常驻 dispatcher 会当 ready 卡 spawn 重复 worker（live worker claim）；kanban_complete 被拒（提示 force=True 但工具 schema 无此参数），CLI `hermes kanban complete --force` 读中央根库对旧布局 board 库卡报 unknown id。纪律: (1) 自执行工作的留痕卡 assignee 不填自身 profile，或建卡后 worker spawn 前立即收尾; (2) 已被 claim 时最省预算解法=等 spawned worker 自行闭环(实测约50s); (3) kanban_create(board=X) 落 boards/<X>/kanban.db 旧布局，kanban_* 工具与 hermes CLI 读中央根库 ~/.hermes/kanban.db——收尾报 unknown id 先 sqlite 查 boards/<slug>/kanban.db 再归因。(4) 归因确认后修复=操作显式带 board=<slug> 重试：kanban_comment/kanban_complete 对旧布局卡省略 board 报 unknown task，补 board 参数同卡即写入成功，勿弃写。
 
 ### 15. 源码机制 → Hermes 落地的首选形态：协议层文档，非改源码（2026-09-03 实测）
 

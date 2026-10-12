@@ -6,7 +6,7 @@ platforms: [linux, macos]
 metadata:
   hermes:
     tags: [rd, routing, orchestrator, workflow]
-    related_skills: [verify-prd, verify-requirement, rd-clarify, rd-analyze, rd-decompose]
+    related_skills: [verify-prd, verify-requirement, rd-clarify, rd-analyze, rd-decompose, rd-estimate]
 ---
 
 # /rd:work — RD 路由命令
@@ -38,7 +38,8 @@ orchestrator 收到以下输入时，跑 `/rd:work`：
   ├─ 有 requirement 但未 clarify → rd-clarify
   ├─ 已 clarify 但未 analyze → rd-analyze
   ├─ 已 analyze 但未 decompose → rd-decompose
-  ├─ 已 decompose 但未 apply → 路由到对应 profile 的 rd-apply
+  ├─ 已 decompose 但未 estimate → rd-estimate（工作量估算：拆卡/轮次/文件 patch/pytest 验证 → 规模→工作量→成本）
+  ├─ 已 estimate 但未 apply → 路由到对应 profile 的 rd-apply
   ├─ 已 apply 但未 validate → rd-validate
   └─ 已 validate → code-review → release-plan
 ```

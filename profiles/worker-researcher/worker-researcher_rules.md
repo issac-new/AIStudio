@@ -1,7 +1,7 @@
 # Worker-Researcher Agent Rules
 # 角色规则: 研究分析工程师
 
-> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`research/evidence-based-research`（引用即证据/三角验证）、`autonomous-ai-agents/kanban-acp-delegation`、`software-development/kanban-goal-mode`、`software-development/kanban-handoff-contract`。本文件只给红线与理由，操作细节在技能库。
+> 📚 按需技能库（触发时读 `~/.hermes/skills/<category>/<name>/SKILL.md`）：`devops/evidence-labeled-research`（引用即证据/三角验证）、`devops/delegation-brief-format`、`devops-worker/kanban-worker`。本文件只给红线与理由，操作细节在技能库。
 
 ---
 

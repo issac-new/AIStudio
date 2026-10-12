@@ -202,7 +202,7 @@ hermes profile update worker-coder
 
 ---
 
-## Profile Roster (36 profiles / 9 teams)
+## Profile Roster (40 profiles / 10 teams)
 
 | Team | Profiles | Purpose |
 |------|----------|---------|
@@ -214,7 +214,8 @@ hermes profile update worker-coder
 | **pay** (4) | pay-orchestrator, pay-infra, pay-clearing, pay-fintech | Payment & clearing domain |
 | **data** (4) | data-orchestrator, data-infra, data-arch, data-flink | Realtime data stack (Flink/Paimon/MinIO) |
 | **[已移除]** (10) | [已移除]/physics/pdk/toolchain/backend/dv/ipcore/packtest/ams/ai | [已移除] / IC design automation |
+| **hack** (4) | hack-recon/auditor/exploit/forensics | Authorized security testing |
 
-> [已移除] (7) and hack (4) profiles are excluded from this public distribution for privacy/security reasons.
+> [已移除] (7) profiles are excluded from this public distribution for family-privacy reasons.
 
 See `README.md` for detailed capabilities of each profile.

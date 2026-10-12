@@ -1,5 +1,6 @@
 ---
 name: hermes-skill-installation
+version: 1.0.0
 description: Install skills from hub or taps. Use for tap-add issues.
 ---
 

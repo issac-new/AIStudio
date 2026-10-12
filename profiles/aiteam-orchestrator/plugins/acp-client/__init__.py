@@ -157,9 +157,41 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
             "  2) npx (Node.js) to run @agentclientprotocol/claude-agent-acp"
         )
 
+    elif name == "zcode":
+        # 1) Direct binary (preferred): configured path, else zcode-acp-server / zcode-acp on PATH
+        binary = provider_cfg.get("binary", "")
+        if not binary:
+            for candidate in ("zcode-acp-server", "zcode-acp"):
+                found = shutil.which(candidate)
+                if found:
+                    binary = found
+                    break
+        if binary:
+            binary = os.path.expanduser(binary)
+            if not os.path.isfile(binary):
+                raise FileNotFoundError(
+                    f"ZCode ACP binary not found at '{binary}'. "
+                    f"Install zcode-acp-server (npm i -g zcode-acp-server) or set providers.zcode.binary in config.yaml"
+                )
+            extra_args = provider_cfg.get("args", [])
+            return [binary] + extra_args, "ZCode Agent"
+
+        # 2) Via npx (fallback)
+        npx = provider_cfg.get("npx", "npx")
+        npx_path = shutil.which(npx)
+        if npx_path:
+            package = provider_cfg.get("package", "zcode-acp-server")
+            return [npx_path, package], "ZCode Agent"
+
+        raise FileNotFoundError(
+            "ZCode ACP provider requires either:\n"
+            "  1) binary path to zcode-acp-server, or\n"
+            "  2) npx (Node.js) to run zcode-acp-server"
+        )
+
     else:
         raise ValueError(
-            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude"
+            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude, zcode"
         )
 
 

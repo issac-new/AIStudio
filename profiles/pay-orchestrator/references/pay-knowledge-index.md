@@ -1,7 +1,7 @@
 # 支付清算知识索引
 
 > payteam 共享知识库索引——整合中国支付体系、国际清算、陈天宇宙公众号知识
-> 最后更新：2026-09-03（补充著作与课程库）
+> 最后更新：2026-10-03（新增多法域合规引擎）
 
 ---
 
@@ -22,8 +22,12 @@
 | **银联规范全文** | `standards/unionpay/`（147份核心规范全文，16MB）+ `unionpay/UNIONPAY-FRAMEWORK.md` | 交换系统/IC卡/终端/移动支付/标记化/差错/二维码/多渠道全系列；2015年12月存档 | ~4.6KB框架 |
 | **专项补齐 8 项标准** | `standards/*`（8 个知识文档；ISO8583/PBOC应用层/二维码/标记化/网联 5 项 2026-09-06 v2.0 全文级重写） | ISO8583详解（CUPS 128域逐条核名，0200=1987结构勘误KC-013）/PBOC应用层（原文TAG集）/二维码演进（053存疑KC-014+2016版现行+EMVCo v1.1）/标记化中国版（银联指引35页全文提炼）/网联Q-NUC（`WANGLIAN-QNUC.md`，103/104编号勘误）/**JRT0197数据分级（⚠️提纲级）**/**JRT0171个人信息（✅全文级，含7大类+C1-C3+附录A脱敏表）**/**跨境合规（文号经官方核验）**/ISO20022迁移（CHIPS/Fedwire已核） | ~85KB |
 | **已知冲突裁决案例库** | `standards/known-conflicts.md` | 12 条过期/矛盾信息裁决（限额/规范版本/数据口径/组织变更/监管时效）——**worker 必读** | ~6.4KB |
+| **FIBO 金融本体专题（2026-09-20 新增）** | `fibo-research/FIBO-FRAMEWORK.md`（框架综述+引用路由）+ `fibo-research/fibo-0{1,2,3}-*.md`（3 分册全文） | **Financial Industry Business Ontology 调研**：EDM Association（原EDMC，2025-10 收购 OMG）治理/12 域架构（支付类在 FND/PaymentsAndSchedules+FBC/ClientsAndAccounts，非独立支付域）/OWL2 形式化/季度发版（最新 master_2026Q2）/与 ISO 20022·LEI 关系/中国支付借鉴点与批评/rdflib 实操（production 闭包 11.7 万三元组实测）——worker 引用路由见框架文档§六 | 框架 6.5KB+分册 116KB |
+| **稳定币合规分支情景库（2026-09-24 新增）** | `STABLECOIN-SCENARIO-LIBRARY.md` | **三路径（立法失败/州级牌照/监管蓝图）× 跨境清算七维度影响矩阵**：监管事实基线+触发信号+可切换规则包取值倾向（收编 gap 19-002/21-013/22-014）；可插拔结算适配层设计约束（design-only）；KC-015 口径纪律全文执行 | ~19KB |
+| **多法域合规引擎（2026-10-03 新增）** | `workspace/research/compliance-engine/`（引擎+规则包+回放基准）+ `workspace/references/COMPLIANCE-ENGINE.md`（知识面） | **US/EU/BR 监管规则→交易校验逻辑自动映射**：五层架构（规则包YAML→10具名校验器→编译目录→评估→22用例回放全绿）；10 条种子规则逐条挂官方锚点（31 CFR 1010.410/1010.311、RTS (EU) 2018/389 Art.5/16/18/53、PSD2 Art.36(5)+EBA CIM、BCB Res 506→587+DICT 80 天窗口）；锚点 A/B/C/D 分级见 RULES-GRADES.md；新规接入=改 YAML+回放全绿；owner=pay-infra（校验逻辑）/pay-fintech（锚点核验）/路由 pay-orchestrator；收编 gap-20260924-014 | 引擎 27KB+规则 11KB+基准 6KB |
+| **Agentic 支付标准追踪线（2026-09-24 新增；2026-10-09 增条款矩阵）** | `agentpay/`（TRACKER + EVENTS + ASSESS-TEMPLATE + STANDARDS-MATRIX + assessments/） | **网络方规则发布 48h 内产出授权/委托/限额三维度影响评估的追踪线**：触发范围/三维度评估模型（锚点=aipay v4 三要素+NUC Q 编号）/SLA 流程/事件日志/简报模板/8 事件（首批 4 种子 + Block x402 Lightning + x402 v2/FIDO 双 TWG/AP2 v0.2 补评估）；**条款级跟踪矩阵 `STANDARDS-MATRIX.md`**（x402 v2/FIDO/AP2 v0.2/Visa TAP+Rules §4.1.24/IETF 402 争议等 9 标准+3 观察项，版本/条款+系统约束映射+双周 7 步检查 SOP）；owner=评估 pay-fintech/路由 pay-orchestrator；收编 gap-20260918-004 + gap-20260927-013 | ~35KB |
 | **蚂蚁账务清算域系列** | `fulltext/6x_zj_*`（5篇5.1万字符）+ `ant-ledger-domain-frameworks.md` | **支付宝内部视角**：资金中台四大平台/热点账户缓冲记账/归类码多账套/四项资金核对/第三方清算模式/流动性调拨 | ~1.8KB框架 |
-|| **外卡收单专题（2026-09-08 新增）** | `waika-shoudan-analysis.md`（知识地图）+ `fulltext/7x_wk_*/6x_js_*`（12篇全文） | **公众号「外卡收单知识库」(Enzo Sun/Wintopay) 调研 + 官方镜像 Channel 0**：单双信息机制（报文数/日切点/T+1清算/Visa BASE II 清算链/VCX网关）/外卡vs外贸收款/三方机构外卡体系六大架构差异（换汇/申报/物流验证/资金调拨/拒付风控/3DS责任转移）/VISA QSP·MC PF资质/Chargeback仲裁流程+WRITE_OFF四维/大商户模式落地案例/收单行状态机五原则/争议处理全流程；12篇全文落盘（10100专栏10篇+微信2篇），微信独家5篇待冷却续采 | 分析15KB+全文210KB |
+| **外卡收单专题（2026-09-08 新增）** | `waika-shoudan-analysis.md`（知识地图）+ `fulltext/7x_wk_*/6x_js_*`（12篇全文） | **公众号「外卡收单知识库」(Enzo Sun/Wintopay) 调研 + 官方镜像 Channel 0**：单双信息机制（报文数/日切点/T+1清算/Visa BASE II 清算链/VCX网关）/外卡vs外贸收款/三方机构外卡体系六大架构差异（换汇/申报/物流验证/资金调拨/拒付风控/3DS责任转移）/VISA QSP·MC PF资质/Chargeback仲裁流程+WRITE_OFF四维/大商户模式落地案例/收单行状态机五原则/争议处理全流程；12篇全文落盘（10100专栏10篇+微信2篇），微信独家5篇待冷却续采 | 分析15KB+全文210KB |
 
 ---
 

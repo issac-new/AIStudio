@@ -1,0 +1,31 @@
+name: spotify
+label: Spotify
+kind: standalone
+version: 2.0.0
+author: NousResearch
+homepage: https://github.com/NousResearch/hermes-spotify
+description: >
+  Spotify for Hermes Agent: seven tools (playback, devices, queue, search,
+  playlists, albums, library) over the Spotify Web API, plus
+  `hermes spotify login|status|logout` (loopback PKCE with your own Spotify
+  developer app). Playback control needs Spotify Premium and an active
+  Spotify Connect device. Formerly built into Hermes core.
+requires_hermes: ">=0.21.6"
+provides_tools:
+  - spotify_playback
+  - spotify_devices
+  - spotify_queue
+  - spotify_search
+  - spotify_playlists
+  - spotify_albums
+  - spotify_library
+provides_hooks: []
+optional_env:
+  - name: HERMES_SPOTIFY_CLIENT_ID
+    description: "Client ID of your Spotify developer app (`hermes spotify login` asks for it and saves it)"
+    prompt: "Spotify Client ID"
+    password: false
+  - name: HERMES_SPOTIFY_REDIRECT_URI
+    description: "Redirect URI allow-listed in your Spotify app (default: http://127.0.0.1:43827/spotify/callback)"
+    prompt: "Spotify redirect URI"
+    password: false

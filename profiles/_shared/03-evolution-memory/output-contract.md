@@ -1,6 +1,6 @@
-# 输出与验收契约（L2 合并版）
+# 输出与验收契约
 
-> 本文件由 F6 结构归并产生（2026-08-25），合并以下来源：
+> 本文件合并以下来源（历史归 git）：
 > `output-contract.md`（主体）+ `verification-checklist.md`（§二验证清单）+ `dod-checklist.md`（`workspace/AGENTS.md` 项目级 DoD 引用）+ `task-contract-guard.md` 契约守卫段
 > 层级定位：L2 输出与验收——kanban_complete 前的输出契约、验证清单、完成定义与任务契约守卫。
 > 原则：不改语义，只做结构化归并；原各文件的来源标注保留在对应章节内。
@@ -15,6 +15,13 @@
 > 评论中引用的任务 ID/卡片/文件，引用前必须验证其存在（`kanban_show` / `ls`）——
 > 幻觉引用会触发看板守卫并打回完成。看板历史上 51% 的完成任务零交接评论，
 > 下游和根协调者只能拿到 result 摘要、被迫翻工作区。
+>
+> **收尾四问（QGate §66 变形）**：重型/融合/结构性任务收尾时，
+> `## 决策与 follow-up` 段必须回答——① 本次新增了什么能力？② 系统现在能多证明什么？
+> ③ 怎么知道它生效（验证信号）？④ 有意不支持的还剩什么？——四问齐 = 增量被显式陈述；
+> 缺失 = 「做了什么」清楚但「系统因此变强多少」模糊，评审按打回信号处理。轻量任务不适用。
+> 语义同源引注（T/ISC 0123-2026 §10j）：**决策是否符合用户意图应由人类判断，
+> 智能体不得自证合规**——验收方独立复验，完成声明自身不构成符合性证据。
 
 ### 1.1 标准模板
 
@@ -35,7 +42,7 @@ kanban_complete(
         "tests_written": 8, "tests_passed": 8,
         "language": "python", "framework": "pytest",
         "acp_sessions": [session_id],
-        "verification": {  # Shadow 模式（2026-08-21 起，覆盖率≥80%后转强制）
+        "verification": {  # Shadow 模式（覆盖率≥80%后转强制）
             "syntax": "pass|skip|n/a",
             "test": "pass|skip|n/a",
             "lint": "pass|skip|n/a",
@@ -81,7 +88,7 @@ kanban_comment(body=(
 
 **强制规则**：`based_on` 引用的文件必须先 `ls` 验证存在（蓝军门 4）；决策改向用 `supersedes: <旧 Decision 的 topic+decided_at>` 表达，不删除旧决策。
 
-### 1.4 统一报告契约（Better Harness 融合 P2-2）
+### 1.4 统一报告契约
 
 > 来源：QoderAI Better Harness `templates/reporting/report-structure.md:17-24`（5 节骨架），**Hermes 本地化改造版**——源骨架为 Project Overview/Harness Dimensions/Issue Findings/Next Recommendations/Notes And Method，此处按 Hermes 报告受众重排为 Executive Summary/Findings/Recommendations/Methodology/Appendix
 > 适用：所有报告类产出（调研报告/审计报告/评审报告/融合方案）
@@ -127,7 +134,7 @@ kanban_comment(body=(
 - [ ] Appendix 有完整索引（非"详见上文"）
 - [ ] **重型多轮任务必含「已验证行为 / 未验证遗留」两节**（HoH 融合 A+E 双状态，2026-09-04）：多轮推进的重型任务（hack 攻击面验证、[已移除] 签核链、跨阶段编码）合并报告必须显式区分「已验证行为（Verified，附验证证据锚点）」与「未验证遗留（Gap，附未验证原因）」——下游任务依据此节规划，不用靠猜重建哪些结论可信
 
-### 1.5 技能路由决策（HarnessEval 融合 P0-5）
+### 1.5 技能路由决策
 
 > 来源：MirroS HarnessEval `pipeline/planner.py:159-171`（selected_skills + skipped_skills schema）+ `protocols.py:62-69`（SKILL_SPECS 反例约束）
 > 适用：`kanban_create` 时记录技能路由决策，确保"为什么启用/跳过某 skill"可追溯
@@ -200,7 +207,7 @@ kanban_comment(body=(
 - ❌ "看起来对" → 没有 `ls` / `python -m py_compile` / 测试输出 = 没验证
 - ❌ 跳过 linter / build step 节省时间 → 历史教训：省 1 分钟炸 1 小时
 
-### 2.5 扩展：证据强度评分上限表（Better Harness 融合 P1-5）
+### 2.5 扩展：证据强度评分上限表
 
 > 来源：QoderAI Better Harness `models/agent-work-loop.md:110-124`
 > 原则：**配置存在 ≠ 被使用 ≠ 改善结果**
@@ -217,7 +224,27 @@ kanban_complete 前，对当前任务的验证证据强度自评：
 
 **自评 ≤74 分 → 不应 kanban_complete，先补齐证据。**
 
-### 2.6 扩展：可观测性六门（Better Harness 融合 P1-5）
+### 2.8 扩展：证据来源独立性分级
+
+> 来源：Universal Delivery Gate Framework (QGate) v0.1 §4.5/§31（存档 `workspace/research/qgate-fusion-20260923/`）
+> 与 §2.5 证据强度正交：**强度=验证深度（跑没跑透），独立性=证据来源（谁产出的）**。两者分别自评，不可互替。
+
+同一任务的证据按来源分 7 级，**取最高独立性等级**作为任务证据独立性判定：
+
+| 级别 | 来源类型 | 判定标准 | 自检问题 |
+|---|---|---|---|
+| I7 | human-reviewed | 独立验收者亲跑并确认（worker-completion-independence-verification 独立核验） | 验收方是否独立复跑了验证？ |
+| I6 | existing-independent | 既有独立测试/上游卡机械验收通过 | 是否存在并非为本任务补写的独立验证？ |
+| I5 | runtime-observed | 真实环境实测（curl 实调/真实 DB 断言/端到端实跑） | 是否在真实环境观测到行为？ |
+| I4 | spec-derived | 从验收标准/契约推导的测试（rd-validate 三方对账矩阵） | 测试用例是否源自冻结验收项而非实现代码？ |
+| I3 | ontology-derived | 领域注册表/能力清单核对（capability-ontology 四清单） | 结论是否经领域事实源交叉？ |
+| I2 | implementation-derived | 与实现同源的分析（lint/type/静态检查） | 是否只是实现了自己的检查？ |
+| I1 | self-generated | agent 自产自验（自写测试+自跑） | 测试是否由同一上下文生成并验证同一实现？ |
+
+**自检问题**：本任务最高独立性证据是哪一级？只有 I1（自产自验）时，即使 §2.5 强度为 Exercised，也**不构成放行**——须补 I4 以上独立性证据（外部验证门，三态协议 §4.2）。
+**硬语义**：I1 证据不得与 I4+ 证据混同为相同证明强度（QGate 原文："AI Generated Test PASS 不能与 Existing Independent Acceptance Test PASS 具有相同证明强度"）。
+
+### 2.6 扩展：可观测性六门
 
 > 来源：QoderAI Better Harness `models/agent-work-loop.md:394-408`
 > 适用：变更验证维度的深度检查
@@ -239,7 +266,7 @@ kanban_complete 前，对当前任务的验证证据强度自评：
 - **Blocked**：缺 3+ 门（需补齐后才能 complete）
 - **N/A**：纯查询/问答任务（无变更）
 
-### 2.7 扩展：修复链完整性（Better Harness 融合 P1-5）
+### 2.7 扩展：修复链完整性
 
 > 来源：QoderAI Better Harness `models/agent-work-loop.md:360-369`
 > 铁律：**"A retry pass without diagnosis is not repair evidence"**
@@ -260,11 +287,36 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 
 ---
 
+## 反向自查与模拟问话（来源：金办发〔2025〕93号 六大领域+四阶段）
+
+> 93号文核心突破 = 从"制度合规"到"能力验证"。检查方不是问"有没有制度"，而是**找人问话/要证据**来验证能力真实存在。集群等效机制 = 反向自查 + 模拟问话。
+
+### 反向自查（穿透式看实际证据）
+
+完成任务前，**主动找人验证**而非自证合规：
+
+1. **证据优先级**：实际执行输出（命令退出码/测试报告/文件存在性） > 文档声称 > 自报 pass
+2. **穿透式核查**：不只看制度文档（SKILL.md/SOUL.md），要看**运行日志/权限配置/数据流转记录**——即 `action_gate_shadow.jsonl`、`exit-audit.log`、`kanban db` 的真实记录
+3. **找人问话**（多 agent 场景）：派 worker 后主动向 worker 发问"你刚才执行了什么？退出码是多少？"，对照其自报结果——**不是审问，是能力验证**
+
+### 模拟问话（能力是否真实存在的测试）
+
+对声称有某能力的机制，模拟监管方提问：
+
+| 问题类型 | 示例 | 验证方法 |
+|---|---|---|
+| 有没有制度 | "你们有没有 prompt-injection 检测机制？" | 有 SKILL.md ≠ 真在用（Present 级） |
+| 有没有执行 | "上次 prompt-injection 检测是什么时候？" | 看 exit-audit/kanban 留痕（Wired 级） |
+| 有没有效果 | "检测出了几个真阳性？误伤率多少？" | 看 redline_replay 结果（Exercised 级） |
+| 能不能持续 | "下次变更后还会执行吗？" | 看是否写进 checklist/cron（Outcome 级） |
+
+**证据强度分级**（参照 Better Harness 评分上限表）：Missing(59) < Present(74) < Wired(84) < Exercised(94) < Outcome-supported(100)——配置存在 ≠ 被使用 ≠ 改善结果。
+
+
 ## 三、完成定义清单（原 dod-checklist.md）
 
 > 来源：Hermes × Better Harness 融合 P1-2；与 workspace 根目录 `AGENTS.md` 互补
 > 适用：所有 worker 在 `kanban_complete` 前逐项自检
-> 版本：v1.0（2026-08-21）
 
 ### 3.1 核心原则
 
@@ -294,12 +346,14 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 
 ### 3.3 第二层：领域特定项
 
-#### 编码类新增（2026-08-22，融合自 AI-Native SDLC Playbook L1254/L1262）
+#### 编码类新增（AI-Native SDLC Playbook）
 
 - [ ] **bug 修复任务失败测试先行**：先写复现测试 → 确认按预期原因失败 → 提交该测试 → 才修绿。"先于修复存在且 agent 改不动的测试才是 bug 已除的证明"
 - [ ] **验证证据不可自削弱**：修复任务中如需改动测试/验证文件，必须在 plan.md 或 kanban_comment 声明理由——"修代码的 agent 不得能削弱对该代码的检查"（单人集群以声明义务等效 hook 拦截）
+- [ ] **分层 Verify 深度声明**（快手 GIAC2026 Agent-Verify 分层体系）：交付按五层声明验证深度——编译/构建（准入）→逻辑（单测/静态）→行为（真实场景路径）→视觉/呈现（如适用）→需求级集成（多证据组合）。重型任务 plan.md 的 Proof 节须写明到达哪一层；声明"行为级"但只给了"逻辑级"证据（仅测试通过、无真实执行痕迹）= 验收不通过。
+- [ ] **验证证据五问**（同源 QuickTest 证据公式收缩）：输入可控（前置条件真实构造）？行为触达（真走到目标路径）？状态完整（端内+链路证据）？时机正确（等到了该等的事件）？失败可定位（SpecId/锚点可回溯）？五问全绿才算"可交付"，只看最后产物截图≈伪验证。
 
-#### 重型任务开工项（2026-08-22，B1 丙案）
+#### 重型任务开工项
 
 - [ ] **事故/返工类任务**：完成前产物中必须含回流卡 id（`[incident-reflux]` 前缀，parents 指向事故卡）——postmortem 不回流 = Loop 未闭合，不予验收（2026-08-27，来源 Playbook Maintain）
 - [ ] 重型任务（triage=True）worker 开工时在工作区落 `plan.md`，四节结构：**Files that change / Order of work / Risks / Proof**（来源 Playbook L820-850）。实现偏离计划时同 commit 更新 plan.md；完成时 Proof 节并入 kanban_comment 验证段
@@ -336,7 +390,7 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 - [ ] 监控/告警已确认覆盖
 - [ ] runbook/playbook 已同步更新
 
-#### 5. 资产盘点（Asset Review 三分法，FDE 融合 P1-B，2026-08-25）
+#### 5. 资产盘点（Asset Review 三分法）
 
 重型任务（triage 或文件写入 ≥3）kanban_complete 前，对产出做一次三分盘点，结论写进 kanban_comment：
 
@@ -346,7 +400,7 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 
 轻量任务（工具调用 ≤2 且无文件写入）豁免。
 
-#### 6. 失败模式标签（kanban_block / kanban_request_changes 时，FDE 融合 P1-C，2026-08-25）
+#### 6. 失败模式标签（kanban_block / kanban_request_changes 时）
 
 任务非成功收尾时，`kanban_block` / `kanban_request_changes` 的 reason 必须以四类标签之一开头，供月度失败模式统计反哺 routing 与 skill 修补：
 
@@ -360,6 +414,22 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 标签后接一两句具体说明。轻量任务豁免。orchestrator 月度汇总四类分布 → 分布异常时修 routing 规则或补 skill。
 
 **打标范围扩展（提案3, 2026-09-07）**：除 block/request_changes 外，以下失败收尾路径同样适用——worker 收尾契约中 `outcome!=completed` 的 run（crashed/timed_out/gave_up 自知时）、orchestrator 验收打回（`[REJECT:<FM模式>]` 双标签：四标签之一 + FM 编号）。**验收抽查**：orchestrator 抽查新失败 run 的打标情况，覆盖率进 `acceptance_routing_metrics.py` 月报（首月目标 ≥30%，现状 0%）。打标的控制论意义：失败不打标=无记忆随机控制（金书§1.4-1.5，已证伪状态不被排除→同类失败必然复发）。
+**模式表反链**：FM 编号与对策速查表在 `devops/failure-mode-playbook`（skill_view 加载）——打 `[REJECT:FM-x]` 前先查表定模式编号与对策；表只收录实锤模式，新模式经复盘确认后增补。案例全文库：`~/.hermes/profiles/_shared/failures/`（五段式，fm_modes 反链本表）。
+
+**失败签名细分（RSI 融合 R1，2026-09-11）**：四标签是收尾时的**粗分类**；跨轮失败聚类（evo 探针 / 失败模式月度聚合 / 复盘五段式）追加引用下表**轨迹签名**细化归因——同标签不同签名，改进方向完全不同。签名词表源自 openJiuwen RSI `FailureSignature`（10 类，源码锚点 `research/rsi-fusion-20260911/REPORT.md` §一），本机收敛为 8 类：
+
+| 签名 | 判定特征（轨迹现象学，非根因） | 典型改进方向 |
+|---|---|---|
+| `sig-loop` | 同一错误重复 ≥3 次（命令重试同参数、同文件反复改坏） | 失败模式检测加压 / 换本质不同方案（压力升级 L1） |
+| `sig-tool-call` | 工具调用参数非法 / API 形状误用（非服务端故障） | skill 补参数示例 / 工具描述修正 |
+| `sig-stalled` | 目标无进展但持续产出（自说自话、空转输出） | Oracle Gate 收紧 / 目标重述 |
+| `sig-missed-capability` | 该做未做（漏探查、漏文件、漏验收项） | 组件清单穷举纪律 / 验收清单前置 |
+| `sig-stale-context` | 用过期记忆/过期版本作答（引用已改配置、旧结论） | 前置核实红线 / 指纹 diff 重探查 |
+| `sig-handoff` | 交接物缺失或与约定不符（上游产物下游用不上） | delegation-brief-format / handoff 四段式 |
+| `sig-instruction-mismatch` | 行为与任务书/验收标准偏离（做了没要的、没做要的） | 验收冻结执法 / 打回附方向 |
+| `sig-config-rail` | 门禁/配置自身错位（拦截了合法操作、放行了违规） | 门禁验证器正反样例复测 / 影子转正 |
+
+使用纪律：签名是**现象学分类不替代根因**——复盘仍走五段式到 file:line；签名的价值在让 evo 聚类与月度聚合**可比较、可计数**，失败改进从"灵感驱动"变为"频次驱动"（RSI 语境：分析与优化定位阶段的输入必须是可归并的结构化信号）。
 
 ### 3.4 第三层：交接质量项
 
@@ -386,7 +456,7 @@ kanban_complete 前自评当前任务的证据强度（表同 §2.5，此处不�
 
 ## 四、任务契约守卫协议（原 task-contract-guard.md 契约守卫段）
 
-> 来源：LongHorizon-Harness（arXiv:2608.01964，AMAP-ML，MIT）MEA 循环融合，2026-08-16。
+> 来源：LongHorizon-Harness（arXiv:2608.01964，AMAP-ML，MIT）MEA 循环。
 > 源码验证：`manager.py` / `prompt_texts.py` / `auditor_agent.py` / `claude_permissions.py`。
 > 定位：**任务卡与验收的语义层防线**——防止"任务被改写成更容易完成的替代目标"与"看起来完成了"。
 > 适用范围：所有 team 的重型任务（kanban_create 时写契约；kanban_complete 前跑反查）。
@@ -531,7 +601,7 @@ GUI 失败且指向服务/数据/代码/profile/日志/回调约束 → 下一�
 
 ---
 
-## 附录：绘图规则（原 chart-rules.md，2026-08-25 F6 并入）
+## 附录：绘图规则
 
 > 本文件是所有 Hermes agent profile 的共享绘图工具规则。
 > 修改本文件全集群自动生效（每个 SOUL.md 末尾引用 `output-contract.md`）。

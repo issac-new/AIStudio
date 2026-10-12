@@ -1,7 +1,7 @@
 ---
 name: kanban-orchestrator
 description: Decomposition playbook + anti-temptation rules for an orchestrator profile routing work through Kanban. The "don't do the work yourself" rule and the basic lifecycle are auto-injected into every kanban worker's system prompt; this skill is the deeper playbook when you're specifically playing the orchestrator role.
-version: 3.0.0
+version: 3.1.0
 platforms: [linux, macos, windows]
 environments: [kanban]
 metadata:
@@ -153,8 +153,29 @@ Tell them what you created in plain prose, naming the actual profiles you used:
 
 - **B1 多作者分章+单一统审（分布式生产+集中质控）**：fan-out 把可并行的 lane 拆给多个 worker 各写一章，是正确形态；但合并质量依赖**显式指定单一统审者**——fan-out 卡与 synthesis/统审卡用 `parents=[...]` 连接，统审卡 body 写明「统一术语表 + 逐章口径核对」职责。判例原型：《物理学基础》7 位译者按章分工、张三慧一人统审校核全书；《普林斯顿数学指南》133 位作者、主编统一深度与风格。
 - **B2 三层粒度条目化分解**：长文（=独立子任务卡，可交付可审）+ 中篇（=阶段性里程碑/综述卡）+ 短条目（=共享词汇表——术语、接口名、口径定义放共享位置供各卡引用）。跨卡一致性的解法是统一词汇表先行，不是事后互相对齐。
+- **B3 蓝军审查卡扇入门（2026-09-17 增补）**：N 张实现卡 fan-out 时**同批**创建 1 张对抗审查卡 `parents=[全部实现卡]`——出生即 gated todo，父卡全 done 自动解锁，禁事后 link、禁手动 promote。纪律：(a) 审查 assignee 必须与所有被审卡不同 profile（不自审自封）；(b) 分解期就把被审产物的**绝对路径清单**预写进审查卡 body，实现卡按同一路径落盘——worker 看不到兄弟卡上下文，预定路径是卡间唯一传递通道；(c) 转译/移植类实现卡的 frozen 验收项逐字锁定源码数字（权重/门禁/阶梯阈值），审查卡忠实性维度=逐个 diff 源码核对，机械核对而非印象审；severity 分类建卡时冻结（BLOCKER/WARNING），「照抄源项目不适用机制」类规则明示 BLOCKER。
 >
 > 来源: synthesis-fusion-plan.md B1/B2 / physics-3books-report.md ⑦（机工社官方页「译者的话」逐章分工原文，查询 2026-09-07）+ math-3books-report.md §2.1 [7][15]
+
+## Graph Engineering 派工纪律（2026-09-17 增补，Graph Engineering with Claude 融合）
+
+> 来源：Codez (@0xCodez)《Graph Engineering with Claude: 14-Step roadmap》(2026-07-20)，经微信文章转引 + 原文全文对照，存档于 workspace `research/wechat-fusion-20260917/original-0xcodez-fulltext.txt`。本机 kanban 图机制（parents 依赖）已天然覆盖 diamond 拓扑、节点隔离（worktree）、边上对抗验证（`_shared/03-evolution-memory/review-gates.md` Diamond 7 门），本节只补真增量纪律。机制锚点全部出自 `hermes_cli/kanban_db.py` 源码。
+
+### GE-1 fan-in 容错：硬依赖才建边，死卡用 unlink 释放
+
+kanban 依赖门是 **all-or-nothing**：`recompute_ready()` 要求全部 parents 到终态（仅 done/archived 算终态，blocked/gave_up 都不算——kanban_db.py:2114, 2148-2157）才放行 child。因此「合成卡 body 写 ≥K/N 上游成功即可开工」是死文本：任一上游 blocked，child 永驻 todo，worker 从未被 dispatch，body 纪律无人执行。正确形态分三层：
+
+- **图设计期**：`parents=[...]` 只挂硬依赖（缺了它合成无意义的上游）；软依赖（锦上添花的上游）写 body 引用、不建边。K/N 容忍语义在构图时用边的选择表达，不是运行时 body 表达。
+- **运行期巡检**（owner=orchestrator；SLA：发现下游悬挂当次会话处置，不留到收尾）：上游 blocked/gave_up → 处置序 ① `hermes kanban reclaim` / reassign 重试 → ② 判定不可产出 → ③ `hermes kanban unlink <parent_id> <child_id>` 释放边（该命令内部自动 recompute_ready 重门控——kanban_db.py:1683-1685 "Re-gate the child now"）→ child 自动放行。**无需也不可手动 promote**（promote_task 拒绝未满足 parent，force 会撞 claim 复检）。注意：上游因需人类输入而正常 block 时，下游悬挂是临态——保持边，不 unlink。
+- **body 容忍纪律后置**：合成卡 body 写「软依赖缺失时标 missing 并在报告中显式标注」——这条只在硬边/软依赖分层之后才活（worker 真会被 dispatch 时才有意义）。
+
+### GE-2 barrier 节俭：机械 reduce 不烧 agent 卡
+
+flatten/dedupe/filter 类无跨项判断的 reduce（合并多卡产物、清单归并）用脚本或 Checker 机械执行，agent 卡只留给真正需要判断的节点。与既有规则的分工：Step 2 的 "Only link tasks when one card cannot start until another card's output exists" 管**边的真实性**；本条管**边汇合后第一个节点的类型**——建合成卡前先问「这一步是判断还是搬运」，纯搬运不建 agent 卡。
+
+### GE-3 循环收敛三判据（仅 goal_mode 卡）
+
+见下方 Goal-mode 节末尾——kanban 图机制无环（`_would_cycle` 拒绝环边，kanban_db.py:1654），循环只存在于 goal_mode judge 循环，判据落在该节。
 
 ## Common patterns
 
@@ -182,6 +203,10 @@ Tell them what you created in plain prose, naming the actual profiles you used:
 
 **Argument order for links.** `kanban_link(parent_id=..., child_id=...)` — parent first. Mixing them up demotes the wrong task to `todo`.
 
+**Batch fan-out creates: pass `title=` explicitly on every call.** The body-first-line routed marker is NOT the title — `kanban_create` without `title` is rejected outright, and in a parallel batch all N calls fail at once. On a batch failure, read one call's error, fix the shared shape, resend once; blind resends of the same shape trip the loop guard.
+
+**Never `force=True` a parent-gated card — you just ran the fan-in gate you built.** `promote_task(..., force=True)` and `kanban_unblock` bypass the "all parents done" check, so a synthesis/integration card you deliberately linked with `parents=[...]` gets promoted to `ready` alongside its still-unfinished parents and the dispatcher runs it with missing inputs. Only force-promote a card whose parents you have *just* completed in this same pass — never to "save a step." If a gated card needs to move early, that is a signal the graph was wrong: fix the `parents` list or re-scope the card instead.
+
 **Pass `board=` explicitly on EVERY kanban_* call.** Omitting it makes the tool resolve the active board from env/symlink defaults, which need not match the board you intended — and the mismatch can be SILENT on create: `kanban_create` returns a task_id but the card lands in the root `~/.hermes/kanban.db` while you keep querying `boards/<board>/kanban.db`. Symptom: every board-DB query for the id returns empty, `kanban_request_changes`/`kanban_show` fail "task not found", yet the dispatcher runs the card fine (worker log at `~/.hermes/kanban/logs/<id>.log`). Diagnosis rule: when a card id has no row in the board DB, query the root `~/.hermes/kanban.db` before declaring the card lost.
 
 **Done cards are terminal — corrections need a comment + fresh card.** `kanban_request_changes` fails ("task not found") on a card already in `done`, even though the card exists. When post-completion review finds defects: (1) post the full correction task-book as a comment on the done card — that comment is the durable audit trail; (2) `kanban_create` a fresh correction card in the SAME workspace_path that repeats the task-book inline (workers only reliably see their own card's body), with frozen acceptance criteria per defect and an explicit "leave a per-item comment and WAIT for re-review; do not self-complete" clause. Do not pass the done card in `parents=[...]` — parent lookup fails across DBs; reference its id in the body instead. Scope the card with a hard boundary list (what is already verified and must NOT be touched) to prevent drive-by rework of accepted parts.
@@ -191,6 +216,34 @@ Tell them what you created in plain prose, naming the actual profiles you used:
 **Don't pre-create the whole graph if the shape depends on intermediate findings.** If T3's structure depends on what T1 and T2 find, let T3 exist as a "synthesize findings" task whose own first step is to read parent handoffs and plan the rest. Orchestrators can spawn orchestrators.
 
 **Tenant inheritance.** If `HERMES_TENANT` is set in your env, pass `tenant=os.environ.get("HERMES_TENANT")` on every `kanban_create` call so child tasks stay in the same namespace.
+
+**Missing write-path skill evidence.** `kanban_create` / `kanban_comment` / `kanban_complete` are tool-layer wrappers; when the tool layer is broken for your profile (a `no such function: kanban_write_sanctioned` error from the DB layer), fall back to the CLI immediately — do not keep retrying the tool. The CLI is authoritative: `hermes kanban --board <slug> create "<title>" --assignee ... --workspace "dir:<abs>" --body-file <abs.md> --json` and `hermes kanban --board <slug> comment <id> "<text>"`. The SQLite table for comments is `task_comments` (not `comments`), and CLI `comment` takes positional args (`task_id text`), not `--body`. Write the tool-layer limitation into the card body so workers see the fallback.
+
+## 跨板派工 body 模板（专用任务书）
+
+当把一个产品调研 + 逆向工程类重型任务拆成跨板子卡（research ↔ hack）时，子卡 body 用以下骨架——它为每个子卡固化「任务契约（防偷换目标）/ 授权门判定（仅逆向类）/ 必读 context 清单 / 约束与红线（逐字入卡，禁事后口头传播）/ 预算轮次与超限处置 / 交付格式与 handoff metadata 形状 / 失败预期（预判缺口+预置修法）/ 验收标准（frozen:true）/ 收尾契约」。跨板引用用 body 互注 `context_from` + 对方卡 id,**不用** parents（跨板 JOIN 失效）。
+
+典型骨架（细节按任务填）:
+```
+# T<n> <任务名>
+routed:heavy:<~N轮>
+## 任务            —— 做什么 + 产出绝对路径
+## 任务契约         —— 目标解释/最终成功状态/权威输入/不可接受捷径
+## 授权门判定       —— 仅逆向类：公开分发物/本机只读/零目标流量红线逐字
+## 必读 context    —— 未读不开工
+## 约束与非功能需求 —— 预算轮次 + 超限处置 + 禁止无界操作
+## 交付格式        —— 产物结构 + 三态标注(confirmed/candidate/not found)
+## 动作空间        —— 允许工具 + 明确排除
+## 失败预期        —— 预判缺口 + 预置修法
+## 验收标准(frozen:true)
+## 收尾契约        —— kanban_complete(summary+metadata.findings)
+```
+
+跨板关联（两卡并行时）在各自 body 末尾互注：
+```
+父卡（跨板）:T<other> <other_id>(<board> 板,<assignee>)=<other任务一句话>
+两卡 done 后由 orchestrator 建 T<next> 合成卡（parents=[T1,T2]）产出<终态交付>
+```
 
 ## Goal-mode cards (persistent workers)
 
@@ -217,6 +270,11 @@ When to use it: long, multi-step, or "keep going until X is true" cards. When NO
 Write the body as **explicit acceptance criteria** — the judge is only as good as the goal text. "Translate the README" is weaker than "Translate every section of the README to French; no English sentences remain."
 
 Two independent budgets govern a goal card, and the one you did not set is the one that fires: `goal_max_turns` (conversation turns, judge loop) and the worker loop's tool-call iteration budget (~90 calls — what actually runs out first on collection-heavy research cards). Split the iteration budget inside the card body (collection vs writing vs buffer) — the common goal-card death is a worker that finishes researching and runs out of calls before writing.
+
+**GE-3 循环收敛三判据（发现/搜索类 goal 卡必配，2026-09-17 增补）**。bug sweep、资产盘点、全量找文章这类「不知道规模多大」的卡靠 judge 循环收敛，body 必须含三判据，缺一则「收敛」不可判定：
+1. **seen 全集去重**：对「见过的一切」去重，不是只对「已确认的」——只对 confirmed 去重时，被否掉的伪发现每轮重新冒出来，循环永不干涸、烧钱重走死路。
+2. **dedupe key 入卡**：判重键必须在 body 里定义死（URL / 归一化标题 / 文件路径等），键不定义则「seen 全集去重」无法机械执行。
+3. **K 轮空转退出 + 硬预算**：连续 K 轮（建议 2）无新增发现即停；`goal_max_turns` 必设（工具层硬限）。
 
 ## Recovering stuck workers
 

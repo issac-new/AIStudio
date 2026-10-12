@@ -1,7 +1,7 @@
 ---
 name: cluster-integrity-audit
 description: "Use when 检查集群组织一致性：幽灵assignee/孤立master/技能不可加载/config漂移."
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, audit, consistency, multi-profile, kanban, skills]
@@ -21,7 +21,7 @@ metadata:
 - profile 改名、看板迁移、skill 大规模重组之后的回归审计
 - 疑惑「为什么这张卡永远没人拾取」「为什么这个 skill 说加载了但没有」
 
-## 断裂分类学（8 类，按检出成本从低到高排序）
+## 断裂分类学（9 类，按检出成本从低到高排序）
 
 | # | 断裂类型 | 检出方法（机械） | 修法 |
 |---|---------|----------------|------|
@@ -29,10 +29,11 @@ metadata:
 | 2 | 重复任务卡（同题同容双份，旧卡未清） | title 分组 + body 前缀比对 + created_at 排序 | 归档旧卡，result 注明重复对象 id |
 | 3 | environment_hint 幽灵路径 | yaml 解析 config → hint 逐行 `os.path.isfile`（注意 hint 是**多行字符串按行拆**，别当单路径判） | hint 改指 SOUL.md；config 先备份 |
 | 4 | 双正典残留（文件迁移后旧引用未清） | grep 旧路径 → 区分「活引用」vs「迁移注记 vs 历史档案」 | 只改活引用（标注迁移日期）；legacy 死链副本归档 |
-| 5 | SOUL 三节规范缺口（命令手册/补充工具/高级用法） | 27 profile grep 三节标题计数 | 按正典补齐：有 references 外置的归拢指针，没有的写真实可执行命令；[已移除] 系豁免 build/test |
+| 5 | SOUL 三节规范缺口（命令手册/补充工具/高级用法） | 全 profile grep 三节标题**子串**计数——标题常带 emoji 前缀（如 `## 🛠️ 具体操作命令手册`），用 `## 标题` 整行匹配会批量误报缺节 | 按正典补齐：有 references 外置的归拢指针，没有的写真实可执行命令；[已移除] 系豁免 build/test |
 | 6 | per-profile skill 不可加载（**master 在 ≠ 该 profile 能加载**） | 跑 `scripts/check-profile-skill-loadability.py` | 缺口补 symlink（单一事实源）；孤立 master 分类整链接到需要的 profile |
 | 7 | skill 库结构病灶（垃圾目录名/三级嵌套/容器-skill 同名冲突） | `find skills -maxdepth 1` 找字面异常名；`-mindepth 3 -name SKILL.md` 找嵌套 | 归档垃圾（可逆路径）；嵌套提升二级；同名冲突改名或提升 |
 | 8 | 审计工具自病（治理工具自身失效 = 治理空转） | 跑之前先冒烟：小样本+超时上限+`test -f` 验证落盘；查 cron `failure_streak` | 重写修复（见 Pitfalls 的两个实例） |
+| 9 | profiles/ 点前缀目录（幽灵 profile / 备份残留） | `ls -d ~/.hermes/profiles/.*`；所有 profiles/ 扫描器必须过滤点前缀，否则备份/幽灵目录被当 profile 计数 | SwarmStudio 幽灵键：备份后 pop ekko config 死键再归档目录（Pitfall 0）；纯备份目录：归档 profiles-archive/ |
 
 ## 核心纪律
 
@@ -44,6 +45,9 @@ metadata:
 
 ## Pitfalls
 
+0. **SwarmStudio 幽灵 profile 键**：桌面端 ekko config（`~/.hermes-web-ui/.ekko/config/config.json`）的 `mcp.profiles` 可出现死键（如 `.deleted`），每次桌面启动都往 `profiles/<死键>/` 重写托管 MCP config——`profiles/` 下出现点开头目录且 config.yaml 是刚写入的 SwarmStudio MCP 段即此病。修法：备份后 pop 死键 + 归档目录（2026-09-09 实修）。
+0a. **watchdog 提示的修复命令含危险后缀**：inventory_watchdog 输出的 Fix 命令自带 `--with-configs`，该后缀会重建漂移 profile 的 config（洗自定义字段前科）。执行 fence 时永远剥掉该后缀。
+
 1. **mv-into-symlink 数据丢失**：对 symlink 位置 `mv 实体 链接路径` 的 POSIX 语义是移入目标目录（等价移回原处），随后 rm 链接再 mv 报源不存在——实体悄然丢失。**移动前必查 `ls -la` 确认目标是真目录**。恢复源：`~/.cc-switch/skills/`（cognition-lattice 案例）、`~/.hermes/skills-archive/_backup_*/`（worldmonitor 案例）。
 2. **master 会无声消失**（本次 worldmonitor 恢复后当日再丢一次，无 fs 审计可归因）——恢复后立即双验证（test -f + 运行时实测），并建议 entropy cron 挂 master 对账。
 3. **O(n²) 子进程炸弹**：bash 双循环里对 709 个名字两两 grep = 50 万次子进程，必超时。改 awk 单遍（重名）/预拼大文本一次 `grep -F` 批查（零引用）。
@@ -52,12 +56,14 @@ metadata:
 6. **terminal 内联长命令触发 hardline 无条件拦**（非审批层）——写脚本文件再 bash 执行，不重试 inline。
 7. **双正典判定要留迁移注记**：grep 命中旧路径 ≠ 都要改——「2026-08-25 从 X 迁移」的历史注记是档案价值，保留；只改活引用。
 8. **健康不修项要显式记录**：matrix 协议引用率 1/27 是设计（通信治理集中在网关 profile）；27 SOUL 共享块 8 组重复是 Tier 注入刻意产物。判健康不修 + 写明理由，防止下轮审计重查。
+9. **回归 rc 别从管道取**：`watchdog | tail` 的 `$?` 是 tail 的退出码——挂掉的 watchdog 看起来全绿。复跑回归用 `cmd > /tmp/out 2>&1; rc=$?` 单独取证再读输出。
 
 ## Scripts
 
 | File | Content |
 |------|---------|
-| `scripts/check-profile-skill-loadability.py` | per-profile skill 可加载性检查器（维度 6 的机械实现，ALL-OK / 逐 profile 列断裂） |
+| `scripts/check-profile-skill-loadability.py` | ⚠️ 该文件并未随 skill 落盘（09-07 审计在 /tmp 运行后未归档）。权威实现在 `~/.hermes/profiles/orchestrator/scripts/inventory_watchdog.py`（DIRCOPIES/断链/EMPTY stub 全量检测），修复器为 `~/.hermes/shared/skill-fence.py apply`（⚠️ 拒用 `--with-configs` 后缀——会重写 profile config，有 2026-08 洗字段前科） |
+| `scripts/demote-dircopies.py` | DIRCOPIES 修复器：profile skills/ 下与共享层同名的实体目录→归档+symlink（orchestrator 豁免），末尾自扫断链。比 fence apply 保守（无 board 剪除、无 config 重写） |
 
 ## References
 

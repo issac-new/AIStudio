@@ -11,7 +11,7 @@ confidence: high
 stability: stable
 evidence:
   - doc: 实际 Matrix 账号观察
-  - human: 图爸（2026-08-20）
+  - human: 用户（2026-08-20）
 tags:
   - matrix
   - cross-machine
@@ -23,7 +23,7 @@ anchors:
 
 # Matrix 对端账号台账（matrix-peers）
 
-> 维护人：图爸 / orchestrator
+> 维护人：用户 / orchestrator
 > 原始 ADR 日期：2026-08-20
 > 迁移日期：2026-08-25（从 `_shared/decisions/matrix-peers.md` 升级到 `_shared/knowledge/candidate/`）
 > 用途：记录 Matrix 网络中的账号性质，供 `MATRIX_IGNORE_USER_PATTERNS` 黑名单配置与跨机协作路由参考
@@ -40,7 +40,7 @@ anchors:
 
 | MXID | 显示名 | 性质 | 备注 |
 |------|--------|------|------|
-| `@cuishi:matrix.test` | Verify User | **人类（图爸）** | 管理员/验证用户，**不可加入黑名单** |
+| `@cuishi:matrix.test` | Verify User | **人类（用户）** | 管理员/验证用户，**不可加入黑名单** |
 | `@testuser2:matrix.test` | testuser2 | **人类** | 测试账号，**不可加入黑名单** |
 
 ## 对端机器 bot（跨机协作对象，需黑名单屏蔽）

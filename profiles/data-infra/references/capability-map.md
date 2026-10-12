@@ -13,6 +13,8 @@
 | 维度建模 (Kimball/Data Vault 选型) | **R/A** | C | — | I |
 | 元数据与血缘 (DataHub/OpenMetadata 运行) | **A** | R | R | I |
 | 湖仓表设计 (Paimon 主键表/Fluss KV) | **R/A** | C | C | I |
+| 多模态表设计 (BLOB/VECTOR/VARIANT 列 + Global Index) | **R/A** | C | I | I |
+| **Agent 数据闭环** (感知-检索-分析-行动-反馈 / 读+写回) | **R/A** | R(管道写回) | C | I |
 | **分析域** | | | | |
 | 指标体系与指标字典 | **R** | C | — | **A** |
 | 指标口径管理 (单一口径/血缘对账) | **R** | R | — | **A** |
@@ -51,3 +53,6 @@
 
 - 四域调研全文: `~/hermes-docker-sandbox/workspace/data-team-research/domains/data-{architecture,analysis,governance,security}.md`
 - 本文件同步副本: data-orchestrator/references/capability-map.md
+- **Agentic AI 数据闭环知识事实源**（2026-09-24 融合）: `references/paimon-2.0-multimodal.md`（多模态类型/索引）+ `references/doris-lakehouse.md`（Doris 集成/SQL 写回）——机制细节以两文件为准，本表只记责任分配
+- 融合裁决报告: `~/hermes-docker-sandbox/workspace/research/agentic-ai-data-loop-20260924/FUSION-REPORT.md`
+- **a5 生产湖仓治理存档索引（2026-10-08 翻案）**: 全文 `research/wechat-fusion-20261008/fulltext/a5-*.txt`（约 4.2 万字）+ 裁决 `research/wechat-fusion-20261008/FUSION-VERDICT.md`；机制正文见 `references/data-governance.md` §8（7 项运维机制），六类控制过表见 §8.12，月度复核挂 failure-pattern 月报同批
