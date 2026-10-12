@@ -101,6 +101,12 @@ if mxp_is_mac; then
 else
   note "非 mac 平台：pgid 防御不可用——改用「同步执行不变式 + relay 让位」防御（见循环内）"
 fi
+# 重启风暴护栏（run16 复盘，fix/run16-report-truth）：驱动非熔断 rc≠0 且无 report_done
+# 时监督器每 30s 重启——run16 实锤 issues.log 混入坏字节致报告链连崩，20 轮循环 67 分钟
+# 零告警单（监控侧无从得知）。护栏三档：连续 ≥3 次=记单 driver-restart-storm（幂等一次，
+# 监控介入信号）；≥10 次=退避 120s 防刷单与负载；rc=0 即复位。不自停（保留自愈能力——
+# run16 循环最终靠热修渡过），但把「跑完才知道坏」前移为「第 3 次失败就知道」。
+_storm=0
 while true; do
   [[ -f "$STOPFLAG" ]] && { note "stop 文件在位，监督器退出"; rm -f "$STOPFLAG"; exit 0; }
   if grep -q '^report_done=' "$STATE" 2>/dev/null; then
@@ -166,6 +172,23 @@ while true; do
       if [ $((_wd % 600)) -eq 0 ]; then note "证据等待 ${_wd}s（指纹不变：${_fp1}）"; fi
     done
     continue
+  fi
+  if [[ $RC -ne 0 ]]; then
+    _storm=$((_storm+1))
+    if [[ $_storm -eq 3 ]]; then
+      _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+      if ! grep -q '^ISSUE|driver-restart-storm|' "$_iss_path" 2>/dev/null; then
+        echo "ISSUE|driver-restart-storm|supervisor|驱动连续 3 次非熔断 rc≠0 退出（重启循环风险；run16 实锤=issues.log 坏字节致报告链崩 20 轮 67 分钟零告警）——监控侧应即刻介入查驱动尾部 Traceback" >> "$_iss_path"
+      fi
+      note "⚠ 重启风暴：连续 ${_storm} 次失败——已记单 driver-restart-storm（监控介入信号）"
+    fi
+    if [[ $_storm -ge 10 ]]; then
+      note "连续 ${_storm} 次失败——退避 120s 再续（防刷单与负载；自愈保留）"
+      monitor_events
+      sleep 120
+    fi
+  else
+    _storm=0
   fi
   note "驱动退出 rc=$RC（${STATE} 无 report_done 键——30s 后按断点续跑）"
   sleep 30

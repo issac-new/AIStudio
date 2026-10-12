@@ -28,6 +28,13 @@ mx_fetch() {
 }
 
 sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
+# marker_eventid（run16 复盘，fix/run16-report-truth）：从 marker 值提取纯 matrix event_id。
+# 两类写入源并存：mx_send 返回纯 event_id（dispatch_marker）；dispatch_in_room 返回整行
+# note（含 "($id): …"——m17/m19/m21_marker 即此形态）。r18-collect 拿到非 $ 开头的锚
+# 必 404（run16 实锤 103 单）。统一经本助手解析，两类值都归一为 $… 首 token。
+marker_eventid() {
+  printf '%s' "$1" | LC_ALL=C grep -oE '\$[A-Za-z0-9_-]+' | head -1
+}
 # 进度 JSON（产品面契约）：完成步按 MX_STEP_ORDER 计数；写失败绝不影响推演（|| true 全兜底）。
 # lite 轮口径（2026-10-10 G4）：state 带 lite_round=1 时 total=执行段步数（夹具步不计），
 # 附 scope=lite+fixtures_from——产品横幅按此显示「lite 轮 x/N」而非误导性的 0/26。
