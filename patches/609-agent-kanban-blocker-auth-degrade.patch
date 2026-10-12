@@ -1,0 +1,45 @@
+--- a/hermes_cli/kanban_db_dispatch.py
++++ b/hermes_cli/kanban_db_dispatch.py
+@@ -172,6 +172,12 @@
+     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
+ 
+ 
++# [609] blocker_auth 阻塞退场参数：近窗秒数与最少拦截次数（60s tick × 阈值≈退场时延；
++# 12 次×60s≈12 分钟持续拦截才退场，瞬时抖动不误伤）。
++_BLOCKER_AUTH_DEGRADE_SEC = 3600
++_BLOCKER_AUTH_DEGRADE_MIN = 12
++
++
+ def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
+     """One line naming why the tick(s) held ready work back, or ``""``.
+ 
+@@ -2165,6 +2171,29 @@
+         if not dry_run:
+             with _kb.write_txn(conn):
+                 _kb._append_event(conn, task_id, "respawn_guarded", {"reason": guard_reason})
++                # [609] blocker_auth 阻塞退场：auth/quota 类守卫拦截不会自愈（凭据缺失/
++                # 配额墙），只记事件会让卡永远停在 ready——派发器健康环「ready 非空但
++                # 0 spawn」告警整夜刷屏（run15 实锤 161 ticks）。近窗内同因拦截达阈值
++                # 即自动 block（needs_input 粘滞，recompute_ready 不会再提回 ready），
++                # 人工修复凭据后 unblock 即恢复。仅 blocker_auth（infrastructure/
++                # rate_limit 冷却是可自愈态不退场）。
++                if guard_reason == "blocker_auth":
++                    _recent = conn.execute(
++                        "SELECT COUNT(*) FROM task_events "
++                        "WHERE task_id = ? AND kind = 'respawn_guarded' "
++                        "AND payload LIKE '%blocker_auth%' "
++                        "AND created_at > ?",
++                        (task_id, int(time.time()) - _BLOCKER_AUTH_DEGRADE_SEC),
++                    ).fetchone()[0]
++                    if _recent >= _BLOCKER_AUTH_DEGRADE_MIN:
++                        if _kb.block_task(
++                            conn, task_id,
++                            reason="auto-block[609]: blocker_auth 持续拦截（respawn guard "
++                                   f"近 {_BLOCKER_AUTH_DEGRADE_SEC}s 内 {_recent} 次）——"
++                                   "凭据/配额需人工处置，unblock 后恢复派发",
++                            kind="needs_input",
++                        ):
++                            result.auto_blocked.append(task_id)
+         return False
+ 
+     def _count_spawn(name: str) -> None:
