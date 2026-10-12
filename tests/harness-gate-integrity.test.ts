@@ -1409,3 +1409,43 @@ echo "v1=$_v1 v2=$_v2 sends=$(wc -l < "$EVID_DIR/relay.log" | tr -d ' ')"`, root
     expect(Number(m![3])).toBe(1)
   })
 })
+
+// ── ㉕ V8.16 全阶段饱和并行守门（run16 起：测试分片/系分并发等待/G2 双工位/饱和度数据源）──
+describe('㉕ V8.16 饱和并行（测试分片+并发等待+G2 双工位）', () => {
+  const SCEN = join(HARNESS, 'aipay-scenario.sh')
+  const LIB = join(HARNESS, 'mux/mx-scenario-lib.sh')
+  const read = (p: string) => readFileSync(p, 'utf8')
+
+  it('测试段分片派发在位：BE 三片+FE 两片+MX_TEST_SHARDS 开关', () => {
+    const s = read(SCEN)
+    for (const sym of ['TEST-BE-S1', 'TEST-BE-S2', 'TEST-BE-S3', 'TEST-FE-S1', 'TEST-FE-S2', 'MX_TEST_SHARDS']) {
+      expect(s).toContain(sym)
+    }
+    expect(s).toContain('_be_n=3')
+    expect(s).toContain('_fe_n=2')
+  })
+
+  it('分片结论行按片唯一计数（scan+unique，防重发虚增）', () => {
+    const s = read(SCEN)
+    expect(s).toContain('scan("TEST-(PASS|FAIL)-TEST-BE(-S[0-9]+)?")] | unique')
+    expect(s).toContain('BOTH_DONE >= _be_n')
+  })
+
+  it('系分四稿并发等待（multi 锚取代串行 for）', () => {
+    const s = read(SCEN)
+    expect(s).toContain('AN-PAYCORE-analysis.md@chen@repo_has')
+    expect(s).toContain('AN-CHALI-analysis.md@lin@repo_has')
+  })
+
+  it('G2 双工位：arch 派发在安全闸等待之前（工作重叠）', () => {
+    const s = read(SCEN)
+    const archAt = s.indexOf('dispatch_in_room arch')
+    const secAnchorAt = s.indexOf('幂等时间锚（run15 根治')
+    expect(archAt).toBeGreaterThan(0)
+    expect(secAnchorAt).toBeGreaterThan(archAt)
+  })
+
+  it('饱和度数据源：进度锚输出在线工位计数', () => {
+    expect(read(LIB)).toContain('在线工位=${_act}')
+  })
+})
