@@ -24,6 +24,10 @@ TRI = ('已修', '观察', '延后')
 GENERIC = ('director', 'monitor', 'harness', '导演', '监控')
 
 ap = argparse.ArgumentParser()
+# 2026-10-13 扩展（fix/lite-closeout）：ISSUE 键完全无 DISP 行时补观察桶行——纪律 28
+# 「无锚点处置一律降为观察或待处置」的机制兑现（run18 实锤：20 键零 DISP 全 FAIL；
+# 已修判定须人工带锚点补记，脚本只降不升）。幂等：该键已有任一 DISP 行即跳过。
+
 ap.add_argument('--run', required=True)
 a = ap.parse_args()
 
@@ -73,9 +77,16 @@ def disp_for(key):
 
 appendix = []
 n_fixed = n_ok = 0
+n_created = 0
 for k in order:
     d = disp_for(k)
     if d is None:
+        # 2026-10-13 扩展：该 ISSUE 键完全无 DISP 行——补观察桶行（纪律 28 降不升；
+        # 幂等由 disp_for 为 None 时的本分支保证：已有行即不走此处）
+        t, s = k.split('·', 1)
+        appendix.append(
+            f'DISP|{t}|{s}|观察（收尾链自动归桶：无人工处置在案——待人工复核升桶，纪律 28）')
+        n_created += 1
         continue
     if d.startswith(TRI):
         n_ok += 1
@@ -90,4 +101,4 @@ for k in order:
 if appendix:
     with open(ilog, 'a', encoding='utf-8') as f:
         f.write('\n'.join(appendix) + '\n')
-print(f'[tri-disp] 归桶 {n_fixed} 键（全部观察桶）；已合规 {n_ok} 键；唯一键总数 {len(order)}')
+print(f'[tri-disp] 归桶 {n_fixed} 键（全部观察桶）；补建 {n_created} 键（无 DISP 行→观察桶）；已合规 {n_ok} 键；唯一键总数 {len(order)}')
