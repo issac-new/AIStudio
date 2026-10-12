@@ -27,8 +27,8 @@ ck "② 驱动主脚本语法" "bash -n '$HERE/aipay-scenario.sh'" "定位最近
 # ③ 新接线静态断言（三段卡/缺陷环/预检/安全前置/采集告警在驱动源内）
 ck "③ V8.8/V8.9 新接线在位" "grep -q 'uc_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'int_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'quality_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'defect_cards_assignee_check' '$HERE/aipay-scenario.sh' && grep -q 'capture_preflight_ok' '$HERE/aipay-scenario.sh' && grep -q 'security_review_done' '$HERE/aipay-scenario.sh' && grep -q 'domains/run' '$HERE/aipay-scenario.sh' && grep -q 'npm audit --omit=dev' '$HERE/aipay-scenario.sh'" "grep 对应符号确认接线在 aipay-scenario.sh"
 
-# ④ 双仓干净（simharness+overlay 无未提交）
-ck "④ 双仓工作区干净" "[ -z \"\$(git -C '$HERE' status --porcelain | grep -v '^??' | head -1)\" ] && [ -z \"\$(git -C '$HERE/../overlay' status --porcelain 2>/dev/null | grep -v '^??' | head -1)\" ]" "提交或暂存未提交改动"
+# ④ 双仓干净（simharness+overlay 无已跟踪未提交改动；未跟踪目录如 scratch/ 不计）
+ck "④ 双仓工作区干净" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no | head -1)\" ] && [ -z \"\$(git -C '$HERE/../overlay' status --porcelain --untracked-files=no 2>/dev/null | head -1)\" ]" "提交或暂存未提交改动"
 
 # ⑤ 网关+studio 健康
 ck "⑤ 服务健康（8801+8802）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null" "bash mux/mx-up.sh 拉起"
@@ -41,7 +41,12 @@ ck "⑦ 采集链依赖（playwright）" "cd '$HERE' && node -e \"require.resolv
 
 # ⑧ 上轮报告四查（最近轮 evidence 在位且审计零 FAIL）
 LAST_RUN=$(ls -1d "$SR"/runs/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9]+/$' | sort | tail -1)
-ck "⑧ 上轮报告审计零 FAIL" "[ -n '${LAST_RUN:-}' ] && python3 '$HERE/mux/mx-report-audit.py' --run \"\$(basename '${LAST_RUN:-/tmp/none}')\" 2>/dev/null | grep -q '四查全过'" "重跑 mx-report-audit --run <上轮> 看 FAIL"
+# runs/ 已清场（mx-clean 后首跑）=无上轮在位，跳过该项判绿（首个新轮自身就是被检对象）
+if [ -n "${LAST_RUN:-}" ]; then
+  ck "⑧ 上轮报告审计零 FAIL" "python3 '$HERE/mux/mx-report-audit.py' --run \"\$(basename '${LAST_RUN}')\" 2>/dev/null | grep -q '四查全过'" "重跑 mx-report-audit --run <上轮> 看 FAIL"
+else
+  echo "✓ ⑧ 上轮报告审计零 FAIL（runs/ 已清场——无上轮在位，新轮首跑）"; PASS=$((PASS+1))
+fi
 
 # ⑨ run 间干净（无在途驱动/监督器/陈锁）
 ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . && ! mxp_pgrep_f 'run-driver-supervisor' | grep -q ." "有残留驱动/监督器：确认后 touch stop 文件+kill（见独立监控手册）"
