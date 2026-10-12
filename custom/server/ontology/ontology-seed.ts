@@ -74,6 +74,35 @@ export function seedSpec(now = Date.now()): OntologySpec {
         ],
       },
       {
+        // —— 推演域高频实体补册（P1-1，2026-10-12 本体论透镜分析指认缺口）——
+        id: 'RFD', label: '需求单', labelEn: 'RFD', category: '工作对象', modality: 'shall', key: 'rfdId',
+        description: '推演需求（RFD-001 支付收银台等）；G1 冻结后不可再改（冻结公理见方案 §5.3）',
+        dataProperties: [
+          { id: 'rfdId', label: '需求号', datatype: 'string', required: true, modality: 'shall' },
+          { id: 'title', label: '标题', datatype: 'string', required: true, modality: 'shall' },
+          { id: 'frozen', label: '已冻结', datatype: 'boolean', modality: 'should' },
+        ],
+      },
+      {
+        id: 'Verdict', label: '判词', labelEn: 'Verdict', category: '运行环境', modality: 'shall', key: 'verdictId',
+        description: '关卡结论文本（行首判词=唯一权威，卡面字段同步）；判词字面值已入册 glossary（P2-1）',
+        dataProperties: [
+          { id: 'verdictId', label: '判词标识', datatype: 'string', required: true, modality: 'shall' },
+          { id: 'outcome', label: '结论', datatype: 'string', required: true, enum: ['PASS', 'FAIL', 'BLOCKED', 'CONDITIONAL'], modality: 'shall' },
+          { id: 'gateRef', label: '所属关卡', datatype: 'string', modality: 'should' },
+          { id: 'anchor', label: '凭证锚', datatype: 'string', modality: 'should', description: 'matrix 事件号/卡号/commit 号' },
+        ],
+      },
+      {
+        id: 'EvidenceFrame', label: '证据帧', labelEn: 'EvidenceFrame', category: '运行环境', modality: 'should', key: 'frameId',
+        description: '推演过程实拍截图（当轮实时采集，禁补拍冒充——帧采集红线见方案 §5.5）',
+        dataProperties: [
+          { id: 'frameId', label: '帧名', datatype: 'string', required: true, modality: 'shall' },
+          { id: 'step', label: '所属步', datatype: 'string', modality: 'should' },
+          { id: 'phase', label: '时相', datatype: 'string', enum: ['before', 'after'], modality: 'may' },
+        ],
+      },
+      {
         id: 'Deliverable', label: '交付物', labelEn: 'Deliverable', category: '工作对象', modality: 'shall', key: 'path',
         description: '任务的产物（代码/文档/报告）；须经验收门禁（verifiedBy 公理）',
         dataProperties: [
@@ -177,18 +206,22 @@ export function seedSpec(now = Date.now()): OntologySpec {
       },
     ],
     objectProperties: [
-      { id: 'assignedTo', label: '分派给', domain: ['Task'], range: ['Agent', 'Human'], cardinality: { max: 1 }, modality: 'shall' },
+      { id: 'assignedTo', label: '分派给', domain: ['Task'], range: ['Agent', 'Human'], cardinality: { min: 1, max: 1 }, modality: 'shall' },
       { id: 'dependsOn', label: '依赖', domain: ['Task'], range: ['Task'], modality: 'shall' },
-      { id: 'produces', label: '产出', domain: ['Task'], range: ['Deliverable'], modality: 'shall' },
+      { id: 'produces', label: '产出', domain: ['Task'], range: ['Deliverable'], cardinality: { min: 1 }, modality: 'shall' },
       { id: 'verifiedBy', label: '验收于', domain: ['Deliverable'], range: ['Gate'], cardinality: { min: 1, max: 1 }, modality: 'shall' },
-      { id: 'playsRole', label: '承担角色', domain: ['Agent', 'Human'], range: ['Role'], modality: 'shall' },
+      { id: 'playsRole', label: '承担角色', domain: ['Agent', 'Human'], range: ['Role'], cardinality: { min: 1 }, modality: 'shall' },
       { id: 'hasMember', label: '成员', domain: ['Squad'], range: ['Agent', 'Human'], modality: 'shall' },
       { id: 'leads', label: '领导', domain: ['Human'], range: ['Squad'], cardinality: { max: 1 }, modality: 'may' },
-      { id: 'belongsTo', label: '归属看板', domain: ['Task'], range: ['Board'], cardinality: { max: 1 }, modality: 'should' },
+      { id: 'belongsTo', label: '归属看板', domain: ['Task'], range: ['Board'], cardinality: { min: 1, max: 1 }, modality: 'should' },
       { id: 'runsTask', label: '执行任务', domain: ['Session'], range: ['Task'], modality: 'may' },
       { id: 'modifies', label: '修改', domain: ['Patch'], range: ['Repo'], modality: 'shall' },
       { id: 'documents', label: '文档化', domain: ['WikiPage'], range: ['Standard', 'Metric', 'Term', 'Role'], modality: 'should', description: '知识页是表述形式，语义实体经此挂接（内容与形式分离）' },
       { id: 'cites', label: '引用', domain: ['Standard'], range: ['Standard'], modality: 'may' },
+      // —— 推演域关系补册（P1-1）——
+      { id: 'scopes', label: '涵盖需求', domain: ['Run'], range: ['RFD'], cardinality: { min: 1, max: 1 }, modality: 'shall', description: '一轮推演恰服务一张需求单' },
+      { id: 'issuesVerdict', label: '出具判词', domain: ['Gate'], range: ['Verdict'], modality: 'should' },
+      { id: 'evidencedBy', label: '以帧佐证', domain: ['Deliverable'], range: ['EvidenceFrame'], modality: 'should', description: '交付物实拍证据（必采步红徽章判据）' },
     ],
     axioms: [
       {
