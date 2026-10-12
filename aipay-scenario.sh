@@ -1988,6 +1988,7 @@ PAYSPECS
       {
         echo "ISSUE|product-surface-degraded|lite-scope|lite 轮夹具步与报告步 UI 帧不在本轮采集面（真值沿用源轮/报告页收尾后生成）——§5.6 采集纪律⑩ 合规降级登记（lite 审计口径自动记）"
         echo "ISSUE|frame-capture-failed|step-report_done|报告步自身页收尾后生成，无法当轮自拍——V8.4④ 配对（lite 审计口径自动记）"
+        echo "ISSUE|frame-capture-failed|step-ready_done|lite 轮 G5 判词复用形态（源轮评审真值沿用不重演，无当轮评审面可拍）——V8.4④ 配对（lite 审计口径自动记）"
       } >> "$EVID_DIR/issues.log"
       note "[报告] lite 审计口径：降级登记已自动记入 issues.log（product-surface-degraded|lite-scope + report_done 配对）"
     fi
