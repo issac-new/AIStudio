@@ -611,3 +611,22 @@
 # [610] 脱敏计数豁免：1-4 位纯数字赋值值不打码——blocker_auth=1 等诊断计数不再塌成
 # ***（stuck 告警 121 ticks 零诊断信号根治）；真密钥形态不受影响（run15 复盘 S2）。
 610-agent-redact-counter-exempt.patch
+
+# [611] SoL-Pi 效能轮①：obs_recall 进 _HERMES_CORE_TOOLS——新工具文件由 registry
+# 自动发现注册（tools/registry.py AST 扫描），但默认工具面由 toolsets.py 核心清单
+# 决定，不进清单模型看不到（inject 路由前缀表同步加 'toolsets.py' 根层条目）。
+611-agent-toolsets-obs-recall.patch
+# [612] SoL-Pi 效能轮②：ObservationPack 对位——溢出报文升级为头+尾双摘录（诊断
+# 尾部不再丢）+ 召回句柄（Result id）；新增 obs_recall 工具按 tool_call_id 分页取回
+# 归档（限定 spillover/hermes-results 目录，不可当第二个 read_file 用）；新增
+# efficiency ledger JSONL 审计线（efficiency/ledger.jsonl，studio 面板消费）。
+612-agent-observation-pack-recall.patch
+# [613] SoL-Pi 效能轮③：Action Fusion——write_file/patch 增 then_run 可选参数，写入
+# 成功后同回合执行校验命令并合并观察（编辑→验证从两次模型决策并作一次）；执行前
+# 内容哈希守卫（写入与执行之间文件被改则跳过并说明），输出头尾截断，账本记账。
+613-agent-action-fusion-then-run.patch
+# [614] SoL-Pi 效能轮④：Evidence-Preserving Reducer——大诊断观察（≥4KiB，目标工具
+# 白名单）交廉价辅助模型出收据，引文逐字校验（行集成员制）+ 密形检查 + 尺寸上限，
+# 任何一环不过即原文直出（能力下限红线）；原文先归档再精简（obs_recall 可整页取回）；
+# cli-config evidence_reducer 块配置，默认关闭。tool_executor 观察提交点接线。
+614-agent-evidence-reducer.patch
