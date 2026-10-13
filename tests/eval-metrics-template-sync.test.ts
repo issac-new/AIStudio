@@ -23,7 +23,7 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(tpl).toContain('证据缺口')
     expect(tpl).toContain('工具选择正确率')
     expect(tpl).toContain('轨迹绕路比')
-    expect(tpl).toContain('链路六环节')
+    expect(tpl).toContain('六环节分段通过率')
     expect(tpl).toContain('异常场景分桶')
     // 机械判据节顺延为 §9 且含评测三判据
     expect(tpl).toContain('## 9. 机械核对判据')
