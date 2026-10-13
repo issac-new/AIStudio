@@ -40,7 +40,7 @@ export interface ProfileTail {
   /** 最后「真做」行（tool completed 或会话第 2+ 次调用）时间戳 epoch ms；无=0。
    *  run19 推演层根治上移：单轮 API call #1 + Turn ended=嘴炮回合（回一句话
    *  收场）——静默催办资格的复位只认真做行，防"被催后回话顶回继续躺平"。 */
-  realWorkTsMs: number
+  realWorkTsMs?: number
 }
 
 export interface ProfilesFace {
