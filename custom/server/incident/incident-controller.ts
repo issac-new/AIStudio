@@ -23,16 +23,29 @@ function invalidId(ctx: { status: number; body: unknown }, id: string | undefine
   return false
 }
 
+/** query → IncidentOpts（推演轮聚合窗口，run18 复盘：驱动侧传 run_started_at/当前时刻）。 */
+function optsFromQuery(ctx: { query: Record<string, string | string[] | undefined> }) {
+  const num = (v: string | string[] | undefined) => {
+    const s = Array.isArray(v) ? v[0] : v
+    const n = s !== undefined ? Number(s) : NaN
+    return Number.isFinite(n) && n >= 0 ? n : undefined
+  }
+  return {
+    windowSince: num(ctx.query.since),
+    windowUntil: num(ctx.query.until),
+  }
+}
+
 incidentRoutes.get('/sessions/:id/report', (ctx) => {
   const id = ctx.params.id
   if (invalidId(ctx, id)) return
-  ctx.body = buildIncidentReport(id)
+  ctx.body = buildIncidentReport(id, optsFromQuery(ctx))
 })
 
 incidentRoutes.get('/sessions/:id/report.md', (ctx) => {
   const id = ctx.params.id
   if (invalidId(ctx, id)) return
-  const report = buildIncidentReport(id)
+  const report = buildIncidentReport(id, optsFromQuery(ctx))
   ctx.type = 'text/markdown; charset=utf-8'
   ctx.set('Content-Disposition', `attachment; filename="incident-report-${id}.md"`)
   ctx.body = renderIncidentMarkdown(report)

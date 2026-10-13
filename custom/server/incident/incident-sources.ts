@@ -10,7 +10,7 @@
 //   6. ekko 记忆审计事件（ekko.db memory_audit_events，路径候选探测，缺席如实）
 //   7. 编排面：workflow_run_node_sessions→workflow_runs 快照 vs 实际执行；gc_handoff_chains（session→room
 //      映射不可得时如实 absent）
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describeToolCall, type ToolSemantic } from './tool-semantics'
@@ -22,6 +22,11 @@ export function studioDbCandidates(explicit?: string): string[] {
   const out: string[] = []
   const push = (p: string | undefined) => { if (p && !out.includes(p)) out.push(p) }
   push(explicit?.trim() || process.env.HERMES_INCIDENT_DB?.trim())
+  // 推演环境对齐（run18 复盘：事故报告 17 要素 12 项空白的根因之一）：studio 进程本就带
+  // HERMES_WEB_UI_HOME（webui db 写入面），事故读取层却没消费它——候选链落到宿主家目录，
+  // 读到的是宿主库（0 条推演会话）。此处补上，与写入面同源。
+  const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim()
+  if (webuiHome) push(join(webuiHome, 'hermes-web-ui.db'))
   push(resolve(process.cwd(), 'packages/server/data/hermes-web-ui.db'))
   push(resolve(__dirname, '../../../data/hermes-web-ui.db'))
   push(resolve(__dirname, '../../../../data/hermes-web-ui.db'))
@@ -137,6 +142,104 @@ export function readSessionOverview(dbPath: string, sessionId: string): SessionO
     }
     return out
   } catch { return null } finally { try { (db as { close(): void }).close() } catch { /* 已关 */ } }
+}
+
+// ---------- 1b. profile state.db 窗口聚合（推演轮形态，run18 复盘根治） ----------
+// 推演环境下 agent（hermes CLI profile）会话不落 webui 主库，落在各 profile 的
+// state.db（sessions/messages 同构表）。sessionId 为 RUN_ID 形态（yyyymmdd-…）且主库
+// 精确查无果时，按时间窗聚合各 profile 的会话——「推演轮聚合形态」如实标注，不冒充
+// 单会话。
+
+export interface ProfileWindowMessages {
+  profilesRoot: string
+  window: { sinceSec: number; untilSec: number }
+  byProfile: Array<{ profile: string; sessions: number; total: number }>
+  combined: SessionMessages
+}
+
+export function profileRootCandidates(explicit?: string, webuiDb?: string | null): string[] {
+  const out: string[] = []
+  const push = (p: string | undefined) => { if (p && !out.includes(p)) out.push(p) }
+  push(explicit?.trim() || process.env.HERMES_INCIDENT_PROFILES_ROOT?.trim())
+  const hermesHome = process.env.HERMES_HOME?.trim()
+  if (hermesHome) push(join(hermesHome, 'profiles'))
+  if (webuiDb) push(resolve(webuiDb, '..', '..', 'hermes', 'profiles'))
+  push(join(homedir(), '.hermes', 'profiles'))
+  return out
+}
+
+/** RUN_ID 形态（如 20261013-v8-run18-lite-acp）→ 当天本地全天窗 [秒, 秒]。null=非 RUN_ID 形态。 */
+export function runWindowFromSessionId(sessionId: string): { sinceSec: number; untilSec: number } | null {
+  const m = /^(\d{4})(\d{2})(\d{2})-/.exec(sessionId)
+  if (!m) return null
+  const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3])
+  const start = new Date(y, mo, d, 0, 0, 0, 0).getTime()
+  const end = new Date(y, mo, d + 1, 0, 0, 0, 0).getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null
+  return { sinceSec: Math.floor(start / 1000), untilSec: Math.floor(end / 1000) }
+}
+
+export function isRunIdForm(sessionId: string): boolean {
+  return /^\d{8}-/.test(sessionId)
+}
+
+/** 读单个 profile state.db 的窗口内会话与消息（缺表/坏档如实跳过）。 */
+function readProfileDb(dbFile: string, profile: string, sinceSec: number, untilSec: number): { sessions: number; rows: MessageRow[] } {
+  let db
+  try { db = openReadonlySync(dbFile) } catch { return { sessions: 0, rows: [] } }
+  try {
+    const sess = db.prepare(
+      'SELECT id FROM sessions WHERE started_at >= ? AND started_at < ? AND message_count > 0',
+    ).all(sinceSec, untilSec) as unknown as Array<{ id: string }>
+    if (sess.length === 0) return { sessions: 0, rows: [] }
+    const ids = sess.map((s) => s.id)
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = db.prepare(
+      `SELECT id, session_id, role, tool_name, tool_calls, timestamp, token_count, finish_reason, reasoning, reasoning_content, content FROM messages WHERE session_id IN (${placeholders}) ORDER BY timestamp ASC, id ASC`,
+    ).all(...ids) as unknown as MessageRow[]
+    // 会话归属带上 profile（供报告按账号分组呈现；session_id 原值在 detail 可反查）
+    for (const r of rows) r.session_id = `${profile}:${r.session_id}`
+    return { sessions: ids.length, rows }
+  } catch { return { sessions: 0, rows: [] } } finally { try { (db as { close(): void }).close() } catch { /* 已关 */ } }
+}
+
+export function readProfileWindowMessages(
+  explicitRoot: string | undefined, webuiDb: string | null, sinceSec: number, untilSec: number,
+): ProfileWindowMessages | null {
+  const root = profileRootCandidates(explicitRoot, webuiDb).find((p) => existsSync(p))
+  if (!root) return null
+  let profiles: string[]
+  try { profiles = readdirSync(root).filter((d) => existsSync(join(root, d, 'state.db'))) } catch { return null }
+  const byProfile: ProfileWindowMessages['byProfile'] = []
+  const merged: MessageRow[] = []
+  for (const p of profiles) {
+    const { sessions, rows } = readProfileDb(join(root, p, 'state.db'), p, sinceSec, untilSec)
+    if (sessions === 0) continue
+    byProfile.push({ profile: p, sessions, total: rows.length })
+    merged.push(...rows)
+  }
+  merged.sort((a, b) => a.timestamp - b.timestamp || a.id - b.id)
+  const combined: SessionMessages = {
+    rows: [], total: merged.length, byRole: {}, toolNameCounts: {}, reasoningTurns: 0,
+    firstTs: merged.length ? merged[0].timestamp : null,
+    lastTs: merged.length ? merged[merged.length - 1].timestamp : null,
+    tokens: 0,
+  }
+  for (const r of merged) {
+    combined.byRole[r.role] = (combined.byRole[r.role] ?? 0) + 1
+    combined.tokens += r.token_count ?? 0
+    const names = r.tool_name ? [r.tool_name] : parseToolCallNames(r.tool_calls)
+    for (const n of names) combined.toolNameCounts[n] = (combined.toolNameCounts[n] ?? 0) + 1
+    if (r.reasoning || r.reasoning_content) combined.reasoningTurns += 1
+    combined.rows.push({
+      id: r.id, session_id: r.session_id, role: r.role, tool_name: r.tool_name,
+      timestamp: r.timestamp, token_count: r.token_count, finish_reason: r.finish_reason,
+      contentPreview: r.content.slice(0, 160),
+      toolCallNames: names,
+      hasReasoning: Boolean(r.reasoning || r.reasoning_content),
+    })
+  }
+  return { profilesRoot: root, window: { sinceSec, untilSec }, byProfile, combined }
 }
 
 // ---------- 2. run-trace JSONL ----------
