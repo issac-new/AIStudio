@@ -5,7 +5,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/plan-view}"
 SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
-TITLE="${2:-Swarm Studio 全流程推演方案 V8.20（环节准入准出基线·全谱深化）}"
+# 标题自动自正本提版（run16 复盘：硬编码 V8.20 滞后实锤——改这里必须无硬编码版本）
+TITLE="${2:-$(python3 -c "
+import re
+s = open('docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md', encoding='utf-8').read()
+m = re.search(r'现行版本 (V8\.\d+)（([^）]+)）', s)
+print(f'Swarm Studio 全流程推演方案 {m.group(1)}（{m.group(2)}）' if m else 'Swarm Studio 全流程推演方案')
+")}"
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
 # 「enhance 读死 /tmp/plan-view 误碰别的输出目录」的坑（2026-10-10 实锤摸到活页 mtime）
