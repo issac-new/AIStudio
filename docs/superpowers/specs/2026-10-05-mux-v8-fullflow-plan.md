@@ -56,7 +56,7 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的驾驶舱。这�
 **这份方案怎么读：像看一部纪录片。** 主线是 §2.4 的七幕旅程——一张需求单怎么流过这家公司（序幕搭台→需求上锁→分析→设计与排期→并行生产→发布验收→复盘交付）。开场先看组织全景（第二部分开篇）：谁在场、舞台是什么。每一幕里三条线交织：AI 在产出（§2.9 责任总表的「AI 产出」列）、人在拍板（同一表「人把关」列+六道关卡 §5.3）、治理在拦截（§4.3 纪律，按幕挂站视图）。结尾是成绩单（§5.7 历轮基线）与证据面（§5.4 报告规范——每个结论可反查）。一、方案目标（要什么）和五、验收标准（怎么算成）是主干；二、方案设计是机制设计，给实现和评审的人；三、四部分是实例与操作细节，给执行的人。换需求单只换第三部分（三、推演场景设计），其余不变。演示视频素材与本章的对应关系见 §5.4.6。
 
 
-> **文档定位**：全流程推演唯一正本，现行版本 V8.22。本方案全文按本体论六要素组织（总述「本体论六要素」一节=章节语法与场景对象的统一索引；本体视图实现锚=§2.6.1）；同时是报告生成器与审计器的解析源，其中 26 步主链、六道关卡、治理机制、交付物模板字段语义为冻结面，变更须整轮推演验证。纪律条款编号为稳定标识，只增不改（§4.3 编号说明）。历次版本的入列内容、修订明细与事故背景，一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-archive.md)》。各专项设计的概念与代码锚另见同目录 specs/ 下对应设计文档。文风验收线（2026-10-11 用户裁定）：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
+> **文档定位**：全流程推演唯一正本，现行版本 V8.23。本方案全文按本体论六要素组织（总述「本体论六要素」一节=章节语法与场景对象的统一索引；本体视图实现锚=§2.6.1）；同时是报告生成器与审计器的解析源，其中 26 步主链、六道关卡、治理机制、交付物模板字段语义为冻结面，变更须整轮推演验证。纪律条款编号为稳定标识，只增不改（§4.3 编号说明）。历次版本的入列内容、修订明细与事故背景，一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-archive.md)》。各专项设计的概念与代码锚另见同目录 specs/ 下对应设计文档。文风验收线（2026-10-11 用户裁定）：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
 
 ## 一、方案目标
 
@@ -814,7 +814,7 @@ graph TB
 |---|---|
 | 操作者 | 驱动脚本（机械化审计）+审计AI 独立复核（fire-and-forget 不等待） |
 | 通道 | studio REST（事故报告汇编导出）+群派发+git 入仓 |
-| 动作序列 | ①导出事故报告汇编（`GET /api/incident/sessions/<RUN>/report.md`） ②机械化审计三查（门禁留痕对账/问题单四段格式/交付物缺件） ③派发：「合规及审计请求：门禁留痕已由驱动侧机械化审计（意见书将入仓），请独立复核并回 `AUDIT-OPINION-PASS` 或 `AUDIT-OPINION-CONCERNS（附清单）`。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人。」 ④意见书入仓（独立性声明/抽检 3 条 AI 结论反核/关切清单/分层签名线——独立复核未回执留空不代签） ⑤免等窗终态复核：对回执类缺口追加 DISP 收尾行 |
+| 动作序列 | ①导出事故报告汇编（`GET /api/incident/sessions/<RUN>/report.md?since=<run_started_at>&until=<now>`——推演轮窗口参数供 profile 聚合面取窗，V8.23） ②机械化审计三查（门禁留痕对账/问题单四段格式/交付物缺件） ③派发：「合规及审计请求：门禁留痕已由驱动侧机械化审计（意见书将入仓），请独立复核并回 `AUDIT-OPINION-PASS` 或 `AUDIT-OPINION-CONCERNS（附清单）`。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人。判罚口径提示：G5 早于 UAT 是 §2.4 冻结面既定序非时序倒挂，判『放行无效』须以缺评审实物/证据链断裂为准（V8.23，run18 复盘 F2 误判防复发）。」 ④意见书入仓（独立性声明/抽检 3 条 AI 结论反核/关切清单/分层签名线——独立复核未回执留空不代签） ⑤免等窗终态复核：对回执类缺口追加 DISP 收尾行 |
 | 等待信号 | `audit_done`（不等待 审计AI 回执） |
 | 超时与失败 | 导出失败/发现→记问题单继续；推送失败记问题单 |
 | 产出 | `evidence/incident-report.md`；审计意见书入仓；delivery 面板灯截图（`/app/runs`） |
@@ -922,7 +922,7 @@ graph TB
 > - ②治理健康页「机器执法实况」条（#/app/board?tab=accounts）：G1-G6 按 qgate 域映射（L0→G1、L1→G3、L2/L3→G4、L4/L5→G5）chip+来源分布行（核验/声明/降级/无信号）。G2/G6 为人工域，灰态"—"不编造。
 > - 锚点=custom/server/governance/governance-controller.ts（/qgate-verdicts）、custom/client/matrix-teams/stores/qgate-bridge.ts、custom/client/ia2/views/gov/GovHealthSection.vue。
 >
-> **治理证据端点与推演侧消费**（步 23/24 证据可引用，不键控步骤）：事故报告汇编器 `/api/incident/sessions/:id/report[.md]`（三类 17 要素、七源只读实取、缺席要素如实标 absent）。自治度对账 `/api/incident/sessions/:id/autonomy`（偏差黄条）。AI 虚拟损益表 `/api/hermes/virtual-pl`。治理事件总线 `/api/hermes/governance-events`（六域三级 append-only）。机器执法判定流 `/api/governance/qgate-verdicts`。报告能力面 `/api/hermes/report/*`（PART1 骨架生成草稿+报告验收断言，§5.4 形式契约）。消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md），步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）。生成器在位即透传。
+> **治理证据端点与推演侧消费**（步 23/24 证据可引用，不键控步骤）：事故报告汇编器 `/api/incident/sessions/:id/report[.md]`（三类 17 要素、七源只读实取、缺席要素如实标 absent）。自治度对账 `/api/incident/sessions/:id/autonomy`（偏差黄条）。AI 虚拟损益表 `/api/hermes/virtual-pl`。治理事件总线 `/api/hermes/governance-events`（六域三级 append-only）。机器执法判定流 `/api/governance/qgate-verdicts`。报告能力面 `/api/hermes/report/*`（PART1 骨架生成草稿+报告验收断言，§5.4 形式契约）。消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md），步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）。生成器在位即透传。**事故报告推演轮聚合形态（V8.23，run18 复盘根治）**：推演环境 agent（hermes CLI profile）会话落 `hermes/profiles/*/state.db` 而非 webui 主库——sessionId 为 RUN_ID 形态且主库无果时，汇编器按时间窗聚合各 profile 的 sessions/messages（byProfile+合并视图），要素标注「推演轮聚合：N 账号 × M 会话」不冒充单会话；窗口取 `since`/`until` query（驱动传 run_started_at/当前时刻），缺省按 RUN_ID 日期全天；db 候选链含 HERMES_WEB_UI_HOME（studio 写入面 env 对齐，防读到宿主库）。
 >
 > **人机协同组织层证据面**：容量分析 `GET /api/governance/capacity/overview?days=N`（SQLite 只读全库聚合：按人估算人日/已交付人日/实际人日/在途卡数+覆盖率汇总，口径注脚随响应下发）。步 22 可附导出件 evidence/capacity-overview.txt（估算覆盖率为 0 时如实呈现，是任务拆解采纳度的诚实信号而非缺陷）。任务工厂 `POST /api/graph/runs/:id/deposit-template`（完成 run 转存为 origin=factory 模板）+ 台账 `docs/admin/mission-templates.md`（治理注册表新 kind，保存即 git 提交）+ 协同图数据组合面（任务卡列表 parents/children/estimate_days 随列表带出，/api/hermes/autonomy-ladder + /api/escalation/pending + /api/graph/specs 三源客户端聚合）——步 24 复盘可引台账提交号佐证「跑过即资产」。锚点=custom/server/governance/capacity-analytics.ts、custom/server/loop/graph/graph-rest.ts（deposit-template）、custom/client/ia2/views/orchestration/OrchestrationView.vue。概念映射总正本=《2026-10-10-orchestration-capability-spec.md》。
 
@@ -1339,7 +1339,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 11. 问题单缺 DISP 时驱动脚本可按三态补账（注明缘由、计入人工介入度量、不改写 agent 原始记录）。
 
-28. 同一问题的 ISSUE/DISP 以**类型段**为连接键（防措辞差断链），配对次序为**主体精确优先**：①type·subject 精确命中即配对。②主体为泛指（director/monitor/harness）的 DISP 广播到该类型全部唯一键。③该类型仅一个唯一键时容主体措辞差。④其余判待处置。DISP 首词只用三态分桶词（已修/观察/延后），禁表外词。生成器将表外词键单列计数（四桶+表外词求和=唯一键数，禁凭空消失）并计审计 WARN；**报告生成前执行三态归桶收尾件**：表外词键幂等补「观察」桶收尾行（引用原处置语义），已修禁自动升桶——须人工带锚点补记。**「已修」处置必须带修复锚点（commit/event/文件路径）**，无锚点处置一律降为观察或待处置。悬挂 DISP（无对应 ISSUE）视为台账卫生缺陷，补 ISSUE 配对或标注别名归属。**登记幂等**：ISSUE 登记点必须同类型+同主体去重。重启循环重放不得刷单。刷单=台账卫生缺陷。**降级逐步键**：r18-collection-missing 类降级登记按 ISSUE 第三段 step-N 精确匹配该步，禁一键全局豁免。系统性采集事故族也须逐步登记（每步一行），文件级整体缺失才保留全局降级语义。**闸键首过保护**：闸类状态键（g1_frozen/g2_arch_pass/g3_code_pass/g4_pass/g5_ready/uat_done/retro_done）首写后，重启循环不得覆写——首过时刻是唯一权威过闸时刻。
+28. 同一问题的 ISSUE/DISP 以**类型段**为连接键（防措辞差断链），配对次序为**主体精确优先**：①type·subject 精确命中即配对。②主体为泛指（director/monitor/harness）的 DISP 广播到该类型全部唯一键。③该类型仅一个唯一键时容主体措辞差。④其余判待处置。DISP 首词只用三态分桶词（已修/观察/延后），禁表外词。生成器将表外词键单列计数（四桶+表外词求和=唯一键数，禁凭空消失）并计审计 WARN；**报告生成前执行三态归桶收尾件**：表外词键幂等补「观察」桶收尾行（引用原处置语义），已修禁自动升桶——须人工带锚点补记。**「已修」处置必须带修复锚点（commit/event/文件路径）**，无锚点处置一律降为观察或待处置。悬挂 DISP（无对应 ISSUE）视为台账卫生缺陷，补 ISSUE 配对或标注别名归属。**登记幂等**：ISSUE 登记点必须同类型+同主体去重。重启循环重放不得刷单。刷单=台账卫生缺陷。**降级逐步键**：r18-collection-missing 类降级登记按 ISSUE 第三段 step-N 精确匹配该步，禁一键全局豁免。系统性采集事故族也须逐步登记（每步一行），文件级整体缺失才保留全局降级语义。**闸键首过保护**：闸类状态键（g1_frozen/g2_arch_pass/g3_code_pass/g4_pass/g5_ready/uat_done/retro_done）首写后，重启循环不得覆写——首过时刻是唯一权威过闸时刻。**结构性类别禁自动观察归桶（V8.23，run18 复盘 F10）**：收尾归桶件对闸键合规类（g3-local-gate-missing/test-report-missing/gate-* 族）、审计发现类（audit-finding）、推送失败类（uat-push/qgate-*）、结论行与合并冲突类（conclusion-gap/merge-conflict）一律归「延后」桶并显式要求下轮开跑前人工处置带锚点回写——自动「观察」桶把 F1-F4 级问题与琐碎观察同桶，复盘「待处置」信号被抹平（run18 实锤：32 键 31 自动观察）。
 
 
 **仓库与凭证**
@@ -1434,6 +1434,8 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 43. **载荷采集可观测**：r18-collect 采集失败必须登记问题单（r18-collect-failed 类型，含步键）禁静默；驱动重放对已登记锚的对话步重放补采（r18-collect 幂等拒重，重启重入即补）；报告步生成前跑载荷清扫补采面。呈现红线见 §5.5 采集三红线——「步完成但载荷全缺」必采步维持红徽章、非必采完成步黄标（区分「实质达标」与「降级在案」）。台账三态归桶收尾件（表外词键补观察桶行，已修禁自动升桶须人工带锚）在报告生成前执行，纪律 28 四桶计数由此归位。**run16 复盘增补三条**：①采集失败登记幂等——r18-collect 中心化登记按（步键+错误指纹）去重，驱动重启循环重放不得每轮刷单（run16 实锤 103 张）。②载荷锚点单一事实源——凡把 state marker 值当采集锚传递，必须经 marker_eventid 提取纯 event_id（marker 存在两种写入形态：mx_send 纯 id / dispatch_in_room 整行 note；裸传键名或整行 note 必 404）。③r18-collect 锚形态预检——锚非 `$` 开头即报「调用方参数错」而非透传服务端 404，参数错与故障当场可分。
 44. **报告链收尾稳定性**：报告链（净化→清扫→生成→审计→合并）是收尾唯一关键路径，其输入（issues.log/state.env）由全程多源写入，任何坏字节都会让消费方逐一崩溃形成重启循环（run16 实锤：1 个非 UTF-8 字节→报告链崩 20 轮×30s 共 67 分钟零告警）。三道防线：①报告链头部台账净化（坏行按字节隔离 .badbytes+替换 U+FFFD，常态零开销）；②全部报告链读文件必须容错解码（errors='replace'），写入侧记单函数一律显式 UTF-8；③监督器重启风暴护栏——驱动连续 ≥3 次非熔断 rc≠0 退出即登记问题单 driver-restart-storm（监控介入信号，幂等一次），≥10 次退避 120s 防刷单与负载；rc=0 复位。自愈能力保留（run16 循环最终靠热修渡过），护栏把「跑完才知道坏」前移为「第 3 次失败就知道」。
 45. **叙事注册与步骤状态一致性**：按轮叙事注册表的 keys 字段是步骤完成态渲染的唯一驱动，空数组=该步恒 ⬜+帧零挂接（run16 实锤：26 步 keys 全空→25 步 ⬜+48 帧零挂接+hero 0 图位，与同页六闸全过仪表盘自相矛盾，审计按「未完成步」口径放行）。三重防线：①生成器兜底——注册 keys 为空即回落 §3.3 默认映射并 stderr 警示；②审计器断言——全量轮 state §3.3 键在位而报告该步 ⬜=FAIL（lite 轮按 lite_fixtures_from 豁免，夹具步「不在本轮执行范围」属合规声明态）；③注册纪律——收尾链补注册叙事时 keys 必须照 §3.3 映射逐行誊写，配门禁测试（改任一端测试当场失败）。hero 区问题单处置计数必须披露配对口径（纪律 28 阶梯：精确 n 键+广播/单键 m 键+悬挂 DISP k 键），禁裸报「n/n 已完整循环」。
+46. **闸键-证据耦合（V8.23，run18 复盘 F1/F3/F4 根治）**：闸类状态键的落下必须以本轮证据在案为前置——「记单即落键」是结构病（run18 实锤三表现：G3 四主体缺 testlog 照落键、G4 被源轮旧测试报告满足存在性、G5 源轮 PASS 卡跨轮命中+评审卡空 body 放行）。证据新鲜度基线=单一事实源函数 evidence_baseline（本轮 run_started_at；lite 轮回落夹具源轮开跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜）。四闸联动：①G3 缺分支 testlog→派补证单+固定窗等待，超时 sset g3_evidence_gap 显形（治理报告计「缺证过闸」，首过率不虚高），禁静默落键；②G4 测试报告判定=存在性×新鲜度双查（origin/integration 上最后提交 ≥ 基线，旧件不满足即走派单等待）；③G5 评审卡判词带 created_at 时间窗（<基线的卡不参与判词合并；lite 传夹具源基线保复用语义）+finalize 前置评审卡 body 非空校验（空 body=无评审实物，禁收口，等 review-record 落卡）；④G4 缺报告超时同款落 g4_evidence_gap。审计口径：G5 发布准出早于 UAT 是 §2.4 冻结面既定序（准出→发布→上线后用户对账），非时序倒挂——判「放行无效」须以缺评审实物/证据链断裂为准（run18 审计 F2 误判防复发，派单词携带口径提示）。
+47. **报告引用产物新鲜度与计数实算（V8.23，run18 复盘 F3/F9/F11）**：报告收编/引用的产物证据与计数必须当轮实取——①QGate 证据包：收编前校验产物正文 generated 时间戳 ≥ 证据基线，旧件禁收编并清中央仓旧产物（run18 实锤：5 天前旧件整包透传，9 门全 INCONCLUSIVE）；②交付物全景矩阵：锚核验须先 fetch origin 再判定，命中 blob 还须过最后提交 ≥ 基线的窗口校验，不新鲜降级标「在仓·旧版」禁标「模版符合」（本地 remote-tracking ref 无 fetch 核验=推送时序差下旧值虚标）；③复盘表计数：标题数以 issues.log 实算为准，自指单（retro-open-items）追加后必须重取计数（run18 实锤：标题 16 vs 表体 17）；叙事注册文案禁手填问题单计数。
 
 
 ### 4.4 关键技术规范总表
