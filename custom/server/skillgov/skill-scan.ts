@@ -12,7 +12,7 @@
  * 与 hermes-agent 侧 skills_guard.py 同向但独立（那是安装树执法，这是产品治理面）。
  */
 import { readdirSync, readFileSync, statSync, readlinkSync, existsSync, mkdirSync, appendFileSync, writeFileSync, renameSync } from 'node:fs'
-import { join, resolve, dirname, relative } from 'node:path'
+import { join, resolve, dirname, relative, sep } from 'node:path'
 import { homedir } from 'node:os'
 
 export type SkillScanVerdict = 'safe' | 'caution' | 'dangerous'
@@ -159,7 +159,10 @@ export function scanSkillDir(dir: string, now: () => number = Date.now): SkillSc
         files.total += 1
         try {
           const target = resolve(dirname(full), readlinkSync(full))
-          if (!target.startsWith(resolve(dir))) {
+          // 前缀判定必须带路径分隔符：skills/foo 的链接指向兄弟目录 skills/foo-bar
+          // 时裸 startsWith 也命中，high 级「逃逸」被消掉（sibling 前缀绕过）。
+          const rootDir = resolve(dir)
+          if (target !== rootDir && !target.startsWith(rootDir + sep)) {
             findings.push({ rule: 'symlink-escape', severity: 'high', file: rel, message: `符号链接逃逸出技能目录：${target}` })
           }
         } catch { /* 坏链接跳过 */ }

@@ -203,10 +203,14 @@ def _on_session_end(ctx: Any, payload: dict) -> None:
     """Write trailer, close file."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
-    key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.pop(key, None)
+        # end 钩子的 task_id 与 start 时不一致是常态（header 常记 null 而
+        # effective_task_id 已定）——精确键 pop 落空会连带跳过 trailer 落盘、
+        # 句柄关闭与索引清理（与 api/tool 钩子同型的键错配，_lookup_state 兜底）。
+        exact_key = _session_key(session_id, task_id)
+        key = exact_key if _TRACE_STATE.get(exact_key) else _SESSION_KEY_INDEX.get(session_id)
+        state = _TRACE_STATE.pop(key, None) if key else None
         if not state:
             return
 
