@@ -1,4 +1,5 @@
 diff --git a/packages/client/index.html b/packages/client/index.html
+index 6679414..abcc276 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
 @@ -65,7 +65,7 @@
@@ -11,22 +12,28 @@ diff --git a/packages/client/index.html b/packages/client/index.html
  
          // Resolve dark mode
 diff --git a/packages/client/src/composables/useTheme.ts b/packages/client/src/composables/useTheme.ts
+index a8927d4..c16804e 100644
 --- a/packages/client/src/composables/useTheme.ts
 +++ b/packages/client/src/composables/useTheme.ts
-@@ -85,7 +85,7 @@
+@@ -85,7 +85,7 @@ function loadCachedTheme(userId: number | null): UserThemeSettings {
+ }
  
  const brightness = ref<BrightnessMode>(
 -  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'system',
 +  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'dark',
  )
  // Keep this in sync with the pre-render theme in index.html.
+ const style = ref<ThemeStyle>(localStorage.getItem(STYLE_KEY) === 'comic' ? 'comic' : 'ink')
 diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
+index cdcfa24..ef9827e 100644
 --- a/packages/client/src/main.ts
 +++ b/packages/client/src/main.ts
-@@ -28,7 +28,7 @@
+@@ -28,7 +28,7 @@ function storedPreference(key: string, fallback: string): string {
    }
  }
  
 -const savedBrightness = storedPreference('hermes_brightness', 'system')
 +const savedBrightness = storedPreference('hermes_brightness', 'dark')
  const themeStyle = useTheme().style.value
+ 
+ // Resolve dark mode
