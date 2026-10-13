@@ -19,10 +19,10 @@ index 68b798bbf..707d08833 100644
    killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
    getSession: getSessionRowForCommandPost,
    userCanAccessProfile: userCanAccessProfileForCommandPost,
-+  // overlay[perf]（2026-09-30 性能批二轮）：sqlite 直读快道库根=CLI 执行同源根
-+  // （HERMES_HOME 缺省回落 ~/.hermes——CLI 无显式 HOME 时即读此根的真库；
-+  // 不能按 active_profile 文件解析：profile 下常无 kanban 数据，实测指错根）
-+  resolveKanbanDir: () => process.env.HERMES_HOME || join(homedir(), '.hermes'),
++  // overlay[perf]（2026-09-30 二轮；2026-10-14 回归轮 D2 修正）：快道库根=CLI
++  // 同源根——agent CLI 的 kanban_home() 优先 HERMES_KANBAN_HOME（kanban_db.py:523），
++  // 快道须同序，否则两根分叉时 boards 计数走 CLI、任务快道读错根，泳道静默清空。
++  resolveKanbanDir: () => process.env.HERMES_KANBAN_HOME || process.env.HERMES_HOME || join(homedir(), '.hermes'),
  })
  async function initLoopSubsystem(): Promise<void> {
    if (loopStore) return

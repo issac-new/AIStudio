@@ -669,3 +669,8 @@
 # Action Fusion 守门测试 5 败即此。修复=home roots 非 destructive 访问放行，写/元数据仍拒。
 # 宿主树+SIM 树已同步应用（双树 Action Fusion 测试 10/10 绿+file_tools 41 绿实证）。
 620-agent-home-io-guard-read-exempt.patch
+
+# [621] studio logs 端点输入校验（2026-10-14 全量回归轮 D3）：杂名穿透 hermes CLI
+# 子进程 → Command failed 被兜成 500。入口加安全模式闸（非法 400），CLI 未知日志名
+# 失败按 404 语义回。触发证据：GET /api/studio/logs/regression-probe → 500。
+621-server-logs-input-validation.patch
