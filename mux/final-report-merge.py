@@ -785,6 +785,20 @@ def main():
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Swarm Studio 多智能体研发推演 · 最终报告（{args.run} · 合并版）</title>
 {machine_styles}
+<style>
+/* PART1/第0章暗色修补（用户 2026-10-13 裁定 dark 报告）——机器 token 暗色层已在 machine_styles 尾；
+   此处覆盖导读层与第0章的亮色硬编码 */
+.guide{color:#dbe4f0}
+.guide .card{background:#16233a;border:1px solid #22314a}
+.guide table{border-color:#22314a;background:#101a2c}
+.guide th{background:#16233a;color:#dbe4f0}
+.guide td{border-color:#22314a;color:#c7d4e6}
+.guide .ok{color:#34d399}.guide .warn{color:#f5b84c}.guide .err,.guide .bad{color:#f87171}
+.guide .note{color:#8ba0b8}
+.guide h1,.guide h2,.guide h3{color:#f1f5fb}
+#ch0 .ch0-hd{background:#16233a;border-color:#22314a;color:#dbe4f0}
+#ch0 .tl li{border-left-color:#2b4c8c;background:#101a2c;color:#c7d4e6}
+</style>
 {GUIDE_CSS}
 {CH0_CSS}
 </head><body>

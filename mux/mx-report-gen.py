@@ -3851,12 +3851,46 @@ art_tbl, art_stat, art_note_g5 = artifact_panorama()
 #    token 值（手抄即第二事实源，必漂移）。──
 _REPORT_TOKENS = (Path(__file__).resolve().parent / 'report-tokens.css').read_text(encoding='utf-8', errors='replace')
 
+# ── 报告暗色主题层（用户 2026-10-13 裁定：推演报告 dark 模式）──
+# 设计：token 单源保持亮色（方案页共用不动）；报告页在 token 之后注入 DARK_OVERRIDE，
+# 重定义全套 token 为暗色板并修补样式别名层中的亮色硬编码。hero 渐变在暗色下用深蓝提亮，
+# 文字面统一切 --ink 系（暗色=浅字）。xlsx/pdf 衍生不受影响（pandoc 走结构不走路灯色）。
+DARK_OVERRIDE = """
+:root{
+  --bg:#0b1220; --surface:#101a2c; --surface-2:#0b1220; --surface-3:#16233a;
+  --ink:#dbe4f0; --ink-strong:#f1f5fb; --muted:#8ba0b8;
+  --line:#22314a; --line-soft:#1a2740;
+  --accent:#5b9bff; --accent-deep:#2b4c8c; --accent-soft:#16233a;
+  --ok:#34d399; --ok-soft:#0d2b22;
+  --warn:#f5b84c; --warn-soft:#33230a;
+  --danger:#f87171; --danger-soft:#331414;
+  --code-bg:#0b1220; --code-ink:#c7d4e6;
+  --grad-hero:linear-gradient(135deg,#101a2c,#1c3155);
+  --shadow-sm:0 2px 10px rgba(0,0,0,.45); --shadow-md:0 8px 24px rgba(0,0,0,.55);
+}
+body{color-scheme:dark}
+/* 亮色硬编码修补（别名层遗留） */
+.hero,.hstat b,.pb-dot{color:#e8eef7}
+.step.gate-step{background:linear-gradient(135deg,#241d09,#101a2c);border-color:#8a6414}
+.nav-step{color:#c3d0e0}
+.sidebar{background:var(--surface);border-right-color:var(--line)}
+.art-chk-row .art-chk-val{color:#a8b8cc}
+label.cp-shot img{border:1px solid var(--line)}
+details,.stat-note{background:var(--surface-3)}
+table{border-color:var(--line)}
+td,th{border-color:var(--line)}
+a{color:var(--accent)}
+::selection{background:#2b4c8c;color:#fff}
+"""
+
+
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Swarm Studio 全流程推演报告 · RFD-001</title>
 <style>
 {_REPORT_TOKENS}
+{DARK_OVERRIDE}
 *{{margin:0;padding:0;box-sizing:border-box}}
 /* 机器样式别名层（2026-10-10 CSS 统一改造）：token 单源在前（report-tokens.css），
    此处只保留 token 未覆盖的本地别名——与 token 同名且取值不同者（--accent/--ok/--warn/--muted）
