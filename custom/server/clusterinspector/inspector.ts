@@ -89,9 +89,13 @@ export class ClusterInspector {
         const sendEnv = readGatewayMatrixEnv(process.env)          // 发送者凭据（orchestrator/默认）
         const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
         if (!sendEnv || !agentEnv?.userId) return undefined
-        // 催办带缺口数字+收口动作（run19 推演层根治上移：模糊提醒"若仍在处理请继续"
-        // 会被自认已完成的回话顶回——run19 三例实锤。改成点名卡清单+可执行收口三步。）
-        const body = `⏰ 集群巡检催办（真做静默）：${summary}。请收口：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
+        // 催办带缺口数字+分支情报+收口动作（run19 推演层根治上移：模糊提醒"若仍在
+        // 处理请继续"会被自认已完成的回话顶回——run19 三例实锤。改成点名卡清单+
+        // 可执行收口三步；配置 CLUSTER_INSPECTOR_NUDGE_REPO 后催办词附「已见到你
+        // 近期推送的分支+还差合并/结论」——干完活不收口形态的带情报催办。）
+        const { probeBranchIntel } = require('./collectors') as typeof import('./collectors')
+        const intel = probeBranchIntel(profile)
+        const body = `⏰ 集群巡检催办（真做静默）：${summary}。${intel}请收口：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
         await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
           { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
           globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)
