@@ -1281,8 +1281,10 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
-  # TEST-PASS/缺陷消息曾让门禁在派发后 1 秒即判「零缺陷轮真值」（假完成）
-  sset test_dispatch_ts $(( $(date +%s) * 1000 ))
+  # TEST-PASS/缺陷消息曾让门禁在派发后 1 秒即判「零缺陷轮真值」（假完成）。
+  # 首键冻结（run19 重放实锤根修）：无守卫时每次重放覆盖成「现在」，重启前已交付
+  # 的结论行全落窗外被忘——fei 已交 3 片被重置为 0/2、被误催重交。已有值不覆盖。
+  [[ -z "$(sget test_dispatch_ts)" ]] && sset test_dispatch_ts $(( $(date +%s) * 1000 ))
   SINCE_TS=$(sget test_dispatch_ts)
 
   # 缺陷流观测窗：房间出现【缺陷】则等待对应 FIX-DONE 回执
