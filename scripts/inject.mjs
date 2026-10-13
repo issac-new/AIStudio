@@ -97,6 +97,10 @@ export const HERMES_AGENT_PATCH_PREFIXES = [
   // 根层 toolsets.py(patch 611 起):同上——obs_recall 进 _HERMES_CORE_TOOLS 的补丁
   // 宿主在 hermes-agent 根层,误路由 studio 同样硬死(SoL-Pi 效能轮)。
   'toolsets.py',
+  // tests/ 根层 home_io_guard.py(patch 620 起):agent 测试文件在 tests/ 根层(非
+  // tests/agent/),首段 tests/ 落 studio 桶"No such file"硬死——run19 根治件 620
+  // 首次触发;文件级条目先例同 model_tools.py/toolsets.py。
+  'tests/home_io_guard.py',
 ];
 
 /** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */
