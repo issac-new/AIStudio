@@ -336,3 +336,43 @@ export function collectSessionTelemetry(deps: CollectorDeps = {}): SessionTeleme
   }
   return face
 }
+
+/** 分支感知催办情报（run19 推演层根治上移产品层，用户 2026-10-13 裁定）：
+ *  「干完活不收口」形态——稿子已推到 git 分支（本轮新提交）但不合并、不回结论，
+ *  模糊催办会被 agent 自认已完成顶回（run19 三例实锤）。探测该档案名下最近
+ *  freshH 小时有新提交的分支，产出「已见到你的分支+还差哪几步」的带情报催办词。
+ *  fail-open：未配置 CLUSTER_INSPECTOR_NUDGE_REPO / git 失败 / 无匹配 → 返回空串，
+ *  催办退回普通文案（探测永远不阻塞催办主链）。
+ *  作者匹配：git author === profile（如 fanfan）或 === profile 首段（如
+ *  chen-csw-pay-core → chen）；CLUSTER_INSPECTOR_AUTHOR_MAP（JSON）可显式覆盖。 */
+export function probeBranchIntel(profile: string, opts: { nowMs?: number } = {}): string {
+  const repo = process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+  if (!repo) return ''
+  const freshH = Number(process.env.CLUSTER_INSPECTOR_BRANCH_FRESH_H || 24)
+  const now = opts.nowMs ?? Date.now()
+  let authors: string[]
+  try {
+    const map = JSON.parse(process.env.CLUSTER_INSPECTOR_AUTHOR_MAP || '{}') as Record<string, string>
+    authors = map[profile] ? [map[profile] as string] : [profile, profile.split('-')[0] as string]
+  } catch { authors = [profile, profile.split('-')[0] as string] }
+  try {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    const out = execFileSync('git', ['-C', repo, 'for-each-ref',
+      '--format=%(refname:short)|%(objectname:short)|%(committerdate:unix)|%(authorname)',
+      'refs/heads', 'refs/remotes'], { timeout: 5000, encoding: 'utf-8' }) as string
+    const hits: string[] = []
+    for (const line of out.split('\n').filter(Boolean)) {
+      const [ref, tip, cdate, aname] = line.split('|')
+      if (!ref || !tip || !cdate || !aname) continue
+      const short = ref.replace(/^origin\//, '')
+      if (short === 'main' || short === 'master' || short === ref && ref.startsWith('origin')) continue
+      if (!authors.includes(aname)) continue
+      const ct = Number(cdate) * 1000
+      if (!(ct > now - freshH * 3600_000)) continue
+      hits.push(`${short}@${tip}`)
+      if (hits.length >= 3) break
+    }
+    if (!hits.length) return ''
+    return `已见到你近期推送的分支：${hits.join('、')}（内容在分支上，主干还没有）。`
+  } catch { return '' }
+}
