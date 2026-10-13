@@ -651,3 +651,9 @@
 # 117/板并发计数改每板独立库口径（0.21.7 tasks 无 board 列）/gates 测试 connect API
 # 迁移/基础设施豁免测试 Linux-only skipif（macOS _IS_LINUX 直通 in_process）。
 617-agent-0217-port-adaptations.patch
+
+# [618] Skill 三段治理·注册扫描接线三个导入/注入通路（2026-10-13 挂账清偿续批）：
+# hermes skills/import 成功即扫描随响应（scan 块）、ekko skill-import 扫描记账本、
+# 内置技能注入器 installManagedSkill 扫描（只在 hash 变化时调用，量有界）。
+# 全部 fail-soft（扫描失败不遮蔽导入/注入）；执法面=工具瀑布 skillGuardHook。
+618-server-skill-import-scan.patch

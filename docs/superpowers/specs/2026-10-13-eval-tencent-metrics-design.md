@@ -52,7 +52,7 @@ M1 已覆盖：S0+S1 断言双轨（机械优先语义兜底=启示⑥）、期�
 
 ## 5. 边界（2026-10-13 挂账清偿轮后更新）
 
-- ~~**Skill 三段安全治理**~~：**overlay 核心已落**（custom/server/skillgov/：skill-scan.ts 注册扫描+账本+REST、skill-guard-hook.ts 执行拦截/输出审核挂工具瀑布、生成器产物即时扫描；SKILLGOV_ENFORCE=1 执法，缺省零行为变化）。剩余面=上游 hermes/ekko 技能导入三入口与内置注入器的扫描接线（需 patch 轮）、扫描面产品 UI——列后续轮。
-- **live 触发评测**：TTFT 接收端已通（trace first_token_ms/ttft_ms → ttftMs → 门禁实测化，有数据即判）；agent 侧首 token 打点与 QPS 容量压测仍属后续（线上 627 份轨迹实态=未打点，如实列证据缺口）。回放判分零 agent 增量调用维持。
+- ~~**Skill 三段安全治理**~~：**全链已落（两批）**（custom/server/skillgov/：skill-scan.ts 注册扫描+账本+REST+recordSkillScan 单录入口、skill-guard-hook.ts 执行拦截/输出审核挂工具瀑布；patch 618 接线上游三个导入/注入通路；/app/skillgov 扫描工作台（默认开）；SKILLGOV_ENFORCE=1 执法，缺省零行为变化）。隔离栈端到端实证：真实 zip 导入→scan 块随响应（pipe-exec 高危抓到）→账本 latest 含导入技能。
+- **live 触发评测**：TTFT 接收端已通（trace first_token_ms/ttft_ms → ttftMs → 门禁实测化，有数据即判）；agent 侧打点已修——run-trace 插件消费上游 0.21.7 既有 first_chunk_at（turn_response_intake.py:85 传递）落双字段名，同时修复 span 会话键错配丢失缺陷（task_id 不一致→按 session_id 兜底，627 份空壳轨迹的根因），五份部署副本已同步；真实会话落盘确认待下轮推演（一次性 CLI 不发会话钩子已实锤）。QPS 压测工具 mx-load-probe.py 已在库（判别力实测：单线程服务容量不足被逮 9.5/50 QPS FAIL；连接失败全计错），执行属部署验收轮。回放判分零 agent 增量调用维持。
 - ~~**costUsd 取数**~~：**已接线**（tokens 域价目表单一事实源：token 分面×idle/peak 中值；未收录模型缺席不造数；币种随表声明）。
 - ~~**判定端多裁判**~~：**已落**（EVAL_JUDGE_MODELS 逗号清单：逐模型判定缓存隔离→τ 三段计票严格过半多数决，平票 unknown；单模型 fail-soft；全败才判离线；缺省单模型行为不变）。
