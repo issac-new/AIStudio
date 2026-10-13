@@ -664,7 +664,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
   # 四路并发等待（V8.16 饱和并行：原逐稿 for 串行——慢稿挡快稿的催办与记单时机，
   # 且单稿 3600s 窗在最慢路上叠加；multi 同刻观测四锚，先完成先 ✓，滞后锚催办按
   # owner 点名+陈旧分支诊断（c1e507d 件），失败退出导出失败稿清单精确记单）
-  wait_alive_truth_multi 3600 "chen,xiao,hu,lin" \
+  wait_alive_truth_multi 1800 "chen,xiao,hu,lin" \
     "仓库出现 docs/analysis/AN-PAYCORE-analysis.md@chen@repo_has docs/analysis/AN-PAYCORE-analysis.md" \
     "仓库出现 docs/analysis/AN-MP-analysis.md@xiao@repo_has docs/analysis/AN-MP-analysis.md" \
     "仓库出现 docs/analysis/AN-CHWX-analysis.md@hu@repo_has docs/analysis/AN-CHWX-analysis.md" \
@@ -1317,8 +1317,11 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # ── 测试员个体判活+按人催办（run19 根治：defect 环原为哑巴等待——纯消息计数，
     #    测试员收场静默后无判活无催办=死等窗口耗尽；fei 21:07 收场静默 35min 实锤，
     #    靠监控侧手工救场）。与 wait_alive_truth_multi 分桶同思路：qi/fei 各自追踪
-    #    最后活动（_agent_log_last_work_ts 同源判据），个体静默过半只 @ 该人（活动
-    #    即复位可再催），催办词带当前缺口计数变可执行收口指令。判活节流 60s/轮。
+    #    最后活动，个体静默过半只 @ 该人，催办词带当前缺口计数变可执行收口指令。
+    #    用户收紧裁定（2026-10-13）：静默阈值 30min→10min（真干活的 agent 日志
+    #    5 分钟内必有动静，10 分钟无痕=空闲浪费）；催办资格复位用严格判据
+    #    _agent_log_last_realwork_ts（工具轮或会话第 2+ 次调用才算真做——嘴炮
+    #    回话顶回不清零，再静默即再催）。判活节流 60s/轮。
     if (( $(date +%s) - _tst_check_ts >= 60 )); then
       _tst_check_ts=$(date +%s)
       for _t in qi fei; do
@@ -1328,11 +1331,18 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           # 首轮 sig 回溯到最后活动时刻（断点续跑进环时 agent 可能已静默半小时——
           # 若把 sig 设为进环时间，已静默事实被抹掉、催办要多等整个半窗）
           if (( _tst_w == 0 )); then eval "_tst_sig_$_t=$_w"; else eval "_tst_sig_$_t=$(date +%s)"; fi
-          eval "_tst_lw_$_t=$_w"; eval "_tst_nudged_$_t=0"
+          eval "_tst_lw_$_t=$_w"
+          # 催办资格复位=真做判据（工具轮/多轮调用）——宽判据活动（嘴炮回话）不
+          # 清零 nudged：被催后只回话不动手的人，下个静默窗到点会被再催。
+          _rw=$(_agent_log_last_realwork_ts "$HERMES_ROOT/profiles/$_t/logs/agent.log" 2>/dev/null || echo 0)
+          eval "_tst_rw=\${_tst_rlw_$_t:-0}"
+          if (( _rw > _tst_rw )); then
+            eval "_tst_rlw_$_t=$_rw"; eval "_tst_nudged_$_t=0"
+          fi
         else
           eval "_tst_sig=\${_tst_sig_$_t:-$_tst_check_ts}"
           eval "_tst_nd=\${_tst_nudged_$_t:-0}"
-          if (( _tst_check_ts - _tst_sig > ${MX_DEFECT_NUDGE_HALF:-1800} )) && (( _tst_nd == 0 )); then
+          if (( _tst_check_ts - _tst_sig > ${MX_DEFECT_NUDGE_HALF:-600} )) && (( _tst_nd == 0 )); then
             if [[ "$_t" == "qi" ]]; then
               _tst_gap="后端测试 ${BOTH_DONE:-0}/${_be_n} 片结论行未齐"
             else
