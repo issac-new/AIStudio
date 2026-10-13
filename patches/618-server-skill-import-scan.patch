@@ -1,0 +1,103 @@
+diff --git a/packages/server/src/modules/ekko/services/skill-import.ts b/packages/server/src/modules/ekko/services/skill-import.ts
+index bb8c69325..64f5556df 100644
+--- a/packages/server/src/modules/ekko/services/skill-import.ts
++++ b/packages/server/src/modules/ekko/services/skill-import.ts
+@@ -3,6 +3,8 @@ import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promi
+ import { tmpdir } from 'node:os'
+ import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
+ import AdmZip from 'adm-zip'
++// overlay[skillgov] ekko 导入通路注册扫描（fail-soft）
++import { recordSkillScan } from '../../../custom/skillgov/skill-scan'
+ import type { EkkoAgentSetup } from '../../../../../ekko-agent/src'
+ import { setupGlobalEkkoAgent } from './manager'
+ import { getEkkoSkill, listEkkoSkills, type EkkoSkillDetail } from './skills'
+@@ -160,6 +162,13 @@ export async function importEkkoSkill(
+       throw error
+     }
+     resolved.config.setSkillEnabled(imported.name, true, profile)
++    // overlay[skillgov] 导入即扫描（fail-soft；结论入账本与 /scan/latest，装载期执法见工具瀑布）
++    try {
++      const scanned = recordSkillScan(target)
++      if (scanned.verdict === 'dangerous') {
++        console.warn(`[skill-import] ekko 技能 ${scanned.name} 注册扫描判定 dangerous——详见 /api/skillgov/scan/latest`)
++      }
++    } catch { /* 扫描失败不遮蔽导入 */ }
+     return await getEkkoSkill(profile, imported.name, resolved)
+   } finally {
+     await rm(staging, { recursive: true, force: true })
+diff --git a/packages/server/src/modules/hermes/controllers/skills.ts b/packages/server/src/modules/hermes/controllers/skills.ts
+index 7d8981672..b100bd0a2 100644
+--- a/packages/server/src/modules/hermes/controllers/skills.ts
++++ b/packages/server/src/modules/hermes/controllers/skills.ts
+@@ -1,4 +1,6 @@
+ import { getSkillFileProvider } from '../../studio/public/skill-files'
++// overlay[skillgov] 三段治理第一段：导入即注册扫描（fail-soft——扫描失败不遮蔽导入结果）
++import { recordSkillScan } from '../../../custom/skillgov/skill-scan'
+ import { assertCodingAgentSkillWritable, isSharedCodingAgentSkill } from '../../studio/public/shared-skills'
+ import { mkdir, readdir, readFile, realpath, rm, stat, writeFile, cp } from 'fs/promises'
+ import { homedir, tmpdir } from 'os'
+@@ -1155,6 +1157,8 @@ export async function importSkill(ctx: any) {
+ 
+   let skillName = ''
+   let stagingDir = ''
++  // overlay[skillgov] 两分支各自的 targetDir 提升到共享作用域（导入成功后的注册扫描要用）
++  let importedSkillDir: string | undefined
+ 
+   try {
+     if (isSingleZip) {
+@@ -1256,6 +1260,7 @@ export async function importSkill(ctx: any) {
+       }
+       await mkdir(targetRoot, { recursive: true })
+       await cp(skillSrcDir, targetDir, { recursive: true })
++      importedSkillDir = targetDir
+     } else {
+       // ============ FOLDER MODE (multiple files with relative paths) ============
+       // Determine top-level dir name from the first segment of every relative path
+@@ -1335,9 +1340,19 @@ export async function importSkill(ctx: any) {
+       }
+ 
+       await cp(stagingSkillDir, targetDir, { recursive: true })
++      importedSkillDir = targetDir
+     }
+ 
+-    ctx.body = { success: true, name: skillName }
++    // overlay[skillgov] 导入成功即扫描（注册扫描锚点；dangerous 随响应警示，装载期执法见工具瀑布钩子）
++    let scanBlock: { verdict: string; findingsCount: number; findings: unknown[] } | undefined
++    if (importedSkillDir) {
++      try {
++        const scanned = recordSkillScan(importedSkillDir)
++        scanBlock = { verdict: scanned.verdict, findingsCount: scanned.findings.length, findings: scanned.findings.slice(0, 8) }
++      } catch { /* 扫描失败不遮蔽导入结果 */ }
++    }
++
++    ctx.body = { success: true, name: skillName, ...(scanBlock ? { scan: scanBlock } : {}) }
+   } catch (err: any) {
+     ctx.status = err.status || 500
+     ctx.body = { error: err.message }
+diff --git a/packages/server/src/modules/hermes/services/skills/injector.ts b/packages/server/src/modules/hermes/services/skills/injector.ts
+index 0963e9c9e..2a5abc61c 100644
+--- a/packages/server/src/modules/hermes/services/skills/injector.ts
++++ b/packages/server/src/modules/hermes/services/skills/injector.ts
+@@ -3,6 +3,8 @@ import { existsSync, readdirSync } from 'fs'
+ import { createHash } from 'crypto'
+ import { join, resolve } from 'path'
+ import { logger } from '../../../studio/public/logging'
++// overlay[skillgov] 注入通路注册扫描（installManagedSkill 只在 hash 变化时被调，量有界）
++import { recordSkillScan } from '../../../../custom/skillgov/skill-scan'
+ import { detectHermesRootHome } from '../runtime/path'
+ 
+ const MANIFEST_FILENAME = '.webui-managed-skills.json'
+@@ -227,6 +229,13 @@ export class HermesSkillInjector {
+       await rm(targetSkillDir, { recursive: true, force: true })
+     }
+     await this.copyDir(sourceSkillDir, targetSkillDir)
++    // overlay[skillgov] 注入即扫描（fail-soft：扫描异常不阻断注入；dangerous 记账本供装载期执法）
++    try {
++      const scanned = recordSkillScan(targetSkillDir)
++      if (scanned.verdict === 'dangerous') {
++        logger.warn(`[skill-injector] 内置技能 ${scanned.name} 注册扫描判定 dangerous（${scanned.findings.filter(f => f.severity === 'high').length} 项高危）——详见 /api/skillgov/scan/latest`)
++      }
++    } catch { /* 扫描失败不遮蔽注入 */ }
+     return await this.hashDir(targetSkillDir)
+   }
+ 

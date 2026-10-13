@@ -55,6 +55,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
   }
 
+  // 技能安全扫描（Skill 三段治理第一段，2026-10-13 挂账清偿续批）：默认开，
+  // VITE_CUSTOM_SKILLGOV=false 显式关。导航入口（FlowNavPanel 内 SkillgovNavEntry）。
+  if (features.skillgov) {
+    registrations.push(import('../../custom/client/skillgov').then(m => m.registerSkillgov(app)))
+  }
+
   // 本体工作台（GB/T 48000.3 方法论产品化，spec 2026-10-10-ontology-studio-spec.md）：
   // 默认开，VITE_CUSTOM_ONTOLOGY=false 显式关。导航入口（FlowNavPanel 内 OntologyNavEntry）。
   if (features.ontology) {

@@ -43,6 +43,9 @@ export interface FeatureConfig {
   /** Eval Studio 评测工作台（M2，/app/eval + FlowNav 入口；spec
    *  2026-10-07-eval-studio-design.md）。默认关，VITE_CUSTOM_EVAL=true 再开。 */
   eval: boolean;
+  /** 技能安全扫描（Skill 三段治理第一段产品面，2026-10-13：/app/skillgov + FlowNav
+   *  入口）。产品能力非实验特性，默认开，VITE_CUSTOM_SKILLGOV=false 显式关。 */
+  skillgov: boolean;
   /** 本体工作台（GB/T 48000.3 方法论产品化，2026-10-10：/app/ontology + FlowNav
    *  入口；spec 2026-10-10-ontology-studio-spec.md）。产品能力非实验特性，默认开，
    *  VITE_CUSTOM_ONTOLOGY=false 显式关（cockpit/ide 档）。 */
@@ -68,6 +71,7 @@ export const features: FeatureConfig = {
   imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',
   eval: import.meta.env.VITE_CUSTOM_EVAL === 'true',
   ontology: import.meta.env.VITE_CUSTOM_ONTOLOGY !== 'false',
+  skillgov: import.meta.env.VITE_CUSTOM_SKILLGOV !== 'false',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {
