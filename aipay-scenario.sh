@@ -1343,6 +1343,10 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           eval "_tst_sig=\${_tst_sig_$_t:-$_tst_check_ts}"
           eval "_tst_nd=\${_tst_nudged_$_t:-0}"
           if (( _tst_check_ts - _tst_sig > ${MX_DEFECT_NUDGE_HALF:-600} )) && (( _tst_nd == 0 )); then
+            # 欠账过滤（run19 首验揪出：fei 结论已交齐 3/2 片仍被按「未齐」误催——静默
+            # 但无欠账的测试员在正常等待期，不该催；全局还差的是另一人的账）
+            if [[ "$_t" == "qi" ]] && (( ${BOTH_DONE:-0} >= ${_be_n:-1} )); then continue; fi
+            if [[ "$_t" == "fei" ]] && (( ${FE_DONE:-0} >= ${_fe_n:-1} )); then continue; fi
             if [[ "$_t" == "qi" ]]; then
               _tst_gap="后端测试 ${BOTH_DONE:-0}/${_be_n} 片结论行未齐"
             else
