@@ -15,7 +15,7 @@
 | freeze.md | 需求上锁（7/G1） | aipay-scenario.sh 步 7 冻结 heredoc（补五项缺字段：需求名/背景/范围外/影响面/提交指纹） |
 | tasklist.md | 系分拆分（11） | aipay-scenario.sh 步 10 派发词字段规格 |
 | schedule.md | 排期（17） | aipay-scenario.sh 步 15 派发词字段规格 |
-| test-report.md | 测试报告（19/G4） | aipay-scenario.sh 步 17 派发词字段规格 |
+| test-report.md | 测试报告（19/G4） | aipay-scenario.sh 步 17 派发词字段规格；§8 评测与运行时指标节=方案 V8.22 §2.6.3 落点（Eval Studio 导出面为数字源，生成器 _ART_V2_BY_STEP 同步核对） |
 | release-plan.md | 发布准出（20/G5） | **已迁入**；aipay-scenario.sh 步 20 派发词七项 |
 | release-notes.md | 发布准出（20/G5） | **已迁入**；aipay-scenario.sh 步 20 派发词第六项 |
 | review-record.md | G2/G5 评审卡 body | **已迁入**；aipay-scenario.sh 步 15/步 20 派发词 |
@@ -48,6 +48,10 @@
 四处修订：第 9 章结论块手编计数「16 个」改实算（n_issue_keys/n_issue_open + 六闸落键），未成立走诚实分支。证据二/证据三当轮叙事入按轮注册表 `_GOV_EVIDENCE_BY_RUN`，未登记轮兜底文案指真实数据源。卡点引言「九个」改 `len(CHECKPOINTS)` 实算。页脚重复句去重。
 
 审计锚与守门钉死字面量一律未动。验证：py_compile 过、vitest 78/78 过、夹具渲染「闭环成立/未成立」双分支实测正确。
+
+## 评测指标节（2026-10-13，腾讯评测体系轮）
+
+test-report.md 增 §8「评测与运行时指标」（原机械判据节顺延为 §9 并加判据 8-10）：发布门禁六行阈值表（工具成功率 ≥99%/P99 ≤2×/降级率 <0.5% 照抄腾讯 ADP 公开清单，TTFT/响应分档/QPS 三行如实「证据缺口」）+ 过程双指标/六环节分段/异常分桶三行。数字单一来源=Swarm Studio Eval Studio 运行报告导出（/app/eval），禁手抄改写；本轮未发起评测如实写明并记问题单 eval-not-run（观察态）。同步位四处：本目录模板、mux/spec-params.env `EVAL_GATE_*` 阈值组、mx-prelaunch-check.sh 第 14 项（三方一致性核对）、mx-report-gen.py `_ART_V2_BY_STEP` 步 19 核对正则——守门测试 `tests/eval-metrics-template-sync.test.ts` 断言四处同步（只修一处=下次复发）。
 
 ## 后续批量项（挂账，列清单待批）
 
