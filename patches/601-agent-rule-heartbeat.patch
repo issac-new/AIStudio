@@ -1,3 +1,20 @@
+diff --git a/agent/agent_init.py b/agent/agent_init.py
+index 57b84fac89..25b3592134 100644
+--- a/agent/agent_init.py
++++ b/agent/agent_init.py
+@@ -1385,6 +1385,12 @@ def _apply_agent_section(agent, _agent_cfg):
+     agent.budget_warning_ratio = normalize_budget_warning_ratio(
+         _agent_section.get("budget_warning_ratio")
+     )
++    # Rule heartbeat interval (601): None = default 12 iterations, 0 = off, <3 clamps to 3.
++    # Resolved per call in agent/rule_heartbeat.py; never cache-busting.
++    from agent.rule_heartbeat import parse_heartbeat_config
++    agent.rule_heartbeat_interval = parse_heartbeat_config(
++        _agent_section.get("rule_heartbeat_interval")
++    )
+     # Both: "auto" (model-list match), true, false, or list of model substrings; independent
+     # of each other (gates in agent/system_prompt.py).
+     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
 diff --git a/agent/rule_heartbeat.py b/agent/rule_heartbeat.py
 new file mode 100644
 index 0000000000..76fc98e77f
@@ -157,7 +174,7 @@ index 0000000000..76fc98e77f
 +        return None
 +    return value if value >= 0 else None
 diff --git a/agent/turn_iteration_prep.py b/agent/turn_iteration_prep.py
-index ec58f39a76..621e64782b 100644
+index e4a9df850c..4fff99d8d9 100644
 --- a/agent/turn_iteration_prep.py
 +++ b/agent/turn_iteration_prep.py
 @@ -188,6 +188,12 @@ def prepare_iteration(
@@ -173,23 +190,6 @@ index ec58f39a76..621e64782b 100644
      request_logger = getattr(agent, "logger", None) or logger  # same name as the origin module
      # Per-agent validation cursor skips re-parsing tool_call args already validated.
      # Identity-keyed; a rewritten list breaks the prefix match and forces a re-scan.
-diff --git a/agent/agent_init.py b/agent/agent_init.py
-index 35b7b086d2..e3c67b0af3 100644
---- a/agent/agent_init.py
-+++ b/agent/agent_init.py
-@@ -1385,6 +1385,12 @@ def _apply_agent_section(agent, _agent_cfg):
-     agent.budget_warning_ratio = normalize_budget_warning_ratio(
-         _agent_section.get("budget_warning_ratio")
-     )
-+    # Rule heartbeat interval (601): None = default 12 iterations, 0 = off, <3 clamps to 3.
-+    # Resolved per call in agent/rule_heartbeat.py; never cache-busting.
-+    from agent.rule_heartbeat import parse_heartbeat_config
-+    agent.rule_heartbeat_interval = parse_heartbeat_config(
-+        _agent_section.get("rule_heartbeat_interval")
-+    )
-     # Both: "auto" (model-list match), true, false, or list of model substrings; independent
-     # of each other (gates in agent/system_prompt.py).
-     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
 diff --git a/tests/agent/test_rule_heartbeat.py b/tests/agent/test_rule_heartbeat.py
 new file mode 100644
 index 0000000000..25b3359fd9

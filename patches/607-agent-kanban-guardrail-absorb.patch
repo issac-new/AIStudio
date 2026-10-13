@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 6214c504ad..2dbb7645ac 100644
+index 2e4c9dbb48..595c364f1d 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -150,6 +150,101 @@ def _assert_not_delegated_child_mutation(path: "str | Path | None" = None) -> No
+@@ -150,6 +150,101 @@ def _assert_not_delegated_child_mutation(path: str | Path | None = None) -> None
          raise PermissionError("delegate_task child contexts cannot mutate Kanban tasks or boards")
  
  

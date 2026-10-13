@@ -1,19 +1,18 @@
 diff --git a/hermes_cli/cron.py b/hermes_cli/cron.py
-index 5431dda516..6f855064f0 100644
+index 6e134b35cf..b21bec62ae 100644
 --- a/hermes_cli/cron.py
 +++ b/hermes_cli/cron.py
-@@ -671,7 +671,8 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
-                    ("repeat", "repeat"), ("script", "script"), ("workdir", "workdir"),
+@@ -759,7 +759,7 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
                     ("model", "model"), ("provider", "model_provider"), ("pinned", "pinned"),
                     ("monitor_script", "monitor_script"), ("monitor_url", "monitor_url"),
--                   ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"))
-+                   ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"),
-+                   ("base_url", "base_url"))
+                    ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"),
+-                   ("interpreter", "interpreter"))
++                   ("interpreter", "interpreter"), ("base_url", "base_url"))
  
  
- def _job_api_kwargs(args) -> Dict[str, Any]:
+ def _job_api_kwargs(args) -> dict[str, Any]:
 diff --git a/hermes_cli/subcommands/cron.py b/hermes_cli/subcommands/cron.py
-index 365ac5368b..716ef18086 100644
+index ae6115293a..b1a2fbb600 100644
 --- a/hermes_cli/subcommands/cron.py
 +++ b/hermes_cli/subcommands/cron.py
 @@ -72,6 +72,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
@@ -26,10 +25,10 @@ index 365ac5368b..716ef18086 100644
      cron_create.add_argument("--reasoning-effort", dest="reasoning_effort",
          help="Pin this job's reasoning (thinking) effort: none, minimal, low, "
              "medium, high, xhigh, max, or ultra. Overrides agent.reasoning_effort "
-@@ -144,6 +147,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
-         help="Pin this job's reasoning (thinking) effort: none, minimal, low, "
-             "medium, high, xhigh, max, or ultra. Pass empty string to clear "
-             "the pin and follow config resolution.")
+@@ -151,6 +154,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
+     cron_edit.add_argument("--interpreter",
+         help="Absolute or ~ path to a Python for a .py script / monitor script. "
+             "Pass empty string to clear (back to Hermes' Python).")
 +    cron_edit.add_argument("--base-url", dest="base_url",
 +        help="Inference base URL paired with --model/--provider (custom "
 +            "endpoints). Pass empty string to clear.")

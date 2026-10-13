@@ -1,11 +1,11 @@
+diff --git a/gateway/run_busy.py b/gateway/run_busy.py
+index 179c122ec4..62572ba04d 100644
 --- a/gateway/run_busy.py
 +++ b/gateway/run_busy.py
-@@ -65,6 +65,29 @@
-     """True when ``tail``'s FIRST slot is ``slot`` (``tail`` is ``""`` when the key ends at the
-     chat id)."""
+@@ -67,6 +67,29 @@ def _tail_has_slot(tail: str, slot: str) -> bool:
      return _strip_slot(tail, slot) is not None
-+
-+
+ 
+ 
 +def _capacity_retry_anchor(event: Any) -> Any:
 +    """Stable identity for a capacity-retry entry ACROSS re-entry round trips.
 +
@@ -27,10 +27,12 @@
 +    if body is not None:
 +        return ("body", str(getattr(event, "sender", "")), str(body)[:256])
 +    return id(event)
- 
- 
++
++
  def _same_chat_key_slots(
-@@ -257,9 +280,10 @@
+     key: str, *, prefix: str, chat_id: str, scope_id: Optional[str],
+ ) -> Optional[tuple[str, str]]:
+@@ -257,9 +280,10 @@ class GatewayBusySessionMixin:
          since_map = getattr(self, "_capacity_retry_since", None)
          if since_map is None:
              since_map = self._capacity_retry_since = {}
@@ -43,7 +45,7 @@
              not_before = now
          else:
              not_before = now + self.CAPACITY_RETRY_POLL_SEC
-@@ -285,7 +309,7 @@
+@@ -285,7 +309,7 @@ class GatewayBusySessionMixin:
                  queue.pop(0)
                  since_map = getattr(self, "_capacity_retry_since", None)
                  if since_map is not None:

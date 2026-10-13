@@ -1,7 +1,8 @@
 diff --git a/hermes_cli/update_cmd_fleet.py b/hermes_cli/update_cmd_fleet.py
+index 776b7b9137..8244b9b44c 100644
 --- a/hermes_cli/update_cmd_fleet.py
 +++ b/hermes_cli/update_cmd_fleet.py
-@@ -526,6 +526,17 @@
+@@ -503,6 +503,17 @@ def _warn_pending_fleet_restart(*, startup: bool = False) -> None:
  
  def _warn_pending_fleet_restart_on_startup() -> None:
      """Cheap CLI-startup hint. Never restarts; never raises."""

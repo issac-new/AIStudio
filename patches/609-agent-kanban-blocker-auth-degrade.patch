@@ -1,6 +1,8 @@
+diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
+index 650241a0b5..82d65c84e4 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -172,6 +172,12 @@
+@@ -158,6 +158,12 @@ class DispatchResult:
      Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
  
  
@@ -10,10 +12,10 @@
 +_BLOCKER_AUTH_DEGRADE_MIN = 12
 +
 +
- def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
+ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
      """One line naming why the tick(s) held ready work back, or ``""``.
  
-@@ -2165,6 +2171,29 @@
+@@ -2092,6 +2098,29 @@ def _dispatch_lane_task(
          if not dry_run:
              with _kb.write_txn(conn):
                  _kb._append_event(conn, task_id, "respawn_guarded", {"reason": guard_reason})

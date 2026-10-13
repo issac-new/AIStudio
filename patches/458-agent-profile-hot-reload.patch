@@ -1,5 +1,6 @@
 diff --git a/agent/profile_hot_reload.py b/agent/profile_hot_reload.py
 new file mode 100644
+index 0000000000..4159b6d61f
 --- /dev/null
 +++ b/agent/profile_hot_reload.py
 @@ -0,0 +1,90 @@
@@ -95,6 +96,7 @@ new file mode 100644
 +        self._last_fire = 0.0
 diff --git a/tests/agent/test_profile_hot_reload.py b/tests/agent/test_profile_hot_reload.py
 new file mode 100644
+index 0000000000..5d6dab5147
 --- /dev/null
 +++ b/tests/agent/test_profile_hot_reload.py
 @@ -0,0 +1,50 @@

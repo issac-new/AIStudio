@@ -1,31 +1,6 @@
-diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
---- a/tools/delegate_tool.py
-+++ b/tools/delegate_tool.py
-@@ -588,6 +588,8 @@
-     "succeeded.\n"
-     "- Children cannot close tracked work: a child asked to close it returns findings instead; "
-     "the parent applies the transition.\n"
-+    "- The subagent's final summary is the entire handoff: nothing else from the child reaches you. It should "
-+    "carry done (with file:line anchors), left (concrete next steps), and blocked (kimi coder 交接话术语义)."
- )
- _DESCRIPTION_TAIL = (
-     "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
-diff --git a/tools/delegate_tool_progress.py b/tools/delegate_tool_progress.py
---- a/tools/delegate_tool_progress.py
-+++ b/tools/delegate_tool_progress.py
-@@ -151,6 +151,9 @@
-     "issuing git/workdir-specific commands.\n\n"
-     "Keep your final summary tight: lead with outcomes, prefer bullet points over paragraphs, and don't replay your "
-     "whole process. Your response is returned to the parent agent as a summary, and overlong summaries crowd out the "
--    "parent's context window."
-+    "parent's context window.\n\n"
-+    "Your final message IS the entire handoff (kimi coder 交接话术语义): the parent sees only this summary, "
-+    "nothing else. Pack it with everything needed to continue — done (with file:line anchors), left (concrete "
-+    "next steps), blocked. A vague closing wastes the whole run."
- )
- _ORCHESTRATOR_BLOCK = (
 diff --git a/tests/tools/test_delegate_handoff_phrase.py b/tests/tools/test_delegate_handoff_phrase.py
 new file mode 100644
+index 0000000000..f3a61fc9db
 --- /dev/null
 +++ b/tests/tools/test_delegate_handoff_phrase.py
 @@ -0,0 +1,27 @@
@@ -56,3 +31,32 @@ new file mode 100644
 +        desc = _build_top_level_description()
 +        assert "final summary is the entire handoff" in desc
 +        assert "your final summary" not in desc  # 父侧描述不得以子代理口吻说话
+diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
+index dc3b7af144..597692433e 100644
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -640,6 +640,8 @@ _DESCRIPTION_HEAD = (
+     "succeeded.\n"
+     "- Children cannot close tracked work: a child asked to close it returns findings instead; "
+     "the parent applies the transition.\n"
++    "- The subagent's final summary is the entire handoff: nothing else from the child reaches you. It should "
++    "carry done (with file:line anchors), left (concrete next steps), and blocked (kimi coder 交接话术语义)."
+ )
+ _DESCRIPTION_TAIL = (
+     "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
+diff --git a/tools/delegate_tool_progress.py b/tools/delegate_tool_progress.py
+index a81ca4d34d..ecf594ab56 100644
+--- a/tools/delegate_tool_progress.py
++++ b/tools/delegate_tool_progress.py
+@@ -151,7 +151,10 @@ _COMPLETION_INSTRUCTIONS = (
+     "issuing git/workdir-specific commands.\n\n"
+     "Keep your final summary tight: lead with outcomes, prefer bullet points over paragraphs, and don't replay your "
+     "whole process. Your response is returned to the parent agent as a summary, and overlong summaries crowd out the "
+-    "parent's context window."
++    "parent's context window.\n\n"
++    "Your final message IS the entire handoff (kimi coder 交接话术语义): the parent sees only this summary, "
++    "nothing else. Pack it with everything needed to continue — done (with file:line anchors), left (concrete "
++    "next steps), blocked. A vague closing wastes the whole run."
+ )
+ _ORCHESTRATOR_BLOCK = (
+     "\n## Subagent Spawning (Orchestrator Role)\n"

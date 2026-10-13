@@ -1,5 +1,6 @@
 diff --git a/agent/agent_roster.py b/agent/agent_roster.py
 new file mode 100644
+index 0000000000..5f0567bfbd
 --- /dev/null
 +++ b/agent/agent_roster.py
 @@ -0,0 +1,151 @@
@@ -156,6 +157,7 @@ new file mode 100644
 +    _cached = None
 diff --git a/tests/agent/test_agent_roster.py b/tests/agent/test_agent_roster.py
 new file mode 100644
+index 0000000000..20291f5267
 --- /dev/null
 +++ b/tests/agent/test_agent_roster.py
 @@ -0,0 +1,93 @@

@@ -1,3 +1,20 @@
+diff --git a/gateway/run_turn.py b/gateway/run_turn.py
+index 2c947327b4..83f4debf9d 100644
+--- a/gateway/run_turn.py
++++ b/gateway/run_turn.py
+@@ -2254,6 +2254,12 @@ class GatewayTurnMixin:
+             # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
+             from gateway.session_telemetry import record_turn_telemetry
+             record_turn_telemetry(self, session_entry, agent_result, source)
++            # Long-session rotation (603): telemetry-driven session lifecycle policy; default
++            # report mode (notice only), auto reuses the compression-exhaustion funnel.
++            from gateway.session_rotation import maybe_rotate_session
++            response, session_entry = await maybe_rotate_session(
++                self, agent_result, response, session_entry, session_key, source,
++            )
+             response, session_entry = await self._hmwa_compression_exhaustion_reset(
+                 agent_result, response, session_entry, session_key, source,
+             )
 diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
 new file mode 100644
 index 0000000000..3945acfd86
@@ -195,23 +212,6 @@ index 0000000000..3945acfd86
 +def reset_book() -> None:
 +    """测试隔离：清进程内簿记。"""
 +    _BOOK.clear()
-diff --git a/gateway/run_turn.py b/gateway/run_turn.py
-index b8b0266119..a5d63cf5a5 100644
---- a/gateway/run_turn.py
-+++ b/gateway/run_turn.py
-@@ -2254,6 +2254,12 @@ class GatewayTurnMixin:
-             # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
-             from gateway.session_telemetry import record_turn_telemetry
-             record_turn_telemetry(self, session_entry, agent_result, source)
-+            # Long-session rotation (603): telemetry-driven session lifecycle policy; default
-+            # report mode (notice only), auto reuses the compression-exhaustion funnel.
-+            from gateway.session_rotation import maybe_rotate_session
-+            response, session_entry = await maybe_rotate_session(
-+                self, agent_result, response, session_entry, session_key, source,
-+            )
-             response, session_entry = await self._hmwa_compression_exhaustion_reset(
-                 agent_result, response, session_entry, session_key, source,
-             )
 diff --git a/tests/gateway/test_session_rotation.py b/tests/gateway/test_session_rotation.py
 new file mode 100644
 index 0000000000..e53c47e06c

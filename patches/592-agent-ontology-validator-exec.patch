@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban_gates.py b/hermes_cli/kanban_gates.py
-index c6a60d4..2321ff3 100644
+index c6a60d49ab..2321ff3fa3 100644
 --- a/hermes_cli/kanban_gates.py
 +++ b/hermes_cli/kanban_gates.py
 @@ -141,12 +141,74 @@ def _eval_gates(
@@ -78,7 +78,7 @@ index c6a60d4..2321ff3 100644
      conn: Any, task_id: str, to_status: str, *, evidence: Optional[str] = None,
      actor: Optional[str] = None, record: bool = True,
 diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanban_gates.py
-index 1825c92..fe1f3d4 100644
+index 1825c92b74..fe1f3d4713 100644
 --- a/tests/hermes_cli/test_kanban_gates.py
 +++ b/tests/hermes_cli/test_kanban_gates.py
 @@ -274,3 +274,83 @@ class TestTransitionAtomicity:

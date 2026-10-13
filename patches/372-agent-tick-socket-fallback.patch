@@ -1,5 +1,5 @@
 diff --git a/gateway/shutdown_watchdog.py b/gateway/shutdown_watchdog.py
-index 1db12ea15c..d43204ba81 100644
+index 60a6888d20..4e89649ee7 100644
 --- a/gateway/shutdown_watchdog.py
 +++ b/gateway/shutdown_watchdog.py
 @@ -23,6 +23,7 @@ from pathlib import Path
@@ -10,7 +10,7 @@ index 1db12ea15c..d43204ba81 100644
  from hermes_constants import get_hermes_home, get_process_hermes_home
  from utils import atomic_json_write
  
-@@ -186,7 +187,11 @@ def get_loop_tick_socket_path(home: Optional[Path] = None, pid: Optional[int] =
+@@ -198,7 +199,11 @@ def get_loop_tick_socket_path(home: Optional[Path] = None, pid: Optional[int] =
      (#90502).
      """
      pid = int(pid if pid is not None else os.getpid())

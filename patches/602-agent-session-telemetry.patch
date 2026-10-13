@@ -1,3 +1,18 @@
+diff --git a/gateway/run_turn.py b/gateway/run_turn.py
+index 068f8240ed..2c947327b4 100644
+--- a/gateway/run_turn.py
++++ b/gateway/run_turn.py
+@@ -2250,6 +2250,10 @@ class GatewayTurnMixin:
+             )
+             if agent_failed_early and not is_context_overflow_failure:
+                 response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))
++            # Session telemetry sidecar (602): post-turn health snapshot for the studio
++            # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
++            from gateway.session_telemetry import record_turn_telemetry
++            record_turn_telemetry(self, session_entry, agent_result, source)
+             response, session_entry = await self._hmwa_compression_exhaustion_reset(
+                 agent_result, response, session_entry, session_key, source,
+             )
 diff --git a/gateway/session_telemetry.py b/gateway/session_telemetry.py
 new file mode 100644
 index 0000000000..34b23b06b4
@@ -192,21 +207,6 @@ index 0000000000..34b23b06b4
 +def reset_state() -> None:
 +    """测试隔离：清进程内累计态（不动磁盘）。"""
 +    _STATE.clear()
-diff --git a/gateway/run_turn.py b/gateway/run_turn.py
-index 8c5728884d..b8b0266119 100644
---- a/gateway/run_turn.py
-+++ b/gateway/run_turn.py
-@@ -2250,6 +2250,10 @@ class GatewayTurnMixin:
-             )
-             if agent_failed_early and not is_context_overflow_failure:
-                 response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))
-+            # Session telemetry sidecar (602): post-turn health snapshot for the studio
-+            # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
-+            from gateway.session_telemetry import record_turn_telemetry
-+            record_turn_telemetry(self, session_entry, agent_result, source)
-             response, session_entry = await self._hmwa_compression_exhaustion_reset(
-                 agent_result, response, session_entry, session_key, source,
-             )
 diff --git a/tests/gateway/test_session_telemetry.py b/tests/gateway/test_session_telemetry.py
 new file mode 100644
 index 0000000000..0535728070
