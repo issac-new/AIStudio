@@ -1,7 +1,10 @@
-// overlay[eval] Eval Studio · 公共面（M1：store/judge/aggregate/runner/outcome/controller）。
+// overlay[eval] Eval Studio · 公共面（M1：store/judge/aggregate/runner/outcome/controller；
+// 腾讯评测体系轮增 metrics/releaseGate 过程指标面）。
 //
-// 设计正本：docs/superpowers/specs/2026-10-07-eval-studio-design.md
-// 范式来源：《美团 Agent 评测体系技术拆解》（8 条工程启示，全文见 spec assets）。
+// 设计正本：docs/superpowers/specs/2026-10-07-eval-studio-design.md（M1 基线）
+//           docs/superpowers/specs/2026-10-13-eval-tencent-metrics-design.md（本轮增面）
+// 范式来源：《美团 Agent 评测体系技术拆解》（8 条工程启示，全文见 spec assets）；
+//           《腾讯 Agent 评测体系技术拆解》（10 条工程启示，全文见 spec assets）。
 //
 // 使用纪律：
 //   - 本域不 import 上游模块（符号链接路径陷阱）；全部依赖注入可测；
@@ -11,6 +14,8 @@ export * from './types'
 export * from './store'
 export * from './clef'
 export * from './judge'
+export * from './metrics'
+export * from './releaseGate'
 export * from './aggregate'
 export * from './outcome'
 export * from './runner'

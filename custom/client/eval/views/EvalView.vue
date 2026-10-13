@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { evalApi, type EvalSetMetaDto, type RunSummaryDto } from '@/custom/eval/api'
+import { evalApi, type EvalSetMetaDto, type RunSummaryDto, type RunCompareDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
 import EvalOraclePanel from '@/custom/eval/components/EvalOraclePanel.vue'
@@ -142,6 +142,30 @@ function riskText(r: RunSummaryDto): string {
 function selectRun(id: string): void {
   selectedRunId.value = selectedRunId.value === id ? '' : id
 }
+
+// —— A/B 对比（腾讯启示⑩：模型/Prompt/版本切换内建对比）——
+const compareBaseId = ref('')
+const compareHeadId = ref('')
+const compareResult = ref<RunCompareDto | null>(null)
+const compareError = ref('')
+
+async function runCompare(): Promise<void> {
+  compareError.value = ''
+  compareResult.value = null
+  if (!compareBaseId.value || !compareHeadId.value || compareBaseId.value === compareHeadId.value) return
+  try {
+    const { compare } = await evalApi.compareRuns(compareBaseId.value, compareHeadId.value)
+    compareResult.value = compare
+  } catch (e) {
+    compareError.value = (e as Error).message
+  }
+}
+
+function deltaText(v: number | null | undefined): string {
+  if (v === null || v === undefined) return '—'
+  const sign = v > 0 ? '+' : ''
+  return `${sign}${Math.abs(v) < 1 ? v.toFixed(2) : v.toFixed(0)}`
+}
 </script>
 
 <template>
@@ -270,6 +294,7 @@ function selectRun(id: string): void {
             <th>{{ L.runs.passAt1 }}</th>
             <th>{{ L.runs.passAtK }}</th>
             <th>{{ L.runs.risk }}</th>
+            <th>{{ L.runs.gateCol }}</th>
             <th>{{ L.runs.unknownRatio }}</th>
             <th>k</th>
             <th />
@@ -288,12 +313,71 @@ function selectRun(id: string): void {
             <td>{{ pct(r.aggregates.passAt1) }}</td>
             <td :class="{ ok: (r.aggregates.passAtK ?? 0) >= 0.8 }">{{ pct(r.aggregates.passAtK) }}</td>
             <td :class="{ danger: r.aggregates.byLayer.risk === 'violated' }">{{ riskText(r) }}</td>
+            <td>
+              <span
+                v-if="r.aggregates.releaseGate"
+                class="chip"
+                :class="{ 'chip-gate-pass': r.aggregates.releaseGate.verdict === 'pass', 'chip-warn': r.aggregates.releaseGate.verdict === 'fail' }"
+                :title="`${L.runs.gateTitle} · ${r.aggregates.releaseGate.measuredCount}`"
+              >{{ L.runs.gateVerdict[r.aggregates.releaseGate.verdict] }}</span>
+              <span v-else class="muted">—</span>
+            </td>
             <td>{{ pct(r.aggregates.unknownRatio) }}</td>
             <td>{{ r.k }}<span v-if="r.aggregates.statisticallyInsufficient" class="chip chip-warn" title="{{ L.runs.insufficient }}">1?</span></td>
             <td><span v-if="!r.aggregates.judgeOnline" class="chip chip-warn">{{ L.runs.judgeOffline }}</span></td>
           </tr>
         </tbody>
       </table>
+
+      <!-- A/B 对比（同评测集两 run） -->
+      <div class="eval-compare card" data-testid="eval-compare">
+        <div class="eval-compare__bar">
+          <span class="eval-compare__title">{{ L.runs.compareTitle }}</span>
+          <div class="eval-compare__picks">
+            <label>
+              {{ L.runs.compareBase }}
+              <select v-model="compareBaseId" data-testid="eval-compare-base">
+                <option v-for="r in runs" :key="`b-${r.id}`" :value="r.id">{{ r.id.slice(-6) }} · {{ sets.find((s) => s.id === r.setId)?.name ?? r.setId }}{{ r.target.model ? ` · ${r.target.model}` : '' }}</option>
+              </select>
+            </label>
+            <label>
+              {{ L.runs.compareHead }}
+              <select v-model="compareHeadId" data-testid="eval-compare-head">
+                <option v-for="r in runs" :key="`h-${r.id}`" :value="r.id">{{ r.id.slice(-6) }} · {{ sets.find((s) => s.id === r.setId)?.name ?? r.setId }}{{ r.target.model ? ` · ${r.target.model}` : '' }}</option>
+              </select>
+            </label>
+            <button type="button" class="primary" data-testid="eval-compare-go" @click="runCompare">{{ L.runs.compareGo }}</button>
+          </div>
+        </div>
+        <p v-if="compareError" class="eval-view__error">{{ compareError }}</p>
+        <template v-if="compareResult">
+          <table class="eval-table" data-testid="eval-compare-table">
+            <thead>
+              <tr>
+                <th>{{ L.runs.tasks }}</th>
+                <th>{{ L.runs.compareBase }}</th>
+                <th>{{ L.runs.compareHead }}</th>
+                <th>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in compareResult.perTask" :key="row.taskId">
+                <td class="mono">{{ row.taskId }}</td>
+                <td :class="row.base === 'pass' ? 'ok' : row.base === 'fail' ? 'danger' : ''">{{ row.base ?? '—' }}</td>
+                <td :class="row.head === 'pass' ? 'ok' : row.head === 'fail' ? 'danger' : ''">{{ row.head ?? '—' }}</td>
+                <td :class="{ ok: row.flip === 'improved', danger: row.flip === 'regressed' }">{{ L.runs.compareFlipNames[row.flip as keyof typeof L.runs.compareFlipNames] ?? row.flip }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted eval-compare__deltas" data-testid="eval-compare-deltas">
+            {{ L.runs.compareDelta }}：pass@k {{ deltaText(compareResult.deltas.passAtK) }} ·
+            pass@1 {{ deltaText(compareResult.deltas.passAt1) }} ·
+            {{ L.runs.procToolHead }} {{ deltaText(compareResult.deltas.toolHeadAccuracy) }} ·
+            {{ L.runs.procTrajectory }} {{ deltaText(compareResult.deltas.trajectoryMatchScore) }} ·
+            {{ L.runs.unknownRatio }} {{ deltaText(compareResult.deltas.unknownRatio) }}
+          </p>
+        </template>
+      </div>
 
       <EvalReportPanel v-if="selectedRunId" :run-id="selectedRunId" @changed="refresh" />
     </div>
@@ -397,6 +481,19 @@ button.primary {
   white-space: nowrap;
   &.chip-sealed { background: var(--bg-tertiary, #eef0f3); }
   &.chip-warn { background: var(--warning, #f59e0b); color: var(--text-on-warning, #fff); }
+  &.chip-gate-pass { background: color-mix(in srgb, var(--success, #16a34a) 14%, transparent); color: var(--success, #16a34a); }
+}
+.eval-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  &__bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  &__title { font-size: 13px; font-weight: 600; }
+  &__picks { display: flex; align-items: flex-end; gap: 10px;
+    label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+    select { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 4px 8px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; }
+  }
+  &__deltas { margin: 0; font-size: 12px; }
 }
 .muted { opacity: 0.65; font-size: 12px; }
 </style>

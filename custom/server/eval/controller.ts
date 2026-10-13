@@ -10,6 +10,8 @@
  * POST /api/hermes/eval/runs                       发起回放判分运行 {setId, samples, target?, crossValidate?}
  * GET  /api/hermes/eval/runs?setId=                运行摘要列表（不含 attempt 明细）
  * GET  /api/hermes/eval/runs/:id                   运行报告（密封集只回聚合——防探测：逐条对错可被重试探测）
+ * GET  /api/hermes/eval/runs/compare?base=&head=   A/B 对比（同集两 run 逐任务翻转表+读数 delta；密封集拒绝）
+ * POST /api/hermes/eval/runs/:id/reflow            坏例回流（失败任务一键转回归样本库，带溯源；幂等）
  * POST /api/hermes/eval/runs/:id/verdicts          人工仲裁（冲突/unknown 断言的最终裁决）
  * POST /api/hermes/eval/runs/:id/attributions      归因双 Loop（finding=judge_wrong/rubric_ambiguous → Rubric Loop；
  *                                                   route=agent → 指回 review 域既有流程）
@@ -20,14 +22,14 @@
  */
 import Router from '@koa/router'
 import type { Context } from 'koa'
-import { aggregateRun } from './aggregate'
+import { aggregateRun, compareRuns } from './aggregate'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, createOracleCase, createSet, exportSet, getOracleCase,
   getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns, listSets,
-  recordHumanVerdict, reviseRubric, sealSet,
+  recordHumanVerdict, reflowTaskToSet, reviseRubric, sealSet,
 } from './store'
 import { loadEvalConfig } from './types'
 import type { EvalRun } from './types'
@@ -171,6 +173,68 @@ router.post('/runs', async (ctx) => {
 router.get('/runs', async (ctx) => {
   const setId = typeof ctx.query.setId === 'string' ? ctx.query.setId : undefined
   ctx.body = { ok: true, runs: listRuns(setId).map(runSummary) }
+})
+
+// A/B 对比（腾讯启示⑩）：字面路由须先于 /runs/:id 注册（同前缀按注册序匹配）
+router.get('/runs/compare', async (ctx) => {
+  const baseId = typeof ctx.query.base === 'string' ? ctx.query.base : ''
+  const headId = typeof ctx.query.head === 'string' ? ctx.query.head : ''
+  if (!baseId || !headId) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['base 与 head 必填（运行 id）'] }
+    return
+  }
+  const base = getRun(baseId)
+  const head = getRun(headId)
+  if (!base || !head) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在（base/head）'] }
+    return
+  }
+  if (base.setId !== head.setId) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`A/B 对比须同评测集：base=${base.setId} / head=${head.setId}`] }
+    return
+  }
+  const set = getSet(base.setId)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  // 密封集拒绝：逐任务对错是内容出库面（防探测契约）
+  if (set.sealed) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['密封集不做逐题对比（逐条对错可被重试探测）'] }
+    return
+  }
+  ctx.body = { ok: true, compare: compareRuns(set, base, head) }
+})
+
+// 坏例回流（腾讯 §03：线上坏例转回归样本，防问题回潮）
+router.post('/runs/:id/reflow', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const taskId = typeof body.taskId === 'string' ? body.taskId : ''
+  const sampleIdx = Number(body.sampleIdx)
+  if (!taskId) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 必填（sampleIdx/targetSetId 可选）'] }
+    return
+  }
+  const result = reflowTaskToSet({
+    runId: ctx.params.id,
+    taskId,
+    ...(Number.isInteger(sampleIdx) && sampleIdx >= 1 ? { sampleIdx } : {}),
+    ...(typeof body.targetSetId === 'string' && body.targetSetId.trim() ? { targetSetId: body.targetSetId.trim() } : {}),
+    actor: actorOf(ctx),
+  })
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = result.created ? 201 : 200
+  ctx.body = { ok: true, created: result.created, taskId: result.taskId, set: { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length } }
 })
 
 router.get('/runs/:id', async (ctx) => {
