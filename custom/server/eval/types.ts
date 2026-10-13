@@ -128,9 +128,12 @@ export interface AttemptVerdict {
 
 export interface AttemptEfficiency {
   tokens?: number
+  /** 单任务成本（价目表币种，idle/peak 两档中值；未收录模型缺席不造数——pricing 三原则）。 */
   costUsd?: number
   steps?: number
   durationMs?: number
+  /** 首 token 时延（毫秒；trace 具备 first_token_ms 字段才有——当前 L2 轨迹未打点则缺席）。 */
+  ttftMs?: number
 }
 
 /** 实际工具调用序列（tool_span 按出现序折叠，只留名字与成败——过程双指标数据源）。 */
@@ -148,7 +151,7 @@ export interface Attempt {
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: AttemptEfficiency
   toolCalls?: ToolCallRecord[]
-  judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean }
+  judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean; models?: string[] }
   passed?: boolean
   judgedAt?: number
 }
@@ -260,6 +263,12 @@ export interface Evidence {
 export interface EvalConfig {
   judgeBaseUrl: string
   judgeModel: string
+  /**
+   * 裁判模型清单（EVAL_JUDGE_MODELS 逗号分隔；缺省单模型=judgeModel）。
+   * >1 个时逐模型判定后多数决（平票/灰区 → unknown）——判定成本随模型数线性放大，
+   * 默认单模型；单模型失败 fail-soft 由其余模型承接（腾讯启示：裁判与被评隔离的轻量形）。
+   */
+  judgeModels: string[]
   judgeTimeoutMs: number
   /** S1 noul 概率三段映射：≥tauYes → yes；≤tauNo → no；灰区 → unknown。 */
   tauYes: number
@@ -280,9 +289,15 @@ function num(name: string, fallback: number): number {
 }
 
 export function loadEvalConfig(): EvalConfig {
+  const judgeModel = process.env.EVAL_JUDGE_MODEL?.trim() || 'clef-flash-4bit'
+  const modelsEnv = process.env.EVAL_JUDGE_MODELS?.trim()
+  const judgeModels = modelsEnv
+    ? modelsEnv.split(',').map((s) => s.trim()).filter(Boolean)
+    : [judgeModel]
   return {
     judgeBaseUrl: process.env.EVAL_JUDGE_BASE_URL?.trim() || 'http://127.0.0.1:8000',
-    judgeModel: process.env.EVAL_JUDGE_MODEL?.trim() || 'clef-flash-4bit',
+    judgeModel,
+    judgeModels,
     judgeTimeoutMs: num('EVAL_JUDGE_TIMEOUT_MS', 12000),
     tauYes: num('EVAL_TAU_YES', 0.75),
     tauNo: num('EVAL_TAU_NO', 0.25),

@@ -126,6 +126,11 @@ class DispatchResult:
     on multi-lane setups, NOT operator-actionable; tracked apart so health
     telemetry can tell "stuck" from "correctly idle"."""
     skipped_per_profile_capped: list[tuple[str, str, int]] = field(default_factory=list)
+    skipped_board_capped: list[tuple[str, int, int]] = field(default_factory=list)
+    """``(task_id, current_board_running, board_cap)`` deferred because the
+    board is at ``kanban.board_concurrency`` (routa KanbanSessionQueue 语义：
+    每 board 会话并发闸默认 1，超限排队等下轮 tick/生命周期 drain——
+    矩阵 §3.5 routa 行 P1)。"""
     """``(task_id, assignee, current_running_count)`` deferred because the
     assignee is at ``kanban.max_in_progress_per_profile``. Picked up on a later
     tick; separate bucket so dashboards show "profile busy" vs "stuck"."""
@@ -158,7 +163,13 @@ class DispatchResult:
     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
 
 
-def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
+# [609] blocker_auth 阻塞退场参数：近窗秒数与最少拦截次数（60s tick × 阈值≈退场时延；
+# 12 次×60s≈12 分钟持续拦截才退场，瞬时抖动不误伤）。
+_BLOCKER_AUTH_DEGRADE_SEC = 3600
+_BLOCKER_AUTH_DEGRADE_MIN = 12
+
+
+def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
     """One line naming why the tick(s) held ready work back, or ``""``.
 
     ``active_pr=1, recent_success=2, rate_limited=1, skipped_locked=1,
@@ -202,12 +213,12 @@ def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
 # leaves in its own log (``KANBAN_WORKER_EXIT_TRAILER``).
 _RECENT_WORKER_EXIT_TTL_SECONDS = 600
 _RECENT_WORKER_EXITS_MAX = 4096
-_recent_worker_exits: "dict[int, tuple[int, float]]" = {}
+_recent_worker_exits: dict[int, tuple[int, float]] = {}
 
 # Windows has no ``waitpid(-1)``: a child's exit code is only recoverable
 # through a live handle, so ``_default_spawn`` parks each worker's ``Popen``
 # here (Windows only) and ``reap_worker_zombies`` polls it. Entry: ``pid -> Popen``.
-_live_worker_procs: "dict[int, subprocess.Popen]" = {}
+_live_worker_procs: dict[int, subprocess.Popen] = {}
 
 
 def _wait_status_from_returncode(returncode: int) -> int:
@@ -232,7 +243,7 @@ def _record_worker_exit(pid: int, raw_status: int) -> None:
             _recent_worker_exits.pop(_pid, None)
 
 
-def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
+def _classify_worker_exit(pid: int) -> tuple[str, Optional[int]]:
     """``(kind, code)`` for a reaped worker PID: ``clean_exit`` (rc 0 while
     still ``running`` = protocol violation), ``rate_limited``
     (``KANBAN_RATE_LIMIT_EXIT_CODE``, never counts as a failure),
@@ -255,7 +266,7 @@ def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
     return ("unknown", None)
 
 
-def _exit_code_kind(code: int) -> "tuple[str, int]":
+def _exit_code_kind(code: int) -> tuple[str, int]:
     """``(kind, code)`` for a worker's exit code, however it was observed."""
     if code == 0:
         return ("clean_exit", 0)
@@ -287,12 +298,12 @@ def _worker_log_exit_code(task_id: str, board: Optional[str] = None) -> Optional
     return int(matches[-1]) if matches else None
 
 
-def reap_worker_zombies() -> "list[int]":
+def reap_worker_zombies() -> list[int]:
     """Reap exited workers without blocking; returns reaped PIDs. POSIX reaps
     every child via ``waitpid(-1)``; Windows polls the ``Popen`` handles
     parked by ``_default_spawn`` (the only way to learn a child's exit code
     there), so the rate-limit sentinel exit is classified on both hosts."""
-    reaped: "list[int]" = []
+    reaped: list[int] = []
     if _kb._IS_WINDOWS:
         for pid, proc in list(_live_worker_procs.items()):
             returncode = proc.poll()
@@ -1357,7 +1368,7 @@ def _record_task_failure(
     error: str,
     *,
     outcome: str,
-    failure_limit: int = None,
+    failure_limit: int | None = None,
     force_trip: bool = False,
     release_claim: bool = False,
     end_run: bool = False,
@@ -1732,16 +1743,16 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
     imported (local import avoids a cycle; callers fall back to trusting the
     assignee).
 
-    When ``kanban.dispatch_profiles`` is set (#110995) the returned predicate
-    additionally requires the assignee to be listed, fail-closed — so a card
-    assigned to ``default`` is only claimable by homes that opted into it.
-    Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
-
     HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
     list in its ``board.json``, the predicate additionally requires the assignee
     to be on that board's team (fail-closed) — a card can only be claimed by the
     agent team mounted on its board. Health probes pass no board and stay
     unfenced (historic fail-open telemetry).
+
+    When ``kanban.dispatch_profiles`` is set (#110995) the returned predicate
+    additionally requires the assignee to be listed, fail-closed — so a card
+    assigned to ``default`` is only claimable by homes that opted into it.
+    Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
     """
     try:
         from hermes_cli.profiles import normalize_profile_name, profile_exists
@@ -2100,7 +2111,7 @@ def _dispatch_lane_task(
     conn: sqlite3.Connection,
     row: sqlite3.Row,
     assignee: str,
-    result: "DispatchResult",
+    result: DispatchResult,
     *,
     lane: str,
     dry_run: bool,
@@ -2110,6 +2121,8 @@ def _dispatch_lane_task(
     spawn_fn,
     per_profile_cap: Optional[int],
     per_profile_running: dict[str, int],
+    board_cap: Optional[int] = None,
+    board_running: dict[str, int] | None = None,
 ) -> bool:
     """Guard, claim, resolve the workspace and spawn one ready/review row.
     Returns True when a spawn slot was consumed (real or ``dry_run``); every
@@ -2144,6 +2157,13 @@ def _dispatch_lane_task(
         if current >= per_profile_cap:
             result.skipped_per_profile_capped.append((task_id, assignee, current))
             return False
+    # Board-level cap (routa KanbanSessionQueue 语义，默认 1）：每 board 会话
+    # 并发闸——同板 fan-out 不吞满全部 worker 槽，超限排队下轮 tick drain。
+    if board_cap is not None and board_running is not None:
+        bcurrent = board_running.get(board, 0)  # board=None=默认板，同样有闸（routa 每 board 语义）
+        if bcurrent >= board_cap:
+            result.skipped_board_capped.append((task_id, bcurrent, board_cap))
+            return False
     guard_reason = check_respawn_guard(conn, task_id, lane=lane)
     if guard_reason is not None:
         result.respawn_guarded.append((task_id, guard_reason))
@@ -2157,6 +2177,29 @@ def _dispatch_lane_task(
         if not dry_run:
             with _kb.write_txn(conn):
                 _kb._append_event(conn, task_id, "respawn_guarded", {"reason": guard_reason})
+                # [609] blocker_auth 阻塞退场：auth/quota 类守卫拦截不会自愈（凭据缺失/
+                # 配额墙），只记事件会让卡永远停在 ready——派发器健康环「ready 非空但
+                # 0 spawn」告警整夜刷屏（run15 实锤 161 ticks）。近窗内同因拦截达阈值
+                # 即自动 block（needs_input 粘滞，recompute_ready 不会再提回 ready），
+                # 人工修复凭据后 unblock 即恢复。仅 blocker_auth（infrastructure/
+                # rate_limit 冷却是可自愈态不退场）。
+                if guard_reason == "blocker_auth":
+                    _recent = conn.execute(
+                        "SELECT COUNT(*) FROM task_events "
+                        "WHERE task_id = ? AND kind = 'respawn_guarded' "
+                        "AND payload LIKE '%blocker_auth%' "
+                        "AND created_at > ?",
+                        (task_id, int(time.time()) - _BLOCKER_AUTH_DEGRADE_SEC),
+                    ).fetchone()[0]
+                    if _recent >= _BLOCKER_AUTH_DEGRADE_MIN:
+                        if _kb.block_task(
+                            conn, task_id,
+                            reason="auto-block[609]: blocker_auth 持续拦截（respawn guard "
+                                   f"近 {_BLOCKER_AUTH_DEGRADE_SEC}s 内 {_recent} 次）——"
+                                   "凭据/配额需人工处置，unblock 后恢复派发",
+                            kind="needs_input",
+                        ):
+                            result.auto_blocked.append(task_id)
         return False
 
     def _count_spawn(name: str) -> None:
@@ -2164,6 +2207,8 @@ def _dispatch_lane_task(
         # ticks re-query from the DB.
         if per_profile_cap is not None and name:
             per_profile_running[name] = per_profile_running.get(name, 0) + 1
+        if board_cap is not None and board_running is not None:
+            board_running[board] = board_running.get(board, 0) + 1
 
     if dry_run:
         result.spawned.append((task_id, assignee, ""))
@@ -2382,7 +2427,25 @@ def _any_spawnable_review(
     return False
 
 
-def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
+def _resolve_board_concurrency(board: Optional[str]) -> Optional[int]:
+    """``kanban.board_concurrency``（routa KanbanSessionQueue 默认 1）；未配=默认 1；
+    显式 0/负数=不设闸（None）。整数解析失败回默认 1（fail-safe 排队语义）。"""
+    try:
+        from hermes_cli.config_effective import load_user_config_effective
+        kanban = (load_user_config_effective(fail_closed=True) or {}).get("kanban", {})
+        v = kanban.get("board_concurrency")
+    except Exception:
+        return 1
+    if v is None:
+        return 1
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return 1
+    return None if n <= 0 else n
+
+
+def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
     gate). Otherwise ``None`` so an unassigned shared-board card is never
@@ -2391,7 +2454,7 @@ def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[s
     as nonspawnable."""
     name = (default_assignee or "").strip() or None
     if name:
-        profile_exists = _profile_exists_fn(board)
+        profile_exists = _profile_exists_fn()
         if profile_exists is not None and not profile_exists(name):
             return None
     return name
@@ -2473,12 +2536,23 @@ def _dispatch_once_locked(
         board=board,
     ):
         ready_budget = max(spawn_budget - 1, 0)
+    # Board-level running count（routa 每 board 并发闸）：本 tick 按板计数；
+    # cap 读 kanban.board_concurrency（默认 1，routa 语义），None=不设闸。
+    board_cap = _resolve_board_concurrency(board)
+    board_running: dict[str, int] = {}
+    if board_cap is not None:
+        # 0.21.7 起每 board 独立 sqlite（conn 即板库），直接数本库 running。
+        rowc = conn.execute(
+            "SELECT COUNT(*) FROM tasks WHERE status = 'running'",
+        ).fetchone()
+        board_running[board] = int(rowc[0]) if rowc else 0
     lane_kwargs: dict[str, Any] = dict(
         dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
         failure_limit=failure_limit, spawn_fn=spawn_fn,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
+        board_cap=board_cap, board_running=board_running,
     )
-    default_assignee = _resolve_default_assignee(default_assignee, board)
+    default_assignee = _resolve_default_assignee(default_assignee)
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:
@@ -3032,7 +3106,7 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     env = systemd_user_bus_env(env)
     log_f = _open_worker_log(task, board)
     try:
-        proc = subprocess.Popen(  # noqa: S603 -- argv is a fixed list built above
+        proc = subprocess.Popen(
             cmd,
             cwd=workspace if os.path.isdir(workspace) else None,
             stdin=subprocess.DEVNULL,
@@ -3116,6 +3190,6 @@ def run_daemon(
 
 # Late-bound origin namespace (see module docstring); imported LAST so this
 # module is fully populated before ``kanban_db`` imports from it.
-from hermes_cli import kanban_db as _kb  # noqa: E402
-from hermes_cli import kanban_db_connect as _kbc  # noqa: E402
-from hermes_cli import kanban_db_workspace as _kbw  # noqa: E402
+from hermes_cli import kanban_db as _kb
+from hermes_cli import kanban_db_connect as _kbc
+from hermes_cli import kanban_db_workspace as _kbw

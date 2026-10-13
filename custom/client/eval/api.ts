@@ -98,9 +98,9 @@ export interface AttemptDto {
   sessionId?: string
   verdicts: Array<{ assertionId: string; value: 'yes' | 'no' | 'unknown'; source: string; conflict?: boolean; p?: number }>
   outcome?: { verifier: string; ok: boolean; detail?: string }
-  efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number }
+  efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number; ttftMs?: number }
   toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>
-  judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean }
+  judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean; models?: string[] }
   passed?: boolean
   judgedAt?: number
 }
