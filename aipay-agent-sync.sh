@@ -31,8 +31,8 @@ AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
 # custom/server/__tests__/ensure-injected-delta-guard.test.ts 双向断言，增删不同步即红。
 # 当前全集：
 #   hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/
-#   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/ model_tools.py
-AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/|hermes_state|model_tools.py|toolsets.py)'
+#   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/ model_tools.py toolsets.py tests/home_io_guard.py
+AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/|hermes_state|model_tools\.py|toolsets\.py|tests/home_io_guard\.py)'
 
 # 要部署的 patch：位置参数优先，否则用默认清单（空格分隔，可用 AIPAY_AGENT_PATCHES 覆盖）
 DEFAULT_PATCHES="372-agent-tick-socket-fallback.patch 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch"
