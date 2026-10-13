@@ -4,7 +4,7 @@
 
 > swarm-yuan 必须遵守应用安全规范及代码安全、网络安全规范，防范常见安全问题。
 > 目标技能生成时必须将本规范编织进 reference-manual.md §2 + dev-guide.md + precheck.sh --security。
-> 参考标准：OWASP Top 10、STRIDE 威胁模型、CWE/SANS Top 25。
+> 参考标准：OWASP Top 10、STRIDE 威胁模型、CWE/SANS Top 25；金融双标准（V8.23 用户指认，两者是两个东西均须在册）：JR/T 0071（金融行业网络安全等级保护实施指引——定级/备案/整改的等保落地框架）、JR/T 0171-2020（个人金融信息保护技术规范——C3=最高敏级、收集-传输-存储-使用-删除全生命周期管控）。
 
 ---
 
