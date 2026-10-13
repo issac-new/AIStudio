@@ -1,0 +1,88 @@
+--- a/packages/desktop/scripts/after-pack-combined.cjs
++++ b/packages/desktop/scripts/after-pack-combined.cjs
+@@ -4,6 +4,7 @@
+ // hooks in one CommonJS module. Pure decision helpers are exported for tests.
+ const { chmodSync, existsSync, readdirSync, rmSync, statSync } = require('node:fs')
+ const { join } = require('node:path')
++const { spawnSync } = require('node:child_process')
+ 
+ // electron-builder passes context.arch as a NUMERIC enum (0=ia32, 1=x64,
+ // 2=armv7l, 3=arm64, 4=universal), NOT the string name. node-pty's prebuilds
+@@ -19,8 +20,17 @@
+   return String(arch)
+ }
+ 
++// npm 包管理器的平台命名不统一，且与 electron-builder 的 electronPlatformName
++// 不同：node-pty prebuilds 目录与 @img/sharp-* 用 Node 名（win32），sherpa-onnx-*
++// 用 win。跨平台打包（如 darwin 宿主打 win x64 zip）时 keep 名必须按各族规范解析，
++// 否则修剪把 win32-x64 一起剪掉（win10-mig 实测 prebuilds/ 全空）。
++const NPM_PLATFORMS = { win: 'win32' }
++function npmPlatform(platform) {
++  return NPM_PLATFORMS[platform] || platform
++}
++
+ function computeKeepDir(platform, arch) {
+-  return platform + '-' + archName(arch)
++  return npmPlatform(platform) + '-' + archName(arch)
+ }
+ 
+ function listPruneTargets(dirs, keep) {
+@@ -32,7 +42,8 @@
+ // cannot load on the target so wrong-ABI failures stay loud instead of subtle.
+ const SHARP_KEEP_ALWAYS = new Set(['colour', 'sharp-wasm32'])
+ function sharpKeepDirs(platform, arch) {
+-  return ['sharp-' + platform + '-' + archName(arch), 'sharp-libvips-' + platform + '-' + archName(arch)]
++  const p = npmPlatform(platform)
++  return ['sharp-' + p + '-' + archName(arch), 'sharp-libvips-' + p + '-' + archName(arch)]
+ }
+ function listSharpPruneTargets(dirs, platform, arch) {
+   const keep = new Set([...sharpKeepDirs(platform, arch), ...SHARP_KEEP_ALWAYS])
+@@ -106,8 +117,48 @@
+   }
+ }
+ 
++// 跨平台构建时 npm 只装宿主平台原生件（@img/sharp-* / sherpa-onnx-* 是按平台
++// 拆分的 optional 包），目标平台变体根本不在 node_modules 里——修剪后包内零原生
++// 件（win10-mig 实测三缺）。打包期按各族命名规范拉取目标变体进暂存树，版本对齐
++// 已暂存的宿主变体（sharp+libvips 同版保 ABI 配对）。命名族：@img 用 win32-x64，
++// sherpa-onnx 用 win-x64。
++function stagedPkgVersion(dir) {
++  if (!existsSync(dir)) return null
++  try {
++    return JSON.parse(require('node:fs').readFileSync(join(dir, 'package.json'), 'utf8')).version || null
++  } catch { return null }
++}
++async function ensureCrossPlatformNatives(context) {
++  const platform = context.electronPlatformName
++  const hostPlatform = process.platform === 'win32' ? 'win' : process.platform
++  if (platform === hostPlatform || platform === 'linux') return
++  const arch = archName(context.arch)
++  const webuiDir = join(resourcesDirFor(context), 'webui')
++  const imgDir = join(webuiDir, 'node_modules', '@img')
++  const sharpVer = stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-' + archName(process.arch)))
++    || stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-x64'))
++    || stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-arm64'))
++  const sherpaVer = stagedPkgVersion(join(webuiDir, 'node_modules', 'sherpa-onnx-' + hostPlatform + '-' + archName(process.arch)))
++    || stagedPkgVersion(join(webuiDir, 'node_modules', 'sherpa-onnx-darwin-arm64'))
++  const want = []
++  if (sharpVer) want.push('@img/sharp-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer,
++                          '@img/sharp-libvips-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer)
++  if (sherpaVer) want.push('sherpa-onnx-' + platform + '-' + arch + '@' + sherpaVer)
++  if (want.length === 0) return
++  console.log('[after-pack] cross build: fetching target natives → ' + want.join(', '))
++  const r = spawnSync('npm', ['install', '--no-save', '--no-audit', '--no-fund', '--prefix', webuiDir, ...want],
++    { stdio: 'inherit' })
++  if (r.status !== 0) throw new Error('[after-pack] cross-native npm install failed (exit ' + r.status + ')')
++  for (const name of want.map((spec) => spec.split('@').slice(0, spec.startsWith('@') ? 2 : 1).join('@'))) {
++    if (!existsSync(join(webuiDir, 'node_modules', name))) {
++      throw new Error('[after-pack] cross-native missing after install: ' + name)
++    }
++  }
++}
++
+ module.exports = async function (context) {
+   await verifyPackagedWebUi(context)
++  await ensureCrossPlatformNatives(context)
+   await pruneNodePtyPrebuilds(context)
+   await pruneSharpPackages(context)
+   await ensureLinuxSpawnHelperExecutable(context)
