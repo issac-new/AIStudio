@@ -641,3 +641,8 @@
 # 抹回 series 态致 SIM 安装树失锚，mx-up preflight 拦停实锤。补丁化=刷新不再可抹）。
 612-agent-capacity-retry-anchor.patch
 615-server-mimo-models-adapter.patch
+
+# [616] 跨平台打包原生件根治（win10-mig 三缺欠账）：node-pty keep 目录 win→win32 映射
+# （旧名 win-x64 剪空 prebuilds）+ @img/sherpa 命名族分离解析 + afterPack 期主动拉取
+# 目标平台变体进暂存树（版本对齐宿主变体保 ABI）。
+616-desktop-crossbuild-native-natives.patch
