@@ -47,6 +47,32 @@ const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 
 const mode = process.argv.includes('--clean') ? 'clean' : 'inject';
 
+// 2026-10-14 全量回归轮防复发闸（当日 P0 根因封堵）：clean 是运行树手术（反向补丁、
+// 移除 src/custom 链接），在 live server（8647 ts-node）运行中执行会留下「进程内旧模块
+// 缓存 + 树已变」的分裂态；若并行操作还重写了其 SQLite 库文件，进程内 schema 缓存会被
+// 永久污染（2026-10-13 夜实测：malformed database schema 每秒报错 8k+ 条、登录 500，
+// 次日回归轮方定位修复）。clean 前探测 8647 监听：在听即拒绝退出；确需带服清理，
+// 显式设 OVERLAY_ALLOW_LIVE_CLEAN=1 豁免并自担重启换装责任。
+function liveStudioServerListening() {
+  if (process.env.OVERLAY_ALLOW_LIVE_CLEAN === '1') return false;
+  try {
+    const out = execSync(
+      'node -e "const n=require(\'node:net\');const s=n.connect(8647,\'127.0.0.1\');s.on(\'connect\',()=>{console.log(\'UP\');s.destroy();process.exit(0)});s.on(\'error\',()=>process.exit(1));setTimeout(()=>process.exit(1),1200)"',
+      { stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 },
+    ).toString();
+    return out.includes('UP');
+  } catch {
+    return false;
+  }
+}
+if (mode === 'clean' && liveStudioServerListening()) {
+  console.error('[clean] 拒绝执行：检测到 8647 端口有 SwarmStudio server 在运行。');
+  console.error('[clean] 带服 clean 会造成运行进程与树状态分裂（模块缓存/库句柄悬空），');
+  console.error('[clean] 2026-10-13 夜间曾因此触发 server SQLite schema 缓存污染（登录 500）。');
+  console.error('[clean] 请先停服再 clean；确需带服清理请设 OVERLAY_ALLOW_LIVE_CLEAN=1。');
+  process.exit(1);
+}
+
 function git(args, cwd) {
   return execSync(`git ${args}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
 }
