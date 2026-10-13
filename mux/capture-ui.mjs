@@ -24,7 +24,10 @@ console.log('login ok:', loginRes.user?.username)
 
 const only = process.argv[2]
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'zh-CN', timezoneId: 'Asia/Shanghai' })  // 推演 UI 始终中文：浏览器级 locale 焊死（localStorage hermes_locale=zh 为第二道保险）
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'zh-CN', timezoneId: 'Asia/Shanghai', colorScheme: 'dark' })
+// 推演 UI 始终 dark（用户 2026-10-13 裁定）：colorScheme 焊死让 system 亮度档解析为 dark；
+// 下面 addInitScript 是双保险②——显式亮度档=dark，绕过 system 档对宿主系统的依赖  // 推演 UI 始终中文：浏览器级 locale 焊死（localStorage hermes_locale=zh 为第二道保险）
+await ctx.addInitScript(() => { try { localStorage.setItem('hermes_brightness', 'dark') } catch {} })
 const page = await ctx.newPage()
 
 await page.goto(BASE + '/login')
