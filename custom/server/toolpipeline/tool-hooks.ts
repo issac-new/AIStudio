@@ -11,6 +11,7 @@ import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
 import { ekkoEnforceGateHook } from './enforce-gate'
+import { skillGuardHook } from '../skillgov/skill-guard-hook'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
 
 export interface ToolExecAuditEntry {
@@ -74,7 +75,10 @@ const auditHook = {
 // H3 v1（2026-10-08 六文调研轮）：enforce-gate 执法钩子排末位（紧贴真实执行）——
 // 阶梯/风险档/权限模式三级裁决，HERMES_TOOL_ENFORCE=1 才生效（默认零行为变化）。
 // "只观测不拦截"的 v1 边界自此收窄为"默认不拦截"（执法面显式开启后可拦）。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), ekkoEnforceGateHook()]
+// Skill 三段治理（2026-10-13 挂账清偿轮）：skillGuardHook 排泛型围栏后、执法门前——
+// skill_view/skill_manage 按注册扫描 verdict 拦 + 装载内容内联 shell 警示
+// （SKILLGOV_ENFORCE=1 才执法；观测审计恒开 fail-open）。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), skillGuardHook(), ekkoEnforceGateHook()]
 
 // H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
 // （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。

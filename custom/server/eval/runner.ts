@@ -9,6 +9,7 @@
 import { readFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
+import { estimateCost } from '../tokens/pricing'
 import { aggregateRun } from './aggregate'
 import { judgeAttempt, type JudgeDeps } from './judge'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
@@ -34,6 +35,9 @@ interface TraceLine {
   duration_ms?: number
   started_at?: number
   ended_at?: number
+  /** 首 token 时延（毫秒）——run-trace 插件具备该字段时 TTFT 门禁即自动有数（挂账清偿轮接线）。 */
+  first_token_ms?: number
+  ttft_ms?: number
   outcome?: string
   summary?: string
 }
@@ -48,16 +52,36 @@ function stringifyFragment(value: unknown, max = 200): string {
   return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
-/** usage 对象 → 总 token（常见字段名防御式提取）。 */
-function tokensOfUsage(usage: Record<string, unknown> | undefined): number | undefined {
+/** usage 对象 → token 分面（prompt/completion 分开取——价目估算需要输入输出分价）。 */
+function tokenPartsOfUsage(usage: Record<string, unknown> | undefined): { prompt: number; completion: number } | undefined {
   if (!usage) return undefined
   const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
-  const total = num(usage.total_tokens) ?? num(usage.tokens)
-  if (total !== null) return total
   const prompt = num(usage.prompt_tokens) ?? num(usage.input_tokens)
   const completion = num(usage.completion_tokens) ?? num(usage.output_tokens)
-  if (prompt !== null || completion !== null) return (prompt ?? 0) + (completion ?? 0)
-  return undefined
+  if (prompt === null && completion === null) {
+    const total = num(usage.total_tokens) ?? num(usage.tokens)
+    if (total === null) return undefined
+    return { prompt: total, completion: 0 }
+  }
+  return { prompt: prompt ?? 0, completion: completion ?? 0 }
+}
+
+/** usage 对象 → 总 token（常见字段名防御式提取）。 */
+function tokensOfUsage(usage: Record<string, unknown> | undefined): number | undefined {
+  const parts = tokenPartsOfUsage(usage)
+  return parts ? parts.prompt + parts.completion : undefined
+}
+
+/** token×价目 → 单任务成本（idle/peak 两档中值；未收录模型 undefined——绝不瞎算）。 */
+function costOfTokens(model: string | undefined, prompt: number, completion: number): number | undefined {
+  if (!model) return undefined
+  try {
+    const est = estimateCost(model, { uncachedInput: prompt, output: completion, cacheRead: 0, cacheWrite: 0 })
+    if (!est) return undefined
+    return Math.round(((est.idleCost + est.peakCost) / 2) * 1e6) / 1e6
+  } catch {
+    return undefined
+  }
 }
 
 /** 解析 L2 trace JSONL 为证据（transcript 文本 + efficiency 指标 + 工具调用序列）。导出供测试。 */
@@ -65,24 +89,41 @@ export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
   const parts: string[] = []
   let tokens = 0
   let tokensKnown = false
+  let promptTokens = 0
+  let completionTokens = 0
   let steps = 0
   let durationMs: number | undefined
+  let ttftMs: number | undefined
+  let model: string | undefined
   const toolCalls: ToolCallRecord[] = []
 
   for (const line of lines) {
+    if (line.type === 'header') {
+      if (typeof line.model === 'string' && line.model) model = line.model
+      continue
+    }
     if (line.type === 'trailer') {
       if (typeof line.duration_ms === 'number') durationMs = line.duration_ms
+      if (typeof line.ttft_ms === 'number') ttftMs = line.ttft_ms
       if (line.outcome) parts.push(`[outcome] ${stringifyFragment(line.outcome, 300)}`)
       if (line.summary) parts.push(`[summary] ${stringifyFragment(line.summary, 500)}`)
       continue
     }
     if (line.type !== 'chunk') continue
     if (line.kind === 'llm_span' && line.phase === 'post') {
-      const t = tokensOfUsage(line.usage)
-      if (t !== undefined) {
-        tokens += t
+      const tp = tokenPartsOfUsage(line.usage)
+      if (tp) {
+        tokens += tp.prompt + tp.completion
+        promptTokens += tp.prompt
+        completionTokens += tp.completion
         tokensKnown = true
       }
+      // 首 token 时延只记首个 span（attempt 级口径=会话首响应）
+      if (ttftMs === undefined) {
+        const t = line.first_token_ms ?? line.ttft_ms
+        if (typeof t === 'number' && Number.isFinite(t)) ttftMs = t
+      }
+      if (typeof line.model === 'string' && line.model) model = line.model
       if (line.response_preview) {
         parts.push(`[assistant] ${stringifyFragment(line.response_preview, 400)}`)
       }
@@ -102,12 +143,18 @@ export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
     }
   }
 
+  // 成本：token 分面 × 价目表（overlay/tokens 域单一事实源；未收录模型缺席不造数）。
+  // 注意价目表币种由表级声明（现 CNY）——costUsd 字段值随表币种，basis 注明。
+  const costUsd = tokensKnown ? costOfTokens(model, promptTokens, completionTokens) : undefined
+
   return {
     transcript: parts.join('\n') || undefined,
     efficiency: {
       ...(tokensKnown ? { tokens } : {}),
+      ...(costUsd !== undefined ? { costUsd } : {}),
       ...(steps > 0 ? { steps } : {}),
       ...(durationMs !== undefined ? { durationMs } : {}),
+      ...(ttftMs !== undefined ? { ttftMs } : {}),
     },
     // 工具调用序列：零工具调用的轨迹产出空数组（有证据、无调用——与"证据缺席"区分）
     toolCalls,
