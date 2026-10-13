@@ -260,7 +260,7 @@ onMounted(() => void refresh())
   &.is-pass { color: #15803d; background: #dcfce7; }
   &.is-conditional { color: #b45309; background: #fef3c7; }
   &.is-reject { color: #b91c1c; background: #fee2e2; }
-  &.is-none { color: #64748b; background: #f1f5f9; } }
+  &.is-none { color: #64748b; background: #16233a; } }
 .gov-health__machine-dist { font-size: 10.5px; color: var(--text-muted, #878c99); margin-left: auto; }
 .gov-health__gate-label { font-size: 11px; color: var(--text-primary, inherit); margin-top: 1px; }
 .gov-health__gate-detail { font-size: 10.5px; color: var(--text-muted, #878c99); margin-top: 3px; }
@@ -276,7 +276,7 @@ onMounted(() => void refresh())
   &.is-pass { color: #15803d; background: #dcfce7; }
   &.is-warn { color: #b45309; background: #fef3c7; }
   &.is-fail { color: #b91c1c; background: #fee2e2; }
-  &.is-none { color: #64748b; background: #f1f5f9; } }
+  &.is-none { color: #64748b; background: #16233a; } }
 .gov-health__audit-ev { font-size: 10px; color: var(--text-muted, #878c99); line-height: 1.45; }
 .gov-health__audit-meta { margin-top: 7px; font-size: 10.5px; color: var(--text-muted, #878c99); }
 .gov-health__empty {
