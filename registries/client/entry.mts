@@ -23,14 +23,21 @@ import 'katex/dist/katex.min.css'
 //   必须在 FOUC 块之前执行——FOUC 该键预挂 .dark 类（防闪白），useTheme() store
 //   首次调用（App.vue setup，晚于本模块体）再读同键定初值，三处同源一致。
 // 语言：i18n 在 import 期已初始化（早于本模块体，写 localStorage 来不及），故用
-//   switchLocale 运行时切 zh——其内部落 localStorage（共享键/账户键），后续启动直读；
-//   仅当共享键无偏好时执行（显式选过语言的浏览器不动）。
+//   switchLocale 运行时切 zh——其内部落 localStorage（有 token 时落账户键
+//   hermes_locale:<username>，否则共享键），后续启动直读。判「已选过」必须枚举
+//   两类键：持久会话下 switchLocale 只落账户键、共享键恒空，若只查共享键则每次
+//   启动都强制 zh，账户键里的显式选择（如 en）被反复覆写。
 {
   const savedBrightness = localStorage.getItem('hermes_brightness')
   if (savedBrightness === null || savedBrightness === 'system') {
     localStorage.setItem('hermes_brightness', 'dark')
   }
-  if (!localStorage.getItem('hermes_locale')) {
+  let hasLocalePref = false
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k === 'hermes_locale' || k?.startsWith('hermes_locale:')) { hasLocalePref = true; break }
+  }
+  if (!hasLocalePref) {
     void import('@/i18n').then(({ switchLocale }) => switchLocale('zh'))
   }
 }

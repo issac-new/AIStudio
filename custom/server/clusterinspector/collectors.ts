@@ -264,8 +264,11 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
         const buf = Buffer.alloc(512)
         const fd = require('node:fs').openSync(log, 'r')
         const len = Math.min(buf.length, st.size)
-        require('node:fs').readSync(fd, buf, 0, len, Math.max(0, st.size - len))
-        require('node:fs').closeSync(fd)
+        try {
+          require('node:fs').readSync(fd, buf, 0, len, Math.max(0, st.size - len))
+        } finally {
+          require('node:fs').closeSync(fd)
+        }
         const tail = buf.toString('utf-8', 0, len).replace(/\0+$/, '').split('\n').filter(Boolean).pop() ?? ''
         // 工作行活性（run14 v3 watcher 根治面移植）：从日志尾部回扫找最后一条
         // 工作行（API call #/tool completed）并解析其行首时间戳；mtime 不算活性。
@@ -274,17 +277,25 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
         try {
           const head = Buffer.alloc(65536)
           const hfd = require('node:fs').openSync(log, 'r')
-          const hlen = Math.min(head.length, st.size)
-          require('node:fs').readSync(hfd, head, 0, hlen, Math.max(0, st.size - hlen))
-          require('node:fs').closeSync(hfd)
-          const lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
+          let lines: string[]
+          try {
+            const hlen = Math.min(head.length, st.size)
+            require('node:fs').readSync(hfd, head, 0, hlen, Math.max(0, st.size - hlen))
+            lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
+          } finally {
+            require('node:fs').closeSync(hfd)
+          }
           for (let i = lines.length - 1; i >= 0; i--) {
             // 真做判据（run19 推演层根治上移）：tool completed 或会话第 2+ 次调用——
             // 单轮 API call #1 + Turn ended=嘴炮回合（回一句话收场），不清静默账。
-            const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #[2-9][0-9]* )/)
-            if (rw) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T') + 'Z') || Date.parse(rw[1]!.replace(' ', 'T')) }
+            // API call #N 后随冒号非空格（实测 agent.log「API call #44: model=…」）；
+            // 1[0-9]+ 段补 #10-19，[^0-9] 吃定界符、#1 不误配。
+            const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9])/)
+            // 尾部回扫=首个命中即最新；已赋值不得覆写（旧日志无真做行时继续扫
+            // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误催办）。
+            if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T') + 'Z') || Date.parse(rw[1]!.replace(' ', 'T')) }
             const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
-            if (m) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')) }
+            if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')) }
             if (realWorkTsMs && workTsMs) break
           }
         } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
