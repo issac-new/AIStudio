@@ -28,10 +28,14 @@ describe('patches/series 守门（zcode-patches-guard 同模式）', () => {
   })
 
   it('补丁编号唯一（撞号=让号流程漏步）', () => {
+    // 双侧保留白名单（agent 0.21.7 升级轮 1f6aefad 显式决策「611×2/612×2 双侧保留」：
+    // 同号双胞胎分属不同宿主域——toolsets-obs-recall vs session-rotation-itercap、
+    // observation-pack-recall vs capacity-retry-anchor；让号改名反而破坏升级轮的三向再生对账）
+    const DUAL_KEEP = new Set(['611', '612'])
     const nums = readSeries().map((p) => /^(\d+)-/.exec(p)?.[1]).filter((n): n is string => !!n)
     const seen = new Map<string, number>()
     for (const n of nums) seen.set(n, (seen.get(n) ?? 0) + 1)
-    const dup = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n)
-    expect(dup, `编号被多个补丁占用：${dup.join(', ')}（处置惯例：在途方保留，已合 main 者让号）`).toEqual([])
+    const dup = [...seen.entries()].filter(([n, c]) => c > 1 && !DUAL_KEEP.has(n)).map(([n]) => n)
+    expect(dup, `编号被多个补丁占用：${dup.join(', ')}（处置惯例：在途方保留，已合 main 者让号；611/612=升级轮双侧保留白名单）`).toEqual([])
   })
 })

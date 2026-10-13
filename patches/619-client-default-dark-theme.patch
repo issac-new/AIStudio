@@ -1,0 +1,22 @@
+diff --git a/packages/client/index.html b/packages/client/index.html
+--- a/packages/client/index.html
++++ b/packages/client/index.html
+@@ -65,7 +65,7 @@
+   <script>
+     (function() {
+       try {
+-        const brightness = localStorage.getItem('hermes_brightness') || 'system';
++        const brightness = localStorage.getItem('hermes_brightness') || 'dark';
+         const style = localStorage.getItem('hermes_style') === 'comic' ? 'comic' : 'ink';
+ 
+         // Resolve dark mode
+diff --git a/packages/client/src/composables/useTheme.ts b/packages/client/src/composables/useTheme.ts
+--- a/packages/client/src/composables/useTheme.ts
++++ b/packages/client/src/composables/useTheme.ts
+@@ -85,7 +85,7 @@
+ 
+ const brightness = ref<BrightnessMode>(
+-  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'system',
++  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'dark',
+ )
+ // Keep this in sync with the pre-render theme in index.html.
