@@ -18,6 +18,7 @@ import {
   readMemoryAudit, readProfileWindowMessages, readSessionMessages, readSessionOverview,
   readToolAuditWindow, readTraceSummary, readWorkflowEvidence, runWindowFromSessionId,
   type ApprovalWindow, type IdentitySnapshot, type MemoryAuditWindow,
+  type ProfileWindowMessages,
   type SessionMessages, type ToolAuditWindow, type TraceSummary, type WorkflowEvidence,
 } from './incident-sources'
 import { ladderForProfile, LADDER_LEVEL_TITLES } from '../autonomyladder/autonomy-ladder'
@@ -47,8 +48,8 @@ export interface IncidentSourceBundle {
   overview: ReturnType<typeof readSessionOverview>
   messages: SessionMessages | null
   /** 推演轮聚合形态（run18 复盘根治）：主库精确查无果且 sessionId 为 RUN_ID 形态时，
-   *  按时间窗聚合 hermes profiles/*/state.db 的真实会话。非 null=聚合成立。 */
-  profileWindow: import('./incident-sources').ProfileWindowMessages | null
+   *  按时间窗聚合 hermes 各 profile 的 state.db 真实会话。非 null=聚合成立。 */
+  profileWindow: ProfileWindowMessages | null
   trace: TraceSummary | null
   toolAudit: ToolAuditWindow
   approvals: ApprovalWindow
