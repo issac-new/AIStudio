@@ -303,16 +303,47 @@ function appendScanLedger(summary: SkillScanSummary): void {
   } catch { /* 账本失败不阻断扫描 */ }
 }
 
+function latestFromLedger(): SkillScanSummary | null {
+  const lines = readFileSync(ledgerFile(), 'utf8').split('\n').filter(Boolean)
+  if (lines.length === 0) return null
+  return JSON.parse(lines[lines.length - 1]) as SkillScanSummary
+}
+
 export function latestSkillScan(): SkillScanSummary | null {
   if (latestInMemory) return latestInMemory
   try {
-    const lines = readFileSync(ledgerFile(), 'utf8').split('\n').filter(Boolean)
-    if (lines.length === 0) return null
-    latestInMemory = JSON.parse(lines[lines.length - 1]) as SkillScanSummary
+    latestInMemory = latestFromLedger()
     return latestInMemory
   } catch {
     return null
   }
+}
+
+/**
+ * 扫描单个技能目录并记账（导入/生成/注入通路的注册扫描入口——上游 import 补丁
+ * 与生成器 run 都调这里）：结果并入 latest（执行拦截钩子随即可见）+ 追加账本。
+ */
+export function recordSkillScan(dir: string): SkillScanResult {
+  const result = scanSkillDir(dir)
+  const base = latestInMemory ?? (() => {
+    try {
+      return latestFromLedger()
+    } catch {
+      return null
+    }
+  })()
+  const results = [...(base?.results.filter((r) => r.dir !== result.dir) ?? []), result].slice(-MAX_SKILLS_PER_ROOT)
+  const byVerdict = { safe: 0, caution: 0, dangerous: 0 }
+  for (const r of results) byVerdict[r.verdict] += 1
+  latestInMemory = {
+    scannedAt: Date.now(),
+    roots: base?.roots ?? [dirname(result.dir)],
+    scanned: results.length,
+    byVerdict,
+    results,
+  }
+  appendScanLedger(latestInMemory)
+  return result
 }
 
 /** 执行拦截查询面：技能名 → 最近扫描判定（无扫描/未收录 → undefined=fail-open 放行）。 */
