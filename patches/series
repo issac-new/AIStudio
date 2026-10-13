@@ -657,3 +657,8 @@
 # 内置技能注入器 installManagedSkill 扫描（只在 hash 变化时调用，量有界）。
 # 全部 fail-soft（扫描失败不遮蔽导入/注入）；执法面=工具瀑布 skillGuardHook。
 618-server-skill-import-scan.patch
+
+# [619] SwarmStudio 默认 dark 主题（用户 2026-10-13 裁定：所有页面中文+dark）：
+# 亮度档缺省值 system→dark（index.html pre-render 与 useTheme.ts 运行时两处同步，
+# 防 FOUC 白闪；用户显式选过 light 的仍尊重 localStorage 既有值）。
+619-client-default-dark-theme.patch
