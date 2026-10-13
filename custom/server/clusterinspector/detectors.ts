@@ -288,6 +288,68 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectContextWatermark(snap, opts),
     ...detectEmptyStreak(snap, opts),
     ...detectRunawayLoop(snap),
+    ...detectDeliveryAnchor(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
+}
+
+/** ── 交付锚验证（run19 推演层根治上移 A+B，用户 2026-10-13「全做」裁定）──
+ *  A 分支新鲜度（branch_fresh 推演件产品化）：卡引用的交付分支，tip 提交时间必须
+ *     ≥ 卡的 started_at——tip 早于任务开始=上轮遗留分支冒充本轮交付（run15 实锤
+ *     形态：feat/DEV-X 存上轮提交时真值锚恒假、等待环盲转 150min）。
+ *  B 锚可反查（FIX-DONE commit 抽验产品化）：已完成卡引用的分支必须在仓中可
+ *     rev-parse 反查——不可查=未推送或伪锚（「嘴上说完成」的防线；判活管过程、
+ *     锚验证管结果，两者互补闭环）。
+ *  fail-open：未配 CLUSTER_INSPECTOR_NUDGE_REPO / git 失败 → 返回空（不误报）。
+ *  只对带 branch_name 的卡生效（无交付引用的卡不在此面）。 */
+export function detectDeliveryAnchor(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const repo = process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+  if (!repo || !snap.runningCards.ok) return []
+  const out: Anomaly[] = []
+  let git: (args: string[]) => string
+  try {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    git = (args: string[]) => execFileSync('git', ['-C', repo, ...args], { timeout: 5000, encoding: 'utf-8' }) as string
+  } catch { return [] }
+  const epoch = (v: number | string | undefined): number => {
+    if (typeof v === 'number') return Math.round(v < 1e12 ? v * 1000 : v)
+    if (typeof v === 'string' && v) { const t = Date.parse(v); return Number.isNaN(t) ? 0 : t }
+    return 0
+  }
+  for (const c of snap.runningCards.cards) {
+    const br = (c.branch_name ?? '').trim()
+    if (!br) continue
+    const startedMs = epoch(c.started_at)
+    const done = String(c.status ?? '').toLowerCase() === 'done' || String(c.status ?? '').toLowerCase() === 'completed'
+    // B 锚可反查（done 卡）：分支在 refs/heads 或 refs/remotes 任一存在
+    if (done) {
+      try {
+        git(['rev-parse', '--verify', '-q', `refs/heads/${br}`]) || git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${br}`])
+      } catch {
+        out.push({
+          detector: 'delivery.anchor-missing', subject: `card:${c.id}`,
+          severity: 'warn',
+          summary: `已完成卡引用的交付分支不可反查：卡 ${c.id}（${c.title ?? ''}）branch=${br} 在仓中查无（未推送或伪锚）——「嘴上说完成」形态，请 ${c.assignee ?? '负责人'} 推送该分支或修正卡的 branch_name 后在卡内回执`,
+          detail: { card: c.id, branch: br, assignee: c.assignee },
+        })
+        continue
+      }
+    }
+    // A 分支新鲜度（running/done 通用）：tip 提交时间 ≥ 卡开始时间
+    if (startedMs > 0) {
+      try {
+        const cdate = git(['for-each-ref', '--format=%(committerdate:unix)',
+          `refs/heads/${br}`, `refs/remotes/origin/${br}`]).trim().split('\n').filter(Boolean).map(Number).sort((a, b) => b - a)[0]
+        if (cdate && cdate * 1000 < startedMs) {
+          out.push({
+            detector: 'delivery.branch-stale', subject: `card:${c.id}`,
+            severity: 'warn',
+            summary: `交付分支 tip 早于任务开始（上轮遗留冒充本轮）：卡 ${c.id}（${c.title ?? ''}）branch=${br} 的 tip 在任务开始前 ${Math.round((startedMs - cdate * 1000) / 60000)} 分钟——本轮新提交未推上该分支（勿只留工作区分支），请推送后回执`,
+            detail: { card: c.id, branch: br, tipEpochS: cdate, startedMs, assignee: c.assignee },
+          })
+        }
+      } catch { /* 单卡 git 失败不阻塞其余卡 */ }
+    }
+  }
+  return out
 }

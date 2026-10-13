@@ -53,6 +53,11 @@ export interface RunningCard {
   id: string
   assignee?: string
   title?: string
+  /** 看板 tasks 表透传（交付锚验证面）：分支名/起止 epoch 秒（run19 上移 A+B） */
+  branch_name?: string
+  started_at?: number | string
+  completed_at?: number | string
+  status?: string
 }
 
 export interface RunningCardsFace {
