@@ -329,3 +329,68 @@ describe('probeBranchIntel（分支感知催办情报，run19 上移）', () => 
     expect(probeBranchIntel('chen')).toBe('')
   })
 })
+
+describe('detectDeliveryAnchor（交付锚验证 A+B，run19 上移）', () => {
+  const mkRepo = () => {
+    const { mkdtempSync } = require('node:fs') as typeof import('node:fs')
+    const { join } = require('node:path') as typeof import('node:path')
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    const dir = mkdtempSync(join(require('node:os').tmpdir(), 'anchor-'))
+    const repo = join(dir, 'r')
+    execFileSync('git', ['init', '-q', repo])
+    const g = (args: string[], env: Record<string, string> = {}) =>
+      execFileSync('git', ['-C', repo, ...args], { env: { ...process.env, ...env } })
+    g(['config', 'user.name', 'chen']); g(['config', 'user.email', 'c@x'])
+    const iso = (offH: number) => new Date(Date.now() - offH * 3600_000).toISOString()
+    const commit = (branch: string, offH: number) => {
+      g(['checkout', '-qb', branch])
+      require('node:fs').writeFileSync(join(repo, branch.replace(/\//g, '_') + '.txt'), 'x')
+      g(['add', '-A'])
+      g(['commit', '-qm', 'w'], { GIT_AUTHOR_DATE: iso(offH), GIT_COMMITTER_DATE: iso(offH) })
+    }
+    return { repo, commit, cleanup: () => require('node:fs').rmSync(dir, { recursive: true, force: true }) }
+  }
+  const cards = (arr: Array<Record<string, unknown>>) =>
+    ({ ok: true, cards: arr.map((c) => ({ id: 't1', title: 'X', ...c })) })
+  it('A：done 卡分支 tip 早于 started_at → delivery.branch-stale', () => {
+    const { repo, commit, cleanup } = mkRepo()
+    commit('feat/OLD', 48); commit('feat/NEW', 1)
+    process.env.CLUSTER_INSPECTOR_NUDGE_REPO = repo
+    const now = Date.now()
+    const snapA = snap({ ts: now, profiles: { ok: true, tails: [] },
+      runningCards: cards([{ branch_name: 'feat/OLD', started_at: Math.round(now / 1000) - 3600, status: 'running' }]) })
+    const hit = detectAll(snapA).find((x) => x.detector === 'delivery.branch-stale')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('上轮遗留')
+    const snapB = snap({ ts: now, profiles: { ok: true, tails: [] },
+      runningCards: cards([{ branch_name: 'feat/NEW', started_at: Math.round(now / 1000) - 3600, status: 'running' }]) })
+    expect(detectAll(snapB).find((x) => x.detector === 'delivery.branch-stale')).toBeUndefined()
+    delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+    cleanup()
+  })
+  it('B：done 卡分支仓中查无 → delivery.anchor-missing（本地有分支则不报）', () => {
+    const { repo, commit, cleanup } = mkRepo()
+    commit('feat/GOOD', 1)
+    process.env.CLUSTER_INSPECTOR_NUDGE_REPO = repo
+    const now = Date.now()
+    const st = Math.round(now / 1000) - 7200
+    const miss = snap({ ts: now, profiles: { ok: true, tails: [] },
+      runningCards: cards([{ branch_name: 'feat/GHOST', started_at: st, status: 'done' }]) })
+    const hit = detectAll(miss).find((x) => x.detector === 'delivery.anchor-missing')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('不可反查')
+    const ok = snap({ ts: now, profiles: { ok: true, tails: [] },
+      runningCards: cards([{ branch_name: 'feat/GOOD', started_at: st, status: 'done' }]) })
+    expect(detectAll(ok).find((x) => x.detector === 'delivery.anchor-missing')).toBeUndefined()
+    delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+    cleanup()
+  })
+  it('fail-open：未配 repo → 两型都不报', () => {
+    delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+    const sp = snap({ ts: Date.now(), profiles: { ok: true, tails: [] },
+      runningCards: cards([{ branch_name: 'feat/X', started_at: 1, status: 'done' }]) })
+    const a = detectAll(sp)
+    expect(a.find((x) => x.detector === 'delivery.anchor-missing')).toBeUndefined()
+    expect(a.find((x) => x.detector === 'delivery.branch-stale')).toBeUndefined()
+  })
+})
