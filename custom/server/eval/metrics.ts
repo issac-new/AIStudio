@@ -202,7 +202,7 @@ export function sixDimensionsOf(run: EvalRun, p99Ratio: number | null): SixDimen
     {
       dim: 'cost',
       value: agg.byLayer.efficiency.avgCostUsd ?? null,
-      basis: '单任务均成本 USD（越小越好；evidence 未取数则缺席）',
+      basis: '单任务均成本（价目表币种，idle/peak 中值；未收录模型缺席不造数）',
       instrumented: agg.byLayer.efficiency.avgCostUsd !== null && agg.byLayer.efficiency.avgCostUsd !== undefined,
     },
   ]
