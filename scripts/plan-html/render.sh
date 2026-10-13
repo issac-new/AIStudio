@@ -9,8 +9,8 @@ SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
 TITLE="${2:-$(python3 -c "
 import re
 s = open('/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md', encoding='utf-8').read()
-m = re.search(r'现行版本 (V8\.\d+)（([^）]+)）', s)
-print(f'Swarm Studio 全流程推演方案 {m.group(1)}（{m.group(2)}）' if m else 'Swarm Studio 全流程推演方案')
+m = re.search(r'现行版本 (V8\.\d+)', s)
+print(f'Swarm Studio 全流程推演方案 {m.group(1)}' if m else 'Swarm Studio 全流程推演方案')
 ")}"
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
