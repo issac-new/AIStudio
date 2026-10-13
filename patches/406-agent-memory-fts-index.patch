@@ -1,5 +1,102 @@
+diff --git a/tests/tools/test_memory_index.py b/tests/tools/test_memory_index.py
+new file mode 100644
+index 0000000000..2b96f2bfec
+--- /dev/null
++++ b/tests/tools/test_memory_index.py
+@@ -0,0 +1,90 @@
++"""记忆 FTS 索引守门（mimo P4 一期：markdown 源/索引视图/reconcile/BM25）。"""
++
++from __future__ import annotations
++
++import json
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from tools.memory_index import MemoryFTSIndex  # noqa: E402
++
++
++class TestReconcile:
++    def test_upsert_prune_idempotent(self, tmp_path):
++        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
++        r1 = idx.reconcile({"memory": ["登录页 token 持久化方案", "编译参数缓存命中优化"], "user": ["偏好中文回复"]})
++        assert r1 == {"indexed": 3, "removed": 0, "degraded": 0}
++        # 幂等：同源再对账零变化。
++        r2 = idx.reconcile({"memory": ["登录页 token 持久化方案", "编译参数缓存命中优化"], "user": ["偏好中文回复"]})
++        assert r2["indexed"] == 3 and r2["removed"] == 0
++        # 剪枝：源删一条后索引删一条。
++        r3 = idx.reconcile({"memory": ["登录页 token 持久化方案"], "user": []})
++        assert r3 == {"indexed": 1, "removed": 2, "degraded": 0}
++        assert [r["entry"] for r in idx.search("token")] and not idx.search("偏好")
++        idx.close()
++
++    def test_content_change_reindexes(self, tmp_path):
++        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
++        idx.reconcile({"memory": ["旧内容 alpha"]})
++        idx.reconcile({"memory": ["新内容 beta"]})
++        assert idx.search("beta") and not idx.search("alpha")
++        idx.close()
++
++
++class TestSearch:
++    def test_bm25_ranking_and_target_filter(self, tmp_path):
++        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
++        idx.reconcile({
++            "memory": ["登录页 token 持久化方案详解", "编译参数缓存命中优化"],
++            "user": ["用户偏好 token 免密"],
++        })
++        hits = idx.search("token")
++        assert len(hits) == 2
++        # BM25：命中词密度更高的条目排前（详解条 vs 偏好条按词频不可断言顺序，但两桶都在）。
++        assert {h["target"] for h in hits} == {"memory", "user"}
++        only_user = idx.search("token", target="user")
++        assert len(only_user) == 1 and only_user[0]["target"] == "user"
++        # 中文分词按 FTS5 unicode61 整串/子串匹配口径——查询词命中含该词的条目。
++        assert len(idx.search("缓存命中")) == 1
++        idx.close()
++
++    def test_empty_query_no_rows(self, tmp_path):
++        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
++        idx.reconcile({"memory": ["x"]})
++        assert idx.search("   ") == []
++        idx.close()
++
++
++class TestDegradation:
++    def test_bad_path_degrades_not_raises(self, tmp_path):
++        # 目录占位成文件 → 打不开 → reconcile/search 降级而非抛错（记忆读写不受影响）。
++        blocker = tmp_path / "index.sqlite"
++        blocker.write_text("not a dir will block? no this IS the file", encoding="utf-8")
++        idx = MemoryFTSIndex(blocker)
++        assert idx.reconcile({"memory": ["a"]})["degraded"] == 1
++        assert idx.search("a") == []
++
++    def test_memory_tool_search_action(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++        from tools import memory_tool as mt
++        from tools.memory_tool_store import MemoryStore
++        store = MemoryStore()
++        store.memory_entries = ["登录页 token 持久化方案", "编译缓存命中优化"]
++        store.user_entries = ["偏好中文"]
++        out = json.loads(mt.memory_tool("search", target="memory", content="token", store=store))
++        assert out["success"] is True and out["count"] == 1
++        assert "token" in out["results"][0]["entry"]
++        # 未检索桶不串。
++        assert all(r["target"] == "memory" for r in out["results"])
++        # 空查询走错误 JSON 不炸。
++        bad = json.loads(mt.memory_tool("search", target="memory", content="  ", store=store))
++        assert bad["success"] is False
++        # 未知动作报错面更新。
++        unknown = json.loads(mt.memory_tool("explode", store=store))
++        assert "search" in unknown.get("error", "")
 diff --git a/tools/memory_index.py b/tools/memory_index.py
 new file mode 100644
+index 0000000000..24764dc384
 --- /dev/null
 +++ b/tools/memory_index.py
 @@ -0,0 +1,158 @@
@@ -162,31 +259,32 @@ new file mode 100644
 +                pass
 +            self._conn = None
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
+index a6e8a72258..2065118a37 100644
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
-@@ -232,7 +232,11 @@ def memory_tool(action: str = None, target: str = "memory", content: str = None,
-             return gate_result
-         return json.dumps(store.apply_batch(target, operations), ensure_ascii=False)
+@@ -270,8 +270,12 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
+             "Missing required parameter: provide 'action' (add/replace/remove) "
+             "or 'operations' (batch list). Got neither."
+         )
++    # P4 一期：FTS 检索（只读，reconcile-then-query；markdown 仍为唯一事实源，
++    # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
++    if action == "search":
++        return _memory_search(store, target, content)
      if action not in _STORE_ACTIONS:
--        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove", success=False)
-+        # P4 一期：FTS 检索（只读，reconcile-then-query；markdown 仍为唯一事实源，
-+        # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
-+        if action == "search":
-+            return _memory_search(store, target, content)
-+        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove, search", success=False)
+-        return _invalid(f"Unknown action '{action}'. Use: add, replace, remove")
++        return _invalid(f"Unknown action '{action}'. Use: add, replace, remove, search")
      invalid = (_validate_single_op(store, action, target, content, old_text)
                 or _background_delete_gate(store, action, None, target, content, old_text)
                 or _apply_write_gate(store, action, target, content, old_text))
-@@ -241,6 +245,29 @@ def memory_tool(action: str = None, target: str = "memory", content: str = None,
-     return json.dumps(_STORE_ACTIONS[action][0](store, target, content, old_text), ensure_ascii=False)
+@@ -280,6 +284,27 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
+     return _applied(_STORE_ACTIONS[action][0](store, target, content, old_text))
  
  
-+def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> str:
++def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> tuple[str, str]:
 +    """action=search：全量 reconcile 后 BM25 检索；target 限定可查单桶。"""
-+    import json as _json
 +    from tools.memory_index import MemoryFTSIndex
 +    if not (query or "").strip():
-+        return tool_error("search 需要 content 作为查询词", success=False)
++        return _invalid("search 需要 content 作为查询词")
 +    idx = MemoryFTSIndex()
 +    try:
 +        targets: Dict[str, List[str]] = {
@@ -195,109 +293,14 @@ diff --git a/tools/memory_tool.py b/tools/memory_tool.py
 +        }
 +        stats = idx.reconcile(targets)
 +        results = idx.search(query, target=None if target in (None, "", "all") else target)
-+        return _json.dumps(
++        return _applied(
 +            {"success": True, "action": "search", "query": query, "stats": stats,
 +             "count": len(results), "results": results},
-+            ensure_ascii=False,
 +        )
 +    finally:
 +        idx.close()
 +
 +
- def get_builtin_memory_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+ def get_builtin_memory_config(config: Optional[dict[str, Any]] = None) -> dict[str, Any]:
      """Normalized ``memory`` config section ({} when missing/malformed → flags default to
      enabled). ``agent_init`` reads the same section so availability and store cannot diverge."""
-new file mode 100644
---- /dev/null
-+++ b/tests/tools/test_memory_index.py
-@@ -0,0 +1,90 @@
-+"""记忆 FTS 索引守门（mimo P4 一期：markdown 源/索引视图/reconcile/BM25）。"""
-+
-+from __future__ import annotations
-+
-+import json
-+import sys
-+from pathlib import Path
-+
-+import pytest
-+
-+_WORKTREE = Path(__file__).resolve().parents[2]
-+if str(_WORKTREE) not in sys.path:
-+    sys.path.insert(0, str(_WORKTREE))
-+
-+from tools.memory_index import MemoryFTSIndex  # noqa: E402
-+
-+
-+class TestReconcile:
-+    def test_upsert_prune_idempotent(self, tmp_path):
-+        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
-+        r1 = idx.reconcile({"memory": ["登录页 token 持久化方案", "编译参数缓存命中优化"], "user": ["偏好中文回复"]})
-+        assert r1 == {"indexed": 3, "removed": 0, "degraded": 0}
-+        # 幂等：同源再对账零变化。
-+        r2 = idx.reconcile({"memory": ["登录页 token 持久化方案", "编译参数缓存命中优化"], "user": ["偏好中文回复"]})
-+        assert r2["indexed"] == 3 and r2["removed"] == 0
-+        # 剪枝：源删一条后索引删一条。
-+        r3 = idx.reconcile({"memory": ["登录页 token 持久化方案"], "user": []})
-+        assert r3 == {"indexed": 1, "removed": 2, "degraded": 0}
-+        assert [r["entry"] for r in idx.search("token")] and not idx.search("偏好")
-+        idx.close()
-+
-+    def test_content_change_reindexes(self, tmp_path):
-+        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
-+        idx.reconcile({"memory": ["旧内容 alpha"]})
-+        idx.reconcile({"memory": ["新内容 beta"]})
-+        assert idx.search("beta") and not idx.search("alpha")
-+        idx.close()
-+
-+
-+class TestSearch:
-+    def test_bm25_ranking_and_target_filter(self, tmp_path):
-+        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
-+        idx.reconcile({
-+            "memory": ["登录页 token 持久化方案详解", "编译参数缓存命中优化"],
-+            "user": ["用户偏好 token 免密"],
-+        })
-+        hits = idx.search("token")
-+        assert len(hits) == 2
-+        # BM25：命中词密度更高的条目排前（详解条 vs 偏好条按词频不可断言顺序，但两桶都在）。
-+        assert {h["target"] for h in hits} == {"memory", "user"}
-+        only_user = idx.search("token", target="user")
-+        assert len(only_user) == 1 and only_user[0]["target"] == "user"
-+        # 中文分词按 FTS5 unicode61 整串/子串匹配口径——查询词命中含该词的条目。
-+        assert len(idx.search("缓存命中")) == 1
-+        idx.close()
-+
-+    def test_empty_query_no_rows(self, tmp_path):
-+        idx = MemoryFTSIndex(tmp_path / "index.sqlite")
-+        idx.reconcile({"memory": ["x"]})
-+        assert idx.search("   ") == []
-+        idx.close()
-+
-+
-+class TestDegradation:
-+    def test_bad_path_degrades_not_raises(self, tmp_path):
-+        # 目录占位成文件 → 打不开 → reconcile/search 降级而非抛错（记忆读写不受影响）。
-+        blocker = tmp_path / "index.sqlite"
-+        blocker.write_text("not a dir will block? no this IS the file", encoding="utf-8")
-+        idx = MemoryFTSIndex(blocker)
-+        assert idx.reconcile({"memory": ["a"]})["degraded"] == 1
-+        assert idx.search("a") == []
-+
-+    def test_memory_tool_search_action(self, tmp_path, monkeypatch):
-+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-+        from tools import memory_tool as mt
-+        from tools.memory_tool_store import MemoryStore
-+        store = MemoryStore()
-+        store.memory_entries = ["登录页 token 持久化方案", "编译缓存命中优化"]
-+        store.user_entries = ["偏好中文"]
-+        out = json.loads(mt.memory_tool("search", target="memory", content="token", store=store))
-+        assert out["success"] is True and out["count"] == 1
-+        assert "token" in out["results"][0]["entry"]
-+        # 未检索桶不串。
-+        assert all(r["target"] == "memory" for r in out["results"])
-+        # 空查询走错误 JSON 不炸。
-+        bad = json.loads(mt.memory_tool("search", target="memory", content="  ", store=store))
-+        assert bad["success"] is False
-+        # 未知动作报错面更新。
-+        unknown = json.loads(mt.memory_tool("explode", store=store))
-+        assert "search" in unknown.get("error", "")

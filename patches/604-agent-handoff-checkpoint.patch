@@ -243,11 +243,11 @@ index 3945acfd86..663f1ba1a1 100644
      except Exception:  # noqa: BLE001 - 轮换面故障绝不冒泡
          logger.warning("session rotation check failed", exc_info=True)
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 781d91813a..2e4c9dbb48 100644
+index 8fe281b845..76f3808d79 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -3994,6 +3994,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
-     _ctx_parent_results(lines, conn, task_id, now)
+@@ -4083,6 +4083,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
+     _ctx_checkpoint_recap(lines, task_id, task)
      _ctx_role_history(lines, conn, task, now)
      _ctx_comments(lines, list_comments(conn, task_id), now)
 +    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）

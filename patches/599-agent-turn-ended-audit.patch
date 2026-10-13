@@ -1,8 +1,8 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index 0b5ad6f5d3..8b668f8078 100644
+index 5b479af120..f086e38b4e 100644
 --- a/agent/conversation_loop.py
 +++ b/agent/conversation_loop.py
-@@ -1811,6 +1811,13 @@ def run_conversation(
+@@ -1818,6 +1818,13 @@ def run_conversation(
                  prelude=prelude,
              )
          finally:

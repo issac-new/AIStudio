@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
-index b3488106a0..5e6b664ca6 100644
+index 6ba74e9e3e..6d5e103db8 100644
 --- a/hermes_cli/kanban.py
 +++ b/hermes_cli/kanban.py
 @@ -9,6 +9,7 @@ from __future__ import annotations
@@ -10,7 +10,7 @@ index b3488106a0..5e6b664ca6 100644
  import os
  import shlex
  import sys
-@@ -265,14 +266,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
+@@ -266,14 +267,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
  
  def _parse_duration(val) -> Optional[int]:
      """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
@@ -31,7 +31,7 @@ index b3488106a0..5e6b664ca6 100644
      units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
      if not (s and s[-1] in units):
          raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
-@@ -280,7 +285,14 @@ def _parse_duration(val) -> Optional[int]:
+@@ -281,7 +286,14 @@ def _parse_duration(val) -> Optional[int]:
          n = float(s[:-1])
      except ValueError as exc:
          raise ValueError(f"malformed duration {val!r}") from exc
@@ -47,7 +47,7 @@ index b3488106a0..5e6b664ca6 100644
  
  
  def _cmd_init(args: argparse.Namespace) -> int:
-@@ -356,6 +368,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
+@@ -357,6 +369,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
          max_runtime = _parse_duration(getattr(args, "max_runtime", None))
      except ValueError as exc:
          return _err(f"kanban: --max-runtime: {exc}", 2)
@@ -64,7 +64,7 @@ index b3488106a0..5e6b664ca6 100644
      max_retries = getattr(args, "max_retries", None)
      if max_retries is not None and max_retries < 1:
          return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
-@@ -375,6 +397,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+@@ -376,6 +398,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
              goal_mode=bool(getattr(args, "goal_mode", False)),
              goal_max_turns=getattr(args, "goal_max_turns", None),
              completion_contract=getattr(args, "completion_contract", None),
@@ -73,10 +73,10 @@ index b3488106a0..5e6b664ca6 100644
              creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                               if is_dispatcher_owned_worker_context() else None),
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 030a7a28dc..3f6b790f76 100644
+index 9ffeed77ee..cd03f1d5d1 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -468,6 +468,28 @@ def get_current_board() -> str:
+@@ -510,6 +510,28 @@ def get_current_board() -> str:
      return DEFAULT_BOARD
  
  
@@ -105,7 +105,7 @@ index 030a7a28dc..3f6b790f76 100644
  def set_current_board(slug: str) -> Path:
      """Persist ``slug`` as the active board; returns the file written. Does NOT
      check the board exists — callers do (so ``boards switch <typo>`` errors)."""
-@@ -475,7 +497,7 @@ def set_current_board(slug: str) -> Path:
+@@ -517,7 +539,7 @@ def set_current_board(slug: str) -> Path:
      normed = _require_slug(slug)
      path = current_board_path()
      path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ index 030a7a28dc..3f6b790f76 100644
      return path
  
  
-@@ -542,8 +564,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
+@@ -625,8 +647,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
  
  
  def task_attachments_dir(task_id: str, board: Optional[str] = None) -> Path:
@@ -150,26 +150,15 @@ index 030a7a28dc..3f6b790f76 100644
  
  
  def worker_logs_dir(board: Optional[str] = None) -> Path:
-@@ -620,9 +667,7 @@ def write_board_metadata(
-         meta["created_at"] = int(time.time())
-     path = board_metadata_path(slug)
-     path.parent.mkdir(parents=True, exist_ok=True)
--    path.write_text(
--        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
--    )
-+    _atomic_write_text(path, json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
-     meta["db_path"] = str(kanban_db_path(slug))
-     return meta
- 
-@@ -751,12 +796,15 @@ class Task:
+@@ -684,12 +731,15 @@ class Task:
      block_kind: Optional[str] = None
      block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
      completion_contract: Optional[str] = None
 +    raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
  
      @classmethod
-     def from_row(cls, row: sqlite3.Row) -> "Task":
-         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))  # noqa: E731
+     def from_row(cls, row: sqlite3.Row) -> Task:
+         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))
          parsed = _json_or(g("skills"))
          skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
 +        raci_parsed = _json_or(g("raci"))
@@ -177,7 +166,7 @@ index 030a7a28dc..3f6b790f76 100644
          return cls(
              **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
              **{col: g(col) for col in _TASK_OPTIONAL_COLUMNS},
-@@ -766,6 +814,7 @@ class Task:
+@@ -699,6 +749,7 @@ class Task:
              consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
              last_failure_error=g("last_failure_error", g("last_spawn_error")),
              skills=skills_value,
@@ -185,7 +174,7 @@ index 030a7a28dc..3f6b790f76 100644
              goal_mode=bool(g("goal_mode")),
              block_recurrences=int(g("block_recurrences") or 0),
          )
-@@ -936,6 +985,8 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -869,6 +920,8 @@ CREATE TABLE IF NOT EXISTS tasks (
      -- Force-loaded skills for the worker on this task, stored as JSON.
      -- Passed to the worker via `--skills`. NULL or empty array = no extras.
      skills               TEXT,
@@ -194,7 +183,7 @@ index 030a7a28dc..3f6b790f76 100644
      -- Per-task model override. When set, the dispatcher passes -m <model>
      -- to the worker, overriding the profile's default model. NULL = use
      -- the profile default.
-@@ -1279,6 +1330,7 @@ def create_task(
+@@ -1212,6 +1265,7 @@ def create_task(
      project_source_task_id: Optional[str] = None,
      creator_task_id: Optional[str] = None,
      completion_contract: Optional[str] = None,
@@ -202,7 +191,7 @@ index 030a7a28dc..3f6b790f76 100644
  ) -> str:
      """Create a task (optionally under ``parents``); returns its id.
  
-@@ -1386,8 +1438,8 @@ def create_task(
+@@ -1319,8 +1373,8 @@ def create_task(
                          max_runtime_seconds,
                          skills, max_retries, model_override, provider_override,
                          reasoning_effort,
@@ -213,7 +202,7 @@ index 030a7a28dc..3f6b790f76 100644
                      """,
                      (
                          task_id, title.strip(), body, assignee, task_status, priority,
-@@ -1397,6 +1449,7 @@ def create_task(
+@@ -1330,6 +1384,7 @@ def create_task(
                          json.dumps(skills_list) if skills_list is not None else None,
                          _opt_int(max_retries), model_override, provider_override, reasoning_effort,
                          1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
@@ -221,7 +210,7 @@ index 030a7a28dc..3f6b790f76 100644
                      ),
                  )
                  for pid in parents:
-@@ -1879,7 +1932,7 @@ def store_attachment_bytes(
+@@ -1812,7 +1867,7 @@ def store_attachment_bytes(
      dest_dir = task_attachments_dir(task_id, board=board)
      dest_dir.mkdir(parents=True, exist_ok=True)
      dest_path = _collision_free_path(dest_dir, safe_name)
@@ -230,7 +219,7 @@ index 030a7a28dc..3f6b790f76 100644
      try:
          return add_attachment(
              conn, task_id, filename=dest_path.name, stored_path=str(dest_path.resolve()),
-@@ -2789,68 +2842,77 @@ def complete_task(
+@@ -2724,68 +2779,77 @@ def complete_task(
      acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
      if acceptance is False:
          return False
@@ -369,7 +358,7 @@ index 030a7a28dc..3f6b790f76 100644
      _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
      # Success wipes the breaker counter (history stays on the event log).
      _clear_failure_counter(conn, task_id)
-@@ -2932,14 +2994,24 @@ def _stage_completion_artifacts(
+@@ -2867,14 +2931,24 @@ def _stage_completion_artifacts(
  ) -> list[Path]:
      """Copy scratch artifacts to the attachments dir and record each as an
      attachment row; returns the copies so the caller can discard them if its
@@ -400,7 +389,7 @@ index 030a7a28dc..3f6b790f76 100644
      return staged
  
  
-@@ -3079,11 +3151,25 @@ def _persist_scratch_completion_artifacts(
+@@ -3014,11 +3088,25 @@ def _persist_scratch_completion_artifacts(
          problem = None
          if not src.is_file():
              problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
@@ -431,11 +420,26 @@ index 030a7a28dc..3f6b790f76 100644
          if problem:
              _discard_copies()
              raise ArtifactPreservationError(problem)
+diff --git a/hermes_cli/kanban_db_boards.py b/hermes_cli/kanban_db_boards.py
+index efe8cdad23..b3bbd4f024 100644
+--- a/hermes_cli/kanban_db_boards.py
++++ b/hermes_cli/kanban_db_boards.py
+@@ -93,9 +93,7 @@ def write_board_metadata(
+         meta["created_at"] = int(time.time())
+     path = board_metadata_path(slug)
+     path.parent.mkdir(parents=True, exist_ok=True)
+-    path.write_text(
+-        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
+-    )
++    _kb._atomic_write_text(path, json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
+     meta["db_path"] = str(_kb.kanban_db_path(slug))
+     return meta
+ 
 diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
-index 0886ef4725..e0c47d7cac 100644
+index 27fcf568db..df71de837c 100644
 --- a/hermes_cli/kanban_db_connect.py
 +++ b/hermes_cli/kanban_db_connect.py
-@@ -821,6 +821,8 @@ _LATER_TASK_COLUMNS = (
+@@ -871,6 +871,8 @@ _LATER_TASK_COLUMNS = (
      ("current_step_key", "current_step_key TEXT"),
      # JSON array of skill names the dispatcher force-loads via --skills.
      ("skills", "skills TEXT"),
@@ -445,10 +449,10 @@ index 0886ef4725..e0c47d7cac 100644
      # ``kanban.failure_limit`` config, then ``DEFAULT_FAILURE_LIMIT``.
      ("max_retries", "max_retries INTEGER"),
 diff --git a/hermes_cli/kanban_output.py b/hermes_cli/kanban_output.py
-index f5769fa903..332b7bbc6f 100644
+index 61dfec274e..711295fa9f 100644
 --- a/hermes_cli/kanban_output.py
 +++ b/hermes_cli/kanban_output.py
-@@ -21,6 +21,7 @@ _TASK_DICT_FIELDS = (
+@@ -19,6 +19,7 @@ _TASK_DICT_FIELDS = (
      "created_by", "created_at", "started_at", "completed_at", "result",
      "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
      "reasoning_effort",  # HERMES_CUSTOM[v020]
@@ -589,10 +593,10 @@ index 2742129146..58fb95a3ad 100644
 +        {"room_id": "#alias:matrix.test", "users": ["@chen:matrix.test"]})))
 +    assert "room alias #alias:matrix.test is not supported" in out["error"]
 diff --git a/tests/hermes_cli/test_kanban_cli.py b/tests/hermes_cli/test_kanban_cli.py
-index be8aa5ad4f..748a3ad7a6 100644
+index 334a9ab539..87b0cf36d2 100644
 --- a/tests/hermes_cli/test_kanban_cli.py
 +++ b/tests/hermes_cli/test_kanban_cli.py
-@@ -241,3 +241,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
+@@ -255,3 +255,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
  # ---------------------------------------------------------------------------
  
  
@@ -621,10 +625,10 @@ index be8aa5ad4f..748a3ad7a6 100644
 +    assert kc._parse_duration("1d") == 86400
 +    assert kc._parse_duration("45") == 45
 diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
-index e6773105f7..4840b419e5 100644
+index 461c1326a8..38a05cef4f 100644
 --- a/tests/hermes_cli/test_kanban_db.py
 +++ b/tests/hermes_cli/test_kanban_db.py
-@@ -2008,3 +2008,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
+@@ -2084,3 +2084,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
              (t,),
          ).fetchone()
          assert row is None
@@ -722,10 +726,10 @@ index e6773105f7..4840b419e5 100644
 +        assert kb.get_task(conn, t).status == "running"
 +        assert not attachment_dir.exists() or not any(attachment_dir.iterdir())
 diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
-index 64db0c316c..3fa2e2d71f 100644
+index c8b64c095c..c82c31e7d6 100644
 --- a/tools/kanban_tools.py
 +++ b/tools/kanban_tools.py
-@@ -1065,6 +1065,7 @@ def _handle_create(args: dict, **kw) -> str:
+@@ -1145,6 +1145,7 @@ def _handle_create(args: dict, **kw) -> str:
              model_override=model_override, provider_override=provider_override,
              goal_mode=goal_mode, goal_max_turns=_opt_int(args.get("goal_max_turns")),
              completion_contract=args.get("completion_contract"),
@@ -734,10 +738,10 @@ index 64db0c316c..3fa2e2d71f 100644
              created_by=_persisted_identity(), session_id=session_id)
          landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
 diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
-index f4134e92c6..e6e28df742 100644
+index ec5a72610e..e3625196cd 100644
 --- a/tools/kanban_tools_schemas.py
 +++ b/tools/kanban_tools_schemas.py
-@@ -477,6 +477,11 @@ KANBAN_CREATE_SCHEMA = _schema(
+@@ -502,6 +502,11 @@ KANBAN_CREATE_SCHEMA = _schema(
                  "open-ended cards where one shot rarely finishes the "
                  "work. Defaults to false (classic single-shot worker)."
          )),

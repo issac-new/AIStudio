@@ -37,7 +37,7 @@
  }
  function listSharpPruneTargets(dirs, platform, arch) {
    const keep = new Set([...sharpKeepDirs(platform, arch), ...SHARP_KEEP_ALWAYS])
-@@ -106,8 +117,48 @@
+@@ -106,8 +117,61 @@
    }
  }
  
@@ -59,14 +59,27 @@
 +  const arch = archName(context.arch)
 +  const webuiDir = join(resourcesDirFor(context), 'webui')
 +  const imgDir = join(webuiDir, 'node_modules', '@img')
-+  const sharpVer = stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-' + archName(process.arch)))
-+    || stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-x64'))
-+    || stagedPkgVersion(join(imgDir, 'sharp-' + npmPlatform(hostPlatform) + '-arm64'))
-+  const sherpaVer = stagedPkgVersion(join(webuiDir, 'node_modules', 'sherpa-onnx-' + hostPlatform + '-' + archName(process.arch)))
-+    || stagedPkgVersion(join(webuiDir, 'node_modules', 'sherpa-onnx-darwin-arm64'))
++  const hostArchs = [archName(process.arch), 'x64', 'arm64']
++  const verOf = (base) => {
++    for (const a of hostArchs) {
++      const v = stagedPkgVersion(join(imgDir, base + '-' + npmPlatform(hostPlatform) + '-' + a))
++      if (v) return v
++    }
++    return null
++  }
++  // sharp 与 libvips 是两条独立版本线（libvips 1.x ≠ sharp 0.x），各自读暂存变体版本。
++  const sharpVer = verOf('sharp')
++  const libvipsVer = verOf('sharp-libvips')
++  const sherpaVer = (() => {
++    for (const a of hostArchs) {
++      const v = stagedPkgVersion(join(webuiDir, 'node_modules', 'sherpa-onnx-' + hostPlatform + '-' + a))
++      if (v) return v
++    }
++    return null
++  })()
 +  const want = []
-+  if (sharpVer) want.push('@img/sharp-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer,
-+                          '@img/sharp-libvips-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer)
++  if (sharpVer) want.push('@img/sharp-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer)
++  if (libvipsVer) want.push('@img/sharp-libvips-' + npmPlatform(platform) + '-' + arch + '@' + libvipsVer)
 +  if (sherpaVer) want.push('sherpa-onnx-' + platform + '-' + arch + '@' + sherpaVer)
 +  if (want.length === 0) return
 +  console.log('[after-pack] cross build: fetching target natives → ' + want.join(', '))
