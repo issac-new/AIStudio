@@ -1,8 +1,13 @@
 --- a/packages/desktop/scripts/after-pack-combined.cjs
 +++ b/packages/desktop/scripts/after-pack-combined.cjs
-@@ -4,6 +4,7 @@
+@@ -1,9 +1,10 @@
+-// Combined afterPack hook: runs verify-packaged-webui + node-pty prebuild pruning
++// AFTERPACK-V10 // Combined afterPack hook: runs verify-packaged-webui + node-pty prebuild pruning
+ // + sharp platform-binary pruning + Linux spawn-helper exec-bit restore.
+ // electron-builder 25.x only supports a single afterPack string, so we wrap all
  // hooks in one CommonJS module. Pure decision helpers are exported for tests.
- const { chmodSync, existsSync, readdirSync, rmSync, statSync } = require('node:fs')
+-const { chmodSync, existsSync, readdirSync, rmSync, statSync } = require('node:fs')
++const { chmodSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } = require('node:fs')
  const { join } = require('node:path')
 +const { spawnSync } = require('node:child_process')
  
@@ -37,7 +42,7 @@
  }
  function listSharpPruneTargets(dirs, platform, arch) {
    const keep = new Set([...sharpKeepDirs(platform, arch), ...SHARP_KEEP_ALWAYS])
-@@ -106,8 +117,73 @@
+@@ -106,8 +117,173 @@
    }
  }
  
@@ -82,21 +87,121 @@
 +  if (libvipsVer) want.push('@img/sharp-libvips-' + npmPlatform(platform) + '-' + arch + '@' + libvipsVer)
 +  if (sherpaVer) want.push('sherpa-onnx-' + platform + '-' + arch + '@' + sherpaVer)
 +  if (want.length === 0) return
-+  console.log('[after-pack] cross build: fetching target natives → ' + want.join(', '))
-+  // --cpu/--os 覆盖宿主平台校验（arm64 mac 装 win32-x64 包默认被 npm notsup 拒）；
-+  // --prefer-online 绕负缓存（abbreviated packument 404 会被缓存钉死，curl 实测
-+  // 两源 packument 均 200 的包在 npm 内仍 404）；双源显式重试：镜像（本机正典）
-+  // → 官方。
-+  const npmArgs = ['install', '--no-save', '--no-audit', '--no-fund', '--prefer-online',
-+                   '--cpu', arch, '--os', npmPlatform(platform),
-+                   '--prefix', webuiDir, ...want]
-+  let r = { status: 1 }
-+  for (const reg of ['https://registry.npmmirror.com', 'https://registry.npmjs.org']) {
-+    console.log('[after-pack] cross-native install via ' + reg)
-+    r = spawnSync('npm', [...npmArgs, '--registry', reg], { stdio: 'inherit' })
-+    if (r.status === 0) break
-+    console.warn('[after-pack] cross-native install failed via ' + reg)
++  // 目标变体已在（构建前 shell 预装路线）→ 直接短路;构建期网络/vendor 仅为兜底。
++  const npmP = npmPlatform(platform)
++  const targetNames = [
++    '@img/sharp-' + npmP + '-' + arch,
++    '@img/sharp-libvips-' + npmP + '-' + arch,
++    'sherpa-onnx-' + platform + '-' + arch,
++  ]
++  const alreadyStaged = targetNames.every((n) => existsSync(join(webuiDir, 'node_modules', n)))
++  if (alreadyStaged) {
++    console.log('[after-pack] cross build: target natives already staged, skip fetch')
++    return
 +  }
++  console.log('[after-pack] cross build: fetching target natives → ' + want.join(', '))
++  // tarball 直装：electron-builder 子进程 env 内 registry 旗标被压、fetch/curl 对
++  // 个别 CDN 路径一律 404（shell 同命令全通实测）——绕开一切网络不确定性：本地
++  // vendor tgz 优先（CROSS_NATIVE_VENDOR_DIR），未命中再进程内 fetch 双源重试，
++  // 终态统一 npm install 本地文件（零依赖叶子二进制，无二次解析）。
++  const { mkdtempSync, writeFileSync } = require('node:fs')
++  const { tmpdir } = require('node:os')
++  const tmp = mkdtempSync(join(tmpdir(), 'cross-native-'))
++  const tgzPaths = []
++  for (const spec of want) {
++    const scopeIdx = spec.lastIndexOf('/')
++    const nameVer = spec.split('@')[0] === '' && scopeIdx > 0
++      ? [spec.slice(0, scopeIdx), spec.slice(scopeIdx + 1)]
++      : ['', spec]
++    const [scope, nameAtVer] = nameVer
++    const pkgName = nameAtVer.split('@')[0]
++    const ver = nameAtVer.split('@')[1]
++    const fileBase = pkgName + '-' + ver + '.tgz'
++    const urls = []
++    for (const reg of ['https://registry.npmmirror.com', 'https://registry.npmjs.org']) {
++      urls.push(scope ? `${reg}/${scope}/${pkgName}/-/${fileBase}` : `${reg}/${pkgName}/-/${fileBase}`)
++    }
++    const tgz = join(tmp, fileBase)
++    // 本地 vendor 优先（CROSS_NATIVE_VENDOR_DIR 指向 win10-mig vendor-npm 类目录；
++    // electron-builder 子进程内 fetch/curl 对个别 registry 路径一律 404 而 shell
++    // 全通的进程级拦截规避——本地 tgz 零网络）。文件名容忍 vendor 命名（img- 前缀、
++    // 无 @scope）。vendor 未命中再走进程内 fetch 双源×2 轮。
++    let ok = false
++    const vendorDir = process.env.CROSS_NATIVE_VENDOR_DIR || ''
++    if (vendorDir) {
++      const { readdirSync: _rd, copyFileSync: _cp } = require('node:fs')
++      const key = pkgName + '-' + ver + '.tgz'
++      try {
++        const _files = _rd(vendorDir)
++        // 宽容匹配:vendor 文件名含 pkgName 且含 ver 且 .tgz 结尾(容忍 img- 前缀/
++        // 命名装饰/不可见字符边缘态);转储名录便于构建内取证。
++        const hit = _files.find((f) => f.endsWith('.tgz') && f.includes(pkgName) && f.includes(ver))
++        console.log('[after-pack] vendor probe key=' + key + ' hit=' + (hit || 'MISS') + ' names=' + JSON.stringify(_files))
++        if (hit) {
++          _cp(join(vendorDir, hit), tgz)
++          console.log('[after-pack] cross-native from vendor: ' + hit)
++          ok = true
++        }
++      } catch (err) {
++        console.warn('[after-pack] vendor scan failed (' + err.message + ')')
++      }
++    }
++    for (let round = 0; round < 2 && !ok; round++) {
++      for (const url of urls) {
++        try {
++          console.log('[after-pack] cross-native fetch ' + url)
++          const res = await fetch(url, { redirect: 'follow' })
++          if (!res.ok) throw new Error('HTTP ' + res.status)
++          const buf = Buffer.from(await res.arrayBuffer())
++          if (buf.length < 1024) throw new Error('suspicious tiny body ' + buf.length)
++          writeFileSync(tgz, buf)
++          ok = true
++          break
++        } catch (err) {
++          console.warn('[after-pack] fetch failed (' + err.message + ')')
++        }
++      }
++    }
++    if (!ok) {
++      // 软失败:目标包若已在暂存树(预装+extraResources 复制路线),fetch 兜底失败
++      // 无害——跳过该件继续;真缺才抛(构建期网络不可达不阻断既有完整件)。
++      const rel = scope ? scope + '/' + pkgName : pkgName
++      const dest = join(webuiDir, 'node_modules', rel)
++      if (existsSync(dest)) { continue }
++      // vendor tgz 直解兜底:electron-builder 26 的 nodeModulesCollector 会把源
++      // node_modules 中不在依赖树的预装件 prune 掉(实测),构建子 env 的网络又不
++      // 可靠——tar 由本脚本掌控,直接解进暂存树(prune 在本 hook 之后跑,keep 名
++      // 已修对,win32 变体保留)。
++      const vendorDir2 = process.env.CROSS_NATIVE_VENDOR_DIR || ''
++      if (vendorDir2) {
++        const key2 = pkgName + '-' + ver + '.tgz'
++        let vf = ''
++        try {
++          const _vf = readdirSync(vendorDir2)
++          vf = _vf.find((x) => x.endsWith(key2)) || ''
++        } catch (e) { console.error('[V13] readdir threw: ' + e.message); vf = '' }
++        if (vf) {
++          const xt = join(tmp, 'x-' + fileBase + '.d')
++          mkdirSync(xt, { recursive: true })
++          const tr = spawnSync('tar', ['-xzf', join(vendorDir2, vf), '-C', xt])
++          if (tr.status === 0 && existsSync(join(xt, 'package'))) {
++            mkdirSync(join(webuiDir, 'node_modules', scope || ''), { recursive: true })
++            rmSync(dest, { recursive: true, force: true })
++            spawnSync('mv', [join(xt, 'package'), dest])
++            console.warn('[after-pack] cross-native restored from vendor tgz: ' + vf)
++            continue
++          }
++        }
++      }
++      throw new Error('[after-pack] cross-native tarball fetch failed: ' + spec)
++    }
++    tgzPaths.push(tgz)
++  }
++  const npmArgs = ['install', '--no-save', '--no-audit', '--no-fund',
++                   '--cpu', arch, '--os', npmPlatform(platform),
++                   '--prefix', webuiDir, ...tgzPaths]
++  console.log('[after-pack] cross-native install from local tarballs')
++  const r = spawnSync('npm', npmArgs, { stdio: 'inherit' })
 +  if (r.status !== 0) throw new Error('[after-pack] cross-native npm install failed (exit ' + r.status + ')')
 +  for (const name of want.map((spec) => spec.split('@').slice(0, spec.startsWith('@') ? 2 : 1).join('@'))) {
 +    if (!existsSync(join(webuiDir, 'node_modules', name))) {
