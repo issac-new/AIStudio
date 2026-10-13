@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { ClusterSnapshot } from '../collectors'
 import { detectAll, detectGateway, detectSessionStall, detectSlotInflation, detectStorm } from '../detectors'
 import { ClusterInspector } from '../inspector'
+import { probeBranchIntel } from '../collectors'
 
 function snap(partial: Partial<ClusterSnapshot>): ClusterSnapshot {
   return {
@@ -281,5 +282,50 @@ describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', ()
   it('runningCards 面未接线 → 零误报', () => {
     const off = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'a', tail: 'x', mtimeMs: 0, workTsMs: 0 }] }, runningCards: { ok: false, cards: [] } })
     expect(detectAll(off, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+  })
+})
+
+describe('probeBranchIntel（分支感知催办情报，run19 上移）', () => {
+  const setup = () => {
+    const { mkdtempSync, mkdirSync } = require('node:fs') as typeof import('node:fs')
+    const { join } = require('node:path') as typeof import('node:path')
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    const dir = mkdtempSync(join(require('node:os').tmpdir(), 'branch-intel-'))
+    const repo = join(dir, 'repo.git')
+    execFileSync('git', ['init', '-q', '--bare', repo])
+    const work = join(dir, 'work')
+    execFileSync('git', ['init', '-q', work])
+    const g = (args: string[], env: Record<string, string> = {}) =>
+      execFileSync('git', ['-C', work, ...args], { env: { ...process.env, ...env } })
+    return { dir, repo, work, g }
+  }
+  const commitAt = (g: (a: string[], e?: Record<string, string>) => void, branch: string, author: string, dateIso: string) => {
+    g(['checkout', '-qb', branch])
+    g(['config', 'user.name', author]); g(['config', 'user.email', `${author}@x`])
+    require('node:fs').writeFileSync(require('node:path').join(process.env.BI_WORK as string, branch.replace(/\//g, '_') + '.txt'), 'x')
+    g(['add', '-A'])
+    g(['commit', '-qm', 'wip'], { GIT_AUTHOR_DATE: dateIso, GIT_COMMITTER_DATE: dateIso })
+    g(['push', '-q', process.env.BI_REPO as string, `HEAD:refs/heads/${branch}`])
+  }
+  it('命中：档案名下 freshH 内的新分支 → 带情报句', () => {
+    const { dir, repo, work, g } = setup()
+    process.env.BI_REPO = repo; process.env.BI_WORK = work
+    const now = new Date()
+    const iso = (offH: number) => new Date(now.getTime() - offH * 3600_000).toISOString()
+    commitAt(g, 'feat/DEV-A', 'chen', iso(1))
+    commitAt(g, 'feat/OLD', 'chen', iso(48))
+    commitAt(g, 'feat/OTHER', 'lin', iso(1))
+    process.env.CLUSTER_INSPECTOR_NUDGE_REPO = repo
+    process.env.CLUSTER_INSPECTOR_BRANCH_FRESH_H = '24'
+    const out = probeBranchIntel('chen-csw-pay-core')
+    expect(out).toContain('feat/DEV-A@')
+    expect(out).not.toContain('feat/OLD')
+    expect(out).not.toContain('feat/OTHER')
+    delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+    require('node:fs').rmSync(dir, { recursive: true, force: true })
+  })
+  it('未配置 NUDGE_REPO → 空串（fail-open 不阻塞催办）', () => {
+    delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+    expect(probeBranchIntel('chen')).toBe('')
   })
 })
