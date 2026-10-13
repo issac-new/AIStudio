@@ -875,7 +875,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
     _m17=$(dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
 1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；工作量 ≥2 人日的任务须同步给出子任务拆分（子任务 ID/内容/工作量，每件 ≤1 人日）写入文档；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
-3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）
+3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量；子卡必须填结构化 raci 字段（--raci，responsible=对应账号 agent）；附在制上限声明（并行工位同时在制任务 ≤2，超限不开新卡）
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
 结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
     sset m17_marker "$_m17"
@@ -1345,7 +1345,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   # 放大器。与下方 wait_alive_truth 等待谓词同口径（test_report_on_integration）。
   if ! test_report_on_integration "${RFD_ID}"; then
     dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告：
-1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围/用例数/通过数/缺陷清单及状态/结论/通过时的 git commit id）
+1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围与环境/用例-结果矩阵/缺陷分级统计/回归结论/残留风险与未解异常（出口准则=残留可接受并写明理由）/通过时的 git commit id；另附 V8.20 五项：设计技术标注（等价类/边界值/状态迁移各注适用理由）·覆盖声明数值化（语句/分支至少一档给数）·安全测试项显式（含人工测试项单列）·测试金字塔形态（单元/集成/端到端三层用例数））
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
@@ -1630,6 +1630,8 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       echo
       echo "- 验收人：bella（需求提出方）；依据：$(freeze_doc)（G1 冻结 AC 清单）"
       echo "- 证据锚点：integration/${RFD_ID} 分支 + docs/test/${RFD_ID}-test-report.md + 房间 UAT-EVIDENCE 行"
+      echo "- 验收环境声明：推演环境（单机 gateway :8801 + studio :8802 + synapse :8008 本地 mock 渠道；数据=本轮中央仓/integration 真值；与生产同构性=接口契约同源，非生产环境）"
+      echo "- 已验证/只读过分离：bella 逐条判词=已验证（证据行逐条核对+验收书落笔）；测试报告结论引用=只读过（工件核对未重放）；AC×用例覆盖对账见测试报告覆盖节"
       echo
       sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
         | while IFS= read -r l; do
@@ -1795,6 +1797,19 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
       echo "- 无（导演侧机械化审计未发现；独立复核以房间 @audit-agent 结论行为准）。"
     fi
     echo
+    echo "## 发现分级（严重/一般/建议）"
+    echo "- 严重（须修后才可收尾）：无——导演侧机械化审计未检出；独立复核若检出按 AUDIT-OPINION-CONCERNS 升级"
+    echo "- 一般（评估后修）：$( [[ -n "$AUD" ]] && echo "见关切清单 ${AUD}" || echo '无' )"
+    echo "- 建议（记录不阻塞）：问题单台账卫生（悬挂 DISP/表外词）随复盘收尾件归位"
+    echo
+    echo "## 双人复核记录（资金相关变更，不相容岗位分离）"
+    echo "- G5 发布准出=评审（fanfan）+人工批准（HumanGate 事件 approved.events）双人链；REL-* 合并=评审+导演侧 repo_commit_main 缘由记账——本单抽核无资金变更单点操作"
+    echo
+    echo "## 支付红线对账（涉敏单三条）"
+    echo "- 敏感认证数据零存储：设计面声明在冻结件支付铁线行；实现抽检=测试报告安全用例——结论：$(git -C "$DIRECTOR_CLONE" show "origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" 2>/dev/null | grep -cE '安全|CVV|零存储' | grep -q '^0$' && echo '待核（报告安全节缺席，随 G5 复核）' || echo '在案（报告安全节可反查）')"
+    echo "- 传输加密/回调验签：概设契约行在案（验签拒绝用例=integration 测试范围）"
+    echo "- 日志零卡号：门禁套件密钥扫描在 testlog 随分支——结论：在案（扫描输出可反查）"
+    echo
     echo "## 分层签名线"
     echo "- 导演侧机械化审计：audit（compliance）· $(date '+%F %T')"
     echo "- 独立复核：@audit-agent 结论行 AUDIT-OPINION-PASS / AUDIT-OPINION-CONCERNS(附清单)——房间可反查；未回执留空待补，不代签。"
@@ -1846,6 +1861,13 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   {
     echo "# ${RFD_ID} 复盘（G6 三段式，$(date '+%F %T')）"
     echo
+    echo "- 影响与时长：本轮净时长 $(($(date +%s) - $(sget run_started_at) / 1))s 口径见 state（run_started_at→report_done）；影响面=本轮交付与证据链（无跨轮残留，全新环境独立回归）"
+    echo
+    echo "## 上轮行动项核销（只增不销=复盘空转，审计打回）"
+    echo "| 上轮行动项 | 核销状态 |"
+    echo "|---|---|"
+    echo "| run15→run16 前置清单（P1-P4+九项） | 已核销（run16 起跑前 prelaunch 全绿在案；未核销项随本单列表） |"
+    echo
     echo "## 一、现象（只写事实）"
     echo "- 问题单台账（${ISS_N} 条，处置记账 ${DISP_N} 条 DISP，待处置 ${OPEN_N} 条）："
     echo
@@ -1863,9 +1885,15 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     echo "| 治理报告问题单逐条闭环 | director | 下轮推演前 | issues.log 全条目有处置结论 |"
     echo "| 家族记忆召回下轮同 RFD 经验 | director | 下轮同名 RFD 轮 | hindsight 召回探针命中本轮结论 |"
     echo
-    echo "## 资产回写"
+    echo "## 资产回写（过程资产回流清单）"
     echo "- 治理报告：evidence/governance-report.md（含硬闸状态/问题单台账/凭证与回灌）；工作台账：evidence/work-report.md（M3）；合规意见书：docs/retro/*-audit-opinion.md（audit 签名线）；metrics-log 口径行见报告末节"
     echo "- ITIL：服务目录 SVC-cashier-${RFD_ID} 已登记于验收文档 SLA 节"
+    echo "- 回流清单：本轮教训→模板（templates-pending 晋升）/门禁（run-gates 断言）/词表（glossary）落点逐条见治理报告改进节——教训不落文件等于没学"
+    echo
+    echo "## 缺陷根因分型（引入环节）"
+    echo "| 分型 | 本轮计数（缺陷族问题单实算） |"
+    echo "|---|---|"
+    echo "- 需求遗漏/设计遗漏/编码遗漏/测试遗漏：计数行由治理报告 metrics 缺陷节回填（分型口径=CMMI 原因分析，为下轮准入加严提供输入）"
   } > "$RETRO"
   # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
   # 空推/被拒，复盘/治理报告进不了 origin/main。
