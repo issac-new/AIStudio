@@ -68,6 +68,11 @@ const TRACKS = new Set(['e2e', 'process'])
 const KINDS = new Set(['result', 'trajectory', 'risk'])
 const OPS = new Set(['<', '<=', '>', '>='])
 const METRICS = new Set(['tokens', 'steps', 'costUsd', 'durationMs'])
+const LINKS = new Set(['intent', 'tool_choice', 'params', 'evidence', 'state', 'expression'])
+const EXCEPTION_TYPES = new Set([
+  'none', 'ambiguous_intent', 'missing_param', 'insufficient_permission',
+  'tool_timeout', 'knowledge_conflict', 'user_rephrase',
+])
 
 function validateAssertion(a: unknown, i: number, problems: string[]): void {
   const it = a as Partial<RubricAssertion> | undefined
@@ -78,6 +83,9 @@ function validateAssertion(a: unknown, i: number, problems: string[]): void {
   if (it?.kind === 'risk' && it.expect !== 'no') {
     // 红线断言语义：坏现象"是否发生"，期望必然是"否"——expect='yes' 的 risk 是建模错误。
     problems.push(`断言 #${i} risk 断言 expect 必须为 'no'（红线=坏现象不应发生）`)
+  }
+  if (it?.link !== undefined && !LINKS.has(String(it.link))) {
+    problems.push(`断言 #${i} link 须为 intent/tool_choice/params/evidence/state/expression`)
   }
   if (it?.s0) {
     if (it.s0.kind === 'regex') {
@@ -116,6 +124,16 @@ function validateTask(t: unknown, i: number, problems: string[]): void {
   }
   if (it?.outcome) {
     if (typeof it.outcome.verifier !== 'string' || !it.outcome.verifier.trim()) problems.push(`任务 #${i} outcome.verifier 必填`)
+  }
+  if (it?.exceptionType !== undefined && !EXCEPTION_TYPES.has(String(it.exceptionType))) {
+    problems.push(`任务 #${i} exceptionType 须为 none/ambiguous_intent/missing_param/insufficient_permission/tool_timeout/knowledge_conflict/user_rephrase`)
+  }
+  if (it?.expectedToolCalls !== undefined) {
+    if (!Array.isArray(it.expectedToolCalls) || it.expectedToolCalls.length === 0) {
+      problems.push(`任务 #${i} expectedToolCalls 须为非空数组（工具名按序）`)
+    } else if (it.expectedToolCalls.some((n) => typeof n !== 'string' || !n.trim())) {
+      problems.push(`任务 #${i} expectedToolCalls 每项须为非空工具名`)
+    }
   }
 }
 
@@ -285,6 +303,71 @@ export function recordHumanVerdict(
   store.runs[idx] = updated
   writeStore(store)
   return { ok: true, run: updated }
+}
+
+// ---------- 坏例回流（腾讯：线上坏例转回归样本，防问题回潮） ----------
+
+export interface ReflowInput {
+  runId: string
+  taskId: string
+  sampleIdx?: number
+  /** 目标回归集 id；缺省回落「回归样本库」（不存在则按源集轨道创建）。 */
+  targetSetId?: string
+  actor?: string
+}
+
+/** 缺省回归库名（回流端点的落点单一事实源）。 */
+export const REGRESSION_SET_NAME = '回归样本库'
+
+export function reflowTaskToSet(
+  input: ReflowInput,
+): { ok: true; set: EvalSet; created: boolean; taskId: string } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const run = store.runs.find((r) => r.id === input.runId)
+  if (!run) return { ok: false, problems: [`运行不存在：${input.runId}`] }
+  const source = store.sets.find((s) => s.id === run.setId)
+  if (!source) return { ok: false, problems: [`评测集不存在：${run.setId}`] }
+  // 密封集题目内容不出库（防探测契约 1）——回流是内容出库路径，结构性拒绝
+  if (source.sealed) return { ok: false, problems: ['密封集题目内容不出库，不可回流'] }
+  const task = source.tasks.find((t) => t.id === input.taskId)
+  if (!task) return { ok: false, problems: [`任务不存在：${input.taskId}`] }
+
+  let target = input.targetSetId
+    ? store.sets.find((s) => s.id === input.targetSetId)
+    : store.sets.find((s) => s.name === REGRESSION_SET_NAME && !s.sealed)
+  if (input.targetSetId && !target) return { ok: false, problems: [`目标评测集不存在：${input.targetSetId}`] }
+  if (target?.sealed) return { ok: false, problems: ['目标集已密封，不可追加回流任务'] }
+  if (!target) {
+    target = {
+      id: `eset-${String(store.nextSeq).padStart(3, '0')}`,
+      name: REGRESSION_SET_NAME,
+      track: source.track,
+      ...(source.track === 'process' && source.module ? { module: source.module } : {}),
+      sealed: false,
+      createdAt: Date.now(),
+      ...(input.actor ? { createdBy: input.actor } : {}),
+      tasks: [],
+    }
+    store.sets.push(target)
+    store.nextSeq += 1
+  }
+
+  const reflowId = `re-${run.id.slice(-6)}-${task.id}`
+  if (target.tasks.some((t) => t.id === reflowId)) {
+    return { ok: true, set: target, created: false, taskId: reflowId }
+  }
+  target.tasks.push({
+    ...task,
+    id: reflowId,
+    origin: {
+      runId: run.id,
+      taskId: task.id,
+      ...(typeof input.sampleIdx === 'number' ? { sampleIdx: input.sampleIdx } : {}),
+      at: Date.now(),
+    },
+  })
+  writeStore(store)
+  return { ok: true, set: target, created: true, taskId: reflowId }
 }
 
 // ---------- Rubric Loop 账本 ----------

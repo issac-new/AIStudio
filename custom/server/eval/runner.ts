@@ -13,7 +13,7 @@ import { aggregateRun } from './aggregate'
 import { judgeAttempt, type JudgeDeps } from './judge'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, sealedAttemptCount } from './store'
-import type { Attempt, Evidence, EvalConfig, EvalRun } from './types'
+import type { Attempt, Evidence, EvalConfig, EvalRun, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
 
 // ---------- L2 trace 证据提供者 ----------
@@ -60,13 +60,14 @@ function tokensOfUsage(usage: Record<string, unknown> | undefined): number | und
   return undefined
 }
 
-/** 解析 L2 trace JSONL 为证据（transcript 文本 + efficiency 指标）。导出供测试。 */
+/** 解析 L2 trace JSONL 为证据（transcript 文本 + efficiency 指标 + 工具调用序列）。导出供测试。 */
 export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
   const parts: string[] = []
   let tokens = 0
   let tokensKnown = false
   let steps = 0
   let durationMs: number | undefined
+  const toolCalls: ToolCallRecord[] = []
 
   for (const line of lines) {
     if (line.type === 'trailer') {
@@ -91,6 +92,11 @@ export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
       const result = stringifyFragment(line.result, 300)
       const err = line.error_message ? ` ERROR=${stringifyFragment(line.error_message, 120)}` : ''
       parts.push(`[tool:${line.tool_name ?? 'unknown'}] ${args} → ${result}${err}`)
+      toolCalls.push({
+        name: line.tool_name ?? 'unknown',
+        ok: !line.error_message && line.status !== 'error' && line.outcome !== 'error',
+        ...(typeof line.duration_ms === 'number' ? { durationMs: line.duration_ms } : {}),
+      })
     } else if (line.kind === 'subagent_span') {
       parts.push(`[subagent] ${stringifyFragment(line.summary ?? line.status, 120)}`)
     }
@@ -103,6 +109,8 @@ export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
       ...(steps > 0 ? { steps } : {}),
       ...(durationMs !== undefined ? { durationMs } : {}),
     },
+    // 工具调用序列：零工具调用的轨迹产出空数组（有证据、无调用——与"证据缺席"区分）
+    toolCalls,
   }
 }
 
@@ -195,6 +203,7 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
         verdicts: judged.verdicts,
         judgeMeta: judged.judgeMeta,
         ...(evidence.efficiency ? { efficiency: evidence.efficiency } : {}),
+        ...(evidence.toolCalls ? { toolCalls: evidence.toolCalls } : {}),
         judgedAt: now(),
       }
       if (task.outcome) {
