@@ -592,7 +592,9 @@ _artifact_nudge() { # <desc> <checkpoint-label>
 _nudge_branch_intel() { # <agents-csv> → stdout: 分支情报句（空=无情报）
   local agents="$1" br tip ct an rs out=""
   [[ -n "${DIRECTOR_CLONE:-}" && -d "$DIRECTOR_CLONE/.git" ]] || return 0
-  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  # fetch 必须走 mx_fetch（60s 超时强断）：裸 fetch 网络黑洞挂起 42 分钟冻死等待环
+  # 是本文件头部实证根修的同型事故，|| true 只兜失败不兜挂起。
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   rs="$(sget run_started_at 2>/dev/null || true)"
   [[ -n "$rs" ]] || return 0
   while IFS='|' read -r br tip ct an; do
@@ -939,6 +941,11 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
           done
           return $rc
         }
+      else
+        # 成功拍复位（分桶重写时丢的）：三拍「连续」不可达才降级——只增不减会把
+        # 任意两次间歇抖动（间隔数小时、中间全部成功）后的第三次瞬时失败累计成
+        # 降级，分桶个体催办/早判面被整体放弃。
+        _hb_miss=0
       fi
     fi
     # 分桶刷新：每未过锚 owner 的个体 sig/work/nudge 桶 + 静默名单/判死标志/日志面收窄

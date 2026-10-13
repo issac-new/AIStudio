@@ -1135,8 +1135,10 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       git add -A -- ':!.worktrees' >/dev/null 2>&1 || true
       git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置；.worktrees 挂载面排除）" >/dev/null 2>&1 || true
       # 收编自验证（r4）：commit 被钩子/锁挡下时 checkout 仍会被挡且 set -e 静默击杀——
-      # 复查仍有脏改即记 ISSUE 并显式失败，不再无声退场。脏改判定同步排除 .worktrees/。
-      if [[ -n "$(git status --porcelain 2>/dev/null | grep -v '^ M \.worktrees/' | head -1)" ]]; then
+      # 复查仍有脏改即记 ISSUE 并显式失败，不再无声退场。脏改判定同步排除 .worktrees/
+      # （全形态：porcelain 的 XY 两字符+空格+路径——活跃 ` M`、暂存 `M `/`A `、
+      # 复合 `MM`、未跟踪 `??` 都不参与 checkout 面判定，单形态漏匹配=复查恒脏死循环）。
+      if [[ -n "$(git status --porcelain 2>/dev/null | grep -vE '^.. \.worktrees/' | head -1)" ]]; then
         echo "ISSUE|integration-checkout-blocked|director|收编后仍有脏改，checkout 预期被挡（.worktrees 挂载面已排除）" >> "$EVID_DIR/issues.log"
         fail "integration checkout 前置收编失败：工作树仍有脏改（见 issues.log）"
       fi
@@ -1334,12 +1336,14 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           # 若把 sig 设为进环时间，已静默事实被抹掉、催办要多等整个半窗）
           if (( _tst_w == 0 )); then eval "_tst_sig_$_t=$_w"; else eval "_tst_sig_$_t=$(date +%s)"; fi
           eval "_tst_lw_$_t=$_w"
-          # 催办资格复位=真做判据（工具轮/多轮调用）——宽判据活动（嘴炮回话）不
-          # 清零 nudged：被催后只回话不动手的人，下个静默窗到点会被再催。
+          # 新活动=开新静默窗并重挂催办资格（含嘴炮回话——「被催后回话顶回继续
+          # 躺平」者下个静默窗到点即再催；nd 把守同窗不重复）。真做判据只记
+          # realwork 账本；此前「嘴炮不清零 nd」使再催永不触发，与本意相反。
+          eval "_tst_nudged_$_t=0"
           _rw=$(_agent_log_last_realwork_ts "$HERMES_ROOT/profiles/$_t/logs/agent.log" 2>/dev/null || echo 0)
           eval "_tst_rw=\${_tst_rlw_$_t:-0}"
           if (( _rw > _tst_rw )); then
-            eval "_tst_rlw_$_t=$_rw"; eval "_tst_nudged_$_t=0"
+            eval "_tst_rlw_$_t=$_rw"
           fi
         else
           eval "_tst_sig=\${_tst_sig_$_t:-$_tst_check_ts}"
@@ -1354,7 +1358,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
             else
               _tst_gap="前端测试 ${FE_DONE:-0}/${_fe_n} 片结论行未齐"
             fi
-            mx_send "$(load_token fanfan)" "$SCAN_ROOM" "⏰ 催办：@${_t}-agent 静默超半小时，${_tst_gap}（缺陷 ${DEFECTS:-0} 修复 ${FIXED:-0}）。请继续测试执行并收口：testlog 入库 push、每片一行结论行 TEST-PASS/FAIL-TEST-*-S<n>（附用例数）、有修复则 FIX-DONE+commit 锚。若已全部完成请补发结论行；确有阻塞请在群里说明。禁静默。" "$(agent_mxid "$_t")" >/dev/null 2>&1 || true
+            mx_send "$(load_token fanfan)" "$SCAN_ROOM" "⏰ 催办：@${_t}-agent 静默超 $(( ${MX_DEFECT_NUDGE_HALF:-600} / 60 )) 分钟，${_tst_gap}（缺陷 ${DEFECTS:-0} 修复 ${FIXED:-0}）。请继续测试执行并收口：testlog 入库 push、每片一行结论行 TEST-PASS/FAIL-TEST-*-S<n>（附用例数）、有修复则 FIX-DONE+commit 锚。若已全部完成请补发结论行；确有阻塞请在群里说明。禁静默。" "$(agent_mxid "$_t")" >/dev/null 2>&1 || true
             note "[观察] 测试员 ${_t} 个体静默过半，已催办一次（${_tst_gap}）"
             eval "_tst_nudged_$_t=1"
           fi
@@ -1492,13 +1496,18 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 开跑前 5 天，9 门全 INCONCLUSIVE 的旧件整包进报告）。产物 generated 时间戳
     # 须 ≥ 证据基线（lite=夹具源轮基线，evidence_baseline 同源）；不新鲜即记单
     # 不收编，并清中央仓旧产物防重启循环再收编；解析失败=记单不收编不删（人工核）。
-    local _qg_ok=0 _qg_gen _qg_ts _qg_base
+    local _qg_ok=0 _qg_gen _qg_ts _qg_base _qg_parse=0
     if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]]; then
       _qg_gen=$(sed -n 's/^- generated: //p' "$DIRECTOR_CLONE/.qgate/release-report.md" | head -1 | tr -d '\r')
-      _qg_ts=$(python3 -c "import datetime; print(int(datetime.datetime.fromisoformat('${_qg_gen:-x}'.replace('Z','+00:00')).timestamp()))" 2>/dev/null || echo 0)
+      _qg_ts=$(python3 -c "import datetime; print(int(datetime.datetime.fromisoformat('${_qg_gen:-x}'.replace('Z','+00:00')).timestamp()))" 2>/dev/null) || _qg_parse=1
+      [[ -n "$_qg_ts" ]] || _qg_parse=1
       _qg_base=$(evidence_baseline)
       if [[ -z "$_qg_gen" ]]; then
         issue_once qgate-evidence step20 "QGate release-report 头部无 generated 时间戳（格式漂移，人工核对 central/.qgate/）——未收编"
+      elif (( _qg_parse )); then
+        # 解析失败（非 ISO 格式漂移/含引号击穿 python -c）≠ 旧件：归 0 会落进
+        # stale 分支误删中央仓产物+误记「旧件透传」单，与注释承诺「不删（人工核）」相反。
+        issue_once qgate-parse step20 "QGate release-report generated 时间戳解析失败（${_qg_gen}）——记单不收编不删（人工核对 central/.qgate/）"
       elif [[ -n "$_qg_base" && "$_qg_ts" -lt "$_qg_base" ]]; then
         rm -f "$DIRECTOR_CLONE/.qgate/release-report.md"
         issue_once qgate-stale step20 "QGate release-report 旧件透传（generated=${_qg_gen} 早于证据基线 ${_qg_base}）——禁收编，中央仓旧产物已清（run18 复盘：曾透传 5 天前旧件）"

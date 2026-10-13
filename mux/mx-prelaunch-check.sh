@@ -82,7 +82,7 @@ ck "⑭ 评测门禁三方同步" "grep -q '评测与运行时指标' '$HERE/mux
 #     chen/fanfan/hu/xiao 全员 write_file 报错被迫 execute_code 绕行，SIM 树 15:52
 #     快照宿主 dirty 态被带入。正本=overlay patches/613 无此行；本检查钉「运行时
 #     树无蛇足行」——手工部署再抄歪即起跑前红，不靠人眼）。
-ck "⑮ 运行时树 write_file 无蛇足参数" "! grep -q 'local_config=' '$SR/hermes-agent-src/tools/file_tools.py'" "git -C 宿主与 SIM 两树的 tools/file_tools.py 删 local_config= 实参行（正本=overlay patches/613-agent-action-fusion-then-run.patch 无此行；含语义差异：该行默认 persistent=False，lifecycle 内部默认 True，删行即恢复正本语义）"
+ck "⑮ 运行时树 write_file 无蛇足参数" "test -f '$SR/hermes-agent-src/tools/file_tools.py' && ! grep -q 'local_config=' '$SR/hermes-agent-src/tools/file_tools.py'" "git -C 宿主与 SIM 两树的 tools/file_tools.py 删 local_config= 实参行（正本=overlay patches/613-agent-action-fusion-then-run.patch 无此行；含语义差异：该行默认 persistent=False，lifecycle 内部默认 True，删行即恢复正本语义）。文件缺席=树未部署/路径漂移，属更严重配置错误，必须红（grep 对缺失文件 rc=2 被 ! 反转为绿是空真放行）"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十五项）" || { echo "有红项——修复后再跑"; exit 1; }

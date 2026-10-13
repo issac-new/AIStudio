@@ -16,11 +16,16 @@ issues_stats()/gov_archive 等消费方逐一崩溃 → 驱动 rc=1 → 监督�
 结构化前四段）。用法：python3 mux/mx-log-sanitize.py --run <RUN_ID> [--files a.log]
 """
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 
-SIM = Path(__file__).resolve().parent.parent.parent
+# SIM 根必须走 AIPAY_SIM_ROOT（与本仓同族工具 r18-collect.py/tri-disp-backfill.py/
+# mx-report-gen.py 同一解析链）：本件部署位在仓内 mux/ 下，__file__ 上溯三级得到
+# 的是仓父目录（~/lab/ncwk），与真 SIM 根恒不相等——缺省目标不存在时 sanitize
+# 静默返回 -1、rc=0，防线空转（run16 崩溃环根治件形同虚设）。
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
 
 
 def sanitize(f: Path) -> int:

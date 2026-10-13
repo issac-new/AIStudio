@@ -7,7 +7,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 # sh 守门先跑（2026-10-10 起：此前 sh 守门无聚合入口从未被自动执行，run12 源层
 # HARD=0 在 F1-F18/V8.5 轮回潮 167 处即此缺口——守门不跑等于没有守门）。
-for t in "$HERE"/mux/tests/*.test.sh; do
+# 2026-10-14 起 tests/ 根的 *.test.sh 同入聚合（isolation-boundary/multi-owner-
+# stall/nudge-branch-intel 落地时只手动跑过，无自动入口=守门形同虚设的同型缺口）。
+for t in "$HERE"/mux/tests/*.test.sh "$HERE"/tests/*.test.sh; do
   bash "$t"
 done
 # fixtures 防污染（run15 前置 P3-8）：vitest 会回写 fixtures 的时间戳/路径（run14 复盘
