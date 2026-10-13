@@ -14,10 +14,11 @@ import {
   type IncidentCategory, type IncidentElement, type IncidentElementKey, type IncidentReport,
 } from './incident-types'
 import {
-  findFirstDb, readApprovalWindow, readIdentitySnapshot,
-  readMemoryAudit, readSessionMessages, readSessionOverview, readToolAuditWindow,
-  readTraceSummary, readWorkflowEvidence,
+  findFirstDb, isRunIdForm, readApprovalWindow, readIdentitySnapshot,
+  readMemoryAudit, readProfileWindowMessages, readSessionMessages, readSessionOverview,
+  readToolAuditWindow, readTraceSummary, readWorkflowEvidence, runWindowFromSessionId,
   type ApprovalWindow, type IdentitySnapshot, type MemoryAuditWindow,
+  type ProfileWindowMessages,
   type SessionMessages, type ToolAuditWindow, type TraceSummary, type WorkflowEvidence,
 } from './incident-sources'
 import { ladderForProfile, LADDER_LEVEL_TITLES } from '../autonomyladder/autonomy-ladder'
@@ -27,6 +28,10 @@ export interface IncidentOpts {
   traceDir?: string
   ekkoDb?: string
   now?: number
+  /** 推演轮聚合窗口（秒；缺省按 RUN_ID 日期全天）。 */
+  windowSince?: number
+  windowUntil?: number
+  profilesRoot?: string
 }
 
 function el(
@@ -42,6 +47,9 @@ export interface IncidentSourceBundle {
   dbFile: string | null
   overview: ReturnType<typeof readSessionOverview>
   messages: SessionMessages | null
+  /** 推演轮聚合形态（run18 复盘根治）：主库精确查无果且 sessionId 为 RUN_ID 形态时，
+   *  按时间窗聚合 hermes 各 profile 的 state.db 真实会话。非 null=聚合成立。 */
+  profileWindow: ProfileWindowMessages | null
   trace: TraceSummary | null
   toolAudit: ToolAuditWindow
   approvals: ApprovalWindow
@@ -52,16 +60,37 @@ export interface IncidentSourceBundle {
 
 export function loadSources(sessionId: string, opts: IncidentOpts = {}): IncidentSourceBundle {
   const dbFile = findFirstDb(opts.dbPath)
-  const overview = dbFile ? readSessionOverview(dbFile, sessionId) : null
-  const messages = dbFile ? readSessionMessages(dbFile, sessionId) : null
+  let overview = dbFile ? readSessionOverview(dbFile, sessionId) : null
+  let messages = dbFile ? readSessionMessages(dbFile, sessionId) : null
+  // 推演轮聚合回退（run18 复盘：agent 会话落 profiles/*/state.db 而非 webui 主库，
+  // 17 要素 12 项空白的根因）：RUN_ID 形态 + 主库无此会话 → 窗口聚合各 profile。
+  let profileWindow: IncidentSourceBundle['profileWindow'] = null
+  if (!messages && isRunIdForm(sessionId)) {
+    const win = (opts.windowSince !== undefined && opts.windowUntil !== undefined)
+      ? { sinceSec: opts.windowSince, untilSec: opts.windowUntil }
+      : runWindowFromSessionId(sessionId)
+    if (win) {
+      profileWindow = readProfileWindowMessages(opts.profilesRoot, dbFile, win.sinceSec, win.untilSec)
+      if (profileWindow && profileWindow.combined.total > 0) {
+        messages = profileWindow.combined
+        overview = overview ?? {
+          title: `${sessionId}（推演轮聚合：${profileWindow.byProfile.length} 账号 × ${profileWindow.byProfile.reduce((s, p) => s + p.sessions, 0)} 会话）`,
+          createdAt: profileWindow.combined.firstTs ?? undefined,
+          profile: `${profileWindow.byProfile.length} 账号`,
+        }
+      }
+    }
+  }
   const trace = readTraceSummary(opts.traceDir, sessionId)
   const toolAudit = readToolAuditWindow()
   const approvals = readApprovalWindow()
-  const profileNames = [overview?.profile].filter((p): p is string => Boolean(p && p.trim()))
+  const profileNames = profileWindow
+    ? profileWindow.byProfile.map((p) => p.profile)
+    : [overview?.profile].filter((p): p is string => Boolean(p && p.trim()))
   const identity = readIdentitySnapshot(profileNames)
   const memory = readMemoryAudit(opts.ekkoDb, sessionId)
   const workflow = dbFile ? readWorkflowEvidence(dbFile, sessionId) : null
-  return { dbFile, overview, messages, trace, toolAudit, approvals, identity, memory, workflow }
+  return { dbFile, overview, messages, profileWindow, trace, toolAudit, approvals, identity, memory, workflow }
 }
 
 // ---------- B：自治度对账 ----------
@@ -186,13 +215,16 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
 
   // ---- 轨迹类 ----
   if (bundle.messages) {
+    const aggNote = bundle.profileWindow && bundle.profileWindow.combined.total > 0
+      ? `（推演轮聚合形态：${bundle.profileWindow.byProfile.length} 账号 × ${bundle.profileWindow.byProfile.reduce((s, p) => s + p.sessions, 0)} 会话，按窗口 ${new Date(bundle.profileWindow.window.sinceSec * 1000).toISOString()} 起）`
+      : ''
     elements.push(el('message_history', 'trajectory', 'collected',
-      `共 ${bundle.messages.total} 条消息（user ${bundle.messages.byRole['user'] ?? 0}/assistant ${bundle.messages.byRole['assistant'] ?? 0}/tool ${bundle.messages.byRole['tool'] ?? 0}），跨时 ${spanMs(bundle.messages.firstTs, bundle.messages.lastTs)}`,
-      [`${dbLabel}#messages`], undefined,
-      { total: bundle.messages.total, byRole: bundle.messages.byRole, preview: bundle.messages.rows.slice(0, 10) }))
+      `共 ${bundle.messages.total} 条消息（user ${bundle.messages.byRole['user'] ?? 0}/assistant ${bundle.messages.byRole['assistant'] ?? 0}/tool ${bundle.messages.byRole['tool'] ?? 0}），跨时 ${spanMs(bundle.messages.firstTs, bundle.messages.lastTs)}${aggNote}`,
+      [`${dbLabel}#messages`].concat(bundle.profileWindow ? [`${bundle.profileWindow.profilesRoot}/*/state.db#messages`] : []), undefined,
+      { total: bundle.messages.total, byRole: bundle.messages.byRole, preview: bundle.messages.rows.slice(0, 10), byProfile: bundle.profileWindow?.byProfile }))
   } else {
     elements.push(el('message_history', 'trajectory', 'absent', '消息历史未采集', [dbLabel],
-      'messages 表无此 session 行，或主库文件未找到'))
+      'messages 表无此 session 行，或主库文件未找到；RUN_ID 形态已尝试 profiles/*/state.db 窗口聚合（窗口内无会话或 profiles 根不可达）'))
   }
 
   if (bundle.messages && bundle.messages.reasoningTurns > 0) {
