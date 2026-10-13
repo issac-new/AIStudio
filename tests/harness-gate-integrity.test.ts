@@ -1562,7 +1562,7 @@ describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四
 
   it('报告头部名词速查行（方案 §5.4 报告语言三规矩②——内部缩写第一屏前载定义）', () => {
     const merge = read(join(MX, 'final-report-merge.py'))
-    expect(merge).toContain('速查单一事实源=机器 hero')  // 头部秩序收敛（用户 2026-10-13 裁定）：merge 不再注入第二份速查，守门锚随迁注释锚
+    expect(merge).toContain('单一事实源=机器 hero')  // 头部秩序收敛（用户 2026-10-13 裁定）：merge 不再注入第二份速查，守门锚随迁注释锚
     expect(gen).toContain('G1-G6=六道关卡')  // 词条超集现于 mx-report-gen hero-terms
     expect(merge).toContain('GLOSS_LINE + part1')
   })
