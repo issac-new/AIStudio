@@ -1,6 +1,8 @@
---- a/gateway/run.py	2026-10-09 01:32:19
-+++ b/gateway/run.py	2026-10-09 01:32:19
-@@ -4809,6 +4809,37 @@
+diff --git a/gateway/run.py b/gateway/run.py
+index a9e9855ec9..3ce6bff9c8 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -4740,6 +4740,37 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
              cron_scheduler.drain_delivery_queue(profile_adapters, loop)
  
  
@@ -38,7 +40,7 @@
  def _start_gateway_housekeeping(
      stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
      cron_thread=None,
-@@ -4830,6 +4861,8 @@
+@@ -4761,6 +4792,8 @@ def _start_gateway_housekeeping(
          chores.append((1, DRAIN_LABEL, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner)))
      chores += [
          (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),

@@ -1,8 +1,8 @@
 diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
-index c5b8018d..95923a91 100644
+index 436ae72b2f..82f5d0f8d4 100644
 --- a/gateway/platforms/base.py
 +++ b/gateway/platforms/base.py
-@@ -4466,10 +4466,24 @@ class BasePlatformAdapter(ABC):
+@@ -4485,10 +4485,24 @@ class BasePlatformAdapter(ABC):
              force_document_attachments=extracted.force_document_attachments,
              human_delay=human_delay, metadata=metadata, record_delivery=record_delivery)
          if not (anything_sent or images or local_files or media_files) and extracted.pre_extract.strip():

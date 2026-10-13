@@ -1,10 +1,11 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index 1111111..2222222 100644
-@@ -1705,7 +1705,55 @@
-         result.update(error=_COMPRESSION_TIMEOUT_FINAL_RESPONSE, partial=True, compression_exhausted=True)
+index 411134b41a..0b5ad6f5d3 100644
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -1706,6 +1706,54 @@ def _run_conversation_turn(
      return result
  
-+
+ 
 +def _profile_usage_watch(agent) -> None:
 +    """Usage anomaly watch: statistics surface + warnings only — never blocks a turn
 +    (user ruling 2026-10-10: no quota enforcement). Soft reference line in
@@ -17,7 +18,7 @@ index 1111111..2222222 100644
 +        from pathlib import Path as _P
 +
 +        from hermes_constants import get_hermes_home
- 
++
 +        home = _P(get_hermes_home())
 +        try:
 +            line_val = int((home / "usage-warn.txt").read_text(encoding="utf-8").strip())
@@ -56,7 +57,7 @@ index 1111111..2222222 100644
  def run_conversation(
      agent,
      user_message: Any,
-@@ -1736,6 +1784,11 @@
+@@ -1736,6 +1784,11 @@ def run_conversation(
  
      # Steer / redirect / interrupt set this mid-turn; the result reports whether the turn ran untouched.
      agent._turn_user_intervened = False

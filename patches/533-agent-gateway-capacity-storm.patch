@@ -1,5 +1,5 @@
 diff --git a/gateway/run_busy.py b/gateway/run_busy.py
-index 89cadb02a82e..2210c977b33a 100644
+index bf6d7d9ed2..179c122ec4 100644
 --- a/gateway/run_busy.py
 +++ b/gateway/run_busy.py
 @@ -229,6 +229,84 @@ class GatewayBusySessionMixin:
@@ -88,10 +88,10 @@ index 89cadb02a82e..2210c977b33a 100644
          self, session_key: str, source: SessionSource
      ) -> tuple[Any, Optional[str]]:
 diff --git a/gateway/run_inbound.py b/gateway/run_inbound.py
-index 626d7806ad1b..1343e02f01eb 100644
+index 888d40e2bb..dbf0c870f0 100644
 --- a/gateway/run_inbound.py
 +++ b/gateway/run_inbound.py
-@@ -1369,7 +1369,21 @@ class GatewayInboundMixin:
+@@ -1342,7 +1342,21 @@ class GatewayInboundMixin(GatewayPluginInjectionMixin):
          # passes the "already running" guard and spins up a duplicate agent for the same session.
          _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
          if _limit_message is not None:
@@ -115,7 +115,7 @@ index 626d7806ad1b..1343e02f01eb 100644
  
          event, source, is_internal = self._hm_rescue_orphaned_fifo(event, source, is_internal, _quick_key)
 diff --git a/tests/gateway/test_max_concurrent_sessions.py b/tests/gateway/test_max_concurrent_sessions.py
-index 6bf97c7730a1..1fbc12d16a4a 100644
+index 6bf97c7730..45d8673a10 100644
 --- a/tests/gateway/test_max_concurrent_sessions.py
 +++ b/tests/gateway/test_max_concurrent_sessions.py
 @@ -99,7 +99,11 @@ def _silence_global_gateway_hooks(monkeypatch):

@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
-index e5bd14a..9665536 100644
+index e1c36a8111..6ba74e9e3e 100644
 --- a/hermes_cli/kanban.py
 +++ b/hermes_cli/kanban.py
-@@ -223,6 +223,7 @@ _DELEGATED_CHILD_DENIED_ACTIONS: frozenset[str] = frozenset({
+@@ -217,6 +217,7 @@ _DELEGATED_CHILD_DENIED_ACTIONS: frozenset[str] = frozenset({
  _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
      "create", "new", "rm", "remove", "delete", "switch", "use", "rename",
      "set-default-workdir", "import",
@@ -10,7 +10,7 @@ index e5bd14a..9665536 100644
  })
  
  
-@@ -377,6 +378,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+@@ -371,6 +372,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
              max_runtime_seconds=max_runtime, skills=getattr(args, "skills", None) or None,
              max_retries=max_retries, model_override=getattr(args, "model_override", None),
              provider_override=getattr(args, "provider_override", None),
@@ -18,7 +18,7 @@ index e5bd14a..9665536 100644
              goal_mode=bool(getattr(args, "goal_mode", False)),
              goal_max_turns=getattr(args, "goal_max_turns", None),
              completion_contract=getattr(args, "completion_contract", None),
-@@ -604,6 +606,137 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
+@@ -598,6 +600,137 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
      return 0
  
  
@@ -156,7 +156,7 @@ index e5bd14a..9665536 100644
  def _cmd_reclaim(args: argparse.Namespace) -> int:
      with kbc.connect_closing() as conn:
          ok = kb.reclaim_task(conn, args.task_id, reason=getattr(args, "reason", None))
-@@ -1327,6 +1460,7 @@ _HANDLERS = {
+@@ -1321,6 +1454,7 @@ _HANDLERS = {
      "init": _cmd_init, "create": _cmd_create, "swarm": _cmd_swarm,
      "list": _cmd_list, "ls": _cmd_list, "show": _cmd_show,
      "assign": _cmd_assign, "set-model": _cmd_set_model,
@@ -165,7 +165,7 @@ index e5bd14a..9665536 100644
      "diagnostics": _cmd_diagnostics, "diag": _cmd_diagnostics,
      "link": _cmd_link, "unlink": _cmd_unlink, "claim": _cmd_claim,
 diff --git a/hermes_cli/kanban_boards.py b/hermes_cli/kanban_boards.py
-index 0c6db18..f56274d 100644
+index ab5a1426ee..42fdb57c6e 100644
 --- a/hermes_cli/kanban_boards.py
 +++ b/hermes_cli/kanban_boards.py
 @@ -76,9 +76,23 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
@@ -193,7 +193,7 @@ index 0c6db18..f56274d 100644
      )
      print(f"Board {meta['slug']!r} {'already exists' if already else 'created'}.\n"
            f"  Display name: {meta.get('name', '')}\n"
-@@ -201,6 +215,35 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
+@@ -206,6 +220,35 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
      return 0
  
  
@@ -229,7 +229,7 @@ index 0c6db18..f56274d 100644
  _BOARD_HANDLERS = {
      "list": _cmd_boards_list, "ls": _cmd_boards_list,
      "create": _cmd_boards_create, "new": _cmd_boards_create,
-@@ -209,6 +252,7 @@ _BOARD_HANDLERS = {
+@@ -214,6 +257,7 @@ _BOARD_HANDLERS = {
      "show": _cmd_boards_show, "current": _cmd_boards_show,
      "rename": _cmd_boards_rename,
      "set-default-workdir": _cmd_boards_set_default_workdir,
@@ -238,10 +238,10 @@ index 0c6db18..f56274d 100644
      "import": _cmd_boards_import,
  }
 diff --git a/hermes_cli/kanban_output.py b/hermes_cli/kanban_output.py
-index ed8ccf2..f5769fa 100644
+index 43d20ec05c..61dfec274e 100644
 --- a/hermes_cli/kanban_output.py
 +++ b/hermes_cli/kanban_output.py
-@@ -20,6 +20,7 @@ _TASK_DICT_FIELDS = (
+@@ -18,6 +18,7 @@ _TASK_DICT_FIELDS = (
      "workspace_kind", "workspace_path", "branch_name", "project_id",
      "created_by", "created_at", "started_at", "completed_at", "result",
      "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
@@ -250,10 +250,10 @@ index ed8ccf2..f5769fa 100644
  )
  _SHOW_RUN_FIELDS = (
 diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
-index f75a44e..fc81cd1 100644
+index 8a65d41346..449621a0d6 100644
 --- a/hermes_cli/kanban_parser.py
 +++ b/hermes_cli/kanban_parser.py
-@@ -95,6 +95,9 @@ _BOARD_SPECS = [
+@@ -107,6 +107,9 @@ _BOARD_SPECS = [
          _arg("--color", help="Optional hex color (e.g. '#8b5cf6') for the dashboard"),
          _arg("--switch", action="store_true", help="Switch to the new board after creating it"),
          _arg("--default-workdir", help="Default workspace path for tasks created on this board"),
@@ -263,7 +263,7 @@ index f75a44e..fc81cd1 100644
      ], aliases=["new"], help="Create a new board"),
      _cmd("rm", [
          _SLUG,
-@@ -110,6 +113,11 @@ _BOARD_SPECS = [
+@@ -122,6 +125,11 @@ _BOARD_SPECS = [
          _SLUG,
          _arg("path", nargs="?", help="Absolute path to use as default workdir. Omit to clear."),
      ], help="Set the default workspace path for tasks on a board"),
@@ -275,7 +275,7 @@ index f75a44e..fc81cd1 100644
      _cmd("export", [
          _arg("slug", nargs="?", help="Board to export (default: the current board)"),
          _arg("-o", "--output", help="Archive path (default: ./<slug>.tar.gz)"),
-@@ -191,6 +199,10 @@ _SPECS = [
+@@ -203,6 +211,10 @@ _SPECS = [
          _arg("--provider", dest="provider_override",
               help="Provider the --model belongs to (passed as --provider <name> to "
                    "the worker). Requires --model."),
@@ -286,7 +286,7 @@ index f75a44e..fc81cd1 100644
          _arg("--completion-contract", metavar="CONTRACT",
               help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
          _arg("--goal", action="store_true", dest="goal_mode",
-@@ -245,6 +257,18 @@ _SPECS = [
+@@ -257,6 +269,18 @@ _SPECS = [
               help="Provider the model belongs to (worker is spawned with "
                    "--provider <name>). Cleared together with the model."),
      ], help="Set or clear a task's model/provider override (takes effect on the next dispatch)"),

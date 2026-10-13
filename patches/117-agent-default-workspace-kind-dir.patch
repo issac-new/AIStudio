@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 91d6dc7..d414624 100644
+index 69d948e179..014ca3b99b 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -860,7 +860,7 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -810,7 +810,7 @@ CREATE TABLE IF NOT EXISTS tasks (
      created_at           INTEGER NOT NULL,
      started_at           INTEGER,
      completed_at         INTEGER,
@@ -11,7 +11,7 @@ index 91d6dc7..d414624 100644
      workspace_path       TEXT,
      branch_name          TEXT,
      -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
-@@ -1269,7 +1269,10 @@ def create_task(
+@@ -1230,7 +1230,10 @@ def create_task(
          except Exception:
              pass
      if workspace_kind is None:
@@ -23,7 +23,7 @@ index 91d6dc7..d414624 100644
      if workspace_kind not in VALID_WORKSPACE_KINDS:
          raise ValueError(
              f"workspace_kind must be one of {sorted(VALID_WORKSPACE_KINDS)}, "
-@@ -1309,6 +1312,11 @@ def create_task(
+@@ -1270,6 +1273,11 @@ def create_task(
      # Retry once on the extremely unlikely id collision.
      for attempt in range(2):
          task_id = _new_task_id()
@@ -36,10 +36,10 @@ index 91d6dc7..d414624 100644
              # allow_nested: graph builders compose create_task under one outer
              # commit so the dispatcher never sees a half-built graph.
 diff --git a/plugins/kanban/dashboard/plugin_api.py b/plugins/kanban/dashboard/plugin_api.py
-index b15ed8a..e51f76d 100644
+index c38f8e399b..273fde0bc8 100644
 --- a/plugins/kanban/dashboard/plugin_api.py
 +++ b/plugins/kanban/dashboard/plugin_api.py
-@@ -376,7 +376,7 @@ class CreateTaskBody(BaseModel):
+@@ -417,7 +417,7 @@ class CreateTaskBody(BaseModel):
      assignee: Optional[str] = None
      tenant: Optional[str] = None
      priority: int = 0

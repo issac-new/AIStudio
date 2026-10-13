@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/main_agent_cmds.py b/hermes_cli/main_agent_cmds.py
-index 7dd3f5d061..7ba493b00d 100644
+index 5f27641239..833f7e26ec 100644
 --- a/hermes_cli/main_agent_cmds.py
 +++ b/hermes_cli/main_agent_cmds.py
-@@ -56,12 +56,63 @@ def _cmd_memory_reset(args):
+@@ -57,12 +57,63 @@ def _cmd_memory_reset(args):
      print(f"  Files were in: {display_hermes_home()}/memories/\n")
  
  
@@ -67,7 +67,7 @@ index 7dd3f5d061..7ba493b00d 100644
          from hermes_cli.memory_setup import memory_command
          memory_command(args)
 diff --git a/hermes_cli/subcommands/memory.py b/hermes_cli/subcommands/memory.py
-index 70992b14d2..9930aa9f9b 100644
+index 9c9bad7578..b6e17c8e12 100644
 --- a/hermes_cli/subcommands/memory.py
 +++ b/hermes_cli/subcommands/memory.py
 @@ -31,4 +31,17 @@ def build_memory_parser(subparsers, *, cmd_memory: Callable) -> None:

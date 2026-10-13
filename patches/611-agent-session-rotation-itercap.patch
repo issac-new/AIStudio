@@ -1,21 +1,8 @@
---- a/gateway/session_telemetry.py
-+++ b/gateway/session_telemetry.py
-@@ -166,6 +166,12 @@
- 
-         agent = _cached_agent(gateway, session_key)
-         entry.update(_agent_health_counters(agent))
-+        # 611（run16 实证）：本回合撞会话迭代上限标记——agent.max_iterations 耗尽
-+        # （Turn ended: max_iterations_reached）时 api_calls==上限，run16 21:18 该
-+        # 形态 60 分钟无人接管（603 三判据全不咬：60 调用 << 400 阈值）。轮换件消费。
-+        def _iter_cap_hit(calls, cap):
-+            return bool(cap and calls >= cap)
-+        entry["turn_hit_iter_cap"] = _iter_cap_hit(api_calls, _int(getattr(agent, "max_iterations", 0)))
-         entry["rotations"] = _int(entry.get("rotations"))
-         _flush_entry(session_key, entry)
-     except Exception:  # noqa: BLE001 - 遥测旁路绝不冒泡
+diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
+index 663f1ba1a1..9c85137692 100644
 --- a/gateway/session_rotation.py
 +++ b/gateway/session_rotation.py
-@@ -89,6 +89,14 @@
+@@ -89,6 +89,14 @@ def _load_settings(gateway: Any) -> Dict[str, Any]:
      return cfg
  
  
@@ -30,19 +17,38 @@
  def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
                    book: Dict[str, Any]) -> RotationDecision:
      """纯判定（可测）：entry 为 602 遥测条目；book 为本模块簿记。"""
-@@ -113,6 +121,9 @@
+@@ -112,6 +120,9 @@ def should_rotate(entry: Optional[Dict[str, Any]], settings: Dict[str, Any],
+     if not reason and _int(entry.get("empty_streak")) >= settings["empty_streak_limit"]:
          reason = "empty-streak"
  
-     if not reason:
++    if not reason:
 +        reason = iter_cap_exit_reason(entry) or ""
 +
-+    if not reason:
+     if not reason:
          return RotationDecision(False)
  
-     # 冷却窗：上次轮换后 N 回合内不再触发（防轮换风暴）
+diff --git a/gateway/session_telemetry.py b/gateway/session_telemetry.py
+index 34b23b06b4..4b128a29c6 100644
+--- a/gateway/session_telemetry.py
++++ b/gateway/session_telemetry.py
+@@ -166,6 +166,12 @@ def record_turn_telemetry(
+ 
+         agent = _cached_agent(gateway, session_key)
+         entry.update(_agent_health_counters(agent))
++        # 611（run16 实证）：本回合撞会话迭代上限标记——agent.max_iterations 耗尽
++        # （Turn ended: max_iterations_reached）时 api_calls==上限，run16 21:18 该
++        # 形态 60 分钟无人接管（603 三判据全不咬：60 调用 << 400 阈值）。轮换件消费。
++        def _iter_cap_hit(calls, cap):
++            return bool(cap and calls >= cap)
++        entry["turn_hit_iter_cap"] = _iter_cap_hit(api_calls, _int(getattr(agent, "max_iterations", 0)))
+         entry["rotations"] = _int(entry.get("rotations"))
+         _flush_entry(session_key, entry)
+     except Exception:  # noqa: BLE001 - 遥测旁路绝不冒泡
+diff --git a/tests/gateway/test_session_rotation.py b/tests/gateway/test_session_rotation.py
+index e53c47e06c..e4ddc6ed65 100644
 --- a/tests/gateway/test_session_rotation.py
 +++ b/tests/gateway/test_session_rotation.py
-@@ -148,3 +148,19 @@
+@@ -148,3 +148,19 @@ def test_wiring_run_turn_calls_rotation():
      import gateway.run_turn as rt
      source = Path(rt.__file__).read_text(encoding="utf-8")
      assert "from gateway.session_rotation import maybe_rotate_session" in source

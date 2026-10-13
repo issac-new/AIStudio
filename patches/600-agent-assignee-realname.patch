@@ -1,6 +1,8 @@
 diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
-index aaaaaaa.bbbbbbb 100644
-@@ -1101,6 +1101,14 @@
+index c8b64c095c..514a1f72ae 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -1099,6 +1099,14 @@ def _handle_create(args: dict, **kw) -> str:
      assignee = args.get("assignee")
      _check(assignee, "assignee is required — name the profile that should execute this "
                       "task (the dispatcher will only spawn tasks with an assignee)")

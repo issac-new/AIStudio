@@ -1,6 +1,6 @@
 diff --git a/optional-mcps/semantica/manifest.yaml b/optional-mcps/semantica/manifest.yaml
 new file mode 100644
-index 0000000..5a70aa4
+index 0000000000..5a70aa42b7
 --- /dev/null
 +++ b/optional-mcps/semantica/manifest.yaml
 @@ -0,0 +1,62 @@

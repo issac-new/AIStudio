@@ -1,8 +1,8 @@
 diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
-index 501d3fb776..29572530c1 100644
+index 8045b00317..e1577819ba 100644
 --- a/gateway/platforms/api_server.py
 +++ b/gateway/platforms/api_server.py
-@@ -2202,10 +2202,24 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+@@ -2455,6 +2455,18 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
              configured_model=_resolve_gateway_model(), runtime_status=runtime,
              active_api_runs=active_api_runs, process_completion_queue_depth=process_depth,
              active_delegations=active_delegations)
@@ -19,28 +19,30 @@ index 501d3fb776..29572530c1 100644
 +            and value.get("writer_start_time") == current_start
 +        }
          return web.json_response({
-             "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
+ "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
              "version": _hermes_version(), "gateway_state": gw_state,
--            "platforms": runtime.get("platforms", {}), "active_agents": gw_active,
-+            "platforms": runtime.get("platforms", {}),
+@@ -2462,6 +2474,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+             "api_server": api_status,
+             "metrics_today": api_status["metrics_today"],
+             "last_heartbeat": api_status["last_heartbeat"],
 +            "loaded_platforms": loaded_platforms,
-+            "served_profiles": runtime.get("served_profiles", []), "active_agents": gw_active,
++            "served_profiles": runtime.get("served_profiles", []),
+             "active_agents": gw_active,
              "gateway_busy": derive_gateway_busy(
                  gateway_running=True, gateway_state=gw_state, active_agents=gw_active),
-             "gateway_drainable": derive_gateway_drainable(
 diff --git a/tests/gateway/test_api_server.py b/tests/gateway/test_api_server.py
-index 7064fd1..f6c51e4 100644
+index 11e404bbf9..3c9c194218 100644
 --- a/tests/gateway/test_api_server.py
 +++ b/tests/gateway/test_api_server.py
-@@ -14,6 +14,7 @@ Tests cover:
- 
+@@ -15,6 +15,7 @@ Tests cover:
  import asyncio
+ import hashlib
  import json
 +import os
  import time
  import types
  import uuid
-@@ -781,7 +782,12 @@ class TestHealthDetailedEndpoint:
+@@ -833,7 +834,12 @@ class TestHealthDetailedEndpoint:
          app = _create_app(adapter)
          with patch("gateway.status.read_runtime_status", return_value={
              "gateway_state": "running",
@@ -54,14 +56,18 @@ index 7064fd1..f6c51e4 100644
              "active_agents": 2,
              "exit_reason": None,
              "updated_at": "2026-04-14T00:00:00Z",
-@@ -796,7 +802,15 @@ class TestHealthDetailedEndpoint:
+@@ -848,10 +854,19 @@ class TestHealthDetailedEndpoint:
                  assert data["status"] == "ok"
                  assert data["platform"] == "hermes-agent"
                  assert data["gateway_state"] == "running"
--                assert data["platforms"] == {"telegram": {"state": "connected"}}
-+                # ``platforms`` is the full runtime map (may include stale / other-profile entries).
+-                assert data["platforms"]["telegram"] == {"state": "connected"}
++                # ``platforms`` is the full enriched runtime map (may include stale /
++                # other-profile entries plus the synthetic api_server status).
 +                assert data["platforms"]["telegram"]["state"] == "connected"
 +                assert data["platforms"]["old:discord"]["state"] == "connected"
+                 assert data["platforms"]["api_server"]["metrics"]["metrics_today"]["requests"] == 1
+                 assert data["metrics_today"]["tokens"] == 9
+                 assert data["last_heartbeat"] is not None
 +                # ``loaded_platforms`` only keeps entries stamped by this process.
 +                assert data["loaded_platforms"] == {
 +                    "telegram": {"state": "connected", "writer_pid": os.getpid(), "writer_start_time": 123.5}

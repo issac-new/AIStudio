@@ -49,6 +49,11 @@ const isAgentPatch = (patchText) => {
   if (!targetPath) return false;
   return HERMES_AGENT_PATCH_PREFIXES.some((p) => targetPath.startsWith(p));
 };
+// MIGRATE_AGENT_ONLY=1:agent 仓升级轮(v0.21.6→v0.21.7 首用)——过滤器反转,
+// 只迁 agent 路由补丁,MIGRATE_STUDIO_ROOT 指向 hermes-agent 仓;old/new 链
+// 与三向逻辑同一套。默认(未设)行为不变:只迁 studio 补丁。
+const agentOnly = !!process.env.MIGRATE_AGENT_ONLY;
+const skipPatch = (patchText) => (agentOnly ? !isAgentPatch(patchText) : isAgentPatch(patchText));
 
 const sh = (cmd, cwd = studioRoot) => execSync(cmd, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
 const trySh = (cmd, cwd = studioRoot) => {
@@ -129,20 +134,25 @@ function main() {
   if (trySh(`git rev-parse --verify ${OLD_BRANCH}`).ok) {
     console.log('[migrate] old 链已存在,跳过重建');
   } else {
-    console.log('[migrate] 建 old 链(${st.baseTag} + 全部旧 studio patch,逐个 commit)…');
+    console.log('[migrate] 建 old 链(${st.baseTag} + 补丁逐个 commit)…');
+    var oldChainHasAny = false;
     sh(`git checkout --force -B ${OLD_BRANCH} ${st.baseTag}`);
     sh('git clean -fdx');
     for (const p of series) {
       const pf = resolve(patchDir, p);
       if (!existsSync(pf)) { console.error(`[migrate] patch 缺失: ${p}`); process.exit(1); }
       const text = readFileSync(pf, 'utf8');
-      if (isAgentPatch(text)) continue; // agent 仓未动,无需进 old 链
+      if (skipPatch(text)) continue; // 对侧仓补丁不进本链(studio 轮跳 agent;agent 轮跳 studio)
       const r = trySh(`git apply --whitespace=nowarn "${pf}"`);
       if (!r.ok) {
-        console.error(`[migrate] old 链应用失败(${p}),base tag 可能不对:\n${r.out}`);
-        process.exit(1);
+        // old 链咬不住=该补丁本不在旧世界(inject 曾 WARN 跳过的存量断裂,
+        // agent 0.21.7 轮实证 18 例,含 118 这种早期补丁)。跳过记档不中断;
+        // 若大面积全跳,base tag 本身可疑,由操作者看日志判断。
+        console.warn(`[migrate] old 链跳过(存量断裂,不在旧世界): ${p}`);
+        continue;
       }
       sh(`git add -A && git commit -q -m "oldchain: ${p}" --no-verify`);
+      oldChainHasAny = true;
     }
     console.log('[migrate] old 链完成');
   }
@@ -158,12 +168,16 @@ function main() {
   const retired = [];
   let pending = null;
 
+  // 存量断裂清单(依赖级联/功能移植轮处理):new 链同样跳过,不空提交不退役,
+  // series 保留原条目(inject 侧继续 WARN 跳过,与旧世界语义一致)。
+  const skipList = (process.env.MIGRATE_SKIP_PATCHES || '').split(',').map((x) => x.trim()).filter(Boolean);
   for (const p of series) {
     if (done.has(p)) continue;
     const pf = resolve(patchDir, p);
     if (!existsSync(pf)) { console.error(`[migrate] patch 缺失: ${p}`); process.exit(1); }
     const text = readFileSync(pf, 'utf8');
-    if (isAgentPatch(text)) { console.log(`[migrate] 跳过(agent 路由): ${p}`); continue; }
+    if (skipList.includes(p)) { console.log(`[migrate] 按清单跳过(存量断裂待专项移植): ${p}`); continue; }
+    if (skipPatch(text)) { console.log(`[migrate] 跳过(对侧路由): ${p}`); continue; }
 
     const r = trySh(`git apply -3 --whitespace=nowarn "${pf}"`);
     let marked = hasMarkers(patchTargets(text));
@@ -235,7 +249,7 @@ function main() {
     process.exit(2);
   }
   const remaining = series.filter((p) => !migratedSet().has(p) && existsSync(resolve(patchDir, p)) &&
-    !isAgentPatch(readFileSync(resolve(patchDir, p), 'utf8')));
+    !skipPatch(readFileSync(resolve(patchDir, p), 'utf8')));
   if (remaining.length > 0) { console.error(`[migrate] 未完成: ${remaining.join(', ')}`); process.exit(2); }
   console.log(`[migrate] 全部 studio patch 迁移完成。退役 ${retired.length} 个。`);
   console.log('[migrate] 验证:npm run clean 不需要;直接 node scripts/migrate-patches.mjs --finish,然后 npm run inject');

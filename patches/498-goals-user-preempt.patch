@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/goals.py b/hermes_cli/goals.py
-index 500096ef87..c5769a80d9 100644
+index c00618e36b..24860ffaad 100644
 --- a/hermes_cli/goals.py
 +++ b/hermes_cli/goals.py
-@@ -996,6 +996,30 @@ def last_user_message_from_db(session_id: Optional[str]) -> Any:
+@@ -1019,6 +1019,30 @@ def last_user_message_from_db(session_id: Optional[str]) -> Any:
          return ""
  
  
@@ -30,10 +30,10 @@ index 500096ef87..c5769a80d9 100644
 +        return False
 +
 +
- def gather_background_processes(task_id: Optional[str] = None, *, owner_task_id: Optional[str] = None) -> List[Dict[str, Any]]:
+ def gather_background_processes(task_id: Optional[str] = None, *, owner_task_id: Optional[str] = None) -> list[dict[str, Any]]:
      """Fail-safe snapshot of RUNNING ``process_registry`` sessions for the judge; ``[]`` on any error
      so the loop degrades to its pre-wait-barrier behavior.
-@@ -1463,6 +1487,15 @@ class GoalManager:
+@@ -1493,6 +1517,15 @@ class GoalManager:
          if self.is_waiting():
              return self._waiting_decision(state)
  

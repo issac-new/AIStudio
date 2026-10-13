@@ -1,5 +1,6 @@
 diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 new file mode 100644
+index 0000000000..a2bda853f2
 --- /dev/null
 +++ b/agent/runaway_guard.py
 @@ -0,0 +1,240 @@
@@ -244,9 +245,10 @@ new file mode 100644
 +                pass
 +    return signal
 diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index a956f213db..2403167fbd 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -1876,6 +1876,14 @@
+@@ -1957,6 +1957,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
              display_index=i,
              tool_start_time=tool_start_time,
          )
@@ -263,6 +265,7 @@ diff --git a/agent/tool_executor.py b/agent/tool_executor.py
              return
 diff --git a/tests/agent/test_runaway_guard.py b/tests/agent/test_runaway_guard.py
 new file mode 100644
+index 0000000000..73b5332fb6
 --- /dev/null
 +++ b/tests/agent/test_runaway_guard.py
 @@ -0,0 +1,135 @@

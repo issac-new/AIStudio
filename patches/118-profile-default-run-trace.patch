@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index 5b7e1f5..dec0451 100644
+index 1bcb57a01a..b9df598a94 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -1092,6 +1092,80 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
+@@ -1375,6 +1375,80 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
          _clone_file(source_dir, profile_dir, SYNC_MANIFEST_NAME)
  
  
@@ -83,20 +83,20 @@ index 5b7e1f5..dec0451 100644
  def create_profile(
      name: str, clone_from: Optional[str] = None, clone_all: bool = False, clone_config: bool = False,
      no_alias: bool = False, no_skills: bool = False, description: Optional[str] = None,
-@@ -1154,6 +1228,12 @@ def create_profile(
-             _clone_all_into(source_dir, staging, canon)
-         else:
-             _bootstrap_profile_dir(staging, source_dir, sync_imports=sync_imports)
-+            # Overlay: seed the run-trace plugin into the new profile's staging
-+            # tree so L2 trace data is captured from the very first session.
-+            # Skipped for clone_all (it copytrees the whole source tree, including
-+            # any plugins/ dir, so seeding here would be overwritten immediately
-+            # — the config-merge step below still ensures run-trace is enabled).
-+            _seed_run_trace_plugin(staging)
+@@ -1440,6 +1514,12 @@ def create_profile(
+         if source_dir is not None:
+             from hermes_cli.setup_profile import release_setup_copy, setup_marker_state
+             release_setup_copy(staging, setup_state=setup_marker_state(source_dir))
++        # Overlay: seed the run-trace plugin into the new profile's staging
++        # tree so L2 trace data is captured from the very first session.
++        # Skipped for clone_all (it copytrees the whole source tree, including
++        # any plugins/ dir, so seeding here would be overwritten immediately
++        # — the config-merge step below still ensures run-trace is enabled).
++        _seed_run_trace_plugin(staging)
          if source_dir is not None and not clone_channels:
              from hermes_cli.profile_channels import strip_channel_settings
              stripped = strip_channel_settings(staging, include_state=clone_all, source_dir=source_dir)
-@@ -1169,6 +1249,12 @@ def create_profile(
+@@ -1455,6 +1535,12 @@ def create_profile(
      # `hermes -p <profile> gateway start` supervises via `s6-svc -u` instead of a bare
      # process. No-op on host (systemd/launchd/windows unit generation handles lifecycle).
      _maybe_register_gateway_service(canon)

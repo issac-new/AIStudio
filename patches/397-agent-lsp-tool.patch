@@ -1,8 +1,8 @@
 diff --git a/agent/lsp/client.py b/agent/lsp/client.py
-index 8d268b4..4c0d766 100644
+index fb7bfe4010..aa1c17440d 100644
 --- a/agent/lsp/client.py
 +++ b/agent/lsp/client.py
-@@ -462,6 +462,14 @@ class LSPClient:
+@@ -484,6 +484,14 @@ class LSPClient:
                      raise
                  await asyncio.sleep(RETRY_BASE_DELAY * (2 ** attempt))
  
@@ -18,17 +18,19 @@ index 8d268b4..4c0d766 100644
          self._require_open(method)
          try:
 diff --git a/agent/lsp/manager.py b/agent/lsp/manager.py
-index fb4a718..90b2da6 100644
+index 75bf060483..cec605e60e 100644
 --- a/agent/lsp/manager.py
 +++ b/agent/lsp/manager.py
-@@ -21,12 +21,15 @@ import time
+@@ -21,7 +21,7 @@ import time
  from typing import Any, Callable, Dict, List, Optional, Tuple
  
  from agent.lsp import eventlog
 -from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, _diagnostic_key as _diag_key
-+from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, file_uri, _diagnostic_key as _diag_key
- from agent.lsp.servers import SERVERS, ServerContext, ServerDef, custom_servers, find_server_for_file, language_id_for
- from agent.lsp.workspace import clear_cache, resolve_workspace_for_file
++from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, _diagnostic_key as _diag_key, file_uri
+ from agent.lsp.servers import (
+     SERVERS, UNTRUSTED_SAFE_SERVERS, ServerContext, ServerDef, custom_servers, find_server_for_file, language_id_for,
+ )
+@@ -29,6 +29,9 @@ from agent.lsp.workspace import clear_cache, is_trusted_workspace, operator_work
  
  logger = logging.getLogger("agent.lsp.manager")
  
@@ -38,7 +40,7 @@ index fb4a718..90b2da6 100644
  DEFAULT_IDLE_TIMEOUT = 600  # seconds; servers idle for >10min get reaped
  _DELTA_BASELINE_CAP = 256  # per-file pre-write snapshots; paths never written again would otherwise live forever (#62950)
  MIN_IDLE_TIMEOUT = 30  # floor for config values; must exceed any per-op wait budget
-@@ -357,6 +360,116 @@ class LSPService:
+@@ -410,6 +413,116 @@ class LSPService:
              eventlog.log_clean(server_id, file_path)
          return diags
  
@@ -157,7 +159,7 @@ index fb4a718..90b2da6 100644
          abs_path = os.path.abspath(file_path)
 diff --git a/tests/tools/test_lsp_tool.py b/tests/tools/test_lsp_tool.py
 new file mode 100644
-index 0000000..5b634e8
+index 0000000000..bae2886cbb
 --- /dev/null
 +++ b/tests/tools/test_lsp_tool.py
 @@ -0,0 +1,296 @@
@@ -459,7 +461,7 @@ index 0000000..5b634e8
 +        assert "lsp" in flat or coding == "lsp"
 diff --git a/tools/lsp_tool.py b/tools/lsp_tool.py
 new file mode 100644
-index 0000000..69cfcbb
+index 0000000000..0a1ff6fb25
 --- /dev/null
 +++ b/tools/lsp_tool.py
 @@ -0,0 +1,257 @@
@@ -721,10 +723,10 @@ index 0000000..69cfcbb
 +    emoji="🧭",
 +)
 diff --git a/toolsets.py b/toolsets.py
-index 2890031..c5508e2 100644
+index b289d4f829..463f0689e7 100644
 --- a/toolsets.py
 +++ b/toolsets.py
-@@ -12,7 +12,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
+@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
  _HERMES_CORE_TOOLS = [
      "web_search", "web_extract",
      "terminal", "process_manage",
