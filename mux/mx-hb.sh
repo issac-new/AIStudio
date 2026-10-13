@@ -26,7 +26,9 @@ _agent_log_last_realwork_ts() { # <agent.log> → epoch（最近「真做」行�
   # （xiao 17:22 被催后回 579 字符 0 工具轮继续躺平）。用途：催办资格复位的严格
   # 判据（嘴炮不清零 nudged，再静默即再催——防"回话顶回"蒙混过关）。
   local line ts
-  line=$(grep -E "tool [a-z_]+ completed|API call #[2-9][0-9]* " "$1" 2>/dev/null | tail -1)
+  # API call #N 后随冒号非空格（实测 agent.log「API call #44: model=…」，尾随空格
+  # 形态零命中）；1[0-9]+ 段补 #10-19（≥2 的会话第二轮起）。
+  line=$(grep -E "tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9]" "$1" 2>/dev/null | tail -1)
   [[ -n "$line" ]] || { echo 0; return; }
   ts=$(printf '%s' "$line" | cut -c1-19)
   mxp_date_to_epoch "$ts"

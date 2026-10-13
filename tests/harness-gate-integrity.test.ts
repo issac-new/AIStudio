@@ -1045,9 +1045,10 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
-    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 4500：QGate 接线+安全条件对账
-    // +V8.23 空 body 校验/QGate 新鲜度入函数后体积增大，run18 复盘批，实测函数体 4323 字符）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,4500}?\n  \}/)
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 5000：QGate 接线+安全条件对账
+    // +V8.23 空 body 校验/QGate 新鲜度入函数后体积增大，run18 复盘批；2026-10-14 qgate
+    // 解析失败分支（记单不删）入函数后实测函数体 4648 字符，窗口随体增长上调）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,5000}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
     // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）
@@ -1281,9 +1282,11 @@ describe('㉔ 干预点四件（2026-10-09：拆卡巡检/PROGRESS 中间锚/骨
     expect(lib).toContain('MATRIX_THREAD_REQUIRE_MENTION=true')
     // ③根因注释在位（防后人误删：洞=thread_require_mention 默认关致多 bot 线程回声环）
     expect(lib).toContain('in_bot_thread 旁路')
-    // ④驱动侧唤醒路径提及全覆盖不回归：催办必带 m.mentions 第 4 参（两处调用面，在 scenario-lib；${_nmentions}/$_nmentions 两种拼写）
+    // ④驱动侧唤醒路径提及全覆盖不回归：催办必带 m.mentions 第 4 参（两处调用面，在 scenario-lib；
+    // 2026-10-13 分桶判活轮起第二处=按人 $_m（agent_mxid 逗号拼接），与聚合 ${_nmentions}
+    // 同为 mentions 载体——锚随调用面演化更新，两种形态都计）
     const scenLib = read(LIB)
-    const nudgeWithMentions = scenLib.match(/mx_send "\$\(load_token fanfan\)" "\$_nroom" "[^"]*" "\$\{?_nmentions\}?"/g)
+    const nudgeWithMentions = scenLib.match(/mx_send "\$\(load_token fanfan\)" "\$_nroom" "[^"]*" "\$(?:\{?_nmentions\}?|_m)"/g)
     expect(nudgeWithMentions!.length).toBeGreaterThanOrEqual(2)
   })
 })
@@ -1531,7 +1534,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 十四项')  // 2026-10-13 评测门禁三方同步加 ⑭——十三→十四（腾讯评测体系轮；原 run16 十二→十三）
+    expect(pre).toContain('prelaunch 十五项')  // 2026-10-13 run19 write_file 蛇足守门加 ⑮——十四→十五（⑭=腾讯评测体系轮；原 run16 十二→十三）
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 })
