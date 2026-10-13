@@ -1791,9 +1791,11 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   fi
   # §4.4-9 治理证据①（六文调研轮 A+B）：事故报告汇编导出（sessionId=本轮 RUN_ID，
   # 产品面 /api/incident/sessions/:id/report.md，17 要素+自治度对账 B 面）。
+  # run18 复盘根治：带 run 窗口参数（since=run_started_at/until=now）——产品侧按
+  # profiles/*/state.db 聚合窗口内真实会话（agent 会话不落 webui 主库的形态对齐）。
   # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口记单。
   GOV_TOK=$(studio_login)
-  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md" "$GOV_TOK"); then
+  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md?since=$(sget run_started_at)&until=$(date +%s)" "$GOV_TOK"); then
     printf '%s\n' "$GOV_IR" > "$EVID_DIR/incident-report.md"
     note "[audit] 事故报告汇编已导出（evidence/incident-report.md，17 要素）"
   else
