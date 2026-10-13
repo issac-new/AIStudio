@@ -621,7 +621,10 @@ uat_evidence_body 1790930955`, root)
     expect(scen).toContain('g5_pass_finalize()')
     expect(scen).toContain('wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan')
     expect(scen).toContain('G5 判词复用（本轮既有 PASS 结论行，不重派评审）')
-    expect(scen).toContain('G5_TS=$(( $(sget run_started_at) * 1000 ))')
+    // V8.23 纪律46：G5 判词窗基线=evidence_baseline（本轮开跑；lite 回落夹具源轮），
+    // 源轮旧卡免疫；复用口须条件调用 g5_pass_finalize（空 body 禁 finalize）
+    expect(scen).toContain('G5_TS=$(( $(evidence_baseline) * 1000 ))')
+    expect(scen).toContain('] && g5_pass_finalize; then')
   })
 
   it('D：relay 探测 15s/拉起确认 10s（90s+120s 旧节奏不得回归）', () => {
@@ -1042,10 +1045,14 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
-    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 3200：QGate 接线与安全条件对账（V8.11 F3）入函数后体积增大，2026-10-12）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,3200}?\n  \}/)
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 4500：QGate 接线+安全条件对账
+    // +V8.23 空 body 校验/QGate 新鲜度入函数后体积增大，run18 复盘批，实测函数体 4323 字符）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,4500}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
+    // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）
+    expect(fin![0]).toContain('评审卡 body 为空')
+    expect(fin![0]).toContain('return 1')
   })
 
   it('report_done 落键前硬跑 mx-report-audit（§5.7 收官判据②接线）', () => {

@@ -23,6 +23,18 @@ from pathlib import Path
 TRI = ('已修', '观察', '延后')
 GENERIC = ('director', 'monitor', 'harness', '导演', '监控')
 
+# run18 复盘 F10 根治：结构性缺陷类型禁自动归「观察」——自动归桶把闸键合规类/
+# 审计发现类与琐碎观察同桶，retro 的「待处置」信号被抹平（run18 实锤：31/32 全
+# 自动观察桶，F1-F4 级问题无差别降级）。此类键归「延后」桶并显式要求下轮前置
+# 人工处置（延后=三态合法词，语义=明确挂起待办，与「观察=无需动作」区分）。
+STRUCTURAL_TYPES = frozenset({
+    'g3-local-gate-missing', 'test-report-missing', 'gate-evidence-blocked',
+    'gate-bypass-blocked', 'gate-breaker-tripped', 'g5-review-record-missing',
+    'audit-finding', 'uat-push', 'qgate-evidence', 'qgate-stale',
+    'conclusion-gap', 'merge-conflict', 'acp-backend-delegate-log-missing',
+    'g5-ready-fail', 'g2-design-review-fail',
+})
+
 ap = argparse.ArgumentParser()
 # 2026-10-13 扩展（fix/lite-closeout）：ISSUE 键完全无 DISP 行时补观察桶行——纪律 28
 # 「无锚点处置一律降为观察或待处置」的机制兑现（run18 实锤：20 键零 DISP 全 FAIL；
@@ -81,11 +93,16 @@ n_created = 0
 for k in order:
     d = disp_for(k)
     if d is None:
-        # 2026-10-13 扩展：该 ISSUE 键完全无 DISP 行——补观察桶行（纪律 28 降不升；
-        # 幂等由 disp_for 为 None 时的本分支保证：已有行即不走此处）
+        # 2026-10-13 扩展：该 ISSUE 键完全无 DISP 行——补桶行（纪律 28 降不升；
+        # 幂等由 disp_for 为 None 时的本分支保证：已有行即不走此处）。
+        # run18 复盘 F10：结构性类型归「延后」（下轮前置人工处置），其余归「观察」。
         t, s = k.split('·', 1)
-        appendix.append(
-            f'DISP|{t}|{s}|观察（收尾链自动归桶：无人工处置在案——待人工复核升桶，纪律 28）')
+        if t in STRUCTURAL_TYPES:
+            appendix.append(
+                f'DISP|{t}|{s}|延后（结构性缺陷类别禁自动观察归桶——须下轮开跑前人工处置并带锚点回写，纪律 28/46）')
+        else:
+            appendix.append(
+                f'DISP|{t}|{s}|观察（收尾链自动归桶：无人工处置在案——待人工复核升桶，纪律 28）')
         n_created += 1
         continue
     if d.startswith(TRI):

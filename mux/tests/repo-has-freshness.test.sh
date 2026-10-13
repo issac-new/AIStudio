@@ -30,8 +30,13 @@ git -C "$DIRECTOR_CLONE" add -A && git -C "$DIRECTOR_CLONE" commit -qm "本轮�
 # 只建 remote-tracking ref：git branch -q origin/main 会造出名为 origin/main 的本地分支（语义混淆留脏 ref）
 git -C "$DIRECTOR_CLONE" update-ref refs/remotes/origin/main HEAD
 
-# 仅提取 repo_has 函数定义（不 source 全库——避免其初始化副作用）
+# 仅提取被测函数定义（不 source 全库——避免其初始化副作用）。
+# run18 复盘重构：repo_has 的基线解析抽为 evidence_baseline（lite 回落夹具源轮），
+# 两函数同提取；测试末补 lite 回落两例（夹具源基线可用回落/不可读回落本轮）。
+sed -n '/^evidence_baseline()/,/^}/p' "$LIB" > "$T/eb.fn"
 sed -n '/^repo_has()/,/^}/p' "$LIB" > "$T/repo_has.fn"
+# shellcheck disable=SC1090
+source "$T/eb.fn"
 # shellcheck disable=SC1090
 source "$T/repo_has.fn"
 
@@ -50,4 +55,23 @@ rm -f "$STATE"
 repo_has "docs/analysis/AN-OLD-analysis.md" >/dev/null 2>&1; t "无 run_started_at 键=旧语义放行（兼容）" 0 $?
 grep -q "跳过新鲜度窗口" "$SCEN_LOG" && echo "✓ 兼容路径留观察日志" || { echo "✗ 兼容路径未留日志"; fail=1; }
 
-if [ "$fail" = 0 ]; then echo "== repo_has 时间窗四例全过 =="; exit 0; else echo "== FAIL =="; exit 1; fi
+# ── lite 回落两例（evidence_baseline：run18 复盘抽取后的新行为）──
+# 注意 STATE 写序：先重写基线行，再 append lite 键（> 会整档重写，后写 lite 键防抹除）
+export SIM_ROOT="$T/sim"
+FIXRUN="$SIM_ROOT/runs/fixtures-src"
+mkdir -p "$FIXRUN"
+# 例 A：夹具源基线=1599999999（早于旧稿提交 1600000000 一秒——旧稿对夹具基线「新鲜」，
+# 构造反例须更早：用 1600000001 让旧稿 1600000000 < 基线 → 拒；新稿（NOW 时刻）过）
+echo "run_started_at=$((NOW - 60))" > "$STATE"
+echo "lite_round=1" >> "$STATE"
+echo "lite_fixtures_from=fixtures-src" >> "$STATE"
+echo "run_started_at=1600000001" > "$FIXRUN/state.env"
+repo_has "docs/analysis/AN-OLD-analysis.md" >/dev/null 2>&1; t "lite 夹具源基线可用：早于夹具基线的旧稿拒" 1 $?
+repo_has "docs/analysis/AN-NEW-analysis.md" >/dev/null 2>&1; t "lite 夹具源基线可用：本轮新稿过" 0 $?
+# 例 B：夹具源 state 不可读 → 回落本轮基线（旧稿 1600000000 < NOW-60 仍拒）
+rm -f "$FIXRUN/state.env"
+repo_has "docs/analysis/AN-OLD-analysis.md" >/dev/null 2>&1; t "lite 夹具源不可读：回落本轮基线旧稿拒" 1 $?
+# 反向确认 lite 键确实在 STATE 生效（防再犯写序抹键的假阳性）
+grep -q '^lite_round=1' "$STATE" && echo "✓ lite 键在场（写序无抹除）" || { echo "✗ lite 键被抹（测试写序 bug）"; fail=1; }
+
+if [ "$fail" = 0 ]; then echo "== repo_has 时间窗八例全过（含 lite 回落两例）=="; exit 0; else echo "== FAIL =="; exit 1; fi
