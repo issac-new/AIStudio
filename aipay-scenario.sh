@@ -781,7 +781,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       SGID=$(sget security_rgid)
       if [[ -z "$SGID" ]]; then
         SGID=$(kanban_create_as secops security_review "${RFD_ID} 安全评审（涉敏=${_sens:-未标注}）" \
-          "涉敏需求安全评审单（V8.17 设计面口径）：密钥管理/验签链路/数据落库字段/回调来源校验四项——对着概设与系分稿判设计完备性。代码级已挂账缺陷不判 FAIL，走 SECURITY-COND 条目随 G5 复核。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
+          "涉敏需求安全评审单（V8.17 设计面口径）：密钥管理/验签链路/数据落库字段/回调来源校验四项——对着概设与系分稿判设计完备性；金融双标准对照锚（V8.23）：个人金融信息按 JR/T 0171-2020 判敏级（支付鉴权类=C3，全生命周期管控），等保面按 JR/T 0071（定级/备案/整改）核对声明完备性。代码级已挂账缺陷不判 FAIL，走 SECURITY-COND 条目随 G5 复核。结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项)。" secops-audit-trail secops-auditor)
         sset security_rgid "$SGID"
         dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。
 评审口径（V8.17 裁决 A，run15 复盘 F3——正本 V8.17 纪律 38 落条款）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
