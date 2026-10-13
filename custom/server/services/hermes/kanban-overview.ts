@@ -144,7 +144,11 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     const dbPath = board === 'default'
       ? fastMainDb(home)
       : (() => { const d = fastBoardsDir(home); return d ? join(d, board, 'kanban.db') : null })()
-    if (!dbPath || !existsSync(dbPath)) return board === 'default' ? [] : null
+    // 主库缺失一律回落 CLI（2026-10-14 回归轮 D2 根治）：default 板曾在此返回权威空
+    // 数组，与 listBoardsFast 的「缺失→null→回落 CLI」不一致——当 HERMES_KANBAN_HOME
+    // 与 HERMES_HOME 分叉（或新 home 首写前）时，boards 计数走 CLI 见 N、任务快道见
+    // 空，泳道渲染 0 条而板计数 N，静默数据不可见。缺失与读失败同语义：null 回落。
+    if (!dbPath || !existsSync(dbPath)) return null
     return queryBoardDb(dbPath, db => {
       const tasks: any[] = db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board }))
       // 链接表读取独立降级：缺表/损坏只丢 parents/children（回 CLI 老路径也无此数据），
