@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 tests/fixtures/v84-gates/
 .claude/
+scratch/
