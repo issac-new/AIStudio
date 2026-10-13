@@ -50,9 +50,9 @@ M1 已覆盖：S0+S1 断言双轨（机械优先语义兜底=启示⑥）、期�
 
 测试：`__tests__/eval-metrics.test.ts`（纯函数 19 例）+ `__tests__/eval-v2.test.ts`（校验/提取/回流/对比 11 例）。验证账：eval 域 90/90 绿；全量 vitest 与干净基线逐项对账一致（18 文件/68 败为借用依赖树的既有环境态，与本轮无关，双跑实证）。
 
-## 5. 边界（本轮不做，如实挂账）
+## 5. 边界（2026-10-13 挂账清偿轮后更新）
 
-- **Skill 三段安全治理**（文章 §09：注册扫描→执行拦截→输出审核）：现有 toolresultguard/secguidance/codesec 各管一段但无 Skill 生命周期视角，属独立产品轮，不在本次范围。
-- **live 触发评测**：维持 M1 Non-goal（回放判分零 agent 增量调用）；TTFT/响应分档/QPS 压测三缺口需 live 打点或压测轮补。
-- **costUsd 取数**：成本维仍缺席（evidence 无价格表），等 runtime 计费面。
-- **判定端多裁判**：单后端单模型维持，多裁判轮换后置。
+- ~~**Skill 三段安全治理**~~：**overlay 核心已落**（custom/server/skillgov/：skill-scan.ts 注册扫描+账本+REST、skill-guard-hook.ts 执行拦截/输出审核挂工具瀑布、生成器产物即时扫描；SKILLGOV_ENFORCE=1 执法，缺省零行为变化）。剩余面=上游 hermes/ekko 技能导入三入口与内置注入器的扫描接线（需 patch 轮）、扫描面产品 UI——列后续轮。
+- **live 触发评测**：TTFT 接收端已通（trace first_token_ms/ttft_ms → ttftMs → 门禁实测化，有数据即判）；agent 侧首 token 打点与 QPS 容量压测仍属后续（线上 627 份轨迹实态=未打点，如实列证据缺口）。回放判分零 agent 增量调用维持。
+- ~~**costUsd 取数**~~：**已接线**（tokens 域价目表单一事实源：token 分面×idle/peak 中值；未收录模型缺席不造数；币种随表声明）。
+- ~~**判定端多裁判**~~：**已落**（EVAL_JUDGE_MODELS 逗号清单：逐模型判定缓存隔离→τ 三段计票严格过半多数决，平票 unknown；单模型 fail-soft；全败才判离线；缺省单模型行为不变）。
