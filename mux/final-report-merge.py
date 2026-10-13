@@ -762,10 +762,24 @@ def main():
 
     # 名词速查行（方案 §5.4 报告语言三规矩②「报告头部带名词速查一行」——2026-10-12
     # 补齐缺件）：正文高频内部缩写在第一屏前载定义，读者无需翻查。
-    GLOSS_LINE = ('<p style="margin:0 0 10px;font-size:12.5px;color:#64748b;line-height:1.8">'
-                  '名词速查：G1-G6=六道关卡 · 判词=结构化结论行 · AC=验收标准 · UAT=用户验收测试 · '
-                  'RACI=责任分配矩阵 · ISSUE/DISP=问题登记行/处置结论行 · WIP=在制品</p>')
-    part1 = GLOSS_LINE + part1
+    # 头部秩序（用户 2026-10-13 裁定）：名词速查不再在此注入第二份——单一事实源=机器 hero 超集行（mx-report-gen hero-terms）
+
+    # ── 头部秩序（用户 2026-10-13 裁定）：第 0 章前三重标题/双速查/PART2 工程横幅收敛为单流 ──
+    # ①机器 hero（唯一主标题：报告名+统计 chips+治理指标+名词速查超集+阶段条）提为主区首元素；
+    # ②PART1 自带 h1 降级为节标题并剥「PART 1 · 一页读懂（说人话版）」脚手架前缀（终稿态规则）；
+    # ③PART 2 横幅废除（割裂标题流；其信息量 hero chips 已承载）。
+    import re as _re_hdr
+    _m_hero = _re_hdr.search(r'<header class="hero">.*?</header>', machine_main, _re_hdr.S)
+    hero_html = ''
+    if _m_hero:
+        hero_html = _m_hero.group(0)
+        machine_main = machine_main[:_m_hero.start()] + machine_main[_m_hero.end():]
+    def _demote_h1(m):
+        inner = _re_hdr.sub(r'^\s*PART\s*1\s*·\s*一页读懂（说人话版）\s*', '', m.group(1))
+        return ('<h2 class="part1-hd" style="font-size:19px;margin:18px 0 6px;color:#0f172a">'
+                '<span style="font-size:12px;color:#64748b;font-weight:600;letter-spacing:.08em">本轮导读</span><br>'
+                + inner + '</h2>')
+    part1 = _re_hdr.sub(r'<h1[^>]*>(.*?)</h1>', _demote_h1, part1, count=1, flags=_re_hdr.S)
 
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -777,12 +791,9 @@ def main():
 <div class="layout">
 {machine_nav}
 <main class="main">
-<div class="guide" id="part1-top" style="background:var(--surface-2);padding:26px 6px 6px">
+{hero_html}
+<div class="guide" id="part1-top" style="background:var(--surface-2);padding:10px 6px 6px">
 {part1}
-</div>
-<div id="part2" style="margin:40px 0 8px;padding:18px 22px;background:var(--grad-hero);color:#fff;border-radius:8px 8px 0 0">
-<h1 style="font-size:20px;margin:0">PART 2 · 26 步明细与全部证据（机器逐步报告全文）</h1>
-<p style="font-size:12.5px;margin:6px 0 0;opacity:.85">由 mx-report-gen.py 生成，此处原文嵌入——逐步把关行、闸门仪表盘、六域审计、问题单明细（DISP {n_disp} 条全处置）、交付物实物核对本章自明。</p>
 </div>
 {machine_main}
 </main>
