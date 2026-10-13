@@ -321,11 +321,14 @@ export function detectDeliveryAnchor(snap: ClusterSnapshot, opts: DetectOptions 
     if (!br) continue
     const startedMs = epoch(c.started_at)
     const done = String(c.status ?? '').toLowerCase() === 'done' || String(c.status ?? '').toLowerCase() === 'completed'
-    // B 锚可反查（done 卡）：分支在 refs/heads 或 refs/remotes 任一存在
+    // B 锚可反查（done 卡）：分支在 refs/heads 或 refs/remotes 任一存在。
+    // rev-parse --verify -q 对缺失 ref 以退出码 1 结束——execFileSync 会抛异常
+    // 而非返回空串，`a() || b()` 形态下 b 永不可达（remote-only 分支被误报伪锚）。
+    const refExists = (ref: string): boolean => {
+      try { return git(['rev-parse', '--verify', '-q', ref]).trim() !== '' } catch { return false }
+    }
     if (done) {
-      try {
-        git(['rev-parse', '--verify', '-q', `refs/heads/${br}`]) || git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${br}`])
-      } catch {
+      if (!refExists(`refs/heads/${br}`) && !refExists(`refs/remotes/origin/${br}`)) {
         out.push({
           detector: 'delivery.anchor-missing', subject: `card:${c.id}`,
           severity: 'warn',

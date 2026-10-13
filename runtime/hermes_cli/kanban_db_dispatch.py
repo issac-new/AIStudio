@@ -2445,7 +2445,7 @@ def _resolve_board_concurrency(board: Optional[str]) -> Optional[int]:
     return None if n <= 0 else n
 
 
-def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
+def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
     gate). Otherwise ``None`` so an unassigned shared-board card is never
@@ -2454,7 +2454,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
     as nonspawnable."""
     name = (default_assignee or "").strip() or None
     if name:
-        profile_exists = _profile_exists_fn()
+        profile_exists = _profile_exists_fn(board)
         if profile_exists is not None and not profile_exists(name):
             return None
     return name
@@ -2552,7 +2552,7 @@ def _dispatch_once_locked(
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
         board_cap=board_cap, board_running=board_running,
     )
-    default_assignee = _resolve_default_assignee(default_assignee)
+    default_assignee = _resolve_default_assignee(default_assignee, board)
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:

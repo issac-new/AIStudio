@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
-index 1bb3044bfa..be56fca4b3 100644
+index 1bb3044..3b06235 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
 @@ -1664,11 +1664,71 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
@@ -124,6 +124,24 @@ index 1bb3044bfa..be56fca4b3 100644
      running = per_profile_running or {}
      for row in review_rows:
          assignee = row["assignee"]
+@@ -2307,7 +2373,7 @@ def _any_spawnable_review(
+     return False
+ 
+ 
+-def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
++def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
+     """``kanban.default_assignee`` when it names a real profile this home may
+     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
+     gate). Otherwise ``None`` so an unassigned shared-board card is never
+@@ -2316,7 +2382,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
+     as nonspawnable."""
+     name = (default_assignee or "").strip() or None
+     if name:
+-        profile_exists = _profile_exists_fn()
++        profile_exists = _profile_exists_fn(board)
+         if profile_exists is not None and not profile_exists(name):
+             return None
+     return name
 @@ -2388,6 +2454,7 @@ def _dispatch_once_locked(
      if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
          conn, review_rows,
@@ -132,6 +150,16 @@ index 1bb3044bfa..be56fca4b3 100644
      ):
          ready_budget = max(spawn_budget - 1, 0)
      lane_kwargs: dict[str, Any] = dict(
+@@ -2395,7 +2462,7 @@ def _dispatch_once_locked(
+         failure_limit=failure_limit, spawn_fn=spawn_fn,
+         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
+     )
+-    default_assignee = _resolve_default_assignee(default_assignee)
++    default_assignee = _resolve_default_assignee(default_assignee, board)
+     spawned = 0
+     for row in ready_rows:
+         if ready_budget is not None and spawned >= ready_budget:
+
 diff --git a/tests/hermes_cli/test_board_team_fence.py b/tests/hermes_cli/test_board_team_fence.py
 new file mode 100644
 index 0000000000..f4628a1d3d
