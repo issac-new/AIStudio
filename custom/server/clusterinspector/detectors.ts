@@ -164,14 +164,18 @@ export function detectTaskAgentSilence(snap: ClusterSnapshot, opts: DetectOption
   for (const t of snap.profiles.tails) {
     const hit = byProfile.get(t.profile)
     if (!hit) continue
-    const actTs = t.workTsMs && t.workTsMs > 0 ? t.workTsMs : t.mtimeMs // 工作行优先；mtime 被 reaction 噪音刷新会假活跃（run14 实锤）
+    // 真做判据优先（run19 上移）：静默按 realWorkTsMs 判——嘴炮回合（单轮调用回话）
+    // 不清静默账，被催后只回话的档案继续计入静默；无真做行退回 workTsMs（兼容旧日志）。
+    const actTs = t.realWorkTsMs && t.realWorkTsMs > 0
+      ? t.realWorkTsMs
+      : (t.workTsMs && t.workTsMs > 0 ? t.workTsMs : t.mtimeMs) // 工作行优先；mtime 被 reaction 噪音刷新会假活跃（run14 实锤）
     const silent = now - actTs
     if (silent > quiet) {
       out.push({
         detector: 'task.agent-silent', subject: `profile:${t.profile}`,
         severity: 'warn',
-        summary: `在办任务但档案静默（按工作行判定活性）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）已静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态）${diffContext(snap, now, t.profile)}`,
-        detail: { cards: hit.cards, quietMs: quiet },
+        summary: `在办任务但档案真做停摆（按真做行判定活性：工具轮或多轮调用）：${t.profile} 持有 ${hit.cards.length} 张在办卡（${hit.cards.slice(0, 3).join('、')}${hit.cards.length > 3 ? '…' : ''}）真做静默 ${Math.round(silent / 1000)}s（日志尾无错误态——人走型停摆形态；若期间只有单轮回话=嘴炮顶回，未清静默账）${diffContext(snap, now, t.profile)}`,
+        detail: { cards: hit.cards, quietMs: quiet, realWorkTsMs: t.realWorkTsMs },
       })
     }
   }
