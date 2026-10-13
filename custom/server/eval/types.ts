@@ -17,6 +17,22 @@ export type AssertionKind = 'result' | 'trajectory' | 'risk'
 /** 二元判词。unknown 是一等公民：Rubric 定义不充分的诊断信号（美团 unknown 占比纪律）。 */
 export type Binary = 'yes' | 'no' | 'unknown'
 
+/**
+ * 链路六环节归属（腾讯评测体系：意图/工具/参数/证据/状态/表达，任一环出问题单独报警）。
+ * 断言可选标注 link → 聚合按环节分段出通过率，环节级独立小门。
+ */
+export type EvalLink = 'intent' | 'tool_choice' | 'params' | 'evidence' | 'state' | 'expression'
+
+/** 异常场景六类（腾讯：测试集不能只放理想问题——覆盖模糊意图/缺参数/权限不足/工具超时/知识冲突/用户改口）。 */
+export type ExceptionType =
+  | 'none'
+  | 'ambiguous_intent'
+  | 'missing_param'
+  | 'insufficient_permission'
+  | 'tool_timeout'
+  | 'knowledge_conflict'
+  | 'user_rephrase'
+
 export type VerdictSource = 's0' | 's1' | 'human' | 's0+s1'
 
 /** S0 确定性规则（零判定费）。regex 对证据全文；threshold 对 efficiency 指标。 */
@@ -41,6 +57,8 @@ export interface RubricAssertion {
   text: string
   expect: 'yes' | 'no'
   kind: AssertionKind
+  /** 链路六环节归属（可选；标注后聚合按环节分段出独立通过率）。 */
+  link?: EvalLink
   s0?: S0Rule
 }
 
@@ -50,12 +68,26 @@ export interface OutcomeCheckDecl {
   params: Record<string, string>
 }
 
+/** 坏例回流来源（腾讯：线上坏例转回归样本防回潮；回流任务带溯源，不匿名混入）。 */
+export interface ReflowOrigin {
+  runId: string
+  taskId: string
+  sampleIdx?: number
+  at: number
+}
+
 export interface EvalTask {
   id: string
   problem: string
   expectedBehavior: string
   rubric: RubricAssertion[]
   outcome?: OutcomeCheckDecl
+  /** 异常场景类目（缺省 'none'=理想问题；标注后按类目分桶出报告）。 */
+  exceptionType?: ExceptionType
+  /** 期望工具调用序列（工具名，按序）——Tool Head Accuracy 与轨迹编辑距离的参照路径。 */
+  expectedToolCalls?: string[]
+  /** 回流溯源（由坏例回流端点写入；手工建集不填）。 */
+  origin?: ReflowOrigin
 }
 
 export interface EvalSet {
@@ -101,6 +133,13 @@ export interface AttemptEfficiency {
   durationMs?: number
 }
 
+/** 实际工具调用序列（tool_span 按出现序折叠，只留名字与成败——过程双指标数据源）。 */
+export interface ToolCallRecord {
+  name: string
+  ok: boolean
+  durationMs?: number
+}
+
 export interface Attempt {
   taskId: string
   sampleIdx: number
@@ -108,6 +147,7 @@ export interface Attempt {
   verdicts: AttemptVerdict[]
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: AttemptEfficiency
+  toolCalls?: ToolCallRecord[]
   judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean }
   passed?: boolean
   judgedAt?: number
@@ -139,6 +179,23 @@ export interface RunAggregates {
   judgeOnline: boolean
   /** 校准度（六文调研轮 G）：消费判词 p 留痕的信心 vs 命中分析；无 p 判词时 samples=0 如实缺席。 */
   calibration?: import('./calibration').CalibrationSummary
+  /** 链路六环节分段（腾讯启示②：意图/工具/参数/证据/状态/表达各设阈值独立报警）；无 link 标注时缺省。 */
+  byLink?: Partial<Record<EvalLink, { total: number; passed: number; unknown: number; passRate: number | null }>>
+  /** 异常场景分桶（腾讯 §3：异常覆盖报告）；全 'none' 时缺省不产噪。 */
+  byException?: Array<{ type: ExceptionType; taskCount: number; passAtK: number | null }>
+  /** 过程双指标（腾讯启示③：结果分之外的第二道闸——抓碰巧答对与绕冤枉路）；无任务声明 expectedToolCalls 时缺省。 */
+  processMetrics?: {
+    /** 工具选择正确率：LCS(期望,实际)/|期望| 均值，越高越好。 */
+    toolHeadAccuracy: number | null
+    /** 轨迹匹配分（文章原口径=编辑距离/最优路径长度）：均值，越低越好（0=零绕路）。 */
+    trajectoryMatchScore: number | null
+    /** 参与对比的 attempt 数（有期望序列且有实际序列证据）。 */
+    attemptsCompared: number
+  }
+  /** 六维度量分面（信通院《云上 Agent 基准度量模型》）：未采集维 value=null 立账不造数。 */
+  sixDimensions?: import('./metrics').SixDimensionRow[]
+  /** 发布门禁（腾讯启示⑦：上线就绪从主观判断转成可机械执行的 gate）；证据缺口项如实 no_data。 */
+  releaseGate?: import('./releaseGate').ReleaseGateSummary
 }
 
 export interface EvalRunTarget {
@@ -196,6 +253,8 @@ export interface Evidence {
   transcript?: string
   efficiency?: AttemptEfficiency
   outcomeDetail?: string
+  /** 工具调用序列（过程双指标数据源；无工具调用的证据可为空数组）。 */
+  toolCalls?: ToolCallRecord[]
 }
 
 export interface EvalConfig {

@@ -4,8 +4,12 @@
 //   pass@k = 任一 sample 通过即计该任务（k 次采样统计基线，单跑不作门禁）。
 //   Risk 一票否决 = 任一 attempt 任一 risk 断言 value≠expect 且非 unknown → 整 run FAIL。
 //   unknownRatio > 阈值 → rubricDrilldownHint（Rubric 定义不充分的诊断信号）。
+//   腾讯评测体系轮增面：byLink 六环节分段 / byException 异常分桶 / processMetrics
+//   过程双指标 / releaseGate 发布门禁 / sixDimensions 六维分面（均无数据时缺省）。
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
 import { calibrationReport } from './calibration'
+import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf } from './metrics'
+import { evaluateReleaseGate, loadReleaseGateConfig } from './releaseGate'
 
 /** attempt 是否通过（断言全对 + outcome 通过）。 */
 export function attemptPassed(task: EvalTask, attempt: Attempt): boolean {
@@ -124,8 +128,87 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     judgeOnline,
     // 校准度（六文调研轮 G）：判词有 p 留痕即生成；全无 p 时 samples=0 如实缺席（不造数）
     calibration: calibrationReport(set, run.attempts),
+    // 腾讯评测体系轮：六环节分段 / 异常分桶 / 过程双指标（各自在无标注/无数据时缺省）
+    byLink: byLinkOf(set, run),
+    byException: byExceptionOf(set, run),
+    processMetrics: processMetricsOf(set, run),
   }
+
+  // 发布门禁（六维分面的 performance 读数复用其 P99/均值比，先算门禁再建分面）
+  const gate = evaluateReleaseGate(run.attempts, loadReleaseGateConfig())
+  run.aggregates.releaseGate = gate
+  run.aggregates.sixDimensions = sixDimensionsOf(run, gate.numeric.p99Ratio)
 
   // Risk 一票否决：整 run FAIL（status 保留原值，passed 语义在 aggregates.riskVeto）
   return run
+}
+
+// ---------- A/B 对比（腾讯启示⑩：模型/Prompt/版本切换必须内建对比） ----------
+
+export interface RunCompareRow {
+  taskId: string
+  base: 'pass' | 'fail' | null
+  head: 'pass' | 'fail' | null
+  flip: 'improved' | 'regressed' | 'same' | 'missing_base' | 'missing_head'
+}
+
+export interface RunCompare {
+  setId: string
+  base: { runId: string; target: EvalRun['target']; createdAt: number }
+  head: { runId: string; target: EvalRun['target']; createdAt: number }
+  perTask: RunCompareRow[]
+  /** head − base（null=任一侧缺读数，不造数）。 */
+  deltas: {
+    passAt1: number | null
+    passAtK: number | null
+    unknownRatio: number | null
+    avgTokens: number | null
+    avgDurationMs: number | null
+    toolHeadAccuracy: number | null
+    trajectoryMatchScore: number | null
+  }
+}
+
+function taskStateOf(run: EvalRun, taskId: string): 'pass' | 'fail' | null {
+  const samples = run.attempts.filter((a) => a.taskId === taskId)
+  if (samples.length === 0) return null
+  return samples.some((a) => a.passed) ? 'pass' : 'fail'
+}
+
+function delta(head: number | null | undefined, base: number | null | undefined): number | null {
+  if (head === null || head === undefined || base === null || base === undefined) return null
+  return head - base
+}
+
+/** 同集两 run 对比（基准 base vs 对照 head）：逐任务翻转表 + 关键读数 delta。 */
+export function compareRuns(set: EvalSet, base: EvalRun, head: EvalRun): RunCompare {
+  const perTask: RunCompareRow[] = set.tasks.map((t) => {
+    const b = taskStateOf(base, t.id)
+    const h = taskStateOf(head, t.id)
+    const flip: RunCompareRow['flip'] =
+      b === null && h === null ? 'same'
+        : b === null ? 'missing_base'
+          : h === null ? 'missing_head'
+            : b === h ? 'same'
+              : b === 'fail' && h === 'pass' ? 'improved'
+                : 'regressed'
+    return { taskId: t.id, base: b, head: h, flip }
+  })
+  const bAgg = base.aggregates
+  const hAgg = head.aggregates
+  return {
+    setId: set.id,
+    base: { runId: base.id, target: base.target, createdAt: base.createdAt },
+    head: { runId: head.id, target: head.target, createdAt: head.createdAt },
+    perTask,
+    deltas: {
+      passAt1: delta(hAgg.passAt1, bAgg.passAt1),
+      passAtK: delta(hAgg.passAtK, bAgg.passAtK),
+      unknownRatio: delta(hAgg.unknownRatio, bAgg.unknownRatio),
+      avgTokens: delta(hAgg.byLayer.efficiency.avgTokens, bAgg.byLayer.efficiency.avgTokens),
+      avgDurationMs: delta(hAgg.byLayer.efficiency.avgDurationMs, bAgg.byLayer.efficiency.avgDurationMs),
+      toolHeadAccuracy: delta(hAgg.processMetrics?.toolHeadAccuracy, bAgg.processMetrics?.toolHeadAccuracy),
+      trajectoryMatchScore: delta(hAgg.processMetrics?.trajectoryMatchScore, bAgg.processMetrics?.trajectoryMatchScore),
+    },
+  }
 }
