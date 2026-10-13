@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十四项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步）。
+# mx-prelaunch-check.sh — 开跑前十五项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -77,5 +77,12 @@ ck "⑬ 独立审批环可启动" "bash -n '$HERE/mux/mx-approval-proxy.sh' && g
 #     步 20 模板↔产物双向同步纪律的评测面落地；守门=tests/eval-metrics-template-sync.test.ts）
 ck "⑭ 评测门禁三方同步" "grep -q '评测与运行时指标' '$HERE/mux/templates-pending/test-report.md' && grep -q 'EVAL_GATE_TOOL_SUCCESS_MIN' '$HERE/mux/spec-params.env' && grep -q '评测节在场' '$HERE/mux/mx-report-gen.py'" "test-report 模板/spec-params.env/mx-report-gen.py 三处评测面漂移——按 templates-pending/README.md「评测指标节」四同步位对齐（锚勘误 2026-10-13：生成器锚=评测节在场，与 eval-metrics-template-sync.test.ts 同源）"
 
+# ⑮ 运行时树 write_file 链路健康（run19 实锤：宿主树手工部署 Action Fusion 时
+#     画蛇添足加 local_config= 实参，撞 _create_configured_env 签名 TypeError——
+#     chen/fanfan/hu/xiao 全员 write_file 报错被迫 execute_code 绕行，SIM 树 15:52
+#     快照宿主 dirty 态被带入。正本=overlay patches/613 无此行；本检查钉「运行时
+#     树无蛇足行」——手工部署再抄歪即起跑前红，不靠人眼）。
+ck "⑮ 运行时树 write_file 无蛇足参数" "! grep -q 'local_config=' '$SR/hermes-agent-src/tools/file_tools.py'" "git -C 宿主与 SIM 两树的 tools/file_tools.py 删 local_config= 实参行（正本=overlay patches/613-agent-action-fusion-then-run.patch 无此行；含语义差异：该行默认 persistent=False，lifecycle 内部默认 True，删行即恢复正本语义）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十四项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十五项）" || { echo "有红项——修复后再跑"; exit 1; }
