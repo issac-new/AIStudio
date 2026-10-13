@@ -15,7 +15,7 @@ delivery 门禁灯帧（R29/P15）= {步 23}：payload['delivery']['frames'] ≥
     exec 项：幂等/下单执行输出件 ≥1（实跑输出原文，禁手抄）；
     frames 项：下单流程帧 ≥2 张（真实产品 UI 前后帧；交付物无 UI 面〔逻辑层 SDK〕
     按 §5.6 采集纪律⑩ 登记降级——issue 在位 product-outcome-missing 族即降级不 FAIL）。
-分母 = 15（5+3+3+1+1+2）；分子 = 达标项数。禁"任一载荷键在位即计"。
+分母 = 15（5+3+3+1+1+2）；分子 = 达标项数。禁「任一载荷键在位即计」。
 
 消费方：mx-report-gen.py hero 统计「全量呈现覆盖」、mx-report-audit.py 查 8。
 改任一端，tests/harness-gate-integrity.test.ts ⑫ 当场失败。
