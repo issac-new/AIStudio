@@ -1,4 +1,4 @@
-# run17 前置清单（run16 复盘轮产出，2026-10-13）
+# 下一轮前置清单（run16 复盘轮产出，2026-10-13；编号勘误：lite ACP 验证轮已以 run18 号位收官——runs/20261013-v8-run18-lite-acp，final-report+治理归档在 main 6a180c0。本清单适用于下一个新开轮次（全量轮优先））
 
 > 一句话：run16 的六闸与 UAT 真实通过，但报告证据面曾因四个单点缺陷整链失真——本清单把复盘修复件与 V8.20/V8.21 生效项汇总为 run17 开跑前的核对面。核对责任=开跑操作者；全绿才执行 mx-prelaunch-check。
 
@@ -11,11 +11,12 @@
 | 方案 V8.21 修订 | overlay fix/run16-retro-plan | 8f2be52 | 纪律 44/45+红线①结构性锚定+§5.7 基线回填+R16 |
 | 采集端登录壳页根治 | simharness（同分支追加提交） | 见 git log | r18-frames.mjs relaunchLogin+壳页签名两处 |
 
-## 二、run17 形态与种子
+## 二、轮次形态与模板/口径现状（2026-10-13 深夜更新）
 
-- 建议形态：先跑 lite 轮（runs/20261012-v8-run17-lite-acp 目录已在——ACP 后端实跑轮，待 run16 收官即启动，本复盘已收官）。种子：`bash mux/mx-lite-seed.sh --to 20261012-v8-run17-lite-acp --from 20261012-v8-run16`；夹具闸键时刻自源轮 state.env 真值（g1g2_fixture=1 分带呈现）。
-- 全量轮紧随 lite 验证后：RFD 不变则为回归全量；换需求按 §3.2 换轮声明。
-- V8.20 §5.8 环节准入准出 run17 起生效：首跑红项=口径变更信号（正则口径随首跑校准），不是质量退化——按 §5.8 生效口径处置，禁回退断言。
+- lite ACP 验证轮已以 **run18** 号位收官（RESULT exit=0 上 origin 实证，复盘见记忆/治理归档 6a180c0）——run17 号位空缺不再补用，下一轮顺延编号。
+- V8.20 §5.8 已对 run≥17 生效（生成器 _m_runno 门控）——run18 已按新口径出报告；其红项=口径变更校准信号（V2 对 run16 工件预校准底表：76 项中 34 未中，明细在 fix/run16-report-truth 提交说明与本文末附表）。处置=按 §5.8 生效口径判读，禁回退断言。
+- **八模板 V8.20 增厚层已晋升中央仓**（origin/main 314d669：freeze/design/schedule/test-report/release-plan/acceptance/audit-opinion/retrospective）+驱动生成段（步 7/21/23/24）与派发词（步 13/17/19）字段提示已同步——下一轮工件产出面齐备，34 项底表中模板依赖项预期转绿。
+- 种子（如再跑 lite）：`bash mux/mx-lite-seed.sh --to <新轮> --from 20261012-v8-run16`；夹具闸键时刻自源轮真值（g1g2_fixture=1 分带呈现）。
 
 ## 三、新防线生效核对（本轮复盘新增，开跑前逐条在场）
 
@@ -28,9 +29,9 @@
 7. 采集端登录自愈：r18-frames.mjs relaunchLogin（坏页重试前重拉 token）+登录壳页签名（连接你的运行时/Connect your runtime）。
 8. prelaunch ⑪ 上轮注册锚=20261012-v8-run16（PART1_BY_RUN 已注册，11b6aad）。
 
-## 四、run17 观察项（run16 挂账，不阻断开跑）
+## 四、下一轮观察项（run16 挂账，不阻断开跑）
 
-1. **采集链登录态丢失的服务端根因**：采集端已加自愈与签名，但「studio 为何把有效会话弹回 /login」未定因（17:40-17:55 采集停滞窗口与网关 fetch 挂起/重启时段重叠）——run17 若复现，按 mx-report-audit 结构性红线 FAIL 现场取证 studio 日志。
+1. **看板路由弹登录页根因（P-Board401Logout，已入产品 backlog §八）**：run16 期间 /app/board 系拍摄位 26 帧 100% 落登录页（按路由完美二分），客户端机制锚=本地 BFF 401→triggerAuthRecheck 清会话跳登录（upstream client.ts:283→172）；**赛后两次现场实验不复现**（单发登录/同 deviceId 重登风暴均正常——诊断脚本 scratch/board401-*.mjs 留档可重跑），run16 时窗服务端日志已轮转不可回查——下一轮若复现，采集端 relaunchLogin 自愈+审计 md5 红线会当场拦下并留 .bad.txt 侧车，顺藤取证 studio/gateway 日志 401 端点。
 2. **悬挂 DISP 台账卫生**：run16 有 11-18 键 DISP 无 ISSUE 配对（监控代行修复链记录形态）——纪律 28 悬挂 DISP 判台账卫生缺陷，监控侧记单时同步补 ISSUE 行可根治。
 3. **完备性检查分支口径**：原始需求文档 RFD-001-payment-cashier.md 不在 origin/main（派发词引用它）、测试报告在 integration 分支——完备性检查宜区分 main/integration 两口径，避免「缺件」误报（记档，低优先）。
 4. **首过率水位**：run16 4/6，G2/G5 各一轮低于 5/6 水位；再一轮低于即触发 §5.8.4 该环节准入自动加严一档（由当轮复盘指定加严项）。
