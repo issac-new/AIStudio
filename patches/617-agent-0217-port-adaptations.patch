@@ -1,0 +1,56 @@
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -831,7 +831,7 @@
+     ("created_by", "created_by TEXT"),
+     ("started_at", "started_at INTEGER"),
+     ("completed_at", "completed_at INTEGER"),
+-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
++    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
+     ("workspace_path", "workspace_path TEXT"),
+     ("claim_lock", "claim_lock TEXT"),
+     ("claim_expires", "claim_expires INTEGER"),
+--- a/hermes_cli/kanban_db_dispatch.py
++++ b/hermes_cli/kanban_db_dispatch.py
+@@ -2541,10 +2541,11 @@
+     board_cap = _resolve_board_concurrency(board)
+     board_running: dict[str, int] = {}
+     if board_cap is not None:
++        # 0.21.7 起每 board 独立 sqlite（conn 即板库），直接数本库 running。
+         rowc = conn.execute(
+-            "SELECT COUNT(*) AS n FROM tasks WHERE status = 'running' AND board IS ?", (board,),
++            "SELECT COUNT(*) FROM tasks WHERE status = 'running'",
+         ).fetchone()
+-        board_running[board] = int(rowc["n"]) if rowc else 0
++        board_running[board] = int(rowc[0]) if rowc else 0
+     lane_kwargs: dict[str, Any] = dict(
+         dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
+         failure_limit=failure_limit, spawn_fn=spawn_fn,
+--- a/tests/hermes_cli/test_kanban_gates.py
++++ b/tests/hermes_cli/test_kanban_gates.py
+@@ -26,6 +26,7 @@
+     sys.path.insert(0, str(_WORKTREE))
+ 
+ from hermes_cli import kanban_db as kb
++from hermes_cli.kanban_db_connect import connect  # noqa: E402
+ from hermes_cli.kanban_gates import (
+     GATE_REASONS,
+     GateBlockedError,
+@@ -49,7 +50,7 @@
+ 
+ 
+ def _connect(fresh_home):
+-    return kb.connect()
++    return connect()
+ 
+ 
+ def _make_task(conn, *, title="gate card", body=None, status="ready", assignee="sage"):
+--- a/tests/hermes_cli/test_kanban_db.py
++++ b/tests/hermes_cli/test_kanban_db.py
+@@ -551,6 +551,7 @@
+         assert kbd.check_respawn_guard(conn, spawn_failed_id) == "blocker_auth"
+ 
+ 
++@pytest.mark.skipif(sys.platform != "linux", reason="real restart-safe systemd boundary only exists on Linux (upstream _IS_LINUX gate); on macOS the boundary short-circuits to in_process and the refusal cannot materialize")
+ def test_infrastructure_spawn_refusal_never_charges_the_card(
+     kanban_home, monkeypatch, all_assignees_spawnable,
+ ):

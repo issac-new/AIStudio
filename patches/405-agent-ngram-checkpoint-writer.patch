@@ -1,7 +1,26 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index 411134b41a..7c8e754e00 100644
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -1681,6 +1681,13 @@ def _run_conversation_turn(
+                 return _ri.result
+             if _ri.action == "continue":
+                 continue
++            # ngram 防循环（mimo max-mode 原语，P6）：文本侧每 assistant 消息观测一次，
++            # 只发信号不打断；守卫自身故障零影响主循环。
++            try:
++                from agent.runaway_guard import observe_text_step
++                observe_text_step(agent, s.assistant_message)
++            except Exception:  # noqa: BLE001
++                pass
+             _v = _run_phase(
+                 run_tool_round if s.assistant_message.tool_calls else finish_text_response, agent, s
+             )
 diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
+index a2bda853f2..8f16bd8eee 100644
 --- a/agent/runaway_guard.py
 +++ b/agent/runaway_guard.py
-@@ -38,6 +38,14 @@
+@@ -38,6 +38,14 @@ RUNAWAY_SIGNALS = (
      "unchanged_progress_repeat",
  )
  
@@ -16,7 +35,7 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
  _FINGERPRINT_INPUT_CAP_BYTES = 16 * 1024  # minimax fingerprint.ts 同款有界序列化
  _DEFAULT_WINDOW = 24
  
-@@ -103,6 +111,8 @@
+@@ -103,6 +111,8 @@ class RunawayGuard:
      _actions: list = field(default_factory=list)   # [(tool, action_fp)]
      _results: list = field(default_factory=list)   # [result_fp]
      _errors: list = field(default_factory=list)    # [family]
@@ -25,7 +44,7 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
      _last_signal: Optional[RunawaySignal] = None
  
      def observe_tool_step(self, tool: str, args: Any, result: Any) -> Optional[RunawaySignal]:
-@@ -128,6 +138,49 @@
+@@ -129,6 +139,49 @@ class RunawayGuard:
              self._last_signal = signal
          return signal
  
@@ -75,7 +94,7 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
      @property
      def last_signal(self) -> Optional[RunawaySignal]:
          return self._last_signal
-@@ -224,16 +277,53 @@
+@@ -225,16 +278,53 @@ def observe_tool_step(agent: Any, tool: str, args: Any, result: Any,
      guard = get_agent_guard(agent)
      signal = guard.observe_tool_step(tool, args, result)
      if signal is not None:
@@ -92,7 +111,7 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 -            except Exception:  # noqa: BLE001
 -                pass
 +        _report_signal(agent, signal, notify)
-     return signal
++    return signal
 +
 +
 +def _report_signal(agent: Any, signal: RunawaySignal,
@@ -140,26 +159,10 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 +    signal = guard.observe_text_step(_text_content(message_or_text))
 +    if signal is not None:
 +        _report_signal(agent, signal, notify)
-+    return signal
-diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
---- a/agent/conversation_loop.py
-+++ b/agent/conversation_loop.py
-@@ -1566,6 +1566,13 @@
-                 return _ri.result
-             if _ri.action == "continue":
-                 continue
-+            # ngram 防循环（mimo max-mode 原语，P6）：文本侧每 assistant 消息观测一次，
-+            # 只发信号不打断；守卫自身故障零影响主循环。
-+            try:
-+                from agent.runaway_guard import observe_text_step
-+                observe_text_step(agent, s.assistant_message)
-+            except Exception:  # noqa: BLE001
-+                pass
-             _v = _run_phase(
-                 run_tool_round if s.assistant_message.tool_calls else finish_text_response, agent, s
-             )
+     return signal
 diff --git a/agent/session_checkpoint.py b/agent/session_checkpoint.py
 new file mode 100644
+index 0000000000..032f50801c
 --- /dev/null
 +++ b/agent/session_checkpoint.py
 @@ -0,0 +1,308 @@
@@ -472,9 +475,10 @@ new file mode 100644
 +        return "no-check"
 +    return "no-anchor"
 diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
+index 9fd39ec52d..bc3f051103 100644
 --- a/agent/turn_finalizer.py
 +++ b/agent/turn_finalizer.py
-@@ -178,6 +178,20 @@
+@@ -192,6 +192,20 @@ def _resolve_budget_fallback(
      # closed it — the CAS invariant in ``_end_run`` (``WHERE ended_at IS NULL``) guarantees idempotence.
      if _kanban_task:
          _record_kanban_budget_exhausted(_kanban_task, api_call_count, agent.max_iterations, logger)
@@ -492,11 +496,12 @@ diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
 +            )
 +        except Exception:  # noqa: BLE001
 +            logger.debug("session-checkpoint: budget-exhausted write skipped", exc_info=True)
-     return final_response, _turn_exit_reason, preserved_verification_fallback
+     return final_response, _turn_exit_reason, preserved_verification_fallback, interrupted
  
  
 diff --git a/tests/agent/test_session_checkpoint.py b/tests/agent/test_session_checkpoint.py
 new file mode 100644
+index 0000000000..fe1bf31732
 --- /dev/null
 +++ b/tests/agent/test_session_checkpoint.py
 @@ -0,0 +1,195 @@

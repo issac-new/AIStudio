@@ -1,9 +1,10 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 13b1d4a08b..9a3127d205 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -1942,7 +1942,13 @@
- cancelled task. Example: "User asked: '<exact reverse signal>' — earlier
- in-flight work is cancelled."
+@@ -2114,7 +2114,13 @@ work, describe the reverse signal accurately and DO NOT carry forward the
+ cancelled task.
+ Example: "User asked to stop the prior task — earlier work is cancelled."
  If no outstanding task exists, write "None."]""",
 -        "goal": "[What the user is trying to accomplish overall]",
 +        "goal": (
@@ -16,7 +17,7 @@ diff --git a/agent/context_compressor.py b/agent/context_compressor.py
          "constraints": (
              "[User preferences, coding style, constraints, important decisions. Any security or safety constraint "
              "the user stated (files/data to avoid, operations that must not be performed, credential-handling rules) "
-@@ -3451,6 +3457,12 @@
+@@ -3629,6 +3635,12 @@ None recoverable from deterministic fallback.
  ## Resolved Questions
  None recoverable from deterministic fallback.
  
@@ -29,7 +30,7 @@ diff --git a/agent/context_compressor.py b/agent/context_compressor.py
  ## Relevant Files
  {_bullets(anchors["relevant_files"], limit=12)}
  
-@@ -3890,7 +3902,10 @@
+@@ -4060,7 +4072,10 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
              + _language_and_provenance_rule +
              "NEVER include API keys, tokens, passwords, secrets, credentials, or connection strings in the "
              "summary — replace any that appear with [REDACTED]. Note that credentials were present, but do "
@@ -41,7 +42,7 @@ diff --git a/agent/context_compressor.py b/agent/context_compressor.py
          )
          # Lean mode folds the session log into this SAME single request (one aux call).
          _session_log_section = _LEAN_SESSION_LOG_SECTION if getattr(self, "tail_mode", "lean") == "lean" else ""
-@@ -3908,7 +3923,7 @@
+@@ -4078,7 +4093,7 @@ PREVIOUS SUMMARY:
  NEW TURNS TO INCORPORATE:
  {content_to_summarize}{_memory_section}
  
@@ -50,18 +51,17 @@ diff --git a/agent/context_compressor.py b/agent/context_compressor.py
  
  {_template_sections}"""
          else:
-@@ -3990,7 +4005,20 @@
- 
+@@ -4161,6 +4176,19 @@ the user's correction and record what changed as a result.]
  ## Resolved Questions
  {_section["resolved_questions"]}
-+
+ 
 +## Open Questions & Unknowns
 +[Known unknowns as of the end of the compacted region — things the work depends on that
 +were never established: unverified assumptions, unconfirmed hypotheses, environment facts
 +never checked, third-party behavior never observed. Distinguish from "Blocked" (known
 +failures): this section is for what was never tested. Write "None" only if everything
 +material was actually verified.]
- 
++
 +## Forward Plan
 +[The intended next steps in order — what the successor context should do first, second,
 +third, plus any deliberately deferred work. Short ordered list, imperative voice. This is
@@ -73,6 +73,7 @@ diff --git a/agent/context_compressor.py b/agent/context_compressor.py
  
 diff --git a/tests/agent/test_compact_handoff_six_segments.py b/tests/agent/test_compact_handoff_six_segments.py
 new file mode 100644
+index 0000000000..5c7e606d1b
 --- /dev/null
 +++ b/tests/agent/test_compact_handoff_six_segments.py
 @@ -0,0 +1,100 @@
