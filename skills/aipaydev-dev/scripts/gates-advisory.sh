@@ -747,6 +747,17 @@ check_cert_audit() {
     _cert_check "定级文档存在" "人工核对" "warn" "须有定级报告文档（定级→备案→按级保护）"
   fi
 
+  # JR/T 0071 + JR/T 0171-2020 金融双标准（jrtfinance；方案 V8.23 用户指认：两者是两个东西均须在册）
+  if [[ "$profile" == "jrtfinance" || "$profile" == "all" ]]; then
+    echo "--- JR/T 0071 金融行业网络安全等级保护实施指引 + JR/T 0171-2020 个人金融信息保护技术规范 ---"
+    _cert_check "等保定级→备案→整改链" "--compliance" "pass" "spec 须含定级/备案/按级整改声明（JR/T 0071 实施指引；GB/T 22240 定级+GB/T 25058 间衔接）"
+    _cert_check "等保测评整改项闭环" "spec§22" "warn" "spec §22 须声明上轮测评遗留问题整改状态（JR/T 0071 第7章）"
+    _cert_check "C3数据识别清单" "--sensitive" "pass" "须 --sensitive 扩展且 spec 含 C3 最高敏级字段清单（JR/T 0171 附录A：支付鉴权类信息=C3）"
+    _cert_check "C3生命周期管控" "--sensitive+--crypto" "pass" "收集-传输-存储-使用-删除全生命周期管控（JR/T 0171 第6章；不得明文存储/传输/展示 6.1.1）"
+    _cert_check "C3展示脱敏" "人工核对" "warn" "界面/日志展示脱敏是运行态——人工核对（JR/T 0171 6.2.2）"
+    _cert_check "委托处理协议" "spec§22" "warn" "涉及第三方处理 C3 须委托协议+安全评估声明（JR/T 0171 第7章）"
+  fi
+
   # JR/T 0142-2016 银行卡清算业务设施技术要求（jrt0142）
   if [[ "$profile" == "jrt0142" || "$profile" == "all" ]]; then
     echo "--- JR/T 0142-2016 银行卡清算业务设施 + 《清算机构管理办法》---"
