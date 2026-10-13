@@ -44,3 +44,26 @@ git merge 分支收口后确认 main
 bash mux/mx-prelaunch-check.sh        # 十三项全绿（⑪ 锚已指向 run16）
 RUN_ID=<轮次> bash aipay-scenario.sh
 ```
+
+## 六、run18 复盘批核对（2026-10-13 追加；run19=下一个全量轮）
+
+> run18-lite-acp 独立审计 F1-F15 与本批修复件（simharness 58ce235 / overlay 26125682 已推 origin）。开跑前逐条在场核对。
+
+| 件 | 仓 | 提交 | 核对锚 |
+|---|---|---|---|
+| 闸键-证据耦合八件 | simharness fix/run18-retro | 5f63b46 | evidence_baseline 函数+G3 补证窗+G5 卡时间窗+QGate generated 校验 |
+| JR/T 双标准落实 | 同上 | 7498506 | gates-advisory.sh jrtfinance 段+涉敏派单对照锚 |
+| 事故报告窗口参 | 同上 | dffa8e0 | 驱动 report.md?since=&until= 调用 |
+| 事故报告聚合面 | overlay fix/incident-profile-window | fb0e47b | incident-sources readProfileWindowMessages |
+| 方案 V8.23 | 同上 | 662561b6 | 纪律 46/47+纪律 28 追加+§4.4-9 聚合条款 |
+| 守门断言适配 | simharness | b9caa66 | G5_TS=evidence_baseline+finalize 窗口 4500 |
+
+### run19 专项观察项（本批新行为首验）
+
+1. **G3 缺证守门**：devimpl 段若分支缺 testlog，驱动应派补证单+等 900s（MX_G3_EVIDENCE_WAIT 可调），超时落 g3_evidence_gap=1——治理报告应出现「缺证过闸」形态而非静默过闸。
+2. **G5 评审卡时间窗**：全量轮 G5_TS=本轮开跑，源轮残留卡不再命中判词；评审卡 body 空=finalize 拒绝+等 review-record 落卡（900s）。
+3. **QGate 新鲜度**：evidence/qgate-release-report.txt 的 generated 应 ≥ 本轮开跑；中央仓 .qgate/ 起轮已清（mx-clean 3b 段）。
+4. **事故报告 17 要素**：RUN_ID 形态聚合面首验——evidence/incident-report.md 应出现「推演轮聚合形态：N 账号 × M 会话」而非 0 条消息（12 项空白应收窄）。
+5. **DISP 分级归桶**：结构性类型（g3-local-gate-missing/merge-conflict/conclusion-gap 等）收尾应归「延后」桶非「观察」——报告第 8 章四桶分布变化。
+6. **复盘表计数**：标题数=表体行数（自指单追加后重取）。
+7. **涉敏评审双标准**：SECURITY-COND 条目应对照 JR/T 0171 C3 敏级+JR/T 0071 等保定级备案整改。
