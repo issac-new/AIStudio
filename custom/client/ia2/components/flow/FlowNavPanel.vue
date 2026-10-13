@@ -27,6 +27,7 @@ import InboxNavEntry from '../InboxNavEntry.vue'
 import GovernanceNavEntry from '../GovernanceNavEntry.vue'
 import EvalNavEntry from '../EvalNavEntry.vue'
 import OntologyNavEntry from '../OntologyNavEntry.vue'
+import SkillgovNavEntry from '../SkillgovNavEntry.vue'
 import AccountsNavEntry from '../AccountsNavEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
@@ -151,6 +152,7 @@ function submitCreateRoom(): void {
     <EvalNavEntry v-if="features.eval" />
     <!-- 本体工作台入口（GB/T 48000.3 方法论；features.ontology 默认开） -->
     <OntologyNavEntry v-if="features.ontology" />
+    <SkillgovNavEntry v-if="features.skillgov" />
     <AccountsNavEntry />
 
     <div class="flow-nav__filters" data-testid="flow-filters">
