@@ -37,7 +37,7 @@
  }
  function listSharpPruneTargets(dirs, platform, arch) {
    const keep = new Set([...sharpKeepDirs(platform, arch), ...SHARP_KEEP_ALWAYS])
-@@ -106,8 +117,61 @@
+@@ -106,8 +117,73 @@
    }
  }
  
@@ -83,8 +83,20 @@
 +  if (sherpaVer) want.push('sherpa-onnx-' + platform + '-' + arch + '@' + sherpaVer)
 +  if (want.length === 0) return
 +  console.log('[after-pack] cross build: fetching target natives → ' + want.join(', '))
-+  const r = spawnSync('npm', ['install', '--no-save', '--no-audit', '--no-fund', '--prefix', webuiDir, ...want],
-+    { stdio: 'inherit' })
++  // --cpu/--os 覆盖宿主平台校验（arm64 mac 装 win32-x64 包默认被 npm notsup 拒）；
++  // --prefer-online 绕负缓存（abbreviated packument 404 会被缓存钉死，curl 实测
++  // 两源 packument 均 200 的包在 npm 内仍 404）；双源显式重试：镜像（本机正典）
++  // → 官方。
++  const npmArgs = ['install', '--no-save', '--no-audit', '--no-fund', '--prefer-online',
++                   '--cpu', arch, '--os', npmPlatform(platform),
++                   '--prefix', webuiDir, ...want]
++  let r = { status: 1 }
++  for (const reg of ['https://registry.npmmirror.com', 'https://registry.npmjs.org']) {
++    console.log('[after-pack] cross-native install via ' + reg)
++    r = spawnSync('npm', [...npmArgs, '--registry', reg], { stdio: 'inherit' })
++    if (r.status === 0) break
++    console.warn('[after-pack] cross-native install failed via ' + reg)
++  }
 +  if (r.status !== 0) throw new Error('[after-pack] cross-native npm install failed (exit ' + r.status + ')')
 +  for (const name of want.map((spec) => spec.split('@').slice(0, spec.startsWith('@') ? 2 : 1).join('@'))) {
 +    if (!existsSync(join(webuiDir, 'node_modules', name))) {
