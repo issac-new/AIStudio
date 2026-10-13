@@ -11,7 +11,7 @@ import type {
   AttemptVerdict, EvalConfig, EvalTask, Evidence,
 } from './types'
 import {
-  Breaker, JudgeUnavailableError, TtlCache, clefAsk, sha1Of,
+  Breaker, TtlCache, clefAsk, sha1Of,
   type ClefJudgeDeps, type EvalJudgeAnswers, type EvalJudgeRequest,
 } from './clef'
 
@@ -143,54 +143,85 @@ export async function judgeAttempt(
     if (options.crossValidate) s1Needed.push(assertion.id)
   }
 
-  // 第 2 步：S1 并行二元判定（单请求多问句）
+  // 第 2 步：S1 判定（多裁判：逐模型请求 → 多数决；单模型=既有行为）。
+  // 缓存键按模型隔离（同题不同裁判不串答案）；单模型失败 fail-soft 由其余承接，
+  // 全部失败才判离线（online=false）。成本随模型数线性放大——默认单模型。
   let latencyMs: number | null = null
   let cached = false
   let online = true
   const s1Values = new Map<string, number>()
+  /** 多数决已裁断言（value 定 yes/no；缺席=未过半 → unknown）。 */
+  const s1Decided = new Map<string, 'yes' | 'no'>()
 
   if (s1Needed.length > 0) {
     const breaker = deps.breaker ?? (sharedBreaker ??= new Breaker(config.breakerThreshold, config.breakerCooldownMs))
     const cache = deps.cache ?? (sharedCache ??= new TtlCache<EvalJudgeAnswers>(config.cacheTtlMs))
     const state = buildJudgeState(task, evidence, config)
     const questions = buildQuestions(task, s1Needed)
-    const cacheKey = sha1Of(JSON.stringify({ state, questions }))
     const ask = deps.ask ?? ((req, cfg) => clefAsk(req, cfg, deps.fetchDeps))
+    const models = config.judgeModels.length > 0 ? config.judgeModels : [config.judgeModel]
+    // 模型 → 断言 id → p（缺席=该模型未答该题）
+    const perModel = new Map<string, Map<string, number>>()
 
     if (breaker.isOpen(now())) {
       online = false
     } else {
-      const cachedAnswers = cache.get(cacheKey, now())
-      if (cachedAnswers !== undefined) {
-        cached = true
-        for (const id of s1Needed) {
-          const p = cachedAnswers[id]
-          if (p !== undefined) s1Values.set(id, p)
-        }
-      } else {
-        const started = now()
-        try {
-          const answers = await ask({ model: config.judgeModel, state, questions }, config)
-          latencyMs = now() - started
-          breaker.recordSuccess()
-          cache.set(cacheKey, answers, now())
+      const started = now()
+      let anyCacheMiss = false
+      for (const model of models) {
+        const cacheKey = sha1Of(JSON.stringify({ state, questions, model }))
+        const collected = new Map<string, number>()
+        const cachedAnswers = cache.get(cacheKey, now())
+        if (cachedAnswers !== undefined) {
           for (const id of s1Needed) {
-            const p = answers[id]
-            if (p !== undefined) s1Values.set(id, p)
+            const p = cachedAnswers[id]
+            if (p !== undefined) collected.set(id, p)
           }
-        } catch (error) {
-          breaker.recordFailure(now())
-          online = false
-          if (!(error instanceof JudgeUnavailableError)) {
-            // 非预期异常也走 fail-open，但保持可观测（verdicts 里该批全部 unknown）。
-            online = false
+        } else {
+          anyCacheMiss = true
+          try {
+            const answers = await ask({ model, state, questions }, config)
+            breaker.recordSuccess()
+            cache.set(cacheKey, answers, now())
+            for (const id of s1Needed) {
+              const p = answers[id]
+              if (p !== undefined) collected.set(id, p)
+            }
+          } catch {
+            // 单模型失败不毙整批：其余模型继续判（fail-soft）；全败在循环外统一判离线
+            breaker.recordFailure(now())
           }
         }
+        if (collected.size > 0) perModel.set(model, collected)
+      }
+      latencyMs = now() - started
+      cached = !anyCacheMiss
+      online = perModel.size > 0
+
+      // 多数决：各模型 p 按 τ 三段映射计票，严格过半才裁决（平票/灰区多数 → unknown）；
+      // 合并 p=已答模型均值（留痕供校准）。单模型退化为既有 τ 三段语义。
+      const majority = perModel.size / 2
+      for (const id of s1Needed) {
+        const ps: number[] = []
+        let yes = 0
+        let no = 0
+        for (const answers of perModel.values()) {
+          const p = answers.get(id)
+          if (p === undefined) continue
+          ps.push(p)
+          if (p >= config.tauYes) yes += 1
+          else if (p <= config.tauNo) no += 1
+        }
+        if (ps.length === 0) continue
+        const mean = ps.reduce((a, b) => a + b, 0) / ps.length
+        s1Values.set(id, mean)
+        if (yes > majority) s1Decided.set(id, 'yes')
+        else if (no > majority) s1Decided.set(id, 'no')
       }
     }
   }
 
-  // τ 三段映射 + 冲突仲裁 + 组装
+  // τ 三段映射（多裁判时已由多数决定值，此处仅单模型/未过半路径）+ 冲突仲裁 + 组装
   const s0ById = new Map(verdicts.map((v) => [v.assertionId, v]))
   const s1Set = new Set(s1Needed)
   const finalVerdicts: AttemptVerdict[] = []
@@ -199,10 +230,15 @@ export async function judgeAttempt(
     const p = s1Values.get(assertion.id)
     if (s1Set.has(assertion.id)) {
       let s1Value: 'yes' | 'no' | 'unknown' = 'unknown'
-      if (p !== undefined) {
+      const decided = s1Decided.get(assertion.id)
+      if (decided) {
+        s1Value = decided
+      } else if (p !== undefined && config.judgeModels.length <= 1) {
+        // 单裁判：均值走 τ 三段（多数决退化路径，与既有语义一致）
         if (p >= config.tauYes) s1Value = 'yes'
         else if (p <= config.tauNo) s1Value = 'no'
       }
+      // 多裁判未过半：s1Value 保持 unknown（均值已留痕在 p）
       if (!s0Verdict) {
         finalVerdicts.push({ assertionId: assertion.id, value: s1Value, source: 's1', ...(p !== undefined ? { p } : {}) })
         continue
@@ -226,6 +262,12 @@ export async function judgeAttempt(
 
   return {
     verdicts: finalVerdicts,
-    judgeMeta: { backend: config.judgeBaseUrl, latencyMs, cached, online },
+    judgeMeta: {
+      backend: config.judgeBaseUrl,
+      latencyMs,
+      cached,
+      online,
+      ...(config.judgeModels.length > 1 ? { models: config.judgeModels } : {}),
+    },
   }
 }

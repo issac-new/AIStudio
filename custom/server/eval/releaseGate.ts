@@ -106,14 +106,21 @@ export function evaluateReleaseGate(attempts: Attempt[], config: ReleaseGateConf
         },
   )
 
-  // ④⑤⑥ 在线服务口径项：回放判分不产生（如实缺口，不硬凑代理值）
-  checks.push({
-    key: 'ttft',
-    threshold: `≤ ${(config.ttftMaxMs / 1000).toFixed(1)}s`,
-    measured: null,
-    status: 'no_data',
-    gap: '回放轨迹未采集首 token 时延（TTFT 需 live 打点）',
-  })
+  // ④ TTFT ≤1.5s：trace 具备首 token 打点才有读数（挂账清偿轮接线接收端；
+  //    当前 L2 轨迹普遍未打点 → 如实缺口，不硬凑代理值）
+  const ttfts = attempts.map((a) => a.efficiency?.ttftMs).filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+  const ttftWorst = ttfts.length > 0 ? Math.max(...ttfts) : null
+  checks.push(
+    ttftWorst === null
+      ? { key: 'ttft', threshold: `≤ ${(config.ttftMaxMs / 1000).toFixed(1)}s`, measured: null, status: 'no_data', gap: '回放轨迹未采集首 token 时延（TTFT 需 live 打点）' }
+      : {
+          key: 'ttft',
+          threshold: `≤ ${(config.ttftMaxMs / 1000).toFixed(1)}s`,
+          measured: `${(ttftWorst / 1000).toFixed(2)}s（最差/${ttfts.length} 样本）`,
+          status: ttftWorst <= config.ttftMaxMs ? 'pass' : 'fail',
+        },
+  )
+  // ⑤⑥ 在线服务口径项：回放判分不产生（如实缺口，不硬凑代理值）
   checks.push({
     key: 'response_tier',
     threshold: '简单 ≤5s / 复杂 ≤15s',
@@ -136,7 +143,9 @@ export function evaluateReleaseGate(attempts: Attempt[], config: ReleaseGateConf
     checks,
     measuredCount: measured.length,
     gapKeys: checks.filter((c) => c.status === 'no_data').map((c) => c.key),
-    basis: '降级率口径=判定端离线 fail-open 样本占比；TTFT/响应分档/QPS 为证据缺口项（见 gapKeys）',
+    basis: ttftWorst === null
+      ? '降级率口径=判定端离线 fail-open 样本占比；TTFT/响应分档/QPS 为证据缺口项（见 gapKeys）'
+      : '降级率口径=判定端离线 fail-open 样本占比；TTFT=最差样本首 token 时延；响应分档/QPS 为证据缺口项',
     numeric: { toolSuccessRate: toolRate, p99Ratio: ratio, degradeRate: judged.length === 0 ? null : degraded / judged.length },
   }
 }
