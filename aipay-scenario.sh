@@ -1325,7 +1325,10 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
         eval "_tst_w=\${_tst_lw_$_t:-0}"
         _w=$(_agent_log_last_work_ts "$HERMES_ROOT/profiles/$_t/logs/agent.log" 2>/dev/null || echo 0)
         if (( _w > _tst_w )); then
-          eval "_tst_sig_$_t=$(date +%s)"; eval "_tst_lw_$_t=$_w"; eval "_tst_nudged_$_t=0"
+          # 首轮 sig 回溯到最后活动时刻（断点续跑进环时 agent 可能已静默半小时——
+          # 若把 sig 设为进环时间，已静默事实被抹掉、催办要多等整个半窗）
+          if (( _tst_w == 0 )); then eval "_tst_sig_$_t=$_w"; else eval "_tst_sig_$_t=$(date +%s)"; fi
+          eval "_tst_lw_$_t=$_w"; eval "_tst_nudged_$_t=0"
         else
           eval "_tst_sig=\${_tst_sig_$_t:-$_tst_check_ts}"
           eval "_tst_nd=\${_tst_nudged_$_t:-0}"
