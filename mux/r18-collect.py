@@ -73,17 +73,35 @@ def fetch_dialog(room: str, anchor: str, user: str, limit: int) -> list:
     if not anchor.startswith('$'):
         die(f'锚非 event_id 形态（收到 "{anchor[:40]}"）——须传 $… 开头的 matrix 事件号；'
             f'marker 值请经 marker_eventid 提取（调用方参数错，非服务端故障）')
-    tf = SIM / 'creds' / f'{user}.token'
-    if not tf.exists():
-        die(f'凭据缺失：{tf}（--user 指定持有该房 membership 的账号）')
-    tok = tf.read_text().strip().splitlines()[0]
-    url = (f'{HS}/_matrix/client/v3/rooms/{urllib.request.quote(room)}/context/'
-           f'{urllib.request.quote(anchor)}?limit={max(limit, 1)}&access_token={tok}')
-    try:
-        with urllib.request.urlopen(url, timeout=30) as r:
-            ctx = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        die(f'matrix /context 拉取失败 HTTP {e.code}：{e.read()[:200]!r}（anchor/room/token 是否匹配）')
+    # run18 复盘 403 根治：admin 对分析房无 membership 时 /context 回 403 M_FORBIDDEN
+    # （run16 同位 404、run18 转 403=成员资格面变化）。默认 user 403 时按成员回退链
+    # 重试（fanfan=分析房创建者最稳），全败才记单——「房间不存在/无成员」与「事件
+    # 不存在」在记单文案上可区分。
+    fallback_users = [u for u in (user, 'fanfan', 'bella', 'admin') if u]
+    seen = []
+    for cand in fallback_users:
+        if cand in seen:
+            continue
+        seen.append(cand)
+        tf = SIM / 'creds' / f'{cand}.token'
+        if not tf.exists():
+            continue
+        tok = tf.read_text().strip().splitlines()[0]
+        url = (f'{HS}/_matrix/client/v3/rooms/{urllib.request.quote(room)}/context/'
+               f'{urllib.request.quote(anchor)}?limit={max(limit, 1)}&access_token={tok}')
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                ctx = json.loads(r.read())
+            break
+        except urllib.error.HTTPError as e:
+            body = e.read()[:200]
+            if e.code == 403 and cand != fallback_users[-1]:
+                continue  # 成员资格面失败——回退下一候选账号
+            die(f'matrix /context 拉取失败 HTTP {e.code}：{body!r}（user={cand}；'
+                f'403=token 对该房无 membership（anchor/room 是否匹配、creds 是否齐全），'
+                f'404=事件不存在（anchor 是否指错房间））')
+    else:
+        die(f'matrix /context 全候选失败：room={room} anchor={anchor[:24]}…（无可用 token：{fallback_users}）')
     anchor_ev = ctx.get('event') or {}
     events = ctx.get('events_before', []) + ([anchor_ev] if anchor_ev else []) + ctx.get('events_after', [])
     msgs = []

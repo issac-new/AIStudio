@@ -254,6 +254,17 @@ if [ "$APPLY" = 1 ]; then
   fi
 fi
 
+# 3b) 中央仓 QGate 旧产物清场（run18 复盘根治：.qgate/release-report.md 跨轮共享
+#     从不清场，G5 收口拷贝点曾把 5 天前旧件透传进报告——驱动侧已加新鲜度校验，
+#     此处起轮清源，双保险）。
+say "中央仓 QGate 旧产物清场：central/*/.qgate/"
+if [ "$APPLY" = 1 ]; then
+  for _qg in "$SIM_ROOT"/central/*/.qgate; do
+    [ -d "$_qg" ] || continue
+    rm -rf "$_qg" && say "  已清 $_qg"
+  done
+fi
+
 # 4) 中央仓按需重置（默认保留；--reset-central 清推演工件与 integration 分支）
 # 清空范围（run5 教训修订）：推演工件不止 RFD-* 前缀——系分稿 AN-*、任务稿 T-*、
 # admin 轮次台账同属轮次产物。0→1 语义=七个 docs 交付目录全清 + docs/admin +

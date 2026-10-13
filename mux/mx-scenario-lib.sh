@@ -1062,27 +1062,29 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
 }
 
 # ── 仓库/房间真值 ───────────────────────────────────────
+evidence_baseline() { # → stdout: 秒级证据新鲜度基线（run18 复盘 F3/F4 根治抽取）
+  # 本轮 run_started_at；lite 轮回落夹具源轮开跑时刻（repo_has 原口径抽为单一事实源，
+  # test_report_on_integration / kanban_card_gate_verdict / QGate 拷贝点同源复用）。
+  # 空=旧 state 兼容形态（调用方自行决定跳窗）。
+  local _rs
+  _rs="$(sget run_started_at)"
+  if [ "$(sget lite_round)" = "1" ]; then
+    local _fx_rs
+    _fx_rs="$(sed -n 's/^run_started_at=//p' "$SIM_ROOT/runs/$(sget lite_fixtures_from)/state.env" 2>/dev/null | head -1)"
+    [ -n "$_fx_rs" ] && _rs="$_fx_rs"
+  fi
+  echo "${_rs:-}"
+}
 repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1 || return 1
   # 工件新鲜度（run5 教训：旧轮 AN-*/T-* 稿未被 mx-clean 清掉，"文件存在"被旧稿
   # 满足=假真值）。文件在 origin/main 的最后提交时间必须 ≥ 本轮首次开跑时刻；
   # run_started_at 缺键（旧轮 state）时保持旧语义并告警，不静默放行新代码路径。
+  # 基线解析= evidence_baseline（lite 轮回落夹具源轮开跑时刻——「不早于夹具源轮」
+  # 才是夹具语义下的真新鲜，更早旧稿仍被拒；夹具源 state 异常回落本轮基线保守不放水）。
   local _rs
-  _rs="$(sget run_started_at)"
-  # lite 轮基线（夹具继承的 G1 冻结件天然早于本轮开跑，按全量轮
-  # 语义判旧稿=UAT 前置永败重启循环）：lite_round=1 且夹具源轮 state 可读时，
-  # 基线改夹具源轮开跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜，更早
-  # 旧稿仍被拒。夹具源 state 异常回落本轮基线（保守，宁可再 fail 不放水）。
-  if [ "$(sget lite_round)" = "1" ]; then
-    local _fx_rs
-    _fx_rs="$(sed -n 's/^run_started_at=//p' "$SIM_ROOT/runs/$(sget lite_fixtures_from)/state.env" 2>/dev/null | head -1)"
-    if [ -n "$_fx_rs" ]; then
-      _rs="$_fx_rs"
-    else
-      log "[观察] lite 轮夹具源 state 不可读（$(sget lite_fixtures_from)），新鲜度基线回落本轮开跑：$1"
-    fi
-  fi
+  _rs="$(evidence_baseline)"
   if [ -z "$_rs" ]; then
     log "[观察] repo_has 无 run_started_at 键（旧 state 兼容），跳过新鲜度窗口：$1"
     return 0
@@ -1096,8 +1098,18 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   # 与 testpass 派发词 push 目标一致）。testpass/uat 用 repo_has（origin/main
   # 口径）查一份只进 integration 的报告=永假——testpass 六代重启代代白派、UAT 九连死循环
   # 3h45m 的共同根因位。冻结件仍走 repo_has（main 口径）。
+  # run18 复盘 F3 根治（闸键-证据耦合）：加同款新鲜度窗——run18 实锤 origin/integration
+  # 上的报告是源轮旧件（正文自标 RUN=源轮号），存在性为真→本轮根本没派报告任务、g4 照落。
+  # 旧件不满足窗=谓词假=走派单等待（调用方既有链路）；lite 轮经 evidence_baseline
+  # 回落夹具源轮基线（源轮真值=夹具语义合法）。
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
-  git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1
+  git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1 || return 1
+  local _rs _ct
+  _rs="$(evidence_baseline)"
+  [ -z "$_rs" ] && return 0
+  _ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/integration/$1" -- "docs/test/$1-test-report.md" 2>/dev/null)"
+  [ -n "$_ct" ] || return 1
+  (( _ct >= _rs ))
 }
 
 uat_evidence_body() { # 本轮（run_started_at 起）产品经理A 发的最新一条 UAT-EVIDENCE 结论行 body；
@@ -1235,12 +1247,22 @@ mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → std
   echo "$last"
 }
 
-kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> → stdout: PASS|FAIL|空
+kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
   # 评审记录落卡 body 是准出的权威载体（派单即要求 review-record 落卡），房间行
   # 只是广播；卡判词与房间行判词由调用方合并（FAIL 优先，保守不放行）。
+  # run18 复盘 F1 根治（闸键-证据耦合）：可选 since-ms 时间窗——看板跨轮持久时，
+  # 源轮 PASS 卡无窗命中=越过本轮评审直接放行（run18 实锤：G5 判词全部来自源轮卡，
+  # 本轮评审卡 16 秒自闭无 body）。带窗时只认 created_at ≥ 窗基线的卡；lite 轮
+  # 调用方传夹具源轮基线（源轮卡=夹具真值，复用合法）。
   local body
-  body=$(kanban_list "$1" | jq -r --arg n "$2" \
-    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+  if [ -n "${4:-}" ]; then
+    body=$(kanban_list "$1" | jq -r --arg n "$2" --argjson s "$(( $4 / 1000 ))" \
+      '[.. | objects | select(has("title")) | select((.created_at // 0) >= $s)
+        | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+  else
+    body=$(kanban_list "$1" | jq -r --arg n "$2" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+  fi
   mx_text_gate_verdict "$3" "$body"
 }
 
@@ -1266,7 +1288,7 @@ mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <ca
   # 标注的对照行补房间记录（转写卡面判词并注明来源，不改判词语义；每闸至多一次）。
   local rv cv
   rv="$(mx_room_gate_verdict "$1" "$2" "$3" "$4")"
-  cv="$(kanban_card_gate_verdict "$5" "$6" "$3")"
+  cv="$(kanban_card_gate_verdict "$5" "$6" "$3" "${4:-}")"
   if [[ -n "$cv" && -z "$rv" && "$(sget "verdict_relay_${3}")" != "1" ]]; then
     sset "verdict_relay_${3}" 1
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "[判词对照行·relay] ${3}-${cv}（来源=评审卡 ${6} body 结论行；房间原行未达，代发对照行补记录）" >/dev/null 2>&1 || true
@@ -1278,6 +1300,15 @@ mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <ca
 
 mx_gate_combined_pass() { # 同 mx_gate_verdict_combined，供 wait_truth 断言用
   [[ "$(mx_gate_verdict_combined "$@")" == "PASS" ]]
+}
+
+kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
+  # run18 复盘 F1 配套谓词：判词 PASS 而 body 空=无评审实物（房间行/代发行撑判词），
+  # finalize 前须等 review-record 真落卡。供 wait_truth 断言用。
+  local body
+  body=$(kanban_list "$1" 2>/dev/null | jq -r --arg n "$2" \
+    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null)
+  [[ -n "$body" ]]
 }
 
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id

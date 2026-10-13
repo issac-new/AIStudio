@@ -421,7 +421,7 @@ def render_intent_chain(sim) -> str:
 
     return """
 <section class="nv-sec" id="nv-intent-chain">
-  <h2>意图通路：一条验收标准从冻结到对账的全程连线</h2>
+  <h2 class="section-hd">第 3 章 · 意图通路：一条验收标准从冻结到对账的全程连线</h2>
   <p class="nv-lead">需求保真的证据不在"某人说过"，而在链上每个环节都留下可反查的工件。下图逐条连线 G1 冻结的验收标准（AC）→ 系分稿 → 编码门禁测试日志 → 独立测试报告 → UAT 对账判定；全部取自中央仓真实文件，缺失环节如实标 ⬜。</p>
   <div class="nv-ic-rows">""" + rows_html + """</div>
   <p class="nv-note">数据源：docs/requirements/*.freeze.md（G1 冻结）、docs/analysis/AN-*-analysis.md（系分）、docs/evidence/DEV-*-testlog.txt（G3 分支测试日志）、docs/test/*test-report*.md（G4 独立测试）、docs/acceptance/*-acceptance.md（UAT 逐条判定）——生成时程序化解析，非人工誊写。</p>
