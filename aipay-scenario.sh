@@ -884,7 +884,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重，
   # 重启重入段即补采——run14 实锤 plan 段挂钩错过即整轮载荷缺）
   if [[ -n "$(sget m17_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m17_marker)")" --title "排期派发任务书全文（fanfan）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m17_marker)")" --title "排期派发任务书全文（fanfan）" --user fanfan >/dev/null 2>&1 || true
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
@@ -1054,17 +1054,41 @@ DEVSPECS
     fi
   done
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）；
-  # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单
+  # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单。
+  # run18 复盘 F4 根治（闸键-证据耦合）：缺证不再「记单即落键」——全量轮先派补证单
+  # 并等待（固定窗，补 testlog 是轻量操作），超时仍缺则 sset g3_evidence_gap 显形
+  # （治理报告计「缺证过闸」，报告红色呈现，首过率不虚高）；lite 轮夹具形态沿用
+  # 记单口径（源轮真值=夹具语义，repo_branch_has 对 lite 分支查不到属采集面缺口）。
+  _g3_miss=""
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
     repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
       || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
-           echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
+           echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; \
+           _g3_miss="${_g3_miss} $b"; }
     if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
       repo_branch_has "feat/$b" "materials/delegate-log.txt" \
         || { note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"; \
              echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"; }
     fi
   done
+  if [[ -n "$_g3_miss" && "$(sget lite_round)" != "1" ]]; then
+    note "[G3] 缺证分支[${_g3_miss} ]——派补证单并等待（run18 复盘 F4：缺证禁静默落键）"
+    dispatch_in_room chen "@chen-agent:matrix.test G3 补证：以下分支缺本地测试输出 docs/evidence/<任务>-testlog.txt（测试命令+结果原样落档后 push 各自 feat 分支）：${_g3_miss}。补齐回执结论行 G3-EVIDENCE-DONE。注意 testlog 属分支本地门禁证据，须由该分支 owner 补（@hu-agent @lin-agent @xiao-agent 如涉你们分支请各自补）。" "$(agent_mxid chen),$(agent_mxid hu),$(agent_mxid lin),$(agent_mxid xiao)"
+    g3_testlogs_complete() {
+      local b
+      for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
+        repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" || return 1
+      done
+      return 0
+    }
+    if wait_truth "G3 缺证分支补齐 testlog" "${MX_G3_EVIDENCE_WAIT:-900}" g3_testlogs_complete; then
+      note "[G3] 补证齐（testlog 全分支在案，含补证）"
+    else
+      echo "ISSUE|gate-evidence-blocked|g3|G3 补证窗超时（分支[${_g3_miss} ]仍缺 testlog）——g3_evidence_gap 落键显形（缺证过闸，治理报告如实计）" >> "$EVID_DIR/issues.log"
+      sset g3_evidence_gap 1
+      note "[G3] 补证超时：g3_evidence_gap=1（缺证过闸显形，run18 复盘 F4）"
+    fi
+  fi
   gate_review chen "G3-代码实现闸-csw-pay-core"
   gate_review hu "G3-代码实现闸-csw-channel-wechat"
   gate_review lin "G3-代码实现闸-csw-channel-alipay"
@@ -1249,7 +1273,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
   # 必采对话挂钩在幂等块外（r18-collect 幂等拒重，重启重入即补采）
   if [[ -n "$(sget m19_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m19_marker)")" --title "测试执行派发全文（qi/TEST-BE）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m19_marker)")" --title "测试执行派发全文（qi/TEST-BE）" --user fanfan >/dev/null 2>&1 || true
   fi
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
@@ -1350,7 +1374,8 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
     wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}" \
-      || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
+      || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; \
+           sset g4_evidence_gap 1; note "[G4] g4_evidence_gap=1（缺报告过闸显形，run18 复盘 F3：闸键-证据耦合）"; }
   fi
   gate_review qi "G4-测试过闸"
   capture_step "testpass_done" "/app/board"
@@ -1370,7 +1395,9 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 判词锚点=本轮开跑时刻（run8 优化 E）：派发时刻锚会把重启前已存在的结论行排除在
   # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。开跑锚
   # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
-  G5_TS=$(( $(sget run_started_at) * 1000 ))
+  # 证据基线口径（run18 复盘 F1/F2 根治）：全量轮=本轮开跑（源轮旧卡免疫）；lite 轮=
+  # 夹具源轮开跑（源轮卡=夹具真值，判词复用合法）。房间行与评审卡双源同窗。
+  G5_TS=$(( $(evidence_baseline) * 1000 ))
   # 安全条件清单收割（V8.17 裁决 A，F3）：安全评审 SECURITY-COND 条目落 evidence 供
   # G5 第 8 项逐条复核——代码级发现不拦 G2（设计面口径），但 G5 放行前必须对账。
   _sec_conds=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 500 2>/dev/null \
@@ -1386,6 +1413,13 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 分节未齐的如实呈现——七项全过才许发布，残留即评审不完整形态）。
     _g5body="$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)"
+    # run18 复盘 F1 根治（闸键-证据耦合）：评审卡 body 空=无评审实物——判词行可能
+    # 来自房间代发对照行或源轮残留，不得据此 finalize。返回 1 让调用方继续走评审
+    # 派发等待链（wait_alive_truth），有 body 才收口。
+    if [[ -z "$_g5body" ]]; then
+      note "[G5] 评审卡 body 为空（无 review-record 实物）——不放行，继续等评审（run18 复盘 F1：空 body 卡禁 finalize）"
+      return 1
+    fi
     if printf '%s' "$_g5body" | grep -qE '(GAP|TODO)[：:）)]|\| *(GAP|TODO) *'; then
       sset_once g5_supplement 1
       note "[G5] 补过口径：评审卡 body 存在 GAP/TODO 分节残留（边评边补后过）——治理报告计「补过」不计首过"
@@ -1402,12 +1436,29 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # CLI 存在 unresolved 门时以 rc=1 退出但报告已写出——
     # 以产物在位为准，不以 rc 判成败（run13 的 11 张「CLI 缺失」单全是此误诊）。
     ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 || true
-    if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]] \
-       && cp "$DIRECTOR_CLONE/.qgate/release-report.md" "$EVID_DIR/qgate-release-report.txt" 2>/dev/null; then
-      note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行；unresolved 门=无信号桶如实呈现）"
+    # run18 复盘根治：QGate 证据新鲜度校验——旧件透传实锤（产物正文 generated=
+    # 开跑前 5 天，9 门全 INCONCLUSIVE 的旧件整包进报告）。产物 generated 时间戳
+    # 须 ≥ 证据基线（lite=夹具源轮基线，evidence_baseline 同源）；不新鲜即记单
+    # 不收编，并清中央仓旧产物防重启循环再收编；解析失败=记单不收编不删（人工核）。
+    local _qg_ok=0 _qg_gen _qg_ts _qg_base
+    if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]]; then
+      _qg_gen=$(sed -n 's/^- generated: //p' "$DIRECTOR_CLONE/.qgate/release-report.md" | head -1 | tr -d '\r')
+      _qg_ts=$(python3 -c "import datetime; print(int(datetime.datetime.fromisoformat('${_qg_gen:-x}'.replace('Z','+00:00')).timestamp()))" 2>/dev/null || echo 0)
+      _qg_base=$(evidence_baseline)
+      if [[ -z "$_qg_gen" ]]; then
+        issue_once qgate-evidence step20 "QGate release-report 头部无 generated 时间戳（格式漂移，人工核对 central/.qgate/）——未收编"
+      elif [[ -n "$_qg_base" && "$_qg_ts" -lt "$_qg_base" ]]; then
+        rm -f "$DIRECTOR_CLONE/.qgate/release-report.md"
+        issue_once qgate-stale step20 "QGate release-report 旧件透传（generated=${_qg_gen} 早于证据基线 ${_qg_base}）——禁收编，中央仓旧产物已清（run18 复盘：曾透传 5 天前旧件）"
+      elif cp "$DIRECTOR_CLONE/.qgate/release-report.md" "$EVID_DIR/qgate-release-report.txt" 2>/dev/null; then
+        _qg_ok=1
+      fi
+    fi
+    if (( _qg_ok )); then
+      note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行；unresolved 门=无信号桶如实呈现；新鲜度校验过）"
     else
-      issue_once qgate-evidence step20 "QGate release-report 落盘失败（CLI 缺失或骨架未部署）——门禁证据缺席记单"
-      note "[G5] QGate release-report 落盘失败（记问题单）"
+      issue_once qgate-evidence step20 "QGate release-report 未落盘（不新鲜/CLI 失败/格式漂移，见同键前单）——门禁证据缺席记单"
+      note "[G5] QGate release-report 未落盘（记问题单）"
     fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
     # lite 轮守卫（夹具跳过早期步时 dlv_room/dlv_case 未初始化，直调
@@ -1436,10 +1487,11 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review fanfan-researcher)
     sset g5_rgid "$RGID"
   fi
-  # 判词复用（run8 优化 E）：本轮已有 PASS 判词（房间行+卡面双源合并）直接收口不重派
-  if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
+  # 判词复用（run8 优化 E）：本轮已有 PASS 判词（房间行+卡面双源合并）直接收口不重派。
+  # run18 复盘 F1：finalize 前置 body 校验——判词 PASS 而卡 body 空=无评审实物，
+  # finalize 拒绝（return 1）即跌入派发评审链（&& 链，set -e 安全）。
+  if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]] && g5_pass_finalize; then
     note "[真值] G5 判词复用（本轮既有 PASS 结论行，不重派评审）✓"
-    g5_pass_finalize
   else
     mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久；已 PASS 复用不受历史 FAIL 计数拦）
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
@@ -1459,7 +1511,15 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       # （"结论行 READY-GATE-PASS 或 READY-GATE-FAIL"）→ G5 误过；真实卡面结论是
       # READY-GATE-FAIL。双源合并 FAIL 优先，FAIL 不得置卡 done、不得落键。
       if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
-        g5_pass_finalize
+        if ! g5_pass_finalize; then
+          # run18 复盘 F1：判词 PASS 而 body 空——等 review-record 落卡再收口
+          if wait_truth "评审卡 review-record 落卡（body 非空）" 900 kanban_card_body_nonempty fanfan "${RFD_ID} 发布准出"; then
+            g5_pass_finalize
+          else
+            echo "ISSUE|g5-review-record-missing|fanfan-agent|G5 判词 PASS 但评审卡 body 空（无 review-record 实物），900s 未补（run18 复盘 F1）" >> "$EVID_DIR/issues.log"
+            fail "G5 评审卡无实物，不放行（run18 复盘 F1：闸键-证据耦合）"
+          fi
+        fi
       else
         echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
         mx_gate_breaker_trip g5 "G5 发布准出" 1
@@ -1468,7 +1528,14 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）
-          g5_pass_finalize
+          if ! g5_pass_finalize; then
+            if wait_truth "补齐轮评审卡 review-record 落卡（body 非空）" 900 kanban_card_body_nonempty fanfan "${RFD_ID} 发布准出"; then
+              g5_pass_finalize
+            else
+              echo "ISSUE|g5-review-record-missing|fanfan-agent|G5 补齐轮判词 PASS 但评审卡 body 空，900s 未补（run18 复盘 F1）" >> "$EVID_DIR/issues.log"
+              fail "G5 补齐轮评审卡无实物，不放行（run18 复盘 F1）"
+            fi
+          fi
         else
           mx_gate_breaker_trip g5 "G5 发布准出" 1
           fail "G5 两轮未过，不得发布（V3 硬闸）"
@@ -1589,7 +1656,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
     sset m21_marker "$_m21"
     # 必采对话挂钩随派发即时采+marker 持久化
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m21_marker)")" --title "UAT 验收任务书全文（bella→fanfan）" >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m21_marker)")" --title "UAT 验收任务书全文（bella→fanfan）" --user fanfan >/dev/null 2>&1 || true
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
     # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
@@ -1759,7 +1826,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     note "[audit] 主卡结构化 raci 终态闭环（记单后补填成功）"
   fi
   if [[ -z "$(sget audit_dispatched)" ]]; then
-    dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。" "$(agent_mxid audit)" || true
+    dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。判罚口径提示（run18 复盘 F2 误判教训）：G5 发布准出早于 UAT 完成是方案 §2.4 冻结面既定序（发布准出→发布→上线后用户对账），非时序倒挂；判「放行无效」须以缺评审实物/证据链断裂为准，不得以 G5→UAT 先后为据。" "$(agent_mxid audit)" || true
     sset audit_dispatched 1
   fi
   AUDDOC="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-audit-opinion.md"
@@ -1855,6 +1922,10 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   OPEN_N=$((ISS_N - DISP_N)); (( OPEN_N < 0 )) && OPEN_N=0
   if (( OPEN_N > 0 )); then
     echo "ISSUE|retro-open-items|director|${OPEN_N} 条问题单缺 DISP 处置记账（已修/观察/延后），复盘表内如实标待处置" >> "$EVID_DIR/issues.log"
+    # run18 复盘 F11 根治：自指单（retro-open-items 自身是第 N+1 条）追加后重取计数，
+    # 标题数与 awk 表体行数一致（run18 实锤：标题 16 vs 表体 17）。
+    read -r ISS_N DISP_N <<< "$(issue_disp_stat)"
+    OPEN_N=$((ISS_N - DISP_N)); (( OPEN_N < 0 )) && OPEN_N=0
   fi
   RETRO="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-${RFD_ID}-retrospective.md"
   mkdir -p "$(dirname "$RETRO")"

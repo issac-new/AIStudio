@@ -1435,7 +1435,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
     23: dict(keys=['audit_done'], actor='human', actorText='人 · 审计师A 独立签名线',
         narrative='独立审计在案：REL-DELIVER 交付物缺件（merchant-onboarding 文档不在 origin/main）已登记问题单。', imgs=[('audit_done-op1-before','审计·前态','ui'), ('audit_done-op1-after','审计·收尾','ui')]),
     24: dict(keys=['retro_done'], actor='ai', actorText='AI · 复盘',
-        narrative='复盘段：16 条问题单缺 DISP 处置记账如实标待处置（含 run18 采集段两起 403 已登记问题单）。', imgs=[]),
+        narrative='复盘段：问题单缺 DISP 处置记账如实标待处置（计数以 issues.log 实算为准——run18 复盘 F11 教训：禁手填计数，驱动侧已改追加自指单后重取）。', imgs=[]),
     25: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 简报',
         narrative='IDE 核验三项通过（06:16：/ide 路由 200、ide?task 参数处理、简报组件在位）。', imgs=[]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告链',
@@ -2855,14 +2855,58 @@ def _git_out(*args):
     except Exception:
         return ''
 
+def _art_baseline_ts() -> int:
+    """证据新鲜度基线（run18 复盘缺陷④根治配套）：state.env 的 run_started_at；
+    lite 轮回落夹具源轮基线（与驱动 evidence_baseline 同口径）。0=取不到（跳窗）。"""
+    try:
+        rs = int((state.get('run_started_at') or '0').strip() or '0')
+        if (state.get('lite_round') or '').strip() == '1':
+            fx = (state.get('lite_fixtures_from') or '').strip()
+            if fx:
+                fenv = SIM / 'runs' / fx / 'state.env'
+                if fenv.exists():
+                    for ln in fenv.read_text(encoding='utf-8', errors='replace').splitlines():
+                        if ln.startswith('run_started_at='):
+                            try:
+                                rs2 = int(ln.split('=', 1)[1].strip())
+                                if rs2 > 0:
+                                    rs = rs2
+                            except ValueError:
+                                pass
+                            break
+        return rs
+    except Exception:
+        return 0
+
+def _art_refreshed(ref: str, rel: str) -> bool:
+    """ref 上 rel 的最后提交时刻 ≥ 基线（run18 复盘缺陷④：本地 remote-tracking ref
+    无 fetch 核验+无新鲜度窗，曾把源轮旧稿/未推送工作树虚标为「模版符合@origin」）。
+    基线取不到（0）时保持旧语义（存在即真）并警示。"""
+    base = _art_baseline_ts()
+    if base <= 0:
+        print('[warn] _art_refreshed 无 run_started_at（旧 state 兼容），跳过新鲜度窗口', file=sys.stderr)
+        return True
+    ct = _git_out('log', '-1', '--format=%ct', ref, '--', rel).strip()
+    if not ct:
+        return False
+    try:
+        return int(ct) >= base
+    except ValueError:
+        return False
+
 def _art_resolve(rel: str):
-    """→ (text|None, 解析源, 解析源锚)。None=三处皆无（如实缺件，不冒充）。"""
+    """→ (text|None, 解析源, 解析源锚)。None=三处皆无（如实缺件，不冒充）。
+    run18 复盘缺陷④根治：先 fetch origin 再核验（此前只查本地 remote-tracking ref，
+    推送时序差下本地 ref 是旧的）；命中 ref 还须过新鲜度窗（本轮窗口内提交），
+    旧稿降级为「(在仓·旧版)」——存在但非本轮产物，不算模版符合。"""
     if not rel:
         return None, '', ''
+    _git_ok('fetch', '-q', 'origin')
     for ref in ('origin/main', 'origin/integration/RFD-001'):
         if _git_ok('cat-file', '-e', f'{ref}:{rel}'):
             sha = _git_out('rev-parse', '--short', ref).strip()
-            return _git_out('show', f'{ref}:{rel}'), ref, sha
+            src = ref if _art_refreshed(ref, rel) else f'{ref}（在仓·旧版）'
+            return _git_out('show', f'{ref}:{rel}'), src, sha
     p = CEN / rel
     if p.exists():
         return p.read_text(encoding='utf-8', errors='replace'), '(工作树检出)', CEN_ANCHOR
@@ -3091,7 +3135,10 @@ def artifact_panorama():
             rows.append(f'<tr><td><b>{n}</b></td><td>{H.escape(label)}</td>'
                         f'<td><span class="art-verdict miss">文件域无独立工件</span>——{H.escape(note)}</td>'
                         f'<td>{anchor}</td></tr>')
-    note_g5 = _NOTE_G5.get(RUN_ID, ('【骨架占位·待补注册】G5 注记未注册（骨架兜底轮）',))
+    # run18 复盘缺陷②根治：_NOTE_G5 值类型历史上 str/tuple 混用（单元素 tuple 的
+    # repr 曾原样泄漏进 HTML 与 txt 派生物）——消费侧统一归一化为 str。
+    _note_g5_raw = _NOTE_G5.get(RUN_ID, ('【骨架占位·待补注册】G5 注记未注册（骨架兜底轮）',))
+    note_g5 = ''.join(_note_g5_raw) if isinstance(_note_g5_raw, (tuple, list)) else _note_g5_raw
     html_tbl = ('<table><tr><th>步</th><th>交付物</th><th>模版核对结果</th><th>锚</th></tr>'
                 + ''.join(rows) + '</table>')
     stat = (f'共 {len(rows)} 行：在仓 {n_files} 件（模版符合 {n_ok} · 在仓不符 {n_files - n_ok if n_files >= n_ok else 0}）+ 缺件不在仓 {n_bad - (n_files - n_ok) if n_bad >= (n_files - n_ok) else n_bad} · 其余为无文件域声明；'
