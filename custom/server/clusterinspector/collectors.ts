@@ -37,6 +37,10 @@ export interface ProfileTail {
   mtimeMs: number
   /** 最后工作行（API call #/tool completed）时间戳 epoch ms；无工作行=0 */
   workTsMs: number
+  /** 最后「真做」行（tool completed 或会话第 2+ 次调用）时间戳 epoch ms；无=0。
+   *  run19 推演层根治上移：单轮 API call #1 + Turn ended=嘴炮回合（回一句话
+   *  收场）——静默催办资格的复位只认真做行，防"被催后回话顶回继续躺平"。 */
+  realWorkTsMs: number
 }
 
 export interface ProfilesFace {
@@ -261,6 +265,7 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
         // 工作行活性（run14 v3 watcher 根治面移植）：从日志尾部回扫找最后一条
         // 工作行（API call #/tool completed）并解析其行首时间戳；mtime 不算活性。
         let workTsMs = 0
+        let realWorkTsMs = 0
         try {
           const head = Buffer.alloc(65536)
           const hfd = require('node:fs').openSync(log, 'r')
@@ -269,11 +274,16 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
           require('node:fs').closeSync(hfd)
           const lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
           for (let i = lines.length - 1; i >= 0; i--) {
+            // 真做判据（run19 推演层根治上移）：tool completed 或会话第 2+ 次调用——
+            // 单轮 API call #1 + Turn ended=嘴炮回合（回一句话收场），不清静默账。
+            const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #[2-9][0-9]* )/)
+            if (rw) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T') + 'Z') || Date.parse(rw[1]!.replace(' ', 'T')) }
             const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
-            if (m) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')); break }
+            if (m) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')) }
+            if (realWorkTsMs && workTsMs) break
           }
         } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
-        face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs, workTsMs })
+        face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs, workTsMs, realWorkTsMs })
       } catch {
         // 单 profile 无日志/读失败：跳过（fail-soft 到 profile 粒度）
       }
