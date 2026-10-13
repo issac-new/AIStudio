@@ -20,3 +20,13 @@ diff --git a/packages/client/src/composables/useTheme.ts b/packages/client/src/c
 +  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'dark',
  )
  // Keep this in sync with the pre-render theme in index.html.
+diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
+--- a/packages/client/src/main.ts
++++ b/packages/client/src/main.ts
+@@ -28,7 +28,7 @@
+   }
+ }
+ 
+-const savedBrightness = storedPreference('hermes_brightness', 'system')
++const savedBrightness = storedPreference('hermes_brightness', 'dark')
+ const themeStyle = useTheme().style.value
