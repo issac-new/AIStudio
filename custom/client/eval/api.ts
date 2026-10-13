@@ -9,8 +9,18 @@ export interface EvalAssertionDto {
   text: string
   expect: 'yes' | 'no'
   kind: 'result' | 'trajectory' | 'risk'
+  link?: 'intent' | 'tool_choice' | 'params' | 'evidence' | 'state' | 'expression'
   s0?: { kind: 'regex'; pattern: string; flags?: string } | { kind: 'threshold'; metric: string; op: string; value: number }
 }
+
+export type ExceptionTypeDto =
+  | 'none'
+  | 'ambiguous_intent'
+  | 'missing_param'
+  | 'insufficient_permission'
+  | 'tool_timeout'
+  | 'knowledge_conflict'
+  | 'user_rephrase'
 
 export interface EvalTaskDto {
   id: string
@@ -18,6 +28,9 @@ export interface EvalTaskDto {
   expectedBehavior: string
   rubric: EvalAssertionDto[]
   outcome?: { verifier: string; params: Record<string, string> }
+  exceptionType?: ExceptionTypeDto
+  expectedToolCalls?: string[]
+  origin?: { runId: string; taskId: string; sampleIdx?: number; at: number }
 }
 
 export interface EvalSetDto {
@@ -43,6 +56,14 @@ export interface EvalSetMetaDto {
   runCount: number
 }
 
+export interface ReleaseGateCheckDto {
+  key: string
+  threshold: string
+  measured: string | null
+  status: 'pass' | 'fail' | 'no_data'
+  gap?: string
+}
+
 export interface AggregatesDto {
   taskCount: number
   passAt1: number | null
@@ -58,6 +79,17 @@ export interface AggregatesDto {
   riskVeto: boolean
   statisticallyInsufficient: boolean
   judgeOnline: boolean
+  byLink?: Partial<Record<string, { total: number; passed: number; unknown: number; passRate: number | null }>>
+  byException?: Array<{ type: string; taskCount: number; passAtK: number | null }>
+  processMetrics?: { toolHeadAccuracy: number | null; trajectoryMatchScore: number | null; attemptsCompared: number }
+  sixDimensions?: Array<{ dim: string; value: number | null; basis: string; instrumented: boolean }>
+  releaseGate?: {
+    verdict: 'pass' | 'fail' | 'no_data'
+    checks: ReleaseGateCheckDto[]
+    measuredCount: number
+    gapKeys: string[]
+    basis: string
+  }
 }
 
 export interface AttemptDto {
@@ -67,6 +99,7 @@ export interface AttemptDto {
   verdicts: Array<{ assertionId: string; value: 'yes' | 'no' | 'unknown'; source: string; conflict?: boolean; p?: number }>
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number }
+  toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>
   judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean }
   passed?: boolean
   judgedAt?: number
@@ -99,6 +132,22 @@ export interface IterationDto {
   revision?: string
   createdAt: number
   createdBy?: string
+}
+
+export interface RunCompareDto {
+  setId: string
+  base: { runId: string; target: { profile?: string; model?: string; version?: string }; createdAt: number }
+  head: { runId: string; target: { profile?: string; model?: string; version?: string }; createdAt: number }
+  perTask: Array<{ taskId: string; base: 'pass' | 'fail' | null; head: 'pass' | 'fail' | null; flip: string }>
+  deltas: {
+    passAt1: number | null
+    passAtK: number | null
+    unknownRatio: number | null
+    avgTokens: number | null
+    avgDurationMs: number | null
+    toolHeadAccuracy: number | null
+    trajectoryMatchScore: number | null
+  }
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -138,6 +187,14 @@ export const evalApi = {
     }),
   listIterations: (runId: string) =>
     req<{ iterations: IterationDto[] }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/iterations`),
+  // —— 腾讯评测体系轮 ——
+  compareRuns: (base: string, head: string) =>
+    req<{ compare: RunCompareDto }>(`/api/hermes/eval/runs/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`),
+  reflow: (runId: string, body: { taskId: string; sampleIdx?: number; targetSetId?: string }) =>
+    req<{ created: boolean; taskId: string; set: { id: string; name: string; taskCount: number } }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/reflow`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   listVerifiers: () => req<{ verifiers: string[] }>('/api/hermes/eval/outcome-verifiers'),
   // —— UI Oracle（M3）——
   listOracleCases: () => req<{ cases: unknown[] }>('/api/hermes/eval/oracle/cases'),

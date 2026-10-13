@@ -1,6 +1,8 @@
 <!-- overlay/custom/client/eval/components/EvalReportPanel.vue -->
 <!-- 运行报告面板：四层卡（Result/Trajectory/Efficiency/Risk）+ 样本明细 +
-     人工仲裁（conflict/unknown 终裁）+ 归因双 Loop（Agent→review 域 / Rubric→迭代账本）。 -->
+     人工仲裁（conflict/unknown 终裁）+ 归因双 Loop（Agent→review 域 / Rubric→迭代账本）。
+     腾讯评测体系轮增面：六环节分段 / 过程双指标 / 六维分面 / 发布门禁 / 异常分桶 /
+     失败样本回流回归库。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -21,6 +23,10 @@ const setDto = ref<EvalSetDto | null>(null)
 const iterations = ref<IterationDto[]>([])
 const error = ref('')
 const note = ref('')
+const reflowMsg = ref('')
+
+/** 六环节呈现固定顺序（与服务端 EVAL_LINKS 同序）。 */
+const LINK_ORDER = ['intent', 'tool_choice', 'params', 'evidence', 'state', 'expression'] as const
 
 async function load(): Promise<void> {
   error.value = ''
@@ -67,6 +73,16 @@ async function attributeRubric(taskId: string, assertionId: string, finding: 'ju
     await evalApi.attribute(props.runId, { taskId, assertionId, finding, ...(note.value.trim() ? { note: note.value.trim() } : {}) })
     note.value = ''
     await load()
+  } catch (e) {
+    error.value = (e as Error).message
+  }
+}
+
+async function reflow(taskId: string, sampleIdx: number): Promise<void> {
+  reflowMsg.value = ''
+  try {
+    const result = await evalApi.reflow(props.runId, { taskId, sampleIdx })
+    reflowMsg.value = result.created ? `${L.value.runs.reflowDone}：${result.set.name}（${result.taskId}）` : L.value.runs.reflowDup
   } catch (e) {
     error.value = (e as Error).message
   }
@@ -143,6 +159,102 @@ function durationText(ms: number | null): string {
       ⚠ {{ L.runs.drilldownHint }}（{{ pct(run.aggregates.unknownRatio) }}）
     </p>
 
+    <!-- 六环节分段 + 过程双指标（腾讯评测体系轮） -->
+    <div v-if="run.aggregates.byLink" class="eval-report__seg" data-testid="eval-report-bylink">
+      <span class="seg__title">{{ L.runs.linkTitle }}</span>
+      <span v-for="link in LINK_ORDER" :key="link" class="seg__chip" :data-testid="`eval-link-${link}`">
+        {{ L.runs.linkNames[link] }} {{ run.aggregates.byLink[link] ? pct(run.aggregates.byLink[link]!.passRate) : '—' }}
+        <em v-if="run.aggregates.byLink[link]?.unknown" class="muted">({{ L.runs.unknown }} {{ run.aggregates.byLink[link]!.unknown }})</em>
+      </span>
+    </div>
+    <div v-if="run.aggregates.processMetrics" class="eval-report__layers" data-testid="eval-report-process">
+      <div class="layer">
+        <span class="layer__name" :title="L.runs.procToolHeadHint">{{ L.runs.procToolHead }} ↑</span>
+        <span class="layer__value" :class="{ ok: (run.aggregates.processMetrics.toolHeadAccuracy ?? 0) >= 0.9 }">
+          {{ pct(run.aggregates.processMetrics.toolHeadAccuracy) }}
+        </span>
+      </div>
+      <div class="layer">
+        <span class="layer__name" :title="L.runs.procTrajectoryHint">{{ L.runs.procTrajectory }} ↓</span>
+        <span class="layer__value" :class="{ ok: (run.aggregates.processMetrics.trajectoryMatchScore ?? 1) <= 0.2 }">
+          {{ run.aggregates.processMetrics.trajectoryMatchScore === null ? '—' : run.aggregates.processMetrics.trajectoryMatchScore.toFixed(2) }}
+        </span>
+      </div>
+      <div class="layer">
+        <span class="layer__name">{{ L.runs.procSamples }}</span>
+        <span class="layer__value">{{ run.aggregates.processMetrics.attemptsCompared }}</span>
+      </div>
+    </div>
+
+    <!-- 发布门禁（实测项机械执行；缺口项如实呈现） -->
+    <div v-if="run.aggregates.releaseGate" class="eval-report__gate" :data-testid="`eval-gate-${run.aggregates.releaseGate.verdict}`">
+      <div class="gate__head">
+        <span class="seg__title">{{ L.runs.gateTitle }}</span>
+        <span class="chip" :class="run.aggregates.releaseGate.verdict === 'fail' ? 'chip-warn' : run.aggregates.releaseGate.verdict === 'pass' ? 'v-pass' : ''">
+          {{ L.runs.gateVerdict[run.aggregates.releaseGate.verdict] }}（{{ run.aggregates.releaseGate.measuredCount }}）
+        </span>
+      </div>
+      <table class="verdicts">
+        <thead>
+          <tr>
+            <th>{{ L.runs.gateCols.check }}</th>
+            <th>{{ L.runs.gateCols.threshold }}</th>
+            <th>{{ L.runs.gateCols.measured }}</th>
+            <th>{{ L.runs.gateCols.status }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in run.aggregates.releaseGate.checks" :key="c.key" :data-testid="`eval-gate-row-${c.key}`">
+            <td class="mono">{{ c.key }}</td>
+            <td>{{ c.threshold }}</td>
+            <td :title="c.gap">{{ c.measured ?? '—' }}</td>
+            <td :class="c.status === 'pass' ? 'v-pass' : c.status === 'fail' ? 'v-fail' : 'v-unknown'">
+              {{ L.runs.gateStatus[c.status] }}<span v-if="c.status === 'no_data'" class="muted">（{{ c.gap }}）</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="muted gate__basis">{{ run.aggregates.releaseGate.basis }}</p>
+    </div>
+
+    <!-- 六维分面（未采集维如实立账） -->
+    <div v-if="run.aggregates.sixDimensions" class="eval-report__sixdim" data-testid="eval-report-sixdim">
+      <span class="seg__title">{{ L.runs.sixDimTitle }}</span>
+      <span
+        v-for="d in run.aggregates.sixDimensions"
+        :key="d.dim"
+        class="seg__chip"
+        :class="{ 'seg__chip--gap': !d.instrumented }"
+        :title="d.basis"
+        :data-testid="`eval-dim-${d.dim}`"
+      >
+        {{ L.runs.sixDimNames[d.dim as keyof typeof L.runs.sixDimNames] }}：
+        <template v-if="d.instrumented && d.value !== null">{{ d.value.toFixed(2) }}</template>
+        <template v-else>{{ L.runs.sixDimNotMeasured }}</template>
+      </span>
+    </div>
+
+    <!-- 异常场景分桶 -->
+    <div v-if="run.aggregates.byException?.length" class="eval-report__exc" data-testid="eval-report-byexception">
+      <span class="seg__title">{{ L.runs.excTitle }}</span>
+      <table class="verdicts">
+        <thead>
+          <tr>
+            <th>{{ L.runs.excCols.type }}</th>
+            <th>{{ L.runs.excCols.taskCount }}</th>
+            <th>{{ L.runs.excCols.passAtK }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in run.aggregates.byException" :key="b.type">
+            <td>{{ L.runs.excNames[b.type as keyof typeof L.runs.excNames] ?? b.type }}</td>
+            <td>{{ b.taskCount }}</td>
+            <td :class="{ ok: b.passAtK !== null && b.passAtK >= 0.8, danger: b.passAtK !== null && b.passAtK < 0.5 }">{{ pct(b.passAtK) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- 样本明细（密封集无明细：只回聚合） -->
     <template v-if="run.attempts && run.attempts.length > 0">
       <h4>{{ L.runs.attempts }}</h4>
@@ -154,6 +266,14 @@ function durationText(ms: number | null): string {
           <span v-if="a.outcome" :class="a.outcome.ok ? 'v-pass' : 'v-fail'" :title="a.outcome?.detail">
             {{ L.runs.outcome }}：{{ a.outcome?.ok ? L.runs.outcomeOk : L.runs.outcomeFail }}
           </span>
+          <button
+            v-if="!a.passed"
+            type="button"
+            class="ghost"
+            :title="L.runs.reflowHint"
+            :data-testid="`reflow-${a.taskId}-${a.sampleIdx}`"
+            @click="reflow(a.taskId, a.sampleIdx)"
+          >{{ L.runs.reflow }}</button>
           <span v-if="a.judgeMeta && !a.judgeMeta.online" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
         </div>
         <table class="verdicts">
@@ -183,6 +303,7 @@ function durationText(ms: number | null): string {
         </table>
       </div>
       <input v-model="note" class="attr-note" :placeholder="L.runs.attrNotePh" data-testid="eval-attr-note" />
+      <p v-if="reflowMsg" class="eval-report__reflow-msg" data-testid="eval-reflow-msg">{{ reflowMsg }}</p>
     </template>
 
     <!-- 归因双 Loop -->
@@ -218,6 +339,31 @@ function durationText(ms: number | null): string {
 .eval-report__head { display: flex; align-items: center; gap: 10px; h3 { margin: 0; font-size: 14px; } }
 .eval-report__error { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
 .eval-report__hint { color: var(--warning, #b45309); font-size: 13px; margin: 0; }
+.eval-report__seg, .eval-report__sixdim {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  .seg__title { font-size: 12px; opacity: 0.7; margin-right: 4px; }
+}
+.seg__chip {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 9px;
+  padding: 2px 8px;
+  font-size: 12px;
+  em { font-style: normal; }
+  &.seg__chip--gap { opacity: 0.6; border-style: dashed; }
+}
+.eval-report__gate {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  .gate__head { display: flex; align-items: center; gap: 8px; }
+  .gate__basis { margin: 0; font-size: 11px; }
+}
+.eval-report__exc {
+  display: flex; flex-direction: column; gap: 6px;
+  .seg__title { font-size: 12px; opacity: 0.7; }
+}
+.eval-report__reflow-msg { color: var(--success, #16a34a); font-size: 12px; margin: 0; }
 .eval-report__layers { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .layer {
   border: 1px solid var(--border-color, #e5e7eb);
