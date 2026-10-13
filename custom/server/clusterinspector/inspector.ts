@@ -89,7 +89,9 @@ export class ClusterInspector {
         const sendEnv = readGatewayMatrixEnv(process.env)          // 发送者凭据（orchestrator/默认）
         const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
         if (!sendEnv || !agentEnv?.userId) return undefined
-        const body = `⏰ 集群巡检提醒：${summary}。若仍在处理请继续；若已卡住请了结当前任务或回执阻塞原因。`
+        // 催办带缺口数字+收口动作（run19 推演层根治上移：模糊提醒"若仍在处理请继续"
+        // 会被自认已完成的回话顶回——run19 三例实锤。改成点名卡清单+可执行收口三步。）
+        const body = `⏰ 集群巡检催办（真做静默）：${summary}。请收口：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
         await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
           { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
           globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)

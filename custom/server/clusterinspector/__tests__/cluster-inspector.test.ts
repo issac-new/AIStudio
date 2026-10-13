@@ -240,6 +240,24 @@ describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', ()
     expect(hit!.subject).toBe('profile:chen-csw-pay-core')
     expect(hit!.summary).toContain('2 张在办卡')
   })
+  it('真做判据（run19 上移）：嘴炮回合（单轮调用回话）不清静默账——workTsMs 新但 realWorkTsMs 旧 → 仍报', () => {
+    const chatty = snap({
+      ts: now,
+      profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'INFO reply sent', mtimeMs: now - 30_000, workTsMs: now - 30_000, realWorkTsMs: now - 1200_000 }] },
+      runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }] },
+    })
+    const hit = detectAll(chatty, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('真做静默')
+  })
+  it('真做判据：工具轮/多轮调用新鲜 → 不报（真在干活不误催）', () => {
+    const working = snap({
+      ts: now,
+      profiles: { ok: true, tails: [{ profile: 'chen-csw-pay-core', tail: 'INFO ok', mtimeMs: now - 30_000, workTsMs: now - 30_000, realWorkTsMs: now - 30_000 }] },
+      runningCards: { ok: true, cards: [{ id: 't_fix1', assignee: 'chen-csw-pay-core' }] },
+    })
+    expect(detectAll(working, { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+  })
   it('档案活跃（刚写日志）→ 不报；无在办卡的静默档案 → 不报（真空闲不误报）', () => {
     expect(detectAll(mk(now - 60_000), { nowMs: now }).find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
     const idle = snap({ ts: now, profiles: { ok: true, tails: [{ profile: 'ops', tail: 'x', mtimeMs: now - 9999_000, workTsMs: 0 }] }, runningCards: { ok: true, cards: [] } })
