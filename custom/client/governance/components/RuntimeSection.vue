@@ -334,7 +334,7 @@ onMounted(() => void refresh())
 .runtime__window { font-size: 9.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
 .runtime__row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin: 3px 0; }
 .runtime__label { font-size: 10.5px; color: var(--text-muted, #878c99); }
-.runtime__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #f1f5f9;
+.runtime__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #16233a;
   &.is-warn { color: #b45309; background: #fef3c7; }
   &.is-bad { color: #b91c1c; background: #fee2e2; }
   &.is-ok { color: #15803d; background: #dcfce7; } }

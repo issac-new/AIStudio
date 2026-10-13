@@ -18,6 +18,23 @@ import { hashDeeplinkTarget } from './deeplink'
 import '@/styles/global.scss'
 import 'katex/dist/katex.min.css'
 
+// overlay[aipaydev]: 全页面默认 dark + 中文（用户 2026-10-13 裁定）。
+// 亮度：hermes_brightness 未设或为出厂缺省 'system' → 写 'dark'（用户显式 'light' 尊重不动）。
+//   必须在 FOUC 块之前执行——FOUC 该键预挂 .dark 类（防闪白），useTheme() store
+//   首次调用（App.vue setup，晚于本模块体）再读同键定初值，三处同源一致。
+// 语言：i18n 在 import 期已初始化（早于本模块体，写 localStorage 来不及），故用
+//   switchLocale 运行时切 zh——其内部落 localStorage（共享键/账户键），后续启动直读；
+//   仅当共享键无偏好时执行（显式选过语言的浏览器不动）。
+{
+  const savedBrightness = localStorage.getItem('hermes_brightness')
+  if (savedBrightness === null || savedBrightness === 'system') {
+    localStorage.setItem('hermes_brightness', 'dark')
+  }
+  if (!localStorage.getItem('hermes_locale')) {
+    void import('@/i18n').then(({ switchLocale }) => switchLocale('zh'))
+  }
+}
+
 // === 上游 main.ts 的 FOUC / token 处理(原样复制,勿改)===
 const savedBrightness = localStorage.getItem('hermes_brightness') || 'system'
 const savedStyle = localStorage.getItem('hermes_style') || 'ink'

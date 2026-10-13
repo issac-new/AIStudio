@@ -196,13 +196,13 @@ onMounted(() => void refresh())
   &.is-primary { color: #15803d; background: #dcfce7; }
   &.is-lc-introduced { color: #1d4ed8; background: #dbeafe; }
   &.is-lc-active { color: #15803d; background: #dcfce7; }
-  &.is-lc-sustaining { color: #64748b; background: #f1f5f9; }
+  &.is-lc-sustaining { color: #64748b; background: #16233a; }
   &.is-lc-retire-candidate { color: #b45309; background: #fef3c7; }
   &.is-lc-retired { color: #6b7280; background: #e5e7eb; text-decoration: line-through; }
   &.is-slo-core { color: #b91c1c; background: #fee2e2; }
   &.is-slo-important { color: #b45309; background: #fef3c7; }
-  &.is-slo-general { color: #64748b; background: #f1f5f9; }
-  &.is-verdict { color: #334155; background: #f1f5f9; font-family: ui-monospace, monospace; } }
+  &.is-slo-general { color: #64748b; background: #16233a; }
+  &.is-verdict { color: #334155; background: #16233a; font-family: ui-monospace, monospace; } }
 
 .ledger__metrics { border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 8px; }
 .ledger__verdicts { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }

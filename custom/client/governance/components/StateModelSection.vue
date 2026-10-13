@@ -88,7 +88,7 @@ onMounted(() => void refresh())
 .sm__empty { border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted, #878c99); }
 .sm__row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
 .sm__label { font-size: 10.5px; color: var(--text-muted, #878c99); }
-.sm__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #f1f5f9;
+.sm__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #16233a;
   &.is-src { color: #1d4ed8; background: #dbeafe; } }
 .sm__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; }
 .sm__trans { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 10px; font-size: 11px; }
