@@ -903,10 +903,17 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       return $rc
     fi
   fi
-  local last_sig=0 last_work=-1 cur_work w nudged=0 idle_half=$(( idle / 2 )) all_done
+  # ── 分桶判活（run19 根治）：原实现 cur_work=全员日志 max——任一 agent 有活动即
+  # 全组判活，hu/lin 被 429 击杀后 chen/xiao 的活跃令个体空转被掩盖（静默 1h+ 催办
+  # 永不触发，靠监控侧手工救场）。分桶后：每个未过锚 owner 独立活动桶（本地日志面
+  # 优先，远程档案走心跳 lw）；催办=存在「个体静默过半且未催」的 owner（按人武装，
+  # 个体活动即复位可再催）；判死=全部未过锚 owner 个体静默满 idle（保持原「全员
+  # 静默才判死」的防误杀语义——部分人死透部分人在干=只催不杀）。单锚
+  # wait_alive_truth 不改：其锚可由任一负责人完成，「任一人活」语义正确。
+  local -a _uo_names=() _uo_sigs=() _uo_works=() _uo_nudged=() _uo_logs=()
+  local _min_half="${MX_NUDGE_MIN_HALF:-300}"
+  local idle_half=$(( idle / 2 )) all_done
   local _nroom="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
-  local _nmentions=""
-  for a in ${agents//,/ }; do _nmentions="${_nmentions:+$_nmentions,}$(agent_mxid "$a")"; done
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
@@ -920,19 +927,8 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       fi
     done
     (( all_done == 1 )) && return 0
-    cur_work=0
-    for a in ${logs[@]+"${logs[@]}"}; do
-      w=$(_agent_log_last_work_ts "$a")
-      (( w > cur_work )) && cur_work=$w
-    done
     if (( _hb_on == 1 )); then
-      if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
-        _hb_miss=0
-        for a in "${_hbag[@]}"; do
-          w=$(hb_agent_lw "$a")
-          (( w > cur_work )) && cur_work=$w
-        done
-      else
+      if ! { hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; }; then
         # 采样守护疑似停：三拍不可达即降级串行硬窗（不误杀真在干活的腿）
         (( ++_hb_miss >= 3 )) && {
           note "[观察] 心跳连续 ${_hb_miss} 拍不可达，降级 ${hard}s 硬窗串行等待——不假判死"
@@ -945,44 +941,80 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
         }
       fi
     fi
-    if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
-    if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
-    if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
-      local lag="" hint="" br _fbi
-      for i in "${!owners[@]}"; do
-        (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"
-        # 可行动催办（run15 根治：陈旧分支盲催 150min 实锤——feat/DEV-X 存在上轮遗留提交
-        # 时 branch_fresh 恒假，owner 的本轮新提交常推去了 wt/t_* 工作区分支；催办必须
-        # 点破「分支在但 tip 是旧的」否则 owner 无从知道真值锚为何不亮）
-        case "${exprs[$i]}" in
-          *"branch_fresh feat/"*)
-            br="${exprs[$i]##*branch_fresh feat/}"; br="${br%% *}"
-            if [[ -n "$br" ]] && git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/feat/$br" >/dev/null 2>&1; then
-              hint="${hint:+$hint；}feat/$br 存在但 tip 早于本轮开跑（上轮遗留）——请把本轮新提交 push 到 feat/$br（勿只留在 wt/t_* 工作区分支）"
-            fi
-            ;;
-        esac
+    # 分桶刷新：每未过锚 owner 的个体 sig/work/nudge 桶 + 静默名单/判死标志/日志面收窄
+    local _now=$(date +%s) _x _lg _w _ui _j
+    local _lag_half="" _lag_idle_half_any=0 _lag_idle_all=1 _lag_nudge=""
+    local -a _lag_logs=()
+    for i in "${!owners[@]}"; do
+      (( done_flag[$i] == 1 )) && continue
+      _x="${owners[$i]}"
+      _ui=-1
+      if (( ${#_uo_names[@]} > 0 )); then
+        for _j in "${!_uo_names[@]}"; do
+          [[ "${_uo_names[$_j]}" = "$_x" ]] && { _ui=$_j; break; }
+        done
+      fi
+      if (( _ui < 0 )); then
+        _uo_names+=("$_x"); _uo_sigs+=("$_now"); _uo_works+=(0); _uo_nudged+=(0)
+        _lg="$HERMES_ROOT/profiles/$_x/logs/agent.log"; [[ -f "$_lg" ]] || _lg=""
+        _uo_logs+=("$_lg"); _ui=$(( ${#_uo_names[@]} - 1 ))
+      fi
+      _lg="${_uo_logs[$_ui]}"
+      if [[ -n "$_lg" ]]; then
+        _w=$(_agent_log_last_work_ts "$_lg" 2>/dev/null || echo 0)
+      elif (( _hb_on == 1 )); then
+        _w=$(hb_agent_lw "$_x" 2>/dev/null || echo 0)
+      else
+        _w=0
+      fi
+      (( _w > _uo_works[$_ui] )) && { _uo_sigs[$_ui]=$_now; _uo_works[$_ui]=$_w; _uo_nudged[$_ui]=0; }
+      if (( _now - _uo_sigs[$_ui] > idle_half )); then
+        _lag_half="${_lag_half:+$_lag_half,}$_x"
+        (( _uo_nudged[$_ui] == 0 )) && _lag_nudge="${_lag_nudge:+$_lag_nudge,}$_x"
+        _lag_idle_half_any=1
+      fi
+      (( _now - _uo_sigs[$_ui] > idle )) || _lag_idle_all=0
+      [[ -n "$_lg" ]] && _lag_logs+=("$_lg")
+    done
+    if (( idle_half >= _min_half )) && [[ -n "${_lag_nudge:-}" && -n "${_nroom:-}" ]]; then
+      # 分桶催办（run19 根治）：只 @ 个体静默过半且未催的 owner；原文案+陈旧分支
+      # 诊断+分支感知情报全保留（见各根治注释）
+      local lag="" hint="" br _fbi _m=""
+      for _x in ${_lag_nudge//,/ }; do
+        lag="${lag:+$lag,}$_x"; _m="${_m:+$_m,}$(agent_mxid "$_x")"
+        for i in "${!owners[@]}"; do
+          (( done_flag[$i] == 0 )) && [[ "${owners[$i]}" = "$_x" ]] || continue
+          case "${exprs[$i]}" in
+            *"branch_fresh feat/"*)
+              br="${exprs[$i]##*branch_fresh feat/}"; br="${br%% *}"
+              if [[ -n "$br" ]] && git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/feat/$br" >/dev/null 2>&1; then
+                hint="${hint:+$hint；}feat/$br 存在但 tip 早于本轮开跑（上轮遗留）——请把本轮新提交 push 到 feat/$br（勿只留在 wt/t_* 工作区分支）"
+              fi
+              ;;
+          esac
+        done
       done
-      # 分支感知情报（run19 根治：「干完活不收口」——本轮新推的分支已在 origin 但
-      # 未 merge 入 main，泛催办被 agent 自认已完成顶回；把「分支已见到+还差哪几步」
-      # 写进催办词，模糊等待变可执行收口指令）
       _fbi=$(_nudge_branch_intel "$lag" 2>/dev/null || true)
       [[ -n "$hint" ]] && hint="诊断：$hint"
-      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。${_fbi}若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_nmentions" >/dev/null 2>&1 || true
-      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次${hint:+（含陈旧分支诊断）}${_fbi:+（含分支情报）}"
-      nudged=1
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。${_fbi}若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_m" >/dev/null 2>&1 || true
+      note "[观察] 个体静默过半（>${idle_half}s），已向 ${lag} 催办一次${hint:+（含陈旧分支诊断）}${_fbi:+（含分支情报）}"
+      for _x in ${lag//,/ }; do
+        for _j in "${!_uo_names[@]}"; do
+          [[ "${_uo_names[$_j]}" = "$_x" ]] && _uo_nudged[$_j]=1
+        done
+      done
     fi
-    if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
+    if (( idle_half >= 120 && _lag_idle_half_any == 1 )) && { _any_log_tail_stalled ${_lag_logs[@]+"${_lag_logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
       MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
-        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：日志尾错误态——左移件 b；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（早判卡死：个体静默>${idle_half}s 且日志尾错误态——左移件 b；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
       done
       return 1
     fi
-    if (( $(date +%s) - last_sig > idle )); then
+    if (( _lag_idle_all == 1 )); then
       MX_MULTI_FAILED_LEGS=""
       for i in "${!exprs[@]}"; do
-        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 空转判死；负责人 ${owners[$i]}）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
+        (( done_flag[$i] == 0 )) && note "[真值] ${descs[$i]} ✗（${idle}s 个体空转全员静默：负责人 ${owners[$i]} 各自日志零增长；中途已分桶催办未响应）" && MX_MULTI_FAILED_LEGS="${MX_MULTI_FAILED_LEGS:+$MX_MULTI_FAILED_LEGS,}${descs[$i]}"
       done
       return 1
     fi
