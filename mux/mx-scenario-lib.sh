@@ -583,6 +583,31 @@ _artifact_nudge() { # <desc> <checkpoint-label>
   note "[跟进] 产物等待提醒已发（$2）：$1"
 }
 
+# ── 分支感知催办情报（run19 根治件）：「干完活不收口」形态——稿子已推到
+# origin/feat/*（tip 是本轮新提交）但不 merge 入 main、不回结论行，催办一句
+# 「仍在等待」被 agent 自认已完成顶回（run19 实录：xiao AN-MP 稿在 feat/AN-MP
+# 分支 c5914fc，main 无文件，泛催办回复 0 工具轮后继续静默 30min+）。探测
+# 责任人名下本轮新鲜的远程分支，产出「已见到你的分支+还差哪几步」的带情报
+# 催办词；探测失败输出空（催办退回原文案，fail-open 不阻塞）。
+_nudge_branch_intel() { # <agents-csv> → stdout: 分支情报句（空=无情报）
+  local agents="$1" br tip ct an rs out=""
+  [[ -n "${DIRECTOR_CLONE:-}" && -d "$DIRECTOR_CLONE/.git" ]] || return 0
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  rs="$(sget run_started_at 2>/dev/null || true)"
+  [[ -n "$rs" ]] || return 0
+  while IFS='|' read -r br tip ct an; do
+    [[ -n "$br" ]] || continue
+    # origin 自身与 main 不算 dev 交付分支（main tip 是驱动/PM 的 merge 提交）
+    [[ "$br" == "origin" || "$br" == "origin/main" ]] && continue
+    [[ "$ct" -ge "$rs" ]] 2>/dev/null || continue
+    case ",$agents," in *",$an,"*) ;; *) continue ;; esac
+    out="${out:+$out；}${br#origin/}@${tip}"
+  done < <(git -C "$DIRECTOR_CLONE" for-each-ref refs/remotes/origin \
+      --format='%(refname:short)|%(objectname:short)|%(committerdate:unix)|%(authorname)' 2>/dev/null)
+  [[ -n "$out" ]] && printf '已见到你本轮推送的分支：%s（内容在分支上，main 还没有）。' "$out"
+  return 0
+}
+
 wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   local desc="$1" timeout="$2"; shift 2
   local deadline=$(( $(date +%s) + timeout ))
@@ -806,8 +831,10 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     # 注意：字符串判空不能进算术上下文（(( ... && -n "$x" )) 把 -n 解析成
     # "减变量 n"，set -u 下 n: unbound variable 击杀驱动）——[[ ]] 移出 (( ))。
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
-      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "${_nmentions}" >/dev/null 2>&1 || true
-      note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次"
+      local _intel=""
+      _intel=$(_nudge_branch_intel "$agents" 2>/dev/null || true)
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。${_intel}若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
+      note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次${_intel:+（含分支情报）}"
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
@@ -921,7 +948,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
     if (( last_work < 0 )); then last_work=$cur_work; last_sig=$(date +%s); fi
     if (( cur_work > last_work )); then last_sig=$(date +%s); last_work=$cur_work; nudged=0; fi
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
-      local lag="" hint="" br
+      local lag="" hint="" br _fbi
       for i in "${!owners[@]}"; do
         (( done_flag[$i] == 0 )) && lag="${lag:+$lag,}${owners[$i]}"
         # 可行动催办（run15 根治：陈旧分支盲催 150min 实锤——feat/DEV-X 存在上轮遗留提交
@@ -936,9 +963,13 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
             ;;
         esac
       done
+      # 分支感知情报（run19 根治：「干完活不收口」——本轮新推的分支已在 origin 但
+      # 未 merge 入 main，泛催办被 agent 自认已完成顶回；把「分支已见到+还差哪几步」
+      # 写进催办词，模糊等待变可执行收口指令）
+      _fbi=$(_nudge_branch_intel "$lag" 2>/dev/null || true)
       [[ -n "$hint" ]] && hint="诊断：$hint"
-      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_nmentions" >/dev/null 2>&1 || true
-      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次${hint:+（含陈旧分支诊断）}"
+      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。${_fbi}若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_nmentions" >/dev/null 2>&1 || true
+      note "[观察] 空转过半（${idle_half}s），已向滞后锚负责人（${lag}）催办一次${hint:+（含陈旧分支诊断）}${_fbi:+（含分支情报）}"
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
