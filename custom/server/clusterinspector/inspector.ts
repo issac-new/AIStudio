@@ -103,8 +103,11 @@ export class ClusterInspector {
       } catch { return undefined }
     })
     for (const a of anomalies) {
-      if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent') continue
-      const profile = a.subject.replace(/^profile:/, '')
+      // 交付锚验证两型也入催办面（run19 上移 A+B）：锚缺失/陈旧分支的修复动作=推送，可催
+      if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent'
+        && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale') continue
+      const profile = (a.detail as { assignee?: string } | undefined)?.assignee?.trim()
+        || a.subject.replace(/^profile:/, '')
       const r = await nudge(profile, a.summary)
       acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
     }
