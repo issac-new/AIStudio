@@ -1290,6 +1290,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   _last_nudge_ts=0
   _last_fixed_count=0
   _stall_rounds=0
+  _tst_check_ts=0
   while (( $(date +%s) < DEFECT_WINDOW_END )); do
     auto_approve "$SCAN_ROOM" || true
     # V8.8 纪律 34⑤：缺陷卡建卡真伪校验（每 ~5 分钟一轮；占位/不在编制的 assignee
@@ -1313,6 +1314,34 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     if [[ "${MX_TEST_SHARDS:-1}" == "1" ]]; then _be_n=3; _fe_n=2; else _be_n=1; _fe_n=1; fi
     BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg qi "$(agent_mxid qi)" '[.[] | select(.origin_server_ts > $since and .sender == $qi) | (.content.body // "") | scan("TEST-(PASS|FAIL)-TEST-BE(-S[0-9]+)?")] | unique | length') || { sleep 30; continue; }
     FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg fei "$(agent_mxid fei)" '[.[] | select(.origin_server_ts > $since and .sender == $fei) | (.content.body // "") | scan("TEST-(PASS|FAIL)-TEST-FE(-S[0-9]+)?")] | unique | length') || { sleep 30; continue; }
+    # ── 测试员个体判活+按人催办（run19 根治：defect 环原为哑巴等待——纯消息计数，
+    #    测试员收场静默后无判活无催办=死等窗口耗尽；fei 21:07 收场静默 35min 实锤，
+    #    靠监控侧手工救场）。与 wait_alive_truth_multi 分桶同思路：qi/fei 各自追踪
+    #    最后活动（_agent_log_last_work_ts 同源判据），个体静默过半只 @ 该人（活动
+    #    即复位可再催），催办词带当前缺口计数变可执行收口指令。判活节流 60s/轮。
+    if (( $(date +%s) - _tst_check_ts >= 60 )); then
+      _tst_check_ts=$(date +%s)
+      for _t in qi fei; do
+        eval "_tst_w=\${_tst_lw_$_t:-0}"
+        _w=$(_agent_log_last_work_ts "$HERMES_ROOT/profiles/$_t/logs/agent.log" 2>/dev/null || echo 0)
+        if (( _w > _tst_w )); then
+          eval "_tst_sig_$_t=$(date +%s)"; eval "_tst_lw_$_t=$_w"; eval "_tst_nudged_$_t=0"
+        else
+          eval "_tst_sig=\${_tst_sig_$_t:-$_tst_check_ts}"
+          eval "_tst_nd=\${_tst_nudged_$_t:-0}"
+          if (( _tst_check_ts - _tst_sig > ${MX_DEFECT_NUDGE_HALF:-1800} )) && (( _tst_nd == 0 )); then
+            if [[ "$_t" == "qi" ]]; then
+              _tst_gap="后端测试 ${BOTH_DONE:-0}/${_be_n} 片结论行未齐"
+            else
+              _tst_gap="前端测试 ${FE_DONE:-0}/${_fe_n} 片结论行未齐"
+            fi
+            mx_send "$(load_token fanfan)" "$SCAN_ROOM" "⏰ 催办：@${_t}-agent 静默超半小时，${_tst_gap}（缺陷 ${DEFECTS:-0} 修复 ${FIXED:-0}）。请继续测试执行并收口：testlog 入库 push、每片一行结论行 TEST-PASS/FAIL-TEST-*-S<n>（附用例数）、有修复则 FIX-DONE+commit 锚。若已全部完成请补发结论行；确有阻塞请在群里说明。禁静默。" "$(agent_mxid "$_t")" >/dev/null 2>&1 || true
+            note "[观察] 测试员 ${_t} 个体静默过半，已催办一次（${_tst_gap}）"
+            eval "_tst_nudged_$_t=1"
+          fi
+        fi
+      done
+    fi
     if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE >= _be_n && FE_DONE >= _fe_n )); then
       # 纪律 34 驱动抽验（方案 34②/34⑥ 锚点级复验）：抽最近一条 FIX-DONE 行的
       # commit= 锚点，核验中央仓可反查（未推送=未完成；防测试侧照单全收伪锚回执）。
