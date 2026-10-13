@@ -70,12 +70,12 @@ ck "⑫ 账号板供给在位" "bash '$HERE/mux/mx-board-supply-check.sh' | grep
 # ⑬ 独立审批环在位（run16 实证：审批臂内嵌驱动，熔断证据等待期修复链审批饿死——
 #     两笔 execute_code 被拒实锤。常驻件 mx-approval-proxy.sh 随监督器同刻起：
 #     nohup bash mux/mx-approval-proxy.sh --run <RUN_ID> >/dev/null 2>&1 &）
-ck "⑬ 独立审批环可启动" "bash -n '$HERE/mux/mx-approval-proxy.sh' && grep -q 'needs your OK' '$HERE/mx-approval-proxy.sh'" "mx-approval-proxy.sh 缺席或语法坏——审批臂独立化的常驻件（run16 事故固化）"
+ck "⑬ 独立审批环可启动" "bash -n '$HERE/mux/mx-approval-proxy.sh' && grep -q 'needs your OK' '$HERE/mux/mx-approval-proxy.sh'" "mx-approval-proxy.sh 缺席或语法坏——审批臂独立化的常驻件（run16 事故固化；路径勘误 2026-10-13：grep 面与 bash -n 同为 mux/ 下）"
 
 # ⑭ 评测门禁三方同步在位（2026-10-13 腾讯评测体系轮：test-report 模板评测节 /
 #     spec-params 阈值组 / 生成器步 19 核对正则——只修一处=下次生成复发，
 #     步 20 模板↔产物双向同步纪律的评测面落地；守门=tests/eval-metrics-template-sync.test.ts）
-ck "⑭ 评测门禁三方同步" "grep -q '评测与运行时指标' '$HERE/mux/templates-pending/test-report.md' && grep -q 'EVAL_GATE_TOOL_SUCCESS_MIN' '$HERE/mux/spec-params.env' && grep -q 'eval-metrics' '$HERE/mux/mx-report-gen.py'" "test-report 模板/spec-params.env/mx-report-gen.py 三处评测面漂移——按 templates-pending/README.md「评测指标节」四同步位对齐"
+ck "⑭ 评测门禁三方同步" "grep -q '评测与运行时指标' '$HERE/mux/templates-pending/test-report.md' && grep -q 'EVAL_GATE_TOOL_SUCCESS_MIN' '$HERE/mux/spec-params.env' && grep -q '评测节在场' '$HERE/mux/mx-report-gen.py'" "test-report 模板/spec-params.env/mx-report-gen.py 三处评测面漂移——按 templates-pending/README.md「评测指标节」四同步位对齐（锚勘误 2026-10-13：生成器锚=评测节在场，与 eval-metrics-template-sync.test.ts 同源）"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十四项）" || { echo "有红项——修复后再跑"; exit 1; }
