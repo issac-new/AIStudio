@@ -51,7 +51,7 @@
 
 ## 评测指标节（2026-10-13，腾讯评测体系轮）
 
-test-report.md 增 §8「评测与运行时指标」（原机械判据节顺延为 §9 并加判据 8-10）：发布门禁六行阈值表（工具成功率 ≥99%/P99 ≤2×/降级率 <0.5% 照抄腾讯 ADP 公开清单，TTFT/响应分档/QPS 三行如实「证据缺口」）+ 过程双指标/六环节分段/异常分桶三行。数字单一来源=Swarm Studio Eval Studio 运行报告导出（/app/eval），禁手抄改写；本轮未发起评测如实写明并记问题单 eval-not-run（观察态）。同步位四处：本目录模板、mux/spec-params.env `EVAL_GATE_*` 阈值组、mx-prelaunch-check.sh 第 14 项（三方一致性核对）、mx-report-gen.py `_ART_V2_BY_STEP` 步 19 核对正则——守门测试 `tests/eval-metrics-template-sync.test.ts` 断言四处同步（只修一处=下次复发）。
+test-report.md 增 §8「评测与运行时指标」（原机械判据节顺延为 §9 并加判据 8-10；2026-10-13 续批：QPS 行改 mx-load-probe 可执行口径）：发布门禁六行阈值表（工具成功率 ≥99%/P99 ≤2×/降级率 <0.5% 照抄腾讯 ADP 公开清单，TTFT/响应分档/QPS 三行如实「证据缺口」）+ 过程双指标/六环节分段/异常分桶三行。数字单一来源=Swarm Studio Eval Studio 运行报告导出（/app/eval），禁手抄改写；本轮未发起评测如实写明并记问题单 eval-not-run（观察态）。同步位四处：本目录模板、mux/spec-params.env `EVAL_GATE_*` 阈值组、mx-prelaunch-check.sh 第 14 项（三方一致性核对）、mx-report-gen.py `_ART_V2_BY_STEP` 步 19 核对正则——守门测试 `tests/eval-metrics-template-sync.test.ts` 断言四处同步（只修一处=下次复发）。
 
 ## 后续批量项（挂账，列清单待批）
 
