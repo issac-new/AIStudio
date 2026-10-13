@@ -1,0 +1,22 @@
+diff --git a/tests/home_io_guard.py b/tests/home_io_guard.py
+index 877d27f..18e8895 100644
+--- a/tests/home_io_guard.py
++++ b/tests/home_io_guard.py
+@@ -100,6 +100,17 @@ class HomeIOGuard:
+             for prefix in _INTERPRETER_PREFIX_STRS:
+                 if _within(absolute, prefix) or (metadata and _contains(absolute, prefix)):
+                     return
++            # Home-root reads are allowed — the class docstring above promises
++            # "Reads stay allowed: several update paths only probe it", and the
++            # installed-app branch below already implements that asymmetry. The
++            # home branch historically refused *every* access (lexical + resolved,
++            # regardless of destructive), which broke legitimate read-only probes
++            # of the real home from routed/isolated children — concretely
++            # ``pm.environments._payload_manifest`` reading ``<real-home>/manifest.json``
++            # to detect a sealed payload (run19 fix; a read, not Hermes state
++            # mutation). Writes/metadata still refuse.
++            if not destructive:
++                return
+             # Check the lexical path first: resolving must not probe a protected
+             # tree merely to decide that the original path was forbidden.
+             for root in roots:
