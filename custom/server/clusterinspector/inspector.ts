@@ -250,8 +250,8 @@ export class ClusterInspector {
         // 交付锚验证面（A+B 检测器）依赖的看板 tasks 表透传字段——漏传则
         // detectDeliveryAnchor 对每张卡在 branch_name 判空处直接跳过、永不触发。
         branch_name: typeof c.branch_name === 'string' ? c.branch_name : undefined,
-        started_at: c.started_at,
-        completed_at: c.completed_at,
+        started_at: typeof c.started_at === 'number' || typeof c.started_at === 'string' ? c.started_at : undefined,
+        completed_at: typeof c.completed_at === 'number' || typeof c.completed_at === 'string' ? c.completed_at : undefined,
         status: typeof c.status === 'string' ? c.status : undefined,
       })).filter((c) => c.id)
       const snap: ClusterSnapshot = {
