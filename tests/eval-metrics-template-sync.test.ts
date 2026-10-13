@@ -65,6 +65,18 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })
 
+  it('mx-load-probe 压测探针在库可编译且判据三件齐', () => {
+    const probe = read('mux/mx-load-probe.py')
+    expect(probe).toContain('error_rate_lt_1pct')
+    expect(probe).toContain('achieved_qps_ge_90pct')
+    expect(probe).toContain('p99_le_2x_p50')
+    execFileSync('python3', ['-m', 'py_compile', join(HARNESS, 'mux', 'mx-load-probe.py')])
+    const env = read('mux/spec-params.env')
+    expect(env).toContain('mx-load-probe')
+    const tpl = read('mux/templates-pending/test-report.md')
+    expect(tpl).toContain('mx-load-probe 结论行原文')
+  })
+
   it('templates-pending README：评测指标节同步位说明在位', () => {
     const readme = read('mux/templates-pending/README.md')
     expect(readme).toContain('评测指标节（2026-10-13')
