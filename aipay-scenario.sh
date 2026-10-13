@@ -1128,12 +1128,16 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # 跟踪文件脏改防撞（09-26 实锤：app-registry/org/freeze 未提交残留挡 checkout，
     # set -e 静默击杀）。产物性脏改先收编提交，不丢证据。
     if [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]]; then
-      git add -A >/dev/null 2>&1 || true
-      git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置）" >/dev/null 2>&1 || true
+      # run19 热修（driver-restart-storm 单）：git add -A 曾把 agent 的 worktree 挂载点
+      # （.worktrees/wt-*，gitlink 形态）误收编进跟踪面——活跃 worktree 的指针随测试腿
+      # 推进永远追不上，收编后复查恒脏=defect 段死循环（3 轮 rc=1 实锤）。收编与复查
+      # 均排除 .worktrees/（挂载态非产物，不参与 checkout 面判定）。
+      git add -A -- ':!.worktrees' >/dev/null 2>&1 || true
+      git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置；.worktrees 挂载面排除）" >/dev/null 2>&1 || true
       # 收编自验证（r4）：commit 被钩子/锁挡下时 checkout 仍会被挡且 set -e 静默击杀——
-      # 复查仍有脏改即记 ISSUE 并显式失败，不再无声退场。
-      if [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]]; then
-        echo "ISSUE|integration-checkout-blocked|director|收编后仍有脏改，checkout 预期被挡" >> "$EVID_DIR/issues.log"
+      # 复查仍有脏改即记 ISSUE 并显式失败，不再无声退场。脏改判定同步排除 .worktrees/。
+      if [[ -n "$(git status --porcelain 2>/dev/null | grep -v '^ M \.worktrees/' | head -1)" ]]; then
+        echo "ISSUE|integration-checkout-blocked|director|收编后仍有脏改，checkout 预期被挡（.worktrees 挂载面已排除）" >> "$EVID_DIR/issues.log"
         fail "integration checkout 前置收编失败：工作树仍有脏改（见 issues.log）"
       fi
     fi
