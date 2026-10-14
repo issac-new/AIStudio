@@ -204,4 +204,39 @@ export const evalApi = {
     req<{ run: unknown }>(`/api/hermes/eval/oracle/cases/${encodeURIComponent(id)}/run`, { method: 'POST' }),
   listOracleRuns: (caseId?: string) =>
     req<{ runs: unknown[] }>(caseId ? `/api/hermes/eval/oracle/runs?caseId=${encodeURIComponent(caseId)}` : '/api/hermes/eval/oracle/runs'),
+  // —— 优化建议（2026-10-14 阿里调研轮 A+F：半自动挡建议报告）——
+  adviceReport: (days = 7, limit = 5) =>
+    req<{ ok: boolean; report: AdviceReportDto }>(`/api/optadvice/report?days=${days}&limit=${limit}`),
+}
+
+// ---------- 优化建议报告（/api/optadvice/report 客户端镜像） ----------
+
+export interface AdviceSessionDto {
+  id: string
+  title: string | null
+  model: string
+  lastActive: number | null
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  estimatedCostUsd: number | null
+}
+
+export interface AdviceStageDto {
+  stage: string
+  entered: number
+  totalSec: number
+  medianSec: number
+  p90Sec: number
+  sharePct: number
+}
+
+export interface AdviceReportDto {
+  generatedAt: string
+  windowDays: number
+  sources: Array<{ id: string; available: boolean; note?: string }>
+  tokenTop: AdviceSessionDto[]
+  slowStages: AdviceStageDto[]
+  gateErrorTop: Array<{ key: string; gate: string; reason: string; count: number; lastAt: number; sample: string }>
+  waterfall: { stages: AdviceStageDto[]; cards: Array<{ taskId: string; spanSec: number; transitions: number }>; medianSpanSec: number | null; events: number } | null
 }
