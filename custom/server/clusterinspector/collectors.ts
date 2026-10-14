@@ -58,6 +58,8 @@ export interface RunningCard {
   started_at?: number | string
   completed_at?: number | string
   status?: string
+  /** 最后更新 epoch 秒（blocked 卡停滞检测面，run19 熔断死等产品化） */
+  updated_at?: number | string
 }
 
 export interface RunningCardsFace {
@@ -124,6 +126,10 @@ export interface ClusterSnapshot {
   kanban: { ok: boolean; error?: string; rows: Array<Record<string, unknown>> }
   /** 在办卡（status=running，含 assignee）——控制器注入（kanban list --json），未接线=ok:false */
   runningCards: RunningCardsFace
+  /** 阻塞卡（status=blocked）——控制器注入（kanban list --status blocked --json），
+   *  未接线=合法空态（检测器静默跳过，同 sessionTelemetry 语义）。
+   *  用途：card.blocked-stale 检测（run19 G5 熔断死等产品化——blocked 卡 300s 无推进即报） */
+  blockedCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
   /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；

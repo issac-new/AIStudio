@@ -1,7 +1,7 @@
 // 集群巡检官测试：六检测器（run11 实录形态夹具）+ 冷却去重 + 巡检环重入保护。
 import { describe, expect, it } from 'vitest'
 import type { ClusterSnapshot } from '../collectors'
-import { detectAll, detectGateway, detectSessionStall, detectSlotInflation, detectStorm } from '../detectors'
+import { detectAll, detectBlockedStale, detectGateway, detectSessionStall, detectSlotInflation, detectStorm } from '../detectors'
 import { ClusterInspector } from '../inspector'
 import { probeBranchIntel } from '../collectors'
 
@@ -439,5 +439,40 @@ describe('detectLoadImbalance + detectIdleWithWorkAvailable（工作调节面，
     expect(hit).toBeTruthy()
     expect(hit!.summary).toContain('可领未领')
     expect(detectAll(mksnap([{ assignee: 'aa' }], [{ p: 'bb' }]), { nowMs: now }).find((x) => x.detector === 'idle.with-work')).toBeUndefined()
+  })
+})
+
+
+describe('card.blocked-stale（run19 G5 熔断死等产品化——用户 300s 时限）', () => {
+  const NOW = 1_790_000_000_000
+  it('阻塞卡停滞超 300s → 报 warn；超 4 倍（20min）→ 升 high', () => {
+    const base = (ageMs: number) => snap({
+      blockedCards: { ok: true, cards: [
+        { id: 't_g5', title: 'RFD-001 发布准出评审（G5）', assignee: 'fanfan', status: 'blocked', updated_at: NOW - ageMs },
+      ] },
+    })
+    const warnOut = detectBlockedStale(base(300_000 + 1), { nowMs: NOW })
+    expect(warnOut).toHaveLength(1)
+    expect(warnOut[0]).toMatchObject({ detector: 'card.blocked-stale', subject: 'card:t_g5', severity: 'warn' })
+    const highOut = detectBlockedStale(base(300_000 * 4 + 1), { nowMs: NOW })
+    expect(highOut[0]).toMatchObject({ severity: 'high' })
+  })
+  it('未超阈值 / updated_at 缺失 / 面未接线 → 均静默零报', () => {
+    const fresh = detectBlockedStale(snap({ blockedCards: { ok: true, cards: [
+      { id: 't1', status: 'blocked', updated_at: NOW - 60_000 },
+    ] } }), { nowMs: NOW })
+    expect(fresh).toHaveLength(0)
+    const noTs = detectBlockedStale(snap({ blockedCards: { ok: true, cards: [
+      { id: 't2', status: 'blocked' },
+    ] } }), { nowMs: NOW })
+    expect(noTs).toHaveLength(0)
+    const notWired = detectBlockedStale(snap({}), { nowMs: NOW })
+    expect(notWired).toHaveLength(0)
+  })
+  it('detectAll 聚合含 card.blocked-stale（阈值可经 blockedStaleMs 收紧）', () => {
+    const out = detectAll(snap({ blockedCards: { ok: true, cards: [
+      { id: 't3', title: 'X', status: 'blocked', updated_at: NOW - 120_000 },
+    ] } }), { nowMs: NOW, blockedStaleMs: 60_000 })
+    expect(out.some((a) => a.detector === 'card.blocked-stale')).toBe(true)
   })
 })
