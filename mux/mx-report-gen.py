@@ -3854,15 +3854,25 @@ _REPORT_TOKENS = (Path(__file__).resolve().parent / 'report-tokens.css').read_te
 # ── 暗色可读性末位覆盖层（与 final-report-merge.py 共用，单一事实源）──
 # DARK_OVERRIDE 只能改 token，改不动后面那些亮色硬编码（color:var(--surface) 在暗色 token
 # 下就是深色字），所以真正的兜底层必须在文档最末注入——见 report-dark-override.css 头注。
+# ── 明色主题修补层（与暗色层对称，见 report-light-override.css 头注）──
+_LIGHT_OVERRIDE_CSS = '<style>\n' + (Path(__file__).resolve().parent / 'report-light-override.css').read_text(
+    encoding='utf-8', errors='replace') + '</style>'
+
 _DARK_OVERRIDE_CSS = '<style>\n' + (Path(__file__).resolve().parent / 'report-dark-override.css').read_text(
     encoding='utf-8', errors='replace') + '</style>'
+
+# ── 明暗主题切换控件（与方案页同文双份：overlay/scripts/plan-html/theme-toggle.js）──
+# 必须放 </body> 前：控件脚本要在 DOM 就绪后挂按钮，首屏主题由它自己在 head 阶段定，
+# 本处注入的 CSS/JS 与文档最末的暗色层同序，不影响层间优先级。
+_THEME_TOGGLE_CSS = (Path(__file__).resolve().parent / 'theme-toggle.css').read_text(encoding='utf-8', errors='replace')
+_THEME_TOGGLE_JS = (Path(__file__).resolve().parent / 'theme-toggle.js').read_text(encoding='utf-8', errors='replace')
 
 # ── 报告暗色主题层（用户 2026-10-13 裁定：推演报告 dark 模式）──
 # 设计：token 单源保持亮色（方案页共用不动）；报告页在 token 之后注入 DARK_OVERRIDE，
 # 重定义全套 token 为暗色板并修补样式别名层中的亮色硬编码。hero 渐变在暗色下用深蓝提亮，
 # 文字面统一切 --ink 系（暗色=浅字）。xlsx/pdf 衍生不受影响（pandoc 走结构不走路灯色）。
 DARK_OVERRIDE = """
-:root{
+html[data-theme="dark"]{
   --bg:#0b1220; --surface:#101a2c; --surface-2:#0b1220; --surface-3:#16233a;
   --ink:#dbe4f0; --ink-strong:#f1f5fb; --muted:#8ba0b8;
   --line:#22314a; --line-soft:#1a2740;
@@ -3874,19 +3884,19 @@ DARK_OVERRIDE = """
   --grad-hero:linear-gradient(135deg,#101a2c,#1c3155);
   --shadow-sm:0 2px 10px rgba(0,0,0,.45); --shadow-md:0 8px 24px rgba(0,0,0,.55);
 }
-body{color-scheme:dark}
+html[data-theme="dark"] body{color-scheme:dark}
 /* 亮色硬编码修补（别名层遗留） */
-.hero,.hstat b,.pb-dot{color:#e8eef7}
-.step.gate-step{background:linear-gradient(135deg,#241d09,#101a2c);border-color:#8a6414}
-.nav-step{color:#c3d0e0}
-.sidebar{background:var(--surface);border-right-color:var(--line)}
-.art-chk-row .art-chk-val{color:#a8b8cc}
-label.cp-shot img{border:1px solid var(--line)}
-details,.stat-note{background:var(--surface-3)}
-table{border-color:var(--line)}
-td,th{border-color:var(--line)}
-a{color:var(--accent)}
-::selection{background:#2b4c8c;color:#fff}
+html[data-theme="dark"] .hero, html[data-theme="dark"] .hstat b, html[data-theme="dark"] .pb-dot{color:#e8eef7}
+html[data-theme="dark"] .step.gate-step{background:linear-gradient(135deg,#241d09,#101a2c);border-color:#8a6414}
+html[data-theme="dark"] .nav-step{color:#c3d0e0}
+html[data-theme="dark"] .sidebar{background:var(--surface);border-right-color:var(--line)}
+html[data-theme="dark"] .art-chk-row .art-chk-val{color:#a8b8cc}
+html[data-theme="dark"] label.cp-shot img{border:1px solid var(--line)}
+html[data-theme="dark"] details, html[data-theme="dark"] .stat-note{background:var(--surface-3)}
+html[data-theme="dark"] table{border-color:var(--line)}
+html[data-theme="dark"] td, html[data-theme="dark"] th{border-color:var(--line)}
+html[data-theme="dark"] a{color:var(--accent)}
+html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
 """
 
 
@@ -3896,6 +3906,7 @@ html = f'''<!DOCTYPE html>
 <title>Swarm Studio 全流程推演报告 · RFD-001</title>
 <style>
 {_REPORT_TOKENS}
+{_THEME_TOGGLE_CSS}
 {DARK_OVERRIDE}
 *{{margin:0;padding:0;box-sizing:border-box}}
 /* 机器样式别名层（2026-10-10 CSS 统一改造）：token 单源在前（report-tokens.css），
@@ -4167,7 +4178,11 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   .shot img{{max-height:none}}
   .step{{break-inside:avoid}}
 }}
-</style></head><body>
+</style>
+<script>
+{_THEME_TOGGLE_JS}
+</script>
+</head><body>
 <div class="layout">
 <nav class="sidebar">
   <div class="nav-title">Swarm Studio<br>全流程推演报告<br><span style="font-size:13px;color:var(--muted)">RFD-001 · 支付收银台</span></div>
@@ -4304,6 +4319,10 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 }})();
 </script>
 {_DARK_OVERRIDE_CSS}
+{_LIGHT_OVERRIDE_CSS}
+<style>
+{_THEME_TOGGLE_CSS}
+</style>
 </body></html>'''
 
 

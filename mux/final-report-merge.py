@@ -45,9 +45,19 @@ CH0_CSS = '''<style>
 #       注入 head 末仍被盖回 13 处。对行内 color/background 一律 !important（行内优先级更高）。
 # 验收：mux/dark-contrast-scan.js 扫全页对比度（正文 4.5 / 大字 3），命中数须为 0；
 #       渐变底文字扫描器读不了（linear-gradient），须人工截图兜底核对。
+_LIGHT_OVERRIDE_CSS = '<style>\n' + (Path(__file__).resolve().parent / 'report-light-override.css').read_text(
+    encoding='utf-8', errors='replace') + '</style>'
 _DARK_OVERRIDE_CSS = (Path(__file__).resolve().parent / 'report-dark-override.css').read_text(
     encoding='utf-8', errors='replace')
 FINAL_DARK_OVERRIDE = '<style>\n' + _DARK_OVERRIDE_CSS + '</style>'
+
+# ── 明暗主题切换控件（与方案页同文双份：overlay/scripts/plan-html/theme-toggle.js）──
+# CSS 在文档末（控件样式与暗色层同序）；JS 必须放 </head> 前——它要在首屏绘制前定好
+# data-theme，否则每次打开都会先闪一下另一套配色。
+_THEME_TOGGLE_CSS = (Path(__file__).resolve().parent / 'theme-toggle.css').read_text(encoding='utf-8', errors='replace')
+_THEME_TOGGLE_JS = (Path(__file__).resolve().parent / 'theme-toggle.js').read_text(encoding='utf-8', errors='replace')
+HEAD_THEME_JS = '<script>\n' + _THEME_TOGGLE_JS + '</script>'
+TAIL_THEME_CSS = '<style>\n' + _THEME_TOGGLE_CSS + '</style>'
 
 # ── GUIDE_CSS（2026-10-10 token 化）：PART1 绿皮肤（#0a7d43 系）撤换为 token
 #    中性系——标题/强调色统一 var(--accent-deep)，边框 var(--line)，底色 var(--surface-2)，
@@ -801,19 +811,20 @@ def main():
 <style>
 /* PART1/第0章暗色修补（用户 2026-10-13 裁定 dark 报告）——机器 token 暗色层已在 machine_styles 尾；
    此处覆盖导读层与第0章的亮色硬编码 */
-.guide{{color:#dbe4f0}}
-.guide .card{{background:#16233a;border:1px solid #22314a}}
-.guide table{{border-color:#22314a;background:#101a2c}}
-.guide th{{background:#16233a;color:#dbe4f0}}
-.guide td{{border-color:#22314a;color:#c7d4e6}}
-.guide .ok{{color:#34d399}}.guide .warn{{color:#f5b84c}}.guide .err,.guide .bad{{color:#f87171}}
-.guide .note{{color:#8ba0b8}}
-.guide h1,.guide h2,.guide h3{{color:#f1f5fb}}
-#ch0 .ch0-hd{{background:#16233a;border-color:#22314a;color:#dbe4f0}}
-#ch0 .tl li{{border-left-color:#2b4c8c;background:#101a2c;color:#c7d4e6}}
+html[data-theme="dark"] .guide{{color:#dbe4f0}}
+html[data-theme="dark"] .guide .card{{background:#16233a;border:1px solid #22314a}}
+html[data-theme="dark"] .guide table{{border-color:#22314a;background:#101a2c}}
+html[data-theme="dark"] .guide th{{background:#16233a;color:#dbe4f0}}
+html[data-theme="dark"] .guide td{{border-color:#22314a;color:#c7d4e6}}
+html[data-theme="dark"] .guide .ok{{color:#34d399}}.guide .warn{{color:#f5b84c}}.guide .err,.guide .bad{{color:#f87171}}
+html[data-theme="dark"] .guide .note{{color:#8ba0b8}}
+html[data-theme="dark"] .guide h1, html[data-theme="dark"] .guide h2, html[data-theme="dark"] .guide h3{{color:#f1f5fb}}
+html[data-theme="dark"] #ch0 .ch0-hd{{background:#16233a;border-color:#22314a;color:#dbe4f0}}
+html[data-theme="dark"] #ch0 .tl li{{border-left-color:#2b4c8c;background:#101a2c;color:#c7d4e6}}
 </style>
 {GUIDE_CSS}
 {CH0_CSS}
+{HEAD_THEME_JS}
 </head><body>
 <div class="layout">
 {machine_nav}
@@ -862,6 +873,8 @@ def main():
 }})();
 </script>
 {FINAL_DARK_OVERRIDE}
+{_LIGHT_OVERRIDE_CSS}
+{TAIL_THEME_CSS}
 </body></html>'''
 
     # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。
