@@ -1,91 +1,146 @@
-/* 暗色 token 反模式：color:var(--surface) 在暗色下 = 深色字。 */
-:root{--dim:#a8b8cc;--zc:#7dd3fc;--pc:#c7d4e6}
-.hero,.hstat b,.pb-dot,.nv-hero,.nv-hero *{color:#e8eef7 !important}
-.nv-hero-sub,.hero .sub{color:#c7d4e6 !important}
-.hero-terms{color:#c7d4e6 !important}
-.part1-hd,.ph-hd h2,.ph-hd h1{color:#f1f5fb !important}
-.part1-hd{color:#94a3b8 !important}
-.gov-metrics-line{color:#a8b8cc !important;background:#16233a !important;border:1px solid #22314a !important}
-.gov-metrics-line b{color:#f1f5fb !important}
-.ck-zone-hd{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
-.ck-node-z{color:#f8fafc !important}
-.ck-zone-links a,.ck-zone a{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
-.sidebar a,.nav-step{color:#a8b8cc !important}
-.sidebar a:hover,.nav-step:hover{color:#f1f5fb !important}
-.nav-title{color:#f1f5fb !important}
-.nav-pname{color:#c7d4e6 !important}
-.nv-note{color:#9ec5ff !important;background:#16233a !important}
-.nv-loop-center,.nv-dim-title{color:#c7d4e6 !important}
-.nv-loop-idx{color:#0b1220 !important}
-summary,.st-gate summary,.st-r18 summary,.st-artifact summary,details.audit summary{color:#c7d4e6 !important}
-.st-r18 summary,.st-artifact summary{background:#16233a !important}
-a{color:#7dd3fc}
-th{color:#c7d4e6}
-.gatebox p{color:#a8b8cc !important}
+/* mux/report-dark-override.css —— 报告页暗色覆盖层（2026-10-14）
+ *
+ * 作用域：全部规则挂在 html[data-theme="dark"] 下——明色主题下本文件一行不生效。
+ *       主题开关由 mux/theme-toggle.js 挂在 <html data-theme>（与 overlay 侧同文）。
+ *
+ * 病根与来历：暗色 token 层原先排在样式表中间，其后拼接的机器样式、章节 CSS、GUIDE_CSS、
+ *       CH0_CSS 仍带亮色硬编码，且大量 color:var(--surface) —— 暗色 token 下 var(--surface)
+ *       是深色，等于「暗底深字」，run19 实测 60 处低于 WCAG AA。本层靠「文档最末 + !important」
+ *       赢过一切前序规则；行内 color/background 用属性选择器覆盖（行内优先级更高）。
+ * 验收：mux/dark-contrast-scan.js 全页扫描（正文 4.5 / 大字 3），命中须为 0；渐变底上的
+ *       文字扫描器读不了（linear-gradient / color-mix），须截图目检兜底。
+ */
+html[data-theme="dark"]{--dim:#a8b8cc;--zc:#7dd3fc;--pc:#c7d4e6}
+html[data-theme="dark"] .hero, html[data-theme="dark"] .hstat b, html[data-theme="dark"] .pb-dot, html[data-theme="dark"] .nv-hero, html[data-theme="dark"] .nv-hero *{color:#e8eef7 !important}
+html[data-theme="dark"] .nv-hero-sub, html[data-theme="dark"] .hero .sub{color:#c7d4e6 !important}
+html[data-theme="dark"] .hero-terms{color:#c7d4e6 !important}
+html[data-theme="dark"] .part1-hd, html[data-theme="dark"] .ph-hd h2, html[data-theme="dark"] .ph-hd h1{color:#f1f5fb !important}
+html[data-theme="dark"] .part1-hd{color:#94a3b8 !important}
+html[data-theme="dark"] .gov-metrics-line{color:#a8b8cc !important;background:#16233a !important;border:1px solid #22314a !important}
+html[data-theme="dark"] .gov-metrics-line b{color:#f1f5fb !important}
+html[data-theme="dark"] .ck-zone-hd{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
+html[data-theme="dark"] .ck-node-z{color:#f8fafc !important}
+html[data-theme="dark"] .ck-zone-links a, html[data-theme="dark"] .ck-zone a{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
+html[data-theme="dark"] .sidebar a, html[data-theme="dark"] .nav-step{color:#a8b8cc !important}
+html[data-theme="dark"] .sidebar a:hover, html[data-theme="dark"] .nav-step:hover{color:#f1f5fb !important}
+html[data-theme="dark"] .nav-title{color:#f1f5fb !important}
+html[data-theme="dark"] .nav-pname{color:#c7d4e6 !important}
+html[data-theme="dark"] .nv-note{color:#9ec5ff !important;background:#16233a !important}
+html[data-theme="dark"] .nv-loop-center, html[data-theme="dark"] .nv-dim-title{color:#c7d4e6 !important}
+html[data-theme="dark"] .nv-loop-idx{color:#0b1220 !important}
+html[data-theme="dark"] summary, html[data-theme="dark"] .st-gate summary, html[data-theme="dark"] .st-r18 summary, html[data-theme="dark"] .st-artifact summary, html[data-theme="dark"] details.audit summary{color:#c7d4e6 !important}
+html[data-theme="dark"] .st-r18 summary, html[data-theme="dark"] .st-artifact summary{background:#16233a !important}
+html[data-theme="dark"] a{color:#7dd3fc}
+html[data-theme="dark"] th{color:#c7d4e6}
+html[data-theme="dark"] .gatebox p{color:#a8b8cc !important}
 /* 导读层（第0章/PART1）亮色硬编码 */
-.guide{color:#dbe4f0}
-.guide .sub{color:#8ba0b8}
-.guide code{background:#16233a;color:#c7d4e6;border:1px solid #22314a}
-.guide .note{color:#8ba0b8}
-.guide .mid{color:#f5b84c}
-.guide .bad{color:#f87171}
-.guide .card.warn{border-left-color:#f5b84c}
-.guide .card.bad{border-left-color:#f87171}
-.guide .card.info{border-left-color:#5b9bff}
-.guide .tl li{border-left-color:#2b4c8c}
-.guide .tl li.warn::before{background:#f5b84c}
+html[data-theme="dark"] .guide{color:#dbe4f0}
+html[data-theme="dark"] .guide .sub{color:#8ba0b8}
+html[data-theme="dark"] .guide code{background:#16233a;color:#c7d4e6;border:1px solid #22314a}
+html[data-theme="dark"] .guide .note{color:#8ba0b8}
+html[data-theme="dark"] .guide .mid{color:#f5b84c}
+html[data-theme="dark"] .guide .bad{color:#f87171}
+html[data-theme="dark"] .guide .card.warn{border-left-color:#f5b84c}
+html[data-theme="dark"] .guide .card.bad{border-left-color:#f87171}
+html[data-theme="dark"] .guide .card.info{border-left-color:#5b9bff}
+html[data-theme="dark"] .guide .tl li{border-left-color:#2b4c8c}
+html[data-theme="dark"] .guide .tl li.warn::before{background:#f5b84c}
 /* 步骤正文与卡片 */
 .st-story,.art-body p,.art-body ul,.cp-sem,.dm-a,
-.nv-case-body,.nv-hl-body,.nv-dim-body{color:#c7d4e6}
-.nv-lead,.nv-loop-caption{color:#a8b8cc}
-.nv-case-mech{color:#5eead4}
-.nv-hl-title,.nv-ic-ac b{color:#7dd3fc}
-.nv-ic-chip span{color:#dbe4f0}
-.nv-ic-chip b{color:#34d399}
-.nv-ic-chip{border-color:#1f6b47;background:#0d2b22}
-.pb-label,.hstat span{color:#94a3b8}
+html[data-theme="dark"] .nv-case-body, html[data-theme="dark"] .nv-hl-body, html[data-theme="dark"] .nv-dim-body{color:#c7d4e6}
+html[data-theme="dark"] .nv-lead, html[data-theme="dark"] .nv-loop-caption{color:#a8b8cc}
+html[data-theme="dark"] .nv-case-mech{color:#5eead4}
+html[data-theme="dark"] .nv-hl-title, html[data-theme="dark"] .nv-ic-ac b{color:#7dd3fc}
+html[data-theme="dark"] .nv-ic-chip span{color:#dbe4f0}
+html[data-theme="dark"] .nv-ic-chip b{color:#34d399}
+html[data-theme="dark"] .nv-ic-chip{border-color:#1f6b47;background:#0d2b22}
+html[data-theme="dark"] .pb-label, html[data-theme="dark"] .hstat span{color:#94a3b8}
 /* 徽标与语义块：浅底一律翻成暗底，否则 v3 的文字提亮会反噬成低对比 */
-.gmark{color:#f5b84c;background:#33230a}
-.gate-rej{background:#33230a;color:#f5b84c}
-.gate-rej.ok1{background:#0d2b22;color:#34d399}
-.st-open{background:#331414;color:#fca5a5}
-.st-entry{background:#0b2b33;color:#7dd3fc}
-.st-note{background:#2a2410;color:#fcd34d}
-.r18-entry{background:#0b2b33;color:#7dd3fc}
-.r18-note{color:#fcd34d}
-.dm-badge{background:#0d2b22;color:#34d399}
-.art-verdict.ok{background:#0d2b22;color:#34d399}
-.art-verdict.miss{background:#331414;color:#f87171}
-.art-chk.miss{background:#331414;border-color:#7a2a2a;color:#f87171}
-.art-chk-row.miss{background:#331414}
-.nv-loop-back{background:#2a2410;color:#f5b84c}
-.gap{border-color:#6b5320}
-.step.gate-step{background:linear-gradient(135deg,#2a2410 0%,var(--surface) 30%)}
-.step.gate-step .gate-body{color:#fcd9a0}
-.step.gate-step .st-num{background:#7c4a05 !important;color:#fde68a !important}
-.nv-miss,.nv-ic-arrow,.nv-ic-chip--miss b,.nv-ic-chip--miss span{color:#8ba0b8}
+html[data-theme="dark"] .gmark{color:#f5b84c;background:#33230a}
+html[data-theme="dark"] .gate-rej{background:#33230a;color:#f5b84c}
+html[data-theme="dark"] .gate-rej.ok1{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .st-open{background:#331414;color:#fca5a5}
+html[data-theme="dark"] .st-entry{background:#0b2b33;color:#7dd3fc}
+html[data-theme="dark"] .st-note{background:#2a2410;color:#fcd34d}
+html[data-theme="dark"] .r18-entry{background:#0b2b33;color:#7dd3fc}
+html[data-theme="dark"] .r18-note{color:#fcd34d}
+html[data-theme="dark"] .dm-badge{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .art-verdict.ok{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .art-verdict.miss{background:#331414;color:#f87171}
+html[data-theme="dark"] .art-chk.miss{background:#331414;border-color:#7a2a2a;color:#f87171}
+html[data-theme="dark"] .art-chk-row.miss{background:#331414}
+html[data-theme="dark"] .nv-loop-back{background:#2a2410;color:#f5b84c}
+html[data-theme="dark"] .gap{border-color:#6b5320}
+html[data-theme="dark"] .step.gate-step{background:linear-gradient(135deg,#2a2410 0%,var(--surface) 30%)}
+html[data-theme="dark"] .step.gate-step .gate-body{color:#fcd9a0}
+html[data-theme="dark"] .step.gate-step .st-num{background:#7c4a05 !important;color:#fde68a !important}
+html[data-theme="dark"] .nv-miss, html[data-theme="dark"] .nv-ic-arrow, html[data-theme="dark"] .nv-ic-chip--miss b, html[data-theme="dark"] .nv-ic-chip--miss span{color:#8ba0b8}
 /* 行内色：行内样式优先级高于选择器，必须 !important；同步把行内浅底翻暗 */
-[style*="color:#0369a1"],[style*="color: #0369a1"]{color:#7dd3fc !important}
-[style*="color:#047857"],[style*="color: #047857"]{color:#34d399 !important}
-[style*="color:#b91c1c"],[style*="color: #b91c1c"]{color:#f87171 !important}
-[style*="color:#be185d"],[style*="color: #be185d"]{color:#f472b6 !important}
-[style*="color:#b45309"],[style*="color: #b45309"]{color:#f5b84c !important}
-[style*="color:#7c3aed"],[style*="color: #7c3aed"]{color:#a78bfa !important}
-[style*="color:#334155"],[style*="color: #334155"]{color:#c7d4e6 !important}
-[style*="color:#57606a"],[style*="color: #57606a"]{color:#a8b8cc !important}
-[style*="color:#64748b"],[style*="color: #64748b"]{color:#94a3b8 !important}
-[style*="color:#1e40af"],[style*="color: #1e40af"]{color:#7dd3fc !important}
-[style*="color:#0f766e"],[style*="color: #0f766e"]{color:#5eead4 !important}
-[style*="color:#92400e"],[style*="color: #92400e"]{color:#fcd34d !important}
-[style*="color:#155e75"],[style*="color: #155e75"]{color:#7dd3fc !important}
-[style*="color:#166534"],[style*="color: #166534"]{color:#34d399 !important}
-[style*="color:#15803d"],[style*="color: #15803d"]{color:#34d399 !important}
-[style*="color:#222"],[style*="color:#222;"]{color:#dbe4f0 !important}
-[style*="background:#d1fae5"],[style*="background: #d1fae5"]{background:#0d2b22 !important;color:#34d399 !important}
-[style*="background:#fef3c7"],[style*="background: #fef3c7"]{background:#33230a !important;color:#f5b84c !important}
+html[data-theme="dark"] [style*="color:#0369a1"], html[data-theme="dark"] [style*="color: #0369a1"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#047857"], html[data-theme="dark"] [style*="color: #047857"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#b91c1c"], html[data-theme="dark"] [style*="color: #b91c1c"]{color:#f87171 !important}
+html[data-theme="dark"] [style*="color:#be185d"], html[data-theme="dark"] [style*="color: #be185d"]{color:#f472b6 !important}
+html[data-theme="dark"] [style*="color:#b45309"], html[data-theme="dark"] [style*="color: #b45309"]{color:#f5b84c !important}
+html[data-theme="dark"] [style*="color:#7c3aed"], html[data-theme="dark"] [style*="color: #7c3aed"]{color:#a78bfa !important}
+html[data-theme="dark"] [style*="color:#334155"], html[data-theme="dark"] [style*="color: #334155"]{color:#c7d4e6 !important}
+html[data-theme="dark"] [style*="color:#57606a"], html[data-theme="dark"] [style*="color: #57606a"]{color:#a8b8cc !important}
+html[data-theme="dark"] [style*="color:#64748b"], html[data-theme="dark"] [style*="color: #64748b"]{color:#94a3b8 !important}
+html[data-theme="dark"] [style*="color:#1e40af"], html[data-theme="dark"] [style*="color: #1e40af"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#0f766e"], html[data-theme="dark"] [style*="color: #0f766e"]{color:#5eead4 !important}
+html[data-theme="dark"] [style*="color:#92400e"], html[data-theme="dark"] [style*="color: #92400e"]{color:#fcd34d !important}
+html[data-theme="dark"] [style*="color:#155e75"], html[data-theme="dark"] [style*="color: #155e75"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#166534"], html[data-theme="dark"] [style*="color: #166534"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#15803d"], html[data-theme="dark"] [style*="color: #15803d"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#222"], html[data-theme="dark"] [style*="color:#222;"]{color:#dbe4f0 !important}
+html[data-theme="dark"] [style*="background:#d1fae5"], html[data-theme="dark"] [style*="background: #d1fae5"]{background:#0d2b22 !important;color:#34d399 !important}
+html[data-theme="dark"] [style*="background:#fef3c7"], html[data-theme="dark"] [style*="background: #fef3c7"]{background:#33230a !important;color:#f5b84c !important}
 /* 步号徽标坐在行内主色 --pc 上，按底色明暗分别选字色 */
 [style*="--pc:#059669"] .st-num,[style*="--pc:#0891b2"] .st-num,
 [style*="--pc:#2563eb"] .st-num,[style*="--pc:#7c3aed"] .st-num,
-[style*="--pc:#dc2626"] .st-num{color:#f8fafc !important}
-[style*="--pc:#d97706"] .st-num,[style*="--pc:#c7d4e6"] .st-num{color:#0b1220 !important}
-::selection{background:#2b4c8c;color:#fff}
+html[data-theme="dark"] [style*="--pc:#dc2626"] .st-num{color:#f8fafc !important}
+html[data-theme="dark"] [style*="--pc:#d97706"] .st-num, html[data-theme="dark"] [style*="--pc:#c7d4e6"] .st-num{color:#0b1220 !important}
+html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
+
+/* ── 复扫补遗（扫描器加了渐变支持后才暴露出来的两条真问题）── */
+html[data-theme="dark"] [style*="color:#64748b"]{color:#94a3b8 !important}
+html[data-theme="dark"] .ck-node{color:#c7d4e6 !important}
+html[data-theme="dark"] .ck-chain-hd b{color:#f1f5fb !important}
+
+/* 青底白字只有 3.7:1，改深字 */
+html[data-theme="dark"] [style*="--pc:#0891b2"] .st-num{color:#0b1220 !important}
+
+
+
+/* 步骤头徽标：背景写在行内，且只在 .st-hd 内分派字色——
+   限定作用域是关键：不限定的话 [style*="#色值"] 会连整个 step 容器（行内带 --pc）一起改，
+   侧栏/联动图的白字会被拉成深字（实测引入 16 条新问题）。 */
+html[data-theme="dark"] .st-hd [style*="background:#059669"],
+html[data-theme="dark"] .st-hd [style*="background-color:#059669"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#0891b2"],
+html[data-theme="dark"] .st-hd [style*="background-color:#0891b2"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#d97706"],
+html[data-theme="dark"] .st-hd [style*="background-color:#d97706"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#f59e0b"],
+html[data-theme="dark"] .st-hd [style*="background-color:#f59e0b"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#dc2626"],
+html[data-theme="dark"] .st-hd [style*="background-color:#dc2626"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#2563eb"],
+html[data-theme="dark"] .st-hd [style*="background-color:#2563eb"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#7c3aed"],
+html[data-theme="dark"] .st-hd [style*="background-color:#7c3aed"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#c7d4e6"],
+html[data-theme="dark"] .st-hd [style*="background-color:#c7d4e6"]{color:#0b1220 !important}
+
+/* 行内样式里 background 与冒号之间带空格的写法（本轮漏网的最后两条就栽在这） */
+html[data-theme="dark"] .st-hd [style*="background: #059669"],
+html[data-theme="dark"] .st-hd [style*="background-color: #059669"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #0891b2"],
+html[data-theme="dark"] .st-hd [style*="background-color: #0891b2"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background: #d97706"],
+html[data-theme="dark"] .st-hd [style*="background-color: #d97706"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background: #dc2626"],
+html[data-theme="dark"] .st-hd [style*="background-color: #dc2626"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #2563eb"],
+html[data-theme="dark"] .st-hd [style*="background-color: #2563eb"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #7c3aed"],
+html[data-theme="dark"] .st-hd [style*="background-color: #7c3aed"]{color:#f8fafc !important}
