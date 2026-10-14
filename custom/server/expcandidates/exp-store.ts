@@ -8,7 +8,10 @@ import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
-  return env || join(homedir(), '.hermes-web-ui', 'expcandidates')
+  if (env) return env
+  // 隔离环境（SIM 推演）随 HERMES_WEB_UI_HOME 走，不写宿主 home（token-auth appHome 同链）
+  const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim() || process.env.HERMES_WEBUI_STATE_DIR?.trim()
+  return webuiHome ? join(webuiHome, 'expcandidates') : join(homedir(), '.hermes-web-ui', 'expcandidates')
 }
 
 function storePath(): string {
