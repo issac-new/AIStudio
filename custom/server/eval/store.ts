@@ -336,6 +336,12 @@ export function reflowTaskToSet(
     ? store.sets.find((s) => s.id === input.targetSetId)
     : store.sets.find((s) => s.name === REGRESSION_SET_NAME && !s.sealed)
   if (input.targetSetId && !target) return { ok: false, problems: [`目标评测集不存在：${input.targetSetId}`] }
+  if (target?.id === run.setId) {
+    // 自指回流（显式指名，或缺省回归库恰为源集）：任务复制回源集——同题双份进
+    // 后续 run 的分母（pass@k 口径被稀释），origin 溯源语义（线上坏例转回归库）
+    // 失真——结构性拒绝。
+    return { ok: false, problems: ['目标评测集与源集相同（自指回流），拒绝'] }
+  }
   if (target?.sealed) return { ok: false, problems: ['目标集已密封，不可追加回流任务'] }
   if (!target) {
     target = {

@@ -203,6 +203,18 @@ describe('坏例回流（线上坏例 → 回归样本库）', () => {
     expect(reflow.set.tasks).toHaveLength(targetSet.tasks.length + 1)
   })
 
+  it('自指回流拒绝（targetSetId=源集：任务不得复制回源集稀释 pass@k 分母）', async () => {
+    const created = createSet({ name: uniqueName('rf-self'), track: 'e2e', tasks: [TASK_WITH_NEW_FIELDS] }, 'tester')
+    const source = (created as { ok: true; set: { id: string; tasks: unknown[] } }).set
+    const runId = await runOnce(source.id)
+
+    const reflow = reflowTaskToSet({ runId, taskId: 't1', targetSetId: source.id, actor: 'tester' })
+    expect(reflow.ok).toBe(false)
+    if (reflow.ok) return
+    expect(reflow.problems.join('')).toContain('自指回流')
+    expect(source.tasks).toHaveLength(1)
+  })
+
   it('密封源集拒绝回流（store 级：run 在密封前已产出）', async () => {
     const created = createSet({ name: uniqueName('rf3'), track: 'e2e', tasks: [TASK_WITH_NEW_FIELDS] }, 'tester')
     const source = (created as { ok: true; set: { id: string } }).set
