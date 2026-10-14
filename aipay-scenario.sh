@@ -1549,8 +1549,8 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
     local gaps
-    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | head -c 120)
-    [[ -z "$gaps" ]] && gaps=$(printf '%s' "$body" | grep -oE 'R-[0-9]+' | sort -u | tr '\n' ' ' | head -c 120)
+    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | cut -c1-120)
+    [[ -z "$gaps" ]] && gaps=$(printf '%s' "$body" | grep -oE 'R-[0-9]+' | sort -u | tr '\n' ' ' | cut -c1-120)
     [[ -z "$gaps" ]] && gaps="回滚阈值/灰度/发布说明（缺省文案——卡面未见显式缺项，以评审卡 GAP/缺项节为准）"
     printf '%s' "$gaps"
   }
