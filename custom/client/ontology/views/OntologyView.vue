@@ -13,6 +13,7 @@ import {
   type SpecSnapshotMeta, type OntologyStats, type Violation,
 } from '@/custom/ontology/api'
 import { ontologyMessages } from '@/custom/ontology/i18n'
+import ConstraintsPanel from '@/custom/ontology/components/ConstraintsPanel.vue'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -20,7 +21,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? ontologyMessages.zh.onto : ontologyMessages.en.onto
 })
 
-type Tab = 'overview' | 'schema' | 'graph' | 'instances' | 'validate' | 'versions' | 'export'
+type Tab = 'overview' | 'schema' | 'graph' | 'instances' | 'validate' | 'versions' | 'export' | 'constraints'
 const tab = ref<Tab>('overview')
 // 模板表达式禁 TS 语法（as 断言）——页签选择经此函数（模板只传 string）
 function selectTab(key: string): void {
@@ -498,6 +499,9 @@ function fmtBytes(b: number): string {
       </div>
       <p class="onto__hint">{{ L.export.note }}</p>
       <pre class="onto__pre" data-testid="ontology-export-preview">{{ exportText.slice(0, 20000) }}</pre>
+    </section>
+    <section v-else-if="tab === 'constraints'" class="onto__section">
+      <ConstraintsPanel />
     </section>
   </div>
 </template>
