@@ -164,10 +164,51 @@ export const profileReadCache = createReadCacheMiddleware({
   ttlMs: 30_000,
 })
 
-/** 测试专用：复位两个实例的模块态 */
+// ── 2026-10-14 回归轮 D4 扩面：CLI 子进程读端点四域 ──
+// 回归实测（冷调用/并发下 8-10s，exec 队列并发 2 放大）：plugins 3.5s、
+// mcp/servers 3.7s、skills/usage/stats 7s、runtime-versions 2.5-10s。四域共同
+// 形态：GET 列表（页面反复拉）+ 写路径同前缀（UI 增删改即时失效）。
+// TTL 取 30s（配置面；agent/CLI 侧直装变更由 TTL 兜底上限）。
+
+/** skills 读缓存：list/usage-stats/external-dirs 白名单；PUT/POST/DELETE
+ *  /api/hermes/skills* 落定即失效。注意 readFile 通配路由（/{*path}）不在
+ *  白名单——技能文件内容须实时。 */
+export const skillsReadCache = createReadCacheMiddleware({
+  prefix: '/api/hermes/skills',
+  whitelist: new Set(['/api/hermes/skills', '/api/hermes/skills/usage/stats', '/api/hermes/skills/external-dirs']),
+  ttlMs: 30_000,
+  maxEntries: 64,
+})
+
+/** plugins 读缓存：GET /api/hermes/plugins（列表）；enable/disable POST 即失效。 */
+export const pluginsReadCache = createReadCacheMiddleware({
+  prefix: '/api/hermes/plugins',
+  whitelist: new Set(['/api/hermes/plugins']),
+  ttlMs: 30_000,
+})
+
+/** mcp 读缓存：servers/tools 列表；增删改/test/reload 同前缀非 GET 即失效。 */
+export const mcpReadCache = createReadCacheMiddleware({
+  prefix: '/api/hermes/mcp',
+  whitelist: new Set(['/api/hermes/mcp/servers', '/api/hermes/mcp/tools']),
+  ttlMs: 30_000,
+})
+
+/** runtime-versions 读缓存：仅 status 总览（superAdmin 设置页）；下载/切换/
+ *  删除等写路径同前缀非 GET 即失效。jobs 明细（进度轮询）不缓存。 */
+export const runtimeVersionsReadCache = createReadCacheMiddleware({
+  prefix: '/api/hermes/runtime-versions',
+  whitelist: new Set(['/api/hermes/runtime-versions']),
+  ttlMs: 20_000,
+})
+
 export function __resetKanbanReadCacheForTest(): void {
   kanbanReadCache.flush()
   profileReadCache.flush()
+  skillsReadCache.flush()
+  pluginsReadCache.flush()
+  mcpReadCache.flush()
+  runtimeVersionsReadCache.flush()
 }
 
 // 兼容旧引用名（头注释与早期测试用 kanban-read-cache 语义名）
