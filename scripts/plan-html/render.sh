@@ -18,7 +18,7 @@ mkdir -p "$OUT"
 # 头部样式=tokens.css（两页共享基准）+ style-header.html（本页组件）拼接；
 # tokens 须包 <style>——裸 CSS 会被 pandoc include-in-header 当正文注入页首
 # （2026-10-10 视觉验收实锤：整段 CSS 源码排进左栏、横幅被挤飞）
-{ printf '<style>\n'; cat "$ROOT/scripts/plan-html/tokens.css"; printf '\n</style>\n'; cat "$ROOT/scripts/plan-html/style-header.html"; } > "$OUT/style-header.html"
+{ printf '<style>\n'; cat "$ROOT/scripts/plan-html/tokens.css"; printf '\n</style>\n'; cat "$ROOT/scripts/plan-html/style-header.html"; printf "\n<style>\n"; cat "$ROOT/scripts/plan-html/theme-toggle.css"; printf "\n</style>\n"; } > "$OUT/style-header.html"
 cd "$ROOT/docs/superpowers/specs"
 pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
   --include-in-header="$OUT/style-header.html" \
@@ -29,4 +29,9 @@ python3 "$ROOT/scripts/plan-html/enhance.py"; python3 "$ROOT/scripts/plan-html/e
 [ -f "$OUT/mermaid.min.js" ] || cp "$ROOT/node_modules/mermaid/dist/mermaid.min.js" "$OUT/" 2>/dev/null \
   || cp "$ROOT/scripts/plan-html/vendor/mermaid.min.js" "$OUT/" 2>/dev/null || true
 (cd "$OUT" && nohup python3 -m http.server 8931 --bind 127.0.0.1 >/dev/null 2>&1 &) 2>/dev/null || true
+# ── 明暗主题（2026-10-14）：暗色层与切换脚本注入到文档最末 ──
+# 必须排在 enhance.py / enhance2.py 之后：那两个脚本会重写 DOM，先注入会被它们改掉；
+# 也必须排在 pandoc 主题之后，否则暗色 token 会被浅色 :root 盖回去（与 run19 报告同款病根）。
+python3 "$ROOT/scripts/plan-html/inject-theme.py" "$OUT/mux-v8-plan.html"
+
 echo "渲染完成：$OUT/mux-v8-plan.html（http://127.0.0.1:8931/mux-v8-plan.html）"
