@@ -156,6 +156,21 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - judge 验证仍未接线真实模型调用方（P2 已备好 pending 结构：VerificationRecord 记 `judge:{status:'pending', reason}` 且不阻断 overall，judge 未配置时装配 warn 一次显式声明降级）：契约带 judge intent 时 judge 项按 pending 记录，程序化 + 人工门禁照常生效；刻意不注入恒失败假 judge（会让 judge 意图契约 repair 循环烧穿 escalated）。
 - connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
 
+### 🎓 专家基线考卷 — benchmarkforge（2026-10-14，阿里调研轮 C）
+
+从真实代码库的人类专家 Commit 反生成需求题（含验收条件），导入 Eval 用例集作固定考卷：调优有固定题可检验，改技能/配置后必跑该集对照（`GET /runs/compare` A/B）。带测试的提交优先入选；问题文本不含提交哈希（防泄漏），出处只进 origin 元数据。考性边界如实声明：同仓历史对被测 agent 可见时考卷失效，导入后建议 `sealSet` 密封。
+
+```bash
+npm run bench:expert -- --repo <仓库路径> --set-name 专家基线集 [--since 3.months.ago] [--limit 20]
+```
+
+同轮落地（调研正本 `docs/superpowers/specs/2026-10-14-ali-15agent-squad-research.md` A-F 提案）：
+
+- **D 约束卡**（`/app/ontology` →「约束卡」页签）：架构级约束登记，派单简报按列/角色命中注入（封顶 5 条，fail-soft）。
+- **A+F 优化建议**（`/app/eval` →「优化建议」页签）：烧钱会话/瓶颈阶段/关卡拦截三张 Top-N + 交付周期瀑布——聚合既有面不新增采集，源缺席如实标出。
+- **E 失败路由显式表**（`/api/faileroute`）：五类失败 → 三档回退（原地修/带证据回上游/人闸），出路由决定与卡标注文本，不自动改派。
+- **B1 经验候选**（`/api/expcandidates`）：看板轨迹提取反模式/较优路径/流程签名三类候选，指纹幂等入库，只出候选不改行为。
+
 ### 🧱 基础运行时层 — semantica 知识基础设施 + pua 行为技能（2026-09-23）
 
 外部运行时按不可变 pin 受管接入,零 agent 内核改动:
