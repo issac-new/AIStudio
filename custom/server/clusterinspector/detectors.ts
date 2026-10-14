@@ -21,6 +21,8 @@ export interface DetectOptions {
   inflateHigh?: number
   /** D4 静默判卡阈值 ms（默认 300000=5min） */
   stallQuietMs?: number
+  /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
+  dispatcherStuckMs?: number
   /** D7 在办卡·档案静默阈值 ms（默认 900000=15min；日志尾无错也算） */
   agentSilentMs?: number
   /** D8 跨机静默阈值 ms（默认 900000=15min；空闲机器不报） */
@@ -289,6 +291,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectEmptyStreak(snap, opts),
     ...detectRunawayLoop(snap),
     ...detectDeliveryAnchor(snap, opts),
+    ...detectDispatcherStuck(snap, opts),
+    ...detectFakeCompletion(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -352,6 +356,52 @@ export function detectDeliveryAnchor(snap: ClusterSnapshot, opts: DetectOptions 
           })
         }
       } catch { /* 单卡 git 失败不阻塞其余卡 */ }
+    }
+  }
+  return out
+}
+
+/** ── 派发通道僵死检测（run19 凌晨实录根治：网关 dispatcher 循环 3h 零孵化+失败
+ *  静默，ready 卡滞留无人领；CLI kanban dispatch 完好可绕——实证破局手产品化）。
+ *  判据：ready 队列非空且持续滞留（detectors 是无状态纯函数，滞留时长由调用方
+ *  通过 opts.dispatcherStuckMs 传入——控制器/inspector 侧维护滞留起点）。
+ *  fail-open：runningCards 面不可用 → 不报。 */
+export function detectDispatcherStuck(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const stuckMs = opts.dispatcherStuckMs ?? 0
+  if (!snap.runningCards.ok || stuckMs <= 0) return []
+  const ready = snap.runningCards.cards.filter((c) => String(c.status ?? '').toLowerCase() === 'ready')
+  if (ready.length === 0) return []
+  return [{
+    detector: 'dispatcher.stuck', subject: 'board:current',
+    severity: 'warn',
+    summary: `派发通道僵死：ready 队列 ${ready.length} 张卡滞留 ${Math.round(stuckMs / 1000)}s 零孵化（网关 dispatcher 循环故障实录形态；CLI 直派通道独立可用）——建议执行 kanban dispatch 直派孵化（自愈动作已内置于 safe-act）`,
+    detail: { readyCards: ready.map((c) => c.id), stuckMs },
+  }]
+}
+
+/** ── 假完成检测（run19 实录根治：「嘴炮完成」——卡推进到 done 但负责人全程零真做
+ *  行：仅回话/占位即完成。判据：done 卡的 assignee 其 realWorkTsMs 为 0（全程无
+ *  工具轮/多轮调用）或远早于卡创建时刻（活儿不是它干的）。与交付锚验证互补：
+ *  锚验证管「结果可反查」，本检测管「过程归属」。 */
+export function detectFakeCompletion(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  if (!snap.runningCards.ok || !snap.profiles.ok) return []
+  const now = opts.nowMs ?? Date.now()
+  const byProfile = new Map(snap.profiles.tails.map((t) => [t.profile, t]))
+  const done = snap.runningCards.cards.filter((c) => ['done', 'completed'].includes(String(c.status ?? '').toLowerCase()))
+  const out: Anomaly[] = []
+  for (const c of done) {
+    const a = (c.assignee ?? '').trim()
+    if (!a) continue
+    const t = byProfile.get(a)
+    if (!t) continue
+    const real = t.realWorkTsMs && t.realWorkTsMs > 0 ? t.realWorkTsMs : 0
+    if (real === 0) {
+      out.push({
+        detector: 'completion.no-realwork', subject: `card:${c.id}`,
+        severity: 'warn',
+        summary: `假完成嫌疑（零真做）：卡 ${c.id}（${c.title ?? ''}）已置 done，但负责人 ${a} 全程无真做行（无工具轮/多轮调用）——「嘴炮完成」形态，请复核交付实际产出人或重开卡`,
+        detail: { card: c.id, assignee: a },
+      })
     }
   }
   return out
