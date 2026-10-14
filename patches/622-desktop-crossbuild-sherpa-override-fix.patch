@@ -1,0 +1,49 @@
+diff --git a/apack-P2.cjs b/apack-T2.cjs
+index 76ff970..d593a75 100644
+--- a/packages/desktop/scripts/after-pack-combined.cjs
++++ b/packages/desktop/scripts/after-pack-combined.cjs
+@@ -156,14 +156,15 @@ async function ensureCrossPlatformNatives(context) {
+   const want = []
+   if (sharpVer) want.push('@img/sharp-' + npmPlatform(platform) + '-' + arch + '@' + sharpVer)
+   if (libvipsVer) want.push('@img/sharp-libvips-' + npmPlatform(platform) + '-' + arch + '@' + libvipsVer)
+-  if (sherpaVer) want.push('sherpa-onnx-' + platform + '-' + arch + '@' + sherpaVer)
++  const sherpaPlatform = platform === 'win32' ? 'win' : platform  // sherpa npm 名族用 win（@img 才用 win32）
++  if (sherpaVer) want.push('sherpa-onnx-' + sherpaPlatform + '-' + arch + '@' + sherpaVer)
+   if (want.length === 0) return
+   // 目标变体已在（构建前 shell 预装路线）→ 直接短路;构建期网络/vendor 仅为兜底。
+   const npmP = npmPlatform(platform)
+   const targetNames = [
+     '@img/sharp-' + npmP + '-' + arch,
+     '@img/sharp-libvips-' + npmP + '-' + arch,
+-    'sherpa-onnx-' + platform + '-' + arch,
++    'sherpa-onnx-' + sherpaPlatform + '-' + arch,
+   ]
+   const alreadyStaged = targetNames.every((n) => existsSync(join(webuiDir, 'node_modules', n)))
+   if (alreadyStaged) {
+@@ -271,8 +272,26 @@ async function ensureCrossPlatformNatives(context) {
+   const npmArgs = ['install', '--no-save', '--no-audit', '--no-fund',
+                    '--cpu', arch, '--os', npmPlatform(platform),
+                    '--prefix', webuiDir, ...tgzPaths]
++  // EOVERRIDE 规避（构建树态补丁）：webui package.json 的 overrides pin 了 sherpa
++  // 全平台族，与 file: tgz 直装硬冲突（npm 硬错，--force 不压）——临时摘除装后还原。
++  const _fs = require('node:fs')
++  const _pkgPath = join(webuiDir, 'package.json')
++  const _pkgBak = _pkgPath + '.crossbak'
++  let _pkgPatched = false
++  if (_fs.existsSync(_pkgPath)) {
++    _fs.copyFileSync(_pkgPath, _pkgBak)
++    const _j = JSON.parse(_fs.readFileSync(_pkgPath, 'utf8'))
++    if (_j.overrides) {
++      for (const k of Object.keys(_j.overrides)) {
++        if (k.includes('sherpa-onnx')) { delete _j.overrides[k]; _pkgPatched = true }
++      }
++      if (_pkgPatched) _fs.writeFileSync(_pkgPath, JSON.stringify(_j, null, 2))
++    }
++  }
+   console.log('[after-pack] cross-native install from local tarballs')
+   const r = spawnSync('npm', npmArgs, { stdio: 'inherit' })
++  if (_pkgPatched && _fs.existsSync(_pkgBak)) _fs.copyFileSync(_pkgBak, _pkgPath)
++  if (_fs.existsSync(_pkgBak)) _fs.unlinkSync(_pkgBak)
+   if (r.status !== 0) throw new Error('[after-pack] cross-native npm install failed (exit ' + r.status + ')')
+   for (const name of want.map((spec) => spec.split('@').slice(0, spec.startsWith('@') ? 2 : 1).join('@'))) {
+     if (!existsSync(join(webuiDir, 'node_modules', name))) {
