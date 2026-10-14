@@ -1,0 +1,76 @@
+/* plan-theme.css —— 方案页明暗主题层（2026-10-14）
+ *
+ * 与报告页共用同一套机制：主题落在 <html data-theme>，:root 是明色，dark 作用域是暗色。
+ * 切换控件的样式在 theme-toggle.css（本文件只管页面配色）。
+ *
+ * 暗色板与报告页一致（simharness/mux/report-dark-override.css 的 token 段同值），
+ * 两份文档来回切换时观感连续——不同页各调一套色会让眼睛反复适应。
+ * 暗色层必须排在 pandoc 主题、tokens、组件样式之后（render.sh 注入在文档最末）。
+ */
+
+html[data-theme="dark"] {
+  --bg:#0b1220; --surface:#101a2c; --surface-2:#0b1220; --surface-3:#16233a;
+  --ink:#dbe4f0; --ink-strong:#f1f5fb; --muted:#8ba0b8;
+  --line:#22314a; --line-soft:#1a2740;
+  --accent:#5b9bff; --accent-deep:#2b4c8c; --accent-soft:#16233a;
+  --ok:#34d399; --ok-soft:#0d2b22;
+  --warn:#f5b84c; --warn-soft:#33230a;
+  --danger:#f87171; --danger-soft:#331414;
+  --code-bg:#0b1220; --code-ink:#c7d4e6;
+  --grad-hero:linear-gradient(135deg,#101a2c,#1c3155);
+  --shadow-sm:0 2px 10px rgba(0,0,0,.45); --shadow-md:0 8px 24px rgba(0,0,0,.55);
+}
+
+/* 暗色下按暗底重设的局部色（组件样式里的硬编码亮色，逐条翻暗） */
+html[data-theme="dark"] body { background:var(--bg); color:var(--ink); }
+html[data-theme="dark"] header#title-block-header { background:var(--grad-hero); }
+html[data-theme="dark"] header#title-block-header h1.title,
+html[data-theme="dark"] header#title-block-header p.author,
+html[data-theme="dark"] header#title-block-header p.date { color:#e8eef7; }
+html[data-theme="dark"] nav#TOC a,
+html[data-theme="dark"] nav#TOC a:visited { color:#a8b8cc; }
+html[data-theme="dark"] nav#TOC a:hover { color:#7dd3fc; }
+html[data-theme="dark"] body a,
+html[data-theme="dark"] body a:visited { color:#7dd3fc; }
+html[data-theme="dark"] table,
+html[data-theme="dark"] th,
+html[data-theme="dark"] td { border-color:var(--line); }
+html[data-theme="dark"] thead th,
+html[data-theme="dark"] tbody tr:nth-child(even) { background:var(--surface-3); color:var(--ink); }
+html[data-theme="dark"] tbody td { background:var(--surface); color:var(--ink); }
+html[data-theme="dark"] blockquote { background:var(--surface-3); border-left-color:var(--accent); color:var(--ink); }
+html[data-theme="dark"] pre,
+html[data-theme="dark"] pre code { background:var(--code-bg); color:var(--code-ink); border-color:var(--line); }
+html[data-theme="dark"] code { background:var(--surface-3); color:#9ec5ff; }
+html[data-theme="dark"] hr { border-color:var(--line); }
+html[data-theme="dark"] #back-top { background:var(--surface); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .kv,
+html[data-theme="dark"] .notice { background:var(--surface); border-color:var(--line); color:var(--ink); }
+
+/* ── 复扫补遗 ── */
+/* 标题与导读块用了 accent-deep（#2b4c8c），暗底上只有 2.2:1 */
+html[data-theme="dark"] .gw-daodu,
+html[data-theme="dark"] .gw-daodu h2,
+html[data-theme="dark"] .gw-daodu h3,
+html[data-theme="dark"] h3.doc-main,
+html[data-theme="dark"] .step-hd,
+html[data-theme="dark"] .doc-main h2{color:var(--accent) !important}
+html[data-theme="dark"] .doc-main h3{color:#a8b8cc !important}
+
+/* 代码块：pandoc 自带的高亮色板是给白底设计的，落到深底上只有 2~3:1。
+   暗色下统一压成 code-ink（可读优先，代价是失去语法配色）；明色下反过来把
+   行内代码的背景打透明，让它落回 pre 的深色 code-bg 上——高亮色才配得上深底。 */
+html[data-theme="dark"] pre,
+html[data-theme="dark"] pre code,
+html[data-theme="dark"] .sourceCode{background:var(--code-bg) !important;color:var(--code-ink) !important}
+html[data-theme="light"] .sourceCode{background:transparent !important}
+html[data-theme="light"] nav#TOC a{color:#475569 !important}
+
+/* 目录侧栏（nav#TOC 是 sticky 侧栏）：组件样式给了它浅色底，暗色下会留下一条白带 */
+html[data-theme="dark"] nav#TOC,
+html[data-theme="dark"] nav#TOC ul,
+html[data-theme="dark"] nav#TOC li,
+html[data-theme="dark"] .layout,
+html[data-theme="dark"] .layout > *{background:transparent !important}
+html[data-theme="dark"] nav#TOC{background:var(--bg) !important}
