@@ -79,3 +79,11 @@ API（`/api/bpa/*`）：
 3. **架构报告导出**（bpa-export + 治理页按钮）：自包含 Markdown 六账——分级清单全字段表/流程地图分区树/八规则体检结论/端到端链路含交接物/PCF 对标差距/PEMM 最近评估；`GET /api/bpa/export`（attachment 下载，带鉴权）。
 
 测试 +5（audit 留痕/截尾/到期判定 + export 六账锚点/空态）全绿；bpa 域累计 38。走查 8/8（雷达/趋势线/评审横幅/留痕追加/导出 3523B 六账）。
+
+## 八、第四轮增补（2026-10-14 同日）：字典生产面
+
+1. **任务 ↔ 流程映射**（bpa-task-link + `/api/bpa/task-links` 三端点）：看板任务卡与 L3 流程的关联登记——文章「架构作为任务拆解/派发/评估的上游字典」从字典变生产工具。独立文件面存储（不动上游 kanban 表），幂等 upsert（同 taskId+processId 覆盖 note），remove 撤销，`groupByProcess` 按流程归组统计。拒不存在 L3 404。
+2. **治理体检第 9 规则 PCF_UNMAPPED**：L1 无 pcfRef 显式映射且名称启发未命中 PCF 分类时触发 medium 违规——对标盲区显式化（文章误区一「照搬标杆不裁剪」的反向哨：先判断是否属业务，再补映射或裁剪）。
+3. **清单页 L1 PCF 徽标**：有 pcfRef 显式显示编码徽标，无映射亮「未映射 PCF」警示徽标（黄虚线框+tooltip 指引编辑器补映射）。
+
+测试 +5（task-link 幂等/归组/删除 + PCF_UNMAPPED 触发/种子零违规）全绿；bpa 域累计 41。走查 8/8（task-link 三态 API + 徽标 0→1 切换 + validate 新规则实证）。

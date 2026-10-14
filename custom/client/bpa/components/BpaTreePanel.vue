@@ -238,6 +238,7 @@ function linkCount(n: BpaNode): number {
             {{ n.id }}
             <span v-if="n.level === 1 && n.section" class="sec">{{ L.sectionLetters[n.section] }}</span>
             <span v-if="n.pcfRef" class="sec pcf">{{ n.pcfRef }}</span>
+            <span v-else-if="n.level === 1" class="sec pcf-miss" :title="L.registry.pcfUnmappedTip">未映射 PCF</span>
           </td>
           <td>
             {{ n.name }}
@@ -284,6 +285,7 @@ button.danger { background: transparent; border: 1px solid var(--danger, #dc2626
 .lv-decompose { background: #9ca3af; }
 .sec { margin-left: 6px; font-size: 10px; border: 1px solid currentColor; border-radius: 6px; padding: 0 4px; opacity: 0.75; }
 .sec.pcf { color: var(--accent, #4f6ef7); opacity: 1; }
+.sec.pcf-miss { color: var(--warning, #b45309); opacity: 1; border-style: dashed; }
 .row-actions button { padding: 2px 8px; }
 .err { color: var(--danger, #dc2626); font-size: 12px; margin: 0; }
 .muted { opacity: 0.65; font-size: 12px; }

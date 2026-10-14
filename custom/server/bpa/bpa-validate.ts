@@ -66,6 +66,10 @@ export function validateArchitecture(arch: BpaArchitecture): BpaValidationReport
     for (const ref of [...(n.drivers ?? []), ...(n.supports ?? [])]) {
       if (!byId.has(ref)) push('DANGLING_REF', 'medium', n, `引用的流程 ${ref} 不存在（驱动/支撑引用悬空）`)
     }
+    // 9. L1 缺 PCF 映射（对标盲区显式化：pcfRef 未设且名称启发未命中任何 PCF 分类）
+    if (n.level === 1 && !n.pcfRef) {
+      push('PCF_UNMAPPED', 'medium', n, `L1 未映射 PCF 分类（对标页将走名称启发兜底——显式 pcfRef 更可靠）`)
+    }
   }
 
   // 覆盖率（量化面：架构的终点是责任与指标，不是图）

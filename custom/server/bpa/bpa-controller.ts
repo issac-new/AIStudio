@@ -22,6 +22,7 @@ import { enumerateE2E } from './bpa-e2e'
 import { PCF_CATEGORIES, pcfGapReport } from './bpa-pcf'
 import { readAudit, recordAudit, reviewDue } from './bpa-audit'
 import { exportArchitectureMarkdown } from './bpa-export'
+import { readTaskLinks, upsertTaskLink, removeTaskLink, groupByProcess } from './bpa-task-link'
 
 const router = new Router({ prefix: '/api/bpa' })
 
@@ -141,7 +142,38 @@ router.post('/seed', async (ctx: Context) => {
   ctx.body = { ok: true, seeded: seeded.nodes.length, ...snapshot() }
 })
 
-// ---------- PEMM 成熟度 ----------
+// 任务 ↔ 流程映射（文章「架构作为任务拆解/派发/评估的上游字典」的生产面）
+router.get('/task-links', async (ctx: Context) => {
+  const arch = readArchitecture()
+  ctx.body = { ok: true, links: readTaskLinks(), byProcess: groupByProcess(), l3Count: arch.nodes.filter((n) => n.level === 3).length }
+})
+
+router.put('/task-link', async (ctx: Context) => {
+  const body = (ctx.request.body ?? {}) as { taskId?: string; processId?: string; note?: string }
+  if (!body.taskId?.trim() || !body.processId?.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 与 processId 必填'] }
+    return
+  }
+  const arch = readArchitecture()
+  const target = arch.nodes.find((n) => n.id === body.processId && n.level === 3)
+  if (!target) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: [`L3 流程 ${body.processId} 不存在（映射只作用于拆解层级的流程主体）`] }
+    return
+  }
+  ctx.body = { ok: true, links: upsertTaskLink(body.taskId.trim(), body.processId.trim(), body.note), byProcess: groupByProcess() }
+})
+
+router.delete('/task-link', async (ctx: Context) => {
+  const body = (ctx.request.body ?? {}) as { taskId?: string; processId?: string }
+  if (!body.taskId?.trim() || !body.processId?.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 与 processId 必填'] }
+    return
+  }
+  ctx.body = { ok: true, links: removeTaskLink(body.taskId.trim(), body.processId.trim()), byProcess: groupByProcess() }
+})
 
 router.get('/maturity', async (ctx: Context) => {
   ctx.body = { ok: true, history: readMaturityHistory() }
