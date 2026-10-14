@@ -36,6 +36,19 @@ CH0_CSS = '''<style>
 .guide table.idx{font-size:12px}
 </style>'''
 
+# ── 暗色可读性末位覆盖层（2026-10-14 根治 run19 暗色模式大片看不见）──
+# 病根：暗色 token 层（DARK_OVERRIDE / PART1 修补层）都排在中间，其后拼接进来的机器样式、
+#       章节 CSS、GUIDE_CSS、CH0_CSS 仍带亮色硬编码，且大量 color:var(--surface) 取值——
+#       暗色 token 下 var(--surface) 是深色，等于「暗底深字」。run19 实测 60 处低于 WCAG AA。
+# 对策：覆盖层正文在 mux/report-dark-override.css（与 mx-report-gen.py 共用，单一事实源），
+#       本处只负责在 **</body> 前**（文档最末）注入——实测章节样式块散落在 </head> 之后，
+#       注入 head 末仍被盖回 13 处。对行内 color/background 一律 !important（行内优先级更高）。
+# 验收：mux/dark-contrast-scan.js 扫全页对比度（正文 4.5 / 大字 3），命中数须为 0；
+#       渐变底文字扫描器读不了（linear-gradient），须人工截图兜底核对。
+_DARK_OVERRIDE_CSS = (Path(__file__).resolve().parent / 'report-dark-override.css').read_text(
+    encoding='utf-8', errors='replace')
+FINAL_DARK_OVERRIDE = '<style>\n' + _DARK_OVERRIDE_CSS + '</style>'
+
 # ── GUIDE_CSS（2026-10-10 token 化）：PART1 绿皮肤（#0a7d43 系）撤换为 token
 #    中性系——标题/强调色统一 var(--accent-deep)，边框 var(--line)，底色 var(--surface-2)，
 #    卡片底 var(--surface)；排版（字号/边距/结构）不动。bad/mid 警示色保留语义色相。 ──
@@ -848,6 +861,7 @@ def main():
   }}
 }})();
 </script>
+{FINAL_DARK_OVERRIDE}
 </body></html>'''
 
     # ── V8.4 人读层 jargon 体检（§5.5 文案质量④，run13 起）：HARD>0 拒出报告。
