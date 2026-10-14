@@ -815,27 +815,45 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
             kanban_walk_done secops "$SGID"; sset security_review_done 1
             note "[安全] 涉敏安全复审改判 PASS——G2 放行前置满足（fail→pass 全程留痕）"
           else
-            # V8.28 修根因（run20 G2 闸 deadlock 实锤）：原 fail 退出让 supervisor 30s 续跑
-            # 又进同闸循环，负责 D 项的 4 名应用研发AI 永远没时间修。改：FAIL 把缺项清单
-            # 真派给上游修订（4 名应用研发AI 分工）+ issues.log 登记带锚回写——闸不放行，
-            # 修订入 origin/main、secops 复审 PASS 才放行（用户 2026-10-14 21:02 裁定：
-            # 禁止以打破死循环为名拆硬闸；G5 复核按 14 项 D 清单逐条复检）。
-            if [[ "$(sget security_dispatched)" != "1" ]]; then
-              local _D_AGENTS=(hu wei lin chen)
-              local _D_TASKS=("D-1 微信侧渠道密钥持有与装载形态" "D-2 渠道密钥与平台证书轮换流程" "D-3 支付宝密钥存储形态" "D-4 微信回调 resource 解密环节" "D-5 回调时间戳容差设计" "D-6 渠道层验签+核心层复核双层结构" "D-7 支付单表访问控制与审计留痕" "D-8 支付铁线(CVV2/磁道/交易密码)否定性断言" "D-9 金额脱敏与涉敏字段留存/销毁口径" "D-10 回调来源校验(网段/频率/HTTPS/TLS)" "D-11 支付宝回调 x-merchant-id 可信锚点" "D-12 回调重放防护窗口设计" "D-13 支付单表 PII 字段加密存储" "D-14 现网密钥轮换演练与回滚预案")
-              for (( _di=0; _di<14; _di++ )); do
-                local _a="${_D_AGENTS[$((_di % 4))]}"
-                local _d="${_D_TASKS[$_di]}"
-                if [[ "$(sget "d_dispatch_$_((_di+1))")" != "1" ]]; then
-                  sset "d_dispatch_$((_di+1))" 1
-                  local _DI_ID=$(kanban_create_as "$_a" "d_dispatch_$((_di+1))" "[D-$((_di+1))] ${RFD_ID} 涉敏安全修补：${_d}" "V8.28 修根因：secops 评审卡 t_f5cc53c5 result FAIL 14 项 D-1~D-14。本项归属 ${_a}，请按 D-${_di+1} 描述在 docs/design/${RFD_ID}-architecture-design.md 与对应子模块（AN-${_a^^}）补齐设计条款，commit 推 origin/main 后回 G5 复核。复审锚：secops 卡 t_f5cc53c5 / 评审卡 body result" "${_a}-${_RFD_ID}-dev" "${_a}-agent" 2>/dev/null || true)
-                  dispatch_in_room "$_a" "@${_a}-agent:matrix.test 安全修补 D-${_di+1}：${_d}。请在 docs/design/${RFD_ID}-architecture-design.md 与你的 AN 模块对应位置补齐设计条款，commit 推 origin/main 后 @secops-agent 复评翻正。复审锚：secops 卡 t_f5cc53c5 / 卡面 result 行。来源：run20 G2 闸 deadlock 修根因（V8.28 修 16.5 h + 24.5 min）" "$(agent_mxid "$_a")" || true
-                fi
-              done
-              echo "ISSUE|security-review-dispatch-run20|director|V8.28 修根因：secops FAIL 14 项 D-1~D-14 缺项清单已派上游修订（产品经理A 组织+4 名应用研发AI 分工）；G2 闸不放行——修订入 origin/main、secops 复审 PASS 才放行（用户裁定：禁止拆闸式解锁）；G5 复核按 D 清单逐条复检。锚：aipay-scenario.sh:823-845" >> "$EVID_DIR/issues.log"
-              sset security_dispatched 1
-              note "[安全] 涉敏安全评审 FAIL 缺项已派上游 14 项 D 修订——G2 等复审 PASS 放行（闸不放行）"
+            # V8.29 闸依赖机器可读（run20 22:34 实录：r2 修订 21:19 入 central main，复审
+            # 派单悬空 75 分钟——「push 后 @secops 复审」的散文交接不可依赖，巡检官/驱动
+            # 超时分支/监督清单三层同盲）。根治=复审环驱动自持：修订落地检测→亲自派复审
+            # →催办限幅。闸仍不放行：只有 SECURITY-GATE 末判词翻 PASS 才放行（用户
+            # 2026-10-14 21:02 裁定不变：禁止拆闸式解锁）。
+            # 注：原「14 项 D 直派」块已移除——上游修订派单归口卡面 FAIL 分支（产品经理A
+            # 组织），本分支只管复审侧；双头派发在回滚重走轮曾造成 d_dispatch 重派隐患。
+            if [[ -z "$(sget security_fail_main_head)" ]]; then
+              git -C "$DIRECTOR_CLONE" fetch origin main >/dev/null 2>&1 || true
+              sset security_fail_main_head "$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
+              echo "ISSUE|security-rereview-baseline|secops-agent|复审等待起点基线 origin/main=$(sget security_fail_main_head)（此后 head 变化=修订入仓，触发驱动亲自派复审）。锚：aipay-scenario.sh 复审超时分支（V8.29 闸依赖闭环）" >> "$EVID_DIR/issues.log"
+              note "[安全] 复审基线锚定 origin/main=$(sget security_fail_main_head)"
             fi
+            git -C "$DIRECTOR_CLONE" fetch origin main >/dev/null 2>&1 || true
+            local _rr_head; _rr_head="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
+            if [[ "$_rr_head" != "$(sget security_fail_main_head)" && "$(sget security_rereview_for_head)" != "$_rr_head" ]]; then
+              sset security_rereview_for_head "$_rr_head"
+              sset security_rereview_nudges 0
+              dispatch_in_room secops "@secops-agent:matrix.test 复审派单（闸依赖闭环·驱动自持）：概设修订已入 central main（head ${_rr_head}，失败基线 $(sget security_fail_main_head)）。请复审安全评审卡 ${SGID}：按原卡 14 项 D-1~D-14 缺项清单逐条核对修订是否闭环，结论行 SECURITY-GATE-PASS 或逐项 FAIL 清单发本房间并更新卡面 result。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid secops)" || true
+              echo "ISSUE|security-rereview-auto|director|闸依赖闭环（V8.29）：修订 head ${_rr_head} 入仓且本版未派复审——驱动亲自派安全工程师AI 复审卡 ${SGID}（不依赖组织面散文递棒）。闸不放行，等末判词。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+              note "[安全] 修订 ${_rr_head} 已入仓——驱动派安全工程师AI 复审（闸依赖自持）"
+            elif [[ "$(sget security_rereview_for_head)" == "$_rr_head" ]]; then
+              # 球位判定（run20 23:0x r2 复审 FAIL 实录补的半边）：本版复审是否已出结论
+              # ——卡面 result 含 FAIL=球在上游（组织 r3 修订），催产品经理A；
+              # 未出结论=球在评审侧，催安全工程师AI。两侧都限幅 3 次。
+              local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
+              local _rr_n; _rr_n="$(sget security_rereview_nudges)"; _rr_n="${_rr_n:-0}"
+              if [[ "$_rr_n" -lt 3 ]]; then
+                sset security_rereview_nudges $((_rr_n + 1))
+                if [[ "$_rr_result" == *"FAIL"* ]]; then
+                  dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_rr_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：$_rr_result）。请按卡面未过项组织 r3 修订并推 origin/main；r3 合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+                  note "[安全] 复审 FAIL 球在上游——催产品经理A 组织 r3（第 $((_rr_n + 1))/3 次）"
+                else
+                  dispatch_in_room secops "@secops-agent:matrix.test 复审催办（第 $((_rr_n + 1))/3 次，之后静默等结论）：修订 $(sget security_rereview_for_head) 的复审仍未回结论行 SECURITY-GATE。请继续复审卡 ${SGID} 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
+                  note "[安全] 复审催办第 $((_rr_n + 1))/3 次（head ${_rr_head}）"
+                fi
+              fi
+            fi
+            # 闸不放行：driver 在本环继续等复审 PASS（wait_truth 由外层 supervisor 续跑驱动重入）
           fi
         fi
       else
