@@ -119,6 +119,10 @@ for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
   save_token "$n" "$tok"
 done
 log "$(( ${#USERS[@]} * 2 )) 账号就绪"
+# 称谓纪律·显示名（2026-10-14 用户指令）：token 就绪即 PUT displayname 职能称呼——
+# 下轮 mx-clean 重建后不回落裸账号名；studio users 表随 matrix-login 的
+# syncMatrixMetadata（server controllers/auth.ts:711/727）自动回填，无需另写。
+mx_apply_displaynames "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done)
 # 账号清单入档 roster（去 token；token 留 creds/*.token 600，密码按约定式不落明文）
 {
   echo "# matrix 账号清单 roster（$(date '+%F %T')；编制 ${#USERS[@]} 人 ×2 账号）"

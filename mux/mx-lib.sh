@@ -249,9 +249,65 @@ synapse_register_api() { # <localpart> <password>
 }
 mx_login() { # <localpart> <password> → access_token
   curl -sf "$HS/_matrix/client/v3/login" \
-    -H 'Content-Type: application/json' \
+    -H "Content-Type: application/json" \
     -d "{\"type\":\"m.login.password\",\"identifier\":{\"type\":\"m.id.user\",\"user\":\"$1\"},\"password\":\"$2\"}" \
     | jq -r '.access_token'
+}
+# ── 称谓纪律·显示名（2026-10-14 用户指令：截图身份一律职能称呼）──────────
+# 单一事实源=synapse displayname：studio 侧每次 matrix-login 经 syncMatrixMetadata
+# 自动回填 users.matrix_display_name（server controllers/auth.ts:711/727），故只需
+# 注册链在 token 就绪后 PUT 一次。账号名/mxid 仍是机器锚不动；仅显示名换称呼。
+displayname_of() { # <账号（含 -agent 后缀）> → 职能称呼（缺省回落 localpart）
+  case "$1" in
+    admin)          echo "主管A" ;;
+    bella)          echo "需求分析师A" ;;
+    fanfan)         echo "产品经理A" ;;
+    wei)            echo "团队负责人A" ;;
+    mei)            echo "团队负责人B" ;;
+    chen)           echo "研发工程师A" ;;
+    hu)             echo "研发工程师B" ;;
+    lin)            echo "研发工程师C" ;;
+    xiao)           echo "研发工程师D" ;;
+    qi)             echo "测试工程师A" ;;
+    fei)            echo "测试工程师B" ;;
+    arch)           echo "系统架构师A" ;;
+    secops)         echo "安全工程师A" ;;
+    ops)            echo "运维工程师A" ;;
+    audit)          echo "审计师A" ;;
+    admin-agent)    echo "主管AI" ;;
+    bella-agent)    echo "需求分析师AI" ;;
+    fanfan-agent)   echo "需求分析AI" ;;
+    chen-agent)     echo "支付核心应用研发AI" ;;
+    hu-agent)       echo "微信渠道应用研发AI" ;;
+    lin-agent)      echo "支付宝渠道应用研发AI" ;;
+    xiao-agent)     echo "收银台前端应用研发AI" ;;
+    qi-agent)       echo "后端测试AI" ;;
+    fei-agent)      echo "前端测试AI" ;;
+    wei-agent)      echo "团队负责人AI-A" ;;
+    mei-agent)      echo "团队负责人AI-B" ;;
+    arch-agent)     echo "架构设计AI" ;;
+    secops-agent)   echo "安全工程AI" ;;
+    ops-agent)      echo "运维工程AI" ;;
+    audit-agent)    echo "审计AI" ;;
+    *)              echo "$1" ;;
+  esac
+}
+mx_apply_displaynames() { # 幂等：所有人类+agent 账号 displayname → 职能称呼
+  local n dn tok ok=0 total=0
+  for n in "$@"; do
+    total=$((total+1))
+    dn=$(displayname_of "$n")
+    tok=$(load_token "$n" 2>/dev/null | tr -d '\n')
+    [[ -n "$tok" && "$tok" != "null" ]] || { log "⚠ displayname 跳过：$n（token 缺）"; continue; }
+    if curl -sf -m 8 -X PUT -H "Content-Type: application/json" \
+      -d "{\"displayname\":\"$dn\"}" \
+      "$HS/_matrix/client/v3/profile/@$n:$SERVER_NAME/displayname?access_token=$tok" >/dev/null 2>&1; then
+      ok=$((ok+1))
+    else
+      log "⚠ displayname 写入失败：$n"
+    fi
+  done
+  log "displayname 就绪：$ok/$total（职能称呼；studio 侧随 matrix-login 自动同步）"
 }
 mx() { # <token> <method> <api-path> [json-body]
   local token="$1" method="$2" path="$3" body="${4:-}"
@@ -432,8 +488,8 @@ gov_provision_user() { # <user>：账号经产品通道供给（R31，#/app/acco
   local mt; mt=$(mx_login admin "$(user_pass admin)" | tr -d '\n')
   [[ -n "$mt" && "$mt" != "null" ]] || { log "gov_provision_user: admin matrix 登录失败"; return 1; }
   body=$(jq -n --arg n "$u" --arg role "$(gov_role_of "$u")" \
-    --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" \
-    '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$n}')
+    --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" --arg dn "$(displayname_of "$u")" \
+    '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$dn}')
   studio POST /api/governance/matrix-users "$tok" "$body" | jq -e '.rosterCommit' >/dev/null
 }
 studio_matrix_login() { # <user-human-localpart> → jwt（matrix 账号换 JWT）
