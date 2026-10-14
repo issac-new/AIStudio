@@ -64,3 +64,11 @@
 | 47 | 报告引用产物新鲜度与计数实测（QGate 证据包 generated 校验/全景矩阵 fetch+窗口/复盘自指单重取计数） | ⚠️ 有代码锚无机械测试锚（待首验配套，防立法即遗忘）：aipay-scenario.sh:1444-1460（qgate-stale 拒收+清中央仓旧件+新鲜度过才落盘）、mx-report-gen.py:2881-2908（_art_refreshed 先 fetch origin+窗口校验+「在仓·旧版」降级）、aipay-scenario.sh:1927-1928（自指单追加后重取计数）。补断言建议：qgate-stale 件沿 repo-has-freshness 脚手架加时间窗两例 |
 
 统计更新（2026-10-13 深夜，V8.24 可读性批同步）：正本现 51 条（编号 1-48 含 25a/b/c）。撞号修复：截图采集十条保持 40（代码注释「纪律 40⑥/⑩」皆指它），全阶段饱和并行顺延为 48（原 V8.16 增列时占用 40）。
+
+## 六、V8.25 新增（2026-10-14 阿里调研轮 B2）
+
+| 纪律 | 条款 | 测试状态（同批声明） |
+|---|---|---|
+| 49 | 经验受控注入（默认关 EXPERIENCE_INJECT=1；三前提=审核+版本化出处+留痕；凭据形态改写；注入通道单一=派单简报行封顶 3） | ✅ 有测试锚：overlay custom/server/expcandidates/__tests__/exp-inject.test.ts（默认关/approved 过滤封顶 3/凭据形态改写/留痕幂等/坏存储 fail-soft）+ custom/server/kanban/__tests__/column-dispatch-brief.test.ts（简报集成：默认关不出现/开启出现）。推演实跑首验待下轮开启 EXPERIENCE_INJECT 的专项轮 |
+
+统计更新（2026-10-14）：正本现 52 条（编号 1-49 含 25a/b/c）。
