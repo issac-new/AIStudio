@@ -197,8 +197,11 @@ while true; do
         _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner 第 ${_nudges} 次（run19 根治+用户 300s 时限收紧）"
         grep -qF "breaker-wait-nudge" "$_iss_path" 2>/dev/null || echo "$_nud" >> "$_iss_path"
         if (( _nudges == 10 )); then
-          echo "ISSUE|breaker-wait-escalated|supervisor|催办 10 次（$((_nudges * _NG))s）仍无证据变化——agent 补齐链疑似停摆，请人工介入（GATE_BREAKER_OVERRIDE 复议或查 agent 会话）" >> "$_iss_path"
-          note "⚠ 催办 10 次无响应——已升级记单（人工介入信号），继续每 ${_NG}s 催办不弃守"
+          # run19 复盘根治（裁决请求通道空转）：升级时扫分析群近 30 分钟「请导演裁决/报导演」
+          # 未应答形态计数附入记单（run19 实锤：chen 10:45 裁决请求在熔断等待期无人应答 32 分钟）
+          _vr_cnt=$(grep -c '裁决' "$SIM_ROOT/runs/$RUN_ID/evidence/scenario.log" 2>/dev/null || echo 0)
+          echo "ISSUE|breaker-wait-escalated|supervisor|催办 10 次（$((_nudges * _NG))s）仍无证据变化——agent 补齐链疑似停摆，请人工介入（GATE_BREAKER_OVERRIDE 复议或查 agent 会话）；附：本轮日志内裁决请求信号 ${_vr_cnt} 处（含向导演请求未应答形态，须人工复核）" >> "$_iss_path"
+          note "⚠ 催办 10 次无响应——已升级记单（人工介入信号+裁决请求信号 ${_vr_cnt} 处），继续每 ${_NG}s 催办不弃守"
         fi
         _br_nudge_g5 "${_wd}"
         note "熔断等待 ${_wd}s 无证据变化——第 ${_nudges} 次催办评审卡 owner（每 ${_NG}s，用户 300s 时限）"
