@@ -45,6 +45,10 @@ _DEFAULT_TRACE_DIR = Path.home() / ".hermes" / "traces"
 _STATE_LOCK = threading.Lock()
 _SESSION_FILES: Dict[str, Any] = {}  # session_id -> file handle
 _TRACE_STATE: Dict[str, TraceSession] = {}
+# session_id -> state key（api/tool 钩子的 task_id 与 session_start 时不一致的场景：
+# header 记 task_id=null 而 effective_task_id 已定，精确键查不到会把 span 全丢——
+# 627 份线上轨迹全空壳的根因。按 session_id 兜底定位同一会话。）
+_SESSION_KEY_INDEX: Dict[str, str] = {}
 _MAX_STATE_ENTRIES = 256
 
 
@@ -111,9 +115,22 @@ def _session_key(session_id: str, task_id: Optional[str] = None) -> str:
     return f"session:{session_id}"
 
 
+def _lookup_state(session_id: str, task_id: Optional[str]) -> Optional["TraceSession"]:
+    """按精确键查会话态；查不到按 session_id 兜底（api/tool 钩子的 task_id 与
+    session_start 时不同是常态——header 常记 null 而 effective_task_id 已定，
+    精确键 miss 会把 span 全部静默丢弃）。"""
+    state = _TRACE_STATE.get(_session_key(session_id, task_id))
+    if state:
+        return state
+    key = _SESSION_KEY_INDEX.get(session_id)
+    if key:
+        return _TRACE_STATE.get(key)
+    return None
+
+
 # ── Hook Handlers ──
 
-def _on_session_start(**payload: Any) -> None:
+def _on_session_start(ctx: Any, payload: dict) -> None:
     """Create new JSONL file, write header."""
     trace_dir = _ensure_trace_dir()
     if not trace_dir:
@@ -152,6 +169,7 @@ def _on_session_start(**payload: Any) -> None:
                 started_at=started_at,
                 model=payload.get("model"),
                 provider=payload.get("provider"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             header = {
@@ -175,12 +193,13 @@ def _on_session_start(**payload: Any) -> None:
             started_at=started_at,
         )
         _TRACE_STATE[key] = state
+        _SESSION_KEY_INDEX[session_id] = key
         _SESSION_FILES[session_id] = file_handle
 
     logger.debug("Started trace session %s", session_id)
 
 
-def _on_session_end(**payload: Any) -> None:
+def _on_session_end(ctx: Any, payload: dict) -> None:
     """Write trailer, close file."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -221,11 +240,13 @@ def _on_session_end(**payload: Any) -> None:
             pass
 
         _SESSION_FILES.pop(session_id, None)
+        if _SESSION_KEY_INDEX.get(session_id) == key:
+            _SESSION_KEY_INDEX.pop(session_id, None)
 
     logger.debug("Ended trace session %s", session_id)
 
 
-def _pre_api_request(**payload: Any) -> None:
+def _pre_api_request(ctx: Any, payload: dict) -> None:
     """Write LLM span start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -233,7 +254,7 @@ def _pre_api_request(**payload: Any) -> None:
     key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.get(key)
+        state = _lookup_state(session_id, task_id)
         if not state:
             return
 
@@ -245,6 +266,7 @@ def _pre_api_request(**payload: Any) -> None:
                 model=payload.get("model"),
                 provider=payload.get("provider"),
                 started_at=started_at,
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -272,7 +294,7 @@ def _pre_api_request(**payload: Any) -> None:
     logger.debug("Pre API request %s for session %s", api_request_id, session_id)
 
 
-def _post_api_request(**payload: Any) -> None:
+def _post_api_request(ctx: Any, payload: dict) -> None:
     """Write LLM span end chunk with usage."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -280,7 +302,7 @@ def _post_api_request(**payload: Any) -> None:
     key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.get(key)
+        state = _lookup_state(session_id, task_id)
         if not state:
             return
 
@@ -300,6 +322,7 @@ def _post_api_request(**payload: Any) -> None:
                 duration_ms=duration_ms,
                 usage=payload.get("usage"),
                 finish_reason=payload.get("finish_reason"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -318,6 +341,18 @@ def _post_api_request(**payload: Any) -> None:
                 "usage": payload.get("usage"),
                 "response_preview": payload.get("response"),
             }
+            # TTFT：上游 0.21.7 post_api_request 已携带 first_chunk_at（epoch s，
+            # 非流式/无分片为 None）——TTFB=first_chunk_at-started_at，落双字段名
+            # 兼容消费面（eval 门禁读 first_token_ms）。
+            first_chunk_at = payload.get("first_chunk_at")
+            try:
+                if first_chunk_at is not None and started_at:
+                    _ttft_ms = int(round((float(first_chunk_at) - float(started_at)) * 1000))
+                    if _ttft_ms >= 0:
+                        chunk["first_token_ms"] = _ttft_ms
+                        chunk["ttft_ms"] = _ttft_ms
+            except (TypeError, ValueError):
+                pass
             # Truncate large response previews
             if chunk["response_preview"] and isinstance(chunk["response_preview"], str):
                 if len(chunk["response_preview"]) > 500:
@@ -329,7 +364,7 @@ def _post_api_request(**payload: Any) -> None:
     logger.debug("Post API request %s for session %s", api_request_id, session_id)
 
 
-def _post_tool_call(**payload: Any) -> None:
+def _post_tool_call(ctx: Any, payload: dict) -> None:
     """Write tool chunk with duration, args, result."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -337,7 +372,7 @@ def _post_tool_call(**payload: Any) -> None:
     key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.get(key)
+        state = _lookup_state(session_id, task_id)
         if not state:
             return
 
@@ -352,6 +387,7 @@ def _post_tool_call(**payload: Any) -> None:
                 status=payload.get("status"),
                 error_message=payload.get("error_message"),
                 started_at=payload.get("ts", time.time()),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -384,7 +420,7 @@ def _post_tool_call(**payload: Any) -> None:
     logger.debug("Tool call %s (%s) for session %s", tool_call_id, payload.get("tool_name"), session_id)
 
 
-def _subagent_start(**payload: Any) -> None:
+def _subagent_start(ctx: Any, payload: dict) -> None:
     """Write subagent start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -392,7 +428,7 @@ def _subagent_start(**payload: Any) -> None:
     key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.get(key)
+        state = _lookup_state(session_id, task_id)
         if not state:
             return
 
@@ -402,6 +438,7 @@ def _subagent_start(**payload: Any) -> None:
                 session_id=session_id,
                 label=subagent_label,
                 started_at=started_at,
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -427,7 +464,7 @@ def _subagent_start(**payload: Any) -> None:
     logger.debug("Subagent %s started for session %s", subagent_label, session_id)
 
 
-def _subagent_stop(**payload: Any) -> None:
+def _subagent_stop(ctx: Any, payload: dict) -> None:
     """Write subagent stop chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -435,7 +472,7 @@ def _subagent_stop(**payload: Any) -> None:
     key = _session_key(session_id, task_id)
 
     with _STATE_LOCK:
-        state = _TRACE_STATE.get(key)
+        state = _lookup_state(session_id, task_id)
         if not state:
             return
 
@@ -452,6 +489,7 @@ def _subagent_stop(**payload: Any) -> None:
                 ended_at=ended_at,
                 duration_ms=duration_ms,
                 status=payload.get("status"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {

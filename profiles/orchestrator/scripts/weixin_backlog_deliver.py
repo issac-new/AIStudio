@@ -13,8 +13,8 @@ import sys
 from datetime import datetime, timezone, timedelta
 
 CST = timezone(timedelta(hours=8))
-REPORTS = "/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench/reports"
-STATE = "/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench/cache/radar/weixin_backlog_state.json"
+REPORTS = "/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/reports"
+STATE = "/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/cache/radar/weixin_backlog_state.json"
 
 # 待补投队列：2026-09-05 夜间生成的 5 份 + 2026-09-06 补跑的 5 份
 QUEUE = [

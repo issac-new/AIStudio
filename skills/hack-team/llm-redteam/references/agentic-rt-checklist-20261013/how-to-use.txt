@@ -1,0 +1,14 @@
+Agentic AI Red Team Checklist — WSTG-style + ARC PI Taxonomy
+Purpose: a comprehensive, forced-order checklist so no test case or edge case is missed during an authorized AI/agentic platform engagement. It mirrors the WSTG philosophy (categorized tests with objective, how-to-test, tools, expected result) and is cross-mapped to the OWASP LLM/Agentic/Skills/MCP Top 10s, MITRE ATLAS, and the Arcanum Prompt Injection (ARC PI) Taxonomy v1.6.1.
+How to use:
+1) Work top-to-bottom, category by category, following the engagement flow (Recon -> Infra -> Cloud -> Supply chain -> Input -> Prompt injection -> Output -> Tools -> Agency -> Memory -> Mesh -> MCP/Skills -> CI/CD -> PrivEsc -> Lateral -> Exfil -> DoS -> Integrity -> Voice).
+2) The ARC PI categories enumerate every intent/technique/evasion/input from the taxonomy so the prompt-injection surface is covered exhaustively, not just the headline attacks.
+3) Mark Status per row: Not Started / In Progress / Passed / Failed / Blocked / N/A. Record evidence in Notes_Evidence (screenshot, Burp/Collaborator log, canary value).
+4) Detection_Mode = how to PROVE it: Reflective (echoed in response), Blind (timing/behavior/state change), OOB (out-of-band callback).
+5) ARC_PI_Ref traces the test to the Arcanum PI Taxonomy (PIT-T = technique, PIT-E = evasion, PIT-I = intent, PIT-N = input). Use the autofilter to slice by Category, Severity, Framework, Detection_Mode, or ARC_PI_Ref.
+Severity legend:
+Critical = RCE, cloud-role/account takeover, cross-tenant breach, autonomous high-impact action. High = credential theft, privesc, sandbox escape, persistent goal hijack, exfil path. Medium = system prompt leak, limited injection, weak isolation, DoS, evasion/obfuscation amplifiers. Low = low-value disclosure, hardening gaps.
+Confidence: mark Confirmed only with Reflective or OOB evidence; Blind-only = Probable.
+White-box note: Model-Weight & White-Box Attacks (Local) rows require local model-weight access (self-hosted/open-weight models). Skip them for black-box API-only targets.
+CVE note: this checklist deliberately does not hard-code CVE numbers; verify against current CVE/NVD before citing a specific ID in a report.
+Attribution: ARC PI Taxonomy by Jason Haddix, Arcanum Information Security (CC BY 4.0) — https://arcanum-sec.github.io/arc_pi_taxonomy/

@@ -116,6 +116,29 @@ for b in swarm hack product ops [已移除] platform [已移除] aiteam pay data
 done
 ```
 
+## 板级 watcher(daemon)在不在岗——ready 卡零拾取的诊断与根治
+
+dispatcher 以**板**为单位常驻：每块板要有一个 `kanban --board <slug> watch` 进程在跑，该板的 ready 卡才会被认领执行。**卡建在分库 + ready + assignee 在位 + 无 runs，但仍零拾取 → 先查板级 watcher 是否缺席**——它与前 5 项排除项（根库陷阱/triage 死锁/respawn guard/幽灵 assignee）正交，卡本身完全健康，只是没有常驻 watcher 去认领。事件流里 `out_of_scope` 刷屏（每 tick 一条、无 claim/spawn）是这个缺口的特征信号。
+
+```bash
+# 判别：本机跑着哪些板的 watcher + 目标板在不在
+ps -eo args | grep -oE "kanban --board [a-z-]+ watch" | sort -u
+ps -eo args | grep -E "kanban --board <slug> watch" | grep -v grep || echo "watcher 缺席"
+
+# 卡侧证据（分库命中 + ready + runs=0 + 无 gate，齐了就指向 watcher）
+sqlite3 ~/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT id,status,assignee FROM tasks WHERE id='<tid>';"
+sqlite3 ~/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT count(*) FROM task_runs WHERE task_id='<tid>';"
+sqlite3 ~/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT kind, count(*) FROM task_events WHERE task_id='<tid>' GROUP BY kind;"
+
+# 根治：补起该板 watcher（后台常驻，拾取下一 tick 自动发生，无需改卡）
+hermes kanban --board <slug> watch --interval 0.5 &
+```
+
+**判级**：能补 watcher 是基础设施修复（推荐根治）；逐张 `unblock` 无效——watcher 缺席时 unblock 后仍没人认领。watcher 缺席的常见原因：板新建后没拉 watcher、机器重启后 launchd/裸进程没自动带起。本机实测：36 块板全有 watcher，唯独某板缺席，补起后该板积压卡下一 tick 被认领。详细分诊见 `kanban-task-pickup-diagnosis`（default profile，跨 profile patch 走 `hermes -p default` 或直接编辑源文件）。
+
 ## 能力图与并行波次（Graph Engineering 机制，派卡前用）
 ```bash
 # 谁会 X？——assignee 不确定时先查能力图，别靠记忆派卡

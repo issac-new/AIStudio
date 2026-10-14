@@ -18,6 +18,22 @@ metadata:
 - 用户问「检查进度 / 调度是否健康 / 为什么卡没被拾取」
 - 重型任务派发前后的例行自检；怀疑 dispatcher 停摆或僵尸卡
 
+## 手动 dispatch 执行纪律（cards ready 但 dispatcher 停摆时）
+
+dispatcher 停摆的判据：gateway 存活（`curl -s localhost:8650/health` 返回 ok）但板上有 ready 卡，且 gateway 日志 `~/.hermes/logs/gateway-*.log` 的 `kanban.dispatch_profiles` 行已停滞多个 tick 周期。此时用 `hermes kanban dispatch --max N --json` 手动触发一轮派工，`--max N` 的 N 必须按「本次会话要推动的目标卡数量」精确指定——**不加或过大 N 会把板上所有积压 ready 卡一并扫出**（本次实测：--max 2 即把一张与本会话无关的他人积压卡 t_90d968f2 一并派出）。手动 dispatch 是调度桥，不是通用泄压阀；它只在确认 dispatcher 停摆后用于救急，且每轮只放目标卡。
+
+手动 dispatch 的复核：返回 JSON 里 `spawned` 数组逐项核 task_id+assignee 全是目标卡——若有非目标卡被一并扫出且其原状态为 ready（说明是积压误带），直接放任跑完收口，不中途 kill（强杀更易留半产物）；若误带卡原状态非 ready 被强拉，须先核其事件流再定处置。命中「误带派出」先例后：dispatch 永远精确 N，不复用「调度还剩积压我顺手全扫」的直觉。
+
+手动 dispatch 后给 8-15 秒派工沉降期再查卡态：`hermes kanban show <id>` 的 status 从 ready 翻 running 且 workspace 字段就位才算 spawn 成功。此窗内 ready→running 转换中，DB 直查易返回空（卡处于过渡态），以 `hermes kanban show` 的展示态为准，不据空 DB 行判「spawn 未发生」二次触发 dispatch 造成重复派工。
+
+## 时间差异常复核路线（自报时长与完成度矛盾时）
+
+created→started 短于分钟级（如 4min）而 self-described 任务全量完成时，按 checklist 逐级追问（turns>15? 产物在场？ 完成度），禁默认信任 time-consistent 即 truth。
+
+## 返工总耗时达预估3x+的豁免
+
+返工总耗时（含 crash/重派）显著超过显式预估（如 3x，实测基线 15min→45min）且全 checklist 通过时，直接采信大数字（如 -44.7~49.0%、94%），不逐条追加人工复验——这是对诚实报告的奖赏，不是验收降级。该例外成立的前提是 checklist 硬证据链在档。
+
 ## 机械检查项（脚本一键跑）
 
 ### Board-aware 状态查询纪律

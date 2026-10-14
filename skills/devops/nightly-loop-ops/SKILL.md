@@ -147,6 +147,32 @@ HERMES_HOME-scoped).
   hotspot time), not zone-dependent — else a late hotspot join leaves download
   apps running on cellular with no marker.
 
+## v3.7 workspace & home-SID drift fix (2026-10-13, user ruling)
+
+- **Home segment changed 192.168.1.x → 192.168.0.x** (user replaced router).
+  `network_zone.sh` HOME_SEG updated; 10-08~10-13 every night misjudged `away`
+  and the whole loop GATE-SKIPped silently (full done line still written, so
+  the liveness watchdog stayed green — gate skip masks dead nights). If the
+  gate fires every night, check the REAL subnet against HOME_SEG first.
+- **Workspace root R switched back to home** (`~/hermes-docker-sandbox/
+  workspace/life-workbench`): the script had drifted to the frozen nvme clone
+  after 10-05. Swept nvme hard-paths out of the whole chain: loop entry (R,
+  doc-quality, digest), reclaim MAIN, radar supervisor BASE, friction scan
+  gap_register(+CLI), liveness watchdog R+sys.path, ops radar wrapper B,
+  render_loop_graph.py (LB/RESEARCH/gap_workspaces), [已移除]+domain BASE (LWB and
+  ~/.hermes/scripts copies), docsync BASE, heartbeat BASE+MAP_URL,
+  render_loop_graph_cron.sh, failure_pattern_monthly WORKSPACE,
+  weixin_backlog_deliver REPORTS/STATE. **Kept on nvme on purpose**: reclaim
+  ARCHIVE_BASE (cold archive per 先存档再删), radar_llm zcode session dir,
+  clef_serve model dir, ccswitch-statusbar repo (lives only on nvme).
+- **home .venv rebuilt by full-tree copy** of the nvme .venv (105 pkgs, 770M;
+  the 5-pkg recipe was stale — full-tree copy is the fidelity-preserving
+  route; import-graph re-derivation is the fallback). Verified: interpreter
+  3.12.15, feedparser/crawl4ai/pymupdf/yaml/lxml/PIL import OK.
+- **Verification chain**: `bash -n` all touched scripts + py_compile py files,
+  `network_zone.sh` → home, then a real full-chain run (artifacts absent →
+  every step actually executes).
+
 ## v3.5 hotspot gate (2026-10-07, user ruling: save cellular data)
 
 - **Single preflight gate, never per-step edits**: after `declare -a STEP_RC`, the loop

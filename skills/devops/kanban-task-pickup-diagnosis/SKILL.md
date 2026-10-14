@@ -47,9 +47,33 @@ ls -lt ~/.hermes/kanban/boards/<board>/logs/t_*.log | head -5
 
 # 3. 根级库命中 → 根库陷阱，走迁移重建
 # 4. 分库命中且 status=triage → promote；父卡 triage 则先修父卡（子卡 gate 才能释放）
+# 5. 排除 respawn guard / 幽灵 assignee：
+#    - respawn guard：SELECT substr(last_failure_error,1,200)，有旧 provider 文本=被扣留（见下方分类4）
+#    - 幽灵 assignee：test -d ~/.hermes/profiles/<assignee>，目录缺=无人可派
+# 6. 以上全否 → 查板级 watcher 是否缺席（见下方「watcher 缺席」分诊）
 ```
 
 **反直觉点**：`kanban_list`/`kanban_show` 能读回卡 ≠ 卡会被执行——工具与写入方同库即可见，dispatcher 扫描范围才是执行前提。
+
+## watcher 缺席分诊（前 5 项排除后仍零拾取的最大嫌疑）
+
+dispatcher 以**板**为单位常驻，每块板要有一个 `kanban --board <slug> watch` 进程认领该板 ready 卡。卡本身健康（分库/ready/assignee 在位/无 gate/无旧错误文本）却仍零拾取时，缺口就是板级 watcher 缺席。特征信号：事件流里 `out_of_scope` 每 tick 一条刷屏、无 `claimed`/`spawned`。
+
+```bash
+# 判别：本机哪些板有 watcher + 目标板在不在
+ps -eo args | grep -oE "kanban --board [a-z-]+ watch" | sort -u
+ps -eo args | grep -E "kanban --board <board> watch" | grep -v grep || echo "watcher 缺席"
+
+# 卡侧证据齐了就指向 watcher：分库命中 + ready + runs=0 + 无 gate + assignee 目录在位
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db "SELECT id,status,assignee FROM tasks WHERE id='<tid>';"
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db "SELECT count(*) FROM task_runs WHERE task_id='<tid>';"
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db "SELECT kind,count(*) FROM task_events WHERE task_id='<tid>' GROUP BY kind;"
+
+# 根治：补起该板 watcher（后台常驻，下一 tick 自动认领积压卡，无需改卡/unblock）
+hermes kanban --board <board> watch --interval 0.5 &
+```
+
+**判级**：补 watcher 是基础设施修复，是根治；逐张 `unblock` 无效——watcher 缺席时 unblock 后仍没人认领，等于白做。缺席常见原因：板新建后没拉 watcher、机器重启后 launchd/裸进程没自动带起。本机实测：36 块板全有 watcher，唯独某板缺席，补起后该板积压卡下一 tick 被认领。
 
 ## 恢复：迁移重建（根库卡原地 SQL promote 无用——dispatcher 根本不看该库）
 

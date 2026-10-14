@@ -3,10 +3,14 @@ model:
   provider: custom:cc-switch
   base_url: http://127.0.0.1:15721
   api_key: PROXY_MANAGED
-fallback_providers: []
+fallback_providers:
+  - provider: custom:cc-switch
+    model: aim
 toolsets:
   - hermes-cli
 agent:
+  skills:
+    creation_nudge_interval: 30
   max_turns: 60
   gateway_timeout: 1800
   restart_drain_timeout: 60
@@ -119,23 +123,60 @@ bedrock:
     trace: disabled
 auxiliary:
   vision:
-    provider: custom
-    model: k3
-    base_url: https://api.kimi.com/coding
-    api_key: ${AUX_KIMI_API_KEY}
-    timeout: 120
-    download_timeout: 30
+    provider: custom:cc-switch
+    model: aim
+    base_url: http://127.0.0.1:15721
     api_mode: anthropic_messages
-    fallback_chain:
-      - provider: custom
-        model: glm-4.5v
-        base_url: https://open.bigmodel.cn/api/anthropic
-        api_key: ${ZHIPU_API_KEY}
-        api_mode: anthropic_messages
-        timeout: 120
+  compression:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: claude-opus-5
+  approval:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  title_generation:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  background_review:
+    enabled: true
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  goal_judge:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  kanban_decomposer:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  moa_aggregator:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  moa_reference:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  profile_describer:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  triage_specifier:
+    api_mode: anthropic_messages
+    provider: custom:cc-switch
+    model: aim
+  session_search:
+    provider: custom:cc-switch
+    model: aim
+  web_extract:
+    provider: custom:cc-switch
+    model: aim
 display:
   compact: false
-  personality: kawaii
+  personality: none
   resume_display: full
   resume_exchanges: 10
   resume_max_user_chars: 300
@@ -186,7 +227,10 @@ display:
     slug: cosmo
     scale: 0.5
   tool_progress: all
-  background_process_notifications: all
+  background_process_notifications: concise
+  message_reactions: true
+  in_app_tips: false
+  in_app_tours: false
 dashboard:
   theme: mono
   show_token_analytics: false
@@ -261,12 +305,13 @@ human_delay:
 context:
   engine: compressor
 memory:
+  nudge_interval: 30
   memory_enabled: true
   user_profile_enabled: true
   write_approval: false
   memory_char_limit: 4400
   user_char_limit: 2750
-  provider: hindsight
+  provider: ""
 delegation:
   model: ""
   provider: ""
@@ -274,10 +319,10 @@ delegation:
   api_key: ""
   api_mode: ""
   inherit_mcp_toolsets: true
-  max_iterations: 50
+  max_iterations: 250
   child_timeout_seconds: 600
-  reasoning_effort: ""
-  max_concurrent_children: 3
+  reasoning_effort: ultra
+  max_concurrent_children: 10
   max_spawn_depth: 1
   orchestrator_enabled: true
   subagent_auto_approve: false
@@ -289,7 +334,8 @@ prefill_messages_file: ""
 goals:
   max_turns: 20
 skills:
-  external_dirs: []
+  external_dirs:
+    - /Volumes/YOURVOLUME/path/to/external/skills
   template_vars: true
   inline_shell: false
   inline_shell_timeout: 10
@@ -300,8 +346,8 @@ curator:
   enabled: true
   interval_hours: 168
   min_idle_hours: 2
-  stale_after_days: 30
-  archive_after_days: 90
+  stale_after_days: 14
+  archive_after_days: 30
   prune_builtins: true
   backup:
     enabled: true
@@ -350,20 +396,18 @@ matrix:
   free_response_rooms: ""
   allowed_rooms: ""
 approvals:
-  mode: smart
+  mode: "off"
   timeout: 60
-  cron_mode: deny
+  cron_mode: approve
   mcp_reload_confirm: true
   destructive_slash_confirm: true
+  single_query_mode: approve
+  unattended_mode: approve
 command_allowlist: []
 hooks_auto_accept: false
 security:
   allow_private_urls: false
   redact_secrets: true
-  tirith_enabled: true
-  tirith_path: tirith
-  tirith_timeout: 5
-  tirith_fail_open: true
   website_blocklist:
     enabled: false
     domains: []
@@ -383,6 +427,8 @@ kanban:
   auto_decompose: true
   auto_decompose_per_tick: 3
   dispatch_stale_timeout_seconds: 14400
+  max_in_progress: 8
+  max_in_progress_per_profile: 3
 code_execution:
   mode: project
   timeout: 300
@@ -403,7 +449,6 @@ logging:
 model_catalog:
   enabled: true
   url: https://hermes-agent.nousresearch.com/docs/api/model-catalog.json
-  ttl_hours: 24
 network:
   force_ipv4: false
 gateway:
@@ -412,6 +457,13 @@ gateway:
   trust_recent_files: true
   trust_recent_files_seconds: 600
   multiplex_profiles: true
+  outbound_guard:
+    dedup_window_minutes: 60
+    rate_max_per_recipient: 5
+    rate_window_minutes: 60
+    quiet_hours_start: "22:00"
+    quiet_hours_end: "08:00"
+    urgent_bypass: true
 streaming:
   enabled: false
   transport: auto
@@ -455,7 +507,7 @@ secrets:
 paste_collapse_threshold: 5
 paste_collapse_threshold_fallback: 0
 paste_collapse_char_threshold: 2000
-_config_version: 23
+_config_version: 50
 platforms:
   api_server:
     enabled: true
@@ -463,20 +515,24 @@ platforms:
       host: 127.0.0.1
       port: 8650
       model_routes:
-        glm-5.3:
-          model: glm-5.3
+        glm-5.3-flash:
+          model: glm-5.3-flash
           provider: custom:cc-switch
         glm-5.2:
-          model: glm-5.3
+          model: glm-5.3-flash
           provider: custom:cc-switch
   matrix:
     enabled: true
     gateway_restart_notification: false
   email:
-    enabled: true
+    enabled: false
     gateway_restart_notification: false
   weixin:
-    enabled: true
+    enabled: false
+    home_channel:
+      platform: weixin
+      chat_id: <dad-wechat-id>@im.wechat
+      name: XIAOBAI-SESSION-NOT-HOME
   webhook:
     enabled: true
 smart_model_routing:
@@ -498,99 +554,112 @@ custom_providers:
   - name: cc-switch
     base_url: http://127.0.0.1:15721
     api_key: PROXY_MANAGED
-    api_mode: openai
+    api_mode: anthropic_messages
     context_length: 1048576
     models:
-      aim:
-        name: aim
+      glm-5.3-flash:
+        name: glm-5.3-flash
         context_length: 1048576
-  - name: kimi-vision
-    base_url: https://api.kimi.com/coding
-    api_key: ${AUX_KIMI_API_KEY}
-    api_mode: anthropic_messages
-    context_length: 200000
-    models:
-      k3:
-        name: k3
-  - name: bigmodel-vision
-    base_url: https://open.bigmodel.cn/api/anthropic
-    api_key: ${ZHIPU_API_KEY}
-    api_mode: anthropic_messages
-    context_length: 131072
-    models:
-      glm-4.5v:
-        name: glm-4.5v
+    model: glm-5.3-flash
 mcp_servers:
-  hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  semantica:
+    command: /Users/YOURNAME/.hermes/hermes-agent/venv.py311/bin/python
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - "-m"
+      - semantica_mcp.mcp
+    env:
+      SEMANTICA_KG_PATH: /Users/YOURNAME/.hermes/semantica/kg.json
+      SEMANTICA_VECTOR_BACKEND: inmemory
+      SEMANTICA_LOG_LEVEL: WARNING
+    enabled: true
+  ekko-studio-api:
+    command: /usr/local/bin/node
+    args:
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - api
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: default
-      HERMES_MCP_SERVER_NAME: hermes-studio-api
+      HERMES_MCP_SERVER_NAME: ekko-studio-api
       HERMES_MCP_TOOLSET: api
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-browser:
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - browser
+    env:
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: default
+      HERMES_MCP_SERVER_NAME: ekko-studio-browser
+      HERMES_MCP_TOOLSET: browser
+      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_WEB_UI_MANAGED_MCP: "1"
+    enabled: true
+  ekko-studio-devices:
+    command: /usr/local/bin/node
+    args:
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - devices
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: default
-      HERMES_MCP_SERVER_NAME: hermes-studio-devices
+      HERMES_MCP_SERVER_NAME: ekko-studio-devices
       HERMES_MCP_TOOLSET: devices
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+  ekko-studio-use:
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: default
-      HERMES_MCP_SERVER_NAME: hermes-studio-use
+      HERMES_MCP_SERVER_NAME: ekko-studio-use
       HERMES_MCP_TOOLSET: use
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  codegraph:
-    command: codegraph
+  ekko-studio-interaction:
+    command: /usr/local/bin/node
     args:
-      - serve
-      - "--mcp"
-    timeout: 120
-    connect_timeout: 60
-    enabled: true
-  hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
-    args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - browser
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - plan
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      ELECTRON_RUN_AS_NODE: "1"
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: default
-      HERMES_MCP_SERVER_NAME: hermes-studio-browser
-      HERMES_MCP_TOOLSET: browser
+      HERMES_MCP_SERVER_NAME: ekko-studio-interaction
+      HERMES_MCP_TOOLSET: plan
+      HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
 plugins:
   enabled:
-    - run-trace
-    - hindsight
-    - observability/langfuse
     - acp-client
+    - hindsight
     - matrix-chat-info
+    - observability/langfuse
     - rtk-rewrite
+    - run-trace
+  disabled:
+    - hindsight

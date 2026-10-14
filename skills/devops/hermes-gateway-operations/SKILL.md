@@ -333,7 +333,7 @@ venv/bin/pip install mautrix==0.21.1 aiosqlite==0.22.1 asyncpg==0.31.0 aiohttp-s
 ## Gateway lifecycle 通知抑制（gateway_restart_notification，2026-08-28 实例）
 
 > 实例：邮箱被 `Gateway online` / `shutting down` 类 home-channel 通知刷屏。
-> 同一收件箱（your-inbox@example.com）被 orchestrator + [已移除]-orchestrator 两个网关进程
+> 同一收件箱（<dad-wechat-id>@im.wechat）被 orchestrator + [已移除]-orchestrator 两个网关进程
 > 各发一次，造成重复噪声。抑制后日志落 `Shutdown notification suppressed ...`。
 
 ### 机制
@@ -385,7 +385,7 @@ grep -h "Shutdown notification suppressed\|Sent home-channel startup" \
 config.yaml，但 `EMAIL_HOME_ADDRESS` 通常指向**同一收件箱**。只给 orchestrator 置
 false，[已移除] 进程仍会发那条通知——必须对所有启用 email 平台的 profile 都置 false，
 噪声才彻底消失。本集群实测：两 profile 的 `EMAIL_ADDRESS` / `EMAIL_HOME_ADDRESS`
-均为 `your-inbox@example.com`（账号相同，非不同账号）。
+均为 `<dad-wechat-id>@im.wechat`（账号相同，非不同账号）。
 
 ### 坑：hermes gateway restart 可能前台超时
 

@@ -1,24 +1,25 @@
 # SwarmTeam — Hermes Agent Multi-Profile Distribution
 
 > A production-grade multi-agent system built on [Hermes Agent](https://hermes-agent.nousresearch.com).
-> **40 profiles** across 10 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / hack / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> **41 profiles** across 10 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / hack / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
 
 ## Overview / 概览
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**40 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
+**41 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
 
-### What changed in this release (v2.0)
+### What changed in this release (v3.2)
 
-- **Profile consolidation**: 8 sub-roles absorbed as skills into primary profiles (architect→worker-coder, prioritizer→product-manager, etc.)
-- **New team**: Platform team (skill-miner + ontology-curator) for self-improving skill library
-- **ops-eval**: Dedicated workflow evaluation engineer (6-dimension weekly assessment)
-- **Workspace persistence**: All kanban tasks default to `workspace_kind="worktree"` — outputs survive task completion on independent git branches
+- **Full refresh**: all 40 existing profiles synced to 2026-10 live state (model routing unified through local cc-switch proxy)
+- **New profile**: `[已移除]` (41st) — [已移除] software install-tree static reverse engineering (REA/Ghidra; static-analysis-only red line)
+- **Root skills refreshed**; `shared/profiles.yaml` now carries 48-profile differential config
+- **Privacy**: WeChat/Matrix IDs → placeholders, `/Users/YOURNAME` → `/Users/YOURNAME`, private cron jobs dropped
+- Previous releases: v3.1 added hack team (4 profiles); v3.0 added Windows installer + six-layer `_shared` structure
 
 ## Profile Roster / Profile 名册
 
-> 本次发布 40 个 profile，横跨 10 个领域团队（新增 hack 安全团队 4 个）。[已移除] 家庭团队（7 个）因家庭隐私不在此仓库。
+> 本次发布 41 个 profile，横跨 10 个领域团队（本次新增 [已移除] 软件逆向）。[已移除] 家庭团队因家庭隐私不在此仓库。
 
 ### Swarm Team (4 profiles) — Software Engineering
 
@@ -81,7 +82,7 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 | `data-arch` | 数仓架构/数据建模 |
 | `data-flink` | Flink 流批处理调优 |
 
-### [已移除] Team (10 profiles) — IC 设计自动化
+### [已移除] Team (11 profiles) — IC 设计自动化
 
 | Profile | Role |
 |---------|------|
@@ -95,6 +96,7 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 | `[已移除]` | 封装测试 |
 | `[已移除]` | 模拟混合信号 |
 | `[已移除]` | AI for [已移除] |
+| `[已移除]` | [已移除] software reverse engineering (static-only) |
 
 ### Hack Team (4 profiles) — 安全审计与红队（授权测试）
 
@@ -125,7 +127,7 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
    ┌────┬────┬───┬────┬────┬────┬────┬────┬────┐
    swarm  product ops platform aiteam pay  data  [已移除]  worker
    board  board  board  board  board  board board board
-   (4)    (2)    (4)   (2)    (6)    (4)  (4)  (10)
+   (4)    (2)    (4)   (2)    (6)    (4)  (4)  (11)
 ```
 
 **10 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `[已移除]` (IC design), `hack` (authorized security testing), `worker` (general).

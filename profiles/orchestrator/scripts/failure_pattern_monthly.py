@@ -24,7 +24,7 @@ from pathlib import Path
 HOME = os.path.expanduser("~")
 BOARDS_DIR = Path(HOME) / ".hermes/kanban/boards"
 TOP_DB = Path(HOME) / ".hermes/kanban/kanban.db"
-WORKSPACE = Path("/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench")
+WORKSPACE = Path("/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench")
 LOOKBACK_DAYS = 30
 LABELS = ["context-gap", "tool-failure", "routing-error", "capability-gap"]
 

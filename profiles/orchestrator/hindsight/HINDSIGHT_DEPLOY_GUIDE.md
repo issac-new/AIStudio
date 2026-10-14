@@ -334,7 +334,7 @@ model:
 
 确保 `~/.hermes/profiles/orchestrator/.env` 包含:
 ```
-DEEPSEEK_API_KEY=sk-xxx...xxxx
+DEEPSEEK_API_KEY=sk-REDACTED
 ```
 
 > ⏳ 配置变更后，当前运行中的 orchestrator 会话仍使用旧配置。需要**新建会话**使新配置生效。Worker profile 在下次 kanban 任务派发时自动继承新配置。

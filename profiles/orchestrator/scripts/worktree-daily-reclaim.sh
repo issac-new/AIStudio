@@ -3,7 +3,7 @@
 # 来源：2026-09-17 实战（36 worktree / 216G 回收）；教训已固化本脚本
 # 纪律：先存档再删；blocked 卡不动；NO-CARD 不动；remediation/ 等特殊前缀不动
 set -u
-MAIN=/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace
+MAIN=/Users/YOURNAME/hermes-docker-sandbox/workspace
 CENTRAL_DB="$HOME/.hermes/kanban.db"
 BOARDS_DIR="$HOME/.hermes/kanban/boards"
 ARCHIVE_BASE=/Volumes/YOURVOLUME/lab/_trash/wt-untracked-daily
@@ -96,6 +96,6 @@ for wt in .worktrees/t_*; do
 done
 
 git worktree prune
-log "=== done: removed=$removed branch_archived=$archived_branch skipped=$skipped failed=$failed | worktrees_left=$(ls .worktrees 2>/dev/null | wc -l | tr -d ' ') disk=$(df -h /Volumes/YOURVOLUME | tail -1 | awk '{print $4" free"}') ==="
+log "=== done: removed=$removed branch_archived=$archived_branch skipped=$skipped failed=$failed | worktrees_left=$(ls .worktrees 2>/dev/null | wc -l | tr -d ' ') disk=$(df -h "$MAIN" | tail -1 | awk '{print $4" free"}') ==="
 [ "$failed" -gt 0 ] && log "WARN: $failed failed items need manual review"
 exit 0

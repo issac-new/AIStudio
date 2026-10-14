@@ -1,5 +1,5 @@
 name: aiteam-multimodal
-version: 3.1.0
+version: 3.2.0
 description: "aiteam-multimodal — AI research domain gateway/worker"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"

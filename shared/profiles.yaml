@@ -21,8 +21,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -49,8 +50,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -77,8 +79,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -105,8 +108,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -133,8 +137,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -163,8 +168,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -198,10 +204,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -230,14 +235,14 @@ profiles:
     - autonomous-ai-agents
     - note-taking
     - productivity
+    - mlops
     skills_pinned:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -271,10 +276,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -307,10 +311,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -349,10 +352,9 @@ profiles:
     - wechat-article-search
     - hack-team
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -390,10 +392,9 @@ profiles:
     - wechat-article-search
     - hack-team
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -433,10 +434,9 @@ profiles:
     - wechat-article-search
     - hack-team
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -474,10 +474,9 @@ profiles:
     - wechat-article-search
     - hack-team
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -509,8 +508,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -542,8 +542,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -575,8 +576,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -608,8 +610,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -641,8 +644,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -674,8 +678,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -689,12 +694,12 @@ profiles:
       enabled: false
       gateway_restart_notification: false
     env_extra:
-      API_SERVER_ENABLED: 'false'
-      HERMES_KANBAN_BOARD: [已移除]
-      WEIXIN_ACCOUNT_ID: ${WEIXIN_ACCOUNT_ID}
+      WEIXIN_ACCOUNT_ID: <[已移除]-bot-account-id>@im.bot
       WEIXIN_DM_POLICY: pairing
       WEIXIN_GROUP_POLICY: disabled
-      WEIXIN_TOKEN: ${WEIXIN_TOKEN}
+      WEIXIN_TOKEN: <[已移除]-bot-account-id>@im.bot:${WEIXIN_TOKEN}
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
     environment_hint: ~/.hermes/profiles/[已移除]-orchestrator/SOUL.md
     kanban:
       default_assignee: ''
@@ -716,8 +721,9 @@ profiles:
     - markdown-viewer
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -750,8 +756,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -783,8 +790,9 @@ profiles:
     - skill-recall
     - cognition-lattice
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -816,8 +824,9 @@ profiles:
     - skill-recall
     - cognition-lattice
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -848,8 +857,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -864,10 +874,14 @@ profiles:
       enabled: false
       gateway_restart_notification: false
     env_extra:
+      WEIXIN_ACCOUNT_ID: ${WEIXIN_ACCOUNT_ID}
+      WEIXIN_DM_POLICY: pairing
+      WEIXIN_GROUP_POLICY: disabled
+      WEIXIN_TOKEN: ${WEIXIN_TOKEN}
       MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN}
       MATRIX_HOMESERVER: http://localhost:8008
-      MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'
-      MATRIX_HOME_ROOM_THREAD_ID: $XRDW_UwsDgQjOODLWyPuPSWD4-HT62dz9_IDyJqg_kw
+      MATRIX_HOME_ROOM: '${MATRIX_HOME_ROOM}'
+      MATRIX_HOME_ROOM_THREAD_ID: ${MATRIX_HOME_ROOM_THREAD_ID}
       MATRIX_USER_ID: '@swarm:matrix.test'
     environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
     gateway_extra:
@@ -926,8 +940,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -958,8 +973,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -987,11 +1003,13 @@ profiles:
     - note-taking
     - productivity
     - devops-rd
+    - autonomous-ai-agents
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1022,8 +1040,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -1057,8 +1076,9 @@ profiles:
     - skill-recall
     - cognition-self-check
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1092,8 +1112,9 @@ profiles:
     - skill-recall
     - cognition-lattice
     fallback_providers:
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1126,8 +1147,9 @@ profiles:
     - skill-recall
     - cognition-lattice
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -1148,7 +1170,6 @@ profiles:
     - observability/langfuse
     - run-trace
     skills_enabled:
-    - product
     - research
     - software-development
     - github
@@ -1158,8 +1179,9 @@ profiles:
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -1190,13 +1212,13 @@ profiles:
     - productivity
     - mcp
     - devops-rd
+    - devops-worker
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1228,13 +1250,13 @@ profiles:
     - productivity
     - mcp
     - devops-rd
+    - devops-worker
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1264,13 +1286,13 @@ profiles:
     - mcp
     - productivity
     - devops-rd
+    - devops-worker
     skills_pinned:
     - skill-recall
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1298,9 +1320,11 @@ profiles:
     - note-taking
     - autonomous-ai-agents
     - devops-rd
+    - software-development
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -1322,9 +1346,11 @@ profiles:
     - note-taking
     - productivity
     - devops-rd
+    - autonomous-ai-agents
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets: &id007
     - hermes-cli
     - acp
@@ -1341,8 +1367,9 @@ profiles:
     environment_hint: ~/.hermes/profiles/data-flink/SOUL.md
     skills_enabled: *id006
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets: *id007
   data-infra:
     api_server: *id001
@@ -1355,20 +1382,21 @@ profiles:
     environment_hint: ~/.hermes/profiles/data-infra/SOUL.md
     skills_enabled: *id006
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets: *id007
   [已移除]:
-    api_server:
+    api_server: &id010
       enabled: false
-    env_extra:
+    env_extra: &id011
       API_SERVER_ENABLED: 'false'
     environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
-    kanban:
+    kanban: &id012
       default_assignee: [已移除]
-    matrix:
+    matrix: &id013
       enabled: false
-    plugins:
+    plugins: &id014
     - acp-client
     - hindsight
     - observability/langfuse
@@ -1381,15 +1409,15 @@ profiles:
     - autonomous-ai-agents
     - note-taking
     - productivity
-    skills_pinned:
+    - mlops
+    skills_pinned: &id015
     - skill-recall
     - [已移除]
-    fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
-    toolsets:
+    fallback_providers: &id016
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
+    toolsets: &id017
     - hermes-cli
     - acp
     - kanban
@@ -1417,14 +1445,14 @@ profiles:
     - autonomous-ai-agents
     - note-taking
     - productivity
+    - mlops
     skills_pinned:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1450,10 +1478,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1487,10 +1514,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1516,10 +1542,9 @@ profiles:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -1548,19 +1573,30 @@ profiles:
     - autonomous-ai-agents
     - note-taking
     - productivity
+    - mlops
     skills_pinned:
     - skill-recall
     - [已移除]
     fallback_providers:
-    - provider: alibaba
-      model: qwen3-max
-    - provider: kimi-coding
-      model: k3
+    - provider: custom:cc-switch
+      model: aim
+      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
     - kanban
     - memory
+  [已移除]:
+    api_server: *id010
+    env_extra: *id011
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban: *id012
+    matrix: *id013
+    plugins: *id014
+    skills_enabled: *id008
+    skills_pinned: *id015
+    fallback_providers: *id016
+    toolsets: *id017
 shared_config:
   agent:
     environment_probe: false
@@ -1570,20 +1606,41 @@ shared_config:
     task_completion_guidance: true
     tool_use_enforcement: auto
   approvals:
-    mode: smart
+    mode: 'off'
   auxiliary:
     approval:
       model: glm-5.3-flash
       provider: custom:cc-switch
-    compression:
-      model: glm-5.3-flash
+    background_review:
       provider: custom:cc-switch
+      model: glm-5.3-flash
+    compression:
+      model: claude-opus-5
+      provider: custom:cc-switch
+    goal_judge:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
+    kanban_decomposer:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
+    moa_aggregator:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
+    moa_reference:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
+    profile_describer:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
     session_search:
       model: glm-5.3-flash
       provider: custom:cc-switch
     title_generation:
       model: glm-5.3-flash
       provider: custom:cc-switch
+    triage_specifier:
+      provider: custom:cc-switch
+      model: glm-5.3-flash
     vision:
       model: glm-5.3-flash
       provider: custom:cc-switch
@@ -1605,7 +1662,6 @@ shared_config:
     name: cc-switch
   display:
     language: zh
-    personality: kawaii
     skin: daylight
   fallback_providers:
   - model: glm-5.3-flash
@@ -1622,7 +1678,7 @@ shared_config:
     provider: hindsight
     user_profile_enabled: true
   model:
-    default: glm-5.3-flash
+    default: aim
     provider: custom:cc-switch
   privacy:
     redact_pii: true
@@ -1634,3 +1690,4 @@ shared_config:
     cwd: ~/hermes-docker-sandbox/workspace
     persistent_shell: true
     timeout: 180
+updated: '2026-10-03'

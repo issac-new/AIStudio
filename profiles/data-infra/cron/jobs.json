@@ -23,22 +23,22 @@
       "schedule_display": "40 7 * * *",
       "repeat": {
         "times": null,
-        "completed": 5
+        "completed": 7
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-09T03:01:57.054017+08:00",
-      "next_run_at": "2026-10-13T07:40:00+08:00",
-      "last_run_at": "2026-10-12T07:41:06.364139+08:00",
+      "next_run_at": "2026-10-15T07:40:00+08:00",
+      "last_run_at": "2026-10-14T07:40:15.698467+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
       "last_delivery_unverified": null,
       "last_failure": {
-        "at": "2026-10-09T07:40:32.184119+08:00",
-        "detail": "Script exited with code 127\nstderr:\nmkdir: /Volumes/YOURVOLUME/lab: Permission denied\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 29: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 30: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch-last-events.txt: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 37: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: No such file or directory\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 38: [: : integer expression expected\nstdout:\n[2026-10-09 07:40:31] rc-watch: 无摘要输出 rc=127"
+        "at": "2026-10-13T07:40:29.995049+08:00",
+        "detail": "Script exited with code 126\nstderr:\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 29: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: Interrupted system call\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 30: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch-last-events.txt: Interrupted system call\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 37: /Volumes/YOURVOLUME/lab/data-stack/logs/rc-watch.log: Interrupted system call\n/Users/YOURNAME/.hermes/profiles/data-infra/scripts/rc-watch-cron.sh: line 38: [: : integer expression expected\nstdout:\n[2026-10-13 07:40:08] rc-watch: 无摘要输出 rc=126"
       },
       "failure_streak": 0,
       "deliver": "local",
@@ -47,9 +47,9 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T07:40:00+08:00",
-        "dispatched_at": "2026-10-12T07:40:57.241786+08:00",
-        "lateness_seconds": 57.2,
+        "scheduled_at": "2026-10-14T07:40:00+08:00",
+        "dispatched_at": "2026-10-14T07:40:03.596593+08:00",
+        "lateness_seconds": 3.6,
         "kind": "on_time"
       }
     },
@@ -67,8 +67,8 @@
       "monitor_script": "rc-watch-events-monitor.sh",
       "monitor_url": null,
       "monitor_state": {
-        "last_output_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "last_changed_at": "2026-10-09T04:00:21.479077+08:00"
+        "last_output_hash": "f31835481718bfe571f4b172b6b903381ac29f19caaac06a17263564a6b9642d",
+        "last_changed_at": "2026-10-14T08:00:03.988176+08:00"
       },
       "context_from": null,
       "schedule": {
@@ -79,15 +79,15 @@
       "schedule_display": "0 */2 * * *",
       "repeat": {
         "times": null,
-        "completed": 41
+        "completed": 64
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-09T03:11:25.301338+08:00",
-      "next_run_at": "2026-10-12T12:00:00+08:00",
-      "last_run_at": "2026-10-12T10:00:51.824174+08:00",
+      "next_run_at": "2026-10-14T10:00:00+08:00",
+      "last_run_at": "2026-10-14T08:02:53.015710+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -100,12 +100,12 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:00:00+08:00",
-        "dispatched_at": "2026-10-12T10:00:51.457473+08:00",
-        "lateness_seconds": 51.5,
+        "scheduled_at": "2026-10-14T08:00:00+08:00",
+        "dispatched_at": "2026-10-14T08:00:03.673763+08:00",
+        "lateness_seconds": 3.7,
         "kind": "on_time"
       }
     }
   ],
-  "updated_at": "2026-10-12T10:00:51.824722+08:00"
+  "updated_at": "2026-10-14T08:02:53.016216+08:00"
 }

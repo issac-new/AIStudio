@@ -1,7 +1,7 @@
 ---
 name: public-repo-release
 description: "Safe public GitHub release of local agent team assets"
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, github, publishing, privacy, release]
@@ -17,9 +17,9 @@ metadata:
 ## 常驻规则（每次发布必过）
 
 1. **扫描打包后的树，不是只扫源目录**——cp/tar/rsync 会把嵌套 `.git`、`.bak`、运行日志重新带进来（references/ 里的嵌套 .git 携带含邮箱的完整历史）。
-2. **[已移除] 团队与 hack 团队永不公开**（用户常设裁决：家庭隐私 + 攻击内容）；[已移除] 专属 skill（[已移除]-*、[已移除]、family-travel-planner、[已移除]* 等）随团队一并排除。
+2. **[已移除] 团队与 hack 团队永不公开**（用户常设裁决：家庭隐私 + 攻击内容）；[已移除] 专属 skill（[已移除]-*、[已移除]、[已移除]-context-profile-enrichment、family-travel-planner、[已移除]* 等）随团队一并排除。家庭内容还会藏进通用类目 skill（devops/ 下的教案、旅行、家庭消息技能）——用家庭名词全库 grep，专属技能整目录排除，通用技能里的顺带提及泛化改写。
 3. push 到公开仓库必须用户明示才执行；leak 修复的 force-push 属历史重写，单独获批。
-4. secrets 一律占位符化（`${VAR}`），不删字段——下游 generate-configs.py 依赖 profiles.yaml 的结构。
+4. secrets 一律占位符化（`${VAR}`），不删字段——下游 generate-configs.py 依赖 profiles.yaml 的结构。手工半脱敏的 key（值里带省略号）不算脱敏完成：凡非 `${VAR}` 且非空的 key/token 值一律重占位符化，半截 key 仍暴露供应商前缀与可比对片段。
 
 ## 工作流（六步）
 

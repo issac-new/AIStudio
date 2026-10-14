@@ -1,6 +1,7 @@
 model:
   default: aim
   provider: custom:cc-switch
+providers: {}
 custom_providers:
   - api_key: PROXY_MANAGED
     api_mode: anthropic_messages
@@ -48,6 +49,7 @@ display:
   skin: daylight
 security:
   redact_secrets: true
+  tirith_enabled: true
 privacy:
   redact_pii: true
 approvals:
@@ -186,6 +188,14 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: hack-forensics
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
     timeout: 1860
+  rea:
+    command: /Users/YOURNAME/lab/tools/rea-mcp-wrapper.sh
+    args:
+      - mcp
+    enabled: true
+    env:
+      GHIDRA_INSTALL_DIR: /Users/YOURNAME/lab/tools/ghidra_12.1.4_PUBLIC
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 onboarding:
   seen:
     tool_progress_prompt: true

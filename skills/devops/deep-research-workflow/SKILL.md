@@ -242,16 +242,29 @@ Single-shot OCR of 500+ pages will hit timeouts and lose work. Build an
 - Run it in the **background** (`terminal background=true` + notify_on_complete)
   and continue orchestrating while it runs; poll progress, don't block.
 
-### 4. Orchestrate the 精读 as a kanban fan-out (don't solo-read 500 pages)
-For a 全书精读 + "完善 agent 能力" ask, this is a 重型 routing task:
-- One orchestrator decomposition card; then **parallel per-篇/部分 精读 cards**
-  (worker-researcher), each producing structured notes anchored to `pN`.
-- A final **synthesis card** (worker-coder) gated on all 精读 cards via
-  `parents=[...]`, producing the 设计文档 + skill 落地.
-- Decompose by the book's natural parts (篇/部分), not page ranges — parts are
-  the independent workstreams (Graph Engineering "where does it fork").
+### 4. 骨架先行（skeleton-first）是全局规则，非单任务技巧
 
-### 5. Goal-mode 调研卡「调研完未落盘」死法与恢复（2026-09-07 T5 识典古籍 run252 实证）
+任何「调研 + 报告」卡（含融合裁决矩阵、多源调研）都必须在 body 显式写「骨架先行」+ 字数约束 + 分节验收清单，不得只在单任务失败经验里隐含（潜在记忆是「防止失败模式扩散到下一个任务」）。骨架先行必须作为**编号步骤**写入 body（如「步骤 3 先写骨架到落盘路径，步骤 5 填内容」），不能只作为建议。
+
+### 5. 调研卡验收陷阱清单（研究卡只裁决不写码）
+
+研究卡（如 SoL-Pi 调研融合裁决矩阵）本质是「调研 + 报告 + 裁决矩阵」的复合体，须按以下陷阱清单独立核验（弱证明抽查判据）：
+
+1. **大数字逐条抽查 + 引用编号精确页码行号**——worker 声称「数字全部经论文侧核对」时，必须逐条抽查关键数字（如 44.7-49.0%、94%、1/40）并对照落盘论文快照实际行号核验；**引用编号命中 + 内容空/错**（或反之）才判失实。
+2. **验收标准矩阵逐项过勾选**——冻结验收表（如「论文全文通读」「裁决矩阵覆盖」「引用行号核验」）逐项 checkbox 机械核验，不整体「符合验收」。
+3. **产物在场 + 非空挂核验**——`ls -la` + `wc -l` 确认快照目录/文件在场且非零行（REPORT.md 14k + paper.txt 5041 行是基线）。
+4. **引用行号/页码锚点定位真实**——worker 报告引用的论文正文行号必须含该机制引用（`grep -c "Action Fusion" paper.txt`），缺引用锚点判失实。
+5. **完整快照目录在场核验**——核验 `paper.txt`、源码目录、微信文快照全在，不能只查 REPORT.md。
+6. **验收标准勾选与交付物一致**——正文「44.7-49.0%、94%」逐条对应落盘行号，缺对应判失实。
+7. **验收标准冻结项完整性**——「每个采纳/增量项给唯一落点 + 引用行 + 证据强度」逐项核验，缺任一项判未达成验收。
+
+**时间差异常复核路线（自报时长与完成度矛盾时）**：created→started 短于分钟级（如 4min）而 self-described 任务全量完成时，按 checklist 逐级追问（turns>15? 产物在场？ 完成度），禁默认信任 time-consistent 即 truth。
+
+**返工总耗时达预估3x+的豁免**：返工总耗时（含 crash/重派）显著超过显式预估（如 3x，实测基线 15min→45min）且全 checklist 通过时，直接采信大数字（如 -44.7~49.0%、94%），不逐条追加人工复验——这是对诚实报告的奖赏，不是验收降级。该例外成立的前提是 checklist 硬证据链在档。
+
+### 6. 多源引用核验（arXiv + 开源仓 + 微信文 + 第三方深读）
+
+多源调研产出（论文 + 源码 + 微信文 + 第三方深读）必须核验全部引用源在场且格式可读（pdf 用 pymupdf 提取文字数、txt 用 `wc -l`、md 用 `wc -l`），缺任一个判部分在场。引用编号命中（如 arXiv 2609.20519、github.com/NVlabs/SoL-Pi）必须精确对应落盘快照文件。引用行号命中 + 内容空/错才判失实。
 
 症状：worker 心跳自报「68 典籍全部实证，准备写报告」→ 迭代预算耗尽（90/90）中断，报告零落盘，成果只存在于已终止会话内存。注意：dispatcher 超时通知里的 `max_runtime=0s` 可能是展示 bug，真因去 kanban.db `task_runs.error` 查（如 `Iteration budget exhausted`），wall-clock（7200s）根本没到。
 

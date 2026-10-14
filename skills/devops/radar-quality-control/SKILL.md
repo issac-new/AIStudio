@@ -1,7 +1,7 @@
 ---
 name: radar-quality-control
 description: "Use when 雷达报告被批样子货/扩源/邮件无摘要：先原料后模型诊断+扩源三关+邮件红线。"
-version: 1.0.1
+version: 1.1.0
 metadata:
   hermes:
     tags: [radar, intel, quality, rss, llm-input]
@@ -35,6 +35,19 @@ nightly-radar-runbook 与 domain-nightly-ops；本 skill 管内容质量与源�
 - 所有 LLM 调用走 `radar_llm.ask_llm_json`（3 次重试+线性退避+平衡括号 JSON 提取），禁止裸 spawn。
 - 关键词打分：ASCII 词 word-boundary、中文词 in——substring 会中文恒 False + `agent` 误中 `user-agent`。
 - GEO 投毒识别（来源：TC260《人工智能安全治理框架3.0》专栏四，2026-09-24 融合）：情报源被 GEO（生成式引擎优化）批量内容污染的信号——同一主张在多个低权威源集中出现、虚构评测数据、假冒专家身份、品牌评价异常密集。命中信号的条目降权或剔除，来源进拒收源清单；LLM 摘要不得把单一批量投放内容当成多源印证的共识。
+
+## 登记佐证红线（gap_register 守门，t_3663d4e6）
+
+- 两级判据（gap_register.py _ownership_adjudication_reason，add 与 dispatch 共用）：
+  ① 破坏性断言（「X 板丢了卡」「Y 库缺数据」「被回滚/覆盖」）登记时刻文本无法自证
+  （须 DB 取证比对全库卡 id），一律降级 needs_adjudication 待核查——带 id+路径也一样；
+  ② 归属性断言（「误记到 X 板名下」）须附机械佐证：至少 1 个卡 id（t_xxxxxx）+
+  可复查锚点（库/文件路径、事件行或时刻）。
+- 降级 fail-open：仍入账、dispatch 不派工；佐证补齐（或改写为带佐证的归属性结论）
+  后人工 update --set needs_adjudication=null 放行。LLM 登记环节不应依赖此兜底，
+  建议环节就按佐证要求自查。
+- 判例：gap-20261013-004——「swarm 板丢了 8 张 done 卡」实为 platform 板卡误记到
+  swarm 板名下，无佐证入账派工浪费夜间预算；机械核查 16 库后判定 REJECT。
 
 ## 邮件红线（always-on）
 

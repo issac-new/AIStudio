@@ -29,7 +29,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
-- `your-inbox@example.com` — IMAP channel（gateway 原生 email adapter）
+- `<dad-wechat-id>@im.wechat` — IMAP channel（gateway 原生 email adapter）
 - `your-bot@example.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
@@ -106,14 +106,14 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 | 平台 | 场景 | Tenant 值 |
 |------|------|-----------|
-| Matrix | 群聊（有名+有话题） | `跨团队协作群01:记忆服务讨论:@testuser3:!<matrix-room-id>:$<event-id>:matrix` |
-| Matrix | 群聊（有名+无话题） | `跨团队协作群01::@testuser3:!<matrix-room-id>:$<event-id>:matrix` |
-| Matrix | 私聊 | `matrix-dm::@testuser3:@testuser3:$eventId:matrix` |
+| Matrix | 群聊（有名+有话题） | `跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix` |
+| Matrix | 群聊（有名+无话题） | `跨团队协作群01::@test-user:<matrix-room-id>:<event-id>:matrix` |
+| Matrix | 私聊 | `matrix-dm::@test-user:@test-user:$eventId:matrix` |
 | Weixin | 群聊 | `技术交流群:API重构讨论:oWxn4S1uW3:gh_abc123:msg_001:weixin` |
 | Weixin | 私信 | `weixin-dm::oWxn4S1uW3:weixin-dm:msg_001:weixin` |
 | API Server | 调用 | `chat/completions:summary-request:api-key-prod:req_abc123:req_001:api_server` |
-| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:your-inbox@example.com:msg_xxx:email` |
-| Email | DM 本质 | `email-dm::zhangsan@example.com:your-inbox@example.com:msg_xxx:email` |
+| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:<dad-wechat-id>@im.wechat:msg_xxx:email` |
+| Email | DM 本质 | `email-dm::zhangsan@example.com:<dad-wechat-id>@im.wechat:msg_xxx:email` |
 
 #### 0.2.3 重型任务路由
 
@@ -342,7 +342,7 @@ Orchestrator 在系统提示中收到的会话上下文示例：
 | `群聊名称` | `**Source:** Matrix (group: ...)` 中的群组名称 | 房间显示名，若无则用 `chat_id` 去 homeserver 后缀 |
 | `話題摘要` | `**Channel Topic:** ...` | **若无则留空**，严禁从消息内容或标题中提取 |
 | `user_id` | `**User:** ...` 或 `**User ID:** ...` | 消息实际发送者（在群聊中发消息的人），**不可**从消息体或 `msg='...'` 前缀解析 |
-| `room_id` | `**Source:**` 中提取 roomId 并**去除 homeserver 后缀** | 如 `!<matrix-room-id>:matrix.test` → `!<matrix-room-id>` |
+| `room_id` | `**Source:**` 中提取 roomId 并**去除 homeserver 后缀** | 如 `<matrix-room-id>` → `<matrix-room-id>` |
 | `session_id` | Matrix 消息的 event_id | 由 auto_thread 机制传入，等于每条消息的事件 ID |
 | `matrix` | 固定值 | 来源平台后缀 |
 
@@ -350,10 +350,10 @@ Orchestrator 在系统提示中收到的会话上下文示例：
 
 | 场景 | Tenant 值（完整六段式） |
 |------|------------------------|
-| 群聊消息（有 chat_name、有话题） | `跨团队协作群01:记忆服务讨论:@testuser3:!<matrix-room-id>:$<event-id>:matrix` |
-| 群聊消息（有 chat_name、无话题） | `跨团队协作群01::@testuser3:!<matrix-room-id>:$<event-id>:matrix` |
-| 群聊消息（chat_name=空） | `!短chatId::@testuser1:!<matrix-room-id>:$eventId:matrix` |
-| 私聊消息 | `@testuser3::@testuser3:@testuser3:$eventId:matrix  【旧格式示例，2026-08-21 起以 §0.2.2 的 matrix-dm::<user_id> 正典为准】` |
+| 群聊消息（有 chat_name、有话题） | `跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix` |
+| 群聊消息（有 chat_name、无话题） | `跨团队协作群01::@test-user:<matrix-room-id>:<event-id>:matrix` |
+| 群聊消息（chat_name=空） | `!短chatId::@testuser1:<matrix-room-id>:$eventId:matrix` |
+| 私聊消息 | `@test-user::@test-user:@test-user:$eventId:matrix  【旧格式示例，2026-08-21 起以 §0.2.2 的 matrix-dm::<user_id> 正典为准】` |
 
 ### 3.4 租户隔离效果
 
@@ -613,10 +613,10 @@ notification_sources: ['*']  # 或 ['orchestrator']
 
 ### §0.7.0 孩子记忆双写（2026-08-14确立，强制）
 
-orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
+orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子昵称）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
 
 **规则**：
-1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：孩子/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
+1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：孩子昵称/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
    ```bash
    python3 ~/hermes-docker-sandbox/workspace/life-workbench/scripts/child_memory_sync.py
    ```

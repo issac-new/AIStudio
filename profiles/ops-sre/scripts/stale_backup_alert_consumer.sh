@@ -69,7 +69,7 @@ for line in open(os.path.expanduser('~/.hermes/.env')):
         env[k.strip()] = v.strip().strip('"').strip("'")
 host, port = env['EMAIL_SMTP_HOST'], int(env.get('EMAIL_SMTP_PORT', '465'))
 user, pwd = env['EMAIL_ADDRESS'], env['EMAIL_PASSWORD']
-to = env.get('EMAIL_HOME_ADDRESS') or 'your-inbox@example.com'
+to = env.get('EMAIL_HOME_ADDRESS') or '<dad-wechat-id>@im.wechat'
 body = f"STALE_BACKUP 告警（消费方 stale_backup_alert_consumer.sh，{time.strftime('%F %T')}）\n\n{alert}\n\n-- Hermes SRE 消费方 cron（t_a6609a0b 邮件腿）"
 msg = MIMEText(body, 'plain', 'utf-8')
 msg['From'] = formataddr((str(Header('Hermes SRE', 'utf-8')), user))

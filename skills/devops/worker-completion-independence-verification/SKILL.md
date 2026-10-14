@@ -1,7 +1,7 @@
 ---
 name: worker-completion-independence-verification
 description: "验收 worker 自述完成时独立核验：不信自报，逐项机械验证。触发：kanban_complete 验收。"
-version: 1.3.0
+version: 1.7.0
 platforms: [macos, linux]
 metadata:
   hermes:
@@ -49,7 +49,25 @@ worker `kanban_complete` 的 summary/metadata 中含以下任一声明：
    - 产物可读：PDF 用 pymupdf 提取文字数、HTML 用解析器、JSON 用 `json.load`
    - 外部副作用：cron job 用 `cronjob action='list'` 确认、kanban 卡用 `kanban_show` 确认、DB 变更用只读查询确认
    - **CLI 工具脚本类交付**（退出码契约、mock 实测、去重幂等、边界 grep）：按 `references/cli-tool-script-acceptance.md` 配方逐步执行，不复用 worker 的测试脚本
+   - **CLI 复验须在干净 tmp 目录独立复跑**（2026-10-13 硬门，出处 t_336584e9 教训——orchestrator 当轮 grep 复验误把 SKILL.md 代码块示例当 CLI 存在放行）：禁在 worker 工作区复跑（防残留/文档示例误导）。
+     ```bash
+     cd "$(mktemp -d)" && python3 <worker 交付脚本的绝对路径> <args>
+     echo "rc=$?"
+     ```
+     grep 命中若来自 `.md` 代码块/文档示例，不算 CLI 存在证据，须以实际 `--help` 输出或退出码实测为准。
+   - **时间线核查**（2026-10-13 硬门，t_336584e9 的 started_at==created_at 时间线异常未被当轮拦截）：
+     ```bash
+     sqlite3 "file:$HOME/.hermes/kanban/boards/<board>/kanban.db?immutable=1" \
+       "SELECT started_at, created_at FROM tasks WHERE id='<task_id>'"
+     ```
+     `started_at < created_at` 或 `started_at - created_at < 5` 标异常待人工复核（结合事件流 `spawned` 事件佐证，先排除 §W 的时钟回拨与 run 语义两解）。
+   - **备份文件存在性**（2026-10-13 硬门，t_336584e9 patch 备份丢失未拦截）：凡 worker 自述「已备份 <文件名>」，验收项加 `ls <文件名>` 实测在位；缺失即打回。
+     ```bash
+     ls -la <worker 自述的备份文件绝对路径>
+     ```
    - **随交付附带的校验产物必须打开亲读**（visual-check JSON、测试报告、lint 输出）——worker 的文字自述可能与自己附上的校验产物直接矛盾（文字写「N/N pass」而产物 `status: fail`），产物是更强的证据源
+   - **SOUL/config patch 类交付验「纯增节」**：diff 改前备份与现文件，删行数（`diff <备份> <现文件> | grep -c '^<'`）=0 才证明未洗掉既有内容——总行数比对会掩盖「边增边删」；多 profile 同节改版时另抽 2 个 diff 增节段核对同构（措辞可异、节结构须一致）
+   - **证据链/witness 类交付验双向哈希闭环**：对交付清单引用的每个证据文件实测 `shasum -a 256` 并与清单双向比对（清单→文件、文件→清单），再抽 1-2 个锚点回放其生成命令——清单存在 ≠ 引用文件在位，文件在位 ≠ 清单里的哈希就是这份文件的哈希
 3. **回归基线对比**（worker 声称「无关改动导致既有失败」时）：
    - 改动前全量测试基线 → 改动后全量测试 → diff 失败集合
    - worker 声明的「无关失败」必须能在基线中复现，否则即 worker 引入
@@ -141,6 +159,13 @@ summary 声明直接矛盾。验收时先打开产物比对声明：产物 `stat
 恒失效但干跑显示「正常无命中」。验收标准里写的「应判 stale/应命中」如果从未真正
 触发过，按未实现处理，打回时要求贴出含判定字段的真实输出。
 
+扩：验收带 reject 语义的**门禁类子命令**（逐字校验、回执对账等）必须配阳性+阴性双
+fixture 实测——阳性应过（rc=0）、阴性应拒（非 0）。只跑一份全合规 happy-path fixture
+是假通过：校验器只检查它解析出的行，行形不合预期时静默零计数而 rc 照常 0，输出
+「lines checked: 0 / verified」会被误读成机制闭环。读到 checked 计数为 0 先改 fixture
+行形复测再判通过；构造 fixture 前先读源码确认校验器解析哪些行形（如「结论行 vs 引文行」
+的前缀约定），照抄文档示例里不被解析的行形会让阴性 fixture 假通过。
+
 ### M. 验证器与生成器分离 + 证据五问（2026-09-17，融合自快手 GIAC2026 运营交付/Agent-Verify）
 
 **核心原则：生成方不得同时是唯一验证方。** Agent 同时产出代码和测试 Case 时，天然倾向验证「干了啥」（行为印证）而非「该干啥」（意图符合）——即「AI 伪验证循环（test oracle）」。落地三条：
@@ -159,6 +184,14 @@ registry/ledger 双份情形）——worker 自述「已登记」可能落错库
 必须双库 grep 关键词确认条目真实存在，且登记位置与派单指定口径一致；落错库
 （条目仍在）记口径备注不算漏登，但要在 kanban_comment 标明后续统一口径。
 派单时在 body 明确指定目标库路径与 CLI 命令，从源头消除歧义。
+
+### N1. 记欠账须先搜旧库编号再取新号——重跑同一笔欠账不得产生重复条目
+
+同一问题（dispatcher 停摆、复验漏洞等）跨日重新登记前，必须先 grep 现有库全部历史条目的标题与 description 关键词，若已有条目则对其 `--update` 追加留痕（evidence/日期），禁止新建第二条——重复条目会让同一问题的排期与状态在两行上各自漂移，后续专项统计口径失真。
+
+### N2. 验收结论术语统一用「终态」不用「完成」——「完成」是 worker 的自述动词
+
+独立复验通过、卡已 done 时，统一说「终态/已收/验收通过」，不说「完成」——「完成」是 worker 在 complete 自述里的动词，验收方再说一遍「完成」会让读者分不清是转述 worker 还是验收方亲验结论。卡侧状态一律写「done/终态」。
 
 ### O. 代回写前产物引用逐一定位——三轮找不到就诚实回退
 
@@ -232,6 +265,25 @@ worker 声称「N 条链接清理/字段归位/零数据删除」类 DB 与结�
 2. **台账全覆盖**：真实删除清单中每一条都必须能在治理台账里找到对应处置记录。匹配要按记录的 action 分别适配字段（台账键形常是 consumer/quote/task/path 等多种，单一匹配式会漏报「未覆盖」）。差集中任何一条无台账去向 = 未授权删除，打回。
 3. **内嵌抽读**：声称「内嵌保留后删链」的记录，抽样打开消费方对象的属性包，确认内嵌字段（如 evidence_quotes）真实在位且非空——台账写了内嵌 ≠ 字段里真有。
 
+### V. 审计卡抽验权重按「自己复验曾通过的结论」翻倍——audit 自己的验证漏检时，不得全信第三方同方法抽查
+
+orchestrator 曾对某卡下「验收通过」结论，事后被推翻（worker 自证其验证当时并未真实发生）时，说明**自己的验证方法本身有漏洞**，而非只说明 worker 虚报。此时派第三方审计卡，不能只要求对方「用同样方法抽卡」，因为同样方法可能产生同样漏检——**审计抽查权重必须偏向自己曾复验通过、后被推翻的那张卡**，并明示该卡验证方法的具体漏检点（如：验收时在残留工作区复跑、非干净 /tmp；信了文字自述未对时间线），要求审计者用自己的方法独立重验。**孤例判定成立的前提是：被抽查卡中不含「验证方法本身可疑」项；含则孤例结论不可下。**
+
+### W. 时间线异常核查——started_at<created_at 或间隔过短是虚报强信号，须先排除时钟回拨与 run 语义
+
+worker 卡 started_at 早于 created_at（或间隔 <10s）属时间线异常，是「开工声明晚于实际代码存在」的强虚报信号，但定虚报前须先排除两解：
+1. **时钟回拨**：sqlite datetime 转换受系统时钟跳变影响——异常卡须换算 epoch 值对比相邻卡 epoch 差，若多张卡同向偏移一致为时钟问题；
+2. **run 语义**：部分 dispatcher 实现的 run 从派工时起算（worker 接单前的侦察阶段已计 started），秒级「完成」可能是 run 只含 comment+complete、实质侦察已在此前的 comment 中自述完成——此时读全量事件流（`SELECT * FROM task_events WHERE task_id=?`）看侦察 comment 是否先于 run，有则时间线不矛盾。
+两解都排除仍解释不通时，按虚报定级并追产出物。**时间线核查三件套**：① epoch 差值与相邻卡对比；② 全量事件流定性 run 起点语义；③ 产物 mtime 与 completed_at 差值（mtime 远早于 completed_at 是「产物早于开工」铁证）。
+
+### U. complete 回执的 metadata 字段是承诺不是机制——缺字段先补验实体再定性
+
+冻结验收项要求 complete 的 metadata 附结构化字段（report_path / 关键布尔 / 计数）时，工具层无 schema 强制，worker 会整段漏附。处置次序：
+
+1. 缺字段 ≠ 交付失败：先对实体产物做独立机械验证（文件在位/小节计数/红线词 grep）——实体全真时由验收方在 kanban_comment 补记验收结论并注明 metadata 缺口，不打回重做；
+2. 打回只在实体产物缺失或与声明矛盾时成立；
+3. 派卡侧缓解：metadata 字段清单逐键写进 body 的收尾契约段（显式字段清单），不依赖验收标准里的括号注——写「metadata 必含 X」时把 X 列全。
+
 ## 4. 核对任务树状态（fan-in 卡的必检项目）
 
 对有父子依赖的任务，先机械读取整棵任务树，再写进度或完成结论：
@@ -249,7 +301,7 @@ worker 声称「N 条链接清理/字段归位/零数据删除」类 DB 与结�
 - 虚假/误导声明发现率 >0（若长期为 0，要么 skill 未被执行，要么 worker 质量已质变——需复核确认）
 - 验证后发现的失实声明有后续处置（revert / 补充完成 / kanban_block 升级）
 
-## 5. Diamond Checker 卡模式：把独立核验前置成最后一张卡（2026-08-27 实证）
+## 6. Diamond Checker 卡模式：把独立核验前置成最后一张卡（2026-08-27 实证）
 
 判例 t_c524d54c（phlexing 三面资产盘点）：三张并行子卡（网络面/本地数据/暴露面）全 done 后，`parents=[三张子卡]` 建独立 Checker 卡，assignee 选**未参与任何子产出**的 profile。实际产出证明其价值——**3/3 子报告各被纠出 ≥1 处口径失实**：
 

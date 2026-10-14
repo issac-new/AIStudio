@@ -53,7 +53,7 @@ metadata:
    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --no-sandbox --print-to-pdf=out.pdf --print-to-pdf-no-header out.html
    ```
    页数验证用二进制 `/Type /Page` 计数（mdls 可能返回 null）。
-7. **推送到微信**：先文字摘要（分条，含核心数据），再 `MEDIA:<pdf>` 附件。若报 "No home channel set for weixin"，先 `hermes config set WEIXIN_HOME_CHANNEL <channel_id>`（channel 用 `hermes send -t weixin --list` 查，如 `o9cq...@im.wechat`）。
+7. **推送到微信**：先文字摘要（分条，含核心数据），再 `MEDIA:<pdf>` 附件。若报 "No home channel set for weixin"，先 `hermes config set WEIXIN_HOME_CHANNEL <channel_id>`（channel 用 `hermes send -t weixin --list` 查，如 `<dad-wechat-id-short>@im.wechat`）。
 8. **留痕**：若来自 Gateway 渠道，按复杂度规则 kanban 留痕；TUI 直接执行不需留痕。
 
 ## Pitfalls

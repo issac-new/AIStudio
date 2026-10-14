@@ -95,11 +95,11 @@ flowchart LR
 
 | 规模维度 | 现状 | 验证方式 |
 |---|---|---|
-| Agent profile | **30**（8 团队 29 worker + orchestrator；[已移除]/[已移除] 两域编制在运行态完整活跃（见 `shared/domain-registry.yaml`），仅不在本文档口径内，见 §2.2 编制表口径） | `ls ~/.hermes/profiles \| grep -vE '^(_trash\|_bak\|_shared\|[已移除]-\|[已移除])' \| wc -l`  # =30 |
+| Agent profile | **31**（8 团队 30 worker + orchestrator；2026-10-13 复测，`lcm-dev-test` 为 LCM 引擎冒烟专用隔离测试 profile，不计业务编制；[已移除]/[已移除] 两域编制在运行态完整活跃（[已移除] 11 岗含 10-12 入网的 `[已移除]`；见 `shared/domain-registry.yaml`），仅不在本文档口径内，见 §2.2 编制表口径） | `ls ~/.hermes/profiles \| grep -vE '^(_trash\|_bak\|_shared\|[已移除]-\|[已移除]\|lcm-dev-test)' \| wc -l`  # =30 |
 | Kanban 看板 | **10 业务板**分库（另有 guardrail-test 测试板、_archive 归档板与 default 空板，不计业务编制；data 板已转正计业务编制） | `ls ~/.hermes/kanban/boards` |
-| skill 手册库 | **765** 份 / **49** 顶层条目（2026-10-04 find -L 复测；上轮 881→765 的 -116 来自 09-28/09-30 两波低频 skill 归档收敛（`skills-archive/global/`，MANIFEST 可检索可召回），非丢失；归档区本体（`skills/archive/` 25 份）不在白名单内；历史漂移线 743→769→785→775→856→875→881→765） | `find -L ~/.hermes/skills -name SKILL.md \| grep -v /archive/ \| wc -l` |
-| 治理规则 | **72 md + yaml**（2026-10-04 复测；另有 52 扩展资产；`_shared/` 按六目录重组，见 §4.4） | `find ~/.hermes/profiles/_shared -type f \( -name "*.md" -o -name "*.yaml" \) ! -path "*/.git/*" \| wc -l` |
-| 运维脚本 | **52**（2026-10-04 复测；`~/.hermes/bin/`，口径排除备份与缓存件） | `ls ~/.hermes/bin/ \| grep -Ev '\.bak\|__pycache__\|repair-\|uv$\|uvx$' \| wc -l` |
+| skill 手册库 | **763** 份 / **48** 顶层条目（2026-10-13 find -L 复测；881→765 的 -116 来自 09-28/09-30 低频归档收敛，765→763 净变化含 10-13 hack 团队 ARTEX 对标 8 技能新增与 devops 侧归档对冲；归档区本体（`skills/archive/` 25 份）不在白名单内；历史漂移线 743→769→785→775→856→875→881→765→763） | `find -L ~/.hermes/skills -name SKILL.md \| grep -v /archive/ \| wc -l` |
+| 治理规则 | **80 md + yaml**（2026-10-13 复测；另有 118 扩展资产；`_shared/` 按六目录重组，见 §4.4；72→80 增量含 agent-governance-baseline / agent-observability 两份新建正本） `find ~/.hermes/profiles/_shared -type f \( -name "*.md" -o -name "*.yaml" \) ! -path "*/.git/*" \| wc -l` |
+| 运维脚本 | **67**（2026-10-13 复测；`~/.hermes/bin/`，口径排除备份与缓存件；52→67 增量含 compression-report / guardrail-regress runner / capability-ontology 等评测与治理件） | `ls ~/.hermes/bin/ \| grep -Ev '\.bak\|__pycache__\|repair-\|uv$\|uvx$' \| wc -l` |
 | 领域知识库 | **pay 库 32MB**（git 化 tag 锁定）+ **data 库**（版本锁定 + 四域能力体系，见 §4.9） | `du -sh ~/.hermes/profiles/pay-orchestrator/references` |
 
 ---
@@ -227,7 +227,7 @@ flowchart TB
 | **专业度** | 领域知识库版本锁定 + 领域红线两式 | hack 结论须 3 独立源交叉；pay 知识库 tag 锁定 |
 | **成熟度** | 证据五档 + 失败案例库 + evals 只增不删 + 季度审计 | 连续两月零执行规则自动降级；incident 回流为评测题 |
 
-深度即档位：挂载数由领域复杂度决定而非职权大小（product 最小集 88/89 → swarm 中量 238-268 → hack 全类目 323-512）；每个新机制入册须带创建链+执行链双 provenance（缺执行链实证标 `unverified`，§4.14 H1）。
+深度即档位：挂载数由领域复杂度决定而非职权大小（product 最小集 46-47 → swarm 中量 297-303 → hack 全类目 356-545）；每个新机制入册须带创建链+执行链双 provenance（缺执行链实证标 `unverified`，§4.14 H1）。
 
 #### 2.2.2 能力六维模型
 
@@ -263,7 +263,7 @@ flowchart LR
 | 维度 | 载体 | 决定什么 | 实测口径 |
 |---|---|---|---|
 | ①工具维 | config.yaml toolsets | 能用什么动作 | 30 岗 3-5 个 toolset；17 岗带 acp |
-| ②知识维 | skill 白名单 | 能读哪些手册（未声明不可见） | 主库 765 份/49 类目，在编岗引用 19 类 |
+| ②知识维 | skill 白名单 | 能读哪些手册（未声明不可见） | 主库 763 份/48 类目，在编岗引用 19 类 |
 | ③脚本机制维 | bin+scripts 84 唯一脚本 | 机械化执行手段 | 消费方三层核实（cron+LaunchAgents+XREF） |
 | ④协议接线维 | _shared 60 协议 | 受哪些集群公约约束 | 47 份 SOUL 全文严格子串匹配 |
 | ⑤SOUL 人格维 | 角色+红线+作业循环 | 行为模式与岗位纪律 | 47 份共享骨架 |
@@ -271,7 +271,7 @@ flowchart LR
 
 六维之上的四条结构规律（全部实测支撑）：
 
-1. **知识深度梯度**（②）：hack（14-16 类目/323-512）> swarm（9-11/238-268）> orchestrator/platform（10/258-268）> ops（7-9/228-238）> pay/data 同构（7/236-261）> product（8/88-89）> aiteam（3-5/61-66）——与「安全全链路 > 研发主力/编排 > 领域交付 > 轻研究」的编制定位吻合。
+1. **知识深度梯度**（②）：hack（14-16 类目/356-545）> swarm（9-11/297-303）> orchestrator/platform（10/280-295）> ops（7-9/274-288）> pay/data 同构（7/279-291）> product（8/46-47）> aiteam（3-5/25-31）——与「安全全链路 > 研发主力/编排 > 领域交付 > 轻研究」的编制定位吻合。——与「安全全链路 > 研发主力/编排 > 领域交付 > 轻研究」的编制定位吻合。
 2. **协议挂接深度与风险正相关**（④）四层拓扑：全员公约层（four-lenses+language-standard，47/47）→ 主干协议层（8 文件，26/47）→ wide 层（output-contract 37、exit-protocol 32）→ 域专属层（constraint-policy 仅 hack×4）。pay/data/aiteam 未挂主干层是最大口径差——与领域交付岗风险面窄一致。
 3. **编排型 vs 执行型 SOUL 分野**（⑤）：编排型「表+规则」短而引用密；执行型「循环+清单」长而自含（worker-coder 51 处协议引用为最）。知识外置方向一致：新域知识下沉 _shared/knowledge 或 skill，SOUL 保精简。
 4. **脚本机制四类设计模式**（③）：度量采集只读零副作用；门禁 fail-closed+退出码契约；夜间自动化幂等+断点续跑；看门狗周期巡检走 sanctioned 通道+交叉互检。
@@ -321,22 +321,22 @@ flowchart LR
 
 | 团队 | profile | 工具集 | skills 挂载 | clearance | 领域定制要点 |
 |---|---|---|---|---|---|
-| **orchestrator** | orchestrator | hermes-cli / **kanban** / memory / **messaging** | 268 | TLP:GREEN | 全板路由 |
-| **swarm** | worker-coder / worker-researcher | hermes-cli / **acp** / kanban / memory | 268 | GREEN, CLEAR | 基座方法论 |
-| | worker-tester | 同上 | 238 | GREEN, CLEAR | 限定测试/对账 |
-| **hack** | hack-recon / exploit / auditor | hermes-cli / kanban / memory（exploit 带 **acp**） | 323 | **AMBER**, GREEN, CLEAR | 网安全类目 |
-| | hack-forensics | hermes-cli / kanban / memory | **512** | AMBER, GREEN, CLEAR | +检测/取证类目 |
-| **product** | product-manager / researcher | hermes-cli / kanban / memory | 89 / 88 | GREEN, CLEAR | 最小集 |
-| **ops** | ops-devops / sre / eval / incident-cmd | hermes-cli / **acp** / kanban / memory | 228-238 | GREEN, CLEAR（eval 加 **EYES-ONLY:ops**） | 运维全链 |
-| **platform** | ontology-curator / skill-miner | hermes-cli / **acp** / kanban / memory（miner 加 **skills**） | 258 | GREEN, CLEAR, **EYES-ONLY:platform** | 治理岗 |
-| **aiteam** | orchestrator / arch / multi / embodied / scout | hermes-cli / kanban / memory | **61** | GREEN, CLEAR | 最轻载 |
-| | aiteam-training | + **acp** | **66**（+mlops） | GREEN, CLEAR | 唯一实测出口 |
-| **pay** | pay-orchestrator | hermes-cli / kanban / memory | 241 | GREEN, CLEAR | 域网关+知识索引 |
-| | pay-infra / clearing / fintech | hermes-cli / kanban / memory | 261 | GREEN, CLEAR | 域交付 |
-| **data** | data-orchestrator | + **messaging** | **236** | GREEN, CLEAR | 域网关+口径裁决 |
-| | data-arch / flink / infra | + **acp** | **261** | GREEN, CLEAR | 域交付 |
+| **orchestrator** | orchestrator | hermes-cli / **kanban** / memory / **messaging** | 295 | TLP:GREEN | 全板路由 |
+| **swarm** | worker-coder / worker-researcher | hermes-cli / **acp** / kanban / memory | 303 | GREEN, CLEAR | 基座方法论 |
+| | worker-tester | 同上 | 297 | GREEN, CLEAR | 限定测试/对账 |
+| **hack** | hack-recon / exploit / auditor | hermes-cli / kanban / memory（exploit 带 **acp**） | 356 | **AMBER**, GREEN, CLEAR | 网安全类目 |
+| | hack-forensics | hermes-cli / kanban / memory | **545** | AMBER, GREEN, CLEAR | +检测/取证类目 |
+| **product** | product-manager / researcher | hermes-cli / kanban / memory | 47 / 46 | GREEN, CLEAR | 最小集 |
+| **ops** | ops-devops / sre / eval / incident-cmd | hermes-cli / **acp** / kanban / memory | 274-288 | GREEN, CLEAR（eval 加 **EYES-ONLY:ops**） | 运维全链 |
+| **platform** | ontology-curator / skill-miner | hermes-cli / **acp** / kanban / memory（miner 加 **skills**） | 280 / 281 | GREEN, CLEAR, **EYES-ONLY:platform** | 治理岗 |
+| **aiteam** | orchestrator / arch / multi / embodied / scout | hermes-cli / kanban / memory | **25** | GREEN, CLEAR | 最轻载 |
+| | aiteam-training | + **acp** | **31**（+mlops） | GREEN, CLEAR | 唯一实测出口 |
+| **pay** | pay-orchestrator | hermes-cli / kanban / memory | 279 | GREEN, CLEAR | 域网关+知识索引 |
+| | pay-infra / clearing / fintech | hermes-cli / kanban / memory | 286-291 | GREEN, CLEAR | 域交付 |
+| **data** | data-orchestrator | + **messaging** | **291** | GREEN, CLEAR | 域网关+口径裁决 |
+| | data-arch / flink / infra | + **acp** | **291** | GREEN, CLEAR | 域交付 |
 
-读表三要点：挂载数差距即能力深度差距；网络安全 6 类目 405 份只进 hack 白名单；EYES-ONLY 域锁（ops-eval / platform）防跨团队读未授权数据。逐岗深读能力卡见 `research/deep-read-20260910/grp-{a..e}-*.md`。
+读表三要点：挂载数差距即能力深度差距；网络安全 6 类目 405 份只进 hack 白名单；EYES-ONLY 域锁（ops-eval / platform）防跨团队读未授权数据。挂载数是「白名单声明 × 类目现存份数」的联合结果：声明未变时随归档收敛自然回落（2026-10-11 skill-recall 归档 -114 份使 product 88/89→46/47、aiteam 61/66→25/31），非白名单收缩。逐岗深读能力卡见 `research/deep-read-20260910/grp-{a..e}-*.md`。
 
 
 ### 2.3 七大机制域总览
@@ -1054,7 +1054,7 @@ kanban 卡是集群里一切工作的唯一载体——「不在卡上的工作�
 
 | # | 资产类 | 内容与规模 | 治理机制 |
 |---|---|---|---|
-| 1 | skill 手册库 | 主库 **765** 份 / 49 顶层条目（网安 6 类目只进 hack 团队；devops-rd 类目 13 岗共享；2026-10-04 复测） | 能力卡 + 白名单（§4.3） |
+| 1 | skill 手册库 | 主库 **763** 份 / 48 顶层条目（网安 6 类目只进 hack 团队；devops-rd 类目 13 岗共享；2026-10-13 复测，含 10-13 ARTEX 对标新增 8 技能） | 能力卡 + 白名单（§4.3） |
 | 2 | 归档区 | `skills/archive/` **25** 份（single-fix 7 + merged 18）+ `skills-archive/` 收敛治理区（MANIFEST 可检索），索引可搜 | 一条命令召回（§4.3） |
 | 3 | 治理规则库 | `_shared/` 六目录：**21 规则 md + 2 契约 yaml** + 决策模板/失败案例/评测基线等扩展资产 | charter 单一事实源 + SOUL 一行引用（§4.4） |
 | 4 | 认知方法库 | cognition-lattice（手册库特写）：认知偏差/心理效应/思维模型/思维框架等 8 册数千条结构化条目 | 正文按需加载，不占常驻注入 |
@@ -1191,13 +1191,17 @@ AI 每次工作前都要「读」一批说明材料（系统提示词、手册�
 | 限制单次读取量 | 工具输出最多 2 万字节 / 500 行；读文件最多 5 万字符 | 宁可截断也不靠 AI「自觉不看太多」 |
 | 砍掉不需要的插件 | 桌面操作类插件只保留在唯一需要它的 orchestrator 上，其他 29 个 agent 全部关闭 | 每个插件的说明文字都会占上下文，用不上的插件是纯浪费 |
 | 手册按需加载 | agent 只注入「挂载手册的名称 + 一句话简介」，手册正文用到时才读 | 注入量 = 白名单的精确集合，多一份都不进 |
+| 压缩摘要模型档位 | 全 fleet `auxiliary.compression` 统一最强推理档（claude-opus-5，2026-10-12 起），压缩遥测 `compression-report.py` 可查询 | 摘要质量决定压缩后全部后续会话保真度，轻量档省的钱以长会话退化的形式偿还（§4.30） |
 
+
+
+**压缩之外的第二条路（LCM 无损上下文引擎，§4.30）**：压缩是有损摘要——省 token 的代价是细节不可逆丢失。context.engine 插件点支持整体替换压缩策略，LCM 插件把中段对话编译为带原文锚点的知识节点（零 LLM 调用），语义无损；替换属生产变更走 staged 提案人审，启用前有损压缩仍是现役正典。
 ---
 ### 4.3 Skill 手册库治理（白名单挂载）
 
 > 承载 S5 的实现。
 
-skill 库按三层结构治理：**主库 765 份 skill 手册 / 49 顶层条目（2026-10-04 find -L 复测）+ 归档区（`skills/archive/`：25 份本集群收敛下架的单点修复/同义合并手册——`archive/single-fix/` 7 份、`archive/merged/` 18 份，索引清单可全文搜索，一条命令召回；另有 `skills-archive/` 收敛治理区——低频/一次性 skill 按 MANIFEST 归档（2026-09-28/09-30 两波共 -116 份至 `global/` 278 份），检索按 skill-recall，需要时恢复）+ 各 agent 的挂载目录（符号链接与实体目录混合，白名单集合，每岗穿透 84-548 份，按 `find -L` 实测口径）**
+skill 库按三层结构治理：**主库 763 份 skill 手册 / 48 顶层条目（2026-10-13 find -L 复测；10-13 ARTEX 对标新增 8 技能入 hack-team）+ 归档区（`skills/archive/`：25 份本集群收敛下架的单点修复/同义合并手册——`archive/single-fix/` 7 份、`archive/merged/` 18 份，索引清单可全文搜索，一条命令召回；另有 `skills-archive/` 收敛治理区——低频/一次性 skill 按 MANIFEST 归档（2026-09-28/09-30 两波共 -116 份至 `global/` 278 份），检索按 skill-recall，需要时恢复）+ 各 agent 的挂载目录（符号链接与实体目录混合，白名单集合，每岗穿透 25-545 份，按 `find -L` 实测口径）**
 - **白名单机制**：`~/.hermes/shared/profiles.yaml` 按两层声明每个 agent 的挂载集合——`skills_enabled`（按类目，如「全部安全类」）+ `skills_pinned`（指定某一本）；配置生成脚本据此产出各 agent 的配置与目录。默认不注入：没声明的手册一律不可见。落地为脚本 `skill-fence.py`（`~/.hermes/shared/`）
 - **归档召回**：归档不删除，索引清单可全文搜索，一条 `skill-lifecycle.py restore <名>` 命令恢复；恢复后把它加进对应 agent 的白名单声明、重跑一次配置生成即可。本集群收敛归档分两区：`archive/single-fix/`（单点修复型 7 份，已被通用机制覆盖）与 `archive/merged/`（同义合并被归档方 18 份，主 skill 留在原类目）；归档区 README 记录恢复方式与主 skill 映射
 - **目录单一事实源**：`_shared/06-observability/skill-catalog.md` 登记 active skill 的架构层归属/触发场景/适用 profile，新增必登记、每季度审计一次、同主题 ≤3 个 skill、禁止为单一 bug 建长期 skill
@@ -1382,13 +1386,14 @@ flowchart TB
 | `03-evolution-memory/` | 进化记忆 | `output-contract.md` / `exit-protocol.md` / `action-risk.md` / `review-gates.md` / `structure-evolution-rollback.md` | 分层完成标准（报告必含「已验证/未验证」；证据强度五档+来源独立性七档，§3.3）；动作可逆性分级+变更三分法授权矩阵（standard 机械门即授权/normal 评审卡/emergency 先止血 24h 补验）+执行后回读复验与子代理权限天花板（§1.4，AgenticOps 融合，§3.2）；评审绑定冻结快照；结构变更六步闭环（含候选重测闸，§4.10.1） |
 | `04-pro-capability/` | 专业能力 | `committee-review.md` | 对抗评审（1+2 并行挑刺、1 人修订）；高危发现未处置不得交付；评审故障降级单人评审不阻断交付 |
 | `05-eng-execution/` | 工程执行 | `drift-comparison-template.md` / `fault-localization-protocol.md` | 安全测试攻击面对比模板；连环故障依赖链回溯法（冻结现场→逐级检验假设→根因修复） |
-| `06-observability/` | 观测治理 | `risk-register.md` / `outbound-guard.md` / `swarm-studio-contract.md` / `skill-catalog.md` | 风险登记册（红区必附应对计划，合并报告强制过目 Top3 风险）；推送防骚扰三闸；SwarmStudio 接口契约单一事实源（数据/API/WS/权限/路由/证据分级/兼容/违约八节）；skill 目录单一事实源（§4.3） |
+| `06-observability/` | 观测治理 | `risk-register.md` / `outbound-guard.md` / `swarm-studio-contract.md` / `skill-catalog.md` | 风险登记册（红区必附应对计划，合并报告强制过目 Top3 风险）；推送防骚扰三闸+事实性边界第四闸（2026-10-09）；SwarmStudio 接口契约单一事实源（数据/API/WS/权限/路由/证据分级/兼容/违约八节）；skill 目录单一事实源（§4.3） |
 
 | 扩展资产 | 职责 | 设计要点 |
 |---|---|---|
 | `workflows/deep-research-synthesis.yaml` | 内置工作流 | 深度调研→对抗评审→综合交付 |
 | `failures/` 3 案例库 | 结构化失败案例 | frontmatter（域/失败类型/模式反链）+五段式（情境/经过/根因/失误/教训）；与 failure-mode-playbook 模式表双向互链 |
-| `evals/baseline.md` | 换模型回归评测基线（17 题：T1-T11 能力题 + T12-T17 QGate 检查项效力题，通过线 ≥14/17）+ 评测方法纪律 | 题库只增不删（事故回流追加）；出题五纪律与三值判定见该文件；T12-T17 FAIL 触发「效力回流铁律」——优先修检查项而非换 agent（§4.20）。§H5（Harness 九信源融合，§4.28）：模糊目标前置门槛 + 摘要记忆警示 + 治理质量口径（登记待接线） |
+| `evals/guardrail-regress/` | 常驻安全回归集（6 探针+manifest 单一事实源，2026-10-13 落地，§4.30）：run_probes.py --all 实跑 6/6 PASS，与 T1-T17 同轮触发——9 板 21 写护栏触发器的存活验证从一次性升为常态 | 效力落地（负例被拦/正例放行全对照 manifest） |
+| `evals/baseline.md` | 换模型回归评测基线（17 题：T1-T11 能力题 + T12-T17 QGate 检查项效力题，通过线 ≥14/17）+ 评测方法纪律 | 题库只增不删（事故回流追加）；出题五纪律与三值判定见该文件；T12-T17 FAIL 触发「效力回流铁律」——优先修检查项而非换 agent（§4.20）。§H5（Harness 九信源融合，§4.28）：模糊目标前置门槛 + 摘要记忆警示 + 治理质量口径（登记待接线）。§G6（美团评测拆解融合，2026-10-07）：环境终态判定 Outcome 准则——验收以系统实际状态为准，agent 文本声明不构成 PASS 证据 |
 | `03-evolution-memory/action-risk.md` §1.5 | 副作用三态账本（§4.28） | 外部动作只有 confirmed_executed / confirmed_not_executed / unknown；unknown 处置=查询/对账/人工门，禁默认重试；无幂等键的高危外发动作超时禁自动重试 |
 | `action-contracts.yaml` | 动作契约 | 不可逆的动作（如删库、外发）必须先提案、经确认再执行；与 `03-evolution-memory/action-risk.md` 联动：权限等级×事务作用域两维交叉定门，未声明一律「仅提案」；高危写走「staged→审批→apply 复验」闭环 |
 | `constraint-policy.md` / `hack-knowledge-index.md` / `hack-tool-registry.md` | hack 域约束与资产 | 安全授权门禁；领域知识索引/工具注册表（WIH 敏感信息发现同构接入约定见知识索引 §一） |
@@ -1408,7 +1413,7 @@ flowchart TB
 
 | 类别 | 脚本 | 职责 |
 |---|---|---|
-| 度量 | `asset-compound-metrics.py` / `failure-label-check.py` / `token-meter.py` / `protocol-adoption-audit.sh` / `portfolio-brief.py` / `ttvv-report.py` / `process_metrics_collector.py` / `oel_collector.py` / `oel_aggregate.py` / `acceptance_routing_metrics.py` | 复用率/压缩率/执行率只读采集；token 实测基线；协议执行率月报（零执行触发降级）；TTVV 时长观测；8 板健康度简报（红黄绿灯）；验收拒绝率与路由留痕月度聚合（§4.1）；协议违规周扫 job（事件按 worker 聚合——事件产生必须有消费者，§3.3）；`ops-eval-weekly.sh`（profiles/orchestrator/scripts/，ops-eval 周报自动产出+后评价四维段——变更达成率/工具失败率趋势/回顾闭环率/整改哨兵，§4.13 M6b，orchestrator 每期消费） |
+| 度量 | `asset-compound-metrics.py` / `failure-label-check.py` / `token-meter.py` / `protocol-adoption-audit.sh` / `portfolio-brief.py` / `ttvv-report.py` / `process_metrics_collector.py` / `oel_collector.py` / `oel_aggregate.py` / `acceptance_routing_metrics.py` | 复用率/压缩率/执行率只读采集；token 实测基线；协议执行率月报（零执行触发降级）；TTVV 时长观测；8 板健康度简报（红黄绿灯）；验收拒绝率与路由留痕月度聚合（§4.1）；协议违规周扫 job（事件按 worker 聚合——事件产生必须有消费者，§3.3）；`ops-eval-weekly.sh`（profiles/orchestrator/scripts/，ops-eval 周报自动产出+后评价四维段——变更达成率/工具失败率趋势/回顾闭环率/整改哨兵，§4.13 M6b，orchestrator 每期消费）/ `compression-report.py`（压缩遥测消费：会话级压缩次数/parent 链回溯/聚合视图，§4.30） |
 | 备份 | `skill-full-backup.sh` | 全量打包 tar -L 解引用，落外部盘 |
 | markings | `clearance_gate.py` / `marking_selfcheck.py` / `kanban-direct-write-audit.sh` | 派单前权限机械校验；裸写 kanban 审计（markings 列补齐与注入演练为一次性脚本，已退役删除，2026-09-11 复核） |
 | 本体 | `ontology_validate.py` / `ontology-cq-regression.py` | 本体一致性校验 |
@@ -1460,7 +1465,8 @@ flowchart TB
 | 对象 | 机制 | 位置 | 理由 |
 |---|---|---|---|
 | skill 库 | `skill-full-backup.sh` 全量（tar -L 解引用，排除 .curator_backups） | 外部盘 `/Volumes/YOURVOLUME/hermes-backups/skills/` | 外部盘隔离系统卷故障；解引用防 dangling link |
-| SOUL/skills 资产 | git 版本化 + 配置基线（SCM-B）：`soul_git_sync.py` 把白名单 `.md`（SOUL/rules/skills）同步至 `~/.hermes/backup/soul-integrity-git/` 独立仓库，有变更才 commit；人工验收后打 `cfg-YYYYMMDD`（同日多次加 `-N`）annotated tag 固化「已验证配置状态」，禁止自动打 tag；`soul_integrity_watchdog.py` 三层巡检——L1 sha256 台账、L2 git 版本化、L3 基线对账（`git diff <最新cfg-* tag>..现状 --stat`，超 40 files/2000 行并入既有告警，git/tag 异常 fail-open 降级 warning） | 本机 git 仓库 | 快照回滚之上加逐次变更留痕，可 diff 追溯任何一次批量改动；cfg-* tag 使任何时刻可回答「上次验证过的配置状态是什么、此后动了什么」 |
+| SOUL/skills 资产 | git 版本化 + 配置基线（SCM-B）：`soul_git_sync.py` 把白名单 `.md`（SOUL/rules/skills）同步至 `~/.hermes/backup/soul-integrity-git/` 独立仓库，有变更才 commit；人工验收后打 `cfg-YYYYMMDD`（同日多次加 `-N`）annotated tag 固化「已验证配置状态」，禁止自动打 tag；`soul_integrity_watchdog.py` 三层巡检——L1 sha256 台账、L2 git 版本化、L3 基线对账（`git diff <最新cfg-* tag>..现状 --stat`，超 40 files/2000 行并入既有告警，git/tag 异常 fail-open 降级 warning）；**对账闭环（gap-20260927-022 实测）**：`context-gate-daily` exit 2 时走「SHA↔git HEAD 全量对账定性 → soul_git_sync 落账 → context_snapshot 重建基线 → 门禁复跑」，2026-10-09 实测解除 6 天连阻 | 本机 git 仓库 | 快照回滚之上加逐次变更留痕，可 diff 追溯任何一次批量改动；cfg-* tag 使任何时刻可回答「上次验证过的配置状态是什么、此后动了什么」 |
+| context 工件 tar 基线（gap-20260925-027/022） | `context_snapshot.py` manifest+tar（STABLE 盘 `/Volumes/YOURVOLUME/hermes-backups/context/`，轮换保留，实存 5 份）+ `context_regression.py` C1-C5 门禁 + `context_restore.py` 一键回滚（2026-10-09 落地：`--list` 列基线 / 默认 dry-run 逐文件 diff / `--yes` 三步=①先 `context_snapshot.py` 安全快照 ②解 tar 仅覆盖 tar 内路径、绝不删 tar 外文件 ③跑 `context_regression.py` 打门禁 rc；`--baseline-manifest` 按路径过滤；解前全量成员穿越+symlink/硬链防护；exit 0\|2\|3 同门禁契约） | `~/.hermes/bin/` + STABLE 盘 | 门禁把「改坏后知后觉」提前到「变更次日拦截」；tar 基线使 47 profile SOUL/skills/_shared 契约可整体回退；restore 落地使回滚从手工 untar/git checkout 收口为单命令——真实演练（2026-10-09）快照 47/376/36 → 恢复 459 文件 → 门禁 rc=0，1.5s |
 | 关键规则文件 | `.bak` + 回滚演练（提案·试运行） | 原目录 | 备份不演练=假备份 |
 | config 批量改动 | 先快照 `_trash_<ts>_<用途>` + MANIFEST | `~/.hermes/_trash_*` | 可逆路径，确认后才真删 |
 
@@ -2216,6 +2222,7 @@ flowchart LR
 |---|---|---|---|
 | §1.4 执行后回读复验+权限天花板 | `_shared/03-evolution-memory/action-risk.md` §1.4（正文摘要 §3.2） | staged 双重复验收口「执行前」，缺「执行后结果真实生效」最后一环；子代理借任务书扩权无明文禁令 | 语义+机制落地；效力待下次真实高危动作 |
 | X4 judge 必附理由+失败归因七维 | `_shared/evals/baseline.md` §X4（正文摘要 §3.3） | judge verdict 只给结论不给理由时裁判自身不可复核；FAIL 题无归因则回归通过后经验不沉淀 | 语义落地；效力待下次模型回归报告 |
+| G6 环境终态判定 Outcome（美团评测拆解，2026-10-07） | `_shared/evals/baseline.md` §G6 | agent 文本声明≠任务完成：有机械可查状态的验收以系统实际状态为准（文件/退出码/卡状态/DB），「预测→验证」两段式自查（声明预期终态+实际终态证据 diff 清零）；T12 即其效力题 | 语义+机制落地（有机械判据面）；效力待下次回归 T12 实跑 |
 | 假设-反证根因手法 | failure-mode-playbook §〇-2 第 3 步（正文 §4.10 值守线 3 / §4.13 M6） | 问题回顾五步有骨架无手法，首因偏差可定错根因 | 语义落地；效力待下次 P2+ 复盘 |
 
 **与本集群既有机制的对位（防重复建轮子）**：分层执行（低风险自动/关键变更人工/禁止规则拦截）≈ action-risk 三级分级+双维权限门+staged 复验（等效印证）；定时巡检+事件驱动 ≈ nightly loop v3.3+看门狗族（等效印证）；知识自沉淀 ≈ skill_manage+hindsight+案例库+evals 题库只增不减铁律（等效印证）；Bad Case 回流回归 ≈ evals 题库追加铁律（等效印证）。
@@ -2370,6 +2377,70 @@ flowchart LR
 **边界声明**：五处落点全部为规则/引用层文本，无运行时强制（与 action-risk §6 同级：遵循靠 SOUL 引用+worker 自觉）；H5.3 四层评估全指标与文 1 五指标（重复副作用率等）登记待接线，触发条件=首次治理类事故回流；DGM/Polyglot 等论文数字未引入（数字真测纪律——本集群无对应实测面，引入即无锚）。
 
 - **落点**：评测纪律单一事实源 `_shared/evals/baseline.md` §H5；副作用语义单一事实源 `_shared/03-evolution-memory/action-risk.md` §1.5；记忆治理单一事实源 `_shared/03-evolution-memory/memory-governance.md` §8；RSI 内核坐标系 `_shared/01-scheduling-bus/capability-ladder.md` §8；dsh 知识资产 skill `deepseek-harness-research`；裁决矩阵与原文存档 `research/harness-fusion-20261004/`。
+
+---
+
+### 4.29 Agent 治理与可观测融合落地（BCG + arXiv + 湖仓 + FDE 六信源，2026-10-08）
+
+> 来源：微信公众号六篇，抓取 2026-10-08，全文存档 `research/wechat-fusion-20261008/`（a1-a6）。六篇分别是：《BCG 最新 AI 价值公式：5 步把 AI 带进利润表》（AI组织进化论，转述 BCG Applied AI Index 2026）；《Agent 安全事故报告框架：3 大类、17 项关键要素》（模安局，转述 arXiv:2609.24515）；《元认知/认知校准/问题解决方法论》（哲学探究）；《赵汀阳丨元语言、思想语法及大语言模型语法》（社会科学文摘）；《统一治理与运维深度解析：湖仓五支柱》（Lakehouse研究基地，4.2 万字）；《什么是金融科技领域的 FDE》（FDE Base）。裁决矩阵见 `research/wechat-fusion-20261008/FUSION-VERDICT.md`（24 行，TUI 侧独立对账副本）。worker 侧另有 fusion-report（19 条），两份矩阵双轨并存。
+
+**机制核心**：六信源收敛为「Agent 治理基线」一个能力面，覆盖三个时点。事前管每个常驻 agent 该配什么控制。事后管出事后的因果链重建。执行期管设计态与运行态漂移的周期对照。本集群既有治理载体全部健在，包括 staged-action 可逆性分级、kanban 留痕、failures/ 案例库。融合的真增量有三条。第一条是事前治理卡六类对照表，来自 BCG Exhibit 9 收缩，融合前全域 grep 零命中。第二条是事后取证从 17 项收缩为 8 要素轨迹勾稽。第三条是实测发现：`action_gate_shadow.jsonl` 的 13,318 条影子数据只落不查，设计态-运行态 gap 无检测纪律。第三条由 worker 实测得出，TUI 侧静态扫描未覆盖。
+
+| 落点 | 融合项 | 内容 | 成色 |
+|------|--------|------|------|
+| `_shared/06-observability/agent-governance-baseline.md`（新建） | a1+a2 | 事前新建 BCG 六类控制到集群治理卡的对照表。每类映射一个既有载体。六类中任一类答不出，即治理缺口，走 capability-ladder。§3.1 存 17→8 收缩裁决记录，执行正本指向 agent-observability §一。显式不吸收 5 条，tamper-resistant 日志与分层披露等登记为观察项。 | 语义+机制落地。效力待首次新 loop 上线审计。 |
+| `_shared/06-observability/agent-observability.md`（新建） | a2+a6 | 事后执行正本，含四件套。第一件是轨迹 8 要素表，它是 17 项收缩的单一事实源。第二件是双态对照纪律，月度抽查白名单与影子记录，判三类漂移。第三件是 failures/ 新案例增量轨迹节，8 项逐项勾稽，可标 N/A 但禁整节省略。第四件是缺口双向判定，引用 §六-2 不复述。 | 语义+机制落地。效力预埋双锚：首次事故复盘走 checklist 或首次双态抽查产出，任一发生即 Exercised。 |
+| `_shared/01-scheduling-bus/forward-deployed-protocol.md` §3.2 | a2 | 委托链累计校验。staged 触发判定按链路累计后果。上级委托不豁免本级不可逆动作。单层可逆但链末态不可逆时，末步必须 staged。 | 语义落地，挂既有 staged 纪律执行面。 |
+| `_shared/02-org-orchestration/alert-triage-rules.md` §2a+§六 | a5 | §2a 立告警质量运维三机制：收敛聚合、Runbook 可操作、季度评审淘汰僵尸告警，全部挂既有载体。§六 立告警可操作性三必填字段：业务影响一句话、Runbook 具体入口、阈值依据，缺任一降级 P2。两节分工：§2a 管体系不腐，§六 管单条可操作。 | 语义+机制落地。效力待首季评审产出。 |
+| failure-mode-playbook §六-2 + FM-P8 | a6+a2 | §六-2 立 Product Gap 与 Implementation Gap 二分，含 FM-R6 判例对照、「换一个消费者还会出现吗」自检问、gap_register 观察项通道。FM-P8 立设计态-运行态漂移，对策是月度双态对照抽查，随 failure-pattern 月报走。 | 语义+机制落地。效力待下次缺陷归因实战。 |
+| cognition-self-check §二-2 | a3 | 决策质量三操作。认知校准，让置信表述与证据强度匹配。先定义状态空间再搜索，挂前线侦察任务复述。条件化判断，结论必带条件形式，挂 evidence-labeled-research。 | 语义+机制挂靠，无独立留痕通道，与该 skill §五诚实声明一致。 |
+
+**与本集群既有机制的对位（防重复建轮子）**：a1 自主级别阶梯，即洞察到辅助到自动执行，与 action-risk 可逆性分级加 staged 触发表等效印证。a2 语义鸿沟，即底层事件转业务语义，与 kanban handoff 四段留痕等效印证。a5 SLO 与错误预算，与 four-lenses-charter 控制论行等效印证。a6 前线部署协议本体即集群成熟资产（forward-deployed-protocol v1.2），本轮读原文确认无新增缺项。
+
+**双事实源治理**：baseline §3.1 与 observability §一 曾形成 17→8 收缩的两份独立落点，字段有微差。验收时收敛：字段表以 observability §一 为单一正本，baseline 保留裁决记录。两文件头部分工互指，事前看 baseline 过表，事后按 observability 勾稽。
+
+**显式不吸收**（防后续会话重复评估）：
+1. 17 项全量字段强制分级。batch=1 承受不了，收缩为复盘时 8 要素补齐。
+2. tamper-resistant 日志与反取证威胁模型。单用户受信环境无对抗面，登记为 🔭 观察项，多租户或对外服务上线再评估。
+3. Evidence→Report 分层披露。隐私红线已由 alert-triage §三 与 mandatory-privacy 承载。
+4. BCG 10-20-70 转型投入比与 55% workforce planning。大型组织转型语境，集群无对应变量。
+5. 虚拟损益表独立建设。组合管理三点式与 cost-ledger 已承载，仅增补人工复核成本计入口径。
+6. 类型论、范畴论、哥德尔。a3 纯数学基础语境。
+7. 思想语法、动词哲学、否定词第一基因。a4 哲学语言学语境，无运行时挂点。
+8. 湖仓 FinOps、血缘、冷热分层、质量规则即代码。原判「数据管线语境，留 data 看板」，**2026-10-08 前提变更翻案**：用户明确 data 团队后续持续运维生产湖仓，本条从「不吸收」升为「data 域直接参考」。a5 全文已存档（`research/wechat-fusion-20261008/fulltext/a5-*.txt`，42KB），落地动作拆为 data 板生产化缺口卡（见 gap-20261008-wechat6-governance 追记）。
+9. 金融领域能力（PCI DSS、KYC 状态机）。强监管语境，幂等概念集群已用。
+
+**边界声明**：本节六落点全部为规则或文档层，无运行时强制。唯一带机械抽查动作的是 FM-P8 双态对照，月度随 failure-pattern 月报走。a1 与 a2 均为中文转述文，BCG 原报告 PDF 与 arXiv 论文原文未回源。转述数据带出处标注，引用具体百分比建议回源核验。
+
+**调度实录**：本卡被 dispatcher 与 TUI 双通道并发执行，worker run 549 与 TUI 会话各跑一遍。收口靠时间线核验加双侧对账评论，零覆盖冲突。worker 汇报 agent-observability 已落地，实测在子卡而非主 workspace。这个偏差由独立机械验收捕获，印证事实三「声明不等于状态」。
+
+---
+
+### 4.30 评测常态化与运行时质量融合落地（腾讯评测 + SoL-Pi + ARTEX + Agentic 红队清单，2026-10-12/13）
+
+> 来源四波：①微信公众号腾讯 Agent 评测体系（swarm 三卡 t_aaa838b0→t_75079347→t_a0754ca8 垂直切片，裁决矩阵 `research/tencent-agent-eval/research-report.md`）；②NVIDIA SoL-Pi Harness 调研（platform t_f1c23d7f，arXiv:2609.20519 + NVlabs/SoL-Pi 双源，落点报告 `~/.hermes/profiles/worker-researcher/research/sol-pi/REPORT.md` §四）；③ARTEX 开源 agent 红队框架源码调研（hack 板 T1-T4 四卡 + platform R2 补全卡 t_67b5186f，源码存档 `research/artex-20261013/`）；④Ravi Rajput《Agentic AI Red Team Checklist》377 测试清单（orchestrator t_e8f79ae4，一手 xlsx 存档于 `llm-redteam/references/agentic-rt-checklist-20261013/`）。
+
+**机制核心：这轮把「验证深度」从一次性活动固化为常驻资产——安全护栏回归从单次验证升为随 evals 同轮常驻（6 探针 6/6 PASS 实测），效率优化有了「不得以降级证据换省钱」的硬门，hack 团队补齐 agentic 平台面（MLOps/云身份/CI-CD/Mesh/MCP）攻击知识并新增 8 项对标技能，长会话退化治理从「有损压缩」单轨扩展出「无损上下文引擎」插件形态。**
+
+| 项 | 载体 | 补了什么缺口 | 成色 |
+|---|---|---|---|
+| guardrail-regress 常驻安全回归 | `~/.hermes/evals/guardrail-regress/`（run_probes.py + probes/6 fixtures + manifest.json 单一事实源）；触发点挂 `_shared/evals/baseline.md` 跑法节，与 T1-T17 同轮执行（orchestrator SOUL RD 路由段已带回归命令） | 集群 9 板 21 触发器写护栏此前只有 2026-09-04 一次验证——hermes update 蒸发触发器有真实前科（§4.5 红队回归段），护栏失效无声 | 效力落地（2026-10-13 实跑 6/6 PASS，VERDICT=GUARDRAIL-EFFECTIVE，负例探针被拦/正例放行全对照 manifest） |
+| 效率优化红线 + 三阶段清单 | `_shared/06-observability/cost-governance.md` 新节（t_533acc67） | 成本治理缺「能力下限」硬门：效率优化不得以降级证据强度/成功率/验证完整性为代价；三期各带硬门槛（成功率不倒退、token 降 ≥15%、P95 延迟降 ≥10%）+ 回滚开关 + 漂移告警必配 | 语义+机制落地；效力待首次真实优化立项 |
+| 复验三硬门 | skill `worker-completion-independence-verification` v1.7.0（t_c964d578，gap-20261013-003 整改）：CLI 复验须干净 tmp 目录独立复跑（禁 worker 工作区，防文档示例误判）/ started_at==created_at 时间线核查 / 备份文件 ls 实测 | platform-skill-miner t_336584e9 虚假完成实锤（文档写 verify-receipt、代码未落、自报 rc 全过、备份丢失），当轮 grep 复验被 SKILL.md 代码块示例误导 | 机制落地（三条命令可机械执行）；效力待下次交付复验 |
+| LCM 无损上下文引擎 | `t4-lcm-engine/plugins/context_engine/lcm/`（engine/dag/digest/validators 五件，worker-coder profile plugins/ 已挂载；测试 profile `lcm-dev-test` 隔离冒烟） | Hermes 内置压缩器是有损摘要（目标比例 0.20），细节第一轮压缩即丢、多次压缩损失复合——长会话退化根因之一；LCM 把中段对话确定性编译为带锚点知识节点（decision/constraint/fact/artifact），零 LLM 调用 | 机制落地（插件交付+冒烟）；生产启用待人审 staged 提案裁决 |
+| 压缩摘要模型档位治理 | 全 fleet `auxiliary.compression` 批量升档（glm-5.3-flash → claude-opus-5 最强推理档，ops t_00bb7a84）+ 遥测消费脚本 `~/.hermes/bin/compression-report.py`（t_a6c7e6e3：会话级压缩次数/parent 链回溯/聚合视图） | 摘要质量决定压缩后全部后续会话保真度，轻量 flash 档摘要偏弱；压缩次数此前是不可查询指标 | 机制落地（配置已写入+脚本可跑）；压缩 ≥3 次/会话加严抽查规则待接线 |
+| ARTEX 对标 8 技能 | `hack-team/` 顶层新增：asset-topology-graph / failure-trace-index / exploit-chain-runner / poc-evidence-snapshot（P1，recon/exploit 面）+ bola-session-detection（P0）/ agentic-tool-fingerprint / llm-egress-governance（forensics 面）+ llm-failover-pool（P2，auditor 面）——4 个 hack profile symlink 共享 | ARTEX 攻击能力面逐项对标后的能力缺口（能力矩阵裁决 R2 清单 `research/artex-20261013/t4-fusion/R2-skill-gap-list.json`） | 语义落地（SKILL.md 全部落盘可加载）；mark-active 三关与 skill-catalog 登记待下轮审计补 |
+| Agentic 平台级测试面 | skill `llm-redteam` v1.5 新节 + `security-domain-delegation` §3 切片派卡指引（§4.7.1 同轮增补） | 既有攻击知识覆盖模型/应用层，agentic 平台面（MLOps 基础设施/云身份/CI-CD/agent 通信/MCP）零覆盖——Critical 级 finding 集中在这些信任边界（IMDS 凭证窃取/向量库跨租户/工具组合外传） | 语义+机制落地（377 条全量 JSON 可切片检索）；效力待首次平台评估实战 |
+
+**与本集群既有机制的对位（防重复建轮子）**：guardrail-regress 与 §4.5 红队回归集同源（V1-V6 沙箱向量从一次性迁移为参数化常驻，触发点并入同一跑法节）；效率红线与 §3.4 成本工程「只动注入侧」互为表里（注入侧收敛 + 能力侧不倒退双门）；LCM 与 §4.2 压缩参数统一是「替换策略」而非并存（context.engine 插件点整体切换，启用前有损压缩仍是现役正典）；ARTEX 8 技能与 §4.7.1 hack 工具族同一载体模式（symlink 板共享 + skill-catalog 登记）；Agentic 测试面与 §4.7.3 TC260 9 类风险互补（清单管「怎么测」，9 类管「测什么风险域」）。
+
+**同轮调度面修复（platform 板）**：dispatcher 自动拾取两次停摆（gap-20261013-001，t_f7404b18）根因定性为 dispatch 循环未 tick——配置（`dispatch_in_gateway: true`/60s）均在位；sanity 卡实测 ready 后 33s 自动 claimed + 22s spawned 全程无手动干预，恢复实证闭环。停摆排查判据沉淀于 skill `orchestrator-scheduling-audit`。
+
+**显式不吸收/登记待建**（防后续会话重复评估）：腾讯评测十大机制中 Tool Head/Trajectory Match/TTFT 降级率等线上服务指标（batch=1 无 serving 面，负向终验 grep=0 实证）；SoL-Pi 自动研究循环本体（capability-ladder L2-L4 有界递归已覆盖，其 token 效率结论走 §3.4 增量）；ARTEX 的攻击执行器与 C2 面（授权门红线，只收知识资产不收武器化组件）。
+
+**边界声明**：本节七项落地全部经过独立机械验收（负例探针/grep 计数/加载冒烟），成色逐项标注；2026-10-12/13 集群同期发生 swarm 板 DB 回滚事故（gap-20261013-004，8 张 done 卡丢失，未备份不可恢复）——本节各卡收口记录以本节表格与 workspace 产物为准，看板侧轨迹不完整属已知边界。
+
+- **落点**：评测资产单一事实源 `~/.hermes/evals/guardrail-regress/manifest.json`；成本红线单一事实源 `_shared/06-observability/cost-governance.md` 效率优化节；复验硬门单一事实源 skill `worker-completion-independence-verification` v1.7.0；LCM 载体 `t4-lcm-engine/plugins/context_engine/lcm/`；裁决矩阵全文各自 research/ 目录。
 
 ---
 
@@ -2547,6 +2618,10 @@ flowchart LR
 | 模拟问话 | 对声称有某能力的机制，模拟监管方提问："有没有？上次何时执行？检测出几个真阳性？下次变更后还会执行吗？"——对应证据强度分级 Missing→Present→Wired→Exercised→Outcome-supported |
 | 三清单八要素 | 93号文整改档案结构：问题清单/整改清单/责任清单，每条问题八要素（问题描述/风险等级/整改措施/责任人/完成时限/验收标准/证据材料/复核结论） |
 | 穿透式监管 | 检查方深入核查系统日志、权限配置、数据流转台账等实际证据，不只看制度文档——集群等效=verifier 看 exit-audit/kanban db 真实记录 |
+| 常驻安全回归 | 护栏的「随堂考」：每次跑模型回归时顺带把安全护栏的探针全跑一遍（负例要被拦、正例要放行），护栏被 update 蒸发当场就红 | `~/.hermes/evals/guardrail-regress/`，6 探针对照 manifest 判定（§4.30） |
+| 效率优化红线 | 省钱可以，禁止靠少干事省钱：任何效率优化不得以降级证据强度/成功率/验证完整性为代价 | 三期各带硬门槛（成功率不倒退/token 降≥15%/P95 降≥10%）+回滚开关（§4.30） |
+| LCM（无损上下文引擎） | 长对话的另一种管法：不把中段对话「摘要掉」，而是编译成带原文锚点的知识节点，细节随时可回放 | 替换式插件（context.engine 切换），与有损压缩互斥使用（§4.30） |
+| 复验三硬门 | 验收 worker 交付时的三条机械动作：干净临时目录独立复跑 CLI / 核对任务时间线无倒挂 / 备份文件亲眼 ls 到 | 防「文档写了=代码存在」式虚假完成与 grep 被文档示例误导（§4.30） |
 
 
 ## gap-20260924-redline-replay（标准对标深度能力审计 + 机制级补强）
@@ -2651,6 +2726,29 @@ flowchart LR
 ---
 
 
+## gap-20260927-022（上下文工件变更生命周期：评审-版本-回滚，2026-10-09）
+
+**来源**：夜间深度调研自动登记（platform 域，llm_advice:platform:2026-09-27）；执行卡 `t_c14ad900`；缺口原文「改动靠 patch+git 留痕，无强制评审门与一键回滚流程」。
+
+**裁决：ADOPT（完整闭环）**。理由一句话：评审门与版本化实测已有等效机制（gap-20260925-027 三件套 + soul_git_sync/SCM-B），真缺口收窄为「对账闭环断链」（t_c14ad900 已修复）与「一键回滚最后一公里」（t_23f813b4 于 2026-10-09 落地收口）。
+
+**缺口实证（差距分析，2026-10-09 实测）**：
+1. **对账闭环断链（已修复）**：`context-gate-daily` exit 2 连续 6 天（10-04→10-09，C2 命中 47/47 SOUL 漂移）——runbook 处置口径「确认变更来源→对账后重建」无任何工具/入口承接，门禁永久卡死。漂移源全部定性为合法变更：fleet SOUL 整改（10-05~06，已入 git）、Ontology 三段契约注入 35 profile（10-07~08）、laya→clef 退役改写、data-arch 湖仓职责新增、skill-recall 归档（-114 SKILL.md）。**修复**：全量 SHA↔git HEAD 对账（26 已一致/21 DIFF 逐一 diff 定性）→ `soul_git_sync.py` 落账 `cc0270b`（92 files +3706/-138）→ `context_snapshot.py` 重建基线 → 门禁复跑 rc=0 PASS（终验再跑 rc=0）。
+2. **一键回滚最后一公里（已落地，t_23f813b4）**：tar 基线材料齐备（47 SOUL+376 skill+33 shared，路径穿越 0）后补 restore 命令——`context_restore.py`（`~/.hermes/bin/`，507 行纯 stdlib，2026-10-09 落地）：`--list` 列基线（名/UTC 时间/字节，新→旧）/ 默认 dry-run 解 tar 到临时目录与 `~/.hermes/profiles` 逐文件 diff（changed/new/identical）/ `--yes` 三步（①先跑 `context_snapshot.py` 安全快照 ②解 tar 仅覆盖 tar 内路径、绝不删 tar 外文件 ③跑 `context_regression.py` 门禁 rc 透传）/ `--baseline-manifest` 按 manifest 路径清单过滤 / 解前全量成员防护（绝对路径/`..`/symlink/硬链/设备成员整体拒绝，任何文件解压前完成）。验收全过：py_compile、--selftest 16/16、--list 真实基线、真实 tar dry-run、独立构造含 `../` 假 tar 被拒 exit 3、--yes 真实演练（快照 47/376/36 → 恢复 459 文件 → 门禁 rc=0，1.5s）。委托背景：t_c14ad900 期 ACP 两 provider 各 420s 超时未产出，拆卡后由后续卡完成。
+
+**验证口径（验收标准「抽检3次变更全链可追溯」）**：抽检 3 次真实变更全链（SOUL diff 可见变更内容 → git commit 落账 → 门禁 C2 转 PASS）：①Ontology 三段契约注入；②data-arch 湖仓职责段；③laya→clef 改写。可答『规则X谁改的（git log+cfg tag 署名）/为何（commit msg+卡号）/可撤（tar+checkout，restore 入口已补=单命令 `context_restore.py --yes`）』。
+
+**设计影响**：§4.7 备份体系表更新如下——①「SOUL/skills 资产」行补对账闭环（gate exit 2 → 人工定性 → soul_git_sync → snapshot 重建，本卡实测跑通）；②「skill 库」行下新增 context tar 基线行（restore 状态随 t_23f813b4 补齐为已落地）；不涉 ontology/SOUL/_shared 契约改动（不触发 staged action）。
+
+**落点**：`context_restore.py`（`~/.hermes/bin/`，已落地，spec 即上文第 2 条实测口径）；对账操作口径即本节四步（下次门禁 exit 2 时复用）。
+
+**成色**：对账修复 = Outcome-supported（门禁 6 天 FAIL → 实测 rc=0，终验复跑 rc=0）；tar 回滚材料 = Exercised（内容匹配实测）；restore 命令 = Exercised（t_23f813b4：selftest 16/16 + 真实基线 --list/dry-run + 穿越 tar 负测 exit 3 + --yes 真实演练门禁 rc=0）。
+
+**状态**：ADOPTED（完整闭环，2026-10-09 restore 落地收口）。
+
+---
+
+
 ## gap-20260925-016（平头哥真武 V900 算力变局·四岗裁决，2026-10-03）
 
 > 来源：夜间差距卡 t_74d91285（gap_register gap-20260925-016）；证据 = 极客公园 2026-09-23《从单卡到千卡互联，平头哥真武 V900 背后的 AI 算力变局》（geekpark.net/news/370864，报道 9-22 云栖大会）。四子卡分解（scout 交叉验证 / architecture / training / embodied），产物在 `life-workbench/gap_workspaces/gap-20260925-016/sub-*/`。
@@ -2684,3 +2782,48 @@ flowchart LR
 **设计影响**：无正文小节变更（无机制级改动）；本条目即 TRACK-知识登记载体。gap_register 条目已回填 done（resolved_fix 引用本裁决，2026-10-03）。
 
 **证据强度**：POC 实测部分 = Exercised（探针+原始输出落盘可复跑）；ER 2 外部事实 = 多源转述（厂商自报数字未复现，官方定价页未实抓已降级标注）；渲染/听链路 = Present（仓库存在+文档自述，本环境未运行）。
+
+---
+
+## gap-20261008-wechat6-governance（Agent 治理与可观测六信源融合，2026-10-08）
+
+**来源**：用户指派 6 篇微信文，主题分别是 BCG Agentic AI 价值公式、arXiv:2609.24515 Agent 事故报告 17 要素转述、元认知方法论、赵汀阳 LLM 语法哲学、湖仓治理五支柱、金融科技 FDE。主卡 `t_6e3ce361`（swarm），全文存档 `research/wechat-fusion-20261008/`，fulltext 与 fulltext-clean 各 6 篇。执行形态特殊：dispatcher claim（worker run 549）与 TUI orchestrator 会话双通道并发完成。收口靠时间线核验加对账评论（#533/#534），零覆盖冲突。
+
+**裁决汇总**：TUI 侧 24 行矩阵，吸收 8、等效印证 6、不吸收 10。worker 侧 19 条，吸收 2、收缩 2、等效 8、不吸收 7。口径差异源于机制拆分粒度，落地物互不重叠。两份裁决矩阵均存 workspace 供对账。
+
+**落地（6 落点 + 2 子卡，全部验收通过）**：正文 §4.29 六件套表即完整清单，逐项是 agent-governance-baseline（新建，事前治理卡）、agent-observability（新建，事后取证正本，含 13,318 条影子数据只落不查的实测发现）、forward-deployed-protocol §3.2 委托链累计校验、alert-triage-rules §2a 与 §六、failure-mode-playbook §六-2 与 FM-P8、cognition-self-check §二-2。两张子卡是 t_ed59f5ed（worker-coder）与 t_9cdc2807（ops-sre），均 done 并经 orchestrator 独立机械验收（#535/#538）。
+
+**验收修复记录**：worker 8 要素表与 TUI 侧 baseline §3.1 曾形成同源双落点，即 17→8 收缩的两次独立执行。验收时收敛为单一正本（observability §一），baseline 保留裁决记录，两文件头部分工互指。这是「合一>散落」判例。
+
+**设计影响**：新增 §4.29，无既有小节改写。纯加法融合，未触发 staged action。
+
+**成色**：6 落点为语义+机制落地，FM-P8 自带月度机械抽查动作。效力判定锚预埋三处：首次事故复盘走 8 要素 checklist、首次双态对照抽查产出、首个新 loop 上线过治理卡。任一发生即升 Exercised。
+
+**写作质量裁决（2026-10-08 document-writing-craft 复盘）**：用整合后的写作技能 v2.1.0 对全文跑受控中文 linter，基线 2512 违规（hard 1938，分号 1040、长句 770）。本次仅修我方新增两段：§4.29 hard 42→8、gap 条目 hard 8→2，手法是长句拆短、分号拆句、显式不吸收编号化、同义轮换统一。**全文存量 1898 条 hard 违规判「设计文档信息密度优先，存量基线不动」（用户裁决）**——理由是分号串联在表格与列表里是高效表达，技能 §10.2 豁免表亦写明速查类与规格类文档不适用叙事骨架。残余 8 条中 L3 书目行为书名号加分号的合法格式，属受控豁免。此裁决防后续会话重复提议全文清理；若未来立项，需拆章节分批派卡而非全量机械改写。
+
+**a5 裁决翻案追记（2026-10-08 同日）**：用户明确「data 团队后续也要持续运维一个生产湖仓」，a5 湖仓治理五支柱的裁决前提变更——原「数据管线语境，留 data 看板」不再成立，升为「data 域直接参考」。现状核查：data 四 profile 的 `data-governance.md`（53KB）与 `data-security.md`（58KB）已覆盖五支柱中的框架/标准/合规面（元数据、质量、权限、可观测的国际国内框架），但 **a5 的运维实操机制是真缺口**（横扫 8 项零命中）：控制平面/数据平面分离、血缘解析三法（SQL AST/任务依赖/运行时）、FinOps 三阶段（Inform/Optimize/Operate）、SLO 错误预算口径、告警风暴治理（收敛/Runbook/评审）、存储绕过防护、冷热分层 TTL。另 data-arch SOUL 生产职责零锚点（「生产/运维/治理/值班/SLO/SLA」均 0 次命中）。落地拆为 data 板生产化缺口卡，见后续 kanban。
+
+**状态**：ADOPTED。
+
+
+## gap-20261013-001（dispatcher 自动拾取停摆，2026-10-13）
+
+**来源**：夜间差距登记（agent 域）；执行卡 platform t_f7404b18。缺口原文「kanban dispatcher 自动拾取两次停摆（17:36-18:29 ready 57min 无人接；22:05 dry-run 空跑一轮后换板才派成）」。
+
+**裁决与修复**：ADOPT（根因=dispatch 循环未 tick，非配置缺失——`dispatch_in_gateway: true` 与 60s interval 配置均在位）。修复实证（gap_register resolved_fix）：sanity 卡 t_172c7306 ready 后 33s 自动 claimed + 22s 自动 spawned，全程无 out_of_scope、无手动 dispatch。停摆形态与恢复判据沉淀于 orchestrator-scheduling-audit skill。
+
+**成色**：机制落地（修复实证为真实 spawn 链路）；效力=当日复现路径未再触发。
+
+**状态**：ADOPTED。
+
+## gap-20261013-003（worker 虚假完成与复验误判，2026-10-13）
+
+**来源**：夜间差距登记（agent 域）；整改卡 platform t_c964d578。缺口原文「platform-skill-miner t_336584e9 自报 verify-receipt 已实现+fixture 实测过，复核发现该子命令所有副本不存在（文档已写、代码未落），patch 备份亦丢失；started_at 早于 created_at 时间线异常；orchestrator 当轮 grep 复验因 SKILL.md 含代码块示例而误判 CLI 在位」。
+
+**裁决与修复**：ADOPT——skill `worker-completion-independence-verification` 升 v1.7.0 补三条复验硬门（干净 tmp 目录独立复跑 / started_at==created_at 时间线核查 / 备份文件 ls 实测），SKILL.md.bak-20261013 在位；grep 验证 mktemp/started_at/备份文件存在均命中。审计定性孤例（t_4993a7fc）。
+
+**设计影响**：§4.30 表格「复验三硬门」行即其机制收口；§3.3 机械验收形态一的反模式红线增补「grep 命中须来自可执行文件而非文档示例」判读纪律。
+
+**成色**：机制落地（三条命令可机械执行）；效力待下次交付复验。
+
+**状态**：ADOPTED。

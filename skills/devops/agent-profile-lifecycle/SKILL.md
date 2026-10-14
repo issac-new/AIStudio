@@ -5,7 +5,7 @@ description: >-
   workflow from `hermes profile create` through SOUL/rules authoring,
   skills_enabled optimization, Hindsight bank setup, and config regeneration.
   Complements hermes-profile-config (which covers config editing patterns).
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -293,6 +293,23 @@ ALL_CATEGORIES = [
   `cfg = { ... }` literal and subsequent `cfg["platforms"] = ...` assignments,
   all keys after the insertion point must be converted from inline dict entries
   to separate assignments. Lint after every step.
+- **`mcp_servers` and `clearances` are local-append config sections the
+  generator does not carry** — they are not in PRESERVE_KEYS, so after
+  `generate-configs.py` runs, inject them manually with PyYAML and restart the
+  gateway. `config doctor` reports hand-injected sections as `stale`; that is
+  expected for locally-appended sections and non-blocking. Do NOT re-run the
+  generator to "clear" the warning — regeneration washes the injected sections
+  away.
+- **After merging a cloned profile's entry into `profiles.yaml`, verify its
+  ownership fields point at the new name** — `kanban.default_assignee` and
+  `environment_hint` can silently keep the clone source's values through the
+  merge step. Check and fix before regenerating:
+
+```bash
+awk '/^  <new-name>:/{f=1;next} /^  [a-z0-9-]+:/{f=0} f' \
+      ~/.hermes/shared/profiles.yaml | grep -E 'default_assignee|environment_hint'
+# both lines must name <new-name>, not the clone source
+```
 
 ## Related Skills
 

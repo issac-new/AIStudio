@@ -1,2 +1,0 @@
-description: "代码安全审计(借鉴Strix inline fix生成+Shannon source-aware whitebox+CyberStrikeAI vuln-triage)：SAST/SCA、架构评估、验证路径设计、fix_before/after代码补丁"
-description_auto: false
