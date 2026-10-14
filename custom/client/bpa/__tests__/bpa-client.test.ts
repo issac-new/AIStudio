@@ -45,6 +45,17 @@ describe('bpa 客户端', () => {
     expect(zh.registry).toHaveProperty('pcfRef')
   })
 
+  it('第三轮结构：体检留痕/评审周期/雷达趋势/导出键齐备', () => {
+    const zh = bpaMessages.zh.bpa
+    expect(zh.governance).toHaveProperty('auditTitle')
+    expect(zh.governance).toHaveProperty('reviewOverdue')
+    expect(zh.governance).toHaveProperty('exportBtn')
+    expect(Object.keys(zh.governance.sourceNames).sort()).toEqual(['validate', 'write'])
+    expect(Object.keys(zh.governance.auditCol).sort()).toEqual(['at', 'high', 'kpi', 'medium', 'owner', 'source'])
+    expect(zh.maturity).toHaveProperty('radarTitle')
+    expect(zh.maturity).toHaveProperty('trendTitle')
+  })
+
   it('PEMM：5 能动因素 + 4 企业能力 + P0-P4 五级', () => {
     expect(PEMM_FACTORS.filter((f) => f.board === 'enabler')).toHaveLength(5)
     expect(PEMM_FACTORS.filter((f) => f.board === 'capability')).toHaveLength(4)

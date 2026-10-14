@@ -89,7 +89,7 @@ onMounted(() => void load())
       <BpaMapPanel v-show="tab === 'map'" :L="L" :dto="dto" @updated="onUpdated" />
       <BpaLinkPanel v-show="tab === 'link'" :L="L" :dto="dto" />
       <BpaPcfPanel v-show="tab === 'pcf'" :L="L" :dto="dto" @goto="t => tab = t" />
-      <BpaGovernancePanel v-show="tab === 'governance'" :L="L" :dto="dto" @updated="onUpdated" />
+      <BpaGovernancePanel v-show="tab === 'governance'" :L="L" :dto="dto" :active="tab === 'governance'" @updated="onUpdated" />
       <BpaMaturityPanel v-show="tab === 'maturity'" :L="L" />
     </template>
     <p v-else-if="!error" class="muted">…</p>

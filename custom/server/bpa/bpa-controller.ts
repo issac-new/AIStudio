@@ -20,6 +20,8 @@ import { validateArchitecture } from './bpa-validate'
 import { seedArchitecture } from './bpa-seed'
 import { enumerateE2E } from './bpa-e2e'
 import { PCF_CATEGORIES, pcfGapReport } from './bpa-pcf'
+import { readAudit, recordAudit, reviewDue } from './bpa-audit'
+import { exportArchitectureMarkdown } from './bpa-export'
 
 const router = new Router({ prefix: '/api/bpa' })
 
@@ -49,6 +51,7 @@ router.put('/node', async (ctx: Context) => {
     return
   }
   writeArchitecture(arch.nodes, arch.config)
+  recordAudit(validateArchitecture(arch), 'write') // 写操作附带体检快照（留痕面）
   ctx.body = { ok: true, ...snapshot() }
 })
 
@@ -62,6 +65,7 @@ router.delete('/node/:id', async (ctx: Context) => {
     return
   }
   writeArchitecture(arch.nodes, arch.config)
+  recordAudit(validateArchitecture(arch), 'write')
   ctx.body = { ok: true, removed, ...snapshot() }
 })
 
@@ -80,12 +84,31 @@ router.put('/config', async (ctx: Context) => {
   next.maxDepth = Math.min(6, Math.max(1, Number(next.maxDepth) || 6))
   next.reviewCycleDays = Math.min(3650, Math.max(7, Number(next.reviewCycleDays) || 180))
   writeArchitecture(arch.nodes, next)
+  recordAudit(validateArchitecture({ ...arch, config: next }), 'write')
   ctx.body = { ok: true, ...snapshot() }
 })
 
 router.post('/validate', async (ctx: Context) => {
   const arch = readArchitecture()
-  ctx.body = { ok: true, report: validateArchitecture(arch) }
+  const report = validateArchitecture(arch)
+  recordAudit(report, 'validate') // 手动体检落账（评估—改进—再评估闭环的体检侧）
+  ctx.body = { ok: true, report, reviewDue: reviewDue(arch.config.reviewCycleDays) }
+})
+
+// 体检留痕 + 评审周期（reviewCycleDays 活约束）
+router.get('/audit', async (ctx: Context) => {
+  const arch = readArchitecture()
+  ctx.body = { ok: true, history: readAudit(), reviewDue: reviewDue(arch.config.reviewCycleDays) }
+})
+
+// 架构报告导出（自包含 Markdown：清单/地图/体检/链路/对标/PEMM 六账）
+router.get('/export', async (ctx: Context) => {
+  const arch = readArchitecture()
+  const maturityHistory = readMaturityHistory()
+  const md = exportArchitectureMarkdown(arch, validateArchitecture(arch), maturityHistory.length > 0 ? maturityHistory[maturityHistory.length - 1] : null)
+  ctx.set('Content-Disposition', 'attachment; filename="bpa-architecture-report.md"')
+  ctx.type = 'text/markdown; charset=utf-8'
+  ctx.body = md
 })
 
 // 三要素之末：流程间关系——端到端链路枚举 + 孤岛/环路检测
@@ -114,6 +137,7 @@ router.post('/seed', async (ctx: Context) => {
   }
   const seeded = seedArchitecture()
   writeArchitecture(seeded.nodes, seeded.config)
+  recordAudit(validateArchitecture(seeded), 'write')
   ctx.body = { ok: true, seeded: seeded.nodes.length, ...snapshot() }
 })
 

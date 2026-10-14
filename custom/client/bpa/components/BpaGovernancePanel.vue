@@ -2,11 +2,11 @@
 <!-- 治理体检：八规则违规呈现（高危/注意）+ 覆盖率量化 + 治理参数配置。
      「流程架构不是靠自觉维护的，是靠机制约束的」（方法论第八节产品化）。 -->
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { bpaApi, type BpaArchitectureDto, type BpaFramework } from '@/custom/bpa/api'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { bpaApi, type BpaArchitectureDto, type BpaAuditEntry, type BpaFramework, type ReviewDue } from '@/custom/bpa/api'
 import type { BpaMessages } from '@/custom/bpa/i18n'
 
-const props = defineProps<{ L: BpaMessages; dto: BpaArchitectureDto }>()
+const props = defineProps<{ L: BpaMessages; dto: BpaArchitectureDto; active?: boolean }>()
 const emit = defineEmits<{ (e: 'updated', dto: BpaArchitectureDto): void }>()
 
 const busy = ref(false)
@@ -14,6 +14,54 @@ const error = ref('')
 const saved = ref(false)
 const report = ref(props.dto.report)
 watch(() => props.dto.report, (r) => { report.value = r })
+watch(() => props.dto, () => { void loadAudit() }, { deep: true })
+watch(() => props.active, (a) => { if (a) void loadAudit() }) // v-show 不重挂载：进入页签时刷新留痕与到期态
+
+const auditHistory = ref<BpaAuditEntry[]>([])
+const due = ref<ReviewDue | null>(null)
+const exported = ref(false)
+
+async function loadAudit(): Promise<void> {
+  try {
+    const r = await bpaApi.audit()
+    auditHistory.value = r.history
+    due.value = r.reviewDue
+  } catch { /* fail-soft */ }
+}
+onMounted(() => void loadAudit())
+
+async function rerun(): Promise<void> {
+  busy.value = true; error.value = ''
+  try {
+    const r = await bpaApi.validate()
+    report.value = r.report
+    await loadAudit()
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    busy.value = false
+  }
+}
+
+async function exportReport(): Promise<void> {
+  busy.value = true; error.value = ''
+  try {
+    const md = await bpaApi.exportMd()
+    const blob = new Blob([typeof md === 'string' ? md : JSON.stringify(md)], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bpa-architecture-report-${new Date().toISOString().slice(0, 10)}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+    exported.value = true
+    setTimeout(() => { exported.value = false }, 2000)
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    busy.value = false
+  }
+}
 
 const cfgForm = reactive({
   framework: props.dto.config.framework as BpaFramework,
@@ -25,18 +73,6 @@ const cfgForm = reactive({
   reviewCycleDays: props.dto.config.reviewCycleDays,
 })
 watch(() => props.dto.config, (c) => { Object.assign(cfgForm, c) })
-
-async function rerun(): Promise<void> {
-  busy.value = true; error.value = ''
-  try {
-    const r = await bpaApi.validate()
-    report.value = r.report
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    busy.value = false
-  }
-}
 
 async function saveConfig(): Promise<void> {
   busy.value = true; error.value = ''; saved.value = false
@@ -60,7 +96,21 @@ const frameworkOptions: BpaFramework[] = ['OES+PCF6', 'POS+PCF5', 'MOS+PCF5', 'O
   <div class="bpa-gov" data-testid="bpa-governance-panel">
     <div class="bpa-gov__bar">
       <p class="muted hint">{{ L.governance.hint }}</p>
-      <button type="button" class="primary" :disabled="busy" data-testid="bpa-rerun" @click="rerun">{{ L.governance.rerun }}</button>
+      <div class="bar-actions">
+        <button type="button" class="primary" :disabled="busy" data-testid="bpa-rerun" @click="rerun">{{ L.governance.rerun }}</button>
+        <button type="button" class="ghost" :disabled="busy" data-testid="bpa-export" @click="exportReport">{{ exported ? '✓ ' + L.governance.exported : L.governance.exportBtn }}</button>
+      </div>
+    </div>
+
+    <!-- 评审周期（reviewCycleDays 活约束） -->
+    <div v-if="due" class="due" :class="{ overdue: due.daysUntilDue !== null && due.daysUntilDue < 0 }" data-testid="bpa-review-due">
+      <strong>{{ L.governance.reviewDue }}：{{ due.reviewCycleDays }} {{ L.governance.reviewDaysUnit === 'd' ? 'd' : '天' }}</strong>
+      <span v-if="due.daysSince === null" class="muted">{{ L.governance.reviewNoBaseline }}</span>
+      <span v-else>
+        {{ L.governance.reviewDaysSince }} {{ due.daysSince }} {{ L.governance.reviewDaysUnit }} ·
+        <template v-if="due.daysUntilDue !== null && due.daysUntilDue < 0">{{ L.governance.reviewOverdue }} {{ -due.daysUntilDue }} {{ L.governance.reviewDaysUnit }}</template>
+        <template v-else>{{ L.governance.reviewLeft }} {{ due.daysUntilDue }} {{ L.governance.reviewDaysUnit }}</template>
+      </span>
     </div>
 
     <div class="cards">
@@ -90,6 +140,34 @@ const frameworkOptions: BpaFramework[] = ['OES+PCF6', 'POS+PCF5', 'MOS+PCF5', 'O
         </tr>
       </tbody>
     </table>
+
+    <!-- 体检留痕 -->
+    <section v-if="auditHistory.length" class="audit">
+      <h3>{{ L.governance.auditTitle }}（{{ auditHistory.length }}）</h3>
+      <p class="muted small">{{ L.governance.auditHint }}</p>
+      <table class="audit-table" data-testid="bpa-audit-table">
+        <thead>
+          <tr>
+            <th>{{ L.governance.auditCol.at }}</th>
+            <th>{{ L.governance.auditCol.high }}</th>
+            <th>{{ L.governance.auditCol.medium }}</th>
+            <th>{{ L.governance.auditCol.owner }}</th>
+            <th>{{ L.governance.auditCol.kpi }}</th>
+            <th>{{ L.governance.auditCol.source }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(a, i) in auditHistory.slice(-8).reverse()" :key="a.at + '-' + i">
+            <td class="mono">{{ new Date(a.at).toLocaleString() }}</td>
+            <td :class="{ hi: a.high > 0 }">{{ a.high }}</td>
+            <td>{{ a.medium }}</td>
+            <td>{{ a.ownerCoverage }}%</td>
+            <td>{{ a.kpiCoverage }}%</td>
+            <td class="muted">{{ L.governance.sourceNames[a.source] }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
     <fieldset class="gov-config">
       <legend>{{ L.governance.configTitle }}</legend>
@@ -123,7 +201,35 @@ const frameworkOptions: BpaFramework[] = ['OES+PCF6', 'POS+PCF5', 'MOS+PCF5', 'O
 <style scoped lang="scss">
 .bpa-gov { display: flex; flex-direction: column; gap: 12px; }
 .bpa-gov__bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
-  .hint { margin: 0; flex: 1; min-width: 260px; } }
+  .hint { margin: 0; flex: 1; min-width: 260px; }
+  .bar-actions { display: flex; gap: 8px; } }
+.due {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  &.overdue { border-color: var(--danger, #dc2626);
+    strong { color: var(--danger, #dc2626); } }
+}
+.audit {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 10px 12px;
+  h3 { margin: 0 0 4px; font-size: 13px; }
+}
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+  th { font-weight: 600; opacity: 0.7; }
+  td.hi { color: var(--danger, #dc2626); font-weight: 600; }
+}
+button.ghost { background: transparent; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: inherit; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .card-num { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
   .num { font-size: 20px; font-weight: 600; }

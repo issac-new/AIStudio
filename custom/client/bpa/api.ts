@@ -114,6 +114,25 @@ export interface PcfGapReportDto {
   unmappedMine: Array<{ id: string; name: string }>
 }
 
+// ---------- 体检留痕与评审周期 ----------
+
+export interface BpaAuditEntry {
+  at: number
+  nodes: number
+  l3Count: number
+  high: number
+  medium: number
+  ownerCoverage: number
+  kpiCoverage: number
+  source: 'validate' | 'write'
+}
+
+export interface ReviewDue {
+  daysSince: number | null
+  daysUntilDue: number | null
+  reviewCycleDays: number
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await request<{ ok?: boolean; problems?: string[] } & T>(path, { credentials: 'same-origin', ...init })
   if ((body as { ok?: boolean }).ok === false && Array.isArray(body.problems)) {
@@ -149,4 +168,7 @@ export const bpaApi = {
     }),
   e2e: () => req<{ ok: boolean; e2e: E2eReport }>('/api/bpa/e2e'),
   pcf: () => req<{ ok: boolean; reference: PcfCategoryDto[]; gap: PcfGapReportDto }>('/api/bpa/pcf'),
+  audit: () => req<{ ok: boolean; history: BpaAuditEntry[]; reviewDue: ReviewDue }>('/api/bpa/audit'),
+  /** 导出报告：返回 markdown 文本（需带 Authorization 的 request 通道拿 blob 文本） */
+  exportMd: () => req<string>('/api/bpa/export'),
 }
