@@ -24,6 +24,9 @@ export interface DetectOptions {
   /** 阻塞卡停滞阈值 ms（默认 300000=5min——用户 2026-10-14 裁定：任何异常 300s 内识别；
    *  run19 G5 熔断死等 14400s+ 实锤的产品化常量） */
   blockedStaleMs?: number
+  /** 复审环老化阈值 ms（默认 7200000=120min；≥2× 升 high。run20 22:34 复审链断棒
+   *  实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化） */
+  reviewFailStallMs?: number
   /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
   dispatcherStuckMs?: number
   /** 负载不均衡判阈：单档案在办卡数 ≥ 此值且存在零卡档案（默认 3） */
@@ -309,6 +312,40 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
         detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, staleMs },
       })
     }
+  }
+  return out
+}
+
+/** review.fail-stall：复审环老化检测（run20 22:34 复审链断棒实录产品化）。
+ *  闸类评审卡判 FAIL 后，「修订→复审」闭环可能断在散文交接——派单正文里的
+ *  「push 后 @复审」无机器保障（实录：修订入仓 75 分钟复审派单悬空，巡检官/
+ *  驱动超时分支/人工监督清单三方同盲，全集群绿灯而死锁）。
+ *  本检测器以 FAIL 判卡自身的最后推进时刻为复审环球钟：卡面长期无任何推进
+ *  （复审改判/重审会更新卡面 result → 球钟自动重置）即报——无论球此刻在
+ *  上游修订侧还是评审侧，闸的老化本身就该被看见。
+ *  未接线（failedVerdictCards 缺席）=合法空态静默跳过。
+ *  时间容错：卡表时间戳为 epoch 秒（10 位）——<1e12 视作秒 ×1000 归一（防
+ *  blocked-stale 同型的秒/毫秒错位恒报）。 */
+export function detectReviewFailStall(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const stallMs = opts.reviewFailStallMs ?? 7_200_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.failedVerdictCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
+    const updRaw = typeof rawTs === 'number' ? rawTs
+      : typeof rawTs === 'string' ? Number(rawTs) : NaN
+    if (!Number.isFinite(updRaw) || updRaw <= 0) continue
+    const upd = updRaw < 1e12 ? updRaw * 1000 : updRaw
+    const quietMs = now - upd
+    if (quietMs < stallMs) continue
+    out.push({
+      detector: 'review.fail-stall', subject: `card:${c.id}`,
+      severity: quietMs >= stallMs * 2 ? 'high' : 'warn',
+      summary: `复审环老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id} 已判 FAIL 后卡面零推进——「修订→复审」闭环疑似断棒（run20 实录形态：散文交接悬空 75 分钟全集群绿灯）。若修订已入仓请立即派复审；若修订仍在途请核对修订侧进度`,
+      detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, stallMs, result: (c.result ?? '').slice(0, 160) },
+    })
   }
   return out
 }

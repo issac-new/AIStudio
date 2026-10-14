@@ -63,6 +63,8 @@ export interface RunningCard {
   status?: string
   /** 最后更新 epoch 秒（blocked 卡停滞检测面，run19 熔断死等产品化） */
   updated_at?: number | string
+  /** 结论正文（复审环老化检测面：done 卡 result 判词——run20 22:34 复审链断棒实录） */
+  result?: string
 }
 
 export interface RunningCardsFace {
@@ -133,6 +135,12 @@ export interface ClusterSnapshot {
    *  未接线=合法空态（检测器静默跳过，同 sessionTelemetry 语义）。
    *  用途：card.blocked-stale 检测（run19 G5 熔断死等产品化——blocked 卡 300s 无推进即报） */
   blockedCards?: RunningCardsFace
+  /** FAIL 判卡（status=done 且 result 含 FAIL 的评审类卡）——控制器注入
+   *  （kanban list --status done --json 过滤），未接线=合法空态。
+   *  用途：review.fail-stall 复审环老化检测（run20 22:34 复审链断棒实录：
+   *  「修订→复审」闭环断在散文交接 75 分钟，三方同盲——闸类 FAIL 卡的
+   *  最后推进时刻即复审环球钟） */
+  failedVerdictCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
   /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；
