@@ -46,30 +46,21 @@ export function topSessions(rows: SessionUsageRow[], limit = 5): SessionUsageRow
   return [...rows].sort((a, b) => b.totalTokens - a.totalTokens || a.id.localeCompare(b.id)).slice(0, limit)
 }
 
-/** gate_blocked/gate_warning 事件 → 失败闸结果行（payload.results !ok 项展开）。 */
+/** 已归一事件行（normalizeEvents 产出）的失败项 → 拦截行展开。 */
 export function gateErrorRowsFromEvents(
-  events: Array<{ taskId: string; kind: string; payload: unknown; at: number }>,
+  events: Array<{ taskId: string; kind: string; failures?: Array<{ gate: string; reason: string; detail?: string }>; at: number }>,
 ): GateErrorRow[] {
   const rows: GateErrorRow[] = []
   for (const ev of events) {
-    if (ev.kind !== 'gate_blocked' && ev.kind !== 'gate_warning') continue
-    let payload: { results?: Array<{ gate?: string; ok?: boolean; reason?: string; detail?: string }> } = {}
-    try {
-      payload = typeof ev.payload === 'string' ? JSON.parse(ev.payload) : (ev.payload as never) ?? {}
-    } catch {
-      continue
-    }
-    for (const r of payload.results ?? []) {
-      if (r && r.ok === false) {
-        rows.push({
-          taskId: ev.taskId,
-          kind: ev.kind,
-          gate: String(r.gate ?? 'unknown'),
-          reason: String(r.reason ?? 'unknown'),
-          detail: String(r.detail ?? '').slice(0, 200),
-          at: ev.at,
-        })
-      }
+    for (const r of ev.failures ?? []) {
+      rows.push({
+        taskId: ev.taskId,
+        kind: ev.kind,
+        gate: r.gate,
+        reason: r.reason,
+        detail: String(r.detail ?? '').slice(0, 200),
+        at: ev.at,
+      })
     }
   }
   return rows
