@@ -1499,7 +1499,7 @@ STEPS_META_RUN15 = {
 
 STEPS_META_20261013_V8_RUN19 = {
     1: dict(keys=['smoke_done'], narrative='开跑 2026-10-13 16:07:58（零环境：mx-clean 三旗标全清重建）。30 账号 token 有效、单网关+单 studio 就绪、驾驶舱回归 headless 三数在线；采集链预检实拍 dark 中文驾驶舱（用户裁定形态首帧）。', imgs=[('smoke_done-op1-after','冒烟·采集预检·后','ui'), ('smoke_done-op1-before','冒烟·采集预检·前','ui')]),
-    2: dict(keys=['smoke_done'], narrative='双账号登录链路端点按契约应答；delivery 案例房已开+小冒烟事件落房可读回（R29 全程开启）。', imgs=[('smoke_done-op1-after','冒烟·登录·后','ui'), ('smoke_done-op1-before','冒烟·登录·前','ui')]),
+    2: dict(keys=['smoke_done'], narrative='双账号登录链路端点按契约应答；delivery 案例房已开+小冒烟事件落房可读回（交付门禁灯帧全程采集）。', imgs=[('smoke_done-op1-after','冒烟·登录·后','ui'), ('smoke_done-op1-before','冒烟·登录·前','ui')]),
     3: dict(keys=['smoke_done'], narrative='15 平台通道在线（机器+智能体）；LC_ALL=C 全量 26 步起跑。', imgs=[('smoke_done-op1-after','冒烟·平台在线·后','ui'), ('smoke_done-op1-before','冒烟·平台在线·前','ui')]),
     4: dict(keys=['smoke_done'], narrative='步骤 1-4 全部完成 ✓（16:0x-16:1x）；G1 前置就绪。', imgs=[('smoke_done-op1-after','冒烟·功能就绪·后','ui'), ('smoke_done-op1-before','冒烟·功能就绪·前','ui')]),
     5: dict(keys=['appinit_done'], narrative='编制三方对账一致：roster=15 × org=15 × matrix=15 ✓；org 经产品通道落档（PUT /api/governance/registry/org 保存即 git 提交）。', imgs=[('appinit_done-op1-after','应用初始化·后','ui'), ('appinit_done-op1-before','应用初始化·前','ui')]),
