@@ -1,0 +1,21 @@
+/* mux/theme-unified-dark.css —— 二合一报告（统一报告层）的暗色修正层（2026-10-14）
+ *
+ * 这一页是「审阅层外壳 + 内嵌 final-report 片段」两层叠在一起。外壳用 #5a6a7d 一类
+ * 中灰，在深底上只有 3.1:1；内嵌片段的主题层已随 final-report 一起注入，这里只补外壳。
+ */
+
+html[data-theme="dark"] .wrap { color:var(--ink) !important; }
+html[data-theme="dark"] .wrap p,
+html[data-theme="dark"] .wrap .card p,
+html[data-theme="dark"] .wrap .lead,
+html[data-theme="dark"] .wrap .meta,
+html[data-theme="dark"] .wrap .anchor { color:#a8b8cc !important; }
+html[data-theme="dark"] .wrap h1,
+html[data-theme="dark"] .wrap h2,
+html[data-theme="dark"] .wrap h3,
+html[data-theme="dark"] .wrap h4 { color:var(--ink-strong) !important; }
+html[data-theme="dark"] .wrap .card { background:var(--surface) !important; border-color:var(--line) !important; }
+html[data-theme="dark"] .wrap table { background:var(--surface); }
+html[data-theme="dark"] .wrap td,
+html[data-theme="dark"] .wrap th { border-color:var(--line) !important; color:var(--ink) !important; }
+html[data-theme="dark"] .review-embed { background:var(--bg) !important; }
