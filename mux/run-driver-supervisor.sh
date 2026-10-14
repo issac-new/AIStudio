@@ -70,6 +70,21 @@ _g5_evidence_fp() {
   printf '%s' "$fp"
 }
 
+_br_nudge_g5() { # <waited-sec>——熔断死等催办：以导演账号（fanfan 人类号）在分析群点名
+  # 评审卡 owner-agent 补齐缺项（证据变化即自动复位；run19 实锤死等 14400s+ 的根治件）。
+  local waited="${1:-?}" tok room hs rgid body eid
+  tok=$(head -1 "$SIM_ROOT/creds/${MX_ANCHOR_USER:-fanfan}.token" 2>/dev/null) || return 0
+  [ -n "$tok" ] || return 0
+  room=$(sed -n 's/^room_analysis=//p' "$STATE" 2>/dev/null | head -1)
+  rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
+  [ -n "$room" ] || return 0
+  hs="${MX_HOMESERVER:-http://127.0.0.1:8008}"
+  body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G5 熔断等待催办（自动，已等 ${waited}s）】评审卡${rgid:+ ${rgid}}缺项仍未补（指纹不变）。请按 templates/release-plan.md 把缺项（回滚阈值/灰度计划/发布说明等以卡面 GAP/缺项清单为准）补进评审卡 body 并重报结论行 READY-GATE-PASS——卡面更新即证据变化自动复位熔断，无需人工。不许谎报。"
+  eid=$(curl -s -m 10 -X PUT "$hs/_matrix/client/v3/rooms/$room/send/m.room.message/g5nudge-$(date +%s%3N)" \
+    -H "Authorization: Bearer $tok" -d "$(python3 -c 'import json,sys; print(json.dumps({"msgtype":"m.text","body":sys.argv[1]}))' "$body")" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
+  [ -n "$eid" ] && note "催办令已发（${eid}）" || note "催办令发送失败（matrix 通道，下轮重试）"
+}
+
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
 # ── 双操作者协同（run15 复盘：三轮神秘杀组+一轮锁竞争互退实锤=两个会话各自起监督器
 # 对同一 RUN 拉锯）。协议=注册表先到先得：启动时原子写 $SIM_ROOT/var/<RUN>-supervisor.owner；
@@ -160,6 +175,10 @@ while true; do
   if tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -q "打回熔断"; then
     note "驱动 rc=$RC 因熔断退出——证据等待模式（复位=integration tip/评审卡面变化；stop 文件/report_done 仍即退）"
     _fp0=$(_g5_evidence_fp); _wd=0
+    # run19 根治（熔断死等）：证据等待不再无限静默——超时即向评审卡 owner 周期催办
+    # （run19 实锤：agent 补齐链夜间停摆，死等 14400s+ 指纹不变零动作）。不弃守熔断
+    # 语义：催办推动证据变化来复位；人工通道（stop/GATE_BREAKER_OVERRIDE）不变。
+    local _WM="${MX_BREAKER_WAIT_MAX:-7200}" _NG="${MX_BREAKER_NUDGE_EVERY:-3600}"
     while true; do
       [[ -f "$STOPFLAG" ]] && { note "stop 文件在位（证据等待中），监督器退出"; rm -f "$STOPFLAG"; exit 0; }
       grep -q '^report_done=' "$STATE" 2>/dev/null && { note "report_done 已落键，监督器功成身退"; exit 0; }
@@ -170,6 +189,14 @@ while true; do
         break
       fi
       if [ $((_wd % 600)) -eq 0 ]; then note "证据等待 ${_wd}s（指纹不变：${_fp1}）"; fi
+      # 超时催办：每 _NG 一次幂等催办令（群内点名 owner 补评审卡）+记单留痕
+      if (( _wd >= _WM && (_wd - _WM) % _NG == 0 )); then
+        _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+        _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner（run19 根治：禁无限死等）"
+        grep -qF "breaker-wait-nudge" "$_iss_path" 2>/dev/null || echo "$_nud" >> "$_iss_path"
+        _br_nudge_g5 "${_wd}"
+        note "熔断等待 ${_wd}s 无证据变化——已催办评审卡 owner（每 ${_NG}s 一次直到证据变化/人工介入）"
+      fi
     done
     continue
   fi
