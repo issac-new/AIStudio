@@ -786,7 +786,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
         dispatch_in_room secops "@secops-agent:matrix.test 安全评审请求：${RFD_ID} 涉敏（${_sens:-涉敏段未标注}）。请在卡 ${SGID} 完成四项安全检查（密钥管理/验签链路/数据落库字段/回调来源校验），结论行 SECURITY-GATE-PASS 或 SECURITY-GATE-FAIL(附缺项清单，行首)。
 评审口径（V8.17 裁决 A，run15 复盘 F3——正本 V8.17 纪律 38 落条款）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
       fi
-      if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
+      if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_G2_WAIT:-600} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
         # V8.28 用户 21:02 裁定后的正确语义：卡面 result=FAIL 即把缺项清单派上游修订，
         # 但闸不放行——等修订入 origin/main、安全工程师AI 复审 PASS 才放行。
         # （原「立即派修+授控放行」的拆闸写法已废止。）
@@ -811,7 +811,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
             sset security_fail_logged 1
           fi
           note "[安全] 涉敏评审 FAIL 已在案——进入复审改判等待（等末判词翻 PASS）"
-          if wait_truth "涉敏安全复审改判 PASS（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
+          if wait_truth "涉敏安全复审改判 PASS（SECURITY-GATE）" ${MX_G2_WAIT:-600} mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
             kanban_walk_done secops "$SGID"; sset security_review_done 1
             note "[安全] 涉敏安全复审改判 PASS——G2 放行前置满足（fail→pass 全程留痕）"
           else
@@ -884,7 +884,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
           fi
         fi
       else
-        echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_GATE_WAIT:-2400}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
+        echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_G2_WAIT:-600}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
         # V8.28 修根因（用户 21:02 裁定改向）：原 fail exit 让 supervisor 30s 续跑回到 archgate
         # 重发 G2——死循环引擎。但闸不得拆：超时只记单+派修提醒，闸键不放行，
         # 修订入 origin/main、secops 复审 PASS 才放行（复审环由 wait_truth 下一轮续等）。
@@ -901,7 +901,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
   # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
   # verdict_combined（FAIL 优先，不放宽）。
-  if wait_truth "G2 结论（房间行或评审卡 body，双源）" ${MX_GATE_WAIT:-3600} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
+  if wait_truth "G2 结论（房间行或评审卡 body，双源）" ${MX_G2_WAIT:-600} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
     # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
       kanban_walk_done arch "$AGID"
