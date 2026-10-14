@@ -3851,6 +3851,12 @@ art_tbl, art_stat, art_note_g5 = artifact_panorama()
 #    token 值（手抄即第二事实源，必漂移）。──
 _REPORT_TOKENS = (Path(__file__).resolve().parent / 'report-tokens.css').read_text(encoding='utf-8', errors='replace')
 
+# ── 暗色可读性末位覆盖层（与 final-report-merge.py 共用，单一事实源）──
+# DARK_OVERRIDE 只能改 token，改不动后面那些亮色硬编码（color:var(--surface) 在暗色 token
+# 下就是深色字），所以真正的兜底层必须在文档最末注入——见 report-dark-override.css 头注。
+_DARK_OVERRIDE_CSS = '<style>\n' + (Path(__file__).resolve().parent / 'report-dark-override.css').read_text(
+    encoding='utf-8', errors='replace') + '</style>'
+
 # ── 报告暗色主题层（用户 2026-10-13 裁定：推演报告 dark 模式）──
 # 设计：token 单源保持亮色（方案页共用不动）；报告页在 token 之后注入 DARK_OVERRIDE，
 # 重定义全套 token 为暗色板并修补样式别名层中的亮色硬编码。hero 渐变在暗色下用深蓝提亮，
@@ -4297,6 +4303,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   }}
 }})();
 </script>
+{_DARK_OVERRIDE_CSS}
 </body></html>'''
 
 
