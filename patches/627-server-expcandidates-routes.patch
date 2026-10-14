@@ -1,0 +1,20 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -179,6 +179,9 @@
+ // overlay[faileroute]: 失败路由显式表（2026-10-14 阿里调研轮 E）——失败类型→回退点→
+ // 携带物三档显式化（原地修/带证据回上游/人闸），出路由决定+卡标注不改派。/api/faileroute
+ import { failerouteRoutes } from '../custom/faileroute/faileroute-controller'
++// overlay[expcandidates]: 经验候选提取（2026-10-14 阿里调研轮 B1）——自动挡第一半环：
++// 看板轨迹提取反模式/较优路径/流程签名三类候选，只出候选不改行为，审核后入 B2。
++import { expCandidatesRoutes } from '../custom/expcandidates/exp-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -475,6 +478,7 @@
+   app.use(constraintsRoutes.routes())             // 约束卡注册表：CRUD+预演（阿里调研轮 D）
+   app.use(optAdviceRoutes.routes())                 // 优化建议报告：半自动挡清单+周期瀑布（阿里调研轮 A+F）
+   app.use(failerouteRoutes.routes())               // 失败路由显式表：table/resolve（阿里调研轮 E）
++  app.use(expCandidatesRoutes.routes())            // 经验候选：extract/list/curate（阿里调研轮 B1）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
