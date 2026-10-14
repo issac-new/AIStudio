@@ -1,8 +1,7 @@
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
-index be56fca4b3..789a45abaa 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -126,6 +126,11 @@ class DispatchResult:
+@@ -126,6 +126,11 @@
      on multi-lane setups, NOT operator-actionable; tracked apart so health
      telemetry can tell "stuck" from "correctly idle"."""
      skipped_per_profile_capped: list[tuple[str, str, int]] = field(default_factory=list)
@@ -14,7 +13,7 @@ index be56fca4b3..789a45abaa 100644
      """``(task_id, assignee, current_running_count)`` deferred because the
      assignee is at ``kanban.max_in_progress_per_profile``. Picked up on a later
      tick; separate bucket so dashboards show "profile busy" vs "stuck"."""
-@@ -2101,6 +2106,8 @@ def _dispatch_lane_task(
+@@ -2116,6 +2121,8 @@
      spawn_fn,
      per_profile_cap: Optional[int],
      per_profile_running: dict[str, int],
@@ -23,21 +22,21 @@ index be56fca4b3..789a45abaa 100644
  ) -> bool:
      """Guard, claim, resolve the workspace and spawn one ready/review row.
      Returns True when a spawn slot was consumed (real or ``dry_run``); every
-@@ -2135,6 +2142,13 @@ def _dispatch_lane_task(
+@@ -2149,6 +2156,13 @@
+         current = per_profile_running.get(assignee, 0)
          if current >= per_profile_cap:
              result.skipped_per_profile_capped.append((task_id, assignee, current))
-             return False
++            return False
 +    # Board-level cap (routa KanbanSessionQueue 语义，默认 1）：每 board 会话
 +    # 并发闸——同板 fan-out 不吞满全部 worker 槽，超限排队下轮 tick drain。
 +    if board_cap is not None and board_running is not None:
 +        bcurrent = board_running.get(board, 0)  # board=None=默认板，同样有闸（routa 每 board 语义）
 +        if bcurrent >= board_cap:
 +            result.skipped_board_capped.append((task_id, bcurrent, board_cap))
-+            return False
+             return False
      guard_reason = check_respawn_guard(conn, task_id, lane=lane)
      if guard_reason is not None:
-         result.respawn_guarded.append((task_id, guard_reason))
-@@ -2155,6 +2169,8 @@ def _dispatch_lane_task(
+@@ -2193,6 +2207,8 @@
          # ticks re-query from the DB.
          if per_profile_cap is not None and name:
              per_profile_running[name] = per_profile_running.get(name, 0) + 1
@@ -46,10 +45,12 @@ index be56fca4b3..789a45abaa 100644
  
      if dry_run:
          result.spawned.append((task_id, assignee, ""))
-@@ -2373,6 +2389,24 @@ def _any_spawnable_review(
+@@ -2409,6 +2425,24 @@
+         if check_respawn_guard(conn, row["id"], lane="review") is None:
+             return True
      return False
- 
- 
++
++
 +def _resolve_board_concurrency(board: Optional[str]) -> Optional[int]:
 +    """``kanban.board_concurrency``（routa KanbanSessionQueue 默认 1）；未配=默认 1；
 +    显式 0/负数=不设闸（None）。整数解析失败回默认 1（fail-safe 排队语义）。"""
@@ -66,12 +67,10 @@ index be56fca4b3..789a45abaa 100644
 +    except (TypeError, ValueError):
 +        return 1
 +    return None if n <= 0 else n
-+
-+
- def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
-     """``kanban.default_assignee`` when it names a real profile this home may
-     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
-@@ -2457,10 +2491,20 @@ def _dispatch_once_locked(
+ 
+ 
+ def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
+@@ -2502,10 +2536,20 @@
          board=board,
      ):
          ready_budget = max(spawn_budget - 1, 0)
@@ -90,11 +89,10 @@ index be56fca4b3..789a45abaa 100644
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
 +        board_cap=board_cap, board_running=board_running,
      )
-     default_assignee = _resolve_default_assignee(default_assignee)
+     default_assignee = _resolve_default_assignee(default_assignee, board)
      spawned = 0
 diff --git a/tests/hermes_cli/test_kanban_board_concurrency.py b/tests/hermes_cli/test_kanban_board_concurrency.py
 new file mode 100644
-index 0000000000..f1863fb54d
 --- /dev/null
 +++ b/tests/hermes_cli/test_kanban_board_concurrency.py
 @@ -0,0 +1,101 @@
