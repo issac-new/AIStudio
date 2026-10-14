@@ -9,6 +9,8 @@ import { bpaApi, type BpaArchitectureDto } from '@/custom/bpa/api'
 import { bpaMessages } from '@/custom/bpa/i18n'
 import BpaTreePanel from '../components/BpaTreePanel.vue'
 import BpaMapPanel from '../components/BpaMapPanel.vue'
+import BpaLinkPanel from '../components/BpaLinkPanel.vue'
+import BpaPcfPanel from '../components/BpaPcfPanel.vue'
 import BpaGovernancePanel from '../components/BpaGovernancePanel.vue'
 import BpaMaturityPanel from '../components/BpaMaturityPanel.vue'
 
@@ -18,7 +20,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? bpaMessages.zh.bpa : bpaMessages.en.bpa
 })
 
-const tab = ref<'registry' | 'map' | 'governance' | 'maturity'>('registry')
+const tab = ref<'registry' | 'map' | 'link' | 'pcf' | 'governance' | 'maturity'>('registry')
 const dto = ref<BpaArchitectureDto | null>(null)
 const busy = ref(false)
 const error = ref('')
@@ -76,7 +78,7 @@ onMounted(() => void load())
 
     <template v-else-if="dto">
       <nav class="bpa-view__tabs" data-testid="bpa-tabs">
-        <button v-for="t in (['registry','map','governance','maturity'] as const)" :key="t"
+        <button v-for="t in (['registry','map','link','pcf','governance','maturity'] as const)" :key="t"
           type="button" :class="{ active: tab === t }" :data-testid="`bpa-tab-${t}`" @click="tab = t">
           {{ L.tabs[t] }}
           <span v-if="t === 'governance' && dto.report.bySeverity.high > 0" class="badge badge-high">{{ dto.report.bySeverity.high }}</span>
@@ -85,6 +87,8 @@ onMounted(() => void load())
 
       <BpaTreePanel v-show="tab === 'registry'" :L="L" :dto="dto" @updated="onUpdated" />
       <BpaMapPanel v-show="tab === 'map'" :L="L" :dto="dto" @updated="onUpdated" />
+      <BpaLinkPanel v-show="tab === 'link'" :L="L" :dto="dto" />
+      <BpaPcfPanel v-show="tab === 'pcf'" :L="L" :dto="dto" @goto="t => tab = t" />
       <BpaGovernancePanel v-show="tab === 'governance'" :L="L" :dto="dto" @updated="onUpdated" />
       <BpaMaturityPanel v-show="tab === 'maturity'" :L="L" />
     </template>

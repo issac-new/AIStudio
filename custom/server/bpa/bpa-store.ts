@@ -95,7 +95,10 @@ export function upsertNode(arch: BpaArchitecture, incoming: BpaNode): BpaNode[] 
     name: incoming.name.trim(),
     updatedAt: Date.now(),
   }
-  if (level !== 1) delete (node as { section?: unknown }).section
+  if (level !== 1) {
+    delete (node as { section?: unknown }).section
+    delete (node as { pcfRef?: unknown }).pcfRef // 对标映射只作用于 L1（与分区同律）
+  }
   const idx = arch.nodes.findIndex((n) => n.id === node.id)
   if (idx >= 0) arch.nodes[idx] = node
   else arch.nodes.push(node)
