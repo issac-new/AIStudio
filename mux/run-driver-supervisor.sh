@@ -175,10 +175,10 @@ while true; do
   if tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -q "打回熔断"; then
     note "驱动 rc=$RC 因熔断退出——证据等待模式（复位=integration tip/评审卡面变化；stop 文件/report_done 仍即退）"
     _fp0=$(_g5_evidence_fp); _wd=0
-    # run19 根治（熔断死等）：证据等待不再无限静默——超时即向评审卡 owner 周期催办
-    # （run19 实锤：agent 补齐链夜间停摆，死等 14400s+ 指纹不变零动作）。不弃守熔断
-    # 语义：催办推动证据变化来复位；人工通道（stop/GATE_BREAKER_OVERRIDE）不变。
-    _WM="${MX_BREAKER_WAIT_MAX:-7200}"; _NG="${MX_BREAKER_NUDGE_EVERY:-3600}"
+    # run19 根治（熔断死等）→ 用户 2026-10-14 收紧：触发式准实时——指纹持续不变
+    # 300s 即首催，此后每 300s 幂等再催（连续 10 次无响应升级记单人工介入信号，
+    # 防无限轰炸）；指纹轮询 120s 不变（发现≤240s、动作≤300s 满足总时限）。
+    _WM="${MX_BREAKER_WAIT_MAX:-300}"; _NG="${MX_BREAKER_NUDGE_EVERY:-300}"
     while true; do
       [[ -f "$STOPFLAG" ]] && { note "stop 文件在位（证据等待中），监督器退出"; rm -f "$STOPFLAG"; exit 0; }
       grep -q '^report_done=' "$STATE" 2>/dev/null && { note "report_done 已落键，监督器功成身退"; exit 0; }
@@ -189,13 +189,19 @@ while true; do
         break
       fi
       if [ $((_wd % 600)) -eq 0 ]; then note "证据等待 ${_wd}s（指纹不变：${_fp1}）"; fi
-      # 超时催办：每 _NG 一次幂等催办令（群内点名 owner 补评审卡）+记单留痕
+      # 超时催办：每 _NG 一次催办令（群内点名 owner 补评审卡）；连续 10 次无响应
+      # 升级记单（人工介入信号）——防无限轰炸，但永不放弃（用户 2026-10-14：禁死等）
       if (( _wd >= _WM && (_wd - _WM) % _NG == 0 )); then
+        _nudges=$(( (_wd - _WM) / _NG + 1 ))
         _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
-        _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner（run19 根治：禁无限死等）"
+        _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner 第 ${_nudges} 次（run19 根治+用户 300s 时限收紧）"
         grep -qF "breaker-wait-nudge" "$_iss_path" 2>/dev/null || echo "$_nud" >> "$_iss_path"
+        if (( _nudges == 10 )); then
+          echo "ISSUE|breaker-wait-escalated|supervisor|催办 10 次（$((_nudges * _NG))s）仍无证据变化——agent 补齐链疑似停摆，请人工介入（GATE_BREAKER_OVERRIDE 复议或查 agent 会话）" >> "$_iss_path"
+          note "⚠ 催办 10 次无响应——已升级记单（人工介入信号），继续每 ${_NG}s 催办不弃守"
+        fi
         _br_nudge_g5 "${_wd}"
-        note "熔断等待 ${_wd}s 无证据变化——已催办评审卡 owner（每 ${_NG}s 一次直到证据变化/人工介入）"
+        note "熔断等待 ${_wd}s 无证据变化——第 ${_nudges} 次催办评审卡 owner（每 ${_NG}s，用户 300s 时限）"
       fi
     done
     continue
