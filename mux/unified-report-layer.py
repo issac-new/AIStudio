@@ -61,6 +61,13 @@ ISSUE_OWNER = {
 }
 
 
+# ── 明暗主题（2026-10-14）：写盘后统一挂切换控件。抽成共用函数，
+#    免得每加一个页面就漏一次；inject-theme.py 幂等，重复调用不会注两份。 ──
+def _inject_theme(page, *extra_css):
+    import subprocess, sys as _sys
+    subprocess.run([_sys.executable, str(Path(__file__).resolve().parent / 'inject-theme.py'),
+                    str(page), *[str(c) for c in extra_css]], check=False)
+
 def load_facts(run_dir: Path) -> dict:
     """从数据面实算事实；每个事实带来源文件名（证据指针）。"""
     f: dict = {"run_dir": str(run_dir), "sources": {}}
@@ -417,6 +424,7 @@ def main() -> int:
                       f'<p class="meta">数据锚：{esc(c["anchor"])}　证据：{esc(c["evi"])}</p></div>')
     ch.append("</div>")
     (out / "audience-cards.html").write_text("\n".join(ch), encoding="utf-8")
+    _inject_theme(out / "audience-cards.html")
 
     # roadshow-outline.md
     md = ["# 路演素材大纲（roadshow-outline）", "",
@@ -429,6 +437,11 @@ def main() -> int:
 
     # unified-report.html
     (out / "unified-report.html").write_text(build_unified(f, cards, blocks), encoding="utf-8")
+    _inject_theme(out / "unified-report.html",
+                   Path(__file__).resolve().parent / "report-dark-override.css",
+                   Path(__file__).resolve().parent / "report-light-override.css",
+                   Path(__file__).resolve().parent / "theme-unified-dark.css",
+                   Path(__file__).resolve().parent / "theme-unified-light.css")
 
     print(f"OK unified-report-layer → {out}")
     print(f"  audience-cards: {sum(len(v) for v in cards.values())} 卡 / {len(AUDIENCES)} 视角")

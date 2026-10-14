@@ -19,6 +19,13 @@ SIM_ROOT = Path(__file__).resolve().parent.parent
 _CAND = [SIM_ROOT, Path('/Volumes/nvme2230/lab/ncwk-sim-mux')]
 
 
+# ── 明暗主题（2026-10-14）：写盘后统一挂切换控件。抽成共用函数，
+#    免得每加一个页面就漏一次；inject-theme.py 幂等，重复调用不会注两份。 ──
+def _inject_theme(page, *extra_css):
+    import subprocess, sys as _sys
+    subprocess.run([_sys.executable, str(Path(__file__).resolve().parent / 'inject-theme.py'),
+                    str(page), *[str(c) for c in extra_css]], check=False)
+
 def find_run(run_id: str) -> Path:
     for base in _CAND:
         d = base / 'runs' / run_id
@@ -229,6 +236,10 @@ td.ai{{color:#a78bfa}} td.hu{{color:#4ade80}}
     html_doc = __import__('re').sub(r'/Users/[A-Za-z0-9_.\-]+', '[宿主家目录]', html_doc)
     html_doc = __import__('re').sub(r'/Volumes/[A-Za-z0-9_.\-]+', '[宿主卷]', html_doc)
     out.write_text(html_doc, encoding='utf-8')
+    # 本页天生暗色，明色那一套由专属层提供（方向与其余页面相反）
+    _inject_theme(out,
+                   Path(__file__).resolve().parent / 'theme-demo-kit-light.css',
+                   Path(__file__).resolve().parent / 'theme-demo-kit-dark.css')
     print(f'[demo-kit] {out}（{len(tl_rows)} 时间轴行 / {len(intercepts)} 拦截卡 / '
           f'{len(approvals)} 审批 / {len(quotes)} 字幕卡）')
 
