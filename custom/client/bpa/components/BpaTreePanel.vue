@@ -20,14 +20,14 @@ const rows = computed(() => [...props.dto.nodes].sort((a, b) => a.id.localeCompa
 
 const form = reactive({
   id: '', name: '', level: 1 as BpaLevel, parentId: null as string | null,
-  section: 'OPERATING' as BpaSection, owner: '', decomposition: '' as '' | BpaDecomposition, note: '',
+  section: 'OPERATING' as BpaSection, pcfRef: '', owner: '', decomposition: '' as '' | BpaDecomposition, note: '',
   kpis: [] as Array<{ name: string; target: string; unit?: string }>,
   inputsText: '', outputsText: '', driversText: '', supportsText: '',
 })
 
 function resetForm(): void {
   form.id = ''; form.name = ''; form.level = 1; form.parentId = null
-  form.section = 'OPERATING'; form.owner = ''; form.decomposition = ''; form.note = ''
+  form.section = 'OPERATING'; form.pcfRef = ''; form.owner = ''; form.decomposition = ''; form.note = ''
   form.kpis = []; form.inputsText = ''; form.outputsText = ''; form.driversText = ''; form.supportsText = ''
 }
 
@@ -64,7 +64,8 @@ function startEdit(node: BpaNode): void {
   resetForm()
   creating.value = false; editing.value = true
   form.id = node.id; form.name = node.name; form.level = node.level; form.parentId = node.parentId
-  form.section = node.section ?? 'OPERATING'; form.owner = node.owner ?? ''
+  form.section = node.section ?? 'OPERATING'; form.pcfRef = node.pcfRef ?? ''
+  form.owner = node.owner ?? ''
   form.decomposition = node.decomposition ?? ''; form.note = node.note ?? ''
   form.kpis = (node.kpis ?? []).map((k) => ({ ...k }))
   form.inputsText = (node.inputs ?? []).join('，')
@@ -88,6 +89,7 @@ async function save(): Promise<void> {
     level: form.level,
     parentId: form.level === 1 ? null : form.parentId,
     ...(form.level === 1 ? { section: form.section } : {}),
+    ...(form.level === 1 && form.pcfRef.trim() ? { pcfRef: form.pcfRef.trim() } : {}),
     ...(form.owner.trim() ? { owner: form.owner.trim() } : {}),
     ...(form.level === 3 && form.kpis.filter((k) => k.name.trim()).length ? { kpis: form.kpis.filter((k) => k.name.trim()).map((k) => ({ name: k.name.trim(), target: k.target.trim(), ...(k.unit?.trim() ? { unit: k.unit.trim() } : {}) })) } : {}),
     ...(form.inputsText.trim() ? { inputs: parseList(form.inputsText) } : {}),
@@ -167,6 +169,13 @@ function linkCount(n: BpaNode): number {
             <option v-for="s in sectionOptions" :key="s" :value="s">{{ L.sectionLetters[s] }} · {{ L.sectionNames[s] }}</option>
           </select>
         </label>
+        <label v-if="form.level === 1">{{ L.registry.pcfRef }}
+          <input v-model="form.pcfRef" class="mono" list="bpa-pcf-codes" placeholder="4.0" />
+          <span class="muted small">{{ L.registry.pcfRefHint }}</span>
+          <datalist id="bpa-pcf-codes">
+            <option v-for="c in ['1.0','2.0','3.0','4.0','5.0','6.0','7.0','8.0','9.0','10.0','11.0','12.0']" :key="c" :value="c" />
+          </datalist>
+        </label>
         <label class="span2">{{ L.registry.name }}
           <input v-model="form.name" />
         </label>
@@ -228,6 +237,7 @@ function linkCount(n: BpaNode): number {
             <span class="lvl" :class="levelBadgeClass(n.level)">L{{ n.level }}</span>
             {{ n.id }}
             <span v-if="n.level === 1 && n.section" class="sec">{{ L.sectionLetters[n.section] }}</span>
+            <span v-if="n.pcfRef" class="sec pcf">{{ n.pcfRef }}</span>
           </td>
           <td>
             {{ n.name }}
@@ -273,6 +283,7 @@ button.danger { background: transparent; border: 1px solid var(--danger, #dc2626
 .lv-process { background: var(--accent, #4f6ef7); }
 .lv-decompose { background: #9ca3af; }
 .sec { margin-left: 6px; font-size: 10px; border: 1px solid currentColor; border-radius: 6px; padding: 0 4px; opacity: 0.75; }
+.sec.pcf { color: var(--accent, #4f6ef7); opacity: 1; }
 .row-actions button { padding: 2px 8px; }
 .err { color: var(--danger, #dc2626); font-size: 12px; margin: 0; }
 .muted { opacity: 0.65; font-size: 12px; }

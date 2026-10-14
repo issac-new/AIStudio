@@ -27,6 +27,8 @@ export interface BpaNode {
   parentId: string | null
   /** 仅 L1：流程地图分区（OES/POS/MOS 构图） */
   section?: BpaSection
+  /** 仅 L1：APQC PCF 对标映射（如 "4.0"，显式映射优先于名称启发） */
+  pcfRef?: string
   /** L1-L3 强制（治理规则 MISSING_OWNER） */
   owner?: string
   /** L3 治理主战场（治理规则 MISSING_KPI） */

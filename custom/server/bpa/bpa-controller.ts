@@ -18,6 +18,8 @@ import {
 } from './bpa-store'
 import { validateArchitecture } from './bpa-validate'
 import { seedArchitecture } from './bpa-seed'
+import { enumerateE2E } from './bpa-e2e'
+import { PCF_CATEGORIES, pcfGapReport } from './bpa-pcf'
 
 const router = new Router({ prefix: '/api/bpa' })
 
@@ -84,6 +86,23 @@ router.put('/config', async (ctx: Context) => {
 router.post('/validate', async (ctx: Context) => {
   const arch = readArchitecture()
   ctx.body = { ok: true, report: validateArchitecture(arch) }
+})
+
+// 三要素之末：流程间关系——端到端链路枚举 + 孤岛/环路检测
+router.get('/e2e', async (ctx: Context) => {
+  const arch = readArchitecture()
+  ctx.body = { ok: true, e2e: enumerateE2E(arch.nodes) }
+})
+
+// PCF 对标：跨行业参照集 + 我的覆盖差距
+router.get('/pcf', async (ctx: Context) => {
+  const arch = readArchitecture()
+  const l1s = arch.nodes.filter((n) => n.level === 1)
+  ctx.body = {
+    ok: true,
+    reference: PCF_CATEGORIES,
+    gap: pcfGapReport(l1s.map((n) => ({ id: n.id, name: n.name, ...(n.pcfRef ? { pcfRef: n.pcfRef } : {}) }))),
+  }
 })
 
 router.post('/seed', async (ctx: Context) => {

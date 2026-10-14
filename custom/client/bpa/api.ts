@@ -18,6 +18,8 @@ export interface BpaNode {
   level: BpaLevel
   parentId: string | null
   section?: BpaSection
+  /** 仅 L1：APQC PCF 对标映射（如 "4.0"） */
+  pcfRef?: string
   owner?: string
   kpis?: BpaKpi[]
   inputs?: string[]
@@ -74,6 +76,44 @@ export interface PemmAssessment {
   note?: string
 }
 
+// ---------- 端到端链路（三要素之末：流程间关系） ----------
+
+export interface E2ePath {
+  steps: string[]
+  handoffs: Array<string | null>
+}
+
+export interface E2eReport {
+  paths: E2ePath[]
+  strandedL3: string[]
+  unlinkedL3: string[]
+  cycleL3: string[]
+}
+
+// ---------- PCF 对标 ----------
+
+export interface PcfCategoryDto {
+  code: string
+  nameZh: string
+  nameEn: string
+  groupsZh: string[]
+  section: BpaSection
+}
+
+export interface PcfGapReportDto {
+  rows: Array<{
+    code: string
+    nameZh: string
+    nameEn: string
+    groupsZh: string[]
+    section: BpaSection
+    matched: Array<{ id: string; name: string; by: 'ref' | 'name' }>
+    status: 'covered' | 'missing'
+  }>
+  summary: { total: number; covered: number; missing: number }
+  unmappedMine: Array<{ id: string; name: string }>
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await request<{ ok?: boolean; problems?: string[] } & T>(path, { credentials: 'same-origin', ...init })
   if ((body as { ok?: boolean }).ok === false && Array.isArray(body.problems)) {
@@ -107,4 +147,6 @@ export const bpaApi = {
       method: 'POST',
       body: JSON.stringify({ scores, note }),
     }),
+  e2e: () => req<{ ok: boolean; e2e: E2eReport }>('/api/bpa/e2e'),
+  pcf: () => req<{ ok: boolean; reference: PcfCategoryDto[]; gap: PcfGapReportDto }>('/api/bpa/pcf'),
 }
