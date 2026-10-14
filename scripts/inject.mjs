@@ -355,6 +355,14 @@ export default mergeConfig(
         // 上游树单一实例（deep import 不受影响）。
         { find: /^pinia$/, replacement: hermesStudioRoot + '/node_modules/pinia/dist/pinia.mjs' },
         { find: /^vue$/, replacement: hermesStudioRoot + '/node_modules/vue/dist/vue.runtime.esm-bundler.js' },
+        // 子路径钉单（run19 采集壳页实锤，双实例第二例）：/^vue$/ 只精确匹配裸名，
+        // 'vue/xxx' 子路径与 '@vue/runtime-core'（pinia/vue-router 内部依赖）不经锚定——
+        // 两树并存期（node_modules 符号链接被 npm 拆成实体目录的窗口）解析出双
+        // runtime-core → useRoute() inject 落空 undefined → IaShell 'reading query'
+        // TypeError 杀渲染树=主区域纯黑空骨架（采集帧 29.3K 同像素壳页族）。
+        // vue-router 同钉（双 router 实例同症）。
+        { find: /^@vue\/runtime-core$/, replacement: hermesStudioRoot + '/node_modules/@vue/runtime-core/dist/runtime-core.esm-bundler.js' },
+        { find: /^vue-router$/, replacement: hermesStudioRoot + '/node_modules/vue-router/dist/vue-router.mjs' },
         // /src/main.ts(index.html 的入口)→ overlay entry shim(复制上游 main.ts 启动序列 + A 类注册)。
         // 用字符串精确匹配 index.html 里的 /src/main.ts,使 Vite 以 index.html 为入口、
         // 但把 main 重定向到 overlay shim(保留 HTML 处理,生成 index.html)。
@@ -373,7 +381,18 @@ export default mergeConfig(
     // 可能失效,显式 input 保证 HTML 被处理、生成 dist/client/index.html。
     build: {
       outDir: ${js(upstreamDistClient)},
-      rollupOptions: { input: resolve(${js(upstreamClientRoot)}, 'index.html') },
+      rollupOptions: {
+        input: resolve(${js(upstreamClientRoot)}, 'index.html'),
+        output: {
+          // run19 采集壳页终因（vite8/rolldown 1.0.2 + echarts 6）：懒加载 chunk 引用
+          // echarts/zrender 模块初始化器（init_Component 族裸调用）时 rolldown 分 chunk
+          // 系统性漏补 import——TasksView/RunTraceOverview 等每个 echarts 消费 chunk 逐个
+          // 中招（advancedChunks 归组只治一个换一个，实测 TasksView 修好 RunTraceOverview
+          // 又炸）。inlineDynamicImports 全并单 chunk 消灭跨 chunk 面（SIM 内网环境，
+          // 体积换稳定；实测 assets/js 收敛为单文件，board 页完整渲染 361K 真帧）。
+          inlineDynamicImports: true,
+        },
+      },
     },
     server: {
       // fs.allow 显式双根（V4 轮实锤）：root 指到 upstream 后 vite 默认
