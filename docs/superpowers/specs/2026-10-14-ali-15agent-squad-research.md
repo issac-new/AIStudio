@@ -91,8 +91,9 @@
 
 验证账：新增测试 5 域 30 例全绿（constraints 9+optadvice 7+faileroute 5+expcandidates 10+forge 3，另有 kanban 集成 4 例并回 35/35、ontology 客户端 5/5、eval 客户端 4/5——advice 面板 2 例新增）；词表过闸 HARD=0（正本/研究文档/README 新增段；README 存量 18 处 HARD 系历史债，本批零新增）。
 
-遗留（如实声明）：
-- 四条新路由（/api/constraints、/api/optadvice、/api/faileroute、/api/expcandidates）待下轮 `npm run inject` 后真进程生效；patch 已过序列连验。
-- B2 推演实跑首验待开启 EXPERIENCE_INJECT 的专项轮（纪律 49③）。
-- E 的卡标注自动接线（缺陷循环/巡检消费 POST /api/faileroute/resolve）未接——run19 在跑期间不动在途消费面，REST 已备。
-- A 的 traces 工具 span 源在宿主侧实测缺席（仅 header/trailer），已如实标 no_data；工具级报错并入看板拦截面。
+遗留（2026-10-14 run19 报告段清偿批更新，cf310700）：
+- ~~四条新路由待 inject 真进程生效~~：**源码树挂载已完成**——`npm run inject` 被上游树既有非 patch 漂移拒绝（branding 类直改树未入 patch，inject 要求先 clean；clean 有「带服拒绝」门禁且 8802 服务在跑），改走等价路径：patch 624-627 手工依序 git apply 进共享树（序列连验过，routes.ts 四挂载点已核，custom/ 经既有符号链接自动可见）。**进程级生效待下次 product-dist 重建换装**（8802 实测跑预构建 bundle 无 watcher；曾以 401 误判已生效，对照实验推翻后如实修正）。下轮 inject 周期仍需处置：非 patch 漂移定性（补录成 patch 或还原弃用）+ 停服 clean。
+- ~~E 的卡标注自动接线未接~~：已接——巡检 emit() 随 govbus 事件携带 routeHint（停滞族/失控环检测器→失败路由行，标注-only 不改派，cf310700）。
+- ~~B1/A+F 无真数据验证~~：已完成——run19 真实板库首验（29 板 989 事件）：B1 产出 14 条真实候选（blocked 派单竞争×13/迭代预算耗尽×8/gave_up×5/空结果×6+快卡较优路径）；A+F 出真实慢阶段榜（blocked 中位 101 分钟占 26%、in_progress 中位 10 分钟）与拦截榜、49 卡中位周期 55 分钟。首验同时抓出并根治读取层词汇盲区（舰队 task_events 是生命周期词汇无 column_transition/gate_blocked，归一层双词汇兼容）。
+- B2 推演实跑首验仍待开启 EXPERIENCE_INJECT 的专项轮（纪律 49③，唯一剩余件）。
+- A 的 traces 工具 span 源维持 no_data（SIM 侧核实亦无 span 文件，工具级报错已并入看板拦截面——迭代预算耗尽等真信号由此通路出）。
