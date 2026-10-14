@@ -690,3 +690,10 @@
 # （column-dispatch stepBrief，封顶 5 条，存储 fail-soft 不阻断派发）。
 # /api/constraints CRUD+预演；本体工作台「约束卡」页签（i18n 键齐平测试守门）。
 624-server-constraints-routes.patch
+
+# [625] 优化建议报告路由挂载（2026-10-14 阿里调研轮 A+F）：半自动挡三张 Top-N
+# 清单（烧钱会话 hermes-web-ui.db sessions/瓶颈阶段+交付周期瀑布 看板
+# column_transition/关卡拦截 gate_blocked+gate_warning）——聚合既有面不新增采集，
+# 源缺席如实 available:false（traces 宿主侧仅 header/trailer 实测缺席）。
+# /api/optadvice/report；Eval Studio「优化建议」页签。
+625-server-optadvice-routes.patch

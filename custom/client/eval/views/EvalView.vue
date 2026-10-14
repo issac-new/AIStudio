@@ -9,6 +9,7 @@ import { evalApi, type EvalSetMetaDto, type RunSummaryDto, type RunCompareDto } 
 import { evalMessages } from '@/custom/eval/i18n'
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
 import EvalOraclePanel from '@/custom/eval/components/EvalOraclePanel.vue'
+import EvalAdvicePanel from '@/custom/eval/components/EvalAdvicePanel.vue'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -16,7 +17,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? evalMessages.zh.eval : evalMessages.en.eval
 })
 
-type Tab = 'sets' | 'runs' | 'oracle'
+type Tab = 'sets' | 'runs' | 'oracle' | 'advice'
 const tab = ref<Tab>('sets')
 const sets = ref<EvalSetMetaDto[]>([])
 const runs = ref<RunSummaryDto[]>([])
@@ -179,6 +180,7 @@ function deltaText(v: number | null | undefined): string {
         <button type="button" :class="{ active: tab === 'sets' }" data-testid="eval-tab-sets" @click="tab = 'sets'">{{ L.tabs.sets }}</button>
         <button type="button" :class="{ active: tab === 'runs' }" data-testid="eval-tab-runs" @click="tab = 'runs'">{{ L.tabs.runs }}</button>
         <button type="button" :class="{ active: tab === 'oracle' }" data-testid="eval-tab-oracle" @click="tab = 'oracle'">{{ L.tabs.oracle }}</button>
+        <button type="button" :class="{ active: tab === 'advice' }" data-testid="eval-tab-advice" @click="tab = 'advice'">{{ L.tabs.advice }}</button>
       </nav>
     </header>
 
@@ -384,6 +386,9 @@ function deltaText(v: number | null | undefined): string {
 
     <!-- ── UI Oracle 页签 ── -->
     <EvalOraclePanel v-if="tab === 'oracle'" />
+
+    <!-- ── 优化建议页签（2026-10-14 阿里调研轮 A+F） ── -->
+    <EvalAdvicePanel v-if="tab === 'advice'" />
   </section>
 </template>
 
