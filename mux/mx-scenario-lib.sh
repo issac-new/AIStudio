@@ -148,9 +148,13 @@ kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[.
   # 09-26 run6/7 实锤：studio /api/hermes/kanban?board=* 整板返空（tenant 面未明），
   # 板上真卡在却两窗误杀（kanban_has/kanban_status_of 全线失明）。改 CLI 直查：
   # hermes kanban --board <slug> list --json 输出裸数组 → {tasks:.} 归一兼容旧消费面。
+  # run19 复盘根治（卡面通道失明）：hermes kanban list CLI 输出形态随版本漂移——
+  # 当前=裸数组（历史={tasks:[...]}对象），旧归一按对象读裸数组恒空 → 全部卡面判定
+  # （G5 卡判词/空 body 校验/卡面时间窗）失明，G5 判词退化为房间行单源（11:3x 实锤：
+  # g5_real_gaps 恒落缺省文案）。归一改双形态兼容：数组直接用，对象取 .tasks。
   local u="$1" slug out='{"tasks":[]}'
   for slug in $(account_boards "$u"); do
-    out=$(jq -c -s '{tasks: (.[0].tasks + (.[1] // []))}' \
+    out=$(jq -c -s '{tasks: (.[0].tasks + ((.[1] | if type == "array" then . else (.tasks // []) end)))}' \
       <(echo "$out") \
       <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null || echo '[]'))
   done

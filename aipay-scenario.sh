@@ -1467,7 +1467,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 首过口径（方案 §2.6-5）：PASS 判词与分节 GAP/TODO 残留并存=边评边补后过，
     # 记 g5_supplement 键计「补过」不计首过（防拆卡刷首过率；GAP 残留同时是
     # 分节未齐的如实呈现——七项全过才许发布，残留即评审不完整形态）。
-    _g5body="$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+    _g5body="$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)"
     # run18 复盘 F1 根治（闸键-证据耦合）：评审卡 body 空=无评审实物——判词行可能
     # 来自房间代发对照行或源轮残留，不得据此 finalize。返回 1 让调用方继续走评审
@@ -1534,7 +1534,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 台账（GAP:COND 残留=如实呈现为未闭环条件，与 GAP 分节同口径计「补过」形态）。
     if [[ -f "$EVID_DIR/security-conditions.md" ]]; then
       _cond_n=$(grep -c 'SECURITY-COND-' "$EVID_DIR/security-conditions.md" || true)
-      _cond_gap=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+      _cond_gap=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
         '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null \
         | grep -c 'GAP:COND' || true)
       note "[G5] 安全条件对账：清单 ${_cond_n} 条，其中未闭环（GAP:COND）${_cond_gap} 条——G5 按条件放行（未闭环项归属与计划见评审卡）"
@@ -1546,7 +1546,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 污染台账且误导 agent 重做已补项）。提取优先级：结论行「缺项 XXX」段 > R-\d+ 标记 > 缺省文案。
   g5_real_gaps() { # → stdout: 评审卡判词行的真实缺项串
     local body
-    body=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+    body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
     local gaps
     gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | head -c 120)
@@ -1559,7 +1559,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   # 该形态直接走熔断（等待修复证据变化复位），不再进补齐重派窗。
   g5_verdict_settled() { # → 0 当评审卡含「复核维持」标记（结论稳定）
     local body
-    body=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+    body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
     printf '%s' "$body" | grep -q '复核维持'
   }
