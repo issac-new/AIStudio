@@ -674,3 +674,8 @@
 # 子进程 → Command failed 被兜成 500。入口加安全模式闸（非法 400），CLI 未知日志名
 # 失败按 404 语义回。触发证据：GET /api/studio/logs/regression-probe → 500。
 621-server-logs-input-validation.patch
+# [622] 跨原生装配根治二件（2026-10-14 win10-mig 构建实录回移）：①sherpa npm 名族用 win 而
+# electronPlatformName 给 win32，裸拼接产出 sherpa-onnx-win32-x64 必 404（CROSS_NATIVE_VENDOR_DIR
+# 宽容匹配同被打空）；②webui overrides pin 的 sherpa 族与 file: tgz 直装 EOVERRIDE 硬冲突
+# （--force 不压）——install 前临时摘除装后还原。mac 交叉构建 0.7.34 全链四族原生件齐验证。
+622-desktop-crossbuild-sherpa-override-fix.patch
