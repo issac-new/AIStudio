@@ -1,0 +1,20 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -173,6 +173,9 @@
+ // overlay[constraints]: 约束卡注册表（2026-10-14 阿里 15-Agent 调研轮 D）——架构级约束
+ // 登记维护，派单简报按列/specialist 命中注入（封顶 5 条，fail-soft）。/api/constraints
+ import { constraintsRoutes } from '../custom/constraints/constraint-controller'
++// overlay[optadvice]: 优化建议报告（2026-10-14 阿里 15-Agent 调研轮 A+F）——半自动挡：
++// 烧钱会话/瓶颈阶段/关卡拦截三张 Top-N + 交付周期瀑布，聚合既有面不新增采集。/api/optadvice
++import { optAdviceRoutes } from '../custom/optadvice/optadvice-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -467,6 +470,7 @@
+   app.use(contextArchiveRoutes.routes())          // 上下文档案：sessions/windows/window/search/state/advance（C1 召回 + C4 可观测）
+   app.use(ctxNotesRoutes.routes())                // 跨窗笔记：CRUD/search + 新鲜度门（C3）
+   app.use(constraintsRoutes.routes())             // 约束卡注册表：CRUD+预演（阿里调研轮 D）
++  app.use(optAdviceRoutes.routes())                 // 优化建议报告：半自动挡清单+周期瀑布（阿里调研轮 A+F）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
