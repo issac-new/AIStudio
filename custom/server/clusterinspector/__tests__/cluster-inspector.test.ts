@@ -394,3 +394,25 @@ describe('detectDeliveryAnchor（交付锚验证 A+B，run19 上移）', () => {
     expect(a.find((x) => x.detector === 'delivery.branch-stale')).toBeUndefined()
   })
 })
+
+describe('detectDispatcherStuck + detectFakeCompletion（run19 四病灶根治上移）', () => {
+  const now = 1_000_000_000_000
+  it('僵死：ready 卡滞留超阈 → dispatcher.stuck；未超阈/无卡不报', () => {
+    const mkc = (status: string) => snap({ ts: now, profiles: { ok: true, tails: [] },
+      runningCards: { ok: true, cards: [{ id: 't1', assignee: 'aa', status, branch_name: '', started_at: 1 }] } })
+    const hit = detectAll(mkc('ready'), { nowMs: now, dispatcherStuckMs: 1_000_000 }).find((x) => x.detector === 'dispatcher.stuck')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('零孵化')
+    expect(detectAll(mkc('ready'), { nowMs: now, dispatcherStuckMs: 0 }).find((x) => x.detector === 'dispatcher.stuck')).toBeUndefined()
+    expect(detectAll(mkc('running'), { nowMs: now, dispatcherStuckMs: 9_999_999 }).find((x) => x.detector === 'dispatcher.stuck')).toBeUndefined()
+  })
+  it('假完成：done 卡但负责人零真做 → completion.no-realwork；有真做不报', () => {
+    const mkp = (rw: number) => snap({ ts: now,
+      profiles: { ok: true, tails: [{ profile: 'aa', tail: 'x', mtimeMs: now, workTsMs: now, realWorkTsMs: rw }] },
+      runningCards: { ok: true, cards: [{ id: 't2', assignee: 'aa', status: 'done', branch_name: 'b', started_at: 1 }] } })
+    const hit = detectAll(mkp(0), { nowMs: now }).find((x) => x.detector === 'completion.no-realwork')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('零真做')
+    expect(detectAll(mkp(now - 60_000), { nowMs: now }).find((x) => x.detector === 'completion.no-realwork')).toBeUndefined()
+  })
+})
