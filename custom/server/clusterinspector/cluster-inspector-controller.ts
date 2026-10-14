@@ -93,6 +93,8 @@ const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider()
       },
       snapshot: insp.snapshot,
       anomalies: last?.anomalies ?? [],
+      // 收敛性面（同类风险是否持续收敛=多轮有效性指标；熵增→熔断/降级/升级）
+      convergence: insp.convergenceFace,
     }
   })
 
