@@ -19,6 +19,7 @@
     "predev": "node scripts/ensure-injected.mjs",
     "test": "vitest run",
     "test:eval": "vitest run custom/server/eval/__tests__/eval-regression.test.ts",
+    "bench:expert": "node scripts/forge-benchmark.mjs",
     "build:full": "node scripts/build.mjs",
     "build:dmg": "node scripts/build-dmg.mjs",
     "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
