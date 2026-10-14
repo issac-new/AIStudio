@@ -787,21 +787,16 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
 评审口径（V8.17 裁决 A，run15 复盘 F3——正本 V8.17 纪律 38 落条款）：四项对着概设 docs/design/${RFD_ID}-architecture-design.md 与概要系分稿判**设计面**——设计缺失/矛盾才构成 FAIL 缺项；代码级问题（含概设 §9 已挂账项）不计入 FAIL 判词，改为逐条发 SECURITY-COND 条目行：SECURITY-COND-<n> <问题一句话> 位置=<file:line 或模块> 归属=<建议任务/人>，这些条目将随 G5 发布准出逐条复核。不许谎报。" "$(agent_mxid secops)"
       fi
       if wait_truth "涉敏安全评审结论（SECURITY-GATE）" ${MX_GATE_WAIT:-2400} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审"; then
-        # V8.28 修根因 3（结构 2 根治）：原代码先 verdict_combined（双源 PASS/FAIL 字符串判），
-        # 但卡面 result 字段已 done+FAIL 时仍被算"等翻正"——实际卡 result 是终判载体。
-        # 改：先看卡面 result，含 FAIL 直接判 FAIL 走派修路径（不等 2400s 复审），让 secops-agent
-        # 改 result 字段（持久化）即可解除——比 2400s 复审窗口更可靠。
+        # V8.28 用户 21:02 裁定后的正确语义：卡面 result=FAIL 即把缺项清单派上游修订，
+        # 但闸不放行——等修订入 origin/main、安全工程师AI 复审 PASS 才放行。
+        # （原「立即派修+授控放行」的拆闸写法已废止。）
         _secops_card_status=$(kanban_status_of secops "$SGID" 2>/dev/null || echo "")
         _secops_card_result=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")
-        if [[ "$_secops_card_status" == "done" && "$_secops_card_result" == *"FAIL"* ]]; then
-          # 卡面已显式 FAIL，等不了 2400s 复审——直接判 FAIL 走派修路径
-          if [[ "$(sget security_dispatched)" != "1" ]]; then
-            sset security_dispatched 1
-            sset security_review_done 1
-            for (( _di=1; _di<=14; _di++ )); do sset "d_dispatch_$_di" 1; done
-            echo "ISSUE|security-review-card-fail|secops-agent|V8.28 修根因 3：卡面 result 已 done+FAIL，driver 不等 2400s 复审直接判 FAIL 走派修。锚：aipay-scenario.sh:789-805" >> "$EVID_DIR/issues.log"
-            note "[安全] 卡面 result 已 FAIL（V8.28 修根因 3 立即派修，不等 2400s 复审）"
-          fi
+        if [[ "$_secops_card_status" == "done" && "$_secops_card_result" == *"FAIL" && "$(sget security_dispatched)" != "1" ]]; then
+          # 卡面已显式 FAIL：立即派上游修订（缺项清单在卡 result），闸保持不放行
+          sset security_dispatched 1
+          echo "ISSUE|security-review-card-fail|secops-agent|V8.28：卡面 result 已 done+FAIL——缺项清单即刻派上游修订（产品经理A 组织+应用研发AI 分工），闸不放行，等复审 PASS。锚：aipay-scenario.sh:789-804" >> "$EVID_DIR/issues.log"
+          dispatch_in_room fanfan "@fanfan-agent:matrix.test 安全评审 FAIL 退回：评审卡 ${SGID} result 已判 FAIL（缺项清单见卡）。请组织修订概设 docs/design/${RFD_ID}-architecture-design.md 对应缺项，修订 push origin main 后 @secops-agent 复审；复审 SECURITY-GATE-PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
         fi
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 涉敏安全评审")" == "PASS" ]]; then
           kanban_walk_done secops "$SGID"; sset security_review_done 1
@@ -809,7 +804,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
         else
           # FAIL→复审改判等待环（run15 根治）：原实现 FAIL 即 fail 退出，靠监督器 40min
           # 一轮的重启循环等复审——改判词到达前驱动空转。改：FAIL 记单后原地等待末判词
-          # 翻 PASS（派修/复审由组织面推进，run15 04:11 实证自组织已派 chen 修复）；
+          # 翻 PASS（派修/复审由组织面推进，run15 04:11 实证自组织已派研发工程师修复）；
           # 复审窗口仍满未翻正才 fail。重放进入本分支零重复记单（security_fail_logged 幂等键）。
           if [[ "$(sget security_fail_logged)" != "1" ]]; then
             echo "ISSUE|security-review-fail|secops-agent|${RFD_ID} 涉敏安全评审 FAIL（缺项见评审卡），进入复审改判等待环（组织面派修→复审 PASS 即放行）" >> "$EVID_DIR/issues.log"
@@ -821,10 +816,10 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
             note "[安全] 涉敏安全复审改判 PASS——G2 放行前置满足（fail→pass 全程留痕）"
           else
             # V8.28 修根因（run20 G2 闸 deadlock 实锤）：原 fail 退出让 supervisor 30s 续跑
-            # 又进同闸循环，4 个 D 负责 agent 永远没时间修。改：FAIL 派修到 4 个 D 负责
-            # agent（hu/wei/lin/chen）+ sset security_review_done=1 人工授控+派修承诺
-            # + issues.log 登记带锚回写——监督器重启直接进 G2/G3 不循环。G5 复核时
-            # 按 14 项 D 清单逐条复检（纪律 28 结构性延后下轮开跑前带锚回写）。
+            # 又进同闸循环，负责 D 项的 4 名应用研发AI 永远没时间修。改：FAIL 把缺项清单
+            # 真派给上游修订（4 名应用研发AI 分工）+ issues.log 登记带锚回写——闸不放行，
+            # 修订入 origin/main、secops 复审 PASS 才放行（用户 2026-10-14 21:02 裁定：
+            # 禁止以打破死循环为名拆硬闸；G5 复核按 14 项 D 清单逐条复检）。
             if [[ "$(sget security_dispatched)" != "1" ]]; then
               local _D_AGENTS=(hu wei lin chen)
               local _D_TASKS=("D-1 微信侧渠道密钥持有与装载形态" "D-2 渠道密钥与平台证书轮换流程" "D-3 支付宝密钥存储形态" "D-4 微信回调 resource 解密环节" "D-5 回调时间戳容差设计" "D-6 渠道层验签+核心层复核双层结构" "D-7 支付单表访问控制与审计留痕" "D-8 支付铁线(CVV2/磁道/交易密码)否定性断言" "D-9 金额脱敏与涉敏字段留存/销毁口径" "D-10 回调来源校验(网段/频率/HTTPS/TLS)" "D-11 支付宝回调 x-merchant-id 可信锚点" "D-12 回调重放防护窗口设计" "D-13 支付单表 PII 字段加密存储" "D-14 现网密钥轮换演练与回滚预案")
@@ -837,28 +832,22 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
                   dispatch_in_room "$_a" "@${_a}-agent:matrix.test 安全修补 D-${_di+1}：${_d}。请在 docs/design/${RFD_ID}-architecture-design.md 与你的 AN 模块对应位置补齐设计条款，commit 推 origin/main 后 @secops-agent 复评翻正。复审锚：secops 卡 t_f5cc53c5 / 卡面 result 行。来源：run20 G2 闸 deadlock 修根因（V8.28 修 16.5 h + 24.5 min）" "$(agent_mxid "$_a")" || true
                 fi
               done
-              echo "ISSUE|security-review-dispatch-run20|director|V8.28 修根因：secops FAIL 14 项 D-1~D-14 派修到 hu/wei/lin/chen 4 agent（G2 闸 deadlock 终结）；security_review_done=1 人工授控生效；G5 复核按 D 清单逐条复检。锚：aipay-scenario.sh:802-841 (run20 worktree fix/v828-secops-dispatch commit 计划入正本：run20 收尾批合入 main)" >> "$EVID_DIR/issues.log"
+              echo "ISSUE|security-review-dispatch-run20|director|V8.28 修根因：secops FAIL 14 项 D-1~D-14 缺项清单已派上游修订（产品经理A 组织+4 名应用研发AI 分工）；G2 闸不放行——修订入 origin/main、secops 复审 PASS 才放行（用户裁定：禁止拆闸式解锁）；G5 复核按 D 清单逐条复检。锚：aipay-scenario.sh:823-845" >> "$EVID_DIR/issues.log"
               sset security_dispatched 1
-              sset security_review_done 1
-              note "[安全] 涉敏安全评审 FAIL 已派修 14 项 D-1~D-14 到 4 agent——G2 放行（G5 复核复检）"
+              note "[安全] 涉敏安全评审 FAIL 缺项已派上游 14 项 D 修订——G2 等复审 PASS 放行（闸不放行）"
             fi
           fi
         fi
       else
         echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_GATE_WAIT:-2400}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
-        # V8.28 修根因：原 fail exit 让 supervisor 30s 续跑回到 archgate 重发 G2——驱动死循环引擎。
-        # 改：记单 + 派修 + 不退出（让 G6 retro 段做总复盘；同时不阻断后续 G3/G4/G5 推进）。
-        # 但因 P3-7①「涉敏需求缺安全评审卡即拦」是硬要求，RUN 不应被旁路——
-        # 改：sset security_review_done=1 人工授控（已记 issue），并派修 14 项 D 让 G5 复核。
+        # V8.28 修根因（用户 21:02 裁定改向）：原 fail exit 让 supervisor 30s 续跑回到 archgate
+        # 重发 G2——死循环引擎。但闸不得拆：超时只记单+派修提醒，闸键不放行，
+        # 修订入 origin/main、secops 复审 PASS 才放行（复审环由 wait_truth 下一轮续等）。
         if [[ "$(sget security_dispatched)" != "1" ]]; then
           sset security_dispatched 1
-          sset security_review_done 1
-          for (( _di=1; _di<=14; _di++ )); do
-            sset "d_dispatch_$_di" 1
-          done
-          echo "ISSUE|security-review-timeout|secops-agent|V8.28 修根因：secops 复审 2400s 超时未达，driver 改用 fail_to_continue（不死循环），G5 复核按 14 项 D 清单逐条复检。锚：aipay-scenario.sh:833（V8.28 修 2）" >> "$EVID_DIR/issues.log"
+          echo "ISSUE|security-review-timeout|secops-agent|V8.28：secops 复审窗口超时未达结论——缺项修订已派上游（产品经理A 组织+4 名应用研发AI），闸不放行，等修订入仓+复审 PASS。锚：aipay-scenario.sh:848-861" >> "$EVID_DIR/issues.log"
         fi
-        # 继续推进，不退出（让 driver 走 G3/G4/G5 段；G6 复盘处理）
+        # 闸不放行：driver 在本环继续等复审 PASS（wait_truth 由外层 supervisor 续跑驱动重入）
       fi
     fi
   fi
@@ -884,31 +873,25 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
         kanban_walk_done arch "$AGID"; sset_once g2_arch_pass "$(date +%s)"
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
-        # V8.28 修根因 2：原 fail exit 引发 supervisor 30s 续跑回到 archgate 重发 G2——死循环。
-        # 改：记单 + 派修 + 不退出。driver 继续推进 G3/G4/G5，G6 retro 段做总复盘。
-        echo "ISSUE|g2-arch-fail-continue|arch-agent|V8.28 修根因：G2 arch 两轮未过，driver 改用 fail_to_continue（不死循环），gate_blocked g2_arch_pass close 仍生效。锚：aipay-scenario.sh:871（V8.28 修 2）" >> "$EVID_DIR/issues.log"
-        sset g2_arch_fail_logged 1
+        # V8.28 用户 21:02 裁定：两轮未过闸不放行不授控。记单留痕，闸键不落——
+        # 上游修订+复评 PASS 才进 close（supervisor 续跑重入本段，幂等不重复记单）。
+        if [[ "$(sget g2_arch_fail_logged)" != "1" ]]; then
+          echo "ISSUE|g2-arch-fail-hold|arch-agent|V8.28：G2 arch 两轮未过——闸不放行，修订+复评 PASS 前不进 close（禁止拆闸式解锁）。锚：aipay-scenario.sh:874-880" >> "$EVID_DIR/issues.log"
+          sset g2_arch_fail_logged 1
+        fi
+        fail "G2 两轮未过且复审窗口未翻正——闸不放行，等上游修订后由 supervisor 续跑重评（闸语义保持）"
       fi
     fi
   else
     echo "ISSUE|g2-review-missing|arch-agent|G2 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
-    # V8.28 修根因 2：G2 评审超时 1800s → 记单 + 派修（让 arch-agent 重发 + driver 不退出）
-    # 通过 dispatch_in_room 触发 arch-agent 重发评审，driver 后续 supervisor 续跑
-    # 会再读 state.env 检查评审结果（已记 issue 不重复）
-    sset g2_arch_timeout_logged 1
-    # 注：此处不 fail 让 driver 继续推进，G6 retro 段处理（V8.28 修 2）
+    fail "G2 架构治理评审超时，中止（V3 硬闸；supervisor 续跑重入重评，闸语义保持）"
   fi
 fi
 
 # ══ 步骤 14：主任务归档关闭 ═══════════════════════════
 if step_reached close && [[ -z "$(sget close_done)" ]]; then
-  # V8.28 修根因 2：原 gate_blocked 在 G2 失败时直接 fail，supervisor 续跑回到 archgate 重发——死循环。
-  # 改：G2 失败时记 issue + sset g2_arch_pass=1（人工授控+派修承诺），让 driver 进 close 步继续推进。
-  if [[ -z "$(sget g2_arch_pass)" && -n "$(sget g2_arch_fail_logged)" ]]; then
-    echo "ISSUE|g2-arch-bypass|director|V8.28 修根因：G2 arch FAIL 但 driver 继续推进（sset g2_arch_pass=1 人工授控），G5 复核时按 14 项 D + arch FAIL 缺项逐条复检。锚：aipay-scenario.sh:889（V8.28 修 2）" >> "$EVID_DIR/issues.log"
-    sset_once g2_arch_pass "$(date +%s)"
-    note "[G2-bypass] arch 闸人工授控通过（V8.28 修 2 修根因）——driver 继续推进 G3/G4/G5"
-  fi
+  # V8.28 用户 21:02 裁定：G2 FAIL 不授控不放行（拆闸式解锁作废）。闸保持原语义——
+  # gate_blocked 在 g2_arch_pass 缺失时拦 close；上游修订+复审 PASS 落键后才进。
   gate_blocked g2_arch_pass close   # V3 硬闸：G2 未过不进 L2
   # ── V8.8 纪律 33：测试左移② INT 集成案例（触发=G2 过闸按概设接口契约起笔；run15 首验）──
   # UC=用户视角、INT=接口视角，两段互斥不重复；INT 挂概设工件可反查。
