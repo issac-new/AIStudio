@@ -1,8 +1,8 @@
 // overlay[benchmarkforge] CLI 入口（阿里调研轮 C）：node scripts/forge-benchmark.mjs 薄壳调本函数。
 // 产题后直接走 eval store createSet 导入（无需 server 在跑）；同名集幂等拒绝由
 // eval store 保证（同名即报错退出，防重复导入撞题）。
-import { forgeTasks, readExpertCommits, selectExpertCommits } from './forge.ts'
-import { createSet } from '../eval/store.ts'
+import { forgeTasks, readExpertCommits, selectExpertCommits } from './forge'
+import { createSet } from '../eval/store'
 
 export interface ForgeCliArgs {
   repo: string

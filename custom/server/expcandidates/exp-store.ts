@@ -3,8 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ExpCandidate, ExpStoreShape } from './exp-types'
-import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract.ts'
-import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics.ts'
+import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
+import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
