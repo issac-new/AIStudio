@@ -1,5 +1,6 @@
-// overlay[constraints] 派单简报注入集成测试：stepBrief 拼进约束卡行（D 项）。
-// 存储隔离走 CONSTRAINT_STORE 临时目录；坏存储→简报不含约束行（fail-soft）。
+// overlay[constraints] 派单简报注入集成测试：stepBrief 拼进约束卡行（D 项）与
+// 历史经验行（B2 项，方案正本纪律 49）。存储隔离走临时目录；坏存储→简报不含
+// 注入行（fail-soft）。
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -7,11 +8,23 @@ import { join } from 'path'
 import { stepBrief } from '../column-dispatch'
 import type { ColumnTransitionTrigger, AutomationStep } from '../column-automation'
 import { createConstraintCard } from '../../constraints/constraint-store'
+import { _useStoreDirForTests as useExpStore, writeExpStore } from '../../expcandidates/exp-store'
+import type { ExpCandidate } from '../../expcandidates/exp-types'
 
 const dir = mkdtempSync(join(tmpdir(), 'dispatch-constraints-'))
 process.env.CONSTRAINT_STORE = dir
-afterAll(() => rmSync(dir, { recursive: true, force: true }))
-beforeEach(() => rmSync(join(dir, 'constraints.json'), { force: true }))
+const expDir = mkdtempSync(join(tmpdir(), 'dispatch-exp-'))
+useExpStore(expDir)
+afterAll(() => {
+  rmSync(dir, { recursive: true, force: true })
+  rmSync(expDir, { recursive: true, force: true })
+  delete process.env.EXPERIENCE_INJECT
+})
+beforeEach(() => {
+  rmSync(join(dir, 'constraints.json'), { force: true })
+  rmSync(join(expDir, 'exp-candidates.json'), { force: true })
+  delete process.env.EXPERIENCE_INJECT
+})
 
 const trigger: ColumnTransitionTrigger = {
   column: 'devimpl', matchedTiming: 'on_enter', autoAdvanceOnSuccess: true,
@@ -50,5 +63,23 @@ describe('stepBrief 约束卡注入', () => {
     const brief = stepBrief(trigger, steps, 0)
     expect(brief).toContain('交付契约')
     expect(brief).not.toContain('架构约束（约束卡注册表')
+  })
+
+  it('历史经验行（B2/纪律 49）：默认关不出现；开启且 approved 出现并留痕', () => {
+    writeExpStore({
+      candidates: [{
+        id: 'exp-001', type: 'sop', statement: '同类任务先备齐证据再提交', fingerprint: 'fp-1',
+        evidence: [], status: 'approved', createdAt: 't', updatedAt: 't', injectedRuns: [],
+      } as ExpCandidate],
+      nextSeq: 2,
+    })
+    // 默认关
+    const off = stepBrief(trigger, steps, 0)
+    expect(off).not.toContain('历史经验（已审核')
+    // 开启
+    process.env.EXPERIENCE_INJECT = '1'
+    const on = stepBrief(trigger, steps, 0)
+    expect(on).toContain('历史经验（已审核，历史经验出处·非本轮实测凭据）')
+    expect(on).toContain('exp-001')
   })
 })
