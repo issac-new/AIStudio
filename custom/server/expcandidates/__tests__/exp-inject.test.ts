@@ -32,6 +32,22 @@ function seed(cs: ExpCandidate[]): void {
 }
 
 describe('受控注入', () => {
+  it('storeDir 随 HERMES_WEB_UI_HOME 走（SIM 隔离不写宿主 home；env 覆盖仍最高）', async () => {
+    const { storeDir } = await import('../exp-store')
+    const savedStore = process.env.EXP_STORE
+    const savedHome = process.env.HERMES_WEB_UI_HOME
+    try {
+      delete process.env.EXP_STORE
+      process.env.HERMES_WEB_UI_HOME = '/tmp/sim-webui'
+      expect(storeDir()).toBe('/tmp/sim-webui/expcandidates')
+      process.env.EXP_STORE = dir
+      expect(storeDir()).toBe(dir)
+    } finally {
+      if (savedStore) process.env.EXP_STORE = savedStore; else delete process.env.EXP_STORE
+      if (savedHome) process.env.HERMES_WEB_UI_HOME = savedHome; else delete process.env.HERMES_WEB_UI_HOME
+    }
+  })
+
   it('默认关闭：EXPERIENCE_INJECT 未设即零注入（有 approved 也不出）', () => {
     seed([cand('exp-001', 'approved')])
     expect(experienceLinesForDispatch({ column: 'devimpl' })).toEqual([])
