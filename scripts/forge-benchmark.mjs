@@ -4,6 +4,8 @@
 //   npm run bench:expert -- --repo <仓库路径> --set-name <集名> [--since 3.months.ago] [--limit 20] [--track e2e|process]
 // 产题即导入 Eval 用例集（建议随后在 Eval Studio 内 sealSet 密封——同仓历史对
 // 被测 agent 可见时考卷失效，密封是逐题对错不出库的防线）。
+const { register } = await import('node:module')
+register(new URL('./ts-resolve.mjs', import.meta.url))
 const { runForgeCli } = await import('../custom/server/benchmarkforge/forge-cli.ts')
 
 function arg(name, fallback) {
