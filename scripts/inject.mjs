@@ -353,16 +353,16 @@ export default mergeConfig(
         // 上游组件解析到 hermes-studio 的，双实例 app.use(A)/useStore 查 B →
         // activePinia undefined → '._s' TypeError → 根组件空渲染白屏。裸包名钉到
         // 上游树单一实例（deep import 不受影响）。
-        { find: /^pinia$/, replacement: hermesStudioRoot + '/node_modules/pinia/dist/pinia.mjs' },
-        { find: /^vue$/, replacement: hermesStudioRoot + '/node_modules/vue/dist/vue.runtime.esm-bundler.js' },
-        // 子路径钉单（run19 采集壳页实锤，双实例第二例）：/^vue$/ 只精确匹配裸名，
+        { find: new RegExp('^pinia$'), replacement: hermesStudioRoot + '/node_modules/pinia/dist/pinia.mjs' },
+        { find: new RegExp('^vue$'), replacement: hermesStudioRoot + '/node_modules/vue/dist/vue.runtime.esm-bundler.js' },
+        // 子路径钉单（run19 采集壳页实锤，双实例第二例）：regex 见 356-357 行，
         // 'vue/xxx' 子路径与 '@vue/runtime-core'（pinia/vue-router 内部依赖）不经锚定——
         // 两树并存期（node_modules 符号链接被 npm 拆成实体目录的窗口）解析出双
         // runtime-core → useRoute() inject 落空 undefined → IaShell 'reading query'
         // TypeError 杀渲染树=主区域纯黑空骨架（采集帧 29.3K 同像素壳页族）。
         // vue-router 同钉（双 router 实例同症）。
-        { find: /^@vue\/runtime-core$/, replacement: hermesStudioRoot + '/node_modules/@vue/runtime-core/dist/runtime-core.esm-bundler.js' },
-        { find: /^vue-router$/, replacement: hermesStudioRoot + '/node_modules/vue-router/dist/vue-router.mjs' },
+        { find: new RegExp('^@vue/runtime-core$'), replacement: hermesStudioRoot + '/node_modules/@vue/runtime-core/dist/runtime-core.esm-bundler.js' },
+        { find: new RegExp('^vue-router$'), replacement: hermesStudioRoot + '/node_modules/vue-router/dist/vue-router.mjs' },
         // /src/main.ts(index.html 的入口)→ overlay entry shim(复制上游 main.ts 启动序列 + A 类注册)。
         // 用字符串精确匹配 index.html 里的 /src/main.ts,使 Vite 以 index.html 为入口、
         // 但把 main 重定向到 overlay shim(保留 HTML 处理,生成 index.html)。
