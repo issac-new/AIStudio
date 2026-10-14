@@ -697,3 +697,9 @@
 # 源缺席如实 available:false（traces 宿主侧仅 header/trailer 实测缺席）。
 # /api/optadvice/report；Eval Studio「优化建议」页签。
 625-server-optadvice-routes.patch
+
+# [626] 失败路由显式表路由挂载（2026-10-14 阿里调研轮 E）：失败类型→回退点→携带物
+# 三档显式化——test_fail=原地修（重试≥3 升人闸）/direction_wrong=带证据回上游
+# （人工改派裁决先例升为显式规则）/budget_exhausted+non_convergent+stall_timeout=
+# 人闸。出路由决定+卡标注文本，不自动改派（改行为必须过人）。/api/faileroute
+626-server-faileroute-routes.patch
