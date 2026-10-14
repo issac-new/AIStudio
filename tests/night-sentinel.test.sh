@@ -10,7 +10,7 @@ fails=0
 
 # 提取主循环体（去掉 shebang/set/头部常量与函数定义后的 while 循环）——直接提取整脚本
 # 的 while 块；测试 stub 掉全部外部函数后 eval。
-BODY="$(sed -n '/^_stuck=0$/,/^done$/p' "$HERE/mux/mx-night-sentinel.sh")"
+BODY="$(sed -n '/^_stuck=0/,/^done$/p' "$HERE/mux/mx-night-sentinel.sh")"
 [[ -n "$BODY" ]] || { echo "FAIL 提取主循环失败"; exit 1; }
 
 CTRL="$(mktemp -d /tmp/night-sentinel.XXXXXX)" || exit 1
@@ -23,7 +23,7 @@ echo "report_pending" > /dev/null
 export SIM_ROOT="$CTRL" RUN_ID="r1" HERMES_ROOT="$CTRL/hermes" \
   MX_NS_INTERVAL=1 MX_NS_STUCK_ROUNDS=2 MX_NS_SLEEP_SEC=5 SCAN_ROOM="!room:x"
 STATE="$CTRL/runs/r1/state.env"; STOPF="$CTRL/var/r1-night-sentinel.stop"; LOG="$CTRL/logs/night-sentinel.log"
-IVAL=1; STUCK_ROUNDS=2; SLEEP_SEC=5
+IVAL=1; STUCK_ROUNDS=2; SLEEP_SEC=5; _last_ready_n=-1; _rounds=0; RUNNING_CACHE=0
 HERMES="/bin/true"
 log() { printf '[ns %s] %s\n' "$(date '+%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
 _realwork_ts() { cat "$CTRL/rw-$1" 2>/dev/null || echo 0; }

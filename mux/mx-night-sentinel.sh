@@ -61,13 +61,19 @@ _kanban_json() { # <status> → tasks json
 }
 
 log "启动：RUN_ID=$RUN_ID ival=${IVAL}s stuck_rounds=$STUCK_ROUNDS sleep=${SLEEP_SEC}s（report_done/stop 即退）"
-_stuck=0
+_stuck=0; _last_ready_n=-1; _rounds=0; RUNNING_CACHE=0
 while :; do
   [[ -f "$STOPF" ]] && { log "stop 文件在位，退出"; rm -f "$STOPF"; exit 0; }
   grep -q '^report_done=' "$STATE" 2>/dev/null && { log "report_done 已落键，功成身退"; exit 0; }
 
   READY=$(_kanban_json ready)
   READY_N=$(printf '%s' "$READY" | jq 'length' 2>/dev/null || echo 0)
+  # 观测性（首验实锤：ready 有卡但日志零输出，无法区分「看不到卡」与「没在跑」——
+  # 计数变化必打一行；恒 0 也每 12 轮（1h）打一次心跳，守望自身的活性可审计）
+  if (( READY_N != _last_ready_n )) || (( (_rounds % 12) == 0 )); then
+    log "巡检：ready=${READY_N} running_count=$(printf '%s' "$RUNNING_CACHE:-0") round=$_rounds"
+  fi
+  _last_ready_n=$READY_N; _rounds=$((_rounds + 1))
   if (( READY_N > 0 )); then
     _stuck=$((_stuck + 1))
     if (( _stuck >= STUCK_ROUNDS )); then
