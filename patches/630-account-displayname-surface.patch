@@ -1,0 +1,63 @@
+diff --git a/packages/client/src/components/layout/PageSidebarFooter.vue b/packages/client/src/components/layout/PageSidebarFooter.vue
+index c11a6c5b9..562f2c66b 100644
+--- a/packages/client/src/components/layout/PageSidebarFooter.vue
++++ b/packages/client/src/components/layout/PageSidebarFooter.vue
+@@ -21,7 +21,8 @@ let sidebarObserver: ResizeObserver | undefined
+ const trigger = ref<HTMLButtonElement | null>(null)
+ const panel = ref<HTMLElement | null>(null)
+ const menuId = useId()
+-const displayName = computed(() => accountStore.username || t('settings.tabs.account'))
++const accountName = computed(() => accountStore.displayName || accountStore.username || '')
++const displayName = computed(() => accountName.value || t('settings.tabs.account'))
+ 
+ function syncSidebarWidth() {
+   const sidebar = footer.value?.parentElement
+@@ -89,7 +90,7 @@ async function focusMenu() {
+           @keydown.up.prevent="focusMenu"
+           @keydown.down.prevent="focusMenu"
+         >
+-          <ProfileAvatar :name="accountStore.username || 'default'" :avatar="accountStore.profileAvatar" :size="30" />
++          <ProfileAvatar :name="accountName || 'default'" :avatar="accountStore.profileAvatar" :size="30" />
+           <span class="account-name">{{ displayName }}</span>
+           <svg class="account-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+             <polyline points="6 14 12 8 18 14" />
+@@ -106,7 +107,7 @@ async function focusMenu() {
+         @keydown.esc.stop.prevent="handleEscape"
+       >
+         <div class="account-menu-heading">
+-          <ProfileAvatar :name="accountStore.username || 'default'" :avatar="accountStore.profileAvatar" :size="34" />
++          <ProfileAvatar :name="accountName || 'default'" :avatar="accountStore.profileAvatar" :size="34" />
+           <div class="account-menu-identity">
+             <span class="account-name" :title="displayName">{{ displayName }}</span>
+             <span class="account-label">{{ t('settings.tabs.account') }}</span>
+diff --git a/packages/client/src/stores/account.ts b/packages/client/src/stores/account.ts
+index 03e2d14c7..73269c01c 100644
+--- a/packages/client/src/stores/account.ts
++++ b/packages/client/src/stores/account.ts
+@@ -5,6 +5,7 @@ import { fetchCurrentUser, fetchMyAvatar, type UserAvatar } from '@/api/studio/a
+ 
+ export const useAccountStore = defineStore('account', () => {
+   const username = ref(getStoredUsername() || '')
++  const displayName = ref('')
+   const avatar = ref<UserAvatar | null>(null)
+   const profileAvatar = computed(() => avatar.value?.type === 'image'
+     ? { type: 'image' as const, dataUrl: avatar.value.dataUrl }
+@@ -17,7 +18,10 @@ export const useAccountStore = defineStore('account', () => {
+     if (loaded) return Promise.resolve()
+     pending = Promise.allSettled([fetchCurrentUser(), fetchMyAvatar()])
+       .then(([userResult, avatarResult]) => {
+-        if (userResult.status === 'fulfilled') username.value = userResult.value.username
++        if (userResult.status === 'fulfilled') {
++          username.value = userResult.value.username
++          displayName.value = userResult.value.matrix_display_name || userResult.value.username
++        }
+         if (avatarResult.status === 'fulfilled') avatar.value = avatarResult.value
+         loaded = userResult.status === 'fulfilled' && avatarResult.status === 'fulfilled'
+       })
+@@ -25,5 +29,5 @@ export const useAccountStore = defineStore('account', () => {
+     return pending
+   }
+ 
+-  return { username, avatar, profileAvatar, loadAccount }
++  return { username, displayName, avatar, profileAvatar, loadAccount }
+ })
