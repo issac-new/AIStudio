@@ -20,6 +20,7 @@ import { appendDispatchOutcome, hasRecentDispatch } from '../governance/dispatch
 import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluation } from '../governance/decision-rules'
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
+import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
@@ -114,6 +115,13 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     specialist: step.specialist || undefined,
     stepId: step.id,
   })
+  // 历史经验注入（阿里调研轮 B2，方案正本纪律 49）：EXPERIENCE_INJECT=1 才启用，
+  // 已审核候选封顶 3 条，凭据形态改写为「历史经验出处」，留痕 injectedRuns。
+  const experienceLines = experienceLinesForDispatch({
+    column: trigger.column,
+    specialist: step.specialist || undefined,
+    stepId: step.id,
+  })
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
@@ -122,6 +130,7 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     ...(step.autonomy ? [`授权空间：${step.autonomy}（在此范围内可自主决策，无需回问）`] : []),
     ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
     ...constraintCardLines,
+    ...experienceLines,
     ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
     contractFooter(),
