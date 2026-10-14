@@ -358,12 +358,12 @@ describe('detectDeliveryAnchor（交付锚验证 A+B，run19 上移）', () => {
     process.env.CLUSTER_INSPECTOR_NUDGE_REPO = repo
     const now = Date.now()
     const snapA = snap({ ts: now, profiles: { ok: true, tails: [] },
-      runningCards: cards([{ branch_name: 'feat/OLD', started_at: Math.round(now / 1000) - 3600, status: 'running' }]) })
+      runningCards: cards([{ branch_name: 'feat/OLD', started_at: Math.round(now / 1000) - 7200, status: 'running' }]) })
     const hit = detectAll(snapA).find((x) => x.detector === 'delivery.branch-stale')
     expect(hit).toBeTruthy()
     expect(hit!.summary).toContain('上轮遗留')
     const snapB = snap({ ts: now, profiles: { ok: true, tails: [] },
-      runningCards: cards([{ branch_name: 'feat/NEW', started_at: Math.round(now / 1000) - 3600, status: 'running' }]) })
+      runningCards: cards([{ branch_name: 'feat/NEW', started_at: Math.round(now / 1000) - 7200, status: 'running' }]) })
     expect(detectAll(snapB).find((x) => x.detector === 'delivery.branch-stale')).toBeUndefined()
     delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
     cleanup()
@@ -414,5 +414,30 @@ describe('detectDispatcherStuck + detectFakeCompletion（run19 四病灶根治�
     expect(hit).toBeTruthy()
     expect(hit!.summary).toContain('零真做')
     expect(detectAll(mkp(now - 60_000), { nowMs: now }).find((x) => x.detector === 'completion.no-realwork')).toBeUndefined()
+  })
+})
+
+describe('detectLoadImbalance + detectIdleWithWorkAvailable（工作调节面，用户裁定）', () => {
+  const now = 1_000_000_000_000
+  const mksnap = (cards: Array<{ assignee?: string; status?: string }>, tails: Array<{ p: string; rw?: number }>) => snap({
+    ts: now,
+    profiles: { ok: true, tails: tails.map((t) => ({ profile: t.p, tail: 'x', mtimeMs: now - 3600_000, workTsMs: now - 3600_000, realWorkTsMs: t.rw ?? 0 })) },
+    runningCards: { ok: true, cards: cards.map((c, i) => ({ id: `t${i}`, assignee: c.assignee, status: c.status ?? 'running', started_at: 1 })) },
+  })
+  it('不均衡：一人持 3 卡+一人零卡 → load.imbalance 附分布；人人≤2 不报', () => {
+    const hit = detectAll(mksnap([
+      { assignee: 'aa' }, { assignee: 'aa' }, { assignee: 'aa' },
+    ], [{ p: 'aa' }, { p: 'bb' }]), { nowMs: now }).find((x) => x.detector === 'load.imbalance')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('aa 持 3 张在办卡')
+    expect(hit!.summary).toContain('bb')
+    expect(detectAll(mksnap([{ assignee: 'aa' }, { assignee: 'aa' }], [{ p: 'aa' }, { p: 'bb' }]), { nowMs: now }).find((x) => x.detector === 'load.imbalance')).toBeUndefined()
+  })
+  it('空闲正当性：零卡档案静默+队列有无主 ready 卡 → idle.with-work；队列无卡（真空闲）不报', () => {
+    const un = [{ }, { assignee: '', status: 'ready' }]
+    const hit = detectAll(mksnap([{ assignee: '', status: 'ready' }], [{ p: 'bb' }]), { nowMs: now }).find((x) => x.detector === 'idle.with-work')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('可领未领')
+    expect(detectAll(mksnap([{ assignee: 'aa' }], [{ p: 'bb' }]), { nowMs: now }).find((x) => x.detector === 'idle.with-work')).toBeUndefined()
   })
 })
