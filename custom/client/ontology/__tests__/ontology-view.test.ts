@@ -24,13 +24,35 @@ vi.mock('@/custom/ontology/api', () => ({
     saveSpec: vi.fn(),
     exportText: vi.fn(),
   },
+  constraintsApi: {
+    list: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    preview: vi.fn(),
+  },
+  parseList: (v: string) => v.split(/[,，;；\s]+/).map((s: string) => s.trim()).filter(Boolean),
 }))
 // @/api/client 被 api.ts 引用——mock 掉 request（不被直接使用但防链式副作用）
 vi.mock('@/api/client', () => ({ request: vi.fn(), getBaseUrlValue: () => '' }))
 
 import OntologyView from '@/custom/ontology/views/OntologyView.vue'
 import { seedSpec, seedInstances } from '../../../server/ontology/ontology-seed'
-import { ontologyApi as apiMocks } from '@/custom/ontology/api'
+import { ontologyApi as apiMocks, constraintsApi as ctrMocks } from '@/custom/ontology/api'
+import { ontologyMessages } from '@/custom/ontology/i18n'
+
+function keyPaths(obj: Record<string, unknown>, base = ''): string[] {
+  return Object.entries(obj).flatMap(([k, v]) => {
+    const p = base ? `${base}.${k}` : k
+    return v && typeof v === 'object' ? keyPaths(v as Record<string, unknown>, p) : [p]
+  })
+}
+
+describe('i18n 键齐平（zh/en 词面守门）', () => {
+  it('zh 与 en 键路径完全一致', () => {
+    expect(keyPaths(ontologyMessages.en as never)).toEqual(keyPaths(ontologyMessages.zh as never))
+  })
+})
 
 function mountView() {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div/>' } }] })
@@ -87,5 +109,23 @@ describe('OntologyView 冒烟', () => {
     await flushPromises()
     expect(w.find('[data-testid="ontology-editor-violations"]').text()).toContain('field:required')
     expect(apiMocks.createInstance).not.toHaveBeenCalled()
+  })
+
+  it('约束卡页签：列表渲染 + 空态（2026-10-14 阿里调研轮 D）', async () => {
+    ctrMocks.list.mockResolvedValue({
+      ok: true,
+      cards: [{
+        id: 'ctr-001', statement: '在已有 API 上扩展能力，不新增并列 API',
+        scope: { columns: ['devimpl'] }, sourceAnchor: 'specs/x.md', enabled: true,
+        createdAt: '2026-10-14T00:00:00Z', updatedAt: '2026-10-14T00:00:00Z',
+      }],
+    })
+    const w = mountView()
+    await flushPromises()
+    await w.find('[data-testid="onto-tab-constraints"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="ontology-ctr-row-ctr-001"]').exists()).toBe(true)
+    expect(w.text()).toContain('不新增并列 API')
+    expect(ctrMocks.list).toHaveBeenCalled()
   })
 })
