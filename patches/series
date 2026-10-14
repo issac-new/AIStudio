@@ -684,3 +684,9 @@
 # 看板任务快 404（sqlite 存在性预检，不存在的 id 9-11s→秒回）+ profiles 快 404
 #（磁盘清单预检，12s 超时→秒回）。闸逻辑在 custom/server/middleware/cli-fast-gates.ts。
 623-server-cli-read-cache-expansion.patch
+
+# [624] 约束卡注册表路由挂载（2026-10-14 阿里 15-Agent 调研轮 D）：架构级约束
+# （陈述/适用范围/来源锚/生效轮）人工维护，派单简报按列/specialist 命中注入
+# （column-dispatch stepBrief，封顶 5 条，存储 fail-soft 不阻断派发）。
+# /api/constraints CRUD+预演；本体工作台「约束卡」页签（i18n 键齐平测试守门）。
+624-server-constraints-routes.patch
