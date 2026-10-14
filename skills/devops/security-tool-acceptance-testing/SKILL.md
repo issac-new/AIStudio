@@ -1,6 +1,6 @@
 ---
 name: security-tool-acceptance-testing
-version: 1.1.0
+version: 1.2.0
 description: "安全工具脚本验收：回环 fixture 零外网测试+状态机复测+工具形状边界自检。"
 platforms: [macos, linux]
 ---
@@ -70,6 +70,17 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 - **产物证据化**：结论带 confidence（observed/derived/inferred）+ authority + limitations；「未覆盖」输出为 unknown，不是 absence。
 - **失败保真**：tagged error + 部分事实保留；降级必须显式（不可静默 fallback 到次优数据源）。
 - 原文：`~/hermes-docker-sandbox/workspace/research/rea-src/docs/tool-design.md`；调研报告同目录 `rea-research-report.md` §2.5。
+
+## 配方五：静态内容扫描器全库基线首跑（效力验证）
+
+规则引擎级工具（关键词/启发式/正则扫描器，如 skill 注入/投毒检测器）交付后，用全库真实语料跑一次基线首跑——fixtures 单元测试只证明「能检出」，基线首跑补「误报边界」这半张效力证明，两半齐了才算效力验证闭环。
+
+- **执行形态**：顶层类目逐目录 `scan <dir> --format json`，纯本地；5000+ 文件量级约 1 分钟。汇总脚本只收新规则命中 + flagged 计数，落 raw-summary.json（机器可复读）；再对每个新规则命中文件抽 snippets 逐类定性（真恶意 / fixtures 预期 / 误报机理），落定性结论 JSON + 命中样本表。安全发现类结果按 hack-kb 约定归档（ts/target/chain/product/cond/evidence 一行 jsonl）。
+- **先探输出形状再解析**：扫描器 JSON 按 target 形态分层——单文件形态在顶层 `findings`，目录形态在 `results[].findings`；按错层级解析=静默漏报，会把「全库干净」建立在零解析上。单文件直 scan 与目录扫描行为不同（顶层散文件不在目录扫描覆盖内），空结果先核对扫描路径真实存在，再判零命中。
+- **双面数字分开报**：恶意面检出率（fixtures 命中占比）与真实面误报率（真实文件命中中误报占比）是两个独立指标——合成一句「检出 N 处」会掩盖「fixtures 全检出、真实面 100% 误报」这类工具在真实语料上不可用的事实。
+- **误报三类高发机理（词面启发式结构性边界）**：①防御性安全文档——分析对象语言被当指令（「检查越狱检测实现」命中注入规则），「以安全为研究对象」的语料对注入类词面规则天然接近全量误报；②教程/标准引文——示例代码叙述句（「now make the key」）命中凭据类规则；③运维祈使句——给 agent 的正常操作指令（「Must print TEST_OK」）命中指令类规则。这是词面启发的结构边界，不是部署错误。
+- **误报不是终点是改进票**：按机理写改进方向（类目/路径豁免清单、升级为「注释+指令动词+工具调用目标」多要素共现再报），误报机理+改进方向落盘台账后效力验证才闭环。
+- **成色升降纪律**：效力级是可升降的实测状态不是终身标签——基线双面数字已知后，落地/裁决表的成色从「生效，效力待首次实战」升为 Exercised，禁用永久性「未验证」措辞（后续 session 会误判为从未跑过）；残留缺口（误报改进）另开小卡登记，不回退已验证部分的成色。
 
 ## 已知坑
 

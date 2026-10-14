@@ -296,11 +296,6 @@ _left_core_installed:
   - spotify
 _left_core_scoped:
   - homeassistant
-update:
-  installs:
-    3b3e454ed645e059:
-      path: /Users/YOURNAME/.hermes/hermes-agent
-      channel: stable
 telemetry:
   shared_metrics:
     enabled: false

@@ -104,19 +104,23 @@ class SkillScanner:
         self.verbose = verbose
         self._severity_order = list(Severity)
 
-    def scan_text(self, text: str, name: str = "skill") -> SkillScanResult:
+    def scan_text(self, text: str, name: str = "skill", path: str | Path | None = None) -> SkillScanResult:
         """
         Scan a skill provided as plain text.
 
         Args:
             text: The skill content (SKILL.md, YAML, Python, etc.)
             name: Identifier for this skill in the report
+            path: Optional source path. Rules with directory-context checks
+                  (check_dir_fn) use it to inspect sibling files.
 
         Returns:
             SkillScanResult with all findings and risk score
         """
         t0 = time.time()
         findings: list[Finding] = []
+
+        src_path = Path(path) if path is not None else None
 
         for rule in self.rules:
             if self._below_min_severity(rule.severity):
@@ -125,6 +129,8 @@ class SkillScanner:
                 snippets = rule.match(text)
             except Exception:
                 snippets = []
+            if not snippets and src_path is not None:
+                snippets = rule.match_dir(src_path)
             if snippets:
                 line_numbers = _find_line_numbers(text, snippets[0])
                 findings.append(Finding(rule=rule, snippets=snippets, line_numbers=line_numbers))
@@ -165,7 +171,7 @@ class SkillScanner:
                 risk_level="ERROR",
                 error=str(e),
             )
-        return self.scan_text(text, name=p.name)
+        return self.scan_text(text, name=p.name, path=p)
 
     def scan_directory(
         self,

@@ -1,7 +1,7 @@
 ---
 name: skill-library-maintenance
 description: "Audit, deduplicate, and repair a multi-profile Hermes skill library. Detect physical-copy redundancy across profiles, convert to symlinks, repair self-referencing symlink loops in shared, and restore lost content from GitHub distribution repo. Use when ~/.hermes/skills has broken loops, profiles have stale physical copies, or after a fusion/clawskills install leaves duplicates."
-version: 1.1.0
+version: 1.2.0
 metadata:
   hermes:
     tags: [skills, maintenance, deduplication, symlinks, cleanup]
@@ -23,6 +23,11 @@ symlink loops, and lost custom skills.
 - After a Hermes update leaves shared skill symlinks broken
 - When one domain has accumulated 2+ separate skills that are cross-linked by a
   分工表 instead of being one entrance (see Mode 5)
+- When `skill_manage` refuses a patch on a skill that IS listed/loaded —
+  "not found in active profile" or "not found" on the qualified name, flip-flopping
+  between the bare and categorized name — while `skill_view` shows both names
+  resolve (bare name returns `dedup: true` or an ambiguous-lock message).
+  Same-name dual directory inside ONE profile (see Mode 6)
 - Routine quarterly maintenance (entropy accumulates silently)
 
 ## The Three Failure Modes
@@ -131,6 +136,35 @@ Procedure (validated on a 3→1 writing-skill merge):
    `~/.hermes/skills` + `profiles/*/SOUL.md` + bin + cron; re-run runtime assets
    (selftest/fixture/fail-closed) FROM THE NEW PATH; invoke once via a profile
    symlink path; `skill_view` loads with the merged description.
+
+## Mode 6: Same-Name Dual Directory Inside One Profile (同名双目录冲突)
+
+A skill exists twice in one profile: a root-level `<name>/` (uncategorized) and
+a categorized `<cat>/<name>/`. Symptoms: `skill_view('name')` resolves/locks
+against one copy while `skill_manage` writes target the other (or refuses with
+"not found" errors that misname the profile); `grep -rh '^name:'
+<profile>/skills/ --include=SKILL.md | sort | uniq -d` lists the duplicated
+frontmatter name. Likely origin: a tooling pass wrote a copy at the wrong level
+while the categorized original already existed; the two copies then drift.
+
+**Resolution order** (validated):
+
+1. **Survivor = the categorized canonical** — the path `skill_view` reports in
+   `skill_dir`. Never keep the uncategorized root copy.
+2. **Diff before delete**: the orphan copy is often NEWER (a prior session
+   patched whichever copy its resolution picked). Fold unique increments into
+   the survivor first — diff both SKILL.md bodies, port deltas into matching
+   sections, bump the survivor's version. Then archive-then-delete the orphan
+   (P3 祖训): `cp -RL` to the archive, `rm -rf` only after SHA256 verification.
+3. **skill_manage writes fail while the duplicate exists** — its name
+   resolution cannot disambiguate the two directories, and error messages
+   misattribute the copy to another profile. Fall back to file tools (python
+   text edit) aimed at the survivor's absolute `skill_dir` from skill_view
+   output; name resolution clears once the orphan is gone.
+4. **Unlock verification**: the detection grep returns empty; bare-name
+   `skill_view` resolves unambiguously and a re-view returns `dedup: true`.
+5. `cp -RL` (dereference) when archiving — skill dirs often contain symlinks
+   into shared; a plain `cp -R` archives broken relative links.
 
 ## Category Classification
 

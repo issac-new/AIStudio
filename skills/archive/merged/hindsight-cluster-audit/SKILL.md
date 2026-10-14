@@ -82,7 +82,7 @@ Symptom: `/health` healthy, worker stats running, but `hindsight_retain` →
 - `app_type='hermes'` providers (damoxing, cc-switch, moa-*) have NO
   provider_health rows — they are a separate routing domain, NOT part of the codex
   failover queue. Their presence in the DB doesn't make them reachable.
-- **Masked-key trap**: codex DS row stores `OPENAI_API_KEY: "sk-REDACTED"`
+- **Masked-key trap**: codex DS row stores `OPENAI_API_KEY: "sk-f9d...8956"`
   (display-masked placeholder). Extracting it to call DeepSeek directly yields
   `Authentication Fails`. Real keys are in the claude app_type rows
   (`ANTHROPIC_AUTH_TOKEN`) and are anthropic-endpoint-only anyway.

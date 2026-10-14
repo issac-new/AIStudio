@@ -9,13 +9,12 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 **41 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
 
-### What changed in this release (v3.2)
+### What changed in this release (v3.3)
 
-- **Full refresh**: all 40 existing profiles synced to 2026-10 live state (model routing unified through local cc-switch proxy)
-- **New profile**: `[已移除]` (41st) — [已移除] software install-tree static reverse engineering (REA/Ghidra; static-analysis-only red line)
-- **Root skills refreshed**; `shared/profiles.yaml` now carries 48-profile differential config
-- **Privacy**: WeChat/Matrix IDs → placeholders, `/Users/YOURNAME` → `/Users/YOURNAME`, private cron jobs dropped
-- Previous releases: v3.1 added hack team (4 profiles); v3.0 added Windows installer + six-layer `_shared` structure
+- **Incremental refresh**: 2026-10-14 fusion batch synced — skillguard v1.2.0 supply-chain rules (SG-013 embedded-instruction / SG-014 tool-description-code consistency / SG-015 rug-pull, with round-trip test fixtures), `llm-redteam` multi-turn adversarial strategies, AIG registration + 3 gaps in `_shared/hack-tool-registry.md`, DSH-style structured finding store in `_shared/hack-knowledge-index.md`, skill admission gate (G-A4) in `platform-skill-miner`, Checklist reflection verification in `_shared/03-evolution-memory/output-contract.md`
+- **17 root skills refreshed** to live state (cost-ledger, weixin ops series, public-repo-release v1.2.0, etc.)
+- **Privacy re-audit**: 5 weixin account-ID leaks caught and re-placeholderized (including 1 real token in `shared/profiles.yaml` carried since v3.2)
+- Previous releases: v3.2 added `[已移除]` (41st profile); v3.1 added hack team (4 profiles); v3.0 added Windows installer + six-layer `_shared` structure
 
 ## Profile Roster / Profile 名册
 
