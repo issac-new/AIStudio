@@ -4,13 +4,14 @@
 //   kanban     各板 kanban.db task_events（column_transition → 周期瀑布；gate_blocked/warning → 拦截 Top-N）
 //   traces     ~/.hermes/traces JSONL——宿主实测仅 header/trailer（span 落 profile 侧），如实缺席
 import { DatabaseSync } from 'node:sqlite'
-import { resolveStudioDb } from '../harness/cost-accounts'
-import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { resolveStudioDb } from '../harness/cost-accounts.ts'
+import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics.ts'
+import { normalizeEvents } from '../expcandidates/exp-store.ts'
 import {
   topSessions, gateErrorRowsFromEvents, topGateErrors,
   type AdviceReport, type SessionUsageRow, type SourceStatus,
-} from './advice'
-import { topStages, waterfallFromEvents, type TransitionLite } from './leadtime'
+} from './advice.ts'
+import { topStages, waterfallFromEvents, type TransitionLite } from './leadtime.ts'
 
 function sessionRows(db: DatabaseSync, days: number): SessionUsageRow[] {
   const cols = (db.prepare('PRAGMA table_info(sessions)').all() as unknown as Array<{ name: string }>).map((c) => c.name)
@@ -75,28 +76,23 @@ export async function buildAdviceReport(opts: { days?: number; limit?: number } 
   }
 
   // ── kanban（瀑布 + 拦截 Top-N）──
+  // 归一走 expcandidates.normalizeEvents 单点（闸词汇+舰队生命周期词汇双兼容，
+  // run19 实测舰队 task_events 无 column_transition/gate_blocked，全走生命周期词汇）。
   let waterfall: AdviceReport['waterfall'] = null
   let gateErrorTop: AdviceReport['gateErrorTop'] = []
   const boards = kanbanDbFiles()
   if (boards.length) {
     const transitions: TransitionLite[] = []
-    const gateEvents: Array<{ taskId: string; kind: string; payload: unknown; at: number }> = []
+    const normalized: Array<{ taskId: string; kind: string; to?: string; failures?: Array<{ gate: string; reason: string; detail?: string }>; at: number }> = []
     let boardsOk = 0
     let lastErr = ''
     for (const f of boards) {
       try {
         const db = await openReadonly(f)
         try {
-          for (const r of boardEvents(db, days)) {
-            let payload: { to?: string } = {}
-            try {
-              payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload as never) ?? {}
-            } catch { /* 坏 payload 跳过 */ }
-            if (r.kind === 'column_transition' && payload.to) {
-              transitions.push({ taskId: String(r.task_id), to: String(payload.to), at: Number(r.created_at), seq: Number(r.id) })
-            } else if (r.kind === 'gate_blocked' || r.kind === 'gate_warning') {
-              gateEvents.push({ taskId: String(r.task_id), kind: r.kind, payload: r.payload, at: Number(r.created_at) })
-            }
+          for (const r of normalizeEvents(boardEvents(db, days))) {
+            normalized.push(r)
+            if (r.to) transitions.push({ taskId: r.taskId, to: r.to, at: r.at, seq: r.seq })
           }
           boardsOk += 1
         } finally {
@@ -108,7 +104,7 @@ export async function buildAdviceReport(opts: { days?: number; limit?: number } 
     }
     if (boardsOk > 0) {
       waterfall = waterfallFromEvents(transitions)
-      gateErrorTop = topGateErrors(gateErrorRowsFromEvents(gateEvents), limit)
+      gateErrorTop = topGateErrors(gateErrorRowsFromEvents(normalized), limit)
       sources.push({ id: `kanban task_events（${boardsOk}/${boards.length} 板可读）`, available: true })
     } else {
       sources.push({ id: 'kanban task_events', available: false, note: lastErr || '板库不可读' })

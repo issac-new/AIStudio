@@ -66,23 +66,23 @@ describe('烧钱会话 Top-N', () => {
 
 describe('关卡拦截 Top-N', () => {
   const events = [
-    { taskId: 't1', kind: 'gate_blocked', payload: JSON.stringify({ to: 'review', results: [{ gate: 'archgate', ok: false, reason: 'evidence_missing', detail: '缺拍摄位' }] }), at: 100 },
-    { taskId: 't2', kind: 'gate_blocked', payload: JSON.stringify({ to: 'review', results: [{ gate: 'archgate', ok: false, reason: 'evidence_missing', detail: '缺锚点' }] }), at: 200 },
-    { taskId: 't3', kind: 'gate_warning', payload: JSON.stringify({ results: [{ gate: 'qgate', ok: false, reason: 'jargon', detail: 'x' }] }), at: 150 },
-    { taskId: 't4', kind: 'column_transition', payload: JSON.stringify({ to: 'x', results: [] }), at: 300 },
-    { taskId: 't5', kind: 'gate_blocked', payload: '{broken', at: 400 },
+    { taskId: 't1', kind: 'gate_blocked', failures: [{ gate: 'archgate', reason: 'evidence_missing', detail: '缺锚点' }], at: 100 },
+    { taskId: 't2', kind: 'gate_blocked', failures: [{ gate: 'archgate', reason: 'evidence_missing', detail: '缺拍摄位' }], at: 200 },
+    { taskId: 't3', kind: 'gate_warning', failures: [{ gate: 'qgate', reason: 'jargon', detail: 'x' }], at: 150 },
+    { taskId: 't3b', kind: 'timed_out', failures: [{ gate: 'iteration_budget', reason: 'budget_exhausted', detail: 'Iteration budget exhausted (60/60)' }], at: 310 },
+    { taskId: 't4', kind: 'column_transition', to: 'x', at: 300 },
   ]
 
-  it('payload.results !ok 展开；坏 payload 跳过；column_transition 不进', () => {
+  it('归一行 failures 展开；无 failures 的迁移行不进', () => {
     const rows = gateErrorRowsFromEvents(events)
-    expect(rows).toHaveLength(3)
+    expect(rows).toHaveLength(4)
     expect(rows.every((r) => r.kind !== 'column_transition')).toBe(true)
   })
 
   it('gate:reason 分组计数降序 + lastAt/sample 取最新', () => {
-    const top = topGateErrors(gateErrorRowsFromEvents(events), 2)
+    const top = topGateErrors(gateErrorRowsFromEvents(events), 3)
     expect(top[0]).toMatchObject({ gate: 'archgate', reason: 'evidence_missing', count: 2, lastAt: 200 })
-    expect(top[0].sample).toContain('缺锚点')
-    expect(top).toHaveLength(2)
+    expect(top[0].sample).toContain('缺拍摄位')
+    expect(top.find((g) => g.gate === 'iteration_budget')).toMatchObject({ count: 1 })
   })
 })

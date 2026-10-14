@@ -3,8 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ExpCandidate, ExpStoreShape } from './exp-types'
-import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
-import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract.ts'
+import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics.ts'
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
@@ -66,20 +66,56 @@ export function recordInjection(ids: string[], runLabel: string): void {
 
 interface RawEventRow { id: number; task_id: string; kind: string; payload: unknown; created_at: number }
 
+/**
+ * 事件归一（单点，expcandidates/optadvice 共用）：兼容两套词汇——
+ * ①宿主闸词汇（column_transition 的 payload.to；gate_blocked/warning 的 results）；
+ * ②舰队生命周期词汇（run19 实测：created(status)/claimed/completed/promoted/unblocked
+ *   为阶段迁移；blocked(reason)/timed_out(error)/gave_up(error)/completion_blocked_
+ *   empty_result 为失败信号——timed_out/gave_up 即迭代预算触顶，对位 faileroute
+ *   budget_exhausted）。spawned/linked/commented/heartbeat/skipped_nonspawnable 不入账。
+ */
+export const LIFECYCLE_STAGE: Record<string, string> = {
+  created: 'ready',
+  claimed: 'in_progress',
+  promoted: 'promoted',
+  completed: 'done',
+  unblocked: 'in_progress',
+}
+
 export function normalizeEvents(rows: RawEventRow[]): ExtractEventRow[] {
   const out: ExtractEventRow[] = []
   for (const r of rows) {
-    let payload: { to?: string; results?: Array<{ gate?: string; ok?: boolean; reason?: string; detail?: string }> } = {}
+    let payload: {
+      to?: string; status?: string; reason?: string; error?: string
+      results?: Array<{ gate?: string; ok?: boolean; reason?: string; detail?: string }>
+    } = {}
     try {
       payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload as never) ?? {}
     } catch { continue }
-    const failures = (payload.results ?? [])
-      .filter((x) => x && x.ok === false)
-      .map((x) => ({ gate: String(x.gate ?? 'unknown'), reason: String(x.reason ?? 'unknown'), detail: x.detail ? String(x.detail) : undefined }))
+    let to: string | undefined
+    if (payload.to) to = String(payload.to)
+    else if (LIFECYCLE_STAGE[r.kind]) {
+      to = r.kind === 'created' && payload.status ? String(payload.status) : LIFECYCLE_STAGE[r.kind]
+    }
+    const failures: Array<{ gate: string; reason: string; detail?: string }> = []
+    for (const x of payload.results ?? []) {
+      if (x && x.ok === false) {
+        failures.push({ gate: String(x.gate ?? 'unknown'), reason: String(x.reason ?? 'unknown'), detail: x.detail ? String(x.detail) : undefined })
+      }
+    }
+    if (r.kind === 'blocked') {
+      failures.push({ gate: 'blocked', reason: 'blocked', detail: payload.reason ? String(payload.reason).slice(0, 160) : undefined })
+    }
+    if (r.kind === 'timed_out' || r.kind === 'gave_up') {
+      failures.push({ gate: 'iteration_budget', reason: r.kind === 'gave_up' ? 'gave_up' : 'budget_exhausted', detail: payload.error ? String(payload.error).slice(0, 160) : undefined })
+    }
+    if (r.kind === 'completion_blocked_empty_result') {
+      failures.push({ gate: 'completion_guard', reason: 'empty_result' })
+    }
     out.push({
       taskId: String(r.task_id),
       kind: r.kind,
-      to: payload.to ? String(payload.to) : undefined,
+      to,
       failures: failures.length ? failures : undefined,
       at: Number(r.created_at),
       seq: Number(r.id),

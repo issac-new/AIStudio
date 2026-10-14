@@ -68,6 +68,32 @@ describe('提取器纯函数', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].to).toBe('x')
   })
+
+  it('舰队生命周期词汇归一（run19 实测形状）', () => {
+    const rows = normalizeEvents([
+      // created 带 status
+      { id: 1, task_id: 'a', kind: 'created', payload: JSON.stringify({ status: 'ready', assignee: 'chen' }), created_at: 100 },
+      { id: 2, task_id: 'a', kind: 'claimed', payload: JSON.stringify({ lock: 'x' }), created_at: 200 },
+      { id: 3, task_id: 'a', kind: 'completed', payload: JSON.stringify({ summary: 'ok' }), created_at: 500 },
+      // blocked 带 reason 文本 → 失败信号
+      { id: 4, task_id: 'b', kind: 'blocked', payload: JSON.stringify({ reason: '派单竞争' }), created_at: 300 },
+      // timed_out/gave_up 带迭代预算错误
+      { id: 5, task_id: 'c', kind: 'timed_out', payload: JSON.stringify({ error: 'Iteration budget exhausted (60/60)', failures: 1 }), created_at: 400 },
+      { id: 6, task_id: 'c', kind: 'gave_up', payload: JSON.stringify({ error: 'Iteration budget exhausted', failures: 2 }), created_at: 450 },
+      // 噪音行不入账
+      { id: 7, task_id: 'a', kind: 'heartbeat', payload: '{}', created_at: 460 },
+      { id: 8, task_id: 'a', kind: 'commented', payload: '{}', created_at: 470 },
+    ])
+    const by = (id: number) => rows.find((r) => r.seq === id)
+    expect(by(1)?.to).toBe('ready')
+    expect(by(2)?.to).toBe('in_progress')
+    expect(by(3)?.to).toBe('done')
+    expect(by(4)?.failures?.[0]).toMatchObject({ gate: 'blocked', reason: 'blocked' })
+    expect(by(5)?.failures?.[0]).toMatchObject({ gate: 'iteration_budget', reason: 'budget_exhausted' })
+    expect(by(6)?.failures?.[0]).toMatchObject({ gate: 'iteration_budget', reason: 'gave_up' })
+    expect(by(7)?.to).toBeUndefined()
+    expect(by(7)?.failures).toBeUndefined()
+  })
 })
 
 describe('store 幂等与审核', () => {
