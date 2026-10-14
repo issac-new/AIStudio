@@ -20,6 +20,13 @@ if '--run' in sys.argv:
     _RUN_ID = sys.argv[sys.argv.index('--run') + 1]
 GEN_TS = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')
 # 基线 commit：生成时实查（禁止硬编码）；overlay 工作树可能被并行会话占用，--git-dir 直读
+# ── 明暗主题（2026-10-14）：写盘后统一挂切换控件。抽成共用函数，
+#    免得每加一个页面就漏一次；inject-theme.py 幂等，重复调用不会注两份。 ──
+def _inject_theme(page, *extra_css):
+    import subprocess, sys as _sys
+    subprocess.run([_sys.executable, str(Path(__file__).resolve().parent / 'inject-theme.py'),
+                    str(page), *[str(c) for c in extra_css]], check=False)
+
 def _overlay_head():
     gd = Path('/Volumes/nvme2230/lab/ncwk/overlay/.git')
     try:
@@ -546,4 +553,5 @@ out.append('</body></html>')
 
 _title_run = f' · RUN_ID={_RUN_ID}' if _RUN_ID else ' · 20260928 两线合并版'
 OUT.write_text('\n'.join(out).replace('__TITLE_RUN__', _title_run), encoding='utf-8')
+_inject_theme(OUT)
 print(f'unified report: {OUT} ({OUT.stat().st_size // 1024} KB, gates={len(gate_rows)}, truth_idx={len(truth_imgs)}, steps={len(STEPS)})')
