@@ -832,24 +832,50 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
             local _rr_head; _rr_head="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
             if [[ "$_rr_head" != "$(sget security_fail_main_head)" && "$(sget security_rereview_for_head)" != "$_rr_head" ]]; then
               sset security_rereview_for_head "$_rr_head"
-              sset security_rereview_nudges 0
+              # 新复审周期：双侧催办预算清零 + 上游耐心钟重置（修正①②配套）
+              sset security_nudge_up 0
+              sset security_nudge_rev 0
+              sset security_up_ball_ts ""
+              sset security_up_last_ts ""
               dispatch_in_room secops "@secops-agent:matrix.test 复审派单（闸依赖闭环·驱动自持）：概设修订已入 central main（head ${_rr_head}，失败基线 $(sget security_fail_main_head)）。请复审安全评审卡 ${SGID}：按原卡 14 项 D-1~D-14 缺项清单逐条核对修订是否闭环，结论行 SECURITY-GATE-PASS 或逐项 FAIL 清单发本房间并更新卡面 result。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid secops)" || true
               echo "ISSUE|security-rereview-auto|director|闸依赖闭环（V8.29）：修订 head ${_rr_head} 入仓且本版未派复审——驱动亲自派安全工程师AI 复审卡 ${SGID}（不依赖组织面散文递棒）。闸不放行，等末判词。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
               note "[安全] 修订 ${_rr_head} 已入仓——驱动派安全工程师AI 复审（闸依赖自持）"
             elif [[ "$(sget security_rereview_for_head)" == "$_rr_head" ]]; then
-              # 球位判定（run20 23:0x r2 复审 FAIL 实录补的半边）：本版复审是否已出结论
-              # ——卡面 result 含 FAIL=球在上游（组织 r3 修订），催产品经理A；
-              # 未出结论=球在评审侧，催安全工程师AI。两侧都限幅 3 次。
+              # 球位判定 + 用户 23:1x 审查三修正：
+              # ①预算分账：上游/评审两侧独立计数（security_nudge_up / security_nudge_rev
+              #   各 3 次）——原共用钱包会一边耗尽额度另一边永久哑掉；
+              # ②上游侧耐心：14 项级设计修订要小时级，等待钟（40min，实际循环约
+              #   100min）太急——上游催办最小间隔 7200s（首催也要距球到上游侧 2h）；
+              # ③第三声后升级不沉默：high 记单 + 房间点名主管A 介入（球在哪侧点名
+              #   哪侧负责人）。
               local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
-              local _rr_n; _rr_n="$(sget security_rereview_nudges)"; _rr_n="${_rr_n:-0}"
-              if [[ "$_rr_n" -lt 3 ]]; then
-                sset security_rereview_nudges $((_rr_n + 1))
-                if [[ "$_rr_result" == *"FAIL"* ]]; then
-                  dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_rr_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：$_rr_result）。请按卡面未过项组织 r3 修订并推 origin/main；r3 合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
-                  note "[安全] 复审 FAIL 球在上游——催产品经理A 组织 r3（第 $((_rr_n + 1))/3 次）"
-                else
-                  dispatch_in_room secops "@secops-agent:matrix.test 复审催办（第 $((_rr_n + 1))/3 次，之后静默等结论）：修订 $(sget security_rereview_for_head) 的复审仍未回结论行 SECURITY-GATE。请继续复审卡 ${SGID} 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
-                  note "[安全] 复审催办第 $((_rr_n + 1))/3 次（head ${_rr_head}）"
+              local _now; _now=$(date +%s)
+              if [[ "$_rr_result" == *"FAIL"* ]]; then
+                # 球在上游（组织 r_n+1 修订）——催产品经理A，带 2h 耐心间隔
+                if [[ -z "$(sget security_up_ball_ts)" ]]; then sset security_up_ball_ts "$_now"; fi
+                local _up_n; _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
+                local _up_last; _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
+                if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 7200 ]]; then
+                  sset security_nudge_up $((_up_n + 1))
+                  sset security_up_last_ts "$_now"
+                  dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_up_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：${_rr_result}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+                  note "[安全] 复审 FAIL 球在上游——催产品经理A 组织修订（第 $((_up_n + 1))/3 次，2h 间隔）"
+                  if [[ "$_up_n" -eq 2 ]]; then
+                    echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（2h 间隔）仍无修订入仓——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+                    dispatch_in_room admin "@admin-agent:matrix.test 升级介入（闸依赖闭环③）：G2 安全复审 FAIL 后对产品经理A 催办 3 次无修订入仓（head 仍 ${_rr_head}）。请核实修订侧是否停摆并处置；复审 PASS 前 G2 不放行。" "$(agent_mxid admin)" || true
+                  fi
+                fi
+              else
+                # 球在评审侧（复审未出结论）——催安全工程师AI，等待钟级节奏
+                local _rev_n; _rev_n="$(sget security_nudge_rev)"; _rev_n="${_rev_n:-0}"
+                if [[ "$_rev_n" -lt 3 ]]; then
+                  sset security_nudge_rev $((_rev_n + 1))
+                  dispatch_in_room secops "@secops-agent:matrix.test 复审催办（第 $((_rev_n + 1))/3 次）：修订 $(sget security_rereview_for_head) 的复审仍未回结论行 SECURITY-GATE。请继续复审卡 ${SGID} 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
+                  note "[安全] 复审催办第 $((_rev_n + 1))/3 次（head ${_rr_head}）"
+                  if [[ "$_rev_n" -eq 2 ]]; then
+                    echo "ISSUE|security-review-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审派单后催安全工程师AI 3 次仍无结论——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+                    dispatch_in_room admin "@admin-agent:matrix.test 升级介入（闸依赖闭环③）：修订 $(sget security_rereview_for_head) 复审派单后催安全工程师AI 3 次无结论。请核实评审侧是否停摆并处置；复审 PASS 前 G2 不放行。" "$(agent_mxid admin)" || true
+                  fi
                 fi
               fi
             fi
