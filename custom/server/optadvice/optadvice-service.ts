@@ -4,14 +4,14 @@
 //   kanban     各板 kanban.db task_events（column_transition → 周期瀑布；gate_blocked/warning → 拦截 Top-N）
 //   traces     ~/.hermes/traces JSONL——宿主实测仅 header/trailer（span 落 profile 侧），如实缺席
 import { DatabaseSync } from 'node:sqlite'
-import { resolveStudioDb } from '../harness/cost-accounts.ts'
-import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics.ts'
-import { normalizeEvents } from '../expcandidates/exp-store.ts'
+import { resolveStudioDb } from '../harness/cost-accounts'
+import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { normalizeEvents } from '../expcandidates/exp-store'
 import {
   topSessions, gateErrorRowsFromEvents, topGateErrors,
   type AdviceReport, type SessionUsageRow, type SourceStatus,
-} from './advice.ts'
-import { topStages, waterfallFromEvents, type TransitionLite } from './leadtime.ts'
+} from './advice'
+import { topStages, waterfallFromEvents, type TransitionLite } from './leadtime'
 
 function sessionRows(db: DatabaseSync, days: number): SessionUsageRow[] {
   const cols = (db.prepare('PRAGMA table_info(sessions)').all() as unknown as Array<{ name: string }>).map((c) => c.name)
