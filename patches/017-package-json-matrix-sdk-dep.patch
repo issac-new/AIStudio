@@ -7,6 +7,6 @@ index 1d6d7fbd6..cb06fa594 100644
      "js-tiktoken": "^1.0.21",
      "katex": "^0.17.0",
 +    "matrix-js-sdk": "^41.8.0-rc.0",
-     "node-edge-tts": "^1.2.10",
+     "node-edge-tts": "^1.2.11",
      "node-pty": "^1.1.0",
      "sharp": "^0.35.3",

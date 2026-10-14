@@ -8,5 +8,5 @@ index 838746a18..3719e12b5 100644
      "katex": "^0.17.0",
 +    "lunar-typescript": "^1.8.6",
      "matrix-js-sdk": "^41.8.0-rc.0",
-     "node-edge-tts": "^1.2.10",
+     "node-edge-tts": "^1.2.11",
      "node-pty": "^1.1.0",
