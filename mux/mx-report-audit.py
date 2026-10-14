@@ -606,11 +606,21 @@ _r18_degraded = any('r18-collection-missing' in l for l in _ilines_r18)
 # 其登记的步（ISSUE 第三段 step-N），不再全局豁免——run14 实锤 4 张登记把 20+ 步的
 # 载荷缺失全部漂白为 WARN。文件级缺失（整链缺位）才保留全局降级语义。
 _r18_degraded_steps = set()
+# 凭证步列表两种形态都收：`|step-5|` 单步与 `|step-5;6;7|` 分号多步（壳页帧隔离
+# 清账 arm 的注册形态）。run19 实锤：分号列表一条都解析不进降级集合——凭证在案
+# 却整批 FAIL，违反「凭证在案即黄标，不二罚」（本文件 614 行注释自述原则）。
+def _r18_collect_cred_steps(_line18):
+    _p18c = _line18.split('|', 3)
+    _is_cred18 = 'r18-collection-missing' in _line18 or (
+        len(_p18c) >= 4 and _p18c[0] == 'ISSUE' and _p18c[1] == 'r18-payload-deref')
+    if not _is_cred18:
+        return
+    for _m18s in re.finditer(r'step-([\d;]+)', _line18):
+        for _n18 in _m18s.group(1).split(';'):
+            if _n18.isdigit():
+                _r18_degraded_steps.add(int(_n18))
 for _l18 in _ilines_r18:
-    if 'r18-collection-missing' in _l18:
-        _m18s = re.search(r'\|step-(\d+)\|', _l18)
-        if _m18s:
-            _r18_degraded_steps.add(int(_m18s.group(1)))
+    _r18_collect_cred_steps(_l18)
 # V8.17 红线②口径兑现（run16 复盘，fix/run16-report-truth）：非必采完成步「载荷全缺」的
 # 降级凭证族扩展——frame-capture-failed（采集失败在案登记）与 r18-collection-missing
 # 同为合规黄标凭证（红线②口径=黄标缺登记才 FAIL）。登记主体=step-<状态键/段名>，
@@ -632,6 +642,9 @@ for _l18 in _ilines_r18:
     _p18 = _l18.split('|', 3)
     if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] == 'frame-capture-failed':
         _r18_degraded_steps.update(_STAGE_ALIAS_STEPS.get(_p18[2].removeprefix('step-'), ()))
+        for _n18 in _p18[2].removeprefix('step-').split(';'):
+            if _n18.isdigit():
+                _r18_degraded_steps.add(int(_n18))
 if _r18_missing_file:
     if _r18_degraded:
         warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按纪律 40⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
@@ -653,13 +666,16 @@ for blk in blocks:
     d_cnt, o_cnt, e_cnt = (int(m18.group(i)) for i in (1, 2, 3)) if m18 else (0, 0, 0)
     s_cnt = int(m18.group(4)) if m18 and m18.group(4) else 0
     v_cnt = int(m18.group(5)) if m18 and m18.group(5) else 0
-    # 帧数核验：ops 组内引用的帧文件须真实存在（生成器对缺帧渲染「帧缺失」占位——报告侧可检出）
-    frames_missing = len(re.findall(r'帧缺失：', blk))
-    if frames_missing:
-        fails.append(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐')
+    # 帧数核验：ops 组内引用的帧文件须真实存在（生成器对缺帧渲染「帧缺失」占位——报告侧可检出）。
+    # 缺帧/帧数不足与兄弟检查同口径吃降级凭证（frame-capture-failed/r18-collection-missing/
+    # r18-payload-deref 按步登记）——run19 实锤：本检查原为无条件 FAIL，采集链缺陷（重拍仅得
+    # 壳页）下重放循环永不收敛；凭证在案即黄标，不二罚。
     _step_deg = _r18_degraded if _r18_missing_file else (n in _r18_degraded_steps)
     _r18_rep = warns.append if _step_deg else fails.append
-    _r18_suffix = '（已登记 r18-collection-missing 降级）' if _step_deg else ''
+    _r18_suffix = '（已登记采集失败/载荷隔离降级）' if _step_deg else ''
+    frames_missing = len(re.findall(r'帧缺失：', blk))
+    if frames_missing:
+        _r18_rep(f'R18 步 {n} 操作序列存在缺帧（{frames_missing} 处）——前后帧须实拍补齐{_r18_suffix}')
     if n in _R18_DIALOG_STEPS and d_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「对话全文」（派发/回执/对账类步必采——r18-collect.py dialog）{_r18_suffix}')
     if n in _R18_OP_STEPS:
@@ -668,7 +684,7 @@ for blk in blocks:
         else:
             _fr = len(re.findall(r'class="shot r18-shot"', blk))
             if _fr < 2 * o_cnt:
-                fails.append(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）')
+                _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）{_r18_suffix}')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）{_r18_suffix}')
     if n in _R18_SKILL_STEPS:
