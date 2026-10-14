@@ -25,6 +25,8 @@ export interface InspectorDeps {
   gatewayBase?: string
   /** 在办卡注入（控制器接 kanban list --status running --json；缺省=该面 not wired） */
   getRunningCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 阻塞卡注入（card.blocked-stale 检测面，run19 熔断死等产品化；缺省=该面静默跳过） */
+  getBlockedCards?: () => Promise<Array<Record<string, unknown>>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
   getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
@@ -134,9 +136,10 @@ export class ClusterInspector {
     })
     for (const a of anomalies) {
       // 交付锚验证两型也入催办面（run19 上移 A+B）：锚缺失/陈旧分支的修复动作=推送，可催
+      // card.blocked-stale 同入（run19 熔断死等产品化——用户 300s 时限：发现即提醒 assignee）
       if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent'
         && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale'
-        && a.detector !== 'idle.with-work') continue
+        && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale') continue
       const profile = (a.detail as { assignee?: string } | undefined)?.assignee?.trim()
         || a.subject.replace(/^profile:/, '')
       const r = await nudge(profile, a.summary)
@@ -286,6 +289,25 @@ export class ClusterInspector {
         completed_at: typeof c.completed_at === 'number' || typeof c.completed_at === 'string' ? c.completed_at : undefined,
         status: typeof c.status === 'string' ? c.status : undefined,
       })).filter((c) => c.id)
+      // 阻塞卡面（card.blocked-stale）：未接线=合法空态（可选面，同 sessionTelemetry 语义）
+      let blockedCards: ClusterSnapshot['blockedCards']
+      if (this.deps.getBlockedCards) {
+        try {
+          const rows = await this.deps.getBlockedCards()
+          blockedCards = {
+            ok: true,
+            cards: rows.map((c) => ({
+              id: String(c.task_id ?? c.id ?? ''),
+              assignee: typeof c.assignee === 'string' ? c.assignee : undefined,
+              title: typeof c.title === 'string' ? c.title : undefined,
+              status: typeof c.status === 'string' ? c.status : undefined,
+              updated_at: typeof c.updated_at === 'number' || typeof c.updated_at === 'string' ? c.updated_at : undefined,
+            })).filter((c) => c.id),
+          }
+        } catch (e) {
+          blockedCards = { ok: false, error: (e as Error).message, cards: [] }
+        }
+      }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -293,6 +315,7 @@ export class ClusterInspector {
         profiles: collectProfiles(this.deps),
         kanban: { ok: kanbanOk, error: kanbanErr, rows: kanbanRows },
         runningCards: { ok: cardsOk, error: cardsErr, cards: runningCards },
+        blockedCards,
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },

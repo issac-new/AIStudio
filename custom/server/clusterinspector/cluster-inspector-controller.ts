@@ -42,6 +42,22 @@ function runningCardsProvider(): (() => Promise<Array<Record<string, unknown>>>)
 // 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
 export { startInspectorIfEnabled } from './inspector'
 
+/** 阻塞卡接线（card.blocked-stale 检测面，run19 G5 熔断死等产品化——用户 300s 时限）：CLI 桥 list --status blocked，fail-soft。 */
+function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
+  return () => new Promise((resolve, reject) => {
+    execFile('hermes', ['kanban', 'list', '--status', 'blocked', '--json'], {
+      timeout: 30_000,
+      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
+    }, (err, stdout) => {
+      if (err) { reject(err); return }
+      try {
+        const out = JSON.parse(stdout) as unknown
+        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
+      } catch (e) { reject(e as Error) }
+    })
+  })
+}
+
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
   // 联邦注册表快照（D8 跨机静默观测面）：读进度联邦注册表（有界内存快照，零 IO）。
@@ -65,7 +81,7 @@ function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; mach
   }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun
