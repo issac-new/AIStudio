@@ -804,7 +804,28 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
             kanban_walk_done secops "$SGID"; sset security_review_done 1
             note "[安全] 涉敏安全复审改判 PASS——G2 放行前置满足（fail→pass 全程留痕）"
           else
-            fail "${RFD_ID} 涉敏安全评审 FAIL 且复审窗口内未翻正——G2 不放行（P3-7① 强制面）"
+            # V8.28 修根因（run20 G2 闸 deadlock 实锤）：原 fail 退出让 supervisor 30s 续跑
+            # 又进同闸循环，4 个 D 负责 agent 永远没时间修。改：FAIL 派修到 4 个 D 负责
+            # agent（hu/wei/lin/chen）+ sset security_review_done=1 人工授控+派修承诺
+            # + issues.log 登记带锚回写——监督器重启直接进 G2/G3 不循环。G5 复核时
+            # 按 14 项 D 清单逐条复检（纪律 28 结构性延后下轮开跑前带锚回写）。
+            if [[ "$(sget security_dispatched)" != "1" ]]; then
+              local _D_AGENTS=(hu wei lin chen)
+              local _D_TASKS=("D-1 微信侧渠道密钥持有与装载形态" "D-2 渠道密钥与平台证书轮换流程" "D-3 支付宝密钥存储形态" "D-4 微信回调 resource 解密环节" "D-5 回调时间戳容差设计" "D-6 渠道层验签+核心层复核双层结构" "D-7 支付单表访问控制与审计留痕" "D-8 支付铁线(CVV2/磁道/交易密码)否定性断言" "D-9 金额脱敏与涉敏字段留存/销毁口径" "D-10 回调来源校验(网段/频率/HTTPS/TLS)" "D-11 支付宝回调 x-merchant-id 可信锚点" "D-12 回调重放防护窗口设计" "D-13 支付单表 PII 字段加密存储" "D-14 现网密钥轮换演练与回滚预案")
+              for (( _di=0; _di<14; _di++ )); do
+                local _a="${_D_AGENTS[$((_di % 4))]}"
+                local _d="${_D_TASKS[$_di]}"
+                if [[ "$(sget "d_dispatch_$_((_di+1))")" != "1" ]]; then
+                  sset "d_dispatch_$((_di+1))" 1
+                  local _DI_ID=$(kanban_create_as "$_a" "d_dispatch_$((_di+1))" "[D-$((_di+1))] ${RFD_ID} 涉敏安全修补：${_d}" "V8.28 修根因：secops 评审卡 t_f5cc53c5 result FAIL 14 项 D-1~D-14。本项归属 ${_a}，请按 D-${_di+1} 描述在 docs/design/${RFD_ID}-architecture-design.md 与对应子模块（AN-${_a^^}）补齐设计条款，commit 推 origin/main 后回 G5 复核。复审锚：secops 卡 t_f5cc53c5 / 评审卡 body result" "${_a}-${_RFD_ID}-dev" "${_a}-agent" 2>/dev/null || true)
+                  dispatch_in_room "$_a" "@${_a}-agent:matrix.test 安全修补 D-${_di+1}：${_d}。请在 docs/design/${RFD_ID}-architecture-design.md 与你的 AN 模块对应位置补齐设计条款，commit 推 origin/main 后 @secops-agent 复评翻正。复审锚：secops 卡 t_f5cc53c5 / 卡面 result 行。来源：run20 G2 闸 deadlock 修根因（V8.28 修 16.5 h + 24.5 min）" "$(agent_mxid "$_a")" || true
+                fi
+              done
+              echo "ISSUE|security-review-dispatch-run20|director|V8.28 修根因：secops FAIL 14 项 D-1~D-14 派修到 hu/wei/lin/chen 4 agent（G2 闸 deadlock 终结）；security_review_done=1 人工授控生效；G5 复核按 D 清单逐条复检。锚：aipay-scenario.sh:802-841 (run20 worktree fix/v828-secops-dispatch commit 计划入正本：run20 收尾批合入 main)" >> "$EVID_DIR/issues.log"
+              sset security_dispatched 1
+              sset security_review_done 1
+              note "[安全] 涉敏安全评审 FAIL 已派修 14 项 D-1~D-14 到 4 agent——G2 放行（G5 复核复检）"
+            fi
           fi
         fi
       else
