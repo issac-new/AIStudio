@@ -301,7 +301,9 @@ export class ClusterInspector {
               assignee: typeof c.assignee === 'string' ? c.assignee : undefined,
               title: typeof c.title === 'string' ? c.title : undefined,
               status: typeof c.status === 'string' ? c.status : undefined,
-              updated_at: typeof c.updated_at === 'number' || typeof c.updated_at === 'string' ? c.updated_at : undefined,
+              // 「最后推进时刻」回退链（真实 tasks 表无 updated_at 列——run19 巡检实锤）：
+              // last_heartbeat_at（worker 心跳）?? completed_at ?? created_at
+              updated_at: pickLastTouched(c),
             })).filter((c) => c.id),
           }
         } catch (e) {
@@ -388,4 +390,15 @@ export function startInspectorIfEnabled(deps: InspectorDeps = {}): ClusterInspec
   const insp = ensureInspector(deps)
   insp.start(Number(process.env.CLUSTER_INSPECTOR_INTERVAL_MS ?? 60_000))
   return insp
+}
+
+
+/** blocked 卡「最后推进时刻」三重回退（tasks 表实无 updated_at 列；CLI 透传列实测） */
+function pickLastTouched(c: Record<string, unknown>): number | string | undefined {
+  for (const k of ['updated_at', 'last_heartbeat_at', 'completed_at', 'created_at']) {
+    const v = c[k]
+    if (typeof v === 'number' && v > 0) return v
+    if (typeof v === 'string' && v && !Number.isNaN(Number(v))) return v
+  }
+  return undefined
 }
