@@ -856,6 +856,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
                 if [[ -z "$(sget security_up_ball_ts)" ]]; then sset security_up_ball_ts "$_now"; fi
                 local _up_n; _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
                 local _up_last; _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
+                # DEAD 块（迁移到 G2 总闸入口 920 行，详见那块注释）
                 if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
                   sset security_nudge_up $((_up_n + 1))
                   sset security_up_last_ts "$_now"
@@ -894,6 +895,27 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
         fi
         # 闸不放行：driver 在本环继续等复审 PASS（wait_truth 由外层 supervisor 续跑驱动重入）
       fi
+    fi
+  fi
+  # V8.29 r3 派单根治·驱动自持：G2 总闸等待段每轮扫一次产品经理板的 G2SREV
+  # 子卡，无 assignee 的按 D-项确定性分派到 4 研发 AI + 跨板复制对账子卡。
+  # 之前挂错位置（security 内层）只在 secops FAIL 分支触发=本轮等 arch
+  # 复评时永远进不去；移到 G2 总闸入口=arch FAIL 也自持。幂等键
+  # subrev_auto_dispatched 防重复派。
+  if [[ "$(sget subrev_auto_dispatched)" != "1" ]]; then
+    local _sub_todo _sub_dispatched=0
+    _sub_todo="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board fanfan-pm-plan list --status todo --json 2>/dev/null | python3 -c 'import sys,json
+for c in json.load(sys.stdin):
+    if not c.get("assignee"):
+        print(c["id"])' 2>/dev/null || true)"
+    for _sub_id in $_sub_todo; do
+      mx_dispatch_subrev fanfan "$_sub_id" >/dev/null 2>&1 && _sub_dispatched=$((_sub_dispatched + 1))
+    done
+    if [[ "$_sub_dispatched" -gt 0 ]]; then
+      sset subrev_auto_dispatched 1
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（V8.29 驱动自持）：你建的 ${_sub_dispatched} 张 G2SREV-r1 子卡已由驱动按 D-项分派到对应研发 AI 并复制到研发板。子卡 body（12 项设计条款）需你手动补——按 arch 评审 r6/r7 缺项清单；补完后推 origin/main、驱动自动派复审。注：你的 profile 缺 worktree=0，唤不起新回合——hermes 已报「No home channel」。本轮 v8.29 自动派单已 12 子卡体填 patch，请你 check body 是否按 D-项补齐；缺 body 我会 30min 后重催。禁谎报。" "$(agent_mxid fanfan)" || true
+      echo "ISSUE|subrev-auto-dispatched|director|闸依赖闭环第二刀（V8.29）：G2 总闸等待段驱动自持调 mx_dispatch_subrev 按 D-项拆派到 4 研发 AI+跨板复制（${_sub_dispatched} 张，幂等键 subrev_auto_dispatched=1）。产品经理 profile 缺 worktree=0 + home channel 丢失=子卡 body 补不进来，下轮须修。锚：aipay-scenario.sh G2 总闸" >> "$EVID_DIR/issues.log"
+      note "[G2] r3 派单补救：驱动自持拆派 ${_sub_dispatched} 张子卡到 4 研发 AI（产品经理醒来仍要补 12 项 body）"
     fi
   fi
   capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
