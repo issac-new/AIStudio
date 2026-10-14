@@ -5,7 +5,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   _useStoreDirForTests, createConstraintCard, listConstraintCards,
-  readConstraintStore, updateConstraintCard, deleteConstraintCard,
+  readConstraintStore, updateConstraintCard, deleteConstraintCard, storeDir,
 } from '../constraint-store'
 import { constraintBriefLine, constraintLinesForDispatch, selectConstraints, selectConstraintsPreview } from '../constraint-inject'
 import type { ConstraintCard } from '../constraint-types'
@@ -30,6 +30,21 @@ function mk(partial: Partial<ConstraintCard> & { statement: string; sourceAnchor
 }
 
 describe('约束卡 store', () => {
+  it('storeDir 随 HERMES_WEB_UI_HOME 走（SIM 隔离不写宿主 home；env 覆盖仍最高）', () => {
+    const savedStore = process.env.CONSTRAINT_STORE
+    const savedHome = process.env.HERMES_WEB_UI_HOME
+    try {
+      delete process.env.CONSTRAINT_STORE
+      process.env.HERMES_WEB_UI_HOME = '/tmp/sim-webui'
+      expect(storeDir()).toBe('/tmp/sim-webui/constraints')
+      process.env.CONSTRAINT_STORE = dir
+      expect(storeDir()).toBe(dir)
+    } finally {
+      if (savedStore) process.env.CONSTRAINT_STORE = savedStore; else delete process.env.CONSTRAINT_STORE
+      if (savedHome) process.env.HERMES_WEB_UI_HOME = savedHome; else delete process.env.HERMES_WEB_UI_HOME
+    }
+  })
+
   it('建卡：编号递增 + 全字段落盘', () => {
     const a = mk({ statement: '在已有 API 上扩展能力，不新增并列 API', sourceAnchor: 'specs/2026-10-14-ali-15agent-squad-research.md §3-D' })
     const b = mk({ statement: '改动须过守门测试再提交', sourceAnchor: '方案正本纪律 5', scope: { specialists: ['qa'] } })
