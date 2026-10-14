@@ -694,10 +694,10 @@ profiles:
       enabled: false
       gateway_restart_notification: false
     env_extra:
-      WEIXIN_ACCOUNT_ID: <[已移除]-bot-account-id>@im.bot
+      WEIXIN_ACCOUNT_ID: ${WEIXIN_ACCOUNT_ID}
       WEIXIN_DM_POLICY: pairing
       WEIXIN_GROUP_POLICY: disabled
-      WEIXIN_TOKEN: <[已移除]-bot-account-id>@im.bot:${WEIXIN_TOKEN}
+      WEIXIN_TOKEN: ${WEIXIN_TOKEN}
       API_SERVER_ENABLED: 'false'
       HERMES_KANBAN_BOARD: [已移除]
     environment_hint: ~/.hermes/profiles/[已移除]-orchestrator/SOUL.md

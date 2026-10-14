@@ -152,6 +152,12 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
+**v3.3.0** — 2026-10-14 增量更新
+
+- 同步 2026-10-14 融合批次：skillguard v1.2.0 供应链规则（SG-013/014/015 + 回环 fixtures）、`llm-redteam` 多轮对抗策略、`_shared` 四文件（hack-tool-registry AIG 登记、hack-knowledge-index 事实库节、output-contract Checklist 核对面、platform-skill-miner 准入门）
+- 17 个根 skills 刷新到 live 状态（cost-ledger、weixin 运维系列、public-repo-release v1.2.0 等）
+- 隐私复审：修复 5 处微信账号 ID 泄露（含 v3.2 起就在 `shared/profiles.yaml` 的 1 个真实 token）
+
 **v3.2.0** — 2026-10-14 更新
 
 - 全量刷新 40 个 profile 到 2026-10 live 状态（模型路由统一 cc-switch 本地代理）

@@ -87,7 +87,45 @@ YunkunSec 的"目标状态记录与比较"= 任务前后对目标状态做快照
 
 ---
 
+## 四、finding 结构化事实库（按靶标聚合检索）（DSH RedTeam 模式融合，2026-10-14）
+
+> 来源：DSH RedTeam 模式（Jueze-2019/dsh-redteam-mode）「资产/漏洞/凭据/会话/攻击链实时落本地 SQLite 事实库（22 表 + FTS5）」；裁决矩阵 `workspace/research/hermes-teams-fusion-20261014/FUSION-VERDICT-20261014.md` R2（收缩吸收——只收「结构化事实库+按靶标聚合」思想，不搬 22 表 schema；JSONL+grep 已满足当前量级，上 DB 属 over-engineering，量级超限是翻案条件）。
+
+### 写入增补
+
+§一 的 finding JSONL 记录增补两个可选字段（既有字段不动，旧记录无此两字段视为 `target=null/chain=[]`）：
+
+```json
+{"ts":"…","cve":"…","product":"…","cond":"…","poc":"…","markings":"…","evidence":["e001"],
+ "target":"example-ltd", "chain":"recon-20261014#3"}
+```
+
+- `target`：靶标单位短名（与授权 scope.txt 的靶标名一致，大小写不敏感），同靶标 finding 聚合的聚合键。
+- `chain`：所属攻击链任务引用（`<任务短名>#<步序>`），把离散 finding 串成攻击链视图。
+
+### 按靶标聚合检索
+
+```bash
+# 某靶标全部 finding（跨 poc/cve/intel 三类）
+grep -rh '"target":"example-ltd"' ~/.hermes/profiles/_shared/hack-kb/{poc,cve,intel}/ 
+# 某靶标攻击链时序视图（按 ts 排序）
+grep -rh '"target":"example-ltd"' ~/.hermes/profiles/_shared/hack-kb/{poc,cve,intel}/ | python3 -c "import sys,json;[print(json.loads(l)['ts'],json.loads(l).get('chain','—'),json.loads(l).get('cve') or json.loads(l).get('cond','')) for l in sorted(sys.stdin,key=lambda x:json.loads(x)['ts'])]"
+```
+
+报告引用约定：红队/审计报告的 finding 汇总表直接由聚合检索产出，禁手工抄录（防报告与事实库漂移）。
+
+### 供应链风险归档参照轴（AI-Infra-Guard 融合，2026-10-14）
+
+审计/MCP 投毒类 finding 入 `hack-kb/intel/` 归档时，`risk_class` 字段优先引用 AIG 两套分类法作命名对照（登记见 `hack-tool-registry.md` §五）：
+- MCP 侧：MCP01-MCP10（一手 mcp-scan 分类）；
+- Skill 侧：SkillTrustBench T01-T09。
+本机 skillguard（SG-xxx）/mcp_poison_scan（MP-xxx）检出结果人工归档时，可在 JSONL 记录附 `aig_ref` 字段记对照类目（如 `"aig_ref":"MCP04"`），用于跨工具聚合与对外报告的通用命名。两套本机规则仍是判定正典，AIG 分类法只作归档命名轴，不参与扫描判定。
+
+---
+
 ## 修订记录
 | 版本 | 日期 | 内容 |
 |---|---|---|
 | v1.0 | 2026-08-29 | 调研 YunkunSec KnowledgeIndexService + 持久化恢复后补齐本机 hack team 本地索引与任务内韧性 |
+| v1.1 | 2026-10-14 | DSH RedTeam 模式融合：finding 记录增补 target/chain 字段 + 按靶标聚合检索约定（§四） |
+| v1.2 | 2026-10-14 | AI-Infra-Guard 融合：供应链风险归档参照轴（§四 aig_ref 字段，MCP01-MCP10/T01-T09 命名对照） |

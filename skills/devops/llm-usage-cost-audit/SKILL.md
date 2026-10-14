@@ -21,8 +21,8 @@ description: "Use when 排查 LLM/token 消耗是否正常或优化通道成本:
 - **aim 是动态别名**：客户端声明 `aim` = cc-switch 当前 active provider 的主模型。failover
   切换 current 后，aim 流量静默落到另一家 provider 上——用 `request_model`（客户端声明）
   对照 `model`+`provider_id`（实际承接）才能看出错配。
-- **403/429 不落请求日志**：配额打穿/限流只写 `provider_health` 表（连败计数）。判定某
-  provider「今天没失败」必须查 health 表，请求日志 0 条失败 ≠ 没失败。
+- **403/429 可能不落请求日志**：配额打穿/限流至少写 `provider_health` 连败计数；是否同时在
+  请求日志留状态行因版本/通道而异（实测两源并存过）。查失败史两表都查，任一源有失败都不算「没失败」。
 - **append 型日志统计必须按业务日锚定**：管道日志跨月追加且 via/attempt 行不带日期，
   统计通道分布/失败率以最近的产物落盘行（如 `pdf: .*<date>.pdf`）为锚归日。直接 grep
   文件尾会把上周旧失败算进今天的账，得出「通道全挂」类误判。
@@ -31,7 +31,7 @@ description: "Use when 排查 LLM/token 消耗是否正常或优化通道成本:
 
 1. **定窗聚合**：cc-switch.db 按 provider×model 聚合请求数/tokens/状态码（机制见
    cc-switch-stats-analysis）；与前三日日均对比定位异常日。
-2. **计费模式确认**：向用户确认各 provider 的计费模式（按次包月/按 token）。此步不做，后续全废。
+2. **计费模式确认**：先自查再问人——`providers.settings_config` JSON 里 `usage_script.codingPlanProvider` 非空、`templateType=token_plan`、或 `ANTHROPIC_BASE_URL` 带 `/coding` 路径，都指向按次包月套餐制（token 折算 $ 仅为名义值）；仍不确定再向用户确认。此步不做，后续全废。
 3. **流量归属**：`request_model` × `provider_id` 交叉表 → 找「声明 A 落在 B」的错配流量；
    按小时分布 → 定位突发时段对应哪条管道/哪个 job。
 4. **静默失败核对**：health 表连败计数 vs 请求日志失败行，差值 = 不落日志的 403/429。

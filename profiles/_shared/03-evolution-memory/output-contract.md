@@ -133,6 +133,16 @@ kanban_comment(body=(
 - [ ] Methodology 可复现（给出具体命令）
 - [ ] Appendix 有完整索引（非"详见上文"）
 - [ ] **重型多轮任务必含「已验证行为 / 未验证遗留」两节**（HoH 融合 A+E 双状态，2026-09-04）：多轮推进的重型任务（hack 攻击面验证、[已移除] 签核链、跨阶段编码）合并报告必须显式区分「已验证行为（Verified，附验证证据锚点）」与「未验证遗留（Gap，附未验证原因）」——下游任务依据此节规划，不用靠猜重建哪些结论可信
+- [ ] **Checklist 反射核对面**（QwenPaw-Data 软验证回路收缩吸收，2026-10-14）：数据分析类无编译器反馈的交付（调研/审计/报告/教案），验证目标从「证明结论正确」降档为「确认方法被可复现、可审查地执行」。worker 收尾前按冻结验收项逐条生成自检清单并附证据锚（file:line/退出码/命令输出）；验收方按同一清单逐项独立复跑（对齐 skill `worker-completion-independence-verification`），不新增独立评审 agent 岗（judge 独立性纪律已覆盖）。清单随交付物落盘，缺清单按「未验证」处理。
+
+#### Checklist 反射核对面（QwenPaw-Data 软验证融合，2026-10-14）
+
+> 来源：QwenPaw-Data（arXiv:2607.11019）Host Reflect 环节「任务级检查清单自动生成 + 反射核对」；裁决矩阵 `workspace/research/hermes-teams-fusion-20261014/FUSION-VERDICT-20261014.md` M5（收缩吸收——只收「从验收标准生成 per-task 检查清单」操作化，不收反射子代理独立编制）
+> 适用：验收标准 ≥3 项冻结的重型卡（`## 验收标准（frozen: true）`）收尾自检 + 验收方独立复跑
+
+- **worker 侧（收尾前）**：按冻结验收项逐条生成自检清单——每行「验收项原文 → 实测命令/产物路径 → 实测结果 → 证据锚」。清单随 `kanban_complete` 的 `metadata.verification` 一并交付；某项无法机械验证时如实标「人工判读+原因」，禁止把未跑项写成通过。
+- **验收方侧（收卡时）**：不重写清单，按 worker 清单逐条独立复跑（对齐 worker-completion-independence-verification），复跑结果回填同表；清单缺失或全勾无证据锚 = 按 unobserved 处理。
+- **为什么**：数据分析类任务无编译器式硬反馈，检查清单把「方法被可复现地执行了」从口头声明变成逐项可核对结构；与 §2.8 独立性分级衔接——worker 清单是 I1 自产证据，验收方复跑后才构成 I7。
 
 ### 1.5 技能路由决策
 
@@ -243,6 +253,7 @@ kanban_complete 前，对当前任务的验证证据强度自评：
 
 **自检问题**：本任务最高独立性证据是哪一级？只有 I1（自产自验）时，即使 §2.5 强度为 Exercised，也**不构成放行**——须补 I4 以上独立性证据（外部验证门，三态协议 §4.2）。
 **硬语义**：I1 证据不得与 I4+ 证据混同为相同证明强度（QGate 原文："AI Generated Test PASS 不能与 Existing Independent Acceptance Test PASS 具有相同证明强度"）。
+**与 §1.4 Checklist 反射核对面衔接**：worker 自检清单恒为 I1，验收方按清单逐条独立复跑是补足 I7 的固定通道（QwenPaw-Data 软验证融合 2026-10-14）。
 
 ### 2.6 扩展：可观测性六门
 

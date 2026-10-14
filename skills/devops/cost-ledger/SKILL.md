@@ -89,6 +89,10 @@ awk -v s="$SPEND" -v b="$BUDGET" 'BEGIN{
 ```
 也可对照 `providers.limit_daily_usd / limit_monthly_usd`（DB 内 provider 级预算）做二次校验。
 
+口径提醒：套餐制 provider（`settings_config.usage_script.templateType=token_plan`，如 Kimi
+coding plan）按次/按套餐计费，`total_cost_usd` 只是名义值——预算门对它们报「超支」不等于
+真实超支，先过 `llm-usage-cost-audit` 的计费模式确认再下结论。
+
 ## 3. reasoning_effort 联动
 
 目标：把近 N 天成本与 Hermes profile 的 `reasoning_effort` 分级对照，定位优化信号。
@@ -133,7 +137,7 @@ python3 ~/.hermes/skills/devops/cost-ledger/scripts/cost_effort_linkage.py --day
 - `scripts/cost_effort_linkage.py --days N`：reasoning_effort ↔ 成本联动分析（启发式分摊，方向性非精确计费）。
 
 ## 已知数据时效
-- `usage_daily_rollups` 表在本集群**已停止更新**（实测 MAX(date)=2026-07-26，而
-  live 流量持续到 2026-08-26）。因此**不要**拿它做交叉校验——它只会给出陈旧/偏低数字。
-  本 skill 全部以 `proxy_request_logs`（实时、权威）为准；analytics 的 rollup 交叉校验
-  在本机当前已失效，若未来 rollup 重新写入再启用。
+- `usage_daily_rollups` 聚合持续滞后 live 且节奏不定（MAX(date) 长期落后 live 数周）。
+  任何 rollup 交叉校验前先 `SELECT MAX(date) FROM usage_daily_rollups` 核新鲜度——
+  落后即弃用，勿拿陈旧 rollup 否决 live 数字。本 skill 全部以 `proxy_request_logs`
+  （实时、权威）为准。

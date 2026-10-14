@@ -134,8 +134,50 @@ mcp:
 
 ---
 
+## 五、外部参照工具登记：腾讯朱雀 AI-Infra-Guard（AIG）（2026-10-14 融合）
+
+> 来源：微信转述文《腾讯朱雀开源 AI 红队工具》+ 一手回源 GitHub Tencent/AI-Infra-Guard（Apache-2.0，v4.5.2 2026-08-17：2000+ CVE 规则）；裁决矩阵 `workspace/research/hermes-teams-fusion-20261014/FUSION-VERDICT-20261014.md` A1/A2/A3/A4。
+
+**登记定位：外部参照与对照基线，不部署。** 理由：①Web 平台无鉴权（官方明示禁公网）；②扫描依赖外部 LLM API（openrouter 默认），违集群「LLM 调用统一走 cc-switch」红线；③Skill 扫描能力与已 vendor 的 skillguard 重叠（openclaw-fusion 2026-09 P0 已落地）。当 skillguard 检测能力不足且经批准引入外部扫描服务时为翻案条件。
+
+**登记价值（分类法对照锚）**：AIG 维护两套 AI 供应链风险分类法，可作为 skillguard 扫描结果的**风险命名对照词典**——
+
+| AIG 分类 | 含义 | skillguard/SkillSieve 对位 |
+|---|---|---|
+| MCP01-MCP10 + 3 补充（名称混淆/拉地毯 Rug Pull/工具阴影） | MCP Server 风险 13 类 | L2 启发已有管道执行/凭据读取；投毒类命名可对照 |
+| SkillTrustBench T01-T09 | Skill 风险 9 类 | 扫描结果 risk_type 命名对照 |
+
+**随登记的三个 gap（裁决 A2/A3/A4 收缩吸收，待派工实现，登记即立项）**：
+
+| Gap | 内容 | 建议执行 |
+|---|---|---|
+| G-A2 供应链检测规则增补 | skillguard 增补：①SKILL.md/HTML 注释内嵌指令检测（strip 注释前后语义差）②工具描述与代码行为一致性比对（AIG「Agent Skill 审计」同款）③Rug-Pull 模式（审批后触发的条件分支）标记 | worker-coder，改 skillguard 规则文件+回环 fixture 测试 |
+| G-A3 多轮对抗策略 | llm-redteam 增补「多轮对抗策略」节：上下文铺垫后诱导、响应自适应 payload 生成、策略交叉验证（方法源：AIG Agent Scan 三阶段流程） | worker-researcher/hack-auditor，skill 增节 |
+| G-A4 skill 引入安全门禁 | 新 skill 准入第 0 步=skillguard 扫描+SKILL.md 一致性审计（对接设计文档 §3.8「工具准入门」待办） | orchestrator 流程改动，依赖 G-A2 |
+
+---
+
+## 五、AI-Infra-Guard（腾讯朱雀 AIG）外部参照工具登记（2026-10-14 新增）
+
+> 来源：微信转述文 + 一手 GitHub README（v4.5.2，2026-08-17）；裁决矩阵 `workspace/research/hermes-teams-fusion-20261014/FUSION-VERDICT-20261014.md` A1-A6。
+> 定位：**外部参照登记，非部署引入**——AIG 本体不部署（WebUI 无鉴权禁公网；平台形态需配外部 LLM API token，违 cc-switch 统一红线；与 skillguard/mcp_poison_scan/模安局五闸门功能重叠）。登记价值：①扫描结果风险命名对照轴 ②本机 AI 组件 CVE 摸底的候选工具（gap 登记，实测前不作能力承诺）。
+
+| AIG 模块 | 一手能力（转述口径） | 本机对位 | 状态 |
+|---|---|---|---|
+| MCP Server & Skills scan | 14 大类风险（MCP01-MCP10 + 3 补充分类）；源码/远程 URL 双输入 | skillguard 12 规则（SG）+ mcp_poison_scan 6 规则（MP）+ 哈希基线 Rug-Pull | 已有等效工具（skillguard），AIG 分类法作命名对照 |
+| SkillTrustBench T01-T09 | 9 类 Skill 风险基准 | skillguard 扫描结果归类参照 | 命名对照轴 |
+| Agent Scan | 多阶段红队（信息收集→探测→分级）+ 多轮对抗策略，对标 OWASP ASI | llm-redteam（OWASP LLM Top10 模板 + 多轮拆分注入）+ ARTEX 对标 8 技能 | 方法源引用；HAR 学习/Dify/Coze 对接语境 DROP |
+| AI Infra scan | 指纹 100+ AI 组件匹配 2000+ CVE（vLLM/Ollama/ComfyUI/Dify 等） | **无对位**——本机跑本地推理服务从未做过组件级 CVE 摸底 | gap 登记（hack 域），工具实测后更新本表 |
+| Jailbreak Evaluation | 越狱数据集批量 + 跨模型对比 | godmode-hunter 攻击模板等效；跨模型对比被模型裁决排除 | 不吸收 |
+| Model/API Relay Checker | 中继指纹/黑盒审计 | cc-switch 统一代理 + provider-route-diagnostics | 已覆盖 |
+
+**接线约定**：后续若引入 AIG（仅 CLI/二进制形态、仅内网、扫描本地资产），先过 §3.3 决策矩阵同款评估 + `action-risk.md` 高危评审；登记为「外部参照」期间，其风险分类名（MCP01-MCP10/T01-T09）仅用于 skillguard/mcp_poison_scan 扫描结果的人工归档对照，不接入自动管线。
+
+---
+
 ## 修订记录
 | 版本 | 日期 | 内容 |
 |---|---|---|
 | v1.0 | 2026-08-29 | 调研 YunkunSec ToolRegistry 后整理本机 hack team 工具注册映射 + MCP 就绪度 |
 | v1.1 | 2026-08-29 | 新增 Burp MCP 缺口评估与分级接入方案（§三） |
+| v1.2 | 2026-10-14 | 新增外部参照工具登记 AI-Infra-Guard（§五）+ 三个供应链/对抗/门禁 gap 立项（三微信文融合 t_bced6953） |

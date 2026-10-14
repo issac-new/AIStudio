@@ -33,7 +33,10 @@ find . \( -name "child-profile.md" -o -name "mom-observations" \) -not -path "./
 | GitHub | `ghp_` / `gho_` + 30-36 位 | |
 | Slack | `xox[baprs]-` | |
 | Google | `AIzaSy` + 33 位 | |
-| 通用赋值 | `WEIXIN_TOKEN: [a-z0-9]`（非 `${`、非空） | |
+| 通用赋值 | `WEIXIN_TOKEN: [a-z0-9]`（非 `${`、非空） |
+| Matrix 房间 ID | `![A-Za-z0-9_-]{16,}:<homeserver>` → `<matrix-room-id>`（含 SOUL/rules/文档示例里的真实房间 ID） |
+| Matrix 事件/会话 ID | `\$[A-Za-z0-9_-]{30,}` → `<event-id>`（30+ 位避开 `${VAR}` 占位符；`matrix_threads.json` 整文件都是，运行态直接排除） |
+| 半截 key | `sk-[A-Za-z0-9]{3}\...`（对照表里的省略形）→ `sk-REDACTED` | |
 
 ## 隐私模式表
 
@@ -50,7 +53,7 @@ find . \( -name "child-profile.md" -o -name "mom-observations" \) -not -path "./
 孩子 / 记忆双写 / trip / 旅行 / 中秋 / [已移除]- / [已移除]教育
 ```
 
-过滤后必须复核：每个保留 job 的 `script` 字段在 scripts/ 里真实存在，缺失的一并移除。
+过滤后必须复核：每个保留 job 的 `script` 字段在 scripts/ 里真实存在，缺失的一并移除（引用闭环）。注意绝对路径 `"script": "/Users/.../scripts/xxx.sh"` 在同步后经 `/Users/YOURNAME→/Users/YOURNAME` 替换，按文件名匹配判存在，别按原路径。保留 job 的 `last_error`/`last_delivery_error` 错误日志字段**先占位符化再截断**——直接截到 120 字符仍会带 room-id/token 前缀（v3.2 实证：`matrix:<room-id>:$XRDW…[truncated]` 漏网）。
 
 ## 泄露后 read-back 验证（push 后必做）
 

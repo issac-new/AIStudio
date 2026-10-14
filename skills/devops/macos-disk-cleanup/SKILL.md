@@ -85,9 +85,7 @@ docker image prune -f             # dangling only (NOT -a)
 docker system df
 ```
 
-**Sparse-file trap:** `Docker.raw` (or `Docker.disk`) shows a huge *virtual* size
-(e.g. 256G) in `ls -lh` but the *actual* footprint is far smaller (e.g. 31G).
-Always measure with `du -hd 0`, never `ls -lh`, for sparse disk images.
+- **Docker.raw sparse-file trap has a second layer: `docker system df` undercounts when containerd image store is on.** With `UseContainerdSnapshotter=true` (Docker Desktop ≥4.30 default-on for new installs), pulled images live in the in-VM `desktop-containerd` store, invisible to `docker system df` (2026-10-14: df said 18G "content", VM-internal truth was 35G across /var/lib/docker 26G + desktop-containerd 16G minus shared blobs). Measure the real hole with: `docker run --rm --privileged --pid=host justincormack/nsenter1 df -h /var/lib` vs host `du -hd 0` on Docker.raw. Reclaimable-by-compaction = host_du − VM_df_used (was ~4G, not 20G).
 
 ### Dev tool caches (tier 🟢, safe)
 
@@ -181,6 +179,8 @@ that was at 97% reclaims 40-65G and lands at 80-85%.
   dependency graphs. Use direct `rm` of cache subdirs for instant reclaim.
 - **MAS apps can't be deleted non-interactively.** `_MASReceipt` = root-owned.
   Use Finder (user types password) or pre-configured `SUDO_PASSWORD`.
+- **Chrome `code_sign_clone` clones are APFS clonefiles: du-logical >> physical freed.** Deleting 36G du-logical freed only ~4G physical (2026-10-14). The real win is fixing the inflated "System Data" category + inode pressure. Always compare `df` before/after and report physical, not du.
+- **JetBrains `Application Support/<IDE>` config dirs survive app uninstall.** No .app in /Applications but 1-3G configs remain. Archive (`cp -Rp` + `diff -rq` verify) before `rm -rf`; keep the shared `Daemon` dir.
 - **Don't propose tier 🔴 items.** `.hermes/hermes-agent/venv`, `.claude`,
   `.codex`, active profile dirs — these are runtime-load-bearing. If the user
   asks about them, explain why they're large but don't suggest deletion.

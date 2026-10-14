@@ -132,6 +132,8 @@ read_file("~/.hermes/profiles/_shared/02-org-orchestration/ontology.md")   # 确
 | **L2-Sandboxed** | 用户临时提供、GitHub/外部引入 | Docker 沙箱或限制 toolset 下执行，workspace_kind=dir（隔离目录，执行完手动清理），不挂 ~/.ssh ~/.hermes | open-source-skill-fusion 引入 |
 | **L3-Disabled** | 审计未通过、含危险模式、来源不可信 | 拒绝执行，`kanban_block(kind=capability)` | 含 `curl\|bash`、请求全权限 |
 
+**准入第 0 步（安全扫描门，2026-10-14 G-A4 落地）**：L1/L2 级 skill 在进入分级审计前，先过 skillguard 机械扫描——`export PYTHONPATH=~/.hermes/skills/hack-team/skillguard/scripts && python3 ~/.hermes/skills/hack-team/skillguard/scripts/skillguard/cli.py scan <skill目录> --format json`，规则 SG-013（注释内嵌指令）/SG-014（工具描述与代码行为一致性）/SG-015（Rug-Pull 审批后触发）任一命中 CRITICAL/HIGH → 按 L3-Disabled 处置（拒绝引入，来源记录进 kanban_comment）；SG-001..012 既有规则命中维持原分级流程处置。扫描器零依赖纯 stdlib，文件形态 JSON 顶层 `findings`、目录形态 `results[].findings`。依据：裁决矩阵 `~/workspace/research/hermes-teams-fusion-20261014/FUSION-VERDICT-20261014.md` A4 行（来源：腾讯朱雀 AIG「aig-skill-scan 嵌 CI 流水线」收缩吸收——CI 槽位映射为本集群 skill 准入门）。
+
 ```bash
 # 查看所有skill分级(路径推断)
 python3 -c "

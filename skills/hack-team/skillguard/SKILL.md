@@ -1,7 +1,7 @@
 ---
 name: skillguard
 description: "AI Agent Skill 安全扫描器 — 12 条规则映射 OWASP Agentic Skills Top 10，含 Lethal Trifecta 组合检测。零依赖纯 stdlib，支持 SARIF 输出。Vendor 自 obielin/skillguard。"
-version: 1.0.0
+version: 1.2.0
 author: Hermes Agent (vendored from obielin/skillguard)
 license: MIT
 platforms: [linux, macos, windows]
@@ -150,3 +150,8 @@ MCP manifest 扩展: mcp_poison_scan.py（本仓自研，2026-09-22，证据源 
 - `pentest-methodology-fusion` — 渗透方法论融合
 - `owasp-security` — OWASP 安全最佳实践
 - `security-auditor` — 安全审计
+
+## 修订记录
+
+- 1.1.0 (2026-10-14): 增补供应链检测规则 SG-013（注释内嵌指令）/SG-014（工具描述-代码行为一致性）/SG-015（Rug-Pull 条件分支），来源 G-A2（腾讯朱雀 AIG 分类法对照，裁决矩阵 A2 行）；新增回环 fixtures 于 scripts/skillguard/tests/fixtures/。
+- 1.2.0 (2026-10-14): SG-013 误报降噪（G-A2b 双端标定）——L1 签名收窄（移除 jailbreak/DAN 等裸词，保留 ignore-instructions 家族），L2 改双路径共现（数据移动动词+数据目标 / 工具调用动词+工具目标，各含命令词），新增防御性语境全文豁免（CVE/CIS/OWASP/SG-/渗透红队等强标记×弱词汇共现门，签名段永不豁免）。四目标基线 20 误报→0，恶意 fixtures 3/3 检出不变，其余规则 findings 逐目录守恒。
