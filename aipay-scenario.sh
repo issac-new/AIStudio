@@ -2078,6 +2078,34 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     else
       echo "- 巡检官收敛账未在位（产品面未部署或 CLUSTER_INSPECTOR_CONVERGENCE=off）：按上表族计数口径人工对账，如实标注"
     fi
+    echo
+    echo "## 经验候选台账（纪律 49：跨轮经验复用走「候选→审核→受控注入」半环，注入默认关）"
+    echo "| 候选类型 | 指纹 | 证据数 | 审核处置 |"
+    echo "|---|---|---|---|"
+    # 候选=经验候选提取面（/api/expcandidates）从看板轨迹机械提取的三类（反模式/较优路径/
+    # 流程签名）；产品 store 随 HERMES_WEB_UI_HOME 走（缺省回落 OS home），在位则 jq 实算，
+    # 缺位如实标注（禁编造，禁删节）。
+    EXP_JSON=""
+    for _ecand in "${HERMES_WEB_UI_HOME:-$HOME/.hermes-web-ui}/expcandidates/exp-candidates.json" "$HOME/.hermes-web-ui/expcandidates/exp-candidates.json"; do
+      [ -n "$_ecand" ] && [ -f "$_ecand" ] && EXP_JSON="$_ecand" && break
+    done
+    if [ -n "$EXP_JSON" ] && command -v jq >/dev/null 2>&1; then
+      _etotal=$(jq -r '.candidates | length' "$EXP_JSON" 2>/dev/null || echo '?')
+      if [ "$_etotal" = "0" ] 2>/dev/null; then
+        echo "| （零候选——窗口内无可提取轨迹，如实呈现） | | | |"
+      else
+        jq -r '.candidates[] | "| \(.type) | \(.fingerprint) | \(.evidence | length) | \(.status) |"' "$EXP_JSON" 2>/dev/null | head -20
+      fi
+      if [ "${EXPERIENCE_INJECT:-}" = "1" ]; then
+        _einj=$(jq -r '[.candidates[] | select((.injectedRuns | length) > 0)] | length' "$EXP_JSON" 2>/dev/null || echo '?')
+        echo "- 注入留痕：本轮开启注入（纪律 49），留痕候选 ${_einj} 条（injectedRuns 见 store）"
+      else
+        echo "- 注入留痕：本轮未启用注入（纪律 49 默认关）"
+      fi
+    else
+      echo "| （候选面未部署或 store 缺位——如实标注，禁编造；首轮写「首轮，无」） | | | |"
+      echo "- 注入留痕：本轮未启用注入（纪律 49 默认关）"
+    fi
   } > "$RETRO"
   # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
   # 空推/被拒，复盘/治理报告进不了 origin/main。
