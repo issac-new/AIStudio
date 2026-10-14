@@ -44,10 +44,9 @@ export function extractCandidates(events: ExtractEventRow[], opts: ExtractOption
   const cfg = { ...DEFAULTS, ...opts }
   const out: ExtractedCandidate[] = []
 
-  // ── antipattern：gate:reason 计数 ──
+  // ── antipattern：gate:reason 计数（归一后 failures 字段驱动，双词汇兼容） ──
   const gateGroups = new Map<string, { count: number; evidence: EvidenceItem[] }>()
   for (const ev of events) {
-    if (ev.kind !== 'gate_blocked' && ev.kind !== 'gate_warning') continue
     for (const f of ev.failures ?? []) {
       const key = `${f.gate}:${f.reason}`
       const g = gateGroups.get(key) ?? { count: 0, evidence: [] }
@@ -80,8 +79,8 @@ export function extractCandidates(events: ExtractEventRow[], opts: ExtractOption
   const cards: CardView[] = []
   for (const [taskId, list] of byTask) {
     list.sort((a, b) => a.at - b.at || a.seq - b.seq)
-    const path = list.filter((e) => e.kind === 'column_transition' && e.to).map((e) => e.to as string)
-    const blocked = list.some((e) => e.kind === 'gate_blocked' || e.kind === 'gate_warning')
+    const path = list.filter((e) => e.to).map((e) => e.to as string)
+    const blocked = list.some((e) => (e.failures ?? []).length > 0)
     const spanSec = list.length >= 2 ? Math.max(0, list[list.length - 1].at - list[0].at) : 0
     cards.push({ taskId, path, spanSec, blocked, firstAt: list[0].at })
   }
