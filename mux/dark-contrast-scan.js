@@ -27,8 +27,19 @@ setTimeout(function () {
   function bgOf(el) {
     var n = el;
     while (n && n !== document.documentElement) {
-      var p = parse(getComputedStyle(n).backgroundColor);
+      var cs = getComputedStyle(n);
+      var p = parse(cs.backgroundColor);
       if (p && p.a > 0.55) return p;
+      // 渐变底：取第一个 color-stop 近似（hero 就是深蓝渐变，扫描器读不到会把
+      // 深底上的白字误报成「白底白字 1.05:1」——这类噪声会淹没真问题）。
+      var img = cs.backgroundImage || '';
+      if (img.indexOf('gradient') >= 0) {
+        var stops = img.match(/rgba?\([^)]+\)/g);
+        if (stops && stops.length) {
+          var sp = parse(stops[0]);
+          if (sp) return sp;
+        }
+      }
       n = n.parentElement;
     }
     return { r: 11, g: 18, b: 32, a: 1 };
