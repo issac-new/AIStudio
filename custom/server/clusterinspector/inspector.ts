@@ -77,6 +77,36 @@ export class ClusterInspector {
   }
 
   /** ②matrix 跟进提醒（CLUSTER_INSPECTOR_NUDGE=on + ROOM 配置时）：会话卡死 → @agent 群消息唤醒 */
+  /** 派发自愈（run19 凌晨实录根治：dispatcher 循环僵死 3h 零孵化+失败静默——CLI
+   *  kanban dispatch 独立完好，直派孵化新工位=实证破局手）。触发=dispatcher.stuck
+   *  告警（控制器侧滞留计时超阈）。幂等：同 subject 进程内只直派一次，直派失败
+   *  退避到冷却期后由下轮重试（safeActedSubjects 复用 B4 幂等集）。 */
+  private async dispatchSelfHeal(anomalies: Anomaly[]): Promise<string[]> {
+    const acted: string[] = []
+    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
+    for (const a of anomalies) {
+      if (a.detector !== 'dispatcher.stuck') continue
+      if (this.safeActedSubjects.has(a.subject)) continue
+      this.safeActedSubjects.add(a.subject)
+      try {
+        const { execFile } = require('node:child_process')
+        const out = await new Promise<string>((resolve, reject) => {
+          execFile('hermes', ['kanban', 'dispatch', '--json'], {
+            timeout: 120_000,
+            env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || this.deps.hermesHome || require('node:os').homedir() + '/.hermes' },
+          }, (e?: Error | null, stdout?: string) => e ? reject(e) : resolve(String(stdout ?? '')))
+        })
+        const spawned = (JSON.parse(out) as { spawned?: Array<{ task_id?: string }> }).spawned ?? []
+        const ids = spawned.map((x) => x.task_id).filter(Boolean).join(',')
+        acted.push(`dispatch-selfheal:${spawned.length ? ids : 'no-op'}`)
+        this.deps.emitGovEvent?.({ domain: 'system', severity: 'info', type: 'cluster.dispatcher.selfheal', source: 'cluster-inspector', summary: `派发自愈：CLI 直派孵化 ${spawned.length} 工位（${ids || '无待派卡'}）`, payload: { subject: a.subject } })
+      } catch (e) {
+        acted.push(`dispatch-selfheal:failed:${(e as Error).message.slice(0, 80)}`)
+      }
+    }
+    return acted
+  }
+
   private async nudgeStalled(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
     // 2026-10-11 默认开（用户指令；run14 六小时停摆实录：能力在而默认关=形同没有）。
@@ -206,6 +236,7 @@ export class ClusterInspector {
   }
   /** safe-act 已处置主体（进程内幂等键，B4） */
   private safeActedSubjects = new Set<string>()
+  private readySince = 0 // dispatcher 僵死滞留起点（ready 队列首次非空时刻）
 
   async runOnce(): Promise<RunOutcome> {
     const t0 = Date.now()
@@ -267,7 +298,18 @@ export class ClusterInspector {
         sessionTelemetry: collectSessionTelemetry(this.deps),
       }
       this.lastSnapshot = snap
-      const anomalies: TimedAnomaly[] = detectAll(snap).map((a) => ({ ...a, ts: snap.ts }))
+      // dispatcher 僵死滞留计时（run19 根治）：ready 队列首次非空记起点，持续非空
+      // 时长作为 dispatcherStuckMs 传入（默认阈 15min，env 可调）——检测器纯函数无
+      // 状态，滞留语义由本侧维护；队列清空即复位。
+      const readyNow = snap.runningCards.ok
+        ? snap.runningCards.cards.filter((c) => String(c.status ?? '').toLowerCase() === 'ready').length : 0
+      if (readyNow > 0) {
+        if (this.readySince === 0) this.readySince = Date.now()
+      } else this.readySince = 0
+      const dispatcherStuckMs = this.readySince > 0 ? Date.now() - this.readySince : 0
+      const anomalies: TimedAnomaly[] = detectAll(snap, {
+        dispatcherStuckMs: dispatcherStuckMs >= Number(process.env.CLUSTER_INSPECTOR_STUCK_MS || 900_000) ? dispatcherStuckMs : 0,
+      }).map((a) => ({ ...a, ts: snap.ts }))
       const now = this.deps.now?.() ?? Date.now()
       let emitted = 0
       let suppressed = 0
@@ -282,7 +324,7 @@ export class ClusterInspector {
         this.emit(a)
         emitted += 1
       }
-      const actions = [...(await this.safeAct(anomalies)), ...(await this.nudgeStalled(anomalies)), ...(await this.destructiveGuard(anomalies))]
+      const actions = [...(await this.safeAct(anomalies)), ...(await this.nudgeStalled(anomalies)), ...(await this.dispatchSelfHeal(anomalies)), ...(await this.destructiveGuard(anomalies))]
       outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
