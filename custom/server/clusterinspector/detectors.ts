@@ -294,8 +294,11 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
   const face = snap.blockedCards
   if (!face || !face.ok) return out
   for (const c of face.cards) {
-    const upd = typeof c.updated_at === 'number' ? c.updated_at
-      : typeof c.updated_at === 'string' ? Number(c.updated_at) : NaN
+    // 「最后推进时刻」双字段容错（真实 tasks 表无 updated_at 列——run19 巡检实锤；
+    // 采集层已做回退映射，此处再容错一层防直夹具/旧快照漏映射）
+    const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
+    const upd = typeof rawTs === 'number' ? rawTs
+      : typeof rawTs === 'string' ? Number(rawTs) : NaN
     if (!Number.isFinite(upd) || upd <= 0) continue
     const quietMs = now - upd
     if (quietMs > staleMs) {

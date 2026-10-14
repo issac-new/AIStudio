@@ -469,6 +469,13 @@ describe('card.blocked-stale（run19 G5 熔断死等产品化——用户 300s �
     const notWired = detectBlockedStale(snap({}), { nowMs: NOW })
     expect(notWired).toHaveLength(0)
   })
+  it('真实表无 updated_at 列：last_heartbeat_at 回退仍触发（run19 巡检实锤修正）', () => {
+    const out = detectBlockedStale(snap({ blockedCards: { ok: true, cards: [
+      { id: 't4', status: 'blocked', last_heartbeat_at: NOW - 400_000 },
+    ] } }), { nowMs: NOW })
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatchObject({ detector: 'card.blocked-stale' })
+  })
   it('detectAll 聚合含 card.blocked-stale（阈值可经 blockedStaleMs 收紧）', () => {
     const out = detectAll(snap({ blockedCards: { ok: true, cards: [
       { id: 't3', title: 'X', status: 'blocked', updated_at: NOW - 120_000 },
