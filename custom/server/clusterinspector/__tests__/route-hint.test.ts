@@ -4,10 +4,10 @@ import { DETECTOR_FAILURE_CLASS, routeHintForDetector } from '../route-hint'
 import { resolveRoute } from '../../faileroute/failure-routes'
 
 describe('巡检→失败路由标注', () => {
-  it('映射表只含停滞族与失控环；hint 行含类型/动作/携带/依据', () => {
+  it('映射表只含停滞族/失控环/熵增熔断；hint 行含类型/动作/携带/依据', () => {
     expect(Object.keys(DETECTOR_FAILURE_CLASS).sort()).toEqual([
       'card.blocked-stale', 'dispatcher.stuck', 'kanban.stale-worker', 'machine.silent',
-      'session.runaway-loop', 'session.stalled', 'task.agent-silent',
+      'risk.diverging', 'session.runaway-loop', 'session.stalled', 'task.agent-silent',
     ].sort())
     const hint = routeHintForDetector('card.blocked-stale') as string
     expect(hint).toContain('stall_timeout → 人闸')
