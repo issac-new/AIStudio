@@ -76,15 +76,15 @@
       "schedule_display": "every day at 4am",
       "repeat": {
         "times": null,
-        "completed": 40
+        "completed": 42
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-01T14:11:59.899224+08:00",
-      "next_run_at": "2026-10-13T04:07:00+08:00",
-      "last_run_at": "2026-10-12T04:08:01.299825+08:00",
+      "next_run_at": "2026-10-15T04:07:00+08:00",
+      "last_run_at": "2026-10-14T04:07:08.753688+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -94,17 +94,17 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T04:07:00+08:00",
-        "dispatched_at": "2026-10-12T04:07:58.007469+08:00",
-        "lateness_seconds": 58.0,
+        "scheduled_at": "2026-10-14T04:07:00+08:00",
+        "dispatched_at": "2026-10-14T04:07:05.797298+08:00",
+        "lateness_seconds": 5.8,
         "kind": "on_time"
       },
       "fire_claim": null,
       "last_failure": {
-        "at": "2026-10-09T04:08:37.118925+08:00",
-        "detail": "Script exited with code 1\nstderr:\nmv: fastcopy: open() failed (to): /Volumes/YOURVOLUME/hermes-backups/skills/orch-skills-2026-10-08T20-08-28Z.tar.gz: Operation not permitted"
+        "at": "2026-10-13T05:03:04.756157+08:00",
+        "detail": "Script exited with code 1\nstderr:\nmv: fastcopy: open() failed (to): /Volumes/YOURVOLUME/hermes-backups/skills/orch-skills-2026-10-12T20-07-10Z.tar.gz: Interrupted system call"
       }
     }
   ],
-  "updated_at": "2026-10-12T04:08:01.300330+08:00"
+  "updated_at": "2026-10-14T04:07:08.754236+08:00"
 }

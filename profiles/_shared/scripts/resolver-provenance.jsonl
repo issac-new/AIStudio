@@ -15,3 +15,18 @@
 {"task_hash": "cc3c4271d3aeb7df", "selected": {"primary": "attack-path-graph", "supports": ["business-logic-vulnerabilities", "llm-redteam"]}, "reason": "phase:['post']+3.0", "confidence": 0.2}
 {"task_hash": "dc4ae3dcd84608a2", "selected": {"primary": "llm-redteam", "supports": ["attack-path-graph", "business-logic-vulnerabilities"]}, "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0", "confidence": 0.4}
 {"task_hash": "64c1a0475f0dd8b1", "selected": {"primary": "audit-orchestration", "supports": ["llm-redteam", "scope-gate"]}, "reason": "target_type:['binary']+3.0; format:target-scope+1.5", "confidence": 0.3}
+{"task_hash": "ed66b8b2e8ca6854", "selected": {"primary": "llm-redteam", "supports": ["attack-path-graph", "business-logic-vulnerabilities"]}, "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0", "confidence": 0.4}
+{"task_hash": "6f32e0699c9c57ff", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "bc44e1bba5fb8faf", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "011dcb8434a67684", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "6f32e0699c9c57ff", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "e3b0c44298fc1c14", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "e3b0c44298fc1c14", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "a6bfdc2fe3e51d8d", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "98bf6825979c77f2", "selected": {"primary": "failure-trace-index", "supports": ["asset-topology-graph", "attack-path-graph"]}, "reason": "target_type:['ad']+3.0; alias:['failure-ledger']+1.0", "confidence": 0.267}
+{"task_hash": "b1c8d2b11b3d03e6", "selected": {"primary": "llm-redteam", "supports": ["attack-path-graph", "business-logic-vulnerabilities"]}, "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0", "confidence": 0.4}
+{"task_hash": "a8c3b4fa410dcb21", "selected": {"primary": null, "supports": []}, "reason": "non-pentest input, abstain", "confidence": 0.0}
+{"task_hash": "7211352225e14ab6", "selected": {"primary": "business-logic-vulnerabilities", "supports": ["bola-session-detection", "autonomous-godmode-hunter"]}, "reason": "vuln_hints:['bola', 'idor']+6.0; alias:['idor']+1.0", "confidence": 0.467}
+{"task_hash": "0bc7974b91645ba5", "selected": {"primary": "llm-redteam", "supports": ["scope-gate", "skill-resolver"]}, "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0", "confidence": 0.4}
+{"task_hash": "08320105174bcb4f", "selected": {"primary": "llm-redteam", "supports": ["redteam-auth", "asset-topology-graph"]}, "reason": "target_type:['api', 'llm']+6.0; format:llm-endpoint+1.5", "confidence": 0.5}
+{"task_hash": "a1d7ff07d1af8340", "selected": {"primary": "llm-redteam", "supports": ["incident-response"]}, "reason": "target_type:['llm']+3.0; format:llm-endpoint+1.5", "confidence": 0.3}

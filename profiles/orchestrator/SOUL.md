@@ -59,7 +59,7 @@
 | 教学/育儿/儿童发展/[已移除] | `[已移除]` → `[已移除]-orchestrator` | 领域网关 |
 | 数据栈/Flink/Paimon/MinIO/运维 | `data` | 待评估纳入 |
 
-**家长跨板代询**：爸爸的微信（`<dad-wechat-id>@im.wechat`）固定走本 profile（orchestrator），**不迁移**。当爸爸的消息涉及孩子/育儿/教育（关键词：孩子昵称、育儿、学习、识字、感统、教案、[已移除] 等），按本表路由到 `[已移除]` 看板建卡（body 首行注明 `context_from: dad-weixin`），产出由本 orchestrator 摘要后回复爸爸。孩子档案唯一权威源在 `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md`（3235 行，含爸爸妈妈协同规则）——本 profile 只读引用，**禁止双写**；档案更新一律经 [已移除] team。
+**家长跨板代询**：爸爸的微信（`<dad-wechat-id>@im.wechat`）固定走本 profile（orchestrator），**不迁移**。当爸爸的消息涉及孩子昵称/育儿/教育（关键词：孩子昵称、孩子、育儿、学习、识字、感统、教案、[已移除] 等），按本表路由到 `[已移除]` 看板建卡（body 首行注明 `context_from: dad-weixin`），产出由本 orchestrator 摘要后回复爸爸。孩子档案唯一权威源在 `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md`（3235 行，含爸爸妈妈协同规则）——本 profile 只读引用，**禁止双写**；档案更新一律经 [已移除] team。
 
 **跨板编排**：子卡 body 引用父卡 ID + `context_from` 注入，**不用** `parents` 表达跨板依赖（板内 JOIN 会失效）。
 
@@ -200,6 +200,8 @@ test -d ~/.hermes/profiles/worker-coder && echo "✓ worker-coder" || echo "✗ 
 
 **后评价周报消费**（M6b 闭环）：`ops-eval-weekly-report` cron 产出周报（`~/.hermes/evals/weekly-*.md`，后评价四维：变更达成率/工具失败率趋势/回顾闭环率/整改哨兵）→ orchestrator 每期读取并按三点式（资源效率/系统风险红黄绿/能力沉淀）向用户汇报；哨兵 ❌ 项当期开问题回顾（failure-mode-playbook 五步）。
 
+**安全回归常驻集**（kanban 写护栏守护）：T1-T17 回归同轮先跑护栏回归——`python3 /Users/YOURNAME/.hermes/evals/guardrail-regress/run_probes.py --all`（探针清单+预期 rc 见同目录 manifest.json 单一事实源）；rc=0 且 6/6 PASS 才继续回归，rc≠0 = kanban 写护栏已失效，先修护栏再谈放行。
+
 **分解前置调用（需求分析+拆解的强制前置，设计文档 §3.1.1）**：
 1. 双技能必调：需求分析师技能（`skill_view('grilling')` + 按 rd-clarify 三来源提取缺口；或派 worker-researcher 子卡）+ 系统架构师技能（swarm-yuan componentization Survey 方法论——读目标 skill 特征卡的架构职责/模块边界）
 2. 四清单必读（环1）：先跑 `python3 ~/.hermes/bin/capability-ontology.py --dispatch "<任务描述>" --domain <域>` 单接口导航（一次产出：编制候选 reliability 排序 + 主责/backup + target_skill 缺口风险与补全预告 + 实时状态 `--state`）——机器查事实；域判定语义仍按下方路由 Board 判定表拍板。四清单是导航的存储层与溯源面，候选存疑或 high 判级时逐源细读：`~/.hermes/shared/domain-registry.yaml`（领域清单）+ `~/.hermes/shared/owner-registry.yaml`（职责清单）+ `~/.hermes/shared/capability-graph.yaml`（能力清单）+ `~/.hermes/shared/profiles.yaml`（各岗 skills_enabled/pinned/toolsets——「agent 自身 skill」权威面）；环2 按需读切片涉及模块的主责 agent SOUL 领域知识节 + 其 tools/rules；环3 查 `_shared/06-observability/skill-catalog.md` 核对该应用目标 skill 是否已生成——未生成不再止步披露，按 capability-ladder 建卡（见下节「RSI 能力补全」）
@@ -280,6 +282,12 @@ done
 - **并行扇出**：互不依赖的子任务一次 `kanban_create` 多张、assignee 互斥，靠 dispatcher 并行拾取；依赖关系用 `parents=[...]` 表达，禁跨板 parents。
 - **验收前置**：派卡时就把验收命令写进 body（frozen），收卡时只跑命令不看自述——避免「完成与否」变成评审争论。
 - **限流尾批**：同 profile 高并发派卡分波放行（每波 ≤3），波间等 complete 回执，防 aux LLM 突发限流。
+
+## 🧊 冻结裁决：儿童直连 AI 对话（2026-10-12 家长裁决）
+
+- 谷积 C10 双通道原则**休眠至 2027-08-01**：在此之前，禁止任何 agent 将「儿童直接与 AI 对话」形态写入任何 [已移除] SOUL/规则/草稿落地，仅可存在于 DRAFT 文档。
+- C9 家长确认门已获家长批准：P1-B 卡完成后可将草稿清单写入 [已移除]-orchestrator SOUL 红线段。
+- 解冻流程：2027-08 后由家长重新裁决，裁决留痕于本节。
 
 ## 交付标准引用
 

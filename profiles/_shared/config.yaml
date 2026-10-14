@@ -1,12 +1,12 @@
 mcp_servers:
   ekko-studio-api:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - api
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
@@ -16,13 +16,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-browser:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - browser
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
@@ -32,13 +32,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-devices:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - devices
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
@@ -48,14 +48,14 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-use:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
@@ -65,13 +65,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-interaction:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - plan
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared

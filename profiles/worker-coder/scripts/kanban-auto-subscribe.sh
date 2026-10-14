@@ -5,7 +5,7 @@
 # Runs as a cron job under the orchestrator profile
 
 KANBAN_DB="$HOME/.hermes/kanban/boards/kanban001/kanban.db"
-MATRIX_ROOM="!<matrix-room-id>:matrix.test"
+MATRIX_ROOM="<matrix-room-id>"
 ORCHESTRATOR_PROFILE="orchestrator"
 
 # Get all tasks that are active (not done/archived) and don't have subscriptions yet

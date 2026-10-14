@@ -1,8 +1,8 @@
 {
   "meta": {
     "version": "1.0",
-    "generated_at": "2026-08-29",
-    "source": "YunkunSec/VulnClaw 对标后的本机 hack-team 27 skills routing index",
+    "generated_at": "2026-10-13",
+    "source": "YunkunSec/VulnClaw 对标后的本机 hack-team 27 skills routing index + R2 ARTEX 8 项补全 (t_67b5186f)",
     "weights": {
       "W_TYPED": 3.0,
       "W_ALIAS": 1.0,
@@ -10,7 +10,8 @@
     },
     "support_threshold": 0.35,
     "max_supports": 2,
-    "skill_count": 26
+    "skill_count": 34,
+    "activation_note": "2026-10-13: 8 项 R2 技能由 orchestrator 人审 mark-active 全部激活"
   },
   "skills": {
     "attack-path-graph": {
@@ -926,6 +927,282 @@
       ],
       "is_broad_knowledge": false,
       "input_format": "target-url"
+    },
+    "asset-topology-graph": {
+      "name": "asset-topology-graph",
+      "description": "全局资产拓扑表+任务推理谱系表双图建模规范（对照 ARTEX 双图架构），recon findings 结构化存取。",
+      "phase": [
+        "recon"
+      ],
+      "target_type": [
+        "web",
+        "network",
+        "ad",
+        "cloud"
+      ],
+      "technologies": [],
+      "vuln_hints": [],
+      "task_types": [
+        "knowledge-model",
+        "asset-inventory",
+        "lineage-tracking"
+      ],
+      "aliases": [
+        "dual-graph",
+        "asset-graph",
+        "exploration-graph"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "recon-findings-json",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "failure-trace-index": {
+      "name": "failure-trace-index",
+      "description": "跨卡失败尝试检索索引——「此路不通」结构化留痕（含根因强制），按关键词跨 engagement 复用。",
+      "phase": [
+        "recon"
+      ],
+      "target_type": [
+        "web",
+        "network",
+        "ad",
+        "cloud"
+      ],
+      "technologies": [],
+      "vuln_hints": [],
+      "task_types": [
+        "failure-ledger",
+        "dead-end-retrieval",
+        "cross-card-search"
+      ],
+      "aliases": [
+        "dead-end-index",
+        "failure-ledger",
+        "what-failed"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "failure-claim",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "exploit-chain-runner": {
+      "name": "exploit-chain-runner",
+      "description": "串行利用链编排规范：持久 TodoStore（跨唤醒存活）+ 证据门完成判定 + 跳步闸。纯流程编排，零攻击内容。",
+      "phase": [
+        "exploit"
+      ],
+      "target_type": [
+        "web",
+        "network",
+        "ad",
+        "cloud"
+      ],
+      "technologies": [],
+      "vuln_hints": [],
+      "task_types": [
+        "chain-orchestration",
+        "todo-store",
+        "evidence-gate"
+      ],
+      "aliases": [
+        "chain-runner",
+        "serial-chain",
+        "todo-chain"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "chain-steps",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "poc-evidence-snapshot": {
+      "name": "poc-evidence-snapshot",
+      "description": "PoC 证据 SHA-256 内容寻址快照绑定——防篡改、可复放、随 finding 版本化。",
+      "phase": [
+        "exploit",
+        "post"
+      ],
+      "target_type": [
+        "web",
+        "network",
+        "ad",
+        "cloud"
+      ],
+      "technologies": [],
+      "vuln_hints": [],
+      "task_types": [
+        "evidence-binding",
+        "sha256-snapshot",
+        "replay"
+      ],
+      "aliases": [
+        "evidence-snapshot",
+        "content-addressed-evidence"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "evidence-files",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "bola-session-detection": {
+      "name": "bola-session-detection",
+      "description": "会话级 BOLA/IDOR 检测基线：去重对象数+顺序枚举段特征（按访问顺序切分），替代失效 IP 限速。",
+      "phase": [
+        "defense"
+      ],
+      "target_type": [
+        "web",
+        "api"
+      ],
+      "technologies": [],
+      "vuln_hints": [
+        "bola",
+        "idor",
+        "object-enumeration"
+      ],
+      "task_types": [
+        "detection-baseline",
+        "log-hunting",
+        "siem-rule"
+      ],
+      "aliases": [
+        "bola-baseline",
+        "session-bola",
+        "idor-detection"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "traffic-jsonl",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "agentic-tool-fingerprint": {
+      "name": "agentic-tool-fingerprint",
+      "description": "agentic 攻击工具指纹 IOC 类别库：自更新 UA/默认端口对/自定义会话头/中转站域名/HTML title 五类匹配（强弱指纹交叉门）。",
+      "phase": [
+        "defense"
+      ],
+      "target_type": [
+        "web",
+        "network",
+        "host"
+      ],
+      "technologies": [],
+      "vuln_hints": [
+        "agentic-tool",
+        "ioc",
+        "fingerprint"
+      ],
+      "task_types": [
+        "ioc-library",
+        "fingerprint-match",
+        "log-hunting"
+      ],
+      "aliases": [
+        "tool-fingerprint",
+        "agentic-ioc",
+        "ua-fingerprint"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "events-jsonl",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "llm-egress-governance": {
+      "name": "llm-egress-governance",
+      "description": "LLM API 出口治理检测：非标准 base_url / 中转站域名 / 自定义会话头 / 独立代理三维审计（白名单+交叉判定门）。",
+      "phase": [
+        "defense"
+      ],
+      "target_type": [
+        "host",
+        "network"
+      ],
+      "technologies": [],
+      "vuln_hints": [
+        "llm-egress",
+        "relay",
+        "shadow-ai"
+      ],
+      "task_types": [
+        "egress-audit",
+        "config-inventory",
+        "traffic-audit"
+      ],
+      "aliases": [
+        "llm-egress",
+        "relay-detection",
+        "base-url-audit"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "inventory-or-traffic-jsonl",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
+    },
+    "llm-failover-pool": {
+      "name": "llm-failover-pool",
+      "description": "运行时 LLM 故障转移/熔断参考实现：同构优先级链+等秩轮转+4xx/5xx 熔断+半开试探+全池 fail-closed（ARTEX llmpool 语义基准）。",
+      "phase": [
+        "infra"
+      ],
+      "target_type": [
+        "internal"
+      ],
+      "technologies": [],
+      "vuln_hints": [],
+      "task_types": [
+        "failover",
+        "circuit-breaker",
+        "reference-impl"
+      ],
+      "aliases": [
+        "llmpool",
+        "provider-failover",
+        "circuit-breaker"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "provider-list",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-13",
+        "approved_by": "orchestrator",
+        "decision": "全部激活（R2 mark-active 人审裁决）"
+      }
     }
   }
 }

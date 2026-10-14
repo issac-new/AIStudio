@@ -1,67 +1,7 @@
-_config_version: 50
-action_gate:
-  mode: enforce
-agent:
-  environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
-  environment_probe: false
-  max_turns: 90
-  parallel_tool_call_guidance: true
-  reasoning_effort: ultra
-  task_completion_guidance: true
-  tool_use_enforcement: auto
-approvals:
-  mode: "off"
-auxiliary:
-  approval:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  background_review:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  compression:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  goal_judge:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  kanban_decomposer:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  moa_aggregator:
-    model: glm-5.3-flash
-    provider: custom:moa-mglm
-  moa_reference:
-    model: glm-5.3-flash
-    provider: custom:moa-mglm
-  profile_describer:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  session_search:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  title_generation:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  triage_specifier:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  vision:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-  web_extract:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-clearances:
-  - TLP:RED
-  - TLP:AMBER
-  - TLP:GREEN
-  - TLP:CLEAR
-  - PII
-  - CONFIDENTIAL
-compression:
-  enabled: true
-  target_ratio: 0.15
-  threshold: 0.35
+model:
+  default: aim
+  provider: custom:cc-switch
+providers: {}
 custom_providers:
   - api_key: PROXY_MANAGED
     api_mode: anthropic_messages
@@ -71,61 +11,116 @@ custom_providers:
       glm-5.3-flash:
         name: glm-5.3-flash
     name: cc-switch
-    session_affinity_header: x-claude-code-session-id
-  - api_key: ${MOA_BIGMODEL_API_KEY}
-    api_mode: anthropic_messages
-    base_url: https://open.bigmodel.cn/api/anthropic
-    context_length: 1003520
-    models:
-      glm-5.3:
-        name: glm-5.3
-      glm-5.3-flash:
-        name: glm-5.3-flash
-    name: moa-mglm
-  - api_key: ${MOA_KIMI_API_KEY}
-    api_mode: anthropic_messages
-    base_url: https://api.kimi.com/coding
-    context_length: 1048576
-    models:
-      k3:
-        name: k3
-    name: moa-mk256
-  - api_key: ${MOA_MIMO_API_KEY}
-    api_mode: anthropic_messages
-    base_url: https://token-plan-cn.xiaomimimo.com/anthropic
-    context_length: 1048576
-    models:
-      mimo-v2.6-pro:
-        name: mimo-v2.6-pro
-    name: moa-mimo
-moa:
-  presets:
-    heavy:
-      aggregator:
-        model: glm-5.3-flash
-        provider: custom:moa-mglm
-        reasoning_effort: none
-      degraded_reference_policy: loud
-      fanout: user_turn
-      reference_models:
-        - enabled: true
-          model: glm-5.3
-          provider: custom:moa-mglm
-        - enabled: true
-          model: k3
-          provider: custom:moa-mk256
-          reasoning_effort: max
-        - enabled: true
-          model: mimo-v2.6-pro
-          provider: custom:moa-mimo
-  default_preset: heavy
-  active_preset: ""
+toolsets:
+  - hermes-cli
+  - kanban
+  - memory
+  - messaging
+agent:
+  environment_probe: false
+  max_turns: 90
+  parallel_tool_call_guidance: true
+  reasoning_effort: ultra
+  task_completion_guidance: true
+  tool_use_enforcement: auto
+  environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
+terminal:
+  backend: local
+  cwd: ~/hermes-docker-sandbox/workspace
+  persistent_shell: true
+  timeout: 180
+compression:
+  enabled: true
+  target_ratio: 0.15
+  threshold: 0.35
+memory:
+  memory_enabled: true
+  provider: ""
+  user_profile_enabled: true
+kanban:
+  auto_decompose: false
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  failure_limit: 2
+  max_in_progress_per_profile: 4
+  orchestrator_profile: orchestrator
+  default_assignee: ""
 display:
   language: zh
-  message_reactions: true
   skin: daylight
-  in_app_tips: false
-  in_app_tours: false
+security:
+  redact_secrets: true
+  tirith_enabled: true
+privacy:
+  redact_pii: true
+approvals:
+  mode: "off"
+auxiliary:
+  approval:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  background_review:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  compression:
+    model: claude-opus-5
+    provider: custom:cc-switch
+  goal_judge:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  kanban_decomposer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_aggregator:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  moa_reference:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  profile_describer:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  session_search:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  title_generation:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  triage_specifier:
+    provider: custom:cc-switch
+    model: glm-5.3-flash
+  vision:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  web_extract:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+fallback_providers:
+  - model: glm-5.3-flash
+    provider: custom:cc-switch
+platforms:
+  api_server:
+    enabled: true
+    extra:
+      host: 127.0.0.1
+      port: 8650
+  matrix:
+    enabled: true
+  email:
+    enabled: false
+plugins:
+  disabled:
+    - hindsight
+  enabled:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - matrix-chat-info
+    - run-trace
+gateway:
+  multiplex_profile_allowlist:
+    - [已移除]-orchestrator
+  multiplex_profiles: true
 extra:
   skills_enabled_by_category:
     - autonomous-ai-agents
@@ -139,38 +134,15 @@ extra:
   skills_pinned:
     - skill-recall
     - cognition-lattice
-fallback_providers:
-  - model: glm-5.3-flash
-    provider: custom:cc-switch
-gateway:
-  multiplex_profile_allowlist:
-    - [已移除]-orchestrator
-  multiplex_profiles: true
-kanban:
-  auto_decompose: false
-  default_assignee: ""
-  dispatch_in_gateway: true
-  dispatch_interval_seconds: 60
-  failure_limit: 2
-  max_in_progress_per_profile: 4
-  orchestrator_profile: orchestrator
-known_plugin_toolsets:
-  cli:
-    - acp
-    - spotify
-  acp:
-    - homeassistant
-  webhook:
-    - homeassistant
 mcp_servers:
   ekko-studio-api:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - api
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
@@ -180,13 +152,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-browser:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - browser
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
@@ -196,13 +168,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-devices:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - devices
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
@@ -212,13 +184,13 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-interaction:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - plan
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
@@ -228,14 +200,14 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-use:
-    command: /Applications/SwarmStudio.app/Contents/MacOS/SwarmStudio
+    command: /usr/local/bin/node
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
       ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
@@ -264,19 +236,6 @@ mcp_servers:
     env:
       GHIDRA_INSTALL_DIR: /Users/YOURNAME/lab/tools/ghidra_12.1.4_PUBLIC
       JAVA_HOME: /Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
-memory:
-  memory_enabled: true
-  provider: ""
-  user_profile_enabled: true
-model:
-  default: aim
-  provider: custom:cc-switch
-onboarding:
-  profile_build: ask
-  seen:
-    busy_input_prompt: true
-    openclaw_residue_cleanup: true
-    tool_progress_prompt: true
 platform_toolsets:
   cli:
     - acp
@@ -306,57 +265,44 @@ platform_toolsets:
     - web
     - x_search
     - yuanbao
-platforms:
-  api_server:
-    enabled: true
-    extra:
-      host: 127.0.0.1
-      port: 8650
-  email:
-    enabled: false
-  matrix:
-    enabled: true
-plugins:
-  disabled:
-    - hindsight
+known_plugin_toolsets:
+  cli:
+    - acp
+    - spotify
+  acp:
     - homeassistant
-  enabled:
-    - acp-client
-    - hindsight
+  webhook:
     - homeassistant
-    - matrix-chat-info
-    - observability/langfuse
-    - run-trace
-privacy:
-  redact_pii: true
-security:
-  redact_secrets: true
-skills:
-  disabled:
-    - local-inference-service-ops
-terminal:
-  backend: local
-  cwd: ~/hermes-docker-sandbox/workspace
-  persistent_shell: true
-  timeout: 180
-toolsets:
-  - hermes-cli
-  - kanban
-  - memory
-  - messaging
+onboarding:
+  profile_build: ask
+  seen:
+    busy_input_prompt: true
+    openclaw_residue_cleanup: true
+    tool_progress_prompt: true
 updates:
   backup_keep: 5
   non_interactive_local_changes: stash
   pre_update_backup: false
+_config_version: 50
+clearances:
+  - TLP:RED
+  - TLP:AMBER
+  - TLP:GREEN
+  - TLP:CLEAR
+  - PII
+  - CONFIDENTIAL
+_left_core_installed:
+  - homeassistant
+  - spotify
+_left_core_scoped:
+  - homeassistant
+update:
+  installs:
+    3b3e454ed645e059:
+      path: /Users/YOURNAME/.hermes/hermes-agent
+      channel: stable
 telemetry:
   shared_metrics:
     enabled: false
     send: false
     offer_version: 2
-_left_core_scoped:
-  - homeassistant
-_left_core_installed:
-  - homeassistant
-  - spotify
-context:
-  engine: compressor

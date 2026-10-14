@@ -1,6 +1,7 @@
 model:
   default: aim
   provider: custom:cc-switch
+providers: {}
 custom_providers:
   - api_key: PROXY_MANAGED
     api_mode: anthropic_messages
@@ -49,6 +50,7 @@ display:
   skin: daylight
 security:
   redact_secrets: true
+  tirith_enabled: true
 privacy:
   redact_pii: true
 approvals:
@@ -122,8 +124,12 @@ extra:
     - productivity
     - mcp
     - devops-rd
+    - devops-worker
   skills_pinned:
     - skill-recall
+skills:
+  disabled:
+    - ui-craft
 mcp_servers:
   ekko-studio-api:
     args:
@@ -219,5 +225,3 @@ _config_version: 50
 clearances:
   - TLP:GREEN
   - TLP:CLEAR
-context:
-  engine: lcm

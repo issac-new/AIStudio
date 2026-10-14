@@ -15,7 +15,7 @@ description: Use when delivering nightly report briefs or PDF emails.
 - 合并机制：各报告仍独立生成产物（md/PDF 不变，supervisor 补跑逻辑不变）；投递侧 `nightly_digest.py` 在 unified 入口末尾跑——PyMuPDF 拼接 10 份 PDF 成 `nightly_digest_<date>.pdf`（带书签 TOC）+ 正文聚合各报告 LLM 核心段（研判/周重点/领域态势/evo）成一封 agent mail。幂等 marker `cache/radar/.digest_sent_<date>.json`（含 pdf sha1）。
 - evo 晨报不另发：`evo_nightly_wrapper.sh` 只写 s6 状态文件（delivery=merged-into-digest），正文段由 digest 并入。
 - **微信 = 纯文字要点简报**（历史策略，通道恢复前不适用），禁止投 PDF 附件。简报必须是「有判断的内容」。
-- **邮件 = PDF 完整版唯一通道**，收件人 your-inbox@example.com，发件身份 **agent mail（your-bot@example.com）**，正文 **Markdown 渲染**。
+- **邮件 = PDF 完整版唯一通道**，收件人 <dad-wechat-id>@im.wechat，发件身份 **agent mail（your-bot@example.com）**，正文 **Markdown 渲染**。
 - **发件身份规则覆盖所有报告邮件管道**（主雷达/8域/[已移除]/evo-nightly 晨报/未来新报告）：新报告类型接线时必须 agent mail 主通道 + SMTP 显式回退；只接 SMTP 的发送器 = 通道缺陷。症状信号：同类报告 from 身份不一致（有的经 swarmstudio、有的是自发自收）= 有管道绕过了 agent mail，先查该管道自己的发送器。
 - 失败语义：**邮件失败 = 步骤失败**（PDF 唯一完整通道，必须送达，supervisor 补跑）；微信简报失败不阻断。
 - 正文质量标准（用户原话级要求）：「是一份内参而不是一份黄页摘录」——正文必须携带 LLM 的判断（态势/why/建议动作），禁止裸标题罗列、禁止只有「N源M条+详见PDF」的空壳。

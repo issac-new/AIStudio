@@ -1,6 +1,7 @@
 model:
   default: aim
   provider: custom:cc-switch
+providers: {}
 custom_providers:
   - api_key: PROXY_MANAGED
     api_mode: anthropic_messages
@@ -49,6 +50,7 @@ display:
   skin: daylight
 security:
   redact_secrets: true
+  tirith_enabled: true
 privacy:
   redact_pii: true
 approvals:
@@ -118,6 +120,7 @@ extra:
     - note-taking
     - productivity
     - devops-rd
+    - autonomous-ai-agents
   skills_pinned:
     - skill-recall
 mcp_servers:

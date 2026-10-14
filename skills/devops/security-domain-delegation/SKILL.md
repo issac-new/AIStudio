@@ -1,7 +1,7 @@
 ---
 name: security-domain-delegation
 description: "派工安全/情报/渗透类任务给hack团队时用：授权门判定+红线入卡+被动源playbook。"
-version: 1.1.0
+version: 1.2.0
 metadata:
   hermes:
     tags: [security, delegation, kanban, hack-team, authorization-gate, passive-recon]
@@ -43,6 +43,7 @@ metadata:
 - 三面 MECE 拆分（网络面→hack-recon / 本地数据→hack-auditor / 暴露面→hack-forensics），Checker（hack-exploit）parents 三面做独立合并
 - Checker 卡附加条款：**缺文件不代写**，`kanban_block(kind="dependency")` 退回；Checker 修正以「修正 A/B/C」留痕，不改子报告原文（保审计轨迹）
 - 合并 = 幸存内容（去重排序、数字逐项可加总核对），不是拼盘
+- **Agentic 平台面切片**（2026-10-13，源：llm-redteam v1.5「Agentic 平台级测试面」节）：目标含 MLOps/云身份/CI-CD/agent 通信/MCP 组件时，从 `~/.hermes/skills/hack-team/llm-redteam/references/agentic-rt-checklist-20261013/checklist-full.json`（377 测试/25 类别）按四阶段顺序切类别派卡——阶段1 Recon/MLOps/Cloud/SupplyChain→hack-recon，阶段2-4→hack-exploit；子卡验收标准写明 Detection_Mode 判级（仅 Blind 证据=Probable，不得标 Confirmed）；Critical 测试（云凭证窃取/RCE/跨租户读）须授权书显式点名，staging-only 项在卡上标注
 
 ### 4. 被动源查询要点
 
@@ -108,4 +109,4 @@ r = cr.get(url, headers=h, impersonate="chrome131", timeout=30, allow_redirects=
 
 拿到 APK 后必做：`sha256sum` 记进 `download-manifest.json`（含来源 URL）→ `file *.apk` 确认合法 APK（非 HTML 错误页），再进 jadx/apktool 分析。
 
-完全拿不到时：**如实 `kanban_block(kind="capability", reason="公开分发 APK 获取受阻")`**，不要在下载环节无限重试烧预算；上报 orchestrator 评估替代方案，不要在子卡里自己硬试已证实走不通的路径。
+完全拿不到时（试满 3 条独立入口——如豌豆荚、应用宝、页面 JS 逆向——仍无一是真直链）：**如实 `kanban_block(kind="capability", reason="公开分发 APK 获取受阻")`**，不要在下载环节无限重试烧预算；上报 orchestrator 评估替代方案，不要在子卡里自己硬试已证实走不通的路径。

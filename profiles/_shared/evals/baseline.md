@@ -63,6 +63,7 @@
 2. orchestrator: delegate_task(tasks=[T1..T17 并行], 每题独立会话)
 3. 汇总 → kanban_create([evals] 卡, board=platform, workspace_kind=dir 禁 scratch；每题产物完成后立即 kanban_attach)
 4. ≥80%（当前 17 题 ≥14 题）→ 放行；否则回退 profiles.yaml 并 kanban_block
+5. 安全回归同轮：python3 /Users/YOURNAME/.hermes/evals/guardrail-regress/run_probes.py --all（kanban 写护栏守护回归，探针清单+预期 rc 见同目录 manifest.json 单一事实源）——rc=0 且 6/6 PASS 才继续；rc≠0 = 护栏已失效，先修护栏再谈放行
 ```
 
 ## 追加规则

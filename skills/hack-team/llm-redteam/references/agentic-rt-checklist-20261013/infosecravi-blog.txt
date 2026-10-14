@@ -1,0 +1,154 @@
+An agentic AI red team checklist: 222 tests, WSTG-style
+8 October 2026
+· by Ravi Rajput
+TL;DR
+Agentic engagements fail by omission — the team tests prompt injection thoroughly and never checks the MLflow server, the IMDS endpoint or the vector store's tenant filter. This checklist fixes that with 222 tests across 20 categories in forced engagement order (recon → infra → cloud → supply chain → input → injection → output → tools → agency → memory → mesh → MCP → CI/CD → privesc → lateral → exfil → DoS → integrity → voice). Every row carries a framework ID, a MITRE ATLAS tactic, a how-to-test, tools, and a detection mode so you can prove the finding. Download it, work it top to bottom, mark status per row.
+The way agentic AI engagements fail is not dramatic. The team spends three days on prompt injection, writes it up well, and never touches the MLflow server sitting unauthenticated on an internal port. Or the IMDS endpoint the agent’s compute node can reach. Or the one missing
+tenant_id
+filter in the vector store that returns every other customer’s documents.
+Those are the critical findings. They get missed because nobody held a list.
+So I built the list. It is 222 tests across 20 categories, structured like the
+OWASP Web Security Testing Guide
+— forced order, categorized, each test carrying an objective, how-to-test steps, tools, expected outcome, severity and a detection mode. It is free, it is a spreadsheet, and it is built to be worked top to bottom.
+↓ download the checklist (.xlsx, 222 tests)
+Why forced order matters
+Coverage tools fail in two directions: you skip something because you forgot it exists, or you test things in an order that wastes the access you already have.
+The checklist follows the real shape of an engagement:
+engagement-flow — 20 categories
+MAP THE SURFACE
+1 Recon & Discovery
+2 Orchestration / MLOps
+3 Cloud & Identity
+4 Model & Supply Chain
+GET IN
+5 Interface & Ingestion
+6 Prompt Injection
+7 System Prompt Leak
+8 Improper Output
+ABUSE CAPABILITY
+9 Tool Execution
+10 Excessive Agency
+11 Memory / RAG
+12 Agent Mesh
+13 MCP Servers / Skills
+ESCALATE & IMPACT
+14 CI/CD & DevOps
+15 Privilege Escalation
+16 Lateral & Persistence
+17 Data Exfiltration
+18 Unbounded / DoS
+19 Integrity / Rogue
+20 Voice & Multimodal
+amber = where critical/high severity concentrates
+Four phases, twenty categories.
+Map the surface before you touch the model; escalate only once you have capability. The order is the point — it mirrors how access actually compounds.
+If you jump straight to prompt injection — which is where most agentic testing starts and stops — you have skipped the four recon-and-infrastructure categories that tell you what the injection can
+reach
+. A prompt injection that can call a tool bound to an over-permissioned cloud role is a different finding from one that can only produce rude text. You cannot grade the first without having done the cloud and tool-scope work first.
+Every row is a provable test
+The point of WSTG-style structure is that a test is not a vibe. Each of the 222 rows gives you enough to execute and enough to prove. A representative row:
+Field
+Example (
+AI-MEM-001
+)
+Category
+Memory & RAG / Vector DB
+Test
+Tenant isolation bypass — drop the
+tenant_id
+filter
+Target node/edge
+Memory Node / Data Edge (RAG retrieval)
+Framework
+LLM08
+Vector & Embedding Weaknesses
+ATLAS tactic
+Collection
+Detection mode
+Reflective | Blind
+Severity
+Critical
+The
+detection mode
+column is the part most checklists omit and the part that decides whether your report survives review:
+Reflective
+— the result is echoed in the response. You can see it.
+Blind
+— you confirm by timing, behaviour or a state change. Nothing is echoed.
+OOB
+— an out-of-band callback to a listener you control (Burp Collaborator, your own DNS/HTTP endpoint).
+The rule baked into the sheet: mark a finding
+Confirmed only with Reflective or OOB evidence
+. Blind-only evidence is
+Probable
+, not confirmed. That single discipline is the difference between a finding a client accepts and one they dispute.
+Where the severity actually sits
+The distribution is the argument for testing infrastructure, not just the model:
+75 Critical
+,
+108 High
+, 30 Medium, 9 Low.
+The Critical findings cluster in exactly the categories prompt-focused testing skips — cloud credential theft via
+IMDSv1
+SSRF (
+AI-CLD-001
+), pickle deserialization RCE on the weight load path (
+AI-MDL-001
+), unsafe tool composition that chains read to exfil (
+AI-TOL-001
+), tenant isolation bypass in the vector store (
+AI-MEM-001
+), inter-agent message spoofing (
+AI-MSH-001
+), and confused-deputy delegation abuse (
+AI-PRIV-001
+).
+Every one of those lives at a trust boundary, not in the model. If you have read the
+six trust boundaries
+post, this checklist is the operational counterpart: that post tells you where to look, this one tells you what to run when you get there.
+How to approach an engagement with it
+Scope first, honestly.
+The Critical tests are genuinely destructive — credential theft, RCE, cross-tenant reads. Your scope agreement has to name them explicitly, and some belong only in a staging environment. Mark anything out-of-scope as
+N/A
+in the Status column before you start, so the gap is a decision on the record rather than an omission.
+Work top to bottom, and let recon pay for the rest.
+The first four categories build the asset and capability map that every later test reads from. Resist starting at category 6 because it is the fun one.
+Mark status per row
+— Not Started / In Progress / Passed / Failed / Blocked / N/A — and put evidence in
+Notes_Evidence
+: the screenshot name, the Burp or Collaborator log reference, the canary value you used. The sheet is also your report’s evidence index.
+Slice by framework for the write-up.
+The autofilter lets you pull every
+ASI03
+test, or every
+LLM01
+, and report coverage against whatever standard the client asked for. The mappings are there precisely so you are not re-tagging findings by hand at report time.
+Do not hard-code CVE numbers.
+The checklist deliberately avoids them — attack
+classes
+are stable, specific CVE IDs rot. Verify against current CVE/NVD before citing a specific identifier in a report. (The same trap I flagged when a dead
+AML.T0104
+kept showing up in secondary write-ups: cite the thing that is still true.)
+Use it, fork it, tell me what is missing
+It is a first version. Twenty categories is broad coverage, but agentic architectures are moving fast and the MCP and agent-mesh categories especially will grow. If you run it on a real engagement and hit a case it does not cover, that gap is worth more to me than any praise — send it.
+↓ download the checklist (.xlsx, 222 tests)
+Authorized use only.
+This is engagement tooling. Every test assumes a written scope agreement with the system owner. Several — IMDS credential theft, deserialization RCE, tenant isolation bypass — are criminal offences run against a system you do not have permission to assess. The checklist maps to OWASP's Agentic Security Initiative, the OWASP Top 10 for LLM Applications, the OWASP MCP Top 10, OWASP ML06:2023 and MITRE ATLAS; framework numbering shifts between versions, so confirm the current IDs before citing them in a formal report. CVE identifiers are deliberately omitted — verify against NVD at report time.
+Agentic AI
+AI Red Teaming
+Penetration Testing
+MITRE ATLAS
+OWASP
+Checklist
+Frequently asked
+What is the agentic AI red team checklist?
+A spreadsheet of 222 test cases for authorized security assessment of agentic AI platforms, structured like the OWASP Web Security Testing Guide: categorized tests, each with an objective, how-to-test steps, tools, expected outcome, severity, and a detection mode. It spans 20 categories from reconnaissance through tool execution, memory and RAG, agent mesh, MCP servers, to voice and multimodal input.
+How is it different from just testing prompt injection?
+Prompt injection is one of 20 categories. The checklist deliberately forces coverage of the infrastructure an agentic system actually runs on — MLflow and orchestration servers, cloud instance metadata and IAM, the model weight load path, the vector store's tenant isolation, inter-agent message buses, MCP servers — which is where the critical-severity findings concentrate and which prompt-focused testing misses entirely.
+Which frameworks does it map to?
+Every test is tagged to OWASP's Agentic Security Initiative threats (ASI01 to ASI10), the OWASP Top 10 for LLM Applications (LLM01 to LLM10), the OWASP MCP Top 10 (MCP01 to MCP10) where relevant, OWASP ML06:2023 for supply chain, and a MITRE ATLAS tactic. That lets you slice the sheet by framework to produce coverage reports against whichever standard a client asks for.
+What does the detection mode column mean?
+It tells you how to prove the finding. Reflective means the result is echoed back in the response. Blind means you confirm via timing, behaviour or a state change. OOB means an out-of-band callback to a listener you control. The guidance is to mark a finding Confirmed only with Reflective or OOB evidence; Blind-only evidence is Probable.
+Can I use this on any AI system?
+Only on systems you are explicitly authorized to test. This is engagement tooling for pentesters and internal red teams with a scope agreement in place. Running these tests — cloud credential theft via IMDS, pickle deserialization RCE, tenant isolation bypass — against a system you do not have written permission to assess is illegal.
+← all posts

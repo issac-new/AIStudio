@@ -1,0 +1,48 @@
+{
+  "strong": {
+    "selfupdate_ua": {
+      "field": "ua",
+      "patterns": [
+        "artex-selfupdate",
+        "artex-enrich"
+      ],
+      "last_verified": "2026-10-13",
+      "source": "selfupdate/github.go:101"
+    },
+    "console_title": {
+      "field": "title",
+      "patterns": [
+        "Autonomous Penetration Testing Console"
+      ],
+      "last_verified": "2026-10-13",
+      "source": "web/src/config/app-config.ts:10"
+    }
+  },
+  "weak": {
+    "default_ports": {
+      "field": "port",
+      "values": [
+        8787,
+        8788
+      ],
+      "pair_mode": true,
+      "last_verified": "2026-10-13",
+      "source": "cmd/artex/main.go:55-57"
+    },
+    "custom_session_header": {
+      "field": "header_names",
+      "patterns": [
+        "x-session-key",
+        "x-session-id"
+      ],
+      "last_verified": "2026-10-13",
+      "source": "agent/provider.go:79-86 模式"
+    },
+    "relay_domain": {
+      "field": "domain",
+      "patterns": [],
+      "note": "事件实证域名入库需人工确认",
+      "last_verified": "2026-10-13"
+    }
+  }
+}

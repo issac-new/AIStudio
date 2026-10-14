@@ -1,5 +1,5 @@
 From 7cd837689d05a68d73600984ce004092fdac8c9f Mon Sep 17 00:00:00 2001
-From: YourName <your-inbox@example.com>
+From: <redacted-email> <<redacted-email>@me.com>
 Date: Wed, 7 Oct 2026 08:21:06 +0800
 Subject: [PATCH] fix(kanban): re-arm guardrail UDF (3rd recurrence), self-heal
  via tui-patch-watchdog

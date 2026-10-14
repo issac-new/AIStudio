@@ -1,5 +1,5 @@
 name: hack-forensics
-version: 3.1.0
+version: 3.2.0
 description: "数字取证(借鉴Nebula EvidenceVerifier+CyberStrikeAI cleanup-rollback)：内存/磁盘/网络取证、SHA-256证据链、攻击链时间线重建、IOC提取、清理验证"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"

@@ -7,14 +7,14 @@
 # chat_name 可用时 → 六段式 群聊名称:話題摘要:user_id:room_id:session_id:matrix
 # 会话上下文:
 #   **Source:** Matrix (group: 跨团队协作群01)
-#   **User ID:** @testuser3:matrix.test → user_id = @testuser3
+#   **User ID:** @test-user:matrix.test → user_id = @test-user
 #   **Channel Topic:** Hindsight 记忆服务讨论
-#   room_id = !<matrix-room-id> (去除 :matrix.test 后缀)
-#   session_id = $<event-id> (auto_thread event_id)
+#   room_id = <matrix-room-id> (去除 :matrix.test 后缀)
+#   session_id = <event-id> (auto_thread event_id)
 kanban_create(
     title="消息标题",
     body="...",
-    tenant="跨团队协作群01:Hindsight记忆服务讨论:@testuser3:!<matrix-room-id>:$<event-id>:matrix",
+    tenant="跨团队协作群01:Hindsight记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix",
     board="swarm",  # 非安全类 → swarm
     workspace_kind="worktree",
     # workspace_path 无需指定 — 系统自动在主仓库下创建 .worktrees/<task-id>
@@ -23,13 +23,13 @@ kanban_create(
 
 # chat_name=空时 → tenant = 短chat_id::user_id:room_id(去homeserver):session_id:matrix
 # 会话上下文:
-#   **Source:** Matrix (group: !<matrix-room-id>:matrix.test)
-#   **User ID:** @testuser3:matrix.test → user_id = @testuser3
+#   **Source:** Matrix (group: <matrix-room-id>)
+#   **User ID:** @test-user:matrix.test → user_id = @test-user
 #   （无 Channel Topic 行 → 话题留空）
 kanban_create(
     title="消息标题",
     body="...",
-    tenant="!<matrix-room-id>::@testuser3:!<matrix-room-id>:$eventId:matrix",
+    tenant="<matrix-room-id>::@test-user:<matrix-room-id>:$eventId:matrix",
     board="swarm",  # 非安全类 → swarm
     workspace_kind="worktree",
     # workspace_path 无需指定 — 系统自动在主仓库下创建 .worktrees/<task-id>
@@ -42,7 +42,7 @@ kanban_create(
 kanban_create(
     title="端口扫描和指纹识别",
     body="...",
-    tenant="跨团队协作群01:recon|端口扫描指纹识别:@testuser3:!<matrix-room-id>:$eventId:matrix",
+    tenant="跨团队协作群01:recon|端口扫描指纹识别:@test-user:<matrix-room-id>:$eventId:matrix",
     board="hack",  # 安全类 → hack
     assignee="hack-recon",
     workspace_kind="worktree",

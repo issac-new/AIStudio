@@ -35,7 +35,7 @@
       "next_run_at": "2027-01-01T09:12:00+08:00",
       "last_run_at": "2026-10-01T09:12:01.629311+08:00",
       "last_status": "error",
-      "last_error": "",
+      "last_error": "Script exited with code 1\nstdout:\n# Ontology CQ 季度回归报告 — 2026-10-01 09:12 CST\nontology: /Users/YOURNAME/.hermes/profiles/_shared/02-org-orchestration/ontology.md (v1.4) | boards: 14 | profiles: 47\n结果: PASS 9/15, PARTIAL 2/15, GAP 4/15\n\n## 身份权限类\n❌ CQ1 [GAP] 哪些 profile 有权限处理带 PII 标记的任务？\n   证据: 无 profile 的 clearances 含 PII\n   备注: ontology 定义 PII marking 但无 profile 可处理\n✅ CQ2 [PASS] 任务 X 派生出的所有下游任务（传递闭包）？\n   证据: task_links 共 354 条 (aiteam(79), data(9), guardrail-test(1), hack(15), [已移除](86)); 演示: board=aiteam root=t_74fc5e52 传递闭包=13 个任务\n✅ CQ3 [PASS] profile Y 当前在哪些 board 上有 running 任务？\n   证据: 1 个 assignee×board running 组合: data-orchestrator @ data: 1\n✅ CQ4 [PASS] 某 Artifact 的 markings 是什么、从哪里继承的？\n   证据: task_attachments 0 行(markings列=无); task_runs.metadata 中 artifacts_produced 428 条, 带 markings 313 条\n🟡 CQ5 [PARTIAL] 谁批准了决策 D、基于哪些证据？\n   证据: decisions 136 条, decided_by+rationale 齐全 42 条\n   备注: 部分 Decision 缺 decided_by/rationale\n## 流程产能类\n🟡 CQ6 [PARTIAL] 流程 P 从触发到交付用了多久、瓶颈在哪个阶段？\n   证据: 近90天 688 任务; 平均排队 2.2h, 平均执行 3.5h\n   备注: 可算任务级阶段耗时近似，但 Process 对象/value_chain_stage/baseline_metrics 无落地——瓶颈定位到『流程阶段』粒度不可答\n✅ CQ7 [PASS] 过去 7 天每 board 的任务吞吐量？\n   证据: 近 7 天完成: _archive=0, aiteam=0, data=1, default=0, [已移除]=0, guardrail-test=0, hack=8, [已移除]=28, ops=1, pay=0, platform=4, product=1, swarm=17, v126test=0\n✅ CQ8 [PASS] 哪些任务被阻塞超过 24 小时、被谁阻塞？\n   证据: 当前 blocked 任务 10 个; 其中 >24h: 0 个\n✅ CQ9 [PASS] 某 Process 失败后返工了几次？\n   证据: 检测到 24 个疑似返工任务: aiteam/t_400b497b(promoted×2); aiteam/t_41470dc0(promoted×2); aiteam/t_4915ca6f(promoted×2); aiteam/t_5c494c0a(promoted×2); aiteam/t_66cd9cf1(promoted×2)\n## 质量证据类\n❌ CQ10 [GAP] Finding F 的证据链完整吗？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n❌ CQ11 [GAP] verification 字段覆盖率和证据强度分布？\n   证据: tasks 表无 metadata 一等列（阻塞于 P1-1, swarm t_37053748）; task_runs.metadata 兜底扫描: 1002 条含 metadata, 其中带 verification 键 404 条\n   备注: 按验收标准标 GAP 并注明阻塞于 P1-1，不绕过\n❌ CQ12 [GAP] 哪些 Finding 被多个 worker 独立发现？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n✅ CQ13 [PASS] 某任务的验收标准是否被修改过？\n   证据: 含验收标准任务 405 个, 标注 frozen 370 个, 存在 updated 事件 0 个\n   备注: frozen 判定靠 body 文本约定（frozen: true），非结构化字段\n## 治理演化类\n✅ CQ14 [PASS] 规则 R 被多少 profile 引用、哪些缺引用？\n   证据: ontology.md 引用覆盖: 27/47 SOUL.md; 缺引用: aiteam-orchestrator, [已移除], pay-orchestrator, pay-clearing, aiteam-scout, aiteam-multimodal, pay-infra, [已移除], aiteam-embodied, [已移除], pay-fintech, data-flink, [已移除], aiteam-training, data-orchestrator, aiteam-architecture, data-infra, [已移除], [已移除], data-arch; 复用脚本 audit-soul-rules.sh(存在)\n✅ CQ15 [PASS] 哪些 skill 是零引用/90 天未更新？\n   证据: skill 总数 816, 90 天未更新 350 个: minecraft-modpack-server, pokemon-player, find-nearby, detecting-pass-the-ticket-attacks, hunting-for-dns-tunneling-with-zeek, detecting-anomalous-authentication-patterns, hunting-for-process-injection-techniques, detecting-attacks-on-scada-systems...; 复用脚本 skill-health-audit.sh(存在)\n   备注: 零引用判定由 skill-health-audit.sh 覆盖，本脚本负责时效维度",
       "last_delivery_error": null,
       "failure_streak": 2,
       "deliver": "local",
@@ -75,32 +75,32 @@
       "schedule_display": "0 7 * * 2",
       "repeat": {
         "times": null,
-        "completed": 6
+        "completed": 7
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-28T17:34:44.771556+08:00",
-      "next_run_at": "2026-10-13T07:00:00+08:00",
-      "last_run_at": "2026-10-06T09:21:19.756697+08:00",
+      "next_run_at": "2026-10-20T07:00:00+08:00",
+      "last_run_at": "2026-10-13T07:00:09.089293+08:00",
       "last_status": "error",
       "last_error": "Script not found: /Users/YOURNAME/.hermes/profiles/platform-ontology-curator/scripts/ontology-metadata-watchdog.sh. Cron scripts are looked up only in this profile's folder (/Users/YOURNAME/.hermes/profiles/platform-ontology-curator/scripts); if the job was copied from another profile, copy the script there too, or edit the job with `hermes cron edit`.",
       "last_delivery_error": null,
-      "failure_streak": 6,
+      "failure_streak": 7,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-06T07:00:00+08:00",
-        "dispatched_at": "2026-10-06T09:21:19.452250+08:00",
-        "lateness_seconds": 8479.5,
-        "kind": "catch_up"
+        "scheduled_at": "2026-10-13T07:00:00+08:00",
+        "dispatched_at": "2026-10-13T07:00:08.789546+08:00",
+        "lateness_seconds": 8.8,
+        "kind": "on_time"
       },
       "last_failure": {
-        "at": "2026-10-06T09:21:19.756697+08:00",
+        "at": "2026-10-13T07:00:09.089293+08:00",
         "detail": "Script not found: /Users/YOURNAME/.hermes/profiles/platform-ontology-curator/scripts/ontology-metadata-watchdog.sh. Cron scripts are looked up only in this profile's folder (/Users/YOURNAME/.hermes/profiles/platform-ontology-curator/scripts); if the job was copied from another profile, copy the script there too, or edit the job with `hermes cron edit`."
       }
     },
@@ -233,33 +233,33 @@
       "schedule_display": "0 9 * * 2",
       "repeat": {
         "times": null,
-        "completed": 6
+        "completed": 7
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-29T23:17:56.913745+08:00",
-      "next_run_at": "2026-10-13T09:13:00+08:00",
-      "last_run_at": "2026-10-06T09:21:20.226207+08:00",
+      "next_run_at": "2026-10-20T09:13:00+08:00",
+      "last_run_at": "2026-10-13T09:13:28.980055+08:00",
       "last_status": "error",
-      "last_error": "",
+      "last_error": "Script exited with code 1\nstdout:\n# Ontology CQ 季度回归报告 — 2026-10-13 09:13 CST\nontology: /Users/YOURNAME/.hermes/profiles/_shared/02-org-orchestration/ontology.md (v1.6) | boards: 15 | profiles: 49\n结果: PASS 10/16, PARTIAL 2/16, GAP 4/16\n\n## 身份权限类\n✅ CQ1 [PASS] 哪些 profile 有权限处理带 PII 标记的任务？\n   证据: 12 profile 可处理 PII: pay-orchestrator, pay-clearing, [已移除], pay-infra, [已移除], pay-fintech, [已移除]-orchestrator, [已移除], [已移除], [已移除], [已移除], orchestrator; 37 不可: [已移除], hack-forensics, aiteam-orchestrator, [已移除], [已移除], product-researcher...\n✅ CQ2 [PASS] 任务 X 派生出的所有下游任务（传递闭包）？\n   证据: task_links 共 384 条 (aiteam(80), data(14), guardrail-test(1), hack(18), [已移除](86)); 演示: board=aiteam root=t_74fc5e52 传递闭包=13 个任务\n✅ CQ3 [PASS] profile Y 当前在哪些 board 上有 running 任务？\n   证据: 1 个 assignee×board running 组合: ops-devops @ platform: 1\n✅ CQ4 [PASS] 某 Artifact 的 markings 是什么、从哪里继承的？\n   证据: task_attachments 0 行(markings列=无); task_runs.metadata 中 artifacts_produced 691 条, 带 markings 543 条\n🟡 CQ5 [PARTIAL] 谁批准了决策 D、基于哪些证据？\n   证据: decisions 204 条, rationale 齐全 109 条, 其中带 decided_by 署名 68 条\n   备注: 41 条署名缺失（choice/rationale 事实完整，属字段对齐欠账，新 completion 按 ontology v1.4 补 decided_by 即收敛）\n## 流程产能类\n🟡 CQ6 [PARTIAL] 流程 P 从触发到交付用了多久、瓶颈在哪个阶段？\n   证据: 近90天 895 任务; 平均排队 3.3h, 平均执行 9.6h\n   备注: 可算任务级阶段耗时近似，但 Process 对象/value_chain_stage/baseline_metrics 无落地——瓶颈定位到『流程阶段』粒度不可答\n✅ CQ7 [PASS] 过去 7 天每 board 的任务吞吐量？\n   证据: 近 7 天完成: _archive=0, aiteam=10, data=8, default=0, [已移除]=7, guardrail-test=0, hack=13, [已移除]=14, ops=7, pay=7, platform=33, product=2, swarm=20, testboard=1, v126test=0\n✅ CQ8 [PASS] 哪些任务被阻塞超过 24 小时、被谁阻塞？\n   证据: 当前 blocked 任务 10 个; 其中 >24h: 3 个: [已移除]/t_a28d6918[[已移除]] 阻塞 101h 无未完成parent(人工阻塞); [已移除]/t_840698e0[[已移除]] 阻塞 101h 无未完成parent(人工阻塞); hack/t_dfdb3824[hack-exploit] 阻塞 224h 无未完成parent(人工阻塞)\n✅ CQ9 [PASS] 某 Process 失败后返工了几次？\n   证据: 检测到 24 个疑似返工任务: aiteam/t_400b497b(promoted×2); aiteam/t_41470dc0(promoted×2); aiteam/t_4915ca6f(promoted×2); aiteam/t_5c494c0a(promoted×2); aiteam/t_66cd9cf1(promoted×2)\n## 质量证据类\n❌ CQ10 [GAP] Finding F 的证据链完整吗？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n❌ CQ11 [GAP] verification 字段覆盖率和证据强度分布？\n   证据: tasks 表无 metadata 一等列（阻塞于 P1-1, swarm t_37053748）; task_runs.metadata 兜底扫描: 1630 条含 metadata, 其中带 verification 键 484 条\n   备注: 按验收标准标 GAP 并注明阻塞于 P1-1，不绕过\n❌ CQ12 [GAP] 哪些 Finding 被多个 worker 独立发现？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n✅ CQ13 [PASS] 某任务的验收标准是否被修改过？\n   证据: 含验收标准任务 547 个, 标注 frozen 497 个, 存在 updated 事件 0 个\n   备注: frozen 判定靠 body 文本约定（frozen: true），非结构化字段\n## 治理演化类\n✅ CQ14 [PASS] 规则 R 被多少 profile 引用、哪些缺引用？\n   证据: ontology.md 引用覆盖: 47/49 SOUL.md; 缺引用: [已移除], lcm-dev-test; 复用脚本 audit-soul-rules.sh(存在)\n✅ CQ15 [PASS] 哪些 skill 是零引用/90 天未更新？\n   证据: skill 总数 739, 90 天未更新 346 个: minecraft-modpack-server, pokemon-player, hermes-docker-sandbox, find-nearby, detecting-pass-the-ticket-attacks, hunting-for-dns-tunneling-with-zeek, detecting-anomalous-authentication-patterns, hunting-for-process-injection-techniques...; 复用脚本 skill-health-audit.sh(存在)\n   备注: 零引用判定由 skill-health-audit.sh 覆盖，本脚本负责时效维度。⚠ 计数口径（2026-08-27 蓝军 F-B）：本 glob 穿透 symlink 分类目录，含链路重复路径（约 +10%）；`find -name SKILL.md`（不穿透）为物理唯一口径。两数并存时以 find 口径为准\n❌ CQ16 [GAP] 近期 done 任务 metadata 含 CompletionHandoff 四字段（artifacts_produced/findings/decisions/ontology_version）？\n   证据: 近 7d done 任务全集群 96 个, 四字段全齐 28 个 (29.2% 合规); 字段命中: artifacts_produced=49, findings=70, decisions=39, ontology_version=12\n   备注: CompletionHandoff 三支柱（artifacts_produced/findings/decisions）覆盖率不足：基线 24.3% 合规，hack/ops/product/platform/swarm 均 <50%。需各 team worker 在 kanban_complete metadata 补齐三支柱。ontology_version 由低频「ontology 版本持有」巡检单独核验（不在本问达成率计分）。[已移除]: 0/7 合规 (art=0,find=0,dec=0,ov=0); hack: 6/13 合规 (art=7,find=9,dec=8,ov=0); [已移除]: 5/14 合规 (art=9,find=9,dec=5,ov=0); ops: 0/7 合规 (art=0,find=3,dec=0,ov=0); platform: 10/33 合规 (art=18,find=28,dec=17,ov=10); product: 1/2 合规 (art=2,find=2,dec=1,ov=0); swarm: 6/20 合规 (art=13,find=19,dec=8,ov=2)",
       "last_delivery_error": null,
-      "failure_streak": 6,
+      "failure_streak": 7,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-06T09:13:00+08:00",
-        "dispatched_at": "2026-10-06T09:21:19.452250+08:00",
-        "lateness_seconds": 499.5,
-        "kind": "late"
+        "scheduled_at": "2026-10-13T09:13:00+08:00",
+        "dispatched_at": "2026-10-13T09:13:28.030920+08:00",
+        "lateness_seconds": 28.0,
+        "kind": "on_time"
       },
       "last_failure": {
-        "at": "2026-10-06T09:21:20.226207+08:00",
-        "detail": "Script exited with code 1\nstdout:\n# Ontology CQ 季度回归报告 — 2026-10-06 09:21 CST\nontology: /Users/YOURNAME/.hermes/profiles/_shared/02-org-orchestration/ontology.md (v1.6) | boards: 15 | profiles: 47\n结果: PASS 10/16, PARTIAL 2/16, GAP 4/16\n\n## 身份权限类\n✅ CQ1 [PASS] 哪些 profile 有权限处理带 PII 标记的任务？\n✅ CQ2 [PASS] 任务 X 派生出的所有下游任务（传递闭包）？\n✅ CQ3 [PASS] profile Y 当前在哪些 board 上有 running 任务？\n   证据: 当前全集群无 running 任务（查询机制可答：按 assignee×board 聚合 running）\n✅ CQ4 [PASS] 某 Artifact 的 markings 是什么、从哪里继承的？\n   证据: task_attachments 0 行(markings列=无); task_runs.metadata 中 artifacts_produced 520 条, 带 markings 375 条\n🟡 CQ5 [PARTIAL] 谁批准了决策 D、基于哪些证据？\n   证据: decisions 167 条, rationale 齐全 84 条, 其中带 decided_by 署名 47 条\n   备注: 37 条署名缺失（choice/rationale 事实完整，属字段对齐欠账，新 completion 按 ontology v1.4 补 decided_by 即收敛）\n## 流程产能类\n🟡 CQ6 [PARTIAL] 流程 P 从触发到交付用了多久、瓶颈在哪个阶段？\n   证据: 近90天 787 任务; 平均排队 3.3h, 平均执行 4.7h\n   备注: 可算任务级阶段耗时近似，但 Process 对象/value_chain_stage/baseline_metrics 无落地——瓶颈定位到『流程阶段』粒度不可答\n✅ CQ7 [PASS] 过去 7 天每 board 的任务吞吐量？\n✅ CQ8 [PASS] 哪些任务被阻塞超过 24 小时、被谁阻塞？\n   证据: 当前 blocked 任务 26 个; 其中 >24h: 1 个: hack/t_dfdb3824[hack-exploit] 阻塞 56h 无未完成parent(人工阻塞)\n✅ CQ9 [PASS] 某 Process 失败后返工了几次？\n   证据: 检测到 24 个疑似返工任务: aiteam/t_400b497b(promoted×2); aiteam/t_41470dc0(promoted×2); aiteam/t_4915ca6f(promoted×2); aiteam/t_5c494c0a(promoted×2); aiteam/t_66cd9cf1(promoted×2)\n## 质量证据类\n❌ CQ10 [GAP] Finding F 的证据链完整吗？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n❌ CQ11 [GAP] verification 字段覆盖率和证据强度分布？\n   证据: tasks 表无 metadata 一等列（阻塞于 P1-1, swarm t_37053748）; task_runs.metadata 兜底扫描: 1377 条含 metadata, 其中带 verification 键 441 条\n   备注: 按验收标准标 GAP 并注明阻塞于 P1-1，不绕过\n❌ CQ12 [GAP] 哪些 Finding 被多个 worker 独立发现？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n✅ CQ13 [PASS] 某任务的验收标准是否被修改过？\n   证据: 含验收标准任务 477 个, 标注 frozen 428 个, 存在 updated 事件 0 个\n   备注: frozen 判定靠 body 文本约定（frozen: true），非结构化字段\n## 治理演化类\n✅ CQ14 [PASS] 规则 R 被多少 profile 引用、哪些缺引用？\n   证据: ontology.md 引用覆盖: 27/47 SOUL.md; 缺引用: aiteam-orchestrator, [已移除], pay-orchestrator, pay-clearing, aiteam-scout, aiteam-multimodal, pay-infra, [已移除], aiteam-embodied, [已移除], pay-fintech, data-flink, [已移除], aiteam-training, data-orchestrator, aiteam-architecture, data-infra, [已移除], [已移除], data-arch; 复用脚本 audit-soul-rules.sh(存在)\n✅ CQ15 [PASS] 哪些 skill 是零引用/90 天未更新？\n   证据: skill 总数 781, 90 天未更新 348 个: minecraft-modpack-server, pokemon-player, find-nearby, detecting-pass-the-ticket-attacks, hunting-for-dns-tunneling-with-zeek, detecting-anomalous-authentication-patterns, hunting-for-process-injection-techniques, detecting-attacks-on-scada-systems...; 复用脚本 skill-health-audit.sh(存在)\n   备注: 零引用判定由 skill-health-audit.sh 覆盖，本脚本负责时效维度。⚠ 计数口径（2026-08-27 蓝军 F-B）：本 glob 穿透 symlink 分类目录，含链路重复路径（约 +10%）；`find -name SKILL.md`（不穿透）为物理唯一口径。两数并存时以 find 口径为准\n❌ CQ16 [GAP] 近期 done 任务 metadata 含 CompletionHandoff 四字段（artifacts_produced/findings/decisions/ontology_version）？\n   证据: 近 7d done 任务全集群 79 个, 四字段全齐 27 个 (34.2% 合规); 字段命中: artifacts_produced=35, findings=50, decisions=32, ontology_version=8"
+        "at": "2026-10-13T09:13:28.980055+08:00",
+        "detail": "Script exited with code 1\nstdout:\n# Ontology CQ 季度回归报告 — 2026-10-13 09:13 CST\nontology: /Users/YOURNAME/.hermes/profiles/_shared/02-org-orchestration/ontology.md (v1.6) | boards: 15 | profiles: 49\n结果: PASS 10/16, PARTIAL 2/16, GAP 4/16\n\n## 身份权限类\n✅ CQ1 [PASS] 哪些 profile 有权限处理带 PII 标记的任务？\n   证据: 12 profile 可处理 PII: pay-orchestrator, pay-clearing, [已移除], pay-infra, [已移除], pay-fintech, [已移除]-orchestrator, [已移除], [已移除], [已移除], [已移除], orchestrator; 37 不可: [已移除], hack-forensics, aiteam-orchestrator, [已移除], [已移除], product-researcher...\n✅ CQ2 [PASS] 任务 X 派生出的所有下游任务（传递闭包）？\n   证据: task_links 共 384 条 (aiteam(80), data(14), guardrail-test(1), hack(18), [已移除](86)); 演示: board=aiteam root=t_74fc5e52 传递闭包=13 个任务\n✅ CQ3 [PASS] profile Y 当前在哪些 board 上有 running 任务？\n   证据: 1 个 assignee×board running 组合: ops-devops @ platform: 1\n✅ CQ4 [PASS] 某 Artifact 的 markings 是什么、从哪里继承的？\n   证据: task_attachments 0 行(markings列=无); task_runs.metadata 中 artifacts_produced 691 条, 带 markings 543 条\n🟡 CQ5 [PARTIAL] 谁批准了决策 D、基于哪些证据？\n   证据: decisions 204 条, rationale 齐全 109 条, 其中带 decided_by 署名 68 条\n   备注: 41 条署名缺失（choice/rationale 事实完整，属字段对齐欠账，新 completion 按 ontology v1.4 补 decided_by 即收敛）\n## 流程产能类\n🟡 CQ6 [PARTIAL] 流程 P 从触发到交付用了多久、瓶颈在哪个阶段？\n   证据: 近90天 895 任务; 平均排队 3.3h, 平均执行 9.6h\n   备注: 可算任务级阶段耗时近似，但 Process 对象/value_chain_stage/baseline_metrics 无落地——瓶颈定位到『流程阶段』粒度不可答\n✅ CQ7 [PASS] 过去 7 天每 board 的任务吞吐量？\n   证据: 近 7 天完成: _archive=0, aiteam=10, data=8, default=0, [已移除]=7, guardrail-test=0, hack=13, [已移除]=14, ops=7, pay=7, platform=33, product=2, swarm=20, testboard=1, v126test=0\n✅ CQ8 [PASS] 哪些任务被阻塞超过 24 小时、被谁阻塞？\n   证据: 当前 blocked 任务 10 个; 其中 >24h: 3 个: [已移除]/t_a28d6918[[已移除]] 阻塞 101h 无未完成parent(人工阻塞); [已移除]/t_840698e0[[已移除]] 阻塞 101h 无未完成parent(人工阻塞); hack/t_dfdb3824[hack-exploit] 阻塞 224h 无未完成parent(人工阻塞)\n✅ CQ9 [PASS] 某 Process 失败后返工了几次？\n   证据: 检测到 24 个疑似返工任务: aiteam/t_400b497b(promoted×2); aiteam/t_41470dc0(promoted×2); aiteam/t_4915ca6f(promoted×2); aiteam/t_5c494c0a(promoted×2); aiteam/t_66cd9cf1(promoted×2)\n## 质量证据类\n❌ CQ10 [GAP] Finding F 的证据链完整吗？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n❌ CQ11 [GAP] verification 字段覆盖率和证据强度分布？\n   证据: tasks 表无 metadata 一等列（阻塞于 P1-1, swarm t_37053748）; task_runs.metadata 兜底扫描: 1630 条含 metadata, 其中带 verification 键 484 条\n   备注: 按验收标准标 GAP 并注明阻塞于 P1-1，不绕过\n❌ CQ12 [GAP] 哪些 Finding 被多个 worker 独立发现？\n   证据: 查询执行异常: TypeError: 'int' object is not iterable\n   备注: 查询本身失败 = 该问当前不可答\n✅ CQ13 [PASS] 某任务的验收标准是否被修改过？\n   证据: 含验收标准任务 547 个, 标注 frozen 497 个, 存在 updated 事件 0 个\n   备注: frozen 判定靠 body 文本约定（frozen: true），非结构化字段\n## 治理演化类\n✅ CQ14 [PASS] 规则 R 被多少 profile 引用、哪些缺引用？\n   证据: ontology.md 引用覆盖: 47/49 SOUL.md; 缺引用: [已移除], lcm-dev-test; 复用脚本 audit-soul-rules.sh(存在)\n✅ CQ15 [PASS] 哪些 skill 是零引用/90 天未更新？\n   证据: skill 总数 739, 90 天未更新 346 个: minecraft-modpack-server, pokemon-player, hermes-docker-sandbox, find-nearby, detecting-pass-the-ticket-attacks, hunting-for-dns-tunneling-with-zeek, detecting-anomalous-authentication-patterns, hunting-for-process-injection-techniques...; 复用脚本 skill-health-audit.sh(存在)\n   备注: 零引用判定由 skill-health-audit.sh 覆盖，本脚本负责时效维度。⚠ 计数口径（2026-08-27 蓝军 F-B）：本 glob 穿透 symlink 分类目录，含链路重复路径（约 +10%）；`find -name SKILL.md`（不穿透）为物理唯一口径。两数并存时以 find 口径为准\n❌ CQ16 [GAP] 近期 done 任务 metadata 含 CompletionHandoff 四字段（artifacts_produced/findings/decisions/ontology_version）？\n   证据: 近 7d done 任务全集群 96 个, 四字段全齐 28 个 (29.2% 合规); 字段命中: artifacts_produced=49, findings=70, decisions=39, ontology_version=12\n   备注: CompletionHandoff 三支柱（artifacts_produced/findings/decisions）覆盖率不足：基线 24.3% 合规，hack/ops/product/platform/swarm 均 <50%。需各 team worker 在 kanban_complete metadata 补齐三支柱。ontology_version 由低频「ontology 版本持有」巡检单独核验（不在本问达成率计分）。[已移除]: 0/7 合规 (art=0,find=0,dec=0,ov=0); hack: 6/13 合规 (art=7,find=9,dec=8,ov=0); [已移除]: 5/14 合规 (art=9,find=9,dec=5,ov=0); ops: 0/7 合规 (art=0,find=3,dec=0,ov=0); platform: 10/33 合规 (art=18,find=28,dec=17,ov=10); product: 1/2 合规 (art=2,find=2,dec=1,ov=0); swarm: 6/20 合规 (art=13,find=19,dec=8,ov=2)"
       }
     },
     {
@@ -340,36 +340,86 @@
       "schedule_display": "17 2 * * *",
       "repeat": {
         "times": null,
-        "completed": 10
+        "completed": 12
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-03T01:15:48.491705+08:00",
-      "next_run_at": "2026-10-13T02:17:00+08:00",
-      "last_run_at": "2026-10-12T02:17:58.047805+08:00",
+      "next_run_at": "2026-10-15T02:17:00+08:00",
+      "last_run_at": "2026-10-14T02:17:04.667430+08:00",
       "last_status": "error",
       "last_error": "Script exited with code 2\nstdout:\nGATE BLOCKED: context 工件漂移被拦，基线未重建；详情 /Users/YOURNAME/.hermes/logs/context-gate.log 与 context-baseline/reports/ 最新报告",
       "last_delivery_error": null,
       "last_delivery_unverified": null,
-      "failure_streak": 2,
+      "failure_streak": 4,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T02:17:00+08:00",
-        "dispatched_at": "2026-10-12T02:17:57.757316+08:00",
-        "lateness_seconds": 57.8,
+        "scheduled_at": "2026-10-14T02:17:00+08:00",
+        "dispatched_at": "2026-10-14T02:17:04.272142+08:00",
+        "lateness_seconds": 4.3,
         "kind": "on_time"
       },
       "fire_claim": null,
       "last_failure": {
-        "at": "2026-10-12T02:17:58.047805+08:00",
+        "at": "2026-10-14T02:17:04.667430+08:00",
         "detail": "Script exited with code 2\nstdout:\nGATE BLOCKED: context 工件漂移被拦，基线未重建；详情 /Users/YOURNAME/.hermes/logs/context-gate.log 与 context-baseline/reports/ 最新报告"
       }
+    },
+    {
+      "id": "ec9b563fa970",
+      "name": "kanban-db-daily",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "kanban_db_backup.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "45 9,21 * * *",
+        "display": "45 9,21 * * *"
+      },
+      "schedule_display": "45 9,21 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 1
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-14T01:25:42.762672+08:00",
+      "next_run_at": "2026-10-14T21:45:00+08:00",
+      "last_run_at": "2026-10-14T09:45:13.667699+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-14T09:45:00+08:00",
+        "dispatched_at": "2026-10-14T09:45:12.565522+08:00",
+        "lateness_seconds": 12.6,
+        "kind": "on_time"
+      },
+      "fire_claim": null
     }
   ],
-  "updated_at": "2026-10-12T10:54:22.407068+08:00"
+  "updated_at": "2026-10-14T09:45:13.668174+08:00"
 }

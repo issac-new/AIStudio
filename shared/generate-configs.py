@@ -555,7 +555,23 @@ def _check_model_change_and_prompt_evals(profiles_data: dict) -> None:
         print("  ℹ️ 模型快照初始化（首次运行，不触发 evals 提醒）")
         return
 
-    changed = {p: (previous.get(p), m) for p, m in current.items() if previous.get(p) != m}
+    # GAP-4 判定修正（2026-09-26，t_evals179043484 误触发事故）：新增/移除 profile
+    # 不是换模型——[已移除] 邀请链路 onboarding（含冒烟测试）会临时注入 family-child-*
+    # 条目再清理，旧逻辑 previous.get(p)=None 把它误判为 "None → aim" 并建
+    # [evals-required] 卡。只有快照中既有 profile 的 model 值变化才触发回归。
+    changed = {
+        p: (previous.get(p), m)
+        for p, m in current.items()
+        if p in previous and previous[p] != m
+    }
+    added = sorted(p for p in current if p not in previous)
+    removed = sorted(p for p in previous if p not in current)
+    if added:
+        print(f"  ℹ️ 新增 profile（非模型变更，不触发 evals）: {', '.join(added)}")
+    if removed:
+        print(f"  ℹ️ 移除 profile（非模型变更，不触发 evals）: {', '.join(removed)}")
+    if added and removed:
+        print("  ⚠️ 同时有增删——若为改名迁移请人工确认是否伴随模型切换")
     if not changed:
         return
 
@@ -563,7 +579,7 @@ def _check_model_change_and_prompt_evals(profiles_data: dict) -> None:
     print("⚠️  检测到模型变更 —— 投产前必须先跑换模型 Evals 回归！")
     for p, (old, new) in sorted(changed.items()):
         print(f"   {p}: {old} → {new}")
-    print("   基准集: ~/.hermes/profiles/_shared/evals/baseline.md (10 题, 通过线 8/10)")
+    print("   基准集: ~/.hermes/profiles/_shared/evals/baseline.md（题数与通过线以该文件现行口径为准）")
     print("!" * 60 + "\n")
 
     # 建 [evals-required] 提醒卡（best-effort，失败不阻塞）
@@ -576,8 +592,8 @@ def _check_model_change_and_prompt_evals(profiles_data: dict) -> None:
         body = (
             "## [evals-required] 模型变更后强制回归\n\n"
             f"变更明细:\n{detail}\n\n"
-            "按 _shared/evals/baseline.md 跑 10 题基准（delegate_task 并行），"
-            "≥8/10 方可投产；任一题编造数据直接不通过。"
+            "按 _shared/evals/baseline.md 基准（delegate_task 并行），"
+            "题数与通过线以该文件现行口径为准；任一题编造数据直接不通过。"
             "结果回帖本卡。来源: generate-configs.py 自动检测（Playbook GAP-4）。"
         )
         con.execute(

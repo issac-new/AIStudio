@@ -1,7 +1,7 @@
 ---
 name: harness-fusion-patterns
 description: "调研吸收外部Harness(BetterHarness等)优化Hermes时的机制速查与落地模式。"
-version: 1.2.0
+version: 1.3.0
 metadata:
   hermes:
     tags: [devops, research, agent-behavior, fusion, harness, governance]
@@ -15,6 +15,26 @@ metadata:
 > 详细机制→源码映射见 `references/better-harness-harnesseval-patterns.md`。
 > 增补（2026-09-11）：Harness Playbook（Can Bölük/omp 作者，经微信文章转引）五推论+五问评估地图，见 `references/harness-playbook-patterns.md`。
 > 增补（2026-09-11）：openJiuwen 双维度 RSI 框架（华为 2012 实验室，源码 clone 验证 + arXiv:2607.15524 交叉），见下「RSI 速查」与存档 `research/rsi-fusion-20260911/REPORT.md`。
+> 增补（2026-10-12）：SoL-Pi 四机制裁决矩阵 + 效率优化红线与三阶段（arXiv:2609.20519，调研存档 `/Users/YOURNAME/.hermes/profiles/worker-researcher/research/sol-pi/REPORT.md`），见下「SoL-Pi 四机制裁决矩阵」与「效率优化红线与三阶段」。裁决矩阵先行，实际写码接线另派子卡，本 skill 只记裁决不预建。
+
+## SoL-Pi 四机制裁决矩阵（2026-10-12，裁决先行，未写码）
+
+> 来源：arXiv:2609.20519《SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness》（2026-09-17）+ NVlabs/SoL-Pi 源码（snapshots/SoL-Pi-main）。论文四效率机制，token -44.7~49.0%、成本约 -1/3、保留 93.7-94.3% 得分。完整裁决矩阵与逐条依据见调研报告 §三（REPORT.md:39-76）。
+
+| 机制 | 一句话定义 | 本机裁决 | 裁决风险 |
+|---|---|---|---|
+| Action Fusion（动作融合） | edit/write 工具附带 follow-up 验证命令，harness 本地执行后一次性返回合并观察，省掉中间一轮模型决策。锚论文 3425 + 源码 `action-fusion/then-run.ts` | **增量补充，需改写**。Hermes 下 `patch`/`write_file` 与 `terminal` 跑测试是分立两次模型决策，正是它要省的那轮。**须 Hermes 工具层重写复合工具，非装扩展**（Pi 实现强绑 ExtensionContext API，不可复用） | 工具调用失败时模型须重发整个调用修小错，可能反增 token。定位为高频小模式优化，量级有限 |
+| Online Context Compact（在线上下文压缩） | 把「完成一个 plan 子任务」当候选压缩点，仅当未来节省能偿还重写 prompt cache 成本才压，带 window 保护、`minimumRequestsSinceCompaction` 冷却。锚论文 3428 + 源码 `online-context-compact/economics.ts` 的 `decideCompaction` | **增量补充，需改写**。采纳「节省收益 vs cache 重写成本」经济门思想骨架；**前沿 cache 经济（cacheWriteReadRatio=12.5）不适用本机 cc-switch**（本地代理不暴露 OpenAI 式 cache pricing 信号，Reddit 已警告对本地模型是 massive cache miss 配方）。落地前**须先实测本机 cache 命中率与重写成本重新标定**，四机制中最易负效果，**最大风险** | 照搬前沿比率＝省小钱毁缓存反增延迟。无本机测量数据前禁止接线 |
+| ObservationPack（观察打包） | >10KiB 大工具结果本地存档，上下文只留稳定句柄+首尾摘录，第 3 次起用句柄替换，模型可按页精确取回。锚论文 3436 + 源码 `observation-pack/ledger.ts`、`observation.ts` | **增量补充，本机价值最高**。本机无「逐观察、句柄化、按需分页召回」观察层机制（会话级压缩是压平上下文，本机制保留可精确取回引用，层级不同不冲突，本机真实能力缺口）。纯本地、无额外模型调用、不中断运行，最容易安全落地 | 存档永不自动删（须配清理）；句柄失效须审计轨迹保底 |
+| Evidence-Preserving Reducer（证据保留精简器） | 长日志首次阅读委派廉价模型产精简回执，回执每条引文对存档日志逐字 sha256 验证，通过才呈主模型，失败主模型看原文。锚论文 3540 + 源码 `evidence-preserving-reducer/receipt.ts` 逐字校验 | **增量补充，与集群红线兼容**。集群红线「LLM 调用禁绕 cc-switch」——廉价模型经 cc-switch 白名单路由即可兼容。与 hindsight 不重复：hindsight 是长期语义记忆召回，reducer 是「廉价模型先读 + 引文可机械验证」执行层机制。**唯一外发数据机制，须过 cc-switch 白名单 + SECURITY 等价审查后才可接线**。操作细则不复制于此——单一事实源挂 `grounded-citations` skill，此处只记裁决与指针 | 廉价模型转述失真；唯 sha256 逐字对账把「转述不可信」变成可机械验证问题 |
+
+## 效率优化红线与三阶段（2026-10-12，SoL-Pi 治理主张裁决）
+
+> 来源：SoL-Pi 论文治理节 + 微信文 75-79（红线原则）、129-147（三阶段）、119-125（swarm 教训）。完整依据见调研报告 §四（REPORT.md:79-88）。
+
+1. **能力下限红线（采纳，并入本 skill 治理区）**：禁靠少干事省钱。提前停止、跳验证、删证据即淘汰。效率优化不得以降级证据强度为代价——与本机证据强度分级（Missing→Outcome 59-100 分）衔接，并入 `~/.hermes/profiles/_shared/06-observability/cost-governance.md` 口径。判据：每个机制须所有能力指标在预声明容差内 + 至少一项效率指标改善。
+2. **落地三阶段（增量补充，方法论入本节）**：埋点按角色统计 token/延迟/工具字节/pass@k → 三期小步每期硬门槛：成功率不倒退、token 降 ≥15%、P95 延迟降 ≥10% → 回滚开关 + 漂移告警 → 把优化当 CI/CD。数字逐字在：≥15% 与 ≥10% 均按 SoL-Pi 论文预声明门槛引用。
+3. **20-agent swarm 教训通则（采纳）**：派 swarm 前先优化单 agent harness，更多 agent ≠ 更好，会省钱的群才有性价比。锚论文 swarm 表（paper.txt:4155-4185，20 SoL-Pi worker 群 1127 周期 $60.11 vs 20 Pi 群 1366 周期 $82.12）。**n=3 小样本标注**：论文 swarm 表样本量 3，结论为 Outcome-supported 但弱，不可外推。
 
 ## When to Use
 

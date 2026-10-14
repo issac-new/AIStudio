@@ -1,5 +1,5 @@
 name: hack-auditor
-version: 3.1.0
+version: 3.2.0
 description: "代码安全审计(借鉴Strix inline fix生成+Shannon source-aware whitebox+CyberStrikeAI vuln-triage)：SAST/SCA、架构评估、验证路径设计、fix_before/after代码补丁"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"

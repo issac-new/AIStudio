@@ -22,15 +22,15 @@
       "schedule_display": "every 30m",
       "repeat": {
         "times": null,
-        "completed": 2194
+        "completed": 2282
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-07-23T15:45:07.277110+08:00",
-      "next_run_at": "2026-10-12T10:59:53.050321+08:00",
-      "last_run_at": "2026-10-12T10:29:53.050321+08:00",
+      "next_run_at": "2026-10-14T09:56:31.821620+08:00",
+      "last_run_at": "2026-10-14T09:26:31.821620+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -44,13 +44,13 @@
       "fire_claim": null,
       "failure_streak": 0,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:28:52.400165+08:00",
-        "dispatched_at": "2026-10-12T10:29:50.994784+08:00",
-        "lateness_seconds": 58.6,
+        "scheduled_at": "2026-10-14T09:25:38.025771+08:00",
+        "dispatched_at": "2026-10-14T09:26:27.823725+08:00",
+        "lateness_seconds": 49.8,
         "kind": "on_time"
       },
       "last_failure": {
-        "at": "2026-10-12T08:57:03.687216+08:00",
+        "at": "2026-10-12T20:49:06.580155+08:00",
         "detail": "Script exited with code 1\nstdout:\nERROR: agently-cli message +list failed (exit 0)"
       }
     },
@@ -175,15 +175,15 @@
       "schedule_display": "* * * * *",
       "repeat": {
         "times": null,
-        "completed": 68288
+        "completed": 70867
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-04T16:24:06.919309+08:00",
-      "next_run_at": "2026-10-12T10:55:00+08:00",
-      "last_run_at": "2026-10-12T10:54:51.481397+08:00",
+      "next_run_at": "2026-10-14T09:52:00+08:00",
+      "last_run_at": "2026-10-14T09:51:36.172750+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -194,9 +194,9 @@
       "fire_claim": null,
       "failure_streak": 0,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:54:00+08:00",
-        "dispatched_at": "2026-10-12T10:54:50.973128+08:00",
-        "lateness_seconds": 51.0,
+        "scheduled_at": "2026-10-14T09:51:00+08:00",
+        "dispatched_at": "2026-10-14T09:51:28.139232+08:00",
+        "lateness_seconds": 28.1,
         "kind": "on_time"
       },
       "last_failure": {
@@ -236,7 +236,7 @@
       "next_run_at": "2026-09-28T09:01:00+08:00",
       "last_run_at": "2026-09-21T09:01:21.864555+08:00",
       "last_status": "error",
-      "last_error": "",
+      "last_error": "Script exited with code 1\nstdout:\nskill-board drift detected (46 issues):\n  - DIRCOPIES aiteam-architecture: 6 real-dir …[truncated]",
       "last_delivery_error": "no delivery target resolved for deliver=telegram",
       "deliver": "local",
       "origin": null,
@@ -407,6 +407,59 @@
         "kind": "on_time"
       },
       "retired_note": "2026-09-21 v3.3 并入统一夜间Loop(00:02入口)对应步, 独立cron退役"
+    },
+    {
+      "id": "0ccf161ff8ad",
+      "name": "skill-mining-weekly",
+      "prompt": "扫描各 board 最近完成的 kanban 任务卡（status=done），识别反复出现的操作模式（frequency≥3 才提议）。窗口规则：每月 1 日所在周扫近 14 天（兼作半月全量窗口，覆盖 board 全量：swarm hack product ops [已移除] platform [已移除]），其余周一扫近 7 天。产出 SkillProposal 到 ~/.hermes/profiles/_shared/skill-proposals/（四段式骨架+task_id 证据链），与既有 skill 库去重。只提议不落地（不调 skill_manage）。同时在本 job 内承担评审通道：对 skill-proposals/ 目录中尚未归档（不在 archived/）的存量提案给出评审意见（批准/合并/拒绝+理由），写入提案文件头部「评审意见」段，评审后移入 archived/pending-decision/ 等图爸最终裁决。挖掘结果摘要写入 ~/.hermes/evals/skill-mining-$(date +%Y%m%d).md（含：扫描任务数/识别模式数/已覆盖数/新提案数/提案名称列表/评审意见数）。若无新模式且无存量提案，静默退出不产文件。sqlite 只读 immutable=1。详细作业循环见 platform-skill-miner SOUL.md。",
+      "skills": [
+        "skill-library-maintenance"
+      ],
+      "skill": "skill-library-maintenance",
+      "model": "aim",
+      "provider": "custom:cc-switch",
+      "provider_snapshot": "custom",
+      "model_snapshot": "aim",
+      "base_url": "http://127.0.0.1:15721",
+      "script": null,
+      "no_agent": false,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "7 3 29 2 *",
+        "display": "7 3 29 2 *"
+      },
+      "schedule_display": "7 3 29 2 *",
+      "repeat": {
+        "times": null,
+        "completed": 4
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-08-25T09:19:12.405826+08:00",
+      "next_run_at": "2028-02-29T03:07:00+08:00",
+      "last_run_at": "2026-10-05T01:01:11.529962+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-09-21T10:07:00+08:00",
+        "dispatched_at": "2026-09-21T10:07:19.582311+08:00",
+        "lateness_seconds": 19.6,
+        "kind": "on_time"
+      },
+      "retired_note": "v3.3: agent型周任务, 调度改为永不触发(2/31), 由统一Loop周一经 cron run 驱动, 保留prompt与模型路由"
     },
     {
       "id": "e7c616111c7a",
@@ -625,15 +678,15 @@
       "schedule_display": "7,37 * * * *",
       "repeat": {
         "times": null,
-        "completed": 2025
+        "completed": 2118
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-27T23:48:41.914561+08:00",
-      "next_run_at": "2026-10-12T11:07:00+08:00",
-      "last_run_at": "2026-10-12T10:37:51.734517+08:00",
+      "next_run_at": "2026-10-14T10:07:00+08:00",
+      "last_run_at": "2026-10-14T09:38:13.002831+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -644,14 +697,14 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:37:00+08:00",
-        "dispatched_at": "2026-10-12T10:37:51.070473+08:00",
-        "lateness_seconds": 51.1,
+        "scheduled_at": "2026-10-14T09:37:00+08:00",
+        "dispatched_at": "2026-10-14T09:38:11.112346+08:00",
+        "lateness_seconds": 71.1,
         "kind": "on_time"
       },
       "last_failure": {
         "at": "2026-10-10T23:37:14.590070+08:00",
-        "detail": "Script exited with code 1\nstdout:"
+        "detail": "Script exited with code 1\nstdout:\n🚨 worldmonitor-intel 第 N 次失踪，已自动从 archive 恢复。请排查删除源（嫌疑：hermes skills 索引器同步/[已移除] gateway）。"
       }
     },
     {
@@ -679,15 +732,15 @@
       "schedule_display": "0 8-23/6 * * *",
       "repeat": {
         "times": null,
-        "completed": 113
+        "completed": 119
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-04T15:46:14.608305+08:00",
-      "next_run_at": "2026-10-12T14:00:00+08:00",
-      "last_run_at": "2026-10-12T08:00:59.749785+08:00",
+      "next_run_at": "2026-10-14T14:00:00+08:00",
+      "last_run_at": "2026-10-14T08:00:04.447584+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -698,9 +751,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T08:00:00+08:00",
-        "dispatched_at": "2026-10-12T08:00:56.586508+08:00",
-        "lateness_seconds": 56.6,
+        "scheduled_at": "2026-10-14T08:00:00+08:00",
+        "dispatched_at": "2026-10-14T08:00:03.184669+08:00",
+        "lateness_seconds": 3.2,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -730,15 +783,15 @@
       "schedule_display": "*/30 * * * *",
       "repeat": {
         "times": null,
-        "completed": 1671
+        "completed": 1763
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-04T16:01:38.604440+08:00",
-      "next_run_at": "2026-10-12T11:00:00+08:00",
-      "last_run_at": "2026-10-12T10:30:51.986265+08:00",
+      "next_run_at": "2026-10-14T10:00:00+08:00",
+      "last_run_at": "2026-10-14T09:30:29.854104+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -749,9 +802,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:30:00+08:00",
-        "dispatched_at": "2026-10-12T10:30:51.044656+08:00",
-        "lateness_seconds": 51.0,
+        "scheduled_at": "2026-10-14T09:30:00+08:00",
+        "dispatched_at": "2026-10-14T09:30:28.503268+08:00",
+        "lateness_seconds": 28.5,
         "kind": "on_time"
       },
       "fire_claim": null,
@@ -785,15 +838,15 @@
       "schedule_display": "*/5 * * * *",
       "repeat": {
         "times": null,
-        "completed": 9158
+        "completed": 9694
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-05T16:26:11.338971+08:00",
-      "next_run_at": "2026-10-12T10:55:00+08:00",
-      "last_run_at": "2026-10-12T10:50:51.727482+08:00",
+      "next_run_at": "2026-10-14T09:55:00+08:00",
+      "last_run_at": "2026-10-14T09:50:14.446473+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -804,9 +857,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:50:00+08:00",
-        "dispatched_at": "2026-10-12T10:50:51.046510+08:00",
-        "lateness_seconds": 51.0,
+        "scheduled_at": "2026-10-14T09:50:00+08:00",
+        "dispatched_at": "2026-10-14T09:50:11.210654+08:00",
+        "lateness_seconds": 11.2,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -887,15 +940,15 @@
       "schedule_display": "every 360m",
       "repeat": {
         "times": null,
-        "completed": 136
+        "completed": 144
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-07T14:49:30.406605+08:00",
-      "next_run_at": "2026-10-12T13:54:57.284794+08:00",
-      "last_run_at": "2026-10-12T07:54:57.284794+08:00",
+      "next_run_at": "2026-10-14T14:55:36.765905+08:00",
+      "last_run_at": "2026-10-14T08:55:36.765905+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -906,10 +959,10 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T07:53:57.281799+08:00",
-        "dispatched_at": "2026-10-12T07:54:56.636071+08:00",
-        "lateness_seconds": 59.4,
-        "kind": "on_time"
+        "scheduled_at": "2026-10-14T08:44:03.870493+08:00",
+        "dispatched_at": "2026-10-14T08:55:32.355403+08:00",
+        "lateness_seconds": 688.5,
+        "kind": "late"
       },
       "fire_claim": null
     },
@@ -1040,7 +1093,7 @@
       "last_run_at": "2026-09-21T08:01:51.145517+08:00",
       "last_status": "delivery_failed",
       "last_error": null,
-      "last_delivery_error": "live adapter send failed: iLink sendmessage session not ready: ret=-2 errcode=None errmsg=prepare failed — the user must send the bot a message first (or re-pair); live adapter delivery to weixin:<dad-wechat-id>@im.wechat failed: iLink sendmessage session not ready: ret=-2 errcode=None errmsg=prepare failed — the user must send the bot a message first (or re-pair); delivery error: Weixin send failed: iLink sendmessage session not ready: ret=-2 errcode=None errmsg=prepare failed — the user must send the bot a message first (or re-pair) (target weixin:<dad-wechat-id>@im.wechat)",
+      "last_delivery_error": "live adapter send failed: iLink sendmessage session not ready: ret=-2 errcode=None errmsg=prepare failed — the user must…[truncated]",
       "last_delivery_unverified": null,
       "failure_streak": 0,
       "deliver": "local",
@@ -1091,7 +1144,7 @@
       "next_run_at": "2026-09-22T09:08:00+08:00",
       "last_run_at": "2026-09-21T09:08:20.952872+08:00",
       "last_status": "error",
-      "last_error": "Script exited with code 2\nstdout:\n✗ tui-usage-window-colors: patch cannot apply cleanly (upstream changed the region). Manual rebase needed.",
+      "last_error": "Script exited with code 2\nstdout:\n✗ tui-usage-window-colors: patch cannot apply cleanly (upstream changed the region). M…[truncated]",
       "last_delivery_error": null,
       "last_delivery_unverified": null,
       "failure_streak": 13,
@@ -1174,7 +1227,7 @@
       "next_run_at": "2026-09-22T08:30:00+08:00",
       "last_run_at": "2026-09-21T08:30:48.634907+08:00",
       "last_status": "error",
-      "last_error": "Script exited with code 2\nstdout:\ndoc-quality-scan.py — 按《AI 协作规范》v2.1 对 Markdown 文档做机械质量扫描。\n\n用法:\n    python3 doc-quality-scan.py <doc.md> [--json]\n\n判据（全部来自 AI协作标准手册.md 附录 A v2.1）:\n    动笔前   1 主旨句（开头 600 字内含「一句话」或「主旨」标记）\n             2 取舍（无 TODO/TBD/待补/【占位】真占位符）\n    写文中   3 术语首现定义（人工复核项，脚本只列代号首现行）\n             5 结构（标题层级连续性）\n             7 图文配比（mermaid 数量统计）\n    交稿前   10 去AI味: 破折号密度（非标题/表格/引用段，单段成对…[truncated]",
+      "last_error": "Script exited with code 2\nstdout:\ndoc-quality-scan.py — 按《AI 协作规范》v2.1 对 Markdown 文档做机械质量扫描。\n\n用法:\n    python3 doc-qualit…[truncated]",
       "last_delivery_error": null,
       "last_delivery_unverified": null,
       "failure_streak": 11,
@@ -1400,15 +1453,15 @@
       "schedule_display": "every 60m",
       "repeat": {
         "times": null,
-        "completed": 552
+        "completed": 597
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-17T12:59:17.452300+08:00",
-      "next_run_at": "2026-10-12T11:08:51.877189+08:00",
-      "last_run_at": "2026-10-12T10:08:51.877189+08:00",
+      "next_run_at": "2026-10-14T10:01:29.234080+08:00",
+      "last_run_at": "2026-10-14T09:01:29.234080+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -1419,9 +1472,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:07:52.065570+08:00",
-        "dispatched_at": "2026-10-12T10:08:51.018609+08:00",
-        "lateness_seconds": 59.0,
+        "scheduled_at": "2026-10-14T09:01:04.078413+08:00",
+        "dispatched_at": "2026-10-14T09:01:27.817403+08:00",
+        "lateness_seconds": 23.7,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -1555,15 +1608,15 @@
       "schedule_display": "every 60m",
       "repeat": {
         "times": null,
-        "completed": 527
+        "completed": 572
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-18T14:16:18.224041+08:00",
-      "next_run_at": "2026-10-12T11:09:55.322114+08:00",
-      "last_run_at": "2026-10-12T10:09:55.322114+08:00",
+      "next_run_at": "2026-10-14T10:28:34.463772+08:00",
+      "last_run_at": "2026-10-14T09:28:34.463772+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -1575,9 +1628,9 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T10:08:55.081880+08:00",
-        "dispatched_at": "2026-10-12T10:09:50.963554+08:00",
-        "lateness_seconds": 55.9,
+        "scheduled_at": "2026-10-14T09:28:07.120475+08:00",
+        "dispatched_at": "2026-10-14T09:28:27.733616+08:00",
+        "lateness_seconds": 20.6,
         "kind": "on_time"
       }
     },
@@ -1721,7 +1774,7 @@
       "next_run_at": "2026-10-19T09:00:00+08:00",
       "last_run_at": "2026-10-12T09:00:51.652115+08:00",
       "last_status": "error",
-      "last_error": "Script exited with code 1\nstderr:\n/Users/YOURNAME/.hermes/profiles/orchestrator/scripts/drift-check-approval-smartcache.sh: line 18: [: 0\n0: integer expression expected\nstdout:\nWATCHDOG: smartcache markers lost (0\n0) — patch reapplied (now 2). Restart gateways to load.",
+      "last_error": "Script exited with code 1\nstderr:\n/Users/YOURNAME/.hermes/profiles/orchestrator/scripts/drift-check-approval-smartcache.…[truncated]",
       "last_delivery_error": null,
       "last_delivery_unverified": null,
       "failure_streak": 3,
@@ -1764,15 +1817,15 @@
       "schedule_display": "40 8 * * *",
       "repeat": {
         "times": null,
-        "completed": 10
+        "completed": 12
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-03T00:31:44.092285+08:00",
-      "next_run_at": "2026-10-13T08:40:00+08:00",
-      "last_run_at": "2026-10-12T08:56:56.411980+08:00",
+      "next_run_at": "2026-10-15T08:40:00+08:00",
+      "last_run_at": "2026-10-14T08:55:42.810146+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -1783,9 +1836,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T08:40:00+08:00",
-        "dispatched_at": "2026-10-12T08:56:51.126546+08:00",
-        "lateness_seconds": 1011.1,
+        "scheduled_at": "2026-10-14T08:40:00+08:00",
+        "dispatched_at": "2026-10-14T08:55:32.355403+08:00",
+        "lateness_seconds": 932.4,
         "kind": "late"
       },
       "fire_claim": null,
@@ -1817,15 +1870,15 @@
       "schedule_display": "30 4 * * *",
       "repeat": {
         "times": null,
-        "completed": 9
+        "completed": 11
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-03T11:16:54.286978+08:00",
-      "next_run_at": "2026-10-13T04:30:00+08:00",
-      "last_run_at": "2026-10-12T04:30:57.349954+08:00",
+      "next_run_at": "2026-10-15T04:30:00+08:00",
+      "last_run_at": "2026-10-14T04:30:03.717027+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -1836,9 +1889,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T04:30:00+08:00",
-        "dispatched_at": "2026-10-12T04:30:56.708710+08:00",
-        "lateness_seconds": 56.7,
+        "scheduled_at": "2026-10-14T04:30:00+08:00",
+        "dispatched_at": "2026-10-14T04:30:03.091002+08:00",
+        "lateness_seconds": 3.1,
         "kind": "on_time"
       },
       "fire_claim": null,
@@ -1924,15 +1977,15 @@
       "schedule_display": "30 8 * * *",
       "repeat": {
         "times": null,
-        "completed": 3
+        "completed": 5
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-10T15:49:14.327517+08:00",
-      "next_run_at": "2026-10-13T08:30:00+08:00",
-      "last_run_at": "2026-10-12T08:30:57.641255+08:00",
+      "next_run_at": "2026-10-15T08:30:00+08:00",
+      "last_run_at": "2026-10-14T08:30:05.306284+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -1945,12 +1998,62 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-12T08:30:00+08:00",
-        "dispatched_at": "2026-10-12T08:30:56.667944+08:00",
-        "lateness_seconds": 56.7,
+        "scheduled_at": "2026-10-14T08:30:00+08:00",
+        "dispatched_at": "2026-10-14T08:30:03.047426+08:00",
+        "lateness_seconds": 3.0,
         "kind": "on_time"
       }
+    },
+    {
+      "id": "6018c8d0deea",
+      "name": "tencent-eval-fusion-watch",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "tencent-eval-watch.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 15,
+        "display": "every 15m"
+      },
+      "schedule_display": "every 15m",
+      "repeat": {
+        "times": null,
+        "completed": 87
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-13T09:46:49.993694+08:00",
+      "next_run_at": "2026-10-14T09:58:20.352606+08:00",
+      "last_run_at": "2026-10-14T09:43:20.352606+08:00",
+      "last_status": "delivery_failed",
+      "last_error": null,
+      "last_delivery_error": "delivery error: Matrix send failed: No module named 'mautrix' (target matrix:<matrix-room-id>:<event-id>)",
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "origin",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-14T09:42:28.996652+08:00",
+        "dispatched_at": "2026-10-14T09:43:11.066494+08:00",
+        "lateness_seconds": 42.1,
+        "kind": "on_time"
+      },
+      "fire_claim": null
     }
   ],
-  "updated_at": "2026-10-12T10:54:51.483463+08:00"
+  "updated_at": "2026-10-14T09:51:36.186368+08:00"
 }

@@ -32,7 +32,7 @@ interface KanbanTask {
 ### 1.2 Tenant 解析规范（6 段式）
 ```
 格式：<群聊名称>:<话题摘要>:<user_id>:<room_id>:<session_id>:<platform>
-示例：跨团队协作群01:记忆服务讨论:@testuser3:!<matrix-room-id>:$<event-id>:matrix
+示例：跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix
 平台值：matrix | weixin | api | email | cli
 ```
 

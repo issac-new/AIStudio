@@ -1,1 +1,0 @@
-{"id":"AUD-001","title":"LiteLLM MCP auth bypass CVE-2026-59822 root cause + repro framework","severity":"high","cwe":"CWE-287","evidence_ids":["e001","e002","e003","e004","e005"],"status":"confirmed-whitebox","dynamic_verdict":"pending-env-recovery"}

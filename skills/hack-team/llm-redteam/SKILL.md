@@ -23,6 +23,7 @@ metadata:
 - 检测数据泄露风险（PII/密钥/训练数据）
 - 测试 agentic 系统的工具滥用/供应链攻击面
 - 评估 RAG 系统的注入攻击面与跨租户检索隔离
+- 评估 agentic 平台面（MLOps/云身份/CI-CD/Mesh/MCP）时，按 377 条平台级清单切片派卡（v1.5，见「Agentic 平台级测试面」节）
 
 ## 测试规则（RoE）与金丝雀纪律
 
@@ -230,6 +231,54 @@ RAG 系统引入独立决策层——决定模型能看到哪些内容。检索�
 4. **监控告警**：异常输入检测、攻击模式识别、速率限制、不可篡改检索日志
 5. **架构防护**：prompt firewall、agent 沙箱、网络隔离、提示词+索引+工具策略+模型版本整体回滚
 
+## Agentic 平台级测试面（v1.5，377 条测试/25 类别）
+
+> 来源：Ravi Rajput（infosecravi.com）Agentic AI Red Team Checklist，WSTG 式结构，2026-10-13 融合（orchestrator 卡 t_e8f79ae4）。一手 xlsx+全量 JSON 存档：`references/agentic-rt-checklist-20261013/`（MANIFEST.json 含 sha256）。转述文（cybersecuritynews.com，2026-10-09）称 222 测试/20 类别，一手表格已是 377/25——作者持续扩表，引用一律以存档 xlsx 为准。本节收编**平台级测试面**；149 条 ARC PI 注入枚举不逐条移植（外部源持续更新+本 skill 模板库已覆盖头部注入手法），需要时按 ARC_PI_Ref 从存档 JSON 切片检索。
+
+### 清单定位：补「注入之外」的失明区
+
+agentic 评估最常见的失败是**遗漏**而非攻不破：团队花三天测 prompt injection，却没碰内网端口上无鉴权的 MLflow、agent 计算节点可达的云 IMDS 端点、向量库缺 `tenant_id` 过滤的检索路径——Critical 级 finding 恰恰集中在这些**信任边界**而非模型本身。清单的 92 条 Critical 中，头部案例：IMDSv1 SSRF 云凭证窃取（AI-CLD-001）、权重加载路径 pickle 反序列化 RCE（AI-MDL-001）、读工具组合成外传链（AI-TOL-001）、向量库跨租户绕过（AI-MEM-001）、agent 间消息伪造（AI-MSH-001）、混淆代理委托滥用（AI-PRIV-001）。
+
+### 四阶段强制顺序（MAP→GET IN→ABUSE→ESCALATE）
+
+```
+1) 测绘攻击面: Recon(12) → MLOps/Orchestration(14) → Cloud&Identity(12) → Model&SupplyChain(12)
+2) 进入:      Interface&Ingestion(10) → PromptInjection(14+ARC PI 149) → SysPromptLeak(10) → OutputHandling(10)
+3) 滥用能力:  ToolExecution(14) → ExcessiveAgency(10) → Memory/RAG(14) → AgentMesh(10) → MCP/Skills(14)
+4) 升级影响:  CI/CD(10) → PrivEsc(10) → Lateral&Persist(10) → Exfil(10) → DoS(8) → Integrity/Rogue(10) → Voice/Multimodal(8)
+```
+
+顺序即方法论：先测绘才能给注入定级（能调绑过权限云角色的工具的注入 ≠ 只能输出粗话的注入）；有 capability 之后才谈升级路径。跳过阶段 1 直接打注入 = 放弃给 finding 定级所需的全部上下文。
+
+### 三种 Detection_Mode（证明纪律）
+
+| 模式 | 证明方式 | 结论规则 |
+|------|----------|----------|
+| Reflective | 结果在响应中回显，直接可见 | 可标 Confirmed |
+| Blind | 靠时延/行为/状态变化间接确认 | **仅 Blind = Probable，不得标 Confirmed** |
+| OOB | 带外回调到自有监听端（Burp Collaborator/自控 DNS/HTTP） | 可标 Confirmed |
+
+配套 Status 六态（Not Started/In Progress/Passed/Failed/Blocked/N/A）逐行留痕 + Notes_Evidence 存证据索引（截图名/Burp 日志引用/金丝雀值）。N/A 项 = 范围外决策在案，不是遗漏。与本 skill 既有纪律的接口：Reflective/OOB 对应 §8 送达性核验后的「真实送达」，Blind-only=Probable 与 §9 人工复核要求同向；Confidence 判级先于 fp-check 六门。
+
+### 框架映射维度（切片出报告用）
+
+每条测试带 Framework_Mapping（OWASP ASI01-10 agentic threats / LLM01-10 / MCP01-10 / ML06:2023）+ MITRE ATLAS 战术 + ARC_PI_Ref。写报告时按客户要求的框架 autofilter 切片出覆盖度，不在报告期手工重打标签。框架版本间编号会漂移，正式引用前核对当前编号；CVE 号刻意不硬编码，报告期对照 NVD 现查。
+
+### 切片派卡用法（orchestrator 侧）
+
+```bash
+# 按类别切出测试清单（Python，非 shell 内联）
+python3 - <<'PY'
+import json
+d = json.load(open('/Users/YOURNAME/.hermes/skills/hack-team/llm-redteam/references/agentic-rt-checklist-20261013/checklist-full.json'))
+sel = [t for t in d['tests'] if t['Category'] == 'MCP Servers & Skills' and t['Severity'] in ('Critical','High')]
+for t in sel:
+    print(t['Test_ID'], t['Severity'], '|', t['Test_Name'], '|', t['Detection_Mode'])
+PY
+```
+
+派卡纪律：平台面测试按四阶段切片派给 hack-recon（阶段1）/ hack-exploit（阶段2-4），Checker 合并沿用 `security-domain-delegation` 的 Diamond 结构；Critical 测试（凭证窃取/RCE/跨租户读）破坏性真实存在，授权书必须显式点名、部分只能在 staging 执行；白盒 6 条（AI-WBX）需本地权重访问，黑盒 API-only 目标标 N/A。
+
 ## Source
 
 Inspired by: https://github.com/perplext/LLMrecon
@@ -258,6 +307,14 @@ v1.4 增量蒸馏自（gap-20260927-001，2026-10-09）：
 - 一手锚点：微软 AIRT PyRIT 官方博客「Choosing Adversarial Models for Automated Red Teaming」（2026-09-03，AdversarialBenchmark 场景 + 基准 CSV 随文发布）https://microsoft.github.io/PyRIT/latest/blog/2026-09-03-adversarial-model-selection
 - 工具锚点：PyRIT 1.1.0（PyPI 2026-09-04，github.com/microsoft/PyRIT ⭐4358 MIT；旧 Azure/PyRIT 已归档）+ 微软 Command Line 博客（2026-09-10，四入口：CoPyRIT GUI / Scanner CLI / Python 框架 / RAMPART agent 测试框架）
 - 新增纪律：§10 攻击者模型证据选型与披露（ASR = 攻击者模型×攻击技术×评分器 的函数；19.5pp 选型差距；选错模型致安全水位虚高）
+
+v1.5 增量蒸馏自（orchestrator t_e8f79ae4，2026-10-13）：
+- 一手源：Ravi Rajput（infosecravi.com）Agentic AI Red Team Checklist（xlsx 377 测试/25 类别，sha256 37483ddf…d463）https://infosecravi.com/blog/agentic-ai-red-team-checklist/
+- 触发源：cybersecuritynews.com 转述文（2026-10-09，222/20 口径滞后于一手）；注入枚举上游：Arcanum ARC PI Taxonomy v1.6.1（Jason Haddix，CC BY 4.0）
+- 新增「Agentic 平台级测试面」节：四阶段强制顺序/377 条测试索引/92 Critical 信任边界案例/Detection_Mode 三分证明法/Status 六态/ASI-LLM-MCP-ATLAS 框架映射切片/切片派卡用法
+- 交叉映射：OWASP Agentic Security Initiative（ASI01-10）与 OWASP MCP Top 10（MCP01-10）为本 skill 首次引入的映射维度
+- 显式不吸收：ARC PI 149 条注入枚举不逐条移植（按需切片）；CVE 硬编码（作者刻意省略，报告期现查 NVD）
+- 存档：references/agentic-rt-checklist-20261013/（xlsx 原件+全量 JSON+博客全文+MANIFEST sha256）
 
 ## Related Skills
 

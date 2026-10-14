@@ -1,7 +1,7 @@
 ---
 name: orchestrator-lessons
 description: "Orchestrator 实战教训：崩溃恢复/教条审查/patch 生命周期/fleet 传播纪律。"
-version: 1.3.0
+version: 1.5.0
 metadata:
   hermes:
     tags: [orchestrator, crash-recovery, dogma-audit, patch-persistence, fleet-propagation]
@@ -89,6 +89,10 @@ metadata:
 
 **坑 6：工具层 kanban_create 报 raci 注入类错误**。create 调用被工具层 raci 注入步骤报错拒绝时，同参重试工具纯烧轮次（错在注入步骤不在参数）。正解=body 先 write_file 落盘，走官方 CLI 建卡：`hermes kanban --board <slug> create --body-file <body.md> ...`（assignee/title 等其余旗标同常规用法），建后 `hermes kanban --board <slug> show <id>` 验卡在位。与坑 5 同一模式：工具层被守门/注入步骤卡死时，官方 CLI 是平级替代写路径——先换路径保交付，再回查工具层根因。
 
+**坑 7：CLI `create --json` 输出带非 JSON 前导行**。管道直入 `json.loads` 被炸（Expecting value: char 0），前导行是 hermes 自身的锁告警（如「an update is still running…running with the previous dependencies」）——瞬时冲突，同参重试即过。判式：json 解析失败先重跑看原始输出判因，勿改参数盲试。
+
+**坑 8：CLI create 的 title 是位置参数，不是 `--title` 旗标**；且 CLI 报「unrecognized arguments: --xxx」时位置参数并不在所列报错里——报错只列非预期旗标，别据报错反推位置参数非法。判式：先跑一条最小可建探针卡（仅位置 title + --assignee，即成功）确认通道，归档探针后再带其余旗标重发正式卡——探针成本 1 次调用，换来旗标面与位置参数语义的确定性，远小于在报错上反复猜。同族正解=「create 用 --workspace `dir:<abs_path>` 直接带值形式」（等号/空格分隔符解析不一致），见 `orchestrator-cli-reference`「CLI 创建卡」节。建卡探针与正式卡之间必走 `hermes kanban archive <probe_id>` 清理，防幽灵 ready 卡误导 dispatcher 计数。
+
 **规则**：
 1. body 已完整 → `initial_status='running'`（不要 triage=True）；body 确实需补充 → triage=True + 指派 specifier
 2. 路由卡 complete 时 **不要传 created_cards**，或传空列表；只有 fan-out 出子卡时才列子卡 id
@@ -136,6 +140,7 @@ metadata:
 | CLI kanban 命令把 --board 放在子命令后 | `--board` 是子命令级旗标：`hermes kanban --board <slug> <subcmd> ...`；放后面=unrecognized，去掉=查错板报 unknown id |
 | 自持卡 complete 工具被 live-claim 拒后继续重试工具 | claim_lock=本会话 gateway 时无 run 可等，直接 CLI `hermes kanban --board <slug> complete --force` 收，sqlite 验 done |
 | 工具层 kanban_create 报 raci 注入错误后原地重试 | body 落盘走 CLI `create --body-file`，建后 show 验 id（见六·坑 6） |
+| CLI create 反复报 unrecognized arguments 时据报错猜哪枚旗标错 | 报错只列非预期旗标、不列位置参数；先最小探针建卡（位置 title+--assignee）确认通道再带全旗标重发（见六·坑 8） |
 | 发现无消费方即想剪裁 | 先二分：假声称改声称；先于使用存在=保留+观察期 |
 | 批量写 SOUL 全文而非挂 charter 引用 | 单一事实源 charter，SOUL 只挂一行引用 |
 | patch 只存私有目录不登记回放清单 | 标准位 + SPECS 清单 + 幂等实测 |
@@ -164,8 +169,20 @@ metadata:
 
 - **停滞 ≠ 失败，先过三信号再决定干预**：① worker 进程 CPU 时间持续增长（`ps -o pid,etime,time -p <pid>` 隔几分钟对比）；② workspace 产物 mtime 在推进（evidence/reports 出现新文件或时间戳变新）；③ 会话日志尾部在产出新工具调用。任一为真=仍在推进，勿干预勿接管；全部为假才走崩溃恢复流程（见第一节）。
 - **运行中 kanban worker 的唯一 steer 信道=卡 body**：delegate steer 对 dispatcher 拉起的 worker 无效（不在本会话子代理树）。orchestrator 亲测的侦察结论（哪个入口可达、哪些是死路）写进卡 body 高优先级段，worker 下次读卡即见，一轮 steer 即可让它掉头。命令级细节（CLI edit 多行 body 的 subprocess 传参、防覆盖拼接、落库验证）见 skill `security-domain-delegation` Pitfalls「steer 子代理」条。
-- **steer 下发侦察事实，不接管执行**：把「实测哪个入口 200、哪个是死路」喂给 worker 让它自己走，不替 worker 执行下载/分析——接管使验收主体错位且烧双份预算。
+- **steer 下发侦察事实，不接管执行**：把「实测哪个入口 200、哪个是死路」喂给 worker 让它自己走，不替 worker 执行下载/分析——接管使验收主体错位且烧双份预算。一轮 steer 见效的判据是卡 body 的**插入位置**：worker 只在任务启动时精读一次 body，running 中的重读由长会话触发——高优先级段必须 patch 进 body **前端**（标题/目标段之后），追加到数 KB 长文尾部会被淹没；实证补在前端后 worker 下一轮即声明按指示切换路径。
 - **前台 sleep 轮询 >180s 必显式 `timeout=`**：terminal 前台默认 180s 即杀（exit 124），`sleep 300` 这类等待直接超时；要么 timeout 设大于等待值，要么缩短单次 sleep 拆多轮。
+- **进度核查汇报的固定三件**：①状态（卡 status + worker 进程 CPU 时间对比）；②产物（frozen 验收锚点的 grep 命中数/备份计数等实测值，不是目录罗列）；③推理流（日志尾部正在产出什么）。按此口径 2 次调用出数，禁只回「仍在运行」。
+- **收卡前的独立验收在生产者通道之外跑**：worker 贴的自验输出是自报——orchestrator 须用自己的工具重跑卡内验收 grep、核对备份文件在位与内容红线零命中，采信前独立复测同一组命令；验收判据若依赖归档产物，先确认产物已从 scratch 落到持久层，scratch 里的件不算交付。
+- **同 assignee 多张 ready 卡=串行排队，非故障**：单卡在场时建卡即拾取，多卡在场按串行消费——建卡后未立即 running 先按「队列位置 × 各卡预算轮次」给累计 ETA，勿对排队卡跑崩溃恢复流程。
+- **亲执行型重型任务的留痕卡自带并行拾取竞态**：orchestrator 亲自执行的任务（如文章源融合——article-methodology-fusion 明确禁派子代理深读）按 SOUL「执行前建卡留痕」建卡后，dispatcher ~13 秒内即拾取 spawn 独立 worker，与主会话并行跑同一任务（实证 2026-10-13 t_e8f79ae4：worker 空转 11 分钟重做调研）。修正：留痕卡 **body 从 create 起就写明「执行主体=orchestrator 主会话，worker 仅做独立核验后收卡」+ 核验命令清单 + 收尾契约**，不等双跑发生再补 steer；已双跑的用卡 body steer 止损（下条）。执行主体明确时也可 assignee 直接写 dispatcher 不会误派的执行 profile 名。
+- **steer「勿重做+收尾三步」通知的闭环已二次实证**：双跑发生后，卡 body 追加 STEER 段（已完成清单绝对路径 + worker 只跑 grep 核验命令 + 全过 kanban_complete / 不过 kanban_block），worker 下一轮读卡即掉头，6/6 独立核验后收卡——「steer 下发侦察事实，不接管执行」+「收卡前的独立验收在生产者通道之外跑」两条纪律的组合闭环。worker 的 complete summary 须含 verified_by_worker 与逐项 grep 实测值，缺了追 comment 补。
+
+## 十三、运行中卡的中途裁决落地三步
+
+用户在卡运行中途下达改判（批准草稿/延期能力/改验收口径）时：
+1. **裁决先落治理文件再落卡**：写入管辖 SOUL 的裁决节（生效范围、休眠终止日、解冻条件与留痕位置），不留在聊天里——聊天会被压缩，SOUL 每会话必读。延期类裁决必须同时写明「解冻前禁止把冻结能力写入任何 SOUL/规则（草稿除外）」与「解冻后需重新裁决」，防 agent 在解冻日前把冻结能力当规则落地，或日后当遗留物误清理。
+2. **kanban_comment 把裁决注入运行中的卡并点名受影响验收项**：写明哪条 frozen 验收项作废、替换成什么（如「『X 不得写入 SOUL』一条作废，改为必须落地」）——不点名的改判会让 worker 按旧口径自检通过，收卡才发现口径分裂。
+3. **收卡验收按新口径跑**：验收命令清单删掉作废项、加上新项；延期类裁决验收两项同时成立——草稿在位、且未污染 SOUL/规则。
 
 ---
 

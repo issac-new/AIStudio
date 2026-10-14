@@ -191,6 +191,10 @@ flatten/dedupe/filter 类无跨项判断的 reduce（合并多卡产物、清单
 
 ## Pitfalls
 
+**Manual dispatch is a per-profile release valve, not a per-card pick.** `hermes kanban dispatch --max N --json` releases cards by **assignee profile**, not by task id — there is no flag to select an individual task. If a dispatcher stalls with one card per profile stranded, `--max 1` releases the highest-priority ready card on the whole board (whatever assignee owns it). If you only want one specific card out, temporarily lock the others by priority or use `hermes kanban reclaim` afterward to pull back the ones you didn't mean to release.
+
+**Don't fire manual dispatch without `--max N` — it sweeps the whole board.** When the dispatcher stalls and you run `hermes kanban dispatch` to unstick one card, omitting `--max` (or setting N too high) releases **every** ready card on the active board at once, including stale cards owned by other assignees that have been accumulating for hours. Set `--max` to the count of cards you actually intend to release this pass, and verify the board's ready queue afterward.
+
 **Inventing profile names that don't exist.** The dispatcher silently fails to spawn unknown assignees — the card just sits in `ready` forever. Always assign to a profile from your Step 0 discovery; ask the user if you're unsure.
 
 **Bundling independent lanes into one card.** If the user asks for two independent outcomes, create two cards. Example: "fix blockers and check model variants" is not one fixer task; create a fixer/engineer card for the fixes and an explorer/researcher card for the variant check, then optionally gate review on both.
@@ -199,7 +203,11 @@ flatten/dedupe/filter 类无跨项判断的 reduce（合并多卡产物、清单
 
 **Forgetting dependency links.** If the task graph says `research -> implement -> review`, do not create all tasks as independent ready cards. Use parent links so implement/review cannot run before their inputs exist.
 
-**Reassignment vs. new task.** If a reviewer blocks with "needs changes," create a NEW task linked from the reviewer's task — don't re-run the same task with a stern look. The new task is assigned to the original implementer profile.
+- **Reassignment vs. new task.** If a reviewer blocks with "needs changes," create a NEW task linked from the reviewer's task — don't re-run the same task with a stern look. The new task is assigned to the original implementer profile.
+
+- **Two-tier approval gate for sensitive product changes.** When a child card produces a draft that depends on user approval (e.g. sensitive changes to a child profile, safety rules, or privacy-affecting features), split into two cards: Card A contains only the items that can land immediately without approval; Card B holds the approval-dependent items, with a draft staged in a workspace reports directory. On approval, dispatch a follow-up card scoped to apply ONLY the approved draft to the target config/SOUL, explicitly preserving everything else. Until the user's ruling, keep the draft out of all runtime surfaces and do not reference it in dispatch cards.
+
+- **Draft-to-active lifecycle.** Keep unapproved drafts in a dedicated reports/drafts area (outside the target SOUL/profile). Once the user approves, the follow-up card writes the draft into the target SOUL with source attribution, backup, and a verification command for the applied state. Do not delete the draft file after the write; mark it as "applied" for audit.
 
 **Argument order for links.** `kanban_link(parent_id=..., child_id=...)` — parent first. Mixing them up demotes the wrong task to `todo`.
 

@@ -1,5 +1,5 @@
 name: data-orchestrator
-version: 3.1.0
+version: 3.2.0
 description: "data-orchestrator — Realtime data stack (Flink/Paimon/MinIO)"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"
