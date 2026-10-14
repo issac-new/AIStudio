@@ -1,0 +1,60 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -32,6 +32,12 @@
+ // overlay[perf]（2026-09-30 性能批）：CLI 读端点缓存中间件（GET 白名单 TTL +
+ // 非 GET 失效；挂载位置见下方 profileRoutes / fleetRouter 之前）
+ import { profileReadCache, kanbanReadCache } from '../custom/middleware/kanban-read-cache'
++// overlay[perf]（2026-10-14 回归轮 D4/D5）：CLI 读端点扩面缓存（skills/plugins/
++// mcp/runtime-versions 四域）+ 快 404 闸（不存在的看板任务/profile 秒回，不再
++// 付 CLI spawn 全额成本）
++import { skillsReadCache, pluginsReadCache, mcpReadCache, runtimeVersionsReadCache } from '../custom/middleware/kanban-read-cache'
++import { kanbanTaskFast404, createProfileFast404 } from '../custom/middleware/cli-fast-gates'
++import { listProfileNamesFromDisk } from '../modules/hermes/services/profiles/profile'
+ // overlay[perf]（2026-09-30 性能批二轮）：快道库根解析用（见 initCommandPost）
+ import { homedir } from 'node:os'
+ import { join } from 'node:path'
+@@ -344,13 +350,20 @@
+   // 任一非 GET /api/hermes/profiles* 落定即全量失效（见 custom/server/middleware/
+   // kanban-read-cache.ts profileReadCache）。
+   app.use(profileReadCache)
++  // overlay[perf]（2026-10-14 回归轮 D5）：profiles 快 404 闸——不存在的 profile
++  // 详情/runtime-status 原要付 8-12s CLI spawn（回归实测超时），磁盘清单预检秒回。
++  app.use(createProfileFast404({ listProfileNames: listProfileNamesFromDisk }))
+   app.use(profileRoutes.routes())
+   app.use(ekkoMemoryRoutes.routes())
+   app.use(ekkoSkillRoutes.routes())
+   app.use(ekkoMcpRoutes.routes())
+   app.use(ekkoConfigRoutes.routes())
++  // overlay[perf]（2026-10-14 回归轮 D4）：skills/plugins 读缓存（CLI 列表 3-8s；
++  // 同前缀写路径落定即失效，见 kanban-read-cache.ts D4 扩面注）
++  app.use(skillsReadCache)
+   app.use(skillRoutes.routes())
+   app.use(skillBundleRoutes.routes())
++  app.use(pluginsReadCache)
+   app.use(pluginRoutes.routes())
+   app.use(memoryRoutes.routes())
+   app.use(modelRoutes.routes())
+@@ -376,6 +389,10 @@
+   // 仅在同 router 有匹配路由时才执行，fleetRouter 无 boards 等路由故拦不住，
+   // 最小复现实证）；须在 fleetRouter/kanbanRoutes 之前、鉴权之后（键含用户）。
+   // boards/stats/assignees 实测 4.4-5.6s/个（CLI 子进程），页面一次并发 4-5 个。
++  // overlay[perf]（2026-10-14 回归轮 D4）：看板任务快 404 闸——不存在的任务 id
++  // （含 /log、/attachments 子路径）原要付 9-11s CLI spawn 才得 404；sqlite 直读
++  // 任务库预检秒回（库读不到 fail-open 放行 CLI，语义只快不慢）。
++  app.use(kanbanTaskFast404)
+   app.use(kanbanReadCache)
+   app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队（须先于 kanbanRoutes 挂载：/api/hermes/kanban/overview 否则被上游 /api/hermes/kanban/:id 抢答 404，聚合端点失效触发客户端 N+1 风暴）
+   app.use(kanbanRoutes.routes())
+@@ -387,7 +404,11 @@
+   app.use(mediaRoutes.routes())
+   app.use(performanceMonitorRoutes.routes())
+   app.use(journeyRoutes.routes())
++  // overlay[perf]（2026-10-14 回归轮 D4）：mcp/runtime-versions 读缓存（CLI 列表
++  // 3-10s；同前缀写路径落定即失效）
++  app.use(mcpReadCache)
+   app.use(mcpRoutes.routes())                   // MCP management
++  app.use(runtimeVersionsReadCache)
+   app.use(runtimeVersionRoutes.routes())         // Runtime and version management
+   app.use(legacyDataMigrationRoutes.routes())    // One-time legacy Windows Hermes data migration
+   app.use(writeGateRoutes.routes())              // Hermes Agent write approval review
