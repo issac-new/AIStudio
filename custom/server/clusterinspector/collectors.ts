@@ -53,12 +53,7 @@ export interface RunningCard {
   id: string
   assignee?: string
   title?: string
-  /** 心跳时间戳（worker 存活面：task_runs 透传；gate-stuck 检测用）
-   *  字段由并行批（inspector-gate-stuck）消费——类型缺口补齐 */
-  last_heartbeat_at?: string | number
-  created_at?: string | number
-  /** 心跳时间戳（worker 存活面：task_runs 透传；gate-stuck 检测用）
-   *  字段由并行批（inspector-gate-stuck）消费——类型缺口补齐 */
+  /** 心跳/建卡时间戳（worker 存活面：task_runs 透传；gate-stuck 检测用） */
   last_heartbeat_at?: string | number
   created_at?: string | number
   /** 看板 tasks 表透传（交付锚验证面）：分支名/起止 epoch 秒（run19 上移 A+B） */
