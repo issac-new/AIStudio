@@ -68,6 +68,7 @@ export type BpaRuleCode =
   | 'BAD_ID'
   | 'SECTION_INVALID'
   | 'DANGLING_REF'
+  | 'PCF_UNMAPPED'
 
 export interface BpaViolation {
   rule: BpaRuleCode
