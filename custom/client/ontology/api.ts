@@ -109,3 +109,48 @@ export const ontologyApi = {
   ingest: (board?: string) =>
     req<{ ok: boolean; ingest: IngestResultDto }>('/api/hermes/ontology/ingest', { method: 'POST', body: JSON.stringify(board ? { board } : {}) }),
 }
+
+// ---------- 约束卡（/api/constraints/*，2026-10-14 阿里调研轮 D） ----------
+
+export interface ConstraintCardDto {
+  id: string
+  statement: string
+  scope: { columns?: string[]; specialists?: string[]; keywords?: string[] }
+  sourceAnchor: string
+  effectiveRun?: string
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConstraintInputDto {
+  statement: string
+  sourceAnchor: string
+  scope: { columns?: string[]; specialists?: string[]; keywords?: string[] }
+  effectiveRun?: string
+  enabled?: boolean
+}
+
+export interface ConstraintPreviewDto {
+  ok: boolean
+  cards: ConstraintCardDto[]
+  briefLine: string | null
+}
+
+function parseList(v: string): string[] {
+  return v.split(/[,，;；\s]+/).map((s) => s.trim()).filter(Boolean)
+}
+
+export const constraintsApi = {
+  list: () => req<{ ok: boolean; cards: ConstraintCardDto[] }>('/api/constraints'),
+  create: (input: ConstraintInputDto) =>
+    req<{ ok: boolean; card: ConstraintCardDto }>('/api/constraints', { method: 'POST', body: JSON.stringify(input) }),
+  update: (id: string, input: ConstraintInputDto) =>
+    req<{ ok: boolean; card: ConstraintCardDto }>(`/api/constraints/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  remove: (id: string) =>
+    req<{ ok: boolean }>(`/api/constraints/${id}`, { method: 'DELETE' }),
+  preview: (target: { column?: string; specialist?: string; title?: string; body?: string }) =>
+    req<ConstraintPreviewDto>('/api/constraints/preview', { method: 'POST', body: JSON.stringify(target) }),
+}
+
+export { parseList }

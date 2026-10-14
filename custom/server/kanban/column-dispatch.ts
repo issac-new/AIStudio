@@ -19,6 +19,7 @@ import { loadActionContracts, buildDispatchSemanticContext, loadCapabilityLedger
 import { appendDispatchOutcome, hasRecentDispatch } from '../governance/dispatch-ledger'
 import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluation } from '../governance/decision-rules'
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
+import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
@@ -98,7 +99,7 @@ function contractFooter(): string {
   ].join('')
 }
 
-function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null): string {
+export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
@@ -106,6 +107,13 @@ function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], in
     ? buildDispatchSemanticContext(steps[index].specialist || '')
     : null
   const step = steps[index]
+  // 约束卡注入（2026-10-14 阿里调研轮 D）：按列/specialist 命中架构约束卡随简报下发，
+  // constraintLinesForDispatch fail-soft（存储缺席/损坏→空行不阻断派发）。
+  const constraintCardLines = constraintLinesForDispatch({
+    column: trigger.column,
+    specialist: step.specialist || undefined,
+    stepId: step.id,
+  })
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
@@ -113,6 +121,7 @@ function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], in
     `请按职责处理列 ${trigger.column} 的当前任务。`,
     ...(step.autonomy ? [`授权空间：${step.autonomy}（在此范围内可自主决策，无需回问）`] : []),
     ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
+    ...constraintCardLines,
     ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
     contractFooter(),
