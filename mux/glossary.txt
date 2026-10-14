@@ -12,8 +12,8 @@ term:patch-533 | 533 |  | 网关并发闸风暴防护补丁——多路并发时
 term:patch-534 | 534 |  | 出站通知护栏补丁——防通知风暴 | 产品面
 term:patch-390 | 390 |  | 看板首页默认板补丁 | 产品面
 term:patch-391 | 391 |  | 看板团队围栏补丁——别人的 agent 认领不了你的任务 | 产品面
-term:patch-569 | 569 | gate-guard 主体 | 看板认领闸门补丁——G2 落键前不派 spawn 信号（越序抢跑前置拦截） | 产品面
-term:state-env | state.env | 状态键值文件 | 推演状态键值文件——26 步落键的真值源（步态推导以此为准） | 驱动
+term:patch-569 | 569 | gate-guard 主体 | 看板认领闸门补丁——G2 过闸写入前不派 spawn 信号（越序抢跑前置拦截） | 产品面
+term:state-env | state.env | 状态键值文件 | 推演状态键值文件——26 步完成时刻的真值源（步骤完成态推导以此为准） | 驱动
 term:sset-sget | sset/sget |  | state.env 的写/读函数 | 驱动
 term:relay | relay | 接力器 | 接力器——驱动进程死掉后按拍自动续跑的守护 | 驱动
 term:mx-scripts | mx-* | mx 脚本族 | 推演 harness 的脚本族前缀（mx-setup/mx-up/mx-clean 等） | 驱动

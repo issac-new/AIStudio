@@ -1497,7 +1497,35 @@ STEPS_META_RUN15 = {
         narrative='下半场完成 12:10:47（全部门禁执行完）；叙事注册由监控哨按 run12 手册补写（全部采用真实凭据与时间戳，禁止编造）；全程 23:54:00→12:10:47≈12h17m。', imgs=[]),
 }
 
-_NARR={'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
+STEPS_META_20261013_V8_RUN19 = {
+    1: dict(keys=['smoke_done'], narrative='开跑 2026-10-13 16:07:58（零环境：mx-clean 三旗标全清重建）。30 账号 token 有效、单网关+单 studio 就绪、驾驶舱回归 headless 三数在线；采集链预检实拍 dark 中文驾驶舱（用户裁定形态首帧）。', imgs=[('smoke_done-op1-after','冒烟·采集预检·后','ui'), ('smoke_done-op1-before','冒烟·采集预检·前','ui')]),
+    2: dict(keys=['smoke_done'], narrative='双账号登录链路端点按契约应答；delivery 案例房已开+小冒烟事件落房可读回（R29 全程开启）。', imgs=[('smoke_done-op1-after','冒烟·登录·后','ui'), ('smoke_done-op1-before','冒烟·登录·前','ui')]),
+    3: dict(keys=['smoke_done'], narrative='15 平台通道在线（机器+智能体）；LC_ALL=C 全量 26 步起跑。', imgs=[('smoke_done-op1-after','冒烟·平台在线·后','ui'), ('smoke_done-op1-before','冒烟·平台在线·前','ui')]),
+    4: dict(keys=['smoke_done'], narrative='步骤 1-4 全部完成 ✓（16:0x-16:1x）；G1 前置就绪。', imgs=[('smoke_done-op1-after','冒烟·功能就绪·后','ui'), ('smoke_done-op1-before','冒烟·功能就绪·前','ui')]),
+    5: dict(keys=['appinit_done'], narrative='编制三方对账一致：roster=15 × org=15 × matrix=15 ✓；org 经产品通道落档（PUT /api/governance/registry/org 保存即 git 提交）。', imgs=[('appinit_done-op1-after','应用初始化·后','ui'), ('appinit_done-op1-before','应用初始化·前','ui')]),
+    6: dict(keys=['people_done'], narrative='14 账号（BA/PM/系统分析/架构/安全/运维/审计治理线）组织与权限矩阵入仓。', imgs=[('people_done-op1-after','编制注册·后','ui'), ('people_done-op1-before','编制注册·前','ui')]),
+    7: dict(keys=['g1_frozen'], narrative='RFD-001 需求冻结完成（16:11:41，docs/requirements/RFD-001.freeze.md 入 origin/main；AC/Scope-Out/影响面/涉敏四要素过——涉敏含 JR/T 双标准对照锚首验）。', imgs=[('g1_frozen-op1-after','G1 需求冻结·后','ui'), ('g1_frozen-op1-before','G1 需求冻结·前','ui')]),
+    8: dict(keys=['room_done'], narrative='「支付收银台需求分析讨论群」建群并全量预邀（fanfan-agent+8 关联人及各自 agent，方案 §8）；qi 测试左移任务同刻派发。', imgs=[('room_done-op1-after','建群预邀·后','ui'), ('room_done-op1-before','建群预邀·前','ui')]),
+    9: dict(keys=['dispatch_marker'], narrative='需求派发任务书全文入群（16:12:23 事件在案）；r18-collect 对话载荷采集 ✓。', imgs=[]),
+    10: dict(keys=['register_done'], narrative='凭证反向核验通过（commit+卡号双凭证）；RACI 结构化字段缺口 2 单如实登记（免等窗口径）。', imgs=[('register_done-op1-after','凭证反向核验·后','ui'), ('register_done-op1-before','凭证反向核验·前','ui')]),
+    11: dict(keys=['analysis_done'], narrative='系分与 RACI 派发对话在案；AN-PAYCORE/CHWX/CHALI 16:51 三份入库，AN-MP 判死窗内赶上（17:4x）——四份系分全齐零缺单。', imgs=[('analysis_done-op1-after','系分拆分·后','ui'), ('analysis_done-op1-before','系分拆分·前','ui')]),
+    12: dict(keys=['triage_done'], narrative='四账号板分诊台登记 ✓+lead 确认（triage→todo）。', imgs=[('triage_done-op1-after','任务分诊·后','ui'), ('triage_done-op1-before','任务分诊·前','ui')]),
+    13: dict(keys=['anexec_done'], narrative='四路齐发（run11 流水线形态）；三份 16:51 入库+MP 补齐；免等窗回执单 3 张如实登记（入库真值在案）。', imgs=[('anexec_done-op1-after','四路系分执行·后','ui'), ('anexec_done-op1-before','四路系分执行·前','ui')]),
+    14: dict(keys=['review_done'], narrative='线下评审结论：通过（虚拟架构小组），评审卡 t_ba5b0261→done。', imgs=[('review_done-op1-after','系分评审·后','ui'), ('review_done-op1-before','系分评审·前','ui')]),
+    15: dict(keys=['g2_arch_pass'], narrative='G2 双评审并行（架构治理+安全评审含 JR/T 0071/0171 对照）后过闸（18:33）。', imgs=[('g2_arch_pass-op1-after','G2 架构治理闸·后','ui'), ('g2_arch_pass-op1-before','G2 架构治理闸·前','ui')]),
+    16: dict(keys=['close_done'], narrative='需求闭环归档。', imgs=[('close_done-op1-after','需求闭环·后','ui'), ('close_done-op1-before','需求闭环·前','ui')]),
+    17: dict(keys=['plan_done'], narrative='排期文档入仓（docs/plan/RFD-001-schedule.md，RUN 标记本轮）。', imgs=[('plan_done-op1-after','排期入仓·后','ui'), ('plan_done-op1-before','排期入仓·前','ui')]),
+    18: dict(keys=['devimpl_done'], narrative='ACP 编码后端六路并行（PAYCORE-C/S/N+CHWX/CHALI/MP）：18:47 起 S/N/MP 三分支先推 feat/*、19:15 C 分支点亮；G3 缺证守门首验——DEV-PAYCORE-C 缺 testlog 记单+补证派单（20:19），补齐后 g3_code_pass 落键（20:23）零缺证过闸。', imgs=[('devimpl_done-op1-after','六路并行编码·后','ui'), ('devimpl_done-op1-before','六路并行编码·前','ui')]),
+    19: dict(keys=['defect_done'], narrative='integration 合并链完成；测试分片五路派发（TEST-BE-S1/S2/S3+FE-S1/S2）；TEST-FE-S1 四套门禁全绿+23 条 TC 双端 37 场景；DEF-S1 修复（dd13141）合入；G4 过闸（04:48）——测试报告 TEST-FAIL 实文入树（G4 结论语义缺陷在案，评审 r4/r5 以「实质未过」拦截）。', imgs=[]),
+    20: dict(keys=['ready_done'], narrative='G5 全程治理样本：两轮 FAIL 熔断（缺项 R-1=DEF-S3/DEF-S4）→修复链派发（chen 类型收敛+qi 台架重锚）→夜间磁盘门禁挂起事故（4h 死等根因）→300s 催办根治→评审 r6 维持 FAIL 判定与驱动错频（真实缺项=测试实质，非三件未补）→修复链落地后翻绿，g5_ready 11:59 落键。', imgs=[]),
+    21: dict(keys=['uat_done'], narrative='UAT 逐条对账完成，uat_done 12:21 落键。', imgs=[('uat_done-op1-after','UAT 验收·后','ui'), ('uat_done-op1-before','UAT 验收·前','ui')]),
+    22: dict(keys=['workmgr_done'], narrative='工作台账保存+零交付遥测登记。', imgs=[('workmgr_done-op1-after','工作台账·后','ui'), ('workmgr_done-op1-before','工作台账·前','ui')]),
+    23: dict(keys=['audit_done'], narrative='六域体检当轮跑（domain-audit-run.json 在案）；审计段过。', imgs=[('audit_done-op1-after','独立审计·后','ui'), ('audit_done-op1-before','独立审计·前','ui')]),
+    24: dict(keys=['retro_done'], narrative='G6 复盘完成（12:24）：治理归档落账回读验证过。', imgs=[('retro_done-op1-after','G6 复盘·后','ui'), ('retro_done-op1-before','G6 复盘·前','ui')]),
+    25: dict(keys=['ide_done'], narrative='/ide 路由 200+简报组件在位。', imgs=[('ide_done-op1-after','IDE 简报·后','ui'), ('ide_done-op1-before','IDE 简报·前','ui')]),
+    26: dict(keys=['report_done'], narrative='报告链收官：叙事注册（本表）+帧全量挂接；全程 16:07:58→13:3x≈21h（含夜间熔断死等 7h 事故段——300s 时限根治件的诞生实录）。', imgs=[]),
+}
+_NARR={'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
 def _narrative_fallback_skeleton(run_id):
     """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
     出 ⬜ 骨架占位叙事（明示待收尾链补注册），不携带任何历史轮文案，防冒充语义保留。
