@@ -21,6 +21,9 @@ export interface DetectOptions {
   inflateHigh?: number
   /** D4 静默判卡阈值 ms（默认 300000=5min） */
   stallQuietMs?: number
+  /** 阻塞卡停滞阈值 ms（默认 300000=5min——用户 2026-10-14 裁定：任何异常 300s 内识别；
+   *  run19 G5 熔断死等 14400s+ 实锤的产品化常量） */
+  blockedStaleMs?: number
   /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
   dispatcherStuckMs?: number
   /** 负载不均衡判阈：单档案在办卡数 ≥ 此值且存在零卡档案（默认 3） */
@@ -280,6 +283,33 @@ export function detectRunawayLoop(snap: ClusterSnapshot): Anomaly[] {
   return out
 }
 
+/** card.blocked-stale：阻塞卡停滞检测（run19 G5 熔断死等产品化——用户 300s 时限）。
+ *  blocked 卡（含评审 FAIL 熔断、依赖阻塞等一切 blocked 形态）自最后更新起停滞超阈值即报
+ *  high（阻塞态无人推进是事故前形态，run19 实锤：评审卡缺项熔断后 agent 停摆 4 小时零信号）。
+ *  未接线（blockedCards 缺席）=合法空态静默跳过。 */
+export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const staleMs = opts.blockedStaleMs ?? 300_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.blockedCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const upd = typeof c.updated_at === 'number' ? c.updated_at
+      : typeof c.updated_at === 'string' ? Number(c.updated_at) : NaN
+    if (!Number.isFinite(upd) || upd <= 0) continue
+    const quietMs = now - upd
+    if (quietMs > staleMs) {
+      out.push({
+        detector: 'card.blocked-stale', subject: `card:${c.id}`,
+        severity: quietMs > staleMs * 4 ? 'high' : 'warn',
+        summary: `阻塞卡停滞 ${Math.round(quietMs / 1000)}s：${c.title ?? c.id}（最后更新于 ${new Date(upd).toISOString()}，阈值 ${Math.round(staleMs / 1000)}s）——无人推进形态，run19 熔断死等同型`,
+        detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, staleMs },
+      })
+    }
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -297,6 +327,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectFakeCompletion(snap, opts),
     ...detectLoadImbalance(snap, opts),
     ...detectIdleWithWorkAvailable(snap, opts),
+    ...detectBlockedStale(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
