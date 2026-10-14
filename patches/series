@@ -666,7 +666,11 @@
 # [620] hermes-agent 测试守卫读豁免（run19 根治件）：home_io_guard 注释承诺"读放行"但
 # home roots 分支无条件 refuse（只有 installed_apps 分支实现了读豁免）——sealed-payload
 # 探测（pm.environments._payload_manifest 读 <real-home>/manifest.json，只读无害）被误拦，
-# Action Fusion 守门测试 5 败即此。修复=home roots 非 destructive 访问放行，写/元数据仍拒。
+# Action Fusion 守门测试 5 败即此。修复=home roots 纯读放行（metadata=False 且
+# destructive=False）；stat 族仍拒；wrap 表把错标非破坏的 mkdir/makedirs/sqlite3.connect
+# （connect 缺省 READWRITE|CREATE，连接即具备创建力）正名 destructive——三者不能再搭读
+# 豁免车对真实 home 建目录/开库（24h 风险审查轮收窄：旧「非 destructive 即放行」语义
+# 下三者实测穿透到真系统调用，与"写/元数据仍拒"承诺相反）。
 # 宿主树+SIM 树已同步应用（双树 Action Fusion 测试 10/10 绿+file_tools 41 绿实证）。
 620-agent-home-io-guard-read-exempt.patch
 
