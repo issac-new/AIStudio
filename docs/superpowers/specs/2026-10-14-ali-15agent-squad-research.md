@@ -1,8 +1,8 @@
 # 阿里 15-Agent 研发小队调研 × SwarmStudio 补强提案（2026-10-14）
 
-> 状态：调研 + 提案（六件编号改进项，未实施，待拍板）。
+> 状态：**已实施（A-F 六件全落地，2026-10-14 当日）**——落地台账见 §6；B2 默认关（EXPERIENCE_INJECT=1 才注入），跨轮注入推演首验待专项轮。
 > 调研正本：specs/assets/wx-articles-2026-10-14/ali-15agent-squad.md（阿里云云原生《15 个 Agent 组成研发小队：多智能体协作的端到端研发体系》，2026-10-14，作者马云雷）。
-> 前置基线：specs/2026-10-13-eval-tencent-metrics-design.md（评测面七机制）与方案正本 V8.24。
+> 前置基线：specs/2026-10-13-eval-tencent-metrics-design.md（评测面七机制）与方案正本 V8.24（本批后 V8.25，纪律 49）。
 
 ## 主旨三句话
 
@@ -71,7 +71,28 @@
 
 ## 5. 边界（不做的事）
 
-- 本轮只调研 + 提案，未动任何代码；A-F 均待拍板后另开 feature 分支实施。
+- ~~本轮只调研 + 提案，未动任何代码~~（已按用户 2026-10-14 指令「提案全部执行」实施，见 §6）。
 - 文章数字（20 天里编码 2 天、19 题约 10 题等价、周期约一月到一周内）是阿里自报口径，未独立验证，仅作叙事参照，不进产品断言。
 - 不照抄 AgentCore/AgentLoop 的产品形态与命名：本仓已有对位件（Eval Studio、RunTraceView、incident 报告），吸收的是做法，不是改名。
-- B2 跨轮注入涉及从零纪律条款，须先修订方案正本再动代码；run19 推演进行期间不动该条款。
+- ~~B2 跨轮注入涉及从零纪律条款，须先修订方案正本再动代码~~（已按此路径执行：纪律 49 先立，代码默认关；run19 在跑期间未动在途轮消费面）。
+
+## 6. 落地台账（2026-10-14 实施批）
+
+一任务一分支一次合并，六件全数合入 overlay main；patch 624-627 均按基线制作并经序列连验（624→625→626→627 依序 git apply 全过）。**run19 在跑期间未执行 `npm run inject`**（防动共享树）——四条新路由须待下轮 inject 周期挂载生效；测试与 CLI 均在 overlay 树直跑实证。
+
+| 项 | 交付 | 提交 |
+|---|---|---|
+| D 约束卡 | constraints 域（CRUD/预演/派单注入封顶 5）+本体工作台「约束卡」页签+patch 624 | a51ea32b |
+| A+F 优化建议+周期瀑布 | optadvice 域（烧钱会话/瓶颈阶段/关卡拦截三清单+瀑布，源缺席如实标）+Eval「优化建议」页签+patch 625 | 097848e4 |
+| E 失败路由显式表 | faileroute 域（五类失败三档回退+升档覆盖，出决定与卡标注不改派）+patch 626 | 6279339a |
+| B1 经验候选提取 | expcandidates 域（反模式/较优路径/流程签名三类候选，指纹幂等，只出候选）+patch 627 | 828ff420 |
+| C 专家基线考卷 | benchmarkforge（专家 Commit 反生成需求题+Eval 导入+`npm run bench:expert` CLI，真实 git 仓端到端+CLI 冒烟实证） | cee8491c |
+| B2 受控注入 | exp-inject（EXPERIENCE_INJECT 默认关/approved 过滤封顶 3/凭据形态改写/留痕幂等）+方案正本纪律 49（V8.25）+simharness 覆盖表 4317e53 | 9cec38be |
+
+验证账：新增测试 5 域 30 例全绿（constraints 9+optadvice 7+faileroute 5+expcandidates 10+forge 3，另有 kanban 集成 4 例并回 35/35、ontology 客户端 5/5、eval 客户端 4/5——advice 面板 2 例新增）；词表过闸 HARD=0（正本/研究文档/README 新增段；README 存量 18 处 HARD 系历史债，本批零新增）。
+
+遗留（如实声明）：
+- 四条新路由（/api/constraints、/api/optadvice、/api/faileroute、/api/expcandidates）待下轮 `npm run inject` 后真进程生效；patch 已过序列连验。
+- B2 推演实跑首验待开启 EXPERIENCE_INJECT 的专项轮（纪律 49③）。
+- E 的卡标注自动接线（缺陷循环/巡检消费 POST /api/faileroute/resolve）未接——run19 在跑期间不动在途消费面，REST 已备。
+- A 的 traces 工具 span 源在宿主侧实测缺席（仅 header/trailer），已如实标 no_data；工具级报错并入看板拦截面。
