@@ -344,6 +344,13 @@ export default mergeConfig(
       // 用数组形式 alias(保证顺序:更具体的前缀先匹配)。
       // Vite 对象形式 alias 不保证顺序;数组形式按声明顺序匹配,故 '@/custom' 必须在 '@' 前。
       alias: [
+        // 双实例根治（run19 白屏实锤）：overlay/node_modules 是指向 .reg-clone 的
+        // 符号链接（另一份依赖树）——entry/custom 解析到 .reg-clone 的 pinia/vue，
+        // 上游组件解析到 hermes-studio 的，双实例 app.use(A)/useStore 查 B →
+        // activePinia undefined → '._s' TypeError → 根组件空渲染白屏。裸包名钉到
+        // 上游树单一实例（deep import 不受影响）。
+        { find: /^pinia$/, replacement: hermesStudioRoot + '/node_modules/pinia/dist/pinia.mjs' },
+        { find: /^vue$/, replacement: hermesStudioRoot + '/node_modules/vue/dist/vue.runtime.esm-bundler.js' },
         // /src/main.ts(index.html 的入口)→ overlay entry shim(复制上游 main.ts 启动序列 + A 类注册)。
         // 用字符串精确匹配 index.html 里的 /src/main.ts,使 Vite 以 index.html 为入口、
         // 但把 main 重定向到 overlay shim(保留 HTML 处理,生成 index.html)。
