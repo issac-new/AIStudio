@@ -157,7 +157,7 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 - 全量刷新 40 个 profile 到 2026-10 live 状态（模型路由统一 cc-switch 本地代理）
 - 新增 `[已移除]`（第 41 个 profile）：[已移除] 商业软件安装树静态逆向（REA/Ghidra；仅静态分析红线）
 - root skills 库刷新；`shared/profiles.yaml` 同步为 48 profile 差异清单
-- 隐私脱敏：微信/Matrix ID → 占位符，`/Users/YOURNAME` → `/Users/YOURNAME`，`/Volumes/YOURVOLUME` → `/Volumes/YOURVOLUME`，私人 cron 剔除（家庭/[已移除] 类 job）
+- 隐私脱敏：微信/Matrix ID → 占位符，用户名主目录路径 → `/Users/YOURNAME`，卷名 → `YOURVOLUME`，私人 cron 剔除（家庭/[已移除] 类 job）
 
 **v3.1.0** — 2026-10-12：40 profile 全量刷新，新增 hack 团队 4 profile。
 **v3.0.0** — 2026-10：36 profile 跨 9 团队 + Windows 安装器适配六层 _shared 结构。
