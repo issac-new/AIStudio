@@ -29,6 +29,8 @@ export interface InspectorDeps {
   getRunningCards?: () => Promise<Array<Record<string, unknown>>>
   /** 阻塞卡注入（card.blocked-stale 检测面，run19 熔断死等产品化；缺省=该面静默跳过） */
   getBlockedCards?: () => Promise<Array<Record<string, unknown>>>
+  /** FAIL 判卡接线（review.fail-stall 复审环老化面，run20 22:34 复审链断棒实录） */
+  getFailedVerdictCards?: () => Promise<Array<Record<string, unknown>>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
   getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
@@ -346,6 +348,28 @@ export class ClusterInspector {
           blockedCards = { ok: false, error: (e as Error).message, cards: [] }
         }
       }
+      // FAIL 判卡面（review.fail-stall 复审环老化）：未接线=合法空态（可选面，同 blockedCards 语义）
+      let failedVerdictCards: ClusterSnapshot['failedVerdictCards']
+      if (this.deps.getFailedVerdictCards) {
+        try {
+          const rows = await this.deps.getFailedVerdictCards()
+          failedVerdictCards = {
+            ok: true,
+            cards: rows
+              .filter((c) => String(c.result ?? '').toUpperCase().includes('FAIL'))
+              .map((c) => ({
+                id: String(c.task_id ?? c.id ?? ''),
+                assignee: typeof c.assignee === 'string' ? c.assignee : undefined,
+                title: typeof c.title === 'string' ? c.title : undefined,
+                status: typeof c.status === 'string' ? c.status : undefined,
+                result: typeof c.result === 'string' ? c.result : undefined,
+                updated_at: pickLastTouched(c),
+              })).filter((c) => c.id),
+          }
+        } catch (e) {
+          failedVerdictCards = { ok: false, error: (e as Error).message, cards: [] }
+        }
+      }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -354,6 +378,7 @@ export class ClusterInspector {
         kanban: { ok: kanbanOk, error: kanbanErr, rows: kanbanRows },
         runningCards: { ok: cardsOk, error: cardsErr, cards: runningCards },
         blockedCards,
+        failedVerdictCards,
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },

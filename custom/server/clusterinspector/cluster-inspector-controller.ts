@@ -39,6 +39,23 @@ function runningCardsProvider(): (() => Promise<Array<Record<string, unknown>>>)
   })
 }
 
+/** FAIL 判卡接线（review.fail-stall 复审环老化面）：CLI 桥 list --status done --json，fail-soft。
+ *  run20 22:34 复审链断棒实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化。 */
+function failedVerdictCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
+  return () => new Promise((resolve, reject) => {
+    execFile('hermes', ['kanban', 'list', '--status', 'done', '--json'], {
+      timeout: 30_000,
+      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
+    }, (err, stdout) => {
+      if (err) { reject(err); return }
+      try {
+        const out = JSON.parse(stdout) as unknown
+        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
+      } catch (e) { reject(e as Error) }
+    })
+  })
+}
+
 // 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
 export { startInspectorIfEnabled } from './inspector'
 
@@ -81,7 +98,7 @@ function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; mach
   }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun
