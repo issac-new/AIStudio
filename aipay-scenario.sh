@@ -2101,6 +2101,33 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   else
     echo "ISSUE|gov-autonomy-export|step24|自治度对账导出失败（端点未部署或会话无数据）" >> "$EVID_DIR/issues.log"
   fi
+  # BPA 过程治理校验（2026-10-14 调研轮产品化，方案 §2.6 第 11 条）：
+  # 流程架构九规则体检 + PCF 对标差距 + 端到端链路三态 + 成熟度总体，全部证据留档
+  if GOV_BPA=$(studio GET "/api/bpa/architecture" "$GOV_TOK" 2>/dev/null); then
+    printf '%s\n' "$GOV_BPA" > "$EVID_DIR/bpa-architecture.json"
+    note "[G6] 流程架构清单已导出（evidence/bpa-architecture.json）"
+  else
+    echo "ISSUE|bpa-arch-export|step24|流程架构清单导出失败（/app/bpa 未部署或零数据）" >> "$EVID_DIR/issues.log"
+  fi
+  if GOV_BPA_V=$(studio POST "/api/bpa/validate" "$GOV_TOK" "{}" 2>/dev/null); then
+    printf '%s\n' "$GOV_BPA_V" > "$EVID_DIR/bpa-validate.json"
+    _bpa_hi=$(printf '%s' "$GOV_BPA_V" | jq -r '.report.bySeverity.high // 0' 2>/dev/null || echo 0)
+    _bpa_me=$(printf '%s' "$GOV_BPA_V" | jq -r '.report.bySeverity.medium // 0' 2>/dev/null || echo 0)
+    note "[G6] 流程架构体检：高危 ${_bpa_hi} / 注意 ${_bpa_me}（evidence/bpa-validate.json）"
+    if [[ "${_bpa_hi:-0}" -gt 0 ]]; then
+      echo "ISSUE|bpa-validate-high|step24|流程架构体检高危 ${_bpa_hi} 项（缺 Owner/缺 KPI/断链/超深/跨级等九规则）——复盘治理小节须如实呈现并给处置" >> "$EVID_DIR/issues.log"
+    fi
+  else
+    echo "ISSUE|bpa-validate-export|step24|流程架构体检失败（validate 端点未部署）" >> "$EVID_DIR/issues.log"
+  fi
+  if GOV_BPA_PCF=$(studio GET "/api/bpa/pcf" "$GOV_TOK" 2>/dev/null); then
+    printf '%s\n' "$GOV_BPA_PCF" > "$EVID_DIR/bpa-pcf.json"
+    _bpa_cov=$(printf '%s' "$GOV_BPA_PCF" | jq -r '.gap.summary.covered // 0' 2>/dev/null || echo 0)
+    _bpa_miss=$(printf '%s' "$GOV_BPA_PCF" | jq -r '.gap.summary.missing // 0' 2>/dev/null || echo 0)
+    note "[G6] PCF 对标：覆盖 ${_bpa_cov}/12，差距 ${_bpa_miss} 类（evidence/bpa-pcf.json）"
+  else
+    echo "ISSUE|bpa-pcf-export|step24|PCF 对标导出失败（端点未部署）" >> "$EVID_DIR/issues.log"
+  fi
   GR=$(gov_report)
   note "[G6] 治理报告已生成：$GR"
   read -r ISS_N DISP_N <<< "$(issue_disp_stat)"
