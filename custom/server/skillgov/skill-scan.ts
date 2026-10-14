@@ -351,8 +351,13 @@ export function recordSkillScan(dir: string): SkillScanResult {
 
 /** 执行拦截查询面：技能名 → 最近扫描判定（无扫描/未收录 → undefined=fail-open 放行）。 */
 export function latestVerdictOf(skillName: string): SkillScanVerdict | undefined {
-  const hit = latestSkillScan()?.results.find((r) => r.name === skillName)
-  return hit?.verdict
+  const hits = latestSkillScan()?.results.filter((r) => r.name === skillName)
+  if (!hits || hits.length === 0) return undefined
+  // 同名技能多根并存是常态（profile 分发副本，实测本机 14 组跨根同名）：执法面只拿
+  // 得到名字、无法定位装载的是哪份副本——取最坏判定：safe 副本先扫不得遮蔽
+  // dangerous 副本（漏拦是安全洞；反向误拦只是可用性损失，处置后重扫即解）。
+  if (hits.some((h) => h.verdict === 'dangerous')) return 'dangerous'
+  return hits[0]?.verdict
 }
 
 /** 测试隔离。 */
