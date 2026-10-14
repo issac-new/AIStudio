@@ -684,6 +684,12 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 capture_step() { # <step> <url> [action] [user]
   local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
   local rc=0
+  # 已降级步不重拍（run19 壳页复读根治）：frame-capture-failed|step-<键> 在案的步，
+  # 断点续跑重放期重拍只会产出新的壳页帧回填帧池（采集链登录态漂移未根治前），
+  # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该记单即恢复拍摄。
+  if grep -q "frame-capture-failed|step-${step}|" "$EVID_DIR/issues.log" 2>/dev/null; then
+    return 0
+  fi
   if [[ -n "$action" ]]; then
     node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --action "$action" --user "$user" >/dev/null 2>&1 || rc=$?
   else
