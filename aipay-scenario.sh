@@ -2059,6 +2059,25 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     echo "| 分型 | 本轮计数（缺陷族问题单实算） |"
     echo "|---|---|"
     echo "- 需求遗漏/设计遗漏/编码遗漏/测试遗漏：计数行由治理报告 metrics 缺陷节回填（分型口径=CMMI 原因分析，为下轮准入加严提供输入）"
+    echo
+    echo "## 同类风险收敛性对账（纪律 51：同类/同一事件风险持续收敛=多轮工作的有效判定标准）"
+    echo "| 风险族（问题单类型） | 本轮复发 | 上轮复发 | 趋势 | 熵增处置 |"
+    echo "|---|---|---|---|---|"
+    # 族计数=本轮问题单按类型聚合（机械实算）；上轮列与趋势由导演按上轮报告同节回填，
+    # 首轮写「首轮，无」。熵增（复发≥3 次不放宽/≥8 次持久）行必须给处置，缺处置=复盘打回。
+    awk -F'|' '/^ISSUE\|/{c[$2]++} END{for(t in c) printf "| %s | %d | 上轮报告同节回填（首轮写「首轮，无」） | 收敛中/持平/熵增 | 熵增必填：换路径/人闸升级/根治轮 |\n", t, c[t]}' "$EVID_DIR/issues.log" 2>/dev/null || echo "| （issues.log 缺位或无问题单——如实呈现，首轮写「首轮，无」） | | | | |"
+    # 巡检官收敛账（产品执法面）在位则引用实测，缺位如实标注（禁编造）
+    CONV_JSON=""
+    for _cand in "${HERMES_WEB_UI_HOME:-}/runtime/cluster-inspector-convergence.json" "${HERMES_HOME:-}/runtime/cluster-inspector-convergence.json"; do
+      [ -n "$_cand" ] && [ -f "$_cand" ] && CONV_JSON="$_cand" && break
+    done
+    if [ -n "$CONV_JSON" ] && command -v jq >/dev/null 2>&1; then
+      _tracked=$(jq -r '.entries | length' "$CONV_JSON" 2>/dev/null || echo '?')
+      _tripped=$(jq -r '[.entries | to_entries[] | select(.value.tripped == true)] | length' "$CONV_JSON" 2>/dev/null || echo '?')
+      echo "- 巡检官收敛账实测（${CONV_JSON}）：追踪 ${_tracked} 指纹、熔断 ${_tripped} 条——趋势以账本间隔走势为准（间隔放宽≥1.5 倍=收敛中；复发≥3 次不放宽或≥8 次持久=熵增），明细见集群健康页「风险收敛性」面"
+    else
+      echo "- 巡检官收敛账未在位（产品面未部署或 CLUSTER_INSPECTOR_CONVERGENCE=off）：按上表族计数口径人工对账，如实标注"
+    fi
   } > "$RETRO"
   # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
   # 空推/被拒，复盘/治理报告进不了 origin/main。

@@ -72,3 +72,11 @@
 | 49 | 经验受控注入（默认关 EXPERIENCE_INJECT=1；三前提=审核+版本化出处+留痕；凭据形态改写；注入通道单一=派单简报行封顶 3） | ✅ 有测试锚：overlay custom/server/expcandidates/__tests__/exp-inject.test.ts（默认关/approved 过滤封顶 3/凭据形态改写/留痕幂等/坏存储 fail-soft）+ custom/server/kanban/__tests__/column-dispatch-brief.test.ts（简报集成：默认关不出现/开启出现）。推演实跑首验待下轮开启 EXPERIENCE_INJECT 的专项轮 |
 
 统计更新（2026-10-14）：正本现 52 条（编号 1-49 含 25a/b/c）。
+
+## 七、V8.26 新增（2026-10-14 收敛性追踪轮）
+
+| 纪律 | 条款 | 测试状态（同批声明） |
+|---|---|---|
+| 51 | 同类风险收敛性判定（复发间隔走势=多轮有效性口径：放宽≥1.5x=收敛中；≥3 次不放宽/≥8 次持久=熵增；熵增三联动=升 high/熔断自动处置/负责人降级；产品执法面=集群巡检官 convergence 面；复盘义务=§2.7 复盘行同类风险收敛性对账） | ✅ 有测试锚：overlay custom/server/clusterinspector/__tests__/convergence.test.ts（13 用例：趋势分类/账本持久化/生命周期重置/巡检环三联动/降级面/旁路开关）+ mux/tests/retro-convergence-gate.test.sh（模板↔生成器↔对照表三方同步门）。推演实跑首验待下轮复盘对账节（上轮复发列回填+巡检官收敛账引用） |
+
+统计更新（2026-10-14 收敛性追踪轮）：正本现 54 条（编号 1-51 含 25a/b/c）。
