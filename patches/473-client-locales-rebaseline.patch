@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index aa9aa3072..5f0efbc1f 100644
+
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -2,278 +2,311 @@ import { socialMessagesEn } from '../social-messages'
@@ -3451,7 +3451,7 @@ index aa9aa3072..5f0efbc1f 100644
 +      button: 'Reassign…',
 +      placeholder: 'Target profile',
 +      confirm: 'Reassign'
-     },
++    },
 +    gotoTaskRoom: 'Open room',
 +    createTaskRoom: 'Create room',
 +    restoreDrawer: 'Restore drawer',
@@ -3512,7 +3512,7 @@ index aa9aa3072..5f0efbc1f 100644
 +      approver: 'Approver',
 +      consulted: 'Consulted',
 +      informed: 'Informed'
-+    },
+     },
 +    mineOnly: 'Needs my action'
 +  },
 +  scheduleBuilder: {
@@ -4354,11 +4354,11 @@ index aa9aa3072..5f0efbc1f 100644
 -
 -  // Changelog
    changelog: {
-     new_0_7_34_1: 'Coding Agents can select native models and reasoning effort in chats, group chats, and workflows, and remember the selected configuration (#3354, #3360)',
-     new_0_7_34_2: 'Unified model selection dialogs with provider and model columns, improving search, scrolling, and small-screen layouts (#3355)',
-@@ -3873,4 +6039,220 @@ export default {
-     new_0_7_32_7: 'Fixed Linux desktop Open at Login and improved error messages and diagnostics for desktop startup failures (#3307, #3308)',
-     new_0_7_32_8: 'Removed the outdated group chat upgrade notice (#3306)',
+     new_0_7_35_1: 'Added transitions from Agent cards to thinking avatars in chat, with improved visibility under reduced motion and matching theme backgrounds (#3378, #3386)',
+     new_0_7_35_2: 'Added Turkish interface support (#3338)',
+@@ -3873,4 +6039,193 @@ export default {
+     new_0_7_33_7: 'Fixed Coding Agent chats being interrupted by dependency debug output, improving DSH and other ACP Agent compatibility (#3327)',
+     new_0_7_33_8: 'Fixed clarification question and answer callback compatibility across Hermes kernel versions (#3330)',
    },
 +  loopScenes: {
 +    manage: {
@@ -4549,36 +4549,9 @@ index aa9aa3072..5f0efbc1f 100644
 +    confirm: 'Confirm',
 +    cancel: 'Cancel'
 +  },
-+  apiRelay: {
-+    title: 'API Relay',
-+    headline: 'Leading AI models, one gateway',
-+    description: 'APIKEY.FAN is SwarmStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.',
-+    zhipu: 'Zhipu',
-+    viewNow: 'View now',
-+    apiCompatible: 'Official API compatibility',
-+    usageTitle: 'Key usage',
-+    usageScope: 'Includes your accessible profiles. The same service and key share one card; different keys are shown separately.',
-+    loadFailed: 'Unable to load usage. Refresh to try again.',
-+    remaining: 'Remaining quota',
-+    sources: 'Configured in',
-+    keyActive: 'Key active',
-+    keyInactive: 'Key inactive',
-+    requests: 'Requests',
-+    spend: 'Spend',
-+    today: 'Today',
-+    total: 'Total',
-+    modelUsage: 'Usage by model',
-+    model: 'Model',
-+    errors: {
-+      unauthorized: 'Key authentication failed. Check the configured key.',
-+      timeout: 'The usage request timed out. Refresh to try again.',
-+      unavailable: 'The usage service is unavailable. Refresh to try again.',
-+      invalid_response: 'The service returned an unrecognized usage response.'
-+    }
-+  }
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index eb23a70f1..81caa7951 100644
+
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -2,278 +2,311 @@ import { socialMessagesZh } from '../social-messages'
@@ -7987,7 +7960,7 @@ index eb23a70f1..81caa7951 100644
 +    unassigned: '未指派',
 +    trash: {
 +      dropHere: '拖到此处归档'
-+    },
+     },
 +    inlineCreate: {
 +      noParent: '— 无父任务 —',
 +      triagePlaceholder: '粗略想法——AI 会补全规格…',
@@ -8065,7 +8038,7 @@ index eb23a70f1..81caa7951 100644
 +      success: '认领已释放——任务回到 ready',
 +      failed: '回收失败：',
 +      button: '回收'
-     },
++    },
 +    reassign: {
 +      success: '已重新指派给 {profile}',
 +      failed: '重新指派失败：',
@@ -8977,37 +8950,5 @@ index eb23a70f1..81caa7951 100644
 -
 -  // 更新日志
    changelog: {
-     new_0_7_34_1: '编程 Agent 支持在聊天、群聊和工作流中选择原生模型与推理强度，并记住已选配置 (#3354、#3360)',
-     new_0_7_34_2: '统一模型选择弹窗，按服务商和模型分栏浏览，改善搜索、滚动与小屏显示 (#3355)',
-@@ -3921,4 +6037,31 @@ export default {
-     new_0_7_32_7: '修复 Linux 桌面端开机自启，并完善桌面启动失败时的错误提示与诊断信息 (#3307、#3308)',
-     new_0_7_32_8: '移除群聊中已过时的升级提示 (#3306)',
-   },
-+  apiRelay: {
-+    title: 'API 中转',
-+    headline: '一站接入主流 AI 模型',
-+    description: 'APIKEY.FAN 是 SwarmStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。',
-+    zhipu: '智谱',
-+    viewNow: '立即查看',
-+    apiCompatible: '官方 API 兼容',
-+    usageTitle: '密钥用量',
-+    usageScope: '涵盖有权限访问的 Profile。同一服务和密钥合并展示，不同密钥分别统计。',
-+    loadFailed: '用量加载失败，请点击刷新重试。',
-+    remaining: '剩余额度',
-+    sources: '配置来源',
-+    keyActive: '密钥有效',
-+    keyInactive: '密钥已失效',
-+    requests: '请求数',
-+    spend: '费用',
-+    today: '今日',
-+    total: '累计',
-+    modelUsage: '按模型查看用量',
-+    model: '模型',
-+    errors: {
-+      unauthorized: '密钥认证失败，请检查配置的密钥。',
-+      timeout: '用量查询超时，请点击刷新重试。',
-+      unavailable: '暂时无法连接用量服务，请点击刷新重试。',
-+      invalid_response: '用量接口返回的数据格式无法识别。'
-+    }
-+  }
- }
+     new_0_7_35_1: '新增 Agent 卡片进入聊天思考头像的过渡动画，并改善减少动态效果时的可见性与主题背景衔接 (#3378、#3386)',
+     new_0_7_35_2: '新增土耳其语界面支持 (#3338)',

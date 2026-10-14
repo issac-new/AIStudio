@@ -1,0 +1,63 @@
+# 流程架构工作台（BPA Studio）设计
+
+- 日期：2026-10-14
+- 来源：调研《企业级流程架构方法论》（流程智能化公众号，AI4BPM，2026-10-13）——APQC PCF 五级分级、O/MS·MOS·POS·OES 四种流程地图构图法、华为 L1-L6 分层分级实践、PEMM 成熟度模型、治理硬约束骨架
+- 路由：`/app/bpa`（`ia2.bpa`），特性开关 `bpa`（默认开，`VITE_CUSTOM_BPA=false` 关）
+- 定位：给 SwarmStudio 补上「研发过程本身也是一套企业流程」的结构化治理面——用行业标准方法论描述多智能体协作的过程资产，与本体工作台（术语治理）、技能治理（能力治理）并列为过程治理三件套
+
+## 一、要解决的问题（对齐文章五坑）
+
+1. 同一件事叫法不一 → 统一编号 + 统一命名（L1-L6 编码字典）
+2. 流程散落不成体系 → 架构清单（单一事实源树）
+3. 不知道缺什么 → 流程地图（OES/POS 一张图全量对照）+ 治理体检（断链/缺项显式化）
+4. 责任落不下去 → Owner/KPI 逐级落位（L1-L3 强制）
+5. 数字化没有地基 → 流程架构作为任务拆解/派发/评估的上游字典（后续可被任务工厂/评估域消费）
+
+## 二、四页签
+
+1. **架构清单**：L1-L6 层级树（PCF 六级，华为 L1-L6 兼容），节点字段=编号/名称/层级/分区/Owner/KPI/输入输出/驱动支撑引用/分解逻辑标注（生命周期法/PDCA/功能分解/场景分解）。增删改、子节点追加。
+2. **流程地图**：一张图按构图法分区（O/MS 二分、MOS 三分、POS 三分、OES 三分可切换），L1 卡片入区，卡内列 L2 流程组。分区只是构图维度，不进入分级清单（文章关键认知：分类法管「图怎么画」，分级法管「层级怎么搭」，两条线并行）。
+3. **治理体检**：把文章第八节「启动校验器」产品化为交互面——规则可配置，违规项分级呈现（高危/注意）。规则：缺 Owner（L1-L3）/缺 KPI（L3）/断链孤岛（L3 无任何输入输出与驱动支撑）/超深（>maxDepth）/跨级（父子层级不连号）/编号非法/分区缺失或非法/引用悬空。治理参数：maxDepth、forbidSkippingLevel、requireEndToEnd、requireL3Owner、requireL3Kpi、reviewCycleDays、framework。
+4. **成熟度评估**：PEMM 自评——5 个流程能动因素（设计/员工/所有者/基础设施/指标）× 4 种企业能力（领导力/文化/专业技能/治理），各按 P0-P4 打分；短板决定论（总体=最低分因素）；历史留痕可对比变革前后。
+
+## 三、数据模型
+
+存储：纯文件面（skillgov 同款）`~/.hermes-web-ui/overlay/bpa-architecture.json`（env `BPA_STORE` 覆盖）+ `bpa-maturity.json`。fail-soft 读、原子写。
+
+```ts
+interface BpaNode {
+  id: string          // ^L[1-6](-[0-9]{2}){level-1}$，如 L3-06-02-01
+  name: string
+  level: 1|2|3|4|5|6
+  parentId: string | null
+  section?: 'OPERATING'|'ENABLING'|'SUPPORTING'|'MANAGING'  // 仅 L1（OES/POS/MOS 分区）
+  owner?: string
+  kpis?: { name: string; target: string; unit?: string }[]  // L3 治理主战场
+  inputs?: string[]; outputs?: string[]     // 输入输出衔接（系统/表单/单据）
+  drivers?: string[]; supports?: string[]   // L3 间引用：谁驱动我 / 我支撑谁
+  decomposition?: 'lifecycle'|'pdca'|'functional'|'scenario'
+  note?: string
+  updatedAt: number
+}
+```
+
+API（`/api/bpa/*`）：
+- `GET /architecture` 全树+配置+体检报告
+- `PUT /node` upsert（编号/层级/父子关系校验）、`DELETE /node/:id`（级联删子孙）
+- `PUT /config` 治理参数
+- `POST /validate` 立即体检
+- `POST /seed` 载入示例（SwarmStudio 自身研发交付流程的示范架构，可反复覆盖）
+- `GET/POST /maturity` PEMM 评估历史/提交（历史截尾 50 条）
+
+## 四、验收线
+
+- 服务端单测：store 读写+种子、validate 八规则、maturity 计分全绿
+- 客户端单测：i18n zh/en 键齐平 + DTO 形状
+- inject 351→352 补丁零失败；vitest 全量零回归
+- `npm run dev` 浏览器走查：/app/bpa 四页签可用、种子载入、体检出违规、PEMM 打分出短板
+
+## 五、不做（本轮边界）
+
+- 不做 BPMN 流程图绘制（架构≠流程图，文章明言 BPA 是结构化描述体系）
+- 不做与任务工厂/评估域的自动联动（留作后续消费方，本域先当字典）
+- 不引入图可视化库（地图用 CSS 分区网格表达构图法语义，足够且零依赖）
