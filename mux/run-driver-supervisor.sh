@@ -178,7 +178,7 @@ while true; do
     # run19 根治（熔断死等）：证据等待不再无限静默——超时即向评审卡 owner 周期催办
     # （run19 实锤：agent 补齐链夜间停摆，死等 14400s+ 指纹不变零动作）。不弃守熔断
     # 语义：催办推动证据变化来复位；人工通道（stop/GATE_BREAKER_OVERRIDE）不变。
-    local _WM="${MX_BREAKER_WAIT_MAX:-7200}" _NG="${MX_BREAKER_NUDGE_EVERY:-3600}"
+    _WM="${MX_BREAKER_WAIT_MAX:-7200}"; _NG="${MX_BREAKER_NUDGE_EVERY:-3600}"
     while true; do
       [[ -f "$STOPFLAG" ]] && { note "stop 文件在位（证据等待中），监督器退出"; rm -f "$STOPFLAG"; exit 0; }
       grep -q '^report_done=' "$STATE" 2>/dev/null && { note "report_done 已落键，监督器功成身退"; exit 0; }
