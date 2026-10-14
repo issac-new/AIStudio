@@ -2,7 +2,8 @@
 <!-- PEMM 成熟度评估：5 流程能动因素 × 4 企业能力，各因素 P0-P4 自评；
      短板决定论（总体=最低分），历史留痕支持变革前后对比。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import * as echarts from 'echarts'
 import { bpaApi, type PemmAssessment } from '@/custom/bpa/api'
 import { PEMM_FACTORS, PEMM_LEVEL_NAMES } from '@/custom/bpa/pemm'
 import type { BpaMessages } from '@/custom/bpa/i18n'
@@ -15,6 +16,11 @@ const history = ref<PemmAssessment[]>([])
 const busy = ref(false)
 const error = ref('')
 const submitted = ref(false)
+
+const radarRef = ref<HTMLDivElement | null>(null)
+const trendRef = ref<HTMLDivElement | null>(null)
+let radarChart: echarts.ECharts | null = null
+let trendChart: echarts.ECharts | null = null
 
 const enablers = computed(() => PEMM_FACTORS.filter((f) => f.board === 'enabler'))
 const capabilities = computed(() => PEMM_FACTORS.filter((f) => f.board === 'capability'))
@@ -57,7 +63,58 @@ function levelName(v: number | undefined): string {
   return v === undefined ? '' : PEMM_LEVEL_NAMES[v]?.nameZh ?? ''
 }
 
-onMounted(() => void loadHistory())
+function renderCharts(): void {
+  // 雷达：9 因素当前评估（P0-P4 → 0-4）
+  if (radarRef.value) {
+    if (!radarChart) radarChart = echarts.init(radarRef.value)
+    radarChart.setOption({
+      backgroundColor: 'transparent',
+      radar: {
+        indicator: PEMM_FACTORS.map((f) => ({ name: f.nameZh, max: 4 })),
+        radius: '68%',
+        splitNumber: 4,
+        axisName: { color: 'inherit', fontSize: 10 },
+      },
+      series: [{
+        type: 'radar',
+        areaStyle: { opacity: 0.25 },
+        lineStyle: { width: 2 },
+        data: [{
+          value: PEMM_FACTORS.map((f) => scores.value[f.key] ?? 0),
+          name: props.L.maturity.title,
+        }],
+      }],
+    }, true)
+  }
+  // 趋势线：各轮评估的总体成熟度（短板决定）
+  if (trendRef.value && history.value.length >= 1) {
+    if (!trendChart) trendChart = echarts.init(trendRef.value)
+    const pts = history.value.map((h) => ({
+      t: new Date(h.scoredAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric' }),
+      v: Math.min(...Object.values(h.scores)),
+    }))
+    trendChart.setOption({
+      backgroundColor: 'transparent',
+      grid: { left: 36, right: 16, top: 24, bottom: 26 },
+      xAxis: { type: 'category', data: pts.map((p) => p.t), axisLabel: { fontSize: 10 } },
+      yAxis: { type: 'value', min: 0, max: 4, interval: 1, axisLabel: { formatter: 'P{value}', fontSize: 10 } },
+      tooltip: { trigger: 'axis' },
+      series: [{
+        type: 'line',
+        data: pts.map((p) => p.v),
+        step: 'middle',
+        symbolSize: 7,
+        lineStyle: { width: 2, color: '#4f6ef7' },
+        itemStyle: { color: '#4f6ef7' },
+        areaStyle: { opacity: 0.1 },
+      }],
+    }, true)
+  }
+}
+
+onMounted(() => { void loadHistory().then(renderCharts) })
+watch([scores, history], () => renderCharts(), { deep: true })
+onBeforeUnmount(() => { radarChart?.dispose(); trendChart?.dispose(); radarChart = null; trendChart = null })
 </script>
 
 <template>
@@ -72,6 +129,18 @@ onMounted(() => void loadHistory())
       <div class="overall__meta">
         <p class="muted">{{ L.maturity.overall }}：{{ scoredCount }}/9</p>
         <p class="muted small">{{ L.maturity.weakest }}：{{ weakest.join('、') }}</p>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box">
+        <h4>{{ L.maturity.radarTitle }}</h4>
+        <div ref="radarRef" class="chart" data-testid="bpa-pemm-radar"></div>
+      </div>
+      <div class="chart-box">
+        <h4>{{ L.maturity.trendTitle }}</h4>
+        <p v-if="history.length < 2" class="muted small chart-tip">{{ L.maturity.trendEmpty }}（{{ L.maturity.trendHint }}）</p>
+        <div ref="trendRef" class="chart" data-testid="bpa-pemm-trend"></div>
       </div>
     </div>
 
@@ -119,6 +188,19 @@ onMounted(() => void loadHistory())
 <style scoped lang="scss">
 .bpa-pemm { display: flex; flex-direction: column; gap: 12px; }
 .hint { margin: 0; }
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  .chart-box {
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 10px;
+    padding: 10px;
+    h4 { margin: 0 0 4px; font-size: 13px; }
+    .chart { width: 100%; height: 260px; }
+    .chart-tip { margin: 0 0 4px; }
+  }
+}
 .overall { display: flex; gap: 16px; align-items: center; border: 1px solid var(--accent, #4f6ef7); border-radius: 10px; padding: 12px 16px; flex-wrap: wrap;
   .overall__score { display: flex; align-items: baseline; gap: 10px;
     .num { font-size: 30px; font-weight: 700; color: var(--accent, #4f6ef7); } }
