@@ -1,14 +1,4 @@
---- a/hermes_cli/kanban_db_connect.py
-+++ b/hermes_cli/kanban_db_connect.py
-@@ -831,7 +831,7 @@
-     ("created_by", "created_by TEXT"),
-     ("started_at", "started_at INTEGER"),
-     ("completed_at", "completed_at INTEGER"),
--    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
-+    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
-     ("workspace_path", "workspace_path TEXT"),
-     ("claim_lock", "claim_lock TEXT"),
-     ("claim_expires", "claim_expires INTEGER"),
+diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
 @@ -2541,10 +2541,11 @@
@@ -25,6 +15,19 @@
      lane_kwargs: dict[str, Any] = dict(
          dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
          failure_limit=failure_limit, spawn_fn=spawn_fn,
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -831,7 +831,7 @@
+     ("created_by", "created_by TEXT"),
+     ("started_at", "started_at INTEGER"),
+     ("completed_at", "completed_at INTEGER"),
+-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
++    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
+     ("workspace_path", "workspace_path TEXT"),
+     ("claim_lock", "claim_lock TEXT"),
+     ("claim_expires", "claim_expires INTEGER"),
+diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanban_gates.py
 --- a/tests/hermes_cli/test_kanban_gates.py
 +++ b/tests/hermes_cli/test_kanban_gates.py
 @@ -26,6 +26,7 @@
@@ -44,6 +47,7 @@
  
  
  def _make_task(conn, *, title="gate card", body=None, status="ready", assignee="sage"):
+diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
 --- a/tests/hermes_cli/test_kanban_db.py
 +++ b/tests/hermes_cli/test_kanban_db.py
 @@ -551,6 +551,7 @@

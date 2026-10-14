@@ -218,7 +218,6 @@
 #      417 kanban 硬化与树上并行 WIP 冲突由 inject 窗口统一重放裁决）。
 416-agent-delegate-handoff-phrase.patch
 417-agent-kanban-runtime-hardening.patch
-419-agent-board-concurrency-gate.patch
 455-server-p1-routes-mounts.patch
 470-hosted-rooms-collab-event-id.patch
 471-kanban-collab-event-id.patch
@@ -650,7 +649,6 @@
 # [617] agent 0.21.7 移植适配四修（11 断裂补丁移植轮收尾）：heal 列默认 scratch→dir 对齐
 # 117/板并发计数改每板独立库口径（0.21.7 tasks 无 board 列）/gates 测试 connect API
 # 迁移/基础设施豁免测试 Linux-only skipif（macOS _IS_LINUX 直通 in_process）。
-617-agent-0217-port-adaptations.patch
 
 # [618] Skill 三段治理·注册扫描接线三个导入/注入通路（2026-10-13 挂账清偿续批）：
 # hermes skills/import 成功即扫描随响应（scan 块）、ekko skill-import 扫描记账本、
@@ -709,3 +707,11 @@
 # sop 路径签名成组），指纹幂等入库，只出候选不改行为；curate 审核（B2 受控注入
 # 的前置）。/api/expcandidates extract/list/curate。
 627-server-expcandidates-routes.patch
+
+
+# [419/617 移尾说明 2026-10-14] 两补丁原位上下文被后继补丁（612 系 board 参数改签名等）
+# 重构而断裂——历史上靠树中手工应用残留隐性生效（run19 即此态）。2026-10-14 阿里轮
+# inject 解阻时暴露，按累积基线再生（全量态 A→B/B→C 快照差分）并移至序列尾部；
+# 编号不变（台账/纪律引用防悬空）。再生后位置=全量态之后，上下文即再生基线。
+419-agent-board-concurrency-gate.patch
+617-agent-0217-port-adaptations.patch
