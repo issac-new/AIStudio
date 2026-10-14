@@ -7,6 +7,7 @@
 
 import type { ClusterSnapshot } from './collectors'
 import { collectGateway, collectProfiles, collectSessionTelemetry, collectSessions } from './collectors'
+import { anomalyKey, convergenceEnabled, type ConvergenceItem, type ConvergenceReport, ConvergenceTracker } from './convergence'
 import { detectAll, type Anomaly } from './detectors'
 import { routeHintForDetector } from './route-hint'
 type TimedAnomaly = Anomaly & { ts?: number }
@@ -55,14 +56,28 @@ export class ClusterInspector {
   private lastOutcome: RunOutcome | null = null
   private readonly history: RunOutcome[] = []
   private readonly cooldown = new Map<string, number>()
+  /** 同类风险收敛账本（用户 2026-10-14 指令：多轮工作有效性=同类风险持续收敛；
+   *  熵增→升级/熔断/降级）。CLUSTER_INSPECTOR_CONVERGENCE=off 时为 null=全链路旁路 */
+  private readonly convergence: ConvergenceTracker | null
 
   constructor(deps: InspectorDeps = {}) {
     this.deps = deps
+    this.convergence = convergenceEnabled() ? new ConvergenceTracker(deps.hermesHome) : null
   }
 
   get snapshot(): ClusterSnapshot | null { return this.lastSnapshot }
   get lastRun(): RunOutcome | null { return this.lastOutcome }
   get runs(): RunOutcome[] { return [...this.history] }
+  /** 收敛性报表（snapshot REST 面：指标+降级档案+熔断态） */
+  get convergenceFace(): ConvergenceReport | null {
+    return this.convergence ? this.convergence.report(this.deps.now?.() ?? Date.now()) : null
+  }
+
+  /** 当前降级档案集（有活跃熵增风险的负责人） */
+  private degradedNow(): Set<string> {
+    if (!this.convergence) return new Set()
+    return this.convergence.degradedSet(this.convergence.items(this.deps.now?.() ?? Date.now()))
+  }
 
   private emit(anomaly: Anomaly): void {
     // 失败路由标注（阿里调研轮 E 收尾件）：停滞族/失控环检测器随事件带 routeHint
@@ -93,6 +108,8 @@ export class ClusterInspector {
     if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
     for (const a of anomalies) {
       if (a.detector !== 'dispatcher.stuck') continue
+      // 熵增熔断：直派反复无效（dispatcher 病灶持续不收敛）——停发，等人介入
+      if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) continue
       if (this.safeActedSubjects.has(a.subject)) continue
       this.safeActedSubjects.add(a.subject)
       try {
@@ -139,6 +156,7 @@ export class ClusterInspector {
         return 'nudged'
       } catch { return undefined }
     })
+    const degraded = this.degradedNow()
     for (const a of anomalies) {
       // 交付锚验证两型也入催办面（run19 上移 A+B）：锚缺失/陈旧分支的修复动作=推送，可催
       // card.blocked-stale 同入（run19 熔断死等产品化——用户 300s 时限：发现即提醒 assignee）
@@ -147,6 +165,17 @@ export class ClusterInspector {
         && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale') continue
       const profile = (a.detail as { assignee?: string } | undefined)?.assignee?.trim()
         || a.subject.replace(/^profile:/, '')
+      // 降级先于熔断判（负责人有活跃熵增风险时不喂新活——领卡督办抑制；此语义
+      // 优先于 idle.with-work 自身指纹的熔断，动作记 nudge-degrade 更可读）
+      if (a.detector === 'idle.with-work' && degraded.has(profile)) {
+        acted.push(`nudge-degrade:${profile}`)
+        continue
+      }
+      // 熵增熔断：该指纹的催办已反复无效（复发不收敛）——停发防回灌轰炸，等人介入
+      if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) {
+        acted.push(`nudge-breaker:${profile}`)
+        continue
+      }
       const r = await nudge(profile, a.summary)
       acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
     }
@@ -236,6 +265,8 @@ export class ClusterInspector {
     }))
     for (const a of anomalies) {
       if (a.detector !== 'kanban.stale-worker' || a.subject === 'board') continue
+      // 熵增熔断：回收反复无效（同卡僵尸态复发不收敛）——停发，等人介入
+      if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) continue
       if (this.safeActedSubjects.has(a.subject)) continue
       this.safeActedSubjects.add(a.subject)
       const r = await reclaim(a.subject)
@@ -342,21 +373,48 @@ export class ClusterInspector {
         dispatcherStuckMs: dispatcherStuckMs >= Number(process.env.CLUSTER_INSPECTOR_STUCK_MS || 900_000) ? dispatcherStuckMs : 0,
       }).map((a) => ({ ...a, ts: snap.ts }))
       const now = this.deps.now?.() ?? Date.now()
+      // 收敛性在场记账（每轮全量）：同类/同一事件风险的复发账
+      this.convergence?.recordPresence(now, anomalies)
       let emitted = 0
       let suppressed = 0
+      const trips: TimedAnomaly[] = []
       for (const a of anomalies) {
-        const key = `${a.detector}::${a.subject}`
+        const key = anomalyKey(a.detector, a.subject)
         const seen = this.cooldown.get(key) ?? 0
         if (now - seen < COOLDOWN_MS) {
           suppressed += 1
           continue
         }
         this.cooldown.set(key, now)
+        if (this.convergence) {
+          // 过冷却窗再发=一次复发（episode）；熵增态三联动：
+          // ①升级风险项（复发异常升 high）②熔断（trip，one-shot）③降级（degradedSet）
+          this.convergence.recordEpisode(now, key)
+          const st = this.convergence.itemOf(key, now)
+          if (st?.trend === 'diverging') {
+            a.severity = 'high'
+            a.detail = { ...(a.detail ?? {}), convergence: { episodes: st.episodes, firstSeenMs: st.firstSeenMs, tripped: st.tripped } }
+            if (!st.tripped) {
+              this.convergence.trip(now, key)
+              trips.push(riskDivergingTrip(a, st))
+            }
+          }
+        }
         this.emit(a)
         emitted += 1
       }
-      const actions = [...(await this.safeAct(anomalies)), ...(await this.nudgeStalled(anomalies)), ...(await this.dispatchSelfHeal(anomalies)), ...(await this.destructiveGuard(anomalies))]
-      outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies, emitted, suppressedByCooldown: suppressed, actions }
+      // 熵增熔断事件（one-shot：每段熵增只发一次，常态走原异常的升级high+收敛面；
+      // 同主体多来源同轮触发时按 cooldown 键去重，只发首条——账本明细在收敛面可见）
+      for (const t of trips) {
+        const tkey = anomalyKey(t.detector, t.subject)
+        if (now - (this.cooldown.get(tkey) ?? 0) < COOLDOWN_MS) { suppressed += 1; continue }
+        this.cooldown.set(tkey, now)
+        this.emit(t)
+        emitted += 1
+      }
+      const allAnomalies = [...anomalies, ...trips]
+      const actions = [...(await this.safeAct(allAnomalies)), ...(await this.nudgeStalled(allAnomalies)), ...(await this.dispatchSelfHeal(allAnomalies)), ...(await this.destructiveGuard(allAnomalies))]
+      outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies: allAnomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
     } finally {
@@ -406,4 +464,15 @@ function pickLastTouched(c: Record<string, unknown>): number | string | undefine
     if (typeof v === 'string' && v && !Number.isNaN(Number(v))) return v
   }
   return undefined
+}
+
+/** 熵增熔断事件（one-shot）：同类风险复发不收敛→升级人工。routeHint 经
+ *  DETECTOR_FAILURE_CLASS 的 risk.diverging→non_convergent 档自动携带。 */
+function riskDivergingTrip(a: TimedAnomaly, st: ConvergenceItem): TimedAnomaly {
+  return {
+    detector: 'risk.diverging', subject: a.subject, severity: 'high',
+    summary: `同类风险不收敛（熵增熔断）：${a.detector}（${a.subject}）已复发 ${st.episodes} 次且间隔未放宽（首见 ${new Date(st.firstSeenMs).toISOString()}）——按「同类风险是否持续收敛」的多轮有效性标准，判熵增。已熔断该风险的自动处置（催办/回收/直派停发，反复无效=副作用风暴）；涉及负责人档案的同步降级（暂停派新卡，先收敛存量）；请人工介入（失败路由 non_convergent 档：带同错重试次数、已试方案与失败证据升级裁决）`,
+    detail: { origin: a.detector, episodes: st.episodes, firstSeenMs: st.firstSeenMs, lastEpisodeMs: st.lastEpisodeMs, breaker: true, degraded: true },
+    ts: a.ts,
+  }
 }
