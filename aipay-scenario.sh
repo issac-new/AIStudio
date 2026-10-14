@@ -845,23 +845,24 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
               # ①预算分账：上游/评审两侧独立计数（security_nudge_up / security_nudge_rev
               #   各 3 次）——原共用钱包会一边耗尽额度另一边永久哑掉；
               # ②上游侧耐心：14 项级设计修订要小时级，等待钟（40min，实际循环约
-              #   100min）太急——上游催办最小间隔 7200s（首催也要距球到上游侧 2h）；
+              #   100min）太急——上游催办最小间隔 1800s（实测修订工时约 17min；2h 版参照系
+#   错把含断棒的 4h 墙钟当工时——用户 23:2x 点名修正）；
               # ③第三声后升级不沉默：high 记单 + 房间点名主管A 介入（球在哪侧点名
               #   哪侧负责人）。
               local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
               local _now; _now=$(date +%s)
               if [[ "$_rr_result" == *"FAIL"* ]]; then
-                # 球在上游（组织 r_n+1 修订）——催产品经理A，带 2h 耐心间隔
+                # 球在上游（组织 r_n+1 修订）——催产品经理A，带 30min 耐心间隔
                 if [[ -z "$(sget security_up_ball_ts)" ]]; then sset security_up_ball_ts "$_now"; fi
                 local _up_n; _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
                 local _up_last; _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
-                if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 7200 ]]; then
+                if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
                   sset security_nudge_up $((_up_n + 1))
                   sset security_up_last_ts "$_now"
                   dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_up_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：${_rr_result}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
-                  note "[安全] 复审 FAIL 球在上游——催产品经理A 组织修订（第 $((_up_n + 1))/3 次，2h 间隔）"
+                  note "[安全] 复审 FAIL 球在上游——催产品经理A 组织修订（第 $((_up_n + 1))/3 次，30min 间隔）"
                   if [[ "$_up_n" -eq 2 ]]; then
-                    echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（2h 间隔）仍无修订入仓——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+                    echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（30min 间隔）仍无修订入仓——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
                     dispatch_in_room admin "@admin-agent:matrix.test 升级介入（闸依赖闭环③）：G2 安全复审 FAIL 后对产品经理A 催办 3 次无修订入仓（head 仍 ${_rr_head}）。请核实修订侧是否停摆并处置；复审 PASS 前 G2 不放行。" "$(agent_mxid admin)" || true
                   fi
                 fi
