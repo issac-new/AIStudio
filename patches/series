@@ -703,3 +703,9 @@
 # （人工改派裁决先例升为显式规则）/budget_exhausted+non_convergent+stall_timeout=
 # 人闸。出路由决定+卡标注文本，不自动改派（改行为必须过人）。/api/faileroute
 626-server-faileroute-routes.patch
+
+# [627] 经验候选提取路由挂载（2026-10-14 阿里调研轮 B1）：自动挡第一半环——看板
+# task_events 轨迹提取三类候选（antipattern 同闸拦截≥阈值/good_path 零拦截且快/
+# sop 路径签名成组），指纹幂等入库，只出候选不改行为；curate 审核（B2 受控注入
+# 的前置）。/api/expcandidates extract/list/curate。
+627-server-expcandidates-routes.patch
