@@ -1541,6 +1541,29 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     fi
     return 0   # dlv 未启用时末行 && 列表返回 1，函数调用是裸命令会被 set -e 击杀（包装引入的差异）
   }
+  # run19 复盘根治：G5 退回缺项从评审卡实取（run19 实锤：驱动退回令硬编码「回滚阈值/
+  # 灰度/发布说明」三缺项，而评审 r4 复核证实三项已在卡、真实缺项是 R-1——错频退回令
+  # 污染台账且误导 agent 重做已补项）。提取优先级：结论行「缺项 XXX」段 > R-\d+ 标记 > 缺省文案。
+  g5_real_gaps() { # → stdout: 评审卡判词行的真实缺项串
+    local body
+    body=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
+    local gaps
+    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | head -c 120)
+    [[ -z "$gaps" ]] && gaps=$(printf '%s' "$body" | grep -oE 'R-[0-9]+' | sort -u | tr '\n' ' ' | head -c 120)
+    [[ -z "$gaps" ]] && gaps="回滚阈值/灰度/发布说明（缺省文案——卡面未见显式缺项，以评审卡 GAP/缺项节为准）"
+    printf '%s' "$gaps"
+  }
+  # run19 复盘根治（FAIL→重派空转）：判词 FAIL 且评审卡已有 ≥1 轮「复核维持」=评审结论
+  # 稳定形态——重派评审只会得到同判词（fanfan 按重复派单合并处置，空转 40 分钟/轮实测）。
+  # 该形态直接走熔断（等待修复证据变化复位），不再进补齐重派窗。
+  g5_verdict_settled() { # → 0 当评审卡含「复核维持」标记（结论稳定）
+    local body
+    body=$(kanban_list fanfan-review 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
+    printf '%s' "$body" | grep -q '复核维持'
+  }
+
   # 评审卡幂等（run8 优化 E）：卡 ID 落 state，重启复用不再重复建卡
   RGID="$(sget g5_rgid)"
   if [[ -z "$RGID" ]]; then
@@ -1584,8 +1607,16 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       else
         echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
         mx_gate_breaker_trip g5 "G5 发布准出" 1
+        _G5GAPS="$(g5_real_gaps)"
+        if g5_verdict_settled; then
+          # 评审结论稳定（卡面含复核维持）：不重派评审（重派=同判词空转 40min/轮），
+          # 直接熔断等待修复证据变化复位；真实缺项随记单留痕供修复链对齐。
+          echo "ISSUE|g5-fail-settled|fanfan-agent|G5 FAIL 判词稳定（评审卡含复核维持，真实缺项=${_G5GAPS}）——跳过重派评审空转，熔断等待修复证据（run19 复盘根治）" >> "$EVID_DIR/issues.log"
+          note "[G5] 判词稳定 FAIL（缺项=${_G5GAPS}）——不重派评审，熔断等修复证据"
+          fail "G5 评审结论稳定（FAIL·缺项 ${_G5GAPS}），等待修复链证据变化后复位（V3 硬闸+run19 复盘根治）"
+        fi
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
-        dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
+        dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 真实缺项（${_G5GAPS}）补齐后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行；卡面已补项勿重做——如认为缺项不成立请按卡面证据改判）。" "$(agent_mxid fanfan)"
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）

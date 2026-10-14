@@ -1172,8 +1172,14 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   # 上的报告是源轮旧件（正文自标 RUN=源轮号），存在性为真→本轮根本没派报告任务、g4 照落。
   # 旧件不满足窗=谓词假=走派单等待（调用方既有链路）；lite 轮经 evidence_baseline
   # 回落夹具源轮基线（源轮真值=夹具语义合法）。
+  # run19 复盘根治（G4 结论语义）：存在+新鲜度之外还须结论 PASS——run19 实锤 TEST-FAIL
+  # 实文（结论行 TEST-FAIL-RFD-001）被存在性判定当过闸落键，评审侧以「G4 实质未过」
+  # 拦截（缺项 R-1）。FAIL 报告走派单等待链（qi 复测覆盖旧文），不再静默过闸。
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
-  git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" >/dev/null 2>&1 || return 1
+  local _body
+  _body="$(git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" 2>/dev/null)" || return 1
+  [ -n "$_body" ] || return 1
+  printf '%s' "$_body" | grep -qE 'TEST-PASS|结论[^，。]*通过' || return 1
   local _rs _ct
   _rs="$(evidence_baseline)"
   [ -z "$_rs" ] && return 0
