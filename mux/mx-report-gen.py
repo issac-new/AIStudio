@@ -1514,7 +1514,7 @@ STEPS_META_20261013_V8_RUN19 = {
     14: dict(keys=['review_done'], narrative='线下评审结论：通过（虚拟架构小组），评审卡 t_ba5b0261→done。', imgs=[('review_done-op1-after','系分评审·后','ui'), ('review_done-op1-before','系分评审·前','ui')]),
     15: dict(keys=['g2_arch_pass'], narrative='G2 双评审并行（架构治理+安全评审含 JR/T 0071/0171 对照）后过闸（18:33）。', imgs=[('g2_arch_pass-op1-after','G2 架构治理闸·后','ui'), ('g2_arch_pass-op1-before','G2 架构治理闸·前','ui')]),
     16: dict(keys=['close_done'], narrative='需求归档完成。', imgs=[('close_done-op1-after','需求完成·后','ui'), ('close_done-op1-before','需求完成·前','ui')]),
-    17: dict(keys=['plan_done'], narrative='排期文档入仓（docs/plan/RFD-001-schedule.md，RUN 标记本轮）。', imgs=[('plan_done-op1-after','排期入仓·后','ui'), ('plan_done-op1-before','排期入仓·前','ui')]),
+    17: dict(keys=['plan_done'], narrative='排期文档入仓（docs/plan/RFD-001-schedule.md，RUN 标记本轮）。', imgs=[('plan_done-op1-after','看板页·排期入仓后','ui'), ('plan_done-op1-before','看板页·排期入仓前','ui')]),
     18: dict(keys=['devimpl_done'], narrative='ACP 编码后端六路并行（PAYCORE-C/S/N+CHWX/CHALI/MP）：18:47 起 S/N/MP 三分支先推 feat/*、19:15 C 分支点亮；G3 缺证据拦截首验——DEV-PAYCORE-C 缺 testlog 登记问题+补证派单（20:19），补齐后 g3_code_pass 写入（20:23）补证后过闸。', imgs=[('devimpl_done-op1-after','六路并行编码·后','ui'), ('devimpl_done-op1-before','六路并行编码·前','ui')]),
     19: dict(keys=['defect_done'], narrative='integration 合并链完成；测试分片五路派发（TEST-BE-S1/S2/S3+FE-S1/S2）；TEST-FE-S1 四套门禁全绿+23 条 TC 双端 37 场景；DEF-S1 修复（dd13141）合入；G4 过闸（04:48）——测试报告 TEST-FAIL 实文入树（G4 结论语义缺陷在案，评审 r4/r5 以「实质未过」拦截）。', imgs=[]),
     20: dict(keys=['ready_done'], narrative='G5 全程治理样本：两轮不过触发熔断（缺项 R-1=DEF-S3/DEF-S4）→修复链派发（chen 类型收敛+qi 台架重锚）→夜间磁盘水位门禁挂起事故（4 小时无进展的根因）→300 秒提醒根治→评审 r6 维持 FAIL 判定与驱动错频（真实缺项=测试实质，非三件未补）→修复链落地后翻绿，g5_ready 11:59 写入。', imgs=[]),
