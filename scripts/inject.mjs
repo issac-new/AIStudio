@@ -311,6 +311,10 @@ import vue from '@vitejs/plugin-vue';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import upstream from ${js(upstreamViteConfig)};
 
+// 裸包名钉单一实例用的根（alias 行引用；此前模板只用法不定义——生成的配置
+// 一加载即 ReferenceError: hermesStudioRoot is not defined，dev/build 全断）。
+const hermesStudioRoot = ${js(hermesStudioRoot)};
+
 const upstreamCfg =
   typeof upstream === 'function'
     ? upstream({ command: 'serve', mode: 'development' })
