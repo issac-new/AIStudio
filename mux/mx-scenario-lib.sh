@@ -213,6 +213,41 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
   fi
   sset "$key" "$id"; echo "$id"
 }
+# mx_dispatch_subrev（V8.29 派单断棒第二刀根治·run20 23:0x 实证）：
+# 「建了卡没人接」病在「建卡→认领」两步都断——子卡建在产品经理板但
+# 没分派 assignee 也没分发到研发板，研发AI 不在自己板上=看不见=死循环。
+# 工具按子卡标题里的 D- 项号（缺省：板+主卡归属）做确定性分派 + 跨板复制：
+#   D-1/2/4/5/10 → hu（微信渠道）
+#   D-3/11       → lin（支付宝渠道）
+#   D-6/7/9/13   → chen（支付核心）
+#   D-12/14 + 共担 → chen（与主卡归属一致；若有 xiao 项需二次拆分后续迭代）
+# 幂等：assignee 已置或目标板已存在对账子卡=跳过；不重复建卡。
+mx_dispatch_subrev() { # <human-pm> <subcard-id> → 0 派发成功 / 1 已派过 / 2 失败
+  local pm="$1" sid="$2" board="fanfan-pm-plan"
+  local title body cur_assignee
+  cur_assignee=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" show "$sid" 2>/dev/null | awk -F: "/^  assignee:/{gsub(/^ +/,"",\$2);print \$2}")
+  if [[ -n "$cur_assignee" && "$cur_assignee" != "-" ]]; then
+    echo "MX|dispatch-subrev-skip|$sid|assignee=$cur_assignee（已分派，跳过幂等）"
+    return 1
+  fi
+  title=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" show "$sid" 2>/dev/null | head -1 | sed "s/^Task $sid: //")
+  # D-项分派：标题含哪些项号就归谁（多归属按首项优先，避免重复派）
+  local agent=""
+  if [[ "$title" =~ D-(1|2|4|5|10) ]]; then agent="hu-csw-channel-wechat"
+  elif [[ "$title" =~ D-(3|11) ]]; then agent="lin-csw-channel-alipay"
+  elif [[ "$title" =~ D-(6|7|9|13) ]]; then agent="chen-csw-pay-core"
+  elif [[ "$title" =~ D-(12|14) ]]; then agent="chen-csw-pay-core"
+  else echo "MX|dispatch-subrev-no-d-item|$sid|标题无 D-项归属（可能需人工）"; return 2
+  fi
+  HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" assign "$sid" "$agent" >/dev/null 2>&1 || { echo "MX|dispatch-subrev-fail|$sid|assign 失败"; return 2; }
+  # 跨板复制（对账子卡，研发板可见性+工作量统计；workspace 仍指原板）
+  local dev_board="${agent}-20261015-RFD-001-dev"
+  local dev_id
+  dev_id=$(kanban_create_as "$agent" "subrev_${sid##t_}" "G2SREV-r1 子卡对账 ${sid}（${title}）" "V8.29 根治派单：本卡为 fanfan-pm-plan 板 ${sid} 的研发板镜像；正文/工作区/进度皆在原板。来源：run20 r3 派单断棒第二刀根治（产品经理仅建子卡未分发）。" "$dev_board" "$agent" 2>/dev/null || echo "")
+  echo "MX|dispatch-subrev-ok|$sid|→ $agent（dev_board=${dev_board} mirror=$dev_id）"
+  return 0
+}
+
 
 kanban_status_as() { # <user> <id> <status>（studio PATCH 主路 + CLI 合法路径兜底）
   # 隔夜 26 步实证 PATCH 有效；GET/POST-create 才有 tenant 病。兜底按状态机动词：

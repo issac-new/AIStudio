@@ -24,6 +24,11 @@ description: 项目管理与研发治理：基于定稿系分与工作量评估�
    测试)/工作量(人日)/开始-结束窗口/依赖），gantt 文本图，里程碑。
 5. kanban 登记：每个开发/测试任务建子任务（link 到排期父任务），卡片含时间
    窗口与工作量；本机代办登记。
+   **5.5 分发（V8.29 根治，run20 r3 派单断棒实录）**：每个开发子卡登记后
+   **必须立即**调用 `mx_dispatch_subrev fanfan <subcard-id>`（确定性按 D-项
+   分派 assignee + 复制对账卡到研发板）。禁止「建了卡就停」——未分派的
+   子卡=半成品，驱动巡检官 30min 内即报 `card.unassigned-stale`。
+   派单后立即推仓（commit origin/main）再终止回合。
 6. 派发：逐条 matrix 消息 @主责研发-agent（或测试-agent）与 @其 lead-agent，
    附任务明细与计划文档 git 地址。
 
@@ -32,3 +37,6 @@ description: 项目管理与研发治理：基于定稿系分与工作量评估�
 - 计划必须有缓冲：整体排期后加 15% 集成缓冲段。
 - 结论行以 `PLAN-DONE-<RFDID>` 开头；排期冲突无法解时以
   `PLAN-BLOCKED-<RFDID>` 开头并说明冲突点。
+- **子卡禁飞（V8.29）**：登记子卡后必须调用 `mx_dispatch_subrev`
+  分派+分发（不派发即不算完成）；子卡 assignee 为空
+  即视为断派单，巡检官 30min 告警。
