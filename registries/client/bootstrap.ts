@@ -67,6 +67,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     registrations.push(import('../../custom/client/ontology').then(m => m.registerOntology(app)))
   }
 
+  // 流程架构工作台（企业级 BPA 方法论产品化，spec 2026-10-14-bpa-process-architecture-spec.md）：
+  // 默认开，VITE_CUSTOM_BPA=false 显式关。导航入口（FlowNavPanel 内 BpaNavEntry）。
+  if (features.bpa) {
+    registrations.push(import('../../custom/client/bpa').then(m => m.registerBpa(app)))
+  }
+
   await Promise.all(registrations)
 
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,

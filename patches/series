@@ -168,7 +168,8 @@
 361-server-kanban-raci-dispatch.patch
 362-server-kanban-rule-engine-gate.patch
 363-server-kanban-retry-guard.patch
-364-package-json-win-crossplatform.patch
+# [364 移入 _skip-0735/ 2026-10-14] v0.7.35 自身 lock 漂移，升级轮 c17c6401 移存但 series 漏摘——
+# 全量重放必炸（inject FAILED: patch 文件不存在），按升级轮意图停用（npm install 自然重生成 lock）。
 366-server-kanban-raci-assign-dispatch.patch
 367-server-auth-matrix-userid-nullable.patch
 368-client-path-deeplink-to-hash.patch
@@ -715,3 +716,14 @@
 # 编号不变（台账/纪律引用防悬空）。再生后位置=全量态之后，上下文即再生基线。
 419-agent-board-concurrency-gate.patch
 617-agent-0217-port-adaptations.patch
+# [628] 流程架构工作台路由挂载（2026-10-14 BPA 调研轮）：企业级流程架构方法论
+# 产品化——APQC PCF L1-L6 分级清单 + OES/POS 流程地图 + 治理八规则硬约束体检 +
+# PEMM 成熟度自评。/api/bpa architecture/node/config/validate/seed/maturity。
+628-server-bpa-routes.patch
+
+# [629] ia2 树上键回填（2026-10-14 BPA 轮重放债清账）：12 个 ia2.* 静态引用键
+# （att.gone/chain.timelineHint/flow 四 Hint/gov.jump.org/overviewDash.cardHint/
+# sit 两 Hint/tdp 两 Title）历史上只活在注入树、从未入补丁——忠实重放后由
+# ia2-i18n-coverage 守门逮住；值取自 NVMe 镜像注入态正本。
+629-client-locales-ia2-treekeys-backfill.patch
+

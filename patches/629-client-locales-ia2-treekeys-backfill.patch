@@ -1,0 +1,166 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1528,7 +1528,11 @@ export default {
+       clusterRooms: 'Rooms',
+       clusterGroups: 'Group Chats',
+       clusterChats: 'Agent Chats',
+-      groupAgents: 'Agents'
++      groupAgents: 'Agents',
++      newChatHint: 'New chat: pick a session type',
++      newAgentChatHint: 'Start a new chat with a single AI agent',
++      newGroupChatHint: 'Create a group chat room (multi-agent)',
++      newMatrixRoomHint: 'Create a Matrix room by name (humans + agents)'
+     },
+     loop: {
+       stage: {
+@@ -1563,7 +1567,8 @@ export default {
+       running: 'Running',
+       review: 'In review',
+       blocked: 'Blocked',
+-      open: 'Open'
++      open: 'Open',
++      cardHint: 'Click to open the workspace'
+     },
+     tdp: {
+       title: 'Tasks · Decisions',
+@@ -1602,7 +1607,9 @@ export default {
+         done: 'Done',
+         archived: 'Archived'
+       },
+-      session: 'Linked session {id}'
++      session: 'Linked session {id}',
++      pendingTitle: 'For Me',
++      contextTitle: 'Context'
+     },
+     wait: {
+       subReview: 'Awaiting acceptance',
+@@ -1612,7 +1619,8 @@ export default {
+     chain: {
+       timeline: 'Timeline',
+       openIde: 'Open in IDE',
+-      gateReview: 'Awaiting you'
++      gateReview: 'Awaiting you',
++      timelineHint: 'Open run observatory (full-trace panel)'
+     },
+     part: {
+       title: 'Participants',
+@@ -1685,7 +1693,9 @@ export default {
+       openManage: 'Open management',
+       decideCount: '{n} to decide',
+       panelPeople: 'People',
+-      panelAgents: 'Agents'
++      panelAgents: 'Agents',
++      chipTasksHint: 'Switch the right panel to tasks & decisions',
++      chipOnlineHint: 'Switch the right panel to the online view'
+     },
+     gov: {
+       title: 'Manage',
+@@ -1782,7 +1792,12 @@ export default {
+         byAssignee: 'By assignee',
+         byAgent: 'Agent load',
+         open: 'open'
+-      }
++      },
++      jump: {
++        accounts: 'Accounts',
++        org: 'Org & Knowledge',
++        inbox: 'Inbox',
++      },
+     },
+     review: {
+       gate: 'Gate',
+@@ -1921,7 +1936,8 @@ export default {
+       subLoopStuck: 'Loop stuck',
+       subRunFailed: 'Run failed',
+       empty: 'Nothing needs attention',
+-      title: 'Attention'
++      title: 'Attention',
++      gone: 'This item is no longer in the list — it may have been handled'
+     },
+     runs: 'Runs',
+     engine: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1527,7 +1527,11 @@ export default {
+       clusterRooms: '房间',
+       clusterGroups: '群聊',
+       clusterChats: '会话',
+-      groupAgents: '智能体'
++      groupAgents: '智能体',
++      newChatHint: '新建聊天：选择会话类型',
++      newAgentChatHint: '发起与单个 AI Agent 的新单聊',
++      newGroupChatHint: '创建群聊房间（多 Agent 协作）',
++      newMatrixRoomHint: '按名称新建 Matrix 房间（真人与 Agent 同厅协作）'
+     },
+     loop: {
+       stage: {
+@@ -1562,7 +1566,8 @@ export default {
+       running: '进行中',
+       review: '评审中',
+       blocked: '受阻',
+-      open: '未开始'
++      open: '未开始',
++      cardHint: '点击进入对应工作面'
+     },
+     tdp: {
+       title: '任务 · 决策',
+@@ -1601,7 +1606,9 @@ export default {
+         done: '完成',
+         archived: '已归档'
+       },
+-      session: '关联会话 {id}'
++      session: '关联会话 {id}',
++      pendingTitle: '待我处理',
++      contextTitle: '上下文'
+     },
+     wait: {
+       subReview: '待验收',
+@@ -1611,7 +1618,8 @@ export default {
+     chain: {
+       timeline: '时间线',
+       openIde: '在 IDE 打开',
+-      gateReview: '等你验收'
++      gateReview: '等你验收',
++      timelineHint: '打开全链路追踪（Run Observatory 全局面板）'
+     },
+     part: {
+       title: '参与方',
+@@ -1684,7 +1692,9 @@ export default {
+       openManage: '打开管理台',
+       decideCount: '待决策 {n}',
+       panelPeople: '人',
+-      panelAgents: '智能体'
++      panelAgents: '智能体',
++      chipTasksHint: '点击切换右栏到「任务与决策」视图',
++      chipOnlineHint: '点击切换右栏到「在线」视图'
+     },
+     gov: {
+       title: '管理',
+@@ -1781,7 +1791,12 @@ export default {
+         byAssignee: '按负责人',
+         byAgent: 'Agent 负载',
+         open: '在办'
+-      }
++      },
++      jump: {
++        accounts: '账户管理',
++        org: '组织与知识',
++        inbox: '收件箱',
++      },
+     },
+     review: {
+       gate: '门禁',
+@@ -1920,7 +1935,8 @@ export default {
+       subLoopStuck: '循环停滞',
+       subRunFailed: '运行失败',
+       empty: '暂无需要关注的事项',
+-      title: '需关注'
++      title: '需关注',
++      gone: '该条目已不在当前列表，可能已被处理'
+     },
+     runs: '运行列表',
+     engine: {

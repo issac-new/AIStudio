@@ -1,17 +1,17 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 4663902d0..31fef4029 100644
+
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -53,6 +53,8 @@ import StarIcon from "@/components/common/StarIcon.vue";
- import ChatInput from "./ChatInput.vue";
+@@ -54,6 +54,8 @@ import ChatInput from "./ChatInput.vue";
  import NewChatAgentCards from "./NewChatAgentCards.vue";
+ import { prepareAgentDeployment, type AgentDeploymentController } from "./agentDeployment.mjs";
  import RealtimeVoiceStage from "./RealtimeVoiceStage.vue";
 +// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
 +import { features } from "@/custom/features";
  import ConversationMonitorPane from "./ConversationMonitorPane.vue";
  import MessageList from "./MessageList.vue";
  import SessionListItem from "./SessionListItem.vue";
-@@ -3298,7 +3300,7 @@ function handleSessionModelSelect(selection: { model: string; provider: string }
+@@ -3309,7 +3311,7 @@ function handleSessionModelSelect(selection: { model: string; provider: string }
      </div>
      <Teleport to="body">
        <RealtimeVoiceStage
@@ -21,7 +21,7 @@ index 4663902d0..31fef4029 100644
        />
      </Teleport>
 diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
-index 158675098..495c442a9 100644
+
 --- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 +++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 @@ -8,6 +8,8 @@ import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsP
@@ -47,7 +47,7 @@ index 158675098..495c442a9 100644
        </NTabPane>
        <NTabPane v-if="isSuperAdmin" name="devices" :tab="t('connections.tabs.devices')" display-directive="if">
 diff --git a/packages/client/src/views/hermes/ModelsView.vue b/packages/client/src/views/hermes/ModelsView.vue
-index be7778b97..93425c030 100644
+
 --- a/packages/client/src/views/hermes/ModelsView.vue
 +++ b/packages/client/src/views/hermes/ModelsView.vue
 @@ -4,6 +4,8 @@ import PageHeader from '@/components/layout/PageHeader.vue'

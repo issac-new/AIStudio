@@ -28,6 +28,7 @@ import GovernanceNavEntry from '../GovernanceNavEntry.vue'
 import EvalNavEntry from '../EvalNavEntry.vue'
 import OntologyNavEntry from '../OntologyNavEntry.vue'
 import SkillgovNavEntry from '../SkillgovNavEntry.vue'
+import BpaNavEntry from '../BpaNavEntry.vue'
 import AccountsNavEntry from '../AccountsNavEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
@@ -153,6 +154,8 @@ function submitCreateRoom(): void {
     <!-- 本体工作台入口（GB/T 48000.3 方法论；features.ontology 默认开） -->
     <OntologyNavEntry v-if="features.ontology" />
     <SkillgovNavEntry v-if="features.skillgov" />
+    <!-- 流程架构工作台入口（企业级 BPA 方法论；features.bpa 默认开） -->
+    <BpaNavEntry v-if="features.bpa" />
     <AccountsNavEntry />
 
     <div class="flow-nav__filters" data-testid="flow-filters">

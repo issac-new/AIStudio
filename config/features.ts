@@ -50,6 +50,11 @@ export interface FeatureConfig {
    *  入口；spec 2026-10-10-ontology-studio-spec.md）。产品能力非实验特性，默认开，
    *  VITE_CUSTOM_ONTOLOGY=false 显式关（cockpit/ide 档）。 */
   ontology: boolean;
+  /** 流程架构工作台（企业级 BPA 方法论产品化，2026-10-14：/app/bpa + FlowNav
+   *  入口；spec 2026-10-14-bpa-process-architecture-spec.md）。APQC PCF 分级 +
+   *  OES/POS 流程地图 + PEMM 成熟度 + 治理硬约束。默认开，VITE_CUSTOM_BPA=false
+   *  显式关。 */
+  bpa: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -72,6 +77,7 @@ export const features: FeatureConfig = {
   eval: import.meta.env.VITE_CUSTOM_EVAL === 'true',
   ontology: import.meta.env.VITE_CUSTOM_ONTOLOGY !== 'false',
   skillgov: import.meta.env.VITE_CUSTOM_SKILLGOV !== 'false',
+  bpa: import.meta.env.VITE_CUSTOM_BPA !== 'false',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {
