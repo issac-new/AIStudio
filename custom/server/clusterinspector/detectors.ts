@@ -23,6 +23,8 @@ export interface DetectOptions {
   stallQuietMs?: number
   /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
   dispatcherStuckMs?: number
+  /** 负载不均衡判阈：单档案在办卡数 ≥ 此值且存在零卡档案（默认 3） */
+  imbalanceMax?: number
   /** D7 在办卡·档案静默阈值 ms（默认 900000=15min；日志尾无错也算） */
   agentSilentMs?: number
   /** D8 跨机静默阈值 ms（默认 900000=15min；空闲机器不报） */
@@ -293,6 +295,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectDeliveryAnchor(snap, opts),
     ...detectDispatcherStuck(snap, opts),
     ...detectFakeCompletion(snap, opts),
+    ...detectLoadImbalance(snap, opts),
+    ...detectIdleWithWorkAvailable(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -403,6 +407,58 @@ export function detectFakeCompletion(snap: ClusterSnapshot, opts: DetectOptions 
         detail: { card: c.id, assignee: a },
       })
     }
+  }
+  return out
+}
+
+/** ── 负载不均衡检测（用户 2026-10-14 裁定：巡检官识别负载不均衡并做工作调节）：
+ *  在办卡分布 max≥imbalanceMax（默认 3）且存在零在办卡的活跃编制档案并存 → 报
+ *  load.imbalance（附分布与调节建议：拆分复合卡/并行领卡/督办再平衡）。活跃编制
+ *  = profiles 面可见的档案（有日志尾巴即算——真空闲档案的区别见 idle.note）。 */
+export function detectLoadImbalance(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const maxCards = opts.imbalanceMax ?? 3
+  if (!snap.runningCards.ok || !snap.profiles.ok) return []
+  const known = new Set(snap.profiles.tails.map((t) => t.profile))
+  const load = new Map<string, number>()
+  for (const c of snap.runningCards.cards) {
+    const a = (c.assignee ?? '').trim()
+    if (!a || !known.has(a)) continue
+    load.set(a, (load.get(a) ?? 0) + 1)
+  }
+  const busy = [...load.entries()].filter(([, n]) => n >= maxCards)
+  if (busy.length === 0) return []
+  const idle = snap.profiles.tails.filter((t) => !load.has(t.profile)).map((t) => t.profile)
+  if (idle.length === 0) return []
+  const dist = [...load.entries()].map(([p, n]) => `${p}:${n}`).join('、')
+  return [{
+    detector: 'load.imbalance', subject: 'board:current',
+    severity: 'warn',
+    summary: `工作负载不均衡：${busy.map(([p, n]) => `${p} 持 ${n} 张在办卡`).join('、')}（≥${maxCards}）而 ${idle.slice(0, 5).join('、')}${idle.length > 5 ? ' 等' : ''} 零在办——建议调节：复合卡拆分（decompose）、待办卡并行领卡、或再平衡指派`,
+    detail: { distribution: dist, busy: busy.map(([p]) => p), idle },
+  }]
+}
+
+/** ── 空闲正当性检测（同裁定）：空闲≠都该催——判别「有活可干的空闲」（异常）与
+ *  「真空闲」（正常，run14 教训不误报）。异常形态=档案零在办卡+真做静默超阈+
+ *  存在无主 ready 卡（可领未领）；真空闲（无卡可领）不报。输出接催办面：督办领卡。 */
+export function detectIdleWithWorkAvailable(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const quiet = opts.agentSilentMs ?? 900_000
+  const now = opts.nowMs ?? Date.now()
+  if (!snap.runningCards.ok || !snap.profiles.ok) return []
+  const unassigned = snap.runningCards.cards.filter((c) => String(c.status ?? '').toLowerCase() === 'ready' && !(c.assignee ?? '').trim())
+  if (unassigned.length === 0) return []
+  const load = new Set(snap.runningCards.cards.filter((c) => (c.status ?? '').toLowerCase() !== 'ready').map((c) => (c.assignee ?? '').trim()).filter(Boolean))
+  const out: Anomaly[] = []
+  for (const t of snap.profiles.tails) {
+    if (load.has(t.profile)) continue
+    const actTs = t.realWorkTsMs && t.realWorkTsMs > 0 ? t.realWorkTsMs : (t.workTsMs && t.workTsMs > 0 ? t.workTsMs : t.mtimeMs)
+    if (now - actTs <= quiet) continue
+    out.push({
+      detector: 'idle.with-work', subject: `profile:${t.profile}`,
+      severity: 'warn',
+      summary: `空闲异常（有活可干的空闲）：${t.profile} 零在办卡且真做静默 ${Math.round((now - actTs) / 1000)}s，而队列有 ${unassigned.length} 张无主 ready 卡（${unassigned.slice(0, 3).map((c) => c.id).join('、')}${unassigned.length > 3 ? '…' : ''}）可领未领——请领卡并行开工（真空闲=队列无卡时不报，不误催）`,
+      detail: { readyCards: unassigned.map((c) => c.id) },
+    })
   }
   return out
 }
