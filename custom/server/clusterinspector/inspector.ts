@@ -328,6 +328,8 @@ export class ClusterInspector {
         started_at: typeof c.started_at === 'number' || typeof c.started_at === 'string' ? c.started_at : undefined,
         completed_at: typeof c.completed_at === 'number' || typeof c.completed_at === 'string' ? c.completed_at : undefined,
         status: typeof c.status === 'string' ? c.status : undefined,
+        // 任务正文透传（card.body-empty 检测面）
+        body: typeof c.body === 'string' ? c.body : undefined,
       })).filter((c) => c.id)
       // 阻塞卡面（card.blocked-stale）：未接线=合法空态（可选面，同 sessionTelemetry 语义）
       let blockedCards: ClusterSnapshot['blockedCards']
@@ -386,6 +388,7 @@ export class ClusterInspector {
                 assignee: undefined,
                 title: typeof c.title === 'string' ? c.title : undefined,
                 status: typeof c.status === 'string' ? c.status : undefined,
+                body: typeof c.body === 'string' ? c.body : undefined,
                 created_at: c.created_at,
                 updated_at: pickLastTouched(c),
               })).filter((c) => c.id),

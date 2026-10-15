@@ -65,6 +65,8 @@ export interface RunningCard {
   updated_at?: number | string
   /** 结论正文（复审环老化检测面：done 卡 result 判词——run20 22:34 复审链断棒实录） */
   result?: string
+  /** 任务正文（card.body-empty 检测面：在办卡正文空=研发 AI 拿到没正文） */
+  body?: string
 }
 
 export interface RunningCardsFace {
