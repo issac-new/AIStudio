@@ -1,5 +1,5 @@
 diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
-index 9fd39ec5..6c9b1222 100644
+index 9fd39ec5..327e9610 100644
 --- a/agent/turn_finalizer.py
 +++ b/agent/turn_finalizer.py
 @@ -382,6 +382,8 @@ def _log_turn_exit(agent, messages, final_response, api_call_count, _turn_exit_r
@@ -11,7 +11,7 @@ index 9fd39ec5..6c9b1222 100644
  
  
  def _append_file_mutation_footer(agent, final_response, logger):
-@@ -809,3 +811,73 @@ def finalize_turn(
+@@ -809,3 +811,77 @@ def finalize_turn(
      agent._turn_preflight_display_snapshot = None
      agent._turn_received_provider_response = False
      return result
@@ -62,6 +62,10 @@ index 9fd39ec5..6c9b1222 100644
 +                        break
 +                    _branch, _, _tip = _line.partition(" ")
 +                    if not _branch or not _tip:
++                        continue
++                    # 任务分支约定闸（方案步 18：任务分支名 feat/DEV-*；辅 24h 新鲜度）——
++                    # 非 DEV 前缀的历史工作分支（t_xxx/rfdxxx 等）不归本兜底管
++                    if not _branch.rsplit("/", 1)[-1].startswith("DEV-"):
 +                        continue
 +                    _remote_ref = _git("rev-parse", "--verify", "refs/remotes/origin/%s" % _branch).strip()
 +                    if _remote_ref == _tip:
