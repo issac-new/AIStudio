@@ -71,7 +71,14 @@ describe('v12 统一视图守门（双视图）', () => {
       .replace(':runId', 'run-9')
       .replace(':roomId', '!x:host')
       .replaceAll(':sessionId', 's1')
-    const cases = IA_LEGACY_REDIRECTS.map(({ from, to }) => [sample(from), sample(to)] as [string, string])
+    // B1（2026-10-16 推演中心壳）：/app/runs 家族退役为重定向 → /app/sim，
+    // 迁移表目标落在 runs 家族时导航终点顺延一跳（实走断言的是链尾落点）
+    const chainEnd = (to: string): string => {
+      if (to === '/app/runs') return '/app/sim'
+      if (to.startsWith('/app/runs/')) return `/app/sim?run=${to.slice('/app/runs/'.length)}`
+      return to
+    }
+    const cases = IA_LEGACY_REDIRECTS.map(({ from, to }) => [sample(from), chainEnd(sample(to))] as [string, string])
     for (const [from, to] of cases) {
       await router.push(from)
       expect(router.currentRoute.value.fullPath, `${from} 应重定向到 ${to}`)
