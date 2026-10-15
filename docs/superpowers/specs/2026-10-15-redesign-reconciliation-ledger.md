@@ -108,9 +108,36 @@
 
 **裁决**：A2 行「设置族不变」细化为 E0-E29——设置并入壳保留，28 项按三设置页重组（治理 18 项/工作台 7 项/推演 3 项+基建 1）。features.ts 构建期开关与运行期偏好的分界维持（settings-layers 注释既定）。
 
+### F. SwarmStudio 原生设置功能逐一盘点（2026-10-16 补扫：components/hermes/settings 17 组件+3 视图+store+服务端分层）
+
+| # | 设置功能 | 实存锚 | 归属设置页 | 依据 |
+|---|---|---|---|---|
+| F1 | DisplaySettings 显示 | settings/DisplaySettings.vue | 工作台·设置 | 个人偏好 |
+| F2 | VoiceSettings 语音（STT/TTS 全族） | VoiceSettings.vue+voice/ 子目录+useVoiceSettings/useSttSettings/useTtsSettingsHydration+api/stt·tts-settings | 工作台·设置 | 个人偏好（语音三件套整体） |
+| F3 | SessionSettings 会话 | SessionSettings.vue | 工作台·设置 | 个人偏好 |
+| F4 | CompressionSettings 压缩 | CompressionSettings.vue | 工作台·设置 | 个人上下文偏好 |
+| F5 | GithubPreviewSettings 预览 | GithubPreviewSettings.vue | 工作台·设置 | 个人偏好 |
+| F6 | ProxySettings 代理 | ProxySettings.vue | 工作台·设置 | 个人环境 |
+| F7 | PrivacySettings 隐私 | PrivacySettings.vue | 工作台·设置 | 个人偏好 |
+| F8 | AccountSettings 我的账号 | AccountSettings.vue | 工作台·设置 | 个人 |
+| F9 | UserManagementSettings 用户管理 | UserManagementSettings.vue | 治理·系统设置·人员 | 治理域「人员」（与 E11/E12 同区） |
+| F10 | ModelSettings 模型 | ModelSettings.vue | 治理·系统设置·成本 | 治理域「成本」（与 E23 同区） |
+| F11 | AgentSettings agent 配置 | AgentSettings.vue | 治理·系统设置·功能 | 治理域「功能」（与 E16 同区） |
+| F12 | MemorySettings 记忆 | MemorySettings.vue | 治理·系统设置·资产 | 治理域「资产」（与 E22 同区） |
+| F13 | PlatformSettings/Card 平台接入 | PlatformSettings.vue+PlatformCard.vue | 治理·系统设置·资产 | 渠道接入（与 E20 同区） |
+| F14 | WebhookSettings webhook | WebhookSettings.vue | 治理·系统设置·流程 | 集成与流程（与 E15 同区） |
+| F15 | GatewayAutoStartSettings 网关自启 | GatewayAutoStartSettings.vue | 治理·系统设置·总 | 系统配置 |
+| F16 | DshPluginSettingsPanel 插件面板 | coding-agents/dsh/DshPluginSettingsPanel.vue | 治理·系统设置·功能 | 治理域「功能」 |
+| F17 | SettingRow 通用行组件 | SettingRow.vue | 三设置页共用基座 | 组件 |
+| F18 | 设置主页/壳 | views/hermes/SettingsView.vue 159 行+HermesSettingsView.vue+ekko/SettingsView.vue | 三设置页分壳（ekko 视图随其域） | 视图重组 |
+| F19 | 设置状态存取 | stores/hermes/settings.ts（display/agent/memory/skills+parse/merge） | 三设置页共用 store | 基建沿用 |
+| F20 | 服务端配置分层 | custom/server/configlayers/config-layers.ts | 治理·系统设置（服务端面） | 与 settings-layers（E29）客户端四层配对 |
+
+**裁决**：设置功能=原生 20 行（F 组）+并入旧族 30 行（E 组）两层合账——同一「三设置页」框架收纳，工作台·设置=F1-F8+E1-E7（个人），治理·系统设置=F9-F16+E8-E27 按六域分组（原生与旧族同域同区合并呈现），推演设置=E28，基座=F17-F20+E0+E29。零双家：E/F 同域条目互指同区不重复建面。
+
 ## 二、反向对账（设计元素 → 登记行）
 
-三中心壳（A1/A9/A13）｜工作台 3 签（B1/B2/B3）｜inbox 扩展（A11+D5）｜推演中心 6 签（D1/D2/A6/D3/C3 摘要/B4/B5/B6+D4）｜治理中心 7 签（C5 拆分+C6/D6·C4·D5·B8·B9·B10-13+C3·A3+B7）｜四角色镜头（D7/D8，四首页=C1/B1/B4-C4 重组）｜IDE 增强（A18+新鲜度=branch_fresh 语义）｜消息存证（A14-17+D3）｜三设置页（E0-E29，治理·系统设置按六域分组=治理域裁定的设置面落点）。**每个设计元素均有登记行依据；D 组九件为唯一合法新增（全部锚定本轮已落地的产品能力，无凭空设计）。**
+三中心壳（A1/A9/A13）｜工作台 3 签（B1/B2/B3）｜inbox 扩展（A11+D5）｜推演中心 6 签（D1/D2/A6/D3/C3 摘要/B4/B5/B6+D4）｜治理中心 7 签（C5 拆分+C6/D6·C4·D5·B8·B9·B10-13+C3·A3+B7）｜四角色镜头（D7/D8，四首页=C1/B1/B4-C4 重组）｜IDE 增强（A18+新鲜度=branch_fresh 语义）｜消息存证（A14-17+D3）｜三设置页（E0-E29+F1-F20 两层合账：studio 原生设置与并入旧族同框架收纳）。**每个设计元素均有登记行依据；D 组九件为唯一合法新增（全部锚定本轮已落地的产品能力，无凭空设计）。**
 
 ## 三、冲突裁决记录
 
