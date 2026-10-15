@@ -92,6 +92,7 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
     try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return [] }
     const boardsDir = join(home(), 'kanban', 'boards')
     const out: Array<Record<string, unknown>> = []
+    const errs: string[] = []
     const q = `SELECT id,title,assignee,status,body,created_at,updated_at FROM tasks WHERE status='ready' OR status='todo'`
     for (const b of boards) {
       let db: InstanceType<typeof DatabaseSync> | null = null
@@ -99,11 +100,11 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
         // 不传 readOnly：本仓 node 版本不接受该选项（抛错→整面恒空）。
         db = new DatabaseSync(join(boardsDir, b, 'kanban.db'))
         for (const r of db.prepare(q).all() as Array<Record<string, unknown>>) out.push({ ...r, board: b })
-      } catch { /* 单板失败不拖垮整面 */ }
+      } catch (e) { errs.push(`${b}:${(e as Error).message.slice(0, 80)}`) }
       finally { try { db?.close() } catch { /* noop */ } }
     }
     // 采集可观测性（run20 批2.2 排查：期望对账 0 触发需采集面证据）
-    console.error(`[clusterinspector] expectedWorkCards 采集: ${out.length} 卡 / ${boards.length} 板`)
+    console.error(`[clusterinspector] expectedWorkCards 采集: ${out.length} 卡 / ${boards.length} 板 / 失败[${errs.length}] ${errs.slice(0, 2).join(' | ')}`)
     return out
   }
 }
