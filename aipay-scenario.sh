@@ -897,6 +897,23 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
           sset security_dispatched 1
           echo "ISSUE|security-review-timeout|secops-agent|V8.28：secops 复审窗口超时未达结论——缺项修订已派上游（产品经理A 组织+4 名应用研发AI），闸不放行，等修订入仓+复审 PASS。锚：aipay-scenario.sh:848-861" >> "$EVID_DIR/issues.log"
         fi
+        # V8.29 hoist 补丁（12:4x 实录：闭环困在 FAIL 分支而流程走缺失分支=自愈死码）：
+        # 缺失分支同样执行复审闭环三件套（修订落地检测/派复审/球位催办）——与 FAIL 分支
+        # 同语义（变量已在 FAIL 分支声明为 local，此处脚本层级直接赋值）
+        _rr_now=$(date +%s)
+        git -C "$DIRECTOR_CLONE" fetch origin main >/dev/null 2>&1 || true
+        _rr_head_h="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
+        if [[ -z "$(sget security_fail_main_head)" ]]; then
+          sset security_fail_main_head "$_rr_head_h"
+          note "[安全] 复审基线锚定（缺失分支路径）origin/main=$_rr_head_h"
+        fi
+        if [[ "$_rr_head_h" != "$(sget security_fail_main_head)" && "$(sget security_rereview_for_head)" != "$_rr_head_h" ]]; then
+          sset security_rereview_for_head "$_rr_head_h"
+          sset security_nudge_rev 0
+          dispatch_in_room secops "@secops-agent:matrix.test 复审派单（闸依赖闭环·缺失分支路径）：概设修订已入 central main（head ${_rr_head_h}）。请复审安全评审卡 ${SGID}：按原卡 14 项 D-1~D-14 逐条核对修订是否闭环，结论行 SECURITY-GATE-PASS 或逐项 FAIL 发房间并更新卡面。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid secops)" || true
+          echo "ISSUE|security-rereview-auto|director|闸依赖闭环（缺失分支路径 V8.29 hoist）：修订 head ${_rr_head_h} 入仓未派复审——驱动亲自派安全工程师AI 复审卡 ${SGID}。闸不放行。" >> "$EVID_DIR/issues.log"
+          note "[安全] 修订 ${_rr_head_h} 已入仓——驱动派安全工程师AI 复审（缺失分支闭环）"
+        fi
         # 闸不放行：driver 在本环继续等复审 PASS（wait_truth 由外层 supervisor 续跑驱动重入）
       fi
     fi
@@ -1101,26 +1118,26 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
-3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
@@ -1157,7 +1174,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。${FRESH_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
@@ -1284,12 +1301,54 @@ fi
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # 段界锚：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
-  # 导演把三个后端分支+前端分支合入 integration 分支（模拟集成分支策略）
-  # 分支状态机约定：本步起 HEAD 切到 integration/${RFD_ID} 并常驻（后续步骤用显式
-  # ref 或临时 worktree 访问仓，不看 HEAD）；凡要进 origin/main 的提交一律走
-  # repo_commit_main()（mx-scenario-lib：临时 worktree 基于 origin/main 提交该文件并
-  # push，不切分支、不动 HEAD/local main、无 rebase）。
+  # ── V8.30 职责归位（2026-10-15 用户裁定）：评审+合并＝域 lead 职权（wei 后端域、
+  # mei 前端域），PM 不合并不评审代码（run12「fanfan 合并高速路」边界重申）；导演只做
+  # 真值验收（git 祖先链反查，lead 自报不算数）与超时补棒兜底（代偿记单进 issues.log）。
+  # 正本 §2.4 16b 操作者行/待收紧面 19 同步收账（演进目标「合并回归组织侧」落地件）。
+  # 分支状态机约定不变：本步起 HEAD 常驻 integration/${RFD_ID}（后续步骤用显式 ref 或
+  # 临时 worktree 访问仓）；凡要进 origin/main 的提交一律走 repo_commit_main()。
   repo_pull
+  _be_branches="DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI"
+  _fe_branches="DEV-MP"
+  _integration_truth() { # <branch...>：origin/integration 在且包含各在场 feat tip（缺席分支=记单放行语义不阻真值）
+    git -C "$DIRECTOR_CLONE" fetch -q origin >/dev/null 2>&1 || true
+    git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1 || return 1
+    local _itb
+    for _itb in "$@"; do
+      if git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/feat/$_itb" >/dev/null 2>&1; then
+        git -C "$DIRECTOR_CLONE" merge-base --is-ancestor "origin/feat/$_itb" "origin/integration/${RFD_ID}" 2>/dev/null || return 1
+      fi
+    done
+    return 0
+  }
+  if [[ -z "$(sget lead_merge_be_dispatched)" ]]; then
+    dispatch_in_room wei "@wei-agent:matrix.test 集成合并任务 INT-MERGE-BE-${RFD_ID}（后端域 lead 职权：评审+合并一条责任链；非 PM、非导演代做）：
+1) 工作区 $(workspace wei) 拉取后：基线=origin/integration/${RFD_ID}（无则 origin/main），checkout -B integration/${RFD_ID}
+2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（push 缺席的分支记单跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并记单不中止
+3) 旧基线头须仍是 HEAD 祖先（丢线=记单）；禁强推；push -u origin integration/${RFD_ID}
+结论行 INT-MERGE-BE-DONE-${RFD_ID}（行首，附已合分支与缺席分支清单）。不许谎报。" "$(agent_mxid wei)" && sset lead_merge_be_dispatched 1
+  fi
+  MX_ALIVE_HARD_SEC=2700 wait_alive_truth "lead 后端域集成合并（wei，真值=祖先链反查）" 900 wei _integration_truth $_be_branches || {
+    note "[集成] lead 后端域合并超时/未达真值——导演补棒代行（代偿记单）"
+    echo "ISSUE|lead-merge-fallback|wei|lead 后端域集成超时或真值未达，导演代行合并（V8.30 职责归位兜底路径）" >> "$EVID_DIR/issues.log"
+    sset lead_merge_fallback 1
+  }
+  if [[ -z "$(sget lead_merge_fallback)" && -z "$(sget lead_merge_fe_dispatched)" ]]; then
+    dispatch_in_room mei "@mei-agent:matrix.test 集成合并任务 INT-MERGE-FE-${RFD_ID}（前端域 lead 职权：评审+合并；串行在后端域之后防同分支推挤）：
+1) 工作区 $(workspace mei) 拉取后：基线=origin/integration/${RFD_ID}，checkout -B integration/${RFD_ID}
+2) 评审后合并 origin/feat/DEV-MP（push 缺席则记单跳过）：merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本，其余 abort 记单
+3) 禁强推；push -u origin integration/${RFD_ID}
+结论行 INT-MERGE-FE-DONE-${RFD_ID}（行首）。不许谎报。" "$(agent_mxid mei)" && sset lead_merge_fe_dispatched 1
+  fi
+  if [[ -z "$(sget lead_merge_fallback)" ]]; then
+    MX_ALIVE_HARD_SEC=2700 wait_alive_truth "lead 前端域集成合并（mei，真值=祖先链反查）" 900 mei _integration_truth $_be_branches $_fe_branches || {
+      note "[集成] lead 前端域合并超时/未达真值——导演补棒代行（代偿记单）"
+      echo "ISSUE|lead-merge-fallback|mei|lead 前端域集成超时或真值未达，导演代行合并（V8.30 兜底）" >> "$EVID_DIR/issues.log"
+      sset lead_merge_fallback 1
+    }
+  fi
+  if [[ -n "$(sget lead_merge_fallback)" ]]; then
+    # 兜底路径＝原导演合并块原样保留（V8.30 起仅作 lead 超时的补棒通道，代偿已记单）
   ( cd "$DIRECTOR_CLONE"
     # 未跟踪副本防撞（Z1 修复回归面）：repo_commit_main 只推远端、文档副本留存工作树，
     # 而 checkout 拒绝覆盖 origin/main 已跟踪的同名未跟踪文件（内容相同也拒，实测）。
@@ -1376,6 +1435,9 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     note "[集成] integration/${RFD_ID} 四开发分支已合并并推送 ✓（origin 可反查）"
   else
     note "[集成] integration/${RFD_ID} 本地合并完成、推送未达（已记问题单，见 issues.log）"
+  fi
+  else
+    note "[集成] integration/${RFD_ID} lead 双域评审合并完成 ✓（git 祖先链反查真值；导演零 git 合并操作）"
   fi
 
   # ── 契约执行观察（run15 前置 P4-10，影子模式：产物落 evidence+报告透传，不进
