@@ -1,0 +1,27 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index d5e689ca2..7f49a2d5d 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -147,6 +147,11 @@ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clust
+ // 缺席=503 fail-closed）——生产不开 env 即关。631 挂载。
+ import { humansimRouter } from '../custom/humansim/humansim-controller'
+ import { observabilityRouter } from '../custom/observability/observability-controller'
++// overlay[autosched+orgloop]（PR-5/6/7 组织回路面）：排期产品源（/api/hermes/autosched/
++// schedule——dispatch-preset 代偿退役路径）+闸修复状态机与受控合并流水线（/api/hermes/
++// orgloop/*——run20 G2 悬置与导演代合并的产品正身；ORGLOOP_REPO_ROOT 缺席=503）。636 挂载。
++import { autoschedRouter } from '../custom/autosched/schedule-generator'
++import { orgloopRouter } from '../custom/orgloop/orgloop-controller'
+ // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
+ // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
+ // 挂载（悬空件），606 补登。
+@@ -472,7 +477,9 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
+   app.use(humansimRouter.routes())                // 人类模拟：受控发送+审计（PR-0①，env fail-closed）
+-  app.use(observabilityRouter.routes())           // 可观测性：run-state 只读查询（PR-0②，env fail-closed）
++  app.use(observabilityRouter.routes())
++  app.use(autoschedRouter.routes())                   // 排期生成：PR-7 产品源（无状态纯计算）
++  app.use(orgloopRouter.routes())                     // 组织回路：PR-5 闸修复状态机 + PR-6 受控合并           // 可观测性：run-state 只读查询（PR-0②，env fail-closed）
+   app.use(runtimeVerifyRoutes.routes())           // runtime-verify：验证器注册表 REST（B5）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run

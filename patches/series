@@ -760,3 +760,11 @@
 # call 行）。只读不唤醒（唤醒走 gateway.wake 既有通道）；harness sleep-wakeup
 # 代偿的退役路径。
 635-agent-sleeping-workers-probe.patch
+
+
+# [636] PR-5/6/7 组织回路面挂载（V8.29 治理轮收尾批）：autosched 排期产品源
+# （POST /api/hermes/autosched/schedule，PR-7 dispatch-preset 退役路径）+ orgloop
+# 闸修复状态机（gate-repair CRUD+迁移合法性，PR-5 run20 G2 悬置根治面）与受控
+# 合并流水线（merge-run，PR-6；ORGLOOP_REPO_ROOT fail-closed）。控制器与 17 断言
+# 单测随本批在 custom/server/；基线=注入态（631 之后锚定，反向校验过）。
+636-server-autosched-orgloop-routes.patch
