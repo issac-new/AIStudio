@@ -35,6 +35,8 @@ export interface InspectorDeps {
   getUnassignedCards?: () => Promise<Array<Record<string, unknown>>>
   /** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录产品化） */
   getExpectedWorkCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 执行面探测接线（runtime.spawn-health 面，run20 00:30 瘫痪实录） */
+  getSpawnHealth?: () => { ok: boolean; detail: string }
   /** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成） */
   getDeliveryBranchIntel?: () => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
@@ -460,6 +462,9 @@ export class ClusterInspector {
           expectedWorkCards = { ok: false, error: (e as Error).message, cards: [] }
         }
       }
+      // 执行面健康面（runtime.spawn-health）：未接线=合法空态
+      let spawnHealth: { ok: boolean; detail: string } | undefined
+      if (this.deps.getSpawnHealth) { try { spawnHealth = this.deps.getSpawnHealth() } catch { spawnHealth = { ok: false, detail: 'probe-error' } } }
       // 交付分支推送情报面（delivery.pushed）：未接线=合法空态
       let deliveryBranchIntel: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> | undefined
       if (this.deps.getDeliveryBranchIntel) {
@@ -477,6 +482,7 @@ export class ClusterInspector {
         unassignedCards,
         expectedWorkCards,
         deliveryBranchIntel: deliveryBranchIntel as unknown as ClusterSnapshot['deliveryBranchIntel'],
+        spawnHealth: spawnHealth as unknown as ClusterSnapshot['spawnHealth'],
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },

@@ -427,6 +427,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectUnassignedStale(snap, opts),
     ...detectCardBodyEmpty(snap, opts),
     ...detectDeliveryPushed(snap, opts),
+    ...detectSpawnHealth(snap, opts),
     ...detectWorkExpectedSilent(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
@@ -661,4 +662,20 @@ export function detectDeliveryPushed(snap: ClusterSnapshot, _opts: DetectOptions
     })
   }
   return out
+}
+
+/** ── 执行面健康（run20 00:30 瘫痪 1.5h 全绿假象根治）──
+ *  `runtime.spawn-health`：worker spawn 通道文件级检测——wrapper 指向的 python
+ *  存在且 anthropic+mautrix 可 import。宿主升级拆 venv 时所有监控面全绿唯独
+ *  spawn 死，本检测器补这个盲区。数据源=控制器注入 spawnHealthProbe（fail-soft
+ *  未接线=合法空态）。 */
+export function detectSpawnHealth(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
+  const probe = (snap as ClusterSnapshot & { spawnHealth?: { ok: boolean; detail: string } }).spawnHealth
+  if (!probe || probe.ok) return []
+  return [{
+    detector: 'runtime.spawn-health', subject: 'runtime:spawn',
+    severity: 'high',
+    summary: `执行面瘫痪：worker spawn 通道不可用——${probe.detail}。泵/催办全部无效（消息能收会话起不来），立即修 venv（多候选探测见 bin/hermes-sim 报错行修法）`,
+    detail: probe,
+  }]
 }
