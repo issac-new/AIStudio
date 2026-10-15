@@ -1,0 +1,133 @@
+diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
+index 442bc64ad9..87de5869da 100644
+--- a/hermes_cli/kanban.py
++++ b/hermes_cli/kanban.py
+@@ -626,6 +626,33 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
+     return by
+ 
+ 
++def _cmd_sleeping_workers(args: argparse.Namespace) -> int:
++    """PR-3（V8.29 治理轮）：休眠工作者探针——running 卡 assignee 真做静默超阈清单。
++    只读不唤醒（唤醒走 gateway.wake 既有通道与所有权检查）。"""
++    import contextlib
++    import json as _json
++    from hermes_cli.kanban_sleeping import sleeping_workers
++    conn = None
++    try:
++        from hermes_cli import kanban_db_connect as _kdc
++        conn = _kdc.connect()
++        running = conn.execute(
++            "SELECT id, assignee FROM tasks WHERE status='running'").fetchall()
++        rows = sleeping_workers(
++            [{"id": r[0], "assignee": r[1]} for r in running],
++            idle_sec=getattr(args, "idle_sec", 1800) or 1800)
++        print(_json.dumps({"idle_sec": getattr(args, "idle_sec", 1800), "sleeping": rows},
++                          ensure_ascii=False, indent=1))
++        return 0
++    except Exception as exc:
++        print(_json.dumps({"error": str(exc)}))
++        return 1
++    finally:
++        if conn is not None:
++            with contextlib.suppress(Exception):
++                conn.close()
++
++
+ def _cmd_selfcheck(args: argparse.Namespace) -> int:
+     """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
+     三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
+diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
+index a5ba663498..dee4aa64be 100644
+--- a/hermes_cli/kanban_parser.py
++++ b/hermes_cli/kanban_parser.py
+@@ -265,6 +265,10 @@ _SPECS = [
+              help="Release any active claim before reassigning (required if task is running)"),
+         _RECLAIM_REASON,
+     ], help="Reassign a task to a different profile, optionally reclaiming first"),
++    _cmd("sleeping-workers", [
++        _arg("--idle-sec", type=int, default=1800,
++             help="Idle threshold in seconds (default 1800 = 30min)"),
++    ], help="List running-card assignees with no real work beyond threshold (PR-3 probe; read-only)"),
+     _cmd("selfcheck", [
+     ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
+     _cmd("diagnostics", [
+diff --git a/hermes_cli/kanban_sleeping.py b/hermes_cli/kanban_sleeping.py
+new file mode 100644
+index 0000000000..38c7a0c404
+--- /dev/null
++++ b/hermes_cli/kanban_sleeping.py
+@@ -0,0 +1,74 @@
++"""Sleeping-workers probe (PR-3 minimal face, V8.29 governance round).
++
++run14/run19/run20 root cause: after ``Turn ended`` a room mention only triggers
++reaction pseudo-activity — real-work detection existed only in the simulation
++harness (mx-hb/_realwork_ts). This module moves the probe INTO the product so
++the harness compensation (sleep-wakeup) can retire. Read-only: it never wakes
++anyone; waking stays with the existing ``gateway.wake`` path and its ownership
++checks.
++
++Real-work line = last ``tool <name> completed`` or ``API call #<n>`` line in
++the profile agent.log — the same evidence the harness used (2026-10-15).
++"""
++
++from __future__ import annotations
++
++import os
++import re
++import time
++from pathlib import Path
++
++_REALWORK_RE = re.compile(r"tool [a-z_]+ completed|API call #[2-9][0-9]* ")
++
++
++def _profile_root() -> Path:
++    root = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes/hermes-agent")
++    return Path(root) / "profiles"
++
++
++def _last_realwork_ts(profile: str) -> float:
++    log = _profile_root() / profile / "logs" / "agent.log"
++    if not log.is_file():
++        return 0.0
++    last = ""
++    try:
++        with log.open("r", encoding="utf-8", errors="replace") as fh:
++            for line in fh:
++                if _REALWORK_RE.search(line):
++                    last = line
++    except Exception:
++        return 0.0
++    if not last:
++        return 0.0
++    try:
++        import datetime as _dt
++        ts = _dt.datetime.strptime(last[:19], "%Y-%m-%d %H:%M:%S")
++        return ts.timestamp()
++    except Exception:
++        return 0.0
++
++
++def sleeping_workers(running_tasks: list[dict], *, idle_sec: int = 1800) -> list[dict]:
++    """Given running kanban tasks (``[{"id","assignee",...}]``), return the subset whose
++    assignee profile shows no real work for ``idle_sec`` (default 30min). One row per
++    assignee: ``{"assignee", "idle_sec", "cards", "last_realwork_ts"}``. Profiles whose
++    log is absent/unreadable report ``last_realwork_ts=None`` with ``"unknown": True``
++    — never silently dropped."""
++    now = time.time()
++    by_assignee: dict[str, list[str]] = {}
++    for t in running_tasks or []:
++        who = (t.get("assignee") or "").strip()
++        if who:
++            by_assignee.setdefault(who, []).append(str(t.get("id") or "?"))
++    out: list[dict] = []
++    for who, cards in by_assignee.items():
++        lw = _last_realwork_ts(who)
++        if lw <= 0:
++            out.append({"assignee": who, "cards": cards, "idle_sec": None,
++                        "last_realwork_ts": None, "unknown": True})
++            continue
++        idle = now - lw
++        if idle >= idle_sec:
++            out.append({"assignee": who, "cards": cards, "idle_sec": round(idle),
++                        "last_realwork_ts": lw, "unknown": False})
++    return out

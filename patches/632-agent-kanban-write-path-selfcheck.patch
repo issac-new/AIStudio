@@ -1,0 +1,110 @@
+diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
+index e1c36a8111..442bc64ad9 100644
+--- a/hermes_cli/kanban.py
++++ b/hermes_cli/kanban.py
+@@ -626,6 +626,15 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
+     return by
+ 
+ 
++def _cmd_selfcheck(args: argparse.Namespace) -> int:
++    """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
++    三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
++    from hermes_cli.kanban_db import write_path_selfcheck
++    report = write_path_selfcheck(board=getattr(args, "board", None))
++    _print_json(report)
++    return 0 if report.get("ok") else 1
++
++
+ def _cmd_diagnostics(args: argparse.Namespace) -> int:
+     """List active diagnostics on the board via the same rule engine the dashboard uses."""
+     from hermes_cli import kanban_diagnostics as kd
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index 0e2b4e51d1..a61857789d 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -4255,3 +4255,72 @@ from hermes_cli.kanban_db_dispatch import (
+     _worker_survived_termination,
+     _worker_terminal_timeout_env,
+ )
++
++
++# ── 写路径启动自检（PR-4，V8.29 治理轮；run14 实锤：判词进群不进卡，根因=写闸
++#    UDF 未随连接注册）。供 `hermes kanban selfcheck`（kanban.py _cmd_selfcheck）
++#    与网关启动诊断调用；只读探测，不写任何业务数据。──
++def write_path_selfcheck(board: str | None = None) -> dict:
++    """三面探测：①sanctioned UDF 可注册且返回 1（本进程非委托子进程）②守卫触发器
++    在全部受护表在位（sqlite_master 查询）③裸连接（无 UDF）的 UPDATE 在 prepare
++    阶段被拒（fail-closed 证明——"no such function" 即设计语义）。任一面失败即
++    返回 ok=False 与明细，调用方据此 fail-fast 或告警。"""
++    import sqlite3 as _sq
++    from hermes_cli import kanban_db_connect as _kdc
++    report: dict = {"ok": True, "board": board, "checks": {}}
++    conn = None
++    try:
++        conn = _kdc.connect(board=board) if board is not None else _kdc.connect()
++    except Exception as exc:
++        return {"ok": False, "board": board, "error": f"connect failed: {exc}"}
++    try:
++        try:
++            register_write_sanction_udf(conn)
++            val = conn.execute("SELECT kanban_write_sanctioned()").fetchone()[0]
++            report["checks"]["udf_registers"] = {"ok": True, "value": val}
++        except Exception as exc:
++            report["checks"]["udf_registers"] = {"ok": False, "error": str(exc)}
++            report["ok"] = False
++        missing: list[str] = []
++        try:
++            names = {r[0] for r in conn.execute(
++                "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
++            for _tbl in _GUARDRAIL_TABLES:
++                if f"kanban_guard_{_tbl}_update" not in names:
++                    missing.append(_tbl)
++            report["checks"]["guard_triggers"] = {
++                "ok": not missing, "missing_tables": missing,
++                "note": "缺表=该板未装守卫触发器（607 未覆盖或旧库）"}
++            if missing:
++                report["ok"] = False
++        except Exception as exc:
++            report["checks"]["guard_triggers"] = {"ok": False, "error": str(exc)}
++            report["ok"] = False
++        try:
++            db_path = None
++            row = conn.execute("PRAGMA database_list").fetchone()
++            if row and len(row) > 2:
++                db_path = row[2]
++            if db_path:
++                bare = _sq.connect(db_path)
++                try:
++                    bare.execute("UPDATE tasks SET title=title WHERE 1=0")
++                    report["checks"]["bare_conn_rejected"] = {
++                        "ok": False, "error": "bare connection UPDATE prepared (guard NOT fail-closed)"}
++                    report["ok"] = False
++                except _sq.Error:
++                    report["checks"]["bare_conn_rejected"] = {
++                        "ok": True, "note": "prepare rejected on bare conn (fail-closed holds)"}
++                finally:
++                    bare.close()
++            else:
++                report["checks"]["bare_conn_rejected"] = {"ok": True, "note": "db path unavailable; skipped"}
++        except Exception as exc:
++            report["checks"]["bare_conn_rejected"] = {"ok": False, "error": str(exc)}
++            report["ok"] = False
++    finally:
++        try:
++            conn.close()
++        except Exception:
++            pass
++    return report
+diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
+index 8a65d41346..a5ba663498 100644
+--- a/hermes_cli/kanban_parser.py
++++ b/hermes_cli/kanban_parser.py
+@@ -265,6 +265,8 @@ _SPECS = [
+              help="Release any active claim before reassigning (required if task is running)"),
+         _RECLAIM_REASON,
+     ], help="Reassign a task to a different profile, optionally reclaiming first"),
++    _cmd("selfcheck", [
++    ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
+     _cmd("diagnostics", [
+         _arg("--severity", choices=["warning", "error", "critical"],
+              help="Only show diagnostics at or above this severity"),

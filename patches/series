@@ -738,3 +738,25 @@
 # （同 402/582 模式）。fail-closed：HUMANSIM_CREDS_DIR/OBS_SIM_ROOT 缺席即 503，
 # 生产不开 env 即关。控制器与纯函数单测随 db1b764d 已在；本补丁为 B 类挂载件。
 631-server-humansim-observability-routes.patch
+
+# [632] PR-4 看板写路径启动自检（V8.29 治理轮，用户裁定 A 口径全做，2026-10-15）：
+# `hermes kanban selfcheck` 三面探测——sanctioned UDF 注册/守卫触发器在位/裸连接
+# prepare 被拒（fail-closed 证明）。run14「判词进群不进卡」（UDF 未随连接注册）的
+# 防复发件；任一面失败非零退出，供启动 fail-fast 与 prelaunch 消费。
+632-agent-kanban-write-path-selfcheck.patch
+
+# [633] PR-2 审批超时升级环（run16 修复链饿死根治）：approvals.timeout_action=
+# escalate（缺省 expire 保持现行）时，待批令超时不再静默失效——重发待批卡再等，
+# 至多 approvals.escalate_rounds 轮（缺省 2）；approval_escalated 钩子供观察。
+633-agent-approval-timeout-escalate.patch
+
+# [634] PR-1 派发器健康面（最小面）：tick 记账+dispatcher_health_snapshot() 只读
+# 快照+连续零孵化报警（DISPATCHER_STALL_ALARM_TICKS 缺省 60）。run12/19 卡死根因
+# 未明——先让病可见；根治待数据面开展，本补丁不自动动队列。
+634-agent-dispatcher-health-face.patch
+
+# [635] PR-3 休眠工作者探针（最小面）：`hermes kanban sleeping-workers` ——running
+# 卡 assignee 真做静默超阈清单（判据与 harness 同源：agent.log tool completed/API
+# call 行）。只读不唤醒（唤醒走 gateway.wake 既有通道）；harness sleep-wakeup
+# 代偿的退役路径。
+635-agent-sleeping-workers-probe.patch
