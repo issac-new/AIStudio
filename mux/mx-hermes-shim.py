@@ -59,6 +59,11 @@ def main():
     argv = sys.argv[1:]
     if len(argv) >= 2 and argv[0] == "kanban" and argv[1] == "list" and "--board" not in argv:
         return boardless_list(argv[2:])
+    # 无板 diagnostics：真 CLI 返回空串（巡检官轮内 JSON.parse 炸环实录 12:55）——
+    # 拦截归一为合法空数组（历史健康态=ok true n 0 同型）
+    if len(argv) >= 2 and argv[0] == "kanban" and argv[1] in ("diagnostics", "diag") and "--board" not in argv:
+        sys.stdout.write("[]\n")
+        return 0
     sys.exit(subprocess.run([REAL] + argv).returncode)
 
 if __name__ == "__main__":
