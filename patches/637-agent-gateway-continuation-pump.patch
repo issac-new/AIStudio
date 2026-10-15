@@ -1,0 +1,128 @@
+diff --git a/gateway/kanban_watchers.py b/gateway/kanban_watchers.py
+index 0d2a8322..34b81e25 100644
+--- a/gateway/kanban_watchers.py
++++ b/gateway/kanban_watchers.py
+@@ -327,6 +327,123 @@ class GatewayKanbanWatchersMixin:
+             except Exception:
+                 logger.exception("kanban dispatcher: unexpected watcher error")
+ 
++            # run20 静默根治（V8.35）：续作泵——静默>3min 且名下有未完卡 → 自动发续作令
++            try:
++                _continuation_guard_tick(logger)
++            except Exception:
++                logger.debug("continuation guard failed", exc_info=True)
++
+             await self._sleep_between_ticks(interval)
+ 
+         self._release_kanban_dispatcher_lock()
++
++_CONT_GUARD_QUIET_S = 180
++_CONT_GUARD_THROTTLE_S = 600
++_cont_guard_last: "dict[str, float]" = {}
++
++
++def _cont_guard_real_work_ts(profile_home_logs: str) -> float:
++    """profile agent.log 尾部最后真做行（tool completed 或 #N>=2 调用）本地时间戳，0=无。"""
++    import os as _os
++    import re as _re
++    log = _os.path.join(profile_home_logs, "agent.log")
++    try:
++        import io as _io
++        size = _os.path.getsize(log)
++        with open(log, "rb") as _f:
++            _f.seek(max(0, size - 65536))
++            tail = _f.read().decode("utf-8", "ignore")
++    except OSError:
++        return 0.0
++    _rw = _re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*):)")
++    import datetime as _dt
++    for _line in reversed(tail.splitlines()):
++        _m = _rw.match(_line)
++        if _m:
++            try:
++                return _dt.datetime.strptime(_m.group(1), "%Y-%m-%d %H:%M:%S").timestamp()
++            except ValueError:
++                return 0.0
++    return 0.0
++
++
++def _cont_guard_open_cards(home: str, profile: str) -> "list[str]":
++    """该 profile 名下未完卡（ready/todo/running），读各板 kanban.db（node:sqlite 不在，用 sqlite3 标准库）。"""
++    import sqlite3 as _s3
++    import glob as _glob
++    import os as _os
++    cards: "list[str]" = []
++    for db in _glob.glob(_os.path.join(home, "kanban", "boards", "*", "kanban.db")):
++        try:
++            _con = _s3.connect("file:%s?mode=ro" % db, uri=True, timeout=2)
++            try:
++                for (cid,) in _con.execute(
++                    "SELECT id FROM tasks WHERE status IN ('ready','todo','running') AND assignee LIKE ?",
++                    ("%" + profile + "%",),
++                ).fetchall():
++                    cards.append(str(cid))
++            finally:
++                _con.close()
++        except Exception:
++            continue
++    return cards
++
++
++def _continuation_guard_tick(logger) -> None:
++    """续作泵（run20 2026-10-15 五波静默实录根治）：dispatcher 每 tick 调用——
++    真做静默超阈且名下有未完卡 → 经 synapse 裸发续作令（fanfan 凭据，SIM 布局
++    <sim>/creds/fanfan.token），每 profile 节流 10min。卡翻 done 后自然停泵。
++    HERMES_CONT_GUARD=off 旁路；全部 fail-soft（凭据缺失/网络失败只 debug 日志）。"""
++    import os as _os
++    import time as _time
++    import json as _json
++    import urllib.request as _rq
++    if _os.environ.get("HERMES_CONT_GUARD") == "off":
++        return
++    home = _os.environ.get("HERMES_HOME") or _os.path.expanduser("~/.hermes")
++    sim_root = _os.path.dirname(_os.path.normpath(home))
++    token_file = _os.path.join(sim_root, "creds", "fanfan.token")
++    room = _os.environ.get("MX_CONT_GUARD_ROOM") or "!tDKINzVMrNVavKvLOF:matrix.test"
++    try:
++        token = open(token_file).read().splitlines()[0].strip()
++    except OSError:
++        return
++    now = _time.time()
++    import glob as _glob
++    prof_root = _os.path.join(home, "profiles")
++    for pdir in sorted(_os.listdir(prof_root))[:60]:
++        logs_dir = _os.path.join(prof_root, pdir, "logs")
++        if not _os.path.isdir(logs_dir):
++            continue
++        if pdir in ("default", "orchestrator", "admin", "audit", "arch", "bella", "secops", "fanfan"):
++            continue  # 只泵执行工人；管理/评审档案另管
++        last = _cont_guard_last.get(pdir)
++        if last and now - last < _CONT_GUARD_THROTTLE_S:
++            continue
++        ts = _cont_guard_real_work_ts(logs_dir)
++        if not ts or now - ts < _CONT_GUARD_QUIET_S:
++            continue
++        cards = _cont_guard_open_cards(home, pdir)
++        if not cards:
++            continue
++        body = (
++            "@%s-agent 续作令（网关续作泵）：你有 %d 张未完任务卡（%s）。继续做，"
++            "直到群内回一行结论（完成→DONE+锚 / 被卡→BLOCKED+原因）。只回话不动手不算完成，"
++            "泵会每 10 分钟继续催。" % (pdir, len(cards), "、".join(cards[:3]))
++        )
++        try:
++            req = _rq.Request(
++                "http://127.0.0.1:8008/_matrix/client/v3/rooms/%s/send/m.room.message?access_token=%s" % (room, token),
++                data=_json.dumps({
++                    "msgtype": "m.text", "body": body,
++                    "m.mentions": {"user_ids": ["@%s-agent:matrix.test" % pdir]},
++                }).encode(),
++                headers={"content-type": "application/json"},
++                method="POST",
++            )
++            with _rq.urlopen(req, timeout=10) as resp:
++                if resp.status == 200:
++                    _cont_guard_last[pdir] = now
++                    logger.info("cont-guard: nudged %s (%d open cards, silent %ds)", pdir, len(cards), int(now - ts))
++        except Exception:
++            continue
