@@ -102,6 +102,8 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
       } catch { /* 单板失败不拖垮整面 */ }
       finally { try { db?.close() } catch { /* noop */ } }
     }
+    // 采集可观测性（run20 批2.2 排查：期望对账 0 触发需采集面证据）
+    console.error(`[clusterinspector] expectedWorkCards 采集: ${out.length} 卡 / ${boards.length} 板`)
     return out
   }
 }
@@ -148,7 +150,36 @@ function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; mach
   }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
+/** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成）：CLUSTER_INSPECTOR_NUDGE_REPO
+ *  仓内 refs/heads/feat/* 本地 tip vs origin 同名 tip 比对——本地新于 origin（或 origin
+ *  缺席）=未推送，owner 取该 tip 的 commit author 名（fail-soft）。git 失败=空数组。 */
+function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>) | undefined {
+  const repo = process.env.CLUSTER_INSPECTOR_NUDGE_REPO
+  if (!repo) return undefined
+  const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+  const git = (args: string[]): string => {
+    return execFileSync('git', ['-C', repo, ...args], { timeout: 10_000, encoding: 'utf-8' }) as string
+  }
+  return async () => {
+    try {
+      const local = git(['for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads/feat/']).trim().split('\n').filter(Boolean)
+      if (local.length === 0) return []
+      const out: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> = []
+      for (const line of local) {
+        const [branch, tip] = line.split(' ')
+        if (!branch || !tip) continue
+        let originTip = ''
+        try { originTip = git(['rev-parse', `origin/${branch}`]).trim() } catch { originTip = '' }
+        if (originTip === tip) continue // 已推（含同步）
+        const author = (() => { try { return git(['log', '-1', '--format=%an', tip]).trim() } catch { return '' } })()
+        out.push({ branch, localTip: tip, originTip, pushed: false, profile: author })
+      }
+      return out
+    } catch { return [] }
+  }
+}
+
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun

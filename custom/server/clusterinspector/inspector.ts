@@ -35,6 +35,8 @@ export interface InspectorDeps {
   getUnassignedCards?: () => Promise<Array<Record<string, unknown>>>
   /** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录产品化） */
   getExpectedWorkCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成） */
+  getDeliveryBranchIntel?: () => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
   getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
@@ -174,9 +176,11 @@ export class ClusterInspector {
       if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent'
         && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale'
         && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale'
-        && a.detector !== 'work.expected-silent') continue  // run20 期望对账：群消息派活形态唯一可见锚
-      const profile = (a.detail as { assignee?: string } | undefined)?.assignee?.trim()
-        || a.subject.replace(/^profile:/, '')
+        && a.detector !== 'work.expected-silent'   // run20 期望对账：群消息派活形态唯一可见锚
+        && a.detector !== 'delivery.pushed') continue  // V8.33 持续集成：未推分支催 push
+      const profile = (a.detail as { assignee?: string; profile?: string } | undefined)?.assignee?.trim()
+        || (a.detail as { profile?: string } | undefined)?.profile?.trim()
+        || a.subject.replace(/^profile:/, '').replace(/^branch:/, '')
       // 降级先于熔断判（负责人有活跃熵增风险时不喂新活——领卡督办抑制；此语义
       // 优先于 idle.with-work 自身指纹的熔断，动作记 nudge-degrade 更可读）
       if (a.detector === 'idle.with-work' && degraded.has(profile)) {
@@ -456,6 +460,11 @@ export class ClusterInspector {
           expectedWorkCards = { ok: false, error: (e as Error).message, cards: [] }
         }
       }
+      // 交付分支推送情报面（delivery.pushed）：未接线=合法空态
+      let deliveryBranchIntel: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> | undefined
+      if (this.deps.getDeliveryBranchIntel) {
+        try { deliveryBranchIntel = await this.deps.getDeliveryBranchIntel() } catch { deliveryBranchIntel = [] }
+      }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -467,6 +476,7 @@ export class ClusterInspector {
         failedVerdictCards,
         unassignedCards,
         expectedWorkCards,
+        deliveryBranchIntel: deliveryBranchIntel as unknown as ClusterSnapshot['deliveryBranchIntel'],
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
