@@ -109,8 +109,15 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
   }
 }
 
-// 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
-export { startInspectorIfEnabled } from './inspector'
+// 巡检环启动入口（routes.ts 挂载点 import 自本控制器——单一挂载面）。
+// 包装：bootstrap 只认 startInspectorIfEnabled 这个名字，pipeline 引擎挂在这里连带启动
+// （PIPELINE=off 旁路；触发开关 PIPELINE_TRIGGER 独立，默认 off 只报状态）。
+export function startInspectorIfEnabled(): void {
+  require('./inspector').startInspectorIfEnabled()
+  const { pipelineEngine } = require('../pipeline/pipeline-engine') as typeof import('../pipeline/pipeline-engine')
+  const { startPipelineIfEnabled } = require('../pipeline/pipeline-controller') as typeof import('../pipeline/pipeline-controller')
+  startPipelineIfEnabled(pipelineEngine)
+}
 
 /** 阻塞卡接线（card.blocked-stale 检测面，run19 G5 熔断死等产品化——用户 300s 时限）：CLI 桥 list --status blocked，fail-soft。 */
 function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
@@ -130,6 +137,10 @@ function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>)
 
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
+  // 持续流水线 v1（V8.33 四持续产品化）：子路由挂巡检官前缀下，零 upstream patch
+  const { pipelineEngine } = require('../pipeline/pipeline-engine') as typeof import('../pipeline/pipeline-engine')
+  const { createPipelineRouter, startPipelineIfEnabled } = require('../pipeline/pipeline-controller') as typeof import('../pipeline/pipeline-controller')
+  router.use(createPipelineRouter(pipelineEngine).routes())
   // 联邦注册表快照（D8 跨机静默观测面）：读进度联邦注册表（有界内存快照，零 IO）。
 function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }) | undefined {
   try {
