@@ -385,6 +385,25 @@ export function detectUnassignedStale(snap: ClusterSnapshot, opts: DetectOptions
   return out
 }
 
+/** card.body-empty：在办卡正文空检测（fcd06993 配套实现——派单后卡无正文，
+ *  研发 AI 拿到的是没正文的空壳卡；只查 runningCards 面：未认领开放卡的
+ *  body 草稿允许待补，派单动作（dispatch body 生成器）负责落正文）。 */
+export function detectCardBodyEmpty(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
+  const out: Anomaly[] = []
+  const face = snap.runningCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const body = typeof c.body === 'string' ? c.body.trim() : ''
+    if (body) continue
+    out.push({
+      detector: 'card.body-empty', subject: `card:${c.id}`,
+      severity: 'warn',
+      summary: `在办卡正文为空：卡 ${c.title ?? c.id}（${c.status ?? 'running'}）已派 ${c.assignee ?? '?'} 但 body 无内容——研发 AI 拿到没正文的空壳卡，产出无从对题。请补写正文或回退派单`,
+      detail: { cardId: c.id, title: c.title, status: c.status, assignee: c.assignee },
+    })
+  }
+  return out
+}
 
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
@@ -407,7 +426,6 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectReviewFailStall(snap, opts),
     ...detectUnassignedStale(snap, opts),
     ...detectCardBodyEmpty(snap, opts),
->>>>>>> ce5cee6 (feat(inspector): unassigned-stale 未认领卡老化检测器（run20 r3 派单断棒实录产品化，昨晚 8802 换装遗留物化）)
   ]
   return [...base, ...detectStorm(base, opts)]
 }
