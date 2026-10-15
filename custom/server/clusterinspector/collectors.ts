@@ -324,9 +324,9 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
             const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9])/)
             // 尾部回扫=首个命中即最新；已赋值不得覆写（旧日志无真做行时继续扫
             // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误催办）。
-            if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T') + 'Z') || Date.parse(rw[1]!.replace(' ', 'T')) }
+            if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T')) || Date.parse(rw[1]!.replace(' ', 'T')) }
             const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
-            if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T') + 'Z') || Date.parse(m[1]!.replace(' ', 'T')) }
+            if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T')) || Date.parse(m[1]!.replace(' ', 'T')) }
             if (realWorkTsMs && workTsMs) break
           }
         } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
