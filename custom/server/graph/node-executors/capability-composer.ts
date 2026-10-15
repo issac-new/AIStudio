@@ -105,6 +105,8 @@ export function capabilitiesRegistrySeed(): string {
     '| qi | tester | test-report | none | * | none |',
     '| fei | tester | test-report | none | * | none |',
     '| fanfan | governance | doc,report,verdict | main-docs-only | * | none |',
+    '| wei | reviewer | verdict | none | csw-pay-core,csw-channel-wechat,csw-channel-alipay | own-domain |',
+    '| mei | reviewer | verdict | none | csw-cashier-mp | own-domain |',
     '| arch | reviewer | verdict | none | * | none |',
     '| audit | governance | report | none | * | none |',
     '',
