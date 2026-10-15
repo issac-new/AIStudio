@@ -50,6 +50,13 @@ try {
 }
 // clean 后可能残留 untracked patch 产物（旧版 clean 不删），统一清点
 run('git checkout -- .', upstream, 'restore upstream tracked files');
+// 隔离模式（OVERLAY_UPSTREAM_ROOT 显式指定 = 一次性构建树）追加硬还原：
+// inject --clean 对「补丁新建文件」的反向剥离不完整——同树二连跑（mac 后跑 win）
+// 时 024 号类创建型补丁的产物残留必撞 "already exists"（2026-10-15 三目标轮⑯两
+// 连实测）。共享树缺省模式不做硬清（非 inject 的 untracked 件不归构建流处置）。
+if (process.env.OVERLAY_UPSTREAM_ROOT?.trim()) {
+  run('git clean -fde node_modules', upstream, 'isolated mode: hard-clean untracked (keep node_modules)');
+}
 
 // === Step 0: Inject (apply patches, create symlinks, generate overlay vite config) ===
 run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
