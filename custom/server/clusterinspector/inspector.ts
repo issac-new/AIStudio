@@ -33,6 +33,8 @@ export interface InspectorDeps {
   getFailedVerdictCards?: () => Promise<Array<Record<string, unknown>>>
   /** 未认领开放卡接线（card.unassigned-stale 面，run20 r3 派单断棒实录） */
   getUnassignedCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录产品化） */
+  getExpectedWorkCards?: () => Promise<Array<Record<string, unknown>>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
   getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
@@ -397,6 +399,29 @@ export class ClusterInspector {
           unassignedCards = { ok: false, error: (e as Error).message, cards: [] }
         }
       }
+      // 期望工作卡面（work.expected-silent）：未接线=合法空态（可选面，同 unassignedCards 语义）
+      let expectedWorkCards: ClusterSnapshot['expectedWorkCards']
+      if (this.deps.getExpectedWorkCards) {
+        try {
+          const rows = await this.deps.getExpectedWorkCards()
+          expectedWorkCards = {
+            ok: true,
+            cards: rows
+              .filter((c) => c.assignee && String(c.assignee).trim() !== '' && String(c.assignee).trim().toLowerCase() !== 'none')
+              .map((c) => ({
+                id: String(c.task_id ?? c.id ?? ''),
+                assignee: typeof c.assignee === 'string' ? c.assignee : undefined,
+                title: typeof c.title === 'string' ? c.title : undefined,
+                status: typeof c.status === 'string' ? c.status : undefined,
+                body: typeof c.body === 'string' ? c.body : undefined,
+                created_at: typeof c.created_at === 'number' || typeof c.created_at === 'string' ? c.created_at : undefined,
+                updated_at: pickLastTouched(c),
+              })).filter((c) => c.id),
+          }
+        } catch (e) {
+          expectedWorkCards = { ok: false, error: (e as Error).message, cards: [] }
+        }
+      }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -407,6 +432,7 @@ export class ClusterInspector {
         blockedCards,
         failedVerdictCards,
         unassignedCards,
+        expectedWorkCards,
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },

@@ -426,6 +426,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectReviewFailStall(snap, opts),
     ...detectUnassignedStale(snap, opts),
     ...detectCardBodyEmpty(snap, opts),
+    ...detectWorkExpectedSilent(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -588,6 +589,52 @@ export function detectIdleWithWorkAvailable(snap: ClusterSnapshot, opts: DetectO
       summary: `空闲异常（有活可干的空闲）：${t.profile} 零在办卡且真做静默 ${Math.round((now - actTs) / 1000)}s，而队列有 ${unassigned.length} 张无主 ready 卡（${unassigned.slice(0, 3).map((c) => c.id).join('、')}${unassigned.length > 3 ? '…' : ''}）可领未领——请领卡并行开工（真空闲=队列无卡时不报，不误催）`,
       detail: { readyCards: unassigned.map((c) => c.id) },
     })
+  }
+  return out
+}
+
+/** ── 期望对账（run20 双盲区实录产品化，用户「空转总是发现不了」怒指）──
+ *  场景：群消息任务书派活形态下，看板卡全是 ready + assignee=<名>-agent 房间
+ *  账号名（纪律 60 违例），永远无人翻 running——D7 agent-silent（要 running
+ *  卡）与 idle.with-work（要无主 ready）双双看不见，活走消息、卡不动。
+ *  唯一可见锚=「ready/todo 卡的 assignee 拆档案名」集合：期望该档案有活
+ *  （deliverable 未落卡），交叉其真做静默——唤醒即再死（hu/lin/xiao 16:07
+ *  新会话一轮即空转收场）的唯一产品级出口。
+ *  与 D7 互补：D7 管「在办卡停摆」，本件管「ready 卡没人动」；
+ *  与 idle.with-work 互补：后者要无主卡（派单断棒），本件要有主卡（群消息派活）。
+ *  判活口径同 D7（realWorkTsMs 优先，嘴炮回合不清账）。 */
+export function detectWorkExpectedSilent(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const quiet = opts.agentSilentMs ?? 900_000
+  const now = opts.nowMs ?? Date.now()
+  const exp = snap.expectedWorkCards
+  if (!exp || !exp.ok || !snap.profiles.ok) return []
+  // 期望档案集=ready/todo 卡的 assignee（拆 <名>-agent 后缀取档案名；无后缀=原名）。
+  const expected = new Map<string, string[]>() // profile -> card ids
+  for (const c of exp.cards) {
+    const a = (c.assignee ?? '').trim()
+    if (!a) continue
+    const profile = a.replace(/-agent$/, '')
+    const cur = expected.get(profile) ?? []
+    cur.push(c.id)
+    expected.set(profile, cur)
+  }
+  if (expected.size === 0) return []
+  const out: Anomaly[] = []
+  for (const t of snap.profiles.tails) {
+    const cards = expected.get(t.profile)
+    if (!cards || cards.length === 0) continue
+    const actTs = t.realWorkTsMs && t.realWorkTsMs > 0
+      ? t.realWorkTsMs
+      : (t.workTsMs && t.workTsMs > 0 ? t.workTsMs : t.mtimeMs)
+    const silent = now - actTs
+    if (silent > quiet) {
+      out.push({
+        detector: 'work.expected-silent', subject: `profile:${t.profile}`,
+        severity: 'warn',
+        summary: `期望工作停摆（期望对账：ready 卡有主但档案真做停摆）：${t.profile} 名下有 ${cards.length} 张 ready/todo 卡（${cards.slice(0, 3).join('、')}${cards.length > 3 ? '…' : ''}）且真做静默 ${Math.round(silent / 1000)}s——群消息派活形态下卡不动活不走，请查会话是否空转收场（turn-ended stop）或唤醒即再死${diffContext(snap, now, t.profile)}`,
+        detail: { cards, quietMs: quiet, realWorkTsMs: t.realWorkTsMs, form: 'expected-work' },
+      })
+    }
   }
   return out
 }
