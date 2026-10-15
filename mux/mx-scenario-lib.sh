@@ -240,10 +240,42 @@ mx_dispatch_subrev() { # <human-pm> <subcard-id> → 0 派发成功 / 1 已派�
   else echo "MX|dispatch-subrev-no-d-item|$sid|标题无 D-项归属（可能需人工）"; return 2
   fi
   HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" assign "$sid" "$agent" >/dev/null 2>&1 || { echo "MX|dispatch-subrev-fail|$sid|assign 失败"; return 2; }
+  # V8.29 派单工具升级：body 生成器（子卡 body 空=研发 AI 拿到没正文=断派单第二刀）
+  local body
+  body=$(cat <<'BODY'
+G2SREV-r1 安全设计条款修订（run20 r3）
+
+任务：按下列 D-项在 docs/design/RFD-001-architecture-design.md 对应章节补齐/修订安全设计条款，commit 推 origin/main。
+完成后结论行 G2SREV-DONE-**$sid** 写回本卡，并 @secops-agent 复审。
+
+D 项明细：
+- D-1 微信侧渠道密钥持有与装载形态无设计条款，与支付宝侧引用形态不对称｜位置=概设 §4.2:310｜归属=hu + wei
+- D-2 渠道密钥与平台证书轮换流程无设计（无更新责任人、无触发条件、无过期告警口径）｜位置=概设 §4.2:306｜归属=wei + hu
+- D-3 支付宝密钥存储形态未冻结，进程内 InMemoryKeyStore 真实环境不可用（概设自认阻塞对外发布）｜位置=概设 §4.2:310 / apps/
+- D-4 微信回调 resource 解密环节未进验签链路设计，APIv3 密钥使用点无落位｜位置=概设 §3.1:195、§3.2:230-233｜归属=hu
+- D-5 回调时间戳容差无设计条款（微信 ±5min 只在代码 verifier.ts:22，支付宝侧无容差设计）｜位置=概设 §5:324｜归属=wei + hu
+- D-6 「渠道层验签 + 核心层复核」双层结构未落设计文档，只存在于集成用例注释 03-notify-security.spec.ts:3｜位置=概设 §5:3
+- D-7 需求 §12:132「订单数据访问限研发/测试编制账号」在概设无承接，支付单表无访问控制与审计留痕设计（概设「访问/权限/账号」0 命中）｜位置=需求
+- D-8 冻结标记 freeze.md:16 支付铁线（CVV2/磁道/交易密码授权后不得存储）在概设无否定性断言｜位置=freeze.md:16 → 概设 §5
+- D-9 需求 §12「日志金额脱敏」在概设 §5:326 被改为「不得输出卡号与密钥」，金额脱敏与涉敏字段留存/销毁口径缺失（留存/销毁/保留期 0 命中）｜位
+- D-10 回调来源校验无设计条目：可信来源锚点、网段与频率限制、notify_url 防泄漏、全链路 HTTPS 均无承接条款｜位置=概设 §5｜归属=wei
+- D-11 支付宝回调商户定位把请求头 x-merchant-id 作为判定依据之一，概设未规定可信锚点选取规则｜位置=概设 §5 / AN-CHALI-anal
+- D-12 回调重放防护口径缺失（D-6:128 三键只覆盖消费幂等，未覆盖幂等窗口外重放；无时间窗设计条款）｜位置=概设 §2 D-6:128-129｜归属=w
+- D-13 服务端回调金额交叉校验无设计条款（AMOUNT_MISMATCH 错误码已在 apps/csw-pay-core/src/errors.ts:19-4
+- D-14 涉敏声明不完备：未按 JR/T 0171-2020 给支付鉴权类 C3 分级与全生命周期管控口径，未按 JR/T 0071 给定级/备案/整改责任与时
+
+评审锚：arch 评审卡 t_88e1e258（缺项清单）+ secops 评审卡 t_f5cc53c5（result=FAIL 12 项未过）。
+禁谎报：无真做行（工具轮）不写结论。
+BODY
+  )
   # 跨板复制（对账子卡，研发板可见性+工作量统计；workspace 仍指原板）
   local dev_board="${agent}-20261015-RFD-001-dev"
   local dev_id
   dev_id=$(kanban_create_as "$agent" "subrev_${sid##t_}" "G2SREV-r1 子卡对账 ${sid}（${title}）" "V8.29 根治派单：本卡为 fanfan-pm-plan 板 ${sid} 的研发板镜像；正文/工作区/进度皆在原板。来源：run20 r3 派单断棒第二刀根治（产品经理仅建子卡未分发）。" "$dev_board" "$agent" 2>/dev/null || echo "")
+  # body 生成器：子卡 body 空=研发 AI 拿到没正文=断派单第二刀
+  if [[ -n "$body" ]]; then
+    kanban_edit_as "$agent" "$sid" --body "$body" 2>/dev/null || true
+  fi
   echo "MX|dispatch-subrev-ok|$sid|→ $agent（dev_board=${dev_board} mirror=$dev_id）"
   return 0
 }
