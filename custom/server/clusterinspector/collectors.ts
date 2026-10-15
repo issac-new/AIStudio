@@ -154,6 +154,8 @@ export interface ClusterSnapshot {
    *  违例），D7/idle.with-work 双双看不见（0 running 卡、卡有主）；唯一可见的锚
    *  是「ready 卡的 assignee 拆档案名」——期望对账检测器从档案名集合交叉真做静默，
    *  是唤醒即再死（hu/lin/xiao 16:07 新会话一轮即空转）的唯一产品级出口。 */
+  /** 交付分支推送情报（delivery.pushed 检测面，V8.33 持续集成）——控制器注入（NUDGE_REPO 仓本地 vs origin tip 比对），未接线=合法空态。 */
+  deliveryBranchIntel?: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>
   expectedWorkCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
