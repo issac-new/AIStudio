@@ -1,0 +1,26 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 15a0e2aa7..d5e689ca2 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -141,6 +141,12 @@ import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
+ // overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
+ // 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
+ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
++// overlay[humansim+observability]（PR-0 通道面）：人类模拟受控发送+审计留痕
++// （/api/hermes/humansim/{send,audit}，HUMANSIM_CREDS_DIR 缺席=503 fail-closed）
++// 与推演运行状态只读查询（/api/hermes/observability/run-state，OBS_SIM_ROOT
++// 缺席=503 fail-closed）——生产不开 env 即关。631 挂载。
++import { humansimRouter } from '../custom/humansim/humansim-controller'
++import { observabilityRouter } from '../custom/observability/observability-controller'
+ // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
+ // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
+ // 挂载（悬空件），606 补登。
+@@ -465,6 +471,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
+   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
++  app.use(humansimRouter.routes())                // 人类模拟：受控发送+审计（PR-0①，env fail-closed）
++  app.use(observabilityRouter.routes())           // 可观测性：run-state 只读查询（PR-0②，env fail-closed）
+   app.use(runtimeVerifyRoutes.routes())           // runtime-verify：验证器注册表 REST（B5）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
