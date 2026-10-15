@@ -760,7 +760,13 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
     return 0
   fi
   ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/$br" 2>/dev/null)"
-  [ -n "$ct" ] && [ "$ct" -ge "$rs" ] 2>/dev/null
+  # run20 18:38 崩溃环根治：分支存在但 tip 过期（⚠STALE）时原裸 && 链返回 rc=1，
+  # 在 set -euE 下击杀驱动（监督器三次拉起三死于同一点）。改 if 保护态返回：
+  # STALE=假值语义（调用方按未交付等待/记单），不再触发 ERR trap 与 -e 退出。
+  if [ -n "$ct" ] && [ "$ct" -ge "$rs" ] 2>/dev/null; then
+    return 0
+  fi
+  return 1
 }
 
 # ── 活性等待（用户裁决：重载任务不设绝对时长上限）─────────────
