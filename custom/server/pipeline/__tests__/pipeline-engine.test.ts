@@ -21,7 +21,7 @@ beforeAll(() => {
   execFileSync('mkdir', ['-p', join(repo, 'docs/evidence')])
   writeFileSync(join(repo, 'docs/evidence/DEV-PAYCORE-X-testlog.txt'), 'log')
   g('add', '.'); g('commit', '-qm', 'be')
-  g('checkout', '-q', '-b', 'feat/DEV-MP-Y', 'main') // FE 分支：仅本地（应停留 dev）
+  g('checkout', '-q', '-b', 'feat/DEV-MP', 'main') // FE 分支：仅本地（应停留 dev）
 })
 afterAll(() => { try { rmSync(repo, { recursive: true, force: true }) } catch { /* noop */ } })
 
@@ -29,7 +29,7 @@ describe('PipelineEngine v1（V8.33 四持续产品化）', () => {
   it('facts：本地未推分支=dev；（无 remote 场景）tested/merged 不虚标', () => {
     const facts = collectFacts(repo)
     expect(facts.get('feat/DEV-PAYCORE-X')?.pushed).toBe(false) // 无 origin remote
-    expect(facts.get('feat/DEV-MP-Y')?.pushed).toBe(false)
+    expect(facts.get('feat/DEV-MP')?.pushed).toBe(false)
   })
   it('runOnce：dev 态分支入 flows；trigger=off 不发令；domain 按 -MP 映射 fe', async () => {
     const sent: string[] = []
