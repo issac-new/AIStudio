@@ -331,6 +331,9 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectLoadImbalance(snap, opts),
     ...detectIdleWithWorkAvailable(snap, opts),
     ...detectBlockedStale(snap, opts),
+    ...detectReviewFailStall(snap, opts),
+    ...detectUnassignedStale(snap, opts),
+    ...detectCardBodyEmpty(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
