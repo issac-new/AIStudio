@@ -27,6 +27,9 @@ export interface DetectOptions {
   /** 复审环老化阈值 ms（默认 7200000=120min；≥2× 升 high。run20 22:34 复审链断棒
    *  实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化） */
   reviewFailStallMs?: number
+  /** 未认领卡老化阈值 ms（默认 1800000=30min；≥3× 升 high。run20 r3 派单断棒实录：
+   *  ready/todo 卡 assignee 空置超时=派单断在「建卡→认领」间，无人看见） */
+  unassignedStaleMs?: number
   /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
   dispatcherStuckMs?: number
   /** 负载不均衡判阈：单档案在办卡数 ≥ 此值且存在零卡档案（默认 3） */
@@ -300,9 +303,12 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
     // 「最后推进时刻」双字段容错（真实 tasks 表无 updated_at 列——run19 巡检实锤；
     // 采集层已做回退映射，此处再容错一层防直夹具/旧快照漏映射）
     const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
-    const upd = typeof rawTs === 'number' ? rawTs
+    const updRaw = typeof rawTs === 'number' ? rawTs
       : typeof rawTs === 'string' ? Number(rawTs) : NaN
-    if (!Number.isFinite(upd) || upd <= 0) continue
+    if (!Number.isFinite(updRaw) || updRaw <= 0) continue
+    // 卡表时间戳为 epoch 秒（run20 巡检实锤：秒当毫秒=1970 年→虚假百万秒停滞）——
+    // <1e12 视作秒 ×1000 归一（与 review.fail-stall/unassigned-stale 同规）
+    const upd = updRaw < 1e12 ? updRaw * 1000 : updRaw
     const quietMs = now - upd
     if (quietMs > staleMs) {
       out.push({
@@ -350,6 +356,36 @@ export function detectReviewFailStall(snap: ClusterSnapshot, opts: DetectOptions
   return out
 }
 
+/** card.unassigned-stale：未认领卡老化检测（run20 r3 派单断棒实录产品化）。
+ *  组织面派单常见断法：建了主卡后 agent 回合结束（Turn ended 正常收场），
+ *  子卡树未生、主卡 ready/todo 且 assignee 空置——工作存在但无人持有，
+ *  对一切「存在物坏了没」型检测器隐形（实录 2h45m 盲区）。
+ *  本检测器守「建卡→认领」不变量：开放卡空置超阈即报，与预期清单无关，
+ *  通杀半派单形态。created_at 秒级归一同 review.fail-stall。 */
+export function detectUnassignedStale(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const staleMs = opts.unassignedStaleMs ?? 1_800_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.unassignedCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const rawTs = c.created_at ?? c.updated_at
+    const ageRaw = typeof rawTs === 'number' ? rawTs : typeof rawTs === 'string' ? Number(rawTs) : NaN
+    if (!Number.isFinite(ageRaw) || ageRaw <= 0) continue
+    const created = ageRaw < 1e12 ? ageRaw * 1000 : ageRaw
+    const quietMs = now - created
+    if (quietMs < staleMs) continue
+    out.push({
+      detector: 'card.unassigned-stale', subject: `card:${c.id}`,
+      severity: quietMs >= staleMs * 3 ? 'high' : 'warn',
+      summary: `未认领卡老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id}（${c.status ?? '?'}）assignee 空置——派单断在「建卡→认领」之间（run20 实录：主卡 ready+无人认领 2h45m、子卡树未生）。请认领派工或关卡回收`,
+      detail: { cardId: c.id, title: c.title, status: c.status, quietMs, staleMs },
+    })
+  }
+  return out
+}
+
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -371,6 +407,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectReviewFailStall(snap, opts),
     ...detectUnassignedStale(snap, opts),
     ...detectCardBodyEmpty(snap, opts),
+>>>>>>> ce5cee6 (feat(inspector): unassigned-stale 未认领卡老化检测器（run20 r3 派单断棒实录产品化，昨晚 8802 换装遗留物化）)
   ]
   return [...base, ...detectStorm(base, opts)]
 }

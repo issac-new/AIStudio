@@ -56,6 +56,24 @@ function failedVerdictCardsProvider(): (() => Promise<Array<Record<string, unkno
   })
 }
 
+/** 未认领开放卡接线（card.unassigned-stale 面）：ready+todo 两查合并，fail-soft。
+ *  run20 r3 派单断棒实录：主卡 ready+无人认领 2h45m 全检测器盲区。 */
+function unassignedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
+  const list = (status: string) => new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
+    execFile('hermes', ['kanban', 'list', '--status', status, '--json'], {
+      timeout: 30_000,
+      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
+    }, (err, stdout) => {
+      if (err) { reject(err); return }
+      try {
+        const out = JSON.parse(stdout) as unknown
+        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
+      } catch (e) { reject(e as Error) }
+    })
+  })
+  return async () => [...await list('ready'), ...await list('todo')]
+}
+
 // 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
 export { startInspectorIfEnabled } from './inspector'
 
@@ -98,7 +116,7 @@ function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; mach
   }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun
