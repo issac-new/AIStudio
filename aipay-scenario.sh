@@ -1125,25 +1125,49 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
   # 各自 origin/main 起建）；d2=依赖双路（hu/lin，feat/DEV-PAYCORE 落地触发）。
   if [[ -z "$(sget devimpl_d1)" ]]; then
-    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律：单卡直做（无需再拆子任务），kanban 建 DEV-PAYCORE-C 主卡（含 --raci）。
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
+4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
+DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律：单卡直做（无需再拆子任务），kanban 建 DEV-PAYCORE-C 主卡（含 --raci）。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
 3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
-    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
+4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
+DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
 3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
-    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
+    dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
+4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
+DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
 1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
 3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
-    dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+    dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
+4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
+DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
@@ -1181,7 +1205,13 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
                 "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
       IFS='|' read -r who task app chan <<< "$spec"
-      dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
+      dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
+4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
+${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
