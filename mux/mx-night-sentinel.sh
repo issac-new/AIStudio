@@ -37,6 +37,14 @@ LOG="$SIM_ROOT/logs/night-sentinel.log"
 
 log() { printf '[ns %s] %s\n' "$(date '+%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
 
+# 代偿台账接线（2026-10-15 治理轮批次一）：A/B 两通道动作逐笔落账
+# （gw-dispatch-bypass→PR-1 / sleep-wakeup→PR-3）。守护不 source 大库（防重初始化），
+# 只挂轻量记账件——记账失败静默，绝不影响守望本职。
+_ns_led_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$_ns_led_self/mx-compensation-ledger.sh" 2>/dev/null || true
+unset _ns_led_self
+
 # 真做判据（与 mx-hb.sh 同源语义的独立内联——守护不 source 大库，防重初始化）
 _realwork_ts() { # <agent> → epoch
   local lg="$HERMES_ROOT/profiles/$1/logs/agent.log" line ts
@@ -78,6 +86,7 @@ while :; do
     _stuck=$((_stuck + 1))
     if (( _stuck >= STUCK_ROUNDS )); then
       log "派发自愈：ready=${READY_N} 卡滞留 ${_stuck} 轮（$(( _stuck * IVAL ))s）无人孵化 → CLI 直派"
+      compensate gw-dispatch-bypass "ready=${READY_N} 滞留 ${_stuck} 轮 → CLI 直派（绕网关派发通道）" 2>/dev/null || true
       OUT=$(timeout 120 "$HERMES" kanban dispatch --json 2>/dev/null || echo '{}')
       SP=$(printf '%s' "$OUT" | jq -r '[.spawned[]? | .task_id] | join(",")' 2>/dev/null)
       log "直派结果：spawned=${SP:-none}"
@@ -103,6 +112,7 @@ while :; do
     if (( now - rw > SLEEP_SEC )); then
       cards=$(printf '%s' "$RUNNING" | jq -r --arg a "$a" '[.[] | select(.assignee == $a) | .id] | join("、")' 2>/dev/null)
       log "休眠唤醒：$a 真做静默 $(( now - rw ))s（在办卡 ${cards:-?}）→ 催办"
+      compensate sleep-wakeup "assignee=$a 真做静默 $(( now - rw ))s → 群催办（在办卡 ${cards:-?}）" 2>/dev/null || true
       _msend "🌅 夜间守望催办：@${a} 真做静默超 ${SLEEP_SEC}s，在办卡 ${cards:-?}。请以新会话继续执行并收口（若原会话已收场，直接领卡重开）；仅回话不动手不计为工作。" "@${a}-agent:matrix.test"
     fi
   done

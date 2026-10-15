@@ -32,6 +32,12 @@ RID=$(grep '^room_analysis=' "$SIM_ROOT/runs/$RUN_ID/state.env" 2>/dev/null | cu
 [[ -n "$RID" ]] || { echo "room_analysis 不在 state（轮未建群？）" >&2; exit 2; }
 TOK=$(head -1 "$CREDS_DIR/fanfan.token" 2>/dev/null)
 LOG="$SIM_ROOT/var/approval-proxy.log"
+# 代偿台账接线（2026-10-15 治理轮批次一）：每笔代批落账（auto-approve → PR-2）
+_mx_led_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$_mx_led_dir/mx-compensation-ledger.sh" 2>/dev/null || true
+unset _mx_led_dir
+_approved_seen=$(grep -c ' 代批 ' "$LOG" 2>/dev/null); _approved_seen=${_approved_seen:-0}
 DEADLINE=$(( $(date +%s) + TTL * 60 ))
 LAST_TS=$(( $(date +%s) - 120 ))
 echo "$(date '+%F %T') [approval-proxy] 启动 run=$RUN_ID（窗口 ${TTL}min）" >> "$LOG"
@@ -64,5 +70,12 @@ for ev,head in asks:
         open(log,"a").write(time.strftime("%F %T")+" 代批失败 "+ev[:24]+" "+str(e)[:60]+"\n")
 ' 2>/dev/null
   LAST_TS=$(( $(date +%s) - 5 ))
+  _approved_now=$(grep -c ' 代批 ' "$LOG" 2>/dev/null); _approved_now=${_approved_now:-0}
+  if (( _approved_now > _approved_seen )); then
+    tail -n $(( _approved_now - _approved_seen )) "$LOG" 2>/dev/null | while IFS= read -r _l; do
+      compensate auto-approve "approval-proxy 代批：${_l##* 代批 }" 2>/dev/null || true
+    done
+    _approved_seen=$_approved_now
+  fi
   sleep 30
 done
