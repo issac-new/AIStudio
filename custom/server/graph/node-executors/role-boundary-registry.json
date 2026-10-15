@@ -15,7 +15,7 @@
     {
       "role": "reviewer",
       "text": "评审仅产出判词与评审意见；不代做被评审域的实现或测试；不修改被评审产物本身。域内交付分支的集成合并（integration 分支，--no-ff、禁强推、冲突处理留痕）是 lead 本职——评审与合并为同一条责任链（V8.30 职责归位）。",
-      "capabilities": { "deliverable-kinds": ["verdict"], "vcs-scope": "none", "integration-authority": "domain-integration" }
+      "capabilities": { "deliverable-kinds": ["verdict"], "vcs-scope": "none", "integration-authority": "own-domain" }
     },
     {
       "role": "tester",
