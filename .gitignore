@@ -20,3 +20,4 @@ vite.config.overlay.wt.ts
 
 # worktree 环境的上游符号链（主 checkout 中 upstream/ 是仓外真实目录，不入库）
 /upstream
+.patch-migrate.json
