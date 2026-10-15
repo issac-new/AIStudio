@@ -13,6 +13,19 @@
 SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
+
+# ── 姿态旋钮+代偿台账（2026-10-15 治理轮批次一）──
+# MX_POSTURE=strict|standard|demo，缺省 standard。strict=零代偿测自组织真力；
+# standard=现状保留但每笔代偿落台账（报告净额对账/清偿门数据源）；demo=演示调度。
+# 用户裁定 2026-10-15：代偿在下一轮推演前必须根治后合入 SwarmStudio 产品能力。
+posture() {
+  local p="${MX_POSTURE:-$(sget posture)}"
+  case "$p" in strict|standard|demo) echo "$p" ;; *) echo "standard" ;; esac
+}
+_mx_led_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$_mx_led_self/mx-compensation-ledger.sh" 2>/dev/null || true
+unset _mx_led_self
 # mx_fetch（run16 实证根修）：git fetch 挂起护栏——20:1x 一次 fetch 网络黑洞挂起
 # 42 分钟冻死驱动等待环（无 FAIL 行无超时，监控靠子进程 mtime 交叉定位才破案）。
 # 全部 fetch 走本函数：60s 超时强断（timeout 缺席环境回落裸跑并打点），失败照常
@@ -303,6 +316,7 @@ kanban_link_as() { # <user> <parentId> <childId>（挂父卡所在板）
 
 kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
   local u="$1" id="$2" st
+  compensate card-walk-done "user=$u card=$id（代演推卡到 done）" 2>/dev/null || true
   for st in todo running review done; do
     kanban_status_as "$u" "$id" "$st" 2>/dev/null || true
   done
@@ -912,6 +926,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       local _intel=""
       _intel=$(_nudge_branch_intel "$agents" 2>/dev/null || true)
+      compensate nudge "agents=$agents desc=${desc:0:60}（空转过半轻推）" 2>/dev/null || true
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。${_intel}若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
       note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次${_intel:+（含分支情报）}"
       nudged=1
@@ -1466,6 +1481,7 @@ kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
 
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
+  compensate dispatch-preset "from=$1 text=${2:0:60}（预写派发词代演人类派单）" 2>/dev/null || true
   local uids=()
   uid="$(human_mxid "$1")"; rid="$(sget room_analysis)"
   # 成员保障 v2（09-26 v1 只保派发者；09-29 重构轮扩展到全部被 @ 责任人）：

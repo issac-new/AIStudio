@@ -67,6 +67,10 @@ elif [[ "$_mx_rc" == "2" ]]; then
   exit 3
 fi
 
+# 姿态入账（2026-10-15 治理轮批次一）：state.env 落 posture 键，报告/哨兵/查询同源读
+sset posture "$(posture)"
+note "[姿态] 本轮 posture=$(posture)（strict=零代偿测自组织 / standard=现状+代偿记账 / demo=演示调度）"
+
 # 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
 # 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
 # 最新定义执行（bash 单 EXIT trap）；DL_WT 未建时为空跳过，worktree 用
@@ -727,6 +731,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
+    compensate card-backfill "user=fanfan card=${RID:-${RFD_ID}-评审}（评审卡缺失，导演补登记）" 2>/dev/null || true
     note "[观察] 评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
     echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
   fi
