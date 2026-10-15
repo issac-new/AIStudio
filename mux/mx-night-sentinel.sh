@@ -45,6 +45,15 @@ _ns_led_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$_ns_led_self/mx-compensation-ledger.sh" 2>/dev/null || true
 unset _ns_led_self
 
+# 姿态解析（V8.29 §1.5，不 source 大库）：MX_POSTURE > state 键 > standard
+_ns_posture() {
+  local p="${MX_POSTURE:-$(grep -s '^posture=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2-)}"
+  case "$p" in strict|standard|demo) echo "$p" ;; *) echo "standard" ;; esac
+}
+_ns_issue() { # <type> <detail>：strict 姿态下「识别不干预」——发现即记问题单
+  echo "ISSUE|$1|sentinel|$2" >> "$SIM_ROOT/runs/$RUN_ID/evidence/issues.log" 2>/dev/null || true
+}
+
 # 真做判据（与 mx-hb.sh 同源语义的独立内联——守护不 source 大库，防重初始化）
 _realwork_ts() { # <agent> → epoch
   local lg="$HERMES_ROOT/profiles/$1/logs/agent.log" line ts
@@ -85,6 +94,11 @@ while :; do
   if (( READY_N > 0 )); then
     _stuck=$((_stuck + 1))
     if (( _stuck >= STUCK_ROUNDS )); then
+      if [ "$(_ns_posture 2>/dev/null || echo standard)" = "strict" ]; then
+        log "strict 姿态：ready=${READY_N} 滞留 ${_stuck} 轮——不代偿不直派，记问题单（派发通道停滞=有效发现，PR-1）"
+        _ns_issue gw-dispatch-stall-observed "ready=${READY_N} 滞留 ${_stuck} 轮无人孵化（strict 姿态不代偿；PR-1 待根治）"
+        _stuck=0; sleep $(( IVAL * 2 )); continue
+      fi
       log "派发自愈：ready=${READY_N} 卡滞留 ${_stuck} 轮（$(( _stuck * IVAL ))s）无人孵化 → CLI 直派"
       compensate gw-dispatch-bypass "ready=${READY_N} 滞留 ${_stuck} 轮 → CLI 直派（绕网关派发通道）" 2>/dev/null || true
       OUT=$(timeout 120 "$HERMES" kanban dispatch --json 2>/dev/null || echo '{}')
@@ -112,8 +126,13 @@ while :; do
     if (( now - rw > SLEEP_SEC )); then
       cards=$(printf '%s' "$RUNNING" | jq -r --arg a "$a" '[.[] | select(.assignee == $a) | .id] | join("、")' 2>/dev/null)
       log "休眠唤醒：$a 真做静默 $(( now - rw ))s（在办卡 ${cards:-?}）→ 催办"
+      if [ "$(_ns_posture 2>/dev/null || echo standard)" = "strict" ]; then
+        log "strict 姿态：$a 真做静默超阈——不代偿不唤醒，记问题单（agent 休眠=有效发现，PR-3）"
+        _ns_issue agent-sleep-observed "$a 真做静默 $(( now - rw ))s（在办卡 ${cards:-?}；strict 姿态不唤醒，PR-3 待根治）"
+      else
       compensate sleep-wakeup "assignee=$a 真做静默 $(( now - rw ))s → 群催办（在办卡 ${cards:-?}）" 2>/dev/null || true
       _msend "🌅 夜间守望催办：@${a} 真做静默超 ${SLEEP_SEC}s，在办卡 ${cards:-?}。请以新会话继续执行并收口（若原会话已收场，直接领卡重开）；仅回话不动手不计为工作。" "@${a}-agent:matrix.test"
+      fi
     fi
   done
 

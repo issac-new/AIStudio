@@ -316,6 +316,11 @@ kanban_link_as() { # <user> <parentId> <childId>（挂父卡所在板）
 
 kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
   local u="$1" id="$2" st
+  if [ "$(posture)" = "strict" ]; then
+    # V8.29 §2.6.5：strict 姿态卡态流转归组织侧，不代演推 done
+    [ -n "${EVID_DIR:-}" ] && echo "ISSUE|strict-walk-done-skipped|$u|卡 $id 未代走到 done（strict 姿态：卡态流转归组织侧）" >> "$EVID_DIR/issues.log" 2>/dev/null || true
+    return 0
+  fi
   compensate card-walk-done "user=$u card=$id（代演推卡到 done）" 2>/dev/null || true
   for st in todo running review done; do
     kanban_status_as "$u" "$id" "$st" 2>/dev/null || true
@@ -926,9 +931,15 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       local _intel=""
       _intel=$(_nudge_branch_intel "$agents" 2>/dev/null || true)
-      compensate nudge "agents=$agents desc=${desc:0:60}（空转过半轻推）" 2>/dev/null || true
-      mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。${_intel}若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
-      note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次${_intel:+（含分支情报）}"
+      if [ "$(posture)" = "strict" ]; then
+        # V8.29 §2.6.5：strict 不代偿提醒（PR-3 根治前如实暴露停滞）
+        note "[姿态] strict：等待「${desc}」空转过半——不代偿提醒，记问题单"
+        [ -n "${EVID_DIR:-}" ] && echo "ISSUE|strict-nudge-skipped|$agents|等待「${desc}」空转过半 ${idle_half}s，strict 姿态不代偿提醒" >> "$EVID_DIR/issues.log" 2>/dev/null || true
+      else
+        compensate nudge "agents=$agents desc=${desc:0:60}（空转过半轻推）" 2>/dev/null || true
+        mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。${_intel}若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
+        note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次${_intel:+（含分支情报）}"
+      fi
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
@@ -1481,7 +1492,12 @@ kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
 
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
-  compensate dispatch-preset "from=$1 text=${2:0:60}（预写派发词代演人类派单）" 2>/dev/null || true
+  if [ "$(posture)" = "strict" ]; then
+    # V8.29 §2.4 待收紧面：strict 不发预写派发词（拆分/人日/纪律归组织侧自主产出）
+    set -- "$1" "【自主组织】收到需求派单：请对 ${RFD_ID:-当前轮} 需求按你的职能自主拆分、评估与派发执行；验收以 G1 冻结单 AC 为准，双凭证（commit+卡号）收口。本消息不预设拆分与人日。" "${3:-}"
+  else
+    compensate dispatch-preset "from=$1 text=${2:0:60}（预写派发词代演人类派单）" 2>/dev/null || true
+  fi
   local uids=()
   uid="$(human_mxid "$1")"; rid="$(sget room_analysis)"
   # 成员保障 v2（09-26 v1 只保派发者；09-29 重构轮扩展到全部被 @ 责任人）：
