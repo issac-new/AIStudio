@@ -654,7 +654,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
 2) 可先做消歧与冲突处理（重点：金额单位统一明确为「分」(int64)；接口契约字段命名统一 snake_case），整理结构层次
 3) 其余稿陆续入库后补合进同一文档；四稿齐后定稿 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型）并 push 到 origin main（推 feat 分支不命中入库真值——run12 design-push-gap 实锤）
 4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
-禁做围栏（预写轮边界，run12 越界实锤补固）：本任务只写 docs/design 概设文档——不建/不合 DEV 分支（集成分支与集成时序走 defect 步导演职权，不得自开合并高速路）、不代做任何开发/测试任务（含代写测试用例/实现码）、不改 apps/ 代码。
+禁做围栏（预写轮边界，run12 越界实锤补固）：本任务只写 docs/design 概设文档——不建/不合 DEV 分支（集成分支与集成时序走 defect 步域 lead 职权——wei/mei 评审+合并，V8.30 职责归位；不得自开合并高速路）、不代做任何开发/测试任务（含代写测试用例/实现码）、不改 apps/ 代码。
 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
       sset review_prewrote 1
       note "[流水线] 概设预写已派（${_pw_n} 份系分在仓即起笔，纪律 27①）"
@@ -1240,7 +1240,7 @@ DEVSPECS
   if [[ -n "$_mb" ]]; then
     _poll=$(git -C "$DIRECTOR_CLONE" log --format="%h|%an|%s" "$_mb"..origin/main -- apps/ docs/evidence/ 2>/dev/null | head -5)
     if [[ -n "$_poll" ]]; then
-      note "[观察] origin/main 在开发段被直接推进（${_poll}）——记 main 污染问题单（集成应走 defect 步导演职权）"
+      note "[观察] origin/main 在开发段被直接推进（${_poll}）——记 main 污染问题单（集成应走 defect 步域 lead 集成（V8.30 职责归位））"
       echo "ISSUE|main-pollution|devimpl|开发段 origin/main 出现 DEV 域直推提交（首条：$(echo "$_poll" | head -1 | cut -d'|' -f1-3)）" >> "$EVID_DIR/issues.log"
     fi
   fi
