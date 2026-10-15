@@ -731,3 +731,10 @@
 # 推演截图身份一律职能称呼）。CurrentUser 补类型字段；account store 增 displayName；
 # PageSidebarFooter 文案/头像优先 displayName 回落 username。v0.7.34 纯净基线手生成。
 630-account-displayname-surface.patch
+
+# [631] humansim+observability 挂载（PR-0 通道面，2026-10-15 三目标轮⑲）：
+# 人类模拟受控发送+审计（/api/hermes/humansim/{send,audit}）与推演运行状态只读
+# 查询（/api/hermes/observability/run-state）两路由注册进 bootstrap/routes.ts
+# （同 402/582 模式）。fail-closed：HUMANSIM_CREDS_DIR/OBS_SIM_ROOT 缺席即 503，
+# 生产不开 env 即关。控制器与纯函数单测随 db1b764d 已在；本补丁为 B 类挂载件。
+631-server-humansim-observability-routes.patch

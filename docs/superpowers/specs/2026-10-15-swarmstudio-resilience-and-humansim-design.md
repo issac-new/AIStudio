@@ -59,7 +59,7 @@
 - **问题**：推演程序模拟人类角色需直调 synapse API（curl+token 散落 14 处）；监测靠翻日志文件。
 - **产品条款**：①humansim 通道：`POST /api/hermes/humansim/send`（as/room/body/kind），以人类账号通道代发并全量审计留痕（audit log）——P1 边界原则的产品化落点；②可观测性端点：`GET /api/hermes/observability/run-state`（读 state.env/代偿台账/健康面，SIM_ROOT 走 env 配置）——mx-state-query.sh 的远期替代。
 - **验收锚**：humansim 发送+审计记录实测；observability 返回 posture/闸态/台账摘要 JSON。
-- **落点**：overlay custom/server/humansim + observability（B 类 patch 挂载 bootstrap/routes.ts，同 402 模式；**挂载待部署窗口**——run20 在跑期间禁 inject）。
+- **落点**：overlay custom/server/humansim + observability + **补丁 631 已挂载**（bootstrap/routes.ts，同 402 模式；2026-10-15 隔离树净基线全量重放适用+server tsc 零错+koa 层 smoke 14/14）。**上线待部署窗口**——run20 收官前不动共享树；窗口=open 后 clean+inject+重启 8647/重部署 product-dist。
 
 ## 三、产品能力×推演面对照（采集与产出物挂钩点）
 
