@@ -65,7 +65,7 @@
 |---|---|---|---|---|
 | 1 | 运行状态查询 | studio observability 端点（631，读 state.env/台账） | 驱动/workflow/推演中心 UI | mx-state-query.sh 降级为端点的 CLI 客户端（文件面留端点缺席时降级档） |
 | 2 | 代偿台账 | 产品存储+API（orgloop 族扩展：list/resolve/waive/check-clearance） | prelaunch ⑯/报告/inbox 审批/工单员 | mx-compensation-ledger.sh 变 API 客户端；TSV 迁产品存储（迁移窗一次性搬） |
-| 3 | 派发器健康 | hermes-agent dispatcher 模块（634 snapshot+报警） | 运行观测卡/哨兵/巡检 | 哨兵内联判活段退役，改调 635/634 CLI |
+| 3 | 派发器健康 | hermes-agent dispatcher 模块（634 snapshot+报警） | 运行观测卡/哨兵/巡检 | 哨兵内联活性判定段退役，改调 635/634 CLI |
 | 4 | 休眠/真做判据 | hermes-agent kanban_sleeping（635） | 哨兵/监督面板/mx-hb | 哨兵 _realwork_ts 内联副本退役（同语义第二份=分叉违例） |
 | 5 | 闸工作流 | orgloop 闸修复状态机（636） | 驱动闸段（读状态不放行）/治理中心 UI | 驱动内闸判读逻辑逐步改为读 orgloop 状态 |
 | 6 | 排期 | autosched schedule-generator（636） | 派发词生成/编排面 | 步 17 排期脚本段退役改调端点 |
