@@ -903,7 +903,8 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   # 复评时永远进不去；移到 G2 总闸入口=arch FAIL 也自持。幂等键
   # subrev_auto_dispatched 防重复派。
   if [[ "$(sget subrev_auto_dispatched)" != "1" ]]; then
-    _sub_todo _sub_dispatched=0
+    _sub_todo=""
+    _sub_dispatched=0
     _sub_todo="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board fanfan-pm-plan list --status todo --json 2>/dev/null | python3 -c 'import sys,json
 for c in json.load(sys.stdin):
     if not c.get("assignee"):
