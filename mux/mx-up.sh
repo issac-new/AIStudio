@@ -111,6 +111,15 @@ else
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
+  # V8.29 适配器探活（10:5x 实录：/health 探活不覆盖矩阵面，假 home_channel 卡死适配器
+  # 2.8h 隐形断档）：90s 窗内等矩阵平台装载行，未见即 fail-fast（带排障指引）
+  for _i in $(seq 1 18); do
+    sleep 5
+    if grep -qE "MULTIPLEX.*Profile.*(ready|listening|connected)" "$LOGS_DIR/gateway.log" 2>/dev/null; then
+      log "✓ 矩阵适配器装载确认（MULTIPLEX 行）"; break
+    fi
+    [[ $_i -eq 18 ]] && { log "⚠ 90s 未见矩阵适配器装载行——查 gateway.log 平台段（假 home_channel/凭据缺失均可致此）；派发链路未通，禁起跑"; }
+  done
 fi
 
 # ── 单 studio（matrix-login 多账号 + ACL；agent 节点不跑 studio）────
@@ -130,7 +139,16 @@ while (( $(date +%s) < deadline )); do
   [[ "$g_ok" == 1 && "$s_ok" == 1 ]] && break
   sleep 3
 done
-[[ "${g_ok:-0}" == 1 ]] || fail "gateway 300s 内未就绪（$LOGS_DIR/gateway.log）"
+# 2026-10-15 10:45 实锤：缺 aiohttp 时 /health 永拒连 → 此处 fail 先于下方自愈段退出，
+# matrix 依赖缺口（正是自愈段能修的病：selfheal 装 mautrix+aiohttp 全家）反而永远走不到
+# 自愈。未就绪+降级症状在 → 放行落到自愈段；未就绪且无降级症状 → 维持原 fail（别的问题）。
+if [[ "${g_ok:-0}" != 1 ]]; then
+  if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then
+    log "gateway 300s 未就绪但 matrix 降级症状在（依赖缺失面）——交自愈段处置，不先行 fail"
+  else
+    fail "gateway 300s 内未就绪（$LOGS_DIR/gateway.log）"
+  fi
+fi
 if [[ "$MX_ROLE" != "agent" ]]; then
   [[ "${s_ok:-0}" == 1 ]] || fail "studio 300s 内未就绪（$LOGS_DIR/studio.log）"
 fi
