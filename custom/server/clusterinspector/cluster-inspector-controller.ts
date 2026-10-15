@@ -76,30 +76,31 @@ function unassignedCardsProvider(): (() => Promise<Array<Record<string, unknown>
 
 /** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录）：遍历各板 kanban.db
  *  聚合 ready/todo 卡（含 assignee 非空卡——群消息派活形态下卡全是 ready +
- *  assignee=<名>-agent，CLI list 只查当前板拿不到，必须直读板库），fail-soft。 */
+ *  assignee=<名>-agent，CLI list 只查当前板拿不到，必须直读板库），fail-soft。
+ *  直读走 node:sqlite（Node 内置）而非 sqlite3 CLI——studio 进程的 PATH 不含
+ *  sqlite3（mx-lib ensure_studio_up 的 PATH 只到 /opt/homebrew/opt/ 无 bin 子目录），
+ *  execFile('sqlite3') 全板失败被单板 catch 吞掉→面恒空→检测器零触发（run20 17:2x 实锤）。 */
 function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
   const home = () => process.env.HERMES_HOME || hermesHomeDefault()
   return async () => {
     const { readdirSync } = await import('node:fs')
     const { join } = await import('node:path')
-    const { execFile } = await import('node:child_process')
-    const boardsDir = join(home(), 'kanban', 'boards')
     let boards: string[] = []
-    try { boards = readdirSync(boardsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) } catch { return [] }
+    try { boards = readdirSync(join(home(), 'kanban', 'boards'), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) } catch { return [] }
+    if (boards.length === 0) return []
+    let DatabaseSync: typeof import('node:sqlite').DatabaseSync
+    try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return [] }
+    const boardsDir = join(home(), 'kanban', 'boards')
     const out: Array<Record<string, unknown>> = []
+    const q = `SELECT id,title,assignee,status,body,created_at,updated_at FROM tasks WHERE status='ready' OR status='todo'`
     for (const b of boards) {
-      const db = join(boardsDir, b, 'kanban.db')
-      for (const status of ['ready', 'todo']) {
-        try {
-          const rows = await new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
-            execFile('sqlite3', [db, `SELECT id,title,assignee,status,body,created_at,updated_at FROM tasks WHERE status='${status}'`, '-json'], { timeout: 10_000 }, (err, stdout) => {
-              if (err) { reject(err); return }
-              try { resolve(JSON.parse(stdout || '[]') as Array<Record<string, unknown>>) } catch (e) { reject(e as Error) }
-            })
-          })
-          for (const r of rows) out.push({ ...r, board: b })
-        } catch { /* 单板失败不拖垮整面 */ }
-      }
+      let db: InstanceType<typeof DatabaseSync> | null = null
+      try {
+        // 不传 readOnly：本仓 node 版本不接受该选项（抛错→整面恒空）。
+        db = new DatabaseSync(join(boardsDir, b, 'kanban.db'))
+        for (const r of db.prepare(q).all() as Array<Record<string, unknown>>) out.push({ ...r, board: b })
+      } catch { /* 单板失败不拖垮整面 */ }
+      finally { try { db?.close() } catch { /* noop */ } }
     }
     return out
   }
