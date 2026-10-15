@@ -93,7 +93,7 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
     const boardsDir = join(home(), 'kanban', 'boards')
     const out: Array<Record<string, unknown>> = []
     const errs: string[] = []
-    const q = `SELECT id,title,assignee,status,body,created_at,updated_at FROM tasks WHERE status='ready' OR status='todo'`
+    const q = `SELECT id,title,assignee,status,body,created_at FROM tasks WHERE status='ready' OR status='todo'`
     for (const b of boards) {
       let db: InstanceType<typeof DatabaseSync> | null = null
       try {
