@@ -466,6 +466,12 @@ gov_role_of() { # <user> → org_gen 同源角色（R31 产品通道 provision �
   esac
 }
 
+ensure_spawn_health() { # 执行面预检（run20 00:30 瘫痪实录：宿主拆 venv 全绿假象）
+  if ! ("$SIM_ROOT/bin/hermes-sim" --help >/dev/null 2>&1 || true) && ! bash -n "$SIM_ROOT/bin/hermes-sim" 2>/dev/null; then
+    fail "执行面瘫痪：bin/hermes-sim 不可用（wrapper 报错行有修法）"
+  fi
+}
+
 ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/health/ready 只看自身 bootstrap，
   # 不探 gateway；env 与 mx-up 同款，单一事实源=本函数，mx-up 亦调用）
   curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
@@ -479,6 +485,11 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$GW_PORT" GATEWAY_PORT="$GW_PORT" \
   HERMES_BIN="$HERMES_BIN" API_SERVER_KEY="$api_key" \
   GRAPH_ENGINE="${MX_GRAPH_ENGINE:-shadow}" \
+  CLUSTER_INSPECTOR_NUDGE="${MX_CI_NUDGE:-on}" \
+  CLUSTER_INSPECTOR_NUDGE_ROOM="${MX_CI_NUDGE_ROOM:-!tDKINzVMrNVavKvLOF:matrix.test}" \
+  CLUSTER_INSPECTOR_NUDGE_REPO="${MX_CI_NUDGE_REPO:-$SIM_ROOT/central/aipaydev}" \
+  CLUSTER_INSPECTOR_STUCK_MS="${MX_CI_STUCK_MS:-900000}" \
+  CLUSTER_INSPECTOR="${MX_CI:-on}" \
     /bin/bash -c 'nohup node "$1" > "$2" 2>&1 < /dev/null & echo $! > "$3"' _ \
     "$STUDIO_DIST/server/index.js" "$LOGS_DIR/studio.log" "$PIDS_DIR/studio.pid" )
   local deadline=$(( $(date +%s) + 120 ))
@@ -633,7 +644,7 @@ mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
   # 长会话治理轮（2026-10-11）：401/457 首次入 SIM 通道（此前仅工作区树可达，SIM/宿主从未执行）；601-605 新增（心跳/遥测/轮换/检查点/监督接线）。
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch; do
+  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch 636-agent-turn-end-delivery-guard.patch 637-agent-gateway-continuation-pump.patch; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
