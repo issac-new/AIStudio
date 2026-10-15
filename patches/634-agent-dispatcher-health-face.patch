@@ -1,0 +1,79 @@
+diff --git a/gateway/kanban_watchers_dispatcher.py b/gateway/kanban_watchers_dispatcher.py
+index c6003a32c4..b5e6368e1e 100644
+--- a/gateway/kanban_watchers_dispatcher.py
++++ b/gateway/kanban_watchers_dispatcher.py
+@@ -215,7 +215,9 @@ class _KanbanDispatcher:
+ 
+     def tick_once(self) -> list[tuple[str, Optional[object]]]:
+         """Run one dispatch_once per board. Returns (slug, result) pairs."""
+-        return [(slug, self.tick_once_for_board(slug)) for slug in self._board_slugs()]
++        results = [(slug, self.tick_once_for_board(slug)) for slug in self._board_slugs()]
++        _record_tick(_log_spawn_results(results))
++        return results
+ 
+     def ready_nonempty(self) -> bool:
+         """Is there a ready+assigned+unclaimed task on ANY board the dispatcher would spawn for?
+@@ -344,3 +346,63 @@ def _log_spawn_results(results: Optional[list]) -> bool:
+                 len(res.auto_blocked) if hasattr(res.auto_blocked, "__len__") else 0,
+             )
+     return any_spawned
++
++
++# ── 派发器健康面（PR-1 最小面，V8.29 治理轮）──
++# run12/run19 实锤：ready 卡滞留数小时零孵化且根因未明——先让病可见，根治用本
++# 数据面开展。消费方：cluster-inspector/哨兵/studio 运行中心（import 本模块调
++# dispatcher_health_snapshot()）；报警阈值 env DISPATCHER_STALL_ALARM_TICKS（缺省
++# 60 拍）。根因未明前不自动重排队列（识别不干预），只报警留痕。
++_HEALTH = {"last_spawn_ts": 0.0, "stall_ticks": 0, "last_tick_ts": 0.0, "total_ticks": 0}
++
++
++def _record_tick(any_spawned: bool) -> None:
++    now = time.time()
++    _HEALTH["last_tick_ts"] = now
++    _HEALTH["total_ticks"] += 1
++    if any_spawned:
++        _HEALTH["last_spawn_ts"] = now
++        _HEALTH["stall_ticks"] = 0
++    else:
++        _HEALTH["stall_ticks"] += 1
++    try:
++        threshold = int(os.environ.get("DISPATCHER_STALL_ALARM_TICKS", "60"))
++    except ValueError:
++        threshold = 60
++    if _HEALTH["stall_ticks"] == threshold:
++        logger.warning("kanban dispatcher stall alarm: %d ticks with zero spawns (ready may be stuck); snapshot=%s",
++                       _HEALTH["stall_ticks"], dispatcher_health_snapshot())
++
++
++def dispatcher_health_snapshot() -> dict:
++    """只读健康快照：ready 在场板清单/距最近孵化秒数/连续零孵化拍数/总拍数。
++    不写任何库；板级 ready 判定与 ready_nonempty() 同源（spawnable+assigned）。"""
++    boards_with_ready: list[str] = []
++    try:
++        kbd = _kbd()
++        from hermes_cli import kanban_db as _kb
++        disp = _KanbanDispatcher(None, _resolve_dispatcher_settings({}, None))
++        with _kb.pin_first_board_resolution():
++            for slug in disp._board_slugs():
++                conn = None
++                try:
++                    conn = _kbc().connect(board=slug)
++                    if kbd.has_spawnable_ready(conn):
++                        boards_with_ready.append(slug)
++                except Exception:
++                    continue
++                finally:
++                    if conn is not None:
++                        with contextlib.suppress(Exception):
++                            conn.close()
++    except Exception:
++        pass
++    now = time.time()
++    last = _HEALTH["last_spawn_ts"]
++    return {
++        "boards_with_ready": boards_with_ready,
++        "ready_nonempty": bool(boards_with_ready),
++        "seconds_since_last_spawn": round(now - last, 1) if last else None,
++        "stall_ticks": _HEALTH["stall_ticks"],
++        "total_ticks": _HEALTH["total_ticks"],
++    }

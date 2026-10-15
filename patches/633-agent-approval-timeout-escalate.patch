@@ -1,0 +1,54 @@
+diff --git a/tools/approval_context.py b/tools/approval_context.py
+index 7b693516e9..aec2fa20e0 100644
+--- a/tools/approval_context.py
++++ b/tools/approval_context.py
+@@ -343,3 +343,23 @@ def _get_approval_transport_config() -> tuple[str, str | None]:
+         # prompt on a built-in surface the operator may not be watching.
+         return "config-error", None
+     return selected or "builtin", "builtin" if fallback == "builtin" else None
++
++
++def _get_approval_timeout_action() -> str:
++    """PR-2（V8.29 治理轮，run16 实锤）：approvals.timeout_action — 'expire'（缺省，
++    现行语义：到期即不执行+超时告知）| 'escalate'（到期重发待批卡再等一轮，轮满才
++    expire）。驱动缺席期待批令无人应答被静默拒绝、修复链在权限门口饿死，是本开关
++    的立法事由。"""
++    try:
++        v = str(_get_approval_config().get("timeout_action", "expire")).lower().strip()
++        return "escalate" if v in {"escalate", "reask", "remind"} else "expire"
++    except Exception:
++        return "expire"
++
++
++def _get_approval_escalate_rounds() -> int:
++    """PR-2：escalate 模式的重发轮数（缺省 2，夹在 0-10）。"""
++    try:
++        return max(0, min(10, int(_get_approval_config().get("escalate_rounds", 2))))
++    except (ValueError, TypeError):
++        return 2
+diff --git a/tools/approval_gateway_wait.py b/tools/approval_gateway_wait.py
+index ea6cef0b8f..c9f8362d22 100644
+--- a/tools/approval_gateway_wait.py
++++ b/tools/approval_gateway_wait.py
+@@ -214,6 +214,21 @@ def _await_gateway_decision(session_key: str, notify_cb, approval_data: dict, *,
+ 
+         state = _poll_event(entry.event, session_key,
+                             interrupt_log="Approval wait interrupted — returning deny for session %s")
++        # PR-2（V8.29 治理轮）：escalate 模式下超时不再直接失效——重发待批卡（升级
++        # 提醒）再等一轮，至多 approvals.escalate_rounds 轮；轮满仍无应答才走原
++        # expire 语义。notify 失败降级回 expire（不阻断 agent 线程）。
++        if _ctx._get_approval_timeout_action() == "escalate":
++            for _esc_round in range(_ctx._get_approval_escalate_rounds()):
++                if state != "timeout":
++                    break
++                try:
++                    _ctx._fire_approval_hook("approval_escalated", **payload)
++                    notify_cb(dict(entry.data))
++                except Exception:
++                    logger.warning("Approval escalation re-notify failed; falling back to expire")
++                    break
++                state = _poll_event(entry.event, session_key,
++                                    interrupt_log="Approval escalated wait interrupted — returning deny for session %s")
+         cancelled = _cancel_cause(state, entry)
+         if state == "interrupted":
+             # Coalesced followers wake with the cause instead of a deny nobody issued.
