@@ -1393,6 +1393,9 @@ mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=
   out=$(printf '%s\n' "$2" | awk -v g="$1" '
     {
       line = $0
+      # 全角冒号归一（run20 G5 实锤：中文 agent 判词行天然写「结论行：X」，全角
+      # 「：」不在分隔符类，锚点紧邻判词被拒）——gsub 多字节字面量实测可用。
+      gsub(/：/, ":", line)
       P = (index(line, g "-PASS") > 0); F = (index(line, g "-FAIL") > 0)
       if (P && F) {
         if (line ~ /或|二选一/) next
@@ -1411,7 +1414,12 @@ mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=
       pos = index(line, g "-" tok)
       pre = substr(line, 1, pos - 1)
       if (pre ~ /^[[:space:]*_+>.#|~-]*([0-9]+[.)][[:space:]]*)?$/) { last = tok; next }
-      if (pre ~ /(结论|判词|conclusion|verdict|closing)[[:space:]:=*_·「」<>#|~.-]*(为|是)?[[:space:]:=*_·「」<>#|~.-]*$/) { last = tok; next }
+      # 锚点词尾「行」合法（run20 G5 实锤：派发词自用「结论行」词汇，agent 照写
+      # 「结论行：READY-GATE-FAIL」——尾字「行」不在锚点集，锚点紧邻判词被拒，
+      # 等待环对已落判词失明 1h+ 直到硬窗中止白丢一轮重评）。注意：锚点枚举必须
+      # 显式列出「结论行|结论」——BSD awk LC_ALL=C 字节模式下「行?」的量词只
+      # 作用于多字节字符末字节，会把字面量打碎致整分支失配（实测对照）。
+      if (pre ~ /(结论行|结论|判词行|判词|conclusion|verdict|closing)[[:space:]:=*_·「」<>#|~.-]*(为|是)?[[:space:]:=*_·「」<>#|~.-]*$/) { last = tok; next }
     }
     END { print last }
   ')
