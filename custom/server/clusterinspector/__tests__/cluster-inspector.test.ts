@@ -483,3 +483,52 @@ describe('card.blocked-stale（run19 G5 熔断死等产品化——用户 300s �
     expect(out.some((a) => a.detector === 'card.blocked-stale')).toBe(true)
   })
 })
+
+describe('work.expected-silent（run20 双盲区实录产品化——群消息派活形态空转唯一出口）', () => {
+  const NOW = 1_800_000_000_000
+  it('ready 卡 assignee=<名>-agent 且档案真做静默 → 报；无期望卡（期望集空）不报', () => {
+    const out = detectAll(snap({
+      expectedWorkCards: { ok: true, cards: [
+        { id: 't1', assignee: 'hu-agent', status: 'ready' },
+        { id: 't2', assignee: 'lin-agent', status: 'todo' },
+      ] },
+      profiles: { ok: true, tails: [
+        { profile: 'hu', tail: 'x', mtimeMs: NOW - 3600_000, workTsMs: NOW - 3600_000, realWorkTsMs: NOW - 3600_000 },
+        { profile: 'lin', tail: 'x', mtimeMs: NOW - 1000, workTsMs: NOW - 1000, realWorkTsMs: NOW - 1000 },
+      ] },
+    }), { nowMs: NOW })
+    const hit = out.find((x) => x.detector === 'work.expected-silent')
+    expect(hit).toBeTruthy()
+    expect(hit!.summary).toContain('hu')
+    expect(hit!.summary).toContain('2 张')
+    expect(out.filter((x) => x.detector === 'work.expected-silent' && x.subject === 'profile:lin')).toHaveLength(0)
+    const noCards = detectAll(snap({
+      expectedWorkCards: { ok: true, cards: [] },
+      profiles: { ok: true, tails: [{ profile: 'x', tail: 'x', mtimeMs: NOW - 3600_000, workTsMs: NOW - 3600_000, realWorkTsMs: NOW - 3600_000 }] },
+    }), { nowMs: NOW })
+    expect(noCards.find((x) => x.detector === 'work.expected-silent')).toBeUndefined()
+  })
+  it('assignee 无 -agent 后缀=原名匹配；面未接线（expectedWorkCards 空）=合法空态零报', () => {
+    const out = detectAll(snap({
+      expectedWorkCards: { ok: true, cards: [{ id: 't3', assignee: 'wei', status: 'ready' }] },
+      profiles: { ok: true, tails: [{ profile: 'wei', tail: 'x', mtimeMs: NOW - 3600_000, workTsMs: NOW - 3600_000, realWorkTsMs: NOW - 3600_000 }] },
+    }), { nowMs: NOW })
+    expect(out.find((x) => x.detector === 'work.expected-silent')).toBeTruthy()
+    const notWired = detectAll(snap({
+      profiles: { ok: true, tails: [{ profile: 'x', tail: 'x', mtimeMs: NOW - 3600_000, workTsMs: NOW - 3600_000, realWorkTsMs: NOW - 3600_000 }] },
+    }), { nowMs: NOW })
+    expect(notWired.find((x) => x.detector === 'work.expected-silent')).toBeUndefined()
+  })
+  it('与 D7/idle 互补：running 卡走 D7、无主 ready 走 idle、有主 ready/todo 走 expected-silent', () => {
+    const mk = (cards: Array<{ assignee?: string; status?: string }>, tails: Array<{ p: string; rw?: number }>) => snap({
+      ts: NOW,
+      expectedWorkCards: { ok: true, cards: cards.map((c, i) => ({ id: `t${i}`, assignee: c.assignee, status: c.status ?? 'ready' })) },
+      profiles: { ok: true, tails: tails.map((t) => ({ profile: t.p, tail: 'x', mtimeMs: NOW - 3600_000, workTsMs: NOW - 3600_000, realWorkTsMs: t.rw ?? NOW - 3600_000 })) },
+      runningCards: { ok: true, cards: [] },
+    })
+    const exp = detectAll(mk([{ assignee: 'chen-agent' }], [{ p: 'chen' }]), { nowMs: NOW })
+    expect(exp.find((x) => x.detector === 'work.expected-silent')).toBeTruthy()
+    expect(exp.find((x) => x.detector === 'task.agent-silent')).toBeUndefined()
+    expect(exp.find((x) => x.detector === 'idle.with-work')).toBeUndefined()
+  })
+})
