@@ -29,9 +29,9 @@ export interface BoundaryTemplate {
 
 /** 内置默认（注册表文件不可读时的兜底——与 role-boundary-registry.json 同口径维护） */
 const BUILTIN_ROLES: BoundaryTemplate[] = [
-  { role: 'analyst', text: '仅产出你名下的分析/概设/计划文档本身；禁写实现代码；禁代做他域的实现或测试；禁做任何合并 origin/main 的集成操作（集成是导演/集成节点的职权）。' },
-  { role: 'dev', text: '交付仅限 push origin feat/<你的任务分支>（含指定 testlog）；不得直接推 origin/main；不得代做他人/他域任务。' },
-  { role: 'reviewer', text: '评审仅产出判词与评审意见；不代做被评审域的实现或测试；不修改被评审产物本身。' },
+  { role: 'analyst', text: '仅产出你名下的分析/概设/计划文档本身；禁写实现代码；禁代做他域的实现或测试；禁做任何合并 origin/main 的集成操作（集成合并是域 lead 的职权，不是 PM 的——V8.30 职责归位 2026-10-15）。' },
+  { role: 'dev', text: '交付仅限 push origin feat/<你的任务分支>（含指定 testlog）；不得直接推 origin/main；不得代做他人/他域任务；代码评审与集成合并归你的域 lead（wei/mei）职权，不得请求产品经理代合并。' },
+  { role: 'reviewer', text: '评审仅产出判词与评审意见；不代做被评审域的实现或测试；不修改被评审产物本身。域内交付分支的集成合并（integration 分支，--no-ff、禁强推、冲突处理留痕）是 lead 本职——评审与合并为同一条责任链（V8.30 职责归位）。' },
   { role: 'tester', text: '测试交付仅限测试报告与用例；预备/起草类任务不执行测试、不建分支（含 worktree）、不 push。' },
   { role: 'governance', text: '仅产出本职的报告/台账/意见；禁代做实现与测试；禁做任何代码或文档的集成合并操作。' },
   { role: 'generic', text: '仅做你名下任务书明确要求的事；不代做他人任务；不直接推共享主干分支。' },
