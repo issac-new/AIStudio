@@ -65,7 +65,9 @@ _g5_evidence_fp() {
   rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
   if [[ -n "$rgid" ]]; then
     db="$SIM_ROOT/hermes/kanban/boards/${MX_ANCHOR_USER:-fanfan}-review/kanban.db"
-    fp="$fp card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='$rgid';" 2>/dev/null | shasum | cut -c1-12)"
+    # run20 02:2x 死锁根治：判词常写 result 列（G5 终判 PASS 实录）而 body 不动——
+    # 单 body 哈希永不变化=复位永不触发。扩为 body||result 拼接哈希（判词落任一列即指纹变）。
+    fp="$fp card:$(sqlite3 "$db" "SELECT body || char(10) || coalesce(result,'') FROM tasks WHERE id='$rgid';" 2>/dev/null | shasum | cut -c1-12)"
   fi
   printf '%s' "$fp"
 }
