@@ -137,6 +137,11 @@ export class ClusterInspector {
     return acted
   }
 
+  /** 已催办档案的「NUDGE 后真做验证」账本（run20 17:42 嘴炮-不交卷形态产品化根治）：
+   *  map entry = { firstNudgeAt, nudgeCount, lastRealWorkTsMs }。下轮巡检若该档案
+   *  仍静默且 realWorkTsMs 未刷新→按 count 重催，3 次仍 0→升级报「需换档案接手」。 */
+  private readonly nudgedProfiles = new Map<string, { firstNudgeAt: number; nudgeCount: number; lastRealWorkTsMs: number }>()
+
   private async nudgeStalled(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
     // 2026-10-11 默认开（用户指令；run14 六小时停摆实录：能力在而默认关=形同没有）。
@@ -168,7 +173,8 @@ export class ClusterInspector {
       // card.blocked-stale 同入（run19 熔断死等产品化——用户 300s 时限：发现即提醒 assignee）
       if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent'
         && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale'
-        && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale') continue
+        && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale'
+        && a.detector !== 'work.expected-silent') continue  // run20 期望对账：群消息派活形态唯一可见锚
       const profile = (a.detail as { assignee?: string } | undefined)?.assignee?.trim()
         || a.subject.replace(/^profile:/, '')
       // 降级先于熔断判（负责人有活跃熵增风险时不喂新活——领卡督办抑制；此语义
@@ -181,6 +187,34 @@ export class ClusterInspector {
       if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) {
         acted.push(`nudge-breaker:${profile}`)
         continue
+      }
+      // 真做验证：催办后档案若仍无 realWorkTsMs 刷新→按重催档位执行（1→2→3，3 次仍 0→升级）
+      // 取该档案当前 realWorkTsMs（来自最近一次 ProfileTail）
+      const tailNow = this.lastSnapshot?.profiles?.tails?.find((t) => t.profile === profile)
+      const rwNow = tailNow?.realWorkTsMs ?? 0
+      const entry = this.nudgedProfiles.get(profile)
+      if (entry) {
+        // 已催过：判断真做是否刷新
+        if (rwNow > entry.lastRealWorkTsMs + 1000) {
+          // 真做刷新了→清账（重活轻催，不重催）
+          this.nudgedProfiles.delete(profile)
+          acted.push(`nudge-resumed:${profile}`)
+          continue
+        }
+        // 真做未刷新：按 nudgeCount 决定动作
+        const nextCount = entry.nudgeCount + 1
+        if (nextCount >= 3) {
+          // 3 次仍 0 升级：停发催办，标记需换档案
+          this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
+          acted.push(`nudge-escalate:${profile}:${nextCount}-nudges-no-realwork`)
+          // 同时发一条升级消息让群内其他人能看到
+          await nudge(profile, `【升级】已催 ${nextCount} 次仍无真做，疑似空转收场或唤醒即再死，建议换档案接手收口`)
+          continue
+        }
+        this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
+      } else {
+        // 首次催办：登记
+        this.nudgedProfiles.set(profile, { firstNudgeAt: Date.now(), nudgeCount: 1, lastRealWorkTsMs: rwNow })
       }
       const r = await nudge(profile, a.summary)
       acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
