@@ -11,6 +11,8 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
+import SupervisionPanel from './SupervisionPanel.vue'
+import EvidencePanel from './EvidencePanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,6 +51,13 @@ function goTab(tab: SimTab): void {
   if (tab.key === activeTab.value) return
   void router.push({ name: tab.name })
 }
+
+/** B2 起监督/证据两签实装，占位仅剩四签（序号沿用六签冻结位次） */
+const placeholderTabs = computed(() =>
+  TABS
+    .filter(t => t.key !== 'supervision' && t.key !== 'evidence')
+    .map(t => ({ ...t, index: TABS.findIndex(x => x.key === t.key) + 1 })),
+)
 </script>
 
 <template>
@@ -73,15 +82,33 @@ function goTab(tab: SimTab): void {
     </header>
 
     <main class="sim-center__body">
-      <!-- 六签占位（B1 壳：标题+空态说明+将消费端点；签内容 B2-B7 实装） -->
+      <!-- 签 2 监督面板（B2 实装：观察窗流+研判/判词时间线+journal 原行反查） -->
       <section
-        v-for="(tab, i) in TABS"
+        v-show="activeTab === 'supervision'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-supervision"
+      >
+        <h3 class="sim-center__panel-title">签 2·{{ text.tabSupervision }}</h3>
+        <SupervisionPanel />
+      </section>
+      <!-- 签 4 证据库（B2 实装：锚检索→锚点抽屉+台账子表+帧图廊挂账态） -->
+      <section
+        v-show="activeTab === 'evidence'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-evidence"
+      >
+        <h3 class="sim-center__panel-title">签 4·{{ text.tabEvidence }}</h3>
+        <EvidencePanel />
+      </section>
+      <!-- 其余四签占位（B4-B7 逐签实装） -->
+      <section
+        v-for="(tab, i) in placeholderTabs"
         v-show="activeTab === tab.key"
         :key="tab.key"
         class="sim-center__panel"
         :data-testid="`ia-sim-panel-${tab.key}`"
       >
-        <h3 class="sim-center__panel-title">签 {{ i + 1 }}·{{ text[TAB_LABEL_KEY[tab.key]] }}</h3>
+        <h3 class="sim-center__panel-title">签 {{ tab.index }}·{{ text[TAB_LABEL_KEY[tab.key]] }}</h3>
         <p class="sim-center__pending">
           <span class="sim-center__badge">{{ text.pendingBadge }}</span>{{ text.pendingLead }}
         </p>
@@ -139,6 +166,11 @@ function goTab(tab: SimTab): void {
   padding: 32px 20px;
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-standard, 6px);
+}
+/* B2 实装签：去虚线占位框，承载实际面板 */
+.sim-center__panel--live {
+  padding: 12px 14px;
+  border-style: solid;
 }
 .sim-center__panel-title { margin: 0; font-size: 15px; }
 .sim-center__pending {
