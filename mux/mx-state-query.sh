@@ -58,6 +58,16 @@ case "$CMD" in
   ledger)
     RUN_ID="$RUN_ID" SIM_ROOT="$SIM_ROOT" bash "$HERE/mx-compensation-ledger.sh" --run "$RUN_ID" summary
     ;;
+  product)
+    # 产品原生端点探查（PR-0/PR-1 落地后的同源查询面；缺席时如实降级到文件面）
+    _H="${MX_STUDIO_URL:-http://127.0.0.1:8802}"
+    echo "-- 派发器健康（PR-1）--"
+    curl -sf -m 3 "$_H/api/hermes/dispatcher/health" 2>/dev/null || echo "（端点未部署——PR-1 落地前走文件面/哨兵观测）"
+    echo
+    echo "-- 可观测性 run-state（PR-0）--"
+    curl -sf -m 3 "$_H/api/hermes/observability/run-state?run=$RUN_ID" 2>/dev/null || echo "（端点未部署——PR-0 落地前以本脚本文件面为准）"
+    echo
+    ;;
   summary)
     echo "== run $RUN_ID =="
     P=$(_q posture); echo "姿态: ${P:-unset（缺省 standard）}"
@@ -69,6 +79,6 @@ case "$CMD" in
     RUN_ID="$RUN_ID" SIM_ROOT="$SIM_ROOT" bash "$HERE/mx-compensation-ledger.sh" --run "$RUN_ID" summary | sed 's/^/  /'
     ;;
   *)
-    echo "unknown cmd: $CMD（summary|gates|steps|state|posture|ledger）" >&2; exit 2
+    echo "unknown cmd: $CMD（summary|gates|steps|state|posture|ledger|product）" >&2; exit 2
     ;;
 esac
