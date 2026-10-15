@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/sim-center-shell.test.ts
-// B1 推演中心壳守门（三中心重构波 2 首件，2026-10-16）：
+// B1 推演中心壳单测（三中心重构波 2 首件，2026-10-16）：
 //   1) 六签路由可达（/app/sim 家族，名称冻结自 2026-10-16-sim-center-detailed-design.md）
 //   2) /app/runs 家族重定向（兼容期一个版本周期，A13 升格移除）——按路径跳与
 //      按名跳（IaGlobalTop/SpotlightPanel/inbox-center 等既有调用面）同验
@@ -8,7 +8,7 @@
 //      签序标题+待实现说明+将消费的 X1 端点名
 //   4) sim-tabs 文案模块 zh/en 键成对（单一事实源不半边漂移）
 // 路由表断言用 router.resolve（不装载组件）；实走重定向时组件换桩（同
-// unified-nav-guard 模式，避免拉起 IaShell 重型导入链）。
+// unified-nav-guard 模式，避免装载 IaShell 重型导入链）。
 import { describe, it, expect } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
@@ -145,16 +145,14 @@ describe('推演中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('每签占位注明将消费的 X1 端点（文案不漂移——与 simcenter 控制器路由同名）', async () => {
+  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2 起监督/证据两签实装）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     const expectations: ReadonlyArray<{ key: string; title: string; endpoint: string }> = [
       { key: 'overview', title: '签 1·轮次总览', endpoint: '/api/hermes/sim/run-state' },
-      { key: 'supervision', title: '签 2·监督面板', endpoint: '/api/hermes/sim/journal' },
       { key: 'ops', title: '签 3·运行观测', endpoint: '/api/hermes/sim/topology' },
-      { key: 'evidence', title: '签 4·证据库', endpoint: '/api/hermes/sim/anchor' },
       { key: 'delivery', title: '签 5·交付健康', endpoint: '/api/hermes/sim/branches' },
       { key: 'trace', title: '签 6·需求追溯', endpoint: '/api/hermes/sim/trace' },
     ]
@@ -164,6 +162,15 @@ describe('推演中心壳（B1）：渲染', () => {
       expect(panel.text()).toContain(title)
       expect(panel.text()).toContain(endpoint)
     }
+    // B2 实装两签：标题保留，占位端点清单由实际数据面取代
+    const sup = wrapper.find('[data-testid="ia-sim-panel-supervision"]')
+    expect(sup.exists()).toBe(true)
+    expect(sup.text()).toContain('签 2·监督面板')
+    expect(sup.find('[data-testid="sup-panel"]').exists()).toBe(true)
+    const ev = wrapper.find('[data-testid="ia-sim-panel-evidence"]')
+    expect(ev.exists()).toBe(true)
+    expect(ev.text()).toContain('签 4·证据库')
+    expect(ev.find('[data-testid="ev-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 
