@@ -12,7 +12,7 @@
  * PR-6 合并流水线端点：受控合并执行面（POST /api/hermes/orgloop/merge-run）——
  * 参数=分支集/目标/策略；执行=git merge --no-ff 带 precheck（目标存在+禁强推）
  * 与日志留痕；fail-closed：ORGLOOP_REPO_ROOT 未配置即 503（生产不开 env 即关）。
- * V8.30 职责归位后驱动/导演不再代做合并——本端点是兜底通道的产品化正身。
+ * V8.30 职责归位后驱动侧不再代做合并——本端点是兜底通道的产品化正身。
  *
  * 挂载：B 类 patch 636（bootstrap/routes.ts，同 631 模式）。
  */
@@ -125,6 +125,204 @@ router.post('/merge-run', (ctx: Context) => {
     ctx.status = 500
     ctx.body = { ok: false, target, log, error: (exc as Error).message.slice(0, 300) }
   }
+})
+
+// ── X2：清偿门四端点（R6，设计正本 2026-10-16-design-derived-from-requirements §三）──
+// 台账正身=evidence/compensation-ledger.tsv（方案 §2.6.5 单一事实源，本端点只读消费——
+// 合并铁律：不复制写入语义）；resolve/waive 处置留痕存产品侧
+// <home>/runtime/orgloop-clearance.json。ORGLOOP_LEDGER_TSV 缺席=503 fail-closed（N5）。
+//   GET  /ledger                     台账全量+处置态合并视图（含 open 计数）
+//   POST /clearance/resolve         {target, pr, commit}——无 PR 锚=400（判据=落码合入）
+//   POST /clearance/waive           {target, reason}——无理由=400（用户批准理由强制）
+//   GET  /clearance/check-clearance 开轮放行判定（open=0 才 pass——灯值唯一源）
+const TARGET_RE = /^[A-Za-z0-9._-]{1,40}$/
+
+/** 入参校验（纯函数，测试面）：resolve 无 PR 锚=invalid（判据=缺陷落码合入）。 */
+export function validateResolve(body: unknown): { ok: true; target: string; pr: string; commit?: string } | { ok: false; error: string } {
+  const b = body as { target?: unknown; pr?: unknown; commit?: unknown } | undefined
+  const target = typeof b?.target === 'string' && TARGET_RE.test(b.target) ? b.target : ''
+  const pr = typeof b?.pr === 'string' ? b.pr.trim() : ''
+  if (!target) return { ok: false, error: 'target 必填（缺陷号或台账类型，受控字符集）' }
+  if (!pr) return { ok: false, error: 'resolve 必须带 PR 锚（判据=缺陷落码合入，不是记了单）' }
+  return { ok: true, target, pr: pr.slice(0, 80), commit: typeof b?.commit === 'string' ? b.commit.slice(0, 80) : undefined }
+}
+
+/** 入参校验（纯函数，测试面）：waive 无理由=invalid（用户批准理由强制）。 */
+export function validateWaive(body: unknown): { ok: true; target: string; reason: string } | { ok: false; error: string } {
+  const b = body as { target?: unknown; reason?: unknown } | undefined
+  const target = typeof b?.target === 'string' && TARGET_RE.test(b.target) ? b.target : ''
+  const reason = typeof b?.reason === 'string' ? b.reason.trim() : ''
+  if (!target) return { ok: false, error: 'target 必填（缺陷号或台账类型，受控字符集）' }
+  if (!reason) return { ok: false, error: 'waive 必须带理由（用户批准理由强制，禁静默豁免）' }
+  return { ok: true, target, reason: reason.slice(0, 300) }
+}
+
+export interface LedgerEntry {
+  id: string; ts: string; type: string; defect: string; detail: string; status: string; resolution: string
+}
+
+/** TSV→结构化（纯函数，测试面）。列序=id ts type defect detail status resolution；短行如实跳过。 */
+export function parseLedgerTsv(text: string): LedgerEntry[] {
+  const out: LedgerEntry[] = []
+  for (const line of text.split('\n')) {
+    if (!line.trim() || line.startsWith('id\t')) continue
+    const c = line.split('\t')
+    if (c.length < 6) continue
+    out.push({ id: c[0], ts: c[1], type: c[2], defect: c[3], detail: c[4] ?? '', status: c[5] ?? '', resolution: c[6] ?? '' })
+  }
+  return out
+}
+
+export interface ClearanceRecord {
+  target: string; action: 'resolve' | 'waive'; pr?: string; commit?: string; reason?: string; ts: string
+}
+
+export interface ClearanceView {
+  rows: Array<LedgerEntry & { state: 'open' | 'resolved' | 'waived' }>
+  open: number; resolved: number; waived: number; pass: boolean
+}
+
+/** 台账×处置记录→清偿视图（纯函数，测试面）。匹配键=defect 列优先，缺席回落 type。 */
+export function computeClearanceView(entries: LedgerEntry[], records: ClearanceRecord[]): ClearanceView {
+  const rows = entries.map(e => {
+    const key = e.defect || e.type
+    const hit = records.filter(r => r.target === key)
+    const state: 'open' | 'resolved' | 'waived' =
+      hit.some(r => r.action === 'resolve') ? 'resolved'
+        : hit.some(r => r.action === 'waive') ? 'waived' : 'open'
+    return { ...e, state }
+  })
+  const open = rows.filter(r => r.state === 'open').length
+  return { rows, open, resolved: rows.length - open - rows.filter(r => r.state === 'waived').length, waived: rows.filter(r => r.state === 'waived').length, pass: open === 0 }
+}
+
+function clearanceFile(): string {
+  const home = process.env.HERMES_WEB_UI_HOME || process.env.HOME || '.'
+  return resolve(home, 'runtime', 'orgloop-clearance.json')
+}
+function loadClearance(): ClearanceRecord[] {
+  const f = clearanceFile()
+  if (!existsSync(f)) return []
+  try { return JSON.parse(readFileSync(f, 'utf-8')) as ClearanceRecord[] } catch { return [] }
+}
+function persistClearance(all: ClearanceRecord[]): void {
+  const f = clearanceFile()
+  mkdirSync(resolve(f, '..'), { recursive: true })
+  writeFileSync(f, JSON.stringify(all, null, 1), 'utf-8')
+}
+function ledgerPath(): string | null {
+  const p = process.env.ORGLOOP_LEDGER_TSV
+  return p && existsSync(p) ? p : null
+}
+function readLedger(): LedgerEntry[] {
+  const p = ledgerPath()
+  return p ? parseLedgerTsv(readFileSync(p, 'utf-8')) : []
+}
+
+router.get('/ledger', (ctx: Context) => {
+  if (!ledgerPath()) { ctx.status = 503; ctx.body = { error: '清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）' }; return }
+  const view = computeClearanceView(readLedger(), loadClearance())
+  ctx.body = view
+})
+
+router.post('/clearance/resolve', (ctx: Context) => {
+  if (!ledgerPath()) { ctx.status = 503; ctx.body = { error: '清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）' }; return }
+  const v = validateResolve(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const all = loadClearance()
+  all.push({ target: v.target, action: 'resolve', pr: v.pr, commit: v.commit, ts: new Date().toISOString() })
+  persistClearance(all)
+  ctx.body = computeClearanceView(readLedger(), all)
+})
+
+router.post('/clearance/waive', (ctx: Context) => {
+  if (!ledgerPath()) { ctx.status = 503; ctx.body = { error: '清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）' }; return }
+  const v = validateWaive(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const all = loadClearance()
+  all.push({ target: v.target, action: 'waive', reason: v.reason, ts: new Date().toISOString() })
+  persistClearance(all)
+  ctx.body = computeClearanceView(readLedger(), all)
+})
+
+router.get('/clearance/check-clearance', (ctx: Context) => {
+  if (!ledgerPath()) { ctx.status = 503; ctx.body = { error: '清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）' }; return }
+  const view = computeClearanceView(readLedger(), loadClearance())
+  ctx.body = { open: view.open, waived: view.waived, resolved: view.resolved, pass: view.pass }
+})
+
+// ── X2：介入点聚合（R5）。挂 orgloop 前缀零补丁（挂载经济性：复用 636）。──
+// 14 介入点登记（方案 §2.9 人把关列+§2.6.5 清偿+§1.5 姿态+熔断复议）；
+// 三源聚合（approved.events/闸态/清偿门），任一源缺席降级不报错（R5 验收判据）。
+export type InterventionSourceKind = 'gate' | 'approval' | 'clearance' | 'uat' | 'registry'
+export interface InterventionPoint {
+  id: string; title: string; sourceKind: InterventionSourceKind; sourceKey: string
+}
+
+export const INTERVENTION_POINTS: InterventionPoint[] = [
+  { id: 'iv-01', title: '账号编制确认（admin token 授予）', sourceKind: 'registry', sourceKey: 'admin-roster' },
+  { id: 'iv-02', title: '需求范围与验收标准裁定（RFD 定 AC）', sourceKind: 'registry', sourceKey: 'req-scope' },
+  { id: 'iv-03', title: 'G1 需求冻结判读', sourceKind: 'gate', sourceKey: 'g1_frozen' },
+  { id: 'iv-04', title: '派发令确认（产品经理）', sourceKind: 'registry', sourceKey: 'dispatch' },
+  { id: 'iv-05', title: '分诊确认（团队负责人看板 todo）', sourceKind: 'registry', sourceKey: 'triage' },
+  { id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass' },
+  { id: 'iv-07', title: '缺陷判读与验收（测试者≠写码者）', sourceKind: 'registry', sourceKey: 'defect-verdict' },
+  { id: 'iv-08', title: 'G5 发布准出人工批准（HumanGate）', sourceKind: 'approval', sourceKey: 'g5_human' },
+  { id: 'iv-09', title: 'UAT 逐条判词', sourceKind: 'uat', sourceKey: 'uat-verdict' },
+  { id: 'iv-10', title: '审计独立签名线', sourceKind: 'registry', sourceKey: 'audit-sign' },
+  { id: 'iv-11', title: '复盘行动项拍板', sourceKind: 'registry', sourceKey: 'retro-decide' },
+  { id: 'iv-12', title: '清偿门 waive（须带批准理由）', sourceKind: 'clearance', sourceKey: 'clearance-waive' },
+  { id: 'iv-13', title: '熔断复议 OVERRIDE（带原因）', sourceKind: 'registry', sourceKey: 'breaker-override' },
+  { id: 'iv-14', title: '姿态声明与开轮批准', sourceKind: 'registry', sourceKey: 'posture-approve' },
+]
+
+export interface InterventionSnapshot {
+  gates?: Record<string, string> | null
+  approvals?: string[] | null
+  clearanceOpen?: number | null
+}
+
+/** 介入点×三源快照→待办视图（纯函数，测试面）。源缺席=该点 unknown 不报错。 */
+export function aggregateInterventions(snap: InterventionSnapshot): {
+  points: Array<InterventionPoint & { pending: boolean | null }>; sources: Record<string, 'ok' | 'absent'>
+} {
+  const sources: Record<string, 'ok' | 'absent'> = {
+    gates: snap.gates ? 'ok' : 'absent',
+    approvals: snap.approvals ? 'ok' : 'absent',
+    clearance: snap.clearanceOpen == null ? 'absent' : 'ok',
+  }
+  const points = INTERVENTION_POINTS.map(p => {
+    let pending: boolean | null = null
+    if (p.sourceKind === 'gate' && snap.gates) pending = !snap.gates[p.sourceKey]
+    else if (p.sourceKind === 'approval' && snap.approvals) pending = !snap.approvals.includes(p.sourceKey)
+    else if (p.sourceKind === 'clearance' && snap.clearanceOpen != null) pending = snap.clearanceOpen > 0
+    return { ...p, pending }
+  })
+  return { points, sources }
+}
+
+function parseStateEnvGates(text: string): Record<string, string> {
+  const gates: Record<string, string> = {}
+  for (const line of text.split('\n')) {
+    const m = /^([a-z0-9_]+)=(.*)$/.exec(line.trim())
+    if (m) gates[m[1]] = m[2]
+  }
+  return gates
+}
+
+router.get('/interventions/pending', (ctx: Context) => {
+  const snap: InterventionSnapshot = {}
+  const stateEnv = process.env.ORGLOOP_STATE_ENV
+  try { if (stateEnv && existsSync(stateEnv)) snap.gates = parseStateEnvGates(readFileSync(stateEnv, 'utf-8')) } catch { /* 降级 */ }
+  const approved = process.env.ORGLOOP_APPROVED_EVENTS
+  try {
+    if (approved && existsSync(approved)) {
+      snap.approvals = readFileSync(approved, 'utf-8').split('\n')
+        .filter(l => l.trim()).map(l => { try { return JSON.parse(l).type as string } catch { return l.slice(0, 60) } })
+    }
+  } catch { /* 降级 */ }
+  try { if (ledgerPath()) snap.clearanceOpen = computeClearanceView(readLedger(), loadClearance()).open } catch { /* 降级 */ }
+  ctx.body = aggregateInterventions(snap)
 })
 
 export { router as orgloopRouter }
