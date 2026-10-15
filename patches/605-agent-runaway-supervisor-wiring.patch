@@ -1,11 +1,10 @@
 diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
-index 8f16bd8eee..a711992b41 100644
 --- a/agent/runaway_guard.py
 +++ b/agent/runaway_guard.py
-@@ -296,6 +296,13 @@ def _report_signal(agent: Any, signal: RunawaySignal,
-             agent.interrupt(f"runaway-guard: {signal.signal}")
-         except Exception:  # noqa: BLE001
-             pass
+@@ -237,4 +237,11 @@
+                 agent.interrupt(f"runaway-guard: {signal.signal}")
+             except Exception:  # noqa: BLE001
+                 pass
 +    # 605 监督决策面：report/watchdog_retry/ralph_loop 三模式处置（默认 report 只报）。
 +    # 懒加载避免模块环；fail-open。
 +    try:
@@ -13,9 +12,8 @@ index 8f16bd8eee..a711992b41 100644
 +        handle_runaway_signal(agent, signal)
 +    except Exception:  # noqa: BLE001
 +        pass
- 
- 
- def _text_content(message: Any) -> str:
+     return signal
+
 diff --git a/agent/runaway_supervisor.py b/agent/runaway_supervisor.py
 index f355dbe8ef..fa7aa63458 100644
 --- a/agent/runaway_supervisor.py
