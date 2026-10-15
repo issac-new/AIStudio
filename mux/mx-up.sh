@@ -67,6 +67,8 @@ else
   log "真机 orchestrator 未探测到（${HOST_ORCH_HEALTH}）——继续"
 fi
 
+ensure_spawn_health   # 执行面预检（run20 00:30 瘫痪实录：防全绿假象起跑）
+
 # ── 单 gateway（multiplex 全部 profile）────────────────
 preflight_capacity_assert   # run11 左移件 a：容量类故障起跑前拒绝（并发闸/年龄锚双断言）
 
