@@ -6,6 +6,7 @@
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
+import GatekeeperSection from '../components/inbox/GatekeeperSection.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -29,6 +30,7 @@ function closeInbox(): void {
       >×</button>
     </div>
     <div class="ia-inbox__body">
+      <GatekeeperSection />
       <ApprovalPanel :poll-ms="10000" show-history hide-title />
     </div>
   </div>
