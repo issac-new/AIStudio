@@ -97,7 +97,7 @@
 | GET /api/hermes/sim/branches?run= | S4 | git＋宽限窗（唯一实现） | 新增 |
 | GET /api/hermes/sim/anchor?id= | S3 | 事件/提交两类先行 | 新增 |
 | GET /api/hermes/sim/trace | S4 | 冻结单＋报告＋验收书聚合 | 新增 |
-| GET /api/hermes/interventions/pending | S7 | approved.events＋闸态＋清偿门聚合，任一缺席降级不报错 | 新增 |
+| GET /api/hermes/orgloop/interventions/pending | S7 | approved.events＋闸态＋清偿门聚合，任一缺席降级不报错（挂 orgloop 前缀零补丁，复用 636） | 新增 |
 | orgloop 清偿门四端点（ledger/resolve/waive/check-clearance） | S7/S11 | orgloop 族扩展；waive 无理由 400/resolve 无 PR 锚 400 | 新增 |
 | POST /api/hermes/sim/evidence/mark | S8 | 唯一写端点，只写 evidence/ 目录 | 新增 |
 | POST /api/hermes/cluster-inspector/run（容量检测器） | S12 | 巡检官通道新增 disk-capacity 检测器，超阈发群 | 新增 |
