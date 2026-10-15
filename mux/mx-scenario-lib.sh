@@ -269,7 +269,12 @@ D 项明细：
 BODY
   )
   # 跨板复制（对账子卡，研发板可见性+工作量统计；workspace 仍指原板）
-  local dev_board="${agent}-20261015-RFD-001-dev"
+  # V8.29 修板名硬编（00:47 实录：${agent}-…-dev 板不存在，工具静默失败）：按工人档案
+  # 前缀在真实板清单里解析归属板（lin-csw-channel-alipay → lin-channel-alipay）
+  local dev_board
+  dev_board=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards list 2>/dev/null \
+    | awk -v a="${agent%%-*}" 'NR>2 && NF && $1 ~ "^"a"-" {print $1; exit}')
+  [[ -n "$dev_board" ]] || dev_board="fanfan-pm-plan"  # 解析失败回落 PM 板（对账卡可见性优先）
   local dev_id
   dev_id=$(kanban_create_as "$agent" "subrev_${sid##t_}" "G2SREV-r1 子卡对账 ${sid}（${title}）" "V8.29 根治派单：本卡为 fanfan-pm-plan 板 ${sid} 的研发板镜像；正文/工作区/进度皆在原板。来源：run20 r3 派单断棒第二刀根治（产品经理仅建子卡未分发）。" "$dev_board" "$agent" 2>/dev/null || echo "")
   # body 生成器：子卡 body 空=研发 AI 拿到没正文=断派单第二刀

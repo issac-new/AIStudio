@@ -592,6 +592,13 @@ WRAP
   chmod +x "$SIM_ROOT/bin/hermes-sim"
   _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_head=$head" "dirty=$dirty" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   log "✓ agent 源码快照就绪（wrapper=$SIM_ROOT/bin/hermes-sim）"
+  # V8.29 垫片供给（巡检官卡面聚合器）：bin/hermes 无板 list/diagnostics 归一——
+  # 产品巡检官卡类采集面依赖；mx-clean 重建后自动恢复（供给源=mux/mx-hermes-shim.py）
+  if [[ -f "$HARNESS_ROOT/mux/mx-hermes-shim.py" ]] && [[ ! -e "$SIM_ROOT/bin/hermes" ]]; then
+    cp "$HARNESS_ROOT/mux/mx-hermes-shim.py" "$SIM_ROOT/bin/hermes"
+    chmod +x "$SIM_ROOT/bin/hermes"
+    log "✓ hermes 垫片就绪（无板聚合器，mx-hermes-shim.py 供给）"
+  fi
 }
 mx_provision_product_dist() {
   [[ "${MX_SKIP_SNAPSHOT:-}" = 1 ]] && { log "MX_SKIP_SNAPSHOT=1——跳过 product-dist 快照（studio 将服务活注入树）"; return 0; }
@@ -1386,4 +1393,36 @@ PYEOF
 matrix_adapter_degraded() { # <gatewayLog>：近端日志有降级症状？
   # 症状词覆盖三面（run6 实锤补全）：skip 型 / requirements-not-met 型 / adapter-failed 型
   tail -120 "$1" 2>/dev/null | grep -qE "skipping platform 'matrix'|requirements not met|adapter creation failed"
+}
+
+# ── V8.29 期望对账（「应存在而不存在」类盲区根治·run20 hu 份额 5 项无卡实录）──
+# mx_audit_dispatch <expect-file>：期望文件=每行「D-项|描述」；对账面=①全板卡标题
+# ②中央仓 origin/main 设计稿全文。产出三列对账（卡有/稿有/两缺）落 stdout+evidence。
+mx_audit_dispatch() { # <expect-file> → 0 全对上 / 1 有缺项
+  local ef="$1" miss=0
+  [ -f "$ef" ] || { echo "mx_audit_dispatch: 期望文件缺 $ef"; return 2; }
+  local cards_all main_doc
+  cards_all=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards list 2>/dev/null | awk 'NR>2 && NF {print $1}' | while read -r b; do
+    HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$b" list --json 2>/dev/null | python3 -c 'import sys,json
+try:
+  for c in json.load(sys.stdin): print((c.get("title") or "") + "|" + (c.get("body") or "")[:200])
+except Exception: pass'
+  done)
+  main_doc=$(git -C "$DIRECTOR_CLONE" show "origin/main:docs/design/RFD-001-architecture-design.md" 2>/dev/null || echo "")
+  echo "── 期望对账（$(date '+%F %T')，基线 $ef）──"
+  while IFS='|' read -r dnum desc; do
+    [ -z "$dnum" ] && continue
+    local in_card=0 in_doc=0
+    echo "$cards_all" | grep -q "$dnum" && in_card=1
+    echo "$main_doc" | grep -q "$dnum" && in_doc=1
+    if [ $in_card -eq 0 ] && [ $in_doc -eq 0 ]; then
+      echo "  ✗✗ $dnum 两缺（无卡无稿）：$desc"; miss=$((miss+1))
+    elif [ $in_card -eq 0 ]; then
+      echo "  ◇  $dnum 稿有卡无（追踪缺，可接受）：$desc"
+    else
+      echo "  ✓  $dnum 卡稿双有：$desc"
+    fi
+  done < "$ef"
+  [ $miss -gt 0 ] && echo "── 缺项 $miss 项（应存在而不存在——立即补派）──" && return 1
+  echo "── 全对上 ──"; return 0
 }

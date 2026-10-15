@@ -111,6 +111,15 @@ else
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
+  # V8.29 适配器探活（10:5x 实录：/health 探活不覆盖矩阵面，假 home_channel 卡死适配器
+  # 2.8h 隐形断档）：90s 窗内等矩阵平台装载行，未见即 fail-fast（带排障指引）
+  for _i in $(seq 1 18); do
+    sleep 5
+    if grep -qE "MULTIPLEX.*Profile.*(ready|listening|connected)" "$LOGS_DIR/gateway.log" 2>/dev/null; then
+      log "✓ 矩阵适配器装载确认（MULTIPLEX 行）"; break
+    fi
+    [[ $_i -eq 18 ]] && { log "⚠ 90s 未见矩阵适配器装载行——查 gateway.log 平台段（假 home_channel/凭据缺失均可致此）；派发链路未通，禁起跑"; }
+  done
 fi
 
 # ── 单 studio（matrix-login 多账号 + ACL；agent 节点不跑 studio）────
