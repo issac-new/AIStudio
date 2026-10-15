@@ -21,6 +21,10 @@ describe('派发边界纪律（task-boundaries 产品能力）', () => {
     expect(ROLE_BOUNDARIES.dev).toContain('不得直接推 origin/main')
     expect(ROLE_BOUNDARIES.tester).toContain('含 worktree')
     expect(ROLE_BOUNDARIES.governance).toContain('禁做任何代码或文档的集成合并')
+    // V8.30 职责归位（2026-10-15 用户裁定）：评审+合并=域 lead 职权，PM 退出代码合并路径
+    expect(ROLE_BOUNDARIES.analyst).toContain('集成合并是域 lead 的职权')
+    expect(ROLE_BOUNDARIES.dev).toContain('不得请求产品经理代合并')
+    expect(ROLE_BOUNDARIES.reviewer).toContain('lead 本职')
   })
 
   it('withBoundary 幂等注入：带标记不叠加、空 brief 可用', () => {
@@ -90,6 +94,11 @@ describe('派发边界纪律（task-boundaries 产品能力）', () => {
     expect(table['fanfan']?.['integration-authority']).toBe('none')
     expect(table['qi']?.['deliverable-kinds']).toContain('test-report')
     expect(table['no-such-agent']).toBeUndefined()
+    // V8.30 职责归位：双域 lead 声明 own-domain 集成权（缺失=generic 最小边界会禁集成）
+    expect(table['wei']?.['integration-authority']).toBe('own-domain')
+    expect(table['wei']?.['domain-scope']).toContain('csw-pay-core')
+    expect(table['mei']?.['integration-authority']).toBe('own-domain')
+    expect(table['mei']?.['domain-scope']).toContain('csw-cashier-mp')
   })
 
   it('M3 否定式合成：未授权维度生成显式禁止；全授权不合成；无声明不合成（宁紧勿松）', () => {
