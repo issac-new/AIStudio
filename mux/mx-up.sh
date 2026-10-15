@@ -99,12 +99,16 @@ else
   if [ -n "${MX_GATE_GUARD:-}" ]; then
     _gg+=("KANBAN_GATE_GUARD_FILE=$SIM_ROOT/var/current-state.env" "KANBAN_GATE_GUARD_KEYS=$MX_GATE_GUARD")
   fi
-  PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
-    HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
-    # V8.29 夜间停滞防线②：日志轮转不截断（mx-up 重启曾覆盖隔夜 wedge/崩溃证据，
-    # 事后只能靠终端引用）——旧档带时间戳保留
-    [ -f "$LOGS_DIR/gateway.log" ] && mv "$LOGS_DIR/gateway.log" "$LOGS_DIR/gateway.log.$(date +%Y%m%d-%H%M%S).prev"
-    "${_gg[@]}" nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
+  # V8.29 夜间停滞防线②：日志轮转不截断（mx-up 重启曾覆盖隔夜 wedge/崩溃证据，
+  #    事后只能靠终端引用）——旧档带时间戳保留
+  [ -f "$LOGS_DIR/gateway.log" ] && mv "$LOGS_DIR/gateway.log" "$LOGS_DIR/gateway.log.$(date +%Y%m%d-%H%M%S).prev"
+  # 2026-10-15 10:39 实锤：注释行插进「VAR=... \」续行赋值链会把前缀赋值与命令切离——赋值只在
+  # 解析期绑定当条命令，被注释隔断后仅落当前 shell（未导出），gateway run 裸跑：HERMES_HOME 回落
+  # 宿主家目录→发现宿主网关在跑即 "nothing to start" 退出，SIM 网关起不来（8801 拒连）。
+  # 环境一律经 env 命令作参数转交（与下方 run11 attempt-3 教训同法），注释移出命令链。
+  "${_gg[@]}" PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" \
+    HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
+    nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
 fi
