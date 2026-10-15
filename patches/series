@@ -768,3 +768,15 @@
 # 合并流水线（merge-run，PR-6；ORGLOOP_REPO_ROOT fail-closed）。控制器与 17 断言
 # 单测随本批在 custom/server/；基线=注入态（631 之后锚定，反向校验过）。
 636-server-autosched-orgloop-routes.patch
+
+# [638] simcenter 挂载（三中心重构·波 1 服务端契约先行件，2026-10-16）：推演中心
+#      11 端点（/api/hermes/sim/{run-state,journal,topology,dispatcher-health,
+#      sleeping-workers,deliverables,branches,anchor,trace,evidence-mark,issues}）
+#      ——run-state 透传 631 正身（import observability 纯函数读同一 state.env/TSV）、
+#      dispatcher-health/sleeping-workers 包 hermes-agent 634/635 CLI（专用 env
+#      SIM_DISPATCHER_HEALTH_CLI/SIM_SLEEPING_WORKERS_CLI 缺席=503）、branches=分支
+#      新鲜度三态唯一实现（classifyBranchFresh，SIM_BRANCHES_REPO fail-closed）。
+#      统一 env 门 OBS_SIM_ROOT 缺席=503 fail-closed；evidence/mark 为族内唯一写端点
+#      （强校验+路径穿越二道闸）。控制器与单测随本批在 custom/server/simcenter/
+#      （26 断言，mkdtemp 夹具）；基线=注入态（636 之后锚定，apply --check 实证）。
+638-server-simcenter-routes.patch
