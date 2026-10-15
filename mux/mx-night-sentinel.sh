@@ -20,8 +20,19 @@ set -u
 LC_ALL=C
 
 SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+# run20 18:2x 实锤：调用方传 --run <RUN_ID> 被无参解析静默忽略，RUN_ID 落到
+# current-state.env 链接 basename（=「state.env」），夜哨全程盯错轮全盲。根治=显式
+# 解析 --run（显式参数 > 环境 > 链接推断三级回退）。
+_NS_ARG_RUN=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --run) _NS_ARG_RUN="${2:-}"; shift 2 ;;
+    *) shift ;;
+  esac
+done
 _link="$(readlink "$SIM_ROOT/var/current-state.env" 2>/dev/null || true)"
-RUN_ID="${RUN_ID:-$(basename "${_link:-x}" 2>/dev/null || true)}"
+[[ -n "$_link" ]] && _link="$(basename "$(dirname "$_link")")"
+RUN_ID="${_NS_ARG_RUN:-${RUN_ID:-${_link:-}}}"
 RUN_ID="${RUN_ID:-20261013-v8-run19}"
 STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 STOPF="$SIM_ROOT/var/$RUN_ID-night-sentinel.stop"
