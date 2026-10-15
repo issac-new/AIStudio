@@ -22,7 +22,7 @@
 | 全局智能体会话 | /app/agent(/session/:id) | 工作台·沟通 | 不变 |
 | 审批收件箱 | InboxView.vue 1.9K、/app/inbox | 工作台·把关 | **扩展**：承接清偿门 resolve/waive 审批流（E4）——人的两类把关一个收件箱 |
 | 注意力条（后台条/提醒） | KanbanAttentionStrip.vue 5.2K | 工作台·顶 | 保留；新增清偿门红灯位 |
-| 沟通组账户管理 | /app/accounts、AccountAdminView 6.5K | 工作台·组织与资产 | 并入「能力与规则」页签的组织区（board 4 签方案） |
+| 沟通组账户管理 | /app/accounts、AccountAdminView 6.5K | **治理中心·组织与权限** | 治理六域之「人员」；工作台保留我的账号快捷入口 |
 
 ### 3. IDE 工作台（/app/ide）
 
@@ -44,7 +44,7 @@
 | 看板 | KanbanBoard 6.2K/Column 11.1K/TaskCard 15.4K/Toolbar 17.4K/BulkBar/InlineCreate/Attachments/Markdown/saved-views 3.0K | 工作台·board（4 签之首） | 默认「我的卡」视角；全局视角切换保留 |
 | 任务协同 | KanbanOrchestrationPanel 12.9K | 工作台·board | 不变 |
 | 协作与知识 | GovOrgKnowledgeView 1.7K | 工作台·board | 不变 |
-| 能力与规则 | GovRegistryRulesView 2.0K（+组织与资产区并 入） | 工作台·board | 扩为「能力与规则+组织资产」 |
+| 能力与规则 | GovRegistryRulesView 2.0K | **治理中心·资产与能力** | 治理六域归位（资产·功能），与组织权限签联动 |
 | 需求追溯 | tabTrace（AC 判词链） | **推演中心** | 迁入；判词行加 provenance 标注 |
 | 交付健康 | tabAccounts、i18n-accounts | **推演中心** | 迁入；STALE 标记用宽限窗语义 |
 | 运行观测 | tabObservatory | **推演中心** | 迁入；+派发器健康卡+休眠工作者卡（634/635 数据面） |
@@ -56,7 +56,7 @@
 | 会话健康 | GovSessionHealthSection 8.2K | **治理中心·度量体检** | 之四 |
 | 六域体检+六闸总览 | GovHealthSection 16.5K | 拆分 | 六闸卡→治理中心「关卡与闸工作流」；六域体检→度量体检第五卡 |
 | 诊断规则 | KanbanDiagnosticsSection 9.0K | **治理中心·问题单对账** | 迁入并与台账/清偿门同屏 |
-| 容量分析 | CapacitySection 8.2K | **推演中心·轮次总览** | 迁入（人日/覆盖率是轮次仪表盘的度量行） |
+| 容量分析 | CapacitySection 8.2K | **治理中心·度量体检**（成本卡） | 治理六域之「成本」；轮次总览保留度量行摘要 |
 | 交接 | kanban/handoff.ts 4.4K、KanbanHandoffSection 6.8K | 工作台·协作 | 迁入协作与知识页签 |
 | 任务抽屉 | KanbanTaskDrawer 64.5K/TaskForm 10.3K | 工作台（共享组件） | **抽屉加「证据」页**：卡的判词/帧/台账关联一屉可查——证据库的反查入口 |
 
