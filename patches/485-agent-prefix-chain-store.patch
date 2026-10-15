@@ -1,8 +1,8 @@
 diff --git a/hermes_state_common.py b/hermes_state_common.py
-index 5a37d49eba..3ca6227721 100644
+index 9c8f2181cd..e0698e3bee 100644
 --- a/hermes_state_common.py
 +++ b/hermes_state_common.py
-@@ -629,7 +629,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
+@@ -679,7 +679,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
  CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
  CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
      ON async_delegations(delivery_state, completed_at);
@@ -17,9 +17,9 @@ index 5a37d49eba..3ca6227721 100644
 +);"""
  
  # Indexes on later-added columns must run AFTER _reconcile_columns(), or executescript fails on legacy DBs.
- DEFERRED_INDEX_SQL = """
+ # sessions_runtime_ledger_delete_guard: every delete path in this release retires a session's ledger rows
 diff --git a/hermes_state_messages.py b/hermes_state_messages.py
-index 19908aed18..75b865bad5 100644
+index 639dc3e19a..8f6b896c54 100644
 --- a/hermes_state_messages.py
 +++ b/hermes_state_messages.py
 @@ -28,6 +28,29 @@ from hermes_state_identity import (
@@ -60,15 +60,15 @@ index 19908aed18..75b865bad5 100644
              return msg_id
          # THE critical write (failure aborts the turn): long patience so a sibling legitimately
          # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
-@@ -488,6 +512,8 @@ class SessionMessagesMixin:
-             )
-             inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
-             self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
-+            for row in inserted_rows:
-+                _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
-             return inserted
-         return self._execute_transcript_write(_do, messages, patience_s=self._TRANSCRIPT_WRITE_PATIENCE_S)
+@@ -494,6 +518,8 @@ class SessionMessagesMixin:
+         )
+         inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
+         self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
++        for row in inserted_rows:
++            _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
+         return inserted
  
+     _ROW_STATE_KEYS = ("_row_id", DB_ROW_SNAPSHOT, "timestamp")
 diff --git a/tests/hermes_cli/test_prefix_chain_485.py b/tests/hermes_cli/test_prefix_chain_485.py
 new file mode 100644
 index 0000000000..43177d1998

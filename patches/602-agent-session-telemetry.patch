@@ -1,8 +1,8 @@
 diff --git a/gateway/run_turn.py b/gateway/run_turn.py
-index 068f8240ed..2c947327b4 100644
+index 8ca7e00944..331620a0f4 100644
 --- a/gateway/run_turn.py
 +++ b/gateway/run_turn.py
-@@ -2250,6 +2250,10 @@ class GatewayTurnMixin:
+@@ -321,6 +321,10 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
              )
              if agent_failed_early and not is_context_overflow_failure:
                  response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))

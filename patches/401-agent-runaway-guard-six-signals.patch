@@ -245,10 +245,10 @@ index 0000000000..a2bda853f2
 +                pass
 +    return signal
 diff --git a/agent/tool_executor.py b/agent/tool_executor.py
-index a956f213db..2403167fbd 100644
+index 549358c918..8d55ce65ec 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -1957,6 +1957,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+@@ -1967,6 +1967,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
              display_index=i,
              tool_start_time=tool_start_time,
          )

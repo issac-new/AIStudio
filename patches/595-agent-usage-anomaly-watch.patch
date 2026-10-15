@@ -1,8 +1,8 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index 7c8e754e00..5b479af120 100644
+index f0155c7ad2..805a7081c2 100644
 --- a/agent/conversation_loop.py
 +++ b/agent/conversation_loop.py
-@@ -1713,6 +1713,54 @@ def _run_conversation_turn(
+@@ -1721,6 +1721,54 @@ def _run_conversation_turn(
      return result
  
  
@@ -57,7 +57,7 @@ index 7c8e754e00..5b479af120 100644
  def run_conversation(
      agent,
      user_message: Any,
-@@ -1743,6 +1791,11 @@ def run_conversation(
+@@ -1751,6 +1799,11 @@ def run_conversation(
  
      # Steer / redirect / interrupt set this mid-turn; the result reports whether the turn ran untouched.
      agent._turn_user_intervened = False

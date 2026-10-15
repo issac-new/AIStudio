@@ -295,22 +295,24 @@ index 0000000000..6b873b101b
 +#     --prompt "调用 memory 工具 action=consolidate 做周期沉淀，然后报告 merged/pruned 数字"
 +# （cron 会话内模型可调 memory 工具；规则式 distill 本身无模型调用，prompt 只做报告壳。）
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
-index 2065118a37..3f7392185e 100644
+index e9e7280a68..4d6f6f10be 100644
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
-@@ -274,8 +274,10 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
+@@ -281,10 +281,12 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
      # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
      if action == "search":
          return _memory_search(store, target, content)
 +    if action == "consolidate":
 +        return _memory_consolidate(store)
+     if action == "replace":
+         return _invalid(_REPLACE_REMOVED)
      if action not in _STORE_ACTIONS:
--        return _invalid(f"Unknown action '{action}'. Use: add, replace, remove, search")
-+        return _invalid(f"Unknown action '{action}'. Use: add, replace, remove, search, consolidate")
+-        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove, search")
++        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove, search, consolidate")
      invalid = (_validate_single_op(store, action, target, content, old_text)
                 or _background_delete_gate(store, action, None, target, content, old_text)
                 or _apply_write_gate(store, action, target, content, old_text))
-@@ -305,6 +307,35 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> t
+@@ -314,6 +316,35 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> t
          idx.close()
  
  

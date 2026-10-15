@@ -1,8 +1,8 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index 9a3127d205..f1203f6cdc 100644
+index cf03128ffb..12459f06ad 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -3280,9 +3280,38 @@ class ContextCompressor(
+@@ -3288,9 +3288,38 @@ class ContextCompressor(
          hard_share = int(input_window * TAIL_MAX_CONTEXT_FRACTION)
          return pending if sum(_estimate_msg_budget_tokens(messages[i]) for i in pending) <= hard_share else range(0)
  
@@ -41,7 +41,7 @@ index 9a3127d205..f1203f6cdc 100644
      ) -> tuple[list[dict[str, Any]], int]:
          """Project old tool-result bodies to bounded summaries without rewriting tool-call arguments.
          Returns ``(messages, count)``; token budget (when given) takes priority over the
-@@ -3306,9 +3335,8 @@ class ContextCompressor(
+@@ -3314,9 +3343,8 @@ class ContextCompressor(
          # Pass 2: summarize old tool results. Tool-call arguments are canonical execution
          # records and are never rewritten; summary input is bounded separately by
          # _render_tool_call_for_summary().
@@ -53,7 +53,7 @@ index 9a3127d205..f1203f6cdc 100644
          )
          # Pass 3: retire image payloads inside the protected tail; re-sent embeds otherwise make
          # compression look ineffective and trip anti-thrash. Newest frames stay live.
-@@ -3428,8 +3456,12 @@ class ContextCompressor(
+@@ -3436,8 +3464,12 @@ class ContextCompressor(
          if session_db and session_id and not callable(getattr(session_db, "archive_and_compact", None)):
              self._warn_reclamation_no_op("prune:store_cannot_persist", current_tokens)
              return messages, 0

@@ -1,8 +1,8 @@
 diff --git a/agent/agent_init.py b/agent/agent_init.py
-index c0bd46d88c..118865674c 100644
+index be91a15eb5..43e4f604f7 100644
 --- a/agent/agent_init.py
 +++ b/agent/agent_init.py
-@@ -1390,6 +1390,12 @@ def _apply_agent_section(agent, _agent_cfg):
+@@ -1397,6 +1397,12 @@ def _apply_agent_section(agent, _agent_cfg):
      agent.budget_warning_ratio = normalize_budget_warning_ratio(
          _agent_section.get("budget_warning_ratio")
      )

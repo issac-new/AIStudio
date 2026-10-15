@@ -1,8 +1,8 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index 411134b41a..7c8e754e00 100644
+index 60666cd156..f0155c7ad2 100644
 --- a/agent/conversation_loop.py
 +++ b/agent/conversation_loop.py
-@@ -1681,6 +1681,13 @@ def _run_conversation_turn(
+@@ -1689,6 +1689,13 @@ def _run_conversation_turn(
                  return _ri.result
              if _ri.action == "continue":
                  continue
