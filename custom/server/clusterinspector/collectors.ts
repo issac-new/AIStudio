@@ -289,47 +289,61 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
     }
     for (const name of readdirSync(dir).sort()) {
       if (face.tails.length >= cap) break
-      const log = join(dir, name, 'logs', 'agent.log')
+      const logsDir = join(dir, name, 'logs')
+      const log = join(logsDir, 'agent.log')
       try {
-        const st = statSync(log)
-        const buf = Buffer.alloc(512)
-        const fd = require('node:fs').openSync(log, 'r')
-        const len = Math.min(buf.length, st.size)
+        // 拼接当前+历史轮转文件（agent.log.1, .2, …），新→旧序，找最早一条工作行；
+        // 单文件轮转会丢历史真做行（run20 17:2x 实锤：chen agent.log 1.9M/.1=5M/.2=5M，
+        // 17:22 触发时只看当前 1.9M 尾部 64KB 找不到早期工作行→判从未工作）。
+        const rotated: string[] = []
+        try { for (const e of readdirSync(logsDir).sort().reverse()) { if (e === 'agent.log' || /^agent\.log\.\d+$/.test(e)) rotated.push(join(logsDir, e)) } } catch { /* 目录读失败降级为单文件 */ }
+        if (rotated.length === 0) rotated.push(log)
+        const st = statSync(rotated[0]!)
+        const tailBuf = Buffer.alloc(512)
+        const tailFd = require('node:fs').openSync(rotated[0]!, 'r')
+        const tailLen = Math.min(tailBuf.length, st.size)
         try {
-          require('node:fs').readSync(fd, buf, 0, len, Math.max(0, st.size - len))
+          require('node:fs').readSync(tailFd, tailBuf, 0, tailLen, Math.max(0, st.size - tailLen))
         } finally {
-          require('node:fs').closeSync(fd)
+          require('node:fs').closeSync(tailFd)
         }
-        const tail = buf.toString('utf-8', 0, len).replace(/\0+$/, '').split('\n').filter(Boolean).pop() ?? ''
-        // 工作行活性（run14 v3 watcher 根治面移植）：从日志尾部回扫找最后一条
+        const tail = tailBuf.toString('utf-8', 0, tailLen).replace(/\0+$/, '').split('\n').filter(Boolean).pop() ?? ''
+        // 工作行活性（run14 v3 watcher 根治面移植）：从当前文件尾部回扫找最后一条
         // 工作行（API call #/tool completed）并解析其行首时间戳；mtime 不算活性。
+        // 历史轮转文件仅在当前文件无真做行时使用——降级补盲，不增噪声。
         let workTsMs = 0
         let realWorkTsMs = 0
-        try {
-          const head = Buffer.alloc(65536)
-          const hfd = require('node:fs').openSync(log, 'r')
-          let lines: string[]
+        for (const logPath of rotated) {
+          let stLog: { size: number }
+          try { stLog = statSync(logPath) } catch { continue }
           try {
-            const hlen = Math.min(head.length, st.size)
-            require('node:fs').readSync(hfd, head, 0, hlen, Math.max(0, st.size - hlen))
-            lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
-          } finally {
-            require('node:fs').closeSync(hfd)
-          }
-          for (let i = lines.length - 1; i >= 0; i--) {
-            // 真做判据（run19 推演层根治上移）：tool completed 或会话第 2+ 次调用——
-            // 单轮 API call #1 + Turn ended=嘴炮回合（回一句话收场），不清静默账。
-            // API call #N 后随冒号非空格（实测 agent.log「API call #44: model=…」）；
-            // 1[0-9]+ 段补 #10-19，[^0-9] 吃定界符、#1 不误配。
-            const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9])/)
-            // 尾部回扫=首个命中即最新；已赋值不得覆写（旧日志无真做行时继续扫
-            // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误催办）。
-            if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T')) || Date.parse(rw[1]!.replace(' ', 'T')) }
-            const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
-            if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T')) || Date.parse(m[1]!.replace(' ', 'T')) }
+            const head = Buffer.alloc(65536)
+            const hfd = require('node:fs').openSync(logPath, 'r')
+            let lines: string[]
+            try {
+              const hlen = Math.min(head.length, stLog.size)
+              require('node:fs').readSync(hfd, head, 0, hlen, Math.max(0, stLog.size - hlen))
+              lines = head.toString('utf-8', 0, hlen).split('\n').filter(Boolean)
+            } finally {
+              require('node:fs').closeSync(hfd)
+            }
+            for (let i = lines.length - 1; i >= 0; i--) {
+              // 真做判据（run19 推演层根治上移）：tool completed 或会话第 2+ 次调用——
+              // 单轮 API call #1 + Turn ended=嘴炮回合（回一句话收场），不清静默账。
+              // API call #N 后随冒号非空格（实测 agent.log「API call #44: model=…」）；
+              // 1[0-9]+ 段补 #10-19，[^0-9] 吃定界符、#1 不误配。
+              const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9])/)
+              // 尾部回扫=首个命中即最新；已赋值不得覆写（旧日志无真做行时继续扫
+              // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误催办）。
+              if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T')) || Date.parse(rw[1]!.replace(' ', 'T')) }
+              const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
+              if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T')) || Date.parse(m[1]!.replace(' ', 'T')) }
+              if (realWorkTsMs && workTsMs) break
+            }
+            // 当前文件已找到真做行→不再回看历史（历史时间戳更早会拉长静默时长）
             if (realWorkTsMs && workTsMs) break
-          }
-        } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
+          } catch { /* 工作行解析失败=0（D7 会按 mtime 兜底） */ }
+        }
         face.tails.push({ profile: name, tail: tail.slice(-240), mtimeMs: st.mtimeMs, workTsMs, realWorkTsMs })
       } catch {
         // 单 profile 无日志/读失败：跳过（fail-soft 到 profile 粒度）
