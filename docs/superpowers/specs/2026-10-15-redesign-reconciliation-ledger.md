@@ -135,6 +135,41 @@
 
 **裁决**：设置功能=原生 20 行（F 组）+并入旧族 30 行（E 组）两层合账——同一「三设置页」框架收纳，工作台·设置=F1-F8+E1-E7（个人），治理·系统设置=F9-F16+E8-E27 按六域分组（原生与旧族同域同区合并呈现），推演设置=E28，基座=F17-F20+E0+E29。零双家：E/F 同域条目互指同区不重复建面。
 
+### G. 设置侧边栏全部功能（IaSettingsSidebar.vue GROUPS 三域逐条，2026-10-16 补扫）
+
+侧边栏=22 个入口、三域分组、四类门控（superAdmin/features.pet/features.agentManager/features.ekko/versionPreview）。逐条对账（E/F 组已登记者标对账号，新发现者补登）：
+
+| # | 侧边栏条目 | 分组/门控 | 对账归属 |
+|---|---|---|---|
+| G1 | models 模型 | 工具 | =F10/E23→治理·系统设置·成本 |
+| G2 | workflow 工作流 | 工具 | =E14→治理·系统设置·流程 |
+| G3 | connections 连接 | 工具 | =E21→治理·系统设置·资产 |
+| G4 | files 文件 | 工具 | =E4→工作台·设置 |
+| G5 | agentManager agent 管理 | Hermes·superAdmin+features.agentManager | **新发现**（28 路由扫描漏：name=agentManager 非设置族前缀）→治理·系统设置·人员（agent 编制管理） |
+| G6 | skills 技能 | Hermes | =E18→治理·系统设置·功能 |
+| G7 | plugins 插件 | Hermes | =E17→治理·系统设置·功能 |
+| G8 | mcp 工具接入 | Hermes | =E19→治理·系统设置·资产 |
+| G9 | memory 记忆 | Hermes | =E22/F12→治理·系统设置·资产 |
+| G10 | channels 渠道 | Hermes | =E20/F13→治理·系统设置·资产 |
+| G11 | jobs 定时任务 | Hermes | =E15→治理·系统设置·流程 |
+| G12 | kanban 看板配置 | Hermes | =E13→治理·系统设置·流程 |
+| G13 | journey 旅程 | Hermes | =E7→工作台·设置 |
+| G14 | ekko 运维（四页入口） | Hermes·superAdmin+features.ekko | **新发现**（ekko memory/skills/mcp/settings 四运维页）→治理·系统设置·总（ekko 运维区） |
+| G15 | settings 系统设置 | 系统 | =E9→治理·系统设置·总 |
+| G16 | profiles 档案 | 系统·superAdmin | =E11→治理·系统设置·人员 |
+| G17 | theme 主题 | 系统 | =E1/F1→工作台·设置 |
+| G18 | petdex 宠物图鉴 | 系统·features.pet | =E27→治理·系统设置·功能 |
+| G19 | skillsUsage 技能用量 | 系统 | **新发现**→治理·系统设置·成本（用量面） |
+| G20 | logs 日志 | 系统 | =E26→治理·系统设置·审计 |
+| G21 | usage 用量 | 系统 | =E24→治理·系统设置·成本 |
+| G22 | performance 性能 | 系统·superAdmin | =E25→治理·系统设置·成本 |
+| G23 | terminal 终端 | 系统·superAdmin | =E5→工作台·设置 |
+| G24 | browser 浏览器 | 系统 | =E6→工作台·设置 |
+| G25 | versionPreview 版本预览 | 系统·versionPreview 开关 | **新发现**→治理·系统设置·总（版本面） |
+| G26 | 侧边栏本身（三域分组+四门控） | 基座 | 三设置页共用侧栏壳；门控语义=权限闸（治理域「权限」）随行 |
+
+**裁决**：22 入口全数归位（18 条回指 E/F 既有行、4 条新发现补登 G5/G14/G19/G25）；原生设置页签（SettingsView 的 account/users/webhooks/display/proxy/compression/privacy/models/graph 九签＋重定向旧签 agent/memory/session/gateway/voice）已由 F 组覆盖（graph 图引擎策略只读卡=F 组补记：→治理·系统设置·功能）。
+
 ## 二、反向对账（设计元素 → 登记行）
 
 三中心壳（A1/A9/A13）｜工作台 3 签（B1/B2/B3）｜inbox 扩展（A11+D5）｜推演中心 6 签（D1/D2/A6/D3/C3 摘要/B4/B5/B6+D4）｜治理中心 7 签（C5 拆分+C6/D6·C4·D5·B8·B9·B10-13+C3·A3+B7）｜四角色镜头（D7/D8，四首页=C1/B1/B4-C4 重组）｜IDE 增强（A18+新鲜度=branch_fresh 语义）｜消息存证（A14-17+D3）｜三设置页（E0-E29+F1-F20 两层合账：studio 原生设置与并入旧族同框架收纳）。**每个设计元素均有登记行依据；D 组九件为唯一合法新增（全部锚定本轮已落地的产品能力，无凭空设计）。**
