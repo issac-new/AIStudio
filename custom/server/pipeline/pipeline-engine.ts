@@ -30,7 +30,7 @@ export interface PipelineDeps {
   log?: (msg: string) => void
 }
 
-const FE_BRANCH_RE = /(DEV-MP|cashier|fe)/i
+const FE_BRANCH_RE = /(DEV-MP$|cashier-mp)/i  // 勿用裸 fe——会匹配 feat/ 前缀致全部误判 fe
 
 function gitOk(repo: string, args: string[]): string | null {
   try {

@@ -38,6 +38,8 @@ describe('PipelineEngine v1（V8.33 四持续产品化）', () => {
     expect(flows.length).toBe(2)
     const mp = flows.find((f) => f.branch.includes('DEV-MP'))!
     expect(mp.domain).toBe('fe')
+    const be = flows.find((f) => f.branch.includes('DEV-PAYCORE'))!
+    expect(be.domain).toBe('be')  // 回归：裸 fe 正则曾致全部误判 fe
     expect(sent).toHaveLength(0) // PIPELINE_TRIGGER 未开
     expect(actions).toHaveLength(0)
   })
