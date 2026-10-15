@@ -1,0 +1,79 @@
+diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
+index 9fd39ec5..a6b92a0e 100644
+--- a/agent/turn_finalizer.py
++++ b/agent/turn_finalizer.py
+@@ -382,6 +382,8 @@ def _log_turn_exit(agent, messages, final_response, api_call_count, _turn_exit_r
+         )
+     else:
+         logger.info(_diag_msg, *_diag_args)
++    # run20 干完不交卷根治（V8.34 纪律 66 兜底层）：收场即自动 push 未推任务分支
++    _turn_end_delivery_guard(agent, logger)
+ 
+ 
+ def _append_file_mutation_footer(agent, final_response, logger):
+@@ -809,3 +811,65 @@ def finalize_turn(
+     agent._turn_preflight_display_snapshot = None
+     agent._turn_received_provider_response = False
+     return result
++
++def _turn_end_delivery_guard(agent, logger) -> None:
++    """Turn-ended delivery guard（run20 2026-10-15 跨档案「干完不交卷」根治兜底）。
++
++    收场时刻扫描本 SIM 布局下的任务仓（<sim_root>/central/* 与 workspaces/*/<*>），
++    对本地领先 origin 跟踪 ref 的 feat/* 分支自动执行 ``git push origin <branch>``
++    ——commit 已由 agent 落在本地，push 是派发任务定义的最后一步，系统代走。
++    失败一律 fail-soft（网络/权限/非 git），HERMES_TURN_END_AUTO_PUSH=off 旁路。
++    每次收场最多推 3 条防风暴；推送结果入日志（审计面：turn-end auto-push）。
++    """
++    import os as _os
++    import subprocess as _sp
++    if _os.environ.get("HERMES_TURN_END_AUTO_PUSH") == "off":
++        return
++    try:
++        home = _os.environ.get("HERMES_HOME") or _os.path.expanduser("~/.hermes")
++        sim_root = _os.path.dirname(_os.path.normpath(home))
++        candidates: "list[str]" = []
++        for _base in (_os.path.join(sim_root, "central"), _os.path.join(sim_root, "workspaces")):
++            try:
++                for _name in sorted(_os.listdir(_base)):
++                    _p = _os.path.join(_base, _name)
++                    if _os.path.isdir(_p):
++                        candidates.append(_p)
++                        _wt = _os.path.join(_p, ".worktrees")
++                        if _os.path.isdir(_wt):
++                            for _w in sorted(_os.listdir(_wt))[:20]:
++                                candidates.append(_os.path.join(_wt, _w))
++            except OSError:
++                continue
++        pushed = 0
++        for _repo in candidates:
++            if pushed >= 3:
++                break
++            if not _os.path.isdir(_os.path.join(_repo, ".git")):
++                continue
++            def _git(*args: str) -> str:
++                return _sp.run(["git", "-C", _repo, *args], capture_output=True, text=True, timeout=30).stdout
++            try:
++                _locals = _git("for-each-ref", "--format=%(refname:short) %(objectname)", "refs/heads/feat/*").strip()
++                if not _locals:
++                    continue
++                for _line in _locals.splitlines():
++                    if pushed >= 3:
++                        break
++                    _branch, _, _tip = _line.partition(" ")
++                    if not _branch or not _tip:
++                        continue
++                    _remote_ref = _git("rev-parse", "--verify", "refs/remotes/origin/%s" % _branch).strip()
++                    if _remote_ref == _tip:
++                        continue
++                    _r = _sp.run(["git", "-C", _repo, "push", "origin", _branch],
++                                 capture_output=True, text=True, timeout=60)
++                    if _r.returncode == 0:
++                        pushed += 1
++                        logger.info("turn-end auto-push: %s %s -> origin", _branch, _tip[:8])
++                    else:
++                        logger.warning("turn-end auto-push failed: %s rc=%d %s", _branch, _r.returncode, _r.stderr.strip()[:120])
++            except Exception:
++                continue
++    except Exception:
++        logger.debug("turn-end delivery guard failed", exc_info=True)
