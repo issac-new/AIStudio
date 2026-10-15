@@ -763,7 +763,12 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
   # run20 18:38 崩溃环根治：分支存在但 tip 过期（⚠STALE）时原裸 && 链返回 rc=1，
   # 在 set -euE 下击杀驱动（监督器三次拉起三死于同一点）。改 if 保护态返回：
   # STALE=假值语义（调用方按未交付等待/记单），不再触发 ERR trap 与 -e 退出。
-  if [ -n "$ct" ] && [ "$ct" -ge "$rs" ] 2>/dev/null; then
+  # 瞬态旧 tip 容忍（run20 18:38 崩溃环的第二层根治）：agent 推送过程中先推
+  # 带旧提交日期的底（rebase 保日期/prep 分支）再推新 tip，属本轮真实交付的
+  # 中间态，非上轮残留。宽限窗 MX_BRANCH_FRESH_GRACE_S（缺省 48h）内的新分支
+  # 按新鲜计——上轮残留（run5 期数周旧）仍被正确判旧。产品方案 §PR 备忘。
+  local grace="${MX_BRANCH_FRESH_GRACE_S:-172800}"
+  if [ -n "$ct" ] && [ "$(( ct + grace ))" -ge "$rs" ] 2>/dev/null; then
     return 0
   fi
   return 1
