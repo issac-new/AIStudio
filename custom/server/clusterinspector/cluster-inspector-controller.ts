@@ -191,7 +191,22 @@ function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; l
   }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), ...deps })
+/** 执行面探测（runtime.spawn-health 面）：复刻 bin/hermes-sim 多候选逻辑文件级检测，
+ *  每 60s 巡检一拍（bash+import 合计 <2s，轻量；真 spawn 冒烟留给起跑面 mxp_worker_smoke）。 */
+function spawnHealthProbe(): { ok: boolean; detail: string } {
+  const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+  const agentRoot = '/Users/cuishi/.hermes/hermes-agent'
+  for (const cand of ['.venv', 'venv.py311', 'venv']) {
+    const py = require('node:path').join(agentRoot, cand, 'bin', 'python')
+    try {
+      execFileSync(py, ['-c', 'import anthropic, mautrix'], { timeout: 8000 })
+      return { ok: true, detail: cand }
+    } catch { continue }
+  }
+  return { ok: false, detail: '宿主 agent 无可用 venv（.venv/venv.py311/venv 均缺 anthropic+mautrix）' }
+}
+
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun
