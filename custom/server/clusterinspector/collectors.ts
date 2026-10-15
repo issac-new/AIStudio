@@ -157,7 +157,7 @@ export interface ClusterSnapshot {
   /** 执行面健康（runtime.spawn-health 检测面，run20 瘫痪实录） */
   spawnHealth?: { ok: boolean; detail: string }
   /** 交付分支推送情报（delivery.pushed 检测面，V8.33 持续集成）——控制器注入（NUDGE_REPO 仓本地 vs origin tip 比对），未接线=合法空态。 */
-  deliveryBranchIntel?: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>
+  deliveryBranchIntel?: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string; tipTs?: number }>
   expectedWorkCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
