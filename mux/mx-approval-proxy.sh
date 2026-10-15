@@ -28,8 +28,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$RUN_ID" ]] || { echo "need --run <RUN_ID>" >&2; exit 2; }
-RID=$(grep '^room_analysis=' "$SIM_ROOT/runs/$RUN_ID/state.env" 2>/dev/null | cut -d= -f2)
-[[ -n "$RID" ]] || { echo "room_analysis 不在 state（轮未建群？）" >&2; exit 2; }
+# run20 18:2x 实锤：xiao/chen/lin 的开发会话审批令发在交付群（dlv_room），本环只轮询
+# 分析群令其 300s 全灭（BLOCKED×7、runaway-guard 同族 3 次告警）。根治=两群齐巡。
+RIDS=$(grep -E '^(room_analysis|dlv_room)=' "$SIM_ROOT/runs/$RUN_ID/state.env" 2>/dev/null | cut -d= -f2 | tr '\n' ' ')
+[[ -n "${RIDS// /}" ]] || { echo "room_analysis 不在 state（轮未建群？）" >&2; exit 2; }
 TOK=$(head -1 "$CREDS_DIR/fanfan.token" 2>/dev/null)
 LOG="$SIM_ROOT/var/approval-proxy.log"
 # 代偿台账接线（2026-10-15 治理轮批次一）：每笔代批落账（auto-approve → PR-2）
@@ -56,6 +58,7 @@ while :; do
   if [[ "$(date +%s)" -ge "$DEADLINE" ]]; then
     echo "$(date '+%F %T') [approval-proxy] 窗口到期，退场" >> "$LOG"; exit 0
   fi
+  for RID in $RIDS; do
   curl -s -m 10 "http://127.0.0.1:8008/_matrix/client/v3/rooms/$RID/messages?access_token=$TOK&dir=b&limit=40" 2>/dev/null \
   | LAST_TS="$LAST_TS" RID="$RID" TOK="$TOK" LOG="$LOG" POLICY="$POLICY" python3 -c '
 import json,sys,time,os,re,urllib.request
@@ -83,6 +86,7 @@ for ev,head in asks:
     except Exception as e:
         open(log,"a").write(time.strftime("%F %T")+" 代批失败 "+ev[:24]+" "+str(e)[:60]+"\n")
 ' 2>/dev/null
+  done
   LAST_TS=$(( $(date +%s) - 5 ))
   _approved_now=$(grep -c ' 代批 ' "$LOG" 2>/dev/null); _approved_now=${_approved_now:-0}
   if (( _approved_now > _approved_seen )); then
