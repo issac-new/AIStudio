@@ -31,6 +31,8 @@ export interface InspectorDeps {
   getBlockedCards?: () => Promise<Array<Record<string, unknown>>>
   /** FAIL 判卡接线（review.fail-stall 复审环老化面，run20 22:34 复审链断棒实录） */
   getFailedVerdictCards?: () => Promise<Array<Record<string, unknown>>>
+  /** 未认领开放卡接线（card.unassigned-stale 面，run20 r3 派单断棒实录） */
+  getUnassignedCards?: () => Promise<Array<Record<string, unknown>>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
   getFederationSnapshot?: () => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
@@ -370,6 +372,28 @@ export class ClusterInspector {
           failedVerdictCards = { ok: false, error: (e as Error).message, cards: [] }
         }
       }
+      // 未认领开放卡面（card.unassigned-stale）：未接线=合法空态（可选面）
+      let unassignedCards: ClusterSnapshot['unassignedCards']
+      if (this.deps.getUnassignedCards) {
+        try {
+          const rows = await this.deps.getUnassignedCards()
+          unassignedCards = {
+            ok: true,
+            cards: rows
+              .filter((c) => !c.assignee || String(c.assignee).trim() === '' || String(c.assignee).trim().toLowerCase() === 'none')
+              .map((c) => ({
+                id: String(c.task_id ?? c.id ?? ''),
+                assignee: undefined,
+                title: typeof c.title === 'string' ? c.title : undefined,
+                status: typeof c.status === 'string' ? c.status : undefined,
+                created_at: c.created_at,
+                updated_at: pickLastTouched(c),
+              })).filter((c) => c.id),
+          }
+        } catch (e) {
+          unassignedCards = { ok: false, error: (e as Error).message, cards: [] }
+        }
+      }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -379,6 +403,7 @@ export class ClusterInspector {
         runningCards: { ok: cardsOk, error: cardsErr, cards: runningCards },
         blockedCards,
         failedVerdictCards,
+        unassignedCards,
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },

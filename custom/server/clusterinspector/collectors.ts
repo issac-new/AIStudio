@@ -141,6 +141,11 @@ export interface ClusterSnapshot {
    *  「修订→复审」闭环断在散文交接 75 分钟，三方同盲——闸类 FAIL 卡的
    *  最后推进时刻即复审环球钟） */
   failedVerdictCards?: RunningCardsFace
+  /** 未认领开放卡（status=ready/todo 且 assignee 空）——控制器注入（ready+todo 两查
+   *  合并过滤），未接线=合法空态。用途：card.unassigned-stale 检测（run20 r3 派单
+   *  断棒实录：组织面建主卡后回合自了断，子卡树未生、主卡 ready+无人认领 2h45m
+   *  全检测器盲区——「建了卡没人接」本身即断派单信号，与预期清单无关的通杀不变量） */
+  unassignedCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
   /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；
