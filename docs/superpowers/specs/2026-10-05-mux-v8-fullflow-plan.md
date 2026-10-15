@@ -768,7 +768,7 @@ graph TB
 |---|---|
 | 操作者 | V8.30 职责归位（2026-10-15 用户裁定）：后端 lead（wei）/前端 lead（mei）做评审+集成合并（git）——评审与合并为同一责任链；PM 不合并不评审代码；驱动只做真值验收（git 祖先链反查，lead 自报不算）与超时补棒兜底；测试工程师A/测试工程师B 派发测试 |
 | 通道 | lead 工作区 git 集成分支+群派发+缺陷对话 |
-| 动作序列 | ①lead 集成（串行防推挤：wei 后端五支 DEV-PAYCORE-C/S/N+DEV-CHWX+DEV-CHALI → mei 前端 DEV-MP）：派发 INT-MERGE-BE/FE，lead 评审后增量 merge 进 `integration/RFD-001`（续建禁强推，testlog 冲突取 ours 解决，缺席分支记单跳过）；驱动以祖先链反查验收，lead 超时（45min 硬窗+活性早判）→导演补棒代行并记代偿单 ②派测试工程师A（TEST-BE 后端集成测试）："若 test-drafts 已有草稿核对后补齐执行，否则从零写（两态均正常）：1) 按概设契约编 vitest 用例（放 apps/test-integration/：下单幂等/双渠道参数/回调验签拒绝/重复回调幂等/超时关单） 2) 执行全量；缺陷走 defect-loop：本群发【缺陷】消息 @对应研发（P 级/复现/期望实际/分支 commit） 3) 结论行 `TEST-PASS-TEST-BE` 或 `TEST-FAIL（附用例数）`。「测试工程师B 同构（前端） ③缺陷修复计数：群内【缺陷】数 vs FIX-DONE 数 ④测试过→派测试报告：」汇总结果写 docs/test/RFD-001-test-report.md→push integration 分支→通过的 commit id 回填全部关联卡。结论行 REPORT-DONE。" |
+| 动作序列 | ①lead 集成（串行防推挤：wei 后端五支 DEV-PAYCORE-C/S/N+DEV-CHWX+DEV-CHALI → mei 前端 DEV-MP）：派发 INT-MERGE-BE/FE，lead 评审后增量 merge 进 `integration/RFD-001`（续建禁强推，testlog 冲突取 ours 解决，缺席分支登记问题单后跳过）；驱动以祖先链反查验收，lead 超时（45min 时限硬上限+活性早判）→由驱动补位代行并登记代偿单 ②派测试工程师A（TEST-BE 后端集成测试）："若 test-drafts 已有草稿核对后补齐执行，否则从零写（两态均正常）：1) 按概设契约编 vitest 用例（放 apps/test-integration/：下单幂等/双渠道参数/回调验签拒绝/重复回调幂等/超时关单） 2) 执行全量；缺陷走 defect-loop：本群发【缺陷】消息 @对应研发（P 级/复现/期望实际/分支 commit） 3) 结论行 `TEST-PASS-TEST-BE` 或 `TEST-FAIL（附用例数）`。「测试工程师B 同构（前端） ③缺陷修复计数：群内【缺陷】数 vs FIX-DONE 数 ④测试过→派测试报告：」汇总结果写 docs/test/RFD-001-test-report.md→push integration 分支→通过的 commit id 回填全部关联卡。结论行 REPORT-DONE。" |
 | 等待信号 | `defect_done`（缺陷数=修复数且双结论行在）；`testpass_done`+`g4_pass`（报告在 integration 分支可查） |
 | 超时与失败 | 缺陷观测窗 5400s（轮询 30s）；报告 1800s 活性等待；分支缺席跳过合并记问题单 |
 | 产出 | 测试报告入仓；`g4_pass`；dlv P4→P5；步 19 对话全文留档 |
@@ -1665,11 +1665,11 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 55. **中文截断按字符非字节（V8.28，run19/run16 复盘根治）**：所有 bash/heredoc/Python 文本处理时 `head -c`/`tail -c` 改为 `cut -c`（字符级）——head -c 误用按字节切中文产生 0xEF/0xBF 等孤立坏字节写入 scenario.log/issues.log，触发 `mx-log-sanitize.py` 净化阻断。测试锚=`mux/tests/` 字符级 vs 字节级断言。
 
 56. **结构性延后下轮开跑前带锚点回写（V8.28，run19 复盘扩展）**：纪律 28「结构性类别禁自动观察归桶」的补完——结构性延后（闸键合规类/审计发现类/推送失败类/结论行与合并冲突类）在每轮开跑前必须由人工处置并带 `file:line` 锚回写到 issues.log；下轮开跑时的 prelaunch check 必须断言这些延后 key 在本轮 prelaunch 段消失。测试锚=`mux/mx-prelaunch-check.sh` ⑯+ `mux/discipline-test-coverage.md` 锚定。
-57. **禁止拆闸式解锁（V8.29，run20 用户 21:02 裁定）**：闸 FAIL 的唯一出口=缺项清单真派上游修订+复审 PASS 落键。以打破死循环为名人工置闸键/跳过 gate_blocked=拆闸，一律无效并回滚（回滚配方：stop 文件+撤闸键+真派修+重启）。死循环要修的是派修链路断裂，不是把闸放掉。
+57. **禁止拆闸式解锁（V8.29，run20 用户 21:02 裁定）**：闸 FAIL 的唯一出口=缺项清单真派上游修订+复审 PASS 写入闸键。以打破死循环为名人工置闸键/跳过 gate_blocked=拆闸，一律无效并回滚（回滚配方：stop 文件+撤闸键+真派修+重启）。死循环要修的是派修流程断裂，不是把闸放掉。
 58. **判词检索锚持久化（V8.29，run20 G2 悬置 12h 根因）**：闸判词的时间锚（G2_TS/SEC_TS 类）必须跨重启持久（state 键 sset_once 语义）；每次重启重锚=把历史判词全排出检索窗=闸永悬。判词读取面=卡 body **并** result 字段（评审员写 result 是合法形态）；卡 JSON 消费前必须剔控制字符（jq parse error=整源致盲）。
 59. **state.env 并发写纪律（V8.29，run20 幂等键两度丢失实录）**：外部工具写 state 键一律经 `sset`（同进程语义毫秒窗）并写后核验；整文件读改写会被驱动循环的 sset 竞态吃掉。sset 依赖 RUN_ID/SIM_ROOT 环境完备，缺则写进幽灵路径假成功。
 60. **派单三件套与板名解析（V8.29，run20 派单断棒第二刀）**：派单卡必须 ready+完整正文（任务/结论行契约/评审锚）+群内 @工人档案 触发；assignee=工人档案名（`*-csw-*` 族），板名只是容器——跨板复制时板名从 `kanban boards list` 解析，禁硬编。agent 执行走看板派发器，与 gateway 常驻无关。
-61. **平台配置变更连带重启+适配器探活（V8.29，run20 矩阵断档 2.8h 实录）**：改平台配置（.env/config）后必须重启网关并验证适配器装载（mx-up 已内建 90s 探活 fail-fast）；/health 探活不覆盖消息面。派单后必须验证送达（agent 回执/工作痕迹），未达即重发。
+61. **平台配置变更连带重启+适配器活性探测（V8.29，run20 矩阵断档 2.8h 实录）**：改平台配置（.env/config）后必须重启网关并验证适配器装载（mx-up 已内建 90s 活性探测 fail-fast）；/health 探活不覆盖消息面。派单后必须验证送达（agent 回执/工作痕迹），未达即重发。
 62. **夜间停滞六层防线（V8.29，run20 隔夜 7h 停滞终修）**：工人连通性冒烟（起跑前真打模型往返，import 检查抓不住 httpx2 版本冲突类）｜网关 pid+适配器双探活｜synapse/cc-switch 探活｜15min 智能监督（13 步 SOP v2）｜launchd 机械看守人（监督断档代行，不依赖会话存活）｜磁盘水位。venv 重建必须按 pyproject 钉版补 extras（anthropic==0.87.0 锚，未钉版装最新=httpx2 分叉冲突工人必崩）。
 63. **巡检官采集面健壮性（V8.29，run20 卡面三小时盲区实录）**：采集垫片（无板聚合器）缓存写必须 pid 唯一 tmp+fsync+读校验（并发截断=静默空串=假绿）；无板子命令逐个归一（diagnostics 空串炸轮）；巡检官轮失败要在快照可观测（runs 冻结=轮崩）。守卫链：巡检官→驱动自愈联动（anomalies 映射派单/催办）。
 64. **期望对账（V8.29，run20 hu 份额 5 项无卡实录）**：「应存在而不存在」类（期望的派单卡/提交缺失）对一切存在性检测器原理性不可见——关键派单（评审缺项清单/任务分解）必须跑期望对账（`mx_audit_dispatch`：期望清单×全板卡×main 稿，两缺即补派），对账结果落 evidence。
