@@ -57,6 +57,8 @@ def boardless_list(argv):
 
 def main():
     argv = sys.argv[1:]
+    with open("/tmp/hermes-shim-calls.log", "a") as _lg:
+        _lg.write(time.strftime("%H:%M:%S") + " " + " ".join(argv[:4]) + "\n")
     if len(argv) >= 2 and argv[0] == "kanban" and argv[1] == "list" and "--board" not in argv:
         return boardless_list(argv[2:])
     # 无板 diagnostics：真 CLI 返回空串（巡检官轮内 JSON.parse 炸环实录 12:55）——
