@@ -45,4 +45,4 @@ index 0000000..0000001 100644
 +    return True
  
  
- def _acquire_singleton_lock(lock_path) -> "tuple[Optional[object], str]":
+ def _acquire_singleton_lock(lock_path) -> tuple[Optional[object], str]:

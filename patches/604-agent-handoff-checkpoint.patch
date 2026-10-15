@@ -246,8 +246,8 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 index a58bf56986..b1af14be3d 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -4084,6 +4084,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
-     _ctx_checkpoint_recap(lines, task_id, task)
+@@ -3933,6 +3952,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
+     _ctx_parent_results(lines, conn, task_id, now)
      _ctx_role_history(lines, conn, task, now)
      _ctx_comments(lines, list_comments(conn, task_id), now)
 +    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
