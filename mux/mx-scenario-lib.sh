@@ -156,7 +156,7 @@ kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[.
   for slug in $(account_boards "$u"); do
     out=$(jq -c -s '{tasks: (.[0].tasks + ((.[1] | if type == "array" then . else (.tasks // []) end)))}' \
       <(echo "$out") \
-      <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null || echo '[]'))
+      <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null | LC_ALL=C tr -d '\000-\011\013-\037' || echo '[]'))
   done
   echo "$out"
 }
@@ -1411,10 +1411,10 @@ kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> [since-ms] → 
   if [ -n "${4:-}" ]; then
     body=$(kanban_list "$1" | jq -r --arg n "$2" --argjson s "$(( $4 / 1000 ))" \
       '[.. | objects | select(has("title")) | select((.created_at // 0) >= $s)
-        | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+        | select(((.title // "") + (.body // "") + (.result // "")) | contains($n)) | (.body // "") + "\n" + (.result // "")][0] // ""')
   else
     body=$(kanban_list "$1" | jq -r --arg n "$2" \
-      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "") + (.result // "")) | contains($n)) | (.body // "") + "\n" + (.result // "")][0] // ""')
   fi
   mx_text_gate_verdict "$3" "$body"
 }
