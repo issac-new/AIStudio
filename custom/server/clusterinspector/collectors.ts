@@ -148,6 +148,13 @@ export interface ClusterSnapshot {
    *  断棒实录：组织面建主卡后回合自了断，子卡树未生、主卡 ready+无人认领 2h45m
    *  全检测器盲区——「建了卡没人接」本身即断派单信号，与预期清单无关的通杀不变量） */
   unassignedCards?: RunningCardsFace
+  /** 期望工作卡面（work.expected-silent 检测面，run20 双盲区实录产品化）——控制器
+   *  注入（ready+todo 两查合并，含 assignee 非空的卡），未接线=合法空态。
+   *  用途：群消息派活形态下卡全是 ready + assignee=<名>-agent 房间账号名（纪律 60
+   *  违例），D7/idle.with-work 双双看不见（0 running 卡、卡有主）；唯一可见的锚
+   *  是「ready 卡的 assignee 拆档案名」——期望对账检测器从档案名集合交叉真做静默，
+   *  是唤醒即再死（hu/lin/xiao 16:07 新会话一轮即空转）的唯一产品级出口。 */
+  expectedWorkCards?: RunningCardsFace
   /** 跨机联邦（2026-10-11 三步之③）——控制器注入，未接线=ok:false */
   federation: FederationFace
   /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；
