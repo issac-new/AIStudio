@@ -101,6 +101,9 @@ else
   fi
   PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
     HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
+    # V8.29 夜间停滞防线②：日志轮转不截断（mx-up 重启曾覆盖隔夜 wedge/崩溃证据，
+    # 事后只能靠终端引用）——旧档带时间戳保留
+    [ -f "$LOGS_DIR/gateway.log" ] && mv "$LOGS_DIR/gateway.log" "$LOGS_DIR/gateway.log.$(date +%Y%m%d-%H%M%S).prev"
     "${_gg[@]}" nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"

@@ -152,6 +152,18 @@ load_token() { cat "$CREDS_DIR/$1.token"; }
 # 断言①并发闸 ≥ 扇出上限（13=12 agent+fanfan 编制口径；run4/run5 串行闸默认 1
 # 与并行流水线失配是三轮容量僵尸根因）；②网关源含年龄锚修复标记（run_busy
 # _capacity_retry_anchor——缺失则风暴消息重入永不过期）。两断言任一不过即 fail。
+# V8.29 夜间停滞根治防线①（run20 01:30-08:30 实录：venv 重建丢 anthropic extras
+# → 工人整夜 60s 崩；补装未钉版 anthropic 1.14.0 → httpx2 分叉与运行时 httpx.Timeout
+# 类型冲突照崩。import 检查抓不住第二类——必须真打一轮模型往返）。
+mxp_worker_smoke() { # <profile> → 0 连通（缺包/版本冲突/模型断路全类抓获）
+  local prof="${1:-default}" out rc
+  out=$(timeout 90 "$HERMES_BIN" -p "$prof" -z "ping（连通性冒烟，只回 pong）" 2>&1); rc=$?
+  if [[ $rc -ne 0 || "$(printf '%s' "$out" | tail -1)" != "pong" ]]; then
+    fail "工人连通性冒烟失败（profile=$prof rc=$rc）：$(printf '%s' "$out" | tail -2 | tr '\n' ' ')——venv 依赖回归（按 pyproject 钉版补 extras，如 anthropic==0.87.0）或模型链路断，禁起跑（夜间工人整夜崩实录）"
+  fi
+  log "工人连通性冒烟 ✓（$prof → pong）"
+}
+
 preflight_capacity_assert() {
   local mc anchor_ok
   mc=$(python3 -c "
