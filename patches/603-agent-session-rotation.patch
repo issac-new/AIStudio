@@ -1,8 +1,8 @@
 diff --git a/gateway/run_turn.py b/gateway/run_turn.py
-index 2c947327b4..83f4debf9d 100644
+index 331620a0f4..17402239b5 100644
 --- a/gateway/run_turn.py
 +++ b/gateway/run_turn.py
-@@ -2254,6 +2254,12 @@ class GatewayTurnMixin:
+@@ -325,6 +325,12 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
              # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
              from gateway.session_telemetry import record_turn_telemetry
              record_turn_telemetry(self, session_entry, agent_result, source)

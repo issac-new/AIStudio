@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 36d5736f73..38defa6678 100644
+index 0e2b4e51d1..8d78359bee 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -812,7 +812,7 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -804,7 +804,7 @@ CREATE TABLE IF NOT EXISTS tasks (
      created_at           INTEGER NOT NULL,
      started_at           INTEGER,
      completed_at         INTEGER,
@@ -11,7 +11,7 @@ index 36d5736f73..38defa6678 100644
      workspace_path       TEXT,
      branch_name          TEXT,
      -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
-@@ -1232,7 +1232,10 @@ def create_task(
+@@ -1224,7 +1224,10 @@ def create_task(
          except Exception:
              pass
      if workspace_kind is None:
@@ -23,7 +23,7 @@ index 36d5736f73..38defa6678 100644
      if workspace_kind not in VALID_WORKSPACE_KINDS:
          raise ValueError(
              f"workspace_kind must be one of {sorted(VALID_WORKSPACE_KINDS)}, "
-@@ -1272,6 +1275,11 @@ def create_task(
+@@ -1264,6 +1267,11 @@ def create_task(
      # Retry once on the extremely unlikely id collision.
      for attempt in range(2):
          task_id = _new_task_id()

@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index 58c123f8c0..48f04cf6e2 100644
+index 3399685bab..159c1504d5 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -1374,6 +1374,80 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
+@@ -1381,6 +1381,80 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
          _clone_file(source_dir, profile_dir, SYNC_MANIFEST_NAME)
  
  
@@ -83,12 +83,10 @@ index 58c123f8c0..48f04cf6e2 100644
  def create_profile(
      name: str, clone_from: Optional[str] = None, clone_all: bool = False, clone_config: bool = False,
      no_alias: bool = False, no_skills: bool = False, description: Optional[str] = None,
-@@ -1436,6 +1510,18 @@ def create_profile(
+@@ -1446,6 +1520,15 @@ def create_profile(
              _clone_all_into(source_dir, staging, canon)
          else:
              _bootstrap_profile_dir(staging, source_dir, sync_imports=sync_imports)
-+<<<<<<< ours
-+=======
 +        if source_dir is not None:
 +            from hermes_cli.setup_profile import release_setup_copy, setup_marker_state
 +            release_setup_copy(staging, setup_state=setup_marker_state(source_dir))
@@ -98,11 +96,10 @@ index 58c123f8c0..48f04cf6e2 100644
 +        # any plugins/ dir, so seeding here would be overwritten immediately
 +        # — the config-merge step below still ensures run-trace is enabled).
 +        _seed_run_trace_plugin(staging)
-+>>>>>>> theirs
          if source_dir is not None and not clone_channels:
              from hermes_cli.profile_channels import strip_channel_settings
              stripped = strip_channel_settings(staging, include_state=clone_all, source_dir=source_dir)
-@@ -1451,6 +1537,12 @@ def create_profile(
+@@ -1462,6 +1545,12 @@ def create_profile(
      # `hermes -p <profile> gateway start` supervises via `s6-svc -u` instead of a bare
      # process. No-op on host (systemd/launchd/windows unit generation handles lifecycle).
      _maybe_register_gateway_service(canon)

@@ -1,7 +1,21 @@
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+index df71de837c..80fa506291 100644
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -831,7 +831,7 @@ _BASE_TASK_COLUMNS = (
+     ("created_by", "created_by TEXT"),
+     ("started_at", "started_at INTEGER"),
+     ("completed_at", "completed_at INTEGER"),
+-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
++    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
+     ("workspace_path", "workspace_path TEXT"),
+     ("claim_lock", "claim_lock TEXT"),
+     ("claim_expires", "claim_expires INTEGER"),
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
+index f26fd2d6e5..798bd2d80f 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -2541,10 +2541,11 @@
+@@ -2564,10 +2564,11 @@ def _dispatch_once_locked(
      board_cap = _resolve_board_concurrency(board)
      board_running: dict[str, int] = {}
      if board_cap is not None:
@@ -15,22 +29,23 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      lane_kwargs: dict[str, Any] = dict(
          dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
          failure_limit=failure_limit, spawn_fn=spawn_fn,
-diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
---- a/hermes_cli/kanban_db_connect.py
-+++ b/hermes_cli/kanban_db_connect.py
-@@ -831,7 +831,7 @@
-     ("created_by", "created_by TEXT"),
-     ("started_at", "started_at INTEGER"),
-     ("completed_at", "completed_at INTEGER"),
--    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
-+    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
-     ("workspace_path", "workspace_path TEXT"),
-     ("claim_lock", "claim_lock TEXT"),
-     ("claim_expires", "claim_expires INTEGER"),
+diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
+index 28bd4771bc..8633e22679 100644
+--- a/tests/hermes_cli/test_kanban_db.py
++++ b/tests/hermes_cli/test_kanban_db.py
+@@ -551,6 +551,7 @@ def test_respawn_guard_ignores_auth_words_in_crashed_worker_output(kanban_home):
+         assert kbd.check_respawn_guard(conn, spawn_failed_id) == "blocker_auth"
+ 
+ 
++@pytest.mark.skipif(sys.platform != "linux", reason="real restart-safe systemd boundary only exists on Linux (upstream _IS_LINUX gate); on macOS the boundary short-circuits to in_process and the refusal cannot materialize")
+ def test_infrastructure_spawn_refusal_never_charges_the_card(
+     kanban_home, monkeypatch, all_assignees_spawnable,
+ ):
 diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanban_gates.py
+index fe1f3d4713..3289d02e7c 100644
 --- a/tests/hermes_cli/test_kanban_gates.py
 +++ b/tests/hermes_cli/test_kanban_gates.py
-@@ -26,6 +26,7 @@
+@@ -26,6 +26,7 @@ if str(_WORKTREE) not in sys.path:
      sys.path.insert(0, str(_WORKTREE))
  
  from hermes_cli import kanban_db as kb
@@ -38,7 +53,7 @@ diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanba
  from hermes_cli.kanban_gates import (
      GATE_REASONS,
      GateBlockedError,
-@@ -49,7 +50,7 @@
+@@ -49,7 +50,7 @@ def fresh_home(tmp_path, monkeypatch):
  
  
  def _connect(fresh_home):
@@ -47,14 +62,3 @@ diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanba
  
  
  def _make_task(conn, *, title="gate card", body=None, status="ready", assignee="sage"):
-diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
---- a/tests/hermes_cli/test_kanban_db.py
-+++ b/tests/hermes_cli/test_kanban_db.py
-@@ -551,6 +551,7 @@
-         assert kbd.check_respawn_guard(conn, spawn_failed_id) == "blocker_auth"
- 
- 
-+@pytest.mark.skipif(sys.platform != "linux", reason="real restart-safe systemd boundary only exists on Linux (upstream _IS_LINUX gate); on macOS the boundary short-circuits to in_process and the refusal cannot materialize")
- def test_infrastructure_spawn_refusal_never_charges_the_card(
-     kanban_home, monkeypatch, all_assignees_spawnable,
- ):

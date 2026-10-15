@@ -1,5 +1,5 @@
 diff --git a/agent/redact.py b/agent/redact.py
-index e76499be9d..6a902ff7ef 100644
+index a5c32a8ec7..03a59f52ce 100644
 --- a/agent/redact.py
 +++ b/agent/redact.py
 @@ -399,6 +399,13 @@ def _should_redact_assignment(key: str, value: str, *, check_keyword: bool) -> b

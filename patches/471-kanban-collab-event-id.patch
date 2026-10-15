@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index cd03f1d5d1..8fe281b845 100644
+index ae9856ae47..a58bf56986 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -1952,9 +1952,15 @@ def _insert_comment(
+@@ -1946,9 +1946,15 @@ def _insert_comment(
  
  def _append_event(
      conn: sqlite3.Connection, task_id: str, kind: str, payload: Optional[dict] = None, *,

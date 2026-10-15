@@ -32,10 +32,10 @@ index 0000000000..f3a61fc9db
 +        assert "final summary is the entire handoff" in desc
 +        assert "your final summary" not in desc  # 父侧描述不得以子代理口吻说话
 diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
-index dc3b7af144..597692433e 100644
+index 486acbab10..c4385a6f5e 100644
 --- a/tools/delegate_tool.py
 +++ b/tools/delegate_tool.py
-@@ -640,6 +640,8 @@ _DESCRIPTION_HEAD = (
+@@ -650,6 +650,8 @@ _DESCRIPTION_HEAD = (
      "succeeded.\n"
      "- Children cannot close tracked work: a child asked to close it returns findings instead; "
      "the parent applies the transition.\n"

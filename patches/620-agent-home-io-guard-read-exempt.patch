@@ -1,5 +1,5 @@
 diff --git a/tests/home_io_guard.py b/tests/home_io_guard.py
-index 877d27f..75c4203 100644
+index 877d27fd7c..75c4203b5c 100644
 --- a/tests/home_io_guard.py
 +++ b/tests/home_io_guard.py
 @@ -100,6 +100,22 @@ class HomeIOGuard:
