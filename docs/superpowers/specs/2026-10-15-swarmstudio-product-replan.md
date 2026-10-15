@@ -55,7 +55,33 @@
 - 引擎版本与 studio 版本保持一致（harness 不再独立演进版本叙事；引擎缺陷=产品缺陷，进同一台账与清偿体系——branch_fresh 崩溃类按产品缺陷记账）。
 - 推演方案正本（V8.x）与产品方案互引：方案条款变更同步本文件的功能地图。
 
-## 五、不做什么
+## 五、合并一致性与避免分叉（2026-10-16 用户裁定：推演中心功能与代码同 SwarmStudio/hermes agent 尽可能合并，保持一致）
+
+**铁律：一处实现，处处消费。**每项能力只允许一个实现正身（产品代码=studio custom 组件或 hermes-agent 模块）；驱动 bash、workflow 编排、UI、报告链一律是消费方（API/CLI 调用），不得出现第二份同语义实现。**发现双实现=产品缺陷**，进清偿门台账开单（与代偿同体系）。
+
+### 单一事实源表（能力 → 唯一实现 → 消费方 → bash 原件处置）
+
+| # | 能力 | 唯一实现（正身） | 消费方 | bash 原件处置 |
+|---|---|---|---|---|
+| 1 | 运行状态查询 | studio observability 端点（631，读 state.env/台账） | 驱动/workflow/推演中心 UI | mx-state-query.sh 降级为端点的 CLI 客户端（文件面留端点缺席时降级档） |
+| 2 | 代偿台账 | 产品存储+API（orgloop 族扩展：list/resolve/waive/check-clearance） | prelaunch ⑯/报告/inbox 审批/工单员 | mx-compensation-ledger.sh 变 API 客户端；TSV 迁产品存储（迁移窗一次性搬） |
+| 3 | 派发器健康 | hermes-agent dispatcher 模块（634 snapshot+报警） | 运行观测卡/哨兵/巡检 | 哨兵内联判活段退役，改调 635/634 CLI |
+| 4 | 休眠/真做判据 | hermes-agent kanban_sleeping（635） | 哨兵/监督面板/mx-hb | 哨兵 _realwork_ts 内联副本退役（同语义第二份=分叉违例） |
+| 5 | 闸工作流 | orgloop 闸修复状态机（636） | 驱动闸段（读状态不放行）/治理中心 UI | 驱动内闸判读逻辑逐步改为读 orgloop 状态 |
+| 6 | 排期 | autosched schedule-generator（636） | 派发词生成/编排面 | 步 17 排期脚本段退役改调端点 |
+| 7 | 审批模拟（人类角色动作） | humansim 通道（631，受控+审计） | 驱动全部人类角色发信 | 驱动内 14 处裸 curl/直调 synAPI 逐处替换 |
+| 8 | 受控合并 | orgloop merge-run（636） | V8.30 兜底段/lead 合并面 | 兜底段 git 子壳退役改调端点 |
+| 9 | 报告 | 产品治理报告服务（Phase B 迁 mx-report-gen） | 步 26/报告中心/多格式衍生 | mx-report-gen.py 迁 custom/server 后原位退役 |
+| 10 | 帧采集 | 产品采集服务（capture 策略配置化） | 驱动步触发 | r18-frames.mjs 迁产品侧，capture-plan.env 变策略配置 |
+| 11 | 场景编排 | 产品场景注册表+执行器（Phase C） | 推演中心/开轮 | aipay-scenario.sh 26 步主体退役，留真机操作薄壳（环境装配/进程守护） |
+
+### 落地守卫
+
+- 新能力一律先落产品面（overlay custom/hermes-agent 补丁），harness 只写消费代码——本表即 Phase B/C 的工单分解依据。
+- 迁移窗内新旧并存时，**bash 侧只允许透传不允许重写语义**（透传=调端点/CLI；重写=分叉违例）。
+- run20 在跑期间上述 bash 原件一律不动（活进程增量读取风险），统一在下轮开跑前的部署窗执行；执行顺序按表行号（1-4 低风险先行，5-8 中，9-11=Phase B/C 正件）。
+
+## 六、不做什么
 
 - 不把 launchd 机械看守产品化（保不死的归机器，产品只做「看得见」）。
 - 不在产品内做第二套推演语义（26 步/六闸的单一事实源仍在方案正本，产品只是承载与执行）。
