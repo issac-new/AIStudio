@@ -131,6 +131,8 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
 export function buildIaRoutes(): RouteRecordRaw[] {
   const workbench = () => import('./views/WorkbenchView.vue')
+  // 推演中心壳（B1）：六签兄弟路由共用同一懒组件
+  const simShell = () => import('./views/sim/SimCenterView.vue')
   // 含参目标转函数式重定向：vue-router 字符串重定向不透传源路径参数
   // （roomId 等含 !/: 特殊字符，经 path 直拼不经 params 序列化）
   const legacy: RouteRecordRaw[] = IA_LEGACY_REDIRECTS.map(({ from, to }) => {
@@ -243,17 +245,64 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.deliveryCases',
           component: () => import('@/custom/matrix-teams/views/DeliveryCasesView.vue'),
         },
+        // ── 推演中心（B1 壳·三中心重构波 2 首件，2026-10-16）──────────────────
+        // 六签单层页签，六条兄弟路由共用 SimCenterView（workbench 复用模式，当前签
+        // 由路由名推导）：签 1 轮次总览=默认签 /app/sim、签 2 监督面板、签 3 运行
+        // 观测、签 4 证据库、签 5 交付健康、签 6 需求追溯。签定义冻结自
+        // 2026-10-16-sim-center-detailed-design.md；壳只含导航+占位，数据面由
+        // B2-B7 逐签实装。场景编排挂面 /app/sim/orchestration（A8+D9，壳层挂面
+        // 非第七签）随其工单挂入。
         {
-          // 全部运行（RunCenter 自带 runs|inbox tab）
-          path: 'runs',
-          name: 'ia2.runs',
-          component: () => import('@/custom/loop/runcenter/views/RunCenterView.vue'),
+          path: 'sim',
+          name: 'ia2.sim',
+          component: simShell,
         },
         {
-          // 运行详情（参数名 runId 与旧路由一致）
+          path: 'sim/supervision',
+          name: 'ia2.simSupervision',
+          component: simShell,
+        },
+        {
+          path: 'sim/ops',
+          name: 'ia2.simOps',
+          component: simShell,
+        },
+        {
+          path: 'sim/evidence',
+          name: 'ia2.simEvidence',
+          component: simShell,
+        },
+        {
+          path: 'sim/delivery',
+          name: 'ia2.simDelivery',
+          component: simShell,
+        },
+        {
+          path: 'sim/trace',
+          name: 'ia2.simTrace',
+          component: simShell,
+        },
+        {
+          // 全部运行 → 推演中心（B1，2026-10-16）：RunCenter 整页退役为重定向，
+          // 保留一个版本周期（A13 升格=运行列表能力并入推演中心后移除本记录）；
+          // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel/inbox-center 等）随
+          // 重定向链落推演中心，零改动。?tab=runs/?loop= 等 RunCenter 专属
+          // query 无消费者（loop 预填随整页退役；vue-router redirect 会把
+          // 原 query 并入目标 URL，落点路由不受影响）
+          path: 'runs',
+          name: 'ia2.runs',
+          redirect: () => ({ path: '/app/sim' }),
+        },
+        {
+          // 运行详情 → 推演中心（B1，2026-10-16）：run 参数保留为轮次定位锚
+          // （签 1 轮次总览消费；A13 升格同上——详情能力由轮次总览/锚点抽屉承接）。
+          // path 式重定向（非 name 式）：vue-router 4.1.4+ 按名目标会并入原导航
+          // params 触发 Discarded invalid param 告警，含参重定向走 path 拼接
+          //（同上方 IA_LEGACY_REDIRECTS 先例）
           path: 'runs/:runId',
           name: 'ia2.runDetail',
-          component: () => import('@/custom/loop/runcenter/views/RunDetailView.vue'),
+          redirect: (loc: { params: Record<string, string | string[]> }) =>
+            ({ path: '/app/sim', query: { run: String(loc.params.runId) } }),
         },
         {
           // hermes 会话历史 / 全局智能体（隐藏深链面，上游 PageSidebarNav 依赖）
