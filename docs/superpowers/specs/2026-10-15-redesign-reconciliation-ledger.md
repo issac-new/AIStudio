@@ -75,7 +75,7 @@
 
 | # | 设置页 | 归属设置页 | 依据 |
 |---|---|---|---|
-| E0 | /app/settings（收编壳+IaSettingsSidebar） | 三设置页共用壳 | A2 细化 |
+| E0 | /app/settings（并入壳+IaSettingsSidebar） | 三设置页共用壳 | A2 细化 |
 | E1 | hermes.theme 主题 | 工作台·设置 | 个人偏好 |
 | E2 | hermes.chat 聊天偏好 | 工作台·设置 | 个人偏好 |
 | E3 | hermes.session 会话偏好 | 工作台·设置 | 个人偏好 |
@@ -106,7 +106,7 @@
 | E28 | 推演引擎参数（姿态缺省/观察窗节奏/清偿门策略/审批 TTL escalate） | **推演中心·推演设置**（新增） | 依据=本轮已落地参数面（posture/MX_PROXY_POLICY/escalate config） |
 | E29 | settings-layers 四层基建（default<user<workspace<session） | 三设置页共用存储基座 | 既有基建沿用；组织级键落 workspace 层、个人键落 user 层 |
 
-**裁决**：A2 行「设置族不变」细化为 E0-E29——设置收编壳保留，28 项按三设置页重组（治理 18 项/工作台 7 项/推演 3 项+基建 1）。features.ts 构建期开关与运行期偏好的分界维持（settings-layers 注释既定）。
+**裁决**：A2 行「设置族不变」细化为 E0-E29——设置并入壳保留，28 项按三设置页重组（治理 18 项/工作台 7 项/推演 3 项+基建 1）。features.ts 构建期开关与运行期偏好的分界维持（settings-layers 注释既定）。
 
 ## 二、反向对账（设计元素 → 登记行）
 
