@@ -1,8 +1,8 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index f1203f6cdc..cffbf5c413 100644
+index 12459f06ad..02124f66e7 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -838,6 +838,9 @@ def _is_summary_stub(content: str) -> bool:
+@@ -840,6 +840,9 @@ def _is_summary_stub(content: str) -> bool:
  # user answer is never re-summarized away on a later prune pass.
  _PRUNE_MIN_CHARS = 200
  
@@ -12,7 +12,7 @@ index f1203f6cdc..cffbf5c413 100644
  # Ghost-skill defense: the ONE canonical prune marker; emit sites and presence
  # checks must use the same string so they cannot drift.
  # Ghost-skill defense (#32106): when compaction reduces an old ``skill_view`` result to a 1-line metadata
-@@ -2156,7 +2159,10 @@ class ContextCompressor(
+@@ -2160,7 +2163,10 @@ class ContextCompressor(
      SummaryDispatchMixin, PreLlmSkipMixin, CompressionTelemetryMixin, MicroCompactionMixin, ContextEngine,
  ):
      """Default context engine: prune tool results, protect head/tail, summarize the middle
@@ -24,7 +24,7 @@ index f1203f6cdc..cffbf5c413 100644
  
      @property
      def name(self) -> str:
-@@ -3292,10 +3298,17 @@ class ContextCompressor(
+@@ -3300,10 +3306,17 @@ class ContextCompressor(
              c = result[i].get("content", "")
              return len(c) if isinstance(c, str) else _content_length_for_budget(c)
  
@@ -43,7 +43,7 @@ index f1203f6cdc..cffbf5c413 100644
          )
          reclaimed = 0
          demoted = 0
-@@ -3306,6 +3319,13 @@ class ContextCompressor(
+@@ -3314,6 +3327,13 @@ class ContextCompressor(
              if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
                  demoted += 1
                  reclaimed += max(0, before - _content_len(i))

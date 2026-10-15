@@ -1,8 +1,8 @@
 diff --git a/tools/approval.py b/tools/approval.py
-index f3400a8a9a..c03d0baf44 100644
+index 1e3dccbbae..c6e1549341 100644
 --- a/tools/approval.py
 +++ b/tools/approval.py
-@@ -1156,6 +1156,27 @@ def check_all_command_guards(command: str, env_type: str,
+@@ -1163,6 +1163,27 @@ def check_all_command_guards(command: str, env_type: str,
          for ctx in _unattended_contexts():
              result = _unattended_deny(command, ctx)
              if result is not None:

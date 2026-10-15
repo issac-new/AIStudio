@@ -1,8 +1,8 @@
 diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
-index 8045b00317..e1577819ba 100644
+index 7ff23f7cd4..8b76b75e67 100644
 --- a/gateway/platforms/api_server.py
 +++ b/gateway/platforms/api_server.py
-@@ -2455,6 +2455,18 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+@@ -2396,6 +2396,18 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
              configured_model=_resolve_gateway_model(), runtime_status=runtime,
              active_api_runs=active_api_runs, process_completion_queue_depth=process_depth,
              active_delegations=active_delegations)
@@ -21,7 +21,7 @@ index 8045b00317..e1577819ba 100644
          return web.json_response({
  "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
              "version": _hermes_version(), "gateway_state": gw_state,
-@@ -2462,6 +2474,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+@@ -2403,6 +2415,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
              "api_server": api_status,
              "metrics_today": api_status["metrics_today"],
              "last_heartbeat": api_status["last_heartbeat"],

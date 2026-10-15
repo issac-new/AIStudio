@@ -171,10 +171,10 @@ index 0000000000..452d7114a5
 +        for key in [k for k, until in self._cooldown_until.items() if until <= idle_cutoff]:
 +            del self._cooldown_until[key]
 diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
-index 197f6dca70..436ae72b2f 100644
+index 39f810e912..a19a23c470 100644
 --- a/gateway/platforms/base.py
 +++ b/gateway/platforms/base.py
-@@ -3605,6 +3605,9 @@ class BasePlatformAdapter(ABC):
+@@ -3564,6 +3564,9 @@ class BasePlatformAdapter(ABC):
          thread_meta = _thread_metadata_for_event(event)
          response = await self._message_handler(event)
          text, eph_ttl = self._unwrap_ephemeral(response)
@@ -184,7 +184,7 @@ index 197f6dca70..436ae72b2f 100644
          if not text:
              return
          if log_cmd is not None:
-@@ -3616,6 +3619,32 @@ class BasePlatformAdapter(ABC):
+@@ -3575,6 +3578,32 @@ class BasePlatformAdapter(ABC):
          if eph_ttl > 0 and result.success and result.message_id:
              self._schedule_ephemeral_delete(event.source.chat_id, result.message_id, eph_ttl)
  
@@ -217,7 +217,7 @@ index 197f6dca70..436ae72b2f 100644
      def _media_delivery_scope(self, source: Optional[SessionSource]):
          """Routed home + terminal policy for post-handler text, media and error delivery;
          a no-op without a runner or outside multiplexing."""
-@@ -4628,9 +4657,14 @@ class BasePlatformAdapter(ABC):
+@@ -4609,9 +4638,14 @@ class BasePlatformAdapter(ABC):
                          or _tts_paths or _tts_caption_delivered:
                      self.pause_typing_for_chat(event.source.chat_id)
                  if text_content and not _tts_caption_delivered:

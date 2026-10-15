@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/main_agent_cmds.py b/hermes_cli/main_agent_cmds.py
-index 5f27641239..833f7e26ec 100644
+index 000943e965..1466160eb2 100644
 --- a/hermes_cli/main_agent_cmds.py
 +++ b/hermes_cli/main_agent_cmds.py
 @@ -57,12 +57,63 @@ def _cmd_memory_reset(args):

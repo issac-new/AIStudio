@@ -69,7 +69,9 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
       'utf8')
     const m = syncSrc.match(/AGENT_PREFIXES='\^\(([^)]*)\)'/)
     expect(m, "aipay-agent-sync.sh 应含 AGENT_PREFIXES='^(a/|b_|...)' 正则片段").toBeTruthy()
-    const shellPrefixes = (m as RegExpMatchArray)[1].split('|').filter((p) => p.length > 0)
+    // shell 侧为 grep -E 正则片段：点号等元字符带 \ 转义（model_tools\.py 实锤），
+    // 比对前归一化去转义，两侧口径才可比。
+    const shellPrefixes = (m as RegExpMatchArray)[1].split('|').filter((p) => p.length > 0).map((p) => p.replace(/\\/g, ''))
     const jsPrefixes = [...injectModule.HERMES_AGENT_PATCH_PREFIXES]
     expect(shellPrefixes.filter((p) => !jsPrefixes.includes(p)), 'shell 侧多出/未同步到 js 的前缀').toEqual([])
     expect(jsPrefixes.filter((p) => !shellPrefixes.includes(p)), 'js 侧多出/未同步到 shell 的前缀').toEqual([])
