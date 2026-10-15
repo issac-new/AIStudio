@@ -1047,6 +1047,9 @@ fi
 # ══ 步骤 15：排期（pm-planning）══════════════════════
 if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   if ! repo_has docs/plan/${RFD_ID}-schedule.md; then
+    # m17 idempotence (2026-10-15): FAIL-restart must not re-send the full brief
+    # (idle-nudge already re-pings; lost-message edge -> monitor SOP step 8 manual backfill).
+    if [[ -z "$(sget m17_marker)" ]]; then
     _m17=$(dispatch_in_room fanfan "@fanfan-agent:matrix.test 请加载 pm-planning 技能，基于定稿的概设与工作量评估编排开发/测试计划：
 1) 产出 docs/plan/${RFD_ID}-schedule.md：任务表（ID/模块/责任人/类型/工作量人日/时间窗口/依赖）+ 里程碑；测试工作量 = 开发 × 0.3 叠加为独立测试任务；整体 +15% 集成缓冲；工作量 ≥2 人日的任务须同步给出子任务拆分（子任务 ID/内容/工作量，每件 ≤1 人日）写入文档；完成后 git commit 并 push origin main（入库真值以 origin/main 为准，推特性分支不算过闸）
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
@@ -1054,6 +1057,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
 结论行 PLAN-DONE-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
     sset m17_marker "$_m17"
+    fi
     wait_alive_truth "docs/plan/${RFD_ID}-schedule.md 入库" 1800 fanfan repo_has docs/plan/${RFD_ID}-schedule.md || fail "排期空转（fanfan 日志 1800s 零增长）"
   fi
   # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重，
