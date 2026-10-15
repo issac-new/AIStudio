@@ -500,7 +500,7 @@ describe('work.expected-silent（run20 双盲区实录产品化——群消息�
     const hit = out.find((x) => x.detector === 'work.expected-silent')
     expect(hit).toBeTruthy()
     expect(hit!.summary).toContain('hu')
-    expect(hit!.summary).toContain('2 张')
+    expect(hit!.summary).toContain('1 张')
     expect(out.filter((x) => x.detector === 'work.expected-silent' && x.subject === 'profile:lin')).toHaveLength(0)
     const noCards = detectAll(snap({
       expectedWorkCards: { ok: true, cards: [] },

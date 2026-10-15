@@ -74,23 +74,35 @@ function unassignedCardsProvider(): (() => Promise<Array<Record<string, unknown>
   return async () => [...await list('ready'), ...await list('todo')]
 }
 
-/** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录）：ready+todo 两查
- *  合并（含 assignee 非空卡——群消息派活形态下卡全是 ready + assignee=<名>-agent，
- *  与 unassignedCardsProvider 的唯一差别是不过滤空 assignee），fail-soft。 */
+/** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录）：遍历各板 kanban.db
+ *  聚合 ready/todo 卡（含 assignee 非空卡——群消息派活形态下卡全是 ready +
+ *  assignee=<名>-agent，CLI list 只查当前板拿不到，必须直读板库），fail-soft。 */
 function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
-  const list = (status: string) => new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
-    execFile('hermes', ['kanban', 'list', '--status', status, '--json'], {
-      timeout: 30_000,
-      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
-    }, (err, stdout) => {
-      if (err) { reject(err); return }
-      try {
-        const out = JSON.parse(stdout) as unknown
-        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
-      } catch (e) { reject(e as Error) }
-    })
-  })
-  return async () => [...await list('ready'), ...await list('todo')]
+  const home = () => process.env.HERMES_HOME || hermesHomeDefault()
+  return async () => {
+    const { readdirSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const { execFile } = await import('node:child_process')
+    const boardsDir = join(home(), 'kanban', 'boards')
+    let boards: string[] = []
+    try { boards = readdirSync(boardsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) } catch { return [] }
+    const out: Array<Record<string, unknown>> = []
+    for (const b of boards) {
+      const db = join(boardsDir, b, 'kanban.db')
+      for (const status of ['ready', 'todo']) {
+        try {
+          const rows = await new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
+            execFile('sqlite3', [db, `SELECT id,title,assignee,status,body,created_at,updated_at FROM tasks WHERE status='${status}'`, '-json'], { timeout: 10_000 }, (err, stdout) => {
+              if (err) { reject(err); return }
+              try { resolve(JSON.parse(stdout || '[]') as Array<Record<string, unknown>>) } catch (e) { reject(e as Error) }
+            })
+          })
+          for (const r of rows) out.push({ ...r, board: b })
+        } catch { /* 单板失败不拖垮整面 */ }
+      }
+    }
+    return out
+  }
 }
 
 // 巡检环启动入口转发（routes.ts 挂载点 import 自本控制器——单一挂载面）
