@@ -23,11 +23,9 @@ HAR="${MX_HARNESS_ROOT:-/Users/cuishi/lab/ncwk/simharness}"
 
 echo "=== 部署窗口批（$(date '+%F %T')）==="
 # ── 硬闸：窗口判定 ──
-_ln=$(readlink "$SR/var/current-state.env" 2>/dev/null || true)
-[ -n "$_ln" ] || { echo "✗ 无 current-state.env 锚（无推演在案？）——直接跑 mx-up 侧即可"; exit 2; }
-_st="$_ln"
-case "$_ln" in /*) ;; *) _st="$SR/$_ln";; esac
-RUN_ID=$(basename "$(dirname "$_st")")
+# 当前轮=runs/ 下 state.env 最新修改者（current-state.env 是 SIM 根全局锚，不含轮号）
+RUN_ID=$(ls -t "$SR"/runs/*/state.env 2>/dev/null | head -1 | xargs dirname 2>/dev/null | xargs basename 2>/dev/null)
+[ -n "$RUN_ID" ] || { echo "✗ runs/ 下无任何轮次 state.env——无推演在案，直接跑 mx-up 侧即可"; exit 2; }
 if ! grep -q '^report_done=' "$SR/runs/$RUN_ID/state.env" 2>/dev/null; then
   echo "✗ 窗口未开：run $RUN_ID 尚未 report_done——本批零动作退出（活轮禁注入）"; exit 1
 fi
