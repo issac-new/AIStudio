@@ -2,7 +2,7 @@
 // 2026-09-19 v12 统一视图（Task 2）：双视图路由树守门——存在性 / 参数原样 /
 // fullscreen / 视图投影 / 全树路由名唯一。
 // 纯路由表断言用 router.resolve，不加载任何视图组件（懒组件保持函数态）；
-// 例外是 workbench 与 runDetail 的懒组件身份断言（stub 替身核对装载目标）。
+// 例外是 workbench 与推演中心壳（B1 六签）的懒组件身份断言（stub 替身核对装载目标）。
 import { describe, it, expect, vi } from 'vitest'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 import { buildIaRoutes, IA_AREAS, areaForPath } from '../routes'
@@ -10,11 +10,11 @@ import { buildIaRoutes, IA_AREAS, areaForPath } from '../routes'
 vi.mock('../views/WorkbenchView.vue', () => ({
   default: { template: '<div class="workbench-stub" />' },
 }))
-vi.mock('@/custom/loop/runcenter/views/RunDetailView.vue', () => ({
-  default: { template: '<div class="run-detail-stub" />' },
+vi.mock('../views/sim/SimCenterView.vue', () => ({
+  default: { template: '<div class="sim-center-stub" />' },
 }))
 import WorkbenchView from '../views/WorkbenchView.vue'
-import RunDetailView from '@/custom/loop/runcenter/views/RunDetailView.vue'
+import SimCenterView from '../views/sim/SimCenterView.vue'
 
 function makeRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: buildIaRoutes() })
@@ -77,21 +77,34 @@ describe('ia2 路由树（v12 双视图）', () => {
     expect(typeof record?.redirect).toBe('function')
   })
 
-  it('工作页：board / eng / runs 存在；runDetail 参数名 runId 且懒组件落 RunDetailView', async () => {
+  it('工作页：board 存在；runs 家族 B1 退役为重定向（推演中心）；sim 六签懒组件落 SimCenterView', async () => {
     const router = makeRouter()
     expect(router.resolve('/app/board').name).toBe('ia2.board')
     // V5 补遗⑤ S5：/app/eng 退役为重定向（组件保留）
     const engRec = router.resolve('/app/eng').matched.slice(-1)[0]
     expect(engRec?.name).toBe('ia2.eng')
     expect(typeof engRec?.redirect).toBe('function')
-    expect(router.resolve('/app/runs').name).toBe('ia2.runs')
-    const resolved = router.resolve('/app/runs/run-abc')
-    expect(resolved.name).toBe('ia2.runDetail')
-    expect(resolved.params.runId).toBe('run-abc')
-    const record = resolved.matched[resolved.matched.length - 1]
-    const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
-    const mod = await loader()
-    expect(mod.default).toBe(RunDetailView)
+    // B1（2026-10-16 推演中心壳）：/app/runs 与 /app/runs/:runId 退役为重定向
+    // ——组件零装载，runId 参数解析保持（兼容守卫按名/按路径跳不炸）
+    const runsRec = router.resolve('/app/runs').matched.slice(-1)[0]
+    expect(runsRec?.name).toBe('ia2.runs')
+    expect(runsRec?.components).toBeFalsy()
+    expect(typeof runsRec?.redirect).toBe('function')
+    const runDetailResolved = router.resolve('/app/runs/run-abc')
+    const runDetailRec = runDetailResolved.matched.slice(-1)[0]
+    expect(runDetailResolved.name).toBe('ia2.runDetail')
+    expect(runDetailResolved.params.runId).toBe('run-abc')
+    expect(runDetailRec?.components).toBeFalsy()
+    expect(typeof runDetailRec?.redirect).toBe('function')
+    // 六签兄弟路由共用 SimCenterView（workbench 复用模式）
+    for (const path of ['/app/sim', '/app/sim/supervision', '/app/sim/ops', '/app/sim/evidence', '/app/sim/delivery', '/app/sim/trace']) {
+      const resolved = router.resolve(path)
+      const record = resolved.matched[resolved.matched.length - 1]
+      const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
+      expect(typeof loader, `${path} loader`).toBe('function')
+      const mod = await loader()
+      expect(mod.default, `${path} 应落 SimCenterView`).toBe(SimCenterView)
+    }
   })
 
   it('hermes 会话深链面：history / global-agent 家族齐全（上游 PageSidebarNav 依赖）', () => {
