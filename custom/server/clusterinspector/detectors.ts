@@ -426,6 +426,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectReviewFailStall(snap, opts),
     ...detectUnassignedStale(snap, opts),
     ...detectCardBodyEmpty(snap, opts),
+    ...detectDeliveryPushed(snap, opts),
     ...detectWorkExpectedSilent(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
@@ -635,6 +636,29 @@ export function detectWorkExpectedSilent(snap: ClusterSnapshot, opts: DetectOpti
         detail: { cards, quietMs: quiet, realWorkTsMs: t.realWorkTsMs, form: 'expected-work' },
       })
     }
+  }
+  return out
+}
+
+/** ── 持续集成检测器（run20 V8.33 草案 CI 部分，2026-10-15 用户裁定）──
+ *  `delivery.pushed`：origin/feat/DEV-* 远程分支 tip 与本地 tip 比对——
+ *  本地 tip 新于 origin tip = 未推送，触发 NUDGE 走群消息通道（与 work.expected-silent
+ *  同一链路）让对应 dev 档案把分支推 origin。
+ *  数据源：snap.deliveryBranchIntel（控制器注入 git fetch live 比对，fail-soft
+ *  返回空集合——git 失败=静默跳过，下轮重试）。
+ *  run21 落地验收：origin 任何未推分支都在 15 分钟内被 NUDGE 提醒 1 次。 */
+export function detectDeliveryPushed(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
+  const intel = (snap as ClusterSnapshot & { deliveryBranchIntel?: { pushed: boolean; localTip: string; originTip: string; branch: string; profile: string }[] }).deliveryBranchIntel
+  if (!Array.isArray(intel) || intel.length === 0) return []
+  const out: Anomaly[] = []
+  for (const item of intel) {
+    if (item.pushed) continue
+    out.push({
+      detector: 'delivery.pushed', subject: `branch:${item.branch}`,
+      severity: 'warn',
+      summary: `分支未推 origin：${item.branch} 本地 tip ${item.localTip.slice(0, 7)} ≠ origin tip ${item.originTip.slice(0, 7) || '不存在'}——${item.profile} 在本地写了但没推。请执行 ` + '`git push origin ' + `${item.branch}，群内回一行 PUSHED-${item.branch}-<短锚>。30 分钟未推视为嘴炮-不交卷升级。`,
+      detail: { branch: item.branch, localTip: item.localTip, originTip: item.originTip, profile: item.profile },
+    })
   }
   return out
 }

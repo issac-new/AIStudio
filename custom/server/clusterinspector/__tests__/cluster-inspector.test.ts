@@ -532,3 +532,28 @@ describe('work.expected-silent（run20 双盲区实录产品化——群消息�
     expect(exp.find((x) => x.detector === 'idle.with-work')).toBeUndefined()
   })
 })
+
+describe('delivery.pushed（V8.33 持续集成检测器骨架）', () => {
+  it('本地 tip ≠ origin tip → 报 warn；pushed=true 不报；空 intel 不报', () => {
+    const out1 = detectAll({
+      ts: 1, gateway: { ok: true }, sessions: { ok: true, entries: 0, live: 0, dead: [] },
+      profiles: { ok: true, tails: [] }, kanban: { ok: false, rows: [] },
+      runningCards: { ok: false, cards: [] }, federation: { ok: false, nowMs: 1, machines: [] },
+      deliveryBranchIntel: [{ branch: 'feat/DEV-MP', localTip: 'abc1234', originTip: '', pushed: false, profile: 'xiao' }],
+    } as any, { nowMs: 1 })
+    expect(out1.find((a) => a.detector === 'delivery.pushed')).toBeTruthy()
+    const out2 = detectAll({
+      ts: 1, gateway: { ok: true }, sessions: { ok: true, entries: 0, live: 0, dead: [] },
+      profiles: { ok: true, tails: [] }, kanban: { ok: false, rows: [] },
+      runningCards: { ok: false, cards: [] }, federation: { ok: false, nowMs: 1, machines: [] },
+      deliveryBranchIntel: [{ branch: 'feat/DEV-MP', localTip: 'abc1234', originTip: 'abc1234', pushed: true, profile: 'xiao' }],
+    } as any, { nowMs: 1 })
+    expect(out2.find((a) => a.detector === 'delivery.pushed')).toBeUndefined()
+    const out3 = detectAll({
+      ts: 1, gateway: { ok: true }, sessions: { ok: true, entries: 0, live: 0, dead: [] },
+      profiles: { ok: true, tails: [] }, kanban: { ok: false, rows: [] },
+      runningCards: { ok: false, cards: [] }, federation: { ok: false, nowMs: 1, machines: [] },
+    } as any, { nowMs: 1 })
+    expect(out3.find((a) => a.detector === 'delivery.pushed')).toBeUndefined()
+  })
+})
