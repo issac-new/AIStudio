@@ -1,5 +1,5 @@
 diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
-index 22217ebc41..461c1326a8 100644
+index ca9989879e..ebdf790ec8 100644
 --- a/tests/hermes_cli/test_kanban_db.py
 +++ b/tests/hermes_cli/test_kanban_db.py
 @@ -814,7 +814,7 @@ def test_worktree_workspace_explicit_target_materializes_linked_worktree(kanban_

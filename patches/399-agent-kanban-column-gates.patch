@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 904a6c8cd3..31b479e5be 100644
+index 902eb1894a..fb2a981876 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -2709,6 +2709,11 @@ def complete_task(
+@@ -2706,6 +2706,11 @@ def complete_task(
      # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
      if not _parents_satisfied(conn, task_id):
          return False
@@ -14,7 +14,7 @@ index 904a6c8cd3..31b479e5be 100644
      from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
      verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
      _gate_empty_completion(conn, task_id, result=result, summary=summary)
-@@ -2778,6 +2783,9 @@ def complete_task(
+@@ -2775,6 +2780,9 @@ def complete_task(
              _completed_event_payload(result, event_summary, verified_cards, metadata),
              run_id=run_id,
          )
@@ -24,7 +24,7 @@ index 904a6c8cd3..31b479e5be 100644
      _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
      # Success wipes the breaker counter (history stays on the event log).
      _clear_failure_counter(conn, task_id)
-@@ -3333,6 +3341,11 @@ def request_review(
+@@ -3330,6 +3338,11 @@ def request_review(
  
      summary = redact_review_value(summary)
      metadata = redact_review_value(metadata)
@@ -36,7 +36,7 @@ index 904a6c8cd3..31b479e5be 100644
      # Declared (metadata["artifacts"]) and prose-referenced files
      # must be durable BEFORE anything can clean the scratch workspace up: for a
      # review-bound card the reviewer's completion is the cleanup trigger.
-@@ -3427,6 +3440,9 @@ def request_review(
+@@ -3424,6 +3437,9 @@ def request_review(
              if staged:
                  payload["artifacts"] = staged
              _append_event(conn, task_id, "review_requested", payload, run_id=run_id)
@@ -46,7 +46,7 @@ index 904a6c8cd3..31b479e5be 100644
      except Exception:
          if staged_copies:
              _discard_staged_copies(staged_copies, staged_copies[0].parent)
-@@ -3558,6 +3574,16 @@ def promote_task(
+@@ -3555,6 +3571,16 @@ def promote_task(
              f"`hermes kanban unlink <parent_id> {task_id}`)"
          )
  
@@ -63,7 +63,7 @@ index 904a6c8cd3..31b479e5be 100644
      if dry_run:
          return True, None
  
-@@ -3569,6 +3595,9 @@ def promote_task(
+@@ -3566,6 +3592,9 @@ def promote_task(
          if upd.rowcount != 1:
              return False, f"task {task_id} status changed during promotion"
          _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})

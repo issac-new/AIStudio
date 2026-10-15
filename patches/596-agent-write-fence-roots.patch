@@ -1,5 +1,5 @@
 diff --git a/agent/file_safety.py b/agent/file_safety.py
-index 939e049e6b..a22327a0cd 100644
+index 31bd2c8f0f..caa47e91e3 100644
 --- a/agent/file_safety.py
 +++ b/agent/file_safety.py
 @@ -220,11 +220,29 @@ def build_write_denied_prefixes(home: str) -> list[str]:

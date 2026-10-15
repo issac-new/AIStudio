@@ -1,8 +1,8 @@
 diff --git a/agent/agent_init.py b/agent/agent_init.py
-index 57b84fac89..c0bd46d88c 100644
+index 58ed7e0e30..be91a15eb5 100644
 --- a/agent/agent_init.py
 +++ b/agent/agent_init.py
-@@ -1121,6 +1121,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
+@@ -1123,6 +1123,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
      if drops := agent_tool_drops(agent):
          agent.tools = [t for t in agent.tools if t["function"]["name"] not in drops]
  

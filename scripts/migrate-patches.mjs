@@ -172,7 +172,21 @@ function main() {
   // series 保留原条目(inject 侧继续 WARN 跳过,与旧世界语义一致)。
   const skipList = (process.env.MIGRATE_SKIP_PATCHES || '').split(',').map((x) => x.trim()).filter(Boolean);
   for (const p of series) {
-    if (done.has(p)) continue;
+    if (done.has(p)) {
+      // 2026-10-15 根治：人工解冲突续传的补丁此前被 done 集直接跳过，补丁文件
+      // 停留在旧版本（inject 侧继续失配、标记甚至被字面注入）。此处对 done 项
+      // 幂等再生：从 new 链对应提交取 diff 重写文件；内容已一致则零动作。
+      const sha = trySh(`git log --format=%H --grep="^migrate: ${p.replaceAll('.', '\.')}$" -1 ${NEW_BRANCH}`).out.trim();
+      if (sha) {
+        const diff = sh(`git diff ${sha}^ ${sha} --binary --no-color`);
+        const cur = existsSync(pf) ? readFileSync(pf, 'utf8') : '';
+        if (diff.trim() && diff !== cur) {
+          writeFileSync(pf, diff);
+          console.log(`[migrate] 补再生(done 项文件落后于提交): ${p}`);
+        }
+      }
+      continue;
+    }
     const pf = resolve(patchDir, p);
     if (!existsSync(pf)) { console.error(`[migrate] patch 缺失: ${p}`); process.exit(1); }
     const text = readFileSync(pf, 'utf8');

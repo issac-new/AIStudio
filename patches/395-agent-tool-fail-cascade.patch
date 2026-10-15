@@ -1,8 +1,8 @@
 diff --git a/agent/tool_executor.py b/agent/tool_executor.py
-index f0783edaa7..a956f213db 100644
+index 4bd1bab397..549358c918 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -193,6 +193,51 @@ def _resolve_concurrent_tool_timeout() -> float | None:
+@@ -195,6 +195,51 @@ def _resolve_concurrent_tool_timeout() -> float | None:
      )
  
  
@@ -54,7 +54,7 @@ index f0783edaa7..a956f213db 100644
  def _flush_session_db_after_tool_progress(agent, messages: list, *, stage: str) -> bool:
      """Flush tool-call progress to the session DB before projecting it to any UI: tool side
      effects can kill/restart the process before turn-end persistence runs."""
-@@ -472,6 +517,12 @@ class _ManagedToolResult:
+@@ -474,6 +519,12 @@ class _ManagedToolResult:
      middleware_trace: list[dict[str, Any]]
      blocked: bool
      dispatched: bool
@@ -67,7 +67,7 @@ index f0783edaa7..a956f213db 100644
  
  
  class _ToolTimeoutResult(str):
-@@ -1812,6 +1863,7 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
+@@ -1822,6 +1873,7 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
      # Multimodal dict results (_multimodal=True) are not sliceable as strings.
      _result_len = len(function_result) if isinstance(function_result, str) else len(str(function_result))
      _is_error_result, _ = _detect_tool_failure(ref.name, function_result)
@@ -75,7 +75,7 @@ index f0783edaa7..a956f213db 100644
      committed = _commit_tool_result(
          agent, messages, ref, function_result,
          budget=budget, tool_duration=tool_duration, is_error=_is_error_result, blocked=managed.blocked,
-@@ -1840,11 +1892,23 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
+@@ -1850,11 +1902,23 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
  def execute_tool_calls_sequential(agent, assistant_message, messages: list, effective_task_id: str, api_call_count: int = 0, *, finalize: bool = True) -> None:
      from types import SimpleNamespace
      from agent.terminal_approval_batch import terminal_approval_batch, terminal_approval_runs
@@ -100,7 +100,7 @@ index f0783edaa7..a956f213db 100644
      if finalize:
          _finalize_tool_batch(agent, messages, effective_task_id, len(assistant_message.tool_calls), _budget_for_agent(agent))
  
-@@ -1877,6 +1941,10 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+@@ -1887,6 +1951,10 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
          if pc.parse_error is not None:
              if not _append_invalid_arguments_result(agent, messages, ref, pc.parse_error):
                  return
@@ -111,7 +111,7 @@ index f0783edaa7..a956f213db 100644
              continue
  
          tool_start_time = time.time()
-@@ -1893,6 +1961,15 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+@@ -1903,6 +1971,15 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
                                            budget=_tool_budget, transform_applied=dispatch.transform_applied):
              return
  
@@ -127,7 +127,7 @@ index f0783edaa7..a956f213db 100644
          if agent._interrupt_requested and i < len(tool_calls):
              if not _skip_remaining_sequential(
                  agent, messages, tool_calls[i:], effective_task_id,
-@@ -1920,9 +1997,20 @@ def execute_tool_calls_segmented(agent, assistant_message, messages: list, effec
+@@ -1930,9 +2007,20 @@ def execute_tool_calls_segmented(agent, assistant_message, messages: list, effec
          _exec_cwd = Path(_active_env.cwd) if _active_env is not None and _active_env.cwd else None
          segments = _plan_tool_batch_segments(assistant_message.tool_calls, execution_cwd=_exec_cwd)
  

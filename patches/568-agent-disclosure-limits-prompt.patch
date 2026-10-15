@@ -1,8 +1,8 @@
 diff --git a/agent/system_prompt.py b/agent/system_prompt.py
-index a2ef790d4b..9f748ffe46 100644
+index 29b2a4e65d..7d0b679190 100644
 --- a/agent/system_prompt.py
 +++ b/agent/system_prompt.py
-@@ -731,6 +731,19 @@ def _join_tier(parts: list[Optional[str]]) -> str:
+@@ -727,6 +727,19 @@ def _join_tier(parts: list[Optional[str]]) -> str:
      return "\n\n".join(p.strip() for p in parts if p and p.strip())
  
  
@@ -22,7 +22,7 @@ index a2ef790d4b..9f748ffe46 100644
  def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) -> dict[str, str]:
      """Assemble the system prompt as three ordered cache tiers: ``stable`` (identity,
      guidance and the coding brief), ``context`` (caller ``system_message``, project
-@@ -750,6 +763,8 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None)
+@@ -746,6 +759,8 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None)
      _help_guidance_slot = len(stable_parts)
      stable_parts.append(HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS)
      stable_parts.extend(_guidance_parts(agent))

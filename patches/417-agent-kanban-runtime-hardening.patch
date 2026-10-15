@@ -73,10 +73,10 @@ index 6ba74e9e3e..6d5e103db8 100644
              creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                               if is_dispatcher_owned_worker_context() else None),
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 9ffeed77ee..cd03f1d5d1 100644
+index 2247b47836..ae9856ae47 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -510,6 +510,28 @@ def get_current_board() -> str:
+@@ -502,6 +502,28 @@ def get_current_board() -> str:
      return DEFAULT_BOARD
  
  
@@ -105,7 +105,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
  def set_current_board(slug: str) -> Path:
      """Persist ``slug`` as the active board; returns the file written. Does NOT
      check the board exists — callers do (so ``boards switch <typo>`` errors)."""
-@@ -517,7 +539,7 @@ def set_current_board(slug: str) -> Path:
+@@ -509,7 +531,7 @@ def set_current_board(slug: str) -> Path:
      normed = _require_slug(slug)
      path = current_board_path()
      path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
      return path
  
  
-@@ -625,8 +647,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
+@@ -617,8 +639,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
  
  
  def task_attachments_dir(task_id: str, board: Optional[str] = None) -> Path:
@@ -150,7 +150,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
  
  
  def worker_logs_dir(board: Optional[str] = None) -> Path:
-@@ -684,12 +731,15 @@ class Task:
+@@ -676,12 +723,15 @@ class Task:
      block_kind: Optional[str] = None
      block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
      completion_contract: Optional[str] = None
@@ -165,8 +165,8 @@ index 9ffeed77ee..cd03f1d5d1 100644
 +        raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
          return cls(
              **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
-             **{col: g(col) for col in _TASK_OPTIONAL_COLUMNS},
-@@ -699,6 +749,7 @@ class Task:
+             **{col: _to_epoch(g(col)) for col in _TASK_EPOCH_COLUMNS},  # outside writers may store text: epoch or None
+@@ -692,6 +742,7 @@ class Task:
              consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
              last_failure_error=g("last_failure_error", g("last_spawn_error")),
              skills=skills_value,
@@ -174,7 +174,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
              goal_mode=bool(g("goal_mode")),
              block_recurrences=int(g("block_recurrences") or 0),
          )
-@@ -869,6 +920,8 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -863,6 +914,8 @@ CREATE TABLE IF NOT EXISTS tasks (
      -- Force-loaded skills for the worker on this task, stored as JSON.
      -- Passed to the worker via `--skills`. NULL or empty array = no extras.
      skills               TEXT,
@@ -183,7 +183,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
      -- Per-task model override. When set, the dispatcher passes -m <model>
      -- to the worker, overriding the profile's default model. NULL = use
      -- the profile default.
-@@ -1212,6 +1265,7 @@ def create_task(
+@@ -1206,6 +1259,7 @@ def create_task(
      project_source_task_id: Optional[str] = None,
      creator_task_id: Optional[str] = None,
      completion_contract: Optional[str] = None,
@@ -191,7 +191,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
  ) -> str:
      """Create a task (optionally under ``parents``); returns its id.
  
-@@ -1319,8 +1373,8 @@ def create_task(
+@@ -1313,8 +1367,8 @@ def create_task(
                          max_runtime_seconds,
                          skills, max_retries, model_override, provider_override,
                          reasoning_effort,
@@ -202,7 +202,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
                      """,
                      (
                          task_id, title.strip(), body, assignee, task_status, priority,
-@@ -1330,6 +1384,7 @@ def create_task(
+@@ -1324,6 +1378,7 @@ def create_task(
                          json.dumps(skills_list) if skills_list is not None else None,
                          _opt_int(max_retries), model_override, provider_override, reasoning_effort,
                          1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
@@ -210,7 +210,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
                      ),
                  )
                  for pid in parents:
-@@ -1812,7 +1867,7 @@ def store_attachment_bytes(
+@@ -1806,7 +1861,7 @@ def store_attachment_bytes(
      dest_dir = task_attachments_dir(task_id, board=board)
      dest_dir.mkdir(parents=True, exist_ok=True)
      dest_path = _collision_free_path(dest_dir, safe_name)
@@ -219,7 +219,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
      try:
          return add_attachment(
              conn, task_id, filename=dest_path.name, stored_path=str(dest_path.resolve()),
-@@ -2724,68 +2779,77 @@ def complete_task(
+@@ -2721,68 +2776,77 @@ def complete_task(
      acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
      if acceptance is False:
          return False
@@ -358,7 +358,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
      _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
      # Success wipes the breaker counter (history stays on the event log).
      _clear_failure_counter(conn, task_id)
-@@ -2867,14 +2931,24 @@ def _stage_completion_artifacts(
+@@ -2864,14 +2928,24 @@ def _stage_completion_artifacts(
  ) -> list[Path]:
      """Copy scratch artifacts to the attachments dir and record each as an
      attachment row; returns the copies so the caller can discard them if its
@@ -389,7 +389,7 @@ index 9ffeed77ee..cd03f1d5d1 100644
      return staged
  
  
-@@ -3014,11 +3088,25 @@ def _persist_scratch_completion_artifacts(
+@@ -3011,11 +3085,25 @@ def _persist_scratch_completion_artifacts(
          problem = None
          if not src.is_file():
              problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
@@ -593,10 +593,10 @@ index 2742129146..58fb95a3ad 100644
 +        {"room_id": "#alias:matrix.test", "users": ["@chen:matrix.test"]})))
 +    assert "room alias #alias:matrix.test is not supported" in out["error"]
 diff --git a/tests/hermes_cli/test_kanban_cli.py b/tests/hermes_cli/test_kanban_cli.py
-index 334a9ab539..87b0cf36d2 100644
+index 00b459356a..6f49fa8eab 100644
 --- a/tests/hermes_cli/test_kanban_cli.py
 +++ b/tests/hermes_cli/test_kanban_cli.py
-@@ -255,3 +255,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
+@@ -293,3 +293,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
  # ---------------------------------------------------------------------------
  
  
@@ -625,10 +625,10 @@ index 334a9ab539..87b0cf36d2 100644
 +    assert kc._parse_duration("1d") == 86400
 +    assert kc._parse_duration("45") == 45
 diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
-index 461c1326a8..38a05cef4f 100644
+index ebdf790ec8..28bd4771bc 100644
 --- a/tests/hermes_cli/test_kanban_db.py
 +++ b/tests/hermes_cli/test_kanban_db.py
-@@ -2084,3 +2084,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
+@@ -2082,3 +2082,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
              (t,),
          ).fetchone()
          assert row is None

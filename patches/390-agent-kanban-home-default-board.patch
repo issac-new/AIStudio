@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 014ca3b99b..904a6c8cd3 100644
+index 8d78359bee..902eb1894a 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -447,10 +447,28 @@ def current_board_path() -> Path:
+@@ -439,10 +439,28 @@ def current_board_path() -> Path:
      return kanban_home() / "kanban" / "current"
  
  
@@ -34,7 +34,7 @@ index 014ca3b99b..904a6c8cd3 100644
      def _existing(candidate: str) -> Optional[str]:
          if not candidate:
              return None
-@@ -470,6 +488,7 @@ def get_current_board() -> str:
+@@ -462,6 +480,7 @@ def get_current_board() -> str:
      for candidate in (
          (_CURRENT_BOARD_OVERRIDE.get() or "").strip(),
          os.environ.get("HERMES_KANBAN_BOARD", "").strip(),

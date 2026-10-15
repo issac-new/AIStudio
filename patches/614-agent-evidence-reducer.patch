@@ -1,8 +1,8 @@
 diff --git a/agent/tool_executor.py b/agent/tool_executor.py
-index 9842217926..1803ccf537 100644
+index 198f1cc2e1..4cafdf29ad 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -1185,6 +1185,17 @@ def _commit_tool_result(
+@@ -1192,6 +1192,17 @@ def _commit_tool_result(
              persisted_result, function_name, tool_call_id, get_active_env(effective_task_id), budget,
          )
      else:

@@ -1,5 +1,5 @@
 diff --git a/gateway/shutdown_watchdog.py b/gateway/shutdown_watchdog.py
-index 60a6888d20..4e89649ee7 100644
+index 5854b42dc3..352072002e 100644
 --- a/gateway/shutdown_watchdog.py
 +++ b/gateway/shutdown_watchdog.py
 @@ -23,6 +23,7 @@ from pathlib import Path

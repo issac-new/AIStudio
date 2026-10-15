@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 31b479e5be..9ffeed77ee 100644
+index fb2a981876..2247b47836 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -3986,6 +3986,7 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
+@@ -3987,11 +3987,36 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
      _ctx_attachments(lines, list_attachments(conn, task_id))
      _ctx_prior_attempts(lines, conn, task_id, now)
      _ctx_parent_results(lines, conn, task_id, now)
@@ -10,8 +10,6 @@ index 31b479e5be..9ffeed77ee 100644
      _ctx_role_history(lines, conn, task, now)
      _ctx_comments(lines, list_comments(conn, task_id), now)
      return "\n".join(lines).rstrip() + "\n"
-@@ -4098,6 +4099,31 @@ def _ctx_prior_attempts(lines: list[str], conn: sqlite3.Connection, task_id: str
-         lines.append("")
  
  
 +def _ctx_checkpoint_recap(lines: list[str], task_id: str, task: Task) -> None:
@@ -38,10 +36,9 @@ index 31b479e5be..9ffeed77ee 100644
 +    except Exception:
 +        pass
 +
-+
- def _ctx_parent_results(lines: list[str], conn: sqlite3.Connection, task_id: str, now: int) -> None:
-     """Done-parent handoffs: newest ``completed`` run's summary+metadata,
-     falling back to ``task.result`` for pre-runs-table data. Stamped with a
+ # --- Stats + SLA helpers ---
+ 
+ def board_stats(conn: sqlite3.Connection) -> dict:
 diff --git a/tests/hermes_cli/test_kanban_recap.py b/tests/hermes_cli/test_kanban_recap.py
 new file mode 100644
 index 0000000000..d31bfe2394
@@ -231,7 +228,7 @@ index 0000000000..a9d785a27a
 +        assert "不可信数据" in s
 +        assert s.split("⟦subagent-output:0⟧", 1)[1].count("⟦subagent-output:1⟧") == 0
 diff --git a/tools/delegate_tool_dispatch.py b/tools/delegate_tool_dispatch.py
-index 3d198173a9..113c1a18fc 100644
+index 5fe497d134..ed8a05ecb1 100644
 --- a/tools/delegate_tool_dispatch.py
 +++ b/tools/delegate_tool_dispatch.py
 @@ -179,6 +179,43 @@ def _run_children_parallel(batch: _Batch, results: list, *, honor_parent_interru
@@ -287,7 +284,7 @@ index 3d198173a9..113c1a18fc 100644
  
  _SYNC_FALLBACK_NOTES = {
      "no_async": (
-@@ -474,4 +511,4 @@ def _run_batch(batch: _Batch, background: bool) -> str:
+@@ -475,4 +512,4 @@ def _run_batch(batch: _Batch, background: bool) -> str:
      )
      if background:
          return _dispatch_background(batch)

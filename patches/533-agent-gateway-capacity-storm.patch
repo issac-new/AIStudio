@@ -1,5 +1,5 @@
 diff --git a/gateway/run_busy.py b/gateway/run_busy.py
-index bf6d7d9ed2..179c122ec4 100644
+index bbf9a12a29..f2c367b1db 100644
 --- a/gateway/run_busy.py
 +++ b/gateway/run_busy.py
 @@ -229,6 +229,84 @@ class GatewayBusySessionMixin:
@@ -88,10 +88,10 @@ index bf6d7d9ed2..179c122ec4 100644
          self, session_key: str, source: SessionSource
      ) -> tuple[Any, Optional[str]]:
 diff --git a/gateway/run_inbound.py b/gateway/run_inbound.py
-index 888d40e2bb..dbf0c870f0 100644
+index a6f26d98c9..45c5c43cfc 100644
 --- a/gateway/run_inbound.py
 +++ b/gateway/run_inbound.py
-@@ -1342,7 +1342,21 @@ class GatewayInboundMixin(GatewayPluginInjectionMixin):
+@@ -1257,7 +1257,21 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayPluginInjectionMixin)
          # passes the "already running" guard and spins up a duplicate agent for the same session.
          _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
          if _limit_message is not None:
