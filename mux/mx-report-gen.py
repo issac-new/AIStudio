@@ -3496,6 +3496,56 @@ def _gate_provenance_map():
             m[g] += '；⚠ 本轮存在闸键回放重走记录——净额口径下该闸需复核'
     return m
 
+def _shadow_evidence_zone_html():
+    """监督层观察实录+产品面证据快照（V8.29 治理轮补：推演程序负责采集关键环节
+    证据并撰写报告——本节把 workflow-journal 与产品端点快照收进报告）。收官时
+    新起进程采集：journal 只读尾部；产品面经 mx-state-query.sh product（缺席如
+    实呈现，不硬凑）。"""
+    import subprocess as _sp
+    import json as _json
+    jr_lines = []
+    jf = SIM / 'logs' / 'workflow-journal.ndjson'
+    if jf.exists():
+        try:
+            raw = jf.read_text(encoding='utf-8', errors='replace').splitlines()
+            jr_lines = [l for l in raw if l.strip()][-12:]
+        except Exception:
+            jr_lines = []
+    briefs, verdicts, rounds = [], [], 0
+    for l in jr_lines:
+        try:
+            o = _json.loads(l)
+        except Exception:
+            continue
+        if o.get('t') == 'situation_brief':
+            briefs.append(o)
+        elif o.get('t') == 'stall_verdict':
+            verdicts.append(o)
+        elif o.get('t') == 'round':
+            rounds += 1
+    prod = ''
+    try:
+        r = _sp.run(['bash', str(Path(__file__).parent / 'mx-state-query.sh'),
+                     '--run', RUN_ID, 'product'], capture_output=True, text=True, timeout=20)
+        prod = (r.stdout or '').strip()[:1200] or '（product 面无输出）'
+    except Exception:
+        prod = '（产品端点采集失败——缺席如实呈现）'
+    jr_note = (f'journal 在案：近 {len(jr_lines)} 行（round×{rounds}、研判 {len(briefs)} 条、停滞判 {len(verdicts)} 条）'
+               if jr_lines else 'journal 未建（观察层未开窗或未落盘）')
+    rows = ''.join(f"<tr><td>{H.escape(str(o.get('ts', '')))}</td><td>{H.escape(str(o.get('situation', ''))[:120])}</td></tr>" for o in briefs[-5:])
+    vrows = ''.join(f"<tr><td>{H.escape(str(o.get('ts', '')))}</td><td>{H.escape(str(o.get('verdict', ''))[:120])}</td></tr>" for o in verdicts[-5:])
+    prod_html = H.escape(prod)
+    return (
+        '\n  <h2 class="section-hd" id="shadow-evidence">监督层观察实录与产品面证据（V8.29 §2.5 采面对照）</h2>\n'
+        '  <p class="stat-note">' + H.escape(jr_note) + '；观察层全程只读，磁盘正本=logs/workflow-journal.ndjson。</p>\n'
+        '  <h3 style="font-size:13px;margin:12px 0 6px">接棒员研判（近 5 条）</h3>\n'
+        '  <table><tr><th>时刻</th><th>局势研判</th></tr>' + (rows or '<tr><td colspan="2">无研判行（安静窗无研判——用户裁定）</td></tr>') + '</table>\n'
+        '  <h3 style="font-size:13px;margin:12px 0 6px">停滞判定（近 5 条）</h3>\n'
+        '  <table><tr><th>时刻</th><th>判词</th></tr>' + (vrows or '<tr><td colspan="2">无停滞判定行</td></tr>') + '</table>\n'
+        '  <h3 style="font-size:13px;margin:12px 0 6px">产品端点快照（收官时实采：派发器健康/休眠探针/通道面）</h3>\n'
+        '  <pre style="font-size:11px;background:var(--bg);padding:8px;border-radius:6px;overflow:auto">' + prod_html + '</pre>\n')
+
+
 def _posture_net_zone_html():
     p = _posture_value()
     rows = _ledger_rows()
@@ -4317,6 +4367,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   {checkpoints_html()}
 
   {_posture_net_zone_html()}
+
+  {_shadow_evidence_zone_html()}
 
   {content_html}
 
