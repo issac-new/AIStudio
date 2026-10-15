@@ -389,7 +389,7 @@ export class ClusterInspector {
                 title: typeof c.title === 'string' ? c.title : undefined,
                 status: typeof c.status === 'string' ? c.status : undefined,
                 body: typeof c.body === 'string' ? c.body : undefined,
-                created_at: c.created_at,
+                created_at: typeof c.created_at === 'number' || typeof c.created_at === 'string' ? c.created_at : undefined,
                 updated_at: pickLastTouched(c),
               })).filter((c) => c.id),
           }
