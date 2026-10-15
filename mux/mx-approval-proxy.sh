@@ -32,6 +32,20 @@ RID=$(grep '^room_analysis=' "$SIM_ROOT/runs/$RUN_ID/state.env" 2>/dev/null | cu
 [[ -n "$RID" ]] || { echo "room_analysis 不在 state（轮未建群？）" >&2; exit 2; }
 TOK=$(head -1 "$CREDS_DIR/fanfan.token" 2>/dev/null)
 LOG="$SIM_ROOT/var/approval-proxy.log"
+# 代偿台账接线（2026-10-15 治理轮批次一）：每笔代批落账（auto-approve → PR-2）
+_mx_led_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$_mx_led_dir/mx-compensation-ledger.sh" 2>/dev/null || true
+unset _mx_led_dir
+_approved_seen=$(grep -c ' 代批 ' "$LOG" 2>/dev/null); _approved_seen=${_approved_seen:-0}
+# 判据化策略（V8.29 §2.4 审批模拟面）：strict 姿态=判据模式（只放行只读安全操作，
+# 其余缓批留痕不代批——PR-2 根治前的诚实形态）；standard/demo=代批+台账（用户裁定
+# 2026-10-15：standard 代偿保留至根治合入产品能力）。
+_axp_posture() {
+  local p="${MX_POSTURE:-$(grep -s '^posture=' "$SIM_ROOT/runs/$RUN_ID/state.env" 2>/dev/null | head -1 | cut -d= -f2-)}"
+  case "$p" in strict) echo "strict" ;; *) echo "standard" ;; esac
+}
+POLICY="${MX_PROXY_POLICY:-$([ "$(_axp_posture)" = "strict" ] && echo criteria || echo approve)}"
 DEADLINE=$(( $(date +%s) + TTL * 60 ))
 LAST_TS=$(( $(date +%s) - 120 ))
 echo "$(date '+%F %T') [approval-proxy] 启动 run=$RUN_ID（窗口 ${TTL}min）" >> "$LOG"
@@ -43,9 +57,12 @@ while :; do
     echo "$(date '+%F %T') [approval-proxy] 窗口到期，退场" >> "$LOG"; exit 0
   fi
   curl -s -m 10 "http://127.0.0.1:8008/_matrix/client/v3/rooms/$RID/messages?access_token=$TOK&dir=b&limit=40" 2>/dev/null \
-  | LAST_TS="$LAST_TS" RID="$RID" TOK="$TOK" LOG="$LOG" python3 -c '
-import json,sys,time,os,urllib.request
+  | LAST_TS="$LAST_TS" RID="$RID" TOK="$TOK" LOG="$LOG" POLICY="$POLICY" python3 -c '
+import json,sys,time,os,re,urllib.request
 rid=os.environ["RID"]; tok=os.environ["TOK"]; log=os.environ["LOG"]; last=int(os.environ["LAST_TS"])
+policy=os.environ.get("POLICY","approve")
+# 判据模式的安全面：只读/无害操作白名单（写库/部署/网络外发一律缓批）
+SAFE=re.compile(r"\b(git (status|log|diff|show|branch)|ls|cat |head |tail |grep |wc |find |pwd|pytest --collect-only|python3 -c .print)\b")
 try: chunk=json.load(sys.stdin).get("chunk",[])
 except Exception: sys.exit(0)
 asks=[(m["event_id"],m["content"].get("body","")[:60]) for m in chunk
@@ -53,6 +70,9 @@ asks=[(m["event_id"],m["content"].get("body","")[:60]) for m in chunk
       and "needs your OK" in m["content"].get("body","")
       and m.get("sender","").endswith("-agent:matrix.test")]
 for ev,head in asks:
+    if policy=="criteria" and not SAFE.search(head):
+        open(log,"a").write(time.strftime("%F %T")+" 缓批 "+ev[:24]+" "+head.replace(chr(10)," ")[:60]+"（判据模式：非只读安全操作，不代批——PR-2 根治前诚实形态）\n")
+        continue
     payload=json.dumps({"msgtype":"m.text","body":"!approve（导演代批·approval-proxy：驱动缺席期审批臂补位，纪律 36）",
                         "m.relates_to":{"m.in_reply_to":{"event_id":ev}}}).encode()
     req=urllib.request.Request(f"http://127.0.0.1:8008/_matrix/client/v3/rooms/{rid}/send/m.room.message?access_token={tok}",
@@ -64,5 +84,12 @@ for ev,head in asks:
         open(log,"a").write(time.strftime("%F %T")+" 代批失败 "+ev[:24]+" "+str(e)[:60]+"\n")
 ' 2>/dev/null
   LAST_TS=$(( $(date +%s) - 5 ))
+  _approved_now=$(grep -c ' 代批 ' "$LOG" 2>/dev/null); _approved_now=${_approved_now:-0}
+  if (( _approved_now > _approved_seen )); then
+    tail -n $(( _approved_now - _approved_seen )) "$LOG" 2>/dev/null | while IFS= read -r _l; do
+      compensate auto-approve "approval-proxy 代批：${_l##* 代批 }" 2>/dev/null || true
+    done
+    _approved_seen=$_approved_now
+  fi
   sleep 30
 done

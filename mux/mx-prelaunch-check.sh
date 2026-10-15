@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十五项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门）。
+# mx-prelaunch-check.sh — 开跑前十六项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -84,5 +84,11 @@ ck "⑭ 评测门禁三方同步" "grep -q '评测与运行时指标' '$HERE/mux
 #     树无蛇足行」——手工部署再抄歪即起跑前红，不靠人眼）。
 ck "⑮ 运行时树 write_file 无蛇足参数" "test -f '$SR/hermes-agent-src/tools/file_tools.py' && ! grep -q 'local_config=' '$SR/hermes-agent-src/tools/file_tools.py'" "git -C 宿主与 SIM 两树的 tools/file_tools.py 删 local_config= 实参行（正本=overlay patches/613-agent-action-fusion-then-run.patch 无此行；含语义差异：该行默认 persistent=False，lifecycle 内部默认 True，删行即恢复正本语义）。文件缺席=树未部署/路径漂移，属更严重配置错误，必须红（grep 对缺失文件 rc=2 被 ! 反转为绿是空真放行）"
 
+# ⑯ 代偿清偿门（V8.29 §2.6.5，用户裁定 2026-10-15：代偿在下一轮推演开跑前必须
+#     根治后合入 SwarmStudio 产品能力）。机械执法：读当前锚定轮（var/current-state.env
+#     指向的最近一轮）的代偿台账 check-clearance——open 笔存在且未 waive 即红。
+#     豁免通道=resolve（对应 PR 落码合入 main，带 commit 锚）或 waive（用户批准理由）。
+ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-clearance >/dev/null 2>&1" "上一轮存在未清偿代偿：bash mux/mx-compensation-ledger.sh list --status open 看明细；根治合入产品（对应 PR 编号落码）后逐笔 resolve，或经用户批准 waive（带理由）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十五项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十六项）" || { echo "有红项——修复后再跑"; exit 1; }

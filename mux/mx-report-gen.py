@@ -3451,6 +3451,84 @@ def _gov_evidence():
     ))
 
 
+# ── 姿态与代偿净额对账（V8.29 §1.5/§2.6.5/§5.9，2026-10-15 治理轮批次二C）──
+_LEDGER_PR = {  # 类型→产品缺陷编号（与 mux/mx-compensation-ledger.sh catalog 同源）
+    'nudge': 'PR-3', 'sleep-wakeup': 'PR-3', 'gw-dispatch-bypass': 'PR-1',
+    'auto-approve': 'PR-2', 'card-backfill': 'PR-4', 'card-walk-done': 'PR-4',
+    'gate-replay': 'PR-5', 'driver-merge': 'PR-6', 'dispatch-preset': 'PR-7',
+}
+_POSTURE_POLICY = {
+    'strict': '零代偿：测自组织真力，停滞如实记单即有效输出（§2.6.5 成功标准）',
+    'standard': '现状动作保留但逐笔记台账；净额口径下代偿项不计入判据满足面',
+    'demo': '演示调度允许，全程显著标注「演示」；能力结论不用于验收',
+}
+
+def _posture_value():
+    return (state.get('posture') or 'standard').strip() or 'standard'
+
+def _ledger_rows():
+    p = EVID / 'compensation-ledger.tsv'
+    if not p.exists():
+        return []
+    rows = []
+    for ln in p.read_text(encoding='utf-8', errors='replace').splitlines()[1:]:
+        f = ln.split('\t')
+        if len(f) >= 6:
+            rows.append({'id': f[0], 'ts': f[1], 'type': f[2],
+                         'pr': (f[3] if len(f) > 3 and f[3] else _LEDGER_PR.get(f[2], 'PR-0')),
+                         'detail': f[4] if len(f) > 4 else '', 'status': f[5]})
+    return rows
+
+def _gate_provenance_map():
+    """闸→判词来源（§2.6.5 闸键语义补则）。基线按 §2.4 操作者姿态分档：G1/G5=人类
+    角色模拟判，G2/G3/G4/G6=agent 判；台账出现 auto-approve/gate-replay 即叠加警示。"""
+    comp_types = {r['type'] for r in _ledger_rows()}
+    m = {'G1': '人类角色模拟判（按判据退回/冻结，§2.4 审批模拟面）',
+         'G2': 'agent 判（架构治理评审卡）',
+         'G3': 'agent 判（编码门禁/自测门禁套件）',
+         'G4': 'agent 判（独立测试报告）',
+         'G5': '人类角色模拟判（HumanGate 批准，approved.events 留档）',
+         'G6': 'agent 判（三段式复盘+治理报告）'}
+    if 'auto-approve' in comp_types:
+        m['G5'] += '；⚠ 本轮存在 approval-proxy 代批记录——净额口径下 G5 通过不计入'
+    if 'gate-replay' in comp_types:
+        for g in list(m):
+            m[g] += '；⚠ 本轮存在闸键回放重走记录——净额口径下该闸需复核'
+    return m
+
+def _posture_net_zone_html():
+    p = _posture_value()
+    rows = _ledger_rows()
+    n_open = sum(1 for r in rows if r['status'] == 'open')
+    by_type = {}
+    for r in rows:
+        d = by_type.setdefault(r['type'], {'n': 0, 'open': 0, 'pr': r['pr']})
+        d['n'] += 1
+        d['open'] += (r['status'] == 'open')
+    net_note = ('台账在案，逐笔见 evidence/compensation-ledger.tsv' if rows
+                else '台账未建/零记录——按姿态缺省如实呈现（§5.9 净额对账线：缺席须写明，禁省略本节）')
+    trows = ''.join(
+        f"<tr><td>{H.escape(t)}</td><td>{d['n']}</td><td>{d['open']}</td><td>{d['pr']}</td></tr>"
+        for t, d in sorted(by_type.items())) or '<tr><td colspan="4">零代偿记录</td></tr>'
+    prov_rows = ''.join(
+        f"<tr><td>{g}</td><td>{H.escape(v)}</td></tr>" for g, v in _gate_provenance_map().items())
+    border = '#047857' if p == 'strict' else ('#b45309' if p == 'standard' else '#7c3aed')
+    scope = ('自组织真力（净额口径唯一有效行）' if p == 'strict'
+             else '含代偿表现与净额表现双行并列，净额行才是判据满足面' if p == 'standard'
+             else '演示形态，能力结论不用于验收')
+    return f'''
+  <h2 class="section-hd" id="posture-net">推演姿态与代偿净额对账（V8.29 §1.5/§2.6.5）</h2>
+  <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {border}">
+    <b>本轮姿态：{H.escape(p)}</b>——{H.escape(_POSTURE_POLICY.get(p, _POSTURE_POLICY['standard']))}<br>
+    能力声明适用范围：{H.escape(scope)}
+  </div>
+  <table style="margin-top:8px"><tr><th>代偿类型</th><th>笔数</th><th>open</th><th>产品缺陷（清偿门对照）</th></tr>{trows}</table>
+  <p class="stat-note">{H.escape(net_note)}；open 笔＝下一轮开跑前必须根治合入产品能力（用户裁定 2026-10-15）或显式 waive，机械执法＝mux/mx-compensation-ledger.sh check-clearance。本轮 open {n_open} 笔。</p>
+  <h3 style="font-size:13px;margin:14px 0 6px">六道关卡 · 判词 provenance（§2.6.5 闸键语义补则）</h3>
+  <table><tr><th>闸</th><th>判词来源</th></tr>{prov_rows}</table>
+'''
+
+
 # 第 9 章结论块实测统计（同块曾硬编码「16 个问题」——run10 的计数渲进任何一轮都是假值）。
 # 完整循环判定三要素：问题单零待处置、六闸全写入通过标记通过；缺一即如实判未成立。
 _gates_all = all(_gate_passed(g) for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'])
@@ -3463,7 +3541,8 @@ _gov_verdict_body = (
     f'支撑这个结论的三件证据如下。'
     if _gov_ok else
     f'待处置问题单 {n_issue_open} 条，闸门写入通过标记 {_n_gate_pass}/6。'
-    f'缺口即下轮行动项，以复盘文档为准；三件证据节如实呈现当前状态。')
+    f'缺口即下轮行动项，以复盘文档为准；三件证据节如实呈现当前状态。'
+) + f' 姿态口径（V8.29 §5.9）：本轮 posture={_posture_value()}，代偿台账 open {sum(1 for r in _ledger_rows() if r["status"] == "open")} 笔——本结论属含代偿口径，净额口径见「推演姿态与代偿净额对账」节。'
 _gov_ev2, _gov_ev3 = _gov_evidence()
 
 def gov_final_rows():
@@ -4209,7 +4288,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     {_gov_metrics_line()}
-    <div class="hero-terms">名词速查：G1-G6=六道关卡 ｜ UAT=用户验收测试 ｜ AC=验收标准 ｜ RACI=责任分配矩阵 ｜ WIP=在制品 ｜ ISSUE/DISP=问题登记行/处置结论行<br>首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目</div>
+    <div class="hero-terms">名词速查：G1-G6=六道关卡 ｜ UAT=用户验收测试 ｜ AC=验收标准 ｜ RACI=责任分配矩阵 ｜ WIP=在制品 ｜ ISSUE/DISP=问题登记行/处置结论行<br>首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目<br>姿态=本轮政策档（strict 零代偿／standard 现状+记账／demo 演示） ｜ 代偿=推演程序替体系兜底的越界动作（逐笔记台账） ｜ 净额=扣除代偿后的能力口径（判据满足面）</div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>
@@ -4236,6 +4315,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <div class="gates">{gate_cards()}</div>
   <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
+
+  {_posture_net_zone_html()}
 
   {content_html}
 

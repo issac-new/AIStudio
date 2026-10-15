@@ -67,6 +67,10 @@ elif [[ "$_mx_rc" == "2" ]]; then
   exit 3
 fi
 
+# 姿态入账（2026-10-15 治理轮批次一）：state.env 落 posture 键，报告/哨兵/查询同源读
+sset posture "$(posture)"
+note "[姿态] 本轮 posture=$(posture)（strict=零代偿测自组织 / standard=现状+代偿记账 / demo=演示调度）"
+
 # 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
 # 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
 # 最新定义执行（bash 单 EXIT trap）；DL_WT 未建时为空跳过，worktree 用
@@ -726,9 +730,16 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
+    if [ "$(posture)" = "strict" ]; then
+      echo "ISSUE|review-card-missing-strict|fanfan|评审卡缺失，strict 姿态不代建（等评审人自登；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
+      note "[姿态] strict：评审卡缺失不代建——记单等待评审人自登"
+      RID=""
+    else
     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
+    compensate card-backfill "user=fanfan card=${RID:-${RFD_ID}-评审}（评审卡缺失，导演补登记）" 2>/dev/null || true
     note "[观察] 评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
     echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+    fi
   fi
   gate_review fanfan "G2-系分评审闸"
   capture_step "review_done" "/app/board"
@@ -1305,6 +1316,8 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # mei 前端域），PM 不合并不评审代码（run12「fanfan 合并高速路」边界重申）；导演只做
   # 真值验收（git 祖先链反查，lead 自报不算数）与超时补棒兜底（代偿记单进 issues.log）。
   # 正本 §2.4 16b 操作者行/待收紧面 19 同步收账（演进目标「合并回归组织侧」落地件）。
+  # V8.29 姿态治理补则：补棒兜底=代偿（driver-merge 型，落台账 PR-6 对照）；strict
+  # 姿态停用兜底（识别不干预，记单等组织侧重试）。
   # 分支状态机约定不变：本步起 HEAD 常驻 integration/${RFD_ID}（后续步骤用显式 ref 或
   # 临时 worktree 访问仓）；凡要进 origin/main 的提交一律走 repo_commit_main()。
   repo_pull
@@ -1349,6 +1362,11 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   fi
   if [[ -n "$(sget lead_merge_fallback)" ]]; then
     # 兜底路径＝原导演合并块原样保留（V8.30 起仅作 lead 超时的补棒通道，代偿已记单）
+    if [ "$(posture)" = "strict" ]; then
+      note "[姿态] strict：lead 合并超时不补棒（PR-6 流水线面待根治）——记单，等组织侧重试"
+      echo "ISSUE|strict-merge-fallback-skipped|driver|lead 合并超时，strict 姿态不代行（V8.30 兜底通道停用）" >> "$EVID_DIR/issues.log"
+    else
+    compensate driver-merge "lead 合并超时，导演补棒代行（V8.30 兜底通道）" 2>/dev/null || true
   ( cd "$DIRECTOR_CLONE"
     # 未跟踪副本防撞（Z1 修复回归面）：repo_commit_main 只推远端、文档副本留存工作树，
     # 而 checkout 拒绝覆盖 origin/main 已跟踪的同名未跟踪文件（内容相同也拒，实测）。
@@ -1427,6 +1445,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # origin/integration 引用，不看 HEAD。
     git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
       || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
+    fi
   # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已记单
   # F7（run15 复盘）：判定前先 fetch——重放轮曾以陈旧本地 origin 引用误报「推送未达」
   # （09:30 实录：origin 已达 0b9b769 但本地引用落后，竞态记单）
