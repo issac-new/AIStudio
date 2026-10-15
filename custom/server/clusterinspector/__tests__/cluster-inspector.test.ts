@@ -557,3 +557,18 @@ describe('delivery.pushed（V8.33 持续集成检测器骨架）', () => {
     expect(out3.find((a) => a.detector === 'delivery.pushed')).toBeUndefined()
   })
 })
+
+describe('runtime.spawn-health（run20 00:30 执行面瘫痪实录）', () => {
+  it('probe ok:false → high 告警带修法；ok:true 静默', () => {
+    const mk = (sh: unknown) => ({
+      ts: 1, gateway: { ok: true }, sessions: { ok: true, entries: 0, live: 0, dead: [] },
+      profiles: { ok: true, tails: [] }, kanban: { ok: false, rows: [] },
+      runningCards: { ok: false, cards: [] }, federation: { ok: false, nowMs: 1, machines: [] },
+      spawnHealth: sh,
+    } as any)
+    const bad = detectAll(mk({ ok: false, detail: '宿主无可用 venv' }), { nowMs: 1 }).find((a) => a.detector === 'runtime.spawn-health')
+    expect(bad).toBeTruthy(); expect(bad!.severity).toBe('high')
+    const good = detectAll(mk({ ok: true, detail: '.venv' }), { nowMs: 1 }).find((a) => a.detector === 'runtime.spawn-health')
+    expect(good).toBeUndefined()
+  })
+})
