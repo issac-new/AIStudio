@@ -918,6 +918,64 @@ for c in json.load(sys.stdin):
       note "[G2] r3 派单补救：驱动自持拆派 ${_sub_dispatched} 张子卡到 4 研发 AI（产品经理醒来仍要补 12 项 body）"
     fi
   fi
+  # V8.29 巡检官告警→驱动自愈联动：每轮读巡检官 API 的 anomalies，
+  # 把 card.unassigned-stale（子卡未认领）/review.fail-stall（复审环老化）映射到
+  # mx_dispatch_subrev / 派复审——驱动自持，不等人工发现。幂等：子卡已派过=工具
+  # return 1 跳过；复审已派过=security_rereview_for_head 幂等键防重。
+  local _insp_anoms
+  _insp_anoms=$(curl -sf -m 5 -H "Authorization: Bearer $(load_token fanfan 2>/dev/null)" \
+    "http://127.0.0.1:8802/api/hermes/cluster-inspector/snapshot" 2>/dev/null | \
+    python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+runs = d.get("inspector", {}).get("runs", [])
+last = runs[-1] if runs else {}
+for a in last.get("anomalies", []):
+    if a.get("detector") in ("card.unassigned-stale", "review.fail-stall"):
+        print(a.get("detector"), "|", a.get("subject", ""))' 2>/dev/null || true)
+  if [[ -n "$_insp_anoms" ]]; then
+    local _unassigned_ids=""
+    local _review_stall=0
+    while IFS='|' read -r _det _subj; do
+      [[ "$_det" == "card.unassigned-stale" ]] && _unassigned_ids="${_unassigned_ids} ${_subj#card:}"
+      [[ "$_det" == "review.fail-stall" ]] && _review_stall=1
+    done <<< "$_insp_anoms"
+    # 未认领子卡：调派单工具（幂等）
+    if [[ -n "$_unassigned_ids" && "$(sget subrev_auto_dispatched)" != "1" ]]; then
+      local _sub_dispatched=0
+      for _sub_id in $_unassigned_ids; do
+        mx_dispatch_subrev fanfan "$_sub_id" >/dev/null 2>&1 && _sub_dispatched=$((_sub_dispatched + 1))
+      done
+      if [[ "$_sub_dispatched" -gt 0 ]]; then
+        sset subrev_auto_dispatched 1
+        dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（巡检官告警联动·驱动自持）：巡检官报 ${_sub_dispatched} 张 G2SREV 子卡未认领，驱动已按 D-项分派到 4 研发 AI。子卡 body 需你补 12 项设计条款（按 arch 评审缺项清单）；推 origin/main 后驱动自动派复审。禁谎报。" "$(agent_mxid fanfan)" || true
+        echo "ISSUE|inspector-unassigned-dispatched|director|巡检官告警联动（V8.29）：card.unassigned-stale 告警触发驱动自持派单（${_sub_dispatched} 张子卡）。锚：aipay-scenario.sh G2 总闸" >> "$EVID_DIR/issues.log"
+        note "[G2] 巡检官告警联动：${_sub_dispatched} 张子卡已由驱动自持派单（研发 AI 认领中）"
+      fi
+    fi
+    # 复审环老化：读卡面 result 判球位，FAIL=催产品经理A，无结论=催安全工程师AI
+    if [[ "$_review_stall" -eq 1 ]]; then
+      local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show t_f5cc53c5 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
+      local _now; _now=$(date +%s)
+      if [[ "$_rr_result" == *"FAIL"* ]]; then
+        local _up_n; _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
+        local _up_last; _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
+        if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
+          sset security_nudge_up $((_up_n + 1))
+          sset security_up_last_ts "$_now"
+          dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（巡检官告警联动，第 $((_up_n + 1))/3 次）：复审环老化超阈（卡 t_f5cc53c5 result=FAIL，head ${_rr_head}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+          note "[安全] 复审环老化告警联动：催产品经理A 组织修订（第 $((_up_n + 1))/3 次，30min 间隔）"
+        fi
+      else
+        local _rev_n; _rev_n="$(sget security_nudge_rev)"; _rev_n="${_rev_n:-0}"
+        if [[ "$_rev_n" -lt 3 ]]; then
+          sset security_nudge_rev $((_rev_n + 1))
+          dispatch_in_room secops "@secops-agent:matrix.test 复审催办（巡检官告警联动，第 $((_rev_n + 1))/3 次）：复审环老化超阈（卡 t_f5cc53c5 无结论行）。请继续复审卡 t_f5cc53c5 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
+          note "[安全] 复审环老化告警联动：催安全工程师AI 复审（第 $((_rev_n + 1))/3 次）"
+        fi
+      fi
+    fi
+  fi
   capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
   # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
