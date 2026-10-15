@@ -730,10 +730,16 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
     # 记录，不代表评审通过。
+    if [ "$(posture)" = "strict" ]; then
+      echo "ISSUE|review-card-missing-strict|fanfan|评审卡缺失，strict 姿态不代建（等评审人自登；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
+      note "[姿态] strict：评审卡缺失不代建——记单等待评审人自登"
+      RID=""
+    else
     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
     compensate card-backfill "user=fanfan card=${RID:-${RFD_ID}-评审}（评审卡缺失，导演补登记）" 2>/dev/null || true
     note "[观察] 评审卡仍未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
     echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
+    fi
   fi
   gate_review fanfan "G2-系分评审闸"
   capture_step "review_done" "/app/board"
@@ -1286,6 +1292,12 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # 段界锚：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
   # 导演把三个后端分支+前端分支合入 integration 分支（模拟集成分支策略）
+  # V8.29 §2.4 待收紧面：strict 姿态集成合并不代做（PR-6 流水线面待根治），记单
+  # 等组织侧合并；后续 origin/integration 存在性判定如实呈现组织侧进度。
+  if [ "$(posture)" = "strict" ]; then
+    note "[姿态] strict：集成合并不代做——记单，等组织侧/产品流水线合并（PR-6）"
+    echo "ISSUE|strict-merge-skipped|driver|strict 姿态集成合并不代做（V8.29 §2.4/§2.6.5；PR-6）" >> "$EVID_DIR/issues.log"
+  else
   # 分支状态机约定：本步起 HEAD 切到 integration/${RFD_ID} 并常驻（后续步骤用显式
   # ref 或临时 worktree 访问仓，不看 HEAD）；凡要进 origin/main 的提交一律走
   # repo_commit_main()（mx-scenario-lib：临时 worktree 基于 origin/main 提交该文件并
@@ -1369,6 +1381,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # origin/integration 引用，不看 HEAD。
     git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
       || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
+  fi
   # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已记单
   # F7（run15 复盘）：判定前先 fetch——重放轮曾以陈旧本地 origin 引用误报「推送未达」
   # （09:30 实录：origin 已达 0b9b769 但本地引用落后，竞态记单）
