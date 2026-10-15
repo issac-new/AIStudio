@@ -1009,6 +1009,21 @@ graph TB
 > - 步 24 复盘可附 `evidence/cluster-convergence.txt`（snapshot convergence 面导出）佐证 §2.7 复盘行「同类风险收敛性对账」。
 > 锚点=custom/server/clusterinspector/（convergence.ts 复发账本，状态落 `<home>/runtime/cluster-inspector-convergence.json` 重启不失账；CLUSTER_INSPECTOR_CONVERGENCE=off 关闭）、custom/client/ia2/views/gov/GovClusterSection.vue（集群健康页「风险收敛性」卡+未收敛明细表）。
 
+**产品能力×采集面×产出物对照（V8.29 增补，2026-10-15 产品功能盘点轮）**：以产品实存路由与组件（/app 家族+overlay custom server 面）为底，核对采集与产出物挂钩——缺口位启用条件与产品缺陷编号对照《2026-10-15-swarmstudio-resilience-and-humansim-design.md》§三：
+
+| 产品面 | 路由/组件 | 采集位现状 | 产出物挂钩（§2.7 同步） |
+|---|---|---|---|
+| 看板 12 页签/账户/案例/运行中心/IDE | /app/board 等 | 已覆盖（步 1-26 既有位） | 任务卡/追溯/交付健康帧（既有） |
+| 审批收件箱 | /app/inbox | **缺口**：无步位挂帧；PR-2 落地后随审批队列帧启用（release 段帧命名锚） | 审批留痕（与 approved.events 同源） |
+| 编排（autosched） | /app/eng | **缺口**：PR-7 落地后排期产物由产品生成，plan 段加编排面帧 | 排期产物产品源化 |
+| 会话历史 | /app/history(/session) | **缺口**：anexec 段可加会话证据帧（下一全量轮启用） | 会话轨迹锚 |
+| BPA 工作台 | /app/bpa | **缺口**：analysis 段加流程分级清单帧 | 流程分级清单 |
+| 本体/评测/技能治理 | /app/ontology、/app/eval、/app/skillgov | 既有锚（验收锚=端点实测，非全量轮固定帧） | 语义快照/评测报告/扫描账本 |
+| 群沟通直达链接 | /app/s/room/:id | 三态 none 在案（采集环境同步未修；事件锚 ?event= 未实现=产品缺口另记） | matrix event_id 文字锚 |
+| 派发健康/审批队列 | PR-1/PR-2 落地后 | 预留：defect/release 段帧命名锚 | 健康端点/队列 TTL 轨迹 |
+
+采集位增补纪律：单步单 URL 语义不变，新增面经帧命名锚（op1-before/after 通道）进 r18-frames；预留位在对应 PR 合入后随下一全量轮启用，禁提前占位空拍。产出物产品源标注（§2.7 同步）：排期=autosched、审批留痕=approvals 队列、案例=delivery-contract、运行注册=runs、语义快照=ontology、评测报告=eval、扫描账本=skillgov、经验注入=expcandidates——各交付物「主导者字段」与产品源双标注，代偿台账按此对账。
+
 ### 2.6 治理机制
 
 治理机制的思路一句话：**不指望 AI 自觉，靠机制卡住不可逆的动作**。十条机制分四类：拦住的（第 1 条）、要证据的（第 2/8/9 条）、全记账的（第 3/4/5 条）、可复现的（第 6/7 条）。第 10 条是治理证据与度量能力的总纲。
