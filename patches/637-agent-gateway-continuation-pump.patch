@@ -1,8 +1,8 @@
 diff --git a/gateway/kanban_watchers.py b/gateway/kanban_watchers.py
-index 0d2a8322..34b81e25 100644
+index 0d2a832290d..d5d5da422aa 100644
 --- a/gateway/kanban_watchers.py
 +++ b/gateway/kanban_watchers.py
-@@ -327,6 +327,123 @@ class GatewayKanbanWatchersMixin:
+@@ -327,6 +327,128 @@ class GatewayKanbanWatchersMixin:
              except Exception:
                  logger.exception("kanban dispatcher: unexpected watcher error")
  
@@ -46,8 +46,8 @@ index 0d2a8322..34b81e25 100644
 +    return 0.0
 +
 +
-+def _cont_guard_open_cards(home: str, profile: str) -> "list[str]":
-+    """该 profile 名下未完卡（ready/todo/running），读各板 kanban.db（node:sqlite 不在，用 sqlite3 标准库）。"""
++def _cont_guard_open_cards(home: str, profile: str, statuses: "tuple[str, ...]" = ("ready", "todo", "running")) -> "list[str]":
++    """该 profile 名下未完卡（默认 ready/todo/running），读各板 kanban.db（node:sqlite 不在，用 sqlite3 标准库）。"""
 +    import sqlite3 as _s3
 +    import glob as _glob
 +    import os as _os
@@ -57,8 +57,8 @@ index 0d2a8322..34b81e25 100644
 +            _con = _s3.connect("file:%s?mode=ro" % db, uri=True, timeout=2)
 +            try:
 +                for (cid,) in _con.execute(
-+                    "SELECT id FROM tasks WHERE status IN ('ready','todo','running') AND assignee LIKE ?",
-+                    ("%" + profile + "%",),
++                    "SELECT id FROM tasks WHERE status IN (%s) AND assignee LIKE ?" % ",".join("?" * len(statuses)),
++                    (*statuses, "%" + profile + "%"),
 +                ).fetchall():
 +                    cards.append(str(cid))
 +            finally:
@@ -68,10 +68,16 @@ index 0d2a8322..34b81e25 100644
 +    return cards
 +
 +
++# 管理与评审档案：整档不泵会留护盘盲区（run20 G5 并行评审实录——终判人 fanfan 被排除，
++# 评审卡悬空无人催）；改为仅当名下有待办卡（ready/todo，编排主卡 running 常态不算）时纳入泵。
++_CONT_GUARD_MANAGER_PROFILES = ("default", "orchestrator", "admin", "audit", "arch", "bella", "secops", "fanfan")
++
++
 +def _continuation_guard_tick(logger) -> None:
 +    """续作泵（run20 2026-10-15 五波静默实录根治）：dispatcher 每 tick 调用——
 +    真做静默超阈且名下有未完卡 → 经 synapse 裸发续作令（fanfan 凭据，SIM 布局
 +    <sim>/creds/fanfan.token），每 profile 节流 10min。卡翻 done 后自然停泵。
++    管理档案仅在有 ready/todo 待办卡时纳入（G5 护盘修复 2026-10-16）。
 +    HERMES_CONT_GUARD=off 旁路；全部 fail-soft（凭据缺失/网络失败只 debug 日志）。"""
 +    import os as _os
 +    import time as _time
@@ -94,16 +100,15 @@ index 0d2a8322..34b81e25 100644
 +        logs_dir = _os.path.join(prof_root, pdir, "logs")
 +        if not _os.path.isdir(logs_dir):
 +            continue
-+        if pdir in ("default", "orchestrator", "admin", "audit", "arch", "bella", "secops", "fanfan"):
-+            continue  # 只泵执行工人；管理/评审档案另管
++        is_mgr = pdir in _CONT_GUARD_MANAGER_PROFILES
++        cards = _cont_guard_open_cards(home, pdir, ("ready", "todo") if is_mgr else ("ready", "todo", "running"))
++        if not cards:
++            continue
 +        last = _cont_guard_last.get(pdir)
 +        if last and now - last < _CONT_GUARD_THROTTLE_S:
 +            continue
 +        ts = _cont_guard_real_work_ts(logs_dir)
 +        if not ts or now - ts < _CONT_GUARD_QUIET_S:
-+            continue
-+        cards = _cont_guard_open_cards(home, pdir)
-+        if not cards:
 +            continue
 +        body = (
 +            "@%s-agent 续作令（网关续作泵）：你有 %d 张未完任务卡（%s）。继续做，"
@@ -127,44 +132,13 @@ index 0d2a8322..34b81e25 100644
 +        except Exception:
 +            continue
 diff --git a/gateway/run.py b/gateway/run.py
-index f9d88925..d65b609f 100644
+index 2dbacf1fc7d..70c4858cc94 100644
 --- a/gateway/run.py
 +++ b/gateway/run.py
-@@ -4783,6 +4783,46 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
-             cron_scheduler.drain_delivery_queue(profile_adapters, loop)
+@@ -4574,6 +4574,15 @@ def _wedged_sweep_one(sweep, key) -> None:
+         logger.debug("wedged-agent sweep failed for %s", key, exc_info=True)
  
  
-+def _housekeeping_wedged_agent_sweep(runner, loop=None) -> None:
-+    """run11 实锤（capacity-queue-drop-zombie / g5-session-stall）：hindsight 交互
-+    卡死或马拉松回合长期占槽时，槽位驱逐检查只挂在同 key 的下一条入站消息快路径
-+    上——挂死 key 无新消息则永不被扫，容量被占到人工重启网关（run11 三次实锤）。
-+    本 chore 周期扫全部 running 槽并复用 _hm_evict_idle_stale_agent 的同一判定
-+    （HERMES_AGENT_TIMEOUT 活动钟 + 无活动面墙钟兜底），驱逐语义与快路径完全一
-+    致；有事件循环时经 call_soon_threadsafe 编排到 loop 线程执行（eviction 非线
-+    程安全）。"""
-+    sweep = getattr(runner, "_hm_evict_idle_stale_agent", None)
-+    snapshot = getattr(runner, "_snapshot_running_agents", None)
-+    if not callable(sweep) or not callable(snapshot):
-+        return
-+    try:
-+        keys = list(snapshot() or {})
-+    except Exception:
-+        logger.debug("wedged-agent sweep snapshot failed", exc_info=True)
-+        return
-+    for key in keys:
-+        if loop is not None:
-+            loop.call_soon_threadsafe(_wedged_sweep_one, sweep, key)
-+        else:
-+            _wedged_sweep_one(sweep, key)
-+
-+
-+def _wedged_sweep_one(sweep, key) -> None:
-+    try:
-+        sweep(key)
-+    except Exception:
-+        logger.debug("wedged-agent sweep failed for %s", key, exc_info=True)
-+
-+
 +def _continuation_pump_chore() -> None:
 +    """Housekeeping 薄包装：续作泵（实现见 gateway.kanban_watchers._continuation_guard_tick）。"""
 +    try:
@@ -177,12 +151,9 @@ index f9d88925..d65b609f 100644
  def _start_gateway_housekeeping(
      stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
      cron_thread=None,
-@@ -4804,8 +4844,12 @@ def _start_gateway_housekeeping(
-         chores.append((1, DRAIN_LABEL, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner)))
-     chores += [
-         (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),
-+        # run11 根治件：挂死 running 槽周期扫（无入站也扫，驱逐判定复用快路径）
-+        (5, "Wedged running-agent sweep", lambda: _housekeeping_wedged_agent_sweep(runner, loop)),
+@@ -4598,7 +4607,9 @@ def _start_gateway_housekeeping(
+         # run11 根治件：挂死 running 槽周期扫（无入站也扫，驱逐判定复用快路径）
+         (5, "Wedged running-agent sweep", lambda: _housekeeping_wedged_agent_sweep(runner, loop)),
          (60, "Media cache cleanup", _housekeeping_media_caches),
 -        (60, "Paste sweep", _housekeeping_paste_sweep)]
 +        (60, "Paste sweep", _housekeeping_paste_sweep),
