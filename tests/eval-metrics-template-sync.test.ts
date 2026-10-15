@@ -61,7 +61,7 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(sh).toContain('评测与运行时指标')
     expect(sh).toContain('EVAL_GATE_TOOL_SUCCESS_MIN')
     expect(sh).toContain('eval-metrics')
-    expect(sh).toContain('十五项')
+    expect(sh).toContain('十六项')  // V8.29 治理轮加 ⑯ 代偿清偿门——十五→十六
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })
 
