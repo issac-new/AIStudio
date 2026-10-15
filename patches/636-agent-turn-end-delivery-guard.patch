@@ -1,5 +1,5 @@
 diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
-index 9fd39ec5..a6b92a0e 100644
+index 9fd39ec5..6c9b1222 100644
 --- a/agent/turn_finalizer.py
 +++ b/agent/turn_finalizer.py
 @@ -382,6 +382,8 @@ def _log_turn_exit(agent, messages, final_response, api_call_count, _turn_exit_r
@@ -11,7 +11,7 @@ index 9fd39ec5..a6b92a0e 100644
  
  
  def _append_file_mutation_footer(agent, final_response, logger):
-@@ -809,3 +811,65 @@ def finalize_turn(
+@@ -809,3 +811,73 @@ def finalize_turn(
      agent._turn_preflight_display_snapshot = None
      agent._turn_received_provider_response = False
      return result
@@ -65,6 +65,14 @@ index 9fd39ec5..a6b92a0e 100644
 +                        continue
 +                    _remote_ref = _git("rev-parse", "--verify", "refs/remotes/origin/%s" % _branch).strip()
 +                    if _remote_ref == _tip:
++                        continue
++                    # 新鲜度闸（run20 实录：无过滤会反复推历史遗留分支弄脏 origin）——只推 24h 内有 commit 的
++                    _ts = _git("log", "-1", "--format=%ct", _tip).strip()
++                    try:
++                        import time as _time
++                        if not _ts or (_time.time() - int(_ts)) > 86400:
++                            continue
++                    except ValueError:
 +                        continue
 +                    _r = _sp.run(["git", "-C", _repo, "push", "origin", _branch],
 +                                 capture_output=True, text=True, timeout=60)
