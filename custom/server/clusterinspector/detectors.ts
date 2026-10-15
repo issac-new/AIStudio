@@ -24,6 +24,12 @@ export interface DetectOptions {
   /** 阻塞卡停滞阈值 ms（默认 300000=5min——用户 2026-10-14 裁定：任何异常 300s 内识别；
    *  run19 G5 熔断死等 14400s+ 实锤的产品化常量） */
   blockedStaleMs?: number
+  /** 复审环老化阈值 ms（默认 7200000=120min；≥2× 升 high。run20 22:34 复审链断棒
+   *  实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化） */
+  reviewFailStallMs?: number
+  /** 未认领卡老化阈值 ms（默认 1800000=30min；≥3× 升 high。run20 r3 派单断棒实录：
+   *  ready/todo 卡 assignee 空置超时=派单断在「建卡→认领」间，无人看见） */
+  unassignedStaleMs?: number
   /** 派发通道僵死滞留时长 ms（控制器侧维护滞留起点传入；0=不检测） */
   dispatcherStuckMs?: number
   /** 负载不均衡判阈：单档案在办卡数 ≥ 此值且存在零卡档案（默认 3） */
@@ -297,9 +303,12 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
     // 「最后推进时刻」双字段容错（真实 tasks 表无 updated_at 列——run19 巡检实锤；
     // 采集层已做回退映射，此处再容错一层防直夹具/旧快照漏映射）
     const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
-    const upd = typeof rawTs === 'number' ? rawTs
+    const updRaw = typeof rawTs === 'number' ? rawTs
       : typeof rawTs === 'string' ? Number(rawTs) : NaN
-    if (!Number.isFinite(upd) || upd <= 0) continue
+    if (!Number.isFinite(updRaw) || updRaw <= 0) continue
+    // 卡表时间戳为 epoch 秒（run20 巡检实锤：秒当毫秒=1970 年→虚假百万秒停滞）——
+    // <1e12 视作秒 ×1000 归一（与 review.fail-stall/unassigned-stale 同规）
+    const upd = updRaw < 1e12 ? updRaw * 1000 : updRaw
     const quietMs = now - upd
     if (quietMs > staleMs) {
       out.push({
@@ -309,6 +318,89 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
         detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, staleMs },
       })
     }
+  }
+  return out
+}
+
+/** review.fail-stall：复审环老化检测（run20 22:34 复审链断棒实录产品化）。
+ *  闸类评审卡判 FAIL 后，「修订→复审」闭环可能断在散文交接——派单正文里的
+ *  「push 后 @复审」无机器保障（实录：修订入仓 75 分钟复审派单悬空，巡检官/
+ *  驱动超时分支/人工监督清单三方同盲，全集群绿灯而死锁）。
+ *  本检测器以 FAIL 判卡自身的最后推进时刻为复审环球钟：卡面长期无任何推进
+ *  （复审改判/重审会更新卡面 result → 球钟自动重置）即报——无论球此刻在
+ *  上游修订侧还是评审侧，闸的老化本身就该被看见。
+ *  未接线（failedVerdictCards 缺席）=合法空态静默跳过。
+ *  时间容错：卡表时间戳为 epoch 秒（10 位）——<1e12 视作秒 ×1000 归一（防
+ *  blocked-stale 同型的秒/毫秒错位恒报）。 */
+export function detectReviewFailStall(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const stallMs = opts.reviewFailStallMs ?? 7_200_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.failedVerdictCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
+    const updRaw = typeof rawTs === 'number' ? rawTs
+      : typeof rawTs === 'string' ? Number(rawTs) : NaN
+    if (!Number.isFinite(updRaw) || updRaw <= 0) continue
+    const upd = updRaw < 1e12 ? updRaw * 1000 : updRaw
+    const quietMs = now - upd
+    if (quietMs < stallMs) continue
+    out.push({
+      detector: 'review.fail-stall', subject: `card:${c.id}`,
+      severity: quietMs >= stallMs * 2 ? 'high' : 'warn',
+      summary: `复审环老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id} 已判 FAIL 后卡面零推进——「修订→复审」闭环疑似断棒（run20 实录形态：散文交接悬空 75 分钟全集群绿灯）。若修订已入仓请立即派复审；若修订仍在途请核对修订侧进度`,
+      detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, stallMs, result: (c.result ?? '').slice(0, 160) },
+    })
+  }
+  return out
+}
+
+/** card.unassigned-stale：未认领卡老化检测（run20 r3 派单断棒实录产品化）。
+ *  组织面派单常见断法：建了主卡后 agent 回合结束（Turn ended 正常收场），
+ *  子卡树未生、主卡 ready/todo 且 assignee 空置——工作存在但无人持有，
+ *  对一切「存在物坏了没」型检测器隐形（实录 2h45m 盲区）。
+ *  本检测器守「建卡→认领」不变量：开放卡空置超阈即报，与预期清单无关，
+ *  通杀半派单形态。created_at 秒级归一同 review.fail-stall。 */
+export function detectUnassignedStale(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const staleMs = opts.unassignedStaleMs ?? 1_800_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.unassignedCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const rawTs = c.created_at ?? c.updated_at
+    const ageRaw = typeof rawTs === 'number' ? rawTs : typeof rawTs === 'string' ? Number(rawTs) : NaN
+    if (!Number.isFinite(ageRaw) || ageRaw <= 0) continue
+    const created = ageRaw < 1e12 ? ageRaw * 1000 : ageRaw
+    const quietMs = now - created
+    if (quietMs < staleMs) continue
+    out.push({
+      detector: 'card.unassigned-stale', subject: `card:${c.id}`,
+      severity: quietMs >= staleMs * 3 ? 'high' : 'warn',
+      summary: `未认领卡老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id}（${c.status ?? '?'}）assignee 空置——派单断在「建卡→认领」之间（run20 实录：主卡 ready+无人认领 2h45m、子卡树未生）。请认领派工或关卡回收`,
+      detail: { cardId: c.id, title: c.title, status: c.status, quietMs, staleMs },
+    })
+  }
+  return out
+}
+
+/** card.body-empty：在办卡正文空检测（fcd06993 配套实现——派单后卡无正文，
+ *  研发 AI 拿到的是没正文的空壳卡；只查 runningCards 面：未认领开放卡的
+ *  body 草稿允许待补，派单动作（dispatch body 生成器）负责落正文）。 */
+export function detectCardBodyEmpty(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
+  const out: Anomaly[] = []
+  const face = snap.runningCards
+  if (!face || !face.ok) return out
+  for (const c of face.cards) {
+    const body = typeof c.body === 'string' ? c.body.trim() : ''
+    if (body) continue
+    out.push({
+      detector: 'card.body-empty', subject: `card:${c.id}`,
+      severity: 'warn',
+      summary: `在办卡正文为空：卡 ${c.title ?? c.id}（${c.status ?? 'running'}）已派 ${c.assignee ?? '?'} 但 body 无内容——研发 AI 拿到没正文的空壳卡，产出无从对题。请补写正文或回退派单`,
+      detail: { cardId: c.id, title: c.title, status: c.status, assignee: c.assignee },
+    })
   }
   return out
 }

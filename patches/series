@@ -727,3 +727,7 @@
 # ia2-i18n-coverage 守门逮住；值取自 NVMe 镜像注入态正本。
 629-client-locales-ia2-treekeys-backfill.patch
 
+# [630] 账号显示面优先 matrix_display_name（称谓纪律显示层，2026-10-14 用户指令：
+# 推演截图身份一律职能称呼）。CurrentUser 补类型字段；account store 增 displayName；
+# PageSidebarFooter 文案/头像优先 displayName 回落 username。v0.7.34 纯净基线手生成。
+630-account-displayname-surface.patch

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { useAuthStore } from '@/stores/hermes/auth'
 import { getStoredUsername } from '@/api/client'
 import * as kanbanApi from '@/api/hermes/kanban'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -681,9 +682,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
     return selectedTask.value?.title ?? ''
   })
 
-  // ── 当前用户（从 localStorage 获取）──
+  // ── 当前用户（优先显示名：matrix_display_name（职能称呼），回落登录名）──
+  // 称谓纪律显示层（2026-10-14 用户指令）：推演截图里的账号身份一律职能称呼；
+  // authStore.user 由 App.vue 启动时 fetchUser() 水合，displayName 已是
+  // matrix_display_name || username（stores/hermes/auth.ts buildUnifiedUser）。
   const currentUserName = computed(() => {
     try {
+      const dn = useAuthStore().user?.displayName
+      if (dn) return dn
       return getStoredUsername() ?? '你'
     } catch {
       return '你'
