@@ -41,7 +41,7 @@ const LEDGER: ClearanceLedgerView = {
 const INTERV: InterventionsView = {
   points: [
     { id: 'iv-03', title: 'G1 需求冻结判读', sourceKind: 'gate', sourceKey: 'g1_frozen', pending: true },
-    { id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass', pending: true },
+    { id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass', belief: '方案复用既有实现未重复造轮', pending: true },
     { id: 'iv-08', title: 'G5 发布准出人工批准', sourceKind: 'approval', sourceKey: 'g5_human', pending: false },
     { id: 'iv-12', title: '清偿门 waive', sourceKind: 'clearance', sourceKey: 'clearance-waive', pending: null },
     { id: 'iv-09', title: 'UAT 逐条判词', sourceKind: 'uat', sourceKey: 'uat-verdict', pending: null },
@@ -83,6 +83,20 @@ describe('GatekeeperSection — S7 把关待办', () => {
     expect(unknown.text()).toContain('UAT 逐条判词')
     expect(w.find('[data-testid="gk-src-clearance"]').classes()).toContain('gk__src--absent')
     expect(w.find('[data-testid="gk-src-gates"]').classes()).not.toContain('gk__src--absent')
+    w.unmount()
+  })
+
+  it('介入卡来源徽标与决策前提透传：sourceKind 标签渲染、belief 行进卡（调研轮 A 件）', async () => {
+    const w = mount(GatekeeperSection)
+    await flushPromises()
+    const sources = w.findAll('[data-testid="sim-interv-source"]')
+    expect(sources.map(s => s.text())).toEqual(['关卡', '关卡'])
+    const beliefs = w.findAll('[data-testid="sim-interv-belief"]')
+    expect(beliefs).toHaveLength(1)
+    expect(beliefs[0].text()).toContain('须先确认：方案复用既有实现未重复造轮')
+    const absent = w.findAll('[data-testid="sim-interv-belief-absent"]')
+    expect(absent).toHaveLength(1)
+    expect(absent[0].text()).toContain('缺决策前提')
     w.unmount()
   })
 

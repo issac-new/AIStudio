@@ -1,20 +1,27 @@
 <script setup lang="ts">
 // 介入卡（R5）：14 个人工介入点的统一待办卡——人形图标＋批准/打回双钮＋留痕。
 // 留痕由消费方落账（approved.events 等），组件只发出动作与载荷。
-export type InterventionSource = 'gate' | 'clearance' | 'approval' | 'uat'
+// 2026-10-16 三篇调研轮 A 件两修：
+// ①对齐端点真实形状（sourceKind 五类）——原卡片读 point.source 恒空的接线缺陷修复；
+// ②新增决策前提行 belief（麦肯锡「what you'd have to believe」：批准前必须成立的前提，
+//   服务端静态登记自方案判据与事故锚；旧后端缺席=如实显示缺席不硬凑）。
+export type InterventionSource = 'gate' | 'clearance' | 'approval' | 'uat' | 'registry'
 
 const props = defineProps<{
   point: {
     id: string
     title: string
+    sourceKind: InterventionSource
+    sourceKey?: string
+    belief?: string | null
     evidenceAnchor?: string | null
-    source: InterventionSource
+    pending?: boolean | null
   }
 }>()
 
 const emit = defineEmits<{
-  approve: [payload: { id: string; evidenceAnchor?: string | null }]
-  reject: [payload: { id: string; evidenceAnchor?: string | null }]
+  approve: [payload: { id: string; belief?: string | null; evidenceAnchor?: string | null }]
+  reject: [payload: { id: string; belief?: string | null; evidenceAnchor?: string | null }]
 }>()
 
 const SOURCE_LABEL: Record<InterventionSource, string> = {
@@ -22,6 +29,11 @@ const SOURCE_LABEL: Record<InterventionSource, string> = {
   clearance: '清偿门',
   approval: '审批',
   uat: '验收',
+  registry: '登记',
+}
+
+function actPayload(): { id: string; belief?: string | null; evidenceAnchor?: string | null } {
+  return { id: props.point.id, belief: props.point.belief ?? null, evidenceAnchor: props.point.evidenceAnchor ?? null }
 }
 </script>
 
@@ -30,14 +42,30 @@ const SOURCE_LABEL: Record<InterventionSource, string> = {
     <span class="sim-interv__icon" aria-label="等人决定" data-testid="sim-interv-icon">👤</span>
     <div class="sim-interv__body">
       <div class="sim-interv__title" data-testid="sim-interv-title">{{ props.point.title }}</div>
+      <div
+        v-if="props.point.belief"
+        class="sim-interv__belief"
+        data-testid="sim-interv-belief"
+      >须先确认：{{ props.point.belief }}</div>
+      <div
+        v-else
+        class="sim-interv__belief sim-interv__belief--absent"
+        data-testid="sim-interv-belief-absent"
+      >缺决策前提（旧后端未供）</div>
       <div class="sim-interv__meta">
-        <span class="sim-interv__source" data-testid="sim-interv-source">{{ SOURCE_LABEL[props.point.source] }}</span>
+        <span class="sim-interv__source" data-testid="sim-interv-source">{{ SOURCE_LABEL[props.point.sourceKind] }}</span>
         <span
           v-if="props.point.evidenceAnchor"
           class="sim-interv__anchor"
           data-testid="sim-interv-anchor"
           :title="props.point.evidenceAnchor"
         >依据 {{ props.point.evidenceAnchor }}</span>
+        <span
+          v-else-if="props.point.sourceKey"
+          class="sim-interv__anchor"
+          data-testid="sim-interv-key"
+          :title="props.point.sourceKey"
+        >键 {{ props.point.sourceKey }}</span>
         <span v-else class="sim-interv__anchor sim-interv__anchor--absent" data-testid="sim-interv-anchor-absent">缺依据锚</span>
       </div>
     </div>
@@ -46,13 +74,13 @@ const SOURCE_LABEL: Record<InterventionSource, string> = {
         class="sim-interv__btn sim-interv__btn--approve"
         data-testid="sim-interv-approve"
         type="button"
-        @click="emit('approve', { id: props.point.id, evidenceAnchor: props.point.evidenceAnchor ?? null })"
+        @click="emit('approve', actPayload())"
       >批准</button>
       <button
         class="sim-interv__btn sim-interv__btn--reject"
         data-testid="sim-interv-reject"
         type="button"
-        @click="emit('reject', { id: props.point.id, evidenceAnchor: props.point.evidenceAnchor ?? null })"
+        @click="emit('reject', actPayload())"
       >打回</button>
     </div>
   </div>
@@ -80,10 +108,24 @@ const SOURCE_LABEL: Record<InterventionSource, string> = {
   font-size: 13px;
   font-weight: 600;
 }
+.sim-interv__belief {
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-left: 3px solid #d9a441;
+  background: rgba(217, 164, 65, 0.08);
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  color: #d9b06a;
+}
+.sim-interv__belief--absent {
+  border-left-color: rgba(127, 127, 127, 0.4);
+  background: none;
+  color: #878c99;
+}
 .sim-interv__meta {
   display: flex;
   gap: 8px;
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 12px;
 }
 .sim-interv__source {
