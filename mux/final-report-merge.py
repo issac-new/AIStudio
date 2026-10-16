@@ -510,7 +510,23 @@ PART1_RUN19 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
+PART1_RUN20 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+
+<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收官中）</span></h1>
+
+<div class="card info"><b>这轮是什么：</b>零环境起步（mx-clean 全量重建），26 步全流程走完、六道关卡 {{gates_pass}}/6（首过实测自 issues.log 闸键登记），全流程窗口 {{window}}。本轮为 V8.30-V8.34 五轮治理修版的实跑验证轮。</div>
+
+<div class="card ok"><b>本轮的诚实结论：</b>26 步 {{steps_done}}/26 落盘（第 26 步随本报告产出）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。UAT 七条 AC 逐条证据过、审计四查过。</div>
+
+<div class="card warn"><b>真实发生的缺口（全部登记在案）：</b>①supervisor 两次孤儿（15:31 死 5h+02:38 死 1.5h——watchdog 假阳根治 05b9d20）；②宿主 venv 拆分致执行面瘫痪 1.5h（00:30 根治）；③G5 判词七层盲因链攻坚（sender 锚/追尾循环/卡面检索/候选词污染）；④跨档案「干完不交卷」五波（16:07-21:27，三层根治=V8.32 完成定义+636 自动 push+637 续作泵）；⑤G3/G4 evidence_gap 各 1 显形记欠；⑥对象级 C/N 差异记 lead_merge_fallback 代偿单。（类型分布实测：{{type_top}}）</div>
+
+<div class="card ok"><b>本轮产品成效：</b>巡检官 19→22 检测器（期望对账/delivery.pushed/spawn-health 三新件字面触发实证）；持续流水线引擎 v1+并行评审编排器（V8.33/V8.35 产品化）；方案 V8.34 四纪律（66-69）；636/637 运行时补丁；watchdog 判据根治。</div>
+
+<div class="card info"><b>怎么看这份报告：</b>每个结论带可反查锚（事件号/提交号/时间戳）；问题单与处置行成对（ISSUE→DISP）；正文只写结论与重点，机器细节在折叠区。</div>
+</div>'''
+
 PART1_BY_RUN = {
+    '20261015-v8-run20': PART1_RUN20,
     '20261013-v8-run19': PART1_RUN19,
     '20261013-v8-run18-lite-acp': PART1_RUN18_LITE,
     '20261012-v8-run16': PART1_RUN16,
