@@ -59,7 +59,10 @@ fi
 STUBEOF
 chmod +x "$HERMES"
 eval "$BODY" & BG=$!
-sleep 4; kill $BG 2>/dev/null; wait $BG 2>/dev/null; BG=
+# 冷启动余量（2026-10-16 竞态根治）：首轮轮询 1s + 首次 `timeout 120 <hermes>` 冷启
+# ~2.7s（实测 run1 1.75-2.75s，热后 70ms）=3.7s 贴原 sleep 4 边界，负载高即被 kill
+# 在「直派结果」落盘前假红。8s 留足余量，行为判据不变。
+sleep 8; kill $BG 2>/dev/null; wait $BG 2>/dev/null; BG=
 if grep -q "派发自愈" "$LOG" && grep -q "直派结果：spawned=t1,t2" "$LOG" && grep -q "派发通道自愈" "$CTRL/sent.log"; then
   echo "PASS ① 派发自愈触发+结果记录+群通知"
 else echo "FAIL ① log=$(tail -4 "$LOG" | tr '\n' ';')"; fails=1; fi
