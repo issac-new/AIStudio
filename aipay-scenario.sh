@@ -1380,7 +1380,8 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   if [[ -z "$(sget lead_merge_be_dispatched)" ]]; then
     dispatch_in_room wei "@wei-agent:matrix.test 集成合并任务 INT-MERGE-BE-${RFD_ID}（后端域 lead 职权：评审+合并一条责任链；非 PM、非导演代做）：
 1) 工作区 $(workspace wei) 拉取后：基线=origin/integration/${RFD_ID}（无则 origin/main），checkout -B integration/${RFD_ID}
-2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（push 缺席的分支记单跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并记单不中止
+1b) 【单分支单步节奏+评审时机（V8.32-b，run20 实测 wei 会话饥饿与"等全齐"瀑布形态根治）】每支分支=一个独立回合：评审→merge→push origin→群内回执 INTEGRATED-<分支ID> 四件事全做完才开下一支；回执即续做下一支（连续集成，不等六条全齐，也不做完六条才回话）。任一 feat 分支出现在 origin 后 30 分钟内先发 REVIEW-STARTED-<分支ID>（开始评审声明），超 1 小时未合并由监督哨发 REVIEW-NUDGE-<分支ID> 提醒催单。
+2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（顺序即到达序；push 缺席的分支记单跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并记单不中止
 3) 旧基线头须仍是 HEAD 祖先（丢线=记单）；禁强推；push -u origin integration/${RFD_ID}
 结论行 INT-MERGE-BE-DONE-${RFD_ID}（行首，附已合分支与缺席分支清单）。不许谎报。" "$(agent_mxid wei)" && sset lead_merge_be_dispatched 1
   fi
