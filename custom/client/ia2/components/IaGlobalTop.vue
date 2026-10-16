@@ -19,6 +19,7 @@ import BackgroundWorkStrip from './BackgroundWorkStrip.vue'
 import type { AttentionRow } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
+import IaCentersNav from './IaCentersNav.vue'
 import AttentionStrip from './AttentionStrip.vue'
 import { useDeliveryCasesStore } from '@/custom/matrix-teams/stores/delivery-cases'
 
@@ -83,6 +84,7 @@ function onOpenBoard(): void {
 
 <template>
   <div class="ia-gtop" data-testid="ia-global-top">
+    <IaCentersNav />
     <IaShellHeader :user-name="cockpit.currentUserName" />
     <BackgroundWorkStrip />
     <div v-if="showDelivery" class="delivery-strip" data-testid="delivery-readings" @click="openCases">

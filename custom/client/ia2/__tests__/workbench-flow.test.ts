@@ -191,6 +191,7 @@ vi.mock('@/custom/matrix-teams/stores/team-registry', () => ({ useTeamRegistrySt
 
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import WorkbenchView from '../views/WorkbenchView.vue'
+import IaCentersNav from '../components/IaCentersNav.vue'
 import { useFlowStore } from '../store/flow'
 import type { FlowLoopRow, FlowSessionRow } from '../adapters/flow'
 
@@ -774,7 +775,7 @@ describe('WorkbenchView — P4③ 群任务流转时间线（2026-09-29 消息�
 
 // ── A0 三中心导航（2026-10-16 屏 0 / R8）：顶栏渲染 + 高亮 + 点击导航 ──────────
 // 纯函数面（centerForPath / 注册表 / legacyTabRedirect）见 workbench-nav-centers.test.ts。
-describe('WorkbenchView — A0 三中心导航顶栏', () => {
+describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGlobalTop，三中心页通用）', () => {
   function makeNavRouter(): Router {
     return createRouter({
       history: createMemoryHistory(),
@@ -803,7 +804,7 @@ describe('WorkbenchView — A0 三中心导航顶栏', () => {
     const router = makeNavRouter()
     await router.push(path)
     await router.isReady()
-    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    const wrapper = mount(IaCentersNav, { global: { plugins: [router] } })
     await flushPromises()
     return { wrapper, router }
   }
@@ -812,17 +813,17 @@ describe('WorkbenchView — A0 三中心导航顶栏', () => {
     const { wrapper } = await mountNav('/app')
     const bar = wrapper.find('[data-testid="ia-nav-centers"]')
     expect(bar.exists()).toBe(true)
-    const labels = bar.findAll('.wb__center-btn').map(x => x.text())
+    const labels = bar.findAll('.icn__center-btn').map(x => x.text())
     expect(labels).toEqual(['工作台', '推演中心', '治理中心'])
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('wb__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('wb__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('wb__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('icn__center-btn--active')
   })
 
   it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
     const { wrapper } = await mountNav('/app/sim')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('wb__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('wb__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('icn__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('icn__center-btn--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
