@@ -1,0 +1,19 @@
+/* mux/theme-unified-light.css —— 二合一报告的明色修正层（2026-10-14）
+ *
+ * 外壳把内嵌报告 hero 的深蓝渐变底剥掉了，浅色文字落在白底上只剩 1.5:1。
+ * hero 的渐变是深色，两个主题下都该保留。注意本页没有 --grad-hero 变量（那是报告页
+ * 的 token），所以这里写死字面值——写 var() 会静默失效，底色退回白底（实测踩过）。
+ */
+
+html[data-theme="light"] .hero { background:linear-gradient(135deg,#0f172a,#1e3a5f) !important; color:#ffffff !important; }
+html[data-theme="light"] .hero .sub,
+html[data-theme="light"] .hero-terms { color:#c7d4e6 !important; }
+html[data-theme="light"] .hero .hstat span,
+html[data-theme="light"] .hero .pb-label { color:#a8b8cc !important; }
+
+/* 内嵌报告片段里按暗色挑的字色：联动图 chip、步号方块、循环图圆点，
+   在白底上分别只有 1.0 / 1.1 / 2.6:1 */
+html[data-theme="light"] .ck-node { color:#1e293b !important; background:#eef2f7 !important; border-color:#cbd5e1 !important; }
+html[data-theme="light"] .ck-node-z { color:#ffffff !important; }
+html[data-theme="light"] .st-num { color:#1e293b !important; }
+html[data-theme="light"] .nv-loop-idx { color:#0b1220 !important; }

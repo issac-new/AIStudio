@@ -1,0 +1,49 @@
+/* mux/theme-base.css —— 推演各 HTML 页面共用的暗色基座（2026-10-14）
+ *
+ * 适用范围：推演程序产出的、明面上按亮色设计的页面（路演报告、二合一报告等）。
+ * 只做「底色 / 文字 / 边框 / 表格」四件事；页面特有的组件色由各自的专属层补。
+ * 已经按暗色设计生成的页面（演示素材页 demo-kit）不需要本文件，只需切换控件。
+ *
+ * 明色下本文件一行不生效——页面原样即明色，不做无谓的改写。
+ */
+
+html[data-theme="dark"] {
+  --bg:#0b1220; --surface:#101a2c; --surface-2:#0b1220; --surface-3:#16233a;
+  --ink:#dbe4f0; --ink-strong:#f1f5fb; --muted:#8ba0b8;
+  --line:#22314a; --line-soft:#1a2740;
+  --accent:#5b9bff; --accent-deep:#2b4c8c; --accent-soft:#16233a;
+  --ok:#34d399; --ok-soft:#0d2b22;
+  --warn:#f5b84c; --warn-soft:#33230a;
+  --danger:#f87171; --danger-soft:#331414;
+  --code-bg:#0b1220; --code-ink:#c7d4e6;
+}
+
+html[data-theme="dark"] body { background:var(--bg) !important; color:var(--ink) !important; }
+html[data-theme="dark"] a { color:var(--accent); }
+html[data-theme="dark"] hr { border-color:var(--line); }
+
+/* 亮色页面里常见的「白卡片 + 浅边框 + 阴影」三件套，统一翻成暗色卡片 */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .step,
+html[data-theme="dark"] .block,
+html[data-theme="dark"] .ic-card,
+html[data-theme="dark"] .qt-card,
+html[data-theme="dark"] .stat { background:var(--surface) !important; border-color:var(--line) !important; color:var(--ink) !important; }
+
+html[data-theme="dark"] table { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] th,
+html[data-theme="dark"] td { border-color:var(--line); color:var(--ink); }
+html[data-theme="dark"] thead th,
+html[data-theme="dark"] th { background:var(--surface-3); color:var(--ink-strong); }
+
+html[data-theme="dark"] nav.aud a,
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .badge { background:var(--surface-3); border-color:var(--line); color:var(--ink); }
+
+html[data-theme="dark"] pre,
+html[data-theme="dark"] code { background:var(--code-bg); color:var(--code-ink); }
+html[data-theme="dark"] blockquote { background:var(--surface-3); border-left-color:var(--accent); color:var(--ink); }
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4 { color:var(--ink-strong); }
