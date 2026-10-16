@@ -70,70 +70,60 @@ describe('视图壳内嵌接线', () => {
     expect(swarmKanbanMounted.count).toBe(1)
   })
 
-  it('单层页签（2026-10-01 用户裁定：不要二级页签）：10 平级页签（+集群健康）+ 治理五分区直挂 + 旧链兼容', async () => {
+  it('A0 三中心拆分：board 3 键注册表 + 迁出 10 键深链重定向不 404 + 未知 tab 回落看板', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/app/board', name: 'ia2.board', component: TasksView }],
+      routes: [
+        { path: '/app', name: 'ia2.collab', component: { template: '<div collab />' } },
+        { path: '/app/board', name: 'ia2.board', component: TasksView },
+        // 迁出签落点桩（真实落点=推演中心六签/治理中心；此处只断言重定向导航）
+        { path: '/app/sim', name: 'ia2.sim', component: { template: '<div sim />' } },
+        { path: '/app/sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
+        { path: '/app/sim/delivery', name: 'ia2.simDelivery', component: { template: '<div sim-delivery />' } },
+        { path: '/app/sim/ops', name: 'ia2.simOps', component: { template: '<div sim-ops />' } },
+        { path: '/app/gov', name: 'ia2.governance', component: { template: '<div gov />' } },
+      ],
     })
     await router.push('/app/board')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    // 单层纪律：恰 13 个平级页签（2026-10-08 集群健康入列；2026-10-10 任务协同图入列、
-    // 语义体检入列——本体×看板治理整合；2026-10-11 会话健康入列——长会话治理 B2），
-    // 无二级页签行（gov-subtabs 随 GovernanceView 退役）
+    // 单层纪律（A0 后）：恰 3 个平级页签（看板/任务协同/协作与知识），无二级页签行
     const tabs = wrapper.findAll('.ia-tasks__tab')
-    expect(tabs).toHaveLength(13)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(13)
-    expect(wrapper.find('[data-testid="gov-subtabs"]').exists()).toBe(false)
-    expect(tabs.map(x => x.text())).toEqual([
-      // 2026-10-04 说人话轮：行业通用术语重命名（用户裁定）；2026-10-10 任务协同图插位第 2、语义体检列尾
-      '看板', '任务协同', '需求追溯', '交付健康', '运行观测', '协作与知识', '能力与规则', '审计与变更', '文档评审', '工程效能', '集群健康', '语义体检', '会话健康',
-    ])
-    // 治理首分区：点击=页内切换（URL 不变 + 内嵌渲染 + 页签仍在）
+    expect(tabs).toHaveLength(3)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(3)
+    expect(tabs.map(x => x.text())).toEqual(['看板', '任务协同', '协作与知识'])
+    // 工作台治理签：点击=页内切换（URL 不变 + 内嵌渲染 + 页签仍在）
     const govOrgTab = wrapper.find('[data-testid="ia-tasks-tab-gov-org"]')
     expect(govOrgTab.exists()).toBe(true)
-    expect(govOrgTab.text()).not.toContain('↗')
     await govOrgTab.trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="gov-org-stub"]').exists()).toBe(true)
     expect(router.currentRoute.value.name).toBe('ia2.board')
     expect(wrapper.find('[data-testid="ia-tasks-tab-gov-org"]').exists()).toBe(true)
-    // 其余三分区页签各挂各面板
-    await wrapper.find('[data-testid="ia-tasks-tab-gov-registry"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="gov-registry-stub"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="ia-tasks-tab-gov-audit"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="gov-audit-stub"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="ia-tasks-tab-gov-docs"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="gov-docs-stub"]').exists()).toBe(true)
-    // 会话健康页签（2026-10-11 长会话治理 B2）：点击后面板挂载（遥测快照消费面）
-    await wrapper.find('[data-testid="ia-tasks-tab-gov-session-health"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="gov-session-health-section"]').exists()).toBe(true)
-    // 驾驭工程页签：点击=页内切换 + 面板挂载（2026-10-02 守门同步）
-    await wrapper.find('[data-testid="ia-tasks-tab-gov-harness"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="gov-harness-stub"]').exists()).toBe(true)
-    expect(router.currentRoute.value.name).toBe('ia2.board')
-    // 三账与体检：管理三账 + 治理体检同页签堆叠（整合守门）
-    await wrapper.find('[data-testid="ia-tasks-tab-accounts"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="ma-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="gov-health-stub"]').exists()).toBe(true)
-    // 旧深链 ?tab=gov → 治理首分区（外部链接不死链）
+    // 旧深链 ?tab=gov 别名 → 工作台治理签（外部链接不死链）
     await router.push('/app/board?tab=gov')
     await flushPromises()
     expect(wrapper.find('[data-testid="gov-org-stub"]').exists()).toBe(true)
-    // 新深链 ?tab=gov-docs 直达
-    await router.push('/app/board?tab=gov-docs')
+    // A0 迁出 10 键深链重定向：3 键落推演中心签，7 键落治理中心（抽全表正反例
+    // 逐键断言在 workbench-nav-centers.test.ts 的 legacyTabRedirect 纯函数用例）
+    await router.push('/app/board?tab=trace')
     await flushPromises()
-    expect(wrapper.find('[data-testid="gov-docs-stub"]').exists()).toBe(true)
-    // 新深链 ?tab=gov-harness 直达
-    await router.push('/app/board?tab=gov-harness')
+    expect(router.currentRoute.value.name).toBe('ia2.simTrace')
+    await router.push('/app/board?tab=accounts')
     await flushPromises()
-    expect(wrapper.find('[data-testid="gov-harness-stub"]').exists()).toBe(true)
+    expect(router.currentRoute.value.name).toBe('ia2.simDelivery')
+    await router.push('/app/board?tab=observatory')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.simOps')
+    for (const key of ['gov-registry', 'gov-audit', 'gov-docs', 'gov-harness', 'gov-cluster', 'gov-ontology', 'gov-session-health']) {
+      await router.push(`/app/board?tab=${key}`)
+      await flushPromises()
+      expect(router.currentRoute.value.name, key).toBe('ia2.governance')
+    }
+    // 未知 tab 值回落看板（A0 裁定：迁出签位已消失，不再静默保留旧位置）
+    await router.push('/app/board?tab=weird')
+    await flushPromises()
+    expect(wrapper.find('.kanban-stub').exists()).toBe(true)
     wrapper.unmount()
   })
 
