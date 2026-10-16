@@ -27,6 +27,7 @@ import { taskLinkedSessionId } from '../adapters/flow'
 import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
+import IaCentersNav from './IaCentersNav.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
 import SpotlightPanel from './SpotlightPanel.vue'
 import SitlineBar from './SitlineBar.vue'
@@ -188,6 +189,8 @@ function onPanelJumpTask(taskId: string): void {
 
 <template>
   <div class="cockpit-top" data-testid="ia-shell-header">
+    <!-- 走查二修（2026-10-16）：三中心导航并入本行行首（原独立首行退役，去重） -->
+    <IaCentersNav part="centers" />
     <div class="cockpit-top__brand">
       <ThemeSwitch />
       <IaLocaleToggle />
@@ -212,6 +215,8 @@ function onPanelJumpTask(taskId: string): void {
       <SpotlightPanel v-if="spotOpen" ref="spotRef" :query="store.searchQuery" @close="closeSpot" />
     </div>
     <div class="cockpit-top__spacer" />
+    <!-- 走查二修：岛屿组右置（IDE 岛与设置钮去重：让位视图切换器/用户钮） -->
+    <IaCentersNav part="islands" />
     <div class="cockpit-top__sit">
       <SitlineBar
         :waiting-count="decisionRows.length"
