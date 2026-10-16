@@ -23,6 +23,7 @@ import GovSessionHealthSection from './GovSessionHealthSection.vue'
 import CapacitySection from '../../../kanban/components/CapacitySection.vue'
 import CapacityLampBanner from './CapacityLampBanner.vue'
 import GovIssuesPanel from './GovIssuesPanel.vue'
+import GovAiQualitySection from './GovAiQualitySection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,7 +40,7 @@ const TABS: ReadonlyArray<GovTab> = [
   { key: 'issues', name: 'ia2.govIssues', components: ['诊断规则（KanbanDiagnosticsSection·C6）'] },
   { key: 'audit', name: 'ia2.govAudit', components: ['审计与变更（GovAuditChangeView·C7）'] },
   { key: 'docs', name: 'ia2.govDocs', components: ['文档评审（GovDocsReviewView·C5）'] },
-  { key: 'metrics', name: 'ia2.govMetrics', components: ['工程效能（GovHarnessView）', '集群健康（GovClusterSection）', '语义体检（GovOntologySection）', '会话健康（GovSessionHealthSection）', '容量成本（CapacitySection·C4 五卡）'] },
+  { key: 'metrics', name: 'ia2.govMetrics', components: ['AI 产出质量（GovAiQualitySection·E/F 件）', '工程效能（GovHarnessView）', '集群健康（GovClusterSection）', '语义体检（GovOntologySection）', '会话健康（GovSessionHealthSection）', '容量成本（CapacitySection·C4 五卡）'] },
 ]
 type TabTextKey = 'tabProcess' | 'tabOrgAssets' | 'tabClearance' | 'tabIssues' | 'tabAudit' | 'tabDocs' | 'tabMetrics'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
@@ -125,7 +126,7 @@ function goTab(tab: GovTab): void {
         <h3 class="gov-center__panel-title">签 6·{{ text.tabDocs }}</h3>
         <GovDocsReviewView />
       </section>
-      <!-- 签 7 度量体检（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件） -->
+      <!-- 签 7 度量体检（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件；AI 产出质量随 E/F 件） -->
       <section
         v-show="activeTab === 'metrics'"
         class="gov-center__panel gov-center__panel--live"
@@ -133,6 +134,7 @@ function goTab(tab: GovTab): void {
       >
         <h3 class="gov-center__panel-title">签 7·{{ text.tabMetrics }}</h3>
         <CapacityLampBanner />
+        <GovAiQualitySection />
         <GovHarnessView />
         <GovClusterSection />
         <GovOntologySection />
