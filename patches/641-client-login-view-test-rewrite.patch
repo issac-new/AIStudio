@@ -1,0 +1,348 @@
+diff --git a/tests/client/login-view.test.ts b/tests/client/login-view.test.ts
+index 823f6fef6..708931264 100644
+--- a/tests/client/login-view.test.ts
++++ b/tests/client/login-view.test.ts
+@@ -1,13 +1,27 @@
+ // @vitest-environment jsdom
+-import { beforeEach, describe, expect, it, vi } from 'vitest'
++// LoginView 契约测试（2026-10-16 安全轮重写）。
++// 旧版 8 用例断言 .login-lock-hint / .login-default-hint 等元素——它们随 overlay
++// patch 025（LoginView 整体替换为 Matrix/本地双表单版）被删除，且组件新增
++// useAuthStore() 调用而测试未装 Pinia，故全数失败（基线既有，非安全轮引入）。
++// 本版按当前组件契约重写：真实 store（setActivePinia）+ mock API 层。
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+ import { mount } from '@vue/test-utils'
++import { createPinia, setActivePinia } from 'pinia'
+ 
+ const mockReplace = vi.hoisted(() => vi.fn())
+-const mockFetchAuthStatus = vi.hoisted(() => vi.fn())
++const mockPush = vi.hoisted(() => vi.fn())
++const mockMatrixSdkLogin = vi.hoisted(() => vi.fn())
++const mockHermesMatrixLogin = vi.hoisted(() => vi.fn())
+ const mockLoginWithPassword = vi.hoisted(() => vi.fn())
++const mockFetchCurrentUser = vi.hoisted(() => vi.fn())
++const mockFetchAuthStatus = vi.hoisted(() => vi.fn())
+ const mockSetApiKey = vi.hoisted(() => vi.fn())
+ const mockClearApiKey = vi.hoisted(() => vi.fn())
+ const mockHasApiKey = vi.hoisted(() => vi.fn())
++const mockGetApiKey = vi.hoisted(() => vi.fn())
++const mockGetMatrixCredentials = vi.hoisted(() => vi.fn())
++const mockStoreMatrixCredentials = vi.hoisted(() => vi.fn())
++const mockClearMatrixCredentials = vi.hoisted(() => vi.fn())
+ const mockIsDesktopShell = vi.hoisted(() => vi.fn())
+ const mockActivateUserTheme = vi.hoisted(() => vi.fn())
+ const mockRoute = vi.hoisted(() => ({ query: {} as Record<string, unknown> }))
+@@ -15,6 +29,7 @@ const mockRoute = vi.hoisted(() => ({ query: {} as Record<string, unknown> }))
+ vi.mock('vue-router', () => ({
+   useRouter: () => ({
+     replace: mockReplace,
++    push: mockPush,
+   }),
+   useRoute: () => mockRoute,
+ }))
+@@ -25,15 +40,23 @@ vi.mock('vue-i18n', () => ({
+   }),
+ }))
+ 
++// store 依赖面全量 mock（缺 getApiKey/getMatrixCredentials 会在 store 建立时即抛错）
+ vi.mock('@/api/client', () => ({
+   setApiKey: mockSetApiKey,
+   clearApiKey: mockClearApiKey,
+   hasApiKey: mockHasApiKey,
++  getApiKey: mockGetApiKey,
++  getMatrixCredentials: mockGetMatrixCredentials,
++  storeMatrixCredentials: mockStoreMatrixCredentials,
++  clearMatrixCredentials: mockClearMatrixCredentials,
+ }))
+ 
+ vi.mock('@/api/studio/auth', () => ({
+   fetchAuthStatus: mockFetchAuthStatus,
+   loginWithPassword: mockLoginWithPassword,
++  fetchCurrentUser: mockFetchCurrentUser,
++  matrixSdkLogin: mockMatrixSdkLogin,
++  hermesMatrixLogin: mockHermesMatrixLogin,
+ }))
+ 
+ vi.mock('@/utils/desktop-bridge', () => ({
+@@ -48,126 +71,194 @@ vi.mock('@/composables/useTheme', () => ({
+ 
+ import LoginView from '@/views/LoginView.vue'
+ 
++const MATRIX_USER = { id: 1, username: 'mx', role: 'admin', status: 'active' } as const
++
++/** autoLoginFromGateway 的 fetch 桩（缺省不可达：jsdom 无相对 URL fetch base） */
++const fetchMock = vi.fn(() => Promise.reject(new TypeError('Failed to fetch URL')))
++
++/** 挂载并等 onMounted 的 autoLogin 异步链落定（until 供成功路径等 push） */
++async function mountLogin(opts: { until?: () => void } = {}): Promise<ReturnType<typeof mount>> {
++  const wrapper = mount(LoginView)
++  if (opts.until) {
++    await vi.waitFor(opts.until)
++  } else {
++    await new Promise(resolve => setTimeout(resolve, 20))
++  }
++  return wrapper
++}
++
++/** 当前激活表单是否为本地登录 */
++function localFormActive(wrapper: ReturnType<typeof mount>): boolean {
++  return wrapper.find('form.login-form [placeholder="login.usernamePlaceholder"]').exists()
++}
++
++/** 经「后端不可达」路径把组件切到本地表单（组件唯一的 Matrix→Local 切换通道） */
++async function switchToLocal(wrapper: ReturnType<typeof mount>): Promise<void> {
++  if (localFormActive(wrapper)) return
++  mockMatrixSdkLogin.mockRejectedValueOnce(new Error('Failed to fetch'))
++  const inputs = wrapper.findAll('input.login-input')
++  await inputs[0]!.setValue('http://hs')
++  await inputs[1]!.setValue('switch-user')
++  await inputs[2]!.setValue('switch-pass')
++  await wrapper.find('form.login-form').trigger('submit')
++  await vi.waitFor(() => { expect(localFormActive(wrapper)).toBe(true) })
++}
++
++async function submitLocal(wrapper: ReturnType<typeof mount>, username: string, password: string): Promise<void> {
++  await switchToLocal(wrapper)
++  const inputs = wrapper.findAll('input.login-input')
++  await inputs[0]!.setValue(username)
++  await inputs[1]!.setValue(password)
++  await wrapper.find('form.login-form').trigger('submit')
++}
++
+ describe('LoginView password login', () => {
+   beforeEach(() => {
+-    delete (window as any).__LOGIN_TOKEN__
++    window.localStorage.clear()
+     vi.clearAllMocks()
++    vi.unstubAllGlobals()
++    vi.stubGlobal('fetch', fetchMock)
++    setActivePinia(createPinia())
+     mockIsDesktopShell.mockReturnValue(false)
+     mockRoute.query = {}
+     mockHasApiKey.mockReturnValue(false)
++    mockGetApiKey.mockReturnValue(null)
++    mockGetMatrixCredentials.mockReturnValue(null)
+     mockFetchAuthStatus.mockResolvedValue({ hasPasswordLogin: true, username: 'admin' })
++    mockFetchCurrentUser.mockResolvedValue({ id: 7, username: 'admin', role: 'super_admin', status: 'active' })
+   })
+-
+-  it('keeps the web login redirect when a token already exists', () => {
+-    mockHasApiKey.mockReturnValue(true)
+-
+-    mount(LoginView)
+-
+-    expect(mockClearApiKey).not.toHaveBeenCalled()
+-    expect(mockReplace).toHaveBeenCalledWith('/hermes/chat')
++  afterEach(() => {
++    vi.unstubAllGlobals()
+   })
+ 
+-  it('clears stale tokens when the desktop login page is opened', () => {
+-    mockIsDesktopShell.mockReturnValue(true)
+-    mockHasApiKey.mockReturnValue(true)
+-
+-    mount(LoginView)
+-
+-    expect(mockClearApiKey).toHaveBeenCalledOnce()
+-    expect(mockReplace).not.toHaveBeenCalledWith('/hermes/chat')
++  it('renders the manual Matrix form when gateway auto-login is unavailable', async () => {
++    const wrapper = await mountLogin()
++    // 未自动登录：停留 Matrix 表单（homeserver/username/password 三输入），不导航
++    expect(wrapper.findAll('input.login-input').length).toBeGreaterThanOrEqual(3)
++    expect(mockReplace).not.toHaveBeenCalled()
+   })
+ 
+-  it('logs in with username and password', async () => {
+-    const theme = {
+-      fontSize: 16,
+-      textColor: '#202020',
+-      accentColor: '#3366ff',
+-      background: null,
+-      updatedAt: 42,
+-    }
+-    mockLoginWithPassword.mockResolvedValue({ token: 'jwt-token', userId: 7, theme })
+-    const wrapper = mount(LoginView)
++  it('auto-logs in from gateway credentials and pushes the redirect target', async () => {
++    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
++      ok: true,
++      json: () => Promise.resolve({ configured: true, homeserverUrl: 'http://hs', accessToken: 'gw-tok', userId: '@gw:hs' }),
++    } as unknown as Response)))
++    mockHermesMatrixLogin.mockResolvedValue({ token: 'gw-jwt', user: MATRIX_USER })
++    await mountLogin({ until: () => { expect(mockPush).toHaveBeenCalled() } })
++    expect(mockPush).toHaveBeenCalledWith('/hermes/chat')
++    expect(mockSetApiKey).toHaveBeenCalledWith('gw-jwt')
++    expect(mockStoreMatrixCredentials).toHaveBeenCalled()
++  })
+ 
++  it('logs in with Matrix credentials and replaces to the default route', async () => {
++    mockMatrixSdkLogin.mockResolvedValue({ accessToken: 'm-tok', userId: '@u:hs', deviceId: 'DEV', homeserverUrl: 'http://hs' })
++    mockHermesMatrixLogin.mockResolvedValue({ token: 'm-jwt', user: MATRIX_USER })
++    const wrapper = await mountLogin()
+     const inputs = wrapper.findAll('input.login-input')
+-    await inputs[0].setValue('admin')
+-    await inputs[1].setValue('123456')
++    await inputs[0]!.setValue('http://hs')
++    await inputs[1]!.setValue('mx-user')
++    await inputs[2]!.setValue('mx-pass')
+     await wrapper.find('form.login-form').trigger('submit')
+-
+-    expect(mockLoginWithPassword).toHaveBeenCalledWith('admin', '123456')
+-    expect(mockSetApiKey).toHaveBeenCalledWith('jwt-token')
+-    expect(mockActivateUserTheme).toHaveBeenCalledWith(7, theme)
+-    expect(mockReplace).toHaveBeenCalledWith('/hermes/chat')
++    await vi.waitFor(() => { expect(mockReplace).toHaveBeenCalled() })
++    expect(mockMatrixSdkLogin).toHaveBeenCalledWith('http://hs', 'mx-user', 'mx-pass')
++    expect(mockSetApiKey).toHaveBeenCalledWith('m-jwt')
++    // loginRedirectTarget：默认 /hermes/chat 映射为 /app（overlay[nav] 裁决）
++    expect(mockReplace).toHaveBeenCalledWith('/app')
+   })
+ 
+-  it('returns to the Agent link page after the first login', async () => {
+-    const redirect = '/group-chat-link?cloudOrigin=http%3A%2F%2F47.243.215.84%3A8088&requestId=handoff-id'
+-    mockRoute.query = { redirect }
+-    mockLoginWithPassword.mockResolvedValue({ token: 'jwt-token', userId: 7, theme: null })
+-    const wrapper = mount(LoginView)
+-
++  it('keeps a redirect query target on Matrix login', async () => {
++    mockRoute.query = { redirect: '/foo' }
++    mockMatrixSdkLogin.mockResolvedValue({ accessToken: 'm-tok', userId: '@u:hs', deviceId: 'DEV', homeserverUrl: 'http://hs' })
++    mockHermesMatrixLogin.mockResolvedValue({ token: 'm-jwt', user: MATRIX_USER })
++    const wrapper = await mountLogin()
+     const inputs = wrapper.findAll('input.login-input')
+-    await inputs[0].setValue('admin')
+-    await inputs[1].setValue('123456')
++    await inputs[0]!.setValue('http://hs')
++    await inputs[1]!.setValue('mx-user')
++    await inputs[2]!.setValue('mx-pass')
+     await wrapper.find('form.login-form').trigger('submit')
+-
+-    expect(mockReplace).toHaveBeenCalledWith(redirect)
+-  })
+-
+-  it('shows the default login hint', () => {
+-    const wrapper = mount(LoginView)
+-
+-    expect(wrapper.text()).toContain('login.defaultCredentialsHint')
++    await vi.waitFor(() => { expect(mockReplace).toHaveBeenCalled() })
++    expect(mockReplace).toHaveBeenCalledWith('/foo')
+   })
+ 
+-  it('shows an error when password login fails', async () => {
+-    mockLoginWithPassword.mockRejectedValue(new Error('Invalid username or password'))
+-    const wrapper = mount(LoginView)
+-
++  it('shows the invalid-credentials error on M_FORBIDDEN and does not navigate', async () => {
++    mockMatrixSdkLogin.mockRejectedValue({ errcode: 'M_FORBIDDEN' })
++    const wrapper = await mountLogin()
+     const inputs = wrapper.findAll('input.login-input')
+-    await inputs[0].setValue('admin')
+-    await inputs[1].setValue('bad-password')
++    await inputs[0]!.setValue('http://hs')
++    await inputs[1]!.setValue('mx-user')
++    await inputs[2]!.setValue('wrong')
+     await wrapper.find('form.login-form').trigger('submit')
+-
+-    expect(wrapper.find('.login-error').text()).toBe('Invalid username or password')
+-    expect(mockSetApiKey).not.toHaveBeenCalled()
++    await vi.waitFor(() => { expect(wrapper.find('.login-error').exists()).toBe(true) })
++    // i18n mock 直返 key
++    expect(wrapper.find('.login-error').text()).toBe('login.invalidCredentials')
+     expect(mockReplace).not.toHaveBeenCalled()
++    expect(mockSetApiKey).not.toHaveBeenCalled()
+   })
+ 
+-  it('shows the reset command hint when the login IP is locked', async () => {
+-    const err: any = new Error('Too many login attempts')
+-    err.status = 429
+-    mockLoginWithPassword.mockRejectedValue(err)
+-    const wrapper = mount(LoginView)
+-
++  it('switches to the local form when the Matrix backend is unreachable', async () => {
++    mockMatrixSdkLogin.mockRejectedValue(new Error('Failed to fetch'))
++    const wrapper = await mountLogin()
+     const inputs = wrapper.findAll('input.login-input')
+-    await inputs[0].setValue('admin')
+-    await inputs[1].setValue('123456')
++    await inputs[0]!.setValue('http://hs')
++    await inputs[1]!.setValue('mx-user')
++    await inputs[2]!.setValue('mx-pass')
+     await wrapper.find('form.login-form').trigger('submit')
++    await vi.waitFor(() => {
++      expect(wrapper.find('.login-error').text()).toBe('login.backendConnectionFailed')
++    })
++    // 后端不可达 → 自动切到本地表单（login.usernamePlaceholder 出现）
++    expect(localFormActive(wrapper)).toBe(true)
++  })
+ 
+-    expect(wrapper.find('.login-error').text()).toBe('login.tooManyAttempts')
+-    expect(wrapper.find('.login-lock-hint').text()).toContain('login.lockResetHint')
+-    expect(wrapper.find('.login-lock-hint').text()).toContain('login.defaultLoginResetHint')
+-    const commands = wrapper.findAll('.login-lock-hint code').map(command => command.text())
+-    expect(commands).toEqual([
+-      'hermes-web-ui clear-login-locks --restart',
+-      'hermes-web-ui reset-default-login',
+-    ])
++  it('logs in with username and password on the local form', async () => {
++    const theme = { background: null, updatedAt: 42 }
++    mockLoginWithPassword.mockResolvedValue({ token: 'jwt-token', userId: 7, theme })
++    const wrapper = await mountLogin()
++    await submitLocal(wrapper, 'admin', '123456')
++    await vi.waitFor(() => { expect(mockReplace).toHaveBeenCalled() })
++    expect(mockLoginWithPassword).toHaveBeenCalledWith('admin', '123456')
++    expect(mockSetApiKey).toHaveBeenCalledWith('jwt-token')
++    expect(mockActivateUserTheme).toHaveBeenCalledWith(7, theme)
++    expect(mockFetchCurrentUser).toHaveBeenCalled()
++    expect(mockReplace).toHaveBeenCalledWith('/app')
+   })
+ 
+-  it('shows the tray reset hint for locked desktop logins', async () => {
+-    mockIsDesktopShell.mockReturnValue(true)
+-    const err: any = new Error('Too many login attempts')
+-    err.status = 429
+-    mockLoginWithPassword.mockRejectedValue(err)
+-    const wrapper = mount(LoginView)
++  it('shows the server error message when local login fails', async () => {
++    mockLoginWithPassword.mockRejectedValue(new Error('Invalid username or password'))
++    const wrapper = await mountLogin()
++    await submitLocal(wrapper, 'admin', 'wrong')
++    await vi.waitFor(() => { expect(wrapper.find('.login-error').exists()).toBe(true) })
++    expect(wrapper.find('.login-error').text()).toBe('Invalid username or password')
++    expect(mockReplace).not.toHaveBeenCalled()
++  })
+ 
++  it('saves remembered local credentials and clears them when unchecked', async () => {
++    mockLoginWithPassword.mockResolvedValue({ token: 'jwt-token', userId: 7, theme: null })
++    const wrapper = await mountLogin()
++    await switchToLocal(wrapper)
+     const inputs = wrapper.findAll('input.login-input')
+-    await inputs[0].setValue('admin')
+-    await inputs[1].setValue('123456')
++    await inputs[0]!.setValue('admin')
++    await inputs[1]!.setValue('123456')
++    await wrapper.find('input[type="checkbox"]').setValue(true)
+     await wrapper.find('form.login-form').trigger('submit')
+-
+-    expect(wrapper.find('.login-error').text()).toBe('login.tooManyAttempts')
+-    expect(wrapper.find('.login-lock-hint').text()).toContain('login.desktopLockResetHint')
+-    expect(wrapper.findAll('.login-lock-hint code')).toHaveLength(0)
++    await vi.waitFor(() => { expect(mockReplace).toHaveBeenCalled() })
++    expect(window.localStorage.setItem).toHaveBeenCalledWith('local_remembered_username', 'admin')
++    // 口令 base64 后落存（encodePassword）
++    expect(window.localStorage.setItem).toHaveBeenCalledWith('local_remembered_password', btoa('123456'))
++
++    // 不勾选记住 → 登录成功时清除已存凭据
++    mockReplace.mockClear()
++    window.localStorage.clear()
++    vi.clearAllMocks()
++    const second = await mountLogin()
++    await switchToLocal(second)
++    const inputs2 = second.findAll('input.login-input')
++    await inputs2[0]!.setValue('admin')
++    await inputs2[1]!.setValue('123456')
++    await second.find('input[type="checkbox"]').setValue(false)
++    await second.find('form.login-form').trigger('submit')
++    await vi.waitFor(() => { expect(mockReplace).toHaveBeenCalled() })
++    expect(window.localStorage.removeItem).toHaveBeenCalledWith('local_remembered_username')
++    expect(window.localStorage.removeItem).toHaveBeenCalledWith('local_remembered_password')
+   })
+ })

@@ -784,3 +784,4 @@
 639-dsh-acp-nonjson-cap.patch
 
 640-studio-remove-default-login.patch
+641-client-login-view-test-rewrite.patch
