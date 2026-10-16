@@ -157,6 +157,24 @@ board_of_task() { # <user> <id> → 卡所在账号板 slug（找不到非零）
   return 1
 }
 
+
+
+# dev_signal：拉某档案最近 done 的 result/reviewer_blocker 字段——派发词注入上次 review 关注点
+# （V8.33 持续改进面，run20 沉淀）。
+dev_signal() { # <user> <limit-默认 2> → stdout: 每行一条 "卡ID|关注点一句话"（取 result 或 reviewer_blocker 字段）
+  local u="$1" lim="${2:-2}" seen=0 out=""
+  for slug in $(account_boards "$u" 2>/dev/null); do
+    HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null       | jq -r --argjson lim "$lim" '.[] | select(.status == "done")
+          | select((.result // "") != "" or (.reviewer_blocker // "") != "")
+          | "\(.id // "?")|\((.result // .reviewer_blocker // "") | gsub("[\\n;|]"; " ") | .[0:80])" ' 2>/dev/null       | head -n "$lim" | while IFS= read -r line; do
+          (( seen < lim )) || break
+          out+="${line}
+"; seen=$((seen+1))
+        done
+  done
+  printf '%s' "$out" | head -n "$lim"
+}
+
 kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[...]}
   # 09-26 run6/7 实锤：studio /api/hermes/kanban?board=* 整板返空（tenant 面未明），
   # 板上真卡在却两窗误杀（kanban_has/kanban_status_of 全线失明）。改 CLI 直查：

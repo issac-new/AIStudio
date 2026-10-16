@@ -1124,6 +1124,19 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 
   # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
   # 各自 origin/main 起建）；d2=依赖双路（hu/lin，feat/DEV-PAYCORE 落地触发）。
+  # V8.33 持续测试（run20 沉淀）：devimpl_d{N} 落键即触发该分支 qi 单片测试派发
+  # ——不等 devimpl_done。dev 单分支落地即本分支单片测（s1=PAY-C/s2=PAY-S/s3=PAY-N/wx=hu/al=lin/mp=xiao）。
+  if [[ -n "$(sget devimpl_d1)" && -z "$(sget test_dispatch_ts_inc)" ]]; then
+    sset test_dispatch_ts_inc $(( $(date +%s) * 1000 ))
+    _dsig=$(dev_signal wei 2 2>/dev/null | head -c 400)
+    dispatch_in_room qi "@qi-agent:matrix.test 单片测试 TEST-BE-PAY-C：拉 feat/DEV-PAYCORE-C 后跑 vitest；testlog 存 docs/evidence/TEST-BE-PAY-C-testlog.txt 随 commit+push origin/feat/DEV-PAYCORE-C；结论行 TEST-PASS-TEST-BE-PAY-C 或 TEST-FAIL-...。${_dsig:+上轮 review 关注：${_dsig}}\n工作区 $(workspace qi)。30 分钟内推 testlog+回执。禁静默。"
+    dispatch_in_room qi "@qi-agent:matrix.test 单片测试 TEST-BE-PAY-S：拉 feat/DEV-PAYCORE-S 同上；testlog 存 TEST-BE-PAY-S-testlog.txt；结论行 TEST-PASS-/-FAIL-TEST-BE-PAY-S。${_dsig:+上轮 review 关注：${_dsig}}"
+    dispatch_in_room qi "@qi-agent:matrix.test 单片测试 TEST-BE-PAY-N：拉 feat/DEV-PAYCORE-N 同上；testlog 存 TEST-BE-PAY-N-testlog.txt；结论行 TEST-PASS-/-FAIL-TEST-BE-PAY-N。${_dsig:+上轮 review 关注：${_dsig}}"
+    dispatch_in_room fei "@fei-agent:matrix.test 单片测试 TEST-FE-MP：拉 feat/DEV-MP；testlog 存 TEST-FE-MP-testlog.txt；结论行 TEST-PASS-/-FAIL-TEST-FE-MP。${_dsig:+上轮 review 关注：${_dsig}}"
+    dispatch_in_room fei "@fei-agent:matrix.test 单片测试 TEST-FE-WX：拉 feat/DEV-CHWX 同上；testlog 存 TEST-FE-WX-testlog.txt；结论行 TEST-PASS-/-FAIL-TEST-FE-WX。${_dsig:+上轮 review 关注：${_dsig}}"
+    dispatch_in_room fei "@fei-agent:matrix.test 单片测试 TEST-FE-AL：拉 feat/DEV-CHALI 同上；testlog 存 TEST-FE-AL-testlog.txt；结论行 TEST-PASS-/-FAIL-TEST-FE-AL。${_dsig:+上轮 review 关注：${_dsig}}"
+  fi
+
   if [[ -z "$(sget devimpl_d1)" ]]; then
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
 1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
@@ -1556,6 +1569,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
+【dev_signal·V8.33 持续改进】上轮 review 关注点（最近 done 卡 result 抽 2 条）：$(dev_signal wei 2 2>/dev/null | tr '\n' ';' | head -c 300)
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
     sset m19_marker "$_m19"
     dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE（收银台前端测试）。
