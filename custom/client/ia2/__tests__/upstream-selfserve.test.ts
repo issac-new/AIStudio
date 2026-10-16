@@ -18,8 +18,8 @@ describe('A1 Web 终端收编三段链（routes → VIEW_LOADERS → 侧栏条�
     expect(routes).toContain("annex('/hermes/terminal', 'hermes.terminal', { superAdmin: true })")
   })
 
-  it('IaLegacyShell VIEW_LOADERS 装载 TerminalView', () => {
-    const shell = readOverlay('custom/client/ia2/views/IaLegacyShell.vue')
+  it('VIEW_LOADERS（走查三修迁 legacy-view-loaders.ts，壳仍消费）装载 TerminalView', () => {
+    const shell = readOverlay('custom/client/ia2/views/legacy-view-loaders.ts')
     expect(shell).toContain("'hermes.terminal': () => import('@/views/hermes/TerminalView.vue')")
   })
 
