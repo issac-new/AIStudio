@@ -1,74 +1,70 @@
-# 结构探查报告（流A ① 结构子代理，2026-09-16）
+# overlay 仓「结构与构建」探查报告（路A · 2026-10-16 全量重生成轮）
 
-## 1. 工作区顶层布局
+仓库：/Users/cuishi/lab/ncwk/overlay，git main @ b38044db（2026-10-16）。overlay-fork：最终应用 = 只读上游 ../upstream/hermes-studio（检出 v0.7.35）+ patches 注入 + custom/ 自有代码。
 
-| 路径 | 角色 | git 仓库 |
-|---|---|---|
-| `overlay/` | 二开 overlay 仓库（patches + custom + scripts + release notes） | 是（当前 main @ 3b730cb） |
-| `upstream/hermes-studio/` | 只读上游：Electron+Vue+Koa 桌面应用，tag **v0.7.21**（8d964022, 2026-09-12），remote github.com/EKKOLearnAI/hermes-studio | 是 |
-| `upstream/element-web/` | 只读上游：Matrix 参考实现，tag **v1.12.27**（6dffa50580, 2026-09-01） | 是 |
-| `upstream/hermes-agent/` | 只读上游：Python agent 运行时，tag **v2026.9.14** = release v0.21.3（345cd2b057, 2026-09-14） | 是 |
-| `docs/` | 工作区文档（superpowers specs/plans/notes + 公众号稿） | 否 |
-| `.claude/ .agents/ .zcode/ .superpowers/` | 各 agent 工具配置/plans 目录 | — |
-| `node_modules/`（顶层） | 空占位；overlay/node_modules 是指向上游的 symlink | — |
+## 1. 顶层目录
 
-## 2. overlay 构建系统（package.json scripts）
-
-- `inject` → node scripts/inject.mjs：应用 B 类 patch + symlink + 生成 vite.config.overlay.ts
-- `clean` → inject.mjs --clean：逆序 reverse patch、移除 symlink、还原非 patch 产物
-- `verify` → verify-clean.mjs：校验上游工作树干净
-- `sync` → sync-upstream.sh：clean → gh release 最新 tag（fallback git describe origin/main）→ detached checkout + git clean -fdx → re-inject → npm install
-- `ensure-injected` → ensure-injected.mjs：幂等前置钩子（predev/prebuild），manifest 或 cockpit 路由检测
-- `build` → vite build --config vite.config.overlay.ts（仅 client bundle）
-- `dev` → cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --port 8649 --strictPort
-- `test` → vitest run
-- `build:full` → build.mjs：openapi:generate → vite build → server tsc → build-server
-- `build:dmg[:mac|:win|:linux]` → build-dmg.mjs 五步：inject → build:full → desktop npm ci → build:main（desktop tsc）→ electron-builder --publish never
-- engines.node >= 23.0.0
-
-## 3. scripts/ 全量（14 文件）
-
-inject.mjs（patch 应用/还原+symlink+vite config 生成+manifest）/ ensure-injected.mjs / verify-clean.mjs / sync-upstream.sh / build.mjs / build-dmg.mjs / serve-server.sh（TS_NODE_PROJECT 修正 + PORT 默认 8647，cwd=upstream/hermes-studio）/ add-i18n-keys.mjs / add-matrixchat-i18n.mjs / graph-migrate.mjs（薄壳委托 vite-node）/ graph-migrate-cli.ts（dry-run 默认，--apply 落库 .loop/graph-specs.json）/ graph-shadow-report.mjs（shadow 双跑对齐率）/ loop-migrate.mjs（LocalStore→MatrixStore）/ loop-migrate-saas.mjs（MatrixStore→SaaSStore PG）
-
-## 4. 注入机制细节（inject.mjs）
-
-- patch 路由（:53-74，clean 侧 :104-123）：patch 文本首个 `---/+++ a|b/<path>` 前缀匹配——`hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/ tests/hermes_cli/` → **hermes-agent**；其余 → hermes-studio。hermes-agent patch 失败 warn+continue（:80-86），hermes-studio 失败 exit 1
-- series 文件：每行一个 patch 文件名按序应用，`#` 注释禁用（:32-39）；420 行 = 启用 219-220 + 禁用 30-34 + 段注 118 + 空行
-- manifest `.overlay-injected.json`：{appliedPatches, generatedAt}（:369-377）；clean 优先读 manifest 否则 fallback series（:381-383）
-- symlink 两条：`overlay/node_modules → upstream/hermes-studio/node_modules`（:222-245）；`upstream/.../server/src/custom → overlay/custom/server`（:247-279，因 server 用相对路径 import，tsc/esbuild 不吃 vite alias）
-- vite.config.overlay.ts 生成（inject.mjs:139-220）：mergeConfig 上游，root 指向上游 packages/client 绝对路径；alias 数组顺序敏感：`/src/main.ts`→registries/client/entry.mts（:26）、`@/custom`+`@custom`→custom/client（:27-28）、`@registries`→registries（:29）、`@`兜底→上游 client/src（:31）；build.outDir=上游 dist/client；dev proxy `/agent-health`→127.0.0.1:8650/health 并从 ~/.hermes/.env 读 API_SERVER_KEY 注入 Bearer（:190-213）
-- 脏树门禁（:319-350）+ restoreNonPatchArtifacts（:281-311）
-
-## 5. 端口与运行形态
-
-8647 后端 Koa（serve-server.sh:9）/ 8649 vite dev strictPort / 8648 上游 start / 8650 agent health 代理。Electron 壳 = upstream/hermes-studio/packages/desktop/（src/main 30+ 模块：entry/index/app-lifecycle/webui-server/webui-port/runtime-manager/updater/hermes-cli/linux-sandbox；src/preload；electron-builder.yml；release/ 产物目录）。
-
-## 6. 构建发布链路
-
-build-dmg.mjs 产物落 `upstream/hermes-studio/packages/desktop/release/`（mac: dmg+zip；win: zip）。RELEASE-NOTES.md（102KB）结构：`## 版本` 倒序每版一行摘要（`SwarmStudio **2.23**（基于 hermes-studio v0.7.21 + hermes-agent v0.21.3 …）`）+ `>` 引用块四段式详情（升级面/patch regen/门禁/产物 sha256）+ `### X.Y 明细` + `## 历史版本`。release-notes-1.1..2.2.md 为早期单版文件（12 个），2.1 后主写汇总文件。上传 GitHub/ModelScope 按用户指令（--publish never）。
-
-## 7. upstream/hermes-studio 目录地图
-
-- `packages/client/` Vue web UI：src/{api,views,components,stores(Pinia),router,composables,i18n(locales 10+ 语言 ts),styles,shared,types,utils,constants,data,assets,main.ts,App.vue}；public/；index.html
-- `packages/server/` Koa：src/{bootstrap(http 启动),modules(coding-agents/ekko/hermes/studio 四大业务域),custom(→overlay symlink 注入位),assets,index.ts}
-- `packages/desktop/` Electron 壳（见 §5）
-- `packages/ekko-agent/`、`packages/esp32-c3/`（MCU 固件）、`packages/skills/`
-- 顶层：scripts/（build-server.mjs/generate-openapi.mjs/desktop-dev.mjs）、dist/、tests/、docs/、vite.config.ts、vitest.config.ts、playwright.config.ts、docker-compose.yml/Dockerfile、bin/
-
-## 8. docs/superpowers/ 文档清单
-
-specs/ 33 篇（kanban 高级特性/Matrix 账号集成/**2026-06-21-overlay-architecture-design.md 奠基文档**/cockpit 技术债 batch0-4/cockpit 各子系统设计/loop-engineering/framework-gates/hermes-agent 019-020 迁移等）；plans/ 36 篇（与 specs 对应的实施版，含 swarm-studio-cockpit-p1..p6、hermes-studio-0646-upgrade）；notes/ 1 篇（run-trace-view 部署手记）。overlay 仓内另有 overlay/docs/superpowers/{specs 39,plans} 并存有分叉（近期落 overlay 侧）+ 5 篇 docs-*.md 散稿。
-
-## 结构事实速查表
-
-| 项 | 值 |
+| 条目 | 用途 |
 |---|---|
-| overlay 版本 | 0.7.21-overlay-2.23（package.json:3） |
-| 三 upstream | hermes-studio v0.7.21 / element-web v1.12.27 / hermes-agent v0.21.3 |
-| desktop 捆绑 runtime | pin 0.21.0（patch 207） |
-| 端口 | 8647 后端 / 8649 vite / 8650 agent health / 8648 上游 start |
-| 构建输出 | client→upstream dist/client；server→dist/server |
-| 注入 manifest | overlay/.overlay-injected.json |
-| symlink | node_modules→上游；server/src/custom→overlay/custom/server |
-| vite alias 链 | /src/main.ts→entry.mts；@/custom+@custom→custom/client；@registries→registries；@→上游 client/src |
-| patch 路由 | hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/ tests/hermes_cli/ → hermes-agent |
+| patches/ | B 类补丁主库（studio+agent 双目标路由），series 770 行（有效 359），_skip/ 与 _skip-0735/ 归档 |
+| zcode-patches/ | 第三上游 upstream/zcode 补丁（5 文件 series 有效 4） |
+| custom/ | A 类纯新增：client（16 域）/server（90+ 域实测 127 模块）/desktop/qgate/hermes-agent-plugins/upstream-compat/__tests__ |
+| registries/ | client entry shim：registries/client/entry.mts 被重定向为 /src/main.ts 入口（复制上游启动序列+A 类注册） |
+| scripts/ | 56 项工具脚本：inject/serve/build/verify/regression/walkthrough 族、githooks/pre-commit、runtime/ 子目录 |
+| runtime/ | 受管外部运行时镜像（semantica v0.7.0 MCP、pua @e6e6cd2 12 技能、pricing/roster），runtime-manifest.json 同步 ~/.hermes/hermes-agent；模板必须入库（D3 事故实锤） |
+| config/ | bootstrap.ts / features.ts / loop-config.ts（路径与特性配置单一事实源） |
+| vite.config.overlay.ts | inject 生成、已 gitignore、勿手改（改 inject.mjs） |
+| vitest.config.ts | overlay 测试权威配置（手写入库） |
+| tsconfig.json | 极简 ESNext/bundler/strict:false/noEmit（仅类型工具用，实编译走上游 tsconfig） |
+| packages/、tests/ | inject 生成的上游派生件（gitignore 声明） |
+| node_modules | 符号链 → ../upstream/hermes-studio/node_modules（依赖借用单一事实源） |
+| RELEASE-NOTES.md（148KB）+ release-notes-1.1~2.2.md | 发布说明族 |
+| docs/（30 项）、spec/、evidence/、assets/ | 文档/规格/证据 |
+| docker-compose.yml | 沙箱编排占位（注释明示未经验证不得宣称可 up） |
+| .overlay-injected.json | inject 状态 manifest（生成物；实录 appliedPatches 359 / appliedZcodePatches 4 / generatedAt 2026-10-15T07:21:14Z） |
+| .github/workflows/qgate.yml | 唯一 CI |
+| .archived-patches/、.qgate/、.swarm-yuan/、patches-v0.7.35-fixes/（空）、docs-cockpit-*.md | 归档/门禁/生成轮工作区/设计稿 |
+
+## 2. package.json
+
+name=hermes-overlay；version=0.7.30-overlay-2.38（package-lock 滞后一版 0.7.29-overlay-2.37）；private；type=module；engines node>=23.0.0；**dependencies/devDependencies 均为空**（//deps-borrow 注释：依赖单一事实源=上游 package.json devDependencies，symbol-grounding.yaml 机器核验）。借用基线：vite ^8.0.4 / vitest ^3.2.4 / vue ^3.5.32 / pinia ^3.0.4 / vue-router ^4.6.4 / typescript ~6.0.2 / vue-tsc ^3.2.8 / ts-node ^10.9.2 / @vitejs/plugin-vue ^6.0.5 / naive-ui ^2.44.1 / vue-i18n ^11.3.2 / jsdom ^27.0.1 / esbuild ^0.27.0 / @playwright/test ^1.63.0 / monaco-editor ^0.55.1 / @xterm/xterm ^6.0.0。
+
+scripts 全表：inject（inject.mjs 补丁注入+派生 vite config+链接 custom/server）/ clean（--clean 反向还原；8647 在听拒执行，OVERLAY_ALLOW_LIVE_CLEAN=1 豁免）/ serve（serve-server.mjs ts-node 拉上游后端 PORT=8647）/ verify（verify-clean.mjs 上游纯净态）/ sync（sync-upstream.sh）/ ensure-injected（幂等差量补套）/ build（vite build 纯 client）/ prebuild+predev（先 ensure-injected）/ dev（HERMES_WEB_UI_BACKEND_PORT=8647 vite --port 8649 --strictPort）/ dev:lan（+--host，devAutoLogin admin/123456 仅限可信局域网）/ test（vitest run）/ test:eval（eval 回归单文件）/ bench:expert / build:full（build.mjs 全链）/ build:dmg|:mac|:win|:linux（electron-builder）/ catalog-check+zcode:ensure+zcode:serve（zcode 引擎面）/ runtime:doctor|:vendor-pua|:register / postbuild（verify-dist.mjs 产物完整性门禁）。
+
+## 3. 构建系统
+
+- 配置三件：vite.config.overlay.ts（生成物）、vitest.config.ts（手写）、tsconfig.json（极简）。无独立 rollup/electron-builder 配置（后者在上游 packages/desktop）。
+- vite.config.overlay.ts：mergeConfig 上游 vite.config 后覆盖——root/outDir 钉绝对路径（outDir=upstream/hermes-studio/dist/client，desktop 构建读此目录）；alias 数组顺序敏感：pinia/vue/@vue/runtime-core/vue-router 裸包名钉上游单实例（双实例白屏根治）→ /src/main.ts→overlay/registries/client/entry.mts → @/custom|@custom→custom/client → @ 兜底上游 src；inlineDynamicImports:true（单 chunk，规避 rolldown+echarts 跨 chunk 漏 import）；server.fs.allow 双根；server.proxy：/api /v1 /health /upload /socket.io 补 xfwd:true →8647，/agent-health→127.0.0.1:8650（rewrite+从 ~/.hermes/.env 读 API_SERVER_KEY 注 Bearer）；vite:vue 注入 node:fs 适配器（typescript 7.x 预览版 compiler-sfc ts.sys 探测失效适配）。
+- build:full 顺序：上游 generate-openapi.mjs → vite(overlay config) → tsc --noEmit -p packages/server/tsconfig.json → 上游 build-server.mjs → 拷 runtime/{pricing,roster} → dist/server/runtime/ → 拷 semantica-bridge.py → verify-dist.mjs 门禁（index.html 缺失/<200B/assets 无 JS 即硬失败）。
+
+## 4. patch 注入体系
+
+- patches/ 409 .patch 文件；series 有效 359；manifest 对齐（appliedPatches 359/appliedZcodePatches 4）。
+- 命名：NNN-域-描述.patch 三位零填充（000 起，当前最大 620+）；域段 client-/server-/test-/cockpit-/desktop-rebrand- 等。
+- inject.mjs 机制：①按 series 顺序 git apply --whitespace=nowarn（win32 加 --ignore-whitespace）②目标路由：解析 patch 首个 ---/+++ 目标路径，命中 HERMES_AGENT_PATCH_PREFIXES（hermes_cli/ plugins/ agent/ apps/ assets/ gateway/ tools/ model_tools.py toolsets.py 等）路由到 upstream/hermes-agent，否则 hermes-studio；agent/zcode 目标失败容错跳过，studio 失败 exit 1 ③符号链 custom/server→上游 packages/server/src/custom ④生成 vite.config.overlay.ts（路径 JSON.stringify 转义防 Windows 反斜杠）⑤写 manifest；--clean 反序 git apply --reverse+untracked 清理，不触上游 .git ⑥OVERLAY_UPSTREAM_ROOT 支持隔离注入副本；clean 前探测 8647 拒绝带服清理。
+- ensure-injected.mjs：manifest 在而 series 领先时自动补套差量。
+
+## 5. 测试体系
+
+vitest ^3.2.4（借上游）；vitest.config.ts：include ['custom/**/*.test.ts']（只跑 overlay）；setupFiles custom/client/test/setup.ts（stub ResizeObserver/localStorage）；environment 按文件 // @vitest-environment jsdom；alias 与构建 config 手工同步；define __APP_VERSION__='test'；OVERLAY_UPSTREAM_ROOT 隔离树。
+测试文件 628：client 292 / server 307 / qgate 19 / __tests__ 5 / desktop 4 / upstream-compat 1。运行 npm run test；历史基线 534 文件 3847 过/1 skip（2026-10-13 记档）。另有 scripts/regression/ 16 个 ux/api/pixel 探针 + custom/qgate 独立包（自带 tsconfig+vitest，CI 单独跑）。
+
+## 6. 端口（实证）
+
+前端 dev 8649（--strictPort）；后端 8647（serve-server.mjs，TS_NODE_PROJECT=packages/server/tsconfig.json TS_NODE_FILES=1）；代理 8649→/api /v1 /health /upload /socket.io→8647（xfwd）+/agent-health→8650；上游 start 8648；desktop webui livez 8748；dev:lan 全网卡 8649。
+
+## 7. 产物与发布
+
+- web 产物：upstream/hermes-studio/dist/client + dist/server。
+- 桌面产物：upstream/hermes-studio/packages/desktop/release/。流程：inject --clean→硬还原→inject→build:full→desktop npm ci+build:main(tsc)→根 node_modules npm prune --omit=dev（防 14GB 巨包）→electron-builder（mac --mac --publish never -c.mac.identity=null ad-hoc 无签名，本机证书已吊销；win --win --x64；linux --linux）。
+- 产物类型：mac arm64 DMG + win x64 zip 双 canonical（命名 SwarmStudio-<上游版本>-mac-arm64.dmg / -win-x64.zip，附 sha256），GitHub Release+ModelScope 双通道；nsis -86 bad CPU type 为在案惯例非交付物。
+- RELEASE-NOTES 态：最新已发 2.37（hermes-studio v0.7.29+agent v0.21.5，dmg 384.0MB/zip 412.3MB，2026-10-04）；2.38 进行中；上游检出实为 v0.7.35（0.7.35 升级轮已启动）；desktop 捆绑 hermes runtime pin 0.21.5。
+- 同版本号覆盖缓存陷阱：发版须递增版本号并删 ~/.hermes-web-ui/webui/<version>/（README:631-637）。
+
+## 8. CI/CD
+
+唯一 .github/workflows/qgate.yml：触发 push/PR 且路径限 custom/qgate/**；ubuntu-latest+node 24；working-directory custom/qgate 内 npm install && npx tsc && npx vitest run。注释明示：overlay 全量依赖本地注入态 upstream 树 CI 不可复现，故只跑 qgate。无发布自动化（发版本机手工）。
+
+## 9. 环境要求
+
+node>=23（CI 24；无 .nvmrc）；desktop 捆绑 python pin 3.12.13（fetch-python.mjs:33 PBS_PY）；runtime/ 面依赖 HERMES_BIN 指向 python；布局硬约定 ../upstream/{hermes-studio,hermes-agent,zcode} 三兄弟目录；OVERLAY_UPSTREAM_ROOT 可重定向。

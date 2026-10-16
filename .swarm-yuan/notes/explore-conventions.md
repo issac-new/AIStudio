@@ -1,62 +1,69 @@
-# 规范探查报告（流A ① 规范子代理，2026-09-16）
+# overlay 仓「开发规范+项目知识」探查报告（路B · 2026-10-16 全量重生成轮）
 
-## 1. 书面规则汇总
+## 1. 可改范围（硬约束）
 
-**工作区 AGENTS.md**（硬规则源）：仅允许修改 overlay/（:5）；严格禁止修改 upstream/ 任何文件，仅可 git pull（:7-9）；upstream 变更唯一通路 = overlay/patches/ + npm run inject（:11）；所有开发基于 overlay main 建 feat/fix/refactor 分支，测试验证通过后合回 main（:15-31）。
+- 仅可改 overlay/（工作区 AGENTS.md:5）；upstream/ 严格只读仅 git pull（:7-9）；upstream 变更必须经 patches/ + npm run inject（:11）
+- upstream 构成：hermes-studio（v0.7.32 稳定线）/element-web（v1.12.30）/hermes-agent（v0.21.6）+ 参照仓（claude-code/codex/dsh-TUI 等只读）
+- simharness/ 独立仓 overlay 只读消费；推演落 ncwk-sim-mux/（SIM_ROOT），不写宿主 ~/.hermes/hermes-agent
+- git 只在 overlay/；工作区根非 git 仓（CLAUDE.md:10）
 
-**工作区 CLAUDE.md**（操作手册）：端口 8647/8649/8650（:38-44）；A类=custom/ 纯新增走 alias+entry shim+registry，B类=patches/ 构建期 git apply（:48-53）；inject 五步（:55-62）；auto-inject 钩子幂等、脏树跳过（:63）；新增 B 类 patch 五步法：临时改 upstream→git diff>patches/NNN-desc.patch→git checkout -- . 还原→入 series→inject 验证（:128-133）；patch 冲突用 git apply --reject 手解（:160）；Node ≥23（:153）。
+## 2. 改造分类（A/B 类）
 
-**overlay/README.md**（37.7KB）：三上游始终原状、.git 永不污染（:181）；A/B 类表含可逆性列（:187-190）；~7 类骨架改动是运行前置故不能全用 A 类（:192）；i18n 扩展键直接经 patch 注入上游 locale，无运行时 merge（:149-151）；新 UI zh/en 全键对称、其余语言 en 回退（:53）；**发布必须用 overlay build:full，禁上游 npm run build**（:490）；后端改动须 `lsof -ti:8647 | xargs kill -9` 重启；改 B 类 patch 后必须先 clean && inject 再重启（:413-443）；发版须递增版本号 + 删 ~/.hermes-web-ui/webui/<version>/ 缓存（:570-576）；README 自报规模口径（177 patch/113 组件/106 测试，:561-564）已滞后于实测（220 启用/146 组件/140 测试）。
+- A 类（纯新增）：组件/store/服务放 custom/，经构建期 alias（@/custom）+ entry.mts shim + 运行时 registry（registerRoute/registerNavEntry/registerComponent，registries/client/bootstrap.ts 按 features 开关动态注册）接入，零侵入（README:229-238,317-339）
+- B 类（骨架修改）：schema/config/vite/路由等约 7 类运行前置条件走 patch。工作流：upstream 临时改→git diff>patches/NNN-描述.patch→还原上游→series 登记→npm run inject 验证（README:573-581）
+- 改 B 类 patch 后后端重启前必须 npm run clean && npm run inject（README:498）
+- 上游升级：npm run sync = clean→fetch/reset upstream→re-inject
 
-## 2. Git 规范实证
+## 3. 分支规范
 
-- commit：Conventional Commits + 中文描述 + scope 括注模块域，如 `fix(loop-cockpit): 完成 KPI 恢复 7 日窗口口径——…`。type 分布（180 天 501 提交）：fix 148 / feat 147 / merge 46 / docs 39 / chore 17 / style 12 / refactor 8 / test 5
-- merge：**显式 --no-ff**（近 10 个 merge 全部双父），风格 `merge: feat/xxx — 说明`
-- 分支：feat/fix/chore/docs/release/backup 前缀严格；版本升级分支 `feat/upstream-0.7.21` 式；tag `v2.x`（v2.4…v2.22）；合入后分支保留不删（60+ 本地分支）；存在多 worktree 并行（.claude/worktrees/）
+- 工作区：基于 overlay main 建 feat/<name>，验证过合回 main；命名 feat/fix/refactor（AGENTS.md:13-31）
+- 用户级更强（v2.6）：提交型任务一律 worktree（.claude/worktrees/，≤3 并行，origin/main 起分支，--no-ff 合并保留边界，不跨 worktree cherry-pick，一任务一收口）
+- 实证（2026-10-16）：现存分支全 feat/*（cluster-delivery-pushed/cluster-dev-signal/cluster-devimpl-incremental/cluster-expected-work/wp1-server-contracts）+main；工作区根可见 overlay-wt-* worktree 目录
+- 偏离需用户明示（「直接在 main 改」「这是只读探索」）；只读探索不产生提交无需 worktree
 
-## 3. patch 规范
+## 4. 文档约定
 
-- series（420 行）：启用 220（grep -cE '^[0-9]'）、禁用 30-34（`# NNN-…  # 原因`，三类措辞：`disabled — keep native…` / `SKIP: …` / `FIXME: pre-existing context mismatch…Stale` / `combined into NNN`）、段注 118 行（说明一批 patch 或用户裁决，如 274 注「2026-09-16 用户裁决」）
-- 命名：`NNN-desc.patch` 三位零填充，000 起步，当前最大 274；编号有空洞（归档或预留段）；描述段小写连字符常带域前缀 client-/server-/desktop-/i18n-/test-/cockpit-；撞号顺延+段注说明（271/272 例：「编号顺延——265-270 已被并行会话的麒麟兼容轮占用」）；开工前 `ls patches/ | grep ^NN` 查重
-- 文件体：纯 `git diff` 输出（无 format-patch 头），hunk 内允许中文注释（如 `// overlay[ia2]: …`）
-- 归档：`.archived-patches/` 存退役 patch，series 同步摘除
-- 孤儿文件：142/145/147/152（磁盘存在、series 零引用，被注释明示折进别的 patch 的残留）
+- docs/superpowers/{specs,plans,notes}；命名 YYYY-MM-DD-<topic>.md（specs 多 -design 后缀）；specs 112 条目 / plans 52 文件 / notes 3 md
+- 设计正本=specs/2026-10-05-mux-v8-fullflow-plan.md（推演全流程唯一正本，终态五部分+本体论六要素）；档案件=mux-history-and-engineering-archive.md；归档约定=specs/archive/README.md（唯一副本+git 历史保全）
+- 当前活跃设计簇（2026-10-15/16）：swarmstudio-product-replan + redesign-reconciliation-ledger（对账总表=唯一归属源）+ 四件实施级详设
+- 无 CONTRIBUTING/.editorconfig；.github 仅 qgate.yml
+- 方案结构七项裁定（记忆 plan-structure-rules）：一事实一源/标题无括号赘述/本体视图对象=推演需求场景/生成执行一图衔接/清理三类处置/能力层按实物展开/跨部分边界卡
 
-## 4. 测试规范
+## 5. 安全与发布规则
 
-- vitest.config.ts 手写入库，与 vite.config.overlay.ts 平行（vitest.config.ts:1-5）；alias 数组必须同步、`@/custom`/`@custom` 先于兜底 `@`（:20-28）
-- include: ['custom/**/*.test.ts'] 只跑 overlay 自身（:31-32）；setup custom/client/test/setup.ts；DOM 环境各文件头 `// @vitest-environment jsdom` 按需
-- 实测 140 个测试分布在 15 个 custom/**/__tests__/ 目录；tests/ 目录 gitignored，tracked 测试一律放 custom/**/__tests__/
-- 风格：describe/it 从 vitest 导入，中文 it 标题，工厂函数构造 fixture，vi mock；测试头注释标注设计任务/修复波来源
-- 用法：npm test / npm test -- cockpit / npm test -- -t "attention"；41% 提交触及测试
-- 收口门禁：npm test + clean&&inject 重放 + build:full；发布注记记录 vitest 文件数/通过数、i18n-coverage 18/18、上游 vue-tsc EXIT=0
+- 构建物：只出 mac arm64 dmg + win x64 zip；dmg 免签 CSC_IDENTITY_AUTO_DISCOVERY=false+notarize=false（本机证书已吊销，签出包被 AMFI SIGKILL）；锚点 build-dmg.mjs:27-38（mac -c.mac.identity=null -c.mac.icon=build/icon.icns；win 必带 --x64）
+- 不自动上传：RELEASE-NOTES 多轮明示；build-dmg.mjs 全平台 --publish never
+- 密钥/脱敏（shared/ 补件泄漏事故 2026-10-14）：shared/.env.common 与 profiles.yaml 明文真密钥根治——全置换占位+scrub_db 加 VACUUM+collect 认任何 .env*+profiles.yaml；用户硬待办=轮换泄漏密钥（清单 ACCOUNTS.md）
+- 审计脱敏：toolresultguard JSONL sha1 脱敏不落原文；eval 密封集防探测契约
+- .gitignore 要点：inject 派生产物不入库（.overlay-injected.json/packages//tests//vite.config.overlay.ts）；node_modules 符号链；runtime/ 模板必须入库（D3 事故）；/upstream 不入库
 
-## 5. i18n 规范
+## 6. 验证方式
 
-- 新 UI zh/en 全键对称、其余语言 en 回退；扩展键经 B 类 patch 注入上游 locale（packages/client/src/i18n/locales/{zh,en}.ts），无运行时 merge；custom 下无独立 locale 文件
-- i18n patch 均 zh/en 成对编号相邻（074/075、090/091、236/237、252/253、254/255、271/272）
-- 旧多语言 patch（044-052 de/es/fr/ja/ko/pt/ru/zh-TW）全部 FIXME-Stale 禁用，仅保 zh/en 主线
-- 缺键会被上游 tests/client/i18n-coverage.test.ts 拦截（series:339-343 注记）；辅助工具 add-i18n-keys.mjs / add-matrixchat-i18n.mjs
+- 默认浏览器热更新禁止默认装机（P0）：npm run dev 8649 + 内置浏览器走查；仅用户主动要求才装机；例外=Electron 主进程/IPC/原生模块（AGENTS.md:33-46）
+- 后端/注入口径（CLAUDE.md）：改 server/patch 后 lsof -ti:8647 | xargs kill -9 再 re-serve；改 B 类 patch 须先 clean && inject；前端热更，仅 alias/entry-shim/vite-config 变更需重启 vite
+- 测试门禁：npm test（vitest custom/**）；test:eval（红线负例）；qgate engineering.basic-check（junit 落盘 minTotal 100；退出码 0 但报告含失败=INCONCLUSIVE 不给假绿）+ symbol-grounding（node_modules 借用契约）
+- 升级轮门禁口径：纯净树全系列重放→inject N/N→server tsc 0 错→vitest 全量→i18n-coverage→build:full EXIT=0→（出包轮）装机三验（CFBundle 版本+进程存活+8748 livez+chunk 指纹）
+- 用户级验证门禁七条：真实工具链先行/每维度单一事实源+守门测试/语言陷阱 checklist/修复回归面=修复点+相邻路径/模板↔产物双向同步/并行同仓先查漂移/收敛判据=零新缺陷完整轮
+- 决策倾向：根治优先/合一收敛/自动化+机械验收/实测带锚点/验收标准=无背景者一眼看懂
 
-## 6. 发布规范
+## 7. 提交规范
 
-- 版本号双轨：overlay 发布号 2.x 体现在 package.json version `0.7.21-overlay-2.23`；桌面产物号 = 上游版本，由 patch 042 写入 desktop package.json（产物名 SwarmStudio-0.7.21-arm64.dmg）；上游升级时 042 须手解「version 行取上游 / 品牌字段取 ours」
-- RELEASE-NOTES.md 四段式注记 + sha256 回填；`chore(release):` / `docs(release):` commit + tag
-- 构建物上传与否由用户指令控制（「未上传，用户指令」反复出现）
+- Conventional Commits+中文 subject：type(scope): 中文主题——细节（b38044db feat(pipeline): parallel-review 并行评审编排器——V8.35 会签型大评审自动拆解产品化）；中英文 header 跟随仓库历史
+- 提交时机：用户要求或稳定节点不破坏构建；commit 前 git status 干净预期内+跑最小测试
+- 测试未绿禁提交（红线）：测试命令与 commit/push/deploy 必须分两轮工具调用，绝不放同一条 && 链（2026-10-15 违例复盘确立）
+- pre-commit 门禁：scripts/githooks/pre-commit jargon 词表检查（G7；暂存面 .ts/.vue/.md HARD>0 拒提交；绕过=--no-verify 评审可见；启用 git config core.hooksPath scripts/githooks）；git log 大量「黑话清偿 HARD=0」提交为实证
+- 红线六条：不隐瞒失败/不偷工减料/不回避问题/不曲意逢迎/不拼凑鸡汤/严禁编造（结论必须有锚点 file:line/URL/实测输出，未覆盖明说未验证）
+- 沟通规范：禁黑话用行业术语/结论先行完整句子/说人话（术语首现括注，验收线=无背景者一眼看懂）
 
-## 7. 设计文档规范
+## 8. 项目自述与版本演进
 
-- 位置双侧并存：workspace docs/superpowers/{specs 33,plans 36,notes} 与 overlay/docs/superpowers/{specs 39,plans}，内容有分叉，近期落 overlay 侧
-- 命名 YYYY-MM-DD-<slug>-design.md / YYYY-MM-DD-<slug>.md（日期前缀强制）
-- spec 模板：标题→元信息行（日期·分支·状态）→## 主旨（改了什么/为什么/怎么验证）→## 决策 D1/D2…编号（含显式偏离记录，如 D5「这是…显式偏离，记录在案」）→## 验证（测试文件级清单+门禁）
-- plan 模板：「For agentic workers: REQUIRED SUB-SKILL…」行 → Goal/Architecture/Tech Stack 三行 → ## Global Constraints（门禁/上游零污染/i18n/patch 编号约束）→ ### Task N（**Files:** Modify/Create/Test 三列 + 行为规格编号清单 + checkbox 步骤 + 收尾 TDD→npm test→Commit 拟定 message）；推荐 superpowers:subagent-driven-development 执行
+- README：SwarmStudio=基于 hermes-studio 二开（Apache 2.0）；overlay 注入架构让三上游 .git 永不污染可独立升级；核心=信息架构 2.0 六区域+RunTraceView 证据图+SwarmKanban+Matrix Chat 完整客户端（50 组件）+Delivery Cases
+- 版本节奏：SwarmStudio 2.x 自有线，每 1-3 天一轮；三类轮次=上游升级轮/自有功能轮/热修评审修复轮；版本行固定格式「SwarmStudio 2.NN（基于 hermes-studio vX+hermes-agent vY 源码跟踪+overlay 二次开发；desktop 捆绑 runtime…）」；每轮必含上游版本/patch regen 编号/门禁终态/产物 sha256/装机三验
 
-## 8. 禁区与红线
+## 9. mine-habits 六维统计（2026-10-16，3353 提交/180 天）
 
-**不可做**：改 upstream/ 任何文件（AGENTS.md:5-11）；用上游 npm run build 出发布产物（README:490）；改 B 类 patch 后不重新 inject 就重启后端（README:443）；顶层 await（es2020 target 不支持，README:303）；运行时 merge i18n 或在 custom 放 locale 文件（README:149-151）；发版复用版本号（README:570-576）；引入新依赖（plan 级约束）；custom 直接 import 上游模块（custom→upstream import 禁令，测试侧镜像 custom/upstream-compat/）；污染上游 .git。
-
-**必须做**：从 main 切 feat/fix/refactor 分支；测试验证通过后合 main；B 类五步法；A 类 register 函数 + bootstrap 按 flag 动态 import + mount 前完成注册；patch 编号开工前查重；收口门禁 npm test + clean&&inject + build:full；新 UI 文案 zh/en 双键成对 patch；vitest alias 同步；显式偏离/用户裁决记录在案（spec 决策 + series 段注）。
-
-## 9. 未成文实践
-
-「不跨 worktree cherry-pick」无书面依据但存在多 worktree 并行工作流（属未成文实践）。用户级 AGENTS.md（~/.zcode/AGENTS.md）另有 worktree ≤3 上限、Conventional Commits、合并 --no-ff 等全局规则。
+- 前缀：feat 966 / merge 787 / fix 753 / docs 508 / other 147 / chore 68 / test 45 / refactor 37 / style 21 / perf 12
+- 提交规模：小(<100行) 1437 / 中 690 / 大 309
+- 共变 Top：mux 两文档 16；clusterinspector 四件套（collectors⇄detectors 12、inspector 15/14、controller 10/9/7、test 11/11/9/6）；series⇄inject.mjs 4；progress controller⇄store 4
+- 热点：patches/series 420 / mux-v8 方案 178 / ycode 吸收矩阵 127 / RELEASE-NOTES 73 / cockpit.ts 69 /（aipay 系 63+56+49——2026-10-03 已迁 simharness）/ package.json 56 / IdeShell.vue 54 / inject.mjs 53 / CockpitView.vue 52 / ia2 WorkbenchView 45 / IdeChatPane 43
+- 测试占比：58% 提交触及测试文件

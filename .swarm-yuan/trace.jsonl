@@ -64,3 +64,72 @@
 {"ts":"2026-10-11T13:01:35Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/tmp/gen-out/smoke-deliv"}
 {"ts":"2026-10-11T13:02:01Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/tmp/gen-out/smoke-deliv"}
 {"ts":"2026-10-11T13:02:05Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/gen-out/smoke-deliv"}
+{"ts":"2026-10-15T17:33:58Z","node":"探查","actor":"结构子代理","tool":"三路并行扇出","status":"done","note":"overlay 报告已回收"}
+{"ts":"2026-10-15T17:33:58Z","node":"探查","actor":"规范子代理","tool":"三路并行扇出","status":"done","note":"overlay 报告已回收"}
+{"ts":"2026-10-15T17:33:58Z","node":"探查","actor":"代码组织子代理","tool":"三路并行扇出","status":"done","note":"overlay 报告已回收"}
+{"ts":"2026-10-15T17:33:58Z","node":"形态判定","actor":"主AI","tool":"detect-frameworks.sh","status":"started","note":""}
+{"ts":"2026-10-15T17:35:01Z","node":"框架取证","actor":"framework-evidence","tool":"TSV 台账","status":"done","note":"5 框架 vue,naiveui,vite,koa,jest-vitest；7 误报已剔除"}
+{"ts":"2026-10-15T17:37:02Z","node":"骨架","actor":"generate-skill","tool":"create ncwk-dev","status":"started","note":"target=工作区根 .claude/skills（9-17 裁定落位）"}
+{"ts":"2026-10-15T17:37:08Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-15T17:37:44Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-15T17:38:10Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-15T17:48:05Z","node":"conf配置","actor":"主AI","tool":"precheck.conf+rules.d","status":"done","note":"TODO:model 全清；旧裁决回迁（BUILD_CMD/SQL 白名单/LAYER_DEFS）；ACTIVE_FRAMEWORKS 收敛 5；SPEC_GLOB 改项目约定"}
+{"ts":"2026-10-15T17:49:22Z","node":"探查","actor":"结构子代理","tool":"三路并行扇出","status":"started","note":""}
+{"ts":"2026-10-15T17:49:23Z","node":"探查","actor":"规范子代理","tool":"三路并行扇出","status":"started","note":""}
+{"ts":"2026-10-15T17:49:23Z","node":"探查","actor":"代码组织子代理","tool":"三路并行扇出","status":"started","note":""}
+{"ts":"2026-10-15T18:27:45Z","node":"门禁","actor":"","tool":"check_branch","status":"started","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_branch","status":"fail","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_scope","status":"started","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_scope","status":"done","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_spec_first","status":"started","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_spec_first","status":"done","note":""}
+{"ts":"2026-10-15T18:27:46Z","node":"门禁","actor":"","tool":"check_build","status":"started","note":""}
+{"ts":"2026-10-15T18:28:28Z","node":"门禁","actor":"","tool":"check_build","status":"done","note":""}
+{"ts":"2026-10-15T18:28:28Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-10-15T18:28:33Z","node":"门禁","actor":"","tool":"check_sensitive","status":"fail","note":""}
+{"ts":"2026-10-15T18:28:33Z","node":"门禁","actor":"","tool":"check_consistency","status":"started","note":""}
+{"ts":"2026-10-15T18:28:33Z","node":"门禁","actor":"","tool":"check_consistency","status":"advisory","note":""}
+{"ts":"2026-10-15T18:28:33Z","node":"门禁","actor":"","tool":"check_review","status":"started","note":""}
+{"ts":"2026-10-15T18:28:34Z","node":"门禁","actor":"","tool":"check_review","status":"warn","note":""}
+{"ts":"2026-10-15T18:28:34Z","node":"门禁","actor":"","tool":"check_reuse","status":"started","note":""}
+{"ts":"2026-10-15T18:28:34Z","node":"门禁","actor":"","tool":"check_reuse","status":"fail","note":""}
+{"ts":"2026-10-15T18:28:34Z","node":"门禁","actor":"","tool":"check_deps","status":"started","note":""}
+{"ts":"2026-10-15T18:28:35Z","node":"门禁","actor":"","tool":"check_deps","status":"fail","note":""}
+{"ts":"2026-10-15T18:28:35Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-15T18:35:55Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-15T18:35:55Z","node":"门禁","actor":"","tool":"check_test","status":"started","note":""}
+{"ts":"2026-10-15T18:37:17Z","node":"门禁","actor":"","tool":"check_test","status":"fail","note":""}
+{"ts":"2026-10-15T18:40:03Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-10-15T18:40:09Z","node":"门禁","actor":"","tool":"check_sensitive","status":"fail","note":""}
+{"ts":"2026-10-15T18:40:32Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-15T18:44:45Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-15T18:45:09Z","node":"门禁","actor":"","tool":"check_deps","status":"started","note":""}
+{"ts":"2026-10-15T18:45:09Z","node":"门禁","actor":"","tool":"check_deps","status":"fail","note":""}
+{"ts":"2026-10-15T18:45:28Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-15T18:47:44Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-15T18:47:44Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-10-15T18:47:47Z","node":"门禁","actor":"","tool":"check_sensitive","status":"fail","note":""}
+{"ts":"2026-10-15T18:47:48Z","node":"门禁","actor":"","tool":"check_deps","status":"started","note":""}
+{"ts":"2026-10-15T18:47:48Z","node":"门禁","actor":"","tool":"check_deps","status":"fail","note":""}
+{"ts":"2026-10-15T18:48:09Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-15T18:49:54Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-15T18:49:55Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-10-15T18:49:58Z","node":"门禁","actor":"","tool":"check_sensitive","status":"fail","note":""}
+{"ts":"2026-10-16T00:15:53Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-16T00:17:23Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-16T00:17:24Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-10-16T00:17:27Z","node":"门禁","actor":"","tool":"check_sensitive","status":"done","note":""}
+{"ts":"2026-10-16T00:17:27Z","node":"门禁","actor":"","tool":"check_deps","status":"started","note":""}
+{"ts":"2026-10-16T00:17:27Z","node":"门禁","actor":"","tool":"check_deps","status":"done","note":""}
+{"ts":"2026-10-16T00:19:09Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-16T00:21:16Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-10-16T00:21:26Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-10-16T00:23:10Z","node":"门禁","actor":"","tool":"check_security","status":"warn","note":""}
+{"ts":"2026-10-16T00:25:14Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-15T18:20:48Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/simharness-dev"}
+{"ts":"2026-10-15T18:22:02Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/simharness-dev"}
+{"ts":"2026-10-15T18:23:49Z","node":"⑨终检","actor":"主AI","tool":"verify-completeness --strict + mark-active","status":"done","note":"simharness-dev 已激活；STABILITY_WARN 12 条 advisory 留档（F-7）"}
+{"ts":"2026-10-16T00:24:16Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-16T00:24:27Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
+{"ts":"2026-10-16T00:31:19Z","node":"⑨终检","actor":"主AI","tool":"verify-completeness --strict + mark-active","status":"done","note":"ncwk-dev 全量重生成已激活；SQL 白名单 16 式/security·sensitive·deps 三修三绿；check_test 3 失败属并行会话在途态（review-record F-3）"}
+{"ts":"2026-10-16T00:31:19Z","node":"⑨终检","actor":"主AI","tool":"mark-active","status":"done","note":"simharness-dev 已激活（同轮）"}
