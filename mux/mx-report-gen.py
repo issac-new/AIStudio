@@ -4397,7 +4397,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
     {_gov_metrics_line()}
-    <div class="hero-terms">名词速查：G1-G6=六道关卡 ｜ UAT=用户验收测试 ｜ AC=验收标准 ｜ RACI=责任分配矩阵 ｜ WIP=在制品 ｜ ISSUE/DISP=问题登记行/处置结论行<br>首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目<br>姿态=本轮政策档（strict 零代偿／standard 现状+记账／demo 演示） ｜ 代偿=推演程序替体系兜底的越界动作（逐笔记台账） ｜ 净额=扣除代偿后的能力口径（判据满足面）</div>
+    <div class="hero-terms">名词速查：G1-G6=六道关卡 ｜ UAT=用户验收测试 ｜ AC=验收标准 ｜ RACI=责任分配矩阵 ｜ WIP=在制品 ｜ ISSUE/DISP=问题登记行/处置结论行<br>首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目<br>姿态=本轮政策档（strict 零代偿／standard 现状+记账／demo 演示） ｜ 代偿=推演程序替体系兜底的越界动作（逐笔记台账） ｜ 净额=扣除代偿后的能力口径（判据满足面）<br>编号与简称：RFD-*=需求单编号 ｜ 任务号 DEV-*=开发、AN-*=分析、TEST-*=测试、INT-MERGE-*=集成合并、REL-*=发布登记 ｜ PAYCORE=支付核心、CHWX/CHALI=微信/支付宝渠道、MP=小程序 ｜ 系分=系统分析 ｜ IDE=集成开发环境 ｜ SMART=任务五要求（具体/可衡量/可达成/相关/有时限）</div>
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>
