@@ -1,0 +1,670 @@
+diff --git a/bin/hermes-web-ui.mjs b/bin/hermes-web-ui.mjs
+index add4efe36..d4be3dc7e 100755
+--- a/bin/hermes-web-ui.mjs
++++ b/bin/hermes-web-ui.mjs
+@@ -28,7 +28,11 @@ const PREVIEW_BACKEND_PORT = 8650
+ const PREVIEW_FRONTEND_PORT = 8651
+ const PREVIEW_AGENT_BRIDGE_PORT = 18650
+ const DEFAULT_USERNAME = 'admin'
+-const DEFAULT_PASSWORD = '123456'
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 出厂默认口令移除（安全轮 M8b，2026-10-16）
++// reset-default-login 改为每次生成随机密码；凭据落 <home>/admin-login.json（0600，
++// 供桌面主进程代理自动登录复用），并打印一次。
++const ADMIN_LOGIN_FILE = join(WEB_UI_HOME, 'admin-login.json')
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ const DEFAULT_RESTART_GRACE_MS = 5000
+ const DEFAULT_STOP_GRACE_MS = 15000
+ const STOP_POLL_INTERVAL_MS = 500
+@@ -602,6 +606,18 @@ function hashPassword(password) {
+   return `scrypt:${salt}:${hash}`
+ }
+ 
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 随机密码建号/重置（安全轮 M8b，2026-10-16）
++// 旧行为=每次重置回出厂 admin/123456（已知默认口令的再生产源）。新行为=每次生成
++// 随机密码，凭据写 <home>/admin-login.json（0600，桌面主进程自动登录复用）并打印。
++function generateAdminPassword() {
++  return randomBytes(15).toString('base64url')
++}
++
++function writeAdminLoginFile(username, password) {
++  writeFileSync(ADMIN_LOGIN_FILE, `${JSON.stringify({ username, password, createdAt: Date.now() })}\n`, { mode: 0o600 })
++  try { chmodSync(ADMIN_LOGIN_FILE, 0o600) } catch { /* best-effort */ }
++}
++
+ async function resetDefaultLogin(options = {}) {
+   const { silent = false } = options
+   mkdirSync(WEB_UI_HOME, { recursive: true })
+@@ -622,7 +638,8 @@ async function resetDefaultLogin(options = {}) {
+     `)
+ 
+     const now = Date.now()
+-    const passwordHash = hashPassword(DEFAULT_PASSWORD)
++    const password = generateAdminPassword()
++    const passwordHash = hashPassword(password)
+     const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(DEFAULT_USERNAME)
+     if (existing?.id) {
+       db.prepare(
+@@ -630,26 +647,24 @@ async function resetDefaultLogin(options = {}) {
+          SET password_hash = ?, role = 'super_admin', status = 'active', updated_at = ?
+          WHERE id = ?`
+       ).run(passwordHash, now, existing.id)
+-      if (!silent) {
+-        console.log(`  ✓ Reset default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
+-        console.log(`    Database: ${WEB_UI_DB_FILE}`)
+-      }
+-      return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'updated' }
++    } else {
++      db.prepare(
++        `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
++         VALUES (?, ?, 'super_admin', 'active', ?, ?)`
++      ).run(DEFAULT_USERNAME, passwordHash, now, now)
+     }
+-
+-    db.prepare(
+-      `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
+-       VALUES (?, ?, 'super_admin', 'active', ?, ?)`
+-    ).run(DEFAULT_USERNAME, passwordHash, now, now)
++    writeAdminLoginFile(DEFAULT_USERNAME, password)
+     if (!silent) {
+-      console.log(`  ✓ Created default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
++      console.log(`  ✓ ${existing?.id ? 'Reset' : 'Created'} login: ${DEFAULT_USERNAME} / ${password}`)
++      console.log(`    (random password, shown once; also stored at ${ADMIN_LOGIN_FILE})`)
+       console.log(`    Database: ${WEB_UI_DB_FILE}`)
+     }
+-    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'created' }
++    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password, action: existing?.id ? 'updated' : 'created' }
+   } finally {
+     db.close()
+   }
+ }
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ 
+ async function main() {
+   const command = process.argv[2] || 'start'
+@@ -672,7 +687,7 @@ Commands:
+   restart [port]     Restart the server
+   status             Show server status
+   clear-login-locks  Delete the login IP lock file
+-  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD})
++  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / random password, shown once)
+   update             Update to latest version and restart
+   upgrade            Alias for update
+   version            Show version number
+diff --git a/packages/client/src/components/hermes/pets/WebPet.vue b/packages/client/src/components/hermes/pets/WebPet.vue
+index c31cc9d97..1c350490a 100644
+--- a/packages/client/src/components/hermes/pets/WebPet.vue
++++ b/packages/client/src/components/hermes/pets/WebPet.vue
+@@ -178,22 +178,17 @@ async function ensureDesktopAuthReady(): Promise<void> {
+   if (!isDesktopWindow.value || localStorage.getItem('hermes_api_key')) return
+   const token = await bridge?.getToken?.().catch(() => '')
+   if (token) {
+-    try {
+-      localStorage.setItem('AUTH_TOKEN', token)
+-      const res = await fetch('/api/auth/login', {
+-        method: 'POST',
+-        headers: {
+-          'Content-Type': 'application/json',
+-          Authorization: `Bearer ${token}`,
+-        },
+-        body: JSON.stringify({ username: 'admin', password: '123456' }),
+-      })
+-      const body = await res.json().catch(() => null) as { token?: string; jwt?: string } | null
+-      const jwt = body?.token || body?.jwt
+-      if (jwt) localStorage.setItem('hermes_api_key', jwt)
+-    } catch {
+-      /* preload performs the same desktop auto-login; this is a fallback. */
+-    }
++    try { localStorage.setItem('AUTH_TOKEN', token) } catch { /* */ }
++  }
++  // HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 登录改走主进程 IPC 代理（安全轮 M8b，
++  // 2026-10-16）——旧实现在此硬编码 admin/123456 换 JWT（口令随客户端 bundle 出厂）。
++  // 主进程用 CLI 随机建号落盘的凭据代理登录，空库首启自动初始化；失败回落手动登录。
++  // HERMES_CUSTOM[SecNoDefaultCred] END
++  try {
++    const jwt = await bridge?.desktopLogin?.().catch(() => '')
++    if (jwt) localStorage.setItem('hermes_api_key', jwt)
++  } catch {
++    /* 主进程代理登录不可用：走手动登录页 */
+   }
+   for (let i = 0; i < 20 && !localStorage.getItem('hermes_api_key'); i += 1) {
+     await new Promise(resolve => window.setTimeout(resolve, 100))
+diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
+index 287123e32..eebbc6a5e 100644
+--- a/packages/client/src/i18n/locales/ar.ts
++++ b/packages/client/src/i18n/locales/ar.ts
+@@ -302,7 +302,7 @@ export default {
+     tokenLogin: 'الرمز',
+     usernamePlaceholder: 'اسم المستخدم',
+     passwordPlaceholder: 'كلمة المرور',
+-    defaultCredentialsHint: 'اسم المستخدم الافتراضي: admin. كلمة المرور الافتراضية: 123456.',
++    defaultCredentialsHint: 'أول استخدام؟ أنشئ الحساب من تطبيق سطح المكتب، أو سجّل الدخول بحساب Matrix الخاص بك.',
+     credentialsRequired: 'الرجاء إدخال اسم المستخدم وكلمة المرور',
+     invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة',
+     tooManyAttempts: 'محاولات فاشلة كثيرة، الرجاء المحاولة لاحقًا',
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+index c79d42160..056203cdf 100644
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: 'Token',
+     usernamePlaceholder: 'Benutzername',
+     passwordPlaceholder: 'Passwort',
+-    defaultCredentialsHint: 'Standard-Benutzername: admin. Standard-Passwort: 123456.',
++    defaultCredentialsHint: 'Erste Nutzung? Login über die Desktop-App initialisieren oder mit Ihrem Matrix-Konto anmelden.',
+     credentialsRequired: 'Bitte Benutzername und Passwort eingeben',
+     invalidCredentials: 'Ungultiger Benutzername oder Passwort',
+     tooManyAttempts: 'Zu viele fehlgeschlagene Versuche, bitte versuchen Sie es spater erneut',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 65254d402..cc0ce616b 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -335,7 +335,7 @@ export default {
+     tokenLogin: 'Token',
+     usernamePlaceholder: 'Username',
+     passwordPlaceholder: 'Password',
+-    defaultCredentialsHint: 'Default username: admin. Default password: 123456.',
++    defaultCredentialsHint: 'First time here? Initialize the login from the desktop app, or sign in with your Matrix account.',
+     credentialsRequired: 'Please enter username and password',
+     invalidCredentials: 'Invalid username or password',
+     tooManyAttempts: 'Too many failed attempts, please try again later',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+index cf2993e3c..64ca1ef4c 100644
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: 'Token',
+     usernamePlaceholder: 'Nombre de usuario',
+     passwordPlaceholder: 'Contrasena',
+-    defaultCredentialsHint: 'Nombre de usuario predeterminado: admin. Contrasena predeterminada: 123456.',
++    defaultCredentialsHint: '¿Primera vez? Inicialice el acceso desde la aplicación de escritorio o inicie sesión con su cuenta de Matrix.',
+     credentialsRequired: 'Por favor, introduzca nombre de usuario y contrasena',
+     invalidCredentials: 'Nombre de usuario o contrasena incorrectos',
+     tooManyAttempts: 'Demasiados intentos fallidos, por favor intente mas tarde',
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+index 27d9cf62d..39f46f107 100644
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: 'Jeton',
+     usernamePlaceholder: 'Nom d\'utilisateur',
+     passwordPlaceholder: 'Mot de passe',
+-    defaultCredentialsHint: 'Nom d utilisateur par defaut : admin. Mot de passe par defaut : 123456.',
++    defaultCredentialsHint: "Première utilisation ? Initialisez la connexion depuis l'application de bureau ou connectez-vous avec votre compte Matrix.",
+     credentialsRequired: 'Veuillez entrer le nom d\'utilisateur et le mot de passe',
+     invalidCredentials: 'Nom d\'utilisateur ou mot de passe incorrect',
+     tooManyAttempts: 'Trop de tentatives echouees, veuillez reessayer plus tard',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+index 68380aee4..1a85febfa 100644
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: 'トークン',
+     usernamePlaceholder: 'ユーザー名',
+     passwordPlaceholder: 'パスワード',
+-    defaultCredentialsHint: '既定のユーザー名：admin、既定のパスワード：123456',
++    defaultCredentialsHint: 'はじめての方は、デスクトップアプリでログインを初期化するか、Matrix アカウントでサインインしてください。',
+     credentialsRequired: 'ユーザー名とパスワードを入力してください',
+     invalidCredentials: 'ユーザー名またはパスワードが正しくありません',
+     tooManyAttempts: 'ログイン試行回数が多すぎます。しばらくしてからお試しください',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+index 22fc7b49c..8af977fed 100644
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: '토큰',
+     usernamePlaceholder: '사용자 이름',
+     passwordPlaceholder: '비밀번호',
+-    defaultCredentialsHint: '기본 로그인 이름: admin, 기본 비밀번호: 123456',
++    defaultCredentialsHint: '처음이신가요? 데스크톱 앱에서 로그인을 초기화하거나 Matrix 계정으로 로그인하세요.',
+     credentialsRequired: '사용자 이름과 비밀번호를 입력해 주세요',
+     invalidCredentials: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
+     tooManyAttempts: '로그인 시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+index 6761a7e0d..d981727a0 100644
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -314,7 +314,7 @@ export default {
+     tokenLogin: 'Token',
+     usernamePlaceholder: 'Nome de usuário',
+     passwordPlaceholder: 'Senha',
+-    defaultCredentialsHint: 'Nome de usuário padrão: admin. Senha padrão: 123456.',
++    defaultCredentialsHint: 'Primeira vez? Inicialize o acesso pelo aplicativo de desktop ou entre com sua conta Matrix.',
+     credentialsRequired: 'Por favor, insira nome de usuário e senha',
+     invalidCredentials: 'Nome de usuário ou senha incorretos',
+     tooManyAttempts: 'Muitas tentativas falhadas, por favor tente novamente mais tarde',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+index a9d8fd5ad..32d83b084 100644
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -302,7 +302,7 @@ export default {
+     tokenLogin: 'Вход по токену',
+     usernamePlaceholder: 'Имя пользователя',
+     passwordPlaceholder: 'Пароль',
+-    defaultCredentialsHint: 'Логин по умолчанию: admin, пароль по умолчанию: 123456',
++    defaultCredentialsHint: 'Впервые здесь? Инициализируйте вход через настольное приложение или войдите через аккаунт Matrix.',
+     credentialsRequired: 'Введите имя пользователя и пароль',
+     invalidCredentials: 'Неверное имя пользователя или пароль',
+     tooManyAttempts: 'Слишком много неудачных попыток входа, повторите попытку позже',
+diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/locales/tr.ts
+index 2b7624b23..5ad6a7a7a 100644
+--- a/packages/client/src/i18n/locales/tr.ts
++++ b/packages/client/src/i18n/locales/tr.ts
+@@ -249,7 +249,7 @@ export default {
+     tokenLogin: 'Belirteç',
+     usernamePlaceholder: 'Kullanıcı adı',
+     passwordPlaceholder: 'Parola',
+-    defaultCredentialsHint: 'Varsayılan kullanıcı adı: admin. Varsayılan parola: 123456.',
++    defaultCredentialsHint: 'İlk kez mi? Girişi masaüstü uygulamadan başlatın veya Matrix hesabınızla oturum açın.',
+     credentialsRequired: 'Lütfen kullanıcı adı ve parola girin',
+     invalidCredentials: 'Geçersiz kullanıcı adı veya parola',
+     tooManyAttempts: 'Çok fazla başarısız deneme yapıldı; lütfen daha sonra tekrar deneyin',
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+index c01125e04..d5aa44775 100644
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -302,7 +302,7 @@ export default {
+     tokenLogin: '權杖登入',
+     usernamePlaceholder: '使用者名稱',
+     passwordPlaceholder: '密碼',
+-    defaultCredentialsHint: '預設登入名：admin，預設密碼：123456',
++    defaultCredentialsHint: '首次使用？請由桌面應用初始化登入，或使用 Matrix 帳號登入。',
+     credentialsRequired: '請輸入使用者名稱和密碼',
+     invalidCredentials: '使用者名稱或密碼錯誤',
+     tooManyAttempts: '登入失敗次數過多，請稍後再試',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 29facd828..2b88cb4db 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -335,7 +335,7 @@ export default {
+     tokenLogin: '令牌登录',
+     usernamePlaceholder: '用户名',
+     passwordPlaceholder: '密码',
+-    defaultCredentialsHint: '默认登录名：admin，默认密码：123456',
++    defaultCredentialsHint: '首次使用？请由桌面应用初始化登录，或使用 Matrix 账号登录。',
+     credentialsRequired: '请输入用户名和密码',
+     invalidCredentials: '用户名或密码错误',
+     tooManyAttempts: '登录失败次数过多，请稍后重试',
+diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/utils/desktop-bridge.ts
+index 4644a0771..cb3f67fe5 100644
+--- a/packages/client/src/utils/desktop-bridge.ts
++++ b/packages/client/src/utils/desktop-bridge.ts
+@@ -168,6 +168,8 @@ export interface HermesDesktopBridge {
+   }
+   updater?: DesktopUpdaterBridge
+   getToken: () => Promise<string>
++  // HERMES_CUSTOM[SecNoDefaultCred]: 主进程代理登录（返回 JWT；空库首启自动随机建号）
++  desktopLogin?: () => Promise<string>
+   ensureAuth?: () => Promise<boolean>
+   retryBootstrap: (source?: 'cf' | 'github') => Promise<void>
+   restartApp?: () => Promise<boolean>
+diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
+index 24a8a52c2..5e7a81947 100644
+--- a/packages/desktop/src/main/desktop-i18n.ts
++++ b/packages/desktop/src/main/desktop-i18n.ts
+@@ -123,7 +123,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'Select DOM element',
+     'browser.selectRegion': 'Select region',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': 'Reset the local login? A new random password will be generated and shown once.',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -186,7 +186,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': '选择 DOM 元素',
+     'browser.selectRegion': '框选区域',
+     'loginReset.confirmTitle': '重置登录',
+-    'loginReset.confirmMessage': '确认将登录重置为 admin / 123456？',
++    'loginReset.confirmMessage': '重置本地登录？将生成新的随机密码并仅显示一次。',
+     'loginReset.confirmDetail': 'SwarmStudio 会重启本地 Web UI 服务、清除登录失败锁，然后回到登录页。',
+     'loginReset.resetting': '正在重置登录...',
+     'loginReset.successTitle': '登录已重置',
+@@ -249,7 +249,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': '選擇 DOM 元素',
+     'browser.selectRegion': '框選區域',
+     'loginReset.confirmTitle': '重置登入',
+-    'loginReset.confirmMessage': '確認將登入重置為 admin / 123456？',
++    'loginReset.confirmMessage': '重置本機登入？將產生新的隨機密碼並僅顯示一次。',
+     'loginReset.confirmDetail': 'SwarmStudio 會重新啟動本地 Web UI 服務、清除登入失敗鎖，然後回到登入頁。',
+     'loginReset.resetting': '正在重置登入...',
+     'loginReset.successTitle': '登入已重置',
+@@ -312,7 +312,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'DOM 要素を選択',
+     'browser.selectRegion': '領域を選択',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': 'ローカルログインをリセットしますか？新しいランダムパスワードを生成し、一度だけ表示します。',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -375,7 +375,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'DOM 요소 선택',
+     'browser.selectRegion': '영역 선택',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': '로컬 로그인을 초기화할까요? 새 무작위 비밀번호가 생성되고 한 번만 표시됩니다.',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -438,7 +438,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'Sélectionner un élément DOM',
+     'browser.selectRegion': 'Sélectionner une zone',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': "Réinitialiser la connexion locale ? Un nouveau mot de passe aléatoire sera généré et affiché une seule fois.",
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -501,7 +501,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'Seleccionar elemento DOM',
+     'browser.selectRegion': 'Seleccionar región',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': '¿Restablecer el acceso local? Se generará una nueva contraseña aleatoria y se mostrará una sola vez.',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -564,7 +564,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'DOM-Element auswählen',
+     'browser.selectRegion': 'Bereich auswählen',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': 'Lokale Anmeldung zurücksetzen? Ein neues Zufallspasswort wird erzeugt und einmal angezeigt.',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+@@ -627,7 +627,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectElement': 'Selecionar elemento DOM',
+     'browser.selectRegion': 'Selecionar região',
+     'loginReset.confirmTitle': 'Reset login',
+-    'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
++    'loginReset.confirmMessage': 'Redefinir o acesso local? Uma nova senha aleatória será gerada e exibida apenas uma vez.',
+     'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
+     'loginReset.resetting': 'Resetting login...',
+     'loginReset.successTitle': 'Login reset',
+diff --git a/packages/desktop/src/main/desktop-login-reset.ts b/packages/desktop/src/main/desktop-login-reset.ts
+index 0999e2256..90155584f 100644
+--- a/packages/desktop/src/main/desktop-login-reset.ts
++++ b/packages/desktop/src/main/desktop-login-reset.ts
+@@ -1,10 +1,13 @@
+ import { execFile } from 'node:child_process'
+-import { existsSync } from 'node:fs'
++import { existsSync, readFileSync } from 'node:fs'
+ import { join } from 'node:path'
+ import { bundledNode, webUiHome, webuiDir } from './paths'
+ 
+-const DEFAULT_USERNAME = 'admin'
+-const DEFAULT_PASSWORD = '123456'
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 出厂默认口令移除（安全轮 M8b，2026-10-16）。
++// 旧实现返回硬编码 admin/123456（与 CLI 的出厂重置配套）。新链路：CLI
++// reset-default-login 生成随机密码并写 <home>/admin-login.json（0600）；本模块读
++// 该文件取真实凭据。desktopAutoLogin 供主进程 IPC 代理登录（渲染层不再持有口令）。
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ const EXEC_MAX_BUFFER = 1024 * 1024
+ 
+ function resolveNodeForWebUiCli(): string {
+@@ -21,6 +24,28 @@ function webUiCliScriptPath(): string {
+   return join(webuiDir(), 'bin', 'hermes-web-ui.mjs')
+ }
+ 
++function adminLoginFilePath(): string {
++  return join(webUiHome(), 'admin-login.json')
++}
++
++interface AdminLoginFile {
++  username: string
++  password: string
++  createdAt: number
++}
++
++function readAdminLoginFile(): AdminLoginFile | null {
++  try {
++    const raw = JSON.parse(readFileSync(adminLoginFilePath(), 'utf-8')) as Partial<AdminLoginFile>
++    if (typeof raw.username === 'string' && typeof raw.password === 'string' && raw.username && raw.password) {
++      return { username: raw.username, password: raw.password, createdAt: Number(raw.createdAt) || 0 }
++    }
++  } catch {
++    /* missing or malformed file */
++  }
++  return null
++}
++
+ async function runWebUiCliCommand(command: string): Promise<void> {
+   const node = resolveNodeForWebUiCli()
+   const script = webUiCliScriptPath()
+@@ -51,5 +76,53 @@ async function runWebUiCliCommand(command: string): Promise<void> {
+ export async function resetDesktopDefaultLogin(): Promise<{ username: string; password: string }> {
+   await runWebUiCliCommand('reset-default-login')
+   await runWebUiCliCommand('clear-login-locks')
+-  return { username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD }
++  const credentials = readAdminLoginFile()
++  if (!credentials) throw new Error('reset-default-login did not produce admin-login.json')
++  return { username: credentials.username, password: credentials.password }
++}
++
++/** 主进程代理登录（IPC 'hermes-desktop:login'）：用 CLI 落盘的随机凭据向本地
++ *  服务换 JWT。空库（首启）时先跑 CLI 随机建号再登录。凭据不出主进程——渲染层
++ *  只拿 JWT（旧实现把 admin/123456 打进客户端 bundle，安全轮 M8b 根治项）。
++ *  返回空串=无法自动登录（渲染层回落手动登录页）。 */
++export async function desktopAutoLogin(serverUrl: string): Promise<string> {
++  if (!serverUrl) return ''
++  const login = async (username: string, password: string): Promise<{ jwt: string; noAccounts: boolean }> => {
++    try {
++      const res = await fetch(`${serverUrl}/api/auth/login`, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ username, password }),
++      })
++      if (res.ok) {
++        const body = await res.json().catch(() => null) as { token?: string } | null
++        return { jwt: body?.token ?? '', noAccounts: false }
++      }
++      const body = await res.json().catch(() => null) as { code?: string } | null
++      return { jwt: '', noAccounts: body?.code === 'NO_USER_ACCOUNTS' }
++    } catch {
++      return { jwt: '', noAccounts: false }
++    }
++  }
++  const stored = readAdminLoginFile()
++  if (stored) {
++    const r = await login(stored.username, stored.password)
++    if (r.jwt) return r.jwt
++    // 口令已被用户修改（登录 401 但账号存在）→ 手动登录，不自动建号
++    if (!r.noAccounts) return ''
++  } else {
++    // 从未初始化：探测账号面——错口令 401=已有账号（手动登录）；
++    // NO_USER_ACCOUNTS=空库（首启，走下方随机建号）
++    const probe = await login('admin', 'probe')
++    if (!probe.noAccounts) return ''
++  }
++  // 空库（首启或库被清空）：CLI 随机建号后重试。绝不在已有账号的环境动用户表。
++  try {
++    await runWebUiCliCommand('reset-default-login')
++  } catch {
++    return ''
++  }
++  const fresh = readAdminLoginFile()
++  if (!fresh) return ''
++  return (await login(fresh.username, fresh.password)).jwt
+ }
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index aa8a8559a..08f6fb07c 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -30,7 +30,7 @@ import { bundledNode, desktopIcon, desktopLinuxTrayIcon, desktopMacTrayIcon, des
+ import { cancelDesktopUpdateDownload, checkForDesktopUpdates, downloadDesktopUpdate, getDesktopUpdateState, initAutoUpdater, installDesktopUpdate } from './updater'
+ import { DESKTOP_UPDATE_STATE_CHANNEL, type DesktopUpdateState } from './updater-types'
+ import { t } from './desktop-i18n'
+-import { resetDesktopDefaultLogin } from './desktop-login-reset'
++import { desktopAutoLogin, resetDesktopDefaultLogin } from './desktop-login-reset'
+ import { installHermesStudioCliShim, installHermesStudioMcpShim } from './cli-shim'
+ import { parseHermesCliArgs, runBundledHermesCli } from './hermes-cli'
+ import { installSelectionContextMenu } from './selection-context-menu'
+@@ -1250,6 +1250,15 @@ ipcMain.handle('hermes-desktop:get-token', () => {
+   // it to a remote page: it is useless there and would leak desktop state.
+   return activeRemoteServerUrl ? '' : getToken()
+ })
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 主进程代理登录（安全轮 M8b，2026-10-16）。
++// 渲染层旧实现在客户端 bundle 里硬编码 admin/123456 直接换 JWT；改为渲染层只调
++// 本 IPC，口令留在主进程（CLI 随机建号落盘的 admin-login.json），空库首启自动
++// 初始化。远程服务器模式不代理（返回空串，渲染层走手动登录）。
++ipcMain.handle('hermes-desktop:login', async () => {
++  if (activeRemoteServerUrl) return ''
++  return desktopAutoLogin(serverUrl ?? '')
++})
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ ipcMain.handle('hermes-desktop:restart-app', event => {
+   if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
+     throw new Error('Desktop restart can only be requested from the main window')
+diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
+index 1acc28ebe..686293431 100644
+--- a/packages/desktop/src/preload/index.ts
++++ b/packages/desktop/src/preload/index.ts
+@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+     },
+   },
+   getToken: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:get-token'),
++  // HERMES_CUSTOM[SecNoDefaultCred]: 主进程代理登录（口令不出主进程；空库首启自动随机建号）
++  desktopLogin: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:login'),
+   retryBootstrap: (source?: 'cf' | 'github'): Promise<void> => ipcRenderer.invoke('hermes-desktop:retry-bootstrap', source),
+   restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
+   selectRuntimeDirectory: (defaultPath?: string): Promise<string | null> => ipcRenderer.invoke('hermes-desktop:select-runtime-directory', defaultPath),
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
+index d94821ce4..1ba1e385b 100644
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
+@@ -1,12 +1,10 @@
+ import type { Context } from 'koa'
+ import { checkPassword, recordPasswordFailure, recordPasswordSuccess, extractIp, getLockedIps, unlockIp, unlockAll } from '../services/auth/login-limiter'
+ import {
+-  DEFAULT_PASSWORD,
+-  DEFAULT_USERNAME,
+-  bootstrapDefaultSuperAdmin,
+   countActiveSuperAdmins,
+   countUsers,
+   createFromMatrix,
++  createSuperAdmin,
+   createUser,
+   deleteUser,
+   findByMatrixUserId,
+@@ -89,9 +87,10 @@ export async function currentUser(ctx: Context) {
+       updated_at: user.updated_at,
+       last_login_at: user.last_login_at,
+       avatar: user.avatar || '',
+-      requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
+-        ? false
+-        : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
++      // HERMES_CUSTOM[SecNoDefaultCred]: 出厂默认口令已移除，不再存在"未改默认密码"
++      // 状态；字段保留（API 契约），恒为 false。原判定=用户名为 admin 且密码仍为
++      // '123456'（verifyPassword(DEFAULT_PASSWORD, ...)）。
++      requiresCredentialChange: false,
+       matrix_user_id: user.matrix_user_id,
+       matrix_display_name: user.matrix_display_name,
+       matrix_avatar_url: user.matrix_avatar_url,
+@@ -208,11 +207,26 @@ async function authenticatePasswordUser(
+   }
+ 
+   const existingUserCount = countUsers()
+-  const user = existingUserCount === 0
+-    ? bootstrapDefaultSuperAdmin(username, password)
+-    : findUserByUsername(username)
++  if (existingUserCount === 0) {
++    // HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 空库不再以 admin/123456 引导（安全轮 M8b）。
++    // 显式开发门：HERMES_WEB_UI_DEV_BOOTSTRAP=1 时空库首登以提交的凭据建号
++    // （dev 链/隔离走查零配置）；生产/桌面不开——桌面首启由主进程经 CLI 随机建号。
++    if (process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === '1' && username && password) {
++      const created = createSuperAdmin(username, password)
++      if (created) return { ok: true, ip, user: created }
++    }
++    recordPasswordFailure(ip)
++    ctx.status = 401
++    ctx.body = {
++      error: 'No user accounts exist. Sign in with Matrix, or create one with: hermes-web-ui reset-default-login',
++      code: 'NO_USER_ACCOUNTS',
++    }
++    return { ok: false }
++  }
++  // HERMES_CUSTOM[SecNoDefaultCred] END
++  const user = findUserByUsername(username)
+ 
+-  if (!user || user.status !== 'active' || (existingUserCount > 0 && !verifyPassword(password, user.password_hash))) {
++  if (!user || user.status !== 'active' || !verifyPassword(password, user.password_hash)) {
+     recordPasswordFailure(ip)
+     ctx.status = 401
+     ctx.body = { error: 'Invalid username or password' }
+diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
+index d4d2aad40..c4d8dd11e 100644
+--- a/packages/server/src/modules/studio/repositories/users-store.ts
++++ b/packages/server/src/modules/studio/repositories/users-store.ts
+@@ -46,7 +46,8 @@ export interface UserSummary {
+ }
+ 
+ export const DEFAULT_USERNAME = 'admin'
+-export const DEFAULT_PASSWORD = '123456'
++// HERMES_CUSTOM[SecNoDefaultCred]: DEFAULT_PASSWORD（'123456'）已删——出厂不再有
++// 已知默认口令；账号初始化走 CLI 随机密码或 Matrix 登录。
+ export const DEFAULT_PROFILE_NAME = 'default'
+ 
+ const SCRYPT_KEY_LEN = 64
+@@ -410,21 +411,21 @@ export function replaceUserProfiles(userId: UserId, profiles: string[], defaultP
+   }
+ }
+ 
+-export function createDefaultSuperAdmin(): UserRecord | null {
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 移除出厂默认口令（安全轮 M8b，2026-10-16）
++// 旧 createDefaultSuperAdmin/bootstrapDefaultSuperAdmin 以 admin/123456 空库引导，
++// 等于给每个新部署预置一把公钥。改为参数化建号：CLI reset-default-login 生成随机
++// 密码；dev 链空库引导经 HERMES_WEB_UI_DEV_BOOTSTRAP=1 显式开启。
++// HERMES_CUSTOM[SecNoDefaultCred] END
++export function createSuperAdmin(username: string, password: string): UserRecord | null {
+   const db = getDb()
+   if (!db) return null
++  if (!username || !password) return null
+ 
+   const now = Date.now()
+   db.prepare(
+     `INSERT INTO ${USERS_TABLE} (username, password_hash, role, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)`
+-  ).run(DEFAULT_USERNAME, hashPassword(DEFAULT_PASSWORD), 'super_admin', 'active', now, now)
++  ).run(username, hashPassword(password), 'super_admin', 'active', now, now)
+ 
+-  return findUserByUsername(DEFAULT_USERNAME)
+-}
+-
+-export function bootstrapDefaultSuperAdmin(username: string, password: string): UserRecord | null {
+-  if (countUsers() > 0) return null
+-  if (username !== DEFAULT_USERNAME || password !== DEFAULT_PASSWORD) return null
+-  return createDefaultSuperAdmin()
++  return findUserByUsername(username)
+ }
+diff --git a/tests/desktop/desktop-login-reset.test.ts b/tests/desktop/desktop-login-reset.test.ts
+index 561d5ed0b..6cae4e991 100644
+--- a/tests/desktop/desktop-login-reset.test.ts
++++ b/tests/desktop/desktop-login-reset.test.ts
+@@ -34,12 +34,23 @@ describe('desktop login reset', () => {
+     expect(source).toContain('if (mainWindow) await mainWindow.loadURL(mainRouteUrl() || url)')
+   })
+ 
+-  it('resets the default credentials and clears login locks through the Web UI CLI', () => {
++  it('resets the login through the Web UI CLI and reads the generated random credentials', () => {
+     const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
+ 
+     expect(source).toContain("runWebUiCliCommand('reset-default-login')")
+     expect(source).toContain("runWebUiCliCommand('clear-login-locks')")
+-    expect(source).toContain("DEFAULT_USERNAME = 'admin'")
+-    expect(source).toContain("DEFAULT_PASSWORD = '123456'")
++    // SecNoDefaultCred（安全轮 M8b）：重置不再返回硬编码口令，改为读 CLI 落盘的
++    // admin-login.json（随机密码）；源码不得再出现出厂默认口令字面量。
++    expect(source).toContain('readAdminLoginFile()')
++    expect(source).not.toContain("DEFAULT_PASSWORD = '123456'")
++    expect(source).not.toContain("'123456'")
++  })
++
++  it('proxies renderer login through the main process (no credentials in the client bundle)', () => {
++    const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
++    const preload = readFileSync(resolve('packages/desktop/src/preload/index.ts'), 'utf-8')
++
++    expect(source).toContain('export async function desktopAutoLogin')
++    expect(preload).toContain("desktopLogin: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:login')")
+   })
+ })
