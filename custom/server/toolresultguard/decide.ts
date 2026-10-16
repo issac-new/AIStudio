@@ -81,20 +81,41 @@ export async function evaluate(
   breaker.recordSuccess()
 
   const { attackP, category, severity } = answers
+  // ── S1 判据校准（P2 深化，2026-10-16；探针实测依据见 __tests__/s1-calibration.probe）──
+  // 问题：noul 概率（is_attack 一问）对 clef-flash 偏保守——10 样本探针实测明确攻击
+  // 的 p 散布 0.116-0.873（7 个仅 1 个过默认 τ_high=0.85），而类别判定极准
+  // （7/7 攻击认对类别、2/3 难负例认 A0）。单信号门控把多数明确攻击留在灰区。
+  // 校准=合并第二信号：类别非 A0（模型已断言有攻击意图）且严重度 ≥ 常量下限时，
+  // 有效概率抬过 τ_high。探针样本集实测该规则 7/7 检出+0 误杀——难负例 B1（安全
+  // 文档）虽被误分类 A5，但严重度 1.11 低于下限被挡（类别+严重度双信号才放行，
+  // 单信号误分类不致命）。原始 attackP 仍如实记入决策（不覆盖），via 标 calibrated。
+  const SEVERITY_FLOOR = 1.5
+  const categoryAssertsAttack = !!category && category !== 'A0_not_an_attack'
+  const calibrated = categoryAssertsAttack && severity >= SEVERITY_FLOOR
+  const effectiveP = calibrated ? Math.max(attackP, config.tauHigh) : attackP
   let decision: GuardDecision
-  if (attackP >= config.tauHigh) {
+  if (effectiveP >= config.tauHigh) {
     decision = stage === 'input'
-      ? { ...baseDecision(stage, 's1', contentSha, suspicion.score, `attack p=${attackP.toFixed(2)} ≥ τ_high`),
+      ? { ...baseDecision(stage, calibrated ? 's1-calibrated' : 's1', contentSha, suspicion.score,
+            calibrated ? `attack p=${attackP.toFixed(2)} + 类别 ${category}/严重度 ${severity.toFixed(2)} 合并信号 ≥ τ_high`
+                       : `attack p=${attackP.toFixed(2)} ≥ τ_high`),
           verdict: 'BLOCK', attackP, category, severity, latencyMs }
-      : { ...baseDecision(stage, 's1', contentSha, suspicion.score, `attack p=${attackP.toFixed(2)} ≥ τ_high`),
+      : { ...baseDecision(stage, calibrated ? 's1-calibrated' : 's1', contentSha, suspicion.score,
+            calibrated ? `attack p=${attackP.toFixed(2)} + 类别 ${category}/严重度 ${severity.toFixed(2)} 合并信号 ≥ τ_high`
+                       : `attack p=${attackP.toFixed(2)} ≥ τ_high`),
           verdict: 'REWRITE', attackP, category, severity, latencyMs,
           rewrittenContent: isolationNotice(contentSha, category, attackP) }
-  } else if (attackP <= config.tauLow) {
+  } else if (effectiveP <= config.tauLow) {
     decision = { ...baseDecision(stage, 's1', contentSha, suspicion.score, `clean p=${attackP.toFixed(2)} ≤ τ_low`),
       attackP, category, severity, latencyMs }
   } else {
     decision = { ...baseDecision(stage, 's1', contentSha, suspicion.score, `gray p=${attackP.toFixed(2)}`),
       verdict: 'CONFIRM', attackP, category, severity, latencyMs, warningLine: warningLine(suspicion.score, attackP) }
+  }
+  // 校准未抬过 τ_high 但类别+严重度达标的样本，仍在灰区如实呈现（warningLine 带上
+  // 第二信号，便于人工复核时看见「模型认了类别但概率不够」这一形态）。
+  if (decision.verdict === 'CONFIRM' && calibrated) {
+    decision.warningLine = (decision.warningLine ?? '') + `（类别 ${category} 严重度 ${severity.toFixed(2)}：第二信号已达合并标准，仅概率未过线）`
   }
   cache.set(cacheKey, decision)
   return decision
