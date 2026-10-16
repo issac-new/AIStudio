@@ -74,6 +74,13 @@ function goTab(tab: GovTab): void {
           @click="goTab(tab)"
         >{{ text[TAB_LABEL_KEY[tab.key]] }}</button>
       </nav>
+      <button
+        class="gov-center__settings"
+        type="button"
+        data-testid="ia-gov-settings-link"
+        title="系统设置"
+        @click="void router.push({ name: 'ia2.govSettings' })"
+      >⚙ 系统设置</button>
     </header>
 
     <main class="gov-center__body">
@@ -157,6 +164,16 @@ function goTab(tab: GovTab): void {
 .gov-center { display: flex; flex-direction: column; height: 100%; padding: 16px; overflow: auto; gap: 12px; }
 .gov-center__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .gov-center__title { margin: 0; font-size: 16px; }
+.gov-center__settings {
+  margin-left: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
 .gov-center__tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .gov-center__tab {
   padding: 4px 12px;

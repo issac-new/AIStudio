@@ -69,6 +69,7 @@ const EXPECTED_NAMES = [
   'ia2.govIssues',
   'ia2.govMetrics',
   'ia2.govOrgAssets',
+  'ia2.govSettings',
   'ia2.governance',
   'ia2.groupRoom',
   'ia2.inbox',
