@@ -1,4 +1,4 @@
-// REST 直连白名单守门（边界设计 §2/§3-E6/§6-T1）：Matrix client-server REST 通道
+// REST 直连白名单单测（边界设计 §2/§3-E6/§6-T1）：Matrix client-server REST 通道
 // 仅限初始化/管理面/派发摘要，调用方白名单锁死；跨机协作消息一律走 task-protocol.ts
 // 协议事件。新增消费方必须先过
 // docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §6-T1 裁决。
@@ -27,7 +27,7 @@ const ALLOWED_CONSUMERS = [
   'server/matrix/raci-matrix.ts', // 定义处
   'server/services/kanban/raci-dispatch.ts', // 唯一调用方：RACI 派发建群+摘要+协议事件
   // 双轨收敛补录（2026-09-29 cockpit-s3 轮）：v14 P2B/P2A 文件自误删恢复后入单——
-  // 桥接与身份面是合法 REST 消费者（本守门成文时两文件恰被 cbd7b3e7 误删缺席）
+  // 桥接与身份面是合法 REST 消费者（本单测成文时两文件恰被 cbd7b3e7 误删缺席）
   'server/matrix/chat-bridge.ts', // v14 P2B：matrix 房间 ↔ hermes 群聊双向桥（sync 通道）
   'server/matrix/agent-identity.ts', // v14 P2A：agent 身份解析（displayname/徽章）
 ]
@@ -37,9 +37,12 @@ const URL_ALLOWED = [
   'server/matrix/admin-service.ts', // 管理面（whoami/displayname/synapse admin）
   'server/matrix/chat-bridge.ts', // v14 P2B 桥接通道（收敛补录，同 ALLOWED_CONSUMERS）
   'server/matrix/agent-identity.ts', // v14 P2A 身份面（收敛补录）
-  // 进度联邦通道（2026-10-11 补录，9044f1b1 落地时漏更本守门）：服务端跨机进度事件
+  // 进度联邦通道（2026-10-11 补录，9044f1b1 落地时漏更本单测）：服务端跨机进度事件
   // 上行/回读（federation 房 messages 读取+send），同属服务端直连面而非任务协作消息
   'server/progress/federation.ts',
+  // humansim 发送面（2026-10-16 补录，B10 统筹批）：人类角色模拟的消息直发通道
+  // （账号 token 文件+审计 ndjson 留痕）——管理面语义，非任务协作消息
+  'server/humansim/humansim-controller.ts',
 ]
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'
@@ -60,7 +63,13 @@ const HARNESS_REST_WHITELIST = [
   'mux/mx-setup.sh', // sim 账号开通（mx_login 取 token）
   'mux/mx-delivery-lib.sh', // M3 delivery 协议轮（事件收发，mx_messages 同款直连）
   'mux/mx-delivery-smoke.sh', // M3 六阶段协议轮（断言读回）
-  'aipay-scenario.sh', // sim 导演兜底（建群/邀人/补邀/读消息）
+  'aipay-scenario.sh', // sim 驱动兜底（建群/邀人/补邀/读消息）
+  // 心跳与探测面（2026-10-16 统筹批补录：主树四件实测命中，均为合法运维/探测用途，
+  // 非 任务协作消息——同批清掉 feat-win-trinode 残留 worktree 后浮出的真缺口）
+  'mux/mx-hb.sh', // 心跳上报（会话活性探测消息）
+  'mux/mx-node-heartbeat.sh', // 节点心跳（跨机活性探测）
+  'scenarios/_template/scenario-skeleton.sh', // 场景模板（骨架示例含 REST 原语示范）
+  'tests/multi-owner-stall.test.sh', // 多主停滞测试（断言读回）
 ]
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {
@@ -73,7 +82,7 @@ function walk(dir: string, exts: string[], out: string[] = []): string[] {
   return out
 }
 
-describe('REST 直连白名单守门', () => {
+describe('REST 直连白名单单测', () => {
   it('② 矩阵 REST 包装函数仅白名单文件可引用（函数级断言）', () => {
     const offenders: string[] = []
     for (const file of walk(customRoot, ['.ts'])) {
@@ -106,7 +115,7 @@ describe('REST 直连白名单守门', () => {
   })
 })
 
-describe('REST 直连白名单守门（sim harness）', () => {
+describe('REST 直连白名单单测（sim harness）', () => {
   it('④ simharness 的 synapse REST 原语仅白名单脚本可出现', () => {
     const harnessDir = simharnessRoot
     const offenders: string[] = []

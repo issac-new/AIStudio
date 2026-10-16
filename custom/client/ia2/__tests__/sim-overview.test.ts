@@ -5,6 +5,7 @@
 // 健康行如实、六闸全名首现、净额双行并列+分型紫标、端点 503 如实）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { createRouter, createMemoryHistory } from 'vue-router'
 
 vi.mock('../api/overview', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/overview')>()
@@ -55,12 +56,10 @@ describe('纯函数层', () => {
 describe('OverviewPanel — 驾驶屏', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('姿态横幅（standard 琥珀带+清偿红灯）+六闸全名行+净额双行+分型紫标', async () => {
+  it('轻量条（B10）：query 带 run 自动装载——三徽标（姿态色点/清偿灯/服务异常）+点击跳签 1', async () => {
     mockedRunState.mockResolvedValue({
-      run: 'r', posture: 'standard',
-      gates: { g1_frozen: 't1', g5_humangate: '' },
-      steps: { a_done: '1', b_done: '1', c_done: '1' },
-      ledger: { total: 40, open: 27, byType: { 'auto-approve': 22, nudge: 5 } },
+      run: 'r', posture: 'standard', gates: {}, steps: {},
+      ledger: { total: 40, open: 27, byType: { 'auto-approve': 22 } },
       source: { stateFile: 's', ledgerFile: 'l', ledgerPresent: true },
     })
     mockedTopology.mockResolvedValue({
@@ -70,53 +69,50 @@ describe('OverviewPanel — 驾驶屏', () => {
       },
       checkedAt: 't',
     })
-    const w = mount(CockpitPanel)
-    await w.find('[data-testid="ov-run"]').setValue('r')
-    await w.find('[data-testid="ov-load"]').trigger('click')
-    await flushPromises()
-    expect(w.find('[data-testid="ov-posture"]').classes()).toContain('ov__banner--standard')
-    const lamp = w.find('[data-testid="ov-clearance-lamp"]')
-    expect(lamp.classes()).toContain('ov__clear-lamp--red')
-    expect(lamp.text()).toContain('27 笔未清·拒开新轮')
-    expect(w.find('[data-testid="ov-health"]').text()).toContain('3/4 在线')
-    expect(w.find('[data-testid="ov-health"]').text()).toContain('studio 离线')
-    expect(w.find('[data-testid="ov-gate-g1_frozen"]').text()).toContain('G1 需求冻结')
-    expect(w.find('[data-testid="ov-gate-g5_humangate"]').text()).toContain('未过')
-    expect(w.find('[data-testid="ov-net-compensated"]').text()).toBe('台账 40 笔，未清 27')
-    expect(w.find('[data-testid="ov-net-cleared"]').text()).toBe('已清 13')
-    expect(w.findAll('[data-testid="sim-comp-tag"]')).toHaveLength(2)
-    expect(w.find('[data-testid="ov-steps"]').text()).toContain('3 项')
-    w.unmount()
-  })
-
-  it('清偿放行绿灯+零代偿如实；拓扑端点失败=健康行缺席标注', async () => {
-    mockedRunState.mockResolvedValue({
-      run: 'r', posture: 'strict', gates: {}, steps: {},
-      ledger: { total: 0, open: 0, byType: {} },
-      source: { stateFile: 's', ledgerFile: 'l', ledgerPresent: false },
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app/sim', name: 'ia2.sim', component: { template: '<div />' } }],
     })
-    mockedTopology.mockRejectedValue(new Error('x → 503'))
-    const w = mount(CockpitPanel)
-    await w.find('[data-testid="ov-run"]').setValue('r')
-    await w.find('[data-testid="ov-load"]').trigger('click')
+    await router.push('/app/sim?run=r')
+    await router.isReady()
+    const w = mount(CockpitPanel, { global: { plugins: [router] } })
     await flushPromises()
-    expect(w.find('[data-testid="ov-posture"]').classes()).toContain('ov__banner--strict')
-    expect(w.find('[data-testid="ov-clearance-lamp"]').classes()).toContain('ov__clear-lamp--green')
-    expect(w.find('[data-testid="ov-clearance-lamp"]').text()).toContain('放行')
-    expect(w.find('[data-testid="ov-health"]').text()).toContain('未探测')
-    expect(w.text()).toContain('零代偿（台账空）')
+    expect(w.find('[data-testid="cpb-strip"]').exists()).toBe(true)
+    expect(w.find('.cpb__dot--standard').exists()).toBe(true)
+    expect(w.find('[data-testid="cpb-clearance"]').text()).toContain('27 未清')
+    expect(w.find('[data-testid="cpb-services"]').text()).toContain('1 异常')
+    await w.find('[data-testid="cpb-strip"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.sim')
     w.unmount()
   })
 
-  it('run-state 端点 503（OBS_SIM_ROOT 缺席）如实报错不渲染驾驶屏', async () => {
-    mockedRunState.mockRejectedValue(new Error('/api/hermes/sim/run-state → 503'))
-    mockedTopology.mockResolvedValue({ services: {}, checkedAt: 't' })
-    const w = mount(CockpitPanel)
-    await w.find('[data-testid="ov-run"]').setValue('r')
-    await w.find('[data-testid="ov-load"]').trigger('click')
+  it('轻量条：无 run=待命提示（不自建输入，单一事实源在签 1）', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app/sim', name: 'ia2.sim', component: { template: '<div />' } }],
+    })
+    await router.push('/app/sim')
+    await router.isReady()
+    const w = mount(CockpitPanel, { global: { plugins: [router] } })
     await flushPromises()
-    expect(w.find('[data-testid="ov-error"]').text()).toContain('503')
-    expect(w.find('[data-testid="ov-posture"]').exists()).toBe(false)
+    expect(w.find('[data-testid="cpb-empty"]').text()).toContain('驾驶位待命')
+    expect(mockedRunState).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('轻量条：run-state 不可达如实（红点+错误徽标），不渲染正常徽标', async () => {
+    mockedRunState.mockRejectedValue(new Error('x → 503'))
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app/sim', name: 'ia2.sim', component: { template: '<div />' } }],
+    })
+    await router.push('/app/sim?run=r')
+    await router.isReady()
+    const w = mount(CockpitPanel, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(w.find('[data-testid="cpb-error"]').text()).toContain('不可达')
+    expect(w.find('[data-testid="cpb-clearance"]').exists()).toBe(false)
     w.unmount()
   })
 })

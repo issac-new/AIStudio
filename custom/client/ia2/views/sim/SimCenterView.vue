@@ -17,6 +17,7 @@ import OpsPanel from './OpsPanel.vue'
 import DeliveryPanel from './DeliveryPanel.vue'
 import TracePanel from './TracePanel.vue'
 import OverviewPanel from './OverviewPanel.vue'
+import CockpitPanel from './CockpitPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -79,6 +80,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
           {{ text[TAB_LABEL_KEY[tab.key]] }}
         </button>
       </nav>
+      <CockpitPanel />
       <button
         class="sim-center__settings"
         type="button"
