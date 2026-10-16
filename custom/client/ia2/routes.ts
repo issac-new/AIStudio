@@ -218,12 +218,43 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/InboxView.vue'),
         },
         {
-          // 治理中心独立路由（2026-10-01 单层页签重构退役整页承载）：治理四分区
-          // 升 /app/board 平级页签后，FlowNavPanel 入口与旧直达链接经重定向不死链
-          // ——落治理首分区「组织与知识」。
+          // 治理中心升格（C1·2026-10-16）：七签壳（关卡与流程/组织与资产/清偿门/
+          // 问题单对账/审计与变更/文档评审/度量体检）；签 3 清偿门 C2 实装。
+          // 旧直达链接 /app/gov 落治理中心默认签（原 board?tab=gov-org 语义由
+          // 签 2 组织与资产承接，board 既有 gov-* 页签保留一版本周期随 C3-C9 迁移）。
           path: 'gov',
           name: 'ia2.governance',
-          redirect: () => ({ name: 'ia2.board', query: { tab: 'gov-org' } }),
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/org-assets',
+          name: 'ia2.govOrgAssets',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/clearance',
+          name: 'ia2.govClearance',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/issues',
+          name: 'ia2.govIssues',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/audit',
+          name: 'ia2.govAudit',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/docs',
+          name: 'ia2.govDocs',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/metrics',
+          name: 'ia2.govMetrics',
+          component: () => import('./views/gov/GovCenterView.vue'),
         },
         {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓
