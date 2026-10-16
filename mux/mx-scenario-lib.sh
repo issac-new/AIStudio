@@ -848,6 +848,24 @@ capture_step() { # <step> <url> [action] [user]
     fi
   else
     sset capture_fail_streak 0
+    # 采集链挂驱动（run20 复盘 C3 根治）：拍到的帧自动登记进 R18 载荷
+    # （r18-steps.json op 条目）——此前 capture_step 只拍不登记，帧成「拍而未嵌」
+    # 孤儿（run20 实锤 59 帧盘上、报告 imgs 空 53 帧无主、逐步「操作 0」）。
+    # 幂等：r18-collect op 帧级去重（重启重放零重复）；失败 fail-open 记单不阻断。
+    local _f _frames=""
+    for _f in "$EVID_DIR/screenshots/steps/${step}-op1-before.png" \
+              "$EVID_DIR/screenshots/steps/${step}-op1-action.png" \
+              "$EVID_DIR/screenshots/steps/${step}-op1-after.png"; do
+      [[ -f "$_f" ]] && _frames="${_frames:+$_frames }$(basename "$_f")"
+    done
+    if [[ -n "$_frames" ]]; then
+      if ! python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
+          --step-key "$step" --title "步 ${step} 操作前后帧（capture_step 自动登记）" \
+          --entry "url=${url} user=${user}" --frames $_frames >/dev/null 2>&1; then
+        note "[帧采集] 步 ${step} R18 op 载荷登记失败（记单不阻断）"
+        echo "ISSUE|r18-op-register-failed|step-${step}|capture_step 拍摄成功但 r18-collect op 登记失败（帧在盘、载荷缺——收尾链按帧名补登记）" >> "$EVID_DIR/issues.log"
+      fi
+    fi
   fi
 }
 

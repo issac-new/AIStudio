@@ -148,3 +148,38 @@ def unregistered_ledger_keys(issues_log: str, registered: dict) -> list:
     except OSError:
         return []
     return seen
+
+
+# ── 孤儿帧自动挂接（run20 复盘 C3 根治件）──
+# run20 实锤：59 帧真实截图落盘、叙事注册 imgs 全空 → 53 帧成孤儿（审计 A5a
+# 「盘上未引用帧」），报告口径却写「本轮未拍摄」。采集链拍了、报告没接——挂接
+# 责任不能只压在收尾链手工注册上：imgs 空=按步键自动扫盘挂接，诚实标注来源。
+
+def orphan_frames_for(keys, step_no, shots_dir) -> list:
+    """步的自动挂接候选帧（叙事 imgs 空时的兜底）。
+
+    匹配盘上 runs/<RUN>/evidence/screenshots/steps/ 的 <key>-op<k>-<phase>.png
+    （key ∈ 该步 state 键）与 <step_no>-op<k>-<phase>.png（数字前缀形态，run20
+    实存 19-op1-action.png）。返回帧名前缀列表（不含扩展名），before/action/after
+    相位序稳定。目录不存在/无匹配=空列表（回落「截图缺失」三态，不改变降级语义）。
+    """
+    import os
+    if not shots_dir or not os.path.isdir(shots_dir):
+        return []
+    keys = [k for k in (keys or []) if k]
+    prefixes = set()
+    for name in os.listdir(shots_dir):
+        if not name.endswith('.png'):
+            continue
+        stem = name[:-4]
+        m = re.match(r'^(.+?)-op\d+-(before|action|after)$', stem)
+        if not m:
+            continue
+        head = m.group(1)
+        if head in keys or (str(step_no) == head):
+            prefixes.add(stem)
+    order = {'before': 0, 'action': 1, 'after': 2}
+    def _sort_key(s):
+        m = re.match(r'^(.+?)-op(\d+)-(before|action|after)$', s)
+        return (m.group(1), int(m.group(2)), order.get(m.group(3), 9)) if m else (s, 0, 9)
+    return sorted(prefixes, key=_sort_key)

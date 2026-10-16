@@ -4123,6 +4123,14 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         _bkey = (meta.get('keys') or [f'step{n}'])[0]
         if meta.get('imgs', []):
             imgs_html = img_tags(meta.get('imgs', []))
+        elif (orphans := report_truth.orphan_frames_for(meta.get('keys') or [], n, STEPS_DIR)):
+            # 孤儿帧自动挂接（run20 复盘 C3）：叙事注册 imgs 空 ≠ 盘上无帧——按步键
+            # 扫盘挂接，诚实标注来源；挂接后 A5a「拍而未嵌」由结构性缺口变个别漏网。
+            _or_imgs = [(pre, f'自动挂接·{pre}（叙事 imgs 未注册，按步键匹配盘上帧——采集链产物）', 'ui')
+                        for pre in orphans]
+            imgs_html = ('<p class="st-autoattach">本步影像为自动挂接（叙事注册未带 imgs，'
+                         f'按状态键匹配盘上 {len(orphans)} 帧）——拍摄真值以帧文件与 r18-steps.json 为准。</p>'
+                         + img_tags(_or_imgs))
         elif (meta.get('mark_chip') or '').startswith('沿用'):
             imgs_html = f'<p class="no-evidence">回归轮（本步不在本轮执行范围）：本步未执行（沿用源轮工件，见步卡夹具标签），无当轮帧——不适用未采集口径</p>'
         elif _CAPTURE_PLAN.get(_bkey, ('',))[0] == 'none':
