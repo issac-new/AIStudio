@@ -787,7 +787,7 @@ STEPS_META_RUN8 = {
             narrative='G6 复盘 00:07:52：治理报告生成+问题单全量在案（16+ 条三族：回执缺失/交付缺席/集成缺口——当晚统一定因为响应投递丢弃根因）。', imgs=[]),
     24: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 核验',
             narrative='IDE 核验三真值通过（00:14 前）；本轮驾驶舱配套（后台任务执行感知三件套+辅助栏分组整合）已合 main，下轮快照生效。', imgs=[]),
-    25: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
+    25: dict(keys=['ide_done'], actor='ai', actorText='AI · 报告生成器',
             narrative='报告链 00:14 首跑被按轮叙事文案强制关卡拦下（按轮注册防旧轮冒充，设计如常）→run8 叙事文案注册后本页生成；全量呈现本轮未采图（0 图如实标注，补拍留收尾链）。', imgs=[]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 终局',
             narrative='接续器 RELAY-FINISHED 判定链：全部 gates 执行完毕。全程 07:09-00:1x≈17h；六型 bash set -u/e 坑+两产品根因（响应投递丢弃/驾驶舱盲区）当场根治入档——本轮推演的核心产出即这份事故-根因-修复账本。', imgs=[]),
@@ -1436,7 +1436,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
     23: dict(keys=['audit_done'], actor='human', actorText='人 · 审计师A 独立签名线',
         narrative='独立审计在案：REL-DELIVER 交付物缺件（merchant-onboarding 文档不在 origin/main）已登记问题单。', imgs=[('audit_done-op1-before','审计·前态','ui'), ('audit_done-op1-after','审计·收尾','ui')]),
     24: dict(keys=['retro_done'], actor='ai', actorText='AI · 复盘',
-        narrative='复盘段：问题单缺 DISP 处置记账如实标待处置（计数以 issues.log 实算为准——run18 复盘 F11 教训：禁手填计数，驱动侧已改追加自指单后重取）。', imgs=[]),
+        narrative='复盘段：问题单缺 DISP 处置记账如实标待处置（计数以 issues.log 实测计算为准——run18 复盘 F11 教训：禁手填计数，驱动侧已改追加自指单后重取）。', imgs=[]),
     25: dict(keys=['ide_done'], actor='ai', actorText='AI · IDE 简报',
         narrative='IDE 核验三项通过（06:16：/ide 路由 200、ide?task 参数处理、简报组件在位）。', imgs=[]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告链',
@@ -1543,18 +1543,18 @@ STEPS_META_20261015_V8_RUN20 = {
     12: dict(keys=['raci_sidework_done'], narrative='分诊与派工：RACI 矩阵落卡；副线任务并行。', imgs=[]),
     13: dict(keys=['analysis_done'], narrative='精准系分四路：概设详设与工作量评估出稿。', imgs=[]),
     14: dict(keys=['anexec_done'], narrative='汇总复核定稿：r3 十二项修订全入 main（union 合并 369762a/410d70d）。', imgs=[]),
-    15: dict(keys=['g2_arch_pass'], narrative='G2 评审闸：架构治理 PASS（判词四层盲因链攻坚后 10:18 放行——本闸攻坚沉淀为方案 V8.30 职责归位轮）。', imgs=[]),
-    16: dict(keys=['close_done'], narrative='系分收口：设计文档链入 main（e6fda00）。', imgs=[]),
+    15: dict(keys=['g2_arch_pass'], narrative='G2 评审闸：架构治理 PASS（判词四层盲因链攻坚后 10:18 放行——本闸攻坚积累为方案 V8.30 职责归位轮）。', imgs=[]),
+    16: dict(keys=['close_done'], narrative='系分归位：设计文档链入 main（e6fda00）。', imgs=[]),
     17: dict(keys=['plan_done'], narrative='排期：RFD-001-schedule 入仓（1b4cd87）；六路任务书 12:02 派发（后证该窗为网关死亡窗，死信补棒 15:42 全员复活——issue devimpl-redispatch-nudge）。', imgs=[]),
-    18: dict(keys=['devimpl_done'], narrative='编码 G3：六分支全推 origin（C e4d77ed/S 4301711/N 1aa75b0/CHWX 16:17/CHALI 2179132/MP 2008885→ffabc8b）；testlog 6/6 在案；g3_evidence_gap=1 显形记欠（CHWX 补证窗超时）。本段实录：跨档案「干完不交卷」五波（16:07-21:27），沉淀三层根治（V8.32 派发词完成定义+636 turn-end 自动 push+637 续作泵——run21 生效）。', imgs=[]),
-    19: dict(keys=['g4_pass'], narrative='独立测试 G4：TEST-BE-S1/S3+QUALITY+INT 四测试分支推 origin（20:36-21:37）；203 例 202 绿 1 红诚实账（658971a 汇总测试报告）；缺陷环 defect_done=1（P0 DEF-BE-S2-01 闭环）；g4_evidence_gap=1 显形。', imgs=[]),
+    18: dict(keys=['devimpl_done'], narrative='编码 G3：六分支全推 origin（C e4d77ed/S 4301711/N 1aa75b0/CHWX 16:17/CHALI 2179132/MP 2008885→ffabc8b）；testlog 6/6 在案；g3_evidence_gap=1 显形记欠（CHWX 补证窗超时）。本段实录：跨档案「干完不交卷」五波（16:07-21:27），积累三层根治（V8.32 派发词完成定义+636 turn-end 自动 push+637 续作泵——run21 生效）。', imgs=[]),
+    19: dict(keys=['g4_pass'], narrative='独立测试 G4：TEST-BE-S1/S3+QUALITY+INT 四测试分支推 origin（20:36-21:37）；203 例 202 绿 1 红诚实账（658971a 汇总测试报告）；缺陷环 defect_done=1（P0 DEF-BE-S2-01 验证达成）；g4_evidence_gap=1 显形。', imgs=[]),
     20: dict(keys=['release_done'], narrative='发布准出 G5：判词 READY-GATE-PASS（fanfan 02:12 六面前判词）；本闸七层盲因链攻坚（sender 锚/追尾循环/卡面检索/候选词污染/熔断指纹 body||result 扩列——watchdog 假阳同步根治 05b9d20）；integration/RFD-001 全六支内容级并入（对象级 C/N 差异记 lead_merge_fallback=1 代偿单）。', imgs=[]),
     21: dict(keys=['uat_done'], narrative='UAT 验收：七条 AC 逐条证据（bella 核对 fanfan 证据链）——uat_done 10:09:29。', imgs=[]),
-    22: dict(keys=['ide_done'], narrative='工作台账：120+ 条 issues.log 全程留痕（ISSUE/DISP/RISK 三态），本报告③段实算呈现。', imgs=[]),
+    22: dict(keys=['ide_done'], narrative='工作台账：120+ 条 issues.log 全程留痕（ISSUE/DISP/RISK 三态），本报告③段实测计算呈现。', imgs=[]),
     23: dict(keys=['audit_done'], narrative='合规审计：audit_done 10:12:14。', imgs=[]),
-    24: dict(keys=['retro_done'], narrative='复盘 G6：retro_done 10:14:37；本日治理沉淀=方案 V8.34（66-69 四纪律）+监督日复盘文档（2026-10-15-run20-supervisor-rescue-and-inspector-closure.md）。', imgs=[]),
-    25: dict(keys=['report_done'], narrative='报告生成：本件（叙事注册补于收官链内——R17 骨架兜底已出，注册后覆盖）。', imgs=[]),
-    26: dict(keys=['report_done'], narrative='终收口：四格式同步+三停（watchdog/nanny/哨）。', imgs=[]),
+    24: dict(keys=['retro_done'], narrative='复盘 G6：retro_done 10:14:37；本日治理积累=方案 V8.34（66-69 四纪律）+监督日复盘文档（2026-10-15-run20-supervisor-rescue-and-inspector-closure.md）。', imgs=[]),
+    25: dict(keys=['ide_done'], narrative='报告生成：本件（叙事注册补于收尾链内——R17 骨架兜底已出，注册后覆盖）。', imgs=[]),
+    26: dict(keys=['report_done'], narrative='终收尾：四格式同步+三停（watchdog/nanny/哨）。', imgs=[]),
 }
 
 _NARR={'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
@@ -3574,7 +3574,7 @@ def _shadow_evidence_zone_html():
         '  <table><tr><th>时刻</th><th>局势研判</th></tr>' + (rows or '<tr><td colspan="2">无研判行（安静窗无研判——用户裁定）</td></tr>') + '</table>\n'
         '  <h3 style="font-size:13px;margin:12px 0 6px">停滞判定（近 5 条）</h3>\n'
         '  <table><tr><th>时刻</th><th>判词</th></tr>' + (vrows or '<tr><td colspan="2">无停滞判定行</td></tr>') + '</table>\n'
-        '  <h3 style="font-size:13px;margin:12px 0 6px">产品端点快照（收官时实采：派发器健康/休眠探针/通道面）</h3>\n'
+        '  <h3 style="font-size:13px;margin:12px 0 6px">产品端点快照（收尾时实采：派发器健康/休眠探针/通道面）</h3>\n'
         '  <pre style="font-size:11px;background:var(--bg);padding:8px;border-radius:6px;overflow:auto">' + prod_html + '</pre>\n')
 
 
