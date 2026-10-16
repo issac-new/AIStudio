@@ -9,9 +9,10 @@ import AuditSection from '@/custom/governance/components/AuditSection.vue'
 import ChangeGovernanceSection from '@/custom/governance/components/ChangeGovernanceSection.vue'
 import IncidentReportSection from '@/custom/governance/components/IncidentReportSection.vue'
 import GovEventStreamSection from '@/custom/governance/components/GovEventStreamSection.vue'
-import { useTasksTabsText } from '../../i18n-tasks-tabs'
+// A0 三中心拆分：标题键 tabGovAudit 已迁 i18n-gov-tabs（治理中心过渡事实源）
+import { useGovTabsText } from '../../i18n-gov-tabs'
 
-const tabText = useTasksTabsText()
+const tabText = useGovTabsText()
 </script>
 
 <template>

@@ -97,6 +97,13 @@ function makeRouter(): Router {
     routes: [
       { path: '/app/board', name: 'ia2.board', component: { template: '<div tasks />' } },
       { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
+      // A0 三中心拆分：迁出签深链重定向落点桩（trace/accounts/observatory →
+      // 推演中心签；组件实体由 sim 侧测试覆盖，此处只断言导航不死链）
+      { path: '/app/sim', name: 'ia2.sim', component: { template: '<div sim />' } },
+      { path: '/app/sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
+      { path: '/app/sim/delivery', name: 'ia2.simDelivery', component: { template: '<div sim-delivery />' } },
+      { path: '/app/sim/ops', name: 'ia2.simOps', component: { template: '<div sim-ops />' } },
+      { path: '/app/gov', name: 'ia2.governance', component: { template: '<div gov />' } },
     ],
   })
 }
@@ -289,66 +296,45 @@ describe('NodeInspector 产物任务链接', () => {
 // ---------------------------------------------------------------------------
 
 describe('TasksView 页签与深链预选', () => {
-  it('默认看板页签；切追溯页签挂矩阵；query 预选 status/task 写入看板过滤器', async () => {
+  it('A0 后默认看板页签（board 3 签）；query 预选 status/task 写入看板过滤器；追溯签深链落推演中心', async () => {
     const router = makeRouter()
     await router.push('/app/board?status=blocked&task=t_42')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(kanbanState.filterStatus).toBe('blocked')
     expect(kanbanState.searchQuery).toBe('t_42')
-
-    await wrapper.find('[data-testid="ia-tasks-tab-trace"]').trigger('click')
-    expect(wrapper.find('[data-testid="ia-trace"]').exists()).toBe(true)
-    expect(wrapper.find('.kanban-stub').exists()).toBe(false)
+    // board 3 签注册表（追溯/交付健康/运行观测已迁推演中心，页签位消失）
+    expect(wrapper.findAll('.ia-tasks__tab')).toHaveLength(3)
+    expect(wrapper.find('[data-testid="ia-tasks-tab-trace"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-tasks-tab-accounts"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-tasks-tab-observatory"]').exists()).toBe(false)
+    // 旧 ?tab=trace 深链 → 推演中心需求追溯签（深链不死链）
+    await router.push('/app/board?tab=trace')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.simTrace')
     // L4 页签 URL 回写引入跨 tick 的 router.replace——组件不卸载会在下一用例
     // 执行期 resolve 并经共享 kanbanState 污染断言（跨用例泄漏组件的既有卫生债）
     wrapper.unmount()
   })
 
-  it('非法 status/未知 tab 忽略不炸；追溯任务点击切回看板并预选搜索', async () => {
+  it('非法 status 忽略不炸；未知 tab 回落看板；三旧签深链全部重定向不死链', async () => {
     const router = makeRouter()
     await router.push('/app/board?status=not-a-status&tab=weird')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(kanbanState.filterStatus).toBeNull()
     expect(wrapper.find('.kanban-stub').exists()).toBe(true)
-
-    await wrapper.find('[data-testid="ia-tasks-tab-trace"]').trigger('click')
-    // 模拟矩阵 open-task：切回看板 + 搜索预选（经 emit 触发宿主行为）
-    ;(wrapper.findComponent({ name: 'TraceabilityMatrix' }).vm as unknown as {
-      $emit: (e: string, ...a: unknown[]) => void
-    }).$emit('open-task', 't_77')
-    await wrapper.vm.$nextTick()
-    expect(kanbanState.searchQuery).toBe('t_77')
-    expect(wrapper.find('.kanban-stub').exists()).toBe(true)
-  })
-
-  it('全链路追踪页签（2026-10-01）：点签挂面板；select-session 走弹窗下钻、close 回看板；?tab= 深链', async () => {
-    cockpitOpenTrace.mockClear()
-    const router = makeRouter()
-    await router.push('/app/board')
-    await router.isReady()
-    const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    expect(wrapper.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(false)
-
-    await wrapper.find('[data-testid="ia-tasks-tab-observatory"]').trigger('click')
-    expect(wrapper.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="rto-stub"]').exists()).toBe(true)
-
-    // select-session → cockpit.openRunTrace 单会话下钻（复用既有弹窗）
-    await wrapper.find('[data-testid="rto-stub"]').trigger('click')
-    expect(cockpitOpenTrace).toHaveBeenCalledWith({ sessionId: 'sess-1' })
-    // close → 回看板页签
-    expect(wrapper.find('.kanban-stub').exists()).toBe(true)
     wrapper.unmount()
 
-    // ?tab=observatory 深链直达（onMounted 后需一次 tick 重渲染）
-    const router2 = makeRouter()
-    await router2.push('/app/board?tab=observatory')
-    await router2.isReady()
-    const wrapper2 = mount(TasksView, { global: { plugins: [router2] } })
-    await wrapper2.vm.$nextTick()
-    expect(wrapper2.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(true)
-    wrapper2.unmount()
+    // 迁出签深链重定向（交付健康→签 5；运行观测→签 3）
+    for (const [tab, name] of [['accounts', 'ia2.simDelivery'], ['observatory', 'ia2.simOps']] as const) {
+      const router2 = makeRouter()
+      await router2.push(`/app/board?tab=${tab}`)
+      await router2.isReady()
+      const wrapper2 = mount(TasksView, { global: { plugins: [router2] } })
+      await flushPromises()
+      expect(router2.currentRoute.value.name, tab).toBe(name)
+      wrapper2.unmount()
+    }
   })
 })
