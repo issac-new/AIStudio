@@ -771,3 +771,95 @@ describe('WorkbenchView — P4③ 群任务流转时间线（2026-09-29 消息�
     delete (groupStubs.state as { messages?: unknown[] }).messages
   })
 })
+
+// ── A0 三中心导航（2026-10-16 屏 0 / R8）：顶栏渲染 + 高亮 + 点击导航 ──────────
+// 纯函数面（centerForPath / 注册表 / legacyTabRedirect）见 workbench-nav-centers.test.ts。
+describe('WorkbenchView — A0 三中心导航顶栏', () => {
+  function makeNavRouter(): Router {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [{
+        path: '/app',
+        component: { template: '<router-view />' },
+        children: [
+          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 'sim', name: 'ia2.sim', component: { template: '<div sim />' } },
+          { path: 'sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
+          { path: 'gov', name: 'ia2.governance', component: { template: '<div gov />' } },
+          { path: 'settings', name: 'hermes.settings', component: { template: '<div settings />' } },
+          // 岛屿路由桩（真实路由在 bpa/ontology/eval/skillgov 各域注册）
+          { path: 'bpa', name: 'ia2.bpa', component: { template: '<div bpa />' } },
+          { path: 'ontology', name: 'ia2.ontology', component: { template: '<div ontology />' } },
+          { path: 'eval', name: 'ia2.eval', component: { template: '<div eval />' } },
+          { path: 'skillgov', name: 'ia2.skillgov', component: { template: '<div skillgov />' } },
+        ],
+      }, {
+        path: '/ide', name: 'ide.shell', component: { template: '<div ide />' },
+      }],
+    })
+  }
+
+  async function mountNav(path: string) {
+    const router = makeNavRouter()
+    await router.push(path)
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    return { wrapper, router }
+  }
+
+  it('三中心入口渲染（中文文案）+ /app 下工作台高亮，其余两中心不高亮', async () => {
+    const { wrapper } = await mountNav('/app')
+    const bar = wrapper.find('[data-testid="ia-nav-centers"]')
+    expect(bar.exists()).toBe(true)
+    const labels = bar.findAll('.wb__center-btn').map(x => x.text())
+    expect(labels).toEqual(['工作台', '推演中心', '治理中心'])
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('wb__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('wb__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('wb__center-btn--active')
+  })
+
+  it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
+    const { wrapper } = await mountNav('/app/sim')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('wb__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('wb__center-btn--active')
+  })
+
+  it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
+    const { wrapper, router } = await mountNav('/app')
+    await wrapper.find('[data-testid="ia-nav-center-sim"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    await wrapper.find('[data-testid="ia-nav-center-gov"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.governance')
+  })
+
+  it('岛屿入口组右侧收纳：默认开（ide/bpa/ontology/skillgov）在位、默认关（eval）不在；点击落既有路由', async () => {
+    const { wrapper, router } = await mountNav('/app')
+    const islands = wrapper.find('[data-testid="ia-nav-islands"]')
+    expect(islands.exists()).toBe(true)
+    // config/features.ts 默认值：eval 关（VITE_CUSTOM_EVAL 才开），其余四件默认开
+    expect(wrapper.find('[data-testid="ia-nav-island-ide"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-nav-island-bpa"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-nav-island-ontology"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-nav-island-skillgov"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-nav-island-eval"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="ia-nav-island-ontology"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.ontology')
+  })
+
+  it('[设置] 入口在位落 hermes.settings；镜头切换器不渲染（Phase D 已随需求 §六 Q1 解体取消）', async () => {
+    const { wrapper, router } = await mountNav('/app')
+    const settings = wrapper.find('[data-testid="ia-nav-settings"]')
+    expect(settings.exists()).toBe(true)
+    expect(settings.text()).toBe('设置')
+    await settings.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('hermes.settings')
+    // 镜头位为空槽：无任何镜头控件渲染（设计原文「Phase D 装」作废）
+    expect(wrapper.find('[data-testid="ia-nav-lens"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-nav-centers"]').text()).not.toContain('镜头')
+  })
+})

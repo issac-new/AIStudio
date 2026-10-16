@@ -52,6 +52,9 @@ import { useDecisionRows } from '../composables/useDecisionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useIdeJump } from '../composables/useIdeJump'
 import { openPanelWindow } from '../wm/popout'
+// A0 三中心导航（2026-10-16 屏 0）：入口表/高亮判定/岛屿入口单一事实源
+import { CENTER_NAVS, ISLAND_NAVS, centerForPath, useCenterNavLocale } from '../nav-centers'
+import { features } from '../../../../config/features'
 // v14 统一聊天：群聊建房型复用上游 CreateRoomForm（与 GroupChatPanel 同源，
 // GroupChatPanel.vue:3528 引用）；NDrawer 未开不渲染内容，测试装载零负担
 import { NDrawer, NDrawerContent } from 'naive-ui'
@@ -70,6 +73,19 @@ const matrixRoom = useMatrixRoomStore()
 const matrixClient = useMatrixClientStore()
 const chatStore = useChatStore()
 const platformsStore = usePlatformsStore()
+
+// ── A0 三中心导航（屏 0）：左=三中心场景条（当前中心高亮，按路由前缀判定）；
+//    右=岛屿入口组（IDE/BPA/本体/评测/技能治理，既有路由+功能开关门控）+
+//    [设置]。镜头切换器位=Phase D 镜头层已随需求 §六 Q1 解体取消，不建不渲染。──
+const navLocale = useCenterNavLocale()
+const activeCenter = computed(() => centerForPath(route.path))
+const visibleIslands = computed(() => ISLAND_NAVS.filter(i => features[i.featureKey]))
+function onGoCenter(name: string): void {
+  void router.push({ name })
+}
+function onGoSettings(): void {
+  void router.push({ name: 'hermes.settings' })
+}
 
 // ── R6 补充：三栏宽度拖拽 + 同步联动（colWidths 单一事实源，协作沟通 ↔ IDE
 // 工作台共享同一套宽度；拖任一边另一边跟随，历史 key 迁移回填）──
@@ -521,6 +537,36 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     :style="wbGridStyle"
     data-testid="wb-root"
   >
+    <!-- A0 三中心导航顶栏（屏 0，全宽 40px，跨三栏全列）：左=三中心场景条；
+         右=岛屿入口组+[设置]。镜头切换器占位空槽：Phase D 已随需求 §六 Q1
+         解体取消，不建不渲染（原设计「Phase D 装」作废）。 -->
+    <header class="wb__topbar" data-testid="ia-nav-centers">
+      <nav class="wb__centers" aria-label="三中心导航">
+        <button
+          v-for="c in CENTER_NAVS" :key="c.key" type="button"
+          class="wb__center-btn"
+          :class="{ 'wb__center-btn--active': activeCenter === c.key }"
+          :data-testid="`ia-nav-center-${c.key}`"
+          :aria-current="activeCenter === c.key ? 'page' : undefined"
+          @click="onGoCenter(c.name)"
+        >{{ navLocale === 'zh' ? c.labelZh : c.labelEn }}</button>
+      </nav>
+      <div class="wb__topbar-spacer" />
+      <div class="wb__islands" data-testid="ia-nav-islands">
+        <button
+          v-for="isl in visibleIslands" :key="isl.testid" type="button"
+          class="wb__island-btn"
+          :data-testid="isl.testid"
+          :title="navLocale === 'zh' ? isl.labelZh : isl.labelEn"
+          @click="onGoCenter(isl.name)"
+        >{{ navLocale === 'zh' ? isl.labelZh : isl.labelEn }}</button>
+        <button
+          type="button" class="wb__island-btn"
+          data-testid="ia-nav-settings"
+          @click="onGoSettings"
+        >{{ navLocale === 'zh' ? '设置' : 'Settings' }}</button>
+      </div>
+    </header>
     <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放栏内右上角（v12.6 不占行） -->
     <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
       <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） -->
@@ -668,12 +714,44 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   height: 100%; min-height: 0; min-width: 0;
   display: grid;
   grid-template-columns: 280px minmax(320px, 1fr) 480px;
+  /* A0 三中心导航：首行=全宽顶栏（auto），次行=三栏骨架（占满余高）；
+     行间 10px 由下方 gap 提供（原单行时 row-gap 不生效，语义不变） */
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
 }
 .wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 480px; }
 .wb--rf { grid-template-columns: 280px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
 .wb__left, .wb__right, .wb__center { min-height: 0; position: relative; }
+
+/* A0 三中心导航顶栏（屏 0）：跨三栏全列，40px，样式对齐既有顶栏 idiom */
+.wb__topbar {
+  grid-column: 1 / -1;
+  height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px;
+}
+.wb__centers { display: flex; align-items: stretch; height: 100%; gap: 2px; }
+.wb__center-btn {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: 13px; padding: 0 14px; margin: 5px 0; border-radius: 6px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99)); white-space: nowrap;
+  &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
+  &--active {
+    color: var(--accent-primary, var(--color-primary, #3b82f6));
+    background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 12%, transparent);
+    font-weight: 600;
+  }
+}
+.wb__topbar-spacer { flex: 1; }
+.wb__islands { display: flex; align-items: center; gap: 4px; }
+.wb__island-btn {
+  display: flex; align-items: center; height: 26px; padding: 0 9px;
+  border-radius: 6px; border: 1px solid transparent; background: transparent;
+  color: var(--text-secondary, inherit); cursor: pointer; font-size: 12px;
+  font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  &:hover { background: var(--bg-secondary, #f1f2f4); color: var(--text-primary, inherit); }
+}
 
 /* R6 补充：栏控独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） */
 .wb__colhead {
