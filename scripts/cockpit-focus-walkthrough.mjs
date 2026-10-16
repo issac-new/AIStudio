@@ -26,10 +26,10 @@ const ctx = await browser.newContext({ viewport: { width: 1600, height: 950 }, d
 const page = await ctx.newPage()
 await page.goto(BASE + '/')
 
-// 登录：admin/123456（dev 链默认管理员）
+// 登录：admin/dev-bootstrap（dev 链须以 HERMES_WEB_UI_DEV_BOOTSTRAP=1 起服务端，空库首登建号）
 const login = await fetch(API + '/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: '123456' }),
+  body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
 }).then(r => r.json()).catch(e => ({ error: String(e) }))
 if (!login.token) { console.log('login failed:', JSON.stringify(login).slice(0, 200)); process.exit(1) }
 await page.goto(BASE + '/#/app')

@@ -22,7 +22,7 @@ const page = await ctx.newPage()
 
 const login = await fetch(API + '/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: '123456' }),
+  body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
 }).then(r => r.json()).catch(e => ({ error: String(e) }))
 if (!login.token) { console.log('login failed'); process.exit(1) }
 

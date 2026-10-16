@@ -22,7 +22,7 @@ const page = await ctx.newPage()
 
 const login = await fetch(API + '/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: '123456' }),
+  body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
 }).then(r => r.json()).catch(e => ({ error: String(e) }))
 if (!login.token) { console.log('login failed:', JSON.stringify(login).slice(0, 200)); process.exit(1) }
 // hash 路由两段式：先落根路径设 localStorage，再跳 hash 目标

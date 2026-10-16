@@ -7,7 +7,7 @@ import { chromium } from '@playwright/test'
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
 const page = await (await browser.newContext({ viewport: { width: 1400, height: 900 } })).newPage()
 page.on('pageerror', e => console.log('PAGE-ERROR:', String(e).slice(0, 160)))
-const login = await fetch('http://localhost:8647/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: '123456' }) }).then(r => r.json())
+const login = await fetch('http://localhost:8647/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }) }).then(r => r.json())
 if (!login.token) { console.log('login failed'); process.exit(1) }
 await page.goto('http://localhost:8649/')
 await page.evaluate(t => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_server_url', location.origin); localStorage.setItem('hermes_locale', 'zh'); localStorage.setItem('hermes.kanban.selectedBoard', 'default') }, login.token)
