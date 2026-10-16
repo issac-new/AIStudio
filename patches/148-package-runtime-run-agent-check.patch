@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/scripts/package-runtime.mjs b/packages/desktop/scripts/package-runtime.mjs
-index 00ff50738..41c6db550 100644
+index d33118c4..a12bbb4d 100644
 --- a/packages/desktop/scripts/package-runtime.mjs
 +++ b/packages/desktop/scripts/package-runtime.mjs
-@@ -72,6 +72,14 @@ for (const dir of [PY_DIR, NODE_DIR]) {
+@@ -73,6 +73,14 @@ for (const dir of [PY_DIR, NODE_DIR]) {
    }
  }
  
@@ -16,4 +16,4 @@ index 00ff50738..41c6db550 100644
 +
  const hermesAgentVersion = output(pyBin, [
    '-c',
-   'import importlib.metadata as m; print(m.version("hermes-agent"))',
+   hermesInstalledVersionScript,

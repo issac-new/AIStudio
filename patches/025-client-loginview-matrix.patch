@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 007105f1a..740d465ee 100644
+index c278fbfa..efd007b4 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,113 +2,155 @@
@@ -90,7 +90,7 @@ index 007105f1a..740d465ee 100644
 +      localRememberMe.value = true;
 +    }
 +    return true;
-   }
++  }
 +  return false;
 +}
 +
@@ -101,7 +101,7 @@ index 007105f1a..740d465ee 100644
 +  if (username && password) {
 +    localStorage.setItem(keys.user, username);
 +    localStorage.setItem(keys.pass, encodePassword(password));
-+  }
+   }
 +}
 +
 +function clearSavedCredentials(form: 'matrix' | 'local'): void {
@@ -109,14 +109,17 @@ index 007105f1a..740d465ee 100644
 +  localStorage.removeItem(keys.user);
 +  localStorage.removeItem(keys.pass);
 +}
-+
+ 
+-  loading.value = true;
+-  errorMsg.value = "";
+-  showLockResetHint.value = false;
 +onMounted(() => {
 +  const savedHs = localStorage.getItem('matrix_homeserver_url');
 +  if (savedHs) homeserverUrl.value = savedHs;
 +  loadSavedCredentials('matrix');
 +  loadSavedCredentials('local');
 +});
-+
+ 
 +function classifyLoginError(err: any): string {
 +  const errcode = err?.errcode || err?.data?.errcode;
 +  if (errcode === 'M_FORBIDDEN' || errcode === 'M_UNKNOWN' || err?.httpStatus === 403) return t("login.invalidCredentials");
@@ -126,36 +129,19 @@ index 007105f1a..740d465ee 100644
 +  if (/Failed to fetch|NetworkError|ERR_CONNECTION|ERR_NETWORK|Load failed/i.test(msg)) return t("login.backendConnectionFailed");
 +  return msg || t("login.invalidCredentials");
 +}
- 
--  loading.value = true;
--  errorMsg.value = "";
--  showLockResetHint.value = false;
++
 +async function handleMatrixLogin() {
 +  if (!homeserverUrl.value.trim()) { errorMsg.value = t("login.homeserverRequired"); return; }
 +  if (!matrixUsername.value.trim() || !matrixPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
-+  loading.value = true; errorMsg.value = "";
-+  try {
-+    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
-+    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
-+    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
-+    router.replace(loginRedirectTarget());
-+  } catch (err: any) {
-+    errorMsg.value = classifyLoginError(err);
-+    clearSavedCredentials('matrix');
-+    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
-+  } finally { loading.value = false; }
-+}
- 
-+async function handleLocalLogin() {
-+  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
 +  loading.value = true; errorMsg.value = "";
    try {
 -    const session = await loginWithPassword(username.value.trim(), password.value);
 -    setApiKey(session.token);
 -    activateUserTheme(session.userId, session.theme);
 -    router.replace(resolveLoginRedirect(route.query.redirect));
-+    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
-+    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
++    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
++    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
++    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
 +    router.replace(loginRedirectTarget());
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
@@ -167,6 +153,20 @@ index 007105f1a..740d465ee 100644
 -  } finally {
 -    loading.value = false;
 -  }
++    errorMsg.value = classifyLoginError(err);
++    clearSavedCredentials('matrix');
++    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
++  } finally { loading.value = false; }
++}
++
++async function handleLocalLogin() {
++  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
++  loading.value = true; errorMsg.value = "";
++  try {
++    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
++    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
++    router.replace(loginRedirectTarget());
++  } catch (err: any) {
 +    errorMsg.value = err?.message || t("login.invalidCredentials");
 +    clearSavedCredentials('local');
 +  } finally { loading.value = false; }
@@ -250,16 +250,16 @@ index 007105f1a..740d465ee 100644
 -}
 -
  .login-title {
-   font-size: 26px;
+   font-size: calc(var(--font-size-base, 14px) * 26 / 14);
    font-weight: 600;
 @@ -161,13 +195,6 @@ async function handlePasswordLogin() {
-   line-height: 1.6;
+   line-height: var(--line-height, 1.6);
  }
  
 -.login-default-hint {
 -  margin: 0 0 28px;
--  font-family: $font-code;
--  font-size: 13px;
+-  font-family: var(--font-code, $font-code);
+-  font-size: calc(var(--font-size-base, 14px) * 13 / 14);
 -  color: $text-secondary;
 -}
 -
@@ -271,27 +271,27 @@ index 007105f1a..740d465ee 100644
  }
  
 -.login-lock-hint {
--  padding: 10px 12px;
--  border: 1px solid rgba(var(--warning-rgb), 0.35);
+-  padding: calc(10px * var(--spacing-scale, 1)) calc(12px * var(--spacing-scale, 1));
+-  border: var(--border-width, 1px) solid rgba(var(--warning-rgb), 0.35);
 -  border-radius: $radius-sm;
 -  background: rgba(var(--warning-rgb), 0.08);
 -  color: $text-secondary;
--  font-size: 12px;
--  line-height: 1.5;
+-  font-size: calc(var(--font-size-base, 14px) * 12 / 14);
+-  line-height: var(--line-height, 1.5);
 -  text-align: start;
 -
 -  code {
 -    display: block;
 -    margin-top: 4px;
 -    color: $text-primary;
--    font-family: $font-code;
+-    font-family: var(--font-code, $font-code);
 -    word-break: break-all;
 -  }
 -}
 -
  .login-btn {
    width: 100%;
-   padding: 14px;
+   padding: calc(14px * var(--spacing-scale, 1));
 @@ -242,4 +250,41 @@ async function handlePasswordLogin() {
      cursor: not-allowed;
    }

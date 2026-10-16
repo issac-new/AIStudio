@@ -1,10 +1,10 @@
 diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 --- a/agent/runaway_guard.py
 +++ b/agent/runaway_guard.py
-@@ -237,4 +237,11 @@
-                 agent.interrupt(f"runaway-guard: {signal.signal}")
-             except Exception:  # noqa: BLE001
-                 pass
+@@ -296,6 +296,13 @@
+             agent.interrupt(f"runaway-guard: {signal.signal}")
+         except Exception:  # noqa: BLE001
+             pass
 +    # 605 监督决策面：report/watchdog_retry/ralph_loop 三模式处置（默认 report 只报）。
 +    # 懒加载避免模块环；fail-open。
 +    try:
@@ -12,13 +12,13 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 +        handle_runaway_signal(agent, signal)
 +    except Exception:  # noqa: BLE001
 +        pass
-     return signal
-
+ 
+ 
+ def _text_content(message: Any) -> str:
 diff --git a/agent/runaway_supervisor.py b/agent/runaway_supervisor.py
-index f355dbe8ef..fa7aa63458 100644
 --- a/agent/runaway_supervisor.py
 +++ b/agent/runaway_supervisor.py
-@@ -16,7 +16,7 @@ from __future__ import annotations
+@@ -16,7 +16,7 @@
  
  import os
  from dataclasses import dataclass
@@ -27,7 +27,7 @@ index f355dbe8ef..fa7aa63458 100644
  
  SupervisorMode = Literal["report", "watchdog_retry", "ralph_loop"]
  SupervisorAction = Literal["report", "retry", "ralph_loop", "stop"]
-@@ -70,3 +70,69 @@ class RunawaySupervisor:
+@@ -70,3 +70,69 @@
  
      def reset(self) -> None:
          self._attempts = 0
@@ -98,7 +98,6 @@ index f355dbe8ef..fa7aa63458 100644
 +    except Exception:  # noqa: BLE001
 +        return None
 diff --git a/tests/agent/test_runaway_supervisor.py b/tests/agent/test_runaway_supervisor.py
-index 6f25a51c60..c498821531 100644
 --- a/tests/agent/test_runaway_supervisor.py
 +++ b/tests/agent/test_runaway_supervisor.py
 @@ -3,6 +3,8 @@
@@ -110,7 +109,7 @@ index 6f25a51c60..c498821531 100644
  from pathlib import Path
  
  import pytest
-@@ -45,3 +47,57 @@ class TestModes:
+@@ -45,3 +47,57 @@
          assert supervisor_mode() == "report"  # 非法回默认
          monkeypatch.setenv("HERMES_RUNAWAY_MAX_RECOVERY", "0")
          assert max_recovery() == 3  # 非法回默认

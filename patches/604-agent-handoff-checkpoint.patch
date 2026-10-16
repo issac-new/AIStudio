@@ -189,76 +189,6 @@ index 0000000000..4207885958
 +        "pointers before relying on them)"
 +    )
 +    return "\n".join(lines)
-diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
-index 8b76b75e67..441d962070 100644
---- a/gateway/platforms/api_server.py
-+++ b/gateway/platforms/api_server.py
-@@ -3307,6 +3307,14 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
-         except ValueError as exc:
-             return _error_response(str(exc), 400, code="invalid_title")
-         fork = await asyncio.to_thread(db.get_session, fork_id) or {"id": fork_id, "parent_session_id": source_id}
-+        # 604 交接检查点写侧：fork 即生命周期边界，给子会话留机械指针（fail-open）
-+        with suppress(Exception):
-+            from agent.handoff_checkpoint import write_checkpoint
-+            write_checkpoint(f"fork-{fork_id}", "fork", {
-+                "objective": str(source.get("title") or ""),
-+                "pointers": {"parent_session_id": source_id, "fork_session_id": fork_id},
-+                "left": "the fork carries the parent transcript; confirm continuity from it",
-+            })
-         return web.json_response({"object": "hermes.session", "session": self._session_response(fork)}, status=201)
- 
-     async def _prepare_session_chat(self, request: web.Request) -> tuple:
-diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
-index 3945acfd86..663f1ba1a1 100644
---- a/gateway/session_rotation.py
-+++ b/gateway/session_rotation.py
-@@ -167,9 +167,18 @@ async def maybe_rotate_session(
-             )
-             return (response or "") + REPORT_NOTICE.format(reason=reason), session_entry
- 
--        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）
-+        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）；
-+        # 轮换前落交接检查点（604），轮换后把检查点 note 挂给新会话首回合 sidecar。
-         logger.info("Auto-rotating session %s (long-session limit: %s).", session_key, reason)
-         note_rotation(session_key, reason=f"auto:{reason}")
-+        checkpoint_note = ""
-+        with suppress(Exception):
-+            from agent.handoff_checkpoint import (
-+                build_checkpoint_note, checkpoint_from_turn, write_checkpoint,
-+            )
-+            record = checkpoint_from_turn(session_key, session_entry, agent_result, entry, reason)
-+            if write_checkpoint(session_key, "rotation", record) is not None:
-+                checkpoint_note = build_checkpoint_note(record)
-         new_entry = await gateway.async_session_store.reset_session(session_key)
-         gateway._evict_cached_agent(session_key)
-         gateway._clear_conversation_scope(session_key, reason=f"long_session_rotation:{reason}")
-@@ -180,6 +189,9 @@ async def maybe_rotate_session(
-                     gateway._sync_telegram_topic_binding, source, session_entry,
-                     reason="long-session-rotation",
-                 )
-+        if checkpoint_note:
-+            with suppress(Exception):
-+                gateway._set_pending_turn_sidecar_notes(session_key, [checkpoint_note])
-         return (response or "") + AUTO_NOTICE.format(reason=reason), session_entry
-     except Exception:  # noqa: BLE001 - 轮换面故障绝不冒泡
-         logger.warning("session rotation check failed", exc_info=True)
-diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index a58bf56986..b1af14be3d 100644
---- a/hermes_cli/kanban_db.py
-+++ b/hermes_cli/kanban_db.py
-@@ -3933,6 +3952,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
-     _ctx_parent_results(lines, conn, task_id, now)
-     _ctx_role_history(lines, conn, task, now)
-     _ctx_comments(lines, list_comments(conn, task_id), now)
-+    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
-+    with contextlib.suppress(Exception):
-+        from agent.handoff_checkpoint import worker_context_block
-+        _ckpt_block = worker_context_block()
-+        if _ckpt_block:
-+            lines.append(_ckpt_block)
-     return "\n".join(lines).rstrip() + "\n"
- 
- 
 diff --git a/tests/agent/test_handoff_checkpoint.py b/tests/agent/test_handoff_checkpoint.py
 new file mode 100644
 index 0000000000..56bfa54402
@@ -370,3 +300,70 @@ index 0000000000..56bfa54402
 +    import gateway.platforms.api_server as srv
 +    source = Path(srv.__file__).read_text(encoding="utf-8")
 +    assert "from agent.handoff_checkpoint import write_checkpoint" in source
+diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
+--- a/gateway/platforms/api_server.py
++++ b/gateway/platforms/api_server.py
+@@ -3356,6 +3356,14 @@
+         except ValueError as exc:
+             return _error_response(str(exc), 400, code="invalid_title")
+         fork = await asyncio.to_thread(db.get_session, fork_id) or {"id": fork_id, "parent_session_id": source_id}
++        # 604 交接检查点写侧：fork 即生命周期边界，给子会话留机械指针（fail-open）
++        with suppress(Exception):
++            from agent.handoff_checkpoint import write_checkpoint
++            write_checkpoint(f"fork-{fork_id}", "fork", {
++                "objective": str(source.get("title") or ""),
++                "pointers": {"parent_session_id": source_id, "fork_session_id": fork_id},
++                "left": "the fork carries the parent transcript; confirm continuity from it",
++            })
+         return web.json_response({"object": "hermes.session", "session": self._session_response(fork)}, status=201)
+ 
+     async def _prepare_session_chat(self, request: web.Request) -> tuple:
+diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
+--- a/gateway/session_rotation.py
++++ b/gateway/session_rotation.py
+@@ -167,9 +167,18 @@
+             )
+             return (response or "") + REPORT_NOTICE.format(reason=reason), session_entry
+ 
+-        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）
++        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）；
++        # 轮换前落交接检查点（604），轮换后把检查点 note 挂给新会话首回合 sidecar。
+         logger.info("Auto-rotating session %s (long-session limit: %s).", session_key, reason)
+         note_rotation(session_key, reason=f"auto:{reason}")
++        checkpoint_note = ""
++        with suppress(Exception):
++            from agent.handoff_checkpoint import (
++                build_checkpoint_note, checkpoint_from_turn, write_checkpoint,
++            )
++            record = checkpoint_from_turn(session_key, session_entry, agent_result, entry, reason)
++            if write_checkpoint(session_key, "rotation", record) is not None:
++                checkpoint_note = build_checkpoint_note(record)
+         new_entry = await gateway.async_session_store.reset_session(session_key)
+         gateway._evict_cached_agent(session_key)
+         gateway._clear_conversation_scope(session_key, reason=f"long_session_rotation:{reason}")
+@@ -180,6 +189,9 @@
+                     gateway._sync_telegram_topic_binding, source, session_entry,
+                     reason="long-session-rotation",
+                 )
++        if checkpoint_note:
++            with suppress(Exception):
++                gateway._set_pending_turn_sidecar_notes(session_key, [checkpoint_note])
+         return (response or "") + AUTO_NOTICE.format(reason=reason), session_entry
+     except Exception:  # noqa: BLE001 - 轮换面故障绝不冒泡
+         logger.warning("session rotation check failed", exc_info=True)
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -4085,6 +4085,12 @@
+     _ctx_checkpoint_recap(lines, task_id, task)
+     _ctx_role_history(lines, conn, task, now)
+     _ctx_comments(lines, list_comments(conn, task_id), now)
++    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
++    with contextlib.suppress(Exception):
++        from agent.handoff_checkpoint import worker_context_block
++        _ckpt_block = worker_context_block()
++        if _ckpt_block:
++            lines.append(_ckpt_block)
+     return "\n".join(lines).rstrip() + "\n"
+ 
+ 

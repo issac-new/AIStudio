@@ -229,6 +229,10 @@
 459-server-mcp-config-mount.patch
 # 473（2026-10-01 0.7.26 迁移重生成：stash 注入态 × 0.7.26 基线深合并，键序=overlay 主序保下游 hunk 兼容）
 473-client-locales-rebaseline.patch
+# [7 个纯 locale 补丁移入 _skip-0736/ 2026-10-16] v0.7.36 升级轮：473 再生时以全链终态为源，
+# 536/552/553/553b/575/583/629 的 locale 内容已全部吸收进再生后的 473（antigravityDescription 回填修复
+# 轮以当前树全链终态重建 473 所致）。七补丁均为 en.ts+zh.ts 纯 locale 面，移存保持可追溯；
+# i18n 上游词条保全门禁继续守最终态。
 475-agent-shed-tiered-metrics.patch
 477-server-ide-engine-models-route.patch
 479-client-provider-prompt-token-retry.patch
@@ -426,7 +430,6 @@
 #      双树可移植性验证：v0.21.5 工作树与安装树（~/.hermes/hermes-agent）均干净应用。
 534-agent-gateway-outbound-notice-guard.patch
 # 535-client-i18n-tasks-tab-governance.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
-536-client-locales-drift-restore.patch
 # 537 退役（2026-10-01 双栏根治 aa3e0bbe）：IDE 一级入口并回 072 整文件版（isIdeShellArea 口径），独立补丁无对象。
 537-desktop-deeplink-badge.patch
 538-server-routes-runtimecaps-mount.patch
@@ -458,10 +461,7 @@
 # 551=HistoryView 剩余两处 hermes.historySession 悬空导航改路径式（539 补遗）。
 551-history-session-name-dangling-fix.patch
 # 552=usage.costStates/pricing 词条回填（473 rebaseline 误删；changelog 8 键归 550）。
-552-locale-0727-usage-blocks.patch
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
-553-locale-ux-clarity.patch
-553b-locale-restore-from-chain.patch
 
 
 # 554: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)
@@ -503,7 +503,6 @@
 574-loginview-no-prefilled-credentials.patch
 
 # 575 IDE 模型失效横幅一键回退 i18n（run10 实证 D 区产品改进项：模型移除应回退到可用项）
-575-i18n-modelinvalid-fallback.patch
 576-chromium-bidi-build-dep.patch
 
 # 577 incident 域路由挂载（六文调研轮 A+B）：/api/incident/sessions/:id/report[.md] + /autonomy
@@ -526,7 +525,6 @@
 
 # 583 v0.7.32 升级轮去重：473 并集合并保留了上游原生 runUsage* 块的副本（上游 1080 行区已有），
 # TS1117 重复键 24 处阻断 desktop prepare 钩子的根级 vue-tsc——删 overlay 侧单引号副本。
-583-locale-runusage-dedup.patch
 
 # 584 看板完成闸 422 结构化（run11 实锤；原 576 号让位给 chromium-bidi 在途方——编号唯一性守门）
 584-server-kanban-complete-blocked-422.patch
@@ -725,7 +723,6 @@
 # （att.gone/chain.timelineHint/flow 四 Hint/gov.jump.org/overviewDash.cardHint/
 # sit 两 Hint/tdp 两 Title）历史上只活在注入树、从未入补丁——忠实重放后由
 # ia2-i18n-coverage 守门逮住；值取自 NVMe 镜像注入态正本。
-629-client-locales-ia2-treekeys-backfill.patch
 
 # [630] 账号显示面优先 matrix_display_name（称谓纪律显示层，2026-10-14 用户指令：
 # 推演截图身份一律职能称呼）。CurrentUser 补类型字段；account store 增 displayName；
