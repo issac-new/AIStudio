@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -2,278 +2,311 @@ import { socialMessagesEn } from '../social-messages'
+@@ -4,278 +4,311 @@
  
  export default {
    jev: {
@@ -300,7 +299,10 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    removeConfirm: 'Remove {name} from future launches?',
 +    conflict: 'Configuration changed elsewhere. Your draft is preserved; compare with the latest version before reloading.',
 +    missingDependency: 'Install DSH and pnpm before managing packages.'
-+  },
+   },
+-  announcements: {"later": "Later", "details": "View details", "gotIt": "Got it"},
+-  taskPlan: {"title": "Task plan", "progress": "{completed}/{total} completed", "pending": "Not completed", "in_progress": "In progress", "completed": "Completed", "running": "Running", "ended": "Run ended; unfinished steps remain", "interrupted": "Interrupted; unfinished steps remain", "failed": "Run failed; unfinished steps remain"},
+-  agentAutoUpdate: { label: 'Automatic updates' },
 +  announcements: {
 +    later: 'Later',
 +    details: 'View details',
@@ -319,10 +321,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +  },
 +  agentAutoUpdate: {
 +    label: 'Automatic updates'
-   },
--  announcements: {"later": "Later", "details": "View details", "gotIt": "Got it"},
--  taskPlan: {"title": "Task plan", "progress": "{completed}/{total} completed", "pending": "Not completed", "in_progress": "In progress", "completed": "Completed", "running": "Running", "ended": "Run ended; unfinished steps remain", "interrupted": "Interrupted; unfinished steps remain", "failed": "Run failed; unfinished steps remain"},
--  agentAutoUpdate: { label: 'Automatic updates' },
++  },
    ekkoConfig: {
 -    "settingsTitle": "Settings",
 -    "settingsRuntime": "Runtime",
@@ -581,15 +580,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    socialMessages: socialMessagesEn,
    browser: {
-@@ -287,7 +320,6 @@ export default {
-     profileSwitchTitle: 'Switch browser profile?', profileSwitchWarning: '{agents} Agent operation(s), {downloads} download(s), and {annotations} annotation(s) may be interrupted.',
-     deleteProfileTitle: 'Delete browser profile?', deleteProfileWarning: 'Managed profile data will be moved to the system Trash. Custom directories are left untouched.', clearCache: 'Clear cache', clearPermissionAudit: 'Clear permission log', clearSiteData: 'Clear site data', clearSiteDataWarning: 'This signs the selected profile out of websites and clears cookies and local storage.', dataCleared: 'Browser data cleared', loadFailed: 'Failed to start the embedded browser',
-   },
--  // Login
-   login: {
-     title: 'SwarmStudio',
-     description: 'Enter your username and password to continue.',
-@@ -333,8 +365,17 @@ export default {
+@@ -335,8 +368,17 @@
      defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
      defaultCredentialAction: 'Update now',
      defaultCredentialLater: 'Remind me later',
@@ -608,7 +599,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    users: {
      title: 'Account Management',
      description: 'Create users, assign roles, and control which profiles regular admins can access.',
-@@ -355,15 +396,18 @@ export default {
+@@ -357,15 +399,18 @@
      disable: 'Disable',
      roles: {
        superAdmin: 'Super Admin',
@@ -618,8 +609,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      status: {
        active: 'Active',
 -      disabled: 'Disabled',
+-    },
 +      disabled: 'Disabled'
-     },
++    },
 +    matrixUserIdPlaceholder: "{'@'}user:matrix.example.com",
 +    matrixUserId: 'Matrix User ID',
 +    displayName: 'Display Name',
@@ -631,7 +623,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    common: {
      close: 'Close',
      loading: 'Loading...',
-@@ -394,9 +438,12 @@ export default {
+@@ -396,9 +441,12 @@
      collapse: 'Collapse',
      start: 'Start',
      stop: 'Stop',
@@ -646,7 +638,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    mcp: {
      title: 'MCP Servers',
      loadFailed: 'Failed to load MCP servers',
-@@ -421,8 +468,8 @@ export default {
+@@ -423,8 +471,8 @@
      updateFailed: 'Failed to update server',
      saveFailed: 'Save failed',
      serverRemoved: 'Removed "{name}"',
@@ -657,7 +649,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      connectedStatus: 'Connected',
      disconnectedStatus: 'Disconnected',
      disabledStatus: 'Disabled',
-@@ -465,7 +512,7 @@ export default {
+@@ -467,7 +515,7 @@
      toolsSelectAll: 'Select all',
      toolsClearSelection: 'Clear selection',
      toolsExcludeAll: 'Exclude all',
@@ -666,7 +658,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
  
    // Sidebar
-@@ -498,17 +545,17 @@ export default {
+@@ -500,21 +548,21 @@
    },
  
    sidebar: {
@@ -695,7 +687,12 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      chat: 'Chat',
      backToChat: 'Back',
      search: 'Search',
-@@ -551,9 +598,9 @@ export default {
+-    apiRelay: 'API Relay',
++    apiRelay: 'API Relay (external)',
+     history: 'History',
+     jobs: 'Jobs',
+     kanban: 'Kanban',
+@@ -553,9 +601,9 @@
      groupMonitoring: 'Monitoring',
      groupMonitoringShort: 'Mon',
      groupTools: 'Tools',
@@ -708,7 +705,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      theme: 'Theme',
      settings: 'Settings',
      connected: 'Connected',
-@@ -575,8 +622,1599 @@ export default {
+@@ -577,8 +625,1622 @@
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -716,7 +713,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    matrixChat: 'Matrix Chat',
 +    ideWorkspace: 'IDE Workspace',
 +    systemGroup: 'System'
-+  },
+   },
+-
 +  ide: {
 +    tools: {
 +      title: 'Tools timeline',
@@ -784,12 +782,12 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      daysAgo: '{count} days ago',
 +      more: 'More actions',
 +      view_tasks: 'Tasks',
-+      view_files: 'Files',
++      view_files: 'View files',
 +      automations: 'Automations',
 +      organize: 'View',
-+      view_active: 'In progress',
++      view_active: 'Active',
 +      view_done: 'Done',
-+      view_workspace: 'Workspaces',
++      view_workspace: 'Workspace',
 +      views: 'Views',
 +      organize_grouped: 'Groups',
 +      organize_project: 'Projects',
@@ -820,11 +818,15 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      deleteAllArchivedTitle: 'Delete {count} archived tasks?',
 +      deleteAllArchivedResult: 'Deleted {deleted}, skipped {skipped}, failed {failed}.',
 +      deleteAllArchivedError: 'Operation or list refresh failed; refresh to check remaining tasks.',
-+      archivedTaskCount: '{count} archived tasks'
++      archivedTaskCount: '{count} archived tasks',
++      restoreAllArchived: 'Restore all archived tasks',
++      restoreAllArchivedOk: 'All archived tasks restored',
++      restoreAllArchivedFailed: 'Failed to restore archived tasks'
 +    },
 +    modelInvalid: {
 +      title: 'Current model unavailable',
 +      hint: 'This model was removed from the available list; please reselect to continue',
++      fallback: 'Fall back to {model}',
 +      reselect: 'Reselect in settings',
 +      dismiss: 'Dismiss'
 +    },
@@ -854,6 +856,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      tab_tools: 'Tools timeline',
 +      tab_hooks: 'Hooks',
 +      tab_workflow: 'Workflows',
++      tab_slash: 'Slash commands',
++      tab_automations: 'Automations',
 +      ledgerPeak: 'Peak {day} · {tokens}',
 +      ledgerTotal: 'Total {tokens}',
 +      roundsTotal: 'Total ({n} rounds)',
@@ -1163,6 +1167,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    chatTabTraceDisabled: 'Unavailable without an active session',
 +    briefing: {
 +      title: 'Task Briefing',
++      worktree: 'Linked worktrees',
 +      toggle: 'Task Briefing',
 +      close: 'Collapse briefing',
 +      noActiveTask: 'No active task: open from the board or a task link to load the briefing',
@@ -1173,7 +1178,6 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      taskPriority: 'Priority',
 +      stage: 'Stage',
 +      branch: 'Branch',
-+      worktree: 'Worktree',
 +      contextBlock: 'Requirement Context',
 +      noContext: 'No requirement context yet',
 +      raciLabel: 'RACI',
@@ -1580,6 +1584,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +  },
 +  ia2: {
 +    delivery: {
++      inFlight: 'In flight',
 +      tab: 'Delivery cases',
 +      title: 'Delivery Cases',
 +      empty: 'No delivery cases yet',
@@ -1593,7 +1598,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    },
 +    brand: 'Cockpit',
 +    flow: {
-+      title: 'Workflow',
++      title: 'Collab Streams',
 +      filter: {
 +        all: 'All',
 +        session: 'Sessions',
@@ -1611,7 +1616,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      clusterRooms: 'Rooms',
 +      clusterGroups: 'Group Chats',
 +      clusterChats: 'Agent Chats',
-+      groupAgents: 'Agents'
++      groupAgents: 'Agents',
++      newChatHint: 'New chat: pick a session type',
++      newAgentChatHint: 'Start a new chat with a single AI agent',
++      newGroupChatHint: 'Create a group chat room (multi-agent)',
++      newMatrixRoomHint: 'Create a Matrix room by name (humans + agents)'
 +    },
 +    loop: {
 +      stage: {
@@ -1646,7 +1655,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      running: 'Running',
 +      review: 'In review',
 +      blocked: 'Blocked',
-+      open: 'Open'
++      open: 'Open',
++      cardHint: 'Click to open the workspace'
 +    },
 +    tdp: {
 +      title: 'Tasks · Decisions',
@@ -1685,7 +1695,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +        done: 'Done',
 +        archived: 'Archived'
 +      },
-+      session: 'Linked session {id}'
++      session: 'Linked session {id}',
++      pendingTitle: 'For Me',
++      contextTitle: 'Context'
 +    },
 +    wait: {
 +      subReview: 'Awaiting acceptance',
@@ -1695,7 +1707,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    chain: {
 +      timeline: 'Timeline',
 +      openIde: 'Open in IDE',
-+      gateReview: 'Awaiting you'
++      gateReview: 'Awaiting you',
++      timelineHint: 'Open run observatory (full-trace panel)'
 +    },
 +    part: {
 +      title: 'Participants',
@@ -1768,7 +1781,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      openManage: 'Open management',
 +      decideCount: '{n} to decide',
 +      panelPeople: 'People',
-+      panelAgents: 'Agents'
++      panelAgents: 'Agents',
++      chipTasksHint: 'Switch the right panel to tasks & decisions',
++      chipOnlineHint: 'Switch the right panel to the online view'
 +    },
 +    gov: {
 +      title: 'Manage',
@@ -1865,7 +1880,12 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +        byAssignee: 'By assignee',
 +        byAgent: 'Agent load',
 +        open: 'open'
-+      }
++      },
++      jump: {
++        accounts: 'Accounts',
++        org: 'Org & Knowledge',
++        inbox: 'Inbox',
++      },
 +    },
 +    review: {
 +      gate: 'Gate',
@@ -2004,7 +2024,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      subLoopStuck: 'Loop stuck',
 +      subRunFailed: 'Run failed',
 +      empty: 'Nothing needs attention',
-+      title: 'Attention'
++      title: 'Attention',
++      gone: 'This item is no longer in the list — it may have been handled'
 +    },
 +    runs: 'Runs',
 +    engine: {
@@ -2304,12 +2325,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      alarmHead: 'Breakers & stalls',
 +      alarmEmpty: 'No breaker/stall alarms in the last 7 days'
 +    }
-   },
--
++  },
    agentManager: {
      title: 'Agent Manager',
      subtitle: 'Discover and manage the Agents available on this device.',
-@@ -599,9 +2237,8 @@ export default {
+@@ -601,9 +2263,8 @@
      ekkoDescription: 'Ekko ships with Studio and does not need separate installation, updates, or removal.',
      version: 'Version',
      codingAgentDescription: 'Studio can install, check for updates, and remove this Agent.',
@@ -2320,26 +2340,15 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      updateToVersion: 'Update to {version}',
      deleteConfirm: 'Remove {name}?',
      installOperation: 'installation',
-@@ -611,7 +2248,7 @@ export default {
-     aiHelpDialogPositive: 'Ask AI',
-     aiHelpDrawerTitle: 'Ekko · Agent troubleshooting',
-     aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
--    aiHelpPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.',
-+    aiHelpPrompt: "Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.",
-     legacyDataMigrationTitle: 'Legacy Hermes data found',
-     legacyDataMigrationDescription: 'SwarmStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-     legacyDataMigrationSource: 'Legacy directory',
-@@ -621,8 +2258,8 @@ export default {
+@@ -623,6 +2284,7 @@
      legacyDataMigrationNegative: 'Do not migrate',
      legacyDataMigrationSuccess: 'Migration scheduled. SwarmStudio will restart and migrate the data before starting local services.',
      legacyDataMigrationFailed: 'Legacy Hermes data migration failed: {error}',
 +    antigravityDescription: 'Install Antigravity CLI (agy) using the official guide and sign in from a terminal, then refresh. Global and scoped modes; installation, updates and removal are managed outside Studio.'
    },
--
+ 
    runtimeVersions: {
-     title: 'Version Management',
-     runtimeTitle: 'Hermes Runtime',
-@@ -681,7 +2318,7 @@ export default {
+@@ -683,7 +2345,7 @@
        queued: 'Queued',
        running: 'Running',
        completed: 'Completed',
@@ -2348,7 +2357,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      jobStageStatus: {
        queued: 'Queued',
-@@ -691,7 +2328,7 @@ export default {
+@@ -693,7 +2355,7 @@
        extract: 'Extracting',
        install: 'Installing',
        completed: 'Completed',
@@ -2357,7 +2366,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      jobStage: {
        queued: 'Queued',
-@@ -705,10 +2342,9 @@ export default {
+@@ -707,10 +2369,9 @@
        extractWebUi: 'Extracting Web UI archive',
        installWebUi: 'Installing Web UI',
        completed: 'Completed',
@@ -2370,7 +2379,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    mcuDevices: {
      title: 'Little Box',
      subtitle: 'Manage Little Box voice interaction devices and connections',
-@@ -748,15 +2384,14 @@ export default {
+@@ -750,15 +2411,14 @@
      deleted: 'MCU device deleted',
      deleteFailed: 'Failed to delete MCU device',
      loadFailed: 'Failed to load MCU devices',
@@ -2388,7 +2397,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      app: {
        subtitle: 'Connect the App to your devices',
-@@ -805,7 +2440,7 @@ export default {
+@@ -807,7 +2467,7 @@
          internal: 'Internal testing',
          public_beta: 'Public beta',
          paid: 'Paid',
@@ -2397,7 +2406,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        accessFailures: {
          tokenExpired: 'Token expired',
-@@ -817,7 +2452,7 @@ export default {
+@@ -819,7 +2479,7 @@
          expired: 'The App access entitlement has expired',
          accountMismatch: 'The entitlement account does not match the current App account',
          deviceMismatch: 'The entitlement device code does not match this device',
@@ -2406,7 +2415,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        deviceName: 'Device name',
        deviceBrand: 'Device brand',
-@@ -828,13 +2463,13 @@ export default {
+@@ -830,13 +2490,13 @@
        authorizedUser: 'Authorizing user',
        connectionTypes: {
          lan: 'LAN',
@@ -2424,7 +2433,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        online: 'Online',
        offline: 'Offline',
        active: 'Active',
-@@ -845,10 +2480,9 @@ export default {
+@@ -847,10 +2507,9 @@
        deleted: 'App connection deleted',
        deleteFailed: 'Failed to delete App connection',
        empty: 'No connected Apps',
@@ -2437,7 +2446,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    devices: {
      title: 'Devices',
      subtitle: 'Manage connected devices, pairing requests, and remote access',
-@@ -904,22 +2538,21 @@ export default {
+@@ -906,22 +2565,21 @@
        pending: 'Pending',
        approved: 'Approved',
        rejected: 'Rejected',
@@ -2464,7 +2473,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    performance: {
      title: 'Performance',
      subtitle: 'Inspect system resources, bridge broker, workers, and active sessions',
-@@ -947,9 +2580,8 @@ export default {
+@@ -949,9 +2607,8 @@
      status: 'Status',
      noWorkers: 'No workers',
      sessionsByProfile: 'Sessions by Profile',
@@ -2475,7 +2484,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    journey: {
      title: 'Learning Journey',
      play: 'Play journey',
-@@ -979,21 +2611,28 @@ export default {
+@@ -981,21 +2638,28 @@
      useCount: 'Use count',
      createdBy: 'Created by',
      timestamp: 'Time',
@@ -2513,7 +2522,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    realtimeVoice: {
      title: 'Realtime Voice',
      mode: 'Voice mode',
-@@ -1016,7 +2655,15 @@ export default {
+@@ -1018,7 +2682,15 @@
      finishTurn: 'Finish turn',
      speak: 'Start speaking',
      end: 'End',
@@ -2530,7 +2539,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      hint: {
        idle: 'Tap the center to begin a voice turn',
        paused: 'Turn the microphone back on when you are ready',
-@@ -1025,11 +2672,9 @@ export default {
+@@ -1027,11 +2699,9 @@
        processing: 'Converting your voice into text',
        thinking: 'Your message was sent to the current conversation',
        speaking: 'You can interrupt at any time',
@@ -2544,7 +2553,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    chat: {
      screenshot: {
        shortcut: {
-@@ -1073,7 +2718,7 @@ export default {
+@@ -1075,7 +2745,7 @@
        systemUnavailable: "System screenshots are currently unavailable",
        systemWaiting: "Choose a screenshot in the system dialog",
        timedOut: "Screenshot timed out. Please try again.",
@@ -2553,7 +2562,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        sourceUnavailable: "The screen could not be captured. Check your screen recording permissions and try again.",
        failed: "Could not capture the screenshot. Please try again.",
      },
-@@ -1090,6 +2735,19 @@ export default {
+@@ -1092,6 +2762,19 @@
      runUsageEstimatedSpeed: "Est. speed",
      runUsageEstimatedSpeedHint: "Output tokens / (run time − tool time). Overlapping tools count once. Includes startup and network overhead; not measured model speed.",
  
@@ -2573,7 +2582,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      contextRemaining: 'remaining',
      contextClickToEdit: 'Click to edit context length',
      contextEditTitle: 'Edit Context Length',
-@@ -1116,7 +2774,7 @@ export default {
+@@ -1118,7 +2801,7 @@
      slashCommandArgs: {
        message: '<message>',
        title: '<title>',
@@ -2582,7 +2591,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      slashCommands: {
        usage: 'Calculate current session usage',
-@@ -1146,7 +2804,7 @@ export default {
+@@ -1148,7 +2831,7 @@
        reloadMcp: 'Reload MCP servers',
        reloadSkills: 'Reload skill commands',
        bundles: 'Browse skill bundles',
@@ -2591,7 +2600,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1161,7 +2819,7 @@ export default {
+@@ -1163,7 +2846,7 @@
        deleteFailed: 'Failed to delete bundle',
        deleted: 'Bundle deleted',
        noBundles: 'No bundles yet. Create one to combine multiple skills.',
@@ -2600,7 +2609,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      bundleCreator: {
        title: 'Create Skill Bundle',
-@@ -1177,7 +2835,7 @@ export default {
+@@ -1179,7 +2862,7 @@
        skillsRequired: 'Select at least one skill',
        skillsLoadFailed: 'Failed to load skills',
        createFailed: 'Failed to create bundle',
@@ -2609,7 +2618,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      attachFiles: 'Attach files',
      reasoningEffort: {
-@@ -1195,8 +2853,8 @@ export default {
+@@ -1197,8 +2880,8 @@
          high: 'High',
          max: 'Max',
          xhigh: 'Extra high',
@@ -2620,7 +2629,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      autoPlaySpeech: 'Auto-play voice',
      voiceInput: {
-@@ -1212,13 +2870,13 @@ export default {
+@@ -1214,13 +2897,13 @@
          capturing: 'Capturing',
          transcribing: 'Transcribing',
          sending: 'Adding to input',
@@ -2636,7 +2645,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      showToolCalls: 'Show tool calls',
      pushEnabled: 'Enable push',
-@@ -1251,7 +2909,7 @@ export default {
+@@ -1253,7 +2936,7 @@
      searchTitle: 'Search Sessions',
      searchSubtitle: 'Search by title or message content',
      searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
@@ -2645,7 +2654,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      searchPlaceholder: 'Search sessions...',
      searchEmpty: 'Recent sessions',
      searchRecent: 'Recent session',
-@@ -1306,9 +2964,7 @@ export default {
+@@ -1308,9 +2991,7 @@
      newCliChat: 'New CLI',
      deleteSession: 'Delete this session?',
      sessionDeleted: 'Session deleted',
@@ -2656,25 +2665,13 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      toggleBatchMode: 'Batch selection',
      selectAll: 'Select all',
      confirmBatchDelete: 'Delete {count} selected sessions?',
-@@ -1414,11 +3070,32 @@ export default {
+@@ -1416,11 +3097,20 @@
      resumeSpeech: 'Resume',
      stopSpeech: 'Stop',
      speechNotSupported: 'Voice playback not supported in this browser',
 +    sessionListActions: 'Session list actions',
 +    filterByProfile: 'Filter by Profile',
 +    selectedSessions: '{count} selected',
-+    runUsageOutput: 'Output tokens',
-+    runUsageInput: 'Input tokens',
-+    runUsageCacheRate: 'Cache hit rate',
-+    runUsageCacheRateHint: 'Cache-read tokens / all input tokens in this run, including cache reads and writes.',
-+    runUsageCache: 'Cache hits',
-+    runUsageCost: 'Est. cost',
-+    runUsageSpeed: 'Token speed',
-+    runUsageSpeedHint: 'Run output tokens / total model request time, including first-token latency and excluding tools.',
-+    runUsageAverageSpeed: 'Average speed',
-+    runUsageAverageSpeedHint: 'Run output tokens / total run time, including tools and waiting. The CLI did not provide model request time.',
-+    runUsageEstimatedSpeed: 'Est. speed',
-+    runUsageEstimatedSpeedHint: 'Output tokens / (run time − tool time). Overlapping tools count once. Includes startup and network overhead; not measured model speed.'
    },
 -
    workflow: {
@@ -2692,7 +2689,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      title: 'Workflow',
      profile: 'Profile',
      namePlaceholder: 'Workflow name',
-@@ -1426,7 +3103,7 @@ export default {
+@@ -1428,7 +3118,7 @@
      workspace: {
        title: 'Select Workspace',
        select: 'Select workspace',
@@ -2701,7 +2698,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      actions: {
        newWorkflow: 'New Workflow',
-@@ -1452,99 +3129,356 @@ export default {
+@@ -1454,99 +3144,356 @@
        imported: 'Workflow imported',
        exported: 'Workflow exported',
        importFailed: 'Workflow import failed',
@@ -3048,7 +3045,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
          in: 'Value must be a JSON array; matches when the array contains the actual value.',
 -        not_in: 'Value must be a JSON array; matches when the array does not contain the actual value.',
 +        not_in: 'Value must be a JSON array; matches when the array does not contain the actual value.'
-+      },
+       },
+-      value: 'Value', invalidConditionValue: 'Condition value must be valid JSON', conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
+-      valueType: 'Value type', valueTypes: { string: 'String', number: 'Number', boolean: 'Boolean', null: 'Null', array: 'Array', object: 'Object' },
 +      value: 'Value',
 +      invalidConditionValue: 'Condition value must be valid JSON',
 +      conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
@@ -3060,9 +3059,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +        null: 'Null',
 +        array: 'Array',
 +        object: 'Object'
-       },
--      value: 'Value', invalidConditionValue: 'Condition value must be valid JSON', conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
--      valueType: 'Value type', valueTypes: { string: 'String', number: 'Number', boolean: 'Boolean', null: 'Null', array: 'Array', object: 'Object' },
++      },
        valueTypeHelp: 'Choose how Value is parsed and validated. This editing aid is inferred from the saved JSON value and is not stored separately.',
 -      conditionValuePlaceholders: { string: 'Text, for example APPROVED', number: 'Number, for example 42', boolean: 'true or false', null: 'null', array: 'JSON array, for example ["a", 2]', object: 'JSON object, for example {\'{\'}"status":"ready"{\'}\'}' },
 -      invalidValueTypes: { string: 'Value must be text.', number: 'Value must be a valid number.', boolean: 'Value must be true or false.', null: 'Value must be null.', array: 'Value must be a valid array.', object: 'Value must be a valid object.' },
@@ -3111,7 +3108,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        jsonFieldOperatorHelp: {
          equals: 'Reads the value at {path}. Matches only when that field value exactly equals “{value}”; it never compares the field name.',
-@@ -1552,14 +3486,18 @@ export default {
+@@ -1554,14 +3501,18 @@
          contains: 'Reads the value at {path} and checks whether that field value contains “{value}”; it never searches the field name.',
          not_contains: 'Reads the value at {path}. Matches only when that field value does not contain “{value}”; it never searches the field name.',
          exists: 'Matches when the JSON field at {path} exists. It does not compare the field value.',
@@ -3135,7 +3132,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      batch: {
        toggle: 'Batch selection',
-@@ -1567,7 +3505,7 @@ export default {
+@@ -1569,7 +3520,7 @@
        confirmDelete: 'Delete {count} selected workflows?',
        deleteSuccess: 'Deleted {count} workflows',
        deletePartial: '{failed} workflows failed to delete',
@@ -3144,7 +3141,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      validation: {
        nodesRequired: 'Add at least one node',
-@@ -1580,7 +3518,7 @@ export default {
+@@ -1582,7 +3533,7 @@
        invalidConnectionDirection: 'Connections must go from the right output to the left input',
        orphanNode: 'Node {node} is not connected to the workflow',
        disconnectedFlow: 'The workflow cannot be split into multiple disconnected flows',
@@ -3153,7 +3150,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      node: {
        title: 'Node name',
-@@ -1596,7 +3534,7 @@ export default {
+@@ -1598,7 +3549,7 @@
        joinAnyHelp: 'Runs once when the first incoming route is taken; skips only if every route is decided and none matches. Example: continue after either reviewer approves.',
        promptPlaceholder: 'Describe what this agent should do...',
        skillsPlaceholder: 'Skills, press Enter to add',
@@ -3162,7 +3159,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      status: {
        idle: 'Idle',
-@@ -1607,7 +3545,7 @@ export default {
+@@ -1609,7 +3560,7 @@
        skipped: 'Skipped',
        failed: 'Failed',
        approval_rejected: 'Approval rejected',
@@ -3171,7 +3168,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      runs: {
        title: 'Run Records',
-@@ -1624,26 +3562,26 @@ export default {
+@@ -1626,26 +3577,26 @@
        stopRequested: 'Stop requested',
        stopFailed: 'Failed to stop run',
        delete: 'Delete record',
@@ -3203,7 +3200,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      initialNodes: {
        node1: 'Node 1',
-@@ -1651,7 +3589,7 @@ export default {
+@@ -1653,7 +3604,7 @@
        node3: 'Node 3',
        plan: 'Plan',
        execute: 'Execute',
@@ -3212,7 +3209,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      initialPrompts: {
        node1: 'Enter this node input.',
-@@ -1659,12 +3597,11 @@ export default {
+@@ -1661,12 +3612,11 @@
        node3: 'Enter this node input.',
        plan: 'Break the request into actionable steps.',
        execute: 'Run the implementation steps and produce artifacts.',
@@ -3227,7 +3224,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    kanban: {
      title: 'Kanban Board',
      createTask: 'New Task',
-@@ -1681,6 +3618,22 @@ export default {
+@@ -1683,6 +3633,22 @@
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
        defaultArchiveUnavailable: 'The default board cannot be archived',
@@ -3250,7 +3247,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      columns: {
        triage: 'Triage',
-@@ -1691,7 +3644,7 @@ export default {
+@@ -1693,7 +3659,7 @@
        blocked: 'Blocked',
        review: 'Review',
        done: 'Done',
@@ -3259,7 +3256,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      form: {
        title: 'Title',
-@@ -1723,20 +3676,29 @@ export default {
+@@ -1725,20 +3691,29 @@
        maxRetriesPlaceholder: 'Number of retries',
        goalMaxTurns: 'Goal max turns',
        goalMaxTurnsPlaceholder: 'Maximum turns',
@@ -3292,7 +3289,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      detail: {
        status: 'Status',
-@@ -1759,7 +3721,7 @@ export default {
+@@ -1761,7 +3736,7 @@
        noLog: 'No log found for this task.',
        addComment: 'Add Comment',
        commentPlaceholder: 'Write a task comment...',
@@ -3301,7 +3298,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      action: {
        title: 'Actions',
-@@ -1768,7 +3730,6 @@ export default {
+@@ -1770,7 +3745,6 @@
        block: 'Block',
        blockReason: 'Reason for blocking',
        unblock: 'Unblock',
@@ -3309,7 +3306,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        archiveConfirm: 'Archive this completed task?',
        assign: 'Assign',
        assignTo: 'Assign to...',
-@@ -1779,6 +3740,11 @@ export default {
+@@ -1781,6 +3755,11 @@
        specify: 'Specify',
        loadLog: 'Load Log',
        loadDiagnostics: 'Load Diagnostics',
@@ -3321,7 +3318,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      message: {
        taskCreated: 'Task created',
-@@ -1793,15 +3759,202 @@ export default {
+@@ -1795,15 +3774,202 @@
        taskReassigned: 'Task reassigned',
        taskSpecified: 'Task specified',
        loadFailed: 'Failed to load task',
@@ -3353,6 +3350,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      stats: {
        total: 'Total',
 -      tasks: 'Tasks',
+-    },
 +      tasks: 'Tasks'
 +    },
 +    noAttachments: 'No attachments',
@@ -3512,23 +3510,23 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      approver: 'Approver',
 +      consulted: 'Consulted',
 +      informed: 'Informed'
-     },
++    },
 +    mineOnly: 'Needs my action'
-+  },
+   },
+-
+-  // Jobs
+-  scheduleBuilder: { time: 'Time', hour: 'Hour', minute: 'Minute', weekday: 'Day of week', monthDay: 'Day of month' },
 +  scheduleBuilder: {
 +    time: 'Time',
 +    hour: 'Hour',
 +    minute: 'Minute',
 +    weekday: 'Day of week',
 +    monthDay: 'Day of month'
-   },
--
--  // Jobs
--  scheduleBuilder: { time: 'Time', hour: 'Hour', minute: 'Minute', weekday: 'Day of week', monthDay: 'Day of month' },
++  },
    jobs: {
      title: 'Scheduled Jobs',
      createJob: 'Create Job',
-@@ -1862,7 +4015,7 @@ export default {
+@@ -1864,7 +4030,7 @@
        running: 'Running',
        paused: 'Paused',
        disabled: 'Disabled',
@@ -3537,7 +3535,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      info: {
        model: 'Model',
-@@ -1871,7 +4024,7 @@ export default {
+@@ -1873,7 +4039,7 @@
        lastRun: 'Last Run',
        nextRun: 'Next Run',
        deliver: 'Deliver',
@@ -3546,7 +3544,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      action: {
        pause: 'Pause',
-@@ -1879,24 +4032,21 @@ export default {
+@@ -1881,24 +4047,21 @@
        resume: 'Resume',
        resumeJob: 'Resume job',
        runNow: 'Run Now',
@@ -3575,7 +3573,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      searchPlaceholder: 'Search skills...',
      noMatch: 'No skills match your search',
-@@ -1921,7 +4071,7 @@ export default {
+@@ -1923,7 +4086,7 @@
        builtin: 'Builtin',
        hub: 'Hub',
        local: 'Local',
@@ -3584,7 +3582,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      delete: 'Delete',
      deleteConfirm: 'Delete skill "{name}"? This cannot be undone.',
-@@ -1944,7 +4094,7 @@ export default {
+@@ -1946,7 +4109,7 @@
      importFailed: 'Failed to import skill',
      path: {
        local: 'Local',
@@ -3593,7 +3591,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      externalDirs: {
        manage: 'External dirs',
-@@ -1958,7 +4108,7 @@ export default {
+@@ -1960,7 +4123,7 @@
        saveSuccess: 'External dirs saved',
        saveFailed: 'Save failed',
        loadFailed: 'Failed to load external dirs',
@@ -3602,7 +3600,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      pathCopied: 'Path copied',
      pathCopyFailed: 'Failed to copy path',
-@@ -1990,9 +4140,8 @@ export default {
+@@ -1992,9 +4155,8 @@
      writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
      writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
      writeApprovalRemoveFile: 'This approval removes {file} from skill {skill}.',
@@ -3613,7 +3611,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    plugins: {
      title: 'Plugins',
      refresh: 'Refresh',
-@@ -2018,28 +4167,28 @@ export default {
+@@ -2020,28 +4182,28 @@
        active: 'Enabled / auto',
        inactive: 'Inactive',
        disabled: 'Disabled',
@@ -3649,7 +3647,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      table: {
        plugin: 'Plugin',
-@@ -2048,21 +4197,20 @@ export default {
+@@ -2050,21 +4212,20 @@
        kind: 'Kind',
        capabilities: 'Capabilities',
        path: 'Path / entrypoint',
@@ -3675,7 +3673,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    petdex: {
      title: 'Petdex Pets',
      subtitle: 'Browse the public petdex catalog used by Hermes desktop pets.',
-@@ -2082,11 +4230,9 @@ export default {
+@@ -2084,11 +4245,9 @@
        total: 'Catalog total',
        visible: 'Matching',
        kinds: 'Kinds',
@@ -3689,7 +3687,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    memory: {
      title: 'Memory',
      refresh: 'Refresh',
-@@ -2099,10 +4245,8 @@ export default {
+@@ -2101,10 +4260,8 @@
      profilePlaceholder: 'Write your profile...',
      soul: 'Soul',
      noSoul: 'No soul configuration yet.',
@@ -3701,7 +3699,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    models: {
      providerColumn: 'Provider',
      title: 'Models',
-@@ -2251,7 +4395,7 @@ export default {
+@@ -2253,7 +4410,7 @@
      customBadge: 'CUSTOM',
      previewBadge: 'PREVIEW',
      disabledBadge: 'UNAVAILABLE',
@@ -3710,7 +3708,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      customModelPlaceholder: 'Unlisted model ID',
      customModelHint: 'For provider-supported models not returned by the API; not a display rename. Press Enter to load.',
      removeCustomModel: 'Remove this unlisted model',
-@@ -2382,17 +4526,15 @@ export default {
+@@ -2389,17 +4546,15 @@
      enterBaseUrl: 'Please enter Base URL first',
      unexpectedFormat: 'Unexpected response format',
      foundModels: 'Found {count} models',
@@ -3730,7 +3728,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    profiles: {
      title: 'Profiles',
-@@ -2457,7 +4599,7 @@ export default {
+@@ -2464,7 +4619,7 @@
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Default avatar restored',
@@ -3739,38 +3737,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      runtime: {
        activeProfile: 'Active: {name}',
-@@ -2475,24 +4617,20 @@ export default {
-       gatewayRestarted: 'Gateway restarted: {name}',
-       gatewayRestartFailed: 'Failed to restart gateway',
-       profileRestarted: 'Profile restarted: {name}',
--      profileRestartFailed: 'Failed to restart profile',
--    },
-+      profileRestartFailed: 'Failed to restart profile'
-+    }
-   },
--
--  // Logs
-   logs: {
--    file: "Log file",
--    level: "Log level",
--    lines: "Lines",
--    filters: "Filter logs",
-     title: 'Logs',
-     all: 'All',
-     searchPlaceholder: 'Search...',
-     refresh: 'Refresh',
-     noEntries: 'No log entries',
-+    file: 'Log file',
-+    level: 'Log level',
-+    lines: 'Lines',
-+    filters: 'Filter logs'
-   },
--
--  // Settings
-   theme: {
-     title: 'Theme',
-     saved: 'Theme saved',
-@@ -2532,7 +4670,7 @@ export default {
+@@ -2541,7 +4696,7 @@
      preview: 'Preview',
      previewTitle: 'Your workspace, your atmosphere',
      previewText: 'Text and selection colors update throughout the interface.',
@@ -3779,7 +3746,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    settings: {
      title: 'Settings',
-@@ -2552,6 +4690,7 @@ export default {
+@@ -2561,6 +4716,7 @@
        apiServer: 'API Server',
        models: 'Models',
        voice: 'Voice',
@@ -3787,7 +3754,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      webhooks: {
        title: 'Webhooks',
-@@ -2577,10 +4716,13 @@ export default {
+@@ -2586,10 +4742,13 @@
          receivedAt: 'Received at',
          event: 'Event',
          eventId: 'Event ID',
@@ -3803,7 +3770,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
          runQueued: 'Run queued',
          runStarted: 'Run started',
          toolStarted: 'Tool started',
-@@ -2591,11 +4733,11 @@ export default {
+@@ -2600,11 +4759,11 @@
          clarificationRequested: 'Clarification requested',
          clarificationResolved: 'Clarification resolved',
          completed: 'Run completed',
@@ -3817,7 +3784,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        runtime: {
          idle: 'Idle',
-@@ -2603,7 +4745,7 @@ export default {
+@@ -2612,7 +4771,7 @@
          retrying: 'Retrying',
          success: 'Delivered',
          failed: 'Failed',
@@ -3826,7 +3793,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        actions: {
          add: 'Add Webhook',
-@@ -2613,7 +4755,7 @@ export default {
+@@ -2622,7 +4781,7 @@
          disable: 'Disable',
          refresh: 'Refresh',
          clear: 'Clear',
@@ -3835,7 +3802,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        form: {
          name: 'Name',
-@@ -2634,7 +4776,7 @@ export default {
+@@ -2643,7 +4802,7 @@
          includeUserContentHint: 'User messages may contain sensitive information. This is disabled by default and does not include system prompts, reasoning, tool arguments, or tool results.',
          allowPrivateNetwork: 'Allow private or local network addresses',
          allowPrivateNetworkHint: 'Only enable this for trusted internal endpoints. DNS is checked again for every delivery.',
@@ -3844,7 +3811,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        messages: {
          required: 'Name and URL are required',
-@@ -2649,8 +4791,8 @@ export default {
+@@ -2658,8 +4817,8 @@
          localTestFailed: 'Failed to create the local test receiver',
          inboxLoadFailed: 'Failed to load local test events',
          inboxCleared: 'Local test events cleared',
@@ -3855,7 +3822,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      models: {
        apiKey: 'API Key',
-@@ -2658,7 +4800,7 @@ export default {
+@@ -2667,7 +4826,7 @@
        save: 'Save',
        saved: 'Saved',
        saveFailed: 'Save failed',
@@ -3864,7 +3831,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      display: {
        streaming: 'Stream Responses',
-@@ -2720,7 +4862,7 @@ export default {
+@@ -2729,7 +4888,7 @@
        toolEnforcementHint: 'Control tool call execution mode',
        auto: 'Auto',
        always: 'Always',
@@ -3873,7 +3840,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      gatewayAutoStart: {
        title: 'Gateway Auto-Start',
-@@ -2740,7 +4882,7 @@ export default {
+@@ -2749,7 +4908,7 @@
        includeHint: 'Comma-separated profile names. In include mode, an empty list starts none.',
        exclude: 'Excluded profiles',
        excludeHint: 'Comma-separated profile names to skip after the include/all policy is applied.',
@@ -3882,7 +3849,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      proxy: {
        title: 'Gateway Proxy',
-@@ -2753,7 +4895,7 @@ export default {
+@@ -2762,7 +4921,7 @@
        allProxyHint: 'Fallback proxy used when a protocol-specific proxy is not set.',
        noProxy: 'NO_PROXY',
        noProxyHint: 'Comma-separated hosts or domains that should bypass the proxy.',
@@ -3891,7 +3858,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      memory: {
        enabled: 'Enable Memory',
-@@ -2763,7 +4905,7 @@ export default {
+@@ -2772,7 +4931,7 @@
        charLimit: 'Memory Char Limit',
        charLimitHint: 'Max characters for MEMORY.md',
        userCharLimit: 'User Profile Char Limit',
@@ -3900,7 +3867,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      compression: {
        enabled: 'Enable Compression',
-@@ -2775,7 +4917,7 @@ export default {
+@@ -2784,7 +4943,7 @@
        protectLastN: 'Protect Recent Messages',
        protectLastNHint: 'Keep this many latest messages uncompressed',
        protectFirstN: 'Protect First Messages',
@@ -3909,7 +3876,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      session: {
        mode: 'Reset Mode',
-@@ -2824,11 +4966,11 @@ export default {
+@@ -2833,11 +4992,11 @@
        writeApprovalRequestedOldString: 'Requested old_string',
        writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
        writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
@@ -3923,7 +3890,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      apiServer: {
        enable: 'Enable',
-@@ -2840,7 +4982,7 @@ export default {
+@@ -2849,7 +5008,7 @@
        key: 'Key',
        keyHint: 'API access key',
        cors: 'CORS Origins',
@@ -3932,7 +3899,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      lockedIps: {
        title: 'Locked IPs',
-@@ -2854,8 +4996,8 @@ export default {
+@@ -2863,8 +5022,8 @@
        type: {
          password: 'Password',
          token: 'API token',
@@ -3943,7 +3910,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      userAvatar: {
        title: 'User Avatar',
-@@ -2868,7 +5010,7 @@ export default {
+@@ -2877,7 +5036,7 @@
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Avatar reset to default',
@@ -3952,16 +3919,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      voice: {
        activeTtsApi: 'Active TTS API',
-@@ -2900,7 +5042,7 @@ export default {
-         validate: 'Validating model runtime…',
-         install: 'Installing model…',
-         completed: 'Model is ready',
--        failed: 'Download failed',
-+        failed: 'Download failed'
-       },
-       hermesConfigTitle: 'Hermes Agent configuration',
-       hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as SwarmStudio.',
-@@ -3077,27 +5219,16 @@ export default {
+@@ -3086,27 +5245,16 @@
        sttTestEmpty: 'No audio was captured for the STT test.',
        sttTestSucceeded: 'STT test succeeded.',
        sttTestFailed: 'STT test failed: {error} — {hint}',
@@ -3989,7 +3947,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        sttFailureHintGeneric: 'Check API key, model, and provider account access, then retry.',
        sttTestRecordFailed: 'Could not start microphone recording: {error}',
        sttTestTranscript: 'Transcript: {text}',
-@@ -3107,13 +5238,9 @@ export default {
+@@ -3116,13 +5264,9 @@
        providerOpenai: 'OpenAI TTS',
        providerCustom: 'Custom Endpoint (OpenAI-compatible)',
        providerEdge: 'Edge TTS (Free, no API Key)',
@@ -4003,7 +3961,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        openaiKey: 'API Key',
        openaiKeyHint: 'Your OpenAI API key with TTS access',
        openaiUrl: 'API Base URL',
-@@ -3122,8 +5249,6 @@ export default {
+@@ -3131,8 +5275,6 @@
        openaiModelHint: 'tts-1 (faster) / tts-1-hd (higher quality)',
        openaiVoice: 'Voice',
        openaiVoiceHint: 'Voice to use for synthesis',
@@ -4012,7 +3970,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        customHint: 'Use any OpenAI-compatible TTS API — works with GPT-SoVITS, CosyVoice, etc.',
        customUrl: 'API URL',
        customUrlHint: 'Base URL of your TTS service',
-@@ -3131,7 +5256,6 @@ export default {
+@@ -3140,7 +5282,6 @@
        customApiKey: 'API Key (Optional)',
        customApiKeyHint: 'Some custom endpoints require authentication',
        customApiKeyPlaceholder: 'Leave blank if not needed',
@@ -4020,7 +3978,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        edgeHint: 'Powered by Microsoft Edge TTS (node-edge-tts).',
        edgeUrl: 'Adapter URL',
        edgeUrlHint: 'Address of your Edge TTS adapter, e.g. http://127.0.0.1:9882',
-@@ -3142,8 +5266,6 @@ export default {
+@@ -3151,8 +5292,6 @@
        edgeRateHint: 'Adjust speech speed (0.5x ~ 2.0x)',
        edgePitch: 'Pitch',
        edgePitchHint: 'Adjust speech pitch (-20 ~ +20 Hz)',
@@ -4029,7 +3987,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        testTitle: 'Test Voice',
        testText: 'Test Text',
        testTextPlaceholder: 'Enter text to test...',
-@@ -3151,8 +5273,6 @@ export default {
+@@ -3160,8 +5299,6 @@
        testButton: 'Test',
        testButtonPlaying: 'Playing...',
        testFailed: 'Test failed: {error}',
@@ -4038,13 +3996,14 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        providerMimo: 'MiMo TTS',
        mimoHint: 'Xiaomi MiMo TTS — supports preset voices, voice design, and voice clone modes',
        mimoApiKey: 'API Key',
-@@ -3181,41 +5301,51 @@ export default {
+@@ -3190,41 +5327,51 @@
        mimoCloneAudioClear: 'Clear',
        mimoStylePrompt: 'Style Prompt',
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
 -      mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
+-    },
 +      mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace'
-     },
++    },
 +    matrixIdentity: {
 +      title: 'Matrix Identity',
 +      userId: 'Matrix User ID',
@@ -4121,7 +4080,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    codingAgents: {
      nativeUsage: "Usage: input {inputTokens}, output {outputTokens}, cache read {cacheReadTokens}, cache write {cacheWriteTokens}, total {totalTokens} tokens.",
      nativeUsageUnknown: "Usage: unknown. No native token usage has been reported for this session.",
-@@ -3290,31 +5420,29 @@ export default {
+@@ -3299,31 +5446,29 @@
      launchConfigDir: "Launch config directory",
      launchCommand: "Launch command",
      table: {
@@ -4171,7 +4130,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    platform: {
      requireMention: "Require {'@'}Mention",
      requireMentionGroup: "Require {'@'}mention in groups to respond",
-@@ -3395,7 +5523,6 @@ export default {
+@@ -3404,7 +5549,6 @@
      qrFetching: 'Fetching QR code...',
      qrScanHint: 'Scan with WeChat to login',
      qrScanedHint: 'Scaned, please confirm on phone...',
@@ -4179,7 +4138,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ Open Platform Bot App ID',
      qqAppSecret: 'App Secret',
-@@ -3404,17 +5531,13 @@ export default {
+@@ -3413,17 +5557,13 @@
      qqMarkdownHint: 'Enable Markdown formatted messages (some clients may not support)',
      qqSandbox: 'Sandbox Mode',
      qqSandboxHint: 'Enable sandbox environment (for testing)',
@@ -4199,7 +4158,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    terminal: {
      sessions: 'Sessions',
      newTab: 'New Terminal',
-@@ -3424,20 +5547,26 @@ export default {
+@@ -3433,20 +5573,26 @@
      noSessions: 'No terminal sessions',
      connectionFailed: 'Terminal service connection failed',
      connectionClosed: 'Terminal connection closed',
@@ -4233,7 +4192,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      agentPreset: 'Agent preset',
      agentPresets: 'Agent presets',
      agentPresetPlaceholder: 'Select a preset',
-@@ -3557,7 +5686,12 @@ export default {
+@@ -3566,7 +5712,12 @@
      allAgents: 'All Agents',
      addAgent: 'Add Agent',
      agentType: 'Agent',
@@ -4247,7 +4206,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      selectProfile: 'Select a profile',
      agentAdded: 'Agent added',
      selectRoomFirst: 'Please select a room first',
-@@ -3641,7 +5775,12 @@ export default {
+@@ -3650,7 +5801,12 @@
      summaryConfigurationOwnerRequired: 'This room has no summarizer yet. Ask a room administrator to configure it before sending messages.',
      saveSummaryConfig: 'Save summary settings',
      currentSummary: 'Current Summary',
@@ -4261,7 +4220,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      summaryUpdatedAt: 'Last updated',
      summarizedTurns: 'Summarized effective utterances',
      summaryAnchor: 'Summary anchor',
-@@ -3653,10 +5792,8 @@ export default {
+@@ -3662,10 +5818,8 @@
      saveSummary: 'Save summary',
      summaryUpdated: 'Summary updated',
      summaryNever: 'Never',
@@ -4273,7 +4232,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    usage: {
      dashboard: {
        profile: "Profile",
-@@ -3727,7 +5864,20 @@ export default {
+@@ -3736,7 +5890,20 @@
      cacheHitRate: 'Cache Hit Rate',
      modelBreakdown: 'Model Breakdown',
      agentBreakdown: 'Agent Breakdown',
@@ -4295,34 +4254,16 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      dailyTrend: 'Daily Usage',
      date: 'Date',
      tokens: 'Tokens',
-@@ -3737,6 +5887,26 @@ export default {
+@@ -3745,7 +5912,7 @@
+     cacheWrite: 'Cache Write',
      sessions: 'Sessions',
      cost: 'Cost',
-     noData: 'No usage data',
-+    costStates: {
-+      unknown: 'Not recorded',
-+      partial: 'Partial cost; some usage is unpriced',
-+      reported: 'Provider-reported cost',
-+      estimated: 'Estimated cost',
-+      mixed: 'Includes reported and estimated costs'
-+    },
-+    pricing: {
-+      title: 'Model pricing',
-+      selectionHelp: 'Select a configured provider and model, or type an ID and press Enter.',
-+      catalogError: 'Could not load configured providers and models. You can still enter IDs manually.',
-+      help: 'Without a custom price, models.dev is used to estimate costs for matching models. USD per million tokens. Match provider and model IDs exactly (e.g. global). Used only when no cost is returned. Blank cache rates mean unknown. Changes apply to future calls; historical costs are not recalculated.',
-+      provider: 'Provider ID',
-+      model: 'Model ID',
-+      input: 'Input',
-+      output: 'Output',
-+      cacheRead: 'Cache read',
-+      cacheWrite: 'Cache write',
-+      error: 'Could not load or save pricing. Check provider/model IDs, duplicates and non-negative rates.'
-+    }
+-    noData: 'No usage data',
++    noData: 'No usage data'
    },
    skillsUsage: {
      title: 'Skills Usage',
-@@ -3757,10 +5927,8 @@ export default {
+@@ -3766,10 +5933,8 @@
      lastUsed: 'Last Used',
      noData: 'No skill usage data',
      loadFailed: 'Failed to load skill usage',
@@ -4334,7 +4275,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    files: {
      title: 'Files',
      fileTree: 'File Tree',
-@@ -3828,8 +5996,8 @@ export default {
+@@ -3837,8 +6002,8 @@
      zoom: 'Zoom',
      pdfPageLimit: 'Preview is limited to the first {count} pages.',
      tableTruncated: 'The preview was truncated to keep the interface responsive. Download the file to inspect all rows and columns.',
@@ -4344,21 +4285,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    download: {
      downloading: 'Downloading...',
      downloadFailed: 'Download failed',
-@@ -3841,10 +6009,8 @@ export default {
-     invalidPath: 'Invalid file path',
-     contentDisplay: 'Content display',
-     download: 'Download',
--    downloadFile: 'Download file',
-+    downloadFile: 'Download file'
-   },
--
--  // Changelog
-   changelog: {
-     new_0_7_35_1: 'Added transitions from Agent cards to thinking avatars in chat, with improved visibility under reduced motion and matching theme backgrounds (#3378, #3386)',
-     new_0_7_35_2: 'Added Turkish interface support (#3338)',
-@@ -3873,4 +6039,193 @@ export default {
-     new_0_7_33_7: 'Fixed Coding Agent chats being interrupted by dependency debug output, improving DSH and other ACP Agent compatibility (#3327)',
-     new_0_7_33_8: 'Fixed clarification question and answer callback compatibility across Hermes kernel versions (#3330)',
+@@ -3883,4 +6048,813 @@
+     new_0_7_34_9: 'Fixed managed MCP connection issues caused by inheriting unrelated authentication tokens (#3359)',
+     new_0_7_34_10: 'Fixed custom provider model discovery metadata being reported as unknown configuration and reduced duplicate warnings (#3375)',
    },
 +  loopScenes: {
 +    manage: {
@@ -4549,12 +4478,631 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    confirm: 'Confirm',
 +    cancel: 'Cancel'
 +  },
++  matrix: {
++    options: 'Options',
++    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
++    undecryptable: 'Unable to decrypt message',
++    historyLoadError: 'Server error, unable to load earlier history'
++  },
++  cockpit: {
++    modeWorkspace: 'Workspace',
++    editTitlePlaceholder: 'Title',
++    actions: 'Actions',
++    specify: 'Specify',
++    decompose: 'Decompose',
++    moveToTriage: 'Move to triage',
++    moveToReady: 'Move to ready',
++    moveToBlocked: 'Mark blocked',
++    moveToDone: 'Mark done',
++    moveToArchived: 'Archive',
++    unblock: 'Unblock',
++    reclaim: 'Reclaim',
++    reassign: 'Reassign',
++    reassignProfile: 'Reassign profile',
++    recovery: 'Recovery',
++    diagnostics: 'Diagnostics',
++    notifyHomeChannels: 'Notify home channels',
++    subscribe: 'Subscribe',
++    unsubscribe: 'Unsubscribe',
++    comments: 'Comments',
++    addCommentPlaceholder: 'Add a comment…',
++    confirmDone: 'Mark this task as done? This will complete the task in the kanban board.',
++    confirmArchive: 'Archive this task? Archived tasks are hidden from the board but can be restored.',
++    confirmBlocked: 'Mark this task as blocked? Blocked tasks are paused until unblocked.',
++    completionSummaryRequired: 'Completion summary is required before marking a task as done.',
++    evaluation: 'Evaluation',
++    saveDraft: 'Save draft',
++    parentTasks: 'Parent tasks',
++    childTasks: 'Child tasks',
++    parentIdPlaceholder: 'Parent task id',
++    childIdPlaceholder: 'Child task id',
++    pendingLinksHint: 'pending link changes',
++    assignee: 'Assignee',
++    selectAssignee: 'Select assignee…',
++    description: 'Description',
++    descriptionPlaceholder: 'Task description…',
++    add: 'Add',
++    attachments: 'Attachments',
++    noAttachments: 'No attachments',
++    uploadFile: 'Upload file',
++    none: 'None',
++    historySearchPlaceholder: 'Search history…',
++    historyToday: 'Today',
++    historyWeek: 'This Week',
++    historyMonth: 'This Month',
++    historyCategory: 'Category',
++    historyCatEvent: 'Events',
++    historyCatComment: 'Comments',
++    historyActive: 'Active',
++    historyDone: 'Done',
++    notifyTitle: 'Notifications',
++    notifyUnread: 'unread',
++    notifySource: 'Source',
++    notifyAll: 'All',
++    notifyMatrix: 'Matrix',
++    notifyChat: 'Chat',
++    notifyGroup: 'Group',
++    notifyEmpty: 'No unread messages',
++    notifyClickHint: 'Click an item to open the chat',
++    notifyReadAll: 'Mark all as read',
++    attention: 'Attention',
++    backToWork: 'Back to Work',
++    openFull: 'Open Full Page',
++    saySomething: 'Say something...',
++    send: 'Send',
++    noTaskSelected: 'No task selected',
++    collabWith: 'Collab with',
++    addCollab: 'Chat & Collab',
++    addCollabTitle: 'Add Collaborator',
++    collaborationMap: 'Collaboration Map',
++    handleLater: 'Handle Later',
++    taskFiles: 'Task Files',
++    currentTaskWorkspace: 'Current task workspace',
++    filterFiles: 'Filter files...',
++    history: 'History',
++    historyTitle: 'History',
++    historyTime: 'Time',
++    historyAction: 'Action',
++    historyStatus: 'Status',
++    historyArchived: 'Archived',
++    restore: 'Restore',
++    maximize: 'Maximize',
++    modeWork: 'Work',
++    modeTerm: 'Terminal',
++    schedule: 'Schedule',
++    today: 'Today',
++    scheduleEvents: 'Schedule Events',
++    scheduleEmpty: 'No events for this date',
++    scheduleAddTodo: 'Add Todo',
++    scheduleTodoPlaceholder: 'What needs to be done?',
++    templateManager: 'Template Manager',
++    templateName: 'Template name...',
++    saveAsTemplate: 'Save as Template',
++    applyTemplate: 'Apply',
++    deleteTemplate: 'Delete',
++    noTemplates: 'No templates saved',
++    termExit: 'Exit Terminal',
++    timeline: 'Timeline',
++    pending: 'Pending',
++    done: 'Done',
++    olderHistory: '{n} older entries',
++    search: 'Search',
++    priority: 'Priority',
++    yourDecision: 'Your Decision',
++    recommend: 'Recommended',
++    riskTags: 'Risk Tags',
++    agentPrefilled: 'Agent pre-filled',
++    reviewOpinion: 'Review Opinion',
++    submit: 'Submit',
++    newCollabFromArchive: 'New Collab from Template',
++    readOnly: 'Read Only',
++    noMessages: 'No messages',
++    connected: 'Connected',
++    disconnected: 'Disconnected',
++    searchPlaceholder: 'Search sessions/tasks/rooms',
++    gatewayProbeTitle: 'Click to view Connected Platforms details',
++    countdownTitle: 'Next auto-detect countdown',
++    notifications: 'Notifications',
++    defaultUser: 'You',
++    refreshFailed: 'Refresh failed, click to retry',
++    refreshAll: 'Refresh all boards ({n}s)',
++    noAttention: 'No pending items',
++    mapHint: 'Scroll to zoom · Drag nodes/canvas · Click to navigate',
++    legendBlocked: 'Blocked',
++    legendTodo: 'To Do',
++    legendTriage: 'Triage',
++    legendReview: 'Review',
++    filterBoard: 'Board',
++    filterPriority: 'Priority',
++    filterStatus: 'Status',
++    filterAssignee: 'Assignee',
++    filterTenant: 'Tenant',
++    totalCount: '{n} items total',
++    clearFilters: 'Clear filters',
++    backToSessions: 'Back to session list',
++    aggregateMode: 'Aggregate mode: merge related task sessions into one view',
++    aggregate: 'Aggregate',
++    close: 'Close',
++    justNow: 'just now',
++    minutesAgo: '{n}m ago',
++    hoursAgo: '{n}h ago',
++    daysAgo: '{n}d ago',
++    weekPrefix: 'Wk',
++    modeFleet: 'Fleet',
++    fleetTitle: 'Session Fleet',
++    fleetLive: 'live',
++    fleetOffline: 'disconnected',
++    fleetWorking: '{n} running',
++    fleetTotal: '{n} sessions',
++    fleetAttention: '{n} pending',
++    fleetSearchPlaceholder: 'Search sessions/profiles/output…',
++    fleetWorkingOnly: 'Active + pending only',
++    fleetEmpty: 'No matching sessions',
++    fleetOfflineEmpty: 'Fleet stream not connected (server 2.13+)',
++    fleetQueued: 'queue {n}',
++    fleetAborting: 'aborting',
++    fleetApproval: 'Tool approval',
++    fleetApprove: 'Approve',
++    fleetAlways: 'Always allow',
++    fleetDeny: 'Deny',
++    fleetClarify: 'Clarify',
++    fleetAnswer: 'Answer',
++    fleetClarifyPrompt: 'Reply to this clarification:',
++    teamAll: 'All teams',
++    teamNew: 'New team',
++    teamEdit: 'Edit',
++    teamName: 'Name',
++    teamNamePlaceholder: 'Team name',
++    teamNameRequired: 'Name is required',
++    teamDescription: 'Description',
++    teamColor: 'Color',
++    teamProfiles: 'Member profiles',
++    teamBoards: 'Boards',
++    teamNoProfiles: '(no profiles found)',
++    teamDelete: 'Delete',
++    teamCancel: 'Cancel',
++    teamSave: 'Save',
++    inboxTitle: 'Command Inbox',
++    inboxPending: 'pending',
++    inboxClear: 'All clear',
++    inboxKind_approval: 'Approval',
++    inboxKind_blocked: 'Blocked',
++    inboxKind_clarify: 'Clarify',
++    inboxKind_review: 'Review',
++    inboxKind_triage: 'Triage',
++    inboxKind_chat: 'Chat',
++    inboxKind_matrix: 'Matrix',
++    inboxKind_group: 'Group',
++    inboxKind_reminder: 'Reminder',
++    fleetSubagents: 'Sub-agents',
++    fleetSubagentsRun: '{n} running',
++    traceUsageSummary: 'Session usage totals (L2 aggregate, continuous across runs)',
++    inboxKind_mcp: 'MCP degraded',
++    completionSummary: 'Completion summary',
++    completionSummaryHint: 'Enter a summary for this task. It is stored as the task result.',
++    scheduleTitle: 'Schedule',
++    yearLabel: 'Year',
++    itemCount: '{n} items',
++    aggregateSessions: 'Aggregate linked sessions',
++    termTool: 'Terminal tool',
++    termToolNotInstalled: 'not installed',
++    accurate: 'Accurate',
++    allTasks: 'All Tasks',
++    applyTimeFilter: 'Apply Time Filter',
++    archived: 'Archived',
++    backToAllTasks: 'Back to All Tasks',
++    childTask: 'Child Task',
++    collaborationSequence: 'Collaboration',
++    collapseCollabMap: 'Collapse Map',
++    collapseSidebar: 'Collapse Sidebar',
++    collapseTimeline: 'Collapse Timeline',
++    completed: 'Completed',
++    config: 'Config',
++    configUnavailable: 'Config Unavailable',
++    content: 'Content',
++    copyTaskId: 'Copy Task ID',
++    createdAt: 'Created At',
++    createdBy: 'Created By',
++    creator: 'Creator',
++    detecting: 'Detecting',
++    duration: 'Duration',
++    editMode: 'Edit Mode',
++    empty: 'Empty',
++    endTime: 'End Time',
++    entryPoint: 'Entry Point',
++    env: 'Environment',
++    eventCount: 'Events',
++    evidenceLevel: 'Evidence',
++    executionCount: 'Executions',
++    expandCollabMap: 'Expand Map',
++    expandDayBackward: 'Previous Day',
++    expandDayForward: 'Next Day',
++    expandTimeline: 'Expand Timeline',
++    exportDossier: 'Export Dossier',
++    globalTimeline: 'Global Timeline',
++    inference: 'Inference',
++    liveMode: 'Live',
++    loadConfig: 'Load Config',
++    loadingAggregate: 'Loading...',
++    model: 'Model',
++    moreInfo: 'More Info',
++    nextYear: 'Next Year',
++    noData: 'No Data',
++    noExecutionData: 'No Execution Data',
++    noMatchingTasks: 'No Matching Tasks',
++    noReminder: 'No Reminder',
++    noTasksOnPage: 'No tasks on this page',
++    parameter: 'Parameter',
++    parentTask: 'Parent Task',
++    path: 'Path',
++    playPause: 'Play/Pause',
++    playbackHint: 'Use play button to replay events',
++    prevYear: 'Previous Year',
++    previewMode: 'Preview',
++    projectId: 'Project ID',
++    reloadArchived: 'Reload Archived',
++    reloadCompleted: 'Reload Completed',
++    replayMode: 'Replay',
++    result: 'Result',
++    runObservatory: 'Observatory',
++    scrollZoom: 'Scroll to zoom',
++    searchEvents: 'Search events...',
++    selectNodeForDetail: 'Select a node to view details',
++    sessionRecords: 'Session Records',
++    skill: 'Skill',
++    skillCount: 'Skills',
++    source: 'Source',
++    startTime: 'Start Time',
++    summary: 'Summary',
++    switchSpeed: 'Speed',
++    taskDetail: 'Task Detail',
++    taskStatus: 'Status',
++    taskSwimlane: 'Task Swimlane',
++    taskTimeline: 'Task Timeline',
++    taskTopology: 'Task Topology',
++    focusTask: ' · focused {id}',
++    tenant: 'Tenant',
++    timeWindow: 'Time Window',
++    timelinePrefix: 'Timeline',
++    title: 'Title',
++    type: 'Type',
++    unassignedTask: 'Unassigned',
++    unspecified: 'Unspecified',
++    newMatrix: 'New Matrix room',
++    newMatrixDesc: 'Create a Matrix collaboration room and invite members',
++    newChat: 'New chat',
++    newChatDesc: 'Start a new agent chat',
++    newGroup: 'New group chat',
++    newGroupDesc: 'Create a multi-party group room',
++    workspaceNotFound: 'Workspace directory not found (not created yet or already cleaned)',
++    retry: 'Retry',
++    actionApprove: 'Approve',
++    actionDecide: 'Decide',
++    actionSupplement: 'Supplement',
++    actionEvaluate: 'Evaluate',
++    actionDelegate: 'Delegate',
++    decisionConditional: 'Conditionally approved',
++    decisionConditionalDesc: 'Proceed with conditions tracked as tasks',
++    decisionReject: 'Reject',
++    decisionApprove: 'Approve',
++    workerHealth: 'Worker',
++    heartbeat: 'heartbeat',
++    maxRuntime: 'max runtime',
++    failureCircuit: 'Failures',
++    circuitTripped: 'circuit tripped',
++    claimLock: 'Claim',
++    workflow: 'Workflow',
++    goalMode: 'goal mode',
++    derivation: 'Origin',
++    events: 'Events',
++    runHistory: 'Run history',
++    lifecycleTitle: 'Task lifecycle',
++    lifecycleMedian: 'Median completion',
++    lifecycleBottleneckHint: 'State where active tasks dwell longest on average',
++    lifecycleBottleneck: 'Bottleneck',
++    lifecycleFunnel: 'Status distribution (active vs all)',
++    lifecycleDwell: 'Average dwell per active status',
++    lifecycleHeat: 'Priority × status'
++  },
++  matrixChat: {
++    actionDelete: 'Delete',
++    adminTools: 'Admin Tools',
++    actionEdit: 'Edit',
++    actionReply: 'Reply',
++    addReaction: 'Add Reaction',
++    addTopic: 'Add Topic',
++    allThreads: 'All Threads',
++    backToThreads: 'Back to Threads',
++    banUser: 'Ban',
++    bold: 'Bold',
++    cancel: 'Cancel',
++    changeAvatar: 'Change Avatar',
++    code: 'Code',
++    codeBlock: 'Code Block',
++    comingSoon: 'Coming Soon',
++    clearAllMessages: 'Clear All Messages',
++    clearAllMessagesConfirm: 'Are you sure you want to clear all messages in "{room}"?',
++    clearAllMessagesWarning: 'This will redact all visible messages you have permission to delete. This action cannot be undone.',
++    clearMessagesFailed: 'Failed to clear messages',
++    clearMessagesResult: '{deleted} messages cleared, {failed} failed',
++    confirmDelete: 'Confirm Delete',
++    confirmDeleteAction: 'Are you sure you want to delete this message?',
++    confirmLeave: 'Click again to confirm',
++    copyLink: 'Copy Link',
++    copyText: 'Copy Text',
++    createRoom: 'Create Room',
++    delete: 'Delete',
++    deleteReasonPlaceholder: 'Reason (optional)',
++    disabled: 'Disabled',
++    edit: 'Edit',
++    editMessagePlaceholder: 'Edit message...',
++    edited: 'edited',
++    editingMessage: 'Editing message',
++    emoji: 'Emoji',
++    enabled: 'Enabled',
++    encryption: 'Encryption',
++    e2eVerified: 'Encryption verified',
++    eventNotFound: 'Event not found',
++    exportChatMenu: 'Export Chat',
++    exportChatDescription: 'Export all messages from this room as a JSON file.',
++    exportFailed: 'Failed to export chat',
++    exportSuccess: '{count} messages exported',
++    exporting: 'Exporting...',
++    extensionsMenu: 'Extensions',
++    failed: 'Failed',
++    favorite: 'Favorite',
++    filesMenu: 'Files',
++    forward: 'Forward',
++    forwardMessage: 'Forward Message',
++    forwardingMessage: 'Forwarding message...',
++    historyLoadError: 'Server error, unable to load earlier history',
++    historyWorldReadable: 'History visible to anyone',
++    historyShared: 'History visible to members since they joined',
++    historyInvited: 'History visible to invited members',
++    historyJoined: 'History visible to members',
++    ignoreUser: 'Ignore User',
++    inviteFailed: 'Invite failed',
++    inviteSending: 'Sending invite...',
++    inviteToRoom: 'Invite to Room',
++    inviteUser: 'Invite User',
++    italic: 'Italic',
++    joinRoom: 'Join Room',
++    kickUser: 'Kick User',
++    leaveRoom: 'Leave Room',
++    leaveFailed: 'Failed to leave room',
++    leaveRoomConfirm: 'Are you sure you want to leave "{room}"?',
++    linkCopied: 'Link copied',
++    loading: 'Loading...',
++    loadMore: 'Load more',
++    loadingThreads: 'Loading threads...',
++    markAllThreadsRead: 'Mark all threads as read',
++    memberAdmin: 'Admin',
++    memberCount: '{count} members',
++    memberDefault: 'Member',
++    memberInvited: 'Invited',
++    memberMod: 'Moderator',
++    memberSearch: 'Search members',
++    members: 'Members',
++    messageSendFailed: 'Failed to send message',
++    messageSending: 'Sending...',
++    minutesAgo: '{n}m ago',
++    hoursAgo: '{n}h ago',
++    daysAgo: '{n}d ago',
++    justNow: 'just now',
++    myThreads: 'My Threads',
++    newMessages: 'New messages',
++    noExtensions: 'No integrations',
++    noExtensionsHint: 'Add integrations from the integration manager',
++    noFilesFound: 'No files found',
++    noMembersFound: 'No members found',
++    noPinnedMessages: 'No pinned messages',
++    noResults: 'No results',
++    noRoomSelected: 'No room selected',
++    noRooms: 'No rooms',
++    noThreadsDesc: 'No threads in this room yet',
++    noThreadsTitle: 'No Threads',
++    noUsersFound: 'No users found',
++    noTopic: 'No topic set',
++    notAuthenticated: 'Not authenticated',
++    notifications: 'Notifications',
++    notifyAllMessages: 'All messages',
++    notifyMentions: 'Mentions only',
++    notifyNone: 'None',
++    notTrusted: 'Not trusted',
++    offline: 'Offline',
++    online: 'Online',
++    openWidget: 'Open widget',
++    options: 'Options',
++    paginateLoading: 'Loading more...',
++    people: 'People',
++    pinnedMessages: 'Pinned Messages',
++    pollsMenu: 'Polls',
++    pollEnded: 'Closed',
++    pollActive: 'Active',
++    noPolls: 'No polls yet',
++    untitledPoll: 'Untitled Poll',
++    votes: 'votes',
++    powerLevel: 'Power Level',
++    powerLevelValue: '{level}',
++    publicRoom: 'Public Room',
++    replyInThread: 'Reply in Thread',
++    replyMessagePlaceholder: 'Reply...',
++    reportFailed: 'Failed to submit report',
++    reportReason: 'Reason for report...',
++    reportRoom: 'Report Room',
++    reportRoomDescription: 'Report this room to the server administrator. Please describe the issue.',
++    reportSpamAbuse: 'Spam or abuse',
++    roomAlias: 'Room Alias',
++    roomEncryption: 'Encrypted room',
++    roomId: 'Room ID',
++    roomIdOrAlias: 'Room ID or alias',
++    roomInfo: 'Room Info',
++    roomMembers: 'Room Members',
++    roomName: 'Room Name',
++    roomPublic: 'Public',
++    roomSettings: 'Room Settings',
++    roomTopic: 'Topic',
++    save: 'Save',
++    saving: 'Saving...',
++    search: 'Search',
++    searchHint: 'Search rooms and people',
++    searchResultCount: '{count} results',
++    searchRooms: 'Search Rooms',
++    searchUsers: 'Search Users',
++    searchUsersHint: 'Search by username or display name',
++    send: 'Send',
++    sendMessage: 'Send Message',
++    sent: 'Sent',
++    showAll: 'Show All',
++    showLess: 'Show Less',
++    shareRoom: 'Share Room',
++    startChat: 'Start Chat',
++    stateBanned: 'banned',
++    stateChangedName: 'changed display name',
++    stateInvited: 'was invited',
++    stateJoined: 'joined',
++    stateKicked: 'was kicked',
++    stateLeft: 'left',
++    stateLoadingOlder: 'Loading older messages...',
++    stateNoMoreHistory: 'No more history',
++    stateReason: 'Reason',
++    stateRejectedInvite: 'rejected the invitation',
++    stateRoomCreated: 'Room created',
++    stateUnbanned: 'was unbanned',
++    stateWithdrewInvite: 'withdrew invitation',
++    stateNameSet: '{sender} set the room name to "{name}"',
++    stateNameChanged: '{sender} changed the room name from "{oldName}" to "{newName}"',
++    stateNameRemoved: '{sender} removed the room name "{oldName}"',
++    stateTopicSet: '{sender} set the topic to "{topic}"',
++    stateTopicChanged: '{sender} changed the topic from "{oldTopic}" to "{newTopic}"',
++    stateTopicRemoved: '{sender} removed the topic',
++    stateAvatarChanged: '{sender} changed the room avatar',
++    stateAliasSet: '{sender} set the main address to {alias}',
++    stateAliasChanged: '{sender} changed the main address from {oldAlias} to {alias}',
++    stateAliasRemoved: '{sender} removed the main address {oldAlias}',
++    statePowerLevelChanged: '{sender} changed the power level requirements',
++    stateMadePublic: '{sender} made the room public to anyone who knows the link',
++    stateMadePrivate: '{sender} made the room invite only',
++    stateJoinRulesChanged: '{sender} changed the join rules',
++    stateHistoryVisibilityChanged: '{sender} changed the history visibility',
++    stateEncryptionEnabled: '{sender} turned on end-to-end encryption',
++    statePinnedMessages: '{sender} pinned {count} messages',
++    stateUnpinnedMessages: '{sender} unpinned some messages ({count} pinned)',
++    stateClearedPinned: '{sender} cleared all pinned messages',
++    stateRoomUpgraded: '{sender} upgraded the room',
++    suggestions: 'Suggestions',
++    submitting: 'Submitting...',
++    syncConnecting: 'Connecting...',
++    syncError: 'Connection error',
++    thread: 'Thread',
++    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
++    threads: 'Threads',
++    threadsMenu: 'Threads',
++    typingMany: '{n} people are typing...',
++    typingOne: '{user} is typing...',
++    typingTwo: '{user1} and {user2} are typing...',
++    trusted: 'Trusted',
++    unavailable: 'Unavailable',
++    undecryptable: 'Unable to decrypt message',
++    unencrypted: 'Unencrypted',
++    unignoreUser: 'Unignore User',
++    unpinAll: 'Unpin all',
++    unpinMessage: 'Unpin message',
++    unknownFile: 'Unknown file',
++    uploadFile: 'Upload File',
++    videoCall: 'Video Call',
++    voiceCall: 'Voice Call'
++  },
++  approvals: {
++    confirmTitle: 'Confirm decision',
++    confirmBody: 'Apply "{choice}" to "{target}". This takes effect immediately.',
++    title: 'Approval inbox',
++    pageTitle: 'Approval Inbox',
++    navLabel: 'Approvals',
++    empty: 'No pending approvals',
++    pendingCount: '{n} pending',
++    kindCommand: 'Command approvals',
++    kindReview: 'Review cards',
++    objectPrefix: 'Object',
++    reviewUncommitted: 'No uncommitted changes were submitted',
++    reviewBaseline: 'Baseline diff {ref}',
++    history: 'Decision history',
++    historyEmpty: 'No decisions yet',
++    colTime: 'Time',
++    colActor: 'Actor',
++    colTarget: 'Target',
++    colDecision: 'Decision',
++    colNote: 'Note',
++    loadFailed: 'Load failed',
++    viewDiff: 'View diff',
++    choice: {
++      once: 'Approve',
++      session: 'Allow for session',
++      always: 'Always allow',
++      deny: 'Deny',
++      approve: 'Approve',
++      request_changes: 'Request changes',
++      spotcheck_confirm: 'Spot-check confirmed',
++      spotcheck_veto: 'Spot-check vetoed',
++      auto_pass: 'Auto-passed'
++    },
++    colRisk: 'Risk tier',
++    risk: {
++      high: 'High risk',
++      medium: 'Standard',
++      low: 'Low risk',
++      highHint: 'Decide individually',
++      autoSample: 'Auto-approvable · sampled'
++    }
++  },
++  loopCockpit: {
++    title: 'Loop Cockpit',
++    tagline: 'Live loop growth',
++    back: 'Back to cockpit',
++    scene: {
++      overview: 'Overview',
++      manage: 'Manage',
++      code: 'Code',
++      ops: 'Ops'
++    },
++    status: {
++      connected: 'Live',
++      disconnected: 'Offline'
++    },
++    kpi: {
++      loopsActive: 'Active loops',
++      runsRunning: 'Running',
++      awaiting: 'Awaiting',
++      done7d: 'Done · 7d',
++      avg7d: 'Avg · 7d'
++    },
++    inbox: {
++      title: 'Interventions',
++      empty: 'Nothing awaiting your decision',
++      all: 'All interventions'
++    },
++    loops: {
++      title: 'Loops',
++      newLoop: 'New loop',
++      deleteConfirm: 'Delete this loop? This cannot be undone.'
++    },
++    viz: {
++      core: 'Core',
++      empty: 'No loops growing yet — create one, or instantiate from a template in Orchestrate.',
++      emptyCta: 'New loop',
++      emptyCta2: 'Orchestrate',
++      legendRunning: 'Running',
++      legendAwaiting: 'Awaiting',
++      legendDone: 'Done',
++      legendFailed: 'Failed',
++      moreLoops: '{n} more loops hidden'
++    }
++  },
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -2,278 +2,311 @@ import { socialMessagesZh } from '../social-messages'
+@@ -4,278 +4,311 @@
  
  export default {
    jev: {
@@ -4852,7 +5400,10 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    removeConfirm: '从后续启动中卸载 {name}？',
 +    conflict: '配置已被其他操作修改。草稿已保留，请对比最新版本后重新加载。',
 +    missingDependency: '请先安装 DSH 和 pnpm。'
-+  },
+   },
+-  announcements: {"later": "稍后", "details": "查看详情", "gotIt": "知道了"},
+-  taskPlan: {"title": "任务计划", "progress": "{completed}/{total} 已完成", "pending": "未完成", "in_progress": "进行中", "completed": "已完成", "running": "执行中", "ended": "本次运行已结束，剩余步骤未完成", "interrupted": "已中断，剩余步骤未完成", "failed": "运行失败，剩余步骤未完成"},
+-  agentAutoUpdate: { label: '自动更新' },
 +  announcements: {
 +    later: '稍后',
 +    details: '查看详情',
@@ -4871,10 +5422,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +  },
 +  agentAutoUpdate: {
 +    label: '自动更新'
-   },
--  announcements: {"later": "稍后", "details": "查看详情", "gotIt": "知道了"},
--  taskPlan: {"title": "任务计划", "progress": "{completed}/{total} 已完成", "pending": "未完成", "in_progress": "进行中", "completed": "已完成", "running": "执行中", "ended": "本次运行已结束，剩余步骤未完成", "interrupted": "已中断，剩余步骤未完成", "failed": "运行失败，剩余步骤未完成"},
--  agentAutoUpdate: { label: '自动更新' },
++  },
    ekkoConfig: {
 -    "settingsTitle": "设置",
 -    "settingsRuntime": "运行",
@@ -5133,15 +5681,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    socialMessages: socialMessagesZh,
    browser: {
-@@ -287,7 +320,6 @@ export default {
-     profileSwitchTitle: '切换浏览器 Profile？', profileSwitchWarning: '可能中断 {agents} 个 Agent 操作、{downloads} 个下载任务和 {annotations} 个批注任务。',
-     deleteProfileTitle: '删除浏览器 Profile？', deleteProfileWarning: '托管的 Profile 数据将移入系统废纸篓，自定义目录不会被删除。', clearCache: '清除缓存', clearPermissionAudit: '清除权限记录', clearSiteData: '清除站点数据', clearSiteDataWarning: '这会退出所选 Profile 中的网站登录，并清除 Cookie 和本地存储。', dataCleared: '浏览器数据已清除', loadFailed: '内置浏览器启动失败',
-   },
--  // 登录
-   login: {
-     title: 'SwarmStudio',
-     description: '输入用户名和密码以继续。',
-@@ -333,8 +365,17 @@ export default {
+@@ -335,8 +368,17 @@
      defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
      defaultCredentialAction: '去修改',
      defaultCredentialLater: '稍后提醒',
@@ -5160,7 +5700,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    users: {
      title: '账户管理',
      description: '创建用户、分配角色，并控制普通管理员可访问的配置。',
-@@ -355,15 +396,18 @@ export default {
+@@ -357,15 +399,18 @@
      disable: '禁用',
      roles: {
        superAdmin: '超级管理员',
@@ -5170,8 +5710,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      status: {
        active: '启用',
 -      disabled: '禁用',
+-    },
 +      disabled: '禁用'
-     },
++    },
 +    matrixUserIdPlaceholder: "{'@'}user:matrix.example.com",
 +    matrixUserId: 'Matrix 用户 ID',
 +    displayName: '显示名称',
@@ -5183,7 +5724,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    common: {
      close: '关闭',
      loading: '加载中...',
-@@ -394,10 +438,12 @@ export default {
+@@ -396,10 +441,12 @@
      collapse: '收起',
      start: '启动',
      stop: '停止',
@@ -5199,7 +5740,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    mcp: {
      title: 'MCP 服务器',
      loadFailed: '加载 MCP 服务器失败',
-@@ -422,8 +468,8 @@ export default {
+@@ -424,8 +471,8 @@
      updateFailed: '更新服务器失败',
      saveFailed: '保存失败',
      serverRemoved: '已移除 "{name}"',
@@ -5210,7 +5751,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      connectedStatus: '已连接',
      disconnectedStatus: '未连接',
      disabledStatus: '已禁用',
-@@ -466,7 +512,7 @@ export default {
+@@ -468,7 +515,7 @@
      toolsSelectAll: '全选',
      toolsClearSelection: '取消全选',
      toolsExcludeAll: '全部排除',
@@ -5219,7 +5760,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
  
    apiRelay: {
-@@ -498,17 +544,17 @@ export default {
+@@ -500,21 +547,21 @@
    },
  
    sidebar: {
@@ -5248,7 +5789,12 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      chat: '对话',
      backToChat: '返回',
      search: '搜索',
-@@ -551,9 +597,9 @@ export default {
+-    apiRelay: '饲料',
++    apiRelay: 'API 中继（外链）',
+     history: '历史',
+     jobs: '任务',
+     kanban: '看板',
+@@ -553,9 +600,9 @@
      groupMonitoring: '监控',
      groupMonitoringShort: '监控',
      groupTools: '工具',
@@ -5261,7 +5807,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      theme: '主题',
      settings: '设置',
      connected: '已连接',
-@@ -575,8 +621,1599 @@ export default {
+@@ -577,8 +624,1622 @@
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -5269,7 +5815,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    matrixChat: 'Matrix 聊天',
 +    ideWorkspace: 'IDE 工作台',
 +    systemGroup: '系统'
-+  },
+   },
+-
 +  ide: {
 +    tools: {
 +      title: '工具时间线',
@@ -5373,11 +5920,15 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      deleteAllArchivedTitle: '删除 {count} 个归档任务？',
 +      deleteAllArchivedResult: '已删除 {deleted} 个，跳过 {skipped} 个，失败 {failed} 个。',
 +      deleteAllArchivedError: '操作或列表刷新失败，请刷新后检查剩余任务。',
-+      archivedTaskCount: '{count} 个归档任务'
++      archivedTaskCount: '{count} 个归档任务',
++      restoreAllArchived: '恢复全部归档任务',
++      restoreAllArchivedOk: '已恢复全部归档任务',
++      restoreAllArchivedFailed: '恢复归档任务失败'
 +    },
 +    modelInvalid: {
 +      title: '当前模型已不可用',
 +      hint: '该模型已从可用列表移除，请重新选择后继续',
++      fallback: '回退到 {model}',
 +      reselect: '去设置重选',
 +      dismiss: '忽略'
 +    },
@@ -5407,6 +5958,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      tab_tools: '工具时间线',
 +      tab_hooks: '钩子',
 +      tab_workflow: '工作流',
++      tab_slash: '斜杠命令',
++      tab_automations: '自动化',
 +      ledgerPeak: '峰值 {day} · {tokens}',
 +      ledgerTotal: '累计 {tokens}',
 +      roundsTotal: '合计（{n} 轮）',
@@ -5716,6 +6269,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    chatTabTraceDisabled: '无活跃会话，暂不可用',
 +    briefing: {
 +      title: '任务简报',
++      worktree: '关联工作树',
 +      toggle: '任务简报',
 +      close: '收起简报',
 +      noActiveTask: '当前无激活任务：从看板或任务跳转进入后自动带入简报',
@@ -5726,7 +6280,6 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      taskPriority: '优先级',
 +      stage: '当前阶段',
 +      branch: '分支',
-+      worktree: 'Worktree',
 +      contextBlock: '需求上下文',
 +      noContext: '暂无需求上下文',
 +      raciLabel: 'RACI',
@@ -6133,6 +6686,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +  },
 +  ia2: {
 +    delivery: {
++      inFlight: '进行中',
 +      tab: '交付案例',
 +      title: '交付案例',
 +      empty: '暂无交付案例（推演/编排发起后显示）',
@@ -6146,7 +6700,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    },
 +    brand: '驾驶舱',
 +    flow: {
-+      title: '工作流',
++      title: '协作流',
 +      filter: {
 +        all: '全部',
 +        session: '会话',
@@ -6164,7 +6718,11 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      clusterRooms: '房间',
 +      clusterGroups: '群聊',
 +      clusterChats: '会话',
-+      groupAgents: 'Agents'
++      groupAgents: '智能体',
++      newChatHint: '新建聊天：选择会话类型',
++      newAgentChatHint: '发起与单个 AI Agent 的新单聊',
++      newGroupChatHint: '创建群聊房间（多 Agent 协作）',
++      newMatrixRoomHint: '按名称新建 Matrix 房间（真人与 Agent 同厅协作）'
 +    },
 +    loop: {
 +      stage: {
@@ -6199,7 +6757,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      running: '进行中',
 +      review: '评审中',
 +      blocked: '受阻',
-+      open: '未开始'
++      open: '未开始',
++      cardHint: '点击进入对应工作面'
 +    },
 +    tdp: {
 +      title: '任务 · 决策',
@@ -6238,7 +6797,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        done: '完成',
 +        archived: '已归档'
 +      },
-+      session: '关联会话 {id}'
++      session: '关联会话 {id}',
++      pendingTitle: '待我处理',
++      contextTitle: '上下文'
 +    },
 +    wait: {
 +      subReview: '待验收',
@@ -6248,7 +6809,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    chain: {
 +      timeline: '时间线',
 +      openIde: '在 IDE 打开',
-+      gateReview: '等你验收'
++      gateReview: '等你验收',
++      timelineHint: '打开全链路追踪（Run Observatory 全局面板）'
 +    },
 +    part: {
 +      title: '参与方',
@@ -6321,7 +6883,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      openManage: '打开管理台',
 +      decideCount: '待决策 {n}',
 +      panelPeople: '人',
-+      panelAgents: '智能体'
++      panelAgents: '智能体',
++      chipTasksHint: '点击切换右栏到「任务与决策」视图',
++      chipOnlineHint: '点击切换右栏到「在线」视图'
 +    },
 +    gov: {
 +      title: '管理',
@@ -6418,7 +6982,12 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        byAssignee: '按负责人',
 +        byAgent: 'Agent 负载',
 +        open: '在办'
-+      }
++      },
++      jump: {
++        accounts: '账户管理',
++        org: '组织与知识',
++        inbox: '收件箱',
++      },
 +    },
 +    review: {
 +      gate: '门禁',
@@ -6557,7 +7126,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      subLoopStuck: '循环停滞',
 +      subRunFailed: '运行失败',
 +      empty: '暂无需要关注的事项',
-+      title: '需关注'
++      title: '需关注',
++      gone: '该条目已不在当前列表，可能已被处理'
 +    },
 +    runs: '运行列表',
 +    engine: {
@@ -6857,12 +7427,11 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      alarmHead: '熔断与停滞',
 +      alarmEmpty: '近 7 天无熔断/停滞告警'
 +    }
-   },
--
++  },
    agentManager: {
      title: 'Agent 管理',
      subtitle: '统一发现和管理这台设备上的 Agent。',
-@@ -599,7 +2236,6 @@ export default {
+@@ -601,7 +2262,6 @@
      ekkoDescription: 'Ekko 随 Studio 提供，无需单独安装、升级或删除。',
      version: '版本',
      codingAgentDescription: '可由 Studio 安装、检查更新和删除。',
@@ -6870,26 +7439,15 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      cursorDescription: '请从 https://cursor.com/install 安装 Cursor CLI（`agent`），然后刷新。Studio 不会用 npm 安装。',
      cursorNoManagedConfig: '启动不会改写 ~/.cursor/mcp.json。托管服务写在本次会话的运行时副本里。',
      updateToVersion: '更新到 {version}',
-@@ -611,7 +2247,7 @@ export default {
-     aiHelpDialogPositive: '询问 AI',
-     aiHelpDrawerTitle: 'Ekko · Agent 管理排障',
-     aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
--    aiHelpPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。',
-+    aiHelpPrompt: "请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。",
-     legacyDataMigrationTitle: '发现旧版 Hermes 数据',
-     legacyDataMigrationDescription: 'SwarmStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-     legacyDataMigrationSource: '旧目录',
-@@ -621,8 +2257,8 @@ export default {
+@@ -623,6 +2283,7 @@
      legacyDataMigrationNegative: '不迁移',
      legacyDataMigrationSuccess: '已记录迁移选择，SwarmStudio 将重启并在服务启动前迁移数据。',
      legacyDataMigrationFailed: '旧版 Hermes 数据迁移失败：{error}',
-+    antigravityDescription: '通过官方安装指南安装 Antigravity CLI（agy）并在终端完成登录，再刷新。支持全局和模型隔离模式；Studio 不托管安装、更新或卸载。'
++    antigravityDescription: '安装 Antigravity CLI (agy) 请参照官方指引并在终端完成登录后刷新。支持全局与按项目两种模式；安装、更新与卸载由外部管理。'
    },
--
+ 
    runtimeVersions: {
-     title: '版本管理',
-     runtimeTitle: 'Hermes Runtime',
-@@ -681,7 +2317,7 @@ export default {
+@@ -683,7 +2344,7 @@
        queued: '排队中',
        running: '下载中',
        completed: '已完成',
@@ -6898,7 +7456,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      jobStageStatus: {
        queued: '排队中',
-@@ -691,7 +2327,7 @@ export default {
+@@ -693,7 +2354,7 @@
        extract: '解压中',
        install: '安装中',
        completed: '已完成',
@@ -6907,7 +7465,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      jobStage: {
        queued: '排队中',
-@@ -705,10 +2341,9 @@ export default {
+@@ -707,10 +2368,9 @@
        extractWebUi: '正在解压 Web UI 压缩包',
        installWebUi: '正在安装 Web UI',
        completed: '已完成',
@@ -6920,7 +7478,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    mcuDevices: {
      title: '小方盒',
      subtitle: '管理小方盒语音交互设备及其连接',
-@@ -748,15 +2383,14 @@ export default {
+@@ -750,15 +2410,14 @@
      deleted: 'MCU 设备已删除',
      deleteFailed: '删除 MCU 设备失败',
      loadFailed: '加载 MCU 设备失败',
@@ -6938,7 +7496,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      app: {
        subtitle: '让 App 连接你的设备',
-@@ -805,7 +2439,7 @@ export default {
+@@ -807,7 +2466,7 @@
          internal: '内测',
          public_beta: '公测',
          paid: '收费',
@@ -6947,7 +7505,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        accessFailures: {
          tokenExpired: 'Token 已失效',
-@@ -817,7 +2451,7 @@ export default {
+@@ -819,7 +2478,7 @@
          expired: 'App 访问授权已过期',
          accountMismatch: '签名账号与当前 App 账号不一致',
          deviceMismatch: '签名设备码与当前设备不一致',
@@ -6956,7 +7514,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        deviceName: '设备名称',
        deviceBrand: '设备品牌',
-@@ -828,13 +2462,13 @@ export default {
+@@ -830,13 +2489,13 @@
        authorizedUser: '授权用户',
        connectionTypes: {
          lan: '局域网',
@@ -6974,7 +7532,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        online: '在线',
        offline: '离线',
        active: '有效',
-@@ -845,10 +2479,9 @@ export default {
+@@ -847,10 +2506,9 @@
        deleted: 'App 连接已删除',
        deleteFailed: '删除 App 连接失败',
        empty: '暂无已连接 App',
@@ -6987,7 +7545,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    devices: {
      title: '设备',
      subtitle: '管理已连接设备、配对请求及远程访问',
-@@ -904,22 +2537,21 @@ export default {
+@@ -906,22 +2564,21 @@
        pending: '待处理',
        approved: '已通过',
        rejected: '已拒绝',
@@ -7014,7 +7572,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    performance: {
      title: '性能监控',
      subtitle: '查看系统资源、Bridge Broker、Workers 和活跃会话',
-@@ -947,9 +2579,8 @@ export default {
+@@ -949,9 +2606,8 @@
      status: '状态',
      noWorkers: '暂无 Worker',
      sessionsByProfile: '按 Profile 统计会话',
@@ -7025,7 +7583,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    journey: {
      title: '学习轨迹',
      play: '播放学习轨迹',
-@@ -979,21 +2610,28 @@ export default {
+@@ -981,21 +2637,28 @@
      useCount: '使用次数',
      createdBy: '创建来源',
      timestamp: '时间',
@@ -7063,7 +7621,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    realtimeVoice: {
      title: '实时语音',
      mode: '语音模式',
-@@ -1016,7 +2654,15 @@ export default {
+@@ -1018,7 +2681,15 @@
      finishTurn: '结束本轮',
      speak: '开始说话',
      end: '结束',
@@ -7080,7 +7638,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      hint: {
        idle: '轻触中央区域开始一轮语音',
        paused: '准备好后重新打开麦克风',
-@@ -1025,11 +2671,9 @@ export default {
+@@ -1027,11 +2698,9 @@
        processing: '正在将你的语音转换为文字',
        thinking: '消息已发送到当前对话',
        speaking: '你可以随时打断回答',
@@ -7094,7 +7652,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    chat: {
      screenshot: {
        shortcut: {
-@@ -1073,7 +2717,7 @@ export default {
+@@ -1075,7 +2744,7 @@
        systemUnavailable: "系统截图当前不可用",
        systemWaiting: "请在系统界面选择截图区域",
        timedOut: "截图等待超时，请重试。",
@@ -7103,7 +7661,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        sourceUnavailable: "无法获取屏幕画面，请检查屏幕录制权限后重试。",
        failed: "截屏失败，请重试。",
      },
-@@ -1090,6 +2734,19 @@ export default {
+@@ -1092,6 +2761,19 @@
      runUsageEstimatedSpeed: "估算速度",
      runUsageEstimatedSpeedHint: "输出 token /（本轮耗时 − 工具占用时间）。并行工具重叠时间只扣一次；仍包含启动、网络等开销，非实测模型速度。",
  
@@ -7123,7 +7681,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      contextRemaining: '剩余',
      contextClickToEdit: '点击编辑上下文长度',
      contextEditTitle: '编辑上下文长度',
-@@ -1116,7 +2773,7 @@ export default {
+@@ -1118,7 +2800,7 @@
      slashCommandArgs: {
        message: '<消息>',
        title: '<标题>',
@@ -7132,7 +7690,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      slashCommands: {
        usage: '计算当前会话用量',
-@@ -1146,7 +2803,7 @@ export default {
+@@ -1148,7 +2830,7 @@
        reloadMcp: '重载 MCP 服务器',
        reloadSkills: '重载技能命令',
        bundles: '查看 Skill Bundle',
@@ -7141,7 +7699,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1161,7 +2818,7 @@ export default {
+@@ -1163,7 +2845,7 @@
        deleteFailed: '删除 Bundle 失败',
        deleted: 'Bundle 已删除',
        noBundles: '还没有 Bundle，可创建一个来组合多个 Skills。',
@@ -7150,7 +7708,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      bundleCreator: {
        title: '创建 Skill Bundle',
-@@ -1177,7 +2834,7 @@ export default {
+@@ -1179,7 +2861,7 @@
        skillsRequired: '请至少选择一个 Skill',
        skillsLoadFailed: '加载 Skills 失败',
        createFailed: '创建 Bundle 失败',
@@ -7159,7 +7717,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      attachFiles: '添加附件',
      reasoningEffort: {
-@@ -1195,8 +2852,8 @@ export default {
+@@ -1197,8 +2879,8 @@
          high: '高',
          max: 'Max',
          xhigh: '超高',
@@ -7170,7 +7728,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      autoPlaySpeech: '自动播放语音',
      voiceInput: {
-@@ -1212,13 +2869,13 @@ export default {
+@@ -1214,13 +2896,13 @@
          capturing: '正在聆听',
          transcribing: '正在转写',
          sending: '正在插入输入框',
@@ -7186,7 +7744,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      showToolCalls: '显示工具调用',
      pushEnabled: '是否推送',
-@@ -1251,7 +2908,7 @@ export default {
+@@ -1253,7 +2935,7 @@
      searchTitle: '搜索会话',
      searchSubtitle: '按标题或消息内容搜索',
      searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
@@ -7195,7 +7753,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      searchPlaceholder: '搜索会话...',
      searchEmpty: '最近会话',
      searchRecent: '最近会话',
-@@ -1306,9 +2963,7 @@ export default {
+@@ -1308,9 +2990,7 @@
      newCliChat: '新建 CLI',
      deleteSession: '确定删除此会话？',
      sessionDeleted: '会话已删除',
@@ -7206,25 +7764,13 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      toggleBatchMode: '批量选择',
      selectAll: '全选',
      confirmBatchDelete: '确定删除选中的 {count} 个会话？',
-@@ -1414,11 +3069,32 @@ export default {
+@@ -1416,11 +3096,20 @@
      resumeSpeech: '继续',
      stopSpeech: '停止',
      speechNotSupported: '此浏览器不支持语音播放',
 +    sessionListActions: '会话列表操作',
 +    filterByProfile: '按 Profile 筛选',
 +    selectedSessions: '已选 {count} 项',
-+    runUsageOutput: '输出 token',
-+    runUsageInput: '输入 token',
-+    runUsageCacheRate: '缓存命中率',
-+    runUsageCacheRateHint: '命中缓存的输入 token ÷ 本轮全部输入 token（含缓存读取和写入）',
-+    runUsageCache: '缓存命中',
-+    runUsageCost: '预估费用',
-+    runUsageSpeed: 'Token 速度',
-+    runUsageSpeedHint: '本轮输出 token ÷ 模型请求总耗时（含首 token 等待，不含工具执行）',
-+    runUsageAverageSpeed: '平均速度',
-+    runUsageAverageSpeedHint: '本轮输出 token / 整轮耗时，包含工具执行和等待时间；CLI 未提供模型请求耗时。',
-+    runUsageEstimatedSpeed: '估算速度',
-+    runUsageEstimatedSpeedHint: '输出 token /（本轮耗时 − 工具占用时间）。并行工具重叠时间只扣一次；仍包含启动、网络等开销，非实测模型速度。'
    },
 -
    workflow: {
@@ -7242,7 +7788,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      title: '工作流',
      profile: '配置',
      namePlaceholder: '工作流名称',
-@@ -1426,7 +3102,7 @@ export default {
+@@ -1428,7 +3117,7 @@
      workspace: {
        title: '选择工作区',
        select: '选择工作区',
@@ -7251,7 +7797,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      actions: {
        newWorkflow: '新建工作流',
-@@ -1452,145 +3128,356 @@ export default {
+@@ -1454,145 +3143,356 @@
        imported: 'Workflow 导入成功',
        exported: 'Workflow 导出成功',
        importFailed: 'Workflow 导入失败',
@@ -7370,7 +7916,6 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -        weekly: "每周",
 -        monthly: "每月",
 -        custom: "自定义 Cron 表达式（高级）",
--      },
 +        everyMinute: '每分钟',
 +        every5Minutes: '每 5 分钟',
 +        every30Minutes: '每 30 分钟',
@@ -7380,15 +7925,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        monthly: '每月',
 +        custom: '自定义 Cron 表达式（高级）'
 +      }
-     },
-     evidence: {
--      historyPage: '运行历史', detailsPage: '运行详情', backToRuns: '返回运行历史', resultStatus: '状态', duration: '耗时', budgetLabel: '预算', actualExecution: '实际执行', otherJudgments: '其他判断', loopEvents: '循环事件', evaluatedNotExecuted: '已判断，未执行',
--      ariaLabel: 'Workflow 执行详情', title: '执行详情', count: '{count} 条',
--      intro: '展示本次执行的路径选择、循环轮次和异常节点。', empty: '暂无执行详情', loadFailed: '读取持久化执行详情失败',
--      summaryTitle: '运行结论', blockedAt: '卡在 {gate}', actualPath: '实际执行路径', noActualPath: '本次未采用任何路径', pathChecks: '路径判断', selectedPaths: '已采用路径', otherPaths: '其他判断与事件', selectedCount: '已采用 {count} 条', otherCount: '未采用 {count} 条', eventCount: '事件 {count} 条', showOtherPaths: '查看其他详情（{count}）', hideOtherPaths: '收起其他详情', runDetails: '运行详情', actualPathSteps: '实际路径步骤', nodeBudgetDetails: '时间预算详情',
--      condition: '条件', conditionMatched: '已匹配', conditionNotMatched: '未匹配', sourceOutcome: '节点结果', sourceReturned: '正常返回', sourceFailed: '执行失败', sourceSkippedStatus: '未执行',
--      checkedData: '检查的数据', entireReplyText: '完整回复文本', errorText: '错误文本', jsonFieldValue: '单个 JSON 字段值', advancedPathValue: '高级路径的值', comparison: '比较方式', textToFind: '要查找的文字', expectedFieldValue: '期望的字段值', parsedBusinessDecision: '解析出的业务结论', failedGateLabel: '失败环节（failed_gate 字段的值）', failedGateValue: '失败环节（failed_gate 字段的值）：{gate}', decisions: { blocked: '已阻塞', released: '已发布', verified: '已验证', skipped: '无需处理' },
--      node: '异常节点', edge: '执行路径', loop: '循环', unknownNode: '未知节点', pathTitle: '{source} → {target}', loopPass: '循环第 {count} 轮', exceptionalNode: '该节点未正常完成。',
++    },
++    evidence: {
 +      historyPage: '运行历史',
 +      detailsPage: '运行详情',
 +      backToRuns: '返回运行历史',
@@ -7443,7 +7981,16 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        released: '已发布',
 +        verified: '已验证',
 +        skipped: '无需处理'
-+      },
+       },
+-    },
+-    evidence: {
+-      historyPage: '运行历史', detailsPage: '运行详情', backToRuns: '返回运行历史', resultStatus: '状态', duration: '耗时', budgetLabel: '预算', actualExecution: '实际执行', otherJudgments: '其他判断', loopEvents: '循环事件', evaluatedNotExecuted: '已判断，未执行',
+-      ariaLabel: 'Workflow 执行详情', title: '执行详情', count: '{count} 条',
+-      intro: '展示本次执行的路径选择、循环轮次和异常节点。', empty: '暂无执行详情', loadFailed: '读取持久化执行详情失败',
+-      summaryTitle: '运行结论', blockedAt: '卡在 {gate}', actualPath: '实际执行路径', noActualPath: '本次未采用任何路径', pathChecks: '路径判断', selectedPaths: '已采用路径', otherPaths: '其他判断与事件', selectedCount: '已采用 {count} 条', otherCount: '未采用 {count} 条', eventCount: '事件 {count} 条', showOtherPaths: '查看其他详情（{count}）', hideOtherPaths: '收起其他详情', runDetails: '运行详情', actualPathSteps: '实际路径步骤', nodeBudgetDetails: '时间预算详情',
+-      condition: '条件', conditionMatched: '已匹配', conditionNotMatched: '未匹配', sourceOutcome: '节点结果', sourceReturned: '正常返回', sourceFailed: '执行失败', sourceSkippedStatus: '未执行',
+-      checkedData: '检查的数据', entireReplyText: '完整回复文本', errorText: '错误文本', jsonFieldValue: '单个 JSON 字段值', advancedPathValue: '高级路径的值', comparison: '比较方式', textToFind: '要查找的文字', expectedFieldValue: '期望的字段值', parsedBusinessDecision: '解析出的业务结论', failedGateLabel: '失败环节（failed_gate 字段的值）', failedGateValue: '失败环节（failed_gate 字段的值）：{gate}', decisions: { blocked: '已阻塞', released: '已发布', verified: '已验证', skipped: '无需处理' },
+-      node: '异常节点', edge: '执行路径', loop: '循环', unknownNode: '未知节点', pathTitle: '{source} → {target}', loopPass: '循环第 {count} 轮', exceptionalNode: '该节点未正常完成。',
 +      node: '异常节点',
 +      edge: '执行路径',
 +      loop: '循环',
@@ -7642,7 +8189,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
          in: '“值”必须是 JSON 数组；数组包含实际值时匹配。',
 -        not_in: '“值”必须是 JSON 数组；数组不包含实际值时匹配。',
 +        not_in: '“值”必须是 JSON 数组；数组不包含实际值时匹配。'
-+      },
+       },
+-      value: '值', invalidConditionValue: '条件值必须是有效的 JSON', conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
+-      valueType: '值类型', valueTypes: { string: '字符串', number: '数字', boolean: '布尔值', null: '空值', array: '数组', object: '对象' },
 +      value: '值',
 +      invalidConditionValue: '条件值必须是有效的 JSON',
 +      conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
@@ -7654,9 +8203,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        null: '空值',
 +        array: '数组',
 +        object: '对象'
-       },
--      value: '值', invalidConditionValue: '条件值必须是有效的 JSON', conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
--      valueType: '值类型', valueTypes: { string: '字符串', number: '数字', boolean: '布尔值', null: '空值', array: '数组', object: '对象' },
++      },
        valueTypeHelp: '选择“值”的解析和校验类型。系统会从已保存的 JSON 值自动识别；该类型只辅助编辑，不会单独保存。',
 -      conditionValuePlaceholders: { string: '文本，例如 APPROVED', number: '数字，例如 42', boolean: 'true 或 false', null: 'null', array: 'JSON 数组，例如 ["a", 2]', object: 'JSON 对象，例如 {\'{\'}"status":"ready"{\'}\'}' },
 -      invalidValueTypes: { string: '值必须是字符串。', number: '值必须是有效数字。', boolean: '值必须是 true 或 false。', null: '值必须是 null。', array: '值必须是有效数组。', object: '值必须是有效对象。' },
@@ -7705,7 +8252,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        jsonFieldOperatorHelp: {
          equals: '读取 {path} 对应的字段 value。只有该字段值与“{value}”完全相同时才匹配；不会比较字段名。',
-@@ -1598,14 +3485,18 @@ export default {
+@@ -1600,14 +3500,18 @@
          contains: '读取 {path} 对应的字段 value，并检查这个值是否包含“{value}”；不会搜索字段名。',
          not_contains: '读取 {path} 对应的字段 value。只有这个值不包含“{value}”时才匹配；不会搜索字段名。',
          exists: '{path} 对应的 JSON 字段存在时匹配，不比较字段 value。',
@@ -7729,7 +8276,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      batch: {
        toggle: '批量选择',
-@@ -1613,7 +3504,7 @@ export default {
+@@ -1615,7 +3519,7 @@
        confirmDelete: '确定删除选中的 {count} 个工作流？',
        deleteSuccess: '已删除 {count} 个工作流',
        deletePartial: '{failed} 个工作流删除失败',
@@ -7738,7 +8285,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      validation: {
        nodesRequired: '请至少添加一个节点',
-@@ -1626,7 +3517,7 @@ export default {
+@@ -1628,7 +3532,7 @@
        invalidConnectionDirection: '连接线只能从右侧输出连接到左侧输入',
        orphanNode: '节点 {node} 没有连接到流程',
        disconnectedFlow: '流程不能拆成多条互不连接的链路',
@@ -7747,7 +8294,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      node: {
        title: '节点名称',
-@@ -1642,7 +3533,7 @@ export default {
+@@ -1644,7 +3548,7 @@
        joinAnyHelp: '任一入线生效就执行一次；只有全部都不匹配才跳过。示例：任一审核人批准后继续。',
        promptPlaceholder: '描述这个 Agent 要做什么...',
        skillsPlaceholder: '技能，按 Enter 添加',
@@ -7756,7 +8303,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      status: {
        idle: '空闲',
-@@ -1653,7 +3544,7 @@ export default {
+@@ -1655,7 +3559,7 @@
        skipped: '已跳过',
        failed: '失败',
        approval_rejected: '审批拒绝',
@@ -7765,7 +8312,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      runs: {
        title: '执行记录',
-@@ -1670,26 +3561,26 @@ export default {
+@@ -1672,26 +3576,26 @@
        stopRequested: '已请求停止执行',
        stopFailed: '停止执行失败',
        delete: '删除记录',
@@ -7797,7 +8344,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      initialNodes: {
        node1: '节点 1',
-@@ -1697,7 +3588,7 @@ export default {
+@@ -1699,7 +3603,7 @@
        node3: '节点 3',
        plan: '规划',
        execute: '执行',
@@ -7806,7 +8353,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      initialPrompts: {
        node1: '输入这个节点的内容。',
-@@ -1705,12 +3596,11 @@ export default {
+@@ -1707,12 +3611,11 @@
        node3: '输入这个节点的内容。',
        plan: '把需求拆成可执行步骤。',
        execute: '执行实现步骤并产出结果。',
@@ -7821,7 +8368,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    kanban: {
      title: '看板',
      createTask: '新建任务',
-@@ -1727,6 +3617,22 @@ export default {
+@@ -1729,6 +3632,22 @@
        archived: '看板已归档',
        archiveConfirm: '确定归档当前看板？',
        defaultArchiveUnavailable: '默认看板不能归档',
@@ -7844,7 +8391,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      columns: {
        triage: '待分拣',
-@@ -1737,7 +3643,7 @@ export default {
+@@ -1739,7 +3658,7 @@
        blocked: '阻塞',
        review: '待审查',
        done: '已完成',
@@ -7853,7 +8400,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      form: {
        title: '标题',
-@@ -1769,20 +3675,29 @@ export default {
+@@ -1771,20 +3690,29 @@
        maxRetriesPlaceholder: '重试次数',
        goalMaxTurns: '目标最大轮次',
        goalMaxTurnsPlaceholder: '最大轮次',
@@ -7886,7 +8433,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      detail: {
        status: '状态',
-@@ -1805,7 +3720,7 @@ export default {
+@@ -1807,7 +3735,7 @@
        noLog: '未找到该任务的日志。',
        addComment: '添加评论',
        commentPlaceholder: '输入任务评论...',
@@ -7895,7 +8442,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      action: {
        title: '操作',
-@@ -1814,7 +3729,6 @@ export default {
+@@ -1816,7 +3744,6 @@
        block: '阻塞',
        blockReason: '阻塞原因',
        unblock: '解除阻塞',
@@ -7903,7 +8450,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        archiveConfirm: '确定归档这个已完成任务？',
        assign: '分配',
        assignTo: '分配给...',
-@@ -1825,6 +3739,11 @@ export default {
+@@ -1827,6 +3754,11 @@
        specify: '细化',
        loadLog: '加载日志',
        loadDiagnostics: '加载诊断',
@@ -7915,7 +8462,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      message: {
        taskCreated: '任务已创建',
-@@ -1839,15 +3758,202 @@ export default {
+@@ -1841,15 +3773,202 @@
        taskReassigned: '任务已重新分配',
        taskSpecified: '任务已细化',
        loadFailed: '加载任务失败',
@@ -7944,6 +8491,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      stats: {
        total: '总计',
 -      tasks: '任务数',
+-    },
 +      tasks: '任务数'
 +    },
 +    workerLog: 'worker 日志',
@@ -7960,7 +8508,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    unassigned: '未指派',
 +    trash: {
 +      dropHere: '拖到此处归档'
-     },
++    },
 +    inlineCreate: {
 +      noParent: '— 无父任务 —',
 +      triagePlaceholder: '粗略想法——AI 会补全规格…',
@@ -8108,21 +8656,21 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      informed: '知会 I'
 +    },
 +    mineOnly: '等您操作'
-+  },
+   },
+-
+-  // 定时任务
+-  scheduleBuilder: { time: '时间', hour: '小时', minute: '分钟', weekday: '星期', monthDay: '每月日期' },
 +  scheduleBuilder: {
 +    time: '时间',
 +    hour: '小时',
 +    minute: '分钟',
 +    weekday: '星期',
 +    monthDay: '每月日期'
-   },
--
--  // 定时任务
--  scheduleBuilder: { time: '时间', hour: '小时', minute: '分钟', weekday: '星期', monthDay: '每月日期' },
++  },
    jobs: {
      title: '定时任务',
      createJob: '创建任务',
-@@ -1908,7 +4014,7 @@ export default {
+@@ -1910,7 +4029,7 @@
        running: '运行中',
        paused: '已暂停',
        disabled: '已禁用',
@@ -8131,7 +8679,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      info: {
        model: '模型',
-@@ -1917,7 +4023,7 @@ export default {
+@@ -1919,7 +4038,7 @@
        lastRun: '上次运行',
        nextRun: '下次运行',
        deliver: '投递',
@@ -8140,7 +8688,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      action: {
        pause: '暂停',
-@@ -1925,24 +4031,21 @@ export default {
+@@ -1927,24 +4046,21 @@
        resume: '恢复',
        resumeJob: '恢复任务',
        runNow: '立即运行',
@@ -8169,7 +8717,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      searchPlaceholder: '搜索技能...',
      noMatch: '没有匹配的技能',
-@@ -1967,7 +4070,7 @@ export default {
+@@ -1969,7 +4085,7 @@
        builtin: '内置',
        hub: 'Hub 安装',
        local: '本地安装',
@@ -8178,7 +8726,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      delete: '删除',
      deleteConfirm: '确定要删除技能 "{name}" 吗？此操作不可撤销。',
-@@ -1990,7 +4093,7 @@ export default {
+@@ -1992,7 +4108,7 @@
      importFailed: '导入失败',
      path: {
        local: '本地',
@@ -8187,7 +8735,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      externalDirs: {
        manage: '外部目录',
-@@ -2004,7 +4107,7 @@ export default {
+@@ -2006,7 +4122,7 @@
        saveSuccess: '外部目录已保存',
        saveFailed: '保存失败',
        loadFailed: '加载外部目录失败',
@@ -8196,7 +8744,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      pathCopied: '路径已复制',
      pathCopyFailed: '复制路径失败',
-@@ -2036,9 +4139,8 @@ export default {
+@@ -2038,9 +4154,8 @@
      writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
      writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
      writeApprovalRemoveFile: '这次审批会从技能 {skill} 中移除文件 {file}。',
@@ -8207,7 +8755,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    plugins: {
      title: '插件',
      refresh: '刷新',
-@@ -2064,28 +4166,28 @@ export default {
+@@ -2066,28 +4181,28 @@
        active: '已启用 / 自动',
        inactive: '未启用',
        disabled: '已禁用',
@@ -8243,7 +8791,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      table: {
        plugin: '插件',
-@@ -2094,21 +4196,20 @@ export default {
+@@ -2096,21 +4211,20 @@
        kind: '类型',
        capabilities: '能力',
        path: '路径 / 入口',
@@ -8269,7 +8817,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    petdex: {
      title: 'Petdex 宠物',
      subtitle: '浏览 Hermes 桌宠使用的 petdex 公共图库。',
-@@ -2128,11 +4229,9 @@ export default {
+@@ -2130,11 +4244,9 @@
        total: '图库总数',
        visible: '匹配数量',
        kinds: '类型数',
@@ -8283,7 +8831,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    memory: {
      title: '记忆',
      refresh: '刷新',
-@@ -2145,10 +4244,8 @@ export default {
+@@ -2147,10 +4259,8 @@
      profilePlaceholder: '输入用户画像...',
      soul: '灵魂',
      noSoul: '暂无灵魂配置。',
@@ -8295,7 +8843,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    models: {
      providerColumn: '服务商',
      title: '模型',
-@@ -2297,7 +4394,7 @@ export default {
+@@ -2299,7 +4409,7 @@
      customBadge: '自定义',
      previewBadge: '预览',
      disabledBadge: '不可用',
@@ -8304,7 +8852,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      customModelPlaceholder: '未列出的模型 ID',
      customModelHint: '仅用于 provider 支持但未返回的模型；不是重命名。按回车加载。',
      removeCustomModel: '移除这个未列出的模型',
-@@ -2428,10 +4525,8 @@ export default {
+@@ -2435,10 +4545,8 @@
      enterBaseUrl: '请先输入 Base URL',
      unexpectedFormat: '响应格式异常',
      foundModels: '找到 {count} 个模型',
@@ -8316,7 +8864,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    profiles: {
      title: '配置',
      create: '创建配置',
-@@ -2495,7 +4590,7 @@ export default {
+@@ -2502,7 +4610,7 @@
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -8325,38 +8873,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      runtime: {
        activeProfile: '当前：{name}',
-@@ -2513,24 +4608,20 @@ export default {
-       gatewayRestarted: '网关已重启：{name}',
-       gatewayRestartFailed: '重启网关失败',
-       profileRestarted: '配置已重启：{name}',
--      profileRestartFailed: '重启配置失败',
--    },
-+      profileRestartFailed: '重启配置失败'
-+    }
-   },
--
--  // 日志
-   logs: {
--    file: "日志文件",
--    level: "日志级别",
--    lines: "行数",
--    filters: "筛选日志",
-     title: '日志',
-     all: '全部',
-     searchPlaceholder: '搜索...',
-     refresh: '刷新',
-     noEntries: '暂无日志',
-+    file: '日志文件',
-+    level: '日志级别',
-+    lines: '行数',
-+    filters: '筛选日志'
-   },
--
--  // 设置
-   theme: {
-     title: '主题',
-     saved: '主题已保存',
-@@ -2570,7 +4661,7 @@ export default {
+@@ -2579,7 +4687,7 @@
      preview: '预览',
      previewTitle: '打造属于你的工作空间',
      previewText: '文字和选中颜色会同步应用到整个界面。',
@@ -8365,7 +8882,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    settings: {
      title: '设置',
-@@ -2590,6 +4681,7 @@ export default {
+@@ -2599,6 +4707,7 @@
        apiServer: 'API 服务器',
        models: '模型',
        voice: '语音',
@@ -8373,7 +8890,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      webhooks: {
        title: 'Webhook',
-@@ -2615,10 +4707,13 @@ export default {
+@@ -2624,10 +4733,13 @@
          receivedAt: '接收时间',
          event: '事件',
          eventId: 'Event ID',
@@ -8389,7 +8906,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
          runQueued: '运行已排队',
          runStarted: '运行已开始',
          toolStarted: '工具已开始',
-@@ -2629,11 +4724,11 @@ export default {
+@@ -2638,11 +4750,11 @@
          clarificationRequested: '请求澄清',
          clarificationResolved: '澄清已处理',
          completed: '运行完成',
@@ -8403,7 +8920,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        runtime: {
          idle: '空闲',
-@@ -2641,7 +4736,7 @@ export default {
+@@ -2650,7 +4762,7 @@
          retrying: '等待重试',
          success: '已送达',
          failed: '投递失败',
@@ -8412,7 +8929,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        actions: {
          add: '添加 Webhook',
-@@ -2651,7 +4746,7 @@ export default {
+@@ -2660,7 +4772,7 @@
          disable: '停用',
          refresh: '刷新',
          clear: '清空',
@@ -8421,7 +8938,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        form: {
          name: '名称',
-@@ -2672,7 +4767,7 @@ export default {
+@@ -2681,7 +4793,7 @@
          includeUserContentHint: '用户消息可能包含敏感信息，默认关闭。系统提示词、推理过程、工具参数和工具结果不会随此开关发送。',
          allowPrivateNetwork: '允许私网或本机地址',
          allowPrivateNetworkHint: '仅对可信的内部接收端开启；每次投递前都会重新检查 DNS。',
@@ -8430,7 +8947,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        messages: {
          required: '名称和 URL 不能为空',
-@@ -2687,8 +4782,8 @@ export default {
+@@ -2696,8 +4808,8 @@
          localTestFailed: '创建本机测试接收器失败',
          inboxLoadFailed: '加载本机测试事件失败',
          inboxCleared: '本机测试事件已清空',
@@ -8441,7 +8958,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      models: {
        apiKey: 'API Key',
-@@ -2696,7 +4791,7 @@ export default {
+@@ -2705,7 +4817,7 @@
        save: '保存',
        saved: '已保存',
        saveFailed: '保存失败',
@@ -8450,7 +8967,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      display: {
        streaming: '流式响应',
-@@ -2758,7 +4853,7 @@ export default {
+@@ -2767,7 +4879,7 @@
        toolEnforcementHint: '控制工具调用的执行模式',
        auto: '自动',
        always: '始终',
@@ -8459,7 +8976,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      gatewayAutoStart: {
        title: 'Gateway 自动启动',
-@@ -2778,7 +4873,7 @@ export default {
+@@ -2787,7 +4899,7 @@
        includeHint: '逗号分隔 profile 名。白名单模式下留空表示不自动启动任何 profile。',
        exclude: '排除 profiles',
        excludeHint: '逗号分隔 profile 名；会在白名单/全量策略之后再排除。',
@@ -8468,7 +8985,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      proxy: {
        title: 'Gateway 代理',
-@@ -2791,7 +4886,7 @@ export default {
+@@ -2800,7 +4912,7 @@
        allProxyHint: '未设置协议专用代理时使用的兜底代理。',
        noProxy: 'NO_PROXY',
        noProxyHint: '不走代理的主机或域名，使用逗号分隔。',
@@ -8477,7 +8994,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      memory: {
        enabled: '启用记忆',
-@@ -2801,7 +4896,7 @@ export default {
+@@ -2810,7 +4922,7 @@
        charLimit: '记忆字符上限',
        charLimitHint: 'MEMORY.md 最大字符数',
        userCharLimit: '用户画像字符上限',
@@ -8486,7 +9003,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      compression: {
        enabled: '启用压缩',
-@@ -2813,7 +4908,7 @@ export default {
+@@ -2822,7 +4934,7 @@
        protectLastN: '保护最近消息',
        protectLastNHint: '最近多少条消息不参与压缩',
        protectFirstN: '保护开头消息',
@@ -8495,7 +9012,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      session: {
        mode: '重置模式',
-@@ -2862,11 +4957,11 @@ export default {
+@@ -2871,11 +4983,11 @@
        writeApprovalRequestedOldString: '本次请求匹配的 old_string',
        writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
        writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
@@ -8509,7 +9026,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      apiServer: {
        enable: '启用',
-@@ -2878,7 +4973,7 @@ export default {
+@@ -2887,7 +4999,7 @@
        key: '密钥',
        keyHint: 'API 访问密钥',
        cors: 'CORS 来源',
@@ -8518,7 +9035,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      lockedIps: {
        title: '锁定 IP 管理',
-@@ -2892,8 +4987,8 @@ export default {
+@@ -2901,8 +5013,8 @@
        type: {
          password: '密码',
          token: 'API Token',
@@ -8529,7 +9046,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      userAvatar: {
        title: '用户头像',
-@@ -2906,7 +5001,7 @@ export default {
+@@ -2915,7 +5027,7 @@
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -8538,16 +9055,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      voice: {
        activeTtsApi: '当前 TTS API',
-@@ -2938,7 +5033,7 @@ export default {
-         validate: '正在验证模型可用性……',
-         install: '正在安装模型……',
-         completed: '模型已可用',
--        failed: '下载失败',
-+        failed: '下载失败'
-       },
-       hermesConfigTitle: 'Hermes Agent 配置',
-       hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 SwarmStudio。',
-@@ -3115,27 +5210,16 @@ export default {
+@@ -3124,27 +5236,16 @@
        sttTestEmpty: '没有录到可用于 STT 测试的音频。',
        sttTestSucceeded: 'STT 测试成功。',
        sttTestFailed: 'STT 测试失败：{error} —— {hint}',
@@ -8575,7 +9083,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        sttFailureHintGeneric: '请检查 API key、模型和 provider 账号权限后重试。',
        sttTestRecordFailed: '无法开始麦克风录音：{error}',
        sttTestTranscript: '转写结果：{text}',
-@@ -3145,13 +5229,9 @@ export default {
+@@ -3154,13 +5255,9 @@
        providerOpenai: 'OpenAI TTS',
        providerCustom: '自定义端点（兼容 OpenAI）',
        providerEdge: 'Edge TTS（免费，无需 API Key）',
@@ -8589,7 +9097,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        openaiKey: 'API 密钥',
        openaiKeyHint: '具有 TTS 权限的 OpenAI API Key',
        openaiUrl: 'API 基础地址',
-@@ -3160,8 +5240,6 @@ export default {
+@@ -3169,8 +5266,6 @@
        openaiModelHint: 'tts-1（快速）/ tts-1-hd（高音质）',
        openaiVoice: '音色',
        openaiVoiceHint: '用于语音合成的音色',
@@ -8598,7 +9106,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        customHint: '支持任何 OpenAI 兼容的 TTS 服务——可用于 GPT-SoVITS、CosyVoice 等自部署服务。',
        customUrl: 'API 地址',
        customUrlHint: 'TTS 服务的完整基础地址',
-@@ -3169,7 +5247,6 @@ export default {
+@@ -3178,7 +5273,6 @@
        customApiKey: 'API 密钥（可选）',
        customApiKeyHint: '部分自部署服务需要身份验证',
        customApiKeyPlaceholder: '不需要则留空',
@@ -8606,7 +9114,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        edgeHint: '由 Microsoft Edge TTS 驱动（node-edge-tts）。',
        edgeUrl: '适配器地址',
        edgeUrlHint: 'Edge TTS 适配器地址，例如 http://127.0.0.1:9882',
-@@ -3180,8 +5257,6 @@ export default {
+@@ -3189,8 +5283,6 @@
        edgeRateHint: '调整语音速度（0.5～2.0 倍）',
        edgePitch: '音调',
        edgePitchHint: '调整语音音调（-20～+20 Hz）',
@@ -8615,7 +9123,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        testTitle: '试听测试',
        testText: '测试文本',
        testTextPlaceholder: '输入测试文本...',
-@@ -3189,8 +5264,6 @@ export default {
+@@ -3198,8 +5290,6 @@
        testButton: '试听',
        testButtonPlaying: '播放中...',
        testFailed: '测试失败：{error}',
@@ -8624,13 +9132,14 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        providerMimo: 'MiMo TTS',
        mimoHint: '小米 MiMo TTS，支持预置音色、音色设计、音色复刻三种模式',
        mimoApiKey: 'API Key',
-@@ -3219,41 +5292,51 @@ export default {
+@@ -3228,41 +5318,51 @@
        mimoCloneAudioClear: '清除音频',
        mimoStylePrompt: '风格指令',
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
 -      mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
+-    },
 +      mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快'
-     },
++    },
 +    matrixIdentity: {
 +      title: 'Matrix 身份',
 +      userId: 'Matrix 用户 ID',
@@ -8707,7 +9216,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    codingAgents: {
      nativeUsage: "用量：输入 {inputTokens}，输出 {outputTokens}，缓存读取 {cacheReadTokens}，缓存写入 {cacheWriteTokens}，合计 {totalTokens} tokens。",
      nativeUsageUnknown: "用量未知：此会话尚未收到原生 Token 用量数据。",
-@@ -3328,31 +5411,29 @@ export default {
+@@ -3337,31 +5437,29 @@
      launchConfigDir: "启动配置目录",
      launchCommand: "启动命令",
      table: {
@@ -8757,7 +9266,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    platform: {
      requireMention: "需要 {'@'}提及",
      requireMentionGroup: "群组中需要 {'@'}机器人 才会响应",
-@@ -3433,7 +5514,6 @@ export default {
+@@ -3442,7 +5540,6 @@
      qrFetching: '正在获取二维码...',
      qrScanHint: '使用微信扫描二维码登录',
      qrScanedHint: '已扫描，请在手机上确认...',
@@ -8765,7 +9274,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ 开放平台机器人 App ID',
      qqAppSecret: 'App Secret',
-@@ -3442,27 +5522,21 @@ export default {
+@@ -3451,27 +5548,21 @@
      qqMarkdownHint: '启用 Markdown 格式消息（部分客户端可能不支持）',
      qqSandbox: '沙箱模式',
      qqSandboxHint: '启用沙箱环境（测试用）',
@@ -8796,7 +9305,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    terminal: {
      sessions: '会话',
      newTab: '新建终端',
-@@ -3472,20 +5546,26 @@ export default {
+@@ -3481,20 +5572,26 @@
      noSessions: '暂无终端会话',
      connectionFailed: '终端服务连接失败',
      connectionClosed: '终端连接已关闭',
@@ -8830,7 +9339,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      agentPreset: 'Agent 预设',
      agentPresets: 'Agent 预设',
      agentPresetPlaceholder: '选择预设',
-@@ -3605,7 +5685,12 @@ export default {
+@@ -3614,7 +5711,12 @@
      allAgents: '所有 Agent',
      addAgent: '添加智能体',
      agentType: 'Agent 类型',
@@ -8844,7 +9353,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      selectProfile: '选择一个配置',
      agentAdded: '智能体已添加',
      selectRoomFirst: '请先选择一个群组',
-@@ -3689,7 +5774,12 @@ export default {
+@@ -3698,7 +5800,12 @@
      summaryConfigurationOwnerRequired: '该群聊尚未配置总结器，请联系房间管理员完成配置后再发送消息。',
      saveSummaryConfig: '保存总结设置',
      currentSummary: '当前总结',
@@ -8858,7 +9367,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      summaryUpdatedAt: '最后更新',
      summarizedTurns: '已总结有效发言',
      summaryAnchor: '总结锚点',
-@@ -3701,10 +5791,8 @@ export default {
+@@ -3710,10 +5817,8 @@
      saveSummary: '保存总结',
      summaryUpdated: '总结已更新',
      summaryNever: '从未',
@@ -8870,7 +9379,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    usage: {
      dashboard: {
        profile: "配置",
-@@ -3775,7 +5863,19 @@ export default {
+@@ -3784,7 +5889,19 @@
      cacheHitRate: '缓存命中率',
      modelBreakdown: '模型分布',
      agentBreakdown: 'Agent 分布',
@@ -8891,34 +9400,16 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      dailyTrend: '每日用量',
      date: '日期',
      tokens: 'Token',
-@@ -3785,6 +5885,26 @@ export default {
+@@ -3793,7 +5910,7 @@
+     cacheWrite: '缓存写入',
      sessions: '会话',
      cost: '费用',
-     noData: '暂无用量数据',
-+    costStates: {
-+      unknown: '未记录',
-+      partial: '部分费用，其余未记录',
-+      reported: '上游返回费用',
-+      estimated: '估算费用',
-+      mixed: '含上游费用与估算费用'
-+    },
-+    pricing: {
-+      title: '模型单价',
-+      selectionHelp: '可选择已配置的供应商及其模型，也可输入 ID 后按回车。',
-+      catalogError: '无法加载已配置的供应商和模型，仍可手动输入 ID。',
-+      help: '未设置自定义单价时，自动使用 models.dev 中匹配模型的价格估算。单位为美元／百万 Token。按供应商和模型 ID 精确匹配（例如 global），仅在上游未返回费用时估算。缓存单价留空表示未知。修改从后续调用生效，不重算历史费用。',
-+      provider: '供应商 ID',
-+      model: '模型 ID',
-+      input: '输入',
-+      output: '输出',
-+      cacheRead: '缓存读取',
-+      cacheWrite: '缓存写入',
-+      error: '无法读取或保存单价。请检查供应商、模型是否填写或重复，单价必须为非负数。'
-+    }
+-    noData: '暂无用量数据',
++    noData: '暂无用量数据'
    },
    skillsUsage: {
      title: '技能用量',
-@@ -3805,10 +5925,8 @@ export default {
+@@ -3814,10 +5931,8 @@
      lastUsed: '最近',
      noData: '暂无技能用量数据',
      loadFailed: '技能用量加载失败',
@@ -8930,7 +9421,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    files: {
      title: '文件',
      fileTree: '文件树',
-@@ -3876,8 +5994,8 @@ export default {
+@@ -3885,8 +6000,8 @@
      zoom: '缩放',
      pdfPageLimit: '仅预览前 {count} 页。',
      tableTruncated: '为保持界面流畅，表格预览已截断。请下载文件查看全部行列。',
@@ -8940,15 +9431,817 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    download: {
      downloading: '正在下载...',
      downloadFailed: '下载失败',
-@@ -3889,10 +6007,8 @@ export default {
-     invalidPath: '无效的文件路径',
-     contentDisplay: '内容展示',
-     download: '下载',
--    downloadFile: '下载文件',
-+    downloadFile: '下载文件'
+@@ -3931,4 +6046,813 @@
+     new_0_7_34_9: '修复内置 MCP 连接继承无关鉴权 Token 导致的连接问题 (#3359)',
+     new_0_7_34_10: '修复自定义服务商模型发现信息被误报为未知配置，并减少重复警告 (#3375)',
    },
--
--  // 更新日志
-   changelog: {
-     new_0_7_35_1: '新增 Agent 卡片进入聊天思考头像的过渡动画，并改善减少动态效果时的可见性与主题背景衔接 (#3378、#3386)',
-     new_0_7_35_2: '新增土耳其语界面支持 (#3338)',
++  matrix: {
++    options: '选项',
++    threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题',
++    undecryptable: '无法解密此消息',
++    historyLoadError: '服务器错误，无法加载更早的历史'
++  },
++  cockpit: {
++    modeWorkspace: '工作区',
++    editTitlePlaceholder: '标题',
++    actions: '操作',
++    specify: '细化',
++    decompose: '分解',
++    moveToTriage: '转入分诊',
++    moveToReady: '转入就绪',
++    moveToBlocked: '标记阻塞',
++    moveToDone: '标记完成',
++    moveToArchived: '归档',
++    unblock: '取消阻塞',
++    reclaim: '回收',
++    reassign: '改派',
++    reassignProfile: '改派 profile',
++    recovery: '恢复',
++    diagnostics: '诊断',
++    notifyHomeChannels: '主页通知频道',
++    subscribe: '订阅',
++    unsubscribe: '退订',
++    comments: '评论',
++    addCommentPlaceholder: '写评论…',
++    confirmDone: '确认将此任务标记为完成？',
++    confirmArchive: '归档此任务？归档后可从看板隐藏但仍可恢复。',
++    confirmBlocked: '标记此任务为阻塞？',
++    completionSummaryRequired: '标记完成前必须填写完成摘要。',
++    evaluation: '评估',
++    saveDraft: '保存草稿',
++    parentTasks: '父任务',
++    childTasks: '子任务',
++    parentIdPlaceholder: '父任务 id',
++    childIdPlaceholder: '子任务 id',
++    pendingLinksHint: '个待提交的关联变更',
++    assignee: '负责人',
++    selectAssignee: '选择负责人…',
++    description: '描述',
++    descriptionPlaceholder: '任务描述…',
++    add: '添加',
++    attachments: '附件',
++    noAttachments: '暂无附件',
++    uploadFile: '上传文件',
++    none: '无',
++    historySearchPlaceholder: '搜索历史事件…',
++    historyToday: '今天',
++    historyWeek: '本周',
++    historyMonth: '本月',
++    historyCategory: '类别',
++    historyCatEvent: '事件',
++    historyCatComment: '评论',
++    historyActive: '进行中',
++    historyDone: '已完成',
++    notifyTitle: '通知',
++    notifyUnread: '条未读',
++    notifySource: '来源',
++    notifyAll: '全部',
++    notifyMatrix: 'Matrix',
++    notifyChat: '单聊',
++    notifyGroup: '群聊',
++    notifyEmpty: '没有未读消息',
++    notifyClickHint: '点击条目进入对应聊天',
++    notifyReadAll: '全部标为已读',
++    attention: '注意力',
++    backToWork: '返回工作',
++    openFull: '全屏打开',
++    saySomething: '输入消息...',
++    send: '发送',
++    noTaskSelected: '未选择任务',
++    collabWith: '协作对象',
++    addCollab: '沟通协作',
++    addCollabTitle: '添加协作者',
++    collaborationMap: '协作地图',
++    handleLater: '稍后处理',
++    taskFiles: '任务文件',
++    currentTaskWorkspace: '当前任务工作区',
++    filterFiles: '过滤文件...',
++    history: '历史',
++    historyTitle: '历史记录',
++    historyTime: '时间',
++    historyAction: '操作',
++    historyStatus: '状态',
++    historyArchived: '已归档',
++    restore: '恢复',
++    maximize: '最大化',
++    modeWork: '工作',
++    modeTerm: '终端',
++    schedule: '日程',
++    today: '今天',
++    scheduleEvents: '日程事件',
++    scheduleEmpty: '此日期无事件',
++    scheduleAddTodo: '添加待办',
++    scheduleTodoPlaceholder: '需要做什么？',
++    templateManager: '模板管理',
++    templateName: '模板名称...',
++    saveAsTemplate: '保存为模板',
++    applyTemplate: '应用',
++    deleteTemplate: '删除',
++    noTemplates: '暂无保存的模板',
++    termExit: '退出终端',
++    timeline: '时间线',
++    pending: '待处理',
++    done: '已完成',
++    olderHistory: '{n} 条更早记录',
++    search: '搜索',
++    priority: '优先级',
++    yourDecision: '你的决定',
++    recommend: '推荐',
++    riskTags: '风险标签',
++    agentPrefilled: 'Agent 预填',
++    reviewOpinion: '审核意见',
++    submit: '提交',
++    newCollabFromArchive: '从模板新建协作',
++    readOnly: '只读',
++    noMessages: '暂无消息',
++    connected: '已连接',
++    disconnected: '未连接',
++    searchPlaceholder: '搜索 会话/任务/房间',
++    gatewayProbeTitle: '点击查看 Connected Platforms 详情',
++    countdownTitle: '下次自动检测倒计时',
++    notifications: '通知',
++    defaultUser: '你',
++    refreshFailed: '刷新失败，点击重试',
++    refreshAll: '刷新全部看板 ({n}s)',
++    noAttention: '无待处理事项',
++    mapHint: '滚轮缩放 · 拖拽节点/画布 · 点击联动',
++    legendBlocked: '阻塞',
++    legendTodo: '待办',
++    legendTriage: '分诊',
++    legendReview: '待审核',
++    filterBoard: '看板',
++    filterPriority: '优先',
++    filterStatus: '状态',
++    filterAssignee: '负责',
++    filterTenant: '租户',
++    totalCount: '共 {n} 条',
++    clearFilters: '清除筛选',
++    backToSessions: '返回会话列表',
++    aggregateMode: '聚合模式：合并关联任务会话到同一视图',
++    aggregate: '聚合',
++    close: '关闭',
++    justNow: '刚刚',
++    minutesAgo: '{n}分钟前',
++    hoursAgo: '{n}小时前',
++    daysAgo: '{n}天前',
++    weekPrefix: '周',
++    modeFleet: '舰队',
++    fleetTitle: '会话舰队',
++    fleetLive: '实时推送中',
++    fleetOffline: '未连接',
++    fleetWorking: '{n} 运行',
++    fleetTotal: '{n} 会话',
++    fleetAttention: '{n} 待处理',
++    fleetSearchPlaceholder: '搜索会话/profile/输出…',
++    fleetWorkingOnly: '只看运行+待办',
++    fleetEmpty: '没有符合条件的会话',
++    fleetOfflineEmpty: '舰队流未连接（需服务端 2.13+）',
++    fleetQueued: '队列 {n}',
++    fleetAborting: '中止中',
++    fleetApproval: '工具审批',
++    fleetApprove: '批准',
++    fleetAlways: '始终允许',
++    fleetDeny: '拒绝',
++    fleetClarify: '待澄清',
++    fleetAnswer: '回答',
++    fleetClarifyPrompt: '输入对该澄清的回复：',
++    teamAll: '全部团队',
++    teamNew: '新建团队',
++    teamEdit: '编辑',
++    teamName: '名称',
++    teamNamePlaceholder: '团队名称',
++    teamNameRequired: '名称必填',
++    teamDescription: '描述',
++    teamColor: '颜色',
++    teamProfiles: '成员 Profiles',
++    teamBoards: '看板 Boards',
++    teamNoProfiles: '（未发现 profiles）',
++    teamDelete: '删除',
++    teamCancel: '取消',
++    teamSave: '保存',
++    inboxTitle: '指挥收件箱',
++    inboxPending: '项待处理',
++    inboxClear: '全部处理完毕',
++    inboxKind_approval: '审批',
++    inboxKind_blocked: '阻塞',
++    inboxKind_clarify: '澄清',
++    inboxKind_review: '待审',
++    inboxKind_triage: '分诊',
++    inboxKind_chat: '会话',
++    inboxKind_matrix: 'Matrix',
++    inboxKind_group: '群聊',
++    inboxKind_reminder: '提醒',
++    fleetSubagents: '子代理',
++    fleetSubagentsRun: '{n} 运行中',
++    traceUsageSummary: '会话累计用量（L2 汇总，跨运行连续）',
++    inboxKind_mcp: 'MCP 降级',
++    completionSummary: '完成摘要',
++    completionSummaryHint: '输入此任务的摘要，将存为任务结果。',
++    scheduleTitle: '日程',
++    yearLabel: '年',
++    itemCount: '{n} 项',
++    aggregateSessions: '聚合关联会话',
++    termTool: '终端工具',
++    termToolNotInstalled: '未安装',
++    accurate: '精确',
++    allTasks: '全部任务',
++    applyTimeFilter: '应用时间筛选',
++    archived: '已归档',
++    backToAllTasks: '返回全部任务',
++    childTask: '子任务',
++    collaborationSequence: '协作序列',
++    collapseCollabMap: '收起协作图',
++    collapseSidebar: '收起侧栏',
++    collapseTimeline: '收起时间线',
++    completed: '已完成',
++    config: '配置',
++    configUnavailable: '配置不可用',
++    content: '内容',
++    copyTaskId: '复制任务 ID',
++    createdAt: '创建时间',
++    createdBy: '创建者',
++    creator: '创建者',
++    detecting: '检测中',
++    duration: '耗时',
++    editMode: '编辑模式',
++    empty: '空',
++    endTime: '结束时间',
++    entryPoint: '入口',
++    env: '环境',
++    eventCount: '事件数',
++    evidenceLevel: '证据级别',
++    executionCount: '执行次数',
++    expandCollabMap: '展开协作图',
++    expandDayBackward: '前一天',
++    expandDayForward: '后一天',
++    expandTimeline: '展开时间线',
++    exportDossier: '导出档案',
++    globalTimeline: '全局时间线',
++    inference: '推理',
++    liveMode: '实时',
++    loadConfig: '加载配置',
++    loadingAggregate: '加载中...',
++    model: '模型',
++    moreInfo: '更多信息',
++    nextYear: '下一年',
++    noData: '暂无数据',
++    noExecutionData: '暂无执行数据',
++    noMatchingTasks: '无匹配任务',
++    noReminder: '无提醒',
++    noTasksOnPage: '本页暂无任务',
++    parameter: '参数',
++    parentTask: '父任务',
++    path: '路径',
++    playPause: '播放/暂停',
++    playbackHint: '点击播放按钮回放事件',
++    prevYear: '上一年',
++    previewMode: '预览',
++    projectId: '项目 ID',
++    reloadArchived: '重新加载归档',
++    reloadCompleted: '重新加载完成',
++    replayMode: '回放',
++    result: '结果',
++    runObservatory: '运行观察台',
++    scrollZoom: '滚轮缩放',
++    searchEvents: '搜索事件...',
++    selectNodeForDetail: '选择节点查看详情',
++    sessionRecords: '会话记录',
++    skill: '技能',
++    skillCount: '技能数',
++    source: '来源',
++    startTime: '开始时间',
++    summary: '摘要',
++    switchSpeed: '切换速度',
++    taskDetail: '任务详情',
++    taskStatus: '状态',
++    taskSwimlane: '任务泳道',
++    taskTimeline: '任务时间线',
++    taskTopology: '任务拓扑',
++    focusTask: ' · 聚焦 {id}',
++    tenant: '租户',
++    timeWindow: '时间窗口',
++    timelinePrefix: '时间线',
++    title: '标题',
++    type: '类型',
++    unassignedTask: '未分配',
++    unspecified: '未指定',
++    newMatrix: '新建 Matrix 群',
++    newMatrixDesc: '创建一个 Matrix 协作群并拉入相关成员',
++    newChat: '新建会话',
++    newChatDesc: '发起一个新的 Agent 会话',
++    newGroup: '新建群聊',
++    newGroupDesc: '创建多人群聊房间',
++    workspaceNotFound: '工作区目录不存在（尚未创建或已被清理）',
++    retry: '重试',
++    actionApprove: '批准',
++    actionDecide: '裁决',
++    actionSupplement: '补充',
++    actionEvaluate: '评估',
++    actionDelegate: '委派',
++    decisionConditional: '有条件通过',
++    decisionConditionalDesc: '人工附加条件后放行，条件落卡跟踪',
++    decisionReject: '驳回',
++    decisionApprove: '批准',
++    workerHealth: 'Worker',
++    heartbeat: '心跳',
++    maxRuntime: '最长运行',
++    failureCircuit: '失败',
++    circuitTripped: '熔断',
++    claimLock: 'Claim 锁',
++    workflow: '工作流',
++    goalMode: 'goal 模式',
++    derivation: '溯源',
++    events: '事件',
++    runHistory: '运行历史',
++    lifecycleTitle: '任务生命周期',
++    lifecycleMedian: '中位完成',
++    lifecycleBottleneckHint: '活跃任务平均停留最长的状态',
++    lifecycleBottleneck: '瓶颈',
++    lifecycleFunnel: '状态分布（active vs all）',
++    lifecycleDwell: '活跃状态平均停留',
++    lifecycleHeat: '优先级 × 状态'
++  },
++  matrixChat: {
++    actionDelete: '删除',
++    adminTools: '管理工具',
++    actionEdit: '编辑',
++    actionReply: '回复',
++    addReaction: '添加回应',
++    addTopic: '添加主题',
++    allThreads: '全部话题',
++    backToThreads: '返回话题',
++    banUser: '封禁用户',
++    bold: '粗体',
++    cancel: '取消',
++    changeAvatar: '更换头像',
++    code: '代码',
++    codeBlock: '代码块',
++    comingSoon: '即将推出',
++    clearAllMessages: '清空全部消息',
++    clearAllMessagesConfirm: '确定要清空「{room}」中的所有消息吗？',
++    clearAllMessagesWarning: '此操作将撤回你有权限删除的所有可见消息，且不可撤销。',
++    clearMessagesFailed: '清空消息失败',
++    clearMessagesResult: '已清空 {deleted} 条消息，{failed} 条失败',
++    confirmDelete: '确认删除',
++    confirmDeleteAction: '确定要删除此消息吗？',
++    confirmLeave: '再次点击确认',
++    copyLink: '复制链接',
++    copyText: '复制文本',
++    createRoom: '创建房间',
++    delete: '删除',
++    deleteReasonPlaceholder: '原因（可选）',
++    disabled: '已禁用',
++    edit: '编辑',
++    editMessagePlaceholder: '编辑消息...',
++    edited: '已编辑',
++    editingMessage: '正在编辑消息',
++    emoji: '表情',
++    enabled: '已启用',
++    encryption: '加密',
++    e2eVerified: '已通过加密验证',
++    eventNotFound: '事件未找到',
++    exportChatMenu: '导出聊天',
++    exportChatDescription: '将此房间的所有消息导出为 JSON 文件。',
++    exportFailed: '导出失败',
++    exportSuccess: '{count} 条消息已导出',
++    exporting: '导出中...',
++    extensionsMenu: '集成',
++    failed: '失败',
++    favorite: '收藏',
++    filesMenu: '文件',
++    forward: '转发',
++    forwardMessage: '转发消息',
++    forwardingMessage: '转发消息中...',
++    historyLoadError: '服务器错误，无法加载更早的历史',
++    historyWorldReadable: '历史对任何人可见',
++    historyShared: '历史对加入后的成员可见',
++    historyInvited: '历史对受邀成员可见',
++    historyJoined: '历史对成员可见',
++    ignoreUser: '忽略用户',
++    inviteFailed: '邀请失败',
++    inviteSending: '发送邀请中...',
++    inviteToRoom: '邀请加入房间',
++    inviteUser: '邀请用户',
++    italic: '斜体',
++    joinRoom: '加入房间',
++    kickUser: '踢出用户',
++    leaveRoom: '离开房间',
++    leaveFailed: '离开房间失败',
++    leaveRoomConfirm: '确定要离开「{room}」吗？',
++    linkCopied: '链接已复制',
++    loading: '加载中...',
++    loadMore: '加载更多',
++    loadingThreads: '加载话题中...',
++    markAllThreadsRead: '将所有话题标记为已读',
++    memberAdmin: '管理员',
++    memberCount: '{count} 名成员',
++    memberDefault: '成员',
++    memberInvited: '已邀请',
++    memberMod: '版主',
++    memberSearch: '搜索成员',
++    members: '成员',
++    messageSendFailed: '消息发送失败',
++    messageSending: '发送中...',
++    minutesAgo: '{n}分钟前',
++    hoursAgo: '{n}小时前',
++    daysAgo: '{n}天前',
++    justNow: '刚刚',
++    myThreads: '我的话题',
++    newMessages: '新消息',
++    noExtensions: '暂无集成',
++    noExtensionsHint: '从集成管理器添加集成',
++    noFilesFound: '未找到文件',
++    noMembersFound: '未找到成员',
++    noPinnedMessages: '暂无已固定消息',
++    noResults: '无结果',
++    noRoomSelected: '未选择房间',
++    noRooms: '暂无房间',
++    noThreadsDesc: '此房间暂无话题',
++    noThreadsTitle: '暂无话题',
++    noUsersFound: '未找到用户',
++    noTopic: '未设置主题',
++    notAuthenticated: '未认证',
++    notifications: '通知',
++    notifyAllMessages: '所有消息',
++    notifyMentions: '仅提及',
++    notifyNone: '无',
++    notTrusted: '未信任',
++    offline: '离线',
++    online: '在线',
++    openWidget: '打开小部件',
++    options: '选项',
++    paginateLoading: '加载更多...',
++    people: '成员',
++    pinnedMessages: '已固定消息',
++    pollsMenu: '投票',
++    pollEnded: '已结束',
++    pollActive: '进行中',
++    noPolls: '暂无投票',
++    untitledPoll: '无标题投票',
++    votes: '票',
++    powerLevel: '权限等级',
++    powerLevelValue: '{level}',
++    publicRoom: '公开房间',
++    replyInThread: '在话题中回复',
++    replyMessagePlaceholder: '回复...',
++    reportFailed: '举报提交失败',
++    reportReason: '举报原因...',
++    reportRoom: '举报房间',
++    reportRoomDescription: '向服务器管理员举报此房间。请描述问题。',
++    reportSpamAbuse: '垃圾信息或滥用',
++    roomAlias: '房间别名',
++    roomEncryption: '已加密房间',
++    roomId: '房间 ID',
++    roomIdOrAlias: '房间 ID 或别名',
++    roomInfo: '房间信息',
++    roomMembers: '房间成员',
++    roomName: '房间名称',
++    roomPublic: '公开',
++    roomSettings: '房间设置',
++    roomTopic: '话题',
++    save: '保存',
++    saving: '保存中...',
++    search: '搜索',
++    searchHint: '搜索房间和联系人',
++    searchResultCount: '{count} 条结果',
++    searchRooms: '搜索房间',
++    searchUsers: '搜索用户',
++    searchUsersHint: '按用户名或显示名搜索',
++    send: '发送',
++    sendMessage: '发送消息',
++    sent: '已发送',
++    showAll: '显示全部',
++    showLess: '收起',
++    shareRoom: '分享房间',
++    startChat: '开始聊天',
++    stateBanned: '被封禁',
++    stateChangedName: '修改了显示名称',
++    stateInvited: '被邀请',
++    stateJoined: '加入了',
++    stateKicked: '被踢出',
++    stateLeft: '离开了',
++    stateLoadingOlder: '加载更早的消息...',
++    stateNoMoreHistory: '没有更多历史',
++    stateReason: '原因',
++    stateRejectedInvite: '拒绝了邀请',
++    stateRoomCreated: '房间已创建',
++    stateUnbanned: '被解封',
++    stateWithdrewInvite: '撤销了邀请',
++    stateNameSet: '{sender} 将房间名称设置为「{name}」',
++    stateNameChanged: '{sender} 将房间名称从「{oldName}」改为「{newName}」',
++    stateNameRemoved: '{sender} 移除了房间名称「{oldName}」',
++    stateTopicSet: '{sender} 将主题设置为「{topic}」',
++    stateTopicChanged: '{sender} 将主题从「{oldTopic}」改为「{newTopic}」',
++    stateTopicRemoved: '{sender} 移除了主题',
++    stateAvatarChanged: '{sender} 更换了房间头像',
++    stateAliasSet: '{sender} 将主地址设置为 {alias}',
++    stateAliasChanged: '{sender} 将主地址从 {oldAlias} 改为 {alias}',
++    stateAliasRemoved: '{sender} 移除了主地址 {oldAlias}',
++    statePowerLevelChanged: '{sender} 修改了权限等级',
++    stateMadePublic: '{sender} 将房间设为公开',
++    stateMadePrivate: '{sender} 将房间设为仅邀请',
++    stateJoinRulesChanged: '{sender} 修改了加入规则',
++    stateHistoryVisibilityChanged: '{sender} 修改了历史可见性',
++    stateEncryptionEnabled: '{sender} 开启了端到端加密',
++    statePinnedMessages: '{sender} 固定了 {count} 条消息',
++    stateUnpinnedMessages: '{sender} 取消了部分固定消息（{count} 条已固定）',
++    stateClearedPinned: '{sender} 清空了所有固定消息',
++    stateRoomUpgraded: '{sender} 升级了房间',
++    suggestions: '建议',
++    submitting: '提交中...',
++    syncConnecting: '连接中...',
++    syncError: '连接错误',
++    thread: '话题',
++    threadStartDisabled: '无法基于已有关系的消息发起话题',
++    threads: '话题',
++    threadsMenu: '话题',
++    typingMany: '{n} 人正在输入...',
++    typingOne: '{user} 正在输入...',
++    typingTwo: '{user1} 和 {user2} 正在输入...',
++    trusted: '已信任',
++    unavailable: '离开',
++    undecryptable: '无法解密此消息',
++    unencrypted: '未加密',
++    unignoreUser: '取消忽略',
++    unpinAll: '全部取消固定',
++    unpinMessage: '取消固定',
++    unknownFile: '未知文件',
++    uploadFile: '上传文件',
++    videoCall: '视频通话',
++    voiceCall: '语音通话'
++  },
++  approvals: {
++    confirmTitle: '确认执行审批决策',
++    confirmBody: '将对「{target}」执行：{choice}。决策即时生效。',
++    title: '审批收件箱',
++    pageTitle: '审批收件箱',
++    navLabel: '待审收件箱',
++    empty: '暂无待审事项',
++    pendingCount: '{n} 项待审',
++    kindCommand: '命令审批',
++    kindReview: '评审卡',
++    objectPrefix: '对象',
++    reviewUncommitted: '未提交变更',
++    reviewBaseline: '基线对照 {ref}',
++    history: '审批历史',
++    historyEmpty: '暂无记录',
++    colTime: '时间',
++    colActor: '操作人',
++    colTarget: '操作对象',
++    colDecision: '结果',
++    colNote: '备注',
++    loadFailed: '加载失败',
++    viewDiff: '查看变更',
++    choice: {
++      once: '批准',
++      session: '本会话允许',
++      always: '总是允许',
++      deny: '拒绝',
++      approve: '批准',
++      request_changes: '打回返工',
++      spotcheck_confirm: '抽检认可',
++      spotcheck_veto: '抽检否决',
++      auto_pass: '自动放行'
++    },
++    colRisk: '风险档',
++    risk: {
++      high: '高风险',
++      medium: '标准',
++      low: '低风险',
++      highHint: '须逐条人审',
++      autoSample: '可自动放行 · 抽检'
++    }
++  },
++  loopCockpit: {
++    title: '循环驾驶舱',
++    tagline: '循环生长态势 · 实时',
++    back: '返回驾驶舱',
++    scene: {
++      overview: '总览',
++      manage: '管理',
++      code: '编码',
++      ops: '运维'
++    },
++    status: {
++      connected: '实时',
++      disconnected: '离线'
++    },
++    kpi: {
++      loopsActive: '活跃循环',
++      runsRunning: '运行中',
++      awaiting: '待介入',
++      done7d: '7日完成',
++      avg7d: '7日均耗时'
++    },
++    inbox: {
++      title: '介入收件箱',
++      empty: '没有等待你的决策',
++      all: '全部介入'
++    },
++    loops: {
++      title: '循环',
++      newLoop: '新建循环',
++      deleteConfirm: '确定删除该循环？此操作不可撤销。'
++    },
++    viz: {
++      core: '核心引擎',
++      empty: '还没有循环在生长——新建一个循环，或到编排区从模板实例化。',
++      emptyCta: '新建循环',
++      emptyCta2: '去编排',
++      legendRunning: '运行中',
++      legendAwaiting: '待介入',
++      legendDone: '已完成',
++      legendFailed: '失败',
++      moreLoops: '另有 {n} 个循环未展示'
++    }
++  },
++  loopScenes: {
++    manage: {
++      people: '人员',
++      unassigned: '未指派',
++      gotoBoard: '全屏看板',
++      rooms: '任务群组',
++      noRooms: '暂无关联群组',
++      trace: '追溯矩阵',
++      openCount: '在办',
++      tabDuty: '任务与值守',
++      tabTeams: 'Teams 管理'
++    },
++    code: {
++      selectTask: '选择任务',
++      noTask: '从上方选择任务以打开工作区与终端',
++      noWorkspace: '任务尚未领取 workspace，等待 agent claim 后重试',
++      context: '任务上下文',
++      openDrawer: '任务详情',
++      openChat: '完整 Chat',
++      runs: '关联运行'
++    },
++    ops: {
++      duty: '值班台',
++      quickActions: '快捷动作',
++      newLoop: '新建循环',
++      schedule: '日程管理',
++      cockpitLink: '协作中心',
++      activeRuns: '进行中运行'
++    }
++  },
++  teams: {
++    title: 'Teams 管理',
++    matrixOffline: 'Matrix 未连接，Teams 管理不可用',
++    registry: {
++      none: '尚未配置团队注册房间',
++      create: '创建注册房间',
++      setName: '注册房间名称',
++      inviteIds: '邀请成员（Matrix ID，逗号分隔，可留空）',
++      candidates: '检测到含团队数据的已加入房间',
++      useThis: '设为注册房间',
++      room: '注册房间'
++    },
++    accounts: {
++      empty: '暂无成员声明 agent teams'
++    },
++    leader: {
++      badge: 'leader',
++      manage: 'leader 管理',
++      add: '添加 leader'
++    },
++    invite: {
++      button: '邀请'
++    },
++    self: {
++      hint: '编辑本账号的 agent teams'
++    },
++    agentTeams: {
++      add: '新增 team',
++      name: '名称',
++      profiles: 'Profiles',
++      defaultProfile: '默认 profile',
++      save: '保存声明'
++    },
++    duty: {
++      title: '群聊值守',
++      chooseRoom: '选择房间',
++      to: '指派给',
++      assign: '指派',
++      clear: '取消值守',
++      mine: '值守',
++      assignFailed: '值守指派失败，请重试'
++    },
++    dispatch: {
++      title: '外派任务',
++      titleField: '标题',
++      body: '描述',
++      target: '目标账号',
++      profile: '指定 profile（可选）',
++      send: '发出',
++      empty: '暂无外派任务',
++      status: {
++        created: '已建卡',
++        running: '执行中',
++        done: '已完成',
++        failed: '失败',
++        pending: '待回执'
++      },
++      issuedBy: '指派人'
++    }
++  },
++  loopMind: {
++    title: '思维大脑',
++    tagline: '活动思维 · 自适应生长',
++    core: '核心思维',
++    loops: {
++      title: '思维',
++      empty: '尚未形成思维活动'
++    },
++    viz: {
++      empty: '思维网络尚未形成——运行会自发生长，无需人工编排。',
++      emptyCta: '去看介入',
++      retry: '重新加载思维网络'
++    },
++    viewRuns: '查看运行',
++    view3d: '立体',
++    viewCortex: '皮层',
++    view2d: '平面',
++    "3dHint": '拖拽旋转 · 滚轮缩放 · 左侧切层',
++    protoB: '方案 B · 思维皮层原型',
++    clusterTasks: '{n} 个任务',
++    clusterTasksUnit: '个任务',
++    detail: {
++      title: '详情',
++      close: '收起',
++      status: '状态',
++      cluster: '所属族',
++      runs: '运行史',
++      relations: '关联',
++      retry: '重新加载',
++      refreshing: '加载中…'
++    },
++    status: {
++      running: '进行中',
++      blocked: '阻塞',
++      "awaiting-review": '待审',
++      "awaiting-input": '待介入',
++      completed: '已完成',
++      failed: '失败',
++      idle: '空闲',
++      archived: '已归档',
++      unknown: '未知'
++    },
++    zone: {
++      all: '总览',
++      running: '进行中',
++      awaiting: '待介入',
++      blocked: '阻塞',
++      failed: '失败',
++      completed: '已完成',
++      idle: '静止',
++      archived: '已归档'
++    }
++  },
++  graph: {
++    title: '图工程',
++    empty: '暂无图实例',
++    fork: '分叉',
++    interrupts: {
++      title: '中断'
++    },
++    sidebar: {
++      all: '全部',
++      running: '运行中',
++      awaiting: '等待输入',
++      completed: '已完成',
++      failed: '已失败'
++    },
++    table: {
++      name: '名称',
++      status: '状态',
++      step: '步骤',
++      cost: '成本',
++      actions: '操作'
++    },
++    actions: {
++      run: '运行',
++      pause: '暂停',
++      fork: '分叉',
++      delete: '删除'
++    },
++    detail: {
++      back: '返回',
++      cost: '成本',
++      currentStep: '当前步骤',
++      level: '级别',
++      pattern: '模式',
++      step: '步骤',
++      thread: '线程'
++    },
++    checkpoints: {
++      empty: '暂无检查点'
++    }
++  },
++  graphFork: {
++    title: '分叉图',
++    name: '名称',
++    confirm: '确认',
++    cancel: '取消'
++  },
+ }

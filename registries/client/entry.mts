@@ -74,15 +74,13 @@ if (isDesktopShell) document.documentElement.classList.add('hermes-desktop-shell
 
 // B4 dev 登录桩：dev 模式（vite :8649）下 localStorage 按 origin 隔离，与 dist/桌面不共享
 // 登录态，且浏览器无桌面自动登录桥 → 纯浏览器 dev 必手动登录，/api 与终端 WS 都 401/悬空。
-// 这里在 app.use(router)（鉴权守卫初次导航）之前，用 admin/123456 免密换 JWT 落 hermes_api_key；
-// 后端 authenticatePasswordUser 在空库首登即 bootstrapDefaultSuperAdmin（顺带满足终端 super_admin 门槛）。
-// 失败静默回落手动登录页。仅 DEV 生效，不影响生产/桌面。
-// ⚠️ 风险边界（2026-09-25 暴露面收敛）：admin/123456 是硬编码默认口令，凡能打开
-// dev 页面的浏览器都会自动获得 super_admin 会话。故 npm run dev 默认只绑
-// localhost（127.0.0.1），只有多实例演练显式 npm run dev:lan（vite --host）才开放
-// 局域网；dev:lan 下同网段任意设备访问 :8649 即拿到 admin 会话，仅限可信网络。
-// 本桩行为保留（本地开发工作流依赖）：仅 import.meta.env.DEV、仅 localStorage 无
-// JWT 时换一次；生产/桌面构建不含此路径。
+// 安全轮 M8b（2026-10-16）起空库不再有 admin/123456 引导：本桩改用 dev 专用口令
+// 'dev-bootstrap'，且仅在服务端显式开 HERMES_WEB_UI_DEV_BOOTSTRAP=1（空库首登以
+// 提交凭据建号）时生效；未开（或库已有账号）时静默回落手动登录页（本机 admin 密码
+// 已改、实际早已走手动登录——行为等价）。仅 DEV 生效，生产/桌面构建不含此路径。
+// ⚠️ dev:lan 边界不变：开放局域网的 dev 链仍会把 super_admin 会话交给同网段任意
+// 设备，仅限可信网络。
+const DEV_BOOTSTRAP_PASSWORD = 'dev-bootstrap'
 async function devAutoLogin(): Promise<void> {
   if (!import.meta.env.DEV) return
   if (localStorage.getItem('hermes_api_key')) return
@@ -90,7 +88,7 @@ async function devAutoLogin(): Promise<void> {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin', password: '123456' }),
+      body: JSON.stringify({ username: 'admin', password: DEV_BOOTSTRAP_PASSWORD }),
     })
     const body = await res.json().catch(() => null) as { token?: string; jwt?: string } | null
     const jwt = body?.token || body?.jwt
