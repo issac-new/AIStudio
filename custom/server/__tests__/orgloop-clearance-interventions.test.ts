@@ -81,6 +81,16 @@ describe('INTERVENTION_POINTS + aggregateInterventions — 14 介入点与三源
     const kinds = new Set(INTERVENTION_POINTS.map(p => p.sourceKind))
     for (const k of ['gate', 'approval', 'clearance'] as const) expect(kinds.has(k)).toBe(true)
   })
+  it('决策前提（belief）14 点全非空且随聚合透传——批准前必须确认的前提不缺席（麦肯锡调研轮 A 件）', () => {
+    for (const p of INTERVENTION_POINTS) {
+      expect(typeof p.belief).toBe('string')
+      expect(p.belief.length).toBeGreaterThanOrEqual(8)
+      expect(p.belief.length).toBeLessThanOrEqual(80)
+    }
+    const r = aggregateInterventions({ gates: { g1_frozen: '1' } })
+    const iv12 = r.points.find(p => p.id === 'iv-12')
+    expect(iv12?.belief).toContain('接受风险')
+  })
   it('三源齐：闸未过/审批未见/清偿未清=待办；已过=非待办', () => {
     const r = aggregateInterventions({ gates: { g1_frozen: '1' }, approvals: ['g5_human'], clearanceOpen: 3 })
     expect(r.sources).toEqual({ gates: 'ok', approvals: 'ok', clearance: 'ok' })

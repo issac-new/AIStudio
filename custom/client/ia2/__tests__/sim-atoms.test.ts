@@ -106,24 +106,50 @@ describe('SimVerdictField — 判词结构位（R3 只认结构化字段）', ()
 })
 
 describe('SimInterventionCard — 介入卡（R5）', () => {
-  it('批准/打回双钮发出动作与载荷（含依据锚）', async () => {
+  it('批准/打回双钮发出动作与载荷（含依据锚与决策前提）', async () => {
     const w = mount(SimInterventionCard, {
-      props: { point: { id: 'iv-g5', title: 'G5 发布准出待人工批准', evidenceAnchor: '$EnQbo21v', source: 'gate' } },
+      props: {
+        point: {
+          id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass',
+          belief: '方案复用既有实现未重复造轮', evidenceAnchor: '$EnQbo21v',
+        },
+      },
     })
     expect(w.find('[data-testid="sim-interv-icon"]').exists()).toBe(true)
     expect(w.find('[data-testid="sim-interv-source"]').text()).toBe('关卡')
+    expect(w.find('[data-testid="sim-interv-belief"]').text()).toContain('须先确认：方案复用既有实现')
     await w.find('[data-testid="sim-interv-approve"]').trigger('click')
     await w.find('[data-testid="sim-interv-reject"]').trigger('click')
     const approve = w.emitted('approve')
     const reject = w.emitted('reject')
-    expect(approve && approve[0][0]).toEqual({ id: 'iv-g5', evidenceAnchor: '$EnQbo21v' })
-    expect(reject && reject[0][0]).toEqual({ id: 'iv-g5', evidenceAnchor: '$EnQbo21v' })
+    expect(approve && approve[0][0]).toEqual({ id: 'iv-06', belief: '方案复用既有实现未重复造轮', evidenceAnchor: '$EnQbo21v' })
+    expect(reject && reject[0][0]).toEqual({ id: 'iv-06', belief: '方案复用既有实现未重复造轮', evidenceAnchor: '$EnQbo21v' })
     w.unmount()
   })
 
-  it('缺席态：缺依据锚红显，不拦动作', async () => {
+  it('registry 来源标签与状态键回退：五类来源齐、无锚显键不误报缺锚', () => {
     const w = mount(SimInterventionCard, {
-      props: { point: { id: 'iv-clr', title: '清偿门 waive 待批', source: 'clearance' } },
+      props: { point: { id: 'iv-05', title: '分诊确认', sourceKind: 'registry', sourceKey: 'triage', pending: true } },
+    })
+    expect(w.find('[data-testid="sim-interv-source"]').text()).toBe('登记')
+    expect(w.find('[data-testid="sim-interv-key"]').text()).toBe('键 triage')
+    expect(w.find('[data-testid="sim-interv-anchor-absent"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('决策前提缺席=如实显示缺席（旧后端未供），不硬凑', () => {
+    const w = mount(SimInterventionCard, {
+      props: { point: { id: 'iv-12', title: '清偿门 waive 待批', sourceKind: 'clearance' } },
+    })
+    const gap = w.find('[data-testid="sim-interv-belief-absent"]')
+    expect(gap.exists()).toBe(true)
+    expect(gap.text()).toContain('缺决策前提')
+    w.unmount()
+  })
+
+  it('缺席态：无锚无键=缺依据锚红显，不拦动作', async () => {
+    const w = mount(SimInterventionCard, {
+      props: { point: { id: 'iv-clr', title: '清偿门 waive 待批', sourceKind: 'clearance' } },
     })
     const gap = w.find('[data-testid="sim-interv-anchor-absent"]')
     expect(gap.exists()).toBe(true)
