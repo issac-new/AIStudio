@@ -16,7 +16,7 @@ NEWEST=$(ls -t $SIM/logs/run20-monitor-*.log 2>/dev/null | head -1)
 if [ -n "$SUP_PID" ] && [ -f "$SUP_LOG" ]; then
   AGE=$(( $(date +%s) - $(stat -f %m "$SUP_LOG") ))
   if [ "$AGE" -le 1500 ]; then
-    echo "[$(ts)] 监督存活（pid=$SUP_PID，sup日志 ${AGE}s）" >> "$LOG"; exit 0
+    echo "[$(ts)] 监督存活（pid=${SUP_PID}，sup日志 ${AGE}s）" >> "$LOG"; exit 0
   fi
 fi
 AGE=99999
