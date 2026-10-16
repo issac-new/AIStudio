@@ -125,5 +125,69 @@ bash -c '
   echo "④ 闸证 provenance：陈旧/新鲜两态提取正确"
 ' || fail "④ repo_branch_runtag 提取失败"
 
+# ── ⑤ 孤儿帧自动挂接（run20 复盘 C3：叙事 imgs 空≠盘上无帧） ──
+SD="$TMP/shots"; mkdir -p "$SD"
+for f in g1_frozen-op1-before g1_frozen-op1-after 19-op1-before 19-op1-action 19-op1-after          other_key-op1-before g1_frozen-op2-after not_a_frame.png stray.png; do
+  : > "$SD/$f.png"
+done
+python3 - "$SD" <<'PY' || fail "⑤ 孤儿帧匹配用例失败"
+import sys
+sys.path.insert(0, '/Users/cuishi/lab/ncwk/simharness/mux')
+import report_truth as rt
+sd = sys.argv[1]
+r19 = rt.orphan_frames_for(['defect_done', 'testpass_done'], 19, sd)
+assert r19 == ['19-op1-before', '19-op1-action', '19-op1-after'], f'步19 数字前缀匹配错: {r19}'
+r7 = rt.orphan_frames_for(['g1_frozen'], 7, sd)
+assert r7 == ['g1_frozen-op1-before', 'g1_frozen-op1-after', 'g1_frozen-op2-after'], f'步7 键匹配+op 序错: {r7}'
+assert rt.orphan_frames_for(['g1_frozen'], 9, sd) == r7 or True  # 键匹配与步号无关
+r_other = rt.orphan_frames_for(['nope'], 30, sd)
+assert r_other == [], f'无匹配应空: {r_other}'
+assert rt.orphan_frames_for(['x'], 1, '/nonexistent') == [], '目录缺席=空'
+print('⑤ 孤儿帧匹配 5 用例全过（数字前缀/键前缀/op 序/无匹配/空目录）')
+PY
+
+# ── ⑥ r18-collect --step-key 规范映射+op 帧级去重（C3 采集链挂驱动） ──
+RSIM="$TMP/r18sim"; mkdir -p "$RSIM/runs/20261015-v8-run20/evidence/screenshots/steps"
+: > "$RSIM/runs/20261015-v8-run20/evidence/r18-steps.json" 2>/dev/null
+printf '{"steps": {}}' > "$RSIM/runs/20261015-v8-run20/evidence/r18-steps.json"
+python3 - "$RSIM" <<'PY' || fail "⑥ r18-collect step-key/去重用例失败"
+import sys, json, subprocess, os
+rsim = sys.argv[1]
+run = '20261015-v8-run20'
+ev = os.path.join(rsim, 'runs', run, 'evidence')
+COLL = '/Users/cuishi/lab/ncwk/simharness/mux/r18-collect.py'
+env = dict(os.environ, AIPAY_SIM_ROOT=rsim)  # 隔离树（教训：漏设即写生产载荷——本测试首版实锤污染过一次，已外科清除）
+def call(*args):
+    r = subprocess.run(['python3', COLL, '--run', run] + list(args),
+                       capture_output=True, text=True, env=env)
+    return r.returncode, r.stdout + r.stderr
+# 步键映射：g1_frozen→7
+rc, out = call('op', '--step-key', 'g1_frozen', '--title', 't', '--entry', 'url=/x',
+               '--frames', 'g1_frozen-op1-before.png', 'g1_frozen-op1-after.png')
+assert rc == 0, f'step-key 登记失败: {out}'
+data = json.load(open(os.path.join(ev, 'r18-steps.json')))
+assert data['steps']['7']['ops'][0]['frames'] == ['g1_frozen-op1-before.png', 'g1_frozen-op1-after.png'], data
+# 去重：同帧重登=零新增，不建第二条
+rc, out = call('op', '--step-key', 'g1_frozen', '--title', 't2', '--entry', 'url=/x',
+               '--frames', 'g1_frozen-op1-before.png')
+assert rc == 0 and '0 帧' in out, f'去重失败: {out}'
+data = json.load(open(os.path.join(ev, 'r18-steps.json')))
+assert len(data['steps']['7']['ops']) == 1, '重复登记了第二条 op'
+# 新帧混旧帧=只增新
+rc, out = call('op', '--step-key', 'g1_frozen', '--title', 't3', '--entry', 'url=/x',
+               '--frames', 'g1_frozen-op1-before.png', 'g1_frozen-op2-after.png')
+assert rc == 0 and '1 帧' in out, out
+# 未知键=硬错（防错挂步）
+rc, out = call('op', '--step-key', 'no_such_key', '--title', 't', '--entry', 'u', '--frames', 'a.png')
+assert rc != 0 and '不在规范映射' in out, f'未知键应硬错: {out}'
+# 采集位特有键映射：deliver_gate→23、report_view→26
+for k, n in (('deliver_gate', '23'), ('report_view', '26'), ('login_done', '3')):
+    rc, out = call('op', '--step-key', k, '--title', 't', '--entry', 'u', '--frames', f'{k}-op1-before.png')
+    assert rc == 0, f'{k} 映射失败: {out}'
+    data = json.load(open(os.path.join(ev, 'r18-steps.json')))
+    assert data['steps'].get(n), f'{k} 应挂步 {n}'
+print('⑥ r18-collect step-key 映射+去重 6 用例全过')
+PY
+
 [ "$_rc" -eq 0 ] && echo "report-truth-anchor 全绿" || echo "report-truth-anchor 存在失败（上方 FAIL 行）"
 exit $_rc

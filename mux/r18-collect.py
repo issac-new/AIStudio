@@ -39,6 +39,22 @@ SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'
 HS = os.environ.get('MX_HOMESERVER', 'http://127.0.0.1:8008')
 
 
+# ── 步键→步号规范映射（run20 复盘 C3：采集链挂驱动的编号解析单一源）──
+# first-wins 口径与生成器 _STEP33_DEFAULT_KEYS 一致（smoke_done 1-4 共键取 1）；
+# login_done/room_done/report_view/deliver_gate 等采集位特有键按语义归位
+# （login→3、room→8、testpass→19、release→20、report_view→26、deliver_gate→23）。
+STEP_KEY_TO_NUM = {}
+for _i, _k in enumerate([
+    'smoke_done', 'smoke_done', 'smoke_done', 'smoke_done', 'appinit_done', 'people_done',
+    'g1_frozen', 'room_analysis', 'dispatch_marker', 'register_done', 'analysis_done', 'triage_done',
+    'anexec_done', 'review_done', 'g2_arch_pass', 'close_done', 'plan_done', 'devimpl_done',
+    'defect_done', 'ready_done', 'uat_done', 'workmgr_done', 'audit_done', 'retro_done',
+    'ide_done', 'report_done'], 1):
+    STEP_KEY_TO_NUM.setdefault(_k, _i)
+STEP_KEY_TO_NUM.update({'login_done': 3, 'room_done': 8, 'testpass_done': 19,
+                        'release_done': 20, 'deliver_gate': 23, 'report_view': 26})
+
+
 def die(msg):
     sys.exit(f'[r18-collect] {msg}')
 
@@ -141,7 +157,9 @@ def main():
     p_d.add_argument('--user', default='admin', help='取 creds/<user>.token 拉取（须为房间成员）')
     p_d.add_argument('--limit', type=int, default=60, help='上下文各侧事件数（默认 60）')
     p_o = sub.add_parser('op')
-    p_o.add_argument('--step', type=int, required=True)
+    p_o.add_argument('--step', type=int)
+    p_o.add_argument('--step-key', dest='step_key', default='',
+                     help='状态键（capture_step 自动登记用；规范映射解析步号，未知键报错）')
     p_o.add_argument('--title', required=True)
     p_o.add_argument('--entry', required=True, help='操作入口：路由/菜单路径/点击序列+登录身份')
     p_o.add_argument('--frames', nargs='+', required=True, help='帧文件名（r18-frames.mjs 产物）')
@@ -173,6 +191,12 @@ def main():
             print(json.dumps({'coverage': f'{len(cov)}/26', 'steps': sorted(cov, key=int)},
                              ensure_ascii=False))
         return
+    # --step-key 解析（C3 采集链挂驱动）：op 模式可用状态键代替步号；须在
+    # setdefault 之前完成（entry 按步号建键）。未知键硬错防错挂步。
+    if a.mode == 'op' and a.step is None:
+        if a.step_key not in STEP_KEY_TO_NUM:
+            die(f'--step-key {a.step_key!r} 不在规范映射（先补 STEP_KEY_TO_NUM 再用——防错挂步）')
+        a.step = STEP_KEY_TO_NUM[a.step_key]
     entry = steps.setdefault(str(a.step), {})
     if a.mode == 'dialog':
         msgs = fetch_dialog(a.room, a.anchor, a.user, a.limit)
@@ -184,10 +208,15 @@ def main():
         dl.append({'title': a.title, 'room': a.room, 'anchor': a.anchor, 'messages': msgs})
         print(f'[r18-collect] step {a.step} 对话入载荷：{len(msgs)} 条消息（全文未截断）')
     elif a.mode == 'op':
-        entry.setdefault('ops', []).append(
-            {'title': a.title, 'entry': a.entry, 'frames': a.frames, 'note': a.note,
-             'ts': int(time.time())})  # V8.4 §5.5 帧③时刻窗锚：采集时刻即真值（审计对 run 窗口核验）
-        print(f'[r18-collect] step {a.step} 操作序列入载荷：{len(a.frames)} 帧')
+        # 帧级去重（重启重放幂等）：同帧名已在任何 op 条目=跳过，全重复=零新增静默
+        _known = {f for o in entry.get('ops', []) for f in o.get('frames', [])}
+        _new = [f for f in a.frames if f not in _known]
+        if _new:
+            entry.setdefault('ops', []).append(
+                {'title': a.title, 'entry': a.entry, 'frames': _new, 'note': a.note,
+                 'ts': int(time.time())})  # V8.4 §5.5 帧③时刻窗锚：采集时刻即真值（审计对 run 窗口核验）
+        print(f'[r18-collect] step {a.step} 操作序列入载荷：{len(_new)} 帧'
+              f'（去重后；共 {len(a.frames)} 传入）')
     elif a.mode == 'effect':
         entry['effect'] = {'text': a.text,
                            'evidence': [dict(zip(('label', 'anchor'), ev.split('=', 1))) for ev in a.ev]}
