@@ -101,7 +101,14 @@ run20 六道关卡全过、26 步走完，但逐一复盘确认四类失真，�
 | D6 会话饥饿无自动处置 | ✅ 已修 | overlay db6eb2c9：detectSessionStarvation（空转×上下文压力交集）+nudge 专属换会话令（新会话只干显式命令清单）；7/7 测试 |
 | 零交付分类判据未产品化 | ✅ 已修 | overlay db6eb2c9：card-classify.ts 单一源（治理静默/研发强告警/不确定人工分诊）+检测器升级；127 例套件过 |
 
-仍挂账（未在本批范围）：B5 集成分支保留规则的产品化（方案纪律 71 已立规，产品面待办）、A7 事故报告 17 要素采集面（依赖 hermes 侧 telemetry）。
+挂账二件也已修（2026-10-16 深夜批，用户「两件没修的也修了」指令）：
+
+| 原挂账 | 状态 | 落地锚 |
+|---|---|---|
+| B5 集成分支保留 | ✅ 已修 | simharness 3f4a97c：mx-clean 保留守卫（锚定轮未落 report_done=integration 禁删，判据前置到 runs 归档前）+3c glob 收紧（git ref 模式 `*` 跨 `/` 误删 integration/main 的实锤修复）+tag 未推达 fail-closed+测试硬隔离与 mx-clean 生产确认闸；守门三路全绿。事故如实记：测试首跑漏传 SIM_ROOT 把生产 runs 归档删一次（68MB/221 条目从 archive tar 完整恢复） |
+| A7 事故报告要素采集 | ✅ 可修部分全修（三层根因） | overlay cb6c3fc0+simharness 4096e90：聚合窗口跨天（锚定轮 state.env 真窗，RUN_ID 单日窗切掉 run20 42.5h 首尾=15 absent 根因）+聚合回退判据（total=0 空对象≠null）+content NULL 兜底+控制器/驱动 state_env 接线；run20 实测 collected 2→3、absent 15→14。**边界如实挂账**：trace span 落盘（SIM 树无 traces/）与推演身份册供给（15 员工身份未在 SIM 注册）属 hermes 侧数据面，需 hermes telemetry 供给侧独立项，不越界改 upstream |
+
+至此 run20 复盘问题清单四类 26 项全部有着落（修/立规/边界挂账）。
 
 诚实说明：run20 官方报告未重写——历史轮次产物按"不改写历史"原则留档，修复对 run21 及以后生效；本报告第三章的验证数字来自隔离副本（/tmp 验证树，未触生产证据）。
 
