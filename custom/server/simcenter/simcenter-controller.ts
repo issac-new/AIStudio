@@ -18,6 +18,7 @@
  *   GET  /trace?run=            冻结单 AC+测试报告+验收书判词四列｜聚合，缺席如实 null
  *   POST /evidence/mark         本族唯一写端点：evidence/message-marks.jsonl append｜强校验+穿越防护
  *   GET  /issues?run=           issues.log（run 根或 evidence/ 两处）ISSUE/DISP 解析｜只读聚合
+ *   GET  /quality?run=          mutation-score.json+dup-ratio.json 只读聚合｜E/F 件，缺席如实
  *
  * 配置（env，单一配置源）：OBS_SIM_ROOT（与 631 同一 env；缺席=503 fail-closed——
  * 生产不开 env 即关，不读任意磁盘路径）；SIM_TOPOLOGY_ENDPOINTS/SIM_DISPATCHER_HEALTH_CLI/
@@ -700,6 +701,79 @@ router.put('/settings', (ctx: Context) => {
   mkdirSync(resolve(f, '..'), { recursive: true })
   writeFileSync(f, JSON.stringify(merged, null, 1), 'utf-8')
   ctx.body = { values: { ...SIM_SETTINGS_DEFAULTS, ...merged } }
+})
+
+// ── 12. quality：AI 产出质量证据只读聚合（三篇调研轮 E/F 件，方案正本 V8.35 §5.8.2 判据执行产物）──
+// 读 run 的 mutation-score.json 与 dup-ratio.json（simharness mx-mutation-score.mjs /
+// mx-dup-ratio.mjs --out 产物；两处候选=run 根与 evidence/，照 issues 模式）。
+// 缺席/坏形状=present:false 如实呈现不硬凑（N1）；verdict 透传工具原判（单一事实源）。
+
+export type QualityMetricKind = 'mx-mutation-score' | 'mx-dup-ratio'
+
+export interface QualityMetricView {
+  present: boolean
+  reason?: 'file-absent' | 'parse-error' | 'shape-error'
+  candidates?: string[]
+  source?: string
+  tool?: string
+  status?: string
+  verdict?: string
+  score?: number | null
+  ratio?: number | null
+  threshold?: number
+  total?: number
+  killed?: number
+  survived?: number
+  timeout?: number
+  incrementLines?: number
+  duplicateLines?: number
+  blocks?: number
+  ts?: string
+}
+
+/** 证据 JSON → 指标视图（纯函数，测试面）：tool/status/verdict 三锚校验，
+ *  缺席=null→file-absent；数值字段缺席透传 undefined 不猜。 */
+export function parseQualityMetric(text: string | null, expectTool: QualityMetricKind): QualityMetricView {
+  if (text === null) return { present: false, reason: 'file-absent' }
+  let raw: unknown
+  try { raw = JSON.parse(text) } catch { return { present: false, reason: 'parse-error' } }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { present: false, reason: 'shape-error' }
+  const r = raw as Record<string, unknown>
+  if (r.tool !== expectTool || typeof r.status !== 'string' || typeof r.verdict !== 'string') {
+    return { present: false, reason: 'shape-error' }
+  }
+  const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
+  const numOrNull = (v: unknown): number | null | undefined => (v === null ? null : num(v))
+  const base: QualityMetricView = {
+    present: true,
+    tool: expectTool,
+    status: r.status,
+    verdict: r.verdict,
+    ts: typeof r.ts === 'string' ? r.ts : undefined,
+  }
+  if (expectTool === 'mx-mutation-score') {
+    return { ...base, score: numOrNull(r.score), threshold: num(r.threshold), total: num(r.total), killed: num(r.killed), survived: num(r.survived), timeout: num(r.timeout) }
+  }
+  return { ...base, ratio: numOrNull(r.ratio), threshold: num(r.threshold), incrementLines: num(r.incrementLines), duplicateLines: num(r.duplicateLines), blocks: Array.isArray(r.blocks) ? r.blocks.length : undefined }
+}
+
+router.get('/quality', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.query.run ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const runDir = safeRunDir(root, run)
+  if (!runDir) { ctx.status = 400; ctx.body = { error: 'run 参数非法（路径越界）' }; return }
+  const readMetric = (file: string): { text: string | null; found: string | null; candidates: string[] } => {
+    const candidates = [resolve(runDir, 'evidence', file), resolve(runDir, file)]
+    const found = candidates.find(f => existsSync(f)) ?? null
+    return { text: found ? readCapped(found) : null, found, candidates }
+  }
+  const mut = readMetric('mutation-score.json')
+  const dup = readMetric('dup-ratio.json')
+  const mutation: QualityMetricView = { ...parseQualityMetric(mut.text, 'mx-mutation-score'), ...(mut.found ? { source: mut.found } : { candidates: mut.candidates }) }
+  const duplication: QualityMetricView = { ...parseQualityMetric(dup.text, 'mx-dup-ratio'), ...(dup.found ? { source: dup.found } : { candidates: dup.candidates }) }
+  ctx.body = { run, mutation, duplication }
 })
 
 export { router as simcenterRouter }
