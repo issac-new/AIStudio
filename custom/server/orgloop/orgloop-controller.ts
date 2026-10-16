@@ -254,26 +254,30 @@ router.get('/clearance/check-clearance', (ctx: Context) => {
 // ── X2：介入点聚合（R5）。挂 orgloop 前缀零补丁（挂载经济性：复用 636）。──
 // 14 介入点登记（方案 §2.9 人把关列+§2.6.5 清偿+§1.5 姿态+熔断复议）；
 // 三源聚合（approved.events/闸态/清偿门），任一源缺席降级不报错（R5 验收判据）。
+// belief=决策前提（2026-10-16 三篇调研轮 A 件，麦肯锡「what you'd have to believe」）：
+// 批准前必须成立的前提，静态登记自方案判据与历轮事故锚——不由 AI 现场生成
+// （被批准方自写「你必须相信我什么」违背运动员/裁判员分离）。
 export type InterventionSourceKind = 'gate' | 'approval' | 'clearance' | 'uat' | 'registry'
 export interface InterventionPoint {
   id: string; title: string; sourceKind: InterventionSourceKind; sourceKey: string
+  belief: string
 }
 
 export const INTERVENTION_POINTS: InterventionPoint[] = [
-  { id: 'iv-01', title: '账号编制确认（admin token 授予）', sourceKind: 'registry', sourceKey: 'admin-roster' },
-  { id: 'iv-02', title: '需求范围与验收标准裁定（RFD 定 AC）', sourceKind: 'registry', sourceKey: 'req-scope' },
-  { id: 'iv-03', title: 'G1 需求冻结判读', sourceKind: 'gate', sourceKey: 'g1_frozen' },
-  { id: 'iv-04', title: '派发令确认（产品经理）', sourceKind: 'registry', sourceKey: 'dispatch' },
-  { id: 'iv-05', title: '分诊确认（团队负责人看板 todo）', sourceKind: 'registry', sourceKey: 'triage' },
-  { id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass' },
-  { id: 'iv-07', title: '缺陷判读与验收（测试者≠写码者）', sourceKind: 'registry', sourceKey: 'defect-verdict' },
-  { id: 'iv-08', title: 'G5 发布准出人工批准（HumanGate）', sourceKind: 'approval', sourceKey: 'g5_human' },
-  { id: 'iv-09', title: 'UAT 逐条判词', sourceKind: 'uat', sourceKey: 'uat-verdict' },
-  { id: 'iv-10', title: '审计独立签名线', sourceKind: 'registry', sourceKey: 'audit-sign' },
-  { id: 'iv-11', title: '复盘行动项拍板', sourceKind: 'registry', sourceKey: 'retro-decide' },
-  { id: 'iv-12', title: '清偿门 waive（须带批准理由）', sourceKind: 'clearance', sourceKey: 'clearance-waive' },
-  { id: 'iv-13', title: '熔断复议 OVERRIDE（带原因）', sourceKind: 'registry', sourceKey: 'breaker-override' },
-  { id: 'iv-14', title: '姿态声明与开轮批准', sourceKind: 'registry', sourceKey: 'posture-approve' },
+  { id: 'iv-01', title: '账号编制确认（admin token 授予）', sourceKind: 'registry', sourceKey: 'admin-roster', belief: '编制名单与账号一一对应，权限位上没有编外账号' },
+  { id: 'iv-02', title: '需求范围与验收标准裁定（RFD 定 AC）', sourceKind: 'registry', sourceKey: 'req-scope', belief: '每条验收判据可判伪可实测，范围边界已锁定——后续实现与测试全按此执行' },
+  { id: 'iv-03', title: 'G1 需求冻结判读', sourceKind: 'gate', sourceKey: 'g1_frozen', belief: '冻结版需求与用户意图一致；判读后改动只能走变更流程' },
+  { id: 'iv-04', title: '派发令确认（产品经理）', sourceKind: 'registry', sourceKey: 'dispatch', belief: '任务粒度已拆到单步可执行——过大粒度是干完不交卷的已知根因' },
+  { id: 'iv-05', title: '分诊确认（团队负责人看板 todo）', sourceKind: 'registry', sourceKey: 'triage', belief: '卡落到有产能的档案，且没有互相等待的悬空卡' },
+  { id: 'iv-06', title: 'G2 架构评审判词', sourceKind: 'gate', sourceKey: 'g2_arch_pass', belief: '方案复用既有实现未重复造轮——AI 不会自行收敛重复实现' },
+  { id: 'iv-07', title: '缺陷判读与验收（测试者≠写码者）', sourceKind: 'registry', sourceKey: 'defect-verdict', belief: '测试者与写码者不是同一档案，缺陷判伪可复现' },
+  { id: 'iv-08', title: 'G5 发布准出人工批准（HumanGate）', sourceKind: 'approval', sourceKey: 'g5_human', belief: '发布件三件齐，完成声明双凭证（提交号+卡号）在库' },
+  { id: 'iv-09', title: 'UAT 逐条判词', sourceKind: 'uat', sourceKey: 'uat-verdict', belief: '每条验收判据逐条回验过；有条件放行的条件已落实到人' },
+  { id: 'iv-10', title: '审计独立签名线', sourceKind: 'registry', sourceKey: 'audit-sign', belief: '四查全过零 FAIL，降级项已如实记单不粉饰' },
+  { id: 'iv-11', title: '复盘行动项拍板', sourceKind: 'registry', sourceKey: 'retro-decide', belief: '每条行动项有归属有期限——无主行动项等于下轮照犯' },
+  { id: 'iv-12', title: '清偿门 waive（须带批准理由）', sourceKind: 'clearance', sourceKey: 'clearance-waive', belief: '豁免理由成立且已记档——waive 是接受风险，不是消灭问题' },
+  { id: 'iv-13', title: '熔断复议 OVERRIDE（带原因）', sourceKind: 'registry', sourceKey: 'breaker-override', belief: '过载证据已核对，复议不是拆闸续跑' },
+  { id: 'iv-14', title: '姿态声明与开轮批准', sourceKind: 'registry', sourceKey: 'posture-approve', belief: 'prelaunch 十六项全绿且代偿台账已处置——block 态未清不得开轮' },
 ]
 
 export interface InterventionSnapshot {
