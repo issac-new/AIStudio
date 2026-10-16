@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/gov/GovAiQualitySection.vue -->
 <!-- AI 产出质量区（三篇调研轮 E/F 件，挂签 7 度量体检）：增量变异得分（测得对不对）
      + 增量重复率（有没有重复造轮）双指标卡。数据=simcenter /quality 只读聚合
-     （evidence/mutation-score.json + dup-ratio.json，simharness 工具产物）；
+     （evidence/mutation-score.json + dup-ratio.json，推演工具链产物）；
      未跑/未计分/基线红中止一律如实呈现不硬凑（N1）；verdict 色态透传工具原判。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
@@ -59,7 +59,7 @@ async function load(): Promise<void> {
       </div>
     </div>
     <p v-if="quality" class="gq__meta">
-      工具=simharness mx-mutation-score / mx-dup-ratio（增量口径：git base..HEAD；跑法见方案 §5.8.2 准出行）。
+      指标口径=增量变异得分 / 增量重复率（git base..HEAD；跑法见方案 §5.8.2 准出行）。
     </p>
   </section>
 </template>
