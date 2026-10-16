@@ -24,7 +24,7 @@
 set -u
 LC_ALL=C
 OV="${MX_OVERLAY_ROOT:-/Users/cuishi/lab/ncwk/overlay}"
-SR="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SR="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 HAR="${MX_HARNESS_ROOT:-/Users/cuishi/lab/ncwk/simharness}"
 
 # ── 孤儿兜底：本脚本被外层超时/信号杀中途时，清掉它派生的 kanban CLI 子进程
@@ -103,13 +103,15 @@ fi
 if [ "$STEP" = all ] || [ "$STEP" = verify ]; then
   echo "--- E. 活体验证 ---"
   H="$SR/hermes-agent-src/venv/bin/hermes"
-  [ -x "$H" ] || H="$(command -v hermes)"
-  HERMES_HOME="$SR/hermes" "$H" kanban selfcheck && echo "  ✓ selfcheck" || echo "  ✗ selfcheck（见上）"
-  HERMES_HOME="$SR/hermes" "$H" kanban sleeping-workers --idle-sec 60 | head -5 && echo "  ✓ sleeping-workers"
-  python3 -c "
-import sys; sys.path.insert(0, '$SR/hermes-agent-src')
-from gateway.kanban_watchers_dispatcher import dispatcher_health_snapshot
-print('  ✓ dispatcher snapshot:', dispatcher_health_snapshot())" 2>&1 | head -3
+  [ -x "$H" ] || H="$SR/bin/hermes-sim"
+  # 0.22.2 适配（2026-10-16 快照升级轮）：upstream 重写 kanban CLI——selfcheck/
+  # sleeping-workers/dispatcher_health_snapshot 三面消失（634/635 补丁未入 mx_apply
+  # 清单，旧形态随 0.21.x 基底退场）。等价验证三件：boards list（板库可达）+
+  # diagnostics（卡级健康诊断）+ 网关日志 dispatcher tick（派发器活着）。
+  HERMES_HOME="$SR/hermes" "$H" kanban boards list >/dev/null 2>&1 && echo "  ✓ boards list（板库可达）" || echo "  ✗ boards list（见上）"
+  HERMES_HOME="$SR/hermes" "$H" kanban diagnostics 2>/dev/null | head -4 && echo "  ✓ diagnostics（卡级诊断面）"
+  _tick=$(tail -200 "$SR/logs/gateway.log" 2>/dev/null | grep -cE "dispatcher|dispatch" || true)
+  echo "  dispatcher 活性：gateway.log 近 200 行含 dispatch 字样 ${_tick} 处（>0=派发器在跑）"
   for url in "http://127.0.0.1:8802/api/hermes/autosched/schedule" "http://127.0.0.1:8802/api/hermes/orgloop/gate-repairs" "http://127.0.0.1:8802/api/hermes/humansim/audit" "http://127.0.0.1:8802/api/hermes/observability/run-state"; do
     code=$(curl -s -o /dev/null -w '%{http_code}' -m 3 "$url" 2>/dev/null || echo 000)
     echo "  $code $url（503=fail-closed 未开 env，属预期可接受）"
