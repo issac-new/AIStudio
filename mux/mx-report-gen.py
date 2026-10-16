@@ -1527,7 +1527,7 @@ STEPS_META_20261013_V8_RUN19 = {
     26: dict(keys=['report_done'], narrative='报告链完成：叙事注册（本表）+帧全量挂接；全程 16:07:58→13:3x≈21h（含夜间熔断死等 7h 事故段——300s 时限根治件的诞生实录）。', imgs=[]),
 }
 
-# run20 叙事（2026-10-16 收官补注册；锚=state.env 键时间线+issues.log 120 条台账）
+# run20 叙事（按轮逐步注册；锚=state.env 键时间线+issues.log 120 条台账）
 STEPS_META_20261015_V8_RUN20 = {
     1: dict(keys=['smoke_done'], narrative='开跑 2026-10-15 14:41（零环境重建）。30 账号 token 有效、单网关+单 studio 就绪。', imgs=[]),
     2: dict(keys=['smoke_done'], narrative='双账号登录通路端点按契约应答；交付案例房开房+冒烟事件落房可读回。', imgs=[]),
@@ -3574,7 +3574,7 @@ def _shadow_evidence_zone_html():
         '  <table><tr><th>时刻</th><th>局势研判</th></tr>' + (rows or '<tr><td colspan="2">无研判行（安静窗无研判——用户裁定）</td></tr>') + '</table>\n'
         '  <h3 style="font-size:13px;margin:12px 0 6px">停滞判定（近 5 条）</h3>\n'
         '  <table><tr><th>时刻</th><th>判词</th></tr>' + (vrows or '<tr><td colspan="2">无停滞判定行</td></tr>') + '</table>\n'
-        '  <h3 style="font-size:13px;margin:12px 0 6px">产品端点快照（收尾时实采：派发器健康/休眠探针/通道面）</h3>\n'
+        '  <h3 style="font-size:13px;margin:12px 0 6px">产品端点快照（收尾时实测采集：派发器健康/休眠探针/通道面）</h3>\n'
         '  <pre style="font-size:11px;background:var(--bg);padding:8px;border-radius:6px;overflow:auto">' + prod_html + '</pre>\n')
 
 
