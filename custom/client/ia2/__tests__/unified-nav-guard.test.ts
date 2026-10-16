@@ -1,6 +1,6 @@
 // overlay/custom/client/ia2/__tests__/unified-nav-guard.test.ts
-// v12 统一视图总守门（2026-09-19）：双视图单一事实源（/app collab + IDE 直链）、
-// 旧深链迁移表实走、退役路由名零残留、catch-all 兜底、双壳互跳键、
+// v12 统一视图总单测（2026-09-19）：双视图单一事实源（/app collab + IDE 直链）、
+// 旧直达链接迁移表实走、退役路由名零残留、catch-all 兜底、双壳互跳键、
 // 窗口管理挂载。patch/路由漂移时当场 fail。
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -27,11 +27,11 @@ const RETIRED_NAMES = [
 // 2026-09-22 驾驶舱回归修复（patch 351 CockpitChatRouteRestore）：以下命名路由
 // 曾因统一导航退役而缺失，致 ChatPanel SessionListItem :to="sessionHref()" 解析
 // 失败、协作中心(/app)与工作台渲染挂（No match for hermes.session）。现经 351
-// 恢复——它们是「恢复性路由」（path 不挂导航、会话深链由 ChatView 读 param），
+// 恢复——它们是「恢复性路由」（path 不挂导航、会话直达链接由 ChatView 读 param），
 // 不算退役残留，须存在而非零出现。
 const RESTORED_NAMES = ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession']
 
-describe('v12 统一视图守门（双视图）', () => {
+describe('v12 统一视图单测（双视图）', () => {
   it('IA_AREAS 单场景 collab 与 buildIaRoutes 产物一一对应', () => {
     const routes = buildIaRoutes()
     const flat = JSON.stringify(routes)
@@ -53,10 +53,10 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(areaForPath('/hermes/logs')).toBeNull()
   })
 
-  it('旧深链迁移表实走重定向（query 语义不丢关键路径）', async () => {
-    // push 会解析目标记录的懒组件——替换为桩，避免拉起 RunCenterView/HistoryView
+  it('旧直达链接迁移表实走重定向（query 语义不丢关键路径）', async () => {
+    // push 会解析目标记录的懒组件——替换为桩，避免装载 RunCenterView/HistoryView
     // 等重型视图的导入链（其内 upstream api/client 顶层 createWebHashHistory 在
-    // node 环境无 location 即炸；本守门只验重定向本身）
+    // node 环境无 location 即炸；本单测只验重定向本身）
     const Stub = { template: '<div />' }
     const stubComponents = (records: ReturnType<typeof buildIaRoutes>): ReturnType<typeof buildIaRoutes> =>
       records.map(r => {
@@ -105,13 +105,13 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
-  it('设置页收编（2026-09-30 用户裁定）：hermes.settings 经 IaLegacyShell 进壳，旧路径重定向保 query', async () => {
-    // 设置页与全量收编批同构（ANNEXED_LEGACY 首条）：同名替换上游顶层记录——
+  it('设置页并入（2026-09-30 用户裁定）：hermes.settings 经 IaLegacyShell 进壳，旧路径重定向保 query', async () => {
+    // 设置页与全量并入批同构（ANNEXED_LEGACY 首条）：同名替换上游顶层记录——
     // 上游 useKeyboard/ChatInput/MessageItem 等按名跳零改动；壳=页头+注意力条+
     // IaSettingsSidebar（注意力条下方）+内容区，App.vue 不再挂侧栏（双栏根治）
     const routes = buildIaRoutes()
     const setRec = routes.find(r => r.name === 'hermes.settings')
-    expect(setRec, 'hermes.settings 收编记录应存在').toBeTruthy()
+    expect(setRec, 'hermes.settings 并入记录应存在').toBeTruthy()
     expect(setRec?.path).toBe('/app/settings')
     expect(String(setRec?.component)).toContain('IaLegacyShell')
     expect(setRec?.meta?.fullscreen).toBe(true)
@@ -121,11 +121,11 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(shellSrc).toContain('<IaGlobalTop />')
     expect(shellSrc).toContain('<IaSettingsSidebar />')
     expect(setNav).toContain('router.hasRoute(')
-    // 旧深链兜底：/hermes/settings → /app/settings（query 保真，tab 页签深链不丢）
+    // 旧直达链接兜底：/hermes/settings → /app/settings（query 保真，tab 页签直达链接不丢）
     const legacy = routes.find(r => r.path === '/hermes/settings')
     expect(legacy, '旧路径兼容重定向应存在').toBeTruthy()
     expect(typeof legacy?.redirect).toBe('function')
-    // 实走重定向（组件换桩，避免拉起 IaLegacyShell 导入链）
+    // 实走重定向（组件换桩，避免装载 IaLegacyShell 导入链）
     const Stub = { template: '<div />' }
     const stub = (records: ReturnType<typeof buildIaRoutes>): ReturnType<typeof buildIaRoutes> =>
       records.map(r => {
@@ -140,7 +140,7 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(router.currentRoute.value.name).toBe('hermes.settings')
   })
 
-  it('catch-all 兜底 → /app（旧深链不白屏）', () => {
+  it('catch-all 兜底 → /app（旧直达链接不白屏）', () => {
     const router = readUpstream('router/index.ts')
     expect(router).toContain(`{ path: '/:pathMatch(.*)*', redirect: '/app' }`)
   })
@@ -158,7 +158,7 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
-  it('窗口管理守门：三栏栏控迁各栏顶部控制条 + 独立窗口精简壳 + 页头集中簇退役（v12.4）', () => {
+  it('窗口管理单测：三栏栏控迁各栏顶部控制条 + 独立窗口精简壳 + 页头集中簇退役（v12.4）', () => {
     const header = readFileSync(
       resolve(__dirname, '../components/IaShellHeader.vue'),
       'utf8',
@@ -180,7 +180,7 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(ideShell).toContain('testid="ide-col-sidebar"')
     expect(ideShell).toContain('testid="ide-col-chat"')
     // standalone 精简壳 / Esc 收管理台 / 合并回流监听；
-    // v12.3 页级 max=1 最大化与最小化 dock 链路退役（守门防回潮）
+    // v12.3 页级 max=1 最大化与最小化 dock 通道退役（单测防回潮）
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
     expect(shell).toContain('<IaGlobalTop v-else />')
     expect(shell).toContain("event.key === 'Escape'")
@@ -192,7 +192,7 @@ describe('v12 统一视图守门（双视图）', () => {
     // v12.4 切换器单按钮（显示目标视图，双按钮/双入口 testid 退役）
     expect(shell).toContain('<IaGlobalTop')
     expect(ideShell).toContain('<IaGlobalTop')
-    expect(header).toContain('<IaViewSwitcher')
+    expect(header).not.toContain('<IaViewSwitcher')  // D9：切换器退役（IDE 画布并入工作台分段）
     expect(switcher).toContain('data-testid="ia-viewswitch-row"')
     expect(switcher).toContain('data-testid="ia-view-toggle"')
     // UX 毛刺③（2026-10-03）：切换带 URL 上下文——回协作落会话画布、去 IDE 带 ?session=
@@ -203,7 +203,7 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(switcher).not.toContain('data-testid="ia-scene-ide"')
   })
 
-  it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 守门）', () => {
+  it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 单测）', () => {
     const sidebar = readUpstream('components/layout/AppSidebar.vue')
     expect(sidebar).toContain(`:to="{ name: 'ide.shell' }"`)
     expect(sidebar).toContain(`:to="{ name: 'ia2.collab' }"`)
