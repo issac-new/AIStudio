@@ -18,6 +18,7 @@
 
 ## 二、复盘专项动作（prelaunch 机械门覆盖不到的人工项）
 
+0. **代偿清偿门**（⑯）：run20 台账 179 笔已清（29 resolve 带产品锚+150 auto-approve 用户裁定 waive，2026-10-16；台账 runs/20261015-v8-run20/evidence/compensation-ledger.tsv，原文件备份 .bak-preclear-*）——run21 prelaunch ⑯ 应直接过。
 1. **结构性延后 14 键开跑前人工处置**（纪律 56）：issues.log 中延后族——
    `g2-design-review-fail`、`conclusion-gap`（4 支）、`g3-local-gate-missing`（CHWX/MP）、
    `gate-evidence-blocked`、`merge-conflict`（PAYCORE-C/N）、`test-report-missing`、
@@ -52,7 +53,8 @@
 
 1. **C3 采集链自动登记**：首轮跑完后抽查 r18-steps.json——capture 步的 op 条目应非零（此前恒 0）；若某步拍摄成功但登记失败，看 issues.log 的 r18-op-register-failed 单。
 2. **C4 QGate 真实执行**：G5 时 release-report 应九门有信号（非全 INCONCLUSIVE）；FAIL 门=真实缺口如实呈现（run20 真实证据复判为 5 PASS+3 FAIL——工程基线/依赖审计/概设决策记录三缺口是真欠账，run21 须补）。
-3. **D6/卡分类产品件随重建上线**（纪律 68 三件套验收）：session.starved 检测器+换会话令、completion.zero-delivery 分类升级——部署后看字面触发事件。
+3. **D6/卡分类/A7 产品件随重建上线**（纪律 68 三件套验收）：session.starved 检测器+换会话令、completion.zero-delivery 分类升级、事故报告跨天窗口（驱动导出带 state_env）——部署后看字面触发事件。
+4. **hermes 侧数据面挂账核验**（A7 边界）：trace span 落盘（SIM 树 traces/）与推演身份册供给（15 员工身份注册）属 hermes telemetry 供给侧——开跑前确认本轮是否具备；不具备则事故报告 absent 项如实呈现（不造假信号）。
 
 ## 四、开跑命令序（沿用 runbook）
 
