@@ -18,7 +18,11 @@ export const SUSPICION_RULES: SuspicionRule[] = [
   { id: 'override-zh', weight: 3, re: /(忽略|无视|忘记|推翻)(掉)?(掉)?(之前|以上|先前|上面|上述|前面|原有)?(的)?(所有|全部)?(指令|指示|规则|提示词?|约束|要求|设定)/ },
   { id: 'override-new', weight: 2, re: /\bnew (instructions?|rules?|directives?)\b\s*[:：]/i },
   // —— 角色扮演劫持（A2）——
+  // P2 实测补面（2026-10-16）：原 persona-en 要求 "you are now"——DAN 类话术惯用
+  // "You are DAN"（无 now）即整族漏掉；补 "you are <name>" 直陈+越狱暗号。
   { id: 'persona-en', weight: 2, re: /\b(you are now|pretend to be|act as (if you are|a))\b[^.\n]{0,60}\b(ai|assistant|agent|model|developer mode|dan)\b/i },
+  { id: 'persona-declare', weight: 2, re: /\byou are (dan|jailbreak|unfiltered|uncensored|unrestricted|evil|anti-?ai)\b/i },
+  { id: 'persona-nofilter', weight: 2, re: /\b(no|without|zero) (safety |content )?(filter|restriction|guideline|limit|censorship)s?\b[^.\n]{0,40}\b(mode|assistant|ai|agent|now)?/i },
   { id: 'persona-zh', weight: 2, re: /你(现在)?(是|扮演|充当)[^。\n]{0,30}(助手|智能体|代理|开发者模式|越狱)/ },
   // —— 系统提示窃取（A7 数据外泄诱导）——
   { id: 'exfil-prompt', weight: 3, re: /\b(reveal|show|print|repeat|output|leak|dump)\b[^.\n]{0,30}\b(your )?(system |initial |original )?(prompt|instructions|配置|规则文件)/i },
@@ -35,8 +39,19 @@ export const SUSPICION_RULES: SuspicionRule[] = [
   { id: 'zero-width', weight: 2, re: /[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/ },
   // —— 多轮诱导开场（A4，弱信号）——
   { id: 'grooming', weight: 1, re: /\b(hypothetically|in a fictional|just (for|between) us|let'?s play a game|角色扮演一下|假设(一个)?场景)\b/i },
+  // P2 实测补面（2026-10-16）：阶梯式拆解（Step 1..N 同段多现）与「既成约定」
+  // （we established / earlier agreement）是渐进诱导的主形态，原 grooming 只抓
+  // 虚构场景开场。阶梯=同文本 ≥2 个 step 标记（弱信号×2 累积才过闸）。
+  { id: 'grooming-steps', weight: 1, re: /(?:\bstep\s*\d\b|\b第\s*[一二三四五六七八九十\d]+\s*[步阶段])[^\n]{0,80}(?:\bstep\s*\d\b|\b第\s*[一二三四五六七八九十\d]+\s*[步阶段])/i },
+  { id: 'grooming-precedent', weight: 1, re: /\b(we (established|agreed)|as (we|i) (established|agreed)|earlier (agreement|you (said|confirmed))|just to confirm (that|our) (earlier|prior)|前面(已经|说过)约定|如前所述)\b/i },
   // —— 工具滥用诱导（A6）——
   { id: 'tool-abuse', weight: 2, re: /\b(run|execute|curl|wget|rm -rf|sudo)\b[^.\n]{0,50}\b(without|bypassing|ignore)\b[^.\n]{0,30}\b(approval|permission|sandbox|review)/i },
+  // P2 实测补面（2026-10-16）：原规则被 URL 打断（curl 与 without 间隔 >50 字符
+  // 即漏）；补三个高频形态——管道直执、免确认、伪授权（pre-approved/admin said ok）。
+  { id: 'tool-pipe-exec', weight: 2, re: /\b(curl|wget|fetch)\b[^\n]{0,120}\|\s*(ba)?sh\b/i },
+  { id: 'tool-no-confirm', weight: 2, re: /\b(do not|don'?t|no need to|without) (ask|asking) (for )?(confirmation|approval|permission)\b[^.\n]{0,60}\b(pre-?approved|admin|owner|already)\b/i },
+  { id: 'tool-fake-auth', weight: 2, re: /\b(pre-?approved|admin (said|approved)|the owner (said|approved)|已授权|管理员(已)?(批准|同意))\b[^.\n]{0,60}\b(run|execute|delete|drop|exec|调用|执行)/i },
+  { id: 'tool-sql-destructive', weight: 2, re: /\b(drop|truncate|delete from)\s+(table\s+)?\w+\s*(;|--|$)/i },
 ]
 
 export interface Suspicion {
