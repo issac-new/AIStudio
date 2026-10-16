@@ -52,6 +52,18 @@ export const SUSPICION_RULES: SuspicionRule[] = [
   { id: 'tool-no-confirm', weight: 2, re: /\b(do not|don'?t|no need to|without) (ask|asking) (for )?(confirmation|approval|permission)\b[^.\n]{0,60}\b(pre-?approved|admin|owner|already)\b/i },
   { id: 'tool-fake-auth', weight: 2, re: /\b(pre-?approved|admin (said|approved)|the owner (said|approved)|已授权|管理员(已)?(批准|同意))\b[^.\n]{0,60}\b(run|execute|delete|drop|exec|调用|执行)/i },
   { id: 'tool-sql-destructive', weight: 2, re: /\b(drop|truncate|delete from)\s+(table\s+)?\w+\s*(;|--|$)/i },
+  // —— 有害内容诱导（A8，P2 实测补面 2026-10-16）——
+  // 设计难点=双刃剑：同一批词在教学/医学科普/安全研究/新闻报道里大量出现。对策=
+  // 不建危险物黑名单（脆弱且误伤科普），改抓「命令式程序框架」——有害请求的形态
+  // 是「给我一份…步骤/教程」的祈使句，而教育文本是陈述句（「X 的合成涉及…」）。
+  // 单条规则不足以定罪（权重 2），S0 只决定「值不值得送 S1」，裁决权仍在 S1。
+  // 允许过触发（烘焙教程也会送 S1——按 rules.ts 头注「宁可多送 S1」惯例）。
+  { id: 'harmful-procedural-en', weight: 2, re: /\b(step[- ]by[- ]step|detailed) (guide|instructions?|walkthrough|tutorial|recipe|process)\b[^.\n]{0,60}\b(to|for) (synthesiz|mak|produc|extract|manufactur|build|creat|refin|purif)/i },
+  { id: 'harmful-procedural-ask', weight: 2, re: /\b(give|write|provide|show|teach) me\b[^.\n]{0,60}\b(step[- ]by[- ]step|guide|instructions?|tutorial|recipe|how to)\b[^.\n]{0,60}\b(synthesiz|mak|produc|extract|manufactur|build|creat|refin|purif|weapon|explosive|bomb|drug)/i },
+  { id: 'harmful-incitement-en', weight: 2, re: /\b(encourag|incit|promot|advocat|justif|glorif)\w*\b[^.\n]{0,40}\b(violence|hatred|hate|attack|killing|harm)\b[^.\n]{0,40}\b(against|toward|towards|at)\b/i },
+  { id: 'harmful-dehumanize-en', weight: 2, re: /\b(dehumaniz\w+|subhuman|vermin|parasites?|infest\w*)\b[^.\n]{0,60}\b(techniques?|rhetorical|speech|argument|framing|narrative)\b/i },
+  { id: 'harmful-procedural-zh', weight: 2, re: /(教我|如何|怎样|帮忙)[^。\n]{0,20}(制作|制造|合成|提取|提炼|配制)[^。\n]{0,20}(步骤|方法|教程|流程|配方)/ },
+  { id: 'harmful-incitement-zh', weight: 2, re: /(煽动|鼓动|鼓励|鼓吹|美化|合理化)[^。\n]{0,25}(暴力|仇恨|袭击|杀害|伤害)[^。\n]{0,25}(针对|反对| against)?/ },
 ]
 
 export interface Suspicion {
