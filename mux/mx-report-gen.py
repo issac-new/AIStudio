@@ -2017,8 +2017,8 @@ def _step_issues_html(n):
     STEP_ISSUE_ROWS[n] = len(rows)
     if not rows:
         return '<p class="st-issues none">本步零问题单（注册键本轮未触发）。</p>'
-    # 台账明细入折叠区（run20 复盘次生修复）：ledger 原文是机器文本（含「催办/记单」
-    # 等项目自造词），直接进正文会踩 A10 黑话门禁——折叠区=机器锚豁免域（同日志折
+    # 台账明细入折叠区（run20 复盘次生修复）：ledger 原文是机器文本（含项目自造词），
+    # 直接进正文会踩 A10 黑话门禁——折叠区=机器锚豁免域（同日志折
     # 叠先例：折叠≠裁剪，反查走文末问题单终态全量表）。可见层只留人话摘要行。
     _keys_seen = sorted({r[1] for r in rows})
     return (f'<p class="st-issues">本步问题单 {len(rows)} 行在案（{"、".join(_keys_seen[:6])}'
