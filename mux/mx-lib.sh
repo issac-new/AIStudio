@@ -51,7 +51,7 @@ STUDIO_DIST_DEFERRED=1   # 执行面三参（STUDIO_DIST/HERMES_BIN/HERMES_PYTHO
 # ── 拓扑常量 ────────────────────────────────────────────
 # SIM_ROOT：env（AIPAY_SIM_ROOT）优先。默认在 NVMe 卷上，Linux 等无该挂载点的机器不可写
 # ——不可写则回落 $HOME/ncwk-sim-mux 并提示（P7 跨端；此处 note/log 尚未定义，提示走 stderr）。
-_mx_sim_default="/Volumes/nvme2230/lab/ncwk-sim-mux"
+_mx_sim_default="/Users/cuishi/lab/ncwk-sim-mux"
 if [[ -n "${AIPAY_SIM_ROOT:-}" ]]; then
   SIM_ROOT="$AIPAY_SIM_ROOT"
 elif [[ ( -d "$_mx_sim_default" && -w "$_mx_sim_default" ) || ( ! -e "$_mx_sim_default" && -w "$(dirname "$_mx_sim_default")" ) ]]; then
@@ -137,7 +137,7 @@ fail() { echo "[mux FAIL $(date +%H:%M:%S)] $*" >&2; exit 1; }
 # 跳下一段"路径，绝不退出；同时记 issue_to_run 串到 G6 复盘段做总复盘。
 # 14 项 fail 调用点将逐步切换。fail() 保留为强错误出口（preflight 类硬错必须退）。
 issue_to_run() { # <type> <subject> <description> → 写 issues.log
-  echo "ISSUE|$1|$2|$3" >> "${EVID_DIR:-/Volumes/nvme2230/lab/ncwk-sim-mux/runs/_in_progress}/issues.log" 2>/dev/null || echo "ISSUE|$1|$2|$3" >> /tmp/issue-$$.log
+  echo "ISSUE|$1|$2|$3" >> "${EVID_DIR:-/Users/cuishi/lab/ncwk-sim-mux/runs/_in_progress}/issues.log" 2>/dev/null || echo "ISSUE|$1|$2|$3" >> /tmp/issue-$$.log
   echo "[mux FAIL-CONT $(date +%H:%M:%S)] $1/$2 已记 issue，run 继续推进（不退出，G6 复盘处理）"
 }
 fail_to_continue() { # <type> <subject> <description> → 记单 + log + 不退出
@@ -165,8 +165,16 @@ mxp_worker_smoke() { # <profile> → 0 连通（缺包/版本冲突/模型断路
 }
 
 preflight_capacity_assert() {
-  local mc anchor_ok
-  mc=$(python3 -c "
+  local mc anchor_ok _py
+  # yaml 解释器多候选（2026-10-16 实锤：brew python 自动升 3.15 丢 site-packages 的
+  # yaml，系统 python3 突然不可用即假 ERR 挡 mx-up）——venv 解释器（hermes 依赖含
+  # pyyaml，wrapper 已验证可用）优先，系统 python3 兜底。
+  _py=""
+  for _c in "$HOME/.hermes/hermes-agent/.venv/bin/python" "$HOME/.hermes/hermes-agent/venv.py311/bin/python" python3; do
+    if "$_c" -c 'import yaml' >/dev/null 2>&1; then _py="$_c"; break; fi
+  done
+  [[ -n "$_py" ]] || fail "preflight：无 yaml 可用解释器（venv 与系统 python3 均缺）——先修环境"
+  mc=$("$_py" -c "
 import yaml,sys
 try: c=yaml.safe_load(open('$HERMES_ROOT/config.yaml')) or {}
 except Exception as e: print('ERR:'+str(e)); sys.exit(0)
@@ -574,12 +582,22 @@ mx_provision_agent_src() {
     || { rm -rf "$AGENT_SRC"; fail "快照 git 化失败"; }
   mkdir -p "$SIM_ROOT/bin"
   local venv_py
+  # venv 多候选（2026-10-16 快照 0.22.2 轮）：宿主自更新拆 venv 形态（0.22.1 起
+  # .venv/venv.py311 并存、旧 venv/ 消失）——单钉 venv/bin/python 必假失败挡供给。
+  # 候选序与巡检官 spawnHealthProbe 同源；首个存在且可 import anthropic+mautrix
+  # 者胜出（缺依赖的候选跳过，防拆半 venv）。
+  local _cand
   if mxp_is_gbash; then
-    venv_py="$HOME/.hermes/hermes-agent/venv/Scripts/python.exe"
+    _cand=("$HOME/.hermes/hermes-agent/.venv/Scripts/python.exe" "$HOME/.hermes/hermes-agent/venv/Scripts/python.exe")
   else
-    venv_py="$HOME/.hermes/hermes-agent/venv/bin/python"
+    _cand=("$HOME/.hermes/hermes-agent/.venv/bin/python" "$HOME/.hermes/hermes-agent/venv.py311/bin/python" "$HOME/.hermes/hermes-agent/venv/bin/python")
   fi
-  [[ -x "$venv_py" ]] || fail "宿主 venv python 缺失（${venv_py}）——wrapper 依赖环境不可用"
+  venv_py=""
+  for _c in "${_cand[@]}"; do
+    [[ -x "$_c" ]] || continue
+    if "$_c" -c 'import anthropic, mautrix' >/dev/null 2>&1; then venv_py="$_c"; break; fi
+  done
+  [[ -n "$venv_py" ]] || fail "宿主无可用 venv python（候选：${_cand[*]}——均缺失或缺 anthropic+mautrix）——wrapper 依赖环境不可用"
   # wrapper 必须 -I 复刻官方 venv wrapper 语义（隔离轮实锤）：-I 无视 PYTHONPATH，
   # 依赖一律取自 venv 自身 site-packages——否则 installs 环境（py3.14）的原生扩展
   # 混入 py3.11 venv 即 pydantic_core 加载炸 → mcp SDK 导入环（网关 MCP 告警环实录）。
@@ -651,18 +669,29 @@ mx_apply_agent_patches() {
       log "运行时 patch 已在位：$p"; continue
     fi
     if ! git -C "$tree" apply --check "$pf" >/dev/null 2>&1; then
-      # 源码树漂移（自更新推进）致上下文失配：查补丁首个新增符号是否已在 SIM 安装环境在位
+      # 源码树漂移（自更新推进）致上下文失配：查补丁新增符号是否已在 SIM 安装环境在位
       # ——在位=运行时行为已生效（installs 分发物已带），如实记档跳过；缺位才真失败。
-      _marker=$(grep -m1 -oE '^\+(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+(def|class) //')
+      # 标记多候选（2026-10-16 快照 0.22.2 升级轮）：原「首个 ^+(def|class)」在 533 实锤
+      # 抓到的是测试函数名（源面全是缩进方法 def，顶层 def 只在 tests）——新树 tests
+      # 无该名即假 fail 挡供给。改为：全部 def/class 符号（含缩进方法）且排除 test_
+      # 前缀，任一在源码树在位=语义在位跳过。
       # 语义在位检查双面：installs/ 分发物 + 源码树本体（534 实锤：manifest 文件同步
       # 已把守卫/接线放进源码树，git apply 与内容副本冲突——语义在位即跳过，不 fail）
       # 扫描面=五个代码目录而非仅 gateway/（390 实锤：marker _home_default_board 在
-      # hermes_cli/、391 在 kanban_db、533 marker 在 tests——只扫 gateway/ 必漏，
-      # 退化去扫 installs 既慢又可能扑空误 fail）。
+      # hermes_cli/、391 在 kanban_db——只扫 gateway/ 必漏，退化去扫 installs 既慢
+      # 又可能扑空误 fail）。
       # 顺序根治（隔离轮实锤）：源码树快查在前（deploy 已同步 runtime 文件时秒中）；
       # installs 树含 venv/site-packages 上千 MB 二进制——加过滤防 marker 兜底挂死
       # （旧序曾对 installs 盲扫 8min+ 卡死 mx-up）。
-      if [ -n "$_marker" ] && { grep -rql --include='*.py' "$_marker" "$tree/gateway/" "$tree/hermes_cli/" "$tree/tools/" "$tree/agent/" "$tree/plugins/" "$tree/tests/" 2>/dev/null || grep -rql --include='*.py' --exclude-dir=venv --exclude-dir=site-packages "$_marker" "$HERMES_ROOT/installs/" 2>/dev/null; }; then
+      local _found=0 _m
+      while IFS= read -r _m; do
+        [ -n "$_m" ] || continue
+        if grep -rql --include='*.py' "$_m" "$tree/gateway/" "$tree/hermes_cli/" "$tree/tools/" "$tree/agent/" "$tree/plugins/" "$tree/tests/" 2>/dev/null \
+           || grep -rql --include='*.py' --exclude-dir=venv --exclude-dir=site-packages "$_m" "$HERMES_ROOT/installs/" 2>/dev/null; then
+          _found=1; _marker="$_m"; break
+        fi
+      done < <(grep -oE '^\+[[:space:]]*(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+[[:space:]]*(def|class) //' | grep -v '^test_' | sort -u)
+      if [ "$_found" = 1 ]; then
         log "运行时 patch 语义已在位（安装环境或源码树，内容副本同步渠道）：${p}（marker=${_marker}）"
         continue
       fi

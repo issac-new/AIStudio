@@ -29,7 +29,7 @@ from pathlib import Path
 
 from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采证据表单一事实源（与生成器 hero 统计同表）
 
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 RUN_ID = os.environ.get('MX_RUN_ID', '')
 if '--run' in sys.argv:
     _i = sys.argv.index('--run')
@@ -883,11 +883,26 @@ else:
         fails.append(f'查14 真值侧柜不可解析：{_e14}')
         _t14 = {}
     # 14a 往轮产物：文件头声明轮≠本轮（freshness 被合并刷新蒙过的形态）
+    # 重放轮口径（2026-10-16 用户裁定）：台账登记 replay-inherited-deliverables 且主体=本轮
+    # → FAIL 降 WARN（重放沿用如实呈现，不冒充也不掩盖；全新轮无登记则维持 FAIL 硬拦）。
     _stale14 = _t14.get('stale_deliverables') or []
     if _stale14:
-        fails.append(f'查14a 往轮产物冒充本轮交付物 {len(_stale14)} 件（声明轮 '
-                     + '、'.join(sorted({s.get("declared", "?") for s in _stale14}))
-                     + f' ≠ 本轮 {RUN_ID}）——交付物须本轮从零产出，历史轮产物不得引用/恢复/作为完成依据')
+        _replay_declared = False
+        try:
+            _il14 = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace')
+            import re as _re14a
+            _replay_declared = bool(_re14a.search(
+                r'^ISSUE\|replay-inherited-deliverables\|' + re.escape(RUN_ID) + r'\|', _il14, _re14a.M))
+        except OSError:
+            pass
+        _stale_msg14 = (f'查14a 往轮产物冒充本轮交付物 {len(_stale14)} 件（声明轮 '
+                        + '、'.join(sorted({s.get("declared", "?") for s in _stale14}))
+                        + f' ≠ 本轮 {RUN_ID}）——交付物须本轮从零产出，历史轮产物不得引用/恢复/作为完成依据')
+        if _replay_declared:
+            warns.append(_stale_msg14 + '——已按重放轮口径记档（replay-inherited-deliverables 在案：'
+                         '重放轮沿用件如实呈现，侧柜逐件可反查；用户 2026-10-16 裁定降 WARN）')
+        else:
+            fails.append(_stale_msg14)
     # 14b 死锚：锚分支不在远端（赛后删分支/游离提交=不可反查）
     _dead14 = _t14.get('dead_anchors') or []
     if _dead14:
