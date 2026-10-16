@@ -570,3 +570,20 @@ body.ia-center-full .studio-navigation-rail {
 }
 .ia-status-capsule__dot--busy { color: var(--ia-stale); }
 .ia-status-capsule__dot--ok { color: var(--ia-fresh); }
+
+/* ── V3 旗舰屏排版（2026-10-16 视觉重规划 D6）── */
+/* KPI 卡：数字大号强调+分母辅助+状态色左边条 */
+.ov__kpi { position: relative; overflow: hidden; }
+.ov__kpi--pass { border-left: 3px solid var(--ia-pass); }
+.ov__kpi--stale { border-left: 3px solid var(--ia-stale); }
+.ov__kpi--net { border-left: 3px solid var(--ia-compensated); }
+.ov__kpi-num { font-size: 22px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ov__kpi-denom { font-size: var(--ia-fs-body); color: var(--text-muted, #878c99); margin-left: 1px; }
+/* 步表七幕分段头（幕名+步号区间，视觉分段） */
+.ov__act-head td {
+  background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--ia-card-border);
+}
+.ov__act-head-name { font-size: var(--ia-fs-block); font-weight: 600; }
+.ov__act-head-range { font-size: var(--ia-fs-aux); color: var(--text-muted, #878c99); margin-left: var(--ia-sp-2); }
