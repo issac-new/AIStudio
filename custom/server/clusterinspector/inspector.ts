@@ -6,7 +6,7 @@
 // govbus 走"动态 require + fail-soft"（跨域桥接纪律，同 approvals/evidence 先例）。
 
 import type { ClusterSnapshot } from './collectors'
-import { collectGateway, collectProfiles, collectSessionTelemetry, collectSessions } from './collectors'
+import { collectGateway, collectProfiles, collectProfileToolUsage, collectSessionTelemetry, collectSessions } from './collectors'
 import { anomalyKey, convergenceEnabled, type ConvergenceItem, type ConvergenceReport, ConvergenceTracker } from './convergence'
 import { detectAll, type Anomaly } from './detectors'
 import { routeHintForDetector } from './route-hint'
@@ -55,6 +55,11 @@ export interface InspectorDeps {
   reclaimTask?: (taskId: string) => Promise<string | undefined>
   /** govbus 发事件注入（缺省动态 require fail-soft） */
   emitGovEvent?: (e: { domain: 'system'; severity: 'info' | 'warn' | 'high'; type: string; source: string; summary: string; payload?: Record<string, unknown> }) => void
+  /** 安全告警中继数据源注入（M9，2026-10-16 安全轮）：缺省动态 require
+   *  queryGovEvents 读 security/approval 域 high 级事件。测试可 stub。 */
+  getSecurityEvents?: () => Array<{ eventId: string; ts: number; domain: string; severity: string; type: string; summary: string; refs?: Record<string, string> }>
+  /** 安全告警发送注入（M9）：缺省走矩阵通道（同 nudgeStalled 凭据链）；测试可 stub */
+  sendSecurityAlert?: (body: string, profile?: string) => Promise<string | undefined>
   now?: () => number
 }
 
@@ -230,8 +235,84 @@ export class ClusterInspector {
     return acted
   }
 
-  /** ③destructive 审批联动（CLUSTER_INSPECTOR_DESTRUCTIVE=approval）：high 级网关类异常
-   *  → 追加审批收件箱 mx-requests.jsonl 请求；后续轮询 responses/<eid>.json，approve 即
+  /** ④安全告警中继（M9，2026-10-16 安全轮预警先行版）：govbus 的 security/approval
+   *  域 high 级事件 → Matrix 群消息。背景：事件流有 subscribe 面但生产零消费方，
+   *  「写了没人看」= 告警幻觉。三层去重防刷屏（水位线/键冷却/每轮封顶），与
+   *  nudgeStalled 的提醒催单走同一房间但消息类不同（治理告警 vs 催单），账本
+   *  不共享（被催对象是「违规 profile」而非「静默档案」，合账会互相污染）。
+   *  总开关 CLUSTER_INSPECTOR_SECURITY_RELAY 默认开，'off' 显式关。 */
+  private securityRelayCooldown = new Map<string, number>()
+  private lastRelayTs = 0
+  private async relaySecurityEvents(): Promise<string[]> {
+    const acted: string[] = []
+    if (process.env.CLUSTER_INSPECTOR_SECURITY_RELAY === 'off') return acted
+    if (!process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted  // 无房间=无处可发（同 nudgeStalled 安全缺省）
+    let events: Array<{ eventId: string; ts: number; domain: string; severity: string; type: string; summary: string; refs?: Record<string, string> }>
+    if (this.deps.getSecurityEvents) {
+      try { events = this.deps.getSecurityEvents() } catch { return acted }
+    } else {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { queryGovEvents } = require('../govbus/event-log')
+        events = (queryGovEvents({ minSeverity: 'high', limit: 200 }) as Array<Record<string, unknown>>)
+          .filter((e) => e.domain === 'security' || e.domain === 'approval')
+          .map((e) => ({
+            eventId: String(e.eventId ?? ''), ts: Number(e.ts ?? 0), domain: String(e.domain ?? ''),
+            severity: String(e.severity ?? ''), type: String(e.type ?? ''), summary: String(e.summary ?? ''),
+            refs: (e.refs && typeof e.refs === 'object' ? e.refs : {}) as Record<string, string>,
+          }))
+      } catch { return acted }  // govbus 不可用：静默（巡检本体不受影响）
+    }
+    const now = this.deps.now?.() ?? Date.now()
+    // 重启防重放：首轮（水位线未初始化）只从「现在减 5 分钟宽限期」起算——
+    // 否则重启后 lastRelayTs=0 会把事件流里全部历史 high 事件当新事件重发一遍。
+    if (this.lastRelayTs === 0) this.lastRelayTs = now - 300_000
+    // ①水位线：只取上次中继之后的新事件（跳过历史与重复轮询）
+    const fresh = events.filter((e) => e.ts > this.lastRelayTs && e.ts <= now + 5000)
+    // ②键冷却：type+profileId 组合键（同事件 100s 内重复的实测形态）
+    const perRound: typeof fresh = []
+    for (const e of fresh) {
+      const key = `${e.type}|${e.refs?.profileId ?? ''}`
+      const seen = this.securityRelayCooldown.get(key) ?? 0
+      if (now - seen < COOLDOWN_MS) continue
+      this.securityRelayCooldown.set(key, now)
+      perRound.push(e)
+    }
+    // 水位线只按「过了冷却的事件」推进：若按全部 fresh 推进，被冷却抑制的事件
+    // 会把水位垫高，后续同刻或更早的新事件被静默丢弃（冷却×水位线耦合缺陷）。
+    if (perRound.length > 0) this.lastRelayTs = Math.max(this.lastRelayTs, ...perRound.map((e) => e.ts))
+    if (perRound.length === 0) return acted
+    // ③每轮封顶 2 条，超限聚合为一条汇总（防 enforce-gate 拒绝风暴演变成 mention 风暴）
+    const send = this.deps.sendSecurityAlert ?? (async (body: string, profile?: string) => {
+      try {
+        const { readGatewayMatrixEnv } = require('../matrix/gateway-env')
+        const { matrixSend } = require('../matrix/chat-bridge')
+        const sendEnv = readGatewayMatrixEnv(process.env)
+        if (!sendEnv) return undefined
+        const payload: Record<string, unknown> = { msgtype: 'm.text', body }
+        if (profile) {
+          const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
+          if (agentEnv?.userId) payload['m.mentions'] = { user_ids: [agentEnv.userId] }
+        }
+        await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message', payload, globalThis.fetch.bind(globalThis), `ci-sec-${Date.now()}`)
+        return 'sent'
+      } catch { return undefined }
+    })
+    const cap = 2
+    for (const e of perRound.slice(0, cap)) {
+      const profile = e.refs?.profileId
+      const r = await send(`🚨 安全告警（${e.domain}/${e.type}）：${e.summary}${profile ? `（profile ${profile}）` : ''}——预警先行版：只告警不拦截，请人工复核。事件 ID ${e.eventId}`, profile)
+      acted.push(`security-relay:${e.eventId}:${r ? 'sent' : 'failed'}`)
+    }
+    if (perRound.length > cap) {
+      const rest = perRound.slice(cap)
+      const r = await send(`🚨 安全告警汇总：本轮另有 ${rest.length} 条高危事件（${rest.map((e) => e.type).join('、')}），已按 15 分钟冷却去重，明细查治理事件流`, undefined)
+      acted.push(`security-relay-aggregated:${rest.length}:${r ? 'sent' : 'failed'}`)
+    }
+    return acted
+  }
+
+  /** ③destructive 审批联动（CLUSTER_INSPECTOR_DESTRUCTIVE=approval）：high 级网关类异常   *  → 追加审批收件箱 mx-requests.jsonl 请求；后续轮询 responses/<eid>.json，approve 即
    *  调 autostart.restartGatewayForProfile（上游现成编排：stop→start→waitForRunning）。 */
   private destructiveQueue = new Map<string, string>() // eid → profile
   private async destructiveGuard(anomalies: Anomaly[]): Promise<string[]> {
@@ -493,6 +574,11 @@ export class ClusterInspector {
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
         sessionTelemetry: collectSessionTelemetry(this.deps),
+        // M6b teams 观测面（安全轮预警先行版）：逐 profile state.db 只读聚合。
+        // 采集自身 fail-soft——单库打不开只缺该 profile，检测器见 toolUsage 缺席即静默。
+        toolUsage: (() => {
+          try { return collectProfileToolUsage(this.deps) } catch { return undefined }
+        })(),
       }
       this.lastSnapshot = snap
       // dispatcher 僵死滞留计时（run19 根治）：ready 队列首次非空记起点，持续非空
@@ -548,7 +634,7 @@ export class ClusterInspector {
         emitted += 1
       }
       const allAnomalies = [...anomalies, ...trips]
-      const actions = [...(await this.safeAct(allAnomalies)), ...(await this.nudgeStalled(allAnomalies)), ...(await this.dispatchSelfHeal(allAnomalies)), ...(await this.destructiveGuard(allAnomalies))]
+      const actions = [...(await this.safeAct(allAnomalies)), ...(await this.nudgeStalled(allAnomalies)), ...(await this.dispatchSelfHeal(allAnomalies)), ...(await this.destructiveGuard(allAnomalies)), ...(await this.relaySecurityEvents())]
       outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies: allAnomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
