@@ -45,3 +45,4 @@
 - D4（V2 基座已交付，785e8823 之后本批）：设计 token 单一事实源落 overlay 全局 ia2.scss（:root 五态色+字阶四级+间距 4 倍数+卡片规范）——与上游变量共存不覆盖，散件样式同值反推成表；顶栏状态胶囊=任务+在线两 chip 合容器（SitlineBar 挂 .ia-status-capsule 容器类），释放层级给三中心导航。
 - D5（V2 边界）：不改上游组件结构，胶囊经容器类+overlay 规则实现；日程/通知/版本/账号保持原位（功能不删，动线不变）。
 - D6（V3 已交付）：旗舰屏排版三改——KPI 数字大号化+分母辅助+状态色左边条（闸=pass 绿/含代偿=stale 琥珀/净额=compensated 紫，与 D4 token 同源）；26 步表七幕分段头行（幕名+步号区间）；样式基座经 token 引用不写死色值。VTU 6 例（含四 fetch 全 mock 的装载等待——OverviewPanel 装载链四端点任一未 mock 即 loading 卡死，属测试基建坑非产品缺陷）。
+- D7（V2 挂账清偿批）：①WCAG 对比度抽查落地并校准 token——深色主题（现用）文字级 AA 全过：fail #d33→#e06666（原 3.61）、pass #1d6b40→#2f9e6e（原 2.54）、compensated #9a6ac9→#9678c6（原 4.15 仅大字）、stale #c9962e→#b8860b（浅底补足 3:1）；对比度纯函数+双底断言入 visual-shell 机械把关（token 手改漂移即红）。②工作台 rail 去留评估定案=收敛——八入口中六项有强替代通路（设置侧栏/FlowNavPanel/治理·系统设置），聊天主动线在工作台左栏聊天列表；WorkbenchView 挂同款 body 类（33K 重型壳不做整挂载单测，grep 守门同 scss 模式）。三中心全宽一致达成。
