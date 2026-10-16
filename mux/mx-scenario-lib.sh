@@ -1566,6 +1566,24 @@ kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
   [[ -n "$body" ]]
 }
 
+# ── 派发词模板化（PR-7 场景侧，2026-10-16 派发词窄化轮）──
+# 设计：派发词从「百科全书」改「指针」——四段结构，枚举明细归位到计划文档/任务卡
+# （agent 本来就要读的单一事实源），聊天消息只携带触发所需的最小面：
+#   ① 需求段：要做什么（一句话）
+#   ② 指针段：读哪些文档/卡（单一事实源，替代内嵌枚举）
+#   ③ 纪律段：模板注入（完成定义/边界/新鲜度/证据要求——不逐点重写）
+#   ④ 验收段：结论行（AC）+ 期限
+# strict 姿态由 dispatch_in_room 既有分支接管（只发需求+期限+AC，不预设拆分）。
+# 用法：dispatch_task <profile> <requirement> <ac-line> <refs> <discipline> <mentions>
+dispatch_task() { # <humanUser> <requirement> <ac-line> <refs> <discipline> <mention-csv>
+  local _who="$1" _req="$2" _ac="$3" _refs="$4" _disc="$5" _mentions="${6:-}"
+  local _msg="【任务】${_req}"
+  [ -n "$_refs" ] && _msg="${_msg}\n【依据】${_refs}（范围/用例/接口以该文档与任务卡为准，本消息不内嵌枚举）"
+  [ -n "$_disc" ] && _msg="${_msg}\n【纪律】${_disc}"
+  _msg="${_msg}\n【验收】${_ac}"
+  dispatch_in_room "$_who" "$_msg" "$_mentions"
+}
+
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
   if [ "$(posture)" = "strict" ]; then
