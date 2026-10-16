@@ -39,10 +39,13 @@ if (assets.length === 0) fail('dist/client/assets 无 JS 产物,SPA 将白屏');
 // 两类模式，均为字符串字面量级（抗 minify）：
 //   P1 自动登录调用：username:"admin",password:"123456" 同现（桌面免密登录）
 //   P2 提示文案：123456 与口令类关键词同现（UI 向用户展示默认口令）
-// 负向断言：123456 后不接冒号——排除 telegram token 占位符
-// （123456:ABC-DEF…，PlatformSettings.vue:320）这类非口令误报。
+// 负向断言（2026-10-16 实测 0.7.36 产物后修正）：原 P2 用 /123456(?!\s*:)/ 邻近判定，
+// 把 minify 产物里的 base64 字母表（…0123456789…）与日期正则（[123456789]）全算成
+// 命中——每次干净构建都误报。现要求 123456 前为分隔符（空白/冒号/等号/逗号，含全角）
+// 且后不接数字：base64 前是 '0'、日期正则前是 '['，双双排除；telegram token 占位符
+// （123456:ABC-DEF…，PlatformSettings.vue:320）因前为 '"' 不在分隔符集同样排除。
 const P1_RE = /username\s*:\s*['"`]admin['"`]\s*,\s*password\s*:\s*['"`]123456['"`]/i;
-const P2_SECRET_RE = /123456(?!\s*:)/;
+const P2_SECRET_RE = /[\s:=,，：]123456(?![\d])/;
 const P2_KEYWORD_RE = /admin|password|密码|密碼|contraseña|passwort|passe|parola|пароль|비밀번호|パスワード/i;
 
 function scanDefaultPassword() {
