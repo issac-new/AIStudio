@@ -269,6 +269,32 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   fi
   capture_step "people_done" "/app/board?tab=gov-org"
 
+  # A7 身份面供给（2026-10-17）：15 员工身份注册到 studio 身份册（agent-identity）——
+  # 事故报告 17 要素中身份/信任边界/委托链等 6 项的判据源；此前 SIM 树无推演身份册
+  # （宿主册仅 2 宿主身份，匹配恒 0）。幂等：同名已存在即跳过；失败记单不中止
+  # （§5.6 采集纪律⑩ 降级——身份面缺席=要素 absent 如实呈现，不造假）。
+  if [[ -z "$(sget identity_registered)" ]]; then
+    _id_ok=0 _id_skip=0 _id_fail=0
+    for u in "${INSTANCED_USERS[@]}"; do
+      _body=$(jq -nc --arg n "aipaydev-${u}" --arg o "aipaydev" --arg t "agent" \
+        '{name:$n, kind:$t, owner:$o, toolAllowlist:[]}')
+      if studio POST /api/governance/agent-identity/register "$GOV_TOK" "$_body" >/dev/null 2>&1; then
+        _id_ok=$((_id_ok+1))
+      elif studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -e --arg n "aipaydev-${u}" '.identities[] | select(.name==$n)' >/dev/null 2>&1; then
+        _id_skip=$((_id_skip+1))
+      else
+        _id_fail=$((_id_fail+1))
+      fi
+    done
+    if [ "$_id_fail" -eq 0 ]; then
+      sset identity_registered "$(date +%s)"
+      note "[M2b] 身份册供给完成（${_id_ok} 注册 + ${_id_skip} 已存在；事故报告身份面判据源就位）"
+    else
+      echo "ISSUE|identity-register-degraded|step6|身份册注册 ${_id_fail}/${#INSTANCED_USERS[@]} 失败（${_id_ok} 成功 ${_id_skip} 已存在）——身份面要素降级 absent，不造假" >> "$EVID_DIR/issues.log"
+      note "[观察] 身份册注册部分失败（${_id_fail} 个，记问题单降级）"
+    fi
+  fi
+
   sset people_done "$(date +%s)"
   capture_step "login_done" "/app/board?tab=accounts"   # 步3 承载面
 fi
@@ -1570,40 +1596,31 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # [V8.16 饱和并行] 测试段分片：BE 三片（qi 单档案三会话并行——run15 chen 双会话
     # 实证：并行宽度=工位数非档案数）+FE 两片。MX_TEST_SHARDS=0 回旧单卡形态。
     if [[ "${MX_TEST_SHARDS:-1}" == "1" ]]; then
-    _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S1（后端集成测试·支付核心片）。
-（预备轮衔接：test-drafts/TEST-BE-draft.md 草稿核对契约后取本片用例执行。）
-工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}
-1) 本片范围：下单幂等、超时关单（vitest 放 apps/test-integration/，按契约条目标注）
-2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S1-testlog.txt（随分支提交）
-3) 发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷研发侧串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>；修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因（本条流程对 S2/S3 片同样生效，按片内缺陷归你复测）
-4) 结论行 TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数）。不许谎报。
-干预点纪律：用例先行——骨架 @会签人 一句确认后展开；每组完成即 push+PROGRESS-TEST-BE-S1-<组>。" "$(agent_mxid qi),$(agent_mxid wei)")
-    sset m19_marker "$_m19"
-    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1 并行各自会话）。
-工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}
-1) 本片范围：回调验签拒绝、重复回调幂等（vitest 放 apps/test-integration/）
-2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S2-testlog.txt（随分支提交）
-3) 缺陷按 S1 任务书 defect-loop 流程办理（含 affected= 文件域）
-4) 结论行 TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数）。不许谎报；每组完成即 PROGRESS-TEST-BE-S2-<组>。" "$(agent_mxid qi),$(agent_mxid wei)"
-    dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）。
-工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}
-1) 本片范围：双渠道调起参数、跨应用集成链路（vitest 放 apps/test-integration/）
-2) 执行本片全量；testlog 存 docs/evidence/TEST-BE-S3-testlog.txt（随分支提交）
-3) 缺陷按 S1 任务书 defect-loop 流程办理（含 affected= 文件域）
-4) 结论行 TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数）。不许谎报；每组完成即 PROGRESS-TEST-BE-S3-<组>。" "$(agent_mxid qi),$(agent_mxid wei)"
-    dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）。
-（预备轮衔接：test-drafts/TEST-FE-draft.md 草稿核对后取本片执行。）
-工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}
-1) 本片范围：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
-2) 执行本片全量；testlog 存 docs/evidence/TEST-FE-S1-testlog.txt（随分支提交）
-3) 缺陷走 defect-loop 发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit+affected=）；建卡后 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因
-4) 结论行 TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数）。不许谎报；PROGRESS-TEST-FE-S1-<组>。" "$(agent_mxid fei),$(agent_mxid mei)"
-    dispatch_in_room fei "@fei-agent:matrix.test 执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）。
-工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}
-1) 本片范围：静态检查面（模块依赖边界/禁入 API/双端对称断言）与守卫用例
-2) 执行本片全量；testlog 存 docs/evidence/TEST-FE-S2-testlog.txt（随分支提交）
-3) 缺陷按 S1 任务书 defect-loop 流程办理
-4) 结论行 TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数）。不许谎报；PROGRESS-TEST-FE-S2-<组>。" "$(agent_mxid fei),$(agent_mxid mei)"
+_m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试·支付核心片，与 S2/S3 并行各自会话）" \
+      "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE}" \
+      "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S1 条目+docs/design/${RFD_ID}-architecture-design.md 契约；test-drafts/TEST-BE-draft.md 草稿核对；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "$(agent_mxid qi),$(agent_mxid wei)")
+    dispatch_task qi "执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1/S3 并行各自会话）" \
+      "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE}" \
+      "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S2 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "$(agent_mxid qi),$(agent_mxid wei)"
+    dispatch_task qi "执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）" \
+      "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE}" \
+      "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S3 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "$(agent_mxid qi),$(agent_mxid wei)"
+    dispatch_task fei "执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）" \
+      "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE}" \
+      "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S1 条目+概设契约；test-drafts/TEST-FE-draft.md 草稿核对；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "$(agent_mxid fei),$(agent_mxid mei)"
+    dispatch_task fei "执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）" \
+      "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE}" \
+      "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S2 条目+概设契约；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "$(agent_mxid fei),$(agent_mxid mei)"
     else
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
