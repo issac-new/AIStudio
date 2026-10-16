@@ -10,6 +10,17 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGovTabsText } from './gov-tabs'
 import ClearancePanel from './ClearancePanel.vue'
+import GateRepairsPanel from './GateRepairsPanel.vue'
+import KeyLedgerSection from './KeyLedgerSection.vue'
+import GovOrgKnowledgeView from './GovOrgKnowledgeView.vue'
+import GovRegistryRulesView from './GovRegistryRulesView.vue'
+import GovAuditChangeView from './GovAuditChangeView.vue'
+import GovDocsReviewView from './GovDocsReviewView.vue'
+import GovHarnessView from './GovHarnessView.vue'
+import GovClusterSection from './GovClusterSection.vue'
+import GovOntologySection from './GovOntologySection.vue'
+import GovSessionHealthSection from './GovSessionHealthSection.vue'
+import CapacitySection from '../../../kanban/components/CapacitySection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,20 +84,71 @@ function goTab(tab: GovTab): void {
         <h3 class="gov-center__panel-title">签 3·{{ text.tabClearance }}</h3>
         <ClearancePanel />
       </section>
-      <!-- 其余六签占位（C3-C9 逐签实装） -->
+      <!-- 签 1 关卡与流程（C3 件一实装：闸修复单台账；六闸卡拆分随 C3 正件） -->
       <section
-        v-for="tab in TABS.filter(t => t.key !== 'clearance')"
-        v-show="activeTab === tab.key"
-        :key="tab.key"
-        class="gov-center__panel"
-        :data-testid="`ia-gov-panel-${tab.key}`"
+        v-show="activeTab === 'process'"
+        class="gov-center__panel gov-center__panel--live"
+        data-testid="ia-gov-panel-process"
       >
-        <h3 class="gov-center__panel-title">签 {{ TABS.findIndex(x => x.key === tab.key) + 1 }}·{{ text[TAB_LABEL_KEY[tab.key]] }}</h3>
+        <h3 class="gov-center__panel-title">签 1·{{ text.tabProcess }}</h3>
+        <GateRepairsPanel />
+        <p class="gov-center__pending">六闸仪表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
+      </section>
+      <!-- 签 2 组织与资产（C8 实装：组织知识+应用资产整件迁入+密钥最小台账 C11） -->
+      <section
+        v-show="activeTab === 'orgAssets'"
+        class="gov-center__panel gov-center__panel--live"
+        data-testid="ia-gov-panel-orgAssets"
+      >
+        <h3 class="gov-center__panel-title">签 2·{{ text.tabOrgAssets }}</h3>
+        <KeyLedgerSection />
+        <GovOrgKnowledgeView />
+        <GovRegistryRulesView />
+      </section>
+      <!-- 签 5 审计与变更（C7 整件迁入） -->
+      <section
+        v-show="activeTab === 'audit'"
+        class="gov-center__panel gov-center__panel--live"
+        data-testid="ia-gov-panel-audit"
+      >
+        <h3 class="gov-center__panel-title">签 5·{{ text.tabAudit }}</h3>
+        <GovAuditChangeView />
+      </section>
+      <!-- 签 6 文档评审（C5 整件迁入） -->
+      <section
+        v-show="activeTab === 'docs'"
+        class="gov-center__panel gov-center__panel--live"
+        data-testid="ia-gov-panel-docs"
+      >
+        <h3 class="gov-center__panel-title">签 6·{{ text.tabDocs }}</h3>
+        <GovDocsReviewView />
+      </section>
+      <!-- 签 7 度量体检（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件） -->
+      <section
+        v-show="activeTab === 'metrics'"
+        class="gov-center__panel gov-center__panel--live"
+        data-testid="ia-gov-panel-metrics"
+      >
+        <h3 class="gov-center__panel-title">签 7·{{ text.tabMetrics }}</h3>
+        <GovHarnessView />
+        <GovClusterSection />
+        <GovOntologySection />
+        <GovSessionHealthSection />
+        <CapacitySection />
+        <p class="gov-center__pending">容量阈值灯（巡检官主动通道+成本卡红灯）随 C4 增件并入。</p>
+      </section>
+      <!-- 签 4 问题单对账占位（C6 正件：KanbanDiagnosticsSection 是卡级数据面，随看板抽屉适配迁移） -->
+      <section
+        v-show="activeTab === 'issues'"
+        class="gov-center__panel"
+        data-testid="ia-gov-panel-issues"
+      >
+        <h3 class="gov-center__panel-title">签 4·{{ text.tabIssues }}</h3>
         <p class="gov-center__pending">
           <span class="gov-center__badge">{{ text.pendingBadge }}</span>{{ text.pendingLead }}
         </p>
         <ul class="gov-center__comp-list">
-          <li v-for="c in tab.components" :key="c" class="gov-center__comp">{{ c }}</li>
+          <li class="gov-center__comp">诊断规则（KanbanDiagnosticsSection·卡级数据面，随看板抽屉适配迁移＝C6 正件）</li>
         </ul>
       </section>
     </main>
