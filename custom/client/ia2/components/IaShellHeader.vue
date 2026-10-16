@@ -10,7 +10,7 @@
        页头集中簇 IaWindowControls 退役）。
      2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，视图切换器（沟通协作 ⇄
      IDE 工作台，带目标视图图标+切换图标）自最右迁入品牌位；用户按钮设置页
-     跳转经路由收编落 /app/settings（壳内顶栏+注意力条常显，见 routes.ts）。
+     跳转经路由并入落 /app/settings（壳内顶栏+注意力条常显，见 routes.ts）。
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
@@ -68,7 +68,7 @@ const searchInputEl = ref<HTMLInputElement | null>(null)
 // 与 IDE 壳 ⌘K 命令面板对称。焦点进输入框，Spotlight 键盘导航即刻可用。
 // 对称的另一半（2026-10-10 wiki 回归 D6 实锤）：IDE 路由下本壳仍挂载，两处
 // window keydown 同抢 ⌘K，协作侧聚焦搜索框会掠走 IDE 面板 input 的焦点，
-// 回车执行不了面板命令——IDE 工作台路由（ide.shell，含 /ide 旧深链）让位。
+// 回车执行不了面板命令——IDE 工作台路由（ide.shell，含 /ide 旧直达链接）让位。
 function onGlobalPaletteKey(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
     const route = router.currentRoute.value
@@ -215,8 +215,6 @@ function onPanelJumpTask(taskId: string): void {
       <SpotlightPanel v-if="spotOpen" ref="spotRef" :query="store.searchQuery" @close="closeSpot" />
     </div>
     <div class="cockpit-top__spacer" />
-    <!-- 走查二修：岛屿组右置（IDE 岛与设置钮去重：让位视图切换器/用户钮） -->
-    <IaCentersNav part="islands" />
     <div class="cockpit-top__sit">
       <SitlineBar
         :waiting-count="decisionRows.length"
@@ -344,7 +342,7 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top__uname { font-size: 11px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .cockpit-top__caret { font-size: 9px; color: var(--text-muted); }
 
-/* 态势内联面板浮层：贴页头下方、右锚定对齐触发 chips（任务/在线现居页头右侧；
+/* 态势内联面板浮层：贴页头下方、右锚定同列触发 chips（任务/在线现居页头右侧；
    left:12px 系旧版 chips 左置时的遗留，与现行触发点错位——2026-10-03 回归走查修正） */
 .cockpit-top__sitpanel { position: absolute; top: 100%; right: 12px; width: min(760px, calc(100vw - 48px)); z-index: 999; }
 .cockpit-top__sitpanel :deep(.sitp) { margin: 6px 0 0; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
