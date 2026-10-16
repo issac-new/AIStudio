@@ -647,18 +647,25 @@ export function detectWorkExpectedSilent(snap: ClusterSnapshot, opts: DetectOpti
  *  同一链路）让对应 dev 档案把分支推 origin。
  *  数据源：snap.deliveryBranchIntel（控制器注入 git fetch live 比对，fail-soft
  *  返回空集合——git 失败=静默跳过，下轮重试）。
+ *  新鲜度过滤（run21 降噪，2026-10-16）：本地 tip 提交时间（tipTs，控制器采
+ *  committerdate）早于 24h 窗的历史遗留分支不触发 NUDGE（run20 白捡 8 条历史
+ *  分支情报全是噪音）；tipTs 缺席（旧 provider/夹具）保守放行。
  *  run21 落地验收：origin 任何未推分支都在 15 分钟内被 NUDGE 提醒 1 次。 */
+const DELIVERY_PUSHED_FRESH_MS = 24 * 60 * 60 * 1000
+
 export function detectDeliveryPushed(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
-  const intel = (snap as ClusterSnapshot & { deliveryBranchIntel?: { pushed: boolean; localTip: string; originTip: string; branch: string; profile: string }[] }).deliveryBranchIntel
+  const intel = (snap as ClusterSnapshot & { deliveryBranchIntel?: { pushed: boolean; localTip: string; originTip: string; branch: string; profile: string; tipTs?: number }[] }).deliveryBranchIntel
   if (!Array.isArray(intel) || intel.length === 0) return []
+  const now = _opts.nowMs ?? Date.now()
   const out: Anomaly[] = []
   for (const item of intel) {
     if (item.pushed) continue
+    if (typeof item.tipTs === 'number' && Number.isFinite(item.tipTs) && now - item.tipTs > DELIVERY_PUSHED_FRESH_MS) continue
     out.push({
       detector: 'delivery.pushed', subject: `branch:${item.branch}`,
       severity: 'warn',
       summary: `分支未推 origin：${item.branch} 本地 tip ${item.localTip.slice(0, 7)} ≠ origin tip ${item.originTip.slice(0, 7) || '不存在'}——${item.profile} 在本地写了但没推。请执行 ` + '`git push origin ' + `${item.branch}，群内回一行 PUSHED-${item.branch}-<短锚>。30 分钟未推视为嘴炮-不交卷升级。`,
-      detail: { branch: item.branch, localTip: item.localTip, originTip: item.originTip, profile: item.profile },
+      detail: { branch: item.branch, localTip: item.localTip, originTip: item.originTip, profile: item.profile, ...(item.tipTs !== undefined ? { tipTs: item.tipTs } : {}) },
     })
   }
   return out
