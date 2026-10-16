@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   parseLedgerTsv,
+  validateKeyLedger,
   computeClearanceView,
   validateResolve,
   validateWaive,
@@ -96,5 +97,27 @@ describe('INTERVENTION_POINTS + aggregateInterventions — 14 介入点与三源
     const half = aggregateInterventions({ gates: { g1_frozen: '1' } })
     expect(half.points.find(p => p.id === 'iv-03')?.pending).toBe(false)
     expect(half.points.find(p => p.id === 'iv-08')?.pending).toBe(null)
+  })
+})
+
+describe('validateKeyLedger — 密钥最小台账校验（C11，R13）', () => {
+  it('合法行通过（含中文归属与空轮换日期）', () => {
+    const v = validateKeyLedger([
+      { name: 'matrix-admin', owner: '运维', last_rotated: '2026-10-14', note: '泄漏轮换' },
+      { name: 'gateway.jwt', owner: '系统', last_rotated: '', note: '' },
+    ])
+    expect(v.ok).toBe(true)
+  })
+  it('本体禁入：secret/token/password/apikey/credential 类字段名一律 400 语义', () => {
+    expect(validateKeyLedger([{ name: 'x', owner: 'y', token: 'abc' }]).ok).toBe(false)
+    expect(validateKeyLedger([{ name: 'x', owner: 'y', secret: 'z' }]).ok).toBe(false)
+    expect(validateKeyLedger([{ name: 'x', owner: 'y', api_key: 'z' }]).ok).toBe(false)
+    expect(validateKeyLedger([{ name: 'x', owner: 'y', password: 'z' }]).ok).toBe(false)
+  })
+  it('行数上限 200/非数组/name 必填/日期格式受控', () => {
+    expect(validateKeyLedger('nope').ok).toBe(false)
+    expect(validateKeyLedger(new Array(201).fill({ name: 'a', owner: 'b' })).ok).toBe(false)
+    expect(validateKeyLedger([{ owner: 'b' }]).ok).toBe(false)
+    expect(validateKeyLedger([{ name: 'a', owner: 'b', last_rotated: '14/10/2026' }]).ok).toBe(false)
   })
 })

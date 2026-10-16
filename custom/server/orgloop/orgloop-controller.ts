@@ -325,4 +325,66 @@ router.get('/interventions/pending', (ctx: Context) => {
   ctx.body = aggregateInterventions(snap)
 })
 
+// ── C11：密钥最小台账（设计正本 §二 S15——R13/Q3）──
+// 只存清单与轮换记录（name/owner/last_rotated/note），**不含密钥本体**：
+// 入参出现 secret/token/key/password 类字段名即 400（防误把本体灌进台账）。
+// 持久化 <home>/runtime/orgloop-key-ledger.json。
+//   GET /key-ledger            台账全量（只读）
+//   PUT /key-ledger            整表替换（受控字段校验；≤200 行）
+export interface KeyLedgerEntry {
+  name: string
+  owner: string
+  last_rotated: string
+  note: string
+}
+
+const KEY_NAME_RE = /^[A-Za-z0-9._\-\u4e00-\u9fff ]{1,60}$/
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?Z?$/
+const FORBIDDEN_SECRET_FIELDS = /secret|token|password|apikey|api_key|credential/i
+
+/** 台账校验（纯函数，测试面）：受控四字段+本体禁入+行数上限。 */
+export function validateKeyLedger(body: unknown): { ok: true; entries: KeyLedgerEntry[] } | { ok: false; error: string } {
+  if (!Array.isArray(body)) return { ok: false, error: '请求体须为数组（整表替换）' }
+  if (body.length > 200) return { ok: false, error: '行数上限 200' }
+  for (const raw of body) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: '每行须为对象' }
+    for (const k of Object.keys(raw as Record<string, unknown>)) {
+      if (FORBIDDEN_SECRET_FIELDS.test(k)) return { ok: false, error: `禁止字段 ${k}（台账不含密钥本体，只存清单与轮换记录）` }
+    }
+    const r = raw as Record<string, unknown>
+    if (typeof r.name !== 'string' || !KEY_NAME_RE.test(r.name)) return { ok: false, error: 'name 必填（受控字符集 ≤60）' }
+    if (typeof r.owner !== 'string' || !KEY_NAME_RE.test(r.owner)) return { ok: false, error: `owner 必填（受控字符集 ≤60，行 ${r.name}）` }
+    const lr = typeof r.last_rotated === 'string' ? r.last_rotated : ''
+    if (lr && !ISO_DATE_RE.test(lr)) return { ok: false, error: `last_rotated 须为 ISO 日期或空（行 ${r.name}）` }
+    if (r.note !== undefined && typeof r.note !== 'string') return { ok: false, error: `note 须为字符串（行 ${r.name}）` }
+  }
+  const entries = (body as Array<Record<string, unknown>>).map(r => ({
+    name: String(r.name),
+    owner: String(r.owner),
+    last_rotated: String(r.last_rotated ?? ''),
+    note: String(r.note ?? '').slice(0, 200),
+  }))
+  return { ok: true, entries }
+}
+
+function keyLedgerFile(): string {
+  const home = process.env.HERMES_WEB_UI_HOME || process.env.HOME || '.'
+  return resolve(home, 'runtime', 'orgloop-key-ledger.json')
+}
+
+router.get('/key-ledger', (ctx: Context) => {
+  const f = keyLedgerFile()
+  if (!existsSync(f)) { ctx.body = { entries: [] }; return }
+  try { ctx.body = { entries: JSON.parse(readFileSync(f, 'utf-8')) as KeyLedgerEntry[] } } catch { ctx.body = { entries: [] } }
+})
+
+router.put('/key-ledger', (ctx: Context) => {
+  const v = validateKeyLedger(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const f = keyLedgerFile()
+  mkdirSync(resolve(f, '..'), { recursive: true })
+  writeFileSync(f, JSON.stringify(v.entries, null, 1), 'utf-8')
+  ctx.body = { entries: v.entries }
+})
+
 export { router as orgloopRouter }

@@ -16,14 +16,31 @@ vi.mock('../api/gatekeeper', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/gatekeeper')>()
   return { ...actual, fetchClearanceLedger: vi.fn(), resolveClearance: vi.fn(), waiveClearance: vi.fn() }
 })
+vi.mock('../api/gov', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/gov')>()
+  return {
+    ...actual,
+    fetchGateRepairs: vi.fn(),
+    transitionGateRepair: vi.fn(),
+    fetchKeyLedger: vi.fn(),
+    putKeyLedger: vi.fn(),
+  }
+})
 
 import GovCenterView from '../views/gov/GovCenterView.vue'
 import ClearancePanel from '../views/gov/ClearancePanel.vue'
 import { fetchClearanceLedger, resolveClearance, waiveClearance } from '../api/gatekeeper'
+import { fetchGateRepairs, transitionGateRepair, fetchKeyLedger, putKeyLedger } from '../api/gov'
+import GateRepairsPanel from '../views/gov/GateRepairsPanel.vue'
+import KeyLedgerSection from '../views/gov/KeyLedgerSection.vue'
 
 const mockedLedger = vi.mocked(fetchClearanceLedger)
 const mockedResolve = vi.mocked(resolveClearance)
 const mockedWaive = vi.mocked(waiveClearance)
+const mockedGateRepairs = vi.mocked(fetchGateRepairs)
+const mockedTransition = vi.mocked(transitionGateRepair)
+const mockedFetchKeys = vi.mocked(fetchKeyLedger)
+const mockedPutKeyLedger = vi.mocked(putKeyLedger)
 
 const LEDGER = {
   rows: [
@@ -58,30 +75,52 @@ async function mountAt(path: string) {
 }
 
 describe('GovCenterView — C1 治理中心壳（R8）', () => {
-  it('七签页签渲染；默认签=关卡与流程；五签占位注明将迁入组件（含密钥台账增件）', async () => {
+  it('七签页签渲染；默认签=关卡与流程；六签实装（问题单对账留占位注卡级数据面）', { timeout: 20000 }, async () => {
     const w = await mountAt('/app/gov')
     const keys = ['process', 'orgAssets', 'clearance', 'issues', 'audit', 'docs', 'metrics']
     for (const k of keys) expect(w.find(`[data-testid="ia-gov-tab-${k}"]`).exists()).toBe(true)
     expect(w.find('[data-testid="ia-gov-tab-process"]').attributes('aria-selected')).toBe('true')
-    expect(w.find('[data-testid="ia-gov-panel-process"]').text()).toContain('签 1·关卡与流程')
-    expect(w.find('[data-testid="ia-gov-panel-orgAssets"]').text()).toContain('密钥最小台账')
-    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('容量成本')
-    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('会话健康')
+    // 六签实装：实际数据面在渲染位
+    const live: Record<string, string> = {
+      process: '[data-testid="grp-panel"]',
+      orgAssets: '[data-testid="kls-section"]',
+      clearance: '[data-testid="clr-panel"]',
+      audit: '[data-testid="ia-gov-panel-audit"] .gov-center__panel-title',
+      docs: '[data-testid="ia-gov-panel-docs"] .gov-center__panel-title',
+      metrics: '[data-testid="ia-gov-panel-metrics"] .gov-center__panel-title',
+    }
+    for (const [k, sel] of Object.entries(live)) {
+      expect(w.find(sel).exists(), `实装面 ${k}`).toBe(true)
+    }
+    // 迁入组件真的挂载（审计/文档/体检三签内含既有组件根元素）
+    expect(w.find('[data-testid="ia-gov-panel-audit"]').text().length).toBeGreaterThan(20)
+    expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('卡级数据面')
+    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('容量阈值灯')
     w.unmount()
   })
 
-  it('签 3 清偿门实装（占位签无实际面板，此签有）；签序号不错位', async () => {
-    const w = await mountAt('/app/gov/clearance')
-    await flushPromises()
-    expect(w.find('[data-testid="ia-gov-panel-clearance"]').find('[data-testid="clr-panel"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ia-gov-panel-process"]').text()).toContain('签 1·')
+  it('签序号不错位（问题单对账=签 4 占位、度量体检=签 7）', { timeout: 20000 }, async () => {
+    const w = await mountAt('/app/gov')
+    expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('签 4·')
     expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('签 7·')
     w.unmount()
   })
 })
 
 describe('ClearancePanel — C2 清偿门签（R6）', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedGateRepairs.mockResolvedValue({
+      count: 2, open: 1,
+      records: [
+        { id: 'gr-1', gate: 'G2', state: 'fail_registered', ts: '2026-10-15T12:00:00Z', fail_evidence: '设计面缺项 D-1', missing: ['D-1'], history: [] },
+        { id: 'gr-2', gate: 'G5', state: 'pass', ts: '2026-10-15T20:00:00Z', fail_evidence: '', missing: [], history: [] },
+      ],
+    })
+    mockedTransition.mockResolvedValue({} as never)
+    mockedFetchKeys.mockResolvedValue({ entries: [{ name: 'matrix-admin', owner: '运维', last_rotated: '2026-10-14', note: '泄漏轮换' }] })
+    mockedPutKeyLedger.mockResolvedValue({ entries: [] })
+  })
 
   it('台账全量表+放行灯红（未清拒开新轮）+按目标分组；resolve 空锚禁用', { timeout: 20000 }, async () => {
     mockedLedger.mockResolvedValue(LEDGER)
@@ -115,6 +154,78 @@ describe('ClearancePanel — C2 清偿门签（R6）', () => {
     const w2 = mount(ClearancePanel)
     await flushPromises()
     expect(w2.find('[data-testid="clr-error"]').text()).toContain('503')
+    w2.unmount()
+  })
+})
+
+describe('GateRepairsPanel — 签 1 闸修复单（C3 件一，R3）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedGateRepairs.mockResolvedValue({
+      count: 2, open: 1,
+      records: [
+        { id: 'gr-1', gate: 'G2', state: 'fail_registered', ts: '2026-10-15T12:00:00Z', fail_evidence: '设计面缺项 D-1', missing: ['D-1'], history: [] },
+        { id: 'gr-2', gate: 'G5', state: 'pass', ts: '2026-10-15T20:00:00Z', fail_evidence: '', missing: [], history: [] },
+      ],
+    })
+    mockedTransition.mockResolvedValue({} as never)
+  })
+  it('修复单渲染+合法迁移按钮（终态无钮）；豁免走 prompt 理由', async () => {
+    vi.stubGlobal('prompt', () => '用户裁定豁免')
+    const w = mount(GateRepairsPanel)
+    await flushPromises()
+    const rec = w.find('[data-testid="grp-rec-gr-1"]')
+    expect(rec.exists()).toBe(true)
+    expect(rec.text()).toContain('G2 架构评审')
+    expect(w.find('[data-testid="grp-tr-gr-1-repair_dispatched"]').exists()).toBe(true)
+    expect(w.find('[data-testid="grp-tr-gr-1-waived"]').exists()).toBe(true)
+    expect(w.find('[data-testid="grp-empty"]').exists()).toBe(false)
+    await w.find('[data-testid="grp-tr-gr-1-waived"]').trigger('click')
+    await flushPromises()
+    expect(mockedTransition).toHaveBeenCalledWith('gr-1', 'waived', '用户裁定豁免')
+    w.unmount()
+    vi.unstubAllGlobals()
+  })
+
+  it('终态（pass）无迁移按钮；端点失败如实', async () => {
+    const w = mount(GateRepairsPanel)
+    await flushPromises()
+    expect(w.find('[data-testid="grp-rec-gr-2"]').text()).toContain('复审通过')
+    expect(w.findAll('[data-testid^="grp-tr-gr-2-"]').length).toBe(0)
+    w.unmount()
+    mockedGateRepairs.mockRejectedValue(new Error('/api/hermes/orgloop/gate-repairs → 503'))
+    const w2 = mount(GateRepairsPanel)
+    await flushPromises()
+    expect(w2.find('[data-testid="grp-error"]').text()).toContain('503')
+    w2.unmount()
+  })
+})
+
+describe('KeyLedgerSection — 密钥最小台账（C11，R13）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedFetchKeys.mockResolvedValue({ entries: [{ name: 'matrix-admin', owner: '运维', last_rotated: '2026-10-14', note: '泄漏轮换' }] })
+    mockedPutKeyLedger.mockResolvedValue({ entries: [] })
+  })
+  it('台账表渲染+加行+保存整表；400（本体禁入）原文如实', async () => {
+    const w = mount(KeyLedgerSection)
+    await flushPromises()
+    const nameInput = w.find('[data-testid="kls-name-0"]').element as HTMLInputElement
+    expect(nameInput.value).toBe('matrix-admin')
+    expect(w.find('[data-testid="kls-table"]').exists()).toBe(true)
+    await w.find('[data-testid="kls-add"]').trigger('click')
+    expect(w.findAll('tbody tr').length).toBe(2)
+    await w.find('[data-testid="kls-save"]').trigger('click')
+    await flushPromises()
+    expect(mockedPutKeyLedger).toHaveBeenCalledTimes(1)
+    expect(w.find('[data-testid="kls-saved"]').exists()).toBe(true)
+    w.unmount()
+    mockedPutKeyLedger.mockRejectedValue(new Error('PUT /api/hermes/orgloop/key-ledger → 400（{"error":"禁止字段 token（台账不含密钥本体，只存清单与轮换记录）"}）'))
+    const w2 = mount(KeyLedgerSection)
+    await flushPromises()
+    await w2.find('[data-testid="kls-save"]').trigger('click')
+    await flushPromises()
+    expect(w2.find('[data-testid="kls-save-error"]').text()).toContain('密钥本体')
     w2.unmount()
   })
 })
