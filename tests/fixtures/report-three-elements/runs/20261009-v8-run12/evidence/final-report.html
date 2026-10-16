@@ -5,16 +5,16 @@
 <style>
 /* PART1/第0章暗色修补（用户 2026-10-13 裁定 dark 报告）——机器 token 暗色层已在 machine_styles 尾；
    此处覆盖导读层与第0章的亮色硬编码 */
-.guide{color:#dbe4f0}
-.guide .card{background:#16233a;border:1px solid #22314a}
-.guide table{border-color:#22314a;background:#101a2c}
-.guide th{background:#16233a;color:#dbe4f0}
-.guide td{border-color:#22314a;color:#c7d4e6}
-.guide .ok{color:#34d399}.guide .warn{color:#f5b84c}.guide .err,.guide .bad{color:#f87171}
-.guide .note{color:#8ba0b8}
-.guide h1,.guide h2,.guide h3{color:#f1f5fb}
-#ch0 .ch0-hd{background:#16233a;border-color:#22314a;color:#dbe4f0}
-#ch0 .tl li{border-left-color:#2b4c8c;background:#101a2c;color:#c7d4e6}
+html[data-theme="dark"] .guide{color:#dbe4f0}
+html[data-theme="dark"] .guide .card{background:#16233a;border:1px solid #22314a}
+html[data-theme="dark"] .guide table{border-color:#22314a;background:#101a2c}
+html[data-theme="dark"] .guide th{background:#16233a;color:#dbe4f0}
+html[data-theme="dark"] .guide td{border-color:#22314a;color:#c7d4e6}
+html[data-theme="dark"] .guide .ok{color:#34d399}.guide .warn{color:#f5b84c}.guide .err,.guide .bad{color:#f87171}
+html[data-theme="dark"] .guide .note{color:#8ba0b8}
+html[data-theme="dark"] .guide h1, html[data-theme="dark"] .guide h2, html[data-theme="dark"] .guide h3{color:#f1f5fb}
+html[data-theme="dark"] #ch0 .ch0-hd{background:#16233a;border-color:#22314a;color:#dbe4f0}
+html[data-theme="dark"] #ch0 .tl li{border-left-color:#2b4c8c;background:#101a2c;color:#c7d4e6}
 </style>
 <style>.guide{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:none;margin:0 auto;padding:36px 34px;color:#222;background:var(--surface-2);line-height:1.75}
 .guide .card{max-width:1200px;margin:0 auto}
@@ -58,6 +58,90 @@
 .idx td,.idx th{border:1px solid var(--line);padding:6px 10px;text-align:left;font-size:12px;line-height:1.7}
 .guide table.idx{font-size:12px}
 </style>
+<script>
+/* theme-toggle.js —— 方案页与报告页共用的明暗主题切换（2026-10-14）
+ *
+ * 单一事实源：本文件在两个仓各存一份，字节级同文——
+ *   overlay/scripts/plan-html/theme-toggle.js
+ *   simharness/mux/theme-toggle.js
+ * 改任一侧必须同步另一侧（与 tokens.css 同一规矩，见 tests/report-three-elements.test.ts）。
+ *
+ * 机制：
+ *   1) 主题落在 <html data-theme="light|dark">，CSS 全部按该属性作用域取色，
+ *      切换不触发重排、不重新渲染。
+ *   2) 未手动选过之前跟随系统 prefers-color-scheme；手动点过之后以 localStorage 为准。
+ *   3) 监听 storage 事件 → 同一浏览器打开的方案页与报告页互相跟随，一个页面切换另一个跟着变。
+ *   4) 本脚本必须放在 <head> 末尾：先定主题再绘制，否则切换瞬间会闪一下另一套配色。
+ */
+(function () {
+  'use strict';
+  var KEY = 'ncwk-doc-theme';           // 两页共用同一个键，才能跨页同步
+  var root = document.documentElement;
+
+  function stored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function systemDark() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function current() {
+    return root.getAttribute('data-theme') || (systemDark() ? 'dark' : 'light');
+  }
+  function apply(mode) {
+    root.setAttribute('data-theme', mode);
+    try { localStorage.setItem(KEY, mode); } catch (e) { /* 隐私模式下写失败：本次会话内仍生效 */ }
+    paint();
+  }
+  function paint() {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+    var dark = current() === 'dark';
+    btn.textContent = dark ? '☀' : '☾';
+    btn.setAttribute('aria-label', dark ? '切换到明色主题' : '切换到暗色主题');
+    btn.title = dark ? '切换到明色主题' : '切换到暗色主题';
+  }
+
+  // ① 首屏定主题（必须在绘制前）
+  var saved = stored();
+  root.setAttribute('data-theme', (saved === 'light' || saved === 'dark') ? saved : (systemDark() ? 'dark' : 'light'));
+
+  // ② 控件
+  function mount() {
+    if (document.getElementById('theme-toggle-btn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'theme-toggle-btn';
+    btn.className = 'theme-toggle';
+    btn.type = 'button';
+    btn.addEventListener('click', function () {
+      apply(current() === 'dark' ? 'light' : 'dark');
+    });
+    document.body.appendChild(btn);
+    paint();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
+  } else {
+    mount();
+  }
+
+  // ③ 跨标签/跨页同步（storage 事件只在别的文档写入时触发）
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || !e.newValue) return;
+    if (e.newValue !== 'light' && e.newValue !== 'dark') return;
+    root.setAttribute('data-theme', e.newValue);
+    paint();
+  });
+
+  // ④ 系统主题跟随：用户没手动点过时，系统切深浅色页面也跟着走
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function () { if (!stored()) { root.setAttribute('data-theme', mq.matches ? 'dark' : 'light'); paint(); } };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+})();
+</script>
 </head><body>
 <div class="layout">
 <nav class="sidebar"><div class="nav-title" style="font-size:11px;color:var(--accent-deep);font-weight:700;margin:0 0 8px">报告导读</div><a href="#part1-top" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">导读</a><a href="#part1-metrics" style="display:block;padding:4px 8px;border-radius:8px;color:#475569;text-decoration:none;font-size:12px">治理实测统计表</a><div style="font-size:11px;color:#94a3b8;font-weight:700;margin:12px 0 6px">全文档案</div><a href="#step1">1</a></nav>
@@ -75,7 +159,7 @@
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（0 张实拍界面截图，图注逐帧标注拍摄时态：当轮实拍或收尾后补拍）；每步四段=本轮实录/交付物+模板核对/已知问题/改进项；全部计数自 issues.log 与 state.env 实测统计，取不到的显式标 ⬜。中途的抢救与提醒动作全部标注为「人工介入」并留痕，不混入自动化成绩。正文里引号内的日志与问题单原文可能保留项目内部用语（「登记」=记入问题清单、「落盘」=写入通过标记、「启动」=开始执行），引文一律按原文呈现、不做改写，保证证据可核。</div>
 
 <h2 id="part1-metrics">研发全流程治理有效性（实测统计）</h2>
-<table class="st-issues-tbl" id="metrics-tbl"><tr><th>治理维度</th><th>本轮实测</th><th>口径来源</th></tr><tr><td>流程完成度</td><td>26 步 12/26</td><td>state.env 状态键（方案 §3.3 映射）</td></tr><tr><td>六道关卡</td><td>6/6 过 · 一次通过 5/6 · 打回 G5×3</td><td>state 关卡键 + issues.log 闸键</td></tr><tr><td>流程窗口</td><td>10-15 22:10 → 10-15 23:10（约 1.0 小时）</td><td>state 时间戳</td></tr><tr><td>问题单台账</td><td>5 条记录 · 3 个键 · 处置 已修 2，观察 1，延后 0</td><td>issues.log 全量</td></tr><tr><td>类型分布 TOP</td><td>g5×3、frame×1、capacity×1</td><td>issues.log 类型段</td></tr><tr><td>证据帧</td><td>0 张 · 全互异</td><td>screenshots/steps/ 实查 + md5 互异</td></tr><tr><td>测试与产品成效</td><td>单测 ⬜ · AC 覆盖 ⬜ · 幂等 ⬜ · UAT ⬜</td><td>product-outcome/quality-summary.env（未采集即 ⬜）</td></tr></table>
+<table class="st-issues-tbl" id="metrics-tbl"><tr><th>治理维度</th><th>本轮实测</th><th>口径来源</th></tr><tr><td>流程完成度</td><td>26 步 12/26</td><td>state.env 状态键（方案 §3.3 映射）</td></tr><tr><td>六道关卡</td><td>6/6 过 · 一次通过 5/6 · 打回 G5×3</td><td>state 关卡键 + issues.log 闸键</td></tr><tr><td>流程窗口</td><td>10-16 12:59 → 10-16 13:59（约 1.0 小时）</td><td>state 时间戳</td></tr><tr><td>问题单台账</td><td>5 条记录 · 3 个键 · 处置 已修 2，观察 1，延后 0</td><td>issues.log 全量</td></tr><tr><td>类型分布 TOP</td><td>g5×3、frame×1、capacity×1</td><td>issues.log 类型段</td></tr><tr><td>证据帧</td><td>0 张 · 全互异</td><td>screenshots/steps/ 实查 + md5 互异</td></tr><tr><td>测试与产品成效</td><td>单测 ⬜ · AC 覆盖 ⬜ · 幂等 ⬜ · UAT ⬜</td><td>product-outcome/quality-summary.env（未采集即 ⬜）</td></tr></table>
 <div class="gatebox" id="spec-params"><b style="font-size:14px">关键技术规范（参数速查）</b><p style="margin:6px 0 4px;font-size:12.5px;color:#57606a">运行参数集中呈现：端口、等待窗口、门禁阈值、容量预算、采集判定。正本=方案 §4.4 技术规范总表，本卡与其同源维护。</p><table class="idx"><tr><th>组</th><th>参数</th><th>值</th><th>说明</th></tr><tr><td style="white-space:nowrap">端口拓扑</td><td><b>SwarmStudio 产品面</b></td><td style="white-space:nowrap"><code>:8802</code></td><td style="font-size:12px">驾驶舱单窗口多区域，全部人机入口</td></tr><tr><td style="white-space:nowrap">端口拓扑</td><td><b>hermes 网关</b></td><td style="white-space:nowrap"><code>:8801</code></td><td style="font-size:12px">单进程多路复用，服务全部 42 个 profile</td></tr><tr><td style="white-space:nowrap">端口拓扑</td><td><b>Synapse（matrix 服务端）</b></td><td style="white-space:nowrap"><code>:8008</code></td><td style="font-size:12px">聊天账号与房间宿主</td></tr><tr><td style="white-space:nowrap">端口拓扑</td><td><b>hindsight 记忆库</b></td><td style="white-space:nowrap"><code>:8888</code></td><td style="font-size:12px">mx-setup 前置检查，不在即拒绝启动</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>看板登记（步 10）</b></td><td style="white-space:nowrap"><code>首窗 600s + 回灌二窗 600s</code></td><td style="font-size:12px">两轮无卡记问题单并中止</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>任务清单入仓（步 11）</b></td><td style="white-space:nowrap"><code>2400s</code></td><td style="font-size:12px">未达硬失败中止</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>分诊每账号（步 12）</b></td><td style="white-space:nowrap"><code>1800s</code></td><td style="font-size:12px">没建出卡的先记入问题清单，不影响其他账号继续</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>系分每稿（步 13）</b></td><td style="white-space:nowrap"><code>3600s（概设预写窗同）</code></td><td style="font-size:12px">稿没到就记入问题清单，流程继续</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>关卡首评（G2/G5）</b></td><td style="white-space:nowrap"><code>3600s（MX_GATE_WAIT 可调）</code></td><td style="font-size:12px">复评 2400s；两轮未过熔断</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>缺陷观测窗（步 19）</b></td><td style="white-space:nowrap"><code>5400s（轮询 30s）</code></td><td style="font-size:12px">分支缺席就跳过合并并记入问题清单</td></tr><tr><td style="white-space:nowrap">关键窗口</td><td><b>无进展判定</b></td><td style="white-space:nowrap"><code>agent 日志连续 1800s 零增长</code></td><td style="font-size:12px">总硬上限 MX_ALIVE_HARD_SEC 下限 7200s</td></tr><tr><td style="white-space:nowrap">门禁阈值</td><td><b>熔断触发</b></td><td style="white-space:nowrap"><code>同闸连续 2 轮未过</code></td><td style="font-size:12px">重试须 GATE_BREAKER_OVERRIDE=1（复议语义）</td></tr><tr><td style="white-space:nowrap">门禁阈值</td><td><b>G3 用例数</b></td><td style="white-space:nowrap"><code>pay-core ≥8 / 其余模块 ≥6，全绿</code></td><td style="font-size:12px">缺一条即门禁不过</td></tr><tr><td style="white-space:nowrap">门禁阈值</td><td><b>AC 下限</b></td><td style="white-space:nowrap"><code>≥3 条且全部可机械化判定</code></td><td style="font-size:12px">G1 锁定前置条件</td></tr><tr><td style="white-space:nowrap">门禁阈值</td><td><b>灰度三档</b></td><td style="white-space:nowrap"><code>5%→25%→100% 各档观察期</code></td><td style="font-size:12px">回滚触发线=崩溃率 &gt;0.5%（72h 观察窗）</td></tr><tr><td style="white-space:nowrap">评测门禁</td><td><b>工具调用成功率</b></td><td style="white-space:nowrap"><code>≥ 99%（EVAL_GATE_TOOL_SUCCESS_MIN）</code></td><td style="font-size:12px">Eval Studio 发布门禁；阈值照抄腾讯 ADP 公开清单（方案 V8.22 §2.6.3）</td></tr><tr><td style="white-space:nowrap">评测门禁</td><td><b>P99/均值耗时比</b></td><td style="white-space:nowrap"><code>≤ 2×（EVAL_GATE_P99_RATIO_MAX）</code></td><td style="font-size:12px">attempt 级耗时分布；样本 &lt;2 无统计意义记证据缺口</td></tr><tr><td style="white-space:nowrap">评测门禁</td><td><b>降级率</b></td><td style="white-space:nowrap"><code>&lt; 0.5%（EVAL_GATE_DEGRADE_RATE_MAX）</code></td><td style="font-size:12px">口径=判定端离线 fail-open 样本占比</td></tr><tr><td style="white-space:nowrap">评测门禁</td><td><b>首响应时延 TTFT</b></td><td style="white-space:nowrap"><code>≤ 1.5s（EVAL_GATE_TTFT_MS）</code></td><td style="font-size:12px">回放轨迹未采集首 token 时延→如实列证据缺口，不实测不判</td></tr><tr><td style="white-space:nowrap">评测门禁</td><td><b>容量压测（QPS×2）</b></td><td style="white-space:nowrap"><code>峰值×2 持续 ≥30s：错误率 &lt;1% 且达成 QPS ≥目标 90% 且 p99 ≤2×p50</code></td><td style="font-size:12px">工具=mux/mx-load-probe.py；峰值基线=当轮实测最大 QPS；属部署验收项</td></tr><tr><td style="white-space:nowrap">容量预算</td><td><b>并发上限</b></td><td style="white-space:nowrap"><code>30（实际峰值 13 路）</code></td><td style="font-size:12px">GLM-5.3 并发 30 / Flash 50</td></tr><tr><td style="white-space:nowrap">容量预算</td><td><b>容量重试队列</b></td><td style="white-space:nowrap"><code>静默重试，20min 过期必然生效</code></td><td style="font-size:12px">去重键 event_id，时间戳=事件首见</td></tr><tr><td style="white-space:nowrap">容量预算</td><td><b>任务粒度</b></td><td style="white-space:nowrap"><code>单卡 ≤1 人日</code></td><td style="font-size:12px">超 1 人日腿须 ≥2 commit 拆分证据</td></tr><tr><td style="white-space:nowrap">容量预算</td><td><b>磁盘低水位</b></td><td style="white-space:nowrap"><code>系统盘 &lt;20GB 先清理</code></td><td style="font-size:12px">启动前置检查</td></tr><tr><td style="white-space:nowrap">采集判定</td><td><b>必采清单</b></td><td style="white-space:nowrap"><code>13 项（对话 5+操作 3+效果 3+skill 1+门禁灯 1）</code></td><td style="font-size:12px">分母单一事实源=r18_matrix</td></tr><tr><td style="white-space:nowrap">采集判定</td><td><b>交付物视图</b></td><td style="white-space:nowrap"><code>每轮 ≥15 类，关卡工件六件必备</code></td><td style="font-size:12px">缺一打回</td></tr><tr><td style="white-space:nowrap">采集判定</td><td><b>视觉抽检</b></td><td style="white-space:nowrap"><code>每轮 ≥3 帧图注-画面一致性核验</code></td><td style="font-size:12px">不符即 FAIL</td></tr></table></div>
 <h2 id="ch0-collab">第 0 章 · 推演逻辑与协作顺序总述（R15）</h2>
 <div class="gatebox"><b style="font-size:14px">产品定位（一页）</b><p style="margin:6px 0;font-size:13.5px;line-height:1.8">Swarm Studio 是 AI 员工驱动的研发交付系统：15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；六道强制关卡守住意图核对一致与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），双 loop=skill 内循环 × swarm 外循环。</p></div>
@@ -131,4 +215,353 @@
   }
 })();
 </script>
+<style>
+/* mux/report-dark-override.css —— 报告页暗色覆盖层（2026-10-14）
+ *
+ * 作用域：全部规则挂在 html[data-theme="dark"] 下——明色主题下本文件一行不生效。
+ *       主题开关由 mux/theme-toggle.js 挂在 <html data-theme>（与 overlay 侧同文）。
+ *
+ * 病根与来历：暗色 token 层原先排在样式表中间，其后拼接的机器样式、章节 CSS、GUIDE_CSS、
+ *       CH0_CSS 仍带亮色硬编码，且大量 color:var(--surface) —— 暗色 token 下 var(--surface)
+ *       是深色，等于「暗底深字」，run19 实测 60 处低于 WCAG AA。本层靠「文档最末 + !important」
+ *       赢过一切前序规则；行内 color/background 用属性选择器覆盖（行内优先级更高）。
+ * 验收：mux/dark-contrast-scan.js 全页扫描（正文 4.5 / 大字 3），命中须为 0；渐变底上的
+ *       文字扫描器读不了（linear-gradient / color-mix），须截图目检兜底。
+ */
+html[data-theme="dark"]{--dim:#a8b8cc;--zc:#7dd3fc;--pc:#c7d4e6}
+html[data-theme="dark"] .hero, html[data-theme="dark"] .hstat b, html[data-theme="dark"] .pb-dot, html[data-theme="dark"] .nv-hero, html[data-theme="dark"] .nv-hero *{color:#e8eef7 !important}
+html[data-theme="dark"] .nv-hero-sub, html[data-theme="dark"] .hero .sub{color:#c7d4e6 !important}
+html[data-theme="dark"] .hero-terms{color:#c7d4e6 !important}
+html[data-theme="dark"] .part1-hd, html[data-theme="dark"] .ph-hd h2, html[data-theme="dark"] .ph-hd h1{color:#f1f5fb !important}
+html[data-theme="dark"] .part1-hd{color:#94a3b8 !important}
+html[data-theme="dark"] .gov-metrics-line{color:#a8b8cc !important;background:#16233a !important;border:1px solid #22314a !important}
+html[data-theme="dark"] .gov-metrics-line b{color:#f1f5fb !important}
+html[data-theme="dark"] .ck-zone-hd{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
+html[data-theme="dark"] .ck-node-z{color:#f8fafc !important}
+html[data-theme="dark"] .ck-zone-links a, html[data-theme="dark"] .ck-zone a{color:color-mix(in srgb,var(--zc) 42%,#ffffff) !important}
+html[data-theme="dark"] .sidebar a, html[data-theme="dark"] .nav-step{color:#a8b8cc !important}
+html[data-theme="dark"] .sidebar a:hover, html[data-theme="dark"] .nav-step:hover{color:#f1f5fb !important}
+html[data-theme="dark"] .nav-title{color:#f1f5fb !important}
+html[data-theme="dark"] .nav-pname{color:#c7d4e6 !important}
+html[data-theme="dark"] .nv-note{color:#9ec5ff !important;background:#16233a !important}
+html[data-theme="dark"] .nv-loop-center, html[data-theme="dark"] .nv-dim-title{color:#c7d4e6 !important}
+html[data-theme="dark"] .nv-loop-idx{color:#0b1220 !important}
+html[data-theme="dark"] summary, html[data-theme="dark"] .st-gate summary, html[data-theme="dark"] .st-r18 summary, html[data-theme="dark"] .st-artifact summary, html[data-theme="dark"] details.audit summary{color:#c7d4e6 !important}
+html[data-theme="dark"] .st-r18 summary, html[data-theme="dark"] .st-artifact summary{background:#16233a !important}
+html[data-theme="dark"] a{color:#7dd3fc}
+html[data-theme="dark"] th{color:#c7d4e6}
+html[data-theme="dark"] .gatebox p{color:#a8b8cc !important}
+/* 导读层（第0章/PART1）亮色硬编码 */
+html[data-theme="dark"] .guide{color:#dbe4f0}
+html[data-theme="dark"] .guide .sub{color:#8ba0b8}
+html[data-theme="dark"] .guide code{background:#16233a;color:#c7d4e6;border:1px solid #22314a}
+html[data-theme="dark"] .guide .note{color:#8ba0b8}
+html[data-theme="dark"] .guide .mid{color:#f5b84c}
+html[data-theme="dark"] .guide .bad{color:#f87171}
+html[data-theme="dark"] .guide .card.warn{border-left-color:#f5b84c}
+html[data-theme="dark"] .guide .card.bad{border-left-color:#f87171}
+html[data-theme="dark"] .guide .card.info{border-left-color:#5b9bff}
+html[data-theme="dark"] .guide .tl li{border-left-color:#2b4c8c}
+html[data-theme="dark"] .guide .tl li.warn::before{background:#f5b84c}
+/* 步骤正文与卡片 */
+.st-story,.art-body p,.art-body ul,.cp-sem,.dm-a,
+html[data-theme="dark"] .nv-case-body, html[data-theme="dark"] .nv-hl-body, html[data-theme="dark"] .nv-dim-body{color:#c7d4e6}
+html[data-theme="dark"] .nv-lead, html[data-theme="dark"] .nv-loop-caption{color:#a8b8cc}
+html[data-theme="dark"] .nv-case-mech{color:#5eead4}
+html[data-theme="dark"] .nv-hl-title, html[data-theme="dark"] .nv-ic-ac b{color:#7dd3fc}
+html[data-theme="dark"] .nv-ic-chip span{color:#dbe4f0}
+html[data-theme="dark"] .nv-ic-chip b{color:#34d399}
+html[data-theme="dark"] .nv-ic-chip{border-color:#1f6b47;background:#0d2b22}
+html[data-theme="dark"] .pb-label, html[data-theme="dark"] .hstat span{color:#94a3b8}
+/* 徽标与语义块：浅底一律翻成暗底，否则 v3 的文字提亮会反噬成低对比 */
+html[data-theme="dark"] .gmark{color:#f5b84c;background:#33230a}
+html[data-theme="dark"] .gate-rej{background:#33230a;color:#f5b84c}
+html[data-theme="dark"] .gate-rej.ok1{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .st-open{background:#331414;color:#fca5a5}
+html[data-theme="dark"] .st-entry{background:#0b2b33;color:#7dd3fc}
+html[data-theme="dark"] .st-note{background:#2a2410;color:#fcd34d}
+html[data-theme="dark"] .r18-entry{background:#0b2b33;color:#7dd3fc}
+html[data-theme="dark"] .r18-note{color:#fcd34d}
+html[data-theme="dark"] .dm-badge{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .art-verdict.ok{background:#0d2b22;color:#34d399}
+html[data-theme="dark"] .art-verdict.miss{background:#331414;color:#f87171}
+html[data-theme="dark"] .art-chk.miss{background:#331414;border-color:#7a2a2a;color:#f87171}
+html[data-theme="dark"] .art-chk-row.miss{background:#331414}
+html[data-theme="dark"] .nv-loop-back{background:#2a2410;color:#f5b84c}
+html[data-theme="dark"] .gap{border-color:#6b5320}
+html[data-theme="dark"] .step.gate-step{background:linear-gradient(135deg,#2a2410 0%,var(--surface) 30%)}
+html[data-theme="dark"] .step.gate-step .gate-body{color:#fcd9a0}
+html[data-theme="dark"] .step.gate-step .st-num{background:#7c4a05 !important;color:#fde68a !important}
+html[data-theme="dark"] .nv-miss, html[data-theme="dark"] .nv-ic-arrow, html[data-theme="dark"] .nv-ic-chip--miss b, html[data-theme="dark"] .nv-ic-chip--miss span{color:#8ba0b8}
+/* 行内色：行内样式优先级高于选择器，必须 !important；同步把行内浅底翻暗 */
+html[data-theme="dark"] [style*="color:#0369a1"], html[data-theme="dark"] [style*="color: #0369a1"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#047857"], html[data-theme="dark"] [style*="color: #047857"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#b91c1c"], html[data-theme="dark"] [style*="color: #b91c1c"]{color:#f87171 !important}
+html[data-theme="dark"] [style*="color:#be185d"], html[data-theme="dark"] [style*="color: #be185d"]{color:#f472b6 !important}
+html[data-theme="dark"] [style*="color:#b45309"], html[data-theme="dark"] [style*="color: #b45309"]{color:#f5b84c !important}
+html[data-theme="dark"] [style*="color:#7c3aed"], html[data-theme="dark"] [style*="color: #7c3aed"]{color:#a78bfa !important}
+html[data-theme="dark"] [style*="color:#334155"], html[data-theme="dark"] [style*="color: #334155"]{color:#c7d4e6 !important}
+html[data-theme="dark"] [style*="color:#57606a"], html[data-theme="dark"] [style*="color: #57606a"]{color:#a8b8cc !important}
+html[data-theme="dark"] [style*="color:#64748b"], html[data-theme="dark"] [style*="color: #64748b"]{color:#94a3b8 !important}
+html[data-theme="dark"] [style*="color:#1e40af"], html[data-theme="dark"] [style*="color: #1e40af"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#0f766e"], html[data-theme="dark"] [style*="color: #0f766e"]{color:#5eead4 !important}
+html[data-theme="dark"] [style*="color:#92400e"], html[data-theme="dark"] [style*="color: #92400e"]{color:#fcd34d !important}
+html[data-theme="dark"] [style*="color:#155e75"], html[data-theme="dark"] [style*="color: #155e75"]{color:#7dd3fc !important}
+html[data-theme="dark"] [style*="color:#166534"], html[data-theme="dark"] [style*="color: #166534"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#15803d"], html[data-theme="dark"] [style*="color: #15803d"]{color:#34d399 !important}
+html[data-theme="dark"] [style*="color:#222"], html[data-theme="dark"] [style*="color:#222;"]{color:#dbe4f0 !important}
+html[data-theme="dark"] [style*="background:#d1fae5"], html[data-theme="dark"] [style*="background: #d1fae5"]{background:#0d2b22 !important;color:#34d399 !important}
+html[data-theme="dark"] [style*="background:#fef3c7"], html[data-theme="dark"] [style*="background: #fef3c7"]{background:#33230a !important;color:#f5b84c !important}
+/* 步号徽标坐在行内主色 --pc 上，按底色明暗分别选字色 */
+[style*="--pc:#059669"] .st-num,[style*="--pc:#0891b2"] .st-num,
+[style*="--pc:#2563eb"] .st-num,[style*="--pc:#7c3aed"] .st-num,
+html[data-theme="dark"] [style*="--pc:#dc2626"] .st-num{color:#f8fafc !important}
+html[data-theme="dark"] [style*="--pc:#d97706"] .st-num, html[data-theme="dark"] [style*="--pc:#c7d4e6"] .st-num{color:#0b1220 !important}
+html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
+
+/* ── 复扫补遗（扫描器加了渐变支持后才暴露出来的两条真问题）── */
+html[data-theme="dark"] [style*="color:#64748b"]{color:#94a3b8 !important}
+html[data-theme="dark"] .ck-node{color:#c7d4e6 !important}
+html[data-theme="dark"] .ck-chain-hd b{color:#f1f5fb !important}
+
+/* 青底白字只有 3.7:1，改深字 */
+html[data-theme="dark"] [style*="--pc:#0891b2"] .st-num{color:#0b1220 !important}
+
+
+
+/* 步骤头徽标：背景写在行内，且只在 .st-hd 内分派字色——
+   限定作用域是关键：不限定的话 [style*="#色值"] 会连整个 step 容器（行内带 --pc）一起改，
+   侧栏/联动图的白字会被拉成深字（实测引入 16 条新问题）。 */
+html[data-theme="dark"] .st-hd [style*="background:#059669"],
+html[data-theme="dark"] .st-hd [style*="background-color:#059669"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#0891b2"],
+html[data-theme="dark"] .st-hd [style*="background-color:#0891b2"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#d97706"],
+html[data-theme="dark"] .st-hd [style*="background-color:#d97706"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#f59e0b"],
+html[data-theme="dark"] .st-hd [style*="background-color:#f59e0b"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background:#dc2626"],
+html[data-theme="dark"] .st-hd [style*="background-color:#dc2626"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#2563eb"],
+html[data-theme="dark"] .st-hd [style*="background-color:#2563eb"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#7c3aed"],
+html[data-theme="dark"] .st-hd [style*="background-color:#7c3aed"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background:#c7d4e6"],
+html[data-theme="dark"] .st-hd [style*="background-color:#c7d4e6"]{color:#0b1220 !important}
+
+/* 行内样式里 background 与冒号之间带空格的写法（本轮漏网的最后两条就栽在这） */
+html[data-theme="dark"] .st-hd [style*="background: #059669"],
+html[data-theme="dark"] .st-hd [style*="background-color: #059669"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #0891b2"],
+html[data-theme="dark"] .st-hd [style*="background-color: #0891b2"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background: #d97706"],
+html[data-theme="dark"] .st-hd [style*="background-color: #d97706"]{color:#0b1220 !important}
+html[data-theme="dark"] .st-hd [style*="background: #dc2626"],
+html[data-theme="dark"] .st-hd [style*="background-color: #dc2626"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #2563eb"],
+html[data-theme="dark"] .st-hd [style*="background-color: #2563eb"]{color:#f8fafc !important}
+html[data-theme="dark"] .st-hd [style*="background: #7c3aed"],
+html[data-theme="dark"] .st-hd [style*="background-color: #7c3aed"]{color:#f8fafc !important}
+</style>
+<style>
+/* mux/report-light-override.css —— 报告页明色主题修补层（2026-10-14）
+ *
+ * 与 report-dark-override.css 对称的一份：全部规则挂在 html[data-theme="light"] 下。
+ * 存在的理由：报告的语义色（--ok 绿 / --warn 橙 / --pc 青）与「骨架占位」灰字是按
+ * 暗色底挑的，落到白底上只有 1.4~3.8:1，达不到 WCAG AA（正文 4.5 / 大字 3）。
+ * 同一组颜色在两个主题下必须分别定值——这是主题化的固有成本，不是 bug。
+ *
+ * 只调色，不改布局与字号；行内色用属性选择器覆盖（行内样式优先级高于选择器）。
+ */
+html[data-theme="light"]{--ok:#047857;--warn:#b45309;--danger:#b91c1c;--muted:#64748b}
+
+/* 行内主色 --pc：白底需比暗底再沉一档才够 4.5:1 */
+html[data-theme="light"] [style*="--pc:#059669"],
+html[data-theme="light"] .nav-pname{color:#047857 !important}
+html[data-theme="light"] [style*="--pc:#d97706"]{color:#b45309 !important}
+html[data-theme="light"] [style*="--pc:#0891b2"]{color:#0e7490 !important}
+html[data-theme="light"] [style*="--pc:#2563eb"]{color:#1d4ed8 !important}
+html[data-theme="light"] [style*="--pc:#7c3aed"]{color:#6d28d9 !important}
+html[data-theme="light"] [style*="--pc:#dc2626"]{color:#b91c1c !important}
+html[data-theme="light"] [style*="--pc:#c7d4e6"] .st-num{color:#1e293b !important}
+html[data-theme="light"] .nav-step{color:#475569 !important}
+html[data-theme="light"] .nav-step .no{color:#475569 !important}
+html[data-theme="light"] .art-verdict.ok,
+html[data-theme="light"] .gate-card.gpass{color:#047857 !important}
+
+/* 骨架占位与「未取到」灰字：暗底用的浅灰不能在白底用 */
+html[data-theme="light"] [style*="color:#c7d4e6"]{color:#64748b !important}
+html[data-theme="light"] .nv-miss,
+html[data-theme="light"] .nv-ic-arrow,
+html[data-theme="light"] .nv-ic-chip--miss b,
+html[data-theme="light"] .nv-ic-chip--miss span{color:#64748b !important}
+html[data-theme="light"] .art-chk-row .art-chk-val{color:#475569 !important}
+
+/* 语义块：与暗色层对称，白底用浅底 + 深字 */
+html[data-theme="light"] .gov-metrics-line{color:#475569 !important;background:#f4f7fa !important;border:1px solid #e2e8f0 !important}
+html[data-theme="light"] .gov-metrics-line b{color:#1f3a5f !important}
+html[data-theme="light"] .gmark{color:#92400e !important;background:#fef3c7 !important}
+html[data-theme="light"] .step.gate-step{background:linear-gradient(135deg,#fffbeb 0%,var(--surface) 30%) !important}
+html[data-theme="light"] .step.gate-step .gate-body{color:#78350f !important}
+html[data-theme="light"] .step.gate-step .st-num{background:#f59e0b !important;color:#1e293b !important}
+html[data-theme="light"] .st-open{background:#fef2f2 !important;color:#991b1b !important}
+html[data-theme="light"] .st-entry{background:#ecfeff !important;color:#155e75 !important}
+html[data-theme="light"] .st-note{background:#fffbeb !important;color:#92400e !important}
+html[data-theme="light"] .nv-note{color:#1e3a8a !important;background:var(--accent-soft) !important}
+html[data-theme="light"] .nv-loop-back{background:#fffbeb !important;color:#92400e !important}
+html[data-theme="light"] .ck-node-z{color:#ffffff !important}
+
+
+
+/* ── 自动生成：章节样式里「按暗底挑选」的硬编码色 → 明底对应值 ──
+   （源：mux/report_narrative.py 章节 CSS；改该文件配色后须重跑 mux/tools/gen-light-override.py）*/
+html[data-theme="light"] .nv-case-body{color:#334155 !important}
+html[data-theme="light"] .nv-case-mech{color:#0f766e !important}
+html[data-theme="light"] .nv-dim-body{color:#334155 !important}
+html[data-theme="light"] .nv-hl-body{color:#334155 !important}
+html[data-theme="light"] .nv-hl-title{color:#1d4ed8 !important}
+html[data-theme="light"] .nv-ic-ac b{color:#1d4ed8 !important}
+html[data-theme="light"] .nv-ic-arrow{color:#64748b !important}
+html[data-theme="light"] .nv-ic-chip--miss b, html[data-theme="light"] .nv-ic-chip--miss span{color:#64748b !important}
+html[data-theme="light"] .nv-lead{color:#475569 !important}
+html[data-theme="light"] .nv-loop-caption{color:#475569 !important}
+html[data-theme="light"] .nv-metric b{color:#0369a1 !important}
+html[data-theme="light"] .nv-miss{color:#64748b !important}
+
+/* ── 兜底：暗底专色 #c7d4e6 / 暗底绿 #059669 在明底上不可读（1.4:1）──
+   这两个值由生成器的章节 CSS 以继承方式落到正文节点（.st-sec / .art-item 等
+   自身不设 color），按选择器逐个点名会漏，故在容器层统一钉死明底值；
+   子元素若自带语义色仍以自己的规则为准（继承只兜底没人管的那部分）。 */
+html[data-theme="light"] .step,
+html[data-theme="light"] .st-body,
+html[data-theme="light"] .st-sec,
+html[data-theme="light"] .st-artifact,
+html[data-theme="light"] .art-body,
+html[data-theme="light"] .art-item,
+html[data-theme="light"] .st-story{color:#1e293b !important}
+html[data-theme="light"] .nv-loop,
+html[data-theme="light"] .nv-dim{color:#1e293b !important}
+
+/* 联动图/外环的强调色由行内 --accent 带进来，暗底挑的绿/青在白底只有 3.7:1 */
+html[data-theme="light"] [style*="--accent:#059669"]{--accent:#047857 !important}
+html[data-theme="light"] [style*="--accent:#0891b2"]{--accent:#0e7490 !important}
+html[data-theme="light"] [style*="--accent:#d97706"]{--accent:#b45309 !important}
+
+/* 工件清单的 <ul> 自身带暗底色（章节 CSS 遗留），<li> 继承它 → 白底浅字 1.4:1 */
+html[data-theme="light"] .art-body ul,
+html[data-theme="light"] .st-artifact ul,
+html[data-theme="light"] .st-body ul,
+html[data-theme="light"] .st-sec ul,
+html[data-theme="light"] .step ul{color:#1e293b !important}
+html[data-theme="light"] .nv-dims .nv-dim,
+html[data-theme="light"] .nv-dims .nv-dim *{color:#1e293b !important}
+
+/* ── 复扫补遗 ── */
+/* hero 底在两个主题下都是深蓝渐变（--grad-hero 是深色 token，不随主题变），
+   所以 hero 内部文字在明色主题下同样要用浅色，不能跟着 muted 走。 */
+html[data-theme="light"] .hero-terms{color:#c7d4e6 !important}
+html[data-theme="light"] .hero .sub{color:#c7d4e6 !important}
+html[data-theme="light"] .hstat span{color:#a8b8cc !important}
+html[data-theme="light"] .pb-label{color:#a8b8cc !important}
+html[data-theme="light"] [style*="color:#94a3b8"]{color:#64748b !important}
+/* 步号徽标：亮色底配深字 */
+html[data-theme="light"] [style*="--pc:#d97706"] .st-num,
+html[data-theme="light"] [style*="--pc:#0891b2"] .st-num,
+html[data-theme="light"] [style*="--pc:#c7d4e6"] .st-num{color:#1e293b !important}
+/* 工件区正文节点自带暗底色，父级兜底够不着它们 */
+html[data-theme="light"] .art-item p,
+html[data-theme="light"] .art-item b,
+html[data-theme="light"] .art-item code,
+html[data-theme="light"] .art-item li,
+html[data-theme="light"] .art-item td,
+html[data-theme="light"] .st-sec p,
+html[data-theme="light"] .st-sec b,
+html[data-theme="light"] .domains td,
+html[data-theme="light"] .domains th{color:#1e293b !important}
+
+/* 绿底用白字（深绿上白字 8:1，深字只有 2.6:1——按底色明暗分派，别一刀切） */
+html[data-theme="light"] [style*="--pc:#059669"] .st-num{color:#f8fafc !important}
+
+
+
+/* 步骤头徽标：背景写在行内，且只在 .st-hd 内分派字色——
+   限定作用域是关键：不限定的话 [style*="#色值"] 会连整个 step 容器（行内带 --pc）一起改，
+   侧栏/联动图的白字会被拉成深字（实测引入 16 条新问题）。 */
+html[data-theme="light"] .st-hd [style*="background:#059669"],
+html[data-theme="light"] .st-hd [style*="background-color:#059669"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#0891b2"],
+html[data-theme="light"] .st-hd [style*="background-color:#0891b2"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#d97706"],
+html[data-theme="light"] .st-hd [style*="background-color:#d97706"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#f59e0b"],
+html[data-theme="light"] .st-hd [style*="background-color:#f59e0b"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#dc2626"],
+html[data-theme="light"] .st-hd [style*="background-color:#dc2626"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#2563eb"],
+html[data-theme="light"] .st-hd [style*="background-color:#2563eb"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#7c3aed"],
+html[data-theme="light"] .st-hd [style*="background-color:#7c3aed"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#c7d4e6"],
+html[data-theme="light"] .st-hd [style*="background-color:#c7d4e6"]{color:#0b1220 !important}
+
+/* 行内样式里 background 与冒号之间带空格的写法（本轮漏网的最后两条就栽在这） */
+html[data-theme="light"] .st-hd [style*="background: #059669"],
+html[data-theme="light"] .st-hd [style*="background-color: #059669"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #0891b2"],
+html[data-theme="light"] .st-hd [style*="background-color: #0891b2"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background: #d97706"],
+html[data-theme="light"] .st-hd [style*="background-color: #d97706"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background: #dc2626"],
+html[data-theme="light"] .st-hd [style*="background-color: #dc2626"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #2563eb"],
+html[data-theme="light"] .st-hd [style*="background-color: #2563eb"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #7c3aed"],
+html[data-theme="light"] .st-hd [style*="background-color: #7c3aed"]{color:#f8fafc !important}
+
+/* 导读层（第0章/PART1）在明底上的边缘色：3.9~4.4，差一口气到 4.5 */
+html[data-theme="light"] .idx th,
+html[data-theme="light"] .stat-note,
+html[data-theme="light"] summary,
+html[data-theme="light"] .part1-hd span{color:#334155 !important}
+html[data-theme="light"] .meta{color:#475569 !important}
+</style>
+<style>
+/* theme-toggle.css —— 主题切换控件样式（方案页与报告页通用）
+ *
+ * 控件本体靠两页共有的 token 取色，明暗下都清晰；不引入任何硬编码色。
+ * 主题作用域约定（全套页面统一）：
+ *   :root                     = 明色 token（默认）
+ *   html[data-theme="dark"]   = 暗色 token
+ */
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"]  { color-scheme: dark; }
+
+.theme-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 99999;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--ink, #1e293b);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.theme-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(15, 23, 42, .28); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle { transition: none; }
+}
+</style>
 </body></html>

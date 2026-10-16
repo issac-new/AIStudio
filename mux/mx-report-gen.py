@@ -4325,11 +4325,17 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
 @media (max-width: 900px) {{
   .layout{{grid-template-columns:1fr}}
-  /* 窄屏侧栏不再消失：顶置横滚条形态（类名不变，只改布局形态） */
-  nav.sidebar{{position:static;width:100%;height:auto;max-height:none;display:flex;gap:4px;overflow-x:auto;padding:8px 12px;border-right:none;border-bottom:1px solid var(--line)}}
-  .nav-title,.nav-phase{{flex:0 0 auto}}
+  /* 窄屏侧栏不再消失：顶置横滚条形态（类名不变，只改布局形态）。
+     全部直接子元素 flex:0 0 auto＋链接 nowrap——裸 <a> 缺不收缩规则时被
+     flex 默认收缩压成 20px 宽、中文逐字折行（run20 报告窄窗实录）；
+     display:contents 展平后的 .nav-pname/.nav-step 是真实 flex 项，>* 抓不到，
+     各自保留规则；.nav-title（含 <br> 三行大标题）隐藏防撑高横条 */
+  nav.sidebar{{position:static;width:100%;height:auto;max-height:none;display:flex;flex-wrap:nowrap;align-items:center;gap:4px;overflow-x:auto;padding:8px 12px;border-right:none;border-bottom:1px solid var(--line)}}
+  nav.sidebar>*{{flex:0 0 auto}}
+  nav.sidebar a{{white-space:nowrap}}
+  nav.sidebar .nav-title{{display:none}}
   .nav-phase{{display:contents}}
-  .nav-pname{{flex:0 0 auto}}
+  .nav-pname{{flex:0 0 auto;white-space:nowrap}}
   .nav-step{{flex:0 0 auto}}
   .main{{padding:0 16px 40px}}
   .hero{{margin:0 -16px 20px;padding:24px 20px 20px;border-radius:0 0 16px 16px}}
