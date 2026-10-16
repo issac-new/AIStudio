@@ -68,6 +68,21 @@ describe('报告三要素·PART1 实测统计表（空标题根治）', () => {
     const out = runMerge()
     expect(out).toContain('G5×3')
   })
+
+  it('单栅格结构：div 开闭配平且 .layout 在 main 之后才闭合（侧栏贯穿全文）', () => {
+    const out = runMerge()
+    // PART1 注册串 div 不配平会把 guide/.layout 提前关死——导读块后全程丢侧栏（run20 实录）
+    const opens = out.split('<div').length - 1
+    const closes = out.split('</div>').length - 1
+    expect(closes, `div 不配平：open=${opens} close=${closes}`).toBe(opens)
+    // main 必须闭合在 layout 之内：栅格容器包住全部正文（尾部 button/script 在栅格外属模板合法区）
+    const layoutOpen = out.indexOf('<div class="layout">')
+    const mainClose = out.lastIndexOf('</main>')
+    const backTop = out.indexOf('<button id="back-top"')
+    expect(layoutOpen).toBeGreaterThan(-1)
+    expect(mainClose).toBeGreaterThan(layoutOpen)
+    expect(backTop).toBeGreaterThan(mainClose)
+  })
 })
 
 describe('报告三要素·技术规范参数卡', () => {
