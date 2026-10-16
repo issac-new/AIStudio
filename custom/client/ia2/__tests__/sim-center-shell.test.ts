@@ -11,6 +11,8 @@
 // unified-nav-guard 模式，避免装载 IaShell 重型导入链）。
 import { describe, it, expect } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
 import { buildIaRoutes } from '../routes'
 import SimCenterView from '../views/sim/SimCenterView.vue'
@@ -207,4 +209,23 @@ describe('sim-tabs 文案单一事实源', () => {
     expect([zh.tabOverview, zh.tabSupervision, zh.tabOps, zh.tabEvidence, zh.tabDelivery, zh.tabTrace])
       .toEqual([...SIX_TAB_LABELS])
   })
+})
+
+// V1 壳收敛（视觉重规划 D2）：两中心 body 类生命周期+rail 隐藏规则在库
+describe('壳收敛 ia-center-full（V1）', () => {
+  it('SimCenterView 挂载加 body 类、卸载移除；隐藏规则在 ia2.scss', async () => {
+    const { default: SimCenterView } = await import('../views/sim/SimCenterView.vue')
+    const { createRouter, createMemoryHistory } = await import('vue-router')
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/app/sim', name: 'ia2.sim', component: SimCenterView }] })
+    await router.push('/app/sim')
+    await router.isReady()
+    const w = mount(SimCenterView, { global: { plugins: [router] } })
+    expect(document.body.classList.contains('ia-center-full')).toBe(true)
+    w.unmount()
+    expect(document.body.classList.contains('ia-center-full')).toBe(false)
+    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    expect(scss).toContain('body.ia-center-full .studio-navigation-rail')
+    expect(scss).toContain('display: none')
+  })
+
 })
