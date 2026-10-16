@@ -8,21 +8,22 @@
 
 ## 决策记录
 
-本段记录本方案及 2026-10-16 第一批落地的关键决策，含被否方案与理由。
+本段记录本方案及 2026-10-16 第一批落地的关键决策，含否决掉的备选方案与理由。
 
-| 编号 | 决策 | 备选（被否） | 理由 |
+| 编号 | 决策 | 否决的备选 | 理由 |
 |---|---|---|---|
 | D1 | 第一批只做观测与告警面，不动任何执行开关 | 直接按严重程度修复（v1 方案） | 用户 2026-10-16 裁定：先不阻断现有用法，多轮数据后再决策。阻断类全部挂起并写死启用判据 |
-| D2 | 阻断项启用判据先写死再挂起 | 先挂起、以后再看 | 没有数据阈值的挂起会无限期拖延；每项配「数据阈值加人工复核」双条件，4 周数据不达标不提请 |
+| D2 | 阻断项启用判据先写死再挂起 | 先挂起、以后再看 | 没有数据阈值的挂起会无限期拖延。每项配「数据阈值加人工复核」双条件，4 周数据不达标不提请 |
 | D3 | M6 审计账身份字段取上游 `AgentToolContext` 第三参数 | 改上游钩子签名或自造上下文 | 上游 `ToolExecuteHook` 本就有该参数且调用处始终透传，补形参即可，零 patch |
 | D4 | M7 检测器不带 D 编号，用域名命名 | 延续 D11/D12/D13 编号 | 现有 `detectRunawayLoop` 已占用 D11，续编会撞号；与 disk.capacity、runtime.spawn-health 等后期件一致 |
-| D5 | M7 时段告警用「时段∩高危」交集口径 | 报全部非工作时段活动 | agent 7×24 在跑，报全量时段活动只会狼来了；E2 检查项原文也只要求高危操作 |
+| D5 | M7 时段告警用「时段∩高危」交集口径 | 报全部非工作时段活动 | agent 7×24 在跑，报全量时段活动只会狼来了。E2 检查项原文也只要求高危操作 |
 | D6 | M8 出厂口令门禁做成 WARN 态 | 直接硬失败（v1 方案） | 用户先预警裁定；源头修复未完成前硬失败会阻断构建。转 FAIL 判据：源头修复完成且连续两周 WARN 零新增 |
 | D7 | M9 告警中继用轮询加三层去重 | 订阅式 fanOut | 与巡检架构同构、可经 deps 注入测试；订阅面生产零消费方，新开生命周期反而添状态 |
-| D8 | 水位线只按过了冷却的事件推进 | 按全部新事件推进 | 实测缺陷：被冷却抑制的事件会把水位垫高，后续同刻或更早的新事件被静默丢弃（冷却与水位线耦合） |
+| D8 | 水位线只按过了冷却的事件推进 | 按全部新事件推进 | 实测缺陷：冷却抑制掉的事件会把水位垫高，同刻或更早的新事件会静默丢失（冷却与水位线耦合） |
 | D9 | 盘点脚本独立成脚本，不塞进巡检官 | 只做巡检官 collector | 周报要人读的报告并落盘，且不依赖 studio server 在跑；collector 与脚本同源同口径 |
 | D10 | 双会话碰撞后改用 cherry-pick 落干净分支 | 直接 merge 原分支 | 原分支混进了另一会话未合入的提交（completion.zero-delivery），merge 会捎带；cherry-pick 只应用本批 diff |
-| D11 | 删默认账号而非换强默认密码（M8b 直接实施，用户 2026-10-16 拍板「要 改掉吧」） | 保留账号换随机强口令出厂 | 部署数据证实真实用户全走 Matrix 登录（testuser1/testuser3/swarm 均 matrix 来源，admin 为空库引导遗留且本机密码已改）；保留已知出厂口令的账号本身就是风险源。空库引导删除、CLI 改随机密码、桌面改主进程 IPC 代理登录（口令不出主进程）、dev 链经 HERMES_WEB_UI_DEV_BOOTSTRAP=1 显式开引导 |
+| D11 | 删默认账号而非换强默认密码（M8b 直接实施，用户 2026-10-16 拍板「要 改掉吧」） | 保留账号换随机强口令出厂 | 部署数据证实真实用户全走 Matrix 登录（testuser1/testuser3/swarm 均 matrix 来源，admin 为空库引导遗留且本机密码已改）。保留已知出厂口令的账号本身就是风险源。落地四件：空库引导移除、CLI 改随机密码、桌面改主进程代理登录（口令不出主进程）、dev 链显式开引导 |
+| D12 | 告警落治理中心面板，不发 Matrix 群（用户 2026-10-16 拍板） | 发工作群 / 单独告警房间 | 治理中心事件流组件本就全域拉取六域事件，显示面现成。发群需要房间与令牌两项人工决定且打扰。配套修正两条。其一 security.* 检测器事件路由到 security 域（原全部落 system 域，面板按域筛选看不到）。其二工具黑名单默认空集（默认全列等于上线即对依赖 terminal 的档案刷 high；名单留给 env 配置）。端到端已验：真实数据触发 offhours-highrisk（worker-coder 凌晨 20 次高危调用）进 security 域，治理中心接口带鉴权可查 |
 
 ## 一、整改原则
 
@@ -30,9 +31,9 @@
 
 由这条裁定推导出三条执行纪律：
 
-1. **零阻断**。第一阶段不改任何会改变现有行为的开关。具体是不动 approvals 档位、不裁 toolsets、不上文件黑名单、不改监听默认值、不让构建失败。预警期内所有现有用法照原样跑通。
+1. **零阻断**。第一阶段不改任何会改变现有行为的开关。具体是不动 approvals 档位、不裁 toolsets、不上文件黑名单、不改监听默认值、不让构建失败。预警期内现有用法照原样跑通。
 2. **只观测**。短期交付物是观测面与告警面：审计账补字段、巡检官加检测器、告警接消费方、盘点脚本出数据。
-3. **判据先行**。每个阻断项在挂起前先写死「启用判据」，即需要看到什么数据才提请决策。没有判据的阻断项不提请，避免凭印象开闸。
+3. **判据先行**。每个阻断项在挂起前先写死「启用判据」，即需要看到什么数据才提请决策。没有判据的阻断项不提请，不凭印象开闸。
 
 ## 二、阶段总表
 
@@ -134,15 +135,18 @@ GROUP BY tool ORDER BY n DESC;
 
 **验收**：inspector 单测五项。注入同键 3 条只发 1 条。跨轮同键且间隔小于冷却时长则抑制。单轮 5 条发 2 条加 1 条汇总。未配房间时静默跳过。
 
-### M4 催办房间配置
+### M4 告警落治理中心（已实施，2026-10-16 用户拍板）
 
-**落点**：跑 cluster inspector 的 studio server 进程环境，以及 agent 进程读的 profile config.yaml。
+原设计配 Matrix 催办房间（CLUSTER_INSPECTOR_NUDGE_ROOM）。用户裁定告警放治理中心面板、不发群。M9 的 Matrix 中继保留为可选能力（不配房间即静默，代码不删）。主通道变为：巡检官事件进治理事件流。治理中心页签的「事件流」组件全域拉取并按域筛选，high 级恒显。
 
-**改法**：server 环境加 `CLUSTER_INSPECTOR_NUDGE_ROOM='!<房间>:<服务器>'`。未配时 `nudgeStalled` 静默跳过（`inspector.ts:155`，代码注释自述安全缺省），所以不配则前面所有告警都到不了人。发送者凭据读 `~/.hermes/profiles/<profile>/.env` 的五件套（MATRIX_HOMESERVER、MATRIX_ACCESS_TOKEN、MATRIX_USER_ID 三必填），profile 解析顺序 `LOOP_MATRIX_PROFILE` 到 `~/.hermes/active_profile` 到 orchestrator（`overlay/custom/server/matrix/gateway-env.ts:66-106`）。agent 侧矩阵白名单按需写进 profile config.yaml 的 matrix 段，先用 `free_response_rooms` 验证再收窄 `allowed_rooms`，设错会把 agent 变成群聋子。
+配套改动（决策 D12）：
 
-**零阻断声明**：配置只影响告警投递，不影响 agent 行为。
+- 域路由：security.* 检测器的事件进 security 域（domainForDetector 纯函数）。面板按域筛选时工具告警归安全、集群健康归 system，不混流。
+- 黑名单默认空集：teams 日常工作依赖 terminal/execute_code，默认全列等于上线即刷屏。频次与时段两条判据已覆盖异常行为，黑名单留给 env 显式配置。
 
-**验收**：触发一次已知告警（如临时调低磁盘水位阈值），房间收到消息；凭据五件套存在性检查通过。
+端到端验证（2026-10-16 实测）：起 server（CLUSTER_INSPECTOR=1，15 秒一轮）。真实数据触发 security.offhours-highrisk（worker-coder 0-6 时 20 次高危调用，severity high）。带 JWT 调 GET /api/hermes/governance-events?domain=security 能取到该事件，治理中心面板可见。冷却去重实测正常。
+
+运维前提（如实告知）：告警由 studio server 进程承载，server 不在跑则无告警产生与显示。日常用 SwarmStudio.app（0.7.36 已装）或 npm run serve 常驻其一。
 
 ### M8 出厂默认口令门禁（预警态）
 
@@ -166,15 +170,15 @@ GROUP BY tool ORDER BY n DESC;
 
 ### M8b 源头修复（已实施，2026-10-16 用户拍板「删默认账号」方向）
 
-原计划只评估。用户核对部署数据后裁定直接改掉（决策 D11）：真实用户全走 Matrix 登录，admin 账号是空库引导遗留。已落地的改动（patch 640 + overlay 随改）：
+原计划只评估。用户检查部署数据后裁定直接改掉（决策 D11）：真实用户全走 Matrix 登录，admin 账号是空库引导遗留。已落地改动（patch 640 加 overlay 随改）：
 
-- server：删 `DEFAULT_PASSWORD` 与空库 admin/123456 引导；空库登录返回 `NO_USER_ACCOUNTS` 错误码（指向 Matrix 登录或 CLI）；`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 时空库首登以提交凭据建号（dev 链专用）；`requiresCredentialChange` 恒 false（字段保留 API 契约）。
+- server：删 `DEFAULT_PASSWORD` 与空库 admin/123456 引导。空库登录返回 `NO_USER_ACCOUNTS` 错误码（指向 Matrix 登录或 CLI）。`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 时空库首登以提交凭据建号（dev 链专用）。`requiresCredentialChange` 恒 false（字段保留 API 契约）。
 - CLI `reset-default-login`：每次生成随机密码，凭据落 `<home>/admin-login.json`（0600）并打印一次。
-- desktop：新增 `hermes-desktop:login` IPC——主进程用落盘凭据代理登录换 JWT，空库首启自动随机建号；WebPet 不再在客户端 bundle 持口令；重置流程读凭据文件并在弹窗显示新随机口令（9 语言文案随改）。
+- desktop：新增 `hermes-desktop:login` IPC，主进程用落盘凭据代理登录换 JWT，空库首启自动随机建号。WebPet 不再在客户端 bundle 持口令。重置流程读凭据文件并在弹窗显示新随机口令（9 语言文案随改）。
 - client：12 语言 `defaultCredentialsHint` 改为首次登录引导文案。
 - overlay 随改：entry.mts dev 桩口令换 `dev-bootstrap`（须服务端显式开 dev-bootstrap 门）；13 个历史走查脚本口令字面量同步。
 
-转硬失败判据照旧：本修复合入后，M8 构建门禁的 WARN 零新增计数从合入日起算，连续两周零命中即提请 WARN 升 FAIL。
+转硬失败判据照旧：本修复合入后，M8 构建门禁的 WARN 零新增计数从合入日起算。连续两周零命中即提请 WARN 升 FAIL。
 
 ## 四、第二阶段 观察指标与周报
 
