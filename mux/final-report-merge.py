@@ -603,7 +603,6 @@ _JARGON_CANDIDATES = [
     os.environ.get('MX_JARGON_CHECK', ''),
     str(Path(__file__).resolve().parent.parent / 'overlay' / 'scripts' / 'plan-html' / 'jargon-check.py'),
     '/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
-    '/Volumes/nvme2230/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
 ]
 
 
