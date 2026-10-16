@@ -99,7 +99,7 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 # 说人话叙事是逐轮人工正本（时间线/故事/提交锚皆该轮真值），禁旧轮冒充；
 # 占位标记 {{n_*}} 由 main() 实测统计替换；正文为普通字符串（非 f-string），CSS 花括号安全。
 # run6 正本（处置口径与 2026-10-02 处置轮终态核对一致）：
-PART1_RUN6 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN6 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
 
@@ -195,10 +195,10 @@ PART1_RUN6 = '''<div class="guide" style="background:var(--surface-2);padding:6p
 
 <p class="note">报告口径：本报告 = 说人话导读+第 0 章推演逻辑与协作顺序（PART 1，自演示叙事版改写，处置口径已更新至 2026-10-02 处置轮终态）+ 机器逐步报告全文（PART 2，经按轮隔离/占位符/判词器三类缺陷根治后嵌入，样式隔离）。数据截至 2026-10-02 {{gen_time}}。</p>
 
-</div>'''
+'''
 
 
-PART1_RUN8 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN8 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
 
@@ -211,7 +211,7 @@ PART1_RUN8 = '''<div class="guide" style="background:var(--surface-2);padding:6p
 {{ch0}}
 '''
 
-PART1_RUN7 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN7 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
 
@@ -320,9 +320,9 @@ PART1_RUN7 = '''<div class="guide" style="background:var(--surface-2);padding:6p
 
 <p class="note">报告口径：本报告 = 说人话导读+第 0 章推演逻辑与协作顺序+研发全流程治理有效性实测统计（PART 1，按本轮实测依据编写）+ 机器逐步报告全文（PART 2，采集 42 图+26 步实测依据叙事嵌入，样式隔离）。run7 为保真混合状态轮（前 11 步关自动复盘、后开），性能引证须标注口径。数据截至 2026-10-03 {{gen_time}}。</p>
 
-</div>'''
+'''
 
-PART1_RUN9 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN9 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
 
@@ -358,7 +358,7 @@ PART1_RUN9 = '''<div class="guide" style="background:var(--surface-2);padding:6p
 # 写法三问：判断句？带锚（时刻/commit/记入问题清单键）？人话（黑话首现释义）？
 # R17 强制关卡（与 mx-report-gen._NARR 同款）：未注册说人话叙事的轮次拒绝合并，
 # 防旧轮叙事冒充新轮报告。新轮正本=人工按该轮实测依据编写后注册。
-PART1_RUN10 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN10 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
 
@@ -384,7 +384,7 @@ PART1_RUN10 = '''<div class="guide" style="background:var(--surface-2);padding:6
 {{ch0}}
 '''
 
-PART1_RUN11 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN11 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
 
@@ -403,7 +403,7 @@ PART1_RUN11 = '''<div class="guide" style="background:var(--surface-2);padding:6
 '''
 
 
-PART1_RUN12 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN12 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-09 02:29 → 10-10 03:39（约 25 小时）</span></h1>
 
@@ -422,7 +422,7 @@ PART1_RUN12 = '''<div class="guide" style="background:var(--surface-2);padding:6
 '''
 
 
-PART1_RUN13 = '''<div class="guide" style="background:var(--surface-2);padding:6px 0 20px">
+PART1_RUN13 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 回归轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 开跑（回归轮）</span></h1>
 
@@ -444,7 +444,7 @@ PART1_RUN13 = '''<div class="guide" style="background:var(--surface-2);padding:6
 {{ch0}}
 '''
 
-PART1_RUN14 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN14 = '''
 
 <h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全新环境） ｜ 2026-10-10 14:15 开跑（全量轮）</span></h1>
 
@@ -464,7 +464,7 @@ PART1_RUN14 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 {{ch0}}
 '''
 
-PART1_RUN15 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN15 = '''
 
 <h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-11 23:54 开跑</span></h1>
 
@@ -475,7 +475,7 @@ PART1_RUN15 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
-PART1_RUN16 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN16 = '''
 
 <h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-12 16:33 开跑</span></h1>
 
@@ -486,7 +486,7 @@ PART1_RUN16 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
-PART1_RUN18_LITE = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN18_LITE = '''
 
 <h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · lite 专项验证轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（lite 轮，开发→报告段） ｜ 2026-10-13 03:08 开跑</span></h1>
 
@@ -499,7 +499,7 @@ PART1_RUN18_LITE = '''<div class="guide" style="background:#fbfbfa;padding:6px 0
 <div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现；lite 轮的夹具步（前半程）明确标注「不在本轮执行范围」，真值指向源轮报告。</div>
 '''
 
-PART1_RUN19 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN19 = '''
 
 <h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-13 16:07:58 开跑</span></h1>
 
@@ -510,7 +510,7 @@ PART1_RUN19 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card info"><b>怎么看这份报告：</b>每个结论都带可反查的锚（事件号/提交号/时间戳）；问题单与处置行成对出现（有什么问题→怎么处理的）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
-PART1_RUN20 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
+PART1_RUN20 = '''
 
 <h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收尾中）</span></h1>
 
@@ -523,7 +523,7 @@ PART1_RUN20 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 <div class="card ok"><b>本轮产品成效：</b>巡检官 19→22 检测器（期望对账/delivery.pushed/spawn-health 三新件字面触发实证）；持续流水线引擎 v1+并行评审编排器（V8.33/V8.35 产品化）；方案 V8.34 四纪律（66-69）；636/637 运行时补丁；watchdog 判据根治。</div>
 
 <div class="card info"><b>怎么看这份报告：</b>每个结论带可反查锚（事件号/提交号/时间戳）；问题单与处置行成对（ISSUE→DISP）；正文只写结论与重点，机器细节在折叠区。</div>
-</div>'''
+'''
 
 PART1_BY_RUN = {
     '20261015-v8-run20': PART1_RUN20,
@@ -724,6 +724,15 @@ def main():
         raise SystemExit(
             '[final-report-merge] PART1 占位符残留拒出（' + '; '.join(h[:60] for h in _ph_hits[:4])
             + '）——收尾链先回填实证再合并（run13 复盘 A1 闸）')
+    # div 配平闸（2026-10-16 立法）：注册串禁自带 guide 包裹层/多余闭合——模板层已提供
+    # <div class="guide" id="part1-top">（导航锚点）。串内多余 </div> 会提前关死 guide 与
+    # .layout 栅格，报告从导读块后全程丢侧栏（run20 及历代 -1 串实录）；未闭合开标签则让
+    # guide 样式吞掉后续全文。开闭数不等即拒出。
+    _o_div, _c_div = part1_tmpl.count('<div'), part1_tmpl.count('</div>')
+    if _o_div != _c_div:
+        raise SystemExit(
+            '[final-report-merge] PART1 注册串 div 不配平（<div>=%d </div>=%d）——导读串'
+            '只写内容层，guide 包裹层归模板（模板重组契约）；请核对串内开闭标签' % (_o_div, _c_div))
 
     # ── PART1 实测统计槽（2026-10-08 PART1 骨架通路配套）：数字合入时自 state/issues.log
     #    现算，注册稿只写语境句——数字永不落伍（方案 §5.4 PART1 模板「数字一律实测统计槽」）。
