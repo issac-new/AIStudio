@@ -1,0 +1,65 @@
+framework	rule_id	rule_title	hits	evidence	SUGGEST
+vue	vue-r1	SFC 须用 `<script setup>` 而非 Options API + `<script>`	-	-	manual
+vue	vue-r2	禁止混用 Options API（data/methods/computed 选项式）	0		likely-na
+vue	vue-r3	v-html 须配套 sanitize，禁止渲染未净化 HTML	-	-	manual
+vue	vue-r4	v-for 须用稳定唯一 key，禁止用数组 index 作 key	47	.claude/worktrees/fix/upstream-sb/hermes-studio/packages/client/src/components/hermes/models/CombinationModelsPanel.vue:367:            <div v-for="(slot, index) in formPreset.reference_models" :key="index" class="slot-editor-row">;custom/client/bpa/components/BpaLinkPanel.vue:165:          <tr v-for="(p, i) in report.paths.slice(0, 12)" :key="i">;custom/client/bpa/components/BpaTreePanel.vue:195:        <div v-for="(k, i) in form.kpis" :key="i" class="kpi-row">	applicable
+vue	vue-r5	reactive 对象用量须收敛，优先 ref/computed	-	-	manual
+vue	vue-r6	reactive 对象禁止直接解构，须用 toRefs/toRef 保持响应式	-	-	manual
+vue	vue-r7	大对象状态须用 shallowRef/shallowReactive 避免深层代理开销	-	-	manual
+vue	vue-r8	defineProps/defineEmits 须显式类型声明，禁运行时声明 + 必填校验	-	-	manual
+vue	vue-r9	生命周期钩子须在 setup 同步注册，禁异步回调中注册	-	-	manual
+vue	vue-r10	computed 须为纯函数无副作用，禁在 computed 内 mutate 状态	-	-	manual
+vue	vue-r11	watch 依赖须完整声明，禁用懒推断导致的漏依赖	-	-	manual
+vue	vue-r12	provide/inject 须带类型与默认值，禁裸 inject 任意值	-	-	manual
+vue	vue-r13	Teleport 须指定目标且目标须在挂载时存在	-	-	manual
+vue	vue-r14	DOM 更新后操作须包 nextTick，禁同步访问更新后 DOM	-	-	manual
+vue	vue-r15	组件命名须多词 PascalCase，禁与 HTML 元素冲突	-	-	manual
+vue	vue-r16	Pinia store 须用 defineStore 定义，禁散落 mutation	-	-	NO_SCOPE
+vue	vue-r17	聚合层 store 须存在且只读消费，禁跨 store 直接写	-	-	manual
+naiveui	naiveui-r1	须具名导入，禁全局注册	-	-	manual
+naiveui	naiveui-r2	禁与第二套 UI 库混用	-	-	manual
+naiveui	naiveui-r3	主题覆盖须用 n-config-provider，禁直接改 .n-* 类 CSS	-	-	manual
+naiveui	naiveui-r4	useMessage/useDialog 须注入式，禁裸 createDiscreteApi	-	-	manual
+naiveui	naiveui-r5	n-data-table 大数据须虚拟滚动	-	-	manual
+naiveui	naiveui-r6	暗色模式须用 darkTheme，禁手写 dark CSS	-	-	manual
+naiveui	naiveui-r7	n-form 须用 rules 校验，禁手动 if 校验	-	-	manual
+naiveui	naiveui-r8	n-select filterable 大数据须远程搜索	-	-	manual
+naiveui	naiveui-r9	n-upload 须配文件大小限制	-	-	manual
+naiveui	naiveui-r10	n-modal 优先 preset="card" 统一布局	-	-	manual
+vite	vite-r1	alias 须数组形式，@/custom 须在 @ 之前	-	-	manual
+vite	vite-r2	inject 脚本须支持 --clean 回滚	-	-	manual
+vite	vite-r3	环境变量须 VITE_ 前缀，防敏感配置泄漏客户端	-	-	manual
+vite	vite-r4	构建须配 manualChunks 分包	-	-	manual
+vite	vite-r5	build.target 须显式配置浏览器兼容	-	-	manual
+vite	vite-r6	生产构建须关闭 sourcemap	-	-	manual
+vite	vite-r7	base 路径须显式配置（部署子路径）	-	-	manual
+vite	vite-r8	预构建缓存须显式管理 optimizeDeps	-	-	manual
+vite	vite-r9	server.proxy 须配 target，禁裸 rewrite	-	-	manual
+vite	vite-r10	生产压缩须 esbuild/minify，禁关闭	-	-	manual
+koa	koa-r1	统一错误处理兜底中间件必须最先注册	-	-	manual
+koa	koa-r2	koa-helmet 安全头为生产基线	-	-	manual
+koa	koa-r3	路由须 factory 注入（createRouter(deps) 返回 Router）	-	-	manual
+koa	koa-r4	禁裸 app.use(router)，必须 app.use(router.routes())	-	-	manual
+koa	koa-r5	路由参数与请求体须输入校验	-	-	manual
+koa	koa-r6	洋葱模型——await next() 须 try/catch（或 try/finally）包裹	-	-	manual
+koa	koa-r7	跨中间件共享数据须挂 ctx.state，禁直接扩展 ctx	-	-	manual
+koa	koa-r8	koa-bodyparser 须显式 jsonLimit/formLimit	-	-	manual
+koa	koa-r9	业务错误须 ctx.throw(status)，禁裸 throw new Error	-	-	manual
+koa	koa-r10	中间件必须 async/await 风格，generator 中间件已废弃	-	-	manual
+koa	koa-r11	CORS 须显式 origin 白名单	-	-	manual
+koa	koa-r12	app.context 扩展用于 API 增强而非请求态	-	-	manual
+koa	koa-r13	Socket.IO 须用 namespace 隔离，禁裸 socket.on	0		likely-na
+koa	koa-r14	Socket.IO 连接须 setup 封装，禁散落 socket.on 监听	-	-	manual
+jest-vitest	jest-vitest-r1	测试位置须与 vitest.config include 一致	-	-	manual
+jest-vitest	jest-vitest-r2	跨变量引用 mock 须用 vi.hoisted 提升	-	-	manual
+jest-vitest	jest-vitest-r3	快照须治理，禁无脑 --update	-	-	manual
+jest-vitest	jest-vitest-r4	须配覆盖率阈值门禁	-	-	manual
+jest-vitest	jest-vitest-r5	Vitest 须用 vi.* API，禁残留 Jest API	-	-	manual
+jest-vitest	jest-vitest-r6	须显式配置 environment（jsdom/happy-dom/node）	-	-	manual
+jest-vitest	jest-vitest-r7	DOM 环境须配 setupFiles 引入 jest-dom	-	-	manual
+jest-vitest	jest-vitest-r8	禁开 globals: true，推荐显式 import	-	-	manual
+jest-vitest	jest-vitest-r9	in-source testing 须用 if(import.meta.vitest) 隔离	-	-	manual
+jest-vitest	jest-vitest-r10	性能敏感模块须配 benchmark 基准	-	-	manual
+jest-vitest	jest-vitest-r11	类型测试须启用 typecheck	-	-	manual
+jest-vitest	jest-vitest-r12	vitest.config include 须明确 custom 测试入口	0		likely-na
+jest-vitest	jest-vitest-r13	禁在只读 upstream 目录新增测试文件	0		likely-na

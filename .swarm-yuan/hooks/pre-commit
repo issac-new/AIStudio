@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# swarm-yuan spec-first L2 提交时强拦垫片（由 generate-skill.sh 装配，勿手改；
+# 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
+exec bash "/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev/scripts/spec-first-pre-commit.sh" "$@"
