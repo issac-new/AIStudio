@@ -7,6 +7,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { compactThreshold } from '../compactthreshold/compact-threshold'
+import type { ProfileToolUsageFace } from './profile-tool-usage'
 
 export interface GatewayFace {
   ok: boolean
@@ -166,7 +167,16 @@ export interface ClusterSnapshot {
   /** 会话遥测（长会话治理 B1：602 sidecar 采集面）——缺文件=合法空态；
    *  可选：旧测试夹具/未升级快照不携带时 D9-D11 静默跳过（同 kanban 未接线语义） */
   sessionTelemetry?: SessionTelemetryFace
+  /** teams 工具调用观测面（2026-10-16 安全轮 M6b：各 profile state.db 只读聚合）——
+   *  未接线=合法空态。用途：security.tool-rate / security.offhours-highrisk /
+   *  security.tool-blacklist 三个检测器（预警先行版：只告警不拦截）。
+   *  覆盖范围：agent teams（Python 子进程）的工具调用；studio server ekko
+   *  runtime 的调用在 toolpipeline 审计账，两面互补。 */
+  toolUsage?: ProfileToolUsageFace
 }
+
+export type { ProfileToolUsageEntry, ProfileToolUsageFace } from './profile-tool-usage'
+export { collectProfileToolUsage } from './profile-tool-usage'
 
 export interface CollectorDeps {
   fetchImpl?: typeof fetch
