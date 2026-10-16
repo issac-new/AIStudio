@@ -32,4 +32,9 @@ kill_by_pidfile "$PIDS_DIR/studio.pid"
 kill_by_pidfile "$PIDS_DIR/gateway.pid"
 kill_port "$STUDIO_PORT"
 kill_port "$GW_PORT"
+# SIM 网关 launchd 托管面卸载（2026-10-16，与 mx-up 托管面配对）：
+# KeepAlive 服务不 bootout 则 kill_port 后 launchd 秒级重拉——必须先卸载服务再杀端口。
+if [ -x "$SCRIPT_DIR/mx-sim-gateway-service.sh" ]; then
+  bash "$SCRIPT_DIR/mx-sim-gateway-service.sh" down 2>/dev/null || true
+fi
 log "=== mx-down 完成（真机 orchestrator :8650 不在管辖范围）==="
