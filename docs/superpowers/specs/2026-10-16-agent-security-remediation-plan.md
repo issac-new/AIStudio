@@ -23,6 +23,7 @@
 | D9 | 盘点脚本独立成脚本，不塞进巡检官 | 只做巡检官 collector | 周报要人读的报告并落盘，且不依赖 studio server 在跑；collector 与脚本同源同口径 |
 | D10 | 双会话碰撞后改用 cherry-pick 落干净分支 | 直接 merge 原分支 | 原分支混进了另一会话未合入的提交（completion.zero-delivery），merge 会捎带；cherry-pick 只应用本批 diff |
 | D11 | 删默认账号而非换强默认密码（M8b 直接实施，用户 2026-10-16 拍板「要 改掉吧」） | 保留账号换随机强口令出厂 | 部署数据证实真实用户全走 Matrix 登录（testuser1/testuser3/swarm 均 matrix 来源，admin 为空库引导遗留且本机密码已改）；保留已知出厂口令的账号本身就是风险源。空库引导删除、CLI 改随机密码、桌面改主进程 IPC 代理登录（口令不出主进程）、dev 链经 HERMES_WEB_UI_DEV_BOOTSTRAP=1 显式开引导 |
+| D12 | 告警落治理中心面板，不发 Matrix 群（用户 2026-10-16 拍板「放在治理中心吧」） | 发工作群 / 单独告警房间 | 治理中心事件流组件本就全域拉取六域事件，展示面现成；发群需要房间与令牌两项人工决定且打扰。配套修正：①security.* 检测器事件路由到 security 域（原全部落 system 域，面板按域筛选会看不到）；②工具黑名单默认改空集（默认全列=上线即对依赖 terminal 的全部活跃档案刷 high，狼来了；E2 只要求可告警，名单留给 CLUSTER_INSPECTOR_TOOL_BLACKLIST 显式配置）。端到端已验：真实数据触发 offhours-highrisk（worker-coder 凌晨 20 次高危调用）→ security 域 → 治理中心接口带鉴权可查；NO_USER_ACCOUNTS 与 dev 门两条新路径实测通过；冷却与单实例行为正常（「重复事件」实为验证期多次重启各发冷启动首条） |
 
 ## 一、整改原则
 
@@ -134,15 +135,18 @@ GROUP BY tool ORDER BY n DESC;
 
 **验收**：inspector 单测五项。注入同键 3 条只发 1 条。跨轮同键且间隔小于冷却时长则抑制。单轮 5 条发 2 条加 1 条汇总。未配房间时静默跳过。
 
-### M4 催办房间配置
+### M4 告警落治理中心（已实施，2026-10-16 用户拍板）
 
-**落点**：跑 cluster inspector 的 studio server 进程环境，以及 agent 进程读的 profile config.yaml。
+原设计配 Matrix 催办房间（CLUSTER_INSPECTOR_NUDGE_ROOM）。用户裁定告警放治理中心面板、不发群——M9 的 Matrix 中继保留为可选能力（不配房间即静默，代码不删），主通道变为：巡检官事件 → 治理事件流 → 治理中心页签「事件流」组件（全域拉取、域 chips 筛选、high 恒显）。
 
-**改法**：server 环境加 `CLUSTER_INSPECTOR_NUDGE_ROOM='!<房间>:<服务器>'`。未配时 `nudgeStalled` 静默跳过（`inspector.ts:155`，代码注释自述安全缺省），所以不配则前面所有告警都到不了人。发送者凭据读 `~/.hermes/profiles/<profile>/.env` 的五件套（MATRIX_HOMESERVER、MATRIX_ACCESS_TOKEN、MATRIX_USER_ID 三必填），profile 解析顺序 `LOOP_MATRIX_PROFILE` 到 `~/.hermes/active_profile` 到 orchestrator（`overlay/custom/server/matrix/gateway-env.ts:66-106`）。agent 侧矩阵白名单按需写进 profile config.yaml 的 matrix 段，先用 `free_response_rooms` 验证再收窄 `allowed_rooms`，设错会把 agent 变成群聋子。
+配套改动（决策 D12）：
 
-**零阻断声明**：配置只影响告警投递，不影响 agent 行为。
+- 域路由：security.* 检测器的事件进 security 域（domainForDetector 纯函数），面板按域筛选时工具告警归安全、集群健康归 system，不混流。
+- 黑名单默认空集：teams 日常工作依赖 terminal/execute_code，默认全列等于上线即刷屏；频次与时段两条判据已覆盖异常行为，黑名单留给 env 显式配置。
 
-**验收**：触发一次已知告警（如临时调低磁盘水位阈值），房间收到消息；凭据五件套存在性检查通过。
+端到端验证（2026-10-16 实测）：起 server（CLUSTER_INSPECTOR=1，15s 轮）→ 真实数据触发 security.offhours-highrisk（worker-coder 0-6 时 20 次高危调用，severity high）→ GET /api/hermes/governance-events?domain=security 返回该事件（带 JWT 鉴权）——即治理中心面板可见。冷却去重实测正常。
+
+运维前提（如实告知）：告警由 studio server 进程承载，server 不在跑则无告警产生与展示。日常用 SwarmStudio.app（0.7.36 已装）或 npm run serve 常驻其一。
 
 ### M8 出厂默认口令门禁（预警态）
 
