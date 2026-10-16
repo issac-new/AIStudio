@@ -22,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 
 
 def git(repo, *args, timeout=15):

@@ -6,8 +6,8 @@ import { chromium } from 'playwright'
 import { readFileSync } from 'node:fs'
 
 const BASE = 'http://127.0.0.1:8802'
-const OUT = '/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/steps'
-const mtok = readFileSync('/Volumes/nvme2230/lab/ncwk-sim-mux/creds/fanfan.token', 'utf8').split('\n')[0].trim()
+const OUT = '/Users/cuishi/lab/ncwk-sim-mux/evidence/screenshots/steps'
+const mtok = readFileSync('/Users/cuishi/lab/ncwk-sim-mux/creds/fanfan.token', 'utf8').split('\n')[0].trim()
 const ROOM_ANALYSIS = '!ubRAvsUSUJTdTIiKEI:matrix.test'
 
 // 真实 matrix 登录（拿服务端会话与 JWT）

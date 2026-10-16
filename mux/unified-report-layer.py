@@ -400,7 +400,7 @@ def build_unified(f: dict, cards: dict, blocks: list) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
-    ap.add_argument("--sim-root", default="/Volumes/nvme2230/lab/ncwk-sim-mux")
+    ap.add_argument("--sim-root", default="/Users/cuishi/lab/ncwk-sim-mux")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     run_dir = Path(a.sim_root) / "runs" / a.run

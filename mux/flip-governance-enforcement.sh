@@ -4,7 +4,7 @@
 # 机制：603 会话轮换读 config.yaml session_rotation 节（env HERMES_SESSION_ROTATION 可覆盖）。
 # 翻转面：会话轮换（含让位耗尽路径=T05 预算耗尽移交的运行时根治）。
 set -eu
-SIM="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 CFG="$SIM/hermes/config.yaml"
 [ -f "$CFG" ] || { echo "缺 $CFG"; exit 1; }
 if grep -q '^session_rotation:' "$CFG"; then

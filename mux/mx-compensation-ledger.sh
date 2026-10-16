@@ -36,7 +36,7 @@ LC_ALL=C
 _mx_led_sim_root() {
   if [ -n "${SIM_ROOT:-}" ]; then echo "$SIM_ROOT"
   elif [ -n "${AIPAY_SIM_ROOT:-}" ]; then echo "$AIPAY_SIM_ROOT"
-  else echo "/Volumes/nvme2230/lab/ncwk-sim-mux"; fi
+  else echo "/Users/cuishi/lab/ncwk-sim-mux"; fi
 }
 _mx_led_run_id() {
   if [ -n "${RUN_ID:-}" ]; then echo "$RUN_ID"; return; fi

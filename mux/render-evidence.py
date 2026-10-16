@@ -12,7 +12,7 @@
 import json, re, subprocess, sys, urllib.request, urllib.parse, html as H
 from pathlib import Path
 
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 CEN = SIM / 'central/aipaydev'
 OUT = SIM / 'evidence/screenshots/_render'
 OUT.mkdir(parents=True, exist_ok=True)

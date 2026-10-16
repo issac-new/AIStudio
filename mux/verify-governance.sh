@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 # 证据防覆盖：产出前把基线图挪入带时间戳备份目录（报告管线仍按固定文件名取图，
 # 契约不变；重跑不再无声覆盖 V3 报告引用的证据图）
-OUT="/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/steps"
+OUT="/Users/cuishi/lab/ncwk-sim-mux/evidence/screenshots/steps"
 if [ -d "$OUT" ]; then
   BAK="$OUT/.bak-$(date +%Y%m%d-%H%M%S)"
   for f in ui-gov-center.png ui-gov-doc.png; do
@@ -20,7 +20,7 @@ OUT="$OUT" node - <<'EOF'
 import { chromium } from 'playwright'
 import { readFileSync } from 'node:fs'
 const OUT = process.env.OUT
-const mtok = readFileSync('/Volumes/nvme2230/lab/ncwk-sim-mux/creds/fanfan.token', 'utf8').split('\n')[0].trim()
+const mtok = readFileSync('/Users/cuishi/lab/ncwk-sim-mux/creds/fanfan.token', 'utf8').split('\n')[0].trim()
 const login = await fetch('http://127.0.0.1:8802/api/auth/matrix-login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ matrixAccessToken: mtok, matrixUserId: '@fanfan:matrix.test', deviceId: 'gov-verify', homeserverUrl: 'http://127.0.0.1:8008' }),

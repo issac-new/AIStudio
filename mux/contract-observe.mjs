@@ -14,7 +14,7 @@
 import { writeFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 
-const SIM = process.env.AIPAY_SIM_ROOT || '/Volumes/nvme2230/lab/ncwk-sim-mux'
+const SIM = process.env.AIPAY_SIM_ROOT || '/Users/cuishi/lab/ncwk-sim-mux'
 const RUN = arg('run')
 const RFD = arg('rfd', 'RFD-001')
 const repo = `${SIM}/central/aipaydev`

@@ -35,7 +35,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 HS = os.environ.get('MX_HOMESERVER', 'http://127.0.0.1:8008')
 
 

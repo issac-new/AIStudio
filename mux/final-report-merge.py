@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from report_narrative import render_chapter0, spec_params_html  # noqa: E402
 
-SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 
 # ── 第 0 章宿主样式（gatebox/meta/idx/gap 与 unified-report-gen 同源，机器报告无此类名不冲突）
 #    2026-10-10 token 化：色值改引 report-tokens.css 变量（final-report head 的

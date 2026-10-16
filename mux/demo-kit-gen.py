@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 SIM_ROOT = Path(__file__).resolve().parent.parent
-_CAND = [SIM_ROOT, Path('/Volumes/nvme2230/lab/ncwk-sim-mux')]
+_CAND = [SIM_ROOT, Path('/Users/cuishi/lab/ncwk-sim-mux')]
 
 
 # ── 明暗主题（2026-10-14）：写盘后统一挂切换控件。抽成共用函数，

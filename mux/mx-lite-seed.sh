@@ -10,7 +10,7 @@ set -uo pipefail
 # 固化 LC_ALL=C 为主防御，变量后接非 ASCII 一律用 ${var} 花括号。
 export LC_ALL=C
 
-SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 TO="" FROM="" ROOM="" CHECK=0

@@ -20,7 +20,7 @@ if (!RUN) { console.error('需要 --run <RUN_ID>（帧落本轮 runs 目录，�
 const STEP = arg("step", ""), K = arg("k", "1"), RAWURL = arg("url", "")
 // 跨端锚点（2026-10-12 双模式轮）：SIM_ROOT/studio/matrix 全走 env，Git Bash/远端
 // homeserver 均可覆盖；默认值与 mac 单机历史行为一致。
-const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Volumes/nvme2230/lab/ncwk-sim-mux'
+const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Users/cuishi/lab/ncwk-sim-mux'
 const MX_SERVER_NAME = process.env.MX_SERVER_NAME || 'matrix.test'
 const MX_HS_URL = process.env.MX_HS || 'http://127.0.0.1:8008'
 

@@ -7,13 +7,13 @@
 # 天然防重派），直到 report_done 落键才退出。
 #
 # 用法: nohup bash mux/run-driver-supervisor.sh --run <RUN_ID> [--start-step devimpl] \
-#         [--sim-root /Volumes/nvme2230/lab/ncwk-sim-mux] > <sim-root>/logs/<RUN>-supervisor.log 2>&1 &
+#         [--sim-root /Users/cuishi/lab/ncwk-sim-mux] > <sim-root>/logs/<RUN>-supervisor.log 2>&1 &
 # 停止: touch <sim-root>/var/<RUN>-supervisor.stop（优雅退）或 kill 监督器（勿 kill 驱动——
 #       会被拉起；真要停驱动先 touch stop 文件让监督器退场）
 set -uo pipefail
 export LC_ALL=C
 
-RUN_ID="" START_STEP="devimpl" SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+RUN_ID="" START_STEP="devimpl" SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run) RUN_ID="${2:-}"; shift 2 ;;

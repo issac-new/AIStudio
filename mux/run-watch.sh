@@ -15,7 +15,7 @@
 #     ③预测实证：若根因 X 成立则 Y 应发生，验证 Y 再下结论。
 #     诊断复用超 1 小时或跨档案必须从零重查——同症不同因。
 
-SR="${RUN_WATCH_SR:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SR="${RUN_WATCH_SR:-/Users/cuishi/lab/ncwk-sim-mux}"
 RUN="${RUN_WATCH_RUN:-20261011-v8-run15}"
 STATE="$SR/var/${RUN}-watch.state"
 DRV="$SR/logs/$RUN-driver.log"

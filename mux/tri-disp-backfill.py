@@ -43,7 +43,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--run', required=True)
 a = ap.parse_args()
 
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Volumes/nvme2230/lab/ncwk-sim-mux')
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-mux')
 EVID = SIM / 'runs' / a.run / 'evidence'
 ilog = EVID / 'issues.log'
 if not ilog.exists():
