@@ -14,6 +14,17 @@
 #   main 分支；--reset-memory 加验：模拟 bank 按 14 精确 ID 各表计数=0；可反复跑。
 set -euo pipefail
 SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
+# 防呆（2026-10-16 事故）：--apply 清空是真破坏性操作；SIM_ROOT 未显式传入（走
+# 默认生产路径）时要求 MX_CLEAN_CONFIRM_PROD=1 显式确认——防测试/脚本漏传 env
+# 把生产卷 runs/ 归档删除（该事故已从 archive tar 恢复，但防呆必须常驻）。
+SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
+if [ "${SIM_ROOT}" = "/Users/cuishi/lab/ncwk-sim-mux" ] && [ -z "${MX_CLEAN_CONFIRM_PROD:-}" ]; then
+  case " $* " in
+    *" --apply "*)
+      echo "⛔ mx-clean --apply 指向默认生产 SIM_ROOT 但未设 MX_CLEAN_CONFIRM_PROD=1（防呆：确认要清生产卷）" >&2
+      exit 3 ;;
+  esac
+fi
 APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0; RESET_WORKSPACES=0; RESET_MEMORY=0
 for a in "$@"; do
   case "$a" in
@@ -63,6 +74,32 @@ done
 # 2) 归档并清空 runs 与 state/locks
 TS=$(date +%Y%m%d-%H%M%S)
 ARC="$SIM_ROOT/archive/mx-clean-$TS"
+# ── 2 前置：集成分支保留守卫（V8.36 纪律 71，run20 复盘 B5）──
+# run20 实锤：integration/RFD-001 在报告证据被引用后即被删（远端删+游离提交），13 件
+# 交付物锚集体不可反查——纪律 71 要求集成分支保留至报告四格式持久化后清理。
+# 守卫判据必须在 runs/ 归档删除之前判（判据文件=锚定轮 state.env，删了无从判）：
+# 当前锚定轮未落 report_done → 本轮 integration/* 分支禁删（其余分支照删）。
+_keep_integ=0
+_cur_run=""
+if [ -L "$SIM_ROOT/var/current-state.env" ]; then
+  # 软链指向 runs/<RUN>/state.env——轮 id=目标文件的父目录名（2026-10-16 修：
+  # 原写法对 basename 去 .env 得 'state'，解析恒错致守卫恒不触）
+  _cur_run="$(basename "$(dirname "$(readlink -f "$SIM_ROOT/var/current-state.env" 2>/dev/null || readlink "$SIM_ROOT/var/current-state.env")")")"
+elif [ -f "$SIM_ROOT/var/current-state.env" ]; then
+  _cur_run="$(grep -m1 '^RUN_ID=' "$SIM_ROOT/var/current-state.env" 2>/dev/null | cut -d= -f2)"
+fi
+if [ -n "$_cur_run" ] && [ -f "$SIM_ROOT/runs/$_cur_run/state.env" ]; then
+  if ! grep -q '^report_done=[0-9]' "$SIM_ROOT/runs/$_cur_run/state.env" 2>/dev/null; then
+    _keep_integ=1
+    say "⛔ 集成分支保留守卫：轮 $_cur_run 未落 report_done——本轮 integration/* 分支禁删（纪律 71：保留至报告四格式持久化后清理）"
+    # 记单位置：var/retention-guard.log（不随 runs/ 归档清——守卫单必须活过清场，
+    # 否则清完即失见证；同时尝试写轮次 issues.log，双落点防单点失效）。
+    mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+    echo "ISSUE|integration-retention-guard|$_cur_run|mx-clean 试图删 integration 分支但轮 $_cur_run report_done 未落——保留守卫触发，分支未删（run20 13 件死锚教训的产品化；报告持久化后再清）" >> "$SIM_ROOT/var/retention-guard.log" 2>/dev/null || true
+    mkdir -p "$SIM_ROOT/runs/$_cur_run/evidence" 2>/dev/null || true
+    echo "ISSUE|integration-retention-guard|$_cur_run|mx-clean 试图删 integration 分支但轮 $_cur_run report_done 未落——保留守卫触发，分支未删（run20 13 件死锚教训的产品化；报告持久化后再清）" >> "$SIM_ROOT/runs/$_cur_run/evidence/issues.log" 2>/dev/null || true
+  fi
+fi
 say "runs/ 与 state.env → ${ARC}（tar 归档后删除原物）"
 if [ "$APPLY" = 1 ]; then
   mkdir -p "$ARC"
@@ -145,8 +182,13 @@ if [ "$KEEP_ACCOUNTS" = 0 ]; then
   fi
   if [ "$APPLY" = 1 ] && { [ "$_purge_failed" -gt 0 ] || [ -z "$ADM" ]; }; then
     say "全部 creds 账号退出所有已加入房间 + 拒绝待处理邀请（账号/凭据不动）"
+    # nullglob 防呆（2026-10-16 守门测试实锤）：creds 空/目录缺席时 glob 不展开成
+    # 字面量路径，head -1 读不存在文件 rc=1 被 set -e 击杀=后续分支清理全不跑。
+    # shopt -s nullglob 令无匹配时循环体零次（bash 3.2 兼容）。
+    shopt -s nullglob 2>/dev/null || true
     for tf in "$SIM_ROOT"/creds/*.token; do
-      u=$(basename "$tf" .token); T=$(head -1 "$tf" 2>/dev/null)
+      [ -f "$tf" ] || continue
+      u=$(basename "$tf" .token); T=$(head -1 "$tf" 2>/dev/null || true)
       [ -n "$T" ] || continue
       # 退出全部已加入房间（管道级 || true：github.token 等非 matrix 凭据 curl 必失败，勿中断）
       curl -sf "$HS/_matrix/client/v3/joined_rooms?access_token=$T" 2>/dev/null | jq -r '.joined_rooms[]?' 2>/dev/null | while read -r rid; do
@@ -241,7 +283,11 @@ fi
 say "中央仓推演域开发分支清理：feat/DEV-*（tag 快照 mx-clean-devbr-${TS} 后删远端）"
 if [ "$APPLY" = 1 ]; then
   CEN3="$SIM_ROOT/central/aipaydev"
-  DEVBRS=$(git -C "$CEN3" for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | sed 's|^origin/||')
+  # glob 收紧（2026-10-16 守门测试实锤）：git 的 ref 模式 `feat/DEV-*` 中 `*`
+  # 可跨 `/`——无匹配时该模式字面对 git=匹配全部 ref，3c 段误删 integration/main！
+  # 双防：①shell 侧先 ls-remote 拿真实分支名再逐个删（禁把模式交给 git 解释）；
+  # ②保留守卫生效时（_keep_integ=1）只删 feat/DEV-* 一族，integration 永不在面。
+  DEVBRS=$(git -C "$CEN3" ls-remote --heads origin 'refs/heads/feat/DEV-*' 2>/dev/null | awk '{print $2}' | sed 's|^refs/heads/||')
   if [ -n "$DEVBRS" ]; then
     git -C "$CEN3" fetch -q origin 2>/dev/null || true
     git -C "$CEN3" tag "mx-clean-devbr-${TS}" 2>/dev/null || true
@@ -334,7 +380,11 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     #   20 条逃过旧正则——agent worktree 分支 wt/* 是 run6/7 主力命名，漏清面最大）
     # 归档纪律：删前统一 tag 快照 mx-clean-${TS}-branches + SHA 清单落 $ARC（可恢复）。
     ( cd "$CEN" || exit 0
-      _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(integration/|feat/|test/|wt/|fix/|wip/)' || true)
+      if [ "$_keep_integ" = "1" ]; then
+        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(feat/|test-|wt/|fix/|wip/)' || true)
+      else
+        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(integration/|feat/|test/|wt/|fix/|wip/)' || true)
+      fi
       if [ -n "$_brs" ]; then
         git fetch -q origin 2>/dev/null || true
         # 全量拉回待删 tips（中央导演 clone 平时只 fetch main，分支 tip 本地无 ref；
@@ -350,12 +400,42 @@ if [ "$RESET_CENTRAL" = 1 ]; then
           fi
         done
         git tag "mx-clean-${TS}-branches" 2>/dev/null || true
+        # 先试推 tag 并回读（删除前置）：推达才执行删除——tag 是删后唯一恢复锚。
+        _tag_ok=1
+        _tags0=$(git tag -l "mx-clean-${TS}-b-*")
+        if [ -n "$_tags0" ]; then
+          git push -q origin $_tags0 2>/dev/null || true
+          git fetch -q origin --tags 2>/dev/null || true
+          for _t in $_tags0; do
+            git rev-parse "refs/tags/$_t" >/dev/null 2>&1 || continue
+            git ls-remote --tags origin "$_t" 2>/dev/null | grep -q . || _tag_ok=0
+          done
+        fi
+        if [ "$_tag_ok" != "1" ]; then
+          say "⛔ 删除中止：保全 tag 未推达远端——删后不可恢复（fail-closed，纪律 71）"
+          echo "ISSUE|integration-retention-guard|director|mx-clean 删除中止：保全 tag 未推达远端，fail-closed 保留全部分支（run20 游离提交教训）" >> "$SIM_ROOT/runs/${_cur_run:-unknown}/evidence/issues.log" 2>/dev/null || true
+        else
         for _b in $_brs; do
           _n="${_b#refs/heads/}"
           git push -q origin --delete "$_n" 2>/dev/null && say "  删远端分支 $_n" || say "  ⚠ 删失败 ${_n}（远端间歇，起跑前核）"
         done
+        fi
         _tags=$(git tag -l "mx-clean-${TS}-b-*")
-        [ -n "$_tags" ] && git push -q origin $_tags 2>/dev/null || true
+        if [ -n "$_tags" ]; then
+          git push -q origin $_tags 2>/dev/null || true
+          # 回读验证（run20 死锚教训的产品化）：删后 tag 是唯一恢复锚，本地 tag 随
+          # worktree 清理即丢——tag 未推达=删除动作不可恢复，停止删分支（fail-closed）。
+          git fetch -q origin --tags 2>/dev/null || true
+          _miss=""
+          for _t in $_tags; do
+            git rev-parse "refs/tags/$_t" >/dev/null 2>&1 || continue
+            git ls-remote --tags origin "$_t" 2>/dev/null | grep -q . || _miss="$_miss $_t"
+          done
+          if [ -n "$_miss" ]; then
+            say "⛔ 删除中止：保全 tag 未推达远端（$_miss）——删后不可恢复，本批保留分支待人工核查（纪律 71）"
+            echo "ISSUE|integration-retention-guard|director|mx-clean 删除中止：保全 tag 未推达远端（$_miss）——fail-closed 保留分支（run20 游离提交不可反查教训）" >> "$SIM_ROOT/runs/${_cur_run:-unknown}/evidence/issues.log" 2>/dev/null || true
+          fi
+        fi
         say "  已删分支 SHA 清单 → $ARC/central-deleted-branches-${TS}.txt（每 tip tag mx-clean-${TS}-b-* 并已推远端）"
       else
         say "✓ 远端无 integration/feat/test 残留分支"
