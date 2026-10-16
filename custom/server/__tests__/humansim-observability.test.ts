@@ -39,6 +39,12 @@ describe('observability 纯函数', () => {
     const st = stepKeys(parseStateEnv(env.join('\n')))
     expect(st.analysis_done).toBe('1'); expect(st.security_review_done).toBeUndefined()
   })
+
+  it('步键加法扩展：§3.3 两键纳入，缺席不造键（2026-10-16 B2 消费发现）', () => {
+    const st = stepKeys(parseStateEnv(env.join('\n')))
+    expect(st.room_analysis).toBe('!r:x')
+    expect(st.dispatch_marker).toBeUndefined()
+  })
   it('台账摘要计数与 open', () => {
     const tsv = ['id\tts\ttype\tdefect\tdetail\tstatus\tres',
       'c1\tt1\tnudge\tPR-3\ta\topen\t', 'c2\tt2\tnudge\tPR-3\tb\tresolve\tfix',
