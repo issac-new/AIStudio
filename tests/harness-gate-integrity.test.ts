@@ -1045,10 +1045,11 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
-    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 5000：QGate 接线+安全条件对账
+    // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 6000：QGate 接线+安全条件对账
     // +V8.23 空 body 校验/QGate 新鲜度入函数后体积增大，run18 复盘批；2026-10-14 qgate
-    // 解析失败分支（记单不删）入函数后实测函数体 4648 字符，窗口随体增长上调）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,5000}?\n  \}/)
+    // 解析失败分支（记单不删）入函数后实测函数体 4648 字符，窗口随体增长上调；
+    // 2026-10-16 C4 九门执行器注入（覆盖注入+先 run 后 report）入函数后 5592 字符）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,6000}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
     // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）
