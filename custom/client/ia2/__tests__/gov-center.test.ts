@@ -272,3 +272,18 @@ describe('joinIssueDisposal + GovIssuesPanel — 签 4 问题单对账（C6，R3
     w2.unmount()
   })
 })
+
+describe('HandoffSection — A1 交接区（对账 B3 交接并入）', () => {
+  it('四类型×五状态语义渲染+数据面挂账标注', async () => {
+    const { default: HandoffSection } = await import('../components/kanban/HandoffSection.vue')
+    const w = mount(HandoffSection)
+    for (const t of ['environment_preparation', 'runtime_context', 'clarification', 'rerun_command']) {
+      expect(w.find(`[data-testid="hds-type-${t}"]`).exists(), t).toBe(true)
+    }
+    for (const st of ['requested', 'delivered', 'completed', 'blocked', 'failed']) {
+      expect(w.find(`[data-testid="hds-state-${st}"]`).exists(), st).toBe(true)
+    }
+    expect(w.find('[data-testid="hds-absent"]').text()).toContain('数据端点未建')
+    w.unmount()
+  })
+})

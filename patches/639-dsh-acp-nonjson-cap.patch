@@ -1,0 +1,30 @@
+diff --git a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+index 3fe61c990..70696d801 100644
+--- a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
++++ b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+@@ -18,6 +18,7 @@ interface Pending {
+ export class DshAcpTurn {
+   private pending = new Map<number, Pending>()
+   private sequence = 0
++  private nonJsonStreak = 0
+   private buffer = ''
+   private decoder = new StringDecoder('utf8')
+   private closed = false
+@@ -55,9 +56,17 @@ export class DshAcpTurn {
+   // looks like JSON but fails to parse is a real protocol break and stays fatal.
+   private receiveLine(line: string) {
+     if (!line.startsWith('{')) {
++      this.nonJsonStreak += 1
++      if (this.nonJsonStreak > 64) {
++        // 噪声洪泛防护：跳过是常态，但连续超限说明对端已不是「偶发 banner」而是
++        // 协议破坏（或依赖把 stdout 占满）——按协议破坏拒绝，防 pending 永挂
++        this.dispose(new Error('too many non-JSON lines on ACP stdout (protocol break?)'))
++        return
++      }
+       logger.warn({ line: line.slice(0, 500) }, '[dsh] skipping non-JSON line on ACP stdout')
+       return
+     }
++    this.nonJsonStreak = 0
+     this.receive(JSON.parse(line))
+   }
+ 
