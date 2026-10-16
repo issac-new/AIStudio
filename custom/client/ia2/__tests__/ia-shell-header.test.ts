@@ -161,7 +161,7 @@ describe('IaShellHeader — 统一壳页头', () => {
     expect(row.find('[data-testid="ia-scene-collab"]').exists()).toBe(false)
     expect(row.find('[data-testid="ia-scene-ide"]').exists()).toBe(false)
     // /app 态显示目标视图（IDE 工作台），点击跳 ide.shell
-    expect(btn.text()).toContain('ia2.shell.gotoIde')
+    expect(btn.text()).toContain('IDE 画布')
     await btn.trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'ide.shell' })
     w.unmount()

@@ -836,23 +836,19 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     expect(router.currentRoute.value.name).toBe('ia2.governance')
   })
 
-  it('岛屿组（islands part）：默认开（bpa/ontology/skillgov）在位、默认关（eval）不在；IDE 岛去重让位视图切换器；点击落既有路由', async () => {
+  it('岛屿组退役（D8 全盘重规划）：顶栏不再渲染 islands——四岛入口归治理中心「治理工作台」区；本组件只承载三中心条', async () => {
     const router = makeNavRouter()
     await router.push('/app')
     await router.isReady()
-    const wrapper = mount(IaCentersNav, { props: { part: 'islands' }, global: { plugins: [router] } })
+    const wrapper = mount(IaCentersNav, { global: { plugins: [router] } })
     await flushPromises()
-    const islands = wrapper.find('[data-testid="ia-nav-islands"]')
-    expect(islands.exists()).toBe(true)
-    // 走查二修去重：IDE 岛退役（IDE 入口=IaViewSwitcher）；config/features.ts 默认 eval 关
-    expect(wrapper.find('[data-testid="ia-nav-island-ide"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-nav-island-bpa"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-nav-island-ontology"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-nav-island-skillgov"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-nav-island-eval"]').exists()).toBe(false)
-    await wrapper.find('[data-testid="ia-nav-island-ontology"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.ontology')
+    expect(wrapper.find('[data-testid="ia-nav-centers"]').exists()).toBe(true)
+    // 岛屿组从顶栏退役（BPA/本体/评测/技能治理 → 治理中心壳头模块区）
+    expect(wrapper.find('[data-testid="ia-nav-islands"]').exists()).toBe(false)
+    for (const id of ['ia-nav-island-ide', 'ia-nav-island-bpa', 'ia-nav-island-ontology', 'ia-nav-island-skillgov', 'ia-nav-island-eval']) {
+      expect(wrapper.find(`[data-testid="${id}"]`).exists(), id).toBe(false)
+    }
+    // 归位验收在 gov-center.test.ts（ia-gov-workbenches 区）
   })
 
   it('[设置] 钮走查二修去重退役（设置入口=用户钮 ia-header-user，见 IaShellHeader）；镜头切换器不渲染', async () => {
