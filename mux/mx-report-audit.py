@@ -366,7 +366,7 @@ if _done_blocks and _ui_cnt == 0:
 if _ilog.exists() and '问题单终态' in rep:
     _uniq = len(set(_iss))
     _m3 = re.search(rf'唯一键\s*(\d+)', rep)
-    # run20 收官实录：审计 FAIL→驱动追加降级 DISP 行→issues 涨→上轮报告数字固化→
+    # run20 收尾实录：审计 FAIL→驱动追加降级 DISP 行→issues 涨→上轮报告数字固化→
     # 永远差 3 的自增死循环。容差 5（降级行属过程追加非计数失实）；超容差仍 FAIL。
     if _m3 and abs(int(_m3.group(1)) - _uniq) > 5:
         fails.append(f'R8 问题单计数不实：报告唯一键 {_m3.group(1)} ≠ issues.log 实测 {_uniq}')

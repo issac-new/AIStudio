@@ -512,7 +512,7 @@ PART1_RUN19 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px
 
 PART1_RUN20 = '''<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收官中）</span></h1>
+<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收尾中）</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>零环境起步（mx-clean 全量重建），26 步全流程走完、六道关卡 {{gates_pass}}/6（首过实测自 issues.log 闸键登记），全流程窗口 {{window}}。本轮为 V8.30-V8.34 五轮治理修版的实跑验证轮。</div>
 
