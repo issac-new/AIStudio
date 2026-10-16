@@ -48,6 +48,12 @@
 | 73 净额闸判 | approved.events 该闸裁决 actor 非 proxy 的机械扫描 | mx-report-audit 增查 15（gate 事件 actor 扫描） |
 | 74 采集降级上限 | 降级步数>必采 1/3 与报告整轮红徽章对账 | 审计器对 issues.log frame-capture-failed 族计数×报告徽章 |
 
+## 三点五、四大件落地后的新增核验（2026-10-16 晚批）
+
+1. **C3 采集链自动登记**：首轮跑完后抽查 r18-steps.json——capture 步的 op 条目应非零（此前恒 0）；若某步拍摄成功但登记失败，看 issues.log 的 r18-op-register-failed 单。
+2. **C4 QGate 真实执行**：G5 时 release-report 应九门有信号（非全 INCONCLUSIVE）；FAIL 门=真实缺口如实呈现（run20 真实证据复判为 5 PASS+3 FAIL——工程基线/依赖审计/概设决策记录三缺口是真欠账，run21 须补）。
+3. **D6/卡分类产品件随重建上线**（纪律 68 三件套验收）：session.starved 检测器+换会话令、completion.zero-delivery 分类升级——部署后看字面触发事件。
+
 ## 四、开跑命令序（沿用 runbook）
 
 ```bash
