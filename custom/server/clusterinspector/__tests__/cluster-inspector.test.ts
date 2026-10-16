@@ -285,7 +285,7 @@ describe('D7 在办任务·档案静默交叉（run14 三次停摆形态）', ()
   })
 })
 
-describe('probeBranchIntel（分支感知催办情报，run19 上移）', () => {
+describe('probeBranchIntel（分支感知提醒催单情报，run19 上移）', () => {
   const setup = () => {
     const { mkdtempSync, mkdirSync } = require('node:fs') as typeof import('node:fs')
     const { join } = require('node:path') as typeof import('node:path')
@@ -324,7 +324,7 @@ describe('probeBranchIntel（分支感知催办情报，run19 上移）', () => 
     delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
     require('node:fs').rmSync(dir, { recursive: true, force: true })
   })
-  it('未配置 NUDGE_REPO → 空串（fail-open 不阻塞催办）', () => {
+  it('未配置 NUDGE_REPO → 空串（fail-open 不阻塞提醒催单）', () => {
     delete process.env.CLUSTER_INSPECTOR_NUDGE_REPO
     expect(probeBranchIntel('chen')).toBe('')
   })

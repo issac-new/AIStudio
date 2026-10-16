@@ -1,6 +1,6 @@
 // 收敛性追踪测试（用户 2026-10-14 指令：同类/同一事件风险是否持续收敛=多轮有效性
 // 指标；熵增→升级 high/熔断/降级）。三层：趋势分类纯函数 / 账本持久化与生命周期 /
-// 巡检环集成（复发三次持平→升级+熔断+催办停发+降级不喂新活）。
+// 巡检环集成（复发三次持平→升级+熔断+提醒催单停发+降级不喂新活）。
 import { describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from 'node:fs'
 import { join } from 'node:path'
@@ -121,7 +121,7 @@ describe('巡检环集成：熵增三联动（升级/熔断/降级）', () => {
     return home
   }
 
-  it('复发三次持平：第 3 次升 high + 熔断事件一次性 + 催办停发 + 负责人降级', async () => {
+  it('复发三次持平：第 3 次升 high + 熔断事件一次性 + 提醒催单停发 + 负责人降级', async () => {
     const home = mkHome('fanfan')
     const events: Array<{ type: string; severity: string; payload?: Record<string, unknown> }> = []
     const nudged: string[] = []
@@ -135,10 +135,10 @@ describe('巡检环集成：熵增三联动（升级/熔断/降级）', () => {
     process.env.CLUSTER_INSPECTOR_NUDGE = 'on'
     process.env.CLUSTER_INSPECTOR_NUDGE_ROOM = '!room:x'
     try {
-      const r1 = await insp.runOnce() // 复发 1：warn + 催办
+      const r1 = await insp.runOnce() // 复发 1：warn + 提醒催单
       expect(r1.anomalies.some((a) => a.detector === 'session.stalled')).toBe(true)
       now += 16 * MIN
-      await insp.runOnce() // 复发 2：warn + 催办
+      await insp.runOnce() // 复发 2：warn + 提醒催单
       now += 16 * MIN
       const r3 = await insp.runOnce() // 复发 3：间隔持平 → 熵增
       // ①升级：复发异常本身升 high，事件带收敛账
@@ -150,10 +150,10 @@ describe('巡检环集成：熵增三联动（升级/熔断/降级）', () => {
       expect(r3.anomalies.some((a) => a.detector === 'risk.diverging' && a.subject === 'profile:fanfan')).toBe(true)
       expect(r3.actions).toContain('nudge-breaker:fanfan')
       now += 16 * MIN
-      const r4 = await insp.runOnce() // 仍熵增：无第二次熔断事件，催办继续停发
+      const r4 = await insp.runOnce() // 仍熵增：无第二次熔断事件，提醒催单继续停发
       expect(events.filter((e) => e.type === 'cluster.risk.diverging' && e.payload?.origin === 'session.stalled')).toHaveLength(1)
       expect(r4.actions).toContain('nudge-breaker:fanfan')
-      // 催办只发生在熵增判定前（回灌轰炸防线）
+      // 提醒催单只发生在熵增判定前（回灌轰炸防线）
       expect(nudged).toEqual(['fanfan', 'fanfan'])
       // ③降级：负责人进降级档案；收敛面报表可查
       expect(insp.convergenceFace?.degradedProfiles).toContain('fanfan')
@@ -165,7 +165,7 @@ describe('巡检环集成：熵增三联动（升级/熔断/降级）', () => {
     }
   })
 
-  it('降级：负责人有熵增风险后 idle.with-work 领卡催办抑制（不喂新活）', async () => {
+  it('降级：负责人有熵增风险后 idle.with-work 领卡提醒催单抑制（不喂新活）', async () => {
     const home = mkHome('x')
     const nudged: string[] = []
     let now = T0
@@ -194,8 +194,8 @@ describe('巡检环集成：熵增三联动（升级/熔断/降级）', () => {
     }
   })
 
-  it('CONVERGENCE=off 全链路旁路：反复复发不升级不熔断，催办照常', async () => {
-    // off 旁路：反复复发既不升级也不熔断，催办照常
+  it('CONVERGENCE=off 全通道旁路：反复复发不升级不熔断，提醒催单照常', async () => {
+    // off 旁路：反复复发既不升级也不熔断，提醒催单照常
     const home = mkHome('lin')
     const events: Array<{ type: string; severity: string }> = []
     const nudged: string[] = []

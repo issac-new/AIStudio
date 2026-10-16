@@ -27,6 +27,8 @@ export interface DetectOptions {
   /** 复审环老化阈值 ms（默认 7200000=120min；≥2× 升 high。run20 22:34 复审链断棒
    *  实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化） */
   reviewFailStallMs?: number
+  /** 磁盘水位告警阈值 %（默认 90；≥95 升 critical。C4 增件·run20 96% 事故） */
+  diskCapacityPct?: number
   /** 未认领卡老化阈值 ms（默认 1800000=30min；≥3× 升 high。run20 r3 派单断棒实录：
    *  ready/todo 卡 assignee 空置超时=派单断在「建卡→认领」间，无人看见） */
   unassignedStaleMs?: number
@@ -323,7 +325,7 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
 }
 
 /** review.fail-stall：复审环老化检测（run20 22:34 复审链断棒实录产品化）。
- *  闸类评审卡判 FAIL 后，「修订→复审」闭环可能断在散文交接——派单正文里的
+ *  闸类评审卡判 FAIL 后，「修订→复审」完整回路可能断在散文交接——派单正文里的
  *  「push 后 @复审」无机器保障（实录：修订入仓 75 分钟复审派单悬空，巡检官/
  *  驱动超时分支/人工监督清单三方同盲，全集群绿灯而死锁）。
  *  本检测器以 FAIL 判卡自身的最后推进时刻为复审环球钟：卡面长期无任何推进
@@ -349,7 +351,7 @@ export function detectReviewFailStall(snap: ClusterSnapshot, opts: DetectOptions
     out.push({
       detector: 'review.fail-stall', subject: `card:${c.id}`,
       severity: quietMs >= stallMs * 2 ? 'high' : 'warn',
-      summary: `复审环老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id} 已判 FAIL 后卡面零推进——「修订→复审」闭环疑似断棒（run20 实录形态：散文交接悬空 75 分钟全集群绿灯）。若修订已入仓请立即派复审；若修订仍在途请核对修订侧进度`,
+      summary: `复审环老化 ${Math.round(quietMs / 60000)} 分钟：卡 ${c.title ?? c.id} 已判 FAIL 后卡面零推进——「修订→复审」完整回路疑似断棒（run20 实录形态：散文交接悬空 75 分钟全集群绿灯）。若修订已入仓请立即派复审；若修订仍在途请核对修订侧进度`,
       detail: { cardId: c.id, title: c.title, assignee: c.assignee, quietMs, stallMs, result: (c.result ?? '').slice(0, 160) },
     })
   }
@@ -405,6 +407,28 @@ export function detectCardBodyEmpty(snap: ClusterSnapshot, _opts: DetectOptions 
   return out
 }
 
+/** ── 容量水位（C4 增件·Q3 双通道之主动面，2026-10-16）──
+ *  `disk.capacity`：磁盘水位越阈值即报——run20 事故（系统盘 96% 靠肉眼发现后
+ *  手工清 12.5GB）的教训是「没人看」而非「缺张表」，主动通道（巡检官发群）
+ *  才是根。数据源=控制器注入 diskUsage（df -P 解析；fail-soft 未接线=合法
+ *  空态，同 spawnHealth 语义）。阈值 opts.diskCapacityPct 缺省 90。 */
+export function detectDiskCapacity(
+  snap: ClusterSnapshot & { diskUsage?: Array<{ mount: string; usedPct: number }> },
+  opts: DetectOptions = {},
+): Anomaly[] {
+  const usage = snap.diskUsage
+  if (!usage || usage.length === 0) return []
+  const threshold = opts.diskCapacityPct ?? 90
+  return usage
+    .filter(u => u.usedPct >= threshold)
+    .map(u => ({
+      detector: 'disk.capacity', subject: `disk:${u.mount}`,
+      severity: u.usedPct >= 95 ? 'critical' : 'high',
+      summary: `磁盘水位 ${u.usedPct}%（${u.mount}，阈值 ${threshold}%）——run20 96% 事故先例：先清缓存与大目录，再查是谁在吃盘`,
+      detail: u,
+    }))
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -429,6 +453,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectDeliveryPushed(snap, opts),
     ...detectSpawnHealth(snap, opts),
     ...detectWorkExpectedSilent(snap, opts),
+    ...detectDiskCapacity(snap as ClusterSnapshot & { diskUsage?: Array<{ mount: string; usedPct: number }> }, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -438,8 +463,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
  *     ≥ 卡的 started_at——tip 早于任务开始=上轮遗留分支冒充本轮交付（run15 实锤
  *     形态：feat/DEV-X 存上轮提交时真值锚恒假、等待环盲转 150min）。
  *  B 锚可反查（FIX-DONE commit 抽验产品化）：已完成卡引用的分支必须在仓中可
- *     rev-parse 反查——不可查=未推送或伪锚（「嘴上说完成」的防线；判活管过程、
- *     锚验证管结果，两者互补闭环）。
+ *     rev-parse 反查——不可查=未推送或伪锚（「嘴上说完成」的防线；活性判定管过程、
+ *     锚验证管结果，两者互补完整回路）。
  *  fail-open：未配 CLUSTER_INSPECTOR_NUDGE_REPO / git 失败 → 返回空（不误报）。
  *  只对带 branch_name 的卡生效（无交付引用的卡不在此面）。 */
 export function detectDeliveryAnchor(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
@@ -572,7 +597,7 @@ export function detectLoadImbalance(snap: ClusterSnapshot, opts: DetectOptions =
 
 /** ── 空闲正当性检测（同裁定）：空闲≠都该催——判别「有活可干的空闲」（异常）与
  *  「真空闲」（正常，run14 教训不误报）。异常形态=档案零在办卡+真做静默超阈+
- *  存在无主 ready 卡（可领未领）；真空闲（无卡可领）不报。输出接催办面：督办领卡。 */
+ *  存在无主 ready 卡（可领未领）；真空闲（无卡可领）不报。输出接提醒催单面：督办领卡。 */
 export function detectIdleWithWorkAvailable(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const quiet = opts.agentSilentMs ?? 900_000
   const now = opts.nowMs ?? Date.now()
@@ -604,7 +629,7 @@ export function detectIdleWithWorkAvailable(snap: ClusterSnapshot, opts: DetectO
  *  新会话一轮即空转收场）的唯一产品级出口。
  *  与 D7 互补：D7 管「在办卡停摆」，本件管「ready 卡没人动」；
  *  与 idle.with-work 互补：后者要无主卡（派单断棒），本件要有主卡（群消息派活）。
- *  判活口径同 D7（realWorkTsMs 优先，嘴炮回合不清账）。 */
+ *  活性判定口径同 D7（realWorkTsMs 优先，嘴炮回合不清账）。 */
 export function detectWorkExpectedSilent(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const quiet = opts.agentSilentMs ?? 900_000
   const now = opts.nowMs ?? Date.now()
@@ -644,7 +669,7 @@ export function detectWorkExpectedSilent(snap: ClusterSnapshot, opts: DetectOpti
 /** ── 持续集成检测器（run20 V8.33 草案 CI 部分，2026-10-15 用户裁定）──
  *  `delivery.pushed`：origin/feat/DEV-* 远程分支 tip 与本地 tip 比对——
  *  本地 tip 新于 origin tip = 未推送，触发 NUDGE 走群消息通道（与 work.expected-silent
- *  同一链路）让对应 dev 档案把分支推 origin。
+ *  同一通道）让对应 dev 档案把分支推 origin。
  *  数据源：snap.deliveryBranchIntel（控制器注入 git fetch live 比对，fail-soft
  *  返回空集合——git 失败=静默跳过，下轮重试）。
  *  新鲜度过滤（run21 降噪，2026-10-16）：本地 tip 提交时间（tipTs，控制器采
@@ -682,7 +707,7 @@ export function detectSpawnHealth(snap: ClusterSnapshot, _opts: DetectOptions = 
   return [{
     detector: 'runtime.spawn-health', subject: 'runtime:spawn',
     severity: 'high',
-    summary: `执行面瘫痪：worker spawn 通道不可用——${probe.detail}。泵/催办全部无效（消息能收会话起不来），立即修 venv（多候选探测见 bin/hermes-sim 报错行修法）`,
+    summary: `执行面瘫痪：worker spawn 通道不可用——${probe.detail}。泵/提醒催单全部无效（消息能收会话起不来），立即修 venv（多候选探测见 bin/hermes-sim 报错行修法）`,
     detail: probe,
   }]
 }

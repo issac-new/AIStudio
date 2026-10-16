@@ -193,7 +193,7 @@ function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; l
 }
 
 /** 执行面探测（runtime.spawn-health 面）：复刻 bin/hermes-sim 多候选逻辑文件级检测，
- *  每 60s 巡检一拍（bash+import 合计 <2s，轻量；真 spawn 冒烟留给起跑面 mxp_worker_smoke）。 */
+ *  每 60s 巡检一拍（bash+import 合计 <2s，轻量；真 spawn 冒烟留给开跑面 mxp_worker_smoke）。 */
 function spawnHealthProbe(): { ok: boolean; detail: string } {
   const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
   const agentRoot = '/Users/cuishi/.hermes/hermes-agent'
@@ -207,7 +207,25 @@ function spawnHealthProbe(): { ok: boolean; detail: string } {
   return { ok: false, detail: '宿主 agent 无可用 venv（.venv/venv.py311/venv 均缺 anthropic+mautrix）' }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, ...deps })
+/** 磁盘水位探针（disk.capacity 面，C4 增件）：df -P 本地卷解析（Used% 列），
+ *  只收真实挂载行；df 失败=未接线（合法空态，检测器静默）。 */
+function diskUsageProbe(): Array<{ mount: string; usedPct: number }> {
+  const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+  try {
+    const out = execFileSync('df', ['-P'], { timeout: 5000, encoding: 'utf-8' }) as string
+    const rows: Array<{ mount: string; usedPct: number }> = []
+    for (const line of out.split('\n').slice(1)) {
+      const f = line.trim().split(/\s+/)
+      if (f.length < 6) continue
+      const pct = Number(f[4]?.replace('%', ''))
+      if (!Number.isFinite(pct)) continue
+      rows.push({ mount: f[5], usedPct: pct })
+    }
+    return rows
+  } catch { return [] }
+}
+
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, getDiskUsage: diskUsageProbe, ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun
