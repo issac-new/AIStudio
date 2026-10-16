@@ -165,7 +165,7 @@ function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; mach
 /** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成）：CLUSTER_INSPECTOR_NUDGE_REPO
  *  仓内 refs/heads/feat/* 本地 tip vs origin 同名 tip 比对——本地新于 origin（或 origin
  *  缺席）=未推送，owner 取该 tip 的 commit author 名（fail-soft）。git 失败=空数组。 */
-function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>) | undefined {
+function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string; tipTs?: number }>>) | undefined {
   const repo = process.env.CLUSTER_INSPECTOR_NUDGE_REPO
   if (!repo) return undefined
   const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
@@ -174,17 +174,18 @@ function deliveryBranchIntelProvider(): (() => Promise<Array<{ branch: string; l
   }
   return async () => {
     try {
-      const local = git(['for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads/feat/']).trim().split('\n').filter(Boolean)
+      const local = git(['for-each-ref', '--format=%(refname:short) %(objectname) %(committerdate:unix)', 'refs/heads/feat/']).trim().split('\n').filter(Boolean)
       if (local.length === 0) return []
-      const out: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> = []
+      const out: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string; tipTs?: number }> = []
       for (const line of local) {
-        const [branch, tip] = line.split(' ')
+        const [branch, tip, tsRaw] = line.split(' ')
         if (!branch || !tip) continue
         let originTip = ''
         try { originTip = git(['rev-parse', `origin/${branch}`]).trim() } catch { originTip = '' }
         if (originTip === tip) continue // 已推（含同步）
         const author = (() => { try { return git(['log', '-1', '--format=%an', tip]).trim() } catch { return '' } })()
-        out.push({ branch, localTip: tip, originTip, pushed: false, profile: author })
+        const tipTs = tsRaw ? Number(tsRaw) * 1000 : undefined
+        out.push({ branch, localTip: tip, originTip, pushed: false, profile: author, ...(Number.isFinite(tipTs as number) ? { tipTs } : {}) })
       }
       return out
     } catch { return [] }

@@ -556,6 +556,30 @@ describe('delivery.pushed（V8.33 持续集成检测器骨架）', () => {
     } as any, { nowMs: 1 })
     expect(out3.find((a) => a.detector === 'delivery.pushed')).toBeUndefined()
   })
+
+  it('新鲜度过滤（run21 降噪）：tipTs 早于 24h 窗的历史遗留分支不报；tipTs 缺席保守放行', () => {
+    const base = {
+      ts: 1, gateway: { ok: true }, sessions: { ok: true, entries: 0, live: 0, dead: [] },
+      profiles: { ok: true, tails: [] }, kanban: { ok: false, rows: [] },
+      runningCards: { ok: false, cards: [] }, federation: { ok: false, nowMs: 1, machines: [] },
+    }
+    const NOW = 1_790_000_000_000
+    const stale = detectAll({
+      ...base,
+      deliveryBranchIntel: [{ branch: 'feat/DEV-OLD', localTip: 'def5678', originTip: '', pushed: false, profile: 'chen', tipTs: NOW - 25 * 60 * 60 * 1000 }],
+    } as any, { nowMs: NOW })
+    expect(stale.find((a) => a.detector === 'delivery.pushed')).toBeUndefined()
+    const fresh = detectAll({
+      ...base,
+      deliveryBranchIntel: [{ branch: 'feat/DEV-NEW', localTip: 'abc1234', originTip: '', pushed: false, profile: 'chen', tipTs: NOW - 60 * 1000 }],
+    } as any, { nowMs: NOW })
+    expect(fresh.find((a) => a.detector === 'delivery.pushed')).toBeTruthy()
+    const legacy = detectAll({
+      ...base,
+      deliveryBranchIntel: [{ branch: 'feat/DEV-NOANGTS', localTip: 'aaa0000', originTip: '', pushed: false, profile: 'chen' }],
+    } as any, { nowMs: NOW })
+    expect(legacy.find((a) => a.detector === 'delivery.pushed')).toBeTruthy()
+  })
 })
 
 describe('runtime.spawn-health（run20 00:30 执行面瘫痪实录）', () => {
