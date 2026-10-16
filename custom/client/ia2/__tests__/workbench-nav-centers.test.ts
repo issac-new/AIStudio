@@ -77,9 +77,12 @@ describe('legacyTabRedirect 旧签重定向（A0：迁出 10 键深链不死链�
     expect(legacyTabRedirect('observatory')).toEqual({ name: 'ia2.simOps' })
   })
 
-  it('治理七键 → 治理中心整页（C1 前经既有重定向进治理内容，C1 后直达签零改动）', () => {
-    for (const k of ['gov-registry', 'gov-audit', 'gov-docs', 'gov-harness', 'gov-cluster', 'gov-ontology', 'gov-session-health']) {
-      expect(legacyTabRedirect(k), k).toEqual({ name: 'ia2.governance' })
+  it('治理七键 → 治理中心对应签（E1 拍摄位同步：帧语义直落专签不断链）', () => {
+    expect(legacyTabRedirect('gov-registry')).toEqual({ name: 'ia2.govOrgAssets' })
+    expect(legacyTabRedirect('gov-audit')).toEqual({ name: 'ia2.govAudit' })
+    expect(legacyTabRedirect('gov-docs')).toEqual({ name: 'ia2.govDocs' })
+    for (const k of ['gov-harness', 'gov-cluster', 'gov-ontology', 'gov-session-health']) {
+      expect(legacyTabRedirect(k), k).toEqual({ name: 'ia2.govMetrics' })
     }
   })
 

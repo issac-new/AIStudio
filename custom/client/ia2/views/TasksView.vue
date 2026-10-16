@@ -4,32 +4,32 @@
      页签 1 看板 = 内嵌 SwarmKanbanView 既有看板；
      页签 2 任务协同 = 人-Agent-控制点协同图（§2.3）；
      页签 3 协作与知识 = 协作断点/知识图谱/决策时间线（交接并入属 A1）。
-     原 13 键中迁出的 10 键深链不死链：3 键落推演中心（trace/accounts/
+     原 13 键中迁出的 10 键直达链接不死链：3 键落推演中心（trace/accounts/
      observatory → /app/sim/*），7 键落治理中心（gov-* → /app/gov，C1 前经
      既有重定向进治理内容）；未知 tab 值回落看板（不再静默保留旧签位）。
-     深链预选：/app/board?tab=<key>&status=<kanban 状态>&task=<taskId>
-     ——旧 ?tab=gov 别名映射 gov-org（工作台第 3 签，外部深链不死链）；
+     直达链接预选：/app/board?tab=<key>&status=<kanban 状态>&task=<taskId>
+     ——旧 ?tab=gov 别名映射 gov-org（工作台第 3 签，外部直达链接不死链）；
      status 预选看板状态过滤器、task 预选搜索框（合法状态词表校验，非法值忽略不炸页面）。 -->
 <script lang="ts">
-// A0 旧签重定向纯函数：迁出 10 键的 ?tab= 深链 → 目标中心既有路由名。
-// 导出供守门测试正反例全覆盖（10 键映射 + board 3 键/别名/未知值回落 null）。
+// A0 旧签重定向纯函数：迁出 10 键的 ?tab= 直达链接 → 目标中心既有路由名。
+// 导出供单测正反例全覆盖（10 键映射 + board 3 键/别名/未知值回落 null）。
 const LEGACY_TAB_REDIRECTS: Readonly<Record<string, string>> = {
   // → 推演中心（/app/sim 六签，B1 壳既有路由）
   trace: 'ia2.simTrace',
   accounts: 'ia2.simDelivery',
   observatory: 'ia2.simOps',
-  // → 治理中心（/app/gov：C1 前经既有重定向落 /app/board?tab=gov-org 进治理
-  //    内容；C1 升格后直达七签壳，本表零改动）
-  'gov-registry': 'ia2.governance',
-  'gov-audit': 'ia2.governance',
-  'gov-docs': 'ia2.governance',
-  'gov-harness': 'ia2.governance',
-  'gov-cluster': 'ia2.governance',
-  'gov-ontology': 'ia2.governance',
-  'gov-session-health': 'ia2.governance',
+  // → 治理中心（/app/gov 七签壳，C1 升格；E1 拍摄位同步轮细化：旧 gov-* 键
+  //    直落对应签路由——帧语义不断链且更准，capture-plan.env 旧键经此表全部可达）
+  'gov-registry': 'ia2.govOrgAssets',
+  'gov-audit': 'ia2.govAudit',
+  'gov-docs': 'ia2.govDocs',
+  'gov-harness': 'ia2.govMetrics',
+  'gov-cluster': 'ia2.govMetrics',
+  'gov-ontology': 'ia2.govMetrics',
+  'gov-session-health': 'ia2.govMetrics',
 }
 
-/** 旧 board 页签深链 → 目标中心路由名；非迁出键（含 board 3 键与未知值）返回 null */
+/** 旧 board 页签直达链接 → 目标中心路由名；非迁出键（含 board 3 键与未知值）返回 null */
 export function legacyTabRedirect(tab: string): { name: string } | null {
   const name = LEGACY_TAB_REDIRECTS[tab]
   return name ? { name } : null
@@ -69,7 +69,7 @@ const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   'gov-org': 'tabGovOrg',
 }
 const TAB_KEYS: ReadonlySet<string> = new Set(TABS.map(x => x.key))
-/** 旧深链兼容：治理中心单页签时代的 ?tab=gov → 工作台治理签（协作与知识） */
+/** 旧直达链接兼容：治理中心单页签时代的 ?tab=gov → 工作台治理签（协作与知识） */
 const TAB_ALIASES: Readonly<Record<string, TabKey>> = { gov: 'gov-org' }
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
@@ -84,7 +84,7 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
   'triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived',
 ])
 
-/** UX 裁决 E：?new=1 深链直开列内建卡表单 */
+/** UX 裁决 E：?new=1 直达链接直开列内建卡表单 */
 const autoOpenCreate = computed(() => route.query.new === '1' || route.query.new === 'true')
 
 /** route query → 看板预选（tab 切换 + status 过滤器 + task 搜索）。
@@ -98,7 +98,7 @@ function applyQuery(q: Record<string, unknown>): void {
     } else {
       const redirect = legacyTabRedirect(raw)
       if (redirect) {
-        // 旧签深链不死链：整页跳目标中心（本组件随路由卸载，本地状态不再处理）
+        // 旧签直达链接不死链：整页跳目标中心（本组件随路由卸载，本地状态不再处理）
         void router.replace(redirect)
         return
       }
@@ -115,7 +115,7 @@ function applyQuery(q: Record<string, unknown>): void {
 }
 
 onMounted(() => applyQuery(route.query as Record<string, unknown>))
-// 同路由 query 变化（已在 /app/board 时被深链再次唤起）同样生效
+// 同路由 query 变化（已在 /app/board 时被直达链接再次唤起）同样生效
 watch(
   () => route.query,
   (q) => { applyQuery(q as Record<string, unknown>) },
@@ -123,7 +123,7 @@ watch(
 
 // 页签 → URL 回写（2026-10-03 走查 L4）：此前切换页签只改本地 tab，
 // 刷新/分享后页签位置丢失。同值跳过避免与上方 query watch 互相触发。
-// task/status 是一次性深链参数，回写时剥离——否则用户清掉的过滤器会在每次
+// task/status 是一次性直达链接参数，回写时剥离——否则用户清掉的过滤器会在每次
 // 切页签时被 URL 残影复活（query watch 重放 applyQuery 覆盖用户输入态）
 watch(tab, (key) => {
   if (route.query.tab === key) return

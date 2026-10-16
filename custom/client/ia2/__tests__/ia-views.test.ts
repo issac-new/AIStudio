@@ -82,6 +82,12 @@ describe('视图壳内嵌接线', () => {
         { path: '/app/sim/delivery', name: 'ia2.simDelivery', component: { template: '<div sim-delivery />' } },
         { path: '/app/sim/ops', name: 'ia2.simOps', component: { template: '<div sim-ops />' } },
         { path: '/app/gov', name: 'ia2.governance', component: { template: '<div gov />' } },
+        { path: '/app/gov/org-assets', name: 'ia2.govOrgAssets', component: { template: '<div gov-assets />' } },
+        { path: '/app/gov/clearance', name: 'ia2.govClearance', component: { template: '<div gov-clearance />' } },
+        { path: '/app/gov/issues', name: 'ia2.govIssues', component: { template: '<div gov-issues />' } },
+        { path: '/app/gov/audit', name: 'ia2.govAudit', component: { template: '<div gov-audit />' } },
+        { path: '/app/gov/docs', name: 'ia2.govDocs', component: { template: '<div gov-docs />' } },
+        { path: '/app/gov/metrics', name: 'ia2.govMetrics', component: { template: '<div gov-metrics />' } },
       ],
     })
     await router.push('/app/board')
@@ -115,10 +121,15 @@ describe('视图壳内嵌接线', () => {
     await router.push('/app/board?tab=observatory')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.simOps')
-    for (const key of ['gov-registry', 'gov-audit', 'gov-docs', 'gov-harness', 'gov-cluster', 'gov-ontology', 'gov-session-health']) {
+    // E1 拍摄位同步：gov-* 旧键直落治理中心对应签（专签路由，帧语义更准）
+    const govTargets: Record<string, string> = {
+      'gov-registry': 'ia2.govOrgAssets', 'gov-audit': 'ia2.govAudit', 'gov-docs': 'ia2.govDocs',
+      'gov-harness': 'ia2.govMetrics', 'gov-cluster': 'ia2.govMetrics', 'gov-ontology': 'ia2.govMetrics', 'gov-session-health': 'ia2.govMetrics',
+    }
+    for (const [key, target] of Object.entries(govTargets)) {
       await router.push(`/app/board?tab=${key}`)
       await flushPromises()
-      expect(router.currentRoute.value.name, key).toBe('ia2.governance')
+      expect(router.currentRoute.value.name, key).toBe(target)
     }
     // 未知 tab 值回落看板（A0 裁定：迁出签位已消失，不再静默保留旧位置）
     await router.push('/app/board?tab=weird')
