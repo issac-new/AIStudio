@@ -15,6 +15,8 @@ export interface InterventionPointView {
   title: string
   sourceKind: InterventionSourceKind
   sourceKey: string
+  /** 决策前提（批准前必须成立的前提，服务端静态登记；三篇调研轮 A 件）。旧后端缺席=如实显示缺席 */
+  belief?: string | null
   /** true=等人决定；false=已办；null=源缺席状态未知（如实不猜） */
   pending: boolean | null
 }
