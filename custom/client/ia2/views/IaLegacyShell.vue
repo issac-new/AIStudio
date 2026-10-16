@@ -12,51 +12,20 @@
 import { computed, shallowRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { defineAsyncComponent, markRaw, type Component } from 'vue'
+import { VIEW_LOADERS, warmAllLegacyViews } from './legacy-view-loaders'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaSettingsSidebar from '../components/IaSettingsSidebar.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useWorkspaceStore } from '../store/workspace'
 
-/** 收编页视图装载表（路由名 → 懒加载工厂；与 routes.ts 收编记录一一对应） */
-const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
-  'hermes.settings': () => import('@/views/hermes/SettingsView.vue'),
-  // ChatView 族（页面内自持会话列/页签；路径不变 → ChatView 按 path 分派行为不变）
-  'hermes.chat': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.session': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.globalAgent': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.globalAgentSession': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.models': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.connections': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.agentManager': () => import('@/views/hermes/ChatView.vue'),
-  'hermes.groupChat': () => import('@/views/hermes/GroupChatView.vue'),
-  'hermes.groupChatRoom': () => import('@/views/hermes/GroupChatView.vue'),
-  // 工具/配置/系统页（上游独立视图）
-  'hermes.workflow': () => import('@/views/hermes/WorkflowView.vue'),
-  'hermes.files': () => import('@/views/hermes/FilesView.vue'),
-  'hermes.skills': () => import('@/views/hermes/SkillsView.vue'),
-  'hermes.plugins': () => import('@/views/hermes/PluginsView.vue'),
-  'hermes.mcp': () => import('@/views/hermes/McpManagerView.vue'),
-  'hermes.memory': () => import('@/views/hermes/MemoryView.vue'),
-  'hermes.channels': () => import('@/views/hermes/ChannelsView.vue'),
-  'hermes.jobs': () => import('@/views/hermes/JobsView.vue'),
-  'hermes.kanban': () => import('@/views/hermes/KanbanView.vue'),
-  'hermes.journey': () => import('@/views/hermes/JourneyView.vue'),
-  'hermes.logs': () => import('@/views/hermes/LogsView.vue'),
-  'hermes.usage': () => import('@/views/hermes/UsageView.vue'),
-  'hermes.performance': () => import('@/views/hermes/PerformanceView.vue'),
-  'hermes.profiles': () => import('@/views/hermes/ProfilesView.vue'),
-  'hermes.theme': () => import('@/views/hermes/ThemeView.vue'),
-  'hermes.petdex': () => import('@/views/hermes/PetdexView.vue'),
-  'hermes.skillsUsage': () => import('@/views/hermes/SkillsUsageView.vue'),
-  'hermes.configSettings': () => import('@/views/hermes/HermesSettingsView.vue'),
-  'hermes.terminal': () => import('@/views/hermes/TerminalView.vue'),
-  'hermes.versionPreview': () => import('@/views/hermes/VersionPreviewView.vue'),
-}
 
 const route = useRoute()
 // 页头日程按钮（IaGlobalTop）指向 workspace store——本壳是第三壳，必须像 IaShell/IdeShell
 // 一样挂弹窗，否则收编页点 📅 只置 store 状态、无任何 UI 出现（24h 审查 P2）
 const workspace = useWorkspaceStore()
+
+// 走查三修：空闲预热全表——后台把设置页分片逐个拉热（错峰 200ms）
+warmAllLegacyViews()
 
 const pageComp = shallowRef<Component | null>(null)
 
