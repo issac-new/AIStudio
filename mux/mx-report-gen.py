@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 import r18_matrix  # 必采清单单一事实源（审计器查 8 同表，自动检查测试 ⑫）
+import report_truth  # 报告真值三件套（run20 复盘根治：往轮产物/死锚/逐步问题单，2026-10-16）
 
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
 # 亦支持隔离树回归测试（写死路径使归档态 run6 无法离线回归）。
@@ -1529,6 +1530,9 @@ STEPS_META_20261013_V8_RUN19 = {
 
 # run20 叙事（按轮逐步注册；锚=state.env 键时间线+issues.log 120 条台账）
 STEPS_META_20261015_V8_RUN20 = {
+    # issue_keys（2026-10-16 run20 复盘补注册）：原注册 26 步全无 issue_keys →
+    # 逐步 ③段恒显「已知问题：无（本步零问题单）」，与台账 139 行 ISSUE 并存
+    # （步级账实不符）。键=issues.log 该步主题的问题单类型键。
     1: dict(keys=['smoke_done'], narrative='开跑 2026-10-15 14:41（零环境重建）。30 账号 token 有效、单网关+单 studio 就绪。', imgs=[]),
     2: dict(keys=['smoke_done'], narrative='双账号登录通路端点按契约应答；交付案例房开房+冒烟事件落房可读回。', imgs=[]),
     3: dict(keys=['smoke_done'], narrative='15 平台通道在线；LC_ALL=C 全量 26 步开跑。', imgs=[]),
@@ -1538,21 +1542,31 @@ STEPS_META_20261015_V8_RUN20 = {
     7: dict(keys=['g1_frozen'], narrative='需求冻结（涉敏分级 C3）：七条 AC 清单锁版；产品经理A 按冻结口径派分析。', imgs=[]),
     8: dict(keys=['analysis_done'], narrative='精准系分四路并行完成；任务树与 RACI 落板。', imgs=[]),
     9: dict(keys=['triage_done'], narrative='分诊台人工确认推进；任务分派链就位。', imgs=[]),
-    10: dict(keys=['anexec_done'], narrative='架构治理评审执行段完成。', imgs=[]),
+    10: dict(keys=['anexec_done'], issue_keys=['raci-dispatch-missing', 'raci-not-structured'],
+             narrative='架构治理评审执行段完成。', imgs=[]),
     11: dict(keys=['analysis_done'], narrative='系统分析与拆分：六开发任务+两测试任务定界（PAYCORE-C/S/N、CHWX、CHALI、MP、TEST-BE/FE）。', imgs=[]),
     12: dict(keys=['raci_sidework_done'], narrative='分诊与派工：RACI 矩阵落卡；副线任务并行。', imgs=[]),
-    13: dict(keys=['analysis_done'], narrative='精准系分四路：概设详设与工作量评估出稿。', imgs=[]),
+    13: dict(keys=['analysis_done'], issue_keys=['anexec-missing', 'receipt-missing'],
+             narrative='精准系分四路：概设详设与工作量评估出稿。', imgs=[]),
     14: dict(keys=['anexec_done'], narrative='汇总复核定稿：r3 十二项修订全入 main（union 合并 369762a/410d70d）。', imgs=[]),
-    15: dict(keys=['g2_arch_pass'], narrative='G2 评审闸：架构治理 PASS（判词四层盲因链攻坚后 10:18 放行——本闸攻坚积累为方案 V8.30 职责归位轮）。', imgs=[]),
+    15: dict(keys=['g2_arch_pass'], issue_keys=['g2-design-review-fail', 'g2-rollback-user-order', 'security-review-fail', 'security-review-missing', 'security-review-timeout'],
+             narrative='G2 评审闸：架构治理 PASS（判词四层盲因链攻坚后 10:18 放行——本闸攻坚积累为方案 V8.30 职责归位轮）。', imgs=[]),
     16: dict(keys=['close_done'], narrative='系分归位：设计文档链入 main（e6fda00）。', imgs=[]),
     17: dict(keys=['plan_done'], narrative='排期：RFD-001-schedule 入仓（1b4cd87）；六路任务书 12:02 派发（后证该窗为网关死亡窗，死信补棒 15:42 全员复活——issue devimpl-redispatch-nudge）。', imgs=[]),
-    18: dict(keys=['devimpl_done'], narrative='编码 G3：六分支全推 origin（C e4d77ed/S 4301711/N 1aa75b0/CHWX 16:17/CHALI 2179132/MP 2008885→ffabc8b）；testlog 6/6 在案；g3_evidence_gap=1 显形记欠（CHWX 补证窗超时）。本段实录：跨档案「干完不交卷」五波（16:07-21:27），积累三层根治（V8.32 派发词完成定义+636 turn-end 自动 push+637 续作泵——run21 生效）。', imgs=[]),
-    19: dict(keys=['g4_pass'], narrative='独立测试 G4：TEST-BE-S1/S3+QUALITY+INT 四测试分支推 origin（20:36-21:37）；203 例 202 绿 1 红诚实账（658971a 汇总测试报告）；缺陷环 defect_done=1（P0 DEF-BE-S2-01 验证达成）；g4_evidence_gap=1 显形。', imgs=[]),
-    20: dict(keys=['release_done'], narrative='发布准出 G5：判词 READY-GATE-PASS（fanfan 02:12 六面前判词）；本闸七层盲因链攻坚（sender 锚/追尾循环/卡面检索/候选词污染/熔断指纹 body||result 扩列——watchdog 假阳同步根治 05b9d20）；integration/RFD-001 全六支内容级并入（对象级 C/N 差异记 lead_merge_fallback=1 代偿单）。', imgs=[]),
-    21: dict(keys=['uat_done'], narrative='UAT 验收：七条 AC 逐条证据（bella 核对 fanfan 证据链）——uat_done 10:09:29。', imgs=[]),
-    22: dict(keys=['ide_done'], narrative='工作台账：120+ 条 issues.log 全程留痕（ISSUE/DISP/RISK 三态），本报告③段实测计算呈现。', imgs=[]),
-    23: dict(keys=['audit_done'], narrative='合规审计：audit_done 10:12:14。', imgs=[]),
-    24: dict(keys=['retro_done'], narrative='复盘 G6：retro_done 10:14:37；本日治理积累=方案 V8.34（66-69 四纪律）+监督日复盘文档（2026-10-15-run20-supervisor-rescue-and-inspector-closure.md）。', imgs=[]),
+    18: dict(keys=['devimpl_done'], issue_keys=['conclusion-gap', 'split-evidence-missing', 'g3-local-gate-missing', 'gate-evidence-blocked', 'g3-testlog-missing-all-six', 'chen-pushcore-n-not-pushed', 'hu-pushchwx-not-pushed', 'devimpl-chen-idle-loop', 'devimpl-lin-idle-first', 'devimpl-second-idle-wave', 'devimpl-third-idle-wave-chen-lin', 'devimpl-xiao-fake-revival', 'devimpl-redispatch-nudge', 'v831-xiao-scaffold-test', 'driver-no-recent-redispatch', 'fourth-idle-wave-1call-stop', 'driver-never-dispatched-wei-integration', 'run20-waterfall-no-rolling-pipeline', 'lead-merge-fallback', 'merge-conflict', 'wei-rebase-broke-ancestor', 'monitor-manual-order'],
+             narrative='编码 G3：六分支全推 origin（C e4d77ed/S 4301711/N 1aa75b0/CHWX 16:17/CHALI 2179132/MP 2008885→ffabc8b）；testlog 6/6 在案；g3_evidence_gap=1 显形记欠（CHWX 补证窗超时）。本段实录：跨档案「干完不交卷」五波（16:07-21:27），积累三层根治（V8.32 派发词完成定义+636 turn-end 自动 push+637 续作泵——run21 生效）。', imgs=[]),
+    19: dict(keys=['g4_pass'], issue_keys=['test-report-missing', 'test-verdict-missing', 'defect-assignee-not-flipped'],
+             narrative='独立测试 G4：TEST-BE-S1/S3+QUALITY+INT 四测试分支推 origin（20:36-21:37）；203 例 202 绿 1 红诚实账（658971a 汇总测试报告）；缺陷环 defect_done=1（P0 DEF-BE-S2-01 验证达成）；g4_evidence_gap=1 显形。', imgs=[]),
+    20: dict(keys=['release_done'], issue_keys=['g5-ready-fail', 'g5-ready-fail-seven-gaps', 'g5-review-missing', 'g5-verdict-fanfan-unpumped', 'g5-verdict-format-blind', 'g5-tripped-verdict-stall', 'gate-breaker-tripped', 'gate-breaker-reset', 'breaker-wait-nudge', 'monitor-repair-dispatch', 'monitor-manual-order'],
+             narrative='发布准出 G5：判词 READY-GATE-PASS（fanfan 02:12 六面前判词）；本闸七层盲因链攻坚（sender 锚/追尾循环/卡面检索/候选词污染/熔断指纹 body||result 扩列——watchdog 假阳同步根治 05b9d20）；integration/RFD-001 全六支内容级并入（对象级 C/N 差异记 lead_merge_fallback=1 代偿单）。', imgs=[]),
+    21: dict(keys=['uat_done'], issue_keys=['uat-conditional', 'uat-precheck'],
+             narrative='UAT 验收：七条 AC 逐条证据（bella 核对 fanfan 证据链）——uat_done 10:09:29。', imgs=[]),
+    22: dict(keys=['workmgr_done'], issue_keys=['zero-delivery', 'agent-log-rotation-impact'],
+             narrative='工作台账：120+ 条 issues.log 全程留痕（ISSUE/DISP/RISK 三态），本报告③段实测计算呈现。', imgs=[]),
+    23: dict(keys=['audit_done'], issue_keys=['audit-finding'],
+             narrative='合规审计：audit_done 10:12:14。', imgs=[]),
+    24: dict(keys=['retro_done'], issue_keys=['retro-open-items', 'm3-v3-events'],
+             narrative='复盘 G6：retro_done 10:14:37；本日治理积累=方案 V8.34（66-69 四纪律）+监督日复盘文档（2026-10-15-run20-supervisor-rescue-and-inspector-closure.md）。', imgs=[]),
     25: dict(keys=['ide_done'], narrative='报告生成：本件（叙事注册补于收尾链内——R17 骨架兜底已出，注册后覆盖）。', imgs=[]),
     26: dict(keys=['report_done'], narrative='终收尾：四格式同步+三停（watchdog/nanny/哨）。', imgs=[]),
 }
@@ -1600,6 +1614,17 @@ for _n, _meta in list(STEPS_META.items()):
         _meta['keys'] = _STEP33_MULTI_KEYS.get(_n) or [_STEP33_DEFAULT_KEYS[_n - 1]]
         sys.stderr.write('[mx-report-gen] 步 %s 叙事注册 keys 为空——回落 §3.3 默认键 %s（run16 实锤防线）\n'
                          % (_n, '+'.join(_meta['keys'])))
+
+# ── run20 复盘防线（fix/run20-report-truth-trio）：逐步问题单漏注册机械暴露 ──
+# run20 实锤：26 步 issue_keys 全空 → 逐步 ③段 27 处「已知问题：无（本步零问题单）」
+# 与台账 139 行 ISSUE 并存（步级账实不符，审计四查全过照放行）。此处对台账键做
+# 步归属盘点：未注册到任何步的键逐条 stderr 列出——收尾链补注册的检查面；
+# 审计器同批新增「台账有行而逐步零渲染」FAIL 断言（双保险）。
+_ledger_keys_unreg = report_truth.unregistered_ledger_keys(
+    str(EVID / 'issues.log'), {n: (m.get('issue_keys') or []) for n, m in STEPS_META.items()})
+if _ledger_keys_unreg:
+    sys.stderr.write('[mx-report-gen] 台账键未注册到任何步（逐步问题单空渲染风险）%d 个：%s\n'
+                     % (len(_ledger_keys_unreg), '、'.join(_ledger_keys_unreg[:20])))
 
 _L3_A={'20261013-v8-run18-lite-acp':'进行中（lite-ACP 专项验证轮：hermes→ACP→Ycode 编码委托链全链首验——MX_ACP_BACKEND=1 首个实跑轮，六路委托 5/6 分支带日志、RESULT exit=0×4；运行中两事故当场根治：工具层 300s 天花板（技能卡 nohup 后台化）与环境清扫误删 selected（清扫器豁免+venv 链修复））','20261012-v8-run16':'进行中（V8.17 复盘纪律版首验轮+监控驱动修复链轮）：六闸 6/6（G2 安全评审新口径 7 分钟过闸首验；G5 两轮真打回熔断后监控修复链完整走通复位）；UAT 7/7 全过（run15 两缺口补齐）；V8.16 饱和并行全谱首验；监控代行全链实战','20261011-v8-run15':'进行中（V8.10-V8.15 全栈首验轮+根治轮·监控哨叙事）：26 步全走完+六闸 6/6（首过 5/6——G2 涉敏安全前置首验真拦截后复审改判）；七件首验落地（三段卡×3/涉敏评审卡/六域当轮体检/契约观察影子 breaking=0/主卡 room 锚/判词复用/实时帧 48 张零补拍）；运行中当场根治四类真缺陷（安全闸三重盲区 bf9a955——80 秒收敛实证、进度锚陈旧分支盲转 c1e507d、多锚精确登记 36c7701、mx-up 冷起挂死 09c07f9）；监控代行定向令 6 发 6 中；全程 12h17m（对照 run14 净 22h，摩擦=锚冻结 150min+安全修复环 68min+监督器卡死 10min）','20261010-v8-run14':'进行中（V8.5 首个全量验证轮·预注册句）：mx-clean 三旗标 0→1 全新环境独立回归；V8.5 条款（DISP 主体精确配对/登记幂等/闸键首过保护/打回=判词语义/并行度段界锚）+G1-G4 产品面修复+GRAPH_ENGINE=on 的首个全量轮——L3 总评行由收尾链按当轮实测定稿','20261010-v8-run13':'符合（回归轮首航·诚实账）：本轮执行带九步全走完（开发→测试→发布→验收→审计→复盘→报告，全程 3 小时 04 分）；六闸全收齐（G3/G4/G5 当轮，G1/G2 沿用源轮真值分带呈现）；边界守卫首次实战通过（零 main 污染、零越界代做）；验收诚实账更严（AC-1/5/6 不通过如实判词，一手复测与 测试工程师A 报备双源一致）；事故账=repo_has×回归轮五连循环（根治 6959a2b）+步18 错页帧（G1/G2 中途上线修复）；回归轮口径首次全程落地','20261009-v8-run12':'run12 符合（逆境中的治理+诚实记账轮）：26 步全部走完、六道关卡全部通过（G1/G2/G3/G4 一次通过 4/6；G5 两轮不通过+强制暂停+复审转正；UAT 有条件通过、AC-5 如实标红）；诚实账=测试工程师A 如实报告「TEST-BE 未执行」→G5 第一轮追责→测试工程师A 真实执行 250/250 全绿完整循环——不谎报纪律全程可反查；六张开发卡同时派出（提速措施二）+测试并行拆分（测试工程师A/团队负责人A/产品经理A 三方）双双首次应用；网关四起事故+噪音风暴+会话中毒+结论行污染全部记入问题清单并全部恢复。','20261007-v8-run11':'符合（零残留独立回归的正跑轮+逆境治理主战役）：attempt-3 26 步全走完（02:26 开跑→G6 00:26 六闸 6/6 收齐）；从零交付实证——孤儿历史（main 深度 1）+禁考古措辞+闸卫三防线下，四系分两稿从零入仓（PAYCORE/MP）、四开发分支全部本轮新推、TEST-BE 228/228 全绿、发布三件套+UAT 7/7 判词齐；流水线三机制首验（四路同时派出同秒/渠道批触发链/用例前移预备轮）；attempt-1/2 事故链四病根全部根治提交（自动检查 78/78）；负向如实入账：系分 2/4 超窗、容量饥饿×2（drop 106 条）、产品经理A 会话卡死×3（hindsight 交互）、G5 六轮（人工介入 5 笔：熔断放行+发布件代拟+簿记代走+终判代落）、RACI 双@×4 复现、materials 残留暴露——全部记入问题清单在案。','20261007-v8-run10':'run10 符合（全流程完整循环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实测统计落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记入问题清单在案；叙事文案预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采清单 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记入问题清单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记入问题清单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收尾，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实测依据）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判停滞重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），研发工程师B/研发工程师D 停摆缺席如实记入问题清单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收尾实测依据）：G1→UAT 意图通路全完整循环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（测试工程师A 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记入问题清单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
 '20261001-v5-run6':'符合（harness 逆境根治+真交付轮）：G1→UAT 意图通路完整循环（验收书入仓+七条 UAT-EVIDENCE 7/7 PASS）；plan 七连超时根因链（窗口<任务时长/派发词缺 push 目标/账户限流/网关换血）四层根治后 产品经理A 30 分钟交卷；devimpl 分支假真值如实披露（branch_fresh 自动检查根治未来轮）且四开发 agent 真实交付三支推送；测试 194/194 零缺陷 G4 真值；夜间 8h 停摆（/tmp 清理+Docker 睡眠）与路由丢失（DM 直发修复）/并发闸弹回/UAT 核验位错配三类新坑全部根治或如实记档——治理逆境与修复即本轮主线素材。',
@@ -2955,25 +2980,57 @@ def _art_refreshed(ref: str, rel: str) -> bool:
         return False
 
 def _art_resolve(rel: str):
-    """→ (text|None, 解析源, 解析源锚)。None=三处皆无（如实缺件，不冒充）。
+    """→ (text|None, 解析源, 解析源锚, 真值标记 dict)。None=三处皆无（如实缺件，不冒充）。
     run18 复盘缺陷④根治：先 fetch origin 再核验（此前只查本地 remote-tracking ref，
     推送时序差下本地 ref 是旧的）；命中 ref 还须过新鲜度窗（本轮窗口内提交），
-    旧稿降级为「(在仓·旧版)」——存在但非本轮产物，不算模版符合。"""
+    旧稿降级为「(在仓·旧版)」——存在但非本轮产物，不算模版符合。
+
+    run20 复盘真值件（2026-10-16，report_truth 同源判据）：
+    真值标记={'stale': 声明轮≠本轮, 'declared': 声明轮 id,
+              'dead_anchor': 锚分支不在远端, 'anchor_ref': 分支名}。
+    stale 实例=run20 步13「系分稿 PAYCORE」实为 RUN=20261012-v8-run16 文档、
+    「系分稿 MP」实为 RUN=20261010-v8-run14 文档、步18「G3 testlog PAYCORE-C/N」
+    实为 run19/run16 证据（经 integration 合并扫入；freshness 被合并「刷新」蒙过
+    ——路径被碰过≠产物是本轮的）；
+    dead_anchor 实例=origin/integration/RFD-001 赛后即删，锚集体不可反查。"""
     if not rel:
-        return None, '', ''
+        return None, '', '', {}
     _git_ok('fetch', '-q', 'origin')
     for ref in ('origin/main', 'origin/integration/RFD-001'):
         if _git_ok('cat-file', '-e', f'{ref}:{rel}'):
             sha = _git_out('rev-parse', '--short', ref).strip()
             src = ref if _art_refreshed(ref, rel) else f'{ref}（在仓·旧版）'
-            return _git_out('show', f'{ref}:{rel}'), src, sha
+            text = _git_out('show', f'{ref}:{rel}')
+            return text, src, sha, _art_truth(text, ref)
     p = CEN / rel
     if p.exists():
-        return p.read_text(encoding='utf-8', errors='replace'), '(工作树检出)', CEN_ANCHOR
-    return None, '', ''
+        text = p.read_text(encoding='utf-8', errors='replace')
+        return text, '(工作树检出)', CEN_ANCHOR, _art_truth(text, '')
+    return None, '', '', {}
+
+def _art_truth(text: str, ref: str) -> dict:
+    """交付物真值标记（report_truth 判据的生成器侧投影）——stale/dead_anchor。
+    锚活性按分支缓存（ls-remote 一次网络往返；同分支多件不重复查）。"""
+    stale, declared = report_truth.stale_verdict(text, RUN_ID)
+    branch = ref[len('origin/'):] if ref.startswith('origin/') else ''
+    dead = bool(branch) and not _anchor_alive_cached(branch)
+    if stale:
+        print(f'[truth] 往轮产物冒充本轮交付物：声明轮 {declared} ≠ 本轮 {RUN_ID}', file=sys.stderr)
+    if dead:
+        print(f'[truth] 交付物锚已失效：分支 {branch} 不在远端（不可反查）', file=sys.stderr)
+    return {'stale': stale, 'declared': declared, 'dead_anchor': dead, 'anchor_ref': branch}
+
+_ANCHOR_ALIVE_CACHE: dict = {}
+
+def _anchor_alive_cached(branch: str) -> bool:
+    """远端分支活性缓存（生成器单进程内一次判定）——13 件交付物同分支不重复
+    ls-remote（实测每件一次网络往返使整报告生成 +4min）。"""
+    if branch not in _ANCHOR_ALIVE_CACHE:
+        _ANCHOR_ALIVE_CACHE[branch] = report_truth.anchor_alive(str(CEN / '.git'), branch)
+    return _ANCHOR_ALIVE_CACHE[branch]
 
 def _art_read(rel: str):
-    raw, _, _ = _art_resolve(rel)
+    raw, _, _, _ = _art_resolve(rel)
     return raw
 
 def _art_checks_html(raw: str, checks):
@@ -3016,8 +3073,8 @@ def _step_artifact_status(n: int):
     total = len(views)
     bad = 0
     for _name, rel, checks in views:
-        raw, _aref, _asha = _art_resolve(rel)
-        if raw is None:
+        raw, _aref, _asha, truth = _art_resolve(rel)
+        if raw is None or truth.get('stale'):
             bad += 1
             continue
         for _lb, rx in checks:
@@ -3121,7 +3178,7 @@ def artifact_block(n: int) -> str:
                 f'0→1 缺口记档）——不作本轮交付物呈现。</div></div></div></details>')
     pieces = []
     for name, rel, checks in arts:
-        raw, aref, asha = _art_resolve(rel)
+        raw, aref, asha, truth = _art_resolve(rel)
         if raw is None:
             pieces.append(f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
                           f'<span class="art-path">{H.escape(rel or "（无路径）")}</span></div>'
@@ -3131,15 +3188,37 @@ def artifact_block(n: int) -> str:
         body = raw[:ART_TRUNC]
         content = ('<pre class="art-code">' + H.escape(body) + '</pre>') if rel.endswith('.txt') \
             else art_md_to_html(body)
+        # 往轮产物（run20 复盘真值件）：文件头声明轮≠本轮——存在但不得计为本轮
+        # 交付物，模版核对照常呈现但判词改「往轮产物」，审计器据此 FAIL。
+        if truth.get('stale'):
+            ok_all, chk = _art_checks_html(raw, checks)
+            _ok_n, _ok_t = ART_OK.get(n, (0, 0))
+            ART_OK[n] = (_ok_n, _ok_t + 1)
+            stale_banner = (f'<div class="art-chk miss art-stale-banner">往轮产物：文件头声明 '
+                            f'RUN={H.escape(truth.get("declared") or "?")} ≠ 本轮 {H.escape(RUN_ID)}'
+                            f'——不得计为本轮交付物（记入问题清单 stale-deliverable）</div>')
+            anchor_html = (f'<span class="art-path">{H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</span>'
+                           + ('<span class="art-path art-dead-anchor">锚已失效·分支不在远端（不可反查）</span>'
+                              if truth.get('dead_anchor') else ''))
+            pieces.append(
+                f'<div class="art-item art-stale"><div class="art-hd"><b>{H.escape(name)}</b>'
+                f'<span class="art-verdict miss">往轮产物（RUN={H.escape(truth.get("declared") or "?")}）</span>'
+                f'{anchor_html}</div>{stale_banner}'
+                f'<div class="art-checks">{chk}</div>{content}'
+                + (f'<div class="art-trunc">已截断（{len(raw)}→{ART_TRUNC} 字符）</div>' if truncated else '')
+                + '</div>')
+            continue
         ok_all, chk = _art_checks_html(raw, checks)  # 核对跑全文（不受展示截断影响）
         _ok_n, _ok_t = ART_OK.get(n, (0, 0))
         ART_OK[n] = (_ok_n + (1 if ok_all else 0), _ok_t + 1)
         trunc_note = (f'<div class="art-trunc">已截断（{len(raw)}→{ART_TRUNC} 字符），'
                       f'全文见中央仓 {H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</div>') if truncated else ''
+        dead_note = ('<span class="art-path art-dead-anchor">锚已失效·分支不在远端（不可反查）</span>'
+                     if truth.get('dead_anchor') else '')
         pieces.append(
             f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
             f'<span class="art-verdict{" ok" if ok_all else " miss"}">{"模版符合" if ok_all else "模版不符"}</span>'
-            f'<span class="art-path">{H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</span></div>'
+            f'<span class="art-path">{H.escape(rel)}@{asha or "?"}（{H.escape(aref)}）</span>{dead_note}</div>'
             f'<div class="art-checks">{chk}</div>{content}{trunc_note}</div>')
     return (f'<details class="st-artifact"><summary>📦 交付物实物与模版核对（{len(pieces)} 件）</summary>'
             '<div class="art-body">' + ''.join(pieces) + '</div></details>')
@@ -3165,12 +3244,23 @@ def artifact_panorama():
     rows, n_ok, n_bad, n_files = [], 0, 0, 0
     for n in sorted(set(ARTIFACT_VIEWS) | set(ART_NOFILE_NOTES)):
         for name, rel, checks in ARTIFACT_VIEWS.get(n, []):
-            raw, aref, asha = _art_resolve(rel)
+            raw, aref, asha, truth = _art_resolve(rel)
             if raw is None:
                 res, anchor, n_bad = '<span class="art-verdict miss">缺件（文件不存在）</span>', '—', n_bad + 1
             else:
                 n_files += 1
                 ok_all, _ = _art_checks_html(raw, checks)
+                # 往轮产物（run20 复盘真值件）：声明轮≠本轮——不得计为本轮交付物
+                if truth.get('stale'):
+                    n_bad += 1
+                    res = (f'<span class="art-verdict miss">往轮产物（RUN={H.escape(truth.get("declared") or "?")}）</span>'
+                           f'<br><span class="d-warn" style="font-weight:700">声明轮≠本轮，不计本轮交付物</span>')
+                    anchor = f'<code>{H.escape(aref)}@{asha or "?"}</code>'
+                    if truth.get('dead_anchor'):
+                        anchor += ' <span class="art-dead-anchor">（锚已失效·分支不在远端，不可反查）</span>'
+                    rows.append(f'<tr><td><b>{n}</b></td><td>{H.escape(name)}<br>'
+                                f'<span class="art-path">{H.escape(rel or "—")}</span></td><td>{res}</td><td>{anchor}</td></tr>')
+                    continue
                 # 逐项呈现（2026-10-12 用户指令：符合与不符合项具体列出，不只计数）——
                 # 符合项绿 ✓+项名，缺项红 ✗+项名；行内联排，与步内折叠块字段级核对同源。
                 _items = ' '.join(
@@ -4256,6 +4346,9 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-verdict{{font-size:11px;font-weight:700;border-radius:3px;padding:1px 6px;flex-shrink:0}}
 .art-verdict.ok{{background:#dcfce7;color:#15803d}}
 .art-verdict.miss{{background:#fef2f2;color:var(--err)}}
+.art-stale-banner{{margin:4px 0;font-weight:700}}
+.art-item.art-stale{{border-left:3px solid var(--err)}}
+.art-dead-anchor{{color:var(--err);font-weight:700}}
 .art-checks{{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}}
 .art-chk{{font-size:11px;border-radius:3px;padding:1px 6px;background:var(--card);border:1px solid var(--border);color:var(--text)}}
 .art-chk.ok{{color:var(--ok)}}
