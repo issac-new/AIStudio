@@ -48,6 +48,10 @@ else
   echo "✓ ⑧ 上轮报告审计零 FAIL（runs/ 已清场——无上轮在位，新轮首跑）"; PASS=$((PASS+1))
 fi
 
+# ⑰ 监督器健康（run20 教训：监督器 15:31 静默死亡 5h+ 无察觉=run20 末段"全员静默"真因；
+#     run21 起跑前清单新增）——脚本在位+语法过+可执行；上轮 supervisor 日志若有"unarmed"残留提示 re-arm。
+ck "⑰ 监督器健康" "[ -f '$HERE/mux/run-driver-supervisor.sh' ] && bash -n '$HERE/mux/run-driver-supervisor.sh'" "监督器脚本缺失或语法坏——修复后再跑（run20 5h 静默死亡教训件；启动走 nohup bash 形态，x 位非必需）"
+
 # ⑨ run 间干净（无在途驱动/监督器/陈锁）
 ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . && ! mxp_pgrep_f 'run-driver-supervisor' | grep -q ." "有残留驱动/监督器：确认后 touch stop 文件+kill（见独立监控手册）"
 

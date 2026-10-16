@@ -7,11 +7,13 @@
 
 ```bash
 cd <simharness>
-bash mux/mx-prelaunch-check.sh          # 十六项全绿为前置（⑯ 读上一轮台账 check-clearance）
+bash mux/mx-prelaunch-check.sh          # 十七项全绿为前置（⑯ 读上一轮台账 check-clearance；⑰ 监督器健康=run20 5h 静默死亡教训件）
 # 严格姿态声明（三选一）：
 export MX_POSTURE=strict                 # 方式一：env（驱动/哨兵/代批环同源读）
 # 方式二：开跑命令行内联；方式三：起跑后 state.env 会落 posture=strict 键可复核
-RUN_ID=2026xxxx-v8-runXX LC_ALL=C MX_POSTURE=strict \
+# 流水线引擎实跑开关（V8.33：run20 期间 off 只报状态；起跑切 on=持续测试/集成触发器产品化首验——仅 run21 及以后轮使用，无用户明确指令不得启动任何轮次）：
+export PIPELINE_TRIGGER=on
+RUN_ID=2026xxxx-v8-runXX LC_ALL=C MX_POSTURE=strict PIPELINE_TRIGGER=on \
   nohup bash mux/run-driver-supervisor.sh --run $RUN_ID --start-step smoke \
   > <SIM_ROOT>/logs/$RUN_ID-supervisor.log 2>&1 &
 ```
