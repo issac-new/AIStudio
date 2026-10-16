@@ -63,7 +63,66 @@ export function toolCategoryOf(tool: string): ToolCategory {
   if (WRITE_TOOLS.has(tool)) return 'write'
   if (EXEC_TOOLS.has(tool)) return 'exec'
   if (NETWORK_TOOLS.has(tool)) return 'network'
-  return 'write'  // 未知工具（含 MCP 动态工具）按 write 保守归类（RA 默认档而非放行）
+  return mcpCategoryOf(tool) ?? 'write'  // MCP 细分类（H3 剩余项③）；非 MCP 未知工具仍保守 write
+}
+
+// ---------- MCP 工具细分类（H3 剩余项③，2026-10-16 落地）----------
+// 背景：MCP 动态工具（运行时 mcp__{server}__{tool} 形态，agent 侧
+// tools/mcp_tool_schema.py MCP_TOOL_NAME_PREFIX="mcp__"）原一律按 write 保守
+// 归类——RA 档全拒，只读型连接器（检索/分析/文档）的查询工具被误拦在审批门外。
+// 两层信号（都不改保守默认——判不出即 write，与旧行为一致）：
+//   ① 连接器类别表：65 连接器目录（optional-mcps/manifest.yaml）里经人工判读
+//      标为只读面/检索面的连接器，其工具默认 read；
+//   ② 工具动词启发式：工具名末段的动词（get/list/search/read/query…）判类别，
+//      覆盖类别表未收的连接器。
+// 边界如实声明：manifest 无工具级元数据（只有连接器描述），细分类是启发式而非
+// 权威声明——执法门对 MCP 的最终防线仍是「超权即拒」的硬边界，本模块只修
+// 「只读工具被当写操作拦」这一侧的误伤。
+const MCP_PREFIX = 'mcp__'
+
+/** 解析 mcp__{server}__{tool}（tool 自身可含 __，取首段为 server、余为 tool）。 */
+function parseMcpName(tool: string): { server: string; tool: string } | null {
+  if (!tool.startsWith(MCP_PREFIX)) return null
+  const rest = tool.slice(MCP_PREFIX.length)
+  const i = rest.indexOf('__')
+  if (i <= 0) return null
+  return { server: rest.slice(0, i).toLowerCase(), tool: rest.slice(i + 2).toLowerCase() }
+}
+
+/** 连接器只读面目录（人工判读，2026-10-16）：检索/分析/文档/只读查询类。
+ *  写操作型连接器（airtable/notion/github/asana…）不列——落入动词启发式或保守默认。 */
+const MCP_READ_CONNECTORS = new Set([
+  'algolia', 'amplitude', 'semanticscholar', 'arxiv', 'wikipedia', 'wikidata',
+  'semantica', 'exa', 'tavily', 'brave-search', 'serper', 'perplexity',
+  'github', 'gitlab', 'bitbucket',  // 代码宿主：读面远大于写面，动词层再分
+  'notion', 'confluence', 'googledocs', 'googledrive', 'dropbox',  // 文档：读为主
+])
+
+/** 工具名末段动词→类别（命中即返回；顺序无关，互斥设计）。 */
+const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
+  // 动词首形态（list_issues/get_user…MCP 主流命名）；末段宾语不限
+  { re: /^(?:get|list|search|read|query|fetch|find|describe|show|view|browse|count|check|validate|inspect|export|download|lookup|retrieve|discover)(?:_|$)/, cat: 'read' },
+  { re: /^(?:create|update|delete|set|write|insert|upsert|remove|drop|patch|put|post|send|publish|upload|move|copy|rename|archive|restore|assign|comment|reply|add|new|edit|modify)(?:_|$)/, cat: 'write' },
+  { re: /^(?:run|execute|call|invoke|trigger|exec|eval|deploy|migrate|sync|import|batch|bulk|apply|submit)(?:_|$)/, cat: 'exec' },
+  // 动词末形态（user_get/record_list…少数连接器命名）
+  { re: /(?:^|_)(?:get|list|search|read|query|fetch|find|describe|show|view|count|check|lookup|retrieve)$/, cat: 'read' },
+  { re: /(?:^|_)(?:create|update|delete|set|write|insert|remove|drop|send|publish|upload|assign|comment|reply|add|edit|modify)$/, cat: 'write' },
+  { re: /(?:^|_)(?:run|execute|call|invoke|trigger|exec|eval|deploy|migrate|sync|import|batch|bulk|apply|submit)$/, cat: 'exec' },
+]
+
+/** MCP 工具细分类：判不出返回 null（调用方落保守 write，与旧行为一致）。 */
+export function mcpCategoryOf(tool: string): ToolCategory | null {
+  const parsed = parseMcpName(tool)
+  if (!parsed) return null
+  // ① 连接器类别（只读面目录）
+  if (MCP_READ_CONNECTORS.has(parsed.server)) {
+    // 连接器只读≠工具只读：动词层优先 refine（如 github__create_issue 仍是 write）
+    const verb = MCP_TOOL_VERBS.find((v) => v.re.test(parsed.tool))
+    return verb ? verb.cat : 'read'
+  }
+  // ② 动词启发式（覆盖类别表未收连接器）
+  const verb = MCP_TOOL_VERBS.find((v) => v.re.test(parsed.tool))
+  return verb ? verb.cat : null
 }
 
 // ---------- 风险分档（复用审批域单一事实源） ----------

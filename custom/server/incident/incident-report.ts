@@ -32,6 +32,8 @@ export interface IncidentOpts {
   windowSince?: number
   windowUntil?: number
   profilesRoot?: string
+  /** 锚定轮 state.env 路径（跨天真窗判据；env HERMES_INCIDENT_STATE_ENV 可覆盖） */
+  stateEnvPath?: string
 }
 
 function el(
@@ -65,10 +67,13 @@ export function loadSources(sessionId: string, opts: IncidentOpts = {}): Inciden
   // 推演轮聚合回退（run18 复盘：agent 会话落 profiles/*/state.db 而非 webui 主库，
   // 17 要素 12 项空白的根因）：RUN_ID 形态 + 主库无此会话 → 窗口聚合各 profile。
   let profileWindow: IncidentSourceBundle['profileWindow'] = null
-  if (!messages && isRunIdForm(sessionId)) {
+  // 判据（2026-10-16 A7）：主库查无此 session 时 readSessionMessages 返回 total=0
+  // 空对象（非 null）——旧判据 !messages 恒 false，profile 聚合分支永不进（run20
+  // 17 要素 15 absent 的第二半根因）。total=0 一律走推演轮聚合回退。
+  if ((!messages || messages.total === 0) && isRunIdForm(sessionId)) {
     const win = (opts.windowSince !== undefined && opts.windowUntil !== undefined)
       ? { sinceSec: opts.windowSince, untilSec: opts.windowUntil }
-      : runWindowFromSessionId(sessionId)
+      : runWindowFromSessionId(sessionId, { stateEnvPath: opts.stateEnvPath })
     if (win) {
       profileWindow = readProfileWindowMessages(opts.profilesRoot, dbFile, win.sinceSec, win.untilSec)
       if (profileWindow && profileWindow.combined.total > 0) {

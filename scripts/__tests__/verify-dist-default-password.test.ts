@@ -98,6 +98,18 @@ describe('M8 出厂默认口令扫描（WARN 态）', () => {
     expect(r.stdout).toContain('出厂默认口令扫描零命中')
   })
 
+  it('minify 常见非口令形态不误报（base64 字母表与日期正则——2026-10-16 实测 0.7.36 产物修正）', () => {
+    makeDist([
+      'var A="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";',
+      'var re={narrow:/^([123456789]|1[012])/,wide:/^([123456789]|[1-9][0-9]{3})/};',
+      'const P="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";',
+    ].join('\n'))
+    const r = run()
+    expect(r.code).toBe(0)
+    expect(r.stderr).not.toContain('WARN')
+    expect(r.stdout).toContain('出厂默认口令扫描零命中')
+  })
+
   it('豁免位：命中时退出码 0，WARN 标注已豁免', () => {
     makeDist('const a = {username:"admin",password:"123456"}')
     const r = run({ VERIFY_DIST_ALLOW_DEFAULT_PASSWORD: '1' })

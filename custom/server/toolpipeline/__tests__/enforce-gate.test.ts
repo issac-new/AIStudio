@@ -37,12 +37,30 @@ afterAll(() => {
 })
 
 describe('工具类别与风险分档', () => {
-  it('四类映射：read/write/exec/network；未知工具保守归 write', () => {
+  it('四类映射：read/write/exec/network；非 MCP 未知工具保守归 write', () => {
     expect(toolCategoryOf('read_file')).toBe('read')
     expect(toolCategoryOf('write_file')).toBe('write')
     expect(toolCategoryOf('terminal_exec')).toBe('exec')
     expect(toolCategoryOf('browser_click')).toBe('network')
-    expect(toolCategoryOf('mcp_some_tool')).toBe('write')
+    expect(toolCategoryOf('mcp_some_tool')).toBe('write')  // 无 __ 分隔=非标准 MCP 名，仍保守
+    expect(toolCategoryOf('totally_unknown_tool')).toBe('write')
+  })
+
+  it('MCP 细分类（H3③）：连接器只读面+动词启发式；判不出仍保守 write', () => {
+    // ① 连接器只读面（github 在目录内）+ 只读动词 → read
+    expect(toolCategoryOf('mcp__github__list_issues')).toBe('read')
+    expect(toolCategoryOf('mcp__algolia__search_index')).toBe('read')
+    // ② 连接器只读面但动词是写 → 动词层 refine（github__create_issue 仍 write）
+    expect(toolCategoryOf('mcp__github__create_issue')).toBe('write')
+    expect(toolCategoryOf('mcp__notion__delete_page')).toBe('write')
+    // ③ 目录外连接器靠动词：只读动词 → read；写动词 → write；执行动词 → exec
+    expect(toolCategoryOf('mcp__airtable__list_records')).toBe('read')
+    expect(toolCategoryOf('mcp__airtable__create_record')).toBe('write')
+    expect(toolCategoryOf('mcp__jenkins__run_build')).toBe('exec')
+    // ④ 判不出（目录外+非常规动词）→ 保守 write（旧行为不回归）
+    expect(toolCategoryOf('mcp__weird__do_something')).toBe('write')
+    // ⑤ 非 MCP 前缀不受影响
+    expect(toolCategoryOf('memory_search')).toBe('read')
   })
 
   it('风险：terminal 按命令分类（git push=high；ls=low；写文件=medium）', () => {

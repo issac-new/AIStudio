@@ -30,9 +30,13 @@ function optsFromQuery(ctx: { query: Record<string, string | string[] | undefine
     const n = s !== undefined ? Number(s) : NaN
     return Number.isFinite(n) && n >= 0 ? n : undefined
   }
+  const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() || undefined
   return {
     windowSince: num(ctx.query.since),
     windowUntil: num(ctx.query.until),
+    // A7（2026-10-16）：跨天轮次真窗判据——state_env query 显式 > env 兜底；
+    // 驱动导出时带 ?state_env=<锚定轮路径>，窗口以 run_started_at→now 精确覆盖。
+    stateEnvPath: str(ctx.query.state_env) || process.env.HERMES_INCIDENT_STATE_ENV,
   }
 }
 
