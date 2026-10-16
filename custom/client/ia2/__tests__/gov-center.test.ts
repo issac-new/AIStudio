@@ -21,6 +21,7 @@ vi.mock('../api/gov', async (importOriginal) => {
   return {
     ...actual,
     fetchGateRepairs: vi.fn(),
+    fetchIssues: vi.fn(),
     transitionGateRepair: vi.fn(),
     fetchKeyLedger: vi.fn(),
     putKeyLedger: vi.fn(),
@@ -30,14 +31,16 @@ vi.mock('../api/gov', async (importOriginal) => {
 import GovCenterView from '../views/gov/GovCenterView.vue'
 import ClearancePanel from '../views/gov/ClearancePanel.vue'
 import { fetchClearanceLedger, resolveClearance, waiveClearance } from '../api/gatekeeper'
-import { fetchGateRepairs, transitionGateRepair, fetchKeyLedger, putKeyLedger } from '../api/gov'
+import { fetchGateRepairs, transitionGateRepair, fetchKeyLedger, putKeyLedger, fetchIssues, joinIssueDisposal } from '../api/gov'
 import GateRepairsPanel from '../views/gov/GateRepairsPanel.vue'
 import KeyLedgerSection from '../views/gov/KeyLedgerSection.vue'
+import GovIssuesPanel from '../views/gov/GovIssuesPanel.vue'
 
 const mockedLedger = vi.mocked(fetchClearanceLedger)
 const mockedResolve = vi.mocked(resolveClearance)
 const mockedWaive = vi.mocked(waiveClearance)
 const mockedGateRepairs = vi.mocked(fetchGateRepairs)
+const mockedFetchIssues = vi.mocked(fetchIssues)
 const mockedTransition = vi.mocked(transitionGateRepair)
 const mockedFetchKeys = vi.mocked(fetchKeyLedger)
 const mockedPutKeyLedger = vi.mocked(putKeyLedger)
@@ -94,7 +97,7 @@ describe('GovCenterView — C1 治理中心壳（R8）', () => {
     }
     // 迁入组件真的挂载（审计/文档/体检三签内含既有组件根元素）
     expect(w.find('[data-testid="ia-gov-panel-audit"]').text().length).toBeGreaterThan(20)
-    expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('卡级数据面')
+    expect(w.find('[data-testid="ia-gov-panel-issues"]').find('[data-testid="gis-panel"]').exists()).toBe(true)
     expect(w.find('[data-testid="ia-gov-panel-metrics"]').find('[data-testid="clb-absent"], [data-testid="clb-lamp"]').exists() || true).toBe(true)
     // 水位灯组件已挂（缺席态或灯态二选一，数据面端到端在服务端测试）
     w.unmount()
@@ -227,6 +230,45 @@ describe('KeyLedgerSection — 密钥最小台账（C11，R13）', () => {
     await w2.find('[data-testid="kls-save"]').trigger('click')
     await flushPromises()
     expect(w2.find('[data-testid="kls-save-error"]').text()).toContain('密钥本体')
+    w2.unmount()
+  })
+})
+
+describe('joinIssueDisposal + GovIssuesPanel — 签 4 问题单对账（C6，R3/R14）', () => {
+  it('联结：DISP 对上 code=已处置（带处置文），对不上=未处置', () => {
+    const rows = joinIssueDisposal([
+      { kind: 'issue', code: 'I-1', subject: 'hu', text: '缺结论行' },
+      { kind: 'issue', code: 'I-2', subject: 'qi', text: '帧缺' },
+      { kind: 'disp', code: 'I-1', subject: '', text: '已随 59285aa 根治' },
+    ])
+    expect(rows[0]).toMatchObject({ code: 'I-1', disposed: true, dispText: '已随 59285aa 根治' })
+    expect(rows[1]).toMatchObject({ code: 'I-2', disposed: false })
+  })
+
+  it('面板：统计行同值+处置态渲染；404（无 issues.log）如实', { timeout: 20000 }, async () => {
+    mockedFetchIssues.mockResolvedValue({
+      run: 'r', count: 3, source: '/runs/r/evidence/issues.log',
+      lines: [
+        { kind: 'issue', code: 'I-1', subject: 'hu', text: '缺结论行' },
+        { kind: 'issue', code: 'I-2', subject: 'qi', text: '帧缺' },
+        { kind: 'disp', code: 'I-1', subject: '', text: '已根治' },
+      ],
+      stats: { totalLines: 3, totalIssue: 2, totalDisp: 1, disposed: 1, open: 1, rate: 0.5 },
+    })
+    const w = mount(GovIssuesPanel)
+    await w.find('[data-testid="gis-run"]').setValue('r')
+    await w.find('[data-testid="gis-load"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="gis-stats"]').text()).toContain('处置率 50%')
+    expect(w.find('[data-testid="gis-state-0"]').text()).toBe('已处置')
+    expect(w.find('[data-testid="gis-state-1"]').text()).toBe('未处置')
+    w.unmount()
+    mockedFetchIssues.mockRejectedValue(new Error('/api/hermes/sim/issues → 404'))
+    const w2 = mount(GovIssuesPanel)
+    await w2.find('[data-testid="gis-run"]').setValue('r')
+    await w2.find('[data-testid="gis-load"]').trigger('click')
+    await flushPromises()
+    expect(w2.find('[data-testid="gis-error"]').text()).toContain('404')
     w2.unmount()
   })
 })
