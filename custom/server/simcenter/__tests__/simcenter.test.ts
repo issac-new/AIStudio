@@ -146,16 +146,17 @@ describe('simcenter 纯函数', () => {
     expect(over.gateway).toBe('http://10.0.0.1:9001')
     expect(over.synapse).toBe('http://127.0.0.1:8008')
   })
-  it('交付物匹配：13 类清单+present/absent+file 锚', () => {
-    expect(DELIVERABLE_PATTERNS).toHaveLength(13)
-    const out = matchDeliverables(['需求冻结单.md', 'app-registry.md', 'compensation-ledger.tsv'])
+  it('交付物匹配：14 类清单+present/absent+file 锚（第 14 件完备性检查）', () => {
+    expect(DELIVERABLE_PATTERNS).toHaveLength(14)
+    const out = matchDeliverables(['需求冻结单.md', 'app-registry.md', 'compensation-ledger.tsv', '完备性检查.md'])
+    expect(out.find(d => d.name === 'completeness')?.status).toBe('present')
     const freeze = out.find(d => d.name === 'freeze')!
     expect(freeze.status).toBe('present')
     expect(freeze.file).toBe('需求冻结单.md')
     // 代偿 TSV 不得误命中工作台账
     expect(out.find(d => d.name === 'work-report')!.status).toBe('absent')
     expect(out.find(d => d.name === 'test-report')!.status).toBe('absent')
-    expect(out.filter(d => d.status === 'present')).toHaveLength(2)
+    expect(out.filter(d => d.status === 'present')).toHaveLength(3)
   })
   it('分支新鲜度三态（唯一实现语义）', () => {
     const now = 1_000_000_000
@@ -307,10 +308,10 @@ describe('simcenter HTTP 面', () => {
     expect(r.body.data.raw).toContain('chen')
     process.env.SIM_SLEEPING_WORKERS_CLI = saved
   })
-  it('deliverables：13 件核对+present/absent；非法 run 400', async () => {
+  it('deliverables：14 件核对+present/absent；非法 run 400', async () => {
     const r = await get('/api/hermes/sim/deliverables?run=run1')
     expect(r.status).toBe(200)
-    expect(r.body.deliverables).toHaveLength(13)
+    expect(r.body.deliverables).toHaveLength(14)
     const names = new Set(r.body.deliverables.map((d: any) => d.name))
     expect(names.has('freeze')).toBe(true)
     expect(names.has('retrospective')).toBe(true)
