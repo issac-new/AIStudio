@@ -108,7 +108,7 @@ export function readSessionMessages(dbPath: string, sessionId: string): SessionM
         id: r.id, session_id: r.session_id, role: r.role, tool_name: r.tool_name,
         timestamp: r.timestamp, token_count: r.token_count, finish_reason: r.finish_reason,
         // 报告层最小暴露：内容只留 160 字符预览（证据全文在 messages 表）
-        contentPreview: r.content.slice(0, 160),
+        contentPreview: (r.content ?? '').slice(0, 160),
         toolCallNames: names,
         hasReasoning,
       })
@@ -169,14 +169,39 @@ export function profileRootCandidates(explicit?: string, webuiDb?: string | null
 }
 
 /** RUN_ID 形态（如 20261013-v8-run18-lite-acp）→ 当天本地全天窗 [秒, 秒]。null=非 RUN_ID 形态。 */
-export function runWindowFromSessionId(sessionId: string): { sinceSec: number; untilSec: number } | null {
+/**
+ * 推演轮聚合窗口（2026-10-16 A7 修）：跨天轮次全窗覆盖。
+ * 原实现按 RUN_ID 日期推「当天 00:00→次日 00:00」——run20 实测跨 10-14 17:15 至
+ * 10-16 11:45（42.5h），窗口切掉首尾两天，profile 聚合恒空=17 要素 15 项 absent
+ * 的根因。新口径：优先读锚定轮 state.env 的 run_started_at（真起点）→now（真终点，
+ * +2h 缓冲覆盖收官尾迹）；state 不可得回落旧日期窗（跨天按 48h 保守窗）。
+ * opts.stateEnvPath 由调用方（驱动/控制器）显式注入；env HERMES_INCIDENT_STATE_ENV
+ * 可覆盖（测试/隔离树用）。
+ */
+export function runWindowFromSessionId(sessionId: string, opts: { stateEnvPath?: string; nowSec?: number } = {}): { sinceSec: number; untilSec: number } | null {
+  const nowSec = opts.nowSec ?? Math.floor(Date.now() / 1000)
+  // 1) 锚定轮 state.env 真窗（跨天精确）
+  const statePath = opts.stateEnvPath?.trim() || process.env.HERMES_INCIDENT_STATE_ENV?.trim()
+  if (statePath) {
+    try {
+      const { readFileSync } = require('node:fs') as typeof import('node:fs')
+      const txt = readFileSync(statePath, 'utf8')
+      const m = /^run_started_at=(\d+)\s*$/m.exec(txt)
+      if (m) {
+        const since = Number(m[1])
+        if (Number.isFinite(since) && since > 0 && since < nowSec) {
+          return { sinceSec: since, untilSec: nowSec + 7200 }
+        }
+      }
+    } catch { /* state 不可读=落日期窗（不猜） */ }
+  }
+  // 2) 日期窗（回落）：当天 00:00 起、+48h 保守覆盖跨天（run20 教训：单日窗切首尾）
   const m = /^(\d{4})(\d{2})(\d{2})-/.exec(sessionId)
   if (!m) return null
   const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3])
   const start = new Date(y, mo, d, 0, 0, 0, 0).getTime()
-  const end = new Date(y, mo, d + 1, 0, 0, 0, 0).getTime()
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return null
-  return { sinceSec: Math.floor(start / 1000), untilSec: Math.floor(end / 1000) }
+  if (!Number.isFinite(start)) return null
+  return { sinceSec: Math.floor(start / 1000), untilSec: Math.floor(start / 1000) + 48 * 3600 }
 }
 
 export function isRunIdForm(sessionId: string): boolean {
@@ -234,7 +259,7 @@ export function readProfileWindowMessages(
     combined.rows.push({
       id: r.id, session_id: r.session_id, role: r.role, tool_name: r.tool_name,
       timestamp: r.timestamp, token_count: r.token_count, finish_reason: r.finish_reason,
-      contentPreview: r.content.slice(0, 160),
+      contentPreview: (r.content ?? '').slice(0, 160),
       toolCallNames: names,
       hasReasoning: Boolean(r.reasoning || r.reasoning_content),
     })
