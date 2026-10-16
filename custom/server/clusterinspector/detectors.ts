@@ -3,6 +3,7 @@
 // D1 网关失联/降级、D2 槽位膨胀、D3 僵尸 worker、D4 会话卡死、D5 异常风暴（轮内聚簇升级）。
 
 import type { ClusterSnapshot, ProfileTail } from './collectors'
+import { detectZeroDelivery } from './detectors-zero-delivery'
 
 export type AnomalySeverity = 'info' | 'warn' | 'high'
 
@@ -556,6 +557,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectToolRate(snap, opts),
     ...detectOffhoursHighRisk(snap, opts),
     ...detectToolBlacklist(snap, opts),
+    // 零交付遥测（run20 复盘产品化）：done 卡零交付引用=无分支+无 commit 锚
+    ...detectZeroDelivery(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
