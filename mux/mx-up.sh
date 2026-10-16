@@ -138,6 +138,7 @@ else
   # 环境一律经 env 命令作参数转交（与下方 run11 attempt-3 教训同法），注释移出命令链。
   "${_gg[@]}" PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" \
     HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
+    HERMES_RUN_TRACE_DIR="$HERMES_ROOT/traces" \
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"

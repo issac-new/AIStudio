@@ -47,6 +47,8 @@ gateway_env() {
     <string>1</string>
     <key>HERMES_HOME</key>
     <string>$SIM/hermes</string>
+    <key>HERMES_RUN_TRACE_DIR</key>
+    <string>$SIM/hermes/traces</string>
     <key>HERMES_GATEWAY_LOCK_DIR</key>
     <string>$SIM/gateway-locks</string>
     <key>HERMES_GATEWAY_BUSY_INPUT_MODE</key>
