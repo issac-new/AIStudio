@@ -1,37 +1,49 @@
 <!-- overlay/custom/client/ia2/views/TasksView.vue -->
-<!-- 工作项区（/app/board，swarm kanban 页）：单层页签（2026-10-01 用户裁定：
-     不要二级页签——治理中心 5 分区拆平，全站唯一二级页签消除）。
+<!-- 工作台页签区（/app/board，swarm kanban 页）——A0 三中心拆分（2026-10-16，
+     R8 导航按关注面归位）后收敛为工作台 3 键单层页签：
      页签 1 看板 = 内嵌 SwarmKanbanView 既有看板；
-     页签 2 追溯矩阵 = 需求 → run → 产出任务 → 验证轮次（§7B.2）；
-     页签 3 三账与体检 = 管理三账（进度/风险/资源+决策点）+ 治理体检（六闸卡+六域体检）；
-     页签 4 全链路追踪 = Run Observatory 任务/运行拓扑；
-     页签 5-8 = 治理中心四分区平级化（组织与知识/台账与规则/审计与变更/文档评审）。
+     页签 2 任务协同 = 人-Agent-控制点协同图（§2.3）；
+     页签 3 协作与知识 = 协作断点/知识图谱/决策时间线（交接并入属 A1）。
+     原 13 键中迁出的 10 键深链不死链：3 键落推演中心（trace/accounts/
+     observatory → /app/sim/*），7 键落治理中心（gov-* → /app/gov，C1 前经
+     既有重定向进治理内容）；未知 tab 值回落看板（不再静默保留旧签位）。
      深链预选：/app/board?tab=<key>&status=<kanban 状态>&task=<taskId>
-     ——旧 ?tab=gov 别名映射 gov-org（治理首分区，外部深链不死链）；
+     ——旧 ?tab=gov 别名映射 gov-org（工作台第 3 签，外部深链不死链）；
      status 预选看板状态过滤器、task 预选搜索框（合法状态词表校验，非法值忽略不炸页面）。 -->
+<script lang="ts">
+// A0 旧签重定向纯函数：迁出 10 键的 ?tab= 深链 → 目标中心既有路由名。
+// 导出供守门测试正反例全覆盖（10 键映射 + board 3 键/别名/未知值回落 null）。
+const LEGACY_TAB_REDIRECTS: Readonly<Record<string, string>> = {
+  // → 推演中心（/app/sim 六签，B1 壳既有路由）
+  trace: 'ia2.simTrace',
+  accounts: 'ia2.simDelivery',
+  observatory: 'ia2.simOps',
+  // → 治理中心（/app/gov：C1 前经既有重定向落 /app/board?tab=gov-org 进治理
+  //    内容；C1 升格后直达七签壳，本表零改动）
+  'gov-registry': 'ia2.governance',
+  'gov-audit': 'ia2.governance',
+  'gov-docs': 'ia2.governance',
+  'gov-harness': 'ia2.governance',
+  'gov-cluster': 'ia2.governance',
+  'gov-ontology': 'ia2.governance',
+  'gov-session-health': 'ia2.governance',
+}
+
+/** 旧 board 页签深链 → 目标中心路由名；非迁出键（含 board 3 键与未知值）返回 null */
+export function legacyTabRedirect(tab: string): { name: string } | null {
+  const name = LEGACY_TAB_REDIRECTS[tab]
+  return name ? { name } : null
+}
+</script>
 <script setup lang="ts">
 import type { KanbanTaskStatus } from '@/api/hermes/kanban'
 import { onMounted, ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TabIntroBanner from '../components/TabIntroBanner.vue'
-import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
-import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
-import CapacitySection from '@/custom/kanban/components/CapacitySection.vue'
-import SkillgovSection from '@/custom/kanban/components/SkillgovSection.vue'
-import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
-import GovHealthSection from './gov/GovHealthSection.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
-import GovRegistryRulesView from './gov/GovRegistryRulesView.vue'
-import GovAuditChangeView from './gov/GovAuditChangeView.vue'
-import GovDocsReviewView from './gov/GovDocsReviewView.vue'
-import GovHarnessView from './gov/GovHarnessView.vue'
-import GovClusterSection from './gov/GovClusterSection.vue'
-import GovSessionHealthSection from './gov/GovSessionHealthSection.vue'
-import GovOntologySection from './gov/GovOntologySection.vue'
 import OrchestrationView from './orchestration/OrchestrationView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
 
@@ -39,46 +51,25 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const kanban = useKanbanStore()
-const cockpit = useCockpitStore()
 
-/** 单层页签全集（2026-10-01）：文案单一事实源=i18n-tasks-tabs 模块字典 */
-type TabKey = 'board' | 'orchestra' | 'trace' | 'accounts' | 'observatory' | 'gov-org' | 'gov-registry' | 'gov-audit' | 'gov-docs' | 'gov-harness' | 'gov-cluster' | 'gov-ontology' | 'gov-session-health'
+/** 工作台页签全集（A0 三中心拆分）：文案单一事实源=i18n-tasks-tabs 模块字典 */
+type TabKey = 'board' | 'orchestra' | 'gov-org'
 const tab = ref<TabKey>('board')
 const tabText = useTasksTabsText()
 
 const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'board', testid: 'ia-tasks-tab-board' },
   { key: 'orchestra', testid: 'ia-tasks-tab-orchestra' },
-  { key: 'trace', testid: 'ia-tasks-tab-trace' },
-  { key: 'accounts', testid: 'ia-tasks-tab-accounts' },
-  { key: 'observatory', testid: 'ia-tasks-tab-observatory' },
   { key: 'gov-org', testid: 'ia-tasks-tab-gov-org' },
-  { key: 'gov-registry', testid: 'ia-tasks-tab-gov-registry' },
-  { key: 'gov-audit', testid: 'ia-tasks-tab-gov-audit' },
-  { key: 'gov-docs', testid: 'ia-tasks-tab-gov-docs' },
-  { key: 'gov-harness', testid: 'ia-tasks-tab-gov-harness' },
-  { key: 'gov-cluster', testid: 'ia-tasks-tab-gov-cluster' },
-  { key: 'gov-ontology', testid: 'ia-tasks-tab-gov-ontology' },
-  { key: 'gov-session-health', testid: 'ia-tasks-tab-gov-session-health' },
 ]
-type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabTrace' | 'tabAccounts' | 'tabObservatory' | 'tabGovOrg' | 'tabGovRegistry' | 'tabGovAudit' | 'tabGovDocs' | 'tabGovHarness' | 'tabGovCluster' | 'tabGovOntology' | 'tabGovSessionHealth'
+type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabGovOrg'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   board: 'tabBoard',
   orchestra: 'tabOrchestra',
-  trace: 'tabTrace',
-  accounts: 'tabAccounts',
-  observatory: 'tabObservatory',
   'gov-org': 'tabGovOrg',
-  'gov-registry': 'tabGovRegistry',
-  'gov-audit': 'tabGovAudit',
-  'gov-docs': 'tabGovDocs',
-  'gov-harness': 'tabGovHarness',
-  'gov-cluster': 'tabGovCluster',
-  'gov-ontology': 'tabGovOntology',
-  'gov-session-health': 'tabGovSessionHealth',
 }
 const TAB_KEYS: ReadonlySet<string> = new Set(TABS.map(x => x.key))
-/** 旧深链兼容：治理中心单页签时代的 ?tab=gov → 治理首分区 */
+/** 旧深链兼容：治理中心单页签时代的 ?tab=gov → 工作台治理签（协作与知识） */
 const TAB_ALIASES: Readonly<Record<string, TabKey>> = { gov: 'gov-org' }
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
@@ -96,12 +87,24 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
 /** UX 裁决 E：?new=1 深链直开列内建卡表单 */
 const autoOpenCreate = computed(() => route.query.new === '1' || route.query.new === 'true')
 
-/** route query → 看板预选（tab 切换 + status 过滤器 + task 搜索）。非法值忽略。 */
+/** route query → 看板预选（tab 切换 + status 过滤器 + task 搜索）。
+ *  A0 旧签重定向：迁出 10 键整页跳目标中心（router.replace）；非法 status 忽略。 */
 function applyQuery(q: Record<string, unknown>): void {
   if (typeof q.tab === 'string') {
     const raw = q.tab
     const key = TAB_ALIASES[raw] ?? raw
-    if (TAB_KEYS.has(key)) tab.value = key as TabKey
+    if (TAB_KEYS.has(key)) {
+      tab.value = key as TabKey
+    } else {
+      const redirect = legacyTabRedirect(raw)
+      if (redirect) {
+        // 旧签深链不死链：整页跳目标中心（本组件随路由卸载，本地状态不再处理）
+        void router.replace(redirect)
+        return
+      }
+      // 未知 tab 值回落看板（A0 裁定：迁出签位已消失，不再静默保留旧位置）
+      tab.value = 'board'
+    }
   }
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
@@ -109,15 +112,6 @@ function applyQuery(q: Record<string, unknown>): void {
   if (typeof q.task === 'string' && q.task) {
     kanban.setSearchQuery(q.task)
   }
-}
-
-/** 全链路追踪页签（2026-10-01）：Run Observatory 页签化——选会话复用既有
- *  CockpitRunTraceModal 单会话下钻（本页在 IaShell 内，弹窗已挂载），关闭回落看板页签 */
-function onTraceSelectSession(sessionId: string): void {
-  cockpit.openRunTrace({ sessionId })
-}
-function onTraceClose(): void {
-  tab.value = 'board'
 }
 
 onMounted(() => applyQuery(route.query as Record<string, unknown>))
@@ -136,26 +130,6 @@ watch(tab, (key) => {
   const { task: _t, status: _s, ...rest } = route.query as Record<string, unknown>
   void router.replace({ name: 'ia2.board', query: { ...rest, tab: key } })
 })
-
-/** 追溯矩阵 → 看板定位任务：切回看板页签 + 搜索框预选 taskId */
-function openTaskFromMatrix(taskId: string): void {
-  tab.value = 'board'
-  kanban.setSearchQuery(taskId)
-}
-
-/** 管理三账决策点动线（三类决策对应）：偏差/风险 → 定位任务；
- *  资源 → 按人过滤看板；请求 → 审批收件箱。 */
-function openTaskFromAccounts(taskId: string): void {
-  tab.value = 'board'
-  kanban.setSearchQuery(taskId)
-}
-function filterAssigneeFromAccounts(assignee: string): void {
-  tab.value = 'board'
-  kanban.setAssigneeFilter(assignee) // 空串=未指派桶清过滤（store 侧 falsy→null）
-}
-function goInboxFromAccounts(): void {
-  void router.push({ name: 'ia2.inbox' })
-}
 </script>
 
 <template>
@@ -193,52 +167,9 @@ function goInboxFromAccounts(): void {
     <div v-else-if="tab === 'orchestra'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-orchestra">
       <OrchestrationView />
     </div>
-    <!-- 三账与体检（2026-10-01 整合）：管理三账 + 治理体检同页签堆叠——
-         同属管理者健康总览语义，滚动一屏读全 -->
-    <div v-else-if="tab === 'accounts'" class="ia-area ia-tasks__panel" data-testid="ia-tasks-panel-accounts">
-      <ManagementAccountsPanel
-        @open-task="openTaskFromAccounts"
-        @filter-assignee="filterAssigneeFromAccounts"
-        @go-inbox="goInboxFromAccounts"
-      />
-      <CapacitySection />
-      <SkillgovSection />
-      <GovHealthSection />
-    </div>
+    <!-- 协作与知识（A0 三中心拆分后工作台治理签；交接并入属 A1 工单） -->
     <div v-else-if="tab === 'gov-org'" class="ia-area" data-testid="ia-tasks-panel-gov-org">
       <GovOrgKnowledgeView />
-    </div>
-    <div v-else-if="tab === 'gov-registry'" class="ia-area" data-testid="ia-tasks-panel-gov-registry">
-      <GovRegistryRulesView />
-    </div>
-    <div v-else-if="tab === 'gov-audit'" class="ia-area" data-testid="ia-tasks-panel-gov-audit">
-      <GovAuditChangeView />
-    </div>
-    <div v-else-if="tab === 'gov-docs'" class="ia-area" data-testid="ia-tasks-panel-gov-docs">
-      <GovDocsReviewView />
-    </div>
-    <div v-else-if="tab === 'gov-cluster'" class="ia-area" data-testid="ia-tasks-panel-gov-cluster">
-      <GovClusterSection />
-    </div>
-    <!-- 会话健康（长会话治理 B2）：602 遥测 sidecar 的消费面——水位/空转/环处置 -->
-    <div v-else-if="tab === 'gov-session-health'" class="ia-area" data-testid="ia-tasks-panel-gov-session-health">
-      <GovSessionHealthSection />
-    </div>
-    <!-- 语义体检（本体轮二阶段 2026-10-10）：看板数据自动进本体 + 数据契约违规
-         反哺治理面（摄取/校验/跳工作台三入口） -->
-    <div v-else-if="tab === 'gov-ontology'" class="ia-area" data-testid="ia-tasks-panel-gov-ontology">
-      <GovOntologySection />
-    </div>
-    <div v-else-if="tab === 'gov-harness'" class="ia-area" data-testid="ia-tasks-panel-gov-harness">
-      <GovHarnessView />
-    </div>
-    <!-- 全链路追踪：RunTraceOverview 自足组件（useKanbanTaskGraph 数据面）；
-         定高滚动容器内 flex 项防压扁（min-height:0 交给面板自管） -->
-    <div v-else-if="tab === 'observatory'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-observatory">
-      <RunTraceOverview @select-session="onTraceSelectSession" @close="onTraceClose" />
-    </div>
-    <div v-else class="ia-area">
-      <TraceabilityMatrix @open-task="openTaskFromMatrix" />
     </div>
   </div>
 </template>
@@ -295,19 +226,7 @@ function goInboxFromAccounts(): void {
   flex-direction: column;
 }
 
-/* 三账与体检：纵向堆叠滚动面板（flex 项防压扁——overflow 容器内 flex 子项
-   自动最小尺寸不为 0 会把内容裁成薄条的已知坑，min-height:0 显式收口） */
-.ia-tasks__panel {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 12px 16px;
-}
-
-/* 全链路追踪页签容器：.ia-area 已给定高 flex 列，面板根 flex:1 自适应；此处只收溢出 */
+/* 任务协同签容器：.ia-area 已给定高 flex 列，面板根 flex:1 自适应；此处只收溢出 */
 .ia-tasks__observatory {
   overflow: hidden;
 }
