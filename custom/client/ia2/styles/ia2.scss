@@ -506,3 +506,11 @@
     outline-offset: -2px;
   }
 }
+
+/* ── V1 壳收敛（2026-10-16 视觉重规划 D2）：推演/治理中心全宽 ──
+ * 两中心视图挂载时 body 加 ia-center-full；上游 StudioNavigationRail 的入口
+ * 语义属工作台沟通域，在这些页面隐藏（CSS 收敛零补丁；DOM 仍在=无功能删除）。
+ * 工作台（/app）不挂此类，rail 保留（V2 评估去留）。 */
+body.ia-center-full .studio-navigation-rail {
+  display: none;
+}
