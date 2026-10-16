@@ -67,26 +67,27 @@ export function loadSources(sessionId: string, opts: IncidentOpts = {}): Inciden
   // 推演轮聚合回退（run18 复盘：agent 会话落 profiles/*/state.db 而非 webui 主库，
   // 17 要素 12 项空白的根因）：RUN_ID 形态 + 主库无此会话 → 窗口聚合各 profile。
   let profileWindow: IncidentSourceBundle['profileWindow'] = null
+  // 轮次窗口（A7 双消费：profile 聚合 + trace 窗口聚合）——提升作用域
+  const win = (opts.windowSince !== undefined && opts.windowUntil !== undefined)
+    ? { sinceSec: opts.windowSince, untilSec: opts.windowUntil }
+    : (isRunIdForm(sessionId)
+        ? runWindowFromSessionId(sessionId, { stateEnvPath: opts.stateEnvPath })
+        : null)
   // 判据（2026-10-16 A7）：主库查无此 session 时 readSessionMessages 返回 total=0
   // 空对象（非 null）——旧判据 !messages 恒 false，profile 聚合分支永不进（run20
   // 17 要素 15 absent 的第二半根因）。total=0 一律走推演轮聚合回退。
-  if ((!messages || messages.total === 0) && isRunIdForm(sessionId)) {
-    const win = (opts.windowSince !== undefined && opts.windowUntil !== undefined)
-      ? { sinceSec: opts.windowSince, untilSec: opts.windowUntil }
-      : runWindowFromSessionId(sessionId, { stateEnvPath: opts.stateEnvPath })
-    if (win) {
-      profileWindow = readProfileWindowMessages(opts.profilesRoot, dbFile, win.sinceSec, win.untilSec)
-      if (profileWindow && profileWindow.combined.total > 0) {
-        messages = profileWindow.combined
-        overview = overview ?? {
-          title: `${sessionId}（推演轮聚合：${profileWindow.byProfile.length} 账号 × ${profileWindow.byProfile.reduce((s, p) => s + p.sessions, 0)} 会话）`,
-          createdAt: profileWindow.combined.firstTs ?? undefined,
-          profile: `${profileWindow.byProfile.length} 账号`,
-        }
+  if ((!messages || messages.total === 0) && win) {
+    profileWindow = readProfileWindowMessages(opts.profilesRoot, dbFile, win.sinceSec, win.untilSec)
+    if (profileWindow && profileWindow.combined.total > 0) {
+      messages = profileWindow.combined
+      overview = overview ?? {
+        title: `${sessionId}（推演轮聚合：${profileWindow.byProfile.length} 账号 × ${profileWindow.byProfile.reduce((s, p) => s + p.sessions, 0)} 会话）`,
+        createdAt: profileWindow.combined.firstTs ?? undefined,
+        profile: `${profileWindow.byProfile.length} 账号`,
       }
     }
   }
-  const trace = readTraceSummary(opts.traceDir, sessionId)
+  const trace = readTraceSummary(opts.traceDir, sessionId, win)
   const toolAudit = readToolAuditWindow()
   const approvals = readApprovalWindow()
   const profileNames = profileWindow

@@ -11,6 +11,9 @@
 //   7. 编排面：workflow_run_node_sessions→workflow_runs 快照 vs 实际执行；gc_handoff_chains（session→room
 //      映射不可得时如实 absent）
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+// 身份册（A7）：静态 import——相对 require 在 vitest/vite 转换态失解析
+// （2026-10-17 实测 Cannot find module，catch 静默吞=身份面恒 absent）。
+import * as agentIdentity from '../agentidentity/agent-identity'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describeToolCall, type ToolSemantic } from './tool-semantics'
@@ -314,15 +317,44 @@ export function traceDirCandidates(explicit?: string): string[] {
   return out
 }
 
-export function readTraceSummary(explicitDir: string | undefined, sessionId: string): TraceSummary | null {
-  const file = traceDirCandidates(explicitDir)
-    .map((d) => join(d, `${sessionId}.jsonl`))
-    .find((f) => existsSync(f))
-  if (!file) return null
-  const summary: TraceSummary = {
-    file, llmCalls: 0, inputTokens: 0, outputTokens: 0, toolCalls: [], subagents: [], errorSpans: [], toolArgKeys: {},
+export function readTraceSummary(
+  explicitDir: string | undefined, sessionId: string,
+  win?: { sinceSec: number; untilSec: number } | null,
+): TraceSummary | null {
+  // 解析序（2026-10-17 A7 数据面）：①<sessionId>.jsonl 精确命中（单会话）；
+  // ②未命中且带窗口 → 窗口聚合目录内全部 *.jsonl（hermes 会话文件名=时间戳
+  // 形态如 20261017_014348_12c540，与 RUN_ID 永不相等——按文件查=永远查不到，
+  // 推演轮只能按 header.started_at 落窗聚合）。
+  const dirs = traceDirCandidates(explicitDir)
+  const file = dirs.map((d) => join(d, `${sessionId}.jsonl`)).find((f) => existsSync(f))
+  let files: string[]
+  if (file) {
+    files = [file]
+  } else if (win) {
+    const inWin: string[] = []
+    for (const d of dirs) {
+      let entries: string[] = []
+      try { entries = readdirSync(d).filter((f) => f.endsWith('.jsonl')) } catch { continue }
+      for (const f of entries) {
+        const full = join(d, f)
+        try {
+          const first = readFileSync(full, 'utf8').split('\n', 1)[0]
+          const head = JSON.parse(first) as { started_at?: number }
+          const ts = Math.floor(Number(head.started_at ?? 0))
+          if (ts >= win.sinceSec && ts < win.untilSec) inWin.push(full)
+        } catch { /* 坏档跳过 */ }
+      }
+    }
+    if (inWin.length === 0) return null
+    files = inWin
+  } else {
+    return null
   }
-  for (const line of readFileSync(file, 'utf8').split('\n')) {
+  const summary: TraceSummary = {
+    file: files[0], llmCalls: 0, inputTokens: 0, outputTokens: 0, toolCalls: [], subagents: [], errorSpans: [], toolArgKeys: {},
+  }
+  for (const cur of files) {
+  for (const line of readFileSync(cur, 'utf8').split('\n')) {
     if (!line.trim()) continue
     let obj: Record<string, unknown>
     try { obj = JSON.parse(line) } catch { continue }
@@ -355,6 +387,7 @@ export function readTraceSummary(explicitDir: string | undefined, sessionId: str
         summary.subagents.push({ label: c.subagent_label, status: c.status ?? 'unknown' })
       }
     }
+  }
   }
   return summary
 }
@@ -419,16 +452,20 @@ export interface IdentitySnapshot {
 }
 
 export function readIdentitySnapshot(profileNames: string[]): IdentitySnapshot {
-  let mod: typeof import('../agentidentity/agent-identity')
-  try {
-    mod = require('../agentidentity/agent-identity')
-  } catch { return { count: 0, byKind: {}, matched: [], delegationChains: [] } }
+  const mod: typeof import('../agentidentity/agent-identity') = agentIdentity
   try {
     const identities = mod.listIdentities()
     const byKind: Record<string, number> = {}
     for (const i of identities) byKind[i.kind] = (byKind[i.kind] ?? 0) + 1
+    // 匹配口径（2026-10-17 A7）：身份名=「项目前缀-账号」（aipaydev-chen）而 profile
+    // 名=裸账号（chen）——旧严格等名匹配恒 0（身份册 15 档全静默）。双向去前缀匹配：
+    // 裸名相等、或一方为另一方去前缀后的形态。
+    const _bare = (s: string) => s.replace(/^[a-z0-9]+-/, '')
     const matched = identities
-      .filter((i) => profileNames.some((p) => p && (i.name === p || i.id === p)))
+      .filter((i) => {
+        const ib = _bare(i.name)
+        return profileNames.some((p) => p && (i.name === p || i.id === p || ib === p || _bare(p) === ib))
+      })
       .map((i) => ({
         id: i.id, name: i.name, kind: i.kind, owner: i.owner,
         toolAllowlist: i.toolAllowlist ?? [],
