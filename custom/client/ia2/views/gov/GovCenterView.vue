@@ -21,6 +21,7 @@ import GovClusterSection from './GovClusterSection.vue'
 import GovOntologySection from './GovOntologySection.vue'
 import GovSessionHealthSection from './GovSessionHealthSection.vue'
 import CapacitySection from '../../../kanban/components/CapacitySection.vue'
+import CapacityLampBanner from './CapacityLampBanner.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,12 +131,12 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-metrics"
       >
         <h3 class="gov-center__panel-title">签 7·{{ text.tabMetrics }}</h3>
+        <CapacityLampBanner />
         <GovHarnessView />
         <GovClusterSection />
         <GovOntologySection />
         <GovSessionHealthSection />
         <CapacitySection />
-        <p class="gov-center__pending">容量阈值灯（巡检官主动通道+成本卡红灯）随 C4 增件并入。</p>
       </section>
       <!-- 签 4 问题单对账占位（C6 正件：KanbanDiagnosticsSection 是卡级数据面，随看板抽屉适配迁移） -->
       <section

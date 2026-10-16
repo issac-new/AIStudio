@@ -39,7 +39,7 @@ export interface ProfileTail {
   workTsMs: number
   /** 最后「真做」行（tool completed 或会话第 2+ 次调用）时间戳 epoch ms；无=0。
    *  run19 推演层根治上移：单轮 API call #1 + Turn ended=嘴炮回合（回一句话
-   *  收场）——静默催办资格的复位只认真做行，防"被催后回话顶回继续躺平"。 */
+   *  收场）——静默提醒催单资格的复位只认真做行，防"被催后回话顶回继续躺平"。 */
   realWorkTsMs?: number
 }
 
@@ -140,7 +140,7 @@ export interface ClusterSnapshot {
   /** FAIL 判卡（status=done 且 result 含 FAIL 的评审类卡）——控制器注入
    *  （kanban list --status done --json 过滤），未接线=合法空态。
    *  用途：review.fail-stall 复审环老化检测（run20 22:34 复审链断棒实录：
-   *  「修订→复审」闭环断在散文交接 75 分钟，三方同盲——闸类 FAIL 卡的
+   *  「修订→复审」完整回路断在散文交接 75 分钟，三方同盲——闸类 FAIL 卡的
    *  最后推进时刻即复审环球钟） */
   failedVerdictCards?: RunningCardsFace
   /** 未认领开放卡（status=ready/todo 且 assignee 空）——控制器注入（ready+todo 两查
@@ -156,6 +156,8 @@ export interface ClusterSnapshot {
    *  是唤醒即再死（hu/lin/xiao 16:07 新会话一轮即空转）的唯一产品级出口。 */
   /** 执行面健康（runtime.spawn-health 检测面，run20 瘫痪实录） */
   spawnHealth?: { ok: boolean; detail: string }
+  /** 磁盘水位面（C4 增件）：控制器注入 df -P 解析（挂载点×已用%）；未接线=合法空态 */
+  diskUsage?: Array<{ mount: string; usedPct: number }>
   /** 交付分支推送情报（delivery.pushed 检测面，V8.33 持续集成）——控制器注入（NUDGE_REPO 仓本地 vs origin tip 比对），未接线=合法空态。 */
   deliveryBranchIntel?: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string; tipTs?: number }>
   expectedWorkCards?: RunningCardsFace
@@ -338,7 +340,7 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
               // 1[0-9]+ 段补 #10-19，[^0-9] 吃定界符、#1 不误配。
               const rw = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(tool [a-z_]+ completed|API call #(1[0-9]+|[2-9][0-9]*)[^0-9])/)
               // 尾部回扫=首个命中即最新；已赋值不得覆写（旧日志无真做行时继续扫
-              // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误催办）。
+              // 只会把 workTsMs 刷成窗口内最旧一条，静默时长虚高、误提醒催单）。
               if (rw && !realWorkTsMs) { realWorkTsMs = Date.parse(rw[1]!.replace(' ', 'T')) || Date.parse(rw[1]!.replace(' ', 'T')) }
               const m = lines[i]!.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*(API call #|tool [a-z_]+ completed)/)
               if (m && !workTsMs) { workTsMs = Date.parse(m[1]!.replace(' ', 'T')) || Date.parse(m[1]!.replace(' ', 'T')) }
@@ -402,12 +404,12 @@ export function collectSessionTelemetry(deps: CollectorDeps = {}): SessionTeleme
   return face
 }
 
-/** 分支感知催办情报（run19 推演层根治上移产品层，用户 2026-10-13 裁定）：
- *  「干完活不收口」形态——稿子已推到 git 分支（本轮新提交）但不合并、不回结论，
- *  模糊催办会被 agent 自认已完成顶回（run19 三例实锤）。探测该档案名下最近
- *  freshH 小时有新提交的分支，产出「已见到你的分支+还差哪几步」的带情报催办词。
+/** 分支感知提醒催单情报（run19 推演层根治上移产品层，用户 2026-10-13 裁定）：
+ *  「干完活不收尾」形态——稿子已推到 git 分支（本轮新提交）但不合并、不回结论，
+ *  模糊提醒催单会被 agent 自认已完成顶回（run19 三例实锤）。探测该档案名下最近
+ *  freshH 小时有新提交的分支，产出「已见到你的分支+还差哪几步」的带情报提醒催单词。
  *  fail-open：未配置 CLUSTER_INSPECTOR_NUDGE_REPO / git 失败 / 无匹配 → 返回空串，
- *  催办退回普通文案（探测永远不阻塞催办主链）。
+ *  提醒催单退回普通文案（探测永远不阻塞提醒催单主链）。
  *  作者匹配：git author === profile（如 fanfan）或 === profile 首段（如
  *  chen-csw-pay-core → chen）；CLUSTER_INSPECTOR_AUTHOR_MAP（JSON）可显式覆盖。 */
 export function probeBranchIntel(profile: string, opts: { nowMs?: number } = {}): string {

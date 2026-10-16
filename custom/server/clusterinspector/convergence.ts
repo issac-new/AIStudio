@@ -4,9 +4,9 @@
 // 每个异常指纹（detector::subject）每过一次冷却窗再发 = 一次复发（episode），
 // 复发间隔的走势给出趋势——熵增（复发次数超阈且间隔不放宽，或持久超硬阈）
 // 时三联动处置：①升级风险项（复发异常 emit 时升 high）；②熔断（跳过该指纹
-// 的自动处置——反复催办/回收不收敛=副作用风暴，run14 回灌轰炸教训）；③降级
-// （负责人档案标 degraded：停止喂新活，idle.with-work 催办抑制）。
-// 路由语义对齐 faileroute 的 non_convergent 档（反复不收敛→人闸：人补判断比
+// 的自动处置——反复提醒催单/回收不收敛=副作用风暴，run14 回灌轰炸教训）；③降级
+// （负责人档案标 degraded：停止喂新活，idle.with-work 提醒催单抑制）。
+// 路由语义一致于 faileroute 的 non_convergent 档（反复不收敛→人闸：人补判断比
 // 再试一轮便宜）。状态持久化 <home>/runtime/cluster-inspector-convergence.json
 // （重启不失熵账；capacity sidecar 同款位置先例）；CLUSTER_INSPECTOR_CONVERGENCE=off 关闭。
 

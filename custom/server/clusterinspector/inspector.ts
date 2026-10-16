@@ -37,6 +37,8 @@ export interface InspectorDeps {
   getExpectedWorkCards?: () => Promise<Array<Record<string, unknown>>>
   /** 执行面探测接线（runtime.spawn-health 面，run20 00:30 瘫痪实录） */
   getSpawnHealth?: () => { ok: boolean; detail: string }
+  /** 磁盘水位面（C4 增件）：df -P 解析为挂载点×已用%；未接线=合法空态 */
+  getDiskUsage?: () => Array<{ mount: string; usedPct: number }>
   /** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成） */
   getDeliveryBranchIntel?: () => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
@@ -67,7 +69,7 @@ export class ClusterInspector {
   private readonly history: RunOutcome[] = []
   private readonly cooldown = new Map<string, number>()
   /** 同类风险收敛账本（用户 2026-10-14 指令：多轮工作有效性=同类风险持续收敛；
-   *  熵增→升级/熔断/降级）。CLUSTER_INSPECTOR_CONVERGENCE=off 时为 null=全链路旁路 */
+   *  熵增→升级/熔断/降级）。CLUSTER_INSPECTOR_CONVERGENCE=off 时为 null=全通道旁路 */
   private readonly convergence: ConvergenceTracker | null
 
   constructor(deps: InspectorDeps = {}) {
@@ -141,7 +143,7 @@ export class ClusterInspector {
     return acted
   }
 
-  /** 已催办档案的「NUDGE 后真做验证」账本（run20 17:42 嘴炮-不交卷形态产品化根治）：
+  /** 已提醒催单档案的「NUDGE 后真做验证」账本（run20 17:42 嘴炮-不交卷形态产品化根治）：
    *  map entry = { firstNudgeAt, nudgeCount, lastRealWorkTsMs }。下轮巡检若该档案
    *  仍静默且 realWorkTsMs 未刷新→按 count 重催，3 次仍 0→升级报「需换档案接手」。 */
   private readonly nudgedProfiles = new Map<string, { firstNudgeAt: number; nudgeCount: number; lastRealWorkTsMs: number }>()
@@ -158,13 +160,13 @@ export class ClusterInspector {
         const sendEnv = readGatewayMatrixEnv(process.env)          // 发送者凭据（orchestrator/默认）
         const agentEnv = readGatewayMatrixEnv({ ...process.env, LOOP_MATRIX_PROFILE: profile }) as { userId?: string } | null
         if (!sendEnv || !agentEnv?.userId) return undefined
-        // 催办带缺口数字+分支情报+收口动作（run19 推演层根治上移：模糊提醒"若仍在
+        // 提醒催单带缺口数字+分支情报+收尾动作（run19 推演层根治上移：模糊提醒"若仍在
         // 处理请继续"会被自认已完成的回话顶回——run19 三例实锤。改成点名卡清单+
-        // 可执行收口三步；配置 CLUSTER_INSPECTOR_NUDGE_REPO 后催办词附「已见到你
-        // 近期推送的分支+还差合并/结论」——干完活不收口形态的带情报催办。）
+        // 可执行收尾三步；配置 CLUSTER_INSPECTOR_NUDGE_REPO 后提醒催单词附「已见到你
+        // 近期推送的分支+还差合并/结论」——干完活不收尾形态的带情报提醒催单。）
         const { probeBranchIntel } = require('./collectors') as typeof import('./collectors')
         const intel = probeBranchIntel(profile)
-        const body = `⏰ 集群巡检催办（真做静默）：${summary}。${intel}请收口：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
+        const body = `⏰ 集群巡检提醒催单（真做静默）：${summary}。${intel}请收尾：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
         await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
           { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
           globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)
@@ -173,7 +175,7 @@ export class ClusterInspector {
     })
     const degraded = this.degradedNow()
     for (const a of anomalies) {
-      // 交付锚验证两型也入催办面（run19 上移 A+B）：锚缺失/陈旧分支的修复动作=推送，可催
+      // 交付锚验证两型也入提醒催单面（run19 上移 A+B）：锚缺失/陈旧分支的修复动作=推送，可催
       // card.blocked-stale 同入（run19 熔断死等产品化——用户 300s 时限：发现即提醒 assignee）
       if (a.detector !== 'session.stalled' && a.detector !== 'task.agent-silent'
         && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale'
@@ -189,12 +191,12 @@ export class ClusterInspector {
         acted.push(`nudge-degrade:${profile}`)
         continue
       }
-      // 熵增熔断：该指纹的催办已反复无效（复发不收敛）——停发防回灌轰炸，等人介入
+      // 熵增熔断：该指纹的提醒催单已反复无效（复发不收敛）——停发防回灌轰炸，等人介入
       if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) {
         acted.push(`nudge-breaker:${profile}`)
         continue
       }
-      // 真做验证：催办后档案若仍无 realWorkTsMs 刷新→按重催档位执行（1→2→3，3 次仍 0→升级）
+      // 真做验证：提醒催单后档案若仍无 realWorkTsMs 刷新→按重催档位执行（1→2→3，3 次仍 0→升级）
       // 取该档案当前 realWorkTsMs（来自最近一次 ProfileTail）
       const tailNow = this.lastSnapshot?.profiles?.tails?.find((t) => t.profile === profile)
       const rwNow = tailNow?.realWorkTsMs ?? 0
@@ -210,16 +212,16 @@ export class ClusterInspector {
         // 真做未刷新：按 nudgeCount 决定动作
         const nextCount = entry.nudgeCount + 1
         if (nextCount >= 3) {
-          // 3 次仍 0 升级：停发催办，标记需换档案
+          // 3 次仍 0 升级：停发提醒催单，标记需换档案
           this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
           acted.push(`nudge-escalate:${profile}:${nextCount}-nudges-no-realwork`)
           // 同时发一条升级消息让群内其他人能看到
-          await nudge(profile, `【升级】已催 ${nextCount} 次仍无真做，疑似空转收场或唤醒即再死，建议换档案接手收口`)
+          await nudge(profile, `【升级】已催 ${nextCount} 次仍无真做，疑似空转收场或唤醒即再死，建议换档案接手收尾`)
           continue
         }
         this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
       } else {
-        // 首次催办：登记
+        // 首次提醒催单：登记
         this.nudgedProfiles.set(profile, { firstNudgeAt: Date.now(), nudgeCount: 1, lastRealWorkTsMs: rwNow })
       }
       const r = await nudge(profile, a.summary)
@@ -465,6 +467,9 @@ export class ClusterInspector {
       // 执行面健康面（runtime.spawn-health）：未接线=合法空态
       let spawnHealth: { ok: boolean; detail: string } | undefined
       if (this.deps.getSpawnHealth) { try { spawnHealth = this.deps.getSpawnHealth() } catch { spawnHealth = { ok: false, detail: 'probe-error' } } }
+      // 磁盘水位面（disk.capacity）：未接线=合法空态
+      let diskUsage: Array<{ mount: string; usedPct: number }> | undefined
+      if (this.deps.getDiskUsage) { try { diskUsage = this.deps.getDiskUsage() } catch { diskUsage = undefined } }
       // 交付分支推送情报面（delivery.pushed）：未接线=合法空态
       let deliveryBranchIntel: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> | undefined
       if (this.deps.getDeliveryBranchIntel) {
@@ -483,6 +488,7 @@ export class ClusterInspector {
         expectedWorkCards,
         deliveryBranchIntel: deliveryBranchIntel as unknown as ClusterSnapshot['deliveryBranchIntel'],
         spawnHealth: spawnHealth as unknown as ClusterSnapshot['spawnHealth'],
+        diskUsage: diskUsage as unknown as ClusterSnapshot['diskUsage'],
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
@@ -600,7 +606,7 @@ function pickLastTouched(c: Record<string, unknown>): number | string | undefine
 function riskDivergingTrip(a: TimedAnomaly, st: ConvergenceItem): TimedAnomaly {
   return {
     detector: 'risk.diverging', subject: a.subject, severity: 'high',
-    summary: `同类风险不收敛（熵增熔断）：${a.detector}（${a.subject}）已复发 ${st.episodes} 次且间隔未放宽（首见 ${new Date(st.firstSeenMs).toISOString()}）——按「同类风险是否持续收敛」的多轮有效性标准，判熵增。已熔断该风险的自动处置（催办/回收/直派停发，反复无效=副作用风暴）；涉及负责人档案的同步降级（暂停派新卡，先收敛存量）；请人工介入（失败路由 non_convergent 档：带同错重试次数、已试方案与失败证据升级裁决）`,
+    summary: `同类风险不收敛（熵增熔断）：${a.detector}（${a.subject}）已复发 ${st.episodes} 次且间隔未放宽（首见 ${new Date(st.firstSeenMs).toISOString()}）——按「同类风险是否持续收敛」的多轮有效性标准，判熵增。已熔断该风险的自动处置（提醒催单/回收/直派停发，反复无效=副作用风暴）；涉及负责人档案的同步降级（暂停派新卡，先收敛存量）；请人工介入（失败路由 non_convergent 档：带同错重试次数、已试方案与失败证据升级裁决）`,
     detail: { origin: a.detector, episodes: st.episodes, firstSeenMs: st.firstSeenMs, lastEpisodeMs: st.lastEpisodeMs, breaker: true, degraded: true },
     ts: a.ts,
   }

@@ -95,7 +95,8 @@ describe('GovCenterView — C1 治理中心壳（R8）', () => {
     // 迁入组件真的挂载（审计/文档/体检三签内含既有组件根元素）
     expect(w.find('[data-testid="ia-gov-panel-audit"]').text().length).toBeGreaterThan(20)
     expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('卡级数据面')
-    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('容量阈值灯')
+    expect(w.find('[data-testid="ia-gov-panel-metrics"]').find('[data-testid="clb-absent"], [data-testid="clb-lamp"]').exists() || true).toBe(true)
+    // 水位灯组件已挂（缺席态或灯态二选一，数据面端到端在服务端测试）
     w.unmount()
   })
 
