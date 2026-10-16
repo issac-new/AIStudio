@@ -3,6 +3,7 @@
 // D1 网关失联/降级、D2 槽位膨胀、D3 僵尸 worker、D4 会话卡死、D5 异常风暴（轮内聚簇升级）。
 
 import type { ClusterSnapshot, ProfileTail } from './collectors'
+import { detectZeroDelivery } from './detectors-zero-delivery'
 
 export type AnomalySeverity = 'info' | 'warn' | 'high'
 
@@ -47,10 +48,107 @@ export interface DetectOptions {
   watermarkHighPct?: number
   /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
   emptyStreakLimit?: number
+  /** 工具调用频次阈（次/分钟，默认 100；E2 判据一，安全轮 M7） */
+  toolRatePerMin?: number
+  /** 非工作时段高危操作条数升 high 的阈（默认 10；E2 判据二，安全轮 M7） */
+  offhoursHighRiskMin?: number
+  /** 黑名单工具集（默认 DEFAULT_TOOL_BLACKLIST；E2 判据三，安全轮 M7）。
+   *  未传时读 env CLUSTER_INSPECTOR_TOOL_BLACKLIST（逗号分隔），再未配用默认集 */
+  toolBlacklist?: string[]
   nowMs?: number
 }
 
 const STALL_TAIL_RE = /ERROR |Traceback|TimeoutError|timed? ?out|gave_up/i
+
+/** 工具黑名单默认集（security.tool-blacklist 判据）。默认收三种执行面原语，
+ *  调用即报，不论频次。 */
+const DEFAULT_TOOL_BLACKLIST = ['terminal', 'terminal_exec', 'execute_code', 'code_exec', 'delegate_task']
+
+function toolBlacklist(opts: DetectOptions): string[] {
+  if (opts.toolBlacklist) return opts.toolBlacklist
+  const env = process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST
+  if (env && env.trim()) return env.split(',').map((s) => s.trim()).filter(Boolean)
+  return DEFAULT_TOOL_BLACKLIST
+}
+
+/** ── 工具调用频次（2026-10-16 安全轮 M7，E2 判据一：单会话超 100 次/分钟）──
+ *  `security.tool-rate`：单 profile 近 1 小时发起量超阈即报 warn，达 2 倍升 high。
+ *  数据源=M6b collectProfileToolUsage（各 profile state.db 只读聚合）；未接线=合法空态。
+ *  口径说明：state.db 落盘有批次性，严格每分钟需滑窗；v1 用 1 小时计数对标
+ *  「次/分钟」阈（真风暴无论如何越线，批次落盘不敏感）。 */
+export function detectToolRate(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const usage = snap.toolUsage
+  if (!usage || usage.entries.length === 0) return []
+  const perMin = opts.toolRatePerMin ?? 100
+  const out: Anomaly[] = []
+  for (const e of usage.entries) {
+    if (e.error || e.total1h <= 0) continue
+    if (e.total1h >= perMin * 2) {
+      out.push({
+        detector: 'security.tool-rate', subject: `profile:${e.profile}`, severity: 'high',
+        summary: `工具调用高频：${e.profile} 近 1 小时 ${e.total1h} 次（阈 ${perMin} 次/分钟的 2 倍）——疑似失控环或自动化风暴，先查该档案在办卡与近期会话`,
+        detail: { total1h: e.total1h, perMin },
+      })
+    } else if (e.total1h >= perMin) {
+      out.push({
+        detector: 'security.tool-rate', subject: `profile:${e.profile}`, severity: 'warn',
+        summary: `工具调用超频：${e.profile} 近 1 小时 ${e.total1h} 次（阈 ${perMin} 次/分钟）——预警先行版只报不拦，请人工确认是否为正常批次任务`,
+        detail: { total1h: e.total1h, perMin },
+      })
+    }
+  }
+  return out
+}
+
+/** ── 非工作时段高危操作（2026-10-16 安全轮 M7，E2 判据二：0-6 时高危操作）──
+ *  `security.offhours-highrisk`：本地 0-6 时的高危工具（terminal/execute_code/
+ *  delegate_task）调用，逐 profile 报 warn，达 opts.offhoursHighRiskMin（缺省 10）
+ *  升 high。数据源=M6b 的 offhoursHighRisk24h 交集口径（时段∩高危，不是全量
+ *  时段活动——agent 7×24 在跑，报全量时段活动只会狼来了）。 */
+export function detectOffhoursHighRisk(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const usage = snap.toolUsage
+  if (!usage || usage.entries.length === 0) return []
+  const min = opts.offhoursHighRiskMin ?? 10
+  const out: Anomaly[] = []
+  for (const e of usage.entries) {
+    if (e.error || e.offhoursHighRisk24h <= 0) continue
+    out.push({
+      detector: 'security.offhours-highrisk',
+      subject: `profile:${e.profile}`,
+      severity: e.offhoursHighRisk24h >= min ? 'high' : 'warn',
+      summary: `非工作时段高危操作：${e.profile} 在 0-6 时有 ${e.offhoursHighRisk24h} 次高危工具调用（terminal/execute_code/delegate_task）——预警先行版只报不拦，请确认是计划内任务还是异常会话`,
+      detail: { offhoursHighRisk24h: e.offhoursHighRisk24h, highRisk24h: e.highRisk24h },
+    })
+  }
+  return out
+}
+
+/** ── 黑名单工具调用（2026-10-16 安全轮 M7，E2 判据三：调用黑名单工具）──
+ *  `security.tool-blacklist`：黑名单内工具一旦被调用即报 high（不论频次）。
+ *  每 profile 聚合为一条（列全部命中工具），避免一 profile 多工具时刷屏。
+ *  黑名单默认集见 DEFAULT_TOOL_BLACKLIST；env CLUSTER_INSPECTOR_TOOL_BLACKLIST
+ *  逗号分隔覆写。注意：本检测器是观测不是执法——黑名单工具当前仍可正常执行，
+ *  报警给人看（预警先行版纪律：先不阻断）。 */
+export function detectToolBlacklist(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const usage = snap.toolUsage
+  if (!usage || usage.entries.length === 0) return []
+  const blacklist = new Set(toolBlacklist(opts))
+  const out: Anomaly[] = []
+  for (const e of usage.entries) {
+    if (e.error) continue
+    const hits = e.perTool24h.filter((t) => blacklist.has(t.tool))
+    if (hits.length === 0) continue
+    const total = hits.reduce((s, h) => s + h.n, 0)
+    out.push({
+      detector: 'security.tool-blacklist',
+      subject: `profile:${e.profile}`,
+      severity: 'high',
+      summary: `黑名单工具被调用：${e.profile} 近 24 小时调用 ${hits.map((h) => `${h.tool}×${h.n}`).join('、')}（共 ${total} 次）——预警先行版只报不拦，请人工复核这些调用的任务依据`,
+      detail: { hits, total },
+    })
+  }
+  return out
+}
 
 /** D1 网关失联/降级：探测失败或 gateway_state 非 running；platforms needs_attention 逐面 warn */
 export function detectGateway(snap: ClusterSnapshot): Anomaly[] {
@@ -455,6 +553,12 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectSpawnHealth(snap, opts),
     ...detectWorkExpectedSilent(snap, opts),
     ...detectDiskCapacity(snap as ClusterSnapshot & { diskUsage?: Array<{ mount: string; usedPct: number }> }, opts),
+    // 安全轮 M7（2026-10-16，预警先行版）：三条工具面告警——只产 Anomaly 不拦截
+    ...detectToolRate(snap, opts),
+    ...detectOffhoursHighRisk(snap, opts),
+    ...detectToolBlacklist(snap, opts),
+    // 零交付遥测（run20 复盘产品化）：done 卡零交付引用=无分支+无 commit 锚
+    ...detectZeroDelivery(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
