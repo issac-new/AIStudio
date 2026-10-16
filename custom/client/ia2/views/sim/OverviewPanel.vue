@@ -45,6 +45,11 @@ const POSTURE_POLICY: Record<string, string> = {
 }
 
 // ── 折算（纯函数层见 steps-registry.ts；此处仅组包） ──
+/** V3：七幕分组头数据（actOfStep 已在 steps-registry） */
+const stepGroups = computed(() =>
+  ACTS_7.map(a => ({ act: a.act, name: a.name, from: a.from, to: a.to })),
+)
+
 const stepRows = computed<StepRow[]>(() =>
   runState.value ? resolveStepRows(runState.value.steps, runState.value.gates) : [])
 
@@ -173,21 +178,21 @@ function goSupervision(): void {
 
       <!-- KPI 四卡：六闸 n/6｜分支交付 n/6｜含代偿步可用｜净额步可用（紫） -->
       <div class="ov__kpis">
-        <div class="ov__kpi" data-testid="ov-kpi-gates">
-          <span class="ov__kpi-num">{{ gatesPassed }}/6</span>
+        <div class="ov__kpi ov__kpi--pass" data-testid="ov-kpi-gates">
+          <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">六闸通过（g1_frozen…report_done）</span>
         </div>
         <div class="ov__kpi" data-testid="ov-kpi-branches">
-          <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}/6` }}</span>
+          <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">分支交付（已推 origin feat）</span>
           <span v-if="branchesError" class="ov__kpi-absent">端点缺席：{{ branchesError }}</span>
         </div>
-        <div class="ov__kpi" data-testid="ov-kpi-steps">
-          <span class="ov__kpi-num">{{ stepsDoneComp }}/26</span>
+        <div class="ov__kpi ov__kpi--stale" data-testid="ov-kpi-steps">
+          <span class="ov__kpi-num">{{ stepsDoneComp }}<span class="ov__kpi-denom">/26</span></span>
           <span class="ov__kpi-label">步可用·含代偿</span>
         </div>
         <div class="ov__kpi ov__kpi--net" data-testid="ov-kpi-net">
-          <span class="ov__kpi-num">{{ stepsDoneNet }}/26</span>
+          <span class="ov__kpi-num">{{ stepsDoneNet }}<span class="ov__kpi-denom">/26</span></span>
           <span class="ov__kpi-label">步可用·净额（扣步级代演 {{ deduction }} 笔）</span>
         </div>
       </div>
@@ -221,6 +226,18 @@ function goSupervision(): void {
           <table class="ov__table" data-testid="ov-steps">
             <thead><tr><th>步</th><th>全名</th><th>操作者</th><th>状态</th><th>凭证</th></tr></thead>
             <tbody>
+              <!-- V3 排版：七幕分段头行（步号连续同幕只出一条头） -->
+              <tr
+                v-for="g in stepGroups"
+                :key="`grp-${g.act}`"
+                class="ov__act-head"
+                :data-testid="`ov-step-acthead-${g.act}`"
+              >
+                <td colspan="5">
+                  <span class="ov__act-head-name">第{{ ['一','二','三','四','五','六','七'][g.act - 1] }}幕·{{ g.name }}</span>
+                  <span class="ov__act-head-range">步 {{ g.from }}-{{ g.to }}</span>
+                </td>
+              </tr>
               <tr
                 v-for="row in stepRows"
                 :key="row.no"
