@@ -56,6 +56,19 @@ export const GATE_FULL_NAME: Record<string, string> = {
   G5: 'G5 发布准出', G6: 'G6 复盘', UAT: 'UAT 验收',
 }
 
+// ── 纯函数层（C6：问题单对账）──
+
+export interface IssueLine { kind: 'issue' | 'disp'; code: string; subject: string; text: string }
+export interface IssuesStats { totalLines: number; totalIssue: number; totalDisp: number; disposed: number; open: number; rate: number | null }
+
+/** ISSUE×DISP 联结（纯函数，测试面）：code 对上=已处置；对不上=未处置如实红显。 */
+export function joinIssueDisposal(lines: IssueLine[]): Array<IssueLine & { disposed: boolean; dispText?: string }> {
+  const disps = new Map(lines.filter(l => l.kind === 'disp').map(d => [d.code, d.text]))
+  return lines
+    .filter(l => l.kind === 'issue')
+    .map(i => ({ ...i, disposed: disps.has(i.code), dispText: disps.get(i.code) }))
+}
+
 // ── fetch 层 ──
 
 async function getJson<T>(path: string): Promise<T> {
@@ -90,4 +103,8 @@ export async function putKeyLedger(entries: KeyLedgerEntry[]): Promise<{ entries
   })
   if (!res.ok) throw new Error(`PUT /api/hermes/orgloop/key-ledger → ${res.status}${res.status === 400 ? `（${(await res.text()).slice(0, 160)}）` : ''}`)
   return res.json() as Promise<{ entries: KeyLedgerEntry[] }>
+}
+
+export function fetchIssues(run: string): Promise<{ run: string; count: number; lines: IssueLine[]; stats: IssuesStats; source: string }> {
+  return getJson(`/api/hermes/sim/issues?run=${encodeURIComponent(run)}`)
 }

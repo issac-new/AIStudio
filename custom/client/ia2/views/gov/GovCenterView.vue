@@ -22,6 +22,7 @@ import GovOntologySection from './GovOntologySection.vue'
 import GovSessionHealthSection from './GovSessionHealthSection.vue'
 import CapacitySection from '../../../kanban/components/CapacitySection.vue'
 import CapacityLampBanner from './CapacityLampBanner.vue'
+import GovIssuesPanel from './GovIssuesPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -138,19 +139,15 @@ function goTab(tab: GovTab): void {
         <GovSessionHealthSection />
         <CapacitySection />
       </section>
-      <!-- 签 4 问题单对账占位（C6 正件：KanbanDiagnosticsSection 是卡级数据面，随看板抽屉适配迁移） -->
+      <!-- 签 4 问题单对账（C6 实装：issues.log 台账全量+DISP 联结处置态+100% 处置进度；
+           看板诊断规则区件随看板抽屉迁移另件） -->
       <section
         v-show="activeTab === 'issues'"
-        class="gov-center__panel"
+        class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-issues"
       >
         <h3 class="gov-center__panel-title">签 4·{{ text.tabIssues }}</h3>
-        <p class="gov-center__pending">
-          <span class="gov-center__badge">{{ text.pendingBadge }}</span>{{ text.pendingLead }}
-        </p>
-        <ul class="gov-center__comp-list">
-          <li class="gov-center__comp">诊断规则（KanbanDiagnosticsSection·卡级数据面，随看板抽屉适配迁移＝C6 正件）</li>
-        </ul>
+        <GovIssuesPanel />
       </section>
     </main>
   </div>
