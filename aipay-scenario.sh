@@ -1311,10 +1311,30 @@ DEVSPECS
   # 记单口径（源轮真值=夹具语义，repo_branch_has 对 lite 分支查不到属采集面缺口）。
   _g3_miss=""
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
-    repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
-      || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
-           echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; \
-           _g3_miss="${_g3_miss} $b"; }
+    if ! repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt"; then
+      note "[观察] $b 缺本地测试输出证据（G3，记问题单）"
+      echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"
+      _g3_miss="${_g3_miss} $b"
+    elif [ -n "${RUN_ID:-}" ]; then
+      # 闸证 provenance（run20 复盘根治）：testlog 在分支上 ≠ 本轮产物——run20
+      # 实锤 DEV-PAYCORE-C/N 的 testlog 为 run19/run16 证据（分支承自 mx-clean
+      # 截断前历史），存在性检查计「6/6 在案」放行。头轮次 ≠ 本轮=往轮证据，
+      # 与缺件同径（派补证单+等待+超时落 g3_evidence_gap），判据与报告层
+      # report_truth.extract_declared_run 同源。
+      _rt="$(repo_branch_runtag "feat/$b" "docs/evidence/$b-testlog.txt")"
+      if [ -n "$_rt" ] && [ "$_rt" != "$RUN_ID" ]; then
+        note "[观察] $b testlog 为往轮证据（声明轮 $_rt ≠ 本轮 $RUN_ID，G3，记问题单）"
+        echo "ISSUE|g3-testlog-stale-run|$b|testlog 文件头声明轮=$_rt ≠ 本轮 $RUN_ID（往轮证据混入本轮闸证，存在性检查曾计「在案」放行——run20 实锤 PAYCORE-C=run19/PAYCORE-N=run16）" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      elif ! repo_branch_grep "feat/$b" "docs/evidence/$b-testlog.txt" 'npm audit|漏洞计数|audit 不可达'; then
+        # 质量 B②（2026-10-16）：testlog 在位但缺 npm audit 段=安全合规件未落实
+        # （派发词早有要求，run20 实测零拦截=要求悬空）。三段任一即算落实：
+        # npm audit 输出 / 漏洞计数摘要 / 明确的「audit 不可达」声明。
+        note "[观察] $b testlog 缺 npm audit 段（安全合规件，记问题单）"
+        echo "ISSUE|g3-npm-audit-missing|$b|testlog 缺 npm audit/漏洞计数/不可达声明段（质量 B②：安全合规从派发词要求升级为闸门实测）" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      fi
+    fi
     if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
       repo_branch_has "feat/$b" "materials/delegate-log.txt" \
         || { note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"; \
@@ -1325,9 +1345,13 @@ DEVSPECS
     note "[G3] 缺证分支[${_g3_miss} ]——派补证单并等待（run18 复盘 F4：缺证禁静默落键）"
     dispatch_in_room chen "@chen-agent:matrix.test G3 补证：以下分支缺本地测试输出 docs/evidence/<任务>-testlog.txt（测试命令+结果原样落档后 push 各自 feat 分支）：${_g3_miss}。补齐回执结论行 G3-EVIDENCE-DONE。注意 testlog 属分支本地门禁证据，须由该分支 owner 补（@hu-agent @lin-agent @xiao-agent 如涉你们分支请各自补）。" "$(agent_mxid chen),$(agent_mxid hu),$(agent_mxid lin),$(agent_mxid xiao)"
     g3_testlogs_complete() {
-      local b
+      local b _rt
       for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
         repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" || return 1
+        if [ -n "${RUN_ID:-}" ]; then
+          _rt="$(repo_branch_runtag "feat/$b" "docs/evidence/$b-testlog.txt")"
+          [ -z "$_rt" ] || [ "$_rt" = "$RUN_ID" ] || return 1
+        fi
       done
       return 0
     }

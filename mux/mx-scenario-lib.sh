@@ -723,6 +723,22 @@ _nudge_branch_intel() { # <agents-csv> → stdout: 分支情报句（空=无情�
   return 0
 }
 
+mx_wait_eval() { # <predicate-cmd...>：等待环谓词求值——临时摘 ERR trap
+  # run20 实录根治：等待环谓词假（repo_branch_has/grep -q 等返回 1）在 bash 3.2
+  # 下会穿透 `if`/`eval` 保护语境触发 ERR trap（-E errtrace），每轮询一拍一条
+  # 「[ERR] 驱动异常退出」——run20 scenario.log 实录 2138 条假警报，真崩溃信号
+  # 被淹没（16:03 起至收尾）。等待态谓词假=常态等待，不是驱动崩溃：求值期间摘
+  # trap、毕后原样恢复（trap -p 存取，未设 trap 时恢复为空=无害）。
+  # 判据归属不变：谓词返回值原样透传，等待语义零改动。
+  local _saved
+  _saved="$(trap -p ERR)"
+  trap - ERR
+  "$@" >/dev/null 2>&1
+  local _rc=$?
+  [ -n "$_saved" ] && eval "$_saved"
+  return $_rc
+}
+
 wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   local desc="$1" timeout="$2"; shift 2
   local deadline=$(( $(date +%s) + timeout ))
@@ -732,7 +748,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   if [[ "$1" = "repo_has" ]]; then
     while (( $(date +%s) < deadline )); do
       [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
       local _el=$(( $(date +%s) - _ws ))
       if (( _n1 == 0 && _el * 2 >= timeout )); then _n1=1; _artifact_nudge "$desc" "半窗"
       elif (( _n2 == 0 && _el * 4 >= timeout * 3 )); then _n2=1; _artifact_nudge "$desc" "窗 75%"; fi
@@ -741,12 +757,12 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   else
     while (( $(date +%s) < deadline )); do
       [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
       sleep "$MX_POLL_IVAL"
     done
   fi
   # 终态复核（方案纪律 8：等待窗口是等待上限，不是判词有效期）——窗满再判一次
-  if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
+  if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
   # 宽限等待（run15 根治「窗严物迟」：AN-MP 实测迟到 12min 落仓，驱动却按窗 ✗ 触发
   # 回退重派=重复劳动）：repo_has 型产物常在超时点后数分钟内落仓——宽限期内继续复查，
   # 落仓即 ✓（标注宽限期命中，诚实记录迟达）；宽限仍无物才 ✗。MX_ARTIFACT_GRACE=0
@@ -755,7 +771,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
     local _gd=$(( $(date +%s) + ${MX_ARTIFACT_GRACE:-900} ))
     while (( $(date +%s) < _gd )); do
       [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（超时后宽限期落仓，迟达如实记）"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓（超时后宽限期落仓，迟达如实记）"; return 0; fi
       sleep "$MX_POLL_IVAL"
     done
   fi
@@ -936,7 +952,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
-    if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
+    if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
     cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
       w=$(_agent_log_last_work_ts "$a")
@@ -977,17 +993,17 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       nudged=1
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 $agents）"
       return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（${idle}s 空转：$agents 日志零增长，判死循环/空转，非时长超限；中途已催办未响应）"
       return 1
     fi
     if (( $(date +%s) - t0 > hard )); then
-      if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
+      if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
       note "[真值] $desc ✗（硬窗 ${hard}s 满：活性等待总时长超限——纪律 26 兜底；负责人 $agents）"
       return 1
     fi
@@ -1059,7 +1075,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
     all_done=1
     for i in "${!exprs[@]}"; do
       (( done_flag[$i] == 1 )) && continue
-      if eval "${exprs[$i]}" >/dev/null 2>&1; then
+      if mx_wait_eval eval "${exprs[$i]}"; then
         done_flag[$i]=1; note "[真值] ${descs[$i]} ✓"
       else
         all_done=0
@@ -1776,6 +1792,23 @@ repo_branch_has() { # <branch> <path-in-repo>：远端分支上文件存在性�
   git -C "$DIRECTOR_CLONE" cat-file -e "refs/remotes/origin/$1:$2" 2>/dev/null
 }
 
+repo_branch_runtag() { # <branch> <path-in-repo>：远端分支文件头声明的轮次（空=无声明位）
+  # run20 复盘根治（闸证 provenance）：testlog 在分支上 ≠ 本轮产物——run20 实锤
+  # DEV-PAYCORE-C/N 的 testlog 分别是 run19/run16 证据，因分支承自截断前历史被
+  # 「6/6 在案」计入 G3 门禁。存在性判据升级为归属判据：头 15 行提取声明轮
+  # （判据与 mux/report_truth.py 同源，禁两套正则）。
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" show "refs/remotes/origin/$1:$2" 2>/dev/null \
+    | python3 -c 'import sys; sys.path.insert(0, "'"${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"'/mux"); import report_truth; print(report_truth.extract_declared_run(sys.stdin.read()))' 2>/dev/null
+}
+
+repo_branch_grep() { # <branch> <path-in-repo> <ERE>：远端分支文件内容命中判定（安全合规件用）
+  # 2026-10-16 质量 B②：npm audit 段从「派发词要求」升级为「闸门真查」——testlog
+  # 存在≠含审计段（run20 实测 6 分支 testlog 齐但零审计段也无拦截）。
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" show "refs/remotes/origin/$1:$2" 2>/dev/null | grep -qE "$3"
+}
+
 uat_ac_covered() { # <ac-list> <body> → 缺失 AC 编号清单（空串=逐条覆盖）
   local missing="" ac
   for ac in $1; do
@@ -2097,7 +2130,32 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
     else
       echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
     fi
-  } > "$out"
+    echo
+    # 跨轮趋势（近 5 轮）——质量 A 补件（2026-10-16）：单轮基线只答「比上轮好吗」，
+    # 趋势答「质量在变好吗」。口径=metrics-log 同源（各轮 governance-report.md 的
+    # metrics CSV 第 5 域）；本轮取刚实算值，历史轮读文件；文件缺席=⬜ 不编造。
+    echo "## 跨轮趋势（近 5 轮，metrics 口径同源）"
+    echo "| 轮次 | 首过率 | 打回率 | 缺陷密度 |"
+    echo "|---|---|---|---|"
+    local _tr _trn _tg _tfp _trej _tdens
+    for _tr in $(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9]+/$' | sort | tail -5); do
+      _trn=$(basename "$_tr")
+      if [ "$_trn" = "${RUN_ID:-}" ]; then
+        _tfp="${_fp}/6"; _trej="${_rejrate}/6"; _tdens="${_dens}"
+      else
+        _tg="${_tr}evidence/governance-report.md"
+        if [ -f "$_tg" ]; then
+          # 裁到比值（门细节在该轮自己的报告里，趋势表只带比值防单元格爆宽）
+          _tfp=$(grep -E ',首过率,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | cut -d'（' -f1)
+          _trej=$(grep -E ',打回率,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | cut -d'（' -f1)
+          _tdens=$(grep -E ',缺陷密度,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | cut -d'（' -f1)
+        else
+          _tfp=""; _trej=""; _tdens=""
+        fi
+      fi
+      echo "| ${_trn} | ${_tfp:-⬜} | ${_trej:-⬜} | ${_tdens:-⬜} |"
+    done
+   } > "$out"
   mask_env_paths "$out"
   echo "$out"
 }
