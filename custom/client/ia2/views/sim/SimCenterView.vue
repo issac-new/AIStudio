@@ -11,9 +11,12 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
-import OverviewPanel from './OverviewPanel.vue'
 import SupervisionPanel from './SupervisionPanel.vue'
 import EvidencePanel from './EvidencePanel.vue'
+import OpsPanel from './OpsPanel.vue'
+import DeliveryPanel from './DeliveryPanel.vue'
+import TracePanel from './TracePanel.vue'
+import OverviewPanel from './OverviewPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,12 +56,8 @@ function goTab(tab: SimTab): void {
   void router.push({ name: tab.name })
 }
 
-/** B2 起监督/证据两签实装；旗舰签起轮次总览实装，占位仅剩三签（序号沿用六签冻结位次） */
-const placeholderTabs = computed(() =>
-  TABS
-    .filter(t => t.key !== 'overview' && t.key !== 'supervision' && t.key !== 'evidence')
-    .map(t => ({ ...t, index: TABS.findIndex(x => x.key === t.key) + 1 })),
-)
+/** 六签全部实装（B1 壳+B2/B4/B5/B6+驾驶屏收尾件）；占位循环保留给后续新增签 */
+const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 </script>
 
 <template>
@@ -80,10 +79,17 @@ const placeholderTabs = computed(() =>
           {{ text[TAB_LABEL_KEY[tab.key]] }}
         </button>
       </nav>
+      <button
+        class="sim-center__settings"
+        type="button"
+        data-testid="ia-sim-settings-link"
+        title="推演设置"
+        @click="void router.push({ name: 'ia2.simSettings' })"
+      >⚙ 推演设置</button>
     </header>
 
     <main class="sim-center__body">
-      <!-- 签 1 轮次总览（旗舰签实装：姿态横幅+KPI 四卡+七幕旅程条+26 步表+交付物链+六闸仪+净额卡） -->
+      <!-- 签 1 轮次总览＝驾驶屏（B 波收尾实装：姿态横幅+健康行+六闸全名行+净额双行卡） -->
       <section
         v-show="activeTab === 'overview'"
         class="sim-center__panel sim-center__panel--live"
@@ -101,6 +107,15 @@ const placeholderTabs = computed(() =>
         <h3 class="sim-center__panel-title">签 2·{{ text.tabSupervision }}</h3>
         <SupervisionPanel />
       </section>
+      <!-- 签 3 运行观测（B4 实装：四服务红绿点+派发器健康+休眠工作者+活性行挂账态） -->
+      <section
+        v-show="activeTab === 'ops'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-ops"
+      >
+        <h3 class="sim-center__panel-title">签 3·{{ text.tabOps }}</h3>
+        <OpsPanel />
+      </section>
       <!-- 签 4 证据库（B2 实装：锚检索→锚点抽屉+台账子表+帧图廊挂账态） -->
       <section
         v-show="activeTab === 'evidence'"
@@ -110,7 +125,25 @@ const placeholderTabs = computed(() =>
         <h3 class="sim-center__panel-title">签 4·{{ text.tabEvidence }}</h3>
         <EvidencePanel />
       </section>
-      <!-- 其余四签占位（B4-B7 逐签实装） -->
+      <!-- 签 5 交付健康（B5 实装：分支新鲜度三态+交付物 14 件链） -->
+      <section
+        v-show="activeTab === 'delivery'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-delivery"
+      >
+        <h3 class="sim-center__panel-title">签 5·{{ text.tabDelivery }}</h3>
+        <DeliveryPanel />
+      </section>
+      <!-- 签 6 需求追溯（B6 实装：AC 判词链四列+三源在场徽） -->
+      <section
+        v-show="activeTab === 'trace'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-trace"
+      >
+        <h3 class="sim-center__panel-title">签 6·{{ text.tabTrace }}</h3>
+        <TracePanel />
+      </section>
+      <!-- 其余两签占位（B7 监督面板深化随 journal 积累） -->
       <section
         v-for="(tab, i) in placeholderTabs"
         v-show="activeTab === tab.key"
@@ -149,6 +182,16 @@ const placeholderTabs = computed(() =>
 }
 
 .sim-center__title { margin: 0; font-size: 16px; }
+.sim-center__settings {
+  margin-left: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
 
 /* 六签单层页签（无二级页签——全站单层纪律同 /app/board） */
 .sim-center__tabs { display: flex; gap: 4px; flex-wrap: wrap; }
