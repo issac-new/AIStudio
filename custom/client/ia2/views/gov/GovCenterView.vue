@@ -9,6 +9,8 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGovTabsText } from './gov-tabs'
+import { ISLAND_NAVS } from '../../nav-centers'
+import { features } from '../../../../../config/features'
 import ClearancePanel from './ClearancePanel.vue'
 import GateRepairsPanel from './GateRepairsPanel.vue'
 import KeyLedgerSection from './KeyLedgerSection.vue'
@@ -56,6 +58,10 @@ const activeTab = computed<TabKey>(() =>
   TABS.find(t => t.name === String(route.name))?.key ?? 'process',
 )
 
+/** D8 治理工作台区：BPA/本体/评测/技能治理模块入口（原顶栏岛屿组归位治理域；
+ *  feature 门控随行，IDE 岛不在列——其入口在工作台视图切换器） */
+const govWorkbenches = computed(() => ISLAND_NAVS.filter(i => i.testid !== 'ia-nav-island-ide' && features[i.featureKey]))
+
 function goTab(tab: GovTab): void {
   if (tab.key === activeTab.value) return
   void router.push({ name: tab.name })
@@ -79,6 +85,16 @@ function goTab(tab: GovTab): void {
           @click="goTab(tab)"
         >{{ text[TAB_LABEL_KEY[tab.key]] }}</button>
       </nav>
+      <span class="gov-center__wb-group" data-testid="ia-gov-workbenches">
+        <button
+          v-for="wb in govWorkbenches"
+          :key="wb.testid"
+          class="gov-center__wb-btn"
+          type="button"
+          :data-testid="`ia-gov-wb-${wb.testid}`"
+          @click="void router.push({ name: wb.name })"
+        >{{ wb.labelZh }}</button>
+      </span>
       <button
         class="gov-center__settings"
         type="button"
@@ -170,6 +186,17 @@ function goTab(tab: GovTab): void {
 .gov-center { display: flex; flex-direction: column; height: 100%; padding: 16px; overflow: auto; gap: 12px; }
 .gov-center__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .gov-center__title { margin: 0; font-size: 16px; }
+.gov-center__wb-group { display: flex; gap: 4px; }
+.gov-center__wb-btn {
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: var(--text-secondary, inherit);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  &:hover { color: var(--text-primary, inherit); background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08))); }
+}
 .gov-center__settings {
   margin-left: auto;
   border: 1px solid var(--border-color);
