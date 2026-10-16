@@ -38,6 +38,14 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# ── 2026-10-17 调用约定修复（run20 复盘 A7 数据面）──
+# 核心 invoke_hook 按 **kwargs 展开调用回调（plugins_dispatch._hook_callback_kwargs：
+# 窄签名按形参名切片）；旧签名 (ctx, payload) 切片恒空 dict → callback() TypeError →
+# fail-open 静默吞 = 631 份轨迹全空壳零 span 的根因（探针插件实证：KW 版被调、
+# (ctx,payload) 版零调用）。本文件全部回调改为 kwargs 形参 + 重组 payload dict，
+# 函数体零改动（payload.get 全部照旧）。
+
+
 # Default trace directory
 _DEFAULT_TRACE_DIR = Path.home() / ".hermes" / "traces"
 
@@ -130,7 +138,10 @@ def _lookup_state(session_id: str, task_id: Optional[str]) -> Optional["TraceSes
 
 # ── Hook Handlers ──
 
-def _on_session_start(ctx: Any, payload: dict) -> None:
+def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: Any = None, session_id: Any = None, source: Any = None, started_at: Any = None, task_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'collab_event_id': collab_event_id, 'model': model, 'provider': provider, 'session_id': session_id, 'source': source, 'started_at': started_at, 'task_id': task_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Create new JSONL file, write header."""
     trace_dir = _ensure_trace_dir()
     if not trace_dir:
@@ -199,7 +210,10 @@ def _on_session_start(ctx: Any, payload: dict) -> None:
     logger.debug("Started trace session %s", session_id)
 
 
-def _on_session_end(ctx: Any, payload: dict) -> None:
+def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None, session_id: Any = None, summary: Any = None, task_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'ended_at': ended_at, 'error': error, 'outcome': outcome, 'session_id': session_id, 'summary': summary, 'task_id': task_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write trailer, close file."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -250,7 +264,10 @@ def _on_session_end(ctx: Any, payload: dict) -> None:
     logger.debug("Ended trace session %s", session_id)
 
 
-def _pre_api_request(ctx: Any, payload: dict) -> None:
+def _pre_api_request(api_call_count: Any = None, api_request_id: Any = None, collab_event_id: Any = None, model: Any = None, provider: Any = None, request_messages: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_call_count': api_call_count, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'model': model, 'provider': provider, 'request_messages': request_messages, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write LLM span start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -298,7 +315,10 @@ def _pre_api_request(ctx: Any, payload: dict) -> None:
     logger.debug("Pre API request %s for session %s", api_request_id, session_id)
 
 
-def _post_api_request(ctx: Any, payload: dict) -> None:
+def _post_api_request(api_duration: Any = None, api_request_id: Any = None, collab_event_id: Any = None, ended_at: Any = None, finish_reason: Any = None, first_chunk_at: Any = None, model: Any = None, provider: Any = None, response: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, usage: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_duration': api_duration, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'ended_at': ended_at, 'finish_reason': finish_reason, 'first_chunk_at': first_chunk_at, 'model': model, 'provider': provider, 'response': response, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id, 'usage': usage})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write LLM span end chunk with usage."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -368,7 +388,10 @@ def _post_api_request(ctx: Any, payload: dict) -> None:
     logger.debug("Post API request %s for session %s", api_request_id, session_id)
 
 
-def _post_tool_call(ctx: Any, payload: dict) -> None:
+def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_id: Any = None, duration_ms: Any = None, error_message: Any = None, error_type: Any = None, result: Any = None, session_id: Any = None, status: Any = None, task_id: Any = None, tool_call_id: Any = None, tool_name: Any = None, ts: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_request_id': api_request_id, 'args': args, 'collab_event_id': collab_event_id, 'duration_ms': duration_ms, 'error_message': error_message, 'error_type': error_type, 'result': result, 'session_id': session_id, 'status': status, 'task_id': task_id, 'tool_call_id': tool_call_id, 'tool_name': tool_name, 'ts': ts, 'turn_id': turn_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write tool chunk with duration, args, result."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -424,7 +447,10 @@ def _post_tool_call(ctx: Any, payload: dict) -> None:
     logger.debug("Tool call %s (%s) for session %s", tool_call_id, payload.get("tool_name"), session_id)
 
 
-def _subagent_start(ctx: Any, payload: dict) -> None:
+def _subagent_start(api_calls: Any = None, collab_event_id: Any = None, input_tokens: Any = None, label: Any = None, output_tokens: Any = None, session_id: Any = None, started_at: Any = None, task_count: Any = None, task_id: Any = None, task_index: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_calls': api_calls, 'collab_event_id': collab_event_id, 'input_tokens': input_tokens, 'label': label, 'output_tokens': output_tokens, 'session_id': session_id, 'started_at': started_at, 'task_count': task_count, 'task_id': task_id, 'task_index': task_index})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write subagent start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -468,7 +494,10 @@ def _subagent_start(ctx: Any, payload: dict) -> None:
     logger.debug("Subagent %s started for session %s", subagent_label, session_id)
 
 
-def _subagent_stop(ctx: Any, payload: dict) -> None:
+def _subagent_stop(api_calls: Any = None, collab_event_id: Any = None, ended_at: Any = None, label: Any = None, output_tokens: Any = None, session_id: Any = None, started_at: Any = None, status: Any = None, task_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_calls': api_calls, 'collab_event_id': collab_event_id, 'ended_at': ended_at, 'label': label, 'output_tokens': output_tokens, 'session_id': session_id, 'started_at': started_at, 'status': status, 'task_id': task_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write subagent stop chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")

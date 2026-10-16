@@ -139,11 +139,22 @@ describe('incident report assembler', () => {
     expect(rt.status).toBe('collected')
   })
 
+  // 2026-10-17 修正：原夹具依赖「宿主册空」的环境巧合——静态 import 后夹具能读到
+  // 宿主真实身份册（A7 修后宿主/SIM 册已有推演身份），巧合破。显式指向不存在的
+  // store 路径（beforeAll 设 env/afterAll 还原）——「空册」成为确定输入而非环境运气。
   it('诚实降级：身份册为空时 agent_identity/委托链/凭证 = absent 且注明原因', () => {
-    for (const key of ['agent_identity', 'delegation_chain', 'auth_credentials']) {
-      const e = byKey(report.elements, key)
-      expect(e.status).toBe('absent')
-      expect(e.note).toBeTruthy()
+    const prev = process.env.AGENT_IDENTITY_STORE
+    process.env.AGENT_IDENTITY_STORE = '/nonexistent/agent-identity-store'
+    try {
+      const empty = buildIncidentReport('20261009-v8-run12', { dbPath: '/nonexistent/webui.db', profilesRoot: '/nonexistent/profiles', traceDir: '/nonexistent/traces' })
+      for (const key of ['agent_identity', 'delegation_chain', 'auth_credentials']) {
+        const e = empty.elements.find((x) => (x as { key: string }).key === key)!
+        expect(e.status).toBe('absent')
+        expect(e.note).toBeTruthy()
+      }
+    } finally {
+      if (prev === undefined) delete process.env.AGENT_IDENTITY_STORE
+      else process.env.AGENT_IDENTITY_STORE = prev
     }
   })
 
