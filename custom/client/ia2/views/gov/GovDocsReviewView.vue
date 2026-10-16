@@ -20,7 +20,8 @@ import { isStoredSuperAdmin } from '@/api/client'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
-import { useTasksTabsText } from '../../i18n-tasks-tabs'
+// A0 三中心拆分：标题键 tabGovDocs 已迁 i18n-gov-tabs（治理中心过渡事实源）
+import { useGovTabsText } from '../../i18n-gov-tabs'
 
 const i18nCtx = useI18n()
 /** 文案单一事实源=custom/governance/i18n.ts；legacy i18n 无 mergeLocaleMessage，
@@ -29,7 +30,7 @@ const L = computed(() => {
   const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
   return loc.startsWith('zh') ? governanceMessages.zh.governance : governanceMessages.en.governance
 })
-const tabText = useTasksTabsText()
+const tabText = useGovTabsText()
 
 const overview = ref<GovernanceOverview | null>(null)
 const selectedKind = ref('')
