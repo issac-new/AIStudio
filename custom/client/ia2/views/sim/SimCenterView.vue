@@ -8,7 +8,7 @@
      simcenter 控制器族，X1 已合入）。场景编排挂面（/app/sim/orchestration，
      A8+D9）是壳层挂面非第七签，随其工单挂入。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
 import SupervisionPanel from './SupervisionPanel.vue'
@@ -22,6 +22,10 @@ import CockpitPanel from './CockpitPanel.vue'
 const route = useRoute()
 const router = useRouter()
 const text = useSimTabsText()
+
+// V1 壳收敛（视觉重规划 D2）：推演中心全宽——挂载期隐藏上游导航 rail
+onMounted(() => document.body.classList.add('ia-center-full'))
+onUnmounted(() => document.body.classList.remove('ia-center-full'))
 
 /** 六签单一事实源：路由名 + 该签将消费的 X1 端点清单（占位展示用，
  *  非数据面调用；端点全集见 simcenter-controller，POST 标注写法面） */

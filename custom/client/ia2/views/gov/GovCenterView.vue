@@ -6,7 +6,7 @@
      同模式，当前签由路由名推导）；五签占位注明 C3-C9 将迁入的既有组件
      （对账总表 B/C 组实存锚）。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGovTabsText } from './gov-tabs'
 import ClearancePanel from './ClearancePanel.vue'
@@ -28,6 +28,10 @@ import GovAiQualitySection from './GovAiQualitySection.vue'
 const route = useRoute()
 const router = useRouter()
 const text = useGovTabsText()
+
+// V1 壳收敛（视觉重规划 D2）：治理中心全宽——挂载期隐藏上游导航 rail
+onMounted(() => document.body.classList.add('ia-center-full'))
+onUnmounted(() => document.body.classList.remove('ia-center-full'))
 
 type TabKey = 'process' | 'orgAssets' | 'clearance' | 'issues' | 'audit' | 'docs' | 'metrics'
 interface GovTab { key: TabKey; name: string; components: string[] }
