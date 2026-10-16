@@ -79,6 +79,13 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
           {{ text[TAB_LABEL_KEY[tab.key]] }}
         </button>
       </nav>
+      <button
+        class="sim-center__settings"
+        type="button"
+        data-testid="ia-sim-settings-link"
+        title="推演设置"
+        @click="void router.push({ name: 'ia2.simSettings' })"
+      >⚙ 推演设置</button>
     </header>
 
     <main class="sim-center__body">
@@ -175,6 +182,16 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 }
 
 .sim-center__title { margin: 0; font-size: 16px; }
+.sim-center__settings {
+  margin-left: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
 
 /* 六签单层页签（无二级页签——全站单层纪律同 /app/board） */
 .sim-center__tabs { display: flex; gap: 4px; flex-wrap: wrap; }
