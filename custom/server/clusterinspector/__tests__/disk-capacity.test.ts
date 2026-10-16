@@ -16,8 +16,9 @@ describe('detectDiskCapacity — 磁盘水位（run20 96% 事故根治面）', (
       { mount: '/Volumes/ok', usedPct: 50 },
     ]))
     expect(anomalies).toHaveLength(2)
-    expect(anomalies[0]).toMatchObject({ detector: 'disk.capacity', subject: 'disk:/', severity: 'critical' })
+    expect(anomalies[0]).toMatchObject({ detector: 'disk.capacity', subject: 'disk:/', severity: 'high' })
     expect(anomalies[0].summary).toContain('96%')
+    expect(anomalies[0].summary).toContain('≥95 加急')
     expect(anomalies[1]).toMatchObject({ subject: 'disk:/Volumes/nvme2230', severity: 'high' })
   })
   it('阈值可调（opts.diskCapacityPct）；默认 90 边界值含本身', () => {

@@ -423,8 +423,9 @@ export function detectDiskCapacity(
     .filter(u => u.usedPct >= threshold)
     .map(u => ({
       detector: 'disk.capacity', subject: `disk:${u.mount}`,
-      severity: u.usedPct >= 95 ? 'critical' : 'high',
-      summary: `磁盘水位 ${u.usedPct}%（${u.mount}，阈值 ${threshold}%）——run20 96% 事故先例：先清缓存与大目录，再查是谁在吃盘`,
+      // AnomalySeverity 只有 info|warn|high——≥95 不另立档位，加急语义进 summary
+      severity: 'high',
+      summary: `磁盘水位 ${u.usedPct}%（${u.mount}，阈值 ${threshold}%${u.usedPct >= 95 ? '，≥95 加急' : ''}）——run20 96% 事故先例：先清缓存与大目录，再查是谁在吃盘`,
       detail: u,
     }))
 }
