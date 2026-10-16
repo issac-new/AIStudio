@@ -59,3 +59,83 @@ describe('PipelineEngine v1（V8.33 四持续产品化）', () => {
     } finally { delete process.env.PIPELINE_TRIGGER }
   })
 })
+
+// ── v2 状态扩展（staged/released，2026-10-16）：真 git 仓多 remote 夹具 ──
+describe('PipelineEngine v2（staged/released 扩展）', () => {
+  let v2repo = ''
+  let bare = ''
+  beforeAll(() => {
+    bare = mkdtempSync(join(tmpdir(), 'pipeline-bare-'))
+    const gb = (...a: string[]) => execFileSync('git', ['-C', bare, ...a], { encoding: 'utf-8' })
+    gb('init', '-q', '--bare', '-b', 'main')
+    v2repo = mkdtempSync(join(tmpdir(), 'pipeline-v2-'))
+    const g = (...a: string[]) => execFileSync('git', ['-C', v2repo, ...a], { encoding: 'utf-8' })
+    g('init', '-q', '-b', 'main'); g('config', 'user.email', 't@t'); g('config', 'user.name', 't')
+    writeFileSync(join(v2repo, 'a.txt'), 'x'); g('add', '.'); g('commit', '-qm', 'init')
+    g('remote', 'add', 'origin', bare); g('push', '-q', 'origin', 'main')
+    // BE 分支：推 origin+testlog（应达 tested）
+    g('checkout', '-q', '-b', 'feat/DEV-PAYCORE-S')
+    execFileSync('mkdir', ['-p', join(v2repo, 'docs/evidence')])
+    writeFileSync(join(v2repo, 'docs/evidence/DEV-PAYCORE-S-testlog.txt'), 'log')
+    g('add', '.'); g('commit', '-qm', 'be'); g('push', '-q', '-u', 'origin', 'feat/DEV-PAYCORE-S')
+    // integration 分支：并入 BE 分支（应达 merged/staged）
+    g('checkout', '-q', '-b', 'integration/RFD-001', 'main')
+    g('merge', '-q', '--no-ff', 'origin/feat/DEV-PAYCORE-S', '-m', 'integ')
+    g('push', '-q', '-u', 'origin', 'integration/RFD-001')
+    // release 分支：从 integration 起（并入后 BE 分支应达 released）
+    g('checkout', '-q', '-b', 'release/RFD-001', 'origin/integration/RFD-001')
+    g('push', '-q', '-u', 'origin', 'release/RFD-001')
+  })
+  afterAll(() => {
+    try { rmSync(v2repo, { recursive: true, force: true }) } catch { /* noop */ }
+    try { rmSync(bare, { recursive: true, force: true }) } catch { /* noop */ }
+  })
+
+  it('facts：merged 分支 staged=true；release 分支缺席时 released 不虚标', () => {
+    const facts = collectFacts(v2repo)
+    const be = facts.get('feat/DEV-PAYCORE-S')!
+    expect(be.pushed).toBe(true)
+    expect(be.tested).toBe(true)
+    expect(be.merged).toBe(true)
+    expect(be.staged).toBe(true) // staged=已并 integration（release 候选集口径）
+    expect(be.released).toBe(true) // release/RFD-001 含该分支
+  })
+
+  it('runOnce：六阶段状态机推演到 released；enteredAt 全链记录', async () => {
+    const eng = new PipelineEngine({ repo: v2repo, room: '!r:mx', send: async () => 'e' })
+    const { flows } = await eng.runOnce()
+    const be = flows.find((f) => f.branch.includes('DEV-PAYCORE'))!
+    expect(be.stage).toBe('released')
+    for (const s of ['dev', 'pushed', 'tested', 'merged', 'staged', 'released']) {
+      expect(be.enteredAt[s]).toBeGreaterThan(0)
+    }
+  })
+
+  it('release 分支缺席：merged 分支 staged 但 released=false（不虚标）', () => {
+    // 另起无 release 分支的仓：BE 分支并入 integration 但不发 release
+    const bare2 = mkdtempSync(join(tmpdir(), 'pipeline-bare2-'))
+    const r2 = mkdtempSync(join(tmpdir(), 'pipeline-v2b-'))
+    try {
+      execFileSync('git', ['-C', bare2, 'init', '-q', '--bare', '-b', 'main'], { encoding: 'utf-8' })
+      const g = (...a: string[]) => execFileSync('git', ['-C', r2, ...a], { encoding: 'utf-8' })
+      g('init', '-q', '-b', 'main'); g('config', 'user.email', 't@t'); g('config', 'user.name', 't')
+      writeFileSync(join(r2, 'a.txt'), 'x'); g('add', '.'); g('commit', '-qm', 'init')
+      g('remote', 'add', 'origin', bare2); g('push', '-q', 'origin', 'main')
+      g('checkout', '-q', '-b', 'feat/DEV-PAYCORE-R')
+      execFileSync('mkdir', ['-p', join(r2, 'docs/evidence')])
+      writeFileSync(join(r2, 'docs/evidence/DEV-PAYCORE-R-testlog.txt'), 'log')
+      g('add', '.'); g('commit', '-qm', 'be'); g('push', '-q', '-u', 'origin', 'feat/DEV-PAYCORE-R')
+      g('checkout', '-q', '-b', 'integration/RFD-001', 'main')
+      g('merge', '-q', '--no-ff', 'origin/feat/DEV-PAYCORE-R', '-m', 'integ')
+      g('push', '-q', '-u', 'origin', 'integration/RFD-001')
+      const facts = collectFacts(r2)
+      const be = facts.get('feat/DEV-PAYCORE-R')!
+      expect(be.merged).toBe(true)
+      expect(be.staged).toBe(true)
+      expect(be.released).toBe(false) // 无 release 分支——不可达不虚标
+    } finally {
+      try { rmSync(r2, { recursive: true, force: true }) } catch { /* noop */ }
+      try { rmSync(bare2, { recursive: true, force: true }) } catch { /* noop */ }
+    }
+  })
+})

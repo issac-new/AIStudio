@@ -38,7 +38,9 @@ export default defineConfig({
   },
   test: {
     // 只跑 overlay 自己的测试，不混跑 upstream 的 tests/**。
-    include: ['custom/**/*.test.ts'],
+    // scripts/ 纳入：构建/校验脚本（verify-dist 等）的反向测试同属 overlay 自有
+    // 测试面（2026-10-16 安全轮 M8 出厂口令门禁测试首个落点）。
+    include: ['custom/**/*.test.ts', 'scripts/**/*.test.ts'],
     setupFiles: [resolve(overlayRoot, 'custom/client/test/setup.ts')],
     // environment 由各测试文件头部的 // @vitest-environment jsdom 指令按需指定；
     // store 级测试无需 DOM，config 层不强制全局 environment 以减少开销。

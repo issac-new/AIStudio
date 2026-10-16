@@ -2,7 +2,10 @@
 // 持续流水线引擎 v1（V8.33 四持续的产品化落地，2026-10-15 用户裁定）：
 //   持续集成——分支 push origin 即触发域负责人评审合并令（不等全齐）
 //   持续测试——分支落地即触发测试令（不等 devimpl_done）
-//   状态机——dev → pushed → tested → merged（staged/released 留 v2）
+//   状态机——dev → pushed → tested → merged → staged → released（v2 扩展：
+//     staged=已并 integration 且进 release 候选集；released=已随 release 分支发布。
+//     事实源=git 只读：ancestor-of origin/integration（staged）/ ancestor-of
+//     origin/release（released）；release 分支缺席=released 不可达（不虚标））
 //   持续改进——每跃迁耗时入账（dev_signal 完整版留 v2）
 // 数据源=NUDGE_REPO 仓 git 只读查询（巡检官同源）；触发走 matrixSend（NUDGE 同链）。
 // 开关：PIPELINE=off 关引擎；PIPELINE_TRIGGER=off 只报状态不发令（默认 off——run20
@@ -10,7 +13,7 @@
 
 import { join } from 'node:path'
 
-export type PipelineStage = 'dev' | 'pushed' | 'tested' | 'merged'
+export type PipelineStage = 'dev' | 'pushed' | 'tested' | 'merged' | 'staged' | 'released'
 
 export interface BranchFlow {
   branch: string
@@ -39,33 +42,57 @@ function gitOk(repo: string, args: string[]): string | null {
   } catch { return null }
 }
 
-/** 采集分支事实：origin 可见性 / testlog 在案 / 已并 integration */
-export function collectFacts(repo: string): Map<string, { pushed: boolean; tested: boolean; merged: boolean }> {
-  const facts = new Map<string, { pushed: boolean; tested: boolean; merged: boolean }>()
+/** 采集分支事实：origin 可见性 / testlog 在案 / 已并 integration / 进 release */
+export function collectFacts(repo: string): Map<string, { pushed: boolean; tested: boolean; merged: boolean; staged: boolean; released: boolean }> {
+  const facts = new Map<string, { pushed: boolean; tested: boolean; merged: boolean; staged: boolean; released: boolean }>()
   const local = (gitOk(repo, ['for-each-ref', '--format=%(refname:short)', 'refs/heads/feat/DEV-*']) ?? '')
     .split('\n').map((s) => s.trim()).filter(Boolean)
   const remote = new Set((gitOk(repo, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin/feat/DEV-*']) ?? '')
     .split('\n').map((s) => s.trim().replace(/^origin\//, '')).filter(Boolean))
   const integ = gitOk(repo, ['rev-parse', '--short', 'origin/integration/RFD-001'])
     ?? gitOk(repo, ['rev-parse', '--short', 'origin/integration'])
+  // v2：release 分支事实源（release/RFD-001 优先，裸 release 兜底；缺席=不可达不虚标）
+  const rel = gitOk(repo, ['rev-parse', '--short', 'origin/release/RFD-001'])
+    ?? gitOk(repo, ['rev-parse', '--short', 'origin/release'])
+  const isAnc = (branch: string, base: string | null) =>
+    !!(base && gitOk(repo, ['merge-base', '--is-ancestor', `origin/${branch}`, base]) !== null)
   for (const b of new Set([...local, ...remote])) {
     const pushed = remote.has(b)
     const tested = pushed && !!(gitOk(repo, ['ls-tree', '-r', `origin/${b}`, '--name-only']) ?? '').includes('testlog.txt')
     const merged = !!(pushed && integ && gitOk(repo, ['merge-base', '--is-ancestor', `origin/${b}`, 'origin/integration/RFD-001']) !== null)
       || !!(pushed && gitOk(repo, ['merge-base', '--is-ancestor', `origin/${b}`, 'origin/integration']) !== null)
-    facts.set(b, { pushed, tested, merged })
+    // staged=已并 integration（release 候选集口径，V8.33 CD 段定义）；released=随 release 分支发布
+    const staged = merged
+    const released = merged && !!rel && (isAnc(b, 'origin/release/RFD-001') || isAnc(b, 'origin/release'))
+    facts.set(b, { pushed, tested, merged, staged, released })
   }
   return facts
 }
 
 /** 状态推演：按事实把 flow 推到最高可达阶段 */
-function advance(flow: BranchFlow, fact: { pushed: boolean; tested: boolean; merged: boolean }, now: number): PipelineStage {
+// 阶段顺序链（enteredAt 补全用）：事实跳级达成时（如一次采到 released），中间
+// 阶段的进入时刻按链上最近已知时刻回填——分支逻辑上一定经过这些阶段，缺失会让
+// 「每阶段耗时」统计断链（v2 持续改进面的数据完整性）。
+const STAGE_CHAIN: PipelineStage[] = ['dev', 'pushed', 'tested', 'merged', 'staged', 'released']
+
+function advance(flow: BranchFlow, fact: { pushed: boolean; tested: boolean; merged: boolean; staged?: boolean; released?: boolean }, now: number): PipelineStage {
   let stage = flow.stage
   const enter = (s: PipelineStage) => { if (!(s in flow.enteredAt)) flow.enteredAt[s] = now; stage = s }
-  if (fact.merged) enter('merged')
+  if (fact.released) enter('released')
+  else if (fact.staged) enter('staged')
+  else if (fact.merged) enter('merged')
   else if (fact.tested) enter('tested')
   else if (fact.pushed) enter('pushed')
   else enter('dev')
+  // 链上中间阶段回填（跳过阶段=事实跳级达成；取链上前一已知时刻，无则用 now）
+  const top = STAGE_CHAIN.indexOf(stage)
+  let prev = 0
+  for (let i = 0; i <= top; i++) {
+    const s = STAGE_CHAIN[i]
+    if (s in flow.enteredAt) { prev = flow.enteredAt[s]; continue }
+    flow.enteredAt[s] = prev || now
+    prev = flow.enteredAt[s]
+  }
   return stage
 }
 
