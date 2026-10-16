@@ -589,3 +589,14 @@ body.ia-center-full .studio-navigation-rail {
 }
 .ov__act-head-name { font-size: var(--ia-fs-block); font-weight: 600; }
 .ov__act-head-range { font-size: var(--ia-fs-aux); color: var(--text-muted, #878c99); margin-left: var(--ia-sp-2); }
+
+/* 治理页签分组小标（U1：事前/事中/事后动线标注） */
+.gov-center__stage-tag {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--text-muted, #878c99);
+  border: 1px solid var(--border-color, #e5e7eb);
+}

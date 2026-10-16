@@ -814,8 +814,8 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     const bar = wrapper.find('[data-testid="ia-nav-centers"]')
     expect(bar.exists()).toBe(true)
     const labels = bar.findAll('.icn-inline__center-btn').map(x => x.text())
-    expect(labels).toEqual(['工作台', '推演中心', '治理中心'])
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn-inline__center-btn--active')
+    expect(labels).toEqual(['工作台', 'IDE 画布', '推演中心', '治理中心'])
+    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
     expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn-inline__center-btn--active')
     expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
@@ -823,7 +823,8 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
   it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
     const { wrapper } = await mountNav('/app/sim')
     expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('icn-inline__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('icn-inline__center-btn--active')
+    // D9 分段：工作台激活态落在分段容器（work--active），子按钮不再挂 --active
+    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).not.toContain('icn-inline__work--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
