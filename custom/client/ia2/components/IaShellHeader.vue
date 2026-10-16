@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/components/IaShellHeader.vue -->
 <!-- 驾驶舱统一壳页头。v12.4（2026-09-20 用户裁定）页头四改：
      ① 语言单按钮切换（IaLocaleToggle 显示目标语言，ZH/EN 两按钮合并）；
-     ② 视图切换器单按钮（IaViewSwitcher 显示目标视图，沟通协作/IDE 工作台
+     ② 视图切换器退役（D9：IDE 画布并入工作台分段按钮，见 IaCentersNav
        两按钮合并）；
      ③ 态势 chips 收窄（SitlineBar 删会话/循环/管理；任务口径=跨板未完成
        未归档；等我口径=useDecisionRows 待我决策的任务及会话，与通知铃铛
@@ -26,7 +26,6 @@ import { useFlowStore } from '../store/flow'
 import { taskLinkedSessionId } from '../adapters/flow'
 import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
-import IaViewSwitcher from './IaViewSwitcher.vue'
 import IaCentersNav from './IaCentersNav.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
 import SpotlightPanel from './SpotlightPanel.vue'
@@ -198,9 +197,7 @@ function onPanelJumpTask(taskId: string): void {
         :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')">
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
       </span>
-      <!-- 2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，换视图切换器
-           （沟通协作 ⇄ IDE 工作台；目标视图图标 + 切换图标见 IaViewSwitcher） -->
-      <IaViewSwitcher />
+      <!-- D9：视图切换器退役（IDE 画布并入工作台分段按钮，见 IaCentersNav） -->
     </div>
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">

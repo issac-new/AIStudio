@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-shell-header.test.ts
-// 驾驶舱统一壳页头守门（2026-09-18 统一导航重构 Task 2）：
+// 驾驶舱统一壳页头单测（2026-09-18 统一导航重构 Task 2）：
 // IaShellHeader = CockpitTopBar 裁剪迁移——品牌（连接点 + ia2.brand）/全局搜索/
 // Gateway 探测组（倒计时+详情面板）/主题/通知/日程/用户；
 // v12.2（2026-09-20）：固定最右 IaViewSwitcher 二视图切换器（⇄IDE 跳转按钮退役）。
@@ -11,11 +11,11 @@
 // 循环/管理）；等我 = useDecisionRows 待我决策（任务及会话）；三栏栏控迁各栏
 // 顶部控制条（页头 IaWindowControls 退役）。
 // 2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，IaViewSwitcher 迁入品牌位
-// （带目标视图图标 code/message + 切换图标 switch）；设置页收编 /app/settings
-//（用户按钮跳 hermes.settings 名不变，经路由收编落壳内）。
+// （带目标视图图标 code/message + 切换图标 switch）；设置页并入 /app/settings
+//（用户按钮跳 hermes.settings 名不变，经路由并入落壳内）。
 // 重依赖桩化：composables（态势/决策聚合拉 chat/matrix/team 上游链）、
 // IaLocaleToggle（upstream switchLocale）；NotifyDropdownPanel
-// 用真组件——铃铛开合即本文件守门。fetch mock 写法参照 cockpit-topbar-health.test.ts；
+// 用真组件——铃铛开合即本文件单测。fetch mock 写法参照 cockpit-topbar-health.test.ts；
 // i18n 走全局 setup mock（t 直返 key）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -139,31 +139,20 @@ describe('IaShellHeader — 统一壳页头', () => {
     cockpitStubs.state.inboxItems = []
   })
 
-  it('品牌位（2026-09-30 用户裁定）：「驾驶舱」文案退役，视图切换器就位品牌簇且全页头唯一', async () => {
+  it('品牌位（D9 合并轮）：视图切换器退役——IDE 画布并入 IaCentersNav 工作台分段，品牌簇不再有切换器', async () => {
     const w = await mountHeader()
     expect(w.text()).not.toContain('ia2.brand')
     expect(w.text()).not.toContain('Swarm Studio')
-    // 切换器在品牌簇内（ThemeSwitch/语言钮/连接点之后），且不再挂最右
-    expect(w.find('.cockpit-top__brand [data-testid="ia-view-toggle"]').exists()).toBe(true)
-    expect(w.findAll('[data-testid="ia-viewswitch-row"]')).toHaveLength(1)
+    expect(w.find('[data-testid="ia-view-toggle"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-viewswitch-row"]').exists()).toBe(false)
     expect(w.find('[data-testid="ia-locale-toggle"]').exists()).toBe(true)
     w.unmount()
   })
 
-  it('v12.4 视图切换器单按钮（2026-09-30 迁品牌位；/app 态显示目标视图 IDE 工作台，双按钮退役）', async () => {
+  it('D9：切换器退役——点击语义并入 IaCentersNav 工作台分段（本文件只断品牌簇零切换器；分段行为在 workbench-nav-centers 断言）', async () => {
     const w = await mountHeader()
-    expect(w.find('[data-testid="ia-header-ide"]').exists()).toBe(false)
-    const row = w.find('[data-testid="ia-viewswitch-row"]')
-    expect(row.exists()).toBe(true)
-    const btn = row.find('[data-testid="ia-view-toggle"]')
-    expect(btn.exists()).toBe(true)
-    // 单按钮：旧双入口 testid 退役
-    expect(row.find('[data-testid="ia-scene-collab"]').exists()).toBe(false)
-    expect(row.find('[data-testid="ia-scene-ide"]').exists()).toBe(false)
-    // /app 态显示目标视图（IDE 工作台），点击跳 ide.shell
-    expect(btn.text()).toContain('IDE 画布')
-    await btn.trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ide.shell' })
+    expect(w.find('[data-testid="ia-view-toggle"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-viewswitch-row"]').exists()).toBe(false)
     w.unmount()
   })
 
