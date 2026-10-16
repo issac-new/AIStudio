@@ -106,3 +106,46 @@ describe('V3 旗舰屏排版（D6）', () => {
     w.unmount()
   })
 })
+
+/** WCAG 相对亮度/对比度（与规范公式一致；3 位 hex 展开支持） */
+function lum(hex: string): number {
+  const h = hex.length === 4 ? '#' + [1, 2, 3].map(i => hex[i] + hex[i]).join('') : hex
+  const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+function contrast(a: string, b: string): number {
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p)
+  return (x + 0.05) / (y + 0.05)
+}
+
+describe('V2 补批：五态色 WCAG 对比度（D4 token 机械守门）', () => {
+  const DARK_BG = '#1d1f23' // 当前深色态主背景（驾驶屏面板实测底色）
+  const TOKENS: Record<string, string> = {
+    '--ia-fresh': '#2e9e5b', '--ia-stale': '#b8860b', '--ia-fail': '#e06666',
+    '--ia-pass': '#2f9e6e', '--ia-compensated': '#9678c6',
+  }
+  it('深色背景（现用主题）文字级 AA：五态色全部 ≥4.5:1', () => {
+    for (const [name, hex] of Object.entries(TOKENS)) {
+      const r = contrast(hex, DARK_BG)
+      expect(r, `${name} ${hex} 深底 ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+  it('浅色背景不劣于大字/图形级（≥3:1），且 token 值与 ia2.scss 同步（防手改漂移）', () => {
+    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    for (const [name, hex] of Object.entries(TOKENS)) {
+      expect(contrast(hex, '#ffffff'), `${name} 浅底`).toBeGreaterThanOrEqual(3)
+      expect(scss, name).toContain(`${name}: ${hex};`)
+    }
+  })
+})
+
+describe('V1 补批：工作台同收敛（D7——rail 去留评估结论=收敛）', () => {
+  it('WorkbenchView 生命周期两行在库（33K 重型壳不做整挂载——同 scss 守门模式 grep 断言）', () => {
+    const src = readFileSync(resolve(__dirname, '../views/WorkbenchView.vue'), 'utf8')
+    expect(src).toContain("document.body.classList.add('ia-center-full')")
+    expect(src).toContain("document.body.classList.remove('ia-center-full')")
+    // onMounted/onUnmounted 确实导入（防只写调用没导 hook）
+    expect(src).toMatch(/import \{[^}]*onMounted[^}]*\} from 'vue'/)
+  })
+})

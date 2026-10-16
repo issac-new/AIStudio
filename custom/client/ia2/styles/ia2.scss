@@ -521,11 +521,13 @@ body.ia-center-full .studio-navigation-rail {
  * 状态色五态（总设计定稿 §七 ②）：fresh/stale/fail/pass/compensated。 */
 :root {
   /* 状态色（语义态，不与主题色混用） */
+  /* 值经 WCAG 校准（2026-10-16 V2 补批）：深底文字级 AA 全过（4.9-6.3），
+   * 浅底大字/图形级（3.3-3.6）——对比度断言在 visual-shell 测试机械把关 */
   --ia-fresh: #2e9e5b;
-  --ia-stale: #c9962e;
-  --ia-fail: #d33;
-  --ia-pass: #1d6b40;
-  --ia-compensated: #9a6ac9;
+  --ia-stale: #b8860b;
+  --ia-fail: #e06666;
+  --ia-pass: #2f9e6e;
+  --ia-compensated: #9678c6;
   /* 字阶四级（页题/区块题/正文/辅助） */
   --ia-fs-page: 15px;
   --ia-fs-block: 13px;

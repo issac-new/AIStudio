@@ -3,19 +3,19 @@
      左=工作流导航（会话∪循环统一列表）；中=对象工作区（会话→对话画布；
      循环→运行画布[实时|历史]）；右=任务与决策（等我队列+挂接任务+动态）恒驻。
      选择态经路由子路径承载（s/chat/:sessionId | s/room/:roomId | l/:loopId），
-     '' 无选择时自动选首个会话（不写 URL，刷新/深链直达不失真）。
+     '' 无选择时自动选首个会话（不写 URL，刷新/直达链接不失真）。
      v12.3（2026-09-20 用户裁定）：六态势 chips 迁页头（SitlineBar + 内联面板
-     在 IaShellHeader，本视图不再渲染态势行）；行装配/决策动作/态势计数收编
+     在 IaShellHeader，本视图不再渲染态势行）；行装配/决策动作/态势计数并入
      composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）。
      v12.4（2026-09-20 用户裁定）：三栏栏控迁各栏顶部控制条（IaColumnControls
      左=折叠/中=最大化+独立窗口/右=折叠，页头集中簇退役；折叠态 18px 导轨
-     就地展开）；右栏「等我」对齐 useDecisionRows（待我决策的任务及会话）。
+     就地展开）；右栏「等我」取数同源于 useDecisionRows（待我决策的任务及会话）。
      v13（2026-09-21 协作感知轮，multica/routa 源码调研落地）：左栏循环行
      运行脉冲（loopRunActivity）+右栏「需关注」节（buildAttention 分诊）+
      运行画布耗时徽章与语义块回放（RunCanvas 内消费）；调研正本
      docs/comm-collab-v13-research.md。 -->
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFlowStore } from '../store/flow'
@@ -59,6 +59,10 @@ import { NDrawer, NDrawerContent } from 'naive-ui'
 import CreateRoomForm from '@/components/hermes/group-chat/CreateRoomForm.vue'
 import type { RoomAgentInput, RoomSummaryConfig } from '@/api/studio/group-chat'
 
+// V1 壳收敛补批（视觉重规划 D7）：工作台同收敛——rail 八入口中六项有强替代
+// （设置侧栏/FlowNavPanel/治理·系统设置），聊天主动线在左栏聊天列表；导航唯一性
+onMounted(() => document.body.classList.add('ia-center-full'))
+onUnmounted(() => document.body.classList.remove('ia-center-full'))
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -313,7 +317,7 @@ function onAllTimeline(): void {
   cockpit.openRunTraceGlobal()
 }
 
-// ── 中栏 · 会话画布数据（链路条/参与方条）──
+// ── 中栏 · 会话画布数据（会话通道条/参与方条）──
 
 const selectedSessionRow = computed(() => {
   const sel = activeSel.value
@@ -321,8 +325,8 @@ const selectedSessionRow = computed(() => {
   return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id) ?? null
 })
 
-// ── 深链房间可靠装载（2026-10-01 产品修复）──
-// 死锁链根治：深链 s/room/:roomId 到列表外房间（新加入未同步/冷启动 client 未起）
+// ── 直达房间可靠装载（2026-10-01 产品修复）──
+// 死锁链根治：直达 s/room/:roomId 到列表外房间（新加入未同步/冷启动 client 未起）
 // 时，SessionCanvas 因 selectedSessionRow 为空不渲染 → MatrixRoomCanvas 的
 // onMounted initClient 兜底永不触发 → 房间永远进不了 sessionRows。视图层补：
 // ①缺失时幂等 initClient；②画布区分「同步中/不可达」态（替代误导性的
@@ -590,7 +594,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       <!-- V5 补遗⑤ M6：RunCanvas 中栏分支移除——循环观测落运行详情页（组件内嵌复用） -->
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
         <div class="wb__canvas-ph-body">
-          <!-- 深链房间缺失态：与「未选择」区分——同步中给预期，超时给原因+出路 -->
+          <!-- 直达房间缺失态：与「未选择」区分——同步中给预期，超时给原因+出路 -->
           <template v-if="deepLinkMissing">
             <p class="wb__canvas-ph-tit" data-testid="wb-canvas-deeplink-state">
               {{ deepLinkUnreachable ? '会话不可达或未加入' : '正在同步会话…' }}
@@ -663,9 +667,9 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 
 <style scoped lang="scss">
 /* v12 三栏铁律：栏宽可拖（180-560，colWidths 单一事实源）| 自适应(≥320) | 栏宽可拖，
- * 永不换列不堆叠（窄屏由外层整体缩放）。此处静态轨道仅作挂载前兜底，数值对齐
+ * 永不换列不堆叠（窄屏由外层整体缩放）。此处静态轨道仅作挂载前兜底，数值同源于
  * colWidths 默认 280/480；真实轨道由 wbGridStyle 内联绑定驱动（拖拽即改轨道）。
- * v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右对齐元素让位 62px）；
+ * v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右侧元素让位 62px）；
  * 折叠态 18px 导轨就地展开；中栏最大化 = 两侧齐折（flow.centerMaximized）。 */
 .wb {
   height: 100%; min-height: 0; min-width: 0;
