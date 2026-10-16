@@ -1530,9 +1530,6 @@ STEPS_META_20261013_V8_RUN19 = {
 
 # run20 叙事（按轮逐步注册；锚=state.env 键时间线+issues.log 120 条台账）
 STEPS_META_20261015_V8_RUN20 = {
-    # issue_keys（2026-10-16 run20 复盘补注册）：原注册 26 步全无 issue_keys →
-    # 逐步 ③段恒显「已知问题：无（本步零问题单）」，与台账 139 行 ISSUE 并存
-    # （步级账实不符）。键=issues.log 该步主题的问题单类型键。
     1: dict(keys=['smoke_done'], narrative='开跑 2026-10-15 14:41（零环境重建）。30 账号 token 有效、单网关+单 studio 就绪。', imgs=[]),
     2: dict(keys=['smoke_done'], narrative='双账号登录通路端点按契约应答；交付案例房开房+冒烟事件落房可读回。', imgs=[]),
     3: dict(keys=['smoke_done'], narrative='15 平台通道在线；LC_ALL=C 全量 26 步开跑。', imgs=[]),
@@ -1614,17 +1611,6 @@ for _n, _meta in list(STEPS_META.items()):
         _meta['keys'] = _STEP33_MULTI_KEYS.get(_n) or [_STEP33_DEFAULT_KEYS[_n - 1]]
         sys.stderr.write('[mx-report-gen] 步 %s 叙事注册 keys 为空——回落 §3.3 默认键 %s（run16 实锤防线）\n'
                          % (_n, '+'.join(_meta['keys'])))
-
-# ── run20 复盘防线（fix/run20-report-truth-trio）：逐步问题单漏注册机械暴露 ──
-# run20 实锤：26 步 issue_keys 全空 → 逐步 ③段 27 处「已知问题：无（本步零问题单）」
-# 与台账 139 行 ISSUE 并存（步级账实不符，审计四查全过照放行）。此处对台账键做
-# 步归属盘点：未注册到任何步的键逐条 stderr 列出——收尾链补注册的检查面；
-# 审计器同批新增「台账有行而逐步零渲染」FAIL 断言（双保险）。
-_ledger_keys_unreg = report_truth.unregistered_ledger_keys(
-    str(EVID / 'issues.log'), {n: (m.get('issue_keys') or []) for n, m in STEPS_META.items()})
-if _ledger_keys_unreg:
-    sys.stderr.write('[mx-report-gen] 台账键未注册到任何步（逐步问题单空渲染风险）%d 个：%s\n'
-                     % (len(_ledger_keys_unreg), '、'.join(_ledger_keys_unreg[:20])))
 
 _L3_A={'20261013-v8-run18-lite-acp':'进行中（lite-ACP 专项验证轮：hermes→ACP→Ycode 编码委托链全链首验——MX_ACP_BACKEND=1 首个实跑轮，六路委托 5/6 分支带日志、RESULT exit=0×4；运行中两事故当场根治：工具层 300s 天花板（技能卡 nohup 后台化）与环境清扫误删 selected（清扫器豁免+venv 链修复））','20261012-v8-run16':'进行中（V8.17 复盘纪律版首验轮+监控驱动修复链轮）：六闸 6/6（G2 安全评审新口径 7 分钟过闸首验；G5 两轮真打回熔断后监控修复链完整走通复位）；UAT 7/7 全过（run15 两缺口补齐）；V8.16 饱和并行全谱首验；监控代行全链实战','20261011-v8-run15':'进行中（V8.10-V8.15 全栈首验轮+根治轮·监控哨叙事）：26 步全走完+六闸 6/6（首过 5/6——G2 涉敏安全前置首验真拦截后复审改判）；七件首验落地（三段卡×3/涉敏评审卡/六域当轮体检/契约观察影子 breaking=0/主卡 room 锚/判词复用/实时帧 48 张零补拍）；运行中当场根治四类真缺陷（安全闸三重盲区 bf9a955——80 秒收敛实证、进度锚陈旧分支盲转 c1e507d、多锚精确登记 36c7701、mx-up 冷起挂死 09c07f9）；监控代行定向令 6 发 6 中；全程 12h17m（对照 run14 净 22h，摩擦=锚冻结 150min+安全修复环 68min+监督器卡死 10min）','20261010-v8-run14':'进行中（V8.5 首个全量验证轮·预注册句）：mx-clean 三旗标 0→1 全新环境独立回归；V8.5 条款（DISP 主体精确配对/登记幂等/闸键首过保护/打回=判词语义/并行度段界锚）+G1-G4 产品面修复+GRAPH_ENGINE=on 的首个全量轮——L3 总评行由收尾链按当轮实测定稿','20261010-v8-run13':'符合（回归轮首航·诚实账）：本轮执行带九步全走完（开发→测试→发布→验收→审计→复盘→报告，全程 3 小时 04 分）；六闸全收齐（G3/G4/G5 当轮，G1/G2 沿用源轮真值分带呈现）；边界守卫首次实战通过（零 main 污染、零越界代做）；验收诚实账更严（AC-1/5/6 不通过如实判词，一手复测与 测试工程师A 报备双源一致）；事故账=repo_has×回归轮五连循环（根治 6959a2b）+步18 错页帧（G1/G2 中途上线修复）；回归轮口径首次全程落地','20261009-v8-run12':'run12 符合（逆境中的治理+诚实记账轮）：26 步全部走完、六道关卡全部通过（G1/G2/G3/G4 一次通过 4/6；G5 两轮不通过+强制暂停+复审转正；UAT 有条件通过、AC-5 如实标红）；诚实账=测试工程师A 如实报告「TEST-BE 未执行」→G5 第一轮追责→测试工程师A 真实执行 250/250 全绿完整循环——不谎报纪律全程可反查；六张开发卡同时派出（提速措施二）+测试并行拆分（测试工程师A/团队负责人A/产品经理A 三方）双双首次应用；网关四起事故+噪音风暴+会话中毒+结论行污染全部记入问题清单并全部恢复。','20261007-v8-run11':'符合（零残留独立回归的正跑轮+逆境治理主战役）：attempt-3 26 步全走完（02:26 开跑→G6 00:26 六闸 6/6 收齐）；从零交付实证——孤儿历史（main 深度 1）+禁考古措辞+闸卫三防线下，四系分两稿从零入仓（PAYCORE/MP）、四开发分支全部本轮新推、TEST-BE 228/228 全绿、发布三件套+UAT 7/7 判词齐；流水线三机制首验（四路同时派出同秒/渠道批触发链/用例前移预备轮）；attempt-1/2 事故链四病根全部根治提交（自动检查 78/78）；负向如实入账：系分 2/4 超窗、容量饥饿×2（drop 106 条）、产品经理A 会话卡死×3（hindsight 交互）、G5 六轮（人工介入 5 笔：熔断放行+发布件代拟+簿记代走+终判代落）、RACI 双@×4 复现、materials 残留暴露——全部记入问题清单在案。','20261007-v8-run10':'run10 符合（全流程完整循环+四起接线事故当场根治）：26 步全走完（G1 01:23→G6 14:29）；六闸全落——G1/G3/G4/G6 首过，G2/G5 打回复补后过（首过率 4/6 实测统计落账 metrics-log）；四起事故全根治提交、run11 免踩；负向如实入账：RACI 双@×4 复现、系分两稿缺件、R18 必采 0/13、G5 门禁灯事件漏发、问题单 12 键待处置——全部记入问题清单在案；叙事文案预写首次消灭注册等待。','20261006-v8-run9':'符合（564 验证轮主命题全过）：交付率 4/4≥3/4、假停摆零复发（run8 五起→零）、接力棒 2 次<50、必采清单 11/13（现矩阵 5+3+3+1+1；当轮 11 项全采达成旧矩阵 11/11 验收线，新增 skill/门禁灯 2 项缺记入问题清单；run8 3/11=旧矩阵口径）；四对照闸全绿——G2 一次过（run8 3h04m 崩溃环）、排期一次过（run8 首派空转 1h39m）、G5 一次过（run8 FAIL+熔断两轮）、receipt-missing 1 起（run8 ×4）；负向如实入账：RACI 双@×4、AN-MP 首窗 3600s 超时、integration 推送未达 1、五 agent 越序抢跑 8 分支、NVMe 卷脱挂 8.5h 基建事故、runs 注册表空态产品缺口——全部记入问题清单在案；基建中断由 relay 接力语义按设计兜住（17:48 续跑 18:04 收尾，全程零数据丢失）。','20261004-v7-run8':'符合（带伤实测依据）：主链 G1→UAT 全走完且真值可反查——G1 冻结一次过；四系分全真入仓（AN-MP 经回灌补齐）；plan 两段（首段投递丢弃静默→活性判据判停滞重派完成）；devimpl 2/4 分支真交付（PAYCORE/CHALI），研发工程师B/研发工程师D 停摆缺席如实记入问题清单（根因当晚定性=网关响应投递丢弃，564 补丁已修待 run9 验证）；integration 缺支前置跳过+合并推送；G4 测试报告入 integration；G5 三卡登记过闸；UAT AC 证据行到位；G6 复盘+16 条问题单三族在案。本轮主线即事故-根因-修复账本：六型 bash set -u/e 坑（全角吞字/空数组/pipefail/算术上下文/local 自引用/curl22 赋值）全部当场根治、五起假停摆统一定因、驾驶舱后台感知三件套落地——治理逆境与同步修复即 run8 核心素材。','20261002-v5-run7':'符合（收尾实测依据）：G1→UAT 意图通路全完整循环且两代修复链全数过考——G1 冻结一次过 16:51:09；register 打回环拒收假凭证后重报 ✓；四路系分全真入仓；devimpl 2h 零假过（branch_fresh 4/4，23:07:52 integration 合并）；G4 独立验证 00:59:09（测试工程师A 报告 00:38:08 真值）；G5 真实打回环（首评超时打回→重评 READY-GATE ✓ 01:49:29，评审卡 t_73b1518a）；UAT 判词 7/7 零误报（验收书 a7eb6b3 05:54:07）；G6 DISP 15/15+记忆探针 ✓。run6 三实锤根治（判词器括号注耐受/报告按轮隔离/{stat} 占位）与 harness 修复（wait_alive_truth/双探针）在复现位全部按预期工作；新逆境三件全程留痕：533 补丁第三次被 hermes 自更新擦除（三发 nudge+现场重放）、网关空闲守护误判腰斩会话（记入问题清单 gw-idle-restart-false-positive+重发任务书恢复）、gate_review jq 语法错五连早退（c24a9d60 热修+relay 兜底接力）——治理逆境与修复即本轮主线素材。',
 '20261001-v5-run6':'符合（harness 逆境根治+真交付轮）：G1→UAT 意图通路完整循环（验收书入仓+七条 UAT-EVIDENCE 7/7 PASS）；plan 七连超时根因链（窗口<任务时长/派发词缺 push 目标/账户限流/网关换血）四层根治后 产品经理A 30 分钟交卷；devimpl 分支假真值如实披露（branch_fresh 自动检查根治未来轮）且四开发 agent 真实交付三支推送；测试 194/194 零缺陷 G4 真值；夜间 8h 停摆（/tmp 清理+Docker 睡眠）与路由丢失（DM 直发修复）/并发闸弹回/UAT 核验位错配三类新坑全部根治或如实记档——治理逆境与修复即本轮主线素材。',
@@ -1993,12 +1979,16 @@ def _sec34_is_empty(n):
 def _sec34_empty(n):
     return '<p class="st-issues none">已知问题：无（本步零问题单）；处置与改进：无（历轮台账见工程档案）——如实呈现，不凑段。</p>'
 
+STEP_ISSUE_ROWS: dict = {}  # 步→渲染问题单行数（审计器查14c 数据源，run20 复盘增设）
+TRUTH_FINDINGS: dict = {'stale': [], 'dead_anchor': []}  # 交付物真值发现（审计器查14a/b 数据源）
+
 def _step_issues_html(n):
     """段三后半：该步 ISSUE/DISP 行（issues.log 按步过滤，步归属=STEPS_META 按轮注册的
     issue_keys；无注册键的步显示零问题单——文末台账仍为全量单一事实源）。"""
     meta = STEPS_META[n]
     keys = meta.get('issue_keys') or []
     if not keys:
+        STEP_ISSUE_ROWS[n] = 0
         return '<p class="st-issues none">本步零问题单（按轮注册键过滤；全量见文末问题单终态）。</p>'
     log = EVID / 'issues.log'
     if not log.exists():
@@ -2012,6 +2002,8 @@ def _step_issues_html(n):
             cls = 'd-ok' if p[0] == 'DISP' and p[3].startswith('已修') else 'd-warn'
             rows.append(f'<tr><td>{H.escape(p[0])}</td><td>{H.escape(p[1])}·{H.escape(p[2])}</td>'
                         f'<td class="{cls}">{H.escape(p[3][:160])}</td></tr>')
+    # 逐步问题单渲染计数（run20 复盘：审计器查14c「台账有行而逐步零渲染」数据源）
+    STEP_ISSUE_ROWS[n] = len(rows)
     if not rows:
         return '<p class="st-issues none">本步零问题单（注册键本轮未触发）。</p>'
     return ('<table class="st-issues-tbl"><thead><tr><th>类</th><th>键</th><th>内容</th></tr></thead>'
@@ -2362,9 +2354,87 @@ def _gov_metrics_line() -> str:
                     return parts[i + 1].strip().replace('记单', '登记')
         return '⬜'
     fp, ev, de = _pick('首过率'), _pick('证据一次通过率'), _pick('缺陷密度')
-    return (f'<div class="gov-metrics-line">治理指标 · 首过率 <b>{H.escape(fp)}</b>'
+    rj = _pick('打回率')
+    line = (f'<div class="gov-metrics-line">治理指标 · 首过率 <b>{H.escape(fp)}</b>'
+            f' · 打回率 <b>{H.escape(rj)}</b>'
             f' · 证据一次通过 <b>{H.escape(ev)}</b> · 缺陷密度 <b>{H.escape(de)}</b>'
             f'（实读 governance-report metrics 节，禁手填）</div>')
+    return line + _gov_trend_table(txt)
+
+
+def _gov_trend_table(gov_txt: str) -> str:
+    """治理指标跨轮趋势（质量 A 补件 2026-10-16）：解析 governance-report.md 的
+    「跨轮趋势」markdown 表渲染为 HTML 表——回答「质量在变好吗」（单轮基线只答
+    「比上轮好吗」）。表缺席（旧轮报告/首轮）=返回空串，指标行不受影响。"""
+    import re as _re
+    rows = []
+    in_tbl = False
+    for ln in gov_txt.splitlines():
+        if ln.strip().startswith('## 跨轮趋势'):
+            in_tbl = True
+            continue
+        if in_tbl:
+            if ln.strip().startswith('##'):  # 下一节
+                break
+            m = _re.match(r'^\|\s*(\S+)\s*\|\s*([^|]*)\|\s*([^|]*)\|\s*([^|]*)\|', ln)
+            if m:
+                cells = [c.strip() for c in m.groups()]
+                if cells[0] in ('轮次', '---') or set(cells[0]) <= {'-', ' '}:
+                    continue
+                rows.append(cells)
+    if not rows:
+        return ''
+    body = ''.join(
+        '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % tuple(H.escape(c) for c in r)
+        for r in rows)
+    return ('<div class="gov-trend"><b>跨轮质量趋势</b>（近 5 轮，metrics 口径同源）'
+            '<table><thead><tr><th>轮次</th><th>首过率</th><th>打回率</th><th>缺陷密度</th></tr></thead>'
+            f'<tbody>{body}</tbody></table></div>')
+
+
+def security_html():
+    """安全合规证据小节（质量 B③，2026-10-16：审计 B 案「安全合规最薄」的产品化收口）。
+
+    三件套逐件实测呈现（缺数据=如实缺席，禁粉饰）：
+      ①涉敏需求安全评审——state.env security_review_done（1=过闸/非涉敏豁免）；
+        SECURITY-COND 条目从 issues.log 实测计数（设计面挂账项，随 G5 逐条复核）。
+      ②依赖审计（npm audit）——G3 闸门实测 g3-npm-audit-missing 记单计数
+        （派发词要求→闸门强制的升级，run20 实测零拦截的根治）。
+      ③密钥泄漏扫描——机制在位声明（每次守门机械扫 simharness+overlay 两仓，
+        tests/secret-scan-gate.test.sh；轮次级执行面=prelaunch ①，非轮内产物，
+        此处如实说明机制位置不冒充轮内结果）。"""
+    sec_done = state.get('security_review_done', '')
+    ilines = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
+    conds = [l for l in ilines if 'SECURITY-COND' in l and l.startswith('ISSUE|')]
+    cond_open = [l for l in conds if 'GAP:COND' in l]
+    audit_miss = [l for l in ilines if l.startswith('ISSUE|g3-npm-audit-missing')]
+    sec_issues = [l for l in ilines if l.startswith('ISSUE|security') or l.startswith('ISSUE|g5-security')]
+
+    if sec_done == '1':
+        sec_row = ('<tr><td>涉敏安全评审</td><td class="ok">已过闸/非涉敏豁免</td>'
+                   '<td>freeze 涉敏段触发时强制 secops 评审卡+结论行，缺卡即拦（质量 B①）</td></tr>')
+    elif sec_done:
+        sec_row = ('<tr><td>涉敏安全评审</td><td>进行中/未过（security_review_done=%s）</td>'
+                   '<td>评审未过闸即不放行——fail-closed 语义</td></tr>' % H.escape(sec_done))
+    else:
+        sec_row = ('<tr><td>涉敏安全评审</td><td>⬜ 键缺席</td>'
+                   '<td>非涉敏轮直通不写键属预期；涉敏轮缺席=闸链异常</td></tr>')
+
+    cond_row = ('<tr><td>设计面安全挂账（SECURITY-COND）</td><td>%d 条%s</td>'
+                '<td>代码级问题不判闸 FAIL，逐条挂 COND 随 G5 发布准出复核（V8.17 口径）；GAP:COND 前缀=未解决项</td></tr>'
+                % (len(conds), f'（其中未解决 {len(cond_open)}）' if cond_open else ''))
+    audit_row = ('<tr><td>依赖审计（npm audit 入 testlog）</td><td>%s</td>'
+                 '<td>G3 闸门实测 testlog 含 npm audit/漏洞计数/不可达声明三态之一（质量 B②）</td></tr>'
+                 % ('✅ 全分支达标' if not audit_miss else '⚠ %d 分支缺审计段（记单）' % len(audit_miss)))
+    scan_row = ('<tr><td>密钥泄漏扫描</td><td>机制在位</td>'
+                '<td>每次守门机械扫两仓跟踪文件（secret-scan-gate，命中非白名单即 FAIL）；'
+                '执行面=prelaunch 门禁层，非轮内产物——此处说明机制位置，不冒充轮内扫描结果</td></tr>')
+    extra = ''
+    if sec_issues:
+        extra = ('<tr><td>安全族问题单</td><td>%d 起</td><td>issues.log security 族 ISSUE 实测计数</td></tr>'
+                 % len(sec_issues))
+    return ('<div class="govgrid"><table><tr><th>安全合规项</th><th>本轮实测</th><th>口径</th></tr>'
+            + sec_row + cond_row + audit_row + scan_row + extra + '</table></div>')
 
 def _issue_level(t):
     """问题单级别（报告三要素改造 2026-10-10）：按类型码族派生——闸门族正则与审计器
@@ -3016,8 +3086,10 @@ def _art_truth(text: str, ref: str) -> dict:
     dead = bool(branch) and not _anchor_alive_cached(branch)
     if stale:
         print(f'[truth] 往轮产物冒充本轮交付物：声明轮 {declared} ≠ 本轮 {RUN_ID}', file=sys.stderr)
+        TRUTH_FINDINGS['stale'].append({'declared': declared})
     if dead:
         print(f'[truth] 交付物锚已失效：分支 {branch} 不在远端（不可反查）', file=sys.stderr)
+        TRUTH_FINDINGS['dead_anchor'].append({'branch': branch})
     return {'stale': stale, 'declared': declared, 'dead_anchor': dead, 'anchor_ref': branch}
 
 _ANCHOR_ALIVE_CACHE: dict = {}
@@ -3073,8 +3145,8 @@ def _step_artifact_status(n: int):
     total = len(views)
     bad = 0
     for _name, rel, checks in views:
-        raw, _aref, _asha, truth = _art_resolve(rel)
-        if raw is None or truth.get('stale'):
+        raw, _aref, _asha = _art_resolve(rel)
+        if raw is None:
             bad += 1
             continue
         for _lb, rx in checks:
@@ -3178,7 +3250,7 @@ def artifact_block(n: int) -> str:
                 f'0→1 缺口记档）——不作本轮交付物呈现。</div></div></div></details>')
     pieces = []
     for name, rel, checks in arts:
-        raw, aref, asha, truth = _art_resolve(rel)
+        raw, aref, asha = _art_resolve(rel)
         if raw is None:
             pieces.append(f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
                           f'<span class="art-path">{H.escape(rel or "（无路径）")}</span></div>'
@@ -4215,6 +4287,10 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .hero-stats{{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap}}
 .gov-metrics-line{{margin-top:10px;font-size:13px;color:#5a6b7d;background:#f4f7fa;border-radius:8px;padding:6px 12px;display:inline-block}}
 .gov-metrics-line b{{color:#1f3a5f}}
+.gov-trend{{margin-top:8px;font-size:12.5px;color:#5a6b7d}}
+.gov-trend table{{border-collapse:collapse;margin-top:4px}}
+.gov-trend th,.gov-trend td{{border:1px solid #dde5ed;padding:3px 10px;text-align:left}}
+.gov-trend th{{background:#f4f7fa;color:#1f3a5f}}
 .hstat{{text-align:center}}
 .hstat b{{display:block;font-size:22px;font-weight:800;color:var(--surface)}}
 .hstat span{{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}}
@@ -4346,9 +4422,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-verdict{{font-size:11px;font-weight:700;border-radius:3px;padding:1px 6px;flex-shrink:0}}
 .art-verdict.ok{{background:#dcfce7;color:#15803d}}
 .art-verdict.miss{{background:#fef2f2;color:var(--err)}}
-.art-stale-banner{{margin:4px 0;font-weight:700}}
-.art-item.art-stale{{border-left:3px solid var(--err)}}
-.art-dead-anchor{{color:var(--err);font-weight:700}}
 .art-checks{{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}}
 .art-chk{{font-size:11px;border-radius:3px;padding:1px 6px;background:var(--card);border:1px solid var(--border);color:var(--text)}}
 .art-chk.ok{{color:var(--ok)}}
@@ -4564,6 +4637,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <h3 style="font-size:13px;margin:14px 0 6px">证据五：语义层在工作（本体证据面）</h3>
   {ontology_html()}
 
+  <h3 style="font-size:13px;margin:14px 0 6px">证据六：安全合规（涉敏评审/依赖审计/密钥扫描）</h3>
+  {security_html()}
+
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
   {art_tbl}
@@ -4658,6 +4734,23 @@ def _html_to_text(h):
 import html as html_mod
 (EVID / 'simulation-report.txt').write_text(_html_to_text(html), encoding='utf-8')
 print(f'txt written: {EVID}/simulation-report.txt')
+
+# ── report-truth-findings.json（run20 复盘真值件，2026-10-16）：交付物真值发现与
+#    逐步问题单渲染计数的机器可读侧柜——审计器查14 的断言数据源（禁解析 HTML 猜）。
+#    生成器与审计器不互相 import：侧柜=两模块间的单一事实源通道。 ──
+_truth_sidecar = {
+    'run_id': RUN_ID,
+    'stale_deliverables': TRUTH_FINDINGS['stale'],
+    'dead_anchors': TRUTH_FINDINGS['dead_anchor'],
+    'step_issue_rows': {str(k): v for k, v in sorted(STEP_ISSUE_ROWS.items())},
+    'step_registered_keys': {str(n): (m.get('issue_keys') or [])
+                             for n, m in sorted(STEPS_META.items()) if (m.get('issue_keys') or [])},
+    'unregistered_ledger_keys': _ledger_keys_unreg,
+}
+(EVID / 'report-truth-findings.json').write_text(
+    json.dumps(_truth_sidecar, ensure_ascii=False, indent=1), encoding='utf-8')
+print(f'truth findings written: {EVID}/report-truth-findings.json '
+      f'(stale={len(TRUTH_FINDINGS["stale"])}, dead_anchor={len(TRUTH_FINDINGS["dead_anchor"])})')
 
 # steps-extract.txt：26 步结构化摘录（TITLE/META/STORY/ENTRY/GATE/SHOTS）
 import io

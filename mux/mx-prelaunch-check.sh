@@ -94,5 +94,12 @@ ck "⑮ 运行时树 write_file 无蛇足参数" "test -f '$SR/hermes-agent-src/
 #     豁免通道=resolve（对应 PR 落码合入 main，带 commit 锚）或 waive（用户批准理由）。
 ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-clearance >/dev/null 2>&1" "上一轮存在未清偿代偿：bash mux/mx-compensation-ledger.sh list --status open 看明细；根治合入产品（对应 PR 编号落码）后逐笔 resolve，或经用户批准 waive（带理由）"
 
+# ⑱ 报告真值三件套在位（run20 复盘 fix/run20-report-truth-trio：4 件往轮产物冒充
+#     交付物+13 件死锚+逐步问题单 27 处空渲染，审计四查全过照放）。判据源
+#     report_truth.py 三处共用（生成器渲染/审计器查14/驱动 G3 闸证），守门=模块
+#     可编译+三侧符号在位+守门测试绿——「修复只落一边」=下次生成复发（模板↔产物
+#     双向同步纪律的真值面落地）。
+ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3 -m py_compile '$HERE/mux/report_truth.py' && grep -q 'import report_truth' '$HERE/mux/mx-report-gen.py' && grep -q 'report-truth-findings.json' '$HERE/mux/mx-report-audit.py' && grep -q 'repo_branch_runtag' '$HERE/aipay-scenario.sh' && bash '$HERE/tests/report-truth-anchor.test.sh' >/dev/null 2>&1" "报告真值件缺位：report_truth.py 不可编译/生成器未接判据/审计器未读侧柜/驱动未接闸证轮次检查/守门测试红——按 docs/specs/2026-10-16-run20-report-truth-trio.md 接线后重跑"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十六项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十八项）" || { echo "有红项——修复后再跑"; exit 1; }

@@ -866,6 +866,46 @@ if _po_dir.exists():
     if _dangling:
         fails.append(f'A11 嵌而不存在：报告引用但盘上无文件 {_dangling[:3]}')
 
+# ── 查 14：报告真值三件套（run20 复盘 fix/run20-report-truth-trio，2026-10-16）──
+# 三断言全部 FAIL 级——三者都是「反查承诺失效」类诚信问题，WARN 化即 run20 式静默
+# 放行重演（run20 审计四查全过照放：4 件往轮产物冒充交付物、13 件死锚、逐步问题单
+# 27 处空渲染）。数据源=生成器侧柜 report-truth-findings.json（禁解析 HTML 猜）；
+# 侧柜缺席（旧轮报告/未重生成）=WARN 不 FAIL（历史轮无此义务，防误咬归档轮）。
+_TRUTH_F = EVID / 'report-truth-findings.json'
+if not _TRUTH_F.exists():
+    warns.append('查14 真值侧柜缺席（report-truth-findings.json）——旧轮报告或未重生成；'
+                 '重生成后本查生效（往轮产物/死锚/逐步问题单三断言）')
+else:
+    import json as _json14
+    try:
+        _t14 = _json14.loads(_TRUTH_F.read_text(encoding='utf-8'))
+    except Exception as _e14:
+        fails.append(f'查14 真值侧柜不可解析：{_e14}')
+        _t14 = {}
+    # 14a 往轮产物：文件头声明轮≠本轮（freshness 被合并刷新蒙过的形态）
+    _stale14 = _t14.get('stale_deliverables') or []
+    if _stale14:
+        fails.append(f'查14a 往轮产物冒充本轮交付物 {len(_stale14)} 件（声明轮 '
+                     + '、'.join(sorted({s.get("declared", "?") for s in _stale14}))
+                     + f' ≠ 本轮 {RUN_ID}）——交付物须本轮从零产出，历史轮产物不得引用/恢复/作为完成依据')
+    # 14b 死锚：锚分支不在远端（赛后删分支/游离提交=不可反查）
+    _dead14 = _t14.get('dead_anchors') or []
+    if _dead14:
+        fails.append(f'查14b 交付物锚不可反查 {len(_dead14)} 处（分支 '
+                     + '、'.join(sorted({d.get("branch", "?") for d in _dead14}))
+                     + ' 不在远端）——「双凭证可反查」失效；集成分支须保留至报告持久化后')
+    # 14c 逐步问题单：注册键有台账行而逐步零渲染（run20：27 处空渲染与 139 行 ISSUE 并存）
+    _rows14 = _t14.get('step_issue_rows') or {}
+    _reg14 = _t14.get('step_registered_keys') or {}
+    _zero_with_keys = [n for n, ks in _reg14.items() if ks and (_rows14.get(str(n)) or 0) == 0]
+    if _zero_with_keys:
+        fails.append(f'查14c 逐步问题单空渲染：步 {_zero_with_keys} 注册了 issue_keys 但台账无命中行渲染'
+                     '——要么该步问题单真未触发（核实 issues.log），要么注册键写错（逐步 ③ 段账实不符）')
+    _unreg14 = _t14.get('unregistered_ledger_keys') or []
+    if _unreg14:
+        warns.append(f'查14c 台账键未注册到任何步 {len(_unreg14)} 个（逐步问题单无归属呈现）：'
+                     + '、'.join(_unreg14[:10]) + '——收尾链补注册 STEPS_META issue_keys')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。
