@@ -1,13 +1,13 @@
 // overlay/custom/client/ia2/__tests__/route-whitelist.test.ts
-// 路由白名单守门（补遗⑤ §13.6-2）：用户可达路由集合快照断言——新增可达路由须走补遗⑤评审
+// 路由白名单单测（补遗⑤ §13.6-2）：用户可达路由集合快照断言——新增可达路由须走补遗⑤评审
 //（改本快照=显式变更点）。快照取自 2026-09-29 P9/P10 落地后实况；
-// 2026-09-30 用户裁定变更（两批）：+hermes.settings（设置页收编）；
-// +ANNEXED_LEGACY 全量收编 28 名（双栏根治：侧栏可达 /hermes-* 页同名替换进
-// IaLegacyShell 壳，见 routes.ts ANNEXED_LEGACY 表——收编例外为唯一 hermes.*
-// 来源，未收编的 hermes.browser/ekko.* 等仍归上游，不经本表）。
-// 2026-10-01 上游自用批：+hermes.terminal（Web 终端收编，superadmin）；
+// 2026-09-30 用户裁定变更（两批）：+hermes.settings（设置页并入）；
+// +ANNEXED_LEGACY 全量并入 28 名（双栏根治：侧栏可达 /hermes-* 页同名替换进
+// IaLegacyShell 壳，见 routes.ts ANNEXED_LEGACY 表——并入例外为唯一 hermes.*
+// 来源，未并入的 hermes.browser/ekko.* 等仍归上游，不经本表）。
+// 2026-10-01 上游自用批：+hermes.terminal（Web 终端并入，superadmin）；
 // −hermes.agentManager（features.agentManager 默认关，S3 既定语义补上消费方；
-// vitest 无 VITE_CUSTOM_AGENT_MANAGER → 收编记录默认不进树）。
+// vitest 无 VITE_CUSTOM_AGENT_MANAGER → 并入记录默认不进树）。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { buildIaRoutes } from '../routes'
@@ -63,6 +63,12 @@ const EXPECTED_NAMES = [
   'ia2.dash',
   'ia2.deliveryCases',
   'ia2.eng',
+  'ia2.govAudit',
+  'ia2.govClearance',
+  'ia2.govDocs',
+  'ia2.govIssues',
+  'ia2.govMetrics',
+  'ia2.govOrgAssets',
   'ia2.governance',
   'ia2.groupRoom',
   'ia2.inbox',
@@ -77,24 +83,26 @@ const EXPECTED_NAMES = [
   'ia2.simDelivery',
   'ia2.simEvidence',
   'ia2.simOps',
+  'ia2.simOrchestration',
+  'ia2.simSettings',
   'ia2.simSupervision',
   'ia2.simTrace',
   'ide.shell',
 ]
 
-describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
-  it('路由名账本快照：ia2.* 与 ide.shell + 收编例外 hermes.*（2026-09-30 设置页+ANNEXED_LEGACY 全量进壳）——零其它 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
+describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
+  it('路由名账本快照：ia2.* 与 ide.shell + 并入例外 hermes.*（2026-09-30 设置页+ANNEXED_LEGACY 全量进壳）——零其它 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
     expect([...new Set(named)].sort()).toEqual(EXPECTED_NAMES)
   })
-  it('收编例外全部经 IaLegacyShell（双栏根治守门）：hermes.* 记录零裸视图', () => {
+  it('并入例外全部经 IaLegacyShell（双栏根治单测）：hermes.* 记录零裸视图', () => {
     const hermes = all.filter((r) => typeof r.name === 'string' && r.name.startsWith('hermes.'))
     expect(hermes.length).toBe(29)
     for (const r of hermes) {
-      expect(r.meta?.fullscreen, `${r.name} 收编记录须 fullscreen=true`).toBe(true)
-      expect(String(r.component), `${r.name} 收编记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
+      expect(r.meta?.fullscreen, `${r.name} 并入记录须 fullscreen=true`).toBe(true)
+      expect(String(r.component), `${r.name} 并入记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
     }
     // requiresSuperAdmin 随上游 meta 迁移（守卫语义保真；terminal 为 2026-10-01
-    // 收编新增——上游 /hermes/terminal 本就 requiresSuperAdmin）
+    // 并入新增——上游 /hermes/terminal 本就 requiresSuperAdmin）
     for (const name of ['hermes.terminal', 'hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
       const rec = hermes.find((r) => r.name === name)
       expect(rec?.meta?.requiresSuperAdmin, `${name} 须保留 requiresSuperAdmin`).toBe(true)

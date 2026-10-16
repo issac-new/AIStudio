@@ -32,7 +32,7 @@ import type { Context } from 'koa'
 import Router from '@koa/router'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { gateKeys, ledgerSummary, parseStateEnv, stepKeys } from '../observability/observability-controller'
 
@@ -78,7 +78,7 @@ function gateClosed(ctx: Context): void {
   ctx.body = { error: 'simcenter 未配置（OBS_SIM_ROOT 缺席=fail-closed）' }
 }
 
-/** fetch 带超时（AbortController；超时/网络错误按 fail-soft 抛出由调用方收口）。 */
+/** fetch 带超时（AbortController；超时/网络错误按 fail-soft 抛出由调用方统一处理）。 */
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), timeoutMs)
@@ -145,7 +145,7 @@ router.get('/journal', (ctx: Context) => {
   ctx.body = { run, tail, count: lines.length, skippedBadLines: skipped, lines, source: file }
 })
 
-// ── 3. topology：四服务 /health 探测代理（前端跨域收口） ──
+// ── 3. topology：四服务 /health 探测代理（前端跨域集中代理） ──
 
 /** 四服务默认端点（设计签 3：gateway:8801/studio:8802/synapse:8008/hindsight:8888）。 */
 export const DEFAULT_TOPOLOGY_ENDPOINTS: Record<string, string> = {
@@ -629,6 +629,77 @@ router.get('/issues', (ctx: Context) => {
   if (!file) { ctx.status = 404; ctx.body = { error: `run ${run} 的 issues.log 不存在（run 根与 evidence/ 均缺席）` }; return }
   const { lines, stats } = parseIssuesLog(readCapped(file) ?? '')
   ctx.body = { run, count: lines.length, lines, stats, source: file }
+})
+
+// ── 10. settings：推演引擎参数读写对（B8，设计正本 E28 四区）──
+// 例外声明：simcenter 族以只读聚合为纲，本对是唯一的服务端状态写面（引擎参数
+// 四键，非数据面聚合）；持久化 <home>/runtime/sim-settings.json，受控键集外
+// 一律 400。消费方=推演设置页（/app/sim/settings）与 harness 开轮参数读取。
+
+export interface SimSettings {
+  posture_default?: 'strict' | 'standard' | 'demo'
+  observation_window_seconds?: number
+  clearance_policy?: 'block' | 'warn'
+  approval_escalate_minutes?: number
+}
+
+export const SIM_SETTINGS_DEFAULTS: Required<SimSettings> = {
+  posture_default: 'standard',
+  observation_window_seconds: 1200,
+  clearance_policy: 'block',
+  approval_escalate_minutes: 30,
+}
+
+/** 设置校验（纯函数，测试面）：只认四键，部分更新合法；值域越界=400 语义。 */
+export function validateSimSettings(body: unknown): { ok: true; patch: SimSettings } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return { ok: false, error: '请求体须为对象' }
+  const patch: SimSettings = {}
+  for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
+    switch (k) {
+      case 'posture_default':
+        if (v !== 'strict' && v !== 'standard' && v !== 'demo') return { ok: false, error: 'posture_default ∈ strict|standard|demo' }
+        patch.posture_default = v
+        break
+      case 'observation_window_seconds':
+        if (!Number.isInteger(v) || (v as number) < 30 || (v as number) > 3600) return { ok: false, error: 'observation_window_seconds ∈ 30-3600 整数秒' }
+        patch.observation_window_seconds = v as number
+        break
+      case 'clearance_policy':
+        if (v !== 'block' && v !== 'warn') return { ok: false, error: 'clearance_policy ∈ block|warn（block=未清拒开新轮，机械执法缺省）' }
+        patch.clearance_policy = v
+        break
+      case 'approval_escalate_minutes':
+        if (!Number.isInteger(v) || (v as number) < 5 || (v as number) > 1440) return { ok: false, error: 'approval_escalate_minutes ∈ 5-1440 整数分钟' }
+        patch.approval_escalate_minutes = v as number
+        break
+      default:
+        return { ok: false, error: `未知键 ${k}（只认 posture_default/observation_window_seconds/clearance_policy/approval_escalate_minutes）` }
+    }
+  }
+  return { ok: true, patch }
+}
+
+function simSettingsFile(): string {
+  const home = process.env.HERMES_WEB_UI_HOME || process.env.HOME || '.'
+  return resolve(home, 'runtime', 'sim-settings.json')
+}
+
+function loadSimSettings(): SimSettings {
+  try { return JSON.parse(readFileSync(simSettingsFile(), 'utf-8')) as SimSettings } catch { return {} }
+}
+
+router.get('/settings', (ctx: Context) => {
+  ctx.body = { values: { ...SIM_SETTINGS_DEFAULTS, ...loadSimSettings() }, defaults: SIM_SETTINGS_DEFAULTS }
+})
+
+router.put('/settings', (ctx: Context) => {
+  const v = validateSimSettings(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const merged = { ...loadSimSettings(), ...v.patch }
+  const f = simSettingsFile()
+  mkdirSync(resolve(f, '..'), { recursive: true })
+  writeFileSync(f, JSON.stringify(merged, null, 1), 'utf-8')
+  ctx.body = { values: { ...SIM_SETTINGS_DEFAULTS, ...merged } }
 })
 
 export { router as simcenterRouter }

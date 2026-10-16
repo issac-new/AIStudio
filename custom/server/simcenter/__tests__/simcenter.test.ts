@@ -1,5 +1,5 @@
 /**
- * simcenter 控制器族单测（三中心重构·波 1，X1 配套守门）。
+ * simcenter 控制器族单测（三中心重构·波 1，X1 配套单测）。
  * 覆盖：11 端点 HTTP 面（mkdtemp 临时 SIM_ROOT 夹具，不碰真实卷）——env fail-closed
  * 503（631 同款断言）/run 强校验 400/路径穿越 400/run-state 与 631 同构/只读聚合/
  * 唯一写端点 append；及全部导出纯函数契约（journal 尾解析/拓扑端点/交付物匹配/
@@ -18,7 +18,7 @@ import {
   classifyAnchorId, classifyBranchFresh, DELIVERABLE_PATTERNS, extractAcList, extractCaseResults,
   extractVerdicts, assembleTrace, isValidRun, matchDeliverables, parseForEachRef, parseGraceMs,
   parseIssuesLog, parseJournalTail, parseTopologyEndpoints, safeRunDir, validateEvidenceMark,
-} from '../simcenter-controller'
+  validateSimSettings } from '../simcenter-controller'
 
 // ── HTTP 测试台（真 koa app + 临时 SIM_ROOT；不依赖上游注入树） ──
 import { simcenterRouter } from '../simcenter-controller'
@@ -420,5 +420,28 @@ describe('simcenter HTTP 面', () => {
     expect(r2.body.stats.totalIssue).toBe(1)
     expect((await get('/api/hermes/sim/issues?run=nope')).status).toBe(404)
     expect((await get('/api/hermes/sim/issues?run=..')).status).toBe(400)
+  })
+})
+
+
+// ── B8 推演设置校验（纯函数契约）──
+describe('validateSimSettings — 四键受控校验（B8，E28）', () => {
+  it('合法部分更新通过；四键全改通过', () => {
+    expect(validateSimSettings({ posture_default: 'strict' })).toEqual({ ok: true, patch: { posture_default: 'strict' } })
+    const all = validateSimSettings({
+      posture_default: 'demo', observation_window_seconds: 300,
+      clearance_policy: 'warn', approval_escalate_minutes: 60,
+    })
+    expect(all.ok).toBe(true)
+  })
+  it('值域越界与未知键=400 语义（枚举外/整数界外/未知键/非对象）', () => {
+    expect(validateSimSettings({ posture_default: 'military' }).ok).toBe(false)
+    expect(validateSimSettings({ observation_window_seconds: 10 }).ok).toBe(false)
+    expect(validateSimSettings({ observation_window_seconds: 3601 }).ok).toBe(false)
+    expect(validateSimSettings({ clearance_policy: 'ignore' }).ok).toBe(false)
+    expect(validateSimSettings({ approval_escalate_minutes: 1 }).ok).toBe(false)
+    expect(validateSimSettings({ hacker_key: 1 }).ok).toBe(false)
+    expect(validateSimSettings(null).ok).toBe(false)
+    expect(validateSimSettings([1]).ok).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
-// 治理分区前端守门（2026-10-01 单层页签重构随迁：GovernanceView 退役，
+// 治理分区前端单测（2026-10-01 单层页签重构随迁：GovernanceView 退役，
 // 拆 GovHealthSection（入三账与体检页签）+ 四平级分区视图，断言逐条移植）：
-// ① 路由：ia2.governance 重定向 /app/board?tab=gov-org（入口/旧深链不死链）
+// ① 路由：ia2.governance 重定向 /app/board?tab=gov-org（入口/旧直达链接不死链）
 // ② GovHealthSection：六闸卡（G3 以分支数为证据）+ 六域体检（台账最新判定+运行按钮链）
 // ③ GovDocsReviewView：工件清单（点击渲染 markdown）+ 待裁决评审（decideApproval 链）
 // ④ 四分区视图：板块挂载（组织知识/台账规则/审计变更）
@@ -152,17 +152,21 @@ beforeEach(() => {
 })
 
 describe('治理分区（2026-10-01 单层页签重构）', () => {
-  it('路由 ia2.governance 重定向 /app/board?tab=gov-org（入口不死链）', async () => {
+  it('路由 ia2.governance＝治理中心壳（C1 升格，2026-10-16）：真组件承载+六兄弟签路由在位', async () => {
     const { buildIaRoutes } = await import('@/custom/ia2/routes')
     const routes = buildIaRoutes()
     const flat = JSON.stringify(routes)
     expect(flat).toContain('"ia2.governance"')
     expect(flat).toContain('"gov"')
-    // 退役整页承载：redirect 指向工作项区治理首分区页签
-    const gov = routes.flatMap((r: { children?: unknown[] }) => [r, ...((r.children ?? []) as typeof r[])])
-      .find((r: { name?: string }) => r.name === 'ia2.governance') as { redirect?: () => unknown }
-    expect(typeof gov.redirect).toBe('function')
-    expect(gov.redirect()).toEqual({ name: 'ia2.board', query: { tab: 'gov-org' } })
+    const flatNames = routes.flatMap((r: { children?: unknown[] }) => [r, ...((r.children ?? []) as typeof r[])])
+    const gov = flatNames.find((r: { name?: string }) => r.name === 'ia2.governance') as { component?: unknown; redirect?: unknown }
+    // C1 升格：从重定向变真组件（七签壳）；重定向语义退役
+    expect(typeof gov.redirect).toBe('undefined')
+    expect(gov.component).toBeTruthy()
+    // 六兄弟签路由齐（清偿门签 C2 实装，其余随 C3-C9）
+    for (const n of ['ia2.govOrgAssets', 'ia2.govClearance', 'ia2.govIssues', 'ia2.govAudit', 'ia2.govDocs', 'ia2.govMetrics']) {
+      expect(flatNames.some((r: { name?: string }) => r.name === n)).toBe(true)
+    }
   })
 
   it('GovHealthSection（三账与体检页签）：六闸卡（G3 以分支数为证据）+ 六域体检台账链', async () => {

@@ -1,17 +1,17 @@
 // overlay/custom/client/ia2/routes.ts
 // 驾驶舱路由树（/app/*）—— 2026-09-19 v12 统一视图重构：
 // 双视图（沟通协作 /app 工作台 + IDE /ide 壳），六场景退役为单一「沟通协作」
-// 三栏工作台（工作流导航 | 对象工作区 | 任务与决策）。旧深链迁移表：
+// 三栏工作台（工作流导航 | 对象工作区 | 任务与决策）。旧直达链接迁移表：
 //   /app/ops(/runs/:runId) → /app/runs(/:runId)；/app/tasks → /app/board；
 //   /app/comms(/room/:roomId) → /app(/s/room/:roomId)；/app/collab/* → /app
 //   （collab/session/:id → /app/s/chat/:id；history/global-agent 平移 /app/history、/app/agent）。
-// 名称账本：ia2.overview / ia2.ops / ia2.tasks / ia2.comms 退役（守门断言零残留）；
+// 名称账本：ia2.overview / ia2.ops / ia2.tasks / ia2.comms 退役（白名单断言零残留）；
 // ia2.collabSession 与 ia2.commsRoom 的参数名（sessionId/roomId）原样保留——
-// cockpit 适配器与上游 GlobalPendingActions/KanbanTaskDrawer 的深链零改动。
+// cockpit 适配器与上游 GlobalPendingActions/KanbanTaskDrawer 的直达链接零改动。
 // board/runs/eng 为工作页（不进场景条）：看板 / 全部运行 / 编排。
-// 收编例外（2026-09-30 用户裁定·两批）：设置页 + 侧栏可达的 /hermes-* 功能页
-// 全量收编（ANNEXED_LEGACY 同名替换上游记录，路径不变、上游按名跳零改动；
-// hermes.browser 桌面桥条件注册不收编）。组件统一 IaLegacyShell：页头+注意力
+// 并入例外（2026-09-30 用户裁定·两批）：设置页 + 侧栏可达的 /hermes-* 功能页
+// 全量并入（ANNEXED_LEGACY 同名替换上游记录，路径不变、上游按名跳零改动；
+// hermes.browser 桌面桥条件注册不并入）。组件统一 IaLegacyShell：页头+注意力
 // 条+IaSettingsSidebar（原三侧栏功能面并集）+ 内容区——双栏根治。
 //
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
@@ -46,7 +46,7 @@ export function areaForPath(path: string): IaAreaKey | null {
   return 'collab'
 }
 
-/** 旧深链迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
+/** 旧直达链接迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
 export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
   { from: '/app/ops/runs/:runId', to: '/app/runs/:runId' },
   { from: '/app/ops', to: '/app/runs' },
@@ -63,7 +63,7 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
 ]
 
 /**
- * 收编页记录表（2026-09-30 双栏根治）：同名替换上游 /hermes-* 家族 + 设置页，
+ * 并入页记录表（2026-09-30 双栏根治）：同名替换上游 /hermes-* 家族 + 设置页，
  * 组件统一 IaLegacyShell（视图装载表见其 VIEW_LOADERS，两者按路由名一一对应）。
  * 路径与上游逐字一致（deep link 兼容）；requiresSuperAdmin 随上游路由 meta 迁移。
  * embed=true 附加 standaloneEmbed（2026-09-30 五次反馈：模型/工作流/设备互联页
@@ -83,7 +83,7 @@ const annex = (path: string, name: string, opts: { superAdmin?: boolean; embed?:
 })
 
 export const ANNEXED_LEGACY: RouteRecordRaw[] = [
-  // 设置页（路径沿用收编批已迁的 /app/settings；旧路径重定向见树尾记录）
+  // 设置页（路径沿用并入批已迁的 /app/settings；旧路径重定向见树尾记录）
   annex('/app/settings', 'hermes.settings'),
   // ChatView 族（standaloneEmbed 隐自带会话列；路径不变 → 页内按 path 分派行为不变）
   annex('/hermes/chat', 'hermes.chat', { embed: true }),
@@ -98,7 +98,7 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   ...(features.agentManager
     ? [annex('/studio/agents', 'hermes.agentManager', { superAdmin: true, embed: true })]
     : []),
-  // 群聊（GroupChatView 兜底深链族；自带房间列是该页核心导航，不隐）
+  // 群聊（GroupChatView 兜底直达链接族；自带房间列是该页核心导航，不隐）
   annex('/hermes/group-chat', 'hermes.groupChat'),
   annex('/hermes/group-chat/room/:roomId', 'hermes.groupChatRoom'),
   // 工具页（workflow 收起列表侧栏=patch 526；files 无侧栏）
@@ -122,8 +122,8 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/theme', 'hermes.theme'),
   annex('/hermes/petdex', 'hermes.petdex'),
   annex('/hermes/skills-usage', 'hermes.skillsUsage'),
-  // Web 终端收编（2026-10-01 上游自用批 A1）：上游路由与 superadmin 门控本就
-  // 在线（terminal/mobile-terminal 双 WS），此前零导航入口；收编进壳同域管理
+  // Web 终端并入（2026-10-01 上游自用批 A1）：上游路由与 superadmin 门控本就
+  // 在线（terminal/mobile-terminal 双 WS），此前零导航入口；并入进壳同域管理
   annex('/hermes/terminal', 'hermes.terminal', { superAdmin: true }),
   annex('/hermes/version-preview', 'hermes.versionPreview', { superAdmin: true }),
 ]
@@ -182,7 +182,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           meta: { standaloneEmbed: true },
         },
         {
-          // matrix 房间画布（roomId 参数名与旧 comms 一致，深链免改）
+          // matrix 房间画布（roomId 参数名与旧 comms 一致，直达链接免改）
           path: 's/room/:roomId',
           name: 'ia2.commsRoom',
           component: workbench,
@@ -199,7 +199,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         },
         {
           // V5 补遗⑤ M6（R-C1 用户裁决合一）：循环运行画布并入运行中心详情页，
-          // /app/l 画布入口退役——本路由降为兼容重定向（旧深链/name 落运行列表，
+          // /app/l 画布入口退役——本路由降为兼容重定向（旧直达链接/name 落运行列表，
           // 详情页内嵌 RunCanvas 承接实时画布能力）
           path: 'l/:loopId',
           name: 'ia2.loopCanvas',
@@ -218,12 +218,43 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/InboxView.vue'),
         },
         {
-          // 治理中心独立路由（2026-10-01 单层页签重构退役整页承载）：治理四分区
-          // 升 /app/board 平级页签后，FlowNavPanel 入口与旧深链经重定向不死链
-          // ——落治理首分区「组织与知识」。
+          // 治理中心升格（C1·2026-10-16）：七签壳（关卡与流程/组织与资产/清偿门/
+          // 问题单对账/审计与变更/文档评审/度量体检）；签 3 清偿门 C2 实装。
+          // 旧直达链接 /app/gov 落治理中心默认签（原 board?tab=gov-org 语义由
+          // 签 2 组织与资产承接，board 既有 gov-* 页签保留一版本周期随 C3-C9 迁移）。
           path: 'gov',
           name: 'ia2.governance',
-          redirect: () => ({ name: 'ia2.board', query: { tab: 'gov-org' } }),
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/org-assets',
+          name: 'ia2.govOrgAssets',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/clearance',
+          name: 'ia2.govClearance',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/issues',
+          name: 'ia2.govIssues',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/audit',
+          name: 'ia2.govAudit',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/docs',
+          name: 'ia2.govDocs',
+          component: () => import('./views/gov/GovCenterView.vue'),
+        },
+        {
+          path: 'gov/metrics',
+          name: 'ia2.govMetrics',
+          component: () => import('./views/gov/GovCenterView.vue'),
         },
         {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓
@@ -232,15 +263,15 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/AccountAdminView.vue'),
         },
         {
-          // V5 补遗⑤ S5：/app/eng 页退役（编排编辑器/Teams 管理推演不走 UI——循环
-          // 脚本建、团队脚本装配、组织走治理中心 OrgEditor）；重定向交付案例，
-          // loop 组件库保留（/app/l 详情内嵌与 /app/runs 依赖）
+          // B9（2026-10-16）：/app/eng 重定向编排挂面新家 /app/sim/orchestration
+          // （OrchestrateView 整件迁入，A8+D9）；旧链保留一个版本周期后移除本记录。
+          // V5 旧语义（重定向交付案例）由新家承接。
           path: 'eng',
           name: 'ia2.eng',
-          redirect: () => ({ name: 'ia2.deliveryCases' }),
+          redirect: () => ({ name: 'ia2.simOrchestration' }),
         },
         {
-          // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的深链直达）
+          // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的直达链接直达）
           path: 'cases',
           name: 'ia2.deliveryCases',
           component: () => import('@/custom/matrix-teams/views/DeliveryCasesView.vue'),
@@ -283,6 +314,18 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: simShell,
         },
         {
+          // B8 推演设置（E28 四区引擎参数页，独立页非第七签）
+          path: 'sim/settings',
+          name: 'ia2.simSettings',
+          component: () => import('./views/sim/SimSettingsView.vue'),
+        },
+        {
+          // B9 场景编排挂面（A8+D9，壳层挂面非第七签；OrchestrateView 整件迁入）
+          path: 'sim/orchestration',
+          name: 'ia2.simOrchestration',
+          component: () => import('./views/sim/SimOrchestrationView.vue'),
+        },
+        {
           // 全部运行 → 推演中心（B1，2026-10-16）：RunCenter 整页退役为重定向，
           // 保留一个版本周期（A13 升格=运行列表能力并入推演中心后移除本记录）；
           // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel/inbox-center 等）随
@@ -305,7 +348,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
             ({ path: '/app/sim', query: { run: String(loc.params.runId) } }),
         },
         {
-          // hermes 会话历史 / 全局智能体（隐藏深链面，上游 PageSidebarNav 依赖）
+          // hermes 会话历史 / 全局智能体（隐藏直达链接面，上游 PageSidebarNav 依赖）
           path: 'history',
           name: 'ia2.collabHistory',
           component: () => import('@/views/hermes/HistoryView.vue'),
@@ -328,17 +371,17 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         ...legacy,
       ],
     },
-    // ── 收编页（2026-09-30 用户裁定：双栏根治）──────────────────────────────
+    // ── 并入页（2026-09-30 用户裁定：双栏根治）──────────────────────────────
     // 「左边栏功能点开后右边又出现一个边栏」根因：侧栏可达的 /hermes-* 页仍活在
-    // 上游 App.vue 布局（AppSidebar/HermesConfigSidebar 又挂一层）。收编=同名
-    // addRoute 替换上游记录：路径/路由名不变（上游按名跳与深链零改动），组件
+    // 上游 App.vue 布局（AppSidebar/HermesConfigSidebar 又挂一层）。并入=同名
+    // addRoute 替换上游记录：路径/路由名不变（上游按名跳与直达链接零改动），组件
     // 统一 IaLegacyShell（IaGlobalTop + IaSettingsSidebar + 内容区），meta
     // fullscreen=true 压掉 App.vue 侧栏。权限语义保真：requiresSuperAdmin
-    // 随迁。hermes.browser 不收编（上游桌面桥运行时条件注册，保持桌面专属）。
+    // 随迁。hermes.browser 不并入（上游桌面桥运行时条件注册，保持桌面专属）。
     ...ANNEXED_LEGACY,
     {
-      // 旧深链兜底（收编配套）：/hermes/settings → /app/settings；
-      // 函数式重定向保 query（?tab=display 等 SettingsView 页签深链不丢）。
+      // 旧直达链接兜底（并入配套）：/hermes/settings → /app/settings；
+      // 函数式重定向保 query（?tab=display 等 SettingsView 页签直达链接不丢）。
       path: '/hermes/settings',
       redirect: to => ({ path: '/app/settings', query: to.query }),
     },
