@@ -62,6 +62,11 @@
 |---|---|---|
 | 46 | 闸键-证据耦合（evidence_baseline 基线/G3 缺证显形/G4 存在性×新鲜度双查/G5 评审卡时间窗+finalize 非空 body） | ✅ 有测试锚：repo-has-freshness.test.sh 六例（旧稿拒/本轮稿过/无起点键放行/main 无文件拒/lite 夹具源基线回落/夹具源不可读回落本轮）；源码锚=mx-scenario-lib.sh evidence_baseline 函数+1314-1323 G5 评审卡 created_at 时间窗+1370 finalize 前置 review-record 校验。行为级首验=run18-lite 已按新口径出报告，全量轮首验=run19 在跑 |
 | 47 | 报告引用产物新鲜度与计数实测（QGate 证据包 generated 校验/全景矩阵 fetch+窗口/复盘自指单重取计数） | ⚠️ 有代码锚无机械测试锚（待首验配套，防立法即遗忘）：aipay-scenario.sh:1444-1460（qgate-stale 拒收+清中央仓旧件+新鲜度过才落盘）、mx-report-gen.py:2881-2908（_art_refreshed 先 fetch origin+窗口校验+「在仓·旧版」降级）、aipay-scenario.sh:1927-1928（自指单追加后重取计数）。补断言建议：qgate-stale 件沿 repo-has-freshness 脚手架加时间窗两例 |
+| 70 | 交付物轮次一致性（V8.36，run20 复盘） | ✅ tests/report-truth-anchor.test.sh①（stale 判定 7 用例：run16/run14 稿判陈旧、run20 稿不判、无声明位不判、上轮前缀/头部窗口外不误报）+④（repo_branch_runtag 陈旧/新鲜两态）；报告面=审计器查 14a（侧柜数据源） |
+| 71 | 交付物锚点保留（V8.36） | ✅ tests/report-truth-anchor.test.sh②（分支在=活/无=死/空名=不判/查询异常 fail-open，本地裸仓+clone fixture）；报告面=审计器查 14b |
+| 72 | 逐步问题单注册守门（V8.36） | ✅ 审计器查 14c（侧柜 step_issue_rows×step_registered_keys 对账，零渲染=FAIL）+生成器 stderr 未注册键清单；守门侧=preflight 于 run21 首跑全量验证 |
+| 73 | 净额闸判机械判据（V8.36） | ⚠️ 待首验配套（防立法即遗忘）：判据=approved.events 该闸裁决 actor 非 proxy；补断言建议=mx-report-audit 增查 15（gate 事件 actor 扫描），run21 接线 |
+| 74 | 采集降级上限（V8.36） | ⚠️ 待首验配套：判据=降级步数>必采清单 1/3 → 报告整轮红徽章；补断言建议=审计器对 issues.log frame-capture-failed 族计数与报告徽章对账，run21 接线 |
 
 统计更新（2026-10-13 深夜，V8.24 可读性批同步）：正本现 51 条（编号 1-48 含 25a/b/c）。撞号修复：截图采集十条保持 40（代码注释「纪律 40⑥/⑩」皆指它），全阶段饱和并行顺延为 48（原 V8.16 增列时占用 40）。
 
