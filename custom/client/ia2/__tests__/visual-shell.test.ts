@@ -53,3 +53,25 @@ describe('壳收敛 ia-center-full（V1·视觉重规划 D2）', () => {
     expect(scss.replace(/\s+/g, ' ')).toContain('display: none')
   })
 })
+
+describe('V2 设计语言 token（D4：单一事实源在库）', () => {
+  it('五态色/字阶四级/间距/卡片规范齐全；胶囊容器规则在位', () => {
+    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    for (const tok of ['--ia-fresh', '--ia-stale', '--ia-fail', '--ia-pass', '--ia-compensated',
+      '--ia-fs-page', '--ia-fs-block', '--ia-fs-body', '--ia-fs-aux',
+      '--ia-sp-1', '--ia-sp-4', '--ia-card-border', '--ia-card-radius', '--ia-card-pad']) {
+      expect(scss, tok).toContain(tok)
+    }
+    expect(scss).toContain('.ia-status-capsule')
+  })
+
+  it('SitlineBar：任务+在线两 chip 挂胶囊容器类（收一条释放层级）', async () => {
+    const { default: SitlineBar } = await import('../components/SitlineBar.vue')
+    const w = mount(SitlineBar, {
+      props: { waitingCount: 2, oldestLabel: '', taskTotal: 8, taskByStatus: { todo: 2 }, onlinePeople: 1, onlineAgents: 2, onlineMachines: 1 },
+    })
+    expect(w.find('[data-testid="sitline"]').classes()).toContain('ia-status-capsule')
+    expect(w.findAll('.ia-status-capsule__item')).toHaveLength(2)
+    w.unmount()
+  })
+})

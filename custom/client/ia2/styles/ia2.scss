@@ -55,7 +55,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  // 走查二修（2026-10-16）：页内容在 main 内滚（顶部栏+注意力条壳外钉死，
+  // 走查二修（2026-10-16）：页内容在 main 内滚（顶部栏+注意力条壳外固定，
   // 所有页面上方常驻可见）；壳 overflow:clip 维持（scrollTop 恒 0 语义不变）
   overflow-y: auto;
 }
@@ -514,3 +514,59 @@
 body.ia-center-full .studio-navigation-rail {
   display: none;
 }
+
+/* ── V2 设计语言基座（2026-10-16 视觉重规划 D4）──
+ * 三中心视觉 token 单一事实源（overlay 域内；与上游 CSS 变量共存不覆盖——
+ * 语义状态色与字阶/间距/卡片规范全部经此前散件同值反推成表）。
+ * 状态色五态（总设计定稿 §七 ②）：fresh/stale/fail/pass/compensated。 */
+:root {
+  /* 状态色（语义态，不与主题色混用） */
+  --ia-fresh: #2e9e5b;
+  --ia-stale: #c9962e;
+  --ia-fail: #d33;
+  --ia-pass: #1d6b40;
+  --ia-compensated: #9a6ac9;
+  /* 字阶四级（页题/区块题/正文/辅助） */
+  --ia-fs-page: 15px;
+  --ia-fs-block: 13px;
+  --ia-fs-body: 12px;
+  --ia-fs-aux: 11px;
+  /* 间距节奏（4 的倍数） */
+  --ia-sp-1: 4px;
+  --ia-sp-2: 8px;
+  --ia-sp-3: 12px;
+  --ia-sp-4: 16px;
+  /* 卡片规范（边框+圆角+内距，统一散件手感） */
+  --ia-card-border: var(--border-color, #e5e7eb);
+  --ia-card-radius: 6px;
+  --ia-card-pad: 12px;
+}
+
+/* 顶栏状态胶囊（D5）：任务/在线/日程三个徽章收一条——释放视觉层级给三中心导航 */
+.ia-status-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ia-sp-2);
+  padding: 2px 10px;
+  border: 1px solid var(--ia-card-border);
+  border-radius: var(--ia-card-radius);
+  font-size: var(--ia-fs-body);
+  background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.06)));
+}
+.ia-status-capsule__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ia-sp-1);
+  white-space: nowrap;
+  color: var(--text-primary, inherit);
+}
+.ia-status-capsule__item + .ia-status-capsule__item {
+  padding-left: var(--ia-sp-2);
+  border-left: 1px solid var(--ia-card-border);
+}
+.ia-status-capsule__dot {
+  font-size: 10px;
+  line-height: 1;
+}
+.ia-status-capsule__dot--busy { color: var(--ia-stale); }
+.ia-status-capsule__dot--ok { color: var(--ia-fresh); }
