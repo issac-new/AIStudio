@@ -814,8 +814,14 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
           dispatch_in_room fanfan "@fanfan-agent:matrix.test 安全评审 FAIL 退回：评审卡 ${SGID} result 已判 FAIL（缺项清单见卡）。请组织修订概设 docs/design/${RFD_ID}-architecture-design.md 对应缺项，修订 push origin main 后 @secops-agent 复审；复审 SECURITY-GATE-PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
         fi
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 安全评审")" == "PASS" ]]; then
-          kanban_walk_done secops "$SGID"; sset security_review_done 1
-          note "[安全] 涉敏安全评审通过（secops 板 ${SGID} → done）——G2 放行前置满足"
+if [ "$(posture)" = "strict" ]; then
+            echo "ISSUE|walk-done-strict|secops|安全评审卡 ${SGID} strict 姿态不代走 done（待收紧面：等 secops 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
+            note "[姿态] strict：secops 卡 ${SGID} 不代走 done——记单（security_review_done 仍置：判词真值在房，卡面归组织）"
+            sset security_review_done 1
+          else
+            kanban_walk_done secops "$SGID"; sset security_review_done 1
+            note "[安全] 涉敏安全评审通过（secops 板 ${SGID} → done）——G2 放行前置满足"
+          fi
         else
           # FAIL→复审改判等待环（run15 根治）：原实现 FAIL 即 fail 退出，靠监督器 40min
           # 一轮的重启循环等复审——改判词到达前驱动空转。改：FAIL 记单后原地等待末判词
@@ -1016,9 +1022,15 @@ for a in last.get("anomalies", []):
   if wait_truth "G2 结论（房间行或评审卡 body，双源）" ${MX_G2_WAIT:-600} mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
     # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
-      kanban_walk_done arch "$AGID"
-      sset_once g2_arch_pass "$(date +%s)"
-      note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
+if [ "$(posture)" = "strict" ]; then
+        echo "ISSUE|walk-done-strict|arch|评审卡 ${AGID} strict 姿态不代走 done（待收紧面：等 arch 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
+        note "[姿态] strict：arch 卡 ${AGID} 不代走 done——记单（闸键仍置：判词真值在房）"
+        sset_once g2_arch_pass "$(date +%s)"
+      else
+        kanban_walk_done arch "$AGID"
+        sset_once g2_arch_pass "$(date +%s)"
+        note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
+      fi
       # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
     else
@@ -1027,7 +1039,12 @@ for a in last.get("anomalies", []):
       G2_RETRY_TS=$(( $(date +%s) * 1000 ))
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
       if wait_truth "修订后 ARCH-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_RETRY_TS" arch "${RFD_ID} 架构治理评审"; then
-        kanban_walk_done arch "$AGID"; sset_once g2_arch_pass "$(date +%s)"
+if [ "$(posture)" = "strict" ]; then
+          echo "ISSUE|walk-done-strict|arch|复审卡 ${AGID} strict 姿态不代走 done（等 arch 自走）" >> "$EVID_DIR/issues.log"
+          sset_once g2_arch_pass "$(date +%s)"
+        else
+          kanban_walk_done arch "$AGID"; sset_once g2_arch_pass "$(date +%s)"
+        fi
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
         # V8.28 用户 21:02 裁定：两轮未过闸不放行不授控。记单留痕，闸键不落——
@@ -1835,8 +1852,14 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       sset_once g5_supplement 1
       note "[G5] 补过口径：评审卡 body 存在 GAP/TODO 分节残留（边评边补后过）——治理报告计「补过」不计首过"
     fi
-    kanban_walk_done fanfan "$RGID"
-    sset_once g5_ready "$(date +%s)"
+if [ "$(posture)" = "strict" ]; then
+      echo "ISSUE|walk-done-strict|fanfan|G5 评审卡 ${RGID} strict 姿态不代走 done（待收紧面：等 fanfan 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
+      note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——记单（闸键仍置：判词真值在房）"
+      sset_once g5_ready "$(date +%s)"
+    else
+      kanban_walk_done fanfan "$RGID"
+      sset_once g5_ready "$(date +%s)"
+    fi
     # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
     # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
     echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"

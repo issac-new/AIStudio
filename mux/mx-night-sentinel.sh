@@ -19,7 +19,7 @@
 set -u
 LC_ALL=C
 
-SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 # run20 18:2x 实锤：调用方传 --run <RUN_ID> 被无参解析静默忽略，RUN_ID 落到
 # current-state.env 链接 basename（=「state.env」），夜哨全程盯错轮全盲。根治=显式
 # 解析 --run（显式参数 > 环境 > 链接推断三级回退）。

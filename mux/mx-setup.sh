@@ -1,7 +1,7 @@
 #!/bin/bash
 # mx-setup.sh — 单 gateway 多路复用拓扑一次性幂等准备（方案 V2.0 §4 P0-4）
 #
-# 产出（SIM_ROOT=/Volumes/nvme2230/lab/ncwk-sim-mux）：
+# 产出（SIM_ROOT=/Users/cuishi/lab/ncwk-sim-mux）：
 #   24 matrix 账号 + 单 hermes root + 12 Orchestrator profile + 22 研发专职 agent profile
 #   + 每账号 2 块独立 kanban（board.json 挂 team 围栏）+ fleet-manifest + 技能同构副本
 # 幂等：账号/板按存在性跳过；配置/manifest 每次重生成（模板同步，漂移自动收敛）。

@@ -13,7 +13,7 @@
 #   state*/cron）、服务器房间数=0（admin rooms 复核）、中央仓远端 main 九目录零文件且仅剩
 #   main 分支；--reset-memory 加验：模拟 bank 按 14 精确 ID 各表计数=0；可反复跑。
 set -euo pipefail
-SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0; RESET_WORKSPACES=0; RESET_MEMORY=0
 for a in "$@"; do
   case "$a" in

@@ -17,7 +17,7 @@ from pathlib import Path
 
 # SIM_ROOT 解析与 mx-lib.sh 同约：AIPAY_SIM_ROOT 覆盖优先（门禁测试 fixture 隔离用），
 # 缺省 NVMe 卷路径。
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Volumes/nvme2230/lab/ncwk-sim-mux')
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-mux')
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--run', required=True)

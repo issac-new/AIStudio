@@ -8,7 +8,7 @@
 
 - macOS + bash 3.2 兼容（驱动内 `LC_ALL=C` 已焊死，勿改）
 - python3、node（playwright 走系统 Chrome，channel:'chrome' 免下载缓存）
-- 推演执行面 SIM_ROOT 挂载在 `/Volumes/nvme2230/lab/ncwk-sim-mux`（运行态、runs/、creds/ 都在那里，不写宿主 `~/.hermes`）
+- 推演执行面 SIM_ROOT 挂载在 `/Users/cuishi/lab/ncwk-sim-mux`（运行态、runs/、creds/ 都在那里，不写宿主 `~/.hermes`）
 
 ## 快速上手
 

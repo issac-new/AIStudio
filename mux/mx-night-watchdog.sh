@@ -4,7 +4,7 @@
 # （驱动重启/网关重拉/防睡/磁盘报警）。智能判断（球位/判词）仍归智能监督，
 # 本脚本只兜「会话死→机械层也停」的最坏形态（01:30-07:49 实录）。
 set -uo pipefail
-SIM=/Volumes/nvme2230/lab/ncwk-sim-mux
+SIM=/Users/cuishi/lab/ncwk-sim-mux
 LOG=$SIM/logs/run20-night-watchdog.log
 ts(){ date '+%F %T'; }
 # run20 09:5x 假阳实录修：原判 run20-monitor-*.log（monitor-loop 日志）——monitor-loop

@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 
-const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Volumes/nvme2230/lab/ncwk-sim-mux';
+const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Users/cuishi/lab/ncwk-sim-mux';
 const DB = join(SIM_ROOT, 'webui', 'hermes-web-ui.db');
 const HB = process.env.HERMES_BIN || join(homedir(), '.hermes/hermes-agent/venv/bin/hermes');
 

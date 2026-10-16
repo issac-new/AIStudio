@@ -18,7 +18,7 @@
 set -u
 LC_ALL=C
 
-SIM_ROOT="${SIM_ROOT:-${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}}"
+SIM_ROOT="${SIM_ROOT:-${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}}"
 RUN_ID_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in

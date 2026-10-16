@@ -25,7 +25,7 @@ from pathlib import Path
 # mx-report-gen.py 同一解析链）：本件部署位在仓内 mux/ 下，__file__ 上溯三级得到
 # 的是仓父目录（~/lab/ncwk），与真 SIM 根恒不相等——缺省目标不存在时 sanitize
 # 静默返回 -1、rc=0，防线空转（run16 崩溃环根治件形同虚设）。
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 
 
 def sanitize(f: Path) -> int:

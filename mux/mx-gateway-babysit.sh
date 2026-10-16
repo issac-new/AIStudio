@@ -16,7 +16,7 @@
 # 用法：bash mx-gateway-babysit.sh  （前台常驻；nohup 由调用方决定）
 set -uo pipefail
 
-SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 source "$(cd "$(dirname "$0")" && pwd)/mx-platform.sh"   # 独立进程：跨平台原语显式挂载
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8801/health}"
 GRACE="${GRACE:-120}"        # 启动宽限秒数（高负载机器上冷启动可超 60s）

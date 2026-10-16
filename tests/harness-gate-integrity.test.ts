@@ -246,12 +246,12 @@ describe('⑥ 报告路由（H7：无 RUN_ID 落全局目录出旧轮假报告�
     const root = sandbox()
     const out = printPaths('', { MX_EVID_DIR: root })
     expect(out).toContain(`OUT=${join(root, 'simulation-report.html')}`)
-    expect(out).toContain('STATE=/Volumes/nvme2230/lab/ncwk-sim-mux/state.env')
+    expect(out).toContain('STATE=/Users/cuishi/lab/ncwk-sim-mux/state.env')
   })
 
   it('无 RUN_ID 缺省回落 SIM 全局（V3 兼容）但可被 --run 纠正', () => {
     const out = printPaths('')
-    expect(out).toContain('OUT=/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/simulation-report.html')
+    expect(out).toContain('OUT=/Users/cuishi/lab/ncwk-sim-mux/evidence/simulation-report.html')
   })
 })
 

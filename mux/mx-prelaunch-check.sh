@@ -4,7 +4,7 @@
 set -u
 LC_ALL=C
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-SR="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SR="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 source "$HERE/mux/mx-platform.sh"   # 独立进程：pgrep/sqlite 走平台层（Git Bash 兼容）
 PASS=0; FAIL=0
 ck() { # <名> <命令串> <失败指引>

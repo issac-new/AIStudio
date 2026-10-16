@@ -269,7 +269,7 @@ def render_narrative(state: dict, evid: Path) -> str:
 if __name__ == '__main__':
     # 自检：对当前 evidence 直接渲染一次，输出到 stdout 供人工核稿
     import sys
-    sim = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
+    sim = Path('/Users/cuishi/lab/ncwk-sim-mux')
     st = {}
     se = sim / 'state.env'
     if se.exists():

@@ -4,8 +4,8 @@ import { chromium } from 'playwright'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-const RENDER_DIR = '/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/_render'
-const OUT_DIR = '/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/steps'
+const RENDER_DIR = '/Users/cuishi/lab/ncwk-sim-mux/evidence/screenshots/_render'
+const OUT_DIR = '/Users/cuishi/lab/ncwk-sim-mux/evidence/screenshots/steps'
 
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
 const page = await browser.newPage({ viewport: { width: 1140, height: 1200 } })

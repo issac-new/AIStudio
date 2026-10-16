@@ -5,7 +5,7 @@
 # → mx-up 幂等复活 → 记 issues.log。与 15min 自动化步骤 9/mx-up 自愈段共存（幂等不互斥）。
 # 停止：touch $SIM_ROOT/var/gateway-nanny.stop（run20 收官后停用）。
 export LC_ALL=C
-SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 PIDF="$SIM_ROOT/pids/gateway.pid"
 STOP="$SIM_ROOT/var/gateway-nanny.stop"
 FORE="$SIM_ROOT/logs/gateway-nanny.log"

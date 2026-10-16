@@ -5,7 +5,18 @@
 #   不使用 --force / --replace；与真机 orchestrator(:8650) 共存靠 HERMES_GATEWAY_LOCK_DIR 隔离锁目录。
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# ── 维护锁（2026-10-16 外置盘迁移加）──────────────────────
+# 必须置于 source mx-lib.sh 之前:mx-lib 在 source 时就有副作用(deploy/自愈),
+# 锁放后面挡不住任何东西。锁文件放 ~/.mx-maintenance-lock:~/.hermes 内会被
+# 外部清理逻辑删掉(20:37 实测,导致 20:47 服务被拉起回旧路径)。
+# 存在锁文件时静默跳过:迁移/维护窗口内外部重试不会把服务拉起/撕裂数据。
+if [ -f "$HOME/.mx-maintenance-lock" ]; then
+  echo "mx-up: maintenance lock present ($HOME/.mx-maintenance-lock), skip"
+  exit 0
+fi
+
 source "$SCRIPT_DIR/mx-lib.sh"
+
 
 # ── 运行面自愈（533/534 长效化：自更新擦除后每次 mx-up 收敛恢复）──────
 # 自更新会 git 清洗源码树——manifest 文件与 git-applied 补丁一并被擦（run5/6/7 三次实录，

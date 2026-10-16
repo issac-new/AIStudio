@@ -6,7 +6,7 @@ boardless `kanban list`，sim CLI 无板形态是状态相关空态——垫片�
 import json, os, stat, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
-REAL = "/Volumes/nvme2230/lab/ncwk-sim-mux/bin/hermes-sim"
+REAL = "/Users/cuishi/lab/ncwk-sim-mux/bin/hermes-sim"
 CACHE = "/tmp/hermes-shim-cache." + str(os.getuid())
 
 def run(args):

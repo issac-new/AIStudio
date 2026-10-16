@@ -23,7 +23,7 @@ import report_truth  # 报告真值三件套（run20 复盘根治：往轮产物
 
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
 # 亦支持隔离树回归测试（写死路径使归档态 run6 无法离线回归）。
-SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Volumes/nvme2230/lab/ncwk-sim-mux'))
+SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 # RUN_ID 参数化（V4-run1 起）：MX_RUN_ID=<id> 或 --run <id> → state/evidence/出报告
 # 全部指向 runs/<id>/；缺省回落 SIM 根（V3 兼容）。生成终版报告必须带本轮
 # RUN_ID，否则会拿旧轮 state 出「状态真实」的假报告（run2 05:15 实锤：无参调用
