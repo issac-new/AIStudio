@@ -2398,9 +2398,9 @@ def security_html():
     三件套逐件实测呈现（缺数据=如实缺席，禁粉饰）：
       ①涉敏需求安全评审——state.env security_review_done（1=过闸/非涉敏豁免）；
         SECURITY-COND 条目从 issues.log 实测计数（设计面挂账项，随 G5 逐条复核）。
-      ②依赖审计（npm audit）——G3 闸门实测 g3-npm-audit-missing 记单计数
+      ②依赖审计（npm audit）——G3 闸门实测 g3-npm-audit-missing 问题单计数
         （派发词要求→闸门强制的升级，run20 实测零拦截的根治）。
-      ③密钥泄漏扫描——机制在位声明（每次守门机械扫 simharness+overlay 两仓，
+      ③密钥泄漏扫描——机制在位声明（每次门禁机械扫 simharness+overlay 两仓，
         tests/secret-scan-gate.test.sh；轮次级执行面=prelaunch ①，非轮内产物，
         此处如实说明机制位置不冒充轮内结果）。"""
     sec_done = state.get('security_review_done', '')
@@ -3145,8 +3145,8 @@ def _step_artifact_status(n: int):
     total = len(views)
     bad = 0
     for _name, rel, checks in views:
-        raw, _aref, _asha = _art_resolve(rel)
-        if raw is None:
+        raw, _aref, _asha, truth = _art_resolve(rel)
+        if raw is None or truth.get('stale'):
             bad += 1
             continue
         for _lb, rx in checks:
@@ -3250,7 +3250,7 @@ def artifact_block(n: int) -> str:
                 f'0→1 缺口记档）——不作本轮交付物呈现。</div></div></div></details>')
     pieces = []
     for name, rel, checks in arts:
-        raw, aref, asha = _art_resolve(rel)
+        raw, aref, asha, truth = _art_resolve(rel)
         if raw is None:
             pieces.append(f'<div class="art-item"><div class="art-hd"><b>{H.escape(name)}</b>'
                           f'<span class="art-path">{H.escape(rel or "（无路径）")}</span></div>'
