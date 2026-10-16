@@ -813,17 +813,17 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     const { wrapper } = await mountNav('/app')
     const bar = wrapper.find('[data-testid="ia-nav-centers"]')
     expect(bar.exists()).toBe(true)
-    const labels = bar.findAll('.icn__center-btn').map(x => x.text())
+    const labels = bar.findAll('.icn-inline__center-btn').map(x => x.text())
     expect(labels).toEqual(['工作台', '推演中心', '治理中心'])
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('icn__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
     const { wrapper } = await mountNav('/app/sim')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('icn__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('icn__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
@@ -836,12 +836,16 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     expect(router.currentRoute.value.name).toBe('ia2.governance')
   })
 
-  it('岛屿入口组右侧收纳：默认开（ide/bpa/ontology/skillgov）在位、默认关（eval）不在；点击落既有路由', async () => {
-    const { wrapper, router } = await mountNav('/app')
+  it('岛屿组（islands part）：默认开（bpa/ontology/skillgov）在位、默认关（eval）不在；IDE 岛去重让位视图切换器；点击落既有路由', async () => {
+    const router = makeNavRouter()
+    await router.push('/app')
+    await router.isReady()
+    const wrapper = mount(IaCentersNav, { props: { part: 'islands' }, global: { plugins: [router] } })
+    await flushPromises()
     const islands = wrapper.find('[data-testid="ia-nav-islands"]')
     expect(islands.exists()).toBe(true)
-    // config/features.ts 默认值：eval 关（VITE_CUSTOM_EVAL 才开），其余四件默认开
-    expect(wrapper.find('[data-testid="ia-nav-island-ide"]').exists()).toBe(true)
+    // 走查二修去重：IDE 岛退役（IDE 入口=IaViewSwitcher）；config/features.ts 默认 eval 关
+    expect(wrapper.find('[data-testid="ia-nav-island-ide"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ia-nav-island-bpa"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ia-nav-island-ontology"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ia-nav-island-skillgov"]').exists()).toBe(true)
@@ -851,14 +855,10 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     expect(router.currentRoute.value.name).toBe('ia2.ontology')
   })
 
-  it('[设置] 入口在位落 hermes.settings；镜头切换器不渲染（Phase D 已随需求 §六 Q1 解体取消）', async () => {
-    const { wrapper, router } = await mountNav('/app')
+  it('[设置] 钮走查二修去重退役（设置入口=用户钮 ia-header-user，见 IaShellHeader）；镜头切换器不渲染', async () => {
+    const { wrapper } = await mountNav('/app')
     const settings = wrapper.find('[data-testid="ia-nav-settings"]')
-    expect(settings.exists()).toBe(true)
-    expect(settings.text()).toBe('设置')
-    await settings.trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('hermes.settings')
+    expect(settings.exists()).toBe(false)
     // 镜头位为空槽：无任何镜头控件渲染（设计原文「Phase D 装」作废）
     expect(wrapper.find('[data-testid="ia-nav-lens"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ia-nav-centers"]').text()).not.toContain('镜头')
