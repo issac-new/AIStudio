@@ -38,11 +38,17 @@ export function gateKeys(state: Record<string, string>): Record<string, string> 
 }
 
 /** 完成标记筛选（纯函数）：*_done/*_pass/*_verified，排除闸键族。 */
+// §3.3 完成键中不带 done/pass/verified 后缀的两键（步 8 room_analysis／步 9 dispatch_marker）
+// ——2026-10-16 B2 轮次总览消费发现：后缀正则筛不到致步 8/9 在 run-state steps 里不可见。
+// 加法扩展：仅当键在 state 中实际存在时纳入，缺席不造键。
+const EXTRA_STEP_KEYS = ['room_analysis', 'dispatch_marker']
+
 export function stepKeys(state: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(state)) {
     if (/^[a-z0-9_]+_(done|pass|verified)$/.test(k) && !/^(security_|g[1-6])/.test(k)) out[k] = v
   }
+  for (const k of EXTRA_STEP_KEYS) if (k in state) out[k] = state[k]!
   return out
 }
 

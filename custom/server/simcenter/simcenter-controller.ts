@@ -253,9 +253,11 @@ export const DELIVERABLE_PATTERNS: DeliverablePattern[] = [
   { key: 'work-report', label: '台账', pattern: /工作台账|台账|work-?report/i },
   { key: 'audit', label: '审计书', pattern: /审计|audit/i },
   { key: 'retrospective', label: '复盘', pattern: /复盘|retro/i },
+  // 第 14 件：完备性检查（2026-10-16 勘误 13→14，方案 §1.3 文档链 L230）
+  { key: 'completeness', label: '完备性检查', pattern: /完备性|completeness/i },
 ]
 
-/** 交付物匹配（纯函数）：对 evidence/ 文件名列表逐一匹配 13 类，每类出
+/** 交付物匹配（纯函数）：对 evidence/ 文件名列表逐一匹配 14 类，每类出
  * name/label/status(present|absent)/file 锚（多命中取字典序首个，确定性）。 */
 export function matchDeliverables(files: string[]): Array<{ name: string; label: string; status: 'present' | 'absent'; file: string | null }> {
   const sorted = [...files].sort()
