@@ -46,7 +46,7 @@ export interface InspectorDeps {
   /** kanban 诊断注入（控制器接 kanban-service；缺省=该面 not wired） */
   getKanbanDiagnostics?: () => Promise<Array<Record<string, unknown>>>
   /** safe-act 注入：matrix 跟进提醒（缺省经 readGatewayMatrixEnv 凭据链裸发；测试可stub） */
-  nudge?: (profile: string, summary: string) => Promise<string | undefined>
+  nudge?: (profile: string, summary: string, body?: string) => Promise<string | undefined>
   /** destructive 注入：审批放行后的网关重启（缺省动态 require autostart.restartGatewayForProfile；测试可stub） */
   restartGateway?: (profile: string) => Promise<unknown>
   /** 审批队列目录注入（destructive 请求/裁决文件面；缺省 ~/.hermes/approvals） */
@@ -158,7 +158,7 @@ export class ClusterInspector {
     // 2026-10-11 默认开（用户指令；run14 六小时停摆实录：能力在而默认关=形同没有）。
     // CLUSTER_INSPECTOR_NUDGE=off 显式关；未配 ROOM 时静默跳过（安全缺省）。
     if (process.env.CLUSTER_INSPECTOR_NUDGE === 'off' || !process.env.CLUSTER_INSPECTOR_NUDGE_ROOM) return acted
-    const nudge = this.deps.nudge ?? (async (profile: string, summary: string) => {
+    const nudge = this.deps.nudge ?? (async (profile: string, summary: string, customBody?: string) => {
       try {
         const { readGatewayMatrixEnv } = require('../matrix/gateway-env')
         const { matrixSend } = require('../matrix/chat-bridge')
@@ -171,7 +171,7 @@ export class ClusterInspector {
         // 近期推送的分支+还差合并/结论」——干完活不收尾形态的带情报提醒催单。）
         const { probeBranchIntel } = require('./collectors') as typeof import('./collectors')
         const intel = probeBranchIntel(profile)
-        const body = `⏰ 集群巡检提醒催单（真做静默）：${summary}。${intel}请收尾：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
+        const body = customBody ?? `⏰ 集群巡检提醒催单（真做静默）：${summary}。${intel}请收尾：①完成在办卡的剩余工作（交付物/结果落盘并 push）；②把在办卡推进到 done 或回执当前卡的实际缺口；③若被阻塞，回执阻塞原因。注意：仅回话不动手不清静默账，下轮巡检将持续跟进。`
         await matrixSend(sendEnv, process.env.CLUSTER_INSPECTOR_NUDGE_ROOM!, 'm.room.message',
           { msgtype: 'm.text', body, 'm.mentions': { user_ids: [agentEnv.userId] } },
           globalThis.fetch.bind(globalThis), `ci-${Date.now()}`)
@@ -186,10 +186,11 @@ export class ClusterInspector {
         && a.detector !== 'delivery.anchor-missing' && a.detector !== 'delivery.branch-stale'
         && a.detector !== 'idle.with-work' && a.detector !== 'card.blocked-stale'
         && a.detector !== 'work.expected-silent'   // run20 期望对账：群消息派活形态唯一可见锚
-        && a.detector !== 'delivery.pushed') continue  // V8.33 持续集成：未推分支催 push
+        && a.detector !== 'delivery.pushed'         // V8.33 持续集成：未推分支催 push
+        && a.detector !== 'session.starved') continue  // run20 复盘 D6：饥饿换会话令（专属文案，见下）
       const profile = (a.detail as { assignee?: string; profile?: string } | undefined)?.assignee?.trim()
         || (a.detail as { profile?: string } | undefined)?.profile?.trim()
-        || a.subject.replace(/^profile:/, '').replace(/^branch:/, '')
+        || a.subject.replace(/^profile:/, '').replace(/^branch:/, '').replace(/^session:/, '').replace(/@.*$/, '')
       // 降级先于熔断判（负责人有活跃熵增风险时不喂新活——领卡督办抑制；此语义
       // 优先于 idle.with-work 自身指纹的熔断，动作记 nudge-degrade 更可读）
       if (a.detector === 'idle.with-work' && degraded.has(profile)) {
@@ -229,8 +230,14 @@ export class ClusterInspector {
         // 首次提醒催单：登记
         this.nudgedProfiles.set(profile, { firstNudgeAt: Date.now(), nudgeCount: 1, lastRealWorkTsMs: rwNow })
       }
-      const r = await nudge(profile, a.summary)
-      acted.push(`${profile}:${r ? 'nudged' : 'nudge-failed'}`)
+      // 会话饥饿专属令（run20 复盘 D6）：通用收尾三步对饥饿是错误处方——
+      // 空转×高上下文再催也没用，处方=换会话+显式命令清单（run20 wei 形态
+      // 人工令的产品化：in 涨 out≤8token 连续 4 轮，人工换会话令救场）。
+      const starvedBody = a.detector === 'session.starved'
+        ? `🔄 换会话令（会话饥饿）：${a.summary}。请立即换新会话接续：新会话第一条消息只带「①当前卡号与剩余步骤 ②交接基线（commit/分支） ③下一条要执行的显式命令」三行，然后逐步执行显式命令清单（每条一行、做完回执）。本会话禁止再等待重试。`
+        : undefined
+      const r = await nudge(profile, a.summary, starvedBody)
+      acted.push(`${profile}:${r ? (a.detector === 'session.starved' ? 'rotate-order-sent' : 'nudged') : 'nudge-failed'}`)
     }
     return acted
   }

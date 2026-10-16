@@ -15,7 +15,7 @@
     "prebuild": "node scripts/ensure-injected.mjs",
     "dev": "cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --config vite.config.overlay.ts --port 8649 --strictPort",
     "dev:lan": "cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --config vite.config.overlay.ts --host --port 8649 --strictPort",
-    "//dev:lan": "多实例演练用：--host 全网卡监听。devAutoLogin（registries/client/entry.mts）会以 admin/123456 免密换 JWT，同网段任意设备访问 :8649 即得 super_admin 会话——仅限可信局域网；日常开发用 npm run dev（只绑 localhost）",
+    "//dev:lan": "多实例演练用：--host 全网卡监听。devAutoLogin（registries/client/entry.mts）以 admin/dev-bootstrap 免密换 JWT（安全轮 M8b 起空库引导须服务端显式 HERMES_WEB_UI_DEV_BOOTSTRAP=1，出厂默认口令已移除），同网段任意设备访问 :8649 即得 super_admin 会话——仅限可信局域网；日常开发用 npm run dev（只绑 localhost）",
     "predev": "node scripts/ensure-injected.mjs",
     "test": "vitest run",
     "test:eval": "vitest run custom/server/eval/__tests__/eval-regression.test.ts",

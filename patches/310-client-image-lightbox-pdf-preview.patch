@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
-index 2505dfe2d..e6e162224 100644
+index 71a700e2..96e99e9a 100644
 --- a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 +++ b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
 @@ -1,17 +1,89 @@
@@ -135,7 +135,7 @@ index 2505dfe2d..e6e162224 100644
  .image-preview-img {
 @@ -52,5 +142,57 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
    object-fit: contain;
-   border-radius: 6px;
+   border-radius: var(--radius-component, 6px);
    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 +  transition: transform 0.12s ease;
 +  user-select: none;
@@ -192,10 +192,9 @@ index 2505dfe2d..e6e162224 100644
  }
  </style>
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index ab94da2ad..7611fe0aa 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
-@@ -231,6 +231,45 @@ function getContentFileUrl(file: DisplayContentFile): string {
+@@ -231,6 +231,44 @@
  const toolExpanded = ref(false);
  const expandedWorkspaceChangeIds = ref(new Set<string>());
  const previewUrl = ref<string | null>(null);
@@ -237,11 +236,10 @@ index ab94da2ad..7611fe0aa 100644
 +  pdfPreviewUrl.value = url;
 +  pdfPreviewName.value = name;
 +}
-+
  const selectedToolChangeFileId = ref<number | null>(null);
  
  const chatStore = useChatStore();
-@@ -1069,7 +1108,7 @@ onBeforeUnmount(() => {
+@@ -1069,7 +1107,7 @@
                      :src="att.url"
                      :alt="att.name"
                      class="msg-attachment-thumb"
@@ -250,7 +248,7 @@ index ab94da2ad..7611fe0aa 100644
                    />
                  </template>
                  <template v-else-if="message.role === 'user' && isVideo(att.type, att.name) && att.url">
-@@ -1086,7 +1125,7 @@ onBeforeUnmount(() => {
+@@ -1086,7 +1124,7 @@
                    </div>
                  </template>
                  <template v-else>
@@ -259,7 +257,7 @@ index ab94da2ad..7611fe0aa 100644
                      <svg
                        width="16"
                        height="16"
-@@ -1178,7 +1217,7 @@ onBeforeUnmount(() => {
+@@ -1178,7 +1216,7 @@
                          :src="getContentFileUrl(file)"
                          :alt="file.name"
                          class="msg-attachment-thumb"
@@ -268,7 +266,7 @@ index ab94da2ad..7611fe0aa 100644
                        />
                      </template>
                      <template v-else-if="file.type === 'video'">
-@@ -1196,9 +1235,9 @@ onBeforeUnmount(() => {
+@@ -1196,9 +1234,9 @@
                      <template v-else>
                        <div
                          class="msg-attachment-file"
@@ -280,7 +278,7 @@ index ab94da2ad..7611fe0aa 100644
                        >
                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-@@ -1333,9 +1372,30 @@ onBeforeUnmount(() => {
+@@ -1333,9 +1371,30 @@
    <ImagePreviewOverlay
      v-if="previewUrl"
      :src="previewUrl"
@@ -312,78 +310,3 @@ index ab94da2ad..7611fe0aa 100644
  </template>
  
  <style scoped lang="scss">
-@@ -2162,4 +2222,74 @@ onBeforeUnmount(() => {
-     padding-inline-end: 8px !important;
-   }
- }
-+
-+/* PDF 消息内预览弹层（zcode chat.previewCards.pdf 对齐） */
-+.pdf-preview-overlay {
-+  position: fixed;
-+  inset: 0;
-+  z-index: 9998;
-+  display: flex;
-+  align-items: center;
-+  justify-content: center;
-+  padding: 4vh 4vw;
-+  background: rgba(0, 0, 0, 0.75);
-+}
-+
-+.pdf-preview-panel {
-+  width: min(880px, 92vw);
-+  height: 88vh;
-+  display: flex;
-+  flex-direction: column;
-+  border-radius: 10px;
-+  overflow: hidden;
-+  background: var(--bg-secondary, #1b1e24);
-+  border: 1px solid var(--border-color, #26292f);
-+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-+}
-+
-+.pdf-preview-head {
-+  display: flex;
-+  align-items: center;
-+  gap: 10px;
-+  padding: 8px 12px;
-+  border-bottom: 1px solid var(--border-color, #26292f);
-+  font-size: 12px;
-+}
-+
-+.pdf-preview-name {
-+  flex: 1;
-+  min-width: 0;
-+  overflow: hidden;
-+  text-overflow: ellipsis;
-+  white-space: nowrap;
-+  color: var(--text-primary, #e6e6e6);
-+}
-+
-+.pdf-preview-open {
-+  flex-shrink: 0;
-+  color: var(--accent-primary, #4cc9f0);
-+  text-decoration: none;
-+
-+  &:hover { text-decoration: underline; }
-+}
-+
-+.pdf-preview-close {
-+  flex-shrink: 0;
-+  width: 24px;
-+  height: 24px;
-+  border: none;
-+  border-radius: 5px;
-+  background: transparent;
-+  color: var(--text-muted, #9aa0aa);
-+  cursor: pointer;
-+  font-size: 12px;
-+
-+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
-+}
-+
-+.pdf-preview-frame {
-+  flex: 1;
-+  border: none;
-+  background: var(--bg-primary, #14161a);
-+}
- </style>

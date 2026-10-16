@@ -5,7 +5,7 @@
 import { chromium } from '@playwright/test'
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 950 } })).newPage()
-const login = await fetch('http://localhost:8647/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: '123456' }) }).then(r => r.json())
+const login = await fetch('http://localhost:8647/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }) }).then(r => r.json())
 await page.goto('http://localhost:8649/')
 await page.evaluate(t => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_server_url', location.origin); localStorage.setItem('hermes_locale', 'zh') }, login.token)
 await page.goto('http://localhost:8649/#/app/board?tab=gov-docs')

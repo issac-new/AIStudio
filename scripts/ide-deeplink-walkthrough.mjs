@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 const BASE = 'http://localhost:8649'
 const login = await fetch('http://localhost:8647/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: '123456' }),
+  body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
 }).then(r => r.json())
 const H = { 'Authorization': `Bearer ${login.token}`, 'Content-Type': 'application/json' }
 // 建真任务

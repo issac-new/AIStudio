@@ -22,6 +22,7 @@
 | D8 | 水位线只按过了冷却的事件推进 | 按全部新事件推进 | 实测缺陷：被冷却抑制的事件会把水位垫高，后续同刻或更早的新事件被静默丢弃（冷却与水位线耦合） |
 | D9 | 盘点脚本独立成脚本，不塞进巡检官 | 只做巡检官 collector | 周报要人读的报告并落盘，且不依赖 studio server 在跑；collector 与脚本同源同口径 |
 | D10 | 双会话碰撞后改用 cherry-pick 落干净分支 | 直接 merge 原分支 | 原分支混进了另一会话未合入的提交（completion.zero-delivery），merge 会捎带；cherry-pick 只应用本批 diff |
+| D11 | 删默认账号而非换强默认密码（M8b 直接实施，用户 2026-10-16 拍板「要 改掉吧」） | 保留账号换随机强口令出厂 | 部署数据证实真实用户全走 Matrix 登录（testuser1/testuser3/swarm 均 matrix 来源，admin 为空库引导遗留且本机密码已改）；保留已知出厂口令的账号本身就是风险源。空库引导删除、CLI 改随机密码、桌面改主进程 IPC 代理登录（口令不出主进程）、dev 链经 HERMES_WEB_UI_DEV_BOOTSTRAP=1 显式开引导 |
 
 ## 一、整改原则
 
@@ -163,9 +164,17 @@ GROUP BY tool ORDER BY n DESC;
 
 **验收**：反向测试五项。造含 P1 字面量的假 asset，退出码为 0 且 stderr 有 WARN。造 P2 文案，结果相同。造 `123456:ABC-DEF` 占位符，不误报。干净 asset 无 WARN。豁免位生效。
 
-### M8b 源头修复评估（只评估不动手）
+### M8b 源头修复（已实施，2026-10-16 用户拍板「删默认账号」方向）
 
-默认口令的根治要动上游五处，本阶段只做评估报告，不改任何上游文件。评估四个问题。桌面免密登录改主进程下发一次性 token，改造面有多大。i18n 死键摘除的影响面。reset 功能是否保留。bootstrap 要不要加首次登录强制改密。评估结论供第三阶段决策。
+原计划只评估。用户核对部署数据后裁定直接改掉（决策 D11）：真实用户全走 Matrix 登录，admin 账号是空库引导遗留。已落地的改动（patch 640 + overlay 随改）：
+
+- server：删 `DEFAULT_PASSWORD` 与空库 admin/123456 引导；空库登录返回 `NO_USER_ACCOUNTS` 错误码（指向 Matrix 登录或 CLI）；`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 时空库首登以提交凭据建号（dev 链专用）；`requiresCredentialChange` 恒 false（字段保留 API 契约）。
+- CLI `reset-default-login`：每次生成随机密码，凭据落 `<home>/admin-login.json`（0600）并打印一次。
+- desktop：新增 `hermes-desktop:login` IPC——主进程用落盘凭据代理登录换 JWT，空库首启自动随机建号；WebPet 不再在客户端 bundle 持口令；重置流程读凭据文件并在弹窗显示新随机口令（9 语言文案随改）。
+- client：12 语言 `defaultCredentialsHint` 改为首次登录引导文案。
+- overlay 随改：entry.mts dev 桩口令换 `dev-bootstrap`（须服务端显式开 dev-bootstrap 门）；13 个历史走查脚本口令字面量同步。
+
+转硬失败判据照旧：本修复合入后，M8 构建门禁的 WARN 零新增计数从合入日起算，连续两周零命中即提请 WARN 升 FAIL。
 
 ## 四、第二阶段 观察指标与周报
 
