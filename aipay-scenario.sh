@@ -521,7 +521,7 @@ if step_reached analysis; then
   # 记单前先回灌要求补发，重查一轮仍缺才落单）：消息洪窗口外不是借口，群通知是
   # 接收方知晓任务的唯一正道（派发词明文要求），静默=任务失联风险。
   if [[ -n "${RACI_MISS_PAIRS:-}" ]]; then
-    mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】以下 RACI 派发消息在群内未见：${RACI_MISS_PAIRS}。请立即在群内逐条补发（@责任人-agent @团队负责人-agent 附任务明细，用 m.mentions 提及）——群通知是接收方知晓任务的唯一正道，缺发记执行缺口。补发后无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    backfill_nudge "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】以下 RACI 派发消息在群内未见：${RACI_MISS_PAIRS}。请立即在群内逐条补发（@责任人-agent @团队负责人-agent 附任务明细，用 m.mentions 提及）——群通知是接收方知晓任务的唯一正道，缺发记执行缺口。补发后无需重报结论行。" "$(agent_mxid fanfan)" raci-dispatch-missing "RACI 派发消息群内未见（回灌要求组织侧补发）：${RACI_MISS_PAIRS}"
     # 左移件 c（真值锚优先级）：RACI 群通知=副作用证据，真值=主卡 raci 列（下段结构
     # 化核验在查）。run11 双轮回灌等待窗（60s+4×240s ×2 轮≈40min）全烧在关键路径，
     # 降级 fire-and-forget：补发要求已发即记单放行，验证归审计段/巡检。
@@ -537,7 +537,7 @@ if step_reached analysis; then
   if [[ -n "$RACI_JSON" ]]; then
     note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
   else
-    mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    backfill_nudge "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" raci-not-structured "${RFD_ID} 主卡未带结构化 raci 字段（回灌要求组织侧补填）"
     # 提速③ 免等窗（2026-10-09 提速决议）：结构化 raci 缺失属程序性（正文 raci 承载
     # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻记单放行。
     echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻记单；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
@@ -688,7 +688,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     if receipt_seen; then
       note "[真值] $t 完成回执在房间可见 ✓"
     else
-      mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" >/dev/null 2>&1 || true
+      backfill_nudge "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" receipt-missing "任务 $t 完成回执群内未见（回灌要求组织侧补发）"
       # 提速③ 免等窗（2026-10-09 提速决议）：入库真值已核验在案，回执属程序性补账——
       # 回灌保留训练信号但不再等 300s 重查（run12 四笔回执重查烧约 40min 实测），即刻记单放行。
       echo "ISSUE|receipt-missing|$t|完成回执未见（免等窗即刻记单；回灌补发要求已发，入库真值在案）" >> "$EVID_DIR/issues.log"
@@ -725,7 +725,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
   else
     # 评审人自登回灌（run8 遗留④：run7 直接导演补登——agent 自登能力从未被触发验证。
     # 先回灌 fanfan 在账号板自登评审卡（标题含 <RFD>-评审），重查一轮）。
-    mx_send "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    backfill_nudge "$(load_token fanfan)" "$(sget room_analysis)" "@fanfan-agent:matrix.test 【回灌】复核稿已入仓但你未登记评审任务卡。请立即在你的账号板登记：标题含 ${RFD_ID}-评审、status=review、关联 docs/design/${RFD_ID}-architecture-design.md（建卡带 --raci）。登记完成无需重报结论行。" "$(agent_mxid fanfan)" review-card-missing "复核稿已入仓但评审任务卡未登记（回灌要求组织侧自登）"
     note "[回灌] 评审卡未见——已要求 fanfan 自登（提速③ 免等窗：不等重查，直接导演补登记兜底）"
     # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
     # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
