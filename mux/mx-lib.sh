@@ -348,6 +348,23 @@ mx_room_membership() { # <token> <roomId> <mxid> → join|invite|空（缺席）
   # 接受与否=受邀方行为。核验 agent 履职须用本函数按 invite|join 双态判定。
   mx "$1" GET "rooms/$2/state/m.room.member/$3" 2>/dev/null | jq -r '.membership // empty' 2>/dev/null || true
 }
+backfill_nudge() { # <token> <roomId> <text> <mention-csv> <issue-key> <issue-body> → event_id
+  # 姿态感知回灌（V8.29 §2.4 待收紧面 10/11：补登/核验回灌的 strict 替代）：
+  # standard=照发回灌消息（代演组织侧催办，落台账 dispatch-preset 同族）；
+  # strict=不发（催办归组织侧自主），只记 ISSUE 呈现缺口——「不代偿」语义的
+  # 文字版（与 walk_done/dispatch_in_room 的 strict 分支同构）。
+  local _tok="$1" _room="$2" _text="$3" _mention="${4:-}" _key="$5" _body="$6"
+  if [ "$(posture)" = "strict" ]; then
+    echo "ISSUE|${_key}|director|${_body}（strict 姿态不回灌代催——缺口如实呈现，等组织侧自主处置）" \
+      >> "${EVID_DIR:-${SIM_ROOT:-/tmp}/evidence}/issues.log" 2>/dev/null || true
+    log "[姿态] strict：${_key} 不回灌——记单呈现缺口"
+    printf 'STRICT-SKIPPED'
+    return 0
+  fi
+  compensate dispatch-preset "backfill ${_key}（补登/核验回灌代催）" 2>/dev/null || true
+  mx_send "$_tok" "$_room" "$_text" "$_mention"
+}
+
 mx_send() { # <token> <roomId> <text> [mentioned-mxid[,mxid2...]] → event_id
   # 瞬断/限流重试 3 次；全败回 SEND-FAILED 且返回 0——set -euo pipefail 下
   # 赋值非零即静默击杀整个脚本（09-26 实锤：arch 派发一击致死 28s 无声退出）。
