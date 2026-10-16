@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # v0.7.35 → v0.7.36+ 上游 type fix 应用器（mimo 级联 + dead-code + vue-flow）
 # 在 npm run inject 后执行一次——直接修上游树（被 inject 复位后能恢复）。
+# 2026-10-16 v0.7.36 适配：上游自带 mimo 后 #2/#3b/#4 会重复添加（TS1117），
+# 全部加"已存在即跳过"守卫；#9 的 CodingAgentId 导入回填删除（#8 改 ChatAgentId 后不再需要）。
 set -euo pipefail
 HERMES_STUDIO="${HERMES_STUDIO_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)/upstream/hermes-studio}"
 cd "$HERMES_STUDIO"
@@ -8,15 +10,21 @@ cd "$HERMES_STUDIO"
 echo "[v0735-fixes] 1. mimo 类型级联：opencode→opencode+mimo+dsh"
 find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "'opencode' | 'dsh'" 2>/dev/null | xargs sed -i '' "s/'opencode' | 'dsh'/'opencode' | 'mimo' | 'dsh'/g" || true
 
-echo "[v0735-fixes] 2. agent-options 默认图（mimo 入口）"
-find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "opencode: '/coding-agents/opencode.png'," 2>/dev/null | xargs sed -i '' "s|opencode: '/coding-agents/opencode.png',|opencode: '/coding-agents/opencode.png',\n    mimo: '/coding-agents/mimo.png',|g" || true
+echo "[v0735-fixes] 2. agent-options 默认图（mimo 入口；v0.7.36+ 已自带则跳过）"
+find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "opencode: '/coding-agents/opencode.png'," 2>/dev/null | while IFS= read -r f; do
+  grep -q "mimo: '/coding-agents/" "$f" || sed -i '' "s|opencode: '/coding-agents/opencode.png',|opencode: '/coding-agents/opencode.png',\n    mimo: '/coding-agents/mimo.png',|g" "$f"
+done
 
 echo "[v0735-fixes] 3. AgentManagerView 安装/卸载/检查 update map"
 find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: false, dsh" 2>/dev/null | xargs sed -i '' "s/opencode: false, dsh: false, cursor: false/opencode: false, mimo: false, dsh: false, cursor: false/g" || true
-find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: null,$" 2>/dev/null | xargs sed -i '' "s/opencode: null,$/opencode: null,\n  mimo: null,/g" || true
+find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: null,$" 2>/dev/null | while IFS= read -r f; do
+  grep -q "mimo: null," "$f" || sed -i '' "s/opencode: null,$/opencode: null,\n  mimo: null,/g" "$f"
+done
 
-echo "[v0735-fixes] 4. CodingAgentConfigView 设置映射"
-find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: { preference:" 2>/dev/null | xargs sed -i '' "s|opencode: { preference: 'memory', configuration: 'settings' },|opencode: { preference: 'memory', configuration: 'settings' },\n  mimo: { preference: 'memory', configuration: 'settings' },|g" || true
+echo "[v0735-fixes] 4. CodingAgentConfigView 设置映射（v0.7.36+ 已自带则跳过）"
+find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: { preference:" 2>/dev/null | while IFS= read -r f; do
+  grep -q "mimo: { preference:" "$f" || sed -i '' "s|opencode: { preference: 'memory', configuration: 'settings' },|opencode: { preference: 'memory', configuration: 'settings' },\n  mimo: { preference: 'memory', configuration: 'settings' },|g" "$f"
+done
 
 echo "[v0735-fixes] 5. App.vue usesPageSidebar → @ts-expect-error"
 if grep -q "const usesPageSidebar = computed(() => false);" packages/client/src/App.vue; then
@@ -51,9 +59,6 @@ open(p, 'w').write(src)
 "
 fi
 
-echo "[v0735-fixes] 9. chat.ts ekko-agent import"
-if ! grep -q "type CodingAgentId" packages/client/src/stores/hermes/chat.ts; then
-  sed -i '' "s|import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'|import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId, type CodingAgentId } from '@/api/coding-agents'|" packages/client/src/stores/hermes/chat.ts 2>/dev/null || true
-fi
+echo "[v0735-fixes] 9. chat.ts ekko-agent import（v0.7.36 删除：#8 改 ChatAgentId 后 CodingAgentId 不再使用，回填即 TS6133 未用导入）"
 
 echo "[v0735-fixes] done"

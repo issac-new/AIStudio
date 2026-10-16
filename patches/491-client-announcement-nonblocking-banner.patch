@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/StudioAnnouncementPrompt.vue b/packages/client/src/components/layout/StudioAnnouncementPrompt.vue
-index 17eec54e6..aa4ebb797 100644
+index 6fb71e5d..dbb9adda 100644
 --- a/packages/client/src/components/layout/StudioAnnouncementPrompt.vue
 +++ b/packages/client/src/components/layout/StudioAnnouncementPrompt.vue
 @@ -1,6 +1,6 @@
@@ -10,7 +10,7 @@ index 17eec54e6..aa4ebb797 100644
  import { useI18n } from 'vue-i18n'
  import { fetchStudioAnnouncements, type StudioAnnouncement } from '@/api/studio/announcements'
  import { openUrlInDesktopBrowser } from '@/utils/desktop-browser'
-@@ -101,42 +101,72 @@ onBeforeUnmount(() => {
+@@ -101,42 +101,74 @@ onBeforeUnmount(() => {
  </script>
  
  <template>
@@ -102,14 +102,13 @@ index 17eec54e6..aa4ebb797 100644
 +  overflow: hidden;
    white-space: pre-wrap;
    overflow-wrap: anywhere;
--  line-height: 1.7;
+   line-height: var(--line-height, 1.7);
  }
 -.actions {
 +.banner-actions {
    display: flex;
--  justify-content: flex-end;
--  gap: 10px;
-+  gap: 8px;
+   justify-content: flex-end;
+   gap: calc(10px * var(--spacing-scale, 1));
 +  flex-shrink: 0;
  }
  </style>
