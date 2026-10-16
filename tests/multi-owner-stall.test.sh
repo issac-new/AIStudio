@@ -10,7 +10,12 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fails=0
 
-FN_SRC="$(sed -n '/^wait_alive_truth_multi()/,/^}/p' "$HERE/mux/mx-scenario-lib.sh")"
+# 提取面含 mx_wait_eval（2026-10-16 ERR trap 根治后 wait_alive_truth_multi 的谓词
+# 求值走该 helper）——只提主函数=helper 未定义、谓词恒 127，成功路径静默失效
+# （场景③「复活重新武装」会因永远等不到谓词真而假过）。双函数同提。
+FN_SRC="$(sed -n '/^mx_wait_eval()/,/^}/p' "$HERE/mux/mx-scenario-lib.sh")"
+FN_SRC="$FN_SRC
+$(sed -n '/^wait_alive_truth_multi()/,/^}/p' "$HERE/mux/mx-scenario-lib.sh")"
 [[ -n "$FN_SRC" ]] || { echo "FAIL 提取 wait_alive_truth_multi 失败"; exit 1; }
 
 CTRL="$(mktemp -d /tmp/multi-owner-stall.XXXXXX)" || exit 1
