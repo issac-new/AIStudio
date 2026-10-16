@@ -257,6 +257,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/gov/GovCenterView.vue'),
         },
         {
+          // C9 治理·系统设置页（R9：既有设置页按治理域分区的导航层，E/F/G 合账）
+          path: 'gov/settings',
+          name: 'ia2.govSettings',
+          component: () => import('./views/gov/GovSettingsView.vue'),
+        },
+        {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓
           path: 'accounts',
           name: 'ia2.accounts',
