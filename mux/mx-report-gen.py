@@ -2446,7 +2446,7 @@ def security_html():
                  '<td>G3 闸门实测 testlog 含 npm audit/漏洞计数/不可达声明三态之一（质量 B②）</td></tr>'
                  % ('✅ 全分支达标' if not audit_miss else '⚠ %d 分支缺审计段（记单）' % len(audit_miss)))
     scan_row = ('<tr><td>密钥泄漏扫描</td><td>机制在位</td>'
-                '<td>每次守门机械扫两仓跟踪文件（secret-scan-gate，命中非白名单即 FAIL）；'
+                '<td>每轮门禁机械扫描两仓跟踪文件（secret-scan-gate，命中非白名单即 FAIL）；'
                 '执行面=prelaunch 门禁层，非轮内产物——此处说明机制位置，不冒充轮内扫描结果</td></tr>')
     extra = ''
     if sec_issues:
