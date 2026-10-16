@@ -1846,6 +1846,20 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
     # CLI 存在 unresolved 门时以 rc=1 退出但报告已写出——
     # 以产物在位为准，不以 rc 判成败（run13 的 11 张「CLI 缺失」单全是此误诊）。
+    # C4（run20 复盘）：九门执行器覆盖注入——.qgate/gates/ 同 id 覆盖内置模板门
+    # （此前九门全 INCONCLUSIVE=模板占位命令跑不了，run12 骨架挂到 run20）。注入件
+    # 供给=simharness mux/qgate-overrides/（gates/*.yaml + scripts/qgate-checks/）；
+    # 检查器读中央仓/集成分支真实产物，退出码即 verdict。幂等 cp，失败不阻断报告
+    # （门回 INCONCLUSIVE 如实呈现）。
+    if [[ -d "$SCRIPT_DIR/mux/qgate-overrides/gates" ]]; then
+      mkdir -p "$DIRECTOR_CLONE/.qgate/gates" "$DIRECTOR_CLONE/scripts/qgate-checks"
+      cp "$SCRIPT_DIR"/mux/qgate-overrides/gates/*.yaml "$DIRECTOR_CLONE/.qgate/gates/" 2>/dev/null || true
+      cp "$SCRIPT_DIR"/mux/qgate-overrides/scripts/qgate-checks/*.mjs "$DIRECTOR_CLONE/scripts/qgate-checks/" 2>/dev/null || true
+    fi
+    # 执行序（C4 关键）：release-report 只渲染存储证据、从不执行——必须先 run
+    # 落证据再出报告（run20 九门全 INCONCLUSIVE 的另一半根因：只跑了渲染面）。
+    # run 的阻断退出码不拦 G5（门态进报告如实呈现，闸语义仍归 READY-GATE 判词）。
+    ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" run --all --trigger release ) >/dev/null 2>&1 || true
     ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 || true
     # run18 复盘根治：QGate 证据新鲜度校验——旧件透传实锤（产物正文 generated=
     # 开跑前 5 天，9 门全 INCONCLUSIVE 的旧件整包进报告）。产物 generated 时间戳

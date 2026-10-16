@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: data.persistence-integrity
+  version: 0.2.0
+  description: >
+    aipaydev 形态覆盖（逻辑层 SDK）：落库/索引设计文档+状态机/幂等用例证据（present 档，运行时 DB 演练属 runtime-proof 门）。run20 复盘 C4 覆盖件：替换模板占位命令为 scripts/qgate-checks/qgate-check.mjs
+    真实执行器（simharness mux/qgate-overrides/ 供给，驱动 G5 前注入本仓）。
+    证据解析序：工作树 → origin/integration/RFD-001（集成分支按纪律 71 保留至报告持久化后）。
+spec:
+  domain: L2
+  claims:
+    - persistence.request-fields-correct
+  triggers:
+    - release
+  executors:
+    - id: qgate-check
+      type: command
+      command: ["node", "scripts/qgate-checks/qgate-check.mjs", "persistence-integrity"]
+      evidenceType: field-diff
+      timeoutMs: 60000
+  evidence:
+    required:
+      - field-diff
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
