@@ -1,10 +1,9 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -6025,6 +6025,626 @@ export default {
-     new_0_7_33_7: 'Fixed Coding Agent chats being interrupted by dependency debug output, improving DSH and other ACP Agent compatibility (#3327)',
-     new_0_7_33_8: 'Fixed clarification question and answer callback compatibility across Hermes kernel versions (#3330)',
+@@ -6231,4 +6231,624 @@
+     confirm: 'Confirm',
+     cancel: 'Cancel'
    },
 +  matrix: {
 +    options: 'Options',
@@ -626,16 +625,13 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      moreLoops: '{n} more loops hidden'
 +    }
 +  },
-   loopScenes: {
-     manage: {
-       people: 'Members',
+ }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -6023,4 +6023,813 @@ export default {
-     new_0_7_33_7: '修复编程 Agent 因依赖输出调试日志而中断聊天的问题，提高 DSH 和其他 ACP Agent 的兼容性 (#3327)',
-     new_0_7_33_8: '修复不同 Hermes 内核版本下澄清问题与回答回调的兼容性问题 (#3330)',
+@@ -6040,4 +6040,813 @@
+     new_0_7_34_9: '修复内置 MCP 连接继承无关鉴权 Token 导致的连接问题 (#3359)',
+     new_0_7_34_10: '修复自定义服务商模型发现信息被误报为未知配置，并减少重复警告 (#3375)',
    },
 +  matrix: {
 +    options: '选项',

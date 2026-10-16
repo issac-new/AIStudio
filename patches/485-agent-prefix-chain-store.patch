@@ -1,8 +1,8 @@
 diff --git a/hermes_state_common.py b/hermes_state_common.py
-index 9c8f2181cd..e0698e3bee 100644
+index 5a37d49eba..3ca6227721 100644
 --- a/hermes_state_common.py
 +++ b/hermes_state_common.py
-@@ -679,7 +679,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
+@@ -629,7 +629,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
  CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
  CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
      ON async_delegations(delivery_state, completed_at);
@@ -17,9 +17,9 @@ index 9c8f2181cd..e0698e3bee 100644
 +);"""
  
  # Indexes on later-added columns must run AFTER _reconcile_columns(), or executescript fails on legacy DBs.
- # sessions_runtime_ledger_delete_guard: every delete path in this release retires a session's ledger rows
+ DEFERRED_INDEX_SQL = """
 diff --git a/hermes_state_messages.py b/hermes_state_messages.py
-index 639dc3e19a..8f6b896c54 100644
+index 19908aed18..42c33b5214 100644
 --- a/hermes_state_messages.py
 +++ b/hermes_state_messages.py
 @@ -28,6 +28,29 @@ from hermes_state_identity import (
@@ -60,15 +60,58 @@ index 639dc3e19a..8f6b896c54 100644
              return msg_id
          # THE critical write (failure aborts the turn): long patience so a sibling legitimately
          # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
-@@ -494,6 +518,8 @@ class SessionMessagesMixin:
-         )
-         inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
-         self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
+@@ -471,25 +495,32 @@ class SessionMessagesMixin:
+                     compression_lock_holder=compression_lock_holder, turn_lease_holder=turn_lease_holder,
+                     turn_lease_ttl_seconds=turn_lease_ttl_seconds)
+                 for start in range(0, len(messages), chunk_rows))
+-        def _do(conn):
+-            self._check_transcript_write_guards(conn, session_id, compression_lock_holder,
+-                turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
+-            from agent.transcript_repair import resolve_and_repair_transcript_batch
+-            inserted_rows = resolve_and_repair_transcript_batch(
+-                conn,
+-                session_id,
+-                messages,
+-                encode_content_fn=self._encode_content,
+-                decode_content_fn=self._decode_content,
+-                serialize_message_fn=lambda msg, timestamp: self._serialized_message_row(
+-                    session_id, msg, timestamp
+-                ),
+-                decode_row_fn=self._decoded_repair_row,
+-            )
+-            inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
+-            self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
+-            return inserted
+-        return self._execute_transcript_write(_do, messages, patience_s=self._TRANSCRIPT_WRITE_PATIENCE_S)
++        return self._execute_transcript_write(lambda conn: self._append_messages_in_transaction(
++            conn, session_id, messages, compression_lock_holder=compression_lock_holder,
++            turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds),
++            messages, patience_s=self._TRANSCRIPT_WRITE_PATIENCE_S)
++
++    def _append_messages_in_transaction(self, conn, session_id, messages, *,
++            compression_lock_holder=None, turn_lease_holder=None, turn_lease_ttl_seconds=300.0):
++        self._check_transcript_write_guards(conn, session_id, compression_lock_holder,
++            turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
++        from agent.transcript_repair import resolve_and_repair_transcript_batch
++        inserted_rows = resolve_and_repair_transcript_batch(
++            conn,
++            session_id,
++            messages,
++            encode_content_fn=self._encode_content,
++            decode_content_fn=self._decode_content,
++            serialize_message_fn=lambda msg, timestamp: self._serialized_message_row(
++                session_id, msg, timestamp
++            ),
++            decode_row_fn=self._decoded_repair_row,
++        )
++        inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
++        self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
 +        for row in inserted_rows:
 +            _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
-         return inserted
++        return inserted
  
      _ROW_STATE_KEYS = ("_row_id", DB_ROW_SNAPSHOT, "timestamp")
+ 
 diff --git a/tests/hermes_cli/test_prefix_chain_485.py b/tests/hermes_cli/test_prefix_chain_485.py
 new file mode 100644
 index 0000000000..43177d1998
