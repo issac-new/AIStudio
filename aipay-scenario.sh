@@ -2279,7 +2279,9 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   # profiles/*/state.db 聚合窗口内真实会话（agent 会话不落 webui 主库的形态对齐）。
   # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口记单。
   GOV_TOK=$(studio_login)
-  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md?since=$(sget run_started_at)&until=$(date +%s)" "$GOV_TOK"); then
+  # A7（2026-10-16）：state_env 显式传入——控制器据此以锚定轮 run_started_at→now
+  # 推跨天真窗（RUN_ID 日期窗会切掉跨天轮次首尾，run20 42.5h 轮次 17 要素 15 absent）。
+  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md?state_env=${EVID_DIR}/../state.env" "$GOV_TOK"); then
     printf '%s\n' "$GOV_IR" > "$EVID_DIR/incident-report.md"
     note "[audit] 事故报告汇编已导出（evidence/incident-report.md，17 要素）"
   else
