@@ -115,6 +115,23 @@ else
   # V8.29 夜间停滞防线②：日志轮转不截断（mx-up 重启曾覆盖隔夜 wedge/崩溃证据，
   #    事后只能靠终端引用）——旧档带时间戳保留
   [ -f "$LOGS_DIR/gateway.log" ] && mv "$LOGS_DIR/gateway.log" "$LOGS_DIR/gateway.log.$(date +%Y%m%d-%H%M%S).prev"
+  # launchd 托管（2026-10-16 宿主清扫根治，默认开；MX_GATEWAY_LAUNCHD=0 回退 nohup）：
+  # 宿主孤儿清扫器（_reap_unsupervised_gateway_orphans，macOS 无 systemd 时对无监督
+  # 形态 argv 扫描硬杀——run20 三杀+维护窗击杀潮根因）豁免集=launchctl list 的
+  # ai.hermes.gateway* 前缀扫描；launchd 父级同时免疫会话回收（杀 nohup 子进程组），
+  # KeepAlive 替代会话内保母。详见 mux/mx-sim-gateway-service.sh 头注。
+  _gw_launchd=0
+  if [ "${MX_GATEWAY_LAUNCHD:-1}" = "1" ] && [ -x "$SCRIPT_DIR/mx-sim-gateway-service.sh" ]; then
+    if bash "$SCRIPT_DIR/mx-sim-gateway-service.sh" up; then
+      _gw_launchd=1
+      _svc_pid=$(launchctl list 2>/dev/null | awk '$3 == "ai.hermes.gateway-sim" {print $1}' | head -1)
+      echo "${_svc_pid:-0}" > "$PIDS_DIR/gateway.pid"
+      log "gateway launchd 托管就绪（pid ${_svc_pid:-?}，label=ai.hermes.gateway-sim——宿主清扫豁免+会话回收免疫）"
+    else
+      log "⚠ launchd 托管失败——回退 nohup 形态（清扫风险回归，建议排查 plist）"
+    fi
+  fi
+  if [ "$_gw_launchd" = "0" ]; then
   # 2026-10-15 10:39 实锤：注释行插进「VAR=... \」续行赋值链会把前缀赋值与命令切离——赋值只在
   # 解析期绑定当条命令，被注释隔断后仅落当前 shell（未导出），gateway run 裸跑：HERMES_HOME 回落
   # 宿主家目录→发现宿主网关在跑即 "nothing to start" 退出，SIM 网关起不来（8801 拒连）。
@@ -124,6 +141,7 @@ else
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
+  fi
   # V8.29 适配器探活（10:5x 实录：/health 探活不覆盖矩阵面，假 home_channel 卡死适配器
   # 2.8h 隐形断档）：90s 窗内等矩阵平台装载行，未见即 fail-fast（带排障指引）
   for _i in $(seq 1 18); do
