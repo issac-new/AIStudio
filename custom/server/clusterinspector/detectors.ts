@@ -68,7 +68,10 @@ const STALL_TAIL_RE = /ERROR |Traceback|TimeoutError|timed? ?out|gave_up/i
 
 /** 工具黑名单默认集（security.tool-blacklist 判据）。默认收三种执行面原语，
  *  调用即报，不论频次。 */
-const DEFAULT_TOOL_BLACKLIST = ['terminal', 'terminal_exec', 'execute_code', 'code_exec', 'delegate_task']
+// 默认空集（2026-10-16 治理中心裁定轮修正）：teams 日常工作即依赖 terminal/
+// execute_code，默认全列=上线即对所有活跃档案刷 high（狼来了）。E2 检查项只要求
+// 「黑名单工具可告警」，名单内容留给 env 显式配置（CLUSTER_INSPECTOR_TOOL_BLACKLIST）。
+const DEFAULT_TOOL_BLACKLIST: string[] = []
 
 function toolBlacklist(opts: DetectOptions): string[] {
   if (opts.toolBlacklist) return opts.toolBlacklist
