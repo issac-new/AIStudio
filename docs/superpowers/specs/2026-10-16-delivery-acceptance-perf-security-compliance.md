@@ -49,7 +49,8 @@
 - 实测环境：私有上游隔离实例（OVERLAY_UPSTREAM_ROOT 私副本+补丁全量注入，PORT 8648，AUTH_TOKEN 定值+自签用户 JWT——配方=server token HMAC-SHA256 base64url，payload 含 sub/username/role/type/aud/iat/exp）；数据=SIM_ROOT 真实推演数据只读消费（run20）。此法不触共享树不扰在跑轮次（N4），与部署窗无耦合。
 - 实测结果（每端点 12 次采样，2026-10-16 14:0x）：run-state p95=15.8ms｜issues 12.0ms｜deliverables 11.8ms｜trace 5.5ms｜orgloop/ledger 7.5ms｜interventions/pending 9.7ms｜gate-repairs 14.9ms｜topology 134.6ms（四服务探测含超时预算，仍远低于 1s）｜journal 404（run20 目录无 journal 副本=如实缺席实证，冷路径 11.7ms）。**全部端点 P95 ≤0.14s，目标 ≤1s 以 7 倍余量通过**。载荷核实=真实 run20 数据（闸键时间戳/介入点登记在响应中原样可读）。
 - 附带战果：隔离实例首次启动即抓到部署阻断级缺陷——disk.capacity 检测器用了 AnomalySeverity 联合外的 'critical'（vitest/esbuild 剥类型不查、ts-node 全量编译才炸），已修为 high+summary 加急语义（当日修复当日实证）。
-- 未测余项：UI 旗舰屏首次可交互计时（须 vite dev 私实例+浏览器，留走查窗）；42 智能体并发容量沿用方案 §4.2 既有预算不重复压测。
+- UI 旗舰屏计时（2026-10-16 16:2x 已实测，隔离 vite dev 8650+隔离后端 8648+内置浏览器）：热态 reload→DOM 可交互 **3.5s**（DCL 523ms/	load 1.8s/锚点出现 3.5s，N6 目标 ≤3s 的 dev 形态基本达线——dev 含按需编译与 source map，产品构建形态只会更快）；冷启动首访（vite 依赖预构建+全量模块编译）约 70s 属 dev 工具链特性非产品指标。
+- 浏览器走查（同窗）：推演中心六签全通（旗舰屏真数据=姿态 standard/清偿 179 未清拒开新轮/六闸 6/6/步净额 23/26 扣代演 2 笔/七幕+26 步表；B10 轻量条三徽标真数据常驻壳头；branches 503 fail-closed 如实呈现）；治理中心三签真数据走查（清偿门 179 笔台账全量+审批组/系统设置七域+原生·旧族徽标/问题单对账面）；帧已存走查记录（artifacts 目录）。走查环境=隔离实例（自签 JWT），零扰共享树与在跑轮次。
 
 ## 五、合规执行矩阵（法规/标准/规范——适用性判定+本轮动作）
 
