@@ -54,7 +54,7 @@ export interface InspectorDeps {
   /** safe-act 注入：僵尸任务回收（缺省 CLI 桥 hermes kanban reclaim；测试可stub） */
   reclaimTask?: (taskId: string) => Promise<string | undefined>
   /** govbus 发事件注入（缺省动态 require fail-soft） */
-  emitGovEvent?: (e: { domain: 'system'; severity: 'info' | 'warn' | 'high'; type: string; source: string; summary: string; payload?: Record<string, unknown> }) => void
+  emitGovEvent?: (e: { domain: 'system' | 'security'; severity: 'info' | 'warn' | 'high'; type: string; source: string; summary: string; payload?: Record<string, unknown> }) => void
   /** 安全告警中继数据源注入（M9，2026-10-16 安全轮）：缺省动态 require
    *  queryGovEvents 读 security/approval 域 high 级事件。测试可 stub。 */
   getSecurityEvents?: () => Array<{ eventId: string; ts: number; domain: string; severity: string; type: string; summary: string; refs?: Record<string, string> }>
@@ -64,6 +64,12 @@ export interface InspectorDeps {
 }
 
 const COOLDOWN_MS = 15 * 60_000
+
+/** 域路由（2026-10-16 安全轮 M4 治理中心裁定）：security.* 检测器的事件进
+ *  security 域——治理中心面板按域筛选时工具告警归安全、集群健康归 system，不混流。 */
+export function domainForDetector(detector: string): 'system' | 'security' {
+  return detector.startsWith('security.') ? 'security' : 'system'
+}
 
 export class ClusterInspector {
   private readonly deps: InspectorDeps
@@ -99,17 +105,18 @@ export class ClusterInspector {
   private emit(anomaly: Anomaly): void {
     // 失败路由标注（阿里调研轮 E 收尾件）：停滞族/失控环检测器随事件带 routeHint
     // （失败类型→回退点→携带物），无映射检测器不带；标注-only 不改派。
+    const domain = domainForDetector(anomaly.detector)
     const routeHint = routeHintForDetector(anomaly.detector)
     const payload = { subject: anomaly.subject, ...anomaly.detail, ...(routeHint ? { routeHint } : {}) }
     if (this.deps.emitGovEvent) {
-      this.deps.emitGovEvent({ domain: 'system', severity: anomaly.severity, type: `cluster.${anomaly.detector}`, source: 'cluster-inspector', summary: anomaly.summary, payload })
+      this.deps.emitGovEvent({ domain, severity: anomaly.severity, type: `cluster.${anomaly.detector}`, source: 'cluster-inspector', summary: anomaly.summary, payload })
       return
     }
     try {
       // 动态 require + fail-soft（跨域桥接纪律；测试/独立运行时无 govbus 不炸）
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { appendGovEvent } = require('../govbus/event-log')
-      appendGovEvent({ domain: 'system', severity: anomaly.severity, type: `cluster.${anomaly.detector}`, source: 'cluster-inspector', summary: anomaly.summary, payload })
+      appendGovEvent({ domain, severity: anomaly.severity, type: `cluster.${anomaly.detector}`, source: 'cluster-inspector', summary: anomaly.summary, payload })
     } catch {
       // govbus 不可用：事件丢弃（巡检本体不受影响）
     }

@@ -2,7 +2,7 @@
 // 注入 getSecurityEvents + sendSecurityAlert，不碰矩阵通道；验证三层去重、
 // 每轮封顶聚合、总开关与房间缺省。与巡检官既有测试同款 deps 注入法。
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { ClusterInspector, type InspectorDeps } from '../inspector'
+import { ClusterInspector, domainForDetector, type InspectorDeps } from '../inspector'
 
 type SecEvent = { eventId: string; ts: number; domain: string; severity: string; type: string; summary: string; refs?: Record<string, string> }
 
@@ -117,6 +117,13 @@ describe('M9 安全告警中继（security/approval 域 high → Matrix）', () 
     await insp.runOnce()
     await insp.runOnce()
     expect(sent).toHaveLength(1)
+  })
+
+  it('域路由（M4 治理中心裁定）：security.* → security 域，其余 → system 域', () => {
+    expect(domainForDetector('security.tool-rate')).toBe('security')
+    expect(domainForDetector('security.tool-blacklist')).toBe('security')
+    expect(domainForDetector('gateway.unreachable')).toBe('system')
+    expect(domainForDetector('disk.capacity')).toBe('system')
   })
 
   it('getSecurityEvents 抛错：fail-soft 不炸巡检轮', async () => {

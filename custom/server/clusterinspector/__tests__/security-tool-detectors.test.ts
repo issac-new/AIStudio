@@ -79,7 +79,13 @@ describe('security.tool-blacklist（E2 判据三：黑名单工具）', () => {
   beforeEach(() => { delete process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST })
   afterEach(() => { delete process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST })
 
-  it('黑名单命中即报 high；只读工具不报', () => {
+  it('默认空集（2026-10-16 治理中心裁定轮修正：默认全列=对日常依赖 terminal 的 teams 刷屏）', () => {
+    // 不配 env、不传 opts：黑名单为空 → terminal 调用不报（告警面留给频次/时段两条判据）
+    expect(detectToolBlacklist(snap([entry({ perTool24h: [{ tool: 'terminal', n: 500 }] })]))).toEqual([])
+  })
+
+  it('显式配置后命中即报 high；只读工具不报', () => {
+    process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST = 'terminal, execute_code'
     const a = detectToolBlacklist(snap([entry({ perTool24h: [{ tool: 'terminal', n: 3 }, { tool: 'read_file', n: 99 }] })]))
     expect(a).toHaveLength(1)
     expect(a[0]!.severity).toBe('high')
@@ -88,13 +94,16 @@ describe('security.tool-blacklist（E2 判据三：黑名单工具）', () => {
   })
 
   it('一 profile 多黑名单工具聚合成一条（不刷屏）', () => {
-    const a = detectToolBlacklist(snap([entry({ perTool24h: [{ tool: 'terminal', n: 1 }, { tool: 'execute_code', n: 2 }] })]))
-    expect(a).toHaveLength(1)
-    expect(a[0]!.summary).toContain('terminal×1')
-    expect(a[0]!.summary).toContain('execute_code×2')
+    process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST = 'terminal, execute_code'
+    try {
+      const a = detectToolBlacklist(snap([entry({ perTool24h: [{ tool: 'terminal', n: 1 }, { tool: 'execute_code', n: 2 }] })]))
+      expect(a).toHaveLength(1)
+      expect(a[0]!.summary).toContain('terminal×1')
+      expect(a[0]!.summary).toContain('execute_code×2')
+    } finally { delete process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST }
   })
 
-  it('env CLUSTER_INSPECTOR_TOOL_BLACKLIST 覆写默认集', () => {
+  it('env CLUSTER_INSPECTOR_TOOL_BLACKLIST 配置生效', () => {
     process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST = 'read_file, write_file'
     const a = detectToolBlacklist(snap([entry({ perTool24h: [{ tool: 'read_file', n: 1 }] })]))
     expect(a).toHaveLength(1)
@@ -117,9 +126,15 @@ describe('detectAll 集成：三个安全检测器在列且不影响既有检测
     expect(out.filter((a) => a.detector.startsWith('security.'))).toEqual([])
   })
 
-  it('有 toolUsage 时三条安全检测器都经 detectAll 产出', () => {
+  it('有 toolUsage 时安全检测器经 detectAll 产出（黑名单需显式 env）', () => {
     const out = detectAll(baseSnap([entry({ total1h: 150, offhoursHighRisk24h: 1, perTool24h: [{ tool: 'terminal', n: 2 }] })]))
     const sec = out.filter((a) => a.detector.startsWith('security.')).map((a) => a.detector).sort()
-    expect(sec).toEqual(['security.offhours-highrisk', 'security.tool-blacklist', 'security.tool-rate'])
+    expect(sec).toEqual(['security.offhours-highrisk', 'security.tool-rate'])
+    process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST = 'terminal'
+    try {
+      const out2 = detectAll(baseSnap([entry({ total1h: 150, offhoursHighRisk24h: 1, perTool24h: [{ tool: 'terminal', n: 2 }] })]))
+      const sec2 = out2.filter((a) => a.detector.startsWith('security.')).map((a) => a.detector).sort()
+      expect(sec2).toEqual(['security.offhours-highrisk', 'security.tool-blacklist', 'security.tool-rate'])
+    } finally { delete process.env.CLUSTER_INSPECTOR_TOOL_BLACKLIST }
   })
 })
