@@ -129,7 +129,7 @@ describe('推演中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('默认签=轮次总览：/app/sim 即签 1 激活 + 占位面板在渲染位', async () => {
+  it('默认签=轮次总览：/app/sim 即签 1 激活 + 驾驶屏面板在渲染位（收尾件实装）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -141,7 +141,7 @@ describe('推演中心壳（B1）：渲染', () => {
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
     expect(panel.text()).toContain('签 1·轮次总览')
-    expect(panel.text()).toContain('待实现')
+    expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 
@@ -150,13 +150,9 @@ describe('推演中心壳（B1）：渲染', () => {
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
-    // 唯一占位签=轮次总览（B 波旗舰屏工单待实装）
-    const ov = wrapper.find('[data-testid="ia-sim-panel-overview"]')
-    expect(ov.exists()).toBe(true)
-    expect(ov.text()).toContain('签 1·轮次总览')
-    expect(ov.text()).toContain('/api/hermes/sim/run-state')
-    // 五签实装：标题保留，占位端点清单由实际数据面取代
+    // 六签全部实装（B1 壳+B2/B4/B5/B6+签 1 驾驶屏收尾件）：标题+实际数据面
     const live: ReadonlyArray<{ key: string; title: string; panel: string }> = [
+      { key: 'overview', title: '签 1·轮次总览', panel: '[data-testid="ov-panel"]' },
       { key: 'supervision', title: '签 2·监督面板', panel: '[data-testid="sup-panel"]' },
       { key: 'ops', title: '签 3·运行观测', panel: '[data-testid="ops-panel"]' },
       { key: 'evidence', title: '签 4·证据库', panel: '[data-testid="ev-panel"]' },
