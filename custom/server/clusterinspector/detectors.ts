@@ -48,6 +48,12 @@ export interface DetectOptions {
   watermarkHighPct?: number
   /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
   emptyStreakLimit?: number
+  /** 会话饥饿：空转连击阈（默认 3；run20 复盘 D6） */
+  starveStreak?: number
+  /** 会话饥饿：上下文 tokens 阈（默认 60K，watermark 缺席时的压力代理） */
+  starveContextTokens?: number
+  /** 会话饥饿：水位百分比阈（默认 65） */
+  starveWatermarkPct?: number
   /** 工具调用频次阈（次/分钟，默认 100；E2 判据一，安全轮 M7） */
   toolRatePerMin?: number
   /** 非工作时段高危操作条数升 high 的阈（默认 10；E2 判据二，安全轮 M7） */
@@ -559,6 +565,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectToolBlacklist(snap, opts),
     // 零交付遥测（run20 复盘产品化）：done 卡零交付引用=无分支+无 commit 锚
     ...detectZeroDelivery(snap, opts),
+    // 会话饥饿（run20 复盘 D6）：空转×高上下文=换会话处方
+    ...detectSessionStarvation(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -815,4 +823,42 @@ export function detectSpawnHealth(snap: ClusterSnapshot, _opts: DetectOptions = 
     summary: `执行面瘫痪：worker spawn 通道不可用——${probe.detail}。泵/提醒催单全部无效（消息能收会话起不来），立即修 venv（多候选探测见 bin/hermes-sim 报错行修法）`,
     detail: probe,
   }]
+}
+
+/** ── 会话饥饿（run20 复盘 D6 产品化）──
+ *  `session.starved`：空转连击 ×高上下文压力的交集——「油尽灯枯空转」形态
+ *  （run20 wei 实录：in=78K 涨、out=1-8 token ×4 轮，迭代预算临界；靠人工发
+ *  「立即换会话令」救场）。区别于 D10 empty-streak（只看零产出，不含压力维度
+ *  ——低水位空转可能是卡住，等得回来；高水位空转=再等也没用，必须换会话）。
+ *  判据：emptyStreak ≥ limit（默认 3）∧ 上下文压力（watermarkPct ≥ 65 或
+ *  contextLength ≥ starveContextTokens 默认 60K）。streak ≥ 2×limit 且高压
+ *  → high。summary 携带换会话处方（新会话只干显式命令清单，禁陪等）。
+ *  数据源=sessionTelemetry（602 sidecar）；未接线=合法空态。 */
+export function detectSessionStarvation(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const limit = opts.starveStreak ?? 3
+  const ctxTokens = opts.starveContextTokens ?? 60_000
+  const watermarkAt = opts.starveWatermarkPct ?? 65
+  const te = snap.sessionTelemetry
+  if (!te?.ok) return []
+  const out: Anomaly[] = []
+  for (const e of te.entries) {
+    const streak = e.emptyStreak ?? 0
+    if (streak < limit) continue
+    const wm = e.watermarkPct ?? null
+    const ctxLen = e.contextLength ?? e.lastPromptTokens ?? null
+    const pressured = (wm !== null && wm >= watermarkAt) || (ctxLen !== null && ctxLen >= ctxTokens)
+    if (!pressured) continue
+    const high = streak >= limit * 2
+    out.push({
+      detector: 'session.starved', subject: `session:${e.sessionKey}`,
+      severity: high ? 'high' : 'warn',
+      summary: `会话饥饿：空转 ${streak} 回合 ∧ 上下文压力（水位 ${wm ?? '?'}%／上下文 ${ctxLen ?? '?'} tokens）——油尽灯枯空转形态，再等无益。处方：立即换会话（新会话只干显式命令清单，禁陪等；在途工作交接一句话带到新会话）`,
+      detail: {
+        emptyStreak: streak, watermarkPct: wm, contextTokens: ctxLen,
+        turns: e.turns, cumApiCalls: e.cumApiCalls, rotations: e.rotations ?? 0,
+        form: 'run20-wei（in 涨 out≤8token 连续 4 轮，人工换会话令救场——本检测器为产品化收口）',
+      },
+    })
+  }
+  return out
 }

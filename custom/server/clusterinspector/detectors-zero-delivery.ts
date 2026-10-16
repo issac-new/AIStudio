@@ -13,13 +13,15 @@
 //     「过程归属」；本检测管「结果凭证」。
 //   - card.body-empty（detectCardBodyEmpty）：正文空——本检测要求 body 存在但
 //     缺 commit= 锚（有正文、无凭证）。
-// 误报口径：治理/台账/评审类卡合法无代码锚（run20 实测多数属此类）——故定级
-// warn 且 summary 明示「须人工分诊」，禁一键升 high（分类判据未产品化前，
-// 高噪高级别=告警疲劳，run20 巡检官致盲史的同型教训）。
+// 分类判据（2026-10-16 产品化，card-classify.ts）：治理/台账类卡合法无锚→静默
+// 剔除（计入 detail.governanceNoAnchor 可反查）；研发类零锚→warn 强告警；不确定
+// （双命中/双不命中）→维持人工分诊文案。uncertain 残留仍禁升 high——分类不确定
+// 时高噪高级别=告警疲劳（run20 巡检官致盲史的同型教训）。
 //
 // fail-open：runningCards/profiles 面未接线=合法空态静默（同族检测器语义）。
 import type { ClusterSnapshot } from './collectors'
 import type { Anomaly, DetectOptions } from './detectors'
+import { classifyCard } from './card-classify'
 
 /** commit= 锚（卡 body 内的交付凭证行，形如 `commit=1a2b3c4d`） */
 const COMMIT_ANCHOR_RE = /(?:^|\s)commit=[0-9a-f]{7,40}/i
@@ -30,26 +32,38 @@ const COMMIT_ANCHOR_RE = /(?:^|\s)commit=[0-9a-f]{7,40}/i
  *  卡清单（≤20 张防载荷爆）+ 分诊提示。 */
 export function detectZeroDelivery(snap: ClusterSnapshot, _opts: DetectOptions = {}): Anomaly[] {
   if (!snap.runningCards.ok) return []
+  const governanceNoAnchor: Array<Record<string, unknown>> = []
   const suspects = snap.runningCards.cards.filter((c) => {
     if (!['done', 'completed'].includes(String(c.status ?? '').toLowerCase())) return false
     if ((c.branch_name ?? '').trim()) return false           // 有分支引用→归 anchor-missing 面
     const body = typeof c.body === 'string' ? c.body : ''
-    return !COMMIT_ANCHOR_RE.test(body)                      // 无 commit 锚=零交付候选
+    if (COMMIT_ANCHOR_RE.test(body)) return false            // 有 commit 锚=凭证在位
+    // 分类判据（run20 复盘件 4/4）：治理/台账类卡合法无锚——静默（计入明细不告警）；
+    // 研发类零锚=零交付（强告警）；不确定=维持人工分诊。判据单一源=card-classify.ts。
+    const cls = classifyCard(c as Parameters<typeof classifyCard>[0])
+    if (cls === 'governance') {
+      governanceNoAnchor.push({ card: c.id, title: c.title, cls })
+      return false
+    }
+    return true                                              // delivery + uncertain 入候选
   })
   if (suspects.length === 0) return []
   return [{
     detector: 'completion.zero-delivery',
     subject: 'board:zero-delivery-candidates',
     severity: 'warn',
-    summary: `零交付候选 ${suspects.length} 张：done 卡既无交付分支引用、body 又无 commit= 锚`
+    summary: `零交付 ${suspects.length} 张：done 卡既无交付分支引用、body 又无 commit= 锚`
       + `（${suspects.slice(0, 3).map((c) => c.id).join('、')}${suspects.length > 3 ? ' 等' : ''}）`
-      + '——治理/台账类卡合法无锚，研发交付类卡=零交付形态；请逐张人工分诊（补凭证或改状态）',
+      + '——研发交付类卡零凭证（分类判据：标题规则，治理/台账类已静默剔除）；请补 commit 锚/分支引用或改状态',
     detail: {
       candidates: suspects.slice(0, 20).map((c) => ({
         card: c.id, title: c.title, assignee: c.assignee, status: c.status,
+        cls: classifyCard(c as Parameters<typeof classifyCard>[0]),
       })),
       total: suspects.length,
-      note: '分类判据（治理类合法 vs 研发类零交付）未产品化——v1 只出候选清单，禁自动定罪',
+      governanceNoAnchor: governanceNoAnchor.slice(0, 20),   // 合法无锚清单（静默但可反查）
+      note: '分类=card-classify.ts 标题规则（v1）：governance 静默剔除、delivery 强告警、'
+            + 'uncertain 维持人工分诊（双命中/双不命中禁机器臆断）',
     },
   }]
 }
