@@ -19,7 +19,7 @@ const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromiu
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 950 }, deviceScaleFactor: 2 })
 const login = await fetch('http://localhost:8647/api/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: '123456' }),
+  body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
 }).then(r => r.json())
 
 async function open(url) {
