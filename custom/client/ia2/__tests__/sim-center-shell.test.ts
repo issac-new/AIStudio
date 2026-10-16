@@ -145,32 +145,30 @@ describe('推演中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2 起监督/证据两签实装）', async () => {
+  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2/B4/B5/B6 后五签实装）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
-    const expectations: ReadonlyArray<{ key: string; title: string; endpoint: string }> = [
-      { key: 'overview', title: '签 1·轮次总览', endpoint: '/api/hermes/sim/run-state' },
-      { key: 'ops', title: '签 3·运行观测', endpoint: '/api/hermes/sim/topology' },
-      { key: 'delivery', title: '签 5·交付健康', endpoint: '/api/hermes/sim/branches' },
-      { key: 'trace', title: '签 6·需求追溯', endpoint: '/api/hermes/sim/trace' },
+    // 唯一占位签=轮次总览（B 波旗舰屏工单待实装）
+    const ov = wrapper.find('[data-testid="ia-sim-panel-overview"]')
+    expect(ov.exists()).toBe(true)
+    expect(ov.text()).toContain('签 1·轮次总览')
+    expect(ov.text()).toContain('/api/hermes/sim/run-state')
+    // 五签实装：标题保留，占位端点清单由实际数据面取代
+    const live: ReadonlyArray<{ key: string; title: string; panel: string }> = [
+      { key: 'supervision', title: '签 2·监督面板', panel: '[data-testid="sup-panel"]' },
+      { key: 'ops', title: '签 3·运行观测', panel: '[data-testid="ops-panel"]' },
+      { key: 'evidence', title: '签 4·证据库', panel: '[data-testid="ev-panel"]' },
+      { key: 'delivery', title: '签 5·交付健康', panel: '[data-testid="dlv-panel"]' },
+      { key: 'trace', title: '签 6·需求追溯', panel: '[data-testid="trc-panel"]' },
     ]
-    for (const { key, title, endpoint } of expectations) {
-      const panel = wrapper.find(`[data-testid="ia-sim-panel-${key}"]`)
-      expect(panel.exists(), `占位面板 ${key}`).toBe(true)
-      expect(panel.text()).toContain(title)
-      expect(panel.text()).toContain(endpoint)
+    for (const { key, title, panel } of live) {
+      const section = wrapper.find(`[data-testid="ia-sim-panel-${key}"]`)
+      expect(section.exists(), `实装面板 ${key}`).toBe(true)
+      expect(section.text()).toContain(title)
+      expect(section.find(panel).exists(), `实际数据面 ${key}`).toBe(true)
     }
-    // B2 实装两签：标题保留，占位端点清单由实际数据面取代
-    const sup = wrapper.find('[data-testid="ia-sim-panel-supervision"]')
-    expect(sup.exists()).toBe(true)
-    expect(sup.text()).toContain('签 2·监督面板')
-    expect(sup.find('[data-testid="sup-panel"]').exists()).toBe(true)
-    const ev = wrapper.find('[data-testid="ia-sim-panel-evidence"]')
-    expect(ev.exists()).toBe(true)
-    expect(ev.text()).toContain('签 4·证据库')
-    expect(ev.find('[data-testid="ev-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 
