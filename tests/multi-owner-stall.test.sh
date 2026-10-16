@@ -16,7 +16,7 @@ FN_SRC="$(sed -n '/^wait_alive_truth_multi()/,/^}/p' "$HERE/mux/mx-scenario-lib.
 CTRL="$(mktemp -d /tmp/multi-owner-stall.XXXXXX)" || exit 1
 trap '[[ -n "${BG_PID:-}" ]] && kill "$BG_PID" 2>/dev/null; rm -rf "$CTRL"' EXIT
 export HERMES_ROOT="$CTRL/hermes"
-export MX_POLL_IVAL=1 MX_NUDGE_MIN_HALF=2 MX_ALIVE_HARD_SEC=22
+export MX_POLL_IVAL=1 MX_NUDGE_MIN_HALF=2 MX_ALIVE_HARD_SEC=16
 export SCAN_ROOM="" MX_PROGRESS_FN=""
 
 # ── stub 外部面 ──
