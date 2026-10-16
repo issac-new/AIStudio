@@ -1763,6 +1763,32 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
            sset g4_evidence_gap 1; note "[G4] g4_evidence_gap=1（缺报告过闸显形，run18 复盘 F3：闸键-证据耦合）"; }
   fi
   gate_review qi "G4-测试过闸"
+  # ── 契约执行强制线（质量 C 转正，2026-10-16：run15 前置 P4-10 影子模式→G4 强制）──
+  # 影子观察器（contract-observe.mjs）自 run15 起跑，口径=qgate contract executor
+  # （mode=breaking）同构：types.ts 冻结 ChannelAdapter 方法集=期望面，各渠道实现
+  # 导出面=观察面，缺方法/多方法=breaking。转正判据（与影子模式同一产物文件，
+  # 不另造轮子）：breaking=0 才准入 g4_pass；>0 记问题单+置 g4_contract_gap 显形
+  # （缺证据过闸语义与 g3/g4_evidence_gap 同族，治理报告如实计，禁静默放行）；
+  # 观察器执行失败=INCONCLUSIVE 同径记单（fail-closed，不冒充通过）。
+  _cb_file="$EVID_DIR/qgate-contract-observation.json"
+  if [[ -f "$_cb_file" ]]; then
+    _cb_n=$(python3 -c "import json;print(len(json.load(open('$_cb_file')).get('breaking',[])))" 2>/dev/null || echo '?')
+    if [ "$_cb_n" = "0" ]; then
+      note "[契约] G4 强制线：ChannelAdapter 契约面成立（breaking=0，质量 C 转正件）"
+    elif [ "$_cb_n" = "?" ]; then
+      echo "ISSUE|g4-contract-inconclusive|${RFD_ID}|契约观察产物解析失败（qgate-contract-observation.json）——fail-closed 记单显形" >> "$EVID_DIR/issues.log"
+      sset g4_contract_gap 1
+      note "[契约] G4 强制线：观察产物不可解析——INCONCLUSIVE 记单（fail-closed）"
+    else
+      echo "ISSUE|g4-contract-breaking|${RFD_ID}|契约面 breaking=${_cb_n} 项（期望 ChannelAdapter 4 方法×双渠道实现，缺/多方法均列 evidence/qgate-contract-observation.json）——G4 强制线未过，缺证据过闸显形" >> "$EVID_DIR/issues.log"
+      sset g4_contract_gap 1
+      note "[契约] G4 强制线：breaking=${_cb_n}——g4_contract_gap=1 显形（禁静默放行）"
+    fi
+  else
+    echo "ISSUE|g4-contract-missing|${RFD_ID}|契约观察产物缺席（defect 段 contract-observe.mjs 未跑或失败）——G4 强制线 fail-closed 记单" >> "$EVID_DIR/issues.log"
+    sset g4_contract_gap 1
+    note "[契约] G4 强制线：观察产物缺席——fail-closed 记单"
+  fi
   capture_step "testpass_done" "/app/board"
 
   sset testpass_done 1
