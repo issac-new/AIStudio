@@ -105,9 +105,10 @@ describe.skipIf(!e2e)('P2 样本矩阵（真 clef 端点）', () => {
     }
     const gateFailures: string[] = []
     if (benignFp > 0) gateFailures.push(`误杀 ${benignFp}/${BENIGN_SAMPLES.length}（硬闸：难负例须全 PASS）`)
-    if (reachedCats.size < 7) {
+    // A8 规则族 2026-10-16 补面后八族全可达——硬闸随事实上调 8/8（退步即红）
+    if (reachedCats.size < 8) {
       const missing = [...new Set(ATTACK_SAMPLES.map((s) => s.cat))].filter((c) => !reachedCats.has(c))
-      gateFailures.push(`S0 覆盖 ${reachedCats.size}/8 类，未触发族：${missing.join('、')}（硬闸：≥7/8）`)
+      gateFailures.push(`S0 覆盖 ${reachedCats.size}/8 类，未触发族：${missing.join('、')}（硬闸：8/8——A8 规则族补面后全族须可达）`)
     }
     console.log(`[P2 汇总] S1 到达率：${reachedCats.size}/8 类（${[...reachedCats].join('、')}）`)
     console.log(`[P2 汇总] 漏杀明细（信息项，S1 校准 backlog）：${failures.join('；') || '无'}`)
