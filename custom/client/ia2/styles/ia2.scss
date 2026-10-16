@@ -600,3 +600,14 @@ body.ia-center-full .studio-navigation-rail {
   color: var(--text-muted, #878c99);
   border: 1px solid var(--border-color, #e5e7eb);
 }
+
+/* U2 驾驶舱使用动线提示（CockpitOverview 三卡串联句） */
+.ov__flow-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-muted, #878c99);
+  border-left: 3px solid var(--accent-primary, var(--color-primary, #3b82f6));
+  padding: 4px 10px;
+  background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.06)));
+  border-radius: 0 6px 6px 0;
+}
