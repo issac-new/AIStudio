@@ -62,13 +62,14 @@ if '--print-paths' in sys.argv:
     sys.exit(0)
 # ── 方案原文解析 ──
 # 验收线（正本 §5.5 反凑数·方案解析源单一）：PLAN_PATH 必须指向当前正本——正本换代时同步切换并记档。
-# 解析链：MX_PLAN_PATH 覆盖 → 主工作树 V8（正本所在）→ NVMe 镜像树 V8 兜底
-# （两棵工作树并存的分叉实录见 2026-10-05-v7-plan-structure-audit.md §二）。
+# 解析链：MX_PLAN_PATH 覆盖 → 主工作树 V8（正本所在）→ MX_OVERLAY_ROOT 定位
+# （默认同主树；NVMe 镜像树 2026-10-16 已整树删除，镜像兜底随之退役——两树并存的
+# 分叉实录见 2026-10-05-v7-plan-structure-audit.md §二）。
 # 块终止符扩到 h2/h3（V8 结构分离版逐步节后接 ### 小节，只认 ^## 会吞块）。
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
     '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    os.environ.get('MX_OVERLAY_ROOT', '/Volumes/nvme2230/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    os.environ.get('MX_OVERLAY_ROOT', '/Users/cuishi/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN_PATH = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
                  Path(_plan_candidates[1]))
@@ -3498,7 +3499,7 @@ def _gate_provenance_map():
 
 def _shadow_evidence_zone_html():
     """监督层观察实录+产品面证据快照（V8.29 治理轮补：推演程序负责采集关键环节
-    证据并撰写报告——本节把 workflow-journal 与产品端点快照收进报告）。收官时
+    证据并撰写报告——本节把 workflow-journal 与产品端点快照收进报告）。收尾时
     新起进程采集：journal 只读尾部；产品面经 mx-state-query.sh product（缺席如
     实呈现，不硬凑）。"""
     import subprocess as _sp

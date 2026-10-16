@@ -44,12 +44,13 @@ SIM = Path(os.environ.get('AIPAY_SIM_ROOT', str(SIM)))
 EVID = SIM / 'runs' / RUN_ID / 'evidence'
 REPORT = EVID / 'simulation-report.html'
 R18F = EVID / 'r18-steps.json'
-# 验收线（正本 §5.5 反凑数·方案解析源单一）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → NVMe 镜像兜底），
+# 验收线（正本 §5.5 反凑数·方案解析源单一）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → MX_OVERLAY_ROOT 定位，
+# 默认同主树；NVMe 镜像树 2026-10-16 已整树删除，镜像兜底随之退役），
 # 勿再硬编码旧版路径——正本与审计源分叉即验收缺陷（V3 分叉实录见结构排查 §二.1）。
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
     '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    os.environ.get('MX_OVERLAY_ROOT', '/Volumes/nvme2230/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    os.environ.get('MX_OVERLAY_ROOT', '/Users/cuishi/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
             Path(_plan_candidates[1]))
@@ -832,8 +833,7 @@ _vis = _re10.sub(r'<[^>]+>', '\n', _vis)
 import html as _html10
 _vis = _html10.unescape(_vis)
 _JC10 = os.environ.get('MX_JARGON_CHECK') or next(
-    (p9 for p9 in ['/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
-                   '/Volumes/nvme2230/lab/ncwk/overlay/scripts/plan-html/jargon-check.py'] if os.path.exists(p9)), '')
+    (p9 for p9 in ['/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py'] if os.path.exists(p9)), '')
 if _JC10:
     import subprocess as _sp10
     _tf10 = os.path.join(tempfile.gettempdir(), f'audit-visible-{RUN_ID}.txt')
