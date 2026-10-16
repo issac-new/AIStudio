@@ -21,6 +21,7 @@ import { useI18n } from 'vue-i18n'
 import { isStoredSuperAdmin } from '@/api/client'
 import { useAuthStore } from '@/stores/hermes/auth'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
+import { prefetchLegacyView } from '../views/legacy-view-loaders'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import { features } from '../../../../config/features'
 
@@ -113,6 +114,8 @@ const groupVisible = computed(() =>
         <RouteLinkItem
           v-for="e in g.entries" :key="e.name"
           class="ia-setnav__item" :to="{ name: e.name }"
+          @mouseenter="prefetchLegacyView(e.name)"
+          @focusin="prefetchLegacyView(e.name)"
         >
           <CockpitIcon :name="e.icon" :size="14" />
           <span>{{ e.labelKey ? t(e.labelKey) : e.label }}</span>

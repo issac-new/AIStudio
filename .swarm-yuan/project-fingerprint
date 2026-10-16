@@ -1,0 +1,5 @@
+total=2995
+ext_dist=ext[.ts]=1323 ext[.patch]=422 ext[.md]=384 ext[.vue]=298 ext[.json]=130 ext[.mjs]=111 ext[.yaml]=98 ext[.py]=51 ext[.png]=39 ext[.diff]=36 ext[.gitignore]=24 ext[.txt]=20 ext[(none)]=10 ext[.sh]=8 ext[.log]=6 ext[.html]=5 ext[.tag]=4 ext[.scss]=4 ext[.jsonl]=4 ext[.gitkeep]=3 
+skel_cksum=1007554400
+dir_cksums=dir_cksum[_root]=2508665032 dir_cksum[assets]=377643953 dir_cksum[config]=955913400 dir_cksum[custom]=3603278850 dir_cksum[docs]=1797715049 dir_cksum[evidence]=2497758522 dir_cksum[packages]=905342194 dir_cksum[patches]=2723683951 dir_cksum[registries]=454810070 dir_cksum[runtime]=4181870647 dir_cksum[scripts]=1755494143 dir_cksum[spec]=2779859895 dir_cksum[zcode-patches]=2704063923 
+ts=2026-10-16T00:24:37Z
