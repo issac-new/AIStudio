@@ -11,6 +11,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
+import OverviewPanel from './OverviewPanel.vue'
 import SupervisionPanel from './SupervisionPanel.vue'
 import EvidencePanel from './EvidencePanel.vue'
 
@@ -52,10 +53,10 @@ function goTab(tab: SimTab): void {
   void router.push({ name: tab.name })
 }
 
-/** B2 起监督/证据两签实装，占位仅剩四签（序号沿用六签冻结位次） */
+/** B2 起监督/证据两签实装；旗舰签起轮次总览实装，占位仅剩三签（序号沿用六签冻结位次） */
 const placeholderTabs = computed(() =>
   TABS
-    .filter(t => t.key !== 'supervision' && t.key !== 'evidence')
+    .filter(t => t.key !== 'overview' && t.key !== 'supervision' && t.key !== 'evidence')
     .map(t => ({ ...t, index: TABS.findIndex(x => x.key === t.key) + 1 })),
 )
 </script>
@@ -82,6 +83,15 @@ const placeholderTabs = computed(() =>
     </header>
 
     <main class="sim-center__body">
+      <!-- 签 1 轮次总览（旗舰签实装：姿态横幅+KPI 四卡+七幕旅程条+26 步表+交付物链+六闸仪+净额卡） -->
+      <section
+        v-show="activeTab === 'overview'"
+        class="sim-center__panel sim-center__panel--live"
+        data-testid="ia-sim-panel-overview"
+      >
+        <h3 class="sim-center__panel-title">签 1·{{ text.tabOverview }}</h3>
+        <OverviewPanel />
+      </section>
       <!-- 签 2 监督面板（B2 实装：观察窗流+研判/判词时间线+journal 原行反查） -->
       <section
         v-show="activeTab === 'supervision'"

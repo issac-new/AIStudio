@@ -129,7 +129,7 @@ describe('推演中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('默认签=轮次总览：/app/sim 即签 1 激活 + 占位面板在渲染位', async () => {
+  it('默认签=轮次总览：/app/sim 即签 1 激活 + 实装面板在渲染位（旗舰签起非占位）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -141,11 +141,11 @@ describe('推演中心壳（B1）：渲染', () => {
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
     expect(panel.text()).toContain('签 1·轮次总览')
-    expect(panel.text()).toContain('待实现')
+    expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 
-  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2 起监督/证据两签实装）', async () => {
+  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2 起监督/证据两签、旗舰签起轮次总览实装）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -162,6 +162,10 @@ describe('推演中心壳（B1）：渲染', () => {
       expect(panel.text()).toContain(title)
       expect(panel.text()).toContain(endpoint)
     }
+    // 旗舰签实装：标题保留，占位端点断言由实际数据面（ov-endpoints 标注）自然满足
+    const ov = wrapper.find('[data-testid="ia-sim-panel-overview"]')
+    expect(ov.find('[data-testid="ov-panel"]').exists()).toBe(true)
+    expect(ov.find('[data-testid="ov-endpoints"]').text()).toContain('/api/hermes/sim/run-state')
     // B2 实装两签：标题保留，占位端点清单由实际数据面取代
     const sup = wrapper.find('[data-testid="ia-sim-panel-supervision"]')
     expect(sup.exists()).toBe(true)
