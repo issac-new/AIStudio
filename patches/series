@@ -782,3 +782,5 @@
 #      在 stdout 洪泛时让 pending 挂到 timeout；>64 连续即判协议破坏拒绝（测试契约
 #      coding-agents-cross-platform「垃圾行超过 64 条」既定断言的补齐）。
 639-dsh-acp-nonjson-cap.patch
+
+640-studio-remove-default-login.patch
