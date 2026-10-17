@@ -13,7 +13,7 @@
 // 修复前更坏；保留字路径（boards/stats/overview 等真实子路由）不经闸，避免与
 // 路由表抢答。
 import type { Context, Next } from 'koa'
-import { existsSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'node:os'
 
@@ -59,6 +59,27 @@ function taskExistsInBoard(root: string, board: string, taskId: string): boolean
   }
 }
 
+/** 全板存在性（跨板解析兜底）：任务 ID 全局唯一，本板查无时再扫全板。
+ *  true=存在（放行给控制器跨板解析）；false=全板确认不存在（可快 404）；
+ *  null=库全不可读（不可判，放行）。 */
+function taskExistsAnywhere(root: string, taskId: string): boolean | null {
+  const boards = new Set<string>(['default'])
+  for (const dir of [join(root, 'kanban', 'boards'), join(root, 'boards')]) {
+    try {
+      for (const slug of readdirSync(dir)) {
+        if (!slug.startsWith('_') && slug !== 'default') boards.add(slug)
+      }
+    } catch { /* 目录不存在/不可读：跳过 */ }
+  }
+  let readable = false
+  for (const board of boards) {
+    const exists = taskExistsInBoard(root, board, taskId)
+    if (exists === true) return true
+    if (exists !== null) readable = true
+  }
+  return readable ? false : null
+}
+
 /** GET /api/hermes/kanban/:id 家族的保留首段（上游 routes/kanban.ts + fleet 路由
  *  的静态子路由全集；命中保留字的路径不经闸——它们有真实 handler）。 */
 const KANBAN_RESERVED_SEGMENTS = new Set([
@@ -92,9 +113,14 @@ export function createKanbanTaskFast404(deps: KanbanFastGateDeps = {}) {
         const board = typeof boardQuery === 'string' && BOARD_SLUG_RE.test(boardQuery) ? boardQuery : 'default'
         const exists = taskExistsInBoard(cliRoot(), board, head)
         if (exists === false) {
-          ctx.status = 404
-          ctx.body = { error: 'task not found' }
-          return
+          // 本板查无 ≠ 全仓无：任务可能在他板（控制器 492 跨板解析负责重试）。
+          // 全板扫描确认不存在才快 404；任一库不可读时 anywhere=null → 放行。
+          const anywhere = taskExistsAnywhere(cliRoot(), head)
+          if (anywhere === false) {
+            ctx.status = 404
+            ctx.body = { error: 'task not found' }
+            return
+          }
         }
       }
     }
