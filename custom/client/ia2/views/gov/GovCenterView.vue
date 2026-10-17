@@ -122,7 +122,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-clearance"
       >
-        <h3 class="gov-center__panel-title">签 3·{{ text.tabClearance }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabClearance }}<span class="gov-center__panel-no">签 3</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['clearance']" />
         <ClearancePanel />
       </section>
@@ -132,7 +132,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-process"
       >
-        <h3 class="gov-center__panel-title">签 1·{{ text.tabProcess }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabProcess }}<span class="gov-center__panel-no">签 1</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['process']" />
         <GateRepairsPanel />
         <p class="gov-center__pending">六道质量门表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
@@ -143,7 +143,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-orgAssets"
       >
-        <h3 class="gov-center__panel-title">签 2·{{ text.tabOrgAssets }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabOrgAssets }}<span class="gov-center__panel-no">签 2</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['orgAssets']" />
         <OrgEditor />
         <KeyLedgerSection />
@@ -156,7 +156,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-audit"
       >
-        <h3 class="gov-center__panel-title">签 5·{{ text.tabAudit }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabAudit }}<span class="gov-center__panel-no">签 5</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['audit']" />
         <GovAuditChangeView />
       </section>
@@ -166,7 +166,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-docs"
       >
-        <h3 class="gov-center__panel-title">签 6·{{ text.tabDocs }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabDocs }}<span class="gov-center__panel-no">签 6</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['docs']" />
         <GovDocsReviewView />
       </section>
@@ -176,7 +176,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-metrics"
       >
-        <h3 class="gov-center__panel-title">签 7·{{ text.tabMetrics }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabMetrics }}<span class="gov-center__panel-no">签 7</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['metrics']" />
         <CapacityLampBanner />
         <GovAiQualitySection />
@@ -193,7 +193,7 @@ function goTab(tab: GovTab): void {
         class="gov-center__panel gov-center__panel--live"
         data-testid="ia-gov-panel-issues"
       >
-        <h3 class="gov-center__panel-title">签 4·{{ text.tabIssues }}</h3>
+        <h3 class="gov-center__panel-title">{{ text.tabIssues }}<span class="gov-center__panel-no">签 4</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['issues']" />
         <GovIssuesPanel />
       </section>
@@ -251,7 +251,8 @@ function goTab(tab: GovTab): void {
   border-radius: var(--radius-standard);
 }
 .gov-center__panel--live { padding: 12px 14px; border-style: solid; }
-.gov-center__panel-title { margin: 0; font-size: 14px; }
+.gov-center__panel-title { margin: 0; font-size: 14px; display: flex; align-items: center; }
+.gov-center__panel-no { margin-left: 8px; padding: 0 5px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 10px; font-weight: 400; color: var(--text-muted); white-space: nowrap; }
 .gov-center__pending { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 .gov-center__badge {
   display: inline-block;
