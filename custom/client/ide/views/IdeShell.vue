@@ -597,7 +597,7 @@ onUnmounted(() => {
   --ia-border-control: #808080;
 }
 
-.ide-shell input, .ide-shell select, .ide-shell textarea { border-color: var(--ia-border-control); }
+.ide-shell input, .ide-shell select, .ide-shell textarea { --border-color: var(--ia-border-control); border-color: var(--ia-border-control); }
 
 /* 日程弹窗遮罩（ia2.scss 的 ia-overlay 同语义；IDE 壳直进路由不加载 ia2.scss，就地声明） */
 .ide-shell__modal-overlay {
