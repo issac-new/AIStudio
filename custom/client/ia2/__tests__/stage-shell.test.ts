@@ -41,20 +41,36 @@ async function mountStage(stage: number, path = `/x`) {
 describe('StageShell — D13 时序六阶段工作页', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('①搭台：标题+导语+三工具卡（组织资产/系统设置/运行观测）', async () => {
+  it('①搭建：标题+导语+五步骤清单（组织/账号/团队/环境资产/智能体）', async () => {
     const { w } = await mountStage(1)
     expect(w.find('[data-testid="stg-page-1"]').exists()).toBe(true)
-    expect(w.text()).toContain('搭台：建立组织与资产')
-    expect(w.findAll('.stg__tool').length).toBeGreaterThanOrEqual(3)
-    expect(w.text()).toContain('组织与资产')
+    expect(w.text()).toContain('搭建：建立组织、账号与资产')
+    // D18：三工具卡→五步骤有序清单，每步带进入按钮
+    const steps = w.findAll('.stg__step')
+    expect(steps).toHaveLength(5)
+    expect(w.find('[data-testid="stg-step-org"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stg-step-accounts"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stg-step-teams"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stg-step-env"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stg-step-agents"]').exists()).toBe(true)
+    for (const key of ['org', 'accounts', 'teams', 'env', 'agents']) {
+      expect(w.find(`[data-testid="stg-step-go-${key}"]`).exists(), `步骤 ${key} 进入按钮`).toBe(true)
+    }
+    // 无键步骤如实显示「轮次内不跟踪」，不假装完成
+    expect(w.find('[data-testid="stg-step-state-teams"]').text()).toContain('轮次内不跟踪')
+    expect(w.find('[data-testid="stg-step-state-agents"]').text()).toContain('轮次内不跟踪')
+    // 密钥台账内嵌保留（D14）
+    expect(w.find('[data-testid="stg-embed-1"]').exists()).toBe(true)
     w.unmount()
   })
 
-  it('④生产：四工具卡（inbox/看板/IDE/证据库）', async () => {
+  it('④开发：四工具卡（审批待办/看板/IDE 工作区/证据库）', async () => {
     const { w } = await mountStage(4)
-    expect(w.text()).toContain('生产：编码测试与日常协调')
+    expect(w.text()).toContain('开发：编码、测试与日常协调')
     const labels = w.findAll('.stg__tool-label').map(x => x.text())
-    for (const t of ['把关待办 inbox', '看板（工作台三栏）', 'IDE 画布', '证据库']) expect(labels).toContain(t)
+    for (const t of ['审批待办', '工作台看板', 'IDE 工作区', '证据库']) expect(labels).toContain(t)
+    // D18：testid 拼稳定 key 不拼 label
+    expect(w.find('[data-testid="stg-tool-ide"]').exists()).toBe(true)
     w.unmount()
   })
 

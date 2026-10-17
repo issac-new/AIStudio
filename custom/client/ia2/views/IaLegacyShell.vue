@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/IaLegacyShell.vue -->
 <!-- 收编页统一壳（2026-09-30 用户裁定：「左边栏功能点开后右边又出现一个边栏」
      根治）——设置页与原 hermes-studio 各功能页（模型/技能/插件/...）统一进
-     驾驶舱壳：IaGlobalTop（页头+注意力条，全宽）+ IaSettingsSidebar（注意力
+     驾驶舱壳：IaGlobalTop（D18 后 = 注意力条+页头，注意力条置顶，全宽）+ IaSettingsSidebar（注意力
      条下方，功能面=原三侧栏并集）+ 右侧内容区渲染被收编的上游视图。
      替换上游同名路由（registerRoute → addRoute 同名先删旧记录，路径不变、
      上游按名跳零改动），meta.fullscreen=true 使 App.vue 不再挂 AppSidebar/

@@ -95,6 +95,7 @@ const EXPECTED_NAMES = [
   'ia2.stage4',
   'ia2.stage5',
   'ia2.stage6',
+  'ia2.teams',
   'ide.shell',
 ]
 

@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/sim/CockpitPanel.vue -->
-<!-- 轻量驾驶条（B10，R1/R6——Q1 镜头层解体裁定的「驾驶位轻量随 B」落位）：
-     挂推演中心壳头、任意签常驻的三徽标行（姿态档色点/清偿门灯/服务异常数）。
-     与旗舰签 1（OverviewPanel 全量驾驶屏）同端点不同密度——run 单一事实源=
+<!-- 轻量驾驶条（B10，R1/R6——Q1 镜头层解体裁定的「值班台轻量随 B」落位）：
+     挂仿真中心壳头、任意签常驻的三徽标行（运行模式档色点/遗留项清算灯/服务异常数）。
+     与旗舰签 1（OverviewPanel 全量总览屏）同端点不同密度——run 单一事实源=
      /app/sim?run=xxx（query，与旗舰签同源），此处只读不自建输入；无 run=提示
      去签 1。点击整条跳签 1 看全量。 -->
 <script setup lang="ts">
@@ -45,11 +45,11 @@ function goOverview(): void {
     class="cpb"
     type="button"
     data-testid="cpb-strip"
-    :title="run ? `轮次 ${run}——点击看全量驾驶屏` : '去轮次总览输入轮次目录名'"
+    :title="run ? `运行 ${run}——点击看全量总览屏` : '去运行总览输入运行目录名'"
     @click="goOverview"
   >
     <template v-if="!run">
-      <span class="cpb__hint" data-testid="cpb-empty">驾驶位待命——轮次总览签输入轮次后，姿态/清偿/服务状态在此常驻</span>
+      <span class="cpb__hint" data-testid="cpb-empty">值班台待命——运行总览签输入运行后，运行模式/遗留项/服务状态在此常驻</span>
     </template>
     <template v-else-if="loadError">
       <span class="cpb__dot cpb__dot--unknown">●</span>
@@ -64,7 +64,7 @@ function goOverview(): void {
         class="cpb__badge"
         :class="state.ledger.open > 0 ? 'cpb__badge--red' : 'cpb__badge--green'"
         data-testid="cpb-clearance"
-      >清偿 {{ state.ledger.open > 0 ? `${state.ledger.open} 未清` : '放行' }}</span>
+      >遗留项 {{ state.ledger.open > 0 ? `${state.ledger.open} 待处理` : '已清零' }}</span>
       <span
         v-if="failServices !== null"
         class="cpb__badge"

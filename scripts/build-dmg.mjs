@@ -61,6 +61,12 @@ if (process.env.OVERLAY_UPSTREAM_ROOT?.trim()) {
 // === Step 0: Inject (apply patches, create symlinks, generate overlay vite config) ===
 run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
 
+// === Step 0.5: v0735-fixes 类型修复（2026-10-16 v0.7.36 轮接线）===
+// inject 只落补丁；apply.sh 的 mimo 级联/类型断言是 post-inject 树手术（Step -1 的
+// checkout 会抹掉上轮残留），不接进编排则每次出包都缺这批修复。脚本已幂等
+// （v0.7.36 上游自带条目自动跳过），同树两连跑（mac→win）安全。
+run(`HERMES_STUDIO_ROOT=${JSON.stringify(upstream)} bash ${JSON.stringify(resolve(overlayRoot, 'scripts/v0735-fixes/apply.sh'))}`, overlayRoot, 'v0735-fixes type fixes (post-inject)');
+
 // === Step 1: Full web UI build (client + server, 用 overlay vite config) ===
 // 关键: 使用 build.mjs (overlay config)，而不是上游的 npm run build
 // 幂等前置：上轮构建的 Step 3.5 已把根 node_modules 裁剪为生产态，vite/tsc 缺席，

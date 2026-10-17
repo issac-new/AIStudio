@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/sim/SimCenterView.vue -->
-<!-- 推演中心壳（B1·三中心重构波 2 首件）：顶部六签单层页签 + 内容区。
+<!-- 仿真中心壳（B1·三中心重构波 2 首件）：顶部六签单层页签 + 内容区。
      六签路由与挂面冻结自 docs/superpowers/specs/2026-10-16-sim-center-detailed-design.md：
-     签 1 轮次总览 /app/sim（默认签）、签 2 监督面板、签 3 运行观测、签 4 证据库、
+     签 1 运行总览 /app/sim（默认签）、签 2 监督面板、签 3 运行监控、签 4 证据库、
      签 5 交付健康、签 6 需求追溯——六条兄弟路由共用本组件（workbench 复用模式，
      当前签由路由名单一推导）。本壳只含导航与占位空态：签内容（数据面）由
      B2-B7 逐签实装，占位文案注明各签将消费的 X1 已就绪端点（正身=custom/server/
@@ -25,7 +25,7 @@ const route = useRoute()
 const router = useRouter()
 const text = useSimTabsText()
 
-// V1 壳收敛（视觉重规划 D2）：推演中心全宽——挂载期隐藏上游导航 rail
+// V1 壳收敛（视觉重规划 D2）：仿真中心全宽——挂载期隐藏上游导航 rail
 onMounted(() => document.body.classList.add('ia-center-full'))
 onUnmounted(() => document.body.classList.remove('ia-center-full'))
 
@@ -52,7 +52,7 @@ const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   trace: 'tabTrace',
 }
 
-/** 当前签：由路由名推导（六条兄弟路由共用本组件）；未知名兜底默认签=轮次总览 */
+/** 当前签：由路由名推导（六条兄弟路由共用本组件）；未知名兜底默认签=运行总览 */
 const activeTab = computed<TabKey>(() =>
   TABS.find(t => t.name === String(route.name))?.key ?? 'overview',
 )
@@ -63,7 +63,7 @@ function goTab(tab: SimTab): void {
   void router.push({ name: tab.name })
 }
 
-/** 六签全部实装（B1 壳+B2/B4/B5/B6+驾驶屏收尾件）；占位循环保留给后续新增签 */
+/** 六签全部实装（B1 壳+B2/B4/B5/B6+总览屏收尾件）；占位循环保留给后续新增签 */
 const INTRO_KEY: Record<TabKey, string> = {
   overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops',
   evidence: 'sim-evidence', delivery: 'sim-delivery', trace: 'sim-trace',
@@ -104,7 +104,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
     <SimFlowStrip />
 
     <main class="sim-center__body">
-      <!-- 签 1 轮次总览＝驾驶屏（B 波收尾实装：姿态横幅+健康行+六闸全名行+净额双行卡） -->
+      <!-- 签 1 运行总览＝总览屏（B 波收尾实装：运行模式横幅+健康行+六闸全名行+净额双行卡） -->
       <section
         v-show="activeTab === 'overview'"
         class="sim-center__panel sim-center__panel--live"
@@ -114,7 +114,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         <TabIntroBanner :tab="INTRO_KEY['overview']" />
         <OverviewPanel />
       </section>
-      <!-- 签 2 监督面板（B2 实装：观察窗流+研判/判词时间线+journal 原行反查） -->
+      <!-- 签 2 监督面板（B2 实装：观察窗流+研判/判定时间线+journal 原行反查） -->
       <section
         v-show="activeTab === 'supervision'"
         class="sim-center__panel sim-center__panel--live"
@@ -124,7 +124,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         <TabIntroBanner :tab="INTRO_KEY['supervision']" />
         <SupervisionPanel />
       </section>
-      <!-- 签 3 运行观测（B4 实装：四服务红绿点+派发器健康+休眠工作者+活性行挂账态） -->
+      <!-- 签 3 运行监控（B4 实装：四服务红绿点+调度器健康+空闲工作者+活性行挂账态） -->
       <section
         v-show="activeTab === 'ops'"
         class="sim-center__panel sim-center__panel--live"

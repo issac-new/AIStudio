@@ -1,8 +1,8 @@
 <!-- overlay/custom/client/ia2/views/gov/GovHealthSection.vue -->
 <!-- 治理体检区（2026-10-01 单层页签重构，用户裁定：不要二级页签）：原治理中心
-     「总览」分区拆出——六闸卡（G1-G6 工件在仓锚点，G3 以开发分支数为证据）
+     「总览」分区拆出——质量门卡（G1-G6 工件在仓锚点，G3 以开发分支数为证据）
      + 六域体检（判定引擎台账跨轮累积）。与「管理三账」同页签堆叠（同属管理者
-     健康总览语义：三账看工作项分布，六闸/六域看交付治理健康）。
+     健康总览语义：三账看工作项分布，六道质量门/六域看交付治理健康）。
      数据自取：/api/governance/*（git 真仓实查，缺失如实灰态不编造）。
      testid 沿用原 GovernanceView（gov-gates/gov-gate-*/gov-domain-audit/…），
      守门测试随迁不断代。 -->
@@ -33,7 +33,7 @@ const error = ref('')
 const loading = ref(false)
 
 // ── 机器执法实况（v1.31.1 吸收轮）：qgate 逐门最新判定按域归 G 门 ──
-// 六闸卡上方的人工工件核查之外，机器门禁判定同屏可见——两套证据各表，不互相冒充。
+// 质量门卡上方的人工工件核查之外，机器门禁判定同屏可见——两套证据各表，不互相冒充。
 // G2（架构评审）/G6（复盘）是人工域：无机器判定属如实边界，灰态标注，不编造。
 const qgateVerdicts = ref<QgateVerdictRow[]>([])
 const QGATE_DOMAIN_TO_GATE: Record<string, string> = { L0: 'G1', L1: 'G3', L2: 'G4', L3: 'G4', L4: 'G5', L5: 'G5' }
@@ -82,7 +82,7 @@ async function runAudit(): Promise<void> {
 const GATE_KEYS = ['gateG1', 'gateG2', 'gateG3', 'gateG4', 'gateG5', 'gateG6'] as const
 const GATE_IDS = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] as const
 
-/** 六闸卡：每闸聚合其工件（在仓=绿，缺=灰）；G3 以开发分支数为证据。 */
+/** 质量门卡：每闸聚合其工件（在仓=绿，缺=灰）；G3 以开发分支数为证据。 */
 const gateCards = computed(() => GATE_IDS.map((gateId, i) => {
   const docs = (overview.value?.docs ?? []).filter((d) => d.gate === gateId && (d.group || 'gate') === 'gate')
   const inRepo = docs.filter((d) => d.exists)
@@ -160,7 +160,7 @@ onMounted(() => void refresh())
       </table>
     </div>
 
-    <!-- 六闸卡 -->
+    <!-- 质量门卡 -->
     <div class="gov-health__gates" data-testid="gov-gates">
       <div v-for="card in gateCards" :key="card.gate" class="gov-health__gate" :class="{ 'is-ok': card.ok }" :data-gate="card.gate">
         <div class="gov-health__gate-name">{{ card.gate }}</div>

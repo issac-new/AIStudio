@@ -31,6 +31,7 @@ const workspaceStubs = vi.hoisted(() => {
   }
   return { state, useWorkspaceStore: () => state }
 })
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId: null }) }))
 vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 
 // cockpit store 桩：壳级 bootstrap/disconnect + 页头/弹窗状态供给

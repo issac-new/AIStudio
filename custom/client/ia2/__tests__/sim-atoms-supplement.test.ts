@@ -30,11 +30,11 @@ describe('SimStepBadge — 步境标（§2.9/§3.3）', () => {
   })
 })
 
-describe('SimGateBadge — 闸全名徽（§5.3 全名首现）', () => {
-  it('六闸全名逐一正确且首现即全名', () => {
+describe('SimGateBadge — 质量门全名徽（§5.3 全名首现）', () => {
+  it('六道质量门全名逐一正确且首现即全名', () => {
     const names: Array<[string, string]> = [
-      ['G1', 'G1 需求冻结'], ['G2', 'G2 架构评审'], ['G3', 'G3 编码门禁'],
-      ['G4', 'G4 独立测试'], ['G5', 'G5 发布准出'], ['G6', 'G6 复盘'],
+      ['G1', 'G1 需求冻结'], ['G2', 'G2 架构评审'], ['G3', 'G3 代码门禁'],
+      ['G4', 'G4 独立验证'], ['G5', 'G5 发布准出'], ['G6', 'G6 复盘'],
     ]
     for (const [gate, name] of names) {
       const w = mount(SimGateBadge, { props: { gate } })

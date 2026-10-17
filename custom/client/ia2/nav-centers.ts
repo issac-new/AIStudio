@@ -1,15 +1,13 @@
 // overlay/custom/client/ia2/nav-centers.ts
-// 三中心一级导航单一事实源（A0，2026-10-16 三中心重构）：
-// [工作台 /app] [推演中心 /app/sim] [治理中心 /app/gov] 入口表 + 高亮判定
-// 纯函数 centerForPath + 岛屿入口组（IDE/BPA/本体/评测/技能治理，右侧收纳）。
-// 设计锚=docs/superpowers/specs/2026-10-16-workbench-detailed-design.md 屏 0；
-// 需求锚 R8（导航按关注面归位：当日工作/一轮推演/治理问责分开）。
-// 路由纪律：全部消费既有路由记录（ia2.collab / ia2.sim / ia2.governance 与
-// 岛屿各名），本模块不注册不改动路由；/app/gov 在 C1 升格前仍是既有重定向
-// （落 /app/board?tab=gov-org 进治理内容），治理中心入口先经重定向，
-// C1 后直达七签壳，此处零改动。
+// 一级导航（D13 六阶段 → D18 旅程式重构，2026-10-17 设计正本 §5.0）：
+// 标签单一事实源=stage-meta.ts 的 STAGE_META（六阶段定义），本模块只做
+// 导航键/路径映射与高亮判定，不各自定义文案——终结三处各自定义的双轨形态。
+// 需求锚 R8（导航按关注面归位）修订为旅程式归位（设计正本 §二 J2）。
+// 路由纪律：全部消费既有路由记录（ia2.stage1-6 与岛屿各名），本模块不注册
+// 不改动路由。
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { STAGE_META } from './stage-meta'
 
 export type CenterKey = 'workbench' | 'sim' | 'gov' | 'workbench2' | 'accept' | 'govern'
 
@@ -23,27 +21,38 @@ export interface CenterNavMeta {
   labelEn: string
 }
 
-/** 三中心入口（顺序即顶栏渲染序） */
+/** 六阶段入口（顺序即顶栏渲染序；文案由 STAGE_META 派生，序号=阶段标记） */
 // D13 时序六阶段（2026-10-17 用户裁定：全部前端功能按使用时序重组，非加导航）：
-// 搭台→需求→分析设计→生产→验收→治理；功能归属按推演方案 26 步/七幕映射，
+// 搭建→需求→分析设计→开发→验收→治理；功能归属按推演方案 26 步/七幕映射，
 // 三中心数据页降为各阶段内的工具舱（路由全保留）。
-export const CENTER_NAVS: readonly CenterNavMeta[] = [
-  { key: 'workbench', name: 'ia2.stage1', path: '/app/stage/setup', labelZh: '①搭台', labelEn: 'Setup' },
-  { key: 'sim', name: 'ia2.stage2', path: '/app/stage/reqs', labelZh: '②需求', labelEn: 'Requirements' },
-  { key: 'gov', name: 'ia2.stage3', path: '/app/stage/design', labelZh: '③分析设计', labelEn: 'Design' },
-  { key: 'workbench2', name: 'ia2.stage4', path: '/app/stage/build', labelZh: '④生产', labelEn: 'Build' },
-  { key: 'accept', name: 'ia2.stage5', path: '/app/stage/accept', labelZh: '⑤验收', labelEn: 'Accept' },
-  { key: 'govern', name: 'ia2.stage6', path: '/app/stage/govern', labelZh: '⑥治理', labelEn: 'Govern' },
-]
+// 键名暂留三中心时代字面（workbench/sim/gov/workbench2/accept/govern）——
+// 改 stage1-6 牵动 ia store/IaCentersNav/四测试，用户不可见，排入下批
+// （设计正本 §5.8 第 4 条挂账）。
+const STAGE_CENTER_KEYS = ['workbench', 'sim', 'gov', 'workbench2', 'accept', 'govern'] as const
+const STAGE_PATHS = [
+  '/app/stage/setup', '/app/stage/reqs', '/app/stage/design',
+  '/app/stage/build', '/app/stage/accept', '/app/stage/govern',
+] as const
+const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥'] as const
+
+export const CENTER_NAVS: readonly CenterNavMeta[] = STAGE_META.map((s, i) => ({
+  key: STAGE_CENTER_KEYS[i],
+  name: `ia2.stage${s.no}`,
+  path: STAGE_PATHS[i],
+  labelZh: `${CIRCLED[i]}${s.navLabel}`,
+  labelEn: s.navLabelEn,
+}))
 
 /**
- * 路径 → 当前中心 key（高亮判定纯函数）。/app 家族按前缀归工作台，
+ * 路径 → 当前中心 key（高亮判定纯函数）。/app 家族按前缀归阶段，
  * 但 /app/sim*、/app/gov* 更长前缀先判；非 /app 家族（IDE 侧 / 上游壳页）
- * 返回 null。段边界匹配：/app/simulation 不误判为推演中心。
+ * 返回 null。段边界匹配：/app/simulation 不误判为仿真中心。
  */
 export function centerForPath(path: string): CenterKey | null {
-  // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④生产
-  // （工作台=生产期的日常工具集：看板/沟通/IDE/inbox）
+  // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④开发
+  // （开发期的日常工具集：看板/沟通/IDE/审批待办）；D18：/app/teams 团队
+  // 管理归①搭建（搭台的第三步，设计正本 §5.3）
+  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'workbench'
   if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'workbench'
   if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'sim'
   if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'gov'
@@ -52,7 +61,7 @@ export function centerForPath(path: string): CenterKey | null {
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'govern'
   if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'sim'
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'gov'
-  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=①搭台
+  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=旅程页（默认入口，搭建区高亮①）
   if (path.startsWith('/app/')) return 'workbench2'
   return null
 }
@@ -70,9 +79,12 @@ export interface IslandNavMeta {
   labelEn: string
 }
 
+// D18 术语标准化（设计正本 §5.5）：BPA 裸缩写→流程架构（全称「业务流程架构」
+// 在治理工作台区首现展开）；本体保留（GB/T 48000.3 本体建模标准依据，与知识
+// 图谱是不同实体）；技能治理与页内「技能安全扫描」按位置分工同名合一。
 export const ISLAND_NAVS: readonly IslandNavMeta[] = [
   { testid: 'ia-nav-island-ide', name: 'ide.shell', featureKey: 'ide', labelZh: 'IDE', labelEn: 'IDE' },
-  { testid: 'ia-nav-island-bpa', name: 'ia2.bpa', featureKey: 'bpa', labelZh: 'BPA', labelEn: 'BPA' },
+  { testid: 'ia-nav-island-bpa', name: 'ia2.bpa', featureKey: 'bpa', labelZh: '流程架构', labelEn: 'BPA' },
   { testid: 'ia-nav-island-ontology', name: 'ia2.ontology', featureKey: 'ontology', labelZh: '本体', labelEn: 'Ontology' },
   { testid: 'ia-nav-island-eval', name: 'ia2.eval', featureKey: 'eval', labelZh: '评测', labelEn: 'Eval' },
   { testid: 'ia-nav-island-skillgov', name: 'ia2.skillgov', featureKey: 'skillgov', labelZh: '技能治理', labelEn: 'Skill Gov' },

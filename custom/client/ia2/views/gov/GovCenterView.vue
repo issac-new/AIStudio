@@ -1,8 +1,8 @@
 <!-- overlay/custom/client/ia2/views/gov/GovCenterView.vue -->
 <!-- 治理中心壳（C1·三中心重构波 3 首件）：顶部七签单层页签+内容区。
      七签冻结自设计正本 §二 治理关注面：签 1 关卡与流程／签 2 组织与资产／
-     签 3 清偿门（C2 实装：台账全量+审批+放行灯）／签 4 问题单对账／签 5 审计
-     与变更／签 6 文档评审／签 7 度量体检。七条兄弟路由共用本组件（SimCenter
+     签 3 遗留项清算（C2 实装：台账全量+审批+放行灯）／签 4 问题清单对账／签 5 审计
+     与变更／签 6 文档评审／签 7 度量检查。七条兄弟路由共用本组件（SimCenter
      同模式，当前签由路由名推导）；五签占位注明 C3-C9 将迁入的既有组件
      （对账总表 B/C 组实存锚）。 -->
 <script setup lang="ts">
@@ -41,7 +41,7 @@ interface GovTab { key: TabKey; name: string; components: string[] }
 
 /** 七签单一事实源：路由名+占位注明的将迁入组件（对账行 C5/C7/C6/C4/C8/B8-B13/C3） */
 const TABS: ReadonlyArray<GovTab> = [
-  { key: 'process', name: 'ia2.governance', components: ['六闸卡（GovHealthSection 拆分·C3）', '闸修复状态机（orgloop gate-repairs·C3）'] },
+  { key: 'process', name: 'ia2.governance', components: ['质量门卡（GovHealthSection 拆分·C3）', '质量门修复状态机（orgloop gate-repairs·C3）'] },
   { key: 'orgAssets', name: 'ia2.govOrgAssets', components: ['组织与知识（GovOrgKnowledgeView）', '应用资产编辑器（GovRegistryRulesView）', '密钥最小台账（C11 增件）'] },
   { key: 'clearance', name: 'ia2.govClearance', components: [] },
   { key: 'issues', name: 'ia2.govIssues', components: ['诊断规则（KanbanDiagnosticsSection·C6）'] },
@@ -115,7 +115,7 @@ function goTab(tab: GovTab): void {
     </header>
 
     <main class="gov-center__body">
-      <!-- 签 3 清偿门（C2 实装：台账全量+审批+放行灯，消费 orgloop X2） -->
+      <!-- 签 3 遗留项清算（C2 实装：台账全量+审批+放行灯，消费 orgloop X2） -->
       <section
         v-show="activeTab === 'clearance'"
         class="gov-center__panel gov-center__panel--live"
@@ -125,7 +125,7 @@ function goTab(tab: GovTab): void {
         <TabIntroBanner :tab="INTRO_KEY['clearance']" />
         <ClearancePanel />
       </section>
-      <!-- 签 1 关卡与流程（C3 件一实装：闸修复单台账；六闸卡拆分随 C3 正件） -->
+      <!-- 签 1 关卡与流程（C3 件一实装：闸修复单台账；质量门卡拆分随 C3 正件） -->
       <section
         v-show="activeTab === 'process'"
         class="gov-center__panel gov-center__panel--live"
@@ -134,7 +134,7 @@ function goTab(tab: GovTab): void {
         <h3 class="gov-center__panel-title">签 1·{{ text.tabProcess }}</h3>
         <TabIntroBanner :tab="INTRO_KEY['process']" />
         <GateRepairsPanel />
-        <p class="gov-center__pending">六闸仪表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
+        <p class="gov-center__pending">六道质量门表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
       </section>
       <!-- 签 2 组织与资产（C8 实装：组织知识+应用资产整件迁入+密钥最小台账 C11） -->
       <section
@@ -168,7 +168,7 @@ function goTab(tab: GovTab): void {
         <TabIntroBanner :tab="INTRO_KEY['docs']" />
         <GovDocsReviewView />
       </section>
-      <!-- 签 7 度量体检（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件；AI 产出质量随 E/F 件） -->
+      <!-- 签 7 度量检查（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件；AI 产出质量随 E/F 件） -->
       <section
         v-show="activeTab === 'metrics'"
         class="gov-center__panel gov-center__panel--live"
@@ -184,7 +184,7 @@ function goTab(tab: GovTab): void {
         <GovSessionHealthSection />
         <CapacitySection />
       </section>
-      <!-- 签 4 问题单对账（C6 实装：issues.log 台账全量+DISP 联结处置态+100% 处置进度；
+      <!-- 签 4 问题清单对账（C6 实装：issues.log 台账全量+DISP 联结处置态+100% 处置进度；
            看板诊断规则区件随看板抽屉迁移另件） -->
       <section
         v-show="activeTab === 'issues'"

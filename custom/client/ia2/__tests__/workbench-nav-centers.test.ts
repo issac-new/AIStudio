@@ -36,8 +36,8 @@ describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
 })
 
 describe('CENTER_NAVS / ISLAND_NAVS 注册表自洽（D13：六阶段）', () => {
-  it('六阶段入口=[①搭台…⑥治理]，入口路径与判定函数互证', () => {
-    expect(CENTER_NAVS.map(c => c.labelZh)).toEqual(['①搭台', '②需求', '③分析设计', '④生产', '⑤验收', '⑥治理'])
+  it('六阶段入口=[①搭建…⑥治理]，入口路径与判定函数互证', () => {
+    expect(CENTER_NAVS.map(c => c.labelZh)).toEqual(['①搭建', '②需求', '③分析设计', '④开发', '⑤验收', '⑥治理'])
     for (const c of CENTER_NAVS) {
       const key = centerForPath(c.path)
       expect(key, `${c.path} 应互证`).toBe(c.key)

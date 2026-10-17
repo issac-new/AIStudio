@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/sim-center-shell.test.ts
-// B1 推演中心壳单测（三中心重构波 2 首件，2026-10-16）：
+// B1 仿真中心壳单测（三中心重构波 2 首件，2026-10-16）：
 //   1) 六签路由可达（/app/sim 家族，名称冻结自 2026-10-16-sim-center-detailed-design.md）
 //   2) /app/runs 家族重定向（兼容期一个版本周期，A13 升格移除）——按路径跳与
 //      按名跳（IaGlobalTop/SpotlightPanel/inbox-center 等既有调用面）同验
-//   3) 默认签=轮次总览；六签单层页签文案渲染（zh 冻结词表）；占位面板含
+//   3) 默认签=运行总览；六签单层页签文案渲染（zh 冻结词表）；占位面板含
 //      签序标题+待实现说明+将消费的 X1 端点名
 //   4) sim-tabs 文案模块 zh/en 键成对（单一事实源不半边漂移）
 // 路由表断言用 router.resolve（不装载组件）；实走重定向时组件换桩（同
@@ -19,7 +19,7 @@ import SimCenterView from '../views/sim/SimCenterView.vue'
 import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 
 /** 六签冻结词表（zh）：签序即路由序 */
-const SIX_TAB_LABELS = ['轮次总览', '监督面板', '运行观测', '证据库', '交付健康', '需求追溯'] as const
+const SIX_TAB_LABELS = ['运行总览', '监督面板', '运行监控', '证据库', '交付健康', '需求追溯'] as const
 
 const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim', name: 'ia2.sim' },
@@ -55,7 +55,7 @@ function makeSimRouter(): Router {
   })
 }
 
-describe('推演中心壳（B1）：六签路由', () => {
+describe('仿真中心壳（B1）：六签路由', () => {
   it('六签路由可达，名称与路径冻结一致（详设 §签 1-6 挂面）', () => {
     const router = makeResolveRouter()
     for (const { path, name } of SIM_PATHS) {
@@ -78,7 +78,7 @@ describe('推演中心壳（B1）：六签路由', () => {
   })
 })
 
-describe('推演中心壳（B1）：/app/runs 家族重定向', () => {
+describe('仿真中心壳（B1）：/app/runs 家族重定向', () => {
   it('runs → /app/sim；runs/:runId → /app/sim?run=:runId（runId 原样透传）', async () => {
     const router = makeStubbedRouter()
     await router.push('/app/runs')
@@ -89,7 +89,7 @@ describe('推演中心壳（B1）：/app/runs 家族重定向', () => {
     expect(router.currentRoute.value.name).toBe('ia2.sim')
   })
 
-  it('按名跳同样落推演中心（IaGlobalTop/WorkbenchView/TraceabilityMatrix 等调用面零改动）', async () => {
+  it('按名跳同样落仿真中心（IaGlobalTop/WorkbenchView/TraceabilityMatrix 等调用面零改动）', async () => {
     const router = makeStubbedRouter()
     // vue-router redirect 语义：原导航 query 并入目标（无消费者、无害）——
     // 断言收敛到落点路由与 path
@@ -118,8 +118,8 @@ describe('推演中心壳（B1）：/app/runs 家族重定向', () => {
   })
 })
 
-describe('推演中心壳（B1）：渲染', () => {
-  it('六签单层页签文案=冻结词表（轮次总览…需求追溯），无二级页签行', async () => {
+describe('仿真中心壳（B1）：渲染', () => {
+  it('六签单层页签文案=冻结词表（运行总览…需求追溯），无二级页签行', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -131,7 +131,7 @@ describe('推演中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('默认签=轮次总览：/app/sim 即签 1 激活 + 驾驶屏面板在渲染位（收尾件实装）', async () => {
+  it('默认签=运行总览：/app/sim 即签 1 激活 + 总览屏面板在渲染位（收尾件实装）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -142,7 +142,7 @@ describe('推演中心壳（B1）：渲染', () => {
     }
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
-    expect(panel.text()).toContain('签 1·轮次总览')
+    expect(panel.text()).toContain('签 1·运行总览')
     expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
@@ -152,11 +152,11 @@ describe('推演中心壳（B1）：渲染', () => {
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
-    // 六签全部实装（B1 壳+B2/B4/B5/B6+签 1 驾驶屏收尾件）：标题+实际数据面
+    // 六签全部实装（B1 壳+B2/B4/B5/B6+签 1 总览屏收尾件）：标题+实际数据面
     const live: ReadonlyArray<{ key: string; title: string; panel: string }> = [
-      { key: 'overview', title: '签 1·轮次总览', panel: '[data-testid="ov-panel"]' },
+      { key: 'overview', title: '签 1·运行总览', panel: '[data-testid="ov-panel"]' },
       { key: 'supervision', title: '签 2·监督面板', panel: '[data-testid="sup-panel"]' },
-      { key: 'ops', title: '签 3·运行观测', panel: '[data-testid="ops-panel"]' },
+      { key: 'ops', title: '签 3·运行监控', panel: '[data-testid="ops-panel"]' },
       { key: 'evidence', title: '签 4·证据库', panel: '[data-testid="ev-panel"]' },
       { key: 'delivery', title: '签 5·交付健康', panel: '[data-testid="dlv-panel"]' },
       { key: 'trace', title: '签 6·需求追溯', panel: '[data-testid="trc-panel"]' },
@@ -179,7 +179,7 @@ describe('推演中心壳（B1）：渲染', () => {
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/sim/ops')
     expect(wrapper.find('[data-testid="ia-sim-tab-ops"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.text()).toContain('签 3·运行观测')
+    expect(wrapper.text()).toContain('签 3·运行监控')
     // 同签点击不产生导航（当前签守卫）
     const before = router.currentRoute.value.fullPath
     await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')

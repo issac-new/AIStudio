@@ -13,6 +13,7 @@ const { swarmKanbanMounted } = vi.hoisted(() => ({
 }))
 
 // 治理分区平级化（2026-10-01 单层页签重构）：GovernanceView 退役，五拆件打桩
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId: null }) }))
 vi.mock('@/custom/ia2/views/gov/GovHealthSection.vue', () => ({
   default: { template: '<div class="gov-health-stub" data-testid="gov-health-stub" />' },
 }))

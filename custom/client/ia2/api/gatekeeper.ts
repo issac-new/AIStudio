@@ -1,5 +1,5 @@
 // overlay/custom/client/ia2/api/gatekeeper.ts
-// S7 把关待办数据面（B3 工单，R5/R6——设计正本 §二 S7）。
+// S7 审批待办数据面（B3 工单，R5/R6——设计正本 §二 S7）。
 // 消费 orgloop X2 端点：介入点聚合 /interventions/pending 与清偿门 /ledger
 // （resolve/waive/check-clearance）。纯函数层（分组/收尾令模板）=守门测试锚点，
 // fetch 层只做薄封装；类型按服务端 aggregateInterventions/computeClearanceView

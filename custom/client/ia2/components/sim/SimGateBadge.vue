@@ -10,8 +10,8 @@ const props = defineProps<{
 }>()
 
 const GATE_NAMES: Record<string, string> = {
-  G1: 'G1 需求冻结', G2: 'G2 架构评审', G3: 'G3 编码门禁',
-  G4: 'G4 独立测试', G5: 'G5 发布准出', G6: 'G6 复盘', UAT: 'UAT 验收',
+  G1: 'G1 需求冻结', G2: 'G2 架构评审', G3: 'G3 代码门禁',
+  G4: 'G4 独立验证', G5: 'G5 发布准出', G6: 'G6 复盘', UAT: 'UAT 验收',
 }
 const fullName = () => GATE_NAMES[props.gate?.toUpperCase?.() ?? ''] ?? props.gate
 const PROV: Record<string, { text: string; cls: string }> = {

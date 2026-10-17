@@ -1,3 +1,4 @@
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId: null }) }))
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-shell-header.test.ts
 // 驾驶舱统一壳页头单测（2026-09-18 统一导航重构 Task 2）：

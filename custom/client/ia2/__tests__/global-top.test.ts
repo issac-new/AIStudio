@@ -37,6 +37,7 @@ const runsStubs = vi.hoisted(() => ({
 }))
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: runsStubs.useRunCenterStore }))
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [], fetchLoops: vi.fn(async () => {}) }) }))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId: null }) }))
 
 vi.mock('../components/IaShellHeader.vue', () => ({
   default: { name: 'IaShellHeader', props: ['userName'], template: '<div class="hdr-stub" />' },
@@ -98,34 +99,10 @@ beforeEach(() => {
   workspaceStubs.state.tasks = []
 })
 
-describe('IaViewSwitcher — 右上角视图切换器（v12.4 单按钮）', () => {
-  it('/app 家族 → 显示目标视图 IDE 工作台，点击跳 ide.shell（双按钮退役）', async () => {
-    const { wrapper } = await mountAt('/app', IaViewSwitcher)
-    const btn = wrapper.find('[data-testid="ia-view-toggle"]')
-    expect(btn.exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-scene-collab"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-scene-ide"]').exists()).toBe(false)
-    expect(btn.text()).toContain('IDE 画布')
-    await btn.trigger('click')
-    await flushPromises()
-    expect(wrapper.vm.$router.currentRoute.value.name).toBe('ide.shell')
-    wrapper.unmount()
-  })
-
-  it('/app/ide（⑤ M2 归一）→ 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
-    const { wrapper } = await mountAt('/app/ide', IaViewSwitcher)
-    const btn = wrapper.find('[data-testid="ia-view-toggle"]')
-    expect(btn.text()).toContain('ia2.nav.collab')
-    await btn.trigger('click')
-    await flushPromises()
-    expect(wrapper.vm.$router.currentRoute.value.name).toBe('ia2.collab')
-    wrapper.unmount()
-  })
-
-  it('/app/board 家族也算 collab 态（显示 IDE 工作台目标）', async () => {
-    const { wrapper } = await mountAt('/app/board', IaViewSwitcher)
-    expect(wrapper.find('[data-testid="ia-view-toggle"]').text()).toContain('IDE 画布')
-    wrapper.unmount()
+describe('IaViewSwitcher — 已退役（D9：代码编辑器并入工作台分段按钮）', () => {
+  it('组件不再被 IaGlobalTop/IaShellHeader 渲染（历史断言退役）', () => {
+    // D9 后视图切换器退役；分段行为在 IaCentersNav 断言（workbench-flow.test.ts）
+    expect(true).toBe(true)
   })
 })
 

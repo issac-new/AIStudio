@@ -50,8 +50,10 @@ describe('contract: v12 unified IA routes (§8 双视图)', () => {
       expect(resolved.name, `${area.path} 必须可解析（契约：视图存在性）`).toBe(area.name)
       expect(String(resolved.name).startsWith('ia2.')).toBe(true)
     }
-    // /app 裸路径 = 沟通协作工作台（登录默认落点，071 守卫直落）
-    expect(router.resolve('/app').name).toBe('ia2.stage1') // D13：①搭台=默认入口
+    // /app 裸路径 = 旅程页（D18：0→1 旅程式重构，登录默认落点，071 守卫直落）
+    expect(router.resolve('/app').name).toBe('ia2.journey')
+    // 旧语义保可达：①搭建阶段页在 stage/setup（顶栏①入口落它）
+    expect(router.resolve('/app/stage/setup').name).toBe('ia2.stage1')
     // fullscreen meta（壳自带场景条，上游 AppSidebar 隐藏）
     expect(router.resolve('/app/board').meta.fullscreen).toBe(true)
   })

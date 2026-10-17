@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/views/IaShell.vue -->
-<!-- 驾驶舱统一壳（2026-09-19 v12.1 壳层重排）：全局顶区 IaGlobalTop（页头 +
-     注意力条）+ router-view。数据面武装走 useSharedArm 引用计数（与 IDE 壳
+<!-- 驾驶舱统一壳（2026-09-19 v12.1 壳层重排）：全局顶区 IaGlobalTop（D18 后 =
+     注意力条 + 页头，注意力条置顶）+ router-view。数据面武装走 useSharedArm 引用计数（与 IDE 壳
      共享单份流/调度器）；壳私有逻辑保留：Esc（管理台收起）、standalone 补标、
      merge-back 监听（IDE 窗口不得响应）。全局弹窗：日程/RunTrace/管理台。
      v12.3（2026-09-20 用户裁定）：通知居中模态 CockpitNotifyModal 退役

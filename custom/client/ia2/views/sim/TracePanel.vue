@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/views/sim/TracePanel.vue -->
 <!-- 签 6 需求追溯（B6 工单，R12——设计正本 §二 S4 的判词链面）：AC 判词链
-     四列表（AC 编号/判据原文/测试结果/UAT 判词三态）；源缺席列=null 如实
+     四列表（AC 编号/判据原文/测试结果/UAT 判定三态）；源缺席列=null 如实
      呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
 <script setup lang="ts">
 import { ref } from 'vue'
@@ -21,7 +21,7 @@ const trace = ref<TraceResponse | null>(null)
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入轮次目录名'; return }
+  if (!r) { loadError.value = '请输入运行目录名'; return }
   loading.value = true
   loadError.value = ''
   trace.value = null
@@ -36,7 +36,7 @@ async function load(): Promise<void> {
   }
 }
 
-/** UAT 判词三态徽（不通过红/有条件通过琥珀/通过绿；未判=灰） */
+/** UAT 判定三态徽（不通过红/有条件通过琥珀/通过绿；未判定=灰） */
 function verdictClass(v: string | null): string {
   if (!v) return 'none'
   if (/不通过|reject|fail/i.test(v)) return 'reject'
@@ -49,11 +49,11 @@ function verdictClass(v: string | null): string {
 <template>
   <div class="trc" data-testid="trc-panel">
     <div class="trc__bar">
-      <input v-model="run" class="trc__input" data-testid="trc-run" placeholder="轮次目录名（如 20261015-v8-run20）" @keyup.enter="load">
+      <input v-model="run" class="trc__input" data-testid="trc-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
       <button class="trc__btn" type="button" data-testid="trc-load" :disabled="loading" @click="load">读取</button>
     </div>
     <p v-if="loadError" class="trc__error" data-testid="trc-error">{{ loadError }}</p>
-    <p v-else-if="!trace" class="trc__hint">输入轮次读取 AC 判词链（冻结单×测试报告×验收书三源聚合）。</p>
+    <p v-else-if="!trace" class="trc__hint">输入运行名读取 AC 判定链（冻结单×测试报告×验收书三源聚合）。</p>
 
     <template v-if="trace">
       <p class="trc__meta" data-testid="trc-meta">
@@ -65,7 +65,7 @@ function verdictClass(v: string | null): string {
       </p>
       <p v-if="trace.rows.length === 0" class="trc__hint" data-testid="trc-empty">三源均未提取到 AC 行（如实呈现）。</p>
       <table v-else class="trc__table" data-testid="trc-table">
-        <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判词</th></tr></thead>
+        <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判定</th></tr></thead>
         <tbody>
           <tr v-for="r in trace.rows" :key="r.ac" :data-testid="`trc-row-${r.ac}`">
             <td class="trc__mono">{{ r.ac }}</td>
