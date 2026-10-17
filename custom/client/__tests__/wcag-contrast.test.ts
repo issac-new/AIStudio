@@ -90,4 +90,10 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
       expect(src, `${f} dark control border`).toContain('--ia-border-control: #808080')
     }
   })
+
+  it('顶栏搜索框有可见 focus-visible 轮廓（WCAG 2.4.7）', () => {
+    const src = readFileSync(resolve(__dirname, '../ia2/components/IaShellHeader.vue'), 'utf8')
+    expect(src).toContain('.cockpit-top__search-input:focus-visible')
+    expect(src).toContain('outline: 2px solid var(--accent-primary')
+  })
 })

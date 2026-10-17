@@ -339,6 +339,7 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top__search { flex: 1 1 auto; max-width: 280px; min-width: 120px; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 11px; color: var(--text-muted); position: relative; flex-shrink: 2; }
 .cockpit-top__search-icon { font-size: 12px; flex-shrink: 0; color: var(--text-muted); }
 .cockpit-top__search-input { flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 11px; outline: none; font-family: inherit; min-width: 0; &::placeholder { color: var(--text-muted); } }
+.cockpit-top__search-input:focus-visible { outline: 2px solid var(--accent-primary, var(--color-primary)); outline-offset: 1px; border-radius: 4px; }
 .cockpit-top__search-clear { flex-shrink: 0; width: 16px; height: 16px; padding: 0; border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; &:hover { color: var(--text-primary); } }
 .cockpit-top__search-spinner { width: 10px; height: 10px; flex-shrink: 0; border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: cockpit-tspin 0.6s linear infinite; }
 @keyframes cockpit-tspin { to { transform: rotate(360deg); } }
