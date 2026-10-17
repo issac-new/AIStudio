@@ -23,9 +23,11 @@
 
 ## 三、已知产品残留（本批登记不动手，产品侧后续清偿）
 
-- `IaCentersNav.vue:40` aria-label「三中心导航」（D13 前残留）。
-- `routes.ts:37-42` IA_AREAS 六行 labelKey 同指 `ia2.nav.collab`（术语档 §5.8-3 列为同批修复项，实读仍在）。
+- ~~`IaCentersNav.vue:40` aria-label「三中心导航」（D13 前残留）~~ 已清偿（overlay `ec8f5de2`，aria-label 改「六阶段一级导航」）。
+- ~~`routes.ts:37-42` IA_AREAS 六行 labelKey 同指 `ia2.nav.collab`~~ 已清偿（同 `ec8f5de2`，逐行指向 `ia2.nav.stage1-6`，词条由 i18n-term-overrides 从 STAGE_META 派生 zh/en）。
 - CenterKey 键名仍三中心字面（挂账项，用户不可见）。
+
+> 2026-10-17 21:0x V8.38 批更新：上两项销账；dist 已按 overlay main `500fa73e` 双面重建（client+server，server bundle 补齐 10-16 20:56 后累计的 incident/D20/补丁 642-644 面）并供给 SIM（dist_mtime=21:03:21）。隔离通道=worktree `dist-v838` + `OVERLAY_UPSTREAM_ROOT` 私有上游（避开并行会话主树未提交编辑，不触共享注入树）。
 
 ## 四、轮次执行口径提醒
 
