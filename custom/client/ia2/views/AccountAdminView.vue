@@ -2,6 +2,7 @@
 <!-- P6 账户管理（补遗④第 2 项）：matrix 系统管理员在此创建/分配账号（synapse 管理端 API），
      本机账号↔matrix 双账号绑定维护（roster），保存/建号即入仓提交（R13）。 -->
 <script setup lang="ts">
+import IaBreadcrumb from '../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { ref, onMounted } from 'vue'
 import { fetchRegistry, saveRegistry, provisionAccount, createInvite, type InviteResult } from '@/custom/governance/api/adminRegistry'
@@ -68,6 +69,7 @@ function delRow(i: number) { rows.value.splice(i, 1) }
 
 <template>
   <div class="aac" data-testid="account-admin">
+  <IaBreadcrumb />
   <TabIntroBanner tab="accounts" />
     <h2>设置 · 账户管理 <span class="aac__meta">中央仓 @{{ commit || '…' }}</span></h2>
     <p class="aac__sub">matrix 系统管理员功能：创建/分配 matrix 账号（人类+AI 助理双账号），维护本机账号 ↔ matrix 账号绑定；一切变更提交中央仓可回溯。</p>

@@ -20,7 +20,7 @@ import { TASKS_TABS_TEXT } from '../i18n-tasks-tabs'
 import { GOV_TABS_TEXT } from '../i18n-gov-tabs'
 
 describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
-  it('/stage/* 前缀映射对应阶段；/app 家族归④生产', () => {
+  it('/stage/* 前缀映射对应阶段；仿真中心归④开发、治理中心归⑥治理', () => {
     expect(centerForPath('/app/stage/setup')).toBe('stage1')
     expect(centerForPath('/app/stage/reqs')).toBe('stage2')
     expect(centerForPath('/app/stage/design')).toBe('stage3')
@@ -29,8 +29,12 @@ describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
     expect(centerForPath('/app/stage/govern')).toBe('stage6')
     expect(centerForPath('/app')).toBe('stage1')
     expect(centerForPath('/app/board')).toBe('stage4') // /app/* 子路径归④
-    expect(centerForPath('/app/sim')).toBe('stage2')
-    expect(centerForPath('/app/gov')).toBe('stage3')
+    // 2026-10-17 层级批：旧映射 sim→②需求/gov→③分析设计 与页面语义无关，
+    // 顶栏高亮成假位置信号；按工具舱归属改判（与 routes.areaForPath 同步）
+    expect(centerForPath('/app/sim')).toBe('stage4')
+    expect(centerForPath('/app/sim/supervision')).toBe('stage4')
+    expect(centerForPath('/app/gov')).toBe('stage6')
+    expect(centerForPath('/app/gov/docs')).toBe('stage6')
     expect(centerForPath('/other')).toBe(null)
   })
 })
