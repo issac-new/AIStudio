@@ -49,7 +49,7 @@ function onToggleWorkbench(): void {
             :class="{ 'icn-inline__seg--cur': !isIde }"
             data-testid="ia-nav-center-work-collab"
             :aria-current="activeCenter === 'workbench' && !isIde ? 'page' : undefined"
-            @click="onGoCenter('ia2.collab')"
+            @click="onGoCenter('ia2.journey')"
           >{{ navLocale === 'zh' ? '工作台' : 'Workbench' }}</button>
           <button
             type="button"

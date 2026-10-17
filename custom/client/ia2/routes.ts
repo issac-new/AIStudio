@@ -34,7 +34,7 @@ export interface IaAreaMeta {
 
 /** 视图元数据（场景条 + 区域投影的单一事实源） */
 export const IA_AREAS: IaAreaMeta[] = [
-  { key: 'collab', name: 'ia2.collab', path: '/app', labelKey: 'ia2.nav.collab' },
+  { key: 'workbench', name: 'ia2.journey', path: '/app', labelKey: 'ia2.nav.collab' },  // D12：旅程=默认入口
 ]
 
 /**
@@ -43,7 +43,7 @@ export const IA_AREAS: IaAreaMeta[] = [
  */
 export function areaForPath(path: string): IaAreaKey | null {
   if (path !== '/app' && !path.startsWith('/app/')) return null
-  return 'collab'
+  return 'workbench'
 }
 
 /** 旧直达链接迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
@@ -53,13 +53,11 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   { from: '/app/tasks', to: '/app/board' },
   { from: '/app/comms/room/:roomId', to: '/app/s/room/:roomId' },
   { from: '/app/comms', to: '/app' },
-  { from: '/app/collab/session/:sessionId', to: '/app/s/chat/:sessionId' },
   { from: '/app/collab/chat', to: '/app/s/chat' },
   { from: '/app/collab/history/session/:sessionId', to: '/app/history/session/:sessionId' },
   { from: '/app/collab/history', to: '/app/history' },
   { from: '/app/collab/global-agent/session/:sessionId', to: '/app/agent/session/:sessionId' },
   { from: '/app/collab/global-agent', to: '/app/agent' },
-  { from: '/app/collab', to: '/app' },
 ]
 
 /**
@@ -153,9 +151,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       meta: { fullscreen: true },
       children: [
         {
-          // 沟通协作工作台（v12 三栏）。''=无选择（组件内自动选首个会话，不写 URL）；
-          // s/chat|s/room|l 承载对象选择，中栏画布按选择分派（对话画布/运行画布）。
+          // D12 时序旅程首页（2026-10-17 用户裁定）：/app 默认入口=八阶段旅程；
+          // 沟通协作三栏移 /app/collab（工作台分段按钮直达），原直达链接重定向一周期。
           path: '',
+          name: 'ia2.journey',
+          component: () => import('./views/journey/JourneyView.vue'),
+        },
+        {
+          path: 'collab',
           name: 'ia2.collab',
           component: workbench,
         },
