@@ -258,7 +258,7 @@ mx_dispatch_subrev() { # <human-pm> <subcard-id> → 0 派发成功 / 1 已派�
   local title body cur_assignee
   cur_assignee=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" show "$sid" 2>/dev/null | awk -F: "/^  assignee:/{gsub(/^ +/,"",\$2);print \$2}")
   if [[ -n "$cur_assignee" && "$cur_assignee" != "-" ]]; then
-    echo "MX|dispatch-subrev-skip|$sid|assignee=$cur_assignee（已分派，跳过幂等）"
+    echo "MX|dispatch-subrev-skip|$sid|assignee=${cur_assignee}（已分派，跳过幂等）"
     return 1
   fi
   title=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" show "$sid" 2>/dev/null | head -1 | sed "s/^Task $sid: //")
@@ -312,7 +312,7 @@ BODY
   if [[ -n "$body" ]]; then
     kanban_edit_as "$agent" "$sid" --body "$body" 2>/dev/null || true
   fi
-  echo "MX|dispatch-subrev-ok|$sid|→ $agent（dev_board=${dev_board} mirror=$dev_id）"
+  echo "MX|dispatch-subrev-ok|$sid|→ ${agent}（dev_board=${dev_board} mirror=${dev_id}）"
   return 0
 }
 
@@ -344,7 +344,7 @@ kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错�
     [ -n "${EVID_DIR:-}" ] && echo "ISSUE|strict-walk-done-skipped|$u|卡 $id 未代走到 done（strict 姿态：卡态流转归组织侧）" >> "$EVID_DIR/issues.log" 2>/dev/null || true
     return 0
   fi
-  compensate card-walk-done "user=$u card=$id（代演推卡到 done）" 2>/dev/null || true
+  compensate card-walk-done "user=$u card=${id}（代演推卡到 done）" 2>/dev/null || true
   for st in todo running review done; do
     kanban_status_as "$u" "$id" "$st" 2>/dev/null || true
   done
@@ -375,7 +375,7 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
 
 # approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
-# 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
+# 事件 id 即 Matrix ${event_id}（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 # ── 审批复核人工介入（用户裁决 C 混合模式）──────────────
 # MX_APPROVE_MODE=auto（默认）脚本扫到即批——历史行为
@@ -716,7 +716,7 @@ _nudge_branch_intel() { # <agents-csv> → stdout: 分支情报句（空=无情�
     [[ "$br" == "origin" || "$br" == "origin/main" ]] && continue
     [[ "$ct" -ge "$rs" ]] 2>/dev/null || continue
     case ",$agents," in *",$an,"*) ;; *) continue ;; esac
-    out="${out:+$out；}${br#origin/}@${tip}"
+    out="${out:+${out}；}${br#origin/}@${tip}"
   done < <(git -C "$DIRECTOR_CLONE" for-each-ref refs/remotes/origin \
       --format='%(refname:short)|%(objectname:short)|%(committerdate:unix)|%(authorname)' 2>/dev/null)
   [[ -n "$out" ]] && printf '已见到你本轮推送的分支：%s（内容在分支上，main 还没有）。' "$out"
@@ -921,7 +921,7 @@ dev_progress_ping() {
     _aw=$(_agent_log_last_work_ts "$_ag" 2>/dev/null || echo 0)
     (( _aw > 0 && $(date +%s) - _aw < 600 )) && _act=$((_act+1))
   done
-  note "[进度锚] 交付分支：$line；工作区在途：${wtline:-无}；在线工位=${_act}；PROGRESS-ANCHORS=${pg:-无}"
+  note "[进度锚] 交付分支：${line}；工作区在途：${wtline:-无}；在线工位=${_act}；PROGRESS-ANCHORS=${pg:-无}"
 }
 
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
@@ -1012,7 +1012,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     fi
     if (( idle_half >= 120 && $(date +%s) - last_sig > idle_half )) && { _any_log_tail_stalled ${logs[@]+"${logs[@]}"} || { (( _hb_on == 1 )) && hb_any_stalled "${_hbag[@]}"; } ; }; then
       if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
-      note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 $agents）"
+      note "[真值] $desc ✗（早判卡死：静默>${idle_half}s 且日志尾为错误态——左移件 b，不等窗满；负责人 ${agents}）"
       return 1
     fi
     if (( $(date +%s) - last_sig > idle )); then
@@ -1022,7 +1022,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     fi
     if (( $(date +%s) - t0 > hard )); then
       if mx_wait_eval "$@"; then note "[真值] $desc ✓（窗口超时终态复核）"; return 0; fi
-      note "[真值] $desc ✗（硬窗 ${hard}s 满：活性等待总时长超限——纪律 26 兜底；负责人 $agents）"
+      note "[真值] $desc ✗（硬窗 ${hard}s 满：活性等待总时长超限——纪律 26 兜底；负责人 ${agents}）"
       return 1
     fi
     sleep "$MX_POLL_IVAL"
@@ -1054,7 +1054,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
     fi
   done
   if (( ${#logs[@]} == 0 && ${#_hbag[@]} == 0 )); then
-    note "[观察] wait_alive_truth_multi 无日志面（agents=$agents），退化为 ${hard}s 硬窗串行等待"
+    note "[观察] wait_alive_truth_multi 无日志面（agents=${agents}），退化为 ${hard}s 硬窗串行等待"
     local rc=0
     for i in "${!exprs[@]}"; do
       wait_truth "${descs[$i]}" "$hard" eval "${exprs[$i]}" || rc=1
@@ -1166,7 +1166,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
             *"branch_fresh feat/"*)
               br="${exprs[$i]##*branch_fresh feat/}"; br="${br%% *}"
               if [[ -n "$br" ]] && git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/feat/$br" >/dev/null 2>&1; then
-                hint="${hint:+$hint；}feat/$br 存在但 tip 早于本轮开跑（上轮遗留）——请把本轮新提交 push 到 feat/$br（勿只留在 wt/t_* 工作区分支）"
+                hint="${hint:+${hint}；}feat/$br 存在但 tip 早于本轮开跑（上轮遗留）——请把本轮新提交 push 到 feat/${br}（勿只留在 wt/t_* 工作区分支）"
               fi
               ;;
           esac
