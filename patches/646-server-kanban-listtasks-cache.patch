@@ -50,7 +50,7 @@
  // HERMES_CUSTOM[kanban-exec-queue] END
  const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
  const NO_WORKER_LOG_PATTERNS = [
-@@ -603,19 +642,53 @@
+@@ -603,18 +642,53 @@
    if (opts?.assignee) args.push('--assignee', opts.assignee)
    if (opts?.tenant) args.push('--tenant', opts.tenant)
  
@@ -77,7 +77,7 @@
 +    // HERMES_CUSTOM[ListTasksCache] BEGIN
 +    listTasksCache.set(cacheKey, { expiresAt: Date.now() + LIST_TASKS_CACHE_TTL_MS, data: parsed })
 +    // HERMES_CUSTOM[ListTasksCache] END
-     return parsed
++    return parsed
    } catch (err: any) {
      logger.error(err, 'Hermes CLI: kanban list failed')
      throw new Error(`Failed to list kanban tasks: ${err.message}`)

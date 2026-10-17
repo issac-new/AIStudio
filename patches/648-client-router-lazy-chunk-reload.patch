@@ -1,9 +1,10 @@
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -320,6 +320,24 @@
+@@ -319,6 +319,25 @@
+     hermesDesktop?: { isDesktop?: boolean }
    }).hermesDesktop?.isDesktop === true
  }
- 
++
 +// HERMES_CUSTOM[LazyChunkReload] BEGIN: 懒加载 chunk 拉取失败兜底（2026-10-17 回归轮 D5）。
 +// vite dev 下深模块图的动态 import 偶发失败一次（网络/transform 竞态），浏览器 ESM
 +// 模块映射会把失败按 URL 永久缓存——此后每次导航到同路由立即 reject，页面无限
