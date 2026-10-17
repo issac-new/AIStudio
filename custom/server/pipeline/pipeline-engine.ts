@@ -8,6 +8,12 @@
 //     origin/release（released）；release 分支缺席=released 不可达（不虚标））
 //   持续改进——每跃迁耗时入账（dev_signal 完整版留 v2）
 // 数据源=NUDGE_REPO 仓 git 只读查询（巡检官同源）；触发走 matrixSend（NUDGE 同链）。
+// 派发安全条款（2026-10-18 run21 提速批沉淀，用户指令沉入产品）：同域多单并行三
+// 条款（隔离工作树/互不等待/做完即止）——防「一人多单捆绑串行+共享工作区互踩」
+//（run21 实证：PAYCORE C/N 三小时零开工根因）；极简单步令收口=治完成态错位。
+export const DISPATCH_SAFETY =
+  '（并行安全：你若同时持有多单，各单用独立 git worktree 隔离推进、互不等待；本条只要求完成上述这一件事并回执结论行，做完即止，不要展开其他工作。）'
+
 // 开关：PIPELINE=off 关引擎；PIPELINE_TRIGGER=off 只报状态不发令（默认 off——run20
 // 驱动在管，run21 起跑前开 on 实战）。持久化 <home>/runtime/pipeline-state.json。
 
@@ -135,7 +141,7 @@ export class PipelineEngine {
           if (!flow.dispatched.includes(key)) {
             flow.dispatched.push(key)
             const tester = flow.domain === 'fe' ? 'fei-agent' : 'qi-agent'
-            await this.deps.send(`【流水线·持续测试】feat/${branch.replace('feat/', '')} 已落地 origin，请立即跑该分支测试并回 TEST-RESULT-${branch}`, [`@${tester}:matrix.test`])
+            await this.deps.send(`【流水线·持续测试】feat/${branch.replace('feat/', '')} 已落地 origin，请立即跑该分支测试并回 TEST-RESULT-${branch}${DISPATCH_SAFETY}`, [`@${tester}:matrix.test`])
             actions.push(`dispatch-test:${branch}`)
           }
         }
@@ -144,7 +150,7 @@ export class PipelineEngine {
           if (!flow.dispatched.includes(key)) {
             flow.dispatched.push(key)
             const lead = flow.domain === 'fe' ? 'mei-agent' : 'wei-agent'
-            await this.deps.send(`【流水线·持续集成】feat/${branch.replace('feat/', '')} 测试证据已就绪，请评审合并入 integration 并回 INTEGRATED-${branch}`, [`@${lead}:matrix.test`])
+            await this.deps.send(`【流水线·持续集成】feat/${branch.replace('feat/', '')} 测试证据已就绪，请评审合并入 integration 并回 INTEGRATED-${branch}${DISPATCH_SAFETY}`, [`@${lead}:matrix.test`])
             actions.push(`dispatch-merge:${branch}`)
           }
         }
