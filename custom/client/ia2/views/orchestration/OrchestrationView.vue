@@ -235,7 +235,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
         <section class="orch__q">
           <h4>5. 可复用资产</h4>
           <template v-if="fiveQ.assets.factoryTemplates.length > 0">
-            <p class="orch__q-note">任务工厂模板（复用次数）：</p>
+            <p class="orch__q-note">任务模板（复用次数）：</p>
             <ul class="orch__list">
               <li v-for="s in fiveQ.assets.factoryTemplates" :key="s.id">
                 {{ s.name }} · 复用 {{ s.reuseCount }} 次<span v-if="s.sourceRunId">（来源 run {{ s.sourceRunId }}）</span>

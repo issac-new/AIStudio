@@ -18,6 +18,8 @@ vi.mock('../../api/gatekeeper', async (importOriginal) => {
 })
 vi.mock('../../kanban/handoff', () => ({ HANDOFF_TYPES: [], HANDOFF_STATES: [], HANDOFF_TYPE_LABEL: {}, HANDOFF_STATE_LABEL: {} }))
 vi.mock('../../components/TabIntroBanner.vue', () => ({ default: { template: '<div class="intro-stub" />' } }))
+// ③组织视图按需挂载（内容减负批）：用桩替代整块治理数据面，断言挂载/卸载时机。
+vi.mock('../views/gov/GovOrgKnowledgeView.vue', () => ({ default: { name: 'GovOrgKnowledgeViewStub', template: '<div data-testid="ia-tasks-panel-gov-org" />' } }))
 
 import { authFetch } from '../../ide/utils/auth-fetch'
 import StageShell from '../views/stage/StageShell.vue'
@@ -135,15 +137,27 @@ describe('D14 阶段内嵌核心操作', () => {
 })
 
 describe('D15 六阶段全内嵌', () => {
-  it('③分析设计内嵌组织视图；④生产内嵌交接+容量灯', async () => {
+  it('③分析设计组织视图按需展开；④开发交接说明折叠', async () => {
     const { w: w3 } = await mountStage(3)
     expect(w3.find('[data-testid="stg-embed-3"]').exists()).toBe(true)
-    expect(w3.text().length).toBeGreaterThan(50) // 组织视图渲染了内容
+    // 默认不挂载：整块治理数据面不占首屏、不发请求
+    expect(w3.find('[data-testid="ia-tasks-panel-gov-org"]').exists()).toBe(false)
+    const toggle = w3.find('[data-testid="stg-embed-3-toggle"]')
+    expect(toggle.exists()).toBe(true)
+    await toggle.trigger('click')
+    await flushPromises()
+    expect(w3.find('[data-testid="ia-tasks-panel-gov-org"]').exists()).toBe(true)
+    expect(toggle.text()).toContain('收起')
+    await toggle.trigger('click')
+    expect(w3.find('[data-testid="ia-tasks-panel-gov-org"]').exists()).toBe(false)
     w3.unmount()
     const { w: w4 } = await mountStage(4)
     expect(w4.find('[data-testid="stg-embed-4"]').exists()).toBe(true)
     expect(w4.find('[data-testid="stg-embed-4b"]').exists()).toBe(true)
     expect(w4.find('[data-testid="gk-section"]').exists()).toBe(true)
+    const details = w4.find('[data-testid="stg-handoff-details"]')
+    expect(details.exists()).toBe(true)
+    expect((details.element as HTMLDetailsElement).open).toBe(false)
     expect(w4.find('[data-testid="hds-section"]').exists()).toBe(true)
     // 容量灯二态之一或都不渲染（无端点时）——只断言不炸
     w4.unmount()

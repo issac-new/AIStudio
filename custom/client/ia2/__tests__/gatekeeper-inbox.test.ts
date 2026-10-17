@@ -134,11 +134,27 @@ describe('GatekeeperSection — S7 把关待办', () => {
     w.unmount()
   })
 
-  it('取数失败如实报错不静默（清偿端点未配置 503 场景）', async () => {
-    fetchClearanceLedger.mockRejectedValue(new Error('/api/hermes/orgloop/ledger → 503'))
+  it('台账 503 时介入队列仍可用：部分失败隔离＋台账错误人话化＋原始锚留 title', async () => {
+    fetchClearanceLedger.mockRejectedValue(new Error('清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）'))
+    const w = mount(GatekeeperSection)
+    await flushPromises()
+    // 介入队列照常渲染
+    expect(w.findAll('[data-testid="sim-interv-card"]')).toHaveLength(2)
+    expect(w.find('[data-testid="gk-error"]').exists()).toBe(false)
+    // 台账区单独报错，正文人话、原始错误在 title
+    const err = w.find('[data-testid="gk-clearance-error"]')
+    expect(err.exists()).toBe(true)
+    expect(err.text()).toContain('遗留项台账未配置')
+    expect(err.attributes('title')).toContain('ORGLOOP_LEDGER_TSV')
+    w.unmount()
+  })
+
+  it('介入队列取数失败不拖死台账区：两路各自如实呈现', async () => {
+    fetchInterventionsPending.mockRejectedValue(new Error('/api/hermes/orgloop/interventions/pending → 503'))
     const w = mount(GatekeeperSection)
     await flushPromises()
     expect(w.find('[data-testid="gk-error"]').text()).toContain('503')
+    expect(w.find('[data-testid="gk-cl-PR-3"]').exists()).toBe(true)
     w.unmount()
   })
 })

@@ -86,6 +86,12 @@ function onToggleWorkbench(): void {
 .icn-inline__work { display: inline-flex; align-items: stretch; height: 100%; border-radius: 6px; overflow: hidden; }
 .icn-inline__work--active .icn-inline__seg { color: var(--accent-primary, var(--color-primary)); }
 .icn-inline__seg--cur { background: color-mix(in srgb, var(--accent-primary, var(--color-primary)) 12%, transparent); font-weight: 600; }
+/* ④开发是「阶段 + IDE 工作区」分段控件：加一道细分隔线，避免顶栏读成七个一级项 */
+.icn-inline__work .icn-inline__seg:first-child { border-radius: 6px 0 0 6px; }
+.icn-inline__work .icn-inline__seg + .icn-inline__seg {
+  border-left: 1px solid var(--border-color);
+  border-radius: 0 6px 6px 0;
+}
 .icn-inline__center-btn {
   border: none; background: transparent; cursor: pointer; font-family: inherit;
   font-size: 13px; padding: 0 12px; margin: 5px 0; border-radius: 6px;

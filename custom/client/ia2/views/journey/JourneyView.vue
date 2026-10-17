@@ -84,11 +84,11 @@ function goStage(no: number): void {
 <template>
   <div class="jrn" data-testid="jrn-page">
     <header class="jrn__head">
-      <h1 class="jrn__title" title="A 区五步把组织从零搭起来，B 区五阶段把需求交付到治理">旅程：从 0 到 1，建组织、跑交付、做治理</h1>
+      <h1 class="jrn__title" title="准备阶段五步把组织从零搭起来，交付阶段五阶段把需求交付到治理">流程总览：从 0 到 1，建组织、跑交付、做治理</h1>
       <div class="jrn__runbar">
         <input v-model="runInput" class="jrn__input" data-testid="jrn-run" placeholder="输入运行目录名查看该轮进度（如 20261015-v8-run20）" @keyup.enter="submitRun">
         <button class="jrn__btn" type="button" data-testid="jrn-load" @click="submitRun">查看进度</button>
-        <button class="jrn__btn jrn__btn--ghost" type="button" data-testid="jrn-dash-link" title="我的待办/评审闸口/交付进度三卡概览" @click="router.push({ name: 'ia2.dash' })">驾驶舱概览 →</button>
+        <button class="jrn__btn jrn__btn--ghost" type="button" data-testid="jrn-dash-link" title="我的待办/待审评审/交付进度三卡概览" @click="router.push({ name: 'ia2.dash' })">工作台概览 →</button>
       </div>
     </header>
 
@@ -111,7 +111,7 @@ function goStage(no: number): void {
 
     <!-- A 区：从 0 到 1 搭建（五步） -->
     <section class="jrn__zone" data-testid="jrn-zone-setup">
-      <h2 class="jrn__zone-title">A 区｜从 0 到 1 搭建</h2>
+      <h2 class="jrn__zone-title">准备阶段｜从 0 到 1 搭建</h2>
       <ol class="jrn__steps">
         <li
           v-for="st in SETUP_STEPS"
@@ -138,7 +138,7 @@ function goStage(no: number): void {
 
     <!-- B 区：交付全流程（五阶段，与顶栏②-⑥同构） -->
     <section class="jrn__zone" data-testid="jrn-zone-delivery">
-      <h2 class="jrn__zone-title">B 区｜交付全流程</h2>
+      <h2 class="jrn__zone-title">交付阶段｜需求到治理</h2>
       <ol class="jrn__stages">
         <li
           v-for="s in deliveryStages"

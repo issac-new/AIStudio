@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
 const SOURCE_LABEL: Record<InterventionSource, string> = {
   gate: '关卡',
-  clearance: '清偿门',
+  clearance: '遗留项清算',
   approval: '审批',
   uat: '验收',
   registry: '登记',

@@ -135,7 +135,8 @@ describe('13 键拆分注册表（三中心模块内事实源）', () => {
     ])
     expect(Object.keys(GOV_TABS_TEXT.zh)).toEqual(Object.keys(GOV_TABS_TEXT.en))
     expect(GOV_TABS_TEXT.zh.tabGovRegistry).toBe('能力与规则')
-    expect(GOV_TABS_TEXT.zh.tabGovOntology).toBe('语义体检')
+    expect(GOV_TABS_TEXT.zh.tabGovOntology).toBe('本体校验')
+    expect(GOV_TABS_TEXT.zh.tabGovHarness).toBe('研发效能')
     expect(GOV_TABS_TEXT.en.tabGovSessionHealth).toBe('Session Health')
   })
 
