@@ -58,7 +58,7 @@ const emit = defineEmits<{
   (e: 'open-gov-people'): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const titleKey = computed(() => ({
   tasks: 'ia2.sit.tasks',
@@ -251,8 +251,18 @@ function boardOpen(key: string): boolean {
 // 「在线 1 · 暂无内容」而 chip 显示「在线 3（1人·1智能体·1机器）」的割裂。
 const sitCounts = useSitCounts()
 const onlineCount = computed(() => sitCounts.online.value.people + sitCounts.online.value.agents + sitCounts.online.value.machines)
-const onlineDetailText = computed(() =>
-  t('ia2.sit.onlineDetail', { p: sitCounts.online.value.people, a: sitCounts.online.value.agents, m: sitCounts.online.value.machines }))
+// 回归轮 R5：英文单复数变形（'1 people' 病灶与态势条同源）；中文走词条。
+const onlineDetailText = computed(() => {
+  const p = sitCounts.online.value.people
+  const a = sitCounts.online.value.agents
+  const m = sitCounts.online.value.machines
+  const lang = typeof locale?.value === 'string' ? locale.value : ''
+  if (lang.toLowerCase().startsWith('en')) {
+    const pl = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+    return `${pl(p, 'person', 'people')} · ${pl(a, 'agent', 'agents')} · ${pl(m, 'machine', 'machines')}`
+  }
+  return t('ia2.sit.onlineDetail', { p, a, m })
+})
 
 function statusLabel(status: string): string {
   // v12.7：状态词与 tdp/态势条共用 ia2.tdp.status.*（原 ia2.board.status.* 键
