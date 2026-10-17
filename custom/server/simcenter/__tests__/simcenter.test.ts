@@ -48,6 +48,10 @@ function seedRunFixture(): void {
     'not-json-bad-line',
     '{"t":"gate_verdict","w":2,"ts":"2026-10-16T01:10:00Z"}',
   ].join('\n'), 'utf-8')
+  // 全局日志 + 无每轮副本的 run2：用于覆盖「每轮副本缺席回落全局日志」。
+  mkdirSync(resolve(simRoot, 'logs'), { recursive: true })
+  writeFileSync(resolve(simRoot, 'logs', 'workflow-journal.ndjson'), '{"t":"global","ts":"2026-10-16T02:00:00Z"}\n', 'utf-8')
+  mkdirSync(resolve(simRoot, 'runs', 'run2'), { recursive: true })
   writeFileSync(resolve(evid, 'compensation-ledger.tsv'), [
     'id\tts\ttype\tdefect\tdetail\tstatus\tresolution',
     'c1\tt1\tnudge\tPR-3\ta\topen\t',
@@ -243,6 +247,12 @@ describe('simcenter HTTP 面', () => {
     expect(r.status).toBe(200)
     expect(r.body.count).toBe(2)
     expect(r.body.skippedBadLines).toBe(1)
+    expect(r.body.source).toContain('run1/workflow-journal.ndjson')
+    // 每轮副本缺席、run 目录存在 → 回落 SIM 根全局日志
+    const fallback = await get('/api/hermes/sim/journal?run=run2&tail=5')
+    expect(fallback.status).toBe(200)
+    expect(fallback.body.count).toBe(1)
+    expect(fallback.body.source).toContain('logs/workflow-journal.ndjson')
     expect((await get('/api/hermes/sim/journal?run=run1&tail=abc')).status).toBe(400)
     expect((await get('/api/hermes/sim/journal?run=run1&tail=0')).status).toBe(400)
     expect((await get('/api/hermes/sim/journal?run=nope')).status).toBe(404)

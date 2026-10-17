@@ -140,8 +140,14 @@ router.get('/journal', (ctx: Context) => {
   const tailRaw = String(ctx.query.tail ?? '50')
   const tail = Number(tailRaw)
   if (!Number.isInteger(tail) || tail < 1 || tail > 1000) { ctx.status = 400; ctx.body = { error: 'tail 非法（1-1000 整数）' }; return }
-  const file = resolve(runDir, 'workflow-journal.ndjson')
-  if (!existsSync(file)) { ctx.status = 404; ctx.body = { error: `run ${run} 的 workflow-journal.ndjson 不存在` }; return }
+  let file = resolve(runDir, 'workflow-journal.ndjson')
+  if (!existsSync(file)) {
+    // 每轮副本缺席时回落到 SIM 根全局日志（网关 journal 是全局流，不是每轮独立文件）；
+    // run 目录本身不存在仍 404，路径穿越仍由 safeRunDir 拦。
+    const globalFile = resolve(root, 'logs', 'workflow-journal.ndjson')
+    if (existsSync(runDir) && existsSync(globalFile)) file = globalFile
+    else { ctx.status = 404; ctx.body = { error: `run ${run} 的 workflow-journal.ndjson 不存在` }; return }
+  }
   const { lines, skipped } = parseJournalTail(readFileSync(file, 'utf-8'), tail)
   ctx.body = { run, tail, count: lines.length, skippedBadLines: skipped, lines, source: file }
 })
