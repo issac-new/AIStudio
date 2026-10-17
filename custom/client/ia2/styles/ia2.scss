@@ -537,13 +537,13 @@ body.ia-center-full .studio-navigation-rail {
  * 状态色五态（总设计定稿 §七 ②）：fresh/stale/fail/pass/compensated。 */
 :root {
   /* 状态色（语义态，不与主题色混用） */
-  /* 值经 WCAG 校准（2026-10-16 V2 补批）：深底文字级 AA 全过（4.9-6.3），
-   * 浅底大字/图形级（3.3-3.6）——对比度断言在 visual-shell 测试机械把关 */
-  --ia-fresh: #2e9e5b;
-  --ia-stale: #b8860b;
-  --ia-fail: #e06666;
-  --ia-pass: #2f9e6e;
-  --ia-compensated: #9678c6;
+  /* 值经 WCAG 2.2 AA 复核（2026-10-18）：浅/深两套值对常用背景与浅/深状态底
+   * 均 ≥4.5:1（正文级）；旧值在浅色状态底只有 2.7-4.0，已在双主题审计中修正。 */
+  --ia-fresh: #17663a;
+  --ia-stale: #7a5a06;
+  --ia-fail: #b3261e;
+  --ia-pass: #17663a;
+  --ia-compensated: #5e3f92;
   /* 字阶四级（页题/区块题/正文/辅助） */
   --ia-fs-page: 15px;
   --ia-fs-block: 13px;
@@ -558,6 +558,15 @@ body.ia-center-full .studio-navigation-rail {
   --ia-card-border: var(--border-color);
   --ia-card-radius: 6px;
   --ia-card-pad: 12px;
+}
+
+/* 深色主题状态色（对深底与深色状态底均 ≥4.5:1） */
+.dark {
+  --ia-fresh: #53b483;
+  --ia-stale: #d4a017;
+  --ia-fail: #f08a8a;
+  --ia-pass: #53b483;
+  --ia-compensated: #b39ddb;
 }
 
 /* 顶栏状态胶囊（D5）：任务/在线/日程三个徽章收一条——释放视觉层级给三中心导航 */

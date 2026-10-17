@@ -54,4 +54,21 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
       expect(src, `${f} dark secondary`).toContain('--text-secondary: #a0a0a0')
     }
   })
+
+  it('五态状态色在常用背景与状态底色上达 AA（浅/深两套）', () => {
+    const light = { fresh: '#17663a', stale: '#7a5a06', fail: '#b3261e', pass: '#17663a', compensated: '#5e3f92' }
+    const dark = { fresh: '#53b483', stale: '#d4a017', fail: '#f08a8a', pass: '#53b483', compensated: '#b39ddb' }
+    const lightBgs = ['#fafafa', '#f0f0f0', '#f7e2e2', '#deefe6', '#e8dcf4']
+    const darkBgs = ['#1a1a1a', '#252525', '#2a2a2a', '#1c2a22', '#30243c']
+    for (const [k, v] of Object.entries(light)) {
+      for (const bg of lightBgs) expect(contrast(v, bg), `light ${k} on ${bg}`).toBeGreaterThanOrEqual(AA)
+    }
+    for (const [k, v] of Object.entries(dark)) {
+      for (const bg of darkBgs) expect(contrast(v, bg), `dark ${k} on ${bg}`).toBeGreaterThanOrEqual(AA)
+    }
+    const src = readFileSync(resolve(__dirname, '../ia2/styles/ia2.scss'), 'utf8')
+    for (const [k, v] of [...Object.entries(light), ...Object.entries(dark)]) {
+      expect(src, `ia2.scss ${k} ${v}`).toContain(`--ia-${k}: ${v}`)
+    }
+  })
 })
