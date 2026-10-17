@@ -1,6 +1,6 @@
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -52,8 +52,46 @@
+@@ -52,8 +52,47 @@
    })
  }
  function execKanbanCli(args: readonly string[], options?: ExecFileOptions) {
@@ -37,7 +37,8 @@
 +// （2026-10-17 回归轮性能批）。HTTP 层 kanbanReadCache 已治「反复拉」，但每个
 +// 用户键的首次回源仍是一次 CLI spawn（~1.8s，旧看板页/单板链首载主因）；
 +// service 层按「板+过滤项」键控跨用户共享，CLI 输出原样缓存（零形状漂移）。
-+// TTL 15s；写路径经 execKanbanCli 咽喉全量失效；板事件由 command-post 失效。
++// TTL 60s（写路径有 execKanbanCli 咽喉+板事件双失效，TTL 仅兜底 watcher
++// 空闲板）；写路径经咽喉全量失效；板事件由 command-post 失效。
 +const LIST_TASKS_CACHE_TTL_MS = 60_000
 +const listTasksCache = new Map<string, { expiresAt: number; data: KanbanTask[] }>()
 +const listTasksRefreshing = new Set<string>()
@@ -49,7 +50,7 @@
  // HERMES_CUSTOM[kanban-exec-queue] END
  const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
  const NO_WORKER_LOG_PATTERNS = [
-@@ -603,13 +641,28 @@
+@@ -603,19 +642,53 @@
    if (opts?.assignee) args.push('--assignee', opts.assignee)
    if (opts?.tenant) args.push('--tenant', opts.tenant)
  
@@ -79,10 +80,10 @@
      return parsed
    } catch (err: any) {
      logger.error(err, 'Hermes CLI: kanban list failed')
-@@ -617,6 +670,24 @@
+     throw new Error(`Failed to list kanban tasks: ${err.message}`)
    }
  }
- 
++
 +// HERMES_CUSTOM[ListTasksCache] BEGIN: 后台续期（single-flight 防重入）
 +async function refreshListTasksCache(cacheKey: string, args: readonly string[]): Promise<void> {
 +  if (listTasksRefreshing.has(cacheKey)) return
