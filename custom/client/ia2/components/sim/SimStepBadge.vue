@@ -5,10 +5,10 @@ const props = defineProps<{
   step?: number | null
 }>()
 
-// 七幕名（§2.9 七幕分组表），act 为 1-7。
+// 七幕名（displayName 口径）：界面用标准术语，方案原文副本只在 steps-registry.name 保留。
 const ACT_NAMES = [
-  '序幕搭台', '第一幕上锁', '第二幕分析', '第三幕设计排期',
-  '第四幕生产', '第五幕发布验收', '尾声复盘交付',
+  '序幕准备', '第一幕需求冻结', '第二幕需求分析', '第三幕设计排期',
+  '第四幕并行开发', '第五幕发布验收', '尾声治理复盘',
 ]
 const actName = () => {
   const i = Number(props.act)
