@@ -21,6 +21,7 @@ import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleMod
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import GovOverlay from '../components/gov/GovOverlay.vue'
 import { useSharedArm } from '../composables/useSharedArm'
+import { retainBodyClass } from '../composables/useBodyClass'
 import { listenMergeBack } from '../wm/popout'
 import '@/custom/ia2/styles/ia2.scss'
 
@@ -34,6 +35,7 @@ const cockpit = useCockpitStore()
 useSharedArm()
 
 let mergeBackOff: (() => void) | null = null
+let releaseBodyClass: (() => void) | null = null
 
 /** 独立窗口态（query standalone=1）：本窗口内导航后保持标记不丢 */
 const isStandalone = computed(() => route.query.standalone === '1')
@@ -58,6 +60,9 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 onMounted(() => {
+  // 驾驶舱全程隐藏上游 StudioNavigationRail（否则与新 IaSideNav 双左栏）。
+  // 引用计数：Workbench/SimCenter 等页内 retain 不互相摘除。
+  releaseBodyClass = retainBodyClass('ia-center-full')
   window.addEventListener('keydown', onKeydown)
   // 独立窗口「合并回驾驶舱」：storage 事件跨窗口广播，仅主壳导航。
   // standalone 面板窗不得响应——否则别的面板合并回时本面板被导航劫持串台
@@ -69,6 +74,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   mergeBackOff?.()
   mergeBackOff = null
+  releaseBodyClass?.()
+  releaseBodyClass = null
 })
 </script>
 

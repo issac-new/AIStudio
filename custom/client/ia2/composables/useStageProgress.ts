@@ -20,9 +20,9 @@ export type StageState = 'done' | 'current' | 'pending'
 export type SetupStepState = 'done' | 'current' | 'pending' | 'untracked'
 
 const cache = new Map<string, RunStateLike>()
-const inflight = new Map<string, Promise<RunStateLike | null>>()
+const inflight = new Map<string, Promise<RunStateLike>>()
 
-async function fetchRunState(run: string): Promise<RunStateLike | null> {
+async function fetchRunState(run: string): Promise<RunStateLike> {
   const cached = cache.get(run)
   if (cached) return cached
   const pending = inflight.get(run)
@@ -34,8 +34,6 @@ async function fetchRunState(run: string): Promise<RunStateLike | null> {
       const data = await res.json() as RunStateLike
       cache.set(run, data)
       return data
-    } catch {
-      return null
     } finally {
       inflight.delete(run)
     }
@@ -65,15 +63,16 @@ export function useStageProgress() {
     }
     loading.value = true
     error.value = ''
-    const data = await fetchRunState(name)
-    loading.value = false
-    if (!data) {
-      // 失败不覆盖上一次成功结果：切换运行失败时保留可读的旧态，错误另行呈现
-      error.value = '运行状态读取失败'
-      return
+    try {
+      const data = await fetchRunState(name)
+      state.value = data
+      remember()
+    } catch (e) {
+      // 失败不覆盖上一次成功结果：切换运行失败时保留可读的旧态，错误原文呈现
+      error.value = (e as Error).message || '运行状态读取失败'
+    } finally {
+      loading.value = false
     }
-    state.value = data
-    remember()
   }
 
   watch(run, () => { void load() }, { immediate: true })

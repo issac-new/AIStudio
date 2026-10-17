@@ -142,11 +142,14 @@ describe('V2 补批：五态色 WCAG 对比度（D4 token 机械守门）', () =
 })
 
 describe('V1 补批：工作台同收敛（D7——rail 去留评估结论=收敛）', () => {
-  it('WorkbenchView 生命周期两行在库（33K 重型壳不做整挂载——同 scss 守门模式 grep 断言）', () => {
+  it('WorkbenchView 生命周期改引用计数（IaShell 全程 retain 时不被误摘）', () => {
     const src = readFileSync(resolve(__dirname, '../views/WorkbenchView.vue'), 'utf8')
-    expect(src).toContain("document.body.classList.add('ia-center-full')")
-    expect(src).toContain("document.body.classList.remove('ia-center-full')")
+    expect(src).toContain("retainBodyClass('ia-center-full')")
+    expect(src).toContain('releaseBodyClass?.()')
     // onMounted/onUnmounted 确实导入（防只写调用没导 hook）
     expect(src).toMatch(/import \{[^}]*onMounted[^}]*\} from 'vue'/)
+    const helper = readFileSync(resolve(__dirname, '../composables/useBodyClass.ts'), 'utf8')
+    expect(helper).toContain('const counts = new Map')
+    expect(helper).toContain('counts.set(name, (counts.get(name) ?? 0) + 1)')
   })
 })
