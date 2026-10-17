@@ -121,7 +121,7 @@ onMounted(() => { void refresh() })
         </li>
       </ul>
       <details v-if="unknownPoints.length > 0" class="gk__unknown" data-testid="gk-unknown">
-        <summary>源缺席·状态未知 {{ unknownPoints.length }} 项（如实呈现，不猜）</summary>
+        <summary>源缺席·状态未知 {{ unknownPoints.length }} 项</summary>
         <ul>
           <li v-for="p in unknownPoints" :key="p.id" class="gk__unknown-item">{{ p.title }}——数据源未接，待接线后计数</li>
         </ul>

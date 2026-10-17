@@ -94,9 +94,9 @@ describe('SimVerdictField — 判词结构位（R3 只认结构化字段）', ()
     w.unmount()
   })
 
-  it('缺席态：无判词如实呈现；接口不收正文参数（正文提及不判定）', () => {
+  it('缺席态：无判定；接口不收正文参数（正文提及不判定）', () => {
     const w = mount(SimVerdictField, { props: { verdict: null } })
-    expect(w.find('[data-testid="sim-verdict-absent"]').text()).toContain('无判词')
+    expect(w.find('[data-testid="sim-verdict-absent"]').text()).toContain('无判定')
     // 从接口上杜绝叙述判词：props 类型只有 verdict/criteria，传未知属性不产生渲染
     const probe = mount(SimVerdictField, { props: { verdict: null } as never, attrs: { prose: '看起来通过了' } })
     expect(probe.text()).not.toContain('看起来通过了')

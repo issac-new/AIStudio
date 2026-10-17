@@ -63,7 +63,7 @@ function verdictClass(v: string | null): string {
         <span :class="trace.meta.acceptancePresent ? 'trc__ok' : 'trc__absent'">验收书{{ trace.meta.acceptancePresent ? '✓' : '缺' }}</span>
         <span class="trc__src">证据目录：{{ trace.source.evidenceDir }}</span>
       </p>
-      <p v-if="trace.rows.length === 0" class="trc__hint" data-testid="trc-empty">三源均未提取到 AC 行（如实呈现）。</p>
+      <p v-if="trace.rows.length === 0" class="trc__hint" data-testid="trc-empty">未提取到 AC 行。</p>
       <table v-else class="trc__table" data-testid="trc-table">
         <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判定</th></tr></thead>
         <tbody>

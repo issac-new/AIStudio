@@ -53,7 +53,7 @@ async function load(): Promise<void> {
         问题 {{ disposedCount + openCount }}｜已处置 {{ disposedCount }}｜未处置 {{ openCount }}｜处置率 {{ rate == null ? '—' : `${Math.round(rate * 100)}%` }}<template v-if="openCount > 0">——未达 100% 处置，红项待清</template>
         <span class="gis__src">数据源：{{ source }}（轮次账本；跨轮组织账本属 harness 侧，如实注明）</span>
       </p>
-      <p v-if="rows.length === 0" class="gis__hint" data-testid="gis-empty">台账无 ISSUE 行（如实呈现）。</p>
+      <p v-if="rows.length === 0" class="gis__hint" data-testid="gis-empty">台账无 ISSUE 行。</p>
       <table v-else class="gis__table" data-testid="gis-table">
         <thead><tr><th>编号</th><th>主体</th><th>描述</th><th>处置</th></tr></thead>
         <tbody>
