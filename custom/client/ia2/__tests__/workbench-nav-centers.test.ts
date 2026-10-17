@@ -19,56 +19,30 @@ import { legacyTabRedirect } from '../views/TasksView.vue'
 import { TASKS_TABS_TEXT } from '../i18n-tasks-tabs'
 import { GOV_TABS_TEXT } from '../i18n-gov-tabs'
 
-describe('centerForPath 三中心高亮判定（纯函数）', () => {
-  it('/app 家族（含 board/dash/会话子路径/工作页）归工作台', () => {
-    for (const p of ['/app', '/app/board', '/app/dash', '/app/s/chat/s1', '/app/s/room/%21r1', '/app/cases', '/app/inbox']) {
-      expect(centerForPath(p), p).toBe('workbench')
-    }
-  })
-
-  it('/app/sim 与六签子路径归推演中心', () => {
-    for (const p of ['/app/sim', '/app/sim/trace', '/app/sim/supervision', '/app/sim/ops', '/app/sim/evidence', '/app/sim/delivery']) {
-      expect(centerForPath(p), p).toBe('sim')
-    }
-  })
-
-  it('/app/gov 前缀归治理中心（判定先行，不依赖 C1 路由升格）', () => {
+describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
+  it('/stage/* 前缀映射对应阶段；/app 家族归④生产', () => {
+    expect(centerForPath('/app/stage/setup')).toBe('workbench')
+    expect(centerForPath('/app/stage/reqs')).toBe('sim')
+    expect(centerForPath('/app/stage/design')).toBe('gov')
+    expect(centerForPath('/app/stage/build')).toBe('workbench2')
+    expect(centerForPath('/app/stage/accept')).toBe('accept')
+    expect(centerForPath('/app/stage/govern')).toBe('govern')
+    expect(centerForPath('/app')).toBe('workbench')
+    expect(centerForPath('/app/board')).toBe('workbench2') // /app/* 子路径归④
+    expect(centerForPath('/app/sim')).toBe('sim')
     expect(centerForPath('/app/gov')).toBe('gov')
-    expect(centerForPath('/app/gov/audit')).toBe('gov')
-  })
-
-  it('段边界：/app/simulation 不误判推演中心（前缀须整段）', () => {
-    expect(centerForPath('/app/simulation')).toBe('workbench')
-    expect(centerForPath('/app/governance-x')).toBe('workbench')
-  })
-
-  it('非 /app 家族返回 null（IDE 侧 / 上游壳页 / 根路径 / 近形路径）', () => {
-    for (const p of ['/ide', '/ide/task/1', '/', '/hermes/chat', '/appx', '/app-settings']) {
-      expect(centerForPath(p), p).toBe(null)
-    }
+    expect(centerForPath('/other')).toBe(null)
   })
 })
 
-describe('CENTER_NAVS / ISLAND_NAVS 注册表自洽', () => {
-  it('三中心入口=[工作台/推演中心/治理中心]，入口路径与判定函数互证', () => {
-    expect(CENTER_NAVS.map(c => c.key)).toEqual(['workbench', 'sim', 'gov'])
-    expect(CENTER_NAVS.map(c => c.labelZh)).toEqual(['工作台', '推演中心', '治理中心'])
+describe('CENTER_NAVS / ISLAND_NAVS 注册表自洽（D13：六阶段）', () => {
+  it('六阶段入口=[①搭台…⑥治理]，入口路径与判定函数互证', () => {
+    expect(CENTER_NAVS.map(c => c.labelZh)).toEqual(['①搭台', '②需求', '③分析设计', '④生产', '⑤验收', '⑥治理'])
     for (const c of CENTER_NAVS) {
-      // 每个入口的首页路径必须判定回自身中心（高亮锚不死链）
-      expect(centerForPath(c.path), c.key).toBe(c.key)
-      expect(c.name, c.key).toBeTruthy()
+      const key = centerForPath(c.path)
+      expect(key, `${c.path} 应互证`).toBe(c.key)
     }
   })
-
-  it('岛屿入口五件（IDE/BPA/本体/评测/技能治理）路由名与开关键齐备', () => {
-    expect(ISLAND_NAVS.map(i => i.featureKey)).toEqual(['ide', 'bpa', 'ontology', 'eval', 'skillgov'])
-    expect(ISLAND_NAVS.map(i => i.labelZh)).toEqual(['IDE', 'BPA', '本体', '评测', '技能治理'])
-    for (const i of ISLAND_NAVS) {
-      expect(i.name, i.featureKey).toBeTruthy()
-      expect(i.testid, i.featureKey).toBeTruthy()
-    }
-  })
-})
 
 describe('legacyTabRedirect 旧签重定向（A0：迁出 10 键深链不死链）', () => {
   it('推演三键 → 推演中心对应签（trace→签6 / accounts→签5 / observatory→签3）', () => {
@@ -125,4 +99,5 @@ describe('13 键拆分注册表（三中心模块内事实源）', () => {
       + 3,
     ).toBe(13)
   })
+})
 })

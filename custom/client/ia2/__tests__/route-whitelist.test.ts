@@ -89,6 +89,12 @@ const EXPECTED_NAMES = [
   'ia2.simSettings',
   'ia2.simSupervision',
   'ia2.simTrace',
+  'ia2.stage1',
+  'ia2.stage2',
+  'ia2.stage3',
+  'ia2.stage4',
+  'ia2.stage5',
+  'ia2.stage6',
   'ide.shell',
 ]
 
