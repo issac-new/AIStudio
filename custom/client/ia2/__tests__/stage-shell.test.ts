@@ -106,6 +106,8 @@ describe('D15 六阶段全内嵌', () => {
     w3.unmount()
     const { w: w4 } = await mountStage(4)
     expect(w4.find('[data-testid="stg-embed-4"]').exists()).toBe(true)
+    expect(w4.find('[data-testid="stg-embed-4b"]').exists()).toBe(true)
+    expect(w4.find('[data-testid="gk-section"]').exists()).toBe(true)
     expect(w4.find('[data-testid="hds-section"]').exists()).toBe(true)
     // 容量灯二态之一或都不渲染（无端点时）——只断言不炸
     w4.unmount()

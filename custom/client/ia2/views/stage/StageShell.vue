@@ -15,6 +15,7 @@ import TracePanel from '../sim/TracePanel.vue'
 import GovOrgKnowledgeView from '../gov/GovOrgKnowledgeView.vue'
 import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
+import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,6 +170,10 @@ function go(t: Tool): void {
       <h3 class="stg__embed-h">生产期风险与交接</h3>
       <CapacityLampBanner />
       <HandoffSection />
+    </section>
+    <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4b">
+      <h3 class="stg__embed-h">把关待办（等人决定的事·生产期实时队列）</h3>
+      <GatekeeperSection />
     </section>
     <section v-else-if="stage === 5" class="stg__embed" data-testid="stg-embed-5">
       <h3 class="stg__embed-h">AC 判词链（验收现场核对）</h3>
