@@ -1191,7 +1191,7 @@ DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律�
 工作区：并行安全（同域多单各自会话，互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-C -b feat/DEV-PAYCORE-C origin/main，在 ../pc-C 内开发。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
-3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出「完成」——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
@@ -1203,7 +1203,7 @@ DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆
 工作区：并行安全（与 C/N 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-S -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C（C 未落地时基于 origin/main，落地后 rebase 对接），在 ../pc-S 内开发。
 1) 实现 csw-pay-core 状态机+幂等
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥5 用例全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出「完成」——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
@@ -1215,7 +1215,7 @@ DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 
 工作区：并行安全（与 C/S 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-N -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S（S 未落地时基于 origin/feat/DEV-PAYCORE-C 或 origin/main，落地后 rebase 对接），在 ../pc-N 内开发。
 1) 实现 csw-pay-core 回调+证据
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出「完成」——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
@@ -1228,7 +1228,7 @@ DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
@@ -1271,7 +1271,7 @@ ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/main）。接口契约以本派发词与概设为准：先做独立部分（${chan} 的参数包/mock/目录骨架/纯逻辑测试），不等契约件分支；待 origin/feat/DEV-PAYCORE-C 出现后 git fetch && git rebase origin/feat/DEV-PAYCORE-C 补 ChannelAdapter 接口对接，冲突以契约为准。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     done
     sset devimpl_d2 1
   fi
@@ -1597,27 +1597,27 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # 实证：并行宽度=工位数非档案数）+FE 两片。MX_TEST_SHARDS=0 回旧单卡形态。
     if [[ "${MX_TEST_SHARDS:-1}" == "1" ]]; then
 _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试·支付核心片，与 S2/S3 并行各自会话）" \
-      "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE}" \
+      "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S1 条目+docs/design/${RFD_ID}-architecture-design.md 契约；test-drafts/TEST-BE-draft.md 草稿核对；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}" \
       "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)")
     dispatch_task qi "执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1/S3 并行各自会话）" \
-      "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE}" \
+      "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S2 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}" \
       "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task qi "执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）" \
-      "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE}" \
+      "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S3 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}" \
       "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task fei "执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）" \
-      "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE}" \
+      "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S1 条目+概设契约；test-drafts/TEST-FE-draft.md 草稿核对；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}" \
       "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     dispatch_task fei "执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）" \
-      "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE}" \
+      "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S2 条目+概设契约；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}" \
       "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
@@ -2298,7 +2298,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   GOV_TOK=$(studio_login)
   # A7（2026-10-16）：state_env 显式传入——控制器据此以锚定轮 run_started_at→now
   # 推跨天真窗（RUN_ID 日期窗会切掉跨天轮次首尾，run20 42.5h 轮次 17 要素 15 absent）。
-  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md?state_env=${EVID_DIR}/../state.env" "$GOV_TOK"); then
+  if GOV_IR=$(studio GET "/api/incident/sessions/${RUN_ID}/report.md?state_env=${EVID_DIR}/../state.env" "${GOV_TOK:-}"); then
     printf '%s\n' "$GOV_IR" > "$EVID_DIR/incident-report.md"
     note "[audit] 事故报告汇编已导出（evidence/incident-report.md，17 要素）"
   else
@@ -2409,13 +2409,13 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   # （/api/hermes/virtual-pl?days=30 与 /api/incident/sessions/:id/autonomy 原文；
   #  收益面无数据源时产品侧如实声明不编造——透传即合规）
   GOV_TOK=$(studio_login)
-  if GOV_VP=$(studio GET "/api/hermes/virtual-pl?days=30" "$GOV_TOK"); then
+  if GOV_VP=$(studio GET "/api/hermes/virtual-pl?days=30" "${GOV_TOK:-}"); then
     printf '%s\n' "$GOV_VP" > "$EVID_DIR/virtual-pl.txt"
     note "[G6] AI 虚拟损益表已导出（evidence/virtual-pl.txt）"
   else
     echo "ISSUE|gov-virtualpl-export|step24|虚拟损益表导出失败（端点未部署）" >> "$EVID_DIR/issues.log"
   fi
-  if GOV_AR=$(studio GET "/api/incident/sessions/${RUN_ID}/autonomy" "$GOV_TOK"); then
+  if GOV_AR=$(studio GET "/api/incident/sessions/${RUN_ID}/autonomy" "${GOV_TOK:-}"); then
     printf '%s\n' "$GOV_AR" > "$EVID_DIR/autonomy-reconcile.txt"
     note "[G6] 自治度对账已导出（evidence/autonomy-reconcile.txt，理论 vs 实际）"
   else
@@ -2423,13 +2423,13 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   fi
   # BPA 过程治理校验（2026-10-14 调研轮产品化，方案 §2.6 第 11 条）：
   # 流程架构九规则体检 + PCF 对标差距 + 端到端链路三态 + 成熟度总体，全部证据留档
-  if GOV_BPA=$(studio GET "/api/bpa/architecture" "$GOV_TOK" 2>/dev/null); then
+  if GOV_BPA=$(studio GET "/api/bpa/architecture" "${GOV_TOK:-}" 2>/dev/null); then
     printf '%s\n' "$GOV_BPA" > "$EVID_DIR/bpa-architecture.json"
     note "[G6] 流程架构清单已导出（evidence/bpa-architecture.json）"
   else
     echo "ISSUE|bpa-arch-export|step24|流程架构清单导出失败（/app/bpa 未部署或零数据）" >> "$EVID_DIR/issues.log"
   fi
-  if GOV_BPA_V=$(studio POST "/api/bpa/validate" "$GOV_TOK" "{}" 2>/dev/null); then
+  if GOV_BPA_V=$(studio POST "/api/bpa/validate" "${GOV_TOK:-}" "{}" 2>/dev/null); then
     printf '%s\n' "$GOV_BPA_V" > "$EVID_DIR/bpa-validate.json"
     _bpa_hi=$(printf '%s' "$GOV_BPA_V" | jq -r '.report.bySeverity.high // 0' 2>/dev/null || echo 0)
     _bpa_me=$(printf '%s' "$GOV_BPA_V" | jq -r '.report.bySeverity.medium // 0' 2>/dev/null || echo 0)
@@ -2440,7 +2440,7 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   else
     echo "ISSUE|bpa-validate-export|step24|流程架构体检失败（validate 端点未部署）" >> "$EVID_DIR/issues.log"
   fi
-  if GOV_BPA_PCF=$(studio GET "/api/bpa/pcf" "$GOV_TOK" 2>/dev/null); then
+  if GOV_BPA_PCF=$(studio GET "/api/bpa/pcf" "${GOV_TOK:-}" 2>/dev/null); then
     printf '%s\n' "$GOV_BPA_PCF" > "$EVID_DIR/bpa-pcf.json"
     _bpa_cov=$(printf '%s' "$GOV_BPA_PCF" | jq -r '.gap.summary.covered // 0' 2>/dev/null || echo 0)
     _bpa_miss=$(printf '%s' "$GOV_BPA_PCF" | jq -r '.gap.summary.missing // 0' 2>/dev/null || echo 0)
