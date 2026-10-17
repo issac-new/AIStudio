@@ -1,0 +1,75 @@
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -109,7 +109,15 @@
+   taskId: string,
+ ): Promise<kanbanCli.KanbanTaskDetail | null> {
+   const detail = await getTaskResilient(board, taskId)
+-  if (!detail || !filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
++  if (!detail) {
++    ctx.status = 404
++    ctx.body = { error: 'Task not found' }
++    return null
++  }
++  // overlay[regress-2026-10-17]：读详情/日志/附件不套认领白名单（admin/super_admin
++  // 放行）；写路径的权限仍由各 handler 的业务校验把守。
++  const role = ctx.state?.user?.role
++  if (role !== 'admin' && role !== 'super_admin' && !filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
+     ctx.status = 404
+     ctx.body = { error: 'Task not found' }
+     return null
+@@ -125,10 +133,12 @@
+   action = 'update',
+ ): Promise<boolean> {
+   const visible = visibleProfileSet(ctx)
++  const role = ctx.state?.user?.role
++  const isAdmin = role === 'admin' || role === 'super_admin'
+   if (!visible && !allowedStatuses) return true
+   const ids = [...new Set(taskIds.map(id => id.trim()).filter(Boolean))]
+   const details = await Promise.all(ids.map(id => getTaskResilient(board, id)))
+-  if (details.some(detail => !detail || (visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
++  if (details.some(detail => !detail || (!isAdmin && visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
+     ctx.status = 404
+     ctx.body = { error: 'Task not found' }
+     return false
+@@ -142,6 +152,11 @@
+     return false
+   }
+   return true
++}
++
++/** 子资源读的 board：跨板任务先解析命中板，解析不到保持请求 board（交 CLI 裁决）。 */
++async function resolveSubresourceBoard(board: string, taskId: string): Promise<string> {
++  return (await resolveTaskBoard(taskId, new Set([board]))) || board
+ }
+ 
+ function attachmentRoot(board: string): string {
+@@ -817,7 +832,8 @@
+   if (rejectBadRequest(ctx, tail.error)) return
+   try {
+     if (!await authorizeTaskIds(ctx, board, [ctx.params.id])) return
+-    ctx.body = await kanbanCli.getTaskLog(ctx.params.id, { board, tail: tail.value })
++    const readBoard = await resolveSubresourceBoard(board, ctx.params.id)
++    ctx.body = await kanbanCli.getTaskLog(ctx.params.id, { board: readBoard, tail: tail.value })
+   } catch (err: any) {
+     ctx.status = err.message?.includes('not found') ? 404 : 500
+     ctx.body = { error: err.message }
+@@ -964,7 +980,8 @@
+   if (!board) return
+   try {
+     if (!await getAuthorizedTask(ctx, board, ctx.params.id)) return
+-    const attachments = await kanbanCli.listAttachments(ctx.params.id, { board })
++    const readBoard = await resolveSubresourceBoard(board, ctx.params.id)
++    const attachments = await kanbanCli.listAttachments(ctx.params.id, { board: readBoard })
+     ctx.body = {
+       attachments: attachments.map(attachment => ({
+         id: attachment.id,
+@@ -993,7 +1010,8 @@
+   try {
+     const detail = await getAuthorizedTask(ctx, board, ctx.params.id)
+     if (!detail) return
+-    const attachments = await kanbanCli.listAttachments(detail.task.id, { board })
++    const readBoard = await resolveSubresourceBoard(board, detail.task.id)
++    const attachments = await kanbanCli.listAttachments(detail.task.id, { board: readBoard })
+     const attachment = attachments.find(item => item.id === attachmentId)
+     if (!attachment) {
+       ctx.status = 404
