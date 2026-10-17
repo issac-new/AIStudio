@@ -7,15 +7,17 @@
 // 镜头切换器位：Phase D 镜头层已随需求 §六 Q1 解体取消，不建不渲染。
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CENTER_NAVS, activeStageForRoute, useCenterNavLocale } from '../nav-centers'
+import { CENTER_NAVS, activeStagesForRoute, useCenterNavLocale } from '../nav-centers'
 import { useChatStore } from '@/stores/hermes/chat'
 
 
 const route = useRoute()
 const router = useRouter()
 const navLocale = useCenterNavLocale()
-// 来路阶段优先（旅程/阶段页带 query.from 进来）；无来路按路径归属
-const activeCenter = computed(() => activeStageForRoute(route.path, route.query.from))
+// 阶段归属（2026-10-17 页签级）：来路 from 优先；无来路按归属表，多归属亮多个，
+// 全程工具（运行总览/系统设置等）不高亮——如实呈现「到处都要用」。
+const activeStages = computed(() => activeStagesForRoute(String(route.name ?? ''), route.path, route.query.from))
+const isActive = (key: string): boolean => activeStages.value.includes(key as (typeof activeStages.value)[number])
 const chatStore = useChatStore()
 
 /** D9/D18 开发阶段分段：IDE 工作区=开发阶段第二形态（isIde 判定同 IaViewSwitcher 原逻辑） */
@@ -37,22 +39,22 @@ function onToggleWorkbench(): void {
 </script>
 
 <template>
-  <div class="icn-inline" data-testid="ia-nav-centers">
+  <div class="icn-inline" data-testid="ia-nav-centers" :data-active-stages="activeStages.join(',')">
     <nav class="icn-inline__centers" aria-label="六阶段一级导航">
       <template v-for="c in CENTER_NAVS" :key="c.key">
         <!-- D9/D18：④开发=分段控件（沟通协作｜IDE 工作区，同阶段两形态） -->
         <span
           v-if="c.key === 'stage4'"
           class="icn-inline__work"
-          :class="{ 'icn-inline__work--active': activeCenter === 'stage4' }"
+          :class="{ 'icn-inline__work--active': isActive('stage4') }"
           data-testid="ia-nav-center-work"
         >
           <button
             type="button"
             class="icn-inline__center-btn icn-inline__seg"
-            :class="{ 'icn-inline__seg--cur': activeCenter === 'stage4' && !isIde }"
+            :class="{ 'icn-inline__seg--cur': isActive('stage4') && !isIde }"
             data-testid="ia-nav-center-work-collab"
-            :aria-current="activeCenter === 'stage4' && !isIde ? 'page' : undefined"
+            :aria-current="isActive('stage4') && !isIde ? 'page' : undefined"
             @click="onGoCenter('ia2.stage4')"
           >{{ navLocale === 'zh' ? c.labelZh : c.labelEn }}</button>
           <button
@@ -60,7 +62,7 @@ function onToggleWorkbench(): void {
             class="icn-inline__center-btn icn-inline__seg"
             :class="{ 'icn-inline__seg--cur': isIde }"
             data-testid="ia-nav-center-work-ide"
-            :aria-current="activeCenter === 'stage4' && isIde ? 'page' : undefined"
+            :aria-current="isActive('stage4') && isIde ? 'page' : undefined"
             @click="onToggleWorkbench"
           >{{ navLocale === 'zh' ? 'IDE 工作区' : 'IDE Workspace' }}</button>
         </span>
@@ -68,9 +70,9 @@ function onToggleWorkbench(): void {
           v-else
           type="button"
           class="icn-inline__center-btn"
-          :class="{ 'icn-inline__center-btn--active': activeCenter === c.key }"
+          :class="{ 'icn-inline__center-btn--active': isActive(c.key) }"
           :data-testid="`ia-nav-center-${c.key}`"
-          :aria-current="activeCenter === c.key ? 'page' : undefined"
+          :aria-current="isActive(c.key) ? 'page' : undefined"
           @click="onGoCenter(c.name)"
         >{{ navLocale === 'zh' ? c.labelZh : c.labelEn }}</button>
       </template>
