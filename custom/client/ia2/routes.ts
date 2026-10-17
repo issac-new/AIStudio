@@ -253,43 +253,42 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/InboxView.vue'),
         },
         {
-          // 治理中心升格（C1·2026-10-16）：七签壳（关卡与流程/组织与资产/清偿门/
-          // 问题单对账/审计与变更/文档评审/度量体检）；签 3 清偿门 C2 实装。
-          // 旧直达链接 /app/gov 落治理中心默认签（原 board?tab=gov-org 语义由
-          // 签 2 组织与资产承接，board 既有 gov-* 页签保留一版本周期随 C3-C9 迁移）。
+          // 2026-10-18 阶段页页签批：治理中心壳解体，七签按用途归入六阶段页签。
+          // 旧路径全部保留为 redirect（书签/通知/测试直达链接零断链）；
+          // 页面由 StageShell 承载，顶栏/左侧栏不再出现「治理中心」。
           path: 'gov',
           name: 'ia2.governance',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'gateLog' } }),
         },
         {
           path: 'gov/org-assets',
           name: 'ia2.govOrgAssets',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage1', query: { ...to.query, tab: 'org' } }),
         },
         {
           path: 'gov/clearance',
           name: 'ia2.govClearance',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'clearance' } }),
         },
         {
           path: 'gov/issues',
           name: 'ia2.govIssues',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'issues' } }),
         },
         {
           path: 'gov/audit',
           name: 'ia2.govAudit',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'audit' } }),
         },
         {
           path: 'gov/docs',
           name: 'ia2.govDocs',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'docs' } }),
         },
         {
           path: 'gov/metrics',
           name: 'ia2.govMetrics',
-          component: () => import('./views/gov/GovCenterView.vue'),
+          redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'metrics' } }),
         },
         {
           // C9 治理·系统设置页（R9：既有设置页按治理域分区的导航层，E/F/G 合账）

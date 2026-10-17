@@ -8,8 +8,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
-import { GOV_TABS_TEXT } from '../views/gov/gov-tabs'
 import { STAGE_META } from '../stage-meta'
+import { resolveTab, tabForLegacyRoute, tabMeta } from '../stage-tabs'
 import { stageContextQuery } from '../nav-centers'
 import { hasStageAttribution, stageCircles, stageOwnersForRouteName } from '../stage-attribution'
 
@@ -27,7 +27,7 @@ function go(c: Crumb): void {
   if (c.to) void router?.push(c.to)
 }
 const sim = computed(() => SIM_TABS_TEXT[lang.value])
-const gov = computed(() => GOV_TABS_TEXT[lang.value])
+const simShellTitle = computed(() => lang.value === 'zh' ? '全流程推演' : 'Full-run Simulation')
 
 const PAGE_LABEL: Record<string, { zh: string; en: string }> = {
   // 键=去 ia2. 前缀的路由名（i18n 覆盖守门只豁免 name:/case 语境，对象键会被
@@ -40,8 +40,8 @@ const PAGE_LABEL: Record<string, { zh: string; en: string }> = {
   agents: { zh: '智能体', en: 'Agents' },
   accounts: { zh: '账户管理', en: 'Accounts' },
   deliveryCases: { zh: '交付案例', en: 'Delivery Cases' },
-  simOrchestration: { zh: '场景编排', en: 'Orchestration' },
-  simSettings: { zh: '仿真设置', en: 'Simulation Settings' },
+  simOrchestration: { zh: '运行编排', en: 'Orchestration' },
+  simSettings: { zh: '推演设置', en: 'Simulation Settings' },
   govSettings: { zh: '系统设置', en: 'System Settings' },
   modelProviders: { zh: '模型服务商', en: 'Model Providers' },
 }
@@ -52,15 +52,6 @@ const SIM_TAB_LABEL: Record<string, keyof typeof SIM_TABS_TEXT.zh> = {
   'ia2.simEvidence': 'tabEvidence',
   'ia2.simDelivery': 'tabDelivery',
   'ia2.simTrace': 'tabTrace',
-}
-const GOV_TAB_LABEL: Record<string, keyof typeof GOV_TABS_TEXT.zh> = {
-  'ia2.governance': 'tabProcess',
-  'ia2.govOrgAssets': 'tabOrgAssets',
-  'ia2.govClearance': 'tabClearance',
-  'ia2.govIssues': 'tabIssues',
-  'ia2.govAudit': 'tabAudit',
-  'ia2.govDocs': 'tabDocs',
-  'ia2.govMetrics': 'tabMetrics',
 }
 
 const crumbs = computed<Crumb[]>(() => {
@@ -74,6 +65,17 @@ const crumbs = computed<Crumb[]>(() => {
   const stage = STAGE_META.find(m => `ia2.stage${m.no}` === name)
   if (stage) {
     out.push({ label: `${'①②③④⑤⑥'[stage.no - 1]} ${zh ? stage.navLabel : stage.navLabelEn}` })
+    const tm = tabMeta(stage.no, resolveTab(stage.no, route?.query?.tab))
+    if (tm) out.push({ label: zh ? tm.zh : tm.en })
+    return out
+  }
+  // 旧 gov 深链（路由本身已 redirect；此分支覆盖未跳转的嵌入/测试态）
+  const legacy = tabForLegacyRoute(name)
+  if (legacy) {
+    const m = STAGE_META[legacy.stage - 1]
+    out.push({ label: `${'①②③④⑤⑥'[legacy.stage - 1]} ${zh ? m.navLabel : m.navLabelEn}` })
+    const tm = tabMeta(legacy.stage, legacy.tab)
+    if (tm) out.push({ label: zh ? tm.zh : tm.en })
     return out
   }
   // 页签级归属（2026-10-17）：单归属→①搭建；多归属→③④；表内空→全程工具。
@@ -95,15 +97,9 @@ const crumbs = computed<Crumb[]>(() => {
   }
   const simKey = SIM_TAB_LABEL[name]
   if (simKey || short === 'simOrchestration' || short === 'simSettings') {
-    out.push({ label: sim.value.shellTitle, to: { name: 'ia2.sim', query: fromQ } })
-    // 中心根路径不再追加默认签段：旅程＞仿真中心 已经说清位置（签级才加第三段）
+    out.push({ label: simShellTitle.value, to: { name: 'ia2.sim', query: fromQ } })
+    // 根路径不再追加默认签段；签级才加第三段
     if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
-    return out
-  }
-  const govKey = GOV_TAB_LABEL[name]
-  if (govKey || short === 'govSettings' || short === 'modelProviders') {
-    out.push({ label: gov.value.shellTitle, to: { name: 'ia2.governance', query: fromQ } })
-    if (name !== 'ia2.governance') out.push({ label: govKey ? String(gov.value[govKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
   const page = PAGE_LABEL[short]
