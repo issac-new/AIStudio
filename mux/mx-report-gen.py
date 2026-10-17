@@ -160,6 +160,23 @@ PHASES = [
 ]
 
 # ── 每步叙事：角色徽章 + 执行叙事 + 截图中文说明 ──
+
+# 称谓统一（2026-10-17 用户指令）：报告叙事一律账户显示名称，可括号标注 matrix ID；
+# 命令/路径/事件引用等机器锚保留原账号 ID。映射与 mx-lib.sh displayname_of 同源。
+DN = {
+    'admin': '主管A', 'bella': '需求分析师A', 'fanfan': '产品经理A',
+    'wei': '团队负责人A', 'mei': '团队负责人B', 'chen': '研发工程师A',
+    'hu': '研发工程师B', 'lin': '研发工程师C', 'xiao': '研发工程师D',
+    'qi': '测试工程师A', 'fei': '测试工程师B', 'arch': '系统架构师A',
+    'secops': '安全工程师A', 'ops': '运维工程师A', 'audit': '审计师A',
+    'admin-agent': '主管AI', 'bella-agent': '需求分析师AI', 'fanfan-agent': '需求分析AI',
+    'chen-agent': '支付核心应用研发AI', 'hu-agent': '微信渠道应用研发AI',
+    'lin-agent': '支付宝渠道应用研发AI',
+}
+def dn(acc: str) -> str:
+    """账号 → 显示名（matrix ID 括号标注）"""
+    return f"{DN.get(acc, acc)}（{acc}）" if acc in DN else acc
+
 # actor: human=人主导 / ai=AI 主导 / both=人机协同 / gate=强制关卡（含人确认点）
 # 叙事全部锚定真实事件（scenario.log / matrix event / git 提交），不虚构。
 # imgs 三元组 (图 id, 中文图注, 来源类别)：
@@ -168,7 +185,7 @@ PHASES = [
 #   'msg' = matrix 真实消息转录（event_id 可反查——非产品界面）
 # 报告读者必须能一眼区分「产品长什么样」与"证据是什么"，杜绝工件冒充 UI。
 STEPS_META_RUN2 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账（本轮 30 账号 token 真值核验 02:14:30 有效）。',
             imgs=[
                   ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（清单入仓可对账）', 'ui'),]),
@@ -198,16 +215,16 @@ STEPS_META_RUN2 = {
                   ('ui-gov-center', '治理中心·六闸工件区：G1 冻结件呈现面（docs/requirements/RFD-001.freeze.md 已入 origin/main，commit 3191c11 锚）', 'ui'),
                   ('ui-08-groupchat', '驾驶舱·会话画布：冻结后建群现场（G1→room 衔接）', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
-            narrative='产品经理 产品经理A 创建「支付收银台需求分析讨论群」（本轮房间 !zMzIGtITnwKsZtbjAp:matrix.test，02:16:47）并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）——建群即按 RACI 全量预邀根治 room-invite 缺口，本轮零邀人问题单。',
+            narrative='产品经理 产品经理A 创建「支付收银台需求分析讨论群」（本轮房间 !zMzIGtITnwKsZtbjAp:matrix.test，02:16:47）并全量预邀（需求分析AI（fanfan-agent）+ 8 关联人及各自 agent，方案 §8）——建群即按 RACI 全量预邀根治 room-invite 缺口，本轮零邀人问题单。',
             imgs=[
                   ('ui-08-groupchat', '协作沟通界面（#/app/s/group）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
                   ('ui-08d-members', '协作沟通界面·成员面板：建群全量预邀实证——人+agent 并排在列', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · 产品经理A 派发',
-            narrative='产品经理A 在群内 @fanfan-agent 发出派发指令（event $dnUFtNxIWKuOUrQngOHYS-c0p0-x5wfZ3x9744tqGlw）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）。',
+            narrative='产品经理A 在群内 @需求分析AI（fanfan-agent）发出派发指令（event $dnUFtNxIWKuOUrQngOHYS-c0p0-x5wfZ3x9744tqGlw）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）。',
             imgs=[
                   ('ui-08b-msgcard', '协作沟通界面：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
-            narrative='Orchestrator agent 经 matrix channel 接收指令，产品经理A 账号板 RFD-001 任务卡 02:16:55 真值 ✓。完成凭证反向核验首轮 02:27:01 600s 超时 ✗——拒收回灌（@fanfan-agent 要求用真实卡 ID 重报结论行），02:31:02 重报后核验 ✓（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。凭证主卡保持未分配/非派发状态专供核验（前代凭证卡链可回溯）。',
+            narrative='Orchestrator agent 经 matrix channel 接收指令，产品经理A 账号板 RFD-001 任务卡 02:16:55 真值 ✓。完成凭证反向核验首轮 02:27:01 600s 超时 ✗——拒收回灌（@需求分析AI（fanfan-agent）要求用真实卡 ID 重报结论行），02:31:02 重报后核验 ✓（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。凭证主卡保持未分配/非派发状态专供核验（前代凭证卡链可回溯）。',
             imgs=[
                   ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
                   ('ui-10-carddrawer', '产品看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),
@@ -292,7 +309,7 @@ STEPS_META_RUN2 = {
                   ('ui-26-report', '推演报告自身（本页）', 'ui'),]),
 }
 STEPS_META_RUN4 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='0→1 清环境推演（补遗④第 1 项）：mx-clean 归档旧轮 runs/与 state 后重建账号面。管理员经设置·账户管理页（#/app/accounts，P6）维护 matrix 账号与双账号绑定，roster 界面导出入仓；30 账号 token 真值核验有效（headless+界面双源）。',
             imgs=[
                   ('ui-01-accounts', '设置·账户管理（P6，补遗④）：matrix 账号创建/分配/停用 + 本机↔matrix 双账号绑定——第 1 步账号分配的产品面', 'ui'),
@@ -333,7 +350,7 @@ STEPS_META_RUN4 = {
                   ('ui-08-groupchat', '驾驶舱·会话画布：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
                   ('ui-08d-members', '会话画布·成员面板：建群全量预邀实证——人+agent 并排在列', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · 产品经理A 派发',
-            narrative='产品经理A 在群内 @fanfan-agent 发出派发指令（event $r63f1ZfV8eqB0FpJ9eEj0oguNWDVfLOt9QtTcP3NIOM）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）——指令通道与文档正文分离（@本人语义才执行）。',
+            narrative='产品经理A 在群内 @需求分析AI（fanfan-agent）发出派发指令（event $r63f1ZfV8eqB0FpJ9eEj0oguNWDVfLOt9QtTcP3NIOM）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）——指令通道与文档正文分离（@本人语义才执行）。',
             imgs=[
                   ('ui-08b-msgcard', '驾驶舱·会话画布：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
@@ -421,7 +438,7 @@ STEPS_META_RUN4 = {
                   ('ui-skill-content', 'R14·skill 产出内容（SKILL.md 实物——五步能力）', 'ui'),]),
 }
 STEPS_META_RUN1 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
             imgs=[
                   ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（commit 锚点）', 'ui'),]),
@@ -454,7 +471,7 @@ STEPS_META_RUN1 = {
             imgs=[
                   ('ui-08-groupchat', '协作沟通界面（#/app/s/room）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4）', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · 产品经理A 派发',
-            narrative='产品经理A 在群内 @fanfan-agent 发出派发指令（event $wH4lFXYehQsJkZibp7cuFNf1yJON4Pl1xlkTMkjacwU）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）。',
+            narrative='产品经理A 在群内 @需求分析AI（fanfan-agent）发出派发指令（event $wH4lFXYehQsJkZibp7cuFNf1yJON4Pl1xlkTMkjacwU）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊「完成」不算数）。',
             imgs=[
                   ('ui-08b-msgcard', '协作沟通界面：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②），右栏任务时间线（P4③）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
@@ -535,7 +552,7 @@ STEPS_META_RUN1 = {
 # ── run5 叙事文案（2026-10-01 收尾实录；全部锚点为本轮真值：房间 !wbdIWyDcMaMOeSvYay、
 # 主卡 t_f405c7b2、tasklist v9=1b2fce3、G2 评审卡 t_a10e41d9、G5 评审卡 t_73c36618）──
 STEPS_META_RUN5 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='0→1 清环境推演：mx-clean 双档归档（20260930-154424/154715）后重建账号面。30 账号 token 全有效（15 人×双账号，16:41:28 真值）；管理员经设置·账户管理页（#/app/accounts）维护 matrix 账号与双账号绑定。本轮补真：账号板 kanban 可达核验接入冒烟（14 账号逐一 CLI 实查）。',
             imgs=[('ui-01-accounts', '设置·账户管理：matrix 账号创建/分配/停用+本机↔matrix 双账号绑定（30 账号真值锚）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
@@ -607,7 +624,7 @@ STEPS_META_RUN5 = {
             imgs=[('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险三档分区+审批历史留痕', 'ui'),
                   ('ui-20b-spotcheck', '审批收件箱·抽检区：低风险自动放行回看', 'ui'),]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · 需求分析师A 验收',
-            narrative='UAT 业务验收：需求分析师A 按 G1 冻结 AC-1~7 逐条要证据，fanfan-agent 出 UAT-EVIDENCE 结论行（commit/分支/测试报告行号锚点），逐条 AC 判词落验收书入仓；SLA 登记（99.5%/P95≤800ms/P2 4h）——开头定的标准结尾对账完整循环（验收书提交锚 9cc4422：AC-1~7 判词全通过；条件解除链 9d9c792→926cce1→9cc4422 如实入仓）。',
+            narrative='UAT 业务验收：需求分析师A 按 G1 冻结 AC-1~7 逐条要证据，需求分析AI（fanfan-agent） 出 UAT-EVIDENCE 结论行（commit/分支/测试报告行号锚点），逐条 AC 判词落验收书入仓；SLA 登记（99.5%/P95≤800ms/P2 4h）——开头定的标准结尾对账完整循环（验收书提交锚 9cc4422：AC-1~7 判词全通过；条件解除链 9d9c792→926cce1→9cc4422 如实入仓）。',
             imgs=[('ui-flow-uat', '流转现场：UAT 验收链（冻结 AC↔证据行↔判词）', 'ui'),]),
     22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作管理',
             narrative='研发工作台账（M3）：14 账号×状态分布真实核查+WIP 并行上限治理+stale 卡口径如实记档；驾驶舱概览页交付进度卡即台账常驻界面视图（测试工程师B 板 14 卡实况锚：T-107 执行卡 t_90f31b36 在列）。',
@@ -629,7 +646,7 @@ STEPS_META_RUN5 = {
 # 按轮次选择叙事文案（run1 叙事自 c353a154 版逐字找回；未知轮次报错不静默错配）
 # ── run6 叙事文案（2026-10-02 补注册：事件全部取自 scenario.log/state/仓内锚点）──
 STEPS_META_RUN6 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='admin 清单复用 run5 台账（mx-clean 20261001-074743 后重建面）；30 账号 token 真值核验，首夜 02:11 admin token 失效中止→02:14 重启过。轮内加题：admin token 被装机 logout_all 冲掉的历史坑由 creds 重签覆盖。', imgs=[]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='单 gateway :8801 多路复用 14 profile；本轮通道韧性实录：hermes 自更新擦掉 ~/.hermes 工作区补丁（kanban --raci 全链+533/534 风暴守卫）→deploy-agent-runtime 恢复 15 文件+533/534 git apply+网关正道重启；夜停 8h（/tmp periodic 清理吃掉接力脚本+Docker 睡眠）→接力迁数据盘+晨修 Docker/synapse/studio 三层启动。', imgs=[]),
@@ -687,7 +704,7 @@ STEPS_META_RUN6 = {
 # 前 13 步叙事基于 scenario.log 实抽事件（锚点为真实时间/commit/事件 id）；
 # 14-26 步为在途骨架（收尾后按本轮事件实测依据修订重生成）。
 STEPS_META_RUN7 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='mx-clean 20261002-164757 彻底清环境后（run6 归档+九目录零残留）0→1 开跑；16:49 30 账号 token 真值核验一次过。', imgs=[('ui-gov-roster','治理中心·管理档案：账号清单——15 人×双账号×角色（roster 入仓可对账）','ui'),('ui-01-accounts','设置→账户管理（#/app/accounts，P6）：本机↔matrix 双账号绑定维护界面','ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='单 gateway :8801+studio :8802 就绪；预检 14 实例全过（双格式探针继承 run6 根治版）。本轮新逆境实录：容量排队补丁 533（overlay 3113eeb1）再被 hermes 自更新擦除（第三次）——anexec 步并发闸拒收实证后现场 git apply 重放+空闲重启守护挂起（run7-lin-nudge/gw-idle-restart 双守护）。', imgs=[('ui-02-profiles','看板切换器：单 gateway 多路复用下按账号隔离的板可见性（28 板实况）','ui')]),
@@ -742,7 +759,7 @@ STEPS_META_RUN7 = {
 }
 
 STEPS_META_RUN8 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='mx-clean 20261004-065954 三旗标全清（reset-central/workspaces/memory 真实执行）后 0→1 开跑；07:10-07:11 24 账号 token 真值核验一次过。清理本身带当天修复：pipefail 静默中断（清得越干净越必炸）已根治。', imgs=[]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='单 gateway :8801 + studio :8802 就绪；运行面自愈双通道（manifest 23 件+git apply）开跑即在位。预检只首轮跑（run8 优化 D）。', imgs=[]),
@@ -797,7 +814,7 @@ STEPS_META_RUN8 = {
 }
 
 STEPS_META_RUN9 = {
-    1: dict(issue_keys=['roster-stale-governance-roles'], keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(issue_keys=['roster-stale-governance-roles'], keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='mx-clean 全清后 00:24:00 开跑（V8 终态正本首跑轮）；30 账号 token 真值核验全过（15 人×双账号），预检只首轮（run8 优化 D 沿用）。设置页实拍：账号管理/开发者设置/关于分区在位（1-op4）。如实记：roster.md 停在首签 12 人版（mx-clean 快照回灌未含治理三岗），编制对账缺口=差异审计 P11，收尾补正（中央仓 4124b47，issues 单 roster-stale-governance-roles）。', imgs=[('1-op4-after', '设置页实拍：账号管理/开发者设置/关于分区在位（v0.7.30）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='服务和界面都正常起来了：网关在线、17 个智能体待命、4 条 Matrix 会话在跑（有截图为证）。前几轮踩过的坑这次一个没复发——五个运行时修复补丁全程在位，接力守护进程每轮巡检都核验过（日志可查）。', imgs=[('2-op4-after', '运维面实拍：网关 8801 在线·17 agent 活跃·4 Matrix 会话在线', 'ui')]),
@@ -852,7 +869,7 @@ STEPS_META_RUN9 = {
 }
 
 STEPS_META_RUN10 = {
-    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
             narrative='mx-clean 全清后 01:21 开跑；30 账号预检全过，三方对账 15=15=15 一次过（run9 编制缺口未复发）。开跑前审计记入问题清单 1 条（391 补丁曾遭部署回退，已修，处置观察）。', imgs=[('1-op1-after', '设置页：账号管理/开发者设置（admin 视角）（收尾后补拍，非当轮实时帧）', 'ui'), ('1-op2-after', '账户管理：roster 15 账号全列（收尾后补拍，非当轮实时帧）', 'ui')]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='gateway :8801 + studio :8802 就绪；判定后端活性探测在线（本轮首次启用本地 clef-flash（mlx 量化 4bit，:8000 常驻），版本三元组快照保存 evidence/decision-backend-snapshot.txt）；装配走产品同源端点（mx-setup 探针 rosterCommit=edc6ed2 同源链）。', imgs=[('2-op1-after', '运维面：网关 8801 在线·agent 活跃·Matrix 会话（收尾后补拍，非当轮实时帧）', 'ui')]),
@@ -912,7 +929,7 @@ STEPS_META_RUN10 = {
 # attempt-3 02:26 起零残留正跑（孤儿历史+禁考古措辞+闸卫三根治后）——本叙事文案即 attempt-3。
 STEPS_META_RUN11 = {
     1: dict(keys=['smoke_done'], ts_override='1',
-            actor='human', actorText='人 · admin 管理员',
+            actor='human', actorText='人 · 主管A（admin）',
             narrative='账号与基础设施就绪：30 账号 token 逐个验证 ✓、单 gateway :8801+单 studio :8802 双健康 ✓、驾驶舱在线 headless 侧 gateway_state=running（connected_platforms=15）；冒烟 02:26:50-02:31 五分钟全绿（attempt-3 开跑 02:26:26），delivery 小冒烟开案例房 dlv-…-023449 并事件落房读回 ✓。', imgs=[('smoke_done-op1-before','冒烟前：驾驶舱入口（登录态待入）','ui'),('smoke_done-op1-after','冒烟后：30 账号全绿+在线三数>0','ui')]),
     2: dict(keys=['smoke_done'], ts_override='1',
             actor='ai', actorText='AI · 装配脚本',
@@ -933,16 +950,16 @@ STEPS_META_RUN11 = {
             actor='human', actorText='人 · 需求分析师A+产品经理A',
             narrative='G1 需求冻结 02:29:30（开跑+3 分钟，历史最快）：RFD-001 收银台四要素（AC×7 可判定/Scope-Out/影响面/涉敏）freeze 文件入 origin/main；delivery 事件 stage P1 done+gate G1 pass 落案例房。需求分析师A→产品经理A 需求私信送达 02:33:37。', imgs=[('7-op1-before','G1 冻结要素页（收尾后补拍载荷帧·前）','ui'),('7-op1-after','G1 冻结要素页（收尾后补拍载荷帧·后）','ui'),('docs_view-op1-before','需求/设计文档评审面（收尾后补拍）','ui'),('docs_view-op1-after','RFD-001 文档在册（收尾后补拍）','ui')]),
     8: dict(keys=['room_analysis'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='分析群 !HmQhMNMivoYKiKtTcV 建群 02:33:51 并 RACI 全量预邀（fanfan-agent+8 关联人及各自 agent），观察员契约 MATRIX_ROOM_OBSERVERS 生效。', imgs=[('room_done-op1-before','群聊/建群面（收尾后补拍，非当轮实时帧）','ui'),('room_done-op1-after','案例群消息流在册（收尾后补拍）','ui')]),
     9: dict(keys=['dispatch_marker'], ts_override='1',
             actor='human', actorText='人 · 产品经理A',
             narrative='需求派发 02:33:51（$9ij2dKfP…）：任务书含三清单匹配/SMART 拆分/RACI 双@/结论行二选一带凭证/防虚报条款；去重脚注为本轮新措辞（从零重新执行+历史产物禁引用——考古防线）。', imgs=[('disp_done-op1-after','看板任务卡与分派在册（收尾后补拍·派工后态）','ui')]),
     10: dict(keys=['register_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='主任务卡登记 02:44:28（attempt-1 同步死穴 16 分钟攻克）；tasklist v12.0 入仓 02:44:42（六任务 13.5 人日，输入基线零漂移自证）。', imgs=[('register_done-op1-before','主卡登记前','ui'),('register_done-op1-after','主卡 t_…在板','ui')]),
     11: dict(keys=['analysis_done','analysis_verified'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='任务清单核验+RACI 双@核验：产品经理A 派发四组双@消息 60s 窗未见→回灌重查 240s 仍缺（P9b 复现，4 笔记入问题清单——双@措辞与检出窗的错配挂复盘）；双凭证反向核验通过。', imgs=[('analysis_done-op1-before','任务清单核验前','ui'),('analysis_done-op1-after','tasklist v12.0 在仓+核验过','ui')]),
     12: dict(keys=['triage_done'], ts_override='1',
             actor='ai', actorText='AI · 四主责 agent',
@@ -951,16 +968,16 @@ STEPS_META_RUN11 = {
             actor='ai', actorText='AI · 研发工程师A/研发工程师D/研发工程师B/研发工程师C agent',
             narrative='四路系分同时派出 03:12:58（同秒四派——run11 流水线首验）：首次容量僵尸记账致 83 分钟零开工（106 条队列 drop 记入问题清单）→网关重启+重派 04:37 恢复；AN-PAYCORE 04:50/AN-MP 05:08 从零入仓；AN-CHWX/AN-CHALI 马拉松超窗记入问题清单（研发工程师B/研发工程师C 各 4h+ 未交付，概设以在仓稿汇总——零残留代价正确的慢，两稿 git 历史可反查于归档）。双重保底回执：PAYCORE/MP 回灌后仍缺记入问题清单（receipt-missing×2）；anexec_done 07:29。', imgs=[('anexec_done-op1-before','四路系分派发前','ui'),('anexec_done-op1-after','系分段收尾（2/4 稿在仓）','ui')]),
     14: dict(keys=['review_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='概设方案 RFD-001-architecture-design.md 入仓（产品经理A 汇总在仓稿+跨模块契约）约 08:00 前后；评审卡自登+线下评审通过，review_done 写入通过标记。', imgs=[('review_done-op1-before','概设汇总前','ui'),('review_done-op1-after','概设在仓+评审卡 done','ui')]),
     15: dict(keys=['g2_arch_pass'], ts_override='1791423371',
             actor='ai', actorText='AI · arch-agent',
             narrative='G2 架构治理评审二轮过闸 09:36（键值 1791423371）：首轮容量饥饿（系统架构师A 评审回合被四槽占用静默排队 3600s 窗尽驱动中止 09:04）→网关重启+archgate 续跑 09:09 重派→ARCH-GATE-PASS 27 分钟；评审卡 t_637f6b1c@arch-governance → done。', imgs=[('15-op1-before','G2 评审卡面（收尾后补拍载荷帧·前）','ui'),('15-op1-after','G2 评审卡面（收尾后补拍载荷帧·后）','ui')]),
     16: dict(keys=['close_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='主任务归档 09:36：产品经理A 主卡汇总登记（四系分档案+tasklist+概设 git 路径）标记完成；检查点归档 !refine 发进工作线程。', imgs=[('close_done-op1-before','主卡收尾前','ui'),('close_done-op1-after','主卡 done+资产汇总在 body','ui')]),
     17: dict(keys=['plan_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='排期计划 v1.0 入仓（b4a4f49）：六任务 13.5 人日、测试线 2.3d（0.3 系数内）、15% 缓冲、里程碑 M1-M5；排期回合 09:36-11:0x（中途空转提醒一次 10:57 后唤醒完成）；父子任务卡+逐条派发齐。', imgs=[('plan_done-op1-before','排期前','ui'),('plan_done-op1-after','排期 v1.0 在仓+子卡挂接','ui')]),
     18: dict(keys=['devimpl_done'], ts_override='1',
             actor='ai', actorText='AI · 四开发 agent',
@@ -969,7 +986,7 @@ STEPS_META_RUN11 = {
             actor='ai', actorText='AI · 测试工程师A/测试工程师B agent',
             narrative='集成+测试：四分支增量合并 integration/RFD-001（f2968d0，丢线守卫过）；TEST-BE/FE 派发 16:21（预备轮衔接措辞在任务书）；缺陷回流完整循环；TEST-BE 报告成稿于 测试工程师A 本地（228/228=基线 216+08 域增量 12，证据 sha256 d0c7da52…）但路径偏差未达 integration——testpass 静默降级记入问题清单后放行，监控程序代推归位 dfd44f0；G4 写入通过标记 18:47（键值 1791456472）。', imgs=[('testpass_done-op1-before','测试执行前','ui'),('testpass_done-op1-after','测试段收尾+G4 写入通过标记','ui')]),
     20: dict(keys=['ready_done','release_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent 评审',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent） 评审',
             narrative='G5 六轮长跑（本晚最重一段，全留痕）：r1 首评真 FAIL（缺回滚阈值/灰度/发布说明 20:25 退回）→r2-r4 会话卡死/窗错配连环（产品经理A hindsight 交互缺陷×3+2400s 窗 vs 夜峰慢节奏）→监控程序三面处置=①发布三件套按真实测试数据代拟落 main 1f2c3bd+测试工程师A 报告归位 dfd44f0 ②缺项①a/①b 卡簿记代走（测试工程师A 执行卡 result+FE TP2/TP4/汇总卡 done）③终判行经 产品经理A 账号通道落评审卡（步 13 代走先例，房间行未伪造）→判词复用放行 23:44 READY-GATE-PASS（评审卡 t_24ae1bc5→done，HumanGate 事件入 approved.events）；release 段完成 23:45（delivery-standard 引用+G5 gate 事件补发——run10 漏发缺陷的本轮验证）。', imgs=[('20-op1-before','G5 发布准出面（收尾后补拍载荷帧·前）','ui'),('20-op1-after','G5 发布准出面（收尾后补拍载荷帧·后）','ui')]),
     21: dict(keys=['uat_done'], ts_override='1791476458',
             actor='human', actorText='人 · 需求分析师A 验收',
@@ -1019,7 +1036,7 @@ _DOMAINS_RUN11 = {
 
 STEPS_META_RUN12 = {
     1: dict(keys=['smoke_done'], ts_override='1',
-            actor='human', actorText='人 · admin 管理员',
+            actor='human', actorText='人 · 主管A（admin）',
             narrative='账号与基础设施就绪：30 个账号的登录凭证逐个验证通过，消息网关（:8801）与工作台（:8802）健康检查通过。02:29:57 开跑；冒烟检查还包括在交付案例房 dlv-20261009-v8-run12-023306（02:33:06 建立）写入一条事件并读回核对成功。', imgs=[('smoke_done-op1-before','冒烟检查前：驾驶舱入口','ui'),('smoke_done-op1-after','冒烟检查后：30 账号凭证全过','ui')]),
     2: dict(keys=['appinit_done'], ts_override='1791484496',
             actor='ai', actorText='AI · 装配脚本',
@@ -1040,16 +1057,16 @@ STEPS_META_RUN12 = {
             actor='human', actorText='人 · 需求分析师A+产品经理A',
             narrative='G1 冻结与交付案例事件同时完成（02:41:53）：需求分析师A→产品经理A 的需求私信送达验证通过；小案例 dlv-20261009-v8-run12-023306 状态从 P1 推进到 P2，真实读回核对成功。', imgs=[('g1_frozen-op1-before','冻结要素页（前）','ui'),('g1_frozen-op1-after','冻结要素页（后）','ui')]),
     8: dict(keys=['room_analysis'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='分析群「支付收银台需求分析讨论群」（!vaOyAgKoSVuIRqmHnD）02:42:26 建群，产品经理A 与 8 位相关成员（连同各自的 AI 助理）受邀入群；群里第一条正式消息就是需求任务书（事件 $7HFktXFtXdCM3RmZK-c-g454fZUHFENzUdck8hK36dA，scenario.log 02:42:26 行可反查）。界面截图未采集：分析群直达链接在采集环境无法完成会话同步（已记入问题清单），建群时间与邀请名单以上述事件与日志为凭，如实空缺。', imgs=[]),
     9: dict(keys=['dispatch_marker'], ts_override='1',
             actor='human', actorText='人 · 产品经理A',
             narrative='需求任务书派发（02:42:26，事件 $7HFktXFtXdCM3RmZK-c-g454fZUHFENzUdck8hK36dA）：任务书要求做三清单匹配、按 SMART 原则拆分任务、用 RACI 表明确每项工作的负责人与审批人、给出带凭证的结论行，并写明防虚报条款——必须从零重新执行、禁止引用历史产物。界面截图未采集：该消息深埋 2400+ 条群历史之下（房间被 run13 复用），界面无法回溯定位（已记入问题清单）；任务书原文以派发事件号为凭，如实空缺。', imgs=[]),
     10: dict(keys=['register_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='主任务卡登记+任务清单入库（03:31:36）：docs/analysis/RFD-001-tasklist.md 提交（commit 4160a2f5），主卡 t_acc22c4d 挂在 产品经理A 看板（03:52:59 凭证行）；主卡当时缺结构化责任分配，经退回补充后补齐（03:57 退回→04:02 补齐完成）。', imgs=[('register_done-op1-before','主卡登记前','ui'),('register_done-op1-after','主卡+任务清单入库','ui')]),
     11: dict(keys=['analysis_done','analysis_verified'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='任务清单核验+双重凭证反查：analysis_verified 与 analysis_done 两项状态写入；四份系统分析任务书按约定展开——收银核心（AN-PAYCORE）、小程序（AN-MP）、微信渠道（AN-CHWX）、支付宝渠道（AN-CHALI），核对结论行后进入执行。', imgs=[('analysis_done-op1-before','任务清单核验前','ui'),('analysis_done-op1-after','任务清单入库+核验通过','ui')]),
     12: dict(keys=['triage_done'], ts_override='1',
             actor='ai', actorText='AI · 四主责 agent',
@@ -1058,16 +1075,16 @@ STEPS_META_RUN12 = {
             actor='ai', actorText='AI · 研发工程师A/研发工程师D/研发工程师B/研发工程师C agent',
             narrative='四份系统分析同时派出（04:03:15-28）：研发工程师A 负责收银核心、研发工程师D 小程序、研发工程师B 微信渠道、研发工程师C 支付宝渠道；概设预写同步开始（04:21:28 派）。四份全部完成入库（08:20:07，四稿齐）。', imgs=[('anexec_done-op1-before','系统分析派出前','ui'),('anexec_done-op1-after','四份系统分析完成入库','ui')]),
     14: dict(keys=['review_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='概设方案 docs/design/RFD-001-architecture-design.md 入库（10:01:26，四份系统分析汇总+跨模块接口约定）；评审卡自登+评审通过，review_done 状态写入。', imgs=[('review_done-op1-before','概设汇总前','ui'),('review_done-op1-after','概设入库+评审通过','ui')]),
     15: dict(keys=['g2_arch_pass'], ts_override='1791512757',
             actor='ai', actorText='AI · arch-agent',
             narrative='G2 架构评审一轮通过（10:25:58）：10:02:40 派发（10:13:11 重派一次）→10:25:42 结论经两个来源核对一致→系统架构师A 看板评审卡 t_6b55dd49 标记完成；交付案例推进（阶段 P2 完成、G2 通过）。界面截图为收尾后补拍（该步当轮截图失败，已记入问题清单）。', imgs=[('15-op1-before','系统架构师A 看板·G2 评审任务卡（收尾后补拍）·前','ui'),('15-op1-after','系统架构师A 看板·G2 评审任务卡（收尾后补拍）·后','ui')]),
     16: dict(keys=['close_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='主卡归档（close_done）：产品经理A 主卡 t_acc22c4d 汇总四份系统分析、任务清单与概设的代码路径后标记完成（10:26:10 真值行可反查）。', imgs=[('close_done-op1-before','主卡归档前','ui'),('close_done-op1-after','主卡完成+资产路径汇总在卡内','ui')]),
     17: dict(keys=['plan_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='排期计划入库（10:50:47-53，docs/plan/RFD-001-schedule.md）：六个任务的人日估算、里程碑与缓冲齐备；父子任务卡挂接完成、逐条可派。', imgs=[('plan_done-op1-before','排期前','ui'),('plan_done-op1-after','排期入库+子卡挂接','ui')]),
     18: dict(keys=['devimpl_done'], ts_override='1',
             actor='ai', actorText='AI · 四开发 agent',
@@ -1076,7 +1093,7 @@ STEPS_META_RUN12 = {
             actor='ai', actorText='AI · 测试工程师A/测试工程师B agent',
             narrative='集成+测试：后端测试（测试工程师A）与前端测试（测试工程师B）18:00 首派（被网关的冻结等待误伤，20:25 重新投递）；G4 通过（22:30:33）——测试工程师A 的测试报告如实写明「TEST-BE 本轮未执行、未覆盖」并入集成分支（不谎报，这成为 G5 第一轮追责的诚实起点）；测试工程师B 的 T07 前端 AC-7 报告在工作区成稿（后续 R2 轮入基线）。', imgs=[('testpass_done-op1-before','测试段派出前','ui'),('testpass_done-op1-after','G4 通过+如实报告入库','ui'),('19-sup1-before','交付健康页·六道关卡工件核查：G4 独立验证在仓锚点 2026-10-09（收尾后补拍；活系统当前状态，G5/G6 关卡已被 run13 更新）','ui')]),
     20: dict(keys=['ready_done','release_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent 评审',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent） 评审',
             narrative='G5 发布准出：两次退回+强制暂停+复审转正（全程留痕）：第一轮 22:54:42 真不通过（缺回滚阈值、灰度方案、发布说明三件）→补齐三项成稿→第二轮 23:25:59 不通过（缺 G4 证据链：TEST-BE 未实际执行+T07 不在基线+29 文件漂移）→连续两轮不通过，23:36 按规则强制暂停→并行整改（测试工程师A 实际执行 TEST-BE：250 个用例分四包全部通过 75+52+60+63，加四包类型检查零错误→bc2cb9f；测试工程师B 把 T07 提交入基线 31db77a）→复审 01:17:21 通过→此时评审卡里的模板字样「READY-GATE-FAIL」污染了结论行、发送脚本又三次未成功（结论合并按 FAIL 优先）→清理后 01:46 通过；发布登记三卡 REL-MERGE t_717db416、REL-TAG t_83133800、REL-DELIVER t_f8910b4e（01:46:33-45）。', imgs=[('release_done-op1-before','发布登记前','ui'),('release_done-op1-after','发布三卡在板','ui'),('deliver_gate-op1-after','交付案例门禁灯状态','ui')]),
     21: dict(keys=['uat_done'], ts_override='1791571600',
             actor='human', actorText='人 · 需求分析师A 验收',
@@ -1107,7 +1124,7 @@ STEPS_META_RUN12 = {
 #    报告步收尾链回填。lite_fixtures_from=20261009-v8-run12。──
 STEPS_META_RUN13 = {
     1: dict(keys=[], mark_chip='沿用·run12',
-            actor='human', actorText='人 · admin 管理员',
+            actor='human', actorText='人 · 主管A（admin）',
             narrative='回归轮（本步不在本轮执行范围）：账号与基础设施为环境夹具（SIM 持久跨轮复用）——30 账号 token/单网关 :8801+单 studio :8802；本轮开跑前实测双健康（2026-10-10 巡检 200/200）。本步不在 lite 轮执行范围。', imgs=[]),
     2: dict(keys=[], mark_chip='沿用·run12',
             actor='ai', actorText='AI · 装配脚本',
@@ -1128,16 +1145,16 @@ STEPS_META_RUN13 = {
             actor='human', actorText='人 · 需求分析师A+产品经理A',
             narrative='回归轮（本步不在本轮执行范围）：G1 案例房事件链（源轮 dlv 案例 P1→P2）在案可反查；本轮交付事件以当轮实发为准。', imgs=[]),
     8: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：分析群复用（room_analysis=源轮群，mx-lite-seed 种入 state）——本轮 devimpl 派发在该群进行。', imgs=[]),
     9: dict(keys=[], mark_chip='沿用·run12',
             actor='human', actorText='人 · 产品经理A',
             narrative='回归轮（本步不在本轮执行范围）：需求派发任务书与防虚报条款为源轮真值；本轮 DEV 派发词自含边界纪律条款（过度交付守卫首次实战，6888f22）。', imgs=[]),
     10: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：RFD-001 主卡与 tasklist 为源轮真值；本轮开发子卡当轮新建。', imgs=[]),
     11: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：四系分任务书（AN-*）与 tasklist 在 origin/main——lite 轮不重跑分析段。', imgs=[]),
     12: dict(keys=[], mark_chip='沿用·run12',
             actor='ai', actorText='AI · 四主责 agent',
@@ -1146,16 +1163,16 @@ STEPS_META_RUN13 = {
             actor='ai', actorText='AI · 研发工程师A/研发工程师D/研发工程师B/研发工程师C agent',
             narrative='回归轮（本步不在本轮执行范围）：四系分稿 docs/analysis/AN-*.md 在仓（源轮真值）。', imgs=[]),
     14: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：架构设计文档 docs/design/RFD-001-architecture-design.md 在仓——本轮 devimpl 任务书按此契约实施（lite 方案边界：契约变更须先走 L2 或人工评审更新概设）。', imgs=[]),
     15: dict(keys=[], mark_chip='沿用·run12',
             actor='human', actorText='人 · 架构 团队负责人A+评审',
             narrative='回归轮（本步不在本轮执行范围）：G2=g2_arch_pass 夹具键（lite seed，provenance=源轮评审真值：系统架构师A 板评审卡 t_6b55dd49 一轮过（时点见源轮台账））；本轮 close/plan 强制关卡放行依据=夹具门禁记录而非本轮现场评审（lite 方案边界条款如实呈现）。', imgs=[]),
     16: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：主卡归档（close）为源轮真值。', imgs=[]),
     17: dict(keys=[], mark_chip='沿用·run12',
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='回归轮（本步不在本轮执行范围）：排期计划 docs/plan/RFD-001-schedule.md 在仓（六任务人日+子任务拆分为源轮真值），本轮 DEV/TEST 任务 ID 沿用。', imgs=[]),
     18: dict(keys=['devimpl_done'], ts_override='1',
             actor='ai', actorText='AI · 四开发 agent',
@@ -1164,7 +1181,7 @@ STEPS_META_RUN13 = {
             actor='ai', actorText='AI · 测试工程师A/测试工程师B agent',
             narrative='本轮执行·集成与测试：TEST-BE（测试工程师A）/TEST-FE（测试工程师B）自预备轮用例核对即跑（用例前移纪律 27②）；诚实账语义沿用——测试未执行=如实报告不谎报 PASS（run12 G5 缺项①教训）。实测依据：TEST-FE 派 测试工程师B 09:59:46、TEST-BE（测试工程师A）自预备轮用例核对即跑；G4 通过 11:30:22（测试工程师A 评审要点已入工作线程 11:30:10（后台评审））；测试报告在 integration 分支可反查；帧=测试工程师A 板实拍（拍摄位规划指定测试员板）', imgs=[('testpass_done-op1-before','测试工程师A 看板·测试任务卡（TEST-BE/TEST-FE）视图·前（补拍 12:47：原帧误拍会话空态，r18 弹窗清扫误关看板页签，修复后按拍摄位准确补拍）','ui'),('testpass_done-op1-after','测试工程师A 看板·测试任务卡（TEST-BE/TEST-FE）视图·后（补拍 12:47，同前帧口径）','ui')]),
     20: dict(keys=['ready_done','release_done'], ts_override='1',
-            actor='ai', actorText='AI · fanfan-agent 评审',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent） 评审',
             narrative='本轮执行·发布准出与登记：判词纪律落地首验（派发词已补「结论行行首+改改判句式+发出后回读确认」，f3d7bb9；判词污染 run12 教训应用——模板字样不入被解析面）。实测依据：G5 一轮过 11:30:41（评审卡 t_4f295b73 → done，HumanGate=人工批准入 approved.events）；判词纪律首验（结论行行首+发出后回读确认）；发布三卡 REL-MERGE t_a513ab95 / REL-TAG t_423eff19 / REL-DELIVER t_f7d35a2b（11:38:06-17）；QGate release-report 落盘失败记问题单（qgate-evidence，审计段按来源分布如实呈现）；帧=发布三卡在板实拍（本轮中途重部署后的新界面，无权限报错）', imgs=[('release_done-op1-before','发布登记看板视图·前','ui'),('release_done-op1-after','发布三卡在板视图','ui')]),
     21: dict(keys=['uat_done'], ts_override='1',
             actor='human', actorText='人 · 需求分析师A 验收',
@@ -1192,7 +1209,7 @@ STEPS_META_RUN13 = {
 # imgs 全空注册：帧引用须待盘上实帧在位后回填（V8.4① 图注=画面描述；缺帧引用=审计 FAIL）。
 STEPS_META_RUN14 = {
     1: dict(keys=['smoke_done'],
-            actor='human', actorText='人 · admin 管理员',
+            actor='human', actorText='人 · 主管A（admin）',
             narrative='账号与基础设施就绪：mx-clean 三旗标全清（中央仓清空提交 bd887da @ 2026-10-10 13:44:54，时刻以 commit 时间戳为准；clean 发生在驱动启动前故 scenario.log 无对应行——run14 复盘 A7 修正手编时刻）后 0→1 重建；24 个账号的登录凭证逐个验证通过，单网关 :8801+单 studio :8802 双健康探测通过。14:15:55 开跑（START_STEP=smoke 全量启动，监督器托底）。', imgs=[('smoke_done-op1-before','账户管理页·30 账号在列（账号就在这里分配）·前','ui'), ('smoke_done-op1-after','账户管理页·账号清单与角色列全量·后','ui')]),
     2: dict(keys=['smoke_done'],
             actor='ai', actorText='AI · 装配脚本',
@@ -1213,34 +1230,34 @@ STEPS_META_RUN14 = {
             actor='human', actorText='人 · 需求分析师A+产品经理A',
             narrative='需求上锁（G1）：需求分析师A 需求书经 matrix 私信送达 产品经理A（DM 房 !HgaPKBGJqvHUhrfYB，送达标记 $gpLzjyw1nzqwYz2Io9C9SN4haNfg_oe3eG-V8rQnadQ）；四要素判读通过后冻结标记入仓。实测依据：g1_frozen 14:19:06；delivery 事件 stage P1 done+gate G1 pass 同刻落案例房（case→P2）。', imgs=[('g1_frozen-op1-before','需求追溯页签·G1 冻结工件与 AC·前','ui'), ('g1_frozen-op1-after','冻结标记与 AC 列·后','ui')]),
     8: dict(keys=['room_analysis'],
-            actor='ai', actorText='AI · fanfan-agent',
-            narrative='建群与全量预邀：分析群 !OStFtevDUpLrHgePBY:matrix.test（14:19:31），fanfan-agent+8 关联人（chen/hu/lin/xiao/wei/mei/qi/fei）及各自 agent 一次性预邀（方案 §8 全量预邀纪律）。', imgs=[]),  # 帧走 r18 ops 通道（r18-steps.json 步 8 已注册，双挂即同源违例）
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
+            narrative='建群与全量预邀：分析群 !OStFtevDUpLrHgePBY:matrix.test（14:19:31），fanfan-agent+8 关联人（chen/研发工程师B（hu）/研发工程师C（lin）/研发工程师D（xiao）/团队负责人A（wei）/团队负责人B（mei）/测试工程师A（qi）/fei）及各自 agent 一次性预邀（方案 §8 全量预邀纪律）。', imgs=[]),  # 帧走 r18 ops 通道（r18-steps.json 步 8 已注册，双挂即同源违例）
     9: dict(keys=['dispatch_marker'],
             actor='human', actorText='人 · 产品经理A',
             narrative='本步无对应产品界面（派发锚点的房间直达链接在采集环境不可达——capture-plan 规划注记在案，事件锚直跳待产品实现）：对话全文已入 r18 载荷（步 9 必采 ✓）。派发词含需求信息/材料地址/双凭证证据要求/派发标识 RUN=20261010-v8-run14。实测依据：派发事件 $lCg7puyg43plN7d13I1LmkHuVaYQAsT2TuRl1zpcs3M（14:19:32）；对话全文挂钩 r18-collect（步 9 必采，run13 复盘 F13 接线首验）。', imgs=[]),
     10: dict(keys=['register_done'],
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='看板登记与任务分解：产品经理A 板 RFD-001 主卡落板（主卡 t_89fd4f0c）+凭证反向核验（commit c597644 真在 origin 且含分析稿、card 真在账号板——15:41:17 双向核验 ✓）。实测依据：scenario.log 完成凭证反向核验行。', imgs=[]),  # 帧走 r18 ops 通道（r18-steps.json 步 10 已注册）
     11: dict(keys=['analysis_done','analysis_verified'],
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='系统分析与拆分：tasklist 入仓（SMART 具体到人+三清单匹配）+四组 RACI 双 @ 派发核验+凭证双向核过。实测依据：收尾链按 scenario.log 回填。', imgs=[('analysis_done-op1-before','文档评审页签·tasklist 核验·前','ui'), ('analysis_done-op1-after','任务清单 T01~T08 行·后','ui')]),
     12: dict(keys=['triage_done'],
             actor='ai', actorText='AI · 四主责 agent',
-            narrative='分诊与派工：四主责账号板任务卡齐+lead 确认（质量指标以 issues.log 实测为准，收尾链回填）：（triage→todo）；重复派发 agent 自动合并去重。本步无三源锚（声明态）——真值锚=四板任务卡状态流转（kanban 板库 chen/hu/lin/xiao 板 triage→todo 事件流可反查）。实测依据：收尾链按 scenario.log 回填。', imgs=[('triage_done-op1-before','chen 看板·分诊台任务卡·前','ui'), ('triage_done-op1-after','分诊确认后卡状态·后','ui')]),
+            narrative='分诊与派工：四主责账号板任务卡齐+lead 确认（质量指标以 issues.log 实测为准，收尾链回填）：（triage→todo）；重复派发 agent 自动合并去重。本步无三源锚（声明态）——真值锚=四板任务卡状态流转（kanban 板库 研发工程师A（chen）/研发工程师B（hu）/研发工程师C（lin）/研发工程师D（xiao） 板 triage→todo 事件流可反查）。实测依据：收尾链按 scenario.log 回填。', imgs=[('triage_done-op1-before','chen 看板·分诊台任务卡·前','ui'), ('triage_done-op1-after','分诊确认后卡状态·后','ui')]),
     13: dict(keys=['anexec_done'],
             actor='ai', actorText='AI · 研发工程师A/研发工程师D/研发工程师B/研发工程师C agent',
             narrative='精准系分（四路并行）：worktree 工作区建分支、四份 AN-*.md（概设含接口签名/数据模型/错误码/幂等键+人日评估）入仓+AN-DONE 回执双通道。实测依据：收尾链按 scenario.log 回填。', imgs=[('anexec_done-op1-before','文档评审页签·四份系分稿在列·前','ui'), ('anexec_done-op1-after','系分稿核验视图·后','ui')]),
     14: dict(keys=['review_done'],
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='汇总复核定稿：概设 docs/design/RFD-001-architecture-design.md 入仓（金额分 int64/snake_case 消歧）+评审任务卡登记。实测依据：收尾链按 scenario.log 回填。', imgs=[('review_done-op1-before','文档评审页签·概设文档·前','ui'), ('review_done-op1-after','概设内容核验·后','ui')]),
     15: dict(keys=['g2_arch_pass'],
             actor='human', actorText='人 · 系统架构师A 治理评审',
             narrative='架构治理评审（G2）：五项检查（设计五要素/爆炸半径/验证计划前移/备选方案≥2/历史偏差硬性拦截）评审卡留痕（arch 板评审卡 t_a7288f5d——交付物矩阵步 15 行同锚）；系统架构师A 板拍摄位首次实拍（capture-plan 步 15，run13 复盘 F16 接线）。实测依据：收尾链按 scenario.log 回填。', imgs=[('g2_arch_pass-op1-before','arch 看板·G2 评审卡（五项检查单）·前','ui'), ('g2_arch_pass-op1-after','评审卡结论留痕·后','ui')]),
     16: dict(keys=['close_done'],
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='系分收尾：主任务卡档案汇总（AN-*/tasklist/概设路径+commit）+标记 done（测试工作量 0.3 系数口径写入；主卡 t_89fd4f0c done）。实测依据：收尾链按 scenario.log 回填。', imgs=[('close_done-op1-before','fanfan 看板·主卡归档·前','ui'), ('close_done-op1-after','主卡 done 与档案汇总·后','ui')]),
     17: dict(keys=['plan_done'],
-            actor='ai', actorText='AI · fanfan-agent',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent）',
             narrative='排期：docs/plan/RFD-001-schedule.md 入仓（任务×时间窗口×依赖；测试=开发×0.3 独立成项；整体+15% 缓冲）+父子卡+逐条派发。实测依据：收尾链按 scenario.log 回填。', imgs=[('plan_done-op1-before','fanfan 看板·排期父卡挂接·前','ui'), ('plan_done-op1-after','排期时间窗口与依赖列·后','ui')]),
     18: dict(keys=['devimpl_done'],
             actor='ai', actorText='AI · 四开发 agent',
@@ -1249,7 +1266,7 @@ STEPS_META_RUN14 = {
             actor='ai', actorText='AI · 测试工程师A/测试工程师B agent',
             narrative='独立测试（G4）：TEST-BE（测试工程师A）/TEST-FE（测试工程师B）用例前移预备即跑；缺陷报→修→验全关；测试报告入 integration 分支+commit 回填关联卡。测试者≠写码者。实测依据：收尾链按 scenario.log 回填。', imgs=[('testpass_done-op1-before','qi 看板·TEST-BE/TEST-FE 测试卡·前','ui'), ('testpass_done-op1-after','测试卡结论与 commit 回填·后','ui')]),
     20: dict(keys=['ready_done','release_done'],
-            actor='ai', actorText='AI · fanfan-agent 评审',
+            actor='ai', actorText='AI · 需求分析AI（fanfan-agent） 评审',
             narrative='发布准出（G5）七项检查+HumanGate 批准留痕；判词纪律沿用（结论行行首+发出后回读确认）；QGate release-report 以产物在位判（run13 复盘 F14——rc=1 含 INCONCLUSIVE 门不算失败，来源分布随行呈现）；REL-MERGE/TAG/DELIVER 三卡登记。实测依据：收尾链按 scenario.log 回填。', imgs=[('release_done-op1-before','fanfan 看板·REL 三卡登记·前','ui'), ('release_done-op1-after','发布三卡在板·后','ui')]),
     21: dict(keys=['uat_done'],
             actor='human', actorText='人 · 需求分析师A 验收',
@@ -1372,7 +1389,7 @@ STEPS_META_20261012_V8_RUN16 = {
     19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
         narrative='缺陷+测试段：五路分片 20 分钟全交卷（18:34 派发/18:52 末行）；集成合并推送在案；G4 20:59 过闸。', imgs=[],),
     20: dict(keys=['ready_done','release_done'], actor='human', actorText='人 · 把关+HumanGate',
-        narrative='G5 两轮真打回（两缺陷+复验报告缺位）触发熔断——监控修复链完整走通（lin/chen 修复+qi 复验+fanfan 复审），00:45 复审 PASS 复位续走；REL 三卡 00:36 登记。'),
+        narrative='G5 两轮真打回（两缺陷+复验报告缺位）触发熔断——监控修复链完整走通（lin/研发工程师A（chen） 修复+qi 复验+fanfan 复审），00:45 复审 PASS 复位续走；REL 三卡 00:36 登记。'),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · 需求分析师A逐条判词',
         narrative='UAT 验收 7 条 AC 全过（00:45 验收书入仓）——上轮 5/7 两缺口本轮补齐。'),
     22: dict(keys=['workmgr_done'], actor='ai', actorText='AI · 研发治理',
@@ -1427,7 +1444,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
     17: dict(keys=['plan_done'], mark_chip='沿用·run16', actor='ai', actorText='AI · 骨架',
         narrative='lite 夹具步——不在本轮执行范围（真值源轮）。'),
     18: dict(keys=['devimpl_done'], actor='ai', actorText='AI · 六路研发（编码后端=delegate）',
-        narrative='ACP 编码后端首个实跑轮：六路任务书 03:08 同刻即派（含【编码后端=delegate】段）；仿真工程师按 coding-delegate 技能以 nohup 后台模式委托 Ycode 引擎（zcode-acp-server 0.43.2 stdio 桥）真实现——chen 链式三托（PAYCORE-C/S/N）+xiao/hu/lin 并行，引擎进程峰值 8。分支真值：PAYCORE-C 03:37 首推（9b708d3 携委托日志），六路 03:53-03:59 全齐。G3 04:21 过闸：六条分支里五条带 materials/delegate-log.txt（4 份 RESULT exit=0 在案），DEV-MP 缺日志已登记问题单；CHWX/MP 缺 testlog 已登记问题单。', imgs=[('devimpl_done-op1-before','IDE 工作台·编码段起点（委托链首验轮）','ui'), ('devimpl_done-op1-after','IDE 工作台·编码段收尾','ui')]),
+        narrative='ACP 编码后端首个实跑轮：六路任务书 03:08 同刻即派（含【编码后端=delegate】段）；仿真工程师按 coding-delegate 技能以 nohup 后台模式委托 Ycode 引擎（zcode-acp-server 0.43.2 stdio 桥）真实现——chen 链式三托（PAYCORE-C/S/N）+xiao/研发工程师B（hu）/研发工程师C（lin） 并行，引擎进程峰值 8。分支真值：PAYCORE-C 03:37 首推（9b708d3 携委托日志），六路 03:53-03:59 全齐。G3 04:21 过闸：六条分支里五条带 materials/delegate-log.txt（4 份 RESULT exit=0 在案），DEV-MP 缺日志已登记问题单；CHWX/MP 缺 testlog 已登记问题单。', imgs=[('devimpl_done-op1-before','IDE 工作台·编码段起点（委托链首验轮）','ui'), ('devimpl_done-op1-after','IDE 工作台·编码段收尾','ui')]),
     19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
         narrative='缺陷+测试段 04:22 起：集成合并六路（testlog 副本冲突族已登记问题单）；ChannelAdapter 契约观察器影子 breaking=0 在案；测试分片执行后 G4 段完成（qi 线执行在案）。', imgs=[('testpass_done-op1-before','测试段·驾驶舱前态','ui'), ('testpass_done-op1-after','测试段·驾驶舱收尾','ui')]),
     20: dict(keys=['ready_done'], actor='gate', actorText='强制关卡 G5 · 发布准出',
@@ -1466,11 +1483,11 @@ STEPS_META_RUN15 = {
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · 人工把关',
         narrative='RFD-001 派发 23:58:50（事件 $gEGO_mtr9PiGKyiexUsda9gudrqncu41V-ajPZu-VWY）；fanfan 账号板出卡 ✓ 23:58:59；测试左移 UC 卡同刻派 qi（V8.8 纪律 33 三段卡首验①）。', imgs=[]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · 需求分析师A',
-        narrative='任务清单 docs/analysis/RFD-001-tasklist.md 入仓 ✓ 00:13:32；完成凭证反向核验首咬：00:29:49 判 fanfan 虚报（300s 空转+凭证反查不过）→拒收回灌→新会话复活 00:31:30 活跃（凭证核验门禁实战首例，零人工）。', imgs=[]),
+        narrative='任务清单 docs/analysis/RFD-001-tasklist.md 入仓 ✓ 00:13:32；完成凭证反向核验首咬：00:29:49 判 产品经理A（fanfan） 虚报（300s 空转+凭证反查不过）→拒收回灌→新会话复活 00:31:30 活跃（凭证核验门禁实战首例，零人工）。', imgs=[]),
     11: dict(keys=['analysis_done','analysis_verified'], actor='ai', actorText='AI · 四路系分',
         narrative='四系分并行 00:38-00:40 派发（PAYCORE=chen/MP=xiao/CHWX=hu/CHALI=lin）。窗严物迟两起如实记：AN-MP 判 ✗02:40:32 后实物 02:52 落仓（1ff0a15，宽限期根治件源例）；AN-CHALI v1.1 03:30；design-prewrite 锚未达回退集中派发 01:40:27；四稿全齐 03:37:13。', imgs=[('analysis_done-op1-after','系分·后','ui'),]),
     12: dict(keys=['triage_done'], actor='ai', actorText='AI · 分诊台',
-        narrative='RFD-001 卡分发 chen/hu/lin/xiao 四账号板 ✓ 00:39:44-46；wei/mei lead 分诊确认 triage→todo。', imgs=[]),
+        narrative='RFD-001 卡分发 研发工程师A（chen）/研发工程师B（hu）/研发工程师C（lin）/研发工程师D（xiao） 四账号板 ✓ 00:39:44-46；wei/团队负责人B（mei） lead 分诊确认 triage→todo。', imgs=[]),
     13: dict(keys=['anexec_done'], actor='ai', actorText='AI · 四路执行',
         narrative='四路执行任务 00:40 派发；AN-PAYCORE 集中复核稿 01:04 入仓（985053c）。lin 空转 80min 后经新派发会话自愈（新线程根=新会话实证）。', imgs=[]),
     14: dict(keys=['review_done'], actor='ai', actorText='AI · 需求分析师A+架构师A',
