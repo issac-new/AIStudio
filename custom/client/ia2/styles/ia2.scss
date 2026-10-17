@@ -69,20 +69,28 @@
   font-weight: 600;
 }
 
-// ── 区域主体（flex column：场景根节点靠下方子项规则占满剩余高度，滚动自理） ──
+// ── 区域主体（2026-10-18 左侧栏批：主区 = 左侧导航 + 页面内容两列） ──
 .ia-shell__main {
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  // 走查二修（2026-10-16）：页内容在 main 内滚（顶部栏+注意力条壳外固定，
-  // 所有页面上方常驻可见）；壳 overflow:clip 维持（scrollTop 恒 0 语义不变）
-  overflow-y: auto;
+  flex-direction: row;
+  overflow: hidden;
 }
 
-// 场景出口占满剩余高度（沿用退役 LoopCockpitView 的 .lcp 子项规则）
-.ia-shell__main > :first-child {
+// 页面内容列：占满剩余宽度；页内滚动自理（顶部栏/注意力条/左侧栏固定）
+.ia-shell__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// 页面根节点占满内容列（沿用退役 LoopCockpitView 的 .lcp 子项规则）
+.ia-shell__content > :first-child {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;

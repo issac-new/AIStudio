@@ -1,8 +1,8 @@
 <!-- overlay/custom/client/ia2/components/IaShellHeader.vue -->
 <!-- 驾驶舱统一壳页头。v12.4（2026-09-20 用户裁定）页头四改：
      ① 语言单按钮切换（IaLocaleToggle 显示目标语言，ZH/EN 两按钮合并）；
-     ② 视图切换器退役（D9：IDE 画布并入工作台分段按钮，见 IaCentersNav
-       两按钮合并）；
+     ② 视图切换器曾退役（D9 并入 IaCentersNav）；2026-10-18 左侧栏批重新
+       独立为 IaWorkspaceSwitch，六阶段移入左侧栏，切换不再与阶段穿插；
      ③ 态势 chips 收窄（SitlineBar 删会话/循环/管理；任务口径=跨板未完成
        未归档；等我口径=useDecisionRows 待我决策的任务及会话，与通知铃铛
        的待人工决策同源）；
@@ -26,7 +26,8 @@ import { useFlowStore } from '../store/flow'
 import { taskLinkedSessionId } from '../adapters/flow'
 import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
-import IaCentersNav from './IaCentersNav.vue'
+import IaWorkspaceSwitch from './IaWorkspaceSwitch.vue'
+import IaRunContextChip from './IaRunContextChip.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
 import SpotlightPanel from './SpotlightPanel.vue'
 import SitlineBar from './SitlineBar.vue'
@@ -192,8 +193,6 @@ function onPanelJumpTask(taskId: string): void {
 
 <template>
   <div class="cockpit-top" data-testid="ia-shell-header">
-    <!-- 走查二修（2026-10-16）：三中心导航并入本行行首（原独立首行退役，去重） -->
-    <IaCentersNav part="centers" />
     <div class="cockpit-top__brand">
       <button type="button" class="cockpit-top__home" data-testid="ia-header-home" title="旅程首页（默认入口）" @click="goJourney">🧭</button>
       <ThemeSwitch />
@@ -202,8 +201,10 @@ function onPanelJumpTask(taskId: string): void {
         :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')">
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
       </span>
-      <!-- D9：视图切换器退役（IDE 画布并入工作台分段按钮，见 IaCentersNav） -->
     </div>
+    <!-- 2026-10-18：六阶段移入左侧栏；顶栏只留「沟通协作 | IDE 工作区」独立切换 -->
+    <IaWorkspaceSwitch />
+    <IaRunContextChip />
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>

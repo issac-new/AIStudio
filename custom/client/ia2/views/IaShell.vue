@@ -15,6 +15,7 @@ import { useFlowStore } from '@/custom/ia2/store/flow'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
+import IaSideNav from '../components/IaSideNav.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
@@ -76,7 +77,11 @@ onUnmounted(() => {
     <IaPopoutBar v-if="isStandalone" />
     <IaGlobalTop v-else />
     <div class="ia-shell__main">
-      <router-view />
+      <!-- 2026-10-18 左侧栏批：六阶段与常用入口常驻左侧；standalone 单面板窗不挂 -->
+      <IaSideNav v-if="!isStandalone" />
+      <div class="ia-shell__content">
+        <router-view />
+      </div>
     </div>
 
     <!-- 日程弹窗（2026-10-01 用户裁定还原 S7 摘除；组件与 workspace store 能力原样） -->
