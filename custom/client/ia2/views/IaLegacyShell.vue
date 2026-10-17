@@ -108,7 +108,8 @@ const pageKey = computed(() => String(route.name ?? ''))
  * [侧栏 | 内容]。上游视图根节点多为固定 100vh 高度，经内容列 flex 收缩
  * （与壳内其他上游视图同款语义），页面自持滚动。 */
 /* overflow:clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤）。 */
-.ia-lshell { height: calc(100 * var(--vh, 1vh)); display: flex; flex-direction: column; overflow: clip; background: var(--bg-primary); color: var(--text-primary); }
+.ia-lshell { height: calc(100 * var(--vh, 1vh)); display: flex; flex-direction: column; overflow: clip; background: var(--bg-primary); color: var(--text-primary); --text-secondary: #555; --text-secondary-rgb: 85, 85, 85; --text-muted: #666; --text-muted-rgb: 102, 102, 102; }
+.dark .ia-lshell { --text-secondary: #a0a0a0; --text-secondary-rgb: 160, 160, 160; --text-muted: #9a9a9a; --text-muted-rgb: 154, 154, 154; }
 .ia-lshell__main { flex: 1; min-height: 0; display: flex; }
 .ia-lshell__content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 </style>
