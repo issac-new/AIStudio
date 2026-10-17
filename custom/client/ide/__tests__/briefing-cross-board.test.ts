@@ -42,9 +42,11 @@ vi.mock('@/stores/hermes/kanban', () => ({
 }))
 const listBoardsMock = vi.fn()
 const listTasksMock = vi.fn()
+const getTaskMock = vi.fn()
 vi.mock('@/api/hermes/kanban', () => ({
   listBoards: (...a: unknown[]) => listBoardsMock(...a),
   listTasks: (...a: unknown[]) => listTasksMock(...a),
+  getTask: (...a: unknown[]) => getTaskMock(...a),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
 // 日程弹窗还原（2026-10-01）后 IdeShell 引 workspace store——同款桩
@@ -83,6 +85,7 @@ describe('IdeShell briefing 跨板解析', () => {
     kanbanState.selectedBoard = 'default'
     setBoardCalls.length = 0
     listBoardsMock.mockReset()
+    getTaskMock.mockReset().mockImplementation(async () => { throw new Error('404') })
     listTasksMock.mockReset()
   })
   afterEach(() => {
@@ -100,6 +103,7 @@ describe('IdeShell briefing 跨板解析', () => {
   })
 
   it('任务在他板：逐板解析→命中→切板回填', async () => {
+    getTaskMock.mockResolvedValue({ task: { id: 't_remote' } })
     listBoardsMock.mockResolvedValue([{ slug: 'default' }, { slug: 'aipay-rfd' }])
     listTasksMock.mockImplementation(({ board }: { board: string }) =>
       Promise.resolve(board === 'aipay-rfd'
@@ -112,16 +116,18 @@ describe('IdeShell briefing 跨板解析', () => {
     expect(listTasksMock).toHaveBeenCalledWith({ board: 'aipay-rfd' })
   })
 
-  it('全板未命中：不崩溃不报错，保持空态', async () => {
+  it('全板未命中：getTask 快 404 判死即止（R7 提速），不崩溃保持空态', async () => {
     listBoardsMock.mockResolvedValue([{ slug: 'default' }, { slug: 'other' }])
     listTasksMock.mockResolvedValue([])
     mountShell()
     ideState.activeTaskId = 't_ghost'
-    await vi.waitFor(() => expect(listTasksMock).toHaveBeenCalledWith({ board: 'other' }))
+    await vi.waitFor(() => expect(getTaskMock).toHaveBeenCalledWith('t_ghost'))
+    expect(listTasksMock).not.toHaveBeenCalled()
     expect(setBoardCalls).toEqual([])
   })
 
   it('session_id 命中也解析（深链会话形态）', async () => {
+    getTaskMock.mockResolvedValue({ task: { id: 't_x' } })
     listBoardsMock.mockResolvedValue([{ slug: 'agent-board' }])
     listTasksMock.mockResolvedValue([{ id: 't_x', session_id: 'sess_abc', title: '按会话', status: 'todo' }])
     kanbanState.selectedBoard = 'other-board'

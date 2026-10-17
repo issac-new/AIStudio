@@ -46,6 +46,7 @@
 - 初版 `container-type: inline-size` 实测触发 size containment——态势条固有宽塌 0、胶囊缩至 6px、chip 溢出被页头后续按钮（changelog/日程）盖住不可点，属修复引入的回归。
 - 改为 `@media (max-width: 1439px)` 收起 `.sit__sm` 副注（视口媒体查询零尺寸副作用）；≥1440 视口页头有余量显全明细。sitline/header 测试 10/10。
 - 三修（同日）：媒体查询挡不住**按语言**的 chip 宽度漂移（EN 态 Tasks/Online chip 更宽，1280 视口复现半裁不可点）。根治=`.cockpit-top__sit` 改 `flex-shrink: 0`（胶囊永不半裁），挤压由搜索框（shrink 2/min 120）与 spacer 吸收；媒体查询保留为 ≥1440 显全明细的开关。
+- R7 提速（同日二修）：GUI 实测 ghost 深链要等逐板 listTasks 串行 CLI（16 板近分钟）才收起——前置一发 `getTask(id)`（服务端快 404 闸毫秒级判死活），404 即收起；存在则走原逐板流程。两测试文件 mock 补 getTask，慢解析用例改为悬挂 Promise 验证「不因慢收起」。
 
 ## 验证
 
