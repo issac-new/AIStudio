@@ -82,6 +82,7 @@ export function resolveNeutrals() {
     ink: get('--text-primary', '#1a1a1a'),
     inkSecondary: get('--text-secondary', '#666666'),
     muted: get('--text-muted', '#999999'),
+    onAccent: get('--text-on-accent', '#ffffff'),
     border: get('--border-color', '#e0e0e0'),
     bgCard: get('--bg-card', '#ffffff'),
     bgSecondary: get('--bg-secondary', '#f0f0f0'),

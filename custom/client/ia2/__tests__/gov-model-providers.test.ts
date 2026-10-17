@@ -51,4 +51,14 @@ describe('GovModelProvidersSection — D20 模型服务商统一入口', () => {
     expect(w.find('[data-testid="gmp-saved"]').text()).toContain('写穿引擎')
     w.unmount()
   })
+
+  it('装载失败：错误条呈现、表单与保存钮隐藏（2026-10-18 审计轮——空表单保存会清空引擎模型目录）', async () => {
+    mockedFetch.mockRejectedValueOnce(new Error('network down'))
+    const w = mount(GovModelProvidersSection)
+    await flushPromises()
+    expect(w.find('[data-testid="gmp-load-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="gmp-load-error"]').text()).toContain('network down')
+    expect(w.find('[data-testid="gmp-save"]').exists()).toBe(false)
+    w.unmount()
+  })
 })
