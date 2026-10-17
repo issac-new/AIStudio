@@ -811,3 +811,9 @@
 # 648: 路由懒分片拉取失败兜底（D5）——vite dev 深模块图偶发 import 失败/pending，
 # router.onError 识别 ESM 失败类错误做一次性整页重载（清失败缓存，防重载风暴）。
 648-client-router-lazy-chunk-reload.patch
+# 649: 看板任务详情读侧对 admin/super_admin 放行——聚合列表本就不按可见 profile
+# 过滤，读侧再拦会「看得见卡、点开 404」；认领/写路径的围栏不变。
+649-server-kanban-admin-task-read.patch
+# 650: 设备互联零页签空态——connectionsExtras 关且非 super_admin 时三个页签全被
+# 条件裁掉，NTabs 空渲染导致整页空白；补 common.noData 空态。
+650-client-connections-empty-state.patch

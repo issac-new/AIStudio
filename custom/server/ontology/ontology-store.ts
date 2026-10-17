@@ -204,7 +204,9 @@ export function listSpecSnapshots(): SpecSnapshotMeta[] {
           const meta = JSON.parse(readFileSync(join(snapDir(), f.replace(/\.json$/, '.meta.json')), 'utf8')) as { label?: string }
           if (typeof meta.label === 'string' && meta.label) label = meta.label
         } catch { /* 旧档缺边车 */ }
-        return { ts: Number(f.slice(6, -5)), file, bytes, label, version, typeCount }
+        // 文件名 spec-<unix 毫秒>.json：数字从索引 5 开始（"spec-" 是 5 个字符），
+        // 旧实现 slice(6,-5) 截掉首位 → 13 位时间戳变 12 位，前端显示 1995 年。
+        return { ts: Number(f.slice(5, -5)), file, bytes, label, version, typeCount }
       })
       .sort((a, b) => b.ts - a.ts)
   } catch {
