@@ -6,18 +6,23 @@
 
 ## 根因
 
-`TeamsManagePanel` 在 `onMounted` 立即调用 `registry.detectRegistry()`。此时 `matrix-js-sdk` 的首次 sync 可能尚未完成，`client.getAccountData(REGISTRY_ACCOUNT_DATA_TYPE)` 返回空，函数提前返回；后续 sync 完成没有再次发现，页面因此停留在未配置态。房间本身已在客户端房间列表里，所以候选兜底能看到它——这也证明数据没有丢，只是发现时机不对。
+两个问题叠加：
+
+1. **真实 SDK 形状读错（主因）**：`matrix-js-sdk` 的 `client.getAccountData(type)` 返回 `MatrixEvent`，内容只能经 `getContent()` 取；`detectRegistry` 按 `{ content: ... }` 读取，拿到 `undefined` 后提前返回。account_data 实际已在 SDK store 的 `accountData` Map 里（实测 `com.swarmstudio.registry → { roomId }` 存在），服务端 GET 也返回 200，但页面永远发现不到。测试 mock 同样按 `{ content }` 形状返回，因此单测全绿而生产失败。
+2. **首次同步时序（次因）**：`TeamsManagePanel` 在 `onMounted` 立即发现；若 account data 在首次 sync 之后才到达，没有后续重试。
 
 ## 变更
 
-1. `TeamsManagePanel.vue`：监听 `matrixClientStore.syncState`，进入 `PREPARED` 或 `SYNCING` 时再次调用 `registry.detectRegistry()`；保留 `onMounted` 一次，覆盖客户端已同步后再进页面的情况。
-2. `teams-panel.test.ts`：mock 增加 `syncState` ref；新增用例——挂载时发现一次，`syncState` 变为 `SYNCING` 后再次发现；每个用例重置 `syncState`。
+1. `team-registry.ts > detectRegistry`：兼容 MatrixEvent 的 `getContent()` 与旧 `{ content }` 形状；读取真实内容后再判断 roomId。
+2. `TeamsManagePanel.vue`：监听 `matrixClientStore.syncState`，进入 `PREPARED` 或 `SYNCING` 时再次发现；保留 `onMounted` 一次，覆盖客户端已同步后再进页面的情况。
+3. `team-registry-store.test.ts`：mock 改为真实 SDK 形状（`getContent()`），防止同类漏测；`teams-panel.test.ts` 增加同步状态变化后再发现的用例。
 
 ## 决策记录
 
-1. **等同步事件，不轮询**：Matrix SDK 已有 `ClientEvent.Sync` 状态机，监听状态变化比定时轮询准确且无额外请求。
-2. **保留 onMounted 发现**：客户端在进页面前已同步时，`syncState` 不会再变化；挂载时的一次发现是必要兜底。两处都调用是幂等的，不会写数据。
-3. **不改 store 的持久化逻辑**：account_data 写入已正确；只修读取时机，避免扩大改动面。
+1. **修内容提取而不是改 SDK**：`getAccountData` 的 MatrixEvent 返回是 SDK 契约；适配契约，不改上游。
+2. **两种形状都兼容**：测试/旧 mock 用 `{ content }`，真实 SDK 用 `getContent()`；同时支持可让存量测试与运行时都过，且不制造第二套读取器。
+3. **等同步事件，不轮询**：Matrix SDK 已有 `ClientEvent.Sync` 状态机，监听状态变化比定时轮询准确且无额外请求；`onMounted` 保留作为已同步场景的即时发现。
+4. **测试 mock 对齐真实形状**：这次漏测的根因是 mock 比生产更宽松；把 mock 改成真实形状，后续同类缺陷会在单测暴露。
 
 ## 验证
 
