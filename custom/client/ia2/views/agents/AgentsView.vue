@@ -5,6 +5,7 @@
      定向 profile，safeFileStore 带 backup）。旅程步骤 5 落此页。
      设计正本=docs/superpowers/specs/2026-10-17-d20-backlog-clearance.md §一.3/4 -->
 <script setup lang="ts">
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { onMounted, ref } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
@@ -67,6 +68,7 @@ async function saveBinding(r: Row): Promise<void> {
 
 <template>
   <div class="agw" data-testid="agents-page">
+  <IaBreadcrumb />
   <TabIntroBanner tab="agents" />
     <header class="agw__head">
       <h1 class="agw__title">智能体管理</h1>

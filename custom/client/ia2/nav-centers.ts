@@ -59,8 +59,10 @@ export function centerForPath(path: string): CenterKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage2'
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage3'
+  // 仿真中心=④开发的运行工具舱、治理中心=⑥治理（2026-10-17 层级批：
+  // 旧映射 sim→②需求 / gov→③分析设计 会让顶栏高亮与实际页面无关，用户实报「层次乱」）
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
+  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
   if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（默认入口，搭建区①高亮）
   if (path.startsWith('/app/')) return 'stage4'
   return null

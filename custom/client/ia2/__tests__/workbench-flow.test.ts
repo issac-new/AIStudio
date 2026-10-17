@@ -823,11 +823,11 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
-  it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
+  it('高亮按路由前缀判定：/app/sim 下④开发高亮（仿真中心=运行工具舱）', async () => {
     const { wrapper } = await mountNav('/app/sim')
-    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).toContain('icn-inline__center-btn--active')
     // D9 分段：工作台激活态落在分段容器（work--active），子按钮不再挂 --active
-    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).not.toContain('icn-inline__work--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
