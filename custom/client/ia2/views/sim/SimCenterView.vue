@@ -110,7 +110,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-overview"
       >
-        <h3 class="sim-center__panel-title">签 1·{{ text.tabOverview }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabOverview }}<span class="sim-center__panel-no">签 1</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['overview']" />
         <OverviewPanel />
       </section>
@@ -120,7 +120,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-supervision"
       >
-        <h3 class="sim-center__panel-title">签 2·{{ text.tabSupervision }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabSupervision }}<span class="sim-center__panel-no">签 2</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['supervision']" />
         <SupervisionPanel />
       </section>
@@ -130,7 +130,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-ops"
       >
-        <h3 class="sim-center__panel-title">签 3·{{ text.tabOps }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabOps }}<span class="sim-center__panel-no">签 3</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['ops']" />
         <OpsPanel />
       </section>
@@ -140,7 +140,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-evidence"
       >
-        <h3 class="sim-center__panel-title">签 4·{{ text.tabEvidence }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabEvidence }}<span class="sim-center__panel-no">签 4</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['evidence']" />
         <EvidencePanel />
       </section>
@@ -150,7 +150,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-delivery"
       >
-        <h3 class="sim-center__panel-title">签 5·{{ text.tabDelivery }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabDelivery }}<span class="sim-center__panel-no">签 5</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['delivery']" />
         <DeliveryPanel />
       </section>
@@ -160,7 +160,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel sim-center__panel--live"
         data-testid="ia-sim-panel-trace"
       >
-        <h3 class="sim-center__panel-title">签 6·{{ text.tabTrace }}</h3>
+        <h3 class="sim-center__panel-title">{{ text.tabTrace }}<span class="sim-center__panel-no">签 6</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['trace']" />
         <TracePanel />
       </section>
@@ -172,7 +172,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__panel"
         :data-testid="`ia-sim-panel-${tab.key}`"
       >
-        <h3 class="sim-center__panel-title">签 {{ tab.index }}·{{ text[TAB_LABEL_KEY[tab.key]] }}</h3>
+        <h3 class="sim-center__panel-title">{{ text[TAB_LABEL_KEY[tab.key]] }}<span class="sim-center__panel-no">签 {{ tab.index }}</span></h3>
         <p class="sim-center__pending">
           <span class="sim-center__badge">{{ text.pendingBadge }}</span>{{ text.pendingLead }}
         </p>
@@ -246,7 +246,8 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
   padding: 12px 14px;
   border-style: solid;
 }
-.sim-center__panel-title { margin: 0; font-size: 15px; }
+.sim-center__panel-title { margin: 0; font-size: 15px; display: flex; align-items: center; }
+.sim-center__panel-no { margin-left: 8px; padding: 0 5px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 10px; font-weight: 400; color: var(--text-muted); white-space: nowrap; }
 .sim-center__pending {
   margin: 0;
   font-size: 12px;

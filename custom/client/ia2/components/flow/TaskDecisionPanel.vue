@@ -70,7 +70,10 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
            「上下文」=挂接任务+任务流转+任务动态。子列表 testid 原样保留。 -->
       <section class="tdp__sec">
         <div class="tdp__sec-head">
-          <span>{{ t('ia2.tdp.pendingTitle') }}<span v-if="waitItems.length + (attentionRows?.length ?? 0)" class="tdp__n">{{ waitItems.length + (attentionRows?.length ?? 0) }}</span></span>
+          <span class="tdp__sec-name">
+            <svg class="tdp__sec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+            {{ t('ia2.tdp.pendingTitle') }}<span v-if="waitItems.length + (attentionRows?.length ?? 0)" class="tdp__n">{{ waitItems.length + (attentionRows?.length ?? 0) }}</span>
+          </span>
           <button type="button" class="tdp__link" data-testid="tdp-wait-all" @click="emit('all-timeline')">
             {{ t('ia2.tdp.all') }} ›
           </button>
@@ -91,7 +94,8 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
 
       <section class="tdp__sec">
         <div class="tdp__sec-head">
-          <span>
+          <span class="tdp__sec-name">
+            <svg class="tdp__sec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
             {{ t('ia2.tdp.contextTitle') }}<template v-if="linkedContext"> · {{ linkedContext }}</template>
           </span>
           <button type="button" class="tdp__link" data-testid="tdp-new-task" @click="emit('new-task')">
@@ -132,11 +136,21 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
 .tdp__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px; }
 .tdp__sec { margin-bottom: 10px; }
 .tdp__sub { margin-top: 6px; }
+/* 相邻子块发丝分隔（观察项 O-2）：挂接任务/任务流转/任务动态同节内的分组线 */
+.tdp__sub + .tdp__sub { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
 .tdp__sec-head {
+  /* 分组头强化（观察项 O-2）：贴顶+同族淡底——滚动时组名常驻，节界一眼可辨；
+     体量不变（同 10px 大写小标，仅加底与贴顶），守 D19 密度纪律 */
+  position: sticky; top: 0; z-index: 1;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 4px 4px; font-size: 10px; text-transform: uppercase;
+  margin: 0 -4px; padding: 5px 6px;
+  border-radius: 4px;
+  background: var(--accent-bg, var(--hover-bg));
+  font-size: 10px; text-transform: uppercase;
   letter-spacing: .04em; color: var(--text-muted);
 }
+.tdp__sec-name { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.tdp__sec-ico { flex-shrink: 0; opacity: .8; }
 .tdp__n {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 16px; height: 16px; margin-left: 5px; padding: 0 4px;

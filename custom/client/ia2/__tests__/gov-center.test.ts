@@ -105,8 +105,8 @@ describe('GovCenterView — C1 治理中心壳（R8）', () => {
 
   it('签序号不错位（问题单对账=签 4 占位、度量体检=签 7）', { timeout: 20000 }, async () => {
     const w = await mountAt('/app/gov')
-    expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('签 4·')
-    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('签 7·')
+    expect(w.find('[data-testid="ia-gov-panel-issues"]').text()).toContain('签 4')
+    expect(w.find('[data-testid="ia-gov-panel-metrics"]').text()).toContain('签 7')
     w.unmount()
   })
 })

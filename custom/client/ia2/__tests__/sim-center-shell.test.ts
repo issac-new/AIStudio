@@ -142,7 +142,8 @@ describe('仿真中心壳（B1）：渲染', () => {
     }
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
-    expect(panel.text()).toContain('签 1·运行总览')
+    expect(panel.text()).toContain('运行总览')
+    expect(panel.text()).toContain('签 1')
     expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
@@ -154,12 +155,12 @@ describe('仿真中心壳（B1）：渲染', () => {
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     // 六签全部实装（B1 壳+B2/B4/B5/B6+签 1 总览屏收尾件）：标题+实际数据面
     const live: ReadonlyArray<{ key: string; title: string; panel: string }> = [
-      { key: 'overview', title: '签 1·运行总览', panel: '[data-testid="ov-panel"]' },
-      { key: 'supervision', title: '签 2·监督面板', panel: '[data-testid="sup-panel"]' },
-      { key: 'ops', title: '签 3·运行监控', panel: '[data-testid="ops-panel"]' },
-      { key: 'evidence', title: '签 4·证据库', panel: '[data-testid="ev-panel"]' },
-      { key: 'delivery', title: '签 5·交付健康', panel: '[data-testid="dlv-panel"]' },
-      { key: 'trace', title: '签 6·需求追溯', panel: '[data-testid="trc-panel"]' },
+      { key: 'overview', title: '运行总览', panel: '[data-testid="ov-panel"]' },
+      { key: 'supervision', title: '监督面板', panel: '[data-testid="sup-panel"]' },
+      { key: 'ops', title: '运行监控', panel: '[data-testid="ops-panel"]' },
+      { key: 'evidence', title: '证据库', panel: '[data-testid="ev-panel"]' },
+      { key: 'delivery', title: '交付健康', panel: '[data-testid="dlv-panel"]' },
+      { key: 'trace', title: '需求追溯', panel: '[data-testid="trc-panel"]' },
     ]
     for (const { key, title, panel } of live) {
       const section = wrapper.find(`[data-testid="ia-sim-panel-${key}"]`)
@@ -179,7 +180,8 @@ describe('仿真中心壳（B1）：渲染', () => {
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/sim/ops')
     expect(wrapper.find('[data-testid="ia-sim-tab-ops"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.text()).toContain('签 3·运行监控')
+    expect(wrapper.text()).toContain('运行监控')
+    expect(wrapper.text()).toContain('签 3')
     // 同签点击不产生导航（当前签守卫）
     const before = router.currentRoute.value.fullPath
     await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')
@@ -194,7 +196,8 @@ describe('仿真中心壳（B1）：渲染', () => {
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     expect(wrapper.find('[data-testid="ia-sim-tab-evidence"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').text()).toContain('签 4·证据库')
+    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').text()).toContain('证据库')
+    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').text()).toContain('签 4')
     wrapper.unmount()
   })
 })
