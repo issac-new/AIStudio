@@ -121,15 +121,16 @@
 
 | 批次 | 提交 | 内容 |
 |---|---|---|
-| B1 | `c3e3922` | 左侧常驻导航（`IaSideNav`/`IaSideNavItem`）、独立 `IaWorkspaceSwitch`、运行上下文 chip、顶区去堆叠 |
-| B2 | `70792f6` | 六阶段页签化（`stage-tabs.ts` + `StageShell` + 五个阶段概览件）、治理七签迁入、旧 gov 深链 redirect |
-| B3 | `e13075e` | 全流程推演四签、运行选择器、交付/追溯迁⑤、去「中心/签 N/待实现」残留 |
-| B4 | `d9d6223` | 全站检索页（五类对象 + 工作区/状态/负责人/时间过滤）、Spotlight 运行组与全量检索入口、工作台按工作区分组 |
-| B5 | 本批 | 移除退场的 `IaCentersNav`/`IaQuickNav`/`IaViewSwitcher` 与工作台左栏重复入口；测试夹具更新；全量回归 |
+| B1 | `9f78a49e` | 左侧常驻导航（`IaSideNav`/`IaSideNavItem`）、独立 `IaWorkspaceSwitch`、运行上下文 chip、顶区去堆叠 |
+| B2 | `90da684e` | 六阶段页签化（`stage-tabs.ts` + `StageShell` + 五个阶段概览件）、治理七签迁入、旧 gov 深链 redirect |
+| B3 | `349578d9` | 全流程推演四签、运行选择器、交付/追溯迁⑤、去「中心/签 N/待实现」残留 |
+| B4 | `66fc5e95` | 全站检索页（五类对象 + 工作区/状态/负责人/时间过滤）、Spotlight 运行组与全量检索入口、工作台按工作区分组 |
+| B5 | `0bc31957` | 移除退场的 `IaCentersNav`/`IaQuickNav`/`IaViewSwitcher` 与工作台左栏重复入口；测试夹具更新；全量回归 |
 
 验证结果：
 
-- 前端全量：`4852 passed / 8 skipped / 0 failed`（4860 项；`--maxWorkers=4`，worktree 依赖经 `OVERLAY_UPSTREAM_ROOT` 指向共享 upstream）。
+- 前端全量：`4857 passed / 8 skipped / 0 failed`（4865 项；`--maxWorkers=4`，worktree 依赖经 `OVERLAY_UPSTREAM_ROOT` 指向共享 upstream）。
 - ia2 全量：`674 passed / 0 failed`（新增左侧栏、阶段页签、检索页、工作区分组守门）。
 - 生产构建未执行：worktree 无 `vite.config.overlay.ts`，生成它需 `npm run inject`；当前推演在跑，按工作区规则不在本轮 inject。构建留部署窗执行。
+- 合并提交：`5bb57d32`（merge: feat/ia-leftnav-stage-tabs）；rebase 后批次哈希以本表为准。
 - 8649 热更新视觉走查待人工执行（左侧栏三组行式一致性、阶段页一屏内、顶栏切换/运行 chip、检索页过滤、工作区分组）。
