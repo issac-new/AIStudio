@@ -187,7 +187,7 @@ onMounted(() => {
 
     <div class="kg__panel" data-testid="kg-versions">
       <h4 class="kg__panel-title">{{ L?.versionsTitle }}</h4>
-      <div v-if="!versions.length" class="kg__empty">{{ L?.versionsEmpty }}</div>
+      <div v-if="!versions.length" class="ui-empty-state">{{ L?.versionsEmpty }}</div>
       <div v-else class="kg__versions">
         <select v-model.number="selectedTs" class="kg__versions-select" data-testid="kg-version-select">
           <option :value="null" disabled>{{ L?.versionSelect }}</option>
@@ -208,7 +208,7 @@ onMounted(() => {
 
     <div class="kg__panel" data-testid="kg-conflicts">
       <h4 class="kg__panel-title">{{ L?.conflictsTitle }}</h4>
-      <div v-if="!pendingConflicts.length" class="kg__empty">{{ L?.conflictsEmpty }}</div>
+      <div v-if="!pendingConflicts.length" class="ui-empty-state">{{ L?.conflictsEmpty }}</div>
       <div v-for="c in pendingConflicts" :key="c.inboxId" class="kg__conflict" :data-testid="`kg-conflict-${c.inboxId}`">
         <div class="kg__conflict-main">
           <span v-if="c.kind === 'merge-review'" class="kg__kind-tag" data-testid="kg-merge-review-tag">{{ L?.mergeReviewTag }}<template v-if="typeof c.similarity === 'number'"> {{ c.similarity.toFixed(2) }}</template></span>
@@ -251,7 +251,6 @@ onMounted(() => {
 .kg__synclog { font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
 .kg__panel { border-top: 1px solid var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .kg__panel-title { margin: 0; font-size: 13px; }
-.kg__empty { font-size: 12px; opacity: 0.6; }
 .kg__conflict { border-left: 3px solid var(--warning); padding: 4px 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
 .kg__conflict-main { font-size: 12px; }
 .kg__conflict-main code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }

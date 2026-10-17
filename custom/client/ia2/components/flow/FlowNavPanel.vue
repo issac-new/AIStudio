@@ -314,7 +314,7 @@ function submitCreateRoom(): void {
         </div>
       </div>
 
-      <div v-if="!shownSessions.length && !shownLoops.length" class="flow-nav__empty" data-testid="flow-empty">
+      <div v-if="!shownSessions.length && !shownLoops.length" class="ui-empty-state ui-empty-state--compact" data-testid="flow-empty">
         {{ t('ia2.flow.empty') }}
       </div>
     </div>
@@ -477,7 +477,6 @@ function submitCreateRoom(): void {
 .flow-nav__stage-idx { color: var(--text-secondary); }
 .flow-nav__status--warn { color: var(--warning); font-weight: 600; }
 .flow-nav__status--err { color: var(--error); font-weight: 600; }
-.flow-nav__empty { padding: 16px 10px; font-size: 11px; color: var(--text-muted); text-align: center; }
 .flow-nav__create { display: flex; gap: 4px; padding: 0 12px 6px; }
 .flow-nav__create-input {
   flex: 1; min-width: 0; height: 24px; padding: 0 8px;

@@ -91,7 +91,7 @@ const STATUS_TEXT: Record<string, string> = {
 
     <section class="ide-bgt__section" data-testid="ide-bgt-subagents">
       <div class="ide-bgt__sectitle">后台子代理 · {{ subagents.length }}</div>
-      <div v-if="!subagents.length" class="ide-bgt__empty">无后台子代理</div>
+      <div v-if="!subagents.length" class="ui-empty-state ui-empty-state--compact">无后台子代理</div>
       <button
         v-for="s in subagents" :key="s.key" type="button" class="ide-bgt__row"
         :data-testid="`ide-bgt-sub-${s.key}`" title="打开子代理浮窗" @click="openAgentsFloat"
@@ -105,7 +105,7 @@ const STATUS_TEXT: Record<string, string> = {
     <section class="ide-bgt__section" data-testid="ide-bgt-queue">
       <div class="ide-bgt__sectitle">自治队列 · {{ queueItems.length }}</div>
       <div v-if="queueError" class="ide-bgt__error" data-testid="ide-bgt-queue-err">{{ queueError }}</div>
-      <div v-else-if="!queueItems.length" class="ide-bgt__empty">自治队列为空</div>
+      <div v-else-if="!queueItems.length" class="ui-empty-state ui-empty-state--compact">自治队列为空</div>
       <div v-for="q in queueItems" :key="q.itemId" class="ide-bgt__row is-static" :data-testid="`ide-bgt-queue-${q.itemId}`">
         <span class="ide-bgt__status">{{ STATUS_TEXT[q.state] ?? q.state }}</span>
         {{ q.text }}
@@ -116,7 +116,7 @@ const STATUS_TEXT: Record<string, string> = {
     <section class="ide-bgt__section" data-testid="ide-bgt-workflows">
       <div class="ide-bgt__sectitle">工作流运行（当前会话）· {{ wfRuns.length }}</div>
       <div v-if="wfError" class="ide-bgt__error" data-testid="ide-bgt-wf-err">{{ wfError }}</div>
-      <div v-else-if="!wfRuns.length" class="ide-bgt__empty">当前会话无工作流运行</div>
+      <div v-else-if="!wfRuns.length" class="ui-empty-state ui-empty-state--compact">当前会话无工作流运行</div>
       <button
         v-for="r in wfRuns" :key="r.runId" type="button" class="ide-bgt__row"
         :data-testid="`ide-bgt-wf-${r.runId}`" title="打开工作流页签" @click="openWorkflowTab"
@@ -140,7 +140,6 @@ const STATUS_TEXT: Record<string, string> = {
 .ide-bgt__head button { border: none; background: none; cursor: pointer; }
 .ide-bgt__section { padding: 6px 10px; }
 .ide-bgt__sectitle { font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-.ide-bgt__empty { color: var(--text-muted); font-size: 11px; padding: 2px 0 6px; }
 .ide-bgt__error { color: var(--error-color, #d03050); font-size: 11px; }
 .ide-bgt__row {
   display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left;

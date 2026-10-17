@@ -43,7 +43,7 @@ onMounted(() => void refresh())
     <p class="dr__sub">{{ L?.sub }}</p>
     <div v-if="error" class="dr__error">{{ error }}</div>
     <div v-else-if="data && !data.exists" class="dr__missing" data-testid="dr-missing">{{ L?.missing }}</div>
-    <div v-else-if="!data" class="dr__empty">…</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <div v-if="data.problems?.length" class="dr__problems" data-testid="dr-problems">
         {{ L?.problems }}：{{ data.problems.join('；') }}
@@ -82,8 +82,7 @@ onMounted(() => void refresh())
 .dr__mode[data-mode="off"] { opacity: 0.6; }
 .dr__sub { margin: 0; font-size: 12px; opacity: 0.7; }
 .dr__error { color: var(--danger); font-size: 12px; }
-.dr__missing, .dr__empty { font-size: 12px; opacity: 0.6; }
-.dr__problems { font-size: 12px; color: var(--danger); background: rgb(254 226 226); border-radius: 6px; padding: 4px 8px; }
+.dr__missing,.dr__problems { font-size: 12px; color: var(--danger); background: rgb(254 226 226); border-radius: 6px; padding: 4px 8px; }
 .dr__table { display: flex; flex-direction: column; font-size: 12px; border-top: 1px solid var(--border-color); }
 .dr__thead, .dr__tr { display: grid; grid-template-columns: 160px 1fr 64px 2fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--border-color); }
 .dr__thead { font-size: 11px; opacity: 0.6; }

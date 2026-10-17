@@ -1,0 +1,31 @@
+// overlay/custom/client/ui/styles/ui.scss
+// 共享 UI 基元样式（前端一致性重构批 B1，spec 2026-10-17-frontend-ux-consolidation-redesign）。
+// 空态统一类：终结十余套 x__empty 平行实现（gss__empty/sitp__empty/sm__empty/
+// ide-*__empty…各自为政）。仅用全局 CSS 变量，随亮暗主题翻转。
+// 装载：ia2/index.ts 顶部 import（ia2 注册无门控=全局面可用；与 cockpit.scss 同款
+// 顶层静态导入模式，避免挂在懒加载组件上造成首屏时序问题）。
+// 组件包装：需要动作槽/标题分层时用 @/custom/ui/UiEmptyState.vue（同类名渲染）。
+
+.ui-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--ia-sp-2, 8px);
+  color: var(--text-muted);
+  font-size: var(--ia-fs-body, 12px);
+  padding: 32px 16px;
+  text-align: center;
+  min-height: 48px;
+
+  /* 紧凑档：下拉/浮层/小面板内嵌空态（原多数 ide 局部空态体量） */
+  &--compact { padding: 12px 8px; min-height: 28px; font-size: var(--ia-fs-aux, 11px); }
+
+  /* 描边档：列表/区块级空态，需要视觉围合的场景（原 dashed box 形态） */
+  &--boxed {
+    border: 1px dashed var(--border-color);
+    border-radius: var(--ia-card-radius, 6px);
+    padding: 16px 12px;
+  }
+}

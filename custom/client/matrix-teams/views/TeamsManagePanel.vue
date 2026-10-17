@@ -106,7 +106,7 @@ onMounted(() => {
       <div class="tmp__body">
         <section class="tmp__accounts" data-testid="teams-accounts">
           <div class="tmp__sec">{{ t('teams.accounts') }}</div>
-          <div v-if="registry.accounts.length === 0" class="tmp__empty">{{ t('teams.accounts.empty') }}</div>
+          <div v-if="registry.accounts.length === 0" class="ui-empty-state ui-empty-state--compact">{{ t('teams.accounts.empty') }}</div>
           <div v-for="a in registry.accounts" :key="a.userId" class="tmp__account"
             :data-testid="`teams-account-${a.userId}`">
             <div class="tmp__account-line1">
@@ -181,8 +181,7 @@ onMounted(() => {
 
 <style scoped>
 .tmp { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
-.tmp__offline, .tmp__empty { font-size: 12px; color: var(--text-secondary); padding: 8px; }
-.tmp__setup { display: flex; flex-direction: column; gap: 8px; max-width: 420px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-standard); }
+.tmp__offline,.tmp__setup { display: flex; flex-direction: column; gap: 8px; max-width: 420px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-standard); }
 .tmp__hint { font-size: 12px; color: var(--text-secondary); }
 .tmp__input { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 4px 8px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
 .tmp__primary { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 4px 14px; cursor: pointer; font-family: inherit; }

@@ -62,7 +62,7 @@ function fmtActivity(ts: number | null): string {
         <span class="gss__c3">{{ t('ia2.gov.session.colTasks') }}</span>
         <span class="gss__c4">{{ t('ia2.gov.task.colOps') }}</span>
       </div>
-      <div v-if="!rows.length" class="gss__empty">{{ t('ia2.gov.session.empty') }}</div>
+      <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.session.empty') }}</div>
       <div
         v-for="r in rows" :key="`${r.kind}:${r.id}`"
         class="gss__row" :data-testid="`gov-session-${r.id}`"
@@ -121,5 +121,4 @@ function fmtActivity(ts: number | null): string {
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
-.gss__empty { padding: 16px; color: var(--text-muted); text-align: center; font-size: 11px; }
 </style>

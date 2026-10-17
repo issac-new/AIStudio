@@ -78,7 +78,7 @@ function runBoost(): void {
       <p class="ide-secbar__plan" :title="planScan(scanRisk).detail">
         计划：{{ planScan(scanRisk).tiers.join(' → ') }}（static 真实执行；semantic/dataflow 引擎侧待接）
       </p>
-      <p v-if="findings && !findings.length" class="ide-secbar__empty" data-testid="ide-scan-clean">✓ 无 static 档发现</p>
+      <p v-if="findings && !findings.length" class="ui-empty-state" data-testid="ide-scan-clean">✓ 无 static 档发现</p>
       <div v-for="(f, i) in findings" :key="i" class="ide-secbar__finding" :data-severity="f.severity" :data-testid="`ide-scan-finding-${i}`">
         [{{ f.severity }}] {{ f.file || '(会话)' }} — {{ f.detail }}
       </div>
@@ -99,7 +99,6 @@ function runBoost(): void {
 .ide-secbar__head select { font-size: 11px; }
 .ide-secbar__run { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin-left: auto; }
 .ide-secbar__plan { color: var(--text-muted); margin: 4px 0; }
-.ide-secbar__empty { color: var(--success-color, #18a058); }
 .ide-secbar__finding { color: var(--text-secondary); padding: 2px 0;
   &[data-severity='high'] { color: var(--error-color, #d03050); }
   &[data-severity='medium'] { color: var(--warning-color, #f0a020); } }

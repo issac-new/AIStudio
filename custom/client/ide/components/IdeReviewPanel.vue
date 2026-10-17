@@ -75,7 +75,7 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 <template>
   <div class="ide-review" data-testid="ide-review-panel">
     <div class="ide-review__head">⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span></div>
-    <div v-if="!findings.length" class="ide-review__empty">
+    <div v-if="!findings.length" class="ui-empty-state ui-empty-state--compact">
       暂无 findings
       <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">发起评审</button>
     </div>
@@ -106,7 +106,6 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 .ide-review { margin: 4px 12px; font-size: 12px; }
 .ide-review__head { font-weight: 600; }
 .ide-review__counts { color: var(--text-muted); font-weight: 400; font-size: 11px; }
-.ide-review__empty { color: var(--text-muted); padding: 8px 0; }
 .ide-review__finding {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 4px; margin: 2px 0;
 }

@@ -137,7 +137,7 @@ onMounted(() => void refresh())
     <div class="gov-board-status" data-testid="gov-board-status">
       <h4 class="gov-board-status__title">{{ (L as any).health.boardStatusTitle }}</h4>
       <p class="gov-board-status__sub">{{ (L as any).health.boardStatusSub }}</p>
-      <p v-if="boardStatus && boardStatus.length === 0" class="gov-board-status__empty">{{ (L as any).health.boardStatusEmpty }}</p>
+      <p v-if="boardStatus && boardStatus.length === 0" class="ui-empty-state ui-empty-state--compact">{{ (L as any).health.boardStatusEmpty }}</p>
       <table v-else-if="boardStatus" class="gov-board-status__tbl" data-testid="gov-board-status-table">
         <thead>
           <tr>
@@ -202,7 +202,7 @@ onMounted(() => void refresh())
           <div class="gov-health__audit-ev">{{ (audit.latest[d]?.evidence ?? []).slice(0, 2).join(' · ') }}</div>
         </div>
       </div>
-      <div v-else class="gov-health__empty">{{ (L as any).health.emptyHint }}</div>
+      <div v-else class="ui-empty-state">{{ (L as any).health.emptyHint }}</div>
       <div v-if="audit" class="gov-health__audit-meta">
         {{ (L as any).health.ledgerMeta.replace('{total}', String(audit.total)).replace('{runs}', String(audit.runs.length)).replace('{list}', audit.runs.slice(0, 3).join(' / ') + (audit.runs.length > 3 ? ' …' : '')) }}
       </div>
@@ -279,14 +279,6 @@ onMounted(() => void refresh())
   &.is-none { color: #64748b; background: #16233a; } }
 .gov-health__audit-ev { font-size: 10px; color: var(--text-muted, #878c99); line-height: 1.45; }
 .gov-health__audit-meta { margin-top: 7px; font-size: 10.5px; color: var(--text-muted, #878c99); }
-.gov-health__empty {
-  border: 1px dashed var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 22px;
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--text-muted, #878c99);
-}
 
 @media (max-width: 1100px) {
   .gov-health__gates { grid-template-columns: repeat(3, 1fr); }
@@ -297,7 +289,6 @@ onMounted(() => void refresh())
 .gov-board-status { margin: 14px 0; }
 .gov-board-status__title { margin: 0 0 2px; font-size: 14px; }
 .gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); }
-.gov-board-status__empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
 .gov-board-status__tbl { border-collapse: collapse; width: 100%; font-size: 12px; }
 .gov-board-status__tbl th, .gov-board-status__tbl td { border: 1px solid var(--border-color, rgba(0,0,0,.08)); padding: 4px 8px; text-align: right; }
 .gov-board-status__tbl th:first-child, .gov-board-status__tbl td:first-child { text-align: left; }

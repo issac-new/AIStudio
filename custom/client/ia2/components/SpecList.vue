@@ -37,7 +37,7 @@ function descLabel(card: SpecCard): string {
 <template>
   <div class="spec-list" data-spec-list>
     <div v-if="props.error" class="spec-list__error" data-spec-list-error>{{ props.error }}</div>
-    <div v-else-if="props.cards.length === 0 && !props.loading" class="spec-list__empty" data-spec-list-empty>
+    <div v-else-if="props.cards.length === 0 && !props.loading" class="ui-empty-state" data-spec-list-empty>
       <p class="spec-list__empty-title">{{ t('ia2.orchestrate.empty.title') }}</p>
       <p class="spec-list__empty-hint">{{ t('ia2.orchestrate.empty.hint') }}</p>
     </div>
@@ -96,17 +96,6 @@ function descLabel(card: SpecCard): string {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
-}
-.spec-list__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 48px 16px;
-  border: 1px dashed var(--border-color);
-  border-radius: var(--radius-standard, 6px);
-  text-align: center;
 }
 .spec-list__empty-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .spec-list__empty-hint { margin: 0; font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }

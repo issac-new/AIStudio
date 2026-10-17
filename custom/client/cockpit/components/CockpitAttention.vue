@@ -79,7 +79,7 @@ onUnmounted(() => { stopCountdown() })
       <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" :title="t('sidebar.swarmKanban')">⊞ {{ t('sidebar.swarmKanban') }}</button>
     </div>
     <div class="cockpit-attention__items">
-      <span v-if="store.attention.length === 0" class="cockpit-attention__empty">{{ t('cockpit.noAttention') }}</span>
+      <span v-if="store.attention.length === 0" class="ui-empty-state ui-empty-state--compact">{{ t('cockpit.noAttention') }}</span>
       <button
         v-for="item in store.attention"
         :key="item.id"
@@ -192,5 +192,4 @@ onUnmounted(() => { stopCountdown() })
   max-width: 200px;
 }
 .cockpit-attention__arrow { font-size: 10px; color: var(--text-muted); }
-.cockpit-attention__empty { font-size: 11px; color: var(--text-muted); padding: 0 4px; }
 </style>

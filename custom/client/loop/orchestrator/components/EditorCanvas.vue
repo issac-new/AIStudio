@@ -154,7 +154,7 @@ function onDrop(ev: DragEvent): void {
         </div>
       </template>
     </VueFlow>
-    <div v-else class="ed-canvas__empty" data-editor-canvas-empty>
+    <div v-else class="ui-empty-state" data-editor-canvas-empty>
       {{ t('ia2.orchestrate.editor.canvas.empty') }}
     </div>
   </div>
@@ -179,14 +179,6 @@ function onDrop(ev: DragEvent): void {
   height: 8px;
   background: var(--accent-primary, var(--color-primary, #3b82f6));
   border: 1px solid var(--bg-card, #fff);
-}
-.ed-canvas__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
 }
 
 /* 可编辑节点卡（类型只做轻着色提示，状态语义仍由选中/告警描边承载） */

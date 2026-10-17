@@ -131,7 +131,7 @@ function goInbox(): void { emit('go-inbox') }
         </div>
       </div>
     </div>
-    <p v-else class="ma__empty" data-testid="ma-empty">{{ L.empty }}</p>
+    <p v-else class="ui-empty-state" data-testid="ma-empty">{{ L.empty }}</p>
 
     <!-- 一屏联动：三类决策点（偏差/风险→定位任务；资源→过滤看板；请求→审批） -->
     <div v-if="tasks.length" class="ma__decisions">
@@ -175,7 +175,6 @@ function goInbox(): void { emit('go-inbox') }
 .ma__sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted, #878c99); }
 .ma__note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
 .ma__error { color: #d03050; font-size: 12px; margin: 0; }
-.ma__empty { color: var(--text-muted, #878c99); font-size: 13px; }
 .ma__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .ma-card {
   border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px;

@@ -376,7 +376,7 @@ function miniTitle(c: MiniCell): string {
         </div>
 
         <div class="cockpit-schedule__list">
-          <div v-if="sortedEvents.length === 0" class="cockpit-schedule__empty">
+          <div v-if="sortedEvents.length === 0" class="ui-empty-state">
             <span class="cockpit-schedule__empty-icon"><CockpitIcon name="calendar" :size="24" /></span>
             <span class="cockpit-schedule__empty-text">{{ t('cockpit.scheduleEmpty') }}</span>
           </div>
@@ -576,10 +576,6 @@ function miniTitle(c: MiniCell): string {
 }
 .cockpit-schedule__list {
   flex: 1; overflow-y: auto; min-height: 120px; padding: 4px 0;
-}
-.cockpit-schedule__empty {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 36px 18px; color: var(--text-muted);
 }
 .cockpit-schedule__empty-icon { font-size: 28px; opacity: 0.5; }
 .cockpit-schedule__empty-text { font-size: 11px; }

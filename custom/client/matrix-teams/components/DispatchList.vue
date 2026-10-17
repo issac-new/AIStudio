@@ -71,7 +71,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         {{ t('teams.dispatch.send') }}</button>
     </form>
 
-    <div v-if="dispatch.dispatches.length === 0" class="dl__empty" data-testid="dispatch-empty">
+    <div v-if="dispatch.dispatches.length === 0" class="ui-empty-state" data-testid="dispatch-empty">
       {{ t('teams.dispatch.empty') }}</div>
     <div v-for="d in dispatch.dispatches" :key="d.assign.taskId"
       class="dl__row" :data-testid="`dispatch-item-${d.assign.taskId.slice(0, 6)}`">
@@ -91,7 +91,6 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .dl__input, .dl__select { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 3px 8px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
 .dl__input--wide { grid-column: 1 / -1; }
 .dl__primary { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; font-family: inherit; }
-.dl__empty { font-size: 12px; color: var(--text-secondary); }
 .dl__row { display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap; }
 .dl__task-title { font-weight: 600; }
 .dl__target { color: var(--color-primary, #3b82f6); }

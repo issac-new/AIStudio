@@ -123,7 +123,7 @@ async function rerun(): Promise<void> {
 <template>
   <div class="ni-panel" data-node-inspector>
     <!-- 空态：未选中节点 -->
-    <div v-if="!node || !insp" class="ni-panel__empty">
+    <div v-if="!node || !insp" class="ui-empty-state">
       <p>{{ t('runcenter.inspector.empty') }}</p>
       <p class="ni-panel__empty-hint">{{ t('runcenter.inspector.emptyHint') }}</p>
     </div>
@@ -245,7 +245,6 @@ async function rerun(): Promise<void> {
   font-size: 12px;
   overflow: auto;
 }
-.ni-panel__empty { text-align: center; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
 .ni-panel__empty p { margin: 0 0 4px; }
 .ni-panel__empty-hint { font-size: 11px; opacity: 0.8; }
 

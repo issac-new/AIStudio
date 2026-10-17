@@ -66,7 +66,7 @@ function waitingLabel(run: RunSummary): string {
     </div>
 
     <!-- 空态：两 tab 各自文案 -->
-    <div v-if="rows.length === 0" class="ib-panel__empty">
+    <div v-if="rows.length === 0" class="ui-empty-state">
       <p>{{ t(tab === 'pending' ? 'runcenter.inbox.empty' : 'runcenter.inbox.archivedEmpty') }}</p>
       <p class="ib-panel__empty-hint">
         {{ t(tab === 'pending' ? 'runcenter.inbox.emptyHint' : 'runcenter.inbox.archivedEmptyHint') }}
@@ -159,11 +159,6 @@ function waitingLabel(run: RunSummary): string {
   font-size: 11px;
 }
 
-.ib-panel__empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
-}
 .ib-panel__empty p { margin: 0 0 6px; }
 .ib-panel__empty-hint { font-size: 12px; opacity: 0.8; }
 

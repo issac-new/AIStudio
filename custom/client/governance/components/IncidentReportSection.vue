@@ -130,7 +130,7 @@ onMounted(() => void loadSessions())
       </div>
     </div>
 
-    <div v-else-if="!loading && !error" class="ir__empty">
+    <div v-else-if="!loading && !error" class="ui-empty-state ui-empty-state--compact">
       选一次运行，把它散在七个存储里的执行数据一键汇编成三类 17 要素事故报告（框架：arXiv 2609.24515）
     </div>
   </div>
@@ -180,5 +180,4 @@ onMounted(() => void loadSessions())
 .ir__face-title { font-size: 11px; font-weight: 600; }
 .ir__div { font-size: 11px; border-radius: 6px; padding: 4px 8px; margin-top: 3px; background: var(--bg-secondary);
   &.is-warn { background: rgba(var(--warning-rgb), 0.12); color: var(--ia-stale); } }
-.ir__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted); }
 </style>

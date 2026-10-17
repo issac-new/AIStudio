@@ -102,7 +102,7 @@ onMounted(() => void refresh())
     <p class="ai__sub">{{ T.sub }}</p>
     <div v-if="error" class="ai__error" data-testid="gov-agent-identity-error">{{ T.fail }}：{{ error }}</div>
 
-    <div v-if="!identities.length" class="ai__empty" data-testid="gov-agent-identity-empty">{{ T.empty }}</div>
+    <div v-if="!identities.length" class="ui-empty-state" data-testid="gov-agent-identity-empty">{{ T.empty }}</div>
 
     <div v-if="identities.length" class="ai__tablewrap">
       <table class="ai__table" data-testid="gov-agent-identity-table">
@@ -186,7 +186,6 @@ onMounted(() => void refresh())
 .ai__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .ai__sub { margin: 0; font-size: 12px; opacity: 0.7; }
 .ai__error { color: var(--danger); font-size: 12px; }
-.ai__empty { font-size: 12px; opacity: 0.6; }
 .ai__tablewrap { overflow: auto; }
 .ai__table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ai__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 4px 6px; white-space: nowrap; }

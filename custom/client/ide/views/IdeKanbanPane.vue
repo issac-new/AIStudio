@@ -127,7 +127,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
     </header>
 
     <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error">{{ loadError }}</p>
-    <p v-else-if="!loading && !tasks.length" class="ide-kanban__empty" data-testid="ide-kanban-empty">{{ t('ide.kanban.empty') }}</p>
+    <p v-else-if="!loading && !tasks.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-kanban-empty">{{ t('ide.kanban.empty') }}</p>
 
     <!-- board：列桶 -->
     <div v-if="view === 'board' && tasks.length" class="ide-kanban__board" data-testid="ide-kanban-board">
@@ -183,7 +183,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
         </span>
       </div>
     </div>
-    <p v-else-if="view === 'gantt' && tasks.length && !ganttRows.length" class="ide-kanban__empty">no started tasks</p>
+    <p v-else-if="view === 'gantt' && tasks.length && !ganttRows.length" class="ui-empty-state ui-empty-state--compact">no started tasks</p>
   </div>
 </template>
 
@@ -195,8 +195,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
 .ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-muted); }
 .ide-kanban__viewtab.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 .ide-kanban__count { margin-left: auto; color: var(--text-muted); }
-.ide-kanban__error, .ide-kanban__empty { padding: 12px; color: var(--text-muted); }
-.ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
+.ide-kanban__error,.ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
 .ide-kanban__col { flex: 0 0 168px; background: var(--hover-color, rgba(0,0,0,.03)); border-radius: 6px; padding: 6px; }
 .ide-kanban__colhead { font-weight: 600; color: var(--text-muted); font-size: 11px; padding: 2px 4px 6px; }
 .ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }

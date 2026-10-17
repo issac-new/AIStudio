@@ -30,7 +30,7 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
     <div class="grs__body">
       <div class="grs__card">
         <div class="grs__card-head">{{ t('ia2.gov.review.pending') }}</div>
-        <div v-if="!pending.length" class="grs__empty">{{ t('ia2.gov.review.pendingEmpty') }}</div>
+        <div v-if="!pending.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.review.pendingEmpty') }}</div>
         <GateReviewCard
           v-for="item in pending" :key="`${item.caseId}:${item.gate}`"
           :case-id="item.caseId" :gate="item.gate" :verdict="item.verdict"
@@ -41,7 +41,7 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
       </div>
       <div class="grs__card">
         <div class="grs__card-head">{{ t('ia2.gov.review.settled') }}</div>
-        <div v-if="!settled.length" class="grs__empty">{{ t('ia2.gov.review.settledEmpty') }}</div>
+        <div v-if="!settled.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.review.settledEmpty') }}</div>
         <div
           v-for="item in settled" :key="`${item.caseId}:${item.gate}`"
           class="grs__row" :data-testid="`gov-review-row-${item.caseId}-${item.gate}`"
@@ -66,7 +66,6 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
 .grs__body { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
 .grs__card { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
 .grs__card-head { font-size: 10px; text-transform: uppercase; color: var(--text-muted); }
-.grs__empty { padding: 8px 4px; color: var(--text-muted); font-size: 11px; }
 .grs__row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; }
 .grs__row-gate { font-weight: 700; color: var(--text-primary); }
 .grs__row-case { color: var(--text-muted); font-size: 11px; }

@@ -100,7 +100,7 @@ onMounted(() => void refresh())
 
       <div class="vp__benefit" data-testid="vp-benefit-note">{{ report.benefitNote }}</div>
     </template>
-    <div v-else-if="loading" class="vp__empty">…</div>
+    <div v-else-if="loading" class="ui-empty-state ui-empty-state--compact">…</div>
   </div>
 </template>
 
@@ -128,5 +128,4 @@ onMounted(() => void refresh())
 .vp__num { font-family: ui-monospace, monospace; font-size: 10px; white-space: nowrap; }
 .vp__empty-row { text-align: center; color: var(--text-muted); padding: 12px; }
 .vp__benefit { font-size: 10px; color: var(--text-muted); }
-.vp__empty { font-size: 11px; color: var(--text-muted); text-align: center; padding: 12px; }
 </style>

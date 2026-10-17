@@ -170,7 +170,7 @@ const coveragePct = computed(() =>
     </div>
 
     <div v-if="chartRows.length > 0" ref="el" class="cap__chart" data-testid="capacity-chart" />
-    <p v-else-if="!loading && !loadError" class="cap__empty" data-testid="capacity-empty">
+    <p v-else-if="!loading && !loadError" class="ui-empty-state" data-testid="capacity-empty">
       窗口内没有任务卡。先在看板建卡并对需求卡执行任务拆解，人日数据才会生长。
     </p>
 
@@ -215,6 +215,5 @@ const coveragePct = computed(() =>
 .cap__card-label { font-size: 11px; color: var(--text-secondary, #6b7280); margin-top: 2px; }
 
 .cap__chart { width: 100%; height: 260px; }
-.cap__empty { margin: 0; font-size: 12px; color: var(--text-muted, #878c99); }
 .cap__note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
 </style>

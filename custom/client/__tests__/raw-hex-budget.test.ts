@@ -79,13 +79,18 @@ function definedVarSet(): Set<string> {
 }
 
 describe('raw hex 预算闸（ratchet：只降不升）', () => {
-  it('各域裸 hex 数 ≤ 预算表（BUDGET 即当前基线；降了就改小，禁改大）', () => {
+  it('各域裸 hex 数 ≤ 预算表（未列目录默认 0——新增目录从零开始）', () => {
     const violations: string[] = []
-    for (const [dir, budget] of Object.entries(BUDGET)) {
-      const rel = join(CLIENT_ROOT, dir)
-      if (!existsSync(rel)) continue
-      const { bare } = collect(rel)
-      if (bare > budget) violations.push(`${dir}: ${bare} > 预算 ${budget}`)
+    const seen = new Set<string>()
+    for (const e of readdirSync(CLIENT_ROOT, { withFileTypes: true })) {
+      if (!e.isDirectory() || e.name === '__tests__' || e.name === 'node_modules') continue
+      seen.add(e.name)
+      const budget = BUDGET[e.name] ?? 0
+      const { bare } = collect(join(CLIENT_ROOT, e.name))
+      if (bare > budget) violations.push(`${e.name}: ${bare} > 预算 ${budget}`)
+    }
+    for (const dir of Object.keys(BUDGET)) {
+      if (!seen.has(dir) && !existsSync(join(CLIENT_ROOT, dir))) continue
     }
     expect(violations.join('\n')).toBe('')
   })

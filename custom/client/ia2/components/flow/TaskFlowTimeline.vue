@@ -33,7 +33,7 @@ function fmtTime(ts: number): string {
 
 <template>
   <div class="tft" data-testid="task-flow-timeline">
-    <div v-if="!rows.length" class="tft__empty">{{ t('ia2.tdp.flowEmpty') }}</div>
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.tdp.flowEmpty') }}</div>
     <div v-for="(ev, i) in rows" :key="`${ev.ts}-${i}`" class="tft__row" :data-testid="`tft-${ev.action}`">
       <span class="tft__icon" :class="`tft__icon--${ACTION_META[ev.action].cls}`">{{ ACTION_META[ev.action].icon }}</span>
       <div class="tft__main">
@@ -58,7 +58,6 @@ function fmtTime(ts: number): string {
 
 <style scoped lang="scss">
 .tft { display: flex; flex-direction: column; gap: 2px; }
-.tft__empty { padding: 8px 4px; font-size: 11px; color: var(--text-muted); }
 .tft__row { display: flex; gap: 7px; padding: 4px 2px; border-bottom: 1px dashed var(--border-color, #e5e7eb); }
 .tft__row:last-child { border-bottom: none; }
 .tft__icon { flex-shrink: 0; font-size: 11px; width: 14px; text-align: center; }

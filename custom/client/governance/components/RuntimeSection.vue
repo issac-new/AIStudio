@@ -148,14 +148,14 @@ onMounted(() => void refresh())
             <span v-if="usage.gateStats.lastAt" class="runtime__tag">{{ fmtTime(usage.gateStats.lastAt) }}</span>
           </div>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ③ SLO 实况 -->
       <section class="runtime__card" data-testid="runtime-slo">
         <h4 class="runtime__card-title">{{ L?.sloTitle }}<span class="runtime__window">{{ slo?.windowDays ?? 30 }}d</span></h4>
         <template v-if="slo">
-          <div v-if="!slo.dataAvailable" class="runtime__empty">{{ L?.sloNoData }}</div>
+          <div v-if="!slo.dataAvailable" class="ui-empty-state">{{ L?.sloNoData }}</div>
           <table v-else class="runtime__table">
             <thead><tr><th>{{ L?.colTier }}</th><th>{{ L?.colRate }}</th><th>{{ L?.colTarget }}</th><th>P95</th><th>{{ L?.colClosed }}</th><th>{{ L?.colBudget }}</th></tr></thead>
             <tbody>
@@ -181,15 +181,15 @@ onMounted(() => void refresh())
             </tbody>
           </table>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ④ 成本归集 -->
       <section class="runtime__card" data-testid="runtime-cost">
         <h4 class="runtime__card-title">{{ L?.costTitle }}<span class="runtime__window">{{ cost?.days ?? 30 }}d</span></h4>
         <template v-if="cost">
-          <div v-if="!cost.dbFound" class="runtime__empty">{{ L?.costNoDb }}</div>
-          <div v-else-if="cost.rows === 0" class="runtime__empty" data-testid="cost-empty">{{ L?.costNoRows }}</div>
+          <div v-if="!cost.dbFound" class="ui-empty-state">{{ L?.costNoDb }}</div>
+          <div v-else-if="cost.rows === 0" class="ui-empty-state" data-testid="cost-empty">{{ L?.costNoRows }}</div>
           <template v-else>
             <div class="runtime__row runtime__total" data-testid="cost-total">
               <b>{{ L?.colTotal }}</b>
@@ -221,7 +221,7 @@ onMounted(() => void refresh())
             <div v-if="cost.pricingMissing.length" class="runtime__missing">{{ L?.pricingMissing }}: {{ cost.pricingMissing.join(', ') }}</div>
           </template>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ⑤ 模型用量排行榜（multica usage-leaderboard 吸收；30 天窗口） -->
@@ -339,7 +339,6 @@ onMounted(() => void refresh())
   &.is-bad { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
   &.is-ok { color: var(--success); background: rgba(var(--success-rgb), 0.08); } }
 .runtime__ok { font-size: 10.5px; color: var(--success); }
-.runtime__empty { font-size: 10.5px; color: var(--text-muted); }
 .runtime__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
   th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 2px 8px 2px 0; border-bottom: 1px solid var(--border-color); }
   td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--border-color); }

@@ -112,7 +112,7 @@ function raciOf(t: CockpitTask) {
           <b>{{ pendingReviews.length }}</b>
         </button>
         <div class="ov__sub">{{ t('ia2.overviewDash.recentVerdicts') }}</div>
-        <div v-if="!recentVerdicts.length" class="ov__empty">{{ t('ia2.overviewDash.noVerdicts') }}</div>
+        <div v-if="!recentVerdicts.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.overviewDash.noVerdicts') }}</div>
         <div v-for="v in recentVerdicts" :key="v.id + v.ts" class="ov__verdict" :data-testid="`ov-verdict-${v.targetId}`">
           <span class="ov__verdict-badge" :class="v.decision === 'approve' ? 'is-ok' : 'is-no'">
             {{ t(`approvals.choice.${v.decision}`) }}
@@ -173,7 +173,6 @@ function raciOf(t: CockpitTask) {
   &:hover { text-decoration: underline; }
 }
 .ov__sub { font-size: 11px; color: var(--text-muted); margin: 8px 0 4px; }
-.ov__empty { font-size: 11.5px; color: var(--text-muted); padding: 4px 0; }
 .ov__verdict { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 11.5px; }
 .ov__verdict-badge { font-size: 10px; padding: 0 5px; border-radius: 3px; flex-shrink: 0; }
 .ov__verdict-badge.is-ok { color: #059669; background: #05966914; }

@@ -82,7 +82,7 @@ watch(() => chatStore.activeSessionId, refresh)
     </div>
     <div v-if="btwStateView.error" class="ide-btw__error" data-testid="ide-btw-error">{{ btwStateView.error }}</div>
     <div class="ide-btw__list">
-      <div v-if="!btwStateView.exchanges.length" class="ide-btw__empty">暂无侧问。提问后回答在旁路会话生成，↻ 刷新查看。</div>
+      <div v-if="!btwStateView.exchanges.length" class="ui-empty-state ui-empty-state--compact">暂无侧问。提问后回答在旁路会话生成，↻ 刷新查看。</div>
       <div v-for="x in btwStateView.exchanges" :key="x.exchangeId" class="ide-btw__x" :data-testid="`ide-btw-x-${x.exchangeId}`">
         <div class="ide-btw__q">Q：{{ x.question }}</div>
         <div v-if="x.answer" class="ide-btw__a">A：{{ x.answer.slice(0, 300) }}</div>
@@ -115,7 +115,6 @@ watch(() => chatStore.activeSessionId, refresh)
 .ide-btw__ask button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 6px; padding: 2px 10px; cursor: pointer; align-self: flex-end; }
 .ide-btw__error { color: var(--error-color, #d03050); padding: 0 10px 6px; font-size: 11px; }
 .ide-btw__list { overflow-y: auto; padding: 0 10px 10px; }
-.ide-btw__empty { color: var(--text-muted); padding: 8px 0; }
 .ide-btw__x { border-top: 1px dashed var(--border-color, #eee); padding: 6px 0; }
 .ide-btw__q { font-weight: 600; }
 .ide-btw__a { color: var(--text-secondary); white-space: pre-wrap; margin-top: 2px; }

@@ -88,7 +88,7 @@ function advanceOptions(state: HandoffState): HandoffState[] {
       </button>
     </div>
 
-    <div v-if="!cards.length && !createOpen" class="kanban-handoff__empty">暂无交接单</div>
+    <div v-if="!cards.length && !createOpen" class="ui-empty-state ui-empty-state--compact">暂无交接单</div>
 
     <div v-for="c in cards" :key="c.id" class="kanban-handoff__card" :class="`is-${c.state}`" :data-testid="`handoff-card-${c.id}`">
       <div class="kanban-handoff__cardhead">
@@ -118,7 +118,6 @@ function advanceOptions(state: HandoffState): HandoffState[] {
 .kanban-handoff__form { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 8px; margin-bottom: 8px; }
 .kanban-handoff__form select, .kanban-handoff__form textarea { border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px 6px; font-size: 12px; }
 .kanban-handoff__form button { align-self: flex-end; border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 4px; padding: 2px 12px; cursor: pointer; }
-.kanban-handoff__empty { color: var(--text-muted); font-size: 11px; }
 .kanban-handoff__card { border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .kanban-handoff__card.is-blocked { border-color: var(--warning-color, #f0a020); }
 .kanban-handoff__card.is-failed { border-color: var(--error-color, #d03050); }

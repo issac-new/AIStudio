@@ -336,7 +336,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             >{{ t('ia2.sit.sortCreatedAt') }}</button>
           </span>
         </div>
-        <div v-if="!taskRows.length" class="sitp__empty">{{ taskStatusFilter.size ? t('ia2.sit.emptyFiltered') : t('ia2.sit.empty') }}</div>
+        <div v-if="!taskRows.length" class="ui-empty-state">{{ taskStatusFilter.size ? t('ia2.sit.emptyFiltered') : t('ia2.sit.empty') }}</div>
         <button
           v-for="task in taskRows" :key="task.id" type="button" class="sitp__row sitp__row--task"
           :data-testid="`sitp-task-${task.id}`" :title="t('ia2.sit.taskJumpHint')"
@@ -364,7 +364,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           >
           <span v-if="onlineQuery" class="sitp__search-clear" data-testid="sitp-online-search-clear" @click="onlineQuery = ''">×</span>
         </div>
-        <div v-if="!filteredOnlineTree.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
+        <div v-if="!filteredOnlineTree.length" class="ui-empty-state">{{ t('ia2.sit.empty') }}</div>
         <div v-for="row in filteredOnlineTree" :key="row.account.userId" class="sitp__acct">
           <button
             type="button" class="sitp__acct-head"
@@ -380,7 +380,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <span class="sitp__acct-sub">{{ row.machines.length }}{{ t('ia2.sit.panelMachines') }} · {{ row.boards.length }}{{ t('ia2.sit.panelBoards') }} · {{ row.account.profiles.length }} profile</span>
           </button>
           <div v-if="accountOpen(row.account.userId)" class="sitp__acct-body">
-            <div v-if="!row.machines.length && !row.boards.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
+            <div v-if="!row.machines.length && !row.boards.length" class="ui-empty-state">{{ t('ia2.sit.empty') }}</div>
             <div
               v-for="m in row.machines" :key="m.key"
               class="sitp__node" :data-testid="`sitp-machine-${m.key}`" :title="m.sub ?? ''"
@@ -433,7 +433,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   &:hover { color: var(--text-primary); }
 }
 .sitp__body { max-height: 280px; overflow-y: auto; padding: 4px 6px; }
-.sitp__empty { padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
 .sitp__row {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px;
   border: none; border-radius: 5px; background: transparent; cursor: pointer;

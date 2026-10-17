@@ -124,7 +124,7 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 <template>
   <div class="ide-tools" data-testid="ide-tools-pane">
     <div class="ide-tools__head">⚙ {{ t('ide.tools.title') }} <span class="ide-tools__count">{{ rows.length }}</span></div>
-    <p v-if="!rows.length" class="ide-tools__empty">{{ t('ide.tools.empty') }}</p>
+    <p v-if="!rows.length" class="ui-empty-state">{{ t('ide.tools.empty') }}</p>
     <div
       v-for="row in rows"
       :key="row.id"
@@ -156,7 +156,6 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 .ide-tools { flex: 1; min-width: 0; overflow-y: auto; font-size: 12px; padding: 6px; }
 .ide-tools__head { font-weight: 600; padding: 2px 6px 8px; }
 .ide-tools__count { color: var(--text-muted); font-weight: 400; }
-.ide-tools__empty { color: var(--text-muted); padding: 16px; }
 .ide-tools__item { margin: 3px 0; }
 .ide-tools__diff {
   margin: 2px 0 4px 20px; padding: 6px 8px; font-size: 10px; font-family: ui-monospace, monospace;
