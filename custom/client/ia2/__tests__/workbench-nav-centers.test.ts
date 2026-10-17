@@ -14,7 +14,7 @@ vi.mock('@/custom/ia2/views/gov/GovOrgKnowledgeView.vue', () => ({
   default: { template: '<div data-testid="gov-org-stub">gov-org</div>' },
 }))
 
-import { centerForPath, CENTER_NAVS, ISLAND_NAVS } from '../nav-centers'
+import { activeStageForRoute, centerForPath, stageContextQuery, stageKeyFromQuery, CENTER_NAVS, ISLAND_NAVS } from '../nav-centers'
 import { legacyTabRedirect } from '../views/TasksView.vue'
 import { TASKS_TABS_TEXT } from '../i18n-tasks-tabs'
 import { GOV_TABS_TEXT } from '../i18n-gov-tabs'
@@ -36,6 +36,30 @@ describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
     expect(centerForPath('/app/gov')).toBe('stage6')
     expect(centerForPath('/app/gov/docs')).toBe('stage6')
     expect(centerForPath('/other')).toBe(null)
+  })
+})
+
+describe('activeStageForRoute — 来路阶段优先（2026-10-17 减负批）', () => {
+  it('query.from 合法时覆盖路径归属（同页跨阶段复用不再二选一）', () => {
+    expect(activeStageForRoute('/app/gov/org-assets', '1')).toBe('stage1')
+    expect(activeStageForRoute('/app/accounts', '1')).toBe('stage1')
+    expect(activeStageForRoute('/app/sim/ops', '1')).toBe('stage1')
+    expect(activeStageForRoute('/app/gov/docs', '2')).toBe('stage2')
+  })
+
+  it('无/非法 from 回退路径归属；数组形式取首值', () => {
+    expect(activeStageForRoute('/app/gov/docs', undefined)).toBe('stage6')
+    expect(activeStageForRoute('/app/sim', '9')).toBe('stage4')
+    expect(activeStageForRoute('/app/sim', 'abc')).toBe('stage4')
+    expect(activeStageForRoute('/app/sim', ['3'])).toBe('stage3')
+    expect(stageKeyFromQuery('0')).toBe(null)
+  })
+
+  it('stageContextQuery 只保留合法阶段号，不把脏参数写进 URL', () => {
+    expect(stageContextQuery('2')).toEqual({ from: '2' })
+    expect(stageContextQuery(2)).toEqual({ from: '2' })
+    expect(stageContextQuery('0')).toBeUndefined()
+    expect(stageContextQuery(undefined)).toBeUndefined()
   })
 })
 

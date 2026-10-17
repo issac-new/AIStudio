@@ -6,9 +6,11 @@
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
+import { stageContextQuery } from '../../nav-centers'
 
+const route = useRoute()
 const router = useRouter()
 const values = ref<Required<SimSettings> | null>(null)
 const draft = ref<SimSettings>({})
@@ -57,7 +59,7 @@ onMounted(() => { void load() })
   <TabIntroBanner tab="sim-settings" />
     <header class="sst__head">
       <h2 class="sst__title">仿真设置</h2>
-      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim' })">返回仿真中心</button>
+      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: stageContextQuery(route.query.from) })">返回仿真中心</button>
     </header>
 
     <p v-if="loadError" class="sst__error" data-testid="sst-error">{{ loadError }}</p>
