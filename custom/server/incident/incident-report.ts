@@ -251,7 +251,7 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
   if (sourceTools.length > 0 && (bundle.trace || bundle.messages)) {
     elements.push(el('data_sources', 'trajectory', 'partial',
       `轨迹显示触达外部数据面：${sourceTools.map(([n]) => n).join('、')}；具体 URL/版本未逐条快照`,
-      [`${bundle.trace.file}#tool_span.args`], '上下文只留压缩边界快照（chat_compression_snapshots），整份 prompt 逐次快照未采集——论文指出的 Context 易失性问题'))
+      [bundle.trace ? `${bundle.trace.file}#tool_span.args` : `${dbLabel}#messages.tool_name`], '上下文只留压缩边界快照（chat_compression_snapshots），整份 prompt 逐次快照未采集——论文指出的 Context 易失性问题'))
   } else {
     elements.push(el('data_sources', 'trajectory', 'absent', '外部数据来源未采集', [bundle.trace ? bundle.trace.file : '(trace 缺席)'],
       '无轨迹证据，或该 run 未触达外部数据工具'))
