@@ -23,7 +23,10 @@
 #   mx-sim-mautrix-ensure.sh ensure  check 失败自动 fix（mx-up 挂钩用）
 set -uo pipefail
 LABEL="ai.hermes.gateway-sim"
-SIM="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
+# SIM 根缺省=ncwk 工作区兄弟目录（lab/ncwk-sim-mux）——脚本相对解析（本文件在
+# <ncwk>/simharness/mux/ 下，上三级=lab），与 mx-lib NCWK_ROOT/overlay serve-server
+# 同一解析族；不写死本机绝对路径（换机/迁移即坏，2026-10-18 审计轮根治）
+SIM="${AIPAY_SIM_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)/ncwk-sim-mux}"
 # 与 wrapper（bin/hermes-sim，生成于 mx-lib mx_provision_agent_src）同源的解释器解析
 PYBIN="$(sed -n 's/^exec "\([^"]*\)".*/\1/p' "$SIM/bin/hermes-sim" 2>/dev/null | head -1)"
 [ -x "$PYBIN" ] || { echo "✗ 解析不到 wrapper 解释器（$SIM/bin/hermes-sim）"; exit 2; }
