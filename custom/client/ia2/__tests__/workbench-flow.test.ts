@@ -198,6 +198,8 @@ import type { FlowLoopRow, FlowSessionRow } from '../adapters/flow'
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  // 分组/排序偏好走 settings-layers 持久化；jsdom 同文件跨用例共享，清掉防串味
+  localStorage.clear()
 })
 
 const SESSIONS: FlowSessionRow[] = [
@@ -236,6 +238,22 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(segs[0].classes()).toContain('flow-nav__seg--done')
     expect(segs[3].classes()).toContain('flow-nav__seg--run')
     expect(segs[4].classes()).toContain('flow-nav__seg--todo')
+  })
+
+  it('分类聚类：按工作区分组（会话经挂接任务反查；无挂接落未关联组）', async () => {
+    const w = mount(FlowNavPanel, {
+      props: {
+        sessions: SESSIONS,
+        loops: LOOPS,
+        selection: null,
+        workspaceBySession: { 'room:!r1': '/lab/pay' },
+      },
+    })
+    await w.find('[data-testid="flow-group-by"]').setValue('workspace')
+    expect(w.find('[data-testid="flow-group-workspace-0"]').exists()).toBe(true)
+    expect(w.text()).toContain('/lab/pay')
+    expect(w.text()).toContain('未关联工作区')
+    w.unmount()
   })
 
   it('过滤 chips 与搜索框联动（会话/循环互斥、任务号匹配）', async () => {

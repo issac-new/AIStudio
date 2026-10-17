@@ -61,6 +61,10 @@ const commonItems: CommonItem[] = [
     key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox',
     testid: 'ia-side-nav-inbox', match: () => routeName.value === 'ia2.inbox',
   },
+  {
+    key: 'search', lead: '⌕', zh: '检索', en: 'Search', name: 'ia2.search',
+    testid: 'ia-side-nav-search', match: () => routeName.value === 'ia2.search',
+  },
 ]
 
 /** 六阶段：标签取 STAGE_META（单一事实源）。只有站在某个阶段页本身时，

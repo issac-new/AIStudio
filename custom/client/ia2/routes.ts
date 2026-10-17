@@ -179,6 +179,13 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         },
         { path: 'journey', redirect: () => ({ name: 'ia2.journey' }) },
         {
+          // 全站检索（2026-10-18 左侧栏批）：会话/任务/运行/文档/人员五类对象，
+          // 支持工作区/状态/负责人/时间过滤；顶栏快搜回车也落这里。
+          path: 'search',
+          name: 'ia2.search',
+          component: () => import('./views/SearchView.vue'),
+        },
+        {
           path: 'stage/setup',
           name: 'ia2.stage1',
           component: () => import('./views/stage/StageShell.vue'),
