@@ -121,4 +121,17 @@ describe('ide?task= 深链自动展开简报', () => {
       expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
     })
   })
+
+  it('判死收起后导轨钮手动重开：抽屉保持打开走空态（2026-10-18 审计轮——miss 粘滞致手动开被当拍强关）', async () => {
+    routeState.query = { task: 't_nosuch' }
+    mountShell()
+    await vi.waitFor(() => {
+      expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
+    })
+    // 自动收起是针对直达链接自动展开的一次性动作：此后用户手动打开不应再被强关
+    await activeWrapper!.find('[data-testid="ide-briefing-toggle"]').trigger('click')
+    await activeWrapper!.vm.$nextTick()
+    await new Promise(r => setTimeout(r, 30))
+    expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(true)
+  })
 })

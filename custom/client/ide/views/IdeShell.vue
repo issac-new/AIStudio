@@ -331,7 +331,13 @@ watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
 watch([briefingOpen, briefingTask, briefingMiss], ([open, task, miss]) => {
-  if (open && miss && !task) briefingOpen.value = false
+  if (open && miss && !task) {
+    briefingOpen.value = false
+    // miss 一次性消费：自动收起只针对直达链接的自动展开——不消费则 miss 粘滞，
+    // 导轨钮手动打开会被本 watch 当拍强关（抽屉闪一下即关，换任务前再也打不开，
+    // 2026-10-18 审计轮实测复现；与上注释「手动打开空态不受影响」的承诺对齐）
+    briefingMiss.value = false
+  }
 })
 
 

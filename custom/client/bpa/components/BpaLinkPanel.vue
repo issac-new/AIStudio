@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { bpaApi, type BpaArchitectureDto, type E2eReport } from '@/custom/bpa/api'
+import { resolveNeutrals } from '@/custom/cockpit/styles/status-colors'
 import type { BpaMessages } from '@/custom/bpa/i18n'
 
 const props = defineProps<{ L: BpaMessages; dto: BpaArchitectureDto }>()
@@ -90,6 +91,8 @@ function layout(): Map<string, { x: number; y: number }> {
 const chartOption = computed(() => {
   const pos = layout()
   const byId = new Map(props.dto.nodes.map((n) => [n.id, n]))
+  // ECharts canvas 不解析 var()（status-colors 既定结论）——label 色走实色通道
+  const neutrals = resolveNeutrals()
   const nodes = l3s.value.map((n) => ({
     id: n.id,
     name: `${n.id}\n${n.name}`,
@@ -97,7 +100,7 @@ const chartOption = computed(() => {
     y: pos.get(n.id)?.y ?? 0,
     symbolSize: 46,
     itemStyle: { color: SECTION_COLOR[l1SectionOf.value(n.id)] ?? '#4f6ef7' },
-    label: { show: true, fontSize: 9, color: 'var(--text-on-accent)', formatter: (p: { name: string }) => p.name.split('\n')[1]?.slice(0, 8) ?? p.name },
+    label: { show: true, fontSize: 9, color: neutrals.onAccent, formatter: (p: { name: string }) => p.name.split('\n')[1]?.slice(0, 8) ?? p.name },
   }))
   const seen = new Set<string>()
   const edges: Array<{ source: string; target: string }> = []

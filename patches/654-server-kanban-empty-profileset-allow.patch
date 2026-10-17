@@ -1,0 +1,14 @@
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -42,7 +42,10 @@
+ 
+ function canUseProfile(ctx: Context, profile: string | null | undefined): boolean {
+   const allowed = allowedProfileSet(ctx)
+-  return !allowed || allowed.has(profileName(profile))
++  // overlay[477 同族·regress-2026-10-18]：空映射不拦（477 只豁免了列表过滤，这里
++  // 仍 403——matrix 建号 admin 的 user_profiles 空集会把一切 profile 定向读全拒，
++  // 旧看板任务详情的 search-sessions?profile=… 即弹全局「无权限」toast）。
++  return !allowed || allowed.size === 0 || allowed.has(profileName(profile))
+ }
+ 
+ function denyProfileAccess(ctx: Context, profile: string | null | undefined): boolean {
