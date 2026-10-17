@@ -37,7 +37,7 @@ function onToggleWorkbench(): void {
 
 <template>
   <div class="icn-inline" data-testid="ia-nav-centers">
-    <nav class="icn-inline__centers" aria-label="三中心导航">
+    <nav class="icn-inline__centers" aria-label="六阶段一级导航">
       <template v-for="c in CENTER_NAVS" :key="c.key">
         <!-- D9/D18：④开发=分段控件（沟通协作｜IDE 工作区，同阶段两形态） -->
         <span

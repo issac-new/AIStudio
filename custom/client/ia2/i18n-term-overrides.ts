@@ -7,7 +7,19 @@
 // gates）不动。键清单与裁决理由对账设计正本 §5.5 与 §5.9。
 // 测试环境 mock 掉 vue-i18n（t 返回键本身），本模块不被测试加载，无一致性风险。
 
-/** 覆盖字典（zh 单侧）。结构即 locale 子树，mergeLocaleMessage 深合并不动其余键 */
+/** 六阶段一级导航词条（设计正本 §5.8-3 清偿：IA_AREAS 六行 labelKey 逐行指向
+ *  ia2.nav.stageN，终结同指 ia2.nav.collab 的六同名项）。键值由 STAGE_META 派生
+ *  （标签单一事实源），zh/en 双侧注册——属新增键而非改上游非标准词，故破例入 en。 */
+import { STAGE_META } from './stage-meta'
+
+const STAGE_NAV_ZH: Record<string, string> = Object.fromEntries(
+  STAGE_META.map(s => [`stage${s.no}`, s.navLabel]),
+)
+const STAGE_NAV_EN: Record<string, string> = Object.fromEntries(
+  STAGE_META.map(s => [`stage${s.no}`, s.navLabelEn]),
+)
+
+/** 覆盖字典（zh 单侧 + 六阶段导航双侧）。结构即 locale 子树，mergeLocaleMessage 深合并不动其余键 */
 export const IA2_TERM_OVERRIDES_ZH = {
   approvals: {
     // 同一功能三个名字（title/pageTitle=审批收件箱、navLabel=待审收件箱）合一
@@ -22,7 +34,13 @@ export const IA2_TERM_OVERRIDES_ZH = {
       noVerdicts: '暂无判定记录',
     },
     wm: { mergeBack: '合并回工作台' },
+    nav: STAGE_NAV_ZH,
   },
+} as const
+
+/** en 侧只含六阶段导航新增键（其余英文词条本就是标准词，见文件头注） */
+export const IA2_TERM_OVERRIDES_EN = {
+  ia2: { nav: STAGE_NAV_EN },
 } as const
 
 /** 结构型入参：不 import vue-i18n 类型，避免与上游 i18n 模块的装载时序耦合 */
@@ -32,4 +50,5 @@ interface MergeableI18n {
 
 export function applyIa2TermOverrides(i18n: MergeableI18n): void {
   i18n.global.mergeLocaleMessage('zh', IA2_TERM_OVERRIDES_ZH as unknown as Record<string, unknown>)
+  i18n.global.mergeLocaleMessage('en', IA2_TERM_OVERRIDES_EN as unknown as Record<string, unknown>)
 }
