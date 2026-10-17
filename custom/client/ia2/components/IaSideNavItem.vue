@@ -61,7 +61,7 @@ const statusTone = computed(() => props.status === 'done' ? 'done' : props.statu
       <span v-else-if="status" class="isn-item__status" :class="`isn-item__status--${statusTone}`" :aria-label="statusLabel || undefined">
         {{ statusGlyph }}
       </span>
-      <span v-else class="isn-item__meta">{{ trail }}</span>
+      <span v-else class="isn-item__meta" :title="trail">{{ trail }}</span>
     </span>
   </button>
 </template>
@@ -122,11 +122,21 @@ const statusTone = computed(() => props.status === 'done' ? 'done' : props.statu
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
+  min-width: 0;
+  max-width: 94px;
+  overflow: hidden;
   color: var(--text-muted);
   font-size: 11px;
   white-space: nowrap;
 }
-.isn-item__meta { color: var(--text-muted); font-size: 11px; }
+.isn-item__meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+}
 .isn-item__badge {
   min-width: 16px;
   height: 16px;
