@@ -41,8 +41,19 @@ E 波三件收尾工单（帧拍摄位同步/测试随迁总核/退役件清点�
 
 - D1（E1 落点）：gov-* 旧键重定向从「治理中心整页」细化为专签路由（registry→orgAssets/audit→audit/docs→docs/harness·cluster·ontology·session-health→metrics）——理由：拍摄帧语义直落实际承载签，兼容垫层语义不变；判据：legacyTabRedirect 全表正反例＋ia-views 集成逐键断言（本批两套测试已绿）。
 - D2（E3 红线）：三项退役（runs/eng 重定向、gov 旧键别名）全部保留不提前拆——摘除条件各设（注册表迁新键＋一轮全量推演实拍验证），当前未达成，如实保留。
-- D3（边界）：capture-plan.env 文本同步属 simharness 仓工单；overlay 侧以重定向表保证兼容期零死链。
+- D3（边界）：capture-plan.env 文本同步属 simharness 仓工单；overlay 侧以重定向表保证兼容期零断链。
 - D4（统筹批·白名单补录，2026-10-16）：humansim-controller（人类角色模拟发送面，token 文件+审计留档）与 simharness 主树四件（双心跳/场景模板/多主测试，运维探测面）补录 REST 直连白名单——判定依据=用途属管理面/探测面而非任务协作消息；同批清除 simharness 残留 feat-win-trinode worktree（分支零领先、改动未采纳，diff 存档 /tmp 后 force remove）。
 - D5（统筹批·patch 639）：dsh ACP 非 JSON 行连续上限 64（超限判协议破坏拒绝）——官方 2b68cfc2e「无限跳过」在 stdout 洪泛下让 pending 挂到 timeout；测试既定断言（垃圾行>64 拒绝）为本批补齐的契约。upstream 边界合规：改动经 patch 639 承载（series 登记），共享树态=单段应用（幂等验证 apply-check 拒绝）。
 - D6（统筹批·B10 落位）：CockpitPanel 由 OverviewPanel 早期拷贝重写为轻量驾驶条（壳头常驻三徽标：姿态色点/清偿灯/服务异常数），run 单一事实源=/app/sim?run= query（与旗舰签同源，不另建状态）；与旗舰全量屏同端点不同密度，非双实现。
 - D7（统筹批·A1 落位）：交接区=HandoffSection 挂协作与知识签（类型×状态语义面，正本=kanban/handoff.ts 常量只渲染不复制）；交接记录数据端点未建如实标注挂账。净额步级挂账经核实已由并行批实现（steps-registry netStepsAvailable+驾驶屏 KPI 在库），本批不重复。
+
+## 五、时序六阶段 IA 后的退役清点补充（D13-D17 批，2026-10-17）
+
+| 退役项 | 现状 | 摘除条件 |
+|---|---|---|
+| 三中心一级导航（工作台/推演中心/治理中心） | 已退役（顶栏=六阶段） | 已执行——工具舱路由保留 |
+| 旅程总览页默认入口 | 降级（挂 /journey 辅助视角） | 默认入口已=①搭台；旅程页保留一轮验证后评估 |
+| /app/collab 三栏直达 | 保留（④生产直达卡+顶栏 IDE 画布段共用） | 时序验证一轮后评估归并 |
+| 各 gov/sim 数据页 | 保留为工具舱（各阶段直达卡目标） | 不退役（一处实现原则：内嵌组件与工具舱同源） |
+
+结论：本轮无新增待摘除项；六阶段 IA 全量落地+旧链接零断链+工具卡 20 目标全可达。
