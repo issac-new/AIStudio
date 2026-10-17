@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/matrix-teams/views/TeamsManagePanel.vue -->
 <!-- Teams 管理：注册房间建立/候选兜底 + 账号树（自声明 agent teams）+ leader 管理（邀请/leaders）。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
@@ -72,6 +72,12 @@ async function removeLeader(id: string): Promise<void> {
 // 监听由 store 自身负责（setup 顶层挂 pinia 作用域）；面板只做一次发现。
 onMounted(() => {
   void registry.detectRegistry()
+})
+// 首次发现可能早于 Matrix 客户端首次同步：account_data 尚未加载时 detectRegistry
+// 会提前返回，重载后表现为「注册房间已存在但页面仍显示未配置」。同步进入
+// PREPARED/SYNCING 后再发现一次；客户端已同步时 onMounted 已覆盖，不重复。
+watch(() => matrixClientStore.syncState, (state) => {
+  if (state === 'PREPARED' || state === 'SYNCING') void registry.detectRegistry()
 })
 </script>
 

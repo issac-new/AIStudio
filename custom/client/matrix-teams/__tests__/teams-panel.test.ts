@@ -6,6 +6,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 
+const matrixSync = vi.hoisted(() => ({ syncState: null as null | { value: string } }))
 const registryState = vi.hoisted(() => ({
   registryRoomId: { value: null as string | null },
   accounts: { value: [] as Array<Record<string, unknown>> },
@@ -58,12 +59,15 @@ vi.mock('@/stores/hermes/profiles', async () => {
 })
 vi.mock('@/custom/matrix-chat/stores/matrix-client', async () => {
   const { ref, reactive } = await import('vue')
+  const syncState = ref('')
+  matrixSync.syncState = syncState
   return {
     // Task 10 接线后右栏挂 DispatchList；task-dispatch store 在 setup 顶层挂监听
     //（终审修复，pinia effect scope）→ 实例化即调 SDK on/off；
     // mock client 补齐监听面（真 store 在 jsdom 下 init 面不可控，同 roomStore mock 理由）。
     useMatrixClientStore: () => reactive({
       client: ref({ on: () => {}, off: () => {} }), userId: ref('@alice:sv'), authenticated: ref(true),
+      syncState,
     }),
   }
 })
@@ -82,13 +86,27 @@ const i18n = createI18n({
   } } },
 })
 
-beforeEach(() => { setActivePinia(createPinia()) })
+beforeEach(() => {
+  setActivePinia(createPinia())
+  if (matrixSync.syncState) matrixSync.syncState.value = ''
+})
 
 function mountPanel() {
   return mount(TeamsManagePanel, { global: { plugins: [i18n], stubs: { teleport: true } } })
 }
 
 describe('未配置注册房间', () => {
+  it('Matrix 首次同步后再发现一次注册房间（防 account_data 早于同步时漏检）', async () => {
+    registryState.registryRoomId.value = null
+    registryState.detectRegistry.mockClear()
+    const w = mountPanel()
+    await flushPromises()
+    expect(registryState.detectRegistry).toHaveBeenCalledTimes(1)
+    matrixSync.syncState!.value = 'SYNCING'
+    await flushPromises()
+    expect(registryState.detectRegistry).toHaveBeenCalledTimes(2)
+    w.unmount()
+  })
   it('渲染创建区与候选房间；候选可设定', async () => {
     registryState.registryRoomId.value = null
     const w = mountPanel()
