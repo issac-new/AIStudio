@@ -6,7 +6,7 @@
      run 缺席=引导输入不造假，端点缺席/失败=如实缺席态（N1）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import {
   fetchBranches, fetchDeliverables, fetchIssues, fetchRunState,
   type BranchesResponse, type DeliverablesResponse, type IssuesResponse, type RunStateResponse,
@@ -19,13 +19,12 @@ import SimDualCredential from '../../components/sim/SimDualCredential.vue'
 import SimGateBadge from '../../components/sim/SimGateBadge.vue'
 import SimCompensatedTag from '../../components/sim/SimCompensatedTag.vue'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
-import { LAST_RUN_KEY } from '../../composables/useRunContext'
+import { useRunContext } from '../../composables/useRunContext'
 
-const route = useRoute()
 const router = useRouter()
 
-// ── run 定位：路由 query 单一事实源（输入框只改 query，加载只认 query） ──
-const runInput = ref('')
+// ── run 定位：与页头 RunSelector/阶段页共用 useRunContext（query 优先+记忆回落）──
+const { run, remember } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
 const runState = ref<RunStateResponse | null>(null)
@@ -36,7 +35,6 @@ const issuesError = ref('')
 const branches = ref<BranchesResponse | null>(null)
 const branchesError = ref('')
 
-const runQuery = computed(() => String(route.query.run ?? '').trim())
 
 /** 运行模式政策一句话（§1.2 运行模式旋钮口径照录） */
 const POSTURE_POLICY: Record<string, string> = {
@@ -106,8 +104,8 @@ function openStepDrawer(row: StepRow): void {
 
 // ── 加载：run-state 主端点失败=整屏如实报错；三副端点各自软失败就地呈现 ──
 async function load(): Promise<void> {
-  const run = runQuery.value
-  if (!run) return
+  const name = run.value.trim()
+  if (!name) return
   loading.value = true
   loadError.value = ''
   runState.value = null
@@ -117,15 +115,15 @@ async function load(): Promise<void> {
   issuesError.value = ''
   branches.value = null
   branchesError.value = ''
-  const main = fetchRunState(run)
+  const main = fetchRunState(name)
   const soft = [
-    fetchDeliverables(run).then(r => { deliverables.value = r }, e => { deliverablesError.value = (e as Error).message }),
-    fetchIssues(run).then(r => { issues.value = r }, e => { issuesError.value = (e as Error).message }),
-    fetchBranches(run).then(r => { branches.value = r }, e => { branchesError.value = (e as Error).message }),
+    fetchDeliverables(name).then(r => { deliverables.value = r }, e => { deliverablesError.value = (e as Error).message }),
+    fetchIssues(name).then(r => { issues.value = r }, e => { issuesError.value = (e as Error).message }),
+    fetchBranches(name).then(r => { branches.value = r }, e => { branchesError.value = (e as Error).message }),
   ]
   try {
     runState.value = await main
-    localStorage.setItem(LAST_RUN_KEY, run)
+    remember()
   } catch (e) {
     runState.value = null
     loadError.value = (e as Error).message
@@ -135,35 +133,25 @@ async function load(): Promise<void> {
   }
 }
 
-/** 读取=改 query（query 为单一事实源）；同 run 重读直接加载 */
-function submitRun(): void {
-  const r = runInput.value.trim()
-  if (!r) { loadError.value = '请输入运行目录名（如 20261015-v8-run20），或经 /app/sim?run=xxx 进入'; return }
-  if (r === runQuery.value) { void load(); return }
-  void router.replace({ query: { ...route.query, run: r } })
-}
-
-watch(runQuery, (r) => { runInput.value = r; void load() })
-onMounted(() => { runInput.value = runQuery.value; if (runQuery.value) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
+onMounted(() => { if (run.value.trim()) void load() })
 
 function goSupervision(): void {
-  const run = runQuery.value
-  void router.push({ name: 'ia2.simSupervision', query: run ? { run } : {} })
+  const r = run.value.trim()
+  void router.push({ name: 'ia2.simSupervision', query: r ? { run: r } : {} })
 }
 </script>
 
 <template>
   <div class="ov" data-testid="ov-panel">
     <div class="ov__bar">
-      <input v-model="runInput" class="ov__input" data-testid="ov-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="submitRun">
-      <button class="ov__btn" type="button" data-testid="ov-load" :disabled="loading" @click="submitRun">读取</button>
-      <span class="ov__src" data-testid="ov-endpoints">数据面：/api/hermes/sim/run-state（deliverables / issues / branches 同批）</span>
+      <span class="ov__src" data-testid="ov-endpoints">数据面：/api/hermes/sim/run-state（deliverables / issues / branches 同批）· 运行在页头「本轮运行」选择</span>
     </div>
 
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
     <p v-if="loadError" class="ov__error" data-testid="ov-error">{{ loadError }}</p>
     <p v-else-if="!runState" class="ov__hint" data-testid="ov-guide">
-      输入运行目录名读取实况；数字来自端点实测。
+      本轮还没有选择运行——在页头「本轮运行」下拉选一轮；数字来自端点实测。
     </p>
 
     <template v-if="runState">
@@ -192,7 +180,7 @@ function goSupervision(): void {
           <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">六道质量门通过（g1_frozen…report_done）</span>
         </div>
-        <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（⑤验收·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">
+        <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（⑤验收·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">
           <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">分支交付（已推 origin feat）</span>
           <span v-if="branchesError" class="ov__kpi-absent">端点缺席：{{ branchesError }}</span>
@@ -273,7 +261,7 @@ function goSupervision(): void {
             </tbody>
           </table>
 
-          <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
+          <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
           <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
@@ -332,14 +320,6 @@ function goSupervision(): void {
 <style scoped lang="scss">
 .ov { display: flex; flex-direction: column; gap: 10px; }
 .ov__bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.ov__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  width: 260px;
-  font-family: var(--font-mono);
-}
 .ov__btn {
   border: 1px solid var(--border-color);
   border-radius: 4px;
