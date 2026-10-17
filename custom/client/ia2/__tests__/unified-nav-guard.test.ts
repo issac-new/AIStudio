@@ -39,16 +39,16 @@ describe('v12 统一视图单测（双视图）', () => {
       expect(routes.some(r => r.path === '/app')).toBe(true)
       expect(flat).toContain(`"name":"${area.name}"`)
     }
-    expect(IA_AREAS.map(a => a.key)).toEqual(['collab'])
+    expect(IA_AREAS.map(a => a.key)).toEqual(['workbench'])
   })
 
   it('areaForPath：/app 家族全投影 collab + 非 /app 返回 null', () => {
     for (const area of IA_AREAS) expect(areaForPath(area.path)).toBe(area.key)
-    expect(areaForPath('/app/board')).toBe('collab')
-    expect(areaForPath('/app/runs/run-1')).toBe('collab')
-    expect(areaForPath('/app/eng')).toBe('collab')
-    expect(areaForPath('/app/s/room/x')).toBe('collab')
-    expect(areaForPath('/app/unknown-deep')).toBe('collab')
+    expect(areaForPath('/app/board')).toBe('workbench')
+    expect(areaForPath('/app/runs/run-1')).toBe('workbench')
+    expect(areaForPath('/app/eng')).toBe('workbench')
+    expect(areaForPath('/app/s/room/x')).toBe('workbench')
+    expect(areaForPath('/app/unknown-deep')).toBe('workbench')
     expect(areaForPath('/ide')).toBeNull()
     expect(areaForPath('/hermes/logs')).toBeNull()
   })

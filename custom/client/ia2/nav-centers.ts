@@ -25,7 +25,7 @@ export interface CenterNavMeta {
 
 /** 三中心入口（顺序即顶栏渲染序） */
 export const CENTER_NAVS: readonly CenterNavMeta[] = [
-  { key: 'workbench', name: 'ia2.collab', path: '/app', labelZh: '工作台', labelEn: 'Workbench' },
+  { key: 'workbench', name: 'ia2.journey', path: '/app', labelZh: '工作台', labelEn: 'Workbench' },
   { key: 'sim', name: 'ia2.sim', path: '/app/sim', labelZh: '推演中心', labelEn: 'Simulation Center' },
   { key: 'gov', name: 'ia2.governance', path: '/app/gov', labelZh: '治理中心', labelEn: 'Governance Center' },
 ]

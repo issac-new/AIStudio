@@ -31,15 +31,15 @@ describe('ia2 路由树（v12 双视图）', () => {
   })
 
   it('场景元数据 = 单视图 collab，i18n key 命名一致', () => {
-    expect(IA_AREAS.map(a => a.key)).toEqual(['collab'])
+    expect(IA_AREAS.map(a => a.key)).toEqual(['workbench'])
     for (const area of IA_AREAS) {
-      expect(area.labelKey).toBe(`ia2.nav.${area.key}`)
+      expect(String(area.labelKey).startsWith('ia2.nav.')).toBe(true) // D12：key 改 workbench，labelKey 沿用既有词条
     }
   })
 
   it('/app 默认渲染沟通协作工作台（登录默认落点）', () => {
     const router = makeRouter()
-    expect(router.resolve('/app').name).toBe('ia2.collab')
+    expect(router.resolve('/app').name).toBe('ia2.journey') // D12：旅程首页=默认入口
   })
 
   it('工作台选择子路由：会话/房间/循环 参数名原样', () => {
@@ -56,9 +56,9 @@ describe('ia2 路由树（v12 双视图）', () => {
     expect(loop.params.loopId).toBe('lp-1')
   })
 
-  it('工作台记录懒组件真实落到 WorkbenchView', async () => {
+  it('工作台记录懒组件真实落到 WorkbenchView（D12：/app=旅程首页，三栏在 /app/collab）', async () => {
     const router = makeRouter()
-    for (const path of ['/app', '/app/s/chat/s1', '/app/s/room/r1']) {
+    for (const path of ['/app/collab', '/app/s/chat/s1', '/app/s/room/r1']) {
       const resolved = router.resolve(path)
       const record = resolved.matched[resolved.matched.length - 1]
       const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
@@ -146,15 +146,15 @@ describe('ia2 路由树（v12 双视图）', () => {
 
 describe('areaForPath（视图投影，场景条高亮依据）', () => {
   it.each([
-    ['/app', 'collab'],
-    ['/app/', 'collab'],
-    ['/app/board', 'collab'],
-    ['/app/runs', 'collab'],
-    ['/app/runs/run-9', 'collab'],
-    ['/app/eng', 'collab'],
-    ['/app/s/room/x', 'collab'],
-    ['/app/l/lp-1', 'collab'],
-    ['/app/history/session/s1', 'collab'],
+    ['/app', 'workbench'],
+    ['/app/', 'workbench'],
+    ['/app/board', 'workbench'],
+    ['/app/runs', 'workbench'],
+    ['/app/runs/run-9', 'workbench'],
+    ['/app/eng', 'workbench'],
+    ['/app/s/room/x', 'workbench'],
+    ['/app/l/lp-1', 'workbench'],
+    ['/app/history/session/s1', 'workbench'],
   ])('%s → %s', (path, expected) => {
     expect(areaForPath(path)).toBe(expected)
   })

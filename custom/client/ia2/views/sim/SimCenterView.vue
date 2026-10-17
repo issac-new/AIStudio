@@ -18,6 +18,8 @@ import DeliveryPanel from './DeliveryPanel.vue'
 import TracePanel from './TracePanel.vue'
 import OverviewPanel from './OverviewPanel.vue'
 import CockpitPanel from './CockpitPanel.vue'
+import SimFlowStrip from './SimFlowStrip.vue'
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -62,6 +64,11 @@ function goTab(tab: SimTab): void {
 }
 
 /** 六签全部实装（B1 壳+B2/B4/B5/B6+驾驶屏收尾件）；占位循环保留给后续新增签 */
+const INTRO_KEY: Record<TabKey, string> = {
+  overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops',
+  evidence: 'sim-evidence', delivery: 'sim-delivery', trace: 'sim-trace',
+}
+
 const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 </script>
 
@@ -94,6 +101,8 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
       >⚙ 推演设置</button>
     </header>
 
+    <SimFlowStrip />
+
     <main class="sim-center__body">
       <!-- 签 1 轮次总览＝驾驶屏（B 波收尾实装：姿态横幅+健康行+六闸全名行+净额双行卡） -->
       <section
@@ -102,6 +111,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-overview"
       >
         <h3 class="sim-center__panel-title">签 1·{{ text.tabOverview }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['overview']" />
         <OverviewPanel />
       </section>
       <!-- 签 2 监督面板（B2 实装：观察窗流+研判/判词时间线+journal 原行反查） -->
@@ -111,6 +121,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-supervision"
       >
         <h3 class="sim-center__panel-title">签 2·{{ text.tabSupervision }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['supervision']" />
         <SupervisionPanel />
       </section>
       <!-- 签 3 运行观测（B4 实装：四服务红绿点+派发器健康+休眠工作者+活性行挂账态） -->
@@ -120,6 +131,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-ops"
       >
         <h3 class="sim-center__panel-title">签 3·{{ text.tabOps }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['ops']" />
         <OpsPanel />
       </section>
       <!-- 签 4 证据库（B2 实装：锚检索→锚点抽屉+台账子表+帧图廊挂账态） -->
@@ -129,6 +141,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-evidence"
       >
         <h3 class="sim-center__panel-title">签 4·{{ text.tabEvidence }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['evidence']" />
         <EvidencePanel />
       </section>
       <!-- 签 5 交付健康（B5 实装：分支新鲜度三态+交付物 14 件链） -->
@@ -138,6 +151,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-delivery"
       >
         <h3 class="sim-center__panel-title">签 5·{{ text.tabDelivery }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['delivery']" />
         <DeliveryPanel />
       </section>
       <!-- 签 6 需求追溯（B6 实装：AC 判词链四列+三源在场徽） -->
@@ -147,6 +161,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         data-testid="ia-sim-panel-trace"
       >
         <h3 class="sim-center__panel-title">签 6·{{ text.tabTrace }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['trace']" />
         <TracePanel />
       </section>
       <!-- 其余两签占位（B7 监督面板深化随 journal 积累） -->
