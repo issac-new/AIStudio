@@ -791,3 +791,8 @@
 # Unknown ZCode builtin model。个人层规则并入候选(builtin 优先、保留原生路由),空模型
 # 且无原生默认时跳过 overlay 直接以 zcode 自身默认启动;发现面同步列出个人层模型。
 642-server-zcode-personal-models.patch
+# 644: 回归测试 D1 修复——退出登录后被 C2 自动登录立即拉回 gateway 账号（用户视角"退不掉"）。
+# 登出路径（SidebarAccountControls.handleLogout / authStore.logout）写 sessionStorage
+# hermes_manual_logout 标记；LoginView 检测到标记跳过 autoLoginFromGateway 回落手动表单，
+# 手动登录成功后清除标记（新标签页不受影响）。
+644-client-manual-logout-gate.patch
