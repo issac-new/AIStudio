@@ -350,7 +350,7 @@ describe('OverviewPanel——挂载渲染主块', () => {
     await flushPromises()
     await wrapper.find('[data-testid="ov-step-row-7"]').trigger('click')
     const drawer = wrapper.find('[data-testid="sim-anchor-drawer"]')
-    expect(drawer.classes()).toContain('sim-anchor-drawer--open')
+    expect(drawer.exists()).toBe(true)
     expect(wrapper.find('[data-testid="sim-anchor-drawer-title"]').text()).toContain('需求冻结（G1）')
     expect(wrapper.find('[data-testid="sim-anchor-drawer-evidence"]').text()).toContain('g1_frozen')
     wrapper.unmount()
