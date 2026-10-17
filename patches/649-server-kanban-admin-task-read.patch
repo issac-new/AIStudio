@@ -1,0 +1,15 @@
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -450,7 +450,11 @@
+       ctx.body = { error: 'Task not found' }
+       return
+     }
+-    if (!filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
++    // overlay[regress-2026-10-17]：详情读侧不套「认领白名单」——该围栏本意是防
++    // agent 认领他人任务；聚合看板列表本就不按可见 profile 过滤，读侧再拦会表现为
++    // 「看得到卡、点开 404」。写操作仍由 authorizeTaskIds/denyProfileAccess 把守。
++    if (ctx.state?.user?.role !== 'admin' && ctx.state?.user?.role !== 'super_admin'
++      && !filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
+       ctx.status = 404
+       ctx.body = { error: 'Task not found' }
+       return

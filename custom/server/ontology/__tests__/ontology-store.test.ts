@@ -1,7 +1,7 @@
 // 本体存储守门：spec/instances 往返、保存版本链（version+1/priorVersion/versionIri 重算）、
 // 快照保留上限、回滚另存与恢复、种子重置可回滚。env 指向 tmpdir，不落宿主目录。
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdtempSync, readdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -45,6 +45,16 @@ describe('loadSpec 冷启动', () => {
     const s = loadSpec()
     expect(s.entityTypes.length).toBeGreaterThan(0)
     expect(readFileSync(join(dir, 'ontology.json'), 'utf8')).toBe('{broken')
+  })
+})
+
+describe('listSpecSnapshots 时间戳', () => {
+  it('13 位毫秒时间戳完整解析（首字符不被截，防 1995 年）', () => {
+    mkdirSync(join(dir, 'snapshots'), { recursive: true })
+    writeFileSync(join(dir, 'snapshots', 'spec-1791627836440.json'), JSON.stringify(seedSpec(NOW)))
+    const [meta] = listSpecSnapshots()
+    expect(meta.ts).toBe(1791627836440)
+    expect(new Date(meta.ts).getFullYear()).toBe(2026)
   })
 })
 

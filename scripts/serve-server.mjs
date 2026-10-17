@@ -40,9 +40,17 @@ process.env.PORT = port;
 if (!process.env.GOVERNANCE_REPO?.trim()) {
   process.env.GOVERNANCE_REPO = resolve(overlayRoot, '..', 'governance');
 }
+// 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
+// 的 fail-closed 门）。缺省工作区内 ncwk-sim-mux（存在才设；显式 env 尊重不动）——
+// 否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面功能全不可用。
+if (!process.env.OBS_SIM_ROOT?.trim()) {
+  const simRoot = resolve(overlayRoot, '..', 'ncwk-sim-mux');
+  if (existsSync(simRoot)) process.env.OBS_SIM_ROOT = simRoot;
+}
 
 console.log(`[serve-server] PORT=${port}`);
 console.log(`[serve-server] GOVERNANCE_REPO=${process.env.GOVERNANCE_REPO}`);
+console.log(`[serve-server] OBS_SIM_ROOT=${process.env.OBS_SIM_ROOT || '(未配置——仿真中心 fail-closed)'}`);
 console.log(`[serve-server] TS_NODE_PROJECT=${process.env.TS_NODE_PROJECT}`);
 console.log(`[serve-server] TS_NODE_FILES=${process.env.TS_NODE_FILES}`);
 console.log(`[serve-server] starting: node -r ts-node/register ${upstream}/packages/server/src/index.ts`);
