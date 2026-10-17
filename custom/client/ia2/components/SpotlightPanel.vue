@@ -13,6 +13,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useMsgSurfaceText } from '../i18n-msg-surface'
 import { useSessionSearch } from '@/composables/useSessionSearch'
+import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 
 const props = defineProps<{ query: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -21,12 +22,13 @@ const router = useRouter()
 const matrixRoom = useMatrixRoomStore()
 const cockpit = useCockpitStore()
 const { sessionRows } = useSessionRows()
+const runsStore = useRunCenterStore()
 const tx = useMsgSurfaceText()
 
 /** 结果行归一（分组渲染 + 键盘序） */
 interface SpotRow {
   key: string
-  group: 'sessions' | 'tasks' | 'commands'
+  group: 'sessions' | 'tasks' | 'runs' | 'commands'
   label: string
   sub: string
   icon: string
@@ -46,13 +48,14 @@ const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: 
   // 动线批（2026-10-17）：runs/gov 两命令语义过期实锤（runs 走退役重定向多一跳、
   // gov 指向看板协作签而非治理中心）——直改直达；并补高频签级与阶段页直达。
   { key: 'runs', label: tx.value.cmdRuns, icon: '🛰️', to: { name: 'ia2.sim' } },
-  { key: 'sim-supervision', label: '监督面板（仿真中心）', icon: '🛰️', to: { name: 'ia2.simSupervision' } },
-  { key: 'sim-delivery', label: '交付健康（仿真中心）', icon: '🚚', to: { name: 'ia2.simDelivery' } },
+  { key: 'sim-supervision', label: '监督面板（全流程推演）', icon: '🛰️', to: { name: 'ia2.simSupervision' } },
+  { key: 'sim-delivery', label: '交付健康（⑤验收）', icon: '🚚', to: { name: 'ia2.simDelivery' } },
   { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.governance' } },
-  { key: 'gov-docs', label: '文档评审（治理中心）', icon: '📄', to: { name: 'ia2.govDocs' } },
+  { key: 'gov-docs', label: '文档评审（②⑤⑥）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
   { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
   { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'hermes.settings' } },
+  { key: 'search', label: tx.value.cmdSearch, icon: '🔎', to: { name: 'ia2.search' } },
 ])
 
 /** 会话与房间组（v14 单一聊天列表同源行） */
@@ -73,6 +76,14 @@ const taskHits = computed(() => {
     .filter((tk) => (tk.id || '').toLowerCase().includes(query.value)
       || String(tk.title ?? tk.name ?? '').toLowerCase().includes(query.value))
     .slice(0, 6)
+})
+
+/** 运行组：按 runId / 状态匹配（全流程推演是独立专区，快搜直接定位一轮） */
+const runHits = computed(() => {
+  if (!query.value) return []
+  return (runsStore.sortedRuns ?? [])
+    .filter(r => r.runId.toLowerCase().includes(query.value) || String(r.status ?? '').toLowerCase().includes(query.value))
+    .slice(0, 4)
 })
 
 const commandHits = computed(() => {
@@ -110,6 +121,16 @@ const rows = computed<SpotRow[]>(() => {
       sub: tk.id,
       icon: '📋',
       navigate: () => void router.push({ name: 'ia2.board', query: { task: tk.id } }),
+    })
+  }
+  for (const r of runHits.value) {
+    out.push({
+      key: `r:${r.runId}`,
+      group: 'runs',
+      label: r.runId,
+      sub: r.status,
+      icon: '◎',
+      navigate: () => void router.push({ name: 'ia2.sim', query: { run: r.runId } }),
     })
   }
   for (const c of commandHits.value) {
@@ -167,7 +188,16 @@ function openDeepSearch() {
 }
 
 function groupLabel(g: SpotRow['group']): string {
-  return g === 'sessions' ? tx.value.groupSessions : g === 'tasks' ? tx.value.groupTasks : tx.value.groupCommands
+  if (g === 'sessions') return tx.value.groupSessions
+  if (g === 'tasks') return tx.value.groupTasks
+  if (g === 'runs') return tx.value.groupRuns
+  return tx.value.groupCommands
+}
+
+/** 完整检索页：把当前查询原样带过去（类型/过滤在那里继续收敛） */
+function openFullSearch(): void {
+  emit('close')
+  void router.push({ name: 'ia2.search', query: props.query.trim() ? { q: props.query.trim() } : undefined })
 }
 </script>
 
@@ -191,9 +221,14 @@ function groupLabel(g: SpotRow['group']): string {
         </button>
       </template>
     </div>
-    <button type="button" class="spot__foot" data-testid="spotlight-deep-search" @click="openDeepSearch">
-      {{ tx.deepSearchSessions }}
-    </button>
+    <div class="spot__footrow">
+      <button type="button" class="spot__foot" data-testid="spotlight-deep-search" @click="openDeepSearch">
+        {{ tx.deepSearchSessions }}
+      </button>
+      <button type="button" class="spot__foot spot__foot--primary" data-testid="spotlight-search-all" @click="openFullSearch">
+        {{ tx.searchAll }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -218,12 +253,12 @@ function groupLabel(g: SpotRow['group']): string {
 
 .spot__list { overflow-y: auto; padding: 4px 0; }
 
+.spot__footrow { display: flex; align-items: center; border-top: 1px solid var(--border-color); }
 .spot__foot {
   display: block;
-  width: 100%;
+  flex: 1;
   padding: 7px 12px;
   border: none;
-  border-top: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-muted);
   font-size: 11px;
@@ -231,6 +266,7 @@ function groupLabel(g: SpotRow['group']): string {
   cursor: pointer;
 }
 .spot__foot:hover { color: var(--text-primary); background: var(--bg-hover, rgba(0, 0, 0, 0.04)); }
+.spot__foot--primary { text-align: right; color: var(--accent-primary); border-left: 1px solid var(--border-color); }
 
 .spot__group {
   padding: 6px 12px 2px;

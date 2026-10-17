@@ -152,20 +152,27 @@ beforeEach(() => {
 })
 
 describe('治理分区（2026-10-01 单层页签重构）', () => {
-  it('路由 ia2.governance＝治理中心壳（C1 升格，2026-10-16）：真组件承载+六兄弟签路由在位', async () => {
+  it('路由 ia2.governance 已解体为⑥治理页签深链：旧路径保留 redirect，六兄弟签仍在', async () => {
     const { buildIaRoutes } = await import('@/custom/ia2/routes')
     const routes = buildIaRoutes()
     const flat = JSON.stringify(routes)
     expect(flat).toContain('"ia2.governance"')
     expect(flat).toContain('"gov"')
     const flatNames = routes.flatMap((r: { children?: unknown[] }) => [r, ...((r.children ?? []) as typeof r[])])
-    const gov = flatNames.find((r: { name?: string }) => r.name === 'ia2.governance') as { component?: unknown; redirect?: unknown }
-    // C1 升格：从重定向变真组件（七签壳）；重定向语义退役
-    expect(typeof gov.redirect).toBe('undefined')
-    expect(gov.component).toBeTruthy()
-    // 六兄弟签路由齐（清偿门签 C2 实装，其余随 C3-C9）
+    const gov = flatNames.find((r: { name?: string }) => r.name === 'ia2.governance') as {
+      component?: unknown
+      redirect?: (to: { query: Record<string, unknown> }) => unknown
+    }
+    // 2026-10-18 阶段页页签批：治理中心壳退役，旧路径 redirect 到⑥治理「质量门记录」签
+    expect(typeof gov.redirect).toBe('function')
+    expect(gov.component).toBeUndefined()
+    expect(gov.redirect!({ query: {} })).toEqual({ name: 'ia2.stage6', query: { tab: 'gateLog' } })
+    // 六兄弟签路由齐，且都保留为阶段页签 redirect（深链零断链）
     for (const n of ['ia2.govOrgAssets', 'ia2.govClearance', 'ia2.govIssues', 'ia2.govAudit', 'ia2.govDocs', 'ia2.govMetrics']) {
-      expect(flatNames.some((r: { name?: string }) => r.name === n)).toBe(true)
+      const r = flatNames.find((x: { name?: string }) => x.name === n) as { redirect?: unknown; component?: unknown }
+      expect(r, n).toBeTruthy()
+      expect(typeof r.redirect, n).toBe('function')
+      expect(r.component, n).toBeUndefined()
     }
   })
 

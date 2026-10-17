@@ -378,7 +378,7 @@ function openFind(): void {
 }
 // B2 侧问浮窗开关
 const btwOpen = ref(false)
-// B1 后台任务中心开关
+// B1 后台任务开关
 const bgTasksOpen = ref(false)
 // #10 History 浏览器开关（minimax /history Web 化：user 消息历史×搜索×定位/复制/编辑重发）
 const historyOpen = ref(false)
@@ -505,7 +505,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
           type="button"
           class="ide-chat__action"
           data-testid="ide-chat-bgtasks"
-          title="后台任务中心（子代理/自治队列/工作流运行 跨源总览）"
+          title="后台任务（子代理/自治队列/工作流运行 跨源总览）"
           @click="bgTasksOpen = !bgTasksOpen"
         >⏱</button>
         <button

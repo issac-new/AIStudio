@@ -29,13 +29,13 @@ vi.mock('../api/supervision', () => ({ fetchJournal: vi.fn(), fetchAnchor: vi.fn
 vi.mock('../api/gatekeeper', () => ({ fetchClearanceLedger: vi.fn(), resolveClearance: vi.fn(), waiveClearance: vi.fn(), groupClearanceTargets: () => [], buildClosingOrder: () => '' }))
 vi.mock('../api/gov', () => ({ fetchGateRepairs: vi.fn(), transitionGateRepair: vi.fn(), fetchKeyLedger: vi.fn(), putKeyLedger: vi.fn(), legalTransitions: () => [], GATE_STATE_LABEL: {}, GATE_FULL_NAME: {}, joinIssueDisposal: () => [], fetchIssues: vi.fn() }))
 vi.mock('../../kanban/handoff', () => ({ HANDOFF_TYPES: [], HANDOFF_STATES: [], HANDOFF_TYPE_LABEL: {}, HANDOFF_STATE_LABEL: {} }))
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: () => ({ sortedRuns: [] }) }))
 
 // jsdom 无 ResizeObserver（迁入组件链上的图表件用）——桩化
 class RO { observe() {} unobserve() {} disconnect() {} }
 vi.stubGlobal('ResizeObserver', RO)
 
 import SimCenterView from '../views/sim/SimCenterView.vue'
-import GovCenterView from '../views/gov/GovCenterView.vue'
 
 async function mountView(view: typeof SimCenterView, path: string, name: string) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path, name, component: view }] })
@@ -47,13 +47,6 @@ async function mountView(view: typeof SimCenterView, path: string, name: string)
 describe('壳收敛 ia-center-full（V1·视觉重规划 D2）', () => {
   it('SimCenterView：挂载加 body 类、卸载移除', { timeout: 20000 }, async () => {
     const w = await mountView(SimCenterView, '/app/sim', 'ia2.sim')
-    expect(document.body.classList.contains('ia-center-full')).toBe(true)
-    w.unmount()
-    expect(document.body.classList.contains('ia-center-full')).toBe(false)
-  })
-
-  it('GovCenterView：同款生命周期', { timeout: 20000 }, async () => {
-    const w = await mountView(GovCenterView, '/app/gov', 'ia2.governance')
     expect(document.body.classList.contains('ia-center-full')).toBe(true)
     w.unmount()
     expect(document.body.classList.contains('ia-center-full')).toBe(false)

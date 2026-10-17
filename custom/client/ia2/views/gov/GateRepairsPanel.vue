@@ -13,6 +13,9 @@ import {
 import { useRouter } from 'vue-router'
 import UiEmptyState from '../../../ui/UiEmptyState.vue'
 
+/** 质量门过滤（阶段页按 G1/G2/G3/G4 分签时用；空=全部） */
+const props = withDefaults(defineProps<{ gates?: string[] }>(), { gates: () => [] })
+
 const records = ref<GateRepair[] | null>(null)
 const open = ref(0)
 const loadError = ref('')
@@ -22,7 +25,11 @@ const busy = ref(false)
 const actionMsg = ref('')
 const filter = ref<'open' | 'all'>('open')
 
-const shown = computed(() => records.value ?? [])
+const shown = computed(() => (records.value ?? [])
+  .filter(r => props.gates.length === 0 || props.gates.includes(r.gate)))
+const openShown = computed(() => props.gates.length === 0
+  ? open.value
+  : shown.value.filter(r => r.state !== 'pass' && r.state !== 'waived').length)
 const LEGAL_LABEL: Partial<Record<GateRepairState, string>> = { repair_dispatched: '标记已派修', re_review: '进入复审', pass: '复审通过', waived: '豁免（须理由）' }
 
 async function refresh(): Promise<void> {
@@ -77,7 +84,7 @@ onMounted(() => { void refresh() })
 <template>
   <div class="grp" data-testid="grp-panel">
     <div class="grp__bar">
-      <h4 class="grp__h">质量门修复单（待处理 {{ open }}）</h4>
+      <h4 class="grp__h">质量门修复单（待处理 {{ openShown }}）</h4>
       <select v-model="filter" class="grp__select" data-testid="grp-filter" @change="refresh">
         <option value="open">未结</option>
         <option value="all">全部</option>
@@ -88,7 +95,7 @@ onMounted(() => { void refresh() })
 
     <p v-if="loadError" class="grp__error" data-testid="grp-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="grp__msg" data-testid="grp-action-msg">{{ actionMsg }}</p>
-    <UiEmptyState v-else-if="shown.length === 0" title="无修复单——当前没有未结的质量门修复事项。" hint="质量门 FAIL 会自动登记修复单到此处；想看六道质量门整体状态去仿真中心·运行总览。" data-testid="grp-empty">
+    <UiEmptyState v-else-if="shown.length === 0" title="无修复单——当前没有未结的质量门修复事项。" hint="质量门 FAIL 会自动登记修复单到此处；想看六道质量门整体状态去全流程推演·运行总览。" data-testid="grp-empty">
       <template #action>
         <button class="grp__btn" type="button" data-testid="grp-empty-goto-overview" @click="router.push({ name: 'ia2.sim' })">去运行总览看六道质量门 →</button>
       </template>

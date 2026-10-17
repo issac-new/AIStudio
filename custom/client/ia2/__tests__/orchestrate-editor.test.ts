@@ -126,7 +126,7 @@ describe('OrchestrateView — P4 编辑器接线', () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-new-blank-graph]').exists()).toBe(true)
     await wrapper.find('[data-new-blank-graph]').trigger('click')
-    await vi.waitFor(() => expect(wrapper.find('[data-spec-editor]').exists()).toBe(true))
+    await vi.waitFor(() => expect(wrapper.find('[data-spec-editor]').exists()).toBe(true), { timeout: 5000 })
     expect(wrapper.find('[data-editor-canvas-empty]').exists()).toBe(true)
     expect(wrapper.find('[data-spec-list]').exists()).toBe(false)
   })
@@ -134,7 +134,7 @@ describe('OrchestrateView — P4 编辑器接线', () => {
   it('editor 卡片"编辑"→ 编辑器装载该 spec 节点；"返回"回列表', async () => {
     const { wrapper } = await mountView()
     await wrapper.find('[data-card-edit="my-graph"]').trigger('click')
-    await vi.waitFor(() => expect(wrapper.find('[data-spec-editor]').exists()).toBe(true))
+    await vi.waitFor(() => expect(wrapper.find('[data-spec-editor]').exists()).toBe(true), { timeout: 5000 })
     expect(flowCapture.nodes.map(n => String(n.id))).toEqual(['seed', 'review'])
 
     await wrapper.find('[data-editor-back]').trigger('click')

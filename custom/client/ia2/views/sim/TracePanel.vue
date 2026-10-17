@@ -3,9 +3,12 @@
      四列表（AC 编号/判据原文/测试结果/UAT 判定三态）；源缺席列=null 如实
      呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRunContext } from '../../composables/useRunContext'
+
+/** UAT 判定页签只看未判条目（2026-10-18 阶段页页签批；默认全量） */
+const props = withDefaults(defineProps<{ onlyUnjudged?: boolean }>(), { onlyUnjudged: false })
 
 interface TraceRow { ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }
 interface TraceResponse {
@@ -38,6 +41,10 @@ async function load(): Promise<void> {
   }
 }
 
+const rows = computed(() => props.onlyUnjudged
+  ? (trace.value?.rows ?? []).filter(r => !r.uatVerdict)
+  : (trace.value?.rows ?? []))
+
 /** UAT 判定三态徽（不通过红/有条件通过琥珀/通过绿；未判定=灰） */
 function verdictClass(v: string | null): string {
   if (!v) return 'none'
@@ -49,6 +56,7 @@ function verdictClass(v: string | null): string {
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
 <template>
@@ -68,11 +76,11 @@ onMounted(() => { if (run.value.trim()) void load() })
         <span :class="trace.meta.acceptancePresent ? 'trc__ok' : 'trc__absent'">验收书{{ trace.meta.acceptancePresent ? '✓' : '缺' }}</span>
         <span class="trc__src">证据目录：{{ trace.source.evidenceDir }}</span>
       </p>
-      <p v-if="trace.rows.length === 0" class="trc__hint" data-testid="trc-empty">未提取到 AC 行。</p>
+      <p v-if="rows.length === 0" class="trc__hint" data-testid="trc-empty">{{ props.onlyUnjudged ? '所有 AC 都已有 UAT 判定。' : '未提取到 AC 行。' }}</p>
       <table v-else class="trc__table" data-testid="trc-table">
         <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判定</th></tr></thead>
         <tbody>
-          <tr v-for="r in trace.rows" :key="r.ac" :data-testid="`trc-row-${r.ac}`">
+          <tr v-for="r in rows" :key="r.ac" :data-testid="`trc-row-${r.ac}`">
             <td class="trc__mono">{{ r.ac }}</td>
             <td>{{ r.criterion ?? '（冻结单缺席）' }}</td>
             <td :class="{ 'trc__absent': !r.caseResult }">{{ r.caseResult ?? 'null' }}</td>
