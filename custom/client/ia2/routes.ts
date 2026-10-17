@@ -34,7 +34,7 @@ export interface IaAreaMeta {
 
 /** 视图元数据（场景条 + 区域投影的单一事实源） */
 export const IA_AREAS: IaAreaMeta[] = [
-  { key: 'workbench', name: 'ia2.stage1', path: '/app', labelKey: 'ia2.nav.collab' },
+  { key: 'workbench', name: 'ia2.stage1', path: '/app/stage/setup', labelKey: 'ia2.nav.collab' },
   { key: 'sim', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.collab' },
   { key: 'gov', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.collab' },
   { key: 'workbench2', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.collab' },
@@ -166,8 +166,16 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       meta: { fullscreen: true },
       children: [
         {
-          // D13 时序六阶段：/app 默认=①搭台（真工作页）；旅程总览挂 /journey
+          // D18 旅程式重构（2026-10-17 用户裁定，设计正本 §5.1）：/app 默认=旅程页，
+          // 按 0→1 时序呈现五搭建步骤+五交付阶段；①搭建阶段页在 stage/setup，
+          // 顶栏①入口落它。旧 /app/journey 书签经重定向可达，零断链。
           path: '',
+          name: 'ia2.journey',
+          component: () => import('./views/journey/JourneyView.vue'),
+        },
+        { path: 'journey', redirect: () => ({ name: 'ia2.journey' }) },
+        {
+          path: 'stage/setup',
           name: 'ia2.stage1',
           component: () => import('./views/stage/StageShell.vue'),
           props: { stage: 1 },
@@ -177,11 +185,6 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         { path: 'stage/build', name: 'ia2.stage4', component: () => import('./views/stage/StageShell.vue'), props: { stage: 4 } },
         { path: 'stage/accept', name: 'ia2.stage5', component: () => import('./views/stage/StageShell.vue'), props: { stage: 5 } },
         { path: 'stage/govern', name: 'ia2.stage6', component: () => import('./views/stage/StageShell.vue'), props: { stage: 6 } },
-        {
-          path: 'journey',
-          name: 'ia2.journey',
-          component: () => import('./views/journey/JourneyView.vue'),
-        },
         {
           path: 'collab',
           name: 'ia2.collab',
@@ -289,6 +292,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'gov/settings',
           name: 'ia2.govSettings',
           component: () => import('./views/gov/GovSettingsView.vue'),
+        },
+        {
+          // D18：团队管理重新可达（设计正本 §5.3）。TeamsManagePanel 原唯一挂载点
+          // EngScene 已被 /app/eng 重定向架空，领导邀请/值守分派/派发列表整块不可达；
+          // 新路由薄壳异步挂载，零新端点（全走 Matrix 通道与看板 API）。
+          path: 'teams',
+          name: 'ia2.teams',
+          component: () => import('./views/TeamsView.vue'),
         },
         {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓

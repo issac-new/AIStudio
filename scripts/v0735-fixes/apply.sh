@@ -11,20 +11,20 @@ echo "[v0735-fixes] 1. mimo 类型级联：opencode→opencode+mimo+dsh"
 find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "'opencode' | 'dsh'" 2>/dev/null | xargs sed -i '' "s/'opencode' | 'dsh'/'opencode' | 'mimo' | 'dsh'/g" || true
 
 echo "[v0735-fixes] 2. agent-options 默认图（mimo 入口；v0.7.36+ 已自带则跳过）"
-find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "opencode: '/coding-agents/opencode.png'," 2>/dev/null | while IFS= read -r f; do
+(find packages -name "*.ts" -o -name "*.vue" 2>/dev/null | xargs grep -l "opencode: '/coding-agents/opencode.png'," 2>/dev/null || true) | while IFS= read -r f; do
   grep -q "mimo: '/coding-agents/" "$f" || sed -i '' "s|opencode: '/coding-agents/opencode.png',|opencode: '/coding-agents/opencode.png',\n    mimo: '/coding-agents/mimo.png',|g" "$f"
-done
+done || true
 
 echo "[v0735-fixes] 3. AgentManagerView 安装/卸载/检查 update map"
 find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: false, dsh" 2>/dev/null | xargs sed -i '' "s/opencode: false, dsh: false, cursor: false/opencode: false, mimo: false, dsh: false, cursor: false/g" || true
-find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: null,$" 2>/dev/null | while IFS= read -r f; do
+(find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: null,$" 2>/dev/null || true) | while IFS= read -r f; do
   grep -q "mimo: null," "$f" || sed -i '' "s/opencode: null,$/opencode: null,\n  mimo: null,/g" "$f"
-done
+done || true
 
 echo "[v0735-fixes] 4. CodingAgentConfigView 设置映射（v0.7.36+ 已自带则跳过）"
-find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: { preference:" 2>/dev/null | while IFS= read -r f; do
+(find packages -name "*.vue" -o -name "*.ts" 2>/dev/null | xargs grep -l "opencode: { preference:" 2>/dev/null || true) | while IFS= read -r f; do
   grep -q "mimo: { preference:" "$f" || sed -i '' "s|opencode: { preference: 'memory', configuration: 'settings' },|opencode: { preference: 'memory', configuration: 'settings' },\n  mimo: { preference: 'memory', configuration: 'settings' },|g" "$f"
-done
+done || true
 
 echo "[v0735-fixes] 5. App.vue usesPageSidebar → @ts-expect-error"
 if grep -q "const usesPageSidebar = computed(() => false);" packages/client/src/App.vue; then

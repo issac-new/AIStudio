@@ -816,9 +816,10 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     const bar = wrapper.find('[data-testid="ia-nav-centers"]')
     expect(bar.exists()).toBe(true)
     const labels = bar.findAll('.icn-inline__center-btn').map(x => x.text())
-    expect(labels).toEqual(['①搭台', 'IDE 画布', '②需求', '③分析设计', '④生产', '⑤验收', '⑥治理'])
-    // /app 裸路径=①搭台高亮（D13 默认入口）
-    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
+    // D18：①搭建②需求③分析设计[④开发｜IDE 工作区]⑤验收⑥治理（IDE 段归④开发）
+    expect(labels).toEqual(['①搭建', '②需求', '③分析设计', '④开发', 'IDE 工作区', '⑤验收', '⑥治理'])
+    // /app 裸路径=旅程页（D18 默认入口），搭建区①高亮
+    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn-inline__center-btn--active')
     expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 

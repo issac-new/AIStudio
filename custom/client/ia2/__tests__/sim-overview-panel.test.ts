@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/sim-overview-panel.test.ts
-// 旗舰签（轮次总览）单测：
+// 旗舰签（运行总览）单测：
 //   1) §3.3 映射表前端副本抽查——完成键/隐藏键/关卡标志逐行誊写不漂移（纪律 45 前端口径）
 //   2) §2.4 步名/操作者抽查（V8.30 职责归位等关键行）
 //   3) 七幕区间=§2.4 七幕主线，无缝覆盖 1-26
 //   4) 键→行状态纯函数正反例（done/进行中/未达/链位推断）
-//   5) KPI 数字自 mock 端点数据计算（含代偿 vs 净额两口径；六闸/分支交付）
+//   5) KPI 数字自 mock 端点数据计算（含代偿 vs 净计两口径；六道质量门/分支交付）
 //   6) 诚实态：run 缺席引导不造假、主端点失败如实报错、副端点缺席就地呈现
 //   7) 面板挂载渲染主块 testid + 步行点击进锚点抽屉 + 交付物 14 件链
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -157,8 +157,8 @@ describe('六闸折算与打回计数', () => {
   })
 })
 
-describe('KPI 数字自 mock 端点数据计算（含代偿 vs 净额两口径）', () => {
-  it('缺步 26 一路的完成轮：done=25（显式 23+链位推断 8/9）、台账步级代演 3 笔 → 含代偿 25/26、净额 22/26；nudge 不扣', () => {
+describe('KPI 数字自 mock 端点数据计算（含代偿 vs 净计两口径）', () => {
+  it('缺步 26 一路的完成轮：done=25（显式 23+链位推断 8/9）、台账步级代演 3 笔 → 含代偿 25/26、净计 22/26；nudge 不扣', () => {
     const steps: Record<string, string> = {
       smoke_done: 't', appinit_done: 't', people_done: 't', register_done: 't',
       analysis_done: 't', triage_done: 't', anexec_done: 't', review_done: 't',
@@ -174,7 +174,7 @@ describe('KPI 数字自 mock 端点数据计算（含代偿 vs 净额两口径�
     const byType = { nudge: 3, 'card-walk-done': 2, 'driver-merge': 1 }
     expect(compDeduction(byType)).toBe(3)
     expect(netStepsAvailable(rows, byType)).toBe(22)
-    // 零步级代演 → 净额=含代偿
+    // 零步级代演 → 净计=含代偿
     expect(netStepsAvailable(rows, {})).toBe(25)
   })
 })
@@ -286,15 +286,15 @@ describe('OverviewPanel——诚实态（N1/N2）', () => {
 describe('OverviewPanel——挂载渲染主块', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAllOk() })
 
-  it('run query 在位：横幅/KPI 四卡/七幕条/26 步表/交付物链/六闸仪/净额卡/观察窗入口齐渲染，数字来自端点', async () => {
+  it('run query 在位：横幅/KPI 四卡/七幕条/26 步表/交付物链/六道质量门/净计卡/观察窗入口齐渲染，数字来自端点', async () => {
     const { wrapper } = await mountPanel('/app/sim?run=20261015-v8-run20')
     await flushPromises()
     expect(mockedRunState).toHaveBeenCalledWith('20261015-v8-run20')
-    // 姿态横幅：standard 琥珀带+清偿门灯红（open 2）
+    // 运行模式横幅：standard 琥珀带+遗留项灯红（2 笔待处理）
     const posture = wrapper.find('[data-testid="ov-posture"]')
     expect(posture.classes()).toContain('ov__posture--standard')
-    expect(wrapper.find('[data-testid="ov-clearance"]').text()).toContain('open 2 笔')
-    // KPI：六闸 1/6（仅 g1_frozen）｜分支 1/6（2 支 1 推）｜含代偿 7/26｜净额 4/26（扣 3 笔）
+    expect(wrapper.find('[data-testid="ov-clearance"]').text()).toContain('2 笔待处理')
+    // KPI：六道质量门 1/6（仅 g1_frozen）｜分支 1/6（2 支 1 推）｜含代偿 7/26｜净计 4/26（扣 3 笔）
     expect(wrapper.find('[data-testid="ov-kpi-gates"]').text()).toContain('1/6')
     expect(wrapper.find('[data-testid="ov-kpi-branches"]').text()).toContain('1/6')
     expect(wrapper.find('[data-testid="ov-kpi-steps"]').text()).toContain('7/26')
@@ -313,13 +313,13 @@ describe('OverviewPanel——挂载渲染主块', () => {
     expect(wrapper.find('[data-testid="ov-dl-13"]').text()).toContain('完备性检查')
     expect(wrapper.find('[data-testid="ov-dl-13"]').text()).toContain('未覆盖')
     expect(wrapper.find('[data-testid="ov-dl-11"]').classes()).toContain('ov__dl-item--absent')
-    // 六闸仪 6 行；G1 打回 1（issues）
+    // 六道质量门 6 行；G1 打回 1（issues）
     expect(wrapper.findAll('[data-testid^="ov-gate-"]')).toHaveLength(6)
     expect(wrapper.find('[data-testid="ov-gate-G1"]').find('[data-testid="sim-gate-reject"]').text()).toContain('1')
-    // 净额卡双行+紫项列表
+    // 净计卡双行+紫项列表
     const net = wrapper.find('[data-testid="ov-net"]')
     expect(net.text()).toContain('含代偿步可用 7/26')
-    expect(net.text()).toContain('净额步可用 4/26')
+    expect(net.text()).toContain('净计步可用 4/26')
     expect(net.findAll('[data-testid="sim-comp-tag"]').length).toBeGreaterThanOrEqual(3)
     expect(wrapper.find('[data-testid="ov-watch-entry"]').exists()).toBe(true)
     wrapper.unmount()

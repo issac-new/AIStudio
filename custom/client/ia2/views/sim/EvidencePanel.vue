@@ -80,7 +80,7 @@ async function loadLedger(): Promise<void> {
       <p v-if="ledgerError" class="ev__error" data-testid="ev-ledger-error">{{ ledgerError }}</p>
       <p v-else-if="!ledger" class="ev__hint">点击读取（消费 orgloop /ledger 端点）。</p>
       <template v-else>
-        <p class="ev__hint" data-testid="ev-ledger-summary">未清 {{ ledger.open }}｜已清 {{ ledger.resolved }}｜豁免 {{ ledger.waived }}｜{{ ledger.pass ? '清偿放行' : '拒开新轮' }}</p>
+        <p class="ev__hint" data-testid="ev-ledger-summary">待处理 {{ ledger.open }}｜已处理 {{ ledger.resolved }}｜已豁免 {{ ledger.waived }}｜{{ ledger.pass ? '清算放行' : '禁止启动新运行' }}</p>
         <table v-if="ledger.rows.length > 0" class="ev__table" data-testid="ev-ledger-table">
           <thead><tr><th>类型</th><th>缺陷</th><th>状态</th></tr></thead>
           <tbody>
@@ -88,7 +88,7 @@ async function loadLedger(): Promise<void> {
               <td>{{ r.type }}</td>
               <td>{{ r.defect || '—' }}</td>
               <td>
-                <span class="ev__state" :class="`ev__state--${r.state}`" :data-testid="`ev-ledger-state-${r.id}`">{{ r.state === 'open' ? '未清' : r.state === 'waived' ? '豁免' : '已清' }}</span>
+                <span class="ev__state" :class="`ev__state--${r.state}`" :data-testid="`ev-ledger-state-${r.id}`">{{ r.state === 'open' ? '待处理' : r.state === 'waived' ? '已豁免' : '已处理' }}</span>
               </td>
             </tr>
           </tbody>

@@ -59,7 +59,7 @@ onMounted(() => { void refresh() })
 <template>
   <div class="clr" data-testid="clr-panel">
     <div class="clr__bar">
-      <h4 class="clr__h">清偿门</h4>
+      <h4 class="clr__h">遗留项清算</h4>
       <span
         v-if="ledger"
         class="clr__lamp"

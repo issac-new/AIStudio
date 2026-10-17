@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/sim-overview.test.ts
-// 签 1 轮次总览（驾驶屏）单测（B 波收尾件，R1/R3/R6/N1）：
-// 纯函数（姿态档/闸全名行/净额双行）+面板 VTU（姿态横幅三档色带+清偿灯红绿、
-// 健康行如实、六闸全名首现、净额双行并列+分型紫标、端点 503 如实）。
+// 签 1 运行总览（总览屏）单测（B 波收尾件，R1/R3/R6/N1）：
+// 纯函数（运行模式档/质量门全名行/净计双行）+面板 VTU（运行模式横幅三档色带+遗留项灯红绿、
+// 健康行如实、六道质量门全名首现、净计双行并列+分型紫标、端点 503 如实）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
@@ -53,10 +53,10 @@ describe('纯函数层', () => {
   })
 })
 
-describe('OverviewPanel — 驾驶屏', () => {
+describe('OverviewPanel — 总览屏', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('轻量条（B10）：query 带 run 自动装载——三徽标（姿态色点/清偿灯/服务异常）+点击跳签 1', async () => {
+  it('轻量条（B10）：query 带 run 自动装载——三徽标（运行模式色点/遗留项灯/服务异常）+点击跳签 1', async () => {
     mockedRunState.mockResolvedValue({
       run: 'r', posture: 'standard', gates: {}, steps: {},
       ledger: { total: 40, open: 27, byType: { 'auto-approve': 22 } },
@@ -79,7 +79,7 @@ describe('OverviewPanel — 驾驶屏', () => {
     await flushPromises()
     expect(w.find('[data-testid="cpb-strip"]').exists()).toBe(true)
     expect(w.find('.cpb__dot--standard').exists()).toBe(true)
-    expect(w.find('[data-testid="cpb-clearance"]').text()).toContain('27 未清')
+    expect(w.find('[data-testid="cpb-clearance"]').text()).toContain('27 待处理')
     expect(w.find('[data-testid="cpb-services"]').text()).toContain('1 异常')
     await w.find('[data-testid="cpb-strip"]').trigger('click')
     await flushPromises()
@@ -96,7 +96,7 @@ describe('OverviewPanel — 驾驶屏', () => {
     await router.isReady()
     const w = mount(CockpitPanel, { global: { plugins: [router] } })
     await flushPromises()
-    expect(w.find('[data-testid="cpb-empty"]').text()).toContain('驾驶位待命')
+    expect(w.find('[data-testid="cpb-empty"]').text()).toContain('值班台待命')
     expect(mockedRunState).not.toHaveBeenCalled()
     w.unmount()
   })

@@ -57,14 +57,14 @@ onMounted(() => { void refresh() })
 <template>
   <div class="grp" data-testid="grp-panel">
     <div class="grp__bar">
-      <h4 class="grp__h">闸修复单（open {{ open }}）</h4>
+      <h4 class="grp__h">质量门修复单（待处理 {{ open }}）</h4>
       <select v-model="filter" class="grp__select" data-testid="grp-filter" @change="refresh">
         <option value="open">未结</option>
         <option value="all">全部</option>
       </select>
       <button class="grp__btn" type="button" data-testid="grp-refresh" :disabled="busy" @click="refresh">刷新</button>
     </div>
-    <p class="grp__note" data-testid="grp-rule">闸 FAIL 唯一出口＝登记修复单并跟踪到复审通过；本面板无任何绕过闸动作（R3）。</p>
+    <p class="grp__note" data-testid="grp-rule">质量门 FAIL 唯一出口＝登记修复单并跟踪到复审通过；本面板无任何绕过质量门动作（R3）。</p>
 
     <p v-if="loadError" class="grp__error" data-testid="grp-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="grp__msg" data-testid="grp-action-msg">{{ actionMsg }}</p>

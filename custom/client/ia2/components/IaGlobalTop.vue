@@ -1,6 +1,9 @@
 <!-- overlay/custom/client/ia2/components/IaGlobalTop.vue -->
 <!-- v12.3 全局顶区（2026-09-20 用户裁定）：页头 + 注意力条。页头四改见
      IaShellHeader 头注；通知下拉自持于页头（原 @notify 上升链路退役）。
+     D18（2026-10-17 用户裁定「把注意力条放在最顶端」）：次序反转为
+     注意力条 + 页头——「现在需要你处理什么」是第一眼；页头内态势条
+     （SitlineBar）留在原位回答全局概况，两者分工见设计正本 §5.4。
      注意力条（R2 改管理入口）：blocked 梯队收编——blocked 任务 + blocked 循环
      + 等我（review 任务/中断运行/fleet）三梯队经 mergeAttention 统一排序；
      点击条目跳对象，尾部 ⚙管理常驻（空态不消失，条即管理入口）；
@@ -83,6 +86,12 @@ function onOpenBoard(): void {
 
 <template>
   <div class="ia-gtop" data-testid="ia-global-top">
+    <!-- D18：注意力条置顶（设计正本 §5.4）——顶区第一行，先于页头 -->
+    <AttentionStrip
+      :items="attentionRows"
+      @select="onAttentionSelect"
+      @open-board="onOpenBoard"
+    />
     <IaShellHeader :user-name="cockpit.currentUserName" />
     <BackgroundWorkStrip />
     <div v-if="showDelivery" class="delivery-strip" data-testid="delivery-readings" @click="openCases">
@@ -91,11 +100,6 @@ function onOpenBoard(): void {
       <span v-if="deliveryReadings.pendingHumanGates > 0" class="dchip dchip--human">{{ t('ia2.delivery.pendingHuman') }} {{ deliveryReadings.pendingHumanGates }}</span>
       <span v-if="deliveryReadings.completed > 0" class="dchip dchip--done">{{ t('ia2.delivery.completed') }} {{ deliveryReadings.completed }}</span>
     </div>
-    <AttentionStrip
-      :items="attentionRows"
-      @select="onAttentionSelect"
-      @open-board="onOpenBoard"
-    />
   </div>
 </template>
 

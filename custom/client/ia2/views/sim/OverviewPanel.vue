@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/sim/OverviewPanel.vue -->
-<!-- S1 轮次总览（旗舰签 B2 工单——设计正本 2026-10-16-sim-center-detailed-design.md 签 1）：
-     姿态横幅（三档色带+清偿门灯）→ KPI 四卡 → 七幕旅程条 → 双列表（左 2/3 26 步表
-     +交付物 14 件链；右 1/3 六闸仪+净额卡+观察窗入口）。run 来自路由 query
+<!-- S1 运行总览（旗舰签 B2 工单——设计正本 2026-10-16-sim-center-detailed-design.md 签 1）：
+     运行模式横幅（三档色带+遗留项清算灯）→ KPI 四卡 → 七幕旅程条 → 双列表（左 2/3 26 步表
+     +交付物 14 件链；右 1/3 六道质量门+净计卡+观察窗入口）。run 来自路由 query
      （/app/sim?run=xxx，runs 家族重定向同源）；数字全部自 X1 端点实测计算（N2），
      run 缺席=引导输入不造假，端点缺席/失败=如实缺席态（N1）。 -->
 <script setup lang="ts">
@@ -37,10 +37,10 @@ const branchesError = ref('')
 
 const runQuery = computed(() => String(route.query.run ?? '').trim())
 
-/** 姿态政策一句话（§1.2 姿态旋钮口径照录） */
+/** 运行模式政策一句话（§1.2 运行模式旋钮口径照录） */
 const POSTURE_POLICY: Record<string, string> = {
   strict: '零代偿，测自组织真力；停滞即如实登记问题单',
-  standard: '现状动作保留，每笔代偿落台账（净额对账数据源）',
+  standard: '现状动作保留，每笔代偿落台账（净计对账数据源）',
   demo: '里程碑演示，允许幕后调度编排，全程显著标注「演示」',
 }
 
@@ -136,7 +136,7 @@ async function load(): Promise<void> {
 /** 读取=改 query（query 为单一事实源）；同 run 重读直接加载 */
 function submitRun(): void {
   const r = runInput.value.trim()
-  if (!r) { loadError.value = '请输入轮次目录名（如 20261015-v8-run20），或经 /app/sim?run=xxx 进入'; return }
+  if (!r) { loadError.value = '请输入运行目录名（如 20261015-v8-run20），或经 /app/sim?run=xxx 进入'; return }
   if (r === runQuery.value) { void load(); return }
   void router.replace({ query: { ...route.query, run: r } })
 }
@@ -153,7 +153,7 @@ function goSupervision(): void {
 <template>
   <div class="ov" data-testid="ov-panel">
     <div class="ov__bar">
-      <input v-model="runInput" class="ov__input" data-testid="ov-run" placeholder="轮次目录名（如 20261015-v8-run20）" @keyup.enter="submitRun">
+      <input v-model="runInput" class="ov__input" data-testid="ov-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="submitRun">
       <button class="ov__btn" type="button" data-testid="ov-load" :disabled="loading" @click="submitRun">读取</button>
       <span class="ov__src" data-testid="ov-endpoints">数据面：/api/hermes/sim/run-state（deliverables / issues / branches 同批）</span>
     </div>
@@ -161,26 +161,26 @@ function goSupervision(): void {
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
     <p v-if="loadError" class="ov__error" data-testid="ov-error">{{ loadError }}</p>
     <p v-else-if="!runState" class="ov__hint" data-testid="ov-guide">
-      输入轮次目录名读取实况——姿态/六闸/26 步/交付物数字全部来自端点实测，缺席不代填。
+      输入运行目录名读取实况——运行模式/六道质量门/26 步/交付物数字全部来自端点实测，缺席不代填。
     </p>
 
     <template v-if="runState">
-      <!-- 姿态横幅：三档色带+政策一句话+清偿门灯（红=ledger.open>0，§2.6.5 清偿门） -->
+      <!-- 运行模式横幅：三档色带+政策一句话+遗留项清算灯（红=ledger.open>0，§2.6.5 遗留项清算） -->
       <div class="ov__posture" :class="`ov__posture--${runState.posture}`" data-testid="ov-posture">
-        <span class="ov__posture-name">姿态 {{ runState.posture }}</span>
-        <span class="ov__posture-policy">{{ POSTURE_POLICY[runState.posture] ?? '姿态政策未登记（如实呈现）' }}</span>
+        <span class="ov__posture-name">运行模式 {{ runState.posture }}</span>
+        <span class="ov__posture-policy">{{ POSTURE_POLICY[runState.posture] ?? '运行模式政策未登记（如实呈现）' }}</span>
         <span
           class="ov__lamp"
           :class="runState.ledger.open > 0 ? 'ov__lamp--red' : 'ov__lamp--green'"
           data-testid="ov-clearance"
-        >{{ runState.ledger.open > 0 ? `清偿门未清（open ${runState.ledger.open} 笔，拒开新轮）` : '清偿门已清（0 open）' }}</span>
+        >{{ runState.ledger.open > 0 ? `遗留项未清算（${runState.ledger.open} 笔待处理，禁止启动新运行）` : '遗留项已清算（0 笔待处理）' }}</span>
       </div>
 
-      <!-- KPI 四卡：六闸 n/6｜分支交付 n/6｜含代偿步可用｜净额步可用（紫） -->
+      <!-- KPI 四卡：六闸 n/6｜分支交付 n/6｜含代偿步可用｜净计步可用（紫） -->
       <div class="ov__kpis">
         <div class="ov__kpi ov__kpi--pass" data-testid="ov-kpi-gates">
           <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
-          <span class="ov__kpi-label">六闸通过（g1_frozen…report_done）</span>
+          <span class="ov__kpi-label">六道质量门通过（g1_frozen…report_done）</span>
         </div>
         <div class="ov__kpi" data-testid="ov-kpi-branches">
           <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
@@ -193,7 +193,7 @@ function goSupervision(): void {
         </div>
         <div class="ov__kpi ov__kpi--net" data-testid="ov-kpi-net">
           <span class="ov__kpi-num">{{ stepsDoneNet }}<span class="ov__kpi-denom">/26</span></span>
-          <span class="ov__kpi-label">步可用·净额（扣步级代演 {{ deduction }} 笔）</span>
+          <span class="ov__kpi-label">步可用·净计（扣步级代演 {{ deduction }} 笔）</span>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ function goSupervision(): void {
         </div>
       </div>
 
-      <!-- 双列表：左 2/3 步骤表+交付物链；右 1/3 六闸仪+净额卡+观察窗入口 -->
+      <!-- 双列表：左 2/3 步骤表+交付物链；右 1/3 六道质量门+净计卡+观察窗入口 -->
       <div class="ov__grid">
         <section class="ov__main">
           <h4 class="ov__h">26 步状态表（§3.3 映射前端副本；点行看键值证据）</h4>
@@ -284,7 +284,7 @@ function goSupervision(): void {
 
         <aside class="ov__side">
           <section class="ov__side-box" data-testid="ov-gates">
-            <h4 class="ov__h">六闸仪</h4>
+            <h4 class="ov__h">六道质量门</h4>
             <p v-if="issuesError" class="ov__hint" data-testid="ov-gate-rejects-absent">打回计数缺席：{{ issuesError }}</p>
             <ul class="ov__gates">
               <li v-for="g in gateRows" :key="g.id" class="ov__gate" :data-testid="`ov-gate-${g.id}`">
@@ -295,10 +295,10 @@ function goSupervision(): void {
           </section>
 
           <section class="ov__side-box" data-testid="ov-net">
-            <h4 class="ov__h">净额卡 <SimCompensatedTag :count="deduction" /></h4>
+            <h4 class="ov__h">净计卡 <SimCompensatedTag :count="deduction" /></h4>
             <div class="ov__net-rows">
               <div class="ov__net-row">含代偿步可用 {{ stepsDoneComp }}/26</div>
-              <div class="ov__net-row ov__net-row--net">净额步可用 {{ stepsDoneNet }}/26（=完成 − 步级代演笔）</div>
+              <div class="ov__net-row ov__net-row--net">净计步可用 {{ stepsDoneNet }}/26（=完成 − 步级代演笔）</div>
             </div>
             <p v-if="byTypeList.length === 0" class="ov__hint">台账零代偿（byType 空，如实呈现）。</p>
             <ul v-else class="ov__net-types">
@@ -308,7 +308,7 @@ function goSupervision(): void {
 
           <section class="ov__side-box" data-testid="ov-watch-entry">
             <h4 class="ov__h">观察窗</h4>
-            <p class="ov__hint">最新窗行与研判/判词在「监督面板」签（journal 尾读）。</p>
+            <p class="ov__hint">最新窗行与研判/判定在「监督面板」签（journal 尾读）。</p>
             <button class="ov__btn" type="button" data-testid="ov-watch-go" @click="goSupervision">去监督面板 →</button>
           </section>
         </aside>

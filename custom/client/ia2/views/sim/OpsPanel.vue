@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/views/sim/OpsPanel.vue -->
 <!-- 签 3 运行观测（B4 工单，R1/R2——设计正本 §二 推演关注面）：四服务红绿点
-     （探测失败=红+原因，如实显示）＋派发器健康卡（634 正身在 hermes-agent）
-     ＋休眠工作者卡（635）＋活性行（驱动/监督器/哨兵——端点未接挂账态）。
+     （探测失败=红+原因，如实显示）＋调度器健康卡（634 正身在 hermes-agent）
+     ＋空闲工作者卡（635）＋运行活性行（驱动/监督器/哨兵——端点未接挂账态）。
      一键并发三端点；任一失败单独呈现，不拖垮整卡。 -->
 <script setup lang="ts">
 import { ref } from 'vue'
@@ -60,7 +60,7 @@ async function load(): Promise<void> {
     </section>
 
     <section class="ops__box">
-      <h4 class="ops__h">派发器健康</h4>
+      <h4 class="ops__h">调度器健康</h4>
       <p v-if="!dispatcher" class="ops__hint">未读取（探测一并拉取；正身在 hermes-agent，界面只消费）。</p>
       <ul v-else class="ops__kv">
         <li v-for="(e, i) in cliHealthEntries(dispatcher)" :key="i" :data-testid="`ops-disp-kv-${i}`" :class="{ 'ops__kv--fail': !dispatcher.ok }">
@@ -71,11 +71,11 @@ async function load(): Promise<void> {
     </section>
 
     <section class="ops__box">
-      <h4 class="ops__h">休眠工作者</h4>
+      <h4 class="ops__h">空闲工作者</h4>
       <p v-if="sleepingError" class="ops__error" data-testid="ops-sleeping-error">{{ sleepingError }}</p>
       <p v-else-if="!sleeping" class="ops__hint">未读取。</p>
       <template v-else>
-        <p v-if="sleeping.length === 0" class="ops__hint" data-testid="ops-sleeping-empty">无休眠工作者。</p>
+        <p v-if="sleeping.length === 0" class="ops__hint" data-testid="ops-sleeping-empty">无空闲工作者。</p>
         <table v-else class="ops__table" data-testid="ops-sleeping-table">
           <thead>
             <tr><th v-for="(_, k) in sleeping[0]" :key="k">{{ k }}</th></tr>
@@ -90,8 +90,8 @@ async function load(): Promise<void> {
     </section>
 
     <section class="ops__box">
-      <h4 class="ops__h">活性（驱动/监督器/哨兵）</h4>
-      <p class="ops__hint" data-testid="ops-liveness-absent">活性端点未接（挂账项）——进程状态与最新日志行时刻待端点就绪后实装，当前如实缺席。</p>
+      <h4 class="ops__h">运行活性（驱动/监督器/哨兵）</h4>
+      <p class="ops__hint" data-testid="ops-liveness-absent">运行活性端点未接（挂账项）——进程状态与最新日志行时刻待端点就绪后实装，当前如实缺席。</p>
     </section>
   </div>
 </template>

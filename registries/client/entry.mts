@@ -116,8 +116,13 @@ app.use(createPinia())
 // (i18nReady → import bootstrap → 注册)，dev 下两条各自都是模块瀑布，串行
 // 实测把首个 API 请求拖到 ~2.3s。并行无顺序风险：bootstrapClient 不触 i18n，
 // app.use(i18n) 仍先于 app.use(router)/mount。
-const i18nInstalled = i18nReady.then((i18n) => {
+const i18nInstalled = i18nReady.then(async (i18n) => {
   app.use(i18n)
+  // D18 Tier-2 术语覆盖（2026-10-17 设计正本 §5.5）：上游 locale 树（patch 473
+  // 注入）里的非标准词运行时改写——禁 inject 期改补丁不生效只制造漂移，故走
+  // mergeLocaleMessage。深合并不动其余键；en 侧本就是标准词不动。
+  const { applyIa2TermOverrides } = await import('@/custom/ia2/i18n-term-overrides')
+  applyIa2TermOverrides(i18n)
 })
 const registrationsDone = import('./bootstrap')
   .then(({ bootstrapClient }) => bootstrapClient(app))

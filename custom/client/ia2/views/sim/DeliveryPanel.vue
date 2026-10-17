@@ -28,7 +28,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入轮次目录名'; return }
+  if (!r) { loadError.value = '请输入运行目录名'; return }
   loading.value = true
   loadError.value = ''
   branches.value = null
@@ -48,11 +48,11 @@ async function load(): Promise<void> {
 <template>
   <div class="dlv" data-testid="dlv-panel">
     <div class="dlv__bar">
-      <input v-model="run" class="dlv__input" data-testid="dlv-run" placeholder="轮次目录名（如 20261015-v8-run20）" @keyup.enter="load">
+      <input v-model="run" class="dlv__input" data-testid="dlv-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
       <button class="dlv__btn" type="button" data-testid="dlv-load" :disabled="loading" @click="load">读取</button>
     </div>
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
-    <p v-else-if="!branches && !deliverables" class="dlv__hint">输入轮次读取分支新鲜度与交付物链。</p>
+    <p v-else-if="!branches && !deliverables" class="dlv__hint">输入运行读取分支新鲜度与交付物链。</p>
 
     <section v-if="branches" class="dlv__box">
       <h4 class="dlv__h">分支交付（{{ branches.count }} 条，宽限窗 {{ Math.round(branches.graceMs / 60000) }} 分钟）</h4>

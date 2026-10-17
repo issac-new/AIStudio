@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/views/sim/SupervisionPanel.vue -->
-<!-- S2 监督面板（B2 工单，R10/R2/R12——设计正本 §二 S2）：观察窗流+研判/判词
+<!-- S2 监督面板（B2 工单，R10/R2/R12——设计正本 §二 S2）：观察窗流+研判/判定
      时间线，只读零写。数据=GET /api/hermes/sim/journal（run 必填+tail 缺省 50）；
      任一行点击→锚点抽屉展开 journal 原行（下钻与报告每步四段同构的界面侧）。 -->
 <script setup lang="ts">
@@ -29,7 +29,7 @@ const windowsDesc = computed(() => (organized.value ? [...organized.value.window
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入轮次目录名（如 20261015-v8-run20）'; return }
+  if (!r) { loadError.value = '请输入运行目录名（如 20261015-v8-run20）'; return }
   loading.value = true
   loadError.value = ''
   try {
@@ -48,7 +48,7 @@ async function load(): Promise<void> {
 <template>
   <div class="sup" data-testid="sup-panel">
     <div class="sup__bar">
-      <input v-model="run" class="sup__input" data-testid="sup-run" placeholder="轮次目录名（如 20261015-v8-run20）" @keyup.enter="load">
+      <input v-model="run" class="sup__input" data-testid="sup-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
       <select v-model.number="tail" class="sup__select" data-testid="sup-tail">
         <option :value="50">尾 50 行</option>
         <option :value="200">尾 200 行</option>
@@ -58,7 +58,7 @@ async function load(): Promise<void> {
     </div>
 
     <p v-if="loadError" class="sup__error" data-testid="sup-error">{{ loadError }}</p>
-    <p v-else-if="!organized" class="sup__hint">输入轮次目录名读取观察窗 journal——主管不翻 agent.log 即可回答「现在卡在哪、谁没动」。</p>
+    <p v-else-if="!organized" class="sup__hint">输入运行目录名读取观察窗 journal——主管不翻 agent.log 即可回答「现在卡在哪、谁没动」。</p>
     <p v-else-if="source" class="sup__src" :data-testid="'sup-src'">数据源：{{ source }}</p>
 
     <div v-if="organized" class="sup__grid">
@@ -99,10 +99,10 @@ async function load(): Promise<void> {
           </ul>
         </section>
         <section class="sup__side-box">
-          <h4 class="sup__h">判词（停滞判定）</h4>
-          <p v-if="organized.verdicts.length === 0" class="sup__hint">无判词行（如实呈现）。</p>
+          <h4 class="sup__h">判定（停滞判定）</h4>
+          <p v-if="organized.verdicts.length === 0" class="sup__hint">无判定行（如实呈现）。</p>
           <ul v-else class="sup__tl">
-            <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判词 ${v.ts}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
+            <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判定 ${v.ts}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
               <span class="sup__tl-ts">{{ v.ts }}</span>
               <span class="sup__tl-text">{{ v.text }}</span>
             </li>

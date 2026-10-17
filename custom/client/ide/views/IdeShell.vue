@@ -4,7 +4,7 @@
 // 布局（布局沿用 ZCode 3.12.3，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
 //   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部驾驶舱入口）
 //   | 会话列（IdeChatPane）| 右辅助面板（IdeSidePane，终端在其页签）
-// 加 IdeStatusBar；顶区 = 共享 IaGlobalTop（页头+注意力条，与沟通协作一致，
+// 加 IdeStatusBar；顶区 = 共享 IaGlobalTop（D18 后 = 注意力条+页头，与沟通协作一致，
 // 09-20 裁定移除自有 IdeTopBar：⌘K/命令面板与功能导航入口都在命令面板）；
 // RunTrace 弹窗复用 cockpit 组件（经 cockpitStore.openRunTrace 打开，store
 // 惰性创建无重初始化成本）。

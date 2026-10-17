@@ -37,9 +37,16 @@ describe('ia2 路由树（v12 双视图）', () => {
     }
   })
 
-  it('/app 默认渲染沟通协作工作台（登录默认落点）', () => {
+  it('/app 默认渲染旅程页（D18：0→1 旅程式重构，登录默认落点）', () => {
     const router = makeRouter()
-    expect(router.resolve('/app').name).toBe('ia2.stage1') // D13：①搭台=默认
+    expect(router.resolve('/app').name).toBe('ia2.journey')
+    // 旧语义保可达：①搭建阶段页在 stage/setup，顶栏①入口落它
+    expect(router.resolve('/app/stage/setup').name).toBe('ia2.stage1')
+    // 旧书签零断链：/app/journey 是重定向记录，落旅程页
+    const jr = router.resolve('/app/journey').matched.slice(-1)[0]
+    expect(typeof jr?.redirect).toBe('function')
+    // D18：团队管理重新可达
+    expect(router.resolve('/app/teams').name).toBe('ia2.teams')
   })
 
   it('工作台选择子路由：会话/房间/循环 参数名原样', () => {

@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/components/inbox/GatekeeperSection.vue -->
-<!-- S7 把关待办（B3 工单，R5/R6——设计正本 §二 S7）：双队列=人工介入卡（14 介入点）
+<!-- S7 审批待办（B3 工单，R5/R6——设计正本 §二 S7）：双队列=人工介入请求（14 介入点）
      +清偿门审批（resolve 挂 PR 锚/waive 强制理由）+收尾三步指令模板。
      数据消费 orgloop X2 端点；源缺席=介入点灰列「状态未知」不猜；动作后刷新两队列。 -->
 <script setup lang="ts">
@@ -96,7 +96,7 @@ onMounted(() => { void refresh() })
 <template>
   <section class="gk" data-testid="gk-section">
     <div class="gk__head">
-      <h3 class="gk__title">把关待办</h3>
+      <h3 class="gk__title">审批待办</h3>
       <span
         v-for="(st, name) in interventions?.sources ?? {}"
         :key="name"

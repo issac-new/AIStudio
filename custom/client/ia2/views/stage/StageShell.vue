@@ -1,8 +1,10 @@
 <!-- overlay/custom/client/ia2/views/stage/StageShell.vue -->
-<!-- D13 时序阶段工作页（2026-10-17 用户裁定：全部前端功能按使用时序重组）：
-     六阶段各有真工作页——直接挂载该阶段的核心工具组件（复用既有件），
-     其余工具为入口卡。阶段=时序（26 步七幕映射），功能不再按中心分舱。
-     阶段进度读 run-state（可选 query.run），与旅程首页同一推导。 -->
+<!-- D18 时序阶段工作页（2026-10-17 设计正本 §5.0/§5.2）：六阶段各有真工作页。
+     阶段文案与工具卡定义单一事实源=stage-meta.ts（STAGE_META），本组件不各自
+     定义——终结 D13 起三处各自定义的双轨形态。①搭建渲染 SETUP_STEPS 五步骤
+     清单（建立组织→账号→团队协调→环境资产→智能体），其余五阶段保留 D14-D16
+     内嵌核心操作件。阶段进度读 run-state（可选 query.run），与旅程页同一推导。
+     工具卡 testid 拼稳定 key 不拼 label（D18 解耦：改名零 churn）。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -16,6 +18,8 @@ import GovOrgKnowledgeView from '../gov/GovOrgKnowledgeView.vue'
 import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
+import { STAGE_META, SETUP_STEPS, type SetupStep, type StageTool } from '../../stage-meta'
+import { features } from '@/custom/features'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,107 +40,36 @@ async function load(): Promise<void> {
 }
 watch(run, () => { void load() }, { immediate: true })
 
-interface Tool { label: string; desc: string; to: string; name: string }
-interface StageMeta {
-  no: 1 | 2 | 3 | 4 | 5 | 6
-  key: string
-  title: string
-  what: string
-  source: string
-  act: string
-  keys: string[]
-  tools: Tool[]
-}
-
-/** 六阶段正本：工具=该阶段真实要用的功能（挂入口直达既有页；核心工具由各阶段页另挂） */
-const STAGES: Record<number, StageMeta> = {
-  1: {
-    no: 1, key: 'stage-setup', title: '搭台：建立组织与资产',
-    what: '从 0 开始：建账号、定编制、设团队领导与协调关系；登记应用资产；hermes agent 就位；环境冒烟。',
-    source: '组织与资产注册表、运行观测健康探测。',
-    act: '开新组织的第一步，全部完成后才进入需求阶段。',
-    keys: ['smoke_done'],
-    tools: [
-      { label: '组织与资产', desc: '人员编制·RACI·账号·应用资产·密钥台账', to: '/app/gov/org-assets', name: 'ia2.govOrgAssets' },
-      { label: '系统设置', desc: '账号/agent/环境/模型等组织级配置', to: '/app/gov/settings', name: 'ia2.govSettings' },
-      { label: '运行观测', desc: '四服务健康·派发器·agent 就位探测', to: '/app/sim/ops', name: 'ia2.simOps' },
-    ],
-  },
-  2: {
-    no: 2, key: 'stage-reqs', title: '需求：冻结与开跑',
-    what: '第一张需求单进场：验收标准≥3 条可判、范围划清；G1 需求冻结上锁；建群预邀；场景编排选姿态开轮。',
-    source: '冻结单（origin/main 可反查）·闸键 g1_frozen。',
-    act: '锁后不许改，改则重新走锁；开轮后进入分析。',
-    keys: ['g1_frozen'],
-    tools: [
-      { label: '轮次总览', desc: '姿态横幅·六闸行（G1 状态）·净额卡', to: '/app/sim', name: 'ia2.sim' },
-      { label: '场景编排', desc: '开轮/续跑/姿态切换·preflight 检视', to: '/app/sim/orchestration', name: 'ia2.simOrchestration' },
-      { label: '文档评审', desc: '冻结单字段级核对（缺项红显）', to: '/app/gov', name: 'ia2.governance' },
-    ],
-  },
-  3: {
-    no: 3, key: 'stage-design', title: '分析设计：拆解与排期',
-    what: '派发任务分解、四路系分、概设定稿；G2 架构评审（历史偏差硬拦）；排期定窗口，测试独立成项。',
-    source: '看板任务链·系分稿·排期计划。',
-    act: '没设计不编码——G2 不过不准排期是铁闸。',
-    keys: ['analysis_done', 'anexec_done', 'review_done', 'archgate_done'],
-    tools: [
-      { label: '看板·任务协同', desc: '任务分解·分诊·依赖图', to: '/app/board', name: 'ia2.board' },
-      { label: '监督面板', desc: '分析期研判·观察窗', to: '/app/sim/supervision', name: 'ia2.simSupervision' },
-      { label: '关卡与流程', desc: 'G2 评审状态·闸修复单', to: '/app/gov', name: 'ia2.governance' },
-    ],
-  },
-  4: {
-    no: 4, key: 'stage-build', title: '生产：编码测试与日常协调',
-    what: '六路并行编码+独立测试（测试者≠写码者）；期间协调全在工作台：看板流转、群沟通、等你拍板的介入卡。',
-    source: '看板·沟通流·inbox 介入队列·证据存证。',
-    act: '在制≤2；完成必带双凭证；缺陷报→修→验全关才准出。',
-    keys: ['devimpl_done', 'defect_done', 'testpass_done'],
-    tools: [
-      { label: '把关待办 inbox', desc: '介入卡·清偿审批·收尾令模板', to: '/app/inbox', name: 'ia2.inbox' },
-      { label: '看板（工作台三栏）', desc: '我的卡·沟通·IDE 画布', to: '/app/collab', name: 'ia2.collab' },
-      { label: 'IDE 画布', desc: '生产位：任务简报·分支新鲜度', to: '/app/ide', name: 'ide.shell' },
-      { label: '证据库', desc: '帧图廊·锚点反查·消息存证', to: '/app/sim/evidence', name: 'ia2.simEvidence' },
-    ],
-  },
-  5: {
-    no: 5, key: 'stage-accept', title: '验收：发布与 UAT',
-    what: 'G5 发布准出（人工批准留痕）·完备性检查·UAT 逐条判词（通过/有条件/不通过）——交付完成。',
-    source: 'approved.events·验收书判词·AC 判词链。',
-    act: '判词只认结构化字段；任一条不过回缺陷回流。',
-    keys: ['g5_ready', 'release_done', 'uat_done'],
-    tools: [
-      { label: '需求追溯', desc: 'AC→用例→测试→UAT 判词四列', to: '/app/sim/trace', name: 'ia2.simTrace' },
-      { label: '交付健康', desc: '分支推送·交付物 14 件链', to: '/app/sim/delivery', name: 'ia2.simDelivery' },
-      { label: '把关待办', desc: 'G5 人工批准入口', to: '/app/inbox', name: 'ia2.inbox' },
-    ],
-  },
-  6: {
-    no: 6, key: 'stage-govern', title: '治理：清偿审计与改进',
-    what: '工作台账·审计意见书·复盘治理报告；代偿欠账清偿（开新轮前必须清零）；度量体检——组织越跑越聪明。',
-    source: 'issues.log·清偿台账·审计流·巡检官快照。',
-    act: '问题单 100% 有处置结论；复盘行动项进下一轮。',
-    keys: ['workmgr_done', 'audit_done', 'retro_done', 'report_done', 'close_done'],
-    tools: [
-      { label: '清偿门', desc: '欠账清单·resolve/waive 审批', to: '/app/gov/clearance', name: 'ia2.govClearance' },
-      { label: '问题单对账', desc: '处置率·台账全量', to: '/app/gov/issues', name: 'ia2.govIssues' },
-      { label: '度量体检', desc: '五卡体检·磁盘水位预警', to: '/app/gov', name: 'ia2.governance' },
-      { label: '审计与变更', desc: '四查状态·基线变更记录', to: '/app/gov', name: 'ia2.governance' },
-    ],
-  },
-}
-
-const meta = computed<StageMeta>(() => STAGES[props.stage])
+const meta = computed(() => STAGE_META.find(s => s.no === props.stage)!)
 const merged = computed(() => (runState.value ? { ...runState.value.steps, ...runState.value.gates } : {}))
 const stageState = computed<'done' | 'active' | 'pending'>(() => {
   if (!runState.value) return 'pending'
   if (meta.value.keys.some(k => k in merged.value)) return 'done'
   const order = [1, 2, 3, 4, 5, 6]
-  const firstPending = order.find(n => !STAGES[n].keys.some(k => k in merged.value))
+  const firstPending = order.find(n => !STAGE_META[n - 1].keys.some(k => k in merged.value))
   return firstPending === props.stage ? 'active' : 'pending'
 })
-function go(t: Tool): void {
+
+// ── ①搭建五步骤（SETUP_STEPS 单一事实源，设计正本 §5.2）─────────────
+/** 步骤状态：有键按 run-state 推导；无键=轮次内不跟踪（诚实呈现，不假装完成） */
+type StepState = 'done' | 'active' | 'pending' | 'untracked'
+function stepState(st: SetupStep): StepState {
+  if (st.keys.length === 0) return 'untracked'
+  if (!runState.value) return 'pending'
+  if (st.keys.some(k => k in merged.value)) return 'done'
+  const firstPending = SETUP_STEPS.find(s => s.keys.length > 0 && !s.keys.some(k => k in merged.value))
+  return firstPending?.key === st.key ? 'active' : 'pending'
+}
+/** 第 5 步智能体管理入口双门控：agentManager 开关默认关，关闭时禁用不假装可达 */
+const agentsGated = computed(() => !features.agentManager)
+function stepDisabled(st: SetupStep): boolean {
+  return st.gated === true && agentsGated.value
+}
+function go(t: StageTool | { to: string }): void {
   void router.push(t.to)
+}
+function goStep(st: SetupStep): void {
+  void router.push(st.target)
 }
 </script>
 
@@ -153,43 +86,85 @@ function go(t: Tool): void {
       <p v-if="loadError" class="stg__error">{{ loadError }}</p>
     </header>
     <TabIntroBanner :tab="meta.key" />
-    <!-- D14 阶段内嵌核心操作（不只直达卡） -->
-    <section v-if="stage === 1" class="stg__embed" data-testid="stg-embed-1">
-      <h3 class="stg__embed-h">密钥台账（本阶段可直接操作）</h3>
-      <KeyLedgerSection />
+    <!-- ①搭建：五步骤有序清单（0→1 搭建旅程） -->
+    <section v-if="stage === 1" class="stg__steps" data-testid="stg-steps-1">
+      <ol class="stg__step-list">
+        <li
+          v-for="st in SETUP_STEPS"
+          :key="st.key"
+          class="stg__step"
+          :class="`stg__step--${stepState(st)}`"
+          :data-testid="`stg-step-${st.key}`"
+        >
+          <span class="stg__step-no">{{ st.no }}</span>
+          <div class="stg__step-body">
+            <div class="stg__step-head">
+              <span class="stg__step-name">{{ st.name }}</span>
+              <span class="stg__step-state" :data-testid="`stg-step-state-${st.key}`">
+                {{ stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始' }}
+              </span>
+            </div>
+            <p class="stg__step-purpose">{{ st.purpose }}</p>
+            <p class="stg__step-criteria">完成判据：{{ st.criteria }}</p>
+            <p v-if="st.note" class="stg__step-note">{{ st.note }}</p>
+          </div>
+          <button
+            type="button"
+            class="stg__step-go"
+            :data-testid="`stg-step-go-${st.key}`"
+            :disabled="stepDisabled(st)"
+            :title="stepDisabled(st) ? '智能体管理开关未开启（组织级配置内可开）' : ''"
+            @click="goStep(st)"
+          >{{ stepDisabled(st) ? '未开启' : '进入 →' }}</button>
+        </li>
+      </ol>
+      <div class="stg__embed" data-testid="stg-embed-1">
+        <h3 class="stg__embed-h">密钥台账（环境与资产·本阶段可直接操作）</h3>
+        <KeyLedgerSection />
+      </div>
+      <p class="stg__more">
+        更多组织级配置（账号/智能体/环境/模型）见
+        <button
+          type="button"
+          class="stg__more-link"
+          data-testid="stg-more-settings"
+          @click="go({ to: '/app/gov/settings' })"
+        >系统设置 →</button>
+      </p>
     </section>
+    <!-- ②-⑥阶段：内嵌核心操作（D14-D16 既有件保留，标题随术语表更新） -->
     <section v-else-if="stage === 2" class="stg__embed" data-testid="stg-embed-2">
-      <h3 class="stg__embed-h">闸修复单（需求阶段 G1 冻结的关卡记录）</h3>
+      <h3 class="stg__embed-h">质量门修复单（需求阶段 G1 需求冻结的门禁记录）</h3>
       <GateRepairsPanel />
     </section>
     <section v-else-if="stage === 3" class="stg__embed" data-testid="stg-embed-3">
-      <h3 class="stg__embed-h">协作断点诊断与知识图谱（分析期的组织视图）</h3>
+      <h3 class="stg__embed-h">断点诊断与知识图谱（分析期的组织视图）</h3>
       <GovOrgKnowledgeView />
     </section>
     <section v-else-if="stage === 4" class="stg__embed" data-testid="stg-embed-4">
-      <h3 class="stg__embed-h">生产期风险与交接</h3>
+      <h3 class="stg__embed-h">开发期风险与交接</h3>
       <CapacityLampBanner />
       <HandoffSection />
     </section>
     <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4b">
-      <h3 class="stg__embed-h">把关待办（等人决定的事·生产期实时队列）</h3>
+      <h3 class="stg__embed-h">审批待办（等人工决定的事项·开发期实时队列）</h3>
       <GatekeeperSection />
     </section>
     <section v-else-if="stage === 5" class="stg__embed" data-testid="stg-embed-5">
-      <h3 class="stg__embed-h">AC 判词链（验收现场核对）</h3>
+      <h3 class="stg__embed-h">AC 判定链（验收现场核对）</h3>
       <TracePanel />
     </section>
     <section v-else-if="stage === 6" class="stg__embed" data-testid="stg-embed-6">
-      <h3 class="stg__embed-h">清偿门（本阶段可直接操作）</h3>
+      <h3 class="stg__embed-h">遗留项清算（本阶段可直接操作）</h3>
       <ClearancePanel />
     </section>
-    <div class="stg__tools">
+    <div v-if="meta.tools.length" class="stg__tools">
       <button
         v-for="t in meta.tools"
-        :key="t.label"
+        :key="t.key"
         type="button"
         class="stg__tool"
-        :data-testid="`stg-tool-${t.label}`"
+        :data-testid="`stg-tool-${t.key}`"
         @click="go(t)"
       >
         <span class="stg__tool-label">{{ t.label }}</span>
@@ -212,6 +187,40 @@ function go(t: Tool): void {
 .stg__error { color: #d33; font-size: 12px; margin: 0 0 0 auto; }
 .stg__embed { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 14px; background: rgba(127, 127, 127, 0.04); }
 .stg__embed-h { margin: 0 0 10px; font-size: 13px; }
+.stg__steps { display: flex; flex-direction: column; gap: 12px; }
+.stg__step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stg__step {
+  display: flex; align-items: flex-start; gap: 12px;
+  border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 12px 14px;
+  background: transparent;
+  &--done { border-left: 3px solid var(--ia-fresh, #2e9e5b); }
+  &--active { border-left: 3px solid var(--ia-stale, #b8860b); background: color-mix(in srgb, var(--ia-stale, #b8860b) 5%, transparent); }
+  &--pending, &--untracked { border-left: 3px solid var(--border-color, #e5e7eb); }
+}
+.stg__step-no { font-size: 18px; font-weight: 800; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; min-width: 20px; }
+.stg__step--done .stg__step-no { color: var(--ia-fresh, #2e9e5b); }
+.stg__step--active .stg__step-no { color: var(--ia-stale, #b8860b); }
+.stg__step-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.stg__step-head { display: flex; align-items: baseline; gap: 8px; }
+.stg__step-name { font-size: 13px; font-weight: 600; }
+.stg__step-state { margin-left: auto; font-size: 11px; color: var(--text-muted, #878c99); }
+.stg__step--done .stg__step-state { color: var(--ia-fresh, #2e9e5b); }
+.stg__step--active .stg__step-state { color: var(--ia-stale, #b8860b); font-weight: 600; }
+.stg__step-purpose { margin: 0; font-size: 12px; line-height: 1.6; }
+.stg__step-criteria { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
+.stg__step-note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
+.stg__step-go {
+  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6)); border-radius: 6px;
+  background: transparent; color: var(--accent-primary, var(--color-primary, #3b82f6));
+  font-size: 12px; padding: 5px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  &:hover { background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 12%, transparent); }
+  &:disabled { border-color: var(--text-muted, #878c99); color: var(--text-muted, #878c99); cursor: not-allowed; }
+}
+.stg__more { margin: 0; font-size: 12px; color: var(--text-muted, #878c99); }
+.stg__more-link {
+  border: none; background: transparent; padding: 0; cursor: pointer; font-family: inherit;
+  color: var(--accent-primary, var(--color-primary, #3b82f6)); font-size: 12px;
+}
 .stg__tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .stg__tool {
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left;

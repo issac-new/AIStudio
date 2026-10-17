@@ -4,3 +4,5 @@
 >>>>>>> feat/upstream-0736-agent-0222
 {"ts":"2026-10-16T17:43:15Z","tool":"git-commit","target":"custom/client/ia2/components/IaCentersNav.vue","gates":"spec-required"}
 {"ts":"2026-10-17T02:36:53Z","tool":"git-commit","target":"custom/client/ia2/__tests__/stage-shell.test.ts","gates":"spec-required"}
+{"ts":"2026-10-16T12:29:56Z","tool":"git-commit","target":"docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md","gates":"spec-required"}
+{"ts":"2026-10-17T02:51:32Z","tool":"git-commit","target":"custom/server/incident/incident-report.ts","gates":"spec-required"}
