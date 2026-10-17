@@ -343,7 +343,10 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top__search-spinner { width: 10px; height: 10px; flex-shrink: 0; border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: cockpit-tspin 0.6s linear infinite; }
 @keyframes cockpit-tspin { to { transform: rotate(360deg); } }
 .cockpit-top__spacer { flex: 1; }
-.cockpit-top__sit { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+/* 回归轮 R6（三修）：态势胶囊不参与收缩——chip 半裁=看得见点不开（zh/en chip
+ * 宽度随语言漂移，媒体查询挡不住）。挤压由搜索框（flex-shrink:2, min 120）与
+ * spacer 吸收；极端窄幅仍可横向滚动（overflow 兜底）。 */
+.cockpit-top__sit { flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
 .cockpit-top__grp { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.12s; flex-shrink: 0; white-space: nowrap;
   &:hover { background: var(--bg-secondary); }
 }
