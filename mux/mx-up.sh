@@ -152,7 +152,7 @@ else
     fi
     [[ $_i -eq 18 ]] && { log "⚠ 90s 未见矩阵适配器装载行——查 gateway.log 平台段（假 home_channel/凭据缺失均可致此）；派发链路未通，禁起跑"; }
   done
-  # matrix 能力自愈（2026-10-17 mautrix macOS 门控事故，A 案兜底；B 案=638 补丁+快照锁重解）：
+  # matrix 能力自愈（2026-10-17 mautrix macOS 门控事故，A 案兜底；B 案=643 补丁+快照锁重解）：
   # 上游把 matrix extra 门控 linux-only，正规安装在 darwin 拿不到 mautrix——探测网关进程
   # 同链 import，失败即旁路注入全部 pm 代际环境并重启网关复验；仍败=matrix 不可用，fail-fast。
   if [ -x "$SCRIPT_DIR/mx-sim-mautrix-ensure.sh" ]; then
