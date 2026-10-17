@@ -1,8 +1,0 @@
-ISSUE|g5-ready-fail|harness|第一次打回
-ISSUE|g5-ready-fail|harness|第二次打回
-ISSUE|g5-ready-fail|harness|第三次打回
-ISSUE|frame-capture-failed|step22|帧缺失
-ISSUE|capacity-queue-drop|devimpl|丢件
-DISP|g5-ready-fail|harness|已修：修复锚点 abc1234
-DISP|frame-capture-failed|step22|观察
-DISP|capacity-queue-drop|devimpl|已修：并发定标 30
