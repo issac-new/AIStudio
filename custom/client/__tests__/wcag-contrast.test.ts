@@ -71,4 +71,23 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
       expect(src, `ia2.scss ${k} ${v}`).toContain(`--ia-${k}: ${v}`)
     }
   })
+
+  it('表单控件边框 ≥3:1（WCAG 1.4.11 非文本）且三个壳层同步', () => {
+    const NON_TEXT_AA = 3
+    for (const bg of ['#fafafa', '#f0f0f0', '#ffffff']) {
+      expect(contrast('#8a8a8a', bg), `light control border on ${bg}`).toBeGreaterThanOrEqual(NON_TEXT_AA)
+    }
+    for (const bg of ['#1a1a1a', '#252525', '#2a2a2a']) {
+      expect(contrast('#808080', bg), `dark control border on ${bg}`).toBeGreaterThanOrEqual(NON_TEXT_AA)
+    }
+    for (const f of [
+      resolve(__dirname, '../ia2/styles/ia2.scss'),
+      resolve(__dirname, '../ia2/views/IaLegacyShell.vue'),
+      resolve(__dirname, '../ide/views/IdeShell.vue'),
+    ]) {
+      const src = readFileSync(f, 'utf8')
+      expect(src, `${f} light control border`).toContain('--ia-border-control: #8a8a8a')
+      expect(src, `${f} dark control border`).toContain('--ia-border-control: #808080')
+    }
+  })
 })
