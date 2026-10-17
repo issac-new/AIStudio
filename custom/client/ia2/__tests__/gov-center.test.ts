@@ -95,6 +95,10 @@ describe('GovCenterView — C1 治理中心壳（R8）', () => {
     for (const [k, sel] of Object.entries(live)) {
       expect(w.find(sel).exists(), `实装面 ${k}`).toBe(true)
     }
+    // 组织与知识分析块默认收起（内容减负批）：核心操作保持在首屏
+    const knowledge = w.find('[data-testid="gov-org-knowledge-details"]')
+    expect(knowledge.exists()).toBe(true)
+    expect((knowledge.element as HTMLDetailsElement).open).toBe(false)
     // 迁入组件真的挂载（审计/文档/体检三签内含既有组件根元素）
     expect(w.find('[data-testid="ia-gov-panel-audit"]').text().length).toBeGreaterThan(20)
     expect(w.find('[data-testid="ia-gov-panel-issues"]').find('[data-testid="gis-panel"]').exists()).toBe(true)
