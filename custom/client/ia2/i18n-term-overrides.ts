@@ -24,6 +24,8 @@ export const IA2_TERM_OVERRIDES_ZH = {
   approvals: {
     // 同一功能三个名字（title/pageTitle=审批收件箱、navLabel=待审收件箱）合一
     navLabel: '审批收件箱',
+    // 决策值 reject（服务端审批历史回流）词表从未收录，zh 回落 en——走查批 D 补键
+    choice: { reject: '拒绝' },
   },
   ia2: {
     overviewDash: {
@@ -38,8 +40,9 @@ export const IA2_TERM_OVERRIDES_ZH = {
   },
 } as const
 
-/** en 侧只含六阶段导航新增键（其余英文词条本就是标准词，见文件头注） */
+/** en 侧只含六阶段导航新增键与审批 reject 补键（其余英文词条本就是标准词，见文件头注） */
 export const IA2_TERM_OVERRIDES_EN = {
+  approvals: { choice: { reject: 'Reject' } },
   ia2: { nav: STAGE_NAV_EN },
 } as const
 

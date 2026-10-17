@@ -23,7 +23,7 @@ const busy = ref(false)
 
 const pendingPoints = computed(() => (interventions.value?.points ?? []).filter(p => p.pending === true))
 const unknownPoints = computed(() => (interventions.value?.points ?? []).filter(p => p.pending === null))
-const clearanceTargets = computed(() => (clearance.value ? groupClearanceTargets(clearance.value) : []))
+const clearanceTargets = computed(() => (Array.isArray(clearance.value?.rows) ? groupClearanceTargets(clearance.value) : []))
 
 // 清偿操作输入（每目标一组，键=target）
 const resolveInput = ref<Record<string, string>>({})
