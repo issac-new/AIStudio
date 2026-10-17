@@ -87,7 +87,7 @@ describe('IdeCommandPalette', () => {
     await flushPromises()
 
     await wrapper.find('.ide-palette__input').setValue('不存在的命令xyz')
-    expect(wrapper.find('.ide-palette__empty').exists()).toBe(true)
+    expect(wrapper.find('.ui-empty-state').exists()).toBe(true)
   })
 
   it('点击任务项：关闭面板并 switchSession', async () => {

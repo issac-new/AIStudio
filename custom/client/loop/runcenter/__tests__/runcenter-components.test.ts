@@ -164,7 +164,7 @@ describe('RunListTable (jsdom)', () => {
 
   it('空列表显示空占位', () => {
     const w = mount(RunListTable, { props: { runs: [] } })
-    expect(w.find('.rc-table__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
   })
 })
 
@@ -320,7 +320,7 @@ describe('RunCenterView (jsdom)', () => {
     // 本地 kv 标记（run 状态不动）+ 待处理清空
     expect(JSON.parse(localStorage.getItem('runcenter:inbox:archived')!)).toHaveProperty('run-2')
     expect(w.findAll('.ib-row')).toHaveLength(0)
-    expect(w.find('.ib-panel__empty').text()).toContain('runcenter.inbox.empty')
+    expect(w.find('.ui-empty-state').text()).toContain('runcenter.inbox.empty')
   })
 
   it('fork 操作调用 REST 并刷新；回放操作打开回放面板', async () => {

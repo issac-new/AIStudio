@@ -269,7 +269,7 @@ function fmtDate(ms: number | null): string {
           </tr>
         </tbody>
       </table>
-      <p v-else class="cg__empty">{{ L.freezeEmpty }}</p>
+      <p v-else class="ui-empty-state">{{ L.freezeEmpty }}</p>
     </div>
 
     <!-- 变更单 -->
@@ -374,7 +374,7 @@ function fmtDate(ms: number | null): string {
           </tr>
         </tbody>
       </table>
-      <p v-else class="cg__empty">{{ L.emptyList }}</p>
+      <p v-else class="ui-empty-state">{{ L.emptyList }}</p>
     </div>
   </section>
 </template>
@@ -390,7 +390,6 @@ function fmtDate(ms: number | null): string {
 .cg__sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
 .cg__error { color: var(--error); font-size: 12px; margin: 0; }
 .cg__hint { margin: 0; font-size: 12px; color: var(--text-muted); }
-.cg__empty { margin: 4px 0; font-size: 12px; color: var(--text-muted); }
 .cg__metrics-title { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .cg__metric-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .cg-mcell {

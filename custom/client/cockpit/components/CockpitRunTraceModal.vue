@@ -338,7 +338,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
             <span class="run-trace-related__title">{{ rs.taskId || rs.sessionId.slice(-8) }}</span>
             <span v-if="rs.profile" class="run-trace-related__profile">{{ rs.profile }}</span>
             <span v-if="rs.role === 'creator'" class="run-trace-related__role">{{ t('cockpit.creator') }}</span>
-            <span v-if="rs.isEmpty" class="run-trace-related__empty">{{ t('cockpit.empty') }}</span>
+            <span v-if="rs.isEmpty" class="ui-empty-state">{{ t('cockpit.empty') }}</span>
           </span>
         </div>
       </div>
@@ -487,7 +487,6 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 .run-trace-related__title { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .run-trace-related__profile { font-size: 9px; opacity: 0.7; }
 .run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-info-rgb), 0.12); color: var(--text-secondary); }
-.run-trace-related__empty { font-size: 9px; padding: 0 3px; border-radius: 3px; background: var(--bg-inset, rgba(0,0,0,0.06)); color: var(--text-muted); }
 .run-trace-modal__hotspots { display: flex; gap: 12px; padding: 6px 18px; font-size: 11px; color: var(--text-muted, #9aa0aa); }
 .run-trace-modal__hotspot-col { flex: 1; min-width: 0; }
 .run-trace-modal__hotspot-title { font-weight: 600; margin-bottom: 2px; }

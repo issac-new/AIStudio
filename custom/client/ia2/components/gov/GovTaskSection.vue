@@ -68,7 +68,7 @@ function history(task: CockpitTask): void {
         <span class="gts__c3">{{ t('ia2.gov.task.colStatus') }}</span>
         <span class="gts__c4">{{ t('ia2.gov.task.colOps') }}</span>
       </div>
-      <div v-if="!shown.length" class="gts__empty">{{ t('ia2.gov.task.empty') }}</div>
+      <div v-if="!shown.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.task.empty') }}</div>
       <div
         v-for="task in shown" :key="task.id"
         class="gts__row" :data-testid="`gov-task-${task.id}`"
@@ -133,5 +133,4 @@ function history(task: CockpitTask): void {
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
-.gts__empty { padding: 16px; color: var(--text-muted); text-align: center; font-size: 11px; }
 </style>

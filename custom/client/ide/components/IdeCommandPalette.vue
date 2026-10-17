@@ -211,7 +211,7 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
           @keydown="onKeydown"
         >
         <div class="ide-palette__list">
-          <div v-if="!flatItems.length" class="ide-palette__empty">
+          <div v-if="!flatItems.length" class="ui-empty-state">
             {{ t('ide.paletteEmpty') }}
           </div>
           <template v-for="section in sections" :key="section.key">
@@ -276,12 +276,6 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
   padding: 6px 0;
 }
 
-.ide-palette__empty {
-  padding: 18px 14px;
-  font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
-  text-align: center;
-}
 
 .ide-palette__section-label {
   padding: 6px 14px 2px;

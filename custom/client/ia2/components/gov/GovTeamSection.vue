@@ -41,7 +41,7 @@ onUnmounted(() => platforms.release())
     <div class="gte__body">
       <div class="gte__card">
         <div class="gte__card-head">{{ t('ia2.gov.team.teams') }}</div>
-        <div v-if="!teams.length" class="gte__empty">{{ t('ia2.gov.team.teamsEmpty') }}</div>
+        <div v-if="!teams.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.team.teamsEmpty') }}</div>
         <div
           v-for="tm in teams" :key="tm.id" class="gte__row"
           :data-testid="`gov-team-${tm.id}`" @click="detail(tm.id)"
@@ -80,5 +80,4 @@ onUnmounted(() => platforms.release())
 .gte__ch-state { font-size: 11px; font-weight: 700; }
 .gte__ch-state--ok { color: var(--success); }
 .gte__ch-state--err { color: var(--error); }
-.gte__empty { padding: 8px 4px; color: var(--text-muted); font-size: 11px; }
 </style>

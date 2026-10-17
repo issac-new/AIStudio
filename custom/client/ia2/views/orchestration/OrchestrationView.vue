@@ -158,7 +158,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
       </div>
     </div>
 
-    <div v-if="roots.length === 0 && !loading" class="orch__empty" data-testid="ia-orchestration-empty">
+    <div v-if="roots.length === 0 && !loading" class="ui-empty-state" data-testid="ia-orchestration-empty">
       当前看板没有「有子任务、无父任务」的根卡。先在看板对一个需求卡执行任务拆解（decompose）或群任务（swarm）建立任务链，协同图才有锚点。
     </div>
 
@@ -310,13 +310,6 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   &--control { color: #b45309; border-color: #fcd34d; background: rgba(245, 158, 11, 0.1); }
 }
 
-.orch__empty {
-  padding: 40px 24px;
-  color: var(--text-muted, #878c99);
-  font-size: 13px;
-  line-height: 1.8;
-  text-align: center;
-}
 
 .orch__main {
   flex: 1;

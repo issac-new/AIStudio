@@ -70,7 +70,7 @@ onMounted(() => void load())
 
     <p v-if="error" class="bpa-view__error">{{ L.loadFailed }}：{{ error }}</p>
 
-    <div v-if="dto && dto.nodes.length === 0 && tab === 'registry'" class="bpa-view__empty">
+    <div v-if="dto && dto.nodes.length === 0 && tab === 'registry'" class="ui-empty-state">
       <p class="muted">{{ L.empty }}</p>
       <button type="button" class="primary" :disabled="busy" data-testid="bpa-seed-btn" @click="seed">{{ L.seedBtn }}</button>
       <p class="muted small">{{ L.seedHint }}</p>
@@ -110,7 +110,6 @@ onMounted(() => void load())
 .bpa-view__tag { margin: 4px 0 0; font-size: 12px; opacity: 0.7; }
 .bpa-view__meta { display: flex; gap: 14px; flex-wrap: wrap; }
 .bpa-view__error { color: var(--danger, #dc2626); font-size: 13px; }
-.bpa-view__empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border: 1px dashed var(--border-color, #e5e7eb); border-radius: 10px; padding: 18px; }
 .bpa-view__tabs { display: flex; gap: 6px; flex-wrap: wrap;
   button { border: 1px solid var(--border-color, #e5e7eb); background: var(--bg-secondary, rgba(255,255,255,0.55)); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: inherit;
     &.active { border-color: var(--accent-primary); color: var(--accent-primary); font-weight: 600; }

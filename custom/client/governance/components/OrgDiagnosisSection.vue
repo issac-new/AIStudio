@@ -73,7 +73,7 @@ onMounted(() => void refresh())
     </div>
     <p class="od__sub">{{ L?.sub }}</p>
     <div v-if="error" class="od__error">{{ error }}</div>
-    <div v-else-if="!data" class="od__empty">…</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <!-- 五流卡片 -->
       <div class="od__grid">
@@ -98,7 +98,7 @@ onMounted(() => void refresh())
       <div class="od__panel" data-testid="od-unattributed">
         <h4 class="od__panel-title">{{ L?.unattributedTitle }}</h4>
         <div v-if="actionMsg" class="od__action-msg">{{ actionMsg }}</div>
-        <div v-if="!data.unattributed.length" class="od__empty">{{ L?.unattributedEmpty }}</div>
+        <div v-if="!data.unattributed.length" class="ui-empty-state">{{ L?.unattributedEmpty }}</div>
         <div v-for="u in data.unattributed" :key="u.escalationId" class="od__unattr">
           <span class="od__unattr-main">
             {{ u.escalationId }} · {{ u.fromAgent }} → {{ u.tool }}（{{ u.verdict }}）
@@ -123,7 +123,7 @@ onMounted(() => void refresh())
       <!-- 机制改进候选 -->
       <div class="od__panel" data-testid="od-candidates">
         <h4 class="od__panel-title">{{ L?.candidatesTitle }}</h4>
-        <div v-if="!data.improvementCandidates.length" class="od__empty">{{ L?.candidatesEmpty }}</div>
+        <div v-if="!data.improvementCandidates.length" class="ui-empty-state">{{ L?.candidatesEmpty }}</div>
         <div v-for="c in data.improvementCandidates" :key="c.tool" class="od__cand" :data-testid="`od-cand-${c.tool}`">
           <div class="od__cand-head">
             <b>{{ c.tool }}</b>
@@ -153,7 +153,6 @@ onMounted(() => void refresh())
 .od__refresh { margin-left: auto; border: none; background: none; cursor: pointer; font-size: 14px; }
 .od__sub { margin: 0; font-size: 12px; opacity: 0.7; }
 .od__error { color: var(--danger); font-size: 12px; }
-.od__empty { font-size: 12px; opacity: 0.6; }
 .od__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
 .od__flow { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; }
 .od__flow-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }

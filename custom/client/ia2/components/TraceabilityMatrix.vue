@@ -141,7 +141,7 @@ function fmtTime(v: string | null): string {
         {{ t('ia2.trace.retry') }}
       </button>
     </div>
-    <div v-else-if="groups.length === 0 && taskChain.length === 0" class="ia-trace__empty">
+    <div v-else-if="groups.length === 0 && taskChain.length === 0" class="ui-empty-state">
       <div class="ia-trace__empty-title">{{ t('ia2.trace.emptyTitle') }}</div>
       <div class="ia-trace__empty-hint">{{ t('ia2.trace.emptyHint') }}</div>
     </div>
@@ -302,14 +302,6 @@ function fmtTime(v: string | null): string {
   font-family: inherit;
   font-size: 12px;
   color: inherit;
-}
-.ia-trace__empty {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  margin-top: 48px;
-  text-align: center;
 }
 .ia-trace__empty-title { font-size: 14px; font-weight: 600; }
 .ia-trace__empty-hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }

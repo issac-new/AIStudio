@@ -96,7 +96,7 @@ async function recover(mode: string): Promise<void> {
         <span>⏎ 恢复到历史点</span>
         <button type="button" class="ide-recovery__close" data-testid="ide-recovery-close" @click="emit('close')">✕</button>
       </header>
-      <p v-if="!selectable.length" class="ide-recovery__empty">无可恢复的行（需会话已有消息）</p>
+      <p v-if="!selectable.length" class="ui-empty-state">无可恢复的行（需会话已有消息）</p>
       <ul v-else class="ide-recovery__rows" data-testid="ide-recovery-rows">
         <li
           v-for="row in selectable"
@@ -136,7 +136,6 @@ async function recover(mode: string): Promise<void> {
 }
 .ide-recovery__head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
 .ide-recovery__close { border: none; background: transparent; cursor: pointer; color: var(--text-muted); }
-.ide-recovery__empty { color: var(--text-muted); padding: 16px 0; }
 .ide-recovery__rows { overflow-y: auto; margin: 8px 0; padding: 0; list-style: none; }
 .ide-recovery__row {
   display: flex; gap: 6px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 12px;

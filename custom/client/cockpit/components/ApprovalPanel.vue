@@ -213,7 +213,7 @@ defineExpose({ refresh })
     <div v-if="error" class="approval-panel__error" data-testid="approval-error">{{ t('approvals.loadFailed') }}：{{ error }}</div>
 
     <!-- 空态：图标 + 文案的暖空态（对照 Run Center 3 步引导范式，不再裸灰字） -->
-    <div v-if="!loading && items.length === 0" class="approval-panel__empty" data-testid="approval-empty">
+    <div v-if="!loading && items.length === 0" class="ui-empty-state" data-testid="approval-empty">
       <span class="approval-panel__empty-icon" aria-hidden="true">✓</span>
       <span class="approval-panel__empty-text">{{ t('approvals.empty') }}</span>
     </div>
@@ -306,7 +306,7 @@ defineExpose({ refresh })
         <span class="risk-dot risk-dot--low"></span>{{ spotT.title }}
         <span class="risk-hint risk-hint--low">{{ spotT.hint }}</span>
       </h4>
-      <div v-if="spotChecks.length === 0" class="approval-panel__empty" data-testid="approval-spotcheck-empty">
+      <div v-if="spotChecks.length === 0" class="ui-empty-state" data-testid="approval-spotcheck-empty">
         {{ spotT.empty.replace('{n}', String(spotResolved.length)) }}
       </div>
       <div
@@ -355,7 +355,7 @@ defineExpose({ refresh })
     <!-- 审批历史 -->
     <section v-if="showHistory" class="approval-panel__history">
       <h4 class="approval-panel__group-title">{{ t('approvals.history') }}</h4>
-      <div v-if="history.length === 0" class="approval-panel__empty">{{ t('approvals.historyEmpty') }}</div>
+      <div v-if="history.length === 0" class="ui-empty-state">{{ t('approvals.historyEmpty') }}</div>
       <table v-else class="approval-history" data-testid="approval-history">
         <thead>
           <tr>
@@ -495,14 +495,6 @@ defineExpose({ refresh })
 .approval-panel__error {
   color: var(--error-color, #dc2626);
   font-size: 12px;
-}
-.approval-panel__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 28px 0;
-  text-align: center;
 }
 .approval-panel__empty-icon {
   display: inline-flex;

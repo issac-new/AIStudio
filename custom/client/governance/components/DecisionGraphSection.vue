@@ -129,12 +129,12 @@ onMounted(() => void refresh())
     <p class="dg__sub">{{ L?.sub }}</p>
     <div v-if="error" class="dg__error">{{ error }}</div>
     <div v-if="status && !status.python" class="dg__nokg" data-testid="dg-no-python">{{ L?.pythonMissing }}</div>
-    <div v-else-if="!status" class="dg__empty">…</div>
+    <div v-else-if="!status" class="ui-empty-state">…</div>
     <template v-else>
       <!-- 决策时间线 -->
       <div class="dg__panel" data-testid="dg-timeline">
         <h4 class="dg__panel-title">{{ L?.timeline }}<span class="dg__count">{{ (L?.total ?? '').replace('{n}', String(total)) }}</span></h4>
-        <div v-if="!decisions.length" class="dg__empty">{{ L?.empty }}</div>
+        <div v-if="!decisions.length" class="ui-empty-state">{{ L?.empty }}</div>
         <div
           v-for="d in decisions" :key="d.id"
           class="dg__row" :data-testid="`dg-decision-${d.id.slice(0, 8)}`"
@@ -147,7 +147,7 @@ onMounted(() => void refresh())
           <!-- 因果链展开（同一行内联区） -->
           <div v-if="expandedId === d.id" class="dg__chain" data-testid="dg-chain">
             <div v-if="chainError" class="dg__error">{{ chainError }}</div>
-            <div v-else-if="!chain.length" class="dg__empty">{{ L?.chainEmpty }}</div>
+            <div v-else-if="!chain.length" class="ui-empty-state">{{ L?.chainEmpty }}</div>
             <template v-else>
               <div class="dg__chain-title">{{ L?.chainTitle }}</div>
               <div v-for="(c, i) in chain" :key="c.id" class="dg__chain-item">
@@ -201,7 +201,6 @@ onMounted(() => void refresh())
 .dg__sync { margin-left: auto; font-size: 12px; cursor: pointer; }
 .dg__sub { margin: 0; font-size: 12px; opacity: 0.7; }
 .dg__error { color: var(--danger); font-size: 12px; }
-.dg__empty { font-size: 12px; opacity: 0.6; }
 .dg__nokg { font-size: 12px; color: var(--ia-stale); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
 .dg__panel { border-top: 1px solid var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .dg__panel-title { margin: 0 0 4px; font-size: 13px; }

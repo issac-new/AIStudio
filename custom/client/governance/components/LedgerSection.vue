@@ -83,8 +83,8 @@ onMounted(() => void refresh())
       <span v-if="ledger?.doc" class="ledger__reviewed">{{ L?.reviewedAt }}: {{ ledger.doc.reviewedAt }}</span>
     </div>
     <div v-if="error" class="ledger__error">{{ error }}</div>
-    <div v-else-if="ledger && !ledger.exists" class="ledger__empty">{{ L?.missing }}</div>
-    <div v-else-if="!ledger" class="ledger__empty">…</div>
+    <div v-else-if="ledger && !ledger.exists" class="ui-empty-state">{{ L?.missing }}</div>
+    <div v-else-if="!ledger" class="ui-empty-state">…</div>
 
     <template v-else>
       <!-- 能力树 -->
@@ -175,7 +175,6 @@ onMounted(() => void refresh())
   &.is-bad { color: var(--error); border-color: rgba(var(--error-rgb), 0.33); background: rgba(var(--error-rgb), 0.08); } }
 .ledger__reviewed { margin-left: auto; font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .ledger__error { color: var(--error); font-size: 12px; }
-.ledger__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
 
 .ledger__tree { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; }
 .ledger__domain { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; }

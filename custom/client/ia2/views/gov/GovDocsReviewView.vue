@@ -207,7 +207,7 @@ onMounted(() => void refresh())
             </div>
           </div>
         </div>
-        <div v-else class="gov-docs__empty">{{ L.selectDoc }}</div>
+        <div v-else class="ui-empty-state">{{ L.selectDoc }}</div>
 
         <!-- 待裁决评审（G2 语义就地裁决） -->
         <div class="gov-docs__reviews" data-testid="gov-reviews">
@@ -338,14 +338,6 @@ onMounted(() => void refresh())
 }
 .gov-docs__docview-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
 .gov-docs__docview-body { padding: 12px 16px; overflow: auto; font-size: 12.5px; line-height: 1.7; }
-.gov-docs__empty {
-  border: 1px dashed var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 22px;
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--text-muted, #878c99);
-}
 .gov-docs__reviews {
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 8px;

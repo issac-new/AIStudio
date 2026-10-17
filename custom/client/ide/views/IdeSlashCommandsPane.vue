@@ -67,7 +67,7 @@ async function reload(): Promise<void> {
     </div>
     <p class="ide-slash__hint">{{ t('ide.slash.hint') }}</p>
 
-    <div v-if="!rows.length" class="ide-slash__empty" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
 
     <div v-for="(c, i) in rows" :key="i" class="ide-slash__row" :class="{ 'ide-slash__row--builtin': c.builtin }" :data-testid="`ide-slash-row-${i}`">
       <div class="ide-slash__line">
@@ -97,7 +97,6 @@ async function reload(): Promise<void> {
 .ide-slash__title { font-weight: 600; flex: 1; }
 .ide-slash__head button { border: 1px solid var(--border-color, #3a3f4b); background: none; color: var(--text-secondary, #b0b5be); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
 .ide-slash__hint { font-size: 10px; color: var(--text-muted, #9aa0aa); margin: 0 0 8px; }
-.ide-slash__empty { color: var(--text-muted, #9aa0aa); padding: 8px 0; }
 .ide-slash__row { border: 1px solid var(--border-color, #3a3f4b); border-radius: 6px; padding: 6px; margin-bottom: 8px; }
 .ide-slash__line { display: flex; gap: 4px; align-items: center; }
 .ide-slash__slash { color: var(--primary-color, #18a058); font-weight: 600; }

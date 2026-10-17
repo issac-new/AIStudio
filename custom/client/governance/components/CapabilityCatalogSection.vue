@@ -111,7 +111,7 @@ onMounted(() => void refresh())
         </thead>
         <tbody>
           <tr v-if="entries.length === 0">
-            <td colspan="7" class="hc__empty">{{ L?.catalogEmpty }}</td>
+            <td colspan="7" class="ui-empty-state ui-empty-state--compact">{{ L?.catalogEmpty }}</td>
           </tr>
           <tr v-for="e in entries" :key="`${e.source}:${e.id}`" :data-testid="`harness-catalog-row-${e.id}`">
             <td>{{ SOURCE_LABELS[e.source] ?? e.source }}</td>
@@ -162,6 +162,5 @@ onMounted(() => void refresh())
 .hc__badge { font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid; }
 .hc__badge--ok { color: var(--success); border-color: var(--success); background: rgba(var(--success-rgb), 0.25); }
 .hc__badge--gap { color: var(--danger); border-color: currentColor; background: rgba(var(--error-rgb), 0.25); }
-.hc__empty { text-align: center; opacity: 0.6; padding: 12px 0; }
 .hc__boundary { font-size: 11.5px; color: var(--ia-stale); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
 </style>

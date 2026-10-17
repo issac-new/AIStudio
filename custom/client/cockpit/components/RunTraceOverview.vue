@@ -177,10 +177,10 @@ function closeRightPanel() {
     <!-- 拓扑图 + 右侧时间轴详情（聚焦任务时显示） -->
     <div class="run-trace-overview__canvas">
       <div class="run-trace-overview__topo">
-        <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="run-trace-overview__empty">
+        <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="ui-empty-state">
           {{ t('cockpit.loadingAggregate') }}… {{ graph.progress.value }}%
         </div>
-        <div v-else-if="!graph.loading.value && topNodes.length === 0" class="run-trace-overview__empty">
+        <div v-else-if="!graph.loading.value && topNodes.length === 0" class="ui-empty-state">
           {{ graph.error.value || t('cockpit.noExecutionData') }}
         </div>
         <RunTraceTopology
@@ -259,7 +259,6 @@ function closeRightPanel() {
 /* 拓扑图区 */
 .run-trace-overview__canvas { flex: 1; min-height: 0; display: flex; }
 .run-trace-overview__topo { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-.run-trace-overview__empty { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .run-trace-overview__back-all { height: 28px; padding: 0 12px; border: 1px solid var(--accent-primary); border-radius: 6px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; flex-shrink: 0;
   &:hover { filter: brightness(1.08); }
 }

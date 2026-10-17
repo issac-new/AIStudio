@@ -167,7 +167,7 @@ function groupLabel(g: SpotRow['group']): string {
 
 <template>
   <div class="spot" data-testid="spotlight-panel" @click.stop @keydown="onKeydown">
-    <div v-if="!rows.length" class="spot__empty">{{ tx.groupEmpty }}</div>
+    <div v-if="!rows.length" class="ui-empty-state">{{ tx.groupEmpty }}</div>
     <div v-else ref="listRef" class="spot__list">
       <template v-for="(row, i) in rows" :key="row.key">
         <div v-if="i === 0 || rows[i - 1].group !== row.group" class="spot__group">{{ groupLabel(row.group) }}</div>
@@ -209,12 +209,6 @@ function groupLabel(g: SpotRow['group']): string {
   overflow: hidden;
 }
 
-.spot__empty {
-  padding: 24px 0;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 12px;
-}
 
 .spot__list { overflow-y: auto; padding: 4px 0; }
 

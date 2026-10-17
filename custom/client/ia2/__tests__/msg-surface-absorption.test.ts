@@ -64,7 +64,7 @@ describe('SpotlightPanel — 混合搜索（element-web Spotlight 吸收）', ()
 
   it('无匹配显示空态', () => {
     const wrapper = mount(SpotlightPanel, { props: { query: 'zzz不存在' } })
-    expect(wrapper.find('.spot__empty').exists()).toBe(true)
+    expect(wrapper.find('.ui-empty-state').exists()).toBe(true)
   })
 
   it('键盘 Enter 激活当前行（命令直达路由）', async () => {

@@ -28,7 +28,7 @@ function shortUser(mxId: string): string {
     <div class="gss__body">
       <div class="gss__card" data-testid="gov-stats-overdue">
         <div class="gss__card-head">{{ t('ia2.gov.stats.overdue') }}（{{ stats.overdue.length }}）</div>
-        <div v-if="!stats.overdue.length" class="gss__empty">{{ t('ia2.gov.stats.overdueEmpty') }}</div>
+        <div v-if="!stats.overdue.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.stats.overdueEmpty') }}</div>
         <div v-for="r in stats.overdue" :key="r.taskId" class="gss__row gss__row--over" :data-testid="`gov-reminder-${r.taskId}`">
           <span class="gss__name">{{ r.title }}</span>
           <span class="gss__meta">{{ shortUser(r.assignee) }} · {{ new Date(r.dueAt).toLocaleDateString('zh-CN') }}</span>
@@ -38,7 +38,7 @@ function shortUser(mxId: string): string {
       <div class="gss__grid">
         <div class="gss__card">
           <div class="gss__card-head">{{ t('ia2.gov.stats.byCase') }}</div>
-          <div v-if="!stats.byCase.length" class="gss__empty">{{ t('ia2.gov.stats.empty') }}</div>
+          <div v-if="!stats.byCase.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.stats.empty') }}</div>
           <div v-for="c in stats.byCase" :key="c.caseId" class="gss__row" :data-testid="`gov-stats-case-${c.caseId}`">
             <span class="gss__name">{{ c.caseId }}</span>
             <span class="gss__meta">{{ c.done }}/{{ c.total }}</span>
@@ -46,7 +46,7 @@ function shortUser(mxId: string): string {
         </div>
         <div class="gss__card">
           <div class="gss__card-head">{{ t('ia2.gov.stats.byPhase') }}</div>
-          <div v-if="!stats.byPhase.length" class="gss__empty">{{ t('ia2.gov.stats.empty') }}</div>
+          <div v-if="!stats.byPhase.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.stats.empty') }}</div>
           <div v-for="p in stats.byPhase" :key="p.phase" class="gss__row" :data-testid="`gov-stats-phase-${p.phase}`">
             <span class="gss__name">{{ p.phase }}</span>
             <span class="gss__meta">{{ p.done }}/{{ p.total }}</span>
@@ -54,7 +54,7 @@ function shortUser(mxId: string): string {
         </div>
         <div class="gss__card">
           <div class="gss__card-head">{{ t('ia2.gov.stats.byAssignee') }}</div>
-          <div v-if="!stats.byAssignee.length" class="gss__empty">{{ t('ia2.gov.stats.empty') }}</div>
+          <div v-if="!stats.byAssignee.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.stats.empty') }}</div>
           <div v-for="a in stats.byAssignee" :key="a.account" class="gss__row" :data-testid="`gov-stats-assignee-${a.account}`">
             <span class="gss__name">{{ shortUser(a.account) }}</span>
             <span class="gss__meta">{{ t('ia2.gov.stats.open') }} {{ a.open }} · ⛔ {{ a.blocked }}</span>
@@ -62,7 +62,7 @@ function shortUser(mxId: string): string {
         </div>
         <div class="gss__card">
           <div class="gss__card-head">{{ t('ia2.gov.stats.byAgent') }}</div>
-          <div v-if="!stats.byAgent.length" class="gss__empty">{{ t('ia2.gov.stats.empty') }}</div>
+          <div v-if="!stats.byAgent.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.stats.empty') }}</div>
           <div v-for="a in stats.byAgent" :key="a.agentId" class="gss__row" :data-testid="`gov-stats-agent-${a.agentId}`">
             <span class="gss__name">{{ a.agentId }}</span>
             <span class="gss__meta">▶ {{ a.running }}</span>
@@ -87,5 +87,4 @@ function shortUser(mxId: string): string {
 .gss__name { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gss__meta { margin-left: auto; font-size: 10px; color: var(--text-muted); flex: none; }
 .gss__badge { padding: 0 6px; border-radius: 6px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 10px; flex: none; }
-.gss__empty { padding: 8px 4px; color: var(--text-muted); font-size: 11px; }
 </style>

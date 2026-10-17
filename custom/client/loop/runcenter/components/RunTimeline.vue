@@ -121,7 +121,7 @@ function payloadJson(row: TimelineRow): string {
 
     <!-- 事件流 -->
     <div class="rt-panel__stream" :class="{ 'rt-panel__stream--loading': loading }">
-      <div v-if="rows.length === 0 && !loading" class="rt-panel__empty">
+      <div v-if="rows.length === 0 && !loading" class="ui-empty-state">
         {{ t('runcenter.timeline.empty') }}
       </div>
       <div
@@ -229,7 +229,6 @@ function payloadJson(row: TimelineRow): string {
   font-size: 12px;
 }
 .rt-panel__stream--loading { opacity: 0.6; }
-.rt-panel__empty { padding: 24px 0; text-align: center; color: var(--text-muted, #878c99); }
 
 .rt-row {
   display: flex;

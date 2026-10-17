@@ -116,7 +116,7 @@ function formatDuration(seconds?: number): string {
 
     <div v-if="open" class="ide-inbox__panel" data-testid="ide-inbox-panel">
       <div class="ide-inbox__head">{{ t('ide.inbox.title') }}</div>
-      <p v-if="items.length === 0" class="ide-inbox__empty">{{ t('ide.inbox.empty') }}</p>
+      <p v-if="items.length === 0" class="ui-empty-state">{{ t('ide.inbox.empty') }}</p>
       <ul v-else class="ide-inbox__list">
         <li v-for="item in items" :key="item.id" class="ide-inbox__item" :data-state="item.state">
           <span class="ide-inbox__dot" :class="`is-${item.state}`" />
@@ -180,9 +180,6 @@ function formatDuration(seconds?: number): string {
   margin-bottom: 6px;
 }
 
-.ide-inbox__empty {
-  color: var(--text-muted, #9aa0aa);
-}
 
 .ide-inbox__list {
   margin: 0;

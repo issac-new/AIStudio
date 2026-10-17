@@ -308,7 +308,7 @@ function togglePeek(run: RunSummary): void {
       </div>
     </div>
 
-    <div v-if="rows.length === 0 && !loading" class="rc-table__empty">
+    <div v-if="rows.length === 0 && !loading" class="ui-empty-state">
       {{ t('runcenter.table.empty') }}
     </div>
   </div>
@@ -508,9 +508,4 @@ function togglePeek(run: RunSummary): void {
   box-shadow: 0 0 0 2px var(--accent-primary, var(--color-primary, #3b82f6));
 }
 
-.rc-table__empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
-}
 </style>

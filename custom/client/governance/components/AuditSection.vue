@@ -96,8 +96,8 @@ onMounted(() => void refresh())
       <span v-if="provMsg" class="audit__prov-msg" data-testid="audit-prov-msg">{{ provMsg }}</span>
     </div>
     <div class="audit__body">
-      <div v-if="loading && !result" class="audit__empty">…</div>
-      <div v-else-if="!result || result.events.length === 0" class="audit__empty" data-testid="audit-empty">{{ L?.empty }}</div>
+      <div v-if="loading && !result" class="ui-empty-state ui-empty-state--compact">…</div>
+      <div v-else-if="!result || result.events.length === 0" class="ui-empty-state ui-empty-state--compact" data-testid="audit-empty">{{ L?.empty }}</div>
       <table v-else class="audit__table">
         <thead><tr><th>{{ L?.colTime }}</th><th>{{ L?.colSource }}</th><th>{{ L?.colActor }}</th><th>{{ L?.colAction }}</th><th>{{ L?.colTarget }}</th><th>{{ L?.colResult }}</th></tr></thead>
         <tbody>
@@ -161,7 +161,6 @@ onMounted(() => void refresh())
 .audit__prov-msg { font-size: 11px; opacity: 0.7; }
 .audit__count { font-size: 10.5px; color: var(--text-muted); }
 .audit__body { max-height: 300px; overflow: auto; }
-.audit__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted); }
 .audit__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
   th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-primary); }
   td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); vertical-align: top; } }

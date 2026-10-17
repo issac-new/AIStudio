@@ -41,8 +41,8 @@ onMounted(() => void refresh())
       <span v-if="data?.problems.length" class="sm__chip is-bad" data-testid="sm-problems">✕ {{ data.problems.length }} {{ L?.problems }}</span>
     </div>
     <div v-if="error" class="sm__error">{{ error }}</div>
-    <div v-else-if="data && !data.exists" class="sm__empty">{{ L?.missing }}</div>
-    <div v-else-if="!data" class="sm__empty">…</div>
+    <div v-else-if="data && !data.exists" class="ui-empty-state">{{ L?.missing }}</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <!-- 九态 -->
       <div class="sm__row" data-testid="sm-states">
@@ -85,7 +85,6 @@ onMounted(() => void refresh())
 .sm__chip { font-size: 10.5px; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 10px; padding: 1px 8px;
   &.is-bad { color: var(--error); border-color: rgba(var(--error-rgb), 0.33); background: rgba(var(--error-rgb), 0.08); } }
 .sm__error { color: var(--error); font-size: 12px; }
-.sm__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted); }
 .sm__row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
 .sm__label { font-size: 10.5px; color: var(--text-muted); }
 .sm__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: var(--text-secondary); background: var(--bg-secondary);

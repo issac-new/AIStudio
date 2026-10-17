@@ -138,7 +138,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
     <div class="ndp__body">
       <!-- ① 待人工决策：waiting 三源 + 评审门；行上就地处置 -->
       <template v-if="tab === 'decisions'">
-        <div v-if="!decisionRows.length" class="ndp__empty">{{ t('ia2.notify.emptyDecisions') }}</div>
+        <div v-if="!decisionRows.length" class="ui-empty-state">{{ t('ia2.notify.emptyDecisions') }}</div>
         <div v-for="row in decisionRows" :key="row.id" class="ndp__row" :class="{ 'ndp__row--read': read.isRead(row.id) }">
           <button type="button" class="ndp__main" :title="row.title" @click="onDecisionOpen(row)">
             <span class="ndp__dot" :class="read.isRead(row.id) ? 'is-read' : 'is-unread'" />
@@ -190,7 +190,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
             <span class="ndp__thrjump">{{ tx.threadsJump }} →</span>
           </button>
         </div>
-        <div v-if="!messageRows.length" class="ndp__empty">{{ t('ia2.notify.emptyMessages') }}</div>
+        <div v-if="!messageRows.length" class="ui-empty-state">{{ t('ia2.notify.emptyMessages') }}</div>
         <button
           v-for="m in messageRows" :key="m.id" type="button" class="ndp__row ndp__row--msg"
           :title="m.title" @click="onMessageOpen(m.routeTarget)"
@@ -251,7 +251,6 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__close { border: none; background: none; color: var(--text-muted); font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
   &:hover { color: var(--text-primary); } }
 .ndp__body { overflow-y: auto; padding: 4px 0; }
-.ndp__empty { padding: 28px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
 .ndp__row {
   display: flex; align-items: center; gap: 6px; padding: 4px 10px;
   &:hover { background: var(--bg-secondary); }

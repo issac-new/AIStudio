@@ -102,7 +102,7 @@ function truncate(s: unknown, max: number): string {
         </div>
       </section>
     </template>
-    <p v-else class="run-trace-inspector__empty">{{ t('cockpit.selectNodeForDetail') }}</p>
+    <p v-else class="ui-empty-state">{{ t('cockpit.selectNodeForDetail') }}</p>
   </aside>
 </template>
 
@@ -158,5 +158,4 @@ function truncate(s: unknown, max: number): string {
 .run-trace-inspector__label { font-size: 9px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px; }
 .run-trace-inspector__timeline-args pre, .run-trace-inspector__timeline-result pre { font-size: 10px; color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 6px; border-radius: 3px; margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
 
-.run-trace-inspector__empty { color: var(--text-muted); font-size: 12px; }
 </style>

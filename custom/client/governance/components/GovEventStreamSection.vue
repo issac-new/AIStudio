@@ -74,8 +74,8 @@ onMounted(() => void refresh())
     </div>
     <div v-if="error" class="ges__error" data-testid="ges-error">{{ error }}</div>
     <div class="ges__body">
-      <div v-if="loading && events.length === 0" class="ges__empty">…</div>
-      <div v-else-if="events.length === 0" class="ges__empty" data-testid="ges-empty">
+      <div v-if="loading && events.length === 0" class="ui-empty-state ui-empty-state--compact">…</div>
+      <div v-else-if="events.length === 0" class="ui-empty-state ui-empty-state--compact" data-testid="ges-empty">
         暂无事件——审批裁决与验证裁决（fail/pass）等真实事件会自动入流
       </div>
       <table v-else class="ges__table">
@@ -114,7 +114,6 @@ onMounted(() => void refresh())
 .ges__refresh { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary); }
 .ges__error { font-size: 11px; color: var(--error); }
 .ges__body { max-height: 300px; overflow: auto; }
-.ges__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted); }
 .ges__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
   th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-primary); }
   td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); vertical-align: top; } }

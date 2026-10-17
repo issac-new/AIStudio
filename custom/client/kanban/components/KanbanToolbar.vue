@@ -229,7 +229,7 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
           <button type="button" class="kanban-views__btn" data-testid="kanban-views-toggle" title="命名视图（保存当前过滤组合）" @click="viewsOpen = !viewsOpen">☰ 视图</button>
           <div v-if="viewsOpen" class="kanban-views__menu" data-testid="kanban-views-menu">
             <button type="button" class="kanban-views__save" data-testid="kanban-views-save" @click="onSaveCurrentView">＋ 保存当前为视图</button>
-            <div v-if="!savedViews.views.length" class="kanban-views__empty">暂无已存视图</div>
+            <div v-if="!savedViews.views.length" class="ui-empty-state ui-empty-state--compact">暂无已存视图</div>
             <div v-for="v in savedViews.views" :key="v.id" class="kanban-views__row">
               <button type="button" class="kanban-views__apply" :data-testid="`kanban-view-${v.id}`" :class="{ 'is-current': viewIsCurrent(v) }" @click="applyView(v)">
                 {{ viewIsCurrent(v) ? '● ' : '' }}{{ v.name }}
@@ -584,5 +584,4 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
 .kanban-views__apply.is-current { color: var(--primary-color, #18a058); }
 .kanban-views__row { display: flex; align-items: center; }
 .kanban-views__del { border: none; background: none; cursor: pointer; color: var(--text-muted); padding: 2px 6px; }
-.kanban-views__empty { font-size: 11px; color: var(--text-muted); padding: 4px 8px; }
 </style>

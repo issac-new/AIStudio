@@ -112,7 +112,7 @@ onMounted(() => void refresh())
             <button type="button" class="al__op al__op--danger" :data-testid="`al-delete-${e.target}`" @click="remove(e.target)">移除</button>
           </td>
         </tr>
-        <tr v-if="entries.length === 0 && !loading"><td colspan="6" class="al__empty">暂无配置——为 agent 配置自治档位后，事故报告的理论自治度对账将引用此处配置</td></tr>
+        <tr v-if="entries.length === 0 && !loading"><td colspan="6" class="ui-empty-state ui-empty-state--compact">暂无配置——为 agent 配置自治档位后，事故报告的理论自治度对账将引用此处配置</td></tr>
       </tbody>
     </table>
 
@@ -164,7 +164,6 @@ onMounted(() => void refresh())
   &.is-auto { color: var(--success); background: rgba(var(--success-rgb), 0.08); } }
 .al__op { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--accent-primary); padding: 0 4px; }
 .al__op--danger { color: var(--error); }
-.al__empty { text-align: center; color: var(--text-muted); padding: 12px; }
 .al__form { border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .al__form-title { font-size: 11px; font-weight: 600; }
 .al__row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }

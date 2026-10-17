@@ -54,7 +54,7 @@ describe('IdeHistoryBrowser — 历史提示浏览器', () => {
     await wrapper.find('[data-testid="ide-history-query"]').setValue('支付')
     expect(wrapper.findAll('.ihb__row').length).toBe(1)
     await wrapper.find('[data-testid="ide-history-query"]').setValue('zzz')
-    expect(wrapper.find('.ihb__empty').exists()).toBe(true)
+    expect(wrapper.find('.ui-empty-state').exists()).toBe(true)
   })
 
   it('定位动作走 focusMessageId 通道（与 IdeFindInSession 同源）', async () => {
@@ -77,6 +77,6 @@ describe('IdeHistoryBrowser — 历史提示浏览器', () => {
   it('空会话诚实空态', () => {
     sessionState.messages = []
     const wrapper = mount(IdeHistoryBrowser)
-    expect(wrapper.find('.ihb__empty').exists()).toBe(true)
+    expect(wrapper.find('.ui-empty-state').exists()).toBe(true)
   })
 })

@@ -129,7 +129,7 @@ function onKeydown(e: KeyboardEvent): void {
       v-model="query" type="text" class="ihb__query"
       :placeholder="tx.historySearchHint" data-testid="ide-history-query"
     >
-    <div v-if="!rows.length" class="ihb__empty">{{ tx.historyEmpty }}</div>
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact">{{ tx.historyEmpty }}</div>
     <div v-else class="ihb__list">
       <div
         v-for="(m, i) in rows" :key="m.id ?? i" class="ihb__row"
@@ -182,7 +182,6 @@ function onKeydown(e: KeyboardEvent): void {
   &:focus { border-color: var(--primary, #3b82f6); }
 }
 
-.ihb__empty { padding: 16px 0; text-align: center; color: var(--text-muted); font-size: 11px; }
 .ihb__forkmsg { padding: 4px 6px; font-size: 11px; color: #059669; }
 .ihb__forkerr { padding: 4px 6px; font-size: 11px; color: #dc2626; }
 

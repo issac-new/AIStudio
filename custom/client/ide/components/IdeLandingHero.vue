@@ -35,7 +35,7 @@ const { t } = useI18n()
         </button>
       </li>
     </ul>
-    <p v-else class="ide-landing__empty">{{ t('ide.landing.empty', '暂无任务：从看板新建或跳转进入后自动带入任务上下文') }}</p>
+    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '暂无任务：从看板新建或跳转进入后自动带入任务上下文') }}</p>
     <button type="button" class="ide-landing__enter" data-testid="ide-landing-enter" @click="$emit('enter')">
       {{ t('ide.landing.enter', '进入会话工作区') }}
     </button>
@@ -59,14 +59,6 @@ const { t } = useI18n()
   font-weight: 600;
 }
 .ide-landing__sub,
-.ide-landing__empty {
-  margin: 0;
-  max-width: 360px;
-  text-align: center;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 12px;
-  line-height: 1.6;
-}
 .ide-landing__list {
   list-style: none;
   margin: 8px 0 0;

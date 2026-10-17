@@ -192,7 +192,7 @@ function onSelect(id: string): void {
         </div>
       </template>
     </VueFlow>
-    <div v-else class="rg-canvas__empty">
+    <div v-else class="ui-empty-state">
       <slot name="empty" />
     </div>
   </div>
@@ -214,14 +214,6 @@ function onSelect(id: string): void {
 :deep(.vue-flow__node) { cursor: pointer; width: auto; }
 :deep(.vue-flow__node.is-selected .rg-node) { border-width: 2px; }
 
-.rg-canvas__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
-  font-size: 12px;
-}
 
 /* 节点卡片（Pure Ink 语义着色，只映射语义变量不写死主题色） */
 .rg-node {
