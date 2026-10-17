@@ -19,6 +19,7 @@ const active = ref<Set<string>>(new Set(SOURCE_IDS))
 const q = ref('')
 const result = ref<AuditLogResult | null>(null)
 const loading = ref(false)
+const loadError = ref('')
 const provMsg = ref('')
 
 /** PROV-O 导出（丁10 UI 化，2026-10-01）：audit 四源证据链下载为 W3C PROV JSON-LD。 */
@@ -60,8 +61,14 @@ function onQueryInput(): void {
 
 async function refresh(): Promise<void> {
   loading.value = true
+  loadError.value = ''
   try {
     result.value = await fetchAuditLog({ sources: [...active.value], q: q.value, limit: 200 })
+  } catch (e) {
+    // 端点失败如实呈现（原实现只有 finally：请求失败=未处理 Promise 拒绝，
+    // 界面停在「无记录」——审计查询失败与「确实没有事件」不可混同）
+    result.value = null
+    loadError.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }
@@ -96,7 +103,8 @@ onMounted(() => void refresh())
       <span v-if="provMsg" class="audit__prov-msg" data-testid="audit-prov-msg">{{ provMsg }}</span>
     </div>
     <div class="audit__body">
-      <div v-if="loading && !result" class="ui-empty-state ui-empty-state--compact">…</div>
+      <div v-if="loadError" class="ui-empty-state ui-empty-state--compact" data-testid="audit-error">审计查询失败：{{ loadError }}</div>
+      <div v-else-if="loading && !result" class="ui-empty-state ui-empty-state--compact">…</div>
       <div v-else-if="!result || result.events.length === 0" class="ui-empty-state ui-empty-state--compact" data-testid="audit-empty">{{ L?.empty }}</div>
       <table v-else class="audit__table">
         <thead><tr><th>{{ L?.colTime }}</th><th>{{ L?.colSource }}</th><th>{{ L?.colActor }}</th><th>{{ L?.colAction }}</th><th>{{ L?.colTarget }}</th><th>{{ L?.colResult }}</th></tr></thead>

@@ -98,9 +98,9 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         class="sim-center__settings"
         type="button"
         data-testid="ia-sim-settings-link"
-        title="推演设置"
+        title="仿真设置"
         @click="void router.push({ name: 'ia2.simSettings' })"
-      >⚙ 推演设置</button>
+      >⚙ 仿真设置</button>
     </header>
 
     <SimFlowStrip />

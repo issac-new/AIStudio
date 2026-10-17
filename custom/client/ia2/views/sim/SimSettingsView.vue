@@ -3,6 +3,7 @@
      审批升级超时。读写 simcenter 设置对；客户端提示值域但校验正身在服务端
      （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回仿真中心。 -->
 <script setup lang="ts">
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -52,9 +53,10 @@ onMounted(() => { void load() })
 
 <template>
   <div class="sst" data-testid="sst-page">
+  <IaBreadcrumb />
   <TabIntroBanner tab="sim-settings" />
     <header class="sst__head">
-      <h2 class="sst__title">推演设置</h2>
+      <h2 class="sst__title">仿真设置</h2>
       <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim' })">返回仿真中心</button>
     </header>
 

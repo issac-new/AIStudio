@@ -3,6 +3,7 @@
      整件迁入挂壳层（非第七签）；启动/续跑实际执行仍由 harness 侧承担（Q2 裁定
      一键启动维持 replan Phase C），preflight 十六项检视灯=端点未接挂账态如实。 -->
 <script setup lang="ts">
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useRouter } from 'vue-router'
 import OrchestrationView from '../orchestration/OrchestrationView.vue'
@@ -12,6 +13,7 @@ const router = useRouter()
 
 <template>
   <div class="orc" data-testid="orc-page">
+  <IaBreadcrumb />
   <TabIntroBanner tab="orchestration" />
     <header class="orc__head">
       <h2 class="orc__title">场景编排</h2>
