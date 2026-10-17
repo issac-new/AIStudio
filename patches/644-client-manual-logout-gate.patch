@@ -1,0 +1,63 @@
+--- a/packages/client/src/views/LoginView.vue
++++ b/packages/client/src/views/LoginView.vue
+@@ -85,12 +85,16 @@
+   const savedHs = localStorage.getItem('matrix_homeserver_url');
+   if (savedHs) homeserverUrl.value = savedHs;
+   // C2 自动登录：本机 gateway 已配 Matrix access_token 时免密直入，失败回落手动登录。
+-  try {
+-    if (await authStore.autoLoginFromGateway()) {
+-      router.push(resolveLoginRedirect(route.query.redirect));
+-      return;
+-    }
+-  } catch { /* 回落手动登录 */ }
++  // 手动登出闸门：本标签页刚退出登录时不再自动拉回 gateway 账号，回落手动表单；
++  // 手动登录成功后清除标记（新开标签页不受影响，自动登录照常）。
++  if (!sessionStorage.getItem('hermes_manual_logout')) {
++    try {
++      if (await authStore.autoLoginFromGateway()) {
++        router.push(resolveLoginRedirect(route.query.redirect));
++        return;
++      }
++    } catch { /* 回落手动登录 */ }
++  }
+   loadSavedCredentials('matrix');
+   loadSavedCredentials('local');
+ });
+@@ -113,6 +117,7 @@
+     await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
+     localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
+     if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
++    sessionStorage.removeItem('hermes_manual_logout');
+     router.replace(loginRedirectTarget());
+   } catch (err: any) {
+     errorMsg.value = classifyLoginError(err);
+@@ -127,6 +132,7 @@
+   try {
+     await authStore.localLogin(localUsername.value.trim(), localPassword.value);
+     if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
++    sessionStorage.removeItem('hermes_manual_logout');
+     router.replace(loginRedirectTarget());
+   } catch (err: any) {
+     errorMsg.value = err?.message || t("login.invalidCredentials");
+--- a/packages/client/src/stores/hermes/auth.ts
++++ b/packages/client/src/stores/hermes/auth.ts
+@@ -123,6 +123,8 @@
+     user.value = null
+     hermesToken.value = null
+     matrixToken.value = null
++    // 手动登出标记：LoginView 据此跳过 C2 自动登录，避免退出后立即被 gateway 账号拉回。
++    try { sessionStorage.setItem('hermes_manual_logout', '1') } catch { /* SSR/隐私模式降级 */ }
+     clearApiKey()
+     clearMatrixCredentials()
+   }
+--- a/packages/client/src/components/layout/SidebarAccountControls.vue
++++ b/packages/client/src/components/layout/SidebarAccountControls.vue
+@@ -56,6 +56,8 @@
+ async function handleLogout() {
+   const userId = getStoredUserId();
+   if (userId) await clearThemeBackgroundCache(userId);
++  // 手动登出标记：LoginView 据此跳过 C2 自动登录，避免退出后立即被 gateway 账号拉回。
++  sessionStorage.setItem('hermes_manual_logout', '1');
+   localStorage.clear();
+   window.location.reload();
+ }

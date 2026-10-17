@@ -71,7 +71,7 @@ onMounted(() => { void refresh() })
 
     <p v-if="loadError" class="clr__error" data-testid="clr-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="clr__msg" data-testid="clr-action-msg">{{ actionMsg }}</p>
-    <p v-else-if="!ledger" class="clr__hint">读取中……</p>
+    <p v-else-if="!ledger && !loadError" class="clr__hint">读取中……</p>
 
     <template v-if="ledger">
       <section class="clr__box">
