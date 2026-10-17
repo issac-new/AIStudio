@@ -808,3 +808,6 @@
 # flushKanbanListTasksCache 传入 initCommandPost（custom require 上游路径会解析成
 # 第二实例，flush 填错对象；与 646 配套）。
 647-server-command-post-flush-inject.patch
+# 648: 路由懒分片拉取失败兜底（D5）——vite dev 深模块图偶发 import 失败/pending，
+# router.onError 识别 ESM 失败类错误做一次性整页重载（清失败缓存，防重载风暴）。
+648-client-router-lazy-chunk-reload.patch
