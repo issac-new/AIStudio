@@ -48,6 +48,11 @@
 - 三修（同日）：媒体查询挡不住**按语言**的 chip 宽度漂移（EN 态 Tasks/Online chip 更宽，1280 视口复现半裁不可点）。根治=`.cockpit-top__sit` 改 `flex-shrink: 0`（胶囊永不半裁），挤压由搜索框（shrink 2/min 120）与 spacer 吸收；媒体查询保留为 ≥1440 显全明细的开关。
 - R7 提速（同日二修）：GUI 实测 ghost 深链要等逐板 listTasks 串行 CLI（16 板近分钟）才收起——前置一发 `getTask(id)`（服务端快 404 闸毫秒级判死活），404 即收起；存在则走原逐板流程。两测试文件 mock 补 getTask，慢解析用例改为悬挂 Promise 验证「不因慢收起」。
 
+### 追加（2026-10-18 晨）：R8 复测揪出的旧看板 403（patch 654）
+- 现象：/hermes/kanban 多数重载弹全局「你没有权限访问该资源」且列表区空（叠加 kanban.db-wal 瞬时只读窗——宿主权限环境问题，chmod 后自愈）。
+- 定位：临时 400 访问日志（用后即撤）实锤 `GET /api/hermes/kanban/search-sessions?task_id=…&profile=orchestrator → 403`。根因=canUseProfile 对空 user_profiles 集仍逐 profile 拒绝——477 的「空映射=admin 不限制」豁免只加在列表过滤，未覆盖 profile 定向读。
+- 修复：654 补丁 canUseProfile 空集放行（`allowed.size === 0` 视为不限制），与 477 语义对齐。
+
 ## 验证
 
 - 单测：sitline 5/5、ia-shell-header-sit、sim-atoms（关闭态改断言）、matrix-chat 全套 40/40、briefing-deeplink 新增 R7 用例 4/4、briefing-cross-board 3/3。
