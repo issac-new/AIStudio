@@ -42,6 +42,17 @@ describe('entry.mts 冷启动装载时序', () => {
     expect(useRouterLines[0]).toBeGreaterThan(piniaLines[0])
   })
 
+  it('术语覆盖在首次语言切换之后应用（防 switchLocale 重建词条树覆盖已合并的覆盖词条）', () => {
+    const lines = src.split('\n')
+    const localeAssign = lines.findIndex(l => l.includes('localeReady = import('))
+    const awaitLocale = lines.findIndex(l => l.trim() === 'await localeReady')
+    const apply = lines.findIndex(l => l.includes('applyIa2TermOverrides(i18n)'))
+    expect(localeAssign, 'localeReady 须由启动语言切换赋值').toBeGreaterThan(-1)
+    expect(awaitLocale, 'i18nInstalled 须等待 localeReady').toBeGreaterThan(-1)
+    expect(apply, '术语覆盖调用须存在').toBeGreaterThan(-1)
+    expect(apply, '术语覆盖早于语言切换完成 → 会被 setLocaleMessage 抹掉').toBeGreaterThan(awaitLocale)
+  })
+
   it('isReady 与 mount 保持在链尾（router.isReady → app.mount）', () => {
     expect(isReadyLines.length).toBe(1)
     expect(mountLines.length, "app.mount('#app') 调用应恰好一处").toBe(1)
