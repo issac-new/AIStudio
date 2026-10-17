@@ -76,9 +76,15 @@ export function buildClosingOrder(cardId: string, commitHint?: string): string {
 
 // ── fetch 层（薄封装；失败抛错由调用方呈现，不静默）──
 
+// 回归测试 D2（2026-10-17）：非 2xx 时优先透出服务端 error 消息（fail-closed
+// 端点带人话原因，如「清偿台账未配置（ORGLOOP_LEDGER_TSV 缺席=fail-closed）」），
+// 避免把内部端点路径+状态码裸露给最终用户。
 async function getJson<T>(path: string): Promise<T> {
   const res = await authFetch(path)
-  if (!res.ok) throw new Error(`${path} → ${res.status}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { error?: string } | null
+    throw new Error(body?.error || `${path} → ${res.status}`)
+  }
   return res.json() as Promise<T>
 }
 
