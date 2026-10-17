@@ -40,10 +40,16 @@ const query = computed(() => props.query.trim().toLowerCase())
     IDE=ide.shell（/app/ide 子路由）、设置=hermes.settings（收编路由）。 */
 const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: { name: string; query?: Record<string, string> } }>>(() => [
   { key: 'overview', label: tx.value.cmdOverview, icon: '🏠', to: { name: 'ia2.dash' } },
+  { key: 'journey', label: '旅程首页（搭建五步＋交付五阶段）', icon: '🧭', to: { name: 'ia2.journey' } },
   { key: 'board', label: tx.value.cmdBoard, icon: '📋', to: { name: 'ia2.board' } },
   { key: 'inbox', label: tx.value.cmdInbox, icon: '📥', to: { name: 'ia2.inbox' } },
-  { key: 'runs', label: tx.value.cmdRuns, icon: '⚙️', to: { name: 'ia2.runs' } },
-  { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.board', query: { tab: 'gov-org' } } },
+  // 动线批（2026-10-17）：runs/gov 两命令语义过期实锤（runs 走退役重定向多一跳、
+  // gov 指向看板协作签而非治理中心）——直改直达；并补高频签级与阶段页直达。
+  { key: 'runs', label: tx.value.cmdRuns, icon: '🛰️', to: { name: 'ia2.sim' } },
+  { key: 'sim-supervision', label: '监督面板（仿真中心）', icon: '🛰️', to: { name: 'ia2.simSupervision' } },
+  { key: 'sim-delivery', label: '交付健康（仿真中心）', icon: '🚚', to: { name: 'ia2.simDelivery' } },
+  { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.governance' } },
+  { key: 'gov-docs', label: '文档评审（治理中心）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
   { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
   { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'hermes.settings' } },

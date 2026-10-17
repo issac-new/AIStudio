@@ -85,6 +85,7 @@ function goStage(no: number): void {
       <div class="jrn__runbar">
         <input v-model="runInput" class="jrn__input" data-testid="jrn-run" placeholder="输入运行目录名查看该轮进度（如 20261015-v8-run20）" @keyup.enter="submitRun">
         <button class="jrn__btn" type="button" data-testid="jrn-load" @click="submitRun">查看进度</button>
+        <button class="jrn__btn jrn__btn--ghost" type="button" data-testid="jrn-dash-link" title="我的待办/评审闸口/交付进度三卡概览" @click="router.push({ name: 'ia2.dash' })">驾驶舱概览 →</button>
       </div>
     </header>
 
@@ -92,7 +93,7 @@ function goStage(no: number): void {
     <div v-if="runState && bottleneck" class="jrn__bottleneck" data-testid="jrn-bottleneck">
       <span class="jrn__bottleneck-tag">当前卡点</span>
       <span class="jrn__bottleneck-text">第 {{ bottleneck.no }} 阶段·{{ bottleneck.title }}——{{ bottleneck.act }}</span>
-      <span v-if="openItems > 0" class="jrn__bottleneck-debt">另有 {{ openItems }} 笔遗留项未清算，启动新运行前须清零</span>
+      <button v-if="openItems > 0" type="button" class="jrn__bottleneck-debt jrn__bottleneck-debt--link" data-testid="jrn-bottleneck-debt" title="去治理中心·遗留项清算处理" @click="router.push({ name: 'ia2.govClearance' })">另有 {{ openItems }} 笔遗留项未清算，启动新运行前须清零——去清算</button>
     </div>
 
     <!-- 无轮引导态（D19 收敛：一句话+双按钮） -->
@@ -170,6 +171,7 @@ function goStage(no: number): void {
   font-size: 12px; width: 300px; background: transparent; color: inherit;
   font-family: var(--font-mono);
 }
+.jrn__btn--ghost { background: transparent; color: var(--text-secondary); }
 .jrn__btn {
   border: 1px solid var(--accent-primary, var(--color-primary)); border-radius: 6px;
   background: transparent; color: var(--accent-primary, var(--color-primary));
@@ -227,4 +229,8 @@ function goStage(no: number): void {
 }
 .jrn__gated { margin: 0; font-size: 11px; color: var(--ia-stale, var(--ia-stale)); }
 .jrn__go { margin: 0; font-size: 11px; color: var(--accent-primary, var(--color-primary)); }
+
+/* 动线批：卡点遗留项行可点去清偿门 */
+.jrn__bottleneck-debt--link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.jrn__bottleneck-debt--link:hover { filter: brightness(1.1); }
 </style>

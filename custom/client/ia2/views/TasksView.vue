@@ -74,8 +74,15 @@ const TAB_ALIASES: Readonly<Record<string, TabKey>> = { gov: 'gov-org' }
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
  *  工作台（页头视图切换器同义的回退动线） */
+// 动线批（2026-10-17）：关闭钮回来源——此前固定回工作台，从阶段 5 审批待办
+// 等处进入后「关闭」落到别处；有来路（本会话内发生过导航）则 history 回退。
+function closeGoBack(fallback: () => void): void {
+  if (window.history.length > 1) router.back()
+  else fallback()
+}
+
 function closeBoard(): void {
-  void router.push({ name: 'ia2.collab' })
+  closeGoBack(() => { void router.push({ name: 'ia2.collab' }) })
 }
 
 /** kanban 任务状态词表（台账 T7 双源收敛：由上游 KanbanTaskStatus 类型派生，

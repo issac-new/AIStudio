@@ -4,6 +4,7 @@
      整块不可达；本路由让它重新可达。零新端点——面板全走 Matrix 注册房与看板 API，
      PL0 自写、PL50 领导层，管理区按 isLeader 门控，非领导只见自声明区与账号树。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { defineAsyncComponent } from 'vue'
 
 // 异步隔离同 EngScene 手法：matrix-teams 依赖面不渲染不评估，按需加载
@@ -13,6 +14,7 @@ const TeamsManagePanel = defineAsyncComponent(() =>
 
 <template>
   <section class="teams-view" data-testid="teams-page">
+  <TabIntroBanner tab="teams" />
     <TeamsManagePanel />
   </section>
 </template>

@@ -51,7 +51,7 @@ export const STAGE_META: readonly StageMeta[] = [
     tools: [
       { key: 'runOverview', label: '运行总览', desc: '运行模式横幅·六道质量门行（G1 状态）·净计卡', to: '/app/sim', name: 'ia2.sim' },
       { key: 'orchestrate', label: '运行编排', desc: '启动/续跑/运行模式切换·启动前检查', to: '/app/sim/orchestration', name: 'ia2.simOrchestration' },
-      { key: 'docReview', label: '文档评审', desc: '冻结单字段级核对（缺项红显）', to: '/app/gov', name: 'ia2.governance' },
+      { key: 'docReview', label: '文档评审', desc: '冻结单字段级核对（缺项红显）', to: '/app/gov/docs', name: 'ia2.govDocs' },
     ],
   },
   {
@@ -100,8 +100,8 @@ export const STAGE_META: readonly StageMeta[] = [
     tools: [
       { key: 'clearance', label: '遗留项清算', desc: '遗留项清单·resolve/waive 审批', to: '/app/gov/clearance', name: 'ia2.govClearance' },
       { key: 'issues', label: '问题清单对账', desc: '处置率·台账全量', to: '/app/gov/issues', name: 'ia2.govIssues' },
-      { key: 'metrics', label: '度量检查', desc: '五卡检查·磁盘水位预警', to: '/app/gov', name: 'ia2.governance' },
-      { key: 'audit', label: '审计与变更', desc: '四查状态·基线变更记录', to: '/app/gov', name: 'ia2.governance' },
+      { key: 'metrics', label: '度量检查', desc: '五卡检查·磁盘水位预警', to: '/app/gov/metrics', name: 'ia2.govMetrics' },
+      { key: 'audit', label: '审计与变更', desc: '四查状态·基线变更记录', to: '/app/gov/audit', name: 'ia2.govAudit' },
     ],
   },
 ]

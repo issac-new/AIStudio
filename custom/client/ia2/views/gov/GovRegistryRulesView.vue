@@ -3,6 +3,7 @@
      板块=能力台账 · 状态本体 · 决策规则闸（注册表只读投影+mode 徽标）· 运行态
      （SLO 档/用量/成本）。分区无内部导航；各板块自取数、失败态自管。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
 import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
@@ -17,6 +18,7 @@ const tabText = useGovTabsText()
 
 <template>
   <div class="ia-area gov-view" data-testid="ia-tasks-panel-gov-registry">
+  <TabIntroBanner tab="gov-registry" />
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovRegistry }}</h2>

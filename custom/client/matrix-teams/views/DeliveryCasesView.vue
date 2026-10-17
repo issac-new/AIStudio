@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TabIntroBanner from '@/custom/ia2/components/TabIntroBanner.vue'
 // 交付案例面板（M2，分布式设计 §7 协作场景）：案例列表 → 阶段条 P1-P6 → 门禁灯
 // G1-G6 → 证据抽屉（gate 事件详情：evidence/decidedBy/reason/at）。数据来自
 // delivery-cases store（index 发现 + case state + timeline 事件投影）。
@@ -97,6 +98,7 @@ function openRoom(roomId: string) {
 
 <template>
   <div class="delivery-cases">
+  <TabIntroBanner tab="cases" />
     <div class="head">
       <h2>{{ $t('ia2.delivery.title') }}</h2>
       <div class="head__actions">

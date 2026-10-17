@@ -15,6 +15,7 @@
      运行画布耗时徽章与语义块回放（RunCanvas 内消费）；调研正本
      docs/comm-collab-v13-research.md。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -558,6 +559,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       >▶</button>
     </div>
     <section class="wb__center" data-testid="wb-center">
+      <TabIntroBanner tab="collab" />
       <!-- R6 补充：中栏栏控迁独立控制条行 -->
       <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
         <IaColumnControls

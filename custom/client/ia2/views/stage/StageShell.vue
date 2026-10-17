@@ -9,6 +9,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import KeyLedgerSection from '../gov/KeyLedgerSection.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
@@ -69,6 +70,7 @@ function goStep(st: SetupStep): void {
 
 <template>
   <div class="stg" :data-testid="`stg-page-${meta.no}`">
+    <IaBreadcrumb />
     <header class="stg__head">
       <span class="stg__no" :class="`stg__no--${stageState}`">{{ meta.no }}</span>
       <div class="stg__heading">
