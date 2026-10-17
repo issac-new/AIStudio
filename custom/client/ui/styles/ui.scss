@@ -29,3 +29,13 @@
     padding: 16px 12px;
   }
 }
+
+/* ── 侧栏账号头像灰度（观察项清偿 O-1，2026-10-17）──
+ * 走查判读的「AK 彩色 logo」实为 boring-avatars beam 生成的账号几何头像——
+ * 彩色生成器输出与 Pure Ink 黑白水墨主题割裂。仅灰度侧栏账号位（按钮+账号
+ * 菜单头，全局选择器零 patch 落此层）；用户上传图片头像（个人内容）与
+ * 其他界面的头像不灰。全应用头像黑白化=开放项，待拍板。 */
+.page-sidebar-account-btn .profile-avatar-svg,
+.sidebar-account-menu .profile-avatar-svg {
+  filter: grayscale(1);
+}

@@ -297,7 +297,7 @@ function onPanelJumpTask(taskId: string): void {
 </template>
 
 <style scoped lang="scss">
-.cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; padding: 0 12px; position: relative; z-index: 10; }
+.cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 12px; position: relative; z-index: 10; }
 /* 2026-09-30：品牌位文字退役改挂切换器控件簇——不再收缩裁剪（窄幅挤压转由
  * 搜索框 flex-shrink:2 与态势条横向滚动吸收），文字省略三件套随之退役 */
 .cockpit-top__brand { display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
