@@ -28,6 +28,9 @@ export interface CommandPostDeps {
   resolveKanbanDir?: () => string
   listBoards: (opts?: { includeArchived?: boolean }) => Promise<any[]>
   listTasks: (opts?: { board?: string; includeArchived?: boolean }) => Promise<any[]>
+  /** 单板列表 service 层缓存失效（patch 647 注入同一模块实例的 flush——custom
+   *  里 require 上游路径会解析成第二实例，flush 填错实例无效） */
+  flushListTasksCache?: () => void
   watchEvents: (opts?: { board?: string; interval?: number }) => any
   killWatch: (pid: number | undefined, fallbackKill: () => void) => void
   getSession: (sessionId: string) => any
@@ -60,8 +63,27 @@ export function initCommandPost(deps: CommandPostDeps): CommandPostSingleton {
     kanbanDir: deps.resolveKanbanDir,
   })
   // 性能批二轮（2026-09-30）：板级 WS 事件 → 看板读缓存即时失效——agent 侧写
-  // 看板（不经本进程 API）不再受 TTL 陈旧窗口约束（TTL 只兜底 watcher 空闲板）
-  overview.onBoardEvent(() => kanbanReadCache.flush())
+  // 看板（不经本进程 API）不再受 TTL 陈旧窗口约束（TTL 只兜底 watcher 空闲板）。
+  // 2026-10-17 回归轮性能批：同事件再失效 kanban-service 单板 listTasks 的
+  // service 层缓存（patch 646），否则 HTTP 层清了、回源仍命中 service 旧值，
+  // agent 翻卡的陈旧窗口被钉到 service TTL+HTTP TTL。
+  overview.onBoardEvent(() => {
+    kanbanReadCache.flush()
+    // 同实例 flush（patch 647 注入；缺席时仅 HTTP 层失效，service 层由 TTL 兜底）
+    deps.flushListTasksCache?.()
+  })
+
+  // 2026-10-17 回归轮性能批：kanban 单板列表 service 层缓存定时续期（keep-warm）
+  // ——~1.8s CLI spawn 的冷回源只发生在后台。用 deps.listTasks（routes.ts 注入
+  // 的同一模块函数实例——custom 里 require 上游路径会解析成第二个模块实例，
+  // 缓存分裂使预热填错实例，实测首请求仍冷）。启动 45s 后开始，25s 循环
+  // （TTL 60s 余量 35s 盖住执行漂移），unref 不阻止进程退出。plugins 页低频，
+  // 只靠 patch 645 的 TTL 缓存（60s 内跨用户免费），不做常驻续期。
+  setTimeout(function warmKanbanList() {
+    void deps.listTasks({ board: 'default', includeArchived: true })
+      .catch(() => { /* 续期失败无害：下一拍重试 */ })
+      .finally(() => { setTimeout(warmKanbanList, 25_000).unref?.() })
+  }, 45_000).unref?.()
   const teams = createTeamsStore()
   const fleetRouter = createFleetRouter({
     buildSnapshot: buildFleetSnapshotFromTap,

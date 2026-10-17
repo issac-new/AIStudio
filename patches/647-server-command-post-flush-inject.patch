@@ -1,0 +1,13 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -314,6 +314,10 @@
+ const commandPost = initCommandPost({
+   listBoards: kanbanCliForCommandPost.listBoards,
+   listTasks: kanbanCliForCommandPost.listTasks,
++  // overlay[perf]（2026-10-17 回归轮）：单板列表 service 缓存的板事件失效——注入
++  // 同一模块实例的 flush（patch 646），command-post 侧 custom require 会解析成
++  // 第二实例导致 flush 填错对象。
++  flushListTasksCache: kanbanCliForCommandPost.flushKanbanListTasksCache,
+   watchEvents: kanbanCliForCommandPost.watchEvents,
+   killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
+   getSession: getSessionRowForCommandPost,

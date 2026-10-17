@@ -796,3 +796,15 @@
 # hermes_manual_logout 标记；LoginView 检测到标记跳过 autoLoginFromGateway 回落手动表单，
 # 手动登录成功后清除标记（新标签页不受影响）。
 644-client-manual-logout-gate.patch
+# 645: 插件列表 TTL 缓存 + stale-while-revalidate——每次列表都是 spawn python 全目录
+# 扫描（~3s），插件清单仅随目录/enable/disable 变化；按 profile 键控 60s TTL，
+# enable/disable 即失效，命中且剩余寿命过半时后台续期（访问驱动保温）。
+645-server-plugins-list-cache.patch
+# 646: 单板任务列表 service 层 TTL 缓存（60s，CLI 输出原样缓存）+ SWR 后台续期
+# ——治旧看板页/单板链每个用户键首次回源的 ~1.8s CLI spawn；写路径经 execKanbanCli
+# 咽喉全量失效，agent 侧板事件由 command-post onBoardEvent 双失效（HTTP+service）。
+646-server-kanban-listtasks-cache.patch
+# 647: command-post 板事件失效注入——routes.ts 把 kanban-service 同一模块实例的
+# flushKanbanListTasksCache 传入 initCommandPost（custom require 上游路径会解析成
+# 第二实例，flush 填错对象；与 646 配套）。
+647-server-command-post-flush-inject.patch
