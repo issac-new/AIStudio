@@ -27,7 +27,7 @@ const PROVENANCE_LABEL: Record<VerdictProvenance, string> = {
         data-testid="sim-verdict-provenance"
       >{{ PROVENANCE_LABEL[props.verdict.provenance] }}</span>
     </template>
-    <span v-else class="sim-verdict__absent" data-testid="sim-verdict-absent">无判词（缺席如实呈现）</span>
+    <span v-else class="sim-verdict__absent" data-testid="sim-verdict-absent">无判定</span>
     <span
       v-if="props.criteria"
       class="sim-verdict__criteria"

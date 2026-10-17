@@ -64,7 +64,7 @@ async function load(): Promise<void> {
     <div v-if="organized" class="sup__grid">
       <section class="sup__main">
         <h4 class="sup__h">观察窗流（{{ organized.windows.length }} 窗）</h4>
-        <p v-if="organized.windows.length === 0" class="sup__hint" data-testid="sup-windows-empty">该区间无观察窗行（如实呈现）。</p>
+        <p v-if="organized.windows.length === 0" class="sup__hint" data-testid="sup-windows-empty">该区间无观察窗行。</p>
         <div v-for="w in windowsDesc" :key="w.id" class="sup__win" :data-testid="`sup-win-${w.id}`">
           <div class="sup__win-head">
             <span class="sup__win-id">{{ w.id }}</span>
@@ -90,7 +90,7 @@ async function load(): Promise<void> {
       <aside class="sup__side">
         <section class="sup__side-box">
           <h4 class="sup__h">研判（接棒员局势）</h4>
-          <p v-if="organized.briefs.length === 0" class="sup__hint">无研判行（如实呈现）。</p>
+          <p v-if="organized.briefs.length === 0" class="sup__hint">无研判行。</p>
           <ul v-else class="sup__tl">
             <li v-for="(b, i) in organized.briefs" :key="i" class="sup__tl-row" role="button" data-testid="sup-brief-row" @click="openLineDrawer(`研判 ${b.ts}`, { t: 'situation_brief', ts: b.ts, brief: b.text })">
               <span class="sup__tl-ts">{{ b.ts }}</span>
@@ -100,7 +100,7 @@ async function load(): Promise<void> {
         </section>
         <section class="sup__side-box">
           <h4 class="sup__h">判定（停滞判定）</h4>
-          <p v-if="organized.verdicts.length === 0" class="sup__hint">无判定行（如实呈现）。</p>
+          <p v-if="organized.verdicts.length === 0" class="sup__hint">无判定行。</p>
           <ul v-else class="sup__tl">
             <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判定 ${v.ts}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
               <span class="sup__tl-ts">{{ v.ts }}</span>

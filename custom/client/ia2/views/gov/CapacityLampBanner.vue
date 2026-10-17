@@ -31,7 +31,7 @@ onMounted(() => { void refresh() })
 
 <template>
   <div v-if="absent" class="clb clb--absent" data-testid="clb-absent">
-    容量水位面缺席（巡检官快照端点未接或未启）——如实呈现，不猜。
+    容量水位面缺席（端点未接或未启）。
   </div>
   <div
     v-else-if="anomalies && anomalies.length > 0"

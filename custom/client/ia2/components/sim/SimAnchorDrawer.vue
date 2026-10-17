@@ -40,7 +40,7 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
       {{ ANCHOR_LABEL[props.anchorType] }}锚：{{ props.anchorId }}
     </div>
     <div v-else class="sim-anchor-drawer__anchor sim-anchor-drawer__anchor--absent" data-testid="sim-anchor-drawer-anchor-absent">
-      无锚（缺席如实呈现）
+      无锚
     </div>
     <pre class="sim-anchor-drawer__evidence" data-testid="sim-anchor-drawer-evidence">{{ props.evidence ?? '（证据原文缺席）' }}</pre>
   </div>
