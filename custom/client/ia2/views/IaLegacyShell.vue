@@ -9,7 +9,7 @@
      页面组件按路由名懒加载（VIEW_LOADERS 单一映射表）；hermes.browser
      不收编（上游桌面桥运行时条件注册，保持桌面专属语义与 hasRoute 门控）。 -->
 <script setup lang="ts">
-import { computed, shallowRef, watch, defineComponent, h } from 'vue'
+import { computed, shallowRef, watch, defineComponent, h, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { defineAsyncComponent, markRaw, type Component } from 'vue'
 import { VIEW_LOADERS, warmAllLegacyViews } from './legacy-view-loaders'
@@ -17,6 +17,7 @@ import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaSettingsSidebar from '../components/IaSettingsSidebar.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useWorkspaceStore } from '../store/workspace'
+import { retainBodyClass } from '../composables/useBodyClass'
 
 
 const route = useRoute()
@@ -28,6 +29,11 @@ const workspace = useWorkspaceStore()
 warmAllLegacyViews()
 
 const pageComp = shallowRef<Component | null>(null)
+
+// 2026-10-18：收编页同样隐藏上游 rail——本壳自带 IaSettingsSidebar，双左栏不可接受。
+let releaseBodyClass: (() => void) | null = null
+onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
+onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 
 // 回归轮 D5 根治（2026-10-17）：vite dev 下懒分片动态 import 偶发**永远 pending**
 // （非 reject——实测模型页 ~50% 概率；vite transform/网络竞态，模块图挂起），

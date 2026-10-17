@@ -18,6 +18,7 @@ import SimFlowStrip from './SimFlowStrip.vue'
 import RunSelector from './RunSelector.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useCenterNavLocale } from '../../nav-centers'
+import { retainBodyClass } from '../../composables/useBodyClass'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,8 +26,10 @@ const text = useSimTabsText()
 const navLocale = useCenterNavLocale()
 
 // V1 壳收敛（视觉重规划 D2）：推演专区全宽——挂载期隐藏上游导航 rail
-onMounted(() => document.body.classList.add('ia-center-full'))
-onUnmounted(() => document.body.classList.remove('ia-center-full'))
+// 2026-10-18：改为引用计数，IaShell 全程 retain 时本页卸载不会误摘 body 类。
+let releaseBodyClass: (() => void) | null = null
+onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
+onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 
 type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence'
 interface SimTab { key: TabKey; name: string }
