@@ -817,3 +817,6 @@
 # 650: 设备互联零页签空态——connectionsExtras 关且非 super_admin 时三个页签全被
 # 条件裁掉，NTabs 空渲染导致整页空白；补 common.noData 空态。
 650-client-connections-empty-state.patch
+# 651: 任务子资源（log/attachments/评论）跨板读——解析命中板后再调 CLI；授权
+# 函数对 admin/super_admin 免认领白名单过滤（否则抽屉正文 200、日志/附件区 404/500）。
+651-server-kanban-subresource-board.patch

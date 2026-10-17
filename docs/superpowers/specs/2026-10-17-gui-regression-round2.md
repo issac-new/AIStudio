@@ -80,7 +80,7 @@
   - D2：运行总览读取 run21 返回真实数据（运行模式/26 步/六闸，t139 截图）；topology 200。
   - D3：设备互联显示「暂无数据」空态（t142 截图）。
   - D4：本体版本页时间均为 2026-10-10（t140 截图）。
+- 子资源补全：651 补丁把「解析后的 board」贯穿到 `taskLog`/`listAttachments`/`readAttachment`，并让 `getAuthorizedTask`/`authorizeTaskIds` 对 admin/super_admin 免认领白名单过滤。跨板任务 `/log`、`/attachments` 均 200；GUI 抽屉活动/评论区无 404（t145 截图）。
 - 残留：
-  - 任务抽屉的日志/附件子端点对跨板任务仍 404（`/log`、`/attachments`）。根因：子资源 handler 走 `authorizeTaskIds` 且拿不到跨板解析后的 board slug；尝试的 651 补丁会把 attachments 变成 500（CLI 用错板），已回滚。正确修法需要把「解析后的 board」贯穿到子资源 handler，作为下一轮独立工单。
   - 运行总览「分支交付」仍 503：`SIM_BRANCHES_REPO` 未配置（与 OBS_SIM_ROOT 不同的专用 env）；页面按 fail-closed 如实提示，未改。
 - 过程修复：`646`/`648` 补丁上下文残渍（重复 `return parsed` / 多一空行）导致全量重放失败，已基于现行基线重生成并提交（commit 67ae04f6）；`serve-server.mjs` SIM_ROOT 缺省路径曾少一层，已修正（commit f5070c06）。
