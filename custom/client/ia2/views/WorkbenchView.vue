@@ -52,6 +52,7 @@ import { useSitCounts } from '../composables/useSitCounts'
 import { useDecisionRows } from '../composables/useDecisionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useIdeJump } from '../composables/useIdeJump'
+import { retainBodyClass } from '../composables/useBodyClass'
 import { openPanelWindow } from '../wm/popout'
 // A0 三中心导航（2026-10-16 屏 0）：入口表/高亮判定/岛屿入口单一事实源
 // v14 统一聊天：群聊建房型复用上游 CreateRoomForm（与 GroupChatPanel 同源，
@@ -62,8 +63,10 @@ import type { RoomAgentInput, RoomSummaryConfig } from '@/api/studio/group-chat'
 
 // V1 壳收敛补批（视觉重规划 D7）：工作台同收敛——rail 八入口中六项有强替代
 // （设置侧栏/FlowNavPanel/治理·系统设置），聊天主动线在左栏聊天列表；导航唯一性
-onMounted(() => document.body.classList.add('ia-center-full'))
-onUnmounted(() => document.body.classList.remove('ia-center-full'))
+// 2026-10-18：改为引用计数，IaShell 全程 retain 时本页卸载不会误摘 body 类。
+let releaseBodyClass: (() => void) | null = null
+onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
+onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()

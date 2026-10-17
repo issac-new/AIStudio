@@ -3,73 +3,45 @@
      产品默认入口（/app 索引路由），按「从 0 到 1」的使用时序组织两区十卡——
      A 区搭建五步（建立组织→建立账号→建立团队与协调关系→准备环境与资产→
      准备智能体，单一事实源=stage-meta.ts 的 SETUP_STEPS）；B 区交付五阶段
-     （需求→分析设计→开发→验收→治理，与顶栏②-⑥同构同名的 STAGE_META）。
+     （需求→分析设计→开发→验收→治理，与左侧栏②-⑥同构同名的 STAGE_META）。
      每卡=状态（run-state 键推导）+一句话+进入入口；无轮次=引导态（从 A 区
      第 1 步开始）；有轮次=当前卡点提示条（第一道未过阶段+遗留项清算提示）。
      设计正本=docs/superpowers/specs/2026-10-17-journey-ia-terminology-redesign.md §5.1。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { authFetch } from '../../../ide/utils/auth-fetch'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { STAGE_META, SETUP_STEPS, type SetupStep } from '../../stage-meta'
+import { useStageProgress } from '../../composables/useStageProgress'
+import RunSelector from '../sim/RunSelector.vue'
 
-const route = useRoute()
 const router = useRouter()
-const run = computed(() => String(route.query.run ?? '').trim())
-const runState = ref<{ posture: string; gates: Record<string, string>; steps: Record<string, string>; ledger: { open: number } } | null>(null)
-const loadError = ref('')
-
-async function load(): Promise<void> {
-  loadError.value = ''
-  runState.value = null
-  if (!run.value) return
-  try {
-    const res = await authFetch(`/api/hermes/sim/run-state?run=${encodeURIComponent(run.value)}`)
-    if (!res.ok) throw new Error(String(res.status))
-    runState.value = await res.json() as typeof runState.value
-  } catch (e) {
-    loadError.value = (e as Error).message
-  }
-}
-watch(run, () => { void load() }, { immediate: true })
-
-// ── 状态推导（与 StageShell 同款纯逻辑；merged=steps+gates 合一）──────
-const merged = computed(() => (runState.value ? { ...runState.value.steps, ...runState.value.gates } : {}))
+// 与左侧栏/阶段页共用同一份 run-state 缓存：记忆里的运行自动带出，不再手打目录名。
+const progress = useStageProgress()
+const run = progress.run
+const runState = computed(() => progress.state.value)
+const loadError = computed(() => progress.error.value)
 
 /** A 区五步：有键按 run-state 推导；无键=轮次内不跟踪（诚实呈现） */
 type CardState = 'done' | 'active' | 'pending' | 'untracked'
 function stepState(st: SetupStep): CardState {
-  if (st.keys.length === 0) return 'untracked'
-  if (!runState.value) return 'pending'
-  if (st.keys.some(k => k in merged.value)) return 'done'
-  const firstPending = SETUP_STEPS.find(s => s.keys.length > 0 && !s.keys.some(k => k in merged.value))
-  return firstPending?.key === st.key ? 'active' : 'pending'
+  const s = progress.stepState(st)
+  return s === 'current' ? 'active' : s
 }
 
-/** B 区五阶段（顶栏②-⑥，STAGE_META 第 2-6 项） */
+/** B 区五阶段（②-⑥，STAGE_META 第 2-6 项） */
 const deliveryStages = computed(() => STAGE_META.filter(s => s.no >= 2))
 function stageState(no: number): CardState {
-  if (!runState.value) return 'pending'
-  const keys = STAGE_META[no - 1].keys
-  if (keys.some(k => k in merged.value)) return 'done'
-  const firstPending = STAGE_META.find(s => !s.keys.some(k => k in merged.value))
-  return firstPending?.no === no ? 'active' : 'pending'
+  const s = progress.stageState(no as 1 | 2 | 3 | 4 | 5 | 6)
+  return s === 'current' ? 'active' : s
 }
 
 /** 当前卡点：第一个未完成阶段（含①搭建整体）；无=全部完成 */
 const bottleneck = computed(() => {
-  if (!runState.value) return null
-  const first = STAGE_META.find(s => !s.keys.some(k => k in merged.value))
-  return first ?? null
+  if (!progress.state.value) return null
+  return STAGE_META.find(s => progress.stageState(s.no) !== 'done') ?? null
 })
-const openItems = computed(() => runState.value?.ledger.open ?? 0)
+const openItems = computed(() => progress.state.value?.ledger?.open ?? 0)
 
-const runInput = ref('')
-function submitRun(): void {
-  const r = runInput.value.trim()
-  if (!r) return
-  void router.replace({ query: { ...route.query, run: r } })
-}
 function goStep(st: SetupStep): void {
   // 来路阶段①：账号/环境等落点页跨阶段复用，顶栏高亮按搭建语境而非路径归属
   const target = st.target
@@ -86,8 +58,7 @@ function goStage(no: number): void {
     <header class="jrn__head">
       <h1 class="jrn__title" title="准备阶段五步把组织从零搭起来，交付阶段五阶段把需求交付到治理">流程总览：从 0 到 1，建组织、跑交付、做治理</h1>
       <div class="jrn__runbar">
-        <input v-model="runInput" class="jrn__input" data-testid="jrn-run" placeholder="输入运行目录名查看该轮进度（如 20261015-v8-run20）" @keyup.enter="submitRun">
-        <button class="jrn__btn" type="button" data-testid="jrn-load" @click="submitRun">查看进度</button>
+        <RunSelector />
         <button class="jrn__btn jrn__btn--ghost" type="button" data-testid="jrn-dash-link" title="我的待办/待审评审/交付进度三卡概览" @click="router.push({ name: 'ia2.dash' })">工作台概览 →</button>
       </div>
     </header>
