@@ -75,7 +75,7 @@ function raciOf(t: CockpitTask) {
     <div class="ov__title">{{ t('ia2.overviewDash.title') }}</div>
     <!-- U2 使用动线：三张卡按「先处理等我的事→再看我的活→最后去沟通」串起来 -->
     <p class="ov__flow-hint" data-testid="ov-flow-hint">
-      使用顺序：①「我的待办」处理等你决定的事 → ②「评审闸口」看我审的活儿 → ③「交付进度」查该我交的卷。卡片上任何数字都可点开。
+      先办等我的 → 再审我审的 → 后查我交的；数字可点。
     </p>
     <div class="ov__grid">
       <!-- ① 我的待办 -->

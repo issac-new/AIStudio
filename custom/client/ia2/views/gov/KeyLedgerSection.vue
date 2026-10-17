@@ -59,7 +59,7 @@ onMounted(() => { void refresh() })
     <p v-if="loadError" class="kls__error" data-testid="kls-error">{{ loadError }}</p>
     <p v-else-if="!entries" class="kls__hint">读取中……</p>
     <template v-else>
-      <p v-if="entries.length === 0" class="kls__hint" data-testid="kls-empty">台账为空（如实呈现）。</p>
+      <p v-if="entries.length === 0" class="kls__hint" data-testid="kls-empty">台账为空。</p>
       <table v-else class="kls__table" data-testid="kls-table">
         <thead><tr><th>名称</th><th>归属</th><th>最近轮换</th><th>备注</th></tr></thead>
         <tbody>
