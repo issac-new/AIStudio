@@ -785,6 +785,8 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
         children: [
           { path: '', name: 'ia2.collab', component: WorkbenchView },
           { path: 'sim', name: 'ia2.sim', component: { template: '<div sim />' } },
+          { path: 'stage/reqs', name: 'ia2.stage2', component: { template: '<div stage2 />' } },
+          { path: 'stage/design', name: 'ia2.stage3', component: { template: '<div stage3 />' } },
           { path: 'sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
           { path: 'gov', name: 'ia2.governance', component: { template: '<div gov />' } },
           { path: 'settings', name: 'hermes.settings', component: { template: '<div settings />' } },
@@ -814,10 +816,10 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     const bar = wrapper.find('[data-testid="ia-nav-centers"]')
     expect(bar.exists()).toBe(true)
     const labels = bar.findAll('.icn-inline__center-btn').map(x => x.text())
-    expect(labels).toEqual(['工作台', 'IDE 画布', '推演中心', '治理中心'])
+    expect(labels).toEqual(['①搭台', 'IDE 画布', '②需求', '③分析设计', '④生产', '⑤验收', '⑥治理'])
+    // /app 裸路径=①搭台高亮（D13 默认入口）
     expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
     expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn-inline__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-gov"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
@@ -831,10 +833,10 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     const { wrapper, router } = await mountNav('/app')
     await wrapper.find('[data-testid="ia-nav-center-sim"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    expect(router.currentRoute.value.name).toBe('ia2.stage2') // D13：②需求阶段页
     await wrapper.find('[data-testid="ia-nav-center-gov"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.governance')
+    expect(router.currentRoute.value.name).toBe('ia2.stage3') // D13：③分析设计阶段页
   })
 
   it('岛屿组退役（D8 全盘重规划）：顶栏不再渲染 islands——四岛入口归治理中心「治理工作台」区；本组件只承载三中心条', async () => {
