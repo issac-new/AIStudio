@@ -8,6 +8,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { STAGE_META } from './stage-meta'
+import { hasStageAttribution, stageKeyOf, stageOwnersForRouteName } from './stage-attribution'
 
 export type CenterKey = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'stage6'
 
@@ -80,9 +81,24 @@ export function stageKeyFromQuery(from: unknown): CenterKey | null {
   return Number.isInteger(n) && n >= 1 && n <= 6 ? (`stage${n}` as CenterKey) : null
 }
 
-/** 顶栏当前阶段：来路上下文优先，其次页面自身归属 */
+/** 单值版（粗粒度兜底，供只接受单阶段的调用方）：来路上下文优先，其次路径归属 */
 export function activeStageForRoute(path: string, from: unknown): CenterKey | null {
   return stageKeyFromQuery(from) ?? centerForPath(path)
+}
+
+/**
+ * 顶栏当前阶段（复数，驾驶舱壳以此为准）：
+ * 1) 来路 from 优先——答「我从哪一站来」；
+ * 2) 否则按页签级归属表——答「这个工具本身归哪几站」，多归属如实返回多个；
+ * 3) 表内登记为空=全程工具，返回空数组（顶栏不高亮，面包屑标「全程」）；
+ * 4) 表外页面回退路径粗粒度归属（如旅程页→①）。
+ */
+export function activeStagesForRoute(name: string, path: string, from: unknown): CenterKey[] {
+  const fromKey = stageKeyFromQuery(from)
+  if (fromKey) return [fromKey]
+  if (hasStageAttribution(name)) return stageOwnersForRouteName(name).map(stageKeyOf)
+  const fallback = centerForPath(path)
+  return fallback ? [fallback] : []
 }
 
 /** 生成保留来路阶段的 query（非法值返回 undefined，不把脏参数写进 URL） */

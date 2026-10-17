@@ -27,6 +27,7 @@ function makeRouter(initial: string): Router {
       { path: '/app/sim/supervision', name: 'ia2.simSupervision', component: { template: '<div />' } },
       { path: '/app/gov', name: 'ia2.governance', component: { template: '<div />' } },
       { path: '/app/gov/docs', name: 'ia2.govDocs', component: { template: '<div />' } },
+      { path: '/app/gov/model-providers', name: 'ia2.modelProviders', component: { template: '<div />' } },
       { path: '/app/inbox', name: 'ia2.inbox', component: { template: '<div />' } },
     ] as RouteRecordRaw[],
   })
@@ -60,34 +61,47 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('中心根路径只到中心层，不重复默认签', async () => {
+  it('中心根路径只到中心层，不重复默认签；运行总览标「全程」', async () => {
     const { w } = await mountAt('/app/sim')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
     expect(text).toContain('仿真中心')
     expect(text).not.toContain('运行总览')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('全程')
     w.unmount()
   })
 
-  it('中心签级：旅程＞仿真中心＞监督面板', async () => {
+  it('中心签级：旅程＞③④＞仿真中心＞监督面板（多归属如实列两阶段）', async () => {
     const { w } = await mountAt('/app/sim/supervision')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
     expect(text).toContain('旅程')
     expect(text).toContain('仿真中心')
     expect(text).toContain('监督面板')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('③④')
     w.unmount()
   })
 
-  it('治理签级：文档评审段取自 gov-tabs 单一事实源', async () => {
+  it('治理签级：文档评审段取自 gov-tabs 单一事实源，归属②⑤', async () => {
     const { w } = await mountAt('/app/gov/docs')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
     expect(text).toContain('治理中心')
     expect(text).toContain('文档评审')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('②⑤')
     w.unmount()
   })
 
-  it('末端页：旅程＞审批收件箱，点旅程回首页', async () => {
+  it('全程工具：模型服务商 旅程＞全程＞治理中心＞模型服务商', async () => {
+    const { w } = await mountAt('/app/gov/model-providers')
+    const text = w.find('[data-testid="ia-breadcrumb"]').text()
+    expect(text).toContain('治理中心')
+    expect(text).toContain('模型服务商')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('全程')
+    w.unmount()
+  })
+
+  it('末端页：旅程＞④⑤＞审批收件箱，点旅程回首页', async () => {
     const { w, router } = await mountAt('/app/inbox')
     expect(w.find('[data-testid="ia-breadcrumb"]').text()).toContain('审批收件箱')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('④⑤')
     const links = w.findAll('.ia-bc__link')
     expect(links.length).toBeGreaterThan(0)
     await links[0].trigger('click')

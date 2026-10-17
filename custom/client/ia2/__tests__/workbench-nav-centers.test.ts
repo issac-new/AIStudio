@@ -14,7 +14,7 @@ vi.mock('@/custom/ia2/views/gov/GovOrgKnowledgeView.vue', () => ({
   default: { template: '<div data-testid="gov-org-stub">gov-org</div>' },
 }))
 
-import { activeStageForRoute, centerForPath, stageContextQuery, stageKeyFromQuery, CENTER_NAVS, ISLAND_NAVS } from '../nav-centers'
+import { activeStageForRoute, activeStagesForRoute, centerForPath, stageContextQuery, stageKeyFromQuery, CENTER_NAVS, ISLAND_NAVS } from '../nav-centers'
 import { legacyTabRedirect } from '../views/TasksView.vue'
 import { TASKS_TABS_TEXT } from '../i18n-tasks-tabs'
 import { GOV_TABS_TEXT } from '../i18n-gov-tabs'
@@ -60,6 +60,29 @@ describe('activeStageForRoute — 来路阶段优先（2026-10-17 减负批）',
     expect(stageContextQuery(2)).toEqual({ from: '2' })
     expect(stageContextQuery('0')).toBeUndefined()
     expect(stageContextQuery(undefined)).toBeUndefined()
+  })
+})
+
+describe('activeStagesForRoute — 页签级归属（2026-10-17 第二阶段）', () => {
+  it('来路 from 优先于归属表', () => {
+    expect(activeStagesForRoute('ia2.govDocs', '/app/gov/docs', '1')).toEqual(['stage1'])
+    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', '2')).toEqual(['stage2'])
+  })
+
+  it('无来路按表：单归属/多归属/全程工具', () => {
+    expect(activeStagesForRoute('ia2.govOrgAssets', '/app/gov/org-assets', undefined)).toEqual(['stage1'])
+    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', undefined)).toEqual(['stage3', 'stage4'])
+    expect(activeStagesForRoute('ia2.govDocs', '/app/gov/docs', undefined)).toEqual(['stage2', 'stage5'])
+    expect(activeStagesForRoute('ia2.inbox', '/app/inbox', undefined)).toEqual(['stage4', 'stage5'])
+    // 全程工具：表内登记为空 → 不高亮
+    expect(activeStagesForRoute('ia2.sim', '/app/sim', undefined)).toEqual([])
+    expect(activeStagesForRoute('ia2.simSettings', '/app/sim/settings', undefined)).toEqual([])
+    expect(activeStagesForRoute('ia2.bpa', '/app/bpa', undefined)).toEqual([])
+  })
+
+  it('表外页面回退路径归属（旅程页→①）', () => {
+    expect(activeStagesForRoute('ia2.journey', '/app', undefined)).toEqual(['stage1'])
+    expect(activeStagesForRoute('ide.shell', '/app/ide', undefined)).toEqual(['stage4'])
   })
 })
 
