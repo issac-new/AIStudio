@@ -48,7 +48,7 @@ const POSTURE_POLICY: Record<string, string> = {
 // ── 折算（纯函数层见 steps-registry.ts；此处仅组包） ──
 /** V3：七幕分组头数据（actOfStep 已在 steps-registry） */
 const stepGroups = computed(() =>
-  ACTS_7.map(a => ({ act: a.act, name: a.name, from: a.from, to: a.to })),
+  ACTS_7.map(a => ({ act: a.act, name: a.displayName, from: a.from, to: a.to })),
 )
 
 const stepRows = computed<StepRow[]>(() =>
@@ -97,7 +97,7 @@ function openStepDrawer(row: StepRow): void {
     no: row.no,
     name: row.name,
     operator: row.operator,
-    act: ACTS_7.find(a => a.act === row.act)?.name,
+    act: ACTS_7.find(a => a.act === row.act)?.displayName,
     state: row.state,
     doneKeys: row.doneKeys.length > 0 ? row.doneKeys : '（完成键未落——如实缺席）',
   }, null, 2)
@@ -217,7 +217,7 @@ function goSupervision(): void {
           :style="{ flexGrow: a.to - a.from + 1 }"
           :data-testid="`ov-act-${a.act}`"
         >
-          <span class="ov__act-name">{{ a.name }}</span>
+          <span class="ov__act-name">{{ a.displayName }}</span>
           <span class="ov__act-ticks">
             <span
               v-for="no in a.to - a.from + 1"
@@ -232,7 +232,7 @@ function goSupervision(): void {
       <!-- 双列表：左 2/3 步骤表+交付物链；右 1/3 六道质量门+净计卡+观察窗入口 -->
       <div class="ov__grid">
         <section class="ov__main">
-          <h4 class="ov__h">26 步状态表（§3.3 映射前端副本；点行看键值证据）</h4>
+          <h4 class="ov__h">26 步状态表（点行看键值证据）</h4>
           <table class="ov__table" data-testid="ov-steps">
             <thead><tr><th>步</th><th>全名</th><th>操作者</th><th>状态</th><th>凭证</th></tr></thead>
             <tbody>
