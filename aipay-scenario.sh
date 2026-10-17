@@ -274,17 +274,36 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   # （宿主册仅 2 宿主身份，匹配恒 0）。幂等：同名已存在即跳过；失败记单不中止
   # （§5.6 采集纪律⑩ 降级——身份面缺席=要素 absent 如实呈现，不造假）。
   if [[ -z "$(sget identity_registered)" ]]; then
+    # 注册面（A7 收尾富化 2026-10-17）：档案+工具面+凭证标签+admin 委托边——
+    # 事故报告 available_tools/delegation_chain/auth_credentials/design_topology
+    # 四要素的判据源，一次供给到位（工具面=hermes 实名九件）。
+    _ID_TOOLS="terminal,read_file,write_file,execute_code,kanban_create_card,kanban_move_card,kanban_query,matrix_send_message,hindsight_recall"
     _id_ok=0 _id_skip=0 _id_fail=0
+    # admin 人类委托源（15 档案的授权起点；幂等：同名跳过）
+    studio POST /api/governance/agent-identity/register "$GOV_TOK" \
+      "$(jq -nc --arg n aipaydev-admin --arg o aipaydev '{name:$n,kind:"agent",owner:$o,toolAllowlist:[]}')" >/dev/null 2>&1 || true
+    _admin_id=$(studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -r '.identities[] | select(.name=="aipaydev-admin") | .id' 2>/dev/null)
     for u in "${INSTANCED_USERS[@]}"; do
-      _body=$(jq -nc --arg n "aipaydev-${u}" --arg o "aipaydev" --arg t "agent" \
-        '{name:$n, kind:$t, owner:$o, toolAllowlist:[]}')
+      _body=$(jq -nc --arg n "aipaydev-${u}" --arg o "aipaydev" --arg t "agent" --arg tl "$_ID_TOOLS" \
+        '{name:$n, kind:$t, owner:$o, toolAllowlist:($tl|split(","))}')
+      _uid=""
       if studio POST /api/governance/agent-identity/register "$GOV_TOK" "$_body" >/dev/null 2>&1; then
         _id_ok=$((_id_ok+1))
-      elif studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -e --arg n "aipaydev-${u}" '.identities[] | select(.name==$n)' >/dev/null 2>&1; then
+      elif _uid=$(studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -r --arg n "aipaydev-${u}" '.identities[] | select(.name==$n) | .id' 2>/dev/null) && [ -n "$_uid" ]; then
         _id_skip=$((_id_skip+1))
+        # 已存在→补齐工具面（update 幂等）
+        studio POST "/api/governance/agent-identity/${_uid}/update" "$GOV_TOK" \
+          "$(jq -nc --arg tl "$_ID_TOOLS" '{toolAllowlist:($tl|split(","))}')" >/dev/null 2>&1 || true
       else
         _id_fail=$((_id_fail+1))
+        continue
       fi
+      [ -n "$_uid" ] || _uid=$(studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -r --arg n "aipaydev-${u}" '.identities[] | select(.name==$n) | .id' 2>/dev/null)
+      # 凭证标签（幂等：重复拒即过）+ admin 委托边（幂等）
+      studio POST "/api/governance/agent-identity/${_uid}/credential" "$GOV_TOK" \
+        "$(jq -nc '{label:"matrix-token",kind:"api_token",status:"active"}')" >/dev/null 2>&1 || true
+      [ -n "$_admin_id" ] && studio POST "/api/governance/agent-identity/${_admin_id}/delegate" "$GOV_TOK" \
+        "$(jq -nc --arg to "$_uid" '{to:$to,scope:"aipaydev 推演执行（全流程角色职责域）"}')" >/dev/null 2>&1 || true
     done
     if [ "$_id_fail" -eq 0 ]; then
       sset identity_registered "$(date +%s)"
