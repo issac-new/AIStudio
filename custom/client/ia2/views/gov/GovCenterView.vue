@@ -25,6 +25,7 @@ import GovSessionHealthSection from './GovSessionHealthSection.vue'
 import CapacitySection from '../../../kanban/components/CapacitySection.vue'
 import CapacityLampBanner from './CapacityLampBanner.vue'
 import GovIssuesPanel from './GovIssuesPanel.vue'
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import GovAiQualitySection from './GovAiQualitySection.vue'
 
 const route = useRoute()
@@ -62,6 +63,15 @@ const activeTab = computed<TabKey>(() =>
  *  feature 门控随行，IDE 岛不在列——其入口在工作台视图切换器） */
 const govWorkbenches = computed(() => ISLAND_NAVS.filter(i => i.testid !== 'ia-nav-island-ide' && features[i.featureKey]))
 
+const INTRO_KEY: Record<TabKey, string> = {
+  process: 'gov-process', orgAssets: 'gov-orgAssets', clearance: 'gov-clearance',
+  issues: 'gov-issues', audit: 'gov-audit', docs: 'gov-docs', metrics: 'gov-metrics',
+}
+/** 治理动线分组（事前准备/事中跟踪/事后对账）——标注在页签上 */
+const STAGE_TAG: Record<TabKey, string> = {
+  process: '事前·中', orgAssets: '事前', clearance: '事前', issues: '事中·后', audit: '事后', docs: '事后', metrics: '事后',
+}
+
 function goTab(tab: GovTab): void {
   if (tab.key === activeTab.value) return
   void router.push({ name: tab.name })
@@ -83,7 +93,7 @@ function goTab(tab: GovTab): void {
           :aria-selected="activeTab === tab.key"
           :data-testid="`ia-gov-tab-${tab.key}`"
           @click="goTab(tab)"
-        >{{ text[TAB_LABEL_KEY[tab.key]] }}</button>
+        >{{ text[TAB_LABEL_KEY[tab.key]] }}<span class="gov-center__stage-tag">{{ STAGE_TAG[tab.key] }}</span></button>
       </nav>
       <span class="gov-center__wb-group" data-testid="ia-gov-workbenches">
         <button
@@ -112,6 +122,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-clearance"
       >
         <h3 class="gov-center__panel-title">签 3·{{ text.tabClearance }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['clearance']" />
         <ClearancePanel />
       </section>
       <!-- 签 1 关卡与流程（C3 件一实装：闸修复单台账；六闸卡拆分随 C3 正件） -->
@@ -121,6 +132,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-process"
       >
         <h3 class="gov-center__panel-title">签 1·{{ text.tabProcess }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['process']" />
         <GateRepairsPanel />
         <p class="gov-center__pending">六闸仪表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
       </section>
@@ -131,6 +143,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-orgAssets"
       >
         <h3 class="gov-center__panel-title">签 2·{{ text.tabOrgAssets }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['orgAssets']" />
         <KeyLedgerSection />
         <GovOrgKnowledgeView />
         <GovRegistryRulesView />
@@ -142,6 +155,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-audit"
       >
         <h3 class="gov-center__panel-title">签 5·{{ text.tabAudit }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['audit']" />
         <GovAuditChangeView />
       </section>
       <!-- 签 6 文档评审（C5 整件迁入） -->
@@ -151,6 +165,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-docs"
       >
         <h3 class="gov-center__panel-title">签 6·{{ text.tabDocs }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['docs']" />
         <GovDocsReviewView />
       </section>
       <!-- 签 7 度量体检（C4 主体：五卡整件迁入；容量阈值灯随 C4 增件；AI 产出质量随 E/F 件） -->
@@ -160,6 +175,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-metrics"
       >
         <h3 class="gov-center__panel-title">签 7·{{ text.tabMetrics }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['metrics']" />
         <CapacityLampBanner />
         <GovAiQualitySection />
         <GovHarnessView />
@@ -176,6 +192,7 @@ function goTab(tab: GovTab): void {
         data-testid="ia-gov-panel-issues"
       >
         <h3 class="gov-center__panel-title">签 4·{{ text.tabIssues }}</h3>
+        <TabIntroBanner :tab="INTRO_KEY['issues']" />
         <GovIssuesPanel />
       </section>
     </main>

@@ -1,0 +1,184 @@
+diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index 4baf39d9..860c2f14 100644
+--- a/packages/server/src/modules/coding-agents/services/index.ts
++++ b/packages/server/src/modules/coding-agents/services/index.ts
+@@ -3267,7 +3267,8 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+       if (tool.id === 'zcode' && (model || reasoningEffort)) {
+         const selection = await prepareZcodeGlobalModel(rootDir, model, { ...await commandEnv(), ...execution.env }, reasoningEffort)
+         execution.env = { ...execution.env, ...selection.env }
+-        nativeFiles.push(selection.file)
++        // An empty selection (no model and no native default) launches ZCode as-is.
++        if (selection.file) nativeFiles.push(selection.file)
+       }
+       return { agentId: tool.id, mode, profile: scope.profile, provider: 'global', model, reasoningEffort, rootDir, workspaceDir,
+         command: execution.command, args: execution.args, env: execution.env, files: nativeFiles, nativeSystemPrompt: systemPrompt, nativeMcpServers,
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/models.ts b/packages/server/src/modules/coding-agents/services/zcode/models.ts
+index 01ed9801..0f035772 100644
+--- a/packages/server/src/modules/coding-agents/services/zcode/models.ts
++++ b/packages/server/src/modules/coding-agents/services/zcode/models.ts
+@@ -2,6 +2,8 @@ import { readFile, stat } from 'node:fs/promises'
+ import { ModelDiscoveryError, record, text, type ModelDiscoveryAdapter } from '../models/types'
+ import { readZcodePersonalConfig, zcodeReasoningEfforts } from './model-options'
+ 
++const ruleList = (value: unknown): any[] => Array.isArray(value) ? value : []
++
+ export const zcodeModels: ModelDiscoveryAdapter = {
+   source: 'config', scope: 'builtin',
+   async discover(context) {
+@@ -16,7 +18,13 @@ export const zcodeModels: ModelDiscoveryAdapter = {
+     const selected = personal.config?.defaultModelSelection
+     const rules = record(record(config.config).modelConfigRules).builtinProviderModelRules
+     if (!Array.isArray(rules)) throw new ModelDiscoveryError('unsupported')
+-    return { models: rules.flatMap((raw: unknown) => {
++    // The personal layer owns the user's custom providers; list its models after
++    // the builtin directory so Global mode can select them like account models.
++    const personalRules = [
++      ...ruleList(personal.config?.modelConfigRules?.providerModelRules),
++      ...ruleList(personal.config?.modelConfigRules?.manualProviderModelRules),
++    ]
++    return { models: [...rules, ...personalRules].flatMap((raw: unknown) => {
+       const rule = record(raw), id = text(rule.modelId), provider = text(rule.providerId)
+       const reasoningEfforts = id && provider ? zcodeReasoningEfforts(config, personal, provider, id) : undefined
+       return id ? [{ id, name: id, ...(provider ? { provider } : {}), hidden: rule.config?.enabled === false,
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts b/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
+index 64bd5090..50355ec8 100644
+--- a/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
++++ b/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
+@@ -3,6 +3,8 @@ import { readFile, writeFile } from 'node:fs/promises'
+ import { createScopedRuntimeConfig, type ScopedRuntimeInput, type ScopedRuntimeConfig } from '../runtime/scoped-config'
+ import { readZcodePersonalConfig, zcodeReasoningEfforts } from './model-options'
+ 
++const ruleList = (value: unknown): any[] => Array.isArray(value) ? value : []
++
+ /** Select a builtin model in a private overlay, preserving native provider credentials. */
+ export async function prepareZcodeGlobalModel(rootDir: string, model: string, env: NodeJS.ProcessEnv, reasoningEffort?: string) {
+   const builtinPath = env.ZCODE_BUILTIN_PROVIDER_CONFIG_FILE
+@@ -12,10 +14,21 @@ export async function prepareZcodeGlobalModel(rootDir: string, model: string, en
+   const path = join(rootDir, 'native-provider-config.json')
+   const previous = personal.config?.defaultModelSelection
+   model ||= previous?.modelId || ''
+-  const candidates = builtin.config?.modelConfigRules?.builtinProviderModelRules?.filter((entry: any) => entry.modelId === model && entry.config?.enabled !== false) || []
++  // The builtin directory ships account models; the personal layer declares the
++  // user's own providers. Directory routes win, personal rules keep custom ids.
++  const candidates = [
++    ...ruleList(builtin.config?.modelConfigRules?.builtinProviderModelRules),
++    ...ruleList(personal.config?.modelConfigRules?.providerModelRules),
++    ...ruleList(personal.config?.modelConfigRules?.manualProviderModelRules),
++  ].filter((entry: any) => entry.modelId === model && entry.config?.enabled !== false)
+   // A model can be shipped by multiple providers; keep the user's native route.
+   const rule = candidates.find((entry: any) => entry.providerId === previous?.providerId) || candidates[0]
+-  if (!rule?.providerId) throw new Error('Unknown ZCode builtin model')
++  if (!rule?.providerId) {
++    // Without a requested or native default model, ZCode launches on its own
++    // default selection; no overlay exists to carry an effort either.
++    if (!model) return { env: {} as Record<string, string>, file: undefined }
++    throw new Error('Unknown ZCode builtin model')
++  }
+   const options = previous?.modelId === model && previous?.providerId === rule.providerId ? { ...previous.options } : {}
+   if (reasoningEffort) {
+     const efforts = zcodeReasoningEfforts(builtin, personal, rule.providerId, model)
+diff --git a/tests/server/coding-agent-models.test.ts b/tests/server/coding-agent-models.test.ts
+index 1084045c..07f3363e 100644
+--- a/tests/server/coding-agent-models.test.ts
++++ b/tests/server/coding-agent-models.test.ts
+@@ -295,6 +295,26 @@ describe('native model directory adapters', () => {
+     expect(JSON.stringify(result)).not.toContain('secret')
+   })
+ 
++  it('lists personal-layer ZCode models after the builtin directory', async () => {
++    const root = await home(), builtin = join(root, 'builtin.json'), personal = join(root, 'personal.json')
++    await writeFile(builtin, JSON.stringify({ config: { modelConfigRules: {
++      builtinProviderModelRules: [{ providerId: 'builtin', modelId: 'GLM-5.3' }],
++    } } }))
++    await writeFile(personal, JSON.stringify({ config: {
++      modelConfigRules: {
++        providerModelRules: [{ providerId: 'custom', modelId: 'k3' }],
++        manualProviderModelRules: [{ providerId: 'manual', modelId: 'step-5-preview', config: { enabled: false } }],
++      },
++    } }))
++    const ctx = context(); ctx.env = { ZCODE_BUILTIN_PROVIDER_CONFIG_FILE: builtin, ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: personal }
++    const result = await zcodeModels.discover(ctx)
++    expect(result.models.map((model: any) => [model.id, model.provider, model.hidden])).toEqual([
++      ['GLM-5.3', 'builtin', false],
++      ['k3', 'custom', false],
++      ['step-5-preview', 'manual', true],
++    ])
++  })
++
+   it('deduplicates by provider and model and allowlists public metadata', () => {
+     expect(normalizeModels([
+       { id: 'same', name: 'Name', provider: 'a', contextWindow: NaN, apiKey: 'secret' } as any,
+diff --git a/tests/server/zcode-global-model.test.ts b/tests/server/zcode-global-model.test.ts
+index dff879ef..2fb2fcef 100644
+--- a/tests/server/zcode-global-model.test.ts
++++ b/tests/server/zcode-global-model.test.ts
+@@ -109,4 +109,69 @@ describe('ZCode global model selection', () => {
+     expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).schemaVersion).toBe(1)
+     await expect(prepareZcodeGlobalModel(root, 'unknown-model', env)).rejects.toThrow('Unknown ZCode builtin model')
+   })
++
++  it('accepts a model declared by the personal provider layer', async () => {
++    const { root, personal, env } = await fixture()
++    const source = JSON.stringify({ schemaVersion: 1, config: {
++      providerConfigRules: { providerRules: [{ providerId: 'custom-provider', config: { access: { apiKey: 'personal-credential' } } }] },
++      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model' }] },
++    } })
++    await writeFile(personal, source)
++    const prepared = await prepareZcodeGlobalModel(root, 'custom-model', env)
++    const overlay = JSON.parse(await readFile(prepared.file.absolutePath, 'utf8'))
++    expect(overlay.config.defaultModelSelection).toEqual({ providerId: 'custom-provider', modelId: 'custom-model', options: {} })
++    expect(overlay.config.providerConfigRules.providerRules[0].config.access.apiKey).toBe('personal-credential')
++    expect(await readFile(personal, 'utf8')).toBe(source)
++  })
++
++  it('prefers the builtin directory route when both layers ship the model', async () => {
++    const { root, personal, env } = await fixture()
++    await writeFile(personal, JSON.stringify({ config: { modelConfigRules: {
++      providerModelRules: [{ providerId: 'custom-provider', modelId: 'native-model' }],
++    } } }))
++    const prepared = await prepareZcodeGlobalModel(root, 'native-model', env)
++    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection.providerId).toBe('native-account')
++  })
++
++  it('keeps the previous personal provider when it also ships the model', async () => {
++    const { root, personal, env } = await fixture()
++    await writeFile(env.ZCODE_BUILTIN_PROVIDER_CONFIG_FILE, JSON.stringify({ config: { modelConfigRules: {
++      builtinProviderModelRules: [{ providerId: 'native-account', modelId: 'native-model' }],
++    } } }))
++    await writeFile(personal, JSON.stringify({ config: {
++      defaultModelSelection: { providerId: 'custom-provider', modelId: 'older-model' },
++      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'native-model' }] },
++    } }))
++    const prepared = await prepareZcodeGlobalModel(root, 'native-model', env)
++    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection)
++      .toEqual({ providerId: 'custom-provider', modelId: 'native-model', options: {} })
++  })
++
++  it('rejects a personal declaration that is disabled', async () => {
++    const { root, personal, env } = await fixture()
++    await writeFile(personal, JSON.stringify({ config: { modelConfigRules: {
++      providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model', config: { enabled: false } }],
++    } } }))
++    await expect(prepareZcodeGlobalModel(root, 'custom-model', env)).rejects.toThrow('Unknown ZCode builtin model')
++  })
++
++  it('skips the overlay when neither a model nor a native default is selected', async () => {
++    const { root, env } = await fixture()
++    const prepared = await prepareZcodeGlobalModel(root, '', env, 'high')
++    expect(prepared.env).toEqual({})
++    expect(prepared.file).toBeUndefined()
++    await expect(readFile(join(root, 'native-provider-config.json'))).rejects.toMatchObject({ code: 'ENOENT' })
++  })
++
++  it('applies an effort to the previous personal-layer default selection', async () => {
++    const { root, personal, env } = await fixture()
++    await writeFile(personal, JSON.stringify({ config: {
++      defaultModelSelection: { providerId: 'custom-provider', modelId: 'custom-model', options: { reasoningLevel: 'low' } },
++      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model',
++        config: { optionSpecs: { reasoningLevel: { values: ['low', 'high'] } } } }] },
++    } }))
++    const prepared = await prepareZcodeGlobalModel(root, '', env, 'high')
++    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection)
++      .toEqual({ providerId: 'custom-provider', modelId: 'custom-model', options: { reasoningLevel: 'high' } })
++  })
+ })

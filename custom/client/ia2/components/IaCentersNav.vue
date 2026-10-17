@@ -38,9 +38,9 @@ function onToggleWorkbench(): void {
       <template v-for="c in CENTER_NAVS" :key="c.key">
         <!-- D9：工作台=分段控件（沟通协作｜IDE 画布，同中心两形态） -->
         <span
-          v-if="c.key === 'work'"
+          v-if="c.key === 'workbench'"
           class="icn-inline__work"
-          :class="{ 'icn-inline__work--active': activeCenter === 'work' }"
+          :class="{ 'icn-inline__work--active': activeCenter === 'workbench' }"
           data-testid="ia-nav-center-work"
         >
           <button
@@ -48,15 +48,15 @@ function onToggleWorkbench(): void {
             class="icn-inline__center-btn icn-inline__seg"
             :class="{ 'icn-inline__seg--cur': !isIde }"
             data-testid="ia-nav-center-work-collab"
-            :aria-current="activeCenter === 'work' && !isIde ? 'page' : undefined"
-            @click="onGoCenter('ia2.collab')"
+            :aria-current="activeCenter === 'workbench' && !isIde ? 'page' : undefined"
+            @click="onGoCenter('ia2.journey')"
           >{{ navLocale === 'zh' ? '工作台' : 'Workbench' }}</button>
           <button
             type="button"
             class="icn-inline__center-btn icn-inline__seg"
             :class="{ 'icn-inline__seg--cur': isIde }"
             data-testid="ia-nav-center-work-ide"
-            :aria-current="activeCenter === 'work' && isIde ? 'page' : undefined"
+            :aria-current="activeCenter === 'workbench' && isIde ? 'page' : undefined"
             @click="onToggleWorkbench"
           >{{ navLocale === 'zh' ? 'IDE 画布' : 'IDE Canvas' }}</button>
         </span>

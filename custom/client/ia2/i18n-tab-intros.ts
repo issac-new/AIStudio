@@ -33,6 +33,74 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: '运行中心实时数据。',
       act: '研发排查"我的任务卡在哪一步、为什么还没出结果"；点节点看执行明细。',
     },
+
+    // ── 推演中心六签（U1 可用性批：按使用动线写，不按数据域写）──
+    'sim-overview': {
+      what: '一轮推演的驾驶屏：跑到第几步、六道关卡过了几道、有没有代偿欠账，一屏看全。',
+      source: '轮次状态文件与代偿台账实读，数字全部实测、缺席如实标注。',
+      act: '开轮后先来这里。「清偿门未清」亮红=上轮欠账没清不能开新轮——去治理中心·清偿门处理。',
+    },
+    'sim-supervision': {
+      what: '值班盯盘位：观察窗时间线+接棒员研判，回答「现在卡在哪、谁没动」。',
+      source: '监督 journal 只读流（开窗/轮询/研判/判词）。',
+      act: '运行期间周期看。发现停滞先读研判再决定介入，不用翻原始日志。',
+    },
+    'sim-ops': {
+      what: '基础设施体检：四个服务通不通、派发器活不活、有没有员工在空转。',
+      source: '各服务健康端点实时探测+hermes-agent 健康命令包装。',
+      act: '页面异常或消息不动时先来这里查红点；全绿说明底座没问题，去监督面板查组织面。',
+    },
+    'sim-evidence': {
+      what: '查证据的地方：消息事件号、git 提交号，贴进去一键反查原文。',
+      source: 'synapse 与 git 实查，缺席如实标注不硬凑。',
+      act: '对任何数字/判词有疑问就点它——锚点抽屉给原文；重要消息可存证备查。',
+    },
+    'sim-delivery': {
+      what: '交付进度表：六个开发分支推没推、14 件交付物齐不齐。',
+      source: '中央仓 git 与证据目录实读。',
+      act: '收尾前核对。「旧残留」分支=上轮遗留该清理；缺的交付物去催对应负责人。',
+    },
+    'sim-trace': {
+      what: '需求对账单：当初冻结的每条验收标准，测试和 UAT 各判了什么。',
+      source: '冻结单×测试报告×验收书三源聚合。',
+      act: '验收复盘时逐条过。「未判」条目=还没人拍板，去找需求分析师。',
+    },
+    // ── 治理中心七签 ──
+    'gov-process': {
+      what: '六道关卡的守门记录：哪个闸被打回过、修复单走到哪一步。',
+      source: 'orgloop 修复单台账。',
+      act: '闸 FAIL 后来这里跟踪修复进度。界面没有绕过闸的按钮——那是设计。',
+    },
+    'gov-orgAssets': {
+      what: '组织花名册与家底：人员权限、应用资产、密钥台账。',
+      source: '各注册表只读聚合。',
+      act: '开轮前检查编制齐不齐；密钥到期轮换在这里登记（不含密钥本体）。',
+    },
+    'gov-clearance': {
+      what: '欠账清单：上轮推演留下的代偿（程序替人干的活），根治一笔消一笔。',
+      source: '代偿台账逐笔实读。',
+      act: '开新轮前必须清零或豁免。紫色=豁免须写理由；resolve 填 PR 号标记已根治。',
+    },
+    'gov-issues': {
+      what: '问题清单对账：这轮登记的每个问题，处理了没有。',
+      source: '轮次 issues.log 实读。',
+      act: '复盘前查处置率；红色未处理的逐条要有说法。',
+    },
+    'gov-audit': {
+      what: '留痕查验：审计四查状态、基线变更记录。',
+      source: '审计与变更事件流。',
+      act: '交付验收前过审计；对改动有疑问查变更记录（带提交号）。',
+    },
+    'gov-docs': {
+      what: '文档完整性核对：14 件交付物逐字段检查，缺什么红显什么。',
+      source: '交付物注册表×证据目录。',
+      act: '收尾时做文档完整性检查，缺项去补再交。',
+    },
+    'gov-metrics': {
+      what: '组织体检五卡：效率/集群/语义/会话/成本，含磁盘水位预警。',
+      source: '巡检官快照与度量端点。',
+      act: '复盘时看趋势；磁盘红灯=立即处理（96% 事故先例）。',
+    },
     'gov-org': {
       what: '团队协作的三面镜子：协作断点诊断（信息/决策/责任/资源/反馈哪一环断了）、知识图谱（谁和谁在哪些任务上共事）、决策时间线（谁在何时批了什么）。',
       source: '结案任务与审批记录沉淀，跨轮累积。',
@@ -80,6 +148,21 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: 'Run Center live data.',
       act: 'Devs answer "where is my task stuck"; click a node for execution detail.',
     },
+
+    'sim-overview': { what: 'Cockpit of a simulation run: step progress, six gates, compensation debt at a glance.', source: 'Run state file and ledger, live.', act: 'Start here after launching. Red clearance lamp = unresolved debt, settle it first.' },
+    'sim-supervision': { what: 'On-duty watch desk: observation windows and analyst briefs answer "where is it stuck".', source: 'Read-only supervision journal.', act: 'Check periodically during a run; read briefs before intervening.' },
+    'sim-ops': { what: 'Infrastructure health: four services, dispatcher, idle workers.', source: 'Live /health probes + hermes-agent commands.', act: 'When things feel dead, check red dots here first.' },
+    'sim-evidence': { what: 'Evidence lookup: paste an event id or commit hash to see the original.', source: 'Live synapse/git lookups.', act: 'Distrust any number? Click it. Anchor drawer shows the source.' },
+    'sim-delivery': { what: 'Delivery sheet: six feature branches pushed? 14 deliverables complete?', source: 'Central repo git + evidence dir.', act: 'Verify before closing a run; chase missing deliverables.' },
+    'sim-trace': { what: 'Requirements reconciliation: each frozen AC vs test and UAT verdicts.', source: 'Freeze × test report × acceptance.', act: 'Walk AC rows at acceptance; unjudged items need a decision.' },
+    'gov-process': { what: 'Gate keeping records: which gate was rejected, repair ticket progress.', source: 'orgloop repair ledger.', act: 'Track gate-FAIL repairs here. No bypass button by design.' },
+    'gov-orgAssets': { what: 'Roster and assets: people, permissions, app registry, key ledger.', source: 'Read-only registries.', act: 'Check staffing before a run; log key rotations (no secrets).' },
+    'gov-clearance': { what: 'Debt list: compensations left from last run; resolve one, clear one.', source: 'Compensation ledger TSV.', act: 'Must be zero or waived before a new run. Waive needs a reason.' },
+    'gov-issues': { what: 'Issue reconciliation: every registered issue, disposed or not.', source: 'Run issues.log.', act: 'Check disposal rate before retro; red rows need answers.' },
+    'gov-audit': { what: 'Audit trail: four-check status, baseline changes.', source: 'Audit and change event streams.', act: 'Pass audit before acceptance; query changes by commit.' },
+    'gov-docs': { what: 'Doc completeness: 14 deliverables field-checked, missing in red.', source: 'Deliverable registry × evidence dir.', act: 'Run completeness check at closing; fix gaps.' },
+    'gov-metrics': { what: 'Org health five cards incl. disk watermark alarm.', source: 'Inspector snapshots and metric endpoints.', act: 'Review trends at retro; red disk lamp = act now.' },
+
     'gov-org': {
       what: 'Three mirrors of teamwork: breakpoint diagnosis (info/decision/ownership/resource/feedback), knowledge graph (who worked with whom), decision timeline.',
       source: 'Accumulated from closed tasks and approvals.',
