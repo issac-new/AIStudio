@@ -30,7 +30,7 @@ case "$MX_SYNAPSE_MODE" in
   manual)
     curl -sf -m 5 "$HS/_matrix/client/versions" >/dev/null || fail "远端 homeserver 不可达：$HS"
     ;;
-  *) fail "未知 MX_SYNAPSE_MODE=$MX_SYNAPSE_MODE（docker|api|manual）" ;;
+  *) fail "未知 MX_SYNAPSE_MODE=${MX_SYNAPSE_MODE}（docker|api|manual）" ;;
 esac
 [[ -x "$HERMES_BIN" ]] || fail "HERMES_BIN 不可执行：$HERMES_BIN"
 [[ -f "$HOME/.hermes/config.yaml" ]] || fail "宿主 config.yaml 不存在（模型配置来源）"
@@ -108,7 +108,7 @@ ensure_studio_up || fail "studio 提前拉起失败（R31 产品通道前置；�
 log "studio 就绪（:${STUDIO_PORT}，产品通道前置）"
 for u in "${USERS[@]}"; do
   [[ "$u" == "admin" ]] && continue
-  gov_provision_user "$u" || fail "产品通道供给失败：$u（端点/鉴权链查 studio.log；禁回退 synapse 直建——排查后重试）"
+  gov_provision_user "$u" || fail "产品通道供给失败：${u}（端点/鉴权链查 studio.log；禁回退 synapse 直建——排查后重试）"
   log "账号供给（产品通道）：$u + $u-agent（建号即 roster 提交）"
 done
 for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do

@@ -37,7 +37,7 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # 子壳过滤（首跑实锤）：-E 令 trap 穿透 $()/管道子壳，命令替换内的良性失败
 # （如 sget 对不存在的 state 键 grep rc=2）不杀驱动却会刷「异常退出」噪音——
 # BASH_SUBSHELL>0 一律静默；真杀死驱动的失败在主壳层（含赋值语句级）另行触发。
-trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -eq 0 ]; then _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=$rc（${BASH_SOURCE[0]##*/}:$LINENO：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi; fi' ERR
+trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -eq 0 ]; then _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=${rc}（${BASH_SOURCE[0]##*/}:${LINENO}：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi; fi' ERR
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
 # Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
@@ -1309,7 +1309,7 @@ ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 
           '[.[] | select(.sender == $s) | (.content.body // "")] | any(test("DEV-DONE-" + $t))' >/dev/null 2>&1; then
       _tip=$(git -C "$DIRECTOR_CLONE" log -1 --format='%h' "origin/feat/$_t" 2>/dev/null)
       mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
-        "@$(agent_mxid "$_o") 交卷令：feat/$_t 分支已达（tip $_tip）但群内未见 DEV-DONE-$_t 结论行。若分支即最终态，请立即发：DEV-DONE-$_t commit=<分支 tip 完整哈希>（附一行测试/证据摘要）；若还有未尽子项，先发已完成部分的结论行并列出剩余待办；实际未完成则如实报 BLOCKED。禁静默，勿重做已完成工作。" "$(agent_mxid "$_o")" >/dev/null 2>&1 || true
+        "@$(agent_mxid "$_o") 交卷令：feat/$_t 分支已达（tip ${_tip}）但群内未见 DEV-DONE-$_t 结论行。若分支即最终态，请立即发：DEV-DONE-$_t commit=<分支 tip 完整哈希>（附一行测试/证据摘要）；若还有未尽子项，先发已完成部分的结论行并列出剩余待办；实际未完成则如实报 BLOCKED。禁静默，勿重做已完成工作。" "$(agent_mxid "$_o")" >/dev/null 2>&1 || true
       note "[观察] $_t 结论行缺口——已向 $_o 发交卷令（分支 tip ${_tip} 在案）"
       echo "ISSUE|conclusion-gap|$_t|分支达而 DEV-DONE 结论行未发（交卷令已发；run15 复盘 F6）" >> "$EVID_DIR/issues.log"
     fi
@@ -1366,8 +1366,8 @@ DEVSPECS
       # report_truth.extract_declared_run 同源。
       _rt="$(repo_branch_runtag "feat/$b" "docs/evidence/$b-testlog.txt")"
       if [ -n "$_rt" ] && [ "$_rt" != "$RUN_ID" ]; then
-        note "[观察] $b testlog 为往轮证据（声明轮 $_rt ≠ 本轮 $RUN_ID，G3，记问题单）"
-        echo "ISSUE|g3-testlog-stale-run|$b|testlog 文件头声明轮=$_rt ≠ 本轮 $RUN_ID（往轮证据混入本轮闸证，存在性检查曾计「在案」放行——run20 实锤 PAYCORE-C=run19/PAYCORE-N=run16）" >> "$EVID_DIR/issues.log"
+        note "[观察] $b testlog 为往轮证据（声明轮 $_rt ≠ 本轮 ${RUN_ID}，G3，记问题单）"
+        echo "ISSUE|g3-testlog-stale-run|$b|testlog 文件头声明轮=$_rt ≠ 本轮 ${RUN_ID}（往轮证据混入本轮闸证，存在性检查曾计「在案」放行——run20 实锤 PAYCORE-C=run19/PAYCORE-N=run16）" >> "$EVID_DIR/issues.log"
         _g3_miss="${_g3_miss} $b"
       elif ! repo_branch_grep "feat/$b" "docs/evidence/$b-testlog.txt" 'npm audit|漏洞计数|audit 不可达'; then
         # 质量 B②（2026-10-16）：testlog 在位但缺 npm audit 段=安全合规件未落实
@@ -2583,7 +2583,7 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
   code=$(curl -s -o /dev/null -w '%{http_code}' "$(studio_url)/ide")
   [[ "$code" == 200 ]] && note "[真值] /ide 路由 200 ✓" || echo "ISSUE|ide-route|studio|/ide HTTP $code" >> "$EVID_DIR/issues.log"
   # 2) 任务跳转参数 ide?task= 处理代码存在性（client 源码）
-  # 路径用 $OVERLAY_ROOT（本检出根，worktree 下恒正确）：run6 实锤 $NCWK 在 worktree
+  # 路径用 ${OVERLAY_ROOT}（本检出根，worktree 下恒正确）：run6 实锤 $NCWK 在 worktree
   # 驱动下解析到 .wxwork（root_walk 被 upstream 软链有意跳过而失败、回落父目录），
   # $NCWK/overlay/... 不存在 → grep 空转 → 两条"未见"假阴性（功能实存，记 DISP 撤单）。
   if grep -rq "route.query.task" "$OVERLAY_ROOT/custom/client/ide" 2>/dev/null; then

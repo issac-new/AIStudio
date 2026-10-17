@@ -159,7 +159,7 @@ mxp_worker_smoke() { # <profile> → 0 连通（缺包/版本冲突/模型断路
   local prof="${1:-default}" out rc
   out=$(timeout 90 "$HERMES_BIN" -p "$prof" -z "ping（连通性冒烟，只回 pong）" 2>&1); rc=$?
   if [[ $rc -ne 0 || "$(printf '%s' "$out" | tail -1)" != "pong" ]]; then
-    fail "工人连通性冒烟失败（profile=$prof rc=$rc）：$(printf '%s' "$out" | tail -2 | tr '\n' ' ')——venv 依赖回归（按 pyproject 钉版补 extras，如 anthropic==0.87.0）或模型链路断，禁起跑（夜间工人整夜崩实录）"
+    fail "工人连通性冒烟失败（profile=$prof rc=${rc}）：$(printf '%s' "$out" | tail -2 | tr '\n' ' ')——venv 依赖回归（按 pyproject 钉版补 extras，如 anthropic==0.87.0）或模型链路断，禁起跑（夜间工人整夜崩实录）"
   fi
   log "工人连通性冒烟 ✓（$prof → pong）"
 }
@@ -265,7 +265,7 @@ synapse_register_api() { # <localpart> <password>
   curl -sf -m 10 -X POST -H 'Content-Type: application/json' -d "$payload" \
     "$HS/_synapse/admin/v1/register" >/dev/null \
     || fail "远端注册 matrix 用户 $u 失败（secret 不符或接口关闭）"
-  log "已注册 matrix 用户 @$u:$SERVER_NAME（远端注册 API）"
+  log "已注册 matrix 用户 @$u:${SERVER_NAME}（远端注册 API）"
 }
 mx_login() { # <localpart> <password> → access_token
   curl -sf "$HS/_matrix/client/v3/login" \
@@ -318,7 +318,7 @@ mx_apply_displaynames() { # 幂等：所有人类+agent 账号 displayname → �
     total=$((total+1))
     dn=$(displayname_of "$n")
     tok=$(load_token "$n" 2>/dev/null | tr -d '\n')
-    [[ -n "$tok" && "$tok" != "null" ]] || { log "⚠ displayname 跳过：$n（token 缺）"; continue; }
+    [[ -n "$tok" && "$tok" != "null" ]] || { log "⚠ displayname 跳过：${n}（token 缺）"; continue; }
     if curl -sf -m 8 -X PUT -H "Content-Type: application/json" \
       -d "{\"displayname\":\"$dn\"}" \
       "$HS/_matrix/client/v3/profile/@$n:$SERVER_NAME/displayname?access_token=$tok" >/dev/null 2>&1; then
@@ -327,7 +327,7 @@ mx_apply_displaynames() { # 幂等：所有人类+agent 账号 displayname → �
       log "⚠ displayname 写入失败：$n"
     fi
   done
-  log "displayname 就绪：$ok/$total（职能称呼；studio 侧随 matrix-login 自动同步）"
+  log "displayname 就绪：${ok}/${total}（职能称呼；studio 侧随 matrix-login 自动同步）"
 }
 mx() { # <token> <method> <api-path> [json-body]
   local token="$1" method="$2" path="$3" body="${4:-}"
@@ -545,7 +545,7 @@ gov_provision_user() { # <user>：账号经邀请流产品通道供给（D21 202
   local resp
   resp=$(studio POST /api/governance/invites "$tok" "$body"); rc=$?
   if [[ $rc -ne 0 ]] || ! echo "$resp" | jq -e '.invitesCommit' >/dev/null 2>&1; then
-    log "invites 端点未就绪（$resp）——回落 matrix-users 旧通道（升级窗口内）"
+    log "invites 端点未就绪（${resp}）——回落 matrix-users 旧通道（升级窗口内）"
     body=$(jq -n --arg n "$u" --arg role "$(gov_role_of "$u")" \
       --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" --arg dn "$(displayname_of "$u")" \
       '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$dn}')
@@ -578,7 +578,7 @@ mx_kanban() { # <board> <hermes-kanban-args...>
 # ── 运行时 patch 部署（安装树；同 aipay-agent-sync 的安全语义）──
 # ── SIM 执行面快照供给（隔离轮 2026-10-03）：推演自持，不共享宿主/活树 ──
 # ①agent 源码快照：宿主 hermes-agent 是 git 仓——git archive HEAD 出纯净跟踪源
-#   （钉版本、无 venv/垃圾），原子换入 $AGENT_SRC；hermes-sim wrapper 用宿主 venv
+#   （钉版本、无 venv/垃圾），原子换入 ${AGENT_SRC}；hermes-sim wrapper 用宿主 venv
 #   python（只借依赖环境，绝不写）+ sys.path 前置快照源 → sim 网关执行的全是快照代码，
 #   宿主自更新/产品补丁操作不再互相污染。②product-dist 快照：rsync 注入树 dist 一次，
 #   推演期间产品可自由 clean/inject。两快照 provenance 落 JSON 可审计。
@@ -1489,7 +1489,7 @@ try:
 except Exception: pass'
   done)
   main_doc=$(git -C "$DIRECTOR_CLONE" show "origin/main:docs/design/RFD-001-architecture-design.md" 2>/dev/null || echo "")
-  echo "── 期望对账（$(date '+%F %T')，基线 $ef）──"
+  echo "── 期望对账（$(date '+%F %T')，基线 ${ef}）──"
   while IFS='|' read -r dnum desc; do
     [ -z "$dnum" ] && continue
     local in_card=0 in_doc=0
