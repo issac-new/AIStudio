@@ -88,9 +88,9 @@ onMounted(() => { void refresh() })
 
     <p v-if="loadError" class="grp__error" data-testid="grp-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="grp__msg" data-testid="grp-action-msg">{{ actionMsg }}</p>
-    <UiEmptyState v-else-if="shown.length === 0" title="无修复单——当前没有未结的质量门修复事项。" hint="质量门 FAIL 会自动登记修复单到此处；想看六闸整体状态去仿真中心·运行总览。" data-testid="grp-empty">
+    <UiEmptyState v-else-if="shown.length === 0" title="无修复单——当前没有未结的质量门修复事项。" hint="质量门 FAIL 会自动登记修复单到此处；想看六道质量门整体状态去仿真中心·运行总览。" data-testid="grp-empty">
       <template #action>
-        <button class="grp__btn" type="button" data-testid="grp-empty-goto-overview" @click="router.push({ name: 'ia2.sim' })">去运行总览看六闸 →</button>
+        <button class="grp__btn" type="button" data-testid="grp-empty-goto-overview" @click="router.push({ name: 'ia2.sim' })">去运行总览看六道质量门 →</button>
       </template>
     </UiEmptyState>
 

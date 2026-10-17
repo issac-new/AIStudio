@@ -28,6 +28,12 @@ export const IA2_TERM_OVERRIDES_ZH = {
     choice: { reject: '拒绝' },
   },
   ia2: {
+    overview: {
+      // 注意力条标签与提示（2026-10-17 术语残留批）：英文标签不符合行业术语体系，
+      // 提示仍写「双击」而交互早已是单击——统一改「看板」与人话提示。
+      swarmKanbanLabel: '看板',
+      swarmKanbanHint: '点击打开看板（全部任务）',
+    },
     overviewDash: {
       title: '工作台概览',
       waitingApproval: '待我审批',
@@ -43,7 +49,10 @@ export const IA2_TERM_OVERRIDES_ZH = {
 /** en 侧只含六阶段导航新增键与审批 reject 补键（其余英文词条本就是标准词，见文件头注） */
 export const IA2_TERM_OVERRIDES_EN = {
   approvals: { choice: { reject: 'Reject' } },
-  ia2: { nav: STAGE_NAV_EN },
+  ia2: {
+    overview: { swarmKanbanLabel: 'Kanban', swarmKanbanHint: 'Open the Kanban board (all tasks)' },
+    nav: STAGE_NAV_EN,
+  },
 } as const
 
 /** 结构型入参：不 import vue-i18n 类型，避免与上游 i18n 模块的装载时序耦合 */

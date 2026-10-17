@@ -18,7 +18,7 @@ const PROVENANCE_LABEL: Record<VerdictProvenance, string> = {
 <template>
   <span class="sim-verdict" data-testid="sim-verdict-field">
     <template v-if="props.verdict">
-      <span class="sim-verdict__label">判词</span>
+      <span class="sim-verdict__label">判定</span>
       <span class="sim-verdict__value" data-testid="sim-verdict-value">{{ props.verdict.value }}</span>
       <span
         v-if="props.verdict.provenance"

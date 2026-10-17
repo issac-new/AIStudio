@@ -193,7 +193,7 @@ describe('治理分区（2026-10-01 单层页签重构）', () => {
   it('GovDocsReviewView：工件四组清单 + 缺件灰态 + 待裁决行', async () => {
     const wrapper = await mountGovView('@/custom/ia2/views/gov/GovDocsReviewView.vue')
     const groupTitles = wrapper.findAll('.gov-docs__group-title').map(n => n.text())
-    expect(groupTitles).toContain('六闸工件')
+    expect(groupTitles).toContain('六道质量门工件')
     expect(groupTitles).toContain('管理档案')
     expect(wrapper.find('[data-testid="gov-doc-roster"]').exists()).toBe(true)
     const retroBtn = wrapper.find('[data-testid="gov-doc-retro"]')

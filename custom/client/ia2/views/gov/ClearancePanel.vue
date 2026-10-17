@@ -11,8 +11,16 @@ import {
 
 const ledger = ref<ClearanceLedgerView | null>(null)
 const loadError = ref('')
+const rawError = ref('')
 const busy = ref(false)
 const actionMsg = ref('')
+
+/** 台账技术错误人话化：正文给人能懂的原因与下一步，原始错误进 title 供排查。 */
+function humanizeLedgerError(message: string): string {
+  return /ORGLOOP_LEDGER_TSV/.test(message)
+    ? '遗留项台账未配置：请联系管理员配置清算台账后重试'
+    : message
+}
 
 const resolveInput = ref<Record<string, string>>({})
 const waiveInput = ref<Record<string, string>>({})
@@ -23,10 +31,12 @@ const rows = computed(() => (Array.isArray(ledger.value?.rows) ? [...ledger.valu
 async function refresh(): Promise<void> {
   busy.value = true
   loadError.value = ''
+  rawError.value = ''
   try {
     ledger.value = await fetchClearanceLedger()
   } catch (e) {
-    loadError.value = (e as Error).message
+    rawError.value = (e as Error).message
+    loadError.value = humanizeLedgerError(rawError.value)
   } finally {
     busy.value = false
   }
@@ -35,6 +45,8 @@ async function refresh(): Promise<void> {
 async function act(kind: 'resolve' | 'waive', target: string): Promise<void> {
   busy.value = true
   actionMsg.value = ''
+  loadError.value = ''
+  rawError.value = ''
   try {
     if (kind === 'resolve') {
       ledger.value = await resolveClearance(target, (resolveInput.value[target] ?? '').trim())
@@ -45,7 +57,8 @@ async function act(kind: 'resolve' | 'waive', target: string): Promise<void> {
     }
     actionMsg.value = `已${kind === 'resolve' ? '登记根治' : '豁免'} ${target}（留痕在 orgloop 处置记录）`
   } catch (e) {
-    loadError.value = (e as Error).message
+    rawError.value = (e as Error).message
+    loadError.value = humanizeLedgerError(rawError.value)
   } finally {
     busy.value = false
   }
@@ -69,7 +82,7 @@ onMounted(() => { void refresh() })
       <button class="clr__btn" type="button" data-testid="clr-refresh" :disabled="busy" @click="refresh">刷新</button>
     </div>
 
-    <p v-if="loadError" class="clr__error" data-testid="clr-error">{{ loadError }}</p>
+    <p v-if="loadError" class="clr__error" data-testid="clr-error" :title="rawError">{{ loadError }}</p>
     <p v-if="actionMsg" class="clr__msg" data-testid="clr-action-msg">{{ actionMsg }}</p>
     <p v-else-if="!ledger && !loadError" class="clr__hint">读取中……</p>
 
@@ -83,10 +96,10 @@ onMounted(() => { void refresh() })
             <span class="clr__target-meta">{{ g.openCount }} 笔未清（{{ g.types.join('、') }}）</span>
           </div>
           <div class="clr__target-actions">
-            <input v-model="resolveInput[g.target]" class="clr__input" :data-testid="`clr-resolve-pr-${g.target}`" placeholder="PR 锚（必填）">
-            <button class="clr__btn" type="button" :data-testid="`clr-resolve-${g.target}`" :disabled="busy || !(resolveInput[g.target] ?? '').trim()" @click="act('resolve', g.target)">resolve</button>
+            <input v-model="resolveInput[g.target]" class="clr__input" :data-testid="`clr-resolve-pr-${g.target}`" placeholder="根治 PR 锚（必填）">
+            <button class="clr__btn" type="button" :data-testid="`clr-resolve-${g.target}`" :disabled="busy || !(resolveInput[g.target] ?? '').trim()" @click="act('resolve', g.target)">登记根治</button>
             <input v-model="waiveInput[g.target]" class="clr__input clr__input--reason" :data-testid="`clr-waive-reason-${g.target}`" placeholder="批准理由（必填）">
-            <button class="clr__btn" type="button" :data-testid="`clr-waive-${g.target}`" :disabled="busy || !(waiveInput[g.target] ?? '').trim()" @click="act('waive', g.target)">waive</button>
+            <button class="clr__btn" type="button" :data-testid="`clr-waive-${g.target}`" :disabled="busy || !(waiveInput[g.target] ?? '').trim()" @click="act('waive', g.target)">批准豁免</button>
           </div>
         </div>
       </section>

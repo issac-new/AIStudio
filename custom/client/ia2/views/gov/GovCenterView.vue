@@ -70,7 +70,7 @@ const TABS: ReadonlyArray<GovTab> = [
   { key: 'issues', name: 'ia2.govIssues', components: ['诊断规则（KanbanDiagnosticsSection·C6）'] },
   { key: 'audit', name: 'ia2.govAudit', components: ['审计与变更（GovAuditChangeView·C7）'] },
   { key: 'docs', name: 'ia2.govDocs', components: ['文档评审（GovDocsReviewView·C5）'] },
-  { key: 'metrics', name: 'ia2.govMetrics', components: ['AI 产出质量（GovAiQualitySection·E/F 件）', '工程效能（GovHarnessView）', '集群健康（GovClusterSection）', '语义体检（GovOntologySection）', '会话健康（GovSessionHealthSection）', '容量成本（CapacitySection·C4 五卡）'] },
+  { key: 'metrics', name: 'ia2.govMetrics', components: ['AI 产出质量（GovAiQualitySection·E/F 件）', '研发效能（GovHarnessView）', '集群健康（GovClusterSection）', '本体校验（GovOntologySection）', '会话健康（GovSessionHealthSection）', '容量成本（CapacitySection·C4 五卡）'] },
 ]
 type TabTextKey = 'tabProcess' | 'tabOrgAssets' | 'tabClearance' | 'tabIssues' | 'tabAudit' | 'tabDocs' | 'tabMetrics'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
@@ -162,7 +162,7 @@ function goTab(tab: GovTab): void {
         <h3 class="gov-center__panel-title">{{ text.tabProcess }}<span class="gov-center__panel-no">签 1</span></h3>
         <TabIntroBanner :tab="INTRO_KEY['process']" />
         <GateRepairsPanel />
-        <p class="gov-center__pending">六道质量门表卡（GovHealthSection 六闸半区拆分）随 C3 拆分正件并入本签。</p>
+        <p class="gov-center__pending">六道质量门表卡（GovHealthSection 质量门半区拆分）随 C3 拆分正件并入本签。</p>
       </section>
       <!-- 签 2 组织与资产（C8 实装：组织知识+应用资产整件迁入+密钥最小台账 C11） -->
       <section

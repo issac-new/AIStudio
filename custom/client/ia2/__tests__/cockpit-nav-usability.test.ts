@@ -51,11 +51,11 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('阶段页：旅程＞②需求，当前段带 aria-current', async () => {
+  it('阶段页：流程总览＞②需求，当前段带 aria-current', async () => {
     const { w } = await mountAt('/app/stage/reqs')
     const nav = w.find('[data-testid="ia-breadcrumb"]')
     expect(nav.exists()).toBe(true)
-    expect(nav.text()).toContain('旅程')
+    expect(nav.text()).toContain('流程总览')
     expect(nav.text()).toContain('② 需求')
     expect(w.find('[data-testid="ia-breadcrumb-current"]').attributes('aria-current')).toBe('page')
     w.unmount()
@@ -70,10 +70,10 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('中心签级：旅程＞③④＞仿真中心＞监督面板（多归属如实列两阶段）', async () => {
+  it('中心签级：流程总览＞③④＞仿真中心＞监督面板（多归属如实列两阶段）', async () => {
     const { w } = await mountAt('/app/sim/supervision')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('旅程')
+    expect(text).toContain('流程总览')
     expect(text).toContain('仿真中心')
     expect(text).toContain('监督面板')
     expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('③④')
@@ -89,7 +89,7 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('全程工具：模型服务商 旅程＞全程＞治理中心＞模型服务商', async () => {
+  it('全程工具：模型服务商 流程总览＞全程＞治理中心＞模型服务商', async () => {
     const { w } = await mountAt('/app/gov/model-providers')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
     expect(text).toContain('治理中心')
@@ -98,7 +98,7 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('末端页：旅程＞④⑤＞审批收件箱，点旅程回首页', async () => {
+  it('末端页：流程总览＞④⑤＞审批收件箱，点流程总览回首页', async () => {
     const { w, router } = await mountAt('/app/inbox')
     expect(w.find('[data-testid="ia-breadcrumb"]').text()).toContain('审批收件箱')
     expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('④⑤')
