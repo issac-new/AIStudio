@@ -1182,8 +1182,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 
   if [[ -z "$(sget devimpl_d1)" ]]; then
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
-1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
-2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
+2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
 4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
@@ -1194,8 +1194,8 @@ DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律�
 3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
-1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
-2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
+2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
 4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
@@ -1206,8 +1206,8 @@ DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆
 3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
-1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
-2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
+2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
 4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
@@ -1218,8 +1218,8 @@ DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 
 3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出"完成"——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
-1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
-2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
+1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
+2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
 4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
