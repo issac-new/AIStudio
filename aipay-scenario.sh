@@ -1185,7 +1185,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
 2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
-4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律：单卡直做（无需再拆子任务），kanban 建 DEV-PAYCORE-C 主卡（含 --raci）。
 工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
@@ -1197,7 +1197,7 @@ DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律�
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
 2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
-4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
@@ -1209,7 +1209,7 @@ DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
 2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
-4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
 工作区 $(workspace chen)（先 git fetch）。
@@ -1221,7 +1221,7 @@ DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 
 1. git add + commit：本地 commit 必须存在（「git log -1 --format=%H」 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
 2. git push origin feat/DEV-X：远程可达（「git ls-remote origin feat/DEV-X」 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
-4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
@@ -1265,7 +1265,7 @@ DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026
 1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
 2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
-4. 等群内监督哨回执 "PUSH-CONFIRMED-<任务ID>" 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
+4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 用户裁决）：拆成 2-3 件子任务（每件 ≤1 人日、独立验收口径），kanban 建主卡+link 子卡（含工作量与 --raci）；逐子任务实现且每件至少一个独立 commit（消息含子任务 ID）。
 每子件完成即 push（增量推送，不等全部完工）+群内一行 PROGRESS-<任务ID>-<子件ID>（一句话进度锚）；首个 commit=骨架（接口签名+目录+测试骨架），推后 @会签人 群内一句骨架评审（偏差先纠偏再续）——干预点纪律（2026-10-09 四件：拆卡/中间锚/骨架前移/可见性）。
