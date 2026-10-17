@@ -632,13 +632,14 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 
 /* v12.5 板多选筛选条：合并全部看板数据 + 板名 chip 复选 */
 .kanban-boardbar {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  padding: 6px 12px;
+  /* 观察项 O-3：chip 行 gap 6→8 并显式行距——换行后无行距曾是「左疏右密」观感来源 */
+  display: flex; align-items: center; gap: 8px; row-gap: 4px; flex-wrap: wrap;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-card);
   flex-shrink: 0;
 }
-.kanban-boardbar__label { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.kanban-boardbar__label { font-size: 11px; color: var(--text-muted); flex-shrink: 0; margin-right: 2px; }
 
 /* R6 补充：「全部」按钮区分于板 chip（徽标样式，重置全选语义显性化；
  *  用户反馈「只能单选无全部」= All 按钮被当成普通板 chip 不可辨） */
