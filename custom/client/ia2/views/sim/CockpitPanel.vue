@@ -1,19 +1,21 @@
 <!-- overlay/custom/client/ia2/views/sim/CockpitPanel.vue -->
 <!-- 轻量驾驶条（B10，R1/R6——Q1 镜头层解体裁定的「值班台轻量随 B」落位）：
      挂仿真中心壳头、任意签常驻的三徽标行（运行模式档色点/遗留项清算灯/服务异常数）。
-     与旗舰签 1（OverviewPanel 全量总览屏）同端点不同密度——run 单一事实源=
-     /app/sim?run=xxx（query，与旗舰签同源），此处只读不自建输入；无 run=提示
-     去签 1。点击整条跳签 1 看全量。 -->
+     与旗舰签 1（OverviewPanel 全量总览屏）同端点不同密度——run 口径与四个面板
+     签同源（useRunContext：query 优先+记忆回落），此处只读不自建输入；无 run=
+     提示去签 1。点击整条跳签 1 看全量。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { fetchRunState, postureKind, type RunStateResponse } from '../../api/overview'
 import { fetchTopology } from '../../api/ops'
+import { useRunContext } from '../../composables/useRunContext'
 
-const route = useRoute()
 const router = useRouter()
 
-const run = computed(() => String(route.query.run ?? '').trim())
+// run 口径与四个面板签同源（useRunContext）：query.run 优先，无 query 回落最近
+// 一次成功读取的记忆——本条挂在仿真中心壳头与②需求阶段页，两处都不该要求手打目录名
+const { run } = useRunContext()
 const state = ref<RunStateResponse | null>(null)
 const failServices = ref<number | null>(null)
 const loadError = ref('')
@@ -29,7 +31,9 @@ async function load(): Promise<void> {
   if (st.status === 'fulfilled') state.value = st.value
   else loadError.value = 'run-state 不可达'
   if (topo.status === 'fulfilled') {
-    failServices.value = Object.values(topo.value.services).filter(s => !s.ok).length
+    // 端点形状不符（缺 services）按未知处理，渲染「服务未探测」——不抛未处理拒绝
+    const svcs = (topo.value as { services?: Record<string, { ok: boolean }> } | null)?.services
+    failServices.value = svcs ? Object.values(svcs).filter(s => !s.ok).length : null
   }
 }
 

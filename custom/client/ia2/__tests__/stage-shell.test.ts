@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 // D13 六阶段工作页单测：路由可达+阶段页渲染+工具卡直达+状态推导。
+// 层级批第二阶段（2026-10-17）：阶段页工作台化——②④⑤⑥各内嵌一块高频件，
+// run 口径与四个面板签同源（useRunContext 记忆回落）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
@@ -21,6 +23,11 @@ import { authFetch } from '../../ide/utils/auth-fetch'
 import StageShell from '../views/stage/StageShell.vue'
 
 const mockedFetch = vi.mocked(authFetch)
+
+// run 记忆与 Mock 调用历史跨用例隔离：jsdom localStorage 同文件内持久，不清会串味
+// （前一条用例成功读取写入 ia2.lastRun，后一条内嵌面板挂载即自动取数）；
+// vi.clearAllMocks 清调用记录（实现保留，D14 等用例靠 mockResolvedValue 续命）
+beforeEach(() => { localStorage.clear(); vi.clearAllMocks() })
 
 function makeRouter(path: string, stage: number): Router {
   return createRouter({
@@ -140,5 +147,54 @@ describe('D15 六阶段全内嵌', () => {
     expect(w4.find('[data-testid="hds-section"]').exists()).toBe(true)
     // 容量灯二态之一或都不渲染（无端点时）——只断言不炸
     w4.unmount()
+  })
+})
+
+describe('层级批第二阶段：阶段页工作台化（高频件内嵌，零新端点）', () => {
+  it('②需求内嵌运行态势条（无 run= 时如实待命，不自建输入）', async () => {
+    const { w } = await mountStage(2)
+    expect(w.find('[data-testid="stg-embed-2b"]').exists()).toBe(true)
+    expect(w.find('[data-testid="cpb-strip"]').exists()).toBe(true)
+    expect(w.find('[data-testid="cpb-empty"]').text()).toContain('值班台待命')
+    w.unmount()
+  })
+
+  it('④开发内嵌证据反查（锚检索+台账，挂载不自动取数）', async () => {
+    const { w } = await mountStage(4)
+    expect(w.find('[data-testid="stg-embed-4c"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ev-panel"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ev-anchor-input"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('⑤验收内嵌交付健康（分支+14 件交付物）', async () => {
+    const { w } = await mountStage(5)
+    expect(w.find('[data-testid="stg-embed-5b"]').exists()).toBe(true)
+    expect(w.find('[data-testid="dlv-panel"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('⑥治理内嵌问题清单对账（处置率+逐条状态）', async () => {
+    const { w } = await mountStage(6)
+    expect(w.find('[data-testid="stg-embed-6b"]').exists()).toBe(true)
+    expect(w.find('[data-testid="gis-panel"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('run 记忆回落：无 ?run= 时阶段页按 ia2.lastRun 读进度', async () => {
+    localStorage.setItem('ia2.lastRun', 'mem-run')
+    const { w } = await mountStage(2)
+    await flushPromises()
+    expect(mockedFetch).toHaveBeenCalledWith('/api/hermes/sim/run-state?run=mem-run')
+    w.unmount()
+  })
+
+  it('query.run 优先于记忆：带 ?run= 时不读记忆值', async () => {
+    localStorage.setItem('ia2.lastRun', 'mem-run')
+    const { w } = await mountStage(2, '/x?run=q-run')
+    await flushPromises()
+    expect(mockedFetch).toHaveBeenCalledWith('/api/hermes/sim/run-state?run=q-run')
+    expect(mockedFetch).not.toHaveBeenCalledWith('/api/hermes/sim/run-state?run=mem-run')
+    w.unmount()
   })
 })

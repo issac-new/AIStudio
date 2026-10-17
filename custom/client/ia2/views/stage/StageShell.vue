@@ -3,11 +3,14 @@
      阶段文案与工具卡定义单一事实源=stage-meta.ts（STAGE_META），本组件不各自
      定义——终结 D13 起三处各自定义的双轨形态。①搭建渲染 SETUP_STEPS 五步骤
      清单（建立组织→账号→团队协调→环境资产→智能体），其余五阶段保留 D14-D16
-     内嵌核心操作件。阶段进度读 run-state（可选 query.run），与旅程页同一推导。
-     工具卡 testid 拼稳定 key 不拼 label（D18 解耦：改名零 churn）。 -->
+     内嵌核心操作件。阶段进度读 run-state（useRunContext：query.run 优先，
+     回落最近一次成功读取的记忆），与旅程页同一推导。
+     工具卡 testid 拼稳定 key 不拼 label（D18 解耦：改名零 churn）。
+     层级批第二阶段（2026-10-17）：②④⑤⑥各补一块高频件内嵌（运行态势/证据
+     反查/交付健康/问题清单对账），阶段页成为本阶段工作台，工具卡只留整页入口。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
@@ -15,17 +18,23 @@ import KeyLedgerSection from '../gov/KeyLedgerSection.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
 import GateRepairsPanel from '../gov/GateRepairsPanel.vue'
 import TracePanel from '../sim/TracePanel.vue'
+import CockpitPanel from '../sim/CockpitPanel.vue'
+import EvidencePanel from '../sim/EvidencePanel.vue'
+import DeliveryPanel from '../sim/DeliveryPanel.vue'
+import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
 import GovOrgKnowledgeView from '../gov/GovOrgKnowledgeView.vue'
 import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
+import { useRunContext } from '../../composables/useRunContext'
 import { STAGE_META, SETUP_STEPS, type SetupStep, type StageTool } from '../../stage-meta'
 
-const route = useRoute()
 const router = useRouter()
 const props = defineProps<{ stage: 1 | 2 | 3 | 4 | 5 | 6 }>()
 
-const run = computed(() => String(route.query.run ?? '').trim())
+// run 上下文与四个中心面板同源（useRunContext）：query.run 优先，无 query 回落
+// 最近一次成功读取的记忆值——阶段页不再因「没带 ?run=」就显示不出进度。
+const { run, remember } = useRunContext()
 const runState = ref<{ steps: Record<string, string>; gates: Record<string, string> } | null>(null)
 const loadError = ref('')
 async function load(): Promise<void> {
@@ -36,6 +45,7 @@ async function load(): Promise<void> {
     const res = await authFetch(`/api/hermes/sim/run-state?run=${encodeURIComponent(run.value)}`)
     if (!res.ok) throw new Error(String(res.status))
     runState.value = await res.json() as typeof runState.value
+    remember()
   } catch (e) { loadError.value = (e as Error).message }
 }
 watch(run, () => { void load() }, { immediate: true })
@@ -150,6 +160,25 @@ function goStep(st: SetupStep): void {
     <section v-else-if="stage === 6" class="stg__embed" data-testid="stg-embed-6">
       <h3 class="stg__embed-h">遗留项清算（本阶段可直接操作）</h3>
       <ClearancePanel />
+    </section>
+    <!-- 阶段页工作台化（2026-10-17 层级批第二阶段）：各阶段高频件直接内嵌，
+         阶段页从「跳板」变「工作台」——本阶段日常操作不必跳去中心再跳回。
+         内嵌件全部复用中心既有自足组件（自带数据面与空态），零新端点。 -->
+    <section v-if="stage === 2" class="stg__embed" data-testid="stg-embed-2b">
+      <h3 class="stg__embed-h">运行态势（运行模式·遗留项清算灯·服务异常，点条进运行总览）</h3>
+      <CockpitPanel />
+    </section>
+    <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4c">
+      <h3 class="stg__embed-h">证据反查（贴事件号或提交号，一键回原文）</h3>
+      <EvidencePanel />
+    </section>
+    <section v-if="stage === 5" class="stg__embed" data-testid="stg-embed-5b">
+      <h3 class="stg__embed-h">交付健康（分支新鲜度·14 件交付物核对）</h3>
+      <DeliveryPanel />
+    </section>
+    <section v-if="stage === 6" class="stg__embed" data-testid="stg-embed-6b">
+      <h3 class="stg__embed-h">问题清单对账（处置率·逐条状态）</h3>
+      <GovIssuesPanel />
     </section>
     <div v-if="meta.tools.length" class="stg__tools">
       <button
