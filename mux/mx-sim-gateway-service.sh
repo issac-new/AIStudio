@@ -15,7 +15,8 @@
 # （Terminated:15 杀 nohup 子进程组，保母三连死同型）不再波及网关。
 #
 # 用法：
-#   mx-sim-gateway-service.sh up     渲染 plist+bootstrap+就绪探活（幂等）
+#   mx-sim-gateway-service.sh up     渲染 plist+bootstrap+就绪探活（幂等；带配置代对账——
+#                                    plist 漂移=env/模板变更时自动重载网关使其生效）
 #   mx-sim-gateway-service.sh down   bootout+清 plist（mx-down 调）
 #   mx-sim-gateway-service.sh status 服务状态+端口健康
 # 逃生门：MX_GATEWAY_LAUNCHD=0 时 mx-up 回退 nohup 形态（无 GUI 会话/容器场景）。
@@ -58,9 +59,11 @@ gateway_env() {
 EOF
 }
 
-render_plist() {
+render_plist_to() {
+  # 渲染到指定路径：cmd_up 先渲 tmp 与正本对账再落盘（漂移检测的单一事实源）
+  local dst="$1"
   mkdir -p "$HOME/Library/LaunchAgents" "$LOGS" "$PIDS"
-  cat > "$PLIST" <<EOF
+  cat > "$dst" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -93,27 +96,42 @@ $(gateway_env)
 </dict>
 </plist>
 EOF
-  plutil -lint "$PLIST" >/dev/null 2>&1 || { echo "✗ plist 渲染非法：$PLIST"; return 1; }
-  echo "✓ plist 就绪（${PLIST}）"
+  plutil -lint "$dst" >/dev/null 2>&1 || { echo "✗ plist 渲染非法：$dst"; return 1; }
 }
 
 svc_pid() { launchctl list 2>/dev/null | awk -v l="$LABEL" '$3 == l {print $1}' | head -1; }
 
 cmd_up() {
-  # 幂等：已 loaded 且端口健康=不动
+  # 配置代对账：健康短路只对「无漂移」放行——否则模板/env 变更会被
+  # 「已在位且健康」永远挡在门外（2026-10-17 实锤：e86dd0b 注入 HERMES_RUN_TRACE_DIR
+  # 后现场网关带旧 env 跑 15h，mx-up 幂等跳过刷新且无一告警）
+  local tmp; tmp=$(mktemp "${TMPDIR:-/tmp}/gw-sim-plist.XXXXXX")
+  render_plist_to "$tmp" || { rm -f "$tmp"; return 1; }
   local cur; cur=$(svc_pid)
+  local healthy=0
   if [ -n "$cur" ] && [ "$cur" != "-" ] && curl -sf -m 3 http://127.0.0.1:8801/health >/dev/null 2>&1; then
-    echo "✓ SIM 网关服务已在位且健康（pid=${cur}）"
+    healthy=1
+  fi
+  if [ "$healthy" = 1 ] && [ -f "$PLIST" ] && diff -q "$tmp" "$PLIST" >/dev/null 2>&1; then
+    echo "✓ SIM 网关服务已在位且健康且 plist 无漂移（pid=${cur}）"
+    rm -f "$tmp"
     return 0
   fi
-  # 清掉 nohup 旧形态（port 冲突前置：旧网关不杀新的起不来）
-  local old
-  old=$(pgrep -f "hermes-sim.py gateway run" 2>/dev/null | head -1 || true)
-  if [ -n "${old:-}" ]; then
+  [ "$healthy" = 1 ] && echo "↻ plist 漂移（env/模板变更）——重载网关生效（旧 pid=${cur}）"
+  # 清掉 nohup 旧形态（port 冲突前置：旧网关不杀新的起不来）。
+  # ppid=1 的是 launchd 托管形态，归下方 bootout 管——不当 nohup 误杀
+  # （2026-10-17 实锤：pgrep 模式串命中 launchd 网关本体，日志误报「停 nohup 旧形态」）
+  local old=""
+  local pid
+  for pid in $(pgrep -f "hermes-sim.py gateway run" 2>/dev/null || true); do
+    [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ] && continue
+    old="$pid"; break
+  done
+  if [ -n "$old" ]; then
     echo "↻ 停 nohup 旧形态网关（pid=${old}）"
     kill "$old" 2>/dev/null || true; sleep 3
   fi
-  render_plist || return 1
+  mv "$tmp" "$PLIST"; chmod 644 "$PLIST"
   # 已 loaded 先 bootout 再 bootstrap（重渲染后需重载）
   launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1
   launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>&1 | head -2
