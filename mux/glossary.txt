@@ -74,3 +74,17 @@ term:verdict-plan-done | PLAN-DONE | | 排期任务交卷判词 | 方案协议
 term:verdict-delivery-complete | DELIVERY-STANDARD-COMPLETE | | 交付标准齐备判词（交付形态六型核对通过） | 方案协议
 term:verdict-review-dev-done | REVIEW-DEV-MP-DONE | | 开发评审任务交卷判词（MP=收银台前端域） | 方案协议
 term:completeness-check | 完备性检查 |  | 交付清单逐件核对防漏交付 | 工程约定
+# ── 产品 IA 面（V8.37，D13-D19 时序六阶段；术语正本=overlay 2026-10-17-journey-ia-terminology-redesign.md §5.5）──
+term:workbench | 工作台 | 驾驶舱 | SwarmStudio 操作界面（一级导航=时序六阶段，旅程首页为默认入口） | 产品术语
+term:stage-nav | 时序六阶段 | 六阶段 | 产品一级导航：①搭建/②需求/③分析设计/④开发/⑤验收/⑥治理（/app/stage/*） | 产品术语
+term:journey-home | 旅程首页 | | /app 默认入口页：搭建五步+交付五阶段两区十卡，状态读运行总览端点 | 产品术语
+term:tool-bay | 工具舱 | | 旧三中心数据页的新角色：仿真中心/治理中心/看板等路由全保留，从对应阶段页直达 | 产品术语
+term:sim-center | 仿真中心 | 推演中心 | /app/sim 六签工具舱：运行总览/监督面板/运行监控/证据库/交付健康/需求追溯 | 产品术语
+term:gov-center | 治理中心 | | /app/gov 七签工具舱：质量门与流程/组织与资产/遗留项清算/问题清单对账/审计与变更/文档评审/度量检查 | 产品术语
+term:run-overview | 运行总览 | 轮次总览 | 仿真中心签 1：运行模式横幅+六道质量门行+净计卡 | 产品术语
+term:quality-gate-repair | 质量门修复单 | 闸修复单 | 治理中心·质量门与流程签的关卡缺项修复跟踪单 | 产品术语
+term:clearance | 遗留项清算 | 清偿门 | 开新运行前遗留项清单 resolve/waive 审批面 | 产品术语
+term:approval-todo | 审批待办 | 把关待办 | 人工介入请求/清算审批/收尾指令的待办队列（/app/inbox） | 产品术语
+term:ide-workspace | IDE 工作区 | IDE 画布 | /app/ide 开发工作位：任务简报/交互编码/git 图谱 | 产品术语
+term:run-orchestration | 运行编排 | 场景编排 | /app/sim/orchestration：启动/续跑/运行模式切换与启动前检查 | 产品术语
+term:run-mode | 运行模式 | 姿态 | strict/standard/demo 三档推演政策（产品界面词；方案机制条款仍用姿态） | 产品术语

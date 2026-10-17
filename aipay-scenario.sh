@@ -2398,7 +2398,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   sset audit_done "$(date +%s)"
   capture_step "deliver_gate" "/app/runs"   # 步23 R29 delivery 面板灯
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 24 --text "独立审计完成（工件见 evidence）" --ev "state=audit_done" >/dev/null 2>&1 || true
-  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 23 --title "delivery 案例面板门禁灯" --entry "/app/runs → 案例面板" --frames deliver_gate-op1-before.png deliver_gate-op1-after.png >/dev/null 2>&1 || true
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 23 --title "delivery 案例面板门禁灯" --entry "/app/cases → 交付案例面板" --frames deliver_gate-op1-before.png deliver_gate-op1-after.png >/dev/null 2>&1 || true
 fi
 
 # ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
@@ -2600,7 +2600,7 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
     note "[观察] IDE 任务简报自动生成功能未见（记问题单）"
   fi
   capture_step "ide_done" "/app/ide"
-  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 25 --title "任务跳转 IDE 工作台" --entry "/app/ide → IDE 视图" --frames ide_done-op1-before.png ide_done-op1-after.png >/dev/null 2>&1 || true
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 25 --title "任务跳转 IDE 工作台" --entry "/app/ide → IDE 工作区" --frames ide_done-op1-before.png ide_done-op1-after.png >/dev/null 2>&1 || true
 
   sset ide_done 1
 fi

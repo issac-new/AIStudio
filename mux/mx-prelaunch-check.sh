@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十六项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门）。
+# mx-prelaunch-check.sh — 开跑前十九项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -101,5 +101,10 @@ ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash 
 #     双向同步纪律的真值面落地）。
 ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3 -m py_compile '$HERE/mux/report_truth.py' && grep -q 'import report_truth' '$HERE/mux/mx-report-gen.py' && grep -q 'report-truth-findings.json' '$HERE/mux/mx-report-audit.py' && grep -q 'repo_branch_runtag' '$HERE/aipay-scenario.sh' && bash '$HERE/tests/report-truth-anchor.test.sh' >/dev/null 2>&1" "报告真值件缺位：report_truth.py 不可编译/生成器未接判据/审计器未读侧柜/驱动未接闸证轮次检查/守门测试红——按 docs/specs/2026-10-16-run20-report-truth-trio.md 接线后重跑"
 
+# ⑲ 产品 IA 版本（V8.37 纪律 75：生效 studio dist 必须含时序六阶段路由族与旅程首页，
+#     防 D13 前旧 dist 上轮——旧 UI 拍出的帧与方案 §2.5 新锚全部错位。生效面判定与
+#     mx-lib 一致：product-dist 有 server 目录用之，否则回落 upstream dist）。
+ck "⑲ 产品 IA 版本（六阶段路由+旅程页在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq 'ia2.journey' \"\$_d\" 2>/dev/null" "生效 dist 不含 /app/stage/ 路由族或旅程页（ia2.journey）——是 D13 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十八项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十九项）" || { echo "有红项——修复后再跑"; exit 1; }
