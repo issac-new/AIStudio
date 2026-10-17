@@ -111,7 +111,13 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
   async function detectRegistry(): Promise<void> {
     const client = clientRef.value
     if (!client) return
-    const content = client.getAccountData(REGISTRY_ACCOUNT_DATA_TYPE)?.content as { roomId?: unknown } | undefined
+    const event = client.getAccountData(REGISTRY_ACCOUNT_DATA_TYPE) as unknown
+    // 真实 matrix-js-sdk 返回 MatrixEvent：内容只能经 getContent() 取。旧代码按
+    // { content } 读取，account_data 明明已在 SDK store 里却永远读不到——重载后
+    // 回退「未配置」的根因。两种形状都兼容（测试 mock 与旧数据）。
+    const content = (event && typeof (event as { getContent?: () => unknown }).getContent === 'function'
+      ? (event as { getContent: () => unknown }).getContent()
+      : (event as { content?: unknown } | undefined)?.content) as { roomId?: unknown } | undefined
     if (!content) return // 无记录：不覆盖已挂定/手动选择的注册房间
     const rid = typeof content.roomId === 'string' ? content.roomId : null
     if (rid && roomVisible(client, rid)) {

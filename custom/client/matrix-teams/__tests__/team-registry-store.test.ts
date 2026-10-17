@@ -15,7 +15,11 @@ function makeSdkClient(roomStates: Record<string, Array<{ type: string; stateKey
   const client = {
     on: (ev: string, fn: Listener) => { listeners.set(ev, [...(listeners.get(ev) ?? []), fn]) },
     off: () => {},
-    getAccountData: (type: string) => accountData.get(type) !== undefined ? { content: accountData.get(type) } : undefined,
+    // 真实 SDK 返回 MatrixEvent（内容经 getContent()）；旧 mock 的 { content } 形状
+    // 曾掩盖生产缺陷，这里按真实形状返回，防止再次漏测。
+    getAccountData: (type: string) => accountData.get(type) !== undefined
+      ? { getContent: () => accountData.get(type) }
+      : undefined,
     setAccountData: async (type: string, content: unknown) => { accountData.set(type, content); sent.accountData.push(type) },
     getRoom: (roomId: string) => {
       const states = roomStates[roomId] ?? []
