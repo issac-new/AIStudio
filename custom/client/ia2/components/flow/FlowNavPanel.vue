@@ -30,6 +30,7 @@ import OntologyNavEntry from '../OntologyNavEntry.vue'
 import SkillgovNavEntry from '../SkillgovNavEntry.vue'
 import BpaNavEntry from '../BpaNavEntry.vue'
 import AccountsNavEntry from '../AccountsNavEntry.vue'
+import IaJourneyEntry from '../IaJourneyEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
 const props = defineProps<{
@@ -143,6 +144,8 @@ function submitCreateRoom(): void {
 <template>
   <div class="flow-nav" data-testid="flow-nav">
     <div class="flow-nav__head">{{ t('ia2.flow.title') }}</div>
+    <!-- 旅程首页入口（层级批：双首页互链——与下者并列） -->
+    <IaJourneyEntry />
     <!-- P5 驾驶舱概览入口（#/app/overview 三卡 landing） -->
     <IaOverviewEntry />
     <!-- P1 审批收件箱入口（待审计数徽标；自含轮询） -->

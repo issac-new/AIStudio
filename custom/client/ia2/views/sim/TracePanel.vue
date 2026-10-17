@@ -3,8 +3,9 @@
      四列表（AC 编号/判据原文/测试结果/UAT 判定三态）；源缺席列=null 如实
      呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
+import { useRunContext } from '../../composables/useRunContext'
 
 interface TraceRow { ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }
 interface TraceResponse {
@@ -14,7 +15,7 @@ interface TraceResponse {
   source: { evidenceDir: string }
 }
 
-const run = ref('')
+const { run, remember } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
 const trace = ref<TraceResponse | null>(null)
@@ -29,6 +30,7 @@ async function load(): Promise<void> {
     const res = await authFetch(`/api/hermes/sim/trace?run=${encodeURIComponent(r)}`)
     if (!res.ok) throw new Error(`/api/hermes/sim/trace → ${res.status}`)
     trace.value = await res.json() as TraceResponse
+    remember()
   } catch (e) {
     loadError.value = (e as Error).message
   } finally {
@@ -44,6 +46,9 @@ function verdictClass(v: string | null): string {
   if (/通过|pass/i.test(v)) return 'pass'
   return 'none'
 }
+
+// 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
+onMounted(() => { if (run.value.trim()) void load() })
 </script>
 
 <template>

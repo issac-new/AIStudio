@@ -124,6 +124,7 @@ async function load(): Promise<void> {
   ]
   try {
     runState.value = await main
+    localStorage.setItem('ia2.lastRun', run)
   } catch (e) {
     runState.value = null
     loadError.value = (e as Error).message
@@ -169,11 +170,19 @@ function goSupervision(): void {
       <div class="ov__posture" :class="`ov__posture--${runState.posture}`" data-testid="ov-posture">
         <span class="ov__posture-name">运行模式 {{ runState.posture }}</span>
         <span class="ov__posture-policy">{{ POSTURE_POLICY[runState.posture] ?? '运行模式政策未登记' }}</span>
-        <span
-          class="ov__lamp"
-          :class="runState.ledger.open > 0 ? 'ov__lamp--red' : 'ov__lamp--green'"
+        <button
+          v-if="runState.ledger.open > 0"
+          type="button"
+          class="ov__lamp ov__lamp--red ov__lamp--link"
           data-testid="ov-clearance"
-        >{{ runState.ledger.open > 0 ? `遗留项未清算（${runState.ledger.open} 笔待处理，禁止启动新运行）` : '遗留项已清算（0 笔待处理）' }}</span>
+          title="去治理中心·遗留项清算处理"
+          @click="router.push({ name: 'ia2.govClearance' })"
+        >{{ `遗留项未清算（${runState.ledger.open} 笔待处理，禁止启动新运行）→ 去清算` }}</button>
+        <span
+          v-else
+          class="ov__lamp ov__lamp--green"
+          data-testid="ov-clearance"
+        >遗留项已清算（0 笔待处理）</span>
       </div>
 
       <!-- KPI 四卡：六闸 n/6｜分支交付 n/6｜含代偿步可用｜净计步可用（紫） -->
@@ -182,7 +191,7 @@ function goSupervision(): void {
           <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">六道质量门通过（g1_frozen…report_done）</span>
         </div>
-        <div class="ov__kpi" data-testid="ov-kpi-branches">
+        <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（仿真中心·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">
           <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">分支交付（已推 origin feat）</span>
           <span v-if="branchesError" class="ov__kpi-absent">端点缺席：{{ branchesError }}</span>
@@ -263,7 +272,7 @@ function goSupervision(): void {
             </tbody>
           </table>
 
-          <h4 class="ov__h">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）</h4>
+          <h4 class="ov__h ov__h--link" title="去仿真中心·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
           <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
@@ -287,7 +296,7 @@ function goSupervision(): void {
             <h4 class="ov__h">六道质量门</h4>
             <p v-if="issuesError" class="ov__hint" data-testid="ov-gate-rejects-absent">打回计数缺席：{{ issuesError }}</p>
             <ul class="ov__gates">
-              <li v-for="g in gateRows" :key="g.id" class="ov__gate" :data-testid="`ov-gate-${g.id}`">
+              <li v-for="g in gateRows" :key="g.id" class="ov__gate ov__gate--link" :data-testid="`ov-gate-${g.id}`" title="查看质量门修复单（治理中心·质量门与流程）" @click="router.push({ name: 'ia2.governance' })">
                 <SimGateBadge :gate="g.id" :status="g.passed ? 'pass' : 'pending'" :first-pass="g.passed && g.rejectCount === 0" :reject-count="issuesError ? null : g.rejectCount" />
                 <span v-if="g.passed" class="ov__gate-at">{{ g.at }}</span>
               </li>
@@ -409,4 +418,14 @@ function goSupervision(): void {
 .ov__net-rows { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 .ov__net-row--net { color: var(--ia-compensated); }
 .ov__net-types { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* 动线批（2026-10-17）：红灯/六闸行/交付 KPI 可点化——去处都在同名功能签 */
+.ov__lamp--link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.ov__lamp--link:hover { filter: brightness(1.1); }
+.ov__gate--link { cursor: pointer; }
+.ov__gate--link:hover { outline: 1px solid var(--border-color); outline-offset: 2px; }
+.ov__kpi--link { cursor: pointer; }
+.ov__kpi--link:hover { outline: 1px solid var(--border-color); outline-offset: 2px; }
+.ov__h--link { cursor: pointer; }
+.ov__h--link:hover { text-decoration: underline; text-underline-offset: 3px; }
 </style>

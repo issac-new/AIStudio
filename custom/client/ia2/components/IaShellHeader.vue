@@ -41,6 +41,10 @@ import { changelog } from '@/data/changelog'
 
 const { t } = useI18n()
 const router = useRouter()
+// 层级批：品牌区旅程回家钮（旅程页是产品默认入口，此前顶栏无路可达）
+function goJourney(): void {
+  void router.push({ name: 'ia2.journey' })
+}
 const store = useCockpitStore()
 const appStore = useAppStore()
 const workspace = useWorkspaceStore()
@@ -191,6 +195,7 @@ function onPanelJumpTask(taskId: string): void {
     <!-- 走查二修（2026-10-16）：三中心导航并入本行行首（原独立首行退役，去重） -->
     <IaCentersNav part="centers" />
     <div class="cockpit-top__brand">
+      <button type="button" class="cockpit-top__home" data-testid="ia-header-home" title="旅程首页（默认入口）" @click="goJourney">🧭</button>
       <ThemeSwitch />
       <IaLocaleToggle />
       <span class="cockpit-top__conn"
@@ -302,6 +307,16 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 12px; position: relative; z-index: 10; }
 /* 2026-09-30：品牌位文字退役改挂切换器控件簇——不再收缩裁剪（窄幅挤压转由
  * 搜索框 flex-shrink:2 与态势条横向滚动吸收），文字省略三件套随之退役 */
+.cockpit-top__home {
+  border: none;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  &:hover { background: rgba(var(--accent-primary-rgb), 0.08); }
+}
 .cockpit-top__brand { display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
 .cockpit-top__conn { font-size: 10px; flex-shrink: 0; }
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }

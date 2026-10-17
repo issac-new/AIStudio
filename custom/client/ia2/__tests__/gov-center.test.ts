@@ -175,7 +175,7 @@ describe('GateRepairsPanel — 签 1 闸修复单（C3 件一，R3）', () => {
     mockedTransition.mockResolvedValue({} as never)
   })
   it('修复单渲染+合法迁移按钮（终态无钮）；豁免走 prompt 理由', async () => {
-    vi.stubGlobal('prompt', () => '用户裁定豁免')
+    // 动线批（2026-10-17）：豁免理由改行内表单（原 window.prompt 原生弹窗退役）
     const w = mount(GateRepairsPanel)
     await flushPromises()
     const rec = w.find('[data-testid="grp-rec-gr-1"]')
@@ -186,9 +186,16 @@ describe('GateRepairsPanel — 签 1 闸修复单（C3 件一，R3）', () => {
     expect(w.find('[data-testid="grp-empty"]').exists()).toBe(false)
     await w.find('[data-testid="grp-tr-gr-1-waived"]').trigger('click')
     await flushPromises()
+    // 点击豁免先出行内表单；空理由时确认钮禁用（必填语义）
+    const waiveBox = w.find('[data-testid="grp-waive-gr-1"]')
+    expect(waiveBox.exists()).toBe(true)
+    expect(w.find('[data-testid="grp-waive-ok-gr-1"]').attributes('disabled')).toBeDefined()
+    await w.find('[data-testid="grp-waive-input-gr-1"]').setValue('用户裁定豁免')
+    expect(w.find('[data-testid="grp-waive-ok-gr-1"]').attributes('disabled')).toBeUndefined()
+    await w.find('[data-testid="grp-waive-ok-gr-1"]').trigger('click')
+    await flushPromises()
     expect(mockedTransition).toHaveBeenCalledWith('gr-1', 'waived', '用户裁定豁免')
     w.unmount()
-    vi.unstubAllGlobals()
   })
 
   it('终态（pass）无迁移按钮；端点失败如实', async () => {

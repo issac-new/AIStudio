@@ -1,6 +1,6 @@
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -320,6 +320,23 @@
+@@ -320,6 +320,24 @@
    }).hermesDesktop?.isDesktop === true
  }
  
@@ -9,7 +9,8 @@
 +// 模块映射会把失败按 URL 永久缓存——此后每次导航到同路由立即 reject，页面无限
 +// 「加载中」（实测模型页 ~50% 概率）。处置：识别该类失败做一次整页重载（清失败
 +// 缓存，重载时 vite 已完成 transform 预热）；sessionStorage 一次性标记防重载风暴。
-+router.onError((error, to) => {
++// 测试态兜底：mock 最小路由器无 onError（模块装载期直炸四测试文件）——能力探测后再挂
++if (typeof router.onError === 'function') router.onError((error, to) => {
 +  const msg = String((error as Error)?.message || '')
 +  if (!/Failed to fetch dynamically imported module|Importing a module script failed/i.test(msg)) return
 +  const key = 'hermes_lazy_reload'

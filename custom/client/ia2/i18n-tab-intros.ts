@@ -18,21 +18,6 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: '看板任务链（依赖边）+ RACI 审批 + 自主度阶梯审批点 + 升级记录，实时聚合；人/智能体按 -agent 后缀口径判定。',
       act: '负责人核对五问：结果谁负责、人机怎么分工、哪里必须人确认、异常怎么升级、跑完沉淀什么可复用资产。',
     },
-    trace: {
-      what: '每张任务卡与它的执行记录对照表：跑了几轮、每轮结果、最近完成时间。',
-      source: '看板任务与其运行历史，实时聚合。',
-      act: '研发核对需求交付到哪一步；测试圈定回归范围；产品确认没有需求掉队。',
-    },
-    accounts: {
-      what: '交付状态总览：工作项分布 + 六道交付关卡（需求冻结/架构评审/代码门禁/独立验证/发布准出/复盘）工件核查 + 六维检查结论。',
-      source: '看板与 git 仓实查；缺失项如实标灰，不编造。',
-      act: '管理者每周扫一眼，缺件补件；检查不过的维度按证据整改，不是拍脑袋。',
-    },
-    observatory: {
-      what: '自动化任务与仿真运行的观测台：任务链拓扑、每步耗时与当前状态。',
-      source: '运行中心实时数据。',
-      act: '研发排查"我的任务卡在哪一步、为什么还没出结果"；点节点看执行明细。',
-    },
 
     // ── 推演中心六签（U1 可用性批：按使用动线写，不按数据域写）──
 
@@ -94,16 +79,6 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: '轮次 issues.log 实读。',
       act: '复盘前查处置率；红色未处理的逐条要有说法。',
     },
-    'gov-audit': {
-      what: '留痕查验：审计四查状态、基线变更记录。',
-      source: '审计与变更事件流。',
-      act: '交付验收前过审计；对改动有疑问查变更记录（带提交号）。',
-    },
-    'gov-docs': {
-      what: '文档完整性核对：14 件交付物逐字段检查，缺什么红显什么。',
-      source: '交付物注册表×证据目录。',
-      act: '收尾时做文档完整性检查，缺项去补再交。',
-    },
     'gov-metrics': {
       what: '组织度量检查五卡：效率/集群/语义/会话/成本，含磁盘水位预警。',
       source: '巡检官快照与度量端点。',
@@ -134,27 +109,24 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: '用量记录、任务实况与代码锚点；缺数据标 unavailable 不造数。',
       act: '工程负责人月度复盘"投入花在哪、哪最亏"；成熟度自检给出下一步改进优先级。',
     },
+
+    // ── 末端工作页导语（2026-10-17 驾驶舱末端可用性批：此前这些页零导语）──
+    'inbox': { what: '等真人拍板的事都在这：人工介入请求、遗留项清算审批、升级裁决。', source: '网关审批事件与治理台账实时聚合；没有待办时如实显示空。', act: '每天先看这里——每一笔都阻塞下游 AI 的工作，批一笔动一串。' },
+    'orchestration': { what: '一轮运行的驾驶座：启动、断点续跑、切换运行模式；起跑前自动跑十九项机械检查。', source: 'harness 驱动脚本状态与检查结果。', act: '开新轮或续跑在这里操作；检查有红项先处理再起跑。' },
+    'sim-settings': { what: '仿真环境的开关面板：端口、账号编制、采集选项等推演专属配置。', source: '配置文件读写，保存即生效并留痕。', act: '环境不对先来这里核对；改完重启相关服务生效。' },
+    'gov-settings': { what: '系统设置的分组入口：模型服务商、平台连接等底层配置直达。', source: '各设置注册表（git 版本化）。', act: '找一项具体设置从分组进，不用在菜单之间跳。' },
+    'model-providers': { what: '模型服务商清单：每个档案用什么模型、走哪个通道。', source: '模型配置注册表。', act: '换模型或加通道在这里改；改完去智能体工作台验证生效。' },
+    'teams': { what: '团队与房间：谁在哪个队、向谁汇报、值守怎么分派。', source: '组织注册表与团队配置。', act: '建团队、指领导、设值守分派——这些决定消息往哪路由。' },
+    'agents': { what: '智能体花名册：每个 AI 助理的档案、模型绑定与启停状态。', source: 'hermes agent 档案与健康探测。', act: '接入新智能体、换模型绑定、排查不在线的档案在这里。' },
+    'accounts': { what: '账号管理：每位成员的账号、角色与 AI 助理配对。', source: 'matrix 账号目录与编制对账。', act: '建号、改角色、重置登录；账号与编制对不上会在这里标红。' },
+    'cases': { what: '交付案例陈列：历轮运行交付了什么、质量门判定如何。', source: 'delivery 案例事件与 QGate 判定。', act: '验收前翻近期案例对照；对外展示也用这页。' },
+    'collab': { what: '日常工作台：左栏工作流导航、中栏当前对象、右栏任务与决策。', source: '看板/会话/审批实时聚合。', act: '开发期每天主驻这页：接任务、跟进卡片、处理待决策。' },
   },
   en: {
     orchestra: {
       what: 'Orchestration chart: pick a business outcome (root task) and see in one graph how people, agents and control points deliver it together.',
       source: 'Kanban task chains (dependency edges) + RACI approvers + autonomy-ladder approval points + escalations, live; humans/agents classified by -agent suffix.',
       act: 'Owners verify the five questions: who owns the outcome, how work splits human/agent, where humans must confirm, how anomalies escalate, what reusable assets remain.',
-    },
-    trace: {
-      what: 'Each task card mapped to its runs: rounds, outcomes, latest finish time.',
-      source: 'Aggregated live from kanban tasks and run history.',
-      act: 'Devs check delivery progress; testers scope regression; PMs confirm no requirement dropped.',
-    },
-    accounts: {
-      what: 'Delivery status overview: work-item distribution + six gate artifact checks + six-domain health verdicts.',
-      source: 'Live from kanban and git; missing items shown honestly in grey.',
-      act: 'Managers scan weekly and close gaps; failing domains get evidence-based fixes.',
-    },
-    observatory: {
-      what: 'Observatory for automated tasks and simulation runs: topology, per-step duration, live status.',
-      source: 'Run Center live data.',
-      act: 'Devs answer "where is my task stuck"; click a node for execution detail.',
     },
 
 
@@ -174,8 +146,6 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'gov-orgAssets': { what: 'Roster and assets: people, permissions, app registry, key ledger.', source: 'Read-only registries.', act: 'Check staffing before a run; log key rotations (no secrets).' },
     'gov-clearance': { what: 'Open items: compensations left from the last run; resolve one, clear one.', source: 'Compensation ledger TSV.', act: 'Must be zero or waived before a new run. Waive needs a reason.' },
     'gov-issues': { what: 'Issue reconciliation: every registered issue, disposed or not.', source: 'Run issues.log.', act: 'Check disposal rate before retro; red rows need answers.' },
-    'gov-audit': { what: 'Audit trail: four-check status, baseline changes.', source: 'Audit and change event streams.', act: 'Pass audit before acceptance; query changes by commit.' },
-    'gov-docs': { what: 'Doc completeness: 14 deliverables field-checked, missing in red.', source: 'Deliverable registry × evidence dir.', act: 'Run completeness check at closing; fix gaps.' },
     'gov-metrics': { what: 'Org health five cards incl. disk watermark alarm.', source: 'Inspector snapshots and metric endpoints.', act: 'Review trends at retro; red disk lamp = act now.' },
 
     'gov-org': {
@@ -203,6 +173,18 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: 'Usage records, task facts, code anchors; missing data marked unavailable.',
       act: 'Engineering leads review monthly where effort goes; maturity check ranks next improvements.',
     },
+
+    // ── End-page intros (2026-10-17 cockpit usability batch) ──
+    'inbox': { what: 'Everything waiting for a human call: intervention requests, open-item approvals, escalations.', source: 'Gateway approval events and governance ledgers, live; empty means empty.', act: 'Check daily — each item blocks downstream agents.' },
+    'orchestration': { what: 'The driver seat of a run: launch, resume, switch posture; 19 mechanical checks before start.', source: 'Harness driver state and check results.', act: 'Start or resume runs here; fix red checks first.' },
+    'sim-settings': { what: 'Switchboard of the simulation environment: ports, account roster, capture options.', source: 'Config files; saving takes effect with a trail.', act: 'Verify here when the environment feels wrong.' },
+    'gov-settings': { what: 'Grouped entry to system settings: model providers, platform connections and more.', source: 'Git-versioned settings registries.', act: 'Jump straight to the setting you need.' },
+    'model-providers': { what: 'Model provider list: which model and channel each profile uses.', source: 'Model configuration registry.', act: 'Change models or channels here; verify in the agents workbench.' },
+    'teams': { what: 'Teams and rooms: who is in which team, reporting lines, on-duty routing.', source: 'Org registry and team configs.', act: 'Create teams, assign leads, set duty routing.' },
+    'agents': { what: 'Agent roster: profiles, model bindings, running state.', source: 'hermes agent profiles and health probes.', act: 'Onboard agents, rebind models, debug offline profiles.' },
+    'accounts': { what: 'Account management: member accounts, roles and AI-assistant pairing.', source: 'matrix account directory vs roster.', act: 'Create accounts, change roles, reset logins.' },
+    'cases': { what: 'Delivery showcase: what past runs delivered and how gates ruled.', source: 'Delivery case events and QGate verdicts.', act: 'Compare recent cases before acceptance.' },
+    'collab': { what: 'Daily workbench: flow nav left, current object center, tasks and decisions right.', source: 'Kanban/sessions/approvals, live.', act: 'Live here during development: pick tasks, follow cards, decide.' },
   },
 }
 
