@@ -121,21 +121,29 @@ function contrast(a: string, b: string): number {
 
 describe('V2 补批：五态色 WCAG 对比度（D4 token 机械守门）', () => {
   const DARK_BG = '#1d1f23' // 当前深色态主背景（驾驶屏面板实测底色）
-  const TOKENS: Record<string, string> = {
-    '--ia-fresh': '#2e9e5b', '--ia-stale': '#b8860b', '--ia-fail': '#e06666',
-    '--ia-pass': '#2f9e6e', '--ia-compensated': '#9678c6',
+  // 2026-10-18 双主题复核：浅色状态底需要深文字、深色状态底需要浅文字，按主题分两套。
+  const DARK_TOKENS: Record<string, string> = {
+    '--ia-fresh': '#53b483', '--ia-stale': '#d4a017', '--ia-fail': '#f08a8a',
+    '--ia-pass': '#53b483', '--ia-compensated': '#b39ddb',
+  }
+  const LIGHT_TOKENS: Record<string, string> = {
+    '--ia-fresh': '#17663a', '--ia-stale': '#7a5a06', '--ia-fail': '#b3261e',
+    '--ia-pass': '#17663a', '--ia-compensated': '#5e3f92',
   }
   it('深色背景（现用主题）文字级 AA：五态色全部 ≥4.5:1', () => {
-    for (const [name, hex] of Object.entries(TOKENS)) {
+    for (const [name, hex] of Object.entries(DARK_TOKENS)) {
       const r = contrast(hex, DARK_BG)
       expect(r, `${name} ${hex} 深底 ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
     }
   })
-  it('浅色背景不劣于大字/图形级（≥3:1），且 token 值与 ia2.scss 同步（防手改漂移）', () => {
+  it('浅色主题文字级 AA：五态色对白底全部 ≥4.5:1，且两套 token 与 ia2.scss 同步', () => {
     const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
-    for (const [name, hex] of Object.entries(TOKENS)) {
-      expect(contrast(hex, '#ffffff'), `${name} 浅底`).toBeGreaterThanOrEqual(3)
-      expect(scss, name).toContain(`${name}: ${hex};`)
+    for (const [name, hex] of Object.entries(LIGHT_TOKENS)) {
+      expect(contrast(hex, '#ffffff'), `${name} 浅底`).toBeGreaterThanOrEqual(4.5)
+      expect(scss, `${name} light`).toContain(`${name}: ${hex};`)
+    }
+    for (const [name, hex] of Object.entries(DARK_TOKENS)) {
+      expect(scss, `${name} dark`).toContain(`${name}: ${hex};`)
     }
   })
 })
