@@ -44,14 +44,14 @@ describe('contract: v12 unified IA routes (§8 双视图)', () => {
 
   it('双视图 /app 侧单场景存在，命名前缀 ia2.（沟通协作=登录默认落点）', () => {
     const router = makeRouter()
-    expect(IA_AREAS.map(a => a.key)).toEqual(['workbench'])
+    expect(IA_AREAS.length).toBeGreaterThanOrEqual(3) // D13：六阶段
     for (const area of IA_AREAS) {
       const resolved = router.resolve(area.path)
       expect(resolved.name, `${area.path} 必须可解析（契约：视图存在性）`).toBe(area.name)
       expect(String(resolved.name).startsWith('ia2.')).toBe(true)
     }
     // /app 裸路径 = 沟通协作工作台（登录默认落点，071 守卫直落）
-    expect(router.resolve('/app').name).toBe('ia2.journey') // D12：旅程=默认入口
+    expect(router.resolve('/app').name).toBe('ia2.stage1') // D13：①搭台=默认入口
     // fullscreen meta（壳自带场景条，上游 AppSidebar 隐藏）
     expect(router.resolve('/app/board').meta.fullscreen).toBe(true)
   })

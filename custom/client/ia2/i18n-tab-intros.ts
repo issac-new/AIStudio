@@ -35,6 +35,14 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     },
 
     // ── 推演中心六签（U1 可用性批：按使用动线写，不按数据域写）──
+
+    // ── D13 时序六阶段（工作页导语）──
+    'stage-setup': { what: '从 0 开始建组织：账号、编制、团队领导与协调关系、应用资产、hermes agent、环境冒烟。', source: '组织资产注册表与健康探测。', act: '全部完成后才进入需求阶段。' },
+    'stage-reqs': { what: '第一张需求单进场：验收标准定清、范围划清、G1 上锁、建群、选姿态开轮。', source: '冻结单与闸键。', act: '锁后不许改；开轮后进入分析。' },
+    'stage-design': { what: '任务分解、系分、概设、G2 评审、排期——把需求拆成可执行的活儿。', source: '看板任务链与文档评审。', act: '没设计不编码。' },
+    'stage-build': { what: '六路并行编码+独立测试；日常协调全在这：看板、沟通、IDE、等你拍板的介入卡。', source: '看板/沟通流/inbox。', act: '在制≤2；完成必带双凭证。' },
+    'stage-accept': { what: 'G5 发布准出、完备性检查、UAT 逐条判词——交付完成。', source: '审批事件与验收书。', act: '判词只认结构化字段。' },
+    'stage-govern': { what: '台账、审计、复盘、欠账清偿、度量体检——组织越跑越聪明。', source: 'issues.log/清偿台账/巡检官。', act: '开新轮前欠账必须清零。' },
     'sim-overview': {
       what: '一轮推演的驾驶屏：跑到第几步、六道关卡过了几道、有没有代偿欠账，一屏看全。',
       source: '轮次状态文件与代偿台账实读，数字全部实测、缺席如实标注。',
@@ -149,6 +157,13 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       act: 'Devs answer "where is my task stuck"; click a node for execution detail.',
     },
 
+
+    'stage-setup': { what: 'Build the org from zero: accounts, roster, team leads, assets, agents, smoke.', source: 'Registries and health probes.', act: 'Complete before requirements.' },
+    'stage-reqs': { what: 'First requirement: freeze ACs, scope, G1 lock, rooms, posture, launch.', source: 'Freeze doc and gate keys.', act: 'No edits after lock.' },
+    'stage-design': { what: 'Decompose, analyze, review G2, schedule.', source: 'Kanban chains and doc review.', act: 'No code without design.' },
+    'stage-build': { what: 'Parallel coding + independent testing; daily coordination lives here.', source: 'Kanban/chat/inbox.', act: 'WIP≤2; dual credentials.' },
+    'stage-accept': { what: 'G5 release gate, completeness, UAT verdicts.', source: 'Approval events.', act: 'Structured verdicts only.' },
+    'stage-govern': { what: 'Ledger, audit, retro, clearance, metrics.', source: 'issues.log/inspector.', act: 'Clear debts before new run.' },
     'sim-overview': { what: 'Cockpit of a simulation run: step progress, six gates, compensation debt at a glance.', source: 'Run state file and ledger, live.', act: 'Start here after launching. Red clearance lamp = unresolved debt, settle it first.' },
     'sim-supervision': { what: 'On-duty watch desk: observation windows and analyst briefs answer "where is it stuck".', source: 'Read-only supervision journal.', act: 'Check periodically during a run; read briefs before intervening.' },
     'sim-ops': { what: 'Infrastructure health: four services, dispatcher, idle workers.', source: 'Live /health probes + hermes-agent commands.', act: 'When things feel dead, check red dots here first.' },

@@ -11,7 +11,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-export type CenterKey = 'workbench' | 'sim' | 'gov'
+export type CenterKey = 'workbench' | 'sim' | 'gov' | 'workbench2' | 'accept' | 'govern'
 
 export interface CenterNavMeta {
   key: CenterKey
@@ -24,10 +24,16 @@ export interface CenterNavMeta {
 }
 
 /** 三中心入口（顺序即顶栏渲染序） */
+// D13 时序六阶段（2026-10-17 用户裁定：全部前端功能按使用时序重组，非加导航）：
+// 搭台→需求→分析设计→生产→验收→治理；功能归属按推演方案 26 步/七幕映射，
+// 三中心数据页降为各阶段内的工具舱（路由全保留）。
 export const CENTER_NAVS: readonly CenterNavMeta[] = [
-  { key: 'workbench', name: 'ia2.journey', path: '/app', labelZh: '工作台', labelEn: 'Workbench' },
-  { key: 'sim', name: 'ia2.sim', path: '/app/sim', labelZh: '推演中心', labelEn: 'Simulation Center' },
-  { key: 'gov', name: 'ia2.governance', path: '/app/gov', labelZh: '治理中心', labelEn: 'Governance Center' },
+  { key: 'workbench', name: 'ia2.stage1', path: '/app/stage/setup', labelZh: '①搭台', labelEn: 'Setup' },
+  { key: 'sim', name: 'ia2.stage2', path: '/app/stage/reqs', labelZh: '②需求', labelEn: 'Requirements' },
+  { key: 'gov', name: 'ia2.stage3', path: '/app/stage/design', labelZh: '③分析设计', labelEn: 'Design' },
+  { key: 'workbench2', name: 'ia2.stage4', path: '/app/stage/build', labelZh: '④生产', labelEn: 'Build' },
+  { key: 'accept', name: 'ia2.stage5', path: '/app/stage/accept', labelZh: '⑤验收', labelEn: 'Accept' },
+  { key: 'govern', name: 'ia2.stage6', path: '/app/stage/govern', labelZh: '⑥治理', labelEn: 'Govern' },
 ]
 
 /**
@@ -36,9 +42,18 @@ export const CENTER_NAVS: readonly CenterNavMeta[] = [
  * 返回 null。段边界匹配：/app/simulation 不误判为推演中心。
  */
 export function centerForPath(path: string): CenterKey | null {
+  // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④生产
+  // （工作台=生产期的日常工具集：看板/沟通/IDE/inbox）
+  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'workbench'
+  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'sim'
+  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'gov'
+  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'workbench2'
+  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'accept'
+  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'govern'
   if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'sim'
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'gov'
-  if (path === '/app' || path.startsWith('/app/')) return 'workbench'
+  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=①搭台
+  if (path.startsWith('/app/')) return 'workbench2'
   return null
 }
 

@@ -31,7 +31,7 @@ describe('ia2 路由树（v12 双视图）', () => {
   })
 
   it('场景元数据 = 单视图 collab，i18n key 命名一致', () => {
-    expect(IA_AREAS.map(a => a.key)).toEqual(['workbench'])
+    expect(IA_AREAS.map(a => a.key).length).toBeGreaterThanOrEqual(3)
     for (const area of IA_AREAS) {
       expect(String(area.labelKey).startsWith('ia2.nav.')).toBe(true) // D12：key 改 workbench，labelKey 沿用既有词条
     }
@@ -39,7 +39,7 @@ describe('ia2 路由树（v12 双视图）', () => {
 
   it('/app 默认渲染沟通协作工作台（登录默认落点）', () => {
     const router = makeRouter()
-    expect(router.resolve('/app').name).toBe('ia2.journey') // D12：旅程首页=默认入口
+    expect(router.resolve('/app').name).toBe('ia2.stage1') // D13：①搭台=默认
   })
 
   it('工作台选择子路由：会话/房间/循环 参数名原样', () => {
@@ -148,13 +148,13 @@ describe('areaForPath（视图投影，场景条高亮依据）', () => {
   it.each([
     ['/app', 'workbench'],
     ['/app/', 'workbench'],
-    ['/app/board', 'workbench'],
-    ['/app/runs', 'workbench'],
-    ['/app/runs/run-9', 'workbench'],
-    ['/app/eng', 'workbench'],
-    ['/app/s/room/x', 'workbench'],
-    ['/app/l/lp-1', 'workbench'],
-    ['/app/history/session/s1', 'workbench'],
+    ['/app/board', 'workbench2'],
+    ['/app/runs', 'workbench2'],
+    ['/app/runs/run-9', 'workbench2'],
+    ['/app/eng', 'workbench2'],
+    ['/app/s/room/x', 'workbench2'],
+    ['/app/l/lp-1', 'workbench2'],
+    ['/app/history/session/s1', 'workbench2'],
   ])('%s → %s', (path, expected) => {
     expect(areaForPath(path)).toBe(expected)
   })

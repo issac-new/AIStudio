@@ -20,7 +20,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { features } from '../../../config/features'
 
 /** 视图 key（场景条与区域投影的词表）—— v12 双视图的 /app 侧；IDE 侧经 ide.shell 直链 */
-export type IaAreaKey = 'collab'
+export type IaAreaKey = 'workbench' | 'sim' | 'gov' | 'workbench2' | 'accept' | 'govern'
 
 export interface IaAreaMeta {
   key: IaAreaKey
@@ -34,7 +34,12 @@ export interface IaAreaMeta {
 
 /** 视图元数据（场景条 + 区域投影的单一事实源） */
 export const IA_AREAS: IaAreaMeta[] = [
-  { key: 'workbench', name: 'ia2.journey', path: '/app', labelKey: 'ia2.nav.collab' },  // D12：旅程=默认入口
+  { key: 'workbench', name: 'ia2.stage1', path: '/app', labelKey: 'ia2.nav.collab' },
+  { key: 'sim', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.collab' },
+  { key: 'gov', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.collab' },
+  { key: 'workbench2', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.collab' },
+  { key: 'accept', name: 'ia2.stage5', path: '/app/stage/accept', labelKey: 'ia2.nav.collab' },
+  { key: 'govern', name: 'ia2.stage6', path: '/app/stage/govern', labelKey: 'ia2.nav.collab' },
 ]
 
 /**
@@ -43,7 +48,17 @@ export const IA_AREAS: IaAreaMeta[] = [
  */
 export function areaForPath(path: string): IaAreaKey | null {
   if (path !== '/app' && !path.startsWith('/app/')) return null
-  return 'workbench'
+  // D13 时序六阶段（与 nav-centers.centerForPath 同步）
+  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'workbench'
+  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'sim'
+  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'gov'
+  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'workbench2'
+  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'accept'
+  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'govern'
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'sim'
+  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'gov'
+  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=①搭台
+  return 'workbench2'
 }
 
 /** 旧直达链接迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
@@ -151,9 +166,19 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       meta: { fullscreen: true },
       children: [
         {
-          // D12 时序旅程首页（2026-10-17 用户裁定）：/app 默认入口=八阶段旅程；
-          // 沟通协作三栏移 /app/collab（工作台分段按钮直达），原直达链接重定向一周期。
+          // D13 时序六阶段：/app 默认=①搭台（真工作页）；旅程总览挂 /journey
           path: '',
+          name: 'ia2.stage1',
+          component: () => import('./views/stage/StageShell.vue'),
+          props: { stage: 1 },
+        },
+        { path: 'stage/reqs', name: 'ia2.stage2', component: () => import('./views/stage/StageShell.vue'), props: { stage: 2 } },
+        { path: 'stage/design', name: 'ia2.stage3', component: () => import('./views/stage/StageShell.vue'), props: { stage: 3 } },
+        { path: 'stage/build', name: 'ia2.stage4', component: () => import('./views/stage/StageShell.vue'), props: { stage: 4 } },
+        { path: 'stage/accept', name: 'ia2.stage5', component: () => import('./views/stage/StageShell.vue'), props: { stage: 5 } },
+        { path: 'stage/govern', name: 'ia2.stage6', component: () => import('./views/stage/StageShell.vue'), props: { stage: 6 } },
+        {
+          path: 'journey',
           name: 'ia2.journey',
           component: () => import('./views/journey/JourneyView.vue'),
         },
