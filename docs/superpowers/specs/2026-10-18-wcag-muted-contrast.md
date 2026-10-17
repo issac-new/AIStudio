@@ -20,5 +20,12 @@
 
 ## 验证
 
-- `npx vitest run custom/client/__tests__/wcag-contrast.test.ts`：3/3 通过。
+- `npx vitest run custom/client/__tests__/wcag-contrast.test.ts`：4/4 通过。
 - 合并后 8649 双主题重跑审计：浅色 muted 对 `#fafafa/#f0f0f0` ≥5.0、深色 muted 对 `#2a2a2a` ≥5.0；页面级失败项应只剩图形/emoji 等非文字项。
+
+## 补充：五态状态色（同日二次复核）
+
+首轮 muted/secondary 修正后重跑审计，仿真中心仍有两类失败：浅色状态底（红 2.7、紫 2.76、绿/琥珀 3.x）与深色状态底（紫 4.0、绿 4.0）。根因是五态状态色只在深色底做过校准，浅色状态底与深色状态底未覆盖。处置：在 `ia2.scss` 的 `:root` 写浅色主题五态值（fail `#b3261e`、stale `#7a5a06`、fresh/pass `#17663a`、compensated `#5e3f92`），`.dark` 写深色主题五态值（fail `#f08a8a`、stale `#d4a017`、fresh/pass `#53b483`、compensated `#b39ddb`）；所有值对常用背景与对应状态底均 ≥4.5:1（最差 4.97）。`wcag-contrast.test.ts` 同时固定两套值并计算对比度。
+
+决策：状态色按主题分套而不是一套通吃——浅色状态底需要深文字、深色状态底需要浅文字，单套值必然有一端不达标；分套是满足 AA 的最小改动，且不改动组件用法。
+
