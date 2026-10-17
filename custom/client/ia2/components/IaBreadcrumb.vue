@@ -35,7 +35,7 @@ const PAGE_LABEL: Record<string, { zh: string; en: string }> = {
   board: { zh: '看板', en: 'Board' },
   inbox: { zh: '审批收件箱', en: 'Approvals Inbox' },
   collab: { zh: '工作台', en: 'Workbench' },
-  dash: { zh: '驾驶舱概览', en: 'Cockpit Overview' },
+  dash: { zh: '工作台概览', en: 'Workbench Overview' },
   teams: { zh: '团队', en: 'Teams' },
   agents: { zh: '智能体', en: 'Agents' },
   accounts: { zh: '账户管理', en: 'Accounts' },
@@ -67,7 +67,7 @@ const crumbs = computed<Crumb[]>(() => {
   const name = String(route?.name ?? '')
   const short = name.replace(/^ia2\./, '')
   const zh = lang.value === 'zh'
-  const out: Crumb[] = [{ label: zh ? '旅程' : 'Journey', to: { name: 'ia2.journey' } }]
+  const out: Crumb[] = [{ label: zh ? '流程总览' : 'Process Overview', to: { name: 'ia2.journey' } }]
 
   // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回治理中心仍亮②
   const fromQ = stageContextQuery(route?.query?.from)

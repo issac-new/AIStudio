@@ -18,8 +18,20 @@ import { SimInterventionCard } from '../sim/index'
 
 const interventions = ref<InterventionsView | null>(null)
 const clearance = ref<ClearanceLedgerView | null>(null)
-const loadError = ref('')
+// 部分失败隔离（2026-10-17 内容与交互批）：介入队列与遗留项台账各自取数——
+// 台账 fail-closed 503 时，人工介入队列仍要能用，不能一起陪葬。
+const interventionsError = ref('')
+const clearanceError = ref('')
+const rawClearanceError = ref('')
+const actionError = ref('')
 const busy = ref(false)
+
+/** 台账技术错误人话化：正文给人能懂的原因与下一步，原始错误进 title 供排查。 */
+function humanizeLedgerError(message: string): string {
+  return /ORGLOOP_LEDGER_TSV/.test(message)
+    ? '遗留项台账未配置：请联系管理员配置清算台账后重试'
+    : message
+}
 
 const pendingPoints = computed(() => (interventions.value?.points ?? []).filter(p => p.pending === true))
 const unknownPoints = computed(() => (interventions.value?.points ?? []).filter(p => p.pending === null))
@@ -39,27 +51,34 @@ const copied = ref(false)
 
 async function refresh(): Promise<void> {
   busy.value = true
-  loadError.value = ''
-  try {
-    const [iv, cl] = await Promise.all([fetchInterventionsPending(), fetchClearanceLedger()])
-    interventions.value = iv
-    clearance.value = cl
-  } catch (e) {
-    loadError.value = (e as Error).message
-  } finally {
-    busy.value = false
+  interventionsError.value = ''
+  clearanceError.value = ''
+  rawClearanceError.value = ''
+  actionError.value = ''
+  const [iv, cl] = await Promise.allSettled([fetchInterventionsPending(), fetchClearanceLedger()])
+  if (iv.status === 'fulfilled') interventions.value = iv.value
+  else { interventions.value = null; interventionsError.value = (iv.reason as Error).message }
+  if (cl.status === 'fulfilled') clearance.value = cl.value
+  else {
+    clearance.value = null
+    rawClearanceError.value = (cl.reason as Error).message
+    clearanceError.value = humanizeLedgerError(rawClearanceError.value)
   }
+  busy.value = false
 }
 
 async function doResolve(target: string): Promise<void> {
   const pr = (resolveInput.value[target] ?? '').trim()
   if (!pr) return
   busy.value = true
+  clearanceError.value = ''
+  rawClearanceError.value = ''
   try {
     clearance.value = await resolveClearance(target, pr)
     delete resolveInput.value[target]
   } catch (e) {
-    loadError.value = (e as Error).message
+    rawClearanceError.value = (e as Error).message
+    clearanceError.value = humanizeLedgerError(rawClearanceError.value)
   } finally {
     busy.value = false
   }
@@ -69,11 +88,14 @@ async function doWaive(target: string): Promise<void> {
   const reason = (waiveInput.value[target] ?? '').trim()
   if (!reason) return
   busy.value = true
+  clearanceError.value = ''
+  rawClearanceError.value = ''
   try {
     clearance.value = await waiveClearance(target, reason)
     delete waiveInput.value[target]
   } catch (e) {
-    loadError.value = (e as Error).message
+    rawClearanceError.value = (e as Error).message
+    clearanceError.value = humanizeLedgerError(rawClearanceError.value)
   } finally {
     busy.value = false
   }
@@ -86,7 +108,7 @@ async function copyClosing(): Promise<void> {
     copied.value = true
     setTimeout(() => { copied.value = false }, 1500)
   } catch {
-    loadError.value = '剪贴板不可用——请手动复制文本框内容'
+    actionError.value = '剪贴板不可用——请手动复制文本框内容'
   }
 }
 
@@ -107,7 +129,7 @@ onMounted(() => { void refresh() })
       <button class="gk__refresh" type="button" data-testid="gk-refresh" :disabled="busy" @click="refresh">刷新</button>
     </div>
 
-    <p v-if="loadError" class="gk__error" data-testid="gk-error">{{ loadError }}</p>
+    <p v-if="interventionsError" class="gk__error" data-testid="gk-error">{{ interventionsError }}</p>
     <p v-else-if="!interventions" class="gk__hint">读取中……</p>
 
     <div class="gk__queue">
@@ -130,9 +152,10 @@ onMounted(() => { void refresh() })
 
     <div class="gk__queue">
       <h4 class="gk__queue-title">
-        清偿门（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒开新轮' }}</template>）
+        遗留项清算（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒绝启动新运行' }}</template>）
       </h4>
-      <p v-if="clearanceTargets.length === 0" class="gk__hint" data-testid="gk-clear-empty">台账无未清项。</p>
+      <p v-if="clearanceError" class="gk__error" data-testid="gk-clearance-error" :title="rawClearanceError">{{ clearanceError }}</p>
+      <p v-else-if="clearanceTargets.length === 0" class="gk__hint" data-testid="gk-clear-empty">台账无未清项。</p>
       <div v-for="g in clearanceTargets" :key="g.target" class="gk__cl" :data-testid="`gk-cl-${g.target}`">
         <div class="gk__cl-head">
           <span class="gk__cl-target">{{ g.target }}</span>
@@ -143,7 +166,7 @@ onMounted(() => { void refresh() })
             v-model="resolveInput[g.target]"
             class="gk__input"
             :data-testid="`gk-resolve-pr-${g.target}`"
-            placeholder="resolve 的 PR 锚（必填）"
+            placeholder="根治 PR 锚（必填）"
           >
           <button
             class="gk__btn"
@@ -151,12 +174,12 @@ onMounted(() => { void refresh() })
             :data-testid="`gk-resolve-${g.target}`"
             :disabled="busy || !(resolveInput[g.target] ?? '').trim()"
             @click="doResolve(g.target)"
-          >resolve</button>
+          >登记根治</button>
           <input
             v-model="waiveInput[g.target]"
             class="gk__input gk__input--reason"
             :data-testid="`gk-waive-reason-${g.target}`"
-            placeholder="waive 的批准理由（必填）"
+            placeholder="豁免批准理由（必填）"
           >
           <button
             class="gk__btn"
@@ -164,13 +187,13 @@ onMounted(() => { void refresh() })
             :data-testid="`gk-waive-${g.target}`"
             :disabled="busy || !(waiveInput[g.target] ?? '').trim()"
             @click="doWaive(g.target)"
-          >waive</button>
+          >批准豁免</button>
         </div>
       </div>
     </div>
 
     <div class="gk__tpl">
-      <h4 class="gk__queue-title">收尾三步指令模板</h4>
+      <h4 class="gk__queue-title">收尾指令模板</h4>
       <div class="gk__tpl-row">
         <input v-model="closingCard" class="gk__input" data-testid="gk-closing-card" placeholder="看板卡号（如 t_rel_001）">
         <input v-model="closingCommit" class="gk__input" data-testid="gk-closing-commit" placeholder="提交号（可选）">
@@ -183,6 +206,7 @@ onMounted(() => { void refresh() })
         >{{ copied ? '已复制' : '复制指令' }}</button>
       </div>
       <pre v-if="closingText" class="gk__tpl-text" data-testid="gk-closing-text">{{ closingText }}</pre>
+      <p v-if="actionError" class="gk__error" data-testid="gk-action-error">{{ actionError }}</p>
     </div>
   </section>
 </template>

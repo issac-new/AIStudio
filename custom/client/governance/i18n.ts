@@ -6,7 +6,7 @@ export const governanceMessages = {
   zh: {
     governance: {
       pageTitle: '治理中心',
-      pageSub: '六道闸工件 · 真仓锚点 · 就地裁决',
+      pageSub: '六道质量门工件 · 真仓锚点 · 就地裁决',
       harness: {
         // 通用
         pageSub: '统一能力目录 · 六类成本账 · L1-L5 成熟度自检 · 八工程原语对账',
@@ -110,10 +110,10 @@ export const governanceMessages = {
         colAuditHook: '审计挂点',
       },
       repoLabel: '数据仓',
-      gatesTitle: '六道闸',
-      gateG1: 'G1 需求上锁',
+      gatesTitle: '六道质量门',
+      gateG1: 'G1 需求冻结',
       gateG2: 'G2 架构评审',
-      gateG3: 'G3 编码门禁',
+      gateG3: 'G3 代码门禁',
       gateG4: 'G4 独立验证',
       gateG5: 'G5 发布准出',
       gateG6: 'G6 复盘治理',
@@ -128,7 +128,7 @@ export const governanceMessages = {
       cancelEdit: '取消',
       freshRound: '本轮',
       staleRound: '旧轮',
-      docGroupGate: '六闸工件',
+      docGroupGate: '六道质量门工件',
       docGroupAdmin: '管理档案',
       docGroupAnalysis: '分析档案',
       docGroupEvidence: '测试证据',
