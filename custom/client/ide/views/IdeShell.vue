@@ -578,10 +578,21 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--bg-primary);
   color: var(--text-primary);
+  --text-secondary: #555;
+  --text-secondary-rgb: 85, 85, 85;
+  --text-muted: #666;
+  --text-muted-rgb: 102, 102, 102;
   // clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤：hidden 容器
   // 被 focus/scrollIntoView 滚动后壳头上探进 z1001 页头带，顶栏操作区被截不可点）
   overflow: clip;
 
+}
+
+.dark .ide-shell {
+  --text-secondary: #a0a0a0;
+  --text-secondary-rgb: 160, 160, 160;
+  --text-muted: #9a9a9a;
+  --text-muted-rgb: 154, 154, 154;
 }
 
 /* 日程弹窗遮罩（ia2.scss 的 ia-overlay 同语义；IDE 壳直进路由不加载 ia2.scss，就地声明） */

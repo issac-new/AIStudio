@@ -3,6 +3,22 @@
 // 六场景条 + router-view；slim 子页头退役）· Pure Ink（仅用 CSS 变量，
 // 无自定义色值；页头样式在 IaShellHeader.vue scoped 内，不进全局）。
 
+// WCAG AA 对比度修正（2026-10-18）：上游 --text-muted 浅色 #999 / 深色 #888 对
+// 常用背景（#fafafa/#f0f0f0/#2a2a2a）低于 4.5:1。只在本产品壳层覆盖为通过 AA
+// 的中性灰，并同步加深一档 secondary 保留主次层级；不改上游 variables.scss。
+.ia-shell {
+  --text-secondary: #555;
+  --text-secondary-rgb: 85, 85, 85;
+  --text-muted: #666;
+  --text-muted-rgb: 102, 102, 102;
+}
+.dark .ia-shell {
+  --text-secondary: #a0a0a0;
+  --text-secondary-rgb: 160, 160, 160;
+  --text-muted: #9a9a9a;
+  --text-muted-rgb: 154, 154, 154;
+}
+
 .ia-shell {
   display: flex;
   flex-direction: column;
