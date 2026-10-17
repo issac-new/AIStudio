@@ -133,7 +133,9 @@ function fromComment(taskId: string, c: { id: number; author: string; body: stri
 }
 
 // worker log → CockpitEvent（单个节点，ts 用当前时间——log 是最新执行日志）
-function fromLog(taskId: string, log: { content: string; size_bytes: number; truncated: boolean }): CockpitEvent {
+// 导出供 cockpit store 合并 worker log 事件（此前未导出，构建报 IMPORT_IS_UNDEFINED，
+// 打开任务日志会抛 eventAdapter.fromLog is not a function）。
+export function fromLog(taskId: string, log: { content: string; size_bytes: number; truncated: boolean }): CockpitEvent {
   return {
     id: `evt-log-${taskId}`,
     taskId, actor: 'worker', kind: 'A2A',

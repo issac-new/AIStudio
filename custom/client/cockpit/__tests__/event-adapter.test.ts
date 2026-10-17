@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeDetail, formatWhen, kindToWhat } from '@/custom/cockpit/adapters/event-adapter'
+import { mergeDetail, formatWhen, kindToWhat, fromLog } from '@/custom/cockpit/adapters/event-adapter'
 import type { KanbanTaskDetail } from '@/api/hermes/kanban'
 
 const today = new Date()
@@ -42,8 +42,19 @@ describe('kindToWhat', () => {
   })
 })
 
-describe('mergeDetail', () => {
-  it('merges events + runs + session messages, sorted by ts asc, unique ids', () => {
+describe('fromLog', () => {
+  it('worker log 事件形状：id/source/fullText/截断标注', () => {
+    const e = fromLog('t1', { content: 'line1\nline2', size_bytes: 12, truncated: true })
+    expect(e.id).toBe('evt-log-t1')
+    expect(e.taskId).toBe('t1')
+    expect(e.source).toBe('log')
+    expect(e.fullText).toBe('line1\nline2')
+    expect(e.what).toContain('12 bytes')
+    expect(e.what).toContain('截断')
+  })
+})
+
+describe('mergeDetail', () => {  it('merges events + runs + session messages, sorted by ts asc, unique ids', () => {
     const d = detail({
       events: [
         { id: 1, task_id: 't1', kind: 'created', payload: {}, created_at: tsToday(10, 0), run_id: null },
