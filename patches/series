@@ -824,3 +824,6 @@
 652-server-plugins-stderr-noise-filter.patch
 # 653: matrixChat.syncing 词条（zh/en）——首屏同步中提示，防空列表被误读为无房间。
 653-client-matrix-syncing-locale.patch
+# 654: canUseProfile 空映射集放行（477 同族）——matrix 建号 admin 的空 user_profiles
+# 把一切 profile 定向读 403（旧看板任务详情 search-sessions 即全局无权限 toast）。
+654-server-kanban-empty-profileset-allow.patch
