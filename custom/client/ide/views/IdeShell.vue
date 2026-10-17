@@ -89,10 +89,14 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
   // 回归轮 R7（提速）：先一发 getTask 让服务端跨板解析/快 404 闸判死活——
   // ghost 任务毫秒级判死（逐板 listTasks 是串行 CLI 调用，16 板可等近分钟）；
   // 任务存在则继续原逐板流程（需命中板 slug 同步看板上下文）。
+  // 2026-10-18 审计轮补：只有「确认不存在」（404）才判死——瞬时 5xx/网络错
+  // 落回原逐板流程，不让暂时性故障伪装成「任务不存在」收抽屉。
   try {
     await getTask(id)
-  } catch {
-    return // 判死：交由外层 briefingMiss 收起抽屉
+  } catch (err) {
+    const e = err as { status?: number; message?: string }
+    const notFound = e?.status === 404 || /\b404\b|not found/i.test(String(e?.message ?? ''))
+    if (notFound) return // 判死：交由外层 briefingMiss 收起抽屉
   }
   try {
     const boards = (await listBoards()).map(b => b.slug).filter(Boolean) as string[]
