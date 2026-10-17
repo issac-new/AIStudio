@@ -74,15 +74,17 @@ const taskStatusSummary = computed(() =>
 </template>
 
 <style scoped lang="scss">
+/* 回归轮 R6（二修）：页头六阶段导航占 487px，态势胶囊在常见 1280-1440 视口
+   被压到 ~180px，在线 chip 右半被裁成"看得见点不开"。窄视口收起副注文本
+   （待办/受阻/在线明细）让 chip 本体完整可点，明细仍在 title 悬浮与展开面板。
+   初版用 container-type:inline-size 会触发 size containment——态势条固有宽
+   塌成 0、胶囊缩到 6px、chip 溢出被后续按钮盖住（实测回归），故改视口媒体
+   查询：≥1440 视口页头有余量显全明细，以下收起。 */
 .sit {
   display: flex; align-items: center; gap: 4px; flex-shrink: 0;
   padding: 4px 2px; font-size: 12px; overflow-x: auto; scrollbar-width: thin;
-  /* 回归轮 R6：态势胶囊容器查询——页头挤压（六阶段导航 487px）时胶囊被压到
-     ~180px，在线 chip 右半被裁成"看得见点不开"。窄于阈值时收起副注文本
-     （待办/受阻/在线明细），chip 本体完整可点；明细仍在 title 与展开面板里。 */
-  container-type: inline-size;
 }
-@container (max-width: 340px) {
+@media (max-width: 1439px) {
   .sit__sm { display: none; }
 }
 .sit__item {
