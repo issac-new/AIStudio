@@ -9,3 +9,5 @@
 {"ts":"2026-10-17T09:05:45Z","tool":"git-commit","target":"docs/superpowers/specs/2026-10-05-mux-history-and-engineering-archive.md","gates":"spec-required"}
 {"ts":"2026-10-17T10:47:56Z","tool":"git-commit","target":"custom/client/__tests__/ia2-i18n-coverage.test.ts","gates":"spec-required"}
 {"ts":"2026-10-17T12:27:40Z","tool":"git-commit","target":"custom/client/ia2/api/gatekeeper.ts","gates":"spec-required"}
+{"ts":"2026-10-17T13:08:00Z","tool":"git-commit","target":"docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md","gates":"spec-required"}
+{"ts":"2026-10-17T14:06:50Z","tool":"git-commit","target":"custom/client/ia2/views/IaLegacyShell.vue","gates":"spec-required"}
