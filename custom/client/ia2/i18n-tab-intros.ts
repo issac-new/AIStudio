@@ -67,7 +67,7 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'gov-orgAssets': {
       what: '组织花名册与家底：人员权限、应用资产、密钥台账。',
       source: '各注册表只读聚合。',
-      act: '开轮前检查编制齐不齐；密钥到期轮换在这里登记（不含密钥本体）。',
+      act: '启动运行前检查编制齐不齐；密钥到期轮换在这里登记（不含密钥本体）。',
     },
     'gov-clearance': {
       what: '遗留项清单：上轮运行留下的代偿（程序替人干的活），根治一笔消一笔。',

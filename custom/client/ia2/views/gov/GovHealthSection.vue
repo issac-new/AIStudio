@@ -172,7 +172,7 @@ onMounted(() => void refresh())
 
     <!-- 机器执法实况（qgate 判定 → G 门映射；与上方工件核查各表，两套证据不互相冒充） -->
     <div class="gov-health__machine" data-testid="gov-qgate-verdicts">
-      <span class="gov-health__machine-title">{{ zh ? '机器执法实况' : 'Machine gates' }}</span>
+      <span class="gov-health__machine-title">{{ zh ? '机器门禁实况' : 'Machine Gates' }}</span>
       <span
         v-for="m in machineGateCards"
         :key="m.gate"

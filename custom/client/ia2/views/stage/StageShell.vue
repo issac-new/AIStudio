@@ -37,6 +37,10 @@ const props = defineProps<{ stage: 1 | 2 | 3 | 4 | 5 | 6 }>()
 const { run, remember } = useRunContext()
 const runState = ref<{ steps: Record<string, string>; gates: Record<string, string> } | null>(null)
 const loadError = ref('')
+// ③设计页组织视图按需展开（内容减负批，2026-10-17）：整块诊断/图谱组件默认
+// 不挂载——它自带多条治理数据面，常挂会把阶段页首屏占满（实测正文 12 万字符）。
+const showOrgKnowledge = ref(false)
+watch(() => props.stage, () => { showOrgKnowledge.value = false })
 async function load(): Promise<void> {
   loadError.value = ''
   runState.value = null
@@ -141,13 +145,26 @@ function goStep(st: SetupStep): void {
       <GateRepairsPanel />
     </section>
     <section v-else-if="stage === 3" class="stg__embed" data-testid="stg-embed-3">
-      <h3 class="stg__embed-h">断点诊断与知识图谱（分析期的组织视图）</h3>
-      <GovOrgKnowledgeView />
+      <div class="stg__embed-head">
+        <h3 class="stg__embed-h">组织与知识（协作断点诊断 · 知识图谱 · 决策图谱）</h3>
+        <button
+          type="button"
+          class="stg__embed-toggle"
+          data-testid="stg-embed-3-toggle"
+          :aria-expanded="showOrgKnowledge"
+          @click="showOrgKnowledge = !showOrgKnowledge"
+        >{{ showOrgKnowledge ? '收起' : '展开查看' }}</button>
+      </div>
+      <p class="stg__embed-hint">需要核对组织协作与历史决策时展开；日常设计工作直接用下方工具卡。</p>
+      <GovOrgKnowledgeView v-if="showOrgKnowledge" />
     </section>
     <section v-else-if="stage === 4" class="stg__embed" data-testid="stg-embed-4">
       <h3 class="stg__embed-h">开发期风险与交接</h3>
       <CapacityLampBanner />
-      <HandoffSection />
+      <details class="stg__details" data-testid="stg-handoff-details">
+        <summary class="stg__details-sum">交接类型与状态说明（参考）</summary>
+        <HandoffSection />
+      </details>
     </section>
     <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4b">
       <h3 class="stg__embed-h">审批待办（等人工决定的事项·开发期实时队列）</h3>
@@ -208,7 +225,22 @@ function goStep(st: SetupStep): void {
 .stg__state { font-size: 12px; color: var(--text-muted); }
 .stg__error { color: var(--ia-fail); font-size: 12px; margin: 0 0 0 auto; }
 .stg__embed { border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; background: rgba(127, 127, 127, 0.04); }
+.stg__embed-head { display: flex; align-items: center; gap: 10px; }
 .stg__embed-h { margin: 0 0 10px; font-size: 13px; }
+.stg__embed-head .stg__embed-h { margin-bottom: 0; }
+.stg__embed-toggle {
+  margin-left: auto; border: 1px solid var(--border-color); border-radius: 6px;
+  background: transparent; color: var(--accent-primary, var(--color-primary));
+  font-size: 12px; padding: 3px 12px; cursor: pointer; flex-shrink: 0;
+  &:hover { border-color: var(--accent-primary, var(--color-primary)); }
+}
+.stg__embed-hint { margin: 6px 0 10px; font-size: 11.5px; color: var(--text-muted); }
+.stg__details { margin-top: 10px; }
+.stg__details-sum {
+  cursor: pointer; user-select: none; font-size: 12px; color: var(--text-muted);
+  padding: 4px 0;
+  &:hover { color: var(--text-primary); }
+}
 .stg__steps { display: flex; flex-direction: column; gap: 10px; }
 .stg__step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .stg__step {

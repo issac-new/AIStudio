@@ -95,8 +95,8 @@ export function gateRows(gates: Record<string, string>): GateRow[] {
   const FULL: Array<[RegExp, string]> = [
     [/^g1[a-z_]*/, 'G1 需求冻结'],
     [/^g2[a-z_]*/, 'G2 架构评审'],
-    [/^g3[a-z_]*/, 'G3 编码门禁'],
-    [/^g4[a-z_]*/, 'G4 独立测试'],
+    [/^g3[a-z_]*/, 'G3 代码门禁'],
+    [/^g4[a-z_]*/, 'G4 独立验证'],
     [/^g5[a-z_]*/, 'G5 发布准出'],
     [/^g6[a-z_]*/, 'G6 复盘'],
     [/^security_/, '安全闸'],
