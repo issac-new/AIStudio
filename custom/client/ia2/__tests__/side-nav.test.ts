@@ -141,7 +141,7 @@ describe('IaSideNav — 左侧常驻导航', () => {
   it('折叠状态持久化：按钮切换后写 user 层，重挂载保持收起', async () => {
     const { w } = await mountAt('/app/stage/build')
     await w.find('[data-testid="ia-side-nav-collapse"]').trigger('click')
-    expect(localStorage.getItem('sl:user:ia2.sidenav.collapsed')).toBe('true')
+    expect(localStorage.getItem('sl:user:sidenav.collapsed')).toBe('true')
     w.unmount()
 
     const { w: w2 } = await mountAt('/app/stage/build')

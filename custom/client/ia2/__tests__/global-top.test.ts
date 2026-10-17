@@ -70,7 +70,6 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
 
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import { __flushSharedArmDisposeForTest } from '../composables/useSharedArm'
-import IaViewSwitcher from '../components/IaViewSwitcher.vue'
 
 function makeRouter(): Router {
   return createRouter({
@@ -99,12 +98,7 @@ beforeEach(() => {
   workspaceStubs.state.tasks = []
 })
 
-describe('IaViewSwitcher — 已退役（D9：代码编辑器并入工作台分段按钮）', () => {
-  it('组件不再被 IaGlobalTop/IaShellHeader 渲染（历史断言退役）', () => {
-    // D9 后视图切换器退役；分段行为在 IaCentersNav 断言（workbench-flow.test.ts）
-    expect(true).toBe(true)
-  })
-})
+
 
 describe('IaGlobalTop — 全局顶区（双视图常驻）', () => {
   it('页头+切换器渲染；武装经 useSharedArm 引用计数执行', async () => {

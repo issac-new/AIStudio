@@ -165,7 +165,7 @@ describe('v12 统一视图单测（双视图）', () => {
     )
     const shell = readFileSync(resolve(__dirname, '../views/IaShell.vue'), 'utf8')
     const ideShell = readFileSync(resolve(__dirname, '../../ide/views/IdeShell.vue'), 'utf8')
-    const switcher = readFileSync(resolve(__dirname, '../components/IaViewSwitcher.vue'), 'utf8')
+    const switcher = readFileSync(resolve(__dirname, '../components/IaWorkspaceSwitch.vue'), 'utf8')
     const workbench = readFileSync(resolve(__dirname, '../views/WorkbenchView.vue'), 'utf8')
     // v12.4：页头 IaWindowControls 集中簇退役——栏控迁三栏各自顶部控制条
     // （IaColumnControls；左=折叠/中=最大化+独立/右=折叠，折叠态 18px 导轨展开）
@@ -192,15 +192,15 @@ describe('v12 统一视图单测（双视图）', () => {
     // v12.4 切换器单按钮（显示目标视图，双按钮/双入口 testid 退役）
     expect(shell).toContain('<IaGlobalTop')
     expect(ideShell).toContain('<IaGlobalTop')
-    expect(header).not.toContain('<IaViewSwitcher')  // D9：切换器退役（IDE 画布并入工作台分段）
-    expect(switcher).toContain('data-testid="ia-viewswitch-row"')
-    expect(switcher).toContain('data-testid="ia-view-toggle"')
+    // 2026-10-18 左侧栏批：切换器独立为 IaWorkspaceSwitch，六阶段移入左侧栏
+    expect(header).toContain('<IaWorkspaceSwitch')
+    expect(switcher).toContain('data-testid="ia-workspace-switch"')
+    expect(switcher).toContain('data-testid="ia-workspace-collab"')
+    expect(switcher).toContain('data-testid="ia-workspace-ide"')
     // UX 毛刺③（2026-10-03）：切换带 URL 上下文——回协作落会话画布、去 IDE 带 ?session=
     expect(switcher).toContain(`ia2.collabSession`)
     expect(switcher).toContain('ide.shell')
     expect(switcher).toContain('session: sid')
-    expect(switcher).not.toContain('data-testid="ia-scene-collab"')
-    expect(switcher).not.toContain('data-testid="ia-scene-ide"')
   })
 
   it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 单测）', () => {

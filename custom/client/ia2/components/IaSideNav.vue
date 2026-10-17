@@ -105,14 +105,14 @@ const topicItems = computed(() => ISLAND_NAVS
 const settingsActive = computed(() => routeName.value === 'ia2.govSettings' || routeName.value === 'ia2.modelProviders')
 
 // ── 折叠：手动优先；窄屏在用户未手动设置过时自动收起 ──
-const stored = readSetting<boolean>('ia2.sidenav.collapsed', false)
+const stored = readSetting<boolean>('sidenav.collapsed', false)
 const userSet = ref(stored.layer !== 'default')
 const collapsed = ref(stored.value)
 const autoCompact = ref(false)
 const effectiveCollapsed = computed(() => collapsed.value || (autoCompact.value && !userSet.value))
 
 watch(collapsed, (v) => {
-  if (userSet.value) writeSetting('user', 'ia2.sidenav.collapsed', v)
+  if (userSet.value) writeSetting('user', 'sidenav.collapsed', v)
 })
 
 let mq: MediaQueryList | null = null

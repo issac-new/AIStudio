@@ -33,6 +33,11 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({
     cockpitTasksAny: [{ id: 't_123', title: '打通支付回调' }],
   }),
 }))
+// 2026-10-18：Spotlight 增加运行组（全流程推演）——本测试不需要真运行列表，
+// 桩化避免拉到 runcenter/api/client 的重导入链（vue-router 仅 mock useRouter）。
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({
+  useRunCenterStore: () => ({ sortedRuns: [] }),
+}))
 
 import SpotlightPanel from '../components/SpotlightPanel.vue'
 

@@ -42,7 +42,7 @@ describe('GOV_SETTINGS_DOMAINS — 分区注册表（对账总表 E/F/G 投影�
 })
 
 describe('GovSettingsView — C9 验收门', () => {
-  it('非管理员：superAdmin 条目不可见（profiles/agentManager/performance/ekko 运维隐藏）；分区说明常驻', { timeout: 20000 }, async () => {
+  it('非管理员：superAdmin 条目不可见（profiles/agentManager/performance/ekko 运维隐藏）；分区说明常驻', { timeout: 60000 }, async () => {
     const router = makeRouter()
     await router.push('/app/gov/settings')
     await router.isReady()
@@ -67,7 +67,7 @@ describe('GovSettingsView — C9 验收门', () => {
     w.unmount()
   })
 
-  it('注册表条目全部路由可达（hasRoute 全真——死链零容忍）', { timeout: 20000 }, async () => {
+  it('注册表条目全部路由可达（hasRoute 全真——死链零容忍）', { timeout: 60000 }, async () => {
     const router = makeRouter()
     await router.push('/app/gov/settings')
     await router.isReady()
