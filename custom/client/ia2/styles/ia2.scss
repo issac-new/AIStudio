@@ -611,3 +611,13 @@ body.ia-center-full .studio-navigation-rail {
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.06)));
   border-radius: 0 6px 6px 0;
 }
+
+/* ── D19（2026-10-17 用户走查「顶部怎么有个空白行」）：浏览器形态上游标题栏空行收零 ──
+ * 上游 app-box 恒定 padding-top:40px 为 studio-page-header（桌面标题栏/拖拽区）预留；
+ * 浏览器（非 Electron）形态该 header 渲染为空（DesktopTitleBar/HeaderSidebarToggle 均 v-if 假），
+ * 留下 40px 空白行压在注意力条之上。桌面平台类（app-shell 上的 desktop-platform-*）
+ * 仅 Electron 注入——据此区分：浏览器收零，桌面保留。 */
+.app-shell:not(.desktop-platform-darwin):not(.desktop-platform-win32):not(.desktop-platform-linux) {
+  .studio-page-header { display: none; }
+  .app-box { padding-top: 0; }
+}
