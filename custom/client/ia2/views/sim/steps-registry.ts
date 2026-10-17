@@ -16,16 +16,17 @@
 
 // ── 七幕（§2.4 七幕主线；幕=叙事单元，驱动段位映射另见 §3.3） ──
 
-export interface ActMeta { act: number; name: string; from: number; to: number }
+export interface ActMeta { act: number; name: string; displayName: string; from: number; to: number }
 
+// name=方案正本 §2.4 逐字副本（追溯用）；displayName=用户可见标准术语（界面只用它）。
 export const ACTS_7: ReadonlyArray<ActMeta> = [
-  { act: 1, name: '序幕·搭台', from: 1, to: 4 },
-  { act: 2, name: '第一幕·需求上锁', from: 5, to: 8 },
-  { act: 3, name: '第二幕·需求分析', from: 9, to: 14 },
-  { act: 4, name: '第三幕·设计与排期', from: 15, to: 17 },
-  { act: 5, name: '第四幕·并行生产', from: 18, to: 19 },
-  { act: 6, name: '第五幕·发布与验收', from: 20, to: 21 },
-  { act: 7, name: '尾声·治理与复盘', from: 22, to: 26 },
+  { act: 1, name: '序幕·搭台', displayName: '序幕·准备', from: 1, to: 4 },
+  { act: 2, name: '第一幕·需求上锁', displayName: '第一幕·需求冻结', from: 5, to: 8 },
+  { act: 3, name: '第二幕·需求分析', displayName: '第二幕·需求分析', from: 9, to: 14 },
+  { act: 4, name: '第三幕·设计与排期', displayName: '第三幕·设计与排期', from: 15, to: 17 },
+  { act: 5, name: '第四幕·并行生产', displayName: '第四幕·并行开发', from: 18, to: 19 },
+  { act: 6, name: '第五幕·发布与验收', displayName: '第五幕·发布与验收', from: 20, to: 21 },
+  { act: 7, name: '尾声·治理与复盘', displayName: '尾声·治理与复盘', from: 22, to: 26 },
 ]
 
 export function actOfStep(no: number): number {
@@ -38,6 +39,8 @@ export function actOfStep(no: number): number {
 export interface StepMeta {
   no: number
   name: string
+  /** 用户可见标准术语；缺省回退 name（方案原文）。界面只读 displayName。 */
+  displayName?: string
   operator: string
   /** §3.3「state.env 状态标志」列——判定该步完成的主键（含闸键 g1_frozen/g2_arch_pass） */
   keys: string[]
@@ -51,30 +54,30 @@ export const STEPS_26: ReadonlyArray<StepMeta> = [
   { no: 1, name: '账号分配', operator: '驱动脚本（持 admin token）', keys: ['smoke_done'] },
   { no: 2, name: '每用户配置初始化', operator: '驱动脚本', keys: ['smoke_done'] },
   { no: 3, name: '登录', operator: '每个账号', keys: ['smoke_done'] },
-  { no: 4, name: '环境冒烟', operator: '驱动脚本', keys: ['smoke_done'] },
+  { no: 4, name: '环境冒烟', displayName: '环境冒烟测试', operator: '驱动脚本', keys: ['smoke_done'] },
   { no: 5, name: '应用初始化', operator: '驱动脚本（界面同源：治理中心·应用资产页签）', keys: ['appinit_done'] },
   { no: 6, name: '研发人员管理', operator: '驱动脚本（界面同源：治理中心·组织页签）', keys: ['people_done'] },
-  { no: 7, name: '需求上锁（G1）', operator: '需求分析师A（驱动脚本代发私信）；G1 判读=驱动脚本', keys: ['g1_frozen'] },
+  { no: 7, name: '需求上锁（G1）', displayName: '需求冻结（G1）', operator: '需求分析师A（驱动脚本代发私信）；G1 判读=驱动脚本', keys: ['g1_frozen'] },
   // §3.3：步 1-4 四合一段共用 smoke_done；步 7 键名=g1_frozen（非 archgate_done 同族陷阱，步 15 同理）
-  { no: 8, name: '建群', operator: '产品经理A', keys: ['room_analysis'], hiddenKey: true },
-  { no: 9, name: '派发', operator: '产品经理A 人类账号发信，@需求分析AI 执行', keys: ['dispatch_marker'], hiddenKey: true },
+  { no: 8, name: '建群', displayName: '建立协作群', operator: '产品经理A', keys: ['room_analysis'], hiddenKey: true },
+  { no: 9, name: '派发', displayName: '任务派发', operator: '产品经理A 人类账号发信，@需求分析AI 执行', keys: ['dispatch_marker'], hiddenKey: true },
   { no: 10, name: '看板登记与任务分解', operator: '卡由 需求分析AI 自己建；驱动脚本只轮询验收、不合格回灌', keys: ['register_done'] },
   { no: 11, name: '系统分析与拆分', operator: '驱动脚本核验（回灌消息以 产品经理A 名义发）', keys: ['analysis_done', 'analysis_verified'] },
   { no: 12, name: '分诊与派工', operator: '团队负责人A/团队负责人B（驱动脚本代做分诊确认，纯板操作无消息）', keys: ['triage_done'] },
-  { no: 13, name: '精准系分（四路）', operator: 'chen/xiao/hu/lin 各自人类账号四路同发（@各自 agent+lead agent）', keys: ['anexec_done'] },
+  { no: 13, name: '精准系分（四路）', displayName: '系统分析（四路）', operator: 'chen/xiao/hu/lin 各自人类账号四路同发（@各自 agent+lead agent）', keys: ['anexec_done'] },
   { no: 14, name: '汇总复核定稿', operator: '产品经理A 派发汇总复核；线下虚拟架构小组评审由驱动脚本代走板', keys: ['review_done'] },
   { no: 15, name: '架构治理评审（G2）', operator: '系统架构师A（架构治理）评审；驱动脚本先补邀进群+代建评审卡', keys: ['g2_arch_pass'] },
-  { no: 16, name: '系分收尾', operator: '产品经理A（收尾主任务）', keys: ['close_done'] },
+  { no: 16, name: '系分收尾', displayName: '系统分析收尾', operator: '产品经理A（收尾主任务）', keys: ['close_done'] },
   { no: 17, name: '排期', operator: '产品经理A（pm-planning 技能）', keys: ['plan_done'] },
   { no: 18, name: '编码（G3）', operator: '研发工程师A（3 路）/研发工程师D/研发工程师B/研发工程师C 六路同刻派发；测试工程师A/B 预备轮', keys: ['devimpl_done'], gateFlags: ['g3_code_pass'] },
-  { no: 19, name: '独立测试（G4）', operator: '后端 lead（wei）/前端 lead（mei）评审+集成合并（V8.30 职责归位）；测试工程师A/B 派发测试；驱动只做真值验收与超时兜底', keys: ['defect_done', 'testpass_done'], gateFlags: ['g4_pass'] },
+  { no: 19, name: '独立测试（G4）', displayName: '独立验证（G4）', operator: '后端 lead（wei）/前端 lead（mei）评审+集成合并（V8.30 职责归位）；测试工程师A/B 派发测试；驱动只做真值验收与超时兜底', keys: ['defect_done', 'testpass_done'], gateFlags: ['g4_pass'] },
   { no: 20, name: '发布准出（G5）', operator: '产品经理A（G5 评审）；对外发布=人工批准（批准事件留档）', keys: ['ready_done', 'release_done'], gateFlags: ['g5_ready'] },
   { no: 21, name: 'UAT 验收', operator: '需求分析师A（需求提出方）派发+逐条核对；验收书驱动脚本代写（author=bella 账号）', keys: ['uat_done'] },
   { no: 22, name: '工作台账', operator: '驱动脚本（纯数据实查，无 LLM 参与）', keys: ['workmgr_done'] },
   { no: 23, name: '合规审计', operator: '驱动脚本（机械化审计）+审计AI 独立复核（fire-and-forget 不等待）', keys: ['audit_done'] },
   { no: 24, name: '复盘（G6）', operator: '驱动脚本', keys: ['retro_done'] },
-  { no: 25, name: 'IDE 工作台全程介入', operator: '驱动脚本（API/代码级核验）+界面走查', keys: ['ide_done'] },
-  { no: 26, name: 'HTML 推演报告', operator: '驱动脚本', keys: ['report_done'] },
+  { no: 25, name: 'IDE 工作台全程介入', displayName: 'IDE 工作区全程使用', operator: '驱动脚本（API/代码级核验）+界面走查', keys: ['ide_done'] },
+  { no: 26, name: 'HTML 推演报告', displayName: 'HTML 运行报告', operator: '驱动脚本', keys: ['report_done'] },
 ]
 
 // ── 六闸（详设签 1「六闸 n/6（键=g1_frozen…report_done）」；全名见 §5.3/SimGateBadge） ──
@@ -151,7 +154,7 @@ export function resolveStepRows(
     const state: StepRowState = isDone ? 'done' : (actOfStep(s.no) <= curAct ? 'active' : 'pending')
     return {
       no: s.no,
-      name: s.name,
+      name: s.displayName ?? s.name,
       operator: s.operator,
       state,
       at: doneKeys[0]?.value ?? null,

@@ -10,13 +10,13 @@ import { SimStepBadge, SimGateBadge, SimRaciBadge } from '../components/sim/inde
 describe('SimStepBadge — 步境标（§2.9/§3.3）', () => {
   it('幕+步齐：显示「幕名 · 步 N」', () => {
     const w = mount(SimStepBadge, { props: { act: 5, step: 18 } })
-    expect(w.find('[data-testid="sim-step-badge"]').text()).toBe('第四幕生产 · 步 18')
+    expect(w.find('[data-testid="sim-step-badge"]').text()).toBe('第四幕并行开发 · 步 18')
     w.unmount()
   })
 
   it('缺席态：步缺席只显幕名；双缺席不渲染', () => {
     const a = mount(SimStepBadge, { props: { act: 1 } })
-    expect(a.find('[data-testid="sim-step-badge"]').text()).toBe('序幕搭台')
+    expect(a.find('[data-testid="sim-step-badge"]').text()).toBe('序幕准备')
     a.unmount()
     const b = mount(SimStepBadge, { props: {} })
     expect(b.find('[data-testid="sim-step-badge"]').exists()).toBe(false)

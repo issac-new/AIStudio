@@ -86,6 +86,11 @@ describe('七幕区间（§2.4 七幕主线）', () => {
       '序幕·搭台', '第一幕·需求上锁', '第二幕·需求分析', '第三幕·设计与排期',
       '第四幕·并行生产', '第五幕·发布与验收', '尾声·治理与复盘',
     ])
+    // 界面只用 displayName：与方案原文副本分开，保证菜单/功能名符合标准术语。
+    expect(ACTS_7.map(a => a.displayName)).toEqual([
+      '序幕·准备', '第一幕·需求冻结', '第二幕·需求分析', '第三幕·设计与排期',
+      '第四幕·并行开发', '第五幕·发布与验收', '尾声·治理与复盘',
+    ])
     expect(ACTS_7.map(a => [a.from, a.to])).toEqual([
       [1, 4], [5, 8], [9, 14], [15, 17], [18, 19], [20, 21], [22, 26],
     ])
@@ -94,6 +99,12 @@ describe('七幕区间（§2.4 七幕主线）', () => {
       else expect(ACTS_7[i].from).toBe(ACTS_7[i - 1].to + 1)
     }
     expect(ACTS_7[6].to).toBe(26)
+  })
+
+  it('用户可见的幕名/步名无内部黑话（系分/搭台/上锁/并行生产）', () => {
+    const banned = /系分|搭台|上锁|并行生产/
+    for (const a of ACTS_7) expect(a.displayName, `幕 ${a.act}`).not.toMatch(banned)
+    for (const s of STEPS_26) expect(s.displayName ?? s.name, `步 ${s.no}`).not.toMatch(banned)
   })
 })
 
@@ -340,7 +351,7 @@ describe('OverviewPanel——挂载渲染主块', () => {
     await wrapper.find('[data-testid="ov-step-row-7"]').trigger('click')
     const drawer = wrapper.find('[data-testid="sim-anchor-drawer"]')
     expect(drawer.classes()).toContain('sim-anchor-drawer--open')
-    expect(wrapper.find('[data-testid="sim-anchor-drawer-title"]').text()).toContain('需求上锁（G1）')
+    expect(wrapper.find('[data-testid="sim-anchor-drawer-title"]').text()).toContain('需求冻结（G1）')
     expect(wrapper.find('[data-testid="sim-anchor-drawer-evidence"]').text()).toContain('g1_frozen')
     wrapper.unmount()
   })
