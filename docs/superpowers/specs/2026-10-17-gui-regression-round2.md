@@ -24,9 +24,9 @@
 ### D1 [P1] 看板任务卡点开必现 404「Task not found」
 
 - 现象：`/app/board` 任一可见任务卡点开，抽屉显示 `API Error 404: Task not found / 加载任务失败`。复现于 Default 板（t_a6185892）与协作板（t_eef3e5f2，t65 截图）。
-- 根因：看板列表来自聚合快道（`/api/hermes/kanban/overview`，sqlite 直读，不按用户可见 profile 过滤）；任务详情走上游 CLI 控制器，读侧仍套 `filterTasksByVisibleProfiles`。聚合可见、详情被过滤 → 404。跨板 fallback（patch 492）只在 detail 为 null 时生效，过滤分支直接 404。
-- 修复：`patches/649-server-kanban-admin-task-read.patch`——`get` 读侧对 role=admin/super_admin 跳过 profile 过滤；写操作（认领/更新/评论）仍由 `authorizeTaskIds`/`denyProfileAccess` 把守。
-- 复验：待合入 + 重启 8647 后重开 t_a6185892 / t_eef3e5f2 抽屉，期望 200 并渲染详情。
+- 根因（两条链叠加）：①看板列表来自聚合快道（`/api/hermes/kanban/overview`，sqlite 直读，不按用户可见 profile 过滤）；任务详情走上游 CLI 控制器，读侧仍套 `filterTasksByVisibleProfiles`——聚合可见、详情被过滤 → 404。②`custom/server/middleware/cli-fast-gates.ts` 的 `kanbanTaskFast404` 只查请求 board（默认 default），分板任务在本板查无即秒回 lowercase 404，绕过控制器 patch 492 的跨板解析。
+- 修复：`patches/649-server-kanban-admin-task-read.patch`（`get` 读侧对 role=admin/super_admin 跳过 profile 过滤；写操作仍由 `authorizeTaskIds`/`denyProfileAccess` 把守）+ overlay `cli-fast-gates.ts` 跨板放行（本板查无时全板扫描，存在则交控制器解析；全板确认不存在才快 404，任一库不可读仍 fail-open）+ 守门测试改为跨板放行/全板无此任务仍 404。
+- 复验：Default 板 t_a6185892、跨板 t_eef3e5f2 详情接口均 200；GUI 点卡正文正常（t138）。**残留**：抽屉日志/附件子端点仍 404（见 §五）。
 
 ### D2 [P1·运维] 仿真中心整族 503（标准 dev 启动未设 OBS_SIM_ROOT）
 
@@ -72,6 +72,15 @@
 
 ## 五、验证
 
-- 单测：`custom/server/ontology/__tests__/ontology-store.test.ts` 9/9 通过（含新增 13 位时间戳守门）。
-- 补丁：649/650 已用 `git apply --check` 对当前注入树校验可应用。
-- 待办：合入 main → 主工作区 `npm run inject` → `vue-tsc`/构建 → 重启 8647 → GUI 复验 D1/D2/D3/D4 四点。
+- 单测：`custom/server/ontology/__tests__/ontology-store.test.ts` 9/9 通过（含新增 13 位时间戳守门）；上游 `kanban-controller` + `kanban-routes` 21/21；`cli-fast-gates` 13/13。
+- 类型：server `tsc --noEmit` 0 错；client `vue-tsc --noEmit -p tsconfig.app.json` 0 错。
+- 注入：`clean → inject` 全系列 000-650 RC=0；649/650 均应用。
+- GUI/接口复验（2026-10-18 00:1x，swarm）：
+  - D1 任务抽屉：Default 板 t_a6185892、跨板 t_eef3e5f2 详情接口均 200；GUI 点卡正文正常渲染（t138 截图）。
+  - D2：运行总览读取 run21 返回真实数据（运行模式/26 步/六闸，t139 截图）；topology 200。
+  - D3：设备互联显示「暂无数据」空态（t142 截图）。
+  - D4：本体版本页时间均为 2026-10-10（t140 截图）。
+- 残留：
+  - 任务抽屉的日志/附件子端点对跨板任务仍 404（`/log`、`/attachments`）。根因：子资源 handler 走 `authorizeTaskIds` 且拿不到跨板解析后的 board slug；尝试的 651 补丁会把 attachments 变成 500（CLI 用错板），已回滚。正确修法需要把「解析后的 board」贯穿到子资源 handler，作为下一轮独立工单。
+  - 运行总览「分支交付」仍 503：`SIM_BRANCHES_REPO` 未配置（与 OBS_SIM_ROOT 不同的专用 env）；页面按 fail-closed 如实提示，未改。
+- 过程修复：`646`/`648` 补丁上下文残渍（重复 `return parsed` / 多一空行）导致全量重放失败，已基于现行基线重生成并提交（commit 67ae04f6）；`serve-server.mjs` SIM_ROOT 缺省路径曾少一层，已修正（commit f5070c06）。
