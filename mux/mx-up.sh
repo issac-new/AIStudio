@@ -1,4 +1,9 @@
 #!/bin/bash
+# 全段提速开关（2026-10-18 用户指令立刻生效）：
+#  PIPELINE_TRIGGER=on——流水线引擎增量派发发令（分支落地即派测/测试过即派集成，段间重叠）；
+#  PARALLEL_REVIEW=on——G5 并行评审编排器放行。studio/网关继承本环境。
+export PIPELINE_TRIGGER="${MX_PIPELINE_TRIGGER:-on}"
+export PARALLEL_REVIEW="${MX_PARALLEL_REVIEW:-on}"
 # mx-up.sh — 拉起单 gateway（多路复用）+ 单 studio（多 matrix 账号）
 #
 # host-ownership 合规（overlay/docs/superpowers/specs/2026-09-23-gateway-host-ownership.md）：
