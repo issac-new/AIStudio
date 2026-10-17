@@ -19,7 +19,7 @@
 import type { Context } from 'koa'
 import Router from '@koa/router'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const router = new Router({ prefix: '/api/hermes/orgloop' })
@@ -210,9 +210,34 @@ function persistClearance(all: ClearanceRecord[]): void {
   mkdirSync(resolve(f, '..'), { recursive: true })
   writeFileSync(f, JSON.stringify(all, null, 1), 'utf-8')
 }
+/**
+ * 台账路径解析（纯函数，测试面）：
+ * - 显式 ORGLOOP_LEDGER_TSV：存在则用，不存在则 null（显式配置错误仍失败关闭）；
+ * - 未配置时从 OBS_SIM_ROOT/runs/&lt;run&gt;/evidence/compensation-ledger.tsv 取最新一份，
+ *   让产品在已配置 SIM 根时默认可读；无任何台账仍 null（失败关闭）。
+ */
+export function resolveLedgerPath(explicit: string | undefined, simRoot: string | undefined): string | null {
+  const fromEnv = explicit?.trim()
+  if (fromEnv) return existsSync(fromEnv) ? fromEnv : null
+  const root = simRoot?.trim()
+  if (!root || !existsSync(root)) return null
+  const runsDir = resolve(root, 'runs')
+  if (!existsSync(runsDir)) return null
+  let best: { path: string; mtime: number } | null = null
+  for (const entry of readdirSync(runsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const candidate = resolve(runsDir, entry.name, 'evidence', 'compensation-ledger.tsv')
+    if (!existsSync(candidate)) continue
+    try {
+      const mtime = statSync(candidate).mtimeMs
+      if (!best || mtime > best.mtime) best = { path: candidate, mtime }
+    } catch { /* 文件在枚举与 stat 之间消失：跳过，继续找下一份 */ }
+  }
+  return best?.path ?? null
+}
+
 function ledgerPath(): string | null {
-  const p = process.env.ORGLOOP_LEDGER_TSV
-  return p && existsSync(p) ? p : null
+  return resolveLedgerPath(process.env.ORGLOOP_LEDGER_TSV, process.env.OBS_SIM_ROOT)
 }
 function readLedger(): LedgerEntry[] {
   const p = ledgerPath()
