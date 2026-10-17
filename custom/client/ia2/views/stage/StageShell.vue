@@ -19,7 +19,6 @@ import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
 import { STAGE_META, SETUP_STEPS, type SetupStep, type StageTool } from '../../stage-meta'
-import { features } from '@/custom/features'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,11 +58,6 @@ function stepState(st: SetupStep): StepState {
   if (st.keys.some(k => k in merged.value)) return 'done'
   const firstPending = SETUP_STEPS.find(s => s.keys.length > 0 && !s.keys.some(k => k in merged.value))
   return firstPending?.key === st.key ? 'active' : 'pending'
-}
-/** 第 5 步智能体管理入口双门控：agentManager 开关默认关，关闭时禁用不假装可达 */
-const agentsGated = computed(() => !features.agentManager)
-function stepDisabled(st: SetupStep): boolean {
-  return st.gated === true && agentsGated.value
 }
 function go(t: StageTool | { to: string }): void {
   void router.push(t.to)
@@ -107,10 +101,8 @@ function goStep(st: SetupStep): void {
             type="button"
             class="stg__step-go"
             :data-testid="`stg-step-go-${st.key}`"
-            :disabled="stepDisabled(st)"
-            :title="stepDisabled(st) ? '智能体管理开关未开启（组织级配置内可开）' : ''"
             @click="goStep(st)"
-          >{{ stepDisabled(st) ? '未开启' : '进入 →' }}</button>
+          >进入 →</button>
         </li>
       </ol>
       <div class="stg__embed" data-testid="stg-embed-1">

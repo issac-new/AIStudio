@@ -153,15 +153,17 @@ describe('ia2 路由树（v12 双视图）', () => {
 
 describe('areaForPath（视图投影，场景条高亮依据）', () => {
   it.each([
-    ['/app', 'workbench'],
-    ['/app/', 'workbench'],
-    ['/app/board', 'workbench2'],
-    ['/app/runs', 'workbench2'],
-    ['/app/runs/run-9', 'workbench2'],
-    ['/app/eng', 'workbench2'],
-    ['/app/s/room/x', 'workbench2'],
-    ['/app/l/lp-1', 'workbench2'],
-    ['/app/history/session/s1', 'workbench2'],
+    ['/app', 'stage1'],
+    ['/app/', 'stage1'],
+    ['/app/board', 'stage4'],
+    ['/app/runs', 'stage4'],
+    ['/app/runs/run-9', 'stage4'],
+    ['/app/eng', 'stage4'],
+    ['/app/s/room/x', 'stage4'],
+    ['/app/l/lp-1', 'stage4'],
+    ['/app/history/session/s1', 'stage4'],
+    ['/app/teams', 'stage1'],
+    ['/app/agents', 'stage1'],
   ])('%s → %s', (path, expected) => {
     expect(areaForPath(path)).toBe(expected)
   })
