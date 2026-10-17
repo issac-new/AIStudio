@@ -161,14 +161,14 @@ function goSupervision(): void {
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
     <p v-if="loadError" class="ov__error" data-testid="ov-error">{{ loadError }}</p>
     <p v-else-if="!runState" class="ov__hint" data-testid="ov-guide">
-      输入运行目录名读取实况——运行模式/六道质量门/26 步/交付物数字全部来自端点实测，缺席不代填。
+      输入运行目录名读取实况；数字来自端点实测。
     </p>
 
     <template v-if="runState">
       <!-- 运行模式横幅：三档色带+政策一句话+遗留项清算灯（红=ledger.open>0，§2.6.5 遗留项清算） -->
       <div class="ov__posture" :class="`ov__posture--${runState.posture}`" data-testid="ov-posture">
         <span class="ov__posture-name">运行模式 {{ runState.posture }}</span>
-        <span class="ov__posture-policy">{{ POSTURE_POLICY[runState.posture] ?? '运行模式政策未登记（如实呈现）' }}</span>
+        <span class="ov__posture-policy">{{ POSTURE_POLICY[runState.posture] ?? '运行模式政策未登记' }}</span>
         <span
           class="ov__lamp"
           :class="runState.ledger.open > 0 ? 'ov__lamp--red' : 'ov__lamp--green'"
@@ -264,7 +264,7 @@ function goSupervision(): void {
           </table>
 
           <h4 class="ov__h">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）</h4>
-          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}（如实呈现）</p>
+          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
               v-for="(d, i) in deliverableChain"
@@ -300,7 +300,7 @@ function goSupervision(): void {
               <div class="ov__net-row">含代偿步可用 {{ stepsDoneComp }}/26</div>
               <div class="ov__net-row ov__net-row--net">净计步可用 {{ stepsDoneNet }}/26（=完成 − 步级代演笔）</div>
             </div>
-            <p v-if="byTypeList.length === 0" class="ov__hint">台账零代偿（byType 空，如实呈现）。</p>
+            <p v-if="byTypeList.length === 0" class="ov__hint">台账零代偿。</p>
             <ul v-else class="ov__net-types">
               <li v-for="[t, n] in byTypeList" :key="t" class="ov__net-type"><SimCompensatedTag :label="t" :count="n" /></li>
             </ul>

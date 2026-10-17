@@ -68,7 +68,7 @@ onMounted(() => { void refresh() })
 
     <p v-if="loadError" class="grp__error" data-testid="grp-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="grp__msg" data-testid="grp-action-msg">{{ actionMsg }}</p>
-    <p v-else-if="shown.length === 0" class="grp__hint" data-testid="grp-empty">无修复单（如实呈现）。</p>
+    <p v-else-if="shown.length === 0" class="grp__hint" data-testid="grp-empty">无修复单。</p>
 
     <div v-for="r in shown" :key="r.id" class="grp__rec" :data-testid="`grp-rec-${r.id}`">
       <div class="grp__rec-head">

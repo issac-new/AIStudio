@@ -175,7 +175,7 @@ describe('TracePanel — 签 6 需求追溯（R12）', () => {
     w.unmount()
   })
 
-  it('trace 端点失败如实报错；空行集呈现「三源均未提取到」', async () => {
+  it('trace 端点失败如实报错；空行集呈现「未提取到」', async () => {
     mockedAuthFetch.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({
       run: 'r', rows: [], meta: { frozenPresent: false, testReportPresent: false, acceptancePresent: false }, source: { evidenceDir: 'x' },
     }) } as Response)
@@ -183,7 +183,7 @@ describe('TracePanel — 签 6 需求追溯（R12）', () => {
     await w.find('[data-testid="trc-run"]').setValue('r')
     await w.find('[data-testid="trc-load"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="trc-empty"]').text()).toContain('三源均未提取到')
+    expect(w.find('[data-testid="trc-empty"]').text()).toContain('未提取到')
     w.unmount()
     mockedAuthFetch.mockResolvedValue({ ok: false, status: 503, json: () => Promise.resolve({}) } as Response)
     const w2 = mount(TracePanel)
