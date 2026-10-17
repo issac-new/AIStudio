@@ -783,8 +783,10 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
         path: '/app',
         component: { template: '<router-view />' },
         children: [
-          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: '', name: 'ia2.journey', component: { template: '<div journey />' } },
+          { path: 'collab', name: 'ia2.collab', component: WorkbenchView },
           { path: 'sim', name: 'ia2.sim', component: { template: '<div sim />' } },
+          { path: 'sim/supervision', name: 'ia2.simSupervision', component: { template: '<div sim-sup />' } },
           { path: 'stage/reqs', name: 'ia2.stage2', component: { template: '<div stage2 />' } },
           { path: 'stage/design', name: 'ia2.stage3', component: { template: '<div stage3 />' } },
           { path: 'sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
@@ -823,11 +825,19 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
-  it('高亮按路由前缀判定：/app/sim 下④开发高亮（仿真中心=运行工具舱）', async () => {
-    const { wrapper } = await mountNav('/app/sim')
+  it('页签级归属：监督面板同时亮③分析设计+④开发（多归属）', async () => {
+    const { wrapper } = await mountNav('/app/sim/supervision')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage3"]').classes()).toContain('icn-inline__center-btn--active')
     // D9 分段：工作台激活态落在分段容器（work--active），子按钮不再挂 --active
     expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-centers"]').attributes('data-active-stages')).toBe('stage3,stage4')
+  })
+
+  it('页签级归属：运行总览=全程工具，不高亮任一阶段（如实呈现跨阶段）', async () => {
+    const { wrapper } = await mountNav('/app/sim')
+    expect(wrapper.find('[data-testid="ia-nav-centers"]').attributes('data-active-stages')).toBe('')
+    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).not.toContain('icn-inline__work--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage1"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {

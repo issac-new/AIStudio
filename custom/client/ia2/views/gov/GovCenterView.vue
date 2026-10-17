@@ -10,6 +10,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGovTabsText } from './gov-tabs'
 import { CENTER_NAVS, ISLAND_NAVS, stageContextQuery, useCenterNavLocale } from '../../nav-centers'
+import { stageCircles, stageKeyOf, stageOwnersForRouteName } from '../../stage-attribution'
 import { features } from '../../../../../config/features'
 import ClearancePanel from './ClearancePanel.vue'
 import GateRepairsPanel from './GateRepairsPanel.vue'
@@ -34,11 +35,24 @@ const route = useRoute()
 const router = useRouter()
 const text = useGovTabsText()
 const navLocale = useCenterNavLocale()
-// 中心归属阶段（2026-10-17 拆轴增量）：治理中心=⑥治理
-const parentStage = CENTER_NAVS.find(c => c.key === 'stage6')!
-const parentLabel = computed(() => (navLocale.value === 'zh' ? parentStage.labelZh : parentStage.labelEn))
+// 页签级归属（2026-10-17）：治理七签归不同阶段，回链按当前签动态生成
+const owners = computed(() => stageOwnersForRouteName(String(route.name ?? '')))
+const parentStage = computed(() => (owners.value.length ? CENTER_NAVS.find(c => c.key === stageKeyOf(owners.value[0]))! : null))
+const parentLabel = computed(() => {
+  if (!owners.value.length) return navLocale.value === 'zh' ? '全程工具' : 'All-stage tool'
+  if (owners.value.length === 1) return navLocale.value === 'zh' ? parentStage.value!.labelZh : parentStage.value!.labelEn
+  return stageCircles(owners.value)
+})
+const parentTitle = computed(() => {
+  if (!owners.value.length) return navLocale.value === 'zh' ? '跨阶段工具：不隶属单一阶段' : 'All-stage tool: not tied to a single stage'
+  const names = owners.value.map(no => {
+    const c = CENTER_NAVS.find(x => x.key === stageKeyOf(no))!
+    return navLocale.value === 'zh' ? c.labelZh : c.labelEn
+  }).join(navLocale.value === 'zh' ? '、' : ', ')
+  return navLocale.value === 'zh' ? `所属阶段：${names}${owners.value.length > 1 ? '（点击回第一个阶段）' : ''}` : `Stages: ${names}`
+})
 function goParentStage(): void {
-  void router.push({ name: parentStage.name })
+  if (parentStage.value) void router.push({ name: parentStage.value.name })
 }
 
 // V1 壳收敛（视觉重规划 D2）：治理中心全宽——挂载期隐藏上游导航 rail
@@ -94,7 +108,8 @@ function goTab(tab: GovTab): void {
     <header class="gov-center__head">
       <IaBreadcrumb />
       <h2 class="gov-center__title">{{ text.shellTitle }}</h2>
-      <button class="gov-center__parent" type="button" data-testid="gov-parent-stage" :title="`所属阶段：${parentLabel}`" @click="goParentStage">← {{ parentLabel }}</button>
+      <button v-if="parentStage" class="gov-center__parent" type="button" data-testid="gov-parent-stage" :title="parentTitle" @click="goParentStage">← {{ parentLabel }}</button>
+      <span v-else class="gov-center__parent gov-center__parent--all" data-testid="gov-allstage-tool" :title="parentTitle">{{ parentLabel }}</span>
       <nav class="gov-center__tabs" role="tablist" :aria-label="text.shellTitle">
         <button
           v-for="tab in TABS"
@@ -227,6 +242,8 @@ function goTab(tab: GovTab): void {
   cursor: pointer;
   &:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 3px; }
 }
+.gov-center__parent--all { cursor: help; }
+.gov-center__parent--all:hover { color: var(--text-muted); text-decoration: none; }
 .gov-center__wb-group { display: flex; gap: 4px; }
 .gov-center__wb-btn {
   border: 1px dashed var(--border-color);
