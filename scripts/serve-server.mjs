@@ -41,10 +41,12 @@ if (!process.env.GOVERNANCE_REPO?.trim()) {
   process.env.GOVERNANCE_REPO = resolve(overlayRoot, '..', 'governance');
 }
 // 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
-// 的 fail-closed 门）。缺省工作区内 ncwk-sim-mux（存在才设；显式 env 尊重不动）——
-// 否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面功能全不可用。
+// 的 fail-closed 门）。缺省工作区同级目录 lab/ncwk-sim-mux（存在才设；显式 env
+// 尊重不动）——否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面
+// 功能全不可用。
 if (!process.env.OBS_SIM_ROOT?.trim()) {
-  const simRoot = resolve(overlayRoot, '..', 'ncwk-sim-mux');
+  // SIM_ROOT 是 ncwk 工作区的兄弟目录（lab/ncwk-sim-mux），不是 ncwk 内子目录。
+  const simRoot = resolve(overlayRoot, '..', '..', 'ncwk-sim-mux');
   if (existsSync(simRoot)) process.env.OBS_SIM_ROOT = simRoot;
 }
 
