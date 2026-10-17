@@ -49,10 +49,21 @@ if (!process.env.OBS_SIM_ROOT?.trim()) {
   const simRoot = resolve(overlayRoot, '..', '..', 'ncwk-sim-mux');
   if (existsSync(simRoot)) process.env.OBS_SIM_ROOT = simRoot;
 }
+// 仿真中心专用门配套缺省（回归轮残留 R1）：中央仓 = SIM_ROOT/central/aipaydev
+//（分支新鲜度 branches 与证据 commit 锚 anchor 共用同一仓）。存在才设；显式
+// env 尊重不动——缺席时两端点按 fail-closed 语义 503，行为不变。
+if (process.env.OBS_SIM_ROOT) {
+  const central = resolve(process.env.OBS_SIM_ROOT, 'central', 'aipaydev');
+  if (existsSync(central)) {
+    if (!process.env.SIM_BRANCHES_REPO?.trim()) process.env.SIM_BRANCHES_REPO = central;
+    if (!process.env.SIM_ANCHOR_REPO?.trim()) process.env.SIM_ANCHOR_REPO = central;
+  }
+}
 
 console.log(`[serve-server] PORT=${port}`);
 console.log(`[serve-server] GOVERNANCE_REPO=${process.env.GOVERNANCE_REPO}`);
 console.log(`[serve-server] OBS_SIM_ROOT=${process.env.OBS_SIM_ROOT || '(未配置——仿真中心 fail-closed)'}`);
+console.log(`[serve-server] SIM_BRANCHES_REPO=${process.env.SIM_BRANCHES_REPO || '(未配置——分支交付 fail-closed)'}`);
 console.log(`[serve-server] TS_NODE_PROJECT=${process.env.TS_NODE_PROJECT}`);
 console.log(`[serve-server] TS_NODE_FILES=${process.env.TS_NODE_FILES}`);
 console.log(`[serve-server] starting: node -r ts-node/register ${upstream}/packages/server/src/index.ts`);

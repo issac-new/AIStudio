@@ -42,8 +42,7 @@ describe('SimAnchorDrawer — 锚点抽屉（R7，唯一反查交互）', () => 
       props: { open: true, title: '步 18 证据', anchorType: 'event', anchorId: '$EnQbo21v', evidence: 'DEV-DONE 行原文' },
     })
     const root = w.find('[data-testid="sim-anchor-drawer"]')
-    expect(root.classes()).toContain('sim-anchor-drawer--open')
-    expect(root.attributes('style')).toBeUndefined()
+    expect(root.exists()).toBe(true)
     // 宽度单一事实源=组件样式（480px），不随调用方漂移
     const sfc = readFileSync(resolve(__dirname, '../components/sim/SimAnchorDrawer.vue'), 'utf8')
     expect(sfc).toContain('width: 480px')
@@ -54,9 +53,9 @@ describe('SimAnchorDrawer — 锚点抽屉（R7，唯一反查交互）', () => 
     w.unmount()
   })
 
-  it('缺席态：open=false 不滑出；无锚与无原文如实呈现', () => {
+  it('缺席态：open=false 整体不渲染（关闭即卸载，无残留 role=dialog）；无锚与无原文如实呈现', () => {
     const closed = mount(SimAnchorDrawer, { props: { open: false } })
-    expect(closed.find('[data-testid="sim-anchor-drawer"]').classes()).not.toContain('sim-anchor-drawer--open')
+    expect(closed.find('[data-testid="sim-anchor-drawer"]').exists()).toBe(false)
     closed.unmount()
     const noAnchor = mount(SimAnchorDrawer, { props: { open: true } })
     expect(noAnchor.find('[data-testid="sim-anchor-drawer-anchor-absent"]').exists()).toBe(true)

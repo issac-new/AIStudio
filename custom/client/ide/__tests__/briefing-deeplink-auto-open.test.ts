@@ -107,4 +107,13 @@ describe('ide?task= 深链自动展开简报', () => {
     // 兜底重试链路触发（跨板解析被调用）
     await vi.waitFor(() => expect(listTasksMock).toHaveBeenCalled())
   })
+
+  it('深链任务全板不存在：解析完成后抽屉自动收起（回归轮 R7——空抽屉常开盖住右栏页签）', async () => {
+    routeState.query = { task: 't_nosuch' }
+    mountShell()
+    await vi.waitFor(() => expect(listTasksMock).toHaveBeenCalled())
+    await vi.waitFor(() => {
+      expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
+    })
+  })
 })

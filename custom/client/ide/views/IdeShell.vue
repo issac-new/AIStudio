@@ -111,9 +111,16 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
     }
   } catch { /* 解析失败保持空态，简报组件显示"当前无激活任务" */ }
 }
+// 回归轮 R7：直达链接任务不可解析时简报抽屉自动收起——原样常开空抽屉会盖住
+// 右栏页签（Git/查看文件点不到）；手动经导轨钮打开的无任务空态不受影响。
+const briefingMiss = ref(false)
 watch(() => ide.activeTaskId, async (id) => {
   briefingTaskResolved.value = null
-  if (id) await resolveBriefingCrossBoard(id)
+  briefingMiss.value = false
+  if (id) {
+    await resolveBriefingCrossBoard(id)
+    if (!briefingTaskResolved.value) briefingMiss.value = true
+  }
 }, { immediate: true })
 const briefingTask = computed(() => {
   if (briefingTaskResolved.value) return briefingTaskResolved.value
@@ -315,6 +322,10 @@ const briefingOpen = ref(false)
 watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
+watch([briefingOpen, briefingTask, briefingMiss], ([open, task, miss]) => {
+  if (open && miss && !task) briefingOpen.value = false
+})
+
 
 // ── 裸落地引导空态（run13 步18 错帧修复配套：/app/ide 是登录默认落点，直达链接
 // 才有任务上下文——裸落地此前直落会话栏自动恢复，新用户零引导）──

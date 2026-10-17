@@ -1,0 +1,20 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -6467,6 +6467,7 @@
+     noResults: '无结果',
+     noRoomSelected: '未选择房间',
+     noRooms: '暂无房间',
++    syncing: '正在同步房间…',
+     noThreadsDesc: '此房间暂无话题',
+     noThreadsTitle: '暂无话题',
+     noUsersFound: '未找到用户',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -6658,6 +6658,7 @@
+     noResults: 'No results',
+     noRoomSelected: 'No room selected',
+     noRooms: 'No rooms',
++    syncing: 'Syncing rooms…',
+     noThreadsDesc: 'No threads in this room yet',
+     noThreadsTitle: 'No Threads',
+     noUsersFound: 'No users found',

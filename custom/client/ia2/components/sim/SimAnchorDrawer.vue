@@ -20,12 +20,13 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
 </script>
 
 <template>
+  <!-- 回归轮残留 R4：关闭即卸载（原常驻 + aria-hidden——三签各挂一件，关闭态
+       仍有 0×0 role=dialog 进可访问性树，读屏噪音）。收起动画换语义洁净。 -->
   <div
+    v-if="props.open"
     class="sim-anchor-drawer"
-    :class="{ 'sim-anchor-drawer--open': props.open }"
     data-testid="sim-anchor-drawer"
     role="dialog"
-    :aria-hidden="!props.open"
   >
     <div class="sim-anchor-drawer__head">
       <span class="sim-anchor-drawer__title" data-testid="sim-anchor-drawer-title">{{ props.title || '证据原文' }}</span>
@@ -58,13 +59,8 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
   background: var(--bg-card);
   color: var(--text-primary);
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
   z-index: 60;
   overflow-y: auto;
-}
-.sim-anchor-drawer--open {
-  transform: translateX(0);
 }
 .sim-anchor-drawer__head {
   display: flex;

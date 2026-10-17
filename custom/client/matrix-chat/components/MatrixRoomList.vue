@@ -92,6 +92,11 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
     <div v-if="filteredRooms.length === 0 && !isSyncing" class="room-list-empty">
       <p>{{ clientStore.authenticated ? t('matrixChat.noRooms') : t('matrixChat.notAuthenticated') }}</p>
     </div>
+    <!-- 回归轮 R2：首屏同步未完成时列表区一片空白（曾因此误判「房间丢失」）——
+         同步中如实提示，避免空态误导 -->
+    <div v-else-if="filteredRooms.length === 0 && isSyncing" class="room-list-empty">
+      <p>{{ t('matrixChat.syncing') }}</p>
+    </div>
 
     <!-- Room items (element-web RoomTile style) -->
     <div class="room-list-items">
