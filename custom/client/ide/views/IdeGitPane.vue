@@ -471,9 +471,9 @@ defineExpose({ refresh, toGroups })
   white-space: pre;
   color: var(--text-primary);
 
-  &.is-add { color: #4cc38a; background: rgba(70, 167, 88, 0.12); }
+  &.is-add { color: var(--success); background: rgba(70, 167, 88, 0.12); }
   &.is-del { color: var(--git-decoration-deleted); background: rgba(229, 72, 77, 0.1); }
-  &.is-hunk { color: #7ca2df; }
+  &.is-hunk { color: var(--accent-info); }
 }
 
 .ide-git__commit {

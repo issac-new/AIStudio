@@ -104,20 +104,20 @@ watch(() => chatStore.activeSessionId, refresh)
 .ide-btw {
   position: absolute; top: 44px; right: 16px; z-index: 60; width: 320px; max-height: 60vh;
   display: flex; flex-direction: column;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); font-size: 12px;
 }
-.ide-btw__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color, #eee); }
+.ide-btw__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color); }
 .ide-btw__head span { flex: 1; }
 .ide-btw__head button { border: none; background: none; cursor: pointer; }
 .ide-btw__ask { display: flex; gap: 6px; padding: 8px 10px; }
-.ide-btw__ask textarea { flex: 1; border: 1px solid var(--border-color, #ddd); border-radius: 6px; padding: 4px 6px; font-size: 12px; resize: vertical; }
-.ide-btw__ask button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 6px; padding: 2px 10px; cursor: pointer; align-self: flex-end; }
-.ide-btw__error { color: var(--error-color, #d03050); padding: 0 10px 6px; font-size: 11px; }
+.ide-btw__ask textarea { flex: 1; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 6px; font-size: 12px; resize: vertical; }
+.ide-btw__ask button { border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 6px; padding: 2px 10px; cursor: pointer; align-self: flex-end; }
+.ide-btw__error { color: var(--error-color); padding: 0 10px 6px; font-size: 11px; }
 .ide-btw__list { overflow-y: auto; padding: 0 10px 10px; }
-.ide-btw__x { border-top: 1px dashed var(--border-color, #eee); padding: 6px 0; }
+.ide-btw__x { border-top: 1px dashed var(--border-color); padding: 6px 0; }
 .ide-btw__q { font-weight: 600; }
 .ide-btw__a { color: var(--text-secondary); white-space: pre-wrap; margin-top: 2px; }
-.ide-btw__waiting { color: var(--warning-color, #f0a020); margin-top: 2px; }
-.ide-btw__copy { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; font-size: 10px; padding: 1px 6px; cursor: pointer; margin-top: 4px; }
+.ide-btw__waiting { color: var(--warning-color); margin-top: 2px; }
+.ide-btw__copy { border: 1px solid var(--border-color); background: none; border-radius: 4px; font-size: 10px; padding: 1px 6px; cursor: pointer; margin-top: 4px; }
 </style>

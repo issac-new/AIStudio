@@ -116,17 +116,17 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 .ide-review__domain { font-size: 10px; color: var(--text-muted); }
 .ide-review__text { flex: 1; }
 .ide-review__resolve {
-  border: none; background: transparent; color: var(--primary-color, #18a058); cursor: pointer; font-size: 11px;
+  border: none; background: transparent; color: var(--primary-color); cursor: pointer; font-size: 11px;
 }
 .ide-review__verdict { display: flex; gap: 6px; margin-top: 8px; }
 .ide-review__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 5px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 5px;
   padding: 4px 12px; cursor: pointer; font-size: 12px;
 }
-.ide-review__btn.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+.ide-review__btn.is-active { border-color: var(--primary-color); color: var(--primary-color); }
 
 .ide-review__start {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 4px;
   padding: 1px 8px; cursor: pointer; font-size: 11px; margin-left: 6px;
 }
 </style>

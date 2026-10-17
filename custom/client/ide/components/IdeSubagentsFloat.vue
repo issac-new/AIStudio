@@ -167,15 +167,15 @@ function select(stream: SubagentStream): void {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--bg-tertiary, #ebebeb); }
+  &:hover { background: var(--bg-tertiary); }
   &.is-active {
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
-    .ide-agents__name { color: var(--accent-primary, #4cc9f0); }
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+    .ide-agents__name { color: var(--accent-primary); }
   }
 }
 
@@ -184,11 +184,11 @@ function select(stream: SubagentStream): void {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--text-muted, #9aa0aa);
+  background: var(--text-muted);
 
-  &.is-running { background: #4cc9f0; }
-  &.is-completed { background: var(--success-color, #18a058); }
-  &.is-failed, &.is-error, &.is-cancelled, &.is-interrupted { background: var(--error-color, #d03050); }
+  &.is-running { background: var(--accent-info); }
+  &.is-completed { background: var(--success-color); }
+  &.is-failed, &.is-error, &.is-cancelled, &.is-interrupted { background: var(--error-color); }
 }
 
 .ide-agents__badge {
@@ -199,12 +199,12 @@ function select(stream: SubagentStream): void {
   border-radius: 3px;
 
   &--injection {
-    color: var(--warning-color, #d97706);
+    color: var(--warning-color);
     background: rgba(240, 164, 76, 0.15);
   }
 
   &--steer {
-    color: var(--primary-color, #18a058);
+    color: var(--primary-color);
     background: rgba(97, 175, 239, 0.12);
   }
 }
@@ -221,11 +221,11 @@ function select(stream: SubagentStream): void {
 .ide-agents__time {
   flex-shrink: 0;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-agents__panel {
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color);
   padding-top: 6px;
 }
 
@@ -234,32 +234,32 @@ function select(stream: SubagentStream): void {
   gap: 6px;
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color);
 }
 
 .ide-agents__steer-input {
   flex: 1;
-  border: 1px solid var(--border-color, #3a3f4b);
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #d7dae0);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 4px;
 
-  &::placeholder { color: var(--text-muted, #9aa0aa); }
+  &::placeholder { color: var(--text-muted); }
 }
 
 .ide-agents__steer-btn {
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
-  background: color-mix(in srgb, var(--primary-color, #18a058) 13%, transparent);
-  color: var(--primary-color, #18a058);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 13%, transparent);
+  color: var(--primary-color);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-color, #18a058) 20%, transparent); }
+  &:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-color) 20%, transparent); }
   &:disabled { opacity: 0.4; cursor: default; }
 }
 </style>

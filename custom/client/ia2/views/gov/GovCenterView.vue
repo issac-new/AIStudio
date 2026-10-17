@@ -208,18 +208,18 @@ function goTab(tab: GovTab): void {
 .gov-center__wb-group { display: flex; gap: 4px; }
 .gov-center__wb-btn {
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
-  color: var(--text-secondary, inherit);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 2px 8px;
   cursor: pointer;
-  &:hover { color: var(--text-primary, inherit); background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08))); }
+  &:hover { color: var(--text-primary); background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08))); }
 }
 .gov-center__settings {
   margin-left: auto;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -230,7 +230,7 @@ function goTab(tab: GovTab): void {
 .gov-center__tab {
   padding: 4px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -238,7 +238,7 @@ function goTab(tab: GovTab): void {
   font-family: inherit;
 }
 .gov-center__tab--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 .gov-center__body { flex: 1; min-height: 0; }
@@ -248,19 +248,19 @@ function goTab(tab: GovTab): void {
   gap: 8px;
   padding: 24px 18px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
 }
 .gov-center__panel--live { padding: 12px 14px; border-style: solid; }
 .gov-center__panel-title { margin: 0; font-size: 14px; }
-.gov-center__pending { margin: 0; font-size: 12px; color: var(--text-muted, #878c99); line-height: 1.6; }
+.gov-center__pending { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 .gov-center__badge {
   display: inline-block;
   margin-right: 8px;
   padding: 1px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 11px;
 }
 .gov-center__comp-list { margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.gov-center__comp { font-size: 12px; font-family: var(--font-mono, ui-monospace, monospace); color: var(--text-muted, #878c99); }
+.gov-center__comp { font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); }
 </style>

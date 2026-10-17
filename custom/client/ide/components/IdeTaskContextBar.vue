@@ -73,13 +73,13 @@ async function onSubmit(): Promise<void> {
 <style scoped lang="scss">
 .itc {
   flex: none; display: flex; align-items: center; gap: 10px; padding: 4px 12px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0); background: var(--bg-secondary, #f4f5f6);
+  border-bottom: 1px solid var(--border-color); background: var(--bg-secondary);
   font-size: 11px; color: var(--text-secondary); overflow-x: auto;
 }
 .itc__label { color: var(--text-muted); flex: none; }
 .itc__title { font-weight: 600; color: var(--text-primary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .itc__title--muted { font-weight: 400; color: var(--text-muted); }
-.itc__status { padding: 0 8px; border-radius: 8px; background: var(--bg-tertiary, #ebebeb); color: var(--text-secondary); flex: none; }
+.itc__status { padding: 0 8px; border-radius: 8px; background: var(--bg-tertiary); color: var(--text-secondary); flex: none; }
 .itc__docs { color: var(--text-muted); white-space: nowrap; }
 .itc__doc { color: var(--text-secondary); }
 .itc__anchor, .itc__acp { color: var(--text-muted); flex: none; white-space: nowrap; }
@@ -93,7 +93,7 @@ async function onSubmit(): Promise<void> {
   color: var(--text-primary); font-size: 11px; padding: 2px 10px; cursor: pointer; font-family: inherit;
   &:disabled { opacity: .4; cursor: default; }
 }
-.itc__btn--r3 { border-color: var(--success, #34c77b); color: var(--success, #34c77b); }
-.itc__r3-ok { color: var(--success, #34c77b); font-weight: 700; }
-.itc__r3-fail { color: var(--error, #e05656); font-weight: 700; }
+.itc__btn--r3 { border-color: var(--success); color: var(--success); }
+.itc__r3-ok { color: var(--success); font-weight: 700; }
+.itc__r3-fail { color: var(--error); font-weight: 700; }
 </style>

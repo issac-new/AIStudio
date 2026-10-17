@@ -131,7 +131,7 @@ async function recover(mode: string): Promise<void> {
 .ide-recovery__mask { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
 .ide-recovery__panel {
   position: relative; width: 480px; max-height: 60vh; display: flex; flex-direction: column;
-  background: var(--card-color, #fff); border-radius: 10px; padding: 12px 16px;
+  background: var(--card-color); border-radius: 10px; padding: 12px 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 .ide-recovery__head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -142,14 +142,14 @@ async function recover(mode: string): Promise<void> {
   align-items: baseline;
 }
 .ide-recovery__row:hover { background: var(--hover-color, rgba(0, 0, 0, 0.05)); }
-.ide-recovery__row.is-selected { background: var(--hover-color, rgba(0, 0, 0, 0.08)); outline: 1px solid var(--primary-color, #18a058); }
+.ide-recovery__row.is-selected { background: var(--hover-color, rgba(0, 0, 0, 0.08)); outline: 1px solid var(--primary-color); }
 .ide-recovery__kind { flex: 0 0 16px; color: var(--text-muted); font-size: 10px; }
 .ide-recovery__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ide-recovery__modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 .ide-recovery__mode {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 6px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 6px;
   padding: 8px 10px; cursor: pointer; font-size: 12px; text-align: left;
 }
-.ide-recovery__mode:hover:not(:disabled) { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+.ide-recovery__mode:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
 .ide-recovery__mode:disabled { opacity: 0.5; cursor: default; }
 </style>

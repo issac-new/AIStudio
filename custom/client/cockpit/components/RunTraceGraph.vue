@@ -87,7 +87,7 @@ const flowEdges = computed<Edge[]>(() => {
       animated: e.kind === 'spawn',
       markerEnd: MarkerType.ArrowClosed,
       style: {
-        stroke: clusterColorMap.value.get(props.nodes.find(n => n.id === e.from)?.cluster ?? '') ?? '#999',
+        stroke: clusterColorMap.value.get(props.nodes.find(n => n.id === e.from)?.cluster ?? '') ?? 'var(--text-muted)',
         strokeWidth: e.kind === 'spawn' ? 2 : 1,
         strokeDasharray: isDashed ? '6 4' : isDotted ? '2 4' : undefined,
         opacity: 0.7,

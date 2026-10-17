@@ -47,7 +47,7 @@ function closeInbox(): void {
   display: flex;
   align-items: center;
   padding: 8px 12px 0;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 .ia-inbox__title {
@@ -64,11 +64,11 @@ function closeInbox(): void {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 .ia-inbox__body {
   flex: 1;

@@ -59,7 +59,7 @@ function toggleView(): void {
  * 没碰容器，是「midY 仍 26」的真凶）。nav 与按钮同高 28px。 */
 .ia-vsrow .ia-scenes.ia-scenes {
   display: flex; align-items: center; border: 1px solid var(--border-color);
-  border-radius: var(--radius, 6px); background: transparent;
+  border-radius: var(--radius); background: transparent;
   padding: 0; margin: 0; height: 28px; box-sizing: border-box; align-self: auto;
 }
 .ia-vsrow .ia-scenes .ia-scenes__btn.ia-scenes__btn {

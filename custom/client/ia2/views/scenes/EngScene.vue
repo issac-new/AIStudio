@@ -57,5 +57,5 @@ const activeTab = ref<EngTab>('orchestrate')
   border-radius: var(--radius-standard); padding: 3px 14px; cursor: pointer;
   font-size: 12px; font-family: inherit;
 }
-.ia-tabs__btn--on { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
+.ia-tabs__btn--on { border-color: var(--color-primary); color: var(--color-primary); font-weight: 600; }
 </style>

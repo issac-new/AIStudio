@@ -287,7 +287,7 @@ const roomTopic = computed(() => {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 // matrix-chat 本地：信息色（上游 variables.scss 无此变量）
-$accent-info: var(--info, #38bdf8);
+$accent-info: var(--info);
 
 
 .matrix-room-header {
@@ -476,8 +476,8 @@ $accent-info: var(--info, #38bdf8);
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-primary, #3b82f6);
-  border: 2px solid var(--bg-card, #fff);
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
 }
 
 // ─── FacePile (Element style) ───────────────────────────

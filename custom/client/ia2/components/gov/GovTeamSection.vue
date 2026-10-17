@@ -65,7 +65,7 @@ onUnmounted(() => platforms.release())
 
 <style scoped lang="scss">
 .gte { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
-.gte__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gte__jump:hover { color: var(--primary, #6366f1); }
+.gte__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gte__jump:hover { color: var(--primary); }
 .gte__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gte__title { font-weight: 700; }
 .gte__sub { font-size: 10px; color: var(--text-muted); }

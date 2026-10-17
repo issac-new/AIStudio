@@ -16,8 +16,8 @@ withDefaults(defineProps<Props>(), { size: 18 })
 
 <style scoped lang="scss">
 .mx_Spinner {
-  border: 2px solid var(--border-color, #e0e0e0);
-  border-top-color: var(--accent-primary, #333333);
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: mx-spin 0.7s linear infinite;
   display: inline-block;

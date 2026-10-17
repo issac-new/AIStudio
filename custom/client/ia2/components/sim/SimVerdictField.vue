@@ -45,7 +45,7 @@ const PROVENANCE_LABEL: Record<VerdictProvenance, string> = {
   font-size: 12px;
 }
 .sim-verdict__label {
-  color: #999;
+  color: var(--text-muted);
 }
 .sim-verdict__value {
   font-weight: 600;
@@ -56,14 +56,14 @@ const PROVENANCE_LABEL: Record<VerdictProvenance, string> = {
   background: rgba(127, 127, 127, 0.15);
 }
 .sim-verdict__prov--compensated {
-  color: #b98ee0;
+  color: var(--ia-compensated);
   background: rgba(150, 84, 214, 0.18);
 }
 .sim-verdict__absent {
-  color: #999;
+  color: var(--text-muted);
 }
 .sim-verdict__criteria {
-  color: #7ab0e8;
+  color: var(--accent-info);
   text-decoration: underline dotted;
   cursor: help;
 }

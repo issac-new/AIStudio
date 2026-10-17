@@ -266,6 +266,6 @@ function groupLabel(g: SpotRow['group']): string {
   flex-shrink: 0;
   font-size: 10px;
   color: var(--text-muted);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
 }
 </style>

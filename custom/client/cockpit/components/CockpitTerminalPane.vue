@@ -65,13 +65,13 @@ function getTheme(dark: boolean): XtermTheme {
     const fg = style.getPropertyValue('--text-primary').trim() || '#e0e0e0'
     const accent = style.getPropertyValue('--accent-primary').trim() || '#4cc9f0'
     const border = style.getPropertyValue('--border-color').trim() || '#333'
-    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
   }
   const bg = style.getPropertyValue('--bg-primary').trim() || '#fafafa'
   const fg = style.getPropertyValue('--text-primary').trim() || '#383a42'
   const accent = style.getPropertyValue('--accent-primary').trim() || '#526fff'
   const border = style.getPropertyValue('--border-color').trim() || '#e0e0e0'
-  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
 }
 
 // 当前任务的 workspace 目录，回退 ~

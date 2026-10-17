@@ -163,14 +163,14 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   height: 34px;
   padding: 6px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm, 3px);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text-primary);
   background: var(--bg-input, var(--bg-card));
   outline: none;
 
   &::placeholder { color: var(--text-secondary); }
-  &:focus { border-color: var(--color-primary, #3b82f6); }
+  &:focus { border-color: var(--color-primary); }
 }
 
 .room-list-syncing {
@@ -187,7 +187,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   width: 20px;
   height: 20px;
   border: 2px solid var(--border-color);
-  border-top-color: var(--color-primary, #3b82f6);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -218,7 +218,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   gap: 10px;
   padding: var(--mx-space-1x, 4px);
   cursor: pointer;
-  transition: background-color var(--transition-fast, 0.15s);
+  transition: background-color var(--transition-fast);
   border-radius: var(--mx-room-tile-radius, 8px);
   margin-bottom: var(--mx-space-1x, 4px);
 
@@ -307,7 +307,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 .mx_RoomTile_suffix {
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   opacity: 0.75;
 }
@@ -316,7 +316,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   font-size: 11px;
   font-weight: 600;
   color: var(--bg-primary);
-  background: var(--color-primary, #3b82f6);
+  background: var(--color-primary);
   border-radius: 10px;
   padding: 1px 6px;
   min-width: 18px;
@@ -336,8 +336,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   flex-shrink: 0;
   font-size: 10px;
   line-height: 1;
-  border: 1px solid var(--color-warning, #f59e0b);
-  color: var(--color-warning, #f59e0b);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
   border-radius: 999px;
   padding: 2px 6px;
 }

@@ -289,13 +289,13 @@ async function submitCreate(): Promise<void> {
   font-weight: 600;
   color: var(--text-primary);
 }
-.ia-orchestrate__hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ia-orchestrate__hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary)); }
 .ia-orchestrate__new {
   padding: 3px 12px;
   border: none;
-  border-radius: var(--radius-micro, 3px);
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--color-on-accent, #fff);
+  border-radius: var(--radius-micro);
+  background: var(--accent-primary, var(--color-primary));
+  color: var(--color-on-accent);
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
@@ -305,13 +305,13 @@ async function submitCreate(): Promise<void> {
   align-items: baseline;
   gap: 6px;
   font-size: 12px;
-  color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
   word-break: break-all;
 }
 .ia-orchestrate__error code { font-size: 11px; }
 .ia-orchestrate__retry {
   border: 1px solid currentColor;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 11px;
@@ -334,7 +334,7 @@ async function submitCreate(): Promise<void> {
   overflow: auto;
   padding: 20px;
   border-radius: 12px;
-  background: var(--bg-card, var(--color-bg-primary, #fff));
+  background: var(--bg-card, var(--color-bg-primary));
 }
 .oc-dialog__title {
   margin: 0 0 12px;
@@ -347,7 +347,7 @@ async function submitCreate(): Promise<void> {
 .oc-dialog__source {
   font-size: 12px;
   font-weight: 400;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .oc-dialog__field {
   display: block;
@@ -362,7 +362,7 @@ async function submitCreate(): Promise<void> {
   padding: 6px 8px;
   border: 1px solid var(--border-color);
   border-radius: 3px;
-  background: var(--color-bg-input, transparent);
+  background: var(--color-bg-input);
   color: inherit;
   font-size: 13px;
   font-family: inherit;
@@ -372,12 +372,12 @@ async function submitCreate(): Promise<void> {
   display: block;
   margin: -6px 0 10px;
   font-size: 12px;
-  color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
 }
 .oc-dialog__submit-error {
   margin-bottom: 10px;
   font-size: 12px;
-  color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
   word-break: break-all;
 }
 .oc-dialog__submit-error code { font-size: 11px; }
@@ -399,8 +399,8 @@ async function submitCreate(): Promise<void> {
 }
 .oc-dialog__submit {
   border: none !important;
-  background: var(--accent-primary, var(--color-primary, #3b82f6)) !important;
-  color: var(--color-on-accent, #fff) !important;
+  background: var(--accent-primary, var(--color-primary)) !important;
+  color: var(--color-on-accent) !important;
 }
 .oc-dialog__submit:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

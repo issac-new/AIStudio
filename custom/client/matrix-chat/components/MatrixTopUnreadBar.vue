@@ -131,7 +131,7 @@ async function markAllRead() {
 }
 
 .mtub__btn--pri {
-  color: var(--accent-primary, #3b82f6);
-  border-color: var(--accent-primary, #3b82f6);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 </style>

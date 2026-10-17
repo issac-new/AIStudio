@@ -39,26 +39,26 @@ const PROV: Record<string, { text: string; cls: string }> = {
   white-space: nowrap;
 }
 .gate-name { font-weight: 500; }
-.gate-name.pass { color: #12a150; }
-.gate-name.fail { color: #dc2626; }
-.gate-name.pending { color: #d97706; }
-.gate-name.unknown { color: #8b93a3; }
+.gate-name.pass { color: var(--ia-pass); }
+.gate-name.fail { color: var(--error); }
+.gate-name.pending { color: var(--ia-stale); }
+.gate-name.unknown { color: var(--text-muted); }
 .first-pass {
   padding: 0 5px; border-radius: 4px; font-size: 10px;
-  color: #12a150; background: rgba(18, 161, 80, 0.12);
+  color: var(--ia-pass); background: rgba(18, 161, 80, 0.12);
   border: 1px solid rgba(18, 161, 80, 0.35);
 }
 .reject {
   padding: 0 5px; border-radius: 4px; font-size: 10px;
-  color: #dc2626; background: rgba(220, 38, 38, 0.1);
+  color: var(--error); background: rgba(220, 38, 38, 0.1);
   border: 1px solid rgba(220, 38, 38, 0.3);
 }
 .prov {
   padding: 0 5px; border-radius: 4px; font-size: 10px;
-  color: #8b93a3; background: rgba(139, 147, 163, 0.12);
+  color: var(--text-muted); background: rgba(139, 147, 163, 0.12);
 }
 .prov-comp {
-  color: #b98ee0; background: rgba(150, 84, 214, 0.18);
+  color: var(--ia-compensated); background: rgba(150, 84, 214, 0.18);
   border: 1px solid rgba(150, 84, 214, 0.45);
 }
 </style>

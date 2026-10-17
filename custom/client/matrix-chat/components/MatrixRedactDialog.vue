@@ -136,7 +136,7 @@ function handleCancel() {
   }
 
   &.danger {
-    background: var(--error, #dc2626);
+    background: var(--error);
     color: var(--text-on-accent);
   }
 

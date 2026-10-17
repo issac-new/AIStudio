@@ -566,22 +566,22 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
 }
 .kanban-views { position: relative; display: inline-block; }
 .kanban-views__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: none; border-radius: 4px;
+  border: 1px solid var(--border-color); background: none; border-radius: 4px;
   font-size: 11px; padding: 2px 8px; cursor: pointer; color: var(--text-secondary);
 }
-.kanban-views__btn:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+.kanban-views__btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
 .kanban-views__menu {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 300; min-width: 180px;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 4px;
 }
 .kanban-views__save, .kanban-views__apply {
   display: block; width: 100%; text-align: left; border: none; background: none;
   padding: 4px 8px; font-size: 12px; cursor: pointer; border-radius: 4px; color: var(--text-secondary);
 }
-.kanban-views__save { color: var(--primary-color, #18a058); }
+.kanban-views__save { color: var(--primary-color); }
 .kanban-views__apply:hover, .kanban-views__save:hover { background: var(--hover-color, rgba(0,0,0,0.05)); }
-.kanban-views__apply.is-current { color: var(--primary-color, #18a058); }
+.kanban-views__apply.is-current { color: var(--primary-color); }
 .kanban-views__row { display: flex; align-items: center; }
 .kanban-views__del { border: none; background: none; cursor: pointer; color: var(--text-muted); padding: 2px 6px; }
 </style>

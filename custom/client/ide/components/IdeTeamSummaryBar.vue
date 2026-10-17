@@ -58,14 +58,14 @@ const summary = computed(() => {
   border: 1px solid transparent;
 }
 
-.ide-team-bar.is-green { color: #18a058; }
+.ide-team-bar.is-green { color: var(--success); }
 .ide-team-bar.is-amber {
-  color: var(--warning-color, #d97706);
+  color: var(--warning-color);
   background: rgba(184, 134, 11, 0.08);
   border-color: rgba(184, 134, 11, 0.35);
 }
 .ide-team-bar.is-red {
-  color: #d03050;
+  color: var(--error);
   background: rgba(208, 48, 80, 0.06);
   border-color: rgba(208, 48, 80, 0.35);
 }

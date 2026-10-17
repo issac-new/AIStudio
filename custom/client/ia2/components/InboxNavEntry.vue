@@ -48,14 +48,14 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
   width: calc(100% - 16px);
   margin: 4px 8px;
   padding: 6px 10px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary, rgba(255, 255, 255, 0.55));
   cursor: pointer;
   font-size: 13px;
   color: inherit;
   text-align: left;
-  &:hover { background: var(--bg-tertiary, #f1f2f4); }
+  &:hover { background: var(--bg-tertiary); }
 }
 .inbox-entry__icon {
   width: 16px;

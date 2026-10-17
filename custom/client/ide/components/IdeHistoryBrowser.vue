@@ -179,11 +179,11 @@ function onKeydown(e: KeyboardEvent): void {
 .ihb__query {
   height: 26px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px;
   background: var(--bg-card); color: var(--text-primary); font-size: 11px; outline: none;
-  &:focus { border-color: var(--primary, #3b82f6); }
+  &:focus { border-color: var(--primary); }
 }
 
-.ihb__forkmsg { padding: 4px 6px; font-size: 11px; color: #059669; }
-.ihb__forkerr { padding: 4px 6px; font-size: 11px; color: #dc2626; }
+.ihb__forkmsg { padding: 4px 6px; font-size: 11px; color: var(--success); }
+.ihb__forkerr { padding: 4px 6px; font-size: 11px; color: var(--error); }
 
 .ihb__list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 

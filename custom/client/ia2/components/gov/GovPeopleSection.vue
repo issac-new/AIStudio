@@ -79,7 +79,7 @@ function roomName(roomId: string): string {
 
 <style scoped lang="scss">
 .gps { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
-.gps__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gps__jump:hover { color: var(--primary, #6366f1); }
+.gps__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gps__jump:hover { color: var(--primary); }
 .gps__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gps__title { font-weight: 700; }
 .gps__sub { font-size: 10px; color: var(--text-muted); }

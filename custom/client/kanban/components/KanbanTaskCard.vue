@@ -142,8 +142,8 @@ function handleDragStart(e: DragEvent) {
       top: -1000px;
       left: -1000px;
       padding: 8px 16px;
-      background: var(--accent-primary, #333333);
-      color: var(--text-on-accent, #ffffff);
+      background: var(--accent-primary);
+      color: var(--text-on-accent);
       border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
@@ -396,13 +396,13 @@ function handleDragEnd(e: DragEvent) {
   padding: 2px 3px;
   border-radius: 3px;
   border: 1px solid transparent;
-  color: #fff;
+  color: var(--text-on-accent);
   sup { font-size: 7px; margin-left: 1px; }
-  &--R { background: #2563ebcc; }
-  &--A { background: #d97706cc; }
-  &--C { background: #059669cc; }
-  &--I { background: #6b7280cc; }
-  &--mine { border-color: currentColor; outline: 1.5px solid #f59e0b66; outline-offset: 1px; }
+  &--R { background: rgba(var(--accent-info-rgb), 0.8); }
+  &--A { background: rgba(var(--warning-rgb), 0.8); }
+  &--C { background: rgba(var(--success-rgb), 0.8); }
+  &--I { background: rgba(var(--text-secondary-rgb), 0.8); }
+  &--mine { border-color: currentColor; outline: 1.5px solid rgba(var(--warning-rgb), 0.4); outline-offset: 1px; }
 }
 
 .needs-assignee-badge {
@@ -423,17 +423,17 @@ function handleDragEnd(e: DragEvent) {
   cursor: help;
 
   &.warn-critical {
-    color: #ff4d4d;
+    color: var(--error);
     font-weight: 700;
   }
 
   &.warn-error {
-    color: #ff6b3d;
+    color: var(--error);
     font-weight: 700;
   }
 
   &.warn-warning {
-    color: #ff9e3b;
+    color: var(--ia-stale);
   }
 }
 
@@ -477,21 +477,21 @@ function handleDragEnd(e: DragEvent) {
 
 .meta-live {
   display: inline-flex; align-items: center; gap: 3px;
-  color: #15803d; font-size: 10.5px; font-weight: 600;
+  color: var(--success); font-size: 10.5px; font-weight: 600;
 }
 .meta-live__dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--success);
   animation: card-live-pulse 1.6s ease-in-out infinite;
 }
 @keyframes card-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 .meta-phase {
   display: inline-flex; align-items: center;
-  color: #1d4ed8; font-size: 10.5px; font-weight: 600;
+  color: var(--accent-info); font-size: 10.5px; font-weight: 600;
   max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  background: #eff6ff; border-radius: 3px; padding: 0 4px;
+  background: rgba(var(--accent-info-rgb), 0.06); border-radius: 3px; padding: 0 4px;
 }
 .meta-phase--active {
-  background: #dbeafe;
+  background: rgba(var(--accent-info-rgb), 0.1);
 }
 </style>

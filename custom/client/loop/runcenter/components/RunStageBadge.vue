@@ -47,18 +47,18 @@ const label = computed(() => t(`runcenter.status.${STATUS_I18N_KEY[props.status]
 .rc-badge__dot {
   width: 7px;
   height: 7px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   flex-shrink: 0;
-  background: var(--text-muted, #999);
+  background: var(--text-muted);
 }
 /* 语义色：只映射 CSS 变量，不写死色值（dark/comic 主题自动适配） */
-.rc-badge--ok .rc-badge__dot { background: var(--color-success, #28bf5c); }
-.rc-badge--ok .rc-badge__label { color: var(--color-success, #28bf5c); }
-.rc-badge--warning .rc-badge__dot { background: var(--color-warning, #f59e0b); }
-.rc-badge--warning .rc-badge__label { color: var(--color-warning, #f59e0b); }
-.rc-badge--error .rc-badge__dot { background: var(--color-danger, #e11d48); }
-.rc-badge--error .rc-badge__label { color: var(--color-danger, #e11d48); }
-.rc-badge--muted .rc-badge__label { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.rc-badge--ok .rc-badge__dot { background: var(--color-success); }
+.rc-badge--ok .rc-badge__label { color: var(--color-success); }
+.rc-badge--warning .rc-badge__dot { background: var(--color-warning); }
+.rc-badge--warning .rc-badge__label { color: var(--color-warning); }
+.rc-badge--error .rc-badge__dot { background: var(--color-danger); }
+.rc-badge--error .rc-badge__label { color: var(--color-danger); }
+.rc-badge--muted .rc-badge__label { color: var(--text-muted, var(--color-text-secondary)); }
 
 /* running 呼吸绿点：透明度呼吸 + 光晕扩散，2s 循环 */
 .rc-badge--ok .rc-badge__dot {
@@ -66,6 +66,6 @@ const label = computed(() => t(`runcenter.status.${STATUS_I18N_KEY[props.status]
 }
 @keyframes rc-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 transparent; }
-  50% { opacity: 0.55; box-shadow: 0 0 0 3px rgba(var(--color-success-rgb, 40, 191, 92), 0.18); }
+  50% { opacity: 0.55; box-shadow: 0 0 0 3px rgba(var(--color-success-rgb), 0.18); }
 }
 </style>

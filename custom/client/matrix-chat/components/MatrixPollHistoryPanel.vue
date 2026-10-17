@@ -275,7 +275,7 @@ function getPercent(count: number, total: number): string {
 }
 
 .pp-status-ended { font-size: 11px; color: $text-muted; background: $bg-secondary; padding: 1px 6px; border-radius: 3px; }
-.pp-status-active { font-size: 11px; color: var(--success, #22c55e); background: rgba(var(--success-rgb, 34 197 94), 0.1); padding: 1px 6px; border-radius: 3px; }
+.pp-status-active { font-size: 11px; color: var(--success); background: rgba(var(--success-rgb), 0.1); padding: 1px 6px; border-radius: 3px; }
 .pp-status-votes { font-size: 11px; color: $text-muted; }
 
 .pp-options { display: flex; flex-direction: column; gap: 3px; }
@@ -289,7 +289,7 @@ function getPercent(count: number, total: number): string {
   overflow: hidden;
   background: $bg-secondary;
 
-  &--winner { background: rgba(var(--success-rgb, 34 197 94), 0.08); }
+  &--winner { background: rgba(var(--success-rgb), 0.08); }
 }
 
 .pp-option-bar {

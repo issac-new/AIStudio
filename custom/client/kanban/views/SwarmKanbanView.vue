@@ -634,43 +634,43 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 .kanban-boardbar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-card, inherit);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
   flex-shrink: 0;
 }
-.kanban-boardbar__label { font-size: 11px; color: var(--text-muted, #878c99); flex-shrink: 0; }
+.kanban-boardbar__label { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
 
 /* R6 补充：「全部」按钮区分于板 chip（徽标样式，重置全选语义显性化；
  *  用户反馈「只能单选无全部」= All 按钮被当成普通板 chip 不可辨） */
 .kanban-boardbar__chip--all {
   font-weight: 700;
-  border: 1px dashed var(--primary-color, #3b82f6);
-  color: var(--primary-color, #3b82f6);
-  background: color-mix(in srgb, var(--primary-color, #3b82f6) 8%, transparent);
+  border: 1px dashed var(--primary-color);
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
 }
 .kanban-boardbar__chip--all.is-on {
   border-style: solid;
-  background: var(--primary-color, #3b82f6);
+  background: var(--primary-color);
   color: var(--text-on-accent);
 }
 .kanban-boardbar__chip {
   display: inline-flex; align-items: center; gap: 5px;
   height: 22px; padding: 0 10px;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 11px;
-  background: transparent; color: var(--text-secondary, inherit);
+  border: 1px solid var(--border-color); border-radius: 11px;
+  background: transparent; color: var(--text-secondary);
   font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap;
-  &:hover { color: var(--text-primary, inherit); border-color: var(--text-muted, #999); }
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
   /* 选中态降噪（2026-10-10 UI 审计）：实心主色块 30 枚占满三行是全页最重视觉块——
      改主色 10% 底+主色描边+主色字，筛选器不再与内容争强调层级 */
   &.is-on {
-    background: color-mix(in srgb, var(--primary-color, #3b82f6) 10%, transparent);
-    border-color: color-mix(in srgb, var(--primary-color, #3b82f6) 45%, transparent);
-    color: var(--primary-color, #3b82f6);
+    background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+    color: var(--primary-color);
     font-weight: 600;
   }
   &:not(.is-on) { opacity: .62; }
 }
-.kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary, inherit); border-color: var(--primary-color, #3b82f6); }
+.kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary); border-color: var(--primary-color); }
 .kanban-boardbar__n {
   font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums;
 }

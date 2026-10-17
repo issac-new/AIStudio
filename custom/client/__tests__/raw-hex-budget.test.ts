@@ -17,19 +17,24 @@ const UPSTREAM_VARS = [
   join(NCWK_ROOT, 'upstream/hermes-studio/packages/client/src/styles/variables.scss'),
 ]
 
-/** 批 A 后基线（2026-10-17 实测）。批 C 逐目录压降；压到 0 的目录永不再放开。 */
+/** 批 C 终态（2026-10-17 实测）。剩余项全部为「与 UI 主题解耦的固定常量」：
+ * cockpit/ide = 终端 ANSI 色板（xterm 惯例不随主题）+ ECharts/G6 分类节点色板（canvas
+ * 不吃 var()，语义色场景应走 resolveStatusColors）；
+ * bpa/ontology/kanban = 图表分类色板残留（同上）。
+ * CSS 段 raw hex 已全量清零（ia2/governance/matrix-chat/matrix-teams/loop/eval=0）。
+ * 压到 0 的目录永不再放开；非 0 目录只降不升。 */
 const BUDGET: Record<string, number> = {
   governance: 0,
-  ia2: 247,
-  ide: 101,
-  cockpit: 95,
-  kanban: 61,
-  'matrix-teams': 32,
-  bpa: 24,
-  ontology: 23,
-  loop: 12,
-  'matrix-chat': 7,
-  eval: 3,
+  ia2: 0,
+  'matrix-chat': 0,
+  'matrix-teams': 0,
+  loop: 0,
+  eval: 0,
+  cockpit: 72,
+  ide: 27,
+  bpa: 8,
+  ontology: 7,
+  kanban: 3,
 }
 
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g
@@ -103,7 +108,7 @@ describe('raw hex 预算闸（ratchet：只降不升）', () => {
     // --vh: JS 视口高度变量（视口单位兜底惯例）
     const RUNTIME_PROVIDED = new Set(['--cluster-color', '--vh'])
     const phantoms = [...phantomVars].filter((v) => !defined.has(v) && !RUNTIME_PROVIDED.has(v))
-    expect(phantomVars.size).toBeGreaterThan(50) // 防扫描空转假绿
+    expect(phantomVars.size).toBeGreaterThan(20) // 防扫描空转假绿（批C清账后合法 fallback≈47：--ia-* 族等）
     expect(phantoms, `以下变量带 fallback 但全仓无定义：\n${phantoms.join('\n')}`).toEqual([])
   })
 })

@@ -242,7 +242,7 @@ onUnmounted(() => {
   // Highlight the current user's existing reaction (element-web selected state)
   &--selected {
     background: rgba(var(--accent-primary-rgb), 0.14);
-    box-shadow: inset 0 0 0 1px var(--accent-primary, $accent-primary);
+    box-shadow: inset 0 0 0 1px var(--accent-primary);
   }
 
   &--disabled {

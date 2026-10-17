@@ -81,15 +81,15 @@ async function doImport(): Promise<void> {
 .ide-import__btn { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--text-muted); padding: 0 4px; &:hover { color: var(--text-primary); } }
 .ide-import__panel {
   position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 95;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 6px; padding: 8px 10px; min-width: 320px; max-width: 420px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 11px;
 }
 .ide-import__head { display: flex; align-items: center; gap: 6px; font-weight: 600; flex-wrap: wrap; }
-.ide-import__path { flex: 1; min-width: 120px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 2px 6px; font-size: 11px; background: var(--bg-primary, #fff); color: var(--text-primary); }
-.ide-import__run, .ide-import__do { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.ide-import__path { flex: 1; min-width: 120px; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; background: var(--bg-primary); color: var(--text-primary); }
+.ide-import__run, .ide-import__do { border: 1px solid var(--primary-color); color: var(--primary-color); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
 .ide-import__do { width: 100%; margin-top: 6px; }
-.ide-import__error { color: var(--error-color, #d03050); word-break: break-all; }
+.ide-import__error { color: var(--error-color); word-break: break-all; }
 .ide-import__summary { color: var(--text-secondary); margin: 4px 0; }
 .ide-import__row { color: var(--text-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

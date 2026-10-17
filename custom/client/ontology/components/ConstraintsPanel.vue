@@ -172,6 +172,6 @@ function scopeText(c: ConstraintCardDto): string {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 8px; margin: 8px 0 16px;
   textarea { grid-column: 1 / -1; }
-  input, textarea { padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font: inherit; }
+  input, textarea { padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font: inherit; }
 }
 </style>

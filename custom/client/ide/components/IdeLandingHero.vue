@@ -75,7 +75,7 @@ const { t } = useI18n()
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--border-color, #3a3f47);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: transparent;
   color: inherit;
@@ -83,7 +83,7 @@ const { t } = useI18n()
   text-align: left;
 }
 .ide-landing__task:hover {
-  border-color: var(--primary-color, #4f7cff);
+  border-color: var(--primary-color);
 }
 .ide-landing__task-title {
   overflow: hidden;
@@ -93,7 +93,7 @@ const { t } = useI18n()
 }
 .ide-landing__task-status {
   flex-shrink: 0;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
 }
 .ide-landing__enter {
@@ -101,8 +101,8 @@ const { t } = useI18n()
   padding: 6px 18px;
   border: none;
   border-radius: 8px;
-  background: var(--primary-color, #4f7cff);
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--text-on-accent);
   font-size: 13px;
   cursor: pointer;
 }

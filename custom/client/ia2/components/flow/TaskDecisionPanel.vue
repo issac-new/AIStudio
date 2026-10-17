@@ -140,7 +140,7 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
 .tdp__n {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 16px; height: 16px; margin-left: 5px; padding: 0 4px;
-  border-radius: 8px; background: var(--error); color: #fff;
+  border-radius: 8px; background: var(--error); color: var(--text-on-accent);
   font-size: 9px; font-weight: 700; text-transform: none;
 }
 .tdp__n--warn { background: var(--warning); }

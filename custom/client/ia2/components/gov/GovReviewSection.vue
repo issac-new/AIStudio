@@ -59,7 +59,7 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
 
 <style scoped lang="scss">
 .grs { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
-.grs__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .grs__jump:hover { color: var(--primary, #6366f1); }
+.grs__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .grs__jump:hover { color: var(--primary); }
 .grs__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .grs__title { font-weight: 700; }
 .grs__sub { font-size: 10px; color: var(--text-muted); }
@@ -70,6 +70,6 @@ function onSign(caseId: string, gate: string, payload: { verdict: 'pass' | 'reje
 .grs__row-gate { font-weight: 700; color: var(--text-primary); }
 .grs__row-case { color: var(--text-muted); font-size: 11px; }
 .grs__row-badge { margin-left: auto; padding: 1px 8px; border-radius: 8px; font-size: 10px; background: var(--bg-secondary); color: var(--text-secondary); }
-.grs__row-badge--pass { background: var(--success); color: #fff; }
-.grs__row-badge--reject { background: var(--error); color: #fff; }
+.grs__row-badge--pass { background: var(--success); color: var(--text-on-accent); }
+.grs__row-badge--reject { background: var(--error); color: var(--text-on-accent); }
 </style>
