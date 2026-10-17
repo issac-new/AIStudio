@@ -44,5 +44,8 @@ export default defineConfig({
     setupFiles: [resolve(overlayRoot, 'custom/client/test/setup.ts')],
     // environment 由各测试文件头部的 // @vitest-environment jsdom 指令按需指定；
     // store 级测试无需 DOM，config 层不强制全局 environment 以减少开销。
+    // 重型 UI 挂载用例在并发负载下 5s 默认超时不稳定（2026-10-18 实测两例无关挂载
+    // 超时）；统一 20s，断言不变，真实挂起仍会失败。
+    testTimeout: 20000,
   },
 })
