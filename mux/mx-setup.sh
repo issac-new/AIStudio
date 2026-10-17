@@ -77,8 +77,8 @@ fi
 
 # ── 2. matrix 账号（产品通道供给，R31 2026-10-06 用户裁决直接落地）────
 # 界面上线是必须要求：除系统引导账号 @admin（产品端点无法自举第一个 admin，
-# docker exec 幂等保底）外，全部账号经 POST /api/governance/matrix-users 供给
-# ——#/app/accounts「创建并登记 roster」同源，建号即 roster 提交（probe 锚
+# docker exec 幂等保底）外，全部账号经邀请流 POST /api/governance/invites 供给（D21 切换）
+# ——#/app/accounts「邀请账号」同源（D21），建号即 roster+invites 双台账提交（probe 锚
 # rosterCommit=edc6ed2）。studio 先于 gateway 拉（/health/ready 只看自身
 # bootstrap，不探 gateway）；账号在位即跳过（appendTableRow 不去重，重复
 # 调会加重复 roster 行）；synapse 直建仅剩 admin 一处=系统引导语义。

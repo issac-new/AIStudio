@@ -526,10 +526,13 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   return 1
 }
 
-gov_provision_user() { # <user>：账号经产品通道供给（R31，#/app/accounts「创建并登记 roster」
-  # 同源端点 POST /api/governance/matrix-users——建号即 roster 提交）。幂等：账号在位即跳过
-  # （appendTableRow 不去重，端点重复调会加重复 roster 行——在位跳过是硬约束，R28 对账兜底）。
-  local u="$1" tok body
+gov_provision_user() { # <user>：账号经邀请流产品通道供给（D21 2026-10-17 用户裁定：
+  # 仿真 30 账号切 POST /api/governance/invites——与 /app/accounts「邀请账号」同源，
+  # 口令由服务端生成并落 creds/<user>.invite-pass；建号即 roster+invites 双台账提交）。
+  # 幂等：账号在位即跳过（appendTableRow 不去重，重复调会加重复行——在位跳过是
+  # 硬约束，R28 对账兜底）。回退：端点 404（旧 studio 无 invites）时回落 matrix-users
+  # 旧通道并 log 标注，升级窗口内不阻断开轮。
+  local u="$1" tok body rc
   if synapse_list_users | grep -qx "@$u:$SERVER_NAME"; then
     return 0
   fi
@@ -537,9 +540,27 @@ gov_provision_user() { # <user>：账号经产品通道供给（R31，#/app/acco
   local mt; mt=$(mx_login admin "$(user_pass admin)" | tr -d '\n')
   [[ -n "$mt" && "$mt" != "null" ]] || { log "gov_provision_user: admin matrix 登录失败"; return 1; }
   body=$(jq -n --arg n "$u" --arg role "$(gov_role_of "$u")" \
-    --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" --arg dn "$(displayname_of "$u")" \
-    '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$dn}')
-  studio POST /api/governance/matrix-users "$tok" "$body" | jq -e '.rosterCommit' >/dev/null
+    --arg at "$mt" --arg hs "$HS" --arg dn "$(displayname_of "$u")" \
+    '{localName:$n,role:$role,adminToken:$at,homeserverUrl:$hs,withAgent:"true",expiresInHours:720}')
+  local resp
+  resp=$(studio POST /api/governance/invites "$tok" "$body"); rc=$?
+  if [[ $rc -ne 0 ]] || ! echo "$resp" | jq -e '.invitesCommit' >/dev/null 2>&1; then
+    log "invites 端点未就绪（$resp）——回落 matrix-users 旧通道（升级窗口内）"
+    body=$(jq -n --arg n "$u" --arg role "$(gov_role_of "$u")" \
+      --arg pw "$(user_pass "$u")" --arg at "$mt" --arg hs "$HS" --arg dn "$(displayname_of "$u")" \
+      '{localName:$n,role:$role,password:$pw,adminToken:$at,homeserverUrl:$hs,withAgent:"true",displayName:$dn}')
+    studio POST /api/governance/matrix-users "$tok" "$body" | jq -e '.rosterCommit' >/dev/null
+    return $?
+  fi
+  # 邀请口令落 creds（后续 mx_login 需要口令登录账号——首轮登录后 synapse 侧
+  # 即可用既有 token 流；口令文件 600，轮次归档随 creds 目录既有纪律处置）
+  local invpw; invpw=$(echo "$resp" | jq -r '.initialPassword // empty')
+  if [[ -n "$invpw" ]]; then
+    mkdir -p "$CREDS_DIR"
+    printf '%s' "$invpw" > "$CREDS_DIR/$u.invite-pass"
+    chmod 600 "$CREDS_DIR/$u.invite-pass"
+  fi
+  echo "$resp" | jq -e '.rosterCommit' >/dev/null
 }
 studio_matrix_login() { # <user-human-localpart> → jwt（matrix 账号换 JWT）
   local u="$1"
