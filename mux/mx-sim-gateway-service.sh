@@ -119,12 +119,14 @@ cmd_up() {
   fi
   [ "$healthy" = 1 ] && echo "↻ plist 漂移（env/模板变更）——重载网关生效（旧 pid=${cur}）"
   # 清掉 nohup 旧形态（port 冲突前置：旧网关不杀新的起不来）。
-  # ppid=1 的是 launchd 托管形态，归下方 bootout 管——不当 nohup 误杀
-  # （2026-10-17 实锤：pgrep 模式串命中 launchd 网关本体，日志误报「停 nohup 旧形态」）
+  # launchd 托管形态归下方 bootout 管，不当 nohup 误杀（2026-10-17 实锤：pgrep
+  # 模式串命中 launchd 网关本体，日志误报「停 nohup 旧形态」）。判据=svc_pid 对照，
+  # 不用 ppid=1 启发式——孤儿化的 nohup 网关父进程也是 1，会把该杀的旧形态漏掉
+  # （2026-10-18 审计轮：改「与 launchd 登记 pid 相等才跳过」精确判据）
   local old=""
   local pid
   for pid in $(pgrep -f "hermes-sim.py gateway run" 2>/dev/null || true); do
-    [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ] && continue
+    [ -n "${cur:-}" ] && [ "$pid" = "$cur" ] && continue
     old="$pid"; break
   done
   if [ -n "$old" ]; then
