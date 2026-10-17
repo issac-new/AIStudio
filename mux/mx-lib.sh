@@ -1375,7 +1375,8 @@ host=github.com
 EOF
 )
   [[ -n "$t" ]] || fail "github token 不可用"
-  save_token github.token "$t"
+  printf '%s' "$t" > "$CREDS_DIR/github.token"
+  chmod 600 "$CREDS_DIR/github.token"
   printf '%s' "$t"
 }
 
