@@ -36,9 +36,8 @@ mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺�
 # 显示开关（warning_notifications.py），缺的只是 profiles 未配——每次 mx-up 幂等收敛：
 # 全档案 display.suppress_warning_notifications=true（诊断类通知静默，正常回复不受影响）。
 _mx_diag_suppress() {
-  local _py="${HERMES_AGENT_VENV:-$HOME/.hermes/hermes-agent/venv/bin/python}"
-  [[ -x "$_py" ]] || _py=$(command -v python3 || true)
-  [[ -n "$_py" ]] || return 0
+  local _py="${HERMES_AGENT_VENV:-}"
+  [[ -n "$_py" && -x "$_py" ]] || _py=$(_mx_yaml_py) || return 0
   "$_py" - "$HERMES_ROOT/profiles" <<'PY' 2>/dev/null || return 1
 import sys, glob, os
 try:

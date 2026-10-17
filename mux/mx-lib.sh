@@ -1300,11 +1300,12 @@ workspace() { echo "$SIM_ROOT/workspaces/$1/aipaydev"; }
 # ── 模型额度预检（V2：profile 配置全同构，路径适配 profiles/<u>）──
 # 返回：ok | quota | auth | unreachable | noreply
 model_preflight() { # <user>
-  local u="$1" cfg="${HERMES_AGENT_VENV:-$HOME/.hermes/hermes-agent/venv/bin/python}"
+  local u="$1" cfg="${HERMES_AGENT_VENV:-}"
   local conf; conf="$HERMES_ROOT/profiles/$u/config.yaml"
   [[ -f "$conf" ]] || { echo "unreachable"; return 0; }
-  [[ -x "$cfg" ]] || cfg=$(command -v python3 || true)
-  [[ -n "$cfg" ]] || { echo "unreachable"; return 0; }
+  # 解释器解析链（2026-10-17 实锤：单钉旧 venv/bin/python 在宿主拆 venv 后失配，
+  # 回退系统 python3 缺 pyyaml → 探针秒死被 2>/dev/null 折叠成 unreachable 假象）
+  [[ -n "$cfg" && -x "$cfg" ]] || cfg=$(_mx_yaml_py) || { echo "unreachable"; return 0; }
   "$cfg" - "$conf" <<'PY' 2>/dev/null || echo unreachable
 import json, sys, urllib.error, urllib.request
 try:
