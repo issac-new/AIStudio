@@ -27,7 +27,21 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select', segment: 'tasks' | 'online'): void
 }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+/** 在线明细文案（回归轮 R5）：英文按各计数单复数变形（原 '{p} people' 在 1 时
+ *  出 '1 people'）；中文无复数形态，走 i18n 词条原样渲染。 */
+const onlineDetail = computed(() => {
+  const p = props.onlinePeople
+  const a = props.onlineAgents
+  const m = props.onlineMachines
+  const lang = typeof locale?.value === 'string' ? locale.value : ''
+  if (lang.toLowerCase().startsWith('en')) {
+    const pl = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+    return `${pl(p, 'person', 'people')} · ${pl(a, 'agent', 'agents')} · ${pl(m, 'machine', 'machines')}`
+  }
+  return t('ia2.sit.onlineDetail', { p, a, m })
+})
 
 /** 状态呈现顺序：与 SitDetailPanel STATUS_ORDER 同一词表序；done/archived
  *  不进任务口径（openTasks 已过滤），防御性排除 */
@@ -54,7 +68,7 @@ const taskStatusSummary = computed(() =>
     </button>
     <button type="button" class="sit__item ia-status-capsule__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" :title="t('ia2.sit.chipOnlineHint')" :aria-expanded="active === 'online'" @click="emit('select', 'online')">
       <span class="sit__dot sit__dot--ok" />{{ t('ia2.sit.online') }} {{ onlinePeople + onlineAgents + onlineMachines }}
-      <span class="sit__sm">{{ t('ia2.sit.onlineDetail', { p: onlinePeople, a: onlineAgents, m: onlineMachines }) }}</span>
+      <span class="sit__sm">{{ onlineDetail }}</span>
     </button>
   </div>
 </template>
@@ -63,6 +77,13 @@ const taskStatusSummary = computed(() =>
 .sit {
   display: flex; align-items: center; gap: 4px; flex-shrink: 0;
   padding: 4px 2px; font-size: 12px; overflow-x: auto; scrollbar-width: thin;
+  /* 回归轮 R6：态势胶囊容器查询——页头挤压（六阶段导航 487px）时胶囊被压到
+     ~180px，在线 chip 右半被裁成"看得见点不开"。窄于阈值时收起副注文本
+     （待办/受阻/在线明细），chip 本体完整可点；明细仍在 title 与展开面板里。 */
+  container-type: inline-size;
+}
+@container (max-width: 340px) {
+  .sit__sm { display: none; }
 }
 .sit__item {
   display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;

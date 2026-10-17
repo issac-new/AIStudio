@@ -1,0 +1,29 @@
+--- a/packages/server/src/modules/hermes/services/plugins/plugins.ts
++++ b/packages/server/src/modules/hermes/services/plugins/plugins.ts
+@@ -374,8 +374,25 @@
+       throw new Error(`${(parsed as any).error}: ${(parsed as any).detail || 'unknown error'}`)
+     }
+     if (stderr?.trim()) {
+-      parsed.warnings = [...(parsed.warnings || []), stderr.trim()]
++      // HERMES_CUSTOM[PluginsStderrFilter] BEGIN（回归轮 R3）：CLI stderr 里有
++      // 一类已知无害的启动噪音——更新器横幅（"→ Restarting gateway(s)…"、
++      // "⚠ Paused gateway…"）与插件 manifest kind 未识别的兜底告警（unknown
++      // kind … treating as 'standalone'，加载器已按 standalone 正常处理）。
++      // 整段透传会在插件页顶出两条英文横幅吓到用户；按行过滤后再并入 warnings，
++      // 真错误（ traceback / M-… 报错）原样保留。
++      const noise = stderr.trim().split('\n').filter((line: string) => {
++        const s = line.trim()
++        if (!s) return false
++        if (/^→/.test(s)) return false
++        if (/^⚠ Paused gateway/.test(s)) return false
++        if (/^Plugin \S+: unknown kind \S+ \(valid: /i.test(s) && /treating as 'standalone'/.test(s)) return false
++        return true
++      })
++      if (noise.length > 0) {
++        parsed.warnings = [...(parsed.warnings || []), noise.join('\n')]
++      }
+     }
++    // HERMES_CUSTOM[PluginsStderrFilter] END
+     // HERMES_CUSTOM[PluginsListCache] BEGIN
+     pluginsListCache.set(cacheKey, { expiresAt: Date.now() + PLUGINS_CACHE_TTL_MS, data: parsed })
+     // HERMES_CUSTOM[PluginsListCache] END
