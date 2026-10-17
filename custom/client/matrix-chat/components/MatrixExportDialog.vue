@@ -155,13 +155,13 @@ async function handleExport() {
 
 .export-success {
   font-size: 13px;
-  color: var(--success, #22c55e);
+  color: var(--success);
   margin: 0;
 }
 
 .export-error {
   font-size: 12px;
-  color: var(--error, #ef4444);
+  color: var(--error);
   margin: 0;
 }
 
@@ -193,7 +193,7 @@ async function handleExport() {
   border: none;
   border-radius: $radius-sm;
   background: $accent-primary;
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -208,7 +208,7 @@ async function handleExport() {
   width: 12px;
   height: 12px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border-top-color: var(--border-color);
   border-radius: 50%;
   display: inline-block;
   animation: export-spin 0.6s linear infinite;

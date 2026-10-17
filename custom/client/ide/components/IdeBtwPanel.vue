@@ -115,10 +115,10 @@ watch(() => chatStore.activeSessionId, refresh)
 .ide-btw__ask button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 6px; padding: 2px 10px; cursor: pointer; align-self: flex-end; }
 .ide-btw__error { color: var(--error-color, #d03050); padding: 0 10px 6px; font-size: 11px; }
 .ide-btw__list { overflow-y: auto; padding: 0 10px 10px; }
-.ide-btw__empty { color: var(--text-color-3, #999); padding: 8px 0; }
+.ide-btw__empty { color: var(--text-muted); padding: 8px 0; }
 .ide-btw__x { border-top: 1px dashed var(--border-color, #eee); padding: 6px 0; }
 .ide-btw__q { font-weight: 600; }
-.ide-btw__a { color: var(--text-color-2, #555); white-space: pre-wrap; margin-top: 2px; }
+.ide-btw__a { color: var(--text-secondary); white-space: pre-wrap; margin-top: 2px; }
 .ide-btw__waiting { color: var(--warning-color, #f0a020); margin-top: 2px; }
 .ide-btw__copy { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; font-size: 10px; padding: 1px 6px; cursor: pointer; margin-top: 4px; }
 </style>

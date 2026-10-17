@@ -365,8 +365,8 @@ watch(
   color: var(--text-muted, #9aa0aa);
 }
 .ide-goal__autonomy { display: flex; align-items: center; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-.ide-goal__autonomy-label { font-size: 10px; color: var(--text-color-3, #999); }
-.ide-goal__autonomy-btn { border: 1px solid var(--border-color, #e0e0e0); border-radius: 9px; background: transparent; font-size: 10px; padding: 0 7px; cursor: pointer; color: var(--text-color-3, #999);
+.ide-goal__autonomy-label { font-size: 10px; color: var(--text-muted); }
+.ide-goal__autonomy-btn { border: 1px solid var(--border-color, #e0e0e0); border-radius: 9px; background: transparent; font-size: 10px; padding: 0 7px; cursor: pointer; color: var(--text-muted);
   &.is-on { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); } }
-.ide-goal__autonomy-stop { font-size: 10px; color: var(--text-color-3, #999); width: 100%; }
+.ide-goal__autonomy-stop { font-size: 10px; color: var(--text-muted); width: 100%; }
 </style>

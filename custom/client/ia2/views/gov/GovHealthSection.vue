@@ -296,13 +296,13 @@ onMounted(() => void refresh())
 /* G3 跨账号板状态分布 */
 .gov-board-status { margin: 14px 0; }
 .gov-board-status__title { margin: 0 0 2px; font-size: 14px; }
-.gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--muted, #888); }
-.gov-board-status__empty { font-size: 12px; color: var(--muted, #888); padding: 8px 0; }
+.gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); }
+.gov-board-status__empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
 .gov-board-status__tbl { border-collapse: collapse; width: 100%; font-size: 12px; }
 .gov-board-status__tbl th, .gov-board-status__tbl td { border: 1px solid var(--border-color, rgba(0,0,0,.08)); padding: 4px 8px; text-align: right; }
 .gov-board-status__tbl th:first-child, .gov-board-status__tbl td:first-child { text-align: left; }
 .gov-board-status__tbl th { background: rgba(127,127,127,.06); }
-.gov-board-status__tbl tr.is-unavailable td { color: var(--muted, #999); }
+.gov-board-status__tbl tr.is-unavailable td { color: var(--text-muted); }
 .gov-board-status__tbl td.is-wip-hot { color: #b45309; font-weight: 600; }
 
 </style>

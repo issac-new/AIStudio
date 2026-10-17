@@ -1053,7 +1053,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
 .ide-chat__model-group-title {
   font-weight: 600;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   padding: 4px 0 2px;
 }
 

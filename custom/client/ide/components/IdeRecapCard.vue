@@ -34,6 +34,6 @@ const recap = computed(() => {
 .ide-recap {
   margin: 4px 12px; padding: 5px 10px; font-size: 12px;
   background: var(--hover-color, rgba(0, 0, 0, 0.04)); border-radius: 6px;
-  border-left: 3px solid var(--primary-color, #18a058); color: var(--text-color-3, #777);
+  border-left: 3px solid var(--primary-color, #18a058); color: var(--text-muted);
 }
 </style>

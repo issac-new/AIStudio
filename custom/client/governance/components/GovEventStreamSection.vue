@@ -96,40 +96,40 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .ges {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   display: flex; flex-direction: column; gap: 8px;
 }
 .ges__bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.ges__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+.ges__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
 .ges__chip {
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px;
-  background: var(--bg-primary, #fff); padding: 1px 9px; font-size: 10.5px; cursor: pointer;
-  &.is-on { color: #1d4ed8; border-color: #1d4ed855; background: #dbeafe; }
-  &.is-off { color: var(--text-muted, #878c99); opacity: 0.7; }
+  border: 1px solid var(--border-color); border-radius: 10px;
+  background: var(--bg-primary); padding: 1px 9px; font-size: 10.5px; cursor: pointer;
+  &.is-on { color: var(--accent-info); border-color: rgba(var(--accent-info-rgb), 0.33); background: rgba(var(--accent-info-rgb), 0.1); }
+  &.is-off { color: var(--text-muted); opacity: 0.7; }
 }
-.ges__sev { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 2px 6px; font-size: 10.5px; background: var(--bg-primary, #fff); color: var(--text-primary, inherit); margin-left: auto; }
-.ges__refresh { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary, #3b82f6); }
-.ges__error { font-size: 11px; color: #b91c1c; }
+.ges__sev { border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 6px; font-size: 10.5px; background: var(--bg-primary); color: var(--text-primary); margin-left: auto; }
+.ges__refresh { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary); }
+.ges__error { font-size: 11px; color: var(--error); }
 .ges__body { max-height: 300px; overflow: auto; }
-.ges__empty { border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted, #878c99); }
+.ges__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted); }
 .ges__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
-  th { text-align: left; color: var(--text-muted, #878c99); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); position: sticky; top: 0; background: var(--bg-primary, #fff); }
-  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); vertical-align: top; } }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-primary); }
+  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); vertical-align: top; } }
 .ges__ts { font-family: ui-monospace, monospace; font-size: 9.5px; white-space: nowrap; }
 .ges__type { font-family: ui-monospace, monospace; font-size: 9.5px; white-space: nowrap; }
 .ges__summary { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ges__badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 1.6;
-  &.is-quality { color: #15803d; background: #dcfce7; }
-  &.is-security { color: #b91c1c; background: #fee2e2; }
-  &.is-cost { color: #b45309; background: #fef3c7; }
-  &.is-approval { color: #7c3aed; background: #ede9fe; }
-  &.is-autonomy { color: #0e7490; background: #cffafe; }
-  &.is-system { color: var(--text-muted, #878c99); background: var(--bg-secondary, #f1f2f4); } }
+  &.is-quality { color: var(--success); background: rgba(var(--success-rgb), 0.08); }
+  &.is-security { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+  &.is-cost { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-approval { color: var(--ia-compensated); background: color-mix(in srgb, var(--ia-compensated) 12%, transparent); }
+  &.is-autonomy { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); }
+  &.is-system { color: var(--text-muted); background: var(--bg-secondary); } }
 .ges__sev-badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 1.6;
-  &.is-high { color: #b91c1c; background: #fee2e2; }
-  &.is-warn { color: #b45309; background: #fef3c7; }
-  &.is-info { color: var(--text-muted, #878c99); background: var(--bg-secondary, #f1f2f4); } }
+  &.is-high { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+  &.is-warn { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-info { color: var(--text-muted); background: var(--bg-secondary); } }
 </style>

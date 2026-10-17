@@ -150,7 +150,7 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  .score { font-size: 15px; font-weight: 700; color: var(--accent, #4f6ef7); }
+  .score { font-size: 15px; font-weight: 700; color: var(--accent-primary); }
 }
 .steps {
   list-style: none;
@@ -185,7 +185,7 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
   .c-enabling { background: #10b981; }
   .c-supporting { background: #f59e0b; }
   .c-managing { background: #8b5cf6; }
-  .pill { border: 1px solid var(--accent, #4f6ef7); color: var(--accent, #4f6ef7); border-radius: 8px; padding: 0 6px; font-size: 11px; margin-right: 4px; }
+  .pill { border: 1px solid var(--accent-primary); color: var(--accent-primary); border-radius: 8px; padding: 0 6px; font-size: 11px; margin-right: 4px; }
   .miss-mark { color: var(--danger, #dc2626); }
 }
 .gapbox {

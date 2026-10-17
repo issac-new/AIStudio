@@ -419,7 +419,7 @@ function deltaText(v: number | null | undefined): string {
     padding: 6px 14px;
     cursor: pointer;
     font-size: 13px;
-    &.active { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); }
+    &.active { background: var(--accent-primary); color: var(--text-on-accent, #fff); }
   }
 }
 .eval-view__error { color: var(--danger, #dc2626); font-size: 13px; }
@@ -457,7 +457,7 @@ function deltaText(v: number | null | undefined): string {
   background: var(--bg-secondary, rgba(255, 255, 255, 0.55));
 }
 button.primary {
-  background: var(--accent, #4f6ef7);
+  background: var(--accent-primary);
   color: var(--text-on-accent, #fff);
   border: none;
   border-radius: 8px;

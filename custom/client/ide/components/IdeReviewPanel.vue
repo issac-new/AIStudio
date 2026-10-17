@@ -105,16 +105,16 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 <style scoped lang="scss">
 .ide-review { margin: 4px 12px; font-size: 12px; }
 .ide-review__head { font-weight: 600; }
-.ide-review__counts { color: var(--text-color-3, #999); font-weight: 400; font-size: 11px; }
-.ide-review__empty { color: var(--text-color-3, #999); padding: 8px 0; }
+.ide-review__counts { color: var(--text-muted); font-weight: 400; font-size: 11px; }
+.ide-review__empty { color: var(--text-muted); padding: 8px 0; }
 .ide-review__finding {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 4px; margin: 2px 0;
 }
 .ide-review__finding.is-high { background: rgba(208, 48, 80, 0.07); }
 .ide-review__finding.is-medium { background: rgba(184, 134, 11, 0.07); }
-.ide-review__finding.is-resolved { color: var(--text-color-3, #bbb); }
+.ide-review__finding.is-resolved { color: var(--text-muted); }
 .ide-review__sev { font-size: 10px; font-weight: 600; }
-.ide-review__domain { font-size: 10px; color: var(--text-color-3, #999); }
+.ide-review__domain { font-size: 10px; color: var(--text-muted); }
 .ide-review__text { flex: 1; }
 .ide-review__resolve {
   border: none; background: transparent; color: var(--primary-color, #18a058); cursor: pointer; font-size: 11px;

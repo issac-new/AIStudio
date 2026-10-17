@@ -110,16 +110,16 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.hp { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.hp { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .hp__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hp__title { margin: 0; font-size: 14px; }
 .hp__chip { font-size: 12px; opacity: 0.85; }
 .hp__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .hp__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.hp__error { color: var(--danger, #dc2626); font-size: 12px; }
+.hp__error { color: var(--danger); font-size: 12px; }
 .hp__tablewrap { overflow: auto; }
 .hp__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.hp__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color, #e5e7eb); padding: 4px 6px; white-space: nowrap; }
+.hp__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 4px 6px; white-space: nowrap; }
 .hp__table td { border-bottom: 1px solid var(--border-color, rgb(0 0 0 / 5%)); padding: 4px 6px; vertical-align: top; }
 .hp__detail summary { cursor: pointer; list-style: none; }
 .hp__detail summary::-webkit-details-marker { display: none; }
@@ -136,7 +136,7 @@ onMounted(() => void refresh())
 .hp__count { font-variant-numeric: tabular-nums; font-weight: 600; }
 .hp__countnote { display: block; font-size: 10px; opacity: 0.6; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hp__status { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid; }
-.hp__status--ok { color: var(--ok-ink, #166534); border-color: var(--ok, #16a34a); background: rgb(134 239 172 / 25%); }
-.hp__status--partial { color: var(--warning-ink, #92400e); border-color: var(--warning, #f59e0b); background: rgb(254 243 199 / 60%); }
-.hp__status--gap { color: var(--danger, #dc2626); border-color: currentColor; background: rgb(254 202 202 / 25%); }
+.hp__status--ok { color: var(--success); border-color: var(--success); background: rgba(var(--success-rgb), 0.25); }
+.hp__status--partial { color: var(--ia-stale); border-color: var(--warning); background: rgba(var(--warning-rgb), 0.6); }
+.hp__status--gap { color: var(--danger); border-color: currentColor; background: rgba(var(--error-rgb), 0.25); }
 </style>

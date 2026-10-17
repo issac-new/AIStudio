@@ -44,10 +44,10 @@ const breakdown = computed(() =>
 )
 
 const SEGMENT_COLORS: Record<ContextSegment['key'], string> = {
-  user: 'var(--primary-color, #18a058)',
-  assistant: 'var(--success-color, #18a058)',
-  tool: 'var(--info-color, #8b5cf6)',
-  system: 'var(--warning-color, #d97706)',
+  user: 'var(--primary-color)',
+  assistant: 'var(--success-color)',
+  tool: 'var(--info-color)',
+  system: 'var(--warning-color)',
 }
 
 // ── 成本估算（dsh-TUI 三原则：未收录不显示 / 缓存分价 / 价目随官方维护）──
@@ -388,9 +388,9 @@ watch(
   overflow-y: auto;
   padding: 10px 12px;
   font-size: 12px;
-  color: var(--text-primary, #d7dae0);
-  background: var(--bg-secondary, #1b1e24);
-  border: 1px solid var(--border-color, #3a3f4b);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
@@ -400,7 +400,7 @@ watch(
   align-items: center;
   gap: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-color, #3a3f4b);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-metrics-panel__title {
@@ -410,27 +410,27 @@ watch(
 .ide-metrics-panel__readout {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 
-  &[data-level='warn'] { color: #f0a44c; }
-  &[data-level='danger'] { color: var(--error-color, #d03050); }
+  &[data-level='warn'] { color: var(--ia-stale); }
+  &[data-level='danger'] { color: var(--error-color); }
 }
 
 .ide-metrics-panel__cost {
   font-variant-numeric: tabular-nums;
-  color: #f0a44c;
+  color: var(--ia-stale);
 }
 
 .ide-metrics-panel__close {
   border: none;
   background: none;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
   padding: 0 2px;
 
-  &:hover { color: var(--text-primary, #d7dae0); }
+  &:hover { color: var(--text-primary); }
 }
 
 .ide-metrics-panel__low {
@@ -441,7 +441,7 @@ watch(
   padding: 6px 8px;
   border-radius: 6px;
   background: rgba(224, 108, 117, 0.12);
-  color: var(--error-color, #d03050);
+  color: var(--error-color);
 }
 
 .ide-metrics-panel__low-title { font-weight: 600; }
@@ -456,13 +456,13 @@ watch(
   align-items: baseline;
   margin-bottom: 6px;
   font-weight: 600;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
 }
 
 .ide-metrics-panel__hint {
   font-weight: 400;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-metrics-panel__ledger {
@@ -470,7 +470,7 @@ watch(
   gap: 12px;
   margin-top: 6px;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-metrics-panel__stack {
@@ -478,7 +478,7 @@ watch(
   height: 8px;
   border-radius: 4px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--text-muted, #9aa0aa) 18%, transparent);
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
 }
 
 .ide-metrics-panel__stack-seg {
@@ -516,12 +516,12 @@ watch(
 .ide-metrics-panel__pct {
   width: 34px;
   text-align: right;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .ide-metrics-panel__state {
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   padding: 4px 0;
 }
 
@@ -534,17 +534,17 @@ watch(
     padding: 2px 6px 2px 0;
     text-align: left;
     font-weight: 400;
-    color: var(--text-secondary, #b0b5be);
+    color: var(--text-secondary);
   }
 
   th {
-    color: var(--text-muted, #9aa0aa);
+    color: var(--text-muted);
     font-size: 11px;
   }
 
   tfoot td {
-    border-top: 1px solid var(--border-color, #3a3f4a);
-    color: var(--text-secondary, #b0b5be);
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
     font-weight: 600;
   }
 
@@ -557,7 +557,7 @@ watch(
     white-space: nowrap;
   }
 
-  tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+  tbody tr:hover { background: var(--hover-bg); }
 }
 
 .ide-metrics-panel__heat {
@@ -572,11 +572,11 @@ watch(
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--text-muted, #9aa0aa) 15%, transparent);
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
 
   &[data-level='1'] { background: rgba(152, 195, 121, 0.3); }
   &[data-level='2'] { background: rgba(152, 195, 121, 0.5); }
   &[data-level='3'] { background: rgba(152, 195, 121, 0.75); }
-  &[data-level='4'] { background: var(--success-color, #18a058); }
+  &[data-level='4'] { background: var(--success-color); }
 }
 </style>

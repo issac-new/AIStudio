@@ -184,7 +184,7 @@ async function save(): Promise<void> {
 .ide-emd__dialog { width: 560px; max-height: 70vh; overflow-y: auto; background: var(--card-color, #fff); border-radius: 10px; padding: 12px 16px; font-size: 12px; }
 .ide-emd__head { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; }
 .ide-emd__head button { border: none; background: none; cursor: pointer; }
-.ide-emd__state { padding: 16px; color: var(--text-color-3, #999); }
+.ide-emd__state { padding: 16px; color: var(--text-muted); }
 .ide-emd__provider { border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 6px; margin: 6px 0; }
 .ide-emd__row { display: flex; gap: 6px; margin: 4px 0; }
 .ide-emd__row input, .ide-emd__row select { flex: 1; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 2px 6px; font-size: 11px; }
@@ -193,9 +193,9 @@ async function save(): Promise<void> {
 .ide-emd__add { border: 1px dashed var(--border-color, #ccc); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; }
 .ide-emd__default { align-items: center; margin-top: 8px; }
 .ide-emd__route { align-items: center; margin-top: 4px; flex-wrap: wrap; }
-.ide-emd__route span { font-size: 11px; color: var(--text-color-3, #999); }
-.ide-emd__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-color-3, #999); }
-.ide-emd__default span { font-size: 11px; color: var(--text-color-3, #999); }
+.ide-emd__route span { font-size: 11px; color: var(--text-muted); }
+.ide-emd__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-muted); }
+.ide-emd__default span { font-size: 11px; color: var(--text-muted); }
 .ide-emd__problems { color: var(--error-color, #d03050); font-size: 11px; margin: 6px 0; padding-left: 18px; }
 .ide-emd__saved { color: var(--primary-color, #18a058); font-size: 11px; margin-top: 6px; }
 .ide-emd__foot { display: flex; justify-content: flex-end; margin-top: 10px; }

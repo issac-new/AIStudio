@@ -93,7 +93,7 @@ const sections = computed(() => Object.keys(SECTION_TITLES) as Array<keyof Hando
 
 .ide-handoff__title {
   flex: 0 0 48px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
 }
 
 .ide-handoff__section ul {

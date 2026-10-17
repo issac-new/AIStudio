@@ -76,7 +76,7 @@ async function pickAuto(): Promise<void> {
   window.setTimeout(() => {
     const el = document.createElement('div')
     el.textContent = `Auto：${route.detail} → ${target.model}`
-    el.style.cssText = 'position:fixed;bottom:44px;right:16px;z-index:999;background:#18a058;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.2)'
+    el.style.cssText = 'position:fixed;bottom:44px;right:16px;z-index:999;background:var(--success);color:var(--text-on-accent);padding:6px 12px;border-radius:6px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.2)'
     document.body.appendChild(el)
     window.setTimeout(() => el.remove(), 3200)
   }, 50)
@@ -195,16 +195,16 @@ async function pick(provider: string, model: string): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
   max-width: 220px;
 
-  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+  &:hover { border-color: var(--primary-color); color: var(--primary-color); }
 }
 
 .ide-model-switcher__current {
@@ -226,8 +226,8 @@ async function pick(provider: string, model: string): Promise<void> {
   max-height: 320px;
   overflow-y: auto;
   padding: 6px;
-  background: var(--bg-secondary, #1b1e24);
-  border: 1px solid var(--border-color, #3a3f4b);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 330;
@@ -235,14 +235,14 @@ async function pick(provider: string, model: string): Promise<void> {
 
 .ide-model-switcher__state {
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   padding: 4px;
 }
 
 .ide-model-switcher__provider {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   padding: 4px 6px 2px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -254,23 +254,23 @@ async function pick(provider: string, model: string): Promise<void> {
   text-align: left;
   border: none;
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   font-size: 12px;
   font-family: ui-monospace, monospace;
   padding: 4px 6px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { background: rgba(255, 255, 255, 0.06); }
+  &:hover { background: var(--hover-bg); }
 
   &.is-active {
-    color: var(--primary-color, #18a058);
+    color: var(--primary-color);
     background: rgba(97, 175, 239, 0.12);
   }
 }
 
 .ide-model-switcher__manage {
-  border-top: 1px dashed var(--border-color, #3a3f4b);
+  border-top: 1px dashed var(--border-color);
   margin-top: 4px;
   padding-top: 4px;
 }
@@ -280,13 +280,13 @@ async function pick(provider: string, model: string): Promise<void> {
   width: 100%;
   border: none;
   background: none;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   padding: 4px 6px;
   text-align: left;
   cursor: pointer;
   border-radius: 4px;
 
-  &:hover { background: rgba(255, 255, 255, 0.06); color: var(--primary-color, #18a058); }
+  &:hover { background: var(--hover-bg); color: var(--primary-color); }
 }
 </style>

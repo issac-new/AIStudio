@@ -424,17 +424,17 @@ defineExpose({ refresh })
   summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 2px 0; }
   summary::-webkit-details-marker { display: none; }
 }
-.impact-chip { font-weight: 600; color: var(--warning-ink, #92400e); }
+.impact-chip { font-weight: 600; color: var(--ia-stale); }
 .impact-danger {
   padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; font-size: 10.5px;
   &--delete { color: var(--danger, #dc2626); }
-  &--overwrite { color: var(--warning-ink, #92400e); }
+  &--overwrite { color: var(--ia-stale); }
   &--worktree-reset { color: var(--danger, #dc2626); }
 }
 .impact-count { color: var(--text-muted, #878c99); }
-.impact-unbounded { color: var(--warning-ink, #92400e); }
+.impact-unbounded { color: var(--ia-stale); }
 .impact-body { display: flex; flex-direction: column; gap: 3px; padding: 2px 0 4px; }
-.impact-note { color: var(--warning-ink, #92400e); }
+.impact-note { color: var(--ia-stale); }
 .impact-targets {
   margin: 0; padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 1px;
   li code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }

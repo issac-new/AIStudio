@@ -116,7 +116,7 @@ async function handleReportAndLeave() {
   flex: 1;
   font-size: 16px;
   font-weight: 600;
-  color: var(--error, #ef4444);
+  color: var(--error);
   margin: 0;
 }
 
@@ -169,13 +169,13 @@ async function handleReportAndLeave() {
   line-height: 1.5;
 
   &:focus {
-    border-color: var(--error, #ef4444);
+    border-color: var(--error);
   }
 }
 
 .report-error {
   font-size: 12px;
-  color: var(--error, #ef4444);
+  color: var(--error);
   margin: 0;
 }
 
@@ -188,7 +188,7 @@ async function handleReportAndLeave() {
   cursor: pointer;
 
   input[type="checkbox"] {
-    accent-color: var(--error, #ef4444);
+    accent-color: var(--error);
   }
 }
 
@@ -225,7 +225,7 @@ async function handleReportAndLeave() {
   padding: 6px 16px;
   border: none;
   border-radius: $radius-sm;
-  background: var(--error, #ef4444);
+  background: var(--error);
   color: var(--text-on-accent);
   cursor: pointer;
   display: flex;
@@ -247,7 +247,7 @@ async function handleReportAndLeave() {
   width: 12px;
   height: 12px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border-top-color: var(--border-color);
   border-radius: 50%;
   display: inline-block;
   animation: report-spin 0.6s linear infinite;

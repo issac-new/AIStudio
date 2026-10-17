@@ -9,6 +9,8 @@ import { features } from '../../../config/features';
 // 协作场景（/app/collab）；ia2/index.ts 顶部同步 import 同款样式（双落点幂等，
 // 确保壳页头 IaShellHeader 与 CollabScene 的 cockpit-* 类在两个入口链都有样式）。
 import './styles/cockpit.scss';
+// ECharts 语义色缓存随主题失效（批 A6，双落点幂等；详见 theme-bridge.ts 头注）
+import './styles/theme-bridge';
 
 export async function registerCockpit(_app: App) {
   if (!features.cockpit) {

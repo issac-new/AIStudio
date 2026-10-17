@@ -486,7 +486,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 .run-trace-related__star { color: var(--warning); font-size: 11px; }
 .run-trace-related__title { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .run-trace-related__profile { font-size: 9px; opacity: 0.7; }
-.run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-secondary-rgb, 64,120,192), 0.12); color: var(--text-secondary); }
+.run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-info-rgb), 0.12); color: var(--text-secondary); }
 .run-trace-related__empty { font-size: 9px; padding: 0 3px; border-radius: 3px; background: var(--bg-inset, rgba(0,0,0,0.06)); color: var(--text-muted); }
 .run-trace-modal__hotspots { display: flex; gap: 12px; padding: 6px 18px; font-size: 11px; color: var(--text-muted, #9aa0aa); }
 .run-trace-modal__hotspot-col { flex: 1; min-width: 0; }

@@ -251,7 +251,7 @@ button.ghost { background: transparent; border: 1px solid var(--border-color, #e
       &.check { flex-direction: row; align-items: center; gap: 6px; }
       input, select { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 10px; font-size: 13px; background: var(--bg-primary, #fff); color: inherit; } } }
   .cfg-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; } }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
+button.primary { background: var(--accent-primary); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
   &:disabled { opacity: 0.6; cursor: wait; } }
 .err { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
 .ok { color: var(--success, #16a34a); font-size: 13px; margin: 0; }

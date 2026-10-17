@@ -380,55 +380,55 @@ onUnmounted(disposeTerminal)
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: var(--term-bg, #1a1a2e);
+  background: var(--code-bg);
 }
 .cockpit-terminal-pane__head {
   flex-shrink: 0;
   padding: 8px 14px;
-  background: var(--term-head-bg, #0d0d0d);
-  border-bottom: 1px solid var(--term-border, #333);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: var(--term-fg, #ccc);
+  color: var(--text-primary);
   z-index: 1;
 }
 .cockpit-terminal-pane__title {
-  color: var(--term-fg, #e0e0e0);
+  color: var(--text-primary);
   font-weight: 600;
 }
 .cockpit-terminal-pane__tool {
   font: inherit;
   font-size: 11px;
-  color: var(--term-fg, #e0e0e0);
-  background: var(--term-head-bg, #1a1a1a);
-  border: 1px solid var(--term-border, #333);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   padding: 2px 4px;
   cursor: pointer;
   max-width: 170px;
   &:focus {
-    outline: 1px solid var(--term-border, #555);
+    outline: 1px solid var(--border-color);
   }
 }
 .cockpit-terminal-pane__root {
   font-size: 11px;
-  color: var(--term-muted, #888);
-  background: var(--term-head-bg, #1a1a1a);
+  color: var(--text-muted);
+  background: var(--bg-secondary);
   padding: 2px 7px;
   border-radius: 3px;
-  border: 1px solid var(--term-border, #333);
+  border: 1px solid var(--border-color);
 }
 .cockpit-terminal-pane__exit {
   margin-left: auto;
   cursor: pointer;
-  color: var(--term-muted, #888);
+  color: var(--text-muted);
   font-size: 11px;
   border: none;
   background: transparent;
   font: inherit;
-  &:hover { color: var(--term-fg, #fff); }
+  &:hover { color: var(--text-primary); }
 }
 .cockpit-terminal-pane__body {
   flex: 1;

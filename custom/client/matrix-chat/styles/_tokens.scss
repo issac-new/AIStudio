@@ -50,6 +50,9 @@ $text-on-accent: var(--bg-primary);
   --mx-room-tile-hover-bg: rgba(var(--accent-primary-rgb), 0.04);
   --mx-room-tile-active-bg: rgba(var(--accent-primary-rgb), 0.08);
 
+  // ── Bubble（原 --bubble-margin-inline-start 借名落地，2026-10-17 幽灵变量清账）──
+  --mx-bubble-margin-inline-start: 48px;
+
   // ── Read marker ──
   --mx-read-marker-color: var(--accent-primary);
   --mx-code-bg: var(--code-bg, #f5f5f5);

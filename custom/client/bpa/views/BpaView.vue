@@ -113,10 +113,10 @@ onMounted(() => void load())
 .bpa-view__empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border: 1px dashed var(--border-color, #e5e7eb); border-radius: 10px; padding: 18px; }
 .bpa-view__tabs { display: flex; gap: 6px; flex-wrap: wrap;
   button { border: 1px solid var(--border-color, #e5e7eb); background: var(--bg-secondary, rgba(255,255,255,0.55)); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: inherit;
-    &.active { border-color: var(--accent, #4f6ef7); color: var(--accent, #4f6ef7); font-weight: 600; }
+    &.active { border-color: var(--accent-primary); color: var(--accent-primary); font-weight: 600; }
     .badge { margin-left: 6px; border-radius: 8px; padding: 0 6px; font-size: 11px; color: #fff; }
     .badge-high { background: var(--danger, #dc2626); } } }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
+button.primary { background: var(--accent-primary); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
   &:disabled { opacity: 0.6; cursor: wait; } }
 .muted { opacity: 0.65; font-size: 12px; }
 .small { font-size: 11px; }
