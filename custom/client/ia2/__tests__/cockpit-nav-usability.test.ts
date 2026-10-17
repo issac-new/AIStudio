@@ -51,49 +51,51 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('阶段页：流程总览＞②需求，当前段带 aria-current', async () => {
+  it('阶段页：流程总览＞②需求＞默认页签（需求与冻结），当前段带 aria-current', async () => {
     const { w } = await mountAt('/app/stage/reqs')
     const nav = w.find('[data-testid="ia-breadcrumb"]')
     expect(nav.exists()).toBe(true)
     expect(nav.text()).toContain('流程总览')
     expect(nav.text()).toContain('② 需求')
+    expect(nav.text()).toContain('需求与冻结')
     expect(w.find('[data-testid="ia-breadcrumb-current"]').attributes('aria-current')).toBe('page')
     w.unmount()
   })
 
-  it('中心根路径只到中心层，不重复默认签；运行总览标「全程」', async () => {
+  it('全流程推演根路径：流程总览＞全程＞全流程推演，不重复默认签', async () => {
     const { w } = await mountAt('/app/sim')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('仿真中心')
+    expect(text).toContain('全流程推演')
     expect(text).not.toContain('运行总览')
     expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('全程')
     w.unmount()
   })
 
-  it('中心签级：流程总览＞③④＞仿真中心＞监督面板（多归属如实列两阶段）', async () => {
+  it('全流程推演签级：流程总览＞③④＞全流程推演＞监督面板（多归属如实列两阶段）', async () => {
     const { w } = await mountAt('/app/sim/supervision')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
     expect(text).toContain('流程总览')
-    expect(text).toContain('仿真中心')
+    expect(text).toContain('全流程推演')
     expect(text).toContain('监督面板')
     expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('③④')
     w.unmount()
   })
 
-  it('治理签级：文档评审段取自 gov-tabs 单一事实源，归属②⑤', async () => {
+  it('旧治理深链：文档评审按「⑥治理＞文档评审」呈现，不再出现治理中心', async () => {
     const { w } = await mountAt('/app/gov/docs')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('治理中心')
+    expect(text).toContain('⑥ 治理')
     expect(text).toContain('文档评审')
-    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('②⑤')
+    expect(text).not.toContain('治理中心')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('⑥ 治理')
     w.unmount()
   })
 
-  it('全程工具：模型服务商 流程总览＞全程＞治理中心＞模型服务商', async () => {
+  it('全程工具：模型服务商 流程总览＞全程＞模型服务商', async () => {
     const { w } = await mountAt('/app/gov/model-providers')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('治理中心')
     expect(text).toContain('模型服务商')
+    expect(text).not.toContain('治理中心')
     expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('全程')
     w.unmount()
   })

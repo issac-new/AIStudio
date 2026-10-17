@@ -1,287 +1,234 @@
-<!-- overlay/custom/client/ia2/views/stage/StageShell.vue -->
-<!-- D18 时序阶段工作页（2026-10-17 设计正本 §5.0/§5.2）：六阶段各有真工作页。
-     阶段文案与工具卡定义单一事实源=stage-meta.ts（STAGE_META），本组件不各自
-     定义——终结 D13 起三处各自定义的双轨形态。①搭建渲染 SETUP_STEPS 五步骤
-     清单（建立组织→账号→团队协调→环境资产→智能体），其余五阶段保留 D14-D16
-     内嵌核心操作件。阶段进度读 run-state（useRunContext：query.run 优先，
-     回落最近一次成功读取的记忆），与旅程页同一推导。
-     工具卡 testid 拼稳定 key 不拼 label（D18 解耦：改名零 churn）。
-     层级批第二阶段（2026-10-17）：②④⑤⑥各补一块高频件内嵌（运行态势/证据
-     反查/交付健康/问题清单对账），阶段页成为本阶段工作台，工具卡只留整页入口。 -->
+<!-- overlay/custom/client/ia2/views/stage/StageShell.vue
+     六阶段工作页（2026-10-18 阶段页页签批）：
+     每个阶段只保留一层页签，页签直接挂可操作组件；页面高度固定，只有当前
+     页签内容区滚动。页签键与文案单一事实源=stage-tabs.ts；阶段文案与完成键
+     单一事实源=stage-meta.ts；运行进度/步骤进度单一读面=useStageProgress。
+     旧 /app/gov/* 深链由 routes 重定向到本页并带 ?tab=，页面不再有「治理中心」壳。
+     日常与整轮推演分离：本页不内嵌运行监控/证据/交付等推演面板；②启动准备
+     只核对条件并跳转「全流程推演·运行编排」。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { authFetch } from '../../../ide/utils/auth-fetch'
+import { computed, defineAsyncComponent, ref, type Component } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
-import KeyLedgerSection from '../gov/KeyLedgerSection.vue'
-import ClearancePanel from '../gov/ClearancePanel.vue'
-import GateRepairsPanel from '../gov/GateRepairsPanel.vue'
-import TracePanel from '../sim/TracePanel.vue'
-import CockpitPanel from '../sim/CockpitPanel.vue'
-import EvidencePanel from '../sim/EvidencePanel.vue'
-import DeliveryPanel from '../sim/DeliveryPanel.vue'
-import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
-import GovOrgKnowledgeView from '../gov/GovOrgKnowledgeView.vue'
-import HandoffSection from '../../components/kanban/HandoffSection.vue'
-import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
+import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import OrgEditor from '../../components/gov/OrgEditor.vue'
 import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
-import { useRunContext } from '../../composables/useRunContext'
-import { STAGE_META, SETUP_STEPS, type SetupStep, type StageTool } from '../../stage-meta'
+import ClearancePanel from '../gov/ClearancePanel.vue'
+import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
+import TracePanel from '../sim/TracePanel.vue'
+import DeliveryPanel from '../sim/DeliveryPanel.vue'
+import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
+import StageSetupSteps from './StageSetupSteps.vue'
+import StageRequirementsOverview from './StageRequirementsOverview.vue'
+import StagePreflight from './StagePreflight.vue'
+import StageAcceptanceOverview from './StageAcceptanceOverview.vue'
+import StageDevToday from './StageDevToday.vue'
+import StageSchedulePanel from './StageSchedulePanel.vue'
+import StageGatePanel from './StageGatePanel.vue'
+import StageRiskPanel from './StageRiskPanel.vue'
+import StageMetricsPanel from './StageMetricsPanel.vue'
+import StageAssetsPanel from './StageAssetsPanel.vue'
+import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
+import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
+import { useStageProgress } from '../../composables/useStageProgress'
 
+const route = useRoute()
 const router = useRouter()
+const i18nCtx = useI18n() as { locale?: { value?: string } }
+const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const props = defineProps<{ stage: 1 | 2 | 3 | 4 | 5 | 6 }>()
 
-// run 上下文与四个中心面板同源（useRunContext）：query.run 优先，无 query 回落
-// 最近一次成功读取的记忆值——阶段页不再因「没带 ?run=」就显示不出进度。
-const { run, remember } = useRunContext()
-const runState = ref<{ steps: Record<string, string>; gates: Record<string, string> } | null>(null)
-const loadError = ref('')
-// ③设计页组织视图按需展开（内容减负批，2026-10-17）：整块诊断/图谱组件默认
-// 不挂载——它自带多条治理数据面，常挂会把阶段页首屏占满（实测正文 12 万字符）。
-const showOrgKnowledge = ref(false)
-watch(() => props.stage, () => { showOrgKnowledge.value = false })
-async function load(): Promise<void> {
-  loadError.value = ''
-  runState.value = null
-  if (!run.value) return
-  try {
-    const res = await authFetch(`/api/hermes/sim/run-state?run=${encodeURIComponent(run.value)}`)
-    if (!res.ok) throw new Error(String(res.status))
-    runState.value = await res.json() as typeof runState.value
-    remember()
-  } catch (e) { loadError.value = (e as Error).message }
-}
-watch(run, () => { void load() }, { immediate: true })
+const progress = useStageProgress()
+const meta = computed<StageMeta>(() => STAGE_META[props.stage - 1])
+const tabs = computed(() => STAGE_TABS[props.stage])
+const activeTab = computed(() => resolveTab(props.stage, route.query.tab))
+const currentTab = computed(() => tabMeta(props.stage, activeTab.value) ?? tabs.value[0])
 
-const meta = computed(() => STAGE_META.find(s => s.no === props.stage)!)
-const merged = computed(() => (runState.value ? { ...runState.value.steps, ...runState.value.gates } : {}))
-const stageState = computed<'done' | 'active' | 'pending'>(() => {
-  if (!runState.value) return 'pending'
-  if (meta.value.keys.some(k => k in merged.value)) return 'done'
-  const order = [1, 2, 3, 4, 5, 6]
-  const firstPending = order.find(n => !STAGE_META[n - 1].keys.some(k => k in merged.value))
-  return firstPending === props.stage ? 'active' : 'pending'
+const STATE_LABEL = {
+  done: { zh: '本阶段完成', en: 'Stage complete' },
+  current: { zh: '当前阶段', en: 'Current stage' },
+  pending: { zh: '未开始', en: 'Not started' },
+} as const
+const stageState = computed(() => progress.stageState(props.stage))
+
+/** 阶段页主操作：只做「本阶段最该做的一步」，不堆第二排按钮。 */
+const STEP_TAB: Record<string, string> = {
+  org: 'org', accounts: 'accounts', teams: 'teams', env: 'assets', agents: 'agents',
+}
+const primary = computed<{ label: string; tab?: string; route?: string }>(() => {
+  if (props.stage === 1) {
+    const first = SETUP_STEPS.find((s) => {
+      const state = progress.stepState(s)
+      return state !== 'done' && state !== 'untracked'
+    })
+    return {
+      label: first ? (zh.value ? `继续第 ${first.no} 步` : `Continue step ${first.no}`) : (zh.value ? '查看五步' : 'View steps'),
+      tab: first ? STEP_TAB[first.key] : 'steps',
+    }
+  }
+  if (props.stage === 2) return { label: zh.value ? '推进 G1' : 'Advance G1', tab: 'g1' }
+  if (props.stage === 3) return { label: zh.value ? '进入任务分解' : 'Open task breakdown', tab: 'tasks' }
+  if (props.stage === 4) return { label: zh.value ? '打开工作台' : 'Open workbench', route: 'ia2.collab' }
+  if (props.stage === 5) return { label: zh.value ? '开始 UAT' : 'Start UAT', tab: 'uat' }
+  return { label: zh.value ? '处理未清算项' : 'Resolve open items', tab: 'clearance' }
 })
 
-// ── ①搭建五步骤（SETUP_STEPS 单一事实源，设计正本 §5.2）─────────────
-/** 步骤状态：有键按 run-state 推导；无键=轮次内不跟踪（诚实呈现，不假装完成） */
-type StepState = 'done' | 'active' | 'pending' | 'untracked'
-function stepState(st: SetupStep): StepState {
-  if (st.keys.length === 0) return 'untracked'
-  if (!runState.value) return 'pending'
-  if (st.keys.some(k => k in merged.value)) return 'done'
-  const firstPending = SETUP_STEPS.find(s => s.keys.length > 0 && !s.keys.some(k => k in merged.value))
-  return firstPending?.key === st.key ? 'active' : 'pending'
+function openTab(key: string): void {
+  if (key === activeTab.value) return
+  void router.replace({ query: { ...route.query, tab: key } })
 }
-function go(t: StageTool | { to: string }): void {
-  // 带上来路阶段：工具卡落点多为跨阶段复用的中心/末端页，顶栏按来路高亮
-  void router.push({ path: t.to, query: { from: String(meta.value.no) } })
+
+function runPrimary(): void {
+  if (primary.value.route) void router.push({ name: primary.value.route })
+  else if (primary.value.tab) openTab(primary.value.tab)
 }
-function goStep(st: SetupStep): void {
-  const target = st.target
-  const from = String(meta.value.no)
-  if (typeof target === 'string') void router.push({ path: target, query: { from } })
-  else void router.push({ ...target, query: { ...(target.query ?? {}), from } })
+
+// 任务抽屉：今日工作/排期页签点行就地打开，不整页跳看板
+const drawerTaskId = ref<string | null>(null)
+const drawerOpen = ref(false)
+function openTask(taskId: string): void {
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
 }
+function openInbox(): void {
+  void router.push({ name: 'ia2.inbox' })
+}
+
+// 重组件按需加载：避免任一阶段页把看板/文档/审计/案例全部打进首屏
+const AsyncKanban = defineAsyncComponent(() => import('@/custom/kanban/views/SwarmKanbanView.vue'))
+const AsyncAccounts = defineAsyncComponent(() => import('../AccountAdminView.vue'))
+const AsyncTeams = defineAsyncComponent(() => import('../TeamsView.vue'))
+const AsyncAgents = defineAsyncComponent(() => import('../agents/AgentsView.vue'))
+const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vue'))
+const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue'))
+const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue'))
+
+const TAB_COMPONENTS: Record<string, Component> = {
+  setupSteps: StageSetupSteps,
+  org: OrgEditor,
+  accounts: AsyncAccounts,
+  teams: AsyncTeams,
+  assets: StageAssetsPanel,
+  agents: AsyncAgents,
+  requirements: StageRequirementsOverview,
+  docs: AsyncDocs,
+  g1: StageGatePanel,
+  preflight: StagePreflight,
+  board: AsyncKanban,
+  schedule: StageSchedulePanel,
+  today: StageDevToday,
+  approvals: GatekeeperSection,
+  risk: StageRiskPanel,
+  quality: StageGatePanel,
+  acceptance: StageAcceptanceOverview,
+  trace: TracePanel,
+  delivery: DeliveryPanel,
+  uat: TracePanel,
+  g5: ApprovalPanel,
+  cases: AsyncCases,
+  clearance: ClearancePanel,
+  issues: GovIssuesPanel,
+  audit: AsyncAudit,
+  metrics: StageMetricsPanel,
+  gateLog: StageGatePanel,
+}
+
+const TAB_PROPS: Record<string, Record<string, unknown>> = {
+  g1: { gates: ['G1'] },
+  g2: { gates: ['G2'] },
+  quality: { gates: ['G3', 'G4'] },
+  uat: { onlyUnjudged: true },
+  g5: { pollMs: 10000, showHistory: true, hideTitle: true },
+}
+const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
 </script>
 
 <template>
-  <div class="stg" :data-testid="`stg-page-${meta.no}`">
+  <div class="stg" :data-testid="`stg-page-${stage}`">
     <IaBreadcrumb />
     <header class="stg__head">
-      <span class="stg__no" :class="`stg__no--${stageState}`">{{ meta.no }}</span>
+      <span class="stg__no" :class="`stg__no--${stageState}`">{{ stage }}</span>
       <div class="stg__heading">
-        <h1 class="stg__title">{{ meta.title }}</h1>
-        <span v-if="runState" class="stg__state" :data-testid="`stg-state-${meta.no}`">
-          {{ stageState === 'done' ? '✓ 本阶段完成' : stageState === 'active' ? '● 当前阶段' : '未开始' }}
-        </span>
+        <div class="stg__titleline">
+          <h1 class="stg__title">{{ meta.title }}</h1>
+          <span class="stg__state" :data-testid="`stg-state-${stage}`">{{ zh ? STATE_LABEL[stageState].zh : STATE_LABEL[stageState].en }}</span>
+        </div>
+        <p class="stg__what">{{ meta.what }}</p>
       </div>
-      <p v-if="loadError" class="stg__error">{{ loadError }}</p>
+      <button type="button" class="stg__primary" data-testid="stg-primary" @click="runPrimary">
+        {{ primary.label }} →
+      </button>
     </header>
-    <TabIntroBanner :tab="meta.key" />
-    <!-- ①搭建：五步骤有序清单（D19 收敛：单行步骤，判据与挂账注解转悬停提示） -->
-    <section v-if="stage === 1" class="stg__steps" data-testid="stg-steps-1">
-      <ol class="stg__step-list">
-        <li
-          v-for="st in SETUP_STEPS"
-          :key="st.key"
-          class="stg__step"
-          :class="`stg__step--${stepState(st)}`"
-          :data-testid="`stg-step-${st.key}`"
-          :title="`完成判据：${st.criteria}${st.note ? `（${st.note}）` : ''}`"
-        >
-          <span class="stg__step-no">{{ st.no }}</span>
-          <span class="stg__step-name">{{ st.name }}</span>
-          <span class="stg__step-purpose">{{ st.purpose }}</span>
-          <span class="stg__step-state" :data-testid="`stg-step-state-${st.key}`">
-            {{ stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始' }}
-          </span>
-          <button
-            type="button"
-            class="stg__step-go"
-            :data-testid="`stg-step-go-${st.key}`"
-            @click="goStep(st)"
-          >进入 →</button>
-        </li>
-      </ol>
-      <div class="stg__embed" data-testid="stg-embed-1">
-        <h3 class="stg__embed-h">密钥台账（环境与资产·本阶段可直接操作）</h3>
-        <KeyLedgerSection />
-      </div>
-      <p class="stg__more">
-        <button
-          type="button"
-          class="stg__more-link"
-          data-testid="stg-more-settings"
-          title="账号/智能体/环境/模型等组织级配置"
-          @click="go({ to: '/app/gov/settings' })"
-        >更多配置 → 系统设置</button>
-      </p>
-    </section>
-    <!-- ②-⑥阶段：内嵌核心操作（D14-D16 既有件保留，标题随术语表更新） -->
-    <section v-else-if="stage === 2" class="stg__embed" data-testid="stg-embed-2">
-      <h3 class="stg__embed-h">质量门修复单（需求阶段 G1 需求冻结的门禁记录）</h3>
-      <GateRepairsPanel />
-    </section>
-    <section v-else-if="stage === 3" class="stg__embed" data-testid="stg-embed-3">
-      <div class="stg__embed-head">
-        <h3 class="stg__embed-h">组织与知识（协作断点诊断 · 知识图谱 · 决策图谱）</h3>
-        <button
-          type="button"
-          class="stg__embed-toggle"
-          data-testid="stg-embed-3-toggle"
-          :aria-expanded="showOrgKnowledge"
-          @click="showOrgKnowledge = !showOrgKnowledge"
-        >{{ showOrgKnowledge ? '收起' : '展开查看' }}</button>
-      </div>
-      <p class="stg__embed-hint">需要核对组织协作与历史决策时展开；日常设计工作直接用下方工具卡。</p>
-      <GovOrgKnowledgeView v-if="showOrgKnowledge" />
-    </section>
-    <section v-else-if="stage === 4" class="stg__embed" data-testid="stg-embed-4">
-      <h3 class="stg__embed-h">开发期风险与交接</h3>
-      <CapacityLampBanner />
-      <details class="stg__details" data-testid="stg-handoff-details">
-        <summary class="stg__details-sum">交接类型与状态说明（参考）</summary>
-        <HandoffSection />
-      </details>
-    </section>
-    <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4b">
-      <h3 class="stg__embed-h">审批待办（等人工决定的事项·开发期实时队列）</h3>
-      <GatekeeperSection />
-    </section>
-    <section v-else-if="stage === 5" class="stg__embed" data-testid="stg-embed-5">
-      <h3 class="stg__embed-h">AC 判定链（验收现场核对）</h3>
-      <TracePanel />
-    </section>
-    <section v-else-if="stage === 6" class="stg__embed" data-testid="stg-embed-6">
-      <h3 class="stg__embed-h">遗留项清算（本阶段可直接操作）</h3>
-      <ClearancePanel />
-    </section>
-    <!-- 阶段页工作台化（2026-10-17 层级批第二阶段）：各阶段高频件直接内嵌，
-         阶段页从「跳板」变「工作台」——本阶段日常操作不必跳去中心再跳回。
-         内嵌件全部复用中心既有自足组件（自带数据面与空态），零新端点。 -->
-    <section v-if="stage === 2" class="stg__embed" data-testid="stg-embed-2b">
-      <h3 class="stg__embed-h">运行态势（运行模式·遗留项清算灯·服务异常，点条进运行总览）</h3>
-      <CockpitPanel />
-    </section>
-    <section v-if="stage === 4" class="stg__embed" data-testid="stg-embed-4c">
-      <h3 class="stg__embed-h">证据反查（贴事件号或提交号，一键回原文）</h3>
-      <EvidencePanel />
-    </section>
-    <section v-if="stage === 5" class="stg__embed" data-testid="stg-embed-5b">
-      <h3 class="stg__embed-h">交付健康（分支新鲜度·14 件交付物核对）</h3>
-      <DeliveryPanel />
-    </section>
-    <section v-if="stage === 6" class="stg__embed" data-testid="stg-embed-6b">
-      <h3 class="stg__embed-h">问题清单对账（处置率·逐条状态）</h3>
-      <GovIssuesPanel />
-    </section>
-    <div v-if="meta.tools.length" class="stg__tools">
+
+    <nav class="stg__tabs" role="tablist" :aria-label="meta.title">
       <button
-        v-for="t in meta.tools"
+        v-for="t in tabs"
         :key="t.key"
         type="button"
-        class="stg__tool"
-        :data-testid="`stg-tool-${t.key}`"
-        @click="go(t)"
-      >
-        <span class="stg__tool-label">{{ t.label }}</span>
-        <span class="stg__tool-desc">{{ t.desc }}</span>
-        <span class="stg__go">进入 →</span>
-      </button>
+        role="tab"
+        class="stg__tab"
+        :class="{ 'stg__tab--on': activeTab === t.key }"
+        :aria-selected="activeTab === t.key"
+        :data-testid="`stg-tab-${t.key}`"
+        @click="openTab(t.key)"
+      >{{ zh ? t.zh : t.en }}</button>
+    </nav>
+
+    <div id="stg-panel" class="stg__body" role="tabpanel" :aria-label="zh ? currentTab.zh : currentTab.en">
+      <component
+        :is="TAB_COMPONENTS[currentTab.component]"
+        v-bind="currentProps"
+        @open-tab="openTab"
+        @open-task="openTask"
+        @open-inbox="openInbox"
+      />
     </div>
+
+    <KanbanTaskDrawer v-if="drawerOpen" v-model:show="drawerOpen" :task-id="drawerTaskId" />
   </div>
 </template>
 
-<style scoped lang="scss">
-.stg { display: flex; flex-direction: column; gap: 10px; padding: 16px 24px; height: 100%; overflow: auto; }
-.stg__head { display: flex; align-items: center; gap: 12px; }
-.stg__no { font-size: 26px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.stg__no--done { color: var(--ia-fresh, var(--ia-fresh)); }
-.stg__no--active { color: var(--ia-stale, var(--ia-stale)); }
-.stg__heading { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+<style scoped>
+.stg {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 16px;
+  overflow: hidden;
+}
+.stg__head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.stg__no {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-color);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
+}
+.stg__no--done { color: var(--ia-fresh); border-color: color-mix(in srgb, var(--ia-fresh) 45%, var(--border-color)); }
+.stg__no--current { color: var(--ia-stale); border-color: color-mix(in srgb, var(--ia-stale) 45%, var(--border-color)); }
+.stg__heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.stg__titleline { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .stg__title { margin: 0; font-size: 16px; }
-.stg__state { font-size: 12px; color: var(--text-muted); }
-.stg__error { color: var(--ia-fail); font-size: 12px; margin: 0 0 0 auto; }
-.stg__embed { border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; background: rgba(127, 127, 127, 0.04); }
-.stg__embed-head { display: flex; align-items: center; gap: 10px; }
-.stg__embed-h { margin: 0 0 10px; font-size: 13px; }
-.stg__embed-head .stg__embed-h { margin-bottom: 0; }
-.stg__embed-toggle {
-  margin-left: auto; border: 1px solid var(--border-color); border-radius: 6px;
-  background: transparent; color: var(--accent-primary, var(--color-primary));
-  font-size: 12px; padding: 3px 12px; cursor: pointer; flex-shrink: 0;
-  &:hover { border-color: var(--accent-primary, var(--color-primary)); }
+.stg__state { font-size: 11px; color: var(--text-muted); }
+.stg__no--done ~ .stg__heading .stg__state { color: var(--ia-fresh); }
+.stg__what { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.stg__primary {
+  border: 1px solid var(--accent-primary); border-radius: 6px;
+  background: transparent; color: var(--accent-primary);
+  font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
 }
-.stg__embed-hint { margin: 6px 0 10px; font-size: 11.5px; color: var(--text-muted); }
-.stg__details { margin-top: 10px; }
-.stg__details-sum {
-  cursor: pointer; user-select: none; font-size: 12px; color: var(--text-muted);
-  padding: 4px 0;
-  &:hover { color: var(--text-primary); }
+.stg__primary:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
+.stg__primary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.stg__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.stg__tab {
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  padding: 7px 11px; font-family: inherit; font-size: 12.5px;
+  color: var(--text-muted); cursor: pointer; white-space: nowrap;
 }
-.stg__steps { display: flex; flex-direction: column; gap: 10px; }
-.stg__step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.stg__step {
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 12px;
-  background: transparent;
-  &--done { border-left: 3px solid var(--ia-fresh, #2e9e5b); }
-  &--active { border-left: 3px solid var(--ia-stale, #b8860b); background: color-mix(in srgb, var(--ia-stale, #b8860b) 5%, transparent); }
-  &--pending, &--untracked { border-left: 3px solid var(--border-color); }
-}
-.stg__step-no { font-size: 14px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 16px; }
-.stg__step--done .stg__step-no { color: var(--ia-fresh, var(--ia-fresh)); }
-.stg__step--active .stg__step-no { color: var(--ia-stale, var(--ia-stale)); }
-.stg__step-name { font-size: 13px; font-weight: 600; flex-shrink: 0; }
-.stg__step-purpose {
-  flex: 1 1 auto; min-width: 0; font-size: 11.5px; color: var(--text-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.stg__step-state { flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
-.stg__step--done .stg__step-state { color: var(--ia-fresh, var(--ia-fresh)); }
-.stg__step--active .stg__step-state { color: var(--ia-stale, var(--ia-stale)); font-weight: 600; }
-.stg__step-go {
-  border: 1px solid var(--accent-primary, var(--color-primary)); border-radius: 6px;
-  background: transparent; color: var(--accent-primary, var(--color-primary));
-  font-size: 12px; padding: 4px 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
-  &:hover { background: color-mix(in srgb, var(--accent-primary, var(--color-primary)) 12%, transparent); }
-  &:disabled { border-color: var(--text-muted); color: var(--text-muted); cursor: not-allowed; }
-}
-.stg__more { margin: 0; font-size: 12px; color: var(--text-muted); }
-.stg__more-link {
-  border: none; background: transparent; padding: 0; cursor: pointer; font-family: inherit;
-  color: var(--accent-primary, var(--color-primary)); font-size: 12px;
-}
-.stg__tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.stg__tool {
-  display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left;
-  border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;
-  background: transparent; color: inherit; cursor: pointer;
-  &:hover { border-color: var(--accent-primary, var(--color-primary)); background: rgba(127, 127, 127, 0.06); }
-}
-.stg__tool-label { font-size: 13px; font-weight: 600; }
-.stg__tool-desc { font-size: 11.5px; color: var(--text-muted); }
-.stg__go { font-size: 11px; color: var(--accent-primary, var(--color-primary)); margin-top: 2px; }
+.stg__tab:hover { color: var(--text-primary); }
+.stg__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.stg__tab--on { color: var(--accent-primary); border-bottom-color: var(--accent-primary); font-weight: 600; }
+.stg__body { flex: 1; min-height: 0; overflow: auto; padding-top: 2px; }
 </style>
