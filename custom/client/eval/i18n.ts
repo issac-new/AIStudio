@@ -7,7 +7,7 @@ export const evalMessages = {
       navLabel: '评测工作台',
       navTitle: 'Agent 评测工作台',
       tagline: 'Rubric 二元化 · Pass@k · 四层+六维报告 · 发布门禁 · 归因双 Loop',
-      tabs: { sets: '评测集', runs: '运行中心', oracle: 'UI Oracle', advice: '优化建议' },
+      tabs: { sets: '评测集', runs: '运行记录', oracle: 'UI Oracle', advice: '优化建议' },
       sets: {
         title: '评测集（E2E + Process 双轨）',
         sub: 'Task = 题干 + 期望行为 + 二元断言集；Process 轨按模块归属定位责任方',
@@ -36,7 +36,7 @@ export const evalMessages = {
         noS0: '纯判定断言（走 S1）',
       },
       runs: {
-        title: '运行中心',
+        title: '运行记录',
         sub: '回放判分：对已完成 session 轨迹离线判分；k≥2 才具备门禁统计效力',
         launch: '发起运行',
         launchSet: '评测集',

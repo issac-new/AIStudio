@@ -3,7 +3,7 @@
      四列表（AC 编号/判据原文/测试结果/UAT 判定三态）；源缺席列=null 如实
      呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRunContext } from '../../composables/useRunContext'
 
@@ -56,6 +56,7 @@ function verdictClass(v: string | null): string {
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
 <template>

@@ -46,10 +46,10 @@ const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: 
   // 动线批（2026-10-17）：runs/gov 两命令语义过期实锤（runs 走退役重定向多一跳、
   // gov 指向看板协作签而非治理中心）——直改直达；并补高频签级与阶段页直达。
   { key: 'runs', label: tx.value.cmdRuns, icon: '🛰️', to: { name: 'ia2.sim' } },
-  { key: 'sim-supervision', label: '监督面板（仿真中心）', icon: '🛰️', to: { name: 'ia2.simSupervision' } },
-  { key: 'sim-delivery', label: '交付健康（仿真中心）', icon: '🚚', to: { name: 'ia2.simDelivery' } },
+  { key: 'sim-supervision', label: '监督面板（全流程推演）', icon: '🛰️', to: { name: 'ia2.simSupervision' } },
+  { key: 'sim-delivery', label: '交付健康（⑤验收）', icon: '🚚', to: { name: 'ia2.simDelivery' } },
   { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.governance' } },
-  { key: 'gov-docs', label: '文档评审（治理中心）', icon: '📄', to: { name: 'ia2.govDocs' } },
+  { key: 'gov-docs', label: '文档评审（②⑤⑥）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
   { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
   { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'hermes.settings' } },

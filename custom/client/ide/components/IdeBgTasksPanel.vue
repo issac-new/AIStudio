@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// IdeBgTasksPanel — 后台任务中心（B1，09-19 全景 #7：cc/kimi/mcode /tasks 统一面板
+// IdeBgTasksPanel — 后台任务（B1，09-19 全景 #7：cc/kimi/mcode /tasks 统一面板
 // 对照的 /ide 形态）。聚合三个真实数据源（全部为此前已接线的面，中心做跨源总览）：
 //   ① 后台子代理（chatStore.subagentStreams，跨会话全局视图——不同于 IdeAgentsView
 //      的会话内过滤，中心看全部；点击开子代理浮窗）
@@ -84,7 +84,7 @@ const STATUS_TEXT: Record<string, string> = {
 <template>
   <div class="ide-bgt" data-testid="ide-bgtasks">
     <div class="ide-bgt__head">
-      <span>⏱ 后台任务中心</span>
+      <span>⏱ 后台任务</span>
       <button type="button" data-testid="ide-bgt-refresh" title="刷新队列与工作流" @click="() => { void loadQueue(); void loadWorkflowRuns() }">↻</button>
       <button type="button" data-testid="ide-bgt-close" @click="emit('close')">✕</button>
     </div>

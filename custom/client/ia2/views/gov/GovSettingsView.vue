@@ -1,8 +1,7 @@
 <!-- overlay/custom/client/ia2/views/gov/GovSettingsView.vue -->
-<!-- 治理·系统设置页（C9，R9——设计正本 §二 设置）：既有设置页按治理域分区的
-     导航层（同域同区合并呈现、来源只标注不分隔——对账总表 E/F/G 合账裁决）；
-     表单本体在各设置页不复制（合并铁律）。分区说明常驻；superAdmin 条目对
-     非管理员不可见（两项 C9 验收门）。 -->
+<!-- 系统设置页（2026-10-18 左侧栏批：原「治理·系统设置」收归管理组）：
+     既有设置页按域分区的导航层（同域同区合并呈现、来源只标注不分隔）；
+     表单本体在各设置页不复制。分区说明常驻；superAdmin 条目对非管理员不可见。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
@@ -35,7 +34,7 @@ function go(name: string): void {
     <header class="gs__head">
       <h2 class="gs__title">系统设置</h2>
       <span class="gs__sub">按治理域分区（{{ domains.length }} 区）——同域同区合并呈现，来源只标注不分隔；点入各设置页编辑。</span>
-      <button class="gs__back" type="button" data-testid="gs-back" @click="void router.push({ name: 'ia2.governance' })">返回治理中心</button>
+      <button class="gs__back" type="button" data-testid="gs-back" @click="void router.push({ name: 'ia2.journey' })">返回流程总览</button>
     </header>
 
     <section

@@ -1,15 +1,11 @@
 // @vitest-environment jsdom
-// overlay/custom/client/ia2/__tests__/sim-center-shell.test.ts
-// B1 仿真中心壳单测（三中心重构波 2 首件，2026-10-16）：
-//   1) 六签路由可达（/app/sim 家族，名称冻结自 2026-10-16-sim-center-detailed-design.md）
-//   2) /app/runs 家族重定向（兼容期一个版本周期，A13 升格移除）——按路径跳与
-//      按名跳（IaGlobalTop/SpotlightPanel/inbox-center 等既有调用面）同验
-//   3) 默认签=运行总览；六签单层页签文案渲染（zh 冻结词表）；占位面板含
-//      签序标题+待实现说明+将消费的 X1 端点名
-//   4) sim-tabs 文案模块 zh/en 键成对（单一事实源不半边漂移）
-// 路由表断言用 router.resolve（不装载组件）；实走重定向时组件换桩（同
-// unified-nav-guard 模式，避免装载 IaShell 重型导入链）。
-import { describe, it, expect } from 'vitest'
+// 全流程推演专区壳守门（2026-10-18 推演区批，原仿真中心）：
+//   1) 四签路由可达：运行总览 / 监督面板 / 运行监控 / 证据库；
+//   2) 交付健康/需求追溯已迁⑤验收，旧 /app/sim/* 深链 redirect 到阶段页；
+//   3) 默认签=运行总览；页签文案来自 sim-tabs 单一事实源；
+//   4) 页面不再渲染「签 N」与「待实现/端点清单」占位；
+//   5) /app/runs 家族重定向与 V1 壳收敛规则保持不变。
+import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
@@ -18,16 +14,18 @@ import { buildIaRoutes } from '../routes'
 import SimCenterView from '../views/sim/SimCenterView.vue'
 import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 
-/** 六签冻结词表（zh）：签序即路由序 */
-const SIX_TAB_LABELS = ['运行总览', '监督面板', '运行监控', '证据库', '交付健康', '需求追溯'] as const
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({
+  useRunCenterStore: () => ({ sortedRuns: [] }),
+}))
+
+/** 四签文案（zh）：签序即路由序 */
+const FOUR_TAB_LABELS = ['运行总览', '监督面板', '运行监控', '证据库'] as const
 
 const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim', name: 'ia2.sim' },
   { path: '/app/sim/supervision', name: 'ia2.simSupervision' },
   { path: '/app/sim/ops', name: 'ia2.simOps' },
   { path: '/app/sim/evidence', name: 'ia2.simEvidence' },
-  { path: '/app/sim/delivery', name: 'ia2.simDelivery' },
-  { path: '/app/sim/trace', name: 'ia2.simTrace' },
 ]
 
 function makeResolveRouter(): Router {
@@ -47,7 +45,7 @@ function makeStubbedRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: stub(buildIaRoutes()) })
 }
 
-/** 壳渲染用：只挂六签兄弟路由（真实组件直接作根挂载，不经 IaShell） */
+/** 壳渲染用：只挂四签兄弟路由（真实组件直接作根挂载，不经 IaShell） */
 function makeSimRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
@@ -55,8 +53,8 @@ function makeSimRouter(): Router {
   })
 }
 
-describe('仿真中心壳（B1）：六签路由', () => {
-  it('六签路由可达，名称与路径冻结一致（详设 §签 1-6 挂面）', () => {
+describe('全流程推演壳：四签路由', () => {
+  it('四签路由可达，名称与路径冻结一致', () => {
     const router = makeResolveRouter()
     for (const { path, name } of SIM_PATHS) {
       const resolved = router.resolve(path)
@@ -66,7 +64,7 @@ describe('仿真中心壳（B1）：六签路由', () => {
     }
   })
 
-  it('六签兄弟路由懒组件统一落 SimCenterView（workbench 复用模式）', async () => {
+  it('四签兄弟路由懒组件统一落 SimCenterView', async () => {
     const router = makeResolveRouter()
     for (const { path } of SIM_PATHS) {
       const record = router.resolve(path).matched.slice(-1)[0]
@@ -76,9 +74,25 @@ describe('仿真中心壳（B1）：六签路由', () => {
       expect(mod.default, `${path} 应落 SimCenterView`).toBe(SimCenterView)
     }
   })
+
+  it('交付健康/需求追溯旧深链 redirect 到⑤验收对应页签', async () => {
+    const router = makeResolveRouter()
+    for (const [path, tab] of [['/app/sim/delivery', 'delivery'], ['/app/sim/trace', 'trace']] as const) {
+      const record = router.resolve(path).matched.slice(-1)[0]
+      expect(record?.components, `${path} 组件应退役`).toBeFalsy()
+      expect(typeof record?.redirect, `${path} 须为函数式重定向`).toBe('function')
+    }
+    const stubbed = makeStubbedRouter()
+    await stubbed.push('/app/sim/delivery?run=r1')
+    expect(stubbed.currentRoute.value.name).toBe('ia2.stage5')
+    expect(stubbed.currentRoute.value.query).toMatchObject({ run: 'r1', tab: 'delivery' })
+    await stubbed.push('/app/sim/trace?run=r2')
+    expect(stubbed.currentRoute.value.name).toBe('ia2.stage5')
+    expect(stubbed.currentRoute.value.query).toMatchObject({ run: 'r2', tab: 'trace' })
+  })
 })
 
-describe('仿真中心壳（B1）：/app/runs 家族重定向', () => {
+describe('全流程推演壳：/app/runs 家族重定向', () => {
   it('runs → /app/sim；runs/:runId → /app/sim?run=:runId（runId 原样透传）', async () => {
     const router = makeStubbedRouter()
     await router.push('/app/runs')
@@ -89,10 +103,8 @@ describe('仿真中心壳（B1）：/app/runs 家族重定向', () => {
     expect(router.currentRoute.value.name).toBe('ia2.sim')
   })
 
-  it('按名跳同样落仿真中心（IaGlobalTop/WorkbenchView/TraceabilityMatrix 等调用面零改动）', async () => {
+  it('按名跳同样落全流程推演（既有调用面零改动）', async () => {
     const router = makeStubbedRouter()
-    // vue-router redirect 语义：原导航 query 并入目标（无消费者、无害）——
-    // 断言收敛到落点路由与 path
     await router.push({ name: 'ia2.runs', query: { tab: 'runs' } })
     expect(router.currentRoute.value.name).toBe('ia2.sim')
     expect(router.currentRoute.value.path).toBe('/app/sim')
@@ -100,7 +112,7 @@ describe('仿真中心壳（B1）：/app/runs 家族重定向', () => {
     expect(router.currentRoute.value.fullPath).toBe('/app/sim?run=r1')
   })
 
-  it('runs 记录只剩重定向：组件零装载、runId 参数解析不炸（兼容守卫深链不白屏）', async () => {
+  it('runs 记录只剩重定向：组件零装载、runId 参数解析不炸', async () => {
     const router = makeResolveRouter()
     for (const path of ['/app/runs', '/app/runs/run-9']) {
       const record = router.resolve(path).matched.slice(-1)[0]
@@ -108,70 +120,62 @@ describe('仿真中心壳（B1）：/app/runs 家族重定向', () => {
       expect(typeof record?.redirect, `${path} 须为函数式重定向`).toBe('function')
     }
     expect(router.resolve('/app/runs/run-9').params.runId).toBe('run-9')
-    // B1 明示：runs 家族旧 query（?loop= 预填 / ?tab=runs）无消费者（RunCenter
-    // 的 loop 搜索预填随整页退役）；vue-router redirect 会并入目标 URL 但落点
-    // 路由不变——轮次定位改走 ?run=（A13 升格承接）
-    const router2 = makeStubbedRouter()
-    await router2.push('/app/runs?tab=runs&loop=l1')
-    expect(router2.currentRoute.value.name).toBe('ia2.sim')
-    expect(router2.currentRoute.value.path).toBe('/app/sim')
   })
 })
 
-describe('仿真中心壳（B1）：渲染', () => {
-  it('六签单层页签文案=冻结词表（运行总览…需求追溯），无二级页签行', async () => {
+describe('全流程推演壳：渲染', () => {
+  it('四签单层页签文案=词表；无二级页签行', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     const tabs = wrapper.findAll('.sim-center__tab')
-    expect(tabs).toHaveLength(6)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(6)
-    expect(tabs.map(x => x.text())).toEqual([...SIX_TAB_LABELS])
+    expect(tabs).toHaveLength(4)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(4)
+    expect(tabs.map(x => x.text())).toEqual([...FOUR_TAB_LABELS])
     wrapper.unmount()
   })
 
-  it('默认签=运行总览：/app/sim 即签 1 激活 + 总览屏面板在渲染位（收尾件实装）', async () => {
+  it('默认签=运行总览；不再渲染「签 N」徽标', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     expect(wrapper.find('[data-testid="ia-sim-tab-overview"]').attributes('aria-selected')).toBe('true')
-    for (const key of ['supervision', 'ops', 'evidence', 'delivery', 'trace']) {
+    for (const key of ['supervision', 'ops', 'evidence']) {
       expect(wrapper.find(`[data-testid="ia-sim-tab-${key}"]`).attributes('aria-selected')).toBe('false')
     }
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
-    expect(panel.text()).toContain('运行总览')
-    expect(panel.text()).toContain('签 1')
     expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('签 1')
+    expect(wrapper.text()).not.toContain('待实现')
     wrapper.unmount()
   })
 
-  it('每签标题在位；占位签注明将消费的 X1 端点，实装签承载实际面板（B2/B4/B5/B6 后五签实装）', async () => {
+  it('四签实际数据面都在位（v-show 挂载）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
-    // 六签全部实装（B1 壳+B2/B4/B5/B6+签 1 总览屏收尾件）：标题+实际数据面
-    const live: ReadonlyArray<{ key: string; title: string; panel: string }> = [
-      { key: 'overview', title: '运行总览', panel: '[data-testid="ov-panel"]' },
-      { key: 'supervision', title: '监督面板', panel: '[data-testid="sup-panel"]' },
-      { key: 'ops', title: '运行监控', panel: '[data-testid="ops-panel"]' },
-      { key: 'evidence', title: '证据库', panel: '[data-testid="ev-panel"]' },
-      { key: 'delivery', title: '交付健康', panel: '[data-testid="dlv-panel"]' },
-      { key: 'trace', title: '需求追溯', panel: '[data-testid="trc-panel"]' },
+    const live: ReadonlyArray<{ key: string; panel: string }> = [
+      { key: 'overview', panel: '[data-testid="ov-panel"]' },
+      { key: 'supervision', panel: '[data-testid="sup-panel"]' },
+      { key: 'ops', panel: '[data-testid="ops-panel"]' },
+      { key: 'evidence', panel: '[data-testid="ev-panel"]' },
     ]
-    for (const { key, title, panel } of live) {
+    for (const { key, panel } of live) {
       const section = wrapper.find(`[data-testid="ia-sim-panel-${key}"]`)
-      expect(section.exists(), `实装面板 ${key}`).toBe(true)
-      expect(section.text()).toContain(title)
-      expect(section.find(panel).exists(), `实际数据面 ${key}`).toBe(true)
+      expect(section.exists(), `面板 ${key}`).toBe(true)
+      expect(section.find(panel).exists(), `数据面 ${key}`).toBe(true)
     }
+    // 已迁⑤验收的两签不再在本页渲染
+    expect(wrapper.find('[data-testid="ia-sim-panel-delivery"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-sim-panel-trace"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('点击页签=路由切换（页签位置可分享/刷新保持），面板跟随', async () => {
+  it('点击页签=路由切换，面板跟随；同签点击不导航', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -180,9 +184,6 @@ describe('仿真中心壳（B1）：渲染', () => {
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/sim/ops')
     expect(wrapper.find('[data-testid="ia-sim-tab-ops"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.text()).toContain('运行监控')
-    expect(wrapper.text()).toContain('签 3')
-    // 同签点击不产生导航（当前签守卫）
     const before = router.currentRoute.value.fullPath
     await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')
     await flushPromises()
@@ -190,14 +191,13 @@ describe('仿真中心壳（B1）：渲染', () => {
     wrapper.unmount()
   })
 
-  it('深链直落各签：/app/sim/evidence 打开即签 4 激活', async () => {
+  it('深链直落各签：/app/sim/evidence 打开即证据库激活', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim/evidence')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
     expect(wrapper.find('[data-testid="ia-sim-tab-evidence"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').text()).toContain('证据库')
-    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').text()).toContain('签 4')
+    expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').find('[data-testid="ev-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 })
@@ -207,14 +207,15 @@ describe('sim-tabs 文案单一事实源', () => {
     expect(Object.keys(SIM_TABS_TEXT.zh)).toEqual(Object.keys(SIM_TABS_TEXT.en))
   })
 
-  it('六签 zh 文案与冻结词表一致', () => {
+  it('四签 zh 文案与词表一致；交付/追溯词条保留兼容', () => {
     const zh = SIM_TABS_TEXT.zh
-    expect([zh.tabOverview, zh.tabSupervision, zh.tabOps, zh.tabEvidence, zh.tabDelivery, zh.tabTrace])
-      .toEqual([...SIX_TAB_LABELS])
+    expect([zh.tabOverview, zh.tabSupervision, zh.tabOps, zh.tabEvidence]).toEqual([...FOUR_TAB_LABELS])
+    expect(zh.shellTitle).toBe('全流程推演')
+    expect(zh.tabDelivery).toBe('交付健康')
+    expect(zh.tabTrace).toBe('需求追溯')
   })
 })
 
-// V1 壳收敛（视觉重规划 D2）：两中心 body 类生命周期+rail 隐藏规则在库
 describe('壳收敛 ia-center-full（V1）', () => {
   it('SimCenterView 挂载加 body 类、卸载移除；隐藏规则在 ia2.scss', async () => {
     const { default: SimCenterView } = await import('../views/sim/SimCenterView.vue')
@@ -230,5 +231,4 @@ describe('壳收敛 ia-center-full（V1）', () => {
     expect(scss).toContain('body.ia-center-full .studio-navigation-rail')
     expect(scss).toContain('display: none')
   })
-
 })

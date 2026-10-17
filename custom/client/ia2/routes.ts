@@ -339,13 +339,10 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.deliveryCases',
           component: () => import('@/custom/matrix-teams/views/DeliveryCasesView.vue'),
         },
-        // ── 推演中心（B1 壳·三中心重构波 2 首件，2026-10-16）──────────────────
-        // 六签单层页签，六条兄弟路由共用 SimCenterView（workbench 复用模式，当前签
-        // 由路由名推导）：签 1 轮次总览=默认签 /app/sim、签 2 监督面板、签 3 运行
-        // 观测、签 4 证据库、签 5 交付健康、签 6 需求追溯。签定义冻结自
-        // 2026-10-16-sim-center-detailed-design.md；壳只含导航+占位，数据面由
-        // B2-B7 逐签实装。场景编排挂面 /app/sim/orchestration（A8+D9，壳层挂面
-        // 非第七签）随其工单挂入。
+        // ── 全流程推演专区（2026-10-18 推演区批，原「仿真中心」）──────────────
+        // 四签单层页签共用 SimCenterView：运行总览（默认 /app/sim）/ 监督面板 /
+        // 运行监控 / 证据库；运行编排与推演设置是专区级动作。
+        // 交付健康/需求追溯已迁⑤验收阶段页，旧路由保留 redirect（深链零断链）。
         {
           path: 'sim',
           name: 'ia2.sim',
@@ -369,12 +366,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         {
           path: 'sim/delivery',
           name: 'ia2.simDelivery',
-          component: simShell,
+          redirect: to => ({ name: 'ia2.stage5', query: { ...to.query, tab: 'delivery' } }),
         },
         {
           path: 'sim/trace',
           name: 'ia2.simTrace',
-          component: simShell,
+          redirect: to => ({ name: 'ia2.stage5', query: { ...to.query, tab: 'trace' } }),
         },
         {
           // B8 推演设置（E28 四区引擎参数页，独立页非第七签）

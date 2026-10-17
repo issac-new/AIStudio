@@ -1,17 +1,16 @@
 // overlay/custom/client/ia2/views/sim/sim-tabs.ts
-// 仿真中心（/app/sim，B1 壳）六签文案单一事实源。
-// 模式照 i18n-tasks-tabs.ts（模块内小事实源 + locale 跟随，不依赖 473 locale 树
-// ——词条不随上游 pull 漂移），但独立成文不改该文件：13 键拆分归 A0 三中心
-// 导航工单，届时两处文案模块再评估合流。六签定义（运行总览/监督面板/运行监控/
-// 证据库/交付健康/需求追溯）冻结自 2026-10-16-sim-center-detailed-design.md。
-// D18（2026-10-17 术语标准化，设计正本 §5.5）：推演中心→仿真中心、轮次总览→
-// 运行总览、运行观测→运行监控（run 与 run-state 端点同名，英文侧同步）。
+// 全流程推演（/app/sim）页签文案单一事实源。
+// 2026-10-18 推演区批：原「仿真中心」改名「全流程推演」；页面只保留
+// 运行总览/监督面板/运行监控/证据库四签；交付健康与需求追溯已迁⑤验收阶段页，
+// 对应旧路由保留 redirect。tabDelivery/tabTrace 词条保留一版兼容（旧深链
+// 重定向与既有 13 键拆分测试消费），页面不再渲染。
+// D18 术语：轮次总览→运行总览、运行观测→运行监控（run 与 run-state 同名）。
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const SIM_TABS_TEXT = {
   zh: {
-    shellTitle: '仿真中心',
+    shellTitle: '全流程推演',
     tabOverview: '运行总览',
     tabSupervision: '监督面板',
     tabOps: '运行监控',
@@ -19,11 +18,11 @@ const SIM_TABS_TEXT = {
     tabDelivery: '交付健康',
     tabTrace: '需求追溯',
     pendingBadge: '待实现',
-    pendingLead: '本签内容（数据面）由仿真中心第二批工单 B2-B7 逐签实装，当前仅壳层占位。',
-    endpointsLead: 'X1 端点已就绪（本签将消费）：',
+    pendingLead: '占位词条（页面已不再渲染；保留给后续新增签）。',
+    endpointsLead: '端点：',
   },
   en: {
-    shellTitle: 'Simulation Center',
+    shellTitle: 'Full-run Simulation',
     tabOverview: 'Run Overview',
     tabSupervision: 'Supervision',
     tabOps: 'Run Monitoring',

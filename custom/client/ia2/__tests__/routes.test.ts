@@ -103,14 +103,20 @@ describe('ia2 路由树（v12 双视图）', () => {
     expect(runDetailResolved.params.runId).toBe('run-abc')
     expect(runDetailRec?.components).toBeFalsy()
     expect(typeof runDetailRec?.redirect).toBe('function')
-    // 六签兄弟路由共用 SimCenterView（workbench 复用模式）
-    for (const path of ['/app/sim', '/app/sim/supervision', '/app/sim/ops', '/app/sim/evidence', '/app/sim/delivery', '/app/sim/trace']) {
+    // 全流程推演四签共用 SimCenterView（workbench 复用模式）
+    for (const path of ['/app/sim', '/app/sim/supervision', '/app/sim/ops', '/app/sim/evidence']) {
       const resolved = router.resolve(path)
       const record = resolved.matched[resolved.matched.length - 1]
       const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
       expect(typeof loader, `${path} loader`).toBe('function')
       const mod = await loader()
       expect(mod.default, `${path} 应落 SimCenterView`).toBe(SimCenterView)
+    }
+    // 交付健康/需求追溯已迁⑤验收：旧路由保留函数式 redirect
+    for (const path of ['/app/sim/delivery', '/app/sim/trace']) {
+      const record = router.resolve(path).matched.slice(-1)[0]
+      expect(record.components, `${path} 组件应退役`).toBeFalsy()
+      expect(typeof record.redirect, `${path} 须为函数式重定向`).toBe('function')
     }
   })
 
