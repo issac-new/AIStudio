@@ -5,7 +5,7 @@
 export const governanceMessages = {
   zh: {
     governance: {
-      pageTitle: '治理中心',
+      pageTitle: '治理',
       pageSub: '六道质量门工件 · 真仓锚点 · 就地裁决',
       harness: {
         // 通用
@@ -440,7 +440,7 @@ export const governanceMessages = {
   },
   en: {
     governance: {
-      pageTitle: 'Governance Center',
+      pageTitle: 'Governance',
       pageSub: 'Six gates · repo-anchored · decide in place',
       harness: {
         // shared

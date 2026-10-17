@@ -12,7 +12,7 @@ const RUN_SURFACE_TEXT = {
     tabWorkflows: '工作流',
     ctaWorkflows: '查看工作流运行',
     tabObservatory: '全链路追踪',
-    tabGovernance: '治理中心',
+    tabGovernance: '治理',
   },
   en: {
     tabWorkflows: 'Workflows',

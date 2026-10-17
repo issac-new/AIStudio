@@ -3,7 +3,7 @@
      （新鲜度三态 fresh/宽限窗内 stale/旧残留 old——branch_fresh 语义唯一实现
      在服务端，界面只消费）＋交付物 14 件链（件名/在场状态）。缺件如实缺席。 -->
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRouter } from 'vue-router'
 import { useRunContext } from '../../composables/useRunContext'
@@ -49,6 +49,7 @@ async function load(): Promise<void> {
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
 <template>

@@ -55,8 +55,8 @@ export const STEPS_26: ReadonlyArray<StepMeta> = [
   { no: 2, name: '每用户配置初始化', operator: '驱动脚本', keys: ['smoke_done'] },
   { no: 3, name: '登录', operator: '每个账号', keys: ['smoke_done'] },
   { no: 4, name: '环境冒烟', displayName: '环境冒烟测试', operator: '驱动脚本', keys: ['smoke_done'] },
-  { no: 5, name: '应用初始化', operator: '驱动脚本（界面同源：治理中心·应用资产页签）', keys: ['appinit_done'] },
-  { no: 6, name: '研发人员管理', operator: '驱动脚本（界面同源：治理中心·组织页签）', keys: ['people_done'] },
+  { no: 5, name: '应用初始化', operator: '驱动脚本（界面同源：①搭建·环境与资产）', keys: ['appinit_done'] },
+  { no: 6, name: '研发人员管理', operator: '驱动脚本（界面同源：①搭建·组织）', keys: ['people_done'] },
   { no: 7, name: '需求上锁（G1）', displayName: '需求冻结（G1）', operator: '需求分析师A（驱动脚本代发私信）；G1 判读=驱动脚本', keys: ['g1_frozen'] },
   // §3.3：步 1-4 四合一段共用 smoke_done；步 7 键名=g1_frozen（非 archgate_done 同族陷阱，步 15 同理）
   { no: 8, name: '建群', displayName: '建立协作群', operator: '产品经理A', keys: ['room_analysis'], hiddenKey: true },

@@ -3,7 +3,7 @@
      处置态+100% 处置进度条（stats 与服务端同值）。v1 范围=轮次 issues.log
      （方案 §2.6-3 单一事实源）；组织级跨轮账本属 harness 侧数据，如实注明。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { fetchIssues, joinIssueDisposal, type IssueLine } from '../../api/gov'
 import { useRunContext } from '../../composables/useRunContext'
 
@@ -41,6 +41,7 @@ async function load(): Promise<void> {
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
 <template>
