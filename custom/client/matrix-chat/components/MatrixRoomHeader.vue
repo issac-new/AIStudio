@@ -293,7 +293,7 @@ $accent-info: var(--info, #38bdf8);
 .matrix-room-header {
   display: flex;
   align-items: center;
-  gap: var(--cpd-space-3x, 12px);
+  gap: var(--mx-space-3x);
   flex: 1;
   min-width: 0;
 }
@@ -379,7 +379,7 @@ $accent-info: var(--info, #38bdf8);
 
 .room-header-inline-icon {
   flex-shrink: 0;
-  color: var(--cpd-color-icon-info-primary, $accent-info);
+  color: $accent-info;
   display: flex;
   align-items: center;
 }
@@ -505,7 +505,7 @@ $accent-info: var(--info, #38bdf8);
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid var(--cpd-color-bg-subtle-primary, $bg-card);
+  border: 2px solid var(--bg-card);
   margin-left: -8px;
   overflow: hidden;
   display: flex;

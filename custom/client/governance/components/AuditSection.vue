@@ -117,10 +117,10 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .audit {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -131,45 +131,45 @@ onMounted(() => void refresh())
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-right: 4px;
 }
 .audit__chip {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   padding: 1px 9px;
   font-size: 10.5px;
   cursor: pointer;
-  &.is-on { color: #15803d; border-color: #15803d55; background: #dcfce7; }
-  &.is-off { color: var(--text-muted, #878c99); opacity: 0.7; }
+  &.is-on { color: var(--success); border-color: rgba(var(--success-rgb), 0.33); background: rgba(var(--success-rgb), 0.08); }
+  &.is-off { color: var(--text-muted); opacity: 0.7; }
   &.is-na { opacity: 0.45; }
 }
 .audit__q {
   margin-left: auto;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 11px;
   min-width: 180px;
-  background: var(--bg-primary, #fff);
-  color: var(--text-primary, inherit);
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
-.audit__prov { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary, var(--color-primary, #3b82f6)); }
+.audit__prov { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary, var(--color-primary)); }
 .audit__prov-msg { font-size: 11px; opacity: 0.7; }
-.audit__count { font-size: 10.5px; color: var(--text-muted, #878c99); }
+.audit__count { font-size: 10.5px; color: var(--text-muted); }
 .audit__body { max-height: 300px; overflow: auto; }
-.audit__empty { border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted, #878c99); }
+.audit__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted); }
 .audit__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
-  th { text-align: left; color: var(--text-muted, #878c99); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); position: sticky; top: 0; background: var(--bg-primary, #fff); }
-  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); vertical-align: top; } }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-primary); }
+  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); vertical-align: top; } }
 .audit__ts { font-family: ui-monospace, monospace; font-size: 9.5px; white-space: nowrap; }
 .audit__target { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .audit__badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 1.6;
-  &.is-approvals { color: #7c3aed; background: #ede9fe; }
-  &.is-domain { color: #1d4ed8; background: #dbeafe; }
-  &.is-provider { color: #b45309; background: #fef3c7; }
-  &.is-kanban { color: #15803d; background: #dcfce7; } }
+  &.is-approvals { color: var(--ia-compensated); background: color-mix(in srgb, var(--ia-compensated) 12%, transparent); }
+  &.is-domain { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); }
+  &.is-provider { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-kanban { color: var(--success); background: rgba(var(--success-rgb), 0.08); } }
 </style>

@@ -157,28 +157,28 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.hcost { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.hcost { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .hcost__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hcost__title { margin: 0; font-size: 14px; }
 .hcost__chip { font-size: 12px; opacity: 0.85; }
 .hcost__days { display: flex; gap: 4px; margin-left: 8px; }
-.hcost__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary, #3b82f6); color: #fff; border-color: transparent; } }
+.hcost__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary); color: var(--text-on-accent); border-color: transparent; } }
 .hcost__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .hcost__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.hcost__error { color: var(--danger, #dc2626); font-size: 12px; }
+.hcost__error { color: var(--danger); font-size: 12px; }
 .hcost__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
-.hcost__card { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.hcost__card { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .hcost__card--off { opacity: 0.75; }
 .hcost__cardhead { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; }
 .hcost__avail { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid; }
-.hcost__avail--ok { color: var(--ok-ink, #166534); border-color: var(--ok, #16a34a); }
-.hcost__avail--off { color: var(--warning-ink, #92400e); border-color: var(--warning, #f59e0b); border-style: dashed; }
+.hcost__avail--ok { color: var(--success); border-color: var(--success); }
+.hcost__avail--off { color: var(--ia-stale); border-color: var(--warning); border-style: dashed; }
 .hcost__rows { display: flex; flex-direction: column; gap: 2px; }
 .hcost__row { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
 .hcost__rowlabel { opacity: 0.7; }
 .hcost__rowvalue { font-variant-numeric: tabular-nums; }
 .hcost__note { font-size: 11px; opacity: 0.7; }
-.hcost__def { font-size: 11px; border-top: 1px dashed var(--border-color, #e5e7eb); padding-top: 4px; }
+.hcost__def { font-size: 11px; border-top: 1px dashed var(--border-color); padding-top: 4px; }
 .hcost__def summary { cursor: pointer; opacity: 0.75; }
 .hcost__deftext { margin: 4px 0 2px; }
 .hcost__defsrc { margin: 0; padding-left: 14px; }

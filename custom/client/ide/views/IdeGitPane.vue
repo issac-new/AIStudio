@@ -306,7 +306,7 @@ defineExpose({ refresh, toGroups })
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-git__branch {
@@ -317,36 +317,36 @@ defineExpose({ refresh, toGroups })
   white-space: nowrap;
   font-size: 12px;
   font-family: Menlo, Monaco, 'Courier New', monospace;
-  color: var(--accent-primary, #4cc9f0);
+  color: var(--accent-primary);
 }
 
 .ide-git__refresh {
   padding: 2px 8px;
   font: inherit;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { color: var(--text-primary, #e6e6e6); }
+  &:hover:not(:disabled) { color: var(--text-primary); }
   &:disabled { opacity: 0.4; }
 }
 
 .ide-git__state {
   padding: 18px 12px;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   text-align: center;
 }
 
-.ide-git__state--error { color: #e5484d; }
+.ide-git__state--error { color: var(--git-decoration-deleted); }
 
 .ide-git__changes {
   flex-shrink: 0;
   max-height: 42%;
   overflow-y: auto;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-git__group-head {
@@ -356,13 +356,13 @@ defineExpose({ refresh, toGroups })
   padding: 6px 10px 2px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-git__group-action {
   font: inherit;
   font-size: 11px;
-  color: var(--accent-primary, #4cc9f0);
+  color: var(--accent-primary);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -376,14 +376,14 @@ defineExpose({ refresh, toGroups })
   padding: 3px 10px;
   font: inherit;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   background: transparent;
   border: none;
   cursor: pointer;
   text-align: left;
 
   &.is-selected { background: var(--accent-primary-soft, rgba(76, 201, 240, 0.14)); }
-  &:hover { background: rgba(255, 255, 255, 0.04); }
+  &:hover { background: var(--hover-bg); }
 }
 
 .ide-git__kind {
@@ -392,12 +392,12 @@ defineExpose({ refresh, toGroups })
   font-size: 10px;
   font-weight: 700;
 
-  &.is-added { color: #46a758; }
-  &.is-modified { color: #f5a623; }
-  &.is-deleted { color: #e5484d; }
-  &.is-renamed { color: #8b8bf7; }
-  &.is-conflicted { color: #e5484d; }
-  &.is-untracked { color: #9aa0aa; }
+  &.is-added { color: var(--git-decoration-added); }
+  &.is-modified { color: var(--git-decoration-modified); }
+  &.is-deleted { color: var(--git-decoration-deleted); }
+  &.is-renamed { color: var(--git-decoration-renamed); }
+  &.is-conflicted { color: var(--git-decoration-deleted); }
+  &.is-untracked { color: var(--text-muted); }
 }
 
 .ide-git__file {
@@ -412,10 +412,10 @@ defineExpose({ refresh, toGroups })
 .ide-git__stage-btn {
   flex-shrink: 0;
   padding: 0 6px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   border-radius: 3px;
 
-  &:hover { color: var(--accent-primary, #4cc9f0); }
+  &:hover { color: var(--accent-primary); }
 }
 
 .ide-git__diff {
@@ -431,7 +431,7 @@ defineExpose({ refresh, toGroups })
   align-items: center;
   gap: 6px;
   padding: 5px 10px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-git__diff-file {
@@ -442,14 +442,14 @@ defineExpose({ refresh, toGroups })
   white-space: nowrap;
   font-size: 11px;
   font-family: Menlo, Monaco, 'Courier New', monospace;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-git__diff-tag {
   flex-shrink: 0;
   padding: 0 6px;
   font-size: 10px;
-  color: var(--accent-primary, #4cc9f0);
+  color: var(--accent-primary);
   border: 1px solid currentColor;
   border-radius: 8px;
 }
@@ -469,10 +469,10 @@ defineExpose({ refresh, toGroups })
   display: block;
   padding: 0 10px;
   white-space: pre;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 
   &.is-add { color: #4cc38a; background: rgba(70, 167, 88, 0.12); }
-  &.is-del { color: #e5484d; background: rgba(229, 72, 77, 0.1); }
+  &.is-del { color: var(--git-decoration-deleted); background: rgba(229, 72, 77, 0.1); }
   &.is-hunk { color: #7ca2df; }
 }
 
@@ -481,13 +481,13 @@ defineExpose({ refresh, toGroups })
   display: flex;
   gap: 6px;
   padding: 8px 10px;
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--border-color);
 }
 
 .ide-git__commit-error {
   flex-basis: 100%;
   font-size: 11px;
-  color: #e5484d;
+  color: var(--git-decoration-deleted);
 }
 
 .ide-git__commit-input {
@@ -496,13 +496,13 @@ defineExpose({ refresh, toGroups })
   padding: 6px 8px;
   font: inherit;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
-  background: var(--bg-primary, #14161a);
-  border: 1px solid var(--border-color, #e0e0e0);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   outline: none;
 
-  &:focus { border-color: var(--accent-primary, #4cc9f0); }
+  &:focus { border-color: var(--accent-primary); }
 }
 
 .ide-git__commit-btn {
@@ -510,8 +510,8 @@ defineExpose({ refresh, toGroups })
   padding: 6px 12px;
   font: inherit;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
-  background: var(--accent-primary, #4cc9f0);
+  color: var(--text-primary);
+  background: var(--accent-primary);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -525,7 +525,7 @@ defineExpose({ refresh, toGroups })
   margin: 0 4px;
   padding: 2px;
   border-radius: 6px;
-  background: var(--bg-primary, #14161a);
+  background: var(--bg-primary);
 }
 
 .ide-git__viewtab {
@@ -534,11 +534,11 @@ defineExpose({ refresh, toGroups })
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
 
-  &.is-active { background: var(--bg-tertiary, #ebebeb); color: var(--text-primary, #e6e6e6); }
+  &.is-active { background: var(--bg-tertiary); color: var(--text-primary); }
 }
 
 .ide-git__graph { flex: 1; min-height: 0; }
@@ -556,20 +556,20 @@ defineExpose({ refresh, toGroups })
   margin: 2px 0 0;
   padding: 4px;
   list-style: none;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 7px;
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--bg-secondary);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   li {
     padding: 4px 8px;
     border-radius: 5px;
     font-size: 12px;
-    color: var(--text-primary, #e6e6e6);
+    color: var(--text-primary);
     cursor: pointer;
 
-    &:hover { background: var(--bg-tertiary, #ebebeb); }
-    &.is-current { color: var(--accent-primary, #4cc9f0); cursor: default; }
+    &:hover { background: var(--bg-tertiary); }
+    &.is-current { color: var(--accent-primary); cursor: default; }
   }
 }
 
@@ -577,14 +577,14 @@ defineExpose({ refresh, toGroups })
   height: 20px;
   min-width: 24px;
   padding: 0 6px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { color: var(--text-primary, #e6e6e6); border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent-primary); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 </style>

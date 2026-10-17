@@ -445,12 +445,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 /* R6 合并：任务段顶部「待决策」区（等我行与任务合一） */
 .sitp__decide {
   margin-bottom: 8px; padding: 4px 4px 2px;
-  border: 1px solid var(--warning, #f0a44c);
+  border: 1px solid var(--warning);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--warning, #f0a44c) 8%, transparent);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
 }
 .sitp__sec-head {
-  font-size: 10px; font-weight: 700; color: var(--warning, #f0a44c);
+  font-size: 10px; font-weight: 700; color: var(--warning);
   padding: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .04em;
 }
 .sitp__row--task { align-items: flex-start; }
@@ -458,7 +458,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
   padding: 2px 4px; border: none; background: transparent; cursor: pointer;
   font-family: inherit; text-align: left;
-  &:hover .sitp__name { color: var(--primary, #3b82f6); }
+  &:hover .sitp__name { color: var(--primary); }
 }
 .sitp__name {
   font-size: 12px; color: var(--text-primary); overflow: hidden;
@@ -471,10 +471,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-secondary); color: var(--text-secondary);
 }
 .sitp__tag--board { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); }
-.sitp__tag--p0 { background: var(--error); color: #fff; }
+.sitp__tag--p0 { background: var(--error); color: var(--text-on-accent); }
 .sitp__tag--p1 { background: var(--warning); color: var(--text-primary); }
-.sitp__tag--p2 { background: var(--primary, #3b82f6); color: #fff; }
-.sitp__tag--blocked { background: var(--error); color: #fff; }
+.sitp__tag--p2 { background: var(--primary); color: var(--text-on-accent); }
+.sitp__tag--blocked { background: var(--error); color: var(--text-on-accent); }
 .sitp__stats {
   display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px 6px;
   border-bottom: 1px dashed var(--border-color); margin-bottom: 4px;
@@ -488,9 +488,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   &:hover { border-color: var(--text-muted); }
   &.is-on { border-color: currentColor; font-weight: 700; }
 }
-.sitp__stat--blocked { background: var(--error); color: #fff; }
+.sitp__stat--blocked { background: var(--error); color: var(--text-on-accent); }
 .sitp__stat--review { background: var(--warning); color: var(--text-primary); }
-.sitp__stat--running { background: var(--primary, #3b82f6); color: #fff; }
+.sitp__stat--running { background: var(--primary); color: var(--text-on-accent); }
 /* v12.7 排序控件：与状态标签同排右置 */
 .sitp__sort { display: inline-flex; gap: 2px; margin-left: auto; }
 .sitp__sort-btn {
@@ -516,7 +516,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-secondary); color: var(--text-primary);
   font-size: 11px; font-family: inherit; outline: none;
   &::placeholder { color: var(--text-muted); }
-  &:focus { border-color: var(--primary, #3b82f6); }
+  &:focus { border-color: var(--primary); }
 }
 .sitp__search-clear {
   position: absolute; right: 10px; top: 9px; cursor: pointer;
@@ -532,7 +532,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 .sitp__caret { font-size: 9px; color: var(--text-muted); flex-shrink: 0; }
 .sitp__acct-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
-.sitp__acct-matrix { font-size: 10px; color: #61afef; font-family: ui-monospace, monospace; }
+.sitp__acct-matrix { font-size: 10px; color: var(--accent-info); font-family: ui-monospace, monospace; }
 .sitp__acct-sub { font-size: 10px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .sitp__acct-body { padding: 0 6px 4px 16px; }
 .sitp__node {

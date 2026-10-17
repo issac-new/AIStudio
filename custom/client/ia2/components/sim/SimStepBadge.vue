@@ -31,7 +31,7 @@ const actName = () => {
   padding: 0 6px;
   border-radius: 4px;
   font-size: 11px;
-  color: #8b93a3;
+  color: var(--text-muted);
   background: rgba(139, 147, 163, 0.12);
   border: 1px solid rgba(139, 147, 163, 0.3);
   white-space: nowrap;

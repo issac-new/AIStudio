@@ -78,7 +78,7 @@ defineExpose({ cycle })
 .ide-perm__trigger:focus-visible { outline: 2px solid var(--primary-color, #18a058); outline-offset: 1px; }
 .ide-perm__trigger {
   border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
-  padding: 2px 8px; cursor: pointer; font-size: 11px; color: var(--text-color-3, #999);
+  padding: 2px 8px; cursor: pointer; font-size: 11px; color: var(--text-muted);
 }
 .ide-perm__panel {
   position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 220px;
@@ -91,9 +91,9 @@ defineExpose({ cycle })
 }
 .ide-perm__mode:hover { background: var(--hover-color, rgba(0, 0, 0, 0.06)); }
 .ide-perm__mode.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.1)); color: var(--primary-color, #18a058); }
-.ide-perm__mode small { display: block; color: var(--text-color-3, #999); font-size: 10px; }
+.ide-perm__mode small { display: block; color: var(--text-muted); font-size: 10px; }
 .ide-perm__note {
-  padding: 6px 8px 4px; font-size: 10px; color: var(--text-color-3, #999);
+  padding: 6px 8px 4px; font-size: 10px; color: var(--text-muted);
   border-top: 1px dashed var(--border-color, #e0e0e0); margin-top: 4px; line-height: 1.5;
 }
 </style>

@@ -119,38 +119,38 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.hm { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.hm { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .hm__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hm__title { margin: 0; font-size: 14px; }
 .hm__days { display: flex; gap: 4px; }
-.hm__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary, #3b82f6); color: #fff; border-color: transparent; } }
+.hm__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary); color: var(--text-on-accent); border-color: transparent; } }
 .hm__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .hm__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.hm__error { color: var(--danger, #dc2626); font-size: 12px; }
-.hm__meta { font-size: 11.5px; color: var(--warning-ink, #92400e); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
+.hm__error { color: var(--danger); font-size: 12px; }
+.hm__meta { font-size: 11.5px; color: var(--ia-stale); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
 .hm__ladder { display: flex; flex-direction: column; gap: 4px; }
-.hm__level { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 4px 8px; }
-.hm__level--ok { border-color: var(--ok, #16a34a); }
-.hm__level--fail { border-color: var(--danger, #dc2626); }
+.hm__level { border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; }
+.hm__level--ok { border-color: var(--success); }
+.hm__level--fail { border-color: var(--danger); }
 .hm__level summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; list-style: none; }
 .hm__level summary::-webkit-details-marker { display: none; }
 .hm__lvkey { font-weight: 600; font-size: 12px; }
 .hm__lvstate { margin-left: auto; font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid; }
-.hm__lvstate--ok { color: var(--ok-ink, #166534); border-color: var(--ok, #16a34a); }
-.hm__lvstate--fail { color: var(--danger, #dc2626); border-color: currentColor; }
-.hm__lvstate--na { color: var(--text-muted, #878c99); border-style: dashed; border-color: currentColor; }
+.hm__lvstate--ok { color: var(--success); border-color: var(--success); }
+.hm__lvstate--fail { color: var(--danger); border-color: currentColor; }
+.hm__lvstate--na { color: var(--text-muted); border-style: dashed; border-color: currentColor; }
 .hm__items { margin: 6px 0 2px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .hm__item { display: flex; gap: 6px; align-items: flex-start; }
 .hm__mark { font-size: 12px; width: 14px; flex-shrink: 0; text-align: center; }
-.hm__mark--ok { color: var(--ok, #16a34a); }
-.hm__mark--fail { color: var(--danger, #dc2626); }
-.hm__mark--na { color: var(--text-muted, #878c99); }
+.hm__mark--ok { color: var(--success); }
+.hm__mark--fail { color: var(--danger); }
+.hm__mark--na { color: var(--text-muted); }
 .hm__itembody { display: flex; flex-direction: column; gap: 1px; }
 .hm__itemtitle { font-size: 12.5px; }
 .hm__evidence { font-size: 11px; opacity: 0.7; }
 .hm__tablewrap { overflow: auto; }
 .hm__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.hm__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color, #e5e7eb); padding: 4px 6px; white-space: nowrap; }
+.hm__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 4px 6px; white-space: nowrap; }
 .hm__table td { border-bottom: 1px solid var(--border-color, rgb(0 0 0 / 5%)); padding: 4px 6px; vertical-align: top; }
 .hm__table code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
 .hm__na { opacity: 0.55; font-style: italic; }

@@ -129,20 +129,20 @@ watch(() => ide.workspace, () => { void fetchAutonomyQueue() })
 
 <style scoped lang="scss">
 .ide-queue { margin: 4px 12px; font-size: 11px; }
-.ide-queue__head { font-weight: 600; color: var(--text-color-3, #999); display: flex; gap: 8px; align-items: center; }
+.ide-queue__head { font-weight: 600; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
 .ide-queue__running { color: var(--primary-color, #18a058); }
 .ide-queue__row {
   display: flex; gap: 6px; align-items: baseline; padding: 2px 4px;
-  color: var(--text-color-3, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ide-queue__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-color-3, #bbb); flex: 0 0 5px; }
+.ide-queue__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); flex: 0 0 5px; }
 .ide-queue__dot.is-auto { background: var(--warning-color, #f0a020); }
 .ide-queue__steer, .ide-queue__action {
   border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
-  font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999); flex: 0 0 auto;
+  font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-muted); flex: 0 0 auto;
 }
 .ide-queue__steer:hover, .ide-queue__action:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 .ide-queue__autonomy { margin-top: 8px; border-top: 1px dashed var(--border-color, #ddd); padding-top: 6px; }
-.ide-queue__meta { color: var(--text-color-3, #bbb); font-size: 10px; margin-left: 4px; }
-.ide-queue__note { color: var(--text-color-3, #999); padding: 2px 4px; }
+.ide-queue__meta { color: var(--text-muted); font-size: 10px; margin-left: 4px; }
+.ide-queue__note { color: var(--text-muted); padding: 2px 4px; }
 </style>

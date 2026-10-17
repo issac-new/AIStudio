@@ -82,7 +82,7 @@ function fmtCost(c: number | null): string {
 
 <style scoped lang="scss">
 .ide-runlog { margin: 4px 12px; font-size: 11px; }
-.ide-runlog__head { font-weight: 600; color: var(--text-color-3, #999); padding: 2px 0; }
+.ide-runlog__head { font-weight: 600; color: var(--text-muted); padding: 2px 0; }
 .ide-runlog__count { font-weight: 400; }
 .ide-runlog__row {
   display: flex; gap: 8px; align-items: baseline; padding: 2px 4px;
@@ -90,12 +90,12 @@ function fmtCost(c: number | null): string {
 }
 .ide-runlog__row.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.04)); }
 .ide-runlog__state { color: var(--primary-color, #18a058); }
-.ide-runlog__state.is-done { color: var(--text-color-3, #bbb); }
-.ide-runlog__id { font-family: ui-monospace, monospace; color: var(--text-color-3, #888); }
-.ide-runlog__meta { color: var(--text-color-3, #999); }
+.ide-runlog__state.is-done { color: var(--text-muted); }
+.ide-runlog__id { font-family: ui-monospace, monospace; color: var(--text-muted); }
+.ide-runlog__meta { color: var(--text-muted); }
 .ide-runlog__cost { margin-left: auto; }
 .ide-runlog__toggle {
-  border: none; background: transparent; cursor: pointer; color: var(--text-color-3, #999);
+  border: none; background: transparent; cursor: pointer; color: var(--text-muted);
   font-size: 11px; padding: 2px 4px;
 }
 </style>

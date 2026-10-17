@@ -186,10 +186,10 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .dg {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -200,24 +200,24 @@ onMounted(() => void refresh())
 .dg__chip { font-size: 12px; opacity: 0.85; }
 .dg__sync { margin-left: auto; font-size: 12px; cursor: pointer; }
 .dg__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.dg__error { color: var(--danger, #dc2626); font-size: 12px; }
+.dg__error { color: var(--danger); font-size: 12px; }
 .dg__empty { font-size: 12px; opacity: 0.6; }
-.dg__nokg { font-size: 12px; color: var(--warning-ink, #92400e); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
-.dg__panel { border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.dg__nokg { font-size: 12px; color: var(--ia-stale); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
+.dg__panel { border-top: 1px solid var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .dg__panel-title { margin: 0 0 4px; font-size: 13px; }
 .dg__count { margin-left: 8px; font-size: 11px; opacity: 0.6; }
-.dg__row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--border-color, #e5e7eb); cursor: pointer; font-size: 12px; }
+.dg__row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--border-color); cursor: pointer; font-size: 12px; }
 .dg__row:hover { background: rgb(0 0 0 / 3%); }
-.dg__cat { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--border-color, #e5e7eb); flex-shrink: 0; }
+.dg__cat { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--border-color); flex-shrink: 0; }
 .dg__cat[data-cat="dispatch"] { border-color: rgb(147 197 253); background: rgb(219 234 254); }
 .dg__cat[data-cat="approval"] { border-color: rgb(134 239 172); background: rgb(220 252 231); }
 .dg__cat[data-cat="escalation"] { border-color: rgb(252 165 165); background: rgb(254 226 226); }
 .dg__cat[data-cat="gate"] { border-color: rgb(253 186 116); background: rgb(255 237 213); }
 .dg__scenario { flex: 1; min-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dg__outcome { font-weight: 600; font-size: 11px; flex-shrink: 0; }
-.dg__outcome.is-approved { color: var(--ok, #15803d); }
-.dg__outcome.is-rejected { color: var(--danger, #dc2626); }
-.dg__outcome.is-deferred { color: var(--warning-ink, #92400e); }
+.dg__outcome.is-approved { color: var(--success); }
+.dg__outcome.is-rejected { color: var(--danger); }
+.dg__outcome.is-deferred { color: var(--ia-stale); }
 .dg__conf { font-size: 11px; opacity: 0.6; flex-shrink: 0; }
 .dg__chain { flex-basis: 100%; margin: 4px 0 2px; padding: 6px 8px; background: rgb(0 0 0 / 3%); border-radius: 6px; display: flex; flex-direction: column; gap: 2px; }
 .dg__chain-title { font-size: 11px; opacity: 0.7; margin-bottom: 2px; }

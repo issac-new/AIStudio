@@ -139,18 +139,18 @@ const STATUS_TEXT: Record<string, string> = {
 .ide-bgt__head span { flex: 1; }
 .ide-bgt__head button { border: none; background: none; cursor: pointer; }
 .ide-bgt__section { padding: 6px 10px; }
-.ide-bgt__sectitle { font-weight: 600; font-size: 11px; color: var(--text-color-3, #999); margin-bottom: 4px; }
-.ide-bgt__empty { color: var(--text-color-3, #aaa); font-size: 11px; padding: 2px 0 6px; }
+.ide-bgt__sectitle { font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.ide-bgt__empty { color: var(--text-muted); font-size: 11px; padding: 2px 0 6px; }
 .ide-bgt__error { color: var(--error-color, #d03050); font-size: 11px; }
 .ide-bgt__row {
   display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left;
   border: none; background: none; padding: 3px 2px; cursor: pointer; font-size: 12px;
-  color: var(--text-color-2, #444); border-radius: 4px;
+  color: var(--text-secondary); border-radius: 4px;
 }
 button.ide-bgt__row:hover { background: var(--hover-color, rgba(0,0,0,0.05)); }
 .ide-bgt__row.is-static { cursor: default; }
-.ide-bgt__status { font-size: 10px; color: var(--text-color-3, #999); flex: 0 0 auto; border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; padding: 0 6px; }
+.ide-bgt__status { font-size: 10px; color: var(--text-muted); flex: 0 0 auto; border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; padding: 0 6px; }
 .ide-bgt__status.is-running { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); }
 .ide-bgt__status.is-failed, .ide-bgt__status.is-error { color: var(--error-color, #d03050); border-color: var(--error-color, #d03050); }
-.ide-bgt__age { margin-left: auto; font-size: 10px; color: var(--text-color-3, #bbb); }
+.ide-bgt__age { margin-left: auto; font-size: 10px; color: var(--text-muted); }
 </style>

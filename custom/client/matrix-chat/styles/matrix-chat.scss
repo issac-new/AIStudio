@@ -82,7 +82,7 @@
 // ─── Bubble Layout ───────────────────────────────────────
 .mx_EventTile_bubbleLayout {
   margin-top: calc(var(--mx-gutter-size) / 2);
-  margin-left: var(--bubble-margin-inline-start, 48px);
+  margin-left: var(--mx-bubble-margin-inline-start);
   max-width: unset;
   padding-top: 0;
 

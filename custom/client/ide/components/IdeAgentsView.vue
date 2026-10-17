@@ -107,23 +107,23 @@ function runBoostAggregate(): void {
 <style scoped lang="scss">
 .ide-agents { margin: 4px 12px; font-size: 12px; }
 .ide-agents__section { margin: 6px 0; }
-.ide-agents__head { font-weight: 600; color: var(--text-color-3, #999); font-size: 11px; }
+.ide-agents__head { font-weight: 600; color: var(--text-muted); font-size: 11px; }
 .ide-agents__row { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; }
 .ide-agents__state { font-size: 10px; padding: 0 6px; border-radius: 8px; }
 .ide-agents__state.is-needs { background: rgba(208, 48, 80, 0.1); color: var(--error-color, #d03050); }
 .ide-agents__state.is-working { background: rgba(24, 160, 88, 0.12); color: #18a058; }
-.ide-agents__state.is-done { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); }
-.ide-agents__dur { margin-left: auto; color: var(--text-color-3, #aaa); font-size: 11px; }
+.ide-agents__state.is-done { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-muted); }
+.ide-agents__dur { margin-left: auto; color: var(--text-muted); font-size: 11px; }
 // 在场两维（A3）：圆点=availability，芯片=workload，分画不合并。
 .ide-agents__presence { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .ide-agents__dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block;
   &.is-online { background: var(--success-color, #18a058); }
   &.is-unstable { background: var(--warning-color, #f0a020); }
-  &.is-offline { background: var(--text-color-3, #bbb); } }
+  &.is-offline { background: var(--text-muted); } }
 .ide-agents__chip { font-size: 9px; padding: 0 5px; border-radius: 7px; line-height: 14px;
   &.is-working { background: rgba(32, 128, 240, 0.12); color: var(--info-color, #2080f0); }
   &.is-queued { background: rgba(240, 160, 32, 0.12); color: var(--warning-color, #f0a020); }
-  &.is-idle { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); } }
-.ide-agents__boost { border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999); margin-left: 6px; }
+  &.is-idle { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-muted); } }
+.ide-agents__boost { border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-muted); margin-left: 6px; }
 .ide-agents__boostresult { font-size: 10px; color: var(--info-color, #2080f0); padding: 2px 4px; }
 </style>

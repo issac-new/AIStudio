@@ -115,7 +115,7 @@ const noTelemetry = computed(() => totalPct.value === 0)
 }
 .ide-ctxbar__seg { height: 100%; }
 .ide-ctxbar__seg.is-total { background: var(--primary-color, #18a058); }
-.ide-ctxbar__pct { font-size: 11px; color: var(--text-color-3, #999); }
+.ide-ctxbar__pct { font-size: 11px; color: var(--text-muted); }
 .ide-ctxbar.is-warn .ide-ctxbar__pct { color: var(--warning-color, #d97706); }
 .ide-ctxbar.is-critical .ide-ctxbar__pct { color: #d03050; font-weight: 600; }
 .ide-ctxbar__legend {

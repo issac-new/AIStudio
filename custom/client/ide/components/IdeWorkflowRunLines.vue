@@ -93,17 +93,17 @@ function onRow(run: RunLineView): void {
 .ide-wf-lines { display: flex; flex-direction: column; gap: 3px; }
 .ide-wf-line {
   display: flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px;
-  font-size: 12px; color: var(--text-color-2, #555); cursor: pointer;
+  font-size: 12px; color: var(--text-secondary); cursor: pointer;
   &:hover { background: var(--hover-color, rgba(0, 0, 0, 0.05)); }
 }
 .ide-wf-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--text-color-3, #999);
+  width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--text-muted);
 }
 .ide-wf-line.is-running .ide-wf-dot { background: var(--info-color, #2080f0); animation: ide-wf-pulse 1.6s ease-in-out infinite; }
 .ide-wf-line.is-pending .ide-wf-dot { background: var(--warning-color, #f0a020); }
 .ide-wf-line.is-completed .ide-wf-dot { background: var(--success-color, #18a058); }
 .ide-wf-line.is-errored .ide-wf-dot { background: var(--error-color, #d03050); }
-.ide-wf-line.is-stopped .ide-wf-dot { background: var(--text-color-3, #999); }
+.ide-wf-line.is-stopped .ide-wf-dot { background: var(--text-muted); }
 .ide-wf-line.is-settled { opacity: 0.7; }
 
 .ide-wf-label { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -113,20 +113,20 @@ function onRow(run: RunLineView): void {
 .ide-wf-station.is-done { color: var(--success-color, #18a058); }
 .ide-wf-station.is-failed { color: var(--error-color, #d03050); }
 .ide-wf-station.is-running { color: var(--info-color, #2080f0); }
-.ide-wf-station.is-pending { color: var(--text-color-3, #bbb); }
+.ide-wf-station.is-pending { color: var(--text-muted); }
 .ide-wf-seg {
-  width: 8px; height: 1px; background: var(--text-color-3, #ccc); display: inline-block; margin: 0 1px;
+  width: 8px; height: 1px; background: var(--text-muted); display: inline-block; margin: 0 1px;
   &.is-reached { background: var(--success-color, #18a058); }
   &.is-twin { height: 3px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; background: transparent; }
 }
-.ide-wf-more { font-size: 10px; color: var(--text-color-3, #999); margin-left: 2px; }
+.ide-wf-more { font-size: 10px; color: var(--text-muted); margin-left: 2px; }
 .ide-wf-agents { font-size: 10px; color: var(--info-color, #2080f0); white-space: nowrap; }
-.ide-wf-elapsed { font-size: 10px; color: var(--text-color-3, #999); white-space: nowrap; }
+.ide-wf-elapsed { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
 .ide-wf-confirm {
-  border: none; background: transparent; color: var(--text-color-3, #999); cursor: pointer;
-  font-size: 12px; line-height: 1; padding: 0 2px; &:hover { color: var(--text-color-1, #333); }
+  border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+  font-size: 12px; line-height: 1; padding: 0 2px; &:hover { color: var(--text-primary); }
 }
-.ide-wf-extra { font-size: 10px; color: var(--text-color-3, #999); padding-left: 16px; }
+.ide-wf-extra { font-size: 10px; color: var(--text-muted); padding-left: 16px; }
 
 @keyframes ide-wf-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 </style>

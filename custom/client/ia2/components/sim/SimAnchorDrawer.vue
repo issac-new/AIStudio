@@ -55,8 +55,8 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
   width: 480px;
   box-sizing: border-box;
   padding: 12px 16px;
-  background: #1d1f23;
-  color: #e8e8e8;
+  background: var(--bg-card);
+  color: var(--text-primary);
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
   transform: translateX(100%);
   transition: transform 0.2s ease;
@@ -77,8 +77,8 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
 }
 .sim-anchor-drawer__close {
   background: none;
-  border: 1px solid #555;
-  color: #e8e8e8;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   border-radius: 4px;
   padding: 2px 10px;
   cursor: pointer;
@@ -89,7 +89,7 @@ const ANCHOR_LABEL: Record<NonNullable<typeof props.anchorType>, string> = {
   margin-bottom: 8px;
 }
 .sim-anchor-drawer__anchor--absent {
-  color: #999;
+  color: var(--text-muted);
 }
 .sim-anchor-drawer__evidence {
   white-space: pre-wrap;

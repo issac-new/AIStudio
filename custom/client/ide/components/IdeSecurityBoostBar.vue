@@ -88,7 +88,7 @@ function runBoost(): void {
 
 <style scoped lang="scss">
 .ide-secbar { position: relative; display: inline-flex; gap: 2px; }
-.ide-secbar__btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; color: var(--text-color-3, #999); &:hover { color: var(--text-color-1, #333); } }
+.ide-secbar__btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; color: var(--text-muted); &:hover { color: var(--text-primary); } }
 .ide-secbar__panel {
   position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 90;
   background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
@@ -98,9 +98,9 @@ function runBoost(): void {
 .ide-secbar__head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .ide-secbar__head select { font-size: 11px; }
 .ide-secbar__run { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin-left: auto; }
-.ide-secbar__plan { color: var(--text-color-3, #999); margin: 4px 0; }
+.ide-secbar__plan { color: var(--text-muted); margin: 4px 0; }
 .ide-secbar__empty { color: var(--success-color, #18a058); }
-.ide-secbar__finding { color: var(--text-color-2, #555); padding: 2px 0;
+.ide-secbar__finding { color: var(--text-secondary); padding: 2px 0;
   &[data-severity='high'] { color: var(--error-color, #d03050); }
   &[data-severity='medium'] { color: var(--warning-color, #f0a020); } }
 </style>

@@ -135,8 +135,8 @@ async function recover(mode: string): Promise<void> {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 .ide-recovery__head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-.ide-recovery__close { border: none; background: transparent; cursor: pointer; color: var(--text-color-3, #999); }
-.ide-recovery__empty { color: var(--text-color-3, #999); padding: 16px 0; }
+.ide-recovery__close { border: none; background: transparent; cursor: pointer; color: var(--text-muted); }
+.ide-recovery__empty { color: var(--text-muted); padding: 16px 0; }
 .ide-recovery__rows { overflow-y: auto; margin: 8px 0; padding: 0; list-style: none; }
 .ide-recovery__row {
   display: flex; gap: 6px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 12px;
@@ -144,7 +144,7 @@ async function recover(mode: string): Promise<void> {
 }
 .ide-recovery__row:hover { background: var(--hover-color, rgba(0, 0, 0, 0.05)); }
 .ide-recovery__row.is-selected { background: var(--hover-color, rgba(0, 0, 0, 0.08)); outline: 1px solid var(--primary-color, #18a058); }
-.ide-recovery__kind { flex: 0 0 16px; color: var(--text-color-3, #999); font-size: 10px; }
+.ide-recovery__kind { flex: 0 0 16px; color: var(--text-muted); font-size: 10px; }
 .ide-recovery__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ide-recovery__modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 .ide-recovery__mode {

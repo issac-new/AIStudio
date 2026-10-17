@@ -83,14 +83,14 @@ function sendKnowledgeContribute(): void {
 
 <style scoped lang="scss">
 .ide-know { position: relative; display: inline-block; }
-.ide-know__btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; color: var(--text-color-3, #999); display: inline-flex; align-items: center; gap: 3px; &:hover { color: var(--text-color-1, #333); } }
+.ide-know__btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 3px; &:hover { color: var(--text-primary); } }
 .ide-know__dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block;
   &[data-state='on'] { background: var(--success-color, #18a058); }
   &[data-state='off'] { background: var(--error-color, #d03050); }
-  &[data-state='unknown'] { background: var(--text-color-3, #bbb); } }
+  &[data-state='unknown'] { background: var(--text-muted); } }
 .ide-know__panel { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 95; background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 8px 10px; min-width: 300px; max-width: 400px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 11px; }
 .ide-know__head { font-weight: 600; margin-bottom: 4px; }
-.ide-know__input { width: 100%; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; font-size: 11px; padding: 4px 6px; resize: vertical; background: var(--bg-primary, #fff); color: var(--text-color-1, #333); box-sizing: border-box; }
+.ide-know__input { width: 100%; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; font-size: 11px; padding: 4px 6px; resize: vertical; background: var(--bg-primary, #fff); color: var(--text-primary); box-sizing: border-box; }
 .ide-know__verdict { color: var(--info-color, #2080f0); margin: 4px 0; }
 .ide-know__actions { display: flex; gap: 6px; }
 .ide-know__act { flex: 1; border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: transparent; border-radius: 4px; font-size: 11px; padding: 2px 0; cursor: pointer; &:disabled { opacity: 0.5; cursor: default; } }

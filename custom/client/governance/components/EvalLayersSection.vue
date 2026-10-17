@@ -101,27 +101,27 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.el { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.el { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .el__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .el__title { margin: 0; font-size: 14px; }
 .el__days { display: flex; gap: 4px; }
-.el__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary, #3b82f6); color: #fff; border-color: transparent; } }
+.el__day { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border-color); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary); color: var(--text-on-accent); border-color: transparent; } }
 .el__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .el__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.el__error { color: var(--danger, #dc2626); font-size: 12px; }
+.el__error { color: var(--danger); font-size: 12px; }
 .el__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
-.el__layer { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+.el__layer { border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
 .el__layername { margin: 0; font-size: 12.5px; font-weight: 600; }
 .el__metric { display: flex; flex-direction: column; gap: 1px; padding: 3px 4px; border-radius: 6px; }
-.el__metric--gap { background: rgb(254 243 199 / 30%); }
+.el__metric--gap { background: rgba(var(--warning-rgb), 0.3); }
 .el__metrichead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .el__metrickey { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
 .el__metricvalue { font-size: 12px; font-weight: 600; }
 .el__na { opacity: 0.55; font-style: italic; font-weight: 400; }
 .el__badge { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; }
-.el__badge--instrumented { color: var(--ok-ink, #166534); }
-.el__badge--gap { color: var(--warning-ink, #92400e); border-style: dashed; }
-.el__def { font-size: 11px; color: var(--warning-ink, #92400e); }
+.el__badge--instrumented { color: var(--success); }
+.el__badge--gap { color: var(--ia-stale); border-style: dashed; }
+.el__def { font-size: 11px; color: var(--ia-stale); }
 .el__src { font-size: 10.5px; opacity: 0.7; }
-.el__gapnote { font-size: 11px; color: var(--text-muted, #878c99); }
+.el__gapnote { font-size: 11px; color: var(--text-muted); }
 </style>

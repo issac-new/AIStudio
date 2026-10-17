@@ -260,7 +260,7 @@ function linkCount(n: BpaNode): number {
 .bpa-tree { display: flex; flex-direction: column; gap: 10px; }
 .bpa-tree__bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
   .hint { margin: 0; flex: 1; min-width: 260px; } }
-.bpa-tree__editor { border: 1px solid var(--accent, #4f6ef7); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+.bpa-tree__editor { border: 1px solid var(--accent-primary); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
   h3 { margin: 0; font-size: 14px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;
     label { display: flex; flex-direction: column; gap: 3px; font-size: 12px;
@@ -271,7 +271,7 @@ function linkCount(n: BpaNode): number {
     .kpi-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 6px; margin-bottom: 6px;
       input { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 5px 8px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; } } } }
 .bpa-tree__editor-actions { display: flex; gap: 8px; }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
+button.primary { background: var(--accent-primary); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
   &:disabled { opacity: 0.6; cursor: wait; } }
 button.ghost { background: transparent; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; color: inherit; }
 button.danger { background: transparent; border: 1px solid var(--danger, #dc2626); color: var(--danger, #dc2626); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; margin-left: auto; }
@@ -281,10 +281,10 @@ button.danger { background: transparent; border: 1px solid var(--danger, #dc2626
   tbody tr { cursor: pointer; &:hover { background: var(--bg-tertiary, rgba(0,0,0,0.04)); } } }
 .lvl { border-radius: 6px; padding: 0 5px; font-size: 10px; margin-right: 6px; color: #fff; }
 .lv-classify { background: #6b7280; }
-.lv-process { background: var(--accent, #4f6ef7); }
+.lv-process { background: var(--accent-primary); }
 .lv-decompose { background: #9ca3af; }
 .sec { margin-left: 6px; font-size: 10px; border: 1px solid currentColor; border-radius: 6px; padding: 0 4px; opacity: 0.75; }
-.sec.pcf { color: var(--accent, #4f6ef7); opacity: 1; }
+.sec.pcf { color: var(--accent-primary); opacity: 1; }
 .sec.pcf-miss { color: var(--warning, #b45309); opacity: 1; border-style: dashed; }
 .row-actions button { padding: 2px 8px; }
 .err { color: var(--danger, #dc2626); font-size: 12px; margin: 0; }

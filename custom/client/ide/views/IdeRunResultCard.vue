@@ -226,7 +226,7 @@ const visible = computed(
   cursor: pointer;
   font-size: 12px;
   padding: 0 3px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   border-radius: 3px;
 }
 

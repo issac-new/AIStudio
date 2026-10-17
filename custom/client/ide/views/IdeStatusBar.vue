@@ -449,7 +449,7 @@ watch(
   background: transparent;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
 }
 
 .ide-statusbar__slots-btn {
@@ -484,7 +484,7 @@ watch(
   background: transparent;
   cursor: pointer;
   font-size: 11px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
 }
 
 .ide-statusbar__branch {

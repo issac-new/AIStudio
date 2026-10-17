@@ -81,7 +81,7 @@ defineExpose({ open })
   font-size: 11px;
 }
 .ide-find__input { border: none; outline: none; background: transparent; font-size: 12px; width: 200px; }
-.ide-find__count { color: var(--text-color-3, #999); min-width: 34px; text-align: center; }
+.ide-find__count { color: var(--text-muted); min-width: 34px; text-align: center; }
 .ide-find button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; cursor: pointer; padding: 0 6px; font-size: 11px; }
 .ide-find button:disabled { opacity: 0.4; cursor: default; }
 </style>

@@ -74,9 +74,9 @@ function runCompact(): void {
 <style scoped lang="scss">
 .ide-compaction {
   font-size: 11px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   background: var(--hover-color, rgba(0, 0, 0, 0.03));
-  border-left: 3px solid var(--text-color-3, #bbb);
+  border-left: 3px solid var(--text-muted);
   border-radius: 4px;
   padding: 3px 10px;
   margin: 4px 12px;

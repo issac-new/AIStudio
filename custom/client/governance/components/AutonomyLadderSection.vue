@@ -141,37 +141,37 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .al {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   display: flex; flex-direction: column; gap: 8px;
 }
 .al__bar { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.al__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; }
-.al__hint { font-size: 10px; color: #b45309; }
-.al__err { font-size: 11px; color: #b91c1c; }
-.al__msg { font-size: 11px; color: #15803d; }
+.al__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.al__hint { font-size: 10px; color: var(--ia-stale); }
+.al__err { font-size: 11px; color: var(--error); }
+.al__msg { font-size: 11px; color: var(--success); }
 .al__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
-  th { text-align: left; color: var(--text-muted, #878c99); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); }
-  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); } }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); }
+  td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); } }
 .al__target { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 600; }
 .al__points { max-width: 260px; }
-.al__ts { font-size: 9.5px; color: var(--text-muted, #878c99); white-space: nowrap; }
+.al__ts { font-size: 9.5px; color: var(--text-muted); white-space: nowrap; }
 .al__level { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 1.6;
-  &.is-insight { color: #1d4ed8; background: #dbeafe; }
-  &.is-assist { color: #b45309; background: #fef3c7; }
-  &.is-auto { color: #15803d; background: #dcfce7; } }
-.al__op { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--accent-primary, #3b82f6); padding: 0 4px; }
-.al__op--danger { color: #b91c1c; }
-.al__empty { text-align: center; color: var(--text-muted, #878c99); padding: 12px; }
-.al__form { border-top: 1px dashed var(--border-color, #e5e7eb); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  &.is-insight { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); }
+  &.is-assist { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-auto { color: var(--success); background: rgba(var(--success-rgb), 0.08); } }
+.al__op { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--accent-primary); padding: 0 4px; }
+.al__op--danger { color: var(--error); }
+.al__empty { text-align: center; color: var(--text-muted); padding: 12px; }
+.al__form { border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .al__form-title { font-size: 11px; font-weight: 600; }
 .al__row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.al__row--note { font-size: 10px; color: var(--text-muted, #878c99); }
-.al__input { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 3px 8px; font-size: 11px; background: var(--bg-primary, #fff); color: var(--text-primary, inherit); flex: 1; min-width: 140px; }
+.al__row--note { font-size: 10px; color: var(--text-muted); }
+.al__input { border: 1px solid var(--border-color); border-radius: 6px; padding: 3px 8px; font-size: 11px; background: var(--bg-primary); color: var(--text-primary); flex: 1; min-width: 140px; }
 .al__input--target { max-width: 340px; }
 .al__input--risk { max-width: 140px; flex: 0; }
-.al__save { border: 1px solid var(--accent-primary, #3b82f6); color: var(--accent-primary, #3b82f6); background: transparent; border-radius: 6px; padding: 3px 12px; font-size: 11px; cursor: pointer; }
-.al__cancel { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--text-muted, #878c99); }
+.al__save { border: 1px solid var(--accent-primary); color: var(--accent-primary); background: transparent; border-radius: 6px; padding: 3px 12px; font-size: 11px; cursor: pointer; }
+.al__cancel { border: none; background: transparent; cursor: pointer; font-size: 11px; color: var(--text-muted); }
 </style>

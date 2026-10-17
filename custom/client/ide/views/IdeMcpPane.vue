@@ -316,7 +316,7 @@ function openManage(): void {
 }
 
 .ide-mcp__skill-desc {
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -431,11 +431,11 @@ function openManage(): void {
   }
 }
 .ide-mcp__health { display: flex; align-items: center; gap: 10px; padding: 4px 10px; font-size: 11px; border-bottom: 1px solid var(--border-color, #e0e0e0); }
-.ide-mcp__health-title { font-weight: 600; color: var(--text-color-3, #999); }
-.ide-mcp__health-dim { color: var(--text-color-2, #555);
+.ide-mcp__health-title { font-weight: 600; color: var(--text-muted); }
+.ide-mcp__health-dim { color: var(--text-secondary);
   &[data-level='good'] { color: var(--success-color, #18a058); }
   &[data-level='poor'] { color: var(--warning-color, #f0a020); } }
 .ide-mcp__search { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
-.ide-mcp__search-tier { border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; background: transparent; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999);
+.ide-mcp__search-tier { border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; background: transparent; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-muted);
   &.is-on { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); } }
 </style>

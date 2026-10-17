@@ -134,7 +134,7 @@ onMounted(() => { void refreshGen(); void refreshRoles(); void refreshLessons() 
 </template>
 
 <style scoped>
-.skillgov { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: var(--n-color, #101a2c); }
+.skillgov { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: var(--bg-secondary); }
 .skillgov-head { display: flex; align-items: center; gap: 12px; }
 .skillgov-head h3 { margin: 0; font-size: 14px; }
 .skillgov-tabs { display: flex; gap: 4px; }

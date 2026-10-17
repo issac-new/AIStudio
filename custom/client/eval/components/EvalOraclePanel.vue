@@ -193,5 +193,5 @@ function runsOf(caseId: string): OracleRunDto[] {
   &.chip-warn { background: var(--warning, #f59e0b); color: var(--text-on-warning, #fff); } }
 .muted { opacity: 0.65; font-size: 12px; }
 .mono { font-family: var(--font-mono, monospace); }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+button.primary { background: var(--accent-primary); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
 </style>

@@ -167,7 +167,7 @@ function fmt(ms: number): string {
   cursor: pointer;
   font-size: 10px;
   line-height: 1.4;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
 }
 
 .ide-turn-rail__row:hover {

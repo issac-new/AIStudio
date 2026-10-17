@@ -106,8 +106,8 @@ function onOpenBoard(): void {
 <style scoped>
 /* P1 交付网络读数条：单行 chip 流，零在途零待审时整条隐藏（零噪音原则） */
 .delivery-strip { display: flex; gap: 6px; align-items: center; padding: 3px 12px 0; cursor: pointer; flex-wrap: wrap; }
-.dchip { font-size: 11px; color: #555; background: #f3f4f6; border-radius: 8px; padding: 1px 8px; }
-.dchip--flight { background: #dbeafe; color: #1d4ed8; }
-.dchip--human { background: #fef3c7; color: #b45309; }
-.dchip--done { background: #dcfce7; color: #15803d; }
+.dchip { font-size: 11px; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 8px; padding: 1px 8px; }
+.dchip--flight { background: rgba(var(--accent-info-rgb), 0.1); color: var(--accent-info); }
+.dchip--human { background: rgba(var(--warning-rgb), 0.12); color: var(--ia-stale); }
+.dchip--done { background: rgba(var(--success-rgb), 0.08); color: var(--success); }
 </style>

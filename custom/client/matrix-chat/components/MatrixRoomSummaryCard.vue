@@ -758,12 +758,12 @@ function handleTopicLinkClick(ev: MouseEvent) {
 
 .menu-item--toggle {
   &.menu-item--active {
-    svg { color: var(--accent-warning, #f59e0b); }
+    svg { color: var(--ia-stale); }
   }
 }
 
 .menu-item--active {
-  svg { color: var(--accent-warning, #f59e0b); }
+  svg { color: var(--ia-stale); }
 }
 
 .menu-item-label {

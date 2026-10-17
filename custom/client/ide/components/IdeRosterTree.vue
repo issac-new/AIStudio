@@ -72,12 +72,12 @@ const tree = computed<RosterNode[]>(() =>
 .ide-roster { margin: 4px 12px; font-size: 12px; }
 .ide-roster__head {
   border: none; background: transparent; cursor: pointer; padding: 2px 0;
-  font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); display: block; width: 100%; text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; width: 100%; text-align: left;
 }
 .ide-roster__node { display: flex; align-items: baseline; gap: 6px; padding: 2px 0; }
 .ide-roster__lead { color: var(--warning-color, #f0a020); font-size: 11px; }
-.ide-roster__id { font-weight: 600; color: var(--text-color-2, #555); }
+.ide-roster__id { font-weight: 600; color: var(--text-secondary); }
 .ide-roster__count { font-size: 10px; color: var(--info-color, #2080f0); white-space: nowrap; }
-.ide-roster__members { font-size: 10px; color: var(--text-color-3, #999); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-roster__members { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-roster__err { font-size: 10px; color: var(--error-color, #d03050); margin: 2px 0; }
 </style>

@@ -111,16 +111,16 @@ function actPayload(): { id: string; belief?: string | null; evidenceAnchor?: st
 .sim-interv__belief {
   margin-top: 3px;
   padding: 2px 6px;
-  border-left: 3px solid #d9a441;
+  border-left: 3px solid var(--ia-stale);
   background: rgba(217, 164, 65, 0.08);
   border-radius: 0 4px 4px 0;
   font-size: 12px;
-  color: #d9b06a;
+  color: var(--ia-stale);
 }
 .sim-interv__belief--absent {
   border-left-color: rgba(127, 127, 127, 0.4);
   background: none;
-  color: #878c99;
+  color: var(--text-muted);
 }
 .sim-interv__meta {
   display: flex;
@@ -129,17 +129,17 @@ function actPayload(): { id: string; belief?: string | null; evidenceAnchor?: st
   font-size: 12px;
 }
 .sim-interv__source {
-  color: #7ab0e8;
+  color: var(--accent-info);
 }
 .sim-interv__anchor {
   font-family: ui-monospace, monospace;
-  color: #999;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sim-interv__anchor--absent {
-  color: #d33;
+  color: var(--ia-fail);
 }
 .sim-interv__actions {
   display: flex;
@@ -147,19 +147,19 @@ function actPayload(): { id: string; belief?: string | null; evidenceAnchor?: st
 }
 .sim-interv__btn {
   border-radius: 4px;
-  border: 1px solid #555;
+  border: 1px solid var(--border-color);
   background: none;
-  color: #e8e8e8;
+  color: var(--text-primary);
   padding: 3px 12px;
   cursor: pointer;
   font-size: 12px;
 }
 .sim-interv__btn--approve {
-  border-color: #2e9e5b;
-  color: #4fc07d;
+  border-color: var(--ia-fresh);
+  color: var(--success);
 }
 .sim-interv__btn--reject {
-  border-color: #b04040;
-  color: #e07070;
+  border-color: var(--error);
+  color: var(--ia-fail);
 }
 </style>
