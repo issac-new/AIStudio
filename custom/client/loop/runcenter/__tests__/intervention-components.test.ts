@@ -333,7 +333,7 @@ describe('InboxPanel (jsdom)', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].text()).toContain('run-1')
     expect(rows[0].text()).toContain('loop-loop1')
-    expect(w.find('.ib-panel__empty').exists()).toBe(false)
+    expect(w.find('.ui-empty-state').exists()).toBe(false)
   })
 
   it('两态切换：点已归档 tab 展示 archived；各自空态文案独立', async () => {
@@ -341,7 +341,7 @@ describe('InboxPanel (jsdom)', () => {
       props: { pending: [], archived: [awaitingRun({ runId: 'run-archived' })] },
     })
     // 待处理空态
-    expect(w.find('.ib-panel__empty').text()).toContain('runcenter.inbox.empty')
+    expect(w.find('.ui-empty-state').text()).toContain('runcenter.inbox.empty')
     // 切到已归档
     await w.findAll('.ib-panel__tab')[1].trigger('click')
     expect(w.findAll('.ib-row')).toHaveLength(1)
@@ -351,7 +351,7 @@ describe('InboxPanel (jsdom)', () => {
       props: { pending: [awaitingRun()], archived: [] },
     })
     await w2.findAll('.ib-panel__tab')[1].trigger('click')
-    expect(w2.find('.ib-panel__empty').text()).toContain('runcenter.inbox.archivedEmpty')
+    expect(w2.find('.ui-empty-state').text()).toContain('runcenter.inbox.archivedEmpty')
   })
 
   it('归档/取消归档按钮 emit 对应事件（不改 run 状态——由 store 落 kv）', async () => {
@@ -386,7 +386,7 @@ describe('InboxPanel (jsdom)', () => {
 describe('NodeInspector (jsdom)', () => {
   it('未选中节点 → 空态提示', () => {
     const w = mount(NodeInspector, { props: { node: null, events: [], runId: 'run-1' } })
-    expect(w.find('.ni-panel__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
   })
 
   it('attach 档：类型/状态/迭代/耗时 + 最近 update channel 键值', () => {

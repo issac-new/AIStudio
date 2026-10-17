@@ -87,8 +87,8 @@ function submit(): void {
 .ate__slug { font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
 .ate__profiles { display: flex; flex-wrap: wrap; gap: 4px; }
 .ate__profile { border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: 999px; padding: 1px 8px; font-size: 11px; cursor: pointer; font-family: inherit; }
-.ate__profile--on { border-color: var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); }
+.ate__profile--on { border-color: var(--color-primary); background: var(--color-primary); color: var(--bg-primary); }
 .ate__actions { display: flex; gap: 8px; }
-.ate__remove { border: none; background: none; color: var(--color-danger, #e11d48); cursor: pointer; }
-.ate__save { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; }
+.ate__remove { border: none; background: none; color: var(--color-danger); cursor: pointer; }
+.ate__save { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; }
 </style>

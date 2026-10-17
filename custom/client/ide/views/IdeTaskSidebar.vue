@@ -654,8 +654,8 @@ onMounted(async () => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary, #1b1e24);
-  border-right: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   min-height: 0;
 }
 
@@ -676,12 +676,12 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--bg-tertiary, #ebebeb); }
+  &:hover { background: var(--bg-tertiary); }
 }
 
 .ide-taskbar__action-label {
@@ -694,9 +694,9 @@ onMounted(async () => {
 
 .ide-taskbar__kbd {
   font-size: 11px;
-  color: var(--text-secondary, #9aa0aa);
-  background: var(--bg-tertiary, #ebebeb);
-  border: 1px solid var(--border-color, #e0e0e0);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 1px 5px;
   font-family: inherit;
@@ -713,10 +713,10 @@ onMounted(async () => {
   min-width: 0;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--accent-primary, #4cc9f0);
+  border: 1px solid var(--accent-primary);
   border-radius: 5px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 12px;
   outline: none;
 }
@@ -726,11 +726,11 @@ onMounted(async () => {
   height: 26px;
   border: none;
   border-radius: 5px;
-  background: var(--bg-tertiary, #ebebeb);
-  color: var(--accent-primary, #4cc9f0);
+  background: var(--bg-tertiary);
+  color: var(--accent-primary);
   cursor: pointer;
 
-  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 20%, transparent); }
+  &:hover { background: color-mix(in srgb, var(--accent-primary) 20%, transparent); }
 }
 
 .ide-taskbar__filter { padding: 4px 8px 4px; }
@@ -739,15 +739,15 @@ onMounted(async () => {
   width: 100%;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 12px;
   outline: none;
 
-  &::placeholder { color: var(--text-muted, #9aa0aa); }
-  &:focus { border-color: var(--accent-primary, #4cc9f0); }
+  &::placeholder { color: var(--text-muted); }
+  &:focus { border-color: var(--accent-primary); }
 }
 
 /* 三段视图 chip 行（进行中/已完成/工作空间） */
@@ -763,21 +763,21 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 4px 6px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
 
-  &:hover { border-color: var(--primary-color, #18a058); }
+  &:hover { border-color: var(--primary-color); }
 
   &.is-active {
     background: rgba(97, 175, 239, 0.12);
-    border-color: color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
-    color: var(--primary-color, #18a058);
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+    color: var(--primary-color);
     font-weight: 600;
   }
 }
@@ -799,8 +799,8 @@ onMounted(async () => {
   height: 24px;
   border: none;
   border-radius: 12px;
-  background: var(--bg-tertiary, #ebebeb);
-  color: var(--text-muted, #9aa0aa);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
@@ -808,10 +808,10 @@ onMounted(async () => {
   text-overflow: ellipsis;
   padding: 0 8px;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--text-primary); }
   &.is-active {
-    color: var(--text-primary, #e6e6e6);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 22%, var(--bg-tertiary, #ebebeb));
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--accent-primary) 22%, var(--bg-tertiary));
   }
 }
 
@@ -825,11 +825,11 @@ onMounted(async () => {
   gap: 5px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   text-transform: none;
   letter-spacing: 0.02em;
 
-  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--text-primary, #e6e6e6); } }
+  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--text-primary); } }
 }
 
 .ide-taskbar__section-caret {
@@ -843,10 +843,10 @@ onMounted(async () => {
   min-width: 0;
   height: 20px;
   padding: 0 6px;
-  border: 1px solid var(--accent-primary, #4cc9f0);
+  border: 1px solid var(--accent-primary);
   border-radius: 4px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 11px;
   outline: none;
 }
@@ -863,12 +863,12 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 10px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
-  &--danger:hover { color: var(--error-color, #d03050); }
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+  &--danger:hover { color: var(--error-color); }
 }
 
 .ide-taskbar__section-count { margin-left: auto; opacity: 0.7; }
@@ -881,10 +881,10 @@ onMounted(async () => {
   border-radius: 6px;
   margin: 1px 0;
 
-  &:hover { background: var(--bg-tertiary, #ebebeb); .ide-taskbar__item-more { opacity: 1; } }
+  &:hover { background: var(--bg-tertiary); .ide-taskbar__item-more { opacity: 1; } }
   &.is-active {
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
-    .ide-taskbar__item-title { color: var(--accent-primary, #4cc9f0); }
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+    .ide-taskbar__item-title { color: var(--accent-primary); }
   }
 }
 
@@ -897,7 +897,7 @@ onMounted(async () => {
   padding: 6px 8px;
   border: none;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -905,7 +905,7 @@ onMounted(async () => {
 
 .ide-taskbar__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #9aa0aa); }
+.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
 
 /* 时间线优先级徽标（P0-P3，口径同 cockpit bucketPriority） */
 .ide-taskbar__prio {
@@ -915,12 +915,12 @@ onMounted(async () => {
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
-  background: color-mix(in srgb, var(--text-muted, #9aa0aa) 18%, transparent);
-  color: var(--text-muted, #9aa0aa);
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+  color: var(--text-muted);
 
-  &--p0 { background: rgba(224, 108, 117, 0.18); color: var(--error-color, #d03050); }
-  &--p1 { background: rgba(240, 164, 76, 0.18); color: #f0a44c; }
-  &--p2 { background: rgba(76, 201, 240, 0.16); color: #4cc9f0; }
+  &--p0 { background: rgba(224, 108, 117, 0.18); color: var(--error-color); }
+  &--p1 { background: rgba(240, 164, 76, 0.18); color: var(--ia-stale); }
+  &--p2 { background: rgba(76, 201, 240, 0.16); color: var(--accent-info); }
 }
 
 .ide-taskbar__item-more {
@@ -933,12 +933,12 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.1s ease;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-primary, #14161a); }
+  &:hover { color: var(--text-primary); background: var(--bg-primary); }
   svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
 }
 
@@ -952,16 +952,16 @@ onMounted(async () => {
   padding: 8px 10px;
   border: 1px solid rgba(224, 108, 117, 0.5);
   border-radius: 7px;
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--bg-secondary);
 
-  p { margin: 0 0 6px; font-size: 12px; color: var(--text-primary, #e6e6e6); }
+  p { margin: 0 0 6px; font-size: 12px; color: var(--text-primary); }
 }
 
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
 
-.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted, #9aa0aa); }
+.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted); }
 
 
 

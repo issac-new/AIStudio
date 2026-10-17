@@ -271,13 +271,13 @@ function sendAux(): void {
   flex-direction: column;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-primary, #1f2329);
+  color: var(--text-primary);
 }
 
-.briefing-briefdiff { font-size: 10px; color: var(--text-muted, #9aa0aa); margin: 0; padding: 0 2px; }
+.briefing-briefdiff { font-size: 10px; color: var(--text-muted); margin: 0; padding: 0 2px; }
 
 .briefing-cplinks { margin-left: auto; font-size: 11.5px; }
-.briefing-cplinks a { color: var(--accent-primary, #2563eb); text-decoration: none; border-bottom: 1px dotted currentColor; padding: 0 4px; }
+.briefing-cplinks a { color: var(--accent-primary); text-decoration: none; border-bottom: 1px dotted currentColor; padding: 0 4px; }
 .briefing-header {
   display: flex;
   align-items: center;
@@ -290,9 +290,9 @@ function sendAux(): void {
 }
 
 .briefing-section {
-  border: 1px solid var(--border-color, #e5e6eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-secondary, #fff);
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
@@ -327,7 +327,7 @@ function sendAux(): void {
 
   .k {
     flex-shrink: 0;
-    color: var(--text-secondary, #646a73);
+    color: var(--text-secondary);
     min-width: 56px;
   }
 
@@ -335,14 +335,14 @@ function sendAux(): void {
     word-break: break-all;
 
     &.danger {
-      color: #d93026;
+      color: var(--error);
       font-weight: 600;
     }
   }
 }
 
 .muted {
-  color: var(--text-muted, #8f959e);
+  color: var(--text-muted);
 }
 
 /* P3.2 上下文文件列表（§四） */
@@ -359,7 +359,7 @@ function sendAux(): void {
   align-items: center;
   gap: 6px;
   width: 100%;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
   padding: 4px 8px;
@@ -367,18 +367,18 @@ function sendAux(): void {
   cursor: pointer;
   text-align: left;
   color: inherit;
-  &:hover { background: var(--bg-secondary, #f1f2f4); }
+  &:hover { background: var(--bg-secondary); }
 }
 .ctx-file__kind {
   flex-shrink: 0;
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
-  color: #fff;
-  background: #6b7280;
-  &--req { background: #2563eb; }
-  &--design { background: #059669; }
-  &--schedule { background: #d97706; }
+  color: var(--text-on-accent);
+  background: var(--text-muted);
+  &--req { background: var(--accent-primary); }
+  &--design { background: var(--success); }
+  &--schedule { background: var(--ia-stale); }
 }
 .ctx-file__name {
   min-width: 0;
@@ -424,11 +424,11 @@ function sendAux(): void {
   .aux-input {
     flex: 1;
     min-width: 0;
-    border: 1px solid var(--border-color, #e5e6eb);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 12px;
-    background: var(--bg-primary, #fff);
+    background: var(--bg-primary);
     color: inherit;
   }
 
@@ -437,7 +437,7 @@ function sendAux(): void {
     border-radius: 4px;
     padding: 3px 10px;
     cursor: pointer;
-    background: var(--brand, #3370ff);
+    background: var(--accent-primary);
     color: var(--text-on-accent);
     font-size: 12px;
   }
@@ -448,11 +448,11 @@ function sendAux(): void {
 }
 .phase-step {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: #64748b;
+  font-size: 12px; color: var(--text-secondary);
 }
-.phase-step--done { color: #15803d; }
-.phase-step--running { color: #1d4ed8; font-weight: 600; }
-.phase-step--failed { color: #b91c1c; }
+.phase-step--done { color: var(--success); }
+.phase-step--running { color: var(--accent-info); font-weight: 600; }
+.phase-step--failed { color: var(--error); }
 .phase-glyph { width: 14px; text-align: center; }
 
 </style>

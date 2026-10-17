@@ -97,7 +97,7 @@ const chartOption = computed(() => {
     y: pos.get(n.id)?.y ?? 0,
     symbolSize: 46,
     itemStyle: { color: SECTION_COLOR[l1SectionOf.value(n.id)] ?? '#4f6ef7' },
-    label: { show: true, fontSize: 9, color: '#fff', formatter: (p: { name: string }) => p.name.split('\n')[1]?.slice(0, 8) ?? p.name },
+    label: { show: true, fontSize: 9, color: 'var(--text-on-accent)', formatter: (p: { name: string }) => p.name.split('\n')[1]?.slice(0, 8) ?? p.name },
   }))
   const seen = new Set<string>()
   const edges: Array<{ source: string; target: string }> = []
@@ -206,7 +206,7 @@ const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?
   margin: 0;
 }
 .block {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px;
   display: flex;
@@ -220,7 +220,7 @@ const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?
 .graph {
   width: 100%;
   height: 320px;
-  border: 1px dashed var(--border-color, #e5e7eb);
+  border: 1px dashed var(--border-color);
   border-radius: 8px;
 }
 .paths {
@@ -230,7 +230,7 @@ const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?
   th, td {
     text-align: left;
     padding: 7px 10px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-color);
     vertical-align: top;
   }
   th {
@@ -241,19 +241,19 @@ const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?
     border-radius: 8px;
     padding: 1px 8px;
     font-size: 11px;
-    color: #fff;
+    color: var(--text-on-accent);
     margin-right: 2px;
   }
-  .c-operating { background: #4f6ef7; }
-  .c-enabling { background: #10b981; }
-  .c-supporting { background: #f59e0b; }
-  .c-managing { background: #8b5cf6; }
+  .c-operating { background: var(--accent-primary); }
+  .c-enabling { background: var(--success); }
+  .c-supporting { background: var(--warning); }
+  .c-managing { background: var(--ia-compensated); }
   .arr { opacity: 0.5; margin: 0 3px; }
-  .miss { color: var(--warning, #b45309); }
+  .miss { color: var(--warning); }
 }
 .health {
   .warn {
-    color: var(--warning, #b45309);
+    color: var(--warning);
     font-size: 12px;
     margin: 4px 0;
   }
@@ -264,10 +264,10 @@ const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?
     margin-right: 4px;
     font-size: 11px;
   }
-  .ok { color: var(--success, #16a34a); font-size: 13px; margin: 4px 0; }
+  .ok { color: var(--success); font-size: 13px; margin: 4px 0; }
 }
-.err { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
+.err { color: var(--danger); font-size: 13px; margin: 0; }
 .muted { opacity: 0.65; font-size: 12px; }
 .small { font-size: 11px; }
-.mono { font-family: var(--font-mono, monospace); font-size: 11px; }
+.mono { font-family: var(--font-mono); font-size: 11px; }
 </style>

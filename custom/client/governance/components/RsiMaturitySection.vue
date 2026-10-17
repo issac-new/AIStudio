@@ -94,38 +94,38 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.rs { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.rs { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .rs__bar { display: flex; align-items: center; gap: 8px; }
 .rs__title { margin: 0; font-size: 14px; }
 .rs__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .rs__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.rs__error { color: var(--danger, #dc2626); font-size: 12px; }
+.rs__error { color: var(--danger); font-size: 12px; }
 .rs__ladder { display: flex; flex-direction: column; gap: 4px; }
-.rs__level { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 4px 8px; }
-.rs__level--ok { border-color: var(--ok, #16a34a); }
-.rs__level--fail { border-color: rgb(217 119 6 / 60%); }
+.rs__level { border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; }
+.rs__level--ok { border-color: var(--success); }
+.rs__level--fail { border-color: rgba(var(--warning-rgb), 0.6); }
 .rs__level summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; list-style: none; }
 .rs__level summary::-webkit-details-marker { display: none; }
 .rs__lvkey { font-weight: 600; font-size: 12px; }
 .rs__lvname { font-size: 12px; opacity: 0.85; }
 .rs__lvstate { margin-left: auto; font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid; flex-shrink: 0; }
-.rs__lvstate--ok { color: var(--ok-ink, #166534); border-color: var(--ok, #16a34a); }
-.rs__lvstate--fail { color: var(--warning-ink, #92400e); border-style: dashed; border-color: currentColor; }
-.rs__lvstate--na { color: var(--text-muted, #878c99); border-style: dashed; border-color: currentColor; }
+.rs__lvstate--ok { color: var(--success); border-color: var(--success); }
+.rs__lvstate--fail { color: var(--ia-stale); border-style: dashed; border-color: currentColor; }
+.rs__lvstate--na { color: var(--text-muted); border-style: dashed; border-color: currentColor; }
 .rs__means { font-size: 11.5px; opacity: 0.75; margin: 4px 0 2px; }
 .rs__ev { margin: 2px 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .rs__ev li { display: flex; gap: 6px; align-items: baseline; font-size: 11px; }
 .rs__ev code { background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
-.rs__evok { color: var(--ok, #16a34a); }
-.rs__evmiss { color: var(--danger, #dc2626); }
-.rs__gap { font-size: 11px; color: var(--warning-ink, #92400e); margin-top: 2px; }
+.rs__evok { color: var(--success); }
+.rs__evmiss { color: var(--danger); }
+.rs__gap { font-size: 11px; color: var(--ia-stale); margin-top: 2px; }
 .rs__elements { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px; }
-.rs__el { display: flex; align-items: baseline; gap: 6px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 4px 6px; font-size: 11.5px; flex-wrap: wrap; }
+.rs__el { display: flex; align-items: baseline; gap: 6px; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 6px; font-size: 11.5px; flex-wrap: wrap; }
 .rs__elkey { font-size: 10.5px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
 .rs__elbadge { font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid currentColor; }
-.rs__elbadge--yes { color: var(--ok-ink, #166534); }
-.rs__elbadge--partial { color: var(--warning-ink, #92400e); border-style: dashed; }
-.rs__elbadge--no { color: var(--text-muted, #878c99); }
+.rs__elbadge--yes { color: var(--success); }
+.rs__elbadge--partial { color: var(--ia-stale); border-style: dashed; }
+.rs__elbadge--no { color: var(--text-muted); }
 .rs__elhow { opacity: 0.8; }
-.rs__meta { font-size: 11px; color: var(--warning-ink, #92400e); background: rgb(254 243 199 / 50%); border-radius: 6px; padding: 4px 8px; }
+.rs__meta { font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.5); border-radius: 6px; padding: 4px 8px; }
 </style>

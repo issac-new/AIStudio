@@ -314,7 +314,7 @@ function submitCreateRoom(): void {
         </div>
       </div>
 
-      <div v-if="!shownSessions.length && !shownLoops.length" class="flow-nav__empty" data-testid="flow-empty">
+      <div v-if="!shownSessions.length && !shownLoops.length" class="ui-empty-state ui-empty-state--compact" data-testid="flow-empty">
         {{ t('ia2.flow.empty') }}
       </div>
     </div>
@@ -404,10 +404,10 @@ function submitCreateRoom(): void {
 }
 .flow-nav__agent-dot {
   flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
-  &.is-busy { background: #4cc9f0; }
-  &.is-online { background: var(--success-color, #98c379); }
-  &.is-idle { background: var(--text-muted, #9aa0aa); }
-  &.is-offline { background: #e06c75; }
+  &.is-busy { background: var(--accent-info); }
+  &.is-online { background: var(--success-color); }
+  &.is-idle { background: var(--text-muted); }
+  &.is-offline { background: var(--error); }
 }
 .flow-nav__agent-name { flex-shrink: 0; font-family: ui-monospace, monospace; font-size: 10px; }
 .flow-nav__agent-task {
@@ -424,7 +424,7 @@ function submitCreateRoom(): void {
 .flow-nav__row--on { background: var(--bg-secondary); color: var(--text-primary); font-weight: 600; }
 .flow-nav__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .flow-nav__suffix {
-  flex-shrink: 0; font-size: 10.5px; color: var(--text-muted, #878c99);
+  flex-shrink: 0; font-size: 10.5px; color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .75;
 }
 .flow-nav__teamtag {
@@ -443,7 +443,7 @@ function submitCreateRoom(): void {
 }
 .flow-nav__unr {
   flex-shrink: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
-  background: var(--error); color: #fff; font-size: 9px; font-weight: 700;
+  background: var(--error); color: var(--text-on-accent); font-size: 9px; font-weight: 700;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .flow-nav__loop {
@@ -477,7 +477,6 @@ function submitCreateRoom(): void {
 .flow-nav__stage-idx { color: var(--text-secondary); }
 .flow-nav__status--warn { color: var(--warning); font-weight: 600; }
 .flow-nav__status--err { color: var(--error); font-weight: 600; }
-.flow-nav__empty { padding: 16px 10px; font-size: 11px; color: var(--text-muted); text-align: center; }
 .flow-nav__create { display: flex; gap: 4px; padding: 0 12px 6px; }
 .flow-nav__create-input {
   flex: 1; min-width: 0; height: 24px; padding: 0 8px;

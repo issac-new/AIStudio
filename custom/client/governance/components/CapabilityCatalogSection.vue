@@ -111,7 +111,7 @@ onMounted(() => void refresh())
         </thead>
         <tbody>
           <tr v-if="entries.length === 0">
-            <td colspan="7" class="hc__empty">{{ L?.catalogEmpty }}</td>
+            <td colspan="7" class="ui-empty-state ui-empty-state--compact">{{ L?.catalogEmpty }}</td>
           </tr>
           <tr v-for="e in entries" :key="`${e.source}:${e.id}`" :data-testid="`harness-catalog-row-${e.id}`">
             <td>{{ SOURCE_LABELS[e.source] ?? e.source }}</td>
@@ -140,28 +140,27 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.hc { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.hc { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .hc__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hc__title { margin: 0; font-size: 14px; }
 .hc__chip { font-size: 12px; opacity: 0.85; }
 .hc__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .hc__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.hc__error { color: var(--danger, #dc2626); font-size: 12px; }
+.hc__error { color: var(--danger); font-size: 12px; }
 .hc__filters { display: flex; gap: 4px; flex-wrap: wrap; }
-.hc__filter { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary, #3b82f6); color: #fff; border-color: transparent; } }
+.hc__filter { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 10px; background: transparent; cursor: pointer; &--active { background: var(--accent-primary); color: var(--text-on-accent); border-color: transparent; } }
 .hc__sources { display: flex; gap: 6px; flex-wrap: wrap; }
-.hc__sourcechip { font-size: 11px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 0 6px; &--off { opacity: 0.55; border-style: dashed; } }
+.hc__sourcechip { font-size: 11px; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 6px; &--off { opacity: 0.55; border-style: dashed; } }
 .hc__tablewrap { overflow: auto; max-height: 320px; }
 .hc__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.hc__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color, #e5e7eb); padding: 4px 6px; white-space: nowrap; }
+.hc__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 4px 6px; white-space: nowrap; }
 .hc__table td { border-bottom: 1px solid var(--border-color, rgb(0 0 0 / 5%)); padding: 4px 6px; vertical-align: top; }
 .hc__table code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
 .hc__name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hc__note { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hc__factors { display: inline-flex; gap: 3px; }
 .hc__badge { font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid; }
-.hc__badge--ok { color: var(--ok-ink, #166534); border-color: var(--ok, #16a34a); background: rgb(134 239 172 / 25%); }
-.hc__badge--gap { color: var(--danger, #dc2626); border-color: currentColor; background: rgb(254 202 202 / 25%); }
-.hc__empty { text-align: center; opacity: 0.6; padding: 12px 0; }
-.hc__boundary { font-size: 11.5px; color: var(--warning-ink, #92400e); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
+.hc__badge--ok { color: var(--success); border-color: var(--success); background: rgba(var(--success-rgb), 0.25); }
+.hc__badge--gap { color: var(--danger); border-color: currentColor; background: rgba(var(--error-rgb), 0.25); }
+.hc__boundary { font-size: 11.5px; color: var(--ia-stale); background: rgb(254 243 199); border-radius: 6px; padding: 4px 8px; }
 </style>

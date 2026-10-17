@@ -124,7 +124,7 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 <template>
   <div class="ide-tools" data-testid="ide-tools-pane">
     <div class="ide-tools__head">⚙ {{ t('ide.tools.title') }} <span class="ide-tools__count">{{ rows.length }}</span></div>
-    <p v-if="!rows.length" class="ide-tools__empty">{{ t('ide.tools.empty') }}</p>
+    <p v-if="!rows.length" class="ui-empty-state">{{ t('ide.tools.empty') }}</p>
     <div
       v-for="row in rows"
       :key="row.id"
@@ -155,30 +155,29 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 <style scoped lang="scss">
 .ide-tools { flex: 1; min-width: 0; overflow-y: auto; font-size: 12px; padding: 6px; }
 .ide-tools__head { font-weight: 600; padding: 2px 6px 8px; }
-.ide-tools__count { color: var(--text-color-3, #999); font-weight: 400; }
-.ide-tools__empty { color: var(--text-color-3, #999); padding: 16px; }
+.ide-tools__count { color: var(--text-muted); font-weight: 400; }
 .ide-tools__item { margin: 3px 0; }
 .ide-tools__diff {
   margin: 2px 0 4px 20px; padding: 6px 8px; font-size: 10px; font-family: ui-monospace, monospace;
   background: var(--hover-color, rgba(0, 0, 0, 0.03)); border-radius: 4px; max-height: 200px; overflow: auto;
 }
 .ide-tools__dline { display: block; white-space: pre-wrap; }
-.ide-tools__dline.is-add { color: #18a058; background: rgba(24, 160, 88, 0.08); }
-.ide-tools__dline.is-del { color: #d03050; background: rgba(208, 48, 80, 0.08); }
-.ide-tools__chev { color: var(--text-color-3, #999); font-size: 10px; }
+.ide-tools__dline.is-add { color: var(--success); background: rgba(24, 160, 88, 0.08); }
+.ide-tools__dline.is-del { color: var(--error); background: rgba(208, 48, 80, 0.08); }
+.ide-tools__chev { color: var(--text-muted); font-size: 10px; }
 .ide-tools__row {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 5px;
-  border-left: 2px solid var(--border-color, #e0e0e0); margin: 3px 0; cursor: default;
+  border-left: 2px solid var(--border-color); margin: 3px 0; cursor: default;
 }
-.ide-tools__row.is-edit { border-left-color: var(--primary-color, #18a058); }
-.ide-tools__row.is-bash { border-left-color: var(--warning-color, #d97706); }
-.ide-tools__row.is-read { border-left-color: var(--success-color, #18a058); }
-.ide-tools__row.is-search { border-left-color: var(--info-color, #8b5cf6); }
-.ide-tools__row.is-web { border-left-color: var(--info-color, #0ea5e9); }
-.ide-tools__icon { color: var(--text-color-3, #999); width: 14px; }
+.ide-tools__row.is-edit { border-left-color: var(--primary-color); }
+.ide-tools__row.is-bash { border-left-color: var(--warning-color); }
+.ide-tools__row.is-read { border-left-color: var(--success-color); }
+.ide-tools__row.is-search { border-left-color: var(--info-color); }
+.ide-tools__row.is-web { border-left-color: var(--info-color); }
+.ide-tools__icon { color: var(--text-muted); width: 14px; }
 .ide-tools__name { font-family: ui-monospace, monospace; font-size: 11px; }
 .ide-tools__summary {
-  margin-left: auto; color: var(--text-color-3, #999); font-size: 11px;
+  margin-left: auto; color: var(--text-muted); font-size: 11px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%;
 }
 </style>

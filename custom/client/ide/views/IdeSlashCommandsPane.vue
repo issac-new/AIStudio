@@ -67,7 +67,7 @@ async function reload(): Promise<void> {
     </div>
     <p class="ide-slash__hint">{{ t('ide.slash.hint') }}</p>
 
-    <div v-if="!rows.length" class="ide-slash__empty" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-slash-empty">{{ t('ide.slash.empty') }}</div>
 
     <div v-for="(c, i) in rows" :key="i" class="ide-slash__row" :class="{ 'ide-slash__row--builtin': c.builtin }" :data-testid="`ide-slash-row-${i}`">
       <div class="ide-slash__line">
@@ -92,27 +92,26 @@ async function reload(): Promise<void> {
 </template>
 
 <style scoped lang="scss">
-.ide-slash { display: flex; flex-direction: column; height: 100%; padding: 10px 12px; font-size: 12px; color: var(--text-primary, #d7dae0); overflow-y: auto; }
+.ide-slash { display: flex; flex-direction: column; height: 100%; padding: 10px 12px; font-size: 12px; color: var(--text-primary); overflow-y: auto; }
 .ide-slash__head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .ide-slash__title { font-weight: 600; flex: 1; }
-.ide-slash__head button { border: 1px solid var(--border-color, #3a3f4b); background: none; color: var(--text-secondary, #b0b5be); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
-.ide-slash__hint { font-size: 10px; color: var(--text-muted, #9aa0aa); margin: 0 0 8px; }
-.ide-slash__empty { color: var(--text-muted, #9aa0aa); padding: 8px 0; }
-.ide-slash__row { border: 1px solid var(--border-color, #3a3f4b); border-radius: 6px; padding: 6px; margin-bottom: 8px; }
+.ide-slash__head button { border: 1px solid var(--border-color); background: none; color: var(--text-secondary); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
+.ide-slash__hint { font-size: 10px; color: var(--text-muted); margin: 0 0 8px; }
+.ide-slash__row { border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; margin-bottom: 8px; }
 .ide-slash__line { display: flex; gap: 4px; align-items: center; }
-.ide-slash__slash { color: var(--primary-color, #18a058); font-weight: 600; }
+.ide-slash__slash { color: var(--primary-color); font-weight: 600; }
 .ide-slash__row input, .ide-slash__row textarea {
-  width: 100%; border: 1px solid var(--border-color, #3a3f4b); background: none;
-  color: var(--text-primary, #d7dae0); border-radius: 4px; padding: 3px 6px; font-size: 11px;
+  width: 100%; border: 1px solid var(--border-color); background: none;
+  color: var(--text-primary); border-radius: 4px; padding: 3px 6px; font-size: 11px;
   font-family: ui-monospace, monospace;
 }
 .ide-slash__desc { margin-top: 4px; }
 .ide-slash__row textarea { margin-top: 4px; resize: vertical; }
-.ide-slash__row button { border: none; background: none; cursor: pointer; color: var(--text-muted, #9aa0aa); }
-.ide-slash__problems { color: var(--error-color, #f04864); font-size: 11px; margin: 4px 0; padding-left: 18px; }
+.ide-slash__row button { border: none; background: none; cursor: pointer; color: var(--text-muted); }
+.ide-slash__problems { color: var(--error-color); font-size: 11px; margin: 4px 0; padding-left: 18px; }
 .ide-slash__savebar { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
-.ide-slash__savebar button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 4px; padding: 2px 14px; cursor: pointer; }
-.ide-slash__ok { color: var(--primary-color, #18a058); font-size: 11px; }
+.ide-slash__savebar button { border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 4px; padding: 2px 14px; cursor: pointer; }
+.ide-slash__ok { color: var(--primary-color); font-size: 11px; }
 .ide-slash__row--builtin { border-style: dashed; opacity: 0.85; }
-.ide-slash__builtin { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; color: var(--text-muted, #878c99); flex-shrink: 0; }
+.ide-slash__builtin { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; color: var(--text-muted); flex-shrink: 0; }
 </style>

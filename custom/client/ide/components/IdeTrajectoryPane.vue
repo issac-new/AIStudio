@@ -244,7 +244,7 @@ const KIND_TONE: Record<string, string> = {
 
 .traj__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .traj__stat { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.traj__stat--err { color: var(--error, #e11d48); font-weight: 600; }
+.traj__stat--err { color: var(--error); font-weight: 600; }
 .traj__spacer { flex: 1; }
 .traj__sortbtn {
   height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 9px;
@@ -262,12 +262,12 @@ const KIND_TONE: Record<string, string> = {
 .traj__query {
   height: 26px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px;
   background: var(--bg-secondary); color: var(--text-primary); font-size: 11px;
-  font-family: var(--font-mono, monospace); outline: none;
-  &:focus { border-color: var(--primary, #3b82f6); }
+  font-family: var(--font-mono); outline: none;
+  &:focus { border-color: var(--primary); }
 }
 
 .traj__state { padding: 20px 0; text-align: center; color: var(--text-muted); font-size: 11px; }
-.traj__state--err { color: var(--error, #e11d48); }
+.traj__state--err { color: var(--error); }
 
 .traj__ledger { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
 
@@ -275,8 +275,8 @@ const KIND_TONE: Record<string, string> = {
   display: flex; align-items: center; gap: 6px; padding: 4px 8px;
   border: none; background: transparent; cursor: pointer; font-family: inherit; text-align: left;
   &:hover { background: var(--bg-secondary); }
-  &.traj__row--sel { background: var(--bg-secondary); box-shadow: inset 2px 0 0 var(--primary, #3b82f6); }
-  &.traj__row--err .traj__label { color: var(--error, #e11d48); }
+  &.traj__row--sel { background: var(--bg-secondary); box-shadow: inset 2px 0 0 var(--primary); }
+  &.traj__row--err .traj__label { color: var(--error); }
 }
 
 .traj__kind {
@@ -284,11 +284,11 @@ const KIND_TONE: Record<string, string> = {
   font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
   background: var(--bg-secondary); color: var(--text-muted);
 }
-.t-kind--tool { color: #61afef; }
-.t-kind--agent { color: #c678dd; }
-.t-kind--skill { color: #98c379; }
-.t-kind--appr { color: #e5c07b; }
-.t-kind--err { color: var(--error, #e11d48); }
+.t-kind--tool { color: var(--accent-info); }
+.t-kind--agent { color: var(--ia-compensated); }
+.t-kind--skill { color: var(--success); }
+.t-kind--appr { color: var(--ia-stale); }
+.t-kind--err { color: var(--error); }
 
 .traj__label {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -296,8 +296,8 @@ const KIND_TONE: Record<string, string> = {
 }
 
 .traj__status { flex-shrink: 0; font-size: 10px; }
-.traj__status--err { color: var(--error, #e11d48); font-weight: 700; }
-.traj__status--run { color: #61afef; animation: traj-pulse 1.2s ease-in-out infinite; }
+.traj__status--err { color: var(--error); font-weight: 700; }
+.traj__status--run { color: var(--accent-info); animation: traj-pulse 1.2s ease-in-out infinite; }
 @keyframes traj-pulse { 50% { opacity: 0.35; } }
 
 .traj__dur { flex-shrink: 0; font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }

@@ -69,7 +69,7 @@ function age(ts: number, now?: number): string {
         <span class="att__sub">{{ t(subKeyOf(row)) }} {{ age(row.createdAt, now) }}</span>
       </span>
     </button>
-    <div v-if="!rows.length" class="att__empty" data-testid="att-empty">
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact" data-testid="att-empty">
       {{ t('ia2.att.empty') }}
     </div>
   </div>
@@ -91,5 +91,4 @@ function age(ts: number, now?: number): string {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .att__sub { font-size: 10px; color: var(--text-muted); }
-.att__empty { padding: 4px 6px; font-size: 10px; color: var(--text-muted); }
 </style>

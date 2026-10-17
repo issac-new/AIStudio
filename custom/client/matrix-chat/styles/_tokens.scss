@@ -6,7 +6,7 @@
 // matrix-chat 本地 sass 变量（上游 variables.scss 无此二项；组件内直接引用）。
 // $accent-info: 信息色（链接/图标 info 态）；$text-on-accent: 强调色底上的文字。
 // 注意：sass 变量是编译期符号——组件的 @use 链需能解析到本文件。
-$accent-info: var(--info, #38bdf8);
+$accent-info: var(--info);
 $text-on-accent: var(--bg-primary);
 
 :root {
@@ -50,7 +50,10 @@ $text-on-accent: var(--bg-primary);
   --mx-room-tile-hover-bg: rgba(var(--accent-primary-rgb), 0.04);
   --mx-room-tile-active-bg: rgba(var(--accent-primary-rgb), 0.08);
 
+  // ── Bubble（原 --bubble-margin-inline-start 借名落地，2026-10-17 幽灵变量清账）──
+  --mx-bubble-margin-inline-start: 48px;
+
   // ── Read marker ──
   --mx-read-marker-color: var(--accent-primary);
-  --mx-code-bg: var(--code-bg, #f5f5f5);
+  --mx-code-bg: var(--code-bg);
 }

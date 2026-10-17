@@ -102,7 +102,7 @@ onMounted(() => void refresh())
     <p class="ai__sub">{{ T.sub }}</p>
     <div v-if="error" class="ai__error" data-testid="gov-agent-identity-error">{{ T.fail }}：{{ error }}</div>
 
-    <div v-if="!identities.length" class="ai__empty" data-testid="gov-agent-identity-empty">{{ T.empty }}</div>
+    <div v-if="!identities.length" class="ui-empty-state" data-testid="gov-agent-identity-empty">{{ T.empty }}</div>
 
     <div v-if="identities.length" class="ai__tablewrap">
       <table class="ai__table" data-testid="gov-agent-identity-table">
@@ -180,24 +180,23 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.ai { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.ai { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .ai__bar { display: flex; align-items: center; gap: 8px; }
 .ai__title { margin: 0; font-size: 14px; }
 .ai__refresh { margin-left: auto; font-size: 12px; cursor: pointer; }
 .ai__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.ai__error { color: var(--danger, #dc2626); font-size: 12px; }
-.ai__empty { font-size: 12px; opacity: 0.6; }
+.ai__error { color: var(--danger); font-size: 12px; }
 .ai__tablewrap { overflow: auto; }
 .ai__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.ai__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color, #e5e7eb); padding: 4px 6px; white-space: nowrap; }
+.ai__table th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 4px 6px; white-space: nowrap; }
 .ai__table td { border-bottom: 1px solid rgb(0 0 0 / 5%); padding: 4px 6px; vertical-align: top; }
-.ai__mini { font-size: 10.5px; padding: 0 5px; margin: 0 2px; border-radius: 8px; border: 1px solid var(--border-color, #e5e7eb); background: transparent; cursor: pointer; }
+.ai__mini { font-size: 10.5px; padding: 0 5px; margin: 0 2px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; }
 .ai__dim { opacity: 0.6; }
-.ai__chain { font-size: 12px; border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.ai__chain { font-size: 12px; border: 1px dashed var(--border-color); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
 .ai__path { font-size: 11.5px; }
 .ai__forms, .ai__events { font-size: 12px; }
 .ai__form { display: flex; gap: 6px; margin: 4px 0; flex-wrap: wrap; }
 .ai__form input { width: 160px; font-size: 12px; padding: 2px 6px; }
 .ai__ev { font-size: 11px; }
-.ai__boundary { font-size: 11px; color: var(--warning-ink, #92400e); background: rgb(254 243 199 / 50%); border-radius: 6px; padding: 4px 8px; }
+.ai__boundary { font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.5); border-radius: 6px; padding: 4px 8px; }
 </style>

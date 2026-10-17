@@ -71,13 +71,13 @@ const sections = computed(() => Object.keys(SECTION_TITLES) as Array<keyof Hando
 
 <style scoped lang="scss">
 .ide-handoff {
-  border: 1px solid var(--border-color, #e0e0e0);
-  border-left: 3px solid var(--primary-color, #18a058);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-color);
   border-radius: 6px;
   padding: 8px 12px;
   margin: 6px 12px;
   font-size: 12px;
-  background: var(--card-color, #fafafa);
+  background: var(--card-color);
 }
 
 .ide-handoff__head {
@@ -93,7 +93,7 @@ const sections = computed(() => Object.keys(SECTION_TITLES) as Array<keyof Hando
 
 .ide-handoff__title {
   flex: 0 0 48px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
 }
 
 .ide-handoff__section ul {

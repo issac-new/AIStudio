@@ -89,14 +89,14 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   height: 5px;
   border-radius: 2px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
 }
 
 .ide-plan-progress__fill {
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: var(--success-color, #98c379);
+  background: var(--success-color);
   transition: width 0.3s ease;
 }
 
@@ -104,7 +104,7 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   flex-shrink: 0;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-plan-actions {
@@ -112,27 +112,27 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   gap: 6px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color);
 }
 
 .ide-plan-action {
   flex: 1;
   padding: 4px 8px;
   font-size: 11px;
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   cursor: pointer;
 
-  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+  &:hover { border-color: var(--primary-color); color: var(--primary-color); }
 
   &.is-primary {
-    background: color-mix(in srgb, var(--primary-color, #18a058) 13%, transparent);
-    border-color: color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
-    color: var(--primary-color, #18a058);
+    background: color-mix(in srgb, var(--primary-color) 13%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+    color: var(--primary-color);
 
-    &:hover { background: color-mix(in srgb, var(--primary-color, #18a058) 20%, transparent); }
+    &:hover { background: color-mix(in srgb, var(--primary-color) 20%, transparent); }
   }
 }
 </style>

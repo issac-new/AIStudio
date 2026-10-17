@@ -14,7 +14,7 @@ const ICON: Record<string, string> = { run: '▶', gate: '⧖', task: '📋', sy
 
 <template>
   <div class="tf" data-testid="tdp-feed">
-    <div v-if="!rows.length" class="tf__empty">{{ t('ia2.tdp.feedEmpty') }}</div>
+    <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.tdp.feedEmpty') }}</div>
     <div v-for="r in rows" :key="r.id" class="tf__row" :data-testid="`tdp-feed-${r.id}`">
       <span class="tf__icon" :class="`tf__icon--${r.icon}`">{{ ICON[r.icon] ?? '·' }}</span>
       <span class="tf__text">{{ t(r.key, r.params ?? {}) }}</span>
@@ -25,7 +25,6 @@ const ICON: Record<string, string> = { run: '▶', gate: '⧖', task: '📋', sy
 
 <style scoped lang="scss">
 .tf { display: flex; flex-direction: column; gap: 1px; }
-.tf__empty { padding: 8px 4px; font-size: 11px; color: var(--text-muted); }
 .tf__row {
   display: flex; align-items: baseline; gap: 6px; padding: 3px 4px;
   font-size: 10.5px; color: var(--text-secondary);

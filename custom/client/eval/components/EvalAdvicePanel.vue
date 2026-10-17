@@ -128,16 +128,16 @@ const stages = computed<AdviceStageDto[]>(() => report.value?.waterfall?.stages 
   display: flex; flex-direction: column; gap: 10px;
   &__bar { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   &__ctrl { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-  &__error { color: #dc2626; }
+  &__error { color: var(--error); }
   &__sources span { margin-right: 10px; font-size: 12px; }
   &__src--off { opacity: 0.45; text-decoration: line-through; }
   &__table { border-collapse: collapse; font-size: 13px; width: 100%;
-    th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; } }
+    th, td { border: 1px solid var(--border-color); padding: 5px 8px; text-align: left; } }
   &__sample { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   &__falls { display: flex; flex-direction: column; gap: 4px; max-width: 720px; }
   &__fall { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   &__fall-label { width: 110px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  &__fall-bar { height: 14px; background: #3b82f6; border-radius: 3px; min-width: 2px; }
+  &__fall-bar { height: 14px; background: var(--accent-primary); border-radius: 3px; min-width: 2px; }
   &__fall-val { white-space: nowrap; }
 }
 </style>

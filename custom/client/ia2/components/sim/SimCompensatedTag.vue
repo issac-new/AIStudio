@@ -21,7 +21,7 @@ const props = defineProps<{
   padding: 0 6px;
   border-radius: 4px;
   font-size: 12px;
-  color: #b98ee0;
+  color: var(--ia-compensated);
   background: rgba(150, 84, 214, 0.18);
   border: 1px solid rgba(150, 84, 214, 0.45);
 }

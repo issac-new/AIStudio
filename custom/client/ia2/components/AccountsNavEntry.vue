@@ -19,9 +19,9 @@ const { t } = useI18n()
 .acct-nav {
   display: flex; align-items: center; gap: 6px; width: 100%;
   padding: 6px 10px; font-size: 12.5px; text-align: left;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 7px;
-  background: var(--bg-primary, #fff); color: inherit; cursor: pointer;
-  &:hover { background: var(--bg-secondary, #f1f2f4); }
+  border: 1px solid var(--border-color); border-radius: 7px;
+  background: var(--bg-primary); color: inherit; cursor: pointer;
+  &:hover { background: var(--bg-secondary); }
 }
 .acct-nav__ico { font-size: 13px; }
 </style>

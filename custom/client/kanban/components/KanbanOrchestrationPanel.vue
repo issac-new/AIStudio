@@ -227,7 +227,7 @@ watch(() => store.selectedBoard, () => {
             v-for="profile in profiles"
             :key="profile.name"
             class="profile-row"
-            :style="{ borderColor: profile.description ? '#888' : '#cc6' }"
+            :style="{ borderColor: profile.description ? 'var(--border-color)' : 'var(--ia-stale)' }"
           >
             <div class="profile-header">
               <span class="profile-name">{{ profile.name }}</span>
@@ -297,13 +297,13 @@ watch(() => store.selectedBoard, () => {
 
 .msg-ok {
   background: rgba(24, 160, 88, 0.1);
-  color: #18a058;
+  color: var(--success);
   border: 1px solid rgba(24, 160, 88, 0.2);
 }
 
 .msg-err {
   background: rgba(208, 48, 80, 0.1);
-  color: #d03050;
+  color: var(--error);
   border: 1px solid rgba(208, 48, 80, 0.2);
 }
 
@@ -366,7 +366,7 @@ watch(() => store.selectedBoard, () => {
 }
 
 .profile-row {
-  border-left: 2px solid #888;
+  border-left: 2px solid var(--border-color);
   padding-left: 8px;
   display: flex;
   flex-direction: column;
@@ -394,7 +394,7 @@ watch(() => store.selectedBoard, () => {
 
 .profile-tag.default {
   background: rgba(24, 160, 88, 0.15);
-  color: #18a058;
+  color: var(--success);
 }
 
 .profile-actions {

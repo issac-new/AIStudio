@@ -322,12 +322,12 @@ function fmtEventTs(ts: string | number | undefined): string {
   display: inline-flex; align-items: center; white-space: nowrap;
 }
 /* v13 语义类词表着色（chips/行图标/分布段共用） */
-.rc__sem--lifecycle { color: #8b5cf6; }
-.rc__sem--step { color: #0ea5e9; }
-.rc__sem--node { color: var(--primary, #3b82f6); }
-.rc__sem--interrupt { color: var(--warning, #f59e0b); }
-.rc__sem--stage { color: #14b8a6; }
-.rc__sem--cost { color: #eab308; }
+.rc__sem--lifecycle { color: var(--ia-compensated); }
+.rc__sem--step { color: var(--accent-info); }
+.rc__sem--node { color: var(--primary); }
+.rc__sem--interrupt { color: var(--warning); }
+.rc__sem--stage { color: var(--ia-fresh); }
+.rc__sem--cost { color: var(--ia-stale); }
 .rc__sem--other { color: var(--text-muted); }
 .rc__sem { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 .rc__sembar {
@@ -335,12 +335,12 @@ function fmtEventTs(ts: string | number | undefined): string {
   border: 1px solid var(--border-color); background: var(--bg-secondary);
 }
 .rc__sembar-seg { min-width: 2px; }
-.rc__sembar-seg.rc__sem--lifecycle { background: #8b5cf6; }
-.rc__sembar-seg.rc__sem--step { background: #0ea5e9; }
-.rc__sembar-seg.rc__sem--node { background: var(--primary, #3b82f6); }
-.rc__sembar-seg.rc__sem--interrupt { background: var(--warning, #f59e0b); }
-.rc__sembar-seg.rc__sem--stage { background: #14b8a6; }
-.rc__sembar-seg.rc__sem--cost { background: #eab308; }
+.rc__sembar-seg.rc__sem--lifecycle { background: var(--ia-compensated); }
+.rc__sembar-seg.rc__sem--step { background: var(--accent-info); }
+.rc__sembar-seg.rc__sem--node { background: var(--primary); }
+.rc__sembar-seg.rc__sem--interrupt { background: var(--warning); }
+.rc__sembar-seg.rc__sem--stage { background: var(--ia-fresh); }
+.rc__sembar-seg.rc__sem--cost { background: var(--ia-stale); }
 .rc__sembar-seg.rc__sem--other { background: var(--text-muted); }
 .rc__semchips { display: flex; flex-wrap: wrap; gap: 4px; }
 .rc__semchip {
@@ -350,8 +350,8 @@ function fmtEventTs(ts: string | number | undefined): string {
   &:hover { border-color: var(--text-muted); }
 }
 .rc__semchip--on { border-color: currentColor; font-weight: 700; background: var(--bg-secondary); }
-.rc__chron-row--interrupt { border-left: 2px solid var(--warning, #f59e0b); padding-left: 4px; }
-.rc__chron-row--node { border-left: 2px solid var(--primary, #3b82f6); padding-left: 4px; }
+.rc__chron-row--interrupt { border-left: 2px solid var(--warning); padding-left: 4px; }
+.rc__chron-row--node { border-left: 2px solid var(--primary); padding-left: 4px; }
 .rc__live, .rc__hist { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px; gap: 10px; overflow-y: auto; }
 .rc__graph {
   flex: 1; min-height: 140px; border: 1px solid var(--border-color); border-radius: 6px;

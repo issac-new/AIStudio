@@ -136,23 +136,23 @@ const liveTitle = computed(() => {
 }
 .bchip {
   display: inline-flex; align-items: center; gap: 4px;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 999px;
-  background: var(--bg-primary, #fff); padding: 1px 9px;
-  color: var(--text-muted, #878c99); font-size: 11px; font-family: inherit;
+  border: 1px solid var(--border-color); border-radius: 999px;
+  background: var(--bg-primary); padding: 1px 9px;
+  color: var(--text-muted); font-size: 11px; font-family: inherit;
   flex-shrink: 0;
 }
-.bchip--live { cursor: pointer; color: #15803d; border-color: #bbf7d0; &:hover { background: #f0fdf4; } }
+.bchip--live { cursor: pointer; color: var(--success); border-color: rgba(var(--success-rgb), 0.4); &:hover { background: rgba(var(--success-rgb), 0.05); } }
 .bchip__dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--success);
   animation: bgwork-pulse 1.6s ease-in-out infinite;
 }
-.bchip--agent { color: var(--text-primary, inherit); }
+.bchip--agent { color: var(--text-primary); }
 .bchip--more {
-  cursor: pointer; color: var(--text-secondary, inherit); font-weight: 600;
+  cursor: pointer; color: var(--text-secondary); font-weight: 600;
   min-width: 36px; justify-content: center;
 }
 .bchip--run {
-  color: #1d4ed8; border-color: #bfdbfe;
+  color: var(--accent-info); border-color: rgba(var(--accent-info-rgb), 0.4);
   // 根治轮：长 run 文本（runId+回归轮元数据+陈旧提示可达 600px+）单行省略，
   // 不再把窄容器里的其它 chip 挤没；完整内容在悬浮提示。
   flex-shrink: 1; min-width: 0; max-width: 46%;

@@ -82,12 +82,12 @@ onMounted(() => { void registry.detectRegistry() })
 .dap__sec { font-size: 12px; font-weight: 600; }
 .dap__form { display: flex; gap: 6px; flex-wrap: wrap; }
 .dap__select { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 3px 6px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); max-width: 180px; }
-.dap__primary { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; font-family: inherit; }
+.dap__primary { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; font-family: inherit; }
 .dap__list { display: flex; flex-direction: column; gap: 4px; }
 .dap__row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .dap__room { font-weight: 600; }
-.dap__assignee { color: var(--color-primary, #3b82f6); }
+.dap__assignee { color: var(--color-primary); }
 .dap__by { color: var(--text-secondary); font-size: 11px; }
-.dap__error { color: var(--color-danger, #e11d48); font-size: 12px; }
-.dap__clear { border: none; background: none; color: var(--color-danger, #e11d48); cursor: pointer; }
+.dap__error { color: var(--color-danger); font-size: 12px; }
+.dap__clear { border: none; background: none; color: var(--color-danger); cursor: pointer; }
 </style>

@@ -374,7 +374,7 @@ function onLoopOpenTask(taskId: string): void {
 
 /* V5 补遗⑤ M6：循环实时画布内嵌节 */
 .rd-view__loopcanvas {
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 12px;
   display: flex;
@@ -385,7 +385,7 @@ function onLoopOpenTask(taskId: string): void {
   align-self: flex-start;
   background: none;
   border: none;
-  color: var(--text-primary, #d7dae0);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -404,7 +404,7 @@ function onLoopOpenTask(taskId: string): void {
   gap: 5px;
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -414,21 +414,21 @@ function onLoopOpenTask(taskId: string): void {
 .rd-view__title {
   margin: 0;
   font-size: 15px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .rd-view__count {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 
 .rd-view__export {
   margin-left: auto;
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -443,10 +443,10 @@ function onLoopOpenTask(taskId: string): void {
 /* 任务工厂沉淀（2026-10-10） */
 .rd-view__deposit {
   padding: 4px 10px;
-  border: 1px solid #b45309;
-  border-radius: var(--radius-micro, 3px);
+  border: 1px solid rgba(var(--warning-rgb), 0.5);
+  border-radius: var(--radius-micro);
   background: rgba(245, 158, 11, 0.1);
-  color: #b45309;
+  color: var(--ia-stale);
   cursor: pointer;
   font-size: 12px;
   font-family: inherit;
@@ -458,26 +458,26 @@ function onLoopOpenTask(taskId: string): void {
   flex-wrap: wrap;
   align-items: center;
   padding: 8px 10px;
-  border: 1px dashed #f59e0b;
-  border-radius: var(--radius-micro, 3px);
+  border: 1px dashed var(--ia-stale);
+  border-radius: var(--radius-micro);
 }
 .rd-view__deposit-input {
   flex: 1;
   min-width: 180px;
   padding: 4px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
-  background: var(--bg-primary, transparent);
+  border-radius: var(--radius-micro);
+  background: var(--bg-primary);
   color: inherit;
   font-size: 12px;
   font-family: inherit;
 }
 .rd-view__deposit-go {
   padding: 4px 12px;
-  border: 1px solid #b45309;
-  border-radius: var(--radius-micro, 3px);
-  background: #f59e0b;
-  color: #fff;
+  border: 1px solid rgba(var(--warning-rgb), 0.5);
+  border-radius: var(--radius-micro);
+  background: var(--warning);
+  color: var(--text-on-accent);
   cursor: pointer;
   font-size: 12px;
   font-family: inherit;
@@ -486,7 +486,7 @@ function onLoopOpenTask(taskId: string): void {
 .rd-view__deposit-cancel {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -496,9 +496,9 @@ function onLoopOpenTask(taskId: string): void {
 .rd-view__deposit-done {
   padding: 6px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 
 .rd-view__error {
@@ -506,14 +506,14 @@ function onLoopOpenTask(taskId: string): void {
   flex-direction: column;
   gap: 4px;
   padding: 8px 12px;
-  border: 1px solid var(--color-danger, #e11d48);
-  border-radius: var(--radius-micro, 3px);
-  color: var(--color-danger, #e11d48);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-micro);
+  color: var(--color-danger);
   font-size: 12px;
 }
 .rd-view__error code {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   word-break: break-all;
 }
 
@@ -538,8 +538,8 @@ function onLoopOpenTask(taskId: string): void {
   height: 100%;
   min-height: 300px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-standard, 6px);
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  border-radius: var(--radius-standard);
+  color: var(--text-muted, var(--color-text-secondary));
   font-size: 12px;
 }
 

@@ -413,16 +413,16 @@ function deltaText(v: number | null | undefined): string {
   display: flex;
   gap: 4px;
   button {
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--border-color);
     background: transparent;
     border-radius: 8px;
     padding: 6px 14px;
     cursor: pointer;
     font-size: 13px;
-    &.active { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); }
+    &.active { background: var(--accent-primary); color: var(--text-on-accent); }
   }
 }
-.eval-view__error { color: var(--danger, #dc2626); font-size: 13px; }
+.eval-view__error { color: var(--danger); font-size: 13px; }
 .eval-sets__bar {
   display: flex;
   justify-content: space-between;
@@ -439,26 +439,26 @@ function deltaText(v: number | null | undefined): string {
   .wide { grid-column: 1 / -1; }
   .check { flex-direction: row; align-items: center; gap: 8px; }
   input, select, textarea {
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 6px 10px;
     font-size: 13px;
-    background: var(--bg-primary, #fff);
+    background: var(--bg-primary);
     color: inherit;
     font-family: inherit;
   }
-  textarea { font-family: var(--font-mono, monospace); font-size: 12px; }
+  textarea { font-family: var(--font-mono); font-size: 12px; }
   .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
 }
 .card {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 14px;
   background: var(--bg-secondary, rgba(255, 255, 255, 0.55));
 }
 button.primary {
-  background: var(--accent, #4f6ef7);
-  color: var(--text-on-accent, #fff);
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 6px 14px;
@@ -469,14 +469,14 @@ button.primary {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
   th { font-weight: 600; opacity: 0.75; }
-  tbody tr { cursor: default; &.selected { background: var(--bg-tertiary, #f1f2f4); } }
-  .ok { color: var(--success, #16a34a); font-weight: 600; }
-  .danger { color: var(--danger, #dc2626); font-weight: 600; }
-  .mono { font-family: var(--font-mono, monospace); }
+  tbody tr { cursor: default; &.selected { background: var(--bg-tertiary); } }
+  .ok { color: var(--success); font-weight: 600; }
+  .danger { color: var(--danger); font-weight: 600; }
+  .mono { font-family: var(--font-mono); }
   .row-actions { display: flex; gap: 6px; justify-content: flex-end;
-    button { border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; }
+    button { border: 1px solid var(--border-color); background: transparent; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; }
   }
 }
 .chip {
@@ -484,9 +484,9 @@ button.primary {
   padding: 1px 7px;
   font-size: 11px;
   white-space: nowrap;
-  &.chip-sealed { background: var(--bg-tertiary, #eef0f3); }
-  &.chip-warn { background: var(--warning, #f59e0b); color: var(--text-on-warning, #fff); }
-  &.chip-gate-pass { background: color-mix(in srgb, var(--success, #16a34a) 14%, transparent); color: var(--success, #16a34a); }
+  &.chip-sealed { background: var(--bg-tertiary); }
+  &.chip-warn { background: var(--warning); color: var(--text-on-warning); }
+  &.chip-gate-pass { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
 }
 .eval-compare {
   display: flex;
@@ -496,7 +496,7 @@ button.primary {
   &__title { font-size: 13px; font-weight: 600; }
   &__picks { display: flex; align-items: flex-end; gap: 10px;
     label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
-    select { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 4px 8px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; }
+    select { border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; font-size: 12px; background: var(--bg-primary); color: inherit; }
   }
   &__deltas { margin: 0; font-size: 12px; }
 }

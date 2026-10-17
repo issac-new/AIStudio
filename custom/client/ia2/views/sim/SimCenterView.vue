@@ -206,7 +206,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 .sim-center__settings {
   margin-left: auto;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -219,7 +219,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 .sim-center__tab {
   padding: 4px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -227,7 +227,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
   font-family: inherit;
 }
 .sim-center__tab--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 
@@ -239,7 +239,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
   gap: 8px;
   padding: 32px 20px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
 }
 /* B2 实装签：去虚线占位框，承载实际面板 */
 .sim-center__panel--live {
@@ -250,7 +250,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 .sim-center__pending {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   line-height: 1.6;
 }
 .sim-center__badge {
@@ -258,13 +258,13 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
   margin-right: 8px;
   padding: 1px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 11px;
 }
 .sim-center__endpoints {
   margin: 4px 0 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .sim-center__endpoint-list {
   margin: 0;
@@ -275,7 +275,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
   gap: 4px;
 }
 .sim-center__endpoint {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 </style>

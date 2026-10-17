@@ -12,6 +12,10 @@ import { buildIaRoutes } from './routes'
 // 在本模块顶部同步导入（与 cockpit/index.ts 同款模式：bootstrap 动态 import 模块的
 // 顶层静态样式，避免样式挂在懒加载场景组件上导致首屏/生产提取时序问题）。
 import '@/custom/cockpit/styles/cockpit.scss'
+// ECharts 语义色缓存随主题失效（批 A6，双落点幂等；详见 theme-bridge.ts 头注）
+import '@/custom/cockpit/styles/theme-bridge'
+// 共享 UI 基元样式（批 B1：统一空态类；ia2 注册无门控=全局面可用）
+import '@/custom/ui/styles/ui.scss'
 
 export async function registerIa2(_app?: App): Promise<void> {
   for (const route of buildIaRoutes()) registerRoute(route)

@@ -91,21 +91,21 @@ function formatHours(ms: number): string {
 }
 .ia-engine-card__mode {
   padding: 1px 10px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
   font-family: ui-monospace, monospace;
-  color: var(--color-on-accent, #fff);
-  background: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--color-on-accent);
+  background: var(--text-muted, var(--color-text-secondary));
 }
 .ia-engine-card__mode--on {
-  background: var(--success, var(--color-success, #10b981));
+  background: var(--success, var(--color-success));
 }
 .ia-engine-card__mode--shadow {
-  background: var(--warning, var(--color-warning, #f59e0b));
+  background: var(--warning, var(--color-warning));
 }
 .ia-engine-card__mode--legacy {
-  background: var(--text-muted, var(--color-text-secondary, #878c99));
+  background: var(--text-muted, var(--color-text-secondary));
 }
 .ia-engine-card__desc {
   font-size: 12px;
@@ -137,10 +137,10 @@ function formatHours(ms: number): string {
 }
 .ia-engine-card__foot {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ia-engine-card__hint {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 </style>

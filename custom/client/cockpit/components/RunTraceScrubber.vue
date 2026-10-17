@@ -137,7 +137,7 @@ const durationLabel = computed(() => fmtDuration(totalSpan.value))
 .run-trace-scrubber__progress { font-size: 10px; color: var(--accent-info); }
 .run-trace-scrubber__hint { font-size: 9px; color: var(--text-muted); margin-left: auto; }
 .run-trace-scrubber__track { position: relative; height: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 3px; overflow: visible; cursor: ew-resize; }
-.run-trace-scrubber__fill { position: absolute; top: 0; left: 0; bottom: 0; background: linear-gradient(to right, var(--accent-info-alpha, rgba(107,163,214,0.15)), rgba(107,163,214,0.25)); border-radius: 3px 0 0 3px; transition: width 0.15s ease; }
+.run-trace-scrubber__fill { position: absolute; top: 0; left: 0; bottom: 0; background: linear-gradient(to right, rgba(var(--accent-info-rgb), 0.15), rgba(var(--accent-info-rgb), 0.25)); border-radius: 3px 0 0 3px; transition: width 0.15s ease; }
 .run-trace-scrubber__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border-color); pointer-events: none; }
 .run-trace-scrubber__tick-label { position: absolute; top: 100%; left: 0; transform: translateX(-50%); margin-top: 2px; font-size: 8px; color: var(--text-muted); white-space: nowrap; }
 .run-trace-scrubber__handle { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--accent-primary); border: 2px solid var(--bg-card); transform: translate(-50%, -50%); box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: grab; z-index: 2;

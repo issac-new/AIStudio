@@ -65,16 +65,16 @@ function go(target: string): void {
 .sfs { display: flex; align-items: stretch; gap: 6px; flex-shrink: 0; }
 .sfs__stage {
   display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px;
+  border: 1px solid var(--border-color); border-radius: 6px;
   background: transparent; color: inherit; cursor: pointer;
   padding: 6px 12px; min-width: 200px;
   &:hover { background: rgba(127, 127, 127, 0.08); }
 }
 .sfs__stage--cur {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
-  background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 10%, transparent);
+  border-color: var(--accent-primary, var(--color-primary));
+  background: color-mix(in srgb, var(--accent-primary, var(--color-primary)) 10%, transparent);
 }
 .sfs__title { font-size: 12px; font-weight: 600; }
-.sfs__hint { font-size: 11px; color: var(--text-muted, #878c99); text-align: left; }
-.sfs__arrow { align-self: center; color: var(--text-muted, #878c99); font-size: 14px; }
+.sfs__hint { font-size: 11px; color: var(--text-muted); text-align: left; }
+.sfs__arrow { align-self: center; color: var(--text-muted); font-size: 14px; }
 </style>

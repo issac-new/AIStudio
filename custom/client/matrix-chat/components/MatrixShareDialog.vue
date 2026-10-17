@@ -255,7 +255,7 @@ async function handleCopyAlias() {
 
 .share-copied {
   font-size: 12px;
-  color: var(--success, #22c55e);
+  color: var(--success);
   margin: 0;
   text-align: center;
 }

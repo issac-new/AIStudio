@@ -219,7 +219,7 @@ const expandedBp = computed(() => blueprints.value?.find(b => b.key === expanded
 .bpslot__sched { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .bpslot__row { display: grid; grid-template-columns: 160px 1fr; gap: 10px; align-items: center; }
 .bpslot__label { font-size: 12px; color: var(--text-secondary); }
-.bpslot__req { font-size: 10px; color: var(--error, #dc2626); margin-left: 4px; &.is-opt { color: var(--text-muted); } }
+.bpslot__req { font-size: 10px; color: var(--error); margin-left: 4px; &.is-opt { color: var(--text-muted); } }
 .bpslot__input {
   height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 6px;
   background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; font-family: inherit;
@@ -238,6 +238,6 @@ const expandedBp = computed(() => blueprints.value?.find(b => b.key === expanded
   &.is-pri { border-color: var(--primary); color: var(--primary); }
   &:disabled { opacity: 0.6; cursor: wait; }
 }
-.bpslot__ok { font-size: 12px; color: #059669; }
-.bpslot__err { font-size: 11px; color: #dc2626; }
+.bpslot__ok { font-size: 12px; color: var(--success); }
+.bpslot__err { font-size: 11px; color: var(--error); }
 </style>

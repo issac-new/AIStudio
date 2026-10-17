@@ -50,7 +50,7 @@ function roomName(roomId: string): string {
       <button type="button" class="gps__jump" data-testid="gov-people-jump-accounts" @click="router.push({ name: 'ia2.accounts' })">{{ t('ia2.gov.jump.accounts') }} ›</button>
     </div>
     <div class="gps__list" data-testid="gov-people-rows">
-      <div v-if="!rows.length" class="gps__empty">{{ t('ia2.gov.people.empty') }}</div>
+      <div v-if="!rows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.people.empty') }}</div>
       <div v-for="r in rows" :key="r.account.userId" class="gps__row" :data-testid="`gov-people-${r.account.userId}`">
         <span class="gps__body">
           <span class="gps__name">👤 {{ r.account.displayName }}<template v-if="r.account.isLeader"> · {{ t('ia2.gov.people.leader') }}</template></span>
@@ -79,7 +79,7 @@ function roomName(roomId: string): string {
 
 <style scoped lang="scss">
 .gps { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
-.gps__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gps__jump:hover { color: var(--primary, #6366f1); }
+.gps__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gps__jump:hover { color: var(--primary); }
 .gps__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gps__title { font-weight: 700; }
 .gps__sub { font-size: 10px; color: var(--text-muted); }
@@ -102,5 +102,4 @@ function roomName(roomId: string): string {
   &:disabled { opacity: .4; cursor: not-allowed; }
   &:hover:not(:disabled) { color: var(--text-primary); border-color: var(--text-muted); }
 }
-.gps__empty { padding: 16px; color: var(--text-muted); text-align: center; font-size: 11px; }
 </style>

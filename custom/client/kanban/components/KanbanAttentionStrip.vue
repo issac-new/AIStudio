@@ -124,8 +124,8 @@ const attentionText = computed(() => {
   }
 
   &.attention--critical {
-    border-color: rgba(#ff4d4d, 0.55);
-    background: rgba(#ff4d4d, 0.10);
+    border-color: rgba(var(--error-rgb), 0.55);
+    background: rgba(var(--error-rgb), 0.10);
   }
 }
 
@@ -144,7 +144,7 @@ const attentionText = computed(() => {
 }
 
 .attention--error .attention-icon { color: $error; }
-.attention--critical .attention-icon { color: #ff4d4d; }
+.attention--critical .attention-icon { color: var(--error); }
 
 .attention-text {
   flex: 1;
@@ -161,7 +161,7 @@ const attentionText = computed(() => {
 }
 
 .attention--critical .attention-list {
-  border-top-color: rgba(#ff4d4d, 0.2);
+  border-top-color: rgba(var(--error-rgb), 0.2);
 }
 
 .attention-row {
@@ -180,7 +180,7 @@ const attentionText = computed(() => {
   }
 
   &.row--critical:hover {
-    background: rgba(#ff4d4d, 0.08);
+    background: rgba(var(--error-rgb), 0.08);
   }
 }
 
@@ -193,10 +193,10 @@ const attentionText = computed(() => {
 
 .row--warning .row-sev { color: $warning; }
 .row--error .row-sev { color: $error; font-weight: 700; }
-.row--critical .row-sev { color: #ff4d4d; font-weight: 700; }
+.row--critical .row-sev { color: var(--error); font-weight: 700; }
 
 .row-id {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
   color: $text-muted;
   min-width: 7rem;

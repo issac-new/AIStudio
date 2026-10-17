@@ -174,19 +174,19 @@ async function save(): Promise<void> {
 <style scoped lang="scss">
 .gmp { display: flex; flex-direction: column; gap: 6px; }
 .gmp__title { margin: 0; font-size: 13px; }
-.gmp__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, #878c99); }
-.gmp__state { padding: 12px 0; color: var(--text-muted, #878c99); font-size: 12px; }
-.gmp__provider { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 6px; margin: 4px 0; }
+.gmp__sub { margin: 0; font-size: 11.5px; color: var(--text-muted); }
+.gmp__state { padding: 12px 0; color: var(--text-muted); font-size: 12px; }
+.gmp__provider { border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; margin: 4px 0; }
 .gmp__row { display: flex; gap: 6px; margin: 4px 0; align-items: center; }
-.gmp__row input, .gmp__row select { flex: 1; border: 1px solid var(--border-color, #e5e7eb); border-radius: 4px; padding: 3px 6px; font-size: 11.5px; background: transparent; color: inherit; }
+.gmp__row input, .gmp__row select { flex: 1; border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 6px; font-size: 11.5px; background: transparent; color: inherit; }
 .gmp__row.is-model { padding-left: 14px; }
-.gmp__row button { border: 1px solid var(--border-color, #e5e7eb); background: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
-.gmp__add { border: 1px dashed var(--border-color, #e5e7eb); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; align-self: flex-start; }
-.gmp__default span, .gmp__route span { font-size: 11px; color: var(--text-muted, #878c99); flex-shrink: 0; }
+.gmp__row button { border: 1px solid var(--border-color); background: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.gmp__add { border: 1px dashed var(--border-color); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; align-self: flex-start; }
+.gmp__default span, .gmp__route span { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
 .gmp__route { flex-wrap: wrap; }
-.gmp__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-muted, #878c99); }
-.gmp__problems { color: #d03050; font-size: 11px; margin: 6px 0; padding-left: 18px; }
-.gmp__saved { color: var(--ia-fresh, #2e9e5b); font-size: 11px; }
+.gmp__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-muted); }
+.gmp__problems { color: var(--error); font-size: 11px; margin: 6px 0; padding-left: 18px; }
+.gmp__saved { color: var(--ia-fresh, var(--ia-fresh)); font-size: 11px; }
 .gmp__foot { display: flex; justify-content: flex-end; }
-.gmp__foot button { border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6)); color: var(--accent-primary, var(--color-primary, #3b82f6)); background: none; border-radius: 6px; padding: 3px 16px; cursor: pointer; }
+.gmp__foot button { border: 1px solid var(--accent-primary, var(--color-primary)); color: var(--accent-primary, var(--color-primary)); background: none; border-radius: 6px; padding: 3px 16px; cursor: pointer; }
 </style>

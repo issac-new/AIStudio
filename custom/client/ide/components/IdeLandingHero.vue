@@ -35,7 +35,7 @@ const { t } = useI18n()
         </button>
       </li>
     </ul>
-    <p v-else class="ide-landing__empty">{{ t('ide.landing.empty', '暂无任务：从看板新建或跳转进入后自动带入任务上下文') }}</p>
+    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '暂无任务：从看板新建或跳转进入后自动带入任务上下文') }}</p>
     <button type="button" class="ide-landing__enter" data-testid="ide-landing-enter" @click="$emit('enter')">
       {{ t('ide.landing.enter', '进入会话工作区') }}
     </button>
@@ -59,14 +59,6 @@ const { t } = useI18n()
   font-weight: 600;
 }
 .ide-landing__sub,
-.ide-landing__empty {
-  margin: 0;
-  max-width: 360px;
-  text-align: center;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 12px;
-  line-height: 1.6;
-}
 .ide-landing__list {
   list-style: none;
   margin: 8px 0 0;
@@ -83,7 +75,7 @@ const { t } = useI18n()
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--border-color, #3a3f47);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: transparent;
   color: inherit;
@@ -91,7 +83,7 @@ const { t } = useI18n()
   text-align: left;
 }
 .ide-landing__task:hover {
-  border-color: var(--primary-color, #4f7cff);
+  border-color: var(--primary-color);
 }
 .ide-landing__task-title {
   overflow: hidden;
@@ -101,7 +93,7 @@ const { t } = useI18n()
 }
 .ide-landing__task-status {
   flex-shrink: 0;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
 }
 .ide-landing__enter {
@@ -109,8 +101,8 @@ const { t } = useI18n()
   padding: 6px 18px;
   border: none;
   border-radius: 8px;
-  background: var(--primary-color, #4f7cff);
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--text-on-accent);
   font-size: 13px;
   cursor: pointer;
 }

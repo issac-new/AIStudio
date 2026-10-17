@@ -148,14 +148,14 @@ onMounted(() => void refresh())
             <span v-if="usage.gateStats.lastAt" class="runtime__tag">{{ fmtTime(usage.gateStats.lastAt) }}</span>
           </div>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ③ SLO 实况 -->
       <section class="runtime__card" data-testid="runtime-slo">
         <h4 class="runtime__card-title">{{ L?.sloTitle }}<span class="runtime__window">{{ slo?.windowDays ?? 30 }}d</span></h4>
         <template v-if="slo">
-          <div v-if="!slo.dataAvailable" class="runtime__empty">{{ L?.sloNoData }}</div>
+          <div v-if="!slo.dataAvailable" class="ui-empty-state">{{ L?.sloNoData }}</div>
           <table v-else class="runtime__table">
             <thead><tr><th>{{ L?.colTier }}</th><th>{{ L?.colRate }}</th><th>{{ L?.colTarget }}</th><th>P95</th><th>{{ L?.colClosed }}</th><th>{{ L?.colBudget }}</th></tr></thead>
             <tbody>
@@ -181,15 +181,15 @@ onMounted(() => void refresh())
             </tbody>
           </table>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ④ 成本归集 -->
       <section class="runtime__card" data-testid="runtime-cost">
         <h4 class="runtime__card-title">{{ L?.costTitle }}<span class="runtime__window">{{ cost?.days ?? 30 }}d</span></h4>
         <template v-if="cost">
-          <div v-if="!cost.dbFound" class="runtime__empty">{{ L?.costNoDb }}</div>
-          <div v-else-if="cost.rows === 0" class="runtime__empty" data-testid="cost-empty">{{ L?.costNoRows }}</div>
+          <div v-if="!cost.dbFound" class="ui-empty-state">{{ L?.costNoDb }}</div>
+          <div v-else-if="cost.rows === 0" class="ui-empty-state" data-testid="cost-empty">{{ L?.costNoRows }}</div>
           <template v-else>
             <div class="runtime__row runtime__total" data-testid="cost-total">
               <b>{{ L?.colTotal }}</b>
@@ -221,7 +221,7 @@ onMounted(() => void refresh())
             <div v-if="cost.pricingMissing.length" class="runtime__missing">{{ L?.pricingMissing }}: {{ cost.pricingMissing.join(', ') }}</div>
           </template>
         </template>
-        <div v-else class="runtime__empty">…</div>
+        <div v-else class="ui-empty-state">…</div>
       </section>
 
       <!-- ⑤ 模型用量排行榜（multica usage-leaderboard 吸收；30 天窗口） -->
@@ -290,10 +290,10 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .runtime {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -305,13 +305,13 @@ onMounted(() => void refresh())
 .runtime__boardrow { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .runtime__boardname {
   flex-shrink: 0; width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 11px; font-family: var(--font-mono, monospace); color: var(--text-primary, #d7dae0);
+  font-size: 11px; font-family: var(--font-mono); color: var(--text-primary);
 }
 .runtime__boardbar {
-  flex: 1; height: 8px; border-radius: 4px; background: var(--bg-secondary, #f3f4f6); overflow: hidden;
+  flex: 1; height: 8px; border-radius: 4px; background: var(--bg-secondary); overflow: hidden;
 }
-.runtime__boardfill { display: block; height: 100%; border-radius: 4px; background: var(--primary, #3b82f6); }
-.runtime__boardval { flex-shrink: 0; font-size: 10px; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; }
+.runtime__boardfill { display: block; height: 100%; border-radius: 4px; background: var(--primary); }
+.runtime__boardval { flex-shrink: 0; font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* 凭证池/cron 运行史行（#7/#17 吸收批 9） */
 .runtime__credrow { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
@@ -320,30 +320,29 @@ onMounted(() => void refresh())
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.runtime__chip { font-size: 10.5px; color: var(--text-muted, #878c99); border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 1px 8px;
-  &.is-warn { color: #b45309; border-color: #b4530955; background: #fef3c7; }
-  &.is-bad { color: #b91c1c; border-color: #b91c1c55; background: #fee2e2; } }
-.runtime__error { color: #dc2626; font-size: 12px; }
+.runtime__chip { font-size: 10.5px; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 10px; padding: 1px 8px;
+  &.is-warn { color: var(--ia-stale); border-color: rgba(var(--warning-rgb), 0.33); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-bad { color: var(--error); border-color: rgba(var(--error-rgb), 0.33); background: rgba(var(--error-rgb), 0.08); } }
+.runtime__error { color: var(--error); font-size: 12px; }
 .runtime__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px; }
-.runtime__card { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 10px; }
+.runtime__card { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; }
 .runtime__card-title { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; display: flex; gap: 8px; align-items: baseline; }
-.runtime__window { font-size: 9.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+.runtime__window { font-size: 9.5px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .runtime__row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin: 3px 0; }
-.runtime__label { font-size: 10.5px; color: var(--text-muted, #878c99); }
-.runtime__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #16233a;
-  &.is-warn { color: #b45309; background: #fef3c7; }
-  &.is-bad { color: #b91c1c; background: #fee2e2; }
-  &.is-ok { color: #15803d; background: #dcfce7; } }
-.runtime__ok { font-size: 10.5px; color: #15803d; }
-.runtime__empty { font-size: 10.5px; color: var(--text-muted, #878c99); }
+.runtime__label { font-size: 10.5px; color: var(--text-muted); }
+.runtime__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: var(--text-secondary); background: var(--bg-secondary);
+  &.is-warn { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-bad { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+  &.is-ok { color: var(--success); background: rgba(var(--success-rgb), 0.08); } }
+.runtime__ok { font-size: 10.5px; color: var(--success); }
 .runtime__table { width: 100%; border-collapse: collapse; font-size: 10.5px;
-  th { text-align: left; color: var(--text-muted, #878c99); font-weight: 600; padding: 2px 8px 2px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); }
-  td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); }
-  tr.is-exhausted td { background: #fef2f2; } }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 2px 8px 2px 0; border-bottom: 1px solid var(--border-color); }
+  td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--border-color); }
+  tr.is-exhausted td { background: rgba(var(--error-rgb), 0.05); } }
 .runtime__total { font-size: 10.5px; gap: 10px; }
-.runtime__missing { font-size: 9.5px; color: #b45309; margin-top: 4px; }
+.runtime__missing { font-size: 9.5px; color: var(--ia-stale); margin-top: 4px; }
 </style>

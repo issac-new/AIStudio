@@ -130,7 +130,7 @@ function canSend(roomId: string): boolean {
             <span v-else-if="getSendState(room.roomId) === 'failed'">! {{ t('matrixChat.failed') }}</span>
           </button>
         </div>
-        <p v-if="rooms.length === 0" class="forward-dialog__empty">{{ t('matrixChat.noRooms') }}</p>
+        <p v-if="rooms.length === 0" class="ui-empty-state">{{ t('matrixChat.noRooms') }}</p>
       </div>
     </div>
   </div>
@@ -286,7 +286,7 @@ function canSend(roomId: string): boolean {
   white-space: nowrap;
   transition: all 0.15s;
 
-  &:hover:not(:disabled) { background: $accent-primary; color: #fff; border-color: $accent-primary; }
+  &:hover:not(:disabled) { background: $accent-primary; color: var(--text-on-accent); border-color: $accent-primary; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   &--sent {
@@ -304,10 +304,4 @@ function canSend(roomId: string): boolean {
   }
 }
 
-.forward-dialog__empty {
-  padding: 24px;
-  text-align: center;
-  color: $text-muted;
-  font-size: 13px;
-}
 </style>

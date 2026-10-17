@@ -313,7 +313,7 @@ function decodeText(text?: string): string {
 .trace-timeline-panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
 .trace-timeline-panel__empty { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
 .trace-timeline-panel__empty-mini { padding: 10px; text-align: center; color: var(--text-muted); font-size: 11px; }
-.trace-timeline-panel__selected { display: flex; align-items: center; gap: 6px; padding: 8px 10px; margin-bottom: 8px; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.08); border: 1px solid var(--accent-primary); border-radius: 6px; flex-wrap: wrap; }
+.trace-timeline-panel__selected { display: flex; align-items: center; gap: 6px; padding: 8px 10px; margin-bottom: 8px; background: rgba(var(--accent-primary-rgb), 0.08); border: 1px solid var(--accent-primary); border-radius: 6px; flex-wrap: wrap; }
 .trace-timeline-panel__selected b { font-size: 12px; word-break: break-word; flex: 1; min-width: 0; }
 .trace-timeline-panel__selected-time { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .trace-timeline-panel__kind { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
@@ -330,10 +330,10 @@ function decodeText(text?: string): string {
 .trace-timeline-panel__group-head small { font-size: 9px; color: var(--text-muted); font-weight: 400; margin-left: auto; }
 .trace-timeline-panel__group-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-primary); }
 .trace-timeline-panel__items { display: flex; flex-direction: column; gap: 3px; padding-left: 5px; border-left: 2px solid var(--border-color); margin-left: 2px; }
-.trace-timeline-panel__seq { min-width: 18px; height: 18px; border-radius: 12px; background: var(--accent-primary); color: #fff; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; flex-shrink: 0; padding: 0 4px; }
+.trace-timeline-panel__seq { min-width: 18px; height: 18px; border-radius: 12px; background: var(--accent-primary); color: var(--text-on-accent); font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; flex-shrink: 0; padding: 0 4px; }
 .trace-timeline-panel__item { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-primary); cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; flex-wrap: wrap;
   &:hover { background: var(--bg-secondary); border-color: var(--text-muted); }
-  &.is-active { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 64,120,192), 0.1); box-shadow: 0 0 0 2px var(--accent-primary); }
+  &.is-active { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb), 0.1); box-shadow: 0 0 0 2px var(--accent-primary); }
 }
 .trace-timeline-panel__time { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; flex-shrink: 0; width: 52px; }
 .trace-timeline-panel__kind-tag { font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; min-width: 36px; text-align: center; }
@@ -342,8 +342,8 @@ function decodeText(text?: string): string {
 .trace-timeline-panel__kind-tag.is-agent { background: rgba(76,175,80,0.15); color: var(--success); }
 .trace-timeline-panel__kind-tag.is-skill { background: rgba(64,120,192,0.15); color: var(--accent-info); }
 .trace-timeline-panel__kind-tag.is-tool { background: rgba(214,155,90,0.15); color: var(--warning); }
-.trace-timeline-panel__kind-tag.is-thinking { background: rgba(181,107,214,0.15); color: #B56BD6; }
-.trace-timeline-panel__kind-tag.is-message { background: rgba(90,170,214,0.15); color: #5AAAD6; }
+.trace-timeline-panel__kind-tag.is-thinking { background: color-mix(in srgb, var(--ia-compensated) 15%, transparent); color: var(--ia-compensated); }
+.trace-timeline-panel__kind-tag.is-message { background: rgba(var(--accent-info-rgb), 0.15); color: var(--accent-info); }
 .trace-timeline-panel__kind-tag.is-memory { background: var(--bg-secondary); color: var(--text-muted); }
 .trace-timeline-panel__label-text { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .trace-timeline-panel__label-text b { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

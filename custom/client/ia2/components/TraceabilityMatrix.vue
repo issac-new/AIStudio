@@ -141,7 +141,7 @@ function fmtTime(v: string | null): string {
         {{ t('ia2.trace.retry') }}
       </button>
     </div>
-    <div v-else-if="groups.length === 0 && taskChain.length === 0" class="ia-trace__empty">
+    <div v-else-if="groups.length === 0 && taskChain.length === 0" class="ui-empty-state">
       <div class="ia-trace__empty-title">{{ t('ia2.trace.emptyTitle') }}</div>
       <div class="ia-trace__empty-hint">{{ t('ia2.trace.emptyHint') }}</div>
     </div>
@@ -290,11 +290,11 @@ function fmtTime(v: string | null): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--color-danger, #e11d48);
+  color: var(--color-danger);
   font-size: 13px;
 }
 .ia-trace__retry {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   border-radius: 4px;
   padding: 3px 12px;
@@ -303,19 +303,11 @@ function fmtTime(v: string | null): string {
   font-size: 12px;
   color: inherit;
 }
-.ia-trace__empty {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  margin-top: 48px;
-  text-align: center;
-}
 .ia-trace__empty-title { font-size: 14px; font-weight: 600; }
-.ia-trace__empty-hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ia-trace__empty-hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary)); }
 
 .ia-trace__group {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -325,13 +317,13 @@ function fmtTime(v: string | null): string {
   gap: 10px;
   padding: 8px 12px;
   background: var(--bg-card, rgba(127, 127, 127, 0.06));
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
   min-width: 0;
 }
 .ia-trace__name { font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .ia-trace__goal {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -346,14 +338,14 @@ function fmtTime(v: string | null): string {
 .ia-trace__table th {
   text-align: left;
   font-weight: 600;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   padding: 6px 12px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 .ia-trace__table td {
   padding: 6px 12px;
-  border-bottom: 1px dashed var(--border-color, #e5e7eb);
+  border-bottom: 1px dashed var(--border-color);
   vertical-align: middle;
   min-width: 0;
 }
@@ -368,9 +360,9 @@ function fmtTime(v: string | null): string {
   border: none;
   background: transparent;
   padding: 0;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   cursor: pointer;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -384,26 +376,26 @@ function fmtTime(v: string | null): string {
 .ia-trace__tasklink:hover { text-decoration: underline; }
 
 .ia-trace__iter { font-variant-numeric: tabular-nums; }
-.ia-trace__muted { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ia-trace__muted { color: var(--text-muted, var(--color-text-secondary)); }
 .ia-trace__unlinked {
   margin-left: 6px;
   font-size: 10px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   padding: 0 6px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ia-trace__task-status {
   margin-left: 6px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ia-trace__rounds { font-variant-numeric: tabular-nums; }
-.ia-trace__rounds--failed { color: var(--color-warning, #f59e0b); }
+.ia-trace__rounds--failed { color: var(--color-warning); }
 .ia-trace__norun {
   padding: 10px 12px;
   font-size: 12px;
   font-style: italic;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 </style>

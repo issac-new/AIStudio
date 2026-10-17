@@ -79,7 +79,7 @@ onUnmounted(() => { stopCountdown() })
       <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" :title="t('sidebar.swarmKanban')">⊞ {{ t('sidebar.swarmKanban') }}</button>
     </div>
     <div class="cockpit-attention__items">
-      <span v-if="store.attention.length === 0" class="cockpit-attention__empty">{{ t('cockpit.noAttention') }}</span>
+      <span v-if="store.attention.length === 0" class="ui-empty-state ui-empty-state--compact">{{ t('cockpit.noAttention') }}</span>
       <button
         v-for="item in store.attention"
         :key="item.id"
@@ -125,8 +125,8 @@ onUnmounted(() => { stopCountdown() })
   &:disabled { opacity: 0.5; cursor: default; }
   &.is-spinning svg { animation: att-refresh-spin 0.8s linear infinite; }
   &.is-error {
-    border-color: var(--warning, #e6a23c); color: var(--warning, #e6a23c); background: rgba(230, 162, 60, 0.08);
-    &:hover:not(:disabled) { border-color: var(--warning, #e6a23c); color: var(--warning, #e6a23c); background: rgba(230, 162, 60, 0.15); }
+    border-color: var(--warning); color: var(--warning); background: rgba(230, 162, 60, 0.08);
+    &:hover:not(:disabled) { border-color: var(--warning); color: var(--warning); background: rgba(230, 162, 60, 0.15); }
     .cockpit-attention__refresh-cd { animation: att-refresh-pulse 1.2s ease-in-out infinite; }
   }
   svg { flex-shrink: 0; }
@@ -183,7 +183,7 @@ onUnmounted(() => { stopCountdown() })
 .is-medium .cockpit-attention__sev-bar { background: var(--warning); }
 /* 按状态区分色条颜色 */
 .is-blocked .cockpit-attention__sev-bar { background: var(--error); }
-.is-triage .cockpit-attention__sev-bar { background: var(--success, #52c41a); }
+.is-triage .cockpit-attention__sev-bar { background: var(--success); }
 .is-review .cockpit-attention__sev-bar { background: var(--warning); }
 .cockpit-attention__text {
   white-space: nowrap;
@@ -192,5 +192,4 @@ onUnmounted(() => { stopCountdown() })
   max-width: 200px;
 }
 .cockpit-attention__arrow { font-size: 10px; color: var(--text-muted); }
-.cockpit-attention__empty { font-size: 11px; color: var(--text-muted); padding: 0 4px; }
 </style>

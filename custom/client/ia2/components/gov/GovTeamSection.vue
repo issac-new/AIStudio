@@ -41,7 +41,7 @@ onUnmounted(() => platforms.release())
     <div class="gte__body">
       <div class="gte__card">
         <div class="gte__card-head">{{ t('ia2.gov.team.teams') }}</div>
-        <div v-if="!teams.length" class="gte__empty">{{ t('ia2.gov.team.teamsEmpty') }}</div>
+        <div v-if="!teams.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.team.teamsEmpty') }}</div>
         <div
           v-for="tm in teams" :key="tm.id" class="gte__row"
           :data-testid="`gov-team-${tm.id}`" @click="detail(tm.id)"
@@ -65,7 +65,7 @@ onUnmounted(() => platforms.release())
 
 <style scoped lang="scss">
 .gte { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }
-.gte__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gte__jump:hover { color: var(--primary, #6366f1); }
+.gte__jump { margin-left: auto; border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; } .gte__jump:hover { color: var(--primary); }
 .gte__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border-color); }
 .gte__title { font-weight: 700; }
 .gte__sub { font-size: 10px; color: var(--text-muted); }
@@ -80,5 +80,4 @@ onUnmounted(() => platforms.release())
 .gte__ch-state { font-size: 11px; font-weight: 700; }
 .gte__ch-state--ok { color: var(--success); }
 .gte__ch-state--err { color: var(--error); }
-.gte__empty { padding: 8px 4px; color: var(--text-muted); font-size: 11px; }
 </style>

@@ -156,7 +156,7 @@ describe('RunTimeline (jsdom)', () => {
 
   it('空行 + 未播放显示空占位；total=0 时播放/scrubber 禁用', () => {
     const w = mount(RunTimeline, { props: { ...baseProps, total: 0, cursorIndex: 0 } })
-    expect(w.find('.rt-panel__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
     expect(w.find('.rt-panel__play').attributes('disabled')).toBeDefined()
     expect(w.find('.rt-panel__scrubber').attributes('disabled')).toBeDefined()
   })
@@ -195,7 +195,7 @@ describe('RunGraphCanvas (jsdom, vue-flow stub)', () => {
   it('空图渲染空占位且不挂 VueFlow', () => {
     const w = mount(RunGraphCanvas, { props: { graph: { nodes: [], edges: [] } } })
     expect(w.find('.vue-flow-stub').exists()).toBe(false)
-    expect(w.find('.rg-canvas__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
   })
 
   it('边投影（台账 #23）：源/目标/端点箭头/taken 描色/guard 徽标进 vue-flow edges', () => {
@@ -369,12 +369,12 @@ describe('RunDetailView (jsdom)', () => {
 
     // 未选中：检查器空态
     expect(w.find('[data-node-inspector]').exists()).toBe(true)
-    expect(w.find('.ni-panel__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
 
     // 选中 discovery → 类型/状态/最近 update 键值与关联事件出现
     await w.findAll('.stub-slot .rg-node')[0].trigger('click')
     const insp = w.find('[data-node-inspector]')
-    expect(w.find('.ni-panel__empty').exists()).toBe(false)
+    expect(w.find('.ui-empty-state').exists()).toBe(false)
     expect(insp.text()).toContain('discovery')
     expect(insp.text()).toContain('phase-discovery')
     expect(insp.text()).toContain('runcenter.graph.nodeStatus.done')
@@ -419,7 +419,7 @@ describe('RunDetailView (jsdom)', () => {
     await new Promise(r => setTimeout(r, 0))
     expect(w.find('.rd-view__nospec').exists()).toBe(true)
     expect(w.find('.vue-flow-stub').exists()).toBe(false)
-    expect(w.find('.rt-panel__empty').exists()).toBe(true)
+    expect(w.find('.ui-empty-state').exists()).toBe(true)
 
     // 失败路径在挂载前设置（load 于 onMounted 即发请求）
     rest.getRun.mockRejectedValue(new Error('boom'))

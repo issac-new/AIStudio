@@ -134,22 +134,22 @@ onMounted(() => { void refreshGen(); void refreshRoles(); void refreshLessons() 
 </template>
 
 <style scoped>
-.skillgov { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: var(--n-color, #101a2c); }
+.skillgov { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; background: var(--bg-secondary); }
 .skillgov-head { display: flex; align-items: center; gap: 12px; }
 .skillgov-head h3 { margin: 0; font-size: 14px; }
 .skillgov-tabs { display: flex; gap: 4px; }
-.skillgov-tab { border: 1px solid #cbd5e1; background: #16233a; border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
-.skillgov-tab.is-active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.skillgov-tab { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.skillgov-tab.is-active { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-info); }
 .skillgov-body { margin-top: 10px; font-size: 13px; }
 .skillgov-form { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.skillgov-form input, .skillgov-form select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-size: 12px; min-width: 180px; }
-.skillgov-form button { border: 1px solid #1d4ed8; background: #1d4ed8; color: #fff; border-radius: 4px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
-.skillgov-json { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; }
+.skillgov-form input, .skillgov-form select { border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; font-size: 12px; min-width: 180px; }
+.skillgov-form button { border: 1px solid var(--accent-info); background: var(--accent-primary); color: var(--text-on-accent); border-radius: 4px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
+.skillgov-json { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; }
 .skillgov-actions { margin-top: 6px; }
-.skillgov-actions button { border: 1px solid #15803d; background: #15803d; color: #fff; border-radius: 4px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
-.skillgov-out { white-space: pre-wrap; background: #16233a; border-radius: 4px; padding: 6px; font-size: 12px; max-height: 180px; overflow: auto; }
+.skillgov-actions button { border: 1px solid var(--success); background: var(--success); color: var(--text-on-accent); border-radius: 4px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
+.skillgov-out { white-space: pre-wrap; background: var(--bg-secondary); border-radius: 4px; padding: 6px; font-size: 12px; max-height: 180px; overflow: auto; }
 .skillgov-lessons { list-style: none; padding: 0; margin: 8px 0 0; }
-.skillgov-lesson { border-top: 1px dashed #e2e8f0; padding: 6px 0; }
-.skillgov-tail { margin: 4px 0 0 16px; padding: 0; color: #64748b; font-size: 12px; list-style: disc; }
-.muted { color: #64748b; }
+.skillgov-lesson { border-top: 1px dashed var(--border-color); padding: 6px 0; }
+.skillgov-tail { margin: 4px 0 0 16px; padding: 0; color: var(--text-secondary); font-size: 12px; list-style: disc; }
+.muted { color: var(--text-secondary); }
 </style>

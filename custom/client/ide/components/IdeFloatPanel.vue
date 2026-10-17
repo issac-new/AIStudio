@@ -82,9 +82,9 @@ function onPointerUp(event: PointerEvent): void {
   max-height: 62%;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--bg-secondary);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
   overflow: hidden;
@@ -96,7 +96,7 @@ function onPointerUp(event: PointerEvent): void {
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color);
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -112,7 +112,7 @@ function onPointerUp(event: PointerEvent): void {
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 }
 
 .ide-float__close {
@@ -125,11 +125,11 @@ function onPointerUp(event: PointerEvent): void {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
 }
 
 .ide-float__body {
@@ -138,13 +138,13 @@ function onPointerUp(event: PointerEvent): void {
   overflow-y: auto;
   padding: 8px 10px;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 }
 
 .ide-float__empty {
   margin: 0;
   padding: 14px 4px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 12px;
   text-align: center;
 }

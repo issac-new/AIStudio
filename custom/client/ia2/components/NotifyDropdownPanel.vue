@@ -138,7 +138,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
     <div class="ndp__body">
       <!-- ① 待人工决策：waiting 三源 + 评审门；行上就地处置 -->
       <template v-if="tab === 'decisions'">
-        <div v-if="!decisionRows.length" class="ndp__empty">{{ t('ia2.notify.emptyDecisions') }}</div>
+        <div v-if="!decisionRows.length" class="ui-empty-state">{{ t('ia2.notify.emptyDecisions') }}</div>
         <div v-for="row in decisionRows" :key="row.id" class="ndp__row" :class="{ 'ndp__row--read': read.isRead(row.id) }">
           <button type="button" class="ndp__main" :title="row.title" @click="onDecisionOpen(row)">
             <span class="ndp__dot" :class="read.isRead(row.id) ? 'is-read' : 'is-unread'" />
@@ -190,7 +190,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
             <span class="ndp__thrjump">{{ tx.threadsJump }} →</span>
           </button>
         </div>
-        <div v-if="!messageRows.length" class="ndp__empty">{{ t('ia2.notify.emptyMessages') }}</div>
+        <div v-if="!messageRows.length" class="ui-empty-state">{{ t('ia2.notify.emptyMessages') }}</div>
         <button
           v-for="m in messageRows" :key="m.id" type="button" class="ndp__row ndp__row--msg"
           :title="m.title" @click="onMessageOpen(m.routeTarget)"
@@ -226,22 +226,22 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__badge {
   display: inline-flex; align-items: center; justify-content: center; margin-left: 4px;
   min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
-  background: var(--error); color: #fff; font-size: 9px; font-weight: 700;
+  background: var(--error); color: var(--text-on-accent); font-size: 9px; font-weight: 700;
 }
 
 /* R6 消息计数徽章（与决策红色区分，蓝色语义） */
-.ndp__badge--msg { background: #61afef; }
+.ndp__badge--msg { background: var(--accent-info); }
 .ndp__prefs { border-bottom: 1px solid var(--border-color); padding: 6px 10px; }
-.ndp__prefshead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); margin-bottom: 4px; }
+.ndp__prefshead { font-size: 11px; font-weight: 600; color: var(--text-color-3); margin-bottom: 4px; }
 .ndp__prefsrow { display: flex; gap: 6px; align-items: center; font-size: 12px; padding: 2px 0; cursor: pointer; }
 .ndp__threads { border-bottom: 1px solid var(--border-color); padding: 6px 0 4px; }
-.ndp__threadshead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); padding: 0 10px 4px; }
+.ndp__threadshead { font-size: 11px; font-weight: 600; color: var(--text-color-3); padding: 0 10px 4px; }
 .ndp__threadsrow {
   display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 10px;
   border: none; background: transparent; cursor: pointer; font-family: inherit; text-align: left;
   &:hover { background: var(--bg-secondary); }
 }
-.ndp__thrjump { font-size: 10px; color: var(--primary, #3b82f6); white-space: nowrap; flex-shrink: 0; }
+.ndp__thrjump { font-size: 10px; color: var(--primary); white-space: nowrap; flex-shrink: 0; }
 .ndp__spacer { flex: 1; }
 .ndp__act {
   height: 22px; padding: 0 8px; border: none; border-radius: 4px; background: transparent;
@@ -251,7 +251,6 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__close { border: none; background: none; color: var(--text-muted); font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
   &:hover { color: var(--text-primary); } }
 .ndp__body { overflow-y: auto; padding: 4px 0; }
-.ndp__empty { padding: 28px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
 .ndp__row {
   display: flex; align-items: center; gap: 6px; padding: 4px 10px;
   &:hover { background: var(--bg-secondary); }
@@ -260,7 +259,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__main {
   display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; padding: 2px 4px;
   border: none; background: transparent; cursor: pointer; font-family: inherit; text-align: left;
-  &:hover .ndp__name { color: var(--primary, #3b82f6); }
+  &:hover .ndp__name { color: var(--primary); }
 }
 .ndp__dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .ndp__dot.is-unread { background: var(--error); }
@@ -273,7 +272,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__ago { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .ndp__cnt {
   flex-shrink: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
-  background: var(--error); color: #fff; font-size: 9px; font-weight: 700;
+  background: var(--error); color: var(--text-on-accent); font-size: 9px; font-weight: 700;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .ndp__acts { display: inline-flex; gap: 4px; flex-shrink: 0; }

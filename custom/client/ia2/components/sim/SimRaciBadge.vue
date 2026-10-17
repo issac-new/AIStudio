@@ -26,7 +26,7 @@ const title = () => (props.raci && RACI_DESC[props.raci]) || ''
   padding: 0 6px;
   border-radius: 4px;
   font-size: 11px;
-  color: #4c7fd0;
+  color: var(--accent-info);
   background: rgba(76, 127, 208, 0.1);
   border: 1px solid rgba(76, 127, 208, 0.3);
   white-space: nowrap;

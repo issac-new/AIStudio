@@ -42,9 +42,9 @@ function isTrouble(reason: string): boolean {
 .ide-mention-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 12px; }
 .ide-mention-chip {
   font-size: 11px; padding: 1px 8px; border-radius: 10px;
-  background: var(--hover-color, rgba(0, 0, 0, 0.05)); color: var(--text-color-3, #777);
+  background: var(--hover-color, rgba(0, 0, 0, 0.05)); color: var(--text-muted);
 }
 .ide-mention-chip.is-trouble {
-  background: rgba(208, 48, 80, 0.08); color: var(--error-color, #d03050); border: 1px solid rgba(208, 48, 80, 0.25);
+  background: rgba(208, 48, 80, 0.08); color: var(--error-color); border: 1px solid rgba(208, 48, 80, 0.25);
 }
 </style>

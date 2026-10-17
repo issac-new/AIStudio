@@ -114,19 +114,19 @@ async function loadLedger(): Promise<void> {
 
 <style scoped lang="scss">
 .ev { display: flex; flex-direction: column; gap: 12px; }
-.ev__box { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 10px 12px; }
+.ev__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .ev__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
 .ev__row { display: flex; gap: 6px; }
 .ev__input {
   flex: 1;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 12px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
 }
 .ev__btn {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: transparent;
   color: inherit;
@@ -135,12 +135,12 @@ async function loadLedger(): Promise<void> {
   cursor: pointer;
   &:disabled { opacity: 0.4; }
 }
-.ev__error { color: #d33; font-size: 12px; margin: 6px 0 0; word-break: break-all; }
-.ev__hint { color: var(--text-muted, #878c99); font-size: 12px; margin: 6px 0 0; }
+.ev__error { color: var(--ia-fail); font-size: 12px; margin: 6px 0 0; word-break: break-all; }
+.ev__hint { color: var(--text-muted); font-size: 12px; margin: 6px 0 0; }
 .ev__table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
-.ev__table th, .ev__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+.ev__table th, .ev__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
 .ev__state { padding: 0 6px; border-radius: 4px; font-size: 11px; }
-.ev__state--open { color: #d33; background: rgba(221, 51, 51, 0.12); }
-.ev__state--waived { color: #b98ee0; background: rgba(150, 84, 214, 0.18); }
-.ev__state--resolved { color: #2e9e5b; background: rgba(46, 158, 91, 0.12); }
+.ev__state--open { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
+.ev__state--waived { color: var(--ia-compensated); background: rgba(150, 84, 214, 0.18); }
+.ev__state--resolved { color: var(--ia-fresh); background: rgba(46, 158, 91, 0.12); }
 </style>

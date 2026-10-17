@@ -121,22 +121,22 @@ function delRow(i: number) { rows.value.splice(i, 1) }
 
 <style scoped lang="scss">
 .aac { padding: 14px 18px; overflow: auto; h2 { margin: 0 0 4px; font-size: 16px; } h3 { font-size: 13px; margin: 0 0 6px; } }
-.aac__meta { font-size: 11px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
-.aac__sub { font-size: 12px; color: var(--text-muted, #878c99); margin: 0 0 12px; }
-.aac__create { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+.aac__meta { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.aac__sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+.aac__create { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
 .aac__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
-.aac__field { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-muted, #878c99); input { padding: 5px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; font-size: 12px; } }
+.aac__field { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-muted); input { padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; } }
 .aac__check { font-size: 12px; display: flex; align-items: end; gap: 4px; padding-bottom: 3px; }
-.aac__create > button { margin-top: 8px; font-size: 12px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--primary-color, #3b82f6); color: var(--primary-color, #3b82f6); background: color-mix(in srgb, var(--primary-color, #3b82f6) 8%, transparent); cursor: pointer; font-weight: 600; }
-.aac__tbl h3 button { margin-left: 8px; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); cursor: pointer; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color, #e5e7eb); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
+.aac__create > button { margin-top: 8px; font-size: 12px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--primary-color); color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 8%, transparent); cursor: pointer; font-weight: 600; }
+.aac__tbl h3 button { margin-left: 8px; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
 .aac__tbl td:last-child, .aac__tbl th:last-child { width: 40px; text-align: center; }
-.aac__tbl td button { border: none; background: none; color: var(--text-muted, #878c99); cursor: pointer; font-size: 12px; opacity: .4; padding: 2px 6px; border-radius: 4px; }
+.aac__tbl td button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; opacity: .4; padding: 2px 6px; border-radius: 4px; }
 .aac__tbl tr:hover td button { opacity: 1; }
-.aac__tbl td button:hover { color: var(--danger, #dc2626); background: color-mix(in srgb, var(--danger, #dc2626) 8%, transparent); }
-.aac__msg { font-size: 12px; color: var(--text-muted, #878c99); }
-.aac__invres { margin-top: 10px; border: 1px dashed var(--primary-color, #3b82f6); border-radius: 8px; padding: 8px 12px; p { margin: 4px 0; font-size: 12px; } }
-.aac__invcred code { font-family: ui-monospace, monospace; background: var(--bg-secondary, #f5f5f5); padding: 1px 6px; border-radius: 4px; }
-.aac__invhint { font-size: 11px !important; color: var(--text-muted, #878c99); }
-.aac__invres button { font-size: 12px; padding: 4px 14px; border-radius: 6px; border: 1px solid var(--primary-color, #3b82f6); color: var(--primary-color, #3b82f6); background: transparent; cursor: pointer; }
+.aac__tbl td button:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.aac__msg { font-size: 12px; color: var(--text-muted); }
+.aac__invres { margin-top: 10px; border: 1px dashed var(--primary-color); border-radius: 8px; padding: 8px 12px; p { margin: 4px 0; font-size: 12px; } }
+.aac__invcred code { font-family: ui-monospace, monospace; background: var(--bg-secondary); padding: 1px 6px; border-radius: 4px; }
+.aac__invhint { font-size: 11px !important; color: var(--text-muted); }
+.aac__invres button { font-size: 12px; padding: 4px 14px; border-radius: 6px; border: 1px solid var(--primary-color); color: var(--primary-color); background: transparent; cursor: pointer; }
 </style>

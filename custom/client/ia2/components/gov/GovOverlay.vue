@@ -145,7 +145,7 @@ function setSection(section: GovSection): void {
   background: var(--bg-secondary); color: var(--text-secondary);
   font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
 }
-.gov__nav--on .gov__nav-n { background: var(--primary); color: #fff; }
+.gov__nav--on .gov__nav-n { background: var(--primary); color: var(--text-on-accent); }
 .gov__nav-note { margin-top: auto; padding: 8px 8px 2px; font-size: 10px; color: var(--text-muted); }
 .gov__center { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .gov__right {

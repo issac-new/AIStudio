@@ -63,16 +63,16 @@ function rebuild(doc: CanvasDoc): void {
       target: e.to,
       type: 'default',
       label: e.guard !== undefined ? `×${e.guard.maxIterations}` : undefined,
-      labelStyle: { fontSize: 10, fill: 'var(--text-muted, #878c99)' },
+      labelStyle: { fontSize: 10, fill: 'var(--text-muted)' },
       labelBgStyle: { fillOpacity: 0 },
       markerEnd: MarkerType.ArrowClosed,
       // 回边（带 guard）虚线；违法边红；选中边加粗
       style: {
         stroke: invalid
-          ? 'var(--error, var(--color-danger, #e11d48))'
+          ? 'var(--error, var(--color-danger))'
           : key === props.selectedEdgeId
-            ? 'var(--accent-primary, var(--color-primary, #3b82f6))'
-            : 'var(--border-color, #c8c8c8)',
+            ? 'var(--accent-primary, var(--color-primary))'
+            : 'var(--border-color)',
         strokeWidth: invalid || key === props.selectedEdgeId ? 2 : 1,
         strokeDasharray: e.guard !== undefined ? '6 4' : undefined,
       },
@@ -154,7 +154,7 @@ function onDrop(ev: DragEvent): void {
         </div>
       </template>
     </VueFlow>
-    <div v-else class="ed-canvas__empty" data-editor-canvas-empty>
+    <div v-else class="ui-empty-state" data-editor-canvas-empty>
       {{ t('ia2.orchestrate.editor.canvas.empty') }}
     </div>
   </div>
@@ -168,7 +168,7 @@ function onDrop(ev: DragEvent): void {
   min-height: 320px;
   overflow: hidden;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background:
     radial-gradient(circle at 1px 1px, var(--border-light, rgba(127, 127, 127, 0.18)) 1px, transparent 0) 0 0 / 16px 16px;
 }
@@ -177,16 +177,8 @@ function onDrop(ev: DragEvent): void {
 :deep(.vue-flow__handle) {
   width: 8px;
   height: 8px;
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  border: 1px solid var(--bg-card, #fff);
-}
-.ed-canvas__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  background: var(--accent-primary, var(--color-primary));
+  border: 1px solid var(--bg-card);
 }
 
 /* 可编辑节点卡（类型只做轻着色提示，状态语义仍由选中/告警描边承载） */
@@ -199,9 +191,9 @@ function onDrop(ev: DragEvent): void {
   max-width: 168px;
   padding: 6px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
-  background: var(--bg-card, var(--color-bg-primary, #fff));
-  color: var(--text-primary, var(--color-text-primary, #1f2329));
+  border-radius: var(--radius-standard);
+  background: var(--bg-card, var(--color-bg-primary));
+  color: var(--text-primary, var(--color-text-primary));
   cursor: pointer;
 }
 .ed-node__label {
@@ -213,11 +205,11 @@ function onDrop(ev: DragEvent): void {
 }
 .ed-node__type {
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ed-node.is-selected {
   border-width: 2px;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
-.ed-node.is-warned { border-color: var(--color-warning, #f59e0b); }
+.ed-node.is-warned { border-color: var(--color-warning); }
 </style>

@@ -243,9 +243,9 @@ const timeoutLabel = computed(() => {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--color-warning, #f59e0b);
-  border-radius: var(--radius-standard, 6px);
-  background: rgba(var(--color-warning-rgb, 245, 158, 11), 0.05);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-standard);
+  background: rgba(var(--color-warning-rgb), 0.05);
   font-size: 12px;
 }
 .ap-panel__head {
@@ -256,7 +256,7 @@ const timeoutLabel = computed(() => {
   font-size: 13px;
 }
 .ap-panel__waiting {
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -273,18 +273,18 @@ const timeoutLabel = computed(() => {
   flex-wrap: wrap;
   padding: 6px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
 }
 .ap-panel__contract-id {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 .ap-panel__contract-ref {
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ap-panel__contract-attempts {
   margin-left: auto;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ap-panel__meta {
   margin: 0;
@@ -294,22 +294,22 @@ const timeoutLabel = computed(() => {
 }
 .ap-panel__meta-row { display: flex; gap: 6px; }
 .ap-panel__meta-row dt {
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   flex-shrink: 0;
 }
 .ap-panel__meta-row dd { margin: 0; word-break: break-all; }
 
 .ap-panel__auto {
   padding: 6px 8px;
-  border: 1px solid var(--color-warning, #f59e0b);
-  border-radius: var(--radius-micro, 3px);
-  color: var(--color-warning, #f59e0b);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-micro);
+  color: var(--color-warning);
 }
 .ap-panel__auto-passed {
   padding: 6px 8px;
-  border: 1px solid var(--color-success, #28bf5c);
-  border-radius: var(--radius-micro, 3px);
-  color: var(--color-success, #28bf5c);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-micro);
+  color: var(--color-success);
 }
 .ap-panel__revoke {
   margin-left: 8px;
@@ -326,7 +326,7 @@ const timeoutLabel = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-size: 11px;
   cursor: pointer;
   user-select: none;
@@ -335,26 +335,26 @@ const timeoutLabel = computed(() => {
   resize: vertical;
   padding: 6px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-family: inherit;
   font-size: 12px;
 }
-.ap-panel__reason-error { color: var(--color-danger, #e11d48); }
+.ap-panel__reason-error { color: var(--color-danger); }
 .ap-panel__error {
-  color: var(--color-danger, #e11d48);
+  color: var(--color-danger);
   word-break: break-all;
 }
 .ap-panel__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ap-panel__no-identity {
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 .ap-panel__decision {
   padding: 5px 14px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -363,11 +363,11 @@ const timeoutLabel = computed(() => {
 }
 .ap-panel__decision:disabled { opacity: 0.5; cursor: default; }
 .ap-panel__decision--approve {
-  border-color: var(--color-success, #28bf5c);
-  color: var(--color-success, #28bf5c);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
 .ap-panel__decision--reject {
-  border-color: var(--color-danger, #e11d48);
-  color: var(--color-danger, #e11d48);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 </style>

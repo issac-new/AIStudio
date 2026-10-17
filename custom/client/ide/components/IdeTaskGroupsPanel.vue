@@ -122,35 +122,35 @@ function toggle(groupId: string): void {
 
 <style scoped lang="scss">
 .ide-tg { margin: 4px 12px; font-size: 12px; }
-.ide-tg__group { border: 1px solid var(--border-color, #e8e8e8); border-radius: 6px; margin: 6px 0; }
+.ide-tg__group { border: 1px solid var(--border-color); border-radius: 6px; margin: 6px 0; }
 .ide-tg__head { display: flex; gap: 6px; align-items: center; padding: 6px 10px; cursor: pointer; }
-.ide-tg__chev { color: var(--text-color-3, #999); }
+.ide-tg__chev { color: var(--text-muted); }
 .ide-tg__title { flex: 1; font-weight: 600; }
-.ide-tg__counts { color: var(--text-color-3, #999); font-size: 11px; }
+.ide-tg__counts { color: var(--text-muted); font-size: 11px; }
 .ide-tg__body { padding: 0 10px 8px; }
 .ide-tg__files { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 .ide-tg__pill {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 10px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 10px;
   font-size: 11px; padding: 1px 8px; cursor: pointer;
 }
-.ide-tg__filestate { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-color-3, #888); margin: 2px 0; }
+.ide-tg__filestate { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-muted); margin: 2px 0; }
 .ide-tg__steps { margin: 4px 0 0; padding-left: 18px; }
 .ide-tg__step { padding: 1px 0; }
-.ide-tg__step.is-approved { color: var(--text-color-3, #999); }
-.ide-tg__ok { color: var(--primary-color, #18a058); margin-left: 4px; }
-.ide-tg__running { color: var(--warning-color, #f0a020); margin-left: 4px; font-size: 11px; }
-.ide-tg__pendingbadge { color: var(--text-color-3, #999); margin-left: 4px; font-size: 11px; }
+.ide-tg__step.is-approved { color: var(--text-muted); }
+.ide-tg__ok { color: var(--primary-color); margin-left: 4px; }
+.ide-tg__running { color: var(--warning-color); margin-left: 4px; font-size: 11px; }
+.ide-tg__pendingbadge { color: var(--text-muted); margin-left: 4px; font-size: 11px; }
 .ide-tg__approve {
-  border: 1px solid var(--primary-color, #18a058); background: transparent; color: var(--primary-color, #18a058);
+  border: 1px solid var(--primary-color); background: transparent; color: var(--primary-color);
   border-radius: 4px; font-size: 11px; padding: 0 6px; cursor: pointer; margin-left: 6px;
 }
-.ide-tg__approve.is-deny { border-color: var(--error-color, #d03050); color: var(--error-color, #d03050); }
-.ide-tg__approval { border: 1px solid var(--warning-color, #f0a020); border-radius: 6px; padding: 6px 10px; margin: 6px 0; }
-.ide-tg__approvalhead { font-weight: 600; font-size: 11px; color: var(--warning-color, #f0a020); }
+.ide-tg__approve.is-deny { border-color: var(--error-color); color: var(--error-color); }
+.ide-tg__approval { border: 1px solid var(--warning-color); border-radius: 6px; padding: 6px 10px; margin: 6px 0; }
+.ide-tg__approvalhead { font-weight: 600; font-size: 11px; color: var(--warning-color); }
 .ide-tg__approvaldesc { padding: 4px 0; word-break: break-all; }
 .ide-tg__approvalactions { display: flex; gap: 6px; }
-.ide-tg__approvalerr { color: var(--error-color, #d03050); font-size: 11px; padding-top: 4px; }
-.ide-tg__pending { margin-top: 10px; border-top: 1px dashed var(--border-color, #ccc); padding-top: 6px; }
-.ide-tg__pendinghead { font-weight: 600; font-size: 11px; color: var(--text-color-3, #999); }
+.ide-tg__approvalerr { color: var(--error-color); font-size: 11px; padding-top: 4px; }
+.ide-tg__pending { margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 6px; }
+.ide-tg__pendinghead { font-weight: 600; font-size: 11px; color: var(--text-muted); }
 .ide-tg__pendingrow { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
 </style>

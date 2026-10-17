@@ -336,7 +336,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             >{{ t('ia2.sit.sortCreatedAt') }}</button>
           </span>
         </div>
-        <div v-if="!taskRows.length" class="sitp__empty">{{ taskStatusFilter.size ? t('ia2.sit.emptyFiltered') : t('ia2.sit.empty') }}</div>
+        <div v-if="!taskRows.length" class="ui-empty-state">{{ taskStatusFilter.size ? t('ia2.sit.emptyFiltered') : t('ia2.sit.empty') }}</div>
         <button
           v-for="task in taskRows" :key="task.id" type="button" class="sitp__row sitp__row--task"
           :data-testid="`sitp-task-${task.id}`" :title="t('ia2.sit.taskJumpHint')"
@@ -364,7 +364,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           >
           <span v-if="onlineQuery" class="sitp__search-clear" data-testid="sitp-online-search-clear" @click="onlineQuery = ''">×</span>
         </div>
-        <div v-if="!filteredOnlineTree.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
+        <div v-if="!filteredOnlineTree.length" class="ui-empty-state">{{ t('ia2.sit.empty') }}</div>
         <div v-for="row in filteredOnlineTree" :key="row.account.userId" class="sitp__acct">
           <button
             type="button" class="sitp__acct-head"
@@ -380,7 +380,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <span class="sitp__acct-sub">{{ row.machines.length }}{{ t('ia2.sit.panelMachines') }} · {{ row.boards.length }}{{ t('ia2.sit.panelBoards') }} · {{ row.account.profiles.length }} profile</span>
           </button>
           <div v-if="accountOpen(row.account.userId)" class="sitp__acct-body">
-            <div v-if="!row.machines.length && !row.boards.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
+            <div v-if="!row.machines.length && !row.boards.length" class="ui-empty-state">{{ t('ia2.sit.empty') }}</div>
             <div
               v-for="m in row.machines" :key="m.key"
               class="sitp__node" :data-testid="`sitp-machine-${m.key}`" :title="m.sub ?? ''"
@@ -433,7 +433,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   &:hover { color: var(--text-primary); }
 }
 .sitp__body { max-height: 280px; overflow-y: auto; padding: 4px 6px; }
-.sitp__empty { padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
 .sitp__row {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px;
   border: none; border-radius: 5px; background: transparent; cursor: pointer;
@@ -445,12 +444,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 /* R6 合并：任务段顶部「待决策」区（等我行与任务合一） */
 .sitp__decide {
   margin-bottom: 8px; padding: 4px 4px 2px;
-  border: 1px solid var(--warning, #f0a44c);
+  border: 1px solid var(--warning);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--warning, #f0a44c) 8%, transparent);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
 }
 .sitp__sec-head {
-  font-size: 10px; font-weight: 700; color: var(--warning, #f0a44c);
+  font-size: 10px; font-weight: 700; color: var(--warning);
   padding: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .04em;
 }
 .sitp__row--task { align-items: flex-start; }
@@ -458,7 +457,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
   padding: 2px 4px; border: none; background: transparent; cursor: pointer;
   font-family: inherit; text-align: left;
-  &:hover .sitp__name { color: var(--primary, #3b82f6); }
+  &:hover .sitp__name { color: var(--primary); }
 }
 .sitp__name {
   font-size: 12px; color: var(--text-primary); overflow: hidden;
@@ -471,10 +470,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-secondary); color: var(--text-secondary);
 }
 .sitp__tag--board { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); }
-.sitp__tag--p0 { background: var(--error); color: #fff; }
+.sitp__tag--p0 { background: var(--error); color: var(--text-on-accent); }
 .sitp__tag--p1 { background: var(--warning); color: var(--text-primary); }
-.sitp__tag--p2 { background: var(--primary, #3b82f6); color: #fff; }
-.sitp__tag--blocked { background: var(--error); color: #fff; }
+.sitp__tag--p2 { background: var(--primary); color: var(--text-on-accent); }
+.sitp__tag--blocked { background: var(--error); color: var(--text-on-accent); }
 .sitp__stats {
   display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px 6px;
   border-bottom: 1px dashed var(--border-color); margin-bottom: 4px;
@@ -488,9 +487,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   &:hover { border-color: var(--text-muted); }
   &.is-on { border-color: currentColor; font-weight: 700; }
 }
-.sitp__stat--blocked { background: var(--error); color: #fff; }
+.sitp__stat--blocked { background: var(--error); color: var(--text-on-accent); }
 .sitp__stat--review { background: var(--warning); color: var(--text-primary); }
-.sitp__stat--running { background: var(--primary, #3b82f6); color: #fff; }
+.sitp__stat--running { background: var(--primary); color: var(--text-on-accent); }
 /* v12.7 排序控件：与状态标签同排右置 */
 .sitp__sort { display: inline-flex; gap: 2px; margin-left: auto; }
 .sitp__sort-btn {
@@ -516,7 +515,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-secondary); color: var(--text-primary);
   font-size: 11px; font-family: inherit; outline: none;
   &::placeholder { color: var(--text-muted); }
-  &:focus { border-color: var(--primary, #3b82f6); }
+  &:focus { border-color: var(--primary); }
 }
 .sitp__search-clear {
   position: absolute; right: 10px; top: 9px; cursor: pointer;
@@ -532,7 +531,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 .sitp__caret { font-size: 9px; color: var(--text-muted); flex-shrink: 0; }
 .sitp__acct-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
-.sitp__acct-matrix { font-size: 10px; color: #61afef; font-family: ui-monospace, monospace; }
+.sitp__acct-matrix { font-size: 10px; color: var(--accent-info); font-family: ui-monospace, monospace; }
 .sitp__acct-sub { font-size: 10px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .sitp__acct-body { padding: 0 6px 4px 16px; }
 .sitp__node {

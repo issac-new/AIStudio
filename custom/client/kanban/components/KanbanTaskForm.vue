@@ -366,12 +366,12 @@ async function handleSubmit() {
 
 .estimate-result {
   font-size: 12px;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .estimate-muted {
-  color: var(--text-muted, #aaa);
+  color: var(--text-muted);
   font-style: italic;
 }
 /* HERMES_CUSTOM[v020] END */

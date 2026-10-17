@@ -74,22 +74,22 @@ watch(() => ide.workspace, () => void load())
   padding: 6px 10px;
 }
 
-.ide-gitlog__title { flex: 1; font-size: 12px; color: var(--text-muted, #9aa0aa); }
+.ide-gitlog__title { flex: 1; font-size: 12px; color: var(--text-muted); }
 
 .ide-gitlog__btn {
   height: 22px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover { border-color: var(--accent-primary); }
 }
 
-.ide-gitlog__hint { padding: 16px 12px; font-size: 12px; color: var(--text-muted, #9aa0aa); }
+.ide-gitlog__hint { padding: 16px 12px; font-size: 12px; color: var(--text-muted); }
 
 .ide-gitlog__list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 10px 10px; list-style: none; }
 
@@ -102,7 +102,7 @@ watch(() => ide.workspace, () => void load())
   margin-bottom: 2px;
   font-size: 12px;
 
-  &:hover { background: var(--bg-tertiary, #ebebeb); }
+  &:hover { background: var(--bg-tertiary); }
 }
 
 .ide-gitlog__dot {
@@ -110,9 +110,9 @@ watch(() => ide.workspace, () => void load())
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--text-muted, #9aa0aa);
+  background: var(--text-muted);
 
-  &.is-head { background: var(--accent-primary, #4cc9f0); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary, #4cc9f0) 25%, transparent); }
+  &.is-head { background: var(--accent-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 25%, transparent); }
 }
 
 .ide-gitlog__subject {
@@ -121,7 +121,7 @@ watch(() => ide.workspace, () => void load())
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 }
 
 .ide-gitlog__ref {
@@ -134,10 +134,10 @@ watch(() => ide.workspace, () => void load())
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &.is-branch { background: rgba(76, 201, 240, 0.15); color: #4cc9f0; }
-  &.is-remote { background: rgba(152, 195, 121, 0.15); color: var(--success-color, #18a058); }
-  &.is-tag { background: rgba(240, 164, 76, 0.15); color: #f0a44c; }
+  &.is-branch { background: rgba(76, 201, 240, 0.15); color: var(--accent-info); }
+  &.is-remote { background: rgba(152, 195, 121, 0.15); color: var(--success-color); }
+  &.is-tag { background: rgba(240, 164, 76, 0.15); color: var(--ia-stale); }
 }
 
-.ide-gitlog__meta { flex-shrink: 0; font-size: 10px; color: var(--text-muted, #9aa0aa); }
+.ide-gitlog__meta { flex-shrink: 0; font-size: 10px; color: var(--text-muted); }
 </style>

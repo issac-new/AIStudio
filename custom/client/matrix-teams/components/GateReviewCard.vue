@@ -93,8 +93,8 @@ function shortUser(mxId: string): string {
   border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px;
   background: var(--bg-card); display: flex; flex-direction: column; gap: 6px;
 }
-.grc--pass { border-color: var(--success, #34c77b); }
-.grc--reject { border-color: var(--danger, #e05656); }
+.grc--pass { border-color: var(--success); }
+.grc--reject { border-color: var(--danger); }
 .grc__head { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .grc__gate { font-weight: 700; color: var(--text-primary); }
 .grc__case { color: var(--text-muted); }
@@ -102,27 +102,27 @@ function shortUser(mxId: string): string {
   margin-left: auto; padding: 1px 8px; border-radius: 8px; font-size: 11px;
   background: var(--bg-secondary); color: var(--text-secondary);
 }
-.grc--pass .grc__badge { background: var(--success, #34c77b); color: #fff; }
-.grc--reject .grc__badge { background: var(--danger, #e05656); color: #fff; }
+.grc--pass .grc__badge { background: var(--success); color: var(--text-on-accent); }
+.grc--reject .grc__badge { background: var(--danger); color: var(--text-on-accent); }
 .grc__evidence { font-size: 12px; color: var(--text-secondary); }
 .grc__signoffs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .grc__signoff { display: flex; gap: 8px; font-size: 11px; }
 .grc__signoff-user { color: var(--text-secondary); }
 .grc__signoff-verdict { color: var(--text-muted); }
-.grc__signoff-verdict--pass { color: var(--success, #34c77b); }
-.grc__signoff-verdict--reject { color: var(--danger, #e05656); }
-.grc__reason { font-size: 11px; color: var(--danger, #e05656); }
+.grc__signoff-verdict--pass { color: var(--success); }
+.grc__signoff-verdict--reject { color: var(--danger); }
+.grc__reason { font-size: 11px; color: var(--danger); }
 .grc__actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .grc__btn {
   border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);
   color: var(--text-primary); font-size: 11px; padding: 3px 10px; cursor: pointer; font-family: inherit;
 }
-.grc__btn--pass { border-color: var(--success, #34c77b); color: var(--success, #34c77b); }
-.grc__btn--reject { border-color: var(--danger, #e05656); color: var(--danger, #e05656); }
+.grc__btn--pass { border-color: var(--success); color: var(--success); }
+.grc__btn--reject { border-color: var(--danger); color: var(--danger); }
 .grc__reason-input {
   border: 1px solid var(--border-color); border-radius: 6px; padding: 3px 8px;
   font-size: 11px; min-width: 160px; background: var(--bg-primary); color: var(--text-primary);
 }
-.grc__reason-input--err { border-color: var(--danger, #e05656); }
-.grc__reason-err { width: 100%; font-size: 10px; color: var(--danger, #e05656); }
+.grc__reason-input--err { border-color: var(--danger); }
+.grc__reason-err { width: 100%; font-size: 10px; color: var(--danger); }
 </style>

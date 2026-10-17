@@ -442,7 +442,7 @@ $left-gutter: 64px;
     }
 
     .mx_EventTile_footer {
-      margin: var(--cpd-space-1x, 4px) $left-gutter;
+      margin: var(--mx-space-1x) $left-gutter;
     }
 
     // Hover background
@@ -479,7 +479,7 @@ $left-gutter: 64px;
   // ─── Bubble Layout ──────────────────────────────────────
   &_bubbleLayout {
     margin-top: calc(var(--mx-gutter-size, 16px) / 2);
-    margin-left: var(--bubble-margin-inline-start, 48px);
+    margin-left: var(--mx-bubble-margin-inline-start);
     max-width: unset;
     padding-top: 0;
 
