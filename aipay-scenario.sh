@@ -278,9 +278,9 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
     for u in "${INSTANCED_USERS[@]}"; do
       _body=$(jq -nc --arg n "aipaydev-${u}" --arg o "aipaydev" --arg t "agent" \
         '{name:$n, kind:$t, owner:$o, toolAllowlist:[]}')
-      if studio POST /api/governance/agent-identity/register "$GOV_TOK" "$_body" >/dev/null 2>&1; then
+      if studio POST /api/governance/agent-identity/register "${GOV_TOK:-$(studio_login)}" "$_body" >/dev/null 2>&1; then
         _id_ok=$((_id_ok+1))
-      elif studio GET "/api/governance/agent-identity" "$GOV_TOK" 2>/dev/null | jq -e --arg n "aipaydev-${u}" '.identities[] | select(.name==$n)' >/dev/null 2>&1; then
+      elif studio GET "/api/governance/agent-identity" "${GOV_TOK:-$(studio_login)}" 2>/dev/null | jq -e --arg n "aipaydev-${u}" '.identities[] | select(.name==$n)' >/dev/null 2>&1; then
         _id_skip=$((_id_skip+1))
       else
         _id_fail=$((_id_fail+1))
