@@ -21,16 +21,16 @@ import { GOV_TABS_TEXT } from '../i18n-gov-tabs'
 
 describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
   it('/stage/* 前缀映射对应阶段；/app 家族归④生产', () => {
-    expect(centerForPath('/app/stage/setup')).toBe('workbench')
-    expect(centerForPath('/app/stage/reqs')).toBe('sim')
-    expect(centerForPath('/app/stage/design')).toBe('gov')
-    expect(centerForPath('/app/stage/build')).toBe('workbench2')
-    expect(centerForPath('/app/stage/accept')).toBe('accept')
-    expect(centerForPath('/app/stage/govern')).toBe('govern')
-    expect(centerForPath('/app')).toBe('workbench')
-    expect(centerForPath('/app/board')).toBe('workbench2') // /app/* 子路径归④
-    expect(centerForPath('/app/sim')).toBe('sim')
-    expect(centerForPath('/app/gov')).toBe('gov')
+    expect(centerForPath('/app/stage/setup')).toBe('stage1')
+    expect(centerForPath('/app/stage/reqs')).toBe('stage2')
+    expect(centerForPath('/app/stage/design')).toBe('stage3')
+    expect(centerForPath('/app/stage/build')).toBe('stage4')
+    expect(centerForPath('/app/stage/accept')).toBe('stage5')
+    expect(centerForPath('/app/stage/govern')).toBe('stage6')
+    expect(centerForPath('/app')).toBe('stage1')
+    expect(centerForPath('/app/board')).toBe('stage4') // /app/* 子路径归④
+    expect(centerForPath('/app/sim')).toBe('stage2')
+    expect(centerForPath('/app/gov')).toBe('stage3')
     expect(centerForPath('/other')).toBe(null)
   })
 })

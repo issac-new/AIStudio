@@ -4,6 +4,7 @@
 //（操作本身以 body 携带的 synapse adminToken 鉴权——只有真实管理员持有效管理凭据）。
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { randomBytes } from 'node:crypto'
 import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { repoRoot } from './governance-controller'
@@ -15,6 +16,9 @@ export const REGISTRY_KINDS = {
   roster: 'docs/admin/roster.md',
   'app-registry': 'docs/admin/app-registry.md',
   org: 'docs/admin/org.md',
+  // D20 账号邀请台账：邀请=服务端生成一次性初始口令预建号，登记可审计
+  //（谁被邀、何时、何时过期、状态）。口令只在创建响应里出现一次，不落盘。
+  invites: 'docs/admin/invites.md',
   // 方案2 M2（specs/2026-10-09-agent-capability-boundaries.md）：agent 能力声明注册表
   // ——分布式 agent 上线即声明（四维），保存即提交=变更审计；派发侧经
   // graph/node-executors 能力合成层消费（否定式边界生成）。
@@ -78,6 +82,15 @@ const REGISTRY_TABLE_SEEDS: Partial<Record<RegistryKind, string>> = {
     '| --- | --- | --- | --- | --- | --- |',
     '',
   ].join('\n'),
+  invites: [
+    '# 账号邀请台账（invites）',
+    '',
+    '邀请=管理员发起、服务端生成一次性初始口令并预建 matrix 账号；初始口令只在创建响应中出现一次，不落盘。被邀人用初始口令在登录页 Matrix 页签首登，随后在设置中改密。本台账登记审计列（谁被邀/何时/何时过期/状态），状态由管理员按交付与回收情况维护。',
+    '',
+    '| 邀请时间 | matrix 账号 | 角色 | 过期时间 | 状态 | 经手 |',
+    '| --- | --- | --- | --- | --- | --- |',
+    '',
+  ].join('\n'),
 }
 
 /** 读-追加-提交一体化（文件缺失时先落种子表头再追加）。 */
@@ -133,6 +146,37 @@ export interface OffboardInput {
   localName: string; handoverTo: string; taskIds: string[]
   reason: string; adminToken: string; homeserverUrl: string; actor?: string
 }
+
+export interface InviteInput {
+  localName: string; role: string
+  adminToken: string; homeserverUrl: string
+  withAgent?: boolean; expiresInHours?: number; actor?: string
+}
+
+/** D20 邀请建号：一次性初始口令由服务端生成（randomBytes 18B base64url，约
+ *  24 字符），预建 matrix 号（复用 provisionMatrixAccount 的防假成功链），
+ *  invites 台账登记审计行。口令只进返回值一次，绝不落盘。 */
+export async function createAccountInvite(inp: InviteInput): Promise<{
+  created: string[]; rosterCommit: string; invitesCommit: string
+  userId: string; initialPassword: string; expires: string
+}> {
+  const initialPassword = randomBytes(18).toString('base64url')
+  const prov = await provisionMatrixAccount({
+    localName: inp.localName, role: inp.role, password: initialPassword,
+    adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl,
+    withAgent: inp.withAgent,
+  })
+  const name = inp.localName.trim().replace(/^@/, '').split(':')[0]
+  const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
+  const userId = `@${name}:${serverName}`
+  const expires = new Date(Date.now() + (inp.expiresInHours && inp.expiresInHours > 0 ? inp.expiresInHours : 24) * 3600_000).toISOString()
+  const { commit } = await appendRegistryRow(
+    'invites',
+    [new Date().toISOString(), userId, inp.role, expires, 'open', inp.actor || 'account-admin'],
+    `账号邀请：${name}（${inp.role}）`, inp.actor || 'account-admin')
+  return { ...prov, invitesCommit: commit, userId, initialPassword, expires }
+}
+
 
 /** P8 离职三步向导（服务端落实三步原子序）：①移交工单 ②停用双账号 ③审计留痕——每步独立提交可回溯。 */
 export async function offboardAccount(inp: OffboardInput): Promise<{

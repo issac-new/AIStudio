@@ -10,7 +10,7 @@ import { IA_AREAS, areaForPath, type IaAreaKey } from '../routes'
 
 export const useIaStore = defineStore('ia2', () => {
   /** 当前视图（场景条高亮依据；v12 双视图——/app 侧唯一场景） */
-  const currentArea = ref<IaAreaKey>('collab')
+  const currentArea = ref<IaAreaKey>('stage1') // D20：键名对齐阶段（原 'collab' 为 v12 陈旧字面）
 
   /** 由路径投影当前区域（IaShell watch route.path 驱动） */
   function syncFromPath(path: string): void {

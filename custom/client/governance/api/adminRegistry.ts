@@ -26,3 +26,14 @@ export function offboardAccount(inp: Record<string, unknown>): Promise<{ handove
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inp),
   })
 }
+
+/** D20 账号邀请：服务端生成一次性初始口令预建号；口令只在本次响应中出现 */
+export interface InviteResult {
+  created: string[]; rosterCommit: string; invitesCommit: string
+  userId: string; initialPassword: string; expires: string
+}
+export function createInvite(inp: Record<string, string | number>): Promise<InviteResult> {
+  return request('/api/governance/invites', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inp),
+  })
+}
