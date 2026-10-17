@@ -1,0 +1,13 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -280,6 +280,10 @@
+ # matrix adapter degrades gracefully without mautrix (import stubs).
+ matrix = [
+   "mautrix[encryption]==0.21.1; sys_platform == 'linux'",
++  # SIM-only（overlay 643）：非 linux 走裸 mautrix（纯 Python、无 python-olm；E2E 加密仍仅
++  # linux）。不解除则 macOS 上 pm 正规 sync 永不装 mautrix，matrix 适配器全灭，只能靠
++  # 旁路 uv pip 注入 pm 代际环境苟活（2026-10-17 网关重启现形实录）。
++  "mautrix==0.21.1; sys_platform != 'linux'",
+   "aiosqlite==0.22.1; sys_platform == 'linux'",
+   "asyncpg==0.31.0; sys_platform == 'linux'",
+   "aiohttp-socks==0.11.0; sys_platform == 'linux'",
