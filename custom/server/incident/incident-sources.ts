@@ -14,6 +14,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 // 身份册（A7）：静态 import——相对 require 在 vitest/vite 转换态失解析
 // （2026-10-17 实测 Cannot find module，catch 静默吞=身份面恒 absent）。
 import * as agentIdentity from '../agentidentity/agent-identity'
+import * as approvalLog from '../approvals/approval-log'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describeToolCall, type ToolSemantic } from './tool-semantics'
@@ -427,11 +428,10 @@ export interface ApprovalWindow {
 }
 
 export function readApprovalWindow(limit = 200): ApprovalWindow {
-  let query: (n?: number) => Array<{ ts: number; targetKind?: string; decision: string; risk?: string }>
-  try {
-    query = require('../approvals/approval-log').queryApprovalLog
-  } catch { return { entries: 0, byDecision: {}, recent: [] } }
-  if (typeof query !== 'function') return { entries: 0, byDecision: {}, recent: [] }
+  // 静态 import（2026-10-17 A7 收尾）：相对 require 在 vitest/vite 转换态失解析
+  // 且 catch 静默吞=审批面恒 0（与身份面同型坑）。
+  const query: (n?: number) => Array<{ ts: number; targetKind?: string; decision: string; risk?: string }>
+    = approvalLog.queryApprovalLog
   const rows = query(limit)
   const out: ApprovalWindow = { entries: rows.length, byDecision: {}, recent: [] }
   for (const r of rows) {
@@ -472,13 +472,28 @@ export function readIdentitySnapshot(profileNames: string[]): IdentitySnapshot {
         // 凭证只带 label/kind/status——绝不带密钥原文（论文：存指纹不存密钥）
         credentials: (i.credentials ?? []).map((c) => ({ label: c.label, kind: c.kind, status: c.status })),
       }))
-    const delegationChains = matched.map((m) => {
+    // incoming 委托（2026-10-17 A7 收尾）：论文委托链=Human→Agent 的授权到达侧；
+    // activeDelegationChain 只走「本身份发出」的边——推演形态授权从 admin 发出、
+    // 到达各执行档案，须补 to==matched 的到达边，否则链恒空。
+    const incoming: Array<{ from: string; edges: Array<{ from: string; to: string; scope: string; revoked: boolean }> }> = []
+    for (const i of identities) {
+      for (const d of i.delegations ?? []) {
+        if (d.revokedAt) continue
+        if (matched.some((m) => m.id === d.to || m.name === d.to)) {
+          incoming.push({ from: i.name, edges: [{ from: i.name, to: String(d.to), scope: d.scope, revoked: false }] })
+        }
+      }
+    }
+    // 出向链（matched 自身发出的委托，如 agent→sub-agent）与到达链并集
+    const outgoing = matched.flatMap((m) => {
       const chain = mod.activeDelegationChain(m.id)
-      return {
+      if (!chain.edges.length) return []
+      return [{
         from: m.name,
         edges: chain.edges.map((e) => ({ from: e.from, to: e.to, scope: e.scope, revoked: Boolean(e.revokedAt) })),
-      }
+      }]
     })
+    const delegationChains = [...incoming, ...outgoing]
     return { count: identities.length, byKind, matched, delegationChains }
   } catch { return { count: 0, byKind: {}, matched: [], delegationChains: [] } }
 }
@@ -496,6 +511,9 @@ export function ekkoDbCandidates(explicit?: string): string[] {
   const out: string[] = []
   const push = (p: string | undefined) => { if (p && !out.includes(p)) out.push(p) }
   push(explicit?.trim() || process.env.HERMES_INCIDENT_EKKO_DB?.trim())
+  // 推演隔离树（2026-10-17 A7）：HERMES_HOME 派生两形态（hermes/.ekko 与根 .ekko）
+  const hh = process.env.HERMES_HOME?.trim()
+  if (hh) { push(join(hh, '.ekko', 'ekko.db')); push(join(hh, 'ekko', 'ekko.db')) }
   push(join(homedir(), '.hermes-web-ui', 'ekko.db'))
   push(join(homedir(), '.hermes', 'ekko', 'ekko.db'))
   return out

@@ -27,6 +27,7 @@
    miss；按 header.started_at 落窗聚合）。
 
 ## 验收
+- 十要素收尾批（2026-10-17 续）：17 要素 collected 15 + partial 2（data_sources/orchestration_protocol 为元素定义的语义上限）+ absent 0——未采集清零
 - run20 证据+SIM trace/身份实测：17 要素 collected 2→7（message_history/
   effective_autonomy/effective_tool_use/agent_identity/trust_boundaries/
   theoretical_autonomy 转正；absent 15→10）。
@@ -52,3 +53,7 @@
 | D3 | 静态 import 替相对 require | vite 转换态相对 require 失解析且 catch 静默吞=恒 absent | 保持 require+放大 catch 日志（仍断） | 可逆 |
 | D4 | trace 窗口聚合按 header.started_at | 文件名时间戳与 RUN_ID 永不相等是 hermes 形态 | 改 hermes 文件名为 RUN_ID（碰上游） | 可逆 |
 | D5 | enable 判定含 already-enabled | CLI 幂等语义返回非零退出码 | 只看退出码（43 home 全判假失败） | 可逆 |
+| D6 | 十要素回退接线到 SIM 真实源（身份册/委托/审批/消息/ekko） | workflow_runs/gc 表在推演形态本就无数据——硬等表=永远 absent；真实设计态=身份册、真实运行态=profile 会话 | 造 workflow 假数据（红线） | 可逆 |
+| D7 | 委托链=到达边∪发出边 | 论文链语义=Human→Agent 授权到达侧；activeDelegationChain 只走出向 | 只走出向（推演形态恒空） | 可逆 |
+| D8 | data_sources 双源并集（trace ∪ messages） | trace 在场不代表消息面无外部触达（run20 span 缺失时代消息是唯一源） | 只认 trace | 可逆 |
+| D9 | 剩余 2 partial 为元素语义上限非缺陷 | data_sources 定义即「URL 未逐条快照=partial」；orchestration gc 裁决面不在事故报告域 | 强改 collected（虚报） | 不可逆（虚报红线） |
