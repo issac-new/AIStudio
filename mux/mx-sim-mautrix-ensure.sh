@@ -5,7 +5,7 @@
 # python-olm 在 macOS 编不过，裸 mautrix 纯 Python 可装却被一并门掉），正规 pm sync 在
 # darwin 永不装 mautrix——SIM matrix 能力历来靠旁路注入苟活，pm 迁移/重建代际环境即丢失，
 # 网关重启才现形（2026-10-17 17:11 实录：01:14 旧实例靠旧代际 3b3e 苟活 15h，重启全灭）。
-# 双保险分流：B 案（正路）= overlay 638 补丁解除 pyproject 门控 + pm lock 重解锁
+# 双保险分流：B 案（正路）= overlay 643 补丁解除 pyproject 门控 + pm lock 重解锁
 # （快照 uv.lock 2026-10-17 已刷），新代际环境经 pm install 合法获得 mautrix；
 # A 案（本脚本）= 兜底「快照 uv.lock 被再供给覆盖回 linux 门控」等 B 路失效场景。
 #
