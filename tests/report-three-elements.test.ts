@@ -1,18 +1,21 @@
 import { describe, it, beforeAll, expect } from 'vitest'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // 报告三要素守门（2026-10-10 改造轮）：①PART1 治理有效性实测统计表实算（旧版空标题根治）
 // ②关键技术规范参数卡（spec-params.env 单一事实源）③问题单表频次+级别列
 // ④RACI 时序去重（PART1 精简、PART2 全量）⑤双闭合/ guide 双嵌套结构 bug 修复。
 // 夹具内嵌自持（run12 形态——jargon 门禁阈值前的轮次，不依赖在架轮次与词表路径）。
+// 2026-10-18 隔离根治：夹具落临时目录——此前在 tests/fixtures/ 就地重建，每次跑
+// 套件都改写已提交基线（state.env 时间戳+final-report.html 再生），工作树常脏有
+// 误提交漂移风险（docs/2026-10-16-simroot-internalization.md §33 搅动件实录）。
 const HARNESS = join(__dirname, '..')
-const FIX = join(HARNESS, 'tests', 'fixtures', 'report-three-elements')
+const FIX = mkdtempSync(join(tmpdir(), 'report-three-elements-'))
 const NOW = Math.floor(Date.now() / 1000)
 
 beforeAll(() => {
-  rmSync(FIX, { recursive: true, force: true })
   const run = '20261009-v8-run12'
   const ev = join(FIX, 'runs', run, 'evidence')
   mkdirSync(ev, { recursive: true })
