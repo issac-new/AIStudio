@@ -31,6 +31,16 @@ _mx_root_walk() {
   done
   return 1
 }
+# yaml 可用解释器解析链（2026-10-17 实锤：宿主拆 venv 后系统 python3 缺 pyyaml，
+# write_root_config/write_user_profile/write_agent_profile 三拷贝裸用 python3 →
+# 静默写空 43 份 SIM config，mx-up 容量闸拦截。与 preflight 候选链同源）
+_mx_yaml_py() {
+  local c
+  for c in "$HOME/.hermes/hermes-agent/.venv/bin/python" "$HOME/.hermes/hermes-agent/venv.py311/bin/python" python3; do
+    if "$c" -c 'import yaml' >/dev/null 2>&1; then echo "$c"; return 0; fi
+  done
+  return 1
+}
 NCWK_ROOT="${MX_NCWK_ROOT:-$(_mx_root_walk "$MX_SCRIPT_DIR" || echo "$(cd "$HARNESS_ROOT/.." && pwd)")}"
 OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT/overlay}"
 PATCH_DIR="$OVERLAY_ROOT/patches"
@@ -745,7 +755,8 @@ mx_apply_agent_patches() {
 write_root_config() {
   mkdir -p "$HERMES_ROOT" "$LOCK_DIR" "$CREDS_DIR" "$PIDS_DIR" "$LOGS_DIR" "$EVID_DIR" "$WEBUI_HOME"
   chmod 700 "$SIM_ROOT"
-  GW_PORT="$GW_PORT" python3 - "$HOME/.hermes/config.yaml" > "$HERMES_ROOT/config.yaml" <<'PYEOF'
+  _mxpy=$(_mx_yaml_py) || fail "write_root_config：无 yaml 可用解释器（venv 与系统 python3 均缺）——先修环境"
+  GW_PORT="$GW_PORT" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$HERMES_ROOT/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
@@ -872,7 +883,8 @@ write_user_profile() { # <user>：Orchestrator profile——仅账号和配置�
   api_key=$(api_server_key)
   mkdir -p "$PROF"
   local defboard; defboard=$(first_board_of "$u")
-  GW_PORT="$GW_PORT" DEF_BOARD="$defboard" python3 - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
+  _mxpy=$(_mx_yaml_py) || fail "write_user_profile：无 yaml 可用解释器——先修环境"
+  GW_PORT="$GW_PORT" DEF_BOARD="$defboard" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
@@ -947,7 +959,8 @@ write_agent_profile() { # <user> <agent-id>：研发专职 agent profile（无 m
   local PROF="$HERMES_ROOT/profiles/$name" defboard
   defboard=$(boards_of "$u" | tr ' ' '\n' | grep ":$a$" | head -1 | cut -d: -f1)
   mkdir -p "$PROF"
-  DEF_BOARD="$defboard" python3 - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
+  _mxpy=$(_mx_yaml_py) || fail "write_agent_profile：无 yaml 可用解释器——先修环境"
+  DEF_BOARD="$defboard" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
