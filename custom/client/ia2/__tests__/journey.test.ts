@@ -8,9 +8,11 @@ import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } f
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }), createI18n: () => ({ global: { t: (k: string) => k, locale: 'zh' } }) }))
 vi.mock('../../ide/utils/auth-fetch', () => ({ authFetch: vi.fn() }))
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: () => ({ sortedRuns: [] }) }))
 
 import { authFetch } from '../../ide/utils/auth-fetch'
 import JourneyView from '../views/journey/JourneyView.vue'
+import { __resetStageProgressCacheForTest } from '../composables/useStageProgress'
 
 const mockedFetch = vi.mocked(authFetch)
 
@@ -45,7 +47,7 @@ async function mountAt(path: string) {
 }
 
 describe('JourneyView — D18 旅程式旅程首页', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); __resetStageProgressCacheForTest() })
 
   it('两区十卡渲染（A 区搭建五步+B 区交付五阶段）+无轮引导态', async () => {
     const { w } = await mountAt('/app')
