@@ -73,6 +73,7 @@ const EXPECTED_NAMES = [
   'ia2.governance',
   'ia2.groupRoom',
   'ia2.inbox',
+  'ia2.journey',
   'ia2.loopCanvas',
   'ia2.runDetail',
   'ia2.runs',
