@@ -17,8 +17,8 @@ const actionMsg = ref('')
 const resolveInput = ref<Record<string, string>>({})
 const waiveInput = ref<Record<string, string>>({})
 
-const targets = computed(() => (ledger.value ? groupClearanceTargets(ledger.value) : []))
-const rows = computed(() => (ledger.value ? [...ledger.value.rows].reverse().slice(0, 100) : []))
+const targets = computed(() => (Array.isArray(ledger.value?.rows) ? groupClearanceTargets(ledger.value) : []))
+const rows = computed(() => (Array.isArray(ledger.value?.rows) ? [...ledger.value.rows].reverse().slice(0, 100) : []))
 
 async function refresh(): Promise<void> {
   busy.value = true
@@ -92,7 +92,7 @@ onMounted(() => { void refresh() })
       </section>
 
       <section class="clr__box">
-        <h5 class="clr__h2">台账全量（{{ ledger.rows.length }} 行，倒序前 100）</h5>
+        <h5 class="clr__h2">台账全量（{{ ledger.rows?.length ?? 0 }} 行，倒序前 100）</h5>
         <table class="clr__table" data-testid="clr-table">
           <thead><tr><th>类型</th><th>缺陷</th><th>时刻</th><th>状态</th></tr></thead>
           <tbody>
@@ -114,11 +114,11 @@ onMounted(() => { void refresh() })
 .clr__bar { display: flex; gap: 10px; align-items: center; }
 .clr__h { margin: 0; font-size: 13px; font-weight: 600; }
 .clr__h2 { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
-.clr__lamp { padding: 1px 10px; border-radius: 4px; font-size: 12px; color: #fff; }
-.clr__lamp--red { background: #b33; }
-.clr__lamp--green { background: #2e9e5b; }
+.clr__lamp { padding: 1px 10px; border-radius: 4px; font-size: 12px; color: var(--text-on-accent); }
+.clr__lamp--red { background: var(--error); }
+.clr__lamp--green { background: var(--ia-fresh); }
 .clr__btn {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   color: inherit;
   border-radius: 4px;
@@ -127,17 +127,17 @@ onMounted(() => { void refresh() })
   cursor: pointer;
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
-.clr__error { color: #d33; font-size: 12px; margin: 0; word-break: break-all; }
-.clr__msg { color: #2e9e5b; font-size: 12px; margin: 0; }
-.clr__hint { color: var(--text-muted, #878c99); font-size: 12px; margin: 0; }
-.clr__box { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 10px 12px; }
-.clr__target { padding: 6px 0; & + & { border-top: 1px dashed var(--border-color, #e5e7eb); } }
+.clr__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
+.clr__msg { color: var(--ia-fresh); font-size: 12px; margin: 0; }
+.clr__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
+.clr__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
+.clr__target { padding: 6px 0; & + & { border-top: 1px dashed var(--border-color); } }
 .clr__target-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
-.clr__target-name { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; font-weight: 600; }
-.clr__target-meta { font-size: 11px; color: var(--text-muted, #878c99); }
+.clr__target-name { font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+.clr__target-meta { font-size: 11px; color: var(--text-muted); }
 .clr__target-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .clr__input {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 12px;
@@ -147,10 +147,10 @@ onMounted(() => { void refresh() })
   &--reason { flex: 1; min-width: 180px; }
 }
 .clr__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.clr__table th, .clr__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color, #e5e7eb); }
-.clr__mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; }
+.clr__table th, .clr__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
+.clr__mono { font-family: var(--font-mono); font-size: 11px; }
 .clr__state { padding: 0 6px; border-radius: 4px; font-size: 11px; }
-.clr__state--open { color: #d33; background: rgba(221, 51, 51, 0.12); }
-.clr__state--waived { color: #b98ee0; background: rgba(150, 84, 214, 0.18); }
-.clr__state--resolved { color: #2e9e5b; background: rgba(46, 158, 91, 0.12); }
+.clr__state--open { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
+.clr__state--waived { color: var(--ia-compensated); background: rgba(150, 84, 214, 0.18); }
+.clr__state--resolved { color: var(--ia-fresh); background: rgba(46, 158, 91, 0.12); }
 </style>

@@ -102,7 +102,7 @@ function truncate(s: unknown, max: number): string {
         </div>
       </section>
     </template>
-    <p v-else class="run-trace-inspector__empty">{{ t('cockpit.selectNodeForDetail') }}</p>
+    <p v-else class="ui-empty-state">{{ t('cockpit.selectNodeForDetail') }}</p>
   </aside>
 </template>
 
@@ -116,12 +116,12 @@ function truncate(s: unknown, max: number): string {
 .run-trace-inspector__head-info b { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px; word-break: break-word; }
 .run-trace-inspector__tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .run-trace-inspector__tag { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted); text-transform: uppercase;
-  &.is-evidence-l1 { background: var(--success); color: #fff; }
-  &.is-evidence-l2 { background: var(--accent-info); color: #fff; }
-  &.is-evidence-l3 { background: var(--warning); color: #fff; }
-  &.is-status-running { background: var(--success); color: #fff; }
-  &.is-status-ok { background: var(--accent-info); color: #fff; }
-  &.is-status-error { background: var(--error); color: #fff; }
+  &.is-evidence-l1 { background: var(--success); color: var(--text-on-accent); }
+  &.is-evidence-l2 { background: var(--accent-info); color: var(--text-on-accent); }
+  &.is-evidence-l3 { background: var(--warning); color: var(--text-on-accent); }
+  &.is-status-running { background: var(--success); color: var(--text-on-accent); }
+  &.is-status-ok { background: var(--accent-info); color: var(--text-on-accent); }
+  &.is-status-error { background: var(--error); color: var(--text-on-accent); }
 }
 
 /* 区块 */
@@ -145,18 +145,17 @@ function truncate(s: unknown, max: number): string {
 .run-trace-inspector__timeline-kind { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); text-transform: uppercase; }
 .run-trace-inspector__timeline-meta { font-size: 9px; color: var(--text-muted); font-family: monospace; }
 .run-trace-inspector__timeline-status { font-size: 9px; padding: 1px 4px; border-radius: 3px;
-  &.is-running { background: var(--success); color: #fff; }
-  &.is-ok { background: var(--accent-info); color: #fff; }
-  &.is-error { background: var(--error); color: #fff; }
+  &.is-running { background: var(--success); color: var(--text-on-accent); }
+  &.is-ok { background: var(--accent-info); color: var(--text-on-accent); }
+  &.is-error { background: var(--error); color: var(--text-on-accent); }
 }
 .run-trace-inspector__timeline-attr { font-size: 8px; padding: 1px 4px; border-radius: 3px;
-  &.is-inferred { background: var(--warning); color: #fff; }
-  &.is-accurate { background: var(--success); color: #fff; }
+  &.is-inferred { background: var(--warning); color: var(--text-on-accent); }
+  &.is-accurate { background: var(--success); color: var(--text-on-accent); }
 }
 .run-trace-inspector__timeline-text { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin: 4px 0 0 0; white-space: pre-wrap; word-break: break-word; }
 .run-trace-inspector__timeline-tool { font-size: 11px; color: var(--text-primary); font-weight: 600; margin: 4px 0 0 0; }
 .run-trace-inspector__label { font-size: 9px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px; }
 .run-trace-inspector__timeline-args pre, .run-trace-inspector__timeline-result pre { font-size: 10px; color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 6px; border-radius: 3px; margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
 
-.run-trace-inspector__empty { color: var(--text-muted); font-size: 12px; }
 </style>

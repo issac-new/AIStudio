@@ -507,7 +507,7 @@ watch(
 .timeline-error {
   padding: 8px 16px;
   text-align: center;
-  color: var(--error, #e53e3e);
+  color: var(--error);
   font-size: 12px;
   background: rgba(229, 62, 62, 0.06);
   border-radius: 6px;

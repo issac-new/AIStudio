@@ -301,7 +301,7 @@ function openManage(): void {
 }
 
 .ide-mcp__tab {
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--border-color);
   background: transparent;
   border-radius: 4px;
   padding: 1px 8px;
@@ -310,13 +310,13 @@ function openManage(): void {
 }
 
 .ide-mcp__tab.is-active {
-  background: var(--primary-color, #18a058);
+  background: var(--primary-color);
   color: var(--text-on-accent);
-  border-color: var(--primary-color, #18a058);
+  border-color: var(--primary-color);
 }
 
 .ide-mcp__skill-desc {
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -331,12 +331,12 @@ function openManage(): void {
 
 .ide-mcp__title {
   font-weight: 600;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 }
 
 .ide-mcp__summary {
   margin: 0;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -346,7 +346,7 @@ function openManage(): void {
   line-height: 1.6;
 }
 
-.ide-mcp__error { color: var(--error-color, #d03050); }
+.ide-mcp__error { color: var(--error-color); }
 
 .ide-mcp__list {
   flex: 1;
@@ -360,7 +360,7 @@ function openManage(): void {
 
 .ide-mcp__server {
   padding: 6px 8px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
 }
 
@@ -376,8 +376,8 @@ function openManage(): void {
   border-radius: 50%;
   flex-shrink: 0;
 
-  &.is-on { background: var(--success-color, var(--success-color, #18a058)); }
-  &.is-off { background: var(--error-color, #d03050); }
+  &.is-on { background: var(--success-color, var(--success-color)); }
+  &.is-off { background: var(--error-color); }
 }
 
 .ide-mcp__name {
@@ -386,20 +386,20 @@ function openManage(): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
 }
 
 .ide-mcp__transport,
 .ide-mcp__tools {
   flex-shrink: 0;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11px;
 }
 
 .ide-mcp__server-error {
   margin-top: 4px;
-  color: var(--error-color, #d03050);
+  color: var(--error-color);
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -414,28 +414,28 @@ function openManage(): void {
 .ide-mcp__btn {
   height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { border-color: var(--accent-primary); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
   &--primary {
     flex: 1;
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+    color: var(--accent-primary);
   }
 }
-.ide-mcp__health { display: flex; align-items: center; gap: 10px; padding: 4px 10px; font-size: 11px; border-bottom: 1px solid var(--border-color, #e0e0e0); }
-.ide-mcp__health-title { font-weight: 600; color: var(--text-color-3, #999); }
-.ide-mcp__health-dim { color: var(--text-color-2, #555);
-  &[data-level='good'] { color: var(--success-color, #18a058); }
-  &[data-level='poor'] { color: var(--warning-color, #f0a020); } }
+.ide-mcp__health { display: flex; align-items: center; gap: 10px; padding: 4px 10px; font-size: 11px; border-bottom: 1px solid var(--border-color); }
+.ide-mcp__health-title { font-weight: 600; color: var(--text-muted); }
+.ide-mcp__health-dim { color: var(--text-secondary);
+  &[data-level='good'] { color: var(--success-color); }
+  &[data-level='poor'] { color: var(--warning-color); } }
 .ide-mcp__search { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
-.ide-mcp__search-tier { border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; background: transparent; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999);
-  &.is-on { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); } }
+.ide-mcp__search-tier { border: 1px solid var(--border-color); border-radius: 8px; background: transparent; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-muted);
+  &.is-on { color: var(--primary-color); border-color: var(--primary-color); } }
 </style>

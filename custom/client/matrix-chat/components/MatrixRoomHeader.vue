@@ -287,13 +287,13 @@ const roomTopic = computed(() => {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 // matrix-chat 本地：信息色（上游 variables.scss 无此变量）
-$accent-info: var(--info, #38bdf8);
+$accent-info: var(--info);
 
 
 .matrix-room-header {
   display: flex;
   align-items: center;
-  gap: var(--cpd-space-3x, 12px);
+  gap: var(--mx-space-3x);
   flex: 1;
   min-width: 0;
 }
@@ -379,7 +379,7 @@ $accent-info: var(--info, #38bdf8);
 
 .room-header-inline-icon {
   flex-shrink: 0;
-  color: var(--cpd-color-icon-info-primary, $accent-info);
+  color: $accent-info;
   display: flex;
   align-items: center;
 }
@@ -476,8 +476,8 @@ $accent-info: var(--info, #38bdf8);
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-primary, #3b82f6);
-  border: 2px solid var(--bg-card, #fff);
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
 }
 
 // ─── FacePile (Element style) ───────────────────────────
@@ -505,7 +505,7 @@ $accent-info: var(--info, #38bdf8);
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid var(--cpd-color-bg-subtle-primary, $bg-card);
+  border: 2px solid var(--bg-card);
   margin-left: -8px;
   overflow: hidden;
   display: flex;

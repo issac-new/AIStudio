@@ -75,7 +75,7 @@ async function shareSession(): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
   cursor: pointer;
 }
 </style>

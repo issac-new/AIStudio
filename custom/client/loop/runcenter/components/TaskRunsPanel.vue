@@ -149,7 +149,7 @@ function badgeStatus(status: string): RunStatus | null {
 .trp__filter {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -157,27 +157,27 @@ function badgeStatus(status: string): RunStatus | null {
   font-family: inherit;
 }
 .trp__filter--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 .trp__search {
   flex: 0 1 220px;
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
 }
 .trp__count {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
-.trp__hint { padding: 24px 0; text-align: center; font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
-.trp__failed { display: flex; align-items: center; gap: 10px; color: var(--color-danger, #e11d48); font-size: 13px; }
+.trp__hint { padding: 24px 0; text-align: center; font-size: 12px; color: var(--text-muted, var(--color-text-secondary)); }
+.trp__failed { display: flex; align-items: center; gap: 10px; color: var(--color-danger); font-size: 13px; }
 .trp__retry {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   border-radius: 4px;
   padding: 3px 12px;
@@ -191,13 +191,13 @@ function badgeStatus(status: string): RunStatus | null {
 .trp__table th {
   text-align: left;
   font-weight: 600;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   padding: 6px 10px;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-primary, #fff));
+  background: var(--bg-card, var(--color-bg-primary));
 }
 .trp__table td {
   padding: 6px 10px;
@@ -205,21 +205,21 @@ function badgeStatus(status: string): RunStatus | null {
   vertical-align: top;
   min-width: 0;
 }
-.trp__mono { font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trp__mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .trp__task { max-width: 320px; }
-.trp__task-id { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--text-muted, var(--color-text-secondary, #878c99)); display: block; }
+.trp__task-id { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted, var(--color-text-secondary)); display: block; }
 .trp__task-title {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.trp__time { white-space: nowrap; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.trp__time { white-space: nowrap; color: var(--text-muted, var(--color-text-secondary)); }
 .trp__summary {
   max-width: 360px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 </style>

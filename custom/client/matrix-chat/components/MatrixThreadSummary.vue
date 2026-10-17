@@ -137,10 +137,10 @@ function handleClick() {
   border-radius: 50%;
   border: 2px solid var(--bg-card);
   &.highlight {
-    background: #ff4b4b;
+    background: var(--error);
   }
   &.unread {
-    background: #ffc107;
+    background: var(--ia-stale);
   }
 }
 

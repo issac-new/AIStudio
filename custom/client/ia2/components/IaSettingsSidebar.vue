@@ -120,7 +120,7 @@ const groupVisible = computed(() =>
           <CockpitIcon :name="e.icon" :size="14" />
           <span>{{ e.labelKey ? t(e.labelKey) : e.label }}</span>
         </RouteLinkItem>
-        <p v-if="g.entries.length === 0" class="ia-setnav__empty">—</p>
+        <p v-if="g.entries.length === 0" class="ui-empty-state ui-empty-state--compact">—</p>
       </section>
     </div>
   </aside>
@@ -141,5 +141,4 @@ const groupVisible = computed(() =>
     .cockpit-icon { color: var(--text-primary); }
   }
 }
-.ia-setnav__empty { margin: 2px 6px; font-size: 11px; color: var(--text-muted); }
 </style>

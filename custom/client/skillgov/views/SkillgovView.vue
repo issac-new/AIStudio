@@ -144,7 +144,7 @@ onMounted(() => void load())
 .sgov-view__bar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .sgov-view__bar .roots { display: flex; flex-direction: column; gap: 3px; font-size: 12px; flex: 1; min-width: 240px;
   input { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 10px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; font-family: var(--font-mono, monospace); } }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
+button.primary { background: var(--accent-primary); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px;
   &:disabled { opacity: 0.6; cursor: wait; } }
 .sgov-view__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .card-num { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;

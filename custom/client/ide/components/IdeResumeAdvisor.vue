@@ -117,14 +117,14 @@ function dismiss(): void {
   border-radius: 6px; font-size: 11px; background: var(--hover-color, rgba(0, 0, 0, 0.04));
 }
 .ide-resume__dot { width: 7px; height: 7px; border-radius: 50%; flex: none;
-  &.is-safe_retry { background: var(--info-color, #2080f0); }
-  &.is-new_session { background: var(--error-color, #d03050); }
-  &.is-backoff { background: var(--warning-color, #f0a020); } }
-.ide-resume__detail { color: var(--text-color-2, #555); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &.is-safe_retry { background: var(--info-color); }
+  &.is-new_session { background: var(--error-color); }
+  &.is-backoff { background: var(--warning-color); } }
+.ide-resume__detail { color: var(--text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-resume__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
-  font-size: 11px; padding: 1px 10px; cursor: pointer; color: var(--text-color-2, #555); white-space: nowrap;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 4px;
+  font-size: 11px; padding: 1px 10px; cursor: pointer; color: var(--text-secondary); white-space: nowrap;
   &:disabled { opacity: 0.5; cursor: default; }
-  &.is-primary { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); } }
-.ide-resume__close { border: none; background: transparent; color: var(--text-color-3, #999); cursor: pointer; padding: 0 2px; }
+  &.is-primary { border-color: var(--primary-color); color: var(--primary-color); } }
+.ide-resume__close { border: none; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0 2px; }
 </style>

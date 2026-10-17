@@ -509,7 +509,7 @@ async function handleLeaveRoom() {
   border: none;
   border-radius: $radius-sm;
   background: $accent-primary;
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   flex-shrink: 0;
   transition: all $transition-fast;
@@ -615,10 +615,10 @@ async function handleLeaveRoom() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--error, #ef4444);
+  border: 1px solid var(--error);
   border-radius: $radius-sm;
   background: none;
-  color: var(--error, #ef4444);
+  color: var(--error);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -629,7 +629,7 @@ async function handleLeaveRoom() {
   }
 
   &--confirming {
-    background: var(--error, #ef4444);
+    background: var(--error);
     color: var(--text-on-accent);
     font-weight: 700;
 
@@ -639,7 +639,7 @@ async function handleLeaveRoom() {
 
 .rs-leave-error {
   font-size: 12px;
-  color: var(--error, #ef4444);
+  color: var(--error);
   margin: 0;
   text-align: center;
 }

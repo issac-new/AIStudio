@@ -81,7 +81,7 @@ onMounted(() => { void refresh() })
 .kls__bar { display: flex; gap: 8px; align-items: center; }
 .kls__h { margin: 0; font-size: 12px; font-weight: 600; }
 .kls__btn {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   color: inherit;
   border-radius: 4px;
@@ -90,15 +90,15 @@ onMounted(() => { void refresh() })
   cursor: pointer;
   &:disabled { opacity: 0.4; }
 }
-.kls__saved { color: #2e9e5b; font-size: 12px; }
-.kls__note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
-.kls__error { color: #d33; font-size: 12px; margin: 0; word-break: break-all; }
-.kls__hint { color: var(--text-muted, #878c99); font-size: 12px; margin: 0; }
+.kls__saved { color: var(--ia-fresh); font-size: 12px; }
+.kls__note { margin: 0; font-size: 11px; color: var(--text-muted); }
+.kls__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
+.kls__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .kls__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.kls__table th, .kls__table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+.kls__table th, .kls__table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border-color); }
 .kls__input {
   width: 100%;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: transparent;
   color: inherit;

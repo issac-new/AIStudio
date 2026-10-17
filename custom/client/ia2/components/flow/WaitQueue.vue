@@ -23,7 +23,7 @@ const { t } = useI18n()
 
 <template>
   <div class="wq" data-testid="tdp-wait">
-    <div v-if="!items.length" class="wq__empty">{{ t('ia2.tdp.waitEmpty') }}</div>
+    <div v-if="!items.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.tdp.waitEmpty') }}</div>
     <div
       v-for="w in items"
       :key="w.id"
@@ -73,7 +73,6 @@ const { t } = useI18n()
 
 <style scoped lang="scss">
 .wq { display: flex; flex-direction: column; gap: 2px; }
-.wq__empty { padding: 8px 4px; font-size: 11px; color: var(--text-muted); }
 .wq__row {
   display: flex; align-items: center; gap: 7px; padding: 6px 6px;
   border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary);

@@ -72,14 +72,14 @@ async function extract(): Promise<void> {
 
 <style scoped lang="scss">
 .ide-vf__backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500; display: flex; align-items: center; justify-content: center; }
-.ide-vf__dialog { width: 460px; background: var(--card-color, #fff); border-radius: 10px; padding: 14px 16px; font-size: 12px; }
+.ide-vf__dialog { width: 460px; background: var(--card-color); border-radius: 10px; padding: 14px 16px; font-size: 12px; }
 .ide-vf__head { font-weight: 600; margin-bottom: 8px; }
-.ide-vf__hint { font-weight: 400; font-size: 10px; color: var(--text-color-3, #999); }
+.ide-vf__hint { font-weight: 400; font-size: 10px; color: var(--text-muted); }
 .ide-vf__row { display: flex; gap: 8px; margin: 8px 0; align-items: center; }
-.ide-vf__row input[type], .ide-vf__row input:not([type]) { flex: 1; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.ide-vf__row input[type], .ide-vf__row input:not([type]) { flex: 1; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
 .ide-vf__row input[type="number"] { flex: 0 0 64px; }
-.ide-vf__row button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 6px; padding: 3px 14px; cursor: pointer; }
-.ide-vf__error { color: var(--error-color, #d03050); font-size: 11px; }
+.ide-vf__row button { border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 6px; padding: 3px 14px; cursor: pointer; }
+.ide-vf__error { color: var(--error-color); font-size: 11px; }
 .ide-vf__foot { display: flex; justify-content: flex-end; }
-.ide-vf__foot button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 6px; padding: 3px 12px; cursor: pointer; }
+.ide-vf__foot button { border: 1px solid var(--border-color); background: none; border-radius: 6px; padding: 3px 12px; cursor: pointer; }
 </style>

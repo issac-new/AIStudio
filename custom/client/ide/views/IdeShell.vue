@@ -562,22 +562,22 @@ onUnmounted(() => {
   gap: 4px;
   height: 28px;
   padding: 0 12px;
-  border: 1px solid var(--border-color, #333);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-card, #1f2226);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-card);
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  &:hover { border-color: var(--color-primary, #3b82f6); }
+  &:hover { border-color: var(--color-primary); }
 }
 
 .ide-shell {
   height: calc(var(--vh, 1vh) * 100);
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   // clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤：hidden 容器
   // 被 focus/scrollIntoView 滚动后壳头上探进 z1001 页头带，顶栏操作区被截不可点）
   overflow: clip;
@@ -614,7 +614,7 @@ onUnmounted(() => {
   &::before {
     content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
   }
-  &:hover, &:active { background: color-mix(in srgb, var(--primary-color, #18a058) 30%, transparent); }
+  &:hover, &:active { background: color-mix(in srgb, var(--primary-color) 30%, transparent); }
 }
 .ide-shell__split--l { right: -3px; }
 .ide-shell__split--r { left: -3px; }
@@ -634,11 +634,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: var(--bg-tertiary, #ebebeb);
-  border-right: 1px solid var(--border-color, #e0e0e0);
-  color: var(--accent-primary, #4cc9f0);
+  background: var(--bg-tertiary);
+  border-right: 1px solid var(--border-color);
+  color: var(--accent-primary);
 
-  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 18%, var(--bg-tertiary, #ebebeb)); }
+  &:hover { background: color-mix(in srgb, var(--accent-primary) 18%, var(--bg-tertiary)); }
 
   &--v { width: 18px; }
 }
@@ -649,8 +649,8 @@ onUnmounted(() => {
 .ide-shell__col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .ide-shell__colhead {
   flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center;
-  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background: var(--bg-primary, #14161a); border-radius: 6px 6px 0 0;
+  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary); border-radius: 6px 6px 0 0;
 }
 .ide-shell__colctl { display: none; }
 /* 旧绝对定位让位规则已退役（栏控迁 colhead 不占内容区） */
@@ -660,10 +660,10 @@ onUnmounted(() => {
   padding-top: 4px;
 }
 .ide-shell__rail-btn {
-  width: 16px; height: 40px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px;
-  background: var(--bg-primary, #14161a); color: var(--text-muted, #9aa0aa); cursor: pointer;
+  width: 16px; height: 40px; border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--bg-primary); color: var(--text-muted); cursor: pointer;
   font-size: 10px; line-height: 1; padding: 0;
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
 }
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
@@ -677,8 +677,8 @@ onUnmounted(() => {
   position: relative;
 }
 .ide-shell__rail-btn.is-active {
-  color: var(--accent-primary, #4cc9f0);
-  border-color: var(--accent-primary, #4cc9f0);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 .ide-shell__briefing {
   position: absolute;
@@ -690,8 +690,8 @@ onUnmounted(() => {
   z-index: 90;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary, #14161a);
-  border-left: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
 }
 .ide-shell__brief-head {
@@ -699,16 +699,16 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 .ide-shell__brief-close {
   border: none;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 14px;
   cursor: pointer;
   line-height: 1;
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--text-primary); }
 }
 .ide-shell__brief-body {
   flex: 1;
@@ -722,7 +722,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 12px;
   text-align: center;
 }

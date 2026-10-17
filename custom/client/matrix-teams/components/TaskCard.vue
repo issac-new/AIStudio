@@ -60,16 +60,16 @@ function onOp(op: 'complete' | 'block' | 'reopen'): void {
 <style scoped lang="scss">
 .tkc { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; background: var(--bg-card); display: flex; flex-direction: column; gap: 5px; }
 .tkc--done { opacity: .68; }
-.tkc--blocked { border-color: var(--error, #e05656); }
+.tkc--blocked { border-color: var(--error); }
 .tkc__head { display: flex; align-items: center; gap: 8px; }
 .tkc__title { font-size: 12px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tkc__badge { margin-left: auto; padding: 1px 8px; border-radius: 8px; font-size: 10px; background: var(--bg-secondary); color: var(--text-secondary); flex: none; }
-.tkc--done .tkc__badge { background: var(--success, #34c77b); color: #fff; }
-.tkc--blocked .tkc__badge { background: var(--error, #e05656); color: #fff; }
-.tkc--review .tkc__badge { background: var(--warning, #d69e2e); color: #fff; }
+.tkc--done .tkc__badge { background: var(--success); color: var(--text-on-accent); }
+.tkc--blocked .tkc__badge { background: var(--error); color: var(--text-on-accent); }
+.tkc--review .tkc__badge { background: var(--warning); color: var(--text-on-accent); }
 .tkc__meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); align-items: center; }
 .tkc__agent { padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 10px; }
-.tkc__due--over { color: var(--error, #e05656); font-weight: 700; }
+.tkc__due--over { color: var(--error); font-weight: 700; }
 .tkc__ops { display: flex; gap: 6px; flex-wrap: wrap; }
 .tkc__btn { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary); color: var(--text-primary); font-size: 10px; padding: 2px 8px; cursor: pointer; font-family: inherit; &:disabled { opacity: .4; cursor: default; } }
 </style>

@@ -70,13 +70,13 @@ function getTheme(dark: boolean): XtermTheme {
     const accent = cssVar('--accent-primary', '#4cc9f0')
     const border = cssVar('--border-color', '#333')
     const primary = cssVar('--primary-color', '#18a058')
-    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: error, green: success, yellow: warning, blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: primary, brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: error, green: success, yellow: warning, blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: primary, brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
   }
   const bg = cssVar('--bg-primary', '#fafafa')
   const fg = cssVar('--text-primary', '#383a42')
   const accent = cssVar('--accent-primary', '#526fff')
   const border = cssVar('--border-color', '#e0e0e0')
-  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: cssVar('--primary-color', '#18a058'), brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: cssVar('--primary-color', 'var(--success)'), brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
 }
 
 let term: Terminal | null = null
@@ -387,7 +387,7 @@ defineExpose({ writeCommand })
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--bg-primary, #1a1a1a);
+  background: var(--bg-primary);
 }
 
 .ide-terminal__disabled {
@@ -395,7 +395,7 @@ defineExpose({ writeCommand })
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 12px;
   padding: 16px;
 }
@@ -407,9 +407,9 @@ defineExpose({ writeCommand })
   gap: 8px;
   padding: 4px 10px;
   font-size: 11px;
-  background: var(--bg-secondary, #1b1e24);
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .ide-terminal__title {
@@ -417,19 +417,19 @@ defineExpose({ writeCommand })
 }
 
 .ide-terminal__state {
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 
   &.is-on {
-    color: var(--success-color, var(--success-color, #18a058));
+    color: var(--success-color, var(--success-color));
   }
 }
 
 .ide-terminal__tool {
   font: inherit;
   font-size: 11px;
-  color: var(--text-primary, #e6e6e6);
-  background: var(--bg-secondary, #1b1e24);
-  border: 1px solid var(--border-color, #e0e0e0);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   padding: 2px 4px;
   cursor: pointer;
@@ -439,16 +439,16 @@ defineExpose({ writeCommand })
 .ide-terminal__action {
   font: inherit;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   padding: 2px 8px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--text-primary, #e6e6e6);
-    border-color: var(--accent-primary, #4cc9f0);
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
   }
 
   &:disabled {
@@ -463,7 +463,7 @@ defineExpose({ writeCommand })
 
 .ide-terminal__cwd {
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

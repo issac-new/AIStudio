@@ -71,7 +71,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         {{ t('teams.dispatch.send') }}</button>
     </form>
 
-    <div v-if="dispatch.dispatches.length === 0" class="dl__empty" data-testid="dispatch-empty">
+    <div v-if="dispatch.dispatches.length === 0" class="ui-empty-state" data-testid="dispatch-empty">
       {{ t('teams.dispatch.empty') }}</div>
     <div v-for="d in dispatch.dispatches" :key="d.assign.taskId"
       class="dl__row" :data-testid="`dispatch-item-${d.assign.taskId.slice(0, 6)}`">
@@ -90,15 +90,14 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .dl__form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .dl__input, .dl__select { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 3px 8px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
 .dl__input--wide { grid-column: 1 / -1; }
-.dl__primary { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; font-family: inherit; }
-.dl__empty { font-size: 12px; color: var(--text-secondary); }
+.dl__primary { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 3px 12px; cursor: pointer; font-family: inherit; }
 .dl__row { display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap; }
 .dl__task-title { font-weight: 600; }
-.dl__target { color: var(--color-primary, #3b82f6); }
+.dl__target { color: var(--color-primary); }
 .dl__issuer { color: var(--text-secondary); font-size: 11px; }
 .dl__status { font-size: 11px; border-radius: 999px; border: 1px solid var(--border-color); padding: 0 8px; }
-.dl__status--done { border-color: var(--color-success, #22c55e); color: var(--color-success, #22c55e); }
-.dl__status--failed { border-color: var(--color-danger, #e11d48); color: var(--color-danger, #e11d48); }
-.dl__status--running { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.dl__admit-warn { grid-column: 1 / -1; font-size: 11px; color: #b45309; background: #fef3c7; border-radius: var(--radius-standard); padding: 3px 8px; }
+.dl__status--done { border-color: var(--color-success); color: var(--color-success); }
+.dl__status--failed { border-color: var(--color-danger); color: var(--color-danger); }
+.dl__status--running { border-color: var(--color-primary); color: var(--color-primary); }
+.dl__admit-warn { grid-column: 1 / -1; font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); border-radius: var(--radius-standard); padding: 3px 8px; }
 </style>

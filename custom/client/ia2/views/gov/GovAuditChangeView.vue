@@ -36,6 +36,6 @@ const tabText = useGovTabsText()
 .gov-view { gap: 10px; padding: 12px 16px; overflow: auto; }
 .gov-view__bar { display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; }
 .gov-view__title { margin: 0; font-size: 15px; font-weight: 600; }
-.gov-view__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted, #878c99); }
+.gov-view__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
 .gov-view__body { display: flex; flex-direction: column; gap: 14px; }
 </style>

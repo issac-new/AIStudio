@@ -44,10 +44,10 @@ function open(): void {
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12.5px;
-  &:hover { background: rgba(var(--accent-primary-rgb, 37, 99, 235), 0.06); color: var(--text-primary); }
+  &:hover { background: rgba(var(--accent-primary-rgb), 0.06); color: var(--text-primary); }
   &--active {
-    background: rgba(var(--accent-primary-rgb, 37, 99, 235), 0.1);
-    color: var(--accent-primary, #2563eb);
+    background: rgba(var(--accent-primary-rgb), 0.1);
+    color: var(--accent-primary);
     font-weight: 600;
   }
 }

@@ -35,16 +35,16 @@ const L = computed(() => {
 <style scoped lang="scss">
 .tabintro {
   padding: 0 14px; font-size: 11.5px; line-height: 1.6;
-  color: var(--text-muted, #878c99);
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-secondary, #fafafa);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 .tabintro__sum {
   list-style: none; cursor: pointer; user-select: none;
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 0; font-size: 11px; color: var(--text-muted, #878c99);
+  padding: 3px 0; font-size: 11px; color: var(--text-muted);
   &::before { content: '▸'; font-size: 9px; transition: transform 0.12s; }
-  &:hover { color: var(--text-primary, inherit); }
+  &:hover { color: var(--text-primary); }
 }
 .tabintro[open] .tabintro__sum::before { transform: rotate(90deg); }
 .tabintro__sum::-webkit-details-marker { display: none; }
@@ -52,7 +52,7 @@ const L = computed(() => {
 .tabintro__seg { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 .tabintro__k {
   flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
-  color: var(--text-primary, inherit); opacity: 0.75;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 4px; padding: 0 5px;
+  color: var(--text-primary); opacity: 0.75;
+  border: 1px solid var(--border-color); border-radius: 4px; padding: 0 5px;
 }
 </style>

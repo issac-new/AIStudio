@@ -308,7 +308,7 @@ function togglePeek(run: RunSummary): void {
       </div>
     </div>
 
-    <div v-if="rows.length === 0 && !loading" class="rc-table__empty">
+    <div v-if="rows.length === 0 && !loading" class="ui-empty-state">
       {{ t('runcenter.table.empty') }}
     </div>
   </div>
@@ -317,7 +317,7 @@ function togglePeek(run: RunSummary): void {
 <style scoped>
 .rc-table {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   overflow: hidden;
   font-size: 13px;
 }
@@ -344,7 +344,7 @@ function togglePeek(run: RunSummary): void {
   outline: none;
 }
 .rc-table__body:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--accent-primary, var(--color-primary, #3b82f6));
+  box-shadow: inset 0 0 0 2px var(--accent-primary, var(--color-primary));
 }
 .rc-table__canvas { position: relative; }
 
@@ -360,16 +360,16 @@ function togglePeek(run: RunSummary): void {
 .rc-table__row:hover { background: var(--hover-bg, var(--bg-secondary, rgba(127, 127, 127, 0.08))); }
 /* 键盘焦点行：与 hover 同语言的可见描边 */
 .rc-table__row--focused {
-  box-shadow: inset 0 0 0 1px var(--accent-primary, var(--color-primary, #3b82f6));
+  box-shadow: inset 0 0 0 1px var(--accent-primary, var(--color-primary));
   background: var(--hover-bg, var(--bg-secondary, rgba(127, 127, 127, 0.08)));
 }
 /* 待我处理行：左 3px 色条 + 浅底（与 cockpit 选中态语言一致） */
 .rc-table__row--awaiting {
-  box-shadow: inset 3px 0 0 var(--color-warning, #f59e0b);
-  background: rgba(var(--color-warning-rgb, 245, 158, 11), 0.05);
+  box-shadow: inset 3px 0 0 var(--color-warning);
+  background: rgba(var(--color-warning-rgb), 0.05);
 }
 .rc-table__row--awaiting.rc-table__row--focused {
-  box-shadow: inset 3px 0 0 var(--color-warning, #f59e0b), inset 0 0 0 1px var(--accent-primary, var(--color-primary, #3b82f6));
+  box-shadow: inset 3px 0 0 var(--color-warning), inset 0 0 0 1px var(--accent-primary, var(--color-primary));
 }
 
 /* 列宽：Run 列弹性，其余定宽 */
@@ -391,7 +391,7 @@ function togglePeek(run: RunSummary): void {
   padding: 0;
   flex-shrink: 0;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -422,9 +422,9 @@ function togglePeek(run: RunSummary): void {
 .rc-table__peek-events { display: flex; flex-direction: column; gap: 2px; }
 .rc-table__peek-title {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
-.rc-table__peek-empty { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.rc-table__peek-empty { font-size: 12px; color: var(--text-muted, var(--color-text-secondary)); }
 .rc-table__peek-line {
   display: flex;
   align-items: baseline;
@@ -434,15 +434,15 @@ function togglePeek(run: RunSummary): void {
 }
 .rc-table__peek-ts {
   flex: 0 0 56px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 .rc-table__peek-type {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   flex-shrink: 0;
 }
 .rc-table__peek-error {
-  color: var(--color-danger, #e11d48);
+  color: var(--color-danger);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -450,15 +450,15 @@ function togglePeek(run: RunSummary): void {
 .rc-table__peek-auto {
   flex-shrink: 0;
   padding: 0 6px;
-  border: 1px solid var(--color-warning, #f59e0b);
-  border-radius: var(--radius-pill, 999px);
-  color: var(--color-warning, #f59e0b);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-pill);
+  color: var(--color-warning);
   font-size: 11px;
   white-space: nowrap;
 }
 
 .rc-table__run-id {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -477,11 +477,11 @@ function togglePeek(run: RunSummary): void {
   font-size: 10px;
   background: var(--bg-secondary);
 }
-.rc-table__src-badge--loop { color: #61afef; }
-.rc-table__src-badge--graph { color: #c678dd; }
+.rc-table__src-badge--loop { color: var(--accent-info); }
+.rc-table__src-badge--graph { color: var(--ia-compensated); }
 .rc-table__graph-id {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -493,7 +493,7 @@ function togglePeek(run: RunSummary): void {
   gap: 4px;
   padding: 3px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -505,12 +505,7 @@ function togglePeek(run: RunSummary): void {
   background: var(--hover-bg, var(--bg-secondary, rgba(127, 127, 127, 0.08)));
 }
 .rc-table__action:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent-primary, var(--color-primary, #3b82f6));
+  box-shadow: 0 0 0 2px var(--accent-primary, var(--color-primary));
 }
 
-.rc-table__empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
-}
 </style>

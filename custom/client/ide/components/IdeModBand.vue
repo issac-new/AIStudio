@@ -47,12 +47,12 @@ const visibleMods = band.ordered
 .ide-modband__mod > :deep(:first-child) { flex: 1; min-width: 0; }
 .ide-modband__hide {
   position: absolute; top: 2px; right: 2px; border: none; background: none;
-  color: var(--text-color-3, #999); cursor: pointer; font-size: 10px; opacity: 0;
+  color: var(--text-muted); cursor: pointer; font-size: 10px; opacity: 0;
   padding: 1px 4px;
 }
 .ide-modband__mod:hover .ide-modband__hide { opacity: 1; }
 .ide-modband__restore {
-  align-self: flex-start; border: 1px dashed var(--border-color, #ccc); background: none;
-  border-radius: 8px; font-size: 10.5px; color: var(--text-color-3, #999); cursor: pointer; padding: 0 8px;
+  align-self: flex-start; border: 1px dashed var(--border-color); background: none;
+  border-radius: 8px; font-size: 10.5px; color: var(--text-muted); cursor: pointer; padding: 0 8px;
 }
 </style>

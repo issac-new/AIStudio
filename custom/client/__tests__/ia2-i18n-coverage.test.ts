@@ -4,6 +4,9 @@
 // v12.3 驾驶舱重构新增键多（通知下拉/会话工作台面板四块/栏控/左栏聚类），
 // 组件在测试里 t→key 直返看不出缺键，装机后中文界面静默回退英文——本测试防复发。
 // 动态键（t(`ia2.${x}`) 模板串）不在静态扫描范围，维持既有豁免。
+// 运行时合并键（i18n-term-overrides 经 mergeLocaleMessage 注入，如 ia2.nav.stageN
+// 六阶段导航词条——值由 STAGE_META 派生，单一事实源）同样视为已覆盖：
+// 向静态词表塞副本会造第二事实源，与派生模块漂移。
 // 补键流程：改 upstream locales/zh.ts + en.ts → 存为 overlay patches/3xx patch →
 // npm run inject 重注入（upstream 目录禁止直改落盘，patch 是唯一正本）。
 import { describe, expect, it } from 'vitest'
@@ -12,6 +15,7 @@ import { resolve } from 'path'
 import en from '@/i18n/locales/en'
 import zh from '@/i18n/locales/zh'
 import { buildIaRoutes } from '../ia2/routes'
+import { IA2_TERM_OVERRIDES_ZH, IA2_TERM_OVERRIDES_EN } from '../ia2/i18n-term-overrides'
 import type { RouteRecordRaw } from 'vue-router'
 
 type Messages = Record<string, unknown>
@@ -92,12 +96,20 @@ describe('ia2 i18n 覆盖守门（驾驶舱组件静态键零缺漏）', () => {
     expect(used.size).toBeGreaterThan(150)
     const gaps: string[] = []
     const patchedLeaves = collectPatchedLeafKeys()
+    // 运行时合并键（tier-2 术语覆盖）：resolveKey 同样适用于覆盖字典本身——
+    // 引用键在覆盖字典里是字符串叶即覆盖，等价于断言派生模块真实供键。
+    const runtimeMerged: Record<string, Messages> = {
+      zh: IA2_TERM_OVERRIDES_ZH as unknown as Messages,
+      en: IA2_TERM_OVERRIDES_EN as unknown as Messages,
+    }
     for (const [key, files] of used) {
       for (const [locale, messages] of [['zh', zh], ['en', en]] as const) {
         const resolved = resolveKey(messages as Messages, `ia2.${key}`)
         if (typeof resolved !== 'string') {
           // 补丁正本已记账（locale patch 新增行含该叶键）→ 待 inject 的真覆盖
           if (patchedLeaves.has(key.split('.').pop() ?? '')) continue
+          // 运行时术语覆盖已供键（mergeLocaleMessage 注入）→ 真覆盖
+          if (typeof resolveKey(runtimeMerged[locale], `ia2.${key}`) === 'string') continue
           gaps.push(`[${locale}] ia2.${key} (used in ${files[0]})`)
         }
       }

@@ -42,7 +42,7 @@ const shortCommit = (c: string) => (c.length > 10 ? c.slice(0, 10) : c)
   font-family: ui-monospace, monospace;
 }
 .sim-dual-cred__gap {
-  color: #d33;
+  color: var(--ia-fail);
   background: rgba(221, 51, 51, 0.12);
 }
 </style>

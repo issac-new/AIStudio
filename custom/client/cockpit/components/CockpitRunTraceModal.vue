@@ -338,7 +338,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
             <span class="run-trace-related__title">{{ rs.taskId || rs.sessionId.slice(-8) }}</span>
             <span v-if="rs.profile" class="run-trace-related__profile">{{ rs.profile }}</span>
             <span v-if="rs.role === 'creator'" class="run-trace-related__role">{{ t('cockpit.creator') }}</span>
-            <span v-if="rs.isEmpty" class="run-trace-related__empty">{{ t('cockpit.empty') }}</span>
+            <span v-if="rs.isEmpty" class="ui-empty-state">{{ t('cockpit.empty') }}</span>
           </span>
         </div>
       </div>
@@ -429,7 +429,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 .run-trace-session-picker__meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .run-trace-session-picker__profile { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted); flex-shrink: 0; text-transform: uppercase; }
 .run-trace-session-picker__kanban { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--accent-info); color: var(--text-on-accent); flex-shrink: 0; font-family: monospace; }
-.run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--success); color: #fff; flex-shrink: 0; }
+.run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--success); color: var(--text-on-accent); flex-shrink: 0; }
 /* 分页 */
 .run-trace-session-picker__pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 18px; border-top: 1px solid var(--border-color); background: var(--bg-card); }
 .run-trace-session-picker__pagination button { height: 26px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 11px; font-family: inherit;
@@ -475,7 +475,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 .run-trace-related__label { font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
 .run-trace-related__list { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
 .run-trace-related__item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
-  &.is-primary { border-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.06); }
+  &.is-primary { border-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; background: rgba(var(--accent-primary-rgb), 0.06); }
   &.is-empty { opacity: 0.5; border-style: dashed; }
   &.is-creator { border-color: var(--accent-secondary, var(--accent-primary)); }
 }
@@ -486,9 +486,8 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 .run-trace-related__star { color: var(--warning); font-size: 11px; }
 .run-trace-related__title { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .run-trace-related__profile { font-size: 9px; opacity: 0.7; }
-.run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-secondary-rgb, 64,120,192), 0.12); color: var(--text-secondary); }
-.run-trace-related__empty { font-size: 9px; padding: 0 3px; border-radius: 3px; background: var(--bg-inset, rgba(0,0,0,0.06)); color: var(--text-muted); }
-.run-trace-modal__hotspots { display: flex; gap: 12px; padding: 6px 18px; font-size: 11px; color: var(--text-muted, #9aa0aa); }
+.run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-info-rgb), 0.12); color: var(--text-secondary); }
+.run-trace-modal__hotspots { display: flex; gap: 12px; padding: 6px 18px; font-size: 11px; color: var(--text-muted); }
 .run-trace-modal__hotspot-col { flex: 1; min-width: 0; }
 .run-trace-modal__hotspot-title { font-weight: 600; margin-bottom: 2px; }
 .run-trace-modal__hotspot-row { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }

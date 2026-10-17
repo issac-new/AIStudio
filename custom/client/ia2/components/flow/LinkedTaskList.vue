@@ -29,7 +29,7 @@ const TONE: Record<string, string> = {
 
 <template>
   <div class="ltl" data-testid="tdp-linked">
-    <div v-if="!tasks.length" class="ltl__empty">{{ t('ia2.tdp.linkedEmpty') }}</div>
+    <div v-if="!tasks.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.tdp.linkedEmpty') }}</div>
     <div v-for="task in tasks" :key="task.id" class="ltl__row" :data-testid="`tdp-task-${task.id}`">
       <span class="ltl__dot" :class="`ltl__dot--${TONE[task.status] ?? 'idle'}`" />
       <span class="ltl__body">
@@ -66,7 +66,6 @@ const TONE: Record<string, string> = {
 
 <style scoped lang="scss">
 .ltl { display: flex; flex-direction: column; gap: 2px; }
-.ltl__empty { padding: 8px 4px; font-size: 11px; color: var(--text-muted); }
 .ltl__row {
   display: flex; align-items: center; gap: 6px; padding: 5px 6px;
   border-radius: 6px;
@@ -93,9 +92,9 @@ const TONE: Record<string, string> = {
 }
 .ltl__linkage-item {
   max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: #61afef;
+  color: var(--accent-info);
 }
-.ltl__linkage-item--ws { color: #c678dd; }
+.ltl__linkage-item--ws { color: var(--ia-compensated); }
 .ltl__avatar {
   flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
   background: var(--bg-secondary); color: var(--text-secondary);

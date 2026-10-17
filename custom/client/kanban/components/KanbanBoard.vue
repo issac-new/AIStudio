@@ -209,7 +209,7 @@ function handleTrashDrop(e: DragEvent) {
 
   &.active {
     border-color: $error;
-    background-color: rgba(var(--error-rgb, 239, 68, 68), 0.08);
+    background-color: rgba(var(--error-rgb), 0.08);
     opacity: 1;
     transform: scale(1.05);
   }

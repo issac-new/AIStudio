@@ -29,7 +29,7 @@ const router = useRouter()
 .orc__head { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .orc__title { margin: 0; font-size: 15px; }
 .orc__back {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   color: inherit;
   border-radius: 4px;
@@ -40,8 +40,8 @@ const router = useRouter()
 .orc__note {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, #878c99);
-  border: 1px dashed var(--border-color, #e5e7eb);
+  color: var(--text-muted);
+  border: 1px dashed var(--border-color);
   border-radius: 6px;
   padding: 6px 10px;
   flex-shrink: 0;

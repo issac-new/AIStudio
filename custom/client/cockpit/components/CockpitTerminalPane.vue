@@ -65,13 +65,13 @@ function getTheme(dark: boolean): XtermTheme {
     const fg = style.getPropertyValue('--text-primary').trim() || '#e0e0e0'
     const accent = style.getPropertyValue('--accent-primary').trim() || '#4cc9f0'
     const border = style.getPropertyValue('--border-color').trim() || '#333'
-    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
   }
   const bg = style.getPropertyValue('--bg-primary').trim() || '#fafafa'
   const fg = style.getPropertyValue('--text-primary').trim() || '#383a42'
   const accent = style.getPropertyValue('--accent-primary').trim() || '#526fff'
   const border = style.getPropertyValue('--border-color').trim() || '#e0e0e0'
-  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
 }
 
 // 当前任务的 workspace 目录，回退 ~
@@ -380,55 +380,55 @@ onUnmounted(disposeTerminal)
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: var(--term-bg, #1a1a2e);
+  background: var(--code-bg);
 }
 .cockpit-terminal-pane__head {
   flex-shrink: 0;
   padding: 8px 14px;
-  background: var(--term-head-bg, #0d0d0d);
-  border-bottom: 1px solid var(--term-border, #333);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: var(--term-fg, #ccc);
+  color: var(--text-primary);
   z-index: 1;
 }
 .cockpit-terminal-pane__title {
-  color: var(--term-fg, #e0e0e0);
+  color: var(--text-primary);
   font-weight: 600;
 }
 .cockpit-terminal-pane__tool {
   font: inherit;
   font-size: 11px;
-  color: var(--term-fg, #e0e0e0);
-  background: var(--term-head-bg, #1a1a1a);
-  border: 1px solid var(--term-border, #333);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   padding: 2px 4px;
   cursor: pointer;
   max-width: 170px;
   &:focus {
-    outline: 1px solid var(--term-border, #555);
+    outline: 1px solid var(--border-color);
   }
 }
 .cockpit-terminal-pane__root {
   font-size: 11px;
-  color: var(--term-muted, #888);
-  background: var(--term-head-bg, #1a1a1a);
+  color: var(--text-muted);
+  background: var(--bg-secondary);
   padding: 2px 7px;
   border-radius: 3px;
-  border: 1px solid var(--term-border, #333);
+  border: 1px solid var(--border-color);
 }
 .cockpit-terminal-pane__exit {
   margin-left: auto;
   cursor: pointer;
-  color: var(--term-muted, #888);
+  color: var(--text-muted);
   font-size: 11px;
   border: none;
   background: transparent;
   font: inherit;
-  &:hover { color: var(--term-fg, #fff); }
+  &:hover { color: var(--text-primary); }
 }
 .cockpit-terminal-pane__body {
   flex: 1;

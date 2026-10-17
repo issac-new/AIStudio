@@ -73,7 +73,7 @@ onMounted(() => void refresh())
     </div>
     <p class="od__sub">{{ L?.sub }}</p>
     <div v-if="error" class="od__error">{{ error }}</div>
-    <div v-else-if="!data" class="od__empty">…</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <!-- 五流卡片 -->
       <div class="od__grid">
@@ -98,7 +98,7 @@ onMounted(() => void refresh())
       <div class="od__panel" data-testid="od-unattributed">
         <h4 class="od__panel-title">{{ L?.unattributedTitle }}</h4>
         <div v-if="actionMsg" class="od__action-msg">{{ actionMsg }}</div>
-        <div v-if="!data.unattributed.length" class="od__empty">{{ L?.unattributedEmpty }}</div>
+        <div v-if="!data.unattributed.length" class="ui-empty-state">{{ L?.unattributedEmpty }}</div>
         <div v-for="u in data.unattributed" :key="u.escalationId" class="od__unattr">
           <span class="od__unattr-main">
             {{ u.escalationId }} · {{ u.fromAgent }} → {{ u.tool }}（{{ u.verdict }}）
@@ -123,7 +123,7 @@ onMounted(() => void refresh())
       <!-- 机制改进候选 -->
       <div class="od__panel" data-testid="od-candidates">
         <h4 class="od__panel-title">{{ L?.candidatesTitle }}</h4>
-        <div v-if="!data.improvementCandidates.length" class="od__empty">{{ L?.candidatesEmpty }}</div>
+        <div v-if="!data.improvementCandidates.length" class="ui-empty-state">{{ L?.candidatesEmpty }}</div>
         <div v-for="c in data.improvementCandidates" :key="c.tool" class="od__cand" :data-testid="`od-cand-${c.tool}`">
           <div class="od__cand-head">
             <b>{{ c.tool }}</b>
@@ -138,10 +138,10 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .od {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -152,23 +152,22 @@ onMounted(() => void refresh())
 .od__chip { font-size: 12px; opacity: 0.85; }
 .od__refresh { margin-left: auto; border: none; background: none; cursor: pointer; font-size: 14px; }
 .od__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.od__error { color: var(--danger, #dc2626); font-size: 12px; }
-.od__empty { font-size: 12px; opacity: 0.6; }
+.od__error { color: var(--danger); font-size: 12px; }
 .od__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
-.od__flow { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px; }
+.od__flow { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; }
 .od__flow-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-.od__flow-count.is-alert { color: var(--danger, #dc2626); }
+.od__flow-count.is-alert { color: var(--danger); }
 .od__essence { font-size: 11px; opacity: 0.65; margin: 2px 0 6px; }
-.od__signal { border-top: 1px dashed var(--border-color, #e5e7eb); padding: 4px 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
-.od__sev { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--border-color, #e5e7eb); }
-.od__sev.is-alert { color: #fff; background: var(--danger, #dc2626); border-color: transparent; }
-.od__sev.is-warn { color: var(--warning-ink, #92400e); background: rgb(254 243 199); border-color: transparent; }
-.od__sev.is-ok { color: var(--ok, #15803d); border-color: rgb(134 239 172); }
+.od__signal { border-top: 1px dashed var(--border-color); padding: 4px 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
+.od__sev { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--border-color); }
+.od__sev.is-alert { color: var(--text-on-accent); background: var(--danger); border-color: transparent; }
+.od__sev.is-warn { color: var(--ia-stale); background: rgb(254 243 199); border-color: transparent; }
+.od__sev.is-ok { color: var(--success); border-color: rgb(134 239 172); }
 .od__sev.is-unknown { opacity: 0.5; }
 .od__sig-id { font-family: monospace; font-size: 11px; opacity: 0.8; }
 .od__sig-val { font-weight: 600; }
 .od__sig-detail { flex-basis: 100%; font-size: 11px; opacity: 0.75; }
-.od__panel { border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.od__panel { border-top: 1px solid var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .od__panel-title { margin: 0; font-size: 13px; }
 .od__action-msg { font-size: 12px; opacity: 0.8; }
 .od__unattr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
@@ -176,7 +175,7 @@ onMounted(() => void refresh())
 .od__gap-prompt { font-size: 11px; opacity: 0.65; }
 .od__gap-select { font-size: 12px; max-width: 240px; }
 .od__attr-btn, .od__gap-ok, .od__gap-cancel { font-size: 12px; cursor: pointer; }
-.od__cand { border-left: 3px solid var(--warning, #f59e0b); padding: 4px 8px; }
+.od__cand { border-left: 3px solid var(--warning); padding: 4px 8px; }
 .od__cand-head { display: flex; justify-content: space-between; font-size: 12px; }
 .od__cand-meta { opacity: 0.7; font-size: 11px; }
 .od__cand-dir { font-size: 12px; opacity: 0.85; margin-top: 2px; }

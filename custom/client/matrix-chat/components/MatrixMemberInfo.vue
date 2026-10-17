@@ -362,9 +362,9 @@ async function copyMxid() {
   border-radius: 50%;
   border: 3px solid var(--bg-card);
 
-  &.presence--online { background: var(--success, #22c55e); }
-  &.presence--unavailable { background: var(--warning, #f59e0b); }
-  &.presence--offline { background: var(--text-muted, #94a3b8); }
+  &.presence--online { background: var(--success); }
+  &.presence--unavailable { background: var(--warning); }
+  &.presence--offline { background: var(--text-muted); }
 }
 
 .mi-name {
@@ -445,7 +445,7 @@ async function copyMxid() {
   font-weight: 500;
 
   &.mi-e2e--trusted { background: rgba(var(--success-rgb), 0.1); color: var(--success); }
-  &.mi-e2e--warning { background: rgba(var(--error-rgb), 0.1); color: var(--error, #ef4444); }
+  &.mi-e2e--warning { background: rgba(var(--error-rgb), 0.1); color: var(--error); }
 }
 
 // ─── Sections ────────────────────────────────────────────
@@ -559,7 +559,7 @@ async function copyMxid() {
   &:hover { background: rgba(var(--accent-primary-rgb), 0.04); }
 
   &--danger {
-    color: var(--error, #ef4444);
+    color: var(--error);
     border-color: rgba(var(--error-rgb), 0.3);
     &:hover { background: rgba(var(--error-rgb), 0.06); }
   }

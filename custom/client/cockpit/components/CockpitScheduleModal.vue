@@ -133,7 +133,7 @@ const selectedCount = computed(() => sortedEvents.value.length)
 // 优先级 → 左色带颜色 / 视觉权重 class
 const PRIO_BAR: Record<string, string> = {
   P0: 'var(--error)',
-  P1: 'var(--warning, #e6a23c)',
+  P1: 'var(--warning)',
   P2: 'var(--accent-primary)',
   P3: 'var(--border-color)',
 }
@@ -376,7 +376,7 @@ function miniTitle(c: MiniCell): string {
         </div>
 
         <div class="cockpit-schedule__list">
-          <div v-if="sortedEvents.length === 0" class="cockpit-schedule__empty">
+          <div v-if="sortedEvents.length === 0" class="ui-empty-state">
             <span class="cockpit-schedule__empty-icon"><CockpitIcon name="calendar" :size="24" /></span>
             <span class="cockpit-schedule__empty-text">{{ t('cockpit.scheduleEmpty') }}</span>
           </div>
@@ -552,7 +552,7 @@ function miniTitle(c: MiniCell): string {
     background: var(--accent-primary); margin-top: 22px;
   }
   &.is-p0::after { background: var(--error); }
-  &.is-p1::after { background: var(--warning, #e6a23c); }
+  &.is-p1::after { background: var(--warning); }
   &.is-p2::after { background: var(--accent-primary); }
   &.is-p3::after { background: var(--text-muted); }
 }
@@ -576,10 +576,6 @@ function miniTitle(c: MiniCell): string {
 }
 .cockpit-schedule__list {
   flex: 1; overflow-y: auto; min-height: 120px; padding: 4px 0;
-}
-.cockpit-schedule__empty {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 36px 18px; color: var(--text-muted);
 }
 .cockpit-schedule__empty-icon { font-size: 28px; opacity: 0.5; }
 .cockpit-schedule__empty-text { font-size: 11px; }
@@ -620,7 +616,7 @@ function miniTitle(c: MiniCell): string {
   font-family: ui-monospace, monospace;
 }
 .cockpit-schedule__ev.is-p0 .cockpit-schedule__ev-pri { background: var(--error); color: var(--text-on-accent); }
-.cockpit-schedule__ev.is-p1 .cockpit-schedule__ev-pri { background: rgba(var(--warning-rgb, 230,162,60), 0.15); color: var(--warning, #e6a23c); }
+.cockpit-schedule__ev.is-p1 .cockpit-schedule__ev-pri { background: rgba(var(--warning-rgb), 0.15); color: var(--warning); }
 .cockpit-schedule__ev.is-p2 .cockpit-schedule__ev-pri { background: rgba(var(--accent-primary-rgb), 0.1); color: var(--accent-primary); }
 .cockpit-schedule__ev.is-p3 .cockpit-schedule__ev-pri { background: var(--bg-secondary); color: var(--text-muted); }
 /* 状态标签：按语义着色 */
@@ -628,8 +624,8 @@ function miniTitle(c: MiniCell): string {
   font-size: 9px; padding: 0 6px; border-radius: 3px; line-height: 15px;
   background: var(--bg-secondary); color: var(--text-secondary);
   &.st-blocked { color: var(--error); background: rgba(var(--error-rgb), 0.08); font-weight: 600; }
-  &.st-running { color: var(--accent-info); background: rgba(var(--accent-info-rgb, 74,144,217), 0.1); font-weight: 600; }
-  &.st-review { color: var(--warning, #e6a23c); background: rgba(var(--warning-rgb, 230,162,60), 0.1); font-weight: 600; }
+  &.st-running { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); font-weight: 600; }
+  &.st-review { color: var(--warning); background: rgba(var(--warning-rgb), 0.1); font-weight: 600; }
   &.st-done { color: var(--text-muted); }
   &.st-normal { color: var(--text-secondary); }
 }

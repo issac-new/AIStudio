@@ -117,24 +117,24 @@ export function useKeyBinding(context: string, action: string): () => string {
 .ide-keymap { position: relative; }
 .ide-keymap__btn {
   border: none; background: transparent; cursor: pointer; font-size: 12px;
-  color: var(--text-color-3, #999); padding: 0 4px; &:hover { color: var(--text-color-1, #333); }
+  color: var(--text-muted); padding: 0 4px; &:hover { color: var(--text-primary); }
 }
 .ide-keymap__card {
   position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 80;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 6px; padding: 8px 10px; min-width: 240px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   font-size: 12px;
 }
 .ide-keymap__head { font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.ide-keymap__reset { border: none; background: transparent; color: var(--primary-color, #18a058); cursor: pointer; font-size: 11px; }
-.ide-keymap__conflicts { color: var(--warning-color, #f0a020); font-size: 11px; margin-bottom: 4px; }
+.ide-keymap__reset { border: none; background: transparent; color: var(--primary-color); cursor: pointer; font-size: 11px; }
+.ide-keymap__conflicts { color: var(--warning-color); font-size: 11px; margin-bottom: 4px; }
 .ide-keymap__row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
-.ide-keymap__label { color: var(--text-color-2, #555); }
+.ide-keymap__label { color: var(--text-secondary); }
 .ide-keymap__key {
-  border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; background: transparent;
+  border: 1px solid var(--border-color); border-radius: 4px; background: transparent;
   font-family: ui-monospace, monospace; font-size: 11px; padding: 1px 8px; cursor: pointer; min-width: 60px;
-  color: var(--text-color-1, #333);
-  &.is-recording { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+  color: var(--text-primary);
+  &.is-recording { border-color: var(--primary-color); color: var(--primary-color); }
 }
-.ide-keymap__note { color: var(--text-color-3, #999); font-size: 10px; margin: 6px 0 0; line-height: 1.5; }
+.ide-keymap__note { color: var(--text-muted); font-size: 10px; margin: 6px 0 0; line-height: 1.5; }
 </style>

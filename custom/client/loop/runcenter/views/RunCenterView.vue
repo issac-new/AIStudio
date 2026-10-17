@@ -373,7 +373,7 @@ function replayTime(e: GraphEventLike): string {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -387,7 +387,7 @@ function replayTime(e: GraphEventLike): string {
   gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -395,13 +395,13 @@ function replayTime(e: GraphEventLike): string {
   font-family: inherit;
 }
 .rc-view__tab--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 .rc-view__tab-count {
   padding: 0 6px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-warning, #f59e0b);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning);
   color: var(--text-on-accent);
   font-size: 11px;
 }
@@ -411,21 +411,21 @@ function replayTime(e: GraphEventLike): string {
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .rc-view__connection-dot {
   width: 6px;
   height: 6px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--text-muted, #999);
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
 }
-.rc-view__connection--connected .rc-view__connection-dot { background: var(--color-success, #28bf5c); }
+.rc-view__connection--connected .rc-view__connection-dot { background: var(--color-success); }
 
 .rc-view__filters { display: flex; gap: 4px; }
 .rc-view__filter {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -433,7 +433,7 @@ function replayTime(e: GraphEventLike): string {
   font-family: inherit;
 }
 .rc-view__filter--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 
@@ -441,7 +441,7 @@ function replayTime(e: GraphEventLike): string {
   flex: 0 1 220px;
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -451,7 +451,7 @@ function replayTime(e: GraphEventLike): string {
   align-items: center;
   padding: 5px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -459,9 +459,9 @@ function replayTime(e: GraphEventLike): string {
 
 .rc-view__error {
   padding: 8px 12px;
-  border: 1px solid var(--color-danger, #e11d48);
-  border-radius: var(--radius-micro, 3px);
-  color: var(--color-danger, #e11d48);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-micro);
+  color: var(--color-danger);
   font-size: 12px;
 }
 
@@ -490,21 +490,21 @@ function replayTime(e: GraphEventLike): string {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 12px;
 }
 .rc-view__step strong { font-size: 13px; }
 .rc-view__step p {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   line-height: 1.5;
 }
 .rc-view__cta {
   padding: 8px 20px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
-  background: var(--color-primary, #3b82f6);
+  border-radius: var(--radius-standard);
+  background: var(--color-primary);
   color: var(--text-on-accent);
   cursor: pointer;
   font-family: inherit;
@@ -517,12 +517,12 @@ function replayTime(e: GraphEventLike): string {
   justify-content: flex-end;
   gap: 12px;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .rc-view__pager button {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -547,9 +547,9 @@ function replayTime(e: GraphEventLike): string {
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-card, var(--color-bg-primary, #fff));
+  background: var(--bg-card, var(--color-bg-primary));
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-large, 12px);
+  border-radius: var(--radius-large);
   z-index: 1001;
   overflow: hidden;
 }
@@ -564,13 +564,13 @@ function replayTime(e: GraphEventLike): string {
 .rc-view__replay-count {
   flex: 1;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .rc-view__replay-close {
   display: inline-flex;
   padding: 4px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -578,15 +578,15 @@ function replayTime(e: GraphEventLike): string {
 .rc-view__replay-body {
   overflow: auto;
   padding: 8px 16px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
-.rc-view__replay-empty { padding: 24px 0; text-align: center; font-family: inherit; color: var(--text-muted, #999); }
+.rc-view__replay-empty { padding: 24px 0; text-align: center; font-family: inherit; color: var(--text-muted); }
 .rc-view__replay-line {
   display: flex;
   gap: 12px;
   padding: 3px 0;
   border-bottom: 1px dashed var(--border-color);
 }
-.rc-view__replay-ts { color: var(--text-muted, var(--color-text-secondary, #878c99)); flex: 0 0 64px; }
+.rc-view__replay-ts { color: var(--text-muted, var(--color-text-secondary)); flex: 0 0 64px; }
 </style>

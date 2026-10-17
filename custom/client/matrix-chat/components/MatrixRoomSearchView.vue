@@ -318,7 +318,7 @@ function getContentPreview(event: any): string {
   word-break: break-word;
 
   :deep(.search-highlight) {
-    background: rgba(var(--accent-warning-rgb, 245 158 11), 0.25);
+    background: rgba(var(--warning-rgb), 0.25);
     color: inherit;
     border-radius: 2px;
     padding: 0 1px;

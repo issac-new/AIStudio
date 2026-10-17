@@ -101,11 +101,11 @@ async function runWizard() {
 
 <style scoped lang="scss">
 .oed__hd { display: flex; justify-content: space-between; gap: 8px; h3 { margin: 0; font-size: 13px; } }
-.oed__meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
-.oed__acts { display: flex; gap: 6px; button { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); background: var(--bg-primary, #fff); cursor: pointer; } }
-.oed__msg { font-size: 12px; color: var(--text-muted, #878c99); margin: 4px 0; }
-.oed__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color, #e5e7eb); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
-.oed__rowacts { white-space: nowrap; button { margin-right: 4px; cursor: pointer; border: 1px solid var(--border-color, #e5e7eb); border-radius: 5px; background: transparent; font-size: 11px; } }
-.oed__wiz { margin-top: 10px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 10px 12px; input { display: block; width: 100%; margin: 4px 0; padding: 4px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; } button { margin-top: 6px; margin-right: 6px; font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); cursor: pointer; } }
+.oed__meta { font-size: 10.5px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.oed__acts { display: flex; gap: 6px; button { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); cursor: pointer; } }
+.oed__msg { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+.oed__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
+.oed__rowacts { white-space: nowrap; button { margin-right: 4px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 5px; background: transparent; font-size: 11px; } }
+.oed__wiz { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; input { display: block; width: 100%; margin: 4px 0; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; } button { margin-top: 6px; margin-right: 6px; font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; } }
 .oed__wiz-hd { font-weight: 600; font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
 </style>

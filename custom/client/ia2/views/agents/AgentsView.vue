@@ -103,18 +103,18 @@ async function saveBinding(r: Row): Promise<void> {
 .agw { display: flex; flex-direction: column; gap: 10px; padding: 16px 24px; height: 100%; overflow: auto; }
 .agw__head { display: flex; align-items: center; gap: 12px; }
 .agw__title { margin: 0; font-size: 16px; }
-.agw__refresh { border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 6px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
-.agw__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, #878c99); }
-.agw__error { color: #d33; font-size: 12px; margin: 0; }
-.agw__hint { font-size: 12px; color: var(--text-muted, #878c99); margin: 0; }
-.agw__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color, #e5e7eb); padding: 5px 8px; text-align: left; } }
+.agw__refresh { border: 1px solid var(--border-color); background: transparent; border-radius: 6px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+.agw__sub { margin: 0; font-size: 11.5px; color: var(--text-muted); }
+.agw__error { color: var(--ia-fail); font-size: 12px; margin: 0; }
+.agw__hint { font-size: 12px; color: var(--text-muted); margin: 0; }
+.agw__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color); padding: 5px 8px; text-align: left; } }
 .agw__name { font-weight: 600; white-space: nowrap; }
-.agw__active { color: var(--ia-fresh, #2e9e5b); margin-left: 4px; }
-.agw__gw--on { color: var(--ia-fresh, #2e9e5b); }
-.agw__acts button { margin-right: 6px; border: 1px solid var(--border-color, #e5e7eb); background: transparent; border-radius: 5px; font-size: 11px; padding: 2px 8px; cursor: pointer; &:disabled { opacity: 0.5; cursor: wait; } }
-.agw__note { font-size: 11px; color: var(--text-muted, #878c99); }
-.agw__bind { display: flex; gap: 8px; align-items: center; border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 12px; }
+.agw__active { color: var(--ia-fresh, var(--ia-fresh)); margin-left: 4px; }
+.agw__gw--on { color: var(--ia-fresh, var(--ia-fresh)); }
+.agw__acts button { margin-right: 6px; border: 1px solid var(--border-color); background: transparent; border-radius: 5px; font-size: 11px; padding: 2px 8px; cursor: pointer; &:disabled { opacity: 0.5; cursor: wait; } }
+.agw__note { font-size: 11px; color: var(--text-muted); }
+.agw__bind { display: flex; gap: 8px; align-items: center; border: 1px dashed var(--border-color); border-radius: 8px; padding: 8px 12px; }
 .agw__bind-name { font-size: 12px; font-weight: 600; white-space: nowrap; }
-.agw__bind input { flex: 1; border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 4px 8px; font-size: 12px; background: transparent; color: inherit; }
-.agw__bind button { border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6)); color: var(--accent-primary, var(--color-primary, #3b82f6)); background: transparent; border-radius: 6px; font-size: 12px; padding: 4px 14px; cursor: pointer; }
+.agw__bind input { flex: 1; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 12px; background: transparent; color: inherit; }
+.agw__bind button { border: 1px solid var(--accent-primary, var(--color-primary)); color: var(--accent-primary, var(--color-primary)); background: transparent; border-radius: 6px; font-size: 12px; padding: 4px 14px; cursor: pointer; }
 </style>

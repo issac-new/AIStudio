@@ -90,20 +90,20 @@ watch(() => chat.activeSessionId, () => {
 .ide-side-sess {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 40;
   display: flex; flex-direction: column; width: 340px;
-  border-left: 1px solid var(--border-color, #2a2e38);
-  background: var(--bg-secondary, #1b1e24); font-size: 12px;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-secondary); font-size: 12px;
   box-shadow: -4px 0 16px rgba(0,0,0,0.18);
 }
-.ide-side-sess__head { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border-color, #2a2e38); }
-.ide-side-sess__t { font-weight: 600; color: var(--text-secondary, #b0b5be); }
-.ide-side-sess__sel { flex: 1; border: 1px solid var(--border-color, #3a3f4b); background: none; color: var(--text-primary, #d7dae0); border-radius: 4px; padding: 2px 4px; font-size: 11px; min-width: 0; }
-.ide-side-sess__head button { border: none; background: none; color: var(--text-secondary, #b0b5be); cursor: pointer; }
+.ide-side-sess__head { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
+.ide-side-sess__t { font-weight: 600; color: var(--text-secondary); }
+.ide-side-sess__sel { flex: 1; border: 1px solid var(--border-color); background: none; color: var(--text-primary); border-radius: 4px; padding: 2px 4px; font-size: 11px; min-width: 0; }
+.ide-side-sess__head button { border: none; background: none; color: var(--text-secondary); cursor: pointer; }
 .ide-side-sess__body { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
-.ide-side-sess__hint { color: var(--text-muted, #9aa0aa); padding: 8px 4px; }
+.ide-side-sess__hint { color: var(--text-muted); padding: 8px 4px; }
 .ide-side-sess__msg {
   margin: 6px 0; padding: 6px 8px; border-radius: 8px; white-space: pre-wrap; word-break: break-word;
-  color: var(--text-primary, #d7dae0);
+  color: var(--text-primary);
 }
 .ide-side-sess__msg.is-user { background: rgba(97, 175, 239, 0.08); }
-.ide-side-sess__msg.is-assistant { background: rgba(255, 255, 255, 0.03); }
+.ide-side-sess__msg.is-assistant { background: var(--msg-assistant-bg); }
 </style>

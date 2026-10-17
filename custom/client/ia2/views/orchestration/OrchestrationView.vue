@@ -94,7 +94,7 @@ const flowEdges = computed<Edge[]>(() => {
       source: e.from,
       target: e.to,
       markerEnd: MarkerType.ArrowClosed,
-      style: { stroke: 'var(--border-color, #7f8691)', strokeWidth: 1.8 },
+      style: { stroke: 'var(--border-color)', strokeWidth: 1.8 },
     })
   }
   return out
@@ -158,7 +158,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
       </div>
     </div>
 
-    <div v-if="roots.length === 0 && !loading" class="orch__empty" data-testid="ia-orchestration-empty">
+    <div v-if="roots.length === 0 && !loading" class="ui-empty-state" data-testid="ia-orchestration-empty">
       当前看板没有「有子任务、无父任务」的根卡。先在看板对一个需求卡执行任务拆解（decompose）或群任务（swarm）建立任务链，协同图才有锚点。
     </div>
 
@@ -266,20 +266,20 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 
-.orch__label { font-size: 13px; color: var(--text-muted, #878c99); white-space: nowrap; }
+.orch__label { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 
 .orch__select {
   max-width: 420px;
   min-width: 220px;
   padding: 4px 8px;
-  border: 1px solid var(--border-color, #dcdfe6);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   color: inherit;
   font-size: 13px;
   font-family: inherit;
@@ -287,13 +287,13 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 
 .orch__refresh {
   padding: 4px 12px;
-  border: 1px solid var(--border-color, #dcdfe6);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-secondary, #f1f2f4);
+  background: var(--bg-secondary);
   color: inherit;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: var(--bg-tertiary, #e7e9ee); }
+  &:hover { background: var(--bg-tertiary); }
   &:disabled { opacity: 0.6; cursor: default; }
 }
 
@@ -304,19 +304,12 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   padding: 1px 8px;
   border-radius: 999px;
   border: 1px solid transparent;
-  &--human { color: #1d4ed8; border-color: #93c5fd; background: rgba(59, 130, 246, 0.08); }
-  &--agent { color: #6d28d9; border-color: #c4b5fd; background: rgba(139, 92, 246, 0.08); }
-  &--unassigned { color: var(--text-muted, #878c99); border-color: var(--border-color, #dcdfe6); }
-  &--control { color: #b45309; border-color: #fcd34d; background: rgba(245, 158, 11, 0.1); }
+  &--human { color: var(--accent-info); border-color: rgba(var(--accent-info-rgb), 0.4); background: rgba(var(--accent-info-rgb), 0.08); }
+  &--agent { color: var(--ia-compensated); border-color: color-mix(in srgb, var(--ia-compensated) 40%, transparent); background: color-mix(in srgb, var(--ia-compensated) 8%, transparent); }
+  &--unassigned { color: var(--text-muted); border-color: var(--border-color); }
+  &--control { color: var(--ia-stale); border-color: rgba(var(--warning-rgb), 0.4); background: rgba(var(--warning-rgb), 0.1); }
 }
 
-.orch__empty {
-  padding: 40px 24px;
-  color: var(--text-muted, #878c99);
-  font-size: 13px;
-  line-height: 1.8;
-  text-align: center;
-}
 
 .orch__main {
   flex: 1;
@@ -334,7 +327,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   width: 340px;
   flex-shrink: 0;
   overflow: auto;
-  border-left: 1px solid var(--border-color, #e5e7eb);
+  border-left: 1px solid var(--border-color);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -344,7 +337,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 .orch__panel-title { margin: 0; font-size: 14px; }
 
 .orch__q {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 10px;
   h4 { margin: 0 0 6px; font-size: 13px; }
@@ -352,7 +345,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 
 .orch__q-line { margin: 2px 0; font-size: 12.5px; line-height: 1.6; }
 
-.orch__q-note { margin: 4px 0 0; font-size: 11.5px; color: var(--text-secondary, #6b7280); line-height: 1.5; }
+.orch__q-note { margin: 4px 0 0; font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }
 
 .orch__list {
   margin: 4px 0 0;
@@ -363,14 +356,14 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 }
 
 .orch__cp-title { font-weight: 600; }
-.orch__cp-reason { display: block; color: var(--text-muted, #878c99); font-size: 11.5px; }
+.orch__cp-reason { display: block; color: var(--text-muted); font-size: 11.5px; }
 
 .orch__footnote {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px dashed var(--border-color, #e5e7eb);
+  border-top: 1px dashed var(--border-color);
   font-size: 11px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -380,8 +373,8 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   width: 190px;
   min-height: 56px;
   border-radius: 8px;
-  border: 1.5px solid var(--border-color, #c9cdd4);
-  background: var(--bg-primary, #fff);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-primary);
   padding: 6px 8px;
   font-size: 12px;
   cursor: pointer;
@@ -401,11 +394,11 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
-    color: var(--text-muted, #878c99);
+    color: var(--text-muted);
     font-size: 11px;
   }
 
-  .orch-node__est { color: #b45309; }
+  .orch-node__est { color: var(--ia-stale); }
 
   .orch-node__badge {
     position: absolute;
@@ -414,13 +407,13 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
     font-size: 10px;
     padding: 0 6px;
     border-radius: 999px;
-    background: #f59e0b;
-    color: #fff;
+    background: var(--warning);
+    color: var(--text-on-accent);
   }
 }
 
-:deep(.orch-node--human) { border-color: #60a5fa; }
-:deep(.orch-node--agent) { border-color: #a78bfa; }
-:deep(.orch-node--unassigned) { border-color: var(--border-color, #c9cdd4); opacity: 0.85; }
-:deep(.orch-node--control) { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35); border-color: #f59e0b; }
+:deep(.orch-node--human) { border-color: rgba(var(--accent-info-rgb), 0.6); }
+:deep(.orch-node--agent) { border-color: color-mix(in srgb, var(--ia-compensated) 60%, transparent); }
+:deep(.orch-node--unassigned) { border-color: var(--border-color); opacity: 0.85; }
+:deep(.orch-node--control) { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35); border-color: var(--ia-stale); }
 </style>

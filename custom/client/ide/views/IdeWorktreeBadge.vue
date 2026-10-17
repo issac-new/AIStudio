@@ -122,7 +122,7 @@ async function removeIsolation(): Promise<void> {
   line-height: 1;
   padding: 3px 6px;
   border-radius: 4px;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
   background: rgba(97, 175, 239, 0.12);
   font-family: ui-monospace, monospace;
   max-width: 180px;
@@ -134,10 +134,10 @@ async function removeIsolation(): Promise<void> {
 
   &--create {
     cursor: pointer;
-    border: 1px dashed color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--primary-color) 40%, transparent);
     background: none;
 
-    &:hover:not(:disabled) { border-color: var(--primary-color, #18a058); }
+    &:hover:not(:disabled) { border-color: var(--primary-color); }
     &:disabled { opacity: 0.5; cursor: default; }
   }
 }
@@ -145,13 +145,13 @@ async function removeIsolation(): Promise<void> {
 .ide-worktree-badge__action {
   border: none;
   background: none;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
   padding: 0 1px;
 
-  &:hover:not(:disabled) { color: var(--error-color, #d03050); }
+  &:hover:not(:disabled) { color: var(--error-color); }
   &:disabled { opacity: 0.5; cursor: default; }
 }
 </style>

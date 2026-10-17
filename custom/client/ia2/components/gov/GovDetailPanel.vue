@@ -94,7 +94,7 @@ function gotoIde(): void {
           </div>
         </div>
       </template>
-      <div v-else class="gdp__empty">
+      <div v-else class="ui-empty-state ui-empty-state--compact">
         {{ selectedRaw ? selectedRaw : t('ia2.gov.detailEmpty') }}
       </div>
     </div>
@@ -118,5 +118,4 @@ function gotoIde(): void {
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
-.gdp__empty { padding: 14px 6px; color: var(--text-muted); font-size: 11px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 </style>

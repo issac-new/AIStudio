@@ -55,13 +55,13 @@ const STATE_HINT: Record<HandoffState, string> = {
 <style scoped lang="scss">
 .hds { display: flex; flex-direction: column; gap: 8px; }
 .hds__title { margin: 0; font-size: 14px; font-weight: 600; }
-.hds__sub { margin: 0; font-size: 12px; color: var(--text-muted, #878c99); line-height: 1.6; }
+.hds__sub { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 .hds__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.hds__box { border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 8px 10px; }
+.hds__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; }
 .hds__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
 .hds__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .hds__row { display: flex; flex-direction: column; gap: 1px; }
 .hds__key { font-size: 12px; font-weight: 500; }
-.hds__hint { font-size: 11px; color: var(--text-muted, #878c99); }
-.hds__absent { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); border: 1px dashed var(--border-color, #e5e7eb); border-radius: 4px; padding: 4px 8px; }
+.hds__hint { font-size: 11px; color: var(--text-muted); }
+.hds__absent { margin: 0; font-size: 11px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 4px; padding: 4px 8px; }
 </style>

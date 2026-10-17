@@ -142,25 +142,25 @@ onMounted(refresh)
 .gov-cluster { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; align-items: center; gap: 10px; }
 .row h3 { margin: 0; font-size: 15px; }
-.btn { border: 1px solid #d0d4dd; border-radius: 6px; padding: 4px 12px; background: #2563eb; color: #fff; cursor: pointer; }
+.btn { border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 12px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; }
 .btn.ghost { background: transparent; color: inherit; }
 .btn:disabled { opacity: .5; cursor: default; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-.card { border: 1px solid #e3e6ec; border-radius: 8px; padding: 10px; }
-.card .k { font-size: 12px; color: #6b7280; }
+.card { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
+.card .k { font-size: 12px; color: var(--text-secondary); }
 .card .v { font-size: 16px; font-weight: 600; margin: 2px 0; }
-.card .sub { font-size: 12px; color: #6b7280; }
+.card .sub { font-size: 12px; color: var(--text-secondary); }
 .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th, .tbl td { border-bottom: 1px solid #eef0f4; padding: 6px 8px; text-align: left; }
-.tbl tr.high td { color: #b91c1c; }
-.tbl tr.warn td { color: #92400e; }
-.tbl.conv tr.diverging td { color: #b91c1c; }
-.tbl.conv tr.converging td { color: #047857; }
-.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid #d0d4dd; }
-.badge.diverging { color: #b91c1c; border-color: #f3c1c1; background: #fef2f2; }
-.badge.converging { color: #047857; border-color: #b7e4d8; background: #f0fdf9; }
-.badge.watching { color: #6b7280; }
-.err { color: #b91c1c; font-size: 13px; }
-.ok { color: #047857; }
-.hint { color: #9ca3af; font-size: 12px; margin: 0; }
+.tbl th, .tbl td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; }
+.tbl tr.high td { color: var(--error); }
+.tbl tr.warn td { color: var(--ia-stale); }
+.tbl.conv tr.diverging td { color: var(--error); }
+.tbl.conv tr.converging td { color: var(--success); }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border-color); }
+.badge.diverging { color: var(--error); border-color: rgba(var(--error-rgb), 0.4); background: rgba(var(--error-rgb), 0.05); }
+.badge.converging { color: var(--success); border-color: rgba(var(--success-rgb), 0.4); background: rgba(var(--success-rgb), 0.05); }
+.badge.watching { color: var(--text-secondary); }
+.err { color: var(--error); font-size: 13px; }
+.ok { color: var(--success); }
+.hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 </style>

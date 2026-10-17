@@ -143,7 +143,7 @@ const violationTop = computed(() => violations.value.slice(0, 50))
 
 <style scoped lang="scss">
 .ogov {
-  --ogov-border: #e2e8f0;
+  --ogov-border: var(--border-color);
   display: flex; flex-direction: column; gap: 14px; padding: 16px 18px;
   max-width: 1080px; margin: 0 auto; overflow-y: auto; height: 100%;
   &__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
@@ -151,10 +151,10 @@ const violationTop = computed(() => violations.value.slice(0, 50))
   &__sub { margin: 3px 0 0; font-size: 12.5px; opacity: 0.75; }
   &__ops { display: flex; gap: 8px; flex-wrap: wrap; }
   &__btn {
-    border: 1px solid var(--ogov-border); background: var(--bg-secondary, #fff); border-radius: 8px;
+    border: 1px solid var(--ogov-border); background: var(--bg-secondary); border-radius: 8px;
     padding: 6px 14px; cursor: pointer; font-size: 13px; color: inherit;
     &:disabled { opacity: 0.5; cursor: wait; }
-    &--primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    &--primary { background: var(--accent-primary); border-color: var(--accent-info); color: var(--text-on-accent); }
   }
   &__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
   &__block { border: 1px solid var(--ogov-border); border-radius: 12px; padding: 12px 14px; h2 { margin: 0 0 8px; font-size: 14.5px; } }
@@ -162,8 +162,8 @@ const violationTop = computed(() => violations.value.slice(0, 50))
   &__srcs { font-size: 12px; opacity: 0.85; margin: 0 0 8px; word-break: break-all; }
   &__result { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
   &__skip { font-size: 12px; margin-top: 4px; opacity: 0.85; }
-  &__clean { color: #059669; font-size: 13px; margin: 0; }
-  &__error { color: #dc2626; font-size: 13px; margin: 0; }
+  &__clean { color: var(--success); font-size: 13px; margin: 0; }
+  &__error { color: var(--error); font-size: 13px; margin: 0; }
 }
 .ogov-card {
   border: 1px solid var(--ogov-border); border-radius: 12px; padding: 10px 14px; text-align: center;
@@ -172,9 +172,9 @@ const violationTop = computed(() => violations.value.slice(0, 50))
 }
 .ogov-sev {
   display: inline-block; border-radius: 6px; padding: 1px 8px; font-size: 11px; font-weight: 600;
-  &--error { background: #fee2e2; color: #b91c1c; }
-  &--warning { background: #fef3c7; color: #b45309; }
-  &--info { background: #e0f2fe; color: #0369a1; }
+  &--error { background: rgba(var(--error-rgb), 0.08); color: var(--error); }
+  &--warning { background: rgba(var(--warning-rgb), 0.12); color: var(--ia-stale); }
+  &--info { background: rgba(var(--accent-info-rgb), 0.1); color: var(--accent-info); }
 }
 .ogov-table {
   width: 100%; border-collapse: collapse; font-size: 12.5px;

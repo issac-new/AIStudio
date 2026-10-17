@@ -74,15 +74,15 @@ function runCompact(): void {
 <style scoped lang="scss">
 .ide-compaction {
   font-size: 11px;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   background: var(--hover-color, rgba(0, 0, 0, 0.03));
-  border-left: 3px solid var(--text-color-3, #bbb);
+  border-left: 3px solid var(--text-muted);
   border-radius: 4px;
   padding: 3px 10px;
   margin: 4px 12px;
 }
-.ide-compaction.is-threshold[data-level='soon'] { border-left-color: var(--warning-color, #f0a020); color: var(--warning-color, #f0a020); }
-.ide-compaction.is-threshold[data-level='now'] { border-left-color: var(--error-color, #d03050); color: var(--error-color, #d03050); font-weight: 600; }
+.ide-compaction.is-threshold[data-level='soon'] { border-left-color: var(--warning-color); color: var(--warning-color); }
+.ide-compaction.is-threshold[data-level='now'] { border-left-color: var(--error-color); color: var(--error-color); font-weight: 600; }
 .ide-compaction__btn {
   border: 1px solid currentColor; background: transparent; border-radius: 4px; font-size: 10px;
   padding: 0 8px; margin-left: 8px; cursor: pointer; color: inherit;

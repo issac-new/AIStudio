@@ -211,7 +211,7 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
           @keydown="onKeydown"
         >
         <div class="ide-palette__list">
-          <div v-if="!flatItems.length" class="ide-palette__empty">
+          <div v-if="!flatItems.length" class="ui-empty-state">
             {{ t('ide.paletteEmpty') }}
           </div>
           <template v-for="section in sections" :key="section.key">
@@ -250,9 +250,9 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
   width: min(560px, calc(100vw - 48px));
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--bg-secondary);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
@@ -261,13 +261,13 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
   padding: 12px 14px;
   font: inherit;
   font-size: 14px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color);
   outline: none;
 
-  &::placeholder { color: var(--text-muted, #9aa0aa); }
+  &::placeholder { color: var(--text-muted); }
 }
 
 .ide-palette__list {
@@ -276,18 +276,12 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
   padding: 6px 0;
 }
 
-.ide-palette__empty {
-  padding: 18px 14px;
-  font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
-  text-align: center;
-}
 
 .ide-palette__section-label {
   padding: 6px 14px 2px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -299,7 +293,7 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
   padding: 7px 14px;
   font: inherit;
   font-size: 13px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   background: transparent;
   border: none;
   cursor: pointer;

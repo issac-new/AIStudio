@@ -38,12 +38,12 @@
   white-space: nowrap;
 
   &:hover {
-    color: var(--color-primary, #3b82f6);
+    color: var(--color-primary);
   }
 }
 
 .ia-scenes__btn--on {
-  background: var(--color-primary, #3b82f6);
+  background: var(--color-primary);
   color: var(--bg-primary);
   font-weight: 600;
 }
@@ -354,7 +354,7 @@
 // 指标口径副注（样本数/部分数据）——弱化于键值行
 .ia-metrics__note {
   font-size: 10px;
-  color: var(--text-tertiary, var(--text-secondary));
+  color: var(--text-muted);
   margin-top: -2px;
 }
 
@@ -539,7 +539,7 @@ body.ia-center-full .studio-navigation-rail {
   --ia-sp-3: 12px;
   --ia-sp-4: 16px;
   /* 卡片规范（边框+圆角+内距，统一散件手感） */
-  --ia-card-border: var(--border-color, #e5e7eb);
+  --ia-card-border: var(--border-color);
   --ia-card-radius: 6px;
   --ia-card-pad: 12px;
 }
@@ -560,7 +560,7 @@ body.ia-center-full .studio-navigation-rail {
   align-items: center;
   gap: var(--ia-sp-1);
   white-space: nowrap;
-  color: var(--text-primary, inherit);
+  color: var(--text-primary);
 }
 .ia-status-capsule__item + .ia-status-capsule__item {
   padding-left: var(--ia-sp-2);
@@ -580,7 +580,7 @@ body.ia-center-full .studio-navigation-rail {
 .ov__kpi--stale { border-left: 3px solid var(--ia-stale); }
 .ov__kpi--net { border-left: 3px solid var(--ia-compensated); }
 .ov__kpi-num { font-size: 22px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.ov__kpi-denom { font-size: var(--ia-fs-body); color: var(--text-muted, #878c99); margin-left: 1px; }
+.ov__kpi-denom { font-size: var(--ia-fs-body); color: var(--text-muted); margin-left: 1px; }
 /* 步表七幕分段头（幕名+步号区间，视觉分段） */
 .ov__act-head td {
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
@@ -588,7 +588,7 @@ body.ia-center-full .studio-navigation-rail {
   border-bottom: 1px solid var(--ia-card-border);
 }
 .ov__act-head-name { font-size: var(--ia-fs-block); font-weight: 600; }
-.ov__act-head-range { font-size: var(--ia-fs-aux); color: var(--text-muted, #878c99); margin-left: var(--ia-sp-2); }
+.ov__act-head-range { font-size: var(--ia-fs-aux); color: var(--text-muted); margin-left: var(--ia-sp-2); }
 
 /* 治理页签分组小标（U1：事前/事中/事后动线标注） */
 .gov-center__stage-tag {
@@ -597,16 +597,16 @@ body.ia-center-full .studio-navigation-rail {
   padding: 0 5px;
   border-radius: 3px;
   font-size: 10px;
-  color: var(--text-muted, #878c99);
-  border: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }
 
 /* U2 驾驶舱使用动线提示（CockpitOverview 三卡串联句） */
 .ov__flow-hint {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--text-muted, #878c99);
-  border-left: 3px solid var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--text-muted);
+  border-left: 3px solid var(--accent-primary, var(--color-primary));
   padding: 4px 10px;
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.06)));
   border-radius: 0 6px 6px 0;

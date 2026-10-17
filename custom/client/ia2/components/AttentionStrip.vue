@@ -108,10 +108,10 @@ const hiddenSummary = computed(() => {
 .ia-attn__label {
   flex-shrink: 0; display: inline-flex; align-items: center;
   padding: 3px 10px; font-size: 11px; font-weight: 600;
-  color: var(--text-primary, #d7dae0); background: var(--bg-secondary, rgba(128,128,128,0.1));
-  border: 1px solid var(--border-color, #3a3f4b); border-radius: 6px;
+  color: var(--text-primary); background: var(--bg-secondary, rgba(128,128,128,0.1));
+  border: 1px solid var(--border-color); border-radius: 6px;
   cursor: pointer; font-family: inherit;
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--accent-info); color: var(--accent-info); }
 }
 .ia-attn__items { display: flex; align-items: center; gap: 6px; }
 

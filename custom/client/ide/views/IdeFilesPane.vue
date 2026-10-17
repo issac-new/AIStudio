@@ -53,14 +53,14 @@ const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--text-primary); }
   &.is-active {
-    background: var(--bg-tertiary, #ebebeb);
-    color: var(--text-primary, #e6e6e6);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 }
 
@@ -68,7 +68,7 @@ const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
   margin: 0;
   padding: 3px 12px;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

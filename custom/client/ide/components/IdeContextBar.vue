@@ -23,7 +23,7 @@ const segments = computed<Segment[]>(() => {
   const breakdown = computeBreakdown((chatStore.activeSession?.messages ?? []) as never, used)
   if (!breakdown || breakdown.total <= 0) return []
   const COLORS: Record<string, string> = {
-    system: '#d97706', user: '#3b82f6', assistant: '#10b981', tool: '#8b5cf6',
+    system: 'var(--ia-stale)', user: 'var(--accent-info)', assistant: 'var(--success)', tool: 'var(--ia-compensated)',
   }
   const LABELS: Record<string, string> = {
     system: 'system/prompt', user: 'user', assistant: 'assistant/thinking', tool: 'tools',
@@ -34,7 +34,7 @@ const segments = computed<Segment[]>(() => {
       key: seg.key,
       label: LABELS[seg.key] ?? seg.key,
       pct: Math.round((seg.tokens / breakdown.total) * 100),
-      color: COLORS[seg.key] ?? '#888',
+      color: COLORS[seg.key] ?? 'var(--text-muted)',
     }))
 })
 
@@ -114,16 +114,16 @@ const noTelemetry = computed(() => totalPct.value === 0)
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
 }
 .ide-ctxbar__seg { height: 100%; }
-.ide-ctxbar__seg.is-total { background: var(--primary-color, #18a058); }
-.ide-ctxbar__pct { font-size: 11px; color: var(--text-color-3, #999); }
-.ide-ctxbar.is-warn .ide-ctxbar__pct { color: var(--warning-color, #d97706); }
-.ide-ctxbar.is-critical .ide-ctxbar__pct { color: #d03050; font-weight: 600; }
+.ide-ctxbar__seg.is-total { background: var(--primary-color); }
+.ide-ctxbar__pct { font-size: 11px; color: var(--text-muted); }
+.ide-ctxbar.is-warn .ide-ctxbar__pct { color: var(--warning-color); }
+.ide-ctxbar.is-critical .ide-ctxbar__pct { color: var(--error); font-weight: 600; }
 .ide-ctxbar__legend {
   position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 50;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 6px; padding: 6px 10px; font-size: 11px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 .ide-ctxbar__six { display: flex; align-items: center; gap: 4px; line-height: 1.6; }
-.ide-ctxbar__est { font-size: 10px; color: var(--warning-color, #d97706); }
+.ide-ctxbar__est { font-size: 10px; color: var(--warning-color); }
 </style>

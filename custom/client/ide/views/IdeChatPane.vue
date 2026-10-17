@@ -741,7 +741,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   flex-direction: column;
   min-height: 0;
   position: relative; /* B4 会话内查找条（绝对定位浮层）的锚 */
-  background: var(--bg-primary, #14161a);
+  background: var(--bg-primary);
 }
 
 .ide-chat__head {
@@ -750,7 +750,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-chat__title {
@@ -772,7 +772,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   min-height: 26px;
   padding: 2px 12px;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 /* R2：recap 横幅（恢复会话回笼摘要） */
@@ -783,15 +783,15 @@ async function pickModel(provider: string, model: string): Promise<void> {
   gap: 8px;
   padding: 6px 12px;
   font-size: 12px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background: color-mix(in srgb, var(--primary-color, #18a058) 10%, transparent);
-  color: var(--text-secondary, #b0b5be);
+  border-bottom: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--text-secondary);
 }
 
 .ide-chat__recap-kicker {
   flex-shrink: 0;
   font-weight: 600;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
 }
 
 .ide-chat__recap-last {
@@ -806,7 +806,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -814,13 +814,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
   flex-shrink: 0;
   border: none;
   background: none;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
   padding: 0 2px;
 
-  &:hover { color: var(--text-primary, #d7dae0); }
+  &:hover { color: var(--text-primary); }
 }
 
 /* R2：子代理结果反注入提示条 */
@@ -828,9 +828,9 @@ async function pickModel(provider: string, model: string): Promise<void> {
   flex-shrink: 0;
   padding: 5px 12px;
   font-size: 12px;
-  color: #f0a44c;
+  color: var(--ia-stale);
   background: rgba(240, 164, 76, 0.1);
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* R2：批准即学习记忆命中提示条 */
@@ -838,25 +838,25 @@ async function pickModel(provider: string, model: string): Promise<void> {
   flex-shrink: 0;
   padding: 4px 12px;
   font-size: 11px;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
   background: rgba(97, 175, 239, 0.08);
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-chat__runline-done {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--success-color, var(--success-color, #18a058));
+  color: var(--success-color, var(--success-color));
 }
 
 .ide-chat__agent {
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 10px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-family: Menlo, Monaco, 'Courier New', monospace;
 }
 
@@ -873,22 +873,22 @@ async function pickModel(provider: string, model: string): Promise<void> {
   justify-content: center;
   font: inherit;
   font-size: 14px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--text-primary, #e6e6e6);
-    border-color: var(--accent-primary, #4cc9f0);
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
   }
 
   /* 浮窗开关激活态 */
   &.is-on {
-    color: var(--accent-primary, #4cc9f0);
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 55%, transparent);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 10%, transparent);
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   }
 
   &:disabled {
@@ -925,7 +925,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   inset: 0;
   z-index: 5;
   display: flex;
-  background: var(--bg-primary, #14161a);
+  background: var(--bg-primary);
 }
 
 /* M1.6 模型失效警示条 */
@@ -934,9 +934,9 @@ async function pickModel(provider: string, model: string): Promise<void> {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: color-mix(in srgb, #f0a44c 12%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, #f0a44c 30%, transparent);
-  color: #f0c98c;
+  background: color-mix(in srgb, var(--ia-stale) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ia-stale) 30%, transparent);
+  color: var(--ia-stale);
   font-size: 12px;
 }
 
@@ -950,26 +950,26 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
 .ide-chat__model-invalid-btn {
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, #f0a44c 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ia-stale) 50%, transparent);
   border-radius: 5px;
   background: transparent;
-  color: #f0c98c;
+  color: var(--ia-stale);
   font-size: 12px;
   padding: 2px 10px;
   cursor: pointer;
 
-  &:hover { background: color-mix(in srgb, #f0a44c 15%, transparent); }
+  &:hover { background: color-mix(in srgb, var(--ia-stale) 15%, transparent); }
 }
 
 .ide-chat__model-invalid-dismiss {
   flex-shrink: 0;
   border: none;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 12px;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--text-primary); }
 }
 
 /* M1.7 会话诊断 popover */
@@ -985,15 +985,15 @@ async function pickModel(provider: string, model: string): Promise<void> {
   z-index: 30;
   width: 300px;
   padding: 10px 12px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--bg-secondary);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .ide-chat__debug-title {
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
@@ -1006,7 +1006,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
 }
 
 .ide-chat__debug-popover dt {
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-chat__debug-popover dd {
@@ -1020,15 +1020,15 @@ async function pickModel(provider: string, model: string): Promise<void> {
 .ide-chat__debug-copy {
   margin-top: 8px;
   width: 100%;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
-  background: var(--bg-tertiary, #ebebeb);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   font-size: 12px;
   padding: 4px 0;
   cursor: pointer;
 
-  &:hover { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover { border-color: var(--accent-primary); }
 }
 
 .ide-chat__model-picker-anchor {
@@ -1041,8 +1041,8 @@ async function pickModel(provider: string, model: string): Promise<void> {
   right: 12px;
   max-height: 260px;
   overflow-y: auto;
-  background: var(--card-color, #fff);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 6px 10px;
@@ -1053,7 +1053,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
 .ide-chat__model-group-title {
   font-weight: 600;
-  color: var(--text-color-3, #999);
+  color: var(--text-muted);
   padding: 4px 0 2px;
 }
 

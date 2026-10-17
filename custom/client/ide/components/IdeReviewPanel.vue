@@ -75,7 +75,7 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 <template>
   <div class="ide-review" data-testid="ide-review-panel">
     <div class="ide-review__head">⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span></div>
-    <div v-if="!findings.length" class="ide-review__empty">
+    <div v-if="!findings.length" class="ui-empty-state ui-empty-state--compact">
       暂无 findings
       <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">发起评审</button>
     </div>
@@ -105,29 +105,28 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 <style scoped lang="scss">
 .ide-review { margin: 4px 12px; font-size: 12px; }
 .ide-review__head { font-weight: 600; }
-.ide-review__counts { color: var(--text-color-3, #999); font-weight: 400; font-size: 11px; }
-.ide-review__empty { color: var(--text-color-3, #999); padding: 8px 0; }
+.ide-review__counts { color: var(--text-muted); font-weight: 400; font-size: 11px; }
 .ide-review__finding {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 4px; margin: 2px 0;
 }
 .ide-review__finding.is-high { background: rgba(208, 48, 80, 0.07); }
 .ide-review__finding.is-medium { background: rgba(184, 134, 11, 0.07); }
-.ide-review__finding.is-resolved { color: var(--text-color-3, #bbb); }
+.ide-review__finding.is-resolved { color: var(--text-muted); }
 .ide-review__sev { font-size: 10px; font-weight: 600; }
-.ide-review__domain { font-size: 10px; color: var(--text-color-3, #999); }
+.ide-review__domain { font-size: 10px; color: var(--text-muted); }
 .ide-review__text { flex: 1; }
 .ide-review__resolve {
-  border: none; background: transparent; color: var(--primary-color, #18a058); cursor: pointer; font-size: 11px;
+  border: none; background: transparent; color: var(--primary-color); cursor: pointer; font-size: 11px;
 }
 .ide-review__verdict { display: flex; gap: 6px; margin-top: 8px; }
 .ide-review__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 5px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 5px;
   padding: 4px 12px; cursor: pointer; font-size: 12px;
 }
-.ide-review__btn.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+.ide-review__btn.is-active { border-color: var(--primary-color); color: var(--primary-color); }
 
 .ide-review__start {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 4px;
   padding: 1px 8px; cursor: pointer; font-size: 11px; margin-left: 6px;
 }
 </style>

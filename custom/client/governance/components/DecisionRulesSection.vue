@@ -43,7 +43,7 @@ onMounted(() => void refresh())
     <p class="dr__sub">{{ L?.sub }}</p>
     <div v-if="error" class="dr__error">{{ error }}</div>
     <div v-else-if="data && !data.exists" class="dr__missing" data-testid="dr-missing">{{ L?.missing }}</div>
-    <div v-else-if="!data" class="dr__empty">…</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <div v-if="data.problems?.length" class="dr__problems" data-testid="dr-problems">
         {{ L?.problems }}：{{ data.problems.join('；') }}
@@ -65,10 +65,10 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .dr {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -76,21 +76,20 @@ onMounted(() => void refresh())
 }
 .dr__bar { display: flex; align-items: center; gap: 8px; }
 .dr__title { margin: 0; font-size: 14px; }
-.dr__mode { font-size: 12px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border-color, #e5e7eb); }
-.dr__mode[data-mode="enforce"] { color: #fff; background: var(--danger, #dc2626); border-color: transparent; }
-.dr__mode[data-mode="warn"] { color: var(--warning-ink, #92400e); background: rgb(254 243 199); border-color: transparent; }
+.dr__mode { font-size: 12px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border-color); }
+.dr__mode[data-mode="enforce"] { color: var(--text-on-accent); background: var(--danger); border-color: transparent; }
+.dr__mode[data-mode="warn"] { color: var(--ia-stale); background: rgb(254 243 199); border-color: transparent; }
 .dr__mode[data-mode="off"] { opacity: 0.6; }
 .dr__sub { margin: 0; font-size: 12px; opacity: 0.7; }
-.dr__error { color: var(--danger, #dc2626); font-size: 12px; }
-.dr__missing, .dr__empty { font-size: 12px; opacity: 0.6; }
-.dr__problems { font-size: 12px; color: var(--danger, #dc2626); background: rgb(254 226 226); border-radius: 6px; padding: 4px 8px; }
-.dr__table { display: flex; flex-direction: column; font-size: 12px; border-top: 1px solid var(--border-color, #e5e7eb); }
-.dr__thead, .dr__tr { display: grid; grid-template-columns: 160px 1fr 64px 2fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--border-color, #e5e7eb); }
+.dr__error { color: var(--danger); font-size: 12px; }
+.dr__missing,.dr__problems { font-size: 12px; color: var(--danger); background: rgb(254 226 226); border-radius: 6px; padding: 4px 8px; }
+.dr__table { display: flex; flex-direction: column; font-size: 12px; border-top: 1px solid var(--border-color); }
+.dr__thead, .dr__tr { display: grid; grid-template-columns: 160px 1fr 64px 2fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--border-color); }
 .dr__thead { font-size: 11px; opacity: 0.6; }
 .dr__id { font-family: monospace; font-size: 11px; }
 .dr__when code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; margin-right: 4px; }
 .dr__then { font-weight: 600; }
-.dr__then.is-deny { color: var(--danger, #dc2626); }
-.dr__then.is-warn { color: var(--warning-ink, #92400e); }
+.dr__then.is-deny { color: var(--danger); }
+.dr__then.is-warn { color: var(--ia-stale); }
 .dr__msg { font-size: 11px; opacity: 0.85; }
 </style>

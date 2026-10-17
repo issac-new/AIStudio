@@ -203,7 +203,7 @@ function discard(): void {
   height: 100%;
   padding: 10px 12px;
   font-size: 12px;
-  color: var(--text-primary, #d7dae0);
+  color: var(--text-primary);
   overflow-y: auto;
 }
 
@@ -220,19 +220,19 @@ function discard(): void {
 }
 
 .ide-hooks__refresh {
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+  &:hover { border-color: var(--primary-color); color: var(--primary-color); }
 }
 
 .ide-hooks__state {
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   padding: 8px 0;
 }
 
@@ -244,7 +244,7 @@ function discard(): void {
   font-family: ui-monospace, monospace;
   font-size: 11px;
   font-weight: 600;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
   margin-bottom: 4px;
 }
 
@@ -259,7 +259,7 @@ function discard(): void {
   align-items: baseline;
   gap: 8px;
   padding: 3px 0;
-  border-bottom: 1px dashed color-mix(in srgb, var(--border-color, #3a3f4b) 50%, transparent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--border-color) 50%, transparent);
 }
 
 .ide-hooks__command {
@@ -274,7 +274,7 @@ function discard(): void {
 .ide-hooks__matcher {
   flex-shrink: 0;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-hooks__meta {
@@ -282,11 +282,11 @@ function discard(): void {
   display: flex;
   gap: 6px;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-hooks__failclosed {
-  color: #f0a44c;
+  color: var(--ia-stale);
 }
 
 .ide-hooks__ops {
@@ -295,9 +295,9 @@ function discard(): void {
   gap: 2px;
 
   button {
-    border: 1px solid var(--border-color, #3a3f4b);
+    border: 1px solid var(--border-color);
     background: none;
-    color: var(--text-secondary, #b0b5be);
+    color: var(--text-secondary);
     border-radius: 3px;
     font-size: 10px;
     padding: 0 4px;
@@ -309,23 +309,23 @@ function discard(): void {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  border: 1px dashed var(--border-color, #3a3f4b);
+  border: 1px dashed var(--border-color);
   border-radius: 6px;
   padding: 8px;
   margin-bottom: 8px;
 
   input, select {
-    border: 1px solid var(--border-color, #3a3f4b);
+    border: 1px solid var(--border-color);
     background: none;
-    color: var(--text-primary, #d7dae0);
+    color: var(--text-primary);
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 11px;
   }
 
   button {
-    border: 1px solid var(--primary-color, #18a058);
-    color: var(--primary-color, #18a058);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
     background: none;
     border-radius: 4px;
     padding: 2px 10px;
@@ -333,7 +333,7 @@ function discard(): void {
   }
 }
 
-.ide-hooks__fc { font-size: 11px; color: var(--text-muted, #9aa0aa); display: flex; align-items: center; gap: 4px; }
+.ide-hooks__fc { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
 
 .ide-hooks__editrow {
   display: flex;
@@ -341,9 +341,9 @@ function discard(): void {
   flex: 1;
 
   input, select {
-    border: 1px solid var(--border-color, #3a3f4b);
+    border: 1px solid var(--border-color);
     background: none;
-    color: var(--text-primary, #d7dae0);
+    color: var(--text-primary);
     border-radius: 4px;
     padding: 2px 6px;
     font-size: 11px;
@@ -355,13 +355,13 @@ function discard(): void {
   display: flex;
   gap: 8px;
   align-items: center;
-  border-top: 1px solid var(--border-color, #3a3f4b);
+  border-top: 1px solid var(--border-color);
   padding-top: 8px;
   margin-top: 8px;
 
   button {
-    border: 1px solid var(--primary-color, #18a058);
-    color: var(--primary-color, #18a058);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
     background: none;
     border-radius: 4px;
     padding: 2px 10px;
@@ -370,7 +370,7 @@ function discard(): void {
 }
 
 .ide-hooks__error {
-  color: var(--error-color, #f04864);
+  color: var(--error-color);
   font-size: 11px;
 }
 
@@ -378,6 +378,6 @@ function discard(): void {
   margin-top: auto;
   padding-top: 12px;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 </style>

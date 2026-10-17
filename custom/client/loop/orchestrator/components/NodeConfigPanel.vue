@@ -334,7 +334,7 @@ const nodeName = (type: string): string => t(`ia2.orchestrate.editor.node.${type
   gap: 8px;
   padding: 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background: var(--bg-card);
   font-size: 12px;
   overflow: auto;
@@ -343,14 +343,14 @@ const nodeName = (type: string): string => t(`ia2.orchestrate.editor.node.${type
 .ncp__title { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .ncp__entry-badge {
   padding: 0 6px;
-  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));
-  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--accent-primary, var(--color-primary));
+  border-radius: var(--radius-pill);
   font-size: 10px;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
 }
 .ncp__set-entry, .ncp__remove {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 11px;
@@ -362,8 +362,8 @@ const nodeName = (type: string): string => t(`ia2.orchestrate.editor.node.${type
 .ncp__remove {
   margin-top: 8px;
   align-self: flex-start;
-  color: var(--error, var(--color-danger, #e11d48));
-  border-color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
+  border-color: var(--error, var(--color-danger));
 }
 .ncp__id-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ncp__field {
@@ -377,21 +377,21 @@ const nodeName = (type: string): string => t(`ia2.orchestrate.editor.node.${type
   padding: 4px 6px;
   border: 1px solid var(--border-color);
   border-radius: 3px;
-  background: var(--color-bg-input, transparent);
+  background: var(--color-bg-input);
   color: inherit;
   font-size: 12px;
   font-family: inherit;
   box-sizing: border-box;
   width: 100%;
 }
-.ncp__input--mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; }
+.ncp__input--mono { font-family: var(--font-mono); font-size: 11px; }
 .ncp__input.is-readonly { opacity: 0.65; cursor: default; }
-.ncp__input.is-invalid { border-color: var(--error, var(--color-danger, #e11d48)); }
-.ncp__err { font-size: 11px; color: var(--error, var(--color-danger, #e11d48)); }
+.ncp__input.is-invalid { border-color: var(--error, var(--color-danger)); }
+.ncp__err { font-size: 11px; color: var(--error, var(--color-danger)); }
 .ncp__hint {
   margin: 0;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   line-height: 1.5;
 }
 </style>

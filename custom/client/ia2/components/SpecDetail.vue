@@ -119,7 +119,7 @@ function exportJson(): void {
 .spec-detail__back {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -138,36 +138,36 @@ function exportJson(): void {
 .spec-detail__version {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .spec-detail__kind {
   padding: 1px 8px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   background: var(--bg-secondary);
   font-size: 11px;
   color: var(--text-secondary);
 }
 .spec-detail__tryrun {
   padding: 4px 12px;
-  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));
-  border-radius: var(--radius-micro, 3px);
+  border: 1px solid var(--accent-primary, var(--color-primary));
+  border-radius: var(--radius-micro);
   background: transparent;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
 }
 .spec-detail__tryrun:hover {
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--color-on-accent, #fff);
+  background: var(--accent-primary, var(--color-primary));
+  color: var(--color-on-accent);
 }
 .spec-detail__create {
   margin-left: auto;
   padding: 4px 12px;
   border: none;
-  border-radius: var(--radius-micro, 3px);
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--color-on-accent, #fff);
+  border-radius: var(--radius-micro);
+  background: var(--accent-primary, var(--color-primary));
+  color: var(--color-on-accent);
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
@@ -184,7 +184,7 @@ function exportJson(): void {
 .spec-detail__io button {
   padding: 3px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -202,9 +202,9 @@ function exportJson(): void {
   overflow: auto;
   padding: 10px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background: var(--bg-secondary);
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.5;
   color: var(--text-secondary);

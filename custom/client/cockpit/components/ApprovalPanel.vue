@@ -213,7 +213,7 @@ defineExpose({ refresh })
     <div v-if="error" class="approval-panel__error" data-testid="approval-error">{{ t('approvals.loadFailed') }}：{{ error }}</div>
 
     <!-- 空态：图标 + 文案的暖空态（对照 Run Center 3 步引导范式，不再裸灰字） -->
-    <div v-if="!loading && items.length === 0" class="approval-panel__empty" data-testid="approval-empty">
+    <div v-if="!loading && items.length === 0" class="ui-empty-state" data-testid="approval-empty">
       <span class="approval-panel__empty-icon" aria-hidden="true">✓</span>
       <span class="approval-panel__empty-text">{{ t('approvals.empty') }}</span>
     </div>
@@ -306,7 +306,7 @@ defineExpose({ refresh })
         <span class="risk-dot risk-dot--low"></span>{{ spotT.title }}
         <span class="risk-hint risk-hint--low">{{ spotT.hint }}</span>
       </h4>
-      <div v-if="spotChecks.length === 0" class="approval-panel__empty" data-testid="approval-spotcheck-empty">
+      <div v-if="spotChecks.length === 0" class="ui-empty-state" data-testid="approval-spotcheck-empty">
         {{ spotT.empty.replace('{n}', String(spotResolved.length)) }}
       </div>
       <div
@@ -355,7 +355,7 @@ defineExpose({ refresh })
     <!-- 审批历史 -->
     <section v-if="showHistory" class="approval-panel__history">
       <h4 class="approval-panel__group-title">{{ t('approvals.history') }}</h4>
-      <div v-if="history.length === 0" class="approval-panel__empty">{{ t('approvals.historyEmpty') }}</div>
+      <div v-if="history.length === 0" class="ui-empty-state">{{ t('approvals.historyEmpty') }}</div>
       <table v-else class="approval-history" data-testid="approval-history">
         <thead>
           <tr>
@@ -416,31 +416,31 @@ defineExpose({ refresh })
 /* 影响面预览（Blast Radius）：待审命令行内可展开块 */
 .approval-row__impact {
   margin-top: 2px;
-  border: 1px dashed var(--warning, #d97706);
+  border: 1px dashed var(--warning);
   border-radius: 8px;
-  background: rgb(254 243 199 / 35%);
+  background: rgba(var(--warning-rgb), 0.35);
   padding: 2px 8px;
   font-size: 11.5px;
   summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 2px 0; }
   summary::-webkit-details-marker { display: none; }
 }
-.impact-chip { font-weight: 600; color: var(--warning-ink, #92400e); }
+.impact-chip { font-weight: 600; color: var(--ia-stale); }
 .impact-danger {
   padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; font-size: 10.5px;
-  &--delete { color: var(--danger, #dc2626); }
-  &--overwrite { color: var(--warning-ink, #92400e); }
-  &--worktree-reset { color: var(--danger, #dc2626); }
+  &--delete { color: var(--danger); }
+  &--overwrite { color: var(--ia-stale); }
+  &--worktree-reset { color: var(--danger); }
 }
-.impact-count { color: var(--text-muted, #878c99); }
-.impact-unbounded { color: var(--warning-ink, #92400e); }
+.impact-count { color: var(--text-muted); }
+.impact-unbounded { color: var(--ia-stale); }
 .impact-body { display: flex; flex-direction: column; gap: 3px; padding: 2px 0 4px; }
-.impact-note { color: var(--warning-ink, #92400e); }
+.impact-note { color: var(--ia-stale); }
 .impact-targets {
   margin: 0; padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 1px;
   li code { font-size: 11px; background: rgb(0 0 0 / 5%); padding: 0 3px; border-radius: 3px; }
 }
-.impact-more { color: var(--text-muted, #878c99); }
-.impact-hint { color: var(--text-muted, #878c99); font-size: 10.5px; }
+.impact-more { color: var(--text-muted); }
+.impact-hint { color: var(--text-muted); font-size: 10.5px; }
 
 .approval-panel {
   display: flex;
@@ -457,10 +457,10 @@ defineExpose({ refresh })
   &:hover { color: var(--text-primary); }
 }
 .approval-sugg__state { padding: 10px 4px; font-size: 11px; color: var(--text-muted); }
-.approval-sugg__state--err { color: var(--error, #e11d48); }
+.approval-sugg__state--err { color: var(--error); }
 .approval-sugg__row { display: flex; align-items: center; gap: 8px; padding: 3px 4px; }
 .approval-sugg__n { flex-shrink: 0; width: 18px; height: 18px; border-radius: 9px; background: var(--bg-secondary); color: var(--text-muted); font-size: 10px; display: inline-flex; align-items: center; justify-content: center; }
-.approval-sugg__pattern { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-primary); font-family: var(--font-mono, monospace); }
+.approval-sugg__pattern { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-primary); font-family: var(--font-mono); }
 .approval-sugg__count { flex-shrink: 0; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .approval-sugg__kind { flex-shrink: 0; font-size: 9px; padding: 1px 6px; border-radius: 8px; background: var(--bg-secondary); color: var(--text-muted); }
 .approval-sugg__hint { margin: 6px 0 0; font-size: 10px; color: var(--text-muted); }
@@ -477,32 +477,24 @@ defineExpose({ refresh })
 .approval-panel__count {
   font-size: 12px;
   font-weight: 500;
-  color: var(--accent-primary, #3b82f6);
-  &--idle { color: var(--text-muted, #878c99); font-weight: 400; }
+  color: var(--accent-primary);
+  &--idle { color: var(--text-muted); font-weight: 400; }
 }
 .approval-panel__refresh {
   margin-left: auto;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   cursor: pointer;
   font-size: 12px;
   padding: 3px 10px;
-  color: var(--text-muted, #878c99);
-  &:hover:not(:disabled) { color: inherit; background: var(--bg-secondary, #f1f2f4); }
+  color: var(--text-muted);
+  &:hover:not(:disabled) { color: inherit; background: var(--bg-secondary); }
   &:disabled { opacity: 0.5; cursor: wait; }
 }
 .approval-panel__error {
-  color: var(--error-color, #dc2626);
+  color: var(--error-color);
   font-size: 12px;
-}
-.approval-panel__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 28px 0;
-  text-align: center;
 }
 .approval-panel__empty-icon {
   display: inline-flex;
@@ -511,12 +503,12 @@ defineExpose({ refresh })
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--bg-secondary, #f0f0f0);
-  color: var(--success, #2e7d32);
+  background: var(--bg-secondary);
+  color: var(--success);
   font-size: 18px;
 }
 .approval-panel__empty-text {
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   font-size: 13px;
 }
 .approval-panel__group {
@@ -528,7 +520,7 @@ defineExpose({ refresh })
   margin: 4px 0 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -537,7 +529,7 @@ defineExpose({ refresh })
   gap: 12px;
   align-items: center;
   padding: 10px 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary, rgba(255, 255, 255, 0.55));
 }
@@ -557,7 +549,7 @@ defineExpose({ refresh })
 }
 .approval-row__detail {
   font-size: 12px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -565,7 +557,7 @@ defineExpose({ refresh })
 }
 .approval-row__meta {
   font-size: 11px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   opacity: 0.8;
 }
 .approval-row__actions {
@@ -574,18 +566,18 @@ defineExpose({ refresh })
   flex-shrink: 0;
 }
 .approval-btn {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   padding: 5px 12px;
   font-size: 12px;
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: wait; }
-  &--once, &--session, &--always, &--approve { color: var(--success-color, #059669); border-color: var(--success-color, #059669); border-opacity: 0.3; }
-  &--deny, &--request_changes { color: var(--error-color, #dc2626); border-color: var(--error-color, #dc2626); border-opacity: 0.3; }
+  &--once, &--session, &--always, &--approve { color: var(--success-color); border-color: var(--success-color); border-opacity: 0.3; }
+  &--deny, &--request_changes { color: var(--error-color); border-color: var(--error-color); border-opacity: 0.3; }
   &--primary {
-    background: var(--success-color, #059669);
-    border-color: var(--success-color, #059669);
+    background: var(--success-color);
+    border-color: var(--success-color);
     color: var(--text-on-accent);
     font-weight: 600;
   }
@@ -601,30 +593,30 @@ defineExpose({ refresh })
   th, td {
     text-align: left;
     padding: 5px 8px;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-color);
   }
-  th { color: var(--text-muted, #878c99); font-weight: 500; }
+  th { color: var(--text-muted); font-weight: 500; }
   td { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-.approval-history__dim { color: var(--text-muted, #878c99); }
+.approval-history__dim { color: var(--text-muted); }
 .approval-history__decision {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 1px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   font-size: 11px;
   font-weight: 600;
   /* 形状+符号编码，不仅颜色（红绿色盲可辨） */
   &::before { font-size: 10px; }
   &.is-once, &.is-session, &.is-always, &.is-approve {
-    color: var(--success, #2e7d32);
-    background: rgba(var(--success-rgb, 46, 125, 50), 0.1);
+    color: var(--success);
+    background: rgba(var(--success-rgb), 0.1);
     &::before { content: '✓'; }
   }
   &.is-deny, &.is-request_changes {
-    color: var(--error, #c62828);
-    background: rgba(var(--error-rgb, 198, 40, 40), 0.1);
+    color: var(--error);
+    background: rgba(var(--error-rgb), 0.1);
     &::before { content: '✕'; }
   }
 }
@@ -637,9 +629,9 @@ defineExpose({ refresh })
   border-radius: 50%;
   margin-right: 5px;
   vertical-align: 1px;
-  &--high { background: var(--error-color, #dc2626); }
-  &--medium { background: var(--warning-color, #d97706); }
-  &--low { background: var(--success-color, #059669); }
+  &--high { background: var(--error-color); }
+  &--medium { background: var(--warning-color); }
+  &--low { background: var(--success-color); }
 }
 .risk-hint {
   margin-left: 8px;
@@ -649,15 +641,15 @@ defineExpose({ refresh })
   border-radius: 4px;
   text-transform: none;
   letter-spacing: 0;
-  &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
-  &--low { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.08); }
+  &--high { color: var(--error-color); background: rgba(220, 38, 38, 0.08); }
+  &--low { color: var(--success-color); background: rgba(5, 150, 105, 0.08); }
 }
 .approval-row--high {
-  border-left: 3px solid var(--error-color, #dc2626);
+  border-left: 3px solid var(--error-color);
 }
 /* V4.1 抽检行：低风险绿轴（区别于高危红轴；事后回看非待审） */
 .approval-row--spotcheck {
-  border-left: 3px solid var(--success-color, #059669);
+  border-left: 3px solid var(--success-color);
   opacity: 0.92;
 }
 /* 已处置回看子区：灰轴弱化（已闭环非待办），子标题区别主标题 */
@@ -665,10 +657,10 @@ defineExpose({ refresh })
   margin: 10px 0 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
 }
 .approval-row--spotcheck-resolved {
-  border-left: 3px solid var(--border-color, #e5e7eb);
+  border-left: 3px solid var(--border-color);
   opacity: 0.75;
   padding: 6px 10px;
 }
@@ -678,8 +670,8 @@ defineExpose({ refresh })
   padding: 0 5px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--text-muted, #878c99);
-  border: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   vertical-align: 1px;
 }
@@ -689,8 +681,8 @@ defineExpose({ refresh })
   padding: 1px 6px;
   font-size: 11px;
   border-radius: 4px;
-  &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
-  &--medium { color: var(--warning-color, #d97706); background: rgba(217, 119, 6, 0.08); }
-  &--low { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.08); }
+  &--high { color: var(--error-color); background: rgba(220, 38, 38, 0.08); }
+  &--medium { color: var(--warning-color); background: rgba(217, 119, 6, 0.08); }
+  &--low { color: var(--success-color); background: rgba(5, 150, 105, 0.08); }
 }
 </style>

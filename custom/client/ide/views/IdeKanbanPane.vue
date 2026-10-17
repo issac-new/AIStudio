@@ -127,7 +127,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
     </header>
 
     <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error">{{ loadError }}</p>
-    <p v-else-if="!loading && !tasks.length" class="ide-kanban__empty" data-testid="ide-kanban-empty">{{ t('ide.kanban.empty') }}</p>
+    <p v-else-if="!loading && !tasks.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-kanban-empty">{{ t('ide.kanban.empty') }}</p>
 
     <!-- board：列桶 -->
     <div v-if="view === 'board' && tasks.length" class="ide-kanban__board" data-testid="ide-kanban-board">
@@ -183,40 +183,39 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
         </span>
       </div>
     </div>
-    <p v-else-if="view === 'gantt' && tasks.length && !ganttRows.length" class="ide-kanban__empty">no started tasks</p>
+    <p v-else-if="view === 'gantt' && tasks.length && !ganttRows.length" class="ui-empty-state ui-empty-state--compact">no started tasks</p>
   </div>
 </template>
 
 <style scoped lang="scss">
 .ide-kanban { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; overflow: hidden; }
-.ide-kanban__head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border-color, #eee); }
-.ide-kanban__refresh { border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--text-color-3, #999); }
+.ide-kanban__head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
+.ide-kanban__refresh { border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--text-muted); }
 .ide-kanban__views { display: inline-flex; gap: 2px; }
-.ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-color-3, #999); }
-.ide-kanban__viewtab.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
-.ide-kanban__count { margin-left: auto; color: var(--text-color-3, #999); }
-.ide-kanban__error, .ide-kanban__empty { padding: 12px; color: var(--text-color-3, #999); }
-.ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
+.ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-muted); }
+.ide-kanban__viewtab.is-active { border-color: var(--primary-color); color: var(--primary-color); }
+.ide-kanban__count { margin-left: auto; color: var(--text-muted); }
+.ide-kanban__error,.ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
 .ide-kanban__col { flex: 0 0 168px; background: var(--hover-color, rgba(0,0,0,.03)); border-radius: 6px; padding: 6px; }
-.ide-kanban__colhead { font-weight: 600; color: var(--text-color-3, #999); font-size: 11px; padding: 2px 4px 6px; }
-.ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }
+.ide-kanban__colhead { font-weight: 600; color: var(--text-muted); font-size: 11px; padding: 2px 4px 6px; }
+.ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }
 .ide-kanban__prio { font-size: 10px; font-weight: 600; }
-.is-p0 .ide-kanban__prio, td.is-p0 { color: #d03050; }
-.is-p1 .ide-kanban__prio, td.is-p1 { color: #d06030; }
-.is-p2 .ide-kanban__prio, td.is-p2 { color: #b8860b; }
+.is-p0 .ide-kanban__prio, td.is-p0 { color: var(--error); }
+.is-p1 .ide-kanban__prio, td.is-p1 { color: var(--error); }
+.is-p2 .ide-kanban__prio, td.is-p2 { color: var(--ia-stale); }
 .ide-kanban__title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ide-kanban__assignee { font-size: 10px; color: var(--text-color-3, #999); }
+.ide-kanban__assignee { font-size: 10px; color: var(--text-muted); }
 .ide-kanban__list { width: 100%; border-collapse: collapse; }
-.ide-kanban__list th { text-align: left; color: var(--text-color-3, #999); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--border-color, #eee); position: sticky; top: 0; background: var(--card-color, #fff); }
-.ide-kanban__list td { padding: 3px 8px; border-bottom: 1px solid var(--border-color, #f0f0f0); }
+.ide-kanban__list th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--card-color); }
+.ide-kanban__list td { padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
 td.is-title { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ide-kanban__lanes { flex: 1; overflow-y: auto; padding: 8px; }
 .ide-kanban__lane { margin-bottom: 8px; }
-.ide-kanban__lanehead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); padding: 2px 0; }
+.ide-kanban__lanehead { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 2px 0; }
 .ide-kanban__gantt { flex: 1; overflow-y: auto; padding: 8px; }
 .ide-kanban__grow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .ide-kanban__glabel { flex: 0 0 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 .ide-kanban__gtrack { flex: 1; position: relative; height: 8px; background: var(--hover-color, rgba(0,0,0,.05)); border-radius: 4px; }
-.ide-kanban__gbar { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--primary-color, #18a058); opacity: .6; }
+.ide-kanban__gbar { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--primary-color); opacity: .6; }
 .ide-kanban__gbar.is-done { opacity: 1; }
 </style>

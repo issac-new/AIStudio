@@ -173,25 +173,25 @@ function runsOf(caseId: string): OracleRunDto[] {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
   label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
   .wide { grid-column: 1 / -1; }
-  input { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 10px; font-size: 13px; background: var(--bg-primary, #fff); color: inherit; }
+  input { border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 13px; background: var(--bg-primary); color: inherit; }
   .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
 }
 .oracle__case { display: flex; flex-direction: column; gap: 8px; }
 .oracle__case-head { display: flex; align-items: center; gap: 10px; font-size: 13px;
   button.primary { margin-left: auto; } }
-.oracle__run { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 8px 10px; font-size: 12px; }
+.oracle__run { border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px; font-size: 12px; }
 .oracle__run-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .oracle__stages { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stage { border: 1px solid var(--border-color, #eee); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.stage { border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .stage__name { font-weight: 600; opacity: 0.75; }
-.domdiff { max-height: 90px; overflow: auto; font-family: var(--font-mono, monospace); font-size: 11px; }
-.oracle__error { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
-.v-pass { color: var(--success, #16a34a); font-weight: 600; }
-.v-fail { color: var(--danger, #dc2626); font-weight: 600; }
-.v-unknown { color: var(--warning, #b45309); font-weight: 600; }
-.chip { border-radius: 9px; padding: 1px 7px; font-size: 11px; background: var(--bg-tertiary, #eef0f3);
-  &.chip-warn { background: var(--warning, #f59e0b); color: var(--text-on-warning, #fff); } }
+.domdiff { max-height: 90px; overflow: auto; font-family: var(--font-mono); font-size: 11px; }
+.oracle__error { color: var(--danger); font-size: 13px; margin: 0; }
+.v-pass { color: var(--success); font-weight: 600; }
+.v-fail { color: var(--danger); font-weight: 600; }
+.v-unknown { color: var(--warning); font-weight: 600; }
+.chip { border-radius: 9px; padding: 1px 7px; font-size: 11px; background: var(--bg-tertiary);
+  &.chip-warn { background: var(--warning); color: var(--text-on-warning); } }
 .muted { opacity: 0.65; font-size: 12px; }
-.mono { font-family: var(--font-mono, monospace); }
-button.primary { background: var(--accent, #4f6ef7); color: var(--text-on-accent, #fff); border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+.mono { font-family: var(--font-mono); }
+button.primary { background: var(--accent-primary); color: var(--text-on-accent); border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
 </style>

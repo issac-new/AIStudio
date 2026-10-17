@@ -123,7 +123,7 @@ async function rerun(): Promise<void> {
 <template>
   <div class="ni-panel" data-node-inspector>
     <!-- 空态：未选中节点 -->
-    <div v-if="!node || !insp" class="ni-panel__empty">
+    <div v-if="!node || !insp" class="ui-empty-state">
       <p>{{ t('runcenter.inspector.empty') }}</p>
       <p class="ni-panel__empty-hint">{{ t('runcenter.inspector.emptyHint') }}</p>
     </div>
@@ -241,11 +241,10 @@ async function rerun(): Promise<void> {
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   font-size: 12px;
   overflow: auto;
 }
-.ni-panel__empty { text-align: center; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
 .ni-panel__empty p { margin: 0 0 4px; }
 .ni-panel__empty-hint { font-size: 11px; opacity: 0.8; }
 
@@ -257,7 +256,7 @@ async function rerun(): Promise<void> {
 }
 .ni-panel__title { font-size: 13px; white-space: nowrap; }
 .ni-panel__node-id {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -270,36 +269,36 @@ async function rerun(): Promise<void> {
   gap: 4px 16px;
 }
 .ni-panel__meta-row { display: flex; gap: 6px; min-width: 0; }
-.ni-panel__meta-row dt { color: var(--text-muted, var(--color-text-secondary, #878c99)); flex-shrink: 0; }
+.ni-panel__meta-row dt { color: var(--text-muted, var(--color-text-secondary)); flex-shrink: 0; }
 .ni-panel__meta-row dd { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ni-panel__status--failed { color: var(--color-danger, #e11d48); }
-.ni-panel__status--running { color: var(--color-success, #28bf5c); }
-.ni-panel__status--awaiting-input { color: var(--color-warning, #f59e0b); }
+.ni-panel__status--failed { color: var(--color-danger); }
+.ni-panel__status--running { color: var(--color-success); }
+.ni-panel__status--awaiting-input { color: var(--color-warning); }
 
 .ni-panel__section { display: flex; flex-direction: column; gap: 4px; }
 .ni-panel__section-title {
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 .ni-panel__task-link {
   align-self: flex-start;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   cursor: pointer;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
   padding: 2px 8px;
 }
 .ni-panel__task-link:hover { text-decoration: underline; }
-.ni-panel__muted { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ni-panel__muted { color: var(--text-muted, var(--color-text-secondary)); }
 
 .ni-panel__update {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .ni-panel__update-row { display: flex; gap: 8px; min-width: 0; align-items: baseline; }
@@ -309,32 +308,32 @@ async function rerun(): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ni-panel__update-note {
   flex-shrink: 0;
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   padding: 0 6px;
 }
 
 .ni-panel__error {
   padding: 6px 8px;
-  border: 1px solid var(--color-danger, #e11d48);
-  border-radius: var(--radius-micro, 3px);
-  color: var(--color-danger, #e11d48);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-micro);
+  color: var(--color-danger);
   word-break: break-word;
 }
-.ni-panel__hint { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ni-panel__hint { color: var(--text-muted, var(--color-text-secondary)); }
 .ni-panel__rerun-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ni-panel__rerun {
   padding: 4px 12px;
-  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));
-  border-radius: var(--radius-micro, 3px);
+  border: 1px solid var(--accent-primary, var(--color-primary));
+  border-radius: var(--radius-micro);
   background: transparent;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
@@ -342,9 +341,9 @@ async function rerun(): Promise<void> {
 }
 .ni-panel__rerun:disabled { opacity: 0.5; cursor: default; }
 .ni-panel__rerun-note { min-width: 0; word-break: break-all; }
-.ni-panel__rerun-note--ok { color: var(--color-success, #28bf5c); }
-.ni-panel__rerun-note--error { color: var(--color-danger, #e11d48); }
-.ni-panel__rerun-id { font-family: var(--font-mono, ui-monospace, monospace); }
+.ni-panel__rerun-note--ok { color: var(--color-success); }
+.ni-panel__rerun-note--error { color: var(--color-danger); }
+.ni-panel__rerun-id { font-family: var(--font-mono); }
 
 .ni-panel__event {
   display: flex;
@@ -355,15 +354,15 @@ async function rerun(): Promise<void> {
 }
 .ni-panel__event-ts {
   flex: 0 0 56px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 .ni-panel__event-type {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   flex-shrink: 0;
 }
 .ni-panel__event-error {
-  color: var(--color-danger, #e11d48);
+  color: var(--color-danger);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

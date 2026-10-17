@@ -75,7 +75,7 @@ const taskStatusSummary = computed(() =>
 
 /* R6 待决策角标（任务 chip 副注，warning 色显性化） */
 .sit__sm--warn { color: var(--warning); font-weight: 700; }
-.sit__item--on { background: var(--bg-secondary); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--primary, #3b82f6); }
+.sit__item--on { background: var(--bg-secondary); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--primary); }
 .sit__sm { font-size: 10px; color: var(--text-muted); }
 .sit__dot { width: 8px; height: 8px; border-radius: 50%; }
 .sit__dot--ok { background: var(--success); }

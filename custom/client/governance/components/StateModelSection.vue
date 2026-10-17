@@ -41,8 +41,8 @@ onMounted(() => void refresh())
       <span v-if="data?.problems.length" class="sm__chip is-bad" data-testid="sm-problems">✕ {{ data.problems.length }} {{ L?.problems }}</span>
     </div>
     <div v-if="error" class="sm__error">{{ error }}</div>
-    <div v-else-if="data && !data.exists" class="sm__empty">{{ L?.missing }}</div>
-    <div v-else-if="!data" class="sm__empty">…</div>
+    <div v-else-if="data && !data.exists" class="ui-empty-state">{{ L?.missing }}</div>
+    <div v-else-if="!data" class="ui-empty-state">…</div>
     <template v-else>
       <!-- 九态 -->
       <div class="sm__row" data-testid="sm-states">
@@ -71,29 +71,28 @@ onMounted(() => void refresh())
 
 <style scoped lang="scss">
 .sm {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .sm__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.sm__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; }
-.sm__chip { font-size: 10.5px; color: var(--text-muted, #878c99); border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 1px 8px;
-  &.is-bad { color: #b91c1c; border-color: #b91c1c55; background: #fee2e2; } }
-.sm__error { color: #dc2626; font-size: 12px; }
-.sm__empty { border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 16px; text-align: center; font-size: 12px; color: var(--text-muted, #878c99); }
+.sm__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.sm__chip { font-size: 10.5px; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 10px; padding: 1px 8px;
+  &.is-bad { color: var(--error); border-color: rgba(var(--error-rgb), 0.33); background: rgba(var(--error-rgb), 0.08); } }
+.sm__error { color: var(--error); font-size: 12px; }
 .sm__row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.sm__label { font-size: 10.5px; color: var(--text-muted, #878c99); }
-.sm__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: #334155; background: #16233a;
-  &.is-src { color: #1d4ed8; background: #dbeafe; } }
+.sm__label { font-size: 10.5px; color: var(--text-muted); }
+.sm__tag { font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 6px; line-height: 1.6; color: var(--text-secondary); background: var(--bg-secondary);
+  &.is-src { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); } }
 .sm__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; }
-.sm__trans { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 10px; font-size: 11px; }
+.sm__trans { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 11px; }
 .sm__trans-head { display: flex; gap: 8px; align-items: baseline; }
-.sm__from-to { font-family: ui-monospace, monospace; font-size: 10px; color: var(--text-muted, #878c99); }
+.sm__from-to { font-family: ui-monospace, monospace; font-size: 10px; color: var(--text-muted); }
 .sm__trans-line { margin-top: 2px; font-size: 10.5px; }
-.sm__trans-ev { margin-top: 2px; font-size: 10px; color: var(--text-muted, #878c99); }
+.sm__trans-ev { margin-top: 2px; font-size: 10px; color: var(--text-muted); }
 </style>

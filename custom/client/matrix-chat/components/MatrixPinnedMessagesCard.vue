@@ -303,8 +303,8 @@ function getSenderAvatar(event: any): string | null {
 
   &:hover {
     background: rgba(var(--error-rgb), 0.06);
-    color: var(--error, #ef4444);
-    border-color: var(--error, #ef4444);
+    color: var(--error);
+    border-color: var(--error);
   }
 }
 
@@ -450,7 +450,7 @@ function getSenderAvatar(event: any): string | null {
 
   &:hover {
     background: rgba(var(--error-rgb), 0.08);
-    color: var(--error, #ef4444);
+    color: var(--error);
   }
 }
 

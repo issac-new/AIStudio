@@ -181,23 +181,23 @@ async function save(): Promise<void> {
 
 <style scoped lang="scss">
 .ide-emd__backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500; display: flex; align-items: center; justify-content: center; }
-.ide-emd__dialog { width: 560px; max-height: 70vh; overflow-y: auto; background: var(--card-color, #fff); border-radius: 10px; padding: 12px 16px; font-size: 12px; }
+.ide-emd__dialog { width: 560px; max-height: 70vh; overflow-y: auto; background: var(--card-color); border-radius: 10px; padding: 12px 16px; font-size: 12px; }
 .ide-emd__head { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; }
 .ide-emd__head button { border: none; background: none; cursor: pointer; }
-.ide-emd__state { padding: 16px; color: var(--text-color-3, #999); }
-.ide-emd__provider { border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 6px; margin: 6px 0; }
+.ide-emd__state { padding: 16px; color: var(--text-muted); }
+.ide-emd__provider { border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; margin: 6px 0; }
 .ide-emd__row { display: flex; gap: 6px; margin: 4px 0; }
-.ide-emd__row input, .ide-emd__row select { flex: 1; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 2px 6px; font-size: 11px; }
+.ide-emd__row input, .ide-emd__row select { flex: 1; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; }
 .ide-emd__row.is-model { padding-left: 14px; }
-.ide-emd__row button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
-.ide-emd__add { border: 1px dashed var(--border-color, #ccc); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; }
+.ide-emd__row button { border: 1px solid var(--border-color); background: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.ide-emd__add { border: 1px dashed var(--border-color); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin: 2px 0; }
 .ide-emd__default { align-items: center; margin-top: 8px; }
 .ide-emd__route { align-items: center; margin-top: 4px; flex-wrap: wrap; }
-.ide-emd__route span { font-size: 11px; color: var(--text-color-3, #999); }
-.ide-emd__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-color-3, #999); }
-.ide-emd__default span { font-size: 11px; color: var(--text-color-3, #999); }
-.ide-emd__problems { color: var(--error-color, #d03050); font-size: 11px; margin: 6px 0; padding-left: 18px; }
-.ide-emd__saved { color: var(--primary-color, #18a058); font-size: 11px; margin-top: 6px; }
+.ide-emd__route span { font-size: 11px; color: var(--text-muted); }
+.ide-emd__routehint { margin: 2px 0 0; font-size: 10.5px; color: var(--text-muted); }
+.ide-emd__default span { font-size: 11px; color: var(--text-muted); }
+.ide-emd__problems { color: var(--error-color); font-size: 11px; margin: 6px 0; padding-left: 18px; }
+.ide-emd__saved { color: var(--primary-color); font-size: 11px; margin-top: 6px; }
 .ide-emd__foot { display: flex; justify-content: flex-end; margin-top: 10px; }
-.ide-emd__foot button { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 6px; padding: 3px 16px; cursor: pointer; }
+.ide-emd__foot button { border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 6px; padding: 3px 16px; cursor: pointer; }
 </style>

@@ -121,7 +121,7 @@ function payloadJson(row: TimelineRow): string {
 
     <!-- 事件流 -->
     <div class="rt-panel__stream" :class="{ 'rt-panel__stream--loading': loading }">
-      <div v-if="rows.length === 0 && !loading" class="rt-panel__empty">
+      <div v-if="rows.length === 0 && !loading" class="ui-empty-state">
         {{ t('runcenter.timeline.empty') }}
       </div>
       <div
@@ -171,7 +171,7 @@ function payloadJson(row: TimelineRow): string {
   min-width: 30px;
   padding: 4px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -181,7 +181,7 @@ function payloadJson(row: TimelineRow): string {
 .rt-panel__play, .rt-panel__step:disabled { opacity: 0.4; cursor: default; }
 .rt-panel__position {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -189,7 +189,7 @@ function payloadJson(row: TimelineRow): string {
 .rt-panel__speed {
   padding: 3px 7px;
   border: 1px solid transparent;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -198,18 +198,18 @@ function payloadJson(row: TimelineRow): string {
   font-variant-numeric: tabular-nums;
 }
 .rt-panel__speed--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(59, 130, 246, 0.1)));
 }
 
-.rt-panel__scrubber { width: 100%; accent-color: var(--accent-primary, var(--color-primary, #3b82f6)); }
+.rt-panel__scrubber { width: 100%; accent-color: var(--accent-primary, var(--color-primary)); }
 .rt-panel__scrubber:disabled { opacity: 0.4; }
 
 .rt-panel__modes { display: flex; gap: 4px; }
 .rt-panel__mode {
   padding: 3px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -217,7 +217,7 @@ function payloadJson(row: TimelineRow): string {
   font-family: inherit;
 }
 .rt-panel__mode--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(59, 130, 246, 0.1)));
 }
 
@@ -229,7 +229,6 @@ function payloadJson(row: TimelineRow): string {
   font-size: 12px;
 }
 .rt-panel__stream--loading { opacity: 0.6; }
-.rt-panel__empty { padding: 24px 0; text-align: center; color: var(--text-muted, #878c99); }
 
 .rt-row {
   display: flex;
@@ -241,8 +240,8 @@ function payloadJson(row: TimelineRow): string {
 .rt-row.is-raw { opacity: 0.62; }
 .rt-row__ts {
   flex: 0 0 58px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
-  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-muted, var(--color-text-secondary));
+  font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
@@ -251,40 +250,40 @@ function payloadJson(row: TimelineRow): string {
   width: 7px;
   height: 7px;
   margin-top: 5px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--border-color, #c8c8c8);
+  border-radius: var(--radius-pill);
+  background: var(--border-color);
 }
-.rt-row.is-result.has-done .rt-row__dot { background: var(--text-secondary, #5c6470); }
-.rt-row.is-result.has-failed .rt-row__dot { background: var(--color-danger, #e11d48); }
-.rt-row.is-result.has-awaiting-input .rt-row__dot { background: var(--color-warning, #f59e0b); }
-.rt-row.has-running .rt-row__dot { background: var(--color-success, #28bf5c); }
+.rt-row.is-result.has-done .rt-row__dot { background: var(--text-secondary); }
+.rt-row.is-result.has-failed .rt-row__dot { background: var(--color-danger); }
+.rt-row.is-result.has-awaiting-input .rt-row__dot { background: var(--color-warning); }
+.rt-row.has-running .rt-row__dot { background: var(--color-success); }
 
 .rt-row__body { min-width: 0; flex: 1; }
 .rt-row__line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.rt-row__type { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; }
+.rt-row__type { font-family: var(--font-mono); font-size: 11px; }
 .rt-row__node {
   padding: 0 5px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
-.rt-row__status { font-size: 10px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.rt-row__status { font-size: 10px; color: var(--text-muted, var(--color-text-secondary)); }
 .rt-row__goto, .rt-row__error { font-size: 11px; }
-.rt-row__goto { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
-.rt-row__error { color: var(--color-danger, #e11d48); }
+.rt-row__goto { color: var(--text-muted, var(--color-text-secondary)); }
+.rt-row__error { color: var(--color-danger); }
 
 .rt-row__payload summary {
   cursor: pointer;
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   user-select: none;
 }
 .rt-row__payload pre {
   margin: 4px 0 0;
   padding: 6px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   overflow: auto;
   max-height: 180px;
   font-size: 10px;

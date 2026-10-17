@@ -43,7 +43,7 @@ function detail(kind: 'fleet' | 'team', id: string): void {
     </div>
     <div class="gas__list">
       <div class="gas__group">{{ t('ia2.gov.agent.fleetGroup') }} · {{ fleetRows.length }}</div>
-      <div v-if="!fleetRows.length" class="gas__empty">{{ t('ia2.gov.agent.fleetEmpty') }}</div>
+      <div v-if="!fleetRows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.agent.fleetEmpty') }}</div>
       <div
         v-for="f in fleetRows" :key="f.id" class="gas__row"
         :data-testid="`gov-agent-fleet-${f.id}`"
@@ -60,7 +60,7 @@ function detail(kind: 'fleet' | 'team', id: string): void {
       </div>
 
       <div class="gas__group">{{ t('ia2.gov.agent.registryGroup') }} · {{ teamRows.length }}</div>
-      <div v-if="!teamRows.length" class="gas__empty">{{ t('ia2.gov.agent.registryEmpty') }}</div>
+      <div v-if="!teamRows.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.gov.agent.registryEmpty') }}</div>
       <div
         v-for="r in teamRows" :key="r.key" class="gas__row"
         :data-testid="`gov-agent-team-${r.key}`"
@@ -95,5 +95,4 @@ function detail(kind: 'fleet' | 'team', id: string): void {
 .gas__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .gas__name { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gas__sub-line { font-size: 10px; color: var(--text-muted); }
-.gas__empty { padding: 10px 4px; color: var(--text-muted); font-size: 11px; }
 </style>

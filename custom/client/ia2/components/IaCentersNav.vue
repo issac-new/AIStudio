@@ -81,16 +81,16 @@ function onToggleWorkbench(): void {
 .icn-inline { display: flex; align-items: center; height: 100%; flex-shrink: 0; }
 .icn-inline__centers { display: flex; align-items: stretch; height: 100%; gap: 2px; }
 .icn-inline__work { display: inline-flex; align-items: stretch; height: 100%; border-radius: 6px; overflow: hidden; }
-.icn-inline__work--active .icn-inline__seg { color: var(--accent-primary, var(--color-primary, #3b82f6)); }
-.icn-inline__seg--cur { background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 12%, transparent); font-weight: 600; }
+.icn-inline__work--active .icn-inline__seg { color: var(--accent-primary, var(--color-primary)); }
+.icn-inline__seg--cur { background: color-mix(in srgb, var(--accent-primary, var(--color-primary)) 12%, transparent); font-weight: 600; }
 .icn-inline__center-btn {
   border: none; background: transparent; cursor: pointer; font-family: inherit;
   font-size: 13px; padding: 0 12px; margin: 5px 0; border-radius: 6px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99)); white-space: nowrap;
-  &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
+  color: var(--text-muted, var(--color-text-secondary)); white-space: nowrap;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
   &--active {
-    color: var(--accent-primary, var(--color-primary, #3b82f6));
-    background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 12%, transparent);
+    color: var(--accent-primary, var(--color-primary));
+    background: color-mix(in srgb, var(--accent-primary, var(--color-primary)) 12%, transparent);
     font-weight: 600;
   }
 }</style>

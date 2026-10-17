@@ -700,7 +700,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   &::before {
     content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
   }
-  &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
+  &:hover, &:active { background: color-mix(in srgb, var(--accent-info) 30%, transparent); }
 }
 .wb__split--l { right: -3px; }
 .wb__split--r { left: -3px; }
@@ -726,13 +726,13 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   justify-content: center;
 }
 .wb__canvas-ph-body { text-align: center; max-width: 320px; padding: 20px; }
-.wb__canvas-ph-tit { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--text-primary, inherit); }
-.wb__canvas-ph-sub { margin: 0 0 14px; font-size: 12px; color: var(--text-muted, #878c99); line-height: 1.6; }
+.wb__canvas-ph-tit { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.wb__canvas-ph-sub { margin: 0 0 14px; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 .wb__canvas-ph-acts { display: flex; gap: 8px; justify-content: center; }
 .wb__canvas-ph-btn {
   padding: 5px 14px; font-size: 12px; border-radius: 6px;
-  border: 1px solid var(--border-color); background: var(--bg-primary, #fff);
-  color: var(--text-primary, inherit); cursor: pointer;
-  &:hover { background: var(--bg-secondary, #f1f2f4); }
+  border: 1px solid var(--border-color); background: var(--bg-primary);
+  color: var(--text-primary); cursor: pointer;
+  &:hover { background: var(--bg-secondary); }
 }
 </style>

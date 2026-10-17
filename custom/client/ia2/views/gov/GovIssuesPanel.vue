@@ -76,17 +76,17 @@ async function load(): Promise<void> {
 .gis { display: flex; flex-direction: column; gap: 10px; }
 .gis__bar { display: flex; gap: 6px; }
 .gis__input {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 12px;
   width: 260px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   background: transparent;
   color: inherit;
 }
 .gis__btn {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   color: inherit;
   border-radius: 4px;
@@ -95,15 +95,15 @@ async function load(): Promise<void> {
   cursor: pointer;
   &:disabled { opacity: 0.4; }
 }
-.gis__error { color: #d33; font-size: 12px; margin: 0; word-break: break-all; }
-.gis__hint { color: var(--text-muted, #878c99); font-size: 12px; margin: 0; }
+.gis__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
+.gis__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .gis__stats { font-size: 12px; margin: 0; display: flex; flex-direction: column; gap: 2px; }
-.gis__src { font-size: 11px; color: var(--text-muted, #878c99); font-family: var(--font-mono, ui-monospace, monospace); }
+.gis__src { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 .gis__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.gis__table th, .gis__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color, #e5e7eb); vertical-align: top; }
-.gis__mono { font-family: var(--font-mono, ui-monospace, monospace); white-space: nowrap; }
+.gis__table th, .gis__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+.gis__mono { font-family: var(--font-mono); white-space: nowrap; }
 .gis__state { padding: 0 6px; border-radius: 4px; font-size: 11px; }
-.gis__state--done { color: #2e9e5b; background: rgba(46, 158, 91, 0.12); }
-.gis__state--open { color: #d33; background: rgba(221, 51, 51, 0.12); }
-.gis__disp { font-size: 11px; color: var(--text-muted, #878c99); }
+.gis__state--done { color: var(--ia-fresh); background: rgba(46, 158, 91, 0.12); }
+.gis__state--open { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
+.gis__disp { font-size: 11px; color: var(--text-muted); }
 </style>

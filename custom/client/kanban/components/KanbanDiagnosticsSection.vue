@@ -252,8 +252,8 @@ const assigneeOptions = computed(() => [
   }
 
   &.diag--critical {
-    border-left-color: #ff4d4d;
-    background: rgba(#ff4d4d, 0.07);
+    border-left-color: var(--error);
+    background: rgba(var(--error-rgb), 0.07);
   }
 }
 
@@ -271,7 +271,7 @@ const assigneeOptions = computed(() => [
 
 .diag--warning .diag-sev { color: $warning; }
 .diag--error .diag-sev { color: $error; }
-.diag--critical .diag-sev { color: #ff4d4d; }
+.diag--critical .diag-sev { color: var(--error); }
 
 .diag-title {
   font-weight: 600;
@@ -306,7 +306,7 @@ const assigneeOptions = computed(() => [
 }
 
 .diag-data-val {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   display: flex;
   gap: 4px;
   flex-wrap: wrap;

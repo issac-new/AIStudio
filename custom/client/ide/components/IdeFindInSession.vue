@@ -76,12 +76,12 @@ defineExpose({ open })
 .ide-find {
   position: absolute; top: 44px; right: 16px; z-index: 60;
   display: flex; gap: 4px; align-items: center;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 8px; padding: 4px 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   font-size: 11px;
 }
 .ide-find__input { border: none; outline: none; background: transparent; font-size: 12px; width: 200px; }
-.ide-find__count { color: var(--text-color-3, #999); min-width: 34px; text-align: center; }
-.ide-find button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; cursor: pointer; padding: 0 6px; font-size: 11px; }
+.ide-find__count { color: var(--text-muted); min-width: 34px; text-align: center; }
+.ide-find button { border: 1px solid var(--border-color); background: none; border-radius: 4px; cursor: pointer; padding: 0 6px; font-size: 11px; }
 .ide-find button:disabled { opacity: 0.4; cursor: default; }
 </style>

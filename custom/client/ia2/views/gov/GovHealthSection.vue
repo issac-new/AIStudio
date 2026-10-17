@@ -137,7 +137,7 @@ onMounted(() => void refresh())
     <div class="gov-board-status" data-testid="gov-board-status">
       <h4 class="gov-board-status__title">{{ (L as any).health.boardStatusTitle }}</h4>
       <p class="gov-board-status__sub">{{ (L as any).health.boardStatusSub }}</p>
-      <p v-if="boardStatus && boardStatus.length === 0" class="gov-board-status__empty">{{ (L as any).health.boardStatusEmpty }}</p>
+      <p v-if="boardStatus && boardStatus.length === 0" class="ui-empty-state ui-empty-state--compact">{{ (L as any).health.boardStatusEmpty }}</p>
       <table v-else-if="boardStatus" class="gov-board-status__tbl" data-testid="gov-board-status-table">
         <thead>
           <tr>
@@ -202,7 +202,7 @@ onMounted(() => void refresh())
           <div class="gov-health__audit-ev">{{ (audit.latest[d]?.evidence ?? []).slice(0, 2).join(' · ') }}</div>
         </div>
       </div>
-      <div v-else class="gov-health__empty">{{ (L as any).health.emptyHint }}</div>
+      <div v-else class="ui-empty-state">{{ (L as any).health.emptyHint }}</div>
       <div v-if="audit" class="gov-health__audit-meta">
         {{ (L as any).health.ledgerMeta.replace('{total}', String(audit.total)).replace('{runs}', String(audit.runs.length)).replace('{list}', audit.runs.slice(0, 3).join(' / ') + (audit.runs.length > 3 ? ' …' : '')) }}
       </div>
@@ -215,28 +215,28 @@ onMounted(() => void refresh())
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px 14px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
 }
 .gov-health__bar { display: flex; align-items: flex-start; gap: 10px; }
 .gov-health__title { margin: 0; font-size: 13px; font-weight: 600; }
-.gov-health__sub { margin: 2px 0 0; font-size: 11px; color: var(--text-muted, #878c99); }
+.gov-health__sub { margin: 2px 0 0; font-size: 11px; color: var(--text-muted); }
 .gov-health__refresh {
   margin-left: auto; flex-shrink: 0;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;
-  &:hover { background: var(--bg-secondary, #f1f2f4); }
+  &:hover { background: var(--bg-secondary); }
   &:disabled { opacity: 0.6; cursor: wait; }
 }
-.gov-health__error { color: #dc2626; font-size: 12px; }
-.gov-health__audit-error { color: #dc2626; font-size: 12px; padding: 2px 0; }
+.gov-health__error { color: var(--error); font-size: 12px; }
+.gov-health__audit-error { color: var(--error); font-size: 12px; padding: 2px 0; }
 
 .gov-health__gates {
   display: grid;
@@ -244,49 +244,41 @@ onMounted(() => void refresh())
   gap: 8px;
 }
 .gov-health__gate {
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-top: 3px solid #cbd5e1;
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   opacity: 0.75;
-  &.is-ok { border-top-color: #16a34a; opacity: 1; }
+  &.is-ok { border-top-color: var(--success); opacity: 1; }
 }
 .gov-health__gate-name { font-size: 14px; font-weight: 800; }
 
 .gov-health__machine { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.gov-health__machine-title { font-size: 11px; font-weight: 700; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; }
+.gov-health__machine-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .gov-health__machine-chip { font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 8px; font-family: ui-monospace, monospace;
-  &.is-pass { color: #15803d; background: #dcfce7; }
-  &.is-conditional { color: #b45309; background: #fef3c7; }
-  &.is-reject { color: #b91c1c; background: #fee2e2; }
-  &.is-none { color: #64748b; background: #16233a; } }
-.gov-health__machine-dist { font-size: 10.5px; color: var(--text-muted, #878c99); margin-left: auto; }
-.gov-health__gate-label { font-size: 11px; color: var(--text-primary, inherit); margin-top: 1px; }
-.gov-health__gate-detail { font-size: 10.5px; color: var(--text-muted, #878c99); margin-top: 3px; }
-.gov-health__gate-ts { font-size: 10px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+  &.is-pass { color: var(--success); background: rgba(var(--success-rgb), 0.08); }
+  &.is-conditional { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-reject { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+  &.is-none { color: var(--text-secondary); background: var(--bg-secondary); } }
+.gov-health__machine-dist { font-size: 10.5px; color: var(--text-muted); margin-left: auto; }
+.gov-health__gate-label { font-size: 11px; color: var(--text-primary); margin-top: 1px; }
+.gov-health__gate-detail { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+.gov-health__gate-ts { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 
-.gov-health__audit { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); }
+.gov-health__audit { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary); }
 .gov-health__audit-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.gov-health__list-title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted, #878c99); text-transform: uppercase; letter-spacing: 0.04em; }
+.gov-health__list-title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .gov-health__audit-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.gov-health__audit-cell { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 7px 9px; }
+.gov-health__audit-cell { border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 9px; }
 .gov-health__audit-dom { display: block; font-size: 11px; font-weight: 700; }
 .gov-health__audit-badge { display: inline-block; margin: 3px 0 4px; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 8px;
-  &.is-pass { color: #15803d; background: #dcfce7; }
-  &.is-warn { color: #b45309; background: #fef3c7; }
-  &.is-fail { color: #b91c1c; background: #fee2e2; }
-  &.is-none { color: #64748b; background: #16233a; } }
-.gov-health__audit-ev { font-size: 10px; color: var(--text-muted, #878c99); line-height: 1.45; }
-.gov-health__audit-meta { margin-top: 7px; font-size: 10.5px; color: var(--text-muted, #878c99); }
-.gov-health__empty {
-  border: 1px dashed var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 22px;
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--text-muted, #878c99);
-}
+  &.is-pass { color: var(--success); background: rgba(var(--success-rgb), 0.08); }
+  &.is-warn { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); }
+  &.is-fail { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+  &.is-none { color: var(--text-secondary); background: var(--bg-secondary); } }
+.gov-health__audit-ev { font-size: 10px; color: var(--text-muted); line-height: 1.45; }
+.gov-health__audit-meta { margin-top: 7px; font-size: 10.5px; color: var(--text-muted); }
 
 @media (max-width: 1100px) {
   .gov-health__gates { grid-template-columns: repeat(3, 1fr); }
@@ -296,13 +288,12 @@ onMounted(() => void refresh())
 /* G3 跨账号板状态分布 */
 .gov-board-status { margin: 14px 0; }
 .gov-board-status__title { margin: 0 0 2px; font-size: 14px; }
-.gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--muted, #888); }
-.gov-board-status__empty { font-size: 12px; color: var(--muted, #888); padding: 8px 0; }
+.gov-board-status__sub { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); }
 .gov-board-status__tbl { border-collapse: collapse; width: 100%; font-size: 12px; }
 .gov-board-status__tbl th, .gov-board-status__tbl td { border: 1px solid var(--border-color, rgba(0,0,0,.08)); padding: 4px 8px; text-align: right; }
 .gov-board-status__tbl th:first-child, .gov-board-status__tbl td:first-child { text-align: left; }
 .gov-board-status__tbl th { background: rgba(127,127,127,.06); }
-.gov-board-status__tbl tr.is-unavailable td { color: var(--muted, #999); }
-.gov-board-status__tbl td.is-wip-hot { color: #b45309; font-weight: 600; }
+.gov-board-status__tbl tr.is-unavailable td { color: var(--text-muted); }
+.gov-board-status__tbl td.is-wip-hot { color: var(--ia-stale); font-weight: 600; }
 
 </style>

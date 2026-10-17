@@ -176,8 +176,8 @@ onUnmounted(() => {
 
 .mx_ReactionsRowButton--selected {
   background: rgba(var(--accent-primary-rgb), 0.1);
-  border-color: var(--accent-primary, $accent-primary);
-  color: var(--accent-primary, $accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
   font-weight: 500;
 }
 
@@ -227,7 +227,7 @@ onUnmounted(() => {
 
   &:hover {
     border-color: rgba(var(--accent-primary-rgb), 0.4);
-    color: var(--accent-primary, $accent-primary);
+    color: var(--accent-primary);
     background: rgba(var(--accent-primary-rgb), 0.04);
   }
 }
