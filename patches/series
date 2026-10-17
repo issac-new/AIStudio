@@ -785,3 +785,9 @@
 
 640-studio-remove-default-login.patch
 641-client-login-view-test-rewrite.patch
+
+# 642: zcode Global 模式模型选择只认 builtin 目录层——个人 provider 层声明的模型(k3/step-5-preview/
+# GLM-5.3-Highspeed 等自定义路由)与「空模型+仅思考档」(个人无默认选择时)一律抛
+# Unknown ZCode builtin model。个人层规则并入候选(builtin 优先、保留原生路由),空模型
+# 且无原生默认时跳过 overlay 直接以 zcode 自身默认启动;发现面同步列出个人层模型。
+642-server-zcode-personal-models.patch
