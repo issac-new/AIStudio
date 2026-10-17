@@ -22,6 +22,7 @@ import BackgroundWorkStrip from './BackgroundWorkStrip.vue'
 import type { AttentionRow } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
+import IaQuickNav from './IaQuickNav.vue'
 import AttentionStrip from './AttentionStrip.vue'
 import { useDeliveryCasesStore } from '@/custom/matrix-teams/stores/delivery-cases'
 
@@ -93,6 +94,8 @@ function onOpenBoard(): void {
       @open-board="onOpenBoard"
     />
     <IaShellHeader :user-name="cockpit.currentUserName" />
+    <!-- 常用入口常驻条（2026-10-17 减负批）：跨页高频四目的地一击可达 -->
+    <IaQuickNav />
     <BackgroundWorkStrip />
     <div v-if="showDelivery" class="delivery-strip" data-testid="delivery-readings" @click="openCases">
       <span class="dchip dchip--flight">{{ t('ia2.delivery.inFlight') }} {{ deliveryReadings.inFlight }}</span>

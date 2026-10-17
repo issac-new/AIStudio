@@ -7,14 +7,15 @@
 // 镜头切换器位：Phase D 镜头层已随需求 §六 Q1 解体取消，不建不渲染。
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CENTER_NAVS, centerForPath, useCenterNavLocale } from '../nav-centers'
+import { CENTER_NAVS, activeStageForRoute, useCenterNavLocale } from '../nav-centers'
 import { useChatStore } from '@/stores/hermes/chat'
 
 
 const route = useRoute()
 const router = useRouter()
 const navLocale = useCenterNavLocale()
-const activeCenter = computed(() => centerForPath(route.path))
+// 来路阶段优先（旅程/阶段页带 query.from 进来）；无来路按路径归属
+const activeCenter = computed(() => activeStageForRoute(route.path, route.query.from))
 const chatStore = useChatStore()
 
 /** D9/D18 开发阶段分段：IDE 工作区=开发阶段第二形态（isIde 判定同 IaViewSwitcher 原逻辑） */
@@ -49,7 +50,7 @@ function onToggleWorkbench(): void {
           <button
             type="button"
             class="icn-inline__center-btn icn-inline__seg"
-            :class="{ 'icn-inline__seg--cur': !isIde }"
+            :class="{ 'icn-inline__seg--cur': activeCenter === 'stage4' && !isIde }"
             data-testid="ia-nav-center-work-collab"
             :aria-current="activeCenter === 'stage4' && !isIde ? 'page' : undefined"
             @click="onGoCenter('ia2.stage4')"

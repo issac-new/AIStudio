@@ -25,7 +25,11 @@ const mockedFetch = vi.mocked(authFetch)
 function makeRouter(path: string, stage: number): Router {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path, component: StageShell, props: { stage } }] as RouteRecordRaw[],
+    routes: [
+      { path, component: StageShell, props: { stage } },
+      // 工具卡落点（减负批：断言来源阶段随行）
+      { path: '/app/gov/docs', name: 'ia2.govDocs', component: { template: '<div />' } },
+    ] as RouteRecordRaw[],
   })
 }
 
@@ -71,6 +75,15 @@ describe('StageShell — D13 时序六阶段工作页', () => {
     for (const t of ['审批待办', '工作台看板', 'IDE 工作区', '证据库']) expect(labels).toContain(t)
     // D18：testid 拼稳定 key 不拼 label
     expect(w.find('[data-testid="stg-tool-ide"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('工具卡携带来源阶段：②需求的文档评审落治理页时 from=2', async () => {
+    const { w, router } = await mountStage(2)
+    await w.find('[data-testid="stg-tool-docReview"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.govDocs')
+    expect(router.currentRoute.value.query.from).toBe('2')
     w.unmount()
   })
 

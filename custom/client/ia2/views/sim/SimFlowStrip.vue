@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { stageContextQuery } from '../../nav-centers'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,7 +40,7 @@ const currentStage = computed<StageKey | null>(() => {
 })
 
 function go(target: string): void {
-  void router.push({ name: target })
+  void router.push({ name: target, query: stageContextQuery(route.query.from) })
 }
 </script>
 
