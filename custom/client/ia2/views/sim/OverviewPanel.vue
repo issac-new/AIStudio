@@ -385,7 +385,7 @@ function goSupervision(): void {
 .ov__act--cur { border-color: var(--accent-primary); background: var(--accent-bg, rgba(127, 127, 127, 0.08)); }
 .ov__act-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ov__act-ticks { display: flex; gap: 2px; }
-.ov__tick { width: 8px; height: 8px; border-radius: 2px; background: var(--border-color); }
+.ov__tick { width: 8px; height: 8px; border-radius: 2px; background: var(--ia-border-control, var(--border-color)); }
 .ov__tick--done { background: var(--ia-fresh); }
 .ov__tick--active { background: var(--ia-stale); }
 .ov__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
