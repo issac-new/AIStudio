@@ -17,8 +17,8 @@ const actionMsg = ref('')
 const resolveInput = ref<Record<string, string>>({})
 const waiveInput = ref<Record<string, string>>({})
 
-const targets = computed(() => (ledger.value ? groupClearanceTargets(ledger.value) : []))
-const rows = computed(() => (ledger.value ? [...ledger.value.rows].reverse().slice(0, 100) : []))
+const targets = computed(() => (Array.isArray(ledger.value?.rows) ? groupClearanceTargets(ledger.value) : []))
+const rows = computed(() => (Array.isArray(ledger.value?.rows) ? [...ledger.value.rows].reverse().slice(0, 100) : []))
 
 async function refresh(): Promise<void> {
   busy.value = true
@@ -92,7 +92,7 @@ onMounted(() => { void refresh() })
       </section>
 
       <section class="clr__box">
-        <h5 class="clr__h2">台账全量（{{ ledger.rows.length }} 行，倒序前 100）</h5>
+        <h5 class="clr__h2">台账全量（{{ ledger.rows?.length ?? 0 }} 行，倒序前 100）</h5>
         <table class="clr__table" data-testid="clr-table">
           <thead><tr><th>类型</th><th>缺陷</th><th>时刻</th><th>状态</th></tr></thead>
           <tbody>
