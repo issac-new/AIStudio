@@ -21,10 +21,18 @@ import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
+import { CENTER_NAVS, stageContextQuery, useCenterNavLocale } from '../../nav-centers'
 
 const route = useRoute()
 const router = useRouter()
 const text = useSimTabsText()
+const navLocale = useCenterNavLocale()
+// 中心归属阶段（2026-10-17 拆轴增量）：仿真中心=④开发的运行工具舱
+const parentStage = CENTER_NAVS.find(c => c.key === 'stage4')!
+const parentLabel = computed(() => (navLocale.value === 'zh' ? parentStage.labelZh : parentStage.labelEn))
+function goParentStage(): void {
+  void router.push({ name: parentStage.name })
+}
 
 // V1 壳收敛（视觉重规划 D2）：仿真中心全宽——挂载期隐藏上游导航 rail
 onMounted(() => document.body.classList.add('ia-center-full'))
@@ -61,7 +69,9 @@ const activeTab = computed<TabKey>(() =>
 /** 页签点击=路由切换（页签位置可分享/刷新保持；同签点击不产生导航） */
 function goTab(tab: SimTab): void {
   if (tab.key === activeTab.value) return
-  void router.push({ name: tab.name })
+  // 来源阶段随签切换保留（从②需求进来查文档/监督，切签后顶栏仍亮②）
+  const from = route.query.from
+  void router.push(typeof from === 'string' ? { name: tab.name, query: { from } } : { name: tab.name })
 }
 
 /** 六签全部实装（B1 壳+B2/B4/B5/B6+总览屏收尾件）；占位循环保留给后续新增签 */
@@ -78,6 +88,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
     <header class="sim-center__head">
       <IaBreadcrumb />
       <h2 class="sim-center__title">{{ text.shellTitle }}</h2>
+      <button class="sim-center__parent" type="button" data-testid="sim-parent-stage" :title="`所属阶段：${parentLabel}`" @click="goParentStage">← {{ parentLabel }}</button>
       <nav class="sim-center__tabs" role="tablist" :aria-label="text.shellTitle">
         <button
           v-for="(tab, i) in TABS"
@@ -99,7 +110,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
         type="button"
         data-testid="ia-sim-settings-link"
         title="仿真设置"
-        @click="void router.push({ name: 'ia2.simSettings' })"
+        @click="void router.push({ name: 'ia2.simSettings', query: stageContextQuery(route.query.from) })"
       >⚙ 仿真设置</button>
     </header>
 
@@ -205,6 +216,16 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 }
 
 .sim-center__title { margin: 0; font-size: 16px; }
+.sim-center__parent {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  &:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 3px; }
+}
 .sim-center__settings {
   margin-left: auto;
   border: 1px solid var(--border-color);

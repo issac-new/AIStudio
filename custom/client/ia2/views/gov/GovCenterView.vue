@@ -9,7 +9,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGovTabsText } from './gov-tabs'
-import { ISLAND_NAVS } from '../../nav-centers'
+import { CENTER_NAVS, ISLAND_NAVS, stageContextQuery, useCenterNavLocale } from '../../nav-centers'
 import { features } from '../../../../../config/features'
 import ClearancePanel from './ClearancePanel.vue'
 import GateRepairsPanel from './GateRepairsPanel.vue'
@@ -33,6 +33,13 @@ import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 const route = useRoute()
 const router = useRouter()
 const text = useGovTabsText()
+const navLocale = useCenterNavLocale()
+// 中心归属阶段（2026-10-17 拆轴增量）：治理中心=⑥治理
+const parentStage = CENTER_NAVS.find(c => c.key === 'stage6')!
+const parentLabel = computed(() => (navLocale.value === 'zh' ? parentStage.labelZh : parentStage.labelEn))
+function goParentStage(): void {
+  void router.push({ name: parentStage.name })
+}
 
 // V1 壳收敛（视觉重规划 D2）：治理中心全宽——挂载期隐藏上游导航 rail
 onMounted(() => document.body.classList.add('ia-center-full'))
@@ -76,7 +83,9 @@ const STAGE_TAG: Record<TabKey, string> = {
 
 function goTab(tab: GovTab): void {
   if (tab.key === activeTab.value) return
-  void router.push({ name: tab.name })
+  // 来源阶段随签切换保留（从②需求进来查文档评审，切到别的签仍亮②）
+  const from = route.query.from
+  void router.push(typeof from === 'string' ? { name: tab.name, query: { from } } : { name: tab.name })
 }
 </script>
 
@@ -85,6 +94,7 @@ function goTab(tab: GovTab): void {
     <header class="gov-center__head">
       <IaBreadcrumb />
       <h2 class="gov-center__title">{{ text.shellTitle }}</h2>
+      <button class="gov-center__parent" type="button" data-testid="gov-parent-stage" :title="`所属阶段：${parentLabel}`" @click="goParentStage">← {{ parentLabel }}</button>
       <nav class="gov-center__tabs" role="tablist" :aria-label="text.shellTitle">
         <button
           v-for="tab in TABS"
@@ -113,7 +123,7 @@ function goTab(tab: GovTab): void {
         type="button"
         data-testid="ia-gov-settings-link"
         title="系统设置"
-        @click="void router.push({ name: 'ia2.govSettings' })"
+        @click="void router.push({ name: 'ia2.govSettings', query: stageContextQuery(route.query.from) })"
       >⚙ 系统设置</button>
     </header>
 
@@ -207,6 +217,16 @@ function goTab(tab: GovTab): void {
 .gov-center { display: flex; flex-direction: column; height: 100%; padding: 16px; overflow: auto; gap: 12px; }
 .gov-center__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .gov-center__title { margin: 0; font-size: 16px; }
+.gov-center__parent {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  &:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 3px; }
+}
 .gov-center__wb-group { display: flex; gap: 4px; }
 .gov-center__wb-btn {
   border: 1px dashed var(--border-color);

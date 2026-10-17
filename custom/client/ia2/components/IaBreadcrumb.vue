@@ -10,8 +10,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 import { GOV_TABS_TEXT } from '../views/gov/gov-tabs'
 import { STAGE_META } from '../stage-meta'
+import { stageContextQuery } from '../nav-centers'
 
-interface Crumb { label: string; to?: { name: string } }
+interface Crumb { label: string; to?: { name: string; query?: Record<string, string> } }
 
 // 无路由/无 i18n 上下文（嵌板测试态）兜底：两者都可能返回无 locale/route 的
 // 对象（TabIntroBanner 同款守卫先例）；跳转用 button+router.push 而非
@@ -67,6 +68,8 @@ const crumbs = computed<Crumb[]>(() => {
   const zh = lang.value === 'zh'
   const out: Crumb[] = [{ label: zh ? '旅程' : 'Journey', to: { name: 'ia2.journey' } }]
 
+  // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回治理中心仍亮②
+  const fromQ = stageContextQuery(route?.query?.from)
   const stage = STAGE_META.find(m => `ia2.stage${m.no}` === name)
   if (stage) {
     out.push({ label: `${'①②③④⑤⑥'[stage.no - 1]} ${zh ? stage.navLabel : stage.navLabelEn}` })
@@ -74,14 +77,14 @@ const crumbs = computed<Crumb[]>(() => {
   }
   const simKey = SIM_TAB_LABEL[name]
   if (simKey || short === 'simOrchestration' || short === 'simSettings') {
-    out.push({ label: sim.value.shellTitle, to: { name: 'ia2.sim' } })
+    out.push({ label: sim.value.shellTitle, to: { name: 'ia2.sim', query: fromQ } })
     // 中心根路径不再追加默认签段：旅程＞仿真中心 已经说清位置（签级才加第三段）
     if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
   const govKey = GOV_TAB_LABEL[name]
   if (govKey || short === 'govSettings' || short === 'govModelProviders') {
-    out.push({ label: gov.value.shellTitle, to: { name: 'ia2.governance' } })
+    out.push({ label: gov.value.shellTitle, to: { name: 'ia2.governance', query: fromQ } })
     if (name !== 'ia2.governance') out.push({ label: govKey ? String(gov.value[govKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
