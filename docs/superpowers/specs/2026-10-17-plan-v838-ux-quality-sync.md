@@ -19,7 +19,7 @@
 
 ## 决策记录
 
-6. **版本行 jargon 硬词改写（fix/plan-v838-jargon-reword）**：初版版本行含「对齐」×2 被 jargon-source-gate 判 HARD 违规（门禁跑于 prelaunch ①，实测 FAIL 行=plan.md:86 两条）。改写为「GUI 回归修复入册」「D18 术语收口」，语义不变、硬词清零；衍生三格式随之重出。
+6. **版本行 jargon 硬词改写（fix/plan-v838-jargon-reword）**：初版版本行含「对齐」×2 被 jargon-source-gate 判 HARD 违规（门禁跑于 prelaunch ①，实测 FAIL 行=plan.md:86 两条）；首改「收口」仍属硬词表（第二次实测 FAIL）。终版用「GUI 回归修复入册」「D18 术语定稿」，语义不变、硬词清零；衍生三格式随之重出。
 
 1. **版本定 V8.38 而非并入 V8.37**：V8.37 已推送定稿（产品功能面），本批是独立的质量面同步，独立版本锚便于报告基线引用。
 2. **不触发纪律 75 四面对账**：实读两批 diff，路由/页签/术语零变化（IA 层显式不动），capture-plan.env/steps_entry/prelaunch ⑰ 检查无需改；仅 dist 内容更新（⑲ 机械检查照常拦截旧 dist）。
