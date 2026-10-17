@@ -174,7 +174,13 @@ function goTab(tab: GovTab): void {
         <TabIntroBanner :tab="INTRO_KEY['orgAssets']" />
         <OrgEditor />
         <KeyLedgerSection />
-        <GovOrgKnowledgeView />
+        <!-- 组织与知识分析块默认收起（内容减负批，2026-10-17）：该块含断点诊断/知识图谱/
+             决策图谱三张长表，常展开会把「组织与资产」首屏变成参考文档；本页核心操作
+             （组织登记/密钥台账/资产规则）保持在首屏。 -->
+        <details class="gov-center__knowledge" data-testid="gov-org-knowledge-details">
+          <summary class="gov-center__knowledge-sum">组织与知识（协作断点诊断 · 知识图谱 · 决策图谱）</summary>
+          <GovOrgKnowledgeView />
+        </details>
         <GovRegistryRulesView />
       </section>
       <!-- 签 5 审计与变更（C7 整件迁入） -->
@@ -291,6 +297,10 @@ function goTab(tab: GovTab): void {
 }
 .gov-center__panel--live { padding: 12px 14px; border-style: solid; }
 .gov-center__panel-title { margin: 0; font-size: 14px; display: flex; align-items: center; }
+.gov-center__knowledge { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; }
+.gov-center__knowledge-sum { cursor: pointer; user-select: none; font-size: 12px; color: var(--text-muted); }
+.gov-center__knowledge-sum:hover { color: var(--text-primary); }
+.gov-center__knowledge[open] > .gov-center__knowledge-sum { margin-bottom: 8px; }
 .gov-center__panel-no { margin-left: 8px; padding: 0 5px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 10px; font-weight: 400; color: var(--text-muted); white-space: nowrap; }
 .gov-center__pending { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 .gov-center__badge {
