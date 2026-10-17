@@ -19,8 +19,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { features } from '../../../config/features'
 
-/** 视图 key（场景条与区域投影的词表）—— v12 双视图的 /app 侧；IDE 侧经 ide.shell 直链 */
-export type IaAreaKey = 'workbench' | 'sim' | 'gov' | 'workbench2' | 'accept' | 'govern'
+/** 视图 key（场景条与区域投影的词表）—— D20：键名与阶段对齐（stage1-6），终结三中心时代字面 */
+export type IaAreaKey = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'stage6'
 
 export interface IaAreaMeta {
   key: IaAreaKey
@@ -34,31 +34,33 @@ export interface IaAreaMeta {
 
 /** 视图元数据（场景条 + 区域投影的单一事实源） */
 export const IA_AREAS: IaAreaMeta[] = [
-  { key: 'workbench', name: 'ia2.stage1', path: '/app/stage/setup', labelKey: 'ia2.nav.collab' },
-  { key: 'sim', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.collab' },
-  { key: 'gov', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.collab' },
-  { key: 'workbench2', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.collab' },
-  { key: 'accept', name: 'ia2.stage5', path: '/app/stage/accept', labelKey: 'ia2.nav.collab' },
-  { key: 'govern', name: 'ia2.stage6', path: '/app/stage/govern', labelKey: 'ia2.nav.collab' },
+  { key: 'stage1', name: 'ia2.stage1', path: '/app/stage/setup', labelKey: 'ia2.nav.collab' },
+  { key: 'stage2', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.collab' },
+  { key: 'stage3', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.collab' },
+  { key: 'stage4', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.collab' },
+  { key: 'stage5', name: 'ia2.stage5', path: '/app/stage/accept', labelKey: 'ia2.nav.collab' },
+  { key: 'stage6', name: 'ia2.stage6', path: '/app/stage/govern', labelKey: 'ia2.nav.collab' },
 ]
 
 /**
  * 路径 → 当前视图 key。场景条高亮与 ia store 的唯一投影函数。
- * /app 家族（含 board/runs/eng 等工作页）→ 'collab'；非 /app 路径返回 null（IDE 侧）。
+ * /app 家族按阶段投影（stage1-6）；非 /app 路径返回 null（IDE 侧）。
  */
 export function areaForPath(path: string): IaAreaKey | null {
   if (path !== '/app' && !path.startsWith('/app/')) return null
-  // D13 时序六阶段（与 nav-centers.centerForPath 同步）
-  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'workbench'
-  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'sim'
-  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'gov'
-  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'workbench2'
-  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'accept'
-  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'govern'
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'sim'
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'gov'
-  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=①搭台
-  return 'workbench2'
+  // D13 时序六阶段（与 nav-centers.centerForPath 同步）；D20 键名对齐 stage1-6
+  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'stage1'
+  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'stage2'
+  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'stage3'
+  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
+  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
+  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage2'
+  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage3'
+  if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
+  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
+  if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（①高亮）
+  return 'stage4'
 }
 
 /** 旧直达链接迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
@@ -300,6 +302,21 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'teams',
           name: 'ia2.teams',
           component: () => import('./views/TeamsView.vue'),
+        },
+        {
+          // D20 智能体工作台（挂账清偿：模型绑定+启停，零新端点——上游
+          // PUT /api/hermes/config x-hermes-profile 定向 + profiles restart）。
+          // 旅程步骤 5 落此页（替代双门控默认关的 hermes.agentManager）。
+          path: 'agents',
+          name: 'ia2.agents',
+          component: () => import('./views/agents/AgentsView.vue'),
+        },
+        {
+          // D20 模型服务商统一入口（治理·系统设置 资产域）：IDE 引擎模型目录
+          // 的组织级平铺面（与 IDE 弹窗同源端点，合并铁律不复制表单逻辑）。
+          path: 'gov/model-providers',
+          name: 'ia2.modelProviders',
+          component: () => import('./views/gov/GovModelProvidersView.vue'),
         },
         {
           // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓

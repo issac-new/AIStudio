@@ -9,7 +9,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { STAGE_META } from './stage-meta'
 
-export type CenterKey = 'workbench' | 'sim' | 'gov' | 'workbench2' | 'accept' | 'govern'
+export type CenterKey = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'stage6'
 
 export interface CenterNavMeta {
   key: CenterKey
@@ -25,10 +25,9 @@ export interface CenterNavMeta {
 // D13 时序六阶段（2026-10-17 用户裁定：全部前端功能按使用时序重组，非加导航）：
 // 搭建→需求→分析设计→开发→验收→治理；功能归属按推演方案 26 步/七幕映射，
 // 三中心数据页降为各阶段内的工具舱（路由全保留）。
-// 键名暂留三中心时代字面（workbench/sim/gov/workbench2/accept/govern）——
-// 改 stage1-6 牵动 ia store/IaCentersNav/四测试，用户不可见，排入下批
-// （设计正本 §5.8 第 4 条挂账）。
-const STAGE_CENTER_KEYS = ['workbench', 'sim', 'gov', 'workbench2', 'accept', 'govern'] as const
+// D20：键名与阶段对齐（stage1-6，设计正本 §5.8 第 4 条清偿）——
+// 联动 routes.ts IaAreaKey / ia store / IaCentersNav / 守门测试同批改。
+const STAGE_CENTER_KEYS = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'] as const
 const STAGE_PATHS = [
   '/app/stage/setup', '/app/stage/reqs', '/app/stage/design',
   '/app/stage/build', '/app/stage/accept', '/app/stage/govern',
@@ -52,17 +51,18 @@ export function centerForPath(path: string): CenterKey | null {
   // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④开发
   // （开发期的日常工具集：看板/沟通/IDE/审批待办）；D18：/app/teams 团队
   // 管理归①搭建（搭台的第三步，设计正本 §5.3）
-  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'workbench'
-  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'workbench'
-  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'sim'
-  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'gov'
-  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'workbench2'
-  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'accept'
-  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'govern'
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'sim'
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'gov'
-  if (path === '/app' || path === '/app/') return 'workbench' // 裸路径=旅程页（默认入口，搭建区高亮①）
-  if (path.startsWith('/app/')) return 'workbench2'
+  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
+  if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
+  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'stage1'
+  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'stage2'
+  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'stage3'
+  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
+  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
+  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage2'
+  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage3'
+  if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（默认入口，搭建区①高亮）
+  if (path.startsWith('/app/')) return 'stage4'
   return null
 }
 

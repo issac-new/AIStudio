@@ -13,6 +13,7 @@ import { ISLAND_NAVS } from '../../nav-centers'
 import { features } from '../../../../../config/features'
 import ClearancePanel from './ClearancePanel.vue'
 import GateRepairsPanel from './GateRepairsPanel.vue'
+import OrgEditor from '../../components/gov/OrgEditor.vue'
 import KeyLedgerSection from './KeyLedgerSection.vue'
 import GovOrgKnowledgeView from './GovOrgKnowledgeView.vue'
 import GovRegistryRulesView from './GovRegistryRulesView.vue'
@@ -144,6 +145,7 @@ function goTab(tab: GovTab): void {
       >
         <h3 class="gov-center__panel-title">签 2·{{ text.tabOrgAssets }}</h3>
         <TabIntroBanner :tab="INTRO_KEY['orgAssets']" />
+        <OrgEditor />
         <KeyLedgerSection />
         <GovOrgKnowledgeView />
         <GovRegistryRulesView />

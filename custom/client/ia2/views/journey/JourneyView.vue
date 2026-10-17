@@ -12,7 +12,6 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { STAGE_META, SETUP_STEPS, type SetupStep } from '../../stage-meta'
-import { features } from '@/custom/features'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,10 +76,6 @@ function goStep(st: SetupStep): void {
 function goStage(no: number): void {
   void router.push({ name: `ia2.stage${no}` as 'ia2.stage2' })
 }
-const agentsGated = computed(() => !features.agentManager)
-function stepDisabled(st: SetupStep): boolean {
-  return st.gated === true && agentsGated.value
-}
 </script>
 
 <template>
@@ -132,7 +127,6 @@ function stepDisabled(st: SetupStep): boolean {
             </span>
           </div>
           <p class="jrn__what jrn__what--one">{{ st.purpose }}</p>
-          <p v-if="stepDisabled(st)" class="jrn__gated">智能体管理开关未开启</p>
           <p class="jrn__go">进入 →</p>
         </li>
       </ol>

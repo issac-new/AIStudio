@@ -44,11 +44,11 @@ describe('v12 统一视图单测（双视图）', () => {
 
   it('areaForPath：/app 家族全投影 collab + 非 /app 返回 null', () => {
     for (const area of IA_AREAS) expect(areaForPath(area.path)).toBe(area.key)
-    expect(areaForPath('/app/board')).toBe('workbench2') // D13：/app 家族归④生产
-    expect(areaForPath('/app/runs/run-1')).toBe('workbench2')
-    expect(areaForPath('/app/eng')).toBe('workbench2')
-    expect(areaForPath('/app/s/room/x')).toBe('workbench2')
-    expect(areaForPath('/app/unknown-deep')).toBe('workbench2')
+    expect(areaForPath('/app/board')).toBe('stage4') // D13：/app 家族归④生产
+    expect(areaForPath('/app/runs/run-1')).toBe('stage4')
+    expect(areaForPath('/app/eng')).toBe('stage4')
+    expect(areaForPath('/app/s/room/x')).toBe('stage4')
+    expect(areaForPath('/app/unknown-deep')).toBe('stage4')
     expect(areaForPath('/ide')).toBeNull()
     expect(areaForPath('/hermes/logs')).toBeNull()
   })

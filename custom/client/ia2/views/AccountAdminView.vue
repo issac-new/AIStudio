@@ -3,13 +3,35 @@
      本机账号↔matrix 双账号绑定维护（roster），保存/建号即入仓提交（R13）。 -->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { fetchRegistry, saveRegistry, provisionAccount } from '@/custom/governance/api/adminRegistry'
+import { fetchRegistry, saveRegistry, provisionAccount, createInvite, type InviteResult } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
 
 const COLS = ['账号', 'AI 助理账号', '角色']
 const rows = ref<string[][]>([]); const preamble = ref<string[]>([]); const after = ref<string[]>([])
 const commit = ref(''); const msg = ref(''); const busy = ref(false)
 const form = ref({ localName: '', role: '', password: '', adminToken: '', homeserverUrl: 'http://127.0.0.1:8008', withAgent: true })
+// D20 邀请表单：口令由服务端生成，不经管理员之手
+const inv = ref({ localName: '', role: '', adminToken: '', homeserverUrl: 'http://127.0.0.1:8008', withAgent: true, expiresInHours: 24 })
+const inviteResult = ref<InviteResult | null>(null)
+const invCopied = ref(false)
+async function invite() {
+  const f = inv.value
+  if (!f.localName || !f.role || !f.adminToken) { msg.value = '用户名/角色/管理 token 均必填'; return }
+  busy.value = true; msg.value = ''; inviteResult.value = null
+  try {
+    inviteResult.value = await createInvite({ ...f, withAgent: String(f.withAgent) })
+    inv.value = { ...inv.value, localName: '', role: '' }
+    await load()
+  } catch (e) { msg.value = `邀请失败：${String(e)}` } finally { busy.value = false }
+}
+function copyInvite(): void {
+  const r = inviteResult.value; if (!r) return
+  const text = `SwarmStudio 账号邀请
+Matrix 账号：${r.userId}
+初始口令（一次性，请尽快登录后修改）：${r.initialPassword}
+登录：打开 SwarmStudio 登录页 → Matrix 页签 → 服务器 ${inv.value.homeserverUrl} → 输入账号与初始口令 → 登录后到设置中修改密码。`
+  void navigator.clipboard?.writeText(text).then(() => { invCopied.value = true; setTimeout(() => { invCopied.value = false }, 2000) })
+}
 
 async function load() {
   const doc = await fetchRegistry('roster')
@@ -61,6 +83,25 @@ function delRow(i: number) { rows.value.splice(i, 1) }
       <button data-testid="aac-create-btn" :disabled="busy" @click="create">创建账号</button>
     </div>
 
+    <div class="aac__create" data-testid="aac-invite">
+      <h3>邀请账号（口令由服务端生成，不经管理员之手）</h3>
+      <div class="aac__grid">
+        <label class="aac__field">本机账号名<input v-model="inv.localName" placeholder="如 zhang" data-testid="aac-inv-name" /></label>
+        <label class="aac__field">角色<input v-model="inv.role" placeholder="如 研发·csw-pay-core" data-testid="aac-inv-role" /></label>
+        <label class="aac__field">服务器地址<input v-model="inv.homeserverUrl" placeholder="homeserver URL" /></label>
+        <label class="aac__field">有效期（小时）<input v-model.number="inv.expiresInHours" type="number" min="1" data-testid="aac-inv-exp" /></label>
+        <label class="aac__field">管理员凭证<input v-model="inv.adminToken" type="password" placeholder="synapse 管理员 access token" data-testid="aac-inv-token" /></label>
+        <label class="aac__check"><input v-model="inv.withAgent" type="checkbox" /> 同建 AI 助理账号</label>
+      </div>
+      <button data-testid="aac-inv-btn" :disabled="busy" @click="invite">生成邀请</button>
+      <div v-if="inviteResult" class="aac__invres" data-testid="aac-inv-result">
+        <p>已创建 <b>{{ inviteResult.created.join('、') }}</b>（台账提交 {{ inviteResult.invitesCommit.slice(0, 7) }}；{{ new Date(inviteResult.expires).toLocaleString() }} 过期）</p>
+        <p class="aac__invcred">Matrix 账号：<code>{{ inviteResult.userId }}</code>　初始口令（一次性）：<code data-testid="aac-inv-pass">{{ inviteResult.initialPassword }}</code></p>
+        <p class="aac__invhint">交付方式：复制下方邀请文本经安全渠道发送；被邀人在登录页 Matrix 页签首登后到设置改密。</p>
+        <button data-testid="aac-inv-copy" @click="copyInvite">{{ invCopied ? '已复制 ✓' : '复制邀请文本' }}</button>
+      </div>
+    </div>
+
     <div class="aac__tbl">
       <h3>账号绑定
         <button data-testid="aac-save" :disabled="busy" title="保存并提交到中央仓（可回溯）" @click="saveRoster">保存修改</button></h3>
@@ -94,4 +135,8 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border
 .aac__tbl tr:hover td button { opacity: 1; }
 .aac__tbl td button:hover { color: var(--danger, #dc2626); background: color-mix(in srgb, var(--danger, #dc2626) 8%, transparent); }
 .aac__msg { font-size: 12px; color: var(--text-muted, #878c99); }
+.aac__invres { margin-top: 10px; border: 1px dashed var(--primary-color, #3b82f6); border-radius: 8px; padding: 8px 12px; p { margin: 4px 0; font-size: 12px; } }
+.aac__invcred code { font-family: ui-monospace, monospace; background: var(--bg-secondary, #f5f5f5); padding: 1px 6px; border-radius: 4px; }
+.aac__invhint { font-size: 11px !important; color: var(--text-muted, #878c99); }
+.aac__invres button { font-size: 12px; padding: 4px 14px; border-radius: 6px; border: 1px solid var(--primary-color, #3b82f6); color: var(--primary-color, #3b82f6); background: transparent; cursor: pointer; }
 </style>
