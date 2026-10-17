@@ -38,3 +38,11 @@
 - D-4 i18n 覆盖守门修复（本分支首个提交）：ia-residuals 批的 `ia2.nav.stageN` 运行时派生键纳入守门覆盖面（同 `collectPatchedLeafKeys` 先例），不向静态词表塞副本——保 STAGE_META 单一事实源。该红为 91e3f2bb 合入后预存，非本批引入。
 - D-5 `var(--x, #fallback)` 剥 fallback 仅限 upstream 全局变量（variables.scss 恒在）；`--ia-*`/域内 token 的 fallback 保留（组件可能在 ia2.scss 未装载的上下文渲染）。
 - D-6 worktree 跑测试配方：`MX_SIMHARNESS_ROOT=/Users/cuishi/lab/ncwk/simharness`（delivery-harness-contract 与 raci-rest-guard 按「overlay 根上一级/simharness」解析，worktree 内解析到 `.claude/worktrees/simharness` 死路径——2026-10-17 双删事故余波，环境性非产品缺陷）。
+
+## 实施期增补决策（收口回填）
+
+- D-7 幽灵变量处置分三类：同义映射（--text-color-1/2/3→text 层级、--term-*→code-bg 族等）、借名落地（--cpd-* 落 --mx-* token、--bubble-margin-inline-start 补定义）、运行时注入 allowlist（--cluster-color 经 :style 逐节点注入、--vh JS 视口变量）。守门断言防新增。
+- D-8 IDE 自有微色板同族归并：#4cc9f0 运行 cyan→--accent-info、#f0a44c/#f0c98c 琥珀→--ia-stale、One-Dark 轨迹四色→五态/语义 token；`IdeTurnRail`/`IdeContextBar` 色板改 var() 字符串（inline style 消费 var() 可行，canvas 消费不可）。终端 ANSI 色板保留固定值（xterm 惯例）。
+- D-9 预算终态 117＝终端 ANSI 55＋ECharts/G6 分类色板 62：与 UI 主题解耦的合法常量入 allowlist（理由注于测试文件头注）；图表分类色若要随主题，属新任务（逐图表接 resolveNeutrals）。
+- D-10 补键 `approvals.choice.reject`（服务端审批历史回流的决策值，走查批 D 发现）：走运行时术语覆盖通道（i18n-term-overrides zh/en 双侧），零 upstream patch，i18n 覆盖守门自动纳入。
+- 结果：四批全部落地，报告见《docs/2026-10-17-swarmstudio-frontend-ux-consolidation-report.md》。
