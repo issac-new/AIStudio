@@ -30,7 +30,7 @@ const page = await (await browser.newContext({ viewport: { width: 1440, height: 
 page.on('console', m => { if (m.type() === 'error' && m.text().includes('mount')) console.error('[mount-err]', m.text().slice(0, 120)) })
 await page.goto('http://127.0.0.1:8802/login')
 await page.evaluate(([t]) => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_locale', 'zh') }, [login.token])
-await page.goto('http://127.0.0.1:8802/app#/app/board?tab=gov-org')
+await page.goto('http://127.0.0.1:8802/app#/app/gov/docs')
 await page.waitForTimeout(7000)
 for (const txt of ['知道了', 'Confirm']) {
   const btn = page.locator(`button:has-text("${txt}")`).first()

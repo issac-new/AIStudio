@@ -147,7 +147,9 @@ _missing = [n for n in range(1, 27) if n not in plan_steps]
 if _missing:
     sys.exit(f'[mx-report-gen] 方案解析缺步：{_missing}（PLAN_PATH={PLAN_PATH}，格式 {"V8.2" if PLAN_V82 else "V8"}）——解析锚断裂，拒出报告')
 
-# ── 六阶段分组（核对一致方案叙事结构）──
+# ── 六阶段分组（核对一致方案叙事结构；V8.37 注：这是报告叙事的推演六阶段，
+#    与产品一级导航的时序六阶段（/app/stage/*）是两个概念——前者按 26 步工作性质
+#    分组，后者按交付时序导航，阶段名不同源，勿混写）──
 PHASES = [
     (1, 4, '环境准备', '账号分配 · 配置初始化 · 登录 · 冒烟', '#2563eb', '#1e40af'),
     (5, 7, '需求管理', '应用登记 · 人员管理 · 需求上锁 G1', '#7c3aed', '#5b21b6'),
@@ -3399,7 +3401,7 @@ try:
     # A7/F7bis：三功能区命中集——STEPS imgs（ui 帧图注，帧文件在位）双源判定
     def _zone_hits():
         _hits = {}
-        _pats = {'cockpit': '工作台|驾驶舱|冒烟|登录', 'kanban': '看板|board', 'ide': 'IDE|画布'}
+        _pats = {'cockpit': '工作台|驾驶舱|旅程|冒烟|登录|仿真中心|运行总览', 'kanban': '看板|board|任务协同', 'ide': 'IDE|工作区|画布', 'gov': '治理中心|质量门|遗留项|度量检查', 'sim': '仿真中心|运行监控|交付健康|需求追溯'}
         for _key, _pat in _pats.items():
             for _t in STEPS:
                 for _pre, _cap, _kind in _t[3].get('imgs', []):
@@ -4012,29 +4014,30 @@ def gate_cards():
     # 2026-10-08 用户截图实锤）。ck-wrap 层与对应 CSS 一并废除。
     return ''.join(cards)
 
-# ── 驾驶舱联动地图（路演版：跨区通路+互跳锚点）──
-# 三层：①顶部六功能区分区导航（点击跳步）②四条跨区通路（沟通/看板/审批/运行/治理/IDE
-# 同屏串联，每个节点锚点可跳）③步块内「联动」行（本步与哪些区的哪些步同源——从通路
-# 自动反查，双向）。锚点全为页内 #stepN，跨区故事一眼可讲。
-COCKPIT_ZONE_COLOR = {'沟通': '#0369a1', '看板': '#047857', '审批': '#b45309',
-                      '运行': '#7c3aed', '治理': '#334155', 'IDE': '#be185d'}
-COCKPIT_ZONES = {
-    '沟通': [(8, '建群'), (9, '@派发'), (19, '缺陷对话'), (21, 'UAT 对账')],
-    '看板': [(10, '主卡+RACI'), (12, '分诊'), (13, '系分卡'), (17, '排期'), (20, 'REL 三卡')],
-    '审批': [(12, 'lead 确认'), (20, 'G5 准出+人工批准')],
-    '运行': [(4, 'run 横幅'), (23, '审计取证')],
-    '治理': [(5, '资产'), (7, 'G1 冻结'), (15, 'G2 评审'), (22, '台账'), (24, '复盘')],
-    'IDE': [(18, '五步编码'), (25, '任务简报')],
+# ── 旅程地图（V8.37 起六阶段口径；原「驾驶舱联动地图」六功能区版随产品 D13-D19 退役）──
+# 三层：①顶部六阶段分区导航（点击跳步；分区=时序六阶段，与产品一级导航同构——阶段定义
+# 单一事实源=overlay stage-meta.ts，步归属按 run-state 完成键映射，步 8/9 无阶段键归②需求）
+# ②四条跨阶段通路（需求流动/代码产出/质量守护/全程监督，每个节点锚点可跳）
+# ③步块内「联动」行（本步与哪些阶段的哪些步同源——从通路自动反查，双向）。锚点全为页内 #stepN。
+STAGE_ZONE_COLOR = {'①搭建': '#0369a1', '②需求': '#7c3aed', '③分析设计': '#047857',
+                    '④开发': '#be185d', '⑤验收': '#b45309', '⑥治理': '#334155'}
+STAGE_ZONES = {
+    '①搭建': [(1, '账号分配'), (4, '环境冒烟'), (5, '资产登记'), (6, '组织对账')],
+    '②需求': [(7, 'G1 冻结'), (8, '建群'), (9, '@派发')],
+    '③分析设计': [(10, '主卡+RACI'), (12, '分诊'), (13, '系分卡'), (15, 'G2 评审'), (17, '排期')],
+    '④开发': [(18, '五步编码'), (19, '缺陷对话+独立测试')],
+    '⑤验收': [(20, 'G5 准出+人工批准'), (21, 'UAT 对账')],
+    '⑥治理': [(22, '台账'), (23, '审计'), (24, '复盘'), (26, '报告')],
 }
 LINKAGE_CHAINS = [
     ('需求怎么流动', '一条需求从群里发出到变成看板任务',
-     [(8, '沟通', '建群全量预邀'), (9, '沟通', '@派发+证据要求'), (10, '看板', '主卡落板 RACI 字段'), (12, '看板', '分诊到人')]),
+     [(8, '②需求', '建群全量预邀'), (9, '②需求', '@派发+证据要求'), (10, '③分析设计', '主卡落板 RACI 字段'), (12, '③分析设计', '分诊到人')]),
     ('代码怎么产出', '从评审到编码全程可追溯',
-     [(15, '治理', 'G2 评审卡把关'), (17, '看板', '排期上卡'), (18, 'IDE', 'worktree 五步编码'), (18, '治理', 'G3 门禁+testlog')]),
+     [(15, '③分析设计', 'G2 评审卡把关'), (17, '③分析设计', '排期上卡'), (18, '④开发', 'worktree 五步编码'), (18, '④开发', 'G3 门禁+testlog')]),
     ('质量怎么守住', '缺陷、准出、验收三道完整循环',
-     [(19, '沟通', '缺陷对话回流'), (19, '看板', 'commit 回填关联卡'), (20, '审批', 'G5 七项+人工批准'), (21, '沟通', 'UAT 逐条对账')]),
+     [(19, '④开发', '缺陷对话回流'), (19, '④开发', 'commit 回填关联卡'), (20, '⑤验收', 'G5 七项+人工批准'), (21, '⑤验收', 'UAT 逐条对账')]),
     ('全程怎么监督', '运行可见、账实相符、经验积累',
-     [(4, '运行', 'run 横幅 N/26'), (22, '治理', '工作台账'), (23, '治理', '独立审计'), (24, '治理', '复盘+记忆积累')]),
+     [(4, '①搭建', 'run 横幅 N/26'), (22, '⑥治理', '工作台账'), (23, '⑥治理', '独立审计'), (24, '⑥治理', '复盘+记忆积累')]),
 ]
 
 _STEP_LINKS = {}
@@ -4047,21 +4050,21 @@ for _cname, _cd, _nodes in LINKAGE_CHAINS:
 
 def _ck_zone_html():
     cells = []
-    for zone, items in COCKPIT_ZONES.items():
-        c = COCKPIT_ZONE_COLOR[zone]
+    for zone, items in STAGE_ZONES.items():
+        c = STAGE_ZONE_COLOR[zone]
         links = ' '.join(f'<a href="#step{n}">{n}·{H.escape(lb)}</a>' for n, lb in items)
         cells.append(f'<div class="ck-zone" style="--zc:{c}"><div class="ck-zone-hd">{zone}</div>'
                      f'<div class="ck-zone-links">{links}</div></div>')
     chains = []
     for cname, cdesc, nodes in LINKAGE_CHAINS:
         seg = ' <span class="ck-arrow">→</span> '.join(
-            f'<a href="#step{n}" class="ck-node" style="--zc:{COCKPIT_ZONE_COLOR[z]}">'
+            f'<a href="#step{n}" class="ck-node" style="--zc:{STAGE_ZONE_COLOR[z]}">'
             f'<span class="ck-node-z">{z}</span>{n} {H.escape(lb)}</a>' for n, z, lb in nodes)
         chains.append(f'<div class="ck-chain"><div class="ck-chain-hd"><b>{H.escape(cname)}</b>'
                       f'<span class="ck-chain-desc">{H.escape(cdesc)}</span></div>'
                       f'<div class="ck-chain-nodes">{seg}</div></div>')
-    return ('<section class="ck-map"><div class="ck-map-hd">驾驶舱联动地图'
-            '<span class="ck-map-sub">同一张驾驶舱，六个功能区协同工作——点击任一节点直达对应步骤档案</span></div>'
+    return ('<section class="ck-map"><div class="ck-map-hd">旅程地图'
+            '<span class="ck-map-sub">同一条交付旅程，六个阶段协同推进（与产品一级导航同构）——点击任一节点直达对应步骤档案</span></div>'
             '<div class="ck-zones">' + ''.join(cells) + '</div>'
             + ''.join(chains) + '</section>')
 
@@ -4075,7 +4078,7 @@ def _link_line(n):
         if m in seen:
             continue
         seen.add(m)
-        parts.append(f'<a href="#step{m}" style="color:{COCKPIT_ZONE_COLOR[z]}">{z}·步{m} {H.escape(lb)}</a>')
+        parts.append(f'<a href="#step{m}" style="color:{STAGE_ZONE_COLOR[z]}">{z}·步{m} {H.escape(lb)}</a>')
     return ('<div class="st-linkline"><b>⟶ 驾驶舱联动</b>（同通路可互跳）：'
             + ' · '.join(parts) + '</div>')
 
@@ -4377,7 +4380,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .st-issues-tbl{{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0;table-layout:fixed}}
 .st-issues-tbl th,.st-issues-tbl td{{border:1px solid var(--border);padding:4px 8px;text-align:left;vertical-align:top;word-break:break-word}}
 .st-issues-tbl th{{background:var(--bg);color:var(--muted);font-weight:600}}
-/* ── 驾驶舱联动地图（单一定义：原五处重复块合并——非冲突声明取并集、margin 冲突取 0 0 22px） ── */
+/* ── 旅程地图（单一定义：原五处重复块合并——非冲突声明取并集、margin 冲突取 0 0 22px；V8.37 六阶段口径） ── */
 .ck-map{{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:0 0 22px;box-shadow:var(--shadow);max-width:100%;box-sizing:border-box}}
 .ck-map-hd{{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}}
 .ck-map-sub{{font-size:13px;color:var(--muted);font-weight:400;margin-left:10px}}

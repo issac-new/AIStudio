@@ -53,10 +53,11 @@ async function shot(name, url, opts = {}) {
   console.log('shot:', name)
 }
 
-// ① 驾驶舱全景（房间 + 任务面板真实数据）
+// ① 旅程首页（/app 默认入口：注意力条置顶+页头六阶段+搭建五步/交付五阶段两区十卡；
+//    D18 前此位为驾驶舱全景，帧 id 不改保报告兼容）
 await shot('ui-03-cockpit', '/app', { wait: 6000 })
 
-// ①b 驾驶舱概览（P5）：#/app/dash 三卡（我的待办/评审闸口/交付进度）
+// ①b 工作台概览（P5，活路由）：#/app/dash 三卡（我的待办/待审评审/交付进度）
 await shot('ui-03b-dash', '/app/dash', { wait: 5000 })
 
 // ② 群聊（需求分析讨论群，真实消息流；P4 任务流转时间线在右栏）
