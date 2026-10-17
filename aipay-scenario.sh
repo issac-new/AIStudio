@@ -1188,7 +1188,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律：单卡直做（无需再拆子任务），kanban 建 DEV-PAYCORE-C 主卡（含 --raci）。
-工作区 $(workspace chen)（先 git pull）。按 docs/design/${RFD_ID}-architecture-design.md 契约：
+工作区：并行安全（同域多单各自会话，互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-C -b feat/DEV-PAYCORE-C origin/main，在 ../pc-C 内开发。按 docs/design/${RFD_ID}-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE-C
 2) 契约件：apps/csw-pay-core 的 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify）、支付单状态机类型（INIT→PAYING→SUCCESS/FAILED/CLOSED）、回调事件 schema、docs/design/${RFD_ID}-pay-core-contract.md 契约文档（金额单位：分 int64）；tsc 编译过即可，无业务实现
 3) push origin feat/DEV-PAYCORE-C；结论行 DEV-DONE-DEV-PAYCORE-C。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
@@ -1200,8 +1200,8 @@ DEV-PAYCORE-C（csw-pay-core 契约件，≤0.5 人日轻量）。任务纪律�
 4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-S 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
-工作区 $(workspace chen)（先 git fetch）。
-1) git checkout -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C
+工作区：并行安全（与 C/N 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-S -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C（C 未落地时基于 origin/main，落地后 rebase 对接），在 ../pc-S 内开发。
+1) 实现 csw-pay-core 状态机+幂等
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
 3) vitest ≥5 用例全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
@@ -1212,8 +1212,8 @@ DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆
 4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
 任何一步没做完就 Turn ended=嘴炮-不交卷形态（run20 18:30 跨档案 xiao/chen/hu 三例实证），巡检官 work.expected-silent + delivery.unpushed 检测器会持续催办升级换档。
 DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 件子任务（每件 ≤1 人日、独立验收口径），kanban 建 DEV-PAYCORE-N 主卡+link 子卡（含 --raci）；逐子任务实现且每件独立 commit。
-工作区 $(workspace chen)（先 git fetch）。
-1) git checkout -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S
+工作区：并行安全（与 C/S 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-N -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S（S 未落地时基于 origin/feat/DEV-PAYCORE-C 或 origin/main，落地后 rebase 对接），在 ../pc-N 内开发。
+1) 实现 csw-pay-core 回调+证据
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
 3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE}不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
