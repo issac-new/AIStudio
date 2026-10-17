@@ -126,6 +126,19 @@ describe('IdeShell briefing 跨板解析', () => {
     expect(setBoardCalls).toEqual([])
   })
 
+  it('getTask 瞬时 5xx：不判死——落回逐板解析照常命中切板（2026-10-18 审计轮：暂时性故障≠任务不存在）', async () => {
+    getTaskMock.mockRejectedValue(Object.assign(new Error('API Error 500: boom'), { status: 500 }))
+    listBoardsMock.mockResolvedValue([{ slug: 'default' }, { slug: 'aipay-rfd' }])
+    listTasksMock.mockImplementation(({ board }: { board: string }) =>
+      Promise.resolve(board === 'aipay-rfd'
+        ? [{ id: 't_flaky', title: '瞬时故障下仍在的任务', status: 'todo', body: 'b' }]
+        : []))
+    mountShell()
+    ideState.activeTaskId = 't_flaky'
+    await vi.waitFor(() => expect(setBoardCalls).toEqual(['aipay-rfd']))
+    expect(listTasksMock).toHaveBeenCalledWith({ board: 'aipay-rfd' })
+  })
+
   it('session_id 命中也解析（深链会话形态）', async () => {
     getTaskMock.mockResolvedValue({ task: { id: 't_x' } })
     listBoardsMock.mockResolvedValue([{ slug: 'agent-board' }])
