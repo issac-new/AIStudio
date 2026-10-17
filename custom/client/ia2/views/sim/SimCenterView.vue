@@ -17,6 +17,7 @@ import OpsPanel from './OpsPanel.vue'
 import DeliveryPanel from './DeliveryPanel.vue'
 import TracePanel from './TracePanel.vue'
 import OverviewPanel from './OverviewPanel.vue'
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
@@ -75,6 +76,7 @@ const placeholderTabs = computed(() => [] as Array<SimTab & { index: number }>)
 <template>
   <div class="sim-center">
     <header class="sim-center__head">
+      <IaBreadcrumb />
       <h2 class="sim-center__title">{{ text.shellTitle }}</h2>
       <nav class="sim-center__tabs" role="tablist" :aria-label="text.shellTitle">
         <button

@@ -3,15 +3,18 @@
      （新鲜度三态 fresh/宽限窗内 stale/旧残留 old——branch_fresh 语义唯一实现
      在服务端，界面只消费）＋交付物 14 件链（件名/在场状态）。缺件如实缺席。 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
+import { useRouter } from 'vue-router'
+import { useRunContext } from '../../composables/useRunContext'
 
 interface BranchRow { name: string; localTs: number; pushTs: number | null; pushed: boolean; freshness: 'fresh' | 'stale' | 'old' }
 interface BranchesResponse { run: string; graceMs: number; count: number; branches: BranchRow[] }
 interface DeliverableRow { name: string; label: string; file: string | null }
 interface DeliverablesResponse { run: string; deliverables: DeliverableRow[]; scanned: number }
 
-const run = ref('')
+const router = useRouter()
+const { run, remember } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
 const branches = ref<BranchesResponse | null>(null)
@@ -37,12 +40,15 @@ async function load(): Promise<void> {
     getJson<BranchesResponse>(`/api/hermes/sim/branches?run=${encodeURIComponent(r)}`),
     getJson<DeliverablesResponse>(`/api/hermes/sim/deliverables?run=${encodeURIComponent(r)}`),
   ])
-  if (b.status === 'fulfilled') branches.value = b.value
+  if (b.status === 'fulfilled') { branches.value = b.value; remember() }
   else loadError.value = (b.reason as Error).message
   if (d.status === 'fulfilled') deliverables.value = d.value
   else loadError.value = loadError.value || (d.reason as Error).message
   loading.value = false
 }
+
+// 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
+onMounted(() => { if (run.value.trim()) void load() })
 </script>
 
 <template>
@@ -52,7 +58,10 @@ async function load(): Promise<void> {
       <button class="dlv__btn" type="button" data-testid="dlv-load" :disabled="loading" @click="load">读取</button>
     </div>
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
-    <p v-else-if="!branches && !deliverables" class="dlv__hint">输入运行读取分支新鲜度与交付物链。</p>
+    <div v-else-if="!branches && !deliverables" class="dlv__hint" data-testid="dlv-empty">
+      <p>输入运行读取分支新鲜度与交付物链。</p>
+      <button type="button" class="dlv__goto" data-testid="dlv-goto-overview" @click="router.push({ name: 'ia2.sim' })">不知道目录名？去运行总览选取 →</button>
+    </div>
 
     <section v-if="branches" class="dlv__box">
       <h4 class="dlv__h">分支交付（{{ branches.count }} 条，宽限窗 {{ Math.round(branches.graceMs / 60000) }} 分钟）</h4>
@@ -106,6 +115,7 @@ async function load(): Promise<void> {
   &:disabled { opacity: 0.4; }
 }
 .dlv__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
+.dlv__goto { border: none; background: transparent; padding: 2px 0; color: var(--accent-primary); cursor: pointer; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .dlv__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .dlv__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .dlv__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }

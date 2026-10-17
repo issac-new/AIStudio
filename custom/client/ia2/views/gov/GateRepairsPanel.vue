@@ -10,10 +10,14 @@ import {
   fetchGateRepairs, transitionGateRepair, legalTransitions, GATE_STATE_LABEL, GATE_FULL_NAME,
   type GateRepair, type GateRepairState,
 } from '../../api/gov'
+import { useRouter } from 'vue-router'
+import UiEmptyState from '../../../ui/UiEmptyState.vue'
 
 const records = ref<GateRepair[] | null>(null)
 const open = ref(0)
 const loadError = ref('')
+const router = useRouter()
+
 const busy = ref(false)
 const actionMsg = ref('')
 const filter = ref<'open' | 'all'>('open')
@@ -36,8 +40,24 @@ async function refresh(): Promise<void> {
   }
 }
 
-async function doTransition(rec: GateRepair, to: GateRepairState): Promise<void> {
-  const note = to === 'waived' ? window.prompt('豁免理由（必填，用户批准语义）：') ?? '' : `界面操作 ${to}`
+// 末端可用性批（2026-10-17）：豁免理由从 window.prompt 原生弹窗改行内表单——
+// 原生弹窗与站内表单风格断裂且无必填校验提示位。
+const waiveTarget = ref<GateRepair | null>(null)
+const waiveNote = ref('')
+
+function askWaive(rec: GateRepair): void {
+  waiveTarget.value = rec
+  waiveNote.value = ''
+}
+
+function confirmWaive(): void {
+  const rec = waiveTarget.value
+  if (!rec) return
+  void doTransition(rec, 'waived', waiveNote.value).then(() => { waiveTarget.value = null })
+}
+
+async function doTransition(rec: GateRepair, to: GateRepairState, noteOverride?: string): Promise<void> {
+  const note = to === 'waived' ? (noteOverride ?? '').trim() : `界面操作 ${to}`
   if (to === 'waived' && !note) return
   busy.value = true
   try {
@@ -68,7 +88,11 @@ onMounted(() => { void refresh() })
 
     <p v-if="loadError" class="grp__error" data-testid="grp-error">{{ loadError }}</p>
     <p v-if="actionMsg" class="grp__msg" data-testid="grp-action-msg">{{ actionMsg }}</p>
-    <p v-else-if="shown.length === 0" class="grp__hint" data-testid="grp-empty">无修复单。</p>
+    <UiEmptyState v-else-if="shown.length === 0" title="无修复单——当前没有未结的质量门修复事项。" hint="质量门 FAIL 会自动登记修复单到此处；想看六闸整体状态去仿真中心·运行总览。" data-testid="grp-empty">
+      <template #action>
+        <button class="grp__btn" type="button" data-testid="grp-empty-goto-overview" @click="router.push({ name: 'ia2.sim' })">去运行总览看六闸 →</button>
+      </template>
+    </UiEmptyState>
 
     <div v-for="r in shown" :key="r.id" class="grp__rec" :data-testid="`grp-rec-${r.id}`">
       <div class="grp__rec-head">
@@ -92,8 +116,20 @@ onMounted(() => { void refresh() })
           type="button"
           :data-testid="`grp-tr-${r.id}-${t}`"
           :disabled="busy"
-          @click="doTransition(r, t)"
+          @click="t === 'waived' ? askWaive(r) : doTransition(r, t)"
         >{{ LEGAL_LABEL[t] ?? t }}</button>
+      </div>
+      <div v-if="waiveTarget?.id === r.id" class="grp__waive" :data-testid="`grp-waive-${r.id}`">
+        <input
+          v-model="waiveNote"
+          class="grp__waive-input"
+          type="text"
+          placeholder="豁免理由（必填，用户批准语义；留痕进修复单 history）"
+          :data-testid="`grp-waive-input-${r.id}`"
+          @keyup.enter="confirmWaive"
+        >
+        <button class="grp__btn" type="button" :data-testid="`grp-waive-ok-${r.id}`" :disabled="busy || !waiveNote.trim()" @click="confirmWaive">确认豁免</button>
+        <button class="grp__btn" type="button" :data-testid="`grp-waive-cancel-${r.id}`" @click="waiveTarget = null">取消</button>
       </div>
     </div>
   </div>
@@ -139,5 +175,7 @@ onMounted(() => { void refresh() })
 .grp__missing { color: var(--ia-fail); }
 .grp__history { font-size: 12px; summary { cursor: pointer; margin-top: 4px; } }
 .grp__history-list { margin: 4px 0 0; padding-left: 16px; color: var(--text-muted); }
+.grp__waive { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.grp__waive-input { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; }
 .grp__actions { display: flex; gap: 6px; margin-top: 6px; }
 </style>

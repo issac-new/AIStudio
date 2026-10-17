@@ -2,11 +2,13 @@
 <!-- D20 模型服务商页（治理·系统设置 资产域路由页）：平铺承载
      GovModelProvidersSection（表单与 IDE 引擎目录同源同端点）。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import GovModelProvidersSection from '../../components/gov/GovModelProvidersSection.vue'
 </script>
 
 <template>
   <div class="gmpv" data-testid="gmpv-page">
+  <TabIntroBanner tab="model-providers" />
     <header class="gmpv__head">
       <h2 class="gmpv__title">设置 · 模型服务商</h2>
     </header>

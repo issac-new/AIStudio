@@ -28,6 +28,7 @@ import CapacityLampBanner from './CapacityLampBanner.vue'
 import GovIssuesPanel from './GovIssuesPanel.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import GovAiQualitySection from './GovAiQualitySection.vue'
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +83,7 @@ function goTab(tab: GovTab): void {
 <template>
   <div class="gov-center">
     <header class="gov-center__head">
+      <IaBreadcrumb />
       <h2 class="gov-center__title">{{ text.shellTitle }}</h2>
       <nav class="gov-center__tabs" role="tablist" :aria-label="text.shellTitle">
         <button

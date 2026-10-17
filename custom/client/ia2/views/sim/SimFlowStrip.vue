@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/views/sim/SimFlowStrip.vue -->
-<!-- 使用动线条（U1 可用性批）：把六签串成「怎么用推演中心」的三段流程——
+<!-- 使用动线条（U1 可用性批）：把六签串成「怎么用仿真中心」的三段流程——
      开轮准备 → 运行监控 → 收尾复盘。每段一句话说明+直达签；当前签所属段
      高亮（由路由推导，不猜运行状态）。回答用户「从哪开始、下一步去哪」。 -->
 <script setup lang="ts">
@@ -44,7 +44,7 @@ function go(target: string): void {
 </script>
 
 <template>
-  <nav class="sfs" data-testid="sim-flow-strip" aria-label="推演中心使用动线">
+  <nav class="sfs" data-testid="sim-flow-strip" aria-label="仿真中心使用动线">
     <button
       v-for="st in STAGES"
       :key="st.key"
