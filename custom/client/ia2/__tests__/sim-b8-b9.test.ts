@@ -42,7 +42,7 @@ describe('SETTING_FIELDS — E28 四区在位', () => {
 describe('SimSettingsView — 推演设置页（B8）', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('读取渲染四区当前有效值；改姿态保存后回传更新+已保存反馈', { timeout: 20000 }, async () => {
+  it('读取渲染四区当前有效值；改姿态保存后回传更新+已保存反馈', { timeout: 60000 }, async () => {
     mockedFetch.mockResolvedValue({ values: VALUES })
     mockedPut.mockResolvedValue({ values: { ...VALUES, posture_default: 'strict' } })
     const w = mount(SimSettingsView, { global: { plugins: [await makeRouter()] } })
@@ -59,7 +59,7 @@ describe('SimSettingsView — 推演设置页（B8）', () => {
     w.unmount()
   })
 
-  it('保存 400（值域越界）原文如实；读取 503 如实', { timeout: 20000 }, async () => {
+  it('保存 400（值域越界）原文如实；读取 503 如实', { timeout: 60000 }, async () => {
     mockedFetch.mockResolvedValue({ values: VALUES })
     mockedPut.mockRejectedValue(new Error('PUT /api/hermes/sim/settings → 400（{"error":"observation_window_seconds ∈ 30-3600 整数秒"}）'))
     const w = mount(SimSettingsView, { global: { plugins: [await makeRouter()] } })

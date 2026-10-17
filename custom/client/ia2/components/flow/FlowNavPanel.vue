@@ -16,23 +16,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { features } from '../../../../../config/features'
 import { filterStreams, LOOP_STAGE_ORDER, sortFlowRows, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type FlowSortMode, type StreamSelection } from '../../adapters/flow'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
 import { useMsgSurfaceText } from '../../i18n-msg-surface'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
-import InboxNavEntry from '../InboxNavEntry.vue'
-import GovernanceNavEntry from '../GovernanceNavEntry.vue'
-import EvalNavEntry from '../EvalNavEntry.vue'
-import OntologyNavEntry from '../OntologyNavEntry.vue'
-import SkillgovNavEntry from '../SkillgovNavEntry.vue'
-import BpaNavEntry from '../BpaNavEntry.vue'
-import AccountsNavEntry from '../AccountsNavEntry.vue'
-import IaJourneyEntry from '../IaJourneyEntry.vue'
-import IaOverviewEntry from '../IaOverviewEntry.vue'
-
 const props = defineProps<{
   sessions: FlowSessionRow[]
   loops: FlowLoopRow[]
@@ -182,22 +171,8 @@ function submitCreateRoom(): void {
 <template>
   <div class="flow-nav" data-testid="flow-nav">
     <div class="flow-nav__head">{{ t('ia2.flow.title') }}</div>
-    <!-- 旅程首页入口（层级批：双首页互链——与下者并列） -->
-    <IaJourneyEntry />
-    <!-- P5 驾驶舱概览入口（#/app/overview 三卡 landing） -->
-    <IaOverviewEntry />
-    <!-- P1 审批收件箱入口（待审计数徽标；自含轮询） -->
-    <InboxNavEntry />
-    <!-- 治理中心入口（六闸工件+待裁决徽标；自含轮询） -->
-    <GovernanceNavEntry />
-    <!-- 评测工作台入口（M2；features.eval 门控，VITE_CUSTOM_EVAL=true 开） -->
-    <EvalNavEntry v-if="features.eval" />
-    <!-- 本体工作台入口（GB/T 48000.3 方法论；features.ontology 默认开） -->
-    <OntologyNavEntry v-if="features.ontology" />
-    <SkillgovNavEntry v-if="features.skillgov" />
-    <!-- 流程架构工作台入口（企业级 BPA 方法论；features.bpa 默认开） -->
-    <BpaNavEntry v-if="features.bpa" />
-    <AccountsNavEntry />
+    <!-- 2026-10-18 左侧栏批：常用入口/六阶段/专题/账户统一移入壳级 IaSideNav；
+         工作台左栏只保留「会话列表 + 过滤/排序/分组」本域内容，避免双导航重复。 -->
 
     <div class="flow-nav__filters" data-testid="flow-filters">
       <button
