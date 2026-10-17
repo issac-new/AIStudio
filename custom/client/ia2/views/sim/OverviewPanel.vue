@@ -19,6 +19,7 @@ import SimDualCredential from '../../components/sim/SimDualCredential.vue'
 import SimGateBadge from '../../components/sim/SimGateBadge.vue'
 import SimCompensatedTag from '../../components/sim/SimCompensatedTag.vue'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
+import { LAST_RUN_KEY } from '../../composables/useRunContext'
 
 const route = useRoute()
 const router = useRouter()
@@ -124,7 +125,7 @@ async function load(): Promise<void> {
   ]
   try {
     runState.value = await main
-    localStorage.setItem('ia2.lastRun', run)
+    localStorage.setItem(LAST_RUN_KEY, run)
   } catch (e) {
     runState.value = null
     loadError.value = (e as Error).message

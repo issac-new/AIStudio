@@ -56,8 +56,9 @@ export function areaForPath(path: string): IaAreaKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage2'
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage3'
+  // 与 nav-centers.centerForPath 同步：仿真中心归④开发、治理中心归⑥治理
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
+  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
   if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
   if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
   if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（①高亮）

@@ -4,6 +4,7 @@
      表单本体在各设置页不复制（合并铁律）。分区说明常驻；superAdmin 条目对
      非管理员不可见（两项 C9 验收门）。 -->
 <script setup lang="ts">
+import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -29,6 +30,7 @@ function go(name: string): void {
 
 <template>
   <div class="gs" data-testid="gs-page">
+  <IaBreadcrumb />
   <TabIntroBanner tab="gov-settings" />
     <header class="gs__head">
       <h2 class="gs__title">系统设置</h2>

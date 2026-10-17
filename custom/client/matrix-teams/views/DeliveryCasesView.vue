@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IaBreadcrumb from '@/custom/ia2/components/IaBreadcrumb.vue'
 import TabIntroBanner from '@/custom/ia2/components/TabIntroBanner.vue'
 // 交付案例面板（M2，分布式设计 §7 协作场景）：案例列表 → 阶段条 P1-P6 → 门禁灯
 // G1-G6 → 证据抽屉（gate 事件详情：evidence/decidedBy/reason/at）。数据来自
@@ -98,6 +99,7 @@ function openRoom(roomId: string) {
 
 <template>
   <div class="delivery-cases">
+  <IaBreadcrumb />
   <TabIntroBanner tab="cases" />
     <div class="head">
       <h2>{{ $t('ia2.delivery.title') }}</h2>

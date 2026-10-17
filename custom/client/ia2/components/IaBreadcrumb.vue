@@ -75,13 +75,14 @@ const crumbs = computed<Crumb[]>(() => {
   const simKey = SIM_TAB_LABEL[name]
   if (simKey || short === 'simOrchestration' || short === 'simSettings') {
     out.push({ label: sim.value.shellTitle, to: { name: 'ia2.sim' } })
-    out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
+    // 中心根路径不再追加默认签段：旅程＞仿真中心 已经说清位置（签级才加第三段）
+    if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
   const govKey = GOV_TAB_LABEL[name]
   if (govKey || short === 'govSettings' || short === 'govModelProviders') {
     out.push({ label: gov.value.shellTitle, to: { name: 'ia2.governance' } })
-    out.push({ label: govKey ? String(gov.value[govKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
+    if (name !== 'ia2.governance') out.push({ label: govKey ? String(gov.value[govKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
   const page = PAGE_LABEL[short]

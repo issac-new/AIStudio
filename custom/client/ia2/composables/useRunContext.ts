@@ -7,7 +7,7 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-const LAST_RUN_KEY = 'ia2.lastRun'
+export const LAST_RUN_KEY = 'ia2.lastRun'
 
 export function useRunContext() {
   // 无路由上下文（嵌板测试态）兜底：useRoute 可能返回 undefined（IaOverviewEntry 先例）
