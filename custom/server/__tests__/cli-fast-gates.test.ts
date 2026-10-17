@@ -112,13 +112,17 @@ describe('kanbanTaskFast404 — 看板任务快 404 闸（D4）', () => {
     db.close()
     const mw = createKanbanTaskFast404({ cliRoot: () => root })
     try {
-      // 主库查 t_sw1 → 查无 → 404
-      const c1 = mkCtx('/api/hermes/kanban/t_sw1')
-      expect((await run(mw, c1))).not.toHaveBeenCalled()
-      expect((c1 as unknown as { status: number }).status).toBe(404)
+      // 主库查 t_sw1（在分板 swarm）→ 本板查无但全板存在 → 放行交控制器跨板解析
+      // （2026-10-17 回归：曾在此秒回 404，抽屉「看得见卡点开 404」）
+      const next1 = await run(mw, mkCtx('/api/hermes/kanban/t_sw1'))
+      expect(next1).toHaveBeenCalledTimes(1)
       // 指定 board=swarm → 存在 → 放行
       const next2 = await run(mw, mkCtx('/api/hermes/kanban/t_sw1', 'GET', { board: 'swarm' }))
       expect(next2).toHaveBeenCalledTimes(1)
+      // 全板都不存在 → 仍快 404
+      const c3 = mkCtx('/api/hermes/kanban/t_bogus_all')
+      expect((await run(mw, c3))).not.toHaveBeenCalled()
+      expect((c3 as unknown as { status: number }).status).toBe(404)
       // 穿越形态 board 不作为路径参与（安全：不落入文件系统）
       const next3 = await run(mw, mkCtx('/api/hermes/kanban/t_exists1', 'GET', { board: '../../etc' }))
       expect(next3).toHaveBeenCalledTimes(1)
