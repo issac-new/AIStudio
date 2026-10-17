@@ -20,3 +20,10 @@
 - plugins 不做常驻 keep-warm：低频配置页，TTL 内免费已达成主要收益；常驻 python 扫描（3s/50s ≈6% 单核）不划算。SWR 保活跃期自动续期。
 - keep-warm 必须用 deps.listTasks（routes 注入的同实例）——custom require 上游路径经 symlink 解析成第二实例（实测预热填错实例、首请求仍 1.4s 的教训）；flush 同理走 patch 647 注入。
 - 中途事故如实记录：曾误用 `git stash`（upstream 树处于 detached HEAD 且含全部补丁注入态）尝试隔离实验，stash 卷走既有补丁效果，服务短暂以 HEAD 原版启动失败；`git stash pop` 即时完整恢复（三文件 M 态与缓存代码标记核对通过），无损失。教训：**upstream 注入树禁用 stash/checkout 类全文件操作，回滚只能用 patch reverse**。
+
+## D5 补充（同日晚，patch 648 + IaLegacyShell）
+
+- 现象：模型页（hermes.models 收编页）自动化判定「无限加载中」；深查后**双层真相**：①壳层存在残留 role=status「加载中」元素（空 live region 噪音），快照文本匹配被误导——以内容区渲染为准实测 5/5 稳定 ~1s 就绪；②vite dev 深模块图动态 import 偶发失败/pending 真实存在（手动 import 同 URL 18ms 成功而壳持有 pending promise 的分裂态实录）。
+- 防御（保留）：IaLegacyShell loader 15s 超时竞速→一次性整页重载（sessionStorage 防风暴）→再失败人话占位+重试；patch 648 router.onError 对原生 lazy 路由同款。
+- 事故如实记录：诊断探针两度污染——①client.ts 探针重定义 base/url 造成 vite transform PARSE_ERROR（全应用模块链挂，误判为 D5 恶化）；②移除不完全残留重复声明二次触发。均已复原并核实（fetch client.ts 200 干净）。
+- 中途树重建事故：npm run clean 在手工补丁态上 reverse 断裂→inject 半态（中段补丁丢失、kanban.ts 残缺）——按「提取全部受补丁文件→checkout HEAD→全量 inject」彻底重建，646 因生成脚本的行手术残渍（重复 return 行）重制，647/symlink/manifest 逐一对齐后服务+编译全绿。教训：**手工应用补丁后必须立即全量重放对账；生成 patch 的行手术必须往返验证**。
