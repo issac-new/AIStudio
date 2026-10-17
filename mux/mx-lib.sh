@@ -770,7 +770,7 @@ out['gateway'] = {'multiplex_profiles': True}   # 单 gateway 多路复用（方
 # 口径 2026-10-08：GLM-5.3 并发 30 / GLM-5.3-Flash 并发 50）→ 默认 30（>13 路
 # agent 扇出上限，队列不再因扇出灌满）。MX_MAX_CONCURRENT 仍可显式覆盖（设 1
 # 回滚串行闸；设 0 关闸）。回滚判据：日志再现成串 429 重试风暴。
-_mcs = os.environ.get('MX_MAX_CONCURRENT', '30').strip()
+_mcs = os.environ.get('MX_MAX_CONCURRENT', '60').strip()  # 2026-10-18 用户指令：供给通道并发上限 60（原 30 未饱和即扩）
 if _mcs.isdigit() and int(_mcs) > 0:
     out['gateway']['max_concurrent_sessions'] = int(_mcs)
 out['platforms'] = {
