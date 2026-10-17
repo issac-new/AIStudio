@@ -5,11 +5,22 @@
      挂 TasksView/仿真中心/治理中心/六阶段页签栏下方，按当前页签取词条；
      看板页不挂（用户明示可懂）。内容词条与 testid 不变。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pickTabIntros, type TabIntro } from '@/custom/ia2/i18n-tab-intros'
 
 const props = defineProps<{ tab: string }>()
+
+// 层级批（2026-10-17）：首访自动展开一次并记忆——D19 收起后导语实际等于藏起来
+// （用户实报「末端页看不懂如何使用」），首访展开兼顾「不占篇幅」与「第一次能看懂」。
+const detailsEl = ref<HTMLDetailsElement | null>(null)
+onMounted(() => {
+  const key = `ia2.tabIntroSeen:${props.tab}`
+  if (detailsEl.value && !localStorage.getItem(key)) {
+    detailsEl.value.open = true
+    localStorage.setItem(key, '1')
+  }
+})
 
 const i18nCtx = useI18n()
 const intro = computed<TabIntro | null>(() => pickTabIntros((i18nCtx as { locale?: { value?: string } })?.locale?.value)[props.tab] ?? null)
@@ -22,7 +33,7 @@ const L = computed(() => {
 </script>
 
 <template>
-  <details v-if="intro" class="tabintro" :data-testid="`tab-intro-${tab}`">
+  <details v-if="intro" ref="detailsEl" class="tabintro" :data-testid="`tab-intro-${tab}`">
     <summary class="tabintro__sum" :data-testid="`tab-intro-toggle-${tab}`">{{ L.sum }}</summary>
     <div class="tabintro__body">
       <span class="tabintro__seg"><b class="tabintro__k">{{ L.what }}</b>{{ intro.what }}</span>

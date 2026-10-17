@@ -3,6 +3,7 @@
      L1-L5 成熟度自检 · 八工程原语对账。分区无内部导航（单层页签纪律）；
      各板块自取数（/api/harness/*）、失败态自管、缺席如实降级。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CapabilityCatalogSection from '@/custom/governance/components/CapabilityCatalogSection.vue'
@@ -29,6 +30,7 @@ const L = computed(() => {
 
 <template>
   <div class="ia-area gov-view" data-testid="ia-tasks-panel-gov-harness">
+  <TabIntroBanner tab="gov-harness" />
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovHarness }}</h2>

@@ -3,6 +3,7 @@
      收件箱式待审列表（agent 命令请求 + 看板评审卡）+ 审批历史。
      右上角关闭钮回到沟通协作工作台（与看板页一致动线）。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
@@ -11,13 +12,21 @@ import GatekeeperSection from '../components/inbox/GatekeeperSection.vue'
 const { t } = useI18n()
 const router = useRouter()
 
+// 动线批（2026-10-17）：关闭钮回来源——此前固定回工作台，从阶段 5 审批待办
+// 等处进入后「关闭」落到别处；有来路（本会话内发生过导航）则 history 回退。
+function closeGoBack(fallback: () => void): void {
+  if (window.history.length > 1) router.back()
+  else fallback()
+}
+
 function closeInbox(): void {
-  void router.push({ name: 'ia2.collab' })
+  closeGoBack(() => { void router.push({ name: 'ia2.collab' }) })
 }
 </script>
 
 <template>
   <div class="ia-area ia-inbox">
+  <TabIntroBanner tab="inbox" />
     <div class="ia-inbox__bar">
       <h2 class="ia-inbox__title">{{ t('approvals.pageTitle') }}</h2>
       <button

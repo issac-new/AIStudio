@@ -3,11 +3,14 @@
      时间线，只读零写。数据=GET /api/hermes/sim/journal（run 必填+tail 缺省 50）；
      任一行点击→锚点抽屉展开 journal 原行（下钻与报告每步四段同构的界面侧）。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchJournal, organizeJournal, type JournalLine, type OrganizedJournal } from '../../api/supervision'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
+import { useRouter } from 'vue-router'
+import { useRunContext } from '../../composables/useRunContext'
 
-const run = ref('')
+const router = useRouter()
+const { run, remember } = useRunContext()
 const tail = ref(50)
 const loading = ref(false)
 const loadError = ref('')
@@ -36,6 +39,7 @@ async function load(): Promise<void> {
     const res = await fetchJournal(r, Math.max(1, Math.min(1000, Number(tail.value) || 50)))
     organized.value = organizeJournal(res.lines)
     source.value = res.source
+    remember()
   } catch (e) {
     organized.value = null
     loadError.value = (e as Error).message
@@ -43,6 +47,9 @@ async function load(): Promise<void> {
     loading.value = false
   }
 }
+
+// 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
+onMounted(() => { if (run.value.trim()) void load() })
 </script>
 
 <template>
@@ -58,7 +65,10 @@ async function load(): Promise<void> {
     </div>
 
     <p v-if="loadError" class="sup__error" data-testid="sup-error">{{ loadError }}</p>
-    <p v-else-if="!organized" class="sup__hint">输入运行目录名读取观察窗 journal——主管不翻 agent.log 即可回答「现在卡在哪、谁没动」。</p>
+    <div v-else-if="!organized" class="sup__hint" data-testid="sup-empty">
+      <p>输入运行目录名读取观察窗 journal——主管不翻 agent.log 即可回答「现在卡在哪、谁没动」。</p>
+      <button type="button" class="sup__goto" data-testid="sup-goto-overview" @click="router.push({ name: 'ia2.sim' })">不知道目录名？去运行总览选取 →</button>
+    </div>
     <p v-else-if="source" class="sup__src" :data-testid="'sup-src'">数据源：{{ source }}</p>
 
     <div v-if="organized" class="sup__grid">
@@ -144,6 +154,7 @@ async function load(): Promise<void> {
 }
 .sup__btn { cursor: pointer; &:disabled { opacity: 0.4; } }
 .sup__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
+.sup__goto { border: none; background: transparent; padding: 2px 0; color: var(--accent-primary); cursor: pointer; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .sup__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .sup__src { color: var(--text-muted); font-size: 11px; margin: 0; font-family: var(--font-mono); }
 .sup__grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }

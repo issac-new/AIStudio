@@ -1,8 +1,9 @@
 <!-- overlay/custom/client/ia2/views/sim/SimSettingsView.vue -->
 <!-- 推演设置页（B8 工单，设计正本 E28 四区）：姿态缺省/观察窗节奏/清偿门策略/
      审批升级超时。读写 simcenter 设置对；客户端提示值域但校验正身在服务端
-     （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回推演中心。 -->
+     （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回仿真中心。 -->
 <script setup lang="ts">
+import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
@@ -51,9 +52,10 @@ onMounted(() => { void load() })
 
 <template>
   <div class="sst" data-testid="sst-page">
+  <TabIntroBanner tab="sim-settings" />
     <header class="sst__head">
       <h2 class="sst__title">推演设置</h2>
-      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim' })">返回推演中心</button>
+      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim' })">返回仿真中心</button>
     </header>
 
     <p v-if="loadError" class="sst__error" data-testid="sst-error">{{ loadError }}</p>
