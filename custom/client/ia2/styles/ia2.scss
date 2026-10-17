@@ -22,7 +22,7 @@
 }
 /* WCAG 1.4.11：表单控件边框是识别输入区的必要视觉信息，需 ≥3:1（2026-10-18
  * 实测旧 --border-color 仅 1.26-1.53；按钮由文字标识，不在此列）。 */
-.ia-shell input, .ia-shell select, .ia-shell textarea { border-color: var(--ia-border-control); }
+.ia-shell input, .ia-shell select, .ia-shell textarea { --border-color: var(--ia-border-control); border-color: var(--ia-border-control); }
 
 .ia-shell {
   display: flex;

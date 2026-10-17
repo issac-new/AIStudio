@@ -110,7 +110,7 @@ const pageKey = computed(() => String(route.name ?? ''))
 /* overflow:clip 防编程性滚动上探（同 ia2.scss .ia-shell 2026-10-03 回归实锤）。 */
 .ia-lshell { height: calc(100 * var(--vh, 1vh)); display: flex; flex-direction: column; overflow: clip; background: var(--bg-primary); color: var(--text-primary); --text-secondary: #555; --text-secondary-rgb: 85, 85, 85; --text-muted: #666; --text-muted-rgb: 102, 102, 102; --ia-border-control: #8a8a8a; }
 .dark .ia-lshell { --text-secondary: #a0a0a0; --text-secondary-rgb: 160, 160, 160; --text-muted: #9a9a9a; --text-muted-rgb: 154, 154, 154; --ia-border-control: #808080; }
-.ia-lshell input, .ia-lshell select, .ia-lshell textarea { border-color: var(--ia-border-control); }
+.ia-lshell input, .ia-lshell select, .ia-lshell textarea { --border-color: var(--ia-border-control); border-color: var(--ia-border-control); }
 .ia-lshell__main { flex: 1; min-height: 0; display: flex; }
 .ia-lshell__content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 </style>
