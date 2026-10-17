@@ -39,7 +39,7 @@ import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceMod
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import { useKanbanStore } from '@/stores/hermes/kanban'
-import { listBoards, listTasks } from '@/api/hermes/kanban'
+import { getTask, listBoards, listTasks } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
 import { useKeyBinding } from '../components/IdeKeymapCard.vue'
@@ -85,6 +85,14 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
   if (inStore) {
     briefingTaskResolved.value = inStore as typeof briefingTaskResolved.value
     return
+  }
+  // 回归轮 R7（提速）：先一发 getTask 让服务端跨板解析/快 404 闸判死活——
+  // ghost 任务毫秒级判死（逐板 listTasks 是串行 CLI 调用，16 板可等近分钟）；
+  // 任务存在则继续原逐板流程（需命中板 slug 同步看板上下文）。
+  try {
+    await getTask(id)
+  } catch {
+    return // 判死：交由外层 briefingMiss 收起抽屉
   }
   try {
     const boards = (await listBoards()).map(b => b.slug).filter(Boolean) as string[]

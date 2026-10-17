@@ -41,9 +41,11 @@ vi.mock('@/stores/hermes/kanban', () => ({
 }))
 const listBoardsMock = vi.fn()
 const listTasksMock = vi.fn()
+const getTaskMock = vi.fn()
 vi.mock('@/api/hermes/kanban', () => ({
   listBoards: (...a: unknown[]) => listBoardsMock(...a),
   listTasks: (...a: unknown[]) => listTasksMock(...a),
+  getTask: (...a: unknown[]) => getTaskMock(...a),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
 vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: () => ({ scheduleOpen: false, openSchedule: () => {}, closeSchedule: () => {} }) }))
@@ -79,6 +81,7 @@ describe('ide?task= 深链自动展开简报', () => {
     kanbanState.selectedBoard = 'default'
     listBoardsMock.mockReset().mockResolvedValue([{ slug: 'default' }])
     listTasksMock.mockReset().mockResolvedValue([])
+    getTaskMock.mockReset().mockImplementation(async () => { throw new Error('404') })
   })
   afterEach(() => {
     activeWrapper?.unmount()
@@ -100,18 +103,20 @@ describe('ide?task= 深链自动展开简报', () => {
     expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
   })
 
-  it('跨板深链未即时命中：抽屉仍展开走空态+兜底重试（不因解析慢而收起）', async () => {
-    routeState.query = { task: 't_ghost' }
+  it('解析慢（getTask 悬挂）：抽屉仍展开走空态（不因解析慢而收起）', async () => {
+    let release: (() => void) | null = null
+    getTaskMock.mockImplementation(() => new Promise(resolve => { release = () => resolve({ task: { id: 't_slow' } }) }))
+    routeState.query = { task: 't_slow' }
     mountShell()
+    await new Promise(r => setTimeout(r, 50))
     expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(true)
-    // 兜底重试链路触发（跨板解析被调用）
-    await vi.waitFor(() => expect(listTasksMock).toHaveBeenCalled())
+    release?.()
   })
 
-  it('深链任务全板不存在：解析完成后抽屉自动收起（回归轮 R7——空抽屉常开盖住右栏页签）', async () => {
+  it('深链任务全板不存在：getTask 快 404 判死，抽屉自动收起（回归轮 R7——空抽屉常开盖住右栏页签）', async () => {
     routeState.query = { task: 't_nosuch' }
     mountShell()
-    await vi.waitFor(() => expect(listTasksMock).toHaveBeenCalled())
+    await vi.waitFor(() => expect(getTaskMock).toHaveBeenCalledWith('t_nosuch'))
     await vi.waitFor(() => {
       expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
     })
