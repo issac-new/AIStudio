@@ -27,6 +27,9 @@ import 'katex/dist/katex.min.css'
 //   hermes_locale:<username>，否则共享键），后续启动直读。判「已选过」必须枚举
 //   两类键：持久会话下 switchLocale 只落账户键、共享键恒空，若只查共享键则每次
 //   启动都强制 zh，账户键里的显式选择（如 en）被反复覆写。
+// 初始语言切换会 setLocaleMessage 重建 zh 词条树（首次启动无偏好、系统语言非 zh
+// 时必然发生）；术语覆盖必须等它完成后再合并，否则会被后到的重建抹掉。
+let localeReady: Promise<void> = Promise.resolve()
 {
   const savedBrightness = localStorage.getItem('hermes_brightness')
   if (savedBrightness === null || savedBrightness === 'system') {
@@ -38,7 +41,10 @@ import 'katex/dist/katex.min.css'
     if (k === 'hermes_locale' || k?.startsWith('hermes_locale:')) { hasLocalePref = true; break }
   }
   if (!hasLocalePref) {
-    void import('@/i18n').then(({ switchLocale }) => switchLocale('zh'))
+    localeReady = import('@/i18n')
+      .then(({ switchLocale }) => switchLocale('zh'))
+      .then(() => undefined)
+      .catch(() => undefined)
   }
 }
 
@@ -118,6 +124,9 @@ app.use(createPinia())
 // app.use(i18n) 仍先于 app.use(router)/mount。
 const i18nInstalled = i18nReady.then(async (i18n) => {
   app.use(i18n)
+  // 等首次启动的语言切换落地（switchLocale 会 setLocaleMessage 重建词条树）——
+  // 2026-10-17 实测：不等待时术语覆盖先合并、重建后到，注意力条退回英文旧词。
+  await localeReady
   // D18 Tier-2 术语覆盖（2026-10-17 设计正本 §5.5）：上游 locale 树（patch 473
   // 注入）里的非标准词运行时改写——禁 inject 期改补丁不生效只制造漂移，故走
   // mergeLocaleMessage。深合并不动其余键；en 侧本就是标准词不动。
