@@ -86,7 +86,7 @@ function goStep(st: SetupStep): void {
       <p v-if="loadError" class="stg__error">{{ loadError }}</p>
     </header>
     <TabIntroBanner :tab="meta.key" />
-    <!-- ①搭建：五步骤有序清单（0→1 搭建旅程） -->
+    <!-- ①搭建：五步骤有序清单（D19 收敛：单行步骤，判据与挂账注解转悬停提示） -->
     <section v-if="stage === 1" class="stg__steps" data-testid="stg-steps-1">
       <ol class="stg__step-list">
         <li
@@ -95,19 +95,14 @@ function goStep(st: SetupStep): void {
           class="stg__step"
           :class="`stg__step--${stepState(st)}`"
           :data-testid="`stg-step-${st.key}`"
+          :title="`完成判据：${st.criteria}${st.note ? `（${st.note}）` : ''}`"
         >
           <span class="stg__step-no">{{ st.no }}</span>
-          <div class="stg__step-body">
-            <div class="stg__step-head">
-              <span class="stg__step-name">{{ st.name }}</span>
-              <span class="stg__step-state" :data-testid="`stg-step-state-${st.key}`">
-                {{ stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始' }}
-              </span>
-            </div>
-            <p class="stg__step-purpose">{{ st.purpose }}</p>
-            <p class="stg__step-criteria">完成判据：{{ st.criteria }}</p>
-            <p v-if="st.note" class="stg__step-note">{{ st.note }}</p>
-          </div>
+          <span class="stg__step-name">{{ st.name }}</span>
+          <span class="stg__step-purpose">{{ st.purpose }}</span>
+          <span class="stg__step-state" :data-testid="`stg-step-state-${st.key}`">
+            {{ stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始' }}
+          </span>
           <button
             type="button"
             class="stg__step-go"
@@ -123,13 +118,13 @@ function goStep(st: SetupStep): void {
         <KeyLedgerSection />
       </div>
       <p class="stg__more">
-        更多组织级配置（账号/智能体/环境/模型）见
         <button
           type="button"
           class="stg__more-link"
           data-testid="stg-more-settings"
+          title="账号/智能体/环境/模型等组织级配置"
           @click="go({ to: '/app/gov/settings' })"
-        >系统设置 →</button>
+        >更多配置 → 系统设置</button>
       </p>
     </section>
     <!-- ②-⑥阶段：内嵌核心操作（D14-D16 既有件保留，标题随术语表更新） -->
@@ -176,7 +171,7 @@ function goStep(st: SetupStep): void {
 </template>
 
 <style scoped lang="scss">
-.stg { display: flex; flex-direction: column; gap: 12px; padding: 20px 24px; height: 100%; overflow: auto; }
+.stg { display: flex; flex-direction: column; gap: 10px; padding: 16px 24px; height: 100%; overflow: auto; }
 .stg__head { display: flex; align-items: center; gap: 12px; }
 .stg__no { font-size: 26px; font-weight: 800; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; }
 .stg__no--done { color: var(--ia-fresh, #2e9e5b); }
@@ -187,32 +182,31 @@ function goStep(st: SetupStep): void {
 .stg__error { color: #d33; font-size: 12px; margin: 0 0 0 auto; }
 .stg__embed { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 14px; background: rgba(127, 127, 127, 0.04); }
 .stg__embed-h { margin: 0 0 10px; font-size: 13px; }
-.stg__steps { display: flex; flex-direction: column; gap: 12px; }
-.stg__step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stg__steps { display: flex; flex-direction: column; gap: 10px; }
+.stg__step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .stg__step {
-  display: flex; align-items: flex-start; gap: 12px;
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 7px 12px;
   background: transparent;
   &--done { border-left: 3px solid var(--ia-fresh, #2e9e5b); }
   &--active { border-left: 3px solid var(--ia-stale, #b8860b); background: color-mix(in srgb, var(--ia-stale, #b8860b) 5%, transparent); }
   &--pending, &--untracked { border-left: 3px solid var(--border-color, #e5e7eb); }
 }
-.stg__step-no { font-size: 18px; font-weight: 800; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; min-width: 20px; }
+.stg__step-no { font-size: 14px; font-weight: 800; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums; min-width: 16px; }
 .stg__step--done .stg__step-no { color: var(--ia-fresh, #2e9e5b); }
 .stg__step--active .stg__step-no { color: var(--ia-stale, #b8860b); }
-.stg__step-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.stg__step-head { display: flex; align-items: baseline; gap: 8px; }
-.stg__step-name { font-size: 13px; font-weight: 600; }
-.stg__step-state { margin-left: auto; font-size: 11px; color: var(--text-muted, #878c99); }
+.stg__step-name { font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.stg__step-purpose {
+  flex: 1 1 auto; min-width: 0; font-size: 11.5px; color: var(--text-muted, #878c99);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stg__step-state { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #878c99); }
 .stg__step--done .stg__step-state { color: var(--ia-fresh, #2e9e5b); }
 .stg__step--active .stg__step-state { color: var(--ia-stale, #b8860b); font-weight: 600; }
-.stg__step-purpose { margin: 0; font-size: 12px; line-height: 1.6; }
-.stg__step-criteria { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
-.stg__step-note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
 .stg__step-go {
   border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6)); border-radius: 6px;
   background: transparent; color: var(--accent-primary, var(--color-primary, #3b82f6));
-  font-size: 12px; padding: 5px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  font-size: 12px; padding: 4px 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
   &:hover { background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #3b82f6)) 12%, transparent); }
   &:disabled { border-color: var(--text-muted, #878c99); color: var(--text-muted, #878c99); cursor: not-allowed; }
 }
