@@ -1,0 +1,106 @@
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -52,8 +52,46 @@
+   })
+ }
+ function execKanbanCli(args: readonly string[], options?: ExecFileOptions) {
+-  return runQueuedKanbanExec(() => execHermes(args, options))
+-}
++  // HERMES_CUSTOM[ListTasksCache] BEGIN: 单板任务列表 TTL 缓存的写失效咽喉。
++  // 仅 'list' 子命令是缓存的读源；其余子命令（create/update/dispatch 等写操作，
++  // 以及 boards/stats 等本就无 service 缓存的读）一律落定即清——误清只损性能
++  // 不损正确性，漏清才会钉住陈旧列表。板事件（agent 侧写）由 command-post
++  // onBoardEvent 调 flushKanbanListTasksCache 失效。
++  const subcommand = (() => {
++    let skipNext = false
++    const words: string[] = []
++    for (const a of args) {
++      if (skipNext) { skipNext = false; continue }
++      if (a === '--board' || a === '--profile') { skipNext = true; continue }
++      if (a.startsWith('--')) continue
++      words.push(a)
++    }
++    return words[1] ?? ''
++  })()
++  const isList = subcommand === 'list'
++  const run = runQueuedKanbanExec(() => execHermes(args, options))
++  if (isList) return run
++  return run.then(result => {
++    flushKanbanListTasksCache()
++    return result
++  }, err => {
++    flushKanbanListTasksCache()
++    throw err
++  })
++}
++// HERMES_CUSTOM[ListTasksCache] BEGIN: 单板任务列表 service 层 TTL 缓存
++// （2026-10-17 回归轮性能批）。HTTP 层 kanbanReadCache 已治「反复拉」，但每个
++// 用户键的首次回源仍是一次 CLI spawn（~1.8s，旧看板页/单板链首载主因）；
++// service 层按「板+过滤项」键控跨用户共享，CLI 输出原样缓存（零形状漂移）。
++// TTL 15s；写路径经 execKanbanCli 咽喉全量失效；板事件由 command-post 失效。
++const LIST_TASKS_CACHE_TTL_MS = 60_000
++const listTasksCache = new Map<string, { expiresAt: number; data: KanbanTask[] }>()
++const listTasksRefreshing = new Set<string>()
++
++export function flushKanbanListTasksCache(): void {
++  listTasksCache.clear()
++}
++// HERMES_CUSTOM[ListTasksCache] END
+ // HERMES_CUSTOM[kanban-exec-queue] END
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+ const NO_WORKER_LOG_PATTERNS = [
+@@ -603,13 +641,28 @@
+   if (opts?.assignee) args.push('--assignee', opts.assignee)
+   if (opts?.tenant) args.push('--tenant', opts.tenant)
+ 
++  // HERMES_CUSTOM[ListTasksCache] BEGIN
++  const cacheKey = JSON.stringify([normalizeBoardSlug(opts?.board), opts?.status ?? '', opts?.assignee ?? '', opts?.tenant ?? '', opts?.includeArchived === true])
++  const hit = listTasksCache.get(cacheKey)
++  if (hit && hit.expiresAt > Date.now()) {
++    // SWR：剩余寿命 < 一半 → 后台续期（访问驱动保温），当前请求返回旧值
++    if (hit.expiresAt - Date.now() < LIST_TASKS_CACHE_TTL_MS / 2) {
++      void refreshListTasksCache(cacheKey, args).catch(() => { /* 后台续期失败：旧值照常服务 */ })
++    }
++    return hit.data
++  }
++  // HERMES_CUSTOM[ListTasksCache] END
++
+   try {
+     const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+     })
+-    return JSON.parse(stdout)
++    const parsed = JSON.parse(stdout)
++    // HERMES_CUSTOM[ListTasksCache] BEGIN
++    listTasksCache.set(cacheKey, { expiresAt: Date.now() + LIST_TASKS_CACHE_TTL_MS, data: parsed })
++    // HERMES_CUSTOM[ListTasksCache] END
+     return parsed
+   } catch (err: any) {
+     logger.error(err, 'Hermes CLI: kanban list failed')
+@@ -617,6 +670,24 @@
+   }
+ }
+ 
++// HERMES_CUSTOM[ListTasksCache] BEGIN: 后台续期（single-flight 防重入）
++async function refreshListTasksCache(cacheKey: string, args: readonly string[]): Promise<void> {
++  if (listTasksRefreshing.has(cacheKey)) return
++  listTasksRefreshing.add(cacheKey)
++  try {
++    const { stdout } = await execKanbanCli([...args], {
++      maxBuffer: 50 * 1024 * 1024,
++      timeout: 30000,
++      ...execOpts,
++    })
++    listTasksCache.set(cacheKey, { expiresAt: Date.now() + LIST_TASKS_CACHE_TTL_MS, data: JSON.parse(stdout) })
++  } catch {
++    // 续期失败保留旧值（下一拍重试）
++  } finally {
++    listTasksRefreshing.delete(cacheKey)
++  }
++}
++// HERMES_CUSTOM[ListTasksCache] END
+ 
+ export async function getTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanTaskDetail | null> {
+   try {
