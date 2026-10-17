@@ -576,7 +576,9 @@ uat_evidence_body 1790930955`, root)
     // ②派发词门控：MX_ACP_BACKEND=1 时 DEV 派发词注入后端段（缺省关=保真对照）
     expect(scen).toContain('MX_ACP_BACKEND')
     expect(scen).toContain('【编码后端=delegate】')
-    const wired = (scen.match(/结论行 DEV-DONE-[A-Za-z${}-]+。\$\{ACP_NOTE\}/g) || []).length
+    // 2026-10-18 跨段防御批（c618338）：${ACP_NOTE} → ${ACP_NOTE:-}（驱动重启跳过
+    // devimpl 段后 set -u 判 unbound 二次崩溃根治）——断言随迁， :- 形态同样计 wired
+    const wired = (scen.match(/结论行 DEV-DONE-[A-Za-z${}-]+。\$\{ACP_NOTE(?::-)?\}/g) || []).length
     expect(wired).toBe(5) // PAYCORE-C/S/N+渠道双路(task)+MP
     // ③G3 后端指纹真查：启用时分支须含 materials/delegate-log.txt（缺=记单）
     expect(scen).toContain('acp-backend-delegate-log-missing')
@@ -1488,7 +1490,8 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('驱动 ERR trap：静默 rc=1 断根诊断（set -E + trap ERR 落行号命令）', () => {
     const s = read(SCEN)
     expect(s).toContain('set -euEo pipefail')
-    expect(s).toContain('驱动异常退出 rc=$rc')
+    // 2026-10-18 花括号化批（2c748a7）：rc=$rc → rc=${rc}（bash3.2 全角标点吞名根治）
+    expect(s).toContain('驱动异常退出 rc=${rc}')
     expect(s).toContain('BASH_COMMAND:0:160')
     expect(s).toContain('BASH_SUBSHELL')  // 子壳良性失败不刷异常退出噪音（run16 首跑实锤）
   })
