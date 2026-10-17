@@ -20,6 +20,9 @@ const loading = ref(true)
 const saving = ref(false)
 const problems = ref<string[]>([])
 const savedNote = ref('')
+// 装载失败态：空表单不可当有效基线保存——否则 providers:[] 会过服务端校验并
+// 写穿清空引擎模型目录（2026-10-18 审计轮：onMounted 无 catch，装载拒绝被静默）
+const loadError = ref('')
 
 const routeOptions = computed(() => {
   const out: Array<{ value: string; label: string }> = []
@@ -53,6 +56,8 @@ onMounted(async () => {
     routeEconomy.value = refOf(body.config?.route?.economy)
     routeStandard.value = refOf(body.config?.route?.standard)
     routePower.value = refOf(body.config?.route?.power)
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }
@@ -67,6 +72,8 @@ function removeModel(i: number, j: number): void { rows.value[i]?.models.splice(
 
 async function save(): Promise<void> {
   if (saving.value) return
+  // 装载失败态禁存：rows 停留 [] 的空表单不是有效基线（保存=清空引擎模型目录）
+  if (loadError.value) return
   saving.value = true
   problems.value = []
   savedNote.value = ''
@@ -117,6 +124,9 @@ async function save(): Promise<void> {
     <h3 class="gmp__title">模型服务商目录（组织级）</h3>
     <p class="gmp__sub">IDE 引擎模型目录的统一入口——provider、baseURL、密钥环境变量名与模型清单；apiKeyEnv 只填环境变量名，不存值。</p>
     <div v-if="loading" class="gmp__state">载入中…</div>
+    <div v-else-if="loadError" class="gmp__state" data-testid="gmp-load-error">
+      目录装载失败：{{ loadError }}（此时不可保存——空目录写穿会清空引擎模型配置；请检查服务后重进页面）
+    </div>
     <template v-else>
       <div v-for="(p, i) in rows" :key="i" class="gmp__provider" :data-testid="`gmp-provider-${i}`">
         <div class="gmp__row">
