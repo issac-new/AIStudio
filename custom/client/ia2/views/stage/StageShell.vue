@@ -61,10 +61,14 @@ function stepState(st: SetupStep): StepState {
   return firstPending?.key === st.key ? 'active' : 'pending'
 }
 function go(t: StageTool | { to: string }): void {
-  void router.push(t.to)
+  // 带上来路阶段：工具卡落点多为跨阶段复用的中心/末端页，顶栏按来路高亮
+  void router.push({ path: t.to, query: { from: String(meta.value.no) } })
 }
 function goStep(st: SetupStep): void {
-  void router.push(st.target)
+  const target = st.target
+  const from = String(meta.value.no)
+  if (typeof target === 'string') void router.push({ path: target, query: { from } })
+  else void router.push({ ...target, query: { ...(target.query ?? {}), from } })
 }
 </script>
 

@@ -66,11 +66,13 @@ describe('JourneyView — D18 旅程式旅程首页', () => {
     w.unmount()
   })
 
-  it('卡片点击直达真实路由（团队管理/治理阶段）', async () => {
+  it('卡片点击直达真实路由（团队管理/治理阶段），搭建步带来路阶段①', async () => {
     const { w, router } = await mountAt('/app')
     await w.find('[data-testid="jrn-step-3"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.teams')
+    // 减负批：A 区步骤统一带 from=1，落点页顶栏高亮按搭建语境（团队/账号/环境跨阶段复用）
+    expect(router.currentRoute.value.query.from).toBe('1')
     await w.find('[data-testid="jrn-stage-6"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.stage6')

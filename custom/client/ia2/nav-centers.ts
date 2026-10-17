@@ -68,6 +68,28 @@ export function centerForPath(path: string): CenterKey | null {
   return null
 }
 
+/**
+ * 来源阶段上下文（query.from）：从旅程页/阶段页进入中心页或末端页时带上
+ * 「我从哪个阶段来」。同一页面可在不同阶段语境下服务不同阶段（如组织与资产
+ * 既服务①搭建也服务⑥治理），纯路径归属只能二选一，必然有一边高亮错。
+ * 非法/越界值忽略，回退路径归属。
+ */
+export function stageKeyFromQuery(from: unknown): CenterKey | null {
+  const raw = Array.isArray(from) ? from[0] : from
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= 1 && n <= 6 ? (`stage${n}` as CenterKey) : null
+}
+
+/** 顶栏当前阶段：来路上下文优先，其次页面自身归属 */
+export function activeStageForRoute(path: string, from: unknown): CenterKey | null {
+  return stageKeyFromQuery(from) ?? centerForPath(path)
+}
+
+/** 生成保留来路阶段的 query（非法值返回 undefined，不把脏参数写进 URL） */
+export function stageContextQuery(from: unknown): Record<string, string> | undefined {
+  return stageKeyFromQuery(from) ? { from: String(from) } : undefined
+}
+
 /** 岛屿入口（顶栏右侧收纳；路由既有，功能开关由挂载方按 featureKey 门控）。
  *  字段名用 name（vue-router 跳转目标，与 CenterNavMeta.name 同语义）——
  *  i18n 覆盖守门按 `name: 'ia2.*'` 语境豁免路由名，非文案键不进词表。 */

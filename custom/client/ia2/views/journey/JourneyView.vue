@@ -71,7 +71,10 @@ function submitRun(): void {
   void router.replace({ query: { ...route.query, run: r } })
 }
 function goStep(st: SetupStep): void {
-  void router.push(st.target)
+  // 来路阶段①：账号/环境等落点页跨阶段复用，顶栏高亮按搭建语境而非路径归属
+  const target = st.target
+  if (typeof target === 'string') void router.push({ path: target, query: { from: '1' } })
+  else void router.push({ ...target, query: { ...(target.query ?? {}), from: '1' } })
 }
 function goStage(no: number): void {
   void router.push({ name: `ia2.stage${no}` as 'ia2.stage2' })

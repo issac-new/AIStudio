@@ -15,6 +15,7 @@ import { resolve } from 'path'
 import en from '@/i18n/locales/en'
 import zh from '@/i18n/locales/zh'
 import { buildIaRoutes } from '../ia2/routes'
+import { ISLAND_NAVS } from '../ia2/nav-centers'
 import { IA2_TERM_OVERRIDES_ZH, IA2_TERM_OVERRIDES_EN } from '../ia2/i18n-term-overrides'
 import type { RouteRecordRaw } from 'vue-router'
 
@@ -33,6 +34,10 @@ function collectRouteNames(): Set<string> {
     }
   }
   walk(buildIaRoutes())
+  // 岛屿路由（BPA/本体/评测/技能治理）由上游注册，不在 buildIaRoutes 内；
+  // 但 nav-centers.ISLAND_NAVS 以路由名消费它们（stage-attribution 按名登记归属），
+  // 与 ia2.* 文案同前缀不同语义——补进路由名集合，避免守门把路由名当缺键。
+  for (const island of ISLAND_NAVS) names.add(island.name.slice(4))
   return names
 }
 

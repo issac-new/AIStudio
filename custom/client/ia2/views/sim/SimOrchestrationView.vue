@@ -5,9 +5,11 @@
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import OrchestrationView from '../orchestration/OrchestrationView.vue'
+import { stageContextQuery } from '../../nav-centers'
 
+const route = useRoute()
 const router = useRouter()
 </script>
 
@@ -17,7 +19,7 @@ const router = useRouter()
   <TabIntroBanner tab="orchestration" />
     <header class="orc__head">
       <h2 class="orc__title">场景编排</h2>
-      <button class="orc__back" type="button" data-testid="orc-back" @click="void router.push({ name: 'ia2.sim' })">返回仿真中心</button>
+      <button class="orc__back" type="button" data-testid="orc-back" @click="void router.push({ name: 'ia2.sim', query: stageContextQuery(route.query.from) })">返回仿真中心</button>
     </header>
     <p class="orc__note" data-testid="orc-preflight-absent">
       preflight 十六项检视灯=端点未接（挂账项，随 harness 产品化实装）；启动/续跑的实际执行由 harness 侧承担，本面承载编排与发起（Q2 裁定）。
