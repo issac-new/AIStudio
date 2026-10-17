@@ -176,7 +176,7 @@ function goSupervision(): void {
           type="button"
           class="ov__lamp ov__lamp--red ov__lamp--link"
           data-testid="ov-clearance"
-          title="去治理中心·遗留项清算处理"
+          title="去⑥治理·遗留项清算处理"
           @click="router.push({ name: 'ia2.govClearance' })"
         >{{ `遗留项未清算（${runState.ledger.open} 笔待处理，禁止启动新运行）→ 去清算` }}</button>
         <span
@@ -192,7 +192,7 @@ function goSupervision(): void {
           <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">六道质量门通过（g1_frozen…report_done）</span>
         </div>
-        <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（仿真中心·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">
+        <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（⑤验收·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">
           <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
           <span class="ov__kpi-label">分支交付（已推 origin feat）</span>
           <span v-if="branchesError" class="ov__kpi-absent">端点缺席：{{ branchesError }}</span>
@@ -273,7 +273,7 @@ function goSupervision(): void {
             </tbody>
           </table>
 
-          <h4 class="ov__h ov__h--link" title="去仿真中心·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
+          <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run: runQuery } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
           <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
@@ -297,7 +297,7 @@ function goSupervision(): void {
             <h4 class="ov__h">六道质量门</h4>
             <p v-if="issuesError" class="ov__hint" data-testid="ov-gate-rejects-absent">打回计数缺席：{{ issuesError }}</p>
             <ul class="ov__gates">
-              <li v-for="g in gateRows" :key="g.id" class="ov__gate ov__gate--link" :data-testid="`ov-gate-${g.id}`" title="查看质量门修复单（治理中心·质量门与流程）" @click="router.push({ name: 'ia2.governance' })">
+              <li v-for="g in gateRows" :key="g.id" class="ov__gate ov__gate--link" :data-testid="`ov-gate-${g.id}`" title="查看质量门修复单（⑥治理·质量门记录）" @click="router.push({ name: 'ia2.governance' })">
                 <SimGateBadge :gate="g.id" :status="g.passed ? 'pass' : 'pending'" :first-pass="g.passed && g.rejectCount === 0" :reject-count="issuesError ? null : g.rejectCount" />
                 <span v-if="g.passed" class="ov__gate-at">{{ g.at }}</span>
               </li>

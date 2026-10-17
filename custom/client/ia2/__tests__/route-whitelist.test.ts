@@ -79,6 +79,7 @@ const EXPECTED_NAMES = [
   'ia2.modelProviders',
   'ia2.runDetail',
   'ia2.runs',
+  'ia2.search',
   'ia2.shell',
   // B1（2026-10-16 推演中心壳·三中心重构波 2 首件）：六签名入账（需求冻结+
   // 详设重审通过——本快照变更即该评审的显式变更点）；ia2.runs/ia2.runDetail

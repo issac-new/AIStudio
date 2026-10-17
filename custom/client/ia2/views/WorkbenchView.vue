@@ -144,6 +144,23 @@ function endDrag(): void {
 const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
 const { loopRows } = useSitCounts()
 
+/** 会话 → 工作区（分类聚类批）：经挂接任务的 workspace_path 反查；无挂接=空。 */
+const workspaceBySession = computed<Record<string, string>>(() => {
+  const taskWs = new Map<string, string>()
+  for (const e of workspace.rawTasks ?? []) {
+    const ws = e.task?.workspace_path
+    if (typeof ws === 'string' && ws) taskWs.set(e.task.id, ws)
+  }
+  const out: Record<string, string> = {}
+  for (const s of sessionRows.value) {
+    for (const id of s.taskIds) {
+      const ws = taskWs.get(id)
+      if (ws) { out[`${s.kind}:${s.id}`] = ws; break }
+    }
+  }
+  return out
+})
+
 // R7-C agent 名册统一面：在线/忙闲/在跑（multica roster 语义）——
 // 三源合并：platforms 在线探针 + kanban assignee 在跑 + 会话挂靠。
 const agentRoster = computed(() => {
@@ -542,6 +559,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :loops="loopRows"
         :agents="agentRoster"
         :selection="activeSel"
+        :workspace-by-session="workspaceBySession"
         :loop-activity="loopActivity"
         @select="onSelect"
         @create-room="onCreateRoom"

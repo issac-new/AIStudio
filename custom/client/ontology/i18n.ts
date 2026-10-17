@@ -77,7 +77,7 @@ export const ontologyMessages = {
         taskRef: '溯源任务号（可选）',
       },
       validate: {
-        title: '校验中心',
+        title: '校验',
         run: '全量跑批',
         running: '校验中…',
         clean: '零违规',
@@ -152,7 +152,7 @@ export const ontologyMessages = {
         agentsUnit: '执行人',
         runsUnit: '运行',
         relationsUnit: '关系',
-        inboxPushed: '已推送收件箱（治理中心待裁决）',
+        inboxPushed: '已推送收件箱（治理待裁决）',
         skipped: '被契约拦下',
         skippedNone: '零拦截',
         violationsTitle: '数据契约违规（全量跑批）',

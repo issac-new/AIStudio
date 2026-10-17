@@ -1,17 +1,24 @@
 <!-- overlay/custom/client/ia2/views/sim/SimSettingsView.vue -->
 <!-- 推演设置页（B8 工单，设计正本 E28 四区）：姿态缺省/观察窗节奏/清偿门策略/
      审批升级超时。读写 simcenter 设置对；客户端提示值域但校验正身在服务端
-     （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回仿真中心。 -->
+     （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回全流程推演。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
-import { stageContextQuery } from '../../nav-centers'
 
 const route = useRoute()
 const router = useRouter()
+const backQuery = computed<Record<string, string> | undefined>(() => {
+  const q: Record<string, string> = {}
+  for (const key of ['run', 'from'] as const) {
+    const v = route.query[key]
+    if (typeof v === 'string' && v) q[key] = v
+  }
+  return Object.keys(q).length ? q : undefined
+})
 const values = ref<Required<SimSettings> | null>(null)
 const draft = ref<SimSettings>({})
 const loadError = ref('')
@@ -58,8 +65,8 @@ onMounted(() => { void load() })
   <IaBreadcrumb />
   <TabIntroBanner tab="sim-settings" />
     <header class="sst__head">
-      <h2 class="sst__title">仿真设置</h2>
-      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: stageContextQuery(route.query.from) })">返回仿真中心</button>
+      <h2 class="sst__title">推演设置</h2>
+      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>
     </header>
 
     <p v-if="loadError" class="sst__error" data-testid="sst-error">{{ loadError }}</p>

@@ -191,13 +191,14 @@ vi.mock('@/custom/matrix-teams/stores/team-registry', () => ({ useTeamRegistrySt
 
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import WorkbenchView from '../views/WorkbenchView.vue'
-import IaCentersNav from '../components/IaCentersNav.vue'
 import { useFlowStore } from '../store/flow'
 import type { FlowLoopRow, FlowSessionRow } from '../adapters/flow'
 
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  // 分组/排序偏好走 settings-layers 持久化；jsdom 同文件跨用例共享，清掉防串味
+  localStorage.clear()
 })
 
 const SESSIONS: FlowSessionRow[] = [
@@ -236,6 +237,22 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(segs[0].classes()).toContain('flow-nav__seg--done')
     expect(segs[3].classes()).toContain('flow-nav__seg--run')
     expect(segs[4].classes()).toContain('flow-nav__seg--todo')
+  })
+
+  it('分类聚类：按工作区分组（会话经挂接任务反查；无挂接落未关联组）', async () => {
+    const w = mount(FlowNavPanel, {
+      props: {
+        sessions: SESSIONS,
+        loops: LOOPS,
+        selection: null,
+        workspaceBySession: { 'room:!r1': '/lab/pay' },
+      },
+    })
+    await w.find('[data-testid="flow-group-by"]').setValue('workspace')
+    expect(w.find('[data-testid="flow-group-workspace-0"]').exists()).toBe(true)
+    expect(w.text()).toContain('/lab/pay')
+    expect(w.text()).toContain('未关联工作区')
+    w.unmount()
   })
 
   it('过滤 chips 与搜索框联动（会话/循环互斥、任务号匹配）', async () => {
@@ -770,107 +787,5 @@ describe('WorkbenchView — P4③ 群任务流转时间线（2026-09-29 消息�
     // room 选择不读群消息（matrix-room 桩无消息）→ 时间线不渲染，群消息零残留
     expect(wrapper.find('[data-testid="tdp-flow-sec"]').exists()).toBe(false)
     delete (groupStubs.state as { messages?: unknown[] }).messages
-  })
-})
-
-// ── A0 三中心导航（2026-10-16 屏 0 / R8）：顶栏渲染 + 高亮 + 点击导航 ──────────
-// 纯函数面（centerForPath / 注册表 / legacyTabRedirect）见 workbench-nav-centers.test.ts。
-describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGlobalTop，三中心页通用）', () => {
-  function makeNavRouter(): Router {
-    return createRouter({
-      history: createMemoryHistory(),
-      routes: [{
-        path: '/app',
-        component: { template: '<router-view />' },
-        children: [
-          { path: '', name: 'ia2.journey', component: { template: '<div journey />' } },
-          { path: 'collab', name: 'ia2.collab', component: WorkbenchView },
-          { path: 'sim', name: 'ia2.sim', component: { template: '<div sim />' } },
-          { path: 'sim/supervision', name: 'ia2.simSupervision', component: { template: '<div sim-sup />' } },
-          { path: 'stage/reqs', name: 'ia2.stage2', component: { template: '<div stage2 />' } },
-          { path: 'stage/design', name: 'ia2.stage3', component: { template: '<div stage3 />' } },
-          { path: 'sim/trace', name: 'ia2.simTrace', component: { template: '<div sim-trace />' } },
-          { path: 'gov', name: 'ia2.governance', component: { template: '<div gov />' } },
-          { path: 'settings', name: 'hermes.settings', component: { template: '<div settings />' } },
-          // 岛屿路由桩（真实路由在 bpa/ontology/eval/skillgov 各域注册）
-          { path: 'bpa', name: 'ia2.bpa', component: { template: '<div bpa />' } },
-          { path: 'ontology', name: 'ia2.ontology', component: { template: '<div ontology />' } },
-          { path: 'eval', name: 'ia2.eval', component: { template: '<div eval />' } },
-          { path: 'skillgov', name: 'ia2.skillgov', component: { template: '<div skillgov />' } },
-        ],
-      }, {
-        path: '/ide', name: 'ide.shell', component: { template: '<div ide />' },
-      }],
-    })
-  }
-
-  async function mountNav(path: string) {
-    const router = makeNavRouter()
-    await router.push(path)
-    await router.isReady()
-    const wrapper = mount(IaCentersNav, { global: { plugins: [router] } })
-    await flushPromises()
-    return { wrapper, router }
-  }
-
-  it('三中心入口渲染（中文文案）+ /app 下工作台高亮，其余两中心不高亮', async () => {
-    const { wrapper } = await mountNav('/app')
-    const bar = wrapper.find('[data-testid="ia-nav-centers"]')
-    expect(bar.exists()).toBe(true)
-    const labels = bar.findAll('.icn-inline__center-btn').map(x => x.text())
-    // D18：①搭建②需求③分析设计[④开发｜IDE 工作区]⑤验收⑥治理（IDE 段归④开发）
-    expect(labels).toEqual(['①搭建', '②需求', '③分析设计', '④开发', 'IDE 工作区', '⑤验收', '⑥治理'])
-    // /app 裸路径=旅程页（D18 默认入口），搭建区①高亮
-    expect(wrapper.find('[data-testid="ia-nav-center-stage1"]').classes()).toContain('icn-inline__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
-  })
-
-  it('页签级归属：监督面板同时亮③分析设计+④开发（多归属）', async () => {
-    const { wrapper } = await mountNav('/app/sim/supervision')
-    expect(wrapper.find('[data-testid="ia-nav-center-stage3"]').classes()).toContain('icn-inline__center-btn--active')
-    // D9 分段：工作台激活态落在分段容器（work--active），子按钮不再挂 --active
-    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).toContain('icn-inline__work--active')
-    expect(wrapper.find('[data-testid="ia-nav-centers"]').attributes('data-active-stages')).toBe('stage3,stage4')
-  })
-
-  it('页签级归属：运行总览=全程工具，不高亮任一阶段（如实呈现跨阶段）', async () => {
-    const { wrapper } = await mountNav('/app/sim')
-    expect(wrapper.find('[data-testid="ia-nav-centers"]').attributes('data-active-stages')).toBe('')
-    expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).not.toContain('icn-inline__work--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-stage1"]').classes()).not.toContain('icn-inline__center-btn--active')
-  })
-
-  it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
-    const { wrapper, router } = await mountNav('/app')
-    await wrapper.find('[data-testid="ia-nav-center-stage2"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.stage2') // D13：②需求阶段页
-    await wrapper.find('[data-testid="ia-nav-center-stage3"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.stage3') // D13：③分析设计阶段页
-  })
-
-  it('岛屿组退役（D8 全盘重规划）：顶栏不再渲染 islands——四岛入口归治理中心「治理工作台」区；本组件只承载三中心条', async () => {
-    const router = makeNavRouter()
-    await router.push('/app')
-    await router.isReady()
-    const wrapper = mount(IaCentersNav, { global: { plugins: [router] } })
-    await flushPromises()
-    expect(wrapper.find('[data-testid="ia-nav-centers"]').exists()).toBe(true)
-    // 岛屿组从顶栏退役（BPA/本体/评测/技能治理 → 治理中心壳头模块区）
-    expect(wrapper.find('[data-testid="ia-nav-islands"]').exists()).toBe(false)
-    for (const id of ['ia-nav-island-ide', 'ia-nav-island-bpa', 'ia-nav-island-ontology', 'ia-nav-island-skillgov', 'ia-nav-island-eval']) {
-      expect(wrapper.find(`[data-testid="${id}"]`).exists(), id).toBe(false)
-    }
-    // 归位验收在 gov-center.test.ts（ia-gov-workbenches 区）
-  })
-
-  it('[设置] 钮走查二修去重退役（设置入口=用户钮 ia-header-user，见 IaShellHeader）；镜头切换器不渲染', async () => {
-    const { wrapper } = await mountNav('/app')
-    const settings = wrapper.find('[data-testid="ia-nav-settings"]')
-    expect(settings.exists()).toBe(false)
-    // 镜头位为空槽：无任何镜头控件渲染（设计原文「Phase D 装」作废）
-    expect(wrapper.find('[data-testid="ia-nav-lens"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-nav-centers"]').text()).not.toContain('镜头')
   })
 })

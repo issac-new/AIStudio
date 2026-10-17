@@ -3,7 +3,7 @@
      时间线，只读零写。数据=GET /api/hermes/sim/journal（run 必填+tail 缺省 50）；
      任一行点击→锚点抽屉展开 journal 原行（下钻与报告每步四段同构的界面侧）。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { fetchJournal, organizeJournal, type JournalLine, type OrganizedJournal } from '../../api/supervision'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
 import { useRouter } from 'vue-router'
@@ -50,6 +50,7 @@ async function load(): Promise<void> {
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
+watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
 <template>
