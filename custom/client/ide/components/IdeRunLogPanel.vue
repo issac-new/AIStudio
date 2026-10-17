@@ -89,7 +89,7 @@ function fmtCost(c: number | null): string {
   border-radius: 4px;
 }
 .ide-runlog__row.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.04)); }
-.ide-runlog__state { color: var(--primary-color, #18a058); }
+.ide-runlog__state { color: var(--primary-color); }
 .ide-runlog__state.is-done { color: var(--text-muted); }
 .ide-runlog__id { font-family: ui-monospace, monospace; color: var(--text-muted); }
 .ide-runlog__meta { color: var(--text-muted); }

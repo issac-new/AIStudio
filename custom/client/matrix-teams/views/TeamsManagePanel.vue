@@ -184,7 +184,7 @@ onMounted(() => {
 .tmp__offline,.tmp__setup { display: flex; flex-direction: column; gap: 8px; max-width: 420px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-standard); }
 .tmp__hint { font-size: 12px; color: var(--text-secondary); }
 .tmp__input { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 4px 8px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
-.tmp__primary { border: 1px solid var(--color-primary, #3b82f6); background: var(--color-primary, #3b82f6); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 4px 14px; cursor: pointer; font-family: inherit; }
+.tmp__primary { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 4px 14px; cursor: pointer; font-family: inherit; }
 .tmp__cands { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .tmp__cand { border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: var(--radius-standard); padding: 4px 10px; cursor: pointer; font-family: inherit; text-align: left; }
 .tmp__head { display: flex; align-items: baseline; gap: 10px; }
@@ -199,20 +199,20 @@ onMounted(() => {
 .tmp__account-line1 { display: flex; align-items: center; gap: 8px; }
 .tmp__account-name { font-weight: 600; font-size: 13px; }
 .tmp__account-id { font-size: 11px; color: var(--text-secondary); }
-.tmp__leader { font-size: 10px; border: 1px solid var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); border-radius: 999px; padding: 0 6px; }
+.tmp__leader { font-size: 10px; border: 1px solid var(--color-warning); color: var(--color-warning); border-radius: 999px; padding: 0 6px; }
 .tmp__admit { font-size: 10px; border-radius: 999px; padding: 0 6px; border: 1px solid;
-  &.is-ok { color: #15803d; border-color: #15803d55; background: #dcfce7; }
-  &.is-missing { color: #b45309; border-color: #b4530955; background: #fef3c7; } }
+  &.is-ok { color: var(--success); border-color: rgba(var(--success-rgb), 0.33); background: rgba(var(--success-rgb), 0.08); }
+  &.is-missing { color: var(--ia-stale); border-color: rgba(var(--warning-rgb), 0.33); background: rgba(var(--warning-rgb), 0.12); } }
 .tmp__admit-form { display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--border-color); border-radius: var(--radius-standard); padding: 8px; }
 .tmp__admit-title { font-size: 11px; font-weight: 600; }
 .tmp__admit-q { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-secondary); }
-.tmp__admit-req { font-size: 10px; color: #b45309; }
+.tmp__admit-req { font-size: 10px; color: var(--ia-stale); }
 .tmp__team { display: flex; gap: 8px; font-size: 12px; padding-left: 10px; }
-.tmp__team-id { color: var(--color-primary, #3b82f6); font-size: 11px; }
+.tmp__team-id { color: var(--color-primary); font-size: 11px; }
 .tmp__team-profiles { color: var(--text-secondary); font-size: 11px; }
 .tmp__undeclared { font-size: 11px; color: var(--text-secondary); opacity: 0.7; }
 .tmp__invite-row { display: flex; gap: 6px; }
 .tmp__leaders { display: flex; flex-wrap: wrap; gap: 4px; }
 .tmp__leader-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-color); border-radius: 999px; padding: 1px 8px; font-size: 11px; }
-.tmp__leader-x { border: none; background: none; color: var(--color-danger, #e11d48); cursor: pointer; padding: 0; }
+.tmp__leader-x { border: none; background: none; color: var(--color-danger); cursor: pointer; padding: 0; }
 </style>

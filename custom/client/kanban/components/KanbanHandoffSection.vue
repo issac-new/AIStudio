@@ -114,23 +114,23 @@ function advanceOptions(state: HandoffState): HandoffState[] {
 .kanban-handoff { margin: 8px 0; font-size: 12px; }
 .kanban-handoff__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .kanban-handoff__title { font-weight: 600; color: var(--text-secondary); }
-.kanban-handoff__head button { border: 1px dashed var(--border-color, #ccc); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
-.kanban-handoff__form { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-.kanban-handoff__form select, .kanban-handoff__form textarea { border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px 6px; font-size: 12px; }
-.kanban-handoff__form button { align-self: flex-end; border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: none; border-radius: 4px; padding: 2px 12px; cursor: pointer; }
-.kanban-handoff__card { border: 1px solid var(--border-color, #e0e0e0); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
-.kanban-handoff__card.is-blocked { border-color: var(--warning-color, #f0a020); }
-.kanban-handoff__card.is-failed { border-color: var(--error-color, #d03050); }
+.kanban-handoff__head button { border: 1px dashed var(--border-color); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.kanban-handoff__form { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+.kanban-handoff__form select, .kanban-handoff__form textarea { border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 6px; font-size: 12px; }
+.kanban-handoff__form button { align-self: flex-end; border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 4px; padding: 2px 12px; cursor: pointer; }
+.kanban-handoff__card { border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.kanban-handoff__card.is-blocked { border-color: var(--warning-color); }
+.kanban-handoff__card.is-failed { border-color: var(--error-color); }
 .kanban-handoff__card.is-completed { opacity: 0.75; }
 .kanban-handoff__cardhead { display: flex; gap: 8px; align-items: center; }
 .kanban-handoff__type { font-weight: 600; font-size: 11px; }
-.kanban-handoff__state { font-size: 10px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; padding: 0 6px; }
-.kanban-handoff__state.is-blocked { color: var(--warning-color, #f0a020); border-color: var(--warning-color, #f0a020); }
-.kanban-handoff__state.is-failed { color: var(--error-color, #d03050); border-color: var(--error-color, #d03050); }
-.kanban-handoff__state.is-delivered { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); }
+.kanban-handoff__state { font-size: 10px; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 6px; }
+.kanban-handoff__state.is-blocked { color: var(--warning-color); border-color: var(--warning-color); }
+.kanban-handoff__state.is-failed { color: var(--error-color); border-color: var(--error-color); }
+.kanban-handoff__state.is-delivered { color: var(--primary-color); border-color: var(--primary-color); }
 .kanban-handoff__body { padding: 4px 0; white-space: pre-wrap; }
 .kanban-handoff__note { font-size: 11px; color: var(--text-muted); }
 .kanban-handoff__actions { display: flex; gap: 6px; margin-top: 4px; }
-.kanban-handoff__actions button { border: 1px solid var(--border-color, #ddd); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
-.kanban-handoff__error { color: var(--error-color, #d03050); font-size: 11px; }
+.kanban-handoff__actions button { border: 1px solid var(--border-color); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.kanban-handoff__error { color: var(--error-color); font-size: 11px; }
 </style>

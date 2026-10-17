@@ -14,7 +14,7 @@ const ide = useIdeStore()
 
 // ── 会话分节（吸收第一批 C1，codex §三：长会话分节+手动 move）──
 // 分节=纯视图重组（localStorage per session，不动物理消息序）；右键轮项移节。
-const SECTION_COLORS = ['#18a058', '#2080f0', '#f0a020', '#8b5cf6', '#d03050']
+const SECTION_COLORS = ['var(--success)', 'var(--accent-info)', 'var(--ia-stale)', 'var(--ia-compensated)', 'var(--error)']
 
 function sectionsKey(sid: string | null | undefined): string {
   return `ide_sections_${sid ?? 'none'}`
@@ -172,7 +172,7 @@ function fmt(ms: number): string {
 
 .ide-turn-rail__row:hover {
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
 }
 
 .ide-turn-rail__tools {

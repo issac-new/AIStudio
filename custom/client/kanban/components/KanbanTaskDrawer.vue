@@ -1588,7 +1588,7 @@ function statusDotClass(status: string): string {
 .drawer-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 6px;
@@ -1602,10 +1602,10 @@ function statusDotClass(status: string): string {
   display: flex;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   align-items: flex-start;
-  &--mine { border-color: #f59e0b; box-shadow: 0 0 0 1px #f59e0b44; }
+  &--mine { border-color: var(--ia-stale); box-shadow: 0 0 0 1px rgba(var(--warning-rgb), 0.27); }
 }
 .raci-cell__role {
   flex-shrink: 0;
@@ -1615,18 +1615,18 @@ function statusDotClass(status: string): string {
   align-items: center;
   justify-content: center;
   border-radius: 5px;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 11px;
   font-weight: 700;
-  &--R { background: #2563eb; }
-  &--A { background: #d97706; }
-  &--C { background: #059669; }
-  &--I { background: #6b7280; }
+  &--R { background: var(--accent-primary); }
+  &--A { background: var(--ia-stale); }
+  &--C { background: var(--success); }
+  &--I { background: var(--text-muted); }
 }
 .raci-cell__body { min-width: 0; }
 .raci-cell__label {
   font-size: 11px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   margin-bottom: 3px;
 }
 .raci-cell__members {
@@ -1638,7 +1638,7 @@ function statusDotClass(status: string): string {
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--bg-secondary, #f1f2f4);
+  background: var(--bg-secondary);
   &--empty { opacity: 0.5; }
 }
 

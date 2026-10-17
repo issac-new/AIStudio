@@ -140,7 +140,7 @@ function waitingLabel(run: RunSummary): string {
   gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -148,13 +148,13 @@ function waitingLabel(run: RunSummary): string {
   font-family: inherit;
 }
 .ib-panel__tab--active {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
   background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
 }
 .ib-panel__count {
   padding: 0 6px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-warning, #f59e0b);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning);
   color: var(--text-on-accent);
   font-size: 11px;
 }
@@ -168,7 +168,7 @@ function waitingLabel(run: RunSummary): string {
   gap: 12px;
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   cursor: pointer;
 }
 .ib-row:hover,
@@ -183,7 +183,7 @@ function waitingLabel(run: RunSummary): string {
   height: 20px;
   padding: 0;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -204,7 +204,7 @@ function waitingLabel(run: RunSummary): string {
   flex-direction: column;
 }
 .ib-row__run-id {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,7 +212,7 @@ function waitingLabel(run: RunSummary): string {
 }
 .ib-row__graph-id {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -220,7 +220,7 @@ function waitingLabel(run: RunSummary): string {
 .ib-row__waiting {
   flex: 0 0 96px;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ib-row__actions { display: flex; gap: 4px; }
 .ib-row__actions button {
@@ -229,7 +229,7 @@ function waitingLabel(run: RunSummary): string {
   gap: 4px;
   padding: 3px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   cursor: pointer;

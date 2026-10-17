@@ -138,7 +138,7 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
 }
 .hint { margin: 0; }
 .block {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px;
   display: flex;
@@ -163,11 +163,11 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
     display: flex;
     gap: 10px;
     align-items: center;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 8px 12px;
-    &.done { border-color: var(--success, #16a34a); background: rgba(22, 163, 74, 0.06); }
-    .mark { font-size: 14px; color: var(--success, #16a34a); }
+    &.done { border-color: var(--success); background: rgba(22, 163, 74, 0.06); }
+    .mark { font-size: 14px; color: var(--success); }
     .body { flex: 1; display: flex; flex-direction: column; gap: 1px;
       strong { font-size: 13px; } }
     .detail { opacity: 0.75; }
@@ -177,28 +177,28 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border-color, #e5e7eb); vertical-align: top; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
   th { font-weight: 600; opacity: 0.75; }
   tr.miss td { opacity: 0.75; }
-  .chip { border-radius: 6px; padding: 0 5px; font-size: 10px; color: #fff; }
-  .c-operating { background: #4f6ef7; }
-  .c-enabling { background: #10b981; }
-  .c-supporting { background: #f59e0b; }
-  .c-managing { background: #8b5cf6; }
+  .chip { border-radius: 6px; padding: 0 5px; font-size: 10px; color: var(--text-on-accent); }
+  .c-operating { background: var(--accent-primary); }
+  .c-enabling { background: var(--success); }
+  .c-supporting { background: var(--warning); }
+  .c-managing { background: var(--ia-compensated); }
   .pill { border: 1px solid var(--accent-primary); color: var(--accent-primary); border-radius: 8px; padding: 0 6px; font-size: 11px; margin-right: 4px; }
-  .miss-mark { color: var(--danger, #dc2626); }
+  .miss-mark { color: var(--danger); }
 }
 .gapbox {
-  .warn { color: var(--warning, #b45309); font-size: 12px; margin: 4px 0; }
+  .warn { color: var(--warning); font-size: 12px; margin: 4px 0; }
   .chip-w { border: 1px solid currentColor; border-radius: 6px; padding: 0 5px; margin-right: 4px; font-size: 11px; }
-  .ok { color: var(--success, #16a34a); font-size: 13px; margin: 4px 0; }
+  .ok { color: var(--success); font-size: 13px; margin: 4px 0; }
 }
 .traps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 8px;
   .trap {
-    border: 1px dashed var(--border-color, #e5e7eb);
+    border: 1px dashed var(--border-color);
     border-radius: 8px;
     padding: 8px 10px;
     display: flex;
@@ -207,9 +207,9 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
     strong { font-size: 12.5px; }
   }
 }
-button.ghost { background: transparent; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; color: inherit; }
-.err { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
+button.ghost { background: transparent; border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 12px; color: inherit; }
+.err { color: var(--danger); font-size: 13px; margin: 0; }
 .muted { opacity: 0.65; font-size: 12px; }
 .small { font-size: 11px; }
-.mono { font-family: var(--font-mono, monospace); font-size: 11px; }
+.mono { font-family: var(--font-mono); font-size: 11px; }
 </style>

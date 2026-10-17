@@ -31,13 +31,13 @@ const overLimit = props.kind === 'wip-limit' && props.wip != null && (props.limi
 <style scoped>
 .sim-disc {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted);
   padding: 0 6px;
   border-radius: 4px;
   background: rgba(127, 127, 127, 0.1);
 }
 .sim-disc--over {
-  color: #d33;
+  color: var(--ia-fail);
   background: rgba(221, 51, 51, 0.12);
 }
 </style>

@@ -286,7 +286,7 @@ function canSend(roomId: string): boolean {
   white-space: nowrap;
   transition: all 0.15s;
 
-  &:hover:not(:disabled) { background: $accent-primary; color: #fff; border-color: $accent-primary; }
+  &:hover:not(:disabled) { background: $accent-primary; color: var(--text-on-accent); border-color: $accent-primary; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   &--sent {

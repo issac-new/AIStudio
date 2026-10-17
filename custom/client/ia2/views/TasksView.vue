@@ -186,7 +186,7 @@ watch(tab, (key) => {
   display: flex;
   gap: 2px;
   padding: 8px 12px 0;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   align-items: center;
 }
@@ -195,8 +195,8 @@ watch(tab, (key) => {
   margin-left: auto; flex-shrink: 0;
   width: 24px; height: 24px; padding: 0; margin-bottom: 2px;
   border: none; border-radius: 5px; background: transparent;
-  color: var(--text-muted, #878c99); font-size: 16px; line-height: 1; cursor: pointer;
-  &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
+  color: var(--text-muted); font-size: 16px; line-height: 1; cursor: pointer;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 
 .ia-tasks__tab {
@@ -205,7 +205,7 @@ watch(tab, (key) => {
   padding: 6px 11px;
   font-size: 13px;
   font-family: inherit;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
@@ -213,8 +213,8 @@ watch(tab, (key) => {
   &:hover { color: inherit; }
 
   &--active {
-    color: var(--accent-primary, var(--color-primary, #3b82f6));
-    border-bottom-color: var(--accent-primary, var(--color-primary, #3b82f6));
+    color: var(--accent-primary, var(--color-primary));
+    border-bottom-color: var(--accent-primary, var(--color-primary));
     font-weight: 600;
   }
 }

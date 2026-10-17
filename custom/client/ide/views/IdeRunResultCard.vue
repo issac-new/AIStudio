@@ -152,9 +152,9 @@ const visible = computed(
   flex-shrink: 0;
   padding: 6px 12px;
   font-size: 12px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background: color-mix(in srgb, var(--success-color, var(--success-color, #18a058)) 8%, transparent);
-  color: var(--text-secondary, #b0b5be);
+  border-bottom: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--success-color, var(--success-color)) 8%, transparent);
+  color: var(--text-secondary);
 }
 
 .ide-runresult__head {
@@ -165,7 +165,7 @@ const visible = computed(
 
 .ide-runresult__kicker {
   font-weight: 600;
-  color: var(--success-color, var(--success-color, #18a058));
+  color: var(--success-color, var(--success-color));
 }
 
 .ide-runresult__elapsed {
@@ -175,7 +175,7 @@ const visible = computed(
 .ide-runresult__time {
   margin-left: auto;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-runresult__verify {
@@ -202,8 +202,8 @@ const visible = computed(
 .ide-runresult__delta {
   font-variant-numeric: tabular-nums;
 
-  .is-add { color: var(--success-color, var(--success-color, #18a058)); }
-  .is-del { color: var(--error-color, #d03050); margin-left: 4px; }
+  .is-add { color: var(--success-color, var(--success-color)); }
+  .is-del { color: var(--error-color); margin-left: 4px; }
 }
 
 .ide-runresult__paths {
@@ -211,7 +211,7 @@ const visible = computed(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-family: ui-monospace, monospace;
 }
 
@@ -232,11 +232,11 @@ const visible = computed(
 
 .ide-runresult__undo:hover {
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
 }
 
 .ide-runresult__undo-done {
   font-size: 11px;
-  color: var(--primary-color, #18a058);
+  color: var(--primary-color);
 }
 </style>

@@ -92,9 +92,9 @@ const TONE: Record<string, string> = {
 }
 .ltl__linkage-item {
   max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: #61afef;
+  color: var(--accent-info);
 }
-.ltl__linkage-item--ws { color: #c678dd; }
+.ltl__linkage-item--ws { color: var(--ia-compensated); }
 .ltl__avatar {
   flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
   background: var(--bg-secondary); color: var(--text-secondary);

@@ -98,7 +98,7 @@ function descLabel(card: SpecCard): string {
   gap: 12px;
 }
 .spec-list__empty-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.spec-list__empty-hint { margin: 0; font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.spec-list__empty-hint { margin: 0; font-size: 12px; color: var(--text-muted, var(--color-text-secondary)); }
 
 .spec-card {
   display: flex;
@@ -106,32 +106,32 @@ function descLabel(card: SpecCard): string {
   gap: 6px;
   padding: 12px 14px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background: var(--bg-card);
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .spec-card:hover {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
-  box-shadow: 0 0 0 1px var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
+  box-shadow: 0 0 0 1px var(--accent-primary, var(--color-primary));
 }
 .spec-card:focus-visible {
-  outline: 2px solid var(--accent-primary, var(--color-primary, #3b82f6));
+  outline: 2px solid var(--accent-primary, var(--color-primary));
   outline-offset: -2px;
 }
 .spec-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .spec-card__kind {
   padding: 1px 8px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   background: var(--bg-secondary);
   font-size: 11px;
   color: var(--text-secondary);
 }
-.spec-card--daily-brief .spec-card__kind { color: var(--color-warning, #f59e0b); }
+.spec-card--daily-brief .spec-card__kind { color: var(--color-warning); }
 .spec-card__version {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .spec-card__name {
   margin: 0;
@@ -145,7 +145,7 @@ function descLabel(card: SpecCard): string {
 .spec-card__desc {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -165,7 +165,7 @@ function descLabel(card: SpecCard): string {
 .spec-card__delete {
   padding: 3px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: var(--text-secondary);
   font-size: 11px;
@@ -173,29 +173,29 @@ function descLabel(card: SpecCard): string {
   cursor: pointer;
   white-space: nowrap;
 }
-.spec-card__edit:hover { border-color: var(--accent-primary, var(--color-primary, #3b82f6)); color: inherit; }
+.spec-card__edit:hover { border-color: var(--accent-primary, var(--color-primary)); color: inherit; }
 .spec-list__error {
   padding: 10px 12px;
-  border: 1px solid var(--error, var(--color-danger, #e11d48));
+  border: 1px solid var(--error, var(--color-danger));
   border-radius: var(--radius-standard);
-  color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
   font-size: 13px;
   word-break: break-all;
 }
-.spec-card__delete { color: var(--error, var(--color-danger, #e11d48)); }
-.spec-card__delete:hover { border-color: var(--error, var(--color-danger, #e11d48)); }
+.spec-card__delete { color: var(--error, var(--color-danger)); }
+.spec-card__delete:hover { border-color: var(--error, var(--color-danger)); }
 .spec-card__create {
   padding: 3px 10px;
-  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));
-  border-radius: var(--radius-micro, 3px);
+  border: 1px solid var(--accent-primary, var(--color-primary));
+  border-radius: var(--radius-micro);
   background: transparent;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
 }
 .spec-card__create:hover {
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--color-on-accent, #fff);
+  background: var(--accent-primary, var(--color-primary));
+  color: var(--color-on-accent);
 }
 </style>

@@ -83,7 +83,7 @@ function shortUser(mxId: string): string {
 .gss__card { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); padding: 8px 10px; }
 .gss__card-head { font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
 .gss__row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
-.gss__row--over .gss__name { color: var(--error, #e05656); font-weight: 700; }
+.gss__row--over .gss__name { color: var(--error); font-weight: 700; }
 .gss__name { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gss__meta { margin-left: auto; font-size: 10px; color: var(--text-muted); flex: none; }
 .gss__badge { padding: 0 6px; border-radius: 6px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 10px; flex: none; }

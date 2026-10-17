@@ -83,16 +83,16 @@ const frameworkOptions: BpaFramework[] = ['OES+PCF6', 'POS+PCF5', 'MOS+PCF5', 'O
 .bpa-map__bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;
   .hint { margin: 0; flex: 1; min-width: 260px; }
   .fw { display: flex; flex-direction: column; gap: 3px; font-size: 12px; min-width: 320px;
-    select { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 10px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; } } }
+    select { border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 12px; background: var(--bg-primary); color: inherit; } } }
 .bpa-map__grid { display: grid; gap: 12px; align-items: start; }
-.bpa-map__col { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 120px;
+.bpa-map__col { border: 1px solid var(--border-color); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 120px;
   .col-head { margin: 0; font-size: 13px; border-bottom: 2px solid var(--accent-primary); padding-bottom: 6px; }
   .empty { margin: 0; } }
-.l1-card { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; background: var(--bg-secondary, rgba(255,255,255,0.55));
+.l1-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; background: var(--bg-secondary, rgba(255,255,255,0.55));
   header { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; strong { font-size: 13px; } }
   ul { margin: 0; padding-left: 14px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; } }
-.err { color: var(--danger, #dc2626); font-size: 13px; margin: 0; }
+.err { color: var(--danger); font-size: 13px; margin: 0; }
 .muted { opacity: 0.65; font-size: 12px; }
 .small { font-size: 11px; }
-.mono { font-family: var(--font-mono, monospace); font-size: 11px; }
+.mono { font-family: var(--font-mono); font-size: 11px; }
 </style>

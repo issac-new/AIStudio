@@ -452,7 +452,7 @@ export default { name: 'SpecEditorView' }
 .sev__btn {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -463,8 +463,8 @@ export default { name: 'SpecEditorView' }
 .sev__btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sev__btn--primary {
   border: none;
-  background: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--color-on-accent, #fff);
+  background: var(--accent-primary, var(--color-primary));
+  color: var(--color-on-accent);
 }
 .sev__btn--mini { padding: 1px 6px; font-size: 10px; }
 .sev__name { width: 160px; }
@@ -473,7 +473,7 @@ export default { name: 'SpecEditorView' }
   padding: 4px 8px;
   border: 1px solid var(--border-color);
   border-radius: 3px;
-  background: var(--color-bg-input, transparent);
+  background: var(--color-bg-input);
   color: inherit;
   font-size: 12px;
   font-family: inherit;
@@ -482,18 +482,18 @@ export default { name: 'SpecEditorView' }
 .sev__version {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .sev__file { display: none; }
 .sev__validation-chip {
   padding: 2px 8px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 11px;
   white-space: nowrap;
 }
-.sev__validation-chip.is-ok { background: rgba(40, 191, 92, 0.12); color: var(--color-success, #28bf5c); }
-.sev__validation-chip.is-warn { background: rgba(245, 158, 11, 0.12); color: var(--color-warning, #f59e0b); }
-.sev__validation-chip.is-error { background: rgba(225, 29, 72, 0.12); color: var(--error, var(--color-danger, #e11d48)); }
+.sev__validation-chip.is-ok { background: rgba(40, 191, 92, 0.12); color: var(--color-success); }
+.sev__validation-chip.is-warn { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.sev__validation-chip.is-error { background: rgba(225, 29, 72, 0.12); color: var(--error, var(--color-danger)); }
 
 .sev__banner {
   display: flex;
@@ -501,17 +501,17 @@ export default { name: 'SpecEditorView' }
   gap: 6px;
   margin: 0;
   padding: 6px 10px;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   font-size: 12px;
 }
 .sev__banner code { font-size: 11px; word-break: break-all; }
 .sev__banner.is-error {
   background: rgba(225, 29, 72, 0.08);
-  color: var(--error, var(--color-danger, #e11d48));
+  color: var(--error, var(--color-danger));
 }
 .sev__banner.is-warn {
   background: rgba(245, 158, 11, 0.1);
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning);
 }
 
 .sev__validation {
@@ -528,7 +528,7 @@ export default { name: 'SpecEditorView' }
   margin: 0;
   padding: 3px 8px;
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   font-size: 11px;
   font-family: inherit;
   text-align: left;
@@ -537,14 +537,14 @@ export default { name: 'SpecEditorView' }
 .sev__issue-tag {
   flex: none;
   padding: 0 5px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 10px;
   color: var(--text-on-accent);
 }
 .sev__issue.is-error { background: rgba(var(--error-rgb), 0.08); color: var(--error); }
 .sev__issue.is-error .sev__issue-tag { background: var(--error); color: var(--text-on-accent); }
-.sev__issue.is-warn { background: rgba(245, 158, 11, 0.1); color: var(--color-warning, #f59e0b); }
-.sev__issue.is-warn .sev__issue-tag { background: var(--color-warning, #f59e0b); }
+.sev__issue.is-warn { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); }
+.sev__issue.is-warn .sev__issue-tag { background: var(--color-warning); }
 
 .sev__body {
   display: grid;
@@ -559,7 +559,7 @@ export default { name: 'SpecEditorView' }
   gap: 4px;
   padding: 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background: var(--bg-card);
   overflow: auto;
 }
@@ -569,18 +569,18 @@ export default { name: 'SpecEditorView' }
   gap: 2px;
   padding: 6px 8px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: var(--radius-micro);
   background: transparent;
   color: inherit;
   font-family: inherit;
   text-align: left;
   cursor: grab;
 }
-.sev__palette-item:hover { border-color: var(--accent-primary, var(--color-primary, #3b82f6)); }
+.sev__palette-item:hover { border-color: var(--accent-primary, var(--color-primary)); }
 .sev__palette-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .sev__palette-desc {
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   line-height: 1.4;
 }
 .sev__center {
@@ -604,7 +604,7 @@ export default { name: 'SpecEditorView' }
   gap: 6px;
   padding: 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background: var(--bg-card);
   font-size: 12px;
 }
@@ -612,7 +612,7 @@ export default { name: 'SpecEditorView' }
 .sev__side-hint {
   margin: 0;
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   line-height: 1.4;
 }
 .sev__container-row {
@@ -629,10 +629,10 @@ export default { name: 'SpecEditorView' }
   gap: 6px;
 }
 .sev__channel-name {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-primary);
   word-break: break-all;
 }
-.sev__channel-reducer { font-size: 10px; color: var(--text-muted, #878c99); }
+.sev__channel-reducer { font-size: 10px; color: var(--text-muted); }
 </style>

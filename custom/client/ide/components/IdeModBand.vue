@@ -52,7 +52,7 @@ const visibleMods = band.ordered
 }
 .ide-modband__mod:hover .ide-modband__hide { opacity: 1; }
 .ide-modband__restore {
-  align-self: flex-start; border: 1px dashed var(--border-color, #ccc); background: none;
+  align-self: flex-start; border: 1px dashed var(--border-color); background: none;
   border-radius: 8px; font-size: 10.5px; color: var(--text-muted); cursor: pointer; padding: 0 8px;
 }
 </style>

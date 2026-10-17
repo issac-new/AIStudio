@@ -118,7 +118,7 @@ function closeTab(id: number): void {
   align-items: center;
   gap: 2px;
   padding: 3px 6px 0;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-termdock__tab {
@@ -131,15 +131,15 @@ function closeTab(id: number): void {
   border-bottom: none;
   border-radius: 6px 6px 0 0;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--text-primary); }
   &.is-active {
-    background: var(--bg-primary, #14161a);
-    border-color: var(--border-color, #e0e0e0);
-    color: var(--text-primary, #e6e6e6);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
   }
 }
 
@@ -148,12 +148,12 @@ function closeTab(id: number): void {
 .ide-termdock__close {
   border: none;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 10px;
   cursor: pointer;
   padding: 0;
 
-  &:hover { color: var(--error-color, #d03050); }
+  &:hover { color: var(--error-color); }
 }
 
 .ide-termdock__add {
@@ -162,11 +162,11 @@ function closeTab(id: number): void {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 13px;
   cursor: pointer;
 
-  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #ebebeb); }
+  &:hover { color: var(--accent-primary); background: var(--bg-tertiary); }
 }
 
 .ide-termdock__panes {
@@ -181,7 +181,7 @@ function closeTab(id: number): void {
   min-height: 0;
 
   &.is-split {
-    border-right: 1px solid var(--border-color, #e0e0e0);
+    border-right: 1px solid var(--border-color);
     &:last-child { border-right: none; }
   }
 }

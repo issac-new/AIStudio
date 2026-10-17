@@ -104,7 +104,7 @@ function color(userId: string): string {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 9px;
   font-weight: 600;
   line-height: 1;

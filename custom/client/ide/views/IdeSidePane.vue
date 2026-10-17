@@ -304,8 +304,8 @@ function focusMainChat(): void {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-left: 1px solid var(--border-color, #e0e0e0);
-  background: var(--bg-secondary, #1b1e24);
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   min-height: 0;
 }
 
@@ -313,17 +313,17 @@ function focusMainChat(): void {
   display: flex; gap: 2px; width: 100%; padding: 3px 6px 0 6px; flex-wrap: wrap;
 }
 .ide-sidepane__group {
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 999px;
-  background: var(--bg-primary, #fff); color: var(--text-muted, #878c99);
+  border: 1px solid var(--border-color); border-radius: 999px;
+  background: var(--bg-primary); color: var(--text-muted);
   font-size: 10px; padding: 1px 8px; cursor: pointer; font-family: inherit;
-  &.is-active { color: var(--text-primary, inherit); border-color: var(--text-muted, #878c99); font-weight: 600; }
+  &.is-active { color: var(--text-primary); border-color: var(--text-muted); font-weight: 600; }
 }
 .ide-sidepane__tabs {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
   /* 全部组 17 签曾把 max/close 钮挤到 ~12px（flex 收缩）——换行 + 页签
    * 不可收缩，按钮保持 30px 可点（2026-10-10 回归轮 UX-1） */
   flex-wrap: wrap;
@@ -339,13 +339,13 @@ function focusMainChat(): void {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
   &.is-active {
-    color: var(--accent-primary, #4cc9f0);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
+    color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   }
 
   &--close:hover { background: rgba(220, 60, 60, 0.4); }
@@ -356,9 +356,9 @@ function focusMainChat(): void {
 .ide-sidepane.is-max { flex: 1 !important; width: auto !important; min-width: 320px; }
 
 .ide-sidepane__tab--add {
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 
-  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #ebebeb); }
+  &:hover { color: var(--accent-primary); background: var(--bg-tertiary); }
 }
 
 .ide-sidepane__spacer { flex: 1; }
@@ -383,7 +383,7 @@ function focusMainChat(): void {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color);
   font-size: 11px;
 }
 
@@ -394,15 +394,15 @@ function focusMainChat(): void {
 }
 
 .ide-sidepane__action {
-  border: 1px solid var(--border-color, #3a3f4b);
+  border: 1px solid var(--border-color);
   background: none;
-  color: var(--text-secondary, #b0b5be);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+  &:hover { border-color: var(--primary-color); color: var(--primary-color); }
 
   &--add {
     padding: 2px 6px;
@@ -414,26 +414,26 @@ function focusMainChat(): void {
 .ide-sidepane__action-remove {
   border: none;
   background: none;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 10px;
   cursor: pointer;
   padding: 0 2px;
 
-  &:hover { color: var(--error-color, #d03050); }
+  &:hover { color: var(--error-color); }
 }
 
 .ide-sidepane__action-input {
   width: 72px;
-  border: 1px solid var(--border-color, #3a3f4b);
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #d7dae0);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
 
   &.is-cmd { width: 130px; font-family: ui-monospace, monospace; }
 
-  &::placeholder { color: var(--text-muted, #9aa0aa); }
+  &::placeholder { color: var(--text-muted); }
 }
 
 .ide-sidepane__assistant {
@@ -448,7 +448,7 @@ function focusMainChat(): void {
 .ide-sidepane__assistant-hint {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -457,16 +457,16 @@ function focusMainChat(): void {
 .ide-sidepane__kind {
   flex: 1;
   height: 24px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
 
   &.is-active {
-    border-color: var(--accent-primary, #4cc9f0);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
   }
 }
 
@@ -474,15 +474,15 @@ function focusMainChat(): void {
   width: 100%;
   resize: vertical;
   padding: 8px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 12px;
   font-family: inherit;
   outline: none;
 
-  &:focus { border-color: var(--accent-primary, #4cc9f0); }
+  &:focus { border-color: var(--accent-primary); }
 }
 
 .ide-sidepane__assistant-actions { display: flex; gap: 6px; }
@@ -490,19 +490,19 @@ function focusMainChat(): void {
 .ide-sidepane__assistant-btn {
   flex: 1;
   height: 28px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { border-color: var(--accent-primary); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
   &--primary {
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+    color: var(--accent-primary);
   }
 }
 </style>

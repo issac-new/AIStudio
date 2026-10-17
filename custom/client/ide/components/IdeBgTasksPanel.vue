@@ -132,15 +132,15 @@ const STATUS_TEXT: Record<string, string> = {
 .ide-bgt {
   position: absolute; top: 44px; right: 16px; z-index: 60; width: 340px; max-height: 66vh;
   display: flex; flex-direction: column; overflow-y: auto;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); font-size: 12px;
 }
-.ide-bgt__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color, #eee); position: sticky; top: 0; background: inherit; }
+.ide-bgt__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: inherit; }
 .ide-bgt__head span { flex: 1; }
 .ide-bgt__head button { border: none; background: none; cursor: pointer; }
 .ide-bgt__section { padding: 6px 10px; }
 .ide-bgt__sectitle { font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-.ide-bgt__error { color: var(--error-color, #d03050); font-size: 11px; }
+.ide-bgt__error { color: var(--error-color); font-size: 11px; }
 .ide-bgt__row {
   display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left;
   border: none; background: none; padding: 3px 2px; cursor: pointer; font-size: 12px;
@@ -148,8 +148,8 @@ const STATUS_TEXT: Record<string, string> = {
 }
 button.ide-bgt__row:hover { background: var(--hover-color, rgba(0,0,0,0.05)); }
 .ide-bgt__row.is-static { cursor: default; }
-.ide-bgt__status { font-size: 10px; color: var(--text-muted); flex: 0 0 auto; border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; padding: 0 6px; }
-.ide-bgt__status.is-running { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); }
-.ide-bgt__status.is-failed, .ide-bgt__status.is-error { color: var(--error-color, #d03050); border-color: var(--error-color, #d03050); }
+.ide-bgt__status { font-size: 10px; color: var(--text-muted); flex: 0 0 auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 6px; }
+.ide-bgt__status.is-running { color: var(--primary-color); border-color: var(--primary-color); }
+.ide-bgt__status.is-failed, .ide-bgt__status.is-error { color: var(--error-color); border-color: var(--error-color); }
 .ide-bgt__age { margin-left: auto; font-size: 10px; color: var(--text-muted); }
 </style>

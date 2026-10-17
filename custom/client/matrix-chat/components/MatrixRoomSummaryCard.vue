@@ -613,27 +613,27 @@ function handleTopicLinkClick(ev: MouseEvent) {
 }
 
 .summary-badge--encrypted {
-  background: rgba(var(--success-rgb, 34 197 94), 0.1);
-  color: var(--success, #22c55e);
+  background: rgba(var(--success-rgb), 0.1);
+  color: var(--success);
 }
 
 .summary-badge--public {
-  background: rgba(var(--accent-info-rgb, 59 130 246), 0.1);
-  color: var(--accent-info, #3b82f6);
+  background: rgba(var(--accent-info-rgb), 0.1);
+  color: var(--accent-info);
 }
 
 .summary-badge--unencrypted {
-  background: rgba(var(--accent-info-rgb, 59 130 246), 0.1);
-  color: var(--accent-info, #3b82f6);
+  background: rgba(var(--accent-info-rgb), 0.1);
+  color: var(--accent-info);
 }
 
 .summary-badge--not-trusted {
-  background: rgba(var(--error-rgb, 239 68 68), 0.1);
-  color: var(--error, #ef4444);
+  background: rgba(var(--error-rgb), 0.1);
+  color: var(--error);
 }
 
 .summary-badge--history {
-  background: rgba(var(--text-muted-rgb, 148 163 184), 0.08);
+  background: rgba(var(--text-muted-rgb), 0.08);
   color: $text-secondary;
 }
 
@@ -786,9 +786,9 @@ function handleTopicLinkClick(ev: MouseEvent) {
 }
 
 .menu-item--critical {
-  color: var(--error, #ef4444);
+  color: var(--error);
 
-  svg { color: var(--error, #ef4444); }
+  svg { color: var(--error); }
 
   &:hover:not(:disabled) {
     background: rgba(var(--error-rgb), 0.06);

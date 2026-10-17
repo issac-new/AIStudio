@@ -50,14 +50,14 @@ const STATUS_ICON: Record<TodoStatus, string> = { completed: '☑', in_progress:
 .ide-todo { margin: 4px 12px; font-size: 11px; }
 .ide-todo__head {
   display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left;
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 6px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 6px;
   padding: 4px 8px; cursor: pointer; color: var(--text-secondary);
 }
 .ide-todo__chev { color: var(--text-muted); }
-.ide-todo__current { color: var(--warning-color, #f0a020); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-todo__current { color: var(--warning-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-todo__next { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ide-todo__list { margin: 4px 0 0; padding: 4px 8px 4px 24px; border-left: 2px solid var(--border-color, #eee); }
+.ide-todo__list { margin: 4px 0 0; padding: 4px 8px 4px 24px; border-left: 2px solid var(--border-color); }
 .ide-todo__list li { padding: 1px 0; }
 .ide-todo__list li.is-completed { color: var(--text-muted); text-decoration: line-through; }
-.ide-todo__list li.is-in_progress { color: var(--warning-color, #f0a020); }
+.ide-todo__list li.is-in_progress { color: var(--warning-color); }
 </style>

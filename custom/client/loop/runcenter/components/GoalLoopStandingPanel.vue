@@ -131,9 +131,9 @@ const STATUS_TONE: Record<string, string> = {
   flex-shrink: 0; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 600;
   background: var(--bg-secondary); color: var(--text-muted);
 }
-.glsp__tone--run { color: #61afef; }
-.glsp__tone--judge { color: #e5c07b; }
-.glsp__tone--blocked { color: var(--error, #e11d48); }
+.glsp__tone--run { color: var(--accent-info); }
+.glsp__tone--judge { color: var(--ia-stale); }
+.glsp__tone--blocked { color: var(--error); }
 .glsp__tone--paused { color: var(--text-muted); }
 
 .glsp__goal {
@@ -147,5 +147,5 @@ const STATUS_TONE: Record<string, string> = {
   font-size: 10px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .glsp__sep { flex: 1; }
-.glsp__resume { font-size: 10px; color: var(--primary, #3b82f6); }
+.glsp__resume { font-size: 10px; color: var(--primary); }
 </style>

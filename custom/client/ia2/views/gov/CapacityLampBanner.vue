@@ -61,17 +61,17 @@ onMounted(() => { void refresh() })
 .clb--critical { background: rgba(221, 51, 51, 0.16); }
 .clb--absent {
   border-style: dashed;
-  border-color: var(--border-color, #e5e7eb);
+  border-color: var(--border-color);
   background: transparent;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
 }
 .clb__head { display: flex; align-items: center; gap: 10px; }
-.clb__title { color: #d33; }
+.clb__title { color: var(--ia-fail); }
 .clb__toggle {
   margin-left: auto;
   border: 1px solid rgba(221, 51, 51, 0.5);
   background: transparent;
-  color: #d33;
+  color: var(--ia-fail);
   border-radius: 4px;
   font-size: 11px;
   padding: 1px 8px;

@@ -111,18 +111,18 @@ function openRun(runId: string | null): void {
 .ia-runlinks__head {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary, #878c99));
+  color: var(--text-secondary, var(--color-text-secondary));
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 .ia-runlinks__muted {
   font-size: 12px;
   font-style: italic;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .ia-runlinks__error {
   font-size: 12px;
-  color: var(--color-danger, #e11d48);
+  color: var(--color-danger);
 }
 .ia-runlinks__list {
   display: flex;
@@ -134,7 +134,7 @@ function openRun(runId: string | null): void {
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: transparent;
   color: inherit;
@@ -144,15 +144,15 @@ function openRun(runId: string | null): void {
   text-align: left;
 }
 .ia-runlinks__item:hover:not(:disabled) {
-  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  border-color: var(--accent-primary, var(--color-primary));
+  color: var(--accent-primary, var(--color-primary));
 }
 .ia-runlinks__item:disabled {
   cursor: default;
   opacity: 0.7;
 }
 .ia-runlinks__runid {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -161,7 +161,7 @@ function openRun(runId: string | null): void {
   margin-left: auto;
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

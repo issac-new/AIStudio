@@ -58,25 +58,25 @@ function fmtTime(ts: number): string {
 
 <style scoped lang="scss">
 .tft { display: flex; flex-direction: column; gap: 2px; }
-.tft__row { display: flex; gap: 7px; padding: 4px 2px; border-bottom: 1px dashed var(--border-color, #e5e7eb); }
+.tft__row { display: flex; gap: 7px; padding: 4px 2px; border-bottom: 1px dashed var(--border-color); }
 .tft__row:last-child { border-bottom: none; }
 .tft__icon { flex-shrink: 0; font-size: 11px; width: 14px; text-align: center; }
-.tft__icon--dispatch { color: var(--info, #2563eb); }
-.tft__icon--receipt { color: #059669; }
-.tft__icon--defect { color: #dc2626; }
-.tft__icon--verdict { color: #d97706; }
+.tft__icon--dispatch { color: var(--info); }
+.tft__icon--receipt { color: var(--success); }
+.tft__icon--defect { color: var(--error); }
+.tft__icon--verdict { color: var(--ia-stale); }
 .tft__main { flex: 1; min-width: 0; }
 .tft__line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 11px; }
 .tft__actor { color: var(--text-primary); }
 .tft__action { font-size: 10px; padding: 0 5px; border-radius: 3px; }
-.tft__action--dispatch { color: var(--info, #2563eb); background: rgba(37, 99, 235, 0.08); }
-.tft__action--receipt { color: #059669; background: #05966914; }
-.tft__action--defect { color: #dc2626; background: #dc262614; }
-.tft__action--verdict { color: #d97706; background: #d9770614; }
+.tft__action--dispatch { color: var(--info); background: rgba(37, 99, 235, 0.08); }
+.tft__action--receipt { color: var(--success); background: rgba(var(--success-rgb), 0.08); }
+.tft__action--defect { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
+.tft__action--verdict { color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.08); }
 .tft__task {
   border: none; background: transparent; cursor: pointer; padding: 0;
   font-family: ui-monospace, Menlo, monospace; font-size: 10.5px;
-  color: var(--accent-primary, #2563eb);
+  color: var(--accent-primary);
   &:hover { text-decoration: underline; }
 }
 .tft__mentions { color: var(--text-muted); font-size: 10px; }

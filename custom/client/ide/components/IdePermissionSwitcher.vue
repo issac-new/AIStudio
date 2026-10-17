@@ -74,15 +74,15 @@ defineExpose({ cycle })
 
 <style scoped lang="scss">
 .ide-perm { position: relative; display: inline-flex; }
-.ide-perm__trigger:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
-.ide-perm__trigger:focus-visible { outline: 2px solid var(--primary-color, #18a058); outline-offset: 1px; }
+.ide-perm__trigger:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.ide-perm__trigger:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
 .ide-perm__trigger {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color); background: transparent; border-radius: 4px;
   padding: 2px 8px; cursor: pointer; font-size: 11px; color: var(--text-muted);
 }
 .ide-perm__panel {
   position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 220px;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); padding: 4px;
 }
 .ide-perm__mode {
@@ -90,10 +90,10 @@ defineExpose({ cycle })
   border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;
 }
 .ide-perm__mode:hover { background: var(--hover-color, rgba(0, 0, 0, 0.06)); }
-.ide-perm__mode.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.1)); color: var(--primary-color, #18a058); }
+.ide-perm__mode.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.1)); color: var(--primary-color); }
 .ide-perm__mode small { display: block; color: var(--text-muted); font-size: 10px; }
 .ide-perm__note {
   padding: 6px 8px 4px; font-size: 10px; color: var(--text-muted);
-  border-top: 1px dashed var(--border-color, #e0e0e0); margin-top: 4px; line-height: 1.5;
+  border-top: 1px dashed var(--border-color); margin-top: 4px; line-height: 1.5;
 }
 </style>

@@ -91,15 +91,15 @@ function runBoost(): void {
 .ide-secbar__btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; color: var(--text-muted); &:hover { color: var(--text-primary); } }
 .ide-secbar__panel {
   position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 90;
-  background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 6px; padding: 8px 10px; min-width: 300px; max-width: 380px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); font-size: 11px;
 }
 .ide-secbar__head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .ide-secbar__head select { font-size: 11px; }
-.ide-secbar__run { border: 1px solid var(--primary-color, #18a058); color: var(--primary-color, #18a058); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin-left: auto; }
+.ide-secbar__run { border: 1px solid var(--primary-color); color: var(--primary-color); background: transparent; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; margin-left: auto; }
 .ide-secbar__plan { color: var(--text-muted); margin: 4px 0; }
 .ide-secbar__finding { color: var(--text-secondary); padding: 2px 0;
-  &[data-severity='high'] { color: var(--error-color, #d03050); }
-  &[data-severity='medium'] { color: var(--warning-color, #f0a020); } }
+  &[data-severity='high'] { color: var(--error-color); }
+  &[data-severity='medium'] { color: var(--warning-color); } }
 </style>

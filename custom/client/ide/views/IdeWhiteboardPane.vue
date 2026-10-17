@@ -298,34 +298,34 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ide-board__btn {
   height: 24px;
   min-width: 26px;
   padding: 0 5px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { border-color: var(--accent-primary); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
   &.is-active {
-    border-color: var(--accent-primary, #4cc9f0);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   }
-  &--primary { color: var(--accent-primary, #4cc9f0); }
+  &--primary { color: var(--accent-primary); }
 }
 
 .ide-board__color {
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
   cursor: pointer;
@@ -345,8 +345,8 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   width: 100%;
   height: 100%;
   border-radius: 8px;
-  background: var(--bg-primary, #14161a);
-  border: 1px dashed var(--border-color, #e0e0e0);
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-color);
   touch-action: none;
   cursor: crosshair;
 }

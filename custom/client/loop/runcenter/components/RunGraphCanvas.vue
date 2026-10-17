@@ -123,13 +123,13 @@ const flowEdges = computed<Edge[]>(() => {
     // 回边（带 guard）画虚线弧 + guard 徽标；taken 边描色加粗
     animated: false,
     label: e.guard !== undefined ? `×${e.guard}` : undefined,
-    labelStyle: { fontSize: 10, fill: 'var(--text-muted, #878c99)' },
+    labelStyle: { fontSize: 10, fill: 'var(--text-muted)' },
     labelBgStyle: { fillOpacity: 0 },
     markerEnd: MarkerType.ArrowClosed,
     style: {
       stroke: e.taken
-        ? 'var(--accent-primary, var(--color-primary, #3b82f6))'
-        : 'var(--border-color, #c8c8c8)',
+        ? 'var(--accent-primary, var(--color-primary))'
+        : 'var(--border-color)',
       strokeWidth: e.taken ? 2 : 1,
       strokeDasharray: e.guard !== undefined ? '6 4' : undefined,
       opacity: e.taken ? 1 : 0.55,
@@ -206,7 +206,7 @@ function onSelect(id: string): void {
   min-height: 300px;
   overflow: hidden;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: var(--radius-standard);
   background:
     radial-gradient(circle at 1px 1px, var(--border-light, rgba(127, 127, 127, 0.18)) 1px, transparent 0) 0 0 / 16px 16px;
 }
@@ -224,9 +224,9 @@ function onSelect(id: string): void {
   max-width: 168px;
   padding: 7px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard, 6px);
-  background: var(--bg-card, var(--color-bg-primary, #fff));
-  color: var(--text-primary, var(--color-text-primary, #1f2329));
+  border-radius: var(--radius-standard);
+  background: var(--bg-card, var(--color-bg-primary));
+  color: var(--text-primary, var(--color-text-primary));
   transition: box-shadow 0.2s;
 }
 .rg-node__head { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -241,28 +241,28 @@ function onSelect(id: string): void {
   flex: none;
   padding: 0 5px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
 }
 .rg-node__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .rg-node__type {
   font-size: 10px;
-  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  color: var(--text-muted, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rg-node__duration { font-size: 10px; font-variant-numeric: tabular-nums; color: var(--text-muted, #878c99); }
+.rg-node__duration { font-size: 10px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 
 /* 状态着色：done 灰实 / running 描边动画 / failed error / awaiting-input warning / skipped 虚化 */
 .rg-node.is-done { border-color: var(--border-color); opacity: 0.82; }
-.rg-node.is-done .rg-node__label { color: var(--text-secondary, var(--color-text-secondary, #5c6470)); }
-.rg-node.is-running { border-color: var(--color-success, #28bf5c); animation: rg-node-running 1.6s ease-in-out infinite; }
-.rg-node.is-failed { border-color: var(--color-danger, #e11d48); }
-.rg-node.is-failed .rg-node__label { color: var(--color-danger, #e11d48); }
-.rg-node.is-awaiting-input { border-color: var(--color-warning, #f59e0b); box-shadow: 0 0 0 1px var(--color-warning, #f59e0b); }
+.rg-node.is-done .rg-node__label { color: var(--text-secondary, var(--color-text-secondary)); }
+.rg-node.is-running { border-color: var(--color-success); animation: rg-node-running 1.6s ease-in-out infinite; }
+.rg-node.is-failed { border-color: var(--color-danger); }
+.rg-node.is-failed .rg-node__label { color: var(--color-danger); }
+.rg-node.is-awaiting-input { border-color: var(--color-warning); box-shadow: 0 0 0 1px var(--color-warning); }
 .rg-node.is-skipped { border-style: dashed; opacity: 0.45; }
 .rg-node.is-selected { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
 
@@ -270,8 +270,8 @@ function onSelect(id: string): void {
 .rg-container {
   position: relative;
   box-sizing: border-box;
-  border: 1.5px dashed var(--accent-primary, var(--color-primary, #3b82f6));
-  border-radius: var(--radius-standard, 8px);
+  border: 1.5px dashed var(--accent-primary, var(--color-primary));
+  border-radius: var(--radius-standard);
   background: rgba(59, 130, 246, 0.04);
   pointer-events: none;
 }
@@ -280,10 +280,10 @@ function onSelect(id: string): void {
   top: -9px;
   left: 10px;
   padding: 0 6px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--bg-card, var(--color-bg-primary, #fff));
+  border-radius: var(--radius-pill);
+  background: var(--bg-card, var(--color-bg-primary));
   font-size: 10px;
-  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--accent-primary, var(--color-primary));
   white-space: nowrap;
 }
 

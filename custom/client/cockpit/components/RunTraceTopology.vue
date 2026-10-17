@@ -119,7 +119,7 @@ const chartOption = computed(() => {
       symbolSize: isSelected ? 34 : isHit ? 30 : 26,
       itemStyle: {
         // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
-        color: KIND_COLOR[n.kind] ?? '#999',
+        color: KIND_COLOR[n.kind] ?? 'var(--text-muted)',
         // 圆形边框：任务状态颜色
         borderColor: statusColor,
         borderWidth: isSelected ? 4 : 3,
@@ -135,15 +135,15 @@ const chartOption = computed(() => {
         formatter: () => `{seq|${seq}} {board|${boardTag}} {task|${taskTag}}\n{title|${title}}\n{status|${statusTag}}`,
         rich: {
           // 数字标号：小圆圈内含数字
-          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [3, 4], borderRadius: 9, lineHeight: 14, align: 'center', width: 16, height: 16 },
+          seq: { fontSize: 10, fontWeight: 'bold', color: 'var(--text-on-accent)', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [3, 4], borderRadius: 9, lineHeight: 14, align: 'center', width: 16, height: 16 },
           // kanban id：等宽深色
-          board: { fontSize: 9, color: '#333', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
+          board: { fontSize: 9, color: 'var(--text-primary)', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
           // title：深色粗体
           title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14, align: 'center' },
           // taskId：等宽灰色
-          task: { fontSize: 9, color: '#666', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
+          task: { fontSize: 9, color: 'var(--text-secondary)', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
           // 任务状态：状态色徽标
-          status: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
+          status: { fontSize: 9, fontWeight: 'bold', color: 'var(--text-on-accent)', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
         },
       },
       _nodeId: n.id,
@@ -182,7 +182,7 @@ const chartOption = computed(() => {
         if (n.taskStatus) meta.push(`状态: ${n.taskStatus}`)
         meta.push(`${n.kind}`, n.status)
         if (meta.length) rows.push(`<span style="color:#888">${meta.join(' · ')}</span>`)
-        if (n.detail) rows.push(`<span style="color:#555">${decodeText(n.detail)}</span>`)
+        if (n.detail) rows.push(`<span style="color:var(--text-secondary)">${decodeText(n.detail)}</span>`)
         return `<div style="max-width:300px">${rows.join('<br/>')}</div>`
       },
     },
@@ -199,7 +199,7 @@ const chartOption = computed(() => {
       edgeSymbol: ['none', 'arrow'],
       edgeSymbolSize: [0, 8],
       emphasis: { focus: 'adjacency', lineStyle: { width: 3 } },
-      lineStyle: { color: '#999', curveness: 0.15 },
+      lineStyle: { color: 'var(--text-muted)', curveness: 0.15 },
     }],
   }
 })

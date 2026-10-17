@@ -180,7 +180,7 @@ const coveragePct = computed(() =>
 
 <style scoped lang="scss">
 .cap {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -192,28 +192,28 @@ const coveragePct = computed(() =>
 .cap__title { margin: 0; font-size: 14px; }
 .cap__window, .cap__refresh {
   padding: 3px 8px;
-  border: 1px solid var(--border-color, #dcdfe6);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
   color: inherit;
   font-size: 12px;
   font-family: inherit;
 }
-.cap__refresh { cursor: pointer; &:hover { background: var(--bg-secondary, #f1f2f4); } &:disabled { opacity: 0.6; cursor: default; } }
+.cap__refresh { cursor: pointer; &:hover { background: var(--bg-secondary); } &:disabled { opacity: 0.6; cursor: default; } }
 .cap__margin { margin-left: auto; }
 
-.cap__error { margin: 0; font-size: 12px; color: var(--color-danger, #e11d48); }
+.cap__error { margin: 0; font-size: 12px; color: var(--color-danger); }
 
 .cap__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .cap__card {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 10px;
-  &--agent { border-color: #c4b5fd; background: rgba(139, 92, 246, 0.06); }
+  &--agent { border-color: color-mix(in srgb, var(--ia-compensated) 40%, transparent); background: color-mix(in srgb, var(--ia-compensated) 6%, transparent); }
 }
 .cap__card-num { font-size: 20px; font-weight: 600; }
-.cap__card-label { font-size: 11px; color: var(--text-secondary, #6b7280); margin-top: 2px; }
+.cap__card-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 
 .cap__chart { width: 100%; height: 260px; }
-.cap__note { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
+.cap__note { margin: 0; font-size: 11px; color: var(--text-muted); }
 </style>

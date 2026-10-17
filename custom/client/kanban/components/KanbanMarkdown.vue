@@ -143,7 +143,7 @@ function renderMarkdown(src: string): string {
     text-decoration: underline;
   }
   :deep(code) {
-    font-family: var(--font-mono, ui-monospace, monospace);
+    font-family: var(--font-mono);
     font-size: 0.8rem;
     padding: 0.05rem 0.3rem;
     background: color-mix(in srgb, currentColor 8%, transparent);

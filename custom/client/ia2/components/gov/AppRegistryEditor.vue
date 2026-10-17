@@ -74,9 +74,9 @@ function serialize(): string {
 
 <style scoped lang="scss">
 .areg__hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; h3 { margin: 0; font-size: 13px; } }
-.areg__meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
-.areg__acts { display: flex; gap: 6px; button { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb); background: var(--bg-primary, #fff); cursor: pointer; } }
-.areg__msg { font-size: 12px; color: var(--text-muted, #878c99); margin: 4px 0; }
-.areg__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color, #e5e7eb); padding: 3px 5px; text-align: left; } th { background: color-mix(in srgb, currentColor 5%, transparent); } input { width: 100%; border: none; background: transparent; font: inherit; } }
+.areg__meta { font-size: 10.5px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.areg__acts { display: flex; gap: 6px; button { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); cursor: pointer; } }
+.areg__msg { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+.areg__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color); padding: 3px 5px; text-align: left; } th { background: color-mix(in srgb, currentColor 5%, transparent); } input { width: 100%; border: none; background: transparent; font: inherit; } }
 .areg__raw { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
 </style>

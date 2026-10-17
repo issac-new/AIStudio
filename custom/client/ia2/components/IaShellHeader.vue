@@ -354,7 +354,7 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-probe__row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
 .cockpit-probe__label { font-size: 12px; color: var(--text-secondary); flex: 1; min-width: 0; }
 .cockpit-probe__val { font-size: 12px; font-weight: 600; flex-shrink: 0; }
-.cockpit-probe__val.is-ok { color: var(--success, #52c41a); }
+.cockpit-probe__val.is-ok { color: var(--success); }
 .cockpit-probe__val.is-err { color: var(--error); }
 .cockpit-probe__ago { font-size: 10px; color: var(--text-muted); font-family: monospace; flex-shrink: 0; }
 .cockpit-probe__section { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }

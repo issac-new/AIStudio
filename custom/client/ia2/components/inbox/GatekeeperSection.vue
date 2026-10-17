@@ -208,28 +208,28 @@ onMounted(() => { void refresh() })
   padding: 0 6px;
   border-radius: 4px;
   background: rgba(46, 158, 91, 0.12);
-  color: #2e9e5b;
+  color: var(--ia-fresh);
   &--absent {
     background: rgba(127, 127, 127, 0.14);
-    color: #999;
+    color: var(--text-muted);
   }
 }
 .gk__refresh {
   margin-left: auto;
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   background: transparent;
   border-radius: 4px;
   padding: 2px 10px;
   font-size: 12px;
   cursor: pointer;
 }
-.gk__error { color: #d33; font-size: 12px; margin: 0; }
-.gk__hint { color: var(--text-muted, #878c99); font-size: 12px; margin: 0; }
+.gk__error { color: var(--ia-fail); font-size: 12px; margin: 0; }
+.gk__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .gk__queue-title {
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, inherit);
+  color: var(--text-primary);
 }
 .gk__cards {
   list-style: none;
@@ -242,12 +242,12 @@ onMounted(() => { void refresh() })
 .gk__card { margin: 0; }
 .gk__unknown {
   font-size: 12px;
-  color: var(--text-muted, #878c99);
+  color: var(--text-muted);
   summary { cursor: pointer; }
 }
 .gk__unknown-item { margin: 2px 0; }
 .gk__cl {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 10px;
   & + & { margin-top: 6px; }
@@ -259,14 +259,14 @@ onMounted(() => { void refresh() })
   margin-bottom: 6px;
 }
 .gk__cl-target { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600; }
-.gk__cl-meta { font-size: 11px; color: var(--text-muted, #878c99); }
+.gk__cl-meta { font-size: 11px; color: var(--text-muted); }
 .gk__cl-actions {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 .gk__input {
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 12px;
@@ -274,7 +274,7 @@ onMounted(() => { void refresh() })
   &--reason { flex: 1; min-width: 200px; }
 }
 .gk__btn {
-  border: 1px solid #555;
+  border: 1px solid var(--border-color);
   background: transparent;
   color: inherit;
   border-radius: 4px;

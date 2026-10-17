@@ -371,7 +371,7 @@ watch(() => ide.workspace, () => void loadPages())
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap; /* 窄面板下按钮换行而非挤出视口（⚙ 不可达实测） */
 }
 
@@ -382,27 +382,27 @@ watch(() => ide.workspace, () => void loadPages())
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-wiki__btn {
   flex-shrink: 0;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   font-size: 11px;
   padding: 3px 8px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { border-color: var(--accent-primary); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
   &--primary {
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+    color: var(--accent-primary);
   }
-  &.is-on { border-color: var(--accent-primary, #4cc9f0); color: var(--accent-primary, #4cc9f0); }
+  &.is-on { border-color: var(--accent-primary); color: var(--accent-primary); }
 }
 
 .ide-wiki__cfg {
@@ -410,12 +410,12 @@ watch(() => ide.workspace, () => void loadPages())
   flex-direction: column;
   gap: 4px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
   font-size: 11px;
 }
-.ide-wiki__cfg-row { display: flex; align-items: center; gap: 6px; color: var(--text-muted, #9aa0aa); }
+.ide-wiki__cfg-row { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
 .ide-wiki__cfg-num {
-  width: 52px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px;
+  width: 52px; border: 1px solid var(--border-color); border-radius: 4px;
   background: transparent; color: inherit; padding: 2px 6px; font-size: 11px;
 }
 
@@ -424,19 +424,19 @@ watch(() => ide.workspace, () => void loadPages())
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color);
   font-size: 11px;
   flex-wrap: wrap;
 }
-.ide-wiki__badge { color: var(--text-muted, #9aa0aa); }
-.ide-wiki__badge--stale { color: #e2a03f; }
-.ide-wiki__badge--ok { color: #4cc9f0; }
+.ide-wiki__badge { color: var(--text-muted); }
+.ide-wiki__badge--stale { color: var(--ia-stale); }
+.ide-wiki__badge--ok { color: var(--accent-info); }
 .ide-wiki__refresh { padding: 2px 6px; font-size: 10px; }
 
 .ide-wiki__hint {
   padding: 16px 12px;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-wiki__body {
@@ -450,11 +450,11 @@ watch(() => ide.workspace, () => void loadPages())
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-color, #e0e0e0);
+  border-right: 1px solid var(--border-color);
 }
 .ide-wiki__filter {
   margin: 4px 4px 2px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -473,7 +473,7 @@ watch(() => ide.workspace, () => void loadPages())
 .ide-wiki__group {
   padding: 6px 8px 2px;
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -482,16 +482,16 @@ watch(() => ide.workspace, () => void loadPages())
   padding: 5px 8px;
   border-radius: 5px;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--text-primary);
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &:hover { background: var(--bg-tertiary, #ebebeb); }
+  &:hover { background: var(--bg-tertiary); }
   &.is-active {
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
-    color: var(--accent-primary, #4cc9f0);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+    color: var(--accent-primary);
   }
 }
 
@@ -504,7 +504,7 @@ watch(() => ide.workspace, () => void loadPages())
 }
 .ide-wiki__pagemeta {
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
   margin: 0 0 6px;
 }
 </style>

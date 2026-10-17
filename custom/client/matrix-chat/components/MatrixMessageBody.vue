@@ -144,7 +144,7 @@ function sanitizeHtml(html: string): string {
 <style scoped>
 /* P4①② 卡链接与 @我 高亮 */
 :deep(.mx-card-link) {
-  color: var(--accent-primary, #2563eb);
+  color: var(--accent-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.92em;
   background: rgba(37, 99, 235, 0.08);
@@ -154,11 +154,11 @@ function sanitizeHtml(html: string): string {
 }
 :deep(.mx-card-link:hover) { text-decoration: underline; }
 :deep(.mx-mention-me) {
-  color: #b45309;
-  background: #fef3c7;
+  color: var(--ia-stale);
+  background: rgba(var(--warning-rgb), 0.12);
   border-radius: 4px;
   padding: 0 3px;
   font-weight: 600;
 }
-:deep(.mx-mention) { color: var(--accent-primary, #2563eb); }
+:deep(.mx-mention) { color: var(--accent-primary); }
 </style>

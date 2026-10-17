@@ -168,8 +168,8 @@ function formatDuration(seconds?: number): string {
   overflow-y: auto;
   padding: 8px 10px;
   font-size: 12px;
-  background: var(--bg-secondary, #1b1e24);
-  border: 1px solid var(--border-color, #3a3f4b);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 320;
@@ -200,9 +200,9 @@ function formatDuration(seconds?: number): string {
   height: 7px;
   border-radius: 50%;
 
-  &.is-running { background: #4cc9f0; }
-  &.is-waiting { background: #f0a44c; }
-  &.is-done { background: var(--success-color, var(--success-color, #18a058)); }
+  &.is-running { background: var(--accent-info); }
+  &.is-waiting { background: var(--ia-stale); }
+  &.is-done { background: var(--success-color, var(--success-color)); }
 }
 
 .ide-inbox__label {
@@ -214,11 +214,11 @@ function formatDuration(seconds?: number): string {
 
 .ide-inbox__duration {
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 
 .ide-inbox__time {
   font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--text-muted);
 }
 </style>
