@@ -113,9 +113,8 @@ export interface SetupStep {
   name: string
   purpose: string
   criteria: string
-  /** 进入入口（路由名）；gated 步骤受 feature 开关门控 */
+  /** 进入入口（路由名） */
   target: RouteNamedRaw
-  gated?: boolean
   /** run-state 完成键；空数组=轮次内不跟踪本步 */
   keys: string[]
   /** 口径或挂账注脚（诚实呈现：不假装有能力） */
@@ -129,7 +128,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     criteria: '组织与编制表有数据（应用初始化与研发人员管理两步合一判定）',
     target: { name: 'ia2.govOrgAssets' },
     keys: ['appinit_done', 'people_done'],
-    note: '后端无组织创建实体，本步是组织信息与编制维护面，不是新建向导（挂账）。',
+    note: '组织与编制表单在治理·组织与资产签（保存即 git 提交）。',
   },
   {
     no: 2, key: 'accounts', name: '建立账号',
@@ -137,7 +136,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     criteria: '账号名单与编制人数对齐',
     target: { name: 'ia2.accounts' },
     keys: ['smoke_done'],
-    note: '账号分配与登录并入序幕四合一段，与步骤 4 共用环境冒烟判定；邀请流未接入，当前只有管理员直建（挂账）。',
+    note: '账号分配与登录并入序幕四合一段，与步骤 4 共用环境冒烟判定；直建与邀请（一次性初始口令）都在账户管理页。',
   },
   {
     no: 3, key: 'teams', name: '建立团队与协调关系',
@@ -159,10 +158,9 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     no: 5, key: 'agents', name: '准备智能体',
     purpose: '建 hermes agent 档案与编制，确认就位。',
     criteria: '就绪检查显示预期智能体在线',
-    target: { name: 'hermes.agentManager' },
-    gated: true,
+    target: { name: 'ia2.agents' },
     keys: [],
-    note: '轮次内不跟踪本步；agent 级模型绑定与启停未接入（挂账）。',
+    note: '轮次内不跟踪本步；模型绑定与启停在智能体工作台操作。',
   },
 ]
 

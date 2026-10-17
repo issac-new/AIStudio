@@ -41,9 +41,9 @@ function onToggleWorkbench(): void {
       <template v-for="c in CENTER_NAVS" :key="c.key">
         <!-- D9/D18：④开发=分段控件（沟通协作｜IDE 工作区，同阶段两形态） -->
         <span
-          v-if="c.key === 'workbench2'"
+          v-if="c.key === 'stage4'"
           class="icn-inline__work"
-          :class="{ 'icn-inline__work--active': activeCenter === 'workbench2' }"
+          :class="{ 'icn-inline__work--active': activeCenter === 'stage4' }"
           data-testid="ia-nav-center-work"
         >
           <button
@@ -51,7 +51,7 @@ function onToggleWorkbench(): void {
             class="icn-inline__center-btn icn-inline__seg"
             :class="{ 'icn-inline__seg--cur': !isIde }"
             data-testid="ia-nav-center-work-collab"
-            :aria-current="activeCenter === 'workbench2' && !isIde ? 'page' : undefined"
+            :aria-current="activeCenter === 'stage4' && !isIde ? 'page' : undefined"
             @click="onGoCenter('ia2.stage4')"
           >{{ navLocale === 'zh' ? c.labelZh : c.labelEn }}</button>
           <button
@@ -59,7 +59,7 @@ function onToggleWorkbench(): void {
             class="icn-inline__center-btn icn-inline__seg"
             :class="{ 'icn-inline__seg--cur': isIde }"
             data-testid="ia-nav-center-work-ide"
-            :aria-current="activeCenter === 'workbench2' && isIde ? 'page' : undefined"
+            :aria-current="activeCenter === 'stage4' && isIde ? 'page' : undefined"
             @click="onToggleWorkbench"
           >{{ navLocale === 'zh' ? 'IDE 工作区' : 'IDE Workspace' }}</button>
         </span>

@@ -819,23 +819,23 @@ describe('IaCentersNav — 壳级三中心导航条（走查修正：升 IaGloba
     // D18：①搭建②需求③分析设计[④开发｜IDE 工作区]⑤验收⑥治理（IDE 段归④开发）
     expect(labels).toEqual(['①搭建', '②需求', '③分析设计', '④开发', 'IDE 工作区', '⑤验收', '⑥治理'])
     // /app 裸路径=旅程页（D18 默认入口），搭建区①高亮
-    expect(wrapper.find('[data-testid="ia-nav-center-workbench"]').classes()).toContain('icn-inline__center-btn--active')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).not.toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage1"]').classes()).toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).not.toContain('icn-inline__center-btn--active')
   })
 
   it('高亮按路由前缀判定：/app/sim 下推演中心高亮（同一壳组件复用场景）', async () => {
     const { wrapper } = await mountNav('/app/sim')
-    expect(wrapper.find('[data-testid="ia-nav-center-sim"]').classes()).toContain('icn-inline__center-btn--active')
+    expect(wrapper.find('[data-testid="ia-nav-center-stage2"]').classes()).toContain('icn-inline__center-btn--active')
     // D9 分段：工作台激活态落在分段容器（work--active），子按钮不再挂 --active
     expect(wrapper.find('[data-testid="ia-nav-center-work"]').classes()).not.toContain('icn-inline__work--active')
   })
 
   it('点击推演/治理中心 → 落既有路由名（不新增路由）', async () => {
     const { wrapper, router } = await mountNav('/app')
-    await wrapper.find('[data-testid="ia-nav-center-sim"]').trigger('click')
+    await wrapper.find('[data-testid="ia-nav-center-stage2"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.stage2') // D13：②需求阶段页
-    await wrapper.find('[data-testid="ia-nav-center-gov"]').trigger('click')
+    await wrapper.find('[data-testid="ia-nav-center-stage3"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.stage3') // D13：③分析设计阶段页
   })

@@ -66,6 +66,7 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
   {
     key: 'assets', title: '资产', note: '工具接入、渠道、连接与记忆库——组织依赖的外部资产。',
     entries: [
+      { name: 'ia2.modelProviders', label: '模型服务商（组织级引擎目录）', source: 'native' },
       { name: 'hermes.mcp', label: '工具接入', source: 'legacy' },
       { name: 'hermes.channels', label: '渠道接入', source: 'legacy' },
       { name: 'hermes.connections', label: '连接管理', source: 'legacy' },

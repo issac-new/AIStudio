@@ -35,8 +35,14 @@ const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';
 process.env.PORT = port;
+// D20 治理台账仓落点（org/roster/invites 等 registry 的 git 仓）：缺省 ncwk/governance
+//（工作区内、overlay 代码仓外）；显式设置 GOVERNANCE_REPO 时尊重不动。
+if (!process.env.GOVERNANCE_REPO?.trim()) {
+  process.env.GOVERNANCE_REPO = resolve(overlayRoot, '..', 'governance');
+}
 
 console.log(`[serve-server] PORT=${port}`);
+console.log(`[serve-server] GOVERNANCE_REPO=${process.env.GOVERNANCE_REPO}`);
 console.log(`[serve-server] TS_NODE_PROJECT=${process.env.TS_NODE_PROJECT}`);
 console.log(`[serve-server] TS_NODE_FILES=${process.env.TS_NODE_FILES}`);
 console.log(`[serve-server] starting: node -r ts-node/register ${upstream}/packages/server/src/index.ts`);

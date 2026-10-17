@@ -28,7 +28,7 @@ import { queryApprovalLog } from '../approvals/approval-log'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
-import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
+import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
@@ -557,6 +557,25 @@ router.post('/matrix-users', async (ctx) => {
     withAgent: b.withAgent !== 'false', displayName: b.displayName,
   }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
 })
+
+// D20 账号邀请：与 matrix-users 同闸同凭据（superAdmin JWT + body.adminToken
+// 双闸），口令由服务端生成一次性初始口令（不落盘，只回一次），invites 台账
+// 登记审计行。被邀人首登走登录页 Matrix 页签，改密走设置页。
+router.post('/invites', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = ctx.request.body as Record<string, string | number>
+  for (const k of ['localName', 'role', 'adminToken', 'homeserverUrl']) {
+    if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
+  }
+  try { ctx.body = await createAccountInvite({
+    localName: String(b.localName), role: String(b.role),
+    adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
+    withAgent: b.withAgent !== 'false',
+    expiresInHours: Number(b.expiresInHours) > 0 ? Number(b.expiresInHours) : 24,
+    actor: b.actor ? String(b.actor) : undefined,
+  }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
+})
+
 
 router.post('/matrix-offboard', async (ctx) => {
   if (superAdminDenied(ctx)) return
