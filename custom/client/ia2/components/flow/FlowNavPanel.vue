@@ -41,6 +41,8 @@ const props = defineProps<{
   loopActivity?: Record<string, LoopActivity>
   /** R7-C agent 名册（multica roster：在线/忙闲/在跑；可选向后兼容） */
   agents?: AgentRosterRow[]
+  /** 会话 → 工作区（WorkbenchView 从挂接任务 workspace_path 反查；可选） */
+  workspaceBySession?: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -60,7 +62,9 @@ const emit = defineEmits<{
   (e: 'delete-group', roomId: string): void
 }>()
 
-const { t } = useI18n()
+const i18nCtx = useI18n()
+const { t } = i18nCtx
+const zh = computed(() => String((i18nCtx as unknown as { locale?: { value?: string } })?.locale?.value ?? 'zh').startsWith('zh'))
 const tx = useMsgSurfaceText()
 /** 排序档 hover 文案（msg-surface 本地字典，漂移期模式） */
 function sortTitle(m: FlowSortMode): string {
@@ -106,6 +110,40 @@ const chatRows = computed<FlowSessionRow[]>(() => {
     return bt - at
   })
   return sortMode.value === 'recent' ? base : sortFlowRows(base, sortMode.value)
+})
+
+/** 分类聚类（2026-10-18 检索/分类批）：会话按工作区或团队分组，偏好持久化。
+ *  默认「不分组」保持既有单一聊天列表；工作区由挂接任务 workspace_path 反查。 */
+type GroupMode = 'none' | 'workspace' | 'team'
+const GROUP_MODES = ['none', 'workspace', 'team'] as const
+const GROUP_LABELS: Record<GroupMode, { zh: string; en: string }> = {
+  none: { zh: '不分组', en: 'No grouping' },
+  workspace: { zh: '按工作区', en: 'By workspace' },
+  team: { zh: '按团队', en: 'By team' },
+}
+const groupBy = ref<GroupMode>(
+  (GROUP_MODES.find(m => m === readSetting('flow.groupBy', 'none').value) ?? 'none') as GroupMode)
+watch(groupBy, (m) => writeSetting('user', 'flow.groupBy', m))
+
+const groupedChats = computed<Array<{ key: string; label: string; rows: FlowSessionRow[] }>>(() => {
+  if (groupBy.value === 'none') {
+    return [{ key: 'all', label: t('ia2.flow.chatSection'), rows: chatRows.value }]
+  }
+  const buckets = new Map<string, FlowSessionRow[]>()
+  for (const s of chatRows.value) {
+    const raw = groupBy.value === 'workspace'
+      ? (props.workspaceBySession?.[`${s.kind}:${s.id}`] ?? '')
+      : (s.teamTag ?? '')
+    const label = raw || (groupBy.value === 'workspace'
+      ? (zh.value ? '未关联工作区' : 'No workspace')
+      : (zh.value ? '未分组' : 'Ungrouped'))
+    const list = buckets.get(label) ?? []
+    list.push(s)
+    buckets.set(label, list)
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, rows], i) => ({ key: `${groupBy.value}-${i}`, label, rows }))
 })
 
 const KIND_ICONS: Record<FlowSessionRow['kind'], string> = { room: '#', group: '👥', chat: '💬' }
@@ -192,14 +230,21 @@ function submitCreateRoom(): void {
         @click="sortMode = sm"
       >{{ sm === 'recent' ? '🕐' : sm === 'unread' ? '🔴' : '🔤' }}</button>
     </div>
+    <label class="flow-nav__groupby">
+      <span>{{ zh ? '分组' : 'Group' }}</span>
+      <select v-model="groupBy" data-testid="flow-group-by">
+        <option v-for="m in GROUP_MODES" :key="m" :value="m">{{ zh ? GROUP_LABELS[m].zh : GROUP_LABELS[m].en }}</option>
+      </select>
+    </label>
 
     <div class="flow-nav__scroll">
-      <!-- v14 单一「聊天」列表（三小节退役；行 testid 沿用 flow-session-*） -->
-      <div v-show="chatRows.length" class="flow-nav__sec" data-testid="flow-cluster-chat-all">
-        <div class="flow-nav__sec-head" data-testid="flow-group-chats">
-          {{ t('ia2.flow.chatSection') }}<span class="flow-nav__sec-n">{{ chatRows.length }}</span>
-        </div>
-        <template v-for="s in chatRows" :key="`${s.kind}:${s.id}`">
+      <!-- 会话列表：单一「聊天」列表可选按工作区/团队聚类；行 testid 沿用 flow-session-* -->
+      <template v-for="g in groupedChats" :key="g.key">
+        <div v-show="g.rows.length" class="flow-nav__sec" :data-testid="g.key === 'all' ? 'flow-cluster-chat-all' : `flow-cluster-${g.key}`">
+          <div class="flow-nav__sec-head" :data-testid="g.key === 'all' ? 'flow-group-chats' : `flow-group-${g.key}`">
+            {{ g.label }}<span class="flow-nav__sec-n">{{ g.rows.length }}</span>
+          </div>
+          <template v-for="s in g.rows" :key="`${s.kind}:${s.id}`">
           <button
             type="button"
             class="flow-nav__row"
@@ -249,8 +294,9 @@ function submitCreateRoom(): void {
               @dblclick.stop="emit('jump-ide', tid)"
             >#{{ tid.slice(0, 8) }}</button>
           </div>
-        </template>
-      </div>
+          </template>
+        </div>
+      </template>
 
       <div v-if="shownLoops.length" class="flow-nav__sec">
         <div class="flow-nav__sec-head" data-testid="flow-group-loops">
@@ -392,6 +438,16 @@ function submitCreateRoom(): void {
   &:hover { color: var(--text-primary); }
 }
 .flow-nav__sort--on { border-color: var(--primary); background: var(--bg-secondary); }
+.flow-nav__groupby {
+  display: flex; align-items: center; gap: 6px; margin: 0 12px 6px;
+  font-size: 10px; color: var(--text-muted);
+}
+.flow-nav__groupby select {
+  flex: 1; min-width: 0; border: 1px solid var(--border-color); border-radius: 5px;
+  background: transparent; color: var(--text-primary); font-family: inherit;
+  font-size: 11px; padding: 2px 5px;
+}
+.flow-nav__groupby select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
 .flow-nav__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 8px; }
 .flow-nav__sec { margin-bottom: 8px; }
 .flow-nav__sec-head {

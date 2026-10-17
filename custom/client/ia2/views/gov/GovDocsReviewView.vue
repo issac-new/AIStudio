@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import AppRegistryEditor from '../../components/gov/AppRegistryEditor.vue'
 import OrgEditor from '../../components/gov/OrgEditor.vue'
@@ -23,6 +24,7 @@ import {
 // A0 三中心拆分：标题键 tabGovDocs 已迁 i18n-gov-tabs（治理中心过渡事实源）
 import { useGovTabsText } from '../../i18n-gov-tabs'
 
+const route = useRoute()
 const i18nCtx = useI18n()
 /** 文案单一事实源=custom/governance/i18n.ts；legacy i18n 无 mergeLocaleMessage，
  *  组件内按当前 locale 选表（zh* → zh，其余 en）。 */
@@ -137,7 +139,12 @@ function fmtTime(ts: number): string {
   return ts ? new Date(ts).toLocaleString('zh-CN') : ''
 }
 
-onMounted(() => void refresh())
+onMounted(async () => {
+  await refresh()
+  // 检索页文档结果直达：?doc=<kind> 自动打开对应工件（找不到则保持列表）
+  const kind = String(route.query.doc ?? '')
+  if (kind && (overview.value?.docs ?? []).some(d => d.kind === kind)) void openDoc(kind)
+})
 </script>
 
 <template>

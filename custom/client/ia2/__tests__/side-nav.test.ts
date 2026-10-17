@@ -50,6 +50,7 @@ function makeRouter(initial: string): Router {
     { path: '/app/collab', name: 'ia2.collab', component: { template: '<div />' } },
     { path: '/app/board', name: 'ia2.board', component: { template: '<div />' } },
     { path: '/app/inbox', name: 'ia2.inbox', component: { template: '<div />' } },
+    { path: '/app/search', name: 'ia2.search', component: { template: '<div />' } },
     { path: '/app/stage/setup', name: 'ia2.stage1', component: { template: '<div />' } },
     { path: '/app/stage/reqs', name: 'ia2.stage2', component: { template: '<div />' } },
     { path: '/app/stage/design', name: 'ia2.stage3', component: { template: '<div />' } },
@@ -84,7 +85,7 @@ describe('IaSideNav — 左侧常驻导航', () => {
   it('常用组五个入口 + 六阶段 + 整轮 + 专题 + 设置都在位', async () => {
     const { w } = await mountAt('/app/stage/build')
     expect(w.find('[data-testid="ia-side-nav"]').exists()).toBe(true)
-    for (const id of ['journey', 'workbench', 'board', 'inbox']) {
+    for (const id of ['journey', 'workbench', 'board', 'inbox', 'search']) {
       expect(w.find(`[data-testid="ia-side-nav-${id}"]`).exists(), id).toBe(true)
     }
     for (let n = 1; n <= 6; n++) {

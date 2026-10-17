@@ -40,6 +40,7 @@ const PAGE_LABEL: Record<string, { zh: string; en: string }> = {
   agents: { zh: '智能体', en: 'Agents' },
   accounts: { zh: '账户管理', en: 'Accounts' },
   deliveryCases: { zh: '交付案例', en: 'Delivery Cases' },
+  search: { zh: '检索', en: 'Search' },
   simOrchestration: { zh: '运行编排', en: 'Orchestration' },
   simSettings: { zh: '推演设置', en: 'Simulation Settings' },
   govSettings: { zh: '系统设置', en: 'System Settings' },
