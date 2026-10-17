@@ -86,10 +86,7 @@ function stepDisabled(st: SetupStep): boolean {
 <template>
   <div class="jrn" data-testid="jrn-page">
     <header class="jrn__head">
-      <div>
-        <h1 class="jrn__title">旅程：从 0 到 1，建组织、跑交付、做治理</h1>
-        <p class="jrn__sub">按使用时序走完一家 AI 研发组织的完整旅程——A 区五步把组织从零搭起来，B 区五阶段把需求交付到治理。每一步告诉你做什么、去哪做。</p>
-      </div>
+      <h1 class="jrn__title" title="A 区五步把组织从零搭起来，B 区五阶段把需求交付到治理">旅程：从 0 到 1，建组织、跑交付、做治理</h1>
       <div class="jrn__runbar">
         <input v-model="runInput" class="jrn__input" data-testid="jrn-run" placeholder="输入运行目录名查看该轮进度（如 20261015-v8-run20）" @keyup.enter="submitRun">
         <button class="jrn__btn" type="button" data-testid="jrn-load" @click="submitRun">查看进度</button>
@@ -103,12 +100,12 @@ function stepDisabled(st: SetupStep): boolean {
       <span v-if="openItems > 0" class="jrn__bottleneck-debt">另有 {{ openItems }} 笔遗留项未清算，启动新运行前须清零</span>
     </div>
 
-    <!-- 无轮引导态：从 A 区第 1 步开始 -->
+    <!-- 无轮引导态（D19 收敛：一句话+双按钮） -->
     <div v-if="!run && !loadError" class="jrn__guide" data-testid="jrn-guide">
-      <p class="jrn__guide-title">还没有进行中的运行。第一次使用请从 A 区第 1 步「建立组织」开始，五步走完即可启动第一轮交付。</p>
+      <p class="jrn__guide-title">还没有进行中的运行——从第 1 步「建立组织」开始</p>
       <div class="jrn__guide-btns">
-        <button class="jrn__guide-btn" type="button" data-testid="jrn-start" @click="goStep(SETUP_STEPS[0])">去建立组织（治理·组织与资产）→</button>
-        <button class="jrn__guide-btn jrn__guide-btn--ghost" type="button" data-testid="jrn-skip" @click="goStage(2)">我已搭好，直接看交付流程 →</button>
+        <button class="jrn__guide-btn" type="button" data-testid="jrn-start" @click="goStep(SETUP_STEPS[0])">去建立组织 →</button>
+        <button class="jrn__guide-btn jrn__guide-btn--ghost" type="button" data-testid="jrn-skip" @click="goStage(2)">已搭好，看交付流程 →</button>
       </div>
     </div>
     <p v-if="loadError" class="jrn__error" data-testid="jrn-error">轮次数据不可达：{{ loadError }}</p>
@@ -123,6 +120,7 @@ function stepDisabled(st: SetupStep): boolean {
           class="jrn__card"
           :class="`jrn__card--${stepState(st)}`"
           :data-testid="`jrn-step-${st.no}`"
+          :title="`完成判据：${st.criteria}${st.note ? `（${st.note}）` : ''}`"
           role="button"
           @click="goStep(st)"
         >
@@ -133,9 +131,8 @@ function stepDisabled(st: SetupStep): boolean {
               {{ runState ? (stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始') : '' }}
             </span>
           </div>
-          <p class="jrn__what">{{ st.purpose }}</p>
-          <p class="jrn__tools">完成判据：{{ st.criteria }}<span v-if="st.note" class="jrn__note">（{{ st.note }}）</span></p>
-          <p v-if="stepDisabled(st)" class="jrn__gated">智能体管理开关未开启（组织级配置内可开）</p>
+          <p class="jrn__what jrn__what--one">{{ st.purpose }}</p>
+          <p v-if="stepDisabled(st)" class="jrn__gated">智能体管理开关未开启</p>
           <p class="jrn__go">进入 →</p>
         </li>
       </ol>
@@ -151,6 +148,7 @@ function stepDisabled(st: SetupStep): boolean {
           class="jrn__card"
           :class="`jrn__card--${stageState(s.no)}`"
           :data-testid="`jrn-stage-${s.no}`"
+          :title="s.what"
           role="button"
           @click="goStage(s.no)"
         >
@@ -161,8 +159,7 @@ function stepDisabled(st: SetupStep): boolean {
               {{ runState ? (stageState(s.no) === 'done' ? '✓ 完成' : stageState(s.no) === 'active' ? '● 进行中' : '未开始') : '' }}
             </span>
           </div>
-          <p class="jrn__what">{{ s.what }}</p>
-          <p class="jrn__go">进入阶段页 →</p>
+          <p class="jrn__go">进入 →</p>
         </li>
       </ol>
     </section>
@@ -170,10 +167,9 @@ function stepDisabled(st: SetupStep): boolean {
 </template>
 
 <style scoped lang="scss">
-.jrn { display: flex; flex-direction: column; gap: 16px; padding: 20px 24px; height: 100%; overflow: auto; }
-.jrn__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.jrn { display: flex; flex-direction: column; gap: 14px; padding: 16px 24px; height: 100%; overflow: auto; }
+.jrn__head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
 .jrn__title { margin: 0; font-size: 16px; }
-.jrn__sub { margin: 4px 0 0; font-size: 12px; color: var(--text-muted, #878c99); max-width: 720px; }
 .jrn__runbar { display: flex; gap: 6px; }
 .jrn__input {
   border: 1px solid var(--border-color, #e5e7eb); border-radius: 6px; padding: 5px 10px;
@@ -210,12 +206,12 @@ function stepDisabled(st: SetupStep): boolean {
   &--ghost { background: transparent; color: var(--accent-primary, var(--color-primary, #3b82f6)); border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6)); }
 }
 .jrn__error { color: #d33; font-size: 12px; margin: 0; }
-.jrn__zone { display: flex; flex-direction: column; gap: 8px; }
-.jrn__zone-title { margin: 0; font-size: 13px; color: var(--text-muted, #878c99); font-weight: 600; }
-.jrn__steps, .jrn__stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.jrn__zone { display: flex; flex-direction: column; gap: 6px; }
+.jrn__zone-title { margin: 0; font-size: 12px; color: var(--text-muted, #878c99); font-weight: 600; }
+.jrn__steps, .jrn__stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .jrn__card {
-  border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 14px 16px;
-  cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 8px 12px;
+  cursor: pointer; display: flex; flex-direction: column; gap: 2px;
   &:hover { border-color: var(--accent-primary, var(--color-primary, #3b82f6)); }
 }
 .jrn__card--done { border-left: 3px solid var(--ia-fresh, #2e9e5b); }
@@ -223,17 +219,18 @@ function stepDisabled(st: SetupStep): boolean {
 .jrn__card--pending, .jrn__card--untracked { border-left: 3px solid var(--border-color, #e5e7eb); }
 .jrn__card-head { display: flex; align-items: baseline; gap: 8px; }
 .jrn__no {
-  font-size: 16px; font-weight: 700; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums;
+  font-size: 14px; font-weight: 700; color: var(--text-muted, #878c99); font-variant-numeric: tabular-nums;
   .jrn__card--done & { color: var(--ia-fresh, #2e9e5b); }
   .jrn__card--active & { color: var(--ia-stale, #b8860b); }
 }
-.jrn__card-title { font-size: 14px; font-weight: 600; }
+.jrn__card-title { font-size: 13px; font-weight: 600; }
 .jrn__state { margin-left: auto; font-size: 11px; color: var(--text-muted, #878c99); }
 .jrn__card--done .jrn__state { color: var(--ia-fresh, #2e9e5b); }
 .jrn__card--active .jrn__state { color: var(--ia-stale, #b8860b); font-weight: 600; }
-.jrn__what { margin: 0; font-size: 12px; line-height: 1.6; }
-.jrn__tools { margin: 0; font-size: 11px; color: var(--text-muted, #878c99); }
-.jrn__note { color: var(--text-muted, #878c99); }
+.jrn__what--one {
+  margin: 0; font-size: 11.5px; color: var(--text-muted, #878c99);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .jrn__gated { margin: 0; font-size: 11px; color: var(--ia-stale, #b8860b); }
 .jrn__go { margin: 0; font-size: 11px; color: var(--accent-primary, var(--color-primary, #3b82f6)); }
 </style>
