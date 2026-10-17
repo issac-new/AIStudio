@@ -14,7 +14,7 @@ BODY="$(sed -n '/^_stuck=0/,/^done$/p' "$HERE/mux/mx-night-sentinel.sh")"
 [[ -n "$BODY" ]] || { echo "FAIL 提取主循环失败"; exit 1; }
 
 CTRL="$(mktemp -d /tmp/night-sentinel.XXXXXX)" || exit 1
-trap 'kill ${BG:-0} 2>/dev/null; rm -rf "$CTRL"' EXIT
+trap '[ -n "${BG:-}" ] && kill "$BG" 2>/dev/null; rm -rf "$CTRL"' EXIT
 mkdir -p "$CTRL/hermes/profiles/aa/logs" "$CTRL/hermes/profiles/bb/logs" "$CTRL/var" "$CTRL/runs/r1" "$CTRL/logs"
 touch "$CTRL/hermes/profiles/aa/logs/agent.log" "$CTRL/hermes/profiles/bb/logs/agent.log"
 echo "report_pending" > /dev/null
@@ -58,7 +58,7 @@ else
 fi
 STUBEOF
 chmod +x "$HERMES"
-eval "$BODY" & BG=$!
+eval "$BODY" >/dev/null 2>&1 & BG=$!
 # 冷启动余量（2026-10-16 竞态根治）：首轮轮询 1s + 首次 `timeout 120 <hermes>` 冷启
 # ~2.7s（实测 run1 1.75-2.75s，热后 70ms）=3.7s 贴原 sleep 4 边界，负载高即被 kill
 # 在「直派结果」落盘前假红。8s 留足余量，行为判据不变。
@@ -73,7 +73,7 @@ echo '[]' > "$CTRL/ready.json"
 echo '[{"id":"t9","assignee":"aa","title":"X"}]' > "$CTRL/running.json"
 echo $((NOW - 9999)) > "$CTRL/rw-aa"
 : > "$LOG"; : > "$CTRL/sent.log"
-eval "$BODY" & BG=$!
+eval "$BODY" >/dev/null 2>&1 & BG=$!
 sleep 3; kill $BG 2>/dev/null; wait $BG 2>/dev/null; BG=
 if grep -q "休眠唤醒：aa" "$LOG" && grep -qE "MENTION=@aa-agent.*t9" "$CTRL/sent.log" && grep -q "仅回话不动手" "$CTRL/sent.log"; then
   echo "PASS ② 休眠催办（@aa、带卡号、真做判词语义）"
@@ -82,7 +82,7 @@ else echo "FAIL ② log=$(tail -3 "$LOG"|tr '\n' ';') sent=$(cat "$CTRL/sent.log
 # ── ③ report_done 即退 ──
 echo 'report_done=123' > "$STATE"
 : > "$LOG"
-eval "$BODY" & BG=$!
+eval "$BODY" >/dev/null 2>&1 & BG=$!
 sleep 2; kill $BG 2>/dev/null; wait $BG 2>/dev/null; BG=
 if grep -q "功成身退" "$LOG"; then
   echo "PASS ③ report_done 落键即退"
