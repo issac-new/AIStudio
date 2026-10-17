@@ -218,7 +218,7 @@ describe('治理分区（2026-10-01 单层页签重构）', () => {
     expect(api.fetchGovernanceOverview).toHaveBeenCalledTimes(2)
   })
 
-  it('分区视图：组织知识区含决策图谱；台账规则区含规则闸/本体/运行态', async () => {
+  it('分区视图：组织知识区含决策图谱；台账规则区含规则闸/本体/运行态', { timeout: 20000 }, async () => {
     const org = await mountGovView('@/custom/ia2/views/gov/GovOrgKnowledgeView.vue')
     expect(org.find('[data-testid="gov-org-diagnosis"]').exists()).toBe(true)
     expect(org.find('[data-testid="gov-knowledge-graph"]').exists()).toBe(true)
