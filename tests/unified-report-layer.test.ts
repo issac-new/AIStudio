@@ -1,16 +1,18 @@
 import { describe, it, beforeAll, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // 二合一报告层守门（2026-10-09 提速轮）：生成器对最小 fixture 可跑、三产物结构完整。
 // fixture 在 beforeAll 内嵌生成（不依赖在架轮次）；生成器=subprocess（Python3 标准库实现）。
+// 2026-10-18 隔离根治：夹具落临时目录——此前在 tests/fixtures/ 就地重建，每次跑
+// 套件都改写已提交基线（unified-report.html/roadshow-outline.md 再生），工作树常脏。
 const HARNESS = join(__dirname, '..')
-const FIX = join(HARNESS, 'tests', 'fixtures', 'unified-mini')
+const FIX = mkdtempSync(join(tmpdir(), 'unified-mini-'))
 const RUN = 'fixture-run'
 
 beforeAll(() => {
-  rmSync(FIX, { recursive: true, force: true })
   const ev = join(FIX, 'runs', RUN, 'evidence')
   mkdirSync(ev, { recursive: true })
   // state.env：门禁键部分在位（覆盖"六闸落键 N 道"实算路径）
