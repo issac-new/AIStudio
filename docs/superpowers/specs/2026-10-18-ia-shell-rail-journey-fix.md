@@ -21,3 +21,7 @@
 - 前端全量：`4857 passed / 8 skipped / 0 failed`（4865 项，`--maxWorkers=4`）。
 - 8649 DOM 实查：`body.className` 含 `ia-center-full`，`.studio-navigation-rail` 不再显示，`[data-testid="ia-side-nav"]` 在位。
 - 旅程页：运行选择器显示记忆运行；无运行时仍显示引导态。
+
+## 补充（8649 走查）
+
+- 左侧栏「全流程推演」行的运行名过长时挤掉了标签（截图实测显示「全流程…」）。修复：右侧槽 `max-width: 94px` + 省略号，完整运行名放 `title` 悬停显示；标签保持完整。
