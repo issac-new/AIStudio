@@ -19,6 +19,11 @@ let report: IncidentReport
 const SESSION = 'sess-incident-test-1'
 
 beforeAll(() => {
+  // 环境隔离（2026-10-17 A7 收尾）：静态 import 后身份/审批面能读到宿主真实数据，
+  // 夹具的「无配置面」前提须显式隔离（与 identity-empty 用例同型——环境运气→确定输入）。
+  process.env.AGENT_IDENTITY_STORE = '/nonexistent/agent-identity-store'
+  process.env.HERMES_APPROVALS_LOG_FILE = '/nonexistent/approvals-history.json'
+  process.env.HERMES_INCIDENT_EKKO_DB = '/nonexistent/ekko.db'
   dbDir = mkdtempSync(join(tmpdir(), 'incident-db-'))
   traceDir = mkdtempSync(join(tmpdir(), 'incident-trace-'))
   // 阶梯配置域隔离（H2 接入后理论面会读配置——测试不读真实家目录）
@@ -79,6 +84,9 @@ afterAll(() => {
   rmSync(traceDir, { recursive: true, force: true })
   rmSync(ladderDir, { recursive: true, force: true })
   delete process.env.HERMES_AUTONOMY_LADDER_DIR
+  delete process.env.AGENT_IDENTITY_STORE
+  delete process.env.HERMES_APPROVALS_LOG_FILE
+  delete process.env.HERMES_INCIDENT_EKKO_DB
 })
 
 function byKey(elements: IncidentElement[], key: string): IncidentElement {

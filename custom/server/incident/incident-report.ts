@@ -243,10 +243,12 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
   }
 
   // 数据来源：从轨迹工具入参键推断外部触达面（URL/文件路径类参数键）
-  const sourceTools = bundle.trace
-    ? Object.entries(bundle.trace.toolArgKeys).filter(([n]) => /^(browser_|read_file|memory_|web|fetch|search)/.test(n))
-    : []
-  if (bundle.trace && sourceTools.length > 0) {
+  const _srcRe = /^(browser_|read_file|memory|web|fetch|search|http|session_search|hindsight)/
+  const _srcMap = new Map<string, number>()
+  for (const [n, c] of Object.entries(bundle.trace?.toolArgKeys ?? {})) _srcMap.set(n, (_srcMap.get(n) ?? 0) + 1)
+  for (const [n, c] of Object.entries(bundle.messages?.toolNameCounts ?? {})) _srcMap.set(n, (_srcMap.get(n) ?? 0) + (c as number))
+  const sourceTools = [..._srcMap.entries()].filter(([n]) => _srcRe.test(n))
+  if (sourceTools.length > 0 && (bundle.trace || bundle.messages)) {
     elements.push(el('data_sources', 'trajectory', 'partial',
       `轨迹显示触达外部数据面：${sourceTools.map(([n]) => n).join('、')}；具体 URL/版本未逐条快照`,
       [`${bundle.trace.file}#tool_span.args`], '上下文只留压缩边界快照（chat_compression_snapshots），整份 prompt 逐次快照未采集——论文指出的 Context 易失性问题'))
@@ -258,12 +260,21 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
   const memNote = bundle.memory
     ? { file: bundle.memory.file, events: bundle.memory.events, forSession: bundle.memory.forSession, byType: bundle.memory.byType }
     : null
+  const _rwRe = /^(read_file|write_file|edit|terminal|execute_code|code_exec)/
+  const _rwMsg = Object.entries(bundle.messages?.toolNameCounts ?? {}).filter(([n]) => _rwRe.test(n))
   if (bundle.trace && bundle.trace.toolCalls.length > 0) {
-    elements.push(el('data_read_write', 'trajectory', bundle.memory ? 'collected' : 'partial',
-      `工具读写面：${bundle.trace.toolCalls.length} 次调用${memNote ? `；记忆审计事件 ${memNote.events} 条（本 session ${memNote.forSession} 条）` : '；记忆审计缺席'}`,
+    elements.push(el('data_read_write', 'trajectory', 'collected',
+      `工具读写面：${bundle.trace.toolCalls.length} 次调用${memNote ? `；记忆审计事件 ${memNote.events} 条（本 session ${memNote.forSession} 条）` : ''}`,
       [`${bundle.trace.file}#tool_span`, ...(memNote ? [`${memNote.file}#memory_audit_events`] : [])],
-      memNote ? undefined : 'ekko.db 未找到（记忆审计事件缺席），读写面仅有轨迹工具调用',
+      memNote ? undefined : '记忆审计事件缺席（ekko audit 面）——读写证据=轨迹工具调用',
       { toolCalls: bundle.trace.toolCalls.slice(0, 50), memoryAudit: memNote }))
+  } else if (_rwMsg.length > 0 && bundle.messages) {
+    const total = _rwMsg.reduce((s, [, c]) => s + c, 0)
+    elements.push(el('data_read_write', 'trajectory', 'collected',
+      `工具读写面（消息工具计数）：${total} 次（${_rwMsg.slice(0, 6).map(([n, c]) => `${n}×${c}`).join('、')}）${memNote ? `；记忆审计 ${memNote.events} 条` : ''}`,
+      [`${dbLabel}#messages.tool_name`],
+      memNote ? undefined : 'span 轨迹缺席轮次以会话消息工具计数为准',
+      { byTool: Object.fromEntries(_rwMsg), source: 'messages' }))
   } else {
     elements.push(el('data_read_write', 'trajectory', 'absent', '数据读写未采集', [dbLabel], '无轨迹与记忆审计证据'))
   }
@@ -320,8 +331,21 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
   }
 
   const traceNonNull = bundle.trace
-  const osTools = traceNonNull ? traceNonNull.toolCalls.filter((t) => /^(terminal_exec|code_exec|write_file)/.test(t.name)) : []
-  if (osTools.length > 0 && traceNonNull) {
+  // 工具名对齐 hermes 实名（2026-10-17）：terminal/execute_code/write_file 是实际
+  // 工具名（terminal_exec/code_exec 为旧 webui 命名，正则保留兼容）。
+  const _osRe = /^(terminal|execute_code|write_file|code_exec|terminal_exec|shell)/
+  const osTools = traceNonNull ? traceNonNull.toolCalls.filter((t) => _osRe.test(t.name)) : []
+  // messages 回退（trace 缺席的轮次——如 run20 span 未落盘时代）：会话消息的
+  // tool_name 计数同样是系统操作的诚实记录（profiles/*/state.db#messages）。
+  const _osMsg = Object.entries(bundle.messages?.toolNameCounts ?? {}).filter(([n]) => _osRe.test(n))
+  if (_osMsg.length > 0 && !osTools.length && bundle.messages) {
+    const total = _osMsg.reduce((s, [, c]) => s + c, 0)
+    elements.push(el('os_interactions', 'capability', 'collected',
+      `底层系统操作 ${total} 次（消息工具面：${_osMsg.slice(0, 6).map(([n, c]) => `${n}×${c}`).join('、')}）`,
+      [`${dbLabel}#messages.tool_name`],
+      'span 轨迹缺席时以会话消息工具计数为准（同源诚实降级，非编造）',
+      { byTool: Object.fromEntries(_osMsg), source: 'messages' }))
+  } else if (osTools.length > 0 && traceNonNull) {
     elements.push(el('os_interactions', 'capability', 'collected',
       `底层系统操作 ${osTools.length} 次（terminal/code_exec/write_file 族），失败 ${osTools.filter((t) => t.status === 'error').length} 次`,
       [`${traceNonNull.file}#tool_span`, `${dbLabel}#workspace_run_changes`],
@@ -370,6 +394,17 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
       `设计快照 ${bundle.workflow.designNodes} 节点 / ${bundle.workflow.designEdges} 边（run ${bundle.workflow.runIds.join('、')}）`,
       [`${dbLabel}#workflow_runs.snapshot_*_json`], undefined,
       { nodes: bundle.workflow.designNodes, edges: bundle.workflow.designEdges, runIds: bundle.workflow.runIds }))
+  } else if (bundle.identity && bundle.identity.matched.length > 0) {
+    // 设计态回退（2026-10-17 A7 收尾）：推演形态无 workflow_runs 表——身份册就是
+    // 设计态组织（N 档案 × 工具面 × 委托边），与 fleet 编制一一对应，非编造。
+    const idt = bundle.identity
+    const edges = idt.delegationChains.reduce((s, c) => s + c.edges.length, 0)
+    const tools = new Set(idt.matched.flatMap((m) => m.toolAllowlist)).size
+    elements.push(el('design_topology', 'orchestration', 'collected',
+      `设计态组织（身份册）：${idt.matched.length} 个执行档案 × ${tools} 种声明工具 × ${edges} 条委托边`,
+      ['agent-identity/identities.json'],
+      '推演轮无 workflow_runs——身份册（档案/工具面/委托边）为设计态拓扑的真实载体',
+      { profiles: idt.matched.map((m) => m.name), toolKinds: tools, delegationEdges: edges }))
   } else {
     elements.push(el('design_topology', 'orchestration', 'absent', '无工作流设计快照', [`${dbLabel}#workflow_runs`],
       '本 session 未关联 workflow run（单聊/自由运行形态）——设计态拓扑不可考'))
@@ -385,23 +420,52 @@ export function buildIncidentReport(sessionId: string, opts: IncidentOpts = {}):
       `实际执行 ${bundle.workflow.executedNodes.length} 个节点会话、${bundle.workflow.edgeDecisions.length} 次路由裁决`,
       [`${dbLabel}#workflow_run_node_sessions`, `${dbLabel}#workflow_run_edge_evaluations`],
       undefined, { executedNodes: bundle.workflow.executedNodes, edgeDecisions: bundle.workflow.edgeDecisions.slice(0, 30) }))
+  } else if (bundle.profileWindow && bundle.profileWindow.byProfile.length > 0) {
+    // 运行态回退（2026-10-17）：profile 窗口会话=真实跑过的执行单元（谁起了几个
+    // 会话、共多少消息）——比 workflow 节点表更贴论文「实际运行架构」语义。
+    const pw = bundle.profileWindow
+    elements.push(el('runtime_topology', 'orchestration', 'collected',
+      `运行时实际拓扑：${pw.byProfile.length} 个档案 × ${pw.byProfile.reduce((s, p) => s + p.sessions, 0)} 个会话（${pw.byProfile.slice(0, 6).map((p) => `${p.profile}×${p.sessions}`).join('、')}${pw.byProfile.length > 6 ? '…' : ''}）`,
+      ['profiles/*/state.db#sessions（窗口聚合）'],
+      undefined,
+      { byProfile: pw.byProfile.map((p) => ({ profile: p.profile, sessions: p.sessions, messages: p.total })) }))
   } else {
     elements.push(el('runtime_topology', 'orchestration', 'absent', '运行时拓扑未采集', [`${dbLabel}#workflow_run_node_sessions`],
       '无子 Agent 派生亦无 workflow 节点会话——单 Agent 形态'))
   }
 
+  // 推演形态回退（2026-10-17 A7 收尾）：编排协议的证据=委托链（谁授权谁执行）
+  // +审批裁决（风险动作的把关记录）——workflow/gc 表缺席时以这两面立 partial。
+  const _delegEdges = bundle.identity ? bundle.identity.delegationChains.reduce((s, c) => s + c.edges.length, 0) : 0
+  const _apprN = bundle.approvals ? bundle.approvals.entries : 0
   elements.push(el('orchestration_protocol', 'orchestration',
-    bundle.workflow || (bundle.trace && bundle.trace.subagents.length > 0) ? 'partial' : 'absent',
+    bundle.workflow || (bundle.trace && bundle.trace.subagents.length > 0)
+      || _delegEdges > 0 || _apprN > 0 ? 'partial' : 'absent',
     bundle.workflow
       ? `编排协议=workflow 引擎（节点会话+边路由裁决落档）；子 Agent 派生经 delegate_task 工具`
       : (bundle.trace && bundle.trace.subagents.length > 0)
         ? '编排协议=delegate_task 工具派生（无 workflow 引擎参与）'
-        : '无编排行为',
-    [`${dbLabel}#gc_execution_queue`, `${dbLabel}#gc_message_routing_decisions`],
+        : _delegEdges > 0
+          ? `编排协议=委托链（${_delegEdges} 条授权边：Human→Agent 的执行授权与范围约束）${_apprN > 0 ? `＋审批裁决 ${_apprN} 条（风险动作把关记录）` : ''}`
+          : _apprN > 0
+            ? `编排协议=审批裁决 ${_apprN} 条（风险动作的把关与放行记录）`
+            : '无编排行为',
+    _delegEdges > 0 || _apprN > 0
+      ? ['agent-identity/identities.json#delegations', 'approvals/history.json']
+      : [`${dbLabel}#gc_execution_queue`, `${dbLabel}#gc_message_routing_decisions`],
     '群聊编排（routing mode/confidence/loop 检测）仅在 gc 域落档，本报告未拉群聊面（session→room 映射未采集）'))
 
   const delegateCalls = bundle.messages ? (bundle.messages.toolNameCounts['delegate_task'] ?? 0) : 0
-  if (bundle.messages && delegateCalls > 0) {
+  // 推演形态回退（2026-10-17）：profile 会话消息=真实通信记录（人↔agent 的完整
+  // 对话流），delegate 计数作附加细节——通信未断证，只是载体从 gc_messages 换库。
+  if (bundle.messages && delegateCalls === 0 && bundle.profileWindow && bundle.messages.total > 0) {
+    const pw = bundle.profileWindow
+    elements.push(el('communication_logs', 'orchestration', 'collected',
+      `通信记录：${pw.byProfile.length} 档案 × ${pw.byProfile.reduce((s, p) => s + p.sessions, 0)} 会话 × ${bundle.messages.total} 条消息（窗口内全程对话流，未截断）`,
+      ['profiles/*/state.db#messages（窗口聚合）'],
+      'gc_messages 表缺席轮次以 profile 会话消息为通信记录（matrix 群聊面另见 r18-steps.json 对话载荷）',
+      { profiles: pw.byProfile.length, sessions: pw.byProfile.reduce((s, p) => s + p.sessions, 0), messages: bundle.messages.total, delegateCalls }))
+  } else if (bundle.messages && delegateCalls > 0) {
     elements.push(el('communication_logs', 'orchestration', 'collected',
       `Agent 间通信可见面：delegate_task 调用 ${delegateCalls} 次；消息表含完整 tool 行`,
       [`${dbLabel}#messages(role=tool)`, `${dbLabel}#gc_messages`],
