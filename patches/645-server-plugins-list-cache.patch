@@ -1,0 +1,92 @@
+diff --git a/packages/server/src/modules/hermes/services/plugins/plugins.ts b/packages/server/src/modules/hermes/services/plugins/plugins.ts
+index 94c16897b..e67c356a9 100644
+--- a/packages/server/src/modules/hermes/services/plugins/plugins.ts
++++ b/packages/server/src/modules/hermes/services/plugins/plugins.ts
+@@ -286,7 +286,53 @@ function extractError(err: any): string {
+   return [err?.message, stdout, stderr].filter(Boolean).join('\n')
+ }
+ 
++// HERMES_CUSTOM[PluginsListCache] BEGIN: 插件发现 TTL 缓存 + stale-while-revalidate
++// （2026-10-17 回归轮性能批）。每次列表都是 spawn python 全目录扫描（实测 ~3s，
++// 页面每次进入都要付）；插件清单仅随「目录变化 / enable / disable」改变，按
++// profile 键控缓存 60s，enable/disable 落定即失效。命中且剩余寿命过半时后台
++// 续期（访问驱动保温：无访问零开销，有访问则下一个用户必命中）；agent/CLI
++// 侧直装插件的变更由 TTL 兜底（≤60s）。
++const PLUGINS_CACHE_TTL_MS = 60_000
++const pluginsListCache = new Map<string, { expiresAt: number; data: HermesPluginsResponse }>()
++const pluginsWarming = new Set<string>()
++
++function pluginsCacheKey(profile?: string): string {
++  return profile ? getProfileDir(profile) : getActiveProfileDir()
++}
++
++export function flushPluginsListCache(): void {
++  pluginsListCache.clear()
++}
++// HERMES_CUSTOM[PluginsListCache] END
++
+ export async function listHermesPlugins(profile?: string): Promise<HermesPluginsResponse> {
++  // HERMES_CUSTOM[PluginsListCache] BEGIN
++  const cacheKey = pluginsCacheKey(profile)
++  const hit = pluginsListCache.get(cacheKey)
++  if (hit && hit.expiresAt > Date.now()) {
++    // SWR：剩余寿命 < 一半 → 后台续期，当前请求仍返回旧值
++    if (hit.expiresAt - Date.now() < PLUGINS_CACHE_TTL_MS / 2) {
++      void warmPluginsList(cacheKey, profile).catch(() => { /* 后台续期失败：旧值照常服务 */ })
++    }
++    return hit.data
++  }
++  // HERMES_CUSTOM[PluginsListCache] END
++  return warmPluginsList(cacheKey, profile)
++}
++
++async function warmPluginsList(cacheKey: string, profile?: string): Promise<HermesPluginsResponse> {
++  // HERMES_CUSTOM[PluginsListCache] BEGIN: single-flight——并发同键只跑一次扫描
++  if (pluginsWarming.has(cacheKey)) {
++    // 等在途回源完成（不精确等待结果，由调用方下一拍命中或直接放行重试）
++    for (let i = 0; i < 150 && pluginsWarming.has(cacheKey); i += 1) {
++      await new Promise(resolve => setTimeout(resolve, 100))
++    }
++    const ready = pluginsListCache.get(cacheKey)
++    if (ready && ready.expiresAt > Date.now()) return ready.data
++  }
++  pluginsWarming.add(cacheKey)
++  try {
++  // HERMES_CUSTOM[PluginsListCache] END
+   const command = resolveAgentBridgeCommand()
+   const agentRoot = command.agentRoot || ''
+   const hermesHome = profile ? getProfileDir(profile) : getActiveProfileDir()
+@@ -330,12 +376,23 @@ export async function listHermesPlugins(profile?: string): Promise<HermesPlugins
+     if (stderr?.trim()) {
+       parsed.warnings = [...(parsed.warnings || []), stderr.trim()]
+     }
++    // HERMES_CUSTOM[PluginsListCache] BEGIN
++    pluginsListCache.set(cacheKey, { expiresAt: Date.now() + PLUGINS_CACHE_TTL_MS, data: parsed })
++    // HERMES_CUSTOM[PluginsListCache] END
+     return parsed
+   } catch (err: any) {
+     errors.push(`${command.command} ${displayArgs}: ${extractError(err)}`)
++  } finally {
++    // HERMES_CUSTOM[PluginsListCache] BEGIN
++    pluginsWarming.delete(cacheKey)
++    // HERMES_CUSTOM[PluginsListCache] END
+   }
+ 
+   throw new Error(`Failed to discover Hermes plugins.\n${errors.join('\n')}`)
++  // HERMES_CUSTOM[PluginsListCache] END（外层 single-flight try 的收尾）
++  } finally {
++    pluginsWarming.delete(cacheKey)
++  }
+ }
+ 
+ function configPathForProfile(profile?: string): string {
+@@ -391,5 +448,9 @@ export async function setHermesPluginEnabled(profile: string | undefined, key: s
+     },
+   })
+ 
++  // HERMES_CUSTOM[PluginsListCache] BEGIN: enable/disable 改变 configStatus，立即失效
++  pluginsListCache.delete(pluginsCacheKey(profile))
++  // HERMES_CUSTOM[PluginsListCache] END
++
+   return { key: plugin.key, enabled }
+ }
