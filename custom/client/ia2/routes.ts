@@ -32,14 +32,15 @@ export interface IaAreaMeta {
   labelKey: string
 }
 
-/** 视图元数据（场景条 + 区域投影的单一事实源） */
+/** 视图元数据（场景条 + 区域投影的单一事实源；labelKey 逐行指向 ia2.nav.stageN——
+ *  §5.8-3 清偿，词条由 i18n-term-overrides 从 STAGE_META 派生注册） */
 export const IA_AREAS: IaAreaMeta[] = [
-  { key: 'stage1', name: 'ia2.stage1', path: '/app/stage/setup', labelKey: 'ia2.nav.collab' },
-  { key: 'stage2', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.collab' },
-  { key: 'stage3', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.collab' },
-  { key: 'stage4', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.collab' },
-  { key: 'stage5', name: 'ia2.stage5', path: '/app/stage/accept', labelKey: 'ia2.nav.collab' },
-  { key: 'stage6', name: 'ia2.stage6', path: '/app/stage/govern', labelKey: 'ia2.nav.collab' },
+  { key: 'stage1', name: 'ia2.stage1', path: '/app/stage/setup', labelKey: 'ia2.nav.stage1' },
+  { key: 'stage2', name: 'ia2.stage2', path: '/app/stage/reqs', labelKey: 'ia2.nav.stage2' },
+  { key: 'stage3', name: 'ia2.stage3', path: '/app/stage/design', labelKey: 'ia2.nav.stage3' },
+  { key: 'stage4', name: 'ia2.stage4', path: '/app/stage/build', labelKey: 'ia2.nav.stage4' },
+  { key: 'stage5', name: 'ia2.stage5', path: '/app/stage/accept', labelKey: 'ia2.nav.stage5' },
+  { key: 'stage6', name: 'ia2.stage6', path: '/app/stage/govern', labelKey: 'ia2.nav.stage6' },
 ]
 
 /**
