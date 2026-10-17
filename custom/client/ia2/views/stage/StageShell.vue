@@ -8,6 +8,10 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
+import KeyLedgerSection from '../gov/KeyLedgerSection.vue'
+import ClearancePanel from '../gov/ClearancePanel.vue'
+import GateRepairsPanel from '../gov/GateRepairsPanel.vue'
+import TracePanel from '../sim/TracePanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -145,6 +149,23 @@ function go(t: Tool): void {
       <p v-if="loadError" class="stg__error">{{ loadError }}</p>
     </header>
     <TabIntroBanner :tab="meta.key" />
+    <!-- D14 阶段内嵌核心操作（不只直达卡） -->
+    <section v-if="stage === 1" class="stg__embed" data-testid="stg-embed-1">
+      <h3 class="stg__embed-h">密钥台账（本阶段可直接操作）</h3>
+      <KeyLedgerSection />
+    </section>
+    <section v-else-if="stage === 2" class="stg__embed" data-testid="stg-embed-2">
+      <h3 class="stg__embed-h">闸修复单（需求阶段 G1 冻结的关卡记录）</h3>
+      <GateRepairsPanel />
+    </section>
+    <section v-else-if="stage === 5" class="stg__embed" data-testid="stg-embed-5">
+      <h3 class="stg__embed-h">AC 判词链（验收现场核对）</h3>
+      <TracePanel />
+    </section>
+    <section v-else-if="stage === 6" class="stg__embed" data-testid="stg-embed-6">
+      <h3 class="stg__embed-h">清偿门（本阶段可直接操作）</h3>
+      <ClearancePanel />
+    </section>
     <div class="stg__tools">
       <button
         v-for="t in meta.tools"
@@ -172,6 +193,8 @@ function go(t: Tool): void {
 .stg__title { margin: 0; font-size: 16px; }
 .stg__state { font-size: 12px; color: var(--text-muted, #878c99); }
 .stg__error { color: #d33; font-size: 12px; margin: 0 0 0 auto; }
+.stg__embed { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 14px; background: rgba(127, 127, 127, 0.04); }
+.stg__embed-h { margin: 0 0 10px; font-size: 13px; }
 .stg__tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .stg__tool {
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left;
