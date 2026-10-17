@@ -53,7 +53,16 @@
 - 定位：临时 400 访问日志（用后即撤）实锤 `GET /api/hermes/kanban/search-sessions?task_id=…&profile=orchestrator → 403`。根因=canUseProfile 对空 user_profiles 集仍逐 profile 拒绝——477 的「空映射=admin 不限制」豁免只加在列表过滤，未覆盖 profile 定向读。
 - 修复：654 补丁 canUseProfile 空集放行（`allowed.size === 0` 视为不限制），与 477 语义对齐。
 
-## 验证
+## 验证（终态，2026-10-18 晨）
 
-- 单测：sitline 5/5、ia-shell-header-sit、sim-atoms（关闭态改断言）、matrix-chat 全套 40/40、briefing-deeplink 新增 R7 用例 4/4、briefing-cross-board 3/3。
-- 待 GUI 复验（重启 8647/8649 后）：branches 200、插件页无噪音横幅、EN 单复数、在线徽章开面板、深链 ghost 任务抽屉自收、sim 关闭态 dialog=0、/matrix 正常、旧看板空载耗时。
+- 单测：sitline/ia-shell-header-sit 10/10、sim-atoms（关闭态改断言）、matrix-chat 全套 40/40、briefing-deeplink 4/4（含 R7 快判死）、briefing-cross-board 4/4；server tsc 0 错、client vue-tsc 0 错；clean→inject 全系列 000-654 RC=0。
+- GUI 复验（swarm，重启 8647/8649 后）：
+  - R1 ✓ branches 200（16 分支三态）；运行总览「分支交付（已推 origin feat）」区渲染（t150）。
+  - R2 ✓ /matrix 房间列出并可进入（7 条系统事件）；同步中词条已入 locale（瞬态难截屏，代码路径+key 已验）。
+  - R3 ✓ /api/hermes/plugins warnings=[]；页面无 unknown kind/重启横幅（t153）。
+  - R4 ✓ 仿真页关闭态 role=dialog 计数 0（t150 期实测）。
+  - R5 ✓ EN 面板头「1 person · 2 agents · 1 machine」（t152）。
+  - R6 ✓ 在线徽章中点可点、面板展开在线树（zh/en 双语各验一次，t151/t152）。
+  - R7 ✓ ghost 深链抽屉自动收起、Git 页签恢复可点（t154；并行会话再补 404-only 收紧 76f0546c）。
+  - R8 定性：同机 10 个 SIM agent + SIM 网关共享 hermes CLI/看板库，/api/hermes/kanban 冷回源实测 ~7s（读缓存命中毫秒级）；旧看板页偶发长载为队列竞争，非代码缺陷。叠加发现并处置两件环境事：①~/.hermes/kanban.db-wal 瞬时只读（chmod 自愈）；②旧看板 403 toast=GlobalPendingActions 对跨 profile 任务检索 search-sessions?profile=… 被围栏拦截——按设计生效（swarm 仅映射 default），654 已把空映射集语义对齐；**待用户裁决**：swarm 作为主管账号是否应映射全部 agent profiles（账户配置项，未擅改）。
+- 提交链：35598bba（七件套）→ 553c0833（R6 二修）→ 9c1ec3dd（R6 三修）→ ec197f54（R7 提速）→ 93268f5e（654）；均经 worktree 合入 main，worktree/分支已清。
