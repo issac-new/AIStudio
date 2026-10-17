@@ -97,3 +97,17 @@ describe('D14 阶段内嵌核心操作', () => {
     w5.unmount()
   })
 })
+
+describe('D15 六阶段全内嵌', () => {
+  it('③分析设计内嵌组织视图；④生产内嵌交接+容量灯', async () => {
+    const { w: w3 } = await mountStage(3)
+    expect(w3.find('[data-testid="stg-embed-3"]').exists()).toBe(true)
+    expect(w3.text().length).toBeGreaterThan(50) // 组织视图渲染了内容
+    w3.unmount()
+    const { w: w4 } = await mountStage(4)
+    expect(w4.find('[data-testid="stg-embed-4"]').exists()).toBe(true)
+    expect(w4.find('[data-testid="hds-section"]').exists()).toBe(true)
+    // 容量灯二态之一或都不渲染（无端点时）——只断言不炸
+    w4.unmount()
+  })
+})

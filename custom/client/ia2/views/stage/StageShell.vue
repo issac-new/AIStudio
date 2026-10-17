@@ -12,6 +12,9 @@ import KeyLedgerSection from '../gov/KeyLedgerSection.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
 import GateRepairsPanel from '../gov/GateRepairsPanel.vue'
 import TracePanel from '../sim/TracePanel.vue'
+import GovOrgKnowledgeView from '../gov/GovOrgKnowledgeView.vue'
+import HandoffSection from '../../components/kanban/HandoffSection.vue'
+import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -157,6 +160,15 @@ function go(t: Tool): void {
     <section v-else-if="stage === 2" class="stg__embed" data-testid="stg-embed-2">
       <h3 class="stg__embed-h">闸修复单（需求阶段 G1 冻结的关卡记录）</h3>
       <GateRepairsPanel />
+    </section>
+    <section v-else-if="stage === 3" class="stg__embed" data-testid="stg-embed-3">
+      <h3 class="stg__embed-h">协作断点诊断与知识图谱（分析期的组织视图）</h3>
+      <GovOrgKnowledgeView />
+    </section>
+    <section v-else-if="stage === 4" class="stg__embed" data-testid="stg-embed-4">
+      <h3 class="stg__embed-h">生产期风险与交接</h3>
+      <CapacityLampBanner />
+      <HandoffSection />
     </section>
     <section v-else-if="stage === 5" class="stg__embed" data-testid="stg-embed-5">
       <h3 class="stg__embed-h">AC 判词链（验收现场核对）</h3>
