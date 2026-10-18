@@ -2114,6 +2114,9 @@ _USED_FRAMES = set()  # V8.4② 同源帧单嵌（run21 收官审计实录：一
 def img_tags(imgs):
     out = []
     for pre, cap, kind in imgs:
+        if pre in _USED_FRAMES:
+            out.append(f'<p class="shot-ref">↗ 同源帧已嵌于前文（V8.4② 单嵌）：{H.escape(cap)}</p>')
+            continue
         _USED_FRAMES.add(pre)
         p = STEPS_DIR / f'{pre}.png'
         if p.exists():
@@ -4832,7 +4835,7 @@ html = _mask_env(html)
 # 双嵌，渲染序不可控的根治位）——同一 src 只保留首个嵌入块，后续替换为文字引用。
 import re as _re_dedupe
 _seen_src = set()
-_pat_dedupe = _re_dedupe.compile(r'(<label class="shot[^"]*"><input type="checkbox"><img src=")(screenshots/steps/[^"]+)(")')
+_pat_dedupe = _re_dedupe.compile(r'(<label class="shot[^"]*">.*?<img src=")(screenshots/steps/[^"]+)(".*</label>)', _re_dedupe.S)
 def _dedupe_embed(m):
     if m.group(2) in _seen_src:
         return '<p class="shot-ref">↗ 同源帧已嵌于前文（V8.4② 单嵌纪律）</p>'
