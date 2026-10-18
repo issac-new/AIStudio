@@ -1,0 +1,23 @@
+#!/bin/bash
+# [LEAD-MERGE] 客户端守门（2026-10-18 立法）：直推 integration/* 须含标记。
+# 与服务端 pre-receive（中央仓本地化后启用）同规则；此处为 GitHub 直连拓扑下的
+# 可执行层——工作区 push 前本地拦截，拒收文案带整改指引。
+set -u
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/integration/*) ;;
+    *) continue ;;
+  esac
+  [ "$local_sha" = "$zero" ] && continue
+  range="$remote_sha..$local_sha"
+  [ "$remote_sha" = "$zero" ] && range="$local_sha"
+  if ! git rev-list "$range" 2>/dev/null | while read -r c; do
+       git log -1 --format=%B "$c" 2>/dev/null
+     done | grep -q '\[LEAD-MERGE\]'; then
+    echo "REJECTED: integration/* 仅收含 [LEAD-MERGE] 标记的域负责人合并提交。" >&2
+    echo "修复请 push fix/DEF-X 分支并 @你的域 lead 合并（守门纪律，run21-1018 立法）。" >&2
+    exit 1
+  fi
+done
+exit 0
