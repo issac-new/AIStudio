@@ -114,6 +114,8 @@ const hiddenSummary = computed(() => {
   &:hover { border-color: var(--accent-info); color: var(--accent-info); }
 }
 .ia-attn__items { display: flex; align-items: center; gap: 6px; }
+/* 梯队词与任务标题是两个 span，无空白节点；EN 下会出现「Blocked实现…」 */
+.ia-attn__tier { margin-inline-end: 6px; }
 
 /* 隐藏测量行：只供 useFitSlice 取 offsetWidth，不进布局与无障碍树 */
 .ia-attn__measure {

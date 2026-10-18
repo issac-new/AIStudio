@@ -7,6 +7,8 @@
 export interface LandingHeroState {
   /** 已激活任务（深链 ?task 或用户速选后非空） */
   activeTaskId: string | null
+  /** 已有真实会话（非本地草稿）在工作区中；裸落地自动建的草稿不算 */
+  hasActiveSession?: boolean
   /** 路由 query.task（深链在途、store 尚未落定时也视为有上下文） */
   queryTask: unknown
   /** 路由 query.session（会话深链自带上下文） */
@@ -19,6 +21,9 @@ export interface LandingHeroState {
 export function shouldShowLandingHero(state: LandingHeroState): boolean {
   if (state.engaged) return false
   if (state.activeTaskId) return false
+  // 选中会话即已进入工作区：此前只认 task/query，左栏点选会话后中栏仍被
+  // 引导页占住（看似点击无效，2026-10-18 回归实测）。
+  if (state.hasActiveSession) return false
   // query 存在且非空串即视为深链（数组取值等异常形态按存在处理）
   const hasQuery = (v: unknown) => v != null && v !== ''
   return !hasQuery(state.queryTask) && !hasQuery(state.querySession)

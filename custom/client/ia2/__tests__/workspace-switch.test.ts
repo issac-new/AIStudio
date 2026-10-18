@@ -5,8 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
 
+const i18nState = vi.hoisted(() => ({ locale: 'zh' }))
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }),
+  useI18n: () => ({
+    t: (k: string) => k,
+    locale: { get value() { return i18nState.locale } },
+  }),
 }))
 
 const chat = vi.hoisted(() => ({ activeSessionId: null as string | null }))
@@ -32,7 +36,10 @@ async function mountAt(path: string) {
   return { w, router }
 }
 
-beforeEach(() => { chat.activeSessionId = null })
+beforeEach(() => {
+  chat.activeSessionId = null
+  i18nState.locale = 'zh'
+})
 
 describe('IaWorkspaceSwitch — 沟通协作 / IDE 工作区', () => {
   it('沟通协作页：协作侧高亮，IDE 侧不高亮', async () => {
@@ -61,6 +68,14 @@ describe('IaWorkspaceSwitch — 沟通协作 / IDE 工作区', () => {
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ide.shell')
     expect(router.currentRoute.value.query.session).toBe('s2')
+    w.unmount()
+  })
+
+  it('EN 语言下不残留中文：IDE Workspace / Workspace view', async () => {
+    i18nState.locale = 'en'
+    const { w } = await mountAt('/app/ide')
+    expect(w.find('[data-testid="ia-workspace-ide"]').text()).toBe('IDE Workspace')
+    expect(w.find('[data-testid="ia-workspace-switch"]').attributes('aria-label')).toBe('Workspace view')
     w.unmount()
   })
 })
