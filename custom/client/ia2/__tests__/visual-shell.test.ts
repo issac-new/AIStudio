@@ -25,6 +25,7 @@ vi.mock('../api/overview', () => ({
   netCardRows: () => ({ compensated: '', net: '', byType: [] }),
 }))
 vi.mock('../api/ops', () => ({
+  fetchCapabilities: vi.fn().mockResolvedValue({ topology: true, frames: true, dispatcherHealth: true, sleepingWorkers: true }),
   fetchTopology: vi.fn().mockResolvedValue({ services: {}, checkedAt: '' }),
   fetchDispatcherHealth: vi.fn().mockResolvedValue({ ok: true, data: {} }),
   fetchSleepingWorkers: vi.fn().mockResolvedValue({ ok: true, data: {} }),
