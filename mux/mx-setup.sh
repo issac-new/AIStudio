@@ -193,6 +193,11 @@ for u in $(node_users); do
   if [[ ! -d "$WS/.git" ]]; then
     mkdir -p "$(dirname "$WS")"
     git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    # [LEAD-MERGE] 客户端守门（2026-10-18 立法 run21 三文件冲突实录）：工作区本地
+    # pre-push 钩子——直推 integration/* 须含 [LEAD-MERGE] 标记，fixer 推 fix/DEF-X
+    # 分支不受限。中央仓本地化前的可执行层（服务端 pre-receive 已备 git-hooks/）。
+    cp "$HARNESS_ROOT/mux/git-hooks/pre-push-client" "$WS/.git/hooks/pre-push" 2>/dev/null \
+      && chmod +x "$WS/.git/hooks/pre-push" || true
     gh_clone_sanitize "$WS"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
