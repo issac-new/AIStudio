@@ -44,3 +44,12 @@
 **终态**：全协议链贯通（authenticate→broker_info→list_applications(active 标记)→request_access→capture_app(状态文档+真图像字节)）。最终一轮无模型可见图像的唯一原因是**环境事实**：本机前台是 loginwindow（锁屏/登录面），官方层按产品设计对无窗口 faceless 进程拒发图像（"hidden or unrendered window, has_image: false"）——解锁后同一链路即出图。此边界如实记录，不装通过。
 
 **桌面 Helper 结论**：`~/.zcode/computer-use/ZCode Computer Use.app` 的 peer-verification 只认 dev.zcode.app 签名链（desktopHostProcess.ts:274-278 注释明示），第三方宿主（hermes/IDE）按设计被拒。自有 broker（upstream/zcode 补丁源码 broker-server.js）是 IDE 侧的正路，006 补丁使其与官方 node_repl host 0.6.x 协议完全兼容。
+
+## 验证记录（2026-10-18 实测）
+
+- **单测**：policy 6（含凭据对契约）+ REST 4 + gate 2（OVERLAY_UPSTREAM_ROOT 私有注入克隆）+ evidence 5 + float 1 = 18 新用例；CUA 域全绿。
+- **全量**：711 文件 / **5188 用例 0 失败**（10 skip）；`build:full` rc=0（server tsc 含 broker.ts 收口）；zcode 补丁链 001→006 干净 v3.15.1 worktree 全 apply 通过；patches-guard 绿。
+- **UI 实测（私有 bundled 后端 8657 + vite 8659）4/4**：开关 ON → 会话入闸 + 服务端自动拉起自有 broker（socket+authority 落 runtime/ide-cua.json broker 段）；CUA 浮窗渲染；OFF → 会话出闸（fail-closed）。截图 `/tmp/ide-cua-final.png`。
+- **冒烟**：11/11；双模式走查 21/21（首跑 20/21 为瞬态，复跑全过）。
+- **E2E 协议链**：authenticate(IPC v3)→broker_info→list_applications(active 标记)→request_access→capture_app(AX 状态文档+真 PNG base64) 全通（broker trace 实录）。模型可见图像的唯一残留=本机锁屏（frontmost=loginwindow，官方层按设计对 faceless 窗口拒发 has_image）——环境边界如实记录。
+- **bundled 形态路径注意**：policy 文件经 `__dirname` 上三级解析，bundle 态落在构建树 runtime/（dev 形态=overlay runtime/）——两种形态各自生效，不跨树共享（期望行为：闸门跟随执行代码所在树）。
