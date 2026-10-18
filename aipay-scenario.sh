@@ -192,6 +192,10 @@ if step_reached smoke; then
   note "[真值] 步骤 1-5 全部完成 ✓"
   capture_step "smoke_done" "/app"
 
+  # V8.42 Harness 运行底座基线快照（fail-soft）：六端点全可用=一次写齐；任一缺席
+  # 也落盘并记问题单（旧 dist 起跑时证据面整段缺席，报告第 9 章须如实呈现）。
+  bash "$SCRIPT_DIR/mux/mx-harness-snapshot.sh" --out "$EVID_DIR/harness/harness-baseline.json"     --token "$(jwt_of fanfan 2>/dev/null || true)" --require >/dev/null 2>&1     || echo "ISSUE|harness-snapshot-baseline|smoke|Harness 运行面基线快照部分端点不可用（见 evidence/harness/harness-baseline.json）" >> "$EVID_DIR/issues.log"
+
   sset smoke_done 1
 fi
 
@@ -2424,6 +2428,10 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     note "[观察] 意见书推送失败（留存本地）"
   fi
   capture_step "audit_done" "/app/runs"
+
+  # V8.42 Harness 运行面审计快照：与基线同源，报告第 9 章「证据七」直接引用
+  # evidence/harness/harness-summary.json；缺席如实记单，不阻断收尾。
+  bash "$SCRIPT_DIR/mux/mx-harness-snapshot.sh" --out "$EVID_DIR/harness/harness-summary.json"     --token "$(jwt_of fanfan 2>/dev/null || true)" --require >/dev/null 2>&1     || echo "ISSUE|harness-snapshot-audit|step23|Harness 运行面审计快照部分端点不可用（见 evidence/harness/harness-summary.json）" >> "$EVID_DIR/issues.log"
 
   sset audit_done "$(date +%s)"
   capture_step "deliver_gate" "/app/runs"   # 步23 R29 delivery 面板灯

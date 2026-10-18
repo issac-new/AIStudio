@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前十九项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查）。
+# mx-prelaunch-check.sh — 开跑前二十项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查；⑳=2026-10-18 V8.42 Harness 运行底座编入检查）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -106,5 +106,10 @@ ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3
 #     mx-lib 一致：product-dist 有 server 目录用之，否则回落 upstream dist）。
 ck "⑲ 产品 IA 版本（六阶段路由+旅程页在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq 'ia2.journey' \"\$_d\" 2>/dev/null" "生效 dist 不含 /app/stage/ 路由族或旅程页（ia2.journey）——是 D13 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
 
+# ⑳ Harness 运行底座编入生效 dist（V8.42）：九层体检/过程质量/恢复判定/执法决策/
+#    运行清单/预算六个新端点必须出现在生效构建里——旧 dist 起跑会让证据面整段缺席，
+#    报告第 9 章「Harness 运行面」无数据可引。判据与⑲同源：product-dist 优先，回落 upstream dist。
+ck "⑳ Harness 运行底座编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'nine-layers' \"\$_d\" 2>/dev/null && grep -rq 'process-quality' \"\$_d\" 2>/dev/null && grep -rq 'resume-plan' \"\$_d\" 2>/dev/null && grep -rq 'policy-decisions' \"\$_d\" 2>/dev/null && grep -rq 'run-manifests' \"\$_d\" 2>/dev/null && grep -rq 'budget-status' \"\$_d\" 2>/dev/null" "生效 dist 不含 Harness 运行底座端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）——是旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 十九项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 二十项）" || { echo "有红项——修复后再跑"; exit 1; }
