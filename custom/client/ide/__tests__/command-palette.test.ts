@@ -75,7 +75,7 @@ describe('IdeCommandPalette', () => {
     ide.openPalette()
     await flushPromises()
 
-    await wrapper.find('.ide-palette__input').setValue('终端')
+    await wrapper.find('.ide-palette__input').setValue('重构终端')
     const items = wrapper.findAll('.ide-palette__item').map((n) => n.text())
     expect(items).toEqual(['重构终端面板'])
   })

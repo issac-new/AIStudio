@@ -71,5 +71,7 @@ describe('IdeStatusBar 槽位定制（UI-8）', () => {
     expect(block).toContain('overflow: visible')
     // 齿轮字形仅 7×15px：按钮须补足最小热区
     expect(src).toContain('min-width: 20px')
+    // 窄屏隐藏低优先指标，避免配置钮/会话状态被挤出
+    expect(src).toContain('@media (max-width: 1279px)')
   })
 })

@@ -106,10 +106,12 @@ describe('状态条与 socket 接线守门', () => {
 
   it('IdeStatusBar 按 workspace 订阅/退订：watch 变化先退旧订新，卸载用清理函数精确 off', () => {
     const bar = readFileSync(resolve(OVERLAY_ROOT, 'custom/client/ide/views/IdeStatusBar.vue'), 'utf8')
-    expect(bar).toContain('watch(() => ide.workspace')
+    expect(bar).toContain('watch(root,')
     expect(bar).toContain('unsubscribeZcode?.()')
     // 卸载/换 workspace 不得以「卸载时刻的 workspace」退订（可能与订阅值不同）
     expect(bar).not.toContain('unsubscribeZcodeWorkspace')
+    // 根来源已收口到 useIdeWorkspace：订阅值必须来自 root
+    expect(bar).toContain('subscribeZcode(root.value)')
   })
 
   it('zcode-reason chip 故障样式在 <style> 块内（SFC 编译器可收集，不被静默丢弃）', () => {

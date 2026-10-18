@@ -462,6 +462,14 @@ watch(
   border-radius: 4px;
 }
 
+/* 窄屏隐藏低优先指标，避免把会话状态/配置钮挤出视口 */
+@media (max-width: 1279px) {
+  .ide-statusbar__metric[data-testid="ide-metrics-tps"],
+  .ide-statusbar__metric[data-testid="ide-metrics-cache"] {
+    display: none;
+  }
+}
+
 .ide-statusbar__slots-btn {
   position: relative;
   display: inline-flex;

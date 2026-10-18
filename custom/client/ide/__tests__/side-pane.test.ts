@@ -18,10 +18,10 @@ vi.mock('naive-ui', () => ({
 
 // 三个内容面板挡为桩（各自依赖面由专测覆盖）
 vi.mock('../views/IdeGitPane.vue', () => ({ default: { name: 'IdeGitPane', template: '<div data-testid="stub-gitpane" />' } }))
-vi.mock('../views/IdeWikiPane.vue', () => ({ default: { name: 'IdeWikiPane', template: '<div data-testid="stub-wikipane" />' } }))
-vi.mock('@/views/hermes/DesktopBrowserView.vue', () => ({ default: { name: 'DesktopBrowserView', template: '<div data-testid="stub-browser" />' } }))
-vi.mock('../views/IdeStoragePane.vue', () => ({ default: { name: 'IdeStoragePane', template: '<div data-testid="stub-storage" />' } }))
-vi.mock('../views/IdeMemoryPane.vue', () => ({ default: { name: 'IdeMemoryPane', template: '<div data-testid="stub-memory" />' } }))
+vi.mock('../views/IdeWikiPane.vue', () => ({ __isTeleport: undefined, __isKeepAlive: undefined, __isSuspense: undefined, __isFragment: undefined, __isComment: undefined, __isText: undefined, __isStatic: undefined, __esModule: true, default: { name: 'IdeWikiPane', template: '<div data-testid="stub-wikipane" />' } }))
+vi.mock('@/views/hermes/DesktopBrowserView.vue', () => ({ __isTeleport: undefined, __isKeepAlive: undefined, __isSuspense: undefined, __isFragment: undefined, __isComment: undefined, __isText: undefined, __isStatic: undefined, __esModule: true, default: { name: 'DesktopBrowserView', template: '<div data-testid="stub-browser" />' } }))
+vi.mock('../views/IdeStoragePane.vue', () => ({ __isTeleport: undefined, __isKeepAlive: undefined, __isSuspense: undefined, __isFragment: undefined, __isComment: undefined, __isText: undefined, __isStatic: undefined, __esModule: true, default: { name: 'IdeStoragePane', template: '<div data-testid="stub-storage" />' } }))
+vi.mock('../views/IdeMemoryPane.vue', () => ({ __isTeleport: undefined, __isKeepAlive: undefined, __isSuspense: undefined, __isFragment: undefined, __isComment: undefined, __isText: undefined, __isStatic: undefined, __esModule: true, default: { name: 'IdeMemoryPane', template: '<div data-testid="stub-memory" />' } }))
 vi.mock('../views/IdeTerminalDock.vue', () => ({ default: { name: 'IdeTerminalDock', template: '<div data-testid="stub-termdock" />' } }))
 // 查看文件页签（09-20 自左侧栏右移）：FileTree 依赖链挡为透传桩
 vi.mock('../views/IdeFilesPane.vue', () => ({ default: { name: 'IdeFilesPane', template: '<div data-testid="stub-filespane" />' } }))
@@ -67,11 +67,13 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     ide.setSidePaneTab('browser')
     await flushPromises()
     w = mountPane()
+    await flushPromises()
     expect(w.find('[data-testid="stub-browser"]').exists()).toBe(true)
 
     ide.setSidePaneTab('wiki')
     await flushPromises()
     w = mountPane()
+    await flushPromises()
     expect(w.find('[data-testid="stub-wikipane"]').exists()).toBe(true)
   })
 

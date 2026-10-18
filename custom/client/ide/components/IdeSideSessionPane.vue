@@ -50,7 +50,7 @@ function title(): string {
 
 onMounted(() => {
   void load()
-  timer = setInterval(() => void load(), 30_000) // 对照面 30s 静默轮询
+  timer = setInterval(() => { if (!document.hidden) void load() }, 30_000) // 对照面 30s 轮询；标签页隐藏时暂停
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 watch(selectedId, () => void load())
