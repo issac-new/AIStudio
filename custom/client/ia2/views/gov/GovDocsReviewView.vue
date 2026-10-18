@@ -21,7 +21,7 @@ import { isStoredSuperAdmin } from '@/api/client'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
-// A0 三中心拆分：标题键 tabGovDocs 已迁 i18n-gov-tabs（治理中心过渡事实源）
+// A0 三中心拆分：标题键 tabGovDocs 已迁 i18n-gov-tabs（⑥治理页签过渡事实源）
 import { useGovTabsText } from '../../i18n-gov-tabs'
 
 const route = useRoute()

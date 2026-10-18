@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/components/IaBreadcrumb.vue -->
 <!-- 面包屑（2026-10-17 驾驶舱层级批）：全站此前零 breadcrumb，末端页回上级只能靠
      页签条常驻或顶栏重选，「层级深乱/不知道自己在哪」是用户实报痛点。位置感知=
-     旅程（首页）＞中心/阶段＞页签；标签取单一事实源（sim-tabs/gov-tabs/STAGE_META），
+     流程总览＞阶段＞页签；标签取单一事实源（sim-tabs/stage-tabs/STAGE_META），
      当前段 aria-current；旅程页自身与未知名不渲染。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -61,7 +61,7 @@ const crumbs = computed<Crumb[]>(() => {
   const zh = lang.value === 'zh'
   const out: Crumb[] = [{ label: zh ? '流程总览' : 'Process Overview', to: { name: 'ia2.journey' } }]
 
-  // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回治理中心仍亮②
+  // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回②需求仍亮②
   const fromQ = stageContextQuery(route?.query?.from)
   const stage = STAGE_META.find(m => `ia2.stage${m.no}` === name)
   if (stage) {

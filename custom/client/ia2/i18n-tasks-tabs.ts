@@ -7,12 +7,12 @@
 // · 2026-10-16 A0 三中心拆分（R8：导航按关注面归位）——原 13 键拆三中心各自
 //   模块内事实源，本文件只留工作台 3 键（tabBoard/tabOrchestra/tabGovOrg）。
 // 迁出 10 键逐键去向（旧深链 ?tab=<key> 重定向见 TasksView.legacyTabRedirect）：
-// · tabTrace       → sim-tabs.ts tabTrace（推演中心签 6 需求追溯 /app/sim/trace）
-// · tabAccounts    → sim-tabs.ts tabDelivery（推演中心签 5 交付健康 /app/sim/delivery；
+// · tabTrace       → ⑤验收·需求追溯（/app/stage/accept?tab=trace；旧 /app/sim/trace redirect）
+// · tabAccounts    → ⑤验收·交付健康（/app/stage/accept?tab=delivery；旧 /app/sim/delivery redirect；
 //                    原「交付健康」语义并入推演中心同名签）
 // · tabObservatory → sim-tabs.ts tabOps（推演中心签 3 运行观测 /app/sim/ops）
 // · tabGovRegistry / tabGovAudit / tabGovDocs / tabGovHarness / tabGovCluster /
-//   tabGovOntology / tabGovSessionHealth（7 键）→ i18n-gov-tabs.ts（治理中心
+//   tabGovOntology / tabGovSessionHealth（7 键）→ i18n-gov-tabs.ts（⑥治理
 //   /app/gov 页签文案过渡事实源，C1 七签壳消费；gov 域四视图标题已切至该模块）
 // 模块内小事实源 + locale 跟随（同 i18n-run-surface 先例）：不依赖 473 locale
 // 树，页签词条不随上游 pull 漂移（patch 473 曾冲掉 locale 段的教训）。

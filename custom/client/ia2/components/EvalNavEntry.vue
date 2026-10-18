@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/components/EvalNavEntry.vue -->
-<!-- 评测工作台导航入口（M2，GovernanceNavEntry 同款自含模式）。
+<!-- 评测工作台导航入口（M2，导航入口同款自含模式）。
      features.eval 门控由挂载方（FlowNavPanel）v-if 承担。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
