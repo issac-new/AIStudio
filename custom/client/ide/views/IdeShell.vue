@@ -11,7 +11,7 @@
 //
 // 纪律：不嵌入 ChatPanel 整面板（自带会话侧栏，嵌套导航）；消息面
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useIdeStore } from '../store/ide'
@@ -33,8 +33,8 @@ import IdeLandingHero from '../components/IdeLandingHero.vue'
 import { shouldShowLandingHero } from '../utils/landingHero'
 import { listFiles } from '@/api/studio/files'
 import { useFilesStore } from '@/stores/hermes/files'
-import type { BriefingContextFile } from '../components/briefing-types'
-import { buildAuxMessage, parseRaciFromTask } from '../components/briefing-types'
+import type { BriefingContextFile, BriefingSessionBlock } from '../components/briefing-types'
+import { buildAuxMessage, buildTaskContextMessage, parseRaciFromTask } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
@@ -78,7 +78,7 @@ watch(() => route.query.session, async (sessionId) => {
 const briefingTaskResolved = ref<null | {
   id: string; title: string; status: string
   priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null; raci?: Record<string, string[]> | null
-  parents?: string[]; children?: string[]
+  parents?: string[]; children?: string[]; sessionId?: string | null
 }>(null)
 async function resolveBriefingCrossBoard(id: string): Promise<void> {
   const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
@@ -117,6 +117,7 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
           workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
           parents: (hit as { parents?: string[] }).parents ?? [],
           children: (hit as { children?: string[] }).children ?? [],
+          sessionId: (hit as { session_id?: string | null }).session_id ?? null,
         }
         return
       }
@@ -126,12 +127,20 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
 // 回归轮 R7：直达链接任务不可解析时简报抽屉自动收起——原样常开空抽屉会盖住
 // 右栏页签（Git/查看文件点不到）；手动经导轨钮打开的无任务空态不受影响。
 const briefingMiss = ref(false)
+// 任务会话块（关联轮③）：声明先于下方 immediate watch（TDZ——watch 回调在
+// setup 期即执行，晚声明的 ref 会 ReferenceError，文件内已有同款先例）。
+const briefingSession = ref<BriefingSessionBlock | null>(null)
 watch(() => ide.activeTaskId, async (id) => {
   briefingTaskResolved.value = null
   briefingMiss.value = false
+  briefingSession.value = null
   if (id) {
     await resolveBriefingCrossBoard(id)
     if (!briefingTaskResolved.value) briefingMiss.value = true
+    // 顺序依赖：跨板解析命中会把选中板切到任务所在板，关联端点随其后才能拿对
+    // 板的 workspaces 根（相对 workspace_path 锚定用）。
+    void ide.associateTaskWorkspace(id, kanbanStore.selectedBoard ?? undefined)
+    void switchToTaskSession()
   }
 }, { immediate: true })
 const briefingTask = computed(() => {
@@ -151,16 +160,26 @@ const briefingTask = computed(() => {
     workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
     parents: (hit as { parents?: string[] }).parents ?? [],
     children: (hit as { children?: string[] }).children ?? [],
+    sessionId: (hit as { session_id?: string | null }).session_id ?? null,
   }
 })
 
-onMounted(() => {
-  const id = ide.activeTaskId
-  if (id) {
-    const hit = (chatStore.sessions ?? []).find(s => s.id === id || s.agentSessionId === id)
-    if (hit) chatStore.switchSession?.(hit.id)
-  }
-})
+// ── 关联轮（2026-10-18）：任务绑定三联动 ──
+// ① 任务 workspace → IDE 工作区（materialized 才切换；未派发/已回收不覆盖）；
+// ② 尽力切到任务挂靠的 agent 会话（session_id 命中即 switch；原 onMounted 版
+//    只在挂载时跑一次，任务维度中途切换不再跟随——升级为随绑定跑）；
+// ③ 任务会话块数据（简报「任务会话」区）。
+async function switchToTaskSession(): Promise<void> {
+  const want = briefingTask.value?.sessionId ?? ide.activeTaskId
+  if (!want) return
+  try {
+    if (!chatStore.sessionsLoaded) await chatStore.loadSessions(chatStore.sessionProfileFilter)
+  } catch { /* 列表装载失败保持当前会话 */ }
+  const hit = (chatStore.sessions ?? []).find(s => s.id === want || s.agentSessionId === want)
+  if (hit && chatStore.activeSessionId !== hit.id) chatStore.switchSession?.(hit.id)
+}
+
+// 会话跟随已升级为随 activeTaskId 绑定跑（switchToTaskSession），挂载期零补挂。
 
 // ── P3.2/P3.3 任务简报上下文文件（2026-09-28 产品 UI 缺陷修复 §四）──
 // workspace 就绪后扫描根目录与 docs/：按文件名语义归类（需求/概设/排期/文档），
@@ -378,10 +397,12 @@ async function resolveBriefingTask(): Promise<void> {
 }
 // Git 活动块：打开抽屉或切换任务时拉一次，任务 workspace 即 git root；失败静默空态
 async function loadBriefingGit(): Promise<void> {
-  // 回退链：卡片 workspace_path → 会话 workspace → IDE 工作区（aipaydev 实证：
-  // 排期卡/跟踪卡无 workspace_path，简报 Git 块整块空态；IDE 工作区此时即用户
-  // 正在开发的仓库，作为回退展示比空态更有信息量）
-  const root = briefingTask.value?.workspacePath
+  const taskGitId = briefingTask.value?.id ?? null
+  // 回退链：关联端点解析根（绝对，相对 workspace_path 已锚定板 workspaces 根）
+  // → 卡片原始 workspace_path（绝对时等价、相对时 git 调用自然失败落空态）
+  // → 会话 workspace → IDE 工作区
+  const root = ide.taskWorkspace?.path
+    ?? briefingTask.value?.workspacePath
     ?? (chatStore.activeSession?.workspace as string | undefined)
     ?? ide.workspace
   briefingGit.value = { branch: null, worktreePath: root ?? null, commits: [] }
@@ -391,8 +412,10 @@ async function loadBriefingGit(): Promise<void> {
       ideGitApi.status(root).catch(() => null),
       ideGitApi.log(root, 5).catch(() => ({ commits: [] })),
     ])
-    // stale 守卫：await 期间切换任务时丢弃旧响应（慢仓库乱序回写会串显到新任务）
-    if (briefingTask.value?.workspacePath !== root) return
+    // stale 守卫：await 期间切换任务时丢弃旧响应（慢仓库乱序回写会串显到新任务）。
+    // 按任务 id 守卫——回退链扩了 taskWorkspace.path 后 workspacePath 可能为 null，
+    // 原比较（workspacePath !== root）会把新鲜结果误判成 stale 丢掉。
+    if (briefingTask.value?.id !== taskGitId) return
     briefingGit.value = {
       branch: st?.branch ?? null,
       worktreePath: root,
@@ -482,16 +505,56 @@ const briefingWorkflow = computed(() => {
     retryCount: briefingRetry.value,
   }
 })
+// 任务会话块装载（关联轮③）：任务详情自带 session（该任务会话全文 messages）+
+// latest_summary——「该任务会话的上下文信息」单一数据源；冷窗 session 缺席如实
+// 空态（sessionKnown 语义同研发进度块，不编造）。消息取尾部 8 条、每条截 200 字。
+async function loadBriefingSession(): Promise<void> {
+  briefingSession.value = null
+  const id = ide.activeTaskId
+  if (!id) return
+  try {
+    const board = kanbanStore.selectedBoard ?? undefined
+    const detail = await getTask(id, board ? { board } : undefined)
+    if (ide.activeTaskId !== id) return // stale 守卫（同 Git/协作块）
+    const s = detail.session ?? null
+    const briefing: BriefingSessionBlock = {
+      sessionId: s?.id ?? detail.task.session_id ?? null,
+      source: s?.source ?? null,
+      model: s?.model ?? null,
+      startedAt: s?.started_at ?? null,
+      endedAt: s?.ended_at ?? null,
+      summary: detail.latest_summary ?? null,
+      messages: (s?.messages ?? [])
+        .filter(m => (m.content ?? '').trim())
+        .slice(-8)
+        .map(m => ({ role: m.role, content: m.content.slice(0, 200), timestamp: m.timestamp ?? null })),
+    }
+    briefingSession.value = briefing
+  } catch { /* 会话面暂缺保持空态 */ }
+}
 watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
   if (open) {
     void resolveBriefingTask().then(() => void loadBriefingRetry())
     void loadBriefingCollab()
+    void loadBriefingSession()
   }
 })
 function onAuxSend(text: string): void {
   // 辅助会话回传：组装任务上下文前缀发往主会话（chat.sendMessage 无活跃会话
-  // 时自动建会话；模式与 IdeTask 一致ContextBar assistant「带入主会话」裁决）
+  // 时自动建会话；模式与 IdeTaskContextBar assistant「带入主会话」裁决）
   const message = buildAuxMessage(briefingTask.value, text)
+  if (message) void chatStore.sendMessage(message)
+}
+
+// 任务上下文一键进会话（关联轮）：任务卡面+workspace 根+最新摘要打包成独立
+// 上下文消息——「集成该任务会话的上下文」的显式动作面（自动注入会打扰、写
+// 文件进 workspace 会弄脏 worktree 阻断任务回收，两路都不走）。
+function onSendTaskContext(): void {
+  const message = buildTaskContextMessage(briefingTask.value, {
+    workspacePath: ide.taskWorkspace?.path,
+    branch: ide.taskWorkspace?.branch,
+    summary: briefingSession.value?.summary,
+  })
   if (message) void chatStore.sendMessage(message)
 }
 
@@ -567,7 +630,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" :context-files="briefingContextFiles" :engine-progress="briefingEngineProgress" @aux-send="onAuxSend" @open-file="openBriefingFile" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" :context-files="briefingContextFiles" :engine-progress="briefingEngineProgress" :session="briefingSession" :workspace-info="ide.taskWorkspace" @aux-send="onAuxSend" @send-context="onSendTaskContext" @open-file="openBriefingFile" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>
