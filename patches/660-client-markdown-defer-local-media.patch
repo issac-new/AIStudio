@@ -1,37 +1,40 @@
 --- a/packages/client/src/components/hermes/chat/MarkdownRenderer.vue
 +++ b/packages/client/src/components/hermes/chat/MarkdownRenderer.vue
-@@ -23,6 +23,10 @@
+@@ -23,6 +23,11 @@
  import { openUrlInDesktopBrowser } from '@/utils/desktop-browser'
  import ImagePreviewOverlay from './ImagePreviewOverlay.vue'
  
-+// IDE 容器提供 ideDeferLocalMedia 时，本地媒体只渲染占位属性，由容器用鉴权
-+// fetch 换成 blob URL（避免 API key 进入 <img>/<video>/<audio> 的 src）。
++// 本地媒体只渲染占位属性（data-local-media + 透明 gif），由宿主容器或全局
++// 重写器（overlay entry 安装）用 Authorization fetch 换成 blob URL——API key
++// 不再进入 <img>/<video>/<audio> 的 src（SecNoQueryToken 后直连必 401）。
 +const DEFERRED_MEDIA_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 +
  const LATEX_FENCE_LANGS = new Set(['latex', 'tex', 'math', 'katex'])
  function getFenceLanguage(info: string): string {
    return info.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
-@@ -59,6 +63,8 @@
-     strict: 'ignore',
+@@ -60,6 +65,8 @@
    })}</div>`
  }
-+
-+const ideDeferLocalMedia = inject<boolean>('ideDeferLocalMedia', false)
  
++const ideDeferLocalMedia = inject<boolean>('ideDeferLocalMedia', true)
++
  const props = withDefaults(defineProps<{
      content: string
-@@ -275,6 +281,10 @@
-   // Replace image src paths with download URLs
-   html = html.replace(/\bsrc=(["'])([^"']+)\1/g, (match, quote, path) => {
-     if (!isLocalFilePath(path)) return match
+     mentionNames?: string[]
+@@ -280,6 +287,12 @@
+       try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
+       return `src="${md.utils.escapeHtml(props.resolveImageUrl(normalizeLocalFilePath(decodedPath)))}"`
+     }
++    // 本地媒体默认占位（容器/全局重写器用 Authorization fetch 换 blob）——
++    // query token 已被服务端拒绝（SecNoQueryToken），直连 src 必 401。
 +    if (ideDeferLocalMedia) {
 +      const localPath = md.utils.escapeHtml(normalizeLocalFilePath(path))
 +      return `data-local-media=${quote}${localPath}${quote} src="${DEFERRED_MEDIA_PLACEHOLDER}"`
 +    }
-     if (props.resolveImageUrl && !path.startsWith('//')) {
-       let decodedPath = md.utils.unescapeAll(path)
-       try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
-@@ -299,8 +309,11 @@
+     const downloadUrl = getDownloadUrl(normalizeLocalFilePath(path))
+     return `src=${quote}${downloadUrl}${quote}`
+   })
+@@ -299,8 +312,11 @@
      // downloadable document, so keep the player instead of opening source view.
      if (hasExtension(path, VIDEO_EXTENSIONS)) {
        const downloadUrl = getDownloadUrl(path)
@@ -44,7 +47,7 @@
          <div class="markdown-video-footer">
            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
              <polygon points="5 3 19 12 5 21 5 3"/>
-@@ -313,8 +326,11 @@
+@@ -313,8 +329,11 @@
      // Audio files: render as inline audio player
      if (hasExtension(path, AUDIO_EXTENSIONS)) {
        const downloadUrl = getDownloadUrl(path)

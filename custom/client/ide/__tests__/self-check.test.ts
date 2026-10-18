@@ -89,4 +89,13 @@ describe('runSelfChecks', () => {
     expect(report.split('\n')[0]).toContain('IDE 自检')
     expect(report).toContain('[PASS] 文件列表 API')
   })
+
+  it('英文 locale：标签与汇总走英文表', async () => {
+    const results = await runSelfChecks(ctx({ locale: 'en' }))
+    const labels = results.map(r => r.label)
+    expect(labels).toContain('Session store')
+    expect(labels).toContain('Worktree API')
+    const report = formatSelfCheckReport(results, 'en')
+    expect(report.split('\n')[0]).toContain('IDE self-check')
+  })
 })

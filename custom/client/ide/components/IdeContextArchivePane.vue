@@ -20,6 +20,7 @@ import {
 } from '../api/context-archive'
 
 import { friendlyIdeError } from '../utils/ideErrors'
+import { ideLocaleOf } from '../i18n'
 
 const chatStore = useChatStore()
 
@@ -117,7 +118,7 @@ async function reload(session?: string): Promise<void> {
     if (session) selectedSession.value = session
     await Promise.all([loadWindows(), loadNotes()])
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   } finally {
     loading.value = false
   }
@@ -151,7 +152,7 @@ async function toggleWindow(n: number): Promise<void> {
     openWindow.value = await getWindow(effectiveSession.value, n)
     expanded.value = new Set()
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   }
 }
 function toggleMsg(id: number): void {
@@ -205,7 +206,7 @@ async function submitNote(): Promise<void> {
     noteDraft.value = ''
     await loadNotes()
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   }
 }
 
@@ -222,7 +223,7 @@ async function saveEdit(): Promise<void> {
     editingId.value = null
     await loadNotes()
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   }
 }
 
@@ -231,7 +232,7 @@ async function removeNote(id: string): Promise<void> {
     await deleteNote(effectiveSession.value, id)
     await loadNotes()
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   }
 }
 

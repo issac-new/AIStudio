@@ -85,3 +85,57 @@ export function useAuthedMediaRewrite(rootRef: Ref<HTMLElement | null>) {
 
   return { rewrite, schedule, TRANSPARENT_GIF }
 }
+
+// ── 全局重写器（非 IDE 聊天页共用）──
+// patch 660 v2 起 Markdown 本地媒体默认渲染占位（data-local-media），任何宿主
+// 没有自己的容器级重写器时由本观察器兜底：body 级 MutationObserver 用
+// Authorization fetch 换 blob。IDE 容器重写器带 workspace root，先到先改
+// （data-media-rewritten 标记互斥），全局兜底不会重复拉取。
+let globalInstalled = false
+
+export function installGlobalAuthedMediaRewrite(): void {
+  if (globalInstalled || typeof window === 'undefined') return
+  globalInstalled = true
+  const objectUrls = new Set<string>()
+  let scheduled = false
+
+  async function rewriteOne(el: Element): Promise<void> {
+    const path = el.getAttribute('data-local-media') || ''
+    if (!path) return
+    el.setAttribute(PROCESSED, '1')
+    try {
+      const res = await authFetch(mediaFetchUrl(path, null))
+      if (!res.ok) return
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      objectUrls.add(objectUrl)
+      el.setAttribute('src', objectUrl)
+      if (el.tagName === 'VIDEO' || el.tagName === 'AUDIO') {
+        el.setAttribute('preload', 'metadata')
+        ;(el as HTMLMediaElement).load?.()
+      }
+    } catch { /* 保持占位，不打断消息渲染 */ }
+  }
+
+  function rewrite(): void {
+    const nodes = document.body?.querySelectorAll(`[data-local-media]:not([${PROCESSED}])`) ?? []
+    for (const node of Array.from(nodes)) void rewriteOne(node)
+  }
+
+  function schedule(): void {
+    if (scheduled) return
+    scheduled = true
+    const run = () => { scheduled = false; rewrite() }
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+    else setTimeout(run, 0)
+  }
+
+  void rewrite()
+  if (typeof MutationObserver === 'undefined') return
+  const observer = new MutationObserver(schedule)
+  observer.observe(document.body, { childList: true, subtree: true })
+  window.addEventListener('beforeunload', () => {
+    observer.disconnect()
+    for (const url of objectUrls) URL.revokeObjectURL(url)
+  })
+}

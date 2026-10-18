@@ -13,7 +13,9 @@ import { authFetch } from '../utils/auth-fetch'
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
 
 const chatStore = useChatStore()
+import { useI18n } from 'vue-i18n'
 const tx = useRunSurfaceText()
+const { locale } = useI18n()
 
 interface TraceNode {
   id: string
@@ -66,7 +68,7 @@ async function load(): Promise<void> {
     nodes.value = data.nodes ?? []
     meta.value = data.meta ?? null
   } catch (e) {
-    error.value = friendlyIdeError(e)
+    error.value = friendlyIdeError(e, undefined, ideLocaleOf(locale))
   } finally {
     loading.value = false
   }
