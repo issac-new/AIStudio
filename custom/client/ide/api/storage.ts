@@ -11,11 +11,15 @@ export interface StorageCategory {
   exists: boolean
   bytes: number
   files: number
+  /** 扫描预算内未扫完：bytes 为下限值（面板显示 ≥） */
+  partial?: boolean
 }
 
 export interface StorageSnapshot {
   categories: StorageCategory[]
   totalBytes: number
+  partial?: boolean
+  scannedAt?: number
 }
 
 export const ideStorageApi = {

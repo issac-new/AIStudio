@@ -280,6 +280,20 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('[data-run-trace-inspector]').exists()).toBe(true)
   })
 
+  it('opens with focus on dialog root so Esc closes (2026-10-18 回归)', async () => {
+    const store = useCockpitStore()
+    const w = mount(CockpitRunTraceModal, { attachTo: document.body, global: { stubs: { teleport: true } } })
+    store.openRunTrace({ sessionId: 's1', runId: 'r1' })
+    await w.vm.$nextTick()
+    await w.vm.$nextTick()
+    const root = w.find('[data-run-trace-modal]').element as HTMLElement
+    expect(document.activeElement).toBe(root)
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await w.vm.$nextTick()
+    expect(store.runTraceOpen).toBe(false)
+    w.unmount()
+  })
+
   it('opens skill drilldown when a skill node is selected', async () => {
     const store = useCockpitStore()
     store.openRunTrace({ sessionId: 's1', runId: 'r1' })

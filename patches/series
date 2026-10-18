@@ -827,3 +827,15 @@
 # 654: canUseProfile 空映射集放行（477 同族）——matrix 建号 admin 的空 user_profiles
 # 把一切 profile 定向读 403（旧看板任务详情 search-sessions 即全局无权限 toast）。
 654-server-kanban-empty-profileset-allow.patch
+
+# 655: IDE 文件树显示文件节点——下游 FilesPanel 有独立文件列表，IDE 右栏只有
+# 一棵树；workspaceKey 接线后仍只列目录（实测），补 showFiles 显式开关。
+655-client-filetree-show-files.patch
+
+# 656: 文件下载/预览 fetch 改 header 鉴权并剥离 URL token——SecNoQueryToken 后
+# query token 不再被接受，下载按钮实测 401；fetch 可带 header，不必泄露 token。
+656-client-download-auth-header.patch
+
+# 657: 下载/预览 fetch 补 workspaceRoot——workspaceRoot 模式下 path 相对 root，
+# 缺 root 时下载按钮 404（2026-10-18 IDE 文件预览实测）。
+657-client-download-workspace-root.patch

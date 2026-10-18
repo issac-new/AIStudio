@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onScopeDispose } from 'vue'
+import { computed, nextTick, ref, watch, onScopeDispose } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '../store/cockpit'
 import { useRunTrace, extractKanbanTaskId } from '../composables/useRunTrace'
@@ -23,6 +23,14 @@ const sessionId = computed(() => store.runTraceSessionId)
 const trace = useRunTrace(sessionId)
 const focusedId = ref<string | null>(null)
 const drilldownSkillId = ref<string | null>(null)
+// 弹层根节点须获得焦点，否则 @keydown.esc 永远不触发（同 2026-10-03 F3
+// 日程弹层缺陷）；打开时聚焦根节点，Esc 才能关闭。
+const modalRoot = ref<HTMLElement | null>(null)
+watch(() => store.runTraceOpen, async (open) => {
+  if (!open) return
+  await nextTick()
+  modalRoot.value?.focus()
+})
 const focusedNode = computed(() => trace.nodes.value.find(n => n.id === (focusedId.value || trace.focusedNodeId.value)) ?? null)
 const drilldownSkill = computed(() => trace.nodes.value.find(n => n.id === drilldownSkillId.value && n.kind === 'skill') ?? null)
 
@@ -286,6 +294,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 <template>
   <div
     v-if="store.runTraceOpen"
+    ref="modalRoot"
     class="run-trace-modal"
     data-run-trace-modal
     role="dialog"

@@ -10,9 +10,10 @@ import { reactive, ref } from 'vue'
 const i18n = createI18n({ legacy: false, locale: 'zh', messages: { zh: {} } })
 
 // 组件走 useRoute() composable（非模板 $route），测试环境无 router 实例须 mock
+const routeQuery = reactive<Record<string, string | undefined>>({})
 vi.mock('vue-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-router')>()
-  return { ...actual, useRoute: () => ({ query: {}, fullPath: '/ide' }) }
+  return { ...actual, useRoute: () => ({ query: routeQuery, fullPath: '/ide' }) }
 })
 
 // ── 受控替身 ──
@@ -71,7 +72,12 @@ function mountShell() {
       stubs: {
         IaGlobalTop: true, IaColumnControls: true, IdeTaskSidebar: true,
         IdeChatPane: true, IdeSidePane: true, IdeStatusBar: true,
-        IdeCommandPalette: true, IdeTaskContextBar: true, TaskBriefingPanel: true,
+        IdeCommandPalette: true, IdeTaskContextBar: true,
+        TaskBriefingPanel: {
+          name: 'TaskBriefingPanel',
+          props: ['task'],
+          template: '<div data-testid="briefing-stub">{{ task?.title }}</div>',
+        },
         CockpitRunTraceModal: true,
       },
     },
@@ -81,6 +87,7 @@ function mountShell() {
 describe('IdeShell briefing 跨板解析', () => {
   beforeEach(() => {
     ideState.activeTaskId = null
+    routeQuery.task = undefined
     kanbanState.tasks = []
     kanbanState.selectedBoard = 'default'
     setBoardCalls.length = 0
@@ -126,8 +133,25 @@ describe('IdeShell briefing 跨板解析', () => {
     expect(setBoardCalls).toEqual([])
   })
 
-  it('getTask 瞬时 5xx：不判死——落回逐板解析照常命中切板（2026-10-18 审计轮：暂时性故障≠任务不存在）', async () => {
-    getTaskMock.mockRejectedValue(Object.assign(new Error('API Error 500: boom'), { status: 500 }))
+  it('归档/已完成任务：getTask 详情直接回填，不依赖 listTasks 状态过滤', async () => {
+    getTaskMock.mockResolvedValue({
+      task: {
+        id: 't_arch', title: '归档任务', status: 'archived',
+        body: 'archived body', workspace_path: '/ws', priority: 1, assignee: 'orchestrator',
+      },
+      parents: [],
+      children: ['t_child'],
+    })
+    listBoardsMock.mockResolvedValue([{ slug: 'default' }])
+    // listTasks 默认过滤 done/archived：扫描永远命中不了，旧实现抽屉空转
+    listTasksMock.mockResolvedValue([])
+    mountShell()
+    routeQuery.task = 't_arch'
+    await vi.waitFor(() => expect(activeWrapper!.find('[data-testid="briefing-stub"]').text()).toContain('归档任务'))
+    expect(activeWrapper!.find('[data-testid="briefing-stub"]').text()).toContain('归档任务')
+  })
+
+  it('getTask 瞬时 5xx：不判死——落回逐板解析照常命中切板（2026-10-18 审计轮：暂时性故障≠任务不存在）', async () => {    getTaskMock.mockRejectedValue(Object.assign(new Error('API Error 500: boom'), { status: 500 }))
     listBoardsMock.mockResolvedValue([{ slug: 'default' }, { slug: 'aipay-rfd' }])
     listTasksMock.mockImplementation(({ board }: { board: string }) =>
       Promise.resolve(board === 'aipay-rfd'
