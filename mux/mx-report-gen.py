@@ -52,6 +52,7 @@ OUT = EVID / 'simulation-report.html'
 #   ① flock 单实例：后到实例立即退出（非零），让持有者完成，驱动侧由监督器断点重试吸收；
 #   ② 原子写盘：tmp + os.replace，读方（审计）永不读到半写文件。
 import fcntl
+EVID.mkdir(parents=True, exist_ok=True)  # --print-paths/首跑也要能落锁（run21 后 runs 目录已清空，锁文件父目录可能不存在）
 _GEN_LOCK_FP = open(EVID / '.report-gen.lock', 'w')
 try:
     fcntl.flock(_GEN_LOCK_FP, fcntl.LOCK_EX | fcntl.LOCK_NB)
