@@ -41,3 +41,11 @@
 #      与 services officialPluginCache 两份默认名单同步（bootstrap 机械对照测试）。
 #      生效=引擎 CLI 重建后 seed 进官方插件缓存（默认启用）。
 006-zcode-cua-plugin-bundled.patch
+
+# 007（Cua 完整回路 2026-10-18，并位 006-bundled）：broker 协议对齐官方 node_repl
+#      host（3.15.x）——authenticate 两段式握手（IPC v3）+ id 回显 + input 别名 + 裸载荷
+#      回包（官方 SDK toText/unwrapEnvelope 契约）+ 官方词表 24 方法（list_applications/
+#      broker_info/capture_app AX 状态文档+真图像/clipboard/指针别名/元素面诚实拒绝）+
+#      list_apps active 标记。旧客户端 legacy 标记回 raw。桌面 Helper peer-verify 拒第三方，
+#      本补丁使 SwarmStudio 自有 broker（broker-server.js Node 宿主）承接官方 host。
+007-zcode-cua-official-host-protocol.patch

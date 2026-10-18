@@ -54,6 +54,7 @@ import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
 import IdeImportHistory from '../components/IdeImportHistory.vue'
 import IdeKnowledgeBar from '../components/IdeKnowledgeBar.vue'
 import { ideRunsApi } from '../api/runs'
+import { ideCuaApi } from '../api/cua'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import {
@@ -76,6 +77,7 @@ import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
+import IdeCuaFloat from '../components/IdeCuaFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
 import IdeModBand from '../components/IdeModBand.vue'
@@ -659,45 +661,50 @@ function onManageSaved(): void {
   void loadCatalog()
 }
 
-// ── 电脑操作（ZCode composer CUA 入口对应物；2026-10-18 接通轮）──
-// 真接线：状态/切换均走后端 /api/ide/computer-use → 引擎 WS 桥 listPlugins/
-// setPluginEnabled（插件 computer-use@zcode-plugins-official，user 级全局态，
-// 启停热更新运行态——新会话即可用；运行中会话引擎可能拒绝切换，如实透出）。
-// 三态：on / off / error（引擎不可达或插件缺失），不再发声明消息（引擎真值取代）。
-type CuState = 'on' | 'off' | 'error'
-const cuState = ref<CuState>('off')
-const cuDetail = ref('')
-const cuBusy = ref(false)
-async function loadComputerUse(): Promise<void> {
-  try {
-    const res = await authFetch(`/api/ide/computer-use?workspacePath=${encodeURIComponent(root.value ?? '/tmp')}`)
-    const body = (await res.json()) as { ok?: boolean; supported?: boolean; enabled?: boolean; detail?: string }
-    cuState.value = !body.ok ? 'error' : body.enabled ? 'on' : 'off'
-    cuDetail.value = body.detail ?? ''
-  } catch {
-    cuState.value = 'error'
+// ── 电脑操作（ZCode composer CUA 入口对应物）──
+// Cua 完整回路（2026-10-18）：开关写服务端会话闸门（/api/ide/cua/session/:id，
+// fail-closed 默认，patch 664 在 spawn 前注入 ZCODE_CUA_DISABLE），并保留一条
+// 会话声明消息引导 agent；本地 localStorage 只作 UI 即时态，服务端值优先。
+const CU_KEY = 'ide-computer-use:'
+function cuStorageKey(): string { return CU_KEY + (chatStore.activeSessionId ?? 'default') }
+const computerUseOn = ref(localStorage.getItem(CU_KEY + 'default') === 'on')
+const cuaUnavailable = ref(false)
+watch(() => chatStore.activeSessionId, async (sid, prev) => {
+  if (sid === prev) return
+  computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
+  if (sid) {
+    try {
+      const state = await ideCuaApi.session(sid)
+      computerUseOn.value = state.enabled
+    } catch { /* 服务端不可达保持本地态 */ }
   }
-}
+})
 async function toggleComputerUse(): Promise<void> {
-  if (cuBusy.value || cuState.value === 'error') return
-  cuBusy.value = true
+  const target = !computerUseOn.value
+  const sid = chatStore.activeSessionId
   try {
-    const res = await authFetch('/api/ide/computer-use', {
-      method: 'PUT',
-      body: JSON.stringify({ enabled: cuState.value !== 'on', workspacePath: root.value ?? '/tmp' }),
-    })
-    const body = (await res.json()) as { ok?: boolean; supported?: boolean; enabled?: boolean; detail?: string }
-    cuState.value = !body.ok ? 'error' : body.enabled ? 'on' : 'off'
-    cuDetail.value = body.detail ?? ''
-    if (!body.ok && body.detail) showToast(`${tx.computerUse}: ${body.detail}`, 'error', 4000)
+    if (sid) {
+      const state = await ideCuaApi.setSession(sid, target)
+      computerUseOn.value = state.enabled
+      localStorage.setItem(cuStorageKey(), state.enabled ? 'on' : 'off')
+    } else {
+      computerUseOn.value = target
+      localStorage.setItem(cuStorageKey(), target ? 'on' : 'off')
+    }
   } catch {
-    cuState.value = 'error'
-    showToast(`${tx.computerUse}: engine unreachable`, 'error', 4000)
-  } finally {
-    cuBusy.value = false
+    // 写失败不装成功：按钮回弹（fail-closed 语义由服务端兜底）
+    computerUseOn.value = !target
+    return
   }
+  await chatStore.sendMessage(
+    `[computer-use-policy] enabled=${computerUseOn.value} —— ${computerUseOn.value ? '已开启电脑操作：agent 可经 computer-use 技能驱动鼠标/键盘/截图（受会话权限档约束）。' : '已关闭电脑操作：CUA 运行时不可用（fail-closed）。'}`,
+  )
 }
-onMounted(() => { void loadComputerUse() })
+onMounted(() => {
+  void ideCuaApi.status()
+    .then((s) => { cuaUnavailable.value = !s.available })
+    .catch(() => { cuaUnavailable.value = false })
+})
 
 
 // ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
@@ -867,6 +874,20 @@ watch(() => chatStore.activeSessionId, syncPermMode)
             <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
             <circle cx="17" cy="9" r="2.4" />
             <path d="M14.8 19a4.6 4.6 0 0 1 5.7-4.4" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          :class="{ 'is-on': ide.floats.cua }"
+          data-testid="ide-chat-float-cua"
+          :title="tx.cuaFloatTitle"
+          :aria-label="tx.cuaFloatTitle"
+          @click="ide.toggleFloat('cua')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="13" rx="2" />
+            <path d="M8 21h8M12 17v4" />
           </svg>
         </button>
         <button
@@ -1216,6 +1237,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       <!-- 浮窗（对标 zcode：任务计划 / 子代理名册，拖拽壳见 IdeFloatPanel） -->
       <IdePlanFloat v-if="ide.floats.plan" />
       <IdeSubagentsFloat v-if="ide.floats.agents" :focus-id="pendingSubagentId" />
+      <IdeCuaFloat v-if="ide.floats.cua" />
     </div>
   </section>
 </template>
