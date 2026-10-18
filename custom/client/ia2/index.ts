@@ -16,6 +16,9 @@ import '@/custom/cockpit/styles/cockpit.scss'
 import '@/custom/cockpit/styles/theme-bridge'
 // 共享 UI 基元样式（批 B1：统一空态类；ia2 注册无门控=全局面可用）
 import '@/custom/ui/styles/ui.scss'
+// 全站壳层覆盖（2026-10-18 用户裁定：上游 StudioNavigationRail 全站退役）——
+// bootstrap 顶层静态导入；IDE/专题等独立 fullscreen 路由不加载 IaShell 也生效。
+import './styles/shell-overrides.scss'
 
 export async function registerIa2(_app?: App): Promise<void> {
   for (const route of buildIaRoutes()) registerRoute(route)

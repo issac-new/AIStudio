@@ -536,13 +536,6 @@
   }
 }
 
-/* ── 2026-10-18 用户裁定：上游 StudioNavigationRail 全站退役 ──
- * 新 IaSideNav 是唯一左侧导航；/app、IDE 壳、收编页都不再显示 64px 上游 rail。
- * DOM 仍在（CSS 收敛零补丁=无功能删除），只是不再参与布局。 */
-.studio-navigation-rail {
-  display: none !important;
-}
-
 /* ── V2 设计语言基座（2026-10-16 视觉重规划 D4）──
  * 三中心视觉 token 单一事实源（overlay 域内；与上游 CSS 变量共存不覆盖——
  * 语义状态色与字阶/间距/卡片规范全部经此前散件同值反推成表）。
