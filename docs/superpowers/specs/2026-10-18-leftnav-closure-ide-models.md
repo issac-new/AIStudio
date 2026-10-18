@@ -41,5 +41,6 @@
 ## 验证
 
 - focused：stage-shell、sim-center-shell、sim-b4-b6-panels、gov-ai-quality、search-view、workbench-flow、side-nav、engine-models-catalog、model-switcher-source、side-pane、engine-models-rest 全绿。
-- 全量：4865/4874 通过，1 个 `simulation-node-executors` 在并发下偶发不等（单独运行 9/9 通过，属既有时间敏感用例）。
-- 8649 走查：阶段页运行选择器/启动运行页签、④看板页签、检索任务抽屉、全流程推演六页签、IDE 辅助栏中文短名、模型选择器 Ycode 目录。
+- 全量：667 个测试文件通过 / 5 跳过；4868 个用例通过 / 8 跳过，零失败（2026-10-18 收口轮两次全量复跑一致）。
+- 构建：`vite build` 临时 outDir 通过（22.7 秒，64MB），未覆盖共享 dist。
+- 8649 走查：六阶段页与全流程推演（6 页签）均有左侧栏/顶部栏、无上游 rail、无页面级滚动（超出内容在 `.stg__body`/`.sim-center__body` 内滚）；②启动运行页签渲染编排表单，④看板页签就地渲染看板；检索页 1156 条结果与工作区过滤可用；专题三页统一壳层；辅助栏 17 个中文短名按六组逐组核对；模型选择器分组显示 BigModel - Coding Plan / Bigmodel - API Key / kimi-max / SRK / kimi-mid，选 GLM-5.3-Flash 与 k3 后均不再误报失效。
