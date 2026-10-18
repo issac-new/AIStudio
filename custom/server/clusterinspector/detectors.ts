@@ -46,6 +46,9 @@ export interface DetectOptions {
   /** D9 上下文水位告警阈（百分比，默认 85；≥watermarkHighPct 升 high） */
   watermarkWarnPct?: number
   watermarkHighPct?: number
+  /** push-stalled 陈化阈 ms（默认 600000=10min：日志尾失败签名新鲜=warn，超阈=high。
+   *  48935f58 落地时漏声明导致 ts-node 拒启（2026-10-18 立查立改补型） */
+  pushStalledStaleMs?: number
   /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
   emptyStreakLimit?: number
   /** 会话饥饿：空转连击阈（默认 3；run20 复盘 D6） */
