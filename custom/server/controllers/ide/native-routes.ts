@@ -84,6 +84,8 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
     }
     if (method === 'PUT' && path === '/api/ide/computer-use') {
       await handleComputerUsePut(ctx)
+      return
+    }
     // ── Cua 完整回路：会话级电脑操作闸（查/写，fail-closed 默认）──
     if (method === 'GET' && path === '/api/ide/cua/status') {
       await handleCuaStatus(ctx)
