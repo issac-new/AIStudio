@@ -12,7 +12,12 @@ vi.mock('naive-ui', () => ({
 const switchSessionModel = vi.fn(async () => true)
 const switchModel = vi.fn(async () => true)
 const setSessionReasoningEffort = vi.fn(async () => undefined)
-const { newChat, sendMessage } = vi.hoisted(() => ({ newChat: vi.fn(), sendMessage: vi.fn() }))
+const { newChat, sendMessage, cuFetchMock } = vi.hoisted(() => ({ newChat: vi.fn(), sendMessage: vi.fn(), cuFetchMock: vi.fn() }))
+// 电脑操作接通轮（2026-10-18）：/api/ide/computer-use GET/PUT 经 auth-fetch 的 mock。
+vi.mock('../utils/auth-fetch', () => ({ authFetch: cuFetchMock }))
+function jsonRes(body: unknown): { ok: boolean; status: number; json: () => Promise<unknown> } {
+  return { ok: true, status: 200, json: async () => body }
+}
 const state = { activeSessionId: null as string | null, activeSession: null as Record<string, unknown> | null }
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
@@ -81,6 +86,7 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     switchModel.mockClear()
     newChat.mockClear()
     setSessionReasoningEffort.mockClear()
+    cuFetchMock.mockReset()
     state.activeSessionId = null
     state.activeSession = null
   })
@@ -249,6 +255,7 @@ describe('IdeChatPane composer 工具条（ZCode 对齐）', () => {
     switchModel.mockClear()
     newChat.mockClear()
     sendMessage.mockClear()
+    cuFetchMock.mockReset()
     state.activeSessionId = null
     state.activeSession = null
     localStorage.clear()
@@ -274,22 +281,35 @@ describe('IdeChatPane composer 工具条（ZCode 对齐）', () => {
     expect(w.find('[data-testid="ide-model-switcher"]').exists()).toBe(false)
   })
 
-  it('电脑操作开关：切换即发声明消息并按会话持久化', async () => {
+  it('电脑操作开关：引擎真值驱动（GET 拉态、PUT 切换），引擎不可达转错误态', async () => {
     catalogMock.mockResolvedValue({ independent: true, groups: [{ provider: 'bigmodel', models: LEVELS_MODEL }] })
     state.activeSessionId = 's1'
     state.activeSession = { id: 's1', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped' }
+    // 按 URL 分流（挂载期还有 loadLatestDiff 等其他 authFetch 调用，排队式 once 会被抢占）
+    let cuEnabled = true
+    let cuError = false
+    cuFetchMock.mockImplementation(async (path: string, init?: { method?: string; body?: string }) => {
+      if (cuError) throw new Error('engine down')
+      if (!String(path).includes('/api/ide/computer-use')) throw new Error(`unexpected ${path}`)
+      if (init?.method === 'PUT') {
+        expect(JSON.parse(String(init.body)).enabled).toBe(!cuEnabled)
+        cuEnabled = !cuEnabled
+      }
+      return jsonRes({ ok: true, supported: true, enabled: cuEnabled })
+    })
     const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
     await flushPromises()
     const btn = w.find('[data-testid="ide-computer-use"]')
-    expect(btn.classes()).not.toContain('is-on')
+    expect(btn.classes()).toContain('is-on')
+    // 点击=PUT 关闭（带工作区）；应答=引擎回读真值
     await btn.trigger('click')
-    expect(sendMessage).toHaveBeenCalledTimes(1)
-    expect(String(sendMessage.mock.calls[0][0])).toContain('[computer-use-policy] enabled=true')
-    expect(w.find('[data-testid="ide-computer-use"]').classes()).toContain('is-on')
-    expect(localStorage.getItem('ide-computer-use:s1')).toBe('on')
-    await w.find('[data-testid="ide-computer-use"]').trigger('click')
-    expect(String(sendMessage.mock.calls[1][0])).toContain('[computer-use-policy] enabled=false')
-    expect(localStorage.getItem('ide-computer-use:s1')).toBe('off')
+    await flushPromises()
+    expect(w.find('[data-testid="ide-computer-use"]').classes()).not.toContain('is-on')
+    // 引擎不可达 → 错误态（红点）
+    cuError = true
+    const w2 = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    expect(w2.find('[data-testid="ide-computer-use"]').classes()).toContain('is-error')
   })
 
   it('模型面板：Auto 路由入口 + 管理模型入口（打开引擎目录对话框，保存写穿重拉）', async () => {
