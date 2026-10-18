@@ -20,13 +20,13 @@ export interface ActMeta { act: number; name: string; displayName: string; from:
 
 // name=方案正本 §2.4 逐字副本（追溯用）；displayName=用户可见标准术语（界面只用它）。
 export const ACTS_7: ReadonlyArray<ActMeta> = [
-  { act: 1, name: '序幕·搭台', displayName: '序幕·准备', from: 1, to: 4 },
-  { act: 2, name: '第一幕·需求上锁', displayName: '第一幕·需求冻结', from: 5, to: 8 },
-  { act: 3, name: '第二幕·需求分析', displayName: '第二幕·需求分析', from: 9, to: 14 },
-  { act: 4, name: '第三幕·设计与排期', displayName: '第三幕·设计与排期', from: 15, to: 17 },
-  { act: 5, name: '第四幕·并行生产', displayName: '第四幕·并行开发', from: 18, to: 19 },
-  { act: 6, name: '第五幕·发布与验收', displayName: '第五幕·发布与验收', from: 20, to: 21 },
-  { act: 7, name: '尾声·治理与复盘', displayName: '尾声·治理与复盘', from: 22, to: 26 },
+  { act: 1, name: '序幕·搭台', displayName: '准备', from: 1, to: 4 },
+  { act: 2, name: '第一幕·需求上锁', displayName: '需求冻结', from: 5, to: 8 },
+  { act: 3, name: '第二幕·需求分析', displayName: '需求分析', from: 9, to: 14 },
+  { act: 4, name: '第三幕·设计与排期', displayName: '设计与排期', from: 15, to: 17 },
+  { act: 5, name: '第四幕·并行生产', displayName: '并行开发', from: 18, to: 19 },
+  { act: 6, name: '第五幕·发布与验收', displayName: '发布与验收', from: 20, to: 21 },
+  { act: 7, name: '尾声·治理与复盘', displayName: '治理与复盘', from: 22, to: 26 },
 ]
 
 export function actOfStep(no: number): number {

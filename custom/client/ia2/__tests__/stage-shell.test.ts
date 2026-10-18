@@ -110,7 +110,7 @@ describe('StageShell — 单层页签', () => {
     for (const key of ['org', 'accounts', 'teams', 'env', 'agents']) {
       expect(w.find(`[data-testid="stg-step-${key}"]`).exists(), key).toBe(true)
     }
-    expect(w.find('[data-testid="stg-step-state-teams"]').text()).toContain('轮次内不跟踪')
+    expect(w.find('[data-testid="stg-step-state-teams"]').text()).toContain('未纳入跟踪')
     expect(w.text()).not.toContain('进入 →')
     expect(w.find('[data-testid="stg-tab-steps"]').classes()).toContain('stg__tab--on')
     w.unmount()

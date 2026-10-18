@@ -54,6 +54,12 @@ const scopeLabel = computed(() => mine.value.length
   : (zh.value ? '需要先处理' : 'Needs attention'))
 const waits = computed(() => decisionRows.value.slice(0, 4))
 
+/** 工作区路径只显示末两层（产品里不出现绝对路径）；完整路径进 title 供排查。 */
+function workspaceShort(path: string): string {
+  const parts = String(path || '').split(/[\\/]+/).filter(Boolean)
+  return parts.slice(-2).join('/')
+}
+
 function statusOf(status: string) {
   return STATUS_LABEL[status] ?? { zh: status, en: status, tone: 'muted' }
 }
@@ -81,7 +87,7 @@ function statusOf(status: string) {
             <span class="sdt__status" :class="`sdt__status--${statusOf(t.status).tone}`">{{ zh ? statusOf(t.status).zh : statusOf(t.status).en }}</span>
             <span class="sdt__body">
               <strong class="sdt__name">{{ t.title }}</strong>
-              <span class="sdt__meta">{{ t.id }}<template v-if="t.workspace"> · {{ t.workspace }}</template><template v-if="t.assignee"> · {{ t.assignee }}</template></span>
+              <span class="sdt__meta">{{ t.id }}<template v-if="t.workspace"> · <span :title="t.workspace">{{ workspaceShort(t.workspace) }}</span></template><template v-if="t.assignee"> · {{ t.assignee }}</template></span>
             </span>
             <span class="sdt__go">{{ zh ? '打开' : 'Open' }}</span>
           </button>

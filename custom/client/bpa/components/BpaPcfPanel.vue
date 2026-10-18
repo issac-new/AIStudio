@@ -54,7 +54,7 @@ const trapKeys = ['t1', 't2', 't3', 't4', 't5'] as const
     <section class="block">
       <div class="head-row">
         <h3>{{ L.pcf.roadmapTitle }}</h3>
-        <span class="score" :data-testid="bpa-roadmap-count">{{ doneCount }}/5</span>
+        <span class="score" data-testid="bpa-roadmap-count">{{ doneCount }}/5</span>
       </div>
       <p class="muted small">{{ L.pcf.roadmapHint }}</p>
       <ol class="steps">

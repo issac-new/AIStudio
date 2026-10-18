@@ -16,6 +16,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { runRest } from '@/custom/loop/runcenter/api'
 import RunStageBadge from '@/custom/loop/runcenter/components/RunStageBadge.vue'
+import { runDisplayName } from '../run-display'
 import type { RunStatus } from '@/custom/loop/runcenter/types'
 import {
   buildTaskChain, buildTraceMatrix,
@@ -226,7 +227,7 @@ function fmtTime(v: string | null): string {
                     class="ia-trace__runlink"
                     :title="t('ia2.trace.openRun')"
                     @click="openRun(run.runId)"
-                  >{{ run.runId }}</button>
+                  >{{ runDisplayName(run.runId) }}</button>
                   <span v-else class="ia-trace__muted">{{ t('ia2.trace.noRun') }}</span>
                   <RunStageBadge v-if="runStatusOf(run.runStatus)" :status="runStatusOf(run.runStatus)!" />
                 </td>

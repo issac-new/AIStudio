@@ -105,7 +105,7 @@ describe('GatekeeperSection — S7 把关待办', () => {
     await flushPromises()
     const group = w.find('[data-testid="gk-cl-PR-3"]')
     expect(group.exists()).toBe(true)
-    expect(group.text()).toContain('2 笔未清')
+    expect(group.text()).toContain('2 项未清')
     const waiveBtn = w.find('[data-testid="gk-waive-PR-3"]')
     expect(waiveBtn.attributes('disabled')).toBeDefined()
     waiveClearance.mockResolvedValue({ ...LEDGER, open: 1, pass: false })

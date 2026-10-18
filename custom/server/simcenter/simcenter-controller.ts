@@ -782,4 +782,87 @@ router.get('/quality', (ctx: Context) => {
   ctx.body = { run, mutation, duplication }
 })
 
+// ── 12/13. 帧图廊：evidence/screenshots 只读枚举与取图（2026-10-19 产品走查批：
+//    证据库页签的「帧目录端点未接」补齐。名字一律相对路径，取图走 resolve+startsWith 双闸） ──
+
+const FRAME_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+
+export interface FrameFile {
+  /** 相对 evidence/screenshots 的路径（前端取图参数） */
+  name: string
+  /** 步骤键（文件名前缀，如 uat_done） */
+  step: string
+  /** before/after（按文件名后缀） */
+  phase: 'before' | 'after' | 'unknown'
+  size: number
+  mtime: number
+}
+
+/** 递归枚举截图目录（纯函数；坏目录跳过，不因单个坏文件拖垮整表）。 */
+export function listFrameFiles(baseDir: string, rel = ''): FrameFile[] {
+  const out: FrameFile[] = []
+  const dir = rel ? resolve(baseDir, rel) : baseDir
+  let entries: string[] = []
+  try { entries = readdirSync(dir) } catch { return out }
+  for (const name of entries) {
+    if (name.startsWith('.')) continue
+    const abs = resolve(dir, name)
+    const relPath = rel ? `${rel}/${name}` : name
+    let st
+    try { st = statSync(abs) } catch { continue }
+    if (st.isDirectory()) {
+      out.push(...listFrameFiles(baseDir, relPath))
+      continue
+    }
+    const ext = name.slice(name.lastIndexOf('.')).toLowerCase()
+    if (!FRAME_EXT.has(ext)) continue
+    const stem = name.slice(0, name.lastIndexOf('.'))
+    const phase = /-after$/i.test(stem) ? 'after' : /-before$/i.test(stem) ? 'before' : 'unknown'
+    out.push({
+      name: relPath,
+      step: stem.replace(/-(?:before|after)$/i, '').replace(/-op\d+$/i, ''),
+      phase,
+      size: st.size,
+      mtime: st.mtimeMs,
+    })
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** 帧根目录（run/evidence/screenshots）；不存在=null（调用方回空列表/404）。 */
+function framesBase(root: string, run: string): string | null {
+  const runDir = safeRunDir(root, run)
+  if (!runDir) return null
+  const base = resolve(runDir, 'evidence', 'screenshots')
+  if (!base.startsWith(resolve(runDir, 'evidence') + sep)) return null
+  return existsSync(base) ? base : null
+}
+
+router.get('/frames', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.query.run ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const base = framesBase(root, run)
+  if (!base) { ctx.body = { run, frames: [], note: '本次运行没有截图目录' }; return }
+  ctx.body = { run, frames: listFrameFiles(base) }
+})
+
+router.get('/frame', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.query.run ?? '')
+  const name = String(ctx.query.name ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const base = framesBase(root, run)
+  if (!base) { ctx.status = 404; ctx.body = { error: '本次运行没有截图目录' }; return }
+  const abs = resolve(base, name)
+  if (!name || !abs.startsWith(base + sep)) { ctx.status = 400; ctx.body = { error: 'name 参数非法（路径越界）' }; return }
+  if (!existsSync(abs)) { ctx.status = 404; ctx.body = { error: '帧不存在' }; return }
+  const ext = abs.slice(abs.lastIndexOf('.')).toLowerCase()
+  if (!FRAME_EXT.has(ext)) { ctx.status = 415; ctx.body = { error: '不支持的图片类型' }; return }
+  ctx.type = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png'
+  ctx.body = readFileSync(abs)
+})
+
 export { router as simcenterRouter }

@@ -7,15 +7,18 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunContext } from '../composables/useRunContext'
+import { runDisplayName } from '../run-display'
 
 const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const { run } = useRunContext()
-const name = computed(() => run.value.trim())
+const raw = computed(() => run.value.trim())
+// 产品面只呈现可读日期；运行目录名留在 title 供排查反查（2026-10-19 走查批）
+const name = computed(() => (raw.value ? runDisplayName(raw.value) : ''))
 
 function open(): void {
-  void router.push(name.value ? { name: 'ia2.sim', query: { run: name.value } } : { name: 'ia2.sim' })
+  void router.push(raw.value ? { name: 'ia2.sim', query: { run: raw.value } } : { name: 'ia2.sim' })
 }
 </script>
 
@@ -25,7 +28,7 @@ function open(): void {
     class="ircc"
     :class="{ 'ircc--empty': !name }"
     data-testid="ia-run-context"
-    :title="name ? `当前运行：${name}（点开运行总览）` : '还没有选择运行（点开运行总览选择）'"
+    :title="raw ? `当前运行：${name}（目录 ${raw}，点开运行总览）` : '还没有选择运行（点开运行总览选择）'"
     @click="open"
   >
     <span class="ircc__dot" aria-hidden="true" />

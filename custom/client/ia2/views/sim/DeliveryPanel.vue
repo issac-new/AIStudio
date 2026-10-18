@@ -54,7 +54,7 @@ watch(run, () => { if (run.value.trim()) void load() })
   <div class="dlv" data-testid="dlv-panel">
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
     <div v-else-if="!branches && !deliverables" class="dlv__hint" data-testid="dlv-empty">
-      <p>在页头「本轮运行」选择一轮，读取分支新鲜度与交付物链。</p>
+      <p>在页头选择一次运行，读取分支新鲜度与交付物链。</p>
     </div>
 
     <section v-if="branches" class="dlv__box">

@@ -143,3 +143,30 @@ export function fetchJournal(run: string, tail = 50): Promise<JournalResponse> {
 export function fetchAnchor(id: string): Promise<AnchorResult> {
   return getJson(`/api/hermes/sim/anchor?id=${encodeURIComponent(id)}`)
 }
+
+// ── 帧图廊（2026-10-19 产品走查批）：证据库页签的截图枚举与取图 ──
+
+export interface FrameFile {
+  /** 相对 evidence/screenshots 的路径（取图参数） */
+  name: string
+  /** 步骤键（如 uat_done） */
+  step: string
+  phase: 'before' | 'after' | 'unknown'
+  size: number
+  mtime: number
+}
+
+export interface FramesResponse {
+  run: string
+  frames: FrameFile[]
+  note?: string
+}
+
+export function fetchFrames(run: string): Promise<FramesResponse> {
+  return getJson(`/api/hermes/sim/frames?run=${encodeURIComponent(run)}`)
+}
+
+/** 取图 URL（img src 直用；同样带 run 与相对路径参数）。 */
+export function frameUrl(run: string, name: string): string {
+  return `/api/hermes/sim/frame?run=${encodeURIComponent(run)}&name=${encodeURIComponent(name)}`
+}

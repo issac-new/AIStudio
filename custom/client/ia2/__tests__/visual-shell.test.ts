@@ -24,8 +24,13 @@ vi.mock('../api/overview', () => ({
   gateRows: (g: Record<string, string>) => Object.entries(g).map(([key, value]) => ({ key, label: key, value })),
   netCardRows: () => ({ compensated: '', net: '', byType: [] }),
 }))
-vi.mock('../api/ops', () => ({ fetchTopology: vi.fn(), topologyRows: () => [], cliHealthEntries: () => [], sleepingRows: () => [] }))
-vi.mock('../api/supervision', () => ({ fetchJournal: vi.fn(), fetchAnchor: vi.fn(), organizeJournal: () => ({ windows: [], briefs: [], verdicts: [], tickets: [], unclassified: 0 }) }))
+vi.mock('../api/ops', () => ({
+  fetchTopology: vi.fn().mockResolvedValue({ services: {}, checkedAt: '' }),
+  fetchDispatcherHealth: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+  fetchSleepingWorkers: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+  topologyRows: () => [], cliHealthEntries: () => [], sleepingRows: () => [],
+}))
+vi.mock('../api/supervision', () => ({ fetchJournal: vi.fn(), fetchAnchor: vi.fn(), fetchFrames: vi.fn().mockResolvedValue({ run: 'r', frames: [] }), frameUrl: () => '', organizeJournal: () => ({ windows: [], briefs: [], verdicts: [], tickets: [], unclassified: 0 }) }))
 vi.mock('../api/gatekeeper', () => ({ fetchClearanceLedger: vi.fn(), resolveClearance: vi.fn(), waiveClearance: vi.fn(), groupClearanceTargets: () => [], buildClosingOrder: () => '' }))
 vi.mock('../api/gov', () => ({ fetchGateRepairs: vi.fn(), transitionGateRepair: vi.fn(), fetchKeyLedger: vi.fn(), putKeyLedger: vi.fn(), legalTransitions: () => [], GATE_STATE_LABEL: {}, GATE_FULL_NAME: {}, joinIssueDisposal: () => [], fetchIssues: vi.fn() }))
 vi.mock('../../kanban/handoff', () => ({ HANDOFF_TYPES: [], HANDOFF_STATES: [], HANDOFF_TYPE_LABEL: {}, HANDOFF_STATE_LABEL: {} }))

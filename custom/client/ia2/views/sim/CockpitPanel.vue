@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router'
 import { fetchRunState, postureKind, type RunStateResponse } from '../../api/overview'
 import { fetchTopology } from '../../api/ops'
 import { useRunContext } from '../../composables/useRunContext'
+import { runDisplayName } from '../../run-display'
 
 const router = useRouter()
 
@@ -57,12 +58,12 @@ function goOverview(): void {
     </template>
     <template v-else-if="loadError">
       <span class="cpb__dot cpb__dot--unknown">●</span>
-      <span class="cpb__run">{{ run }}</span>
+      <span class="cpb__run">{{ runDisplayName(run) }}</span>
       <span class="cpb__fail" data-testid="cpb-error">{{ loadError }}</span>
     </template>
     <template v-else-if="state">
       <span class="cpb__dot" :class="`cpb__dot--${postureKind(state.posture)}`">●</span>
-      <span class="cpb__run">{{ run }}</span>
+      <span class="cpb__run">{{ runDisplayName(run) }}</span>
       <span class="cpb__badge">{{ POSTURE_LABEL[postureKind(state.posture)] ?? state.posture }}</span>
       <span
         class="cpb__badge"
@@ -78,7 +79,7 @@ function goOverview(): void {
       <span v-else class="cpb__badge cpb__badge--muted">服务未探测</span>
     </template>
     <template v-else>
-      <span class="cpb__run">{{ run }}</span>
+      <span class="cpb__run">{{ runDisplayName(run) }}</span>
       <span class="cpb__hint">读取中……</span>
     </template>
   </button>

@@ -62,7 +62,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 <template>
   <div class="trc" data-testid="trc-panel">
     <p v-if="loadError" class="trc__error" data-testid="trc-error">{{ loadError }}</p>
-    <p v-else-if="!trace" class="trc__hint">在页头「本轮运行」选择一轮，读取 AC 判定链（冻结单×测试报告×验收书三源聚合）。</p>
+    <p v-else-if="!trace" class="trc__hint">在页头选择一次运行，读取验收判定链（冻结单×测试报告×验收书三源聚合）。</p>
 
     <template v-if="trace">
       <p class="trc__meta" data-testid="trc-meta">
