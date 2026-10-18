@@ -1199,7 +1199,7 @@ graph TB
 3. 不改变六道关卡判据（§5.3 不变）；本节证据用于复盘与产品缺陷归因，产品缺陷按 §2.6.5 台账登记。
 4. 预检⑳：生效 product-dist 必须包含六个新端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）；旧 dist 起跑即红，修复=`npm run inject && npm run build` 后刷新 SIM 快照。
 
-边界（如实登记）：恢复判定只给三档建议不自动执行；预算 `downgrade` 只给建议、`block` 需 `HERMES_BUDGET_ENFORCE=1`；沙箱路径/域名/ulimit 均 opt-in，未配置即不检查；macOS 不支持 `ulimit -v`，内存限额仅 Linux。
+边界（如实登记）：恢复判定只给三档建议不自动执行；预算 `downgrade` 只给建议、`block` 需 `HERMES_BUDGET_ENFORCE=1`；沙箱路径/域名/ulimit 均 opt-in，未配置即不检查；macOS 不支持 `ulimit -v`，内存限额仅 Linux；快照鉴权用调用方 JWT（驱动 `jwt_of fanfan`），取不到时端点按不可用记单。
 
 ### 2.7 交付物体系与模板字段
 
