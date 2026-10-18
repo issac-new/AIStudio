@@ -1643,7 +1643,7 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   # 非零→ERR trap 击杀驱动 11 连）。mx_send 本体已三试 SEND-FAILED 返 0——此层
   # 再兜一层，失败降级 SEND-FAILED 字面而非杀驱动。
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3") || m="SEND-FAILED"
-  m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3")
+  m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3") || m="${m:-SEND-FAILED}"
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   _progress_ledger_record "$1" "$2" "${3:-}" "$m"
   echo "$m"
@@ -1734,7 +1734,7 @@ _verify_dispatch_delivery() { # <user> <event-id> <body> <mentions> → 生效 e
     echo "ISSUE|dispatch-capacity-drop|${user}|派发 ${ev} 遭容量丢弃/排队，已自动重递" >> "$EVID_DIR/issues.log"
     note "[${user}] 派发 ${ev} 命中容量限制——自动重递一次"
     m2=$(mx_send "$(load_token "$user")" "$(sget room_analysis)" "$body
-[重递标记] 上一条 ${ev} 遭网关容量限制未达，本条为同一任务书重递，语义等同；若上一条实际已处理，按去重键合并回执即可。" "$mentions")
+[重递标记] 上一条 ${ev} 遭网关容量限制未达，本条为同一任务书重递，语义等同；若上一条实际已处理，按去重键合并回执即可。" "$mentions") || m2="$ev"
     printf '%s' "$m2"
     return 0
   fi
