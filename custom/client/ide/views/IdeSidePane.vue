@@ -62,6 +62,28 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string; group: SidePaneGroup }> =
   { key: 'slash', icon: '/', group: 'config' },
 ]
 
+// 2026-10-18 用户裁定：辅助栏必须中文可读，图标不能作为唯一标识。
+// 短名与 title 全名分开：图标旁常驻短名（2-5 字），长标题保留在 title。
+const SHORT_LABELS: Record<string, { zh: string; en: string }> = {
+  files: { zh: '文件', en: 'Files' },
+  review: { zh: '审查', en: 'Review' },
+  terminal: { zh: '终端', en: 'Term' },
+  wiki: { zh: '引用', en: 'Wiki' },
+  memory: { zh: '记忆', en: 'Memory' },
+  ctxarchive: { zh: '档案', en: 'Context' },
+  tools: { zh: '工具', en: 'Tools' },
+  trajectory: { zh: '轨迹', en: 'Trace' },
+  workflow: { zh: '流程', en: 'Flow' },
+  kanban: { zh: '看板', en: 'Board' },
+  assistant: { zh: '辅助', en: 'Ask' },
+  board: { zh: '画板', en: 'Draw' },
+  browser: { zh: '浏览器', en: 'Browser' },
+  storage: { zh: '资源', en: 'Files' },
+  mcp: { zh: 'MCP', en: 'MCP' },
+  hooks: { zh: '钩子', en: 'Hooks' },
+  slash: { zh: '命令', en: 'Cmd' },
+}
+
 // 漂移期本地字典兜底（i18n-observatory）：locale 词表键 tab_trajectory 尚未
 // 收编进 473 单一事实源，缺键时 t() 回显键名——trajectory 页签 title 走本地字典。
 // ctxarchive 同款（上下文无损滚存批）：本地字典，473 恢复后一并收编。
@@ -80,6 +102,10 @@ const GROUPS: Array<{ id: SidePaneGroup | 'all'; zh: string; en: string }> = [
 ]
 const paneLocale = computed(() =>
   String((locale as unknown as { value?: string } | undefined)?.value ?? 'zh').startsWith('zh') ? 'zh' : 'en')
+function tabShortLabel(key: IdeSidePaneTab): string {
+  const x = SHORT_LABELS[key]
+  return x ? (paneLocale.value === 'zh' ? x.zh : x.en) : key
+}
 const groupFilter = ref<SidePaneGroup | 'all'>('code')
 const visibleTabs = computed(() =>
   groupFilter.value === 'all' ? TABS : TABS.filter(x => x.group === groupFilter.value))
@@ -184,6 +210,7 @@ function focusMainChat(): void {
         @click="ide.setSidePaneTab(tab.key)"
       >
         <span class="ide-sidepane__tab-icon" aria-hidden="true">{{ tab.icon }}</span>
+        <span class="ide-sidepane__tab-label">{{ tabShortLabel(tab.key) }}</span>
       </button>
       <span class="ide-sidepane__spacer" />
       <button
@@ -322,6 +349,7 @@ function focusMainChat(): void {
   display: flex;
   align-items: center;
   gap: 2px;
+  row-gap: 2px;
   padding: 4px 6px;
   border-bottom: 1px solid var(--border-color);
   /* 全部组 17 签曾把 max/close 钮挤到 ~12px（flex 收缩）——换行 + 页签
@@ -330,8 +358,11 @@ function focusMainChat(): void {
 }
 
 .ide-sidepane__tab {
-  width: 30px;
+  width: auto;
+  min-width: 30px;
   height: 26px;
+  padding: 0 7px;
+  gap: 4px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -352,6 +383,8 @@ function focusMainChat(): void {
 }
 
 .ide-sidepane__tab-icon { font-size: 13px; line-height: 1; }
+/* 2026-10-18：图标旁常驻中文短名，避免只靠图标猜功能 */
+.ide-sidepane__tab-label { font-size: 11px; line-height: 1; white-space: nowrap; }
 
 .ide-sidepane.is-max { flex: 1 !important; width: auto !important; min-width: 320px; }
 

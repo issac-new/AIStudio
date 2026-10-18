@@ -70,6 +70,9 @@ engineModelsRouter.get('/', (ctx) => {
   ctx.body = {
     ok: true,
     config,
+    // 2026-10-18 用户裁定：IDE 模型选择使用 Ycode（zcode）实际模型配置。
+    // 独立目录为空时客户端优先用此目录；独立目录有值也一并返回，由客户端选源。
+    zcode: { groups: readZcodeCatalog() },
     effectivePolicy: effectivePolicySnapshot(config),
     store: 'runtime/ide-engine-models.json',
   }
@@ -104,6 +107,39 @@ engineModelsRouter.put('/', (ctx) => {
 function zcodeConfigPath(): string {
   const root = process.env.ZCODE_HOME?.trim() ? resolve(process.env.ZCODE_HOME) : join(homedir(), '.zcode')
   return join(root, 'v2', 'config.json')
+}
+
+export interface ZcodeCatalogGroup {
+  provider: string
+  label: string
+  models: Array<{ id: string; reasoningLevels?: string[] }>
+}
+
+/** 读 Ycode/ZCode 实际配置（~/.zcode/v2/config.json）的启用 provider → 模型目录。
+ *  只投影 providerId/名称/模型 id 与推理档，不读取 options（密钥/端点不出口）。 */
+export function readZcodeCatalog(): ZcodeCatalogGroup[] {
+  try {
+    const path = zcodeConfigPath()
+    if (!existsSync(path)) return []
+    const engine = JSON.parse(readFileSync(path, 'utf8')) as {
+      provider?: Record<string, {
+        enabled?: boolean
+        name?: string
+        models?: Record<string, { reasoningLevels?: string[] }>
+      }>
+    }
+    const groups: ZcodeCatalogGroup[] = []
+    for (const [providerId, p] of Object.entries(engine.provider ?? {})) {
+      if (!p || p.enabled === false) continue
+      const models = Object.entries(p.models ?? {})
+        .map(([id, m]) => ({ id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }))
+      if (models.length === 0) continue
+      groups.push({ provider: providerId, label: p.name || providerId, models })
+    }
+    return groups
+  } catch {
+    return []
+  }
 }
 
 export interface EnginePassthrough {

@@ -77,6 +77,29 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
     delete process.env.TEST_KEY_X
   })
 
+  it('readZcodeCatalog：读 ZCODE_HOME/v2/config.json 启用 provider/模型，不出口 options', async () => {
+    const zhome = mkdtempSync(join(tmpdir(), 'zcode-catalog-'))
+    fs_mkdirSync(join(zhome, 'v2'), { recursive: true })
+    writeFileSync(join(zhome, 'v2', 'config.json'), JSON.stringify({
+      provider: {
+        p1: { enabled: true, name: 'Provider One', options: { apiKey: 'SECRET' }, models: { m1: { reasoningLevels: ['low'] }, m2: {} } },
+        p2: { enabled: false, models: { x: {} } },
+        p3: { enabled: true, models: {} },
+      },
+    }))
+    const prev = process.env.ZCODE_HOME
+    process.env.ZCODE_HOME = zhome
+    const mod = await import('../engine-models')
+    const groups = mod.readZcodeCatalog()
+    expect(groups).toEqual([
+      { provider: 'p1', label: 'Provider One', models: [{ id: 'm1', reasoningLevels: ['low'] }, { id: 'm2' }] },
+    ])
+    expect(JSON.stringify(groups)).not.toContain('SECRET')
+    if (prev === undefined) delete process.env.ZCODE_HOME
+    else process.env.ZCODE_HOME = prev
+    rmSync(zhome, { recursive: true, force: true })
+  })
+
   it('PUT 非法 400 带问题清单；合法原子落盘+回读一致', async () => {
     const bad = await run(router, 'put', {
       request: { body: { providers: [{ providerId: '', baseURL: 'x', models: [] }] } },

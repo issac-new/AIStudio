@@ -507,13 +507,12 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(r2.currentRoute.value.name).toBe('ia2.collab')
   })
 
-  it('R4a 动线⑤：左栏任务簇 chip → 看板预选；行双击 → ide.shell?task=（useIdeJump）', async () => {
-    const { wrapper, router } = await mountAt('/app')
+  it('R4a 动线⑤：左栏任务簇 chip → 就地开抽屉；行双击 → ide.shell?task=（useIdeJump）', async () => {
+    const { wrapper } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-session-!r1:host"] .flow-nav__cnt--btn').trigger('click')
     await wrapper.find('[data-testid="flow-task-t-402"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.board')
-    expect(router.currentRoute.value.query.task).toBe('t-402')
+    expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')
     const { wrapper: w2, router: r2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-session-!r1:host"]').trigger('dblclick')
     await flushPromises()

@@ -29,6 +29,7 @@ import StageGatePanel from './StageGatePanel.vue'
 import StageRiskPanel from './StageRiskPanel.vue'
 import StageMetricsPanel from './StageMetricsPanel.vue'
 import StageAssetsPanel from './StageAssetsPanel.vue'
+import RunSelector from '../sim/RunSelector.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
 import { useStageProgress } from '../../composables/useStageProgress'
@@ -51,6 +52,8 @@ const STATE_LABEL = {
   pending: { zh: '未开始', en: 'Not started' },
 } as const
 const stageState = computed(() => progress.stageState(props.stage))
+/** ②⑤⑥ 的页签内容按运行取数：运行选择器放在页头，页签内不再手打目录名 */
+const needsRun = computed(() => [2, 5, 6].includes(props.stage))
 
 /** 阶段页主操作：只做「本阶段最该做的一步」，不堆第二排按钮。 */
 const STEP_TAB: Record<string, string> = {
@@ -69,7 +72,7 @@ const primary = computed<{ label: string; tab?: string; route?: string }>(() => 
   }
   if (props.stage === 2) return { label: zh.value ? '推进 G1' : 'Advance G1', tab: 'g1' }
   if (props.stage === 3) return { label: zh.value ? '进入任务分解' : 'Open task breakdown', tab: 'tasks' }
-  if (props.stage === 4) return { label: zh.value ? '打开工作台' : 'Open workbench', route: 'ia2.collab' }
+  if (props.stage === 4) return { label: zh.value ? '打开看板' : 'Open board', tab: 'board' }
   if (props.stage === 5) return { label: zh.value ? '开始 UAT' : 'Start UAT', tab: 'uat' }
   return { label: zh.value ? '处理未清算项' : 'Resolve open items', tab: 'clearance' }
 })
@@ -92,17 +95,21 @@ function openTask(taskId: string): void {
   drawerOpen.value = true
 }
 function openInbox(): void {
+  // 审批就地开页签：④开发→审批待办，⑤验收→G5 审批；其余阶段才落全局收件箱
+  if (props.stage === 4) { openTab('approvals'); return }
+  if (props.stage === 5) { openTab('g5'); return }
   void router.push({ name: 'ia2.inbox' })
 }
 
 // 重组件按需加载：避免任一阶段页把看板/文档/审计/案例全部打进首屏
-const AsyncKanban = defineAsyncComponent(() => import('@/custom/kanban/views/SwarmKanbanView.vue'))
-const AsyncAccounts = defineAsyncComponent(() => import('../AccountAdminView.vue'))
-const AsyncTeams = defineAsyncComponent(() => import('../TeamsView.vue'))
-const AsyncAgents = defineAsyncComponent(() => import('../agents/AgentsView.vue'))
-const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vue'))
-const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue'))
-const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue'))
+const AsyncKanban = defineAsyncComponent(() => import('@/custom/kanban/views/SwarmKanbanView.vue').then(m => m.default))
+const AsyncAccounts = defineAsyncComponent(() => import('../AccountAdminView.vue').then(m => m.default))
+const AsyncTeams = defineAsyncComponent(() => import('../TeamsView.vue').then(m => m.default))
+const AsyncAgents = defineAsyncComponent(() => import('../agents/AgentsView.vue').then(m => m.default))
+const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vue').then(m => m.default))
+const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue').then(m => m.default))
+const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue').then(m => m.default))
+const AsyncOrchestration = defineAsyncComponent(() => import('../orchestration/OrchestrationView.vue').then(m => m.default))
 
 const TAB_COMPONENTS: Record<string, Component> = {
   setupSteps: StageSetupSteps,
@@ -115,6 +122,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   docs: AsyncDocs,
   g1: StageGatePanel,
   preflight: StagePreflight,
+  launch: AsyncOrchestration,
   board: AsyncKanban,
   schedule: StageSchedulePanel,
   today: StageDevToday,
@@ -156,6 +164,7 @@ const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
         </div>
         <p class="stg__what">{{ meta.what }}</p>
       </div>
+      <RunSelector v-if="needsRun" class="stg__run" />
       <button type="button" class="stg__primary" data-testid="stg-primary" @click="runPrimary">
         {{ primary.label }} →
       </button>
@@ -213,6 +222,7 @@ const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
 .stg__state { font-size: 11px; color: var(--text-muted); }
 .stg__no--done ~ .stg__heading .stg__state { color: var(--ia-fresh); }
 .stg__what { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.stg__run { flex-shrink: 0; }
 .stg__primary {
   border: 1px solid var(--accent-primary); border-radius: 6px;
   background: transparent; color: var(--accent-primary);

@@ -67,10 +67,9 @@ describe('GovAiQualitySection — 渲染与加载', () => {
       { score: 71, threshold: 50, killed: 5, total: 7, survived: 2, source: 'evidence/mutation-score.json' },
       { verdict: 'fail', ratio: 12.5, threshold: 3, incrementLines: 40, duplicateLines: 5, blocks: 2, source: 'evidence/dup-ratio.json' },
     ))
+    localStorage.setItem('ia2.lastRun', '20261015-v8-run20')
     const w = mount(GovAiQualitySection)
     expect(w.find('[data-testid="gq-empty"]').exists()).toBe(true)
-    await w.find('[data-testid="gq-run"]').setValue('20261015-v8-run20')
-    await w.find('[data-testid="gq-run"]').trigger('keyup.enter')
     await flushPromises()
     expect(fetchQuality).toHaveBeenCalledWith('20261015-v8-run20')
     expect(w.find('[data-testid="gq-card-mutation"]').classes()).toContain('is-pass')
@@ -82,9 +81,8 @@ describe('GovAiQualitySection — 渲染与加载', () => {
 
   it('端点报错如实呈现不吞', async () => {
     ;(fetchQuality as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('503 fail-closed'))
+    localStorage.setItem('ia2.lastRun', 'r1')
     const w = mount(GovAiQualitySection)
-    await w.find('[data-testid="gq-run"]').setValue('r1')
-    await w.find('[data-testid="gq-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="gq-error"]').text()).toContain('503')
     w.unmount()
