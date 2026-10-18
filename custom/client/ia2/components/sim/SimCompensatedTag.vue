@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 代偿紫标（N1）：代偿相关内容紫色标记＋「净额口径不计入」提示；对任何人不隐藏。
+// 自动代处理紫标（N1）：紫色标记＋「不计入人工完成数」提示；对任何人不隐藏。
 const props = defineProps<{
   count?: number | null
   label?: string
@@ -10,8 +10,8 @@ const props = defineProps<{
   <span
     class="sim-comp-tag"
     data-testid="sim-comp-tag"
-    title="净额口径不计入"
-  >{{ props.label || '代偿' }}{{ props.count == null ? '' : ` ${props.count}` }}</span>
+    title="自动代处理不计入人工完成数"
+  >{{ props.label || '自动代处理' }}{{ props.count == null ? '' : ` ${props.count}` }}</span>
 </template>
 
 <style scoped>

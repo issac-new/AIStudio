@@ -4,13 +4,16 @@
      ＋空闲工作者卡（635）＋运行活性行（驱动/监督器/哨兵——端点未接挂账态）。
      一键并发三端点；任一失败单独呈现，不拖垮整卡。 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { fetchRunState } from '../../api/overview'
+import { useRunContext } from '../../composables/useRunContext'
 import {
   fetchTopology, fetchDispatcherHealth, fetchSleepingWorkers,
   topologyRows, cliHealthEntries, sleepingRows,
   type ServiceRow, type CliHealthResponse,
 } from '../../api/ops'
 
+const { run } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
 const checkedAt = ref('')
@@ -18,6 +21,15 @@ const services = ref<ServiceRow[] | null>(null)
 const dispatcher = ref<CliHealthResponse | null>(null)
 const sleeping = ref<Array<Record<string, string>> | null>(null)
 const sleepingError = ref('')
+const liveness = ref<string>('')
+
+/** 技术错误人话化：503/未配置=服务端缺探测命令，不把 env 名甩给用户。 */
+function humanizeOpsError(message: string): string {
+  if (/SIM_DISPATCHER_HEALTH_CLI/.test(message)) return '调度器健康探测未接入（服务端未配置探测命令）'
+  if (/SIM_SLEEPING_WORKERS_CLI/.test(message)) return '空闲工作者探测未接入（服务端未配置探测命令）'
+  if (/OBS_SIM_ROOT/.test(message)) return '推演数据目录未配置（请联系管理员）'
+  return message
+}
 
 async function load(): Promise<void> {
   loading.value = true
@@ -29,27 +41,47 @@ async function load(): Promise<void> {
     checkedAt.value = topo.value.checkedAt
   } else {
     services.value = null
-    loadError.value = (topo.reason as Error).message
+    loadError.value = humanizeOpsError((topo.reason as Error).message)
   }
   dispatcher.value = disp.status === 'fulfilled' ? disp.value : null
-  if (disp.status === 'rejected') loadError.value = loadError.value || (disp.reason as Error).message
+  if (disp.status === 'rejected') loadError.value = loadError.value || humanizeOpsError((disp.reason as Error).message)
   sleeping.value = sleep.status === 'fulfilled' ? sleepingRows(sleep.value) : null
-  if (sleep.status === 'rejected') sleepingError.value = (sleep.reason as Error).message
+  if (sleep.status === 'rejected') sleepingError.value = humanizeOpsError((sleep.reason as Error).message)
   loading.value = false
 }
+
+/** 运行状态一句话：有 report_done=已结束；否则按已完成步数呈现进行中。 */
+async function loadLiveness(): Promise<void> {
+  const name = run.value.trim()
+  if (!name) { liveness.value = '还没有选择运行记录'; return }
+  try {
+    const st = await fetchRunState(name)
+    const done = Object.keys(st.steps ?? {}).length
+    liveness.value = 'report_done' in (st.steps ?? {})
+      ? '运行已结束（报告已生成）'
+      : `运行进行中（已完成 ${done} 个步骤）`
+  } catch {
+    liveness.value = '运行状态暂不可读'
+  }
+}
+
+onMounted(() => {
+  void load()
+  void loadLiveness()
+})
 </script>
 
 <template>
   <div class="ops" data-testid="ops-panel">
     <div class="ops__bar">
-      <button class="ops__btn" type="button" data-testid="ops-load" :disabled="loading" @click="load">探测</button>
+      <button class="ops__btn" type="button" data-testid="ops-load" :disabled="loading" @click="load(); loadLiveness()">刷新</button>
       <span v-if="checkedAt" class="ops__ts" data-testid="ops-checked-at">探测时刻：{{ checkedAt }}</span>
     </div>
     <p v-if="loadError" class="ops__error" data-testid="ops-error">{{ loadError }}</p>
 
     <section class="ops__box">
       <h4 class="ops__h">环境拓扑（四服务）</h4>
-      <p v-if="!services" class="ops__hint">点「探测」读取（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）。</p>
+      <p v-if="!services" class="ops__hint">正在读取服务状态……（网关 / 工作台 / 消息服务 / 记忆服务）</p>
       <ul v-else class="ops__svc-list">
         <li v-for="s in services" :key="s.name" class="ops__svc" :data-testid="`ops-svc-${s.name}`">
           <span class="ops__dot" :class="s.ok ? 'ops__dot--ok' : 'ops__dot--fail'" data-testid="ops-dot">{{ s.ok ? '●' : '●' }}</span>
@@ -61,7 +93,7 @@ async function load(): Promise<void> {
 
     <section class="ops__box">
       <h4 class="ops__h">调度器健康</h4>
-      <p v-if="!dispatcher" class="ops__hint">未读取（探测一并拉取；正身在 hermes-agent，界面只消费）。</p>
+      <p v-if="!dispatcher" class="ops__hint">暂未读取到调度器状态。</p>
       <ul v-else class="ops__kv">
         <li v-for="(e, i) in cliHealthEntries(dispatcher)" :key="i" :data-testid="`ops-disp-kv-${i}`" :class="{ 'ops__kv--fail': !dispatcher.ok }">
           <span class="ops__kv-k">{{ e.k }}</span>
@@ -73,7 +105,7 @@ async function load(): Promise<void> {
     <section class="ops__box">
       <h4 class="ops__h">空闲工作者</h4>
       <p v-if="sleepingError" class="ops__error" data-testid="ops-sleeping-error">{{ sleepingError }}</p>
-      <p v-else-if="!sleeping" class="ops__hint">未读取。</p>
+      <p v-else-if="!sleeping" class="ops__hint">暂未读取到空闲工作者。</p>
       <template v-else>
         <p v-if="sleeping.length === 0" class="ops__hint" data-testid="ops-sleeping-empty">无空闲工作者。</p>
         <table v-else class="ops__table" data-testid="ops-sleeping-table">
@@ -90,8 +122,8 @@ async function load(): Promise<void> {
     </section>
 
     <section class="ops__box">
-      <h4 class="ops__h">运行活性（驱动/监督器/哨兵）</h4>
-      <p class="ops__hint" data-testid="ops-liveness-absent">运行活性端点未接（挂账项）——进程状态与最新日志行时刻待端点就绪后实装，当前如实缺席。</p>
+      <h4 class="ops__h">运行状态</h4>
+      <p class="ops__hint" data-testid="ops-liveness">{{ liveness || '正在读取……' }}</p>
     </section>
   </div>
 </template>

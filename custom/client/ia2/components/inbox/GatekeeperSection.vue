@@ -15,6 +15,7 @@ import {
   type ClearanceLedgerView,
 } from '../../api/gatekeeper'
 import { SimInterventionCard } from '../sim/index'
+import { compensationLabel } from '../../compensation-labels'
 
 const interventions = ref<InterventionsView | null>(null)
 const clearance = ref<ClearanceLedgerView | null>(null)
@@ -152,14 +153,14 @@ onMounted(() => { void refresh() })
 
     <div class="gk__queue">
       <h4 class="gk__queue-title">
-        遗留项清算（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒绝启动新运行' }}</template>）
+        遗留事项清算（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒绝启动新运行' }}</template>）
       </h4>
       <p v-if="clearanceError" class="gk__error" data-testid="gk-clearance-error" :title="rawClearanceError">{{ clearanceError }}</p>
       <p v-else-if="clearanceTargets.length === 0" class="gk__hint" data-testid="gk-clear-empty">台账无未清项。</p>
       <div v-for="g in clearanceTargets" :key="g.target" class="gk__cl" :data-testid="`gk-cl-${g.target}`">
         <div class="gk__cl-head">
           <span class="gk__cl-target">{{ g.target }}</span>
-          <span class="gk__cl-meta">{{ g.openCount }} 笔未清（{{ g.types.join('、') }}）</span>
+          <span class="gk__cl-meta">{{ g.openCount }} 项未清（{{ g.types.map(compensationLabel).join('、') }}）</span>
         </div>
         <div class="gk__cl-actions">
           <input

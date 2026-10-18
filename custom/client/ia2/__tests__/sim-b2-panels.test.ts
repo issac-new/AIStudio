@@ -12,7 +12,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('../api/supervision', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/supervision')>()
-  return { ...actual, fetchJournal: vi.fn(), fetchAnchor: vi.fn() }
+  return { ...actual, fetchJournal: vi.fn(), fetchAnchor: vi.fn(), fetchFrames: vi.fn().mockResolvedValue({ run: 'r', frames: [], note: '本次运行没有截图' }) }
 })
 vi.mock('../api/gatekeeper', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/gatekeeper')>()
@@ -131,14 +131,15 @@ describe('EvidencePanel — S3 证据库', () => {
     w.unmount()
   })
 
-  it('锚反查失败（404/400）如实报错；帧图廊挂账态在位', async () => {
+  it('锚反查失败（404/400）如实报错；没有截图时给可读空态', async () => {
+    localStorage.setItem('ia2.lastRun', '20261017-v8-run21')
     mockedFetchAnchor.mockRejectedValue(new Error('/api/hermes/sim/anchor → 404（{"error":"synapse 查询失败"}）'))
     const w = mount(EvidencePanel)
     await w.find('[data-testid="ev-anchor-input"]').setValue('$notfound')
     await w.find('[data-testid="ev-anchor-search"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="ev-anchor-error"]').text()).toContain('404')
-    expect(w.find('[data-testid="ev-frames-absent"]').text()).toContain('帧目录端点未接')
+    expect(w.find('[data-testid="ev-frames-absent"]').text()).toContain('本次运行没有截图')
     w.unmount()
   })
 
@@ -154,7 +155,7 @@ describe('EvidencePanel — S3 证据库', () => {
     const w = mount(EvidencePanel)
     await w.find('[data-testid="ev-ledger-load"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="ev-ledger-summary"]').text()).toContain('禁止启动新运行')
+    expect(w.find('[data-testid="ev-ledger-summary"]').text()).toContain('暂不能启动新运行')
     expect(w.find('[data-testid="ev-ledger-state-e1"]').text()).toBe('待处理')
     expect(w.find('[data-testid="ev-ledger-state-e2"]').classes()).toContain('ev__state--waived')
     expect(w.find('[data-testid="ev-ledger-state-e3"]').text()).toBe('已处理')

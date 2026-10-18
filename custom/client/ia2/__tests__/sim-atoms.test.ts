@@ -68,14 +68,14 @@ describe('SimCompensatedTag — 代偿紫标（N1 紫标不隐藏）', () => {
   it('带计数：紫标＋净额口径提示', () => {
     const w = mount(SimCompensatedTag, { props: { count: 40 } })
     const tag = w.find('[data-testid="sim-comp-tag"]')
-    expect(tag.text()).toBe('代偿 40')
-    expect(tag.attributes('title')).toBe('净额口径不计入')
+    expect(tag.text()).toBe('自动代处理 40')
+    expect(tag.attributes('title')).toBe('自动代处理不计入人工完成数')
     w.unmount()
   })
 
   it('缺席态：计数未知仍显示紫标本体（不隐藏）', () => {
     const w = mount(SimCompensatedTag, { props: {} })
-    expect(w.find('[data-testid="sim-comp-tag"]').text()).toBe('代偿')
+    expect(w.find('[data-testid="sim-comp-tag"]').text()).toBe('自动代处理')
     w.unmount()
   })
 })
