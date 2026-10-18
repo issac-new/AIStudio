@@ -594,12 +594,15 @@ export function detectActiveNoArtifact(snap: ClusterSnapshot, opts: DetectOption
   for (const t of face.tails) {
     if (!t.workTsMs) continue
     const liveMs = now - t.workTsMs
-    if (liveMs > activeMs || liveMs < 0) continue
+    // 窗口=2×activeMs 双档全可达（首版 skip 阈 activeMs 早于 high 阈 2×activeMs，
+    // high 永假——挂载级测试抓出的死分支）：warn=活跃中（<30min）持卡；high=
+    // 30-60min 灰带（刚停写/完成态错位最可疑形态）；>60min 交静默类检测器。
+    if (liveMs > activeMs * 2 || liveMs < 0) continue
     const held = ownerOf.get(t.profile) ?? ownerOf.get(`${t.profile}-agent`) ?? 0
     if (held === 0) continue
     out.push({
       detector: 'agent.active-no-artifact', subject: `profile:${t.profile}`,
-      severity: liveMs >= activeMs * 2 ? 'high' : 'warn',
+      severity: liveMs >= activeMs ? 'high' : 'warn',
       summary: `活跃但交付未落 ${Math.round(liveMs / 60000)} 分钟：${t.profile} 日志持续工作且持有 ${held} 张在途卡——「在写未提交/完成态错位」形态（run21 四复发同族）。建议直查：已写内容立即 push（WIP 亦可，增量提交纪律）；未写则发单步里程碑指令`,
       detail: { profile: t.profile, liveMs, activeMs, runningCards: held },
     })
@@ -611,6 +614,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
   const base = [
     ...detectGateway(snap),
     ...detectPushStalled(snap, opts),
+    ...detectActiveNoArtifact(snap, opts),
     ...detectSlotInflation(snap, opts),
     ...detectStaleWorkers(snap),
     ...detectSessionStall(snap, opts),
