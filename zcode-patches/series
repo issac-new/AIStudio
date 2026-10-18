@@ -2,6 +2,11 @@
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
 001-server-cli-yazl-external.patch
 
+# 002（importSession RPC，P11 导入写入通道）：文件一直在但 series 漏登记——
+# 与 003/004 同一次旧侧 series 覆盖事故，恢复并集时漏了本条（2026-10-18 实测
+# 引擎 Method not found: importSessionV4 定位）。补登记后引擎重建即含该 RPC。
+002-import-session-rpc.patch
+
 # ── 以下 003/004 恢复自 6619a447（CUA 桌面级轮；并行 P9/P10 合并时被旧侧 series 覆盖丢失，本轮并集恢复）──
 # 003（zcode-cua 活体化，Computer Use 桌面级 2026-09-29）：占位包→跨三端真实现。
 #      新增 node-backend.js（mac=JXA CGEvent+screencapture+System Events 粘贴通道/
