@@ -18,7 +18,7 @@
 | Codex | `rust-v0.162.1`（2026-10-09） | `upstream/codex` → `git describe --tags` |
 | Kimi Code | `@moonshot-ai/kimi-code@2.1.1-6-ga940f2ff0` | `upstream/kimi-code` → `git describe --tags` |
 | MiniMax Code | `v0.6.5`（2026-10-09） | `upstream/minimax-code` → `git describe --tags` |
-| deepseek-harness | `dsh-v0.2.1-alpha.2`（仓库已有 alpha.3–5 标签，检出停在 alpha.2） | `upstream/deepseek-harness` → `git describe --tags` |
+| deepseek-harness | 检出 `dsh-v0.2.1-alpha.2`；**仓库最新标签 `dsh-v0.2.1-alpha.5`** | `upstream/deepseek-harness` → `git describe --tags`；`git tag --list 'dsh-v0.2.1-alpha.*' --sort=v:refname` |
 | dsh-TUI | `v0.15.0`（2026-10-13） | `upstream/dsh-TUI` → `git describe --tags` |
 | multica | `v0.6.2`（2026-10-13） | `upstream/multica` → `git describe --tags` |
 | routa | `v0.19.0`（2026-06-22） | `upstream/routa` → `git describe --tags` |
@@ -26,6 +26,8 @@
 | Antigravity | App `2.24.0`（10-15）；CLI `1.4.0`（10-16） | `antigravity.google/docs/changelog`（web-products.md §2.1） |
 | Qoder | 工作台 `0.4.8`（10-15） | `docs.qoder.cn/product-overview/qoder-update-log.md`（web-products.md §3.1） |
 | WorkBuddy / CodeBuddy | WorkBuddy `5.8.2`（10-16）；CodeBuddy IDE 版本官方未公布 | `codebuddy.cn/docs/workbuddy/Changelog`；未证实项见 web-products.md §7.2 |
+
+**dsh alpha.2 → alpha.5 增量核对（2026-10-18，`git log alpha.2..alpha.5`）**：alpha.3–5 以 Web/账户/提示词修补为主——通用通知字段与多层通知卡、provider 感知模型标签槽、PTC 提示语对齐、终端会话列表、右栏 PageUp 折叠修复、SDK 缓存重试与 provider 失败暴露、Windows runner 监督、skill 菜单插件变更。**未出现新的能力族**（插件化内核/事件溯源/Agent Teams/Workflow/权限沙箱均沿用 alpha.2 结构），故 `tools-batch2.md` 的能力清单对 alpha.5 仍适用；版本差异已在表格标注，后续若需要逐文件级 alpha.5 对照应重新 checkout 该标签（本轮只读审计，不切换共享检出）。
 
 ## 二、"编码模式 / 工作模式"的真实语义（本轮的立论基础）
 
