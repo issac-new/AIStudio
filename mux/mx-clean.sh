@@ -432,8 +432,8 @@ if [ "$RESET_CENTRAL" = 1 ]; then
             git ls-remote --tags origin "$_t" 2>/dev/null | grep -q . || _miss="$_miss $_t"
           done
           if [ -n "$_miss" ]; then
-            say "⛔ 删除中止：保全 tag 未推达远端（$_miss）——删后不可恢复，本批保留分支待人工核查（纪律 71）"
-            echo "ISSUE|integration-retention-guard|director|mx-clean 删除中止：保全 tag 未推达远端（$_miss）——fail-closed 保留分支（run20 游离提交不可反查教训）" >> "$SIM_ROOT/runs/${_cur_run:-unknown}/evidence/issues.log" 2>/dev/null || true
+            say "⛔ 删除中止：保全 tag 未推达远端（${_miss}）——删后不可恢复，本批保留分支待人工核查（纪律 71）"
+            echo "ISSUE|integration-retention-guard|director|mx-clean 删除中止：保全 tag 未推达远端（${_miss}）——fail-closed 保留分支（run20 游离提交不可反查教训）" >> "$SIM_ROOT/runs/${_cur_run:-unknown}/evidence/issues.log" 2>/dev/null || true
           fi
         fi
         say "  已删分支 SHA 清单 → $ARC/central-deleted-branches-${TS}.txt（每 tip tag mx-clean-${TS}-b-* 并已推远端）"
