@@ -165,7 +165,7 @@ async function loadFrames(): Promise<void> {
 
 function humanizeLedgerError(message: string): string {
   return /ORGLOOP_LEDGER_TSV/.test(message)
-    ? '遗留事项台账未配置：请联系管理员配置清算台账后重试'
+    ? '还没有遗留事项台账（开始一次运行后生成）'
     : message
 }
 
