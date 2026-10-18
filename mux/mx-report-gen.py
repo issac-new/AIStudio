@@ -2430,6 +2430,60 @@ def _gov_trend_table(gov_txt: str) -> str:
             f'<tbody>{body}</tbody></table></div>')
 
 
+def harness_runtime_html():
+    """Harness 运行面证据（V8.42，2026-10-18）：读 evidence/harness/harness-summary.json。
+
+    六端点实测读数（九层体检/过程质量/执法决策/运行清单/预算/沙箱），缺席如实 ⬜，
+    不造数；不改变六道关卡判据（§5.3），只作第 9 章治理证据第七面。
+    """
+    p = EVID / 'harness' / 'harness-summary.json'
+    if not p.exists():
+        return ('<p class="stat-note">本轮未采集 Harness 运行面快照'
+                '（evidence/harness/harness-summary.json 缺席）——如实标注，不造数。</p>')
+    try:
+        data = json.loads(p.read_text(encoding='utf-8', errors='replace'))
+    except Exception:
+        return '<p class="stat-note">Harness 运行面快照解析失败——如实标注，不造数。</p>'
+    summary = data.get('summary') or {}
+    endpoints = data.get('endpoints') or {}
+
+    def cell(name, value):
+        ok = bool((endpoints.get(name) or {}).get('ok'))
+        return f'{H.escape(str(value))}' + ('' if ok else ' ⬜')
+    def pct(v):
+        return '—' if v is None else f'{float(v) * 100:.1f}%'
+    def usd(v):
+        return '—' if v is None else f'${float(v):.4f}'
+
+    layers = summary.get('layers') or {}
+    pq = summary.get('processQuality') or {}
+    pol = summary.get('policy') or {}
+    man = summary.get('manifests') or {}
+    bud = summary.get('budget') or {}
+    sbx = summary.get('sandbox') or {}
+    rows = [
+        ('九层运行体检', cell('nineLayers', f"覆盖 {layers.get('covered','—')} / 部分 {layers.get('partial','—')} / 缺失 {layers.get('missing','—')}"),
+         '九层逐项证据与差距（/api/harness/nine-layers）'),
+        ('过程质量', cell('processQuality', f"重复 {pct(pq.get('duplicateCallRate'))} · 失败 {pct(pq.get('toolFailureRate'))} · 首过 {pct(pq.get('firstPassSuccessRate'))} · 规范符合 {pct(pq.get('specComplianceRate'))}"),
+         '重复/失败/长链/首过/规范符合率五项代理指标'),
+        ('执法决策账', cell('policyDecisions', f"放行 {pol.get('allow','—')} / 拒绝 {pol.get('deny','—')}（窗口内 {pol.get('total','—')}）"),
+         '每次放行与拒绝可查（身份/委托/沙箱/预算规则）'),
+        ('运行清单', cell('runManifests', f"{man.get('total','—')} 条 · 已定价 {man.get('priced','—')} · 估算 {usd(man.get('spendUsd'))}"),
+         '模型/提示词指纹/权限模式/契约版本 + 运行级成本'),
+        ('预算状态', cell('budgetStatus', f"动作 {bud.get('action','—')} · 支出 {usd(bud.get('spentUsd'))} / 限额 {usd(bud.get('limitUsd'))} · 执法 {'开' if bud.get('enforce') else '关'}"),
+         '日限额策略与 block 执法（opt-in）'),
+        ('沙箱租约', cell('sandboxLeases', f"租约 {sbx.get('leases','—')} · 已过期 {sbx.get('expired','—')}"),
+         '任务后清扫只动沙箱根内目录'),
+    ]
+    html = ['<table><tr><th>证据面</th><th>实测读数</th><th>口径</th></tr>']
+    for name, reading, meaning in rows:
+        html.append(f'<tr><td>{H.escape(name)}</td><td>{reading}</td><td>{H.escape(meaning)}</td></tr>')
+    html.append('</table>')
+    html.append('<p class="stat-note">数据源=evidence/harness/harness-summary.json'
+                '（mx-harness-snapshot.sh 实测落盘）；⬜=端点缺席或返回异常，如实标注不造数。</p>')
+    return '\n'.join(html)
+
+
 def security_html():
     """安全合规证据小节（质量 B③，2026-10-16：审计 B 案「安全合规最薄」的产品化收口）。
 
@@ -4686,6 +4740,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据六：安全合规（涉敏评审/依赖审计/密钥扫描）</h3>
   {security_html()}
+
+  <h3 style="font-size:13px;margin:14px 0 6px">证据七：Harness 运行面（九层能力与证据）</h3>
+  {harness_runtime_html()}
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
