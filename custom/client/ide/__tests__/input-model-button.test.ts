@@ -11,6 +11,7 @@ vi.mock('naive-ui', () => ({
 }))
 const switchSessionModel = vi.fn(async () => true)
 const switchModel = vi.fn(async () => true)
+const setSessionReasoningEffort = vi.fn(async () => undefined)
 const { newChat } = vi.hoisted(() => ({ newChat: vi.fn() }))
 const state = { activeSessionId: null as string | null, activeSession: null as Record<string, unknown> | null }
 vi.mock('@/stores/hermes/chat', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     sessions: [],
     newChat,
     switchSessionModel,
+    setSessionReasoningEffort,
     sendMessage: vi.fn(),
   }),
 }))
@@ -43,7 +45,7 @@ vi.mock('@/api/hermes/model-context', () => ({ setModelContext: vi.fn(async () =
 vi.mock('@/components/hermes/chat/ChatInput.vue', () => ({
   default: {
     name: 'ChatInputStub',
-    props: ['modelDisabled', 'modelLabel'],
+    props: ['modelDisabled', 'modelLabel', 'reasoningEffortDisabled'],
     emits: ['modelClick'],
     template: `<div>
       <button data-testid="stub-model-btn" :disabled="modelDisabled" @click="$emit('modelClick')">{{ modelLabel }}</button>
@@ -74,6 +76,7 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     switchSessionModel.mockClear()
     switchModel.mockClear()
     newChat.mockClear()
+    setSessionReasoningEffort.mockClear()
     state.activeSessionId = null
     state.activeSession = null
   })
@@ -162,5 +165,37 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     expect(reselect).toBeTruthy()
     await reselect!.trigger('click')
     expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(true)
+  })
+
+  it('思考档=ZCode 目录档位（非 Hermes）：展示/选档写会话；模型无档位不渲染', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'bigmodel', label: 'BigModel', models: [
+        { id: 'glm-5.3', reasoningLevels: ['low', 'high', 'max'] },
+        { id: 'plain-model' },
+      ] }],
+      defaultModel: { provider: 'bigmodel', model: 'glm-5.3' },
+    })
+    state.activeSessionId = 's1'
+    state.activeSession = { id: 's1', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped', reasoningEffort: '' }
+    let w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    // ChatInput 内置 Hermes 推理强度被禁用（prop 下发）
+    expect(w.findComponent({ name: 'ChatInputStub' }).props('reasoningEffortDisabled')).toBe(true)
+    const btn = w.find('[data-testid="ide-effort-btn"]')
+    expect(btn.exists()).toBe(true)
+    expect(btn.text()).toContain('思考')
+    await btn.trigger('click')
+    const options = w.findAll('[data-testid="ide-effort-menu"] .ide-chat__effort-option')
+    expect(options.map(o => o.text())).toEqual(['默认', '低', '高', '最高'])
+    await options[2].trigger('click')
+    expect(setSessionReasoningEffort).toHaveBeenCalledWith('s1', 'high')
+    expect(w.find('[data-testid="ide-effort-menu"]').exists()).toBe(false)
+
+    // 模型无档位 → 控件不渲染（不落 Hermes 默认档）
+    state.activeSession = { id: 's1', model: 'plain-model', provider: 'bigmodel', codingAgentMode: 'scoped', reasoningEffort: '' }
+    w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    expect(w.find('[data-testid="ide-effort"]').exists()).toBe(false)
   })
 })

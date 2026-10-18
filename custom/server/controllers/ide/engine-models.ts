@@ -175,10 +175,20 @@ function versionLt(a: string, b: string): boolean {
   return false
 }
 
-function readZcodeBuiltinTemplates(): Map<string, ZcodeBuiltinTemplate> {
+/** 思考档位规则（manifest modelConfigRules.modelRules）：modelMatch 正则匹配模型 id，
+ *  optionSpecs.reasoningLevel.values 给档位列表；规则按声明序求值，后命中覆盖先命中。 */
+interface ZcodeModelRule {
+  modelMatch?: string
+  config?: { optionSpecs?: { reasoningLevel?: { values?: string[] } } }
+}
+
+function readZcodeBuiltinManifest(): {
+  templates: Map<string, ZcodeBuiltinTemplate>
+  modelRules: ZcodeModelRule[]
+} {
   try {
     const base = join(zcodeRoot(), 'v2', 'runtime', 'provider')
-    if (!existsSync(base)) return new Map()
+    if (!existsSync(base)) return { templates: new Map(), modelRules: [] }
     let newest: { manifest: Record<string, unknown>; version: string } | null = null
     for (const platform of readdirSync(base)) {
       const platformDir = join(base, platform)
@@ -195,12 +205,41 @@ function readZcodeBuiltinTemplates(): Map<string, ZcodeBuiltinTemplate> {
         }
       }
     }
-    const templates = ((newest?.manifest as { config?: { providerConfigRules?: { templateRules?: ZcodeBuiltinTemplate[] } } })
-      ?.config?.providerConfigRules?.templateRules) ?? []
-    return new Map(templates.map(t => [t.templateId, t]))
+    const config = (newest?.manifest as {
+      config?: {
+        providerConfigRules?: { templateRules?: ZcodeBuiltinTemplate[] }
+        modelConfigRules?: { modelRules?: ZcodeModelRule[] }
+      }
+    })?.config
+    const templates = config?.providerConfigRules?.templateRules ?? []
+    return {
+      templates: new Map(templates.map(t => [t.templateId, t])),
+      modelRules: config?.modelConfigRules?.modelRules ?? [],
+    }
   } catch {
-    return new Map()
+    return { templates: new Map(), modelRules: [] }
   }
+}
+
+function readZcodeBuiltinTemplates(): Map<string, ZcodeBuiltinTemplate> {
+  return readZcodeBuiltinManifest().templates
+}
+
+/** 模型思考档位：manifest 规则后命中覆盖；无规则给档位 → null（不伪造）。 */
+export function zcodeModelReasoningLevels(
+  modelId: string,
+  modelRules: ZcodeModelRule[] = readZcodeBuiltinManifest().modelRules,
+): string[] | null {
+  let levels: string[] | null = null
+  for (const rule of modelRules) {
+    if (!rule.modelMatch) continue
+    let re: RegExp
+    try { re = new RegExp(rule.modelMatch) } catch { continue }
+    if (!re.test(modelId)) continue
+    const values = rule.config?.optionSpecs?.reasoningLevel?.values
+    if (values && values.length > 0) levels = values
+  }
+  return levels
 }
 
 type EngineProviderMap = Record<string, {
@@ -239,18 +278,28 @@ export function readZcodeCatalog(): ZcodeCatalogGroup[] {
     const engine = JSON.parse(readFileSync(path, 'utf8')) as { provider?: EngineProviderMap }
     const providers = engine.provider ?? {}
     const { order, rules } = readZcodeProviderConfig()
-    const templates = readZcodeBuiltinTemplates()
+    const manifest = readZcodeBuiltinManifest()
+    const templates = manifest.templates
 
     const orderModels = (preferred: string[] | undefined, providerId: string) => {
       const p = providers[providerId]
       const byId = new Map(Object.entries(p?.models ?? {})
         .map(([id, m]) => [id, { id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }]))
       const ordered: Array<{ id: string; reasoningLevels?: string[] }> = []
+      const pushWithLevels = (m: { id: string; reasoningLevels?: string[] }) => {
+        // 思考档位（2026-10-18 用户指令）：per-model reasoningLevels 缺省时按
+        // manifest 档位规则补（如 glm-5.3 → low/high/max），不落 Hermes 默认档。
+        if (!m.reasoningLevels) {
+          const ladder = zcodeModelReasoningLevels(m.id, manifest.modelRules)
+          if (ladder) ordered.push({ ...m, reasoningLevels: ladder })
+          else ordered.push(m)
+        } else ordered.push(m)
+      }
       for (const id of preferred ?? []) {
         const m = byId.get(id)
-        if (m) { ordered.push(m); byId.delete(id) }
+        if (m) { pushWithLevels(m); byId.delete(id) }
       }
-      for (const m of byId.values()) ordered.push(m)
+      for (const m of byId.values()) pushWithLevels(m)
       return ordered
     }
 
