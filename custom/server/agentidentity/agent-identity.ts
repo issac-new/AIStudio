@@ -34,6 +34,8 @@ export interface DelegationRecord {
   to: string
   /** 委托范围（自然语言，如"代表我在 #dev 房间执行构建命令"） */
   scope: string
+  /** 结构化工具白名单（2026-10-18：唯一可执行的委托范围；空=只写了自然语言 scope）。 */
+  toolAllowlist?: string[]
   grantedAt: number
   grantedBy: string
   expiresAt?: number
@@ -235,7 +237,7 @@ export function revokeCredential(id: string, label: string, actor: string): { ok
 
 export function delegate(
   id: string,
-  input: { to: string; scope: string; expiresAt?: number },
+  input: { to: string; scope: string; expiresAt?: number; toolAllowlist?: string[] },
   actor: string,
 ): { ok: true; delegation: DelegationRecord } | { ok: false; problems: string[] } {
   const store = readStore()
@@ -248,11 +250,15 @@ export function delegate(
   if (!target) {
     return { ok: false, problems: [`委托目标身份不存在：${input.to}（先登记再委托）`] }
   }
+  if (input.toolAllowlist !== undefined && (!Array.isArray(input.toolAllowlist) || input.toolAllowlist.some((t) => typeof t !== 'string' || !t.trim()))) {
+    return { ok: false, problems: ['toolAllowlist 须为非空字符串数组'] }
+  }
   const delegation: DelegationRecord = {
     id: `did-${String(store.nextDelegationSeq).padStart(3, '0')}`,
     from: identity.id,
     to: target.id,
     scope: input.scope.trim(),
+    ...(input.toolAllowlist?.length ? { toolAllowlist: input.toolAllowlist.map((t) => t.trim()) } : {}),
     grantedAt: Date.now(),
     grantedBy: actor,
     expiresAt: input.expiresAt,
@@ -277,6 +283,21 @@ export function revokeDelegation(id: string, delegationId: string, actor: string
   writeStore(store)
   appendEvent({ actor, action: 'revoke-delegation', targetId: id, detail: delegationId })
   return { ok: true }
+}
+
+/**
+ * 活跃委托的结构化工具白名单并集（2026-10-18）。执法时必须与身份自身
+ * allowlist **同时**满足（交集语义）——委托只能收窄，不能扩大身份权限；
+ * 身份自身 allowlist 为空时（未声明）只按委托范围校验。
+ * 自然语言 scope 不参与机读裁决（无法可靠解析）。
+ */
+export function activeDelegationToolAllowlist(identity: AgentIdentity, now = Date.now()): string[] {
+  const active = identity.delegations.filter(
+    (d) => !d.revokedAt && (!d.expiresAt || d.expiresAt > now) && Array.isArray(d.toolAllowlist) && d.toolAllowlist.length > 0,
+  )
+  const set = new Set<string>()
+  for (const d of active) for (const t of d.toolAllowlist ?? []) set.add(t)
+  return [...set]
 }
 
 /** 委托链查询：身份 X 当前有效（未撤销未过期）的委托出边 + 可达路径（环检测）。 */

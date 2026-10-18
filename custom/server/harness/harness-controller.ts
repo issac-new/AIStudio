@@ -26,6 +26,10 @@ import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
+import { planResume } from '../resume/resume-planner'
+import { collectProcessQuality } from '../observability/process-quality'
+import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
+import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 
@@ -34,6 +38,17 @@ const router = new Router({ prefix: '/api/harness' })
 function daysOf(v: unknown): number {
   const n = Number(v)
   return Number.isFinite(n) && n >= 1 && n <= 90 ? Math.round(n) : 7
+}
+
+/** 治理写面（预算/沙箱）：有认证主体时须 super_admin；单用户无鉴权部署放行。 */
+function writeDenied(ctx: { state?: unknown; status?: number; body?: unknown }): boolean {
+  const user = (ctx.state as { user?: { role?: string } } | undefined)?.user
+  if (user && user.role !== 'super_admin') {
+    ctx.status = 403
+    ctx.body = { ok: false, detail: '治理写面须 super_admin 权限' }
+    return true
+  }
+  return false
 }
 
 router.get('/capability-catalog', async (ctx) => {
@@ -177,6 +192,113 @@ router.get('/run-manifests', async (ctx) => {
   }
 })
 
+// 恢复判定（残余项②）：三档建议 + 证据；只建议不执行。
+router.get('/resume-plan', async (ctx) => {
+  try {
+    const runId = typeof ctx.query.runId === 'string' && ctx.query.runId ? ctx.query.runId : undefined
+    const sessionId = typeof ctx.query.sessionId === 'string' && ctx.query.sessionId ? ctx.query.sessionId : undefined
+    if (!runId && !sessionId) {
+      ctx.status = 400
+      ctx.body = { ok: false, detail: 'runId 或 sessionId 至少提供一个' }
+      return
+    }
+    ctx.body = { ok: true, plan: await planResume({ runId, sessionId }) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 过程质量指标（残余项③）：重复调用/失败率/长链/首过/规范符合率。
+router.get('/process-quality', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...collectProcessQuality(daysOf(ctx.query.days)) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 预算状态（残余项⑤）：只读；策略写面在下方 POST。
+router.get('/budget-status', async (ctx) => {
+  try {
+    const userId = typeof ctx.query.userId === 'string' && ctx.query.userId ? ctx.query.userId : undefined
+    const profileId = typeof ctx.query.profileId === 'string' && ctx.query.profileId ? ctx.query.profileId : undefined
+    ctx.body = { ok: true, status: budgetStatus({ userId, profileId }) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+router.get('/budget-policies', async (ctx) => {
+  ctx.body = { ok: true, policies: listBudgetPolicies() }
+})
+
+router.post('/budget-policy', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const action = b.action === 'warn' || b.action === 'downgrade' || b.action === 'block' ? b.action as BudgetAction : null
+  const dailyUsd = Number(b.dailyUsd)
+  const userId = typeof b.userId === 'string' && b.userId ? b.userId : undefined
+  const profileId = typeof b.profileId === 'string' && b.profileId ? b.profileId : undefined
+  if ((!userId && !profileId) || !action || !Number.isFinite(dailyUsd) || dailyUsd < 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: '须提供 userId 或 profileId、dailyUsd≥0、action=warn|downgrade|block' }
+    return
+  }
+  try {
+    ctx.body = { ok: true, policy: setBudgetPolicy({ userId, profileId, dailyUsd, action }) }
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+router.post('/budget-policy/remove', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const removed = removeBudgetPolicy({
+    userId: typeof b.userId === 'string' && b.userId ? b.userId : undefined,
+    profileId: typeof b.profileId === 'string' && b.profileId ? b.profileId : undefined,
+  })
+  ctx.body = { ok: true, removed }
+})
+
+// 沙箱租约与清扫（残余项⑥）：清扫只动沙箱根内目录，未配置根拒绝。
+router.get('/sandbox/leases', async (ctx) => {
+  ctx.body = { ok: true, leases: listLeases() }
+})
+
+router.post('/sandbox/lease', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const res = registerLease({
+    runId: String(b.runId ?? ''),
+    sessionId: typeof b.sessionId === 'string' ? b.sessionId : undefined,
+    workspace: String(b.workspace ?? ''),
+    ttlMs: typeof b.ttlMs === 'number' ? b.ttlMs : undefined,
+  })
+  if (!res.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: res.problems }
+    return
+  }
+  ctx.body = res
+})
+
+router.post('/sandbox/sweep', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const result = sweepExpiredLeases({ dryRun: b.dryRun === true })
+  if (!result.root) {
+    ctx.status = 409
+    ctx.body = { ok: false, detail: '未配置 HERMES_SANDBOX_WORKSPACES_ROOT，拒绝清扫', ...result }
+    return
+  }
+  ctx.body = { ok: true, ...result }
+})
+
 // 九层运行体检（2026-10-18 Harness 可靠性轮）：按源文九层逐项给证据与差距。
 // 30s 进程内缓存：采集要读审计账/检查点库/评测库，治理页轮询不应重复扫盘。
 let nineLayersCache: { at: number; days: number; report: NineLayersReport } | null = null
@@ -203,6 +325,8 @@ if (process.env.NODE_ENV !== 'test') {
   void import('../expcandidates/exp-store')
     .then((m) => m.ingestQgateRuns())
     .catch(() => { /* 回流失败不影响治理面 */ })
+  // 残余项⑥：沙箱租约 janitor（显式配置根与间隔才启动）。
+  startSandboxJanitorIfEnabled()
 }
 
 export const harnessRoutes = router
