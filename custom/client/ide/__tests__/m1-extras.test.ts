@@ -45,6 +45,12 @@ describe('isSessionModelInvalid（M1.6 模型失效判定）', () => {
     expect(isSessionModelInvalid({ model: 'gone' }, groups)).toBe(true)
   })
 
+  it('Ycode/独立目录的 {id} 对象组同样能命中（2026-10-18 走查回归）', () => {
+    const groups = [{ provider: 'bigmodel', models: [{ id: 'GLM-5.3-Flash' }, { id: 'GLM-5.3' }] }]
+    expect(isSessionModelInvalid({ model: 'GLM-5.3-Flash' }, groups)).toBe(false)
+    expect(isSessionModelInvalid({ model: 'aim' }, groups)).toBe(true)
+  })
+
   it('L12：global coding agent 会话豁免（CLI 别名不在 web 目录不算失效）', () => {
     const groups = [{ provider: 'alibaba', models: ['qwen3.7-max'] }]
     expect(isSessionModelInvalid({ model: 'aim', codingAgentMode: 'global' }, groups)).toBe(false)
