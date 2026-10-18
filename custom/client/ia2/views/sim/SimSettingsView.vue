@@ -9,6 +9,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
 
+/** embedded=true 时作为全流程推演页签内容，不渲染面包屑/页头/返回钮 */
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const route = useRoute()
 const router = useRouter()
 const backQuery = computed<Record<string, string> | undefined>(() => {
@@ -61,13 +64,15 @@ onMounted(() => { void load() })
 </script>
 
 <template>
-  <div class="sst" data-testid="sst-page">
-  <IaBreadcrumb />
-  <TabIntroBanner tab="sim-settings" />
-    <header class="sst__head">
-      <h2 class="sst__title">推演设置</h2>
-      <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>
-    </header>
+  <div class="sst" :class="{ 'sst--embedded': props.embedded }" data-testid="sst-page">
+    <template v-if="!props.embedded">
+      <IaBreadcrumb />
+      <TabIntroBanner tab="sim-settings" />
+      <header class="sst__head">
+        <h2 class="sst__title">推演设置</h2>
+        <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>
+      </header>
+    </template>
 
     <p v-if="loadError" class="sst__error" data-testid="sst-error">{{ loadError }}</p>
     <p v-else-if="!values" class="sst__hint">读取中……</p>
@@ -115,6 +120,7 @@ onMounted(() => { void load() })
 
 <style scoped lang="scss">
 .sst { display: flex; flex-direction: column; gap: 12px; padding: 16px; height: 100%; overflow: auto; }
+.sst--embedded { height: auto; overflow: visible; padding: 0; }
 .sst__head { display: flex; align-items: center; gap: 12px; }
 .sst__title { margin: 0; font-size: 15px; }
 .sst__back {

@@ -25,7 +25,7 @@ const trace = ref<TraceResponse | null>(null)
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入运行目录名'; return }
+  if (!r) { loadError.value = ''; return }
   loading.value = true
   loadError.value = ''
   trace.value = null
@@ -61,12 +61,8 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <template>
   <div class="trc" data-testid="trc-panel">
-    <div class="trc__bar">
-      <input v-model="run" class="trc__input" data-testid="trc-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
-      <button class="trc__btn" type="button" data-testid="trc-load" :disabled="loading" @click="load">读取</button>
-    </div>
     <p v-if="loadError" class="trc__error" data-testid="trc-error">{{ loadError }}</p>
-    <p v-else-if="!trace" class="trc__hint">输入运行名读取 AC 判定链（冻结单×测试报告×验收书三源聚合）。</p>
+    <p v-else-if="!trace" class="trc__hint">在页头「本轮运行」选择一轮，读取 AC 判定链（冻结单×测试报告×验收书三源聚合）。</p>
 
     <template v-if="trace">
       <p class="trc__meta" data-testid="trc-meta">
@@ -96,25 +92,6 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <style scoped lang="scss">
 .trc { display: flex; flex-direction: column; gap: 12px; }
-.trc__bar { display: flex; gap: 6px; }
-.trc__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  width: 260px;
-  font-family: var(--font-mono);
-}
-.trc__btn {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  padding: 3px 12px;
-  cursor: pointer;
-  &:disabled { opacity: 0.4; }
-}
 .trc__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .trc__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .trc__meta { font-size: 12px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }

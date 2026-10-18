@@ -326,7 +326,9 @@ function onOpenIde(taskId: string): void {
 }
 
 function onHandleTask(taskId: string): void {
-  void router.push({ name: 'ia2.board', query: { task: taskId } })
+  // 就地开任务抽屉（不跳看板）
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
 }
 
 function onNewTask(): void {
@@ -477,9 +479,10 @@ function onSelect(sel: StreamSelection): void {
   else openLoopLatestRun(sel.id)
 }
 
-/** 任务簇 chip → 看板预选（R4a） */
+/** 任务簇 chip → 就地开任务抽屉（R4a；不跳看板） */
 function onNavOpenTask(taskId: string): void {
-  void router.push({ name: 'ia2.board', query: { task: taskId } })
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
 }
 
 /** 行/任务 chip 双击 → IDE 工作台编码动线（R4a 动线⑤；无任务裸进） */

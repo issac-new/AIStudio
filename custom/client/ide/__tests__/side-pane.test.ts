@@ -49,6 +49,9 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     // v12.6 用户裁定：三栏打开时默认显示（此前默认收起）
     expect(w.find('[data-testid="ide-sidepane"]').exists()).toBe(true)
     expect(ide.sidePane.tab).toBe('files')
+    // 2026-10-18 用户裁定：页签必须中文可读，不能只有图标
+    expect(w.find('[data-testid="ide-sidepane-tab-files"]').text()).toContain('文件')
+    expect(w.find('[data-testid="ide-sidepane-tab-review"]').text()).toContain('审查')
     ide.sidePane.open = false
     await flushPromises()
     w = mountPane()

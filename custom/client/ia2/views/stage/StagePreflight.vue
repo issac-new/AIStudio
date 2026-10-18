@@ -4,11 +4,10 @@
      避免把整轮运行的写动作混进日常需求页。条件全部来自 run-state 实读。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStageProgress } from '../../composables/useStageProgress'
 
-const router = useRouter()
+const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const progress = useStageProgress()
@@ -40,8 +39,8 @@ const checks = computed(() => [
 const readyCount = computed(() => checks.value.filter(c => c.ok).length)
 
 function openRun(): void {
-  const query = runName.value ? { run: runName.value } : undefined
-  void router.push(query ? { name: 'ia2.simOrchestration', query } : { name: 'ia2.simOrchestration' })
+  // 启动运行已并入本页「启动运行」页签，不再跳整页
+  emit('open-tab', 'launch')
 }
 </script>
 
@@ -51,8 +50,8 @@ function openRun(): void {
       <div>
         <h2 class="spf__title">{{ zh ? '启动前检查' : 'Launch preflight' }}</h2>
         <p class="spf__sub">{{ zh
-          ? '启动、断点续跑和运行模式切换都在「全流程推演·运行编排」执行；这里只核对条件。'
-          : 'Launch, resume and mode switching happen in Full-run Simulation · Orchestration; this tab only checks readiness.' }}</p>
+          ? '启动、断点续跑和运行模式切换已并入本页「启动运行」页签；这里先核对条件。'
+          : 'Launch, resume and mode switching are in the Launch tab of this page; this tab checks readiness.' }}</p>
       </div>
       <span class="spf__count" data-testid="stg-preflight-count">{{ readyCount }}/{{ checks.length }}</span>
     </header>
@@ -69,7 +68,7 @@ function openRun(): void {
 
     <footer class="spf__foot">
       <span class="spf__note">{{ zh ? '运行编排页会再跑 19 项机械检查；有红项先处理再起跑。' : 'Orchestration runs 19 mechanical checks; fix red items before launching.' }}</span>
-      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '去运行编排 →' : 'Open orchestration →' }}</button>
+      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '进入启动运行 →' : 'Open orchestration →' }}</button>
     </footer>
   </section>
 </template>

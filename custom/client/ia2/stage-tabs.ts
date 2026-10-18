@@ -29,6 +29,7 @@ export const STAGE_TABS: Readonly<Record<StageNo, readonly StageTabMeta[]>> = {
     { key: 'docs', zh: '文档评审', en: 'Doc review', component: 'docs' },
     { key: 'g1', zh: '质量门 G1', en: 'Gate G1', component: 'g1' },
     { key: 'preflight', zh: '启动准备', en: 'Launch prep', component: 'preflight' },
+    { key: 'launch', zh: '启动运行', en: 'Launch', component: 'launch' },
   ],
   3: [
     { key: 'tasks', zh: '任务分解', en: 'Task breakdown', component: 'board' },

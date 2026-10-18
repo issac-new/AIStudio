@@ -16,6 +16,8 @@ import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
 import RunSelector from './RunSelector.vue'
+import OrchestrationView from '../orchestration/OrchestrationView.vue'
+import SimSettingsView from './SimSettingsView.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useCenterNavLocale } from '../../nav-centers'
 import { retainBodyClass } from '../../composables/useBodyClass'
@@ -31,25 +33,36 @@ let releaseBodyClass: (() => void) | null = null
 onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
 onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 
-type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence'
-interface SimTab { key: TabKey; name: string }
+type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence' | 'orchestration' | 'settings'
+interface SimTab { key: TabKey; name?: string; zh?: string; en?: string }
 
 const TABS: ReadonlyArray<SimTab> = [
   { key: 'overview', name: 'ia2.sim' },
   { key: 'supervision', name: 'ia2.simSupervision' },
   { key: 'ops', name: 'ia2.simOps' },
   { key: 'evidence', name: 'ia2.simEvidence' },
+  { key: 'orchestration', zh: '运行编排', en: 'Orchestration' },
+  { key: 'settings', zh: '推演设置', en: 'Settings' },
 ]
 type TabTextKey = 'tabOverview' | 'tabSupervision' | 'tabOps' | 'tabEvidence'
-const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
+const TAB_LABEL_KEY: Record<string, TabTextKey> = {
   overview: 'tabOverview', supervision: 'tabSupervision', ops: 'tabOps', evidence: 'tabEvidence',
 }
 
+const localTab = computed<'orchestration' | 'settings' | ''>(() => {
+  const t = String(route.query.tab ?? '')
+  return t === 'orchestration' || t === 'settings' ? t : ''
+})
 const activeTab = computed<TabKey>(() =>
-  TABS.find(t => t.name === String(route.name))?.key ?? 'overview',
+  localTab.value || TABS.find(t => t.name === String(route.name))?.key || 'overview',
 )
 
-/** 页签点击=路由切换；run/from 上下文随签保留（刷新/分享/来路不丢） */
+function labelOf(tab: SimTab): string {
+  if (tab.zh) return navLocale.value === 'zh' ? tab.zh : tab.en!
+  return text.value[TAB_LABEL_KEY[tab.key]]
+}
+
+/** 页签点击：路由签走兄弟路由，编排/设置走本页 ?tab=；run/from 上下文随签保留 */
 function goTab(tab: SimTab): void {
   if (tab.key === activeTab.value) return
   const query: Record<string, string> = {}
@@ -57,20 +70,14 @@ function goTab(tab: SimTab): void {
     const v = route.query[key]
     if (typeof v === 'string' && v) query[key] = v
   }
-  void router.push({ name: tab.name, query: Object.keys(query).length ? query : undefined })
+  if (tab.name) {
+    void router.push({ name: tab.name, query: Object.keys(query).length ? query : undefined })
+  } else {
+    void router.push({ name: 'ia2.sim', query: { ...query, tab: tab.key } })
+  }
 }
 
-function goOrchestration(): void {
-  const run = typeof route.query.run === 'string' ? route.query.run : ''
-  void router.push(run ? { name: 'ia2.simOrchestration', query: { run } } : { name: 'ia2.simOrchestration' })
-}
-
-function goSettings(): void {
-  const run = typeof route.query.run === 'string' ? route.query.run : ''
-  void router.push(run ? { name: 'ia2.simSettings', query: { run } } : { name: 'ia2.simSettings' })
-}
-
-const INTRO_KEY: Record<TabKey, string> = {
+const INTRO_KEY: Record<string, string> = {
   overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops', evidence: 'sim-evidence',
 }
 </script>
@@ -81,13 +88,6 @@ const INTRO_KEY: Record<TabKey, string> = {
       <IaBreadcrumb />
       <h2 class="sim-center__title">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</h2>
       <RunSelector />
-      <span class="sim-center__spacer" />
-      <button class="sim-center__act" type="button" data-testid="sim-orchestration-link" @click="goOrchestration">
-        {{ navLocale === 'zh' ? '运行编排' : 'Orchestration' }}
-      </button>
-      <button class="sim-center__act" type="button" data-testid="ia-sim-settings-link" @click="goSettings">
-        {{ navLocale === 'zh' ? '推演设置' : 'Settings' }}
-      </button>
     </header>
 
     <p class="sim-center__lead">
@@ -107,7 +107,7 @@ const INTRO_KEY: Record<TabKey, string> = {
         :aria-selected="activeTab === tab.key"
         :data-testid="`ia-sim-tab-${tab.key}`"
         @click="goTab(tab)"
-      >{{ text[TAB_LABEL_KEY[tab.key]] }}</button>
+      >{{ labelOf(tab) }}</button>
     </nav>
 
     <CockpitPanel />
@@ -130,6 +130,12 @@ const INTRO_KEY: Record<TabKey, string> = {
         <TabIntroBanner :tab="INTRO_KEY.evidence" />
         <EvidencePanel />
       </section>
+      <section v-if="activeTab === 'orchestration'" class="sim-center__panel" data-testid="ia-sim-panel-orchestration">
+        <OrchestrationView />
+      </section>
+      <section v-if="activeTab === 'settings'" class="sim-center__panel" data-testid="ia-sim-panel-settings">
+        <SimSettingsView embedded />
+      </section>
     </main>
   </div>
 </template>
@@ -140,7 +146,7 @@ const INTRO_KEY: Record<TabKey, string> = {
   flex-direction: column;
   height: 100%;
   padding: 14px 16px 16px;
-  overflow: auto;
+  overflow: hidden;
   gap: 10px;
 }
 .sim-center__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -178,7 +184,7 @@ const INTRO_KEY: Record<TabKey, string> = {
   color: var(--accent-primary);
   font-weight: 600;
 }
-.sim-center__body { flex: 1; min-height: 0; }
+.sim-center__body { flex: 1; min-height: 0; overflow-y: auto; }
 .sim-center__panel {
   display: flex;
   flex-direction: column;
