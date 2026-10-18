@@ -19,6 +19,18 @@ import { ekkoGuardHook } from '../toolresultguard'
 import { ekkoEnforceGateHook } from './enforce-gate'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
+import {
+  argDigest,
+  CallSignatureTracker,
+  classifyToolError,
+  redactSensitive,
+  resolveToolContract,
+  summarizeArgs,
+  type ErrorCategory,
+  type ToolContract,
+  type ToolSideEffect,
+} from '../toolcontract/contract'
+import { IdempotencyStore, idempotencyKeyFor } from '../toolcontract/idempotency-store'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -34,6 +46,24 @@ export interface ToolExecAuditEntry {
   userId?: string
   profileId?: string
   runId?: string
+  /** 2026-10-18 Harness 可靠性轮：post 与配对 pre 的耗时（ms）。 */
+  durationMs?: number
+  /** 错误归一类别（只对失败调用写入）。 */
+  errorCategory?: ErrorCategory
+  /** 该类别在工具契约下是否可重试。 */
+  retryable?: boolean
+  /** 参数指纹（关联 pre/post、识别重复调用；不可反推参数）。 */
+  argDigest?: string
+  /** 脱敏后的参数摘要（键名保留、敏感键替换、长值截断）。 */
+  argSummary?: Record<string, unknown>
+  /** 工具副作用等级（read/write/external）。 */
+  sideEffect?: ToolSideEffect
+  /** 连续相同调用签名的次数（源文经验阈值 3）。 */
+  duplicateStreak?: number
+  /** 是否达到重复阈值。 */
+  duplicate?: boolean
+  /** 幂等键是否命中历史记录（跨重启仍有效）。 */
+  idempotencyHit?: boolean
 }
 
 /** 单日文件行数上限（超限转 .1/.2 后缀，同 agent.log 轮转命名） */
@@ -95,9 +125,10 @@ function rolloverIfFull(file: string): void {
 function appendEntry(entry: ToolExecAuditEntry): void {
   try {
     const file = auditFile()
-    mkdirSync(auditDir(), { recursive: true })
+    // 审计目录与文件只给当前用户：同机其他账户不应能改读执行记录（源文 04 节）。
+    mkdirSync(auditDir(), { recursive: true, mode: 0o700 })
     rolloverIfFull(file)
-    appendFileSync(file, JSON.stringify(entry) + '\n')
+    appendFileSync(file, JSON.stringify(entry) + '\n', { mode: 0o600 })
     // 跨天/超限的清理与轮转低频触发（每 200 条做一次，避免每 append 读目录）
     if (Math.random() < 1 / 200) rotateAndPrune()
   } catch {
@@ -120,29 +151,143 @@ function appendEntry(entry: ToolExecAuditEntry): void {
   }
 }
 
-/** 观测钩子（v2，2026-10-16 安全轮 M6）：pre 记键名，post 记结局；两条都带身份字段。
- *  上游 ToolExecuteHook 第三参数本就是 AgentToolContext（ekko-agent/src/tools/types.ts
- *  :132-142，含 userId/sessionId/profileId/runId），调用处始终透传——此前忽略未用。 */
+/** 观测钩子（v3，2026-10-18 Harness 可靠性轮）：在 v2「pre 记键名、post 记结局」
+ *  之上补齐源文 04/05/07 节要求的审计字段：耗时、错误归一类别、可重试性、
+ *  参数指纹与脱敏摘要、副作用等级、连续重复调用、幂等键命中。
+ *
+ *  配对策略：上游钩子不带 tool_call_id，按 `scope(run/session) + 工具名` 维护
+ *  FIFO 队列；postExecute 出队最早一条配对。并发同名调用可能错配耗时，但不会
+ *  丢行——审计用途可接受，换取零上游接口改动。
+ *  纪律不变：不落参数原值；摘要脱敏后截断；审计失败 fail-open。 */
+interface AuditContext {
+  userId?: string
+  sessionId?: string
+  profileId?: string
+  runId?: string
+}
+
+interface PendingCall {
+  startedAt: number
+  contract: ToolContract
+  idempotencyKey: string | null
+  idempotencyHit: boolean
+}
+
+const pendingCalls = new Map<string, PendingCall[]>()
+const PENDING_PER_KEY_CAP = 32
+const duplicateTracker = new CallSignatureTracker()
+const idempotencyStore = new IdempotencyStore()
+
+function scopeOf(context?: AuditContext): string {
+  return context?.runId || context?.sessionId || context?.profileId || 'anonymous'
+}
+
+function pendingKeyOf(name: string, context?: AuditContext): string {
+  return `${scopeOf(context)}|${name}`
+}
+
+function emitRepeatWarning(name: string, streak: number, context: AuditContext | undefined, signature: string): void {
+  void import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      appendGovEvent({
+        domain: 'security',
+        severity: 'warn',
+        type: 'tool.call.repeat-signature',
+        source: 'toolpipeline/tool-hooks',
+        summary: `连续 ${streak} 次相同工具调用（${name}），疑似模型陷入重复循环`,
+        payload: { tool: name, streak, signature },
+        refs: {
+          ...(context?.sessionId ? { sessionId: context.sessionId } : {}),
+          ...(context?.runId ? { runId: context.runId } : {}),
+        },
+      })
+    })
+    .catch(() => { /* govbus 不可用：审计行仍保留 duplicate 标记 */ })
+}
+
 const auditHook = {
-  async preExecute(name: string, input: Record<string, unknown>, context?: { userId?: string; sessionId?: string; profileId?: string; runId?: string }) {
+  async preExecute(name: string, input: Record<string, unknown>, context?: AuditContext) {
+    const contract = resolveToolContract(name)
+    const scope = scopeOf(context)
+    // 指纹输入先脱敏：审计/幂等账只落哈希，敏感值不进入哈希原文。
+    const digestInput = redactSensitive(input, contract.redactKeys)
+    const repeat = duplicateTracker.observe(scope, name, digestInput)
+    let idempotencyKey: string | null = null
+    let idempotencyHit = false
+    if (contract.idempotency.mode === 'key' && contract.sideEffect !== 'read') {
+      idempotencyKey = idempotencyKeyFor({
+        tool: name,
+        args: digestInput,
+        userId: context?.userId,
+        runId: context?.runId,
+        ttlMs: contract.idempotency.ttlMs,
+        keyFields: contract.idempotency.keyFields,
+      })
+      idempotencyHit = idempotencyStore.peek(idempotencyKey) !== null
+    }
+
+    const key = pendingKeyOf(name, context)
+    const queue = pendingCalls.get(key) ?? []
+    queue.push({ startedAt: Date.now(), contract, idempotencyKey, idempotencyHit })
+    if (queue.length > PENDING_PER_KEY_CAP) queue.shift()
+    pendingCalls.set(key, queue)
+
     appendEntry({
       ts: Date.now(),
       phase: 'pre',
       tool: name,
       inputKeys: Object.keys(input ?? {}).slice(0, 20),
+      argDigest: argDigest(digestInput),
+      argSummary: summarizeArgs(input, {
+        redactKeys: contract.redactKeys,
+        maxChars: contract.maxArgSummaryChars,
+        // 默认只记形状；排障需要值摘要时显式开启，且仍走敏感键脱敏与截断。
+        includeValues: process.env.TOOL_AUDIT_ARG_VALUES === '1',
+      }),
+      sideEffect: contract.sideEffect,
+      duplicateStreak: repeat.streak,
+      duplicate: repeat.duplicate || undefined,
+      idempotencyHit: idempotencyHit || undefined,
       sessionId: context?.sessionId,
       userId: context?.userId,
       profileId: context?.profileId,
       runId: context?.runId,
     })
+
+    if (repeat.firstDuplicate) emitRepeatWarning(name, repeat.streak, context, repeat.signature)
   },
-  async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string }, context?: { userId?: string; sessionId?: string; profileId?: string; runId?: string }) {
+
+  async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string }, context?: AuditContext) {
+    const key = pendingKeyOf(name, context)
+    const queue = pendingCalls.get(key)
+    const pending = queue?.shift() ?? null
+    if (queue && queue.length === 0) pendingCalls.delete(key)
+
+    const now = Date.now()
+    const ok = typeof result?.ok === 'boolean' ? result.ok : undefined
+    const failed = ok === false
+    const info = failed ? classifyToolError(result?.error ?? result, pending?.contract) : null
+
+    // 成功的幂等键落账：后续同键调用即命中（观测层；跳过执行待执行器改造）。
+    if (pending?.idempotencyKey && ok !== false) {
+      idempotencyStore.complete(pending.idempotencyKey, {
+        tool: name,
+        ttlMs: pending.contract.idempotency.ttlMs,
+        resultDigest: argDigest({ ok: result?.ok, error: result?.error }),
+      })
+    }
+
     appendEntry({
-      ts: Date.now(),
+      ts: now,
       phase: 'post',
       tool: name,
-      ok: typeof result?.ok === 'boolean' ? result.ok : undefined,
+      ok,
       error: typeof result?.error === 'string' ? result.error.slice(0, 200) : undefined,
+      durationMs: pending ? Math.max(0, now - pending.startedAt) : undefined,
+      errorCategory: info?.category,
+      retryable: info?.retryable,
+      sideEffect: pending?.contract.sideEffect,
+      idempotencyHit: pending?.idempotencyHit || undefined,
       sessionId: context?.sessionId,
       userId: context?.userId,
       profileId: context?.profileId,
@@ -201,9 +346,114 @@ export function toolExecAuditWriteFailures(): number {
   return writeFailures
 }
 
+export interface ToolExecAuditQuery {
+  /** 回看天数（默认 7，1~90）。 */
+  days?: number
+  /** 返回条数上限（默认 200，1~5000）。 */
+  limit?: number
+  tool?: string
+  sessionId?: string
+  runId?: string
+  outcome?: 'ok' | 'error'
+  phase?: 'pre' | 'post'
+}
+
+export interface ToolExecAuditQueryResult {
+  entries: ToolExecAuditEntry[]
+  total: number
+  byTool: Array<{ tool: string; count: number; errors: number; avgDurationMs: number | null }>
+  byOutcome: { ok: number; error: number; unknown: number }
+  auditWriteFailures: number
+  windowDays: number
+}
+
+function dayStamp(ms: number): string {
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** 查询面：按窗口/身份/工具/结果过滤，返回分页明细与聚合。
+ *  与 readToolExecAudit 同源同文件格式；坏行跳过、目录缺席返回空（fail-soft）。 */
+export function queryToolExecAudit(query: ToolExecAuditQuery = {}, now = Date.now()): ToolExecAuditQueryResult {
+  const days = Math.min(90, Math.max(1, Math.round(query.days ?? 7)))
+  const limit = Math.min(5_000, Math.max(1, Math.round(query.limit ?? 200)))
+  const cutoff = now - days * 86_400_000
+  const cutoffDay = dayStamp(cutoff)
+  const all: ToolExecAuditEntry[] = []
+  try {
+    const dir = auditDir()
+    if (existsSync(dir)) {
+      const files = readdirSync(dir)
+        .filter((f) => /^tool-exec-\d{4}-\d{2}-\d{2}\.jsonl(\.\d+)?$/.test(f))
+        .filter((f) => f.slice(10, 20) >= cutoffDay)
+      for (const f of files) {
+        try {
+          for (const line of readFileSync(join(dir, f), 'utf8').split('\n')) {
+            if (!line) continue
+            try {
+              const entry = JSON.parse(line) as ToolExecAuditEntry
+              if (typeof entry?.ts === 'number' && entry.ts >= cutoff) all.push(entry)
+            } catch { /* 坏行跳过 */ }
+          }
+        } catch { /* 单文件读失败跳过 */ }
+      }
+    }
+  } catch { /* 目录不可读：按空账返回 */ }
+
+  const filtered = all.filter((e) => {
+    if (query.tool && e.tool !== query.tool) return false
+    if (query.sessionId && e.sessionId !== query.sessionId) return false
+    if (query.runId && e.runId !== query.runId) return false
+    if (query.phase && e.phase !== query.phase) return false
+    if (query.outcome === 'ok' && !(e.phase === 'post' && e.ok === true)) return false
+    if (query.outcome === 'error' && !(e.phase === 'post' && e.ok === false)) return false
+    return true
+  })
+
+  const byTool = new Map<string, { count: number; errors: number; durations: number[] }>()
+  const byOutcome = { ok: 0, error: 0, unknown: 0 }
+  for (const e of filtered) {
+    const bucket = byTool.get(e.tool) ?? { count: 0, errors: 0, durations: [] }
+    bucket.count += 1
+    if (e.phase === 'post') {
+      if (e.ok === true) byOutcome.ok += 1
+      else if (e.ok === false) { byOutcome.error += 1; bucket.errors += 1 }
+      else byOutcome.unknown += 1
+      if (typeof e.durationMs === 'number') bucket.durations.push(e.durationMs)
+    }
+    byTool.set(e.tool, bucket)
+  }
+
+  filtered.sort((a, b) => b.ts - a.ts)
+
+  return {
+    entries: filtered.slice(0, limit),
+    total: filtered.length,
+    byTool: [...byTool.entries()]
+      .map(([tool, b]) => ({
+        tool,
+        count: b.count,
+        errors: b.errors,
+        avgDurationMs: b.durations.length
+          ? Math.round(b.durations.reduce((s, v) => s + v, 0) / b.durations.length)
+          : null,
+      }))
+      .sort((a, b) => b.count - a.count),
+    byOutcome,
+    auditWriteFailures: writeFailures,
+    windowDays: days,
+  }
+}
+
 /** 测试隔离。 */
 export function _useAuditDirForTests(dir: string): void {
   process.env.TOOL_EXEC_AUDIT_DIR = dir
+}
+
+/** 测试专用：重置进程内重复调用追踪与 pending 配对。 */
+export function _resetAuditStateForTests(): void {
+  duplicateTracker.reset()
+  pendingCalls.clear()
 }
 
 /** 测试专用：跨天清理与超限转缀的内部入口（生产路径由 appendEntry 低频触发） */
