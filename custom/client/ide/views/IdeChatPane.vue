@@ -60,6 +60,10 @@ import {
   engineDefaultModel, fetchEngineCatalog, rememberEngineDefault,
   type EngineCatalogGroup, type EngineDefault,
 } from '../utils/engine-models'
+import {
+  readZcodeMode, writeZcodeMode, toLegacyMode, zcodeModeLabel,
+  ZCODE_PERMISSION_MODES, ZCODE_PLAN, type ZcodeModeState,
+} from '../utils/zcodeModes'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
 import {
@@ -717,26 +721,19 @@ async function pickEffort(value: string): Promise<void> {
 // 事实源）。本批（e0a3c301）把 ⚙ 按钮收进 composer 工具条行（ZCode 对齐五控件同排），
 // 原Teleport 进 ChatInput .input-top-bar 的宿主机制退役——行内直接渲染无需宿主解析。
 const composerSettingsOpen = ref(false)
-const PERM_MODES: Array<{ key: string; label: string; hint: string }> = [
-  { key: 'readonly', label: '只读', hint: 'read only — 仅查看（plan 档同义）' },
-  { key: 'plan', label: '计划', hint: 'plan — 只规划不执行' },
-  { key: 'default', label: '标准', hint: 'default — 写免审、执行需批（engine: edit）' },
-  { key: 'acceptEdits', label: '自动编辑', hint: 'acceptEdits — 编辑免审（engine: autoEdit）' },
-  { key: 'dontAsk', label: '少问', hint: 'dontAsk — 执行免审（engine: auto）' },
-  { key: 'auto', label: '全自动', hint: 'auto — 全免审' },
-  { key: 'bypassPermissions', label: '绕过', hint: 'bypassPermissions — 最高信任（engine: yolo）' },
-]
-const PERM_KEY = 'ide-permission-mode:'
+// 模式=ZCode 四档形态（2026-10-18 锚定校正轮）：Plan 勾选 + build/guarded/yolo 三单选
+// （目录/描述/色语义锚 upstream/zcode v3.15.1 ZCODE_AGENT_MODE_OPTIONS + 
+// V4ComposerModeControls）；存储与派生经 utils/zcodeModes（派生七档写旧键，
+// 服务端 session-mode REST 零改动）。
 const PERM_MODE_EVENT = 'ide-perm-mode-changed'
-function permStorageKey(): string { return PERM_KEY + (chatStore.activeSessionId ?? 'default') }
-const permMode = ref('default')
-function syncPermMode(): void { permMode.value = localStorage.getItem(permStorageKey()) || 'default' }
-function pickPermMode(key: string): void {
-  permMode.value = key
-  localStorage.setItem(permStorageKey(), key)
-  window.dispatchEvent(new CustomEvent(PERM_MODE_EVENT, { detail: { key, sessionId: chatStore.activeSessionId } }))
+const zcodeModeState = ref<ZcodeModeState>(readZcodeMode(chatStore.activeSessionId))
+function syncPermMode(): void { zcodeModeState.value = readZcodeMode(chatStore.activeSessionId) }
+function commitZcodeMode(next: ZcodeModeState): void {
+  zcodeModeState.value = next
+  writeZcodeMode(chatStore.activeSessionId, next)
+  window.dispatchEvent(new CustomEvent(PERM_MODE_EVENT, { detail: { key: toLegacyMode(next), sessionId: chatStore.activeSessionId } }))
 }
-const permModeLabel = computed(() => PERM_MODES.find(m => m.key === permMode.value)?.label ?? permMode.value)
+const permModeLabel = computed(() => zcodeModeLabel(zcodeModeState.value))
 const { toolTraceVisible, toggleToolTraceVisible } = useToolTraceVisibility()
 const labels = computed(() => isZhLocale.value
   ? { settings: '设置', mode: '模式', model: '模型', think: '思考', toolTrace: '显示工具调用', changeModel: '打开模型选择器' }
@@ -1085,17 +1082,26 @@ watch(() => chatStore.activeSessionId, syncPermMode)
             >⚙ {{ labels.settings }}<span class="ide-chat__effort-caret">▾</span></button>
             <div v-if="composerSettingsOpen" class="ide-chat__csettings-menu" data-testid="ide-composer-settings-menu">
               <div class="ide-chat__csettings-section">
-                <div class="ide-chat__csettings-title">{{ labels.mode }} · {{ permModeLabel }}</div>
+                <div class="ide-chat__csettings-title">{{ labels.mode }} · {{ permModeLabel }}{{ zcodeModeState.planEnabled ? ' + 计划' : '' }}</div>
+                <!-- Plan 独立勾选 + 权限三档单选（zcode V4ComposerModeControls 同构） -->
                 <div class="ide-chat__csettings-chips">
                   <button
-                    v-for="m in PERM_MODES"
+                    type="button"
+                    class="ide-chat__csettings-chip"
+                    :class="{ 'is-active': zcodeModeState.planEnabled }"
+                    data-testid="ide-settings-mode-plan"
+                    :title="ZCODE_PLAN.description"
+                    @click="commitZcodeMode({ ...zcodeModeState, planEnabled: !zcodeModeState.planEnabled })"
+                  >💡 计划</button>
+                  <button
+                    v-for="m in ZCODE_PERMISSION_MODES"
                     :key="m.key"
                     type="button"
                     class="ide-chat__csettings-chip"
-                    :class="{ 'is-active': permMode === m.key }"
+                    :class="[{ 'is-active': m.key === zcodeModeState.mode }, `is-${m.key}`]"
                     :data-testid="`ide-settings-mode-${m.key}`"
-                    :title="m.hint"
-                    @click="pickPermMode(m.key)"
+                    :title="m.description"
+                    @click="commitZcodeMode({ ...zcodeModeState, mode: m.key })"
                   >{{ m.label }}</button>
                 </div>
               </div>

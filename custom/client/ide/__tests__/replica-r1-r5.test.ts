@@ -10,18 +10,29 @@ vi.mock('@/stores/hermes/chat', () => ({
 }))
 vi.mock('../store/ide', () => ({ useIdeStore: () => ({ workspace: '/w' }) }))
 
-describe('R2 权限七档切换器', () => {
-  it('默认标准档；点开面板七档可选；选中持久化', async () => {
+describe('R2 权限模式切换器（2026-10-18 锚定校正：ZCode 四档形态）', () => {
+  it('默认 build 档；面板=Plan 勾选+权限三档；选档持久化（zcode 键+派生旧键）', async () => {
     const { default: IdePermissionSwitcher } = await import('../components/IdePermissionSwitcher.vue')
     localStorage.clear()
     const w = mount(IdePermissionSwitcher)
-    expect(w.find('[data-testid="ide-perm-trigger"]').text()).toContain('标准')
+    expect(w.find('[data-testid="ide-perm-trigger"]').text()).toContain('改动前询问')
     await w.find('[data-testid="ide-perm-trigger"]').trigger('click')
-    for (const key of ['readonly', 'plan', 'default', 'acceptEdits', 'dontAsk', 'auto', 'bypassPermissions']) {
+    // Plan 独立勾选 + 三权限单选（zcode V4ComposerModeControls 同构）
+    expect(w.find('[data-testid="ide-perm-plan"]').exists()).toBe(true)
+    for (const key of ['build', 'guarded', 'yolo']) {
       expect(w.find(`[data-testid="ide-perm-${key}"]`).exists()).toBe(true)
     }
-    await w.find('[data-testid="ide-perm-bypassPermissions"]').trigger('click')
-    expect(w.find('[data-testid="ide-perm-trigger"]').text()).toContain('绕过')
+    await w.find('[data-testid="ide-perm-yolo"]').trigger('click')
+    expect(w.find('[data-testid="ide-perm-trigger"]').text()).toContain('完全访问')
+    expect(JSON.parse(localStorage.getItem('ide-zcode-mode:s1') || 'null')).toEqual({ mode: 'yolo', planEnabled: false })
+    expect(localStorage.getItem('ide-permission-mode:s1')).toBe('bypassPermissions')
+    // Plan 勾选：触发器旁出现计划标记，✕ 可撤
+    await w.find('[data-testid="ide-perm-trigger"]').trigger('click')
+    await w.find('[data-testid="ide-perm-plan"]').trigger('click')
+    expect(w.find('[data-testid="ide-perm-plan-marker"]').exists()).toBe(true)
+    expect(localStorage.getItem('ide-permission-mode:s1')).toBe('plan')
+    await w.find('[data-testid="ide-perm-plan-remove"]').trigger('click')
+    expect(w.find('[data-testid="ide-perm-plan-marker"]').exists()).toBe(false)
     expect(localStorage.getItem('ide-permission-mode:s1')).toBe('bypassPermissions')
   })
 
