@@ -190,15 +190,22 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
         ] },
       },
     }))
-    // 3.15.3 内置清单（两个版本目录，应取版本大的）
+    // 3.15.3 内置清单（两个版本目录，应取版本大的）；含思考档位规则——
+    // 兜底 .* → 关/开，glm-5.3 系 → low/high/max（后命中覆盖）。
     for (const [ver, models] of [['3.14.0', ['GLM-4.5']], ['3.15.3', ['GLM-5.3', 'GLM-5.3-Flash']]] as const) {
       const dir = join(zhome, 'v2', 'runtime', 'provider', 'darwin-aarch64', ver, 'endpoint-x')
       fs_mkdirSync(dir, { recursive: true })
       writeFileSync(join(dir, 'zcode-builtin.json'), JSON.stringify({
         schemaVersion: 1,
-        config: { providerConfigRules: { templateRules: [
-          { templateId: 'bigmodel-api', templateNameMap: { 'zh-CN': 'BigModel Coding Plan' }, config: { logo: { key: 'bigmodel' }, access: { type: 'zhipu-coding-plan-api-key' }, builtinModelIds: models } },
-        ] } },
+        config: {
+          providerConfigRules: { templateRules: [
+            { templateId: 'bigmodel-api', templateNameMap: { 'zh-CN': 'BigModel Coding Plan' }, config: { logo: { key: 'bigmodel' }, access: { type: 'zhipu-coding-plan-api-key' }, builtinModelIds: models } },
+          ] },
+          modelConfigRules: { modelRules: [
+            { modelMatch: '.*', config: { optionSpecs: { reasoningLevel: { values: ['disabled', 'enabled'] } } } },
+            { modelMatch: '.*glm-5\\.3(?:-flash)?(?:[.\\-:/\\[].*)?$', config: { optionSpecs: { reasoningLevel: { values: ['low', 'high', 'max'] } } } },
+          ] },
+        },
       }))
     }
     writeFileSync(join(zhome, 'cli', 'rollout', 'model-io-sess-a.jsonl'), JSON.stringify({
@@ -215,8 +222,18 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
       provider: 'builtin:bigmodel-coding-plan',
       alias: 'bigmodel-api',
       label: 'SGLM',
-      models: [{ id: 'GLM-5.3' }, { id: 'GLM-5.3-Flash' }, { id: 'offpeak-idle-plan/GLM-5.3' }],
+      // 思考档位按 manifest 规则补齐：小写 glm-5.3 系 → low/high/max（后命中覆盖
+      // 兜底规则），大写 GLM-5.3 系 → 兜底 disabled/enabled。
+      models: [
+        { id: 'GLM-5.3', reasoningLevels: ['disabled', 'enabled'] },
+        { id: 'GLM-5.3-Flash', reasoningLevels: ['disabled', 'enabled'] },
+        { id: 'offpeak-idle-plan/GLM-5.3', reasoningLevels: ['disabled', 'enabled'] },
+      ],
     })
+    expect(groups[0].models).toEqual([
+      { id: 'glm-5.3', reasoningLevels: ['low', 'high', 'max'] },
+      { id: 'glm-5.3-flash', reasoningLevels: ['low', 'high', 'max'] },
+    ])
     // 默认 = rollout 在用模型（UI 命名空间 bigmodel-api/GLM-5.3 → 引擎组/GLM-5.3），
     // 压过 providerOrder 首位 xglm。
     expect(mod.readZcodeDefault(groups)).toEqual({ provider: 'builtin:bigmodel-coding-plan', model: 'GLM-5.3' })
