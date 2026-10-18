@@ -46,6 +46,19 @@ else:
     STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 OUT = EVID / 'simulation-report.html'
+# ── 并发写根防（run21 收官实录 2026-10-18）：值班侧手动 gen 与驱动 gen 同刻并跑，
+# 同写 simulation-report.html → 审计读到的版本与盘上版本错位（19:48 审计 FAIL 双嵌、
+# 19:49 盘上已是无双嵌的下一版本——FAIL 环假象）。两层根治：
+#   ① flock 单实例：后到实例立即退出（非零），让持有者完成，驱动侧由监督器断点重试吸收；
+#   ② 原子写盘：tmp + os.replace，读方（审计）永不读到半写文件。
+import fcntl
+_GEN_LOCK_FP = open(EVID / '.report-gen.lock', 'w')
+try:
+    fcntl.flock(_GEN_LOCK_FP, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    print('[report-gen] 另一生成器实例持有锁（.report-gen.lock）——本实例退出让位；'
+          '驱动侧等待监督器断点重试即可，禁并发双写报告', flush=True)
+    sys.exit(75)
 # ── R18 载荷（V7.2 全量呈现）：evidence/r18-steps.json ──
 # 契约（r18-collect.py 写入方为单一事实源）：
 #   {"_schema":1,"steps":{"<n>":{"dialogs":[{"title","room","anchor",
@@ -2115,7 +2128,7 @@ def img_tags(imgs):
     out = []
     for pre, cap, kind in imgs:
         if pre in _USED_FRAMES:
-            out.append(f'<p class="shot-ref">↗ 同源帧已嵌于前文（V8.4② 单嵌）：{H.escape(cap)}</p>')
+            out.append(f'<p class="shot" data-shared-key="1">本步影像与前步共用状态键，帧已嵌前步（V8.4② 单嵌；登记在案，无帧明示）：{H.escape(cap)}</p>')
             continue
         _USED_FRAMES.add(pre)
         p = STEPS_DIR / f'{pre}.png'
@@ -2167,7 +2180,6 @@ def _r18_frame_tags(frames, step, view=''):
         _pos = {'before': '操作前', 'action': '操作动作', 'after': '系统响应'}.get(
             name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
         cap = f'{view}·{_pos}' if (view and _pos) else (name[:-4] if not _pos else f'操作序列画面·{_pos}')
-        _USED_FRAMES.add(name[:-4] if name.endswith('.png') else name)  # V8.4② 单嵌登记（自动挂接侧）
         _stem = name[:-4] if name.endswith('.png') else name
         if _stem in _USED_FRAMES:
             continue  # V8.4② 单嵌：步条已嵌此帧（步条先渲染），挂接侧让位
@@ -4842,7 +4854,9 @@ def _dedupe_embed(m):
     _seen_src.add(m.group(2))
     return m.group(0)
 html = _pat_dedupe.sub(_dedupe_embed, html)
-OUT.write_text(html, encoding='utf-8')
+_out_tmp = OUT.with_name(OUT.name + '.tmp')
+_out_tmp.write_text(html, encoding='utf-8')
+os.replace(_out_tmp, OUT)  # 原子换名：审计读方永不读到半写文件（并发写根防②）
 print(f'report written: {OUT} ({len(html)} bytes, {total_imgs} images)')
 
 # ── txt 派生物写入器（F-6②，2026-10-06 入库）：HTML→纯文本三件套，随生成链产出
