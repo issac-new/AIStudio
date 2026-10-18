@@ -564,6 +564,11 @@ export function detectPushStalled(snap: ClusterSnapshot, opts: DetectOptions = {
       severity: stale ? 'high' : 'warn',
       summary: `推送受阻${Number.isFinite(ageMs) ? ` ${Math.round(ageMs / 60000)} 分钟` : ''}：${t.profile} 日志尾出现 rebase/push 失败签名且未消除——本地失败静默形态（run21 实录：冲突 40 分钟无人见）。若 owner 在途自解可观察一轮；陈化超阈请回灌精确冲突文件清单或发单步推送令`,
       detail: { profile: t.profile, tail: t.tail.slice(-120), ageMs, stallMs },
+    })
+  }
+  return out
+}
+
 /** agent.active-no-artifact：活跃但零产物检测（run21 四复发同根产品化，2026-10-18）。
  *  一夜四形态（结论行 92min/PAYCORE 3h/P0 75min/G5 修订 80min）：档案日志持续
  *  活跃但交付物迟迟不落——「在写未提交/完成态错位」灰区，日志活跃≠进展。
