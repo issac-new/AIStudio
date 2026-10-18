@@ -102,7 +102,10 @@ describe('V8.4 帧四断言（审计器）', () => {
   it('正向：画面描述图注+单一用途+记录在案 → V8.4 断言零误杀', () => {
     const r = runAudit('20261010-v8-run13pos')
     const out = r.stdout + r.stderr
-    expect(out, out.slice(0, 400)).not.toMatch(/V8\.4[①②③④]/)
+    // 只咬 FAIL 项（"- V8.4…" 行首形态）：审计头部的「审计工具版本锚」行原样携带
+    // 最近提交信息，提交主题本身含 V8.4② 时原正则整文匹配误红（run21 收官夜
+    // 040fd2c→bd4fdb4→e0650ea→4f7a0b7 四连提交均含该词，测试随 HEAD 消息红绿摇摆）
+    expect(out, out.slice(0, 400)).not.toMatch(/^- V8\.4[①②③④]/m)
   })
 
   it('③ 补拍标注分级：无标注晚拍帧 FAIL 冒充，带补拍图注晚拍帧 WARN 合规', () => {
