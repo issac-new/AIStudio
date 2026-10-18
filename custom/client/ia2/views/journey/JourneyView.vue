@@ -78,7 +78,7 @@ function goStage(no: number): void {
         <button class="jrn__guide-btn jrn__guide-btn--ghost" type="button" data-testid="jrn-skip" @click="goStage(2)">已搭好，看交付流程 →</button>
       </div>
     </div>
-    <p v-if="loadError" class="jrn__error" data-testid="jrn-error">运行数据暂时不可用：{{ loadError }}</p>
+    <p v-if="loadError" class="jrn__error" data-testid="jrn-error">{{ loadError === '记录已不存在（可能已被清理）——请在页头选择其他运行' ? loadError : `运行数据暂时不可用：${loadError}` }}</p>
 
     <!-- A 区：从 0 到 1 搭建（五步） -->
     <section class="jrn__zone" data-testid="jrn-zone-setup">
