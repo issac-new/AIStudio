@@ -52,14 +52,17 @@ OUT = EVID / 'simulation-report.html'
 #   ① flock 单实例：后到实例立即退出（非零），让持有者完成，驱动侧由监督器断点重试吸收；
 #   ② 原子写盘：tmp + os.replace，读方（审计）永不读到半写文件。
 import fcntl
-EVID.mkdir(parents=True, exist_ok=True)  # --print-paths/首跑也要能落锁（run21 后 runs 目录已清空，锁文件父目录可能不存在）
-_GEN_LOCK_FP = open(EVID / '.report-gen.lock', 'w')
-try:
-    fcntl.flock(_GEN_LOCK_FP, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except OSError:
-    print('[report-gen] 另一生成器实例持有锁（.report-gen.lock）——本实例退出让位；'
-          '驱动侧等待监督器断点重试即可，禁并发双写报告', flush=True)
-    sys.exit(75)
+# --print-paths 是纯只读契约（测试/预检用），不得建目录/落锁——否则门禁测试会在真
+# SIM_ROOT 下造出测试 run，prelaunch ⑧ 把残留当上轮审计（2026-10-19 实测）。
+if '--print-paths' not in sys.argv:
+    EVID.mkdir(parents=True, exist_ok=True)
+    _GEN_LOCK_FP = open(EVID / '.report-gen.lock', 'w')
+    try:
+        fcntl.flock(_GEN_LOCK_FP, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print('[report-gen] 另一生成器实例持有锁（.report-gen.lock）——本实例退出让位；'
+              '驱动侧等待监督器断点重试即可，禁并发双写报告', flush=True)
+        sys.exit(75)
 # ── R18 载荷（V7.2 全量呈现）：evidence/r18-steps.json ──
 # 契约（r18-collect.py 写入方为单一事实源）：
 #   {"_schema":1,"steps":{"<n>":{"dialogs":[{"title","room","anchor",

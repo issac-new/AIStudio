@@ -15,3 +15,4 @@
 - D-3：快照新鲜度必须覆盖服务端与客户端两个入口，禁止只看一个文件 mtime。
 - D-4：prelaunch ⑤ 对 studio 进程 env 做机械检查，防止「健康检查绿、推演端点 503」的假绿。
 - D-5（2026-10-19 清场实测）：`mx-clean` 分支删除校验的 `$_miss` 后接全角括号会被 macOS bash 3.2 吸入变量名（`_miss�: unbound variable`，纪律 76 同族）；改为 `${_miss}`，机械检查=`bash -n`。
+- D-6（2026-10-19 prelaunch ⑧ 实测）：`--print-paths` 改为纯只读，不建 evidence/锁目录；门禁测试不再在真 SIM_ROOT 造测试 run（否则 prelaunch ⑧ 把测试残留当上轮审计）。机械检查=print-paths 后 runs/ 为空 + harness-gate-integrity 128 测全绿。
