@@ -6,10 +6,17 @@
 // 会话内即时切换需引擎通道。通道锚点已查实：zcode v4 sendText payload 支持
 // mode: submissionModeSchema（build/edit/plan/yolo，command.ts:99），接线列独立轮
 // （需 /ide 发送链从 hermes 通道切/并到 engine sendText）。
+// 2026-10-18 ZCode 对齐批：控件迁输入区 composer 工具条（面板改向上开）；
+// 选档除 localStorage 外穿线服务端会话档 REST（/api/hermes/permmodes/session-mode，
+// session-mode-controller.ts——落盘后随任务派发 createSession.config.mode 生效）。
+// 同批 bee7c5e4：与 composer 设置菜单（IdeChatPane）同 localStorage 键+事件双向同步。
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useIdeStore } from '../store/ide'
+import { authFetch } from '../utils/auth-fetch'
 
 const chatStore = useChatStore()
+const ide = useIdeStore()
 const open = ref(false)
 
 const MODES: Array<{ key: string; label: string; hint: string }> = [
@@ -30,11 +37,29 @@ function current(): string {
 }
 
 const selected = ref(current())
+// 会话切换跟随本会话档（localStorage 为 UI 即时态；服务端档经 REST 同步）。
+watch(() => chatStore.activeSessionId, (sid, prev) => {
+  if (sid !== prev) selected.value = current()
+})
 const selectedLabel = computed(() => MODES.find((m) => m.key === selected.value)?.label ?? selected.value)
+
+// 服务端会话档穿线（2026-10-18）：profile=ide.agentId；失败 fail-soft（本地档仍
+// 随派发面消费，面板注如实说明双面）。agentId 缺席（测试桩/未就绪）跳过不发。
+async function pushServerMode(key: string): Promise<void> {
+  const agentId = (ide as { agentId?: string }).agentId
+  if (!agentId) return
+  try {
+    await authFetch(`/api/hermes/permmodes/session-mode/${encodeURIComponent(agentId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ mode: key }),
+    })
+  } catch { /* fail-soft：服务端不可达时保留本地档（派发面退本地） */ }
+}
 
 function pick(key: string): void {
   selected.value = key
   localStorage.setItem(storageKey(), key)
+  void pushServerMode(key)
   open.value = false
 }
 
@@ -81,7 +106,7 @@ defineExpose({ cycle })
         :title="m.hint"
         @click="pick(m.key)"
       >{{ m.label }}<small>{{ m.hint }}</small></button>
-      <div class="ide-perm__note" data-testid="ide-perm-note">生效面：任务派发/自动化。会话内即时切换通道待引擎接线（v4 sendText mode 已查实，见组件头注）。</div>
+      <div class="ide-perm__note" data-testid="ide-perm-note">生效面：任务派发/自动化（选档已穿线服务端会话档，随下次派发生效）。会话内即时切换待引擎接线（v4 sendText mode 已查实，见组件头注）。</div>
     </div>
   </span>
 </template>
@@ -95,7 +120,9 @@ defineExpose({ cycle })
   padding: 2px 8px; cursor: pointer; font-size: 11px; color: var(--text-muted);
 }
 .ide-perm__panel {
-  position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 220px;
+  // 2026-10-18 迁 composer 工具条：控件贴屏底，面板改向上开（ZCode 同位
+  // SelectContent side:"top" 语义）。
+  position: absolute; bottom: calc(100% + 4px); top: auto; left: 0; z-index: 40; min-width: 220px;
   background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); padding: 4px;
 }
