@@ -1639,7 +1639,10 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local _body="$2
 [派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，接收方须**从零重新执行**本任务——历史轮产物、git 历史提交（含悬空提交）与前轮遗留文件均不得引用、恢复或作为完成依据；若发现疑似历史遗留，如实说明并忽略之。判定重复也必须回执合并回执，禁止静默。
 [RACI 解析] 本任务唯一执行人=任务书正文被指名执行的主责 agent（首个 @）；其余 @ 为 RACI 会签/评审角色（lead 等），不执行本任务、仅知情与确认。结论行只由执行人发。"
-  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3")
+  # 崩溃环防御（run21 15:57 实录：set -uo pipefail 下 mx_send 内 jq/管道瞬断→赋值
+  # 非零→ERR trap 击杀驱动 11 连）。mx_send 本体已三试 SEND-FAILED 返 0——此层
+  # 再兜一层，失败降级 SEND-FAILED 字面而非杀驱动。
+  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3") || m="SEND-FAILED"
   m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   _progress_ledger_record "$1" "$2" "${3:-}" "$m"
