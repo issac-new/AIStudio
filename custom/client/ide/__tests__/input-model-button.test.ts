@@ -73,10 +73,10 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     state.activeSession = null
   })
 
-  it('不再写死禁用：目录就绪即可点；点击开独立目录浮层', async () => {
+  it('不再写死禁用：目录就绪即可点；点击开独立目录浮层（分组显示人类可读名）', async () => {
     catalogMock.mockResolvedValue({
       independent: true,
-      groups: [{ provider: 'bigmodel', models: [{ id: 'glm-5.3' }] }],
+      groups: [{ provider: 'bigmodel', label: 'BigModel - Coding Plan', models: [{ id: 'glm-5.3' }] }],
     })
     const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
     await flushPromises()
@@ -85,6 +85,7 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     await btn.trigger('click')
     expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-input-model-bigmodel-glm-5.3"]').exists()).toBe(true)
+    expect(w.find('.ide-chat__model-group-title').text()).toBe('BigModel - Coding Plan')
   })
 
   it('无会话 pick=新会话默认模型（switchModel）；有会话 pick=会话粘性（switchSessionModel）', async () => {
@@ -132,5 +133,26 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     await flushPromises()
     // 回落 hermes modelGroups（mock 里有一组）→ 仍可用
     expect(w.find('[data-testid="stub-model-btn"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('Ycode 对象目录按模型 id 判失效；横幅按钮就地开选择器（2026-10-18 回归）', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'builtin:bigmodel', label: 'BigModel', models: [{ id: 'GLM-5.3-Flash' }] }],
+    })
+    state.activeSessionId = 's1'
+    state.activeSession = { id: 's1', model: 'GLM-5.3-Flash', codingAgentMode: 'scoped' }
+    let w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    expect(w.find('[data-testid="ide-model-invalid"]').exists()).toBe(false)
+
+    state.activeSession = { id: 's1', model: 'aim', codingAgentMode: 'scoped' }
+    w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    expect(w.find('[data-testid="ide-model-invalid"]').exists()).toBe(true)
+    const reselect = w.findAll('button.ide-chat__model-invalid-btn').find(b => b.text() === '重选模型')
+    expect(reselect).toBeTruthy()
+    await reselect!.trigger('click')
+    expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(true)
   })
 })
