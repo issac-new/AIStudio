@@ -27,6 +27,7 @@ import {
   type ApprovalCaller, type ApprovalDecision, type ApprovalRule, type ScopeCandidate, type ToolCallRequest,
 } from './approval-domain'
 import { getApprovalRuleStore } from './approval-store'
+import { appendApprovalLog } from '../approvals/approval-log'
 
 const router = new Router({ prefix: '/api/approval' })
 
@@ -139,6 +140,20 @@ router.post('/decide', async (ctx) => {
   // 学习规则记 owner（X2）：归属以认证主体为准，body 自报身份不可信。
   const learned = ruleFromDecision(decision as ApprovalDecision, call, candidate, now, caller?.username)
   if (learned) store.addRule(learned)
+  // 2026-10-18 P0-2：规则学习也是决策，必须进审批历史（此前只落规则不落账，
+  // 复盘时看不到“谁在什么时候把什么范围改成了 allow”）。
+  try {
+    appendApprovalLog({
+      id: `rule:${now}:${Math.random().toString(36).slice(2, 8)}`,
+      actor: caller?.username ?? 'anonymous',
+      targetKind: 'command',
+      targetId: `rule:${domainOf(call.tool)}`,
+      targetTitle: `规则学习：${call.tool} ${call.argv.join(' ').slice(0, 80)}`,
+      decision,
+      note: typeof body.note === 'string' ? body.note.slice(0, 200) : undefined,
+      source: 'human',
+    })
+  } catch { /* 历史写失败不阻断规则学习（fail-soft） */ }
   ctx.body = {
     ok: true,
     decision,

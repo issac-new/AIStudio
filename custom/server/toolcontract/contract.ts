@@ -56,6 +56,9 @@ export interface ToolContract {
   maxArgSummaryChars: number
 }
 
+/** 工具契约表版本：运行清单记录该值，回答“这次运行用的是哪版契约”。 */
+export const TOOL_CONTRACT_VERSION = '2026-10-18.1'
+
 export const DEFAULT_TIMEOUT_MS = 60_000
 
 const NO_RETRY: RetryPolicy = {

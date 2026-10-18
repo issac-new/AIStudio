@@ -28,6 +28,10 @@ beforeEach(async () => {
   process.env.EVAL_STORE = join(dir, 'eval')
   process.env.HELDOUT_STORE = join(dir, 'heldout')
   process.env.HERMES_APPROVALS_LOG_FILE = join(dir, 'approvals.json')
+  process.env.RUN_MANIFEST_DIR = join(dir, 'run-manifests')
+  process.env.POLICY_DECISION_DIR = join(dir, 'policy-decisions')
+  process.env.AGENT_IDENTITY_STORE = join(dir, 'agent-identity')
+  process.env.HERMES_GOV_EVENT_DIR = join(dir, 'gov-events')
   // mcp 假配置：一个 authorized server
   mkdirSync(join(dir, 'mcp'), { recursive: true })
   writeFileSync(join(dir, 'mcp', 'demo.json'), JSON.stringify({ name: 'demo', scope: 'global', timeoutMs: 1000, authState: 'authorized', updatedAt: 1 }))
@@ -47,7 +51,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   server.close()
-  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER', 'TOOL_EXEC_AUDIT_DIR', 'TOOL_IDEMPOTENCY_STORE', 'HERMES_LOOP_DIR', 'EVAL_STORE', 'HELDOUT_STORE', 'HERMES_APPROVALS_LOG_FILE']) {
+  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER', 'TOOL_EXEC_AUDIT_DIR', 'TOOL_IDEMPOTENCY_STORE', 'HERMES_LOOP_DIR', 'EVAL_STORE', 'HELDOUT_STORE', 'HERMES_APPROVALS_LOG_FILE', 'RUN_MANIFEST_DIR', 'POLICY_DECISION_DIR', 'AGENT_IDENTITY_STORE', 'HERMES_GOV_EVENT_DIR']) {
     delete process.env[k]
   }
   const store = await import('../../governance/change-governance-store')
@@ -141,6 +145,24 @@ describe('四子路由 HTTP 投影', () => {
     // 非法 days 回落 7；outcome 非法值被忽略
     const fallback = await get('/api/harness/tool-audit?days=abc&outcome=weird')
     expect(fallback.body.windowDays).toBe(7)
+  })
+
+  it('GET /api/harness/policy-decisions：空账 200 + 聚合结构', async () => {
+    const { status, body } = await get('/api/harness/policy-decisions?days=7')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.total).toBe(0)
+    expect(body.byOutcome).toEqual({ allow: 0, deny: 0 })
+    expect(body.windowDays).toBe(7)
+  })
+
+  it('GET /api/harness/run-manifests：空账 200 + withCost 不炸', async () => {
+    const { status, body } = await get('/api/harness/run-manifests?days=7&withCost=1')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.total).toBe(0)
+    expect(body.entries).toEqual([])
+    expect(body.windowDays).toBe(7)
   })
 
   it('GET /api/harness/nine-layers：200 + 九层顺序 + 三态计数和=9 + 自检非认证', async () => {

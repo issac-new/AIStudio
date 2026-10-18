@@ -1,0 +1,39 @@
+diff --git a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
+index bf6979f..71ac1a1 100644
+--- a/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
++++ b/packages/server/src/modules/studio/services/chat-run/handle-ekko-agent-run.ts
+@@ -53,6 +53,9 @@ import { resolveBridgeRunModelConfig, type RunModelGroup } from './model-config'
+ import { persistRunMessages, type RunMessageDraft } from './message-persistence'
+ // HERMES_CUSTOM[toolresultguard] 输入侧围栏（2026-10-06 五文轮 P1a）
+ import { guardUserInput } from '../../../../custom/toolresultguard'
++// overlay[run-manifest]（P1-3）：运行清单——模型/提示词指纹/权限模式随 run 落盘。
++import { recordRunManifest } from '../../../../custom/runmanifest/run-manifest'
++import { sessionModeOf } from '../../../../custom/permmodes/session-mode-store'
+ import { buildOutboundRunEvent } from './resume-payload'
+ import { estimateUsageTokensFromMessages } from './usage'
+ import type { BackgroundContinuationContext, ChatCodingAgentId, ContentBlock, QueuedRun, SessionState } from './types'
+@@ -957,6 +960,24 @@ export async function handleEkkoAgentRun(
+     if (event.type === 'run.started') {
+       startWorkspaceRunDiff(event.runId)
+       state.runId = event.runId
++      // overlay[run-manifest]（P1-3）：记录本次运行实际使用的模型/提示词指纹/权限模式；
++      // 只落指纹不落提示词正文，fail-soft 不阻断会话。
++      try {
++        recordRunManifest({
++          runId: event.runId,
++          sessionId,
++          userId: authenticatedUserId,
++          profileId: profile,
++          model: modelConfig.model,
++          provider: modelConfig.provider,
++          apiMode,
++          reasoningEffort: persistedReasoningEffort,
++          promptHash: createHash('sha1').update(instructions).digest('hex').slice(0, 16),
++          contextRevision: storedSession?.history_revision,
++          permissionMode: sessionModeOf(profile) ?? process.env.HERMES_TOOL_ENFORCE_MODE ?? undefined,
++          workspace,
++        })
++      } catch { /* 运行清单写失败不阻断会话 */ }
+       emit('run.started', {
+         event: 'run.started',
+         run_id: event.runId,
