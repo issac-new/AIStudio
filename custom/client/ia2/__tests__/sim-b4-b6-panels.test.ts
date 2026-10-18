@@ -8,7 +8,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('../api/ops', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/ops')>()
-  return { ...actual, fetchTopology: vi.fn(), fetchDispatcherHealth: vi.fn(), fetchSleepingWorkers: vi.fn() }
+  return { ...actual, fetchCapabilities: vi.fn().mockResolvedValue({ topology: true, frames: true, dispatcherHealth: true, sleepingWorkers: true }), fetchTopology: vi.fn(), fetchDispatcherHealth: vi.fn(), fetchSleepingWorkers: vi.fn() }
 })
 vi.mock('../../ide/utils/auth-fetch', () => ({
   authFetch: vi.fn(),

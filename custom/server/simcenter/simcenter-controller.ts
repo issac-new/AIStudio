@@ -179,6 +179,18 @@ export function parseTopologyEndpoints(env: string | undefined): Record<string, 
   return out
 }
 
+// ── 能力面：可选探测命令是否配置（前端据此决定是否发起请求，避免必然 503 的噪音） ──
+router.get('/capabilities', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  ctx.body = {
+    topology: true,
+    frames: true,
+    dispatcherHealth: Boolean(process.env.SIM_DISPATCHER_HEALTH_CLI),
+    sleepingWorkers: Boolean(process.env.SIM_SLEEPING_WORKERS_CLI),
+  }
+})
+
 router.get('/topology', async (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)

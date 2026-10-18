@@ -5,11 +5,12 @@
      2026-10-19 产品走查批：台账进页自动读取；帧图廊接入 /frames 端点（按步骤
      分组、before/after 配对、点击看大图）；缺数据给人话空态，不露出挂账措辞。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { fetchAnchor, fetchFrames, frameUrl, type AnchorResult, type FrameFile } from '../../api/supervision'
 import { fetchClearanceLedger, type ClearanceLedgerView } from '../../api/gatekeeper'
 import { useRunContext } from '../../composables/useRunContext'
 import { compensationLabel } from '../../compensation-labels'
+import { authFetch } from '../../../ide/utils/auth-fetch'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
 
 const { run } = useRunContext()
@@ -35,6 +36,68 @@ const framesNote = ref('')
 const framesLoading = ref(false)
 const frameStep = ref('all')
 const preview = ref<FrameFile | null>(null)
+const previewUrl = ref('')
+
+// 图片端点要 Authorization 头，<img src> 带不上——统一走 authFetch 取 blob 再显示。
+// 缩略图按可视区懒加载（50 帧 × 200KB，不一次性拉全量）。
+const thumbSrc = reactive<Record<string, string>>({})
+const objectUrls = new Map<string, string>()
+let observer: IntersectionObserver | null = null
+
+function releaseObjectUrls(): void {
+  for (const url of objectUrls.values()) URL.revokeObjectURL(url)
+  objectUrls.clear()
+  for (const key of Object.keys(thumbSrc)) delete thumbSrc[key]
+}
+
+async function fetchBlobUrl(name: string): Promise<string> {
+  const res = await authFetch(frameUrl(run.value.trim(), name))
+  if (!res.ok) throw new Error(String(res.status))
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  objectUrls.set(`${name}#${objectUrls.size}`, url)
+  return url
+}
+
+async function loadThumb(f: FrameFile): Promise<void> {
+  if (thumbSrc[f.name]) return
+  try { thumbSrc[f.name] = await fetchBlobUrl(f.name) } catch { /* 单帧失败不拖垮图廊 */ }
+}
+
+function registerFrame(el: unknown, f: FrameFile): void {
+  if (!(el instanceof Element)) return
+  if (!observer) {
+    observer = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        const name = (e.target as HTMLElement).dataset.frameName || ''
+        const frame = frames.value.find(x => x.name === name)
+        if (frame) void loadThumb(frame)
+        observer?.unobserve(e.target)
+      }
+    }, { rootMargin: '240px' })
+  }
+  observer.observe(el)
+}
+
+async function openPreview(f: FrameFile): Promise<void> {
+  preview.value = f
+  previewUrl.value = thumbSrc[f.name] || ''
+  if (!previewUrl.value) {
+    try { previewUrl.value = await fetchBlobUrl(f.name) } catch { /* 留空态 */ }
+  }
+}
+
+function closePreview(): void {
+  preview.value = null
+  previewUrl.value = ''
+}
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+  releaseObjectUrls()
+})
 
 const frameSteps = computed(() => {
   const set = new Set(frames.value.map(f => f.step).filter(Boolean))
@@ -83,6 +146,7 @@ async function loadLedger(): Promise<void> {
 
 async function loadFrames(): Promise<void> {
   const r = run.value.trim()
+  releaseObjectUrls()
   if (!r) { frames.value = []; framesNote.value = '还没有选择运行记录——在页头选择后显示本次运行的截图'; return }
   framesLoading.value = true
   framesError.value = ''
@@ -157,9 +221,12 @@ onMounted(() => {
           class="ev__frame"
           :data-testid="`ev-frame-${f.name}`"
           :title="`${f.name}（${fmtSize(f.size)}）`"
-          @click="preview = f"
+          :data-frame-name="f.name"
+          :ref="(el) => registerFrame(el, f)"
+          @click="openPreview(f)"
         >
-          <img :src="frameUrl(run, f.name)" :alt="f.name" loading="lazy">
+          <img v-if="thumbSrc[f.name]" :src="thumbSrc[f.name]" :alt="f.name" loading="lazy">
+          <span v-else class="ev__frame-ph" aria-hidden="true" />
           <span class="ev__frame-cap">{{ f.step }}</span>
           <span class="ev__frame-phase">{{ phaseLabel(f.phase) }}</span>
         </button>
@@ -191,13 +258,14 @@ onMounted(() => {
       </template>
     </section>
 
-    <div v-if="preview" class="ev__preview" data-testid="ev-frame-preview" @click.self="preview = null">
+    <div v-if="preview" class="ev__preview" data-testid="ev-frame-preview" @click.self="closePreview">
       <div class="ev__preview-inner">
         <div class="ev__preview-head">
           <span class="ev__preview-name">{{ preview.name }}</span>
-          <button class="ev__btn" type="button" @click="preview = null">关闭</button>
+          <button class="ev__btn" type="button" @click="closePreview">关闭</button>
         </div>
-        <img :src="frameUrl(run, preview.name)" :alt="preview.name">
+        <img v-if="previewUrl" :src="previewUrl" :alt="preview.name">
+        <p v-else class="ev__hint">大图加载中……</p>
       </div>
     </div>
 
@@ -272,6 +340,7 @@ onMounted(() => {
   text-align: left;
   img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
 }
+.ev__frame-ph { display: block; width: 100%; aspect-ratio: 16 / 10; background: var(--bg-secondary); }
 .ev__frame-cap { display: block; padding: 3px 6px 0; font-size: 11px; color: var(--text-secondary); }
 .ev__frame-phase { display: block; padding: 0 6px 4px; font-size: 10px; color: var(--text-muted); }
 .ev__preview {
