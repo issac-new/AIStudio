@@ -66,7 +66,7 @@ async function load(): Promise<void> {
     nodes.value = data.nodes ?? []
     meta.value = data.meta ?? null
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   } finally {
     loading.value = false
   }

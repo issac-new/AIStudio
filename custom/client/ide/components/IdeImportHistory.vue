@@ -5,9 +5,11 @@
 // RPC（zcode-patches 草稿 498-import-session-rpc；RPC 未开时如实报错不虚标）。
 import { ref } from 'vue'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { authFetch } from '../utils/auth-fetch'
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const open = ref(false)
 const source = ref<'codex' | 'kimi' | 'claude'>('claude')
 const filePath = ref('')
@@ -18,7 +20,7 @@ const loading = ref(false)
 async function runPreview(): Promise<void> {
   error.value = null
   preview.value = null
-  if (!ide.workspace) { error.value = '无工作区'; return }
+  if (!root.value) { error.value = '无工作区'; return }
   loading.value = true
   try {
     const res = await authFetch(`/api/zcode-engine/import/history-preview?source=${source.value}&ref=${encodeURIComponent(filePath.value)}`)
@@ -38,7 +40,7 @@ async function doImport(): Promise<void> {
     const res = await authFetch('/api/zcode-engine/import/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workspacePath: ide.workspace, source: source.value, ref: filePath.value }),
+      body: JSON.stringify({ workspacePath: root.value, source: source.value, ref: filePath.value }),
     })
     const body = await res.json() as { ok?: boolean; detail?: string; sessionId?: string }
     if (!res.ok || !body.ok) throw new Error(body.detail ?? `http_${res.status}`)

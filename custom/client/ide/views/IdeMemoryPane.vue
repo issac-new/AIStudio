@@ -7,12 +7,14 @@ import { useMessage } from 'naive-ui'
 import { listFiles, readFile } from '@/api/studio/files'
 import MarkdownRenderer from '@/components/hermes/chat/MarkdownRenderer.vue'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { freshnessOf, type Freshness } from '../../../server/memorytax/memory-taxonomy'
 import { toggleScope, clearScope, scopeSummary, type MemoryScopeBoard, type MemoryScopeKind } from '../../../server/memscope/memory-scope'
 
 const { t } = useI18n()
 const message = useMessage()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 const items = ref<Array<{ path: string; name: string; mtime?: number }>>([])
 const loading = ref(false)
@@ -49,7 +51,7 @@ function itemScope(name: string): MemoryScopeKind {
   return name.startsWith('memory/') ? 'global' : 'project'
 }
 
-const hasWorkspace = computed(() => Boolean(ide.workspace))
+const hasWorkspace = computed(() => Boolean(root.value))
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return (q ? items.value.filter(i => i.name.toLowerCase().includes(q)) : items.value)
@@ -75,13 +77,13 @@ async function load(): Promise<void> {
     const push = (path: string, name: string, mtime?: string) => {
       if (!found.some(f => f.path === path)) found.push({ path, name, mtime: mtime ? Date.parse(mtime) || undefined : undefined })
     }
-    const rootRes = await listFiles('', ide.workspace!)
+    const rootRes = await listFiles('', root.value!)
     for (const name of ['AGENTS.md', 'CLAUDE.md', 'MEMORY.md']) {
       const e = rootRes.entries.find(en => en.name === name && !en.isDir)
       if (e) push(name, name, e.modTime)
     }
     if (rootRes.entries.some(e => e.name === 'memory' && e.isDir)) {
-      const memRes = await listFiles('memory', ide.workspace!)
+      const memRes = await listFiles('memory', root.value!)
       for (const e of memRes.entries) {
         if (!e.isDir && e.name.endsWith('.md')) push(`memory/${e.name}`, `memory/${e.name}`, e.modTime)
       }
@@ -105,7 +107,7 @@ async function open(item: { path: string; name: string }): Promise<void> {
   contentLoading.value = true
   content.value = ''
   try {
-    const res = await readFile(item.path, ide.workspace!)
+    const res = await readFile(item.path, root.value!)
     content.value = res.content
   } catch {
     message.error(t('ide.memory.loadFailed'))
@@ -116,7 +118,7 @@ async function open(item: { path: string; name: string }): Promise<void> {
 
 onMounted(load)
 // 工作区切换即重载：否则记忆面板继续读旧目录
-watch(() => ide.workspace, () => void load())
+watch(() => root.value, () => void load())
 </script>
 
 <template>

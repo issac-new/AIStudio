@@ -7,10 +7,12 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { buildTurnOutline, type OutlineEvent } from '../../cockpit/adapters/turn-outline'
 import { fetchEngineRows, findForkAnchor, forkAtAnchor } from '../utils/zcode-fork'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { defineSection, moveTurn, type SessionSection } from '../../../server/sections/session-sections'
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 // ── 会话分节（吸收第一批 C1，codex §三：长会话分节+手动 move）──
 // 分节=纯视图重组（localStorage per session，不动物理消息序）；右键轮项移节。
@@ -98,15 +100,15 @@ function jump(row: TurnRow, ev?: MouseEvent): void {
 /** ⇧点击：从该会话最新稳定 assistant 行分叉（zcode v4 forkAssistant）。 */
 async function forkFromTurn(): Promise<void> {
   const sid = chatStore.activeSessionId
-  if (!sid || !ide.workspace) return
+  if (!sid || !root.value) return
   try {
-    const rows = await fetchEngineRows(ide.workspace, sid)
+    const rows = await fetchEngineRows(root.value, sid)
     const anchor = findForkAnchor(rows)
     if (!anchor) {
       window.alert('未找到可分叉的稳定 assistant 行（需至少一条完整回复）')
       return
     }
-    await forkAtAnchor(ide.workspace, sid, anchor)
+    await forkAtAnchor(root.value, sid, anchor)
   } catch (err) {
     window.alert(err instanceof Error ? err.message : String(err))
   }

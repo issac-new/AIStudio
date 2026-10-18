@@ -7,6 +7,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { fetchEngineRows, type EngineRow } from '../utils/zcode-fork'
 import { authFetch } from '../utils/auth-fetch'
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const rows = ref<EngineRow[]>([])
 const selectedRow = ref<EngineRow | null>(null)
 const busy = ref(false)
@@ -36,8 +38,8 @@ async function loadRows(): Promise<void> {
   if (!sid) return
   try {
     // 优先引擎行缓存（zcode 直连会话）；空时回落 chatStore 消息行（IDE coding-agent 会话）。
-    if (ide.workspace) {
-      const engineRows = await fetchEngineRows(ide.workspace, sid)
+    if (root.value) {
+      const engineRows = await fetchEngineRows(root.value, sid)
       if (engineRows.length > 0) {
         rows.value = engineRows
         selectedRow.value = selectable.value[0] ?? null
@@ -65,14 +67,14 @@ onMounted(() => { if (props.open) void loadRows() })
 
 async function recover(mode: string): Promise<void> {
   const sid = chatStore.activeSessionId
-  if (!sid || !ide.workspace || !selectedRow.value || busy.value) return
+  if (!sid || !root.value || !selectedRow.value || busy.value) return
   busy.value = true
   try {
     const res = await authFetch('/api/zcode-engine/checkpoint/recover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mode, workspacePath: ide.workspace, sessionId: sid,
+        mode, workspacePath: root.value, sessionId: sid,
         rowId: selectedRow.value.rowId, entityId: selectedRow.value.entityId,
         originalQueryText: selectedRow.value.text || undefined,
       }),

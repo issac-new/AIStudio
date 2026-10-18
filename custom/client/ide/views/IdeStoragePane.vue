@@ -13,17 +13,19 @@ const message = useMessage()
 const categories = ref<StorageCategory[]>([])
 const totalBytes = ref(0)
 const partial = ref(false)
+const cached = ref(false)
 const loading = ref(false)
 const confirmTarget = ref<StorageCategory | null>(null)
 const cleaning = ref(false)
 
-async function load(): Promise<void> {
+async function load(force = false): Promise<void> {
   loading.value = true
   try {
-    const snap = await ideStorageApi.snapshot()
+    const snap = await ideStorageApi.snapshot(force)
     categories.value = snap.categories
     totalBytes.value = snap.totalBytes
     partial.value = Boolean(snap.partial)
+    cached.value = Boolean(snap.cached)
   } catch {
     message.error(t('ide.storage.loadFailed'))
   } finally {
@@ -51,15 +53,16 @@ function reveal(cat: StorageCategory): void {
   ideStorageApi.reveal(cat.key).catch(() => message.error(t('ide.storage.revealFailed')))
 }
 
-onMounted(load)
+onMounted(() => { void load() })
 </script>
 
 <template>
   <div class="ide-storage" data-testid="ide-storage-pane">
     <div class="ide-storage__toolbar">
       <span class="ide-storage__title">{{ t('ide.storage.panelTitle') }}</span>
+      <span v-if="cached" class="ide-storage__cached" title="磁盘缓存，后台刷新中">缓存</span>
       <span class="ide-storage__total" :title="partial ? '部分分类扫描超时，显示下限值 / Partial: some scans timed out' : ''">{{ t('ide.storage.total') }}：{{ partial ? '≈ ' : '' }}{{ formatBytes(totalBytes) }}</span>
-      <button type="button" class="ide-storage__btn" data-testid="ide-storage-refresh" @click="load">{{ t('ide.storage.rescan') }}</button>
+      <button type="button" class="ide-storage__btn" data-testid="ide-storage-refresh" @click="load(true)">{{ t('ide.storage.rescan') }}</button>
     </div>
 
     <p v-if="loading" class="ide-storage__hint">{{ t('ide.storage.scanning') }}</p>
@@ -118,6 +121,7 @@ onMounted(load)
 .ide-storage__total { flex: 1; min-width: 0; font-size: 12px; color: var(--text-primary); }
 
 .ide-storage__hint { padding: 16px 12px; font-size: 12px; color: var(--text-muted); }
+.ide-storage__cached { flex-shrink: 0; font-size: 10px; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 4px; }
 
 .ide-storage__list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 8px; }
 

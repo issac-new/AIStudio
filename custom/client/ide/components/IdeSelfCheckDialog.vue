@@ -4,6 +4,7 @@
 // Git/存储/命令/工作流/深链等主链路，输出可复制的报告。
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { authFetch } from '../utils/auth-fetch'
 import {
@@ -15,6 +16,7 @@ import {
 } from '../utils/selfCheck'
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chat = useChatStore()
 
 const results = ref<SelfCheckResult[]>([])
@@ -36,7 +38,7 @@ async function run(): Promise<void> {
   try {
     results.value = await runSelfChecks({
       authFetch,
-      workspace: ide.workspace,
+      workspace: root.value,
       sessionsLoaded: chat.sessionsLoaded,
       sessionCount: chat.sessions.length,
       activeSessionId: chat.activeSessionId,

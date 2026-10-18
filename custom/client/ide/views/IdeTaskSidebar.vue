@@ -30,6 +30,7 @@ import {
 } from '@/api/studio/sessions'
 import { listTasks } from '@/api/hermes/kanban'
 import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { restoreAllArchived } from '../utils/archive-restore'
@@ -48,6 +49,7 @@ const pinsVersion = ref(0)
 prefs.onChange(() => { pinsVersion.value++ })
 const pinnedIds = computed(() => { void pinsVersion.value; return prefs.pinnedIds })
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 // ---- 分组（category）底座 ----
 const categories = ref<SessionCategory[]>([])
@@ -338,7 +340,7 @@ async function onNewTask(): Promise<void> {
     // API 沙箱内，右栏文件树直接 400（2026-10-18 回归实测）。
     codingAgentMode: 'scoped',
     source: 'coding_agent',
-    workspace: ide.workspace,
+    workspace: root.value,
   })
   ide.setChatFocus()
 }
@@ -528,7 +530,7 @@ onMounted(async () => {
               :data-testid="`ide-task-item-${s.id}`"
             >
               <button type="button" class="ide-taskbar__item-main" @click="onOpen(s.id)">
-                <span class="ide-taskbar__item-title">{{ s.title || t('ide.task.untitled') }}</span>
+                <span class="ide-taskbar__item-title">{{ s.title || t('ide.chatUntitled') }}</span>
                 <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.updatedAt || s.createdAt) }}</span>
               </button>
               <NDropdown trigger="click" :options="sessionMenu(s)" @select="(k: string) => onSessionAction(k, s)">
@@ -582,7 +584,7 @@ onMounted(async () => {
                   :class="`ide-taskbar__prio--${(sessionTier(s) || '').toLowerCase()}`"
                   :data-testid="`ide-task-prio-${sessionTier(s)}`"
                 >{{ sessionTier(s) }}</span>
-                <span class="ide-taskbar__item-title">{{ s.title || t('ide.task.untitled') }}</span>
+                <span class="ide-taskbar__item-title">{{ s.title || t('ide.chatUntitled') }}</span>
                 <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.updatedAt || s.createdAt) }}</span>
               </button>
               <NDropdown trigger="click" :options="sessionMenu(s)" @select="(k: string) => onSessionAction(k, s)">
@@ -631,7 +633,7 @@ onMounted(async () => {
             <ul v-else class="ide-taskbar__list">
               <li v-for="s in archived" :key="s.id" class="ide-taskbar__item" :data-testid="`ide-task-archived-${s.id}`">
                 <button type="button" class="ide-taskbar__item-main" @click="onUnarchive(s.id)">
-                  <span class="ide-taskbar__item-title">{{ s.title || t('ide.task.untitled') }}</span>
+                  <span class="ide-taskbar__item-title">{{ s.title || t('ide.chatUntitled') }}</span>
                   <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.last_active) }}</span>
                 </button>
                 <NTooltip trigger="hover">

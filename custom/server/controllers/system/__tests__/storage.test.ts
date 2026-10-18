@@ -62,6 +62,19 @@ describe('storage controller（M2 资源管理器）', () => {
     expect(ctx.body.partial).toBe(false)
   })
 
+  it('snapshot：二次调用命中磁盘缓存（stale-while-revalidate）', async () => {
+    const first = makeCtx()
+    first.query = { refresh: '1' }
+    await findHandler('GET', '/api/ide/storage/snapshot')(first)
+    expect(first.body.cached).toBeUndefined()
+
+    const second = makeCtx()
+    await findHandler('GET', '/api/ide/storage/snapshot')(second)
+    expect(second.body.cached).toBe(true)
+    expect(second.body.cachedAt).toBeTypeOf('number')
+    expect(second.body.totalBytes).toBe(first.body.totalBytes)
+  })
+
   it('snapshot：超过扫描预算时标记 partial（下限值），接口不被大树拖死', async () => {
     // 真实病灶：~/.hermes/hermes-agent 数十万文件，2026-10-18 实测 118s。
     // 这里用大量文件 + 1ms 预算复现「预算内扫不完」，断言 partial 语义。
