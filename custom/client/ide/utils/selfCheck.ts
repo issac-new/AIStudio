@@ -4,9 +4,8 @@
 import { resolveBootSession } from './sessionBoot'
 import { IDE_LOCAL_TEXT, type IdeLocale } from '../i18n'
 
-/** IdeSidePane TABS 静态表项数（files/review/terminal/wiki/memory/ctxarchive/
- *  tools/trajectory/workflow/kanban/assistant/board/browser/storage/mcp/hooks/slash） */
-export const IDE_SIDE_PANE_TAB_COUNT = 17
+/** IdeSidePane TABS 静态表项数（21：原 17 + deliver/genui/remote/plugins） */
+export const IDE_SIDE_PANE_TAB_COUNT = 21
 
 export type SelfCheckStatus = 'pass' | 'warn' | 'fail'
 

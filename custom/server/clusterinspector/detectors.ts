@@ -49,6 +49,9 @@ export interface DetectOptions {
   /** push-stalled 陈化阈 ms（默认 600000=10min：日志尾失败签名新鲜=warn，超阈=high。
    *  48935f58 落地时漏声明导致 ts-node 拒启（2026-10-18 立查立改补型） */
   pushStalledStaleMs?: number
+  /** active-no-artifact 活跃阈 ms（默认 1800000=30min；liveMs ≥2× 升 high。
+   *  4ab303d2 双保留合并漏声明，server tsc 报 TS2339——2026-10-18 补型） */
+  activeNoArtifactMs?: number
   /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
   emptyStreakLimit?: number
   /** 会话饥饿：空转连击阈（默认 3；run20 复盘 D6） */
