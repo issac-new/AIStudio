@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { queryApprovalLog } from '../approvals/approval-log'
+import { governanceRepoRoot } from './repo-root'
 
 export interface NormalizedEvent {
   ts: number
@@ -38,11 +39,6 @@ export interface AuditLogResult {
 }
 
 const SOURCE_IDS = ['approvals', 'domain', 'provider', 'kanban'] as const
-
-function governanceRepoRoot(): string {
-  // GOVERNANCE_REPO 环境变量是配置面单一事实源；默认路径与 governance-controller.ts 对齐。
-  return process.env.GOVERNANCE_REPO || '/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev'
-}
 
 async function openReadonly(dbPath: string) {
   const { DatabaseSync } = await import('node:sqlite')

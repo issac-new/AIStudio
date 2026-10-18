@@ -182,6 +182,17 @@
 - 用户可见导语：运行编排「十九项机械检查」→「二十二项」；「仿真环境的开关面板」→「推演设置」；页签导语注释统一为全流程推演/⑥治理。
 - 保留项（非欠账）：`/app/gov/*`、`/app/sim/trace|delivery`、`/app/runs` 等旧路由的重定向是零断链设计，不删除。
 
+## 六之三、2026-10-19 全页走查结构修复批
+
+- 运行选择器：自动选最新一轮（HEAD 已有）+ 运行中心 `sim-<目录>` 复合 ID 归一为目录名，修掉 `?run=sim-…` 导致的 run-state 404；流程总览/推演总览/阶段页不再停在「选择运行…」空态。
+- 工作台 `/app/collab`、`/app/dash` 补 `standaloneEmbed` 元数据；新增补丁 665 让 GroupChatView 嵌入态只 join 不改父路由，工作台不再跳到 `hermes.groupChatRoom`。
+- 阶段页 G2 页签补 `TAB_COMPONENTS.g2` 映射（此前整页空白）。
+- 工作台 `.wb` 三栏轨道内联 `display:grid`，压过全局同名 `.wb` 的 flex 覆盖，恢复 280/自适应/480 三栏。
+- 推演总览 26 步表在 2/3 轨道内横向溢出会压住右栏六道门：左栏加横向滚动、表加最小宽。
+- 治理仓根统一 `GOVERNANCE_REPO → OBS_SIM_ROOT/central/aipaydev → 历史 NVMe` 回落；`inject.mjs` 校验上游 custom 符号链接目标，修并行 worktree 旧链接导致服务端编旧代码。
+- 推演程序：`ensure_studio_up` 注入 `OBS_SIM_ROOT/SIM_BRANCHES_REPO/SIM_ANCHOR_REPO`；product-dist 快照新鲜度改服务端入口+客户端 index 双 mtime。
+- 验证：overlay 全量 720 文件/5237 用例通过、8 跳过；simharness 门禁 8 文件/181 用例全绿。
+
 ## 七、取代声明
 
 - 本文取代《2026-10-17-fullflow-plan-harness-ia-reconciliation.md》作为**当期**对账总表；旧表冻结为历史依据（其 V8.37 裁决对当时有效）。

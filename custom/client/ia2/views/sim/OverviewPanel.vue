@@ -370,7 +370,9 @@ function goSupervision(): void {
 .ov__tick--done { background: var(--ia-fresh); }
 .ov__tick--active { background: var(--ia-stale); }
 .ov__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
-.ov__main { min-width: 0; }
+.ov__main { min-width: 0; overflow-x: auto; }
+/* 26 步表 5 列在 2/3 轨道里会横向溢出盖住右栏（2026-10-19 走查实证）：给表最小宽+容器横向滚动，右栏不再被压字。 */
+.ov__table { min-width: 760px; }
 .ov__h { margin: 4px 0 6px; font-size: 12px; font-weight: 600; }
 .ov__table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ov__table th, .ov__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
