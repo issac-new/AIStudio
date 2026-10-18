@@ -171,6 +171,19 @@ describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
     expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
   })
 
+  it('featureView 模式：内容区渲染专题视图而非 router-view（专题统一壳）', async () => {
+    const router = makeRouter()
+    await router.push('/app')
+    await router.isReady()
+    const w = mount(IaShell, {
+      props: { featureView: { template: '<div data-testid="feature-stub" />' } },
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+    expect(w.find('[data-testid="feature-stub"]').exists()).toBe(true)
+    w.unmount()
+  })
+
   it('共享武装（自旧驾驶舱壳上移）：onMounted 调 workspace 四件套 + cockpit.bootstrap', async () => {
     const { wrapper } = await mountShell('/app')
     expect(workspaceStubs.state.loadTodos).toHaveBeenCalled()

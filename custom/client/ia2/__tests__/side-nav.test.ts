@@ -149,6 +149,18 @@ describe('IaSideNav — 左侧常驻导航', () => {
     w2.unmount()
   })
 
+  it('收起后展开按钮仍在，点击可恢复展开（2026-10-18 用户实报修复）', async () => {
+    const { w } = await mountAt('/app/stage/build')
+    await w.find('[data-testid="ia-side-nav-collapse"]').trigger('click')
+    expect(w.find('[data-testid="ia-side-nav"]').classes()).toContain('isn--collapsed')
+    // 收起态按钮必须留在 DOM——此前 CSS display:none 导致无法展开
+    expect(w.find('[data-testid="ia-side-nav-collapse"]').exists()).toBe(true)
+    await w.find('[data-testid="ia-side-nav-collapse"]').trigger('click')
+    expect(w.find('[data-testid="ia-side-nav"]').classes()).not.toContain('isn--collapsed')
+    expect(localStorage.getItem('sl:user:sidenav.collapsed')).toBe('false')
+    w.unmount()
+  })
+
   it('旅程页不亮阶段（当前页是总览，不是①搭建）', async () => {
     const { w } = await mountAt('/app')
     const activeStages = w.findAll('.isn-item--active')

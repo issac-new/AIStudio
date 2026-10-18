@@ -8,7 +8,8 @@ export async function registerSkillgov(_app?: App): Promise<void> {
   registerRoute({
     path: '/app/skillgov',
     name: 'ia2.skillgov',
-    component: () => import('./views/SkillgovView.vue'),
+    component: () => import('../ia2/views/IaFeatureShell.vue'),
+    props: { feature: 'skillgov' },
     meta: { fullscreen: true },
   })
   console.log('[Custom] skillgov scan registered (/app/skillgov)')

@@ -8,7 +8,8 @@ export async function registerBpa(_app?: App): Promise<void> {
   registerRoute({
     path: '/app/bpa',
     name: 'ia2.bpa',
-    component: () => import('./views/BpaView.vue'),
+    component: () => import('../ia2/views/IaFeatureShell.vue'),
+    props: { feature: 'bpa' },
     meta: { fullscreen: true },
   })
   console.log('[Custom] bpa process architecture registered (/app/bpa)')

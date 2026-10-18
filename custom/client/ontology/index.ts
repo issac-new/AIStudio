@@ -9,7 +9,8 @@ export async function registerOntology(_app?: App): Promise<void> {
   registerRoute({
     path: '/app/ontology',
     name: 'ia2.ontology',
-    component: () => import('./views/OntologyView.vue'),
+    component: () => import('../ia2/views/IaFeatureShell.vue'),
+    props: { feature: 'ontology' },
     meta: { fullscreen: true },
   })
   console.log('[Custom] ontology studio registered (/app/ontology)')
