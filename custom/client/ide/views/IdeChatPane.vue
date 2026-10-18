@@ -143,18 +143,28 @@ function defaultModelPayload(): { model?: string; provider?: string } {
   return d ? { model: d.model, provider: d.provider } : {}
 }
 
+// 空会话（无消息）若没有模型或模型已不在 ZCode 目录（历史 aim 等），就地换成默认模型；
+// 有对话的会话不动（模型失效由横幅交用户决定）。
+function adoptDefaultModelIfEmpty(session: Session | undefined | null): void {
+  if (!session || (session.messages?.length ?? 0) > 0) return
+  if (engineDefault.value && !catalogHasModel(session.model)) {
+    void chatStore.switchSessionModel(engineDefault.value.model, engineDefault.value.provider, session.id)
+  }
+}
+
 function ensureSession() {
-  if (sessionMatchesAgent(chatStore.activeSession)) return
+  if (sessionMatchesAgent(chatStore.activeSession)) {
+    // 恢复的活动会话也可能是「选择模型...」的空会话（2026-10-18 复测实录）——同样补默认。
+    adoptDefaultModelIfEmpty(chatStore.activeSession)
+    return
+  }
   // 复用最近的同 agent 空会话，避免反复进出页面堆积空会话
   const reusable = chatStore.sessions.find(
     (session) => sessionMatchesAgent(session) && (session.messages?.length ?? 0) === 0,
   )
   if (reusable) {
     void chatStore.switchSession(reusable.id)
-    // 空会话若没有模型或模型已不在 ZCode 目录（历史 aim 等），就地换成默认模型。
-    if (engineDefault.value && !catalogHasModel(reusable.model)) {
-      void chatStore.switchSessionModel(engineDefault.value.model, engineDefault.value.provider, reusable.id)
-    }
+    adoptDefaultModelIfEmpty(reusable)
     return
   }
   chatStore.newChat({
@@ -559,6 +569,20 @@ async function pickEffort(value: string): Promise<void> {
   if (!sid) return
   await chatStore.setSessionReasoningEffort?.(sid, value)
 }
+// 思考档宿主：ChatInput 底栏左簇（设置/模型按钮所在的 .input-top-bar）。宿主属上游
+// 组件 DOM，不在本组件 vnode 树内——挂载后与会话切换后解析一次，宿主脱离文档
+// 即重解析；始终找不到就回落浮层（Teleport disabled 就地渲染）。
+const pickerAnchorEl = ref<HTMLElement | null>(null)
+const effortHost = ref<HTMLElement | null>(null)
+function resolveEffortHost(): void {
+  const host = pickerAnchorEl.value?.querySelector<HTMLElement>('.input-top-bar') ?? null
+  effortHost.value = host && document.contains(host) ? host : null
+}
+onMounted(() => { void nextTick(resolveEffortHost) })
+watch(() => [chatStore.activeSessionId, ready.value], () => { void nextTick(resolveEffortHost) })
+watch(effortLevels, () => {
+  if (effortHost.value && !document.contains(effortHost.value)) void nextTick(resolveEffortHost)
+})
 </script>
 
 <template>
@@ -806,7 +830,7 @@ async function pickEffort(value: string): Promise<void> {
       <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />
       <IdeBgTasksPanel v-if="bgTasksOpen" @close="bgTasksOpen = false" />
       <IdeCompactionCard />
-      <div class="ide-chat__model-picker-anchor">
+      <div ref="pickerAnchorEl" class="ide-chat__model-picker-anchor">
         <ChatInput
           ref="chatInputEl"
           :model-disabled="modelDisabled"
@@ -817,32 +841,41 @@ async function pickEffort(value: string): Promise<void> {
         />
         <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
              reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
-             控件已禁用并隐藏（reasoning-effort-disabled + :deep 隐藏）。 -->
-        <div v-if="effortLevels.length > 0" class="ide-chat__effort" data-testid="ide-effort">
-          <button
-            type="button"
-            class="ide-chat__effort-btn"
-            data-testid="ide-effort-btn"
-            :class="{ 'is-active': !!sessionEffort }"
-            @click="effortOpen = !effortOpen"
-          >{{ effortLabelShort }}</button>
-          <div v-if="effortOpen" class="ide-chat__effort-menu" data-testid="ide-effort-menu">
+             控件已禁用并隐藏。位置与 zcode 一致：Teleport 进 ChatInput 底栏左簇
+             （.input-top-bar，紧挨模型按钮）；找不到宿主时就地浮于输入区右上。 -->
+        <Teleport :to="effortHost" :disabled="!effortHost">
+          <div
+            v-if="effortLevels.length > 0"
+            class="ide-chat__effort"
+            :class="{ 'is-floating': !effortHost }"
+            data-testid="ide-effort"
+          >
             <button
               type="button"
-              class="ide-chat__effort-option"
-              :class="{ 'is-active': sessionEffort === '' }"
-              @click="pickEffort('')"
-            >{{ effortDefaultLabel }}</button>
-            <button
-              v-for="lv in effortLevels"
-              :key="lv"
-              type="button"
-              class="ide-chat__effort-option"
-              :class="{ 'is-active': sessionEffort === lv }"
-              @click="pickEffort(lv)"
-            >{{ effortLevelLabel(lv) }}</button>
+              class="ide-chat__effort-btn"
+              data-testid="ide-effort-btn"
+              :class="{ 'is-active': !!sessionEffort }"
+              :title="effortLabelShort"
+              @click="effortOpen = !effortOpen"
+            >{{ effortLabelShort }}<span class="ide-chat__effort-caret">▾</span></button>
+            <div v-if="effortOpen" class="ide-chat__effort-menu" data-testid="ide-effort-menu">
+              <button
+                type="button"
+                class="ide-chat__effort-option"
+                :class="{ 'is-active': sessionEffort === '' }"
+                @click="pickEffort('')"
+              >{{ effortDefaultLabel }}</button>
+              <button
+                v-for="lv in effortLevels"
+                :key="lv"
+                type="button"
+                class="ide-chat__effort-option"
+                :class="{ 'is-active': sessionEffort === lv }"
+                @click="pickEffort(lv)"
+              >{{ effortLevelLabel(lv) }}</button>
+            </div>
           </div>
-        </div>
+        </Teleport>
         <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
           <div
             v-for="group in modelGroupsView"
@@ -1185,35 +1218,44 @@ async function pickEffort(value: string): Promise<void> {
   :deep(.reasoning-effort-button) { display: none; }
 }
 
-// Ycode 思考档：浮在输入区右上角。composer 底部行（模型按钮/发送）在窄列下
-// 已占满，且 input-wrapper 的层级会盖住 anchor 内兄弟绝对定位元素（2026-10-18
-// 实测按钮渲染在 (485,787) 却被 input-wrapper 覆盖不可见）——放行上方右缘并
-// 提高 z-index 保证可见可点。
+// Ycode 思考档：默认 Teleport 进 ChatInput 底栏左簇（紧挨模型按钮，zcode 风格：
+// 模型与思考档并排）；按钮样式对齐模型按钮（quaternary tiny：无边框胶囊、12px、
+// 22px 高）。is-floating=找不到宿主时的回落（就地浮于输入区右上，2026-10-18 实测
+// 右下定位会被 input-wrapper 层级盖住）。
 .ide-chat__effort {
-  position: absolute;
-  top: -32px;
-  right: 6px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   z-index: 20;
-}
-.ide-chat__effort-btn {
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-muted);
-  font-size: 11px;
-  padding: 3px 8px;
-  cursor: pointer;
-  font-family: inherit;
-  &:hover { color: var(--text-primary); }
-  &.is-active {
-    color: var(--accent-primary);
-    border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  &.is-floating {
+    position: absolute;
+    top: -32px;
+    right: 6px;
   }
 }
+.ide-chat__effort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+  &.is-active { color: var(--accent-primary); }
+}
+.ide-chat__effort-caret { font-size: 10px; opacity: 0.7; }
 .ide-chat__effort-menu {
   position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
+  left: 0;
+  bottom: calc(100% + 6px);
   min-width: 108px;
   padding: 4px;
   border: 1px solid var(--border-color);
@@ -1223,6 +1265,9 @@ async function pickEffort(value: string): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  z-index: 30;
+  // 回落浮层在输入区上方：菜单改向下开、靠右对齐
+  .is-floating & { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; }
 }
 .ide-chat__effort-option {
   border: none;
