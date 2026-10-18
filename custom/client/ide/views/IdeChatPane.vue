@@ -95,7 +95,6 @@ import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEnt
 import { showToast } from '../utils/toast'
 import { authFetch } from '../utils/auth-fetch'
 import { buildNewTaskOptions, sessionTaskMode, explicitTaskMode, type IdeTaskMode } from '../utils/task-mode'
-import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
