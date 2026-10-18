@@ -2208,9 +2208,9 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
         _tg="${_tr}evidence/governance-report.md"
         if [ -f "$_tg" ]; then
           # 裁到比值（门细节在该轮自己的报告里，趋势表只带比值防单元格爆宽）
-          _tfp=$(grep -E ',首过率,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | sed 's/（.*//' )
-          _trej=$(grep -E ',打回率,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | cut -d,  -f1)
-          _tdens=$(grep -E ',缺陷密度,' "$_tg" 2>/dev/null | tail -1 | cut -d, -f5 | cut -d,  -f1)
+          _tfp=$( { grep -E ',首过率,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | sed 's/（.*//' )
+          _trej=$( { grep -E ',打回率,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | cut -d, -f1)
+          _tdens=$( { grep -E ',缺陷密度,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | cut -d, -f1)
         else
           _tfp=""; _trej=""; _tdens=""
         fi
