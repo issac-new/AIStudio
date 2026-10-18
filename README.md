@@ -16,7 +16,7 @@
 cd simharness
 bash mux/mx-setup.sh                  # 环境供给：账号/看板/团队/记忆库/中央仓，可反复跑
 bash mux/mx-up.sh                     # 起单 gateway(:8801) + 单 studio(:8802)
-bash mux/mx-prelaunch-check.sh        # 开跑前九项核验，全绿才开跑
+bash mux/mx-prelaunch-check.sh        # 开跑前二十项核验，全绿才开跑
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 ```
 
@@ -27,10 +27,23 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 | 路径 | 是什么 |
 |---|---|
 | `aipay-scenario.sh` | 主驱动：26 步逐段推进、关卡判读、凭证核验、回灌打回 |
-| `mux/` | 工具链：环境供给与清理（mx-setup/mx-up/mx-clean）、报告生成与审计（mx-report-gen/mx-report-audit/final-report-merge）、证据采集（r18-collect/r18-frames/capture-ui）、帧拍摄位注册表（capture-plan.env）、术语词表（glossary.txt） |
+| `mux/` | 工具链：环境供给与清理（mx-setup/mx-up/mx-clean）、报告生成与审计（mx-report-gen/mx-report-audit/final-report-merge）、证据采集（r18-collect/r18-frames/capture-ui）、Harness 运行面快照（mx-harness-snapshot.sh）、帧拍摄位注册表（capture-plan.env）、术语词表（glossary.txt） |
 | `materials/` | 需求单（RFD-001 收银台等，含 OCR 样张），换轮换单 |
 | `tests/` | 守门套件：vitest 143 测（run-gates.sh 入口）+ 隔离边界三断言 |
 | `mux/run13-lite-round-plan.md` | lite 回归轮设计正本（夹具三类与边界代价） |
+
+## Harness 运行面证据（V8.42）
+
+产品侧 2026-10-18 落地九层运行底座（工具契约/审计 v3/身份与委托/审批凭证/运行清单/
+预算/沙箱/恢复判定/评测）。推演在两个时点固化证据：
+
+```bash
+# 开跑基线（驱动 smoke 步自动调用）与合规审计时点（驱动步 23 自动调用）
+bash mux/mx-harness-snapshot.sh --out <run>/evidence/harness/harness-summary.json --token <JWT> --require
+```
+
+快照写 `harness-summary.json` + `harness-summary.md`，报告第 9 章「证据七：Harness 运行面」
+引用；端点缺席如实标 ⬜ 并记问题单，不阻断主链。prelaunch ⑳ 检查生效 dist 是否含六个新端点。
 
 ## 测试
 
