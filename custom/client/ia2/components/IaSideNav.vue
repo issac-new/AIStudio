@@ -252,6 +252,8 @@ function go(name: string): void {
   border-bottom: 1px solid var(--border-color);
 }
 .isn--collapsed .isn__brand { justify-content: center; padding: 0; }
+/* 收起后隐藏品牌字标，但展开按钮必须留在原地——否则没有回到展开态的入口 */
+.isn--collapsed .isn__logo { display: none; }
 .isn__logo {
   width: 22px;
   height: 22px;
@@ -287,7 +289,13 @@ function go(name: string): void {
   line-height: 1;
 }
 .isn__collapse:hover { color: var(--text-primary); background: var(--bg-secondary); }
-.isn--collapsed .isn__collapse { display: none; }
+.isn--collapsed .isn__collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
 .isn__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 8px 12px; }
 .isn__group + .isn__group { margin-top: 8px; }
 .isn__label {

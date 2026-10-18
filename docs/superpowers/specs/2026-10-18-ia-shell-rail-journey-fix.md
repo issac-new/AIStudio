@@ -29,3 +29,8 @@
 - 补充：运行总览页删除手打运行目录名输入，改 `useRunContext` + 页头 RunSelector 单一入口；无运行时引导去页头选择。
 - D-5（2026-10-18 用户二次走访）：上游 `StudioNavigationRail` 在 IDE 壳仍以 64px 显示。改为 `ia2.scss` 全局 `.studio-navigation-rail { display: none !important; }`——rail 全站退役，不再依赖 `ia-center-full` 按壳/按页隐藏；body 类 retain 保留但 rail 已不参与布局。
 - D-6（2026-10-18 用户三次走访）：专题页（流程架构/本体/评测/技能治理）是独立注册的 fullscreen 路由，不经过 IaShell，`ia2.scss` 里的 rail 规则对它们不生效。规则移到 `ia2/styles/shell-overrides.scss`，由 `ia2/index.ts` 在 bootstrap 顶层静态导入——冷启动直达 /app/ide、/app/bpa、/app/ontology、/app/eval、/app/skillgov 均生效。
+
+## 补充（2026-10-18 专题统一壳 + 收起展开）
+
+- 专题四个路由（/app/bpa、/app/ontology、/app/eval、/app/skillgov）改为 `IaFeatureShell`，复用 `IaShell` 的 `IaGlobalTop` + `IaSideNav` + 同一内容区；路由只传 `feature`，视图仍懒加载。专题页从此与「沟通协作」同布局。
+- 左侧栏收起后展开按钮不再 `display:none`（收起态隐藏 logo 腾位，按钮居中常驻），修复用户实报「收起来后不能展开」。

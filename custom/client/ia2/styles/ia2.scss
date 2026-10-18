@@ -89,6 +89,14 @@
   overflow: hidden;
 }
 
+// 专题页复用壳：专题视图自身不定高，由本层收纳滚动（与阶段页/工作台同壳）
+.ia-shell__feature {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 // 页面根节点占满内容列（沿用退役 LoopCockpitView 的 .lcp 子项规则）
 .ia-shell__content > :first-child {
   flex: 1 1 auto;

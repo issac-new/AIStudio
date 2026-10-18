@@ -9,7 +9,8 @@ export async function registerEval(_app?: App): Promise<void> {
   registerRoute({
     path: '/app/eval',
     name: 'ia2.eval',
-    component: () => import('./views/EvalView.vue'),
+    component: () => import('../ia2/views/IaFeatureShell.vue'),
+    props: { feature: 'eval' },
     meta: { fullscreen: true },
   })
   console.log('[Custom] eval studio registered (/app/eval)')
