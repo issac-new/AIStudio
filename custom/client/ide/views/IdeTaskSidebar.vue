@@ -36,6 +36,9 @@ import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archived
 import { restoreAllArchived } from '../utils/archive-restore'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
 import { bucketSessions } from '../utils/sessionBuckets'
+import { engineDefaultFromCache } from '../utils/engine-models'
+import { buildNewTaskOptions, sessionTaskMode } from '../utils/task-mode'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -50,6 +53,12 @@ prefs.onChange(() => { pinsVersion.value++ })
 const pinnedIds = computed(() => { void pinsVersion.value; return prefs.pinnedIds })
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
+const { locale } = useI18n()
+const modeText = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].mode)
+/** 任务模式徽标：编/工（派生自会话，不新增服务端字段） */
+function taskModeBadge(s: Session): string {
+  return sessionTaskMode(s) === 'work' ? modeText.value.workShort : modeText.value.codingShort
+}
 
 // ---- 分组（category）底座 ----
 const categories = ref<SessionCategory[]>([])
@@ -328,20 +337,29 @@ async function onRestoreAllArchived(): Promise<void> {
 async function onOpen(id: string): Promise<void> {
   emit('open', id)
   await chat.switchSession(id)
+  // 打开哪类任务，新建任务模式跟随（模型取源随会话类型，避免 Ycode 模型写到
+  // Hermes 会话上误报失效）；界面模式不跟随（呈现偏好是全局的）。
+  const opened = chat.sessions.find((s) => s.id === id)
+  if (opened) ide.setTaskMode(sessionTaskMode(opened))
   ide.setChatFocus()
 }
 
 async function onNewTask(): Promise<void> {
-  await chat.newChat({
-    agent: ideAgentToChatAgent(ide.agentId) as never,
+  // 编程/工作双模式（2026-10-18）：编程任务走 zcode 编码会话 + 工作区；
+  // 工作任务走 hermes 通用助手，不绑仓库（Qoder 通用模式 / OpenAI Work 同型）。
+  const mode = ide.taskMode ?? 'coding'
+  const d = mode === 'coding' ? engineDefaultFromCache() : null
+  const created = chat.newChat(buildNewTaskOptions({
+    mode,
     codingAgentId: ide.agentId,
-    // 与命令面板「新建会话」同口径：scoped 才使用传入的 workspace；
-    // global 会落到 coding-agent 默认目录 ~/.hermes-web-ui/...，不在文件
-    // API 沙箱内，右栏文件树直接 400（2026-10-18 回归实测）。
-    codingAgentMode: 'scoped',
-    source: 'coding_agent',
+    chatAgent: ideAgentToChatAgent(ide.agentId),
     workspace: root.value,
-  })
+    model: d?.model,
+    provider: d?.provider,
+  }) as unknown as Parameters<typeof chat.newChat>[0])
+  // 新建即进入会话：外壳据此收起裸落地引导（否则新任务被「从一个任务开始」挡在
+  // 后面，用户要点一下「进入会话工作区」才看得见刚建的任务）。
+  emit('open', created.id)
   ide.setChatFocus()
 }
 
@@ -420,6 +438,26 @@ onMounted(async () => {
 
 <template>
   <aside class="ide-taskbar" :aria-label="t('ide.task.sectionLabel')">
+    <!-- 编程/工作双模式：决定「新建任务」创建哪种内核（编程=编码引擎+工作区；
+         工作=通用助手，不绑仓库）。呈现层差异见 ide.interfaceMode。 -->
+    <div class="ide-taskbar__modes" role="group" :aria-label="modeText.desc">
+      <button
+        type="button"
+        class="ide-taskbar__mode-btn"
+        :class="{ 'is-active': (ide.taskMode ?? 'coding') === 'coding' }"
+        :title="modeText.newCodingHint"
+        data-testid="ide-task-mode-coding"
+        @click="ide.setTaskMode('coding')"
+      >{{ modeText.newCoding }}</button>
+      <button
+        type="button"
+        class="ide-taskbar__mode-btn"
+        :class="{ 'is-active': ide.taskMode === 'work' }"
+        :title="modeText.newWorkHint"
+        data-testid="ide-task-mode-work"
+        @click="ide.setTaskMode('work')"
+      >{{ modeText.newWork }}</button>
+    </div>
     <div class="ide-taskbar__actions">
       <button type="button" class="ide-taskbar__action" data-testid="ide-task-new" @click="onNewTask">
         <span class="ide-taskbar__action-label">
@@ -530,6 +568,12 @@ onMounted(async () => {
               :data-testid="`ide-task-item-${s.id}`"
             >
               <button type="button" class="ide-taskbar__item-main" @click="onOpen(s.id)">
+                <span
+                  class="ide-taskbar__mode-badge"
+                  :class="`is-${sessionTaskMode(s)}`"
+                  :data-testid="`ide-task-mode-badge-${s.id}`"
+                  :title="sessionTaskMode(s) === 'work' ? modeText.newWork : modeText.newCoding"
+                >{{ taskModeBadge(s) }}</span>
                 <span class="ide-taskbar__item-title">{{ s.title || t('ide.chatUntitled') }}</span>
                 <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.updatedAt || s.createdAt) }}</span>
               </button>
@@ -584,6 +628,12 @@ onMounted(async () => {
                   :class="`ide-taskbar__prio--${(sessionTier(s) || '').toLowerCase()}`"
                   :data-testid="`ide-task-prio-${sessionTier(s)}`"
                 >{{ sessionTier(s) }}</span>
+                <span
+                  class="ide-taskbar__mode-badge"
+                  :class="`is-${sessionTaskMode(s)}`"
+                  :data-testid="`ide-task-mode-badge-${s.id}`"
+                  :title="sessionTaskMode(s) === 'work' ? modeText.newWork : modeText.newCoding"
+                >{{ taskModeBadge(s) }}</span>
                 <span class="ide-taskbar__item-title">{{ s.title || t('ide.chatUntitled') }}</span>
                 <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.updatedAt || s.createdAt) }}</span>
               </button>
@@ -665,6 +715,30 @@ onMounted(async () => {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   min-height: 0;
+}
+
+/* 编程/工作任务双按钮：决定新建任务的内核（不是界面模式开关） */
+.ide-taskbar__modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 8px 8px 0;
+}
+.ide-taskbar__mode-btn {
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ide-taskbar__mode-btn:hover { color: var(--text-primary); border-color: var(--primary-color); }
+.ide-taskbar__mode-btn.is-active {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  font-weight: 600;
 }
 
 .ide-taskbar__actions {
@@ -912,6 +986,19 @@ onMounted(async () => {
 }
 
 .ide-taskbar__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 任务模式徽标：编程=蓝、工作=绿（与状态栏 chip 同色系） */
+.ide-taskbar__mode-badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 16px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.ide-taskbar__mode-badge.is-coding { color: var(--primary-color); border-color: color-mix(in srgb, var(--primary-color) 45%, transparent); }
+.ide-taskbar__mode-badge.is-work { color: var(--success-color); border-color: color-mix(in srgb, var(--success-color) 45%, transparent); }
 
 .ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
 

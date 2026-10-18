@@ -18,12 +18,14 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { buildReviewPrompt } from '../utils/reviewPrompt'
 import { engineDefaultFromCache } from '../utils/engine-models'
+import { interfaceModeEffects } from '../utils/interface-mode'
+import { buildNewTaskOptions } from '../utils/task-mode'
 
 interface PaletteItem {
   id: string
-  /** i18n 键（导航项复用 ide.links.*，命令用 ide.paletteCmd*） */
-  labelKey: string
-  /** 运行时数据文案（会话标题等，不走 i18n；非空时优先于 labelKey） */
+  /** i18n 键（导航项复用 ide.links.*，命令用 ide.paletteCmd*）；label 在场的运行时文案二选一 */
+  labelKey?: string
+  /** 运行时数据文案（会话标题/本地字典等，不走 i18n；非空时优先于 labelKey） */
   label?: string
   run: () => void
 }
@@ -71,28 +73,39 @@ const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } 
 
 /** 命令区：布局开关 + 会话动作 + 导航（全量构建后按 query 过滤） */
 const commandItems = computed<PaletteItem[]>(() => {
+  const modeText = IDE_LOCAL_TEXT[ideLocaleOf(locale)].mode
+  const effects = interfaceModeEffects(ide.interfaceMode ?? 'coding')
+  // 工作模式隐藏终端/审查直达项（zcode quickPick supportsTerminal/supportsReview=false）
+  const paneTargets = PANE_TARGETS.filter((pane) =>
+    (pane !== 'terminal' || effects.showTerminal) && (pane !== 'review' || effects.showReview))
   const items: PaletteItem[] = [
     {
       id: 'cmd:new-session',
       labelKey: 'ide.paletteCmdNewSession',
       run: () => {
-        // 与输入区/标题栏的新会话一致：默认模型取 ZCode 目录（IdeChatPane 挂载时已缓存）。
+        // 与输入区/标题栏的新会话一致：编程任务取 ZCode 目录默认模型，工作任务走通用助手。
         const d = engineDefaultFromCache()
-        chatStore.newChat({
-          agent: ideAgentToChatAgent(ide.agentId) as never,
+        chatStore.newChat(buildNewTaskOptions({
+          mode: ide.taskMode ?? 'coding',
           codingAgentId: ide.agentId,
-          codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
-          source: 'coding_agent',
+          chatAgent: ideAgentToChatAgent(ide.agentId),
           workspace: root.value,
-          ...(d ? { model: d.model, provider: d.provider } : {}),
-        })
+          model: d?.model,
+          provider: d?.provider,
+        }) as unknown as Parameters<typeof chatStore.newChat>[0])
       },
     },
     {
+      // 编程/工作界面模式切换（Cmd/Ctrl+Shift+U 同源动作；zcode office/coding 语义）
+      id: 'cmd:toggle-interface-mode',
+      label: (ide.interfaceMode ?? 'coding') === 'work' ? modeText.switchToCoding : modeText.switchToWork,
+      run: () => { ide.toggleInterfaceMode() },
+    },
+    ...(effects.showTerminal ? [{
       id: 'cmd:toggle-terminal',
       labelKey: 'ide.paletteCmdToggleTerminal',
       run: () => { ide.toggleSidePane('terminal') },
-    },
+    }] : []),
     {
       id: 'cmd:toggle-workspace',
       labelKey: 'ide.paletteCmdToggleWorkspace',
@@ -111,7 +124,7 @@ const commandItems = computed<PaletteItem[]>(() => {
       label: IDE_LOCAL_TEXT[ideLocaleOf(locale)].selfCheckCommand,
       run: () => { ide.openSelfCheck() },
     },
-    ...PANE_TARGETS.map(pane => ({
+    ...paneTargets.map(pane => ({
       id: `pane:${pane}`,
       label: paneLabel(pane),
       run: () => { ide.sidePane.open = true; ide.setSidePaneTab(pane) },

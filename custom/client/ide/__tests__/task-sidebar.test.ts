@@ -24,13 +24,14 @@ const { switchSession, newChat, loadSessions, archiveSession, deleteSession } = 
 }))
 
 const sessions = [
-  { id: 's-pin-a', title: '置顶任务A', workspace: '/lab/ncwk', updatedAt: Date.now() - 60_000, createdAt: 0 },
-  { id: 's-pin-b', title: '置顶任务B', workspace: '/lab/other', updatedAt: Date.now() - 3_600_000, createdAt: 0 },
-  { id: 's-active', title: '当前任务', workspace: '/lab/ncwk', updatedAt: Date.now(), createdAt: 0 },
-  { id: 's-other', title: '另一个仓库的任务', workspace: '/lab/other', updatedAt: Date.now() - 10_000, createdAt: 0 },
+  { id: 's-pin-a', title: '置顶任务A', workspace: '/lab/ncwk', updatedAt: Date.now() - 60_000, createdAt: 0, codingAgentMode: 'scoped' },
+  { id: 's-pin-b', title: '置顶任务B', workspace: '/lab/other', updatedAt: Date.now() - 3_600_000, createdAt: 0, codingAgentMode: 'scoped' },
+  { id: 's-active', title: '当前任务', workspace: '/lab/ncwk', updatedAt: Date.now(), createdAt: 0, codingAgentMode: 'scoped' },
+  { id: 's-other', title: '另一个仓库的任务', workspace: '/lab/other', updatedAt: Date.now() - 10_000, createdAt: 0, codingAgentMode: 'scoped' },
+  // 唯一无编码标记的会话：工作任务的徽标/新建分流用
   { id: 's-none', title: '无工作区任务', workspace: null, updatedAt: Date.now() - 5_000, createdAt: 0 },
-  { id: 's-extra1', title: '填充1', workspace: '/lab/ncwk', updatedAt: 1, createdAt: 0 },
-  { id: 's-extra2', title: '填充2', workspace: '/lab/ncwk', updatedAt: 1, createdAt: 0 },
+  { id: 's-extra1', title: '填充1', workspace: '/lab/ncwk', updatedAt: 1, createdAt: 0, codingAgentMode: 'scoped' },
+  { id: 's-extra2', title: '填充2', workspace: '/lab/ncwk', updatedAt: 1, createdAt: 0, codingAgentMode: 'scoped' },
 ]
 
 vi.mock('@/stores/hermes/chat', () => ({
@@ -181,6 +182,31 @@ describe('IdeTaskSidebar', () => {
       codingAgentMode: 'scoped',
       source: 'coding_agent',
     }))
+  })
+
+  it('工作任务：双按钮切到工作模式后新建 hermes 通用会话（不绑仓库、无 codingAgentId）', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    // 默认编程模式按钮激活
+    expect(w.find('[data-testid="ide-task-mode-coding"]').classes()).toContain('is-active')
+    await w.find('[data-testid="ide-task-mode-work"]').trigger('click')
+    expect(w.find('[data-testid="ide-task-mode-work"]').classes()).toContain('is-active')
+
+    await w.find('[data-testid="ide-task-new"]').trigger('click')
+    expect(newChat).toHaveBeenCalledWith({ agent: 'hermes', source: 'cli', workspace: null })
+    const calls = newChat.mock.calls as unknown as Array<[Record<string, unknown>]>
+    const payload = calls[calls.length - 1]?.[0] ?? {}
+    expect(payload).not.toHaveProperty('codingAgentId')
+    expect(payload).not.toHaveProperty('model')
+  })
+
+  it('任务行模式徽标：有 codingAgentMode/codingAgentId=编程、无=工作', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-task-mode-badge-s-other"]').text()).toBe('编程')
+    expect(w.find('[data-testid="ide-task-mode-badge-s-other"]').classes()).toContain('is-coding')
+    expect(w.find('[data-testid="ide-task-mode-badge-s-none"]').text()).toBe('工作')
+    expect(w.find('[data-testid="ide-task-mode-badge-s-none"]').classes()).toContain('is-work')
   })
 
   it('置顶开关走 sessionBrowserPrefs（与历史页全局一致）', async () => {

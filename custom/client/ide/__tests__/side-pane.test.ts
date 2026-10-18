@@ -77,6 +77,25 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     expect(w.find('[data-testid="stub-wikipane"]').exists()).toBe(true)
   })
 
+  it('工作模式：隐藏终端/审查页签；停留终端时回落 files；切回编程恢复', async () => {
+    const ide = useIdeStore()
+    ide.setSidePaneTab('terminal')
+    const w = mountPane()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-sidepane-tab-terminal"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-sidepane-tab-review"]').exists()).toBe(true)
+
+    ide.setInterfaceMode('work')
+    await flushPromises()
+    expect(w.find('[data-testid="ide-sidepane-tab-terminal"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-sidepane-tab-review"]').exists()).toBe(false)
+    expect(ide.sidePane.tab).toBe('files')
+
+    ide.setInterfaceMode('coding')
+    await flushPromises()
+    expect(w.find('[data-testid="ide-sidepane-tab-terminal"]').exists()).toBe(true)
+  })
+
   it('分组整合（2026-10-04 用户裁定）：默认编码组 3 签、全部组 17 签齐备、外部深链自动切组、关闭收起', async () => {
     const ide = useIdeStore()
     ide.sidePane.open = true
