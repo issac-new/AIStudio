@@ -685,7 +685,15 @@ for blk in blocks:
         if o_cnt == 0:
             _r18_rep(f'R18 步 {n} 缺「操作前后帧」（真 UI 操作步必采——r18-frames.mjs 拍摄+collect op）{_r18_suffix}')
         else:
-            _fr = len(re.findall(r'class="shot r18-shot"', blk))
+            # 帧数核验按「本步 ops 帧在本步块内实际嵌入数」计（V8.4② 单嵌设计：步条 imgs 先渲染
+            # 拥有帧、r18 挂接侧让位——同一帧只嵌一处，条带嵌与 r18 嵌同权计入，避免按 r18-shot
+            # 类名一刀切把「条带先嵌」形态误判零帧；run21 实锤：步条先嵌 ops 帧→r18 让位→
+            # r18-shot 计 0→误 FAIL，而帧在报告内真实在位）。缺文件仍走「帧缺失」兄弟检查。
+            _ops_frames: list = []
+            for _og in (((_r18_payloads.get(str(n)) or _r18_payloads.get(n) or {}).get('ops')) or []):
+                _ops_frames += [str(_f) for _f in (_og.get('frames') or [])]
+            _fr = sum(1 for _fn in _ops_frames
+                      if re.search(rf'screenshots/steps/{re.escape(_fn if _fn.endswith(".png") else _fn + ".png")}"', blk))
             if _fr < 2 * o_cnt:
                 _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）{_r18_suffix}')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
