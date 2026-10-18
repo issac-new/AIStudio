@@ -33,7 +33,32 @@ export function builtinManifest(): ProvisionManifest {
 export function manifestPath(): string {
   const env = process.env.SKILL_PROVISION_MANIFEST?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'skill-provisioning.json')
+  return manifestCandidates()[0]
+}
+
+function sharedProfilesRoot(): string {
+  const env = process.env.HERMES_PROFILES_ROOT?.trim()
+  if (env) return resolve(env.replace(/^~/, homedir()))
+  return join(homedir(), '.hermes', 'profiles')
+}
+
+/**
+ * 清单读取候选链（2026-10-18 多机轮）：env 显式 > 中央仓 `_shared/skill-provisioning.json`
+ * （版本化、多机同步）> 本地 webui 目录 > 内置示例。中央仓在位即接管期望源。
+ */
+export function manifestCandidates(): string[] {
+  const env = process.env.SKILL_PROVISION_MANIFEST?.trim()
+  const central = join(sharedProfilesRoot(), '_shared', 'skill-provisioning.json')
+  const local = join(homedir(), '.hermes-web-ui', 'overlay', 'skill-provisioning.json')
+  return env ? [resolve(env.replace(/^~/, homedir())), central, local] : [central, local]
+}
+
+/** 首个在位的候选；全缺时返回首选路径（报告里如实标 source=builtin）。 */
+export function resolveManifestPath(): string {
+  for (const candidate of manifestCandidates()) {
+    if (existsSync(candidate)) return candidate
+  }
+  return manifestCandidates()[0]
 }
 
 function validateMatch(value: unknown): string {
@@ -77,8 +102,8 @@ export function normalizeManifest(raw: unknown): ProvisionManifest {
   return { version: 1, roles }
 }
 
-/** 读 manifest；缺失/坏文件降级为内置示例并如实带 errors。 */
-export function loadManifest(path: string = manifestPath()): ManifestLoad {
+/** 读 manifest；缺省沿候选链取首个在位；缺失/坏文件降级内置示例并如实带 errors。 */
+export function loadManifest(path: string = resolveManifestPath()): ManifestLoad {
   if (!existsSync(path)) {
     return { path, exists: false, source: 'builtin', manifest: builtinManifest(), errors: [] }
   }

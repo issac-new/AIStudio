@@ -98,6 +98,30 @@ export interface ProvisionRollbackResultDto {
   profiles: ProvisionRollbackProfileDto[]
   summary: { profiles: number; planned: number; removed: number; skipped: number; failed: number }
 }
+export interface FleetProfileSummaryDto {
+  profile: string
+  role: string | null
+  skillCount: number
+  skills: string[]
+}
+export interface FleetMachineDto {
+  machine: string
+  file: string
+  generatedAt: number
+  ageMinutes: number
+  stale: boolean
+  profiles: FleetProfileSummaryDto[]
+  totalSkills: number
+}
+export interface FleetReportDto {
+  ok: true
+  dir: string
+  available: boolean
+  note?: string
+  machines: FleetMachineDto[]
+  generatedAt: number
+  bad: string[]
+}
 export interface ProvisionManifestDto {
   ok: true
   path: string
@@ -129,6 +153,7 @@ export const skillgovApi = {
     }),
   latestScan: () => req<SkillScanSummaryDto>('/api/skillgov/scan/latest'),
   provisionReport: () => req<{ ok: true; report: ProvisionReportDto }>('/api/skillgov/provision/report'),
+  fleetReport: () => req<FleetReportDto>('/api/skillgov/provision/fleet'),
   getProvisionManifest: () => req<ProvisionManifestDto>('/api/skillgov/provision/manifest'),
   putProvisionManifest: (manifest: ProvisionManifestDto['manifest']) =>
     req<{ ok: true; path: string; backup?: string }>('/api/skillgov/provision/manifest', {

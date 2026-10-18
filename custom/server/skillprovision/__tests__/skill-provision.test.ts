@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { scanSkillRoot } from '../scan'
-import { matchRole, normalizeManifest } from '../manifest'
+import { loadManifest, matchRole, normalizeManifest, resolveManifestPath } from '../manifest'
 import { buildReport, readDisabledSkills } from '../reconcile'
 import { applyProvision, hashDir, rollbackProvision } from '../provision'
 import type { ProvisionManifest } from '../types'
@@ -115,6 +115,50 @@ describe('matchRole', () => {
       { match: '*', skills: ['two'] },
     ]
     expect(matchRole('a-x', tied)).toEqual({ match: '*', skills: ['one', 'two'] })
+  })
+})
+
+describe('manifest 候选链（env > 中央 _shared > 本地 webui > 内置）', () => {
+  const savedProfilesRoot = process.env.HERMES_PROFILES_ROOT
+  const savedManifest = process.env.SKILL_PROVISION_MANIFEST
+  afterEach(() => {
+    if (savedProfilesRoot === undefined) delete process.env.HERMES_PROFILES_ROOT
+    else process.env.HERMES_PROFILES_ROOT = savedProfilesRoot
+    if (savedManifest === undefined) delete process.env.SKILL_PROVISION_MANIFEST
+    else process.env.SKILL_PROVISION_MANIFEST = savedManifest
+  })
+
+  it('中央仓 _shared 在位时接管期望源', () => {
+    const centralDir = join(root, 'profiles', '_shared')
+    mkdirSync(centralDir, { recursive: true })
+    writeFileSync(join(centralDir, 'skill-provisioning.json'), JSON.stringify({ version: 1, roles: [{ match: '*', skills: ['central-x'] }] }))
+    process.env.HERMES_PROFILES_ROOT = join(root, 'profiles')
+    const loaded = loadManifest()
+    expect(loaded.source).toBe('file')
+    expect(loaded.path).toBe(join(centralDir, 'skill-provisioning.json'))
+    expect(matchRole('anyone', loaded.manifest.roles)?.skills).toEqual(['central-x'])
+  })
+
+  it('env 显式路径压过中央仓', () => {
+    const centralDir = join(root, 'profiles', '_shared')
+    mkdirSync(centralDir, { recursive: true })
+    writeFileSync(join(centralDir, 'skill-provisioning.json'), JSON.stringify({ version: 1, roles: [{ match: '*', skills: ['central-x'] }] }))
+    const envPath = join(root, 'env-manifest.json')
+    writeFileSync(envPath, JSON.stringify({ version: 1, roles: [{ match: '*', skills: ['env-x'] }] }))
+    process.env.HERMES_PROFILES_ROOT = join(root, 'profiles')
+    process.env.SKILL_PROVISION_MANIFEST = envPath
+    const loaded = loadManifest()
+    expect(loaded.path).toBe(envPath)
+    expect(matchRole('anyone', loaded.manifest.roles)?.skills).toEqual(['env-x'])
+  })
+
+  it('全缺时回落内置且路径指向首选候选', () => {
+    process.env.HERMES_PROFILES_ROOT = join(root, 'profiles') // 无 _shared 清单
+    process.env.SKILL_PROVISION_MANIFEST = join(root, 'absent.json')
+    const loaded = loadManifest()
+    expect(loaded.source).toBe('builtin')
+    expect(loaded.path).toBe(join(root, 'absent.json'))
+    expect(resolveManifestPath()).toBe(join(root, 'absent.json'))
   })
 })
 
