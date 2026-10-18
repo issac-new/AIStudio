@@ -6,26 +6,42 @@
 // 开关经 ide.toggleSidePane（IdeStatusBar 面板切换按钮），宽高偏好持久化在 ide store。
 // R4 新增：hooks 只读页签（IdeHooksPane）+ 终端页签 actions 条（codex-product
 // 项目级一键命令：工作区级命名命令一键写入活动终端）。
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, h, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
 import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
-import IdeWikiPane from './IdeWikiPane.vue'
-import IdeStoragePane from './IdeStoragePane.vue'
-import IdeMemoryPane from './IdeMemoryPane.vue'
-import IdeMcpPane from './IdeMcpPane.vue'
-import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
-import IdeKanbanPane from './IdeKanbanPane.vue'
-import IdeToolsPane from './IdeToolsPane.vue'
-import IdeWorkflowPane from './IdeWorkflowPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
-import IdeHooksPane from './IdeHooksPane.vue'
-import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
-import IdeTrajectoryPane from '../components/IdeTrajectoryPane.vue'
-import IdeContextArchivePane from '../components/IdeContextArchivePane.vue'
-import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
+
+// 13 个非高频页签懒加载：生产单 chunk（inlineDynamicImports）字节不变，
+// 但组件模块初始化推迟到首次打开页签，IDE 首屏少解析 echarts/monaco 等重模块。
+const PaneLoading = { render: () => h('div', { class: 'ide-sidepane__loading' }, '加载中…') }
+const PaneError = { render: () => h('div', { class: 'ide-sidepane__loading' }, '页签加载失败') }
+function asyncPane(loader: () => Promise<unknown>) {
+  return defineAsyncComponent({
+    loader: (() => loader().catch((err) => { console.error('[asyncPane]', err); throw err })) as () => Promise<{ default: never }>,
+    loadingComponent: PaneLoading,
+    errorComponent: PaneError,
+    delay: 120,
+    timeout: 15_000,
+  })
+}
+const IdeWikiPane = asyncPane(() => import('./IdeWikiPane.vue'))
+const IdeStoragePane = asyncPane(() => import('./IdeStoragePane.vue'))
+const IdeMemoryPane = asyncPane(() => import('./IdeMemoryPane.vue'))
+const IdeMcpPane = asyncPane(() => import('./IdeMcpPane.vue'))
+const IdeWhiteboardPane = asyncPane(() => import('./IdeWhiteboardPane.vue'))
+const IdeKanbanPane = asyncPane(() => import('./IdeKanbanPane.vue'))
+const IdeToolsPane = asyncPane(() => import('./IdeToolsPane.vue'))
+const IdeWorkflowPane = asyncPane(() => import('./IdeWorkflowPane.vue'))
+const IdeHooksPane = asyncPane(() => import('./IdeHooksPane.vue'))
+const IdeSlashCommandsPane = asyncPane(() => import('./IdeSlashCommandsPane.vue'))
+const IdeTrajectoryPane = asyncPane(() => import('../components/IdeTrajectoryPane.vue'))
+const IdeContextArchivePane = asyncPane(() => import('../components/IdeContextArchivePane.vue'))
+const DesktopBrowserView = asyncPane(() => import('@/views/hermes/DesktopBrowserView.vue'))
 import {
   loadTerminalActions,
   addTerminalAction,
@@ -36,6 +52,7 @@ import {
 
 const { t, locale } = useI18n()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const message = useMessage()
 
 // 2026-10-04 辅助栏整合（用户裁定：17 平铺页签心智负担过重）——按研发直觉分 5 语义组：
@@ -89,19 +106,13 @@ const SHORT_LABELS: Record<string, { zh: string; en: string }> = {
 // ctxarchive 同款（上下文无损滚存批）：本地字典，473 恢复后一并收编。
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
 const obsTx = useRunSurfaceText()
-const CTXARCHIVE_TAB_TITLE = { zh: '上下文档案', en: 'Context Archive' } as const
 
 // 组词条（本地字典，漂移期通道先例；组名走说人话口径）
-const GROUPS: Array<{ id: SidePaneGroup | 'all'; zh: string; en: string }> = [
-  { id: 'all', zh: '全部', en: 'All' },
-  { id: 'code', zh: '编码', en: 'Code' },
-  { id: 'knowledge', zh: '知识', en: 'Knowledge' },
-  { id: 'observe', zh: '观测', en: 'Observe' },
-  { id: 'collab', zh: '协作', en: 'Collab' },
-  { id: 'config', zh: '工具与配置', en: 'Tools' },
-]
-const paneLocale = computed(() =>
-  String((locale as unknown as { value?: string } | undefined)?.value ?? 'zh').startsWith('zh') ? 'zh' : 'en')
+const GROUPS: Array<SidePaneGroup | 'all'> = ['all', 'code', 'knowledge', 'observe', 'collab', 'config']
+const paneLocale = computed(() => ideLocaleOf(locale))
+function groupLabel(id: SidePaneGroup | 'all'): string {
+  return IDE_LOCAL_TEXT[paneLocale.value].groups[id]
+}
 function tabShortLabel(key: IdeSidePaneTab): string {
   const x = SHORT_LABELS[key]
   return x ? (paneLocale.value === 'zh' ? x.zh : x.en) : key
@@ -119,10 +130,7 @@ watch(() => ide.sidePane.tab, (k) => {
 })
 function tabTitle(key: IdeSidePaneTab): string {
   if (key === 'trajectory') return obsTx.value.trajTabTitle
-  if (key === 'ctxarchive') {
-    const loc = String((locale as unknown as { value?: string } | undefined)?.value ?? 'zh')
-    return loc.startsWith('zh') ? CTXARCHIVE_TAB_TITLE.zh : CTXARCHIVE_TAB_TITLE.en
-  }
+  if (key === 'ctxarchive') return IDE_LOCAL_TEXT[paneLocale.value].panes.ctxarchive
   return t(`ide.sidePane.tab_${key}`)
 }
 
@@ -132,7 +140,7 @@ const newActionLabel = ref('')
 const newActionCommand = ref('')
 
 watch(
-  () => ide.workspace,
+  () => root.value,
   (ws) => {
     termActions.value = loadTerminalActions(ws ?? '')
     newActionLabel.value = ''
@@ -149,13 +157,13 @@ function runAction(action: TerminalAction): void {
 
 function addAction(): void {
   if (!newActionLabel.value.trim() || !newActionCommand.value.trim()) return
-  termActions.value = addTerminalAction(ide.workspace ?? '', newActionLabel.value, newActionCommand.value)
+  termActions.value = addTerminalAction(root.value ?? '', newActionLabel.value, newActionCommand.value)
   newActionLabel.value = ''
   newActionCommand.value = ''
 }
 
 function removeAction(id: string): void {
-  termActions.value = removeTerminalAction(ide.workspace ?? '', id)
+  termActions.value = removeTerminalAction(root.value ?? '', id)
 }
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))
@@ -190,12 +198,12 @@ function focusMainChat(): void {
     <div class="ide-sidepane__tabs" role="tablist" :aria-label="t('ide.sidePane.togglePanel')">
       <div class="ide-sidepane__groups" data-testid="ide-sidepane-groups">
         <button
-          v-for="g in GROUPS" :key="g.id" type="button"
+          v-for="g in GROUPS" :key="g" type="button"
           class="ide-sidepane__group"
-          :class="{ 'is-active': groupFilter === g.id }"
-          :data-testid="`ide-sidepane-group-${g.id}`"
-          @click="groupFilter = g.id"
-        >{{ paneLocale === 'zh' ? g.zh : g.en }}</button>
+          :class="{ 'is-active': groupFilter === g }"
+          :data-testid="`ide-sidepane-group-${g}`"
+          @click="groupFilter = g"
+        >{{ groupLabel(g) }}</button>
       </div>
       <button
         v-for="tab in visibleTabs"
@@ -537,5 +545,10 @@ function focusMainChat(): void {
     border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
     color: var(--accent-primary);
   }
+}
+.ide-sidepane__loading {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 </style>

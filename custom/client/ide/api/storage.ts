@@ -20,11 +20,14 @@ export interface StorageSnapshot {
   totalBytes: number
   partial?: boolean
   scannedAt?: number
+  cached?: boolean
+  cachedAt?: number
 }
 
 export const ideStorageApi = {
-  snapshot(): Promise<StorageSnapshot> {
-    return request<StorageSnapshot>('/api/ide/storage/snapshot')
+  snapshot(refresh = false): Promise<StorageSnapshot> {
+    const q = refresh ? '?refresh=1' : ''
+    return request<StorageSnapshot>(`/api/ide/storage/snapshot${q}`)
   },
   clean(category: string): Promise<{ ok: boolean; freedBytes: number }> {
     return request('/api/ide/storage/clean', { method: 'POST', body: JSON.stringify({ category }) })

@@ -3,34 +3,43 @@
 // 基于任务会话与项目的视图——根目录响应式跟随当前会话 workspace（回退
 // ide.workspace），不与任务列表平行独立存在；保留「查看文件 | Git」双
 // 子页签（上游 FileTree + IdeGitPane）。
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useChatStore } from '@/stores/hermes/chat'
 import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
 import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
-import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { workspaceLabel } from '../utils/time'
 
 const { t } = useI18n()
-const ide = useIdeStore()
-const chat = useChatStore()
 const filesStore = useFilesStore()
+const { root, validation, validate, invalidate } = useIdeWorkspace()
 
 const tab = ref<'tree' | 'git'>('tree')
 
-const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
-
 // FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
-// workspaceRoot（上游 FileTree 直接读该 ref）。此前 IDE 只传了标签，页面
-// 显示 ide-qa-repo 却列 ~/.hermes（2026-10-18 回归实测），此处补接线。
-watch(root, (value) => {
-  filesStore.workspaceRoot = value ?? undefined
+// workspaceRoot（上游 FileTree 直接读该 ref）。根先校验再接线：非法根只打
+// 一次探测请求并显示可解释状态，不让 FileTree 反复 400。
+watch(root, async (value) => {
+  filesStore.workspaceRoot = undefined
+  if (!value) {
+    await validate()
+    return
+  }
+  const ok = await validate()
+  if (ok && root.value === value) filesStore.workspaceRoot = value
 }, { immediate: true })
 onUnmounted(() => {
   filesStore.workspaceRoot = undefined
 })
+
+async function retryRoot(): Promise<void> {
+  invalidate()
+  const ok = await validate()
+  if (ok) filesStore.workspaceRoot = root.value ?? undefined
+}
+
 
 // 文件节点点击 → 走 toolPanel 预览 overlay（IdeChatPane 的 FilePreview 宿主），
 // IDE 没有独立编辑器面板，openEditor 无落点。
@@ -48,8 +57,13 @@ async function openEntry(entry: FileEntry): Promise<void> {
       <button type="button" role="tab" class="ide-files__tab" :class="{ 'is-active': tab === 'git' }" :aria-selected="tab === 'git'" data-testid="ide-files-tab-git" @click="tab = 'git'">Git</button>
     </div>
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
+    <p v-if="tab === 'tree' && validation.status === 'checking'" class="ide-files__hint" data-testid="ide-files-checking">{{ t('ide.loading') }}</p>
+    <div v-else-if="tab === 'tree' && validation.status === 'invalid'" class="ide-files__invalid" data-testid="ide-files-invalid">
+      <p>工作区不可用：{{ validation.message || '路径不在允许范围内' }}</p>
+      <button type="button" class="ide-files__retry" @click="retryRoot">重试</button>
+    </div>
     <FileTree
-      v-show="tab === 'tree'"
+      v-else-if="tab === 'tree'"
       class="ide-files__tree"
       :profile="null"
       :workspace-key="root"
@@ -100,6 +114,34 @@ async function openEntry(entry: FileEntry): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ide-files__hint {
+  margin: 8px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ide-files__invalid {
+  margin: 8px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--error-color);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+
+  p { margin: 0 0 6px; word-break: break-all; }
+}
+
+.ide-files__retry {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 4px;
+  height: 22px;
+  padding: 0 10px;
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .ide-files__tree {

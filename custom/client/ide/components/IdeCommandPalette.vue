@@ -9,7 +9,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useIdeStore } from '../store/ide'
+import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { ideAgentToChatAgent } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -33,16 +35,28 @@ interface PaletteSection {
 }
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
 const cockpitStore = useCockpitStore()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const query = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 const activeIndex = ref(0)
 
 // 功能页导航（ide.links.* 唯一事实源；「功能导航」下拉已随 IdeTopBar 退役）
+
+/** 辅助页签直达（17 个）：不经过分组过滤，命令面板搜「页签」即可全量到达 */
+const PANE_TARGETS: IdeSidePaneTab[] = [
+  'files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow',
+  'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash',
+]
+function paneLabel(key: IdeSidePaneTab): string {
+  const text = IDE_LOCAL_TEXT[ideLocaleOf(locale)].panes[key]
+  return `${ideLocaleOf(locale) === 'zh' ? '页签' : 'Pane'}: ${text}`
+}
+
 const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } }> = [
   // 统一导航（09-18）：workbench/cockpit/loopGraph 死链移除，kanban/history 指六场景
   { key: 'kanban', to: { name: 'ia2.board' } },
@@ -69,7 +83,7 @@ const commandItems = computed<PaletteItem[]>(() => {
           codingAgentId: ide.agentId,
           codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
           source: 'coding_agent',
-          workspace: ide.workspace,
+          workspace: root.value,
           ...(d ? { model: d.model, provider: d.provider } : {}),
         })
       },
@@ -97,6 +111,11 @@ const commandItems = computed<PaletteItem[]>(() => {
       label: 'IDE 自检（全能力冒烟）',
       run: () => { ide.openSelfCheck() },
     },
+    ...PANE_TARGETS.map(pane => ({
+      id: `pane:${pane}`,
+      label: paneLabel(pane),
+      run: () => { ide.sidePane.open = true; ide.setSidePaneTab(pane) },
+    })),
   ]
   if (chatStore.activeSessionId) {
     items.push({

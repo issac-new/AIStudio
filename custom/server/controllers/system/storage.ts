@@ -22,6 +22,7 @@ import Router from '@koa/router'
 import { spawn } from 'child_process'
 import { homedir } from 'os'
 import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { readdir, stat, rm } from 'fs/promises'
 
 /** 分类定义（对标 zcode resourceManager.storage.category 11 类的本地子集） */
@@ -103,52 +104,97 @@ let snapshotCache: { at: number; ttl: number; body: unknown } | null = null
 /** 扫描进行中的共享 Promise：面板打开 + 自检并发请求只跑一次扫描 */
 let snapshotInFlight: Promise<unknown> | null = null
 
-const router = new Router({ prefix: '/api/ide/storage' })
+/** 磁盘缓存：面板热开读它，后台刷新写它；避免每次 4s 扫描 */
+const DISK_CACHE_PATH = process.env.IDE_STORAGE_CACHE_PATH?.trim()
+  || join(homedir(), '.hermes', 'ide-storage-snapshot.json')
+const DISK_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
 
-router.get('/snapshot', async (ctx: any) => {
-  if (snapshotCache && Date.now() - snapshotCache.at < snapshotCache.ttl) {
-    ctx.body = snapshotCache.body
-    return
+interface DiskCache { at: number; body: Record<string, unknown> }
+
+function readDiskCache(): DiskCache | null {
+  try {
+    if (!existsSync(DISK_CACHE_PATH)) return null
+    const parsed = JSON.parse(readFileSync(DISK_CACHE_PATH, 'utf8')) as DiskCache
+    if (!parsed?.at || !parsed.body) return null
+    if (Date.now() - parsed.at > DISK_CACHE_MAX_AGE_MS) return null
+    return parsed
+  } catch {
+    return null
   }
-  if (snapshotInFlight) {
-    ctx.body = await snapshotInFlight
-    return
-  }
+}
+
+function writeDiskCache(body: Record<string, unknown>): void {
+  try {
+    mkdirSync(join(DISK_CACHE_PATH, '..'), { recursive: true })
+    const tmp = `${DISK_CACHE_PATH}.tmp`
+    writeFileSync(tmp, JSON.stringify({ at: Date.now(), body }), 'utf8')
+    renameSync(tmp, DISK_CACHE_PATH)
+  } catch { /* 缓存写失败不影响响应 */ }
+}
+
+function clearDiskCache(): void {
+  try { rmSync(DISK_CACHE_PATH, { force: true }) } catch { /* 忽略 */ }
+}
+
+async function scanSnapshot(): Promise<Record<string, unknown>> {
   // 9 分类并行扫描（每分类内部串行栈遍历）：异步 IO 不阻塞事件循环；
   // 共享一个总预算，超时分类标 partial（面板显示「≥」下限）。
-  const work = (async () => {
-    const deadline = Date.now() + scanBudgetMs()
-    const scanned = await Promise.all(
-      CATEGORIES.map(async (c) => {
-        const r = await scanDir(c.dir, deadline)
-        return {
-          key: c.key,
-          path: c.dir,
-          cleanable: c.cleanable,
-          hint: c.hint,
-          exists: r.exists,
-          bytes: r.exists ? r.bytes : 0,
-          files: r.exists ? r.files : 0,
-          partial: r.exists ? r.partial : false,
-        }
-      }),
-    )
-    return {
-      categories: scanned,
-      totalBytes: scanned.reduce((sum, c) => sum + c.bytes, 0),
-      partial: scanned.some(c => c.partial),
-      scannedAt: Date.now(),
-    }
-  })()
+  const deadline = Date.now() + scanBudgetMs()
+  const scanned = await Promise.all(
+    CATEGORIES.map(async (c) => {
+      const r = await scanDir(c.dir, deadline)
+      return {
+        key: c.key,
+        path: c.dir,
+        cleanable: c.cleanable,
+        hint: c.hint,
+        exists: r.exists,
+        bytes: r.exists ? r.bytes : 0,
+        files: r.exists ? r.files : 0,
+        partial: r.exists ? r.partial : false,
+      }
+    }),
+  )
+  return {
+    categories: scanned,
+    totalBytes: scanned.reduce((sum, c) => sum + c.bytes, 0),
+    partial: scanned.some(c => c.partial),
+    scannedAt: Date.now(),
+  }
+}
+
+async function freshSnapshot(force = false): Promise<Record<string, unknown>> {
+  if (!force && snapshotCache && Date.now() - snapshotCache.at < snapshotCache.ttl) {
+    return snapshotCache.body as Record<string, unknown>
+  }
+  if (snapshotInFlight) return snapshotInFlight as Promise<Record<string, unknown>>
+  const work = scanSnapshot()
   snapshotInFlight = work
   try {
     const body = await work
     // 部分结果只缓存 10s：用户点「重新计算」能尽快拿到完整结果
     snapshotCache = { at: Date.now(), ttl: body.partial ? 10_000 : SNAPSHOT_TTL_MS, body }
-    ctx.body = body
+    writeDiskCache(body)
+    return body
   } finally {
     snapshotInFlight = null
   }
+}
+
+const router = new Router({ prefix: '/api/ide/storage' })
+
+router.get('/snapshot', async (ctx: any) => {
+  const force = String(ctx.query?.refresh ?? '') === '1'
+  const disk = force ? null : readDiskCache()
+  if (disk) {
+    // stale-while-revalidate：先返回缓存，过期则后台刷新（不阻塞面板）
+    ctx.body = { ...disk.body, cached: true, cachedAt: disk.at }
+    if (Date.now() - disk.at > SNAPSHOT_TTL_MS) {
+      void freshSnapshot(true).catch(() => { /* 后台刷新失败保留缓存 */ })
+    }
+    return
+  }
+  ctx.body = await freshSnapshot(force)
 })
 
 router.post('/clean', async (ctx: any) => {
@@ -172,6 +218,7 @@ router.post('/clean', async (ctx: any) => {
     }
     await rm(cat.dir, { recursive: true, force: true })
     snapshotCache = null // 清理后失效快照缓存
+    clearDiskCache()
     ctx.body = { ok: true, freedBytes: before.bytes }
   } catch (err: unknown) {
     ctx.status = 500

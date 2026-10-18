@@ -7,20 +7,22 @@ import { useMessage } from 'naive-ui'
 import { ideGitApi, type GitLogCommit } from '../api/git'
 import { formatRelativeTime, type TFunc } from '../utils/time'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 
 const { t } = useI18n()
 const message = useMessage()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 const commits = ref<GitLogCommit[]>([])
 const loading = ref(false)
 
 async function load(): Promise<void> {
-  const root = ide.workspace
-  if (!root) return
+  const rootPath = root.value
+  if (!rootPath) return
   loading.value = true
   try {
-    const res = await ideGitApi.log(root, 200)
+    const res = await ideGitApi.log(rootPath, 200)
     commits.value = res.commits
   } catch {
     message.error(t('ide.gitGraphLoadFailed'))
@@ -37,7 +39,7 @@ function refClass(ref: string): string {
 
 onMounted(load)
 // 工作区切换即重载：否则提交图谱一直显示旧仓库（对齐 IdeGitPane 同款 watch）
-watch(() => ide.workspace, () => void load())
+watch(() => root.value, () => void load())
 </script>
 
 <template>

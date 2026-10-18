@@ -17,8 +17,19 @@ import { DEFAULT_WIKI_GEN_CONFIG, type WikiGenConfig } from '../utils/wikiPipeli
 import type { TaskWorkspaceInfo } from '../api/taskWorkspace'
 
 const WORKSPACE_KEY = 'hermes_ide_workspace'
+const WORKSPACE_ORIGIN_KEY = 'hermes_ide_workspace_origin'
 const AGENT_KEY = 'hermes_ide_agent'
 const LAYOUT_KEY = 'hermes_ide_layout'
+
+/** 工作区偏好来源：task=任务关联写入，user=用户/worktree 显式设置，default=无偏好 */
+export type IdeWorkspaceOrigin = 'default' | 'user' | 'task'
+
+function loadWorkspaceOrigin(): IdeWorkspaceOrigin {
+  const saved = localStorage.getItem(WORKSPACE_ORIGIN_KEY)
+  if (saved === 'task' || saved === 'user') return saved
+  // 历史数据没有来源：有值按用户偏好，避免任务关联覆盖用户手选
+  return localStorage.getItem(WORKSPACE_KEY) ? 'user' : 'default'
+}
 
 /** 中栏浮窗键（任务计划/子代理，对标 zcode 浮窗模式） */
 export type IdeFloatKey = 'plan' | 'agents'
@@ -158,6 +169,7 @@ function loadDimension(): IdeDimension {
 
 export const useIdeStore = defineStore('ide', () => {
   const workspace = ref<string | null>(localStorage.getItem(WORKSPACE_KEY) || null)
+  const workspaceOrigin = ref<IdeWorkspaceOrigin>(loadWorkspaceOrigin())
   const agentId = ref<CodingAgentId>(loadAgent())
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>('ide.layout', DEFAULT_LAYOUT, LAYOUT_KEY))
   const sidebar = ref<{ organize: IdeOrganizeMode; sessionView: IdeSessionView }>(
@@ -199,9 +211,11 @@ export const useIdeStore = defineStore('ide', () => {
     } catch { /* 存储满等异常不阻塞 UI */ }
   }
 
-  function setWorkspace(path: string | null): void {
+  function setWorkspace(path: string | null, origin: IdeWorkspaceOrigin = 'user'): void {
     workspace.value = path?.trim() ? path.trim() : null
+    workspaceOrigin.value = workspace.value ? origin : 'default'
     localStorage.setItem(WORKSPACE_KEY, workspace.value ?? '')
+    localStorage.setItem(WORKSPACE_ORIGIN_KEY, workspaceOrigin.value)
   }
 
   function setAgentId(id: CodingAgentId): void {
@@ -238,7 +252,7 @@ export const useIdeStore = defineStore('ide', () => {
       const info = await ideTaskWorkspaceApi.get(taskId, board)
       if (activeTaskId.value !== taskId) return null
       taskWorkspace.value = info
-      if (info?.path && info.materialized) setWorkspace(info.path)
+      if (info?.path && info.materialized) setWorkspace(info.path, 'task')
       return info
     } catch {
       if (activeTaskId.value === taskId) taskWorkspace.value = null
@@ -323,6 +337,7 @@ export const useIdeStore = defineStore('ide', () => {
 
   return {
     workspace,
+    workspaceOrigin,
     agentId,
     layout,
     sidebar,

@@ -8,10 +8,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { authFetch } from '../utils/auth-fetch'
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 interface QueuedItem { id: string; text: string; state: 'queued' | 'sent'; steerable: boolean }
 
@@ -58,7 +60,7 @@ const autonomyNote = ref('')
 const autonomyBusy = ref(false)
 
 async function fetchAutonomyQueue(): Promise<void> {
-  const ws = ide.workspace
+  const ws = root.value
   if (!ws) { autonomyQueue.value = []; return }
   try {
     const res = await authFetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
@@ -69,7 +71,7 @@ async function fetchAutonomyQueue(): Promise<void> {
 }
 
 async function autonomyAction(kind: 'yield' | 'drain'): Promise<void> {
-  const ws = ide.workspace
+  const ws = root.value
   if (!ws || autonomyBusy.value) return
   autonomyBusy.value = true
   autonomyNote.value = ''
@@ -94,7 +96,7 @@ async function autonomyAction(kind: 'yield' | 'drain'): Promise<void> {
 }
 
 onMounted(() => { void fetchAutonomyQueue() })
-watch(() => ide.workspace, () => { void fetchAutonomyQueue() })
+watch(() => root.value, () => { void fetchAutonomyQueue() })
 </script>
 
 <template>

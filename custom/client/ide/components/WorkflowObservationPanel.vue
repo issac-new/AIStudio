@@ -9,18 +9,21 @@
 //      走 REST /workflow/run-events 分页拉取——需工作区）；
 //   ② 已保存工作流（REST /workflow/saved：项目档/全局档；选中加载该工作流的
 //      历史 runs /workflow/saved-runs——需工作区）。
-// 工作区解析：props.workspace 显式注入优先，缺省回落 ide.workspace（localStorage
+// 工作区解析：props.workspace 显式注入优先，缺省回落 root.value（localStorage
 // 持久，跨壳可用）；两者皆空时 ① 仍可用，②/事件流降级为提示（不猜 workspaceId→
 // workspacePath 映射，见 zcode-projection.ts:39/54）。
 // 引擎离线：REST 503 reason=engine_unreachable，面板显示引擎离线占位（不炸）。
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { friendlyIdeError } from '../utils/ideErrors'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import IdeWorkflowRunLines from './IdeWorkflowRunLines.vue'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 import {
   fetchWorkflowRunEvents,
   fetchSavedWorkflows,
@@ -33,6 +36,7 @@ import {
 const props = defineProps<{ workspace?: string | null }>()
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const zcode = useZcodeProjection()
 const router = useRouter()
 
@@ -42,8 +46,8 @@ function jumpIdeSession(sessionId: string): void {
   void router.push({ path: '/app/ide', query: { session: sessionId } })
 }
 
-/** 有效工作区：显式 prop 优先 → ide.workspace 回落（null=无工作区，档案区降级） */
-const ws = computed(() => props.workspace ?? ide.workspace)
+/** 有效工作区：显式 prop 优先 → root.value 回落（null=无工作区，档案区降级） */
+const ws = computed(() => props.workspace ?? root.value)
 
 // ── ① 会话运行行 ──
 const workflowSessions = zcode.workflowSessions
@@ -112,15 +116,6 @@ const savedLoading = ref(false)
 const savedError = ref<string | null>(null)
 const selectedSaved = ref<string | null>(null)
 
-/** 引擎离线是常态（未 `npm run zcode:serve`）：不要把 ECONNREFUSED 裸栈丢给用户 */
-function friendlyWorkflowError(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err)
-  if (/engine_unreachable|ECONNREFUSED|fetch failed/i.test(message)) {
-    return '工作流引擎未启动（127.0.0.1:3030）；启动引擎后点刷新'
-  }
-  return message
-}
-
 async function loadSaved(): Promise<void> {
   if (!ws.value) return
   savedLoading.value = true
@@ -130,7 +125,7 @@ async function loadSaved(): Promise<void> {
     savedRuns.value = []
     selectedSaved.value = null
   } catch (err) {
-    savedError.value = friendlyWorkflowError(err)
+    savedError.value = friendlyIdeError(err)
   } finally {
     savedLoading.value = false
   }
@@ -143,7 +138,7 @@ async function loadSavedRuns(name: string): Promise<void> {
   try {
     savedRuns.value = await fetchSavedWorkflowRuns(ws.value, name, 20, savedScope.value)
   } catch (err) {
-    savedError.value = friendlyWorkflowError(err)
+    savedError.value = friendlyIdeError(err)
   } finally {
     savedLoading.value = false
   }
@@ -151,11 +146,9 @@ async function loadSavedRuns(name: string): Promise<void> {
 
 watch([ws, savedScope], () => { void loadSaved() }, { immediate: true })
 
-const STATUS_TEXT: Record<string, string> = {
-  pending: '排队中', running: '运行中', completed: '已完成', errored: '失败', stopped: '已停止',
-}
 function statusText(s?: string): string {
-  return (s && STATUS_TEXT[s]) || s || '—'
+  const table = IDE_LOCAL_TEXT[ideLocaleOf(locale)].workflowStatus as Record<string, string>
+  return (s && table[s]) || s || '—'
 }
 </script>
 

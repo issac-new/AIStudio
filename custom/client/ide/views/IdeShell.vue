@@ -15,6 +15,9 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { useIdeBoot } from '../composables/useIdeBoot'
+import { useIdeTask } from '../composables/useIdeTask'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useChatStore } from '@/stores/hermes/chat'
 import { readColWidths, updateColWidth, onColWidthsChange } from '@/custom/ia2/utils/colWidths'
@@ -40,7 +43,7 @@ import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceMod
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import { useKanbanStore } from '@/stores/hermes/kanban'
-import { getTask, listBoards, listTasks } from '@/api/hermes/kanban'
+import { getTask } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
 import { useKeyBinding } from '../components/IdeKeymapCard.vue'
@@ -48,6 +51,7 @@ import { useKeyBinding } from '../components/IdeKeymapCard.vue'
 const { t } = useI18n()
 const route = useRoute()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const cockpitStore = useCockpitStore()
 const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
@@ -62,13 +66,14 @@ watch(() => route.query.task, (taskId) => {
 }, { immediate: true })
 
 // ── 会话直达链接（/ide?session=<id>，沟通协作页「需关注」会话行 R7-B 入口）──
-// 此前 WorkbenchView 发出 session 参数但本侧零消费，跳转后静默丢弃。
-// 会话列表未装载时先装载再切换；未知 id 由 switchSession 自身容错（不崩溃）。
+// 装载与落位统一走 useIdeBoot：未装载先装载，命中深链目标则切换，未知 id
+// 交给 store 容错。IdeChatPane 不再重复 loadSessions。
+const boot = useIdeBoot()
+const taskReader = useIdeTask()
 watch(() => route.query.session, async (sessionId) => {
   const id = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : null
   if (!id) return
-  if (!chatStore.sessionsLoaded) await chatStore.loadSessions(chatStore.sessionProfileFilter)
-  await chatStore.switchSession(id)
+  await boot.resolveSessionQuery(id)
 }, { immediate: true })
 
 // 直达链接绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
@@ -87,72 +92,15 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
     briefingTaskResolved.value = inStore as typeof briefingTaskResolved.value
     return
   }
-  // 回归轮 R7（提速）：先一发 getTask 让服务端跨板解析/快 404 闸判死活——
-  // ghost 任务毫秒级判死（逐板 listTasks 是串行 CLI 调用，16 板可等近分钟）；
-  // 任务存在则继续原逐板流程（需命中板 slug 同步看板上下文）。
-  // 2026-10-18 审计轮补：只有「确认不存在」（404）才判死——瞬时 5xx/网络错
-  // 落回原逐板流程，不让暂时性故障伪装成「任务不存在」收抽屉。
-  // 2026-10-18 回归补：listTasks 默认过滤 done/archived，已归档任务的深链
-  // 永远命中不了逐板扫描（实测 t_0e138dae 抽屉空转 30s+）。getTask 明明
-  // 已返回任务详情，直接用它回填；逐板扫描仅负责补 board slug。
-  let detail: {
-    task?: {
-      id?: string; title?: string; status?: string; priority?: number
-      assignee?: string | null; body?: string | null
-      raci?: Record<string, string[]> | null; workspace_path?: string | null
-      parents?: string[]; children?: string[]
-    }
-    parents?: string[]
-    children?: string[]
-  } | null = null
-  try {
-    detail = await getTask(id) as typeof detail
-  } catch (err) {
-    const e = err as { status?: number; message?: string }
-    const notFound = e?.status === 404 || /\b404\b|not found/i.test(String(e?.message ?? ''))
-    if (notFound) return // 判死：交由外层 briefingMiss 收起抽屉
-  }
-  const detailTask = detail?.task
-  if (detailTask?.id) {
-    if (ide.activeTaskId !== id) return
-    briefingTaskResolved.value = {
-      id: detailTask.id,
-      title: detailTask.title ?? '',
-      status: detailTask.status ?? '',
-      priority: typeof detailTask.priority === 'number' ? detailTask.priority : undefined,
-      assignee: detailTask.assignee ?? null,
-      body: detailTask.body ?? null,
-      raci: detailTask.raci ?? null,
-      workspacePath: detailTask.workspace_path ?? null,
-      parents: detail.parents ?? detailTask.parents ?? [],
-      children: detail.children ?? detailTask.children ?? [],
-    }
-  }
-  try {
-    const boards = (await listBoards()).map(b => b.slug).filter(Boolean) as string[]
-    const order = [kanbanStore.selectedBoard ?? 'default', ...boards.filter(b => b !== kanbanStore.selectedBoard)]
-    for (const slug of [...new Set(order)]) {
-      const hit = (await listTasks({ board: slug }).catch(() => []))
-        .find(task => task.id === id || task.session_id === id)
-      if (hit) {
-        // stale 守卫：逐板请求期间直达链接又切了任务，旧结果不回填
-        if (ide.activeTaskId !== id) return
-        kanbanStore.setBoard(slug)
-        briefingTaskResolved.value = {
-          id: hit.id, title: hit.title, status: hit.status,
-          priority: typeof hit.priority === 'number' ? hit.priority : undefined,
-          assignee: (hit as { assignee?: string | null }).assignee ?? null,
-          body: hit.body ?? null,
-          raci: (hit as { raci?: Record<string, string[]> | null }).raci ?? null,
-          workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
-          parents: (hit as { parents?: string[] }).parents ?? [],
-          children: (hit as { children?: string[] }).children ?? [],
-          sessionId: (hit as { session_id?: string | null }).session_id ?? null,
-        }
-        return
-      }
-    }
-  } catch { /* 板解析失败：已由 getTask 详情回填则保持，不收起 */ }
+  // 2026-10-18 深度重构：详情优先（归档任务不被 listTasks 状态过滤影响），
+  // 板提示后补；缓存/在途合并由 useIdeTask 负责。
+  const result = await taskReader.resolve(id, (task) => {
+    if (ide.activeTaskId === id) briefingTaskResolved.value = task
+  })
+  if (ide.activeTaskId !== id) return
+  if (result.notFound) return
+  if (result.task) briefingTaskResolved.value = result.task
+  if (result.board && result.board !== kanbanStore.selectedBoard) kanbanStore.setBoard(result.board)
 }
 // 回归轮 R7：直达链接任务不可解析时简报抽屉自动收起——原样常开空抽屉会盖住
 // 右栏页签（Git/查看文件点不到）；手动经导轨钮打开的无任务空态不受影响。
@@ -222,7 +170,7 @@ const CONTEXT_PATTERNS: Array<{ re: RegExp; kind: BriefingContextFile['kind'] }>
   { re: /(排期|计划|schedule|plan)/i, kind: 'schedule' },
 ]
 async function loadBriefingContextFiles(): Promise<void> {
-  const ws = ide.workspace
+  const ws = root.value
   if (!ws) { briefingContextFiles.value = []; return }
   const picked: BriefingContextFile[] = []
   const perKind: Record<string, number> = {}
@@ -246,7 +194,7 @@ async function loadBriefingContextFiles(): Promise<void> {
   } catch { /* 工作区不可读时静默空列表（面板显示暂无） */ }
   briefingContextFiles.value = picked
 }
-watch(() => [ide.workspace, ide.activeTaskId] as const, () => void loadBriefingContextFiles(), { immediate: true })
+watch(() => [root.value, ide.activeTaskId] as const, () => void loadBriefingContextFiles(), { immediate: true })
 function openBriefingFile(path: string): void {
   void filesStore.openEditor(path)
 }
@@ -437,16 +385,16 @@ async function loadBriefingGit(): Promise<void> {
   // 回退链：关联端点解析根（绝对，相对 workspace_path 已锚定板 workspaces 根）
   // → 卡片原始 workspace_path（绝对时等价、相对时 git 调用自然失败落空态）
   // → 会话 workspace → IDE 工作区
-  const root = ide.taskWorkspace?.path
+  const rootPath = ide.taskWorkspace?.path
     ?? briefingTask.value?.workspacePath
     ?? (chatStore.activeSession?.workspace as string | undefined)
-    ?? ide.workspace
-  briefingGit.value = { branch: null, worktreePath: root ?? null, commits: [] }
-  if (!root) return
+    ?? root.value
+  briefingGit.value = { branch: null, worktreePath: rootPath ?? null, commits: [] }
+  if (!rootPath) return
   try {
     const [st, lg] = await Promise.all([
-      ideGitApi.status(root).catch(() => null),
-      ideGitApi.log(root, 5).catch(() => ({ commits: [] })),
+      ideGitApi.status(rootPath).catch(() => null),
+      ideGitApi.log(rootPath, 5).catch(() => ({ commits: [] })),
     ])
     // stale 守卫：await 期间切换任务时丢弃旧响应（慢仓库乱序回写会串显到新任务）。
     // 按任务 id 守卫——回退链扩了 taskWorkspace.path 后 workspacePath 可能为 null，
@@ -454,7 +402,7 @@ async function loadBriefingGit(): Promise<void> {
     if (briefingTask.value?.id !== taskGitId) return
     briefingGit.value = {
       branch: st?.branch ?? null,
-      worktreePath: root,
+      worktreePath: rootPath,
       commits: (lg.commits ?? []).map(c => ({ hash: c.hash, subject: c.subject, at: c.timestamp })),
     }
   } catch { /* 简报 Git 块保持空态 */ }

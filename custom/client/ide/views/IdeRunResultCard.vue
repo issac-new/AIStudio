@@ -8,11 +8,13 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { ideRunsApi, digestRunChanges, type RunChangesDigest } from '../api/runs'
 import { formatRelativeTime } from '../utils/time'
 
 const { t } = useI18n()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
 
 // 时长：本轮 runStartedAt → 最近一次轮结束（isRunActive false 翻转时刻不可知，
@@ -51,10 +53,10 @@ const undoDone = ref('')
 
 async function undoFile(changeId: string, f: { id: number; path: string }): Promise<void> {
   const sid = chatStore.activeSessionId
-  if (!sid || !ide.workspace || undoBusy.value) return
+  if (!sid || !root.value || undoBusy.value) return
   undoBusy.value = `${changeId}:${f.id}`
   try {
-    const res = await ideRunsApi.undo({ sessionId: sid, changeId, fileId: f.id, workspace: ide.workspace })
+    const res = await ideRunsApi.undo({ sessionId: sid, changeId, fileId: f.id, workspace: root.value })
     undoDone.value = res.restoredPath ?? f.path
     void load() // 重载变更（undo 后 digest 应反映恢复态）
   } catch (err) {
@@ -70,6 +72,8 @@ const loaded = ref(false)
 async function load(): Promise<void> {
   const sid = chatStore.activeSessionId
   if (!sid) return
+  // 本地草稿尚未落库：run changes 必 404，跳过（2026-10-18 深度重构）
+  if (chatStore.activeSession?.isLocalOnly) { loaded.value = true; return }
   try {
     const rows = await ideRunsApi.changes(sid)
     // 在途请求乱序守卫：resolve 时会话已切走则丢弃，避免旧会话数据串显
@@ -102,7 +106,7 @@ const visible = computed(
   () =>
     !running.value &&
     loaded.value &&
-    Boolean(ide.workspace) &&
+    Boolean(root.value) &&
     (runStartedAt.value != null || digests.value.length > 0),
 )
 </script>

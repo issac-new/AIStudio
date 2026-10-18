@@ -6,7 +6,7 @@
 // backlog（见 parity-analysis §二 G2）。
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import IdeGitLog from './IdeGitLog.vue'
 import {
   ideGitApi,
@@ -16,7 +16,7 @@ import {
   type GitChangeGroup,
 } from '../api/git'
 
-const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const { t } = useI18n()
 
 const gitView = ref<'status' | 'graph'>('status')
@@ -50,19 +50,19 @@ const branches = ref<Array<{ name: string; current: boolean }>>([])
 const branchMenuOpen = ref(false)
 const pushing = ref(false)
 async function loadBranches(): Promise<void> {
-  const root = ide.workspace
-  if (!root) return
+  const rootPath = root.value
+  if (!rootPath) return
   try {
-    const res = await ideGitApi.branches(root)
+    const res = await ideGitApi.branches(rootPath)
     branches.value = res.branches
   } catch { branchMenuOpen.value = false }
 }
 async function checkout(branch: string): Promise<void> {
-  const root = ide.workspace
+  const rootPath = root.value
   branchMenuOpen.value = false
-  if (!root) return
+  if (!rootPath) return
   try {
-    await ideGitApi.checkout(root, branch)
+    await ideGitApi.checkout(rootPath, branch)
     await refresh()
   } catch (err) {
     errorMessage.value = err instanceof Error ? err.message : String(err)
@@ -70,11 +70,11 @@ async function checkout(branch: string): Promise<void> {
   }
 }
 async function push(): Promise<void> {
-  const root = ide.workspace
-  if (!root || pushing.value) return
+  const rootPath = root.value
+  if (!rootPath || pushing.value) return
   pushing.value = true
   try {
-    await ideGitApi.push(root)
+    await ideGitApi.push(rootPath)
     await refresh()
   } catch (err) {
     errorMessage.value = err instanceof Error ? err.message : String(err)
@@ -92,11 +92,11 @@ const branchLabel = computed(() => {
 })
 
 async function refresh(): Promise<void> {
-  const root = ide.workspace
+  const rootPath = root.value
   diffRequestSeq++ // 刷新作废在途 diff 响应（列表已重建，选中态清空）
   selected.value = null
   diffText.value = ''
-  if (!root) {
+  if (!rootPath) {
     status.value = null
     errorCode.value = null
     return
@@ -104,7 +104,7 @@ async function refresh(): Promise<void> {
   loading.value = true
   errorCode.value = null
   try {
-    status.value = await ideGitApi.status(root)
+    status.value = await ideGitApi.status(rootPath)
   } catch (err) {
     status.value = null
     // 错误码判别走 duck-typing：ideGitApi 包装为 GitApiError，但底层
@@ -127,13 +127,13 @@ async function refresh(): Promise<void> {
 let diffRequestSeq = 0
 
 async function selectChange(change: GitChange, staged: boolean): Promise<void> {
-  if (!ide.workspace) return
+  if (!root.value) return
   const seq = ++diffRequestSeq
   selected.value = { file: change.file, staged }
   diffLoading.value = true
   diffText.value = ''
   try {
-    const result = await ideGitApi.diff(ide.workspace, change.file, staged)
+    const result = await ideGitApi.diff(root.value, change.file, staged)
     if (seq !== diffRequestSeq) return
     diffText.value = result.diff
   } catch (err) {
@@ -145,10 +145,10 @@ async function selectChange(change: GitChange, staged: boolean): Promise<void> {
 }
 
 async function stage(change: GitChange, staged: boolean): Promise<void> {
-  if (!ide.workspace) return
+  if (!root.value) return
   actionError.value = ''
   try {
-    await ideGitApi.stage(ide.workspace, [change.file], staged)
+    await ideGitApi.stage(root.value, [change.file], staged)
     await refresh()
   } catch (err) {
     actionError.value = err instanceof Error ? err.message : String(err)
@@ -156,10 +156,10 @@ async function stage(change: GitChange, staged: boolean): Promise<void> {
 }
 
 async function stageGroup(group: ChangeGroup): Promise<void> {
-  if (!ide.workspace) return
+  if (!root.value) return
   actionError.value = ''
   try {
-    await ideGitApi.stage(ide.workspace, group.changes.map((c) => c.file), group.key !== 'staged')
+    await ideGitApi.stage(root.value, group.changes.map((c) => c.file), group.key !== 'staged')
     await refresh()
   } catch (err) {
     actionError.value = err instanceof Error ? err.message : String(err)
@@ -167,11 +167,11 @@ async function stageGroup(group: ChangeGroup): Promise<void> {
 }
 
 async function commit(): Promise<void> {
-  if (!ide.workspace || !canCommit.value) return
+  if (!root.value || !canCommit.value) return
   actionError.value = ''
   committing.value = true
   try {
-    await ideGitApi.commit(ide.workspace, commitMessage.value.trim())
+    await ideGitApi.commit(root.value, commitMessage.value.trim())
     commitMessage.value = ''
     await refresh()
   } catch (err) {
@@ -186,7 +186,7 @@ const diffLines = computed(() =>
   diffText.value ? diffText.value.split('\n') : [],
 )
 
-watch(() => ide.workspace, () => { void refresh() })
+watch(root, () => { void refresh() })
 onMounted(() => { void refresh() })
 
 defineExpose({ refresh, toGroups })
@@ -219,7 +219,7 @@ defineExpose({ refresh, toGroups })
     </header>
     <IdeGitLog v-if="gitView === 'graph'" class="ide-git__graph" />
 
-    <div v-if="!ide.workspace && gitView === 'status'" class="ide-git__state">{{ t('ide.gitNeedWorkspace') }}</div>
+    <div v-if="!root && gitView === 'status'" class="ide-git__state">{{ t('ide.gitNeedWorkspace') }}</div>
     <div v-else-if="loading" class="ide-git__state">{{ t('ide.loading') }}</div>
     <div v-else-if="errorCode === 'not_a_repo'" class="ide-git__state">{{ t('ide.gitNotRepo') }}</div>
     <div v-else-if="errorCode" class="ide-git__state ide-git__state--error">
