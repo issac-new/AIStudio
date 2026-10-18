@@ -11,6 +11,7 @@ vi.mock('naive-ui', () => ({
 }))
 const switchSessionModel = vi.fn(async () => true)
 const switchModel = vi.fn(async () => true)
+const { newChat } = vi.hoisted(() => ({ newChat: vi.fn() }))
 const state = { activeSessionId: null as string | null, activeSession: null as Record<string, unknown> | null }
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
@@ -18,7 +19,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     get activeSession() { return state.activeSession },
     subagentStreams: new Map(),
     sessions: [],
-    newChat: vi.fn(),
+    newChat,
     switchSessionModel,
     sendMessage: vi.fn(),
   }),
@@ -34,7 +35,10 @@ vi.mock('@/stores/hermes/app', () => ({
 }))
 vi.mock('../store/ide', () => ({ useIdeStore: () => ({ floats: {}, agentId: 'zcode' }), ideAgentToChatAgent: (agentId: string) => ({ id: agentId }) }))
 const catalogMock = vi.fn()
-vi.mock('../utils/engine-models', () => ({ fetchEngineCatalog: () => catalogMock() }))
+vi.mock('../utils/engine-models', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/engine-models')>()
+  return { ...actual, fetchEngineCatalog: () => catalogMock() }
+})
 vi.mock('@/api/hermes/model-context', () => ({ setModelContext: vi.fn(async () => undefined) }))
 vi.mock('@/components/hermes/chat/ChatInput.vue', () => ({
   default: {
@@ -69,6 +73,7 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     catalogMock.mockReset()
     switchSessionModel.mockClear()
     switchModel.mockClear()
+    newChat.mockClear()
     state.activeSessionId = null
     state.activeSession = null
   })
@@ -77,9 +82,12 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     catalogMock.mockResolvedValue({
       independent: true,
       groups: [{ provider: 'bigmodel', label: 'BigModel - Coding Plan', models: [{ id: 'glm-5.3' }] }],
+      defaultModel: { provider: 'bigmodel', model: 'glm-5.3' },
     })
     const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
     await flushPromises()
+    // 新会话默认模型来自 ZCode 目录，不再继承 Hermes 的 selectedModel（aim）。
+    expect(newChat).toHaveBeenCalledWith(expect.objectContaining({ model: 'glm-5.3', provider: 'bigmodel' }))
     const btn = w.find('[data-testid="stub-model-btn"]')
     expect(btn.attributes('disabled')).toBeUndefined()
     await btn.trigger('click')

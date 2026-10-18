@@ -67,12 +67,14 @@ function writeAtomic(config: EngineModelConfig): void {
 
 engineModelsRouter.get('/', (ctx) => {
   const config = readConfig()
+  const zcodeGroups = readZcodeCatalog()
   ctx.body = {
     ok: true,
     config,
     // 2026-10-18 用户裁定：IDE 模型选择使用 Ycode（zcode）实际模型配置。
     // 独立目录为空时客户端优先用此目录；独立目录有值也一并返回，由客户端选源。
-    zcode: { groups: readZcodeCatalog() },
+    // default=新会话默认模型（ZCode 配置的 provider family 首选，缺省取首个启用 provider 首模型）。
+    zcode: { groups: zcodeGroups, default: readZcodeDefault(zcodeGroups) },
     effectivePolicy: effectivePolicySnapshot(config),
     store: 'runtime/ide-engine-models.json',
   }
@@ -104,9 +106,12 @@ engineModelsRouter.put('/', (ctx) => {
 // 键位隔离：只写 `ide-engine:<providerId>` 前缀条目（用户已有条目零触碰）。
 // apiKeyEnv 语义：服务端解析 env 取真值；env 缺失→enabled:false 占位（不写空 key）。
 // 生效时点：引擎按自身配置装载节奏消费（写穿后新会话/引擎重载生效）。
+function zcodeRoot(): string {
+  return process.env.ZCODE_HOME?.trim() ? resolve(process.env.ZCODE_HOME) : join(homedir(), '.zcode')
+}
+
 function zcodeConfigPath(): string {
-  const root = process.env.ZCODE_HOME?.trim() ? resolve(process.env.ZCODE_HOME) : join(homedir(), '.zcode')
-  return join(root, 'v2', 'config.json')
+  return join(zcodeRoot(), 'v2', 'config.json')
 }
 
 export interface ZcodeCatalogGroup {
@@ -140,6 +145,36 @@ export function readZcodeCatalog(): ZcodeCatalogGroup[] {
   } catch {
     return []
   }
+}
+
+/** ZCode 侧“当前首选 provider”：setting.json 的 provider family 选择（若存在）。
+ *  形如 modelProviderFamilySelectedKeys.bigmodel = "coding-plan:builtin:bigmodel-coding-plan"，
+ *  用 providerId 后缀匹配到目录组；用户未配置 family 时返回 null。 */
+function preferredZcodeGroup(groups: ZcodeCatalogGroup[]): ZcodeCatalogGroup | null {
+  try {
+    const path = join(zcodeRoot(), 'v2', 'setting.json')
+    if (!existsSync(path)) return null
+    const setting = JSON.parse(readFileSync(path, 'utf8')) as {
+      providerFamilyDomain?: string
+      modelProviderFamilySelectedKeys?: Record<string, string>
+    }
+    const domain = setting.providerFamilyDomain
+    const selected = domain ? setting.modelProviderFamilySelectedKeys?.[domain] : undefined
+    if (!selected) return null
+    return groups.find(g => selected.endsWith(g.provider)) ?? null
+  } catch {
+    return null
+  }
+}
+
+/** 新会话默认模型：ZCode 选中的 provider family 首模型；没有 family 选择时取首个
+ *  启用 provider 的首模型（与选择器展示顺序一致）。目录空 → null。 */
+export function readZcodeDefault(
+  groups: ZcodeCatalogGroup[] = readZcodeCatalog(),
+): { provider: string; model: string } | null {
+  const group = preferredZcodeGroup(groups) ?? groups.find(g => g.models.length > 0)
+  const model = group?.models[0]?.id
+  return group && model ? { provider: group.provider, model } : null
 }
 
 export interface EnginePassthrough {
