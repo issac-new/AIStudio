@@ -8,7 +8,9 @@
 
 export interface ModelGroupLike {
   provider?: string
-  models: string[]
+  /** 目录条目有 string 与 {id} 两种形态：Hermes appStore 为 string[]，
+   *  Ycode/独立引擎目录为对象组——判定前必须归一，否则可用模型被误报失效。 */
+  models: Array<string | { id?: string }>
 }
 
 export interface SessionLike {
@@ -25,7 +27,9 @@ export function isSessionModelInvalid(
   if (!model) return false
   const groups = modelGroups || []
   if (!groups.length) return false
-  return !groups.some(group => group.models?.includes(model))
+  return !groups.some(group =>
+    group.models?.some(entry => (typeof entry === 'string' ? entry : entry?.id) === model),
+  )
 }
 
 // 失效态一键回退目标（2026-10-07，run10 实证：IDE 默认模型被移除后只剩横幅无快

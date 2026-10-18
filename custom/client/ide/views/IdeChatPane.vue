@@ -92,7 +92,7 @@ const settingsStore = useSettingsStore()
 const filesStore = useFilesStore()
 const toolPanelStore = useToolPanelStore()
 const cockpitStore = useCockpitStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const message = useMessage()
 
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
@@ -359,9 +359,21 @@ onMounted(async () => {
   }
 })
 
-const modelGroupsView = computed(() =>
-  usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? []),
-)
+// 两源目录形态不同（Ycode/独立目录为 {id} 对象组，Hermes 为 string[]）：
+// 统一成 { provider, label, models: [{id}] }，选择器与失效判定共用同一视图。
+interface ViewModelGroup { provider: string; label: string; models: Array<{ id: string }> }
+const modelGroupsView = computed<ViewModelGroup[]>(() => {
+  const raw = (usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? [])) as Array<{
+    provider?: string
+    label?: string
+    models?: Array<string | { id: string }>
+  }>
+  return raw.map(group => ({
+    provider: group.provider ?? '',
+    label: group.label || group.provider || '',
+    models: (group.models ?? []).map(m => (typeof m === 'string' ? { id: m } : m)),
+  }))
+})
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
@@ -424,6 +436,12 @@ watch(() => chatStore.activeSessionId, () => {
 const modelLabel = computed(() => {
   const m = chatStore.activeSession?.model || appStore.selectedModel || ''
   return m || t('ide.chatSelectModel')
+})
+// 「重选」已改为就地打开本页选择器（D-7/D-9），旧文案「去设置重选」不再属实。
+// 词条在 patch 473，禁 inject 期不改补丁只制造漂移，故按 locale 就地取字。
+const reselectLabel = computed(() => {
+  const l = String(locale?.value ?? '')
+  return l.startsWith('zh') || !l ? '重选模型' : 'Reselect model'
 })
 
 function onModelClick(): void {
@@ -603,7 +621,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
         data-testid="ide-model-invalid-fallback"
         @click="onFallbackModel"
       >{{ t('ide.modelInvalid.fallback', { model: fallbackModelTarget.id }) }}</button>
-      <button type="button" class="ide-chat__model-invalid-btn" @click="goReselectModel">{{ t('ide.modelInvalid.reselect') }}</button>
+      <button type="button" class="ide-chat__model-invalid-btn" @click="goReselectModel">{{ reselectLabel }}</button>
       <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
     </div>
 
@@ -706,7 +724,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
             :key="group.provider"
             class="ide-chat__model-group"
           >
-            <div class="ide-chat__model-group-title">{{ group.provider }}</div>
+            <div class="ide-chat__model-group-title">{{ group.label || group.provider }}</div>
             <button
               v-for="m in group.models"
               :key="m.id"
