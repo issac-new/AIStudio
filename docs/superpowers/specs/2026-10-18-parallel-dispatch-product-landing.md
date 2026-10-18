@@ -40,3 +40,13 @@ run21 一夜四复发（结论行 92min/PAYCORE 3h/P0 75min/G5 修订 80min）�
 
 ## 决策记录（增补）
 10. 三件与已落的 DISPATCH_SAFETY/push-stalled/产物信号同族同批，构成「契约→观测→精确催办」闭环；实现顺序=7→8→9（契约先行，观测与催办消费契约锚）。
+
+## 第四批（2026-10-18 21 时收官后补落，用户「挂账及 spec 完成」令）
+
+10. **[LEAD-MERGE] 客户端守门 ✅（simharness 6d78043）**：pre-push-client 钩子随工作区克隆部署（mx-setup），直推 integration/* 无标记本地拒收（stdin 烟测 rc=1 生效）；服务端 pre-receive 留中央仓本地化启用——分支保护在 GitHub 直连拓扑下先有了可执行层。
+11. **文档编排器产品化 ✅（本仓 doc-orchestrator.ts）**：总分总机器化第三件（评审/派发安全/文档同骨架）——章节片模板（测试报告 BE/FE）+并行派发（互不等待+途中锚条款）+汇总篇；REST 接入位=cluster-inspector pipeline 域同 parallel-review。3/3 测试绿。
+12. **branches 产物面精确判定（active-no-artifact 升级位）**：collectors 加 branches face（中央仓实查 owner→最近提交），探测器从「持有在途卡」升级为「名下分支零新提交」精确判定——下批首件（需 branches 采集面接线）。
+
+## 决策记录（第四批）
+11. 客户端钩子先行而非等服务端：拓扑实测工作区 origin=GitHub 直连，服务端 pre-receive 不在推送路径上；客户端闸在 push 前触发，可执行性立得。
+12. 文档编排器只做拆解+派发+汇总催办，不做片收集判定（产物路径在中央仓，收集判定复用巡检环既有文件探测面）——避免第二套收集器。
