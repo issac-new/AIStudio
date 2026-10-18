@@ -73,10 +73,60 @@ index 2fca421..80bcdc7 100644
    } finally {
      socket.destroy();
 diff --git a/a/packages/zcode-cua/node-backend.js b/b/packages/zcode-cua/node-backend.js
-index 9c5df8c..b8e4fd5 100644
+index 9c5df8c..d488d76 100644
 --- a/packages/zcode-cua/node-backend.js
 +++ b/packages/zcode-cua/node-backend.js
-@@ -749,6 +749,101 @@ export function createNodeAutomationBackend(options = {}) {
+@@ -348,10 +348,15 @@ export function createNodeAutomationBackend(options = {}) {
+           'var ws = $.NSWorkspace.sharedWorkspace',
+           "var apps = ws.runningApplications",
+           "function s(v){ return v === null || v === undefined ? null : String(ObjC.unwrap(v)) }",
++          "var front = s(ws.frontmostApplication.localizedName)",
++          "var frontPid = Number(ws.frontmostApplication.processIdentifier)",
+           "var out = []",
+           "for (var i = 0; i < apps.count; i++) {",
+           "  var a = apps.objectAtIndex(i)",
+-          "  out.push({ name: s(a.localizedName), pid: Number(a.processIdentifier), bundleId: s(a.bundleIdentifier) })",
++          // overlay 006g：官方 SDK getState 以 active 标记绑定前台应用（v9 E2E 实锤
++          // 缺标即 "No active app found"）——NSWorkspace frontmostApplication 判定。
++          "  var pid = Number(a.processIdentifier)",
++          "  out.push({ name: s(a.localizedName), pid: pid, bundleId: s(a.bundleIdentifier), active: pid === frontPid, frontmost: pid === frontPid })",
+           "}",
+           "JSON.stringify(out)",
+         ].join("\n");
+@@ -435,8 +440,31 @@ export function createNodeAutomationBackend(options = {}) {
+       return { ok: true };
+     },
+ 
+-    async get_app_state() {
++    async get_app_state(params = {}) {
+       requirePlatform();
++      // overlay 006f：官方 SDK appStateOf 合并键（state_id/app/window/elements/text/
++      // snapshot_mode/base_state_id）。loginwindow 等 AX 树取不到时给最小合法态而非
++      // 抛错——截图配对流程（getScreenshot→capture_app→get_app_state）不因状态面
++      // 缺失而丢掉已捕获的图像（v8 E2E 实锤：图像已到 SDK 手里被这一步丢弃）。
++      try {
++        return await backend._get_app_state_raw(params)
++      } catch (error) {
++        const ref = params && typeof params === 'object' ? params.app_ref ?? params : {}
++        const pid = Number((ref && typeof ref === 'object' ? ref.pid : ref) ?? NaN)
++        return {
++          state_id: `node-${Date.now()}`,
++          app: { pid: Number.isFinite(pid) ? pid : null, name: typeof ref?.name === 'string' ? ref.name : null },
++          window: { title: null, window_id: null },
++          elements: [],
++          text: '',
++          snapshot_mode: 'minimal',
++          note: `ax state unavailable (${error instanceof Error ? error.message : String(error)}); image capture unaffected`,
++        }
++      }
++    },
++
++    async _get_app_state_raw(params = {}) {
++      void params;
+       if (mac) {
+         const script = [
+           'ObjC.import("AppKit")',
+@@ -749,6 +777,124 @@ export function createNodeAutomationBackend(options = {}) {
        await new Promise((r) => setTimeout(r, ms));
        return { ok: true, waitedMs: ms };
      },
@@ -169,16 +219,39 @@ index 9c5df8c..b8e4fd5 100644
 +    },
 +    async set_display() { throw Object.assign(new Error("node backend is single-display"), { code: "action_unavailable" }); },
 +    async capture_app(params = {}) {
-+      // overlay 006e：官方 app.getScreenshot 走 capture_app（窗口栅格）。Node 后端无
-+      // 窗口 ID 寻址——全屏截图诚实回退（note 标注），图像链路保持真实。
-+      const shot = await backend.screenshot(params)
-+      return { ...shot, note: "node backend: full-display capture (no window addressing)" }
++      // overlay 006h：官方语义实锚——get_app_state 与 app.getScreenshot 都走 capture_app，
++      // 期望返回 AX 状态文档（state_id/elements/app/window/text[+image data]），不是裸截图。
++      // Node 后端无 AX 树：elements 空数组 + 最小窗口档（SDK 验证四键必须真值）；
++      // 截图恒附（getScreenshot 依赖 data 字段；get_app_state 无 include_screenshot 时
++      // 官方层自行取舍）。
++      const ref = params && typeof params === 'object' ? params.app_ref ?? {} : {}
++      const refObj = ref && typeof ref === 'object' ? ref : {}
++      let image = {}
++      try {
++        const shot = await backend.screenshot({})
++        image = { data: shot.data, mediaType: shot.mediaType ?? 'image/png', bytes: shot.bytes }
++      } catch (error) {
++        image = { capture_error: error instanceof Error ? error.message : String(error) }
++      }
++      return {
++        state_id: `node-${Date.now()}`,
++        snapshot_mode: 'full',
++        app: {
++          pid: Number.isFinite(Number(refObj.pid)) ? Number(refObj.pid) : null,
++          name: typeof refObj.name === 'string' ? refObj.name : (typeof ref === 'string' ? ref : null),
++        },
++        window: { title: null, window_id: null },
++        elements: [],
++        text: '',
++        ...image,
++        note: 'node backend: full-display capture (no AX tree / window addressing)',
++      }
 +    },
 +    async pip_clear_dismissed() { return { ok: true, cleared: 0 }; },
    };
  
    return backend;
-@@ -759,4 +854,13 @@ export const NODE_BACKEND_METHODS = Object.freeze([
+@@ -759,4 +905,13 @@ export const NODE_BACKEND_METHODS = Object.freeze([
    "health", "permission_status", "screenshot", "list_displays", "list_apps", "list_windows",
    "open_application", "get_app_state", "mouse_move", "left_click", "right_click",
    "double_click", "drag", "scroll", "type_text", "key", "hold_key", "hold_key_down", "hold_key_up", "set_value", "wait",
