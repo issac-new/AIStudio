@@ -2338,7 +2338,10 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     note "[audit] 主卡结构化 raci 终态闭环（记单后补填成功）"
   fi
   if [[ -z "$(sget audit_dispatched)" ]]; then
-    dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。判罚口径提示（run18 复盘 F2 误判教训）：G5 发布准出早于 UAT 完成是方案 §2.4 冻结面既定序（发布准出→发布→上线后用户对账），非时序倒挂；判「放行无效」须以缺评审实物/证据链断裂为准，不得以 G5→UAT 先后为据。" "$(agent_mxid audit)" || true
+    # 总分总并行（2026-10-18 用户指令：所有报告类根治）：意见书拆两片并行
+    dispatch_in_room audit "@audit-agent:matrix.test 审计意见书·流程合规片（并行分工，独立会话）：复核 G1-G6 门禁流转合规性（打回-修复-复审链完整性/审批留痕），写 docs/retro/${RUN_ID}-audit-opinion-process.md。完成回一行 AUDIT-SEC-PROCESS-DONE。不要写数据真实性片。"
+    dispatch_in_room audit "@audit-agent:matrix.test 审计意见书·数据真实性片（并行分工，独立会话）：抽查结论行-实物反查（commit/卡/帧锚点抽样核验），写 docs/retro/${RUN_ID}-audit-opinion-data.md。完成回一行 AUDIT-SEC-DATA-DONE。不要写流程合规片。"
+    dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求（汇总篇，总分总之总）：两片已并行起草（process/data 各一），请独立复核合并成正式意见书并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。判罚口径提示（run18 复盘 F2 误判教训）：G5 发布准出早于 UAT 完成是方案 §2.4 冻结面既定序（发布准出→发布→上线后用户对账），非时序倒挂；判「放行无效」须以缺评审实物/证据链断裂为准，不得以 G5→UAT 先后为据。" "$(agent_mxid audit)" || true
     sset audit_dispatched 1
   fi
   AUDDOC="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-audit-opinion.md"
@@ -2411,6 +2414,14 @@ fi
 # ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
 # 三段式复盘（现象/规律/下轮验证）+ 行动项四元组 + 治理报告与 metrics 回写 + ITIL 资产回写 + 记忆沉淀探针。
 if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
+  # 总分总·素材提前批（2026-10-18 用户指令：所有报告类根治）：时间线/问题分类两片
+  # 为纯素材章节（数据源=scenario.log/issues.log，轮中已齐），复盘段前即派并行起草；
+  # 判定章节（根因/行动项）须终态数据，仍由汇总人在段内写——证据纪律边界。
+  if [[ -z "$(sget retro_material_dispatched)" ]]; then
+    dispatch_in_room audit "@audit-agent:matrix.test 复盘·时间线素材片（提前批，独立会话）：基于 runs/${RUN_ID}/evidence/scenario.log 整理本轮时间线骨架（里程碑/事故/干预点），写 docs/retro/${RUN_ID}-retro-timeline.md。只整理事实不写判定。完成回一行 RETRO-SEC-TIMELINE-DONE。"
+    dispatch_in_room secops "@secops-agent:matrix.test 复盘·问题分类素材片（提前批，独立会话）：基于 issues.log 全量问题单归类（产品通道/凭证/流程/环境），写 docs/retro/${RUN_ID}-retro-issues.md。只分类不判定根因。完成回一行 RETRO-SEC-ISSUES-DONE。"
+    sset retro_material_dispatched 1
+  fi
   gate_blocked uat_done retro
   # §4.4-9 治理证据②③（六文调研轮 E+B）：AI 虚拟损益表 + 自治度对账导出
   # （/api/hermes/virtual-pl?days=30 与 /api/incident/sessions/:id/autonomy 原文；
