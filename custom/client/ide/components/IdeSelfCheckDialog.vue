@@ -92,7 +92,7 @@ const STATUS_ICON: Record<SelfCheckResult['status'], string> = { pass: '✓', wa
         <header class="ide-selfcheck__head">
           <b>{{ tx.title }}</b>
           <span v-if="results.length" class="ide-selfcheck__summary" data-testid="ide-selfcheck-summary">
-            {{ summary.pass }} 通过 · {{ summary.warn }} 告警 · {{ summary.fail }} 失败
+            {{ summary.pass }} {{ tx.pass }} · {{ summary.warn }} {{ tx.warn }} · {{ summary.fail }} {{ tx.fail }}
           </span>
           <span class="ide-selfcheck__spacer" />
           <button type="button" class="ide-selfcheck__btn" data-testid="ide-selfcheck-rerun" :disabled="running" @click="run">

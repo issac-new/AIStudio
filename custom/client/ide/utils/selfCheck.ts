@@ -103,14 +103,14 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['active-session'],
       run: async () => ctx.activeSessionId
         ? { status: 'pass', detail: ctx.activeSessionId }
-        : { status: 'warn', detail: '无活动会话（裸落地草稿态）' },
+        : { status: 'warn', detail: tx.detail.noActiveSession },
     },
     {
       id: 'workspace',
       label: tx.label['workspace'],
       run: async () => ctx.workspace
         ? { status: 'pass', detail: ctx.workspace }
-        : { status: 'warn', detail: '未绑定工作区；文件/Git/终端能力受限' },
+        : { status: 'warn', detail: tx.detail.noWorkspace },
     },
     {
       id: 'deep-link',
@@ -119,23 +119,23 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.activeSessionId) return { status: 'warn', detail: tx.detail.noSessionToVerify }
         const hit = resolveBootSession(ctx.activeSessionId, [ctx.activeSessionId], null)
         return hit.matched
-          ? { status: 'pass', detail: '?session= 可解析到当前会话' }
-          : { status: 'fail', detail: '深链解析未命中' }
+          ? { status: 'pass', detail: tx.detail.deepLinkOk }
+          : { status: 'fail', detail: tx.detail.deepLinkMiss }
       },
     },
     {
       id: 'side-pane',
       label: tx.label['side-pane'],
       run: async () => ctx.sidePaneTabs >= 17
-        ? { status: 'pass', detail: `${ctx.sidePaneTabs} 个页签` }
-        : { status: 'warn', detail: `仅 ${ctx.sidePaneTabs} 个页签（预期 17）` },
+        ? { status: 'pass', detail: `${ctx.sidePaneTabs}` }
+        : { status: 'warn', detail: `${ctx.sidePaneTabs} / 17` },
     },
     {
       id: 'i18n',
       label: tx.label['i18n'],
       run: async () => ctx.rawI18nKeys === 0
-        ? { status: 'pass', detail: '无裸 i18n 键' }
-        : { status: 'warn', detail: `${ctx.rawI18nKeys} 个裸键（如 ide.xxx）` },
+        ? { status: 'pass', detail: 'OK' }
+        : { status: 'warn', detail: tx.detail.rawKeys(ctx.rawI18nKeys) },
     },
     {
       id: 'files',
@@ -156,7 +156,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         return api(`/api/ide/git/status?${qs({ root: ctx.workspace })}`, (body) =>
           body.repoRoot
             ? { status: 'pass', detail: `${String(body.branch ?? '?')} · ${(body.changes as unknown[] | undefined)?.length ?? 0} 变更` }
-            : { status: 'warn', detail: '非 Git 仓库（面板显示 not_a_repo 是诚实态）' })
+            : { status: 'warn', detail: tx.detail.notRepo })
       },
     },
     {
