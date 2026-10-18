@@ -564,6 +564,36 @@ export function detectPushStalled(snap: ClusterSnapshot, opts: DetectOptions = {
       severity: stale ? 'high' : 'warn',
       summary: `推送受阻${Number.isFinite(ageMs) ? ` ${Math.round(ageMs / 60000)} 分钟` : ''}：${t.profile} 日志尾出现 rebase/push 失败签名且未消除——本地失败静默形态（run21 实录：冲突 40 分钟无人见）。若 owner 在途自解可观察一轮；陈化超阈请回灌精确冲突文件清单或发单步推送令`,
       detail: { profile: t.profile, tail: t.tail.slice(-120), ageMs, stallMs },
+/** agent.active-no-artifact：活跃但零产物检测（run21 四复发同根产品化，2026-10-18）。
+ *  一夜四形态（结论行 92min/PAYCORE 3h/P0 75min/G5 修订 80min）：档案日志持续
+ *  活跃但交付物迟迟不落——「在写未提交/完成态错位」灰区，日志活跃≠进展。
+ *  本版交叉 profiles 活跃面 × runningCards 在途卡：档案正活跃 + 名下有 running
+ *  卡 → 报警提示直查（push 已有 WIP 或发单步里程碑令）。branches 产物面接入
+ *  后可升级为精确零提交判定（挂账）。fail-soft：任一面缺席即静默跳过。 */
+export function detectActiveNoArtifact(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const activeMs = opts.activeNoArtifactMs ?? 1_800_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.profiles
+  const running = snap.runningCards
+  if (!face || !face.ok || !running || !running.ok) return out
+  const ownerOf = new Map<string, number>()
+  for (const c of running.cards) {
+    const a = String(c.assignee ?? '')
+    if (!a) continue
+    ownerOf.set(a, (ownerOf.get(a) ?? 0) + 1)
+  }
+  for (const t of face.tails) {
+    if (!t.workTsMs) continue
+    const liveMs = now - t.workTsMs
+    if (liveMs > activeMs || liveMs < 0) continue
+    const held = ownerOf.get(t.profile) ?? ownerOf.get(`${t.profile}-agent`) ?? 0
+    if (held === 0) continue
+    out.push({
+      detector: 'agent.active-no-artifact', subject: `profile:${t.profile}`,
+      severity: liveMs >= activeMs * 2 ? 'high' : 'warn',
+      summary: `活跃但交付未落 ${Math.round(liveMs / 60000)} 分钟：${t.profile} 日志持续工作且持有 ${held} 张在途卡——「在写未提交/完成态错位」形态（run21 四复发同族）。建议直查：已写内容立即 push（WIP 亦可，增量提交纪律）；未写则发单步里程碑指令`,
+      detail: { profile: t.profile, liveMs, activeMs, runningCards: held },
     })
   }
   return out
