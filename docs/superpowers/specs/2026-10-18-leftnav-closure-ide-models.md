@@ -18,7 +18,7 @@
 
 - 服务端 `GET /api/ide/engine-models` 增加 `zcode.groups`：只读 `ZCODE_HOME/v2/config.json` 的启用 provider/模型 id/名称/推理档，不出口 `options`（密钥/端点）。
 - 客户端 `fetchEngineCatalog` 取源优先级：**zcode.groups → IDE 独立目录 → Hermes appStore**；`source` 字段可观测。
-- `IdeChatPane` 的模型失效判定从 `appStore.modelGroups` 改为实际选择源 `modelGroupsView`，避免把 Ycode 模型误判为「已移除」。
+- `IdeChatPane` 的模型失效判定从 `appStore.modelGroups` 改为实际选择源 `modelGroupsView`；两源目录先归一为 `{ provider, label, models: [{id}] }` 再共用（Ycode 为对象组、Hermes 为 string[]），否则对象组在 `includes` 判定下永远查不到，可用模型被误报「已移除」（2026-10-18 8649 走查实录：选中 GLM-5.3-Flash 仍报失效）。
 - 运行期即时兼容：用当前 Ycode 配置生成 `runtime/ide-engine-models.json`（仅 provider/模型/baseURL，无密钥），后端无需重启即可让选择器读到 Ycode 模型；服务端 `zcode.groups` 在下次后端重启后成为单一动态来源。
 
 ## 三、辅助栏中文可读
@@ -35,6 +35,8 @@
 - D-5：服务端只出口 provider/模型元数据，不出口 `options`。理由=密钥与端点不应经模型选择器出现在前端。
 - D-6：辅助栏图标不能作为唯一标识，中文短名常驻。理由=用户实报「图标不知道具体是什么」。
 - D-7：模型失效横幅的「重新选择」不再跳 Hermes 设置页，直接开输入框模型选择器；选择源已是 Ycode 目录。
+- D-8：失效判定与选择器共用归一后的目录视图（string / {id} 双形态统一），不在每个消费点各写一套形状判断。理由=两处形状假设不一致正是本次误报的根因。
+- D-9：横幅按钮文案按 locale 就地取「重选模型 / Reselect model」，不再复用 patch 473 的「去设置重选」。理由=D-7 改变行为后旧文案与事实不符；禁 inject 期改补丁不生效，只会在补丁与运行态之间制造漂移，待下一次 inject 时再把词条正式回写。
 
 ## 验证
 
