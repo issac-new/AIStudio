@@ -19,6 +19,8 @@
 
 ## 决策记录
 
+- D-12：zcode-patches/series 补登 002-import-session-rpc（文件在、登记丢——与 003/004 同次覆盖事故，恢复时漏了本条；实测引擎 Method not found 定位）。集成测试加旧引擎能力探测：引擎在跑但无 importSessionV4 时 skip 并留重建指引（f9920982 同款先例）。引擎重建被 pnpm storeDir 指向已归档旧盘卡住（node_modules/.modules.yaml），列为环境债，修法=本地 store 重建 node_modules 后 `pnpm --filter @zcode/server run build`。
+
 - D-11：工作流探针对 503（引擎冷握手）重试一次（3s 间隔）。理由：服务端重启后首连引擎的 helloConversationV4 5s 超时是既有暖机形态，直连复测 5-30ms 即过；不重试则每次后端重启都被自检误报为引擎未启动。
 
 - D-10：磁盘缓存里的完整扫描结果不被后台刷新的部分结果覆盖（后台刷新只在缓存本身是 partial 时触发，完整结果 24h 窗口内不回退）。理由：用户复测实录——19s 完整扫描落缓存后，30s TTL 到期触发 4s 预算的后台刷新，partial 把完整结果覆盖回下限值，告警复现。
