@@ -187,9 +187,12 @@ router.get('/snapshot', async (ctx: any) => {
   const force = String(ctx.query?.refresh ?? '') === '1'
   const disk = force ? null : readDiskCache()
   if (disk) {
-    // stale-while-revalidate：先返回缓存，过期则后台刷新（不阻塞面板）
+    // stale-while-revalidate：先返回缓存，过期则后台刷新（不阻塞面板）。
+    // 只有缓存本身是部分结果才刷新——完整结果在 24h 窗口内不回退：
+    // 后台刷新走 4s 预算，拿到的 partial 会把完整扫描覆盖成下限值（实测）。
     ctx.body = { ...disk.body, cached: true, cachedAt: disk.at }
-    if (Date.now() - disk.at > SNAPSHOT_TTL_MS) {
+    const diskPartial = Boolean((disk.body as { partial?: boolean }).partial)
+    if (diskPartial && Date.now() - disk.at > SNAPSHOT_TTL_MS) {
       void freshSnapshot(true).catch(() => { /* 后台刷新失败保留缓存 */ })
     }
     return
