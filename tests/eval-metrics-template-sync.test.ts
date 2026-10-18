@@ -61,7 +61,7 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(sh).toContain('评测与运行时指标')
     expect(sh).toContain('EVAL_GATE_TOOL_SUCCESS_MIN')
     expect(sh).toContain('eval-metrics')
-    expect(sh).toContain('二十项')  // V8.42 加 ⑳ Harness 运行底座编入检查（2026-10-18）；此前 十九=⑰ 监督器健康+⑱ 报告真值三件套+⑲ 产品 IA 版本
+    expect(sh).toContain('二十二项')  // V8.44 加 ㉑ 任务工作区/㉒ 阶段页签与重定向矩阵；此前 二十=⑳ Harness 运行底座编入检查（V8.42）
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })
 
