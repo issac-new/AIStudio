@@ -75,10 +75,12 @@ export async function fetchEngineCatalog(): Promise<EngineCatalog> {
       models: (g.models ?? []).map((m) => ({ id: m.id, ...(m.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) })),
     }))
   const independentDefault = normalizeDefault(body.config?.defaultModel)
-  // 版本判据：只采信带 zcode.default 的 zcode 目录（新版服务端标志——新代码在
-  // 目录非空时必出 default）。旧后端返回旧算路的 zcode.groups（无 default），
-  // 直接采信会把过期分组压过已更新的独立目录，回落独立目录由种子供给新目录。
-  if (zcodeGroups.length > 0 && normalizeDefault(body.zcode?.default)) {
+  // 版本判据（D-13/D-14）：只采信「带 zcode.default 且携带思考档位」的 zcode 目录
+  // （最新服务端标志——default 与 manifest 档位都是新代码产物）。中间版本后端
+  // （有目录无档位）与旧后端（无 default）一律回落独立目录，由种子文件供给
+  // 完整目录（命名空间/顺序/默认/档位），避免半新目录压过种子。
+  const zcodeHasLevels = zcodeGroups.some(g => (g.models ?? []).some(m => m.reasoningLevels?.length))
+  if (zcodeGroups.length > 0 && zcodeHasLevels && normalizeDefault(body.zcode?.default)) {
     return {
       groups: zcodeGroups,
       independent: true,
