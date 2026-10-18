@@ -12,7 +12,7 @@ vi.mock('naive-ui', () => ({
 const switchSessionModel = vi.fn(async () => true)
 const switchModel = vi.fn(async () => true)
 const setSessionReasoningEffort = vi.fn(async () => undefined)
-const { newChat } = vi.hoisted(() => ({ newChat: vi.fn() }))
+const { newChat, sendMessage } = vi.hoisted(() => ({ newChat: vi.fn(), sendMessage: vi.fn() }))
 const state = { activeSessionId: null as string | null, activeSession: null as Record<string, unknown> | null }
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
@@ -23,7 +23,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     newChat,
     switchSessionModel,
     setSessionReasoningEffort,
-    sendMessage: vi.fn(),
+    sendMessage,
   }),
 }))
 vi.mock('@/stores/hermes/profiles', () => ({ useProfilesStore: () => ({ fetchProfiles: vi.fn(async () => {}), profiles: [] }) }))
@@ -60,7 +60,11 @@ vi.mock('@/components/hermes/chat/MessageList.vue', () => ({ default: { name: 'M
 vi.mock('../components/IdeTurnRail.vue', () => ({ default: { name: 'IdeTurnRail', template: '<div />' } }))
 vi.mock('../components/IdeHandoffCard.vue', () => ({ default: { name: 'IdeHandoffCard', template: '<div />' } }))
 vi.mock('../components/IdeRecoveryDialog.vue', () => ({ default: { name: 'IdeRecoveryDialog', template: '<div />' } }))
-vi.mock('../components/IdePermissionSwitcher.vue', () => ({ default: { name: 'IdePermissionSwitcher', template: '<div />' } }))
+vi.mock('../components/IdePermissionSwitcher.vue', () => ({ default: { name: 'IdePermissionSwitcherStub', template: '<div data-testid="ide-perm-trigger" />' } }))
+// ZCode 对齐批：管理模型入口打开的引擎目录对话框（重件桩化；保存回调由本文件断言调用面）
+vi.mock('../components/IdeEngineModelsDialog.vue', () => ({
+  default: { name: 'IdeEngineModelsDialogStub', emits: ['close', 'saved'], template: '<div data-testid="ide-engine-models-dialog-stub"><button data-testid="stub-dialog-saved" @click="$emit(\'saved\')" /></div>' },
+}))
 vi.mock('../components/IdeAskCard.vue', () => ({ default: { name: 'IdeAskCard', template: '<div />' } }))
 vi.mock('../components/IdeMentionChip.vue', () => ({ default: { name: 'IdeMentionChip', template: '<div />' } }))
 vi.mock('../components/IdeRunLogPanel.vue', () => ({ default: { name: 'IdeRunLogPanel', template: '<div />' } }))
@@ -221,5 +225,113 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(false)
     await w.find('[data-testid="ide-settings-model-row"]').trigger('click')
     expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(true)
+  })
+})
+
+// ── ZCode 输入框对齐批（2026-10-18）：composer 工具条五控件 + 模型面板入口 ──
+describe('IdeChatPane composer 工具条（ZCode 对齐）', () => {
+  const LEVELS_MODEL = [{ id: 'glm-5.3', reasoningLevels: ['low', 'high', 'max'] }]
+
+  function barTestids(w: { element: HTMLElement }): string[] {
+    const bar = w.element.querySelector('[data-testid="ide-composer-bar"]')
+    expect(bar).toBeTruthy()
+    return Array.from(bar!.querySelectorAll<HTMLElement>('[data-testid]')).map(el => el.dataset.testid as string)
+  }
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    catalogMock.mockReset()
+    switchSessionModel.mockClear()
+    switchModel.mockClear()
+    newChat.mockClear()
+    sendMessage.mockClear()
+    state.activeSessionId = null
+    state.activeSession = null
+    localStorage.clear()
+  })
+
+  it('输入区下方一排五控件，顺序=ZCode（模式/电脑操作/上下文容量/模型选择/思考强度）', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'bigmodel', models: LEVELS_MODEL }],
+    })
+    state.activeSessionId = 's1'
+    state.activeSession = { id: 's1', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped' }
+    const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    const ids = barTestids(w)
+    const firstOf = (id: string) => ids.indexOf(id)
+    expect(firstOf('ide-perm-trigger')).toBeGreaterThanOrEqual(0)
+    expect(firstOf('ide-computer-use')).toBeGreaterThan(firstOf('ide-perm-trigger'))
+    expect(firstOf('ide-context-bar')).toBeGreaterThan(firstOf('ide-computer-use'))
+    expect(firstOf('ide-composer-model-btn')).toBeGreaterThan(firstOf('ide-context-bar'))
+    expect(firstOf('ide-effort-btn')).toBeGreaterThan(firstOf('ide-composer-model-btn'))
+    // 头部双入口退役：模型切换器不再渲染于头部
+    expect(w.find('[data-testid="ide-model-switcher"]').exists()).toBe(false)
+  })
+
+  it('电脑操作开关：切换即发声明消息并按会话持久化', async () => {
+    catalogMock.mockResolvedValue({ independent: true, groups: [{ provider: 'bigmodel', models: LEVELS_MODEL }] })
+    state.activeSessionId = 's1'
+    state.activeSession = { id: 's1', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped' }
+    const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    const btn = w.find('[data-testid="ide-computer-use"]')
+    expect(btn.classes()).not.toContain('is-on')
+    await btn.trigger('click')
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+    expect(String(sendMessage.mock.calls[0][0])).toContain('[computer-use-policy] enabled=true')
+    expect(w.find('[data-testid="ide-computer-use"]').classes()).toContain('is-on')
+    expect(localStorage.getItem('ide-computer-use:s1')).toBe('on')
+    await w.find('[data-testid="ide-computer-use"]').trigger('click')
+    expect(String(sendMessage.mock.calls[1][0])).toContain('[computer-use-policy] enabled=false')
+    expect(localStorage.getItem('ide-computer-use:s1')).toBe('off')
+  })
+
+  it('模型面板：Auto 路由入口 + 管理模型入口（打开引擎目录对话框，保存写穿重拉）', async () => {
+    let calls = 0
+    catalogMock.mockImplementation(async () => {
+      calls += 1
+      return { independent: true, groups: [{ provider: 'bigmodel', label: 'BigModel', models: [{ id: 'glm-5.3' }] }] }
+    })
+    const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="ide-composer-model-btn"]').trigger('click')
+    const picker = w.find('[data-testid="ide-input-model-picker"]')
+    expect(picker.exists()).toBe(true)
+    expect(w.find('[data-testid="ide-input-model-auto"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-input-model-manage"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-input-model-manage"]').trigger('click')
+    expect(w.find('[data-testid="ide-engine-models-dialog-stub"]').exists()).toBe(true)
+    const before = calls
+    await w.find('[data-testid="stub-dialog-saved"]').trigger('click')
+    await flushPromises()
+    expect(calls).toBeGreaterThan(before) // 保存回调写穿重拉目录
+  })
+
+  it('双源守门（自退役的 model-switcher-source 迁入）：独立目录优先，空/失败回落 Hermes', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'bigmodel', models: [{ id: 'glm-5.3' }] }],
+    })
+    let w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="ide-composer-model-btn"]').trigger('click')
+    let text = w.find('[data-testid="ide-input-model-picker"]').text()
+    expect(text).toContain('bigmodel')
+    expect(text).not.toContain('hermes-p')
+
+    catalogMock.mockResolvedValue({ independent: false, groups: [] })
+    w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="ide-composer-model-btn"]').trigger('click')
+    text = w.find('[data-testid="ide-input-model-picker"]').text()
+    expect(text).toContain('hermes-p')
+
+    catalogMock.mockRejectedValue(new Error('503'))
+    w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="ide-composer-model-btn"]').trigger('click')
+    expect(w.find('[data-testid="ide-input-model-picker"]').text()).toContain('hermes-p')
   })
 })
