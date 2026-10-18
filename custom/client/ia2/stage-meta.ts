@@ -1,6 +1,6 @@
 // overlay/custom/client/ia2/stage-meta.ts
 // 阶段定义单一事实源（D18 旅程式重构，2026-10-17 用户裁定）：
-// 顶栏六阶段（nav-centers CENTER_NAVS）、StageShell 阶段页、旅程页交付区
+// 左侧流程组六阶段（nav-centers CENTER_NAVS / IaSideNav）、StageShell 阶段页签、流程总览交付区
 // 三处消费同一份数据，终结此前三处各自定义的双轨形态。
 // 需求与设计正本=docs/superpowers/specs/2026-10-17-journey-ia-terminology-redesign.md
 // （§5.0 单一事实源、§5.1 旅程页、§5.5 术语映射表）。
@@ -51,7 +51,7 @@ export const STAGE_META: readonly StageMeta[] = [
     tools: [
       { key: 'runOverview', label: '运行总览', desc: '运行模式横幅·六道质量门行（G1 状态）·净计卡', to: '/app/sim', name: 'ia2.sim' },
       { key: 'orchestrate', label: '运行编排', desc: '启动/续跑/运行模式切换·启动前检查', to: '/app/sim/orchestration', name: 'ia2.simOrchestration' },
-      { key: 'docReview', label: '文档评审', desc: '冻结单字段级核对（缺项红显）', to: '/app/gov/docs', name: 'ia2.govDocs' },
+      { key: 'docReview', label: '文档评审', desc: '冻结单字段级核对（缺项红显）', to: '/app/stage/reqs', name: 'ia2.stage2' },
     ],
   },
   {
@@ -61,9 +61,9 @@ export const STAGE_META: readonly StageMeta[] = [
     act: '没设计不开发——G2 不过不准排期是铁闸。',
     keys: ['analysis_done', 'anexec_done', 'review_done', 'g2_arch_pass', 'plan_done'],
     tools: [
-      { key: 'board', label: '看板·任务协同', desc: '任务分解·分诊·依赖图', to: '/app/board', name: 'ia2.board' },
+      { key: 'board', label: '看板·任务协同', desc: '任务分解·分诊·依赖图', to: '/app/stage/design', name: 'ia2.stage3' },
       { key: 'supervision', label: '监督面板', desc: '分析期态势研判·观察窗', to: '/app/sim/supervision', name: 'ia2.simSupervision' },
-      { key: 'gates', label: '质量门与流程', desc: 'G2 评审状态·质量门修复单', to: '/app/gov', name: 'ia2.governance' },
+      { key: 'gates', label: '质量门与流程', desc: 'G2 评审状态·质量门修复单', to: '/app/stage/design', name: 'ia2.stage3' },
     ],
   },
   {
@@ -73,7 +73,7 @@ export const STAGE_META: readonly StageMeta[] = [
     act: '在制上限（WIP）≤2；完成必带双凭证；缺陷报→修→验全关才准出。',
     keys: ['devimpl_done', 'defect_done', 'testpass_done'],
     tools: [
-      { key: 'approvals', label: '审批待办', desc: '人工介入请求·遗留项清算审批·收尾指令模板', to: '/app/inbox', name: 'ia2.inbox' },
+      { key: 'approvals', label: '审批待办', desc: '人工介入请求·遗留项清算审批·收尾指令模板', to: '/app/stage/build', name: 'ia2.stage4' },
       { key: 'workbench', label: '工作台看板', desc: '我的卡·沟通·IDE 工作区', to: '/app/collab', name: 'ia2.collab' },
       { key: 'ide', label: 'IDE 工作区', desc: '开发工作位：任务简报·分支新鲜度', to: '/app/ide', name: 'ide.shell' },
       { key: 'evidence', label: '证据库', desc: '帧图廊·锚点反查·消息存证', to: '/app/sim/evidence', name: 'ia2.simEvidence' },
@@ -86,9 +86,9 @@ export const STAGE_META: readonly StageMeta[] = [
     act: '判定只认结构化字段；任一条不过回缺陷回流。',
     keys: ['g5_ready', 'release_done', 'uat_done'],
     tools: [
-      { key: 'trace', label: '需求追溯', desc: '验收标准→用例→测试→UAT 判定四列', to: '/app/sim/trace', name: 'ia2.simTrace' },
-      { key: 'delivery', label: '交付健康', desc: '分支推送·交付物 14 件链', to: '/app/sim/delivery', name: 'ia2.simDelivery' },
-      { key: 'approvals', label: '审批待办', desc: 'G5 人工批准入口', to: '/app/inbox', name: 'ia2.inbox' },
+      { key: 'trace', label: '需求追溯', desc: '验收标准→用例→测试→UAT 判定四列', to: '/app/stage/accept', name: 'ia2.stage5' },
+      { key: 'delivery', label: '交付健康', desc: '分支推送·交付物 14 件链', to: '/app/stage/accept', name: 'ia2.stage5' },
+      { key: 'approvals', label: '审批待办', desc: 'G5 人工批准入口', to: '/app/stage/accept', name: 'ia2.stage5' },
     ],
   },
   {
@@ -98,10 +98,10 @@ export const STAGE_META: readonly StageMeta[] = [
     act: '问题清单 100% 有处置结论；复盘行动项进下一轮。',
     keys: ['workmgr_done', 'audit_done', 'retro_done', 'report_done'],
     tools: [
-      { key: 'clearance', label: '遗留项清算', desc: '遗留项清单·resolve/waive 审批', to: '/app/gov/clearance', name: 'ia2.govClearance' },
-      { key: 'issues', label: '问题清单对账', desc: '处置率·台账全量', to: '/app/gov/issues', name: 'ia2.govIssues' },
-      { key: 'metrics', label: '度量检查', desc: '五卡检查·磁盘水位预警', to: '/app/gov/metrics', name: 'ia2.govMetrics' },
-      { key: 'audit', label: '审计与变更', desc: '四查状态·基线变更记录', to: '/app/gov/audit', name: 'ia2.govAudit' },
+      { key: 'clearance', label: '遗留项清算', desc: '遗留项清单·resolve/waive 审批', to: '/app/stage/govern', name: 'ia2.stage6' },
+      { key: 'issues', label: '问题清单对账', desc: '处置率·台账全量', to: '/app/stage/govern', name: 'ia2.stage6' },
+      { key: 'metrics', label: '度量检查', desc: '五卡检查·磁盘水位预警', to: '/app/stage/govern', name: 'ia2.stage6' },
+      { key: 'audit', label: '审计与变更', desc: '四查状态·基线变更记录', to: '/app/stage/govern', name: 'ia2.stage6' },
     ],
   },
 ]

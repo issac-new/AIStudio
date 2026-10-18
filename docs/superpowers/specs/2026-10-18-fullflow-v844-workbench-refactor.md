@@ -174,6 +174,14 @@
 5. 方案 26 步 `**步 N｜` 解析锚、STEPS 键、六道关卡未被改动（生成器/审计器回归）。
 6. 报告叙事中产品面描述与词表一致；历史轮次报告不回溯。
 
+## 六之二、产品欠账清偿记录（2026-10-19）
+
+- `stage-meta.ts` 六阶段工具卡路由从 `/app/gov/*`、`/app/sim/trace|delivery` 全部迁到阶段页规范路径（`/app/stage/reqs|design|build|accept|govern`），`name` 同步为 `ia2.stageN`；工具卡本身已不渲染，但 `stage-attribution` 仍消费其路径，迁移后归属判定与重定向零冲突。
+- `routes.ts` 的 `IA_AREAS` labelKey 已是 `ia2.nav.stage1..6`（旧「六行同指 ia2.nav.collab」欠账在左侧栏批已清），本批复核确认。
+- `IaCentersNav.vue`、`IaQuickNav.vue`、`IaViewSwitcher.vue` 已不存在；本批删除无引用的旧导航入口 `IaJourneyEntry.vue`、`IaOverviewEntry.vue`、`GovernanceNavEntry.vue`，并移除对应孤立测试块。
+- 用户可见导语：运行编排「十九项机械检查」→「二十二项」；「仿真环境的开关面板」→「推演设置」；页签导语注释统一为全流程推演/⑥治理。
+- 保留项（非欠账）：`/app/gov/*`、`/app/sim/trace|delivery`、`/app/runs` 等旧路由的重定向是零断链设计，不删除。
+
 ## 七、取代声明
 
 - 本文取代《2026-10-17-fullflow-plan-harness-ia-reconciliation.md》作为**当期**对账总表；旧表冻结为历史依据（其 V8.37 裁决对当时有效）。
