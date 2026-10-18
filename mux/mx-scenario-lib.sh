@@ -924,6 +924,27 @@ dev_progress_ping() {
   note "[进度锚] 交付分支：${line}；工作区在途：${wtline:-无}；在线工位=${_act}；PROGRESS-ANCHORS=${pg:-无}"
 }
 
+# ⑨ 催办语义精确化（run21 四复发根治第三件，2026-10-18）：按等待目标生成
+# 「缺什么+格式模板+单步指令」——通用文案 6 轮石沉大海 vs 极简单步令三破局
+# （8min/3min/6min）的机器化。识别等待目标类型，注入对应精确指令。
+_nudge_precision() { # <desc> → 精确催办片段
+  local d="$1"
+  case "$d" in
+    *结论行*|*DONE*)
+      echo "｜精确指令：只补一行结论（格式已给全），不要重做已完成的工作，不要解释，发完即止。";;
+    *报告*|*report*)
+      echo "｜精确指令：若内容已写完→立即 push（WIP 亦可，增量提交）；未写完→先推已完成部分。推完回执一行。";;
+    *凭证*|*证据*|*testlog*)
+      echo "｜精确指令：把已有产物 push 上分支（文件在本地不算交付），回执一行带 commit 短锚。";;
+    *复审*|*评审*)
+      echo "｜精确指令：按卡面缺项逐项补齐；已补项勿重做。补完更新卡面判词+结论行。";;
+    *分支*|*push*)
+      echo "｜精确指令：本地已有提交立即推；冲突则 fetch+rebase（两边保留）再推；推完回执。";;
+    *)
+      echo "｜精确指令：只推进本等待项，做完即回执一行，勿展开其他工作。";;
+  esac
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   # 总时长硬窗（纪律 26 兜底，2026-10-09 提速轮根治）：idle 判据可被"房间噪音持续
@@ -999,6 +1020,8 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     if (( idle_half >= 300 && nudged == 0 && $(date +%s) - last_sig > idle_half )) && [[ -n "${_nroom:-}" ]]; then
       local _intel=""
       _intel=$(_nudge_branch_intel "$agents" 2>/dev/null || true)
+      # ⑨ 催办语义精确化：按等待目标注入「缺什么+格式模板+单步指令」
+      _intel="${_intel}$(_nudge_precision "${desc}" 2>/dev/null || true)"
       if [ "$(posture)" = "strict" ]; then
         # V8.29 §2.6.5：strict 不代偿提醒（PR-3 根治前如实暴露停滞）
         note "[姿态] strict：等待「${desc}」空转过半——不代偿提醒，记问题单"
