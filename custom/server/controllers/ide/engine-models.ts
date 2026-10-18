@@ -120,8 +120,34 @@ export interface ZcodeCatalogGroup {
   models: Array<{ id: string; reasoningLevels?: string[] }>
 }
 
+/** ZCode 供应商管理器（provider_config.json）：排序与显示名的真实来源——
+ *  setting.json 的 family 键只管 OAuth 套餐 UI，与本机实际首选（用户在 provider
+ *  管理器里排到第一位的）不一定一致（2026-10-18 用户实报「和本机 zcode 的配置
+ *  不一样」：XGLM/glm-5.3 才是当前所用，而非 family 键指向的 coding-plan）。 */
+interface ZcodeProviderRule {
+  providerId: string
+  providerName?: string
+  enabled?: boolean
+  config?: { modelOrder?: string[] }
+}
+
+function readZcodeProviderConfig(): { order: string[]; rules: Map<string, ZcodeProviderRule> } {
+  try {
+    const path = join(zcodeRoot(), 'v2', 'provider_config.json')
+    if (!existsSync(path)) return { order: [], rules: new Map() }
+    const raw = JSON.parse(readFileSync(path, 'utf8')) as {
+      config?: { providerOrder?: string[]; providerConfigRules?: { providerRules?: ZcodeProviderRule[] } }
+    }
+    const rules = new Map((raw.config?.providerConfigRules?.providerRules ?? []).map(r => [r.providerId, r]))
+    return { order: raw.config?.providerOrder ?? [], rules }
+  } catch {
+    return { order: [], rules: new Map() }
+  }
+}
+
 /** 读 Ycode/ZCode 实际配置（~/.zcode/v2/config.json）的启用 provider → 模型目录。
- *  只投影 providerId/名称/模型 id 与推理档，不读取 options（密钥/端点不出口）。 */
+ *  只投影 providerId/名称/模型 id 与推理档，不读取 options（密钥/端点不出口）。
+ *  分组顺序与组内模型顺序对齐 provider_config.json（无记录的保持 config 序垫后）。 */
 export function readZcodeCatalog(): ZcodeCatalogGroup[] {
   try {
     const path = zcodeConfigPath()
@@ -133,15 +159,35 @@ export function readZcodeCatalog(): ZcodeCatalogGroup[] {
         models?: Record<string, { reasoningLevels?: string[] }>
       }>
     }
+    const { order, rules } = readZcodeProviderConfig()
     const groups: ZcodeCatalogGroup[] = []
     for (const [providerId, p] of Object.entries(engine.provider ?? {})) {
       if (!p || p.enabled === false) continue
-      const models = Object.entries(p.models ?? {})
-        .map(([id, m]) => ({ id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }))
-      if (models.length === 0) continue
-      groups.push({ provider: providerId, label: p.name || providerId, models })
+      const rule = rules.get(providerId)
+      if (rule && rule.enabled === false) continue
+      const byId = new Map(Object.entries(p.models ?? {})
+        .map(([id, m]) => [id, { id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }]))
+      const ordered: Array<{ id: string; reasoningLevels?: string[] }> = []
+      for (const id of rule?.config?.modelOrder ?? []) {
+        const m = byId.get(id)
+        if (m) { ordered.push(m); byId.delete(id) }
+      }
+      for (const m of byId.values()) ordered.push(m)
+      if (ordered.length === 0) continue
+      groups.push({
+        provider: providerId,
+        label: rule?.providerName || p.name || providerId,
+        models: ordered,
+      })
     }
-    return groups
+    const rank = (id: string) => {
+      const i = order.indexOf(id)
+      return i === -1 ? order.length : i
+    }
+    // 稳定排序：providerOrder 命中的在前（按序），未命中的保持 config 声明序垫后。
+    return groups.map((g, i) => ({ g, i }))
+      .sort((a, b) => rank(a.g.provider) - rank(b.g.provider) || a.i - b.i)
+      .map(x => x.g)
   } catch {
     return []
   }
@@ -167,11 +213,20 @@ function preferredZcodeGroup(groups: ZcodeCatalogGroup[]): ZcodeCatalogGroup | n
   }
 }
 
-/** 新会话默认模型：ZCode 选中的 provider family 首模型；没有 family 选择时取首个
- *  启用 provider 的首模型（与选择器展示顺序一致）。目录空 → null。 */
+/** 新会话默认模型：优先 provider 管理器排首位且启用的 provider 的首选模型
+ *  （modelOrder 与目录交集的第一个）；无 provider_config 时回落 family 选择，
+ *  再回落首个启用 provider 首模型（与选择器展示顺序一致）。目录空 → null。 */
 export function readZcodeDefault(
   groups: ZcodeCatalogGroup[] = readZcodeCatalog(),
 ): { provider: string; model: string } | null {
+  const { order, rules } = readZcodeProviderConfig()
+  const byId = new Map(groups.map(g => [g.provider, g]))
+  for (const id of order) {
+    const rule = rules.get(id)
+    if (rule && rule.enabled === false) continue
+    const group = byId.get(id)
+    if (group && group.models.length > 0) return { provider: group.provider, model: group.models[0].id }
+  }
   const group = preferredZcodeGroup(groups) ?? groups.find(g => g.models.length > 0)
   const model = group?.models[0]?.id
   return group && model ? { provider: group.provider, model } : null
