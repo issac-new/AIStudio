@@ -3,10 +3,12 @@
 // 基于任务会话与项目的视图——根目录响应式跟随当前会话 workspace（回退
 // ide.workspace），不与任务列表平行独立存在；保留「查看文件 | Git」双
 // 子页签（上游 FileTree + IdeGitPane）。
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
+import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
 import { useIdeStore } from '../store/ide'
 import { workspaceLabel } from '../utils/time'
@@ -14,10 +16,29 @@ import { workspaceLabel } from '../utils/time'
 const { t } = useI18n()
 const ide = useIdeStore()
 const chat = useChatStore()
+const filesStore = useFilesStore()
 
 const tab = ref<'tree' | 'git'>('tree')
 
 const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
+
+// FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
+// workspaceRoot（上游 FileTree 直接读该 ref）。此前 IDE 只传了标签，页面
+// 显示 ide-qa-repo 却列 ~/.hermes（2026-10-18 回归实测），此处补接线。
+watch(root, (value) => {
+  filesStore.workspaceRoot = value ?? undefined
+}, { immediate: true })
+onUnmounted(() => {
+  filesStore.workspaceRoot = undefined
+})
+
+// 文件节点点击 → 走 toolPanel 预览 overlay（IdeChatPane 的 FilePreview 宿主），
+// IDE 没有独立编辑器面板，openEditor 无落点。
+async function openEntry(entry: FileEntry): Promise<void> {
+  if (entry.isDir) return
+  filesStore.closePreview()
+  await filesStore.openPreview(entry, { profile: null })
+}
 </script>
 
 <template>
@@ -27,7 +48,14 @@ const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
       <button type="button" role="tab" class="ide-files__tab" :class="{ 'is-active': tab === 'git' }" :aria-selected="tab === 'git'" data-testid="ide-files-tab-git" @click="tab = 'git'">Git</button>
     </div>
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
-    <FileTree v-show="tab === 'tree'" class="ide-files__tree" :profile="null" :workspace-key="root" />
+    <FileTree
+      v-show="tab === 'tree'"
+      class="ide-files__tree"
+      :profile="null"
+      :workspace-key="root"
+      show-files
+      @open-entry="openEntry"
+    />
     <IdeGitPane v-if="tab === 'git'" class="ide-files__git" />
   </div>
 </template>

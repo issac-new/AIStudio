@@ -3,6 +3,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('naive-ui', () => ({ useMessage: () => ({ warning: vi.fn(), success: vi.fn() }) }))
@@ -59,5 +61,15 @@ describe('IdeStatusBar 槽位定制（UI-8）', () => {
     expect((cluster.element as HTMLElement).style.order).toBe('0')
     const ws = w.find('[data-testid="ide-slot-workspace"]').element.closest('.ide-statusbar__item') as HTMLElement
     expect(ws.style.order).not.toBe('0')
+  })
+
+  it('slots 配置入口不被右端挤压、面板不被 overflow 裁切（2026-10-18 回归）', () => {
+    const src = readFileSync(resolve(__dirname, '../views/IdeStatusBar.vue'), 'utf8')
+    const start = src.indexOf('.ide-statusbar__slots-btn')
+    const block = src.slice(start, src.indexOf('.ide-statusbar__slots-panel', start))
+    expect(block).toContain('flex-shrink: 0')
+    expect(block).toContain('overflow: visible')
+    // 齿轮字形仅 7×15px：按钮须补足最小热区
+    expect(src).toContain('min-width: 20px')
   })
 })

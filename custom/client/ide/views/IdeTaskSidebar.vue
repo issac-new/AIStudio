@@ -40,6 +40,8 @@ const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const chat = useChatStore()
+// 用户主动点选会话 → 通知外壳收起裸落地引导（本地草稿不是「已进入工作区」）
+const emit = defineEmits<{ open: [id: string] }>()
 const prefs = useIdePins()
 // prefs.pinnedIds 非响应式（闭包数组），经触发器转响应式供 computed 依赖
 const pinsVersion = ref(0)
@@ -322,6 +324,7 @@ async function onRestoreAllArchived(): Promise<void> {
 
 // ---- 会话操作 ----
 async function onOpen(id: string): Promise<void> {
+  emit('open', id)
   await chat.switchSession(id)
   ide.setChatFocus()
 }
@@ -330,7 +333,10 @@ async function onNewTask(): Promise<void> {
   await chat.newChat({
     agent: ideAgentToChatAgent(ide.agentId) as never,
     codingAgentId: ide.agentId,
-    codingAgentMode: 'global',
+    // 与命令面板「新建会话」同口径：scoped 才使用传入的 workspace；
+    // global 会落到 coding-agent 默认目录 ~/.hermes-web-ui/...，不在文件
+    // API 沙箱内，右栏文件树直接 400（2026-10-18 回归实测）。
+    codingAgentMode: 'scoped',
     source: 'coding_agent',
     workspace: ide.workspace,
   })
@@ -420,7 +426,7 @@ onMounted(async () => {
         </span>
         <kbd class="ide-taskbar__kbd">⌘N</kbd>
       </button>
-      <button type="button" class="ide-taskbar__action" data-testid="ide-task-search" @click="onSearchClick">
+      <button type="button" class="ide-taskbar__action" data-testid="ide-task-search" @mousedown.prevent @click="onSearchClick">
         <span class="ide-taskbar__action-label">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
           {{ t('ide.task.search') }}

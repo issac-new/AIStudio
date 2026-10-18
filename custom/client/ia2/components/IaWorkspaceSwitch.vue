@@ -11,8 +11,13 @@ import { useChatStore } from '@/stores/hermes/chat'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const chatStore = useChatStore()
+
+const isZh = computed(() => String(locale?.value ?? 'zh').startsWith('zh'))
+// 词条表（patch 316/317）没有 IDE 视图名，走本地字典；EN 下不能留中文。
+const ideLabel = computed(() => isZh.value ? 'IDE 工作区' : 'IDE Workspace')
+const groupLabel = computed(() => isZh.value ? '工作视图' : 'Workspace view')
 
 const isIde = computed(() => route.path === '/app/ide' || route.path.startsWith('/app/ide/'))
 
@@ -28,7 +33,7 @@ function goIde(): void {
 </script>
 
 <template>
-  <div class="iws" role="group" aria-label="工作视图" data-testid="ia-workspace-switch">
+  <div class="iws" role="group" :aria-label="groupLabel" data-testid="ia-workspace-switch">
     <button
       type="button"
       class="iws__btn"
@@ -44,7 +49,7 @@ function goIde(): void {
       data-testid="ia-workspace-ide"
       :aria-pressed="isIde"
       @click="goIde"
-    >IDE 工作区</button>
+    >{{ ideLabel }}</button>
   </div>
 </template>
 

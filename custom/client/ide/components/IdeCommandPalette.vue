@@ -6,7 +6,7 @@
 // （chatStore.sessions 标题过滤 → switchSession，对标 zcode taskSearch）。
 // 文件区列 backlog（需非递归目录 API 之外的树搜索通道，见 parity-analysis §二）。
 // 键盘：↑↓ 跨区扁平导航、Enter 执行、Esc 关闭；输入即时过滤。
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
@@ -90,6 +90,13 @@ const commandItems = computed<PaletteItem[]>(() => {
       labelKey: 'ide.paletteCmdToggleChat',
       run: () => { ide.toggleFold('chat') },
     },
+    {
+      // 2026-10-18 回归配套：把会话/文件/Git/存储/命令/工作流/深链等只读探针
+      // 串成一张报告，日常改完 IDE 点一次即可看全链路。
+      id: 'cmd:self-check',
+      label: 'IDE 自检（全能力冒烟）',
+      run: () => { ide.openSelfCheck() },
+    },
   ]
   if (chatStore.activeSessionId) {
     items.push({
@@ -156,14 +163,32 @@ const sections = computed<PaletteSection[]>(() => {
 const flatItems = computed<PaletteItem[]>(() => sections.value.flatMap((s) => s.items))
 
 watch(query, () => { activeIndex.value = 0 })
-watch(ide.paletteOpen, async (open) => {
+// ide.paletteOpen 在 Pinia setup store 上已被解包为普通布尔值——直接传值给
+// watch 不会触发（2026-10-18 实测焦点永不进入输入框，Escape 也只在输入框内
+// 生效）。必须用 getter 形式。
+watch(() => ide.paletteOpen, async (open) => {
   if (open) {
     query.value = ''
     activeIndex.value = 0
     await nextTick()
-    inputEl.value?.focus()
+    // 由外部按钮（侧栏「搜索」）打开时，点击后的默认聚焦会落回按钮，
+    // 同步 focus 会被盖掉；下一帧再聚焦确保输入框拿到焦点（侧栏入口另加
+    // @mousedown.prevent 阻止按钮抢焦点）。
+    const focusInput = () => inputEl.value?.focus()
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(focusInput)
+    else setTimeout(focusInput, 0)
   }
 })
+
+// 兜底：焦点不在输入框时 Esc 也要能关面板（2026-10-18 实测侧栏搜索入口
+// 打开后焦点留在按钮，input 上的 @keydown 收不到 Escape）。
+function onWindowKeydown(event: KeyboardEvent): void {
+  if (!ide.paletteOpen || event.key !== 'Escape') return
+  event.preventDefault()
+  ide.closePalette()
+}
+onMounted(() => { window.addEventListener('keydown', onWindowKeydown) })
+onUnmounted(() => { window.removeEventListener('keydown', onWindowKeydown) })
 
 function label(item: PaletteItem): string {
   return item.label ?? t(item.labelKey)

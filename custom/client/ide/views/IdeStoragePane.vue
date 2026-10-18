@@ -12,6 +12,7 @@ const message = useMessage()
 
 const categories = ref<StorageCategory[]>([])
 const totalBytes = ref(0)
+const partial = ref(false)
 const loading = ref(false)
 const confirmTarget = ref<StorageCategory | null>(null)
 const cleaning = ref(false)
@@ -22,6 +23,7 @@ async function load(): Promise<void> {
     const snap = await ideStorageApi.snapshot()
     categories.value = snap.categories
     totalBytes.value = snap.totalBytes
+    partial.value = Boolean(snap.partial)
   } catch {
     message.error(t('ide.storage.loadFailed'))
   } finally {
@@ -56,7 +58,7 @@ onMounted(load)
   <div class="ide-storage" data-testid="ide-storage-pane">
     <div class="ide-storage__toolbar">
       <span class="ide-storage__title">{{ t('ide.storage.panelTitle') }}</span>
-      <span class="ide-storage__total">{{ t('ide.storage.total') }}：{{ formatBytes(totalBytes) }}</span>
+      <span class="ide-storage__total" :title="partial ? '部分分类扫描超时，显示下限值 / Partial: some scans timed out' : ''">{{ t('ide.storage.total') }}：{{ partial ? '≈ ' : '' }}{{ formatBytes(totalBytes) }}</span>
       <button type="button" class="ide-storage__btn" data-testid="ide-storage-refresh" @click="load">{{ t('ide.storage.rescan') }}</button>
     </div>
 
@@ -65,7 +67,11 @@ onMounted(load)
       <div v-for="cat in categories" :key="cat.key" class="ide-storage__row">
         <div class="ide-storage__row-main">
           <span class="ide-storage__name">{{ t(`ide.storage.cat_${cat.key}`) }}</span>
-          <span class="ide-storage__size" :data-testid="`ide-storage-size-${cat.key}`">{{ cat.exists ? formatBytes(cat.bytes) : '—' }}</span>
+          <span
+            class="ide-storage__size"
+            :data-testid="`ide-storage-size-${cat.key}`"
+            :title="cat.partial ? '扫描超时，显示下限值 / Scan timed out (lower bound)' : ''"
+          >{{ cat.exists ? (cat.partial ? '≥ ' : '') + formatBytes(cat.bytes) : '—' }}</span>
         </div>
         <div class="ide-storage__row-sub">{{ cat.path }}</div>
         <div class="ide-storage__row-actions">
