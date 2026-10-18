@@ -52,10 +52,10 @@ describe('壳收敛 ia-center-full（V1·视觉重规划 D2）', () => {
     expect(document.body.classList.contains('ia-center-full')).toBe(false)
   })
 
-  it('隐藏规则在库：ia2.scss 含 body.ia-center-full .studio-navigation-rail { display:none }', () => {
+  it('隐藏规则在库：上游 rail 全站 display:none !important（2026-10-18 用户裁定）', () => {
     const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
-    expect(scss).toContain('body.ia-center-full .studio-navigation-rail')
-    expect(scss.replace(/\s+/g, ' ')).toContain('display: none')
+    expect(scss).toContain('.studio-navigation-rail')
+    expect(scss.replace(/\s+/g, ' ')).toContain('display: none !important')
   })
 })
 
