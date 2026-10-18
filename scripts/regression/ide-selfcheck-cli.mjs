@@ -29,7 +29,9 @@ try {
   await page.waitForTimeout(600)
   await page.keyboard.type('自检')
   await page.waitForTimeout(400)
-  await page.getByText('IDE 自检（全能力冒烟）', { exact: true }).first().click()
+  const zhCmd = page.getByText('IDE 自检（全能力冒烟）', { exact: true }).first()
+  const enCmd = page.getByText('IDE self-check (full smoke)', { exact: true }).first()
+  await (await zhCmd.count() ? zhCmd : enCmd).click()
   await page.waitForFunction(
     () => Boolean(document.querySelector('[data-testid="ide-selfcheck-summary"]')?.textContent?.trim()),
     { timeout: 30_000 },
