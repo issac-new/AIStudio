@@ -227,7 +227,7 @@ describe('壳收敛 ia-center-full（V1）', () => {
     expect(document.body.classList.contains('ia-center-full')).toBe(true)
     w.unmount()
     expect(document.body.classList.contains('ia-center-full')).toBe(false)
-    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    const scss = readFileSync(resolve(__dirname, '../styles/shell-overrides.scss'), 'utf8')
     expect(scss).toContain('.studio-navigation-rail')
     expect(scss).toContain('display: none !important')
   })

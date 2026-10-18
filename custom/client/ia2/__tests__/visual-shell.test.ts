@@ -53,9 +53,13 @@ describe('壳收敛 ia-center-full（V1·视觉重规划 D2）', () => {
   })
 
   it('隐藏规则在库：上游 rail 全站 display:none !important（2026-10-18 用户裁定）', () => {
-    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    const scss = readFileSync(resolve(__dirname, '../styles/shell-overrides.scss'), 'utf8')
     expect(scss).toContain('.studio-navigation-rail')
     expect(scss.replace(/\s+/g, ' ')).toContain('display: none !important')
+    // 必须由 ia2/index.ts 在 bootstrap 顶层导入——专题/IDE 等独立 fullscreen 路由
+    // 不经过 IaShell，只在 IaShell 里挂样式会漏
+    const entry = readFileSync(resolve(__dirname, '../index.ts'), 'utf8')
+    expect(entry).toContain("import './styles/shell-overrides.scss'")
   })
 })
 
