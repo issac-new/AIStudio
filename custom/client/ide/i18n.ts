@@ -25,7 +25,7 @@ export const IDE_LOCAL_TEXT = {
       modelSelect: '选择模型', thinkLevel: '思考强度', manageModels: '管理模型…',
       autoRoute: '⚡ Auto（复杂度路由）',
       autoTitle: '按任务复杂度选成本档（0.5×/1×/2×）——判定理由见点击后提示',
-      computerUseTip: '开启后向当前会话声明允许电脑操作/浏览器控制（声明式，实际能力以会话工具面为准；引擎 CUA 插件通道未接）',
+      computerUseTip: '启用/停用电脑操作（引擎插件，全局生效）：开启后新会话即可用电脑操作工具控制桌面应用；运行中的会话需重开会话生效；macOS 权限在首次使用时按引擎提示授予',
     },
     mode: {
       coding: '编程模式', work: '工作模式', codingShort: '编程', workShort: '工作',
@@ -141,7 +141,7 @@ export const IDE_LOCAL_TEXT = {
       modelSelect: 'Select model', thinkLevel: 'Think', manageModels: 'Manage models…',
       autoRoute: '⚡ Auto (complexity routing)',
       autoTitle: 'Pick a cost tier by task complexity (0.5×/1×/2×) — rationale shown after click',
-      computerUseTip: 'When on, declares computer-use/browser-control allowed to the session (declarative; actual capability depends on session tools; engine CUA plugin channel not wired)',
+      computerUseTip: 'Enable/disable Computer Use (engine plugin, global): new sessions get computer-use tools to drive desktop apps; running sessions need a reopen; grant macOS permissions on first use as the engine prompts',
     },
     mode: {
       coding: 'Coding mode', work: 'Work mode', codingShort: 'Code', workShort: 'Work',

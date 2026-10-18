@@ -222,12 +222,13 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
       provider: 'builtin:bigmodel-coding-plan',
       alias: 'bigmodel-api',
       label: 'SGLM',
-      // 思考档位按 manifest 规则补齐：小写 glm-5.3 系 → low/high/max（后命中覆盖
-      // 兜底规则），大写 GLM-5.3 系 → 兜底 disabled/enabled。
+      // 思考档位按 manifest 规则补齐（2026-10-18 双源根治后=引擎语义：全匹配+
+      // 大小写不敏感）：GLM-5.3 系（含大写）→ low/high/max。旧断言「大写只落
+      // 兜底 disabled/enabled」正是目录/发送链不一致的缺陷化石，已修。
       models: [
-        { id: 'GLM-5.3', reasoningLevels: ['disabled', 'enabled'] },
-        { id: 'GLM-5.3-Flash', reasoningLevels: ['disabled', 'enabled'] },
-        { id: 'offpeak-idle-plan/GLM-5.3', reasoningLevels: ['disabled', 'enabled'] },
+        { id: 'GLM-5.3', reasoningLevels: ['low', 'high', 'max'] },
+        { id: 'GLM-5.3-Flash', reasoningLevels: ['low', 'high', 'max'] },
+        { id: 'offpeak-idle-plan/GLM-5.3', reasoningLevels: ['low', 'high', 'max'] },
       ],
     })
     expect(groups[0].models).toEqual([
