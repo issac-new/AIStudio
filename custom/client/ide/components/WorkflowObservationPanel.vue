@@ -125,7 +125,7 @@ async function loadSaved(): Promise<void> {
     savedRuns.value = []
     selectedSaved.value = null
   } catch (err) {
-    savedError.value = friendlyIdeError(err)
+    savedError.value = friendlyIdeError(err, undefined, ideLocaleOf(locale))
   } finally {
     savedLoading.value = false
   }
@@ -138,7 +138,7 @@ async function loadSavedRuns(name: string): Promise<void> {
   try {
     savedRuns.value = await fetchSavedWorkflowRuns(ws.value, name, 20, savedScope.value)
   } catch (err) {
-    savedError.value = friendlyIdeError(err)
+    savedError.value = friendlyIdeError(err, undefined, ideLocaleOf(locale))
   } finally {
     savedLoading.value = false
   }

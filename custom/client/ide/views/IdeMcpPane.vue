@@ -15,6 +15,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { friendlyIdeError } from '../utils/ideErrors'
+import { ideLocaleOf } from '../i18n'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { fetchHermesSkills } from '../utils/hermes-skills'
 import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
@@ -22,7 +23,7 @@ import { SEARCH_TIERS, searchVerdict, type SearchTier } from '../../../server/we
 import { harnessReport } from '../../../server/harnesshealth/harness-health'
 import { authFetch } from '../utils/auth-fetch'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const ide = useIdeStore()
@@ -69,7 +70,7 @@ async function load(): Promise<void> {
   } catch (err) {
     servers.value = []
     totalTools.value = 0
-    loadError.value = friendlyIdeError(err)
+    loadError.value = friendlyIdeError(err, undefined, ideLocaleOf(locale))
   } finally {
     loading.value = false
   }

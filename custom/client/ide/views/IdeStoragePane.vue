@@ -1,13 +1,15 @@
 <script setup lang="ts">
 // IdeStoragePane — 资源管理器面板（M2，对标 zcode resourceManager 65 键）：
 // 磁盘占用分类扫描 / 安全分类清理（确认弹层 + 释放量 toast）/ 在文件管理器中显示。
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { ideStorageApi, type StorageCategory } from '../api/storage'
 import { formatBytes } from '../utils/format'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const cachedTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].storage)
 const message = useMessage()
 
 const categories = ref<StorageCategory[]>([])
@@ -60,7 +62,7 @@ onMounted(() => { void load() })
   <div class="ide-storage" data-testid="ide-storage-pane">
     <div class="ide-storage__toolbar">
       <span class="ide-storage__title">{{ t('ide.storage.panelTitle') }}</span>
-      <span v-if="cached" class="ide-storage__cached" title="磁盘缓存，后台刷新中">缓存</span>
+      <span v-if="cached" class="ide-storage__cached" :title="cachedTx.cachedTitle">{{ cachedTx.cached }}</span>
       <span class="ide-storage__total" :title="partial ? '部分分类扫描超时，显示下限值 / Partial: some scans timed out' : ''">{{ t('ide.storage.total') }}：{{ partial ? '≈ ' : '' }}{{ formatBytes(totalBytes) }}</span>
       <button type="button" class="ide-storage__btn" data-testid="ide-storage-refresh" @click="load(true)">{{ t('ide.storage.rescan') }}</button>
     </div>

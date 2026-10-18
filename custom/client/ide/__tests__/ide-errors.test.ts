@@ -32,4 +32,10 @@ describe('ideErrors', () => {
   it('未知错误保留原始消息', () => {
     expect(friendlyIdeError(new Error('自定义失败'), '兜底')).toBe('自定义失败')
   })
+
+  it('英文 locale：状态码与引擎离线走英文表', () => {
+    expect(friendlyIdeError(new Error('http_401: x'), undefined, 'en')).toContain('sign in')
+    expect(ideErrorFrom(new Error('engine_unreachable: ECONNREFUSED'), undefined, 'en'))
+      .toMatchObject({ kind: 'unavailable' })
+  })
 })

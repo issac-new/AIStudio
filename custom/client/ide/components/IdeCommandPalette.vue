@@ -108,7 +108,7 @@ const commandItems = computed<PaletteItem[]>(() => {
       // 2026-10-18 回归配套：把会话/文件/Git/存储/命令/工作流/深链等只读探针
       // 串成一张报告，日常改完 IDE 点一次即可看全链路。
       id: 'cmd:self-check',
-      label: 'IDE 自检（全能力冒烟）',
+      label: IDE_LOCAL_TEXT[ideLocaleOf(locale)].selfCheckCommand,
       run: () => { ide.openSelfCheck() },
     },
     ...PANE_TARGETS.map(pane => ({
