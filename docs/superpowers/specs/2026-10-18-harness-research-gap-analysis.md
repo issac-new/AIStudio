@@ -68,18 +68,27 @@ P0-P2 已在同日完成并合入 main（`9ff44554`）：
 - ✅ **P1-4 七维评测与门禁**：内置回归集扩到八任务覆盖七维；新增 L1 门 `engineering.harness-eval`，`vibe-fast` 由 7 门变 8 门。
 - ✅ **P2-5 沙箱与经验回流**：显式路径/浏览器域名 opt-in 沙箱；qgate FAIL/CONDITIONAL 启动时幂等回流为经验候选。
 
+### 残余项完成情况（同日第二轮，main `9fb03f1e`）
+
+- ✅ **委托范围参与裁决**：`DelegationRecord` 增加结构化 `toolAllowlist`；执法用“身份 allowlist ∧ 活跃委托白名单”双检查，委托只能收窄不能提权。
+- ✅ **自动恢复判定**：`resume/resume-planner` 汇总图/交接/进展检查点，输出 `auto_resume / manual_gate / new_session` 三档与证据；`/api/harness/resume-plan`。
+- ✅ **过程质量指标**：重复调用率、工具失败率、长链占比、首过成功率、qgate 规范符合率；`/api/harness/process-quality`。
+- ✅ **真实轨迹采样**：`POST /api/hermes/eval/sample-from-trace` 把 L2 trace 转成 Evidence（工具序列/tokens/脱敏），由人决定是否建集。
+- ✅ **预算事前阻断/降级**：日限额策略、trace 估价、`warn/downgrade/block` 动作；`HERMES_BUDGET_ENFORCE=1` 时 block 由执法门硬拒。
+- ✅ **完整沙箱（能力范围内）**：租约 + janitor（只清沙箱根内目录）；patch 662 给 `terminal_exec` 加可选 `ulimit`（CPU/文件/进程；内存仅 Linux）。
+- ✅ **运行运维面 UI**：治理页新增过程质量/执法决策/运行清单/预算/恢复判定五块。
+
 ### 仍未完成（下一轮候选）
 
-1. **自动恢复判定**：统一图检查点与 agent 检查点的 run 键，给出安全续跑/新会话/人工闸三档判定。
-2. **真实 agent 能力评测**：当前固定集只证明评测引擎对七维都有判定，需接入真实运行轨迹样本。
-3. **过程质量指标**：重复调用率、无效步骤率、超长链占比、首次生成成功率、规范符合率。
-4. **预算事前阻断/降级**：运行级成本已可算，但还没有按用户/部门阈值阻断。
-5. **完整沙箱**：目前只有显式路径与浏览器域名，缺 OS 级资源限额与任务后销毁。
-6. **数据 UI**：policy-decisions/run-manifests 目前只有 API；qgate run/waive 仍走 CLI。
-7. **委托链执行语义**：toolAllowlist 已执法，委托的 `scope` 尚未参与裁决。
+1. **自动执行恢复**：当前只给三档建议，执行仍走既有 resume 端点（自动续跑可能重复副作用）。
+2. **真实能力基线运营**：采样 API 已具备，但还需持续采样、人工建题与密封，形成版本化能力题库。
+3. **预算降级自动切换模型**：当前 downgrade 只给建议，模型切换属上游路由。
+4. **更强沙箱**：Linux cgroup/namespace 级隔离与 macOS 内存上限尚未实现（macOS 不支持 `ulimit -v`）。
+5. **写面 UI**：预算策略、沙箱租约、qgate run/waive 仍只有 API/CLI。
+6. **自然语言 scope 结构化**：委托范围需人工填写 `toolAllowlist`，自然语言 scope 不参与机读裁决。
 
 ## 五、验证与边界
 
-- 全量 vitest：**5083 通过 / 8 跳过 / 0 失败**（P0-P2 轮，rebase 后复跑）。
-- 定向类型检查：`npm run typecheck:harness` 0 错误；`git apply --check` 确认 patch 661 可应用；`qgate templates` 确认 vibe-fast 8 门。
-- 边界：本轮未做整包 inject 与 8649 浏览器走查（共享上游树被并行会话占用）；沙箱为 opt-in，未配置即不检查；运行成本是估算上界，不是实际账单；身份裁决只对已登记身份生效。
+- 全量 vitest：**5120 通过 / 8 跳过 / 0 失败**（残余项轮，rebase 后复跑）。
+- 定向类型检查：`npm run typecheck:harness` 0 错误；patch 661/662 `git apply --check` 通过；patch 662 另经 esbuild 解析验证。
+- 边界：未做整包 inject 与 8649 浏览器走查（共享上游树被并行会话占用）；沙箱为 opt-in，未配置即不检查；运行成本是估算上界，不是实际账单；身份裁决只对已登记身份生效；恢复判定只建议不执行。
