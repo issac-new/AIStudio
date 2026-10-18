@@ -515,7 +515,9 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   # 子壳优化后 node 成调用者直子、studio.pid 误记外层 pid，mx-up 收口 wait4 挂死
   # （仅 kill 外层可解，studio 无恙）。内层 bash 托孤 launchd，$! 即 node 真身。
   ( cd "$SIM_ROOT" && \
-  NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" \
+  NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" OBS_SIM_ROOT="$SIM_ROOT" \
+  SIM_BRANCHES_REPO="${SIM_BRANCHES_REPO:-$SIM_ROOT/central/aipaydev}" \
+  SIM_ANCHOR_REPO="${SIM_ANCHOR_REPO:-$SIM_ROOT/central/aipaydev}" \
   HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
   AGENT_IDENTITY_STORE="$WEBUI_HOME/agent-identity" HERMES_INCIDENT_TRACE_DIR="$HERMES_ROOT/traces" \
   HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$GW_PORT" GATEWAY_PORT="$GW_PORT" \
@@ -685,7 +687,12 @@ mx_provision_product_dist() {
   local ovl; ovl=$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
   # dist mtime 跨端取法收敛进平台层（BSD/GNU/python 三兜底；Git Bash 的 stat 是
   # coreutils 版走 GNU 分支，纯 BSD 单边处不再静默失败）
-  local stamp; stamp=$(mxp_file_mtime "$live/server/index.js")
+  # 新鲜度取服务端入口 + 客户端 index 双 mtime：只盯 server/index.js 会把
+  # 「只重建客户端」的批次误判为已同步（2026-10-19 走查实证：RunSelector 修复被跳过）。
+  local stamp_srv stamp_cli stamp
+  stamp_srv=$(mxp_file_mtime "$live/server/index.js")
+  stamp_cli=$(mxp_file_mtime "$live/client/index.html")
+  stamp="${stamp_srv}__${stamp_cli}"
   local cur; cur=$(_mx_provenance "$PRODUCT_DIST.provenance.json" --read | sed -n 's/.*"dist_mtime": "\([^"\\]*\)".*/\1/p')
   if [[ "$cur" == "$stamp" && -f "$PRODUCT_DIST/server/index.js" ]]; then
     log "product-dist 快照已在位且同步（dist_mtime=${stamp}）——跳过"
