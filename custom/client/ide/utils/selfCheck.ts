@@ -198,10 +198,17 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['workflow'],
       run: async () => {
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
-        return api(`/api/zcode-engine/workflow/saved?${qs({ workspacePath: ctx.workspace, scope: 'project' })}`, (body) =>
+        const url = `/api/zcode-engine/workflow/saved?${qs({ workspacePath: ctx.workspace, scope: 'project' })}`
+        const judge = (body: Record<string, unknown>) =>
           Array.isArray(body.workflows)
-            ? { status: 'pass', detail: `${body.workflows.length}` }
-            : { status: 'warn', detail: '响应缺 workflows' })
+            ? { status: 'pass' as const, detail: `${body.workflows.length}` }
+            : { status: 'warn' as const, detail: '响应缺 workflows' }
+        // 服务端重启后首次连引擎的冷握手会 503（helloConversationV4 5s 超时），
+        // 重试一次即过——直连实测 5-30ms。不重试会把每次后端重启误报成告警。
+        const first = await api(url, judge)
+        if (first.status !== 'warn' || !/503|unavailable|握手/i.test(first.detail)) return first
+        await new Promise(resolve => setTimeout(resolve, 3_000))
+        return api(url, judge)
       },
     },
     {
