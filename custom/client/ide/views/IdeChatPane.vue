@@ -94,6 +94,7 @@ import { resolveBootSession } from '../utils/sessionBoot'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
 import { authFetch } from '../utils/auth-fetch'
+import { buildNewTaskOptions, sessionTaskMode, explicitTaskMode, type IdeTaskMode } from '../utils/task-mode'
 
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
@@ -114,6 +115,30 @@ const message = useMessage()
 // composer 工具条/模型面板文案（IDE 本地字典，ZCode 对齐批）
 const tx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].composer)
 
+// 编程/工作双模式：新建任务模式决定模型取源（编程=Ycode 目录，工作=Hermes 目录）；
+// 工作空态只看当前会话是否真是工作任务；界面模式（ide.interfaceMode）决定呈现降噪。
+const isWorkSession = computed(() => ((ide.taskMode as IdeTaskMode | undefined) ?? 'coding') === 'work')
+const isWorkTask = computed(() => sessionTaskMode(chatStore.activeSession) === 'work')
+const modeText = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].mode)
+const workStarters = computed(() => [
+  { key: 'doc', label: modeText.value.starterDoc, prompt: '请帮我起草一份文档：先问我用途、读者和篇幅，再给出提纲并开始写。' },
+  { key: 'sheet', label: modeText.value.starterSheet, prompt: '请帮我整理一份表格：先确认字段、数据来源和输出格式（xlsx/csv），再开始。' },
+  { key: 'slides', label: modeText.value.starterSlides, prompt: '请帮我做一份演示文稿：先确认主题、受众和页数，再给出结构并逐页生成。' },
+  { key: 'research', label: modeText.value.starterResearch, prompt: '请帮我做一次调研：先明确问题和范围，列出信息源与检索计划，再汇总成带引用的报告。' },
+])
+const showWorkEmpty = computed(() => isWorkTask.value
+  && (chatStore.activeSession?.messages?.length ?? 0) === 0)
+function startWork(prompt: string): void {
+  void chatStore.sendMessage(prompt)
+  ide.setChatFocus()
+}
+// 会话切换（含 ?session= 深链）时让新建任务模式跟随当前会话类型：
+// 模型取源与空态都按任务类型走，避免工作会话拿 Ycode 模型目录误报失效。
+watch(() => chatStore.activeSessionId, () => {
+  const explicit = explicitTaskMode(chatStore.activeSession)
+  if (explicit) ide.setTaskMode(explicit)
+})
+
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
 const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
 // P4 模组横幅带 specs：六条注册（priority 小者在上；visible=有内容才占位）
@@ -123,8 +148,9 @@ const modBandSpecs = computed<ModBandSpec[]>(() => [
   { id: 'injection', priority: 20, visible: flaggedSubagents.value.size > 0 },
   { id: 'approval-hint', priority: 30, visible: !!approvalMemoryHint.value },
   { id: 'runline', priority: 40, visible: running.value || !!lastCompletedSummary.value },
-  { id: 'run-result', priority: 50, visible: true },
-  { id: 'replay', priority: 55, visible: true },
+  // 轮结果/回放是代码变更面，工作模式降噪（zcode office 语义：隐藏审查类呈现）
+  { id: 'run-result', priority: 50, visible: !Boolean(ide.isWorkMode) },
+  { id: 'replay', priority: 55, visible: !Boolean(ide.isWorkMode) },
   { id: 'todo', priority: 60, visible: true },
 ])
 
@@ -145,10 +171,7 @@ function sessionMatchesAgent(session: Session | undefined | null): boolean {
 
 // Ycode 默认模型（2026-10-18 用户指令）：新会话与可复用的空会话都用 ZCode 目录默认，
 // 不再继承 Hermes 的 aim/qwen 等别名（它们不在 ZCode 目录里 → 一进 IDE 就报失效）。
-function defaultModelPayload(): { model?: string; provider?: string } {
-  const d = engineDefault.value
-  return d ? { model: d.model, provider: d.provider } : {}
-}
+// 载荷统一走 buildNewTaskOptions（utils/task-mode.ts），此处不再保留第二份配方。
 
 // 空会话（无消息）若没有模型或模型已不在 ZCode 目录（历史 aim 等），就地换成默认模型；
 // 有对话的会话不动（模型失效由横幅交用户决定）。
@@ -160,9 +183,31 @@ function adoptDefaultModelIfEmpty(session: Session | undefined | null): void {
 }
 
 function ensureSession() {
-  if (sessionMatchesAgent(chatStore.activeSession)) {
+  const active = chatStore.activeSession
+  // 工作会话（无 codingAgentId）在任意编码 agent 选择下都保留：切 agent 不应把
+  // 通用工作任务顶掉（2026-10-18 双模式轮）。
+  if (active && sessionTaskMode(active) === 'work') return
+  if (sessionMatchesAgent(active)) {
     // 恢复的活动会话也可能是「选择模型...」的空会话（2026-10-18 复测实录）——同样补默认。
-    adoptDefaultModelIfEmpty(chatStore.activeSession)
+    adoptDefaultModelIfEmpty(active)
+    return
+  }
+  // 无活动会话时按新建任务模式；已有编程会话但 agent 不匹配=用户切了编码底座，按编程建。
+  const mode: IdeTaskMode = active ? 'coding' : ((ide.taskMode as IdeTaskMode | undefined) ?? 'coding')
+  if (mode === 'work') {
+    const reusableWork = chatStore.sessions.find(
+      (session) => !session.codingAgentId && (session.messages?.length ?? 0) === 0,
+    )
+    if (reusableWork) {
+      void chatStore.switchSession(reusableWork.id)
+      return
+    }
+    chatStore.newChat(buildNewTaskOptions({
+      mode: 'work',
+      codingAgentId: ide.agentId,
+      chatAgent: ideAgentToChatAgent(ide.agentId),
+      workspace: root.value,
+    }) as unknown as Parameters<typeof chatStore.newChat>[0])
     return
   }
   // 复用最近的同 agent 空会话，避免反复进出页面堆积空会话
@@ -174,14 +219,14 @@ function ensureSession() {
     adoptDefaultModelIfEmpty(reusable)
     return
   }
-  chatStore.newChat({
-    agent: ideAgentToChatAgent(ide.agentId) as never,
+  chatStore.newChat(buildNewTaskOptions({
+    mode: 'coding',
     codingAgentId: ide.agentId,
-    codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
-    source: 'coding_agent',
+    chatAgent: ideAgentToChatAgent(ide.agentId),
     workspace: root.value,
-    ...defaultModelPayload(),
-  })
+    model: engineDefault.value?.model,
+    provider: engineDefault.value?.provider,
+  }) as unknown as Parameters<typeof chatStore.newChat>[0])
 }
 
 onMounted(async () => {
@@ -384,14 +429,15 @@ function closeOverlay() {
 // ── 动作 ──
 
 function newSession() {
-  chatStore.newChat({
-    agent: ideAgentToChatAgent(ide.agentId) as never,
+  const mode: IdeTaskMode = (ide.taskMode as IdeTaskMode | undefined) ?? 'coding'
+  chatStore.newChat(buildNewTaskOptions({
+    mode,
     codingAgentId: ide.agentId,
-    codingAgentMode: 'scoped',
-    source: 'coding_agent',
+    chatAgent: ideAgentToChatAgent(ide.agentId),
     workspace: root.value,
-    ...defaultModelPayload(),
-  })
+    model: mode === 'coding' ? engineDefault.value?.model : undefined,
+    provider: mode === 'coding' ? engineDefault.value?.provider : undefined,
+  }) as unknown as Parameters<typeof chatStore.newChat>[0])
   pendingSubagentId.value = null
   ide.floats.agents = false
 }
@@ -442,7 +488,10 @@ interface ViewModelGroup {
   models: Array<{ id: string; reasoningLevels?: string[] }>
 }
 const modelGroupsView = computed<ViewModelGroup[]>(() => {
-  const raw = (usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? [])) as Array<{
+  // 工作任务用 Hermes 目录（Ycode/zcode 模型 id 不在 Hermes 目录内，混用会误报失效）；
+  // 编程任务沿用 Ycode/独立目录优先。
+  const useEngineCatalog = !isWorkSession.value && usingIndependent.value
+  const raw = (useEngineCatalog ? engineGroups.value : (appStore.modelGroups ?? [])) as Array<{
     provider?: string
     label?: string
     models?: Array<string | { id: string; reasoningLevels?: string[] }>
@@ -701,7 +750,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
 </script>
 
 <template>
-  <section class="ide-chat">
+  <section class="ide-chat" :class="{ 'is-ide-work-mode': Boolean(ide.isWorkMode) }">
     <header class="ide-chat__head">
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
       <!-- R5 会话工作树隔离徽标（worktree 域显性化） -->
@@ -912,6 +961,20 @@ watch(() => chatStore.activeSessionId, syncPermMode)
 
     <div ref="mediaRoot" class="ide-chat__body">
       <div class="ide-chat__messages-anchor" :style="sideSessionOpen ? { paddingRight: '348px' } : undefined">
+        <div v-if="showWorkEmpty" class="ide-work-empty" data-testid="ide-work-empty">
+          <h3 class="ide-work-empty__title">{{ modeText.workEmptyTitle }}</h3>
+          <p class="ide-work-empty__desc">{{ modeText.workEmptyDesc }}</p>
+          <div class="ide-work-empty__starters">
+            <button
+              v-for="s in workStarters"
+              :key="s.key"
+              type="button"
+              class="ide-work-empty__starter"
+              :data-testid="`ide-work-starter-${s.key}`"
+              @click="startWork(s.prompt)"
+            >{{ s.label }}</button>
+          </div>
+        </div>
         <MessageList
           v-if="ready"
           class="ide-chat__messages"
@@ -922,7 +985,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       </div>
       <IdeSideSessionPane v-if="sideSessionOpen" @close="sideSessionOpen = false" />
       <IdeMentionPicker />
-      <IdeInlineDiff :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
+      <IdeInlineDiff v-if="!ide.isWorkMode" :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
       <IdeAgentsView />
       <IdeResumeAdvisor />
       <IdeSecurityBoostBar />
@@ -931,7 +994,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       <IdeQueuePanel />
       <IdeRecapCard />
       <IdeTaskGroupsPanel />
-      <IdeReviewPanel />
+      <IdeReviewPanel v-if="!ide.isWorkMode" />
       <IdeAskCard />
       <IdeMentionChip />
       <IdeRunLogPanel />
@@ -1665,5 +1728,64 @@ watch(() => chatStore.activeSessionId, syncPermMode)
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* 工作模式（interface-mode effects：collapseToolDetails/wrapCode）：
+   工具卡只留摘要、代码强制换行；不改上游组件接口（D-10）。 */
+.ide-chat.is-ide-work-mode :deep(.tool-details),
+.ide-chat.is-ide-work-mode :deep(.tool-details-expand) {
+  display: none !important;
+}
+.ide-chat.is-ide-work-mode :deep(.tool-line.expandable) {
+  cursor: default;
+}
+.ide-chat.is-ide-work-mode :deep(pre),
+.ide-chat.is-ide-work-mode :deep(.tool-detail-code-block) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 工作任务空态：四类起步（点击即真实发送，D-9） */
+.ide-work-empty {
+  padding: 28px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ide-work-empty__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ide-work-empty__desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 520px;
+}
+.ide-work-empty__starters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  margin-top: 6px;
+}
+.ide-work-empty__starter {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.ide-work-empty__starter:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 </style>

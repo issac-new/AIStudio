@@ -125,14 +125,30 @@ describe('IdeCommandPalette', () => {
     expect(newChat).toHaveBeenCalled()
     expect(ide.paletteOpen).toBe(false)
 
-    // 重新打开：ArrowDown 后激活项移到第二项
+    // 重新打开：ArrowDown 后激活项移到第二项（模式切换，2026-10-18 双模式轮）
     ide.openPalette()
     await flushPromises()
     await wrapper.find('.ide-palette__input').trigger('keydown', { key: 'ArrowDown' })
-    expect(wrapper.find('.ide-palette__item.is-active').text()).toBe('ide.paletteCmdToggleTerminal')
+    expect(wrapper.find('.ide-palette__item.is-active').text()).toBe('切换到工作模式')
 
     await wrapper.find('.ide-palette__input').trigger('keydown', { key: 'Escape' })
     expect(ide.paletteOpen).toBe(false)
+  })
+
+  it('工作模式：隐藏终端/审查直达项，模式命令变为切换回编程', async () => {
+    const ide = useIdeStore()
+    ide.setInterfaceMode('work')
+    const wrapper = mountPalette()
+    ide.openPalette()
+    await flushPromises()
+    const items = wrapper.findAll('.ide-palette__item').map((n) => n.text())
+    expect(items).toContain('切换到编程模式')
+    expect(items).not.toContain('页签: 终端')
+    expect(items).not.toContain('页签: 代码审查')
+    expect(items).not.toContain('ide.paletteCmdToggleTerminal')
+    // 非终端/审查的编程直达仍可用（文件/记忆）
+    expect(items).toContain('页签: 查看文件')
+    expect(items).toContain('页签: 记忆')
   })
 
   it('焦点不在输入框时窗口级 Escape 也能关闭（侧栏搜索入口实测）', async () => {

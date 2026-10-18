@@ -26,6 +26,16 @@ export const IDE_LOCAL_TEXT = {
       autoTitle: '按任务复杂度选成本档（0.5×/1×/2×）——判定理由见点击后提示',
       computerUseTip: '开启后向当前会话声明允许电脑操作/浏览器控制（声明式，实际能力以会话工具面为准；引擎 CUA 插件通道未接）',
     },
+    mode: {
+      coding: '编程模式', work: '工作模式', codingShort: '编程', workShort: '工作',
+      switchToWork: '切换到工作模式', switchToCoding: '切换到编程模式',
+      desc: '工作模式侧重操作摘要与结果；编程模式显示命令、输出和代码变更详情。',
+      newCoding: '编程任务', newWork: '工作任务',
+      newCodingHint: '绑定工作区，使用编码引擎', newWorkHint: '通用助手，不绑定仓库',
+      workEmptyTitle: '开始一件工作',
+      workEmptyDesc: '工作模式不绑定仓库，适合写文档、做表格、出幻灯片或做调研。',
+      starterDoc: '写文档', starterSheet: '做表格', starterSlides: '出幻灯片', starterResearch: '做调研',
+    },
     selfCheckCommand: 'IDE 自检（全能力冒烟）',
     selfCheck: {
       title: 'IDE 全能力自检',
@@ -94,6 +104,16 @@ export const IDE_LOCAL_TEXT = {
       autoRoute: '⚡ Auto (complexity routing)',
       autoTitle: 'Pick a cost tier by task complexity (0.5×/1×/2×) — rationale shown after click',
       computerUseTip: 'When on, declares computer-use/browser-control allowed to the session (declarative; actual capability depends on session tools; engine CUA plugin channel not wired)',
+    },
+    mode: {
+      coding: 'Coding mode', work: 'Work mode', codingShort: 'Code', workShort: 'Work',
+      switchToWork: 'Switch to work mode', switchToCoding: 'Switch to coding mode',
+      desc: 'Work mode focuses on summaries and results; coding mode shows commands, output and code changes.',
+      newCoding: 'Coding task', newWork: 'Work task',
+      newCodingHint: 'Bind a workspace and use the coding engine', newWorkHint: 'General assistant, no repo binding',
+      workEmptyTitle: 'Start a piece of work',
+      workEmptyDesc: 'Work mode is not bound to a repo. Write documents, build sheets, make slides, or research.',
+      starterDoc: 'Write a doc', starterSheet: 'Build a sheet', starterSlides: 'Make slides', starterResearch: 'Research',
     },
     selfCheckCommand: 'IDE self-check (full smoke)',
     selfCheck: {

@@ -15,6 +15,8 @@ import type { CodingAgentId } from '@/api/coding-agents'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { DEFAULT_WIKI_GEN_CONFIG, type WikiGenConfig } from '../utils/wikiPipeline'
 import type { TaskWorkspaceInfo } from '../api/taskWorkspace'
+import { normalizeInterfaceMode, INTERFACE_MODE_KEY, type IdeInterfaceMode } from '../utils/interface-mode'
+import type { IdeTaskMode } from '../utils/task-mode'
 
 const WORKSPACE_KEY = 'hermes_ide_workspace'
 const WORKSPACE_ORIGIN_KEY = 'hermes_ide_workspace_origin'
@@ -128,6 +130,8 @@ export interface IdeSidePanePrefs {
 const SIDEBAR_KEY = 'hermes_ide_sidebar'
 const SIDEPANE_KEY = 'hermes_ide_sidepane'
 const DIM_KEY = 'hermes_ide_dim'
+/** 新建任务模式偏好（编程/工作）——与界面模式分开：界面模式是看板外观，任务模式是新建内核 */
+const TASK_MODE_KEY = 'hermes_ide_task_mode'
 
 const DEFAULT_SIDEBAR: { organize: IdeOrganizeMode; sessionView: IdeSessionView } = {
   organize: 'project',
@@ -167,10 +171,20 @@ function loadDimension(): IdeDimension {
   return saved === 'task' || saved === 'project' || saved === 'session' ? saved : 'task'
 }
 
+/** 新建任务模式偏好（默认编程；历史值 work 才回落工作） */
+function loadTaskMode(): IdeTaskMode {
+  return localStorage.getItem(TASK_MODE_KEY) === 'work' ? 'work' : 'coding'
+}
+
 export const useIdeStore = defineStore('ide', () => {
   const workspace = ref<string | null>(localStorage.getItem(WORKSPACE_KEY) || null)
   const workspaceOrigin = ref<IdeWorkspaceOrigin>(loadWorkspaceOrigin())
   const agentId = ref<CodingAgentId>(loadAgent())
+  /** 界面模式：编程/工作（zcode office/coding 同款语义；呈现层降噪，不改引擎） */
+  const interfaceMode = ref<IdeInterfaceMode>(normalizeInterfaceMode(localStorage.getItem(INTERFACE_MODE_KEY)))
+  /** 新建任务模式：编程任务（编码引擎+工作区）/ 工作任务（通用助手，不绑仓库） */
+  const taskMode = ref<IdeTaskMode>(loadTaskMode())
+  const isWorkMode = computed(() => interfaceMode.value === 'work')
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>('ide.layout', DEFAULT_LAYOUT, LAYOUT_KEY))
   const sidebar = ref<{ organize: IdeOrganizeMode; sessionView: IdeSessionView }>(
     loadJson('ide.sidebar', DEFAULT_SIDEBAR, SIDEBAR_KEY),
@@ -221,6 +235,31 @@ export const useIdeStore = defineStore('ide', () => {
   function setAgentId(id: CodingAgentId): void {
     agentId.value = id
     localStorage.setItem(AGENT_KEY, id)
+  }
+
+  /** 界面模式切换（编程/工作）：持久化后由组件经 effects 表消费。
+   *  同时把「新建任务模式」同步到同一值（默认动线：切到工作模式后新建的就是工作任务；
+   *  任务侧栏仍可单独改回，二者不强制绑定）。 */
+  function setInterfaceMode(mode: IdeInterfaceMode): void {
+    const next = normalizeInterfaceMode(mode)
+    interfaceMode.value = next
+    taskMode.value = next
+    try {
+      localStorage.setItem(INTERFACE_MODE_KEY, next)
+      localStorage.setItem(TASK_MODE_KEY, next)
+    } catch { /* 存储异常不阻塞 */ }
+  }
+
+  function toggleInterfaceMode(): void {
+    setInterfaceMode(interfaceMode.value === 'work' ? 'coding' : 'work')
+  }
+
+  /** 新建任务模式（不改变界面模式；界面模式是外观，任务模式是新建内核） */
+  function setTaskMode(mode: IdeTaskMode): void {
+    taskMode.value = mode === 'work' ? 'work' : 'coding'
+    try {
+      localStorage.setItem(TASK_MODE_KEY, taskMode.value)
+    } catch { /* 存储异常不阻塞 */ }
   }
 
   function setDimension(dim: IdeDimension): void {
@@ -339,6 +378,9 @@ export const useIdeStore = defineStore('ide', () => {
     workspace,
     workspaceOrigin,
     agentId,
+    interfaceMode,
+    taskMode,
+    isWorkMode,
     layout,
     sidebar,
     sidePane,
@@ -355,6 +397,9 @@ export const useIdeStore = defineStore('ide', () => {
     setWikiGenConfig,
     setWorkspace,
     setAgentId,
+    setInterfaceMode,
+    toggleInterfaceMode,
+    setTaskMode,
     setDimension,
     setActiveTask,
     associateTaskWorkspace,
