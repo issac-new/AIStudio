@@ -58,31 +58,28 @@
    - 新增仓库根 `AGENTS.md`（36 行）与 `custom/server/AGENTS.md`、`custom/client/AGENTS.md`。
    - 新增 `npm run typecheck:harness` 定向类型门（新增服务端模块 0 错误）。
 
-## 四、剩余优先队列
+## 四、优先队列执行状态（2026-10-18 更新）
 
-### P0（安全边界，下一轮优先）
+P0-P2 已在同日完成并合入 main（`9ff44554`）：
 
-1. **按发起用户鉴权**：把 `userId` 接进 `enforce-gate` 裁决，结合 `agentidentity` 的委托链与 `toolAllowlist`；当前裁决只看 `profileId`。
-2. **审批记录补全**：`scope`、`expiresAt`、`source(human|policy)`；`/api/approval/decide` 全路径写入审批历史与 govbus；裁决端点加归属/角色校验。
-3. **放行决策审计**：`ladder-pass`/`mode-pass` 放行结果写入决策账，回答「为什么放行」。
+- ✅ **P0-1 按发起用户裁决**：`userId` 接入 `enforce-gate`；`agentidentity` 的 `toolAllowlist` 支持精确与 `prefix*` 通配；未登记用户/空白名单不改变既有行为。
+- ✅ **P0-2 审批凭证与放行审计**：审批记录补 `scope/expiresAt/source`（批准后 TTL）；`/api/approval/decide` 入审批历史；新增独立执法决策账与 `/api/harness/policy-decisions`。
+- ✅ **P1-3 运行清单与成本**：patch 661 在 `run.started` 落模型/提供方/提示词指纹/权限模式/契约版本；运行成本按 trace 窗口估价（未缓存价上界）。
+- ✅ **P1-4 七维评测与门禁**：内置回归集扩到八任务覆盖七维；新增 L1 门 `engineering.harness-eval`，`vibe-fast` 由 7 门变 8 门。
+- ✅ **P2-5 沙箱与经验回流**：显式路径/浏览器域名 opt-in 沙箱；qgate FAIL/CONDITIONAL 启动时幂等回流为经验候选。
 
-### P1（运行可观测与评测）
+### 仍未完成（下一轮候选）
 
-4. **运行清单（run manifest）**：会话启动时落模型/参数/prompt 版本/工具契约版本/权限模式/预算，与 trace、incident、evidence 用 runId 关联。
-5. **运行级成本**：token 账按 runId 归集，支持超预算事前阻断/降级。
-6. **固定能力评测集**：覆盖完成率、工具参数正确率、失败恢复、长任务状态保持、越权/注入、成本/延迟/无效循环、升级人工正确性七维；接入门禁。
-7. **自动恢复判定**：统一图检查点与 agent 检查点 run 键；给出安全续跑/新会话/人工闸三档判定。
-
-### P2（沙箱与自进化）
-
-8. **执行沙箱**：terminal 目录白名单、浏览器网络放行接上 `browsersec`、提示词入口 secret 扫描、任务后销毁。
-9. **过程质量指标**：重复调用率、无效步骤率、超长链占比、首次生成成功率、规范符合率。
-10. **失败经验回流**：qgate/eval/review 失败自动提取到 ERRORS/LEARNINGS 类知识库，并在下一轮派单强制读取；当前 expcandidates 默认关闭且不读 qgate。
-11. **门禁 UI 产品化**：qgate run/waive/evidence/release-report 操作面；Eval Studio 默认开启。
+1. **自动恢复判定**：统一图检查点与 agent 检查点的 run 键，给出安全续跑/新会话/人工闸三档判定。
+2. **真实 agent 能力评测**：当前固定集只证明评测引擎对七维都有判定，需接入真实运行轨迹样本。
+3. **过程质量指标**：重复调用率、无效步骤率、超长链占比、首次生成成功率、规范符合率。
+4. **预算事前阻断/降级**：运行级成本已可算，但还没有按用户/部门阈值阻断。
+5. **完整沙箱**：目前只有显式路径与浏览器域名，缺 OS 级资源限额与任务后销毁。
+6. **数据 UI**：policy-decisions/run-manifests 目前只有 API；qgate run/waive 仍走 CLI。
+7. **委托链执行语义**：toolAllowlist 已执法，委托的 `scope` 尚未参与裁决。
 
 ## 五、验证与边界
 
-- 全量 vitest：**5026 通过 / 8 跳过 / 0 失败**（2026-10-18，rebase 后复跑）。
-- 定向类型检查：`npm run typecheck:harness` 0 错误。
-- 本轮不改变权限执法语义（enforce-gate 行为不变），因此没有安全边界回归风险；对应缺口保留在 P0。
-- 未做整包构建与 8649 浏览器走查：共享上游树被并行会话占用，`npm run inject` 会改写共享注入态并影响在跑服务；SFC 已通过组件挂载测试完成编译验证，API 已通过真 Koa HTTP 测试。装机与整包验证按工作区规则需用户明确指令。
+- 全量 vitest：**5083 通过 / 8 跳过 / 0 失败**（P0-P2 轮，rebase 后复跑）。
+- 定向类型检查：`npm run typecheck:harness` 0 错误；`git apply --check` 确认 patch 661 可应用；`qgate templates` 确认 vibe-fast 8 门。
+- 边界：本轮未做整包 inject 与 8649 浏览器走查（共享上游树被并行会话占用）；沙箱为 opt-in，未配置即不检查；运行成本是估算上界，不是实际账单；身份裁决只对已登记身份生效。
