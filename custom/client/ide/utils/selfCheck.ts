@@ -95,7 +95,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => {
         if (!ctx.sessionsLoaded) return { status: 'fail', detail: 'sessionsLoaded=false' }
         if (ctx.sessionCount === 0) return { status: 'warn', detail: tx.detail.sessionEmpty }
-        return { status: 'pass', detail: `${ctx.sessionCount} 个会话` }
+        return { status: 'pass', detail: `${ctx.sessionCount}` }
       },
     },
     {
@@ -103,14 +103,14 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['active-session'],
       run: async () => ctx.activeSessionId
         ? { status: 'pass', detail: ctx.activeSessionId }
-        : { status: 'warn', detail: '无活动会话（裸落地草稿态）' },
+        : { status: 'warn', detail: tx.detail.noActiveSession },
     },
     {
       id: 'workspace',
       label: tx.label['workspace'],
       run: async () => ctx.workspace
         ? { status: 'pass', detail: ctx.workspace }
-        : { status: 'warn', detail: '未绑定工作区；文件/Git/终端能力受限' },
+        : { status: 'warn', detail: tx.detail.noWorkspace },
     },
     {
       id: 'deep-link',
@@ -119,23 +119,23 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.activeSessionId) return { status: 'warn', detail: tx.detail.noSessionToVerify }
         const hit = resolveBootSession(ctx.activeSessionId, [ctx.activeSessionId], null)
         return hit.matched
-          ? { status: 'pass', detail: '?session= 可解析到当前会话' }
-          : { status: 'fail', detail: '深链解析未命中' }
+          ? { status: 'pass', detail: tx.detail.deepLinkOk }
+          : { status: 'fail', detail: tx.detail.deepLinkMiss }
       },
     },
     {
       id: 'side-pane',
       label: tx.label['side-pane'],
       run: async () => ctx.sidePaneTabs >= 17
-        ? { status: 'pass', detail: `${ctx.sidePaneTabs} 个页签` }
-        : { status: 'warn', detail: `仅 ${ctx.sidePaneTabs} 个页签（预期 17）` },
+        ? { status: 'pass', detail: `${ctx.sidePaneTabs}` }
+        : { status: 'warn', detail: `${ctx.sidePaneTabs} / 17` },
     },
     {
       id: 'i18n',
       label: tx.label['i18n'],
       run: async () => ctx.rawI18nKeys === 0
-        ? { status: 'pass', detail: '无裸 i18n 键' }
-        : { status: 'warn', detail: `${ctx.rawI18nKeys} 个裸键（如 ide.xxx）` },
+        ? { status: 'pass', detail: 'OK' }
+        : { status: 'warn', detail: tx.detail.rawKeys(ctx.rawI18nKeys) },
     },
     {
       id: 'files',
@@ -144,7 +144,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/studio/files/list?${qs({ root: ctx.workspace })}`, (body) =>
           Array.isArray(body.entries)
-            ? { status: 'pass', detail: `${body.entries.length} 个根条目` }
+            ? { status: 'pass', detail: `${body.entries.length}` }
             : { status: 'fail', detail: '响应缺 entries' })
       },
     },
@@ -156,7 +156,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         return api(`/api/ide/git/status?${qs({ root: ctx.workspace })}`, (body) =>
           body.repoRoot
             ? { status: 'pass', detail: `${String(body.branch ?? '?')} · ${(body.changes as unknown[] | undefined)?.length ?? 0} 变更` }
-            : { status: 'warn', detail: '非 Git 仓库（面板显示 not_a_repo 是诚实态）' })
+            : { status: 'warn', detail: tx.detail.notRepo })
       },
     },
     {
@@ -165,14 +165,14 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => api('/api/ide/storage/snapshot', (body) =>
         body.partial
           ? { status: 'warn', detail: '扫描超预算，部分分类为下限值' }
-          : { status: 'pass', detail: `${(body.categories as unknown[] | undefined)?.length ?? 0} 个分类` }),
+          : { status: 'pass', detail: `${(body.categories as unknown[] | undefined)?.length ?? 0}` }),
     },
     {
       id: 'slash',
       label: tx.label['slash'],
       run: async () => api('/api/ide/slash-commands', (body) =>
         Array.isArray(body.commands)
-          ? { status: 'pass', detail: `${body.commands.length} 条` }
+          ? { status: 'pass', detail: `${body.commands.length}` }
           : { status: 'fail', detail: '响应缺 commands' }),
     },
     {
@@ -180,7 +180,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['automations'],
       run: async () => api('/api/ide/automations', (body) =>
         Array.isArray(body.rules)
-          ? { status: 'pass', detail: `${body.rules.length} 条规则` }
+          ? { status: 'pass', detail: `${body.rules.length}` }
           : { status: 'fail', detail: '响应缺 rules' }),
     },
     {
@@ -189,7 +189,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => api('/api/ide/engine-models', (body) => {
         const providers = (body.config as { providers?: unknown[] } | undefined)?.providers
         return Array.isArray(providers) && providers.length
-          ? { status: 'pass', detail: `${providers.length} 个 provider` }
+          ? { status: 'pass', detail: `${providers.length}` }
           : { status: 'warn', detail: '模型目录为空' }
       }),
     },
@@ -200,7 +200,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/zcode-engine/workflow/saved?${qs({ workspacePath: ctx.workspace, scope: 'project' })}`, (body) =>
           Array.isArray(body.workflows)
-            ? { status: 'pass', detail: `${body.workflows.length} 个已保存工作流` }
+            ? { status: 'pass', detail: `${body.workflows.length}` }
             : { status: 'warn', detail: '响应缺 workflows' })
       },
     },
@@ -209,7 +209,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['context-archive'],
       run: async () => api('/api/context-archive/sessions', (body) =>
         Array.isArray(body.sessions)
-          ? { status: 'pass', detail: `${body.sessions.length} 个可归档会话` }
+          ? { status: 'pass', detail: `${body.sessions.length}` }
           : { status: 'warn', detail: '响应缺 sessions' }),
     },
     {
@@ -219,7 +219,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/ide/worktree/list?${qs({ repoRoot: ctx.workspace })}`, (body) =>
           Array.isArray(body.worktrees)
-            ? { status: 'pass', detail: `${body.worktrees.length} 个 worktree` }
+            ? { status: 'pass', detail: `${body.worktrees.length}` }
             : { status: 'warn', detail: '响应缺 worktrees' })
       },
     },

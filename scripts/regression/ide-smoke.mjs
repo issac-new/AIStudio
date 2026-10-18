@@ -134,7 +134,9 @@ try {
   await page.waitForTimeout(500)
   await page.keyboard.type('自检')
   await page.waitForTimeout(400)
-  const selfCheckCmd = page.getByText('IDE 自检（全能力冒烟）', { exact: true }).first()
+  const selfCheckZh = page.getByText('IDE 自检（全能力冒烟）', { exact: true }).first()
+  const selfCheckEn = page.getByText('IDE self-check (full smoke)', { exact: true }).first()
+  const selfCheckCmd = (await selfCheckZh.count()) ? selfCheckZh : selfCheckEn
   if (await selfCheckCmd.count()) {
     await selfCheckCmd.click()
     await waitText(page, '[data-testid="ide-selfcheck-summary"]', 25_000)
