@@ -82,3 +82,12 @@ manifest 默认路径 `~/.hermes-web-ui/overlay/skill-provisioning.json`，可�
 
 - 供给：`POST /provision/rollback`（确认后按台账删除未改副本）；或直接忽略，供给本身只增不改。
 - manifest：每次写入前备份 `.bak-<ISO>`；删除 manifest 文件即回到 `source=builtin`（只读报告态，不可供给）。
+
+## 多机轮补充（2026-10-18 深夜，feat/fleet-capabilities）
+
+- **中央仓事实源**：`~/lab/hermes-shared.git`（bare）+ `_shared` 挂 origin 已推。清单读取候选链改为 env > `_shared/skill-provisioning.json`（中央）> 本地 webui > 内置（manifest.ts `manifestCandidates/resolveManifestPath`）；PUT 响应带 `effectiveReadPath` 防写读遮蔽。真机验证：source=file、7 角色、缺口 274/无源 182（种子清单真实账面）。
+- **收编**：中央清单 v1 合并三处旧源（catalog 各角色行 + mx-lib 硬编码 `*-tester`/`*-sys-analyst` + 通用行）。skill-catalog.md 因并行会话持脏文件本轮未动文案，降级说明随后续轮补。
+- **死承诺修正**：SkillgovSection.vue 保存提示从"下一轮推演启动时安装管线按后缀补装"（无执行面）改为如实说明历史登记面。
+- **profile install 闭环实测**：中央仓→clone→子目录 install `pilot-minimal`（真技能 capability-report 随包）→落位/更新幂等→delete 清理，全程 rc=0；"一仓多角色按子目录装"模式成立。
+- **运维面**：`_shared/ops/provision-pull.sh`+`gen-capability-report.py`（fail-soft）；LaunchAgent `ai.hermes.shared-pull` 每日 06:40，kickstart 现场验证通过。发现面设计另见《2026-10-18-capability-directory.md》。
+- 既有宿主隐患记录（非本轮引入）：宿主 hermes 检出有 2 个半写文件、存在被 update 暂停的网关，待宿主侧修复。
