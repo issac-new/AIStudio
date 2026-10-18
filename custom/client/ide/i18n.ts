@@ -18,6 +18,14 @@ export const IDE_LOCAL_TEXT = {
     workflowStatus: {
       queued: '排队中', pending: '排队中', running: '运行中', completed: '已完成', errored: '失败', stopped: '已停止',
     },
+    // ZCode 输入框对齐批（2026-10-18）：composer 工具条五控件 + 模型面板入口文案。
+    composer: {
+      mode: '模式', computerUse: '电脑操作', contextUsage: '上下文容量',
+      modelSelect: '选择模型', thinkLevel: '思考强度', manageModels: '管理模型…',
+      autoRoute: '⚡ Auto（复杂度路由）',
+      autoTitle: '按任务复杂度选成本档（0.5×/1×/2×）——判定理由见点击后提示',
+      computerUseTip: '开启后向当前会话声明允许电脑操作/浏览器控制（声明式，实际能力以会话工具面为准；引擎 CUA 插件通道未接）',
+    },
     selfCheckCommand: 'IDE 自检（全能力冒烟）',
     selfCheck: {
       title: 'IDE 全能力自检',
@@ -79,6 +87,13 @@ export const IDE_LOCAL_TEXT = {
     },
     workflowStatus: {
       queued: 'Queued', pending: 'Queued', running: 'Running', completed: 'Completed', errored: 'Failed', stopped: 'Stopped',
+    },
+    composer: {
+      mode: 'Mode', computerUse: 'Computer Use', contextUsage: 'Context',
+      modelSelect: 'Select model', thinkLevel: 'Think', manageModels: 'Manage models…',
+      autoRoute: '⚡ Auto (complexity routing)',
+      autoTitle: 'Pick a cost tier by task complexity (0.5×/1×/2×) — rationale shown after click',
+      computerUseTip: 'When on, declares computer-use/browser-control allowed to the session (declarative; actual capability depends on session tools; engine CUA plugin channel not wired)',
     },
     selfCheckCommand: 'IDE self-check (full smoke)',
     selfCheck: {

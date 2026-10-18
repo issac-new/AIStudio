@@ -78,7 +78,11 @@ import IdeModBand from '../components/IdeModBand.vue'
 import IdeReplayTheater from '../components/IdeReplayTheater.vue'
 import { useModBand, type ModBandSpec } from '../composables/useModBand'
 import IdeTodoBar from '../components/IdeTodoBar.vue'
-import IdeModelSwitcher from './IdeModelSwitcher.vue'
+// ZCode 输入框对齐批（2026-10-18）：头部 IdeModelSwitcher 退役，模型选择/Auto 路由/
+// 管理入口全部并入输入区模型面板；管理对话框在此挂载（保存后写穿重拉目录）。
+import IdeEngineModelsDialog from '../components/IdeEngineModelsDialog.vue'
+import { autoRoute, type CostTier } from '../../../server/modelroute/model-routing'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import IdeShareEntry from './IdeShareEntry.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
@@ -107,6 +111,8 @@ const toolPanelStore = useToolPanelStore()
 const cockpitStore = useCockpitStore()
 const { t, locale } = useI18n()
 const message = useMessage()
+// composer 工具条/模型面板文案（IDE 本地字典，ZCode 对齐批）
+const tx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].composer)
 
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
 const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
@@ -183,18 +189,7 @@ onMounted(async () => {
   chatStore.setRuntimeMode?.('default')
   appStore.loadModels?.()
   // 目录与身份/设置并行拉取：ensureSession 建会话前必须已拿到 ZCode 默认模型。
-  const catalogLoaded = fetchEngineCatalog()
-    .then((catalog) => {
-      engineGroups.value = catalog.groups
-      usingIndependent.value = catalog.independent
-      engineDefault.value = engineDefaultModel(catalog)
-      rememberEngineDefault(engineDefault.value)
-    })
-    .catch(() => {
-      engineGroups.value = []
-      usingIndependent.value = false
-      engineDefault.value = null
-    })
+  const catalogLoaded = loadCatalog()
   await Promise.all([
     profilesStore.fetchProfiles?.() ?? Promise.resolve(),
     settingsStore.fetchSettings?.() ?? Promise.resolve(),
@@ -417,6 +412,26 @@ const sessionTitle = computed(
 const engineGroups = ref<EngineCatalogGroup[]>([])
 const usingIndependent = ref(false)
 const engineDefault = ref<EngineDefault | null>(null)
+// P3：服务端档位映射（engine-models config.route）；Auto 路由优先于 localStorage。
+const serverRoute = ref<Partial<Record<'economy' | 'standard' | 'power', { providerId: string; modelId: string }>>>({})
+
+// 目录可重入装载（2026-10-18 管理入口并轮）：管理对话框保存后写穿重拉，
+// 写穿结果立即可选（与退役的 IdeModelSwitcher A8 同语义）。
+async function loadCatalog(): Promise<void> {
+  try {
+    const catalog = await fetchEngineCatalog()
+    engineGroups.value = catalog.groups
+    usingIndependent.value = catalog.independent
+    engineDefault.value = engineDefaultModel(catalog)
+    rememberEngineDefault(engineDefault.value)
+    serverRoute.value = catalog.route ?? {}
+  } catch {
+    engineGroups.value = []
+    usingIndependent.value = false
+    engineDefault.value = null
+    serverRoute.value = {}
+  }
+}
 
 // 两源目录形态不同（Ycode/独立目录为 {id} 对象组，Hermes 为 string[]）：
 // 统一成 { provider, label, models: [{id, reasoningLevels?}] }，选择器/失效判定/
@@ -534,6 +549,81 @@ async function pickModel(provider: string, model: string): Promise<void> {
   }
 }
 
+// ── Auto 模型路由（D3，自退役的 IdeModelSwitcher 迁入；qoder 语义：复杂度→成本档）──
+// 判定 v1=启发式（最近 user 消息长度+任务关键词），理由透明（toast 展示，不黑箱）；
+// 档位→模型映射优先级=服务端 config.route > localStorage 覆盖 > 目录摊平序。
+const AUTO_MAP_KEY = 'ide_auto_tier_map'
+function tierModels(): Record<CostTier, { provider: string; model: string } | null> {
+  const fromServer = (tier: CostTier): { provider: string; model: string } | null => {
+    const r = serverRoute.value[tier]
+    return r ? { provider: r.providerId, model: r.modelId } : null
+  }
+  const served: Partial<Record<CostTier, { provider: string; model: string } | null>> = {
+    economy: fromServer('economy'), standard: fromServer('standard'), power: fromServer('power'),
+  }
+  if (served.economy && served.standard && served.power) return served as Record<CostTier, { provider: string; model: string }>
+  let ls: Record<string, { provider?: string; model?: string }> | null = null
+  try { ls = JSON.parse(localStorage.getItem(AUTO_MAP_KEY) ?? 'null') } catch { /* 坏档回默认 */ }
+  const flat: Array<{ provider: string; model: string }> = []
+  for (const g of modelGroupsView.value) for (const m of g.models) flat.push({ provider: g.provider, model: m.id })
+  const pickAt = (i: number) => flat[Math.min(i, flat.length - 1)] ?? null
+  const fallback = { economy: pickAt(0), standard: pickAt(Math.floor((flat.length - 1) / 2)), power: pickAt(flat.length - 1) }
+  const merged: Record<CostTier, { provider: string; model: string } | null> = {
+    economy: null, standard: null, power: null,
+  }
+  for (const tier of ['economy', 'standard', 'power'] as const) {
+    merged[tier] = served[tier] ?? (ls?.[tier]?.model ? { provider: ls[tier].provider ?? '', model: ls[tier].model as string } : null) ?? fallback[tier]
+  }
+  return merged
+}
+
+function judgeComplexity(): 'simple' | 'standard' | 'complex' {
+  const msgs = (chatStore.activeSession?.messages ?? []) as Array<Record<string, unknown>>
+  let lastUser = ''
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'user') { lastUser = String(msgs[i].content ?? ''); break }
+  }
+  if (/重构|排查|架构|设计|迁移|审计|全量|端到端/i.test(lastUser)) return 'complex'
+  if (lastUser.length <= 24 && !/[？?]/.test(lastUser)) return 'simple'
+  return 'standard'
+}
+
+async function pickAuto(): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid) return
+  const route = autoRoute({ complexity: judgeComplexity() })
+  const target = tierModels()[route.tier]
+  modelPickerOpen.value = false
+  if (!target) return
+  await chatStore.switchSessionModel(target.model, target.provider, sid)
+  // 判定理由透明（不黑箱）：toast 告知档位与依据。
+  showToast(`Auto：${route.detail} → ${target.model}`, 'info', 3200)
+}
+
+// ── 模型面板管理入口（ZCode chat.toolbar.model.manageModels 对应物）──
+const manageOpen = ref(false)
+function onManageSaved(): void {
+  void loadCatalog()
+}
+
+// ── 电脑操作（ZCode composer CUA 入口对应物；声明式，spec D-2）──
+// ZCode CUA=宿主插件深集成（权限代理/Helper），IDE 引擎桥无该通道；与 websearch
+// 档同一既有模式：开/关各向当前会话发一条声明，实际能力以会话工具面为准。
+const CU_KEY = 'ide-computer-use:'
+function cuStorageKey(): string { return CU_KEY + (chatStore.activeSessionId ?? 'default') }
+const computerUseOn = ref(localStorage.getItem(CU_KEY + 'default') === 'on')
+watch(() => chatStore.activeSessionId, (sid, prev) => {
+  if (sid !== prev) computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
+})
+async function toggleComputerUse(): Promise<void> {
+  computerUseOn.value = !computerUseOn.value
+  localStorage.setItem(cuStorageKey(), computerUseOn.value ? 'on' : 'off')
+  await chatStore.sendMessage(
+    `[computer-use-policy] enabled=${computerUseOn.value} —— 声明式：允许使用电脑操作/浏览器控制工具；实际能力以会话工具面为准。`,
+  )
+}
+
+
 // ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
 // 档位来源=引擎目录 per-model reasoningLevels（服务端按 ZCode manifest
 // modelConfigRules 补齐，如 glm-5.3 → low/high/max）；写入会话与 ChatInput
@@ -572,20 +662,20 @@ async function pickEffort(value: string): Promise<void> {
   await chatStore.setSessionReasoningEffort?.(sid, value)
 }
 
-// ── composer「设置」菜单（2026-10-18 用户指令：模式/模型要能在设置里调，zcode 有）──
-// 上游 ChatInput 的设置菜单只有「显示工具调用」等，IDE 侧隐藏原按钮，Teleport 自有
-// 菜单进同一位置：模式（七档，与 IdePermissionSwitcher 同 localStorage 键，经事件
-// 同步）/ 模型（打开 Ycode 模型选择器）/ 思考（档位 chips）/ 显示工具调用（同
-// useToolTraceVisibility 单一事实源）。
+// ── composer「设置」菜单（bee7c5e4，2026-10-18 用户指令：模式/模型要能在设置里调）──
+// 模式（七档，与 IdePermissionSwitcher 同 localStorage 键，经事件同步）/ 模型（打开
+// Ycode 模型选择器）/ 思考（档位 chips）/ 显示工具调用（useToolTraceVisibility 单一
+// 事实源）。本批（e0a3c301）把 ⚙ 按钮收进 composer 工具条行（ZCode 对齐五控件同排），
+// 原Teleport 进 ChatInput .input-top-bar 的宿主机制退役——行内直接渲染无需宿主解析。
 const composerSettingsOpen = ref(false)
 const PERM_MODES: Array<{ key: string; label: string; hint: string }> = [
   { key: 'readonly', label: '只读', hint: 'read only — 仅查看（plan 档同义）' },
   { key: 'plan', label: '计划', hint: 'plan — 只规划不执行' },
-  { key: 'default', label: '标准', hint: 'default — 写免审、执行需批' },
-  { key: 'acceptEdits', label: '自动编辑', hint: 'acceptEdits — 编辑免审' },
-  { key: 'dontAsk', label: '少问', hint: 'dontAsk — 执行免审' },
+  { key: 'default', label: '标准', hint: 'default — 写免审、执行需批（engine: edit）' },
+  { key: 'acceptEdits', label: '自动编辑', hint: 'acceptEdits — 编辑免审（engine: autoEdit）' },
+  { key: 'dontAsk', label: '少问', hint: 'dontAsk — 执行免审（engine: auto）' },
   { key: 'auto', label: '全自动', hint: 'auto — 全免审' },
-  { key: 'bypassPermissions', label: '绕过', hint: 'bypassPermissions — 最高信任' },
+  { key: 'bypassPermissions', label: '绕过', hint: 'bypassPermissions — 最高信任（engine: yolo）' },
 ]
 const PERM_KEY = 'ide-permission-mode:'
 const PERM_MODE_EVENT = 'ide-perm-mode-changed'
@@ -608,21 +698,6 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener(PERM_MODE_EVENT, syncPermMode))
 watch(() => chatStore.activeSessionId, syncPermMode)
-
-// composer 宿主：ChatInput 底栏左簇（设置/模型按钮所在的 .input-top-bar）。宿主属上游
-// 组件 DOM，不在本组件 vnode 树内——挂载后与会话切换后解析一次，宿主脱离文档
-// 即重解析；始终找不到就回落浮层（Teleport disabled 就地渲染）。
-const pickerAnchorEl = ref<HTMLElement | null>(null)
-const composerBarHost = ref<HTMLElement | null>(null)
-function resolveEffortHost(): void {
-  const host = pickerAnchorEl.value?.querySelector<HTMLElement>('.input-top-bar') ?? null
-  composerBarHost.value = host && document.contains(host) ? host : null
-}
-onMounted(() => { void nextTick(resolveEffortHost) })
-watch(() => [chatStore.activeSessionId, ready.value], () => { void nextTick(resolveEffortHost) })
-watch(effortLevels, () => {
-  if (composerBarHost.value && !document.contains(composerBarHost.value)) void nextTick(resolveEffortHost)
-})
 </script>
 
 <template>
@@ -631,8 +706,8 @@ watch(effortLevels, () => {
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
       <!-- R5 会话工作树隔离徽标（worktree 域显性化） -->
       <IdeWorktreeBadge />
-      <!-- R4 会话内模型切换器（antigravity 语义：切换+粘性） -->
-      <IdeModelSwitcher />
+      <!-- 2026-10-18 ZCode 对齐：模型选择/模式控件迁输入区下方 composer 工具条，
+           头部不再保留双入口（IdeModelSwitcher/IdePermissionSwitcher 退役迁入）。 -->
       <!-- R5 goal 预算浮层（zcode goal stats 语义：工具/迭代/上下文消耗面） -->
       <IdeGoalBudgetFloat />
       <div class="ide-chat__actions">
@@ -652,7 +727,6 @@ watch(effortLevels, () => {
           @click="recoveryOpen = true"
         >⏎</button>
         <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
-        <IdePermissionSwitcher />
         <button
           type="button"
           class="ide-chat__action"
@@ -854,7 +928,6 @@ watch(effortLevels, () => {
       <IdeSecurityBoostBar />
       <IdeImportHistory />
       <IdeKnowledgeBar />
-      <IdeContextBar />
       <IdeQueuePanel />
       <IdeRecapCard />
       <IdeTaskGroupsPanel />
@@ -870,7 +943,7 @@ watch(effortLevels, () => {
       <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />
       <IdeBgTasksPanel v-if="bgTasksOpen" @close="bgTasksOpen = false" />
       <IdeCompactionCard />
-      <div ref="pickerAnchorEl" class="ide-chat__model-picker-anchor">
+      <div class="ide-chat__model-picker-anchor">
         <ChatInput
           ref="chatInputEl"
           :model-disabled="modelDisabled"
@@ -879,25 +952,47 @@ watch(effortLevels, () => {
           persist-draft
           @model-click="onModelClick"
         />
-        <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
-             reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
-             控件已禁用并隐藏。位置与 zcode 一致：Teleport 进 ChatInput 底栏左簇
-             （.input-top-bar，紧挨模型按钮）；找不到宿主时就地浮于输入区右上。 -->
-        <Teleport :to="composerBarHost" :disabled="!composerBarHost">
-          <div
-            v-if="effortLevels.length > 0"
-            class="ide-chat__effort"
-            :class="{ 'is-floating': !composerBarHost }"
-            data-testid="ide-effort"
+        <!-- ZCode 输入框对齐批（2026-10-18）：输入区下方一排五控件+⚙设置，顺序=ZCode
+             composer（模式/电脑操作/上下文容量/模型选择/思考强度/设置）。ChatInput 内置
+             模型按钮 :deep 隐藏（单一入口防双触发器）；思考档同因弃 Hermes 配置。
+             注：本行并位取代 9c0ae4b1「思考档 Teleport 进 ChatInput 底栏」与 bee7c5e4
+             「⚙设置 Teleport 同位」——五控件+⚙ 同排，独立行是唯一不 patch 上游组件的
+             落点（spec D-1/D-8）；⚙设置菜单本体（模式/模型/思考/工具调用）自 bee7c5e4
+             原样收进行尾。 -->
+        <div class="ide-chat__composerbar" data-testid="ide-composer-bar">
+          <IdePermissionSwitcher />
+          <button
+            type="button"
+            class="ide-chat__cb-btn"
+            :class="{ 'is-on': computerUseOn }"
+            data-testid="ide-computer-use"
+            :title="tx.computerUseTip"
+            @click="toggleComputerUse"
+          ><span class="ide-chat__cb-dot" />{{ tx.computerUse }}</button>
+          <IdeContextBar />
+          <button
+            type="button"
+            class="ide-chat__cb-btn ide-chat__cb-model"
+            :disabled="modelDisabled"
+            data-testid="ide-composer-model-btn"
+            :title="tx.modelSelect"
+            @click="onModelClick"
           >
+            <span class="ide-chat__cb-model-label">{{ modelLabel }}</span>
+            <span class="ide-chat__cb-chevron">▾</span>
+          </button>
+          <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
+               reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
+               控件已禁用并隐藏（reasoning-effort-disabled + :deep 隐藏）。 -->
+          <div v-if="effortLevels.length > 0" class="ide-chat__effort" data-testid="ide-effort">
             <button
               type="button"
               class="ide-chat__effort-btn"
               data-testid="ide-effort-btn"
               :class="{ 'is-active': !!sessionEffort }"
-              :title="effortLabelShort"
+              :title="tx.thinkLevel"
               @click="effortOpen = !effortOpen"
-            >{{ effortLabelShort }}<span class="ide-chat__effort-caret">▾</span></button>
+            >{{ effortLabelShort }}<span class="ide-chat__cb-chevron">▾</span></button>
             <div v-if="effortOpen" class="ide-chat__effort-menu" data-testid="ide-effort-menu">
               <button
                 type="button"
@@ -915,12 +1010,9 @@ watch(effortLevels, () => {
               >{{ effortLevelLabel(lv) }}</button>
             </div>
           </div>
-          <!-- composer 设置菜单（zcode 对照：模式/模型就地可调；2026-10-18 用户指令） -->
-          <div
-            class="ide-chat__csettings"
-            :class="{ 'is-floating': !composerBarHost }"
-            data-testid="ide-composer-settings"
-          >
+          <!-- composer 设置菜单（zcode 对照：模式/模型就地可调；bee7c5e4）——收进
+               composer 工具条行（原 Teleport 宿主/is-floating 回落随并位退役）。 -->
+          <div class="ide-chat__csettings" data-testid="ide-composer-settings">
             <button
               type="button"
               class="ide-chat__effort-btn ide-chat__csettings-btn"
@@ -977,8 +1069,15 @@ watch(effortLevels, () => {
               </div>
             </div>
           </div>
-        </Teleport>
+        </div>
         <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
+          <button
+            type="button"
+            class="ide-chat__model-option is-auto"
+            data-testid="ide-input-model-auto"
+            :title="tx.autoTitle"
+            @click="pickAuto"
+          >{{ tx.autoRoute }}</button>
           <div
             v-for="group in modelGroupsView"
             :key="group.provider"
@@ -990,11 +1089,21 @@ watch(effortLevels, () => {
               :key="m.id"
               type="button"
               class="ide-chat__model-option"
+              :class="{ 'is-active': m.id === chatStore.activeSession?.model }"
               :data-testid="`ide-input-model-${group.provider}-${m.id}`"
               @click="pickModel(group.provider, m.id)"
             >{{ m.id }}</button>
           </div>
+          <div class="ide-chat__model-manage">
+            <button
+              type="button"
+              class="ide-chat__model-managebtn"
+              data-testid="ide-input-model-manage"
+              @click="manageOpen = true"
+            >⚙ {{ tx.manageModels }}</button>
+          </div>
         </div>
+        <IdeEngineModelsDialog v-if="manageOpen" @close="manageOpen = false" @saved="onManageSaved" />
       </div>
 
       <!-- toolPanel overlay：会话 workspace diff / 文件预览（ChatPanel 宿主同款） -->
@@ -1319,47 +1428,90 @@ watch(effortLevels, () => {
   // ide-chat__effort（档位=ZCode manifest）。设置菜单同因：上游菜单无模式/模型
   // （zcode 有，用户实报），隐藏原按钮，用 ide-chat__csettings。
   :deep(.reasoning-effort-button) { display: none; }
+  // 上游 ChatInput 内置设置按钮隐藏（bee7c5e4：⚙迁 IDE 自有位）；内置模型按钮
+  // 隐藏（本批：模型选择迁 composer 工具条行，单一入口防双触发器）。
   :deep(.input-settings-button) { display: none; }
+  :deep(.input-model-button) { display: none; }
 }
 
-// Ycode 思考档：默认 Teleport 进 ChatInput 底栏左簇（紧挨模型按钮，zcode 风格：
-// 模型与思考档并排）；按钮样式对齐模型按钮（quaternary tiny：无边框胶囊、12px、
-// 22px 高）。is-floating=找不到宿主时的回落（就地浮于输入区右上，2026-10-18 实测
-// 右下定位会被 input-wrapper 层级盖住）。
+// ZCode composer 工具条（2026-10-18 对齐批）：输入区下方一排——模式/电脑操作/
+// 上下文容量/模型选择/思考强度（顺序=ZCode）。窄列溢出自动换行不裁控件。
+// 思考档随行内排布，取代 9c0ae4b1 的 Teleport 进底栏方案（五控件同排需要，spec D-8）。
+.ide-chat__composerbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px 10px;
+}
+.ide-chat__cb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  max-width: 200px;
+
+  &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--text-primary); }
+  &.is-on {
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent);
+    background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+.ide-chat__cb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.ide-chat__cb-btn.is-on .ide-chat__cb-dot { background: var(--accent-primary); }
+.ide-chat__cb-model {
+  max-width: 260px;
+}
+.ide-chat__cb-model-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, monospace;
+}
+.ide-chat__cb-chevron {
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+// Ycode 思考档：随 composer 工具条行内排布（2026-10-18 由输入区右上浮层迁入，
+// 原 top:-32px 绝对定位退役）；菜单向上开（工具条贴屏底，向下开必被裁）。
 .ide-chat__effort {
   position: relative;
   display: inline-flex;
-  align-items: center;
-  z-index: 20;
-  &.is-floating {
-    position: absolute;
-    top: -32px;
-    right: 6px;
-  }
 }
 .ide-chat__effort-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 22px;
-  padding: 0 6px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
   color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1;
+  font-size: 11px;
+  padding: 3px 8px;
   cursor: pointer;
   font-family: inherit;
-  white-space: nowrap;
-  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
-  &.is-active { color: var(--accent-primary); }
+  &:hover { color: var(--text-primary); }
+  &.is-active {
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  }
 }
-.ide-chat__effort-caret { font-size: 10px; opacity: 0.7; }
 .ide-chat__effort-menu {
   position: absolute;
-  left: 0;
-  bottom: calc(100% + 6px);
+  right: 0;
+  bottom: calc(100% + 4px);
   min-width: 108px;
   padding: 4px;
   border: 1px solid var(--border-color);
@@ -1370,8 +1522,6 @@ watch(effortLevels, () => {
   flex-direction: column;
   gap: 2px;
   z-index: 30;
-  // 回落浮层在输入区上方：菜单改向下开、靠右对齐
-  .is-floating & { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; }
 }
 .ide-chat__effort-option {
   border: none;
@@ -1394,11 +1544,6 @@ watch(effortLevels, () => {
   display: inline-flex;
   align-items: center;
   z-index: 20;
-  &.is-floating {
-    position: absolute;
-    top: -32px;
-    right: 6px;
-  }
 }
 .ide-chat__csettings-menu {
   position: absolute;
@@ -1414,7 +1559,6 @@ watch(effortLevels, () => {
   flex-direction: column;
   gap: 6px;
   z-index: 30;
-  .is-floating & { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; }
 }
 .ide-chat__csettings-section { display: flex; flex-direction: column; gap: 4px; }
 .ide-chat__csettings-title {
@@ -1448,6 +1592,7 @@ watch(effortLevels, () => {
   font-family: inherit;
   &:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 }
+.ide-chat__effort-caret { font-size: 10px; opacity: 0.7; }
 
 .ide-chat__model-picker {
   position: absolute;
@@ -1485,6 +1630,33 @@ watch(effortLevels, () => {
 
 .ide-chat__model-option:hover {
   background: var(--hover-color, rgba(0, 0, 0, 0.05));
+}
+
+.ide-chat__model-option.is-auto {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* 管理模型入口（ZCode chat.toolbar.model.manageModels 对应物）：面板底部常驻。 */
+.ide-chat__model-manage {
+  border-top: 1px dashed var(--border-color);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.ide-chat__model-managebtn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 6px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover { background: var(--hover-color, rgba(0, 0, 0, 0.05)); color: var(--primary-color); }
 }
 
 .ide-chat__messages-anchor {
