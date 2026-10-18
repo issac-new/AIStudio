@@ -100,6 +100,33 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
     rmSync(zhome, { recursive: true, force: true })
   })
 
+  it('readZcodeDefault：优先 setting.json 选中的 provider family，否则首个启用 provider 首模型', async () => {
+    const zhome = mkdtempSync(join(tmpdir(), 'zcode-default-'))
+    fs_mkdirSync(join(zhome, 'v2'), { recursive: true })
+    writeFileSync(join(zhome, 'v2', 'config.json'), JSON.stringify({
+      provider: {
+        'builtin:bigmodel-coding-plan': { enabled: true, name: 'BigModel - Coding Plan', models: { 'GLM-5.3-Flash': {}, 'GLM-5.3': {} } },
+        'builtin:bigmodel': { enabled: true, name: 'Bigmodel', models: { 'glm-5.3': {} } },
+      },
+    }))
+    const prev = process.env.ZCODE_HOME
+    process.env.ZCODE_HOME = zhome
+    const mod = await import('../engine-models')
+    const groups = mod.readZcodeCatalog()
+    // 无 setting.json → 首个启用 provider 首模型
+    expect(mod.readZcodeDefault(groups)).toEqual({ provider: 'builtin:bigmodel-coding-plan', model: 'GLM-5.3-Flash' })
+    // 用户选中 bigmodel family 的 coding-plan provider → 用该 provider 首模型
+    writeFileSync(join(zhome, 'v2', 'setting.json'), JSON.stringify({
+      providerFamilyDomain: 'bigmodel',
+      modelProviderFamilySelectedKeys: { bigmodel: 'coding-plan:builtin:bigmodel-coding-plan' },
+    }))
+    expect(mod.readZcodeDefault(groups)).toEqual({ provider: 'builtin:bigmodel-coding-plan', model: 'GLM-5.3-Flash' })
+    expect(mod.readZcodeDefault([])).toBeNull()
+    if (prev === undefined) delete process.env.ZCODE_HOME
+    else process.env.ZCODE_HOME = prev
+    rmSync(zhome, { recursive: true, force: true })
+  })
+
   it('PUT 非法 400 带问题清单；合法原子落盘+回读一致', async () => {
     const bad = await run(router, 'put', {
       request: { body: { providers: [{ providerId: '', baseURL: 'x', models: [] }] } },

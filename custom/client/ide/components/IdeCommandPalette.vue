@@ -15,6 +15,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { buildReviewPrompt } from '../utils/reviewPrompt'
+import { engineDefaultFromCache } from '../utils/engine-models'
 
 interface PaletteItem {
   id: string
@@ -61,12 +62,15 @@ const commandItems = computed<PaletteItem[]>(() => {
       id: 'cmd:new-session',
       labelKey: 'ide.paletteCmdNewSession',
       run: () => {
+        // 与输入区/标题栏的新会话一致：默认模型取 ZCode 目录（IdeChatPane 挂载时已缓存）。
+        const d = engineDefaultFromCache()
         chatStore.newChat({
           agent: ideAgentToChatAgent(ide.agentId) as never,
           codingAgentId: ide.agentId,
           codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
           source: 'coding_agent',
           workspace: ide.workspace,
+          ...(d ? { model: d.model, provider: d.provider } : {}),
         })
       },
     },
