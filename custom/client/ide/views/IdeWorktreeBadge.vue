@@ -12,18 +12,19 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { ideWorktreeApi } from '../api/worktree'
 import { showToast } from '../utils/toast'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 const busy = ref(false)
 
-// 会话 workspace 优先（与 FilesPane 同源）：徽标描述的是当前会话的隔离态，
-// ide.workspace 是面板级偏好，二者不一致时以会话为准
-const workspace = computed(() => (chatStore.activeSession?.workspace as string | undefined) ?? ide.workspace ?? '')
+// 与文件/Git 页签同源：任务根/会话 workspace/用户偏好由 useIdeWorkspace 统一裁决
+const workspace = computed(() => root.value ?? '')
 
 // 只认两个惯例根：泛化的 '/worktrees/' 会把路径里恰有该目录的普通仓库
 // （如 ~/worktrees/myrepo）误判为已隔离，点回收还会对错误的 repoRoot 发起删除

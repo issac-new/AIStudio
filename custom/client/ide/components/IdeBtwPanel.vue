@@ -4,12 +4,14 @@
 import { onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { fetchSessionMessagesPage } from '@/api/studio/sessions'
 import { askBtw, refreshBtw, btwNoteText, btwSessionOf, btwStateView } from '../store/btw'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 const question = ref('')
 const copiedId = ref<string | null>(null)
@@ -34,7 +36,7 @@ async function submit(): Promise<void> {
     codingAgentId: ide.agentId,
     codingAgentMode: 'global',
     source: 'coding_agent',
-    workspace: ide.workspace,
+    workspace: root.value,
   })
   if (ok) question.value = ''
 }

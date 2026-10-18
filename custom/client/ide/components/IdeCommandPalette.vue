@@ -10,6 +10,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { ideAgentToChatAgent } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -33,6 +34,7 @@ interface PaletteSection {
 }
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
 const cockpitStore = useCockpitStore()
 const router = useRouter()
@@ -69,7 +71,7 @@ const commandItems = computed<PaletteItem[]>(() => {
           codingAgentId: ide.agentId,
           codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
           source: 'coding_agent',
-          workspace: ide.workspace,
+          workspace: root.value,
           ...(d ? { model: d.model, provider: d.provider } : {}),
         })
       },

@@ -9,12 +9,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useNowTick } from '@/custom/ia2/composables/useNowTick'
 import { authFetch } from '../utils/auth-fetch'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chat = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const nowTick = useNowTick()
 
 // ── ① 后台子代理（全局，跨会话）──
@@ -38,7 +40,7 @@ const queueItems = ref<Array<{ itemId: string; text: string; origin: string; sta
 const queueError = ref('')
 async function loadQueue(): Promise<void> {
   queueError.value = ''
-  const ws = ide.workspace
+  const ws = root.value
   if (!ws) { queueItems.value = []; return }
   try {
     const res = await authFetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
@@ -53,7 +55,7 @@ const wfRuns = ref<Array<{ runId: string; name?: string; status?: string }>>([])
 const wfError = ref('')
 async function loadWorkflowRuns(): Promise<void> {
   wfError.value = ''
-  const ws = ide.workspace
+  const ws = root.value
   const sid = chat.activeSessionId
   if (!ws || !sid) { wfRuns.value = []; return }
   try {
@@ -65,7 +67,7 @@ async function loadWorkflowRuns(): Promise<void> {
 }
 
 onMounted(() => { void loadQueue(); void loadWorkflowRuns() })
-watch(() => [ide.workspace, chat.activeSessionId], () => { void loadQueue(); void loadWorkflowRuns() })
+watch(() => [root.value, chat.activeSessionId], () => { void loadQueue(); void loadWorkflowRuns() })
 
 function openAgentsFloat(): void {
   if (!ide.floats.agents) ide.toggleFloat('agents')

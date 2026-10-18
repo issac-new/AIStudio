@@ -849,3 +849,7 @@
 # 659: 任务工作区/任务会话/一键发上下文 词条（zh/en）——关联轮配套；Composer t
 # 无默认文案参数，键必须真实落语言包（否则界面直出键名）。
 659-client-task-workspace-locale.patch
+
+# 660: IDE 聊天容器提供 ideDeferLocalMedia 时，Markdown 本地图片/音频/视频只出
+# data-local-media 占位，由容器鉴权 fetch 换 blob——API key 不再进入媒体 src。
+660-client-markdown-defer-local-media.patch
