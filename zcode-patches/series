@@ -32,3 +32,12 @@
 #      unknown broker method，工具两条执行路径全失败。005 补 hold_key 组合方法
 #      （按下→durationMs 默认 500/上限 10000→松开，finally 保底松键）+词表加名。
 005-zcode-cua-hold-key.patch
+
+# 006（computer-use 插件打包内置，2026-10-18）：上游 seed 定义表已有 computer-use
+#      条目但仓库缺载荷包——本补丁补 packages/zcode-cua-plugin/（skill+client 脚本+
+#      manifest+docs，逐字拷自官方缓存 0.6.4 MIT；不带 node_modules——skill 走宿主
+#      bridge，fork 003/004 运行时无 sharp/koffi/Helper 依赖）+ 定义表 defaultEnabled:true
+#      （Ycode 开箱即用；ZCODE_CUA_DISABLE=1 仍 fail-closed）+ shared/plugin-marketplaces
+#      与 services officialPluginCache 两份默认名单同步（bootstrap 机械对照测试）。
+#      生效=引擎 CLI 重建后 seed 进官方插件缓存（默认启用）。
+006-zcode-cua-plugin-bundled.patch
