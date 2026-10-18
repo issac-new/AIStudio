@@ -537,9 +537,39 @@ export function detectDiskCapacity(
     }))
 }
 
+/** agent.push-stalled：推送受阻检测（run21 2026-10-18 40 分钟盲区实录产品化）。
+ *  本地 rebase/push 失败是静默的——owner 在长回合里反复重试或放弃，全集群
+ *  无一方可见（实录：checkpoint 落库后三文件 rebase 冲突，owner 本地失败
+ *  40 分钟无感知，复测/验收全链等待）。本检测器扫 profile 日志尾的失败
+ *  签名（CONFLICT/failed to push/non-fast-forward/integration 拒收语），
+ *  命中即报：mtime 新鲜=warn（owner 可能正自解），mtime 陈化 10 分钟=high
+ *  （卡死面——需回灌精确冲突情报或换会话令）。未接线（profiles 缺席）=
+ *  合法空态静默跳过。 */
+export function detectPushStalled(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const stallMs = opts.pushStalledStaleMs ?? 600_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.profiles
+  if (!face || !face.ok) return out
+  const SIG = /(CONFLICT \(content\)|error: failed to push|non-fast-forward|REJECTED: integration\b|\[remote rejected\])/i
+  for (const t of face.tails) {
+    if (!t.tail || !SIG.test(t.tail)) continue
+    const ageMs = now - (t.mtimeMs ?? 0)
+    const stale = Number.isFinite(ageMs) && ageMs >= stallMs
+    out.push({
+      detector: 'agent.push-stalled', subject: `profile:${t.profile}`,
+      severity: stale ? 'high' : 'warn',
+      summary: `推送受阻${Number.isFinite(ageMs) ? ` ${Math.round(ageMs / 60000)} 分钟` : ''}：${t.profile} 日志尾出现 rebase/push 失败签名且未消除——本地失败静默形态（run21 实录：冲突 40 分钟无人见）。若 owner 在途自解可观察一轮；陈化超阈请回灌精确冲突文件清单或发单步推送令`,
+      detail: { profile: t.profile, tail: t.tail.slice(-120), ageMs, stallMs },
+    })
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
+    ...detectPushStalled(snap, opts),
     ...detectSlotInflation(snap, opts),
     ...detectStaleWorkers(snap),
     ...detectSessionStall(snap, opts),
