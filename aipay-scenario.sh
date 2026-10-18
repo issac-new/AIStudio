@@ -2363,7 +2363,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   fi
   if [[ -z "$(sget audit_dispatched)" ]]; then
     # 总分总并行（2026-10-18 用户指令：所有报告类根治）：意见书拆两片并行
-    dispatch_in_room audit "@audit-agent:matrix.test 审计意见书·流程合规片（并行分工，独立会话）：复核 G1-G6 门禁流转合规性（打回-修复-复审链完整性/审批留痕），写 docs/retro/${RUN_ID}-audit-opinion-process.md。首节完成即先 push 一次（途中锚）；完成回一行 AUDIT-SEC-PROCESS-DONE。不要写数据真实性片。"
+    dispatch_in_room audit "@audit-agent:matrix.test 审计意见书·流程合规片（并行分工，独立会话）：复核 G1-G6 门禁流转合规性（打回-修复-复审链完整性/审批留痕），写 docs/retro/${RUN_ID}-audit-opinion-process.md。首节完成即先 push 一次（途中锚）；完成回一行 AUDIT-SEC-PROCESS-DONE。不要写数据真实性片。" "$(agent_mxid audit)" || true
     dispatch_in_room audit "@audit-agent:matrix.test 审计意见书·数据真实性片（并行分工，独立会话）：抽查结论行-实物反查（commit/卡/帧锚点抽样核验），写 docs/retro/${RUN_ID}-audit-opinion-data.md。首节完成即先 push 一次（途中锚）；完成回一行 AUDIT-SEC-DATA-DONE。不要写流程合规片。"
     dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求（汇总篇，总分总之总）：两片已并行起草（process/data 各一），请独立复核合并成正式意见书并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。判罚口径提示（run18 复盘 F2 误判教训）：G5 发布准出早于 UAT 完成是方案 §2.4 冻结面既定序（发布准出→发布→上线后用户对账），非时序倒挂；判「放行无效」须以缺评审实物/证据链断裂为准，不得以 G5→UAT 先后为据。" "$(agent_mxid audit)" || true
     sset audit_dispatched 1
