@@ -22,6 +22,12 @@ beforeEach(async () => {
   process.env.HERMES_APPROVAL_RULES_FILE = join(dir, 'no-rules.json')
   process.env.GOVERNANCE_QGATE_GATE_PACKS = join(dir, 'no-packs')
   process.env.GOVERNANCE_DISPATCH_LEDGER = join(dir, 'no-ledger.jsonl')
+  process.env.TOOL_EXEC_AUDIT_DIR = join(dir, 'audit')
+  process.env.TOOL_IDEMPOTENCY_STORE = join(dir, 'idem.json')
+  process.env.HERMES_LOOP_DIR = join(dir, 'loop')
+  process.env.EVAL_STORE = join(dir, 'eval')
+  process.env.HELDOUT_STORE = join(dir, 'heldout')
+  process.env.HERMES_APPROVALS_LOG_FILE = join(dir, 'approvals.json')
   // mcp 假配置：一个 authorized server
   mkdirSync(join(dir, 'mcp'), { recursive: true })
   writeFileSync(join(dir, 'mcp', 'demo.json'), JSON.stringify({ name: 'demo', scope: 'global', timeoutMs: 1000, authState: 'authorized', updatedAt: 1 }))
@@ -41,7 +47,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   server.close()
-  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER']) {
+  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER', 'TOOL_EXEC_AUDIT_DIR', 'TOOL_IDEMPOTENCY_STORE', 'HERMES_LOOP_DIR', 'EVAL_STORE', 'HELDOUT_STORE', 'HERMES_APPROVALS_LOG_FILE']) {
     delete process.env[k]
   }
   const store = await import('../../governance/change-governance-store')
@@ -109,5 +115,48 @@ describe('四子路由 HTTP 投影', () => {
     expect(typeof body.matrix.fullyCovered).toBe('number')
     const task = body.primitives.find((p: any) => p.key === 'task')
     expect(task.liveCountNote ?? 'counted').toBeTruthy()
+  })
+
+  it('GET /api/harness/tool-contracts：200 + 契约表非空且含只读工具', async () => {
+    const { status, body } = await get('/api/harness/tool-contracts')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.count).toBeGreaterThan(10)
+    const read = body.contracts.find((c: any) => c.match === 'read_file')
+    expect(read).toMatchObject({ sideEffect: 'read', retry: { maxAttempts: 3 } })
+    const terminal = body.contracts.find((c: any) => c.match === 'terminal')
+    expect(terminal.sideEffect).toBe('external')
+    expect(terminal.idempotency.mode).toBe('key')
+  })
+
+  it('GET /api/harness/tool-audit：空账 200 + 聚合结构与窗口回显', async () => {
+    const { status, body } = await get('/api/harness/tool-audit?days=7&limit=50')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.total).toBe(0)
+    expect(body.entries).toEqual([])
+    expect(body.byOutcome).toEqual({ ok: 0, error: 0, unknown: 0 })
+    expect(body.windowDays).toBe(7)
+    expect(body.auditWriteFailures).toBe(0)
+    // 非法 days 回落 7；outcome 非法值被忽略
+    const fallback = await get('/api/harness/tool-audit?days=abc&outcome=weird')
+    expect(fallback.body.windowDays).toBe(7)
+  })
+
+  it('GET /api/harness/nine-layers：200 + 九层顺序 + 三态计数和=9 + 自检非认证', async () => {
+    const { status, body } = await get('/api/harness/nine-layers?days=7')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.layers.map((l: any) => l.key)).toEqual([
+      'tools', 'loop', 'memory', 'context', 'sandbox',
+      'verification', 'permissions', 'observability', 'evals',
+    ])
+    expect(body.counts.covered + body.counts.partial + body.counts.missing).toBe(9)
+    for (const layer of body.layers) {
+      expect(typeof layer.score).toBe('number')
+      expect(Array.isArray(layer.checks)).toBe(true)
+      expect(Array.isArray(layer.gaps)).toBe(true)
+    }
+    expect(body.meta.note).toContain('自检清单')
   })
 })

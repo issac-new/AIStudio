@@ -14,6 +14,7 @@
 // ============================================================================
 
 import type { PredicateExpr } from './predicate'
+import type { ErrorCategory } from '../../toolcontract/contract'
 
 /** 回边守卫：有限终止的循环级安全网 */
 export interface LoopGuard {
@@ -73,8 +74,19 @@ export interface NodeDef {
   execute: (state: StateValues, ctx: NodeContext) => Promise<NodeResult>
   /** 超时 ms */
   timeout?: number
-  /** 重试配置 */
-  retry?: { maxAttempts: number; backoffMs: number }
+  /** 重试配置。2026-10-18 Harness 可靠性轮扩展：错误分类 + 指数退避 + 抖动 +
+   *  Retry-After；未声明新字段时保持既有线性退避行为。 */
+  retry?: {
+    maxAttempts: number
+    backoffMs: number
+    strategy?: 'linear' | 'exponential'
+    jitterRatio?: number
+    maxDelayMs?: number
+    /** 可重试错误类别（默认 transient/rate_limit/unknown：保留既有弹性，确定性错误仍不重试）。 */
+    retryOn?: ErrorCategory[]
+    /** 显式不可重试类别（优先于 retryOn）。 */
+    nonRetryable?: ErrorCategory[]
+  }
   /** 缓存 TTL（秒），同输入跳过执行 */
   cacheTtl?: number
   /** 子图引用（type='subgraph' 时使用） */

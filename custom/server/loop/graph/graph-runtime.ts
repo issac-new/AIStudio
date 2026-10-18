@@ -35,6 +35,7 @@ import { CheckpointManager } from './checkpoint-manager'
 import { evaluatePredicate } from './predicate'
 import type { EventLogStore, StoredCheckpoint, GraphLogEvent, JoinLedger } from './event-log-store'
 import { emptyJoinLedger } from './event-log-store'
+import { classifyToolError, computeBackoffMs, type RetryPolicy } from '../../toolcontract/contract'
 
 export interface GraphRuntimeOptions {
   checkpointManager?: CheckpointManager
@@ -719,23 +720,39 @@ export class GraphRuntime {
       return result
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
-      // 重试逻辑
-      if (node.retry && node.retry.maxAttempts > 0) {
-        for (let attempt = 1; attempt <= node.retry.maxAttempts; attempt++) {
-          await this.sleep(node.retry.backoffMs * attempt)
-          try {
-            return await this.withTimeout(
-              node.execute(state, nodeCtx),
-              node.timeout ?? 60000,
-            )
-          } catch (retryErr) {
-            if (attempt === node.retry.maxAttempts) {
-              return retryErr instanceof Error ? retryErr : new Error(String(retryErr))
-            }
-          }
+      if (!node.retry || node.retry.maxAttempts <= 0) return error
+
+      // 2026-10-18 Harness 可靠性轮：错误分类 → 只重试瞬时/限流类；
+      // 权限/认证/参数校验/资源不存在立即失败（源文 07 节确定性错误）。
+      const policy: RetryPolicy = {
+        maxAttempts: node.retry.maxAttempts,
+        baseDelayMs: node.retry.backoffMs,
+        maxDelayMs: node.retry.maxDelayMs ?? 60_000,
+        jitterRatio: node.retry.jitterRatio ?? 0,
+        strategy: node.retry.strategy ?? 'linear',
+        // unknown 默认保留重试：既有推演图定义用通用异常表达基础设施抖动，
+        // 本轮只阻断确定性错误（权限/认证/校验/不存在），不改变其弹性。
+        retryOn: node.retry.retryOn ?? ['transient', 'rate_limit', 'unknown'],
+      }
+      let lastError: unknown = error
+
+      for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
+        const info = classifyToolError(lastError)
+        const blocked = node.retry.nonRetryable?.includes(info.category) ?? false
+        if (blocked || !policy.retryOn.includes(info.category)) {
+          return lastError instanceof Error ? lastError : new Error(String(lastError))
+        }
+        await this.sleep(computeBackoffMs({ attempt, retry: policy, retryAfterMs: info.retryAfterMs }))
+        try {
+          return await this.withTimeout(
+            node.execute(state, nodeCtx),
+            node.timeout ?? 60000,
+          )
+        } catch (retryErr) {
+          lastError = retryErr
         }
       }
-      return error
+      return lastError instanceof Error ? lastError : new Error(String(lastError))
     }
   }
 
