@@ -873,3 +873,7 @@
 # 合并 cuaEnvForSession(sessionId)——默认注入 ZCODE_CUA_DISABLE=1（fail-closed），
 # IDE 经 /api/ide/cua/session/:id 显式开启的会话才放行电脑操作运行时。
 664-server-zcode-cua-gate.patch
+
+# 665: 工作台嵌入态群聊不跳出 /app 壳——GroupChatView 自动选首个房间时，
+# standaloneEmbed 只 join 不改父路由（2026-10-19 全页走查实证：/app/collab 被 hermes.groupChatRoom 覆盖）。
+665-client-groupchat-embedded-no-route-escape.patch

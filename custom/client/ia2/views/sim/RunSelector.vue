@@ -19,8 +19,11 @@ const runsStore = useRunCenterStore()
 const { run } = useRunContext()
 
 const current = computed(() => run.value.trim())
+/** 运行中心列表的 sim 运行 ID 带 `sim-` 前缀（图引擎命名空间），而 run-state /
+ *  报告端点消费的是 runs/<目录名>。选择器统一归一为目录名，避免 ?run=sim-xxx 404。 */
+const runStateId = (id: string): string => id.startsWith('sim-') ? id.slice(4) : id
 const options = computed(() => {
-  const list = (runsStore.sortedRuns ?? []).map(r => r.runId).filter(Boolean)
+  const list = Array.from(new Set((runsStore.sortedRuns ?? []).map(r => runStateId(r.runId)).filter(Boolean)))
   if (current.value && !list.includes(current.value)) list.unshift(current.value)
   return list.slice(0, 40)
 })
