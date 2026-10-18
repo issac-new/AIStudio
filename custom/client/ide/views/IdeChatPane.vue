@@ -171,7 +171,8 @@ const activeModelInvalid = computed(() =>
 )
 const showModelInvalid = computed(() => activeModelInvalid.value && !modelInvalidDismissed.value)
 function goReselectModel(): void {
-  router.push({ name: 'hermes.settings' })
+  // 就地开模型选择器（不跳设置页）——选择源已切换到 Ycode 目录
+  modelPickerOpen.value = true
 }
 
 // 一键回退（2026-10-07 run10 实证修复）：模型被移除时横幅内直接回退到目录首个
