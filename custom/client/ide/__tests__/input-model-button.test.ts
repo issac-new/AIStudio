@@ -47,6 +47,14 @@ vi.mock('../utils/engine-models', async (importOriginal) => {
   return { ...actual, fetchEngineCatalog: () => catalogMock() }
 })
 vi.mock('@/api/hermes/model-context', () => ({ setModelContext: vi.fn(async () => undefined) }))
+// Cua 完整回路：会话闸门 API 桩（真实行为由 api/cua + policy 专测覆盖）
+vi.mock('../api/cua', () => ({
+  ideCuaApi: {
+    status: vi.fn(async () => ({ ok: true, available: true, seededAt: '0.6.4', note: '' })),
+    session: vi.fn(async (sessionId: string) => ({ ok: true, sessionId, enabled: localStorage.getItem('ide-computer-use:' + sessionId) === 'on' })),
+    setSession: vi.fn(async (sessionId: string, enabled: boolean) => ({ ok: true, sessionId, enabled })),
+  },
+}))
 vi.mock('@/components/hermes/chat/ChatInput.vue', () => ({
   default: {
     name: 'ChatInputStub',

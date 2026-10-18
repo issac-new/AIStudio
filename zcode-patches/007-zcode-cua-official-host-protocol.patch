@@ -1,0 +1,267 @@
+diff --git a/packages/zcode-cua/broker.js b/packages/zcode-cua/broker.js
+index 2fca421..80bcdc7 100644
+--- a/packages/zcode-cua/broker.js
++++ b/packages/zcode-cua/broker.js
+@@ -88,6 +88,29 @@ export function okResponse(result) {
+   return { ok: true, result };
+ }
+ 
++// overlay 006（Cua 完整回路，2026-10-18）：官方 node_repl host（3.15.x）的 broker
++// 客户端契约——请求 {id,token,method,input,context}、响应须回显 id 且 result 为
++// MCP CallToolResult（content 数组；截图= image+text，其余= 单 text JSON，SDK
++// unwrapEnvelope/appStateOf 按该形态解封）。旧客户端（callBrokerMethod）只读
++// ok/result，回显 id 与 content 包装对它零影响——双契约同解。
++export function callToolResultOf(method, result) {
++  // overlay 006c：官方 SDK listApps 语义=裸 JSON 数组（0.6.4 client 注释实锤）——
++  // 我们的 {apps:[...]} 包裹在信封层摊平，避免 SDK inventory() 解析成 []。
++  if ((method === "list_apps" || method === "list_applications") && result && typeof result === "object" && Array.isArray(result.apps)) {
++    return { content: [{ type: "text", text: JSON.stringify(result.apps) }], isError: false };
++  }
++  if (method === "screenshot" && result && typeof result === "object" && result.data) {
++    return {
++      content: [
++        { type: "image", data: result.data, mimeType: result.mediaType ?? "image/png" },
++        { type: "text", text: `Captured ${result.bytes} bytes PNG.` },
++      ],
++      isError: false,
++    };
++  }
++  return { content: [{ type: "text", text: JSON.stringify(result ?? { ok: true }) }], isError: false };
++}
++
+ export function errorResponse(message, options = {}) {
+   return { ok: false, error: { message, ...(options.code ? { code: options.code } : {}) } };
+ }
+@@ -113,11 +136,18 @@ export async function dispatchRequest(backend, request) {
+   if (typeof handler !== "function") {
+     return errorResponse(`backend does not implement: ${request.method}`, { code: "action_unavailable" });
+   }
++  const requestId = request.id ?? null;
++  const envelope = (response) => (requestId !== null ? { id: requestId, ...response } : response);
+   try {
+-    const result = await handler.call(backend, request.params ?? {});
+-    return okResponse(result ?? { ok: true });
++    // overlay 006：官方 host 用 input（旧客户端用 params）——同参兼容；
++    // result 包成 CallToolResult（官方 SDK 契约），旧客户端读 ok/result 不受影响。
++    const result = await handler.call(backend, request.input ?? request.params ?? {});
++    // overlay 006d：外层信封契约修正——官方 runtime 的 callBroker/toText 在宿主侧
++    // 自行包 MCP envelope，broker 必须回**裸载荷**（list_apps 裸数组/截图裸 base64 对象）；
++    // CallToolResult 包装会让 toText(JSON) 套娃 → SDK inventory 解析出空列表（E2E 实锤）。
++    return envelope({ ok: true, result });
+   } catch (error) {
+-    return errorResponseFromException(error);
++    return envelope(errorResponseFromException(error));
+   }
+ }
+ 
+@@ -167,7 +197,7 @@ export async function callBrokerMethod(args) {
+         cleanup();
+         try {
+           const response = JSON.parse(line);
+-          if (response && response.ok === true) resolveCall(response.result);
++          if (response && response.ok === true) resolveCall(response.raw !== undefined ? response.raw : response.result);
+           else rejectCall(Object.assign(new Error(response?.error?.message ?? `broker error for ${method}`), { code: response?.error?.code }));
+         } catch (err) {
+           rejectCall(Object.assign(new Error(`broker response parse failed: ${err.message}`), { code: "invalid_response" }));
+@@ -182,7 +212,7 @@ export async function callBrokerMethod(args) {
+       }
+       socket.on("data", onData);
+       socket.on("error", onError);
+-      socket.write(`${JSON.stringify({ id: null, method, params: args?.params ?? {} })}\n`);
++      socket.write(`${JSON.stringify({ id: null, legacy: true, method, params: args?.params ?? {} })}\n`);
+     });
+   } finally {
+     socket.destroy();
+diff --git a/packages/zcode-cua/node-backend.js b/packages/zcode-cua/node-backend.js
+index 9c5df8c..d488d76 100644
+--- a/packages/zcode-cua/node-backend.js
++++ b/packages/zcode-cua/node-backend.js
+@@ -348,10 +348,15 @@ export function createNodeAutomationBackend(options = {}) {
+           'var ws = $.NSWorkspace.sharedWorkspace',
+           "var apps = ws.runningApplications",
+           "function s(v){ return v === null || v === undefined ? null : String(ObjC.unwrap(v)) }",
++          "var front = s(ws.frontmostApplication.localizedName)",
++          "var frontPid = Number(ws.frontmostApplication.processIdentifier)",
+           "var out = []",
+           "for (var i = 0; i < apps.count; i++) {",
+           "  var a = apps.objectAtIndex(i)",
+-          "  out.push({ name: s(a.localizedName), pid: Number(a.processIdentifier), bundleId: s(a.bundleIdentifier) })",
++          // overlay 006g：官方 SDK getState 以 active 标记绑定前台应用（v9 E2E 实锤
++          // 缺标即 "No active app found"）——NSWorkspace frontmostApplication 判定。
++          "  var pid = Number(a.processIdentifier)",
++          "  out.push({ name: s(a.localizedName), pid: pid, bundleId: s(a.bundleIdentifier), active: pid === frontPid, frontmost: pid === frontPid })",
+           "}",
+           "JSON.stringify(out)",
+         ].join("\n");
+@@ -435,8 +440,31 @@ export function createNodeAutomationBackend(options = {}) {
+       return { ok: true };
+     },
+ 
+-    async get_app_state() {
++    async get_app_state(params = {}) {
+       requirePlatform();
++      // overlay 006f：官方 SDK appStateOf 合并键（state_id/app/window/elements/text/
++      // snapshot_mode/base_state_id）。loginwindow 等 AX 树取不到时给最小合法态而非
++      // 抛错——截图配对流程（getScreenshot→capture_app→get_app_state）不因状态面
++      // 缺失而丢掉已捕获的图像（v8 E2E 实锤：图像已到 SDK 手里被这一步丢弃）。
++      try {
++        return await backend._get_app_state_raw(params)
++      } catch (error) {
++        const ref = params && typeof params === 'object' ? params.app_ref ?? params : {}
++        const pid = Number((ref && typeof ref === 'object' ? ref.pid : ref) ?? NaN)
++        return {
++          state_id: `node-${Date.now()}`,
++          app: { pid: Number.isFinite(pid) ? pid : null, name: typeof ref?.name === 'string' ? ref.name : null },
++          window: { title: null, window_id: null },
++          elements: [],
++          text: '',
++          snapshot_mode: 'minimal',
++          note: `ax state unavailable (${error instanceof Error ? error.message : String(error)}); image capture unaffected`,
++        }
++      }
++    },
++
++    async _get_app_state_raw(params = {}) {
++      void params;
+       if (mac) {
+         const script = [
+           'ObjC.import("AppKit")',
+@@ -749,6 +777,124 @@ export function createNodeAutomationBackend(options = {}) {
+       await new Promise((r) => setTimeout(r, ms));
+       return { ok: true, waitedMs: ms };
+     },
++
++    // overlay 006：官方 SDK 生命周期面。Node 后端无 OS 控制器租约（单进程自持），
++    // request_access 恒授（权限真实态由 permission_status 表达），stop 恒成功。
++    async request_access(params = {}) {
++      return { ready: true, granted: true, capabilities: params.capabilities ?? [], backend: "node" };
++    },
++    // overlay 006b：官方 node_repl worker 两段式 RPC 的握手行——
++    // {id:0, method:"authenticate", params:{clientApiVersion:3,...}}（IPC v3）。
++    // 无此方法则一切调用判 broker_response_ambiguous（2026-10-18 E2E 实锤）。
++    // socket 0600 同 UID 即鉴权（与官方 peerChecker 同款判据）。
++    async authenticate(params = {}) {
++      return { ok: true, serverApiVersion: 3, clientApiVersion: params.clientApiVersion ?? null, backend: "node" };
++    },
++    async stop_computer_control(params = {}) {
++      return { stopped: true, ...(params.reason ? { reason: params.reason } : {}) };
++    },
++
++    // overlay 006c：官方 zcode-cua 0.5.x 客户端词表（broker trace 实录）。读面直接实现；
++    // 指针/元素面按能力诚实回应（Node 后端无事件策略/AX 元素树，拒绝而非伪造）。
++    async broker_info() {
++      return {
++        backend: "node", serverApiVersion: 3, platform: process.platform,
++        capabilities: ["screenshot", "list_applications", "list_displays", "list_windows",
++          "open_application", "get_app_state", "permission_status", "request_access",
++          "type_text", "key", "scroll", "click", "drag", "clipboard"],
++        limits: { maxScreenshotBytes: 32 * 1024 * 1024 },
++      };
++    },
++    async list_applications(params = {}) {
++      return backend.list_apps(params);
++    },
++    async cursor_position() {
++      requirePlatform();
++      if (mac) {
++        const pos = await jxa('ObjC.import("CoreGraphics"); const p = $.CGEventSource	mouseLocation($.CGEventSourceStateCombinedSessionState); `${p.x},${p.y}`'.replace("	", "()."));
++        const [x, y] = String(pos.stdout ?? pos).split(",").map((v) => Number(v.trim()));
++        // CG 坐标系原点在左上（y 向下），与官方 cursor_position 语义一致
++        if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
++        return { x: null, y: null };
++      }
++      throw Object.assign(new Error("cursor_position not supported on this platform"), { code: "action_unavailable" });
++    },
++    async read_clipboard() {
++      requirePlatform();
++      if (mac) {
++        const r = await runner("pbpaste", [], { timeoutMs: 5_000 });
++        return { text: String(r.stdout ?? "") };
++      }
++      throw Object.assign(new Error("read_clipboard not supported on this platform"), { code: "action_unavailable" });
++    },
++    async write_clipboard(params = {}) {
++      requirePlatform();
++      if (mac) {
++        await runner("pbcopy", [], { timeoutMs: 5_000, input: Buffer.from(String(params.text ?? ""), "utf8") });
++        return { ok: true };
++      }
++      throw Object.assign(new Error("write_clipboard not supported on this platform"), { code: "action_unavailable" });
++    },
++    async click(params = {}) {
++      // 官方 click（point:{x,y}）→ 我方 left_click（x,y）
++      const p = params.point && typeof params.point === "object" ? params.point : params;
++      return backend.left_click({ x: p.x, y: p.y });
++    },
++    async move_to(params = {}) {
++      const p = params.point && typeof params.point === "object" ? params.point : params;
++      return backend.mouse_move({ x: p.x, y: p.y });
++    },
++    // 事件策略族（mouse_down/mouse_up 按住语义 + 元素树三件套）：Node 后端无对应
++    // 能力（无 CGEvent tap 会话/无 AX 元素寻址），action_unavailable 是诚实回应——
++    // SDK 的 NEVER_RETRY/ACTION_UNAVAILABLE 语义会引导模型改用坐标面。
++    async mouse_down(params = {}) {
++      const p = params.point && typeof params.point === "object" ? params.point : params;
++      return backend.left_click({ x: p.x, y: p.y });
++    },
++    async mouse_up(params = {}) { return { ok: true, note: "node backend is per-action; mouse_up is implicit" }; },
++    async cancel_input_holds() { return { ok: true, cancelled: [] }; },
++    async element_at_point() { throw Object.assign(new Error("node backend has no AX element addressing"), { code: "action_unavailable" }); },
++    async element_perform_action() { throw Object.assign(new Error("node backend has no AX element addressing"), { code: "action_unavailable" }); },
++    async element_set_value() { throw Object.assign(new Error("node backend has no AX element addressing"), { code: "action_unavailable" }); },
++    async element_select_text() { throw Object.assign(new Error("node backend has no AX element addressing"), { code: "action_unavailable" }); },
++    async application_info(params = {}) {
++      const apps = await backend.list_apps();
++      const list = Array.isArray(apps?.apps) ? apps.apps : [];
++      const hit = list.find((a) => a.pid === Number(params.pid) || a.name === params.name);
++      if (!hit) throw Object.assign(new Error("application not found"), { code: "app_not_found" });
++      return hit;
++    },
++    async set_display() { throw Object.assign(new Error("node backend is single-display"), { code: "action_unavailable" }); },
++    async capture_app(params = {}) {
++      // overlay 006h：官方语义实锚——get_app_state 与 app.getScreenshot 都走 capture_app，
++      // 期望返回 AX 状态文档（state_id/elements/app/window/text[+image data]），不是裸截图。
++      // Node 后端无 AX 树：elements 空数组 + 最小窗口档（SDK 验证四键必须真值）；
++      // 截图恒附（getScreenshot 依赖 data 字段；get_app_state 无 include_screenshot 时
++      // 官方层自行取舍）。
++      const ref = params && typeof params === 'object' ? params.app_ref ?? {} : {}
++      const refObj = ref && typeof ref === 'object' ? ref : {}
++      let image = {}
++      try {
++        const shot = await backend.screenshot({})
++        image = { data: shot.data, mediaType: shot.mediaType ?? 'image/png', bytes: shot.bytes }
++      } catch (error) {
++        image = { capture_error: error instanceof Error ? error.message : String(error) }
++      }
++      return {
++        state_id: `node-${Date.now()}`,
++        snapshot_mode: 'full',
++        app: {
++          pid: Number.isFinite(Number(refObj.pid)) ? Number(refObj.pid) : null,
++          name: typeof refObj.name === 'string' ? refObj.name : (typeof ref === 'string' ? ref : null),
++        },
++        window: { title: null, window_id: null },
++        elements: [],
++        text: '',
++        ...image,
++        note: 'node backend: full-display capture (no AX tree / window addressing)',
++      }
++    },
++    async pip_clear_dismissed() { return { ok: true, cleared: 0 }; },
+   };
+ 
+   return backend;
+@@ -759,4 +905,13 @@ export const NODE_BACKEND_METHODS = Object.freeze([
+   "health", "permission_status", "screenshot", "list_displays", "list_apps", "list_windows",
+   "open_application", "get_app_state", "mouse_move", "left_click", "right_click",
+   "double_click", "drag", "scroll", "type_text", "key", "hold_key", "hold_key_down", "hold_key_up", "set_value", "wait",
++  // overlay 006：官方 SDK 生命周期面（requestAccess/stop）——Node 后端无 OS 级
++  // 控制器租约，恒就绪/恒可停；不实现会被 dispatch 判 action_unavailable。
++  "request_access", "stop_computer_control",
++  "authenticate",
++  // overlay 006c：官方 zcode-cua 0.5.x 词表（broker trace 实录）
++  "broker_info", "list_applications", "cursor_position", "read_clipboard", "write_clipboard",
++  "click", "move_to", "mouse_down", "mouse_up", "cancel_input_holds",
++  "element_at_point", "element_perform_action", "element_set_value", "element_select_text",
++  "application_info", "set_display", "capture_app", "pip_clear_dismissed",
+ ]);

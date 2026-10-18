@@ -84,6 +84,17 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
     }
     if (method === 'PUT' && path === '/api/ide/computer-use') {
       await handleComputerUsePut(ctx)
+    // ── Cua 完整回路：会话级电脑操作闸（查/写，fail-closed 默认）──
+    if (method === 'GET' && path === '/api/ide/cua/status') {
+      await handleCuaStatus(ctx)
+      return
+    }
+    if (method === 'GET' && /^\/api\/ide\/cua\/session\/[^/]+$/.test(path)) {
+      await handleCuaSessionGet(ctx, decodeURIComponent(path.slice('/api/ide/cua/session/'.length)))
+      return
+    }
+    if (method === 'PUT' && /^\/api\/ide\/cua\/session\/[^/]+$/.test(path)) {
+      await handleCuaSessionPut(ctx, decodeURIComponent(path.slice('/api/ide/cua/session/'.length)))
       return
     }
     await next()
@@ -401,4 +412,63 @@ async function handleZcodePlugins(ctx: Context): Promise<void> {
     }
   }
   ctx.body = { ok: true, zcodeHome, roots, count: plugins.length, plugins }
+}
+
+// ── Cua 完整回路（2026-10-18）：会话级电脑操作闸。策略=custom/cua/policy；
+// fail-closed 默认（未开启的 zcode 会话 spawn 时带 ZCODE_CUA_DISABLE=1，patch 664）。
+async function handleCuaStatus(ctx: Context): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const { cuaAvailability, brokerTransport } = await import('../../cua/policy')
+  const availability = cuaAvailability()
+  const broker = brokerTransport()
+  let brokerHealthy = false
+  let brokerDetail = 'not started'
+  if (broker) {
+    try {
+      const { cuaBrokerHost } = await import('../../cua/broker')
+      const h = await cuaBrokerHost().health()
+      brokerHealthy = h.ok
+      brokerDetail = h.ok ? 'ok' : (h.detail ?? 'unhealthy')
+    } catch (e) {
+      brokerDetail = e instanceof Error ? e.message : String(e)
+    }
+  }
+  ctx.body = {
+    ok: true,
+    ...availability,
+    broker: broker ? { authority: broker.authority, healthy: brokerHealthy, detail: brokerDetail } : null,
+    note: availability.available
+      ? '官方 computer-use 插件已 seed；开启会话时自动拉起 SwarmStudio 自有 broker（upstream/zcode 补丁源码 Node 后端，003/006 协议对齐）'
+      : '插件缓存未 seed：跑一次 zcode plugins list（或桌面端装一次插件）后可用',
+  }
+}
+
+async function handleCuaSessionGet(ctx: Context, sessionId: string): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const { isSessionCuaEnabled } = await import('../../cua/policy')
+  ctx.body = { ok: true, sessionId, enabled: isSessionCuaEnabled(sessionId) }
+}
+
+async function handleCuaSessionPut(ctx: Context, sessionId: string): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const body = ctx.request.body as { enabled?: unknown } | undefined
+  if (typeof body?.enabled !== 'boolean') {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'enabled (boolean) is required' }
+    return
+  }
+  const { setSessionCua, setBrokerTransport } = await import('../../cua/policy')
+  let brokerError: string | undefined
+  if (body.enabled) {
+    // 开启即拉起自有 broker 并把凭据对写入策略文件（chat-turn 补丁 664 同步读取注入）
+    try {
+      const { cuaBrokerHost } = await import('../../cua/broker')
+      const t = await cuaBrokerHost().start()
+      setBrokerTransport({ socket: t.socket, authority: t.authority })
+    } catch (e) {
+      brokerError = e instanceof Error ? e.message : String(e)
+    }
+  }
+  const enabled = setSessionCua(sessionId, body.enabled && !brokerError)
+  ctx.body = { ok: true, sessionId, enabled, ...(brokerError ? { brokerError } : {}) }
 }

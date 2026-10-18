@@ -25,7 +25,12 @@ export const IDE_LOCAL_TEXT = {
       modelSelect: '选择模型', thinkLevel: '思考强度', manageModels: '管理模型…',
       autoRoute: '⚡ Auto（复杂度路由）',
       autoTitle: '按任务复杂度选成本档（0.5×/1×/2×）——判定理由见点击后提示',
-      computerUseTip: '启用/停用电脑操作（引擎插件，全局生效）：开启后新会话即可用电脑操作工具控制桌面应用；运行中的会话需重开会话生效；macOS 权限在首次使用时按引擎提示授予',
+      computerUseTip: '会话级电脑操作闸（真实生效）：开启后本会话的编码引擎放行 computer-use 工具面（鼠标/键盘/截图，受权限档约束）；默认关闭=运行时不可用（fail-closed）。',
+      cuaFloatTitle: '电脑操作截图证据',
+    },
+    cua: {
+      title: 'CUA 截图', empty: '本会话还没有电脑操作截图。开启电脑操作后，让 agent「截个图」即可在此查看证据。',
+      shot: '截图', enlarge: '放大', shrink: '缩小', save: '保存',
     },
     mode: {
       coding: '编程模式', work: '工作模式', codingShort: '编程', workShort: '工作',
@@ -141,7 +146,12 @@ export const IDE_LOCAL_TEXT = {
       modelSelect: 'Select model', thinkLevel: 'Think', manageModels: 'Manage models…',
       autoRoute: '⚡ Auto (complexity routing)',
       autoTitle: 'Pick a cost tier by task complexity (0.5×/1×/2×) — rationale shown after click',
-      computerUseTip: 'Enable/disable Computer Use (engine plugin, global): new sessions get computer-use tools to drive desktop apps; running sessions need a reopen; grant macOS permissions on first use as the engine prompts',
+      computerUseTip: 'Real per-session computer-use gate: when on, this session\'s coding engine exposes the computer-use toolset (mouse/keyboard/screenshot, gated by permission mode); default off = runtime unavailable (fail-closed).',
+      cuaFloatTitle: 'Computer-use screenshots',
+    },
+    cua: {
+      title: 'CUA shots', empty: 'No computer-use screenshots yet. Turn computer use on and ask the agent to take one.',
+      shot: 'screenshot', enlarge: 'Zoom in', shrink: 'Zoom out', save: 'Save',
     },
     mode: {
       coding: 'Coding mode', work: 'Work mode', codingShort: 'Code', workShort: 'Work',

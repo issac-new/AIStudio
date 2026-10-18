@@ -1,0 +1,142 @@
+{
+  "providers": [
+    {
+      "providerId": "47b8a0af-3403-4fd6-8fc6-4e45639a8b13",
+      "label": "XGLM",
+      "baseURL": "https://api2.sharkai.cc",
+      "models": [
+        {
+          "modelId": "glm-5.3",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "glm-5.3-flash",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        }
+      ]
+    },
+    {
+      "providerId": "builtin:bigmodel-coding-plan",
+      "label": "SGLM",
+      "baseURL": "https://open.bigmodel.cn/api/anthropic",
+      "models": [
+        {
+          "modelId": "GLM-5.3",
+          "reasoningLevels": [
+            "disabled",
+            "enabled"
+          ]
+        },
+        {
+          "modelId": "GLM-5.3-Flash",
+          "reasoningLevels": [
+            "disabled",
+            "enabled"
+          ]
+        },
+        {
+          "modelId": "offpeak-idle-plan/GLM-5.3",
+          "reasoningLevels": [
+            "disabled",
+            "enabled"
+          ]
+        }
+      ]
+    },
+    {
+      "providerId": "1fcf280d-2908-458f-8271-de009f2f130b",
+      "label": "kimi-mid",
+      "baseURL": "https://api.kimi.com/coding",
+      "models": [
+        {
+          "modelId": "k3",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "k3-256k",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "kimi-for-coding",
+          "reasoningLevels": [
+            "disabled",
+            "enabled"
+          ]
+        }
+      ]
+    },
+    {
+      "providerId": "e2f4a47b-9822-4092-94f1-94f0c30a497d",
+      "label": "kimi-max",
+      "baseURL": "https://api.kimi.com/coding",
+      "models": [
+        {
+          "modelId": "k3",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "k3-256k",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "kimi-for-coding",
+          "reasoningLevels": [
+            "disabled",
+            "enabled"
+          ]
+        }
+      ]
+    },
+    {
+      "providerId": "builtin:bigmodel",
+      "label": "Bigmodel - API Key",
+      "baseURL": "https://open.bigmodel.cn/api/anthropic",
+      "models": [
+        {
+          "modelId": "glm-5.3",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        {
+          "modelId": "glm-5.3-flash",
+          "reasoningLevels": [
+            "low",
+            "high",
+            "max"
+          ]
+        }
+      ]
+    }
+  ],
+  "defaultModel": {
+    "providerId": "builtin:bigmodel-coding-plan",
+    "modelId": "GLM-5.3"
+  }
+}

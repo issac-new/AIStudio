@@ -41,12 +41,14 @@ describe('ide store（workspace/agent/布局持久化）', () => {
 
   it('浮窗开关默认关闭、toggleFloat 翻转（瞬态不持久化）', () => {
     const ide = useIdeStore()
-    expect(ide.floats).toEqual({ plan: false, agents: false })
+    expect(ide.floats).toEqual({ plan: false, agents: false, cua: false })
     ide.toggleFloat('plan')
     ide.toggleFloat('agents')
-    expect(ide.floats).toEqual({ plan: true, agents: true })
+    ide.toggleFloat('cua')
+    expect(ide.floats).toEqual({ plan: true, agents: true, cua: true })
     ide.toggleFloat('plan')
     expect(ide.floats.plan).toBe(false)
+    expect(ide.floats.cua).toBe(true)
   })
 
   it('维度持久化：历史残留 chain 回落 task（链路维度退役守门）', () => {
