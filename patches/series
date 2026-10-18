@@ -853,3 +853,8 @@
 # 660: IDE 聊天容器提供 ideDeferLocalMedia 时，Markdown 本地图片/音频/视频只出
 # data-local-media 占位，由容器鉴权 fetch 换 blob——API key 不再进入媒体 src。
 660-client-markdown-defer-local-media.patch
+
+# 661: 运行清单（P1-3）：chat-run 在 run.started 时落模型/提供方/提示词指纹/
+# 权限模式/契约版本（patch 661 引入 custom/runmanifest 调用；只落指纹不落正文，
+# fail-soft 不阻断会话）。
+661-server-run-manifest.patch

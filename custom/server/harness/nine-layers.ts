@@ -14,7 +14,9 @@ import { dirname, join } from 'path'
 import { homedir } from 'os'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
+import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
 import { queryApprovalLog } from '../approvals/approval-log'
+import { countRunManifests, latestRunManifest, runCostFromTrace } from '../runmanifest/run-manifest'
 import { listSets as listEvalSets, listRuns as listEvalRuns } from '../eval/store'
 import { listSets as listHeldoutSets } from '../heldout/held-out-store'
 import { resolveLoopBaseDir } from '../loop/paths'
@@ -90,6 +92,8 @@ export interface NineLayersInputs {
   sandbox: {
     permissionMatrix: boolean
     workspaceGuard: boolean
+    /** 显式路径白名单已配置（HERMES_TOOL_SANDBOX_ROOTS）。 */
+    pathAllowlist: boolean
     networkAllowlist: boolean
     secretRedaction: boolean
     declaredTimeouts: number
@@ -116,7 +120,9 @@ export interface NineLayersInputs {
     postsWithDuration: number
     traceFiles: number
     runManifest: boolean
+    runManifestCount?: number
     costPerRun: boolean
+    costEvidence?: string
   }
   evals: {
     fixedSets: number
@@ -278,8 +284,8 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
     ]),
     layerOf('sandbox', [
       { key: 'permissions', status: sb.permissionMatrix ? 'yes' : 'no', evidence: sb.permissionMatrix ? '权限模式矩阵在档' : '未发现权限矩阵' },
-      { key: 'workspace', critical: true, status: sb.workspaceGuard ? 'partial' : 'no', evidence: sb.workspaceGuard ? 'workspace 归属校验在档；terminal 目录白名单缺' : '未发现工作目录边界' },
-      { key: 'network', status: sb.networkAllowlist ? 'yes' : 'no', evidence: sb.networkAllowlist ? '网络放行规则已接线' : 'browsersec 规则在档但无执行期消费者' },
+      { key: 'workspace', critical: true, status: sb.workspaceGuard && sb.pathAllowlist ? 'yes' : sb.workspaceGuard ? 'partial' : 'no', evidence: !sb.workspaceGuard ? '未发现工作目录边界' : sb.pathAllowlist ? 'workspace 归属校验+显式路径白名单均在档' : 'workspace 归属校验在档；显式路径白名单未配置（HERMES_TOOL_SANDBOX_ROOTS）' },
+      { key: 'network', status: sb.networkAllowlist ? 'yes' : 'no', evidence: sb.networkAllowlist ? '浏览器域名放行/拒绝已接线并配置' : '未配置 HERMES_BROWSER_ALLOWLIST/DENYLIST（沙箱可选）' },
       { key: 'secrets', critical: true, status: sb.secretRedaction ? 'yes' : 'no', evidence: sb.secretRedaction ? '审计默认不落入参值' : '存在原值落盘风险' },
       { key: 'limits', status: sb.declaredTimeouts >= 10 ? (sb.teardown ? 'yes' : 'partial') : 'no', evidence: `已声明超时的工具族 ${sb.declaredTimeouts} 个；任务后销毁=${sb.teardown ? '有' : '无'}` },
     ]),
@@ -300,8 +306,8 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
       { key: 'audit', critical: true, status: o.auditEntries > 0 ? 'yes' : 'no', evidence: `窗口内审计行 ${o.auditEntries} 条` },
       { key: 'duration', status: durationRatio >= 0.9 ? 'yes' : durationRatio > 0 ? 'partial' : 'no', evidence: o.postEntries ? `${Math.round(durationRatio * 100)}% 的完成行带耗时（${o.postsWithDuration}/${o.postEntries}）` : '窗口内无完成行' },
       { key: 'errors', status: classifiedRatio >= 0.9 ? 'yes' : classifiedRatio > 0 ? 'partial' : 'no', evidence: t.failedPosts ? `${Math.round(classifiedRatio * 100)}% 的失败带错误分类` : '窗口内无失败调用' },
-      { key: 'manifest', status: o.runManifest ? 'yes' : 'no', evidence: o.runManifest ? '运行清单在档' : '未发现运行清单（模型/参数/提示词版本）' },
-      { key: 'cost', status: o.costPerRun ? 'yes' : 'no', evidence: o.costPerRun ? '成本可按 run 归集' : '成本只有按天/按模型聚合' },
+      { key: 'manifest', status: o.runManifest ? 'yes' : 'no', evidence: o.runManifest ? `运行清单 ${o.runManifestCount ?? '?'} 条（模型/提示词指纹/权限模式/契约版本）` : '未发现运行清单（模型/参数/提示词版本）' },
+      { key: 'cost', status: o.costPerRun ? 'yes' : 'no', evidence: o.costEvidence ?? (o.costPerRun ? '成本可按 run 归集' : '成本只有按天/按模型聚合') },
     ]),
     layerOf('evals', [
       { key: 'fixedSets', critical: true, status: e.fixedSets > 0 ? 'yes' : 'no', evidence: `固定评测集 ${e.fixedSets} 套 / 评测运行 ${e.evalRuns} 次` },
@@ -438,6 +444,21 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
 
   const contractsWithTimeout = BUILTIN_CONTRACTS.filter((c) => c.timeoutMs > 0).length
   const enforceEnabled = process.env.HERMES_TOOL_ENFORCE === '1'
+  const policyCount = queryPolicyDecisions({ days, limit: 1 }).total
+  const latestApproval = queryApprovalLog(1)[0]
+  const scopedApprovals = !!latestApproval && !!latestApproval.scope && !!latestApproval.source
+  const manifestCount = countRunManifests(days)
+  const latestManifest = latestRunManifest()
+  let costPriced = false
+  let costEvidence = '未发现运行清单'
+  if (latestManifest) {
+    const cost = runCostFromTrace(latestManifest)
+    if (!cost.traceFound) costEvidence = '运行清单在档，trace 缺席（无法估价）'
+    else if (cost.priced) {
+      costPriced = true
+      costEvidence = `最近运行 ${cost.inputTokens} 输入 / ${cost.outputTokens} 输出 token 已按价目估价`
+    } else costEvidence = '运行清单与 trace 在档，但模型未收录价目（金额不估算）'
+  }
 
   return {
     days,
@@ -473,8 +494,9 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
     sandbox: {
       permissionMatrix: existsUnder(root, 'custom/server/permmodes/permission-modes.ts'),
       workspaceGuard: existsUnder(root, 'custom/server/zcode/workspace-access.ts'),
-      // browsersec 规则在档但执行期无消费者（2026-10-18 盘点结论）→ 保守为 false。
-      networkAllowlist: false,
+      pathAllowlist: !!process.env.HERMES_TOOL_SANDBOX_ROOTS?.trim(),
+      networkAllowlist: existsUnder(root, 'custom/server/browsersec/browser-security.ts')
+        && !!(process.env.HERMES_BROWSER_ALLOWLIST?.trim() || process.env.HERMES_BROWSER_DENYLIST?.trim()),
       secretRedaction: true,
       declaredTimeouts: contractsWithTimeout,
       teardown: false,
@@ -490,18 +512,22 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
       enforceWired: existsUnder(root, 'custom/server/toolpipeline/enforce-gate.ts'),
       enforceEnabled,
       approvalRecords,
-      // 2026-10-18 盘点：审批记录缺 scope/expiresAt/source；本轮不收窄安全边界。
-      scopedApprovals: false,
-      identityInEnforcement: false,
-      allowDecisionsAudited: false,
+      // P0-2：新记录自动带 scope/expiresAt/source；存量老记录可能缺，按最新一条判定。
+      scopedApprovals,
+      // P0-1：userId 已接入执法链（未登记用户不改变行为）。
+      identityInEnforcement: true,
+      // P0-2：每次执法裁决（含放行）落独立决策账。
+      allowDecisionsAudited: policyCount > 0,
     },
     observability: {
       auditEntries: windowAudit.total,
       postEntries: postEntries.length,
       postsWithDuration: postEntries.filter((e) => typeof e.durationMs === 'number').length,
       traceFiles,
-      runManifest: false,
-      costPerRun: false,
+      runManifest: manifestCount > 0,
+      runManifestCount: manifestCount,
+      costPerRun: costPriced,
+      costEvidence,
     },
     evals: {
       fixedSets: evalSets,

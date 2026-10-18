@@ -28,10 +28,10 @@ const allGood: NineLayersInputs = {
   loop: { runawayGuard: true, stuckDetector: true, guardedEdges: true, classifiedRetry: true, checkpoints: 40, runsWithCheckpoints: 5 },
   memory: { checkpointDb: true, graphCheckpoints: 40, agentCheckpoints: 3, handoffCheckpoints: 2 },
   context: { rootAgentsMd: true, rootAgentsMdLines: 80, moduleAgentsMd: 2, specFiles: 100 },
-  sandbox: { permissionMatrix: true, workspaceGuard: true, networkAllowlist: true, secretRedaction: true, declaredTimeouts: 30, teardown: true },
+  sandbox: { permissionMatrix: true, workspaceGuard: true, pathAllowlist: true, networkAllowlist: true, secretRedaction: true, declaredTimeouts: 30, teardown: true },
   verification: { gatePacks: 15, typecheckScript: true, evalSets: 2, releaseGate: true, uiOracle: true },
   permissions: { enforceWired: true, enforceEnabled: true, approvalRecords: 20, scopedApprovals: true, identityInEnforcement: true, allowDecisionsAudited: true },
-  observability: { auditEntries: 120, postEntries: 60, postsWithDuration: 60, traceFiles: 10, runManifest: true, costPerRun: true },
+  observability: { auditEntries: 120, postEntries: 60, postsWithDuration: 60, traceFiles: 10, runManifest: true, runManifestCount: 3, costPerRun: true },
   evals: { fixedSets: 2, evalRuns: 10, heldoutQuestions: 20, coveredDimensions: 7, gateIntegrated: true },
 }
 
@@ -41,7 +41,7 @@ const allMissing: NineLayersInputs = {
   loop: { runawayGuard: false, stuckDetector: false, guardedEdges: false, classifiedRetry: false, checkpoints: 0, runsWithCheckpoints: 0 },
   memory: { checkpointDb: false, graphCheckpoints: 0, agentCheckpoints: 0, handoffCheckpoints: 0 },
   context: { rootAgentsMd: false, rootAgentsMdLines: null, moduleAgentsMd: 0, specFiles: 0 },
-  sandbox: { permissionMatrix: false, workspaceGuard: false, networkAllowlist: false, secretRedaction: false, declaredTimeouts: 0, teardown: false },
+  sandbox: { permissionMatrix: false, workspaceGuard: false, pathAllowlist: false, networkAllowlist: false, secretRedaction: false, declaredTimeouts: 0, teardown: false },
   verification: { gatePacks: 0, typecheckScript: false, evalSets: 0, releaseGate: false, uiOracle: false },
   permissions: { enforceWired: false, enforceEnabled: false, approvalRecords: 0, scopedApprovals: false, identityInEnforcement: false, allowDecisionsAudited: false },
   observability: { auditEntries: 0, postEntries: 0, postsWithDuration: 0, traceFiles: 0, runManifest: false, costPerRun: false },
