@@ -73,6 +73,17 @@ describe('身份工具白名单（P0-1）', () => {
     if (v.enforcing && !v.allow) expect(v.error).toContain('terminal_exec')
   })
 
+  it('身份 allowlist 与委托范围同时校验：任一未覆盖即拒绝', () => {
+    const dual: IdentityLite = { id: 'aid-1', name: 'alice', toolAllowlist: ['read_file', 'terminal_exec'], delegationAllowlist: ['read_file'] }
+    const run = (tool: string, id: IdentityLite) => evaluateEnforcement(tool, {}, 'p1', { masterOn: true, userId: 'alice', identityOf: () => id })
+    expect(run('read_file', dual)).toMatchObject({ enforcing: true, allow: true })
+    expect(run('terminal_exec', dual)).toMatchObject({ enforcing: true, allow: false, rule: 'identity-tool-denied' })
+    // 身份白名单为空=未声明，只按委托范围校验
+    const delegOnly: IdentityLite = { id: 'aid-2', name: 'bob', toolAllowlist: [], delegationAllowlist: ['terminal_exec'] }
+    expect(run('terminal_exec', delegOnly)).toMatchObject({ enforcing: true, allow: true })
+    expect(run('read_file', delegOnly)).toMatchObject({ enforcing: true, allow: false })
+  })
+
   it('无身份记录或空白名单=未声明，不改变既有 no-config 行为', () => {
     expect(evaluateEnforcement('terminal_exec', {}, 'p1', { masterOn: true, userId: 'ghost' })).toMatchObject({
       enforcing: false, rule: 'no-config',
@@ -99,6 +110,11 @@ describe('沙箱硬边界（P2-5）', () => {
     process.env.HERMES_TOOL_SANDBOX_ROOTS = '/workspace'
     const v = evaluateEnforcement('terminal_exec', { cwd: '/etc' }, 'p1', { masterOn: true })
     expect(v).toMatchObject({ enforcing: true, allow: false, rule: 'sandbox-path' })
+  })
+
+  it('预算耗尽标记为硬边界 budget-exceeded', () => {
+    const v = evaluateEnforcement('read_file', {}, 'p1', { masterOn: true, budgetBlocked: true })
+    expect(v).toMatchObject({ enforcing: true, allow: false, rule: 'budget-exceeded' })
   })
 
   it('浏览器域名策略：denylist 优先、allowlist 外拒绝、无规则放行', () => {

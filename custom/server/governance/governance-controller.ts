@@ -658,6 +658,7 @@ router.post('/agent-identity/:id/delegate', async (ctx) => {
     to: String(b.to ?? ''),
     scope: String(b.scope ?? ''),
     expiresAt: typeof b.expiresAt === 'number' ? b.expiresAt : undefined,
+    toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : undefined,
   }, govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
   ctx.body = res

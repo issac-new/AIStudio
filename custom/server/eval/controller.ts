@@ -25,6 +25,7 @@ import type { Context } from 'koa'
 import { aggregateRun, compareRuns } from './aggregate'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
+import { sampleFromTrace } from './trace-sampler'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, createOracleCase, createSet, exportSet, getOracleCase,
@@ -69,6 +70,24 @@ function runSummary(run: EvalRun) {
 }
 
 // ---------- 评测集 ----------
+
+// 真实轨迹采样（2026-10-18 残余项④）：把 L2 trace 转成 Evidence；不自动建集。
+router.post('/sample-from-trace', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { sessionId?: unknown }
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : ''
+  if (!sessionId) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'sessionId 必填' }
+    return
+  }
+  const result = sampleFromTrace(sessionId)
+  if (!result.ok) {
+    ctx.status = result.reason === 'sessionId 含非法字符' ? 400 : 404
+    ctx.body = result
+    return
+  }
+  ctx.body = { ...result, actor: actorOf(ctx) }
+})
 
 router.get('/sets', async (ctx) => {
   ctx.body = { ok: true, sets: listSets() }
