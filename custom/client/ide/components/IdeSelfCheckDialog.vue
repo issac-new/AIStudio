@@ -6,6 +6,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { useIdeBoot } from '../composables/useIdeBoot'
 import { useChatStore } from '@/stores/hermes/chat'
 import { authFetch } from '../utils/auth-fetch'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
@@ -38,6 +39,9 @@ function countRawI18nKeys(): number {
 async function run(): Promise<void> {
   if (running.value) return
   running.value = true
+  // 先等会话装载完成再判定「会话库装载」——命令面板入口可能在冷启动
+  // loadSessions 完成前触发自检，此时 sessionsLoaded=false 是竞态不是缺陷。
+  await useIdeBoot().ensureSessions().catch(() => { /* 装载失败按实际态判定 */ })
   copied.value = false
   try {
     results.value = await runSelfChecks({
