@@ -19,7 +19,7 @@ const actionMsg = ref('')
 /** 台账技术错误人话化：正文给人能懂的原因与下一步，原始错误进 title 供排查。 */
 function humanizeLedgerError(message: string): string {
   return /ORGLOOP_LEDGER_TSV/.test(message)
-    ? '遗留事项台账未配置：请联系管理员配置清算台账后重试'
+    ? '还没有遗留事项台账（开始一次运行后生成）'
     : message
 }
 

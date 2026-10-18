@@ -144,7 +144,7 @@ describe('GatekeeperSection — S7 把关待办', () => {
     // 台账区单独报错，正文人话、原始错误在 title
     const err = w.find('[data-testid="gk-clearance-error"]')
     expect(err.exists()).toBe(true)
-    expect(err.text()).toContain('遗留项台账未配置')
+    expect(err.text()).toContain('还没有遗留事项台账')
     expect(err.attributes('title')).toContain('ORGLOOP_LEDGER_TSV')
     w.unmount()
   })
