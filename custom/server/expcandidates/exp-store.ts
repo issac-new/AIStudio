@@ -4,6 +4,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 import type { ExpCandidate, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
+import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 
 export function storeDir(): string {
@@ -133,6 +134,37 @@ export interface ExtractRunResult {
   newCandidates: number
   duplicatesSkipped: number
   candidates: ExpCandidate[]
+  /** P2-5：qgate run 文件扫描数与新增候选数。 */
+  qgateRunsScanned: number
+  qgateCandidates: number
+}
+
+/** 指纹幂等入库（kanban 事件与 qgate run 共用，单一写入口）。 */
+function upsertCandidates(extracted: ReturnType<typeof extractCandidates>): { added: number; skipped: number; candidates: ExpCandidate[] } {
+  const store = readExpStore()
+  const known = new Set(store.candidates.map((c) => c.fingerprint))
+  const now = new Date().toISOString()
+  const addedCandidates: ExpCandidate[] = []
+  let skipped = 0
+  for (const item of extracted) {
+    if (known.has(item.fingerprint)) { skipped += 1; continue }
+    const candidate = toCandidate(item, `exp-${String(store.nextSeq).padStart(3, '0')}`, now)
+    store.nextSeq += 1
+    store.candidates.push(candidate)
+    known.add(item.fingerprint)
+    addedCandidates.push(candidate)
+  }
+  if (addedCandidates.length > 0) writeExpStore(store)
+  return { added: addedCandidates.length, skipped, candidates: addedCandidates }
+}
+
+/** qgate 失败回流（P2-5）：读 .qgate/runs，FAIL/CONDITIONAL → antipattern 候选。 */
+export function ingestQgateRuns(runsDir = resolveQgateRunsDir()): {
+  scanned: number; added: number; skipped: number; candidates: ExpCandidate[]
+} {
+  const rows = readQgateRunRows(runsDir)
+  const upserted = upsertCandidates(extractQgateRunCandidates(rows))
+  return { scanned: rows.length, ...upserted }
 }
 
 export async function runExtraction(opts: ExtractOptions & { days?: number } = {}): Promise<ExtractRunResult> {
@@ -154,28 +186,22 @@ export async function runExtraction(opts: ExtractOptions & { days?: number } = {
       }
     } catch { /* 单板失败不阻断（多板合并口径） */ }
   }
-  const extracted = extractCandidates(events, opts)
-  const store = readExpStore()
-  const known = new Set(store.candidates.map((c) => c.fingerprint))
-  const now = new Date().toISOString()
-  let added = 0
-  let skipped = 0
-  for (const item of extracted) {
-    if (known.has(item.fingerprint)) { skipped += 1; continue }
-    const candidate = toCandidate(item, `exp-${String(store.nextSeq).padStart(3, '0')}`, now)
-    store.nextSeq += 1
-    store.candidates.push(candidate)
-    known.add(item.fingerprint)
-    added += 1
-  }
-  if (added > 0) writeExpStore(store)
+  const kanban = upsertCandidates(extractCandidates(events, opts))
+  const qgate = ingestQgateRuns()
   return {
-    boardsRead, eventsScanned: events.length, newCandidates: added, duplicatesSkipped: skipped,
-    candidates: added > 0 ? store.candidates.slice(-added) : [],
+    boardsRead,
+    eventsScanned: events.length,
+    newCandidates: kanban.added + qgate.added,
+    duplicatesSkipped: kanban.skipped + qgate.skipped,
+    candidates: [...kanban.candidates, ...qgate.candidates],
+    qgateRunsScanned: qgate.scanned,
+    qgateCandidates: qgate.added,
   }
 }
 
 /** 测试隔离。 */
 export function _useStoreDirForTests(dir: string): void {
   process.env.EXP_STORE = dir
+  // qgate 提取隔离：测试不扫真实 .qgate/runs（否则历史 run 会污染候选断言）。
+  process.env.QGATE_RUNS_DIR = join(dir, 'qgate-runs')
 }

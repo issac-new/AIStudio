@@ -8,6 +8,8 @@
  *   GET  /api/harness/nine-layers?days=7          九层运行体检（2026-10-18；逐层证据/差距/动作）
  *   GET  /api/harness/tool-contracts               工具契约表（副作用/超时/重试/幂等）
  *   GET  /api/harness/tool-audit?days=&limit=      工具执行审计查询（窗口/身份/结果过滤+聚合）
+ *   GET  /api/harness/policy-decisions?days=        执法放行/拒绝决策账（P0-2）
+ *   GET  /api/harness/run-manifests?days=            运行清单与运行级成本（P1-3）
  *
  * 四职能映射：统筹协同（L2/L4 指标）· 规范治理（B1 目录/B4 原语）· 效率提升
  * （B2 成本账）· 安全保障（安全治理账+审计完整率）。全部只读聚合，fail-soft：
@@ -22,6 +24,8 @@ import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } 
 import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
 import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
+import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
+import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 
@@ -129,6 +133,50 @@ router.get('/tool-audit', async (ctx) => {
   }
 })
 
+// 执法放行/拒绝决策账（P0-2）：与工具执行审计分面，回答“为什么放行”。
+router.get('/policy-decisions', async (ctx) => {
+  try {
+    const q = ctx.query
+    const limit = Number(q.limit)
+    const outcome = q.outcome === 'allow' || q.outcome === 'deny' ? q.outcome : undefined
+    const result = queryPolicyDecisions({
+      days: daysOf(q.days),
+      limit: Number.isFinite(limit) ? limit : undefined,
+      tool: typeof q.tool === 'string' && q.tool ? q.tool : undefined,
+      userId: typeof q.userId === 'string' && q.userId ? q.userId : undefined,
+      sessionId: typeof q.sessionId === 'string' && q.sessionId ? q.sessionId : undefined,
+      runId: typeof q.runId === 'string' && q.runId ? q.runId : undefined,
+      outcome,
+    })
+    ctx.body = { ...result, ok: true }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 运行清单（P1-3）：模型/提示词指纹/权限模式/契约版本；withCost=1 时按 trace 估价。
+router.get('/run-manifests', async (ctx) => {
+  try {
+    const q = ctx.query
+    const limit = Number(q.limit)
+    const result = queryRunManifests({
+      days: daysOf(q.days),
+      limit: Number.isFinite(limit) ? limit : undefined,
+      sessionId: typeof q.sessionId === 'string' && q.sessionId ? q.sessionId : undefined,
+      runId: typeof q.runId === 'string' && q.runId ? q.runId : undefined,
+    })
+    const withCost = q.withCost === '1' || q.withCost === 'true'
+    const entries = withCost
+      ? result.entries.slice(0, 50).map((m) => ({ ...m, cost: runCostFromTrace(m) }))
+      : result.entries
+    ctx.body = { ...result, entries, ok: true }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
 // 九层运行体检（2026-10-18 Harness 可靠性轮）：按源文九层逐项给证据与差距。
 // 30s 进程内缓存：采集要读审计账/检查点库/评测库，治理页轮询不应重复扫盘。
 let nineLayersCache: { at: number; days: number; report: NineLayersReport } | null = null
@@ -148,5 +196,13 @@ router.get('/nine-layers', async (ctx) => {
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 })
+
+// P2-5：启动时把 qgate FAIL/CONDITIONAL 回流成经验候选（指纹幂等、fail-soft）。
+// 测试环境跳过：避免单测扫描真实 .qgate/runs 并写真实经验库。
+if (process.env.NODE_ENV !== 'test') {
+  void import('../expcandidates/exp-store')
+    .then((m) => m.ingestQgateRuns())
+    .catch(() => { /* 回流失败不影响治理面 */ })
+}
 
 export const harnessRoutes = router

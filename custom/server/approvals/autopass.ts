@@ -127,6 +127,7 @@ export function resolveSpotcheck(id: string, verdict: 'confirm' | 'veto', actor:
     decision: verdict === 'confirm' ? 'spotcheck_confirm' : 'spotcheck_veto',
     note: note || (verdict === 'confirm' ? undefined : '抽检否决：分类器误放行，回灌治理'),
     risk: 'low',
+    source: 'policy',
   })
   return item
 }
@@ -154,6 +155,7 @@ export function recordAutoPass(item: { id: string; title: string; detail: string
     decision: 'auto_pass',
     note: '低风险只读命令自动放行（V4.1 抽检器）',
     risk: 'low',
+    source: 'policy',
   })
   if (!shouldSpotCheck(item.id, spotcheckRate())) return false
   const list = loadSpotchecks()
