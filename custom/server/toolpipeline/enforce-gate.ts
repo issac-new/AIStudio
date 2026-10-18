@@ -51,6 +51,7 @@ export type EnforceRule =
   | 'approval-passed'        // 审批桥放行（批单在案且未消费，consume-on-pass；applyApprovalBridge 终态）
   | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
+  | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
 
 export type EnforceVerdict =
   | { enforcing: false; rule: Extract<EnforceRule, 'master-off' | 'no-config'> }
@@ -181,7 +182,10 @@ export function approvalPointHit(ladder: AutonomyLadderEntry, tool: string, inpu
 export interface IdentityLite {
   id: string
   name: string
+  /** 身份自身工具白名单（空=未声明）。 */
   toolAllowlist: string[]
+  /** 活跃委托的结构化工具白名单并集（空=无结构化委托）。 */
+  delegationAllowlist?: string[]
 }
 
 export interface EnforceEnv {
@@ -193,6 +197,8 @@ export interface EnforceEnv {
   /** 发起用户（ekko context.userId）；无身份记录时不影响既有裁决。 */
   userId?: string
   identityOf?: (userId?: string) => IdentityLite | null
+  /** 预算已耗尽且策略动作为 block（由钩子在 HERMES_BUDGET_ENFORCE=1 时预计算）。 */
+  budgetBlocked?: boolean
 }
 
 /** 工具白名单匹配：精确名或 `prefix*`。 */
@@ -275,11 +281,19 @@ export function evaluateEnforcement(
   // 策略链 0（P0-1）：发起用户身份白名单。仅当身份已登记且声明了 allowlist 才执法；
   // 未登记/空 allowlist=未声明，不改变既有行为（不把“没登记”当“已治理”）。
   const identity = env.identityOf?.(env.userId) ?? null
-  const identityEnforced = !!identity && identity.toolAllowlist.length > 0
-  if (identity && identityEnforced && !toolAllowedByList(tool, identity.toolAllowlist)) {
-    return {
-      enforcing: true, allow: false, rule: 'identity-tool-denied',
-      error: `身份 ${identity.name}（${identity.id}）的工具白名单未覆盖 ${tool}——请登记该工具或由属主调整 allowlist`,
+  const hasOwnAllowlist = !!identity && identity.toolAllowlist.length > 0
+  const hasDelegationAllowlist = !!identity && (identity.delegationAllowlist?.length ?? 0) > 0
+  const identityEnforced = hasOwnAllowlist || hasDelegationAllowlist
+  if (identity && identityEnforced) {
+    // 双清单同时校验：身份 allowlist 与活跃委托范围都放行才算通过（委托只能收窄）。
+    const ownOk = !hasOwnAllowlist || toolAllowedByList(tool, identity.toolAllowlist)
+    const delegatedOk = !hasDelegationAllowlist || toolAllowedByList(tool, identity.delegationAllowlist ?? [])
+    if (!ownOk || !delegatedOk) {
+      const missing = !ownOk ? '身份 allowlist' : '活跃委托范围'
+      return {
+        enforcing: true, allow: false, rule: 'identity-tool-denied',
+        error: `身份 ${identity.name}（${identity.id}）的${missing}未覆盖 ${tool}——请登记该工具或由属主调整 allowlist/委托范围`,
+      }
     }
   }
 
@@ -296,6 +310,12 @@ export function evaluateEnforcement(
     return {
       enforcing: true, allow: false, rule: 'sandbox-network',
       error: `浏览器目标 ${networkViolation} 被网络策略拒绝（HERMES_BROWSER_ALLOWLIST/DENYLIST）`,
+    }
+  }
+  if (env.budgetBlocked) {
+    return {
+      enforcing: true, allow: false, rule: 'budget-exceeded',
+      error: '当日预算已耗尽（HERMES_BUDGET_ENFORCE=1 且策略动作 block）——请等待次日额度或调整预算策略',
     }
   }
   // 档位解析三级链（阶梯＞会话档＞全局档）：会话档 per-profile 更具体故恒胜全局档
@@ -455,10 +475,15 @@ async function identityOfUser(userId?: string): Promise<IdentityLite | null> {
   if (!userId) return null
   if (!identityCache || Date.now() - identityCache.at > 5_000) {
     try {
-      const { listIdentities } = await import('../agentidentity/agent-identity')
+      const { listIdentities, activeDelegationToolAllowlist } = await import('../agentidentity/agent-identity')
       identityCache = {
         at: Date.now(),
-        list: listIdentities().map((i) => ({ id: i.id, name: i.name, toolAllowlist: i.toolAllowlist })),
+        list: listIdentities().map((i) => ({
+          id: i.id,
+          name: i.name,
+          toolAllowlist: i.toolAllowlist,
+          delegationAllowlist: activeDelegationToolAllowlist(i),
+        })),
       }
     } catch {
       return null // 台账不可用=不按身份执法（fail-open，与既有未配置语义一致）
@@ -498,9 +523,17 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
       let bridgeFacts: Awaited<ReturnType<typeof approvalBridgeFacts>> | null = null
       try {
         const identity = await identityOfUser(context?.userId)
+        let budgetBlocked = false
+        if (process.env.HERMES_BUDGET_ENFORCE === '1') {
+          try {
+            const budget = await import('../tokenbudget/budget-policy')
+            budgetBlocked = budget.budgetBlocked({ userId: context?.userId, profileId: context?.profileId })
+          } catch { /* 预算策略不可用=不阻断（fail-soft） */ }
+        }
         verdict = evaluateEnforcement(name, input, context?.profileId, {
           userId: context?.userId,
           identityOf: () => identity,
+          budgetBlocked,
         })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
