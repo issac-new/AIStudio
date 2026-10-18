@@ -18,11 +18,12 @@ import { useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { friendlyIdeError } from '../utils/ideErrors'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import IdeWorkflowRunLines from './IdeWorkflowRunLines.vue'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 import {
   fetchWorkflowRunEvents,
   fetchSavedWorkflows,
@@ -145,11 +146,9 @@ async function loadSavedRuns(name: string): Promise<void> {
 
 watch([ws, savedScope], () => { void loadSaved() }, { immediate: true })
 
-const STATUS_TEXT: Record<string, string> = {
-  pending: '排队中', running: '运行中', completed: '已完成', errored: '失败', stopped: '已停止',
-}
 function statusText(s?: string): string {
-  return (s && STATUS_TEXT[s]) || s || '—'
+  const table = IDE_LOCAL_TEXT[ideLocaleOf(locale)].workflowStatus as Record<string, string>
+  return (s && table[s]) || s || '—'
 }
 </script>
 

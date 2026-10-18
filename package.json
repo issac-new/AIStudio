@@ -19,6 +19,8 @@
     "predev": "node scripts/ensure-injected.mjs",
     "test": "vitest run",
     "test:ide-smoke": "node scripts/regression/ide-smoke.mjs",
+    "test:ide-selfcheck": "node scripts/regression/ide-selfcheck-cli.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "test:eval": "vitest run custom/server/eval/__tests__/eval-regression.test.ts",
     "bench:expert": "node scripts/forge-benchmark.mjs",
     "build:full": "node scripts/build.mjs",
