@@ -40,12 +40,12 @@ if (mainPath === currentPath) {
 const status = execFileSync('git', ['status', '--porcelain'], { cwd: mainPath, encoding: 'utf8' })
   .split('\n')
   .filter(Boolean)
-const codeChanges = status.filter(line => !line.includes('IN-FLIGHT'))
+const codeChanges = status.filter(line => !line.includes('IN-FLIGHT') && !line.includes('.swarm-yuan/gate-deny.jsonl'))
 if (codeChanges.length) {
   console.error(`[merge] main worktree 有未提交代码改动，拒绝：\n${codeChanges.slice(0, 10).join('\n')}`)
   process.exit(1)
 }
-if (status.length) console.warn(`[merge] main worktree 仅 IN-FLIGHT 等元数据改动（${status.length} 项），继续`)
+if (status.length) console.warn(`[merge] main worktree 仅 IN-FLIGHT/审计日志等运行期元数据改动（${status.length} 项），继续`)
 
 const message = process.argv.includes('--message')
   ? process.argv[process.argv.indexOf('--message') + 1]
