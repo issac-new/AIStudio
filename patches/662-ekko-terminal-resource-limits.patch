@@ -1,0 +1,49 @@
+diff --git a/packages/ekko-agent/src/tools/terminal.ts b/packages/ekko-agent/src/tools/terminal.ts
+index 9602361..817a924 100644
+--- a/packages/ekko-agent/src/tools/terminal.ts
++++ b/packages/ekko-agent/src/tools/terminal.ts
+@@ -46,6 +46,9 @@ export class TerminalExecTool implements AgentTool<TerminalExecInput> {
+   async execute(input: TerminalExecInput, context: AgentToolContext = {}): Promise<AgentToolResult> {
+     const normalized = normalizeTerminalCommand(input.command, input.args)
+     const args = normalized.args
++    // overlay[sandbox-rlimit]（残余项⑥）：显式配置时用 sh 的 ulimit 包裹命令；
++    // 未配置时 command/args 完全不变（零行为变化）。
++    const limited = withResourceLimits(normalized.command, args)
+     const baseDirectory = context.cwd || context.workspaceRoot || process.cwd()
+     const cwd = input.cwd ? resolve(baseDirectory, input.cwd) : baseDirectory
+     const timeoutMs = input.timeoutMs ?? context.timeoutMs ?? this.timeoutMs
+@@ -65,7 +68,7 @@ export class TerminalExecTool implements AgentTool<TerminalExecInput> {
+     const stdoutArtifactPath = join(outputDirectory, `${artifactPrefix}.stdout.log`)
+     const stderrArtifactPath = join(outputDirectory, `${artifactPrefix}.stderr.log`)
+     return new Promise<AgentToolResult>((resolveResult) => {
+-      const child = spawn(normalized.command, args, {
++      const child = spawn(limited.command, limited.args, {
+         cwd,
+         env: {
+           ...process.env,
+@@ -330,6 +333,25 @@ function positiveInteger(value: number | undefined, fallback: number): number {
+   return Number.isFinite(value) && Number(value) > 0 ? Math.floor(Number(value)) : fallback
+ }
+ 
++/**
++ * 资源限额包装（2026-10-18 残余项⑥）：只在显式配置 HERMES_TOOL_RLIMIT_* 时生效。
++ * macOS 不支持 ulimit -v，内存限额只在 Linux 生效；Windows 不包装。
++ */
++function withResourceLimits(command: string, args: string[]): { command: string; args: string[] } {
++  if (process.platform === 'win32') return { command, args }
++  const cpu = Number(process.env.HERMES_TOOL_RLIMIT_CPU_SEC)
++  const fsize = Number(process.env.HERMES_TOOL_RLIMIT_FSIZE_MB)
++  const nproc = Number(process.env.HERMES_TOOL_RLIMIT_NPROC)
++  const mem = Number(process.env.HERMES_TOOL_RLIMIT_MEM_MB)
++  const limits: string[] = []
++  if (Number.isFinite(cpu) && cpu > 0) limits.push(`ulimit -t ${Math.floor(cpu)}`)
++  if (Number.isFinite(fsize) && fsize > 0) limits.push(`ulimit -f ${Math.floor(fsize * 1024)}`)
++  if (Number.isFinite(nproc) && nproc > 0) limits.push(`ulimit -u ${Math.floor(nproc)}`)
++  if (process.platform === 'linux' && Number.isFinite(mem) && mem > 0) limits.push(`ulimit -v ${Math.floor(mem * 1024)}`)
++  if (limits.length === 0) return { command, args }
++  return { command: '/bin/sh', args: ['-c', `${limits.join('; ')}; exec "$@"`, 'hermes-rlimit', command, ...args] }
++}
++
+ function normalizeTerminalCommand(command: string, args?: string[]): { command: string; args: string[] } {
+   const normalizedArgs = Array.isArray(args) ? args.map(String) : []
+   if (normalizedArgs.length > 0 || !/\s/.test(command.trim())) {

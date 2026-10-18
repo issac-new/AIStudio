@@ -190,6 +190,47 @@ vi.mock('@/custom/governance/api/harness', () => ({
     counts: { covered: 4, partial: 4, missing: 0 },
     meta: { source: 'governance/harness', note: '九层体检是自检清单，不是认证；数据缺席按 unavailable/partial 计，不造运行数据。', layersOrder: ['tools', 'loop', 'memory', 'context', 'sandbox', 'verification', 'permissions', 'observability', 'evals'] },
   })),
+  fetchProcessQuality: vi.fn(async () => ({
+    ok: true,
+    days: 7,
+    metrics: { runs: 4, toolCalls: 40, failedCalls: 2, duplicateCallRate: 0.05, toolFailureRate: 0.05, longChainRate: 0.25, firstPassSuccessRate: 0.75, specComplianceRate: 0.8 },
+    steps: { p50: 6, p95: 18, max: 21 },
+    qgate: { total: 10, pass: 8, fail: 1, conditional: 1, other: 0 },
+    notes: ['工具失败率是代理指标'],
+  })),
+  fetchPolicyDecisions: vi.fn(async () => ({
+    ok: true,
+    total: 2,
+    entries: [
+      { ts: 1700000000000, tool: 'read_file', userId: 'u1', enforcing: true, allow: true, rule: 'identity-pass' },
+      { ts: 1700000001000, tool: 'terminal_exec', profileId: 'p1', enforcing: true, allow: false, rule: 'identity-tool-denied', reason: 'not allowed' },
+    ],
+    byRule: [{ rule: 'identity-pass', count: 1, denied: 0 }, { rule: 'identity-tool-denied', count: 1, denied: 1 }],
+    byOutcome: { allow: 1, deny: 1 },
+    windowDays: 7,
+  })),
+  fetchRunManifests: vi.fn(async () => ({
+    ok: true,
+    total: 1,
+    entries: [{
+      runId: 'r1', sessionId: 's1', userId: 'u1', profileId: 'p1', model: 'demo-model', provider: 'demo',
+      permissionMode: 'default', promptHash: 'abc123def4567890', toolContractVersion: '2026-10-18.1', startedAt: 1700000000000,
+      cost: { priced: true, inputTokens: 100, outputTokens: 20, costIdleUsd: 0.0123, costPeakUsd: 0.02, traceFound: true },
+    }],
+    windowDays: 7,
+  })),
+  fetchBudgetStatus: vi.fn(async () => ({
+    ok: true,
+    status: { day: '2026-10-18', spentUsd: 0.0123, limitUsd: 5, ratio: 0.0025, action: 'allow', runs: 1, missingPricedRuns: 0, enforce: true, note: '当日支出 0.0123 USD，限额 5 USD' },
+  })),
+  fetchResumePlan: vi.fn(async () => ({
+    ok: true,
+    plan: {
+      runId: 'r1', sessionId: 's1', decision: 'auto_resume', reasons: ['图检查点第 8 步、无待应答 interrupt'],
+      next: 'next: step9',
+      facts: { graph: { found: true, superStep: 8, pendingInterrupts: 0, ageMs: 60000 }, handoff: { found: false }, progress: { found: false } },
+    },
+  })),
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'zh-CN', messages: {} })
@@ -277,6 +318,26 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-nine-note"]').text()).toContain('不是认证')
   })
 
+  it('B8 运行运维面：过程质量/决策账/运行清单/预算/恢复判定', async () => {
+    const w = await mountComp('@/custom/governance/components/HarnessRunOpsSection.vue')
+    await flushPromises()
+    expect(w.find('[data-testid="harness-runops-quality"]').text()).toContain('5%')
+    expect(w.find('[data-testid="runops-quality-meta"]').text()).toContain('qgate 8/10')
+    expect(w.find('[data-testid="harness-runops-policy"]').text()).toContain('identity-pass')
+    expect(w.find('[data-testid="runops-policy-row-0"]').find('.ro__badge--ok').exists()).toBe(true)
+    expect(w.find('[data-testid="runops-policy-row-1"]').find('.ro__badge--bad').exists()).toBe(true)
+    expect(w.find('[data-testid="harness-runops-manifests"]').text()).toContain('demo-model')
+    expect(w.find('[data-testid="harness-runops-manifests"]').text()).toContain('abc123def4567890')
+    expect(w.find('[data-testid="runops-budget-line"]').text()).toContain('0.0123')
+    expect(w.find('[data-testid="runops-budget-line"]').text()).toContain('allow')
+
+    await w.find('[data-testid="runops-resume-input"]').setValue('r1')
+    await w.find('[data-testid="runops-resume-btn"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="runops-resume-result"]').text()).toContain('可续跑')
+    expect(w.find('[data-testid="runops-resume-result"]').text()).toContain('step9')
+  })
+
   it('GovHarnessView 聚合四板块（页签面板壳）', async () => {
     const w = await mountComp('@/custom/ia2/views/gov/GovHarnessView.vue')
     await flushPromises()
@@ -287,6 +348,7 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-primitives"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-eval-layers"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-nine-layers"]').exists()).toBe(true)
+    expect(w.find('[data-testid="harness-run-ops"]').exists()).toBe(true)
   })
 
   it('降级诚实：API 抛错渲染错误行，不编造数据', async () => {

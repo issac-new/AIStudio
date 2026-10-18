@@ -32,6 +32,12 @@ beforeEach(async () => {
   process.env.POLICY_DECISION_DIR = join(dir, 'policy-decisions')
   process.env.AGENT_IDENTITY_STORE = join(dir, 'agent-identity')
   process.env.HERMES_GOV_EVENT_DIR = join(dir, 'gov-events')
+  process.env.BUDGET_POLICY_FILE = join(dir, 'budget-policies.json')
+  process.env.SANDBOX_LEASE_FILE = join(dir, 'sandbox-leases.json')
+  process.env.HERMES_SESSION_CHECKPOINTS_DIR = join(dir, 'handoff')
+  process.env.HERMES_PROGRESS_CHECKPOINTS_DIR = join(dir, 'progress')
+  delete process.env.HERMES_SANDBOX_WORKSPACES_ROOT
+  delete process.env.HERMES_BUDGET_ENFORCE
   // mcp 假配置：一个 authorized server
   mkdirSync(join(dir, 'mcp'), { recursive: true })
   writeFileSync(join(dir, 'mcp', 'demo.json'), JSON.stringify({ name: 'demo', scope: 'global', timeoutMs: 1000, authState: 'authorized', updatedAt: 1 }))
@@ -43,6 +49,16 @@ beforeEach(async () => {
   const Koa = (await import('koa')).default
   const { harnessRoutes } = await import('../harness-controller')
   const app = new Koa()
+  // 测试用 JSON body 解析（生产由 bootstrap 的 createRequestBodyParser 承担）。
+  app.use(async (ctx: any, next: () => Promise<unknown>) => {
+    if (ctx.method === 'POST' || ctx.method === 'PUT' || ctx.method === 'PATCH') {
+      const chunks: Buffer[] = []
+      for await (const chunk of ctx.req) chunks.push(Buffer.from(chunk))
+      const raw = Buffer.concat(chunks).toString('utf8')
+      ctx.request.body = raw ? JSON.parse(raw) : {}
+    }
+    await next()
+  })
   app.use(harnessRoutes.routes())
   server = createServer(app.callback())
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
@@ -51,7 +67,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   server.close()
-  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER', 'TOOL_EXEC_AUDIT_DIR', 'TOOL_IDEMPOTENCY_STORE', 'HERMES_LOOP_DIR', 'EVAL_STORE', 'HELDOUT_STORE', 'HERMES_APPROVALS_LOG_FILE', 'RUN_MANIFEST_DIR', 'POLICY_DECISION_DIR', 'AGENT_IDENTITY_STORE', 'HERMES_GOV_EVENT_DIR']) {
+  for (const k of ['HERMES_HOME', 'HARNESS_STUDIO_DB', 'HERMES_MCP_CONFIG_DIR', 'HERMES_SKILLS_DIR', 'GOVERNANCE_REPO', 'HERMES_TRACES_DIR', 'CHANGE_GOV_DB', 'HERMES_APPROVAL_RULES_FILE', 'GOVERNANCE_QGATE_GATE_PACKS', 'GOVERNANCE_DISPATCH_LEDGER', 'TOOL_EXEC_AUDIT_DIR', 'TOOL_IDEMPOTENCY_STORE', 'HERMES_LOOP_DIR', 'EVAL_STORE', 'HELDOUT_STORE', 'HERMES_APPROVALS_LOG_FILE', 'RUN_MANIFEST_DIR', 'POLICY_DECISION_DIR', 'AGENT_IDENTITY_STORE', 'HERMES_GOV_EVENT_DIR', 'BUDGET_POLICY_FILE', 'SANDBOX_LEASE_FILE', 'HERMES_SESSION_CHECKPOINTS_DIR', 'HERMES_PROGRESS_CHECKPOINTS_DIR', 'HERMES_SANDBOX_WORKSPACES_ROOT', 'HERMES_BUDGET_ENFORCE']) {
     delete process.env[k]
   }
   const store = await import('../../governance/change-governance-store')
@@ -61,6 +77,13 @@ afterEach(async () => {
 
 const get = async (path: string): Promise<{ status: number; body: any }> => {
   const res = await fetch(`http://127.0.0.1:${port}${path}`)
+  return { status: res.status, body: await res.json() }
+}
+
+const post = async (path: string, body: unknown): Promise<{ status: number; body: any }> => {
+  const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  })
   return { status: res.status, body: await res.json() }
 }
 
@@ -163,6 +186,35 @@ describe('四子路由 HTTP 投影', () => {
     expect(body.total).toBe(0)
     expect(body.entries).toEqual([])
     expect(body.windowDays).toBe(7)
+  })
+
+  it('GET /api/harness/process-quality：200 + 指标字段（空账为 null）', async () => {
+    const { status, body } = await get('/api/harness/process-quality?days=7')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.metrics.duplicateCallRate).toBeNull()
+    expect(body.metrics.specComplianceRate).toBeNull()
+    expect(Array.isArray(body.notes)).toBe(true)
+  })
+
+  it('GET /api/harness/resume-plan：缺参 400；无检查点 → new_session', async () => {
+    expect((await get('/api/harness/resume-plan')).status).toBe(400)
+    const { status, body } = await get('/api/harness/resume-plan?sessionId=s-none')
+    expect(status).toBe(200)
+    expect(body.plan.decision).toBe('new_session')
+  })
+
+  it('预算策略写面与状态：limit 0 → block；沙箱无根清扫 409', async () => {
+    const created = await post('/api/harness/budget-policy', { userId: 'u1', dailyUsd: 0, action: 'block' })
+    expect(created.status).toBe(200)
+    const status = await get('/api/harness/budget-status?userId=u1')
+    expect(status.body.status).toMatchObject({ limitUsd: 0, action: 'block', enforce: false })
+    const sweep = await post('/api/harness/sandbox/sweep', {})
+    expect(sweep.status).toBe(409)
+    expect(sweep.body.detail).toContain('HERMES_SANDBOX_WORKSPACES_ROOT')
+    const leases = await get('/api/harness/sandbox/leases')
+    expect(leases.status).toBe(200)
+    expect(leases.body.leases).toEqual([])
   })
 
   it('GET /api/harness/nine-layers：200 + 九层顺序 + 三态计数和=9 + 自检非认证', async () => {

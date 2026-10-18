@@ -858,3 +858,8 @@
 # 权限模式/契约版本（patch 661 引入 custom/runmanifest 调用；只落指纹不落正文，
 # fail-soft 不阻断会话）。
 661-server-run-manifest.patch
+
+# 662: ekko terminal_exec 可选资源限额（残余项⑥）：显式 HERMES_TOOL_RLIMIT_* 时用
+# /bin/sh 的 ulimit 包裹命令（CPU/文件大小/进程数；内存限额仅 Linux）。
+# 未配置时 command/args 完全不变，零行为变化。
+662-ekko-terminal-resource-limits.patch

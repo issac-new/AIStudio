@@ -223,3 +223,138 @@ export interface NineLayersDto {
 export function fetchNineLayers(days = 7): Promise<NineLayersDto> {
   return request<NineLayersDto>(`/api/harness/nine-layers?days=${encodeURIComponent(String(days))}`)
 }
+
+// ---- B8 运行运维面（2026-10-18 残余项）：过程质量 / 执法决策 / 运行清单 / 预算 / 恢复判定 ----
+export interface ProcessQualityDto {
+  ok: boolean
+  days: number
+  metrics: {
+    runs: number
+    toolCalls: number
+    failedCalls: number
+    duplicateCallRate: number | null
+    toolFailureRate: number | null
+    longChainRate: number | null
+    firstPassSuccessRate: number | null
+    specComplianceRate: number | null
+  }
+  steps: { p50: number | null; p95: number | null; max: number | null }
+  qgate: { total: number; pass: number; fail: number; conditional: number; other: number }
+  notes: string[]
+}
+
+export function fetchProcessQuality(days = 7): Promise<ProcessQualityDto> {
+  return request<ProcessQualityDto>(`/api/harness/process-quality?days=${days}`)
+}
+
+export interface PolicyDecisionDto {
+  ts: number
+  tool: string
+  userId?: string
+  profileId?: string
+  sessionId?: string
+  runId?: string
+  enforcing: boolean
+  allow: boolean
+  rule: string
+  risk?: string
+  reason?: string
+}
+
+export interface PolicyDecisionsDto {
+  ok: boolean
+  total: number
+  entries: PolicyDecisionDto[]
+  byRule: Array<{ rule: string; count: number; denied: number }>
+  byOutcome: { allow: number; deny: number }
+  windowDays: number
+}
+
+export function fetchPolicyDecisions(days = 7): Promise<PolicyDecisionsDto> {
+  return request<PolicyDecisionsDto>(`/api/harness/policy-decisions?days=${days}&limit=50`)
+}
+
+export interface RunManifestCostDto {
+  priced: boolean
+  inputTokens: number
+  outputTokens: number
+  costIdleUsd: number | null
+  costPeakUsd: number | null
+  traceFound: boolean
+}
+
+export interface RunManifestDto {
+  runId: string
+  sessionId: string
+  userId?: string
+  profileId: string
+  model: string
+  provider: string
+  apiMode?: string
+  reasoningEffort?: string
+  promptHash?: string
+  permissionMode?: string
+  toolContractVersion: string
+  startedAt: number
+  cost?: RunManifestCostDto
+}
+
+export interface RunManifestsDto {
+  ok: boolean
+  total: number
+  entries: RunManifestDto[]
+  windowDays: number
+}
+
+export function fetchRunManifests(days = 7): Promise<RunManifestsDto> {
+  return request<RunManifestsDto>(`/api/harness/run-manifests?days=${days}&limit=20&withCost=1`)
+}
+
+export interface BudgetStatusDto {
+  ok: boolean
+  status: {
+    userId?: string
+    profileId?: string
+    day: string
+    spentUsd: number
+    limitUsd: number | null
+    ratio: number | null
+    action: 'allow' | 'warn' | 'downgrade' | 'block'
+    runs: number
+    missingPricedRuns: number
+    enforce: boolean
+    note: string
+  }
+}
+
+export function fetchBudgetStatus(userId?: string, profileId?: string): Promise<BudgetStatusDto> {
+  const q = new URLSearchParams()
+  if (userId) q.set('userId', userId)
+  if (profileId) q.set('profileId', profileId)
+  return request<BudgetStatusDto>(`/api/harness/budget-status?${q.toString()}`)
+}
+
+export type ResumeDecisionDto = 'auto_resume' | 'manual_gate' | 'new_session'
+
+export interface ResumePlanDto {
+  ok: boolean
+  plan: {
+    runId?: string
+    sessionId?: string
+    decision: ResumeDecisionDto
+    reasons: string[]
+    next?: string
+    facts: {
+      graph: { found: boolean; superStep?: number; pendingInterrupts?: number; ageMs?: number | null; note?: string }
+      handoff: { found: boolean; path?: string; next?: string; corrupt?: boolean }
+      progress: { found: boolean; path?: string; next?: string }
+    }
+  }
+}
+
+export function fetchResumePlan(input: { runId?: string; sessionId?: string }): Promise<ResumePlanDto> {
+  const q = new URLSearchParams()
+  if (input.runId) q.set('runId', input.runId)
+  if (input.sessionId) q.set('sessionId', input.sessionId)
+  return request<ResumePlanDto>(`/api/harness/resume-plan?${q.toString()}`)
+}
