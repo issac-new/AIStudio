@@ -13,6 +13,7 @@ import { features } from '../../../../config/features'
 import { CENTER_NAVS, ISLAND_NAVS, useCenterNavLocale } from '../nav-centers'
 import { STAGE_META } from '../stage-meta'
 import { useStageProgress } from '../composables/useStageProgress'
+import { runShortLabel } from '../run-display'
 import { useDecisionRows } from '../composables/useDecisionRows'
 import { readSetting, writeSetting } from '@/custom/settings-layers'
 import IaSideNavItem from './IaSideNavItem.vue'
@@ -90,11 +91,11 @@ const stageStatusLabel = (status: 'done' | 'current' | 'pending'): string =>
       : (zh.value ? '未开始' : 'Not started')
 
 const runActive = computed(() => routeName.value.startsWith('ia2.sim') || routePath.value.startsWith('/app/sim'))
-/** 左侧栏只放运行短名（run21），完整目录名在顶栏运行 chip 与 tooltip 里；避免挤掉「全流程推演」标签 */
+/** 左侧栏只放可读日期（10/17 运行），不暴露运行目录名/轮次号；
+ *  完整目录名留在顶栏运行 chip 的 title 里供排查反查（2026-10-19 走查批） */
 const runTrail = computed(() => {
   const r = progress.run.value.trim()
-  const i = r.lastIndexOf('-')
-  return i >= 0 ? (r.slice(i + 1) || r) : r
+  return r ? runShortLabel(r) : ''
 })
 
 const topicItems = computed(() => ISLAND_NAVS

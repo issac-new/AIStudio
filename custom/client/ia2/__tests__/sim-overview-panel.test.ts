@@ -88,8 +88,8 @@ describe('七幕区间（§2.4 七幕主线）', () => {
     ])
     // 界面只用 displayName：与方案原文副本分开，保证菜单/功能名符合标准术语。
     expect(ACTS_7.map(a => a.displayName)).toEqual([
-      '序幕·准备', '第一幕·需求冻结', '第二幕·需求分析', '第三幕·设计与排期',
-      '第四幕·并行开发', '第五幕·发布与验收', '尾声·治理与复盘',
+      '准备', '需求冻结', '需求分析', '设计与排期',
+      '并行开发', '发布与验收', '治理与复盘',
     ])
     expect(ACTS_7.map(a => [a.from, a.to])).toEqual([
       [1, 4], [5, 8], [9, 14], [15, 17], [18, 19], [20, 21], [22, 26],
@@ -304,7 +304,7 @@ describe('OverviewPanel——挂载渲染主块', () => {
     // 运行模式横幅：standard 琥珀带+遗留项灯红（2 笔待处理）
     const posture = wrapper.find('[data-testid="ov-posture"]')
     expect(posture.classes()).toContain('ov__posture--standard')
-    expect(wrapper.find('[data-testid="ov-clearance"]').text()).toContain('2 笔待处理')
+    expect(wrapper.find('[data-testid="ov-clearance"]').text()).toContain('2 项待清算')
     // KPI：六道质量门 1/6（仅 g1_frozen）｜分支 1/6（2 支 1 推）｜含代偿 7/26｜净计 4/26（扣 3 笔）
     expect(wrapper.find('[data-testid="ov-kpi-gates"]').text()).toContain('1/6')
     expect(wrapper.find('[data-testid="ov-kpi-branches"]').text()).toContain('1/6')
@@ -329,8 +329,8 @@ describe('OverviewPanel——挂载渲染主块', () => {
     expect(wrapper.find('[data-testid="ov-gate-G1"]').find('[data-testid="sim-gate-reject"]').text()).toContain('1')
     // 净计卡双行+紫项列表
     const net = wrapper.find('[data-testid="ov-net"]')
-    expect(net.text()).toContain('含代偿步可用 7/26')
-    expect(net.text()).toContain('净计步可用 4/26')
+    expect(net.text()).toContain('含自动代处理 7/26')
+    expect(net.text()).toContain('人工完成 4/26')
     expect(net.findAll('[data-testid="sim-comp-tag"]').length).toBeGreaterThanOrEqual(3)
     expect(wrapper.find('[data-testid="ov-watch-entry"]').exists()).toBe(true)
     wrapper.unmount()

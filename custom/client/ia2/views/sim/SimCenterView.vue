@@ -92,7 +92,7 @@ const INTRO_KEY: Record<string, string> = {
 
     <p class="sim-center__lead">
       {{ navLocale === 'zh'
-        ? '这一轮 26 步怎么跑、卡在哪、证据在哪。日常派活与沟通请用左侧「工作台 / 看板」。'
+        ? '本次运行 26 步怎么走、卡在哪、证据在哪。日常派活与沟通请用左侧「工作台 / 看板」。'
         : 'How this 26-step run is going, where it is stuck, and where the evidence is. Daily work lives in Workbench / Board.' }}
     </p>
 

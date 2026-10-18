@@ -96,8 +96,8 @@ describe('JourneyView — D18 旅程式旅程首页', () => {
     // A 区：步 1（appinit_done/people_done）与步 4（smoke_done）完成；步 3/5 无键=不跟踪
     expect(w.find('[data-testid="jrn-step-state-1"]').text()).toContain('完成')
     expect(w.find('[data-testid="jrn-step-state-4"]').text()).toContain('完成')
-    expect(w.find('[data-testid="jrn-step-state-3"]').text()).toContain('轮次内不跟踪')
-    expect(w.find('[data-testid="jrn-step-state-5"]').text()).toContain('轮次内不跟踪')
+    expect(w.find('[data-testid="jrn-step-state-3"]').text()).toContain('未纳入跟踪')
+    expect(w.find('[data-testid="jrn-step-state-5"]').text()).toContain('未纳入跟踪')
     // B 区：②需求完成（g1_frozen）；③分析设计=首个未完成=进行中；⑥治理未开始
     expect(w.find('[data-testid="jrn-state-2"]').text()).toContain('完成')
     expect(w.find('[data-testid="jrn-state-3"]').text()).toContain('进行中')
@@ -106,7 +106,7 @@ describe('JourneyView — D18 旅程式旅程首页', () => {
     const bn = w.find('[data-testid="jrn-bottleneck"]')
     expect(bn.exists()).toBe(true)
     expect(bn.text()).toContain('分析设计')
-    expect(bn.text()).toContain('2 笔遗留项未清算')
+    expect(bn.text()).toContain('2 项遗留事项未清算')
     expect(mockedFetch).toHaveBeenCalledWith('/api/hermes/sim/run-state?run=r')
     w.unmount()
   })

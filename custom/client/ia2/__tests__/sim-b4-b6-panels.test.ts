@@ -82,7 +82,7 @@ describe('OpsPanel — 签 3 运行观测（R1/R2）', () => {
     expect(w.text()).toContain('ready')
     expect(w.find('[data-testid="ops-sleeping-table"]').text()).toContain('wei')
     expect(w.find('[data-testid="ops-checked-at"]').text()).toContain('2026-10-16T04:00:00')
-    expect(w.find('[data-testid="ops-liveness-absent"]').text()).toContain('活性端点未接')
+    expect(w.find('[data-testid="ops-liveness"]').text()).toContain('运行状态暂不可读')
     w.unmount()
   })
 

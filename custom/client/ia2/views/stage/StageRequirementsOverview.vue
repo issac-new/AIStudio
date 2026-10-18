@@ -7,13 +7,17 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStageProgress } from '../../composables/useStageProgress'
+import { runDisplayName } from '../../run-display'
 
 const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const progress = useStageProgress()
 
-const runName = computed(() => progress.run.value.trim())
+const runName = computed(() => {
+  const r = progress.run.value.trim()
+  return r ? runDisplayName(r) : ''
+})
 const frozen = computed(() => 'g1_frozen' in progress.merged.value)
 const posture = computed(() => String(progress.state.value?.posture ?? '').trim())
 

@@ -49,7 +49,31 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ changed: [] }>()
 
-const { t, locale } = useI18n()
+const i18nApi = useI18n() as unknown as {
+  t: (key: string, named?: Record<string, unknown>) => string
+  te?: (key: string) => boolean
+  locale: { value?: string }
+}
+const { t, locale } = i18nApi
+
+/** 词条存在性：真实 i18n 有 te；测试替身没有时用「翻译结果≠键名」判定。 */
+function hasMessage(key: string): boolean {
+  return typeof i18nApi.te === 'function' ? i18nApi.te(key) : t(key) !== key
+}
+
+// 历史决策枚举里有些值只在服务端域出现（approved_once / approved_scoped 等），
+// 未上词表时给产品文案，避免 intlify 缺键告警与界面露出原始枚举（2026-10-19 走查批）。
+const DECISION_FALLBACK: Record<string, string> = {
+  pending: '待处理',
+  approved_once: '批准（本次）',
+  approved_for_session: '本会话允许',
+  approved_scoped: '批准（范围内）',
+  denied_for_session: '本会话拒绝',
+  expolicy_amendment: '策略修订',
+}
+function decisionFallback(decision: string): string {
+  return DECISION_FALLBACK[decision] ?? decision
+}
 // 离散 dialog（无 n-dialog-provider 也可用；测试与嵌入场景同稳）
 const { dialog } = createDiscreteApi(['dialog'])
 const items = ref<PendingApprovalItem[]>([])
@@ -373,7 +397,7 @@ defineExpose({ refresh })
             <td>{{ entry.actor }}</td>
             <td :title="entry.targetTitle">{{ prettyTarget(entry.targetTitle) }}</td>
             <td><span v-if="entry.risk" class="risk-badge" :class="`risk-badge--${entry.risk}`" data-testid="approval-history-risk">{{ t(`approvals.risk.${entry.risk}`) }}</span><span v-else class="approval-history__dim">—</span></td>
-            <td><span class="approval-history__decision" :class="`is-${entry.decision}`">{{ t(`approvals.choice.${entry.decision}`) !== `approvals.choice.${entry.decision}` ? t(`approvals.choice.${entry.decision}`) : entry.decision }}</span></td>
+            <td><span class="approval-history__decision" :class="`is-${entry.decision}`">{{ hasMessage(`approvals.choice.${entry.decision}`) ? t(`approvals.choice.${entry.decision}`) : decisionFallback(entry.decision) }}</span></td>
             <td>{{ entry.note && entry.note !== entry.targetTitle ? entry.note : '—' }}</td>
           </tr>
         </tbody>

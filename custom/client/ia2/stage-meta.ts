@@ -144,7 +144,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     criteria: '至少一个团队有领导且值守分派非空',
     target: { name: 'ia2.teams' },
     keys: [],
-    note: '轮次内不跟踪本步；面板按领导身份显示管理区。',
+    note: '本步未纳入进度跟踪；面板按领导身份显示管理区。',
   },
   {
     no: 4, key: 'env', name: '准备环境与资产',
@@ -160,7 +160,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     criteria: '就绪检查显示预期智能体在线',
     target: { name: 'ia2.agents' },
     keys: [],
-    note: '轮次内不跟踪本步；模型绑定与启停在智能体工作台操作。',
+    note: '本步未纳入进度跟踪；模型绑定与启停在智能体工作台操作。',
   },
 ]
 

@@ -24,7 +24,7 @@ function stateText(st: (typeof SETUP_STEPS)[number]): string {
   const s = progress.stepState(st)
   if (s === 'done') return zh.value ? '✓ 完成' : '✓ Done'
   if (s === 'current') return zh.value ? '● 待完成' : '● To do'
-  if (s === 'untracked') return zh.value ? '轮次内不跟踪' : 'Not tracked'
+  if (s === 'untracked') return zh.value ? '未纳入跟踪' : 'Not tracked'
   return zh.value ? '未开始' : 'Not started'
 }
 
@@ -42,7 +42,7 @@ function actionText(st: (typeof SETUP_STEPS)[number]): string {
       <div>
         <h2 class="sst__title">{{ zh ? '五步把组织搭起来' : 'Set up the organization in five steps' }}</h2>
         <p class="sst__sub">{{ zh
-          ? '每一步都在本页签内完成；「轮次内不跟踪」表示这一步没有运行状态键，不是已完成。'
+          ? '每一步都在本页签内完成；「未纳入跟踪」表示这一步没有运行状态键，不是已完成。'
           : 'Each step is completed in this tab. “Not tracked” means no run-state key exists; it is not done.' }}</p>
       </div>
       <span class="sst__count" data-testid="stg-setup-count">{{ doneCount }}/{{ SETUP_STEPS.length }}</span>

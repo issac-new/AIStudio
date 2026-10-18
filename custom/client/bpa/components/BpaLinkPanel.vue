@@ -129,15 +129,33 @@ const chartOption = computed(() => {
   }
 })
 
+let resizeObserver: ResizeObserver | null = null
+
 function render(): void {
-  if (!containerRef.value) return
-  if (!chart) chart = echarts.init(containerRef.value)
+  const el = containerRef.value
+  if (!el) return
+  // 隐藏页签里容器宽高为 0；此时初始化会让 ECharts 告警且画布尺寸错误。
+  // 观测一次尺寸，容器可见后再真正初始化（2026-10-19 走查批）。
+  if (!el.clientWidth || !el.clientHeight) {
+    if (!resizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        if (containerRef.value && containerRef.value.clientWidth && containerRef.value.clientHeight) {
+          resizeObserver?.disconnect()
+          resizeObserver = null
+          render()
+        }
+      })
+      resizeObserver.observe(el)
+    }
+    return
+  }
+  if (!chart) chart = echarts.init(el)
   chart.setOption(chartOption.value, true)
 }
 
 onMounted(() => { void load().then(render) })
 watch(() => props.dto, () => { void load().then(render) })
-onBeforeUnmount(() => { chart?.dispose(); chart = null })
+onBeforeUnmount(() => { resizeObserver?.disconnect(); resizeObserver = null; chart?.dispose(); chart = null })
 
 const nameOf = (id: string): string => props.dto.nodes.find((n) => n.id === id)?.name ?? id
 </script>

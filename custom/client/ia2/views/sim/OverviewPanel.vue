@@ -20,6 +20,7 @@ import SimGateBadge from '../../components/sim/SimGateBadge.vue'
 import SimCompensatedTag from '../../components/sim/SimCompensatedTag.vue'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
 import { useRunContext } from '../../composables/useRunContext'
+import { compensationLabel } from '../../compensation-labels'
 
 const router = useRouter()
 
@@ -38,9 +39,9 @@ const branchesError = ref('')
 
 /** 运行模式政策一句话（§1.2 运行模式旋钮口径照录） */
 const POSTURE_POLICY: Record<string, string> = {
-  strict: '零代偿，测自组织真力；停滞即如实登记问题单',
-  standard: '现状动作保留，每笔代偿落台账（净计对账数据源）',
-  demo: '里程碑演示，允许幕后调度编排，全程显著标注「演示」',
+  strict: '全程不自动代处理，检验自主运行能力；停滞如实登记为问题',
+  standard: '保留现有动作，每笔自动代处理都记账（用于人工/自动对账）',
+  demo: '里程碑演示，允许后台自动编排，全程显著标注「演示」',
 }
 
 // ── 折算（纯函数层见 steps-registry.ts；此处仅组包） ──
@@ -145,13 +146,13 @@ function goSupervision(): void {
 <template>
   <div class="ov" data-testid="ov-panel">
     <div class="ov__bar">
-      <span class="ov__src" data-testid="ov-endpoints">数据面：/api/hermes/sim/run-state（deliverables / issues / branches 同批）· 运行在页头「本轮运行」选择</span>
+      <span class="ov__src" data-testid="ov-endpoints">数据来源：运行状态、交付物、问题清单与分支交付（自动汇总）· 运行记录在页头选择</span>
     </div>
 
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
     <p v-if="loadError" class="ov__error" data-testid="ov-error">{{ loadError }}</p>
     <p v-else-if="!runState" class="ov__hint" data-testid="ov-guide">
-      本轮还没有选择运行——在页头「本轮运行」下拉选一轮；数字来自端点实测。
+      还没有选择运行记录——在页头下拉选择一次运行；页面数字全部来自实测。
     </p>
 
     <template v-if="runState">
@@ -166,32 +167,32 @@ function goSupervision(): void {
           data-testid="ov-clearance"
           title="去⑥治理·遗留项清算处理"
           @click="router.push({ name: 'ia2.govClearance' })"
-        >{{ `遗留项未清算（${runState.ledger.open} 笔待处理，禁止启动新运行）→ 去清算` }}</button>
+        >{{ `遗留事项 ${runState.ledger.open} 项待清算，清算前不能启动新运行 → 去清算` }}</button>
         <span
           v-else
           class="ov__lamp ov__lamp--green"
           data-testid="ov-clearance"
-        >遗留项已清算（0 笔待处理）</span>
+        >遗留事项已清算（0 项待处理）</span>
       </div>
 
       <!-- KPI 四卡：六闸 n/6｜分支交付 n/6｜含代偿步可用｜净计步可用（紫） -->
       <div class="ov__kpis">
         <div class="ov__kpi ov__kpi--pass" data-testid="ov-kpi-gates">
           <span class="ov__kpi-num">{{ gatesPassed }}<span class="ov__kpi-denom">/6</span></span>
-          <span class="ov__kpi-label">六道质量门通过（g1_frozen…report_done）</span>
+          <span class="ov__kpi-label">六道质量门通过（G1-G6）</span>
         </div>
         <div class="ov__kpi ov__kpi--link" data-testid="ov-kpi-branches" title="查看分支新鲜度与交付物明细（⑤验收·交付健康）" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">
           <span class="ov__kpi-num">{{ branchesDelivered === null ? '—' : `${branchesDelivered}` }}<span v-if="branchesDelivered !== null" class="ov__kpi-denom">/6</span></span>
-          <span class="ov__kpi-label">分支交付（已推 origin feat）</span>
-          <span v-if="branchesError" class="ov__kpi-absent">端点缺席：{{ branchesError }}</span>
+          <span class="ov__kpi-label">分支交付（已推送远端）</span>
+          <span v-if="branchesError" class="ov__kpi-absent">暂不可用：{{ branchesError }}</span>
         </div>
         <div class="ov__kpi ov__kpi--stale" data-testid="ov-kpi-steps">
           <span class="ov__kpi-num">{{ stepsDoneComp }}<span class="ov__kpi-denom">/26</span></span>
-          <span class="ov__kpi-label">步可用·含代偿</span>
+          <span class="ov__kpi-label">步骤完成（含自动代处理）</span>
         </div>
         <div class="ov__kpi ov__kpi--net" data-testid="ov-kpi-net">
           <span class="ov__kpi-num">{{ stepsDoneNet }}<span class="ov__kpi-denom">/26</span></span>
-          <span class="ov__kpi-label">步可用·净计（扣步级代演 {{ deduction }} 笔）</span>
+          <span class="ov__kpi-label">人工完成（扣除自动代处理 {{ deduction }} 笔）</span>
         </div>
       </div>
 
@@ -220,7 +221,7 @@ function goSupervision(): void {
       <!-- 双列表：左 2/3 步骤表+交付物链；右 1/3 六道质量门+净计卡+观察窗入口 -->
       <div class="ov__grid">
         <section class="ov__main">
-          <h4 class="ov__h">26 步状态表（点行看键值证据）</h4>
+          <h4 class="ov__h">26 步执行状态（点击查看证据）</h4>
           <table class="ov__table" data-testid="ov-steps">
             <thead><tr><th>步</th><th>全名</th><th>操作者</th><th>状态</th><th>凭证</th></tr></thead>
             <tbody>
@@ -232,7 +233,7 @@ function goSupervision(): void {
                 :data-testid="`ov-step-acthead-${g.act}`"
               >
                 <td colspan="5">
-                  <span class="ov__act-head-name">第{{ ['一','二','三','四','五','六','七'][g.act - 1] }}幕·{{ g.name }}</span>
+                  <span class="ov__act-head-name">{{ g.name }}</span>
                   <span class="ov__act-head-range">步 {{ g.from }}-{{ g.to }}</span>
                 </td>
               </tr>
@@ -261,8 +262,8 @@ function goSupervision(): void {
             </tbody>
           </table>
 
-          <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">交付物 14 件链（§1.3 文档链；端点 13 类核对+完备性检查）→</h4>
-          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">端点缺席：{{ deliverablesError }}</p>
+          <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">交付物链路（14 件，自动核对）→</h4>
+          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">暂不可用：{{ deliverablesError }}</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
               v-for="(d, i) in deliverableChain"
@@ -274,10 +275,10 @@ function goSupervision(): void {
               <span class="ov__dl-mark">{{ d.status === 'present' ? '✅' : d.status === 'absent' ? '缺' : '未覆盖' }}</span>
               <span class="ov__dl-label">{{ d.label }}</span>
               <span v-if="d.file" class="ov__dl-file">{{ d.file }}</span>
-              <span v-else-if="d.status === 'uncovered'" class="ov__dl-note">端点 13 类清单未覆盖本件，如实缺席</span>
+              <span v-else-if="d.status === 'uncovered'" class="ov__dl-note">暂无对应核对标准</span>
             </li>
           </ul>
-          <p v-if="deliverables" class="ov__hint">evidence/ 实扫 {{ deliverables.scanned }} 文件；在位 {{ deliverables.deliverables.filter(d => d.status === 'present').length }}/13 类。</p>
+          <p v-if="deliverables" class="ov__hint">已扫描 evidence 目录 {{ deliverables.scanned }} 个文件；核实 {{ deliverables.deliverables.filter(d => d.status === 'present').length }}/13 类。</p>
         </section>
 
         <aside class="ov__side">
@@ -293,14 +294,14 @@ function goSupervision(): void {
           </section>
 
           <section class="ov__side-box" data-testid="ov-net">
-            <h4 class="ov__h">净计卡 <SimCompensatedTag :count="deduction" /></h4>
+            <h4 class="ov__h">自动代处理 <SimCompensatedTag :count="deduction" /></h4>
             <div class="ov__net-rows">
-              <div class="ov__net-row">含代偿步可用 {{ stepsDoneComp }}/26</div>
-              <div class="ov__net-row ov__net-row--net">净计步可用 {{ stepsDoneNet }}/26（=完成 − 步级代演笔）</div>
+              <div class="ov__net-row">含自动代处理 {{ stepsDoneComp }}/26</div>
+              <div class="ov__net-row ov__net-row--net">人工完成 {{ stepsDoneNet }}/26（= 完成 − 自动代处理）</div>
             </div>
-            <p v-if="byTypeList.length === 0" class="ov__hint">台账零代偿。</p>
+            <p v-if="byTypeList.length === 0" class="ov__hint">没有自动代处理记录。</p>
             <ul v-else class="ov__net-types">
-              <li v-for="[t, n] in byTypeList" :key="t" class="ov__net-type"><SimCompensatedTag :label="t" :count="n" /></li>
+              <li v-for="[t, n] in byTypeList" :key="t" class="ov__net-type"><SimCompensatedTag :label="compensationLabel(t)" :count="n" /></li>
             </ul>
           </section>
 

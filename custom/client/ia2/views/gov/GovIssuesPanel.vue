@@ -47,12 +47,12 @@ watch(run, () => { if (run.value.trim()) void load() })
 <template>
   <div class="gis" data-testid="gis-panel">
     <p v-if="loadError" class="gis__error" data-testid="gis-error">{{ loadError }}</p>
-    <p v-else-if="!lines" class="gis__hint">在页头「本轮运行」选择一轮，读取 issues.log——问题全记账、复盘逐条清点（§2.6-3）。</p>
+    <p v-else-if="!lines" class="gis__hint">在页头「本轮运行」选择一轮，读取本次运行的问题清单——问题全记账、复盘逐条清点。</p>
 
     <template v-if="lines">
       <p class="gis__stats" data-testid="gis-stats">
         问题 {{ disposedCount + openCount }}｜已处置 {{ disposedCount }}｜未处置 {{ openCount }}｜处置率 {{ rate == null ? '—' : `${Math.round(rate * 100)}%` }}<template v-if="openCount > 0">——未达 100% 处置，红项待清</template>
-        <span class="gis__src">数据源：{{ source }}（轮次账本；跨轮组织账本属 harness 侧，如实注明）</span>
+        <span class="gis__src">数据源：{{ source }}（本次运行账本）</span>
       </p>
       <p v-if="rows.length === 0" class="gis__hint" data-testid="gis-empty">台账无 ISSUE 行。</p>
       <table v-else class="gis__table" data-testid="gis-table">
