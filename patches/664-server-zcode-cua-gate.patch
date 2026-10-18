@@ -1,0 +1,24 @@
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts b/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
+index 9e20565..cbda77d 100644
+--- a/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
++++ b/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
+@@ -5,6 +5,10 @@ import { startNativeTurnProcess } from '../runtime/native-turn-process'
+ import { applyZcodeEvent } from './event-adapter'
+ import type { CodingAgentImageInput } from '../../protocol/types'
+ import { prepareZcodePrompt } from './prompt'
++// overlay[cua-gate]（Cua 完整回路，2026-10-18）：会话级电脑操作闸——默认
++// fail-closed（ZCODE_CUA_DISABLE=1 → zcode-cua 运行时 unavailable），IDE 经
++// /api/ide/cua/session/:id 显式开启的会话才放行。策略单一事实源=custom/cua/policy。
++import { cuaEnvForSession } from '../../../../custom/cua/policy'
+ 
+ // Read the prompt before executing the CJS entrypoint as Node's main module.
+ // Windows command lines cannot carry arbitrary multiline/long chat content.
+@@ -12,6 +16,8 @@ const WINDOWS_PROMPT_BRIDGE = "let input='';process.stdin.setEncoding('utf8');pr
+ 
+ export function startZcodeChatTurn(definition: { name: string }, run: ManagedCodingAgentRun, input: string, systemPrompt: string, host: NativeTurnHost, images: CodingAgentImageInput[] = []) {
+   const bridge = process.platform === 'win32' && run.launch.command === process.execPath && /\.cjs$/i.test(run.launch.args[0] || '')
++  // overlay[cua-gate]：闸门 env 合并进本次 spawn（不改 launch 持久面，per-turn 生效）
++  run.launch.env = { ...run.launch.env, ...cuaEnvForSession(run.launch.sessionId) }
+   const baseArgs = [...run.launch.args, '--output-format', 'stream-json', '--mode', run.launch.approvalRequired ? 'plan' : 'yolo',
+     ...(run.nativeResumeReady && run.launch.agentNativeSessionId ? ['--resume', run.launch.agentNativeSessionId] : []),
+     ...images.flatMap(image => ['--attach', image.path])]
