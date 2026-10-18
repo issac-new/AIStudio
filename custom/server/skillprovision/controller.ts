@@ -5,8 +5,9 @@
 import { isAbsolute } from 'node:path'
 import Router from '@koa/router'
 import { buildReport } from './reconcile'
-import { loadManifest, manifestPath, writeManifest } from './manifest'
+import { loadManifest, resolveManifestPath, writeManifest } from './manifest'
 import { applyProvision, rollbackProvision } from './provision'
+import { fleetDir, readFleetReport } from './fleet'
 
 function bodyOf(ctx: unknown): Record<string, unknown> {
   const req = (ctx as { request?: { body?: unknown } })?.request
@@ -40,6 +41,16 @@ export function attachSkillProvisionRoutes(router: Router): void {
     }
   })
 
+  router.get('/provision/fleet', async (ctx) => {
+    try {
+      const dir = absoluteQuery(ctx.query.fleetDir, 'fleetDir') ?? fleetDir()
+      ctx.body = readFleetReport(dir)
+    } catch (e) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: [(e as Error).message] }
+    }
+  })
+
   router.get('/provision/manifest', async (ctx) => {
     const path = absoluteQuery(ctx.query.manifestPath, 'manifestPath')
     try {
@@ -54,10 +65,10 @@ export function attachSkillProvisionRoutes(router: Router): void {
   router.put('/provision/manifest', async (ctx) => {
     const body = bodyOf(ctx) as { manifest?: unknown; manifestPath?: unknown }
     const payload = body.manifest ?? body
-    const path = absoluteQuery(body.manifestPath, 'manifestPath') ?? manifestPath()
+    const path = absoluteQuery(body.manifestPath, 'manifestPath') ?? resolveManifestPath()
     try {
       const written = writeManifest(payload, path)
-      ctx.body = { ok: true, ...written }
+      ctx.body = { ok: true, ...written, effectiveReadPath: resolveManifestPath() }
     } catch (e) {
       ctx.status = 400
       ctx.body = { ok: false, problems: [(e as Error).message] }

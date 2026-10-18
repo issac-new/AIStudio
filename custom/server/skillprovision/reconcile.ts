@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { catalogAppliesTo, defaultCatalogPath, parseCatalog } from './catalog'
-import { loadManifest, manifestPath, matchRole } from './manifest'
+import { loadManifest, matchRole, resolveManifestPath } from './manifest'
 import { indexSkills, listProfiles, scanProfileSkills, scanSkillRoot, skillNames } from './scan'
 import type { ProfileReconcileRow, ProvisionReport } from './types'
 
@@ -92,7 +92,7 @@ export function buildReport(options: BuildReportOptions = {}): ProvisionReport {
   const hostRoot = resolve(options.hostRoot ?? defaultHostRoot())
   const simRoot = resolve(options.simRoot ?? defaultSimRoot())
   const profilesRoot = join(hostRoot, 'profiles')
-  const manifest = loadManifest(options.manifestPath ?? manifestPath())
+  const manifest = loadManifest(options.manifestPath ?? resolveManifestPath())
   const catalog = parseCatalog(options.catalogPath ?? defaultCatalogPath(hostRoot))
   const hostGlobal = scanSkillRoot(join(hostRoot, 'skills'))
   const hostGlobalIndex = indexSkills(hostGlobal)

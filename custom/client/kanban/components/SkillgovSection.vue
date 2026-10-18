@@ -68,7 +68,9 @@ async function saveRoles(): Promise<void> {
       body: JSON.stringify({ mappings: parsed }),
     })
     const data = (await res.json()) as { ok?: boolean; detail?: string }
-    rolesMsg.value = data.ok ? '已保存（下一轮推演启动时安装管线按后缀补装）' : `保存失败：${data.detail ?? ''}`
+    rolesMsg.value = data.ok
+      ? '已保存（历史登记面：此表无执行管线；生效期望源=中央仓 skill-provisioning.json，见技能治理→供给对账页签）'
+      : `保存失败：${data.detail ?? ''}`
     await refreshRoles()
   } catch (err) { rolesMsg.value = `JSON 解析失败：${err instanceof Error ? err.message : String(err)}` }
 }
