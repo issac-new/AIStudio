@@ -10,7 +10,7 @@ import { useRoute } from 'vue-router'
 export const LAST_RUN_KEY = 'ia2.lastRun'
 
 export function useRunContext() {
-  // 无路由上下文（嵌板测试态）兜底：useRoute 可能返回 undefined（IaOverviewEntry 先例）
+  // 无路由上下文（嵌板测试态）兜底：useRoute 可能返回 undefined（嵌板测试态先例）
   const route = useRoute() as ReturnType<typeof useRoute> | undefined
   const fromQuery = () => String(route?.query?.run ?? '').trim()
   const run = ref(fromQuery() || localStorage.getItem(LAST_RUN_KEY) || '')

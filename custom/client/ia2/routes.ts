@@ -1,5 +1,5 @@
 // overlay/custom/client/ia2/routes.ts
-// 驾驶舱路由树（/app/*）—— 2026-09-19 v12 统一视图重构：
+// 工作台路由树（/app/*）—— 2026-09-19 v12 统一视图重构：
 // 双视图（沟通协作 /app 工作台 + IDE /ide 壳），六场景退役为单一「沟通协作」
 // 三栏工作台（工作流导航 | 对象工作区 | 任务与决策）。旧直达链接迁移表：
 //   /app/ops(/runs/:runId) → /app/runs(/:runId)；/app/tasks → /app/board；
@@ -56,7 +56,7 @@ export function areaForPath(path: string): IaAreaKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 与 nav-centers.centerForPath 同步：仿真中心归④开发、治理中心归⑥治理
+  // 与 nav-centers.centerForPath 同步：全流程推演归④开发、⑥治理归阶段页
   if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
   if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
@@ -148,7 +148,7 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
 export function buildIaRoutes(): RouteRecordRaw[] {
   const workbench = () => import('./views/WorkbenchView.vue')
-  // 推演中心壳（B1）：六签兄弟路由共用同一懒组件
+  // 全流程推演专区壳（B1）：六签兄弟路由共用同一懒组件
   const simShell = () => import('./views/sim/SimCenterView.vue')
   // 含参目标转函数式重定向：vue-router 字符串重定向不透传源路径参数
   // （roomId 等含 !/: 特殊字符，经 path 直拼不经 params 序列化）
@@ -202,7 +202,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: workbench,
         },
         {
-          // P5 驾驶舱概览（我的待办/评审闸口/交付进度）：显式路由，
+          // P5 工作台概览（我的待办/评审闸口/交付进度）：显式路由，
           // 不占对象选择轴（ia2.collab 的 auto-select 语义不动）
           path: 'dash',
           name: 'ia2.dash',
@@ -393,10 +393,10 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/sim/SimOrchestrationView.vue'),
         },
         {
-          // 全部运行 → 推演中心（B1，2026-10-16）：RunCenter 整页退役为重定向，
-          // 保留一个版本周期（A13 升格=运行列表能力并入推演中心后移除本记录）；
+          // 全部运行 → 全流程推演（B1，2026-10-16）：RunCenter 整页退役为重定向，
+          // 保留一个版本周期（A13 升格=运行列表能力并入全流程推演后移除本记录）；
           // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel/inbox-center 等）随
-          // 重定向链落推演中心，零改动。?tab=runs/?loop= 等 RunCenter 专属
+          // 重定向链落全流程推演，零改动。?tab=runs/?loop= 等 RunCenter 专属
           // query 无消费者（loop 预填随整页退役；vue-router redirect 会把
           // 原 query 并入目标 URL，落点路由不受影响）
           path: 'runs',
@@ -404,7 +404,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           redirect: () => ({ path: '/app/sim' }),
         },
         {
-          // 运行详情 → 推演中心（B1，2026-10-16）：run 参数保留为轮次定位锚
+          // 运行详情 → 全流程推演（B1，2026-10-16）：run 参数保留为轮次定位锚
           // （签 1 轮次总览消费；A13 升格同上——详情能力由轮次总览/锚点抽屉承接）。
           // path 式重定向（非 name 式）：vue-router 4.1.4+ 按名目标会并入原导航
           // params 触发 Discarded invalid param 告警，含参重定向走 path 拼接
