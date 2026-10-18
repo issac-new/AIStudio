@@ -15,6 +15,10 @@ import { join, resolve } from 'path'
 import type { Context, Next } from 'koa'
 import { writeThroughToEngine } from './engine-models'
 import { remoteList, remoteStatus, type RemoteDeps } from './remote-workspace'
+// 电脑操作接通轮：engine-bridge 静态导入（模块无副作用，连接按需发起）——
+// 动态 import 在 vitest 下不进 mock 注册表（实测握手超时真连引擎），kanban
+// 先例（column-automation.test.ts）静态导入+vi.mock 才拦得住。
+import { connectZCodeEngine } from '../../zcode/engine-bridge'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -72,7 +76,74 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleZcodePlugins(ctx)
       return
     }
+    // ── 电脑操作（2026-10-18 接通轮）：zcode 引擎插件真接线，状态/切换均以引擎为
+    //    单一事实源（listPlugins/setPluginEnabled，插件启停热更新运行态）。──
+    if (method === 'GET' && path === '/api/ide/computer-use') {
+      await handleComputerUseGet(ctx)
+      return
+    }
+    if (method === 'PUT' && path === '/api/ide/computer-use') {
+      await handleComputerUsePut(ctx)
+      return
+    }
     await next()
+  }
+}
+
+// ── 电脑操作（computer-use 引擎插件）：ZCode 桌面同款语义——插件启停=user 级
+// 全局态（pluginManagementService 头注：事实源在 zcode-cli 进程，读写 ~/.zcode
+// 插件目录并热更新运行态）；会话忙时引擎拒绝切换，如实透出。插件 id 锚=
+// upstream/zcode packages/shared/src/mcp.ts:10。
+const CUA_PLUGIN_ID = 'computer-use@zcode-plugins-official'
+
+interface ComputerUseState {
+  ok: boolean
+  supported: boolean
+  enabled: boolean
+  pluginId: string
+  detail?: string
+}
+
+async function readComputerUseState(workspacePath: string): Promise<ComputerUseState> {
+  try {
+    const bridge = await connectZCodeEngine(process.env.ZCODE_HOME ?? process.env.HOME ?? '~')
+    try {
+      const result = await bridge.agent.listPlugins({ workspacePath }) as { plugins?: Array<{ id: string; enabled: boolean }> }
+      const plugin = (result.plugins ?? []).find(p => p.id === CUA_PLUGIN_ID)
+      return { ok: true, supported: !!plugin, enabled: plugin?.enabled === true, pluginId: CUA_PLUGIN_ID }
+    } finally {
+      bridge.close()
+    }
+  } catch (e) {
+    return { ok: false, supported: false, enabled: false, pluginId: CUA_PLUGIN_ID, detail: e instanceof Error ? e.message.slice(0, 200) : String(e) }
+  }
+}
+
+async function handleComputerUseGet(ctx: Context): Promise<void> {
+  const ws = String((ctx.query as Record<string, unknown>)?.workspacePath ?? '/tmp')
+  ctx.body = await readComputerUseState(ws)
+}
+
+async function handleComputerUsePut(ctx: Context): Promise<void> {
+  const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
+  const enabled = body.enabled === true
+  const workspacePath = typeof body.workspacePath === 'string' && body.workspacePath.trim() ? body.workspacePath : '/tmp'
+  try {
+    const bridge = await connectZCodeEngine(process.env.ZCODE_HOME ?? process.env.HOME ?? '~')
+    try {
+      // scope:user=ZCode 同款全局态；引擎忙时（运行中会话工具集不可变）会拒绝——如实透出
+      await bridge.agent.setPluginEnabled({ workspacePath, pluginId: CUA_PLUGIN_ID, enabled, scope: 'user' })
+    } finally {
+      bridge.close()
+    }
+    // 回读引擎真值作为应答（不 echo 请求值——写失败/被引擎改判都能照实返回）
+    ctx.body = await readComputerUseState(workspacePath)
+  } catch (e) {
+    ctx.status = 503
+    ctx.body = {
+      ok: false, supported: false, enabled: false, pluginId: CUA_PLUGIN_ID,
+      detail: e instanceof Error ? e.message.slice(0, 200) : String(e),
+    }
   }
 }
 

@@ -175,20 +175,30 @@ function versionLt(a: string, b: string): boolean {
   return false
 }
 
-/** 思考档位规则（manifest modelConfigRules.modelRules）：modelMatch 正则匹配模型 id，
- *  optionSpecs.reasoningLevel.values 给档位列表；规则按声明序求值，后命中覆盖先命中。 */
+/** 思考档位规则（manifest modelConfigRules）：modelMatch 正则匹配模型 id，
+ *  optionSpecs.reasoningLevel.values 给档位列表。匹配语义=引擎同款——
+ *  `^(?:pattern)$` 全匹配+大小写不敏感（引擎真值 upstream/zcode packages/
+ *  provider/src/config/model-config.ts:408,545；发送链 model-options.ts:43-49 同款）。
+ *  2026-10-18 双源根治：旧实现大小写敏感不锚定，GLM-5.3（大写）只命中通配
+ *  `.*`→[disabled,enabled]，引擎/发送链实为 [low,high,max]，选「开」发送被拒。 */
 interface ZcodeModelRule {
   modelMatch?: string
-  config?: { optionSpecs?: { reasoningLevel?: { values?: string[] } } }
+  config?: { optionSpecs?: { reasoningLevel?: { values?: string[] } | null } }
+}
+
+interface ZcodeBuiltinProviderModelRule extends ZcodeModelRule {
+  providerId?: string
+  modelId?: string
 }
 
 function readZcodeBuiltinManifest(): {
   templates: Map<string, ZcodeBuiltinTemplate>
   modelRules: ZcodeModelRule[]
+  builtinProviderModelRules: ZcodeBuiltinProviderModelRule[]
 } {
   try {
     const base = join(zcodeRoot(), 'v2', 'runtime', 'provider')
-    if (!existsSync(base)) return { templates: new Map(), modelRules: [] }
+    if (!existsSync(base)) return { templates: new Map(), modelRules: [], builtinProviderModelRules: [] }
     let newest: { manifest: Record<string, unknown>; version: string } | null = null
     for (const platform of readdirSync(base)) {
       const platformDir = join(base, platform)
@@ -208,16 +218,20 @@ function readZcodeBuiltinManifest(): {
     const config = (newest?.manifest as {
       config?: {
         providerConfigRules?: { templateRules?: ZcodeBuiltinTemplate[] }
-        modelConfigRules?: { modelRules?: ZcodeModelRule[] }
+        modelConfigRules?: {
+          modelRules?: ZcodeModelRule[]
+          builtinProviderModelRules?: ZcodeBuiltinProviderModelRule[]
+        }
       }
     })?.config
     const templates = config?.providerConfigRules?.templateRules ?? []
     return {
       templates: new Map(templates.map(t => [t.templateId, t])),
       modelRules: config?.modelConfigRules?.modelRules ?? [],
+      builtinProviderModelRules: config?.modelConfigRules?.builtinProviderModelRules ?? [],
     }
   } catch {
-    return { templates: new Map(), modelRules: [] }
+    return { templates: new Map(), modelRules: [], builtinProviderModelRules: [] }
   }
 }
 
@@ -225,19 +239,35 @@ function readZcodeBuiltinTemplates(): Map<string, ZcodeBuiltinTemplate> {
   return readZcodeBuiltinManifest().templates
 }
 
-/** 模型思考档位：manifest 规则后命中覆盖；无规则给档位 → null（不伪造）。 */
+function ruleMatchesModel(pattern: string | undefined, modelId: string): boolean {
+  if (!pattern) return false
+  try { return new RegExp(`^(?:${pattern})$`, 'i').test(modelId) } catch { return false }
+}
+
+/** 模型思考档位：引擎语义（全匹配+不区分大小写）后命中覆盖；builtin 精确规则
+ *  （providerId 匹配调用方引擎条目+modelId 精确）压轴；reasoningLevel:null 清空；
+ *  无规则给档位 → null（不伪造）。 */
 export function zcodeModelReasoningLevels(
   modelId: string,
   modelRules: ZcodeModelRule[] = readZcodeBuiltinManifest().modelRules,
+  builtinProviderRules: ZcodeBuiltinProviderModelRule[] = [],
+  providerId?: string,
 ): string[] | null {
   let levels: string[] | null = null
-  for (const rule of modelRules) {
-    if (!rule.modelMatch) continue
-    let re: RegExp
-    try { re = new RegExp(rule.modelMatch) } catch { continue }
-    if (!re.test(modelId)) continue
-    const values = rule.config?.optionSpecs?.reasoningLevel?.values
+  const overlay = (rule: ZcodeModelRule): void => {
+    const specs = rule.config?.optionSpecs
+    if (specs?.reasoningLevel === null) { levels = null; return }
+    const values = specs?.reasoningLevel?.values
     if (values && values.length > 0) levels = values
+  }
+  for (const rule of modelRules) {
+    if (ruleMatchesModel(rule.modelMatch, modelId)) overlay(rule)
+  }
+  for (const rule of builtinProviderRules) {
+    // providerId 在场时按 provider 过滤（builtin 规则是 per-provider 覆盖，不是全局）；
+    // 缺省（无调用方上下文）退化为 modelId 精确匹配（保守：仍要求 modelId 精确相等）。
+    if (rule.modelId !== modelId) continue
+    if (providerId ? rule.providerId === providerId : rule.providerId === undefined) overlay(rule)
   }
   return levels
 }
@@ -288,9 +318,10 @@ export function readZcodeCatalog(): ZcodeCatalogGroup[] {
       const ordered: Array<{ id: string; reasoningLevels?: string[] }> = []
       const pushWithLevels = (m: { id: string; reasoningLevels?: string[] }) => {
         // 思考档位（2026-10-18 用户指令）：per-model reasoningLevels 缺省时按
-        // manifest 档位规则补（如 glm-5.3 → low/high/max），不落 Hermes 默认档。
+        // manifest 档位规则补（引擎同款匹配语义，GLM-5.3 → low/high/max），
+        // 不落 Hermes 默认档；builtin 精确规则（provider+model）一并参与覆盖。
         if (!m.reasoningLevels) {
-          const ladder = zcodeModelReasoningLevels(m.id, manifest.modelRules)
+          const ladder = zcodeModelReasoningLevels(m.id, manifest.modelRules, manifest.builtinProviderModelRules, providerId)
           if (ladder) ordered.push({ ...m, reasoningLevels: ladder })
           else ordered.push(m)
         } else ordered.push(m)
