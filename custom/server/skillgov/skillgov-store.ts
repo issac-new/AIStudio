@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from '
 import { join, dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import Router from '@koa/router'
+import { attachSkillProvisionRoutes } from '../skillprovision/controller'
 
 export interface RoleMapping {
   /** profile 名后缀模式（如 "-tester"） */
@@ -109,5 +110,9 @@ router.put('/role-mappings', async (ctx) => {
 router.get('/lessons', async (ctx) => {
   ctx.body = { ok: true, lessons: listLessons(typeof ctx.query.root === 'string' && ctx.query.root ? ctx.query.root : undefined) }
 })
+
+// 技能供给对账/供给（2026-10-18 技能供给轮）：复用本 router 的 /api/skillgov
+// 前缀，不新增上游 patch；详见 custom/server/skillprovision/。
+attachSkillProvisionRoutes(router)
 
 export default router
