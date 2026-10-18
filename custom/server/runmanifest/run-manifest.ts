@@ -189,7 +189,9 @@ interface TraceLine {
   output_tokens?: number
 }
 
-/** 从 trace 汇总一次运行的 token 与估价。缺 trace/未收录模型如实返回 null。 */
+/** 从 trace 汇总一次运行的 token 与估价。缺 trace/未收录模型如实返回 null。
+ *  口径说明：trace usage 未单列 cache token，输入统一按未缓存价计——金额是上界，
+ *  不把估算值当实际账单。 */
 export function runCostFromTrace(manifest: RunManifest, opts: RunCostOptions = {}): RunCost {
   const since = opts.since ?? manifest.startedAt
   const file = join(tracesDirOf(opts), `${manifest.sessionId}.jsonl`)
