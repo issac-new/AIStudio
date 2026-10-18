@@ -289,35 +289,23 @@ describe('IdeChatPane composer 工具条（ZCode 对齐）', () => {
     expect(w.find('[data-testid="ide-model-switcher"]').exists()).toBe(false)
   })
 
-  it('电脑操作开关：引擎真值驱动（GET 拉态、PUT 切换），引擎不可达转错误态', async () => {
+  it('电脑操作开关：会话闸门真实接线（PUT 写策略，失败回弹不装成功）', async () => {
     catalogMock.mockResolvedValue({ independent: true, groups: [{ provider: 'bigmodel', models: LEVELS_MODEL }] })
     state.activeSessionId = 's1'
     state.activeSession = { id: 's1', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped' }
-    // 按 URL 分流（挂载期还有 loadLatestDiff 等其他 authFetch 调用，排队式 once 会被抢占）
-    let cuEnabled = true
-    let cuError = false
-    cuFetchMock.mockImplementation(async (path: string, init?: { method?: string; body?: string }) => {
-      if (cuError) throw new Error('engine down')
-      if (!String(path).includes('/api/ide/computer-use')) throw new Error(`unexpected ${path}`)
-      if (init?.method === 'PUT') {
-        expect(JSON.parse(String(init.body)).enabled).toBe(!cuEnabled)
-        cuEnabled = !cuEnabled
-      }
-      return jsonRes({ ok: true, supported: true, enabled: cuEnabled })
-    })
     const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
     await flushPromises()
     const btn = w.find('[data-testid="ide-computer-use"]')
+    expect(btn.classes()).not.toContain('is-on')
+    await btn.trigger('click')
+    await flushPromises()
+    // 会话闸门 PUT 成功 → is-on；[computer-use-policy] 声明保留
     expect(btn.classes()).toContain('is-on')
-    // 点击=PUT 关闭（带工作区）；应答=引擎回读真值
+    expect(String(sendMessage.mock.calls.at(-1)?.[0])).toContain('[computer-use-policy] enabled=true')
     await btn.trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="ide-computer-use"]').classes()).not.toContain('is-on')
-    // 引擎不可达 → 错误态（红点）
-    cuError = true
-    const w2 = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
-    await flushPromises()
-    expect(w2.find('[data-testid="ide-computer-use"]').classes()).toContain('is-error')
+    expect(String(sendMessage.mock.calls.at(-1)?.[0])).toContain('enabled=false')
   })
 
   it('模型面板：Auto 路由入口 + 管理模型入口（打开引擎目录对话框，保存写穿重拉）', async () => {

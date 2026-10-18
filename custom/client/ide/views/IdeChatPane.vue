@@ -1065,15 +1065,15 @@ watch(() => chatStore.activeSessionId, syncPermMode)
              原样收进行尾。 -->
         <div class="ide-chat__composerbar" data-testid="ide-composer-bar">
           <IdePermissionSwitcher />
-          <!-- 电脑操作（2026-10-18 接通轮）：引擎插件真接线（computer-use@
-               zcode-plugins-official user 级启停，热更新）；状态点=引擎真值。 -->
+          <!-- 电脑操作（Cua 完整回路）：会话级闸门（/api/ide/cua/session/:id，
+               fail-closed 默认，patch 664 spawn env 注入）；引擎级全局启停见
+               /api/ide/computer-use（并行接通轮端点，本按钮不占用）。 -->
           <button
             type="button"
             class="ide-chat__cb-btn"
-            :class="{ 'is-on': cuState === 'on', 'is-error': cuState === 'error' }"
-            :disabled="cuBusy"
+            :class="{ 'is-on': computerUseOn }"
             data-testid="ide-computer-use"
-            :title="cuState === 'error' ? (cuDetail || '引擎不可达') : tx.computerUseTip"
+            :title="tx.computerUseTip"
             @click="toggleComputerUse"
           ><span class="ide-chat__cb-dot" />{{ tx.computerUse }}</button>
           <IdeContextBar />
