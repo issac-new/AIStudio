@@ -1185,12 +1185,15 @@ async function pickEffort(value: string): Promise<void> {
   :deep(.reasoning-effort-button) { display: none; }
 }
 
-// Ycode 思考档：挂在 composer 右下（Send 左侧），与 zcode composer 控件同区。
+// Ycode 思考档：浮在输入区右上角。composer 底部行（模型按钮/发送）在窄列下
+// 已占满，且 input-wrapper 的层级会盖住 anchor 内兄弟绝对定位元素（2026-10-18
+// 实测按钮渲染在 (485,787) 却被 input-wrapper 覆盖不可见）——放行上方右缘并
+// 提高 z-index 保证可见可点。
 .ide-chat__effort {
   position: absolute;
-  right: 48px;
-  bottom: 6px;
-  z-index: 6;
+  top: -32px;
+  right: 6px;
+  z-index: 20;
 }
 .ide-chat__effort-btn {
   border: 1px solid var(--border-color);
@@ -1210,7 +1213,7 @@ async function pickEffort(value: string): Promise<void> {
 .ide-chat__effort-menu {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   min-width: 108px;
   padding: 4px;
   border: 1px solid var(--border-color);
