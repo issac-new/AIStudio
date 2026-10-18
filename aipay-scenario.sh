@@ -1789,7 +1789,12 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   # repo_has（origin/main）查它=永假——run7 六代重启代代白派报告任务书（jq 崩溃期）的
   # 放大器。与下方 wait_alive_truth 等待谓词同口径（test_report_on_integration）。
   if ! test_report_on_integration "${RFD_ID}"; then
-    dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告：
+    # 总分总并行（2026-10-18 用户指令：报告类任务拆分-并行-汇总）：BE 章节片与 FE
+    # 章节片由两名测试 AI 并行起草（各自会话、各自章节文件），汇总人合并成稿——
+    # 单人串行写全报告的历史耗时 ~40 分钟压缩到 ~1/2+。
+    dispatch_in_room qi "@qi-agent:matrix.test 测试报告·BE 片（并行分工）：在 integration/${RFD_ID} 分支写 docs/test/${RFD_ID}-test-report-BE.md（范围与环境/后端用例-结果矩阵/缺陷统计/回归结论/残留风险+V8.20 五项标注，仅后端部分）。做完 push 并回一行 BE-SECTION-DONE。不要写前端章节（由测试工程师B 并行负责）。" "$(agent_mxid qi)"
+    dispatch_in_room fei "@fei-agent:matrix.test 测试报告·FE 片（并行分工）：在 integration/${RFD_ID} 分支写 docs/test/${RFD_ID}-test-report-FE.md（前端用例-结果矩阵/缺陷统计/回归结论/残留风险+V8.20 五项标注，仅前端部分）。做完 push 并回一行 FE-SECTION-DONE。不要写后端章节（由测试工程师A 并行负责）。" "$(agent_mxid fei)"
+    dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告（汇总篇，总分总之总）：
 1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围与环境/用例-结果矩阵/缺陷分级统计/回归结论/残留风险与未解异常（出口准则=残留可接受并写明理由）/通过时的 git commit id；另附 V8.20 五项：设计技术标注（等价类/边界值/状态迁移各注适用理由）·覆盖声明数值化（语句/分支至少一档给数）·安全测试项显式（含人工测试项单列）·测试金字塔形态（单元/集成/端到端三层用例数））
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
