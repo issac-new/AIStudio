@@ -21,3 +21,11 @@
 
 - pipeline-engine 测试 6/6 绿（vitest 定点）；文案变更不涉路由/端点。
 - 产品 dist 不重建（run21 运行中；下轮供给自然带上，与性能批/驾驶舱批同队列）。
+
+## 增补（2026-10-18 11:4x，第二批：推送受阻+产物信号）
+
+5. **agent.push-stalled 检测器（48935f58）**：巡检官扫 profile 日志尾失败签名（CONFLICT/non-fast-forward/REJECTED: integration），新签名=warn、陈化 10 分钟=high；run21 冲突 40 分钟静默盲区产品化。
+6. **监督面板产物信号区**：SupervisionPanel 新增分支实物区（commit 数+最近推送时间，复用 branches 端点），fail-soft 不渲染缺席端点；「日志活跃≠进展」的观察口径产品化（03 时活跃零产出/P0 活跃无提交两例实证）。
+## 决策记录（增补）
+8. 产物信号复用 branches 端点而非新端点：交付健康同源单一事实源；面板 fail-soft。
+9. 检测器读既有 ProfilesFace 尾 240 字符：零采集器改动，纯函数可测。
