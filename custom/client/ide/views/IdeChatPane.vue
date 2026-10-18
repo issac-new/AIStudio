@@ -67,6 +67,7 @@ import {
   type OpenSubagentStreamDetail,
 } from '@/utils/hermes/subagent-stream'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
+import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -565,23 +566,62 @@ const effortLabelShort = computed(() =>
 )
 async function pickEffort(value: string): Promise<void> {
   effortOpen.value = false
+  composerSettingsOpen.value = false
   const sid = chatStore.activeSessionId
   if (!sid) return
   await chatStore.setSessionReasoningEffort?.(sid, value)
 }
-// 思考档宿主：ChatInput 底栏左簇（设置/模型按钮所在的 .input-top-bar）。宿主属上游
+
+// ── composer「设置」菜单（2026-10-18 用户指令：模式/模型要能在设置里调，zcode 有）──
+// 上游 ChatInput 的设置菜单只有「显示工具调用」等，IDE 侧隐藏原按钮，Teleport 自有
+// 菜单进同一位置：模式（七档，与 IdePermissionSwitcher 同 localStorage 键，经事件
+// 同步）/ 模型（打开 Ycode 模型选择器）/ 思考（档位 chips）/ 显示工具调用（同
+// useToolTraceVisibility 单一事实源）。
+const composerSettingsOpen = ref(false)
+const PERM_MODES: Array<{ key: string; label: string; hint: string }> = [
+  { key: 'readonly', label: '只读', hint: 'read only — 仅查看（plan 档同义）' },
+  { key: 'plan', label: '计划', hint: 'plan — 只规划不执行' },
+  { key: 'default', label: '标准', hint: 'default — 写免审、执行需批' },
+  { key: 'acceptEdits', label: '自动编辑', hint: 'acceptEdits — 编辑免审' },
+  { key: 'dontAsk', label: '少问', hint: 'dontAsk — 执行免审' },
+  { key: 'auto', label: '全自动', hint: 'auto — 全免审' },
+  { key: 'bypassPermissions', label: '绕过', hint: 'bypassPermissions — 最高信任' },
+]
+const PERM_KEY = 'ide-permission-mode:'
+const PERM_MODE_EVENT = 'ide-perm-mode-changed'
+function permStorageKey(): string { return PERM_KEY + (chatStore.activeSessionId ?? 'default') }
+const permMode = ref('default')
+function syncPermMode(): void { permMode.value = localStorage.getItem(permStorageKey()) || 'default' }
+function pickPermMode(key: string): void {
+  permMode.value = key
+  localStorage.setItem(permStorageKey(), key)
+  window.dispatchEvent(new CustomEvent(PERM_MODE_EVENT, { detail: { key, sessionId: chatStore.activeSessionId } }))
+}
+const permModeLabel = computed(() => PERM_MODES.find(m => m.key === permMode.value)?.label ?? permMode.value)
+const { toolTraceVisible, toggleToolTraceVisible } = useToolTraceVisibility()
+const labels = computed(() => isZhLocale.value
+  ? { settings: '设置', mode: '模式', model: '模型', think: '思考', toolTrace: '显示工具调用', changeModel: '打开模型选择器' }
+  : { settings: 'Settings', mode: 'Mode', model: 'Model', think: 'Think', toolTrace: 'Show tool calls', changeModel: 'Open model picker' })
+onMounted(() => {
+  syncPermMode()
+  window.addEventListener(PERM_MODE_EVENT, syncPermMode)
+})
+onUnmounted(() => window.removeEventListener(PERM_MODE_EVENT, syncPermMode))
+watch(() => chatStore.activeSessionId, syncPermMode)
+
+// composer 宿主：ChatInput 底栏左簇（设置/模型按钮所在的 .input-top-bar）。宿主属上游
 // 组件 DOM，不在本组件 vnode 树内——挂载后与会话切换后解析一次，宿主脱离文档
 // 即重解析；始终找不到就回落浮层（Teleport disabled 就地渲染）。
 const pickerAnchorEl = ref<HTMLElement | null>(null)
-const effortHost = ref<HTMLElement | null>(null)
+const composerBarHost = ref<HTMLElement | null>(null)
 function resolveEffortHost(): void {
   const host = pickerAnchorEl.value?.querySelector<HTMLElement>('.input-top-bar') ?? null
-  effortHost.value = host && document.contains(host) ? host : null
+  composerBarHost.value = host && document.contains(host) ? host : null
 }
 onMounted(() => { void nextTick(resolveEffortHost) })
 watch(() => [chatStore.activeSessionId, ready.value], () => { void nextTick(resolveEffortHost) })
 watch(effortLevels, () => {
-  if (effortHost.value && !document.contains(effortHost.value)) void nextTick(resolveEffortHost)
+  if (composerBarHost.value && !document.contains(composerBarHost.value)) void nextTick(resolveEffortHost)
 })
 </script>
 
@@ -843,11 +883,11 @@ watch(effortLevels, () => {
              reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
              控件已禁用并隐藏。位置与 zcode 一致：Teleport 进 ChatInput 底栏左簇
              （.input-top-bar，紧挨模型按钮）；找不到宿主时就地浮于输入区右上。 -->
-        <Teleport :to="effortHost" :disabled="!effortHost">
+        <Teleport :to="composerBarHost" :disabled="!composerBarHost">
           <div
             v-if="effortLevels.length > 0"
             class="ide-chat__effort"
-            :class="{ 'is-floating': !effortHost }"
+            :class="{ 'is-floating': !composerBarHost }"
             data-testid="ide-effort"
           >
             <button
@@ -873,6 +913,68 @@ watch(effortLevels, () => {
                 :class="{ 'is-active': sessionEffort === lv }"
                 @click="pickEffort(lv)"
               >{{ effortLevelLabel(lv) }}</button>
+            </div>
+          </div>
+          <!-- composer 设置菜单（zcode 对照：模式/模型就地可调；2026-10-18 用户指令） -->
+          <div
+            class="ide-chat__csettings"
+            :class="{ 'is-floating': !composerBarHost }"
+            data-testid="ide-composer-settings"
+          >
+            <button
+              type="button"
+              class="ide-chat__effort-btn ide-chat__csettings-btn"
+              data-testid="ide-composer-settings-btn"
+              :title="labels.settings"
+              @click="composerSettingsOpen = !composerSettingsOpen"
+            >⚙ {{ labels.settings }}<span class="ide-chat__effort-caret">▾</span></button>
+            <div v-if="composerSettingsOpen" class="ide-chat__csettings-menu" data-testid="ide-composer-settings-menu">
+              <div class="ide-chat__csettings-section">
+                <div class="ide-chat__csettings-title">{{ labels.mode }} · {{ permModeLabel }}</div>
+                <div class="ide-chat__csettings-chips">
+                  <button
+                    v-for="m in PERM_MODES"
+                    :key="m.key"
+                    type="button"
+                    class="ide-chat__csettings-chip"
+                    :class="{ 'is-active': permMode === m.key }"
+                    :data-testid="`ide-settings-mode-${m.key}`"
+                    :title="m.hint"
+                    @click="pickPermMode(m.key)"
+                  >{{ m.label }}</button>
+                </div>
+              </div>
+              <div class="ide-chat__csettings-section">
+                <div class="ide-chat__csettings-title">{{ labels.model }} · {{ modelLabel || '—' }}</div>
+                <button
+                  type="button"
+                  class="ide-chat__csettings-row"
+                  data-testid="ide-settings-model-row"
+                  @click="composerSettingsOpen = false; onModelClick()"
+                >{{ labels.changeModel }} ›</button>
+              </div>
+              <div v-if="effortLevels.length > 0" class="ide-chat__csettings-section">
+                <div class="ide-chat__csettings-title">{{ labels.think }}</div>
+                <div class="ide-chat__csettings-chips">
+                  <button type="button" class="ide-chat__csettings-chip" :class="{ 'is-active': sessionEffort === '' }" @click="pickEffort('')">{{ effortDefaultLabel }}</button>
+                  <button
+                    v-for="lv in effortLevels"
+                    :key="lv"
+                    type="button"
+                    class="ide-chat__csettings-chip"
+                    :class="{ 'is-active': sessionEffort === lv }"
+                    @click="pickEffort(lv)"
+                  >{{ effortLevelLabel(lv) }}</button>
+                </div>
+              </div>
+              <div class="ide-chat__csettings-section">
+                <button
+                  type="button"
+                  class="ide-chat__csettings-row"
+                  data-testid="ide-settings-tooltrace"
+                  @click="toggleToolTraceVisible()"
+                >{{ toolTraceVisible ? '✓ ' : '' }}{{ labels.toolTrace }}</button>
+              </div>
             </div>
           </div>
         </Teleport>
@@ -1214,8 +1316,10 @@ watch(effortLevels, () => {
   position: relative;
   // Ycode 思考档替换 Hermes 推理强度控件（2026-10-18）：ChatInput 内置档位读
   // Hermes model_meta/默认档，与 ZCode 不一致——IDE 内隐藏，改用本组件的
-  // ide-chat__effort（档位=ZCode manifest）。
+  // ide-chat__effort（档位=ZCode manifest）。设置菜单同因：上游菜单无模式/模型
+  // （zcode 有，用户实报），隐藏原按钮，用 ide-chat__csettings。
   :deep(.reasoning-effort-button) { display: none; }
+  :deep(.input-settings-button) { display: none; }
 }
 
 // Ycode 思考档：默认 Teleport 进 ChatInput 底栏左簇（紧挨模型按钮，zcode 风格：
@@ -1281,6 +1385,68 @@ watch(effortLevels, () => {
   font-family: inherit;
   &:hover { background: var(--bg-tertiary); color: var(--text-primary); }
   &.is-active { color: var(--accent-primary); font-weight: 600; }
+}
+
+// composer 设置菜单（zcode 对照：模式/模型就地可调）。按钮复用 effort-btn 形态，
+// 菜单向上弹（与 effort-menu 同区），分区：模式 chips / 模型行 / 思考 chips / 工具调用。
+.ide-chat__csettings {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  z-index: 20;
+  &.is-floating {
+    position: absolute;
+    top: -32px;
+    right: 6px;
+  }
+}
+.ide-chat__csettings-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 30;
+  .is-floating & { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; }
+}
+.ide-chat__csettings-section { display: flex; flex-direction: column; gap: 4px; }
+.ide-chat__csettings-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+.ide-chat__csettings-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 2px; }
+.ide-chat__csettings-chip {
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  &:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+  &.is-active { color: var(--accent-primary); border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent); }
+}
+.ide-chat__csettings-row {
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  &:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 }
 
 .ide-chat__model-picker {

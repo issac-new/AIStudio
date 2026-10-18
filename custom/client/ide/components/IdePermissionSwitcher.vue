@@ -6,7 +6,7 @@
 // 会话内即时切换需引擎通道。通道锚点已查实：zcode v4 sendText payload 支持
 // mode: submissionModeSchema（build/edit/plan/yolo，command.ts:99），接线列独立轮
 // （需 /ide 发送链从 hermes 通道切/并到 engine sendText）。
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chatStore = useChatStore()
@@ -37,6 +37,20 @@ function pick(key: string): void {
   localStorage.setItem(storageKey(), key)
   open.value = false
 }
+
+// composer 设置菜单（IdeChatPane）写同一 localStorage 键后广播；本触发器与菜单
+// 互为同一事实源的两个入口，监听刷新保持显示一致。会话切换同理重读。
+const PERM_MODE_EVENT = 'ide-perm-mode-changed'
+function resync(): void { selected.value = current() }
+if (typeof window !== 'undefined') {
+  window.addEventListener(PERM_MODE_EVENT, resync)
+  window.addEventListener('storage', resync)
+  onUnmounted(() => {
+    window.removeEventListener(PERM_MODE_EVENT, resync)
+    window.removeEventListener('storage', resync)
+  })
+}
+watch(() => chatStore.activeSessionId, resync)
 
 /** 循环切换（Shift+Tab 语义）。 */
 function cycle(): void {
