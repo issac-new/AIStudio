@@ -127,6 +127,49 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
     rmSync(zhome, { recursive: true, force: true })
   })
 
+  it('readZcodeDefault/Catalog：provider_config.json 的 providerOrder 是第一来源（2026-10-18 用户实报对齐）', async () => {
+    const zhome = mkdtempSync(join(tmpdir(), 'zcode-pcorder-'))
+    fs_mkdirSync(join(zhome, 'v2'), { recursive: true })
+    writeFileSync(join(zhome, 'v2', 'config.json'), JSON.stringify({
+      provider: {
+        'builtin:bigmodel-coding-plan': { enabled: true, name: 'BigModel - Coding Plan', models: { 'GLM-5.3-Flash': {}, 'GLM-5.3': {} } },
+        'xglm': { enabled: true, name: 'SRK', models: { 'glm-5.3-flash': {}, 'glm-5.3': {} } },
+        'kimi-mid': { enabled: true, name: 'kimi-mid', models: { 'k3': {}, 'kimi-for-coding': {} } },
+        'disabled-one': { enabled: true, name: 'Disabled', models: { 'x': {} } },
+      },
+    }))
+    writeFileSync(join(zhome, 'v2', 'setting.json'), JSON.stringify({
+      providerFamilyDomain: 'bigmodel',
+      modelProviderFamilySelectedKeys: { bigmodel: 'coding-plan:builtin:bigmodel-coding-plan' },
+    }))
+    writeFileSync(join(zhome, 'v2', 'provider_config.json'), JSON.stringify({
+      schemaVersion: 1,
+      config: {
+        providerOrder: ['xglm', 'missing-provider', 'disabled-one', 'kimi-mid'],
+        providerConfigRules: { providerRules: [
+          { providerId: 'xglm', providerName: 'XGLM', enabled: true, config: { modelOrder: ['glm-5.3', 'glm-5.3-flash', 'not-in-catalog'] } },
+          { providerId: 'disabled-one', enabled: false, config: { modelOrder: ['x'] } },
+          { providerId: 'kimi-mid', providerName: 'kimi-mid', enabled: true, config: { modelOrder: ['kimi-for-coding', 'k3'] } },
+        ] },
+      },
+    }))
+    const prev = process.env.ZCODE_HOME
+    process.env.ZCODE_HOME = zhome
+    const mod = await import('../engine-models')
+    // 目录：providerOrder 命中的按序在前（xglm→kimi-mid），未命中的 config 序垫后；
+    // 组内模型按 modelOrder（与目录交集）重排；label 取 providerName；规则禁用的剔除。
+    const groups = mod.readZcodeCatalog()
+    expect(groups.map(g => g.provider)).toEqual(['xglm', 'kimi-mid', 'builtin:bigmodel-coding-plan'])
+    expect(groups[0]).toEqual({ provider: 'xglm', label: 'XGLM', models: [{ id: 'glm-5.3' }, { id: 'glm-5.3-flash' }] })
+    expect(groups[1].models.map(m => m.id)).toEqual(['kimi-for-coding', 'k3'])
+    // 默认：排首位且启用的 xglm，其 modelOrder 首个在目录内的模型 glm-5.3
+    // （压过 setting.json family 指向的 coding-plan/GLM-5.3-Flash）。
+    expect(mod.readZcodeDefault(groups)).toEqual({ provider: 'xglm', model: 'glm-5.3' })
+    if (prev === undefined) delete process.env.ZCODE_HOME
+    else process.env.ZCODE_HOME = prev
+    rmSync(zhome, { recursive: true, force: true })
+  })
+
   it('PUT 非法 400 带问题清单；合法原子落盘+回读一致', async () => {
     const bad = await run(router, 'put', {
       request: { body: { providers: [{ providerId: '', baseURL: 'x', models: [] }] } },
