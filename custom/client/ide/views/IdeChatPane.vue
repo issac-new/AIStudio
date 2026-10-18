@@ -54,6 +54,7 @@ import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
 import IdeImportHistory from '../components/IdeImportHistory.vue'
 import IdeKnowledgeBar from '../components/IdeKnowledgeBar.vue'
 import { ideRunsApi } from '../api/runs'
+import { ideCuaApi } from '../api/cua'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import {
@@ -76,6 +77,7 @@ import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
+import IdeCuaFloat from '../components/IdeCuaFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
 import IdeModBand from '../components/IdeModBand.vue'
@@ -659,22 +661,50 @@ function onManageSaved(): void {
   void loadCatalog()
 }
 
-// ── 电脑操作（ZCode composer CUA 入口对应物；声明式，spec D-2）──
-// ZCode CUA=宿主插件深集成（权限代理/Helper），IDE 引擎桥无该通道；与 websearch
-// 档同一既有模式：开/关各向当前会话发一条声明，实际能力以会话工具面为准。
+// ── 电脑操作（ZCode composer CUA 入口对应物）──
+// Cua 完整回路（2026-10-18）：开关写服务端会话闸门（/api/ide/cua/session/:id，
+// fail-closed 默认，patch 664 在 spawn 前注入 ZCODE_CUA_DISABLE），并保留一条
+// 会话声明消息引导 agent；本地 localStorage 只作 UI 即时态，服务端值优先。
 const CU_KEY = 'ide-computer-use:'
 function cuStorageKey(): string { return CU_KEY + (chatStore.activeSessionId ?? 'default') }
 const computerUseOn = ref(localStorage.getItem(CU_KEY + 'default') === 'on')
-watch(() => chatStore.activeSessionId, (sid, prev) => {
-  if (sid !== prev) computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
+const cuaUnavailable = ref(false)
+watch(() => chatStore.activeSessionId, async (sid, prev) => {
+  if (sid === prev) return
+  computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
+  if (sid) {
+    try {
+      const state = await ideCuaApi.session(sid)
+      computerUseOn.value = state.enabled
+    } catch { /* 服务端不可达保持本地态 */ }
+  }
 })
 async function toggleComputerUse(): Promise<void> {
-  computerUseOn.value = !computerUseOn.value
-  localStorage.setItem(cuStorageKey(), computerUseOn.value ? 'on' : 'off')
+  const target = !computerUseOn.value
+  const sid = chatStore.activeSessionId
+  try {
+    if (sid) {
+      const state = await ideCuaApi.setSession(sid, target)
+      computerUseOn.value = state.enabled
+      localStorage.setItem(cuStorageKey(), state.enabled ? 'on' : 'off')
+    } else {
+      computerUseOn.value = target
+      localStorage.setItem(cuStorageKey(), target ? 'on' : 'off')
+    }
+  } catch {
+    // 写失败不装成功：按钮回弹（fail-closed 语义由服务端兜底）
+    computerUseOn.value = !target
+    return
+  }
   await chatStore.sendMessage(
-    `[computer-use-policy] enabled=${computerUseOn.value} —— 声明式：允许使用电脑操作/浏览器控制工具；实际能力以会话工具面为准。`,
+    `[computer-use-policy] enabled=${computerUseOn.value} —— ${computerUseOn.value ? '已开启电脑操作：agent 可经 computer-use 技能驱动鼠标/键盘/截图（受会话权限档约束）。' : '已关闭电脑操作：CUA 运行时不可用（fail-closed）。'}`,
   )
 }
+onMounted(() => {
+  void ideCuaApi.status()
+    .then((s) => { cuaUnavailable.value = !s.available })
+    .catch(() => { cuaUnavailable.value = false })
+})
 
 
 // ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
@@ -844,6 +874,20 @@ watch(() => chatStore.activeSessionId, syncPermMode)
             <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
             <circle cx="17" cy="9" r="2.4" />
             <path d="M14.8 19a4.6 4.6 0 0 1 5.7-4.4" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          :class="{ 'is-on': ide.floats.cua }"
+          data-testid="ide-chat-float-cua"
+          :title="tx.cuaFloatTitle"
+          :aria-label="tx.cuaFloatTitle"
+          @click="ide.toggleFloat('cua')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="13" rx="2" />
+            <path d="M8 21h8M12 17v4" />
           </svg>
         </button>
         <button
@@ -1190,6 +1234,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       <!-- 浮窗（对标 zcode：任务计划 / 子代理名册，拖拽壳见 IdeFloatPanel） -->
       <IdePlanFloat v-if="ide.floats.plan" />
       <IdeSubagentsFloat v-if="ide.floats.agents" :focus-id="pendingSubagentId" />
+      <IdeCuaFloat v-if="ide.floats.cua" />
     </div>
   </section>
 </template>

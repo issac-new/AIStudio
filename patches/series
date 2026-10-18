@@ -868,3 +868,8 @@
 # custom/server/controllers/ide 深一级（五个 ../），原四层匹配漏掉导致 esbuild 解析失败。
 # 663 让位：661/662 已被并行 Harness 批占用。
 663-server-build-escape-five-up.patch
+
+# 664: zcode 会话 CUA 闸门（Cua 完整回路 2026-10-18）：startZcodeChatTurn 在 spawn 前
+# 合并 cuaEnvForSession(sessionId)——默认注入 ZCODE_CUA_DISABLE=1（fail-closed），
+# IDE 经 /api/ide/cua/session/:id 显式开启的会话才放行电脑操作运行时。
+664-server-zcode-cua-gate.patch

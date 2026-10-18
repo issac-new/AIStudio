@@ -34,7 +34,7 @@ function loadWorkspaceOrigin(): IdeWorkspaceOrigin {
 }
 
 /** 中栏浮窗键（任务计划/子代理，对标 zcode 浮窗模式） */
-export type IdeFloatKey = 'plan' | 'agents'
+export type IdeFloatKey = 'plan' | 'agents' | 'cua'
 
 /** agent 底座默认值——zcode 源码底座（2026-09-23 用户裁定切换，原 codex） */
 export const DEFAULT_IDE_AGENT: CodingAgentId = 'zcode'
@@ -206,7 +206,7 @@ export const useIdeStore = defineStore('ide', () => {
   // 事实源收在本 store 避免散落组件各自 fetch）。
   const taskWorkspace = ref<TaskWorkspaceInfo | null>(null)
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
-  const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false })
+  const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false, cua: false })
   // wiki 深化轮（2026-10-10）：@wiki 消费闭环配套——
   //   wikiPages = 当前工作区 docs/wiki/ 页面缓存（IdeWikiPane 装载时写入，
   //   IdeMentionPicker 选 wiki 源时做页名模糊匹配预览；瞬态不持久化）；

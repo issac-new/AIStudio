@@ -32,3 +32,11 @@
 #      unknown broker method，工具两条执行路径全失败。005 补 hold_key 组合方法
 #      （按下→durationMs 默认 500/上限 10000→松开，finally 保底松键）+词表加名。
 005-zcode-cua-hold-key.patch
+
+# 006（Cua 完整回路 2026-10-18）：broker 协议对齐官方 node_repl host（3.15.x）——
+# 请求收 input 别名+回显 id；result 包成 MCP CallToolResult（截图=image+text，其余=
+# 单 text JSON，官方 SDK unwrapEnvelope/appStateOf 契约）；旧客户端 legacy 标记回
+# raw。node-backend 补 request_access/stop_computer_control 生命周期面（恒授/恒停，
+# Node 后端无 OS 租约）。桌面 Helper 对第三方宿主 peer-verification 拒连（实测），
+# 本补丁使 SwarmStudio 自有 broker（broker-server.js Node 宿主）可承接官方 host。
+006-zcode-cua-official-host-protocol.patch
