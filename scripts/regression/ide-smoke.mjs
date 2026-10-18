@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // overlay/scripts/regression/ide-smoke.mjs
-// IDE 工作区冒烟（P0-6）：裸落地、会话/任务深链、命令面板、17 辅助页签、
+// IDE 工作区冒烟（P0-6）：裸落地、会话/任务深链、命令面板、21 辅助页签、
 // 状态栏配置、RunTrace Esc、自检弹层。只读，不改会话/仓库/配置。
 //
 // 用法：
@@ -83,10 +83,10 @@ try {
   await page.waitForTimeout(300)
   record('命令面板 Esc 关闭', (await page.locator('.ide-palette').count()) === 0)
 
-  // 3. 17 辅助页签逐个点开
+  // 3. 21 辅助页签逐个点开
   await page.locator('[data-testid="ide-sidepane-group-all"]').click().catch(() => {})
   await page.waitForTimeout(300)
-  const tabs = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow', 'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash']
+  const tabs = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow', 'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash', 'deliver', 'genui', 'remote', 'plugins']
   const tabFailures = []
   for (const tab of tabs) {
     const loc = page.locator(`[data-testid="ide-sidepane-tab-${tab}"]`)
@@ -96,7 +96,7 @@ try {
     const text = await page.locator('.ide-sidepane__body').innerText().catch(() => '')
     if (!text.trim()) tabFailures.push(`${tab}:empty`)
   }
-  record('17 个辅助页签可打开', tabFailures.length === 0, tabFailures.join(','))
+  record('21 个辅助页签可打开', tabFailures.length === 0, tabFailures.join(','))
 
   // 4. 状态栏配置面板
   const slots = page.locator('[data-testid="ide-status-slots-btn"]')
@@ -126,7 +126,14 @@ try {
   await page.waitForSelector('.ide-shell', { timeout: 15_000 }).catch(() => {})
   await page.waitForTimeout(3_000)
   const ghostShell = await page.locator('.ide-shell').count()
-  const ghostDrawer = await page.locator('[data-testid="ide-briefing-drawer"]').count()
+  // 跨板解析是异步的（boards 列表 + 任务查询），固定 3s 单点判会偶发把「尚未回包」
+  // 误判成「未收起」；轮询到 8s，只认最终稳态（仍关不上才算失败）。
+  let ghostDrawer = 1
+  for (let i = 0; i < 10; i++) {
+    ghostDrawer = await page.locator('[data-testid="ide-briefing-drawer"]').count()
+    if (ghostDrawer === 0) break
+    await page.waitForTimeout(500)
+  }
   record('幽灵任务深链不崩溃', ghostShell > 0 && ghostDrawer === 0, `shell=${ghostShell} drawer=${ghostDrawer}`)
 
   // 7. 自检弹层（命令面板入口）
