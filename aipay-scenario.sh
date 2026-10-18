@@ -1601,27 +1601,27 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试·支付核心片，与 S2/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S1 条目+docs/design/${RFD_ID}-architecture-design.md 契约；test-drafts/TEST-BE-draft.md 草稿核对；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)")
     dispatch_task qi "执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S2 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task qi "执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）" \
       "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S3 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task fei "执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）" \
       "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S1 条目+概设契约；test-drafts/TEST-FE-draft.md 草稿核对；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     dispatch_task fei "执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）" \
       "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S2 条目+概设契约；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     else
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
