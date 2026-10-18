@@ -56,7 +56,10 @@ import IdeKnowledgeBar from '../components/IdeKnowledgeBar.vue'
 import { ideRunsApi } from '../api/runs'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
-import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
+import {
+  engineDefaultModel, fetchEngineCatalog, rememberEngineDefault,
+  type EngineCatalogGroup, type EngineDefault,
+} from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
 import {
@@ -122,6 +125,13 @@ function sessionMatchesAgent(session: Session | undefined | null): boolean {
   return Boolean(session?.codingAgentId) && session?.codingAgentId === ide.agentId
 }
 
+// Ycode 默认模型（2026-10-18 用户指令）：新会话与可复用的空会话都用 ZCode 目录默认，
+// 不再继承 Hermes 的 aim/qwen 等别名（它们不在 ZCode 目录里 → 一进 IDE 就报失效）。
+function defaultModelPayload(): { model?: string; provider?: string } {
+  const d = engineDefault.value
+  return d ? { model: d.model, provider: d.provider } : {}
+}
+
 function ensureSession() {
   if (sessionMatchesAgent(chatStore.activeSession)) return
   // 复用最近的同 agent 空会话，避免反复进出页面堆积空会话
@@ -130,6 +140,10 @@ function ensureSession() {
   )
   if (reusable) {
     void chatStore.switchSession(reusable.id)
+    // 空会话若没有模型或模型已不在 ZCode 目录（历史 aim 等），就地换成默认模型。
+    if (engineDefault.value && !catalogHasModel(reusable.model)) {
+      void chatStore.switchSessionModel(engineDefault.value.model, engineDefault.value.provider, reusable.id)
+    }
     return
   }
   chatStore.newChat({
@@ -138,6 +152,7 @@ function ensureSession() {
     codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
     source: 'coding_agent',
     workspace: ide.workspace,
+    ...defaultModelPayload(),
   })
 }
 
@@ -145,9 +160,23 @@ onMounted(async () => {
   // overlay 挂载面须容忍上游 store 版本漂移：缺方法即跳过，不炸挂载
   chatStore.setRuntimeMode?.('default')
   appStore.loadModels?.()
+  // 目录与身份/设置并行拉取：ensureSession 建会话前必须已拿到 ZCode 默认模型。
+  const catalogLoaded = fetchEngineCatalog()
+    .then((catalog) => {
+      engineGroups.value = catalog.groups
+      usingIndependent.value = catalog.independent
+      engineDefault.value = engineDefaultModel(catalog)
+      rememberEngineDefault(engineDefault.value)
+    })
+    .catch(() => {
+      engineGroups.value = []
+      usingIndependent.value = false
+      engineDefault.value = null
+    })
   await Promise.all([
     profilesStore.fetchProfiles?.() ?? Promise.resolve(),
     settingsStore.fetchSettings?.() ?? Promise.resolve(),
+    catalogLoaded,
   ])
   await chatStore.loadSessions?.(chatStore.sessionProfileFilter)
   ready.value = true
@@ -177,7 +206,11 @@ function goReselectModel(): void {
 
 // 一键回退（2026-10-07 run10 实证修复）：模型被移除时横幅内直接回退到目录首个
 // 可用模型，不强制跳设置页；复用 pickModel 的 scoped/global 双路径。
-const fallbackModelTarget = computed(() => firstAvailableModel(modelGroupsView.value))
+const fallbackModelTarget = computed(() => {
+  const d = engineDefault.value
+  if (d && catalogHasModel(d.model)) return { provider: d.provider, id: d.model }
+  return firstAvailableModel(modelGroupsView.value)
+})
 async function onFallbackModel(): Promise<void> {
   const target = fallbackModelTarget.value
   if (!target) return
@@ -327,6 +360,7 @@ function newSession() {
     codingAgentMode: 'scoped',
     source: 'coding_agent',
     workspace: ide.workspace,
+    ...defaultModelPayload(),
   })
   pendingSubagentId.value = null
   ide.floats.agents = false
@@ -347,17 +381,7 @@ const sessionTitle = computed(
 // 目录就绪即可选；有会话切会话粘性，无会话设新会话默认模型。
 const engineGroups = ref<EngineCatalogGroup[]>([])
 const usingIndependent = ref(false)
-
-onMounted(async () => {
-  try {
-    const catalog = await fetchEngineCatalog()
-    engineGroups.value = catalog.groups
-    usingIndependent.value = catalog.independent
-  } catch {
-    engineGroups.value = []
-    usingIndependent.value = false
-  }
-})
+const engineDefault = ref<EngineDefault | null>(null)
 
 // 两源目录形态不同（Ycode/独立目录为 {id} 对象组，Hermes 为 string[]）：
 // 统一成 { provider, label, models: [{id}] }，选择器与失效判定共用同一视图。
@@ -374,6 +398,10 @@ const modelGroupsView = computed<ViewModelGroup[]>(() => {
     models: (group.models ?? []).map(m => (typeof m === 'string' ? { id: m } : m)),
   }))
 })
+function catalogHasModel(model?: string | null): boolean {
+  if (!model) return false
+  return modelGroupsView.value.some(g => g.models.some(m => m.id === model))
+}
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
