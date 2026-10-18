@@ -3,7 +3,8 @@
 // 两侧合同由本测试钉死，schema 漂移当场 fail。
 // 对应：分布式设计 §10 M3；协议 v2（DELIVERY_SCHEMA_VERSION=2）。
 import { execFileSync } from 'child_process'
-import { join } from 'path'
+import { existsSync, readFileSync, statSync } from 'fs'
+import { dirname, join, resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import {
   parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
@@ -11,8 +12,33 @@ import {
 
 // 构造器随分树轮（2026-10-03）移居 simharness 独立仓（ncwk 根下与 overlay 平级；
 // MX_SIMHARNESS_ROOT 可覆盖，与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称）。
+// 可移植 simharness 根解析：向上找 overlay 仓库根（patches/series 标记），再定位
+// 其真实上级（worktree 的 .git 文件指向主仓 .git——worktree 根的兄弟目录不是
+// simharness，须回到主仓根再取兄弟）；env 显式指定优先。
+function resolveSimharnessRoot(startDir: string): string {
+  let cur = startDir
+  for (let i = 0; i < 12; i++) {
+    if (existsSync(join(cur, 'patches', 'series'))) {
+      const gitFile = join(cur, '.git')
+      if (existsSync(gitFile) && statSync(gitFile).isFile()) {
+        const m = /gitdir:\s*(.+)/.exec(readFileSync(gitFile, 'utf8').trim())
+        if (m) {
+          const mainRoot = dirname(dirname(resolve(m[1].trim())))
+          const viaMain = join(mainRoot, '..', 'simharness')
+          if (existsSync(viaMain)) return viaMain
+        }
+      }
+      const sibling = join(cur, '..', 'simharness')
+      if (existsSync(sibling)) return sibling
+    }
+    const parent = dirname(cur)
+    if (parent === cur) break
+    cur = parent
+  }
+  return join(startDir, '..', '..', '..', '..', '..', 'simharness')
+}
 const BUILDER = join(
-  process.env.MX_SIMHARNESS_ROOT || join(__dirname, '..', '..', '..', '..', '..', 'simharness'),
+  process.env.MX_SIMHARNESS_ROOT || resolveSimharnessRoot(__dirname),
   'mux', 'delivery-event.mjs')
 
 function build(args: string[]): Record<string, unknown> {

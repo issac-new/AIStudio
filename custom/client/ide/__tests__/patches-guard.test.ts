@@ -29,10 +29,14 @@ describe('IDE 上游补丁守卫', () => {
     expect(body).toContain("params.set('root', root)")
   })
 
-  it('660 Markdown 本地媒体占位：不把 API key 放进 src', () => {
+  it('660 Markdown 本地媒体占位：默认开启且不压过 resolveImageUrl', () => {
     expect(series).toContain('660-client-markdown-defer-local-media.patch')
     const body = read('660-client-markdown-defer-local-media.patch')
-    expect(body).toContain('ideDeferLocalMedia')
+    expect(body).toContain("ideDeferLocalMedia', true)")
     expect(body).toContain('data-local-media')
+    // 顺序：resolveImageUrl 分支必须先于占位分支（会话工作区图片不走默认根）
+    const resolveIdx = body.indexOf('resolveImageUrl && !path.startsWith')
+    const deferIdx = body.indexOf('if (ideDeferLocalMedia) {')
+    expect(deferIdx).toBeGreaterThan(resolveIdx)
   })
 })

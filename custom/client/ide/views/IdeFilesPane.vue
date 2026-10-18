@@ -3,7 +3,7 @@
 // 基于任务会话与项目的视图——根目录响应式跟随当前会话 workspace（回退
 // ide.workspace），不与任务列表平行独立存在；保留「查看文件 | Git」双
 // 子页签（上游 FileTree + IdeGitPane）。
-import { onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
@@ -11,8 +11,10 @@ import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { workspaceLabel } from '../utils/time'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
 const filesStore = useFilesStore()
 const { root, validation, validate, invalidate } = useIdeWorkspace()
 
@@ -59,8 +61,8 @@ async function openEntry(entry: FileEntry): Promise<void> {
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
     <p v-if="tab === 'tree' && validation.status === 'checking'" class="ide-files__hint" data-testid="ide-files-checking">{{ t('ide.loading') }}</p>
     <div v-else-if="tab === 'tree' && validation.status === 'invalid'" class="ide-files__invalid" data-testid="ide-files-invalid">
-      <p>工作区不可用：{{ validation.message || '路径不在允许范围内' }}</p>
-      <button type="button" class="ide-files__retry" @click="retryRoot">重试</button>
+      <p>{{ invalidTx.title(validation.message || invalidTx.fallback) }}</p>
+      <button type="button" class="ide-files__retry" @click="retryRoot">{{ invalidTx.retry }}</button>
     </div>
     <FileTree
       v-else-if="tab === 'tree'"

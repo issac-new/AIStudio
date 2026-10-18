@@ -102,6 +102,14 @@ async function devAutoLogin(): Promise<void> {
   } catch { /* 回落手动登录 */ }
 }
 
+// 全局本地媒体鉴权重写（2026-10-18 立查立改）：patch 660 v2 起本地图片/音频/
+// 视频默认渲染 data-local-media 占位，此处安装 body 级观察器用 Authorization
+// fetch 换 blob——非 IDE 聊天页不再出现 query-token 401（IDE 容器自带带 root
+// 的重写器，先到先改，互不重复）。
+import('@/custom/ide/utils/authedMedia')
+  .then(({ installGlobalAuthedMediaRewrite }) => installGlobalAuthedMediaRewrite())
+  .catch(() => { /* 媒体重写失败不阻塞启动 */ })
+
 const urlParams = new URLSearchParams(window.location.search)
 const hashQuery = window.location.hash.split('?')[1]
 const urlToken = urlParams.get('token') || (hashQuery ? new URLSearchParams(hashQuery).get('token') : null)

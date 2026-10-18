@@ -10,15 +10,42 @@
 //   ③ `com.swarmstudio.` 协议事件类型字面量唯一源是 task-protocol.ts；
 //   ④ sim harness（simharness 仓，2026-10-03 分树）REST 原语锁白名单（G2：通用封装
 //      mx/mx_messages 等与 mx_send 同级，只认两个名字即可绕过）。
-import { readdirSync, readFileSync, statSync } from 'fs'
-import { join, relative, sep } from 'path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { dirname, join, relative, resolve, sep } from 'path'
 import { describe, expect, it } from 'vitest'
 
 const customRoot = join(__dirname, '..', '..', '..') // custom
 const overlayRoot = join(__dirname, '..', '..', '..', '..') // overlay 根
 // simharness 独立仓（ncwk 根下与 overlay 平级；分树隔离轮 2026-10-03）。
 // 可用 MX_SIMHARNESS_ROOT 覆盖（与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称）。
-const simharnessRoot = process.env.MX_SIMHARNESS_ROOT || join(overlayRoot, '..', 'simharness')
+
+// 可移植 simharness 根解析：向上找 overlay 仓库根（patches/series 标记），再定位
+// 其真实上级（worktree 的 .git 文件指向主仓 .git——worktree 根的兄弟目录不是
+// simharness，须回到主仓根再取兄弟）；env 显式指定优先。
+function resolveSimharnessRoot(startDir: string): string {
+  let cur = startDir
+  for (let i = 0; i < 12; i++) {
+    if (existsSync(join(cur, 'patches', 'series'))) {
+      const gitFile = join(cur, '.git')
+      if (existsSync(gitFile) && statSync(gitFile).isFile()) {
+        const m = /gitdir:\s*(.+)/.exec(readFileSync(gitFile, 'utf8').trim())
+        if (m) {
+          const mainRoot = dirname(dirname(resolve(m[1].trim())))
+          const viaMain = join(mainRoot, '..', 'simharness')
+          if (existsSync(viaMain)) return viaMain
+        }
+      }
+      const sibling = join(cur, '..', 'simharness')
+      if (existsSync(sibling)) return sibling
+    }
+    const parent = dirname(cur)
+    if (parent === cur) break
+    cur = parent
+  }
+  return join(startDir, '..', '..', '..', '..', '..', 'simharness')
+}
+
+const simharnessRoot = process.env.MX_SIMHARNESS_ROOT || resolveSimharnessRoot(__dirname)
 
 // ② REST 包装函数清单（单一常量）：client-server REST 全部通道。
 // matrixSendProtocolEvent 为协议事件通道（协作信号唯一入口），一并入清单防绕过。
