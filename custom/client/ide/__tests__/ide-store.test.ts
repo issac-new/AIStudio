@@ -111,4 +111,42 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     ide.setWorkspace('/tmp/ws')
     expect(ide.terminalCwd).toBe('/tmp/ws')
   })
+
+  it('界面模式默认编程；切换工作后持久化并同步新建任务模式', () => {
+    const ide = useIdeStore()
+    expect(ide.interfaceMode).toBe('coding')
+    expect(ide.taskMode).toBe('coding')
+    expect(ide.isWorkMode).toBe(false)
+    ide.toggleInterfaceMode()
+    expect(ide.interfaceMode).toBe('work')
+    expect(ide.isWorkMode).toBe(true)
+    expect(localStorage.getItem('hermes_ide_interface_mode')).toBe('work')
+    // 默认动线：切到工作模式后新建任务也默认工作任务
+    expect(ide.taskMode).toBe('work')
+    expect(localStorage.getItem('hermes_ide_task_mode')).toBe('work')
+    // 新 pinia 回读
+    setActivePinia(createPinia())
+    const second = useIdeStore()
+    expect(second.interfaceMode).toBe('work')
+    expect(second.taskMode).toBe('work')
+  })
+
+  it('界面模式归一：历史 office/general 值回读为 work（zcode 迁移兼容）', () => {
+    localStorage.setItem('hermes_ide_interface_mode', 'office')
+    setActivePinia(createPinia())
+    const ide = useIdeStore()
+    expect(ide.interfaceMode).toBe('work')
+  })
+
+  it('任务模式可独立于界面模式改回编程（侧栏双按钮）', () => {
+    const ide = useIdeStore()
+    ide.setInterfaceMode('work')
+    ide.setTaskMode('coding')
+    expect(ide.interfaceMode).toBe('work')
+    expect(ide.taskMode).toBe('coding')
+    setActivePinia(createPinia())
+    const second = useIdeStore()
+    expect(second.interfaceMode).toBe('work')
+    expect(second.taskMode).toBe('coding')
+  })
 })

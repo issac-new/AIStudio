@@ -47,6 +47,7 @@ import { getTask } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
 import { useKeyBinding } from '../components/IdeKeymapCard.vue'
+import { isInterfaceModeToggle, isEditableTarget } from '../utils/interface-mode'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -56,6 +57,16 @@ const cockpitStore = useCockpitStore()
 const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
 const kanbanStore = useKanbanStore()
+
+// ── 编程/工作界面模式快捷键（Cmd/Ctrl+Shift+U，zcode shortcutCommands.ts:98 同绑定）──
+// 编辑态不劫持（输入框里 Shift+U 是正常大写输入）。
+function onInterfaceModeHotkey(event: KeyboardEvent): void {
+  if (!isInterfaceModeToggle(event)) return
+  if (isEditableTarget(event.target)) return
+  event.preventDefault()
+  ide.toggleInterfaceMode()
+}
+window.addEventListener('keydown', onInterfaceModeHotkey)
 
 // ── v12 任务维度直达链接（/ide?task=<id>，工作台 ⌨ / 管理台 ⌨ 入口）──
 // 绑定任务维度并尽力切到任务挂靠的 agent 会话（session_id 命中即 switch）。
@@ -218,6 +229,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
 window.addEventListener('keydown', onGlobalKeydown)
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown)
+  window.removeEventListener('keydown', onInterfaceModeHotkey)
 })
 
 // ── 三栏折叠/最大化（v12.4 用户裁定：栏控迁各栏顶部控制条右上角）──
