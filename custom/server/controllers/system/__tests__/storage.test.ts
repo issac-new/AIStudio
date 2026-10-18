@@ -31,8 +31,7 @@ function makeCtx() {
 
 // router 不真正起服务：直接调注册的路由处理器。Router 实例的 stack 可读。
 type Handler = (ctx: any) => Promise<void>
-function findHandler(method: string, path: string): Handler {
-  const router = storageModule.default as any
+function findHandler(method: string, path: string, router = storageModule.default as any): Handler {
   const layer = router.stack.find((l: any) => l.path === path && l.methods.includes(method))
   if (!layer) throw new Error(`route not found: ${method} ${path}`)
   return layer.stack[layer.stack.length - 1]
@@ -60,6 +59,29 @@ describe('storage controller（M2 资源管理器）', () => {
     const sessionStore = cats.find(c => c.key === 'sessionStore')
     expect(sessionStore!.cleanable).toBe(false)
     expect(ctx.body.totalBytes).toBeGreaterThan(0)
+    expect(ctx.body.partial).toBe(false)
+  })
+
+  it('snapshot：超过扫描预算时标记 partial（下限值），接口不被大树拖死', async () => {
+    // 真实病灶：~/.hermes/hermes-agent 数十万文件，2026-10-18 实测 118s。
+    // 这里用大量文件 + 1ms 预算复现「预算内扫不完」，断言 partial 语义。
+    const deep = join(fakeHome, '.hermes', 'logs', 'deep')
+    mkdirSync(deep, { recursive: true })
+    for (let i = 0; i < 2500; i++) writeFileSync(join(deep, `f${i}.txt`), 'x')
+    process.env.IDE_STORAGE_SCAN_BUDGET_MS = '1'
+    try {
+      // 独立模块实例：绕开上一例的 30s 快照缓存
+      vi.resetModules()
+      const fresh = await import('../storage')
+      const ctx = makeCtx()
+      await findHandler('GET', '/api/ide/storage/snapshot', fresh.default)(ctx)
+      expect(ctx.body.partial).toBe(true)
+      const logs = (ctx.body.categories as Array<Record<string, unknown>>).find(c => c.key === 'logs')
+      expect(logs!.partial).toBe(true)
+      expect(ctx.body.scannedAt).toBeTypeOf('number')
+    } finally {
+      delete process.env.IDE_STORAGE_SCAN_BUDGET_MS
+    }
   })
 
   it('clean：白名单分类可清理并报告释放量；只读分类 403', async () => {

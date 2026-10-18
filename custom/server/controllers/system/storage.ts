@@ -45,28 +45,45 @@ const CATEGORIES: Array<{
 /** 单分类扫描的文件数软上限：异常巨大的树（坏挂载/符号环）不至于拖死扫描 */
 const SCAN_FILE_LIMIT = 1_000_000
 const SNAPSHOT_TTL_MS = 30_000
+/** 单次快照的总预算：~/.hermes/hermes-agent 这类数十万文件的大树实测可扫
+ *  2 分钟（2026-10-18 回归实测 118s），面板会一直停在「正在计算…」。
+ *  超时分类返回已扫部分并标 partial，总时长封顶在预算量级。 */
+const SCAN_BUDGET_MS = 4_000
+
+function scanBudgetMs(): number {
+  const fromEnv = Number(process.env.IDE_STORAGE_SCAN_BUDGET_MS)
+  return Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : SCAN_BUDGET_MS
+}
 
 interface ScanResult {
   bytes: number
   files: number
   exists: boolean
+  partial: boolean
 }
 
 /** 异步递归扫描：返回 [字节数, 文件数]；目录不存在返回 exists=false */
-async function scanDir(dir: string): Promise<ScanResult> {
-  const result: ScanResult = { bytes: 0, files: 0, exists: true }
+async function scanDir(dir: string, deadline = Number.POSITIVE_INFINITY): Promise<ScanResult> {
+  const result: ScanResult = { bytes: 0, files: 0, exists: true, partial: false }
   const stack: string[] = [dir]
   while (stack.length) {
+    if (Date.now() > deadline) {
+      result.partial = true
+      return result
+    }
     const current = stack.pop()!
     let names: string[]
     try {
       names = await readdir(current)
     } catch {
-      if (current === dir) return { bytes: 0, files: 0, exists: false }
+      if (current === dir) return { bytes: 0, files: 0, exists: false, partial: false }
       continue // 权限或并发删除，跳过
     }
     for (const name of names) {
-      if (result.files > SCAN_FILE_LIMIT) return result
+      if (result.files > SCAN_FILE_LIMIT || Date.now() > deadline) {
+        result.partial = true
+        return result
+      }
       const p = join(current, name)
       try {
         const st = await stat(p)
@@ -82,36 +99,56 @@ async function scanDir(dir: string): Promise<ScanResult> {
   return result
 }
 
-let snapshotCache: { at: number; body: unknown } | null = null
+let snapshotCache: { at: number; ttl: number; body: unknown } | null = null
+/** 扫描进行中的共享 Promise：面板打开 + 自检并发请求只跑一次扫描 */
+let snapshotInFlight: Promise<unknown> | null = null
 
 const router = new Router({ prefix: '/api/ide/storage' })
 
 router.get('/snapshot', async (ctx: any) => {
-  if (snapshotCache && Date.now() - snapshotCache.at < SNAPSHOT_TTL_MS) {
+  if (snapshotCache && Date.now() - snapshotCache.at < snapshotCache.ttl) {
     ctx.body = snapshotCache.body
     return
   }
-  // 9 分类并行扫描（每分类内部串行栈遍历）：异步 IO 不阻塞事件循环
-  const scanned = await Promise.all(
-    CATEGORIES.map(async (c) => {
-      const r = await scanDir(c.dir)
-      return {
-        key: c.key,
-        path: c.dir,
-        cleanable: c.cleanable,
-        hint: c.hint,
-        exists: r.exists,
-        bytes: r.exists ? r.bytes : 0,
-        files: r.exists ? r.files : 0,
-      }
-    }),
-  )
-  const body = {
-    categories: scanned,
-    totalBytes: scanned.reduce((sum, c) => sum + c.bytes, 0),
+  if (snapshotInFlight) {
+    ctx.body = await snapshotInFlight
+    return
   }
-  snapshotCache = { at: Date.now(), body }
-  ctx.body = body
+  // 9 分类并行扫描（每分类内部串行栈遍历）：异步 IO 不阻塞事件循环；
+  // 共享一个总预算，超时分类标 partial（面板显示「≥」下限）。
+  const work = (async () => {
+    const deadline = Date.now() + scanBudgetMs()
+    const scanned = await Promise.all(
+      CATEGORIES.map(async (c) => {
+        const r = await scanDir(c.dir, deadline)
+        return {
+          key: c.key,
+          path: c.dir,
+          cleanable: c.cleanable,
+          hint: c.hint,
+          exists: r.exists,
+          bytes: r.exists ? r.bytes : 0,
+          files: r.exists ? r.files : 0,
+          partial: r.exists ? r.partial : false,
+        }
+      }),
+    )
+    return {
+      categories: scanned,
+      totalBytes: scanned.reduce((sum, c) => sum + c.bytes, 0),
+      partial: scanned.some(c => c.partial),
+      scannedAt: Date.now(),
+    }
+  })()
+  snapshotInFlight = work
+  try {
+    const body = await work
+    // 部分结果只缓存 10s：用户点「重新计算」能尽快拿到完整结果
+    snapshotCache = { at: Date.now(), ttl: body.partial ? 10_000 : SNAPSHOT_TTL_MS, body }
+    ctx.body = body
+  } finally {
+    snapshotInFlight = null
+  }
 })
 
 router.post('/clean', async (ctx: any) => {

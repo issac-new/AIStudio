@@ -1,0 +1,56 @@
+--- a/packages/client/src/api/studio/download.ts
++++ b/packages/client/src/api/studio/download.ts
+@@ -1,4 +1,4 @@
+-import { getActiveProfileName, getApiKey, getBaseUrlValue } from '../client'
++import { ensureDesktopAuthReady, getActiveProfileName, getApiKey, getBaseUrlValue } from '../client'
+ 
+ function safeDecodeURIComponent(value: string): string {
+   try {
+@@ -80,13 +80,33 @@
+   return `${base}/api/studio/files/download?${params.toString()}`
+ }
+ 
++
+ /**
++ * fetch 下载/预览路径：安全加固（SecNoQueryToken）后 query token 不再被服务端
++ * 接受，且 token 出现在 URL 会泄露到日志/Referer。fetch 能带 header，故剥离
++ * URL token 并改用 Authorization。
++ */
++function authenticatedRequest(url: string): { url: string; headers: Record<string, string> } {
++  const [base, query = ''] = url.split('?')
++  let nextUrl = url
++  if (query) {
++    const params = new URLSearchParams(query)
++    params.delete('token')
++    const rest = params.toString()
++    nextUrl = rest ? `${base}?${rest}` : base
++  }
++  const token = getApiKey()
++  return { url: nextUrl, headers: token ? { Authorization: `Bearer ${token}` } : {} }
++}
++
++/**
+  * Download a file. Uses fetch to detect errors, then creates a blob URL
+  * for the browser download. Throws with error message on failure.
+  */
+ export async function downloadFile(filePath: string, fileName?: string, profile?: string | null): Promise<void> {
+-  const url = getDownloadUrl(filePath, fileName, profile)
+-  const res = await fetch(url)
++  await ensureDesktopAuthReady()
++  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile))
++  const res = await fetch(request.url, { headers: request.headers })
+   if (!res.ok) {
+     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+     throw new Error(body.error || `Download failed: ${res.status}`)
+@@ -107,8 +127,9 @@
+  * Throws with error message on failure.
+  */
+ export async function fetchFileText(filePath: string, fileName?: string, profile?: string | null): Promise<string> {
+-  const url = getDownloadUrl(filePath, fileName, profile)
+-  const res = await fetch(url)
++  await ensureDesktopAuthReady()
++  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile))
++  const res = await fetch(request.url, { headers: request.headers })
+   if (!res.ok) {
+     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+     throw new Error(body.error || `Preview failed: ${res.status}`)

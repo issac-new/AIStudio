@@ -1,0 +1,77 @@
+--- a/packages/client/src/api/studio/download.ts
++++ b/packages/client/src/api/studio/download.ts
+@@ -49,7 +49,7 @@
+  * Construct a download URL with auth token as query parameter.
+  * Token is passed via query param because <a> tags cannot set headers.
+  */
+-export function getDownloadUrl(filePath: string, fileName?: string, profile?: string | null): string {
++export function getDownloadUrl(filePath: string, fileName?: string, profile?: string | null, root?: string): string {
+   const base = getBaseUrlValue()
+ 
+   // Guard: if filePath is already a full download URL, extract the real path
+@@ -75,6 +75,8 @@
+   const explicitProfile = normalizeProfile(profile)
+   const profileName = profile === undefined ? getActiveProfileName() : explicitProfile
+   if (profileName) params.set('profile', profileName)
++  // workspaceRoot 模式：下载路径相对 root，缺 root 会在默认根下 404
++  if (root) params.set('root', root)
+   const token = getApiKey()
+   if (token) params.set('token', token)
+   return `${base}/api/studio/files/download?${params.toString()}`
+@@ -103,9 +105,9 @@
+  * Download a file. Uses fetch to detect errors, then creates a blob URL
+  * for the browser download. Throws with error message on failure.
+  */
+-export async function downloadFile(filePath: string, fileName?: string, profile?: string | null): Promise<void> {
++export async function downloadFile(filePath: string, fileName?: string, profile?: string | null, root?: string): Promise<void> {
+   await ensureDesktopAuthReady()
+-  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile))
++  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile, root))
+   const res = await fetch(request.url, { headers: request.headers })
+   if (!res.ok) {
+     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+@@ -126,9 +128,9 @@
+  * Get preview file content.
+  * Throws with error message on failure.
+  */
+-export async function fetchFileText(filePath: string, fileName?: string, profile?: string | null): Promise<string> {
++export async function fetchFileText(filePath: string, fileName?: string, profile?: string | null, root?: string): Promise<string> {
+   await ensureDesktopAuthReady()
+-  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile))
++  const request = authenticatedRequest(getDownloadUrl(filePath, fileName, profile, root))
+   const res = await fetch(request.url, { headers: request.headers })
+   if (!res.ok) {
+     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+--- a/packages/client/src/components/hermes/files/FilePreview.vue
++++ b/packages/client/src/components/hermes/files/FilePreview.vue
+@@ -123,7 +123,7 @@
+     } else if (file.workspaceSessionId) {
+       await downloadSessionWorkspaceFile(file.workspaceSessionId, file.path, file.name)
+     } else {
+-      await downloadFile(file.path, file.name, file.profile)
++      await downloadFile(file.path, file.name, file.profile, filesStore.workspaceRoot)
+     }
+   } catch (error) {
+     message.error(error instanceof Error ? error.message : t('download.downloadFailed'))
+--- a/packages/client/src/components/hermes/files/FileList.vue
++++ b/packages/client/src/components/hermes/files/FileList.vue
+@@ -83,7 +83,7 @@
+ 
+ async function handleDownload(entry: FileEntry) {
+   try {
+-    await downloadFile(entry.path, entry.name, filesStore.currentProfile)
++    await downloadFile(entry.path, entry.name, filesStore.currentProfile, filesStore.workspaceRoot)
+   } catch (err: any) {
+     message.error(err.message || t('files.backendError'))
+   }
+--- a/packages/client/src/components/hermes/files/FileContextMenu.vue
++++ b/packages/client/src/components/hermes/files/FileContextMenu.vue
+@@ -91,7 +91,7 @@
+       try {
+         if (filesStore.currentWorkspaceRoomId) await downloadGroupWorkspaceFile(filesStore.currentWorkspaceRoomId, entry.path, entry.name)
+         else if (filesStore.currentWorkspaceSessionId) await downloadSessionWorkspaceFile(filesStore.currentWorkspaceSessionId, entry.path, entry.name)
+-        else await downloadFile(entry.path, entry.name, filesStore.currentProfile)
++        else await downloadFile(entry.path, entry.name, filesStore.currentProfile, filesStore.workspaceRoot)
+       } catch (err: any) { message.error(err.message) }
+       break
+     case 'copyPath': {
