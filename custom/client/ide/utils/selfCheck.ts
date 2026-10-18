@@ -95,7 +95,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => {
         if (!ctx.sessionsLoaded) return { status: 'fail', detail: 'sessionsLoaded=false' }
         if (ctx.sessionCount === 0) return { status: 'warn', detail: tx.detail.sessionEmpty }
-        return { status: 'pass', detail: `${ctx.sessionCount} 个会话` }
+        return { status: 'pass', detail: `${ctx.sessionCount}` }
       },
     },
     {
@@ -144,7 +144,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/studio/files/list?${qs({ root: ctx.workspace })}`, (body) =>
           Array.isArray(body.entries)
-            ? { status: 'pass', detail: `${body.entries.length} 个根条目` }
+            ? { status: 'pass', detail: `${body.entries.length}` }
             : { status: 'fail', detail: '响应缺 entries' })
       },
     },
@@ -165,14 +165,14 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => api('/api/ide/storage/snapshot', (body) =>
         body.partial
           ? { status: 'warn', detail: '扫描超预算，部分分类为下限值' }
-          : { status: 'pass', detail: `${(body.categories as unknown[] | undefined)?.length ?? 0} 个分类` }),
+          : { status: 'pass', detail: `${(body.categories as unknown[] | undefined)?.length ?? 0}` }),
     },
     {
       id: 'slash',
       label: tx.label['slash'],
       run: async () => api('/api/ide/slash-commands', (body) =>
         Array.isArray(body.commands)
-          ? { status: 'pass', detail: `${body.commands.length} 条` }
+          ? { status: 'pass', detail: `${body.commands.length}` }
           : { status: 'fail', detail: '响应缺 commands' }),
     },
     {
@@ -180,7 +180,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['automations'],
       run: async () => api('/api/ide/automations', (body) =>
         Array.isArray(body.rules)
-          ? { status: 'pass', detail: `${body.rules.length} 条规则` }
+          ? { status: 'pass', detail: `${body.rules.length}` }
           : { status: 'fail', detail: '响应缺 rules' }),
     },
     {
@@ -189,7 +189,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       run: async () => api('/api/ide/engine-models', (body) => {
         const providers = (body.config as { providers?: unknown[] } | undefined)?.providers
         return Array.isArray(providers) && providers.length
-          ? { status: 'pass', detail: `${providers.length} 个 provider` }
+          ? { status: 'pass', detail: `${providers.length}` }
           : { status: 'warn', detail: '模型目录为空' }
       }),
     },
@@ -200,7 +200,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/zcode-engine/workflow/saved?${qs({ workspacePath: ctx.workspace, scope: 'project' })}`, (body) =>
           Array.isArray(body.workflows)
-            ? { status: 'pass', detail: `${body.workflows.length} 个已保存工作流` }
+            ? { status: 'pass', detail: `${body.workflows.length}` }
             : { status: 'warn', detail: '响应缺 workflows' })
       },
     },
@@ -209,7 +209,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['context-archive'],
       run: async () => api('/api/context-archive/sessions', (body) =>
         Array.isArray(body.sessions)
-          ? { status: 'pass', detail: `${body.sessions.length} 个可归档会话` }
+          ? { status: 'pass', detail: `${body.sessions.length}` }
           : { status: 'warn', detail: '响应缺 sessions' }),
     },
     {
@@ -219,7 +219,7 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
         return api(`/api/ide/worktree/list?${qs({ repoRoot: ctx.workspace })}`, (body) =>
           Array.isArray(body.worktrees)
-            ? { status: 'pass', detail: `${body.worktrees.length} 个 worktree` }
+            ? { status: 'pass', detail: `${body.worktrees.length}` }
             : { status: 'warn', detail: '响应缺 worktrees' })
       },
     },
