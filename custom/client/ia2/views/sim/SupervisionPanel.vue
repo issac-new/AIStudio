@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { fetchJournal, organizeJournal, type JournalLine, type OrganizedJournal } from '../../api/supervision'
+import { authFetch } from '../../../ide/utils/auth-fetch'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
 import { useRouter } from 'vue-router'
 import { useRunContext } from '../../composables/useRunContext'
@@ -30,6 +31,29 @@ function openLineDrawer(title: string, line: JournalLine | Record<string, unknow
 
 const windowsDesc = computed(() => (organized.value ? [...organized.value.windows].reverse() : []))
 
+// ── 产物信号（run21 10-18 立法：agent 健康=实物产出导向，日志活跃≠进展）──
+// 复用 /api/hermes/sim/branches（交付健康同源端点）；读取成功才渲染该区。
+interface ArtiBranch { name: string; count: number; lastTs: number | null }
+const artifactBranches = ref<ArtiBranch[] | null>(null)
+const artifactTs = ref('')
+async function loadArtifacts(): Promise<void> {
+  const r = run.value.trim()
+  if (!r) return
+  try {
+    const res = await authFetch(`/api/hermes/sim/branches?run=${encodeURIComponent(r)}`)
+    if (!res.ok) return
+    const j = (await res.json()) as { branches?: Array<{ name: string; count?: number; pushTs?: number | null; localTs?: number }> }
+    artifactBranches.value = (j.branches ?? []).slice(0, 8)
+    artifactTs.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+  } catch { /* 端点缺席=不渲染，监督面不受影响 */ }
+}
+function fmtPush(ts: number | null | undefined): string {
+  if (!ts) return '—'
+  const d = new Date(ts < 1e12 ? ts * 1000 : ts)
+  const mins = Math.round((Date.now() - d.getTime()) / 60000)
+  return mins < 1 ? '刚刚' : mins < 60 ? `${mins} 分钟前` : `${Math.round(mins / 60)} 小时前`
+}
+
 async function load(): Promise<void> {
   const r = run.value.trim()
   if (!r) { loadError.value = '请输入运行目录名（如 20261015-v8-run20）'; return }
@@ -40,6 +64,7 @@ async function load(): Promise<void> {
     organized.value = organizeJournal(res.lines)
     source.value = res.source
     remember()
+    void loadArtifacts()
   } catch (e) {
     organized.value = null
     loadError.value = (e as Error).message
@@ -49,7 +74,7 @@ async function load(): Promise<void> {
 }
 
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
-onMounted(() => { if (run.value.trim()) void load() })
+onMounted(() => { if (run.value.trim()) void load(); void loadArtifacts() })
 watch(run, () => { if (run.value.trim()) void load() })
 </script>
 
@@ -76,6 +101,18 @@ watch(run, () => { if (run.value.trim()) void load() })
       <section class="sup__main">
         <h4 class="sup__h">观察窗流（{{ organized.windows.length }} 窗）</h4>
         <p v-if="organized.windows.length === 0" class="sup__hint" data-testid="sup-windows-empty">该区间无观察窗行。</p>
+      <!-- 产物信号：实物产出导向健康（2026-10-18 run21 立法） -->
+      <section v-if="artifactBranches && artifactBranches.length" class="sup__arti" data-testid="sup-artifact-signal">
+        <h4 class="sup__h2">产物信号（分支实物 · {{ artifactTs }}）</h4>
+        <ul class="sup__arti-list">
+          <li v-for="b in artifactBranches" :key="b.name" class="sup__arti-row">
+            <span class="sup__arti-name">{{ b.name }}</span>
+            <span class="sup__arti-count">{{ b.count ?? 0 }} 提交</span>
+            <span class="sup__arti-ts">{{ fmtPush(b.pushTs ?? b.localTs) }}</span>
+          </li>
+        </ul>
+        <p class="sup__hint">口径：中央仓分支实查（与交付健康同源）；「X 小时前」持续增大而任务在途=活跃但零产出形态，先查产物再催人。</p>
+      </section>
         <div v-for="w in windowsDesc" :key="w.id" class="sup__win" :data-testid="`sup-win-${w.id}`">
           <div class="sup__win-head">
             <span class="sup__win-id">{{ w.id }}</span>
@@ -156,6 +193,13 @@ watch(run, () => { if (run.value.trim()) void load() })
 .sup__btn { cursor: pointer; &:disabled { opacity: 0.4; } }
 .sup__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .sup__goto { border: none; background: transparent; padding: 2px 0; color: var(--accent-primary); cursor: pointer; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.sup__arti { margin-top: 10px; }
+.sup__h2 { font-size: 12px; margin: 0 0 4px; color: var(--text-primary); }
+.sup__arti-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sup__arti-row { display: flex; gap: 10px; align-items: baseline; font-size: 12px; }
+.sup__arti-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sup__arti-count { color: var(--text-secondary); }
+.sup__arti-ts { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .sup__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .sup__src { color: var(--text-muted); font-size: 11px; margin: 0; font-family: var(--font-mono); }
 .sup__grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }
