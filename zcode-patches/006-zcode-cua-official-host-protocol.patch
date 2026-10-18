@@ -1,4 +1,4 @@
-diff --git a/a/packages/zcode-cua/broker.js b/b/packages/zcode-cua/broker.js
+diff --git a/packages/zcode-cua/broker.js b/packages/zcode-cua/broker.js
 index 2fca421..80bcdc7 100644
 --- a/packages/zcode-cua/broker.js
 +++ b/packages/zcode-cua/broker.js
@@ -72,7 +72,7 @@ index 2fca421..80bcdc7 100644
      });
    } finally {
      socket.destroy();
-diff --git a/a/packages/zcode-cua/node-backend.js b/b/packages/zcode-cua/node-backend.js
+diff --git a/packages/zcode-cua/node-backend.js b/packages/zcode-cua/node-backend.js
 index 9c5df8c..d488d76 100644
 --- a/packages/zcode-cua/node-backend.js
 +++ b/packages/zcode-cua/node-backend.js

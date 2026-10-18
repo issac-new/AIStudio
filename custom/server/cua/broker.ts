@@ -19,7 +19,7 @@ export interface CuaBrokerHandle {
 }
 
 interface ProductHost {
-  waitForTransport(timeoutMs?: number): Promise<{ socketPath: string; pluginAuthority: string }>
+  waitForTransport(timeoutMs?: number): Promise<{ socketPath: string; pluginAuthority?: string }>
   checkHealth(timeoutMs?: number): Promise<unknown>
   running: boolean
   socketPath: string | null
@@ -39,17 +39,16 @@ let singleton: CuaBrokerHandle | null = null
 export function cuaBrokerHost(): CuaBrokerHandle {
   if (singleton) return singleton
   let host: ProductHost | null = null
+  const transportOf = (): CuaBrokerTransport | null =>
+    host?.socketPath ? { socket: host.socketPath, authority: 'node-backend', pid: null } : null
   let starting: Promise<CuaBrokerTransport> | null = null
   singleton = {
     get transport() {
-      return host?.socketPath
-        ? { socket: host.socketPath, authority: host.pluginAuthority ?? 'node-backend', pid: null }
-        : null
+      return transportOf()
     },
     async start() {
-      if (host?.socketPath) {
-        return { socket: host.socketPath, authority: host.pluginAuthority ?? 'node-backend', pid: null }
-      }
+      const existing = transportOf()
+      if (existing) return existing
       if (!starting) {
         starting = (async () => {
           const path = brokerServerPath()
