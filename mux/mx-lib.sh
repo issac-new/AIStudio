@@ -1208,6 +1208,29 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
       _role_skill_install lin aipaydev-sys-analysis
       ;;
   esac
+  # 中央清单角色增量（2026-10-18 多机能力管理轮）：读中央仓 skill-provisioning.json
+  # （MX_SKILL_MANIFEST 显式 > MX_CENTRAL_SHARED 目录 > 宿主 _shared 检出，缺位=零行为
+  # 变化）。只加"精确/后缀/前缀"角色增量，**忽略 '*' 通用行**——sim 基线=上方
+  # SKILLS_INSTALL 同构分发，通用行若再叠会给 42 个推演账号翻倍铺技能。来源仍限
+  # SKILLS_SRC（simharness/skills），仓内无此技能=跳过（不引入宿主全局源）。
+  local _mxm="${MX_SKILL_MANIFEST:-${MX_CENTRAL_SHARED:-$HOME/.hermes/profiles/_shared}/skill-provisioning.json}"
+  if [[ -f "$_mxm" ]]; then
+    local _ms _msn
+    while IFS= read -r _ms; do
+      [[ -n "$_ms" ]] || continue
+      if [[ -d "$SKILLS_SRC/$_ms" ]]; then
+        rm -rf "$PROF/skills/$_ms"; mkdir -p "$PROF/skills/$_ms"
+        cp -R "$SKILLS_SRC/$_ms/." "$PROF/skills/$_ms/"
+        if [[ -f "$STYLE_CHARTER" ]] && [[ -f "$PROF/skills/$_ms/SKILL.md" ]]; then
+          cat "$STYLE_CHARTER" >> "$PROF/skills/$_ms/SKILL.md"
+        fi
+        for _msn in "$PROF/skills/$_ms/SKILL.md" "$PROF/skills/$_ms/scripts/precheck.conf"; do
+          [[ -f "$_msn" ]] || continue
+          sed "s|__SIM_ROOT__|$SIM_ROOT|g" "$_msn" > "${_msn}.tmp" && mv "${_msn}.tmp" "$_msn"
+        done
+      fi
+    done < <(python3 "${HARNESS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/mux/manifest-extras.py" "$_base" "$_mxm")
+  fi
   # ACP 编码后端 L1 委托技能（2026-10-09 acp-coding-backend-divergence 根治件）：
   # 正本=overlay/runtime/hermes-skills（产品侧技能面），harness 只读消费；缺位跳过
   # （bare CI 无 overlay 检出），在位即随 profile 同构分发。
