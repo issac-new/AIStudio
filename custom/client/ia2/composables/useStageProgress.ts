@@ -6,7 +6,7 @@
 // 失败如实保留 error，状态推导返回 pending，不假装完成。
 import { computed, ref, watch } from 'vue'
 import { authFetch } from '../../ide/utils/auth-fetch'
-import { useRunContext } from './useRunContext'
+import { LAST_RUN_KEY, useRunContext } from './useRunContext'
 import { SETUP_STEPS, STAGE_META, type SetupStep } from '../stage-meta'
 
 export interface RunStateLike {
@@ -30,7 +30,13 @@ async function fetchRunState(run: string): Promise<RunStateLike> {
   const request = (async () => {
     try {
       const res = await authFetch(`/api/hermes/sim/run-state?run=${encodeURIComponent(run)}`)
-      if (!res.ok) throw new Error(String(res.status))
+      if (!res.ok) {
+        // 记录被清理（404）时不再反复重试：清掉记忆键，由调用方给可读提示。
+        if (res.status === 404) localStorage.removeItem(LAST_RUN_KEY)
+        throw new Error(res.status === 404
+          ? '记录已不存在（可能已被清理）——请在页头选择其他运行'
+          : String(res.status))
+      }
       const data = await res.json() as RunStateLike
       cache.set(run, data)
       return data
