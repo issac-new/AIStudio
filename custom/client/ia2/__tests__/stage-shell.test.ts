@@ -40,7 +40,13 @@ vi.mock('../composables/useStageProgress', async () => {
 })
 
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
+  __isTeleport: false,
+  __isKeepAlive: false,
   default: { name: 'SwarmKanbanView', template: '<div data-testid="kanban-stub" />' },
+}))
+// 阶段页 RunSelector 依赖运行列表：桩化空列表，避免 Pinia/runcenter 重链
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({
+  useRunCenterStore: () => ({ sortedRuns: [] }),
 }))
 
 import StageShell from '../views/stage/StageShell.vue'
@@ -67,6 +73,8 @@ const stubs = {
   ApprovalPanel: { name: 'ApprovalPanel', template: '<div data-testid="approval-panel-stub" />' },
   DeliveryPanel: { name: 'DeliveryPanel', template: '<div data-testid="delivery-stub" />' },
   GovIssuesPanel: { name: 'GovIssuesPanel', template: '<div data-testid="issues-stub" />' },
+  SwarmKanbanView: { name: 'SwarmKanbanView', template: '<div data-testid="kanban-stub" />' },
+  OrchestrationView: { name: 'OrchestrationView', template: '<div data-testid="launch-stub" />' },
 }
 
 function makeRouter(stage: number, initial: string): Router {
@@ -118,9 +126,9 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('②需求：四个页签；默认需求与冻结；G1 页签按 G1 过滤', async () => {
+  it('②需求：五个页签；默认需求与冻结；G1 页签按 G1 过滤', async () => {
     const { w, router } = await mountStage(2)
-    for (const key of ['reqs', 'docs', 'g1', 'preflight']) {
+    for (const key of ['reqs', 'docs', 'g1', 'preflight', 'launch']) {
       expect(w.find(`[data-testid="stg-tab-${key}"]`).exists(), key).toBe(true)
     }
     expect(w.find('[data-testid="stg-tab-reqs"]').classes()).toContain('stg__tab--on')
@@ -132,16 +140,15 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('②启动准备只核对条件并跳运行编排，不在阶段页直接启动', async () => {
+  it('②启动准备切换到本页「启动运行」页签，不跳整页', async () => {
     const { w, router } = await mountStage(2, '?tab=preflight')
     expect(w.find('[data-testid="stg-preflight"]').exists()).toBe(true)
-    expect(w.text()).toContain('启动、断点续跑和运行模式切换都在「全流程推演·运行编排」执行')
+    expect(w.text()).toContain('启动、断点续跑和运行模式切换已并入本页「启动运行」页签')
     expect(w.find('[data-testid="stg-preflight-run"]').exists()).toBe(true)
-    const push = vi.spyOn(router, 'push')
     await w.find('[data-testid="stg-preflight-run"]').trigger('click')
     await flushPromises()
-    expect(push).toHaveBeenCalled()
-    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
+    expect(router.currentRoute.value.query.tab).toBe('launch')
+    expect(w.find('[data-testid="stg-tab-launch"]').classes()).toContain('stg__tab--on')
     w.unmount()
   })
 
@@ -178,12 +185,13 @@ describe('StageShell — 单层页签', () => {
     second.w.unmount()
   })
 
-  it('④开发主操作=打开工作台（日常在协作侧，不在阶段页堆推演面板）', async () => {
+  it('④开发主操作=页内打开看板（不跳整页）', async () => {
     const { w, router } = await mountStage(4)
     expect(w.find('[data-testid="today-stub"]').exists()).toBe(true)
     await w.find('[data-testid="stg-primary"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.collab')
+    expect(router.currentRoute.value.query.tab).toBe('board')
+    expect(w.find('[data-testid="stg-tab-board"]').classes()).toContain('stg__tab--on')
     w.unmount()
   })
 

@@ -5,12 +5,10 @@
      不在阶段页里直接开跑，保持日常与整轮推演分离。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStageProgress } from '../../composables/useStageProgress'
 
 const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
-const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const progress = useStageProgress()
@@ -20,8 +18,7 @@ const frozen = computed(() => 'g1_frozen' in progress.merged.value)
 const posture = computed(() => String(progress.state.value?.posture ?? '').trim())
 
 function openRun(): void {
-  const query = runName.value ? { run: runName.value } : undefined
-  void router.push(query ? { name: 'ia2.simOrchestration', query } : { name: 'ia2.simOrchestration' })
+  emit('open-tab', 'launch')
 }
 </script>
 
@@ -57,7 +54,7 @@ function openRun(): void {
         </li>
         <li class="sro__step">
           <div><strong>{{ zh ? '启动本轮运行' : 'Launch this run' }}</strong><span>{{ zh ? '启动属于整轮运行，在「全流程推演」里做启动前检查' : 'Launching is a full-run action; preflight lives in Full-run Simulation' }}</span></div>
-          <button type="button" class="sro__btn" data-testid="stg-req-launch" @click="openRun">{{ zh ? '去运行编排' : 'Open orchestration' }}</button>
+          <button type="button" class="sro__btn" data-testid="stg-req-launch" @click="openRun">{{ zh ? '进入启动运行' : 'Open orchestration' }}</button>
         </li>
       </ol>
     </div>

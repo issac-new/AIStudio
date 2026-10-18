@@ -45,6 +45,13 @@ vi.mock('@/custom/governance/api/governance', () => ({
   fetchGovernanceOverview: vi.fn(async () => ({ ok: true, docs: rows.docs })),
 }))
 
+vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
+  default: {
+    props: ['show', 'taskId'],
+    template: '<div data-testid="task-drawer-stub" :data-task="taskId" />',
+  },
+}))
+
 import SearchView from '../views/SearchView.vue'
 
 function makeRouter(initial = '/app/search'): Router {
@@ -108,12 +115,11 @@ describe('SearchView — 全站检索', () => {
     w.unmount()
   })
 
-  it('任务行点击直达看板预选', async () => {
-    const { w, router } = await mountSearch()
+  it('任务行点击就地打开抽屉（不再跳看板）', async () => {
+    const { w } = await mountSearch()
     await w.find('[data-testid="search-row-t:t1"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.board')
-    expect(router.currentRoute.value.query.task).toBe('t1')
+    expect(w.find('[data-testid="task-drawer-stub"]').attributes('data-task')).toBe('t1')
     w.unmount()
   })
 })

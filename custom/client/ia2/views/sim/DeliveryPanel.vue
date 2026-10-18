@@ -5,7 +5,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
-import { useRouter } from 'vue-router'
 import { useRunContext } from '../../composables/useRunContext'
 
 interface BranchRow { name: string; localTs: number; pushTs: number | null; pushed: boolean; freshness: 'fresh' | 'stale' | 'old' }
@@ -13,7 +12,6 @@ interface BranchesResponse { run: string; graceMs: number; count: number; branch
 interface DeliverableRow { name: string; label: string; file: string | null }
 interface DeliverablesResponse { run: string; deliverables: DeliverableRow[]; scanned: number }
 
-const router = useRouter()
 const { run, remember } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
@@ -31,7 +29,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入运行目录名'; return }
+  if (!r) { loadError.value = ''; return }
   loading.value = true
   loadError.value = ''
   branches.value = null
@@ -54,14 +52,9 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <template>
   <div class="dlv" data-testid="dlv-panel">
-    <div class="dlv__bar">
-      <input v-model="run" class="dlv__input" data-testid="dlv-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
-      <button class="dlv__btn" type="button" data-testid="dlv-load" :disabled="loading" @click="load">读取</button>
-    </div>
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
     <div v-else-if="!branches && !deliverables" class="dlv__hint" data-testid="dlv-empty">
-      <p>输入运行读取分支新鲜度与交付物链。</p>
-      <button type="button" class="dlv__goto" data-testid="dlv-goto-overview" @click="router.push({ name: 'ia2.sim' })">不知道目录名？去运行总览选取 →</button>
+      <p>在页头「本轮运行」选择一轮，读取分支新鲜度与交付物链。</p>
     </div>
 
     <section v-if="branches" class="dlv__box">
@@ -96,27 +89,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <style scoped lang="scss">
 .dlv { display: flex; flex-direction: column; gap: 12px; }
-.dlv__bar { display: flex; gap: 6px; }
-.dlv__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  width: 260px;
-  font-family: var(--font-mono);
-}
-.dlv__btn {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  padding: 3px 12px;
-  cursor: pointer;
-  &:disabled { opacity: 0.4; }
-}
 .dlv__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
-.dlv__goto { border: none; background: transparent; padding: 2px 0; color: var(--accent-primary); cursor: pointer; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .dlv__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .dlv__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .dlv__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }

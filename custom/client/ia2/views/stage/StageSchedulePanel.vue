@@ -2,12 +2,13 @@
      没有已排期任务时给出去看板设置排期的真实出口，不放假日期表单。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 
-const emit = defineEmits<{ (e: 'open-task', taskId: string): void }>()
-const router = useRouter()
+const emit = defineEmits<{
+  (e: 'open-task', taskId: string): void
+  (e: 'open-tab', key: string): void
+}>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
@@ -22,7 +23,7 @@ const scheduled = computed(() => workspace.tasks
     <header class="ssp__head">
       <h2 class="ssp__title">{{ zh ? '已排期任务' : 'Scheduled tasks' }}</h2>
       <span class="ssp__n">{{ scheduled.length }}</span>
-      <button type="button" class="ssp__btn" @click="router.push({ name: 'ia2.board' })">{{ zh ? '去看板排期' : 'Schedule on board' }}</button>
+      <button type="button" class="ssp__btn" @click="emit('open-tab', 'board')">{{ zh ? '去任务分解排期' : 'Schedule in task breakdown' }}</button>
     </header>
 
     <div v-if="scheduled.length" class="ssp__rows">
