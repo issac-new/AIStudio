@@ -198,4 +198,28 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     await flushPromises()
     expect(w.find('[data-testid="ide-effort"]').exists()).toBe(false)
   })
+
+  it('composer 设置菜单（zcode 对照）：模式七档/模型入口/思考档/工具调用齐备可操作', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'bigmodel', label: 'BigModel', models: [{ id: 'glm-5.3', reasoningLevels: ['low', 'high'] }] }],
+      defaultModel: { provider: 'bigmodel', model: 'glm-5.3' },
+    })
+    state.activeSessionId = 's2'
+    state.activeSession = { id: 's2', model: 'glm-5.3', provider: 'bigmodel', codingAgentMode: 'scoped', reasoningEffort: '' }
+    const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="ide-composer-settings-btn"]').trigger('click')
+    // 模式：七档 chips，选档写 per-session localStorage 键并广播事件
+    const chips = w.findAll('[data-testid^="ide-settings-mode-"]')
+    expect(chips.map(c => c.text())).toEqual(['只读', '计划', '标准', '自动编辑', '少问', '全自动', '绕过'])
+    await chips[4].trigger('click')
+    expect(localStorage.getItem('ide-permission-mode:s2')).toBe('dontAsk')
+    // 工具调用行存在（先于模型行断言——点模型行会收起菜单）
+    expect(w.find('[data-testid="ide-settings-tooltrace"]').exists()).toBe(true)
+    // 模型：行点击打开 Ycode 模型选择器
+    expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(false)
+    await w.find('[data-testid="ide-settings-model-row"]').trigger('click')
+    expect(w.find('[data-testid="ide-input-model-picker"]').exists()).toBe(true)
+  })
 })
