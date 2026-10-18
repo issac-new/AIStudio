@@ -5,11 +5,7 @@ import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import TaskBriefingPanel from '@/custom/ide/components/TaskBriefingPanel.vue'
 
-const i18n = createI18n({
-  legacy: false,
-  locale: 'zh',
-  messages: { zh: {} },
-})
+const i18n = createI18n({ legacy: false, locale: 'zh', messages: { zh: {} } })
 
 function mountPanel(overrides: Record<string, unknown> = {}) {
   return mount(TaskBriefingPanel, {
@@ -67,5 +63,58 @@ describe('TaskBriefingPanel', () => {
     const w = mountPanel({ workflow: { stage: 'blocked', parentIds: [], childIds: [], blocked: true, retryCount: 3 } })
     const wfText = w.find('[data-testid="briefing-workflow-block"]').text()
     expect(wfText).toContain('3/5')
+  })
+})
+
+// ── 关联轮（2026-10-18）：任务工作区块 + 任务会话块 ──
+describe('TaskBriefingPanel 关联轮块', () => {
+  it('workspaceInfo 缺席 → 任务工作区块不渲染（诚实缺席）', () => {
+    const w = mountPanel()
+    expect(w.find('[data-testid="briefing-workspace-block"]').exists()).toBe(false)
+    expect(w.find('[data-testid="briefing-session-block"]').exists()).toBe(false)
+  })
+
+  it('workspaceInfo 物化 → 根目录+类型+已关联状态呈现', () => {
+    const w = mountPanel({
+      workspaceInfo: { kind: 'worktree', path: '/repo/.worktrees/t1', materialized: true, branch: 'wt/t1', note: 'ok' },
+    })
+    const block = w.find('[data-testid="briefing-workspace-block"]')
+    expect(block.exists()).toBe(true)
+    expect(block.text()).toContain('/repo/.worktrees/t1')
+    expect(block.text()).toContain('worktree · wt/t1')
+    expect(w.find('[data-testid="briefing-workspace-state"]').text()).toContain('workspaceLinked')
+  })
+
+  it('workspaceInfo 未物化（预测路径）→ 未派发标注', () => {
+    const w = mountPanel({
+      workspaceInfo: { kind: 'scratch', path: '/ws/t1', materialized: false, branch: null, note: 'predicted_scratch' },
+    })
+    expect(w.find('[data-testid="briefing-workspace-state"]').text()).toContain('workspacePredicted')
+  })
+
+  it('session 面（摘要+消息）→ 任务会话块渲染 + send-context 事件', async () => {
+    const w = mountPanel({
+      session: {
+        sessionId: 's1', source: 'cli', model: null, startedAt: 1, endedAt: null,
+        summary: '已完成三成',
+        messages: [
+          { role: 'user', content: '开始实现', timestamp: 1 },
+          { role: 'assistant', content: '好的，已建骨架', timestamp: 2 },
+        ],
+      },
+    })
+    const block = w.find('[data-testid="briefing-session-block"]')
+    expect(block.exists()).toBe(true)
+    expect(w.find('[data-testid="briefing-session-summary"]').text()).toContain('已完成三成')
+    expect(block.text()).toContain('开始实现')
+    await w.find('[data-testid="briefing-send-context"]').trigger('click')
+    expect(w.emitted('send-context')).toHaveLength(1)
+  })
+
+  it('session 面缺席（冷窗：无摘要无消息）→ 整块不渲染', () => {
+    const w = mountPanel({
+      session: { sessionId: 's1', source: null, model: null, startedAt: null, endedAt: null, summary: null, messages: [] },
+    })
+    expect(w.find('[data-testid="briefing-session-block"]').exists()).toBe(false)
   })
 })

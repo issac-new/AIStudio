@@ -26,6 +26,7 @@ vi.mock('@/custom/ide/store/ide', () => ({
     get activeTaskId() { return ideState.activeTaskId },
     setActiveTask: (v: string | null) => { ideState.activeTaskId = v },
     setDimension: (d: string) => { ideState.dimension = d },
+    associateTaskWorkspace: vi.fn(async () => null),
     layout: { sidebar: { maximized: false }, chat: { maximized: false }, sidepane: { maximized: false } },
     sidePane: { open: true, active: 'files' },
     togglePalette: () => {},
