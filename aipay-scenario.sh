@@ -1447,7 +1447,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     return 0
   }
   if [[ -z "$(sget lead_merge_be_dispatched)" ]]; then
-    dispatch_in_room wei "@wei-agent:matrix.test 集成合并任务 INT-MERGE-BE-${RFD_ID}（后端域 lead 职权：评审+合并一条责任链；非 PM、非导演代做）：
+    dispatch_in_room wei "@wei-agent:matrix.test 集成合并任务 INT-MERGE-BE-${RFD_ID}（后端域 lead 职权：评审+合并一条责任链；非 PM、非导演代做；合并提交信息必须含 [LEAD-MERGE] 标记——守门凭据，缺标记判越权合并）：
 1) 工作区 $(workspace wei) 拉取后：基线=origin/integration/${RFD_ID}（无则 origin/main），checkout -B integration/${RFD_ID}
 1b) 【单分支单步节奏+评审时机（V8.32-b，run20 实测 wei 会话饥饿与"等全齐"瀑布形态根治）】每支分支=一个独立回合：评审→merge→push origin→群内回执 INTEGRATED-<分支ID> 四件事全做完才开下一支；回执即续做下一支（连续集成，不等六条全齐，也不做完六条才回话）。任一 feat 分支出现在 origin 后 30 分钟内先发 REVIEW-STARTED-<分支ID>（开始评审声明），超 1 小时未合并由监督哨发 REVIEW-NUDGE-<分支ID> 提醒催单。
 2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（顺序即到达序；push 缺席的分支记单跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并记单不中止
@@ -1460,7 +1460,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     sset lead_merge_fallback 1
   }
   if [[ -z "$(sget lead_merge_fallback)" && -z "$(sget lead_merge_fe_dispatched)" ]]; then
-    dispatch_in_room mei "@mei-agent:matrix.test 集成合并任务 INT-MERGE-FE-${RFD_ID}（前端域 lead 职权：评审+合并；串行在后端域之后防同分支推挤）：
+    dispatch_in_room mei "@mei-agent:matrix.test 集成合并任务 INT-MERGE-FE-${RFD_ID}（前端域 lead 职权：评审+合并；串行在后端域之后防同分支推挤；合并提交信息必须含 [LEAD-MERGE] 标记——守门凭据）：
 1) 工作区 $(workspace mei) 拉取后：基线=origin/integration/${RFD_ID}，checkout -B integration/${RFD_ID}
 2) 评审后合并 origin/feat/DEV-MP（push 缺席则记单跳过）：merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本，其余 abort 记单
 3) 禁强推；push -u origin integration/${RFD_ID}
@@ -1601,27 +1601,27 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试·支付核心片，与 S2/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S1 条目+docs/design/${RFD_ID}-architecture-design.md 契约；test-drafts/TEST-BE-draft.md 草稿核对；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)")
     dispatch_task qi "执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S2 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task qi "执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）" \
       "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S3 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task fei "执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）" \
       "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S1 条目+概设契约；test-drafts/TEST-FE-draft.md 草稿核对；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     dispatch_task fei "执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）" \
       "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S2 条目+概设契约；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据，缺件判未完成；发结论行前自检文件已在分支上且非空）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因）；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     else
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
