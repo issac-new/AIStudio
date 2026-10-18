@@ -48,6 +48,9 @@ describe('界面模式（编程/工作）接线', () => {
     expect(src).toContain("'is-ide-work-mode': Boolean(ide.isWorkMode)")
     expect(src).toContain('.ide-chat.is-ide-work-mode :deep(.tool-details)')
     expect(src).toContain('white-space: pre-wrap')
+    // 审查/轮结果/回放是代码变更面，工作模式一并降噪
+    expect(src).toContain('<IdeReviewPanel v-if="!ide.isWorkMode"')
+    expect(src).toContain("visible: !Boolean(ide.isWorkMode)")
   })
 })
 

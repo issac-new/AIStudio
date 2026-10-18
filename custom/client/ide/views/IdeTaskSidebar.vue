@@ -349,7 +349,7 @@ async function onNewTask(): Promise<void> {
   // 工作任务走 hermes 通用助手，不绑仓库（Qoder 通用模式 / OpenAI Work 同型）。
   const mode = ide.taskMode ?? 'coding'
   const d = mode === 'coding' ? engineDefaultFromCache() : null
-  await chat.newChat(buildNewTaskOptions({
+  const created = chat.newChat(buildNewTaskOptions({
     mode,
     codingAgentId: ide.agentId,
     chatAgent: ideAgentToChatAgent(ide.agentId),
@@ -357,6 +357,9 @@ async function onNewTask(): Promise<void> {
     model: d?.model,
     provider: d?.provider,
   }) as unknown as Parameters<typeof chat.newChat>[0])
+  // 新建即进入会话：外壳据此收起裸落地引导（否则新任务被「从一个任务开始」挡在
+  // 后面，用户要点一下「进入会话工作区」才看得见刚建的任务）。
+  emit('open', created.id)
   ide.setChatFocus()
 }
 

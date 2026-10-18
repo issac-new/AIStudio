@@ -149,8 +149,9 @@ const modBandSpecs = computed<ModBandSpec[]>(() => [
   { id: 'injection', priority: 20, visible: flaggedSubagents.value.size > 0 },
   { id: 'approval-hint', priority: 30, visible: !!approvalMemoryHint.value },
   { id: 'runline', priority: 40, visible: running.value || !!lastCompletedSummary.value },
-  { id: 'run-result', priority: 50, visible: true },
-  { id: 'replay', priority: 55, visible: true },
+  // 轮结果/回放是代码变更面，工作模式降噪（zcode office 语义：隐藏审查类呈现）
+  { id: 'run-result', priority: 50, visible: !Boolean(ide.isWorkMode) },
+  { id: 'replay', priority: 55, visible: !Boolean(ide.isWorkMode) },
   { id: 'todo', priority: 60, visible: true },
 ])
 
@@ -985,7 +986,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       </div>
       <IdeSideSessionPane v-if="sideSessionOpen" @close="sideSessionOpen = false" />
       <IdeMentionPicker />
-      <IdeInlineDiff :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
+      <IdeInlineDiff v-if="!ide.isWorkMode" :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
       <IdeAgentsView />
       <IdeResumeAdvisor />
       <IdeSecurityBoostBar />
@@ -994,7 +995,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
       <IdeQueuePanel />
       <IdeRecapCard />
       <IdeTaskGroupsPanel />
-      <IdeReviewPanel />
+      <IdeReviewPanel v-if="!ide.isWorkMode" />
       <IdeAskCard />
       <IdeMentionChip />
       <IdeRunLogPanel />
