@@ -133,6 +133,12 @@
 19. **产品建号通道假成功缺陷修复（2026-10-06 晚，用户指令轮）**：R31 落地复测发现探针"供给 ✓"为假成功——createMatrixUser 误用 /_synapse/admin/v1/register（共享密钥端点，需 nonce+mac，仅 Bearer 必 400），建号从未真发生；provisionMatrixAccount 忽略返回值照样写 roster；"停用步空数组"实为号不存在的正确响应。修复（overlay 01045c39）：改 PUT /_synapse/admin/v2/users（幂等）+建号失败拒写 roster+测试 18/18（admin-service.test.ts 钉 v2 PUT+v1/register 绊线）；build:full 重建 dist→product-dist 刷新→studio 换血（老进程 pid 失配 kill -9）；live 终验 r31fix2 双号真实在位+offboard deactivated×2（handover=f8a5db4）。环境教训：overlay 下 npm i --no-save 炸 node_modules 软链（重建实体目录）——删目录重建软链恢复；凡建号/写入类端点验证必须核销端侧真实状态，禁只看返回 JSON。
 20. **run10 报告整改+方案修订全会话（2026-10-07，用户指令轮）**：本会话对 run10 报告和方案做了系统性整改，全部融入正本。报告侧：①七→八→九章重写为递进逻辑（审计→问题→闭环终态三件证据+结论先行）②G1-G6 仪表盘从散落两处归位到"六道关卡"节（3 列 2 行卡片）③驾驶舱联动地图渲染修复（CSS 全套+sidebar 遮挡根治）④术语首现自动释义（glossary.txt 25 条）⑤模版字段值可见化 ⑥双空步合并去凑数 ⑦txt 派生物自动产出 ⑧叙事集预写 18/26 步消灭注册等待。方案侧：①三核原则（§1.0 真实>质量>速度）②推演模式=产品模式（§1.0.1 流水线是产品主张）③图执行终极形态（§1.0.2 含北极星需求→图→自动运转）④零污染独立回归铁律（§1.0.3 八维清理+四禁+记忆例外）⑤全并发+快模式（§4.2 系分/编码四路齐发+治理三步并发+轮询 5s，净目标 ≤3h）⑥26 步并行度地图（§4.2 逐步触发条件）⑦流式流水线架构（§4.2 按模块独立流水）⑧纪律 25-27（运行中禁改脚本/活性等待封顶/流水线重叠五招）。产品侧：五件 backlog 全部已修+全量 3904/3904。harness 侧：帧采集焊死进驱动 16 步+帧硬闸+守门⑰（零帧拒出报告）。
 
+21. **V8.42 Harness 运行面开放事项（2026-10-18）**：
+    - 待验证：下一全量轮验证快照双时点（smoke 基线 / 步 23 审计）与报告第 9 章「证据七」端到端落盘；验证前置=`npm run inject && npm run build` 刷新 SIM product-dist（否则预检⑳拦旧构建）。
+    - 依赖：快照鉴权用调用方 JWT（驱动 `jwt_of fanfan`）；取不到时六端点按不可用落 `ok=false` 并记 `harness-snapshot-*` 问题单，属如实降级不是推演失败。
+    - 已接受边界（不另立整改）：恢复判定只给建议不自动执行；预算 `downgrade` 只给建议、`block` 需 `HERMES_BUDGET_ENFORCE=1`；沙箱路径/域名/rlimit 均 opt-in；macOS 不支持 `ulimit -v`（内存限额仅 Linux）。
+    - 环境：当前系统盘约 18GB，低于 §4.1 前置①的 20GB 水位线；正式全量轮前须清理或迁移数据盘，避免磁盘门禁挂起任务树。
+
 ## 六、工程附录 A-C（原 V7 附录全文要点，运维与核查时查）
 
 **附录 A 上游吸收谱系（截至 2026-10-02）**：一期 x20 IDE 吸收（d5f70537+83e5413b；a34a15aa）；二期消息面（系统事件折叠/permalink/房间排序/同名房悬停）+治理工件编辑链+settings-layers 四层+IDE Fork 网关真分叉（POST /api/sessions/{id}/fork）+蓝图画廊 16 模板+ekko/JEV 开门+网关能力卡（absorb-round2 走查 10/10）；QGate v0.3：13→44 门四档裁剪+rawOutput 交叉核验+输入快照新鲜度+元门二轮通道+task-intent 意图漂移对账+四族 22 检查+CLI 生命周期四命令，符号接地门 2844→0（main ab6c101c；套件 156/156；全量三连 3584 绿）；四源文 12 提案甲乙丙三组（KG 演化治理 A1-A4/驾驭工程 B1-B4/无损换窗 C1-C4，P18 全表）；保真开关面（P19：MX_BGREVIEW/gate_review v3/MX_APPROVE_MODE/MX_REASONING_EFFORT/memory 对齐 8f93a048…d1e24f9e；分类器 14/14+poll jq 4 用例）。
