@@ -200,6 +200,9 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'collab',
           name: 'ia2.collab',
           component: workbench,
+          // 原生工作台三栏内嵌 GroupChatView/ChatView：标记嵌入态，避免上游视图
+          // 把父路由替换成 hermes.groupChatRoom（2026-10-19 全页走查实证）。
+          meta: { standaloneEmbed: true },
         },
         {
           // P5 工作台概览（我的待办/评审闸口/交付进度）：显式路由，
@@ -207,6 +210,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'dash',
           name: 'ia2.dash',
           component: workbench,
+          meta: { standaloneEmbed: true },
         },
         {
           // hermes agent 会话画布（upstream ChatView 经路由参数绑定；新会话态）

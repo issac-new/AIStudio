@@ -121,6 +121,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   requirements: StageRequirementsOverview,
   docs: AsyncDocs,
   g1: StageGatePanel,
+  g2: StageGatePanel,
   preflight: StagePreflight,
   launch: AsyncOrchestration,
   board: AsyncKanban,

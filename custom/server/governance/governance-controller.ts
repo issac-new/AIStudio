@@ -32,6 +32,7 @@ import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, of
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
+import { governanceRepoRoot } from './repo-root'
 import { orgDiagnosis } from './org-diagnosis'
 import { qgateRunRoots } from './governance-analytics'
 import { loadDecisionRules } from './decision-rules'
@@ -111,7 +112,7 @@ export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title:
 ]
 
 export function repoRoot(): string {
-  return process.env.GOVERNANCE_REPO || '/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev'
+  return governanceRepoRoot()
 }
 
 /** git 全异步（execFile + timeout）：koa handler 内禁同步子进程——execFileSync

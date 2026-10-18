@@ -484,15 +484,19 @@ function ensureServerCustomSymlink() {
   // 上游 packages/server/src/custom。clean 时移除链接(还原上游)。
   const isOursSymlink = () => {
     try {
-      return lstatSync(upstreamServerCustom).isSymbolicLink();
+      if (!lstatSync(upstreamServerCustom).isSymbolicLink()) return false
+      // 2026-10-19：符号链接存在不等于链到当前 overlay——并行 worktree 会留下
+      // 指向旧树的链接（实测 serve-main），构建会静默编旧 custom 代码。
+      return realpathSync(upstreamServerCustom) === realpathSync(overlayServerCustom)
     } catch {
-      return false;
+      return false
     }
   };
   if (mode === 'inject') {
-    if (isOursSymlink()) return; // 已链接
+    if (isOursSymlink()) return; // 已链接且目标正确
     try {
       // junction 同上:Windows 免特权目录链接。
+      try { if (lstatSync(upstreamServerCustom).isSymbolicLink()) unlinkSync(upstreamServerCustom) } catch { /* absent */ }
       symlinkSync(overlayServerCustom, upstreamServerCustom, 'junction');
       console.log('[inject] linked upstream/.../server/src/custom → overlay/custom/server');
     } catch (e) {

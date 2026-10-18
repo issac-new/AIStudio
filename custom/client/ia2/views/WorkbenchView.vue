@@ -115,6 +115,9 @@ onUnmounted(() => { if (overviewTimer) clearInterval(overviewTimer) })
 // 「拖了不动」根因——aside 拖宽只是溢出轨道被中栏盖住/悬出屏外，可见边界不动）。
 // 折叠态 18px 导轨与 v12 铁律轨道同源。
 const wbGridStyle = computed(() => ({
+  // 2026-10-19 全页走查：全局同名 .wb 规则把 display 改成 flex，三栏竖排；
+  // 内联声明压过全局规则，保证「永不换列不堆叠」铁律。
+  display: 'grid',
   gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} minmax(320px, 1fr) ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
 }))
 
