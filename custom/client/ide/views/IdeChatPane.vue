@@ -659,22 +659,45 @@ function onManageSaved(): void {
   void loadCatalog()
 }
 
-// ── 电脑操作（ZCode composer CUA 入口对应物；声明式，spec D-2）──
-// ZCode CUA=宿主插件深集成（权限代理/Helper），IDE 引擎桥无该通道；与 websearch
-// 档同一既有模式：开/关各向当前会话发一条声明，实际能力以会话工具面为准。
-const CU_KEY = 'ide-computer-use:'
-function cuStorageKey(): string { return CU_KEY + (chatStore.activeSessionId ?? 'default') }
-const computerUseOn = ref(localStorage.getItem(CU_KEY + 'default') === 'on')
-watch(() => chatStore.activeSessionId, (sid, prev) => {
-  if (sid !== prev) computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
-})
-async function toggleComputerUse(): Promise<void> {
-  computerUseOn.value = !computerUseOn.value
-  localStorage.setItem(cuStorageKey(), computerUseOn.value ? 'on' : 'off')
-  await chatStore.sendMessage(
-    `[computer-use-policy] enabled=${computerUseOn.value} —— 声明式：允许使用电脑操作/浏览器控制工具；实际能力以会话工具面为准。`,
-  )
+// ── 电脑操作（ZCode composer CUA 入口对应物；2026-10-18 接通轮）──
+// 真接线：状态/切换均走后端 /api/ide/computer-use → 引擎 WS 桥 listPlugins/
+// setPluginEnabled（插件 computer-use@zcode-plugins-official，user 级全局态，
+// 启停热更新运行态——新会话即可用；运行中会话引擎可能拒绝切换，如实透出）。
+// 三态：on / off / error（引擎不可达或插件缺失），不再发声明消息（引擎真值取代）。
+type CuState = 'on' | 'off' | 'error'
+const cuState = ref<CuState>('off')
+const cuDetail = ref('')
+const cuBusy = ref(false)
+async function loadComputerUse(): Promise<void> {
+  try {
+    const res = await authFetch(`/api/ide/computer-use?workspacePath=${encodeURIComponent(root.value ?? '/tmp')}`)
+    const body = (await res.json()) as { ok?: boolean; supported?: boolean; enabled?: boolean; detail?: string }
+    cuState.value = !body.ok ? 'error' : body.enabled ? 'on' : 'off'
+    cuDetail.value = body.detail ?? ''
+  } catch {
+    cuState.value = 'error'
+  }
 }
+async function toggleComputerUse(): Promise<void> {
+  if (cuBusy.value || cuState.value === 'error') return
+  cuBusy.value = true
+  try {
+    const res = await authFetch('/api/ide/computer-use', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled: cuState.value !== 'on', workspacePath: root.value ?? '/tmp' }),
+    })
+    const body = (await res.json()) as { ok?: boolean; supported?: boolean; enabled?: boolean; detail?: string }
+    cuState.value = !body.ok ? 'error' : body.enabled ? 'on' : 'off'
+    cuDetail.value = body.detail ?? ''
+    if (!body.ok && body.detail) showToast(`${tx.computerUse}: ${body.detail}`, 'error', 4000)
+  } catch {
+    cuState.value = 'error'
+    showToast(`${tx.computerUse}: engine unreachable`, 'error', 4000)
+  } finally {
+    cuBusy.value = false
+  }
+}
+onMounted(() => { void loadComputerUse() })
 
 
 // ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
@@ -1021,12 +1044,15 @@ watch(() => chatStore.activeSessionId, syncPermMode)
              原样收进行尾。 -->
         <div class="ide-chat__composerbar" data-testid="ide-composer-bar">
           <IdePermissionSwitcher />
+          <!-- 电脑操作（2026-10-18 接通轮）：引擎插件真接线（computer-use@
+               zcode-plugins-official user 级启停，热更新）；状态点=引擎真值。 -->
           <button
             type="button"
             class="ide-chat__cb-btn"
-            :class="{ 'is-on': computerUseOn }"
+            :class="{ 'is-on': cuState === 'on', 'is-error': cuState === 'error' }"
+            :disabled="cuBusy"
             data-testid="ide-computer-use"
-            :title="tx.computerUseTip"
+            :title="cuState === 'error' ? (cuDetail || '引擎不可达') : tx.computerUseTip"
             @click="toggleComputerUse"
           ><span class="ide-chat__cb-dot" />{{ tx.computerUse }}</button>
           <IdeContextBar />
@@ -1542,6 +1568,9 @@ watch(() => chatStore.activeSessionId, syncPermMode)
   flex-shrink: 0;
 }
 .ide-chat__cb-btn.is-on .ide-chat__cb-dot { background: var(--accent-primary); }
+// 电脑操作错误态（引擎不可达/插件缺失）：红点提示，点击无动作（title 给详情）。
+.ide-chat__cb-btn.is-error { color: var(--ia-stale); border-color: color-mix(in srgb, var(--ia-stale) 45%, transparent); }
+.ide-chat__cb-btn.is-error .ide-chat__cb-dot { background: var(--ia-stale); }
 .ide-chat__cb-model {
   max-width: 260px;
 }

@@ -30,6 +30,12 @@ export interface ZcodeEngineAgentService {
   listSavedWorkflowRuns(params: { workspacePath?: string; name?: string; limit: number; scope?: string }): Promise<Record<string, unknown>>
   // overlay 002-import-session-rpc（#22 写入面）：归一化行→imported 会话。
   importSessionV4(params: { workspacePath: string; source: 'codex' | 'kimi' | 'claudeCode'; sourceId: string; rows: Array<{ role: 'user' | 'assistant' | 'tool'; text: string; at: number }> }): Promise<{ sessionId: string; rowsWritten: number }>
+  // ── 插件面（2026-10-18 电脑操作接通轮）：listPlugins/setPluginEnabled 锚=
+  // upstream/zcode packages/services/src/zcode-agent/zcodeAgent.ts:658/792 与
+  // zcodeAgentPluginParams.ts（workspacePath+pluginId+enabled+scope）。插件启停=
+  // user 级全局态，CLI 进程读写 ~/.zcode 插件目录并热更新运行态。
+  listPlugins(params: { workspacePath: string; configScope?: 'user' | 'workspace' }): Promise<{ plugins: Array<{ id: string; enabled: boolean }>; diagnostics?: Array<Record<string, unknown>> }>
+  setPluginEnabled(params: { workspacePath: string; pluginId: string; enabled: boolean; scope?: 'user' | 'workspace'; operationId?: string }): Promise<Record<string, unknown>>
 }
 
 export interface ZcodeEngineBridge {
