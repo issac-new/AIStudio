@@ -1,0 +1,32 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: engineering.harness-eval
+  version: 0.1.0
+  description: >
+    固定能力评测集七维回归（2026-10-18 P1-4）：跑 `npm run test:eval`，内置八任务
+    覆盖任务完成、工具参数、失败恢复、长任务状态、越权/注入、成本/无效循环、
+    人工升级正确性。断言为纯 S0（正则/阈值/红线负例），零判定端依赖，CI 可复跑。
+    本门守的是“评测引擎对七维都能给出判定”，不是“某个 agent 在七维都达标”
+    （真实能力评测需接入运行轨迹样本，另行排期）。
+spec:
+  domain: L1
+  claims:
+    - behavior.eval-pipeline-regression-clean
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: harness-eval
+      type: command
+      command: ["npm", "run", "test:eval"]
+      evidenceType: eval-regression-result
+      timeoutMs: 300000
+  evidence:
+    required:
+      - eval-regression-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

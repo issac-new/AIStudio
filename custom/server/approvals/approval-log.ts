@@ -43,6 +43,8 @@ function emitToGovBus(full: ApprovalLogEntry): void {
     .catch(() => { /* fail-soft：总线故障不影响审批日志主链路 */ })
 }
 
+export type ApprovalLogSource = 'human' | 'policy' | 'system'
+
 export interface ApprovalLogEntry {
   id: string
   ts: number
@@ -54,6 +56,36 @@ export interface ApprovalLogEntry {
   note?: string
   /** V4-N1 风险档（裁决时服务端重算；老记录可无） */
   risk?: ApprovalRiskTier
+  /** 2026-10-18 P0-2：批准范围（once/session/always/scoped/task/policy）。 */
+  scope?: string
+  /** 凭证失效时刻（epoch ms）；缺省=长期有效（如 always）。 */
+  expiresAt?: number
+  /** 决策来源：人工 / 策略自动 / 系统兜底。 */
+  source?: ApprovalLogSource
+}
+
+/** 决策 → 范围与期限（单一事实源；appendApprovalLog 自动补齐，调用方也可显式覆盖）。 */
+export function approvalScopeMeta(decision: string, now = Date.now()): { scope: string; expiresAt?: number } {
+  switch (decision) {
+    case 'session':
+    case 'approved_for_session':
+    case 'denied_for_session':
+      return { scope: 'session', expiresAt: now + 8 * 3_600_000 }
+    case 'always':
+      return { scope: 'always' }
+    case 'approved_scoped':
+      return { scope: 'scoped', expiresAt: now + 24 * 3_600_000 }
+    case 'request_changes':
+      return { scope: 'task' }
+    case 'execpolicy_amendment':
+      return { scope: 'policy' }
+    case 'once':
+    case 'approved_once':
+    case 'approve':
+    case 'reject':
+    default:
+      return { scope: 'once', expiresAt: now + 30 * 60_000 }
+  }
 }
 
 const CAP = 500
@@ -92,8 +124,16 @@ function isEntry(v: unknown): v is ApprovalLogEntry {
  * promise 链（链会把返回值变成 Promise，破坏同步契约与调用方取值）；跨进程
  * 并发仍靠 CAP 裁剪兜底。 */
 export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: number }): ApprovalLogEntry {
-  const full: ApprovalLogEntry = { ts: Date.now(), ...entry }
-  recordToDecisionGraph(entry)
+  const ts = entry.ts ?? Date.now()
+  const meta = approvalScopeMeta(entry.decision, ts)
+  const full: ApprovalLogEntry = {
+    ...entry,
+    ts,
+    scope: entry.scope ?? meta.scope,
+    expiresAt: entry.expiresAt ?? meta.expiresAt,
+    source: entry.source ?? 'human',
+  }
+  recordToDecisionGraph(full)
   emitToGovBus(full)
   const list = load()
   list.push(full)

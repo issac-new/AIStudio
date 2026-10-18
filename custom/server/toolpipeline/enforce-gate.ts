@@ -16,21 +16,31 @@
  * 总闸 HERMES_TOOL_ENFORCE=1 才生效（默认 0=零行为变化，对齐 toolresultguard
  * 先例）；内部任何异常 fail-open；每次拒绝发 govbus security/high 事件留痕。
  */
+import { homedir } from 'os'
+import { join, resolve } from 'path'
 import { ladderForProfile, type AutonomyLadderEntry } from '../autonomyladder/autonomy-ladder'
 import { classifyApprovalRisk, type ApprovalRiskTier } from '../approvals/risk-tier'
+import { browserVerdict } from '../browsersec/browser-security'
 import { modeDecision, type PermissionMode, type ToolCategory } from '../permmodes/permission-modes'
 import { sessionModeOf } from '../permmodes/session-mode-store'
+import { appendPolicyDecision } from './policy-decisions'
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
 interface PreExecuteVerdict { allow: false; error: string }
 interface StructuralToolHook {
-  preExecute?: (name: string, input: Record<string, unknown>, context?: { profileId?: string }) =>
-    Promise<PreExecuteVerdict | void> | PreExecuteVerdict | void
+  preExecute?: (name: string, input: Record<string, unknown>, context?: {
+    profileId?: string
+    userId?: string
+    sessionId?: string
+    runId?: string
+  }) => Promise<PreExecuteVerdict | void> | PreExecuteVerdict | void
 }
 
 export type EnforceRule =
   | 'master-off'            // 总闸未开（不执法）
   | 'no-config'             // 无阶梯无全局模式（不执法）
+  | 'identity-pass'         // 身份白名单放行（无阶梯/模式时的唯一执法层）
+  | 'identity-tool-denied'  // 身份工具白名单未覆盖
   | 'ladder-pass'           // 阶梯判定放行
   | 'mode-pass'             // 全局模式判定放行
   | 'ladder-insight-readonly' // insight 档遇非 read 工具
@@ -39,11 +49,13 @@ export type EnforceRule =
   | 'mode-off'               // 全局模式矩阵判 OFF
   | 'mode-needs-approval'    // 全局模式矩阵判 RA（需审批，v1 无交互桥→拒并指引）
   | 'approval-passed'        // 审批桥放行（批单在案且未消费，consume-on-pass；applyApprovalBridge 终态）
+  | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
+  | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
 
 export type EnforceVerdict =
   | { enforcing: false; rule: Extract<EnforceRule, 'master-off' | 'no-config'> }
-  | { enforcing: true; allow: true; rule: Extract<EnforceRule, 'ladder-pass' | 'mode-pass' | 'approval-passed'> }
-  | { enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'ladder-pass' | 'mode-pass' | 'approval-passed'>; error: string }
+  | { enforcing: true; allow: true; rule: Extract<EnforceRule, 'identity-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'> }
+  | { enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'identity-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'>; error: string }
 
 // ---------- 工具类别映射（permmodes 四类口径） ----------
 
@@ -165,12 +177,90 @@ export function approvalPointHit(ladder: AutonomyLadderEntry, tool: string, inpu
 
 // ---------- 裁决核心（纯函数，测试面） ----------
 
+/** 身份最小面（agentidentity 的投影；不 import 存储，保持纯函数可测）。 */
+export interface IdentityLite {
+  id: string
+  name: string
+  toolAllowlist: string[]
+}
+
 export interface EnforceEnv {
   masterOn?: boolean
   globalMode?: PermissionMode | null
   /** 会话档取值（v4 通道轮）：per-profile 会话权限档，优先于全局档、让位于阶梯。 */
   sessionModeOf?: (profileId?: string) => PermissionMode | null
   ladderOf?: (profileId?: string) => AutonomyLadderEntry | null
+  /** 发起用户（ekko context.userId）；无身份记录时不影响既有裁决。 */
+  userId?: string
+  identityOf?: (userId?: string) => IdentityLite | null
+}
+
+/** 工具白名单匹配：精确名或 `prefix*`。 */
+export function toolAllowedByList(tool: string, list: string[]): boolean {
+  return list.some((raw) => {
+    const pattern = String(raw ?? '').trim()
+    if (!pattern) return false
+    return pattern.endsWith('*') ? tool.startsWith(pattern.slice(0, -1)) : tool === pattern
+  })
+}
+
+function envList(name: string): string[] {
+  return (process.env[name] ?? '')
+    .split(/[:,]/)
+    .map((v) => v.trim())
+    .filter(Boolean)
+}
+
+const FILE_PATH_TOOLS = new Set(['read_file', 'write_file', 'patch', 'view_image'])
+
+/** 显式路径提取：只取入参里明确给出的绝对/~路径；相对路径跳过（无法在裁决层确定工作区根）。 */
+function explicitPathsOf(tool: string, input: Record<string, unknown>): string[] {
+  if (tool === 'terminal_exec' || tool === 'code_exec') {
+    const v = input.cwd ?? input.workdir
+    return typeof v === 'string' && v ? [v] : []
+  }
+  if (FILE_PATH_TOOLS.has(tool)) {
+    const v = input.path ?? input.file_path
+    return typeof v === 'string' && v ? [v] : []
+  }
+  return []
+}
+
+function normalizeRoot(path: string): string {
+  const expanded = path.startsWith('~') ? join(homedir(), path.slice(1)) : path
+  return resolve(expanded)
+}
+
+/** 沙箱路径检查：返回越界路径或 null。只检查显式绝对/~路径。 */
+export function sandboxPathViolation(tool: string, input: Record<string, unknown>, rootsInput?: string[]): string | null {
+  const roots = (rootsInput ?? envList('HERMES_TOOL_SANDBOX_ROOTS')).map(normalizeRoot)
+  if (roots.length === 0) return null
+  for (const raw of explicitPathsOf(tool, input)) {
+    if (!raw.startsWith('/') && !raw.startsWith('~')) continue
+    const target = normalizeRoot(raw)
+    const ok = roots.some((root) => target === root || target.startsWith(root.endsWith('/') ? root : `${root}/`))
+    if (!ok) return raw
+  }
+  return null
+}
+
+const URL_KEYS = ['url', 'href', 'link', 'target_url', 'navigate_to']
+
+/** 浏览器 URL 检查：配置了 allow/deny 才生效；denylist 优先（browsersec 语义）。 */
+export function sandboxNetworkViolation(tool: string, input: Record<string, unknown>): string | null {
+  if (!tool.startsWith('browser_') && tool !== 'delegate_task') return null
+  const allow = envList('HERMES_BROWSER_ALLOWLIST')
+  const deny = envList('HERMES_BROWSER_DENYLIST')
+  if (allow.length === 0 && deny.length === 0) return null
+  let url: string | null = null
+  for (const key of URL_KEYS) {
+    const v = input[key]
+    if (typeof v === 'string' && /^https?:\/\//i.test(v)) { url = v; break }
+  }
+  // 没有 URL 的浏览器动作（click/press）无法在裁决层判定目标域，交给独立 profile 隔离。
+  if (!url) return null
+  const decision = browserVerdict(url, { allowlist: allow, denylist: deny, isolatedProfile: true })
+  return decision.verdict === 'deny' ? `${url}（${decision.reason}）` : null
 }
 
 export function evaluateEnforcement(
@@ -181,6 +271,33 @@ export function evaluateEnforcement(
 ): EnforceVerdict {
   const masterOn = env.masterOn ?? (process.env.HERMES_TOOL_ENFORCE === '1')
   if (!masterOn) return { enforcing: false, rule: 'master-off' }
+
+  // 策略链 0（P0-1）：发起用户身份白名单。仅当身份已登记且声明了 allowlist 才执法；
+  // 未登记/空 allowlist=未声明，不改变既有行为（不把“没登记”当“已治理”）。
+  const identity = env.identityOf?.(env.userId) ?? null
+  const identityEnforced = !!identity && identity.toolAllowlist.length > 0
+  if (identity && identityEnforced && !toolAllowedByList(tool, identity.toolAllowlist)) {
+    return {
+      enforcing: true, allow: false, rule: 'identity-tool-denied',
+      error: `身份 ${identity.name}（${identity.id}）的工具白名单未覆盖 ${tool}——请登记该工具或由属主调整 allowlist`,
+    }
+  }
+
+  // 沙箱硬边界（P2-5，opt-in）：未配置根/域名 = 不检查，不假装有沙箱。
+  const pathViolation = sandboxPathViolation(tool, input)
+  if (pathViolation) {
+    return {
+      enforcing: true, allow: false, rule: 'sandbox-path',
+      error: `显式路径 ${pathViolation} 超出沙箱根（HERMES_TOOL_SANDBOX_ROOTS）——请改到允许目录`,
+    }
+  }
+  const networkViolation = sandboxNetworkViolation(tool, input)
+  if (networkViolation) {
+    return {
+      enforcing: true, allow: false, rule: 'sandbox-network',
+      error: `浏览器目标 ${networkViolation} 被网络策略拒绝（HERMES_BROWSER_ALLOWLIST/DENYLIST）`,
+    }
+  }
   // 档位解析三级链（阶梯＞会话档＞全局档）：会话档 per-profile 更具体故恒胜全局档
   // （v4 通道轮）；全局档=env 注入位（测试用 globalMode / 运行用 HERMES_TOOL_ENFORCE_MODE）。
   const sessionMode = env.sessionModeOf !== undefined
@@ -192,7 +309,12 @@ export function evaluateEnforcement(
   const modeRaw = sessionMode ?? globalRaw
   const modeSource = sessionMode ? '会话档' : '全局档'
   const ladder = (env.ladderOf ?? ((p?: string) => ladderForProfile(p ?? '')))(profileId)
-  if (!ladder && !modeRaw) return { enforcing: false, rule: 'no-config' }
+  if (!ladder && !modeRaw) {
+    // 身份白名单是唯一执法层时，放行也要如实标 enforcement=true（否则审计看不到裁决）。
+    return identityEnforced
+      ? { enforcing: true, allow: true, rule: 'identity-pass' }
+      : { enforcing: false, rule: 'no-config' }
+  }
 
   // 策略链 1：自治阶梯（配置了阶梯则阶梯优先——更具体的 per-profile 约束胜出全局模式）
   if (ladder) {
@@ -326,14 +448,60 @@ function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<E
     .catch(() => { /* fail-soft */ })
 }
 
+/** 身份台账缓存（5s）：工具调用高频，不每次读盘；台账变更最多延迟 5s 生效。 */
+let identityCache: { at: number; list: IdentityLite[] } | null = null
+
+async function identityOfUser(userId?: string): Promise<IdentityLite | null> {
+  if (!userId) return null
+  if (!identityCache || Date.now() - identityCache.at > 5_000) {
+    try {
+      const { listIdentities } = await import('../agentidentity/agent-identity')
+      identityCache = {
+        at: Date.now(),
+        list: listIdentities().map((i) => ({ id: i.id, name: i.name, toolAllowlist: i.toolAllowlist })),
+      }
+    } catch {
+      return null // 台账不可用=不按身份执法（fail-open，与既有未配置语义一致）
+    }
+  }
+  return identityCache.list.find((i) => i.id === userId || i.name === userId) ?? null
+}
+
+function logPolicyDecision(
+  tool: string,
+  input: Record<string, unknown>,
+  context: { profileId?: string; userId?: string; sessionId?: string; runId?: string } | undefined,
+  verdict: EnforceVerdict,
+): void {
+  if (!verdict.enforcing) return
+  appendPolicyDecision({
+    tool,
+    userId: context?.userId,
+    profileId: context?.profileId,
+    sessionId: context?.sessionId,
+    runId: context?.runId,
+    enforcing: true,
+    allow: verdict.allow,
+    rule: verdict.rule,
+    risk: riskOfCall(tool, input),
+    reason: verdict.allow === false ? verdict.error.slice(0, 200) : undefined,
+  })
+}
+
 /** 执法钩子（H3 v1）：preExecute 裁决。拒绝时 govbus 留痕 + 审计账 deny 条目。 */
 export function ekkoEnforceGateHook(): StructuralToolHook {
   return {
-    async preExecute(name: string, input: Record<string, unknown>, context?: { profileId?: string }) {
+    async preExecute(name: string, input: Record<string, unknown>, context?: {
+      profileId?: string; userId?: string; sessionId?: string; runId?: string
+    }) {
       let verdict: EnforceVerdict
       let bridgeFacts: Awaited<ReturnType<typeof approvalBridgeFacts>> | null = null
       try {
-        verdict = evaluateEnforcement(name, input, context?.profileId)
+        const identity = await identityOfUser(context?.userId)
+        verdict = evaluateEnforcement(name, input, context?.profileId, {
+          userId: context?.userId,
+          identityOf: () => identity,
+        })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
           bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule)
@@ -356,6 +524,7 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
         const outcome = await ap.waitEnforceDecision(bridgeFacts.callHash)
         if (outcome === 'approved' && ap.consumeApprovalIfReady(bridgeFacts.callHash)) {
           emitSuspendEvent(name, context?.profileId, bridgeFacts.ticket.id, 'resume')
+          logPolicyDecision(name, input, context, { enforcing: true, allow: true, rule: 'approval-passed' })
           return // 批准即续跑：瀑布继续执行工具本体
         }
         if (outcome === 'approved') {
@@ -367,6 +536,7 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
           verdict = { ...verdict, error: `审批等待超时（TTL=${Math.round(ap.suspendTtlMs() / 1000)}s）——审批单 ${bridgeFacts.ticket.id} 仍在收件箱，批准后重试即放行` }
         }
       }
+      logPolicyDecision(name, input, context, verdict)
       if (verdict.enforcing && verdict.allow === false) {
         emitDenyEvent(name, context?.profileId, verdict)
         return { allow: false as const, error: verdict.error }
