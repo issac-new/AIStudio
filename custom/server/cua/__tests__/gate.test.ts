@@ -10,7 +10,7 @@ import { EventEmitter } from 'node:events'
 const storeDir = mkdtempSync(join(tmpdir(), 'ide-cua-gate-'))
 process.env.IDE_CUA_POLICY_FILE = join(storeDir, 'ide-cua.json')
 
-const { setSessionCua } = await import('../policy')
+const { setSessionCua, setBrokerTransport } = await import('../policy')
 
 // 上游根取法与 zcode-002 集成测试同款：优先 OVERLAY_UPSTREAM_ROOT（私有注入克隆），
 // 缺省共享 upstream。chat-turn 是 patch 664 的落点——旧注入树（无 overlay[cua-gate]
@@ -71,12 +71,17 @@ describe.skipIf(!startZcodeChatTurn || !patched)('patch 664：zcode spawn 前合
     expect(captured.env?.ZCODE_CUA_DISABLE).toBe('1')
   })
 
-  it('开启会话 → 不注入（不覆盖宿主 env）', async () => {
+  it('开启+broker 凭据对 → 注入 socket+authority；无凭据开启=fail-closed', async () => {
     setSessionCua('sess-open', true)
-    const captured: Captured = {}
+    let captured: Captured = {}
     startZcodeChatTurn({ name: 'ZCode' }, fakeRun('sess-open'), 'hi', '', captureHost(captured))
+    expect(captured.env?.ZCODE_CUA_DISABLE).toBe('1') // 无凭据对：仍 fail-closed
+    setBrokerTransport({ socket: '/tmp/cua.sock', authority: 'node-backend' })
+    captured = {}
+    startZcodeChatTurn({ name: 'ZCode' }, fakeRun('sess-open'), 'hi', '', captureHost(captured))
+    expect(captured.env?.ZCODE_CUA_PERMISSION_BROKER_SOCKET).toBe('/tmp/cua.sock')
+    expect(captured.env?.ZCODE_CUA_PLUGIN_AUTHORITY).toBe('node-backend')
     expect(captured.env?.ZCODE_CUA_DISABLE).toBeUndefined()
-    // 显式存在的宿主值不被清掉
-    expect('ZCODE_CUA_DISABLE' in (captured.env ?? {})).toBe(false)
+    setBrokerTransport(null)
   })
 })
