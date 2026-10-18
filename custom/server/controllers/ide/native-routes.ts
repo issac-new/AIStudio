@@ -14,6 +14,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
 import type { Context, Next } from 'koa'
 import { writeThroughToEngine } from './engine-models'
+import { remoteList, remoteStatus, type RemoteDeps } from './remote-workspace'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -55,6 +56,20 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
     }
     if (method === 'POST' && path === '/api/ide/slash-commands/save') {
       await handleSlashCommandsSave(ctx)
+      return
+    }
+    // ── G6 远程工作区诊断（复用 Hermes FileProvider；只读）──
+    if (method === 'GET' && path === '/api/ide/remote/status') {
+      await handleRemoteStatus(ctx)
+      return
+    }
+    if (method === 'GET' && path === '/api/ide/remote/list') {
+      await handleRemoteList(ctx)
+      return
+    }
+    // ── G7 zcode 插件目录（只读清单）──
+    if (method === 'GET' && path === '/api/ide/plugins/zcode') {
+      await handleZcodePlugins(ctx)
       return
     }
     await next()
@@ -230,4 +245,89 @@ async function handleSemanticaStatus(ctx: Context): Promise<void> {
     ctx.status = 503
     ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
   }
+}
+
+// ── G6 远程工作区：复用 Hermes FileProvider（local|docker|ssh|singularity）。
+// 上游模块经符号链接真实路径解析（custom/server/controllers/ide 上五级到 overlay 根，
+// 再进 upstream）——与 zcode engine-controller 的 require 先例同型。惰性装载：
+// 单测/未配置环境下不加载 file-provider 的重依赖。
+function remoteProfile(ctx: Context): string | undefined {
+  const q = ctx.query?.profile
+  return typeof q === 'string' && q.trim() ? q.trim() : undefined
+}
+
+function realRemoteDeps(): RemoteDeps {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fp = require('../../../../../upstream/hermes-studio/packages/server/src/modules/studio/services/files/file-provider') as {
+    getTerminalConfig: RemoteDeps['getTerminalConfig']
+    createFileProvider: (p?: string) => Promise<{
+      listDir: (d: string) => Promise<Array<{ name: string; path: string; isDir: boolean; size: number }>>
+    }>
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const pc = require('../../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/profile-config') as {
+    getActiveProfileDir: () => string
+    getProfileDir: (p: string) => string
+  }
+  return {
+    getTerminalConfig: (p) => fp.getTerminalConfig(p),
+    createProvider: (p) => fp.createFileProvider(p),
+    profileHome: (p) => (p ? pc.getProfileDir(p) : pc.getActiveProfileDir()),
+  }
+}
+
+async function handleRemoteStatus(ctx: Context): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  try {
+    ctx.body = await remoteStatus(realRemoteDeps(), remoteProfile(ctx))
+  } catch (err) {
+    ctx.status = 200
+    ctx.body = {
+      ok: false, profile: remoteProfile(ctx) ?? null, backend: 'unknown', cwd: null,
+      docker: { image: false, container: false }, ssh: { host: false, user: false, key: false, port: null },
+      probe: { ok: false, ms: 0, code: 'backend_error', detail: err instanceof Error ? err.message.slice(0, 200) : String(err) },
+    }
+  }
+}
+
+async function handleRemoteList(ctx: Context): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const raw = ctx.query?.path
+  const path = typeof raw === 'string' && raw.trim() ? raw.trim() : null
+  try {
+    ctx.body = await remoteList(realRemoteDeps(), { profile: remoteProfile(ctx), path })
+  } catch (err) {
+    ctx.status = 200
+    ctx.body = {
+      ok: false, backend: 'unknown', path: path ?? '', entries: [], truncated: false,
+      code: 'backend_error', detail: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    }
+  }
+}
+
+// ── G7 zcode 插件目录（只读）：列已知插件根的子目录 + manifest 名称/版本。──
+async function handleZcodePlugins(ctx: Context): Promise<void> {
+  const { readdirSync, statSync } = await import('fs')
+  const { homedir } = await import('os')
+  const zcodeHome = process.env.ZCODE_HOME?.trim() || join(homedir(), '.zcode')
+  const roots = [join(zcodeHome, 'v2', 'plugins'), join(zcodeHome, 'plugins')]
+  const plugins: Array<{ name: string; version: string | null; root: string; path: string }> = []
+  for (const root of roots) {
+    if (!existsSync(root)) continue
+    let names: string[] = []
+    try { names = readdirSync(root) } catch { continue }
+    for (const name of names.slice(0, 200)) {
+      const dir = join(root, name)
+      try { if (!statSync(dir).isDirectory()) continue } catch { continue }
+      let version: string | null = null
+      for (const manifest of ['plugin.json', 'package.json']) {
+        try {
+          const parsed = JSON.parse(readFileSync(join(dir, manifest), 'utf8')) as { version?: string }
+          if (parsed?.version) { version = String(parsed.version); break }
+        } catch { /* manifest 缺席是常态 */ }
+      }
+      plugins.push({ name, version, root, path: dir })
+    }
+  }
+  ctx.body = { ok: true, zcodeHome, roots, count: plugins.length, plugins }
 }

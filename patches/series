@@ -863,3 +863,8 @@
 # /bin/sh 的 ulimit 包裹命令（CPU/文件大小/进程数；内存限额仅 Linux）。
 # 未配置时 command/args 完全不变，零行为变化。
 662-ekko-terminal-resource-limits.patch
+
+# 663: build-server 的 custom 兄弟布局 require 逃逸前缀扩展到任意层 ../——
+# custom/server/controllers/ide 深一级（五个 ../），原四层匹配漏掉导致 esbuild 解析失败。
+# 663 让位：661/662 已被并行 Harness 批占用。
+663-server-build-escape-five-up.patch

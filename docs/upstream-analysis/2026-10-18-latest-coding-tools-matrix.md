@@ -13,7 +13,7 @@
 
 | 工具 | 最新检出/外部版本 | 核验锚点 |
 |---|---|---|
-| zcode（源码底座） | tag `v3.15.1` = `aac47556`，2026-10-10；本地 HEAD 仍是 v3.14.3；安装版 3.15.3 | `git -C upstream/zcode log -1 v3.15.1`；`PlistBuddy .../ZCode.app/Contents/Info.plist` |
+| zcode（源码底座） | **源码基线 = 公开最新 v3.15.1**（`aac47556`，origin/main；本地 HEAD 已同步到 v3.15.1）；安装版 3.15.3（源码未公开，增量核对见 `2026-10-18-zcode-3.15.3-delta.md`） | `git -C upstream/zcode log -1`；`git ls-remote --tags origin`；`PlistBuddy .../ZCode.app/Contents/Info.plist` |
 | Claude Code | `v2.1.300`（2026-10-14） | `upstream/claude-code` → `git describe --tags` |
 | Codex | `rust-v0.162.1`（2026-10-09） | `upstream/codex` → `git describe --tags` |
 | Kimi Code | `@moonshot-ai/kimi-code@2.1.1-6-ga940f2ff0` | `upstream/kimi-code` → `git describe --tags` |
@@ -87,10 +87,10 @@ v3.14.3→v3.15.1 只有一个 squash 提交（11,736 文件），不能按 comm
 | G1 | **工作模式（办公模式）缺失**：只有编程形态，没有 zcode 3.15.x 的 coding/office 呈现模式 | `custom/client/ide/views/IdeShell.vue`、`IdeSidePane.vue` 无 interfaceMode | **本轮实现**（呈现层+快捷键+设置入口） |
 | G2 | **工作任务与编程任务没有内核分流**：新建任务永远创建 zcode 编码会话并绑工作区 | `IdeTaskSidebar.vue:335-347`、`IdeChatPane.vue:153-174` | **本轮实现**（工作任务→通用 hermes 会话，不绑仓库） |
 | G3 | 执行模式（plan/build/edit/yolo）会话内不生效 | `IdePermissionSwitcher.vue:1-8`（头注自述） | 另一并行会话已接线服务端会话档（REST）；本轮不重复 |
-| G4 | 交付物体系（artifacts 统一评审：计划/diff/验证证据） | 分散在 IdePlanFloat/IdeRunResultCard/IdeGitPane | 下一轮（本轮先落 G1/G2 + 验证链） |
+| G4 | 交付物体系（artifacts 统一评审：计划/diff/验证证据） | 分散在 IdePlanFloat/IdeRunResultCard/IdeGitPane | **2026-10-18 待办清零批已交付**：`deliver` 页签聚合计划/变更/验证/产物 + 本地评审门 + 摘要回流 |
 | G5 | 工作模式快速开始/文档技能入口 | hermes 技能存在，但无工作模式引导 | 随 G2 给空态引导 |
-| G6 | 远程工作区 SSH/Docker/WSL、移动远控、Gen UI、Plugin UI 沙箱 | 无 | 记录 backlog，不在本轮 |
-| G7 | 分享选段/云链接、插件市场、Cua | 部分（本地导出/浏览器页签） | backlog |
+| G6 | 远程工作区 SSH/Docker/WSL、移动远控、Gen UI、Plugin UI 沙箱 | 无 | **部分交付**：Gen UI 预览页签、远程工作区只读诊断（复用 Hermes FileProvider 的 local/docker/ssh/singularity）；WSL/移动远控/Plugin UI 运行时未支持（已标注） |
+| G7 | 分享选段/云链接、插件市场、Cua | 部分（本地导出/浏览器页签） | **部分交付**：选段导出（md/json）+ 深链、插件目录（skills/MCP/zcode 只读 + 启停/重载）、云分享 stub 如实标注；Cua 仅声明式策略 |
 
 ## 六、本轮交付定义
 

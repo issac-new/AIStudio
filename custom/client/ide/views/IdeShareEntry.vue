@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // IdeShareEntry — 会话共享入口（session-share 客户端半边，R6 服务端三端点调用方）。
 // 活跃会话才可用；点击创建 view 只读共享链接并写剪贴板；链接可点击重复制。
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { createSessionShare, type ShareLink } from '../utils/session-share'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const props = defineProps<{ sessionId: string }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const tx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].deliver)
 
 const shareLink = ref<ShareLink | null>(null)
 const sharing = ref(false)
@@ -41,9 +43,10 @@ async function shareSession(): Promise<void> {
       v-if="shareLink"
       class="ide-share__link"
       data-testid="ide-chat-share-link"
-      :title="shareLink.url"
+      :title="`${shareLink.url}\n${tx.shareStub}`"
       @click="shareSession"
     >{{ shareLink.url }}</span>
+    <span v-if="shareLink" class="ide-share__note" data-testid="ide-share-stub-note">{{ tx.shareStub }}</span>
   </span>
 </template>
 
@@ -77,5 +80,12 @@ async function shareSession(): Promise<void> {
   font-size: 11px;
   color: var(--primary-color);
   cursor: pointer;
+}
+
+.ide-share__note {
+  max-width: 180px;
+  font-size: 9.5px;
+  line-height: 1.3;
+  color: var(--text-muted);
 }
 </style>
