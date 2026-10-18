@@ -365,8 +365,8 @@ watch(
   cursor: pointer;
 
   &.is-work {
-    color: #16a34a;
-    border-color: color-mix(in srgb, #16a34a 45%, transparent);
+    color: var(--success-color);
+    border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
   }
 }
 

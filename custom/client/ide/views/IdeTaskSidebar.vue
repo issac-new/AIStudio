@@ -998,7 +998,7 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 .ide-taskbar__mode-badge.is-coding { color: var(--primary-color); border-color: color-mix(in srgb, var(--primary-color) 45%, transparent); }
-.ide-taskbar__mode-badge.is-work { color: #16a34a; border-color: color-mix(in srgb, #16a34a 45%, transparent); }
+.ide-taskbar__mode-badge.is-work { color: var(--success-color); border-color: color-mix(in srgb, var(--success-color) 45%, transparent); }
 
 .ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
 
