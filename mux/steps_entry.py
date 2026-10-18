@@ -8,73 +8,81 @@
   旧表 13=评审卡审批/14=派发系分，系更早版 26 步映射，与 V8.2 正本不符）。
 
 路由与页签勘误（2026-10-06 差异审计 P1 落版；2026-10-07 页签词表对齐实测；
-2026-10-17 V8.37 按时序六阶段 IA 全表重锚）：
-v0.7.30 起治理中心独立路由 /app/gov 与 /app/dash 退役（历史；/app/gov 后随
-C1 波复立为七签壳，/app/dash 今为活路由=工作台概览）。2026-10-16 A0 起
-/app/board 收敛为 3 页签（看板/任务协同/协作与知识），旧 13 键拆三中心：
-仿真中心（/app/sim 六签：运行总览/监督面板/运行监控/证据库/交付健康/需求
-追溯）+治理中心（/app/gov 七签：质量门与流程/组织与资产/遗留项清算/问题
-清单对账/审计与变更/文档评审/度量检查）。2026-10-17 D13-D19 一级导航=时序
-六阶段（/app/stage/*），/app 默认入口=旅程首页；旧 ?tab= 键经
-TasksView.legacyTabRedirect 重定向可达（映射=对账总表 §1.4）。文案锚=
-sim-tabs.ts/gov-tabs.ts/i18n-tasks-tabs.ts；「应用资产」编辑器实体在
-/app/gov/docs 管理维护区（AppRegistryEditor+OrgEditor 同区挂载）；
-「REL-* 三卡」是数据级任务卡（REL- 前缀卡号），非独立产品功能；看板
-「每人只见本账号板」过滤=patch 558/547 服务端可见性。起跑前以正本
-§4.1 前置⑤ 实弹校验为准。
+2026-10-17 V8.37 按时序六阶段 IA 全表重锚；2026-10-18 V8.44 按左侧导航+阶段页签全表重锚）：
+当前产品事实（单一事实源=overlay custom/client/ia2/{IaSideNav.vue,stage-meta.ts,
+stage-tabs.ts,routes.ts,sim-tabs.ts}）：
+- 左侧导航五组：常用（流程总览 /app、工作台 /app/collab、看板 /app/board、
+  审批收件箱 /app/inbox、检索 /app/search）＋流程（①搭建 /app/stage/setup、
+  ②需求 /app/stage/reqs、③分析设计 /app/stage/design、④开发 /app/stage/build、
+  ⑤验收 /app/stage/accept、⑥治理 /app/stage/govern）＋整轮（全流程推演 /app/sim）
+  ＋专题（流程架构/本体/评测/技能治理）＋管理（系统设置）。
+- 六阶段页单层页签（?tab=，共 29 签）：① steps/org/accounts/teams/assets/agents；
+  ② reqs/docs/g1/preflight/launch；③ tasks/analysis/g2/schedule；
+  ④ today/board/approvals/risk/quality；⑤ overview/trace/delivery/uat/g5/cases；
+  ⑥ clearance/issues/audit/metrics/docs/gateLog。
+- 全流程推演（/app/sim，原仿真中心）六签：运行总览/监督面板/运行监控/证据库/
+  运行编排/推演设置；交付健康与需求追溯已迁⑤验收。
+- 治理中心壳已解体：/app/gov 与 /app/gov/* 全部 redirect 到阶段页并带 ?tab=；
+  旧 /app/runs、/app/eng、/app/journey、?tab=trace/accounts/observatory 等
+  经 routes 重定向可达（零断链兜底），但入口表以阶段页规范路径为准。
+- 「应用资产」编辑器实体在⑥治理·文档评审签管理维护区（GovDocsReviewView），
+  不是①搭建·环境与资产签；组织编辑器另有①搭建·组织签直挂。
+- IDE 任务工作区（GET /api/ide/task-workspace）：文件树/终端/记忆/新会话跟随
+  kanban 任务根；任务简报含「任务工作区」「任务会话」两块。
+- 起跑前以正本 §4.1 前置⑤ 实弹校验为准；旧路由可达不豁免对账。
 """
 
 STEP_ENTRIES = {
-    1: ('admin（Super Admin）', '设置 → 账户管理（#/app/accounts）',
+    1: ('admin（Super Admin）', '左侧导航 → ①搭建 → 账号（#/app/stage/setup?tab=accounts）',
         '新建账号（人类+AI 助理双账号并建）→ 分配角色/团队 → roster 提交入仓（保存即 git）'),
-    2: ('super_admin（装配面）', '看板切换器（看板: … ▾）+ 治理中心·文档评审签管理维护区（#/app/gov/docs 应用资产编辑器）',
+    2: ('super_admin（装配面）', '左侧导航 → ①搭建 → 智能体/环境与资产（#/app/stage/setup?tab=agents 或 assets）',
         '逐账号装配"账号+配置+看板+团队围栏+记忆库"四件套 → 板可见性按账号隔离核验（patch 558/547）'),
-    3: ('各用户（15 人编制）', '登录页（matrix 地址+账号+密码，或 gateway 免密）',
-        '登录 → 落旅程首页（#/app，搭建五步+交付五阶段总览）→ 只见本账号档案与看板'),
-    4: ('admin', '注意力条（顶区第一行）+工作台页头「任务」「在线」chips + 旅程首页（#/app）',
-        '任务计数=看板实况核对 → 在线三数（人/智能体/机器）>0 核对 → 下拉点选跳转；仿真中心·运行总览（#/app/sim）抽查'),
-    5: ('admin', '治理中心 → 文档评审签（#/app/gov/docs）管理维护区 AppRegistryEditor 应用资产编辑器',
+    3: ('各用户（15 人编制）', '登录页 → 流程总览（#/app）→ 本账号档案',
+        '登录 → 落流程总览（搭建五步+交付五阶段总览）→ 只见本账号档案与看板'),
+    4: ('admin', '左侧导航五组＋顶部上下文栏＋流程总览（#/app）＋全流程推演（#/app/sim）',
+        '任务计数=看板实况核对 → 在线三数（人/智能体/机器）>0 核对 → 下拉点选跳转；全流程推演·运行总览抽查'),
+    5: ('admin', '左侧导航 → ⑥治理 → 文档评审 → 管理维护区应用资产编辑器（#/app/stage/govern?tab=docs）',
         '六列表单登记应用（负责人/专属看板/技术栈/SLA/测试骨架）→ 保存即 git 提交'),
-    6: ('admin', '治理中心 → 文档评审签管理维护区组织关系编辑器（#/app/gov/docs）',
+    6: ('admin', '左侧导航 → ①搭建 → 组织（#/app/stage/setup?tab=org）',
         '账号↔团队↔负责人关系维护 → 组织矩阵导出入仓对账'),
-    7: ('需求分析师A（BA）', 'matrix 私信送达 → 治理中心·文档评审签 G1 工件区（#/app/gov/docs）',
+    7: ('需求分析师A（BA）', 'matrix 私信送达 → ②需求 → 文档评审 G1 工件区（#/app/stage/reqs?tab=docs）',
         '需求文档四项检查（AC 可判定/范围外/影响面/涉敏）→ 冻结标记入仓（锁后不许改）'),
-    8: ('产品经理A（PM）', '工作台中栏会话画布（#/app/s/group）',
+    8: ('产品经理A（PM）', '左侧导航 → 工作台会话画布（#/app/s/chat）',
         '创建需求分析讨论群 → 按 RACI 全量预邀（人+agent 双账号并邀）→ 成员面板核验'),
     9: ('产品经理A（PM）', '群会话画布（#/app/s/group/:roomId）',
         '群内 @fanfan-agent 派发指令（需求一行信息+材料地址+证据要求）'),
-    10: ('产品经理A（PM）', '④开发阶段页工具卡「工作台看板」或直达看板（#/app/board）',
+    10: ('产品经理A（PM）', '左侧导航 → ③分析设计 → 任务分解（#/app/stage/design?tab=tasks）',
         '选 fanfan-pm-plan 板 → RFD-001 主卡+子卡登记 → 卡面 RACI 徽章核对'),
-    11: ('AI · 系统分析智能体', '看板（#/app/board，agent 账号板）',
+    11: ('AI · 系统分析智能体', '③分析设计 → 系统分析（#/app/stage/design?tab=analysis）',
         '接收派发 → 需求切分+三清单匹配 → 分析稿与任务清单入仓 → 结论行回群'),
-    12: ('各团队 lead（研发工程师A/研发工程师B/研发工程师C/研发工程师D）', '看板（#/app/board）Triage 列',
+    12: ('各团队 lead（研发工程师A/研发工程师B/研发工程师C/研发工程师D）', '④开发 → 看板（#/app/stage/build?tab=board）Triage 列',
         '分诊台登记卡确认（triage→todo）→ 本账号板出现任务卡'),
-    13: ('AI · 研发智能体（四路并行）', '任务 workspace worktree + xxx-dev 定制技能',
+    13: ('AI · 研发智能体（四路并行）', '任务 workspace worktree + xxx-dev 定制技能；产出回③分析设计·系统分析',
         '精准系分：材料/仓库/历史文档归集 → 接口签名/数据模型/错误码/幂等键/工作量评估产出 → 系分稿入仓 → 完成回执发两遍保送达（群消息+私信各一次）'),
-    14: ('产品经理A（PM）', '群会话画布 + 看板（#/app/board）',
+    14: ('产品经理A（PM）', '③分析设计 → 系统分析（#/app/stage/design?tab=analysis）',
         '四稿齐后汇总复核（消歧/消冲突/理层次）→ 概设入仓 → 评审任务卡登记'),
-    15: ('系统架构师A（架构治理）', 'arch-governance 板评审卡（#/app/board 选板）',
+    15: ('系统架构师A（架构治理）', '③分析设计 → 任务分解（#/app/stage/design?tab=tasks）arch-governance 板评审卡',
         'G2 五项检查（设计五要素/影响面排查/验证计划/备选方案/历史踩坑记录硬拦）→ 结论行回房+评审卡判词同步'),
-    16: ('产品经理A（PM）', '看板（#/app/board）fanfan-pm-plan 排期板',
+    16: ('产品经理A（PM）', '③分析设计 → 任务分解（#/app/stage/design?tab=tasks）',
         'SMART 任务排期入卡（任务卡具体到人+人日，编号随本轮 tasklist）'),
-    17: ('AI · 研发智能体', '中央仓 DEV 分支（IDE 工作区 git 图谱可观测）',
+    17: ('AI · 研发智能体', '③分析设计 → 排期（#/app/stage/design?tab=schedule）',
         '创建 feat/DEV-* 分支 → 编码提交（每条 AC 对应用例）'),
-    18: ('AI · 研发智能体', 'IDE 工作区（#/app/ide，任务右栏 ⌨IDE 进入）',
-        '编码+单测（pay-core≥8/其余≥6 全绿）→ testlog 随分支提交 → 运行证据可看仿真中心·运行总览（#/app/sim）'),
-    19: ('测试工程师A/测试工程师B（测试，≠写码者）', '独立测试（报告入中央仓）',
+    18: ('AI · 研发智能体', 'IDE 工作区（#/app/ide；任务右栏或页面切换进入；任务简报含任务工作区/任务会话）',
+        '编码+单测（pay-core≥8/其余≥6 全绿）→ testlog 随分支提交 → 运行证据可看全流程推演·运行总览（#/app/sim）'),
+    19: ('测试工程师A/测试工程师B（测试，≠写码者）', '④开发 → 看板（#/app/stage/build?tab=board）qi 板；质量与测试签',
         '按 AC 全量用例执行 → 缺陷报告→修复→复验全过关（一条不落）→ 测试报告六要素入仓'),
-    20: ('PM+评审卡（HumanGate）', '审批收件箱（#/app/inbox）',
+    20: ('PM+评审卡（HumanGate）', '⑤验收 → G5 审批（#/app/stage/accept?tab=g5）',
         'G5 七项检查 → !approve 人工批准（approved.events 留痕可反查）→ 发布计划入仓'),
-    21: ('需求分析师A（BA）', 'G1 冻结清单对照（仿真中心·需求追溯 #/app/sim/trace）',
+    21: ('需求分析师A（BA）', '⑤验收 → 需求追溯（#/app/stage/accept?tab=trace）',
         'AC 逐条判词（三态逐条）→ 验收书入仓（放行权归 需求分析师A）'),
-    22: ('全员 + 治理 AI', '仿真中心·交付健康（#/app/sim/delivery）容量与台账区',
+    22: ('全员 + 治理 AI', '⑤验收 → 交付健康（#/app/stage/accept?tab=delivery）容量与台账区',
         '工作台账（按人×状态分布/WIP/卡壳 72h）→ 存进中央仓根目录'),
-    23: ('审计师A（审计）', '治理中心·审计与变更签（#/app/gov/audit）',
+    23: ('审计师A（审计）', '⑥治理 → 审计与变更（#/app/stage/govern?tab=audit）；交付门禁灯在⑤验收·交付案例',
         '独立意见书入仓 → 与推演监控结论有出入的走处置台账（audit-response-disposition.md）'),
-    24: ('全员', '治理中心（#/app/gov，度量检查签）',
+    24: ('全员', '⑥治理 → 度量检查（#/app/stage/govern?tab=metrics）',
         '问题单 100% DISP 回写（已修/观察/延后三态）→ 经验写进跨轮记忆库'),
-    25: ('人（修复介入演示）', 'IDE 工作区（#/app/ide，页头视图切换或任务右栏 ⌨IDE；?task= 直达链接）',
+    25: ('人（修复介入演示）', 'IDE 工作区（#/app/ide，任务右栏；?task= 直达链接，简报含任务工作区/任务会话）',
         '任务简报六区块 → 交互编码修复 → git 图谱核验提交'),
-    26: ('报告链（工具侧）', '交付案例页（#/app/cases）+ 本报告（evidence/）',
+    26: ('报告链（工具侧）', '流程总览/看板/IDE 三界面走查；报告查看=全流程推演（#/app/sim?run=:runId）',
         'mx-report-gen 生成 → mx-report-audit 断言 → final-report-merge 双正本 → 交付案例页回看轮次投影'),
 }

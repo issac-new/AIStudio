@@ -16,7 +16,7 @@
 cd simharness
 bash mux/mx-setup.sh                  # 环境供给：账号/看板/团队/记忆库/中央仓，可反复跑
 bash mux/mx-up.sh                     # 起单 gateway(:8801) + 单 studio(:8802)
-bash mux/mx-prelaunch-check.sh        # 开跑前二十项核验，全绿才开跑
+bash mux/mx-prelaunch-check.sh        # 开跑前二十二项核验，全绿才开跑
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 ```
 
@@ -44,6 +44,16 @@ bash mux/mx-harness-snapshot.sh --out <run>/evidence/harness/harness-summary.jso
 
 快照写 `harness-summary.json` + `harness-summary.md`，报告第 9 章「证据七：Harness 运行面」
 引用；端点缺席如实标 ⬜ 并记问题单，不阻断主链。prelaunch ⑳ 检查生效 dist 是否含六个新端点。
+
+## 工作台 IA 与采集位（V8.44）
+
+产品 2026-10-18 把工作台改为「左侧导航五组（常用/流程/整轮/专题/管理）＋六阶段页单层页签（29 签）＋全流程推演独立专区（6 签）＋检索页」，治理中心壳解体、`/app/gov/*` 全部 redirect 到阶段页，IDE 任务工作区让文件树/终端/记忆/新会话跟随 kanban 任务根。推演侧同步：
+
+- `mux/capture-plan.env` 26 步拍摄位迁到阶段页规范 URL（`/app/stage/<阶段>?tab=<页签>`）；旧路由只作 redirect 兜底。
+- `mux/steps_entry.py` 26 步入口表按左侧导航＋阶段页签重写。
+- `mx-prelaunch-check` ⑲ 扩为左栏/阶段页签/全流程推演/检索四组标记，新增 ㉑ 任务工作区端点、㉒ 阶段页签与重定向矩阵。
+- 新增 IA 面帧：左栏、阶段页签、全流程推演、检索、IDE 任务工作区（不占必采分母 15）。
+- 对账正本=`overlay/docs/superpowers/specs/2026-10-18-fullflow-v844-workbench-refactor.md`。
 
 ## 测试
 

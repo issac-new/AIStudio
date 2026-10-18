@@ -238,7 +238,7 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
     echo "ISSUE|appinit-push|director|app-registry 推送 origin/main 失败（留存 ${REG}）" >> "$EVID_DIR/issues.log"
     note "[观察] app-registry 推送失败（留存本地，记问题单）"
   fi
-  capture_step "appinit_done" "/app/board?tab=gov-registry"
+  capture_step "appinit_done" "/app/stage/govern?tab=docs"
 
   sset appinit_done "$(date +%s)"
 fi
@@ -271,7 +271,7 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
     echo "ISSUE|people-push|director|org.md 推送 origin/main 失败（留存 ${ORG}）" >> "$EVID_DIR/issues.log"
     note "[观察] org.md 推送失败（留存本地，记问题单）"
   fi
-  capture_step "people_done" "/app/board?tab=gov-org"
+  capture_step "people_done" "/app/stage/setup?tab=org"
 
   # A7 身份面供给（2026-10-17）：15 员工身份注册到 studio 身份册（agent-identity）——
   # 事故报告 17 要素中身份/信任边界/委托链等 6 项的判据源；此前 SIM 树无推演身份册
@@ -300,7 +300,7 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   fi
 
   sset people_done "$(date +%s)"
-  capture_step "login_done" "/app/board?tab=accounts"   # 步3 承载面
+  capture_step "login_done" "/app/stage/setup?tab=accounts"   # 步3 承载面
 fi
 
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
@@ -401,7 +401,7 @@ if step_reached reqgate; then
       note "[观察] G1 冻结文件推送失败（留存本地，记问题单）"
     fi
     sset_once g1_frozen "$(date +%s)"
-    capture_step "g1_frozen" "/app/board?tab=trace"   # 步7 承载面
+    capture_step "g1_frozen" "/app/stage/reqs?tab=docs"   # 步7 承载面
   fi
 fi
 
@@ -496,7 +496,7 @@ if step_reached register; then
       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
   fi
-  capture_step "register_done" "/app/board"
+  capture_step "register_done" "/app/stage/design?tab=tasks"
 
   sset register_done 1
 fi
@@ -596,7 +596,7 @@ if step_reached analysis; then
   # 必采对话挂钩（run13 复盘 B1：步 11 缺采集；锚=需求派发事件，/context 后窗覆盖
   # RACI 双 @ 派发与凭证核验回灌对话；与步 9 分步登记不冲突——dialog 去重键=步内锚）
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 11 --room "$RID" --anchor "$(sget dispatch_marker)" --title "系分拆分与 RACI 派发对话（fanfan-agent）" --user fanfan --limit 80 >/dev/null 2>&1 || true
-  capture_step "analysis_done" "/app/board"
+  capture_step "analysis_done" "/app/stage/design?tab=analysis"
 
   sset analysis_done 1
 fi
@@ -616,7 +616,7 @@ if step_reached triage; then
       | while read -r id; do kanban_status_as "$lead" "$id" todo || true; done
     note "[$lead] lead 分诊确认完成（triage→todo）"
   done
-  capture_step "triage_done" "/app/board"
+  capture_step "triage_done" "/app/stage/build?tab=board"
 
   sset triage_done 1
 fi
@@ -729,7 +729,7 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
   gate_review hu "系分执行-AN-CHWX"
   gate_review lin "系分执行-AN-CHALI"
   gate_review xiao "系分执行-AN-MP"
-  capture_step "anexec_done" "/app/board"
+  capture_step "anexec_done" "/app/stage/design?tab=analysis"
 
   sset anexec_done 1
 fi
@@ -772,7 +772,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     fi
   fi
   gate_review fanfan "G2-系分评审闸"
-  capture_step "review_done" "/app/board"
+  capture_step "review_done" "/app/stage/design?tab=analysis"
 
   sset review_done 1
 fi
@@ -1044,7 +1044,7 @@ for a in last.get("anomalies", []):
       fi
     fi
   fi
-  capture_step "g2_arch_pass" "/app/board"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
+  capture_step "g2_arch_pass" "/app/stage/design?tab=tasks"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
   # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
   # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
@@ -1114,7 +1114,7 @@ if step_reached close && [[ -z "$(sget close_done)" ]]; then
       || note "[观察] 主卡未置 done（记问题单）"
   fi
   gate_review arch "概设收口闸"
-  capture_step "close_done" "/app/board"
+  capture_step "close_done" "/app/stage/design?tab=tasks"
 
   sset close_done 1
 fi
@@ -1142,7 +1142,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   fi
   repo_pull
   note "[真值] 排期计划入库 ✓"
-  capture_step "plan_done" "/app/board"
+  capture_step "plan_done" "/app/stage/design?tab=schedule"
 
   sset plan_done 1
 fi
@@ -1854,7 +1854,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     sset g4_contract_gap 1
     note "[契约] G4 强制线：观察产物缺席——fail-closed 记单"
   fi
-  capture_step "testpass_done" "/app/board"
+  capture_step "testpass_done" "/app/stage/build?tab=board"
 
   sset testpass_done 1
   sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
@@ -2148,7 +2148,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
   done
   gate_review fanfan "G5-发布闸"
   sset release_done 1
-  capture_step "release_done" "/app/board"   # 步20 承载面
+  capture_step "release_done" "/app/stage/accept?tab=g5"   # 步20 承载面
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡登记" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
 fi
 
@@ -2258,7 +2258,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       note "[观察] 验收文档推送失败（留存本地，记问题单）"
     fi
     sset_once uat_done "$(date +%s)"
-    capture_step "uat_done" "/app/board?tab=trace"   # 步21 承载面
+    capture_step "uat_done" "/app/stage/accept?tab=trace"   # 步21 承载面
     if [[ $UAT_ALL_PASS == 1 ]]; then
       note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
     else
@@ -2298,7 +2298,7 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
     echo "ISSUE|workreport-push|director|工作台账落档 origin/main 失败（留存 $EVID_DIR/work-report.md）" >> "$EVID_DIR/issues.log"
     note "[观察] 工作台账落档失败（留存本地，记问题单）"
   fi
-  capture_step "workmgr_done" "/app/s/chat"
+  capture_step "workmgr_done" "/app/stage/accept?tab=delivery"
 
   sset workmgr_done "$(date +%s)"
   note "[M3] 报告落 $(echo "$WR" | tail -1)"
@@ -2427,14 +2427,14 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   else
     note "[观察] 意见书推送失败（留存本地）"
   fi
-  capture_step "audit_done" "/app/runs"
+  capture_step "audit_done" "/app/stage/govern?tab=audit"
 
   # V8.42 Harness 运行面审计快照：与基线同源，报告第 9 章「证据七」直接引用
   # evidence/harness/harness-summary.json；缺席如实记单，不阻断收尾。
   bash "$SCRIPT_DIR/mux/mx-harness-snapshot.sh" --out "$EVID_DIR/harness/harness-summary.json"     --token "$(jwt_of fanfan 2>/dev/null || true)" --require >/dev/null 2>&1     || echo "ISSUE|harness-snapshot-audit|step23|Harness 运行面审计快照部分端点不可用（见 evidence/harness/harness-summary.json）" >> "$EVID_DIR/issues.log"
 
   sset audit_done "$(date +%s)"
-  capture_step "deliver_gate" "/app/runs"   # 步23 R29 delivery 面板灯
+  capture_step "deliver_gate" "/app/stage/accept?tab=cases"   # 步23 R29 delivery 面板灯
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 24 --text "独立审计完成（工件见 evidence）" --ev "state=audit_done" >/dev/null 2>&1 || true
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 23 --title "delivery 案例面板门禁灯" --entry "/app/cases → 交付案例面板" --frames deliver_gate-op1-before.png deliver_gate-op1-after.png >/dev/null 2>&1 || true
 fi
@@ -2617,7 +2617,7 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   else
     note "[观察] 治理归档落账未过（已记单 archive-commit-failed，挂收官回灌清单）"
   fi
-  capture_step "retro_done" "/app/board?tab=gov-harness"
+  capture_step "retro_done" "/app/stage/govern?tab=metrics"
 
   sset_once retro_done "$(date +%s)"
 fi
@@ -2746,7 +2746,7 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册时先编写注册）"
   sset report_done "$(date +%s)"
-  capture_step "report_view" "/app/runs"   # 步26 承载面
+  capture_step "report_view" "/app/sim"   # 步26 承载面
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
   dlv_enabled && dlv_scenario_assert
 fi
