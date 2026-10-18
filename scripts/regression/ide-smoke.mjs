@@ -123,8 +123,11 @@ try {
 
   // 6. 幽灵任务深链：不崩溃、抽屉自动收起
   await page.goto(`${BASE}/#/app/ide?task=ghost-task-smoke`, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(4_000)
-  record('幽灵任务深链不崩溃', (await page.locator('.ide-shell').count()) > 0 && (await page.locator('[data-testid="ide-briefing-drawer"]').count()) === 0)
+  await page.waitForSelector('.ide-shell', { timeout: 15_000 }).catch(() => {})
+  await page.waitForTimeout(3_000)
+  const ghostShell = await page.locator('.ide-shell').count()
+  const ghostDrawer = await page.locator('[data-testid="ide-briefing-drawer"]').count()
+  record('幽灵任务深链不崩溃', ghostShell > 0 && ghostDrawer === 0, `shell=${ghostShell} drawer=${ghostDrawer}`)
 
   // 7. 自检弹层（命令面板入口）
   await page.keyboard.press('Meta+k')
