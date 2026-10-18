@@ -46,7 +46,7 @@ else:
     STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 OUT = EVID / 'simulation-report.html'
-# ── 并发写根防（run21 收官实录 2026-10-18）：值班侧手动 gen 与驱动 gen 同刻并跑，
+# ── 并发写根防（run21 收尾实录 2026-10-18）：值班侧手动 gen 与驱动 gen 同刻并跑，
 # 同写 simulation-report.html → 审计读到的版本与盘上版本错位（19:48 审计 FAIL 双嵌、
 # 19:49 盘上已是无双嵌的下一版本——FAIL 环假象）。两层根治：
 #   ① flock 单实例：后到实例立即退出（非零），让持有者完成，驱动侧由监督器断点重试吸收；
@@ -2167,7 +2167,7 @@ def gloss_first_use(escaped_text):
         escaped_text = pat.sub(lambda m, _k=k: _gloss_sub(m, _k), escaped_text, count=1)
     return escaped_text
 
-_USED_FRAMES = set()  # V8.4② 同源帧单嵌（run21 收官审计实录：一帧两嵌=FAIL）
+_USED_FRAMES = set()  # V8.4② 同源帧单嵌（run21 收尾审计实录：一帧两嵌=FAIL）
 
 def img_tags(imgs):
     out = []
@@ -2458,7 +2458,7 @@ def _gov_metrics_line() -> str:
             parts = ln.split(',')
             for i, seg in enumerate(parts):
                 if label in seg and i + 1 < len(parts) and parts[i + 1].strip():
-                    return parts[i + 1].strip().replace('记单', '登记')
+                    return parts[i + 1].strip().replace('登记问题单', '登记')
         return '⬜'
     fp, ev, de = _pick('首过率'), _pick('证据一次通过率'), _pick('缺陷密度')
     rj = _pick('打回率')
@@ -3158,7 +3158,7 @@ def art_md_to_html(md: str) -> str:
 # （repo_commit_main 未跟踪残件兜底）。锚随解析源逐件标注，禁笼统 HEAD 锚。
 def _git_ok(*args) -> bool:
     try:
-        # timeout 根治（run21 收官实录 2026-10-18）：_git_ok('fetch','-q','origin') 在 GitHub
+        # timeout 根治（run21 收尾实录 2026-10-18）：_git_ok('fetch','-q','origin') 在 GitHub
         # 间歇断网夜可无限挂起（实测单次 >80 分钟，整条报告链被一个子进程卡死）；异常路径
         # 本就有 False 兜底，超时=同一通道优雅降级（锚取不到如实标注，不阻断报告）。
         return subprocess.run(['git', '--git-dir', str(CEN / '.git'), *args],
@@ -3816,7 +3816,7 @@ _LEDGER_PR = {  # 类型→产品缺陷编号（与 mux/mx-compensation-ledger.s
     'gate-replay': 'PR-5', 'driver-merge': 'PR-6', 'dispatch-preset': 'PR-7',
 }
 _POSTURE_POLICY = {
-    'strict': '零代偿：测自组织真力，停滞如实记单即有效输出（§2.6.5 成功标准）',
+    'strict': '零代偿：测自组织真力，停滞如实登记问题单即有效输出（§2.6.5 成功标准）',
     'standard': '现状动作保留但逐笔记台账；净额口径下代偿项不计入判据满足面',
     'demo': '演示调度允许，全程显著标注「演示」；能力结论不用于验收',
 }
@@ -4891,7 +4891,7 @@ def _mask_env(text: str) -> str:
     return text
 
 html = _mask_env(html)
-# V8.4② 全局后处理去重（run21 收官实录：步条 imgs/孤儿挂接/r18 挂接三路同帧
+# V8.4② 全局后处理去重（run21 收尾实录：步条 imgs/孤儿挂接/r18 挂接三路同帧
 # 双嵌，渲染序不可控的根治位）——同一 src 只保留首个嵌入块，后续替换为文字引用。
 import re as _re_dedupe
 _seen_src = set()
