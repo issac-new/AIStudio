@@ -61,3 +61,11 @@
 - 单测：`interface-mode.test.ts`（归一化/效果表/快捷键匹配）、`task-mode.test.ts`（会话派生）、`task-sidebar`（双模式新建与徽标）、`side-pane`（工作模式隐藏终端/审查并回落）、`command-palette`（工作模式隐藏入口）、`statusbar`（chip 切换与持久化）、`ide-chat-work`（工作会话保留/创建、模型取源）。
 - 双 tsc 零错；全量 vitest 零失败；`build:full` 通过；IDE 冒烟 11/11、自检 CLI 0 失败。
 - 8649 浏览器走查：切换模式后侧栏/命令面板/工具卡/代码换行四处差异可见；快捷键与状态栏 chip 双向同步；刷新后模式保持；工作模式新建任务不绑工作区、任务行徽标正确。
+
+## 验证记录（2026-10-18 实测）
+
+- **单测**：IDE 目录 105 文件 / 639 用例全绿；全量 `vitest run` 685 文件通过、5 跳过；4997 用例通过 / 8 跳过 / **0 失败**（5005）。
+- **类型与构建**：`vue-tsc`（overlay 源码 + 上游 client，临时 tsconfig）在本轮改动文件零新增错误；`build:full` rc=0（vite build 12,356 模块 1m11s、server tsc、build-server、verify-dist 全过），产物 `dist/client` 67MB，构建产物 grep 到「工作模式」「开始一件工作」。
+- **冒烟**：私有 dev（vite 8659 + 后端 8647，`OVERLAY_UPSTREAM_ROOT=/tmp/upstream-idecheck`）`ide-smoke` **11/11**；首次跑因 vite 依赖优化后自动 reload 出现一次幽灵任务抽屉瞬态，复跑 11/11（两次基线 8649 同为 11/11）。
+- **自检 CLI**：rc=0，13 通过 / 0 告警 / 2 失败；两项失败为环境态——文件列表 400 与 Git 404 均因当前活动会话是 coding-agent 的 `workspace/default/global`（不在文件 API 沙箱且非 git 仓），与 8649 基线同值，非本轮改动引入。
+- **双模式走查（21 项全过）**：脚本 `scripts/regression/ide-work-mode-walkthrough.mjs`（`IDE_SMOKE_BASE` 指向私有 dev）。默认编程（终端/审查/内联评审可见）→ 点 chip 切工作（终端/审查/内联评审/轮结果/回放隐藏、聊天列 `is-ide-work-mode`、命令面板出现「切换到编程模式」且无终端/审查直达）→ `Cmd+Shift+U` 切回编程（全部恢复）→ 工作任务新建后空态四类起步可见；无页面级 JS 异常。截图存档 `evidence/2026-10-18-ide-work-modes/work-mode.png`。
