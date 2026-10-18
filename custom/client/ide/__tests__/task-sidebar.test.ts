@@ -176,7 +176,9 @@ describe('IdeTaskSidebar', () => {
     await w.find('[data-testid="ide-task-new"]').trigger('click')
     expect(newChat).toHaveBeenCalledWith(expect.objectContaining({
       codingAgentId: 'zcode',
-      codingAgentMode: 'global',
+      // scoped 才使用传入 workspace；global 落到 coding-agent 默认目录，
+      // 不在文件 API 沙箱内（2026-10-18 回归实测 400）
+      codingAgentMode: 'scoped',
       source: 'coding_agent',
     }))
   })

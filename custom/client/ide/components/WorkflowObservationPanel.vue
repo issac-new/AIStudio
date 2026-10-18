@@ -112,6 +112,15 @@ const savedLoading = ref(false)
 const savedError = ref<string | null>(null)
 const selectedSaved = ref<string | null>(null)
 
+/** 引擎离线是常态（未 `npm run zcode:serve`）：不要把 ECONNREFUSED 裸栈丢给用户 */
+function friendlyWorkflowError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  if (/engine_unreachable|ECONNREFUSED|fetch failed/i.test(message)) {
+    return '工作流引擎未启动（127.0.0.1:3030）；启动引擎后点刷新'
+  }
+  return message
+}
+
 async function loadSaved(): Promise<void> {
   if (!ws.value) return
   savedLoading.value = true
@@ -121,7 +130,7 @@ async function loadSaved(): Promise<void> {
     savedRuns.value = []
     selectedSaved.value = null
   } catch (err) {
-    savedError.value = err instanceof Error ? err.message : String(err)
+    savedError.value = friendlyWorkflowError(err)
   } finally {
     savedLoading.value = false
   }
@@ -134,7 +143,7 @@ async function loadSavedRuns(name: string): Promise<void> {
   try {
     savedRuns.value = await fetchSavedWorkflowRuns(ws.value, name, 20, savedScope.value)
   } catch (err) {
-    savedError.value = err instanceof Error ? err.message : String(err)
+    savedError.value = friendlyWorkflowError(err)
   } finally {
     savedLoading.value = false
   }

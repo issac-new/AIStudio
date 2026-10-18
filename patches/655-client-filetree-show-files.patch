@@ -1,0 +1,20 @@
+--- a/packages/client/src/components/hermes/files/FileTree.vue
++++ b/packages/client/src/components/hermes/files/FileTree.vue
+@@ -12,6 +12,8 @@
+ const props = defineProps<{
+   profile?: string | null
+   workspaceKey?: string | null
++  /** 显示文件节点（IDE 右栏文件树无独立文件列表，需在树内直出文件） */
++  showFiles?: boolean
+ }>()
+ const emit = defineEmits<{
+   (event: 'contextmenu-entry', mouseEvent: MouseEvent, entry: FileEntry): void
+@@ -48,7 +50,7 @@
+       rootGitStatusCount.value = result.gitStatusCount || 0
+     }
+     return result.entries
+-      .filter(entry => workspaceMode.value || entry.isDir)
++      .filter(entry => workspaceMode.value || props.showFiles || entry.isDir)
+       .sort((a, b) => a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1)
+       .map(e => ({
+         key: e.path,

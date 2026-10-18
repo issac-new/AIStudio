@@ -30,6 +30,10 @@ describe('shouldShowLandingHero 判定（纯函数）', () => {
     expect(shouldShowLandingHero({ ...base, queryTask: '' })).toBe(true)
     expect(shouldShowLandingHero({ ...base, engaged: true })).toBe(false)
   })
+  it('左栏已选会话（activeSessionId 非空）→ 不再用引导页占住中栏', () => {
+    expect(shouldShowLandingHero({ ...base, hasActiveSession: true })).toBe(false)
+    expect(shouldShowLandingHero({ ...base, hasActiveSession: false })).toBe(true)
+  })
 })
 
 describe('IdeLandingHero 渲染与交互', () => {

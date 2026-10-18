@@ -4,6 +4,7 @@
 // conversationWorkflowRunsV4 / conversationWorkflowRunEventsV4 / listSavedWorkflows /
 // listSavedWorkflowRuns；引擎离线时 503 {reason:'engine_unreachable'}）。
 import type { ZcodeWorkflowActivity } from '../../zcode/store/zcode-projection'
+import { authFetch } from '../utils/auth-fetch'
 
 export interface WorkflowRunRecord {
   runId: string
@@ -32,7 +33,9 @@ export interface SavedWorkflowRecord {
 }
 
 async function getJson<T = Record<string, unknown>>(path: string): Promise<T> {
-  const res = await fetch(path)
+  // 裸 fetch 不带 Authorization → 网关 401（2026-10-18 回归实测，工作流页签
+  // 直接显示 http_401:）。与 IDE 域其它 REST 同用 authFetch。
+  const res = await authFetch(path)
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
     const reason = (body as { reason?: string }).reason ?? `http_${res.status}`

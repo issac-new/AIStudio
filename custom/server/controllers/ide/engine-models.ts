@@ -9,7 +9,7 @@
  * 挂载：patch 477 在 bootstrap/routes.ts（session-share 356 同款两行）。
  */
 import Router from '@koa/router'
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import {
@@ -115,29 +115,181 @@ function zcodeConfigPath(): string {
 }
 
 export interface ZcodeCatalogGroup {
+  /** 引擎侧 provider id（会话切换实际使用的键，config.json 命名空间）。 */
   provider: string
+  /** ZCode UI 侧 id（providerOrder/template 命名空间，如 bigmodel-api；默认与 provider 相同）。 */
+  alias?: string
   label: string
   models: Array<{ id: string; reasoningLevels?: string[] }>
 }
 
-/** 读 Ycode/ZCode 实际配置（~/.zcode/v2/config.json）的启用 provider → 模型目录。
- *  只投影 providerId/名称/模型 id 与推理档，不读取 options（密钥/端点不出口）。 */
+/** ZCode 供应商管理器（provider_config.json）：排序与显示名的真实来源——
+ *  setting.json 的 family 键只管 OAuth 套餐 UI，与本机实际首选（用户在 provider
+ *  管理器里排到第一位的）不一定一致（2026-10-18 用户实报「和本机 zcode 的配置
+ *  不一样」：XGLM/glm-5.3 才是当前所用，而非 family 键指向的 coding-plan）。 */
+interface ZcodeProviderRule {
+  providerId: string
+  templateId?: string
+  providerName?: string
+  enabled?: boolean
+  config?: { modelOrder?: string[] }
+}
+
+function readZcodeProviderConfig(): { order: string[]; rules: Map<string, ZcodeProviderRule> } {
+  try {
+    const path = join(zcodeRoot(), 'v2', 'provider_config.json')
+    if (!existsSync(path)) return { order: [], rules: new Map() }
+    const raw = JSON.parse(readFileSync(path, 'utf8')) as {
+      config?: { providerOrder?: string[]; providerConfigRules?: { providerRules?: ZcodeProviderRule[] } }
+    }
+    const rules = new Map((raw.config?.providerConfigRules?.providerRules ?? []).map(r => [r.providerId, r]))
+    return { order: raw.config?.providerOrder ?? [], rules }
+  } catch {
+    return { order: [], rules: new Map() }
+  }
+}
+
+/** ZCode 内置供应商模板（runtime/provider 下各版本目录的 zcode-builtin.json）。
+ *  模板 id（如 bigmodel-api）是 UI 命名空间；引擎侧对应 builtin:bigmodel-coding-plan。
+ *  取版本号最大的清单（3.15.3 用户实报口径）。 */
+interface ZcodeBuiltinTemplate {
+  templateId: string
+  templateNameMap?: Record<string, string>
+  config?: {
+    logo?: { key?: string }
+    access?: { type?: string }
+    builtinModelIds?: string[]
+  }
+}
+
+function versionRank(dir: string): number[] {
+  return dir.split('.').map(seg => Number(seg.replace(/[^0-9].*$/, '')) || 0)
+}
+
+function versionLt(a: string, b: string): boolean {
+  const x = versionRank(a), y = versionRank(b)
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0)
+    if (d !== 0) return d < 0
+  }
+  return false
+}
+
+function readZcodeBuiltinTemplates(): Map<string, ZcodeBuiltinTemplate> {
+  try {
+    const base = join(zcodeRoot(), 'v2', 'runtime', 'provider')
+    if (!existsSync(base)) return new Map()
+    let newest: { manifest: Record<string, unknown>; version: string } | null = null
+    for (const platform of readdirSync(base)) {
+      const platformDir = join(base, platform)
+      if (!statSync(platformDir).isDirectory()) continue
+      for (const version of readdirSync(platformDir)) {
+        const versionDir = join(platformDir, version)
+        if (!statSync(versionDir).isDirectory()) continue
+        for (const entry of readdirSync(versionDir)) {
+          const manifestPath = join(versionDir, entry, 'zcode-builtin.json')
+          if (!existsSync(manifestPath)) continue
+          if (!newest || versionLt(newest.version, version)) {
+            newest = { manifest: JSON.parse(readFileSync(manifestPath, 'utf8')), version }
+          }
+        }
+      }
+    }
+    const templates = ((newest?.manifest as { config?: { providerConfigRules?: { templateRules?: ZcodeBuiltinTemplate[] } } })
+      ?.config?.providerConfigRules?.templateRules) ?? []
+    return new Map(templates.map(t => [t.templateId, t]))
+  } catch {
+    return new Map()
+  }
+}
+
+type EngineProviderMap = Record<string, {
+  enabled?: boolean
+  name?: string
+  models?: Record<string, { reasoningLevels?: string[] }>
+}>
+
+/** 模板 → 引擎 provider id：family 取 logo.key，coding-plan 接入 → builtin:<family>-coding-plan，
+ *  普通 api-key → builtin:<family>。找不到对应引擎条目时返回 null（模板不可执行）。 */
+function templateEngineCounterpart(tpl: ZcodeBuiltinTemplate, engine: EngineProviderMap): string | null {
+  const family = tpl.config?.logo?.key
+  if (!family) return null
+  const candidates = Object.keys(engine).filter(id => id === `builtin:${family}` || id.startsWith(`builtin:${family}-`))
+  if (candidates.length === 0) return null
+  const isCodingPlan = (tpl.config?.access?.type ?? '').includes('coding-plan')
+  if (isCodingPlan) {
+    return candidates.find(id => id.includes('coding-plan'))
+      ?? candidates.find(id => id !== `builtin:${family}`) ?? null
+  }
+  return candidates.includes(`builtin:${family}`)
+    ? `builtin:${family}`
+    : candidates.find(id => !id.includes('coding-plan') && !id.includes('start-plan')) ?? candidates[0]
+}
+
+/** 读 Ycode/ZCode 实际配置的启用 provider → 模型目录。
+ *  只投影 providerId/名称/模型 id 与推理档，不读取 options（密钥/端点不出口）。
+ *  命名空间：按 provider_config 的 providerOrder 走 UI 顺序——rule 直连引擎条目
+ *  （自定义 provider）或经 templateId 解析到 builtin 引擎条目（如 bigmodel-api →
+ *  builtin:bigmodel-coding-plan，label 用用户命名如 SGLM）；两者都命不中的跳过，
+ *  剩余启用引擎 provider 保持 config 序垫后。 */
 export function readZcodeCatalog(): ZcodeCatalogGroup[] {
   try {
     const path = zcodeConfigPath()
     if (!existsSync(path)) return []
-    const engine = JSON.parse(readFileSync(path, 'utf8')) as {
-      provider?: Record<string, {
-        enabled?: boolean
-        name?: string
-        models?: Record<string, { reasoningLevels?: string[] }>
-      }>
+    const engine = JSON.parse(readFileSync(path, 'utf8')) as { provider?: EngineProviderMap }
+    const providers = engine.provider ?? {}
+    const { order, rules } = readZcodeProviderConfig()
+    const templates = readZcodeBuiltinTemplates()
+
+    const orderModels = (preferred: string[] | undefined, providerId: string) => {
+      const p = providers[providerId]
+      const byId = new Map(Object.entries(p?.models ?? {})
+        .map(([id, m]) => [id, { id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }]))
+      const ordered: Array<{ id: string; reasoningLevels?: string[] }> = []
+      for (const id of preferred ?? []) {
+        const m = byId.get(id)
+        if (m) { ordered.push(m); byId.delete(id) }
+      }
+      for (const m of byId.values()) ordered.push(m)
+      return ordered
     }
+
     const groups: ZcodeCatalogGroup[] = []
-    for (const [providerId, p] of Object.entries(engine.provider ?? {})) {
+    const used = new Set<string>()
+    for (const id of order) {
+      const rule = rules.get(id)
+      if (rule && rule.enabled === false) continue
+      let engineId: string | null = null
+      let label = ''
+      let preferred: string[] | undefined
+      if (providers[id]) {
+        engineId = id
+        label = rule?.providerName || providers[id].name || id
+        preferred = rule?.config?.modelOrder
+      } else {
+        const templateId = rule?.templateId || id
+        const tpl = templates.get(templateId)
+        engineId = tpl ? templateEngineCounterpart(tpl, providers) : null
+        if (!engineId) continue
+        label = rule?.providerName
+          || tpl?.templateNameMap?.['zh-CN']
+          || tpl?.templateNameMap?.['en-US']
+          || providers[engineId]?.name
+          || id
+        preferred = rule?.config?.modelOrder ?? tpl?.config?.builtinModelIds
+      }
+      if (!providers[engineId] || providers[engineId].enabled === false) continue
+      const models = orderModels(preferred, engineId)
+      if (models.length === 0) continue
+      used.add(engineId)
+      groups.push({ provider: engineId, alias: id, label, models })
+    }
+    for (const [providerId, p] of Object.entries(providers)) {
+      if (used.has(providerId)) continue
+      // provider 管理器里被用户显式禁用的（rule.enabled=false）整组不进目录。
+      if (rules.get(providerId)?.enabled === false) continue
       if (!p || p.enabled === false) continue
-      const models = Object.entries(p.models ?? {})
-        .map(([id, m]) => ({ id, ...(m?.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}) }))
+      const models = orderModels(undefined, providerId)
       if (models.length === 0) continue
       groups.push({ provider: providerId, label: p.name || providerId, models })
     }
@@ -167,11 +319,57 @@ function preferredZcodeGroup(groups: ZcodeCatalogGroup[]): ZcodeCatalogGroup | n
   }
 }
 
-/** 新会话默认模型：ZCode 选中的 provider family 首模型；没有 family 选择时取首个
- *  启用 provider 的首模型（与选择器展示顺序一致）。目录空 → null。 */
+/** 本机 ZCode「正在用」的模型：cli/rollout/model-io-*.jsonl 按 mtime 取最新文件，
+ *  读末行 model {providerId, modelId}（UI/template 命名空间）。无记录 → null。 */
+function newestZcodeInUseModel(): { providerId: string; modelId: string } | null {
+  try {
+    const dir = join(zcodeRoot(), 'cli', 'rollout')
+    if (!existsSync(dir)) return null
+    const files = readdirSync(dir)
+      .filter(f => f.startsWith('model-io-') && f.endsWith('.jsonl'))
+      .map(f => ({ f, mtime: statSync(join(dir, f)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime)
+    if (files.length === 0) return null
+    const lines = readFileSync(join(dir, files[0].f), 'utf8').split('\n').filter(Boolean)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const rec = JSON.parse(lines[i]) as { model?: { providerId?: string; modelId?: string } }
+        if (rec.model?.providerId && rec.model?.modelId) {
+          return { providerId: rec.model.providerId, modelId: rec.model.modelId }
+        }
+      } catch { /* 跳过残行 */ }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** 新会话默认模型：优先「本机 ZCode 正在用的模型」（rollout 最新记录，经
+ *  alias/provider 双键匹配回引擎组）；其次 provider 管理器排首位且启用的组；
+ *  再回落 family 选择与首个启用组。目录空 → null。 */
 export function readZcodeDefault(
   groups: ZcodeCatalogGroup[] = readZcodeCatalog(),
 ): { provider: string; model: string } | null {
+  // 1) 正在用的模型（最强信号——用户实报口径：与本机 ZCode 当前会话一致）
+  const inUse = newestZcodeInUseModel()
+  if (inUse) {
+    const group = groups.find(g => g.provider === inUse.providerId || g.alias === inUse.providerId)
+    if (group && group.models.some(m => m.id === inUse.modelId)) {
+      return { provider: group.provider, model: inUse.modelId }
+    }
+  }
+  // 2) providerOrder 首个可用组（rule 直连或经 alias 命中）
+  const { order, rules } = readZcodeProviderConfig()
+  const byProvider = new Map(groups.map(g => [g.provider, g]))
+  const byAlias = new Map(groups.filter(g => g.alias).map(g => [g.alias as string, g]))
+  for (const id of order) {
+    const rule = rules.get(id)
+    if (rule && rule.enabled === false) continue
+    const group = byProvider.get(id) ?? byAlias.get(id)
+    if (group && group.models.length > 0) return { provider: group.provider, model: group.models[0].id }
+  }
+  // 3) family 选择 → 4) 首个启用组
   const group = preferredZcodeGroup(groups) ?? groups.find(g => g.models.length > 0)
   const model = group?.models[0]?.id
   return group && model ? { provider: group.provider, model } : null
