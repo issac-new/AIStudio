@@ -119,7 +119,7 @@ export type IdeSessionView = 'active' | 'done' | 'workspace'
 /** v12 工作空间维度（任务/项目/会话）：链路维度已随 09-20 重构退役 */
 export type IdeDimension = 'task' | 'project' | 'session'
 
-export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'kanban' | 'tools' | 'mcp' | 'terminal' | 'hooks' | 'workflow' | 'slash' | 'trajectory' | 'ctxarchive'
+export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'kanban' | 'tools' | 'mcp' | 'terminal' | 'hooks' | 'workflow' | 'slash' | 'trajectory' | 'ctxarchive' | 'deliver' | 'genui' | 'remote' | 'plugins'
 
 export interface IdeSidePanePrefs {
   open: boolean

@@ -49,10 +49,11 @@ const activeIndex = ref(0)
 
 // 功能页导航（ide.links.* 唯一事实源；「功能导航」下拉已随 IdeTopBar 退役）
 
-/** 辅助页签直达（17 个）：不经过分组过滤，命令面板搜「页签」即可全量到达 */
+/** 辅助页签直达（21 个）：不经过分组过滤，命令面板搜「页签」即可全量到达 */
 const PANE_TARGETS: IdeSidePaneTab[] = [
   'files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow',
   'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash',
+  'deliver', 'genui', 'remote', 'plugins',
 ]
 function paneLabel(key: IdeSidePaneTab): string {
   const text = IDE_LOCAL_TEXT[ideLocaleOf(locale)].panes[key]
