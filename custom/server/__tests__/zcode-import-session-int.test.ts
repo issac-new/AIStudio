@@ -13,7 +13,28 @@ async function engineUp(port = 3030): Promise<boolean> {
   })
 }
 
-describe.skipIf(!(await engineUp()))('importSession 端到端（真引擎）', () => {
+// 旧引擎二进制（002 登记前构建）没有 importSessionV4 方法——握手能通但调用
+// Method not found。按 f9920982「旧后端无 zcode.default 回落」同款先例：探测
+// 到旧构建时 skip 并给出重建指引，不把引擎代际差误报成产品失败。
+async function engineHasImportRpc(): Promise<boolean> {
+  try {
+    const { connectZCodeEngine } = await import('../zcode/engine-bridge')
+    const bridge = await connectZCodeEngine(`${process.env.HOME ?? '/tmp'}/.hermes/zcode-engine`)
+    try {
+      await bridge.agent.importSessionV4({ workspacePath: '/tmp', source: 'probe', sourceId: 'capability-probe', rows: [] })
+      return true
+    } catch (err) {
+      return !/Method not found/i.test(String((err as Error)?.message ?? err))
+    } finally {
+      bridge.close()
+    }
+  } catch {
+    return false
+  }
+}
+
+const engineReady = (await engineUp()) && (await engineHasImportRpc())
+describe.skipIf(!engineReady)('importSession 端到端（真引擎）', () => {
   it('归一化行 → importSessionV4 → imported 会话（sessionId+rowsWritten）', async () => {
     const { connectZCodeEngine } = await import('../zcode/engine-bridge')
     const bridge = await connectZCodeEngine(`${process.env.HOME ?? '/tmp'}/.hermes/zcode-engine`)
