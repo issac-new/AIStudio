@@ -16,10 +16,13 @@ function reply(body: unknown): { ok: boolean; status: number; json: () => Promis
 beforeEach(() => { authFetch.mockReset() })
 
 describe('fetchEngineCatalog 取源优先级', () => {
-  it('有 zcode.groups → 用 Ycode 配置（含 label），independent=true', async () => {
+  it('有 zcode.groups + zcode.default（新服务端）→ 用 Ycode 配置（含 label），independent=true', async () => {
     authFetch.mockResolvedValue(reply({
       config: { providers: [{ providerId: 'ide-only', models: [{ modelId: 'x' }] }] },
-      zcode: { groups: [{ provider: 'builtin:bigmodel', label: 'BigModel', models: [{ id: 'GLM-5.3' }, { id: 'glm-5.3-flash', reasoningLevels: ['low'] }] }] },
+      zcode: {
+        groups: [{ provider: 'builtin:bigmodel', label: 'BigModel', models: [{ id: 'GLM-5.3' }, { id: 'glm-5.3-flash', reasoningLevels: ['low'] }] }],
+        default: { provider: 'builtin:bigmodel', model: 'GLM-5.3' },
+      },
     }))
     const c = await fetchEngineCatalog()
     expect(c.source).toBe('zcode')
@@ -27,6 +30,16 @@ describe('fetchEngineCatalog 取源优先级', () => {
     expect(c.groups).toEqual([
       { provider: 'builtin:bigmodel', label: 'BigModel', models: [{ id: 'GLM-5.3' }, { id: 'glm-5.3-flash', reasoningLevels: ['low'] }] },
     ])
+  })
+
+  it('旧后端：zcode.groups 非空但无 zcode.default → 不采信，回落独立目录（版本判据）', async () => {
+    authFetch.mockResolvedValue(reply({
+      config: { providers: [{ providerId: 'seed-provider', models: [{ modelId: 'fresh' }] }] },
+      zcode: { groups: [{ provider: 'stale', label: 'Stale', models: [{ id: 'old' }] }] },
+    }))
+    const c = await fetchEngineCatalog()
+    expect(c.source).toBe('independent')
+    expect(c.groups[0]).toMatchObject({ provider: 'seed-provider' })
   })
 
   it('无 zcode.groups → 用 IDE 独立目录', async () => {

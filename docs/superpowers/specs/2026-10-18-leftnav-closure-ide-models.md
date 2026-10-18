@@ -43,6 +43,7 @@
 - D-10：默认模型跟随 ZCode 的 provider family 选择（`setting.json`），没有显式 family 时取首个启用 provider 首模型；不复用 Hermes 的 `selectedModel`（`aim`/`qwen` 等 CLI 别名不在 ZCode 目录内，必然误报失效）。理由=用户实报「Ycode 默认使用 Zcode 的模型配置」；默认源与选择源必须同一事实源。
 - D-11：默认与目录排序的第一事实源是 `provider_config.json`（provider 管理器），`setting.json` family 键只是 OAuth 套餐 UI 的选择，两者可能指向不同 provider。理由=用户实报默认与「本机 zcode 的配置」不一致；实测 providerOrder 首位 XGLM/glm-5.3 与 family 键指向的 coding-plan/GLM-5.3-Flash 不同，前者才是实际所用。
 - D-12：目录用 ZCode UI 命名空间（模板供应商经 3.15.x 内置清单解析到引擎条目、用户命名优先），默认模型第一信号=rollout「正在用」记录。理由=用户二次实报「还是旧的，和本机 Zcode（3.15.3）不一样」——config.json 引擎序/providerOrder 序都不等于「正在用」；本机在用 bigmodel-api(=SGLM)/GLM-5.3 既非引擎首组也非 providerOrder 首位，只有 rollout 记录能忠实表达。providerOrder 首位、family、首组依次兜底。
+- D-13：客户端只采信带 `zcode.default` 的 zcode 目录（新服务端在目录非空时必出 default，可作版本判据）；旧后端无 default 的 zcode.groups 不采信，回落独立目录（种子已按新命名空间/顺序/默认配置）。理由=用户指令「直接重新加载配置刷一下」——运行中 8647 是旧代码且 run21 期间不可重启，不加判据则旧目录永远压过种子，分组刷新不生效；判据在后端升级后自动失效回采信服务端。
 
 ## 验证
 
