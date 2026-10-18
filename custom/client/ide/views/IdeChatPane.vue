@@ -408,13 +408,18 @@ const usingIndependent = ref(false)
 const engineDefault = ref<EngineDefault | null>(null)
 
 // 两源目录形态不同（Ycode/独立目录为 {id} 对象组，Hermes 为 string[]）：
-// 统一成 { provider, label, models: [{id}] }，选择器与失效判定共用同一视图。
-interface ViewModelGroup { provider: string; label: string; models: Array<{ id: string }> }
+// 统一成 { provider, label, models: [{id, reasoningLevels?}] }，选择器/失效判定/
+// 思考档共用同一视图（reasoningLevels=ZCode manifest 档位，随目录下发）。
+interface ViewModelGroup {
+  provider: string
+  label: string
+  models: Array<{ id: string; reasoningLevels?: string[] }>
+}
 const modelGroupsView = computed<ViewModelGroup[]>(() => {
   const raw = (usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? [])) as Array<{
     provider?: string
     label?: string
-    models?: Array<string | { id: string }>
+    models?: Array<string | { id: string; reasoningLevels?: string[] }>
   }>
   return raw.map(group => ({
     provider: group.provider ?? '',
@@ -516,6 +521,43 @@ async function pickModel(provider: string, model: string): Promise<void> {
   } else {
     await appStore.switchModel(model, provider)
   }
+}
+
+// ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
+// 档位来源=引擎目录 per-model reasoningLevels（服务端按 ZCode manifest
+// modelConfigRules 补齐，如 glm-5.3 → low/high/max）；写入会话与 ChatInput
+// 内置控件同一字段（setSessionReasoningEffort），引擎侧消费路径不变。
+const effortOpen = ref(false)
+const EFFORT_LABELS: Record<'zh' | 'en', Record<string, string>> = {
+  zh: { disabled: '关', enabled: '开', none: '关', minimal: '极低', low: '低', medium: '中', high: '高', xhigh: '中高', max: '最高', ultra: '超高' },
+  en: { disabled: 'Off', enabled: 'On', none: 'None', minimal: 'Minimal', low: 'Low', medium: 'Med', high: 'High', xhigh: 'X-High', max: 'Max', ultra: 'Ultra' },
+}
+const isZhLocale = computed(() => {
+  const l = String(locale?.value ?? '')
+  return !l || l.startsWith('zh')
+})
+function effortLevelLabel(lv: string): string {
+  const map = isZhLocale.value ? EFFORT_LABELS.zh : EFFORT_LABELS.en
+  return map[lv] ?? lv
+}
+const effortDefaultLabel = computed(() => (isZhLocale.value ? '默认' : 'Default'))
+const sessionModelEntry = computed(() => {
+  const s = chatStore.activeSession
+  if (!s?.model) return null
+  const group = modelGroupsView.value.find(g => g.provider === (s.provider || '') && g.models.some(m => m.id === s.model))
+    ?? modelGroupsView.value.find(g => g.models.some(m => m.id === s.model))
+  return group?.models.find(m => m.id === s.model) ?? null
+})
+const effortLevels = computed(() => sessionModelEntry.value?.reasoningLevels ?? [])
+const sessionEffort = computed(() => chatStore.activeSession?.reasoningEffort || '')
+const effortLabelShort = computed(() =>
+  (isZhLocale.value ? '思考' : 'Think') + ': ' + (sessionEffort.value ? effortLevelLabel(sessionEffort.value) : effortDefaultLabel.value),
+)
+async function pickEffort(value: string): Promise<void> {
+  effortOpen.value = false
+  const sid = chatStore.activeSessionId
+  if (!sid) return
+  await chatStore.setSessionReasoningEffort?.(sid, value)
 }
 </script>
 
@@ -769,9 +811,38 @@ async function pickModel(provider: string, model: string): Promise<void> {
           ref="chatInputEl"
           :model-disabled="modelDisabled"
           :model-label="modelLabel"
+          :reasoning-effort-disabled="true"
           persist-draft
           @model-click="onModelClick"
         />
+        <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
+             reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
+             控件已禁用并隐藏（reasoning-effort-disabled + :deep 隐藏）。 -->
+        <div v-if="effortLevels.length > 0" class="ide-chat__effort" data-testid="ide-effort">
+          <button
+            type="button"
+            class="ide-chat__effort-btn"
+            data-testid="ide-effort-btn"
+            :class="{ 'is-active': !!sessionEffort }"
+            @click="effortOpen = !effortOpen"
+          >{{ effortLabelShort }}</button>
+          <div v-if="effortOpen" class="ide-chat__effort-menu" data-testid="ide-effort-menu">
+            <button
+              type="button"
+              class="ide-chat__effort-option"
+              :class="{ 'is-active': sessionEffort === '' }"
+              @click="pickEffort('')"
+            >{{ effortDefaultLabel }}</button>
+            <button
+              v-for="lv in effortLevels"
+              :key="lv"
+              type="button"
+              class="ide-chat__effort-option"
+              :class="{ 'is-active': sessionEffort === lv }"
+              @click="pickEffort(lv)"
+            >{{ effortLevelLabel(lv) }}</button>
+          </div>
+        </div>
         <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
           <div
             v-for="group in modelGroupsView"
@@ -1108,6 +1179,60 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
 .ide-chat__model-picker-anchor {
   position: relative;
+  // Ycode 思考档替换 Hermes 推理强度控件（2026-10-18）：ChatInput 内置档位读
+  // Hermes model_meta/默认档，与 ZCode 不一致——IDE 内隐藏，改用本组件的
+  // ide-chat__effort（档位=ZCode manifest）。
+  :deep(.reasoning-effort-button) { display: none; }
+}
+
+// Ycode 思考档：挂在 composer 右下（Send 左侧），与 zcode composer 控件同区。
+.ide-chat__effort {
+  position: absolute;
+  right: 48px;
+  bottom: 6px;
+  z-index: 6;
+}
+.ide-chat__effort-btn {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  &:hover { color: var(--text-primary); }
+  &.is-active {
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  }
+}
+.ide-chat__effort-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  min-width: 108px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ide-chat__effort-option {
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  &:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+  &.is-active { color: var(--accent-primary); font-weight: 600; }
 }
 
 .ide-chat__model-picker {
