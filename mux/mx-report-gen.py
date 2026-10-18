@@ -2109,9 +2109,15 @@ def gloss_first_use(escaped_text):
         escaped_text = pat.sub(lambda m, _k=k: _gloss_sub(m, _k), escaped_text, count=1)
     return escaped_text
 
+_USED_FRAMES = set()  # V8.4② 同源帧单嵌（run21 收官审计实录：一帧两嵌=FAIL）
+
 def img_tags(imgs):
     out = []
     for pre, cap, kind in imgs:
+        if pre in _USED_FRAMES:
+            out.append(f'<p class="shot-ref">↗ 同源帧已嵌于前步（V8.4② 单嵌纪律）：{H.escape(cap)}</p>')
+            continue
+        _USED_FRAMES.add(pre)
         p = STEPS_DIR / f'{pre}.png'
         if p.exists():
             kb, kf, kt = KIND_STYLE.get(kind, KIND_STYLE['doc'])
