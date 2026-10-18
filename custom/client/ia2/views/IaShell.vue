@@ -8,7 +8,7 @@
      （IaMinimizedDock + wm store）链路一并退役——最大化=栏控中栏最大化，
      独立窗口走 ⧉ 栏控（standalone=1 精简壳 IaPopoutBar）。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useIaStore } from '@/custom/ia2/store/ia'
 import { useFlowStore } from '@/custom/ia2/store/flow'
@@ -24,6 +24,9 @@ import { useSharedArm } from '../composables/useSharedArm'
 import { retainBodyClass } from '../composables/useBodyClass'
 import { listenMergeBack } from '../wm/popout'
 import '@/custom/ia2/styles/ia2.scss'
+
+/** 专题页复用同一壳：传入 featureView 时内容区渲染它，否则走 /app router-view */
+defineProps<{ featureView?: Component }>()
 
 const route = useRoute()
 const router = useRouter()
@@ -87,7 +90,10 @@ onUnmounted(() => {
       <!-- 2026-10-18 左侧栏批：六阶段与常用入口常驻左侧；standalone 单面板窗不挂 -->
       <IaSideNav v-if="!isStandalone" />
       <div class="ia-shell__content">
-        <router-view />
+        <div v-if="featureView" class="ia-shell__feature">
+          <component :is="featureView" />
+        </div>
+        <router-view v-else />
       </div>
     </div>
 
