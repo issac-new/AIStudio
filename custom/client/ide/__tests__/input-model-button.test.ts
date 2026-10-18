@@ -214,11 +214,15 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
     await flushPromises()
     await w.find('[data-testid="ide-composer-settings-btn"]').trigger('click')
-    // 模式：七档 chips，选档写 per-session localStorage 键并广播事件
+    // 模式=ZCode 四档形态（2026-10-18 锚定校正）：Plan 勾选 + build/guarded/yolo 三单选；
+    // 选档写 zcode 形态键并派生七档写旧键（服务端穿线词表零改动）
     const chips = w.findAll('[data-testid^="ide-settings-mode-"]')
-    expect(chips.map(c => c.text())).toEqual(['只读', '计划', '标准', '自动编辑', '少问', '全自动', '绕过'])
-    await chips[4].trigger('click')
+    expect(chips.map(c => c.text())).toEqual(['💡 计划', '改动前询问', '自主模式', '完全访问'])
+    await chips[2].trigger('click')
+    expect(JSON.parse(localStorage.getItem('ide-zcode-mode:s2') || 'null')).toEqual({ mode: 'guarded', planEnabled: false })
     expect(localStorage.getItem('ide-permission-mode:s2')).toBe('dontAsk')
+    await chips[0].trigger('click')
+    expect(localStorage.getItem('ide-permission-mode:s2')).toBe('plan')
     // 工具调用行存在（先于模型行断言——点模型行会收起菜单）
     expect(w.find('[data-testid="ide-settings-tooltrace"]').exists()).toBe(true)
     // 模型：行点击打开 Ycode 模型选择器
