@@ -891,8 +891,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       // 初步合并（events + runs + comments + messages）
       events.value = eventAdapter.mergeDetail(detail)
-      const profile = detail.task.assignee ?? undefined
-      if (profile) extras.searchSessions(id, profile).catch(() => {})
+      // 2026-10-19 报错清零批：这里原有一次 fire-and-forget 的会话检索，
+      // 返回值从不消费（纯预热），但用户档案不在授权名单时会触发全局 403 提示。
+      // 无消费者的请求直接移除，任务详情其余数据面不受影响。
       // 异步拉 worker log，返回后重新合并（避免被后续 mergeDetail 覆盖）
       kanbanApi.getTaskLog(id, boardOpts).then((log) => {
         // 确保仍是当前选中任务（避免竞态）
