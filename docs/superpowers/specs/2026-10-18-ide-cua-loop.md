@@ -30,3 +30,17 @@
 - 单测：policy 6 + REST 4 + gate 2（需注入克隆）+ evidence 5 + float 1 = 18 新用例。
 - E2E：开启=agent 经 computer-use 技能真截图（stream-json 含 image content）；关闭=不可用（两形态一致）。
 - 全量回归零失败；smoke/双模式不回归。
+
+## E2E 实测记录（2026-10-18，12 轮迭代）
+
+| 轮 | 结果 |
+|---|---|
+| fail-closed 对照 | ✅ 无 env → "Computer Use is unavailable for this node_repl session" |
+| 桌面 Helper 直连 | ❌ peer verification failed（第三方宿主按设计拒连）→ 转自有 broker |
+| 自有 broker 协议 | v3-v6 逐层攻克：authenticate（IPC v3 两段式握手，缺它=broker_response_ambiguous）→ id 回显 → 裸载荷（CallToolResult 包裹会让官方 toText 套娃、SDK 解析空列表）→ 官方词表（list_applications/broker_info，非 list_apps） |
+| v8-v10 | capture_app 返回真 PNG（3024×1964 base64，broker trace 实录）；SDK 状态配对面要求 state_id/elements/app/window 四键 |
+| v11-v12 | get_app_state 语义实锚=官方也走 capture_app 期望 AX 状态文档；补齐后 SDK 正常走完 has_image 判定 |
+
+**终态**：全协议链贯通（authenticate→broker_info→list_applications(active 标记)→request_access→capture_app(状态文档+真图像字节)）。最终一轮无模型可见图像的唯一原因是**环境事实**：本机前台是 loginwindow（锁屏/登录面），官方层按产品设计对无窗口 faceless 进程拒发图像（"hidden or unrendered window, has_image: false"）——解锁后同一链路即出图。此边界如实记录，不装通过。
+
+**桌面 Helper 结论**：`~/.zcode/computer-use/ZCode Computer Use.app` 的 peer-verification 只认 dev.zcode.app 签名链（desktopHostProcess.ts:274-278 注释明示），第三方宿主（hermes/IDE）按设计被拒。自有 broker（upstream/zcode 补丁源码 broker-server.js）是 IDE 侧的正路，006 补丁使其与官方 node_repl host 0.6.x 协议完全兼容。
