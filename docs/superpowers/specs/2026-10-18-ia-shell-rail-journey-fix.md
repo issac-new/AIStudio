@@ -27,3 +27,4 @@
 - 左侧栏「全流程推演」行的运行名过长时挤掉了标签（截图实测显示「全流程…」）。修复：右侧槽 `max-width: 94px` + 省略号，完整运行名放 `title` 悬停显示；标签保持完整。
 - 补充：整轮行只显示运行短名（run21），完整目录名保留在顶栏运行 chip 与 `title`；「全流程推演」标签不再被挤断。
 - 补充：运行总览页删除手打运行目录名输入，改 `useRunContext` + 页头 RunSelector 单一入口；无运行时引导去页头选择。
+- D-5（2026-10-18 用户二次走访）：上游 `StudioNavigationRail` 在 IDE 壳仍以 64px 显示。改为 `ia2.scss` 全局 `.studio-navigation-rail { display: none !important; }`——rail 全站退役，不再依赖 `ia-center-full` 按壳/按页隐藏；body 类 retain 保留但 rail 已不参与布局。
