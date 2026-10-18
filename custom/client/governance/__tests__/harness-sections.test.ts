@@ -125,6 +125,71 @@ vi.mock('@/custom/governance/api/harness', () => ({
     counts: { instrumented: 3, gap: 3 },
     meta: { note: '四层评估', source: 'Harness·Loop·Graph 选型文', gapNote: 'gap 不造数' },
   })),
+  fetchNineLayers: vi.fn(async () => ({
+    ok: true,
+    days: 7,
+    layers: [
+      { key: 'tools', status: 'covered', score: 100, checks: [
+        { key: 'contracts', label: '工具契约', status: 'yes', evidence: '已声明契约 30 项', critical: true },
+        { key: 'summary', label: '审计参数摘要', status: 'yes', evidence: '100% 的调用带参数摘要（60/60）' },
+        { key: 'errors', label: '错误分类', status: 'yes', evidence: '100% 的失败带错误分类（10/10）' },
+        { key: 'duplicates', label: '重复调用识别', status: 'yes', evidence: '窗口内命中 0 次' },
+      ], gaps: [], actions: [] },
+      { key: 'loop', status: 'covered', score: 100, checks: [
+        { key: 'bounds', label: '有界循环', status: 'yes', evidence: 'runaway guard=在，回边守卫=在', critical: true },
+        { key: 'stuck', label: '卡死检测', status: 'yes', evidence: '停滞检测器在档' },
+        { key: 'retry', label: '按类别重试', status: 'yes', evidence: '图节点按错误类别重试' },
+        { key: 'checkpoints', label: '检查点', status: 'yes', evidence: '检查点 40 个' },
+      ], gaps: [], actions: [] },
+      { key: 'memory', status: 'partial', score: 75, checks: [
+        { key: 'graphCheckpoint', label: '图执行检查点', status: 'yes', evidence: '图检查点 40 个', critical: true },
+        { key: 'agentCheckpoint', label: 'agent 进展检查点', status: 'yes', evidence: '3 个' },
+        { key: 'handoff', label: '跨会话交接', status: 'partial', evidence: '交接检查点 0 个' },
+        { key: 'restore', label: '重启后可恢复', status: 'no', evidence: '自动恢复判定仍缺' },
+      ], gaps: ['跨会话交接：交接检查点 0 个'], actions: ['交接文件纳入统一恢复判定'] },
+      { key: 'context', status: 'covered', score: 100, checks: [
+        { key: 'rootEntry', label: '项目入口', status: 'yes', evidence: '根 AGENTS.md 80 行', critical: true },
+        { key: 'modules', label: '模块入口', status: 'yes', evidence: '2 个' },
+        { key: 'specs', label: '规格文档', status: 'yes', evidence: '100 份' },
+        { key: 'progressive', label: '渐进披露', status: 'yes', evidence: '80 行' },
+      ], gaps: [], actions: [] },
+      { key: 'sandbox', status: 'partial', score: 60, checks: [
+        { key: 'permissions', label: '权限矩阵', status: 'yes', evidence: '在档' },
+        { key: 'workspace', label: '目录边界', status: 'partial', evidence: 'workspace 校验在档；目录白名单缺', critical: true },
+        { key: 'network', label: '网络放行', status: 'no', evidence: '规则无执行期消费者' },
+        { key: 'secrets', label: '密钥不落盘', status: 'yes', evidence: '默认不落原值', critical: true },
+        { key: 'limits', label: '资源限额', status: 'partial', evidence: '有超时；无任务后销毁' },
+      ], gaps: ['目录边界：白名单缺'], actions: ['terminal 增加目录白名单'] },
+      { key: 'verification', status: 'covered', score: 87, checks: [
+        { key: 'gates', label: '自动化门禁', status: 'yes', evidence: '15 个 gate pack', critical: true },
+        { key: 'evalGate', label: '评测回归门', status: 'partial', evidence: '尚未接入常用 profile' },
+        { key: 'external', label: '外部证据', status: 'yes', evidence: '发布门在档' },
+        { key: 'release', label: '发布准出', status: 'yes', evidence: 'release gate 在档' },
+      ], gaps: ['评测回归门：尚未接入常用 profile'], actions: ['把 L3 eval-regression 纳入常用 profile'] },
+      { key: 'permissions', status: 'partial', score: 60, checks: [
+        { key: 'enforce', label: '执行层强制', status: 'yes', evidence: '执法门已接线', critical: true },
+        { key: 'identity', label: '按发起用户鉴权', status: 'no', evidence: '裁决只看 profile', critical: true },
+        { key: 'scope', label: '审批带范围', status: 'no', evidence: '缺 scope/expiresAt', critical: true },
+        { key: 'allowAudit', label: '放行可审计', status: 'no', evidence: '放行不落账', critical: true },
+        { key: 'approvals', label: '审批记录', status: 'yes', evidence: '20 条' },
+      ], gaps: ['按发起用户鉴权：裁决只看 profile'], actions: ['把 userId 接进 enforce-gate 裁决'] },
+      { key: 'observability', status: 'covered', score: 80, checks: [
+        { key: 'audit', label: '逐工具审计', status: 'yes', evidence: '120 条', critical: true },
+        { key: 'duration', label: '耗时', status: 'yes', evidence: '100%' },
+        { key: 'errors', label: '错误分类', status: 'yes', evidence: '100%' },
+        { key: 'manifest', label: '运行清单', status: 'no', evidence: '未发现' },
+        { key: 'cost', label: '运行级成本', status: 'no', evidence: '只有按天聚合' },
+      ], gaps: ['运行清单：未发现'], actions: ['新增 run manifest'] },
+      { key: 'evals', status: 'partial', score: 50, checks: [
+        { key: 'fixedSets', label: '固定评测集', status: 'yes', evidence: '2 套', critical: true },
+        { key: 'dimensions', label: '七维覆盖', status: 'partial', evidence: '3/7' },
+        { key: 'heldout', label: '密封集', status: 'partial', evidence: '20 道' },
+        { key: 'gate', label: '评测阻断', status: 'no', evidence: '仅回放打分' },
+      ], gaps: ['七维覆盖：3/7'], actions: ['补工具参数与失败恢复评测'] },
+    ],
+    counts: { covered: 4, partial: 4, missing: 0 },
+    meta: { source: 'governance/harness', note: '九层体检是自检清单，不是认证；数据缺席按 unavailable/partial 计，不造运行数据。', layersOrder: ['tools', 'loop', 'memory', 'context', 'sandbox', 'verification', 'permissions', 'observability', 'evals'] },
+  })),
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'zh-CN', messages: {} })
@@ -198,6 +263,20 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-eval-gapnote"]').text()).toContain('3')
   })
 
+  it('B7 九层体检：九卡齐备 + 三态徽标 + 证据/差距/建议动作 + 非认证注记', async () => {
+    const w = await mountComp('@/custom/governance/components/NineLayersSection.vue')
+    await flushPromises()
+    for (const k of ['tools', 'loop', 'memory', 'context', 'sandbox', 'verification', 'permissions', 'observability', 'evals']) {
+      expect(w.find(`[data-testid="harness-nine-layer-${k}"]`).exists(), k).toBe(true)
+    }
+    expect(w.find('[data-testid="harness-nine-layer-tools"]').classes()).toContain('nl__layer--covered')
+    expect(w.find('[data-testid="harness-nine-layer-permissions"]').classes()).toContain('nl__layer--partial')
+    expect(w.find('[data-testid="harness-nine-check-permissions-identity"]').text()).toContain('裁决只看 profile')
+    expect(w.find('[data-testid="harness-nine-layer-permissions"]').text()).toContain('把 userId 接进 enforce-gate 裁决')
+    expect(w.find('[data-testid="harness-nine-summary"]').text()).toContain('4')
+    expect(w.find('[data-testid="harness-nine-note"]').text()).toContain('不是认证')
+  })
+
   it('GovHarnessView 聚合四板块（页签面板壳）', async () => {
     const w = await mountComp('@/custom/ia2/views/gov/GovHarnessView.vue')
     await flushPromises()
@@ -207,6 +286,7 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-maturity"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-primitives"]').exists()).toBe(true)
     expect(w.find('[data-testid="harness-eval-layers"]').exists()).toBe(true)
+    expect(w.find('[data-testid="harness-nine-layers"]').exists()).toBe(true)
   })
 
   it('降级诚实：API 抛错渲染错误行，不编造数据', async () => {

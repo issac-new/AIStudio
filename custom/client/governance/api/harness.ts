@@ -185,3 +185,41 @@ export interface EvalLayersDto {
 export function fetchEvalLayers(days = 7): Promise<EvalLayersDto> {
   return request<EvalLayersDto>(`/api/harness/eval-layers?days=${encodeURIComponent(String(days))}`)
 }
+
+// ---- B7 九层运行体检（2026-10-18 Harness 可靠性轮）----
+export type NineLayerKeyDto =
+  | 'tools' | 'loop' | 'memory' | 'context' | 'sandbox'
+  | 'verification' | 'permissions' | 'observability' | 'evals'
+
+export type NineLayerStatusDto = 'covered' | 'partial' | 'missing'
+export type NineCheckStatusDto = 'yes' | 'partial' | 'no'
+
+export interface NineLayerCheckDto {
+  key: string
+  label?: string
+  status: NineCheckStatusDto
+  evidence: string
+  critical?: boolean
+}
+
+export interface NineLayerDto {
+  key: NineLayerKeyDto
+  status: NineLayerStatusDto
+  score: number
+  checks: NineLayerCheckDto[]
+  gaps: string[]
+  actions: string[]
+}
+
+export interface NineLayersDto {
+  ok: boolean
+  days: number
+  layers: NineLayerDto[]
+  counts: { covered: number; partial: number; missing: number }
+  meta: { source: string; note: string; layersOrder: NineLayerKeyDto[] }
+  cachedAt?: number
+}
+
+export function fetchNineLayers(days = 7): Promise<NineLayersDto> {
+  return request<NineLayersDto>(`/api/harness/nine-layers?days=${encodeURIComponent(String(days))}`)
+}
