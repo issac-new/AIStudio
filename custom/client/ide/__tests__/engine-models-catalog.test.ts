@@ -35,7 +35,20 @@ describe('fetchEngineCatalog 取源优先级', () => {
   it('旧后端：zcode.groups 非空但无 zcode.default → 不采信，回落独立目录（版本判据）', async () => {
     authFetch.mockResolvedValue(reply({
       config: { providers: [{ providerId: 'seed-provider', models: [{ modelId: 'fresh' }] }] },
-      zcode: { groups: [{ provider: 'stale', label: 'Stale', models: [{ id: 'old' }] }] },
+      zcode: { groups: [{ provider: 'stale', label: 'Stale', models: [{ id: 'old', reasoningLevels: ['low'] }] }] },
+    }))
+    const c = await fetchEngineCatalog()
+    expect(c.source).toBe('independent')
+    expect(c.groups[0]).toMatchObject({ provider: 'seed-provider' })
+  })
+
+  it('中间版本后端：有 default 但目录无思考档位 → 不采信，回落独立目录（档位判据）', async () => {
+    authFetch.mockResolvedValue(reply({
+      config: { providers: [{ providerId: 'seed-provider', models: [{ modelId: 'fresh', reasoningLevels: ['low', 'high'] }] }] },
+      zcode: {
+        groups: [{ provider: 'half-new', label: 'HalfNew', models: [{ id: 'm' }] }],
+        default: { provider: 'half-new', model: 'm' },
+      },
     }))
     const c = await fetchEngineCatalog()
     expect(c.source).toBe('independent')
@@ -64,7 +77,7 @@ describe('fetchEngineCatalog 取源优先级', () => {
     authFetch.mockResolvedValue(reply({
       config: { providers: [{ providerId: 'ide-only', models: [{ modelId: 'x' }] }], defaultModel: { providerId: 'ide-only', modelId: 'x' } },
       zcode: {
-        groups: [{ provider: 'builtin:bigmodel', models: [{ id: 'GLM-5.3-Flash' }] }],
+        groups: [{ provider: 'builtin:bigmodel', models: [{ id: 'GLM-5.3-Flash', reasoningLevels: ['low', 'high'] }] }],
         default: { provider: 'builtin:bigmodel', model: 'GLM-5.3-Flash' },
       },
     }))
