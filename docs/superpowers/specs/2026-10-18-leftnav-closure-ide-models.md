@@ -21,6 +21,8 @@
 - `IdeChatPane` 的模型失效判定从 `appStore.modelGroups` 改为实际选择源 `modelGroupsView`；两源目录先归一为 `{ provider, label, models: [{id}] }` 再共用（Ycode 为对象组、Hermes 为 string[]），否则对象组在 `includes` 判定下永远查不到，可用模型被误报「已移除」（2026-10-18 8649 走查实录：选中 GLM-5.3-Flash 仍报失效）。
 - 运行期即时兼容：用当前 Ycode 配置生成 `runtime/ide-engine-models.json`（仅 provider/模型/baseURL，无密钥），后端无需重启即可让选择器读到 Ycode 模型；服务端 `zcode.groups` 在下次后端重启后成为单一动态来源。
 - **默认模型也取 Ycode 配置**（2026-10-18 用户追加指令）：服务端返回 `zcode.default`，优先 `setting.json` 里用户选中的 provider family（`providerFamilyDomain` + `modelProviderFamilySelectedKeys`），否则取首个启用 provider 的首模型。客户端新会话（含标题栏＋、命令面板、复用的空会话）都带这个默认；空会话若模型为空或不在目录内（历史 `aim` 等），自动切换为默认，不再一进 IDE 就弹失效横幅。旧后端未重启期间由独立目录 `config.defaultModel` 供给同一默认。
+- **与 provider 管理器对齐**（2026-10-18 用户实报「怎么和本机 zcode 的配置不一样」）：默认与目录顺序的第一来源改为 `provider_config.json` 的 `providerOrder` + `providerRules`（显示名 `providerName`、组内模型 `modelOrder` 与目录交集重排、规则 `enabled:false` 剔除）；`setting.json` family 键降为次级兜底——实测本机 family 键指向 coding-plan/GLM-5.3-Flash，而用户实际首选是 providerOrder 首位 XGLM（47b8a0af）/glm-5.3。
+- **与 ZCode 3.15.3 UI 命名空间对齐**（用户二次实报「还是旧的」）：ZCode 选择器用的是 UI 命名空间——模板供应商（如 `bigmodel-api`，用户命名 SGLM，modelOrder 以 GLM-5.3 为首）经 3.15.x 内置清单（`runtime/provider/<platform>/<ver>/…/zcode-builtin.json` 取最大版本）解析到引擎条目（`builtin:bigmodel-coding-plan`）。目录分组=providerOrder 全量解析（rule 直连引擎 id 或 `templateId` 走清单，alias 记 UI id），未覆盖的启用引擎条目垫后。**默认模型第一信号 = `cli/rollout/model-io-*.jsonl` 最新记录的 `model {providerId, modelId}`**（本机正在用的 bigmodel-api/GLM-5.3，经 alias/provider 双键匹配回引擎组），压过 providerOrder 首位。实测：XGLM → SGLM(GLM-5.3 首) → kimi-mid → kimi-max → Bigmodel API，默认 SGLM/GLM-5.3。
 
 ## 三、辅助栏中文可读
 
@@ -39,6 +41,8 @@
 - D-8：失效判定与选择器共用归一后的目录视图（string / {id} 双形态统一），不在每个消费点各写一套形状判断。理由=两处形状假设不一致正是本次误报的根因。
 - D-9：横幅按钮文案按 locale 就地取「重选模型 / Reselect model」，不再复用 patch 473 的「去设置重选」。理由=D-7 改变行为后旧文案与事实不符；禁 inject 期改补丁不生效，只会在补丁与运行态之间制造漂移，待下一次 inject 时再把词条正式回写。
 - D-10：默认模型跟随 ZCode 的 provider family 选择（`setting.json`），没有显式 family 时取首个启用 provider 首模型；不复用 Hermes 的 `selectedModel`（`aim`/`qwen` 等 CLI 别名不在 ZCode 目录内，必然误报失效）。理由=用户实报「Ycode 默认使用 Zcode 的模型配置」；默认源与选择源必须同一事实源。
+- D-11：默认与目录排序的第一事实源是 `provider_config.json`（provider 管理器），`setting.json` family 键只是 OAuth 套餐 UI 的选择，两者可能指向不同 provider。理由=用户实报默认与「本机 zcode 的配置」不一致；实测 providerOrder 首位 XGLM/glm-5.3 与 family 键指向的 coding-plan/GLM-5.3-Flash 不同，前者才是实际所用。
+- D-12：目录用 ZCode UI 命名空间（模板供应商经 3.15.x 内置清单解析到引擎条目、用户命名优先），默认模型第一信号=rollout「正在用」记录。理由=用户二次实报「还是旧的，和本机 Zcode（3.15.3）不一样」——config.json 引擎序/providerOrder 序都不等于「正在用」；本机在用 bigmodel-api(=SGLM)/GLM-5.3 既非引擎首组也非 providerOrder 首位，只有 rollout 记录能忠实表达。providerOrder 首位、family、首组依次兜底。
 
 ## 验证
 

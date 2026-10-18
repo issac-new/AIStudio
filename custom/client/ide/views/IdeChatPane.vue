@@ -16,7 +16,7 @@
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   useChatStore,
   type Session,
@@ -82,6 +82,7 @@ import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
 import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
+import { resolveBootSession } from '../utils/sessionBoot'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
 import { authFetch } from '../utils/auth-fetch'
@@ -90,6 +91,7 @@ const ide = useIdeStore()
 const chatStore = useChatStore()
 const appStore = useAppStore()
 const router = useRouter()
+const route = useRoute()
 const profilesStore = useProfilesStore()
 const settingsStore = useSettingsStore()
 const filesStore = useFilesStore()
@@ -180,6 +182,19 @@ onMounted(async () => {
   ])
   await chatStore.loadSessions?.(chatStore.sessionProfileFilter)
   ready.value = true
+  // ?session= 深链必须压过 ensureSession：imported/CLI 会话的 agent 与 IDE
+  // 底座不同，原 ensureSession 会新建空会话把直链目标顶掉（冷启动 12s 实测
+  // 目标会话被替换为「新会话」）。loadSessions 完成后再落一次选择，覆盖
+  // IdeShell watch 与本次 load 的竞态。
+  const boot = resolveBootSession(
+    route?.query?.session,
+    chatStore.sessions.map(session => session.id),
+    chatStore.activeSessionId,
+  )
+  if (boot.matched) {
+    if (boot.switchTo) await chatStore.switchSession?.(boot.switchTo)
+    return
+  }
   ensureSession()
 })
 
@@ -436,7 +451,9 @@ const latestDiff = ref('')
 const latestDiffUndoCtx = ref<InlineDiffUndoContext | null>(null)
 async function loadLatestDiff(): Promise<void> {
   const sid = chatStore.activeSessionId
-  if (!sid) return
+  // 本地草稿会话尚未在服务端落库，workspace-run-changes 必 404；此前冷启动
+  // 每 3s 轮询打一条 404（2026-10-18 回归实测 12s 内 4 条）。
+  if (!sid || chatStore.activeSession?.isLocalOnly) return
   try {
     const summaries = await ideRunsApi.changes(sid)
     if (chatStore.activeSessionId !== sid) return // 会话已切换，弃旧响应防乱序回写

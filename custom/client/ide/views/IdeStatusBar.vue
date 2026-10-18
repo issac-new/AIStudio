@@ -450,11 +450,23 @@ watch(
   cursor: pointer;
   font-size: 12px;
   color: var(--text-muted);
+  /* 齿轮字形实测仅 7×15px，点击目标过小（2026-10-18 回归）；补足热区。 */
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
 }
 
 .ide-statusbar__slots-btn {
   position: relative;
   display: inline-flex;
+  flex-shrink: 0;
+  /* 继承 .ide-statusbar__item 的 overflow:hidden 会把弹出的配置面板裁掉；
+     同时右端空间不足时本按钮会被压到 7px（2026-10-18 实测）。 */
+  overflow: visible;
 }
 
 .ide-statusbar__slots-panel {

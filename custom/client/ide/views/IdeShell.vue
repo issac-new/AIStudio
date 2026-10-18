@@ -26,6 +26,7 @@ import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
+import IdeSelfCheckDialog from '../components/IdeSelfCheckDialog.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
 import { useTaskProgress, taskProgressOf } from '@/custom/ia2/composables/useTaskProgress'
@@ -91,12 +92,41 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
   // 任务存在则继续原逐板流程（需命中板 slug 同步看板上下文）。
   // 2026-10-18 审计轮补：只有「确认不存在」（404）才判死——瞬时 5xx/网络错
   // 落回原逐板流程，不让暂时性故障伪装成「任务不存在」收抽屉。
+  // 2026-10-18 回归补：listTasks 默认过滤 done/archived，已归档任务的深链
+  // 永远命中不了逐板扫描（实测 t_0e138dae 抽屉空转 30s+）。getTask 明明
+  // 已返回任务详情，直接用它回填；逐板扫描仅负责补 board slug。
+  let detail: {
+    task?: {
+      id?: string; title?: string; status?: string; priority?: number
+      assignee?: string | null; body?: string | null
+      raci?: Record<string, string[]> | null; workspace_path?: string | null
+      parents?: string[]; children?: string[]
+    }
+    parents?: string[]
+    children?: string[]
+  } | null = null
   try {
-    await getTask(id)
+    detail = await getTask(id) as typeof detail
   } catch (err) {
     const e = err as { status?: number; message?: string }
     const notFound = e?.status === 404 || /\b404\b|not found/i.test(String(e?.message ?? ''))
     if (notFound) return // 判死：交由外层 briefingMiss 收起抽屉
+  }
+  const detailTask = detail?.task
+  if (detailTask?.id) {
+    if (ide.activeTaskId !== id) return
+    briefingTaskResolved.value = {
+      id: detailTask.id,
+      title: detailTask.title ?? '',
+      status: detailTask.status ?? '',
+      priority: typeof detailTask.priority === 'number' ? detailTask.priority : undefined,
+      assignee: detailTask.assignee ?? null,
+      body: detailTask.body ?? null,
+      raci: detailTask.raci ?? null,
+      workspacePath: detailTask.workspace_path ?? null,
+      parents: detail.parents ?? detailTask.parents ?? [],
+      children: detail.children ?? detailTask.children ?? [],
+    }
   }
   try {
     const boards = (await listBoards()).map(b => b.slug).filter(Boolean) as string[]
@@ -122,7 +152,7 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
         return
       }
     }
-  } catch { /* 解析失败保持空态，简报组件显示"当前无激活任务" */ }
+  } catch { /* 板解析失败：已由 getTask 详情回填则保持，不收起 */ }
 }
 // 回归轮 R7：直达链接任务不可解析时简报抽屉自动收起——原样常开空抽屉会盖住
 // 右栏页签（Git/查看文件点不到）；手动经导轨钮打开的无任务空态不受影响。
@@ -368,8 +398,14 @@ watch([briefingOpen, briefingTask, briefingMiss], ([open, task, miss]) => {
 // 才有任务上下文——裸落地此前直落会话栏自动恢复，新用户零引导）──
 // 判定纯函数=utils/landingHero（门禁测试同源）；engage 后本次访问不再打扰。
 const landingEngaged = ref(false)
+// 只把「真实会话」（非本地草稿）算作已进入工作区：裸落地时 ensureSession 会
+// 立即建一个 isLocalOnly 草稿，若按 activeSessionId 判定，引导页将永不出现。
+// 用户点选本地草稿的路径由 IdeTaskSidebar 的 open 事件置 landingEngaged。
+const hasWorkingSession = computed(() =>
+  Boolean(chatStore.activeSessionId) && !chatStore.activeSession?.isLocalOnly)
 const showLandingHero = computed(() => shouldShowLandingHero({
   activeTaskId: ide.activeTaskId,
+  hasActiveSession: hasWorkingSession.value,
   queryTask: route.query.task,
   querySession: route.query.session,
   engaged: landingEngaged.value,
@@ -584,7 +620,7 @@ onUnmounted(() => {
           </div>
           <!-- R6 补充：左栏右缘拖拽分割条（调整左栏宽度） -->
           <div class="ide-shell__split ide-shell__split--l" data-testid="ide-split-l" @mousedown="startIdeDrag('sidebar', $event)" />
-          <IdeTaskSidebar class="ide-shell__colbody" />
+          <IdeTaskSidebar class="ide-shell__colbody" @open="landingEngaged = true" />
         </div>
       </aside>
       <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }">
@@ -640,6 +676,7 @@ onUnmounted(() => {
     <CockpitScheduleModal v-if="workspaceStore.scheduleOpen" />
     <CockpitRunTraceModal />
     <IdeCommandPalette />
+    <IdeSelfCheckDialog />
   </div>
 </template>
 

@@ -134,4 +134,28 @@ describe('IdeCommandPalette', () => {
     await wrapper.find('.ide-palette__input').trigger('keydown', { key: 'Escape' })
     expect(ide.paletteOpen).toBe(false)
   })
+
+  it('焦点不在输入框时窗口级 Escape 也能关闭（侧栏搜索入口实测）', async () => {
+    const ide = useIdeStore()
+    const wrapper = mountPalette()
+    ide.openPalette()
+    await flushPromises()
+    // 模拟焦点仍在外部按钮：不在 input 上派发，直接 window 派发
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(ide.paletteOpen).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('开启后输入框自动聚焦（Pinia 解包布尔值也须 getter 监听）', async () => {
+    const ide = useIdeStore()
+    const wrapper = mount(IdeCommandPalette, {
+      attachTo: document.body,
+      global: { stubs: { Teleport: true } },
+    })
+    ide.openPalette()
+    await flushPromises()
+    await new Promise(resolve => setTimeout(resolve, 30))
+    expect(document.activeElement).toBe(wrapper.find('.ide-palette__input').element)
+    wrapper.unmount()
+  })
 })

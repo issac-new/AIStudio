@@ -166,6 +166,8 @@ export const useIdeStore = defineStore('ide', () => {
   const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
   /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
   const paletteOpen = ref(false)
+  /** IDE 全能力自检弹层（命令面板入口；瞬态） */
+  const selfCheckOpen = ref(false)
   /** v12 工作空间维度（默认任务；/ide?task= 深链落任务维度） */
   const dimension = ref<IdeDimension>(loadDimension())
   /** 任务维度绑定的任务 id（工作台 ⌨ / 管理台 ⌨ 深链带入） */
@@ -256,6 +258,14 @@ export const useIdeStore = defineStore('ide', () => {
     paletteOpen.value = !paletteOpen.value
   }
 
+  function openSelfCheck(): void {
+    selfCheckOpen.value = true
+  }
+
+  function closeSelfCheck(): void {
+    selfCheckOpen.value = false
+  }
+
   function toggleFloat(key: IdeFloatKey): void {
     floats.value[key] = !floats.value[key]
   }
@@ -318,6 +328,7 @@ export const useIdeStore = defineStore('ide', () => {
     sidebar,
     sidePane,
     paletteOpen,
+    selfCheckOpen,
     dimension,
     activeTaskId,
     taskWorkspace,
@@ -343,5 +354,7 @@ export const useIdeStore = defineStore('ide', () => {
     openPalette,
     closePalette,
     togglePalette,
+    openSelfCheck,
+    closeSelfCheck,
   }
 })
