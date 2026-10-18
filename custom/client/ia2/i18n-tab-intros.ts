@@ -76,7 +76,7 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     },
     'gov-issues': {
       what: '问题清单对账：这轮登记的每个问题，处理了没有。',
-      source: '轮次 issues.log 实读。',
+      source: '本次运行的问题清单实读。',
       act: '复盘前查处置率；红色未处理的逐条要有说法。',
     },
     'gov-metrics': {

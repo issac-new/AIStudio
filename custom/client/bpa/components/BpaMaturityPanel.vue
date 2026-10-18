@@ -63,9 +63,32 @@ function levelName(v: number | undefined): string {
   return v === undefined ? '' : PEMM_LEVEL_NAMES[v]?.nameZh ?? ''
 }
 
+let maturityResizeObserver: ResizeObserver | null = null
+
+/** 容器是否可绘制（隐藏页签里宽高为 0）。 */
+function chartReady(el: HTMLDivElement | null): boolean {
+  return !!el && el.clientWidth > 0 && el.clientHeight > 0
+}
+
+/** 有图未画时观测容器，可见后重试一次，避免 ECharts 零尺寸告警。 */
+function scheduleRetry(): void {
+  if (maturityResizeObserver) return
+  const targets = [radarRef.value, trendRef.value].filter((el): el is HTMLDivElement => !!el && !chartReady(el))
+  if (targets.length === 0) return
+  maturityResizeObserver = new ResizeObserver(() => {
+    if (!targets.some((el) => chartReady(el))) return
+    maturityResizeObserver?.disconnect()
+    maturityResizeObserver = null
+    renderCharts()
+  })
+  for (const el of targets) maturityResizeObserver.observe(el)
+}
+
 function renderCharts(): void {
   // 雷达：9 因素当前评估（P0-P4 → 0-4）
-  if (radarRef.value) {
+  if (radarRef.value && !chartReady(radarRef.value)) scheduleRetry()
+  if (trendRef.value && history.value.length >= 1 && !chartReady(trendRef.value)) scheduleRetry()
+  if (radarRef.value && chartReady(radarRef.value)) {
     if (!radarChart) radarChart = echarts.init(radarRef.value)
     radarChart.setOption({
       backgroundColor: 'transparent',
@@ -87,7 +110,7 @@ function renderCharts(): void {
     }, true)
   }
   // 趋势线：各轮评估的总体成熟度（短板决定）
-  if (trendRef.value && history.value.length >= 1) {
+  if (trendRef.value && history.value.length >= 1 && chartReady(trendRef.value)) {
     if (!trendChart) trendChart = echarts.init(trendRef.value)
     const pts = history.value.map((h) => ({
       t: new Date(h.scoredAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric' }),
@@ -114,7 +137,7 @@ function renderCharts(): void {
 
 onMounted(() => { void loadHistory().then(renderCharts) })
 watch([scores, history], () => renderCharts(), { deep: true })
-onBeforeUnmount(() => { radarChart?.dispose(); trendChart?.dispose(); radarChart = null; trendChart = null })
+onBeforeUnmount(() => { maturityResizeObserver?.disconnect(); maturityResizeObserver = null; radarChart?.dispose(); trendChart?.dispose(); radarChart = null; trendChart = null })
 </script>
 
 <template>

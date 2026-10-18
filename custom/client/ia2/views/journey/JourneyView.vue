@@ -67,7 +67,7 @@ function goStage(no: number): void {
     <div v-if="runState && bottleneck" class="jrn__bottleneck" data-testid="jrn-bottleneck">
       <span class="jrn__bottleneck-tag">当前卡点</span>
       <span class="jrn__bottleneck-text">第 {{ bottleneck.no }} 阶段·{{ bottleneck.title }}——{{ bottleneck.act }}</span>
-      <button v-if="openItems > 0" type="button" class="jrn__bottleneck-debt jrn__bottleneck-debt--link" data-testid="jrn-bottleneck-debt" title="去⑥治理·遗留项清算处理" @click="router.push({ name: 'ia2.govClearance' })">另有 {{ openItems }} 笔遗留项未清算，启动新运行前须清零——去清算</button>
+      <button v-if="openItems > 0" type="button" class="jrn__bottleneck-debt jrn__bottleneck-debt--link" data-testid="jrn-bottleneck-debt" title="去⑥治理·遗留项清算处理" @click="router.push({ name: 'ia2.govClearance' })">另有 {{ openItems }} 项遗留事项未清算，启动新运行前须清零——去清算</button>
     </div>
 
     <!-- 无轮引导态（D19 收敛：一句话+双按钮） -->
@@ -78,7 +78,7 @@ function goStage(no: number): void {
         <button class="jrn__guide-btn jrn__guide-btn--ghost" type="button" data-testid="jrn-skip" @click="goStage(2)">已搭好，看交付流程 →</button>
       </div>
     </div>
-    <p v-if="loadError" class="jrn__error" data-testid="jrn-error">轮次数据不可达：{{ loadError }}</p>
+    <p v-if="loadError" class="jrn__error" data-testid="jrn-error">运行数据暂时不可用：{{ loadError }}</p>
 
     <!-- A 区：从 0 到 1 搭建（五步） -->
     <section class="jrn__zone" data-testid="jrn-zone-setup">
@@ -98,7 +98,7 @@ function goStage(no: number): void {
             <span class="jrn__no">{{ st.no }}</span>
             <span class="jrn__card-title">{{ st.name }}</span>
             <span class="jrn__state" :data-testid="`jrn-step-state-${st.no}`">
-              {{ runState ? (stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '轮次内不跟踪' : '未开始') : '' }}
+              {{ runState ? (stepState(st) === 'done' ? '✓ 完成' : stepState(st) === 'active' ? '● 待完成' : stepState(st) === 'untracked' ? '未纳入跟踪' : '未开始') : '' }}
             </span>
           </div>
           <p class="jrn__what jrn__what--one">{{ st.purpose }}</p>

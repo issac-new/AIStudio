@@ -16,6 +16,7 @@ import { useAgentActivity } from '@/custom/ia2/composables/useAgentActivity'
 import { useTaskProgress, phaseProgressText } from '@/custom/ia2/composables/useTaskProgress'
 import { useFitSlice } from '@/custom/ia2/composables/useFitSlice'
 import { authFetch } from '@/custom/ide/utils/auth-fetch'
+import { runDisplayName } from '../run-display'
 
 const i18nCtx = useI18n()
 const router = useRouter()
@@ -114,7 +115,7 @@ const liveTitle = computed(() => {
       :title="hiddenAgents.join(', ')" @click="gotoBoard"
     >+{{ hiddenAgents.length }}</button>
     <span v-if="run" ref="runEl" class="bchip bchip--run" data-testid="bgwork-run" :title="fmt(L.updatedAgo, { sec: Math.max(0, now - run.updatedTs) })">
-      {{ L.runTitle }} {{ run.runId }}<template v-if="run.scope === 'lite'"> · {{ fmt(L.runMetaLite, { done: run.done, total: run.total, step: latestStep || '—', from: run.fixturesFrom || '—' }) }}</template><template v-else> · {{ fmt(L.runMeta, { done: run.done, total: run.total, step: latestStep || '—' }) }}</template>
+      {{ L.runTitle }} {{ runDisplayName(run.runId) }}<template v-if="run.scope === 'lite'"> · {{ fmt(L.runMetaLite, { done: run.done, total: run.total, step: latestStep || '—', from: run.fixturesFrom || '—' }) }}</template><template v-else> · {{ fmt(L.runMeta, { done: run.done, total: run.total, step: latestStep || '—' }) }}</template>
       <template v-if="runStaleMin >= 5"> · {{ fmt(L.stale, { min: runStaleMin }) }}</template>
     </span>
     <!-- 隐藏测量行：全量 agent chip 取真实宽度（秒数变化每轮重测） -->

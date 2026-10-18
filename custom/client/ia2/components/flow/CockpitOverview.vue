@@ -26,7 +26,29 @@ const emit = defineEmits<{
   (e: 'open-task', taskId: string): void
 }>()
 
-const { t } = useI18n()
+const i18nApi = useI18n() as unknown as {
+  t: (key: string, named?: Record<string, unknown>) => string
+  te?: (key: string) => boolean
+}
+const { t } = i18nApi
+
+/** 词条存在性：真实 i18n 有 te；测试替身没有时用「翻译结果≠键名」判定。 */
+function hasMessage(key: string): boolean {
+  return typeof i18nApi.te === 'function' ? i18nApi.te(key) : t(key) !== key
+}
+
+// 决策枚举含服务端域值（approved_once/approved_scoped 等），未上词表时如实给中文短名
+const DECISION_FALLBACK: Record<string, string> = {
+  approved_once: '批准（本次）',
+  approved_for_session: '本会话允许',
+  approved_scoped: '批准（范围内）',
+  denied_for_session: '本会话拒绝',
+  expolicy_amendment: '策略修订',
+}
+function decisionLabel(d: string): string {
+  const key = `approvals.choice.${d}`
+  return hasMessage(key) ? t(key) : (DECISION_FALLBACK[d] ?? d)
+}
 
 // ① 我的待办：审批待审 + 我在 RACI 中担 R/A 的卡
 const myRaciTasks = computed(() =>
@@ -115,7 +137,7 @@ function raciOf(t: CockpitTask) {
         <div v-if="!recentVerdicts.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.overviewDash.noVerdicts') }}</div>
         <div v-for="v in recentVerdicts" :key="v.id + v.ts" class="ov__verdict" :data-testid="`ov-verdict-${v.targetId}`">
           <span class="ov__verdict-badge" :class="v.decision === 'approve' ? 'is-ok' : 'is-no'">
-            {{ t(`approvals.choice.${v.decision}`) }}
+            {{ decisionLabel(v.decision) }}
           </span>
           <span class="ov__verdict-title">{{ v.targetTitle }}</span>
           <span class="ov__verdict-meta">{{ v.actor }} · {{ fmtTime(v.ts) }}</span>

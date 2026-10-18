@@ -372,7 +372,7 @@ function submitCreateRoom(): void {
         </button>
       </div>
       <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" :title="t('ia2.flow.newChatHint')" @click="newMenuOpen = !newMenuOpen">
-        ＋ {{ t('ia2.flow.newChat') }}
+        ＋ {{ t('ia2.flow.newChat', zh ? '新建聊天' : 'New chat') }}
       </button>
       <!-- S5（补遗⑤）：/app/eng 编排页退役——＋新循环入口随之摘除（守门 workbench-flow
            断言 flow-new-loop 不存在；循环创建走脚本/运行中心，恢复路由即回生）。 -->
