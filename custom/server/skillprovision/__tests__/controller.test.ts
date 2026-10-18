@@ -43,6 +43,7 @@ const manifestPath = (): string => join(root, 'manifest.json')
 describe('skillprovision controller', () => {
   it('注册了报告/清单/供给/回滚端点', () => {
     expect([...routes.keys()].sort()).toEqual([
+      'GET /provision/fleet',
       'GET /provision/manifest',
       'GET /provision/report',
       'POST /provision/apply',

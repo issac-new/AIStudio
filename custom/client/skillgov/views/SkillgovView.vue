@@ -6,6 +6,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   skillgovApi,
+  type FleetMachineDto,
+  type FleetReportDto,
   type ProvisionReportDto,
   type SkillScanSummaryDto,
 } from '@/custom/skillgov/api'
@@ -70,6 +72,41 @@ const provError = ref('')
 const provMsg = ref('')
 const provExpanded = ref<Set<string>>(new Set())
 
+// ── 舰队能力（能力发现面 v1）─────────────────────────
+const fleet = ref<FleetReportDto | null>(null)
+const fleetQuery = ref('')
+const fleetExpanded = ref<Set<string>>(new Set())
+
+async function loadFleet(): Promise<void> {
+  try {
+    fleet.value = await skillgovApi.fleetReport()
+  } catch { fleet.value = null }
+}
+
+function toggleFleet(machine: string): void {
+  const next = new Set(fleetExpanded.value)
+  if (next.has(machine)) next.delete(machine)
+  else next.add(machine)
+  fleetExpanded.value = next
+}
+
+/** 客户端搜索：机器名/账号名/技能名命中即保留该机器+该行。 */
+const fleetFiltered = computed(() => {
+  const q = fleetQuery.value.trim().toLowerCase()
+  if (!q || !fleet.value) return fleet.value
+  return {
+    ...fleet.value,
+    machines: fleet.value.machines
+      .map((m) => ({
+        ...m,
+        profiles: m.profiles.filter(
+          (p) => m.machine.toLowerCase().includes(q) || p.profile.toLowerCase().includes(q) || p.skills.some((sk) => sk.toLowerCase().includes(q)),
+        ),
+      }))
+      .filter((m) => m.machine.toLowerCase().includes(q) || m.profiles.length > 0),
+  }
+})
+
 const manifestReady = computed(() => Boolean(
   prov.value
   && prov.value.manifest.source === 'file'
@@ -93,6 +130,7 @@ async function loadProvision(): Promise<void> {
 function openProvision(): void {
   tab.value = 'provision'
   if (!prov.value) void loadProvision()
+  if (!fleet.value) void loadFleet()
 }
 
 async function seedManifest(): Promise<void> {
@@ -330,6 +368,44 @@ onMounted(() => void load())
           sim-only：{{ prov.simOnlyProfiles.join(', ') }}
         </p>
       </template>
+
+      <section v-if="fleet" class="fleet" data-testid="skillgov-fleet">
+        <div class="fleet-head">
+          <h2>{{ L.provision.fleet.title }}</h2>
+          <input v-model="fleetQuery" class="fleet-search" :placeholder="L.provision.fleet.searchPh" data-testid="skillgov-fleet-search" />
+        </div>
+        <p v-if="!fleet.available" class="muted">{{ L.provision.fleet.unavailable }}：{{ fleet.note }}</p>
+        <p v-else class="muted">{{ L.provision.fleet.note }}<template v-if="fleet.bad.length">（{{ fleet.bad.length }} 坏文件）</template></p>
+        <template v-if="fleetFiltered && fleetFiltered.machines.length">
+          <div class="fleet-cards">
+            <div v-for="m in fleetFiltered.machines" :key="m.machine" class="fleet-card" :class="{ stale: m.stale }" :data-testid="`skillgov-fleet-${m.machine}`" @click="toggleFleet(m.machine)">
+              <div class="fleet-card__head">
+                <b class="mono">{{ m.machine }}</b>
+                <span class="badge" :class="m.stale ? 'b-stale' : 'b-fresh'">{{ m.stale ? L.provision.fleet.staleBadge : L.provision.fleet.freshBadge }}</span>
+              </div>
+              <div class="fleet-card__row">
+                <span>{{ L.provision.fleet.age }}：{{ m.generatedAt ? new Date(m.generatedAt).toLocaleString() : '—' }}<template v-if="m.ageMinutes >= 0">（{{ m.ageMinutes >= 1440 ? `${Math.floor(m.ageMinutes / 1440)}d` : `${m.ageMinutes}m` }}）</template></span>
+              </div>
+              <div class="fleet-card__row">
+                <span>{{ L.provision.fleet.profiles }}：{{ m.profiles.length }} ｜ {{ L.provision.fleet.totalSkills }}：{{ m.totalSkills }}</span>
+              </div>
+              <table v-if="fleetExpanded.has(m.machine)" class="sgov-table fleet-table">
+                <thead>
+                  <tr><th>{{ L.provision.table.profile }}</th><th>{{ L.provision.table.role }}</th><th>{{ L.provision.fleet.skillCount }}</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in m.profiles" :key="p.profile">
+                    <td class="mono">{{ p.profile }}</td>
+                    <td>{{ p.role ?? '—' }}</td>
+                    <td>{{ p.skillCount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+        <p v-else-if="fleet.available" class="muted">{{ L.provision.fleet.empty }}</p>
+      </section>
       <p v-else class="muted">{{ L.provision.loading }}</p>
     </template>
   </section>
@@ -388,4 +464,17 @@ button.ghost { background: transparent; color: inherit; border: 1px solid var(--
 .muted { opacity: 0.65; font-size: 12px; }
 .mono { font-family: var(--font-mono, monospace); font-size: 12px; }
 .sgov-view__hint { margin: 0; }
+.fleet { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--border-color, #e5e7eb); padding-top: 10px;
+  h2 { font-size: 15px; margin: 0; } }
+.fleet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.fleet-search { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 5px 10px; font-size: 12px; min-width: 220px; background: var(--bg-primary, #fff); color: inherit; }
+.fleet-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.fleet-card { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-size: 12px;
+  &.stale { border-color: var(--warning, #b45309); }
+  &__head { display: flex; align-items: center; justify-content: space-between; }
+  &__row { opacity: 0.8; } }
+.fleet-table { margin-top: 6px; font-size: 12px; }
+.badge { border: 1px solid currentColor; border-radius: 8px; padding: 0 6px; font-size: 10px;
+  &.b-fresh { color: var(--success, #16a34a); }
+  &.b-stale { color: var(--warning, #b45309); } }
 </style>
