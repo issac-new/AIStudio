@@ -5,15 +5,24 @@
 // 优先级五档映射 p0-p4；列=status 词表。只读视图（编辑走驾驶舱看板）。
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { listTasks, type KanbanTask } from '@/api/hermes/kanban'
 
 type BoardView = 'list' | 'board' | 'swimlane' | 'gantt'
 
 const { t } = useI18n()
+const router = useRouter()
 const tasks = ref<KanbanTask[]>([])
 const loadError = ref('')
 const loading = ref(false)
 const view = ref<BoardView>('board')
+
+// 卡片点击 → /ide?task=<id> 深链（关联轮发现路径）：直达链接一条链把任务维度
+// 绑定、简报展开、workspace 关联、任务会话切换全带起来（IdeShell watch 同源）。
+// router 空值守卫：无路由上下文的裸挂载（单测）不炸，点击时静默。
+function openTask(taskId: string): void {
+  void router?.push({ path: '/ide', query: { task: taskId } })
+}
 
 const VIEWS: Array<{ key: BoardView; label: string }> = [
   { key: 'board', label: 'Board' },
@@ -136,9 +145,14 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
         <div
           v-for="task in col.list"
           :key="task.id"
-          class="ide-kanban__card"
+          class="ide-kanban__card ide-kanban__card--clickable"
           :class="`is-${prio(task.priority)}`"
           :data-testid="`ide-kanban-task-${task.id}`"
+          role="button"
+          tabindex="0"
+          :title="t('ide.kanban.openTask', '在 Ycode 打开任务')"
+          @click="openTask(task.id)"
+          @keydown.enter="openTask(task.id)"
         >
           <span class="ide-kanban__prio">{{ prio(task.priority) }}</span>
           <span class="ide-kanban__title" :title="task.title">{{ task.title }}</span>
@@ -151,7 +165,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
     <table v-else-if="view === 'list' && tasks.length" class="ide-kanban__list" data-testid="ide-kanban-list">
       <thead><tr><th>#</th><th>prio</th><th>title</th><th>status</th><th>assignee</th></tr></thead>
       <tbody>
-        <tr v-for="task in tasks" :key="task.id" :data-testid="`ide-kanban-task-${task.id}`">
+        <tr v-for="task in tasks" :key="task.id" :data-testid="`ide-kanban-task-${task.id}`" class="ide-kanban__row--clickable" @click="openTask(task.id)">
           <td>{{ task.id.slice(0, 6) }}</td>
           <td :class="`is-${prio(task.priority)}`">{{ prio(task.priority) }}</td>
           <td class="is-title" :title="task.title">{{ task.title }}</td>
@@ -168,8 +182,9 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
         <span
           v-for="task in lane.list"
           :key="task.id"
-          class="ide-kanban__card"
+          class="ide-kanban__card ide-kanban__card--clickable"
           :class="`is-${prio(task.priority)}`"
+          @click="openTask(task.id)"
         >{{ prio(task.priority) }} {{ task.title }}</span>
       </div>
     </div>
@@ -199,6 +214,8 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
 .ide-kanban__col { flex: 0 0 168px; background: var(--hover-color, rgba(0,0,0,.03)); border-radius: 6px; padding: 6px; }
 .ide-kanban__colhead { font-weight: 600; color: var(--text-muted); font-size: 11px; padding: 2px 4px 6px; }
 .ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }
+.ide-kanban__card--clickable { cursor: pointer; &:hover { border-color: var(--primary-color); } }
+.ide-kanban__row--clickable { cursor: pointer; &:hover td { background: var(--hover-color, rgba(0,0,0,.04)); } }
 .ide-kanban__prio { font-size: 10px; font-weight: 600; }
 .is-p0 .ide-kanban__prio, td.is-p0 { color: var(--error); }
 .is-p1 .ide-kanban__prio, td.is-p1 { color: var(--error); }

@@ -44,3 +44,27 @@ describe('IdeKanbanPane（四视图）', () => {
     expect(w.find('.ide-kanban__gbar').exists()).toBe(true)
   })
 })
+
+// ── 关联轮（2026-10-18）：卡片点击 → /ide?task=<id> 深链（发现路径）──
+import { createRouter, createMemoryHistory } from 'vue-router'
+
+describe('IdeKanbanPane 卡片点击深链', () => {
+  it('board 卡与 list 行点击都发 /ide?task=<id>（一条链带起任务绑定+workspace 关联）', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/ide', component: { template: '<div/>' } }] })
+    const pushes: Array<{ path: string; query: Record<string, string> }> = []
+    router.push = async (to: unknown) => {
+      const loc = to as { path: string; query: Record<string, string> }
+      pushes.push({ path: loc.path, query: loc.query })
+      return Promise.resolve()
+    }
+    const w = mount(IdeKanbanPane, { global: { plugins: [router] } })
+    await flushPromises()
+    await w.find('[data-testid="ide-kanban-task-t1"]').trigger('click')
+    await w.find('[data-testid="ide-kanban-view-list"]').trigger('click')
+    await w.find('[data-testid="ide-kanban-task-t2"]').trigger('click')
+    expect(pushes).toEqual([
+      { path: '/ide', query: { task: 't1' } },
+      { path: '/ide', query: { task: 't2' } },
+    ])
+  })
+})

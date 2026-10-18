@@ -76,6 +76,26 @@ export interface BriefingEngineProgress {
   milestones?: Array<{ ts: string; milestone: string; status?: string; note?: string }>
 }
 
+/** 任务会话块（关联轮，2026-10-18）：该任务会话的上下文信息（最新摘要+近期消息） */
+export interface BriefingSessionBlock {
+  sessionId: string | null
+  source: string | null
+  model: string | null
+  startedAt: number | null
+  endedAt: number | null
+  summary: string | null
+  messages: Array<{ role: string; content: string; timestamp: number | null }>
+}
+
+/** 任务 workspace 关联态（patch 658 端点解析结果的展示面子集） */
+export interface BriefingWorkspaceInfo {
+  kind: string | null
+  path: string | null
+  materialized: boolean
+  branch: string | null
+  note: 'ok' | 'predicted_scratch' | 'no_workspace' | 'escape_refused'
+}
+
 /** 辅助会话追问组装：带任务上下文前缀发往主会话（同 IdeTaskContextBar assistant 模式） */
 export function buildAuxMessage(task: BriefingTask | null | undefined, text: string): string {
   const trimmed = text.trim()
@@ -145,4 +165,36 @@ export function parseRaciFromTask(task: BriefingTask | null | undefined): Briefi
   const consulted = labeled('咨询')
   const informed = [...labeled('通知'), ...labeled('发起方')]
   return { responsible, approver, consulted, informed }
+}
+
+/**
+ * 任务上下文一键进会话（关联轮，2026-10-18）：任务卡面 + workspace 根 + 最新
+ * 摘要组装成一条独立上下文消息，经简报「任务会话」块按钮发往当前会话
+ * （chat.sendMessage 无活跃会话时自动建）。不自动注入——发送是用户显式动作；
+ * 也不写文件进 workspace——worktree 型任务树被弄脏会阻断完成时的 worktree 回收
+ * （kanban _cleanup_worktree_workspace 对 dirty 树拒绝回收）。
+ */
+export function buildTaskContextMessage(
+  task: BriefingTask | null | undefined,
+  opts?: { workspacePath?: string | null; summary?: string | null; branch?: string | null },
+): string {
+  if (!task) return ''
+  const lines = [
+    `【任务上下文·${task.id}】${task.title}`,
+    `状态: ${task.status}${task.assignee ? ` · 负责人: ${task.assignee}` : ''}`,
+  ]
+  if (opts?.branch) lines.push(`分支: ${opts.branch}`)
+  if (opts?.workspacePath) lines.push(`工作区根目录: ${opts.workspacePath}`)
+  if (opts?.summary?.trim()) lines.push(`最新摘要: ${opts.summary.trim()}`)
+  lines.push('——以上为该任务会话的背景信息，请基于此继续。')
+  return lines.join('\n')
+}
+
+/** 任务工作区关联态 → i18n 键（关联轮）：物化=已关联；预测/无/异常如实分级 */
+export function workspaceStateKey(info: BriefingWorkspaceInfo | null | undefined): string {
+  if (!info) return ''
+  if (info.materialized) return 'ide.briefing.workspaceLinked'
+  if (info.note === 'predicted_scratch') return 'ide.briefing.workspacePredicted'
+  if (info.note === 'no_workspace') return 'ide.briefing.workspaceNone'
+  return 'ide.briefing.workspaceAbnormal'
 }

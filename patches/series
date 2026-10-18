@@ -839,3 +839,13 @@
 # 657: 下载/预览 fetch 补 workspaceRoot——workspaceRoot 模式下 path 相对 root，
 # 缺 root 时下载按钮 404（2026-10-18 IDE 文件预览实测）。
 657-client-download-workspace-root.patch
+
+# 658: IDE 任务 workspace 解析端点——Ycode 工作区↔kanban 任务关联轮服务端件：
+# GET /api/ide/task-workspace?task=<id>&board=<slug> 镜像 upstream listWorkspaceFiles
+# 的路径约定（~/.hermes/kanban[/boards/<slug>]/workspaces 锚定，绝对直用），
+# scratch 未派发预测 <workspacesRoot>/<task-id> 且 materialized=false 如实呈现。
+658-server-ide-task-workspace-route.patch
+
+# 659: 任务工作区/任务会话/一键发上下文 词条（zh/en）——关联轮配套；Composer t
+# 无默认文案参数，键必须真实落语言包（否则界面直出键名）。
+659-client-task-workspace-locale.patch

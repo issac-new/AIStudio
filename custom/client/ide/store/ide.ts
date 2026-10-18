@@ -14,6 +14,7 @@ import { computed, ref, watch } from 'vue'
 import type { CodingAgentId } from '@/api/coding-agents'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { DEFAULT_WIKI_GEN_CONFIG, type WikiGenConfig } from '../utils/wikiPipeline'
+import type { TaskWorkspaceInfo } from '../api/taskWorkspace'
 
 const WORKSPACE_KEY = 'hermes_ide_workspace'
 const AGENT_KEY = 'hermes_ide_agent'
@@ -171,6 +172,13 @@ export const useIdeStore = defineStore('ide', () => {
   const dimension = ref<IdeDimension>(loadDimension())
   /** 任务维度绑定的任务 id（工作台 ⌨ / 管理台 ⌨ 深链带入） */
   const activeTaskId = ref<string | null>(null)
+  // ── 任务 workspace 关联（2026-10-18 关联轮）──
+  // activeTask 绑定后解析任务 workspace（patch 658 端点），materialized 时把
+  // IDE 工作区切到任务根目录：文件树/终端 cwd/记忆面板（项目档=任务 workspace
+  // 的 AGENTS.md/MEMORY.md/memory/）/新建会话 workspace 全部随根走。唯一例外
+  // 持有服务端数据的状态（头部「不持有服务端数据」原则的历史豁免，关联链单一
+  // 事实源收在本 store 避免散落组件各自 fetch）。
+  const taskWorkspace = ref<TaskWorkspaceInfo | null>(null)
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
   const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false })
   // wiki 深化轮（2026-10-10）：@wiki 消费闭环配套——
@@ -211,6 +219,31 @@ export const useIdeStore = defineStore('ide', () => {
   /** 任务维度绑定（工作台 ⌨ 深链）；null 清除 */
   function setActiveTask(taskId: string | null): void {
     activeTaskId.value = taskId?.trim() || null
+    if (!activeTaskId.value) taskWorkspace.value = null
+  }
+
+  /**
+   * 任务 workspace 关联：解析（patch 658 端点）+ materialized 时切换 IDE 工作区。
+   * - 未物化（scratch 未派发/已完成回收）不切换、不覆盖用户手选的工作区，只回填
+   *   taskWorkspace 供简报展示预测路径；
+   * - 解析失败静默（任务无 workspace 是常态：排期卡/跟踪卡），不清旧值以外不炸；
+   * - stale 守卫：请求期间任务又切换则丢弃本次结果。
+   */
+  async function associateTaskWorkspace(taskId: string, board?: string): Promise<TaskWorkspaceInfo | null> {
+    try {
+      // 懒加载：api/taskWorkspace → @/api/client → @/router 的模块级 createRouter
+      // 会击穿全量 mock vue-router 的既有测试（command-palette/task-sidebar）；
+      // 动作内 import 只在实际关联时拉这条链。
+      const { ideTaskWorkspaceApi } = await import('../api/taskWorkspace')
+      const info = await ideTaskWorkspaceApi.get(taskId, board)
+      if (activeTaskId.value !== taskId) return null
+      taskWorkspace.value = info
+      if (info?.path && info.materialized) setWorkspace(info.path)
+      return info
+    } catch {
+      if (activeTaskId.value === taskId) taskWorkspace.value = null
+      return null
+    }
   }
 
   function openPalette(): void {
@@ -298,6 +331,7 @@ export const useIdeStore = defineStore('ide', () => {
     selfCheckOpen,
     dimension,
     activeTaskId,
+    taskWorkspace,
     floats,
     terminalCwd,
     wikiPages,
@@ -308,6 +342,7 @@ export const useIdeStore = defineStore('ide', () => {
     setAgentId,
     setDimension,
     setActiveTask,
+    associateTaskWorkspace,
     toggleFold,
     toggleMax,
     setOrganize,

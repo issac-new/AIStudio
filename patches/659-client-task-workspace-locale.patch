@@ -1,0 +1,68 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/zh.ts
+index 1c75367..e7e384f 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -857,7 +857,8 @@ export default {
+       exported: '画板已导出'
+     },
+     kanban: {
+-      empty: '暂无看板任务（驾驶舱建板后此处展示）'
++      empty: '暂无看板任务（驾驶舱建板后此处展示）',
++      openTask: '在 Ycode 打开任务'
+     },
+     paletteOpen: '命令面板 ⌘K',
+     palettePlaceholder: '搜索命令或任务…',
+@@ -1115,7 +1116,18 @@ export default {
+       ctxKindReq: '需求',
+       ctxKindDesign: '概设',
+       ctxKindSchedule: '排期',
+-      ctxKindDoc: '文档'
++      ctxKindDoc: '文档',
++      workspaceBlock: '任务工作区',
++      workspaceRoot: '根目录',
++      workspaceKind: '类型',
++      workspaceState: '关联状态',
++      workspaceLinked: '已关联为 IDE 工作区根目录',
++      workspacePredicted: '未派发（路径为预测值）',
++      workspaceNone: '任务无工作区',
++      workspaceAbnormal: '路径异常未关联',
++      sessionBlock: '任务会话',
++      sessionMeta: '会话',
++      sendContext: '把任务上下文发给当前会话'
+     },
+     chatShare: '分享会话'
+   },
+diff --git a/packages/client/src/i18n/locales/en.ts b/en.ts
+index 8a7a324..f51e475 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -858,7 +858,8 @@ export default {
+       exported: 'Whiteboard exported'
+     },
+     kanban: {
+-      empty: 'No kanban tasks yet (create a board in cockpit)'
++      empty: 'No kanban tasks yet (create a board in cockpit)',
++      openTask: 'Open task in Ycode'
+     },
+     paletteOpen: 'Command Palette ⌘K',
+     palettePlaceholder: 'Search commands or tasks…',
+@@ -1116,7 +1117,18 @@ export default {
+       ctxKindReq: 'REQ',
+       ctxKindDesign: 'DESIGN',
+       ctxKindSchedule: 'SCHED',
+-      ctxKindDoc: 'DOC'
++      ctxKindDoc: 'DOC',
++      workspaceBlock: 'Task Workspace',
++      workspaceRoot: 'Root',
++      workspaceKind: 'Kind',
++      workspaceState: 'Link state',
++      workspaceLinked: 'Linked as IDE workspace root',
++      workspacePredicted: 'Not dispatched (path is predicted)',
++      workspaceNone: 'Task has no workspace',
++      workspaceAbnormal: 'Path abnormal; not linked',
++      sessionBlock: 'Task Session',
++      sessionMeta: 'Session',
++      sendContext: 'Send task context to current session'
+     },
+     chatShare: 'Share chat'
+   },

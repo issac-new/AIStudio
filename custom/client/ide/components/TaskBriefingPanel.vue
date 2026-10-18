@@ -15,7 +15,10 @@ import type {
   BriefingRecap,
   BriefingContextFile,
   BriefingEngineProgress,
+  BriefingSessionBlock,
+  BriefingWorkspaceInfo,
 } from './briefing-types'
+import { workspaceStateKey } from './briefing-types'
 
 const props = defineProps<{
   task: BriefingTask
@@ -28,12 +31,18 @@ const props = defineProps<{
   contextFiles?: BriefingContextFile[]
   /** 研发进度（引擎侧阶段时间线，进度可感知链·件 2c；IdeShell 注入） */
   engineProgress?: BriefingEngineProgress | null
+  /** 任务会话块（关联轮）：该任务会话最新摘要+近期消息；缺席整块不渲染 */
+  session?: BriefingSessionBlock | null
+  /** 任务 workspace 关联态（关联轮，patch 658 端点）；缺席整块不渲染 */
+  workspaceInfo?: BriefingWorkspaceInfo | null
 }>()
 
 const emit = defineEmits<{
   'aux-send': [text: string]
   /** P3.3 一键打开（IDE 编辑器/预览） */
   'open-file': [path: string]
+  /** 任务上下文一键进当前会话（关联轮） */
+  'send-context': []
 }>()
 
 const { t } = useI18n()
@@ -43,6 +52,9 @@ const gitView = computed<BriefingGit>(() => props.git ?? { branch: null, worktre
 const wfView = computed<BriefingWorkflow>(() => props.workflow ?? { stage: props.task.status, parentIds: [], childIds: [], blocked: false, retryCount: 0 })
 const collabView = computed<BriefingCollabMessage[]>(() => props.collab ?? [])
 const recapView = computed<BriefingRecap>(() => props.recap ?? { summary: '', decisions: [], blockers: [], todos: [] })
+
+// 任务工作区关联态（关联轮）：状态→键映射在 briefing-types.workspaceStateKey
+// （纯函数守门测试同源），文案由语言包解析（patch 659 词条）。
 
 // ── 简报前缀稳定度量（吸收第一批 D2，multica runtime brief 缓存语义的度量面）──
 // 当前简报内容 vs 上次打开（localStorage per task）→ diffBrief 稳定前缀/变更段；
@@ -116,6 +128,29 @@ function sendAux(): void {
       </div>
     </section>
 
+    <!-- 区块 1c：任务工作区（关联轮）——任务 workspace 即 IDE 根目录；解析失败/
+         无工作区整块不渲染（诚实缺席）。未物化（未派发/已回收）如实标注不切换。 -->
+    <section v-if="workspaceInfo" class="briefing-section" data-testid="briefing-workspace-block">
+      <button class="section-toggle" type="button" @click="toggle('workspace')">
+        <span>{{ t('ide.briefing.workspaceBlock', '任务工作区') }}</span>
+        <span class="chev">{{ collapsed.workspace ? '▸' : '▾' }}</span>
+      </button>
+      <div v-if="!collapsed.workspace" class="section-body">
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.workspaceRoot', '根目录') }}</span>
+          <span class="v" :title="workspaceInfo.path ?? ''">{{ workspaceInfo.path || '—' }}</span>
+        </div>
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.workspaceKind', '类型') }}</span>
+          <span class="v">{{ workspaceInfo.kind || '—' }}<template v-if="workspaceInfo.branch"> · {{ workspaceInfo.branch }}</template></span>
+        </div>
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.workspaceState', '关联状态') }}</span>
+          <span class="v" :class="{ danger: !workspaceInfo.materialized }" data-testid="briefing-workspace-state">{{ t(workspaceStateKey(workspaceInfo)) }}</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 区块 1b：研发进度（引擎站点时间线，进度可感知链）——会话面暂缺/无站点
          时整块不渲染（诚实缺席，不占版面不编造） -->
     <section
@@ -169,6 +204,32 @@ function sendAux(): void {
             </button>
           </li>
         </ul>
+      </div>
+    </section>
+
+    <!-- 区块 2b：任务会话（关联轮）——该任务会话的上下文信息：最新摘要+近期
+         消息节选；会话面缺席（冷窗）整块不渲染。一键把任务上下文发给当前会话
+         （显式动作，不自动注入不写文件进 workspace——worktree 树脏会阻断回收）。 -->
+    <section v-if="session && (session.summary || session.messages.length)" class="briefing-section" data-testid="briefing-session-block">
+      <button class="section-toggle" type="button" @click="toggle('session')">
+        <span>{{ t('ide.briefing.sessionBlock', '任务会话') }}</span>
+        <span class="chev">{{ collapsed.session ? '▸' : '▾' }}</span>
+      </button>
+      <div v-if="!collapsed.session" class="section-body">
+        <p v-if="session.summary" class="body-excerpt" data-testid="briefing-session-summary">{{ session.summary }}</p>
+        <ul class="collab-list" data-testid="briefing-session-messages">
+          <li v-for="(m, i) in session.messages" :key="i" class="collab-item">
+            <span class="sender">{{ m.role }}</span>
+            <span class="excerpt">{{ m.content }}</span>
+          </li>
+        </ul>
+        <div class="kv">
+          <span class="k">{{ t('ide.briefing.sessionMeta', '会话') }}</span>
+          <span class="v">{{ session.sessionId || '—' }}<template v-if="session.source"> · {{ session.source }}</template></span>
+        </div>
+        <button type="button" class="ctx-send" data-testid="briefing-send-context" @click="emit('send-context')">
+          {{ t('ide.briefing.sendContext', '把任务上下文发给当前会话') }}
+        </button>
       </div>
     </section>
 
@@ -440,6 +501,20 @@ function sendAux(): void {
     background: var(--accent-primary);
     color: var(--text-on-accent);
     font-size: 12px;
+  }
+
+  /* 任务上下文一键进会话（关联轮）：宽幅动作钮，与辅助会话发送钮同语言 */
+  .ctx-send {
+    width: 100%;
+    margin-top: 6px;
+    border: 1px solid var(--accent-primary);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    background: var(--bg-primary);
+    color: var(--accent-primary);
+    font-size: 12px;
+    &:hover { background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-primary)); }
   }
 }
 .phase-line {
