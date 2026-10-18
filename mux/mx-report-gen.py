@@ -2114,9 +2114,6 @@ _USED_FRAMES = set()  # V8.4② 同源帧单嵌（run21 收官审计实录：一
 def img_tags(imgs):
     out = []
     for pre, cap, kind in imgs:
-        if pre in _USED_FRAMES:
-            out.append(f'<p class="shot-ref">↗ 同源帧已嵌于前步（V8.4② 单嵌纪律）：{H.escape(cap)}</p>')
-            continue
         _USED_FRAMES.add(pre)
         p = STEPS_DIR / f'{pre}.png'
         if p.exists():
@@ -2167,6 +2164,12 @@ def _r18_frame_tags(frames, step, view=''):
         _pos = {'before': '操作前', 'action': '操作动作', 'after': '系统响应'}.get(
             name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
         cap = f'{view}·{_pos}' if (view and _pos) else (name[:-4] if not _pos else f'操作序列画面·{_pos}')
+        _USED_FRAMES.add(name[:-4] if name.endswith('.png') else name)  # V8.4② 单嵌登记（自动挂接侧）
+        _stem = name[:-4] if name.endswith('.png') else name
+        if _stem in _USED_FRAMES:
+            continue  # V8.4② 单嵌：步条已嵌此帧（步条先渲染），挂接侧让位
+        _USED_FRAMES.add(_stem)
+
         if p.exists():
             out.append(
                 f'<label class="shot r18-shot"><input type="checkbox">'
@@ -4825,6 +4828,17 @@ def _mask_env(text: str) -> str:
     return text
 
 html = _mask_env(html)
+# V8.4② 全局后处理去重（run21 收官实录：步条 imgs/孤儿挂接/r18 挂接三路同帧
+# 双嵌，渲染序不可控的根治位）——同一 src 只保留首个嵌入块，后续替换为文字引用。
+import re as _re_dedupe
+_seen_src = set()
+_pat_dedupe = _re_dedupe.compile(r'(<label class="shot[^"]*"><input type="checkbox"><img src=")(screenshots/steps/[^"]+)(")')
+def _dedupe_embed(m):
+    if m.group(2) in _seen_src:
+        return '<p class="shot-ref">↗ 同源帧已嵌于前文（V8.4② 单嵌纪律）</p>'
+    _seen_src.add(m.group(2))
+    return m.group(0)
+html = _pat_dedupe.sub(_dedupe_embed, html)
 OUT.write_text(html, encoding='utf-8')
 print(f'report written: {OUT} ({len(html)} bytes, {total_imgs} images)')
 
