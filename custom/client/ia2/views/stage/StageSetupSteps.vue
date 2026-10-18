@@ -5,13 +5,11 @@
      状态读 useStageProgress 共享缓存；无运行/无键的步骤如实显示「轮次内不跟踪」。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { SETUP_STEPS } from '../../stage-meta'
 import { useStageProgress } from '../../composables/useStageProgress'
 
 const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
-const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const progress = useStageProgress()
@@ -74,10 +72,7 @@ function actionText(st: (typeof SETUP_STEPS)[number]): string {
     </ol>
 
     <footer class="sst__foot">
-      <span class="sst__hint">{{ zh ? '账号、智能体、模型等组织级配置集中在系统设置。' : 'Organization-level settings live in Settings.' }}</span>
-      <button type="button" class="sst__link" data-testid="stg-setup-settings" @click="router.push({ name: 'ia2.govSettings' })">
-        {{ zh ? '打开系统设置 →' : 'Open settings →' }}
-      </button>
+      <span class="sst__hint">{{ zh ? '账号、智能体、模型等组织级配置都在对应页签内完成。' : 'Accounts, agents and models are configured in their tabs.' }}</span>
     </footer>
   </section>
 </template>
@@ -109,5 +104,4 @@ function actionText(st: (typeof SETUP_STEPS)[number]): string {
 .sst__go:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .sst__foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sst__hint { font-size: 11.5px; color: var(--text-muted); }
-.sst__link { margin-left: auto; border: 0; background: transparent; padding: 0; font-family: inherit; font-size: 12px; color: var(--accent-primary); cursor: pointer; }
 </style>

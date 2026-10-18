@@ -11,6 +11,7 @@ import { useSessionRows } from '../composables/useSessionRows'
 import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { fetchGovernanceOverview, type GovernanceDocMeta } from '@/custom/governance/api/governance'
+import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 
 type SearchType = 'all' | 'sessions' | 'tasks' | 'runs' | 'docs' | 'people'
 type GroupKey = Exclude<SearchType, 'all'>
@@ -31,6 +32,9 @@ const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'
 const { sessionRows, accounts } = useSessionRows()
 const workspace = useWorkspaceStore()
 const runsStore = useRunCenterStore()
+// 任务结果就地开抽屉（不再跳看板）；会话/运行/文档仍按对象打开
+const drawerTaskId = ref<string | null>(null)
+const drawerOpen = ref(false)
 
 const q = ref(String(route.query.q ?? ''))
 const type = ref<SearchType>(normalizeType(route.query.type))
@@ -132,7 +136,7 @@ const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
     meta: [t.id, t.workspace || (zh.value ? '未关联工作区' : 'No workspace'), STATUS_LABEL[t.status]?.[zh.value ? 'zh' : 'en'] ?? t.status, t.assignee].join(' · '),
     icon: '▦',
     action: zh.value ? '看板' : 'Board',
-    open: () => void router.push({ name: 'ia2.board', query: { task: t.id } }),
+    open: () => { drawerTaskId.value = t.id; drawerOpen.value = true },
   })))
 
 const runRowsResult = computed<ResultRow[]>(() => (runsStore.sortedRuns ?? [])
@@ -294,6 +298,8 @@ function reset(): void {
         <p class="srch__empty-sub">{{ zh ? '换个关键词，或放宽工作区 / 状态 / 时间过滤。' : 'Try another keyword or relax the workspace / status / time filters.' }}</p>
       </div>
     </div>
+
+    <KanbanTaskDrawer v-if="drawerOpen" v-model:show="drawerOpen" :task-id="drawerTaskId" />
   </div>
 </template>
 

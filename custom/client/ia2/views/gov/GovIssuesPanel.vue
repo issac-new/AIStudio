@@ -20,7 +20,7 @@ const rows = computed(() => (lines.value ? joinIssueDisposal(lines.value) : []))
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入轮次目录名'; return }
+  if (!r) { loadError.value = ''; return }
   loading.value = true
   loadError.value = ''
   lines.value = null
@@ -46,13 +46,8 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <template>
   <div class="gis" data-testid="gis-panel">
-    <div class="gis__bar">
-      <input v-model="run" class="gis__input" data-testid="gis-run" placeholder="轮次目录名（如 20261015-v8-run20）" @keyup.enter="load">
-      <button class="gis__btn" type="button" data-testid="gis-load" :disabled="loading" @click="load">读取</button>
-    </div>
-
     <p v-if="loadError" class="gis__error" data-testid="gis-error">{{ loadError }}</p>
-    <p v-else-if="!lines" class="gis__hint">读取轮次 issues.log——问题全记账、复盘逐条清点（§2.6-3）。</p>
+    <p v-else-if="!lines" class="gis__hint">在页头「本轮运行」选择一轮，读取 issues.log——问题全记账、复盘逐条清点（§2.6-3）。</p>
 
     <template v-if="lines">
       <p class="gis__stats" data-testid="gis-stats">
@@ -80,27 +75,6 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <style scoped lang="scss">
 .gis { display: flex; flex-direction: column; gap: 10px; }
-.gis__bar { display: flex; gap: 6px; }
-.gis__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  width: 260px;
-  font-family: var(--font-mono);
-  background: transparent;
-  color: inherit;
-}
-.gis__btn {
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: inherit;
-  border-radius: 4px;
-  font-size: 12px;
-  padding: 3px 12px;
-  cursor: pointer;
-  &:disabled { opacity: 0.4; }
-}
 .gis__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .gis__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .gis__stats { font-size: 12px; margin: 0; display: flex; flex-direction: column; gap: 2px; }

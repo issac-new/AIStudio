@@ -26,6 +26,9 @@ const mockedDisp = vi.mocked(fetchDispatcherHealth)
 const mockedSleep = vi.mocked(fetchSleepingWorkers)
 const mockedAuthFetch = vi.mocked(authFetch)
 
+// 2026-10-18：面板改为页头 RunSelector/useRunContext 供 run，测试用记忆键注入
+beforeEach(() => { localStorage.clear(); localStorage.setItem('ia2.lastRun', 'r') })
+
 describe('纯函数层', () => {
   it('topologyRows：四服务固定位次+红点 detail（失败带原因，未返回=如实未探测）', () => {
     const services: Record<string, ServiceProbe> = {
@@ -121,8 +124,6 @@ describe('DeliveryPanel — 签 5 交付健康（R4）', () => {
       }) } as Response
     })
     const w = mount(DeliveryPanel)
-    await w.find('[data-testid="dlv-run"]').setValue('r')
-    await w.find('[data-testid="dlv-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="dlv-fresh-feat/a"]').text()).toBe('新鲜')
     expect(w.find('[data-testid="dlv-fresh-feat/b"]').text()).toBe('宽限窗内')
@@ -137,8 +138,6 @@ describe('DeliveryPanel — 签 5 交付健康（R4）', () => {
   it('branches 端点 503（SIM_BRANCHES_REPO 未配置）如实报错', async () => {
     mockedAuthFetch.mockResolvedValue({ ok: false, status: 503, json: () => Promise.resolve({ error: 'x' }) } as Response)
     const w = mount(DeliveryPanel)
-    await w.find('[data-testid="dlv-run"]').setValue('r')
-    await w.find('[data-testid="dlv-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="dlv-error"]').text()).toContain('503')
     w.unmount()
@@ -160,8 +159,6 @@ describe('TracePanel — 签 6 需求追溯（R12）', () => {
       source: { evidenceDir: '/runs/r/evidence' },
     }) } as Response)
     const w = mount(TracePanel)
-    await w.find('[data-testid="trc-run"]').setValue('r')
-    await w.find('[data-testid="trc-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="trc-row-AC-1"]').text()).toContain('重复提交返回同一支付单号')
     expect(w.find('[data-testid="trc-row-AC-2"]').text()).toContain('（冻结单缺席）')
@@ -180,15 +177,11 @@ describe('TracePanel — 签 6 需求追溯（R12）', () => {
       run: 'r', rows: [], meta: { frozenPresent: false, testReportPresent: false, acceptancePresent: false }, source: { evidenceDir: 'x' },
     }) } as Response)
     const w = mount(TracePanel)
-    await w.find('[data-testid="trc-run"]').setValue('r')
-    await w.find('[data-testid="trc-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="trc-empty"]').text()).toContain('未提取到')
     w.unmount()
     mockedAuthFetch.mockResolvedValue({ ok: false, status: 503, json: () => Promise.resolve({}) } as Response)
     const w2 = mount(TracePanel)
-    await w2.find('[data-testid="trc-run"]').setValue('r')
-    await w2.find('[data-testid="trc-load"]').trigger('click')
     await flushPromises()
     expect(w2.find('[data-testid="trc-error"]').text()).toContain('503')
     w2.unmount()

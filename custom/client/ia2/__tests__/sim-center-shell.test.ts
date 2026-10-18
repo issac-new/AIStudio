@@ -18,8 +18,13 @@ vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: [] }),
 }))
 
-/** 四签文案（zh）：签序即路由序 */
+/** 六签文案（zh）：四路由签+两本页签 */
 const FOUR_TAB_LABELS = ['运行总览', '监督面板', '运行监控', '证据库'] as const
+const SIX_TAB_LABELS = [...FOUR_TAB_LABELS, '运行编排', '推演设置'] as const
+const stubs = {
+  OrchestrationView: { template: '<div data-testid="orchestration-stub" />' },
+  SimSettingsView: { template: '<div data-testid="settings-stub" />' },
+}
 
 const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim', name: 'ia2.sim' },
@@ -124,15 +129,15 @@ describe('全流程推演壳：/app/runs 家族重定向', () => {
 })
 
 describe('全流程推演壳：渲染', () => {
-  it('四签单层页签文案=词表；无二级页签行', async () => {
+  it('六签单层页签文案=词表；无二级页签行', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
-    const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     const tabs = wrapper.findAll('.sim-center__tab')
-    expect(tabs).toHaveLength(4)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(4)
-    expect(tabs.map(x => x.text())).toEqual([...FOUR_TAB_LABELS])
+    expect(tabs).toHaveLength(6)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(6)
+    expect(tabs.map(x => x.text())).toEqual([...SIX_TAB_LABELS])
     wrapper.unmount()
   })
 
@@ -140,9 +145,9 @@ describe('全流程推演壳：渲染', () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
-    const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     expect(wrapper.find('[data-testid="ia-sim-tab-overview"]').attributes('aria-selected')).toBe('true')
-    for (const key of ['supervision', 'ops', 'evidence']) {
+    for (const key of ['supervision', 'ops', 'evidence', 'orchestration', 'settings']) {
       expect(wrapper.find(`[data-testid="ia-sim-tab-${key}"]`).attributes('aria-selected')).toBe('false')
     }
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
@@ -157,7 +162,7 @@ describe('全流程推演壳：渲染', () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
-    const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     const live: ReadonlyArray<{ key: string; panel: string }> = [
       { key: 'overview', panel: '[data-testid="ov-panel"]' },
       { key: 'supervision', panel: '[data-testid="sup-panel"]' },
@@ -179,7 +184,7 @@ describe('全流程推演壳：渲染', () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
-    const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/sim/ops')
@@ -191,11 +196,27 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
+  it('运行编排/推演设置=本页页签，不跳整页', async () => {
+    const router = makeSimRouter()
+    await router.push('/app/sim')
+    await router.isReady()
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
+    await wrapper.find('[data-testid="ia-sim-tab-orchestration"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/app/sim?tab=orchestration')
+    expect(wrapper.find('[data-testid="orchestration-stub"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="ia-sim-tab-settings"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/app/sim?tab=settings')
+    expect(wrapper.find('[data-testid="settings-stub"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('深链直落各签：/app/sim/evidence 打开即证据库激活', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim/evidence')
     await router.isReady()
-    const wrapper = mount(SimCenterView, { global: { plugins: [router] } })
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     expect(wrapper.find('[data-testid="ia-sim-tab-evidence"]').attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').find('[data-testid="ev-panel"]').exists()).toBe(true)
     wrapper.unmount()
@@ -223,7 +244,7 @@ describe('壳收敛 ia-center-full（V1）', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/app/sim', name: 'ia2.sim', component: SimCenterView }] })
     await router.push('/app/sim')
     await router.isReady()
-    const w = mount(SimCenterView, { global: { plugins: [router] } })
+    const w = mount(SimCenterView, { global: { plugins: [router], stubs } })
     expect(document.body.classList.contains('ia-center-full')).toBe(true)
     w.unmount()
     expect(document.body.classList.contains('ia-center-full')).toBe(false)

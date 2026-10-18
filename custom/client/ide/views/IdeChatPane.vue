@@ -164,8 +164,10 @@ watch(() => ide.agentId, () => {
 // scoped 会话携带具体 model；模型目录已加载却不含该 model → 顶部警示条
 // （global codingAgent 会话 model 为空，天然不触发；目录未加载不误报）。
 const modelInvalidDismissed = ref(false)
+// 2026-10-18：失效判定跟随实际选择源（Ycode 引擎目录 / 独立目录），
+// 不再用 Hermes appStore 目录误判引擎模型为「已移除」。
 const activeModelInvalid = computed(() =>
-  isSessionModelInvalid(chatStore.activeSession, appStore.modelGroups),
+  isSessionModelInvalid(chatStore.activeSession, modelGroupsView.value),
 )
 const showModelInvalid = computed(() => activeModelInvalid.value && !modelInvalidDismissed.value)
 function goReselectModel(): void {

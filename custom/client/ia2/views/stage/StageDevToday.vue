@@ -5,7 +5,6 @@
      数据全部来自既有 workspace/decision 聚合，零新端点。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 import { useDecisionRows } from '../../composables/useDecisionRows'
@@ -14,8 +13,8 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 const emit = defineEmits<{
   (e: 'open-task', taskId: string): void
   (e: 'open-inbox'): void
+  (e: 'open-tab', key: string): void
 }>()
-const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
@@ -90,10 +89,10 @@ function statusOf(status: string) {
 
         <div v-else class="sdt__empty" data-testid="stg-dev-empty">
           <p class="sdt__empty-title">{{ zh ? '当前没有需要你处理的开发任务' : 'No development task needs you right now' }}</p>
-          <p class="sdt__empty-sub">{{ zh ? '可以去工作台收消息，或打开看板接一张卡。' : 'Open the workbench for messages, or pick a card from the board.' }}</p>
+          <p class="sdt__empty-sub">{{ zh ? '可以打开看板接一张卡，或到审批待办处理等你决定的事。' : 'Pick a card from the board, or handle approvals waiting on you.' }}</p>
           <div class="sdt__empty-acts">
-            <button type="button" class="sdt__btn" @click="router.push({ name: 'ia2.collab' })">{{ zh ? '打开工作台' : 'Open workbench' }}</button>
-            <button type="button" class="sdt__btn" @click="router.push({ name: 'ia2.board' })">{{ zh ? '打开看板' : 'Open board' }}</button>
+            <button type="button" class="sdt__btn" @click="emit('open-tab', 'board')">{{ zh ? '打开看板' : 'Open board' }}</button>
+            <button type="button" class="sdt__btn" @click="emit('open-inbox')">{{ zh ? '处理审批' : 'Handle approvals' }}</button>
           </div>
         </div>
       </section>
