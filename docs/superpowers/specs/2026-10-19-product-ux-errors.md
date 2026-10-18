@@ -40,3 +40,15 @@
 - `npx vitest run`：722 文件通过 / 5 跳过；5242 用例通过 / 8 跳过 / 0 失败。
 - `npx vite build --config vite.config.overlay.ts`：构建通过。
 - 新增 `run-display.test.ts`（3 例）与 `frames.test.ts`（2 例）守门。
+
+## 补批（2026-10-19 走查复验后）
+
+- 新增 `GET /api/hermes/sim/capabilities`：运行监控先读能力面，未配置的探测命令不再发起请求（消除必然 503 的控制台噪音）。
+- 帧图改为 `authFetch` 取 blob：`/sim/frame` 要 Authorization 头，`<img src>` 带不上；缩略图按可视区 `IntersectionObserver` 懒加载，大图预览同源。
+- 清算面板（`ClearancePanel`）：笔→项、「拒开新轮」→「清算前不能启动新运行」、补偿类型映射人话。
+
+### 补批决策
+
+7. **能力面预检而非放宽 503**：探测命令未配置是部署选择，服务端契约保持 fail-closed；前端先问能力再决定是否请求，既不撒谎也不制造噪音。
+8. **图片走 blob URL 而非 query token**：项目安全策略 `SecNoQueryToken` 明确禁止 query token（VULN-05），不能让 `<img>` 走 `?token=`；blob 方案不改安全边界。
+9. **懒加载而非全量拉取**：run21 有 50 张 2880×1800 截图（约 12MB），一次性拉全会拖慢页签；可视区 240px 预载足够。

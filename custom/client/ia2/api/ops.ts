@@ -26,6 +26,13 @@ export interface CliHealthResponse {
   error?: string
 }
 
+export interface SimCapabilities {
+  topology: boolean
+  frames: boolean
+  dispatcherHealth: boolean
+  sleepingWorkers: boolean
+}
+
 export interface ServiceRow {
   name: string
   ok: boolean
@@ -101,4 +108,12 @@ export function fetchDispatcherHealth(): Promise<CliHealthResponse> {
 
 export function fetchSleepingWorkers(): Promise<CliHealthResponse> {
   return getJson('/api/hermes/sim/sleeping-workers')
+}
+
+
+/** 可选能力面：前端据此决定是否发起必然 503 的探测（2026-10-19 报错清零批）。 */
+export async function fetchCapabilities(): Promise<SimCapabilities> {
+  const res = await authFetch('/api/hermes/sim/capabilities')
+  if (!res.ok) throw new Error(`capabilities → ${res.status}`)
+  return res.json() as Promise<SimCapabilities>
 }

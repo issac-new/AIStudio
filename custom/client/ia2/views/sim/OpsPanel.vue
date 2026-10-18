@@ -8,7 +8,7 @@ import { onMounted, ref } from 'vue'
 import { fetchRunState } from '../../api/overview'
 import { useRunContext } from '../../composables/useRunContext'
 import {
-  fetchTopology, fetchDispatcherHealth, fetchSleepingWorkers,
+  fetchCapabilities, fetchTopology, fetchDispatcherHealth, fetchSleepingWorkers,
   topologyRows, cliHealthEntries, sleepingRows,
   type ServiceRow, type CliHealthResponse,
 } from '../../api/ops'
@@ -21,6 +21,8 @@ const services = ref<ServiceRow[] | null>(null)
 const dispatcher = ref<CliHealthResponse | null>(null)
 const sleeping = ref<Array<Record<string, string>> | null>(null)
 const sleepingError = ref('')
+const sleepingNote = ref('')
+const dispatcherNote = ref('')
 const liveness = ref<string>('')
 
 /** 技术错误人话化：503/未配置=服务端缺探测命令，不把 env 名甩给用户。 */
@@ -35,7 +37,17 @@ async function load(): Promise<void> {
   loading.value = true
   loadError.value = ''
   sleepingError.value = ''
-  const [topo, disp, sleep] = await Promise.allSettled([fetchTopology(), fetchDispatcherHealth(), fetchSleepingWorkers()])
+  sleepingNote.value = ''
+  dispatcherNote.value = ''
+  // 先读能力面：未配置的探测命令不发请求（必然 503 只会制造控制台噪音）
+  const caps = await fetchCapabilities().catch(() => null)
+  const canDisp = caps ? caps.dispatcherHealth : true
+  const canSleep = caps ? caps.sleepingWorkers : true
+  const [topo, disp, sleep] = await Promise.allSettled([
+    fetchTopology(),
+    canDisp ? fetchDispatcherHealth() : Promise.resolve(null),
+    canSleep ? fetchSleepingWorkers() : Promise.resolve(null),
+  ])
   if (topo.status === 'fulfilled') {
     services.value = topologyRows(topo.value.services)
     checkedAt.value = topo.value.checkedAt
@@ -44,9 +56,11 @@ async function load(): Promise<void> {
     loadError.value = humanizeOpsError((topo.reason as Error).message)
   }
   dispatcher.value = disp.status === 'fulfilled' ? disp.value : null
-  if (disp.status === 'rejected') loadError.value = loadError.value || humanizeOpsError((disp.reason as Error).message)
-  sleeping.value = sleep.status === 'fulfilled' ? sleepingRows(sleep.value) : null
-  if (sleep.status === 'rejected') sleepingError.value = humanizeOpsError((sleep.reason as Error).message)
+  if (!canDisp) dispatcherNote.value = '未接入（服务端未配置调度器探测命令）'
+  else if (disp.status === 'rejected') loadError.value = loadError.value || humanizeOpsError((disp.reason as Error).message)
+  sleeping.value = sleep.status === 'fulfilled' && sleep.value ? sleepingRows(sleep.value) : null
+  if (!canSleep) sleepingNote.value = '未接入（服务端未配置空闲工作者探测命令）'
+  else if (sleep.status === 'rejected') sleepingError.value = humanizeOpsError((sleep.reason as Error).message)
   loading.value = false
 }
 
@@ -93,7 +107,7 @@ onMounted(() => {
 
     <section class="ops__box">
       <h4 class="ops__h">调度器健康</h4>
-      <p v-if="!dispatcher" class="ops__hint">暂未读取到调度器状态。</p>
+      <p v-if="!dispatcher" class="ops__hint">{{ dispatcherNote || '暂未读取到调度器状态。' }}</p>
       <ul v-else class="ops__kv">
         <li v-for="(e, i) in cliHealthEntries(dispatcher)" :key="i" :data-testid="`ops-disp-kv-${i}`" :class="{ 'ops__kv--fail': !dispatcher.ok }">
           <span class="ops__kv-k">{{ e.k }}</span>
@@ -105,6 +119,7 @@ onMounted(() => {
     <section class="ops__box">
       <h4 class="ops__h">空闲工作者</h4>
       <p v-if="sleepingError" class="ops__error" data-testid="ops-sleeping-error">{{ sleepingError }}</p>
+      <p v-else-if="sleepingNote" class="ops__hint" data-testid="ops-sleeping-note">{{ sleepingNote }}</p>
       <p v-else-if="!sleeping" class="ops__hint">暂未读取到空闲工作者。</p>
       <template v-else>
         <p v-if="sleeping.length === 0" class="ops__hint" data-testid="ops-sleeping-empty">无空闲工作者。</p>

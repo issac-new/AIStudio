@@ -8,6 +8,7 @@ import {
   fetchClearanceLedger, resolveClearance, waiveClearance, groupClearanceTargets,
   type ClearanceLedgerView,
 } from '../../api/gatekeeper'
+import { compensationLabel } from '../../compensation-labels'
 
 const ledger = ref<ClearanceLedgerView | null>(null)
 const loadError = ref('')
@@ -18,7 +19,7 @@ const actionMsg = ref('')
 /** 台账技术错误人话化：正文给人能懂的原因与下一步，原始错误进 title 供排查。 */
 function humanizeLedgerError(message: string): string {
   return /ORGLOOP_LEDGER_TSV/.test(message)
-    ? '遗留项台账未配置：请联系管理员配置清算台账后重试'
+    ? '遗留事项台账未配置：请联系管理员配置清算台账后重试'
     : message
 }
 
@@ -78,7 +79,7 @@ onMounted(() => { void refresh() })
         class="clr__lamp"
         :class="ledger.pass ? 'clr__lamp--green' : 'clr__lamp--red'"
         data-testid="clr-lamp"
-      >{{ ledger.pass ? '放行（零未清）' : `${ledger.open} 笔未清·拒开新轮` }}</span>
+      >{{ ledger.pass ? '放行（零未清）' : `${ledger.open} 项未清·清算前不能启动新运行` }}</span>
       <button class="clr__btn" type="button" data-testid="clr-refresh" :disabled="busy" @click="refresh">刷新</button>
     </div>
 
@@ -93,7 +94,7 @@ onMounted(() => { void refresh() })
         <div v-for="g in targets" :key="g.target" class="clr__target" :data-testid="`clr-target-${g.target}`">
           <div class="clr__target-head">
             <span class="clr__target-name">{{ g.target }}</span>
-            <span class="clr__target-meta">{{ g.openCount }} 笔未清（{{ g.types.join('、') }}）</span>
+            <span class="clr__target-meta">{{ g.openCount }} 项未清（{{ g.types.map(compensationLabel).join('、') }}）</span>
           </div>
           <div class="clr__target-actions">
             <input v-model="resolveInput[g.target]" class="clr__input" :data-testid="`clr-resolve-pr-${g.target}`" placeholder="根治 PR 锚（必填）">
