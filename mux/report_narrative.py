@@ -533,7 +533,7 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=No
                '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
                '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'
                '六道强制关卡守住意图核对一致与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
-               '产品面=工作台单面（旅程首页＋时序六阶段一级导航；工具舱：看板/IDE 工作区/审批收件箱/治理中心/仿真中心/账户），'
+               '产品面=工作台单面（流程总览＋左侧导航五组＋六阶段页单层页签；整轮=全流程推演专区；工具舱：看板/IDE 工作区/审批收件箱/检索），'
                '双 loop=skill 内循环 × swarm 外循环。</p></div>')
 
     # run13 复盘 A7：三功能区证据改按「当轮帧注册表实查」——原逻辑查三个写死帧名
@@ -541,15 +541,15 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=No
     # （mx-report-gen）自 STEPS imgs（ui 帧图注）+ r18 ops 路由双源算得传入：
     # zone_hits = {'cockpit': '…', 'kanban': '…', 'ide': '…'}（值=帧位描述；空=未拍）。
     import re as _re
-    tri = [('旅程首页/工作台（#/app）', 'cockpit', _re.compile(r'工作台|驾驶舱|旅程|#/app(?!/)')), ('看板（#/app/board）', 'kanban', _re.compile(r'看板|任务协同|/app/board')), ('IDE 工作区（/app/ide）', 'ide', _re.compile(r'IDE|工作区|画布|/app/ide'))]
+    tri = [('流程总览/工作台（#/app）', 'cockpit', _re.compile(r'工作台|流程总览|左侧导航|阶段页|驾驶舱|旅程|#/app(?!/)')), ('看板（#/app/board）', 'kanban', _re.compile(r'看板|任务协同|/app/board')), ('IDE 工作区（/app/ide）', 'ide', _re.compile(r'IDE|工作区|任务工作区|画布|/app/ide'))]
     _zh = zone_hits or {}
     tri_html = ' ｜ '.join(
         (f'<b>{n}</b> <code>{H.escape(_zh.get(k, ""))}</code>' if _zh.get(k) else f'{n}（本轮未拍——如实标注）')
         for n, k, _rx in tri)
     out.append('<div class="gatebox"><b style="font-size:14px">演示动线（工作台单面）</b>'
-               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 旅程首页（/app：注意力条置顶·页头六阶段·搭建五步与交付五阶段总览）'
-               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·任务协同页签） → IDE 工作区（任务简报·交互编码）'
-               ' → 治理中心（质量门工件·应用资产·组织）——全流程不出 /app 路由树。</p>'
+               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 流程总览（/app：注意力条置顶·左侧导航五组·搭建五步与交付五阶段总览）'
+               ' → 审批收件箱（三档分区·抽检回看） → 看板（RACI 徽章·状态流转·任务协同页签） → IDE 工作区（任务简报含任务工作区/任务会话·交互编码）'
+               ' → ⑥治理（质量门记录·审计·度量）→ 全流程推演（运行总览·监督·监控·证据）——全流程不出 /app 路由树。</p>'
                f'<p style="margin:4px 0;font-size:12.5px;color:#57606a">三功能区证据（R7 核验口径）：{tri_html}</p></div>')
 
     out.append('<h3>26 步六阶段分幕总览</h3>'
