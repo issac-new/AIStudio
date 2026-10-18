@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const authFetch = vi.hoisted(() => vi.fn())
 vi.mock('../utils/auth-fetch', () => ({ authFetch: (...args: unknown[]) => authFetch(...args) }))
 
-import { fetchEngineCatalog } from '../utils/engine-models'
+import { engineDefaultModel, fetchEngineCatalog } from '../utils/engine-models'
 
 function reply(body: unknown): { ok: boolean; status: number; json: () => Promise<unknown> } {
   return { ok: true, status: 200, json: async () => body }
@@ -45,5 +45,42 @@ describe('fetchEngineCatalog 取源优先级', () => {
     expect(c.source).toBe('hermes')
     expect(c.independent).toBe(false)
     expect(c.groups).toEqual([])
+  })
+
+  it('默认模型：zcode.default 优先；旧后端回落 config.defaultModel（providerId/modelId）', async () => {
+    authFetch.mockResolvedValue(reply({
+      config: { providers: [{ providerId: 'ide-only', models: [{ modelId: 'x' }] }], defaultModel: { providerId: 'ide-only', modelId: 'x' } },
+      zcode: {
+        groups: [{ provider: 'builtin:bigmodel', models: [{ id: 'GLM-5.3-Flash' }] }],
+        default: { provider: 'builtin:bigmodel', model: 'GLM-5.3-Flash' },
+      },
+    }))
+    const c = await fetchEngineCatalog()
+    expect(c.defaultModel).toEqual({ provider: 'builtin:bigmodel', model: 'GLM-5.3-Flash' })
+
+    authFetch.mockResolvedValue(reply({
+      config: { providers: [{ providerId: 'ide-only', models: [{ modelId: 'x' }] }], defaultModel: { providerId: 'ide-only', modelId: 'x' } },
+      zcode: { groups: [] },
+    }))
+    const legacy = await fetchEngineCatalog()
+    expect(legacy.defaultModel).toEqual({ provider: 'ide-only', model: 'x' })
+  })
+})
+
+describe('engineDefaultModel（默认选择）', () => {
+  const groups = [
+    { provider: 'p0', label: 'p0', models: [] as Array<{ id: string }> },
+    { provider: 'p1', label: 'p1', models: [{ id: 'a' }, { id: 'b' }] },
+  ]
+  it('服务端 default 在目录内 → 用它；不在目录内 → 首个有模型组的首模型', () => {
+    expect(engineDefaultModel({ groups, independent: true, source: 'zcode', defaultModel: { provider: 'p1', model: 'b' } }))
+      .toEqual({ provider: 'p1', model: 'b' })
+    expect(engineDefaultModel({ groups, independent: true, source: 'zcode', defaultModel: { provider: 'p1', model: 'gone' } }))
+      .toEqual({ provider: 'p1', model: 'a' })
+  })
+
+  it('空目录 → null', () => {
+    expect(engineDefaultModel(null)).toBeNull()
+    expect(engineDefaultModel({ groups: [], independent: false, source: 'hermes' })).toBeNull()
   })
 })
