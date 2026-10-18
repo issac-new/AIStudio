@@ -164,7 +164,7 @@ board_of_task() { # <user> <id> → 卡所在账号板 slug（找不到非零）
 dev_signal() { # <user> <limit-默认 2> → stdout: 每行一条 "卡ID|关注点一句话"（取 result 或 reviewer_blocker 字段）
   local u="$1" lim="${2:-2}" seen=0 out=""
   for slug in $(account_boards "$u" 2>/dev/null); do
-    HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null       | jq -r --argjson lim "$lim" '.[] | select(.status == "done")
+    HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$slug" list --json 2>/dev/null       | jq -r --argjson lim "$lim" '.[] | select(.status == "done")
           | select((.result // "") != "" or (.reviewer_blocker // "") != "")
           | "\(.id // "?")|\((.result // .reviewer_blocker // "") | gsub("[\\n;|]"; " ") | .[0:80])" ' 2>/dev/null       | head -n "$lim" | while IFS= read -r line; do
           (( seen < lim )) || break
@@ -187,7 +187,7 @@ kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[.
   for slug in $(account_boards "$u"); do
     out=$(jq -c -s '{tasks: (.[0].tasks + ((.[1] | if type == "array" then . else (.tasks // []) end)))}' \
       <(echo "$out") \
-      <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null | LC_ALL=C tr -d '\000-\011\013-\037' || echo '[]'))
+      <(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$slug" list --json 2>/dev/null | LC_ALL=C tr -d '\000-\011\013-\037' || echo '[]'))
   done
   echo "$out"
 }
@@ -233,7 +233,7 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
   local asg_args=()
   [[ -n "$asg" ]] && asg_args=(--assignee "$asg")
-  id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
+  id=$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$board" create "$title" \
     --body "$body" --project aipaydev --json ${asg_args[@]+"${asg_args[@]}"} 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
@@ -324,9 +324,9 @@ kanban_status_as() { # <user> <id> <status>（studio PATCH 主路 + CLI 合法�
   b=$(board_of_task "$u" "$tid") || return 1
   studio PATCH "/api/hermes/kanban/$tid?board=$b" "$(jwt_of "$u")" "{\"status\":\"$st\"}" >/dev/null 2>&1 && return 0
   case "$st" in
-    running) HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" claim "$tid" >/dev/null 2>&1 || true ;;
-    review)  HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" request-review "$tid" >/dev/null 2>&1 || true ;;
-    done)    HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" complete "$tid" >/dev/null 2>&1 || true ;;
+    running) HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$b" claim "$tid" >/dev/null 2>&1 || true ;;
+    review)  HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$b" request-review "$tid" >/dev/null 2>&1 || true ;;
+    done)    HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$b" complete "$tid" >/dev/null 2>&1 || true ;;
   esac
   return 0
 }
@@ -334,7 +334,7 @@ kanban_status_as() { # <user> <id> <status>（studio PATCH 主路 + CLI 合法�
 kanban_link_as() { # <user> <parentId> <childId>（挂父卡所在板）
   local u="$1" pid="$2" cid="$3" b
   b=$(board_of_task "$u" "$pid") || return 0
-  HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" link "$pid" "$cid" >/dev/null 2>&1 || true
+  HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$b" link "$pid" "$cid" >/dev/null 2>&1 || true
 }
 
 kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
@@ -1314,8 +1314,8 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   fi
   local slug card_found=1
   for slug in $(account_boards "$MX_ANCHOR_USER"); do
-    if HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
-      || HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --status archived 2>/dev/null | grep -q "$card"; then
+    if HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
+      || HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$slug" list --status archived 2>/dev/null | grep -q "$card"; then
       card_found=0; break
     fi
   done
