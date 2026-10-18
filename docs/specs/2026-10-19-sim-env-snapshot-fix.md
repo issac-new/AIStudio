@@ -16,3 +16,4 @@
 - D-4：prelaunch ⑤ 对 studio 进程 env 做机械检查，防止「健康检查绿、推演端点 503」的假绿。
 - D-5（2026-10-19 清场实测）：`mx-clean` 分支删除校验的 `$_miss` 后接全角括号会被 macOS bash 3.2 吸入变量名（`_miss�: unbound variable`，纪律 76 同族）；改为 `${_miss}`，机械检查=`bash -n`。
 - D-6（2026-10-19 prelaunch ⑧ 实测）：`--print-paths` 改为纯只读，不建 evidence/锁目录；门禁测试不再在真 SIM_ROOT 造测试 run（否则 prelaunch ⑧ 把测试残留当上轮审计）。机械检查=print-paths 后 runs/ 为空 + harness-gate-integrity 128 测全绿。
+- D-7（2026-10-19 smoke 实测）：`mx-smoke.sh` 139 行 `$_A_BOARD` 后接全角括号撞 bash 3.2 变量名（`_A_BOARD�: unbound variable`），统一 `$VAR`→`${VAR}`；G2「ACL 泄漏」为测试账号 role=admin 的假阳性（G3 团队围栏通过），G1/G3/G4/G5/G6 实弹通过，G4 agent 实际派发到 done（provider 回退 `custom:cc-switch/aim` 可用）。

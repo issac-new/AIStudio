@@ -136,7 +136,7 @@ fence_runs=$(board_count "$_A_BOARD" "id=(select id from tasks where title='$fen
 fence_runcount=$(mxp_sqlite "$(board_db "$_A_BOARD")" \
   "select count(*) from task_runs where task_id=(select id from tasks where title='$fence_title')" || echo -1)
 if [[ "$fence_status" == "ready" && "$fence_runcount" == "0" ]]; then
-  gate G3 1 "板外 assignee（$_FENCE_ASSIGNEE@$_A_BOARD）未被认领（status=$fence_status, runs=${fence_runcount}）"
+  gate G3 1 "板外 assignee（$_FENCE_ASSIGNEE@${_A_BOARD}）未被认领（status=$fence_status, runs=${fence_runcount}）"
 else
   gate G3 0 "围栏失效或异常：status=$fence_status runs=$fence_runcount"
 fi
