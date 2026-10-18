@@ -67,6 +67,7 @@ import {
   type OpenSubagentStreamDetail,
 } from '@/utils/hermes/subagent-stream'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
@@ -82,13 +83,19 @@ import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
 import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
+import { useIdeBoot } from '../composables/useIdeBoot'
+import { useAuthedMediaRewrite } from '../utils/authedMedia'
 import { resolveBootSession } from '../utils/sessionBoot'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
 import { authFetch } from '../utils/auth-fetch'
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
+const ideBoot = useIdeBoot()
+const mediaRoot = ref<HTMLElement | null>(null)
+useAuthedMediaRewrite(mediaRoot)
 const appStore = useAppStore()
 const router = useRouter()
 const route = useRoute()
@@ -118,6 +125,8 @@ const modBandSpecs = computed<ModBandSpec[]>(() => [
 // ChatPanel 上下文契约（ChatPanel.vue:84）——MessageList 的 workspace 文件
 // 预览依赖此 provide，缺失会静默降级。
 provide('hermesWorkspaceFilePreview', true)
+// 本地媒体交容器内鉴权 blob 重写（Markdown 侧只出占位，不带 token）
+provide('ideDeferLocalMedia', true)
 
 // ── 会话生命周期（ChatView.vue 挂载配方）──
 
@@ -153,7 +162,7 @@ function ensureSession() {
     codingAgentId: ide.agentId,
     codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
     source: 'coding_agent',
-    workspace: ide.workspace,
+    workspace: root.value,
     ...defaultModelPayload(),
   })
 }
@@ -180,7 +189,7 @@ onMounted(async () => {
     settingsStore.fetchSettings?.() ?? Promise.resolve(),
     catalogLoaded,
   ])
-  await chatStore.loadSessions?.(chatStore.sessionProfileFilter)
+  await ideBoot.ensureSessions()
   ready.value = true
   // ?session= 深链必须压过 ensureSession：imported/CLI 会话的 agent 与 IDE
   // 底座不同，原 ensureSession 会新建空会话把直链目标顶掉（冷启动 12s 实测
@@ -374,7 +383,7 @@ function newSession() {
     codingAgentId: ide.agentId,
     codingAgentMode: 'scoped',
     source: 'coding_agent',
-    workspace: ide.workspace,
+    workspace: root.value,
     ...defaultModelPayload(),
   })
   pendingSubagentId.value = null
@@ -465,7 +474,7 @@ async function loadLatestDiff(): Promise<void> {
     const body = (await res.json()) as { file?: { patch?: string } }
     if (chatStore.activeSessionId !== sid) return // 文件详情返回前再次校验
     latestDiff.value = body.file?.patch ?? ''
-    const ws = ide.workspace
+    const ws = root.value
     latestDiffUndoCtx.value = latestDiff.value && ws
       ? { sessionId: sid, changeId: file.change_id, fileId: file.id, workspace: ws }
       : null
@@ -721,7 +730,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       </template>
     </IdeModBand>
 
-    <div class="ide-chat__body">
+    <div ref="mediaRoot" class="ide-chat__body">
       <div class="ide-chat__messages-anchor" :style="sideSessionOpen ? { paddingRight: '348px' } : undefined">
         <MessageList
           v-if="ready"
@@ -749,7 +758,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeRunLogPanel />
       <IdeHandoffCard />
       <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
-      <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
+      <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="root" @close="videoFramesOpen = false" @frames="onVideoFrames" />
       <IdeFindInSession v-if="findOpen" ref="findRef" @close="findOpen = false" />
       <IdeHistoryBrowser v-if="historyOpen" @close="historyOpen = false" />
       <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />

@@ -17,6 +17,7 @@ import { useMessage } from 'naive-ui'
 import { listFiles, readFile } from '@/api/studio/files'
 import MarkdownRenderer from '@/components/hermes/chat/MarkdownRenderer.vue'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { ideGitApi } from '../api/git'
 import {
@@ -31,6 +32,7 @@ import {
 const { t, locale } = useI18n()
 const message = useMessage()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
 
 // 新键走本地字典（漂移期通道先例：IdeSidePane CTXARCHIVE）；既有键仍走上游 locales。
@@ -90,7 +92,7 @@ const meta = ref<WikiMeta | null>(null)
 const gitHead = ref<string | null>(null)
 const gitDirty = ref<boolean | null>(null)
 
-const hasWorkspace = computed(() => Boolean(ide.workspace))
+const hasWorkspace = computed(() => Boolean(root.value))
 
 async function loadPages(): Promise<void> {
   if (!hasWorkspace.value) return
@@ -101,10 +103,10 @@ async function loadPages(): Promise<void> {
     // entries 的目录字段是 isDir（FileEntry 契约，api/studio/workspace-files.ts）——
     // 曾误用 entry.type === 'directory'（恒 undefined），子目录页静默丢失。
     const MAX_DEPTH = 4
-    const root = await listFiles(WIKI_DIR, ide.workspace!)
+    const listing = await listFiles(WIKI_DIR, root.value!)
     const collected: WikiPage[] = []
     const walk = async (dirPath: string, depth: number): Promise<void> => {
-      const res = await listFiles(dirPath, ide.workspace!)
+      const res = await listFiles(dirPath, root.value!)
       for (const entry of res.entries) {
         if (entry.isDir && depth < MAX_DEPTH) await walk(`${dirPath}/${entry.name}`, depth + 1)
         else if (!entry.isDir && entry.name.endsWith('.md')) {
@@ -112,7 +114,7 @@ async function loadPages(): Promise<void> {
         }
       }
     }
-    for (const entry of root.entries) {
+    for (const entry of listing.entries) {
       if (entry.isDir) await walk(`${WIKI_DIR}/${entry.name}`, 1)
       else if (entry.name.endsWith('.md')) {
         collected.push({ path: `${WIKI_DIR}/${entry.name}`, name: entry.name.replace(/\.md$/, '') })
@@ -123,7 +125,7 @@ async function loadPages(): Promise<void> {
     ide.setWikiPages(collected)
     // front matter 批量取（页数典型 5-12；上限防失控，读失败单页降级为无序）
     const settled = await Promise.allSettled(
-      collected.slice(0, 30).map(async (p) => ({ p, fm: parseWikiFrontMatter((await readFile(p.path, ide.workspace!)).content) })),
+      collected.slice(0, 30).map(async (p) => ({ p, fm: parseWikiFrontMatter((await readFile(p.path, root.value!)).content) })),
     )
     const next: Record<string, WikiFrontMatter> = {}
     for (const s of settled) if (s.status === 'fulfilled') next[s.value.p.path] = s.value.fm
@@ -151,7 +153,7 @@ async function loadMeta(): Promise<void> {
     // 5s 超时兜底：后端抖动窗口里 fetch 可挂到浏览器默认超时（实测拖住 runPipeline
     // 的 await 链）——meta 只是增量判据，超时按"无边车"降级（旧式增量）。
     const res = await Promise.race([
-      readFile(WIKI_META_PATH, ide.workspace!),
+      readFile(WIKI_META_PATH, root.value!),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('meta-read-timeout')), 5000)),
     ])
     meta.value = parseWikiMeta(res.content)
@@ -162,10 +164,10 @@ async function loadMeta(): Promise<void> {
 
 /** git 基线信息（非 git 仓库/接口失败 → null，状态行整体隐藏） */
 async function loadGitInfo(): Promise<void> {
-  const root = ide.workspace
-  if (!root) { gitHead.value = null; gitDirty.value = null; return }
+  const rootPath = root.value
+  if (!rootPath) { gitHead.value = null; gitDirty.value = null; return }
   try {
-    const [{ commits }, st] = await Promise.all([ideGitApi.log(root, 1), ideGitApi.status(root)])
+    const [{ commits }, st] = await Promise.all([ideGitApi.log(rootPath, 1), ideGitApi.status(rootPath)])
     gitHead.value = commits[0]?.hash ?? null
     gitDirty.value = (st.changes?.length ?? 0) > 0
   } catch {
@@ -186,7 +188,7 @@ async function openPage(page: WikiPage): Promise<void> {
   content.value = ''
   pageFm.value = fmMap.value[page.path] ?? {}
   try {
-    const res = await readFile(page.path, ide.workspace!)
+    const res = await readFile(page.path, root.value!)
     content.value = res.content
     pageFm.value = parseWikiFrontMatter(content.value)
   } catch (err) {
@@ -270,7 +272,7 @@ function setMaxPages(n: number): void { ide.setWikiGenConfig({ maxPages: Math.mi
 
 onMounted(loadPages)
 // 工作区切换即重载：否则 Wiki 面板继续读旧目录
-watch(() => ide.workspace, () => void loadPages())
+watch(() => root.value, () => void loadPages())
 </script>
 
 <template>

@@ -19,6 +19,8 @@ import {
   type ArchivedSession, type WindowSummary, type WindowDetail, type SearchHit, type CtxNoteView,
 } from '../api/context-archive'
 
+import { friendlyIdeError } from '../utils/ideErrors'
+
 const chatStore = useChatStore()
 
 // ── 本地字典（zh/en，漂移期不进 473 locale 面；键位语义对齐该区域命名） ──
@@ -115,7 +117,7 @@ async function reload(session?: string): Promise<void> {
     if (session) selectedSession.value = session
     await Promise.all([loadWindows(), loadNotes()])
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   } finally {
     loading.value = false
   }
@@ -149,7 +151,7 @@ async function toggleWindow(n: number): Promise<void> {
     openWindow.value = await getWindow(effectiveSession.value, n)
     expanded.value = new Set()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   }
 }
 function toggleMsg(id: number): void {
@@ -203,7 +205,7 @@ async function submitNote(): Promise<void> {
     noteDraft.value = ''
     await loadNotes()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   }
 }
 
@@ -220,7 +222,7 @@ async function saveEdit(): Promise<void> {
     editingId.value = null
     await loadNotes()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   }
 }
 
@@ -229,7 +231,7 @@ async function removeNote(id: string): Promise<void> {
     await deleteNote(effectiveSession.value, id)
     await loadNotes()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = friendlyIdeError(e)
   }
 }
 

@@ -8,11 +8,13 @@
 import { ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { planScan, gradeFinding, type SecurityFinding } from '../../../server/codesec/code-security'
 import { authFetch } from '../utils/auth-fetch'
 
 const chat = useChatStore()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 
 const open = ref(false)
 const findings = ref<SecurityFinding[] | null>(null)
@@ -24,7 +26,7 @@ async function runScan(): Promise<void> {
   scanning.value = true
   findings.value = []
   try {
-    const ws = ide.workspace
+    const ws = root.value
     if (!ws) throw new Error('无工作区')
     const res = await authFetch(`/api/studio/git/status?path=${encodeURIComponent(ws)}`).catch(() => null)
     // 降级数据面：git status 端点形状不可靠时扫会话内 edit 类工具触碰的文件列表

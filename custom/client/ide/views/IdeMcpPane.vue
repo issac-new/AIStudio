@@ -13,6 +13,8 @@ import { fetchMcpServers } from '@/api/hermes/mcp'
 import { listFiles } from '@/api/studio/files'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { friendlyIdeError } from '../utils/ideErrors'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { fetchHermesSkills } from '../utils/hermes-skills'
 import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
@@ -24,6 +26,7 @@ const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
 
 // ── 搜索策略（v2 批 websearch）：四档（codex off/light/full/agent）+判定展示 ──
@@ -66,7 +69,7 @@ async function load(): Promise<void> {
   } catch (err) {
     servers.value = []
     totalTools.value = 0
-    loadError.value = err instanceof Error ? err.message : String(err)
+    loadError.value = friendlyIdeError(err)
   } finally {
     loading.value = false
   }
@@ -81,7 +84,7 @@ const healthCounts = ref<Record<'rules' | 'memory' | 'automations', number>>({ r
 const healthBroken = ref<Record<'rules' | 'memory' | 'automations', number>>({ rules: 0, memory: 0, automations: 0 })
 
 async function loadHealth(): Promise<void> {
-  const ws = ide.workspace
+  const ws = root.value
   if (!ws) return
   // memory + rules（一次 listFiles 根目录 + memory/ 子目录）
   try {

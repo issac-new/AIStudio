@@ -15,6 +15,7 @@ import { useI18n } from 'vue-i18n'
 import { getApiKey, getBaseUrlValue, isStoredSuperAdmin } from '@/api/client'
 import { useTheme } from '@/composables/useTheme'
 import { useIdeStore } from '../store/ide'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import {
   TERMINAL_TOOLS,
   buildToolInitCommand,
@@ -26,6 +27,7 @@ import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/ap
 import { detachShell } from '../../../server/shelldetach/shell-detach'
 
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const { isDark } = useTheme()
 const { t } = useI18n()
 
@@ -222,8 +224,8 @@ function handleControl(msg: { type?: string; shell?: string; exitCode?: number |
       if (!initialCdSent) {
         initialCdSent = true
         // IDE 终端保持纯 shell：只 cd 到 workspace，不自动启动工具
-        if (ide.workspace) {
-          const path = ide.workspace.replace(/"/g, '\\"')
+        if (root.value) {
+          const path = root.value.replace(/"/g, '\\"')
           send(/powershell|pwsh/i.test(shellName)
             ? `Set-Location "${path}"\r`
             : `cd "${path}"\r`)

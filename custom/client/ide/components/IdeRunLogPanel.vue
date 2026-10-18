@@ -14,6 +14,8 @@ const showHistory = ref(false)
 async function load(): Promise<void> {
   const sid = chatStore.activeSessionId
   if (!sid) return
+  // 本地草稿尚未落库：run changes 必 404，跳过（2026-10-18 深度重构）
+  if (chatStore.activeSession?.isLocalOnly) return
   try {
     const rows = await ideRunsApi.changes(sid)
     if (chatStore.activeSessionId !== sid) return

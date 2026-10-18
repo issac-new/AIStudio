@@ -9,6 +9,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
+import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
 import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
@@ -36,6 +37,7 @@ import {
 
 const { t, locale } = useI18n()
 const ide = useIdeStore()
+const { root } = useIdeWorkspace()
 const message = useMessage()
 
 // 2026-10-04 辅助栏整合（用户裁定：17 平铺页签心智负担过重）——按研发直觉分 5 语义组：
@@ -132,7 +134,7 @@ const newActionLabel = ref('')
 const newActionCommand = ref('')
 
 watch(
-  () => ide.workspace,
+  () => root.value,
   (ws) => {
     termActions.value = loadTerminalActions(ws ?? '')
     newActionLabel.value = ''
@@ -149,13 +151,13 @@ function runAction(action: TerminalAction): void {
 
 function addAction(): void {
   if (!newActionLabel.value.trim() || !newActionCommand.value.trim()) return
-  termActions.value = addTerminalAction(ide.workspace ?? '', newActionLabel.value, newActionCommand.value)
+  termActions.value = addTerminalAction(root.value ?? '', newActionLabel.value, newActionCommand.value)
   newActionLabel.value = ''
   newActionCommand.value = ''
 }
 
 function removeAction(id: string): void {
-  termActions.value = removeTerminalAction(ide.workspace ?? '', id)
+  termActions.value = removeTerminalAction(root.value ?? '', id)
 }
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))

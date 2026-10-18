@@ -20,6 +20,8 @@ vi.mock('@/components/hermes/chat/MarkdownRenderer.vue', () => ({ default: { tem
 vi.mock('../store/ide', () => ({
   useIdeStore: () => ({ workspace: '/ws/proj' }),
 }))
+// 根组合式函数读活动会话：无 Pinia 的测试环境给空会话替身
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSession: null }) }))
 
 import IdeMemoryPane from '../views/IdeMemoryPane.vue'
 
