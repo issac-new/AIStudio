@@ -11,7 +11,14 @@ vi.mock('naive-ui', () => ({ useMessage: () => ({ warning: vi.fn(), success: vi.
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({ activeSessionId: null, activeSession: null, subagentStreams: new Map() }),
 }))
-vi.mock('../store/ide', () => ({ useIdeStore: () => ({ workspace: '/w', agentId: 'zcode' }) }))
+const { ideMock, toggleInterfaceMode } = vi.hoisted(() => {
+  const toggleInterfaceMode = vi.fn()
+  const ideMock: Record<string, unknown> = {
+    workspace: '/w', agentId: 'zcode', isWorkMode: false, toggleInterfaceMode,
+  }
+  return { ideMock, toggleInterfaceMode }
+})
+vi.mock('../store/ide', () => ({ useIdeStore: () => ideMock }))
 vi.mock('../composables/useSessionMetrics', () => ({
   useSessionMetrics: () => new Proxy({}, {
     get: (_t, key: string) => {
@@ -61,6 +68,25 @@ describe('IdeStatusBar 槽位定制（UI-8）', () => {
     expect((cluster.element as HTMLElement).style.order).toBe('0')
     const ws = w.find('[data-testid="ide-slot-workspace"]').element.closest('.ide-statusbar__item') as HTMLElement
     expect(ws.style.order).not.toBe('0')
+  })
+
+  it('编程/工作模式 chip：默认显示编程，点击调 toggleInterfaceMode；工作态显示工作', async () => {
+    const w = mount(IdeStatusBar)
+    await flushPromises()
+    const chip = w.find('[data-testid="ide-mode-chip"]')
+    expect(chip.exists()).toBe(true)
+    expect(chip.text()).toBe('编程')
+    expect(chip.classes()).not.toContain('is-work')
+    await chip.trigger('click')
+    expect(toggleInterfaceMode).toHaveBeenCalledTimes(1)
+
+    ideMock.isWorkMode = true
+    const w2 = mount(IdeStatusBar)
+    await flushPromises()
+    const chip2 = w2.find('[data-testid="ide-mode-chip"]')
+    expect(chip2.text()).toBe('工作')
+    expect(chip2.classes()).toContain('is-work')
+    ideMock.isWorkMode = false
   })
 
   it('slots 配置入口不被右端挤压、面板不被 overflow 裁切（2026-10-18 回归）', () => {

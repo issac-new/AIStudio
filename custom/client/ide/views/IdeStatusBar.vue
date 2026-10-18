@@ -18,11 +18,13 @@ import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-soc
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
 import IdeKeymapCard from '../components/IdeKeymapCard.vue'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
 const chatStore = useChatStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const modeText = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].mode)
 const message = useMessage()
 const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
@@ -195,6 +197,16 @@ watch(
 
 <template>
   <footer class="ide-statusbar">
+    <!-- 编程/工作界面模式 chip（zcode office/coding；点击切换，Cmd/Ctrl+Shift+U 同源） -->
+    <button
+      type="button"
+      class="ide-statusbar__item ide-statusbar__mode"
+      :class="{ 'is-work': Boolean(ide.isWorkMode) }"
+      data-testid="ide-mode-chip"
+      :title="ide.isWorkMode ? modeText.switchToCoding : modeText.switchToWork"
+      :aria-label="ide.isWorkMode ? modeText.switchToCoding : modeText.switchToWork"
+      @click="ide.toggleInterfaceMode()"
+    >{{ ide.isWorkMode ? modeText.workShort : modeText.codingShort }}</button>
     <span v-if="slotOn('workspace')" class="ide-statusbar__item" :style="{ order: slotOrder('workspace') }" :title="root ?? ''">
       {{ root ?? t('ide.workspaceDefault') }}
     </span>
@@ -340,6 +352,25 @@ watch(
     color: var(--success-color, var(--success-color));
   }
 }
+
+/* 编程/工作模式 chip：编程=主色，工作=绿；点击切换（快捷键同源） */
+.ide-statusbar__mode {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  cursor: pointer;
+
+  &.is-work {
+    color: #16a34a;
+    border-color: color-mix(in srgb, #16a34a 45%, transparent);
+  }
+}
+
+.ide-statusbar__mode:hover { border-color: currentColor; }
 
 .ide-statusbar__spacer {
   flex: 1;

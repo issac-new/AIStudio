@@ -15,6 +15,7 @@ import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
 import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
+import { interfaceModeEffects } from '../utils/interface-mode'
 
 // 13 个非高频页签懒加载：生产单 chunk（inlineDynamicImports）字节不变，
 // 但组件模块初始化推迟到首次打开页签，IDE 首屏少解析 echarts/monaco 等重模块。
@@ -118,8 +119,21 @@ function tabShortLabel(key: IdeSidePaneTab): string {
   return x ? (paneLocale.value === 'zh' ? x.zh : x.en) : key
 }
 const groupFilter = ref<SidePaneGroup | 'all'>('code')
+// 编程/工作模式：终端/审查是 zcode office 模式明确隐藏的两类页签
+// （App.tsx:997-998 supportsTerminal/supportsReview=!isOfficeMode）。效果表单一事实源。
+const modeEffects = computed(() => interfaceModeEffects(ide.interfaceMode ?? 'coding'))
+function tabAllowedByMode(key: IdeSidePaneTab): boolean {
+  if (key === 'terminal') return modeEffects.value.showTerminal
+  if (key === 'review') return modeEffects.value.showReview
+  return true
+}
 const visibleTabs = computed(() =>
-  groupFilter.value === 'all' ? TABS : TABS.filter(x => x.group === groupFilter.value))
+  TABS.filter(x => tabAllowedByMode(x.key))
+    .filter(x => groupFilter.value === 'all' || x.group === groupFilter.value))
+// 模式切换兜底：当前页签被新模式隐藏时回落 defaultSideTab（终端→工作模式不悬空）
+watch(() => ide.interfaceMode, () => {
+  if (!tabAllowedByMode(ide.sidePane.tab)) ide.setSidePaneTab(modeEffects.value.defaultSideTab)
+})
 // 深链/外部切换兜底：目标页签不在当前组时自动切到其所在组（命令面板/BgTasks 跳
 // workflow 等路径不因分组而断）
 watch(() => ide.sidePane.tab, (k) => {
