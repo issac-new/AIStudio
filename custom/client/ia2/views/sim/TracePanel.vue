@@ -1,12 +1,15 @@
 <!-- overlay/custom/client/ia2/views/sim/TracePanel.vue -->
 <!-- 签 6 需求追溯（B6 工单，R12——设计正本 §二 S4 的判词链面）：AC 判词链
      四列表（AC 编号/判据原文/测试结果/UAT 判定三态）；源缺席列=null 如实
-     呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
+     呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。
+     P2（2026-10-19）：UAT 待判模式支持就地三态录入，写入运行证据台账
+     （evidence/uat-verdicts.jsonl，服务端合并回本表）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRunContext } from '../../composables/useRunContext'
+import { postUatVerdict, type UatVerdictKey } from '../../api/sim-verdicts'
 
 /** UAT 判定页签只看未判条目（2026-10-18 阶段页页签批；默认全量） */
 const props = withDefaults(defineProps<{ onlyUnjudged?: boolean }>(), { onlyUnjudged: false })
@@ -16,7 +19,7 @@ interface TraceRow { ac: string; criterion: string | null; caseResult: string | 
 interface TraceResponse {
   run: string
   rows: TraceRow[]
-  meta: { frozenPresent: boolean; testReportPresent: boolean; acceptancePresent: boolean }
+  meta: { frozenPresent: boolean; testReportPresent: boolean; acceptancePresent: boolean; uatLedger?: boolean }
   source: { evidenceDir: string }
 }
 
@@ -24,6 +27,8 @@ const { run, remember } = useRunContext()
 const loading = ref(false)
 const loadError = ref('')
 const trace = ref<TraceResponse | null>(null)
+const actingAc = ref('')
+const actionError = ref('')
 
 async function load(): Promise<void> {
   const r = run.value.trim()
@@ -56,6 +61,30 @@ function verdictClass(v: string | null): string {
   return 'none'
 }
 
+const VERDICT_OPTIONS: Array<{ key: UatVerdictKey; label: string; cls: string }> = [
+  { key: 'pass', label: '通过', cls: 'pass' },
+  { key: 'conditional', label: '有条件通过', cls: 'conditional' },
+  { key: 'reject', label: '不通过', cls: 'reject' },
+]
+
+/** 就地录入：写运行证据台账后整表重读（服务端合并人工判定）。 */
+async function recordVerdict(ac: string, verdict: UatVerdictKey): Promise<void> {
+  const r = run.value.trim()
+  if (!r || actingAc.value) return
+  const label = VERDICT_OPTIONS.find(o => o.key === verdict)?.label ?? verdict
+  if (!window.confirm(`确认将 ${ac} 判定为「${label}」？判定将写入运行证据台账并留痕。`)) return
+  actingAc.value = ac
+  actionError.value = ''
+  try {
+    await postUatVerdict({ run: r, ac, verdict })
+    await load()
+  } catch (e) {
+    actionError.value = (e as Error).message
+  } finally {
+    actingAc.value = ''
+  }
+}
+
 // 跨签贯通：run 已预填（query 或最近记忆）则挂载即读取，省一次手动点击
 onMounted(() => { if (run.value.trim()) void load() })
 watch(run, () => { if (run.value.trim()) void load() })
@@ -73,19 +102,22 @@ watch(run, () => { if (run.value.trim()) void load() })
     </div>
 
     <template v-if="trace">
-      <p v-if="onlyUnjudged" class="trc__readonly" data-testid="trc-uat-readonly">
-        UAT 待判为只读清单：本版本尚不在此页录入判定，判定结果来自运行验收数据；未判条目需回到对应运行补齐证据。
+      <p v-if="onlyUnjudged" class="trc__readonly" data-testid="trc-uat-entry">
+        UAT 待判就地录入：点行内三态按钮写判定，落运行证据台账（evidence/uat-verdicts.jsonl）并留痕；
+        人工判定覆盖验收书提取值。
       </p>
+      <p v-if="actionError" class="trc__error" data-testid="trc-action-error">{{ actionError }}</p>
       <p class="trc__meta" data-testid="trc-meta">
         源在场：
         <span :class="trace.meta.frozenPresent ? 'trc__ok' : 'trc__absent'">冻结单{{ trace.meta.frozenPresent ? '✓' : '缺' }}</span>
         <span :class="trace.meta.testReportPresent ? 'trc__ok' : 'trc__absent'">测试报告{{ trace.meta.testReportPresent ? '✓' : '缺' }}</span>
         <span :class="trace.meta.acceptancePresent ? 'trc__ok' : 'trc__absent'">验收书{{ trace.meta.acceptancePresent ? '✓' : '缺' }}</span>
+        <span v-if="trace.meta.uatLedger" class="trc__ok">人工判定台账✓</span>
         <span class="trc__src">证据目录：{{ trace.source.evidenceDir }}</span>
       </p>
       <p v-if="rows.length === 0" class="trc__hint" data-testid="trc-empty">{{ props.onlyUnjudged ? '所有 AC 都已有 UAT 判定。' : '未提取到 AC 行。' }}</p>
       <table v-else class="trc__table" data-testid="trc-table">
-        <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判定</th></tr></thead>
+        <thead><tr><th>AC</th><th>判据原文</th><th>测试结果</th><th>UAT 判定</th><th v-if="onlyUnjudged">录入</th></tr></thead>
         <tbody>
           <tr v-for="r in rows" :key="r.ac" :data-testid="`trc-row-${r.ac}`">
             <td class="trc__mono">{{ r.ac }}</td>
@@ -93,6 +125,18 @@ watch(run, () => { if (run.value.trim()) void load() })
             <td :class="{ 'trc__absent': !r.caseResult }">{{ r.caseResult ?? 'null' }}</td>
             <td>
               <span class="trc__verdict" :class="`trc__verdict--${verdictClass(r.uatVerdict)}`">{{ r.uatVerdict ?? '未判' }}</span>
+            </td>
+            <td v-if="onlyUnjudged" class="trc__entry">
+              <button
+                v-for="o in VERDICT_OPTIONS"
+                :key="o.key"
+                type="button"
+                class="trc__verdict-btn"
+                :class="`trc__verdict-btn--${o.cls}`"
+                :data-testid="`trc-verdict-${r.ac}-${o.key}`"
+                :disabled="actingAc === r.ac"
+                @click="recordVerdict(r.ac, o.key)"
+              >{{ o.label }}</button>
             </td>
           </tr>
         </tbody>
@@ -135,4 +179,19 @@ watch(run, () => { if (run.value.trim()) void load() })
 .trc__verdict--conditional { color: var(--ia-stale); background: rgba(201, 150, 46, 0.14); }
 .trc__verdict--reject { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
 .trc__verdict--none { color: var(--text-muted); background: rgba(127, 127, 127, 0.12); }
+.trc__entry { white-space: nowrap; }
+.trc__verdict-btn {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  border-radius: 4px;
+  padding: 1px 7px;
+  margin-right: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  &:hover:not(:disabled) { border-color: var(--accent-primary); }
+  &:disabled { opacity: 0.5; cursor: wait; }
+}
+.trc__verdict-btn--pass { color: var(--ia-fresh); }
+.trc__verdict-btn--conditional { color: var(--ia-stale); }
+.trc__verdict-btn--reject { color: var(--ia-fail); }
 </style>

@@ -108,3 +108,17 @@ export function resolveSpotCheck(id: string, verdict: 'confirm' | 'veto', note?:
     body: JSON.stringify({ verdict, note }),
   })
 }
+
+// P2 审批汇总单一契约（spec 2026-10-19-studio-p2 §2.3）：同一聚合管线的计数投影。
+export interface PendingSummary {
+  total: number
+  command: number
+  review: number
+  enforce: number
+  byRisk: Record<ApprovalRiskTier, number>
+  ts: number
+}
+
+export function fetchPendingSummary(): Promise<PendingSummary> {
+  return request<PendingSummary>('/api/approvals/pending-summary')
+}

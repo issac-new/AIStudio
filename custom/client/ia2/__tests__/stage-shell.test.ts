@@ -72,6 +72,7 @@ const stubs = {
   GatekeeperSection: { name: 'GatekeeperSection', template: '<div data-testid="approvals-stub" />' },
   StageDevApprovals: { name: 'StageDevApprovals', template: '<div data-testid="dev-approvals-stub" />' },
   ApprovalPanel: { name: 'ApprovalPanel', template: '<div data-testid="approval-panel-stub" />' },
+  StageG5Panel: { name: 'StageG5Panel', template: '<div data-testid="g5-panel-stub" />' },
   DeliveryPanel: { name: 'DeliveryPanel', template: '<div data-testid="delivery-stub" />' },
   GovIssuesPanel: { name: 'GovIssuesPanel', template: '<div data-testid="issues-stub" />' },
   SwarmKanbanView: { name: 'SwarmKanbanView', template: '<div data-testid="kanban-stub" />' },
@@ -177,6 +178,12 @@ describe('StageShell — 单层页签', () => {
     await w.find('[data-testid="stg-tab-uat"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="trace-stub"]').attributes('data-only')).toBe('true')
+
+    // P2：G5 页签换装发布门面板（含发布类审批过滤），不再直接挂通用审批面板
+    await w.find('[data-testid="stg-tab-g5"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="g5-panel-stub"]').exists()).toBe(true)
+    expect(w.find('[data-testid="approval-panel-stub"]').exists()).toBe(false)
     w.unmount()
   })
 

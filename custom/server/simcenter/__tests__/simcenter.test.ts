@@ -18,7 +18,9 @@ import {
   classifyAnchorId, classifyBranchFresh, DELIVERABLE_PATTERNS, extractAcList, extractCaseResults,
   extractVerdicts, assembleTrace, isValidRun, matchDeliverables, parseForEachRef, parseGraceMs,
   parseIssuesLog, parseJournalTail, parseTopologyEndpoints, safeRunDir, validateEvidenceMark,
-  validateSimSettings } from '../simcenter-controller'
+  validateSimSettings,
+  validateUatVerdict, mergeUatVerdicts, validateReleaseGate, latestReleaseDecision,
+  type UatVerdictRecord, type ReleaseGateRecord } from '../simcenter-controller'
 
 // ── HTTP 测试台（真 koa app + 临时 SIM_ROOT；不依赖上游注入树） ──
 import { simcenterRouter } from '../simcenter-controller'
@@ -399,7 +401,7 @@ describe('simcenter HTTP 面', () => {
     expect(byAc['AC-2'].uatVerdict).toBe('不通过')
     // run2 无任何源文件：全列 null+meta 全缺席（如实呈现，不硬凑）
     const r2 = await get('/api/hermes/sim/trace?run=run2')
-    expect(r2.body.meta).toEqual({ frozenPresent: false, testReportPresent: false, acceptancePresent: false })
+    expect(r2.body.meta).toEqual({ frozenPresent: false, testReportPresent: false, acceptancePresent: false, uatLedger: false })
     expect(r2.body.rows).toEqual([])
     expect((await get('/api/hermes/sim/trace?run=..')).status).toBe(400)
   })
@@ -453,5 +455,90 @@ describe('validateSimSettings — 四键受控校验（B8，E28）', () => {
     expect(validateSimSettings({ hacker_key: 1 }).ok).toBe(false)
     expect(validateSimSettings(null).ok).toBe(false)
     expect(validateSimSettings([1]).ok).toBe(false)
+  })
+})
+
+
+// ── P2（spec 2026-10-19-studio-p2）：UAT 判定台账 + G5 发布准出台账 ──
+describe('UAT 判定台账（纯函数）', () => {
+  it('validateUatVerdict：ac 归一 AC-N；三态键；note 界外拒', () => {
+    expect(validateUatVerdict({ run: 'run1', ac: '3', verdict: 'pass' })).toEqual({ ok: true, run: 'run1', ac: 'AC-3', verdict: 'pass', note: undefined })
+    expect(validateUatVerdict({ run: 'run1', ac: 'AC-12', verdict: 'conditional', note: ' 保留窗口 ' })).toEqual({ ok: true, run: 'run1', ac: 'AC-12', verdict: 'conditional', note: '保留窗口' })
+    expect(validateUatVerdict({ run: 'run1', ac: 'AC-9999', verdict: 'pass' }).ok).toBe(false)
+    expect(validateUatVerdict({ run: 'run1', ac: 'AC-1', verdict: 'maybe' }).ok).toBe(false)
+    expect(validateUatVerdict({ run: '../esc', ac: 'AC-1', verdict: 'pass' }).ok).toBe(false)
+    expect(validateUatVerdict({ run: 'run1', ac: 'AC-1', verdict: 'pass', note: 'x'.repeat(201) }).ok).toBe(false)
+  })
+  it('mergeUatVerdicts：同 AC 取 ts 最新的人工判定，label 覆盖', () => {
+    const rows = [
+      { ac: 'AC-1', criterion: null, caseResult: null, uatVerdict: null },
+      { ac: 'AC-2', criterion: null, caseResult: null, uatVerdict: '通过' },
+    ]
+    const recs: UatVerdictRecord[] = [
+      { ts: '2026-10-19T01:00:00Z', actor: 'a', run: 'r', ac: 'AC-1', verdict: 'reject' },
+      { ts: '2026-10-19T02:00:00Z', actor: 'a', run: 'r', ac: 'AC-1', verdict: 'pass' },
+    ]
+    const merged = mergeUatVerdicts(rows, recs)
+    expect(merged[0].uatVerdict).toBe('通过')
+    expect(merged[1].uatVerdict).toBe('通过') // 无人工记录不动
+  })
+})
+
+describe('UAT 判定端点（真 koa + 临时 SIM_ROOT）', () => {
+  it('POST 写台账（actor 回落 unknown）→ GET 读回 → trace 合并人工判定', async () => {
+    const w = await post('/api/hermes/sim/uat-verdict', { run: 'run1', ac: 'AC-1', verdict: 'conditional', note: '冒烟' })
+    expect(w.status).toBe(200)
+    expect(w.body.record.verdict).toBe('conditional')
+    expect(w.body.record.actor).toBe('unknown')
+    const g = await get('/api/hermes/sim/uat-verdicts?run=run1')
+    expect(g.status).toBe(200)
+    expect(g.body.records.some((r: UatVerdictRecord) => r.ac === 'AC-1' && r.verdict === 'conditional')).toBe(true)
+    const t = await get('/api/hermes/sim/trace?run=run1')
+    expect(t.status).toBe(200)
+    expect(t.body.meta.uatLedger).toBe(true)
+    expect(t.body.rows.find((r: { ac: string }) => r.ac === 'AC-1').uatVerdict).toBe('有条件通过')
+  })
+  it('入参非法=400；不存在的 run=400；穿越 run=400', async () => {
+    expect((await post('/api/hermes/sim/uat-verdict', { run: 'run1', ac: 'AC-1', verdict: 'maybe' })).status).toBe(400)
+    expect((await post('/api/hermes/sim/uat-verdict', { run: 'nope', ac: 'AC-1', verdict: 'pass' })).status).toBe(400)
+    expect((await post('/api/hermes/sim/uat-verdict', { run: '../x', ac: 'AC-1', verdict: 'pass' })).status).toBe(400)
+  })
+})
+
+describe('G5 发布准出台账（纯函数）', () => {
+  it('validateReleaseGate：打回必须给理由；批准 note 可选；越界拒', () => {
+    expect(validateReleaseGate({ run: 'run1', decision: 'reject' }).ok).toBe(false)
+    expect(validateReleaseGate({ run: 'run1', decision: 'reject', note: '证据缺' })).toEqual({ ok: true, run: 'run1', decision: 'reject', note: '证据缺' })
+    expect(validateReleaseGate({ run: 'run1', decision: 'approve' })).toEqual({ ok: true, run: 'run1', decision: 'approve', note: undefined })
+    expect(validateReleaseGate({ run: 'run1', decision: 'maybe' }).ok).toBe(false)
+    expect(validateReleaseGate({ run: 'run1', decision: 'approve', note: 'x'.repeat(301) }).ok).toBe(false)
+  })
+  it('latestReleaseDecision：最新记录胜出；空台账=未决', () => {
+    const recs: ReleaseGateRecord[] = [
+      { ts: '2026-10-19T01:00:00Z', actor: 'a', run: 'r', decision: 'approve' },
+      { ts: '2026-10-19T02:00:00Z', actor: 'b', run: 'r', decision: 'reject', note: '回流' },
+    ]
+    expect(latestReleaseDecision(recs)?.decision).toBe('reject')
+    expect(latestReleaseDecision([])).toBeNull()
+  })
+})
+
+describe('G5 发布准出端点（真 koa）', () => {
+  it('未决→批准→改判打回（append-only 留痕）', async () => {
+    const before = await get('/api/hermes/sim/release-gate?run=run1')
+    if (before.body.decision === null) {
+      const a = await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'approve' })
+      expect(a.status).toBe(200)
+      expect((await get('/api/hermes/sim/release-gate?run=run1')).body.decision).toBe('approve')
+    }
+    const r = await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'reject', note: '复检回流' })
+    expect(r.status).toBe(200)
+    const after = await get('/api/hermes/sim/release-gate?run=run1')
+    expect(after.body.decision).toBe('reject')
+    expect(after.body.records.filter((x: ReleaseGateRecord) => x.decision === 'reject' && x.note === '复检回流').length).toBeGreaterThanOrEqual(1)
+  })
+  it('打回缺理由=400；非法 run=400', async () => {
+    expect((await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'reject' })).status).toBe(400)
+    expect((await post('/api/hermes/sim/release-gate', { run: '../x', decision: 'approve' })).status).toBe(400)
   })
 })

@@ -114,12 +114,28 @@ onUnmounted(() => { if (overviewTimer) clearInterval(overviewTimer) })
 // 栏宽必须进 grid 轨道：grid item 的内联 width 改不动固定轨道（2026-09-22
 // 「拖了不动」根因——aside 拖宽只是溢出轨道被中栏盖住/悬出屏外，可见边界不动）。
 // 折叠态 18px 导轨与 v12 铁律轨道同源。
-const wbGridStyle = computed(() => ({
-  // 2026-10-19 全页走查：全局同名 .wb 规则把 display 改成 flex，三栏竖排；
-  // 内联声明压过全局规则，保证「永不换列不堆叠」铁律。
-  display: 'grid',
-  gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} minmax(320px, 1fr) ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
-}))
+// P2 移动收尾（spec 2026-10-19-studio-p2 §3）：≤720px 三栏让位单列堆叠——
+// 内联样式会盖过媒体查询，故窄屏改写内联为单列而非依赖样式表。
+const isNarrow = ref(false)
+let narrowMq: MediaQueryList | null = null
+function onNarrowChange(e: MediaQueryListEvent): void { isNarrow.value = e.matches }
+onMounted(() => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+  narrowMq = window.matchMedia('(max-width: 720px)')
+  isNarrow.value = narrowMq.matches
+  narrowMq.addEventListener?.('change', onNarrowChange)
+})
+onUnmounted(() => { narrowMq?.removeEventListener?.('change', onNarrowChange) })
+
+const wbGridStyle = computed(() => {
+  if (isNarrow.value) return { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }
+  return {
+    // 2026-10-19 全页走查：全局同名 .wb 规则把 display 改成 flex，三栏竖排；
+    // 内联声明压过全局规则，保证「永不换列不堆叠」铁律。
+    display: 'grid',
+    gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} minmax(320px, 1fr) ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
+  }
+})
 
 // 拖拽：mousedown 起捕，mousemove 改宽（实时联动），mouseup 落盘
 let dragCol: 'left' | 'right' | null = null
