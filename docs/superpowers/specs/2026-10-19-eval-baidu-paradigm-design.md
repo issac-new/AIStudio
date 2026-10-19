@@ -150,7 +150,8 @@ npm run build                                                     # 客户端构
 - 目标域：`custom/server/eval` + `custom/server/redteam` + `custom/server/harness` + `custom/server/toolresultguard` + `custom/client/eval` + `custom/client/ia2` + i18n 编译门 → 116 文件通过、1 文件失败（`journey.test.ts`，主基线同样失败，环境态，与本轮无关）。
 - 全量：735 文件 / 5306 用例 → 5289 通过、9 失败。9 项失败逐项归因：`journey.test.ts`（2，主基线复现）、`incident-window.test.ts`（1，主基线复现）、`cua-node-backend-platforms.test.ts`（5，共享 zcode 树未打补丁，缺 `node-backend.js`，环境态）、`raw-hex-budget.test.ts`（1，本轮新增组件引入幽灵变量 `--bg-color`/`--accent`，已修，复跑绿）。
 - 类型：`npm run typecheck:harness` 0 错误（新模块已并入该脚本）；`vite build` 成功（输出到 `/tmp`，未覆盖共享 dist）。
-- 浏览器走查：合入 main 并重启服务后执行，结果回填本节。
+- 浏览器走查（隔离环境：私有 upstream worktree + 独立后端 8658 + 构建产物预览 8659，未触碰共享服务与 main 工作区）：Playwright 12/12 断言通过、零页面错误——六页签齐备；指标治理显示 23 指标/15 已接线/8 未接线/1 装饰候选，维度覆盖 1/7 且未标注 0；红队跑 3 代 20 个体，84 个体/28 拦截/56 逃逸（67%）、良性误报 17%、13 个算子行；运行报告三角卡（S0 6、审计率 100% 6/6）与判词理由可见；证据抽屉成功回溯 session 并显示 read_file/150 tokens/900ms（参数已脱敏）；⑥治理度量检查评测运营卡显示 4 集/4 运行/pass@k/门禁/unknown/覆盖/红队逃逸 67%。
+- 走查中发现并修复一个布局缺陷：红队运行表单同时套 `.rt__form`（grid）与 `.card`（flex 列），后者在样式表中后定义并覆盖 grid，导致输入框竖排挤在右侧；已去掉 `card` 类并在 `.rt__form` 内自带边框圆角，重建后复测通过。
 
 ## 6. 边界（本轮不做）
 
