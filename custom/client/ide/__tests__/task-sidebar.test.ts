@@ -143,8 +143,8 @@ describe('IdeTaskSidebar', () => {
     // workspace 分组：ncwk / other / 默认（无工作区）
     expect(w.find('[data-testid="ide-task-group-ncwk"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-task-group-other"]').exists()).toBe(true)
-    // 无工作区组：label 由 workspaceLabel(t, null) 给出，mock t 下即 key 原文
-    expect(w.find('[data-testid="ide-task-group-ide.task.defaultGroup"]').exists()).toBe(true)
+    // 无工作区会话：2026-10-19 项目归类修正后落「未绑项目」（不再伪「默认」）
+    expect(w.find('[data-testid="ide-task-group-未绑项目"]').exists()).toBe(true)
 
     // 组内计数：ncwk = active + extra1 + extra2
     const ncwk = w.find('[data-testid="ide-task-group-ncwk"]')
