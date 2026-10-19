@@ -46,7 +46,7 @@ export const CENTER_NAVS: readonly CenterNavMeta[] = STAGE_META.map((s, i) => ({
 /**
  * 路径 → 当前中心 key（高亮判定纯函数）。/app 家族按前缀归阶段，
  * 但 /app/sim*、/app/gov* 更长前缀先判；非 /app 家族（IDE 侧 / 上游壳页）
- * 返回 null。段边界匹配：/app/simulation 不误判为仿真中心。
+ * 返回 null。段边界匹配：/app/simulation 不误判为全流程推演。
  */
 export function centerForPath(path: string): CenterKey | null {
   // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④开发
@@ -60,7 +60,7 @@ export function centerForPath(path: string): CenterKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 仿真中心=④开发的运行工具舱、治理中心=⑥治理（2026-10-17 层级批：
+  // 全流程推演=④开发的运行工具舱、六阶段治理=⑥治理（2026-10-17 层级批：
   // 旧映射 sim→②需求 / gov→③分析设计 会让顶栏高亮与实际页面无关，用户实报「层次乱」）
   if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
@@ -87,7 +87,7 @@ export function activeStageForRoute(path: string, from: unknown): CenterKey | nu
 }
 
 /**
- * 顶栏当前阶段（复数，驾驶舱壳以此为准）：
+ * 顶栏当前阶段（复数，工作台壳以此为准）：
  * 1) 来路 from 优先——答「我从哪一站来」；
  * 2) 否则按页签级归属表——答「这个工具本身归哪几站」，多归属如实返回多个；
  * 3) 表内登记为空=全程工具，返回空数组（顶栏不高亮，面包屑标「全程」）；

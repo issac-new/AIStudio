@@ -98,7 +98,7 @@ function sendAux(): void {
     <header class="briefing-header">
       <span class="briefing-icon">📋</span>
       <span class="briefing-title">{{ t('ide.briefing.title', '任务简报') }}</span>
-      <!-- 驾驶舱联动：IDE 简报 ↔ 看板卡（board?task= 深链打开卡抽屉）——聊天消息里的
+      <!-- 工作台联动：IDE 简报 ↔ 看板卡（board?task= 深链打开卡抽屉）——聊天消息里的
            card=t_xxx 芯片已直达看板，此处补 IDE→看板回跳，三区互相可达。 -->
       <nav class="briefing-cplinks" data-testid="briefing-cplinks">
         <a :href="boardHref" :title="`打开任务卡 ${task.id}`">看板卡 ↗</a>

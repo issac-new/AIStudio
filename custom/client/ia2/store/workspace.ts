@@ -13,7 +13,7 @@
 //      本 store 只聚合 task(createdAt) + todo(date) 两源）。
 //   ④ 看板聚合 WS 生命周期 —— connectOverviewStream（任一 board 事件 → 500ms
 //      去抖 refreshAllBoards）。方法名沿用 Task 4 台账的 initFleetStream/
-//      stopFleetStream；接管点：旧驾驶舱壳 unmount（已退役，视图自回收）+
+//      stopFleetStream；接管点：旧工作台壳 unmount（已退役，视图自回收）+
 //      IaShell unmount 兜底（2026-09-16 审查恢复：介入视图只武装不回收）。
 //      fleet sessions WS（connectFleetStream）无新 IA 消费方，不再连接。
 // 不含：workspaceMode/三栏布局/协作图/时序流/假终端/工作项草稿/团队过滤/MCP
@@ -281,7 +281,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     return m
   })
 
-  // ── ④ 看板聚合 WS 生命周期（接管点：旧驾驶舱壳 unmount（已退役）+ IaShell unmount 兜底）──
+  // ── ④ 看板聚合 WS 生命周期（接管点：旧工作台壳 unmount（已退役）+ IaShell unmount 兜底）──
   let _overviewStream: fleetAdapter.FleetStreamHandle | null = null
   let _overviewDebounce: ReturnType<typeof setTimeout> | undefined
   // 性能批二轮（2026-09-30 按钮/链路排查）：WS 板级事件→全量刷新由 500ms 去抖

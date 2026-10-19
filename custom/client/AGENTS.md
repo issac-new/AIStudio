@@ -15,9 +15,9 @@ Vue 3 + TypeScript 客户端扩展层。按功能区目录：`ide/`、`ia2/`、`
 
 | 路径 | 职责 |
 |---|---|
-| `ia2/` | 六阶段主界面与治理中心视图 |
+| `ia2/` | 六阶段主界面与专题壳 |
 | `ide/` | IDE 页签、会话、模型切换、自检面板 |
-| `cockpit/` | 驾驶舱聚合（trace/协作/审批） |
+| `cockpit/` | 早期工作台聚合（trace/协作/审批组件仍被复用） |
 | `governance/` | 治理组件与 API 客户端 |
 | `ui/` | 基础控件与设计原语 |
 | `test/setup.ts` | vitest 全局 setup |

@@ -5,6 +5,7 @@
 // 子页签（上游 FileTree + IdeGitPane）。
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
 import type { FileEntry } from '@/api/studio/files'
@@ -14,6 +15,7 @@ import { workspaceLabel } from '../utils/time'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const { t, locale } = useI18n()
+const router = useRouter()
 const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
 const filesStore = useFilesStore()
 const { root, validation, validate, invalidate } = useIdeWorkspace()
@@ -63,6 +65,12 @@ async function openEntry(entry: FileEntry): Promise<void> {
     <div v-else-if="tab === 'tree' && validation.status === 'invalid'" class="ide-files__invalid" data-testid="ide-files-invalid">
       <p>{{ invalidTx.title(validation.message || invalidTx.fallback) }}</p>
       <button type="button" class="ide-files__retry" @click="retryRoot">{{ invalidTx.retry }}</button>
+    </div>
+    <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
+      <p>{{ t('ide.files.noWorkspace', '还没有任务工作区——从左侧任务或看板选一张卡带入') }}</p>
+      <button type="button" class="ide-files__retry" data-testid="ide-files-pick-task" @click="router.push({ name: 'ia2.board' })">
+        {{ t('ide.files.pickTask', '去工作台选任务') }}
+      </button>
     </div>
     <FileTree
       v-else-if="tab === 'tree'"

@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/ia2/components/BackgroundWorkStrip.vue -->
 <!-- 后台任务执行感知条（2026-10-04 三件套②+③）：「N 路执行中」chip（点击跳看板）
      + 推演运行态（harness run-progress.json 契约，缺文件=无推演=整条隐藏）。
-     挂 IaGlobalTop 页头下（与 delivery-strip 同层）。静默执行期驾驶舱由此有活体信号，
+     挂 IaGlobalTop 页头下（与 delivery-strip 同层）。静默执行期工作台由此有活体信号，
      兑现全流程追踪设计在「执行」环的可见性。
      2026-10-10 根治轮（用户裁定「根治」）：单行纪律——agent 活跃多时不再 wrap
      成多行撑高顶区（run13 14 agent 实测 26px→49px+），改为隐藏测量行自适应
