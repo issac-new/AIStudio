@@ -181,7 +181,7 @@ export interface ReviewApproval {
   note?: string
   at: number
   invalidatedAt?: number
-  invalidatedBy?: 'new_commit' | 'conflict_resolution'
+  invalidatedBy?: 'new_commit' | 'conflict_resolution' | 'policy_tightened' | 'rollback'
 }
 
 export interface ReviewCase {
@@ -190,6 +190,12 @@ export interface ReviewCase {
   taskId?: string
   /** 关联既有 /api/review 评审（不双写评论）。 */
   reviewId?: string
+  /** 外部 PR 来源（导入时写入；不主动回写代码托管平台）。 */
+  pr?: { provider: 'github' | 'gitlab' | 'generic'; repo: string; number: number; url?: string }
+  /** 回滚登记：只记事实与责任人，不自动改代码。 */
+  rollback?: { at: number; by?: string; note?: string }
+  /** 熔断收紧导致审批作废的时间（审计用）。 */
+  policyTightenedAt?: number
   author?: string
   authorKind: ActorKind
   baseCommit?: string
@@ -249,11 +255,16 @@ export interface ReviewMetrics {
   p95Rounds: number | null
   fivePlusShare: number | null
   humanApprovalsMedian: number | null
+  /** 案例创建到首个有效人工审批的中位等待时间（毫秒）。 */
+  humanWaitMedianMs: number | null
   noiseRate: number | null
   preexistingShare: number | null
   deferredBacklog: number
   openImportant: number
   evalCases: number
+  /** 最近一次评测运行的召回率/精确率（无运行或未导入预测时为 null）。 */
+  evalRecall: number | null
+  evalPrecision: number | null
   breaker: BreakerState
 }
 
@@ -268,4 +279,41 @@ export interface ReviewEvalCase {
   line?: number
   createdAt: number
   createdBy?: string
+}
+
+export interface ReviewEvalPrediction {
+  file: string
+  line?: number
+  title?: string
+}
+
+export interface ReviewEvalRun {
+  runId: string
+  at: number
+  total: number
+  matched: number
+  recall: number | null
+  precision: number | null
+  missing: string[]
+  falsePositives: ReviewEvalPrediction[]
+  createdBy?: string
+}
+
+export interface NightlyGroup {
+  file: string
+  bugClass: string
+  count: number
+  oldestAt: number
+  findingIds: string[]
+  caseIds: string[]
+}
+
+export interface NightlyReport {
+  reportId: string
+  /** 本地日期 YYYY-MM-DD。 */
+  date: string
+  generatedAt: number
+  backlog: number
+  groups: NightlyGroup[]
+  caseCount: number
 }

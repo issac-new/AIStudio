@@ -11,6 +11,7 @@ import {
   type ActorKind,
   type BreakerState,
   type ReviewApproval,
+  type ReviewCase,
   type ReviewPolicy,
   type RiskAssessment,
   type RiskTier,
@@ -178,13 +179,48 @@ export function countEffectiveApprovals(
   return { human: effective.length, agent: agent.length, effective }
 }
 
-/** 新提交 / 解冲突后，把此前审批标记失效（返回副本，不改入参）。 */
+/** 新提交 / 解冲突 / 策略收紧后，把此前审批标记失效（返回副本，不改入参）。 */
 export function invalidateApprovals(
   approvals: ReviewApproval[],
-  by: 'new_commit' | 'conflict_resolution',
+  by: 'new_commit' | 'conflict_resolution' | 'policy_tightened' | 'rollback',
   at = Date.now(),
 ): ReviewApproval[] {
   return approvals.map((a) => (
     a.invalidatedAt ? a : { ...a, invalidatedAt: at, invalidatedBy: by }
   ))
+}
+
+/** 熔断收紧：重新分级；门槛升高时作废旧审批，要求按新档重新放行。
+ *  只升不降（风险回落不撤销既有审批），避免同一提交反复横跳。 */
+export function tightenCaseRisk(
+  c: ReviewCase,
+  policy: ReviewPolicy = DEFAULT_POLICY,
+  breaker: BreakerState | null = null,
+  now = Date.now(),
+): { case: ReviewCase; tightened: boolean } {
+  if (c.state === 'merged' || c.state === 'abandoned') return { case: c, tightened: false }
+  const risk = classifyChangeRisk({
+    changedPaths: c.changedPaths,
+    diffLines: c.diffLines,
+    behindFlag: c.behindFlag,
+    author: c.author,
+    authorKind: c.authorKind,
+    policy,
+    breaker,
+    now,
+  })
+  const order: RiskTier[] = ['low', 'medium', 'high']
+  const worse = order.indexOf(risk.tier) > order.indexOf(c.risk.tier)
+    || risk.requiredHumanApprovals > c.risk.requiredHumanApprovals
+  if (!worse) return { case: c, tightened: false }
+  return {
+    case: {
+      ...c,
+      risk,
+      approvals: invalidateApprovals(c.approvals, 'policy_tightened', now),
+      policyTightenedAt: now,
+      updatedAt: now,
+    },
+    tightened: true,
+  }
 }

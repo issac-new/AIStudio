@@ -25,6 +25,12 @@ vi.mock('../api/review-gov', async () => {
     mergeCase: vi.fn(),
     openCase: vi.fn(),
     addFinding: vi.fn(),
+    fetchNightly: vi.fn(),
+    runNightly: vi.fn(),
+    fetchEvalScore: vi.fn(),
+    runEval: vi.fn(),
+    rollbackCase: vi.fn(),
+    importPr: vi.fn(),
   }
 })
 const api = await import('../api/review-gov')
@@ -87,8 +93,10 @@ const detail = {
 const metrics: ReviewMetricsView = {
   cases: 1, active: 1, merged: 0,
   firstRoundPassRate: 0.75, meanRounds: 1.5, p95Rounds: 3, fivePlusShare: 0.02,
-  humanApprovalsMedian: 1, noiseRate: 0.1, preexistingShare: 0.05,
-  deferredBacklog: 2, openImportant: 1, evalCases: 4, breaker,
+  humanApprovalsMedian: 1, humanWaitMedianMs: 3_600_000,
+  noiseRate: 0.1, preexistingShare: 0.05,
+  deferredBacklog: 2, openImportant: 1, evalCases: 4,
+  evalRecall: 0.85, evalPrecision: 0.7, breaker,
 }
 
 describe('纯视图函数', () => {
@@ -96,6 +104,8 @@ describe('纯视图函数', () => {
     const cards = kpiCards(metrics)
     expect(cards.find((c) => c.key === 'firstRound')).toMatchObject({ value: '75%', state: 'ok' })
     expect(cards.find((c) => c.key === 'fivePlus')).toMatchObject({ state: 'ok' })
+    expect(cards.find((c) => c.key === 'humanWait')).toMatchObject({ value: '1.0h', state: 'ok' })
+    expect(cards.find((c) => c.key === 'evalRecall')).toMatchObject({ value: '85%', state: 'ok' })
     expect(cards.find((c) => c.key === 'breaker')).toMatchObject({ value: '正常', state: 'ok' })
     const bad = kpiCards({ ...metrics, firstRoundPassRate: 0.4, fivePlusShare: 0.2, breaker: { ...breaker, active: true } })
     expect(bad.find((c) => c.key === 'firstRound')?.state).toBe('warn')
@@ -157,6 +167,8 @@ describe('ReviewGovPanel 渲染与动作', () => {
     mock.fetchMetrics.mockResolvedValue(metrics)
     mock.fetchCase.mockResolvedValue(detail)
     mock.recordApproval.mockResolvedValue(detail)
+    mock.fetchNightly.mockResolvedValue(null)
+    mock.fetchEvalScore.mockResolvedValue({ latest: null, runs: [] })
   })
 
   it('熔断状态、KPI、案例与未决发现如实渲染；选中案例拉详情', async () => {
@@ -164,6 +176,10 @@ describe('ReviewGovPanel 渲染与动作', () => {
     await flushPromises()
     expect(w.find('[data-testid="rg-breaker"]').text()).toContain('正常')
     expect(w.find('[data-testid="rg-kpi-firstRound"]').text()).toContain('75%')
+    expect(w.find('[data-testid="rg-kpi-humanWait"]').text()).toContain('1.0h')
+    expect(w.find('[data-testid="rg-kpi-evalRecall"]').text()).toContain('85%')
+    expect(w.find('[data-testid="rg-nightly"]').exists()).toBe(true)
+    expect(w.find('[data-testid="rg-eval"]').exists()).toBe(true)
     expect(w.find('[data-testid="rg-case-case-1"]').exists()).toBe(true)
     expect(w.find('[data-testid="rg-detail"]').text()).toContain('改缓存')
     expect(w.find('[data-testid="rg-finding-f1"]').text()).toContain('缓存穿透')
