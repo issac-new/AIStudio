@@ -154,6 +154,13 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
+  it('②旧 ?tab=launch 深链回退启动准备（不静默落需求页）', async () => {
+    const { w } = await mountStage(2, '?tab=launch')
+    expect(w.find('[data-testid="stg-preflight"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stg-tab-preflight"]').classes()).toContain('stg__tab--on')
+    w.unmount()
+  })
+
   it('⑤验收：默认总览显示 G5/UAT，四处出口切页签；UAT 签只挂未判过滤', async () => {
     const { w, router } = await mountStage(5)
     expect(w.find('[data-testid="stg-tab-overview"]').classes()).toContain('stg__tab--on')
