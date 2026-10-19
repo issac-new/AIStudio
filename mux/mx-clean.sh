@@ -190,6 +190,15 @@ if [ "$APPLY" = 1 ]; then
       | while read -r f; do mv "$f" "$ARC/sim-logs/" 2>/dev/null || true; done ) || true
     say "旧轮 SIM_ROOT/logs 日志 → ${ARC}/sim-logs/"
   fi
+
+  # 2d) 图引擎状态（2026-10-19 0→1 实测）：$SIM_ROOT/.loop/graph-events.db 是 runcenter
+  #     运行列表的事实源（GET /api/graph/runs 由 event log 派生），从不清场 → 清空 runs/
+  #     后推演区仍列出旧轮运行、面板全部 run-state 404。整目录归档后删，引擎首启重建。
+  if [ -d "$SIM_ROOT/.loop" ]; then
+    tar -cf "$ARC/loop-state.tar" -C "$SIM_ROOT" .loop 2>/dev/null || true
+    rm -rf "$SIM_ROOT/.loop"
+    say "✓ 图引擎状态（.loop：graph-events/shadow/checkpoints）已归档重置"
+  fi
 fi
 
 # 3) synapse 房间清场（保留账号与凭据）
