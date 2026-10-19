@@ -1,9 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index 68b798bbf..707d08833 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -29,6 +29,12 @@ import { mcuDeviceRoutes } from '../modules/studio/routes/mcu-devices'
- import { sessionRoutes } from '../modules/studio/routes/sessions'
+@@ -30,6 +30,12 @@
+ import { modelApiRoutes } from '../modules/studio/routes/model-api'
  import { sessionSharePublicRoutes, sessionShareRoutes } from '../modules/studio/routes/session-shares'
  import { profileRoutes } from '../modules/hermes/routes/profiles'
 +// overlay[perf]（2026-09-30 性能批）：CLI 读端点缓存中间件（GET 白名单 TTL +
@@ -15,7 +14,7 @@ index 68b798bbf..707d08833 100644
  import { skillRoutes } from '../modules/hermes/routes/skills'
  import { skillBundleRoutes } from '../modules/hermes/routes/skill-bundles'
  import { pluginRoutes } from '../modules/hermes/routes/plugins'
-@@ -226,6 +232,10 @@ const commandPost = initCommandPost({
+@@ -227,6 +233,10 @@
    killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
    getSession: getSessionRowForCommandPost,
    userCanAccessProfile: userCanAccessProfileForCommandPost,
@@ -26,9 +25,9 @@ index 68b798bbf..707d08833 100644
  })
  async function initLoopSubsystem(): Promise<void> {
    if (loopStore) return
-@@ -278,6 +288,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
-   app.use(socialMessageRoutes.routes())
+@@ -280,6 +290,11 @@
    app.use(sessionRoutes.routes())
+   app.use(modelApiRoutes.routes())
    app.use(sessionShareRoutes.routes())
 +  // overlay[perf]（2026-09-30 性能批）：profiles 读缓存——GET /api/hermes/profiles
 +  // 实测 8.7s（CLI 子进程），且 profileRoutes 挂载先于 fleetRouter，须在此直挂；
@@ -38,7 +37,7 @@ index 68b798bbf..707d08833 100644
    app.use(profileRoutes.routes())
    app.use(ekkoMemoryRoutes.routes())
    app.use(ekkoSkillRoutes.routes())
-@@ -306,6 +321,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -308,6 +323,11 @@
    app.use(jobRoutes.routes())
    app.use(cronHistoryRoutes.routes())
    app.use(kanbanDashboardUrlRoutes.routes())
