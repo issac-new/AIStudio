@@ -1,5 +1,5 @@
 // overlay/custom/client/ia2/store/ia.ts
-// 驾驶舱单页全局状态：当前视图。
+// 工作台单页全局状态：当前视图。
 // 当前视图由 IaShell 以 areaForPath 投影（routes.ts 纯函数为唯一事实源），
 // store 只持有结果，不自算。2026-09-19 v12 统一视图：/app 家族唯一视图 collab。
 // 2026-09-18 统一导航 Task 5：RETRO 回退开关随兼容守卫退役删除（零消费确认）。

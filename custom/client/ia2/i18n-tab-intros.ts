@@ -48,16 +48,6 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: 'synapse 与 git 实查，缺席如实标注不硬凑。',
       act: '对任何数字/判定有疑问就点它——锚点抽屉给原文；重要消息可存证备查。',
     },
-    'sim-delivery': {
-      what: '交付进度表：六个开发分支推没推、14 件交付物齐不齐。',
-      source: '中央仓 git 与证据目录实读。',
-      act: '收尾前核对。「旧残留」分支=上轮遗留该清理；缺的交付物去催对应负责人。',
-    },
-    'sim-trace': {
-      what: '需求对账单：当初冻结的每条验收标准，测试和 UAT 各给出了什么判定。',
-      source: '冻结单×测试报告×验收书三源聚合。',
-      act: '验收复盘时逐条过。「未判定」条目=还没有人决策，去找需求分析师。',
-    },
     // ── ⑥治理页签 ──
     'gov-process': {
       what: '六道质量门的守门记录：哪道门被打回过、修复单走到哪一步。',
@@ -140,8 +130,6 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'sim-supervision': { what: 'On-duty watch desk: observation windows and analyst briefs answer "where is it stuck".', source: 'Read-only supervision journal.', act: 'Check periodically during a run; read briefs before intervening.' },
     'sim-ops': { what: 'Infrastructure health: four services, dispatcher, idle workers.', source: 'Live /health probes + hermes-agent commands.', act: 'When things feel dead, check red dots here first.' },
     'sim-evidence': { what: 'Evidence lookup: paste an event id or commit hash to see the original.', source: 'Live synapse/git lookups.', act: 'Distrust any number? Click it. Anchor drawer shows the source.' },
-    'sim-delivery': { what: 'Delivery sheet: six feature branches pushed? 14 deliverables complete?', source: 'Central repo git + evidence dir.', act: 'Verify before closing a run; chase missing deliverables.' },
-    'sim-trace': { what: 'Requirements reconciliation: each frozen AC vs test and UAT verdicts.', source: 'Freeze × test report × acceptance.', act: 'Walk AC rows at acceptance; unjudged items need a decision.' },
     'gov-process': { what: 'Quality-gate keeping records: which gate was rejected, repair ticket progress.', source: 'orgloop repair ledger.', act: 'Track gate-FAIL repairs here. No gate bypass button by design.' },
     'gov-orgAssets': { what: 'Roster and assets: people, permissions, app registry, key ledger.', source: 'Read-only registries.', act: 'Check staffing before a run; log key rotations (no secrets).' },
     'gov-clearance': { what: 'Open items: compensations left from the last run; resolve one, clear one.', source: 'Compensation ledger TSV.', act: 'Must be zero or waived before a new run. Waive needs a reason.' },

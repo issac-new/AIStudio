@@ -1,5 +1,5 @@
 // overlay/custom/client/ia2/wm/popout.ts
-// 窗口管理（2026-09-18 统一导航 /goal 追加）：独立窗口弹出与合并回驾驶舱。
+// 窗口管理（2026-09-18 统一导航 /goal 追加）：独立窗口弹出与合并回工作台。
 //
 // 弹出通路：桌面（Electron）走 IPC hermes-desktop:open-panel-window（主进程建
 // BrowserWindow + preload + --hermes-window-kind=panel，与既有 chat 弹窗同模式）；
@@ -11,7 +11,7 @@ import { desktopBridge } from '@/utils/desktop-bridge'
 /** standalone 标记：路由 query 参数，弹出窗口据此渲染精简壳 */
 export const STANDALONE_QUERY_KEY = 'standalone'
 
-/** 合并回驾驶舱信号：localStorage key（storage 事件跨窗口广播） */
+/** 合并回工作台信号：localStorage key（storage 事件跨窗口广播） */
 export const MERGE_BACK_KEY = 'swarmstudio:wm-merge-back'
 
 export interface PopoutRequest {

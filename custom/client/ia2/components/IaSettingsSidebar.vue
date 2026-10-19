@@ -2,7 +2,7 @@
 <!-- 设置页侧栏（2026-09-30 用户裁定：位于注意力条下方、壳内左侧；功能面恢复）。
      功能面 = 原 hermes-studio 三侧栏并集：
        · PageSidebarNav（协作域）——模型/工作流/连接/文件（聊天/群聊/历史由
-         驾驶舱工作台自持，不重复挂）；
+         工作台自持，不重复挂）；
        · HermesConfigSidebar（配置域）——Agent 管理/技能/插件/MCP/记忆/频道/
          任务/看板/学习轨迹（configSettings 经设置页页签流转直达，不重复挂）；
        · AppSidebar（系统域）——系统组全集，主题/宠物/技能用量等统一导航与
@@ -12,7 +12,7 @@
      AppSidebar 同款）；版本预览随 VITE_HERMES_PREVIEW（同 AppSidebar）。
      分组标签全用既有词表键（sidebar.groupTools/groupSystem）+ 品牌名直书
      Hermes——零新增 i18n、零上游补丁。
-     视图双入口（驾驶舱/IDE 工作台）退役：与页头品牌位切换器重复
+     视图双入口（工作台/IDE 工作台）退役：与页头品牌位切换器重复
      （2026-09-30 用户裁定保留页面顶部即可）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'

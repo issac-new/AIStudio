@@ -51,7 +51,7 @@ export function linkifyPlainText(text: string, currentUsername: string | null | 
   html = html.replace(CARD_RE, (_m, id: string) => {
     const tid = id // 保留原始大小写（任务 id 大小写敏感）
     if (!cardIds.includes(tid)) cardIds.push(tid)
-    // 落点与驾驶舱 onHandleTask 同源：/app/board?task=（TasksView 内嵌 SwarmKanbanView 预选）
+    // 落点与工作台 onHandleTask 同源：/app/board?task=（TasksView 内嵌 SwarmKanbanView 预选）
     return `<a class="mx-card-link" href="#/app/board?task=${encodeURIComponent(tid)}" title="打开任务卡 ${ESC(id)}">card=${ESC(id)}</a>`
   })
 

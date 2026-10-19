@@ -92,7 +92,7 @@ const unsubscribeCols = onColWidthsChange((w) => {
 })
 onUnmounted(unsubscribeCols)
 
-// ── P5 驾驶舱概览数据（2026-09-28 §六）：审批待审+决策历史 30s 轮询，
+// ── P5 工作台概览数据（2026-09-28 §六）：审批待审+决策历史 30s 轮询，
 //    交付进度复用 workspace.tasks（tasksForShow 已在内存）。 ──
 const overviewPending = ref<PendingApprovalItem[]>([])
 const overviewHistory = ref<ApprovalHistoryEntry[]>([])
@@ -594,7 +594,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
           @max="flow.toggleCenterMax()" @popout="onPopout"
         />
       </div>
-      <!-- P5 驾驶舱概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
+      <!-- P5 工作台概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
            我的待办/评审闸口/交付进度三卡；不占对象选择轴（auto-select 语义不动） -->
       <CockpitOverview
         v-if="isOverviewRoute"

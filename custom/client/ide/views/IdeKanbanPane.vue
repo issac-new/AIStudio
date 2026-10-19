@@ -2,7 +2,7 @@
 // IdeKanbanPane — IDE 内嵌看板（UI 融合 UI-10，multica 看板组织面四视图吸收落地）。
 // 数据=studio 原生 kanban API（listBoards/listTasks）；四视图（list/board/swimlane/
 // gantt）=boardorg 域同语义客户端排布：同一数据四种组织（表/列桶/泳道/时序）。
-// 优先级五档映射 p0-p4；列=status 词表。只读视图（编辑走驾驶舱看板）。
+// 优先级五档映射 p0-p4；列=status 词表。只读视图（编辑走工作台看板）。
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
