@@ -167,7 +167,9 @@ npm run build                                                     # 客户端构
 
 合并冲突三处，按「保留双方语义」解决：`judge.ts` 的 S0 分派同时支持 regex/threshold/similarity，且每种都写审计理由；`EvalView.vue` 运行表同时保留本分支的 tooltip 修复与对方的锚点漂移/动作芯片；同名测试文件拆分——对方保留 `eval-baidu.test.ts`（B1-B5），本分支改为 `eval-baidu-registry.test.ts`。合并后评测域 166/166 全绿、`typecheck:harness` 0 错、vite build 成功。
 
-交接时 main 已推进到 `504bf125`（另一个会话的 IDE 轮）且其工作区存在未提交的暂存改动（IDE devtools 回退），因此本轮**未在 main 工作区执行快进**——避免覆盖并行会话的在途工作。分支 `feat/eval-baidu-paradigm` 已包含 main `504bf125`（该时点 main 为分支祖先）；main 工作区清空后执行 `git merge --ff-only feat/eval-baidu-paradigm` 即可落地。若 main 在清空暂存后继续推进，先 `git merge main` 再快进。落地后按服务拓扑更新 `serve-merged` 到新 main 并重启 8647/8649 激活。
+交接时 main 一度推进到 `504bf125`（另一个会话的 IDE 轮）且其工作区存在未提交改动，因此当时未在 main 工作区执行快进。随后并行会话又落了 B6-B7（红队变体扩产 + 线上证据回填），本分支再次合并 main 并解决 `controller.ts` 冲突（保留评估器审计/证据回填两端点，并入线上证据入账端点与 store 导入）。最终主工作区停在另一个 feature 分支（`feat/eval-baidu-followup`），main 未被任何工作区占用，故以 ref 快进方式落地：`main` 快进到合并结果，`serve-merged` 服务树同步到 main，8647/8649 重启。
+
+**上线实测（8649）**：评测工作台六页签齐备（评测集/运行记录/指标治理/安全红队/UI Oracle/优化建议）；指标治理显示 23 指标、21 已接线、2 未接线、1 装饰候选，消费账来自共享账本；安全红队页签显示语料与 S1 未接线声明；⑥治理「度量检查」评测运营卡显示 4 集/5 运行、unknown 率 100%、维度覆盖 0/7（存量 28 个任务未标注）、最近红队逃逸率「—」。覆盖度 0/7 是真实读数：存量评测集没有 dimension 标注，新标注任务会抬升该值，不再沿用旧的「有集就算 3/7」。
 
 ## 7. 边界（本轮不做）
 
