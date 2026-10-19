@@ -34,6 +34,7 @@ import {
 } from './store'
 import { loadEvalConfig } from './types'
 import type { EvalRun } from './types'
+import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 
@@ -59,6 +60,7 @@ function runSummary(run: EvalRun) {
   return {
     id: run.id,
     setId: run.setId,
+    ...(run.setHash ? { setHash: run.setHash } : {}),
     target: run.target,
     k: run.k,
     status: run.status,
@@ -105,6 +107,28 @@ router.post('/sets', async (ctx) => {
   ctx.body = { ok: true, set: result.set }
 })
 
+// 红队种子库（百度轮 B5：红队四步只落第一步「攻击向量库」种子形态；自动生成挂账）。
+// 幂等：同名集已存在即返回既有（existed=true），不重复建。
+router.post('/sets/redteam-seed', async (ctx) => {
+  const store = { listSets }
+  const existing = store.listSets().find((s) => s.name === REDTEAM_SET_NAME)
+  if (existing) {
+    ctx.body = { ok: true, existed: true, set: existing, vectors: REDTEAM_VECTORS }
+    return
+  }
+  const result = createSet(
+    { name: REDTEAM_SET_NAME, track: 'e2e', tasks: buildRedteamSeedTasks() },
+    actorOf(ctx) ?? 'redteam-seed',
+  )
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = 201
+  ctx.body = { ok: true, existed: false, set: result.set, vectors: REDTEAM_VECTORS }
+})
+
 router.get('/sets/:id', async (ctx) => {
   const set = getSet(ctx.params.id)
   if (!set) {
@@ -113,7 +137,7 @@ router.get('/sets/:id', async (ctx) => {
     return
   }
   if (set.sealed) {
-    ctx.body = { ok: true, sealed: true, set: { id: set.id, name: set.name, track: set.track, module: set.module, sealed: true, createdAt: set.createdAt, taskCount: set.tasks.length } }
+    ctx.body = { ok: true, sealed: true, set: { id: set.id, name: set.name, track: set.track, module: set.module, sealed: true, contentHash: set.contentHash, revision: set.revision, createdAt: set.createdAt, taskCount: set.tasks.length } }
     return
   }
   ctx.body = { ok: true, set }
