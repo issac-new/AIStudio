@@ -13,6 +13,7 @@ import {
 } from '@/custom/skillgov/api'
 import { skillgovMessages } from '@/custom/skillgov/i18n'
 import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
+import { useTabQuery } from '@/custom/ia2/composables/useTabQuery'
 import { filterScanRows, type ScanVerdictFilter } from '@/custom/skillgov/utils/filter'
 
 const i18nCtx = useI18n()
@@ -23,7 +24,8 @@ const L = computed(() => {
 
 type ScanRow = SkillScanSummaryDto['results'][number]
 
-const tab = ref<'scan' | 'provision'>('scan')
+const SKILLGOV_TABS = ['scan', 'provision'] as const
+const tab = useTabQuery('tab', SKILLGOV_TABS, 'scan')
 const scanQuery = ref('')
 const scanVerdict = ref<ScanVerdictFilter>('all')
 const selectedSkill = ref<ScanRow | null>(null)

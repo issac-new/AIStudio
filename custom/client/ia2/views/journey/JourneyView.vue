@@ -207,4 +207,11 @@ function goStage(no: number): void {
 /* 动线批：卡点遗留项行可点去清偿门 */
 .jrn__bottleneck-debt--link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .jrn__bottleneck-debt--link:hover { filter: brightness(1.1); }
+
+/* 窄屏：两列卡改单列，避免 375px 下标题与按钮被压成竖排 */
+@media (max-width: 720px) {
+  .jrn__steps, .jrn__stages { grid-template-columns: minmax(0, 1fr); }
+  .jrn__guide { align-items: flex-start; }
+  .jrn__what--one { white-space: normal; overflow: visible; text-overflow: clip; }
+}
 </style>

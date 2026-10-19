@@ -232,4 +232,39 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(wrap.find('[data-testid="approval-spotcheck-verdict"]').classes()).toContain('risk-badge--low')
     expect(wrap.find('[data-testid="approval-spotcheck-resolved-row"]').text()).toContain('qa-lead')
   })
+
+  it('G5 发布过滤：只留发布/准出评审，命令与普通评审不混入', async () => {
+    api.__setState({
+      pending: {
+        items: [
+          pendingItems[0],
+          pendingItems[1],
+          { id: 'review:rel-1', kind: 'review', title: 'G5 发布准出检查', detail: 'release gate', taskId: 't_rel', createdAt: 1759000300000 },
+        ],
+      },
+      history: {
+        entries: [
+          historyEntries[0],
+          { id: 'review:rel-0', ts: 1759000400000, actor: 'qa-lead', targetKind: 'review', targetId: 'rel-0', targetTitle: 'G5 发布准出检查', decision: 'approve', note: '准出' },
+        ],
+      },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true, filter: 'release' } })
+    await flushPromises()
+    expect(wrap.find('[data-testid="approval-pending-count"]').text()).toContain('1')
+    expect(wrap.text()).toContain('G5 发布准出检查')
+    expect(wrap.text()).not.toContain('会话 A')
+    expect(wrap.text()).not.toContain('评审 · t_100')
+    expect(wrap.find('[data-testid="approval-row-command"]').exists()).toBe(false)
+    expect(wrap.find('[data-testid="approval-spotcheck"]').exists()).toBe(false)
+  })
+
+  it('G5 发布过滤空态：说明只收发布类并给全部审批入口', async () => {
+    api.__setState({ pending: { items: [pendingItems[0]] }, history: { entries: [] } })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true, filter: 'release' } })
+    await flushPromises()
+    expect(wrap.find('[data-testid="approval-empty"]').text()).toContain('当前没有发布准出类审批')
+    await wrap.find('[data-testid="approval-open-all"]').trigger('click')
+    expect(wrap.emitted('open-all')).toBeTruthy()
+  })
 })

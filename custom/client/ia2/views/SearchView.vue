@@ -38,10 +38,10 @@ const drawerOpen = ref(false)
 
 const q = ref(String(route.query.q ?? ''))
 const type = ref<SearchType>(normalizeType(route.query.type))
-const workspaceFilter = ref('')
-const statusFilter = ref('')
-const assigneeFilter = ref('')
-const timeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
+const workspaceFilter = ref(String(route.query.ws ?? ''))
+const statusFilter = ref(String(route.query.status ?? ''))
+const assigneeFilter = ref(String(route.query.assignee ?? ''))
+const timeFilter = ref<'all' | '24h' | '7d' | '30d'>(normalizeTime(route.query.time))
 const searchInput = ref<HTMLInputElement | null>(null)
 
 const docs = ref<GovernanceDocMeta[]>([])
@@ -54,8 +54,36 @@ function normalizeType(raw: unknown): SearchType {
     : 'all'
 }
 
-watch(() => route.query.q, (v) => { q.value = String(v ?? '') })
+function normalizeTime(raw: unknown): 'all' | '24h' | '7d' | '30d' {
+  const v = String(raw ?? '')
+  return (['24h', '7d', '30d'] as const).includes(v as '24h' | '7d' | '30d')
+    ? v as '24h' | '7d' | '30d'
+    : 'all'
+}
+
+/**
+ * 筛选状态入 URL（可刷新/分享/后退恢复）；检索词不入 URL——
+ * 查询词可能含内部对象名，避免进入浏览器历史与日志。
+ */
+watch([type, workspaceFilter, statusFilter, assigneeFilter, timeFilter], () => {
+  const next: Record<string, string> = { ...route.query as Record<string, string> }
+  const set = (key: string, value: string, fallback = '') => {
+    if (value && value !== fallback) next[key] = value
+    else delete next[key]
+  }
+  set('type', type.value, 'all')
+  set('ws', workspaceFilter.value)
+  set('status', statusFilter.value)
+  set('assignee', assigneeFilter.value)
+  set('time', timeFilter.value, 'all')
+  void router.replace({ query: next })
+})
+
 watch(() => route.query.type, (v) => { type.value = normalizeType(v) })
+watch(() => route.query.time, (v) => { timeFilter.value = normalizeTime(v) })
+watch(() => route.query.ws, (v) => { workspaceFilter.value = String(v ?? '') })
+watch(() => route.query.status, (v) => { statusFilter.value = String(v ?? '') })
+watch(() => route.query.assignee, (v) => { assigneeFilter.value = String(v ?? '') })
 
 onMounted(() => {
   searchInput.value?.focus()

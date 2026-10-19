@@ -20,8 +20,6 @@ const domains = computed(() =>
   })).filter(d => d.entries.length > 0),
 )
 
-const SOURCE_LABEL = { native: '原生', legacy: '旧族' } as const
-
 function go(name: string): void {
   void router.push({ name })
 }
@@ -33,7 +31,7 @@ function go(name: string): void {
   <TabIntroBanner tab="gov-settings" />
     <header class="gs__head">
       <h2 class="gs__title">系统设置</h2>
-      <span class="gs__sub">按治理域分区（{{ domains.length }} 区）——同域同区合并呈现，来源只标注不分隔；点入各设置页编辑。</span>
+      <span class="gs__sub">按治理域分区（{{ domains.length }} 区）——同域同区合并呈现；点入各设置页编辑。</span>
       <button class="gs__back" type="button" data-testid="gs-back" @click="void router.push({ name: 'ia2.journey' })">返回流程总览</button>
     </header>
 
@@ -51,7 +49,6 @@ function go(name: string): void {
         <li v-for="e in d.entries" :key="e.name" class="gs__entry" :data-testid="`gs-entry-${e.name}`">
           <button class="gs__entry-btn" type="button" :class="{ 'gs__entry-btn--active': route.name === e.name }" @click="go(e.name)">
             <span class="gs__entry-label">{{ e.label }}</span>
-            <span class="gs__entry-source" :class="`gs__entry-source--${e.source}`" :data-testid="`gs-source-${e.name}`">{{ SOURCE_LABEL[e.source] }}</span>
             <span v-if="e.superAdmin" class="gs__entry-admin" title="仅管理员可见">管</span>
           </button>
         </li>

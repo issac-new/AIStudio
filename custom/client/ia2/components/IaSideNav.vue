@@ -110,26 +110,35 @@ const topicItems = computed(() => ISLAND_NAVS
 
 const settingsActive = computed(() => routeName.value === 'ia2.govSettings' || routeName.value === 'ia2.modelProviders')
 
-// ── 折叠：手动优先；窄屏在用户未手动设置过时自动收起 ──
+// ── 折叠：手动优先；窄屏自动收起；≤720px 强制紧凑（用户历史展开偏好不覆盖） ──
 const stored = readSetting<boolean>('sidenav.collapsed', false)
 const userSet = ref(stored.layer !== 'default')
 const collapsed = ref(stored.value)
 const autoCompact = ref(false)
-const effectiveCollapsed = computed(() => collapsed.value || (autoCompact.value && !userSet.value))
+const hardCompact = ref(false)
+const effectiveCollapsed = computed(() => hardCompact.value || collapsed.value || (autoCompact.value && !userSet.value))
 
 watch(collapsed, (v) => {
   if (userSet.value) writeSetting('user', 'sidenav.collapsed', v)
 })
 
 let mq: MediaQueryList | null = null
+let mqNarrow: MediaQueryList | null = null
 function onMqChange(e: MediaQueryListEvent): void { autoCompact.value = e.matches }
+function onNarrowChange(e: MediaQueryListEvent): void { hardCompact.value = e.matches }
 onMounted(() => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
   mq = window.matchMedia('(max-width: 1180px)')
   autoCompact.value = mq.matches
   mq.addEventListener?.('change', onMqChange)
+  mqNarrow = window.matchMedia('(max-width: 720px)')
+  hardCompact.value = mqNarrow.matches
+  mqNarrow.addEventListener?.('change', onNarrowChange)
 })
-onUnmounted(() => { mq?.removeEventListener?.('change', onMqChange) })
+onUnmounted(() => {
+  mq?.removeEventListener?.('change', onMqChange)
+  mqNarrow?.removeEventListener?.('change', onNarrowChange)
+})
 
 function toggleCollapsed(): void {
   userSet.value = true
@@ -156,8 +165,9 @@ function go(name: string): void {
         type="button"
         class="isn__collapse"
         data-testid="ia-side-nav-collapse"
-        :aria-label="effectiveCollapsed ? '展开侧栏' : '收起侧栏'"
-        :title="effectiveCollapsed ? '展开侧栏' : '收起侧栏'"
+        :disabled="hardCompact"
+        :aria-label="hardCompact ? '窄屏下固定紧凑导航' : effectiveCollapsed ? '展开侧栏' : '收起侧栏'"
+        :title="hardCompact ? '窄屏下固定紧凑导航' : effectiveCollapsed ? '展开侧栏' : '收起侧栏'"
         @click="toggleCollapsed"
       >{{ effectiveCollapsed ? '›' : '‹' }}</button>
     </div>
@@ -290,6 +300,7 @@ function go(name: string): void {
   line-height: 1;
 }
 .isn__collapse:hover { color: var(--text-primary); background: var(--bg-secondary); }
+.isn__collapse:disabled { opacity: .55; cursor: default; }
 .isn--collapsed .isn__collapse {
   display: inline-flex;
   align-items: center;

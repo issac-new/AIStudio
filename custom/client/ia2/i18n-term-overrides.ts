@@ -40,6 +40,7 @@ export const IA2_TERM_OVERRIDES_ZH = {
       gateReview: '待审评审',
       recentVerdicts: '最近判定',
       noVerdicts: '暂无判定记录',
+      scopeNote: '统计全部看板任务，不限当前运行；未全部完成时不会显示 100%。',
     },
     wm: { mergeBack: '合并回工作台' },
     nav: STAGE_NAV_ZH,
@@ -51,6 +52,7 @@ export const IA2_TERM_OVERRIDES_EN = {
   approvals: { choice: { reject: 'Reject' } },
   ia2: {
     overview: { swarmKanbanLabel: 'Kanban', swarmKanbanHint: 'Open the Kanban board (all tasks)' },
+    overviewDash: { scopeNote: 'Counts all board tasks, not the selected run; 100% only when every task is complete.' },
     nav: STAGE_NAV_EN,
   },
 } as const
