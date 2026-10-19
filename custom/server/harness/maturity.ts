@@ -128,6 +128,24 @@ export function assessMaturity(inputs: MaturityInputs): MaturityReport {
       source: '（暂无在档恢复时间数据源——kanban 无 blocked 起止史、dispatch 无失败恢复留痕）',
       note: 'unavailable：现有事实源不含故障恢复时间，不造数（报告批评的口径缺口如实呈现）',
     },
+    // #10 任务级自治度（企业 Agent 框架完善）：组织级口径——窗口内无人工介入完成率。
+    // 数据源=既有 tasksDoneInWindow（done 任务数）× interventionsCount（干预事件数），
+    // 全部 fail-soft；缺数标 unavailable 不造数。AI Task Share 的自治度维（自治完成占比）。
+    {
+      key: 'task-autonomy-rate', value: (() => {
+        if (tasksDoneInWindow == null || interventionsCount == null || tasksDoneInWindow === 0) return null
+        return Math.max(0, Math.min(1, 1 - interventionsCount / tasksDoneInWindow))
+      })(), unit: 'ratio',
+      source: '1 − 人工干预事件数 ÷ done 任务数（近似：干预按事件非按任务精确归因，待 task_events actor 标注后精确化）',
+      note: tasksDoneInWindow == null || interventionsCount == null
+        ? 'done 任务或干预数据缺席，无法计算（不造数）'
+        : '组织级近似口径：干预未按 taskId 精确归因，读数偏乐观（如 1 次干预覆盖多任务）',
+    },
+    {
+      key: 'interventions-per-task', value: div(interventionsCount, tasksDoneInWindow), unit: 'events/task',
+      source: '人工干预事件数 ÷ done 任务数（自治度反向读数：越低越自治）',
+      note: div(interventionsCount, tasksDoneInWindow) == null ? '干预或 done 任务数据缺席，无法计算' : undefined,
+    },
   ]
 
   const item = (title: string, passed: boolean | null, evidence: string, metric?: string): MaturityItem =>

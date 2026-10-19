@@ -161,8 +161,22 @@ describe('处置单机械关闭', () => {
     expect(goodVerify.body.remediation.status).toBe('closed')
     expect(goodVerify.body.remediation.rerunCount).toBe(2)
 
+    // 自改进飞轮（#4）：关闭即自动回流回归样本库（默认开），幂等键 re-<run尾6>-<taskId>
+    expect(goodVerify.body.autoReflow).toBeDefined()
+    expect(goodVerify.body.autoReflow.ok).toBe(true)
+    expect(goodVerify.body.autoReflow.created).toBe(true)
+    // 回流幂等键=re-<复评run尾6>-<taskId>（reflow 用 rerun.id 而非 base.id）
+    const reflowedTaskId = goodVerify.body.autoReflow.taskId
+    const regSets = await get('/api/hermes/eval/sets')
+    const regLibMeta = regSets.body.sets.find((s: any) => s.name === '回归样本库')
+    expect(regLibMeta).toBeDefined()
+    const regLib = await get(`/api/hermes/eval/sets/${regLibMeta.id}`)
+    expect(regLib.body.set.tasks.some((t: any) => t.id === reflowedTaskId)).toBe(true)
+
     const again = await post(`/api/hermes/eval/remediations/${id}/verify`, { rerunRunId: goodRerun.body.run.id })
     expect(again.body.alreadyClosed).toBe(true)
+    // 已关闭再 verify 不重复回流
+    expect(again.body.autoReflow).toBeUndefined()
   })
 
   it('已通过样本不建单；跨版本复评不能关闭；密封集拒绝建单', async () => {

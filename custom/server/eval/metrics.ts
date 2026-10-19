@@ -126,8 +126,13 @@ export function byExceptionOf(set: EvalSet, run: EvalRun): RunAggregates['byExce
  */
 export function processMetricsOf(set: EvalSet, run: EvalRun): RunAggregates['processMetrics'] {
   const taskById = new Map(set.tasks.map((t) => [t.id, t]))
+  // #7 过程评估覆盖露出：分母=声明了期望工具序列的任务数（declaredCount），
+  // 分子=既有期望序列又有实际轨迹证据、真正参与对比的 attempt 数。此前未声明期望
+  // 的样本静默不计入（"未测"≠0 分），报告里看不到漏测比例——现露出 coverage 并告警。
+  const declaredCount = set.tasks.filter((t) => (t.expectedToolCalls?.length ?? 0) > 0).length
   const accuracies: number[] = []
   const detours: number[] = []
+  const comparedTaskIds = new Set<string>()
   for (const attempt of run.attempts) {
     const task = taskById.get(attempt.taskId)
     if (!task?.expectedToolCalls?.length) continue
@@ -136,13 +141,19 @@ export function processMetricsOf(set: EvalSet, run: EvalRun): RunAggregates['pro
     const actual = attempt.toolCalls.map((c) => c.name)
     accuracies.push(toolHeadAccuracyOf(expected, actual))
     detours.push(trajectoryMatchOf(expected, actual))
+    comparedTaskIds.add(attempt.taskId)
   }
+  // 与旧口径一致：无任何对比样本（缺证据或全未声明期望）时仍返回 undefined，
+  // 只在确有对比样本时补 coverage 字段（#7 露出漏测比例，不改变 undefined 语义）。
   if (accuracies.length === 0) return undefined
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
   return {
     toolHeadAccuracy: mean(accuracies),
     trajectoryMatchScore: mean(detours),
     attemptsCompared: accuracies.length,
+    declaredCount,
+    // 覆盖度按任务级：至少一个 attempt 被实际对比到的声明任务 / 全部声明任务。
+    coverage: declaredCount ? comparedTaskIds.size / declaredCount : 0,
   }
 }
 

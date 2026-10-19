@@ -225,7 +225,27 @@ function diskUsageProbe(): Array<{ mount: string; usedPct: number }> {
   } catch { return [] }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, getDiskUsage: diskUsageProbe, ...deps })
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, getDiskUsage: diskUsageProbe,
+  // #9 决策影子层：默认把催办决策点的「建议动作+置信度+特征」落 decisiongraph
+  // （category=shadow-nudge）。fail-soft 动态 require：decisiongraph 缺席不炸、不阻断真值链；
+  // CLUSTER_INSPECTOR_SHADOW_JUDGE=off 可关（缺省 on，仅记录不接管）。
+  recordShadow: (process.env.CLUSTER_INSPECTOR_SHADOW_JUDGE === 'off') ? undefined : (input) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { recordDecision } = require('../decisiongraph/semantica-client') as typeof import('../decisiongraph/semantica-client')
+      void recordDecision({
+        category: 'shadow-nudge',
+        scenario: `[${input.detector}] profile=${input.profile} rule=${input.ruleAction}`,
+        reasoning: `silence=${input.silenceMs}ms nudges=${input.nudgeCount} degraded=${input.degraded} tripped=${input.tripped} → suggest=${input.suggestedAction}`,
+        outcome: input.suggestedAction,
+        confidence: input.confidence,
+        decisionMaker: 'shadow-judge',
+        metadata: { ...input },
+        linkPrecedent: false,
+      })
+    } catch { /* fail-soft：影子层绝不阻断催办真值链 */ }
+  },
+  ...deps })
 
   router.get('/snapshot', (ctx) => {
     const last = insp.lastRun

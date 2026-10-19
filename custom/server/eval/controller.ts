@@ -426,6 +426,7 @@ router.post('/remediations/:id/verify', async (ctx) => {
     closed: result.closed,
     alreadyClosed: result.alreadyClosed,
     remediation: result.remediation,
+    ...(result.autoReflow ? { autoReflow: result.autoReflow } : {}),
   }
 })
 
