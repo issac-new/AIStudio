@@ -91,6 +91,8 @@ export function tabForLegacyRoute(name: string): { stage: StageNo; tab: string }
 /** 当前阶段页的合法页签键（未知值回退默认签；供 StageShell 与守门测试用） */
 export function resolveTab(stage: StageNo, raw: unknown): string {
   const key = String(Array.isArray(raw) ? raw[0] : raw ?? '')
+  // ②旧深链 ?tab=launch 已无对应页签：回退启动准备，而不是静默落到需求页。
+  if (stage === 2 && key === 'launch') return 'preflight'
   return STAGE_TABS[stage].some(t => t.key === key) ? key : DEFAULT_TAB[stage]
 }
 
