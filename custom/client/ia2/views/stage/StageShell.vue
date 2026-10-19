@@ -33,6 +33,7 @@ import RunSelector from '../sim/RunSelector.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
 import { useStageProgress } from '../../composables/useStageProgress'
+import { stageBoardStatuses, stageBoardStatusLabel } from '../../stage-task-filter'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,7 +151,14 @@ const TAB_PROPS: Record<string, Record<string, unknown>> = {
   uat: { onlyUnjudged: true },
   g5: { pollMs: 10000, showHistory: true, hideTitle: true },
 }
-const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
+/** ③④阶段页内嵌看板只显示本阶段在办的卡（映射单一事实源=stage-task-filter.ts）；
+ *  其他阶段页签不传 statuses，行为与全量看板一致。 */
+const boardStatuses = computed(() => currentTab.value.component === 'board' ? stageBoardStatuses(props.stage) : [])
+const boardStatusLabel = computed(() => stageBoardStatusLabel(props.stage, zh.value))
+const currentProps = computed(() => {
+  const base = TAB_PROPS[activeTab.value] ?? {}
+  return boardStatuses.value.length ? { ...base, statuses: boardStatuses.value } : base
+})
 </script>
 
 <template>
@@ -189,7 +197,9 @@ const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
       <!-- P2-9（走查 §四）：阶段页内嵌的是全量看板，与「常用 · 看板」同源；
            这里明确说明并给全量入口，避免用户以为有三份不同的看板。 -->
       <div v-if="currentTab.component === 'board'" class="stg__same-src" data-testid="stg-board-note">
-        <span>{{ zh ? '这里是全量看板，与「常用 · 看板」同源；按阶段看用本页其他页签。' : 'This is the full board (same source as Common · Board); use the stage tabs for a stage view.' }}</span>
+        <span data-testid="stg-board-filter-note">{{ zh
+          ? `本阶段视图：只显示「${boardStatusLabel}」的任务，与「常用 · 看板」同源。`
+          : `Stage view: only ${boardStatusLabel} tasks (same source as Common · Board).` }}</span>
         <button type="button" data-testid="stg-open-full-board" @click="router.push({ name: 'ia2.board' })">{{ zh ? '在全量看板打开 →' : 'Open full board →' }}</button>
       </div>
       <component

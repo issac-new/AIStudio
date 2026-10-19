@@ -1,7 +1,8 @@
 <script setup lang="ts">
 
 // UX 裁决 E（2026-10-03）：?new=1 直达链接打开建卡表单——TasksView 传入后首列展开建卡器。
-const props = defineProps<{ autoOpenCreate?: boolean }>()
+// statuses：视图级状态过滤（阶段页用；空=全量）。不改 store，避免污染常用看板。
+const props = defineProps<{ autoOpenCreate?: boolean; statuses?: readonly string[] }>()
 import { ref, computed, onMounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -10,6 +11,7 @@ import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 import { getStoredUsername } from '@/api/client'
 import { needsMyAction } from '../utils/raci'
 import { taskMatchesQuery } from '../utils/task-search'
+import { filterTasksByStatuses } from '../utils/task-status-filter'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import KanbanBoard from '@/custom/kanban/components/KanbanBoard.vue'
 import KanbanToolbar from '@/custom/kanban/components/KanbanToolbar.vue'
@@ -110,6 +112,9 @@ const filteredTasks = computed(() => {
   return [...tasks].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
 })
 
+/** 可见任务=既有过滤链（状态/指派人/我的待办/租户/归档/搜索）∩ 视图级阶段状态。 */
+const viewTasks = computed(() => filterTasksByStatuses(filteredTasks.value, props.statuses))
+
 const selectedIds = computed(() => store.selectedIds)
 
 /** 写操作板定位：先把 store 切到任务所在板（抽屉/诊断/估算等 store 域调用
@@ -160,7 +165,7 @@ function handleTaskClick(taskId: string, multiSelect: boolean, rangeSelect: bool
   }
   if (rangeSelect) {
     // Shift+click: select range from last selected to clicked task
-    const ids = filteredTasks.value.map(t => t.id)
+    const ids = viewTasks.value.map(t => t.id)
     const clickedIndex = ids.indexOf(taskId)
     if (clickedIndex === -1) return
 
@@ -309,7 +314,7 @@ function handleBulkClear() {
 }
 
 function handleBulkSelectAllVisible() {
-  for (const task of filteredTasks.value) {
+  for (const task of viewTasks.value) {
     if (!store.selectedIds.has(task.id)) {
       store.selectedIds.add(task.id)
     }
@@ -545,7 +550,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       :mine-only="mineOnly"
       :lane-by-profile="laneByProfile"
       :tenants="tenants"
-      :task-count="filteredTasks.length"
+      :task-count="viewTasks.length"
       :status-filter="store.filterStatus"
       hide-board-select
       @board-change="handleBoardChange"
@@ -575,7 +580,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 
     <KanbanBulkBar
       :selected-count="selectedIds.size"
-      :total-count="filteredTasks.length"
+      :total-count="viewTasks.length"
       :assignees="assigneeNames"
       @clear="handleBulkClear"
       @select-all-visible="handleBulkSelectAllVisible"
@@ -590,17 +595,17 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       @move-to-ready="handleBulkMoveToReady"
     />
 
-    <div class="board-container">
-      <NSpin v-if="store.loading && !filteredTasks.length" size="large" class="page-loading" />
+    <div class="board-container" :data-status-filter="(props.statuses ?? []).join(',')">
+      <NSpin v-if="store.loading && !viewTasks.length" size="large" class="page-loading" />
       <KanbanBoard
         v-else
         :auto-open-create="autoOpenCreate"
-        :tasks="filteredTasks"
+        :tasks="viewTasks"
         :loading="store.loading"
         :selected-ids="selectedIds"
         :include-archived="includeArchived"
         :lane-by-profile="laneByProfile"
-        :parent-tasks="filteredTasks.map(t => ({ id: t.id, title: t.title }))"
+        :parent-tasks="viewTasks.map(t => ({ id: t.id, title: t.title }))"
         @task-click="handleTaskClick"
         @select-all="handleSelectAll"
         @task-drag-start="handleTaskDragStart"
