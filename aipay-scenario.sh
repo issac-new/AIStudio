@@ -732,6 +732,10 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
   gate_review lin "系分执行-AN-CHALI"
   gate_review xiao "系分执行-AN-MP"
   capture_step "anexec_done" "/app/stage/design?tab=analysis"
+  # V8.46 明确排除：skill 过程帧（r18_matrix 要求 gen≥3/invoke≥2）没有产品拍摄位——
+  # 技能治理页只有目录/供给/能力发现，没有「生成/调用过程」界面。如实登记降级，
+  # 不拿同一组页面帧冒充两类过程；技能使用读数走 /api/harness/tool-audit（证据九）。
+  echo "ISSUE|r18-collection-missing|step-13|skill 过程帧采集位未建（V8.46 明确排除：产品无生成/调用过程界面；技能使用读数见 evidence/governance-closure/tool-audit.json）" >> "$EVID_DIR/issues.log"
 
   sset anexec_done 1
 fi
@@ -1941,6 +1945,16 @@ if [ "$(posture)" = "strict" ]; then
     # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
     echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
     note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
+    # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
+    # 与 approved.events 并行留痕——前者可被产品 UI/报告按 run 直读，后者是驱动侧文本账。
+    # 写失败只记单不阻断（台账是证据增强，不改 G5 判据；报告证据九如实呈现缺席）。
+    _rel_tok=$(studio_login 2>/dev/null || true)
+    if [[ -n "$_rel_tok" ]] && studio POST /api/hermes/sim/release-gate "$_rel_tok" \
+         "$(jq -n --arg r "$RUN_ID" --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=导演批准）" '{run:$r,decision:"approve",note:$n}')" >/dev/null 2>&1; then
+      note "[G5] 发布门台账已落（evidence/release-gate.jsonl：approve）"
+    else
+      issue_once release-gate-ledger step20 "发布门台账写入失败（POST /api/hermes/sim/release-gate）——报告证据九按缺席呈现"
+    fi
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
@@ -2246,10 +2260,23 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     # 逐条 AC 判词（独立审计意见 #3）：验收书按证据行逐条落判词，有条件/不通过
     # 不得写成"全部通过"——放行权归需求提出方 bella（人），条件闭环后另行验收。
     UAT_ALL_PASS=1; UAT_VERDICTS=""
+    _uat_tok=$(studio_login 2>/dev/null || true)
     for ac in $AC_LIST; do
       v=$(uat_ac_verdict "$UAT_BODY" "$ac")
       UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
       [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
+      # V8.46 UAT 判定台账（append-only）：产品端点 POST /api/hermes/sim/uat-verdict。
+      # 三态映射=通过→pass／有条件通过→conditional／不通过|未见→reject；写失败记单不阻断。
+      if [[ -n "$_uat_tok" ]]; then
+        case "$v" in
+          通过) _uv=pass ;;
+          有条件通过) _uv=conditional ;;
+          *) _uv=reject ;;
+        esac
+        studio POST /api/hermes/sim/uat-verdict "$_uat_tok" \
+          "$(jq -n --arg r "$RUN_ID" --arg ac "$ac" --arg v "$_uv" --arg n "UAT 逐条判词：${v}" '{run:$r,ac:$ac,verdict:$v,note:$n}')" >/dev/null 2>&1 \
+          || issue_once uat-verdict-ledger step21 "UAT 判定台账写入失败（${ac} → ${_uv}；POST /api/hermes/sim/uat-verdict）"
+      fi
     done
     ACC="$DIRECTOR_CLONE/docs/acceptance/${RFD_ID}-acceptance.md"
     mkdir -p "$(dirname "$ACC")"
@@ -2478,7 +2505,9 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   sset audit_done "$(date +%s)"
   capture_step "deliver_gate" "/app/stage/accept?tab=cases"   # 步23 R29 delivery 面板灯
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 24 --text "独立审计完成（工件见 evidence）" --ev "state=audit_done" >/dev/null 2>&1 || true
-  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 23 --title "delivery 案例面板门禁灯" --entry "/app/cases → 交付案例面板" --frames deliver_gate-op1-before.png deliver_gate-op1-after.png >/dev/null 2>&1 || true
+  # V8.46 修正：R29/P15 要求的是 delivery 门禁灯帧（payload['delivery']），run21 错登成 op
+  # 导致矩阵步 23 恒缺——按 r18_matrix.py DELIVERY_STEPS 的读法登记。
+  python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" deliver --step 23 --frame deliver_gate-op1-before.png deliver_gate-op1-after.png --note "Delivery Cases 面板六闸门禁灯（审计独立见证位）" >/dev/null 2>&1 || true
 fi
 
 # ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
@@ -2502,6 +2531,19 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   # （/api/hermes/virtual-pl?days=30 与 /api/incident/sessions/:id/autonomy 原文；
   #  收益面无数据源时产品侧如实声明不编造——透传即合规）
   GOV_TOK=$(studio_login)
+  # V8.46 治理闭环快照（评审治理/观测告警/改进实验/发布门与 UAT 台账）：
+  # 一次落 evidence/governance-closure/summary.json + 各端点原文；失败只记单，
+  # 报告证据九按缺席如实呈现（不把端点没起伪装成闭环通过）。
+  bash "$SCRIPT_DIR/mux/mx-closure-snapshot.sh" --run "$RUN_ID" \
+    --out "$EVID_DIR/governance-closure" --token "${GOV_TOK:-}" \
+    --eval-run "$(sget eval_run_id)" >/dev/null 2>&1 \
+    || echo "ISSUE|closure-snapshot|step24|治理闭环快照脚本失败（evidence/governance-closure/ 缺席）" >> "$EVID_DIR/issues.log"
+  _closure_sum="$EVID_DIR/governance-closure/summary.json"
+  if [[ -f "$_closure_sum" ]]; then
+    _closure_fail=$(jq -r '.failedCount // 0' "$_closure_sum" 2>/dev/null || echo 0)
+    [[ "${_closure_fail:-0}" -gt 0 ]] && echo "ISSUE|closure-endpoint-gap|step24|治理闭环端点 ${_closure_fail} 项不可用（见 governance-closure/summary.json）" >> "$EVID_DIR/issues.log"
+    note "[G6] 治理闭环快照已落（ok=$(jq -r '.ok // 0' "$_closure_sum" 2>/dev/null || echo 0)，失败 ${_closure_fail:-0} 项如实呈现）"
+  fi
   if GOV_VP=$(studio GET "/api/hermes/virtual-pl?days=30" "${GOV_TOK:-}"); then
     printf '%s\n' "$GOV_VP" > "$EVID_DIR/virtual-pl.txt"
     note "[G6] AI 虚拟损益表已导出（evidence/virtual-pl.txt）"
@@ -2794,6 +2836,10 @@ PAYSPECS
   # PART1 未注册时合并器会给出注册指引（按轮人工正本，禁旧轮顶包）。
   python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册时先编写注册）"
+  # V8.46 合并后复跑审计（run21 实证：R15 载体 final-report.html 在首次审计时必然未生成，
+  # 只能 WARN；合并后复跑让 R15 成为真断言。首次审计保留=报告生成后早失败，防白等合并）。
+  python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
+    || fail "报告审计（合并后复跑）FAIL（R15 第 0 章/证据九/评测闭环须真断言）"
   sset report_done "$(date +%s)"
   capture_step "report_view" "/app/sim"   # 步26 承载面
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）

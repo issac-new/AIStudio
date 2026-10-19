@@ -57,6 +57,10 @@ test-report.md 增 §8「评测与运行时指标」（原机械判据节顺延�
 
 test-report.md §8 追加七行：指标治理（接线/未接线/装饰候选）、评估器三角（严格 vs 保守反事实、误杀/假通过候选）、四层指标金字塔（模型/应用/Agent/线上）、能力维度覆盖（n/7 + 未标注）、评测集锚点（revision/setHash/contentHash/漂移）、安全红队（逃逸率/良性误报/S1 未接线声明）、线上证据回填（QPS/分档）；§9 判据扩到 15 条（11-15 为评测治理面）。数字单一来源=evidence/evals/eval-summary.json（`mx-eval-summary.py` 机械判定），禁手抄。同步位新增：`mux/mx-eval-lib.sh`（接线）、`mux/mx-eval-summary.py`（判据）、`mux/mx-lib.sh`（EVAL_STORE/REDTEAM_STORE/HELDOUT_STORE/EVAL_TRACE_DIR 隔离）、`aipay-scenario.sh`（G4-E `eval_flow`）、`mux/mx-report-gen.py`（证据八）、`mux/final-report-merge.py`（PART1 评测行）、prelaunch ㉓；守门测试同 `eval-metrics-template-sync.test.ts` 与新增 `eval-fullflow-integration.test.ts`。
 
+## 治理闭环扩展（V8.46，2026-10-19）
+
+test-report.md §8 增评测处置链行、§9 判据 16；release-plan.md §7 增发布门台账锚、判据 8；acceptance.md 增 UAT 判定台账锚与判据 5；retrospective.md 增治理闭环读数表与判据 12；audit-opinion.md 增治理闭环抽查行与判据 6。数字单一来源=evidence/governance-closure/summary.json + evidence/{release-gate,uat-verdicts}.jsonl + evidence/evals/remediations.json；采集器=`mux/mx-closure-snapshot.sh`（驱动步 24 调用），报告消费=`mx-report-gen.py` 证据九，审计消费=`mx-report-audit.py` 查 15/16。端点失败按 summary.failed 如实呈现，禁把「端点没起」写成「闭环通过」。同步位：模板五张、驱动步 13/20/21/24/26、生成器、审计器、prelaunch ㉔-㉚；守门测试 `tests/v846-governance-closure.test.ts`。
+
 ## 后续批量项（挂账，列清单待批）
 
 - §2.7 其余行模板候选：analysis.md（系分稿）、app-registry.md、org.md、governance-report.md、completeness-check.md。编码行（步 18）交付物=分支+执行输出原文，无可模板化结构，不立模板（原文不得修饰，模板化反而诱导粉饰）。

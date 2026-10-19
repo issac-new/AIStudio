@@ -2574,6 +2574,111 @@ def eval_summary_html():
 """
 
 
+def closure_evidence_html():
+    """治理结果证据（V8.46，2026-10-19）：读 evidence/governance-closure/ 与评测处置链。
+
+    七面：评审治理 / 观测信号 / 基线漂移告警 / 改进实验 / 发布门台账 / UAT 判定台账 /
+    评测处置链。缺席逐面如实 ⬜，不造数；不改变六道关卡判据（§5.3），只作第 9 章
+    治理证据第九面。数据源=mx-closure-snapshot.sh 搬运的产品端点原文 + 驱动步 20/21
+    写入的 append-only 台账。
+    """
+    d = EVID / 'governance-closure'
+    sp = d / 'summary.json'
+    if not sp.exists():
+        return ('<p class="stat-note">本轮未采集治理结果快照（evidence/governance-closure/summary.json 缺席）'
+                '——评审治理/观测告警/改进实验/发布门与 UAT 台账记为缺口，不编造。</p>')
+
+    def load(name, base=None):
+        p = (base or d) / name
+        if not p.exists():
+            return None
+        try:
+            return json.loads(p.read_text(encoding='utf-8', errors='replace'))
+        except Exception:
+            return None
+
+    def g(dct, *keys, default='—'):
+        cur = dct
+        for k in keys:
+            if not isinstance(cur, dict):
+                return default
+            cur = cur.get(k)
+        return default if cur is None else cur
+
+    def pct(v):
+        try:
+            return f'{float(v) * 100:.1f}%'
+        except Exception:
+            return '—'
+
+    summary = load('summary.json') or {}
+    obs = load('obs-signals.json') or {}
+    alerts = load('obs-alerts.json') or {}
+    wb = load('workbench-overview.json') or {}
+    rg = load('release-gate.json') or {}
+    uv = load('uat-verdicts.json') or {}
+    rem = load('remediations.json', EVID / 'evals') or {}
+    failed = summary.get('failed') or []
+    alert_rows = alerts.get('alerts') or []
+    skipped_rows = alerts.get('skipped') or []
+    alert_kinds = '、'.join(str(a.get('kind')) for a in alert_rows if isinstance(a, dict)) or '无'
+    uv_recs = uv.get('records') or []
+    uv_counts = {'pass': 0, 'conditional': 0, 'reject': 0}
+    for r in uv_recs:
+        if isinstance(r, dict) and r.get('verdict') in uv_counts:
+            uv_counts[r['verdict']] += 1
+    totals = obs.get('totals') or {}
+    counts = wb.get('counts') or {}
+    metrics = (load('reviewgov-metrics.json') or {}).get('metrics') or {}
+    rg_recs = rg.get('records') or []
+    rows = [
+        ('快照采集', f"端点成功 {summary.get('ok', '—')} · 失败 {summary.get('failedCount', '—')}"
+                    + (f"（{('、'.join(failed))}）" if failed else ''),
+         'mx-closure-snapshot.sh；失败逐项如实呈现'),
+        ('观测信号', f"会话 {g(obs, 'totals', 'sessions')} · LLM 调用 {g(totals, 'llmCalls')} · "
+                    f"错误 {g(totals, 'llmErrors')} · 429 {g(totals, 'rateLimit429')} · "
+                    f"工具失败率 {pct(totals.get('toolFailureRate'))} · TTFT p95 {g(totals, 'ttftMs', 'p95')}ms · "
+                    f"缓存命中 {pct(totals.get('cacheHitRate'))}",
+         '/api/harness/obs-signals（run-trace v1.1 聚合）'),
+        ('基线漂移告警', f"告警 {len(alert_rows)} 条（{alert_kinds}）· 基线不足/无数据跳过 {len(skipped_rows)} 项",
+         '/api/harness/obs-alerts；四类=成本/延迟/错误率/质量'),
+        ('评审治理', f"案例 {g(metrics, 'cases')} · 活跃 {g(metrics, 'active')} · 已合 {g(metrics, 'merged')} · "
+                    f"首轮通过 {pct(metrics.get('firstRoundPassRate'))} · 轮次均值 {g(metrics, 'meanRounds')} · "
+                    f"人工批准中位 {g(metrics, 'humanApprovalsMedian')}",
+         '/api/review/gov/metrics；审批绑定 head commit，Agent 审批不计名额'),
+        ('改进实验', f"面 {g(counts, 'surfaces')} · 提案 {g(counts, 'proposals')}（进行中 {g(counts, 'openProposals')}）· "
+                    f"冠军 {g(counts, 'champions')} · 经验 {g(counts, 'experiences')}（已采纳 {g(counts, 'adoptedExperiences')}）· "
+                    f"探测成本 ${g(wb, 'budget', 'observedUsd')}/${g(wb, 'budget', 'capUsd')}",
+         '/api/harness/workbench/overview；探测证据只来自 Eval Studio 真实运行'),
+        ('发布门台账', f"当前判定 {g(rg, 'decision')} · 记录 {len(rg_recs)} 条（append-only）",
+         'evidence/release-gate.jsonl + /api/hermes/sim/release-gate'),
+        ('UAT 判定台账', f"记录 {len(uv_recs)} 条 · 通过 {uv_counts['pass']} / 有条件 {uv_counts['conditional']} / 不通过 {uv_counts['reject']}",
+         'evidence/uat-verdicts.jsonl + /api/hermes/sim/uat-verdicts'),
+        ('评测处置链', f"失败 {g(rem, 'failed')} · 已关 {g(rem, 'closed')} · 未关 {g(rem, 'open')}"
+                    + (f" · 同卷复评 {g(rem, 'rerunRunId')}" if rem.get('rerunRunId') else ''),
+         'evidence/evals/remediations.json；失败→处置单→复评→机械关闭'),
+    ]
+    body = ''.join(
+        f'<tr><td>{H.escape(name)}</td><td>{H.escape(str(reading))}</td><td>{H.escape(meaning)}</td></tr>'
+        for name, reading, meaning in rows
+    )
+    color = '#15803d' if not failed else '#b45309'
+    return f"""
+  <h3 style="font-size:13px;margin:14px 0 6px">证据九：治理结果可反查（V8.46）</h3>
+  <div style="margin:8px 0;padding:10px 14px;background:var(--bg);border-radius:8px;border-left:4px solid {color}">
+    <b style="color:{color}">治理快照：{summary.get('ok', '—')} 项可用 / {summary.get('failedCount', '—')} 项缺口</b>
+    <div class="stat-note" style="margin-top:4px">判据源=evidence/governance-closure/summary.json + 两份 append-only 台账；端点失败按缺口呈现，不冒充全部通过。</div>
+  </div>
+  <div class="govgrid">
+    <table>
+      <tr><th>证据面</th><th>本轮实测</th><th>口径</th></tr>
+      {body}
+    </table>
+  </div>
+  <p class="stat-note">评审治理、观测告警、改进实验三项为本轮治理能力读数，不改变 G1-G6 判据；发布门与 UAT 台账是 G5/UAT 的 append-only 证据，报告与产品 UI 同源。</p>
+"""
+
+
 def harness_runtime_html():
     """Harness 运行面证据（V8.42，2026-10-18）：读 evidence/harness/harness-summary.json。
 
@@ -4898,6 +5003,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   {harness_runtime_html()}
 
   {eval_summary_html()}
+
+  {closure_evidence_html()}
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>

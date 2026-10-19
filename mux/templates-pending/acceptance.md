@@ -11,7 +11,7 @@
 ## 1. 验收元信息
 
 - 验收人：bella（需求提出方）。依据：docs/requirements/<RFD-ID>.freeze.md（G1 冻结 AC 清单）
-- 证据锚点：integration/<RFD-ID> 分支 + docs/test/RFD-<id>-test-report.md + 房间 UAT-EVIDENCE 行（行首锚定，防中间态误判）
+- 证据锚点：integration/<RFD-ID> 分支 + docs/test/RFD-<id>-test-report.md + 房间 UAT-EVIDENCE 行（行首锚定，防中间态误判）+ 判定台账 evidence/uat-verdicts.jsonl（逐条 AC，append-only）
 - 验收环境声明：<在什么环境验的（同构预发/本地起服/回放证据），写明；判词独立性=判词者非实现者（方案 V8.20 §5.8）>
 
 ## 2. 逐条判词（AC × 判词 × 证据锚点）
@@ -41,3 +41,4 @@
 | 2 | 每条 AC 带三态判词与证据锚 | 逐行正则 + 锚反查 |
 | 3 | 结论与判词不矛盾 | 存在非「通过」时全文禁现「全部通过」 |
 | 4 | 验收环境声明在场；判词行带「已验证/只读过」方式标注 | 逐行存在性 |
+| 5 | 判定台账逐条 AC 记录在位，且与本文判词一致（V8.46） | `evidence/uat-verdicts.jsonl` 逐条对账 |
