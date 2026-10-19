@@ -81,21 +81,30 @@ eval_ensure_set() {
   return 1
 }
 
-eval_ensure_run() { # <setId> → runId（测试报告证据 × k=2）
-  local set_id="$1" report rf body tmp run_id
+eval_samples_obj() { # → 评测样本对象（taskId→样本列表）；测试报告缺席返回非零
+  # 单一事实源：首次运行与同卷复评共用同一构造，防两处样本漂移（V8.46 处置链）。
+  local report rf
   report=$(eval_report_text)
-  [[ -n "$report" ]] || { issue_once eval-report-missing "$RFD_ID" "测试报告缺失，无法生成评测样本"; return 1; }
+  [[ -n "$report" ]] || return 1
   rf=$(mktemp "${TMPDIR:-/tmp}/mx-eval-report.XXXXXX") || return 1
   printf '%s' "$report" > "$rf"
-  body=$(jq -n --rawfile r "$rf" --arg setId "$set_id" '{
-    setId:$setId, k:2, note:"全流程评测（测试证据机械判分，非 agent 重放）",
-    samples:{
-      t1:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}],
-      t2:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}],
-      t3:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}]
-    }
-  }')
+  jq -n --rawfile r "$rf" '{
+    t1:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}],
+    t2:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}],
+    t3:[{evidence:{transcript:$r}},{evidence:{transcript:$r}}]
+  }'
+  local rc=$?
   rm -f "$rf"
+  return $rc
+}
+
+eval_ensure_run() { # <setId> → runId（测试报告证据 × k=2）
+  local set_id="$1" samples body tmp run_id
+  samples=$(eval_samples_obj) || { issue_once eval-report-missing "$RFD_ID" "测试报告缺失，无法生成评测样本"; return 1; }
+  body=$(jq -n --arg setId "$set_id" --argjson samples "$samples" '{
+    setId:$setId, k:2, note:"全流程评测（测试证据机械判分，非 agent 重放）",
+    samples:$samples
+  }')
   tmp=$(mktemp "${TMPDIR:-/tmp}/mx-eval-run.XXXXXX") || return 1
   if eval_api POST /api/hermes/eval/runs "$body" > "$tmp" && [[ -s "$tmp" ]]; then
     run_id=$(jq -r '.run.id // empty' "$tmp" 2>/dev/null)
@@ -153,7 +162,84 @@ eval_summary() { # 生成摘要并输出判定行；返回 python 的 0/1/2
     --out "$d/eval-summary.json"
 }
 
-eval_flow() { # 步 20 主流程：建集→运行→红队→采集→判定
+eval_live_evidence() { # <runId> [probe-jsonl]：把 mx-load-probe 实测回填到线上证据（B7）
+  # 只回填不采集：探针产物缺席=如实 no_data，不阻断评测子门（V8.45 D9 口径）。
+  local run_id="$1" probe="${2:-${EVID_DIR:-$SIM_ROOT/runs/${RUN_ID:-}/evidence}/load-probe.jsonl}"
+  local d last body tmp
+  d=$(eval_dir); mkdir -p "$d"
+  [[ -s "$probe" ]] || { issue_once eval-live-evidence-missing "$RFD_ID" "线上证据未回填：探针产物缺席（$probe）；QPS/分档如实 no_data"; return 2; }
+  last=$(grep -v '^[[:space:]]*$' "$probe" | tail -1)
+  body=$(printf '%s' "$last" | jq -c '{qpsProbe:{targetQps:.target_qps,achievedQps:.achieved_qps,errorRate:.error_rate,p99ToP50:(if ((.latency_ms.p50 // 0) > 0) then (.latency_ms.p99 / .latency_ms.p50) else 1 end),source:"mx-load-probe"}}' 2>/dev/null) || {
+    issue_once eval-live-evidence-bad "$RFD_ID" "线上证据回填失败：探针档案解析失败（$probe）"
+    return 2
+  }
+  tmp=$(mktemp "${TMPDIR:-/tmp}/mx-eval-live.XXXXXX") || return 2
+  if eval_api POST "/api/hermes/eval/runs/${run_id}/live-evidence" "$body" > "$tmp" 2>/dev/null && [[ -s "$tmp" ]]; then
+    cp "$tmp" "$d/live-evidence.json" 2>/dev/null || true
+    rm -f "$tmp"
+    note "[评测] 线上证据已回填（QPS/响应分档；源=mx-load-probe）"
+    return 0
+  fi
+  rm -f "$tmp"
+  issue_once eval-live-evidence-failed "$RFD_ID" "线上证据回填端点失败（/runs/:id/live-evidence）"
+  return 2
+}
+
+eval_remediation_flow() { # <runId>：失败样本→处置单→同卷复评→机械关闭（V8.46）
+  # 产品侧单一事实源：POST /runs/:id/remediations + POST /remediations/:id/verify。
+  # 本函数只编排，不复制判据；无失败样本=零动作并留档。返回 0=全关/无失败，2=有未关或基础设施缺口。
+  local run_id="$1" d runf failed samples rerun_body tmp rerun_id
+  d=$(eval_dir); runf="$d/eval-run.json"
+  [[ -s "$runf" ]] || { issue_once eval-remediation-missing "$RFD_ID" "评测运行详情缺席，无法建处置单"; return 2; }
+  failed=$(jq -r '(.run.attempts // [])[] | select(.passed == false) | [.taskId, (.sampleIdx // 1 | tostring)] | @tsv' "$runf" 2>/dev/null || true)
+  if [[ -z "$failed" ]]; then
+    printf '{"failed":0,"closed":0,"open":0,"note":"无失败样本"}\n' > "$d/remediations.json"
+    note "[评测] 处置链：无失败样本（零动作）"
+    return 0
+  fi
+  samples=$(eval_samples_obj) || { issue_once eval-remediation-rerun "$RFD_ID" "复评样本构造失败（测试报告缺席）"; return 2; }
+  rerun_body=$(jq -n --argjson samples "$samples" '{samples:$samples}')
+  tmp=$(mktemp "${TMPDIR:-/tmp}/mx-eval-rerun.XXXXXX") || return 2
+  if ! eval_api POST "/api/hermes/eval/runs/${run_id}/rerun" "$rerun_body" > "$tmp" 2>/dev/null || [[ ! -s "$tmp" ]]; then
+    rm -f "$tmp"
+    issue_once eval-remediation-rerun "$RFD_ID" "同卷复评发起失败（/runs/:id/rerun）——处置单不建（避免无复评可关）"
+    return 2
+  fi
+  rerun_id=$(jq -r '.run.id // empty' "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  [[ -n "$rerun_id" ]] || { issue_once eval-remediation-rerun "$RFD_ID" "同卷复评返回无 run.id"; return 2; }
+  sset eval_rerun_run_id "$rerun_id"
+  local total=0 closed=0 open=0 task sample tmp2 rid verify
+  : > "$d/remediations.jsonl"
+  while IFS=$'\t' read -r task sample; do
+    [[ -n "$task" ]] || continue
+    total=$((total+1))
+    tmp2=$(mktemp "${TMPDIR:-/tmp}/mx-eval-rem.XXXXXX") || continue
+    if ! eval_api POST "/api/hermes/eval/runs/${run_id}/remediations" \
+         "$(jq -n --arg t "$task" --argjson s "$sample" '{taskId:$t,sampleIdx:$s,note:"V8.46 自动建单：失败样本进入同卷复评",owner:"driver"}')" > "$tmp2" 2>/dev/null; then
+      rm -f "$tmp2"; open=$((open+1))
+      printf '{"taskId":"%s","sampleIdx":%s,"status":"create_failed"}\n' "$task" "$sample" >> "$d/remediations.jsonl"
+      continue
+    fi
+    rid=$(jq -r '.remediation.id // empty' "$tmp2" 2>/dev/null)
+    rm -f "$tmp2"
+    if [[ -z "$rid" ]]; then open=$((open+1)); continue; fi
+    verify=$(eval_api POST "/api/hermes/eval/remediations/${rid}/verify" "$(jq -n --arg r "$rerun_id" '{rerunRunId:$r}')" 2>/dev/null || true)
+    if printf '%s' "$verify" | jq -e '.closed == true or .alreadyClosed == true' >/dev/null 2>&1; then
+      closed=$((closed+1))
+      printf '%s\n' "$verify" | jq -c --arg t "$task" --argjson s "$sample" '{taskId:$t,sampleIdx:$s,status:"closed",verify:.}' >> "$d/remediations.jsonl"
+    else
+      open=$((open+1))
+      printf '%s\n' "$verify" | jq -c --arg t "$task" --argjson s "$sample" '{taskId:$t,sampleIdx:$s,status:"open",verify:.}' >> "$d/remediations.jsonl" 2>/dev/null \
+        || printf '{"taskId":"%s","sampleIdx":%s,"status":"open"}\n' "$task" "$sample" >> "$d/remediations.jsonl"
+    fi
+  done <<< "$failed"
+  printf '{"failed":%d,"closed":%d,"open":%d,"rerunRunId":"%s"}\n' "$total" "$closed" "$open" "$rerun_id" > "$d/remediations.json"
+  note "[评测] 处置链：失败 ${total} · 已关 ${closed} · 未关 ${open}（同卷复评 ${rerun_id}）"
+  [[ "$open" -eq 0 ]] && return 0 || return 2
+}
+
+eval_flow() { # 步 20 主流程：建集→运行→红队→采集→线上证据→判定→处置
   local set_id run_id rt_id rc out
   set_id=$(eval_ensure_set) || { issue_once eval-set-failed "$RFD_ID" "全流程评测集建立失败"; return 2; }
   sset eval_set_id "$set_id"
@@ -162,9 +248,13 @@ eval_flow() { # 步 20 主流程：建集→运行→红队→采集→判定
   rt_id=$(eval_ensure_redteam || true)
   [[ -n "$rt_id" ]] && sset eval_redteam_run_id "$rt_id"
   eval_collect "$run_id" "${rt_id:-}"
+  eval_live_evidence "$run_id" >/dev/null 2>&1 || true
   rc=0
   out=$(eval_summary) || rc=$?
   note "[评测] ${out}"
+  # 处置链（V8.46）：失败样本→处置单→同卷复评→机械关闭。不改评测判据；
+  # 未关项记问题单并在报告证据九如实呈现（处置链未闭合≠评测门禁改写）。
+  eval_remediation_flow "$run_id" >/dev/null 2>&1 || issue_once eval-remediation-open "$RFD_ID" "处置链存在未关闭项（详见 evidence/evals/remediations.json）"
   case "$rc" in
     0) sset_once g4_eval_pass "$(date +%s)"; return 0 ;;
     2) sset g4_eval_gap 1; issue_once eval-gate-gap "$RFD_ID" "$out"; return 2 ;;

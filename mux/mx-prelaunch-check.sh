@@ -1,10 +1,14 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前二十三项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费））。
+# mx-prelaunch-check.sh — 开跑前三十项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 SR="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
+# overlay 根：worktree 场景由 MX_OVERLAY_ROOT 显式指定（memory: worktree 跑守门须设它）；
+# 缺省=主仓同级，再回落绝对路径（防 worktree 的 ../overlay 解析到 .claude/worktrees/overlay）。
+OV="${MX_OVERLAY_ROOT:-$HERE/../overlay}"
+[ -d "$OV" ] || OV="/Users/cuishi/lab/ncwk/overlay"
 source "$HERE/mux/mx-platform.sh"   # 独立进程：pgrep/sqlite 走平台层（Git Bash 兼容）
 PASS=0; FAIL=0
 ck() { # <名> <命令串> <失败指引>
@@ -125,5 +129,32 @@ ck "㉒ 阶段页签与重定向矩阵在位" "_d='$SR/product-dist'; [ -d \"\$_
 #    评测接线不完整（跑起来会退化成「评测未发起」或污染宿主 home）。
 ck "㉓ 评测接线（隔离库+G4 子门+报告消费+库/汇总器可执行）" "grep -q 'mx-eval-lib.sh' '$HERE/aipay-scenario.sh' && grep -q 'EVAL_STORE=' '$HERE/mux/mx-lib.sh' && grep -q 'eval_flow' '$HERE/aipay-scenario.sh' && grep -q 'eval-summary.json' '$HERE/mux/mx-report-gen.py' && bash -n '$HERE/mux/mx-eval-lib.sh' && python3 -m py_compile '$HERE/mux/mx-eval-summary.py'" "评测接线不完整：驱动未 source mx-eval-lib / mx-lib 未隔离 EVAL_STORE / G4 未挂 eval_flow / 报告未消费 eval-summary / 脚本语法错——按 specs/2026-10-19-fullflow-v845-eval-integration.md 接线"
 
+# ㉔ G6 闸键统一（V8.46）：产品六闸 G6 必须取 retro_done（步 24），不得再取报告步
+#    完成键 report_done。口径分裂会让「复盘已过、报告未出」时 G6 灯不亮。
+ck "㉔ G6 闸键统一（retro_done@步24）" "grep -q \"id: 'G6', key: 'retro_done', step: 24\" '$OV/custom/client/ia2/views/sim/steps-registry.ts' && ! grep -q \"id: 'G6', key: 'report_done'\" '$OV/custom/client/ia2/views/sim/steps-registry.ts'" "改 custom/client/ia2/views/sim/steps-registry.ts：G6 键=retro_done、步=24，并同步 sim-overview-panel 测试"
+
+# ㉕ 治理闭环端点编入生效 dist（V8.46）：评审治理/观测信号/告警/改进实验/发布门/UAT
+#    台账六类端点必须在生效构建里——旧 dist 会让证据九整段缺席。
+ck "㉕ 治理闭环端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'release-gate' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'uat-verdict' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-signals' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-alerts' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'review/gov' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'workbench' \"\$_d\" 2>/dev/null" "生效 dist 不含治理闭环端点：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑"
+
+# ㉖ 闭环快照与证据九接线（V8.46）：采集脚本在位+驱动调用+报告消费+审计查16。
+ck "㉖ 闭环快照与证据九接线" "bash -n '$HERE/mux/mx-closure-snapshot.sh' && grep -q 'mx-closure-snapshot.sh' '$HERE/aipay-scenario.sh' && grep -q '证据九：治理结果可反查' '$HERE/mux/mx-report-gen.py' && grep -q '查 16：治理闭环' '$HERE/mux/mx-report-audit.py'" "闭环快照件不齐：检查 mx-closure-snapshot.sh/驱动步24/报告生成器/审计器四处"
+
+# ㉗ 评测处置链与线上证据接线（V8.46）：失败样本→处置单→同卷复评→机械关闭；
+#    线上证据回填走 /runs/:id/live-evidence（只回填不采集）。
+ck "㉗ 评测处置链与线上证据接线" "grep -q 'eval_remediation_flow' '$HERE/mux/mx-eval-lib.sh' && grep -q 'eval_live_evidence' '$HERE/mux/mx-eval-lib.sh' && grep -q 'remediations.json' '$HERE/mux/mx-report-gen.py'" "评测处置链不齐：mx-eval-lib 缺 remediation/live-evidence 或报告未消费 remediations.json"
+
+# ㉘ G5/UAT append-only 台账写入接线（V8.46）：驱动 G5 收口写 release-gate，UAT 逐条写
+#    uat-verdict；报告证据九与审计查16 按台账如实呈现。
+ck "㉘ G5/UAT 台账写入接线" "grep -q '/api/hermes/sim/release-gate' '$HERE/aipay-scenario.sh' && grep -q '/api/hermes/sim/uat-verdict' '$HERE/aipay-scenario.sh' && grep -q 'release-gate.jsonl' '$HERE/mux/mx-report-audit.py' && grep -q 'uat-verdicts.jsonl' '$HERE/mux/mx-report-audit.py'" "驱动未接发布门/UAT 台账端点，或审计未查台账"
+
+# ㉙ R18 修正（V8.46）：step23 必须按 delivery 载荷登记（run21 错登 op 致矩阵恒缺）；
+#    step13 skill 过程帧无产品拍摄位，已如实登记降级。
+ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$HERE/aipay-scenario.sh' && grep -q 'skill 过程帧采集位未建' '$HERE/aipay-scenario.sh'" "aipay 步23 未改 deliver 登记，或步13 未登记 skill 降级"
+
+# ㉚ 阶段页签 31 与两个新治理签在生效 dist（V8.46）：⑥治理新增 reviewGov/improve，
+#    页面签数 31；文档若仍写 29 属口径漂移。
+ck "㉚ 阶段页签 31（reviewGov/improve）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -q '29 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺 reviewGov/improve，或方案正本仍写 29 签"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 二十三项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十项）" || { echo "有红项——修复后再跑"; exit 1; }

@@ -36,7 +36,7 @@ describe('V8.45 评测接线结构', () => {
     expect(clean).toContain('webui-$_ed')
     const pre = read('mux/mx-prelaunch-check.sh')
     expect(pre).toContain('㉓ 评测接线')
-    expect(pre).toContain('二十三项')
+    expect(pre).toContain('三十项')
   })
 
   it('报告链消费 eval-summary（证据八 + PART1 行 + 叙事槽）', () => {

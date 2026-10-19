@@ -1050,8 +1050,9 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 6000：QGate 接线+安全条件对账
     // +V8.23 空 body 校验/QGate 新鲜度入函数后体积增大，run18 复盘批；2026-10-14 qgate
     // 解析失败分支（记单不删）入函数后实测函数体 4648 字符，窗口随体增长上调；
-    // 2026-10-16 C4 九门执行器注入（覆盖注入+先 run 后 report）入函数后 5592 字符）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,6000}?\n  \}/)
+    // 2026-10-16 C4 九门执行器注入（覆盖注入+先 run 后 report）入函数后 5592 字符；
+    // 2026-10-19 V8.46 发布门台账接线入函数后超 6000，窗口上调到 8000（判据不变）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,8000}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
     // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）
@@ -1538,7 +1539,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 二十三项')  // V8.45 加 ㉓ 评测接线；此前二十二=㉑/㉒（V8.44），二十=⑳ Harness 运行底座（V8.42）
+    expect(pre).toContain('prelaunch 三十项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 })

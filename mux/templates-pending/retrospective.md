@@ -83,6 +83,20 @@
 
 <!-- 本小节与 §2.6 第 11 条呼应：推演过程资产同样走「分类+分级+责任+机制约束」。数据面未部署时如实标注，禁编造。 -->
 
+**治理闭环读数（V8.46，2026-10-19）**：
+
+| 证据面 | 本轮读数 | 锚 |
+|---|---|---|
+| 观测信号 | 会话 / LLM 调用 / 错误 / 429 / 工具失败率 / TTFT p95 / 缓存命中 | `evidence/governance-closure/obs-signals.json` |
+| 基线漂移告警 | 告警条数与类别 / 基线不足跳过项 | `evidence/governance-closure/obs-alerts.json` |
+| 评审治理 | 案例 / 活跃 / 已合 / 首轮通过率 / 轮次均值 / 人工批准中位 | `evidence/governance-closure/reviewgov-metrics.json` |
+| 改进实验 | 面 / 提案 / 进行中 / 冠军 / 经验 / 已采纳 / 探测成本 | `evidence/governance-closure/workbench-overview.json` |
+| 发布门台账 | 当前判定 / 记录条数 | `evidence/release-gate.jsonl` |
+| UAT 判定台账 | 通过 / 有条件 / 不通过 | `evidence/uat-verdicts.jsonl` |
+| 评测处置链 | 失败 / 已关 / 未关 / 同卷复评 | `evidence/evals/remediations.json` |
+
+<!-- 数字全部来自 mx-closure-snapshot.sh 搬运的产品端点原文与驱动写入的 append-only 台账；端点失败按 summary.failed 如实呈现，禁写「闭环通过」。 -->
+
 ## 六、资产回写与记忆沉淀
 
 > **采集端登录态漂移如实在场则补充（run19 同型）**：若本轮采集链出现「同像素组多帧步」壳页复读（详见方案 §5.5/§5.6 帧采集红线），必须在第四节「问题单处置全表」登记 `frame-capture-failed` 类问题单与对应隔离区清单（`screenshots/frames-degraded/`），并在第五节「治理度量实算」标注「实时帧比例（被采集实时帧 / 应采步数）」作为本轮自承认指标——既非下轮待办，亦非补拍冒充，而是当轮帧采集质量的可观察证据（run19 实锤 46% 同像素组事故如实呈现零帧，配对记单禁冒充）。
@@ -113,3 +127,4 @@
 | 9 | 经验候选台账注入留痕在位（候选注入与否如实标注，未启用写「纪律 49 默认关」） | 字段存在性 |
 | 10 | 同类风险收敛处置行与第四节的 DISP 处置表互相呼应（闭环） | 处置引用反查 |
 | 11 | 流程架构治理（BPA）小节在场：六维度表（分级清单/体检/链路/对标/成熟度/评审周期）有实测值或如实标注「未部署/零数据」 | 存在性+数据面反查 |
+| 12 | 治理闭环读数表在场（观测/告警/评审治理/改进实验/发布门/UAT/处置链），端点失败如实呈现（V8.46） | 存在性+`governance-closure/summary.json` 对账 |
