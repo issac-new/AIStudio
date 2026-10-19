@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
 import { bpaApi, type BpaArchitectureDto } from '@/custom/bpa/api'
 import { bpaMessages } from '@/custom/bpa/i18n'
 import BpaTreePanel from '../components/BpaTreePanel.vue'
@@ -76,15 +77,18 @@ onMounted(() => void load())
       <p class="muted small">{{ L.seedHint }}</p>
     </div>
 
-    <template v-else-if="dto">
-      <nav class="bpa-view__tabs" data-testid="bpa-tabs">
+    <TopicPageLayout>
+    <template #tabs>
+      <nav v-if="dto && !(dto.nodes.length === 0 && tab === 'registry')" class="bpa-view__tabs" data-testid="bpa-tabs">
         <button v-for="t in (['registry','map','link','pcf','governance','maturity'] as const)" :key="t"
           type="button" :class="{ active: tab === t }" :data-testid="`bpa-tab-${t}`" @click="tab = t">
           {{ L.tabs[t] }}
           <span v-if="t === 'governance' && dto.report.bySeverity.high > 0" class="badge badge-high">{{ dto.report.bySeverity.high }}</span>
         </button>
       </nav>
+    </template>
 
+    <template v-if="dto">
       <BpaTreePanel v-show="tab === 'registry'" :L="L" :dto="dto" @updated="onUpdated" />
       <BpaMapPanel v-show="tab === 'map'" :L="L" :dto="dto" @updated="onUpdated" />
       <BpaLinkPanel v-show="tab === 'link'" :L="L" :dto="dto" />
@@ -93,6 +97,7 @@ onMounted(() => void load())
       <BpaMaturityPanel v-show="tab === 'maturity'" :L="L" />
     </template>
     <p v-else-if="!error" class="muted">…</p>
+    </TopicPageLayout>
   </section>
 </template>
 

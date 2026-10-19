@@ -21,6 +21,30 @@ describe('专题页统一壳', () => {
     }
   })
 
+  it('四个专题页统一使用 TopicPageLayout（P2-7 统一壳）', () => {
+    const VIEWS: ReadonlyArray<readonly [string, string]> = [
+      ['bpa/views/BpaView.vue', 'BpaTreePanel'],
+      ['ontology/views/OntologyView.vue', 'ontology-view'],
+      ['eval/views/EvalView.vue', 'eval-view'],
+      ['skillgov/views/SkillgovView.vue', 'skillgov-view'],
+    ]
+    for (const [view, marker] of VIEWS) {
+      const src = readFileSync(resolve(__dirname, '../../', view), 'utf8')
+      expect(src, view).toContain("import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'")
+      expect(src, view).toContain('<TopicPageLayout')
+      expect(src, view).toContain('</TopicPageLayout>')
+      expect(src, view).toContain(marker)
+    }
+  })
+
+  it('技能治理页提供左栏筛选与详情抽屉（P2-7）', () => {
+    const src = readFileSync(resolve(__dirname, '../../skillgov/views/SkillgovView.vue'), 'utf8')
+    expect(src).toContain('data-testid="skillgov-filters"')
+    expect(src).toContain('data-testid="skillgov-search"')
+    expect(src).toContain('data-testid="skillgov-drawer"')
+    expect(src).toContain(':rail="tab === \'scan\'"')
+  })
+
   it('IaFeatureShell 复用 IaShell 并挂四个专题视图', () => {
     const src = readFileSync(resolve(__dirname, '../views/IaFeatureShell.vue'), 'utf8')
     expect(src).toContain("import IaShell from './IaShell.vue'")
