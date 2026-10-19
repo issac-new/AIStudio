@@ -49,7 +49,7 @@ export interface ApprovalLogEntry {
   id: string
   ts: number
   actor: string
-  targetKind: 'command' | 'review' | 'kanban'
+  targetKind: 'command' | 'review' | 'kanban' | 'harness'
   targetId: string
   targetTitle: string
   decision: string

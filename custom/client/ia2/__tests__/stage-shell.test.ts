@@ -187,9 +187,9 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('⑥治理：六个页签，默认遗留项清算；旧 gov 签可由 query 直达', async () => {
+  it('⑥治理：页签齐全，默认遗留项清算；旧 gov 签可由 query 直达', async () => {
     const { w } = await mountStage(6)
-    for (const key of ['clearance', 'issues', 'audit', 'metrics', 'docs', 'gateLog']) {
+    for (const key of ['clearance', 'issues', 'audit', 'reviewGov', 'improve', 'metrics', 'docs', 'gateLog']) {
       expect(w.find(`[data-testid="stg-tab-${key}"]`).exists(), key).toBe(true)
     }
     expect(w.find('[data-testid="clearance-stub"]').exists()).toBe(true)

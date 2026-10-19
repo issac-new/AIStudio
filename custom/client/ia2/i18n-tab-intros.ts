@@ -99,6 +99,11 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       source: '用量记录、任务实况与代码锚点；缺数据标 unavailable 不造数。',
       act: '工程负责人月度复盘"投入花在哪、哪最亏"；成熟度自检给出下一步改进优先级。',
     },
+    'gov-improve': {
+      what: '改进闭环：改哪个面、凭什么证据、花了多少、回归有没有倒退、谁批准、怎么回滚。',
+      source: 'HERMES_HOME 八类可编辑面的真实产物 + Eval Studio 真实评测运行 + 人工裁决账本；缺证据标「—」，拒绝手填。',
+      act: '工程负责人把一条改进做成提案：绑基线、跑候选、看行为对比、过回归门、批准后晋级；没收益可回滚。',
+    },
 
     // ── 末端工作页导语（2026-10-17 驾驶舱末端可用性批：此前这些页零导语）──
     'inbox': { what: '等真人拍板的事都在这：人工介入请求、遗留项清算审批、升级裁决。', source: '网关审批事件与治理台账实时聚合；没有待办时如实显示空。', act: '每天先看这里——每一笔都阻塞下游 AI 的工作，批一笔动一串。' },
@@ -160,6 +165,11 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       what: 'The R&D process ledger: six cost accounts, capability catalog, L1-L5 maturity self-check, engineering-primitive reconciliation.',
       source: 'Usage records, task facts, code anchors; missing data marked unavailable.',
       act: 'Engineering leads review monthly where effort goes; maturity check ranks next improvements.',
+    },
+    'gov-improve': {
+      what: 'The improvement loop: which surface changes, on what evidence, at what cost, with what regression, who approved, and how to roll back.',
+      source: 'Real artifacts across eight editable surfaces under HERMES_HOME + real Eval Studio runs + human decision log; missing evidence shows as —, never hand-filled.',
+      act: 'Leads turn an improvement into a proposal: bind a baseline, probe candidates, compare behavior, pass the regression gate, promote after approval; roll back if it does not pay off.',
     },
 
     // ── End-page intros (2026-10-17 cockpit usability batch) ──
