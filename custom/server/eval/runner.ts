@@ -13,7 +13,7 @@ import { estimateCost } from '../tokens/pricing'
 import { aggregateRun } from './aggregate'
 import { judgeAttempt, type JudgeDeps } from './judge'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
-import { appendRun, getSet, sealedAttemptCount } from './store'
+import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
 import type { Attempt, Evidence, EvalConfig, EvalRun, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
 
@@ -197,6 +197,12 @@ export interface ReplayRunInput {
   crossValidate?: boolean
   note?: string
   actor?: string
+  /** 同卷复评：按该版本快照判分（缺省=当前集）。 */
+  setRevision?: number
+  /** 期望考卷指纹（复评锚定）：解析出的考卷与期望不符则拒绝。 */
+  expectedSetHash?: string
+  /** 期望考卷版本（复评锚定）：与解析出的版本不符则拒绝。 */
+  expectedRevision?: number
 }
 
 export interface RunnerDeps {
@@ -219,8 +225,25 @@ export type ReplayRunResult =
 export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Promise<ReplayRunResult> {
   const config = deps.config ?? loadEvalConfig()
   const now = deps.now ?? Date.now
-  const set = getSet(input.setId)
-  if (!set) return { ok: false, problems: [`评测集不存在：${input.setId}`] }
+  const current = getSet(input.setId)
+  if (!current) return { ok: false, problems: [`评测集不存在：${input.setId}`] }
+
+  // 同卷复评：按运行时版本快照判分，不读当前集内容（改题不改变历史口径）。
+  let set = current
+  if (input.setRevision !== undefined) {
+    const frozen = getSetRevision(input.setId, input.setRevision)
+    if (!frozen) {
+      return { ok: false, problems: [`考卷版本不存在：${input.setId} r${input.setRevision}（历史版本未留档，无法同卷复评）`] }
+    }
+    set = { ...current, revision: frozen.revision, contentHash: frozen.contentHash, tasks: frozen.tasks }
+  }
+  if (input.expectedRevision !== undefined && set.revision !== input.expectedRevision) {
+    return { ok: false, problems: [`考卷版本不符：期望 r${input.expectedRevision}，实际 r${set.revision}`] }
+  }
+  if (input.expectedSetHash !== undefined && set.contentHash !== input.expectedSetHash) {
+    return { ok: false, problems: ['评测集已改版：试卷指纹与基准运行不一致，拒绝复评（须使用同一版本）'] }
+  }
+
   if (set.sealed) {
     const used = sealedAttemptCount(set.id, input.actor ?? 'anonymous')
     if (used >= config.sealedMaxAttempts) {
@@ -270,6 +293,7 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     setId: set.id,
     // 资产锚点（百度轮 B1）：钉住运行时集内容指纹，报告期比对示警「集已改版」
     setHash: set.contentHash,
+    setRevision: set.revision,
     target: input.target ?? {},
     k: maxK,
     status: 'done',

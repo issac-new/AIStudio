@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { homedir } from 'os'
 import { join } from 'path'
 import type {
-  EvalRun, EvalSet, EvalSetMeta, EvalTask, RubricAssertion, RubricIterationLog,
+  EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
 } from './types'
 import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
@@ -18,7 +18,11 @@ import { contentFingerprint } from './fingerprint'
 
 interface StoreShape {
   sets: EvalSet[]
+  /** 不可变考卷快照：每次资产变更追加一版（收口轮）。 */
+  revisions: EvalSetRevision[]
   runs: EvalRun[]
+  /** 处置单：失败样本的修复追踪（收口轮）。 */
+  remediations: RemediationRecord[]
   rubricIterations: RubricIterationLog[]
   oracleCases: OracleCase[]
   oracleRuns: OracleRunRecord[]
@@ -42,13 +46,18 @@ function readStore(): StoreShape {
     // 仅"首装无文件"按空账处理；损坏/占用如实上抛（静默当空账会让下一次全量
     // writeStore 把评测资产整体覆写清零且 nextSeq 重置撞号）。
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { sets: [], runs: [], rubricIterations: [], oracleCases: [], oracleRuns: [], nextSeq: 1 }
+      return {
+        sets: [], revisions: [], runs: [], remediations: [],
+        rubricIterations: [], oracleCases: [], oracleRuns: [], nextSeq: 1,
+      }
     }
     throw e
   }
   return {
     sets: Array.isArray(raw.sets) ? raw.sets.map(backfillSetAsset) : [],
+    revisions: Array.isArray(raw.revisions) ? raw.revisions : [],
     runs: Array.isArray(raw.runs) ? raw.runs : [],
+    remediations: Array.isArray(raw.remediations) ? raw.remediations : [],
     rubricIterations: Array.isArray(raw.rubricIterations) ? raw.rubricIterations : [],
     oracleCases: Array.isArray(raw.oracleCases) ? raw.oracleCases : [],
     oracleRuns: Array.isArray(raw.oracleRuns) ? raw.oracleRuns : [],
@@ -62,10 +71,26 @@ function backfillSetAsset(set: EvalSet): EvalSet {
   return { ...set, contentHash: contentFingerprint(set), revision: set.revision ?? 1 }
 }
 
-/** 改题后维护资产面：重算指纹 + 修订号递增（三条路径共用：revise/reflow/建集置 1 在各自现场）。 */
-function bumpSetAsset(set: EvalSet): void {
+/** 追加不可变快照；同版本同指纹幂等（建集/改题各调用一次）。 */
+function snapshotSet(store: StoreShape, set: EvalSet, createdBy?: string): void {
+  const latest = store.revisions.find((r) => r.setId === set.id && r.revision === set.revision)
+  if (latest && latest.contentHash === set.contentHash) return
+  const by = createdBy ?? set.createdBy
+  store.revisions.push({
+    setId: set.id,
+    revision: set.revision,
+    contentHash: set.contentHash,
+    tasks: JSON.parse(JSON.stringify(set.tasks)) as EvalTask[],
+    createdAt: Date.now(),
+    ...(by ? { createdBy: by } : {}),
+  })
+}
+
+/** 改题后维护资产面：重算指纹 + 修订号递增 + 追加版本快照（三条路径共用）。 */
+function bumpSetAsset(store: StoreShape, set: EvalSet): void {
   set.revision = (set.revision ?? 1) + 1
   set.contentHash = contentFingerprint(set)
+  snapshotSet(store, set)
 }
 
 function writeStore(store: StoreShape): void {
@@ -219,6 +244,7 @@ export function createSet(
     tasks: input.tasks as EvalTask[],
   }
   set.contentHash = contentFingerprint(set)
+  snapshotSet(store, set)
   store.sets.push(set)
   store.nextSeq += 1
   writeStore(store)
@@ -274,7 +300,7 @@ export function reviseRubric(
   if (iter && typeof revision === 'string') iter.revision = revision
 
   assertion.text = revision.trim()
-  bumpSetAsset(set)
+  bumpSetAsset(store, set)
   writeStore(store)
   return { ok: true, set }
 }
@@ -307,6 +333,151 @@ export function sealedAttemptCount(setId: string, actor: string): number {
   return store.runs.filter((r) => r.setId === setId && r.createdBy === actor).length
 }
 
+// ---------- 考卷版本快照（收口轮） ----------
+
+/**
+ * 某集的全部版本快照（升序）。历史集在快照功能上线前改过题，旧版内容不可恢复；
+ * 只把「当前版本」按现状补成一条视图（不落盘），不伪造历史。
+ */
+export function listSetRevisions(setId: string): EvalSetRevision[] {
+  const store = readStore()
+  const archived = store.revisions
+    .filter((r) => r.setId === setId)
+    .sort((a, b) => a.revision - b.revision)
+  const set = store.sets.find((s) => s.id === setId)
+  if (set && !archived.some((r) => r.revision === set.revision)) {
+    archived.push({
+      setId: set.id,
+      revision: set.revision,
+      contentHash: set.contentHash,
+      tasks: JSON.parse(JSON.stringify(set.tasks)) as EvalTask[],
+      createdAt: set.createdAt,
+      ...(set.createdBy ? { createdBy: set.createdBy } : {}),
+    })
+  }
+  return archived
+}
+
+export function getSetRevision(setId: string, revision: number): EvalSetRevision | undefined {
+  return listSetRevisions(setId).find((r) => r.revision === revision)
+}
+
+// ---------- 处置单（收口轮） ----------
+
+export interface CreateRemediationInput {
+  runId: string
+  taskId: string
+  sampleIdx?: number
+  note?: string
+  owner?: string
+  createdBy?: string
+}
+
+/**
+ * 建处置单：只对真实失败样本开放（已通过样本拒绝），同一 run+task+sample 幂等。
+ * 密封集拒绝——任务/样本是否存在本身是可探测信息。
+ */
+export function createRemediation(
+  input: CreateRemediationInput,
+): { ok: true; remediation: RemediationRecord; created: boolean } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const run = store.runs.find((r) => r.id === input.runId)
+  if (!run) return { ok: false, problems: [`运行不存在：${input.runId}`] }
+  const set = store.sets.find((s) => s.id === run.setId)
+  if (!set) return { ok: false, problems: [`评测集不存在：${run.setId}`] }
+  if (set.sealed) return { ok: false, problems: ['密封集不提供逐样本处置（防探测）'] }
+  if (!set.tasks.some((t) => t.id === input.taskId)) return { ok: false, problems: [`任务不存在：${input.taskId}`] }
+  if (!Number.isInteger(input.sampleIdx ?? 1) || (input.sampleIdx !== undefined && input.sampleIdx < 1)) {
+    return { ok: false, problems: ['sampleIdx 须为 ≥1 的整数'] }
+  }
+  const attempts = run.attempts.filter((a) => a.taskId === input.taskId
+    && (input.sampleIdx === undefined || a.sampleIdx === input.sampleIdx))
+  if (attempts.length === 0) return { ok: false, problems: [`样本不存在：${input.taskId}${input.sampleIdx ? `#${input.sampleIdx}` : ''}`] }
+  if (!attempts.some((a) => a.passed === false)) {
+    return { ok: false, problems: ['该样本已通过，无需处置单'] }
+  }
+
+  const existing = store.remediations.find((r) => r.runId === input.runId && r.taskId === input.taskId
+    && (r.sampleIdx ?? null) === (input.sampleIdx ?? null))
+  if (existing) return { ok: true, remediation: existing, created: false }
+
+  const now = Date.now()
+  const remediation: RemediationRecord = {
+    id: `rem-${String(store.nextSeq).padStart(4, '0')}`,
+    runId: run.id,
+    setId: run.setId,
+    setHash: run.setHash ?? set.contentHash,
+    ...(run.setRevision !== undefined ? { setRevision: run.setRevision } : {}),
+    taskId: input.taskId,
+    ...(input.sampleIdx !== undefined ? { sampleIdx: input.sampleIdx } : {}),
+    status: 'open',
+    rerunCount: 0,
+    ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+    ...(input.owner?.trim() ? { owner: input.owner.trim() } : {}),
+    createdAt: now,
+    updatedAt: now,
+    ...(input.createdBy ? { createdBy: input.createdBy } : {}),
+  }
+  store.remediations.push(remediation)
+  store.nextSeq += 1
+  writeStore(store)
+  return { ok: true, remediation, created: true }
+}
+
+export function listRemediations(filter: { runId?: string; setId?: string; status?: string } = {}): RemediationRecord[] {
+  const store = readStore()
+  return store.remediations.filter((r) => (!filter.runId || r.runId === filter.runId)
+    && (!filter.setId || r.setId === filter.setId)
+    && (!filter.status || r.status === filter.status))
+}
+
+export function getRemediation(id: string): RemediationRecord | undefined {
+  return readStore().remediations.find((r) => r.id === id)
+}
+
+/**
+ * 复评验证：只认同一评测集、同一指纹、同一版本的复评运行；该任务任一样本通过
+ * 且整轮无红线否决才关闭。没有手工关闭入口——关闭必须由复跑结果决定。
+ */
+export function verifyRemediation(
+  id: string,
+  rerunRunId: string,
+): { ok: true; remediation: RemediationRecord; closed: boolean; alreadyClosed: boolean } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const remediation = store.remediations.find((r) => r.id === id)
+  if (!remediation) return { ok: false, problems: [`处置单不存在：${id}`] }
+  if (remediation.status === 'closed') return { ok: true, remediation, closed: true, alreadyClosed: true }
+  const rerun = store.runs.find((r) => r.id === rerunRunId)
+  if (!rerun) return { ok: false, problems: [`复评运行不存在：${rerunRunId}`] }
+  // 复评必须是建单之后的运行：拿建单前的旧通过运行来关闭，等于没修也放行。
+  if (rerun.createdAt < remediation.createdAt) {
+    return { ok: false, problems: ['复评运行早于处置单创建时间，不能作为修复证据'] }
+  }
+  if (rerun.setId !== remediation.setId) {
+    return { ok: false, problems: [`复评须同一评测集：${remediation.setId} ≠ ${rerun.setId}`] }
+  }
+  if (!rerun.setHash || rerun.setHash !== remediation.setHash) {
+    return { ok: false, problems: ['复评考卷指纹与处置单不一致（集已改版，不能视为同卷复评）'] }
+  }
+  if (remediation.setRevision !== undefined && rerun.setRevision !== undefined
+    && rerun.setRevision !== remediation.setRevision) {
+    return { ok: false, problems: [`复评须同一考卷版本：r${remediation.setRevision} ≠ r${rerun.setRevision}`] }
+  }
+  const passed = rerun.attempts.some((a) => a.taskId === remediation.taskId && a.passed === true)
+  const closed = passed && !rerun.aggregates.riskVeto
+  const now = Date.now()
+  remediation.rerunCount += 1
+  remediation.rerunRunId = rerun.id
+  remediation.lastRerunPassed = passed
+  remediation.updatedAt = now
+  if (closed) {
+    remediation.status = 'closed'
+    remediation.closedAt = now
+  }
+  writeStore(store)
+  return { ok: true, remediation, closed, alreadyClosed: false }
+}
+
 // ---------- 任务追加（红队变体扩产，百度轮后续批 B6） ----------
 
 /**
@@ -328,7 +499,7 @@ export function appendTasksToSet(
   const fresh = tasks.filter((t) => !existing.has(t.id))
   if (fresh.length > 0) {
     set.tasks.push(...fresh)
-    bumpSetAsset(set)
+    bumpSetAsset(store, set)
     writeStore(store)
   }
   return { ok: true, set, appended: fresh.length }
@@ -461,7 +632,7 @@ export function reflowTaskToSet(
       at: Date.now(),
     },
   })
-  bumpSetAsset(target)
+  bumpSetAsset(store, target)
   writeStore(store)
   return { ok: true, set: target, created: true, taskId: reflowId }
 }

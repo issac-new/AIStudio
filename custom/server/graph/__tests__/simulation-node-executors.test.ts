@@ -97,11 +97,15 @@ describe('registerSimulationNodeTypes', () => {
     expect(dry.created[0].idempotencyKey).toBe('graph_node:t:rep')
     expect(dry.created[0].body.format).toBe('html')
     expect(dry.created[0].body.output).toBe('final-report.html')
-    const upd = r1.update as unknown as Record<string, Array<{ node: string; task: string; format: string }>>
+    const upd = r1.update as unknown as Record<string, Array<{ node: string; task: string; format: string; ts: number }>>
     expect(upd['report.gen'][0].node).toBe('rep')
     expect(upd['report.gen'][0].task).toBe('dry-t1')
     expect(upd['report.gen'][0].format).toBe('html')
-    expect(r2).toEqual(r1)
+    // 幂等的真值是「不重复建卡」（上方 created 长度=1）；更新信号带执行时刻，
+    // 两次调用天然不同毫秒——不得把时间戳也当幂等判据（2026-10-19 抖动根因）。
+    const upd2 = r2.update as unknown as Record<string, Array<{ node: string; task: string; format: string; ts: number }>>
+    expect(upd2['report.gen'][0]).toMatchObject({ node: 'rep', task: 'dry-t1', format: 'html' })
+    expect(Number.isFinite(upd2['report.gen'][0].ts)).toBe(true)
   })
 
   it('report-gen 注入 reportFns 优先；deps.fnTable 次之（三层解析，三期）', async () => {

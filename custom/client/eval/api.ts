@@ -129,6 +129,7 @@ export interface RunSummaryDto {
   id: string
   setId: string
   setHash?: string
+  setRevision?: number
   target: { profile?: string; model?: string; version?: string }
   k: number
   status: string
@@ -140,6 +141,25 @@ export interface RunSummaryDto {
 
 export interface EvalRunDto extends RunSummaryDto {
   attempts?: AttemptDto[]
+}
+
+export interface RemediationDto {
+  id: string
+  runId: string
+  setId: string
+  setHash: string
+  setRevision?: number
+  taskId: string
+  sampleIdx?: number
+  status: 'open' | 'closed'
+  rerunCount: number
+  rerunRunId?: string
+  lastRerunPassed?: boolean
+  note?: string
+  owner?: string
+  createdAt: number
+  updatedAt: number
+  closedAt?: number
 }
 
 export interface IterationDto {
@@ -228,6 +248,23 @@ export const evalApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  // —— 收口轮：同卷复评 + 处置单 ——
+  rerunRun: (runId: string, body: { samples: Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>; target?: Record<string, string>; crossValidate?: boolean; note?: string }) =>
+    req<{ run: EvalRunDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/rerun`, { method: 'POST', body: JSON.stringify(body) }),
+  createRemediation: (runId: string, body: { taskId: string; sampleIdx?: number; note?: string; owner?: string }) =>
+    req<{ created: boolean; remediation: RemediationDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/remediations`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  listRemediations: (runId: string) =>
+    req<{ remediations: RemediationDto[] }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/remediations`),
+  verifyRemediation: (id: string, rerunRunId: string) =>
+    req<{ closed: boolean; alreadyClosed: boolean; remediation: RemediationDto }>(`/api/hermes/eval/remediations/${encodeURIComponent(id)}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ rerunRunId }),
+    }),
+  listSetRevisions: (setId: string) =>
+    req<{ revisions: Array<{ revision: number; contentHash: string; createdAt: number; taskCount: number }> }>(`/api/hermes/eval/sets/${encodeURIComponent(setId)}/revisions`),
   listVerifiers: () => req<{ verifiers: string[] }>('/api/hermes/eval/outcome-verifiers'),
   // —— UI Oracle（M3）——
   listOracleCases: () => req<{ cases: unknown[] }>('/api/hermes/eval/oracle/cases'),
