@@ -23,3 +23,32 @@ export function sessionProjectOf(s: SessionLike): string | null {
   const seg = w.replace(/\/+$/, '').split('/').filter(Boolean)
   return seg.length ? seg[seg.length - 1] : null
 }
+
+// ── zcode CLI 会话的项目/视图归类（2026-10-19「组织取 zcode 信息」批）───────
+// zcode 的权威项目信息=CLI 会话库 session.directory（工作区真实路径）。
+
+export interface CliSessionLike {
+  id: string
+  title: string
+  directory: string
+  timeUpdated: number
+}
+
+/** CLI 会话项目名：directory 末段；空 → null（未绑项目）。 */
+export function cliProjectOf(c: CliSessionLike): string | null {
+  return sessionProjectOf({ workspace: c.directory })
+}
+
+/** CLI 会话按侧栏视图/搜索过滤（与 IDE 会话同口径：active=24h 内、done=更早）。 */
+export function filterCliSessions<T extends CliSessionLike>(
+  list: T[], view: 'active' | 'done' | 'workspace', query: string, nowMs: number,
+): T[] {
+  const DAY = 24 * 60 * 60 * 1000
+  const q = query.trim().toLowerCase()
+  return list.filter(s => {
+    if (view === 'active' && !(nowMs - s.timeUpdated <= DAY)) return false
+    if (view === 'done' && !(nowMs - s.timeUpdated > DAY)) return false
+    if (q && !s.title.toLowerCase().includes(q) && !s.directory.toLowerCase().includes(q)) return false
+    return true
+  })
+}
