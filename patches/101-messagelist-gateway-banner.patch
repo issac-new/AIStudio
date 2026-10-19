@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index e07b4179c..b9a7d2580 100644
+index 0f4b7b33..5b3ba496 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
 @@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
@@ -7,10 +7,10 @@ index e07b4179c..b9a7d2580 100644
  import { parseThinking } from "@/utils/thinking-parser";
  import { groupCompletedToolsByRun } from "./tool-run-grouping";
 +import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
- 
- const props = withDefaults(defineProps<{
-   approvalPortalToBody?: boolean
-@@ -378,6 +379,24 @@ async function openForkParent(event?: MouseEvent) {
+ import { useMessageSelection } from './useMessageSelection';
+ import type { MessageSelectionRow } from './message-selection';
+ import { desktopBridge } from '@/utils/desktop-bridge';
+@@ -473,6 +474,24 @@ async function openForkParent(event?: MouseEvent) {
  }
  
  function handleApproval(choice: "once" | "session" | "always" | "deny") {
@@ -35,11 +35,11 @@ index e07b4179c..b9a7d2580 100644
    chatStore.respondApproval(choice);
  }
  
-@@ -658,6 +677,7 @@ defineExpose({
+@@ -762,6 +781,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell" :aria-busy="isSearchLoading">
 +    <GatewayNoticeBanner :session-id="chatStore.activeSessionId" :messages="chatStore.messages" />
-     <VirtualMessageList
-       v-if="!isSearchFetching"
-       :key="activeSessionScrollKey || 'chat-empty'"
+     <NDropdown trigger="manual" placement="bottom-start" :show="selectionMenu.show"
+       :x="selectionMenu.x" :y="selectionMenu.y" :options="selectionMenuOptions"
+       @select="selectFromMenu" @clickoutside="selectionMenu.show = false" @update:show="selectionMenu.show = $event" />
