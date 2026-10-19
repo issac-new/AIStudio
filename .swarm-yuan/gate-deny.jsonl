@@ -12,3 +12,4 @@
 {"ts":"2026-10-17T13:08:00Z","tool":"git-commit","target":"docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md","gates":"spec-required"}
 {"ts":"2026-10-17T14:06:50Z","tool":"git-commit","target":"custom/client/ia2/views/IaLegacyShell.vue","gates":"spec-required"}
 {"ts":"2026-10-18T04:05:02Z","tool":"git-commit","target":"custom/client/ide/views/IdeChatPane.vue","gates":"spec-required"}
+{"ts":"2026-10-19T12:02:51Z","tool":"git-commit","target":"custom/client/ia2/__tests__/sim-overview-panel.test.ts","gates":"spec-required"}
