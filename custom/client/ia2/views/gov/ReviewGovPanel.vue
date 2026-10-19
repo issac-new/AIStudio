@@ -53,6 +53,13 @@ const deferred = computed(() => (detail.value ? detail.value.case.findings.filte
 const selected = computed(() => detail.value?.case ?? null)
 const readiness = computed(() => detail.value?.readiness ?? null)
 
+const TIER_ZH = { low: '低风险', medium: '中风险', high: '高风险' } as const
+const STATE_ZH = { open: '评审中', ready: '可合并', merged: '已合并', abandoned: '已放弃' } as const
+const CHECK_ZH = { green: '全绿', red: '未通过', unknown: '未上报' } as const
+const selectedTier = computed(() => (selected.value ? TIER_ZH[selected.value.risk.tier] : ''))
+const selectedState = computed(() => (selected.value ? STATE_ZH[selected.value.state] : ''))
+const selectedChecks = computed(() => (selected.value ? CHECK_ZH[selected.value.checks] : ''))
+
 async function run(fn: () => Promise<void>): Promise<void> {
   loading.value = true
   error.value = ''
@@ -308,13 +315,13 @@ onMounted(() => { void loadAll() })
         <template v-else>
           <div class="rg__detail-head">
             <h5 class="rg__card-title">{{ selected.title }}</h5>
-            <span class="rg__tier" :class="`is-${selected.risk.tier}`">{{ selected.risk.tier }}</span>
-            <span class="rg__state">{{ selected.state }}</span>
+            <span class="rg__tier" :class="`is-${selected.risk.tier}`">{{ selectedTier }}</span>
+            <span class="rg__state">{{ selectedState }}</span>
           </div>
           <p class="rg__meta">
             第 {{ selected.rounds.length }}/{{ policy?.convergence.maxRounds ?? 3 }} 轮 ·
             提交 {{ selected.headCommit || '未绑定' }} ·
-            检查 {{ selected.checks }} ·
+            检查 {{ selectedChecks }} ·
             人工审批 {{ readiness?.humanApprovals ?? 0 }}/{{ readiness?.requiredHumanApprovals ?? 0 }}
             · Agent 审批 {{ readiness?.agentApprovals ?? 0 }}
           </p>
