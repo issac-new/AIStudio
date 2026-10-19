@@ -34,12 +34,15 @@ export const evalMessages = {
         riskBadge: '红线',
         s0Badge: 'S0 规则',
         noS0: '纯判定断言（走 S1）',
-        // —— 百度轮 B1/B5 ——
+        // —— 百度轮 B1/B5 + 后续批 B6 ——
         assetCol: '资产锚点',
         redteamSeed: '建红队种子库',
         redteamHint: '四向量种子集（直接注入/间接注入/机密外泄/工具滥用，24 任务）；同名已建则不重复',
         redteamCreated: '红队种子库已创建（24 任务 × 4 向量）',
         redteamExisted: '红队种子库已存在（幂等，未重复创建）',
+        redteamVariants: '扩产变体库',
+        redteamVariantsHint: '规则改写器把 24 种子扩为 114 变体（换载体/换伪装/换框架）；按题号去重幂等追加',
+        redteamExpanded: '变体已追加 {n} 条（库内共 {total} 题）',
       },
       runs: {
         title: '运行记录',
@@ -72,6 +75,14 @@ export const evalMessages = {
         actionChipHint: '动作驱动清单条数（评估器即回报函数：读数指向动作）',
         actionsTitle: '动作驱动清单（评估器即回报函数：读数回答「下一步往哪调」）',
         actionsCols: { metric: '读数', condition: '触发条件', action: '驱动动作' },
+        // —— 后续批 B7：线上证据回填 ——
+        liveToggle: '▸ 回填线上证据（压测 / 响应分档）',
+        liveQps: { target: '目标 QPS', achieved: '达成 QPS', errRate: '错误率（0~1）', p99: 'p99÷p50' },
+        liveTier: { simple: '简单档 p95（ms）', complex: '复杂档 p95（ms）' },
+        liveHint: '口径对齐 mx-load-probe（达成≥90%·错误率<1%·p99≤2×p50；简单≤5s·复杂≤15s）；表单为单次读数回填，批量数据请走 API 带 samples',
+        liveSubmit: '回填',
+        liveQpsIncomplete: 'QPS 四项须填全（目标/达成/错误率/p99÷p50）',
+        liveEmpty: '至少填 QPS 组或任一响应分档',
         tasks: '任务',
         report: '报告',
         back: '返回列表',
@@ -231,12 +242,15 @@ export const evalMessages = {
         riskBadge: 'RISK',
         s0Badge: 'S0 rule',
         noS0: 'judge-only assertion (S1)',
-        // —— Baidu round B1/B5 ——
+        // —— Baidu round B1/B5 + followup B6 ——
         assetCol: 'Asset anchor',
         redteamSeed: 'Create red-team seed',
         redteamHint: 'Four-vector seed set (direct/indirect injection, secret exfil, tool abuse; 24 tasks); idempotent by name',
         redteamCreated: 'Red-team seed set created (24 tasks × 4 vectors)',
         redteamExisted: 'Red-team seed set already exists (idempotent, not recreated)',
+        redteamVariants: 'Expand variants',
+        redteamVariantsHint: 'Rule-based rewriter expands 24 seeds into 114 variants (carrier/disguise/framing); idempotent by task id',
+        redteamExpanded: 'Appended {n} variants ({total} tasks in set)',
       },
       runs: {
         title: 'Runs',
@@ -269,6 +283,14 @@ export const evalMessages = {
         actionChipHint: 'action-link count (evaluator as reward function: readings point to actions)',
         actionsTitle: 'Action links (evaluator as reward function: readings answer "what to tune next")',
         actionsCols: { metric: 'Reading', condition: 'Condition', action: 'Action' },
+        // —— Followup B7: live evidence backfill ——
+        liveToggle: '▸ Backfill online evidence (QPS probe / response tiers)',
+        liveQps: { target: 'Target QPS', achieved: 'Achieved QPS', errRate: 'Error rate (0~1)', p99: 'p99÷p50' },
+        liveTier: { simple: 'Simple tier p95 (ms)', complex: 'Complex tier p95 (ms)' },
+        liveHint: 'Thresholds mirror mx-load-probe (≥90% achieved · <1% errors · p99≤2×p50; simple≤5s · complex≤15s); form backfills single readings — use the API with samples for batch data',
+        liveSubmit: 'Backfill',
+        liveQpsIncomplete: 'All four QPS fields required (target/achieved/error rate/p99÷p50)',
+        liveEmpty: 'Fill the QPS group or at least one response tier',
         tasks: 'tasks',
         report: 'Report',
         back: 'Back to list',

@@ -45,12 +45,12 @@ const GATE_DRIVES: Record<string, { metric: string; condition: string; action: s
   response_tier: {
     metric: '响应分档',
     condition: '在线口径无读数',
-    action: '接 live 打点后补测（回放判分不产生该口径）',
+    action: '实测 simple/complex p95 后经 POST /runs/:id/live-evidence 回填（回放判分不产生该口径）',
   },
   qps_headroom: {
     metric: 'QPS 余量',
     condition: '容量压测未做',
-    action: '跑 mx-load-probe 峰值×2 压测补齐容量面',
+    action: '跑 mx-load-probe 峰值×2 压测，结果经 POST /runs/:id/live-evidence 回填补齐容量面',
   },
 }
 
