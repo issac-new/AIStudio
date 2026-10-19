@@ -148,6 +148,19 @@ export interface ImproveCopy {
   boundary: string
   actionFailed: string
   confirmApply: string
+  autoProbe: string
+  autoProbeHint: string
+  autoSetId: string
+  autoRegressionSetId: string
+  autoMaxTasks: string
+  autoRun: string
+  autoRunning: string
+  autoStopped: string
+  autoFailed: string
+  autoDone: string
+  autoProgress: string
+  autoEstimated: string
+  autoBudgetStop: string
 }
 
 export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
@@ -297,6 +310,19 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     boundary: '边界：本页不替用户跑模型；探测必须绑定真实评测运行。可直接写盘仅系统提示词与 Skills，且需人工批准 + HARNESS2_APPLY=1；其余六面只出建议。',
     actionFailed: '操作失败',
     confirmApply: '将把候选内容写入目标文件（写前快照，可回滚）。确认继续？',
+    autoProbe: '一键自动探测',
+    autoProbeHint: '批准后自动物化候选到隔离环境并发起真实评测，逐题记成本、超支硬停；含脚本/插件的候选禁跑。',
+    autoSetId: '评测集 id',
+    autoRegressionSetId: '回归集 id（可选）',
+    autoMaxTasks: '最多题数',
+    autoRun: '自动探测',
+    autoRunning: '运行中',
+    autoStopped: '已停止',
+    autoFailed: '失败',
+    autoDone: '完成',
+    autoProgress: '进度',
+    autoEstimated: '估值记账',
+    autoBudgetStop: '预算硬停',
   },
   en: {
     title: 'Improvement experiments',
@@ -444,5 +470,18 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     boundary: 'Boundary: this page does not run models for you; probes must bind real eval runs. Only system prompt and Skills are writable, and only with human approval + HARNESS2_APPLY=1; the other six surfaces are advisory.',
     actionFailed: 'Action failed',
     confirmApply: 'This writes the candidate into the target file (snapshot first, rollback supported). Continue?',
+    autoProbe: 'Auto probe',
+    autoProbeHint: 'After approval, materializes candidates into an isolated home and starts real eval runs; per-task real cost with a hard budget stop; candidates with scripts/plugins are refused.',
+    autoSetId: 'Eval set id',
+    autoRegressionSetId: 'Regression set id (optional)',
+    autoMaxTasks: 'Max tasks',
+    autoRun: 'Auto probe',
+    autoRunning: 'Running',
+    autoStopped: 'Stopped',
+    autoFailed: 'Failed',
+    autoDone: 'Done',
+    autoProgress: 'Progress',
+    autoEstimated: 'estimated',
+    autoBudgetStop: 'Budget stop',
   },
 }

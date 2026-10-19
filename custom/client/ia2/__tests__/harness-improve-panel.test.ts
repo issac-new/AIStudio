@@ -10,6 +10,7 @@ vi.mock('vue-i18n', () => ({
 
 const api = vi.hoisted(() => ({
   fetchWorkbenchOverview: vi.fn(),
+  startAutoProbe: vi.fn(),
   createWorkbenchProposal: vi.fn(),
   attachWorkbenchBaseline: vi.fn(),
   submitWorkbenchProposal: vi.fn(),
@@ -69,7 +70,10 @@ const overview = {
       { id: 'v2', label: '候选 B', content: 'B', digest: 'b', diffSummary: { added: 3, removed: 2, unchanged: 1 } },
     ],
     probes: [
-      { id: 'pr-1', variantId: 'v1', status: 'recorded', evidence: { evalRunId: 'run-p', setId: 's', k: 2, passAt1: 0.8, passAtK: 0.8, resultPassRate: 0.8, trajectoryPassRate: 0.7, unknownRatio: 0, riskVeto: false, judgeOnline: true, statisticallyInsufficient: false, tokens: 1200, costUsd: 1, steps: 10, latencyMs: 900, regression: { runId: 'r', suiteName: '回归样本库', total: 2, failed: 0, failedTaskIds: [] } }, contrast: { quality: 'improved', reasons: [], passAt1Delta: 0.3, passAtKDelta: 0.3, resultPassRateDelta: 0.3, trajectoryPassRateDelta: 0.1, unknownRatioDelta: 0, tokenDeltaPct: 0.2, costDeltaPct: 0, stepDeltaPct: 0, latencyDeltaPct: -0.1, regressionFailed: 0 } },
+      {
+        id: 'pr-1', variantId: 'v1', status: 'recorded',
+        autoRun: { status: 'done', setId: '探测集', tasksTotal: 5, tasksDone: 5, costUsd: 1.2, estimatedTasks: 1, startedAt: 'now', finishedAt: 'now' },
+        evidence: { evalRunId: 'run-p', setId: 's', k: 2, passAt1: 0.8, passAtK: 0.8, resultPassRate: 0.8, trajectoryPassRate: 0.7, unknownRatio: 0, riskVeto: false, judgeOnline: true, statisticallyInsufficient: false, tokens: 1200, costUsd: 1, steps: 10, latencyMs: 900, regression: { runId: 'r', suiteName: '回归样本库', total: 2, failed: 0, failedTaskIds: [] } }, contrast: { quality: 'improved', reasons: [], passAt1Delta: 0.3, passAtKDelta: 0.3, resultPassRateDelta: 0.3, trajectoryPassRateDelta: 0.1, unknownRatioDelta: 0, tokenDeltaPct: 0.2, costDeltaPct: 0, stepDeltaPct: 0, latencyDeltaPct: -0.1, regressionFailed: 0 } },
       { id: 'pr-2', variantId: 'v2', status: 'planned' },
     ],
     approval: { decision: 'approved', actor: 'reviewer', note: '', variantSetDigest: 'x', at: 'now', approvalLogId: 'al-1' },
@@ -93,6 +97,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   api.fetchWorkbenchOverview.mockResolvedValue(overview)
   api.importWorkbenchExperiences.mockResolvedValue({ ok: true, imported: 1, skipped: 0 })
+  api.startAutoProbe.mockResolvedValue({ ok: true, job: { proposalId: 'hw-001', status: 'running', variantsTotal: 1, variantsDone: 0, costUsd: 0, estimatedTasks: 0 } })
 })
 
 describe('HarnessImprovePanel', () => {
@@ -136,6 +141,20 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-create"]').exists()).toBe(false)
     await w.find('[data-testid="hi-create-toggle"]').trigger('click')
     expect(w.find('[data-testid="hi-create"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('一键自动探测：按钮触发端点并展示任务态', async () => {
+    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    await flushPromises()
+    expect(w.find('[data-testid="hi-auto-hw-001"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-auto-state-pr-1"]').text()).toContain('完成')
+    expect(w.find('[data-testid="hi-auto-state-pr-1"]').text()).toContain('5/5')
+    expect(w.find('[data-testid="hi-auto-state-pr-1"]').text()).toContain('估值记账')
+    await w.find('[data-testid="hi-auto-set-hw-001"]').setValue('探测集')
+    await w.find('[data-testid="hi-auto-run-hw-001"]').trigger('click')
+    await flushPromises()
+    expect(api.startAutoProbe).toHaveBeenCalledWith('hw-001', expect.objectContaining({ setId: '探测集', maxTasks: 5 }))
     w.unmount()
   })
 

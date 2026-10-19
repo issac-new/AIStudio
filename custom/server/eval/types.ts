@@ -274,6 +274,8 @@ export interface EvalRunTarget {
   profile?: string
   model?: string
   version?: string
+  /** 2026-10-19 一键自动探测：候选 harness 归因（<提案id>:<候选id>），缺席=人工发起的普通运行。 */
+  harnessRef?: string
 }
 
 /** 容量压测证据（口径对齐 simharness mx-load-probe：错误率<1%、达成≥90% 目标、p99≤2×p50）。 */
