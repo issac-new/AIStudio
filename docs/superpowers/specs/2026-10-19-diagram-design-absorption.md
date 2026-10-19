@@ -108,3 +108,20 @@
 - 品牌 mermaid 产出与活图导出 HTML 均真跑 `self_check.py --offline` 通过（门禁吃自己的狗粮）。
 - PNG 导出真实浏览器链路实证：viewBox 200x100 × scale2 → 400x200 PNG（bundled chromium 缺失自动回退系统 Chrome，walkthrough 同例）。
 - 全量 `npm test` + 构建 + inject 重放 + 8647/8649 激活走查：合 main 收口轮执行（见收口记录）。
+
+## 追加轮：编排编辑器导出挂账清账（2026-10-19 同日晚）
+
+用户裁定「按建议做」，项6 挂账（编排画布同款导出）单分支清账 `feat/diagram-editor-export`。
+
+**事实修正**：挂账原文写「OrchestrationView EditorCanvas」有误——EditorCanvas 的挂载方是 `loop/orchestrator/views/SpecEditorView.vue`（编排 spec 编辑器），OrchestrationView（ia2）是另一个入口视图；本件落在 EditorCanvas 组件层，两入口共用。
+
+**D-10 三裁决（用户拍板「按建议做」）**：
+- 非法边（校验判红的 `invalidEdgeIds`）与警告节点（`warningNodeIds`）如实入图：invalid=error 描边加粗 1.6、warning=琥珀 #f57f17 描边——镜像画布红边/琥珀描边，草稿态不化妆（门禁文化同款）。
+- 选中态（selectedNodeIds/selectedEdgeId）不入图：交互瞬态，非文档真值。
+- 布局忠实保留用户拖拽坐标，不重排版（导出=快照语义）。
+
+**变更**：
+- `custom/client/ide/utils/diagram-export.ts`：status +'warning'（#f57f17 锚定 status-colors）+ FlowExportEdge.invalid
+- `custom/client/loop/orchestrator/adapters/canvas-export.ts`：CanvasDoc+校验态→导出模型纯函数（label=config.label||id 兜底、guard→×N 虚线、几何 168×52 估计）
+- `EditorCanvas.vue`：「导出图」按钮（右上角，testid=ed-canvas-export）
+- 测试：canvas-export.test.ts 4 例（三裁决逐条钉）+ diagram-export.test.ts 增 2 例；loop+ide 全量 164 文件 1154 例绿。
