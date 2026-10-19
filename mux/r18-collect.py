@@ -52,7 +52,8 @@ for _i, _k in enumerate([
     'ide_done', 'report_done'], 1):
     STEP_KEY_TO_NUM.setdefault(_k, _i)
 STEP_KEY_TO_NUM.update({'login_done': 3, 'room_done': 8, 'testpass_done': 19,
-                        'release_done': 20, 'deliver_gate': 23, 'report_view': 26})
+                        'eval_done': 19, 'release_done': 20, 'deliver_gate': 23,
+                        'report_view': 26})
 
 
 def die(msg):

@@ -2503,6 +2503,77 @@ def _gov_trend_table(gov_txt: str) -> str:
             f'<tbody>{body}</tbody></table></div>')
 
 
+
+def eval_summary_html():
+    """评测治理面证据（V8.45）：读 evidence/evals/eval-summary.json。
+
+    指标治理/评估器三角/四层金字塔/能力维度/锚点漂移/红队/线上证据全部来自
+    mx-eval-summary.py 的单一读数源；缺席如实 ⬜，不造数。
+    """
+    p = EVID / 'evals' / 'eval-summary.json'
+    if not p.exists():
+        return ('<p class="stat-note">本轮未采集评测摘要（evidence/evals/eval-summary.json 缺席）'
+                '——评测门记为缺口，不编造。</p>')
+    try:
+        d = json.loads(p.read_text(encoding='utf-8', errors='replace'))
+    except Exception:
+        return '<p class="stat-note">评测摘要解析失败——如实标注，不造数。</p>'
+
+    def pct(v):
+        return '—' if v is None else f'{float(v) * 100:.1f}%'
+    def esc(v):
+        return H.escape('—' if v is None else str(v))
+
+    reg = d.get('registry') or {}
+    cov = d.get('coverage') or {}
+    st = d.get('set') or {}
+    run = d.get('run') or {}
+    tri = d.get('triangle') or {}
+    rt = d.get('redteam') or {}
+    gate = run.get('releaseGate') or {}
+    src = tri.get('bySource') or {}
+    policy = tri.get('policy') or {}
+    strict = policy.get('strict') or {}
+    cons = policy.get('conservative') or {}
+    human = tri.get('human') or {}
+    rt_tot = rt.get('totals') or {}
+    rt_ben = rt.get('benign') or {}
+    verdict = str(d.get('verdict') or 'gap').upper()
+    color = {'PASS': '#15803d', 'GAP': '#b45309', 'FAIL': '#b91c1c'}.get(verdict, '#475569')
+    reasons = list(d.get('fails') or []) + list(d.get('gaps') or [])
+    actions = run.get('actions') or []
+    high = [a for a in actions if isinstance(a, dict) and a.get('priority') == 'high']
+    pyramid = run.get('pyramid') or []
+    if isinstance(pyramid, dict):
+        pyramid = pyramid.get('layers') or []
+    pyr_txt = ' · '.join(f"{a.get('label') or a.get('key')}={a.get('status')}" for a in pyramid if isinstance(a, dict)) or '未采集'
+
+    return f"""
+  <h3 style="font-size:13px;margin:14px 0 6px">证据八：EvalOps 评测运营（V8.45）</h3>
+  <div style="margin:8px 0;padding:10px 14px;background:var(--bg);border-radius:8px;border-left:4px solid {color}">
+    <b style="color:{color}">评测子门：{verdict}</b>——{esc('；'.join(reasons) or '全部门禁项通过')}
+    <div class="stat-note" style="margin-top:4px">判据源=evidence/evals/eval-summary.json（mx-eval-summary.py 机械判定，禁手填）</div>
+  </div>
+  <div class="govgrid">
+    <table>
+      <tr><th>评测面</th><th>本轮实测</th><th>含义/口径</th></tr>
+      <tr><td>指标治理</td><td>{esc(reg.get('total'))} 个 · 已接线 {esc(reg.get('wired'))} · 未接线 {esc(reg.get('unwired'))} · 装饰候选 {esc(reg.get('decoration'))}</td><td>装饰=只报告不驱动动作；未接线=无消费证据</td></tr>
+      <tr><td>能力维度覆盖</td><td>{esc(cov.get('covered'))}/{esc(cov.get('total'))} · 未标注任务 {esc(cov.get('untaggedTasks'))}</td><td>只认显式 dimension 标注，不猜</td></tr>
+      <tr><td>评测集锚点</td><td>revision {esc(st.get('revision'))} · setHash {esc((st.get('contentHash') or run.get('setHash') or '')[:12])} · 漂移 {'是' if run.get('anchorDrift') else '否'}</td><td>漂移=集已改版，读数不可直接对比</td></tr>
+      <tr><td>端到端读数</td><td>pass@1 {pct(run.get('passAt1'))} · pass@k {pct(run.get('passAtK'))} · unknown {pct(run.get('unknownRatio'))} · 红线 {'命中' if run.get('riskVeto') else '干净'}</td><td>Eval Studio 运行报告</td></tr>
+      <tr><td>发布门禁</td><td>{esc(gate.get('verdict'))} · 实测项 {esc(gate.get('measuredCount'))} · 缺口 {esc('、'.join(gate.get('gapKeys') or []) or '无')}</td><td>六检查；缺口如实 no_data</td></tr>
+      <tr><td>评估器三角</td><td>规则 {esc(src.get('s0'))} · 裁判 {esc((src.get('s1') or 0) + (src.get('s0+s1') or 0))} · 人工 {esc(src.get('human'))} · 冲突 {esc(tri.get('conflicts'))} · 判词可审计 {pct((tri.get('audit') or {}).get('ratio'))}</td><td>S0/S1/人工互证；判词 reason 可追问</td></tr>
+      <tr><td>严格 vs 保守</td><td>严格 {pct(strict.get('passAtK'))} · 保守（反事实）{pct(cons.get('passAtK'))} · 误杀候选 {esc(human.get('falseKillCandidates'))} · 假通过候选 {esc(human.get('falsePassCandidates'))}</td><td>保守口径不作门禁，只量误杀空间</td></tr>
+      <tr><td>四层指标金字塔</td><td>{esc(pyr_txt)}</td><td>模型/应用/Agent/线上；no_data 如实</td></tr>
+      <tr><td>安全红队</td><td>逃逸 {pct(rt_tot.get('evasionRate'))} · 拦截 {esc(rt_tot.get('detected'))}/{esc(rt_tot.get('evaluated'))} · 良性误报 {pct(rt_ben.get('falsePositiveRate'))} · S1 接线 {'是' if rt.get('s1Wired') else '否'}</td><td>v1 只接 S0 规则层；逃逸率只代表规则层</td></tr>
+      <tr><td>线上证据</td><td>{'已回填' if run.get('liveEvidence') else '未回填（QPS/分档 no_data）'}</td><td>只有回填后才是真判</td></tr>
+      <tr><td>动作驱动</td><td>{len(actions)} 条 · 高优 {len(high)} 条</td><td>每条失败/缺口应指向下一步动作</td></tr>
+    </table>
+  </div>
+  <p class="stat-note">失败样本可一键回溯 trace（非密封集）；密封集只回聚合（防探测）。证据端点不可回溯时如实写「不可回溯」。</p>
+"""
+
+
 def harness_runtime_html():
     """Harness 运行面证据（V8.42，2026-10-18）：读 evidence/harness/harness-summary.json。
 
@@ -3042,7 +3113,13 @@ _ART_V2_BY_STEP = {
          # V8.22 增项（方案 §2.6.3 评测体系；test-report.md §8 评测与运行时指标节同步）
          ('评测节在场（未发起须写明）', r'评测与运行时指标|本轮未发起评测'),
          ('评测门禁判定三态', r'证据缺口|不过'),
-         ('过程双指标行', r'工具选择正确率|轨迹绕路')],
+         ('过程双指标行', r'工具选择正确率|轨迹绕路'),
+         # V8.45 增项（百度评测轮：指标治理/三角/覆盖/红队/锚点）
+         ('指标治理读数', r'指标治理|装饰候选'),
+         ('评估器三角读数', r'评估器三角|误杀候选'),
+         ('能力维度覆盖', r'维度覆盖|未标注'),
+         ('安全红队读数', r'逃逸率|良性误报'),
+         ('评测集锚点', r'setHash|漂移')],
     20: [('回滚步骤（触发+命令）', r'回滚'), ('灰度档位', r'灰度'), ('观察窗', r'观察'),
          ('监控指标与阈值', r'监控|指标'), ('回滚触发线数值化', r'\d+(?:\.\d+)?%|崩溃率'),
          # V8.20 增项（方案 §5.8.2 发布行；release-plan.md 模板同步）
@@ -4819,6 +4896,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据七：Harness 运行面（九层能力与证据）</h3>
   {harness_runtime_html()}
+
+  {eval_summary_html()}
 
   <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>

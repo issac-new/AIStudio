@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前二十二项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵）。
+# mx-prelaunch-check.sh — 开跑前二十三项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费））。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -120,5 +120,10 @@ ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d
 #     redirect 到阶段页（书签/通知零断链）；页签注册表缺位会让 ?tab= 全部回落默认签。
 ck "㉒ 阶段页签与重定向矩阵在位" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/accept' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'gov/org-assets' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'clearance' \"\$_d\" 2>/dev/null" "生效 dist 不含阶段页签或 /app/gov/* 重定向矩阵——按 overlay custom/client/ia2/{stage-tabs.ts,routes.ts} 重建后再试"
 
+# ㉓ 评测接线（V8.45）：评测库/红队/留出库必须隔离到 SIM_ROOT；G4 必须挂评测子门；
+#    报告生成器必须消费 eval-summary；驱动必须 source 评测库。任何一环缺席=旧轮
+#    评测接线不完整（跑起来会退化成「评测未发起」或污染宿主 home）。
+ck "㉓ 评测接线（隔离库+G4 子门+报告消费+库/汇总器可执行）" "grep -q 'mx-eval-lib.sh' '$HERE/aipay-scenario.sh' && grep -q 'EVAL_STORE=' '$HERE/mux/mx-lib.sh' && grep -q 'eval_flow' '$HERE/aipay-scenario.sh' && grep -q 'eval-summary.json' '$HERE/mux/mx-report-gen.py' && bash -n '$HERE/mux/mx-eval-lib.sh' && python3 -m py_compile '$HERE/mux/mx-eval-summary.py'" "评测接线不完整：驱动未 source mx-eval-lib / mx-lib 未隔离 EVAL_STORE / G4 未挂 eval_flow / 报告未消费 eval-summary / 脚本语法错——按 specs/2026-10-19-fullflow-v845-eval-integration.md 接线"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 二十二项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 二十三项）" || { echo "有红项——修复后再跑"; exit 1; }

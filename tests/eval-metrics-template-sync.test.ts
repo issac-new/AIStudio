@@ -25,11 +25,24 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(tpl).toContain('轨迹绕路比')
     expect(tpl).toContain('六环节分段通过率')
     expect(tpl).toContain('异常场景分桶')
+    // V8.45：指标治理/三角/金字塔/维度/锚点/红队/线上证据
+    expect(tpl).toContain('指标治理（V8.45）')
+    expect(tpl).toContain('评估器三角（V8.45）')
+    expect(tpl).toContain('四层指标金字塔（V8.45）')
+    expect(tpl).toContain('能力维度覆盖（V8.45）')
+    expect(tpl).toContain('评测集锚点（V8.45）')
+    expect(tpl).toContain('安全红队（V8.45）')
+    expect(tpl).toContain('线上证据回填')
     // 机械判据节顺延为 §9 且含评测三判据
     expect(tpl).toContain('## 9. 机械核对判据')
     expect(tpl).toMatch(/8 \| 评测节在场/)
     expect(tpl).toMatch(/9 \| 评测门禁行判定三态合法/)
     expect(tpl).toMatch(/10 \| 评测数字带源/)
+    expect(tpl).toMatch(/11 \| 指标治理读数在场/)
+    expect(tpl).toMatch(/12 \| 评估器三角读数在场/)
+    expect(tpl).toMatch(/13 \| 能力维度覆盖/)
+    expect(tpl).toMatch(/14 \| 红队读数在场/)
+    expect(tpl).toMatch(/15 \| 集锚点/)
   })
 
   it('spec-params.env：EVAL_GATE 阈值组四行在位（照抄腾讯 ADP 公开清单口径）', () => {
@@ -37,6 +50,11 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     for (const key of ['EVAL_GATE_TOOL_SUCCESS_MIN', 'EVAL_GATE_P99_RATIO_MAX', 'EVAL_GATE_DEGRADE_RATE_MAX', 'EVAL_GATE_TTFT_MS']) {
       expect(env).toContain(key)
     }
+    // V8.45 评测子门参数组
+    for (const key of ['EVAL_MAX_UNKNOWN', 'EVAL_REDTEAM_FP_MAX', 'EVAL_REDTEAM_GENERATIONS', 'EVAL_SIMILARITY_MIN_SCORE']) {
+      expect(env).toContain(key)
+    }
+    expect(env).toContain('G4 评测子门')
     expect(env).toContain('≥ 99%')
     expect(env).toContain('≤ 2×')
     expect(env).toContain('< 0.5%')
@@ -52,6 +70,14 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(gen).toContain("('评测门禁判定三态', r'证据缺口|不过')")
     expect(gen).toContain("('过程双指标行', r'工具选择正确率|轨迹绕路')")
     expect(gen).toContain('V8.22 增项')
+    // V8.45 增项 + 证据八
+    expect(gen).toContain("('指标治理读数'")
+    expect(gen).toContain("('评估器三角读数'")
+    expect(gen).toContain("('能力维度覆盖'")
+    expect(gen).toContain("('安全红队读数'")
+    expect(gen).toContain("('评测集锚点'")
+    expect(gen).toContain('def eval_summary_html')
+    expect(gen).toContain('{eval_summary_html()}')
     execFileSync('python3', ['-m', 'py_compile', join(HARNESS, 'mux', 'mx-report-gen.py')])
   })
 
@@ -61,7 +87,8 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(sh).toContain('评测与运行时指标')
     expect(sh).toContain('EVAL_GATE_TOOL_SUCCESS_MIN')
     expect(sh).toContain('eval-metrics')
-    expect(sh).toContain('二十二项')  // V8.44 加 ㉑ 任务工作区/㉒ 阶段页签与重定向矩阵；此前 二十=⑳ Harness 运行底座编入检查（V8.42）
+    expect(sh).toContain('二十三项')  // V8.45 加 ㉓ 评测接线；V8.44 ㉑/㉒ 任务工作区与阶段页签）；此前 二十=⑳ Harness 运行底座（V8.42）
+    expect(sh).toContain('㉓ 评测接线')
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })
 
@@ -81,5 +108,6 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     const readme = read('mux/templates-pending/README.md')
     expect(readme).toContain('评测指标节（2026-10-13')
     expect(readme).toContain('eval-metrics-template-sync.test.ts')
+    expect(readme).toContain('V8.45')
   })
 })
