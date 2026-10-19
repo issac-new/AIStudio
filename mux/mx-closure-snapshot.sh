@@ -52,11 +52,11 @@ fetch() { # <name> <path>
   else
     rm -f "$file"
     failed+=("$name")
-    echo "  ✗ $name（$path）"
+    echo "  ✗ ${name}（${path}）"
   fi
 }
 
-echo "[closure] 采集治理闭环端点（run=$RUN_ID）"
+echo "[closure] 采集治理结果端点（run=${RUN_ID}）"
 fetch obs-signals "/api/harness/obs-signals?days=7"
 fetch obs-alerts "/api/harness/obs-alerts?days=7"
 fetch tool-audit "/api/harness/tool-audit?days=7"
