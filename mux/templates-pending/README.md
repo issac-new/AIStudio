@@ -53,6 +53,10 @@
 
 test-report.md 增 §8「评测与运行时指标」（原机械判据节顺延为 §9 并加判据 8-10；2026-10-13 续批：QPS 行改 mx-load-probe 可执行口径）：发布门禁六行阈值表（工具成功率 ≥99%/P99 ≤2×/降级率 <0.5% 照抄腾讯 ADP 公开清单，TTFT/响应分档/QPS 三行如实「证据缺口」）+ 过程双指标/六环节分段/异常分桶三行。数字单一来源=Swarm Studio Eval Studio 运行报告导出（/app/eval），禁手抄改写；本轮未发起评测如实写明并记问题单 eval-not-run（观察态）。同步位四处：本目录模板、mux/spec-params.env `EVAL_GATE_*` 阈值组、mx-prelaunch-check.sh 第 14 项（三方一致性核对）、mx-report-gen.py `_ART_V2_BY_STEP` 步 19 核对正则——守门测试 `tests/eval-metrics-template-sync.test.ts` 断言四处同步（只修一处=下次复发）。
 
+## 评测治理扩展（V8.45，2026-10-19 百度评测轮）
+
+test-report.md §8 追加七行：指标治理（接线/未接线/装饰候选）、评估器三角（严格 vs 保守反事实、误杀/假通过候选）、四层指标金字塔（模型/应用/Agent/线上）、能力维度覆盖（n/7 + 未标注）、评测集锚点（revision/setHash/contentHash/漂移）、安全红队（逃逸率/良性误报/S1 未接线声明）、线上证据回填（QPS/分档）；§9 判据扩到 15 条（11-15 为评测治理面）。数字单一来源=evidence/evals/eval-summary.json（`mx-eval-summary.py` 机械判定），禁手抄。同步位新增：`mux/mx-eval-lib.sh`（接线）、`mux/mx-eval-summary.py`（判据）、`mux/mx-lib.sh`（EVAL_STORE/REDTEAM_STORE/HELDOUT_STORE/EVAL_TRACE_DIR 隔离）、`aipay-scenario.sh`（G4-E `eval_flow`）、`mux/mx-report-gen.py`（证据八）、`mux/final-report-merge.py`（PART1 评测行）、prelaunch ㉓；守门测试同 `eval-metrics-template-sync.test.ts` 与新增 `eval-fullflow-integration.test.ts`。
+
 ## 后续批量项（挂账，列清单待批）
 
 - §2.7 其余行模板候选：analysis.md（系分稿）、app-registry.md、org.md、governance-report.md、completeness-check.md。编码行（步 18）交付物=分支+执行输出原文，无可模板化结构，不立模板（原文不得修饰，模板化反而诱导粉饰）。

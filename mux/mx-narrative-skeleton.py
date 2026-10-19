@@ -87,6 +87,8 @@ def part1_skeleton() -> str:
 
 <div class="card ok"><b>本轮产品成效：</b>单测 {{{{n_tests_pass}}}}；AC 覆盖 {{{{ac_cover}}}}；幂等验证 {{{{idem_verdict}}}}；UAT 判词 {{{{uat_sum}}}}（三件详见第 4 章；数字自 evidence/product-outcome/quality-summary.env 实测，未采集轮如实 ⬜）。【TODO 一句：成效定性——哪条交付能力被本轮证明可用】</div>
 
+<div class="card info"><b>评测子门（G4-E，V8.45）：</b>{{{{eval_gate}}}}；指标治理 {{{{eval_registry}}}}；维度覆盖 {{{{eval_coverage}}}}；评估器三角 {{{{eval_triangle}}}}；红队 {{{{eval_redteam}}}}；锚点漂移 {{{{eval_drift}}}}。【TODO 一句：评测发现的下一步动作（不看分数看动作）】</div>
+
 <div class="card warn"><b>真实发生的缺口（全部登记在案）：</b>【TODO 3-6 条，每条带问题单键】（类型分布实测：{{{{type_top}}}}）</div>
 
 <div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{{{n_frames}}}} 张实拍界面帧 {{{{uniq_note}}}}）；每步四段=本轮实录/交付物实际内容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测，取不到显式 ⬜。</div>

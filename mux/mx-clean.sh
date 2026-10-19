@@ -167,6 +167,20 @@ if [ "$APPLY" = 1 ] && [ -f "$SIM_ROOT/webui/hermes-web-ui.db" ]; then
   fi
 fi
 
+# 2b3) 评测域存储归档重置（V8.45）：eval/redteam/heldout 的产品默认路径在
+#      ~/.hermes-web-ui，不随 HERMES_WEB_UI_HOME 隔离；不归档会让 0→1 环境带旧
+#      评测集/运行/红队历史/留出题库尝试预算（实测旧轮数据跨轮可见）。mx-lib 启动
+#      env 已把三者指到 $WEBUI_HOME/{eval,redteam,heldout}，此处按同源路径归档。
+if [ "$APPLY" = 1 ]; then
+  for _ed in eval redteam heldout; do
+    if [ -d "$SIM_ROOT/webui/$_ed" ]; then
+      mv "$SIM_ROOT/webui/$_ed" "$ARC/webui-$_ed" 2>/dev/null \
+        && say "✓ 评测存储 $_ed 已归档（webui-$_ed）" \
+        || say "⚠ 评测存储 $_ed 归档失败（studio 未停净？）"
+    fi
+  done
+fi
+
 # 2c) hermes 运行态归档重置（2026-10-03 实锤新增段；旧脚本只清 kanban，以下七类全是旧轮数据）
 #     pending_messages（70 条旧在途消息：新网关每次启动都恢复失败刷 WARNING，还会误触发
 #       mx-up 的 matrix 适配器降级自愈长挂）/ sessions（旧会话）/ approvals（旧审批单——
