@@ -28,6 +28,8 @@ set -euEo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
+# V8.45：评测接线（评测运行/红队/三角/覆盖/锚点/线上证据 → G4 子门）
+source "$SCRIPT_DIR/mux/mx-eval-lib.sh"
 # N4（run15 复盘，V8.17）：静默 rc=1 断根诊断——ERR trap。
 # set -e 下未受 if/||/&& 保护的失败命令先触发本 trap 再退出（受保护上下文不触发，
 # 与 set -e 判定同源；-E 令 trap 穿透函数体）。崩溃点从「日志尾部无 FAIL 行」变为
@@ -1854,10 +1856,26 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     sset g4_contract_gap 1
     note "[契约] G4 强制线：观察产物缺席——fail-closed 记单"
   fi
+  # ── V8.45 G4 评测子门：评测运行 + 红队 + 三角 + 覆盖 + 锚点（方案 §5.3 G4-E）──
+  # FAIL 阻断 g4_pass（G5 的 gate_blocked 会拒入）；GAP 记单放行（缺口如实呈现，
+  # 不拿基础设施缺席冒充通过）；PASS 置 g4_eval_pass。
+  _eval_rc=0
+  eval_flow || _eval_rc=$?
+  case "$_eval_rc" in
+    0) note "[G4] 评测子门 PASS（评测/红队/三角/覆盖/锚点）" ;;
+    2) note "[G4] 评测子门 GAP（缺口已记单，放行并如实呈现）" ;;
+    *) note "[G4] 评测子门 FAIL（g4_pass 不置位，G5 不得进入）" ;;
+  esac
   capture_step "testpass_done" "/app/stage/build?tab=board"
+  capture_step "eval_done" "/app/eval" "click:[data-testid=eval-tab-metrics]"
 
   sset testpass_done 1
-  sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
+  if (( _eval_rc != 1 )); then
+    sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
+  else
+    sset g4_eval_blocked 1
+    echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门 FAIL：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
+  fi
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
   dlv_enabled && dlv_scenario_phase P4 qi G4 qi command-exit "testpass 测试报告入仓+G4 硬闸置位" P5
 fi
@@ -2298,6 +2316,8 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
     echo "ISSUE|workreport-push|director|工作台账落档 origin/main 失败（留存 $EVID_DIR/work-report.md）" >> "$EVID_DIR/issues.log"
     note "[观察] 工作台账落档失败（留存本地，记问题单）"
   fi
+  # V8.45：EvalOps 读数落档（复用 G4 评测摘要，不重复跑评测）
+  evalops_snapshot || true
   capture_step "workmgr_done" "/app/stage/accept?tab=delivery"
 
   sset workmgr_done "$(date +%s)"
@@ -2734,6 +2754,8 @@ PAYSPECS
       "ISSUE|delivery-protocol|step-23|lite 轮 delivery 未启用（夹具跳过致案例未开，驱动日志多处「跳过」在案）——门禁灯帧按 §5.6 采集纪律⑩ 降级登记（lite 审计口径自动记）"
     note "[报告] lite 审计口径：逐键降级登记完成（承载面/帧配对/payload/门禁灯族）"
   fi
+  # V8.45：评测摘要必须在报告生成前落档（报告第 9 章证据八的唯一读数源）
+  evalops_snapshot >/dev/null 2>&1 || true
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落

@@ -11,6 +11,7 @@
 # 不编造；PART 1 措辞与处置终态核对一致（已修项不得写「待修」）。
 import argparse
 import html
+import json
 import importlib.util
 import os
 import re
@@ -706,6 +707,30 @@ def main():
     ac_cover = po.get('ac_cover', '⬜')
     idem_verdict = po.get('idem_verdict', '⬜')
     uat_sum = po.get('uat_sum', '⬜')
+    # 评测摘要（V8.45）：与 product-outcome 同级消费，缺席如实 ⬜
+    ev = {}
+    ev_path = evid / 'evals' / 'eval-summary.json'
+    if ev_path.exists():
+        try:
+            ev = json.loads(ev_path.read_text(encoding='utf-8', errors='replace'))
+        except Exception:
+            ev = {}
+    ev_reg = ev.get('registry') or {}
+    ev_cov = ev.get('coverage') or {}
+    ev_run = ev.get('run') or {}
+    ev_tri = ev.get('triangle') or {}
+    ev_rt = ev.get('redteam') or {}
+    ev_gate_txt = str(ev.get('verdict') or '⬜').upper()
+    ev_reg_txt = (f"{ev_reg.get('total', '⬜')} 个 / 接线 {ev_reg.get('wired', '⬜')} / 装饰 {ev_reg.get('decoration', '⬜')}"
+                   if ev_reg else '⬜')
+    ev_cov_txt = (f"{ev_cov.get('covered', '⬜')}/{ev_cov.get('total', '⬜')} · 未标注 {ev_cov.get('untaggedTasks', '⬜')}"
+                  if ev_cov else '⬜')
+    ev_rt_tot = ev_rt.get('totals') or {}
+    ev_rt_txt = (f"逃逸 {(ev_rt_tot.get('evasionRate') or 0) * 100:.0f}% · 误报 {((ev_rt.get('benign') or {}).get('falsePositiveRate') or 0) * 100:.0f}%"
+                 if ev_rt else '⬜')
+    ev_drift_txt = '漂移' if ev_run.get('anchorDrift') else ('否' if ev_run else '⬜')
+    ev_tri_txt = (f"冲突 {ev_tri.get('conflicts', '⬜')} · 可审计 {((ev_tri.get('audit') or {}).get('ratio') or 0) * 100:.0f}%"
+                  if ev_tri else '⬜')
     machine_styles, machine_body = extract_machine_parts(sim_html_path.read_text(encoding='utf-8'))
     machine_nav, machine_main, fused = split_layout(machine_body)
     if not fused:
@@ -806,6 +831,10 @@ def main():
         f'<tr><td>证据帧</td><td>{n_frames} 张 · {uniq_note}</td><td>screenshots/steps/ 实查 + md5 互异</td></tr>'
         f'<tr><td>测试与产品成效</td><td>单测 {n_tests_pass} · AC 覆盖 {ac_cover} · 幂等 {idem_verdict} · UAT {uat_sum}</td>'
         '<td>product-outcome/quality-summary.env（未采集即 ⬜）</td></tr>'
+        f'<tr><td>评测子门（V8.45）</td><td>{ev_gate_txt}</td><td>evidence/evals/eval-summary.json（G4-E）</td></tr>'
+        f'<tr><td>指标治理 / 维度覆盖</td><td>{ev_reg_txt} · {ev_cov_txt}</td><td>metric-registry（装饰=只报告不驱动动作）</td></tr>'
+        f'<tr><td>评估器三角 / 锚点</td><td>{ev_tri_txt} · 漂移 {ev_drift_txt}</td><td>runs/:id/evaluators + setHash 对账</td></tr>'
+        f'<tr><td>安全红队</td><td>{ev_rt_txt}</td><td>v1 只接 S0；逃逸率只代表规则层</td></tr>'
         '</table>')
     spec_tbl = spec_params_html()
 
@@ -827,6 +856,12 @@ def main():
              .replace('{{ac_cover}}', ac_cover)
              .replace('{{idem_verdict}}', idem_verdict)
              .replace('{{uat_sum}}', uat_sum)
+             .replace('{{eval_gate}}', ev_gate_txt)
+             .replace('{{eval_registry}}', ev_reg_txt)
+             .replace('{{eval_coverage}}', ev_cov_txt)
+             .replace('{{eval_triangle}}', ev_tri_txt)
+             .replace('{{eval_redteam}}', ev_rt_txt)
+             .replace('{{eval_drift}}', ev_drift_txt)
              .replace('{{metrics_tbl}}', metrics_tbl)
              .replace('{{spec_tbl}}', spec_tbl)
              .replace('{{ch0}}', ch0)
