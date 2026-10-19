@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { colorFromUserId } from '@/custom/matrix-chat/utils/usernameColor'
+import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
 
 interface Props {
   userId: string
@@ -33,6 +34,8 @@ const senderColor = computed(() => colorFromUserId(props.userId))
 <template>
   <span class="mx_DisambiguatedProfile" :style="{ color: senderColor }" @click="rightPanelStore.openMemberInfo(userId)">
     <span class="mx_DisambiguatedProfile_displayName">{{ displayName }}</span>
+    <!-- AI 员工徽标（-agent 命名约定自动归类，人类不显——spec D-1） -->
+    <MatrixUserKindBadge :user-id="userId" />
     <span v-if="showMxid && displayName !== mxid" class="mx_DisambiguatedProfile_mxid">{{ mxid }}</span>
   </span>
 </template>
