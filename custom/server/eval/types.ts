@@ -249,6 +249,10 @@ export interface RunAggregates {
     trajectoryMatchScore: number | null
     /** 参与对比的 attempt 数（有期望序列且有实际序列证据）。 */
     attemptsCompared: number
+    /** #7 过程评估覆盖露出：声明了期望工具序列的任务数（分母）。 */
+    declaredCount: number
+    /** 覆盖度=attemptsCompared/declaredCount；<0.5 时报告标 warning（不再静默漏测）。 */
+    coverage: number
   }
   /** 六维度量分面（信通院《云上 Agent 基准度量模型》）：未采集维 value=null 立账不造数。 */
   sixDimensions?: import('./metrics').SixDimensionRow[]
@@ -404,6 +408,12 @@ export interface EvalConfig {
   breakerThreshold: number
   breakerCooldownMs: number
   sealedMaxAttempts: number
+  /**
+   * 处置单机械关闭时是否自动把该任务回流到回归样本库（#4 自改进飞轮）。
+   * 默认 true（EVAL_AUTO_REFLOW_ON_CLOSE 可关）。幂等：复跑同 run 幂等键跳过，
+   * 密封源集与自指回流仍被 reflowTaskToSet 结构性拒绝。
+   */
+  autoReflowOnClose: boolean
 }
 
 function num(name: string, fallback: number): number {
@@ -432,5 +442,6 @@ export function loadEvalConfig(): EvalConfig {
     breakerThreshold: num('EVAL_BREAKER_THRESHOLD', 5),
     breakerCooldownMs: num('EVAL_BREAKER_COOLDOWN_MS', 120_000),
     sealedMaxAttempts: num('EVAL_SEALED_MAX_ATTEMPTS', 3),
+    autoReflowOnClose: (process.env.EVAL_AUTO_REFLOW_ON_CLOSE ?? '1') !== '0',
   }
 }
