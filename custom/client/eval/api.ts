@@ -212,6 +212,15 @@ export const evalApi = {
   // —— 百度评测体系轮 B5：红队种子库（幂等；existed=true 表示已有同名集） ——
   createRedteamSeed: () =>
     req<{ existed: boolean; set: EvalSetMetaDto | EvalSetDto; vectors: Array<{ key: string; label: string; description: string }> }>('/api/hermes/eval/sets/redteam-seed', { method: 'POST' }),
+  // —— 后续批 B6：红队变体扩产（24 种子 → 114 变体，按 id 去重幂等追加） ——
+  expandRedteamVariants: () =>
+    req<{ appended: number; set: { id: string; name: string; taskCount: number; revision: number } }>('/api/hermes/eval/sets/redteam-variants', { method: 'POST' }),
+  // —— 后续批 B7：线上证据回填（压测/分档实测 → 门禁 qps/分档项转真判） ——
+  recordLiveEvidence: (runId: string, body: {
+    qpsProbe?: { targetQps: number; achievedQps: number; errorRate: number; p99ToP50: number; source?: string }
+    responseTiers?: Array<{ tier: 'simple' | 'complex'; samples: number; p95Ms: number; source?: string }>
+  }) =>
+    req<{ run: EvalRunDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/live-evidence`, { method: 'POST', body: JSON.stringify(body) }),
   reflow: (runId: string, body: { taskId: string; sampleIdx?: number; targetSetId?: string }) =>
     req<{ created: boolean; taskId: string; set: { id: string; name: string; taskCount: number } }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/reflow`, {
       method: 'POST',
