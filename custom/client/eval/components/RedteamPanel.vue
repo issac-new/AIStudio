@@ -127,7 +127,7 @@ function timeText(ts: number): string {
         </div>
       </div>
 
-      <form class="rt__form card" data-testid="eval-redteam-form" @submit.prevent="run">
+      <form class="rt__form" data-testid="eval-redteam-form" @submit.prevent="run">
         <label>{{ L.redteam.generations }}<input v-model.number="form.generations" type="number" min="0" :max="corpus.limits.maxGenerations" /></label>
         <label>{{ L.redteam.population }}<input v-model.number="form.population" type="number" min="1" :max="corpus.limits.maxPopulation" /></label>
         <label>{{ L.redteam.threshold }}<input v-model.number="form.threshold" type="number" min="1" :max="corpus.limits.maxThreshold" /></label>
@@ -265,6 +265,7 @@ function timeText(ts: number): string {
 .chip-benign { border-color: var(--success); }
 .chip-warn { border-color: var(--warning); color: var(--warning); }
 .rt__form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; padding: 10px 12px;
+  border: 1px solid var(--border-color); border-radius: 10px;
   label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
   input { border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 6px; background: transparent; color: inherit; }
   button { height: 28px; }
