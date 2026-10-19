@@ -119,8 +119,12 @@ V8.45 的 `eval_flow` 只建集、运行、红队、采集、判分；失败样�
 
 ## 九、验证账
 
-- `bash -n`：`aipay-scenario.sh`、`mx-prelaunch-check.sh`、`mx-eval-lib.sh`、`mx-closure-snapshot.sh`。
-- `python3 -m py_compile`：`mx-report-gen.py`、`mx-report-audit.py`、`mx-eval-summary.py`、`mx-narrative-skeleton.py`。
-- `tests/v846-governance-closure.test.ts` 与既有 `tests/eval-fullflow-integration.test.ts`、`tests/eval-metrics-template-sync.test.ts`、`tests/harness-gate-integrity.test.ts` 全绿（实际结果见交付说明）。
-- 产品侧 `vitest` 的 `sim-overview-panel` 用例覆盖 G6 键改动。
-- run22 未启动；`mx-prelaunch-check.sh` 可在 SIM 环境就绪后重跑，当前环境未起 8801/8802，预检不全绿属预期，不作为 run22 已就绪的结论。
+- `bash -n`：`aipay-scenario.sh`、`mx-prelaunch-check.sh`、`mx-eval-lib.sh`、`mx-closure-snapshot.sh` 全过。
+- `python3 -m py_compile`：`mx-report-gen.py`、`mx-report-audit.py`、`mx-eval-summary.py`、`mx-narrative-skeleton.py` 全过。
+- simharness 全量门禁 `tests/run-gates.sh`：rc=0，jargon-source-gate HARD=0。
+- 定向用例：`v846-governance-closure` 7/7、`eval-fullflow-integration` 8/8、`eval-metrics-template-sync` 6/6、`harness-gate-integrity` 128/128。
+- 产品侧 `sim-overview-panel` 21/21（G6 键断言已更新）；`nx run build` rc=0，`verify-dist` 通过。
+- `mx-prelaunch-check.sh` 实测 **30 过 / 0 败**（2026-10-19 20:10，SIM 8801/8802 在跑）。
+- SIM `product-dist` 已刷新到 overlay `b060fc4e`，六个治理端点标记全部在位。
+- 宿主 8647/8649 已重启；G6 改动在 serve-main 54539c65 生效。
+- run22 未启动；本文件与 `simharness/docs/2026-10-19-run22-prelude.md` 是起跑前的操作口径。
