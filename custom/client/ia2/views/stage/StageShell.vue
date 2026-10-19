@@ -17,7 +17,7 @@ import ClearancePanel from '../gov/ClearancePanel.vue'
 import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
 import TracePanel from '../sim/TracePanel.vue'
 import DeliveryPanel from '../sim/DeliveryPanel.vue'
-import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
+import StageG5Panel from './StageG5Panel.vue'
 import StageSetupSteps from './StageSetupSteps.vue'
 import StageRequirementsOverview from './StageRequirementsOverview.vue'
 import StagePreflight from './StagePreflight.vue'
@@ -102,15 +102,38 @@ function openInbox(): void {
   void router.push({ name: 'ia2.inbox' })
 }
 
-// 重组件按需加载：避免任一阶段页把看板/文档/审计/案例全部打进首屏
-const AsyncKanban = defineAsyncComponent(() => import('@/custom/kanban/views/SwarmKanbanView.vue').then(m => m.default))
-const AsyncAccounts = defineAsyncComponent(() => import('../AccountAdminView.vue').then(m => m.default))
-const AsyncTeams = defineAsyncComponent(() => import('../TeamsView.vue').then(m => m.default))
-const AsyncAgents = defineAsyncComponent(() => import('../agents/AgentsView.vue').then(m => m.default))
-const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vue').then(m => m.default))
-const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue').then(m => m.default))
-const AsyncReviewGov = defineAsyncComponent(() => import('../gov/ReviewGovPanel.vue').then(m => m.default))
-const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue').then(m => m.default))
+// 重组件按需加载：避免任一阶段页把看板/文档/审计/案例全部打进首屏。
+// P2（2026-10-19）：统一挂加载骨架（延迟 200ms 防闪现）与错误重试面，异步页签不再白屏等待。
+const TabSkeleton = {
+  name: 'TabSkeleton',
+  template: `<div class="stg__skeleton" data-testid="stg-tab-skeleton"><span></span><span></span><span></span></div>`,
+}
+const TabLoadError = {
+  name: 'TabLoadError',
+  emits: ['retry'],
+  template: `<div class="stg__load-error" data-testid="stg-tab-load-error">页签加载失败<button type="button" @click="$emit('retry')">重试</button></div>`,
+}
+function lazyTab(loader: () => Promise<unknown>): Component {
+  return defineAsyncComponent({
+    // 显式解包 default：ESM 互操作探测在测试 mock 下不成立（模块对象会被当组件用）
+    loader: async () => {
+      const mod = await loader() as { default?: Component }
+      return mod.default ?? (mod as unknown as Component)
+    },
+    loadingComponent: TabSkeleton,
+    delay: 200,
+    errorComponent: TabLoadError,
+    timeout: 30_000,
+  })
+}
+const AsyncKanban = lazyTab(() => import('@/custom/kanban/views/SwarmKanbanView.vue'))
+const AsyncAccounts = lazyTab(() => import('../AccountAdminView.vue'))
+const AsyncTeams = lazyTab(() => import('../TeamsView.vue'))
+const AsyncAgents = lazyTab(() => import('../agents/AgentsView.vue'))
+const AsyncDocs = lazyTab(() => import('../gov/GovDocsReviewView.vue'))
+const AsyncAudit = lazyTab(() => import('../gov/GovAuditChangeView.vue'))
+const AsyncReviewGov = lazyTab(() => import('../gov/ReviewGovPanel.vue'))
+const AsyncCases = lazyTab(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue'))
 
 const TAB_COMPONENTS: Record<string, Component> = {
   setupSteps: StageSetupSteps,
@@ -134,7 +157,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   trace: TracePanel,
   delivery: DeliveryPanel,
   uat: TracePanel,
-  g5: ApprovalPanel,
+  g5: StageG5Panel,
   cases: AsyncCases,
   clearance: ClearancePanel,
   issues: GovIssuesPanel,
@@ -150,7 +173,6 @@ const TAB_PROPS: Record<string, Record<string, unknown>> = {
   analysis: { scope: 'g2' },
   quality: { gates: ['G3', 'G4'] },
   uat: { onlyUnjudged: true },
-  g5: { pollMs: 10000, showHistory: true, hideTitle: true, filter: 'release' },
 }
 /** ③④阶段页内嵌看板只显示本阶段在办的卡（映射单一事实源=stage-task-filter.ts）；
  *  其他阶段页签不传 statuses，行为与全量看板一致。 */
@@ -267,5 +289,24 @@ const currentProps = computed(() => {
 }
 .stg__same-src button {
   border: none; background: none; color: var(--accent-info); font-size: 11.5px; cursor: pointer; white-space: nowrap;
+}
+/* 异步页签加载骨架（P2）：三条渐进灰条占位，替代白屏等待 */
+.stg__skeleton { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.stg__skeleton span {
+  height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary, var(--bg-secondary)) 50%, var(--bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: stg-skeleton-wave 1.2s ease-in-out infinite;
+}
+.stg__skeleton span:nth-child(2) { width: 82%; animation-delay: 0.12s; }
+.stg__skeleton span:nth-child(3) { width: 64%; animation-delay: 0.24s; }
+@keyframes stg-skeleton-wave { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.stg__load-error {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--ia-fail);
+}
+.stg__load-error button {
+  border: 1px solid var(--border-color); background: transparent; color: inherit;
+  border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer;
 }
 </style>

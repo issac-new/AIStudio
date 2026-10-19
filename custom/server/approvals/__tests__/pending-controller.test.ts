@@ -267,6 +267,54 @@ describe('审批收件箱 REST（/api/approvals）', () => {
   })
 })
 
+
+// ── P2 审批汇总单一契约（spec 2026-10-19-studio-p2 §2.3） ──
+describe('pending-summary 计数契约', () => {
+  it('纯函数 summarizePendingItems：kind 前缀归域 + 风险分桶', async () => {
+    const { summarizePendingItems } = await import('../pending-controller')
+    const items = [
+      { id: 'fleet:s1:a1', kind: 'command', title: 'a', detail: '', createdAt: 1, risk: 'high' },
+      { id: 'fleetfile:x', kind: 'command', title: 'b', detail: '', createdAt: 2 },
+      { id: 'review:r1', kind: 'review', title: 'c', detail: '', createdAt: 3, risk: 'medium' },
+      { id: 'enf:e1', kind: 'command', title: 'd', detail: '', createdAt: 4 },
+    ] as never
+    const sum = summarizePendingItems(items)
+    expect(sum.total).toBe(4)
+    expect(sum.command).toBe(2)
+    expect(sum.review).toBe(1)
+    expect(sum.enforce).toBe(1)
+    // 无 risk 字段按 medium 兜底（老服务端兼容语义）：fleetfile 与 enf 两件均落 medium
+    expect(sum.byRisk).toEqual({ high: 1, medium: 3, low: 0 })
+  })
+
+  it('GET /pending-summary：与 /pending 同源计数（夹具含 1 张待审评审）', async () => {
+    const { approvalsRoutes } = await import('../pending-controller')
+    const { openReview } = await import('../../review/review-store')
+    openReview({ reviewId: 'rev-sum-1', taskId: 't_sum', domain: 'uncommitted' })
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      await next()
+    })
+    app.use(approvalsRoutes.routes())
+    const srv = createServer(app.callback())
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r))
+    const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+    try {
+      const pending = await fetch(`${url}/api/approvals/pending`).then(r => r.json())
+      const sum = await fetch(`${url}/api/approvals/pending-summary`).then(r => r.json())
+      expect(sum.ok).toBe(true)
+      expect(sum.total).toBe(pending.items.length)
+      expect(sum.review).toBe(pending.items.filter((i: { kind: string }) => i.kind === 'review').length)
+      // 命令域不含执法门（enf: 前缀单列 enforce 桶）——域分离正是契约要点
+      expect(sum.command).toBe(pending.items.filter((i: { kind: string; id: string }) => i.kind === 'command' && !i.id.startsWith('enf:')).length)
+      expect(sum.enforce).toBe(pending.items.filter((i: { id: string }) => i.id.startsWith('enf:')).length)
+    } finally {
+      await new Promise<void>((r) => srv.close(() => r()))
+    }
+  })
+})
+
 describe('执法审批桥入收件箱（H3 收口轮：enf: 聚合+裁决）', () => {
   it('挂单入 pending 清单；decide approve 走通并落台账', async () => {
     const enfDir = `/tmp/enf-inbox-${process.pid}-${Date.now()}`
