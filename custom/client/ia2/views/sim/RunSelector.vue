@@ -7,7 +7,8 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useRunContext } from '../../composables/useRunContext'
+import { useRunContext, LAST_RUN_KEY } from '../../composables/useRunContext'
+import { buildRunOptions } from '../../utils/run-options'
 import { runDisplayName } from '../../run-display'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 
@@ -19,14 +20,13 @@ const runsStore = useRunCenterStore()
 const { run } = useRunContext()
 
 const current = computed(() => run.value.trim())
-/** 运行中心列表的 sim 运行 ID 带 `sim-` 前缀（图引擎命名空间），而 run-state /
- *  报告端点消费的是 runs/<目录名>。选择器统一归一为目录名，避免 ?run=sim-xxx 404。 */
-const runStateId = (id: string): string => id.startsWith('sim-') ? id.slice(4) : id
-const options = computed(() => {
-  const list = Array.from(new Set((runsStore.sortedRuns ?? []).map(r => runStateId(r.runId)).filter(Boolean)))
-  if (current.value && !list.includes(current.value)) list.unshift(current.value)
-  return list.slice(0, 40)
-})
+/** 选项构造抽成纯函数（utils/run-options）：空列表且加载完不再把 localStorage
+ *  里的旧运行补回选项——清场重建后它会显示成一个不存在的运行（2026-10-19 实测）。 */
+const options = computed(() => buildRunOptions(
+  (runsStore.sortedRuns ?? []).map(r => r.runId),
+  current.value,
+  Boolean(runsStore.loading),
+))
 
 function selectRun(value: string): void {
   const query = { ...route.query }
@@ -47,7 +47,12 @@ onMounted(() => {
   if (!isTest && typeof fetchRuns === 'function' && !(runsStore.sortedRuns ?? []).length) void fetchRuns.call(runsStore)
 })
 watch(options, (list) => {
-  if (!current.value && list.length) selectRun(list[0])
+  if (!current.value && list.length) { selectRun(list[0]); return }
+  // 运行记录已被清场：丢掉记忆值与 ?run，面板回到「暂无历史运行」而不是打 404
+  if (!list.length && current.value && !runsStore.loading) {
+    try { localStorage.removeItem(LAST_RUN_KEY) } catch { /* 隐私模式 */ }
+    selectRun('')
+  }
 }, { immediate: true })
 </script>
 
