@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { fetchCliSessions, launchDevtool, type CliSession } from '../api/devtools'
+import { filterCliSessions } from '../utils/sessionProjects'
 import { showToast } from '../utils/toast'
 
 const props = withDefaults(defineProps<{
@@ -15,7 +16,9 @@ const props = withDefaults(defineProps<{
   view?: 'active' | 'done' | 'workspace'
   /** 跟随侧栏搜索（命中标题或工作区路径） */
   query?: string
-}>(), { boxed: true, view: 'workspace', query: '' })
+  /** 外部注入会话列表（侧栏单一数据源场景；不传则组件自拉） */
+  sessions?: CliSession[] | null
+}>(), { boxed: true, view: 'workspace', query: '', sessions: null })
 
 const emit = defineEmits<{ (e: 'count', n: number): void }>()
 
@@ -25,9 +28,9 @@ const loading = ref(true)
 const busyId = ref('')
 
 const ALL = ref<CliSession[]>([])
-const DAY = 24 * 60 * 60 * 1000
 
 async function load(): Promise<void> {
+  if (props.sessions) { ALL.value = props.sessions; return } // 外部注入：不双拉
   loading.value = true
   loadError.value = ''
   try {
@@ -43,17 +46,10 @@ async function load(): Promise<void> {
   }
 }
 
-/** 视图 + 搜索过滤（2026-10-19 视图语义修正批：CLI 分组跟随侧栏口径）。 */
-const sessions = computed(() => {
-  const now = Date.now()
-  return ALL.value.filter(s => {
-    if (props.view === 'active' && !(now - s.timeUpdated <= DAY)) return false
-    if (props.view === 'done' && !(now - s.timeUpdated > DAY)) return false
-    const q = props.query.trim().toLowerCase()
-    if (q && !s.title.toLowerCase().includes(q) && !s.directory.toLowerCase().includes(q)) return false
-    return true
-  })
-})
+watch(() => props.sessions, v => { if (v) { ALL.value = v; loading.value = false } }, { immediate: true })
+
+/** 视图 + 搜索过滤（共享 util——侧栏混排与独立分组同口径）。 */
+const sessions = computed(() => filterCliSessions(ALL.value, props.view, props.query, Date.now()))
 
 watch(sessions, list => emit('count', list.length), { immediate: true })
 
