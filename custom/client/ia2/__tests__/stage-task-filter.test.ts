@@ -11,8 +11,8 @@ describe('阶段 → 任务状态映射', () => {
   it('③ 分析设计 = 待分类/待办/已排期/可开工', () => {
     expect(stageBoardStatuses(3)).toEqual(['triage', 'todo', 'scheduled', 'ready'])
   })
-  it('④ 开发 = 进行中/运行中/阻塞/待验收', () => {
-    expect(stageBoardStatuses(4)).toEqual(['in_progress', 'running', 'blocked', 'review'])
+  it('④ 开发 = 进行中/阻塞/待验收', () => {
+    expect(stageBoardStatuses(4)).toEqual(['running', 'blocked', 'review'])
   })
   it('无阶段视图的阶段（1/2/5/6）不额外过滤', () => {
     for (const stage of [1, 2, 5, 6]) expect(stageBoardStatuses(stage)).toEqual([])
@@ -30,7 +30,7 @@ describe('阶段 → 任务状态映射', () => {
 describe('filterTasksByStatuses 叠加规则', () => {
   const tasks = [
     { id: 'a', status: 'ready' },
-    { id: 'b', status: 'in_progress' },
+    { id: 'b', status: 'blocked' },
     { id: 'c', status: 'done' },
   ]
   it('空映射返回全量副本（不共享原数组）', () => {

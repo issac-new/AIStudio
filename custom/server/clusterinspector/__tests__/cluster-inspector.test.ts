@@ -158,9 +158,12 @@ describe('二期②③：matrix 提醒 + destructive 审批联动', () => {
     writeFileSync(log, '2026-10-08 18:18:00 ERROR hindsight prefetch TimeoutError\n')
     utimesSync(log, new Date(Date.now() - 400_000), new Date(Date.now() - 400_000))
     const nudged: Array<[string, string]> = []
+    const shadows: Array<Record<string, unknown>> = []
     const insp = new ClusterInspector({
       emitGovEvent: () => {}, hermesHome: home, gatewayBase: 'http://127.0.0.1:1',
       nudge: async (pf, sum) => { nudged.push([pf, sum]); return 'nudged' },
+      // #9 决策影子层注入桩：断言建议动作+置信度落账，真值（nudged）不受影响
+      recordShadow: (input) => { shadows.push({ ...input }) },
       now: () => 1,
     })
     process.env.CLUSTER_INSPECTOR_NUDGE = 'on'
@@ -168,6 +171,10 @@ describe('二期②③：matrix 提醒 + destructive 审批联动', () => {
     try {
       await insp.runOnce()
       expect(nudged).toEqual([['fanfan', expect.stringContaining('卡死')]])  // 注入桩收 a.summary；提醒话术在缺省发送体内
+      // 影子层：首催决策点记录了建议动作与置信度，规则真值照常（nudged 非空）
+      expect(shadows.length).toBeGreaterThanOrEqual(1)
+      expect(shadows[0]).toMatchObject({ detector: 'session.stalled', profile: 'fanfan', ruleAction: 'nudge-first', suggestedAction: 'nudge' })
+      expect(typeof (shadows[0] as { confidence: number }).confidence).toBe('number')
     } finally { delete process.env.CLUSTER_INSPECTOR_NUDGE; delete process.env.CLUSTER_INSPECTOR_NUDGE_ROOM }
   })
 

@@ -103,6 +103,18 @@ describe('纯函数：分级达成 + 证据', () => {
     expect(cost.value).toBe(5000)
     const audit = r.metrics.find((m) => m.key === 'audit-completeness')!
     expect(audit.value).toBe(1)
+    // #10 任务级自治度：fullInputs 默认 interventionsCount/done 见 fullInputs；复算自治率
+    const autonomy = r.metrics.find((m) => m.key === 'task-autonomy-rate')!
+    expect(autonomy.value).not.toBeNull()
+    const ipt = r.metrics.find((m) => m.key === 'interventions-per-task')!
+    expect(ipt.value).not.toBeNull()
+  })
+
+  it('#10 自治度缺数 → unavailable（不造数）', async () => {
+    const { assessMaturity } = await import('../maturity')
+    const r = assessMaturity({ ...fullInputs(), interventionsCount: null })
+    expect(r.metrics.find((m) => m.key === 'task-autonomy-rate')!.value).toBeNull()
+    expect(r.metrics.find((m) => m.key === 'interventions-per-task')!.value).toBeNull()
   })
 
   it('高介入率/低送达率：L4 未达成（achieved=false），单级失败不牵连他级', async () => {

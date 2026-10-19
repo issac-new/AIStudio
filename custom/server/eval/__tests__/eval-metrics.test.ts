@@ -184,6 +184,9 @@ describe('processMetricsOf（run 级均值 + 诚实缺席）', () => {
     expect(pm?.attemptsCompared).toBe(2)
     expect(pm?.toolHeadAccuracy).toBe(1) // 两样本 LCS 均=2/2
     expect(pm?.trajectoryMatchScore).toBeCloseTo((0 + 1 / 2) / 2, 5)
+    // #7 过程评估覆盖露出：declaredCount=1（仅 t1 声明期望序列），coverage=1（两 attempt 均对比）
+    expect(pm?.declaredCount).toBe(1)
+    expect(pm?.coverage).toBe(1)
   })
 
   it('有期望序列但证据缺 toolCalls → 不参与（未测≠零分）', () => {

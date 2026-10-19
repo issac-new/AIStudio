@@ -69,6 +69,8 @@ const createForm = reactive({
   variants: [{ label: '候选 A', tree: false, content: '', files: [{ path: '', content: '' }], deletions: '' }] as Array<{
     label: string; tree: boolean; content: string; files: Array<{ path: string; content: string }>; deletions: string
   }>,
+  // #5 经验库合流：引用经验新建提案（把经验 id 传入 experienceIds，激活原死字段）
+  experienceIds: [] as string[],
 })
 
 const expForm = reactive({
@@ -76,6 +78,20 @@ const expForm = reactive({
   surfaceKey: '' as SurfaceKey | '',
   evidenceRefs: '',
   confidence: 'medium' as 'low' | 'medium' | 'high',
+})
+
+// #5 经验库合流：按经验域筛选（消「导入全 general 后无法分域检索」的盲区）。
+const expDomainFilter = ref('')
+
+const experienceDomains = computed<string[]>(() => {
+  const all = (data.value?.experiences ?? []).map((e) => e.domain || 'general')
+  return [...new Set(all)].sort()
+})
+
+const filteredExperiences = computed(() => {
+  const all = data.value?.experiences ?? []
+  if (!expDomainFilter.value) return all
+  return all.filter((e) => (e.domain || 'general') === expDomainFilter.value)
 })
 
 function formFor(id: string): ProposalForm {
@@ -215,6 +231,7 @@ async function create(): Promise<void> {
     domain: createForm.domain.trim() || 'general',
     budgetCapUsd: Number(createForm.budgetCapUsd) || 0,
     evidenceRefs: splitRefs(createForm.evidenceRefs),
+    ...(createForm.experienceIds.length ? { experienceIds: createForm.experienceIds } : {}),
     variants,
   }))
   if (ok) {
@@ -224,6 +241,7 @@ async function create(): Promise<void> {
     createForm.targetPath = ''
     createForm.evidenceRefs = ''
     createForm.domain = 'general'
+    createForm.experienceIds = []
     createForm.variants = [{ label: '候选 A', tree: false, content: '', files: [{ path: '', content: '' }], deletions: '' }]
   }
 }
@@ -298,6 +316,26 @@ async function rollback(p: ProposalDto): Promise<void> {
 
 async function importExperiences(): Promise<void> {
   await act(() => importWorkbenchExperiences())
+}
+
+// #5：把经验加入待引用清单（创建提案时作为 experienceIds 传入，激活死字段）。
+// 同时把经验域带到提案 domain，保证「同域经验互相检索」语义贯穿。
+function citeExperience(exp: { id: string; domain?: string | null }): void {
+  if (!createForm.experienceIds.includes(exp.id)) createForm.experienceIds.push(exp.id)
+  if (exp.domain) createForm.domain = exp.domain
+  showCreate.value = true
+}
+
+function unciteExperience(id: string): void {
+  createForm.experienceIds = createForm.experienceIds.filter((x) => x !== id)
+}
+
+// #5：提案详情展示其引用的经验（experienceIds → 经验摘要，激活死字段的可视消费）。
+function citedExperiencesOf(p: { experienceIds?: string[] }): Array<{ id: string; domain?: string | null; statement: string }> {
+  const ids = p.experienceIds ?? []
+  if (!ids.length) return []
+  const all = data.value?.experiences ?? []
+  return all.filter((e) => ids.includes(e.id))
 }
 
 async function addExperience(): Promise<void> {
@@ -453,6 +491,9 @@ onMounted(() => void refresh())
           </header>
           <p class="hi__hyp">{{ p.hypothesis }}</p>
           <div v-if="p.targetPath" class="hi__meta">{{ L.formTarget }}：<code>{{ p.targetPath }}</code></div>
+          <div v-if="citedExperiencesOf(p).length" class="hi__meta" data-testid="hi-proposal-cited">
+            {{ L.citedExperiences }}：<span v-for="e in citedExperiencesOf(p)" :key="e.id"><code>{{ e.domain || L.general }}/{{ e.statement.slice(0, 24) }}</code> </span>
+          </div>
           <div class="hi__meta">
             {{ L.baseline }}：<code>{{ p.baselineRunId ?? '—' }}</code>
             · {{ L.approvalApproved }}：{{ p.approval ? `${p.approval.actor}（${p.approval.decision === 'approved' ? L.approvalApproved : L.approvalRejected}）` : L.approvalNone }}
@@ -601,9 +642,21 @@ onMounted(() => void refresh())
           </div>
           <button type="button" class="hi__btn" data-testid="hi-exp-import" @click="importExperiences">{{ L.importExperiences }}</button>
         </div>
-        <p v-if="data.experiences.length === 0" class="hi__empty">{{ L.emptyExperiences }}</p>
+        <div class="hi__row" v-if="data.experiences.length > 0">
+          <label class="hi__meta">{{ L.filterByDomain }}
+            <select v-model="expDomainFilter" data-testid="hi-exp-domain-filter">
+              <option value="">{{ L.general }}（全部）</option>
+              <option v-for="d in experienceDomains" :key="d" :value="d">{{ d }}</option>
+            </select>
+          </label>
+          <span v-if="createForm.experienceIds.length" class="hi__meta" data-testid="hi-cited-count">
+            {{ L.citedExperiences }}: {{ createForm.experienceIds.length }}
+            <button type="button" class="hi__btn" @click="createForm.experienceIds = []">×</button>
+          </span>
+        </div>
+        <p v-if="filteredExperiences.length === 0" class="hi__empty">{{ L.emptyExperiences }}</p>
         <ul class="hi__expList">
-          <li v-for="exp in data.experiences" :key="exp.id" class="hi__exp" :data-testid="`hi-exp-${exp.id}`">
+          <li v-for="exp in filteredExperiences" :key="exp.id" class="hi__exp" :data-testid="`hi-exp-${exp.id}`">
             <div class="hi__expMain">
               <span>{{ exp.statement }}</span>
               <span class="hi__meta">
@@ -619,6 +672,7 @@ onMounted(() => void refresh())
               <code v-for="ref in exp.evidenceRefs.slice(0, 3)" :key="ref">{{ ref }}</code>
             </div>
             <div class="hi__row">
+              <button type="button" class="hi__btn" :data-testid="`hi-exp-cite-${exp.id}`" @click="citeExperience(exp)">{{ L.citeForProposal }}</button>
               <button v-if="exp.status === 'candidate'" type="button" class="hi__btn" @click="setExperienceStatus(exp, 'adopted')">{{ L.adopt }}</button>
               <button v-if="exp.status !== 'retired'" type="button" class="hi__btn" @click="setExperienceStatus(exp, 'retired')">{{ L.retire }}</button>
             </div>

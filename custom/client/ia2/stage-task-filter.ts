@@ -1,14 +1,17 @@
 // overlay/custom/client/ia2/stage-task-filter.ts
 // 阶段 → 任务状态映射（2026-10-19 P2-9 续批，用户裁定先定映射）。
 //
-// 依据 26 步流程与看板状态词表（triage/todo/scheduled/ready/running|in_progress/
-// blocked/review/done/archived）：阶段页内嵌的看板只显示「本阶段在办」的卡，
-// 全量入口仍是「常用 · 看板」。映射固定在此文件，阶段页、看板组件与守门测试同源。
+// 依据 26 步流程与看板状态词表（triage/todo/scheduled/ready/running/
+// blocked/review/done/archived 九态，见 kanban_db.py DEFAULT_STATUSES）：
+// 阶段页内嵌的看板只显示「本阶段在办」的卡，全量入口仍是「常用 · 看板」。
+// 映射固定在此文件，阶段页、看板组件与守门测试同源。
+// 注（2026-10-19 闸门收口 #3）：原 ④ 映射含 `in_progress`，但九态枚举无此值、全树
+// 无状态写入点——纯幽灵值，已从权威映射剔除（filterTasksByStatuses 通用匹配能力不受影响）。
 export const STAGE_BOARD_STATUSES: Readonly<Record<3 | 4, readonly string[]>> = {
   // ③ 分析设计：任务分解、系统分析、G2、排期——卡在待分类/待办/已排期/可开工
   3: ['triage', 'todo', 'scheduled', 'ready'],
   // ④ 开发：编码、联调、测试、缺陷修复——卡在进行中/阻塞/待验收
-  4: ['in_progress', 'running', 'blocked', 'review'],
+  4: ['running', 'blocked', 'review'],
 }
 
 export const STAGE_BOARD_STATUS_LABELS: Readonly<Record<3 | 4, { zh: string; en: string }>> = {

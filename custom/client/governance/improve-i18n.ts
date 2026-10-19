@@ -142,6 +142,9 @@ export interface ImproveCopy {
   expAdopted: string
   expRetired: string
   general: string
+  filterByDomain: string
+  citeForProposal: string
+  citedExperiences: string
   boundary: string
   actionFailed: string
   confirmApply: string
@@ -288,6 +291,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     expAdopted: '已采纳',
     expRetired: '已退役',
     general: '通用',
+    filterByDomain: '按经验域筛选',
+    citeForProposal: '引用新建提案',
+    citedExperiences: '引用经验',
     boundary: '边界：本页不替用户跑模型；探测必须绑定真实评测运行。可直接写盘仅系统提示词与 Skills，且需人工批准 + HARNESS2_APPLY=1；其余六面只出建议。',
     actionFailed: '操作失败',
     confirmApply: '将把候选内容写入目标文件（写前快照，可回滚）。确认继续？',
@@ -432,6 +438,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     expAdopted: 'Adopted',
     expRetired: 'Retired',
     general: 'General',
+    filterByDomain: 'Filter by domain',
+    citeForProposal: 'Cite in new proposal',
+    citedExperiences: 'Cited experiences',
     boundary: 'Boundary: this page does not run models for you; probes must bind real eval runs. Only system prompt and Skills are writable, and only with human approval + HARNESS2_APPLY=1; the other six surfaces are advisory.',
     actionFailed: 'Action failed',
     confirmApply: 'This writes the candidate into the target file (snapshot first, rollback supported). Continue?',
