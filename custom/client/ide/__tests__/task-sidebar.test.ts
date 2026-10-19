@@ -258,20 +258,20 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-task-pinned"]').exists()).toBe(true)
   })
 
-  it('时间线按任务优先级降序 → 更新时间逆序；关联会话显 P0-P3 徽标', async () => {
-    // done 视图：organize chip 出现且老会话（updatedAt:1 的 extra1/2）在桶内；
-    // 置顶区在该视图被过滤（置顶会话近期活跃）不影响 organize 排序断言。
+  it('时间线=时间分层（今天/近7天/更早），段内更新时间逆序；关联会话显 P0-P3 徽标', async () => {
+    // 2026-10-19 视图语义修正批：时间线组织从「优先级平铺」改为时间分层。
     const w = mountSidebarForOrganize()
     await flushPromises()
     await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
     expect(listTasks).toHaveBeenCalled()
-    const items = w
-      .find('[data-testid="ide-task-group-ide.task.timeline"]')
+    // active 视图下 extra1/2（updatedAt:1）超 24h 窗被滤；其余全部落「今天」段
+    const today = w.find('[data-testid="ide-task-group-今天"]')
+    expect(today.exists()).toBe(true)
+    const items = today
       .findAll('[data-testid^="ide-task-item-"]')
       .map((n) => n.attributes('data-testid').slice('ide-task-item-'.length))
-    // active 视图下时间线只覆盖 24h 活跃会话（extra1/2 超窗被滤）：
-    // 优先级 s-active(3) > s-other(1)；无任务者 s-none 按更新时间跟上。
-    expect(items).toEqual(['s-active', 's-other', 's-none'])
+    // 段内按更新时间逆序：s-active(now) > s-none(-5s) > s-other(-10s)
+    expect(items).toEqual(['s-active', 's-none', 's-other'])
     // 徽标：P0/P2/P3（P3 因 priority=0 仍属「有任务」档）
     expect(w.find('[data-testid="ide-task-prio-P0"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-task-prio-P2"]').exists()).toBe(true)
@@ -290,9 +290,9 @@ describe('IdeTaskSidebar', () => {
     await w.find('[data-testid="ide-task-organize-grouped"]').trigger('click')
     expect(w.find('[data-testid="ide-task-group-发布批"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-task-group-ide.task.ungrouped"]').exists()).toBe(true)
-    // 切 timeline：单组平铺
+    // 切 timeline：时间分层（今天段必有——近期活跃会话都在）
     await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
-    expect(w.find('[data-testid="ide-task-group-ide.task.timeline"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-task-group-今天"]').exists()).toBe(true)
   })
 
   it('移动到分组调 setSessionCategory；分享导出调 exportSession', async () => {
