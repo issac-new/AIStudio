@@ -8,8 +8,7 @@ import { randomBytes } from 'node:crypto'
 import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { repoRoot } from './governance-controller'
-import { createMatrixUser, setMatrixUserActive, validateMatrixToken, getMatrixUserState, assignDefaultAvatar, listMatrixUsers } from '../matrix/admin-service'
-import { UnsafeUrlError } from '../security/url-guard'
+import { createMatrixUser, setMatrixUserActive, validateMatrixToken, getMatrixUserState } from '../matrix/admin-service'
 
 const exec = promisify(execFile)
 
@@ -114,18 +113,9 @@ export interface ProvisionInput {
   withAgent?: boolean; displayName?: string
 }
 
-/** 建号命名约定的服务端正本判定：AI 助理号 localpart 一律 `<name>-agent`。
- *  客户端镜像 = matrix-chat/identity/user-kind.ts（绊线测试钉两端不漂移，spec D-6）。 */
-export function isAgentMatrixUser(userId: string): boolean {
-  return userId.replace(/^@/, '').split(':')[0].toLowerCase().endsWith('-agent')
-}
-
-/** P6 建号：synapse 建人类号（+可选 AI 助理号）→ roster 追加行 → 提交。
- *  2026-10-19 追加默认头像（spec D-2/D-3）：roster 提交后 best-effort 配默认
- *  头像（人类款/AI 机器人款）——头像失败不抛错不回滚，失败态记录在 avatars。 */
+/** P6 建号：synapse 建人类号（+可选 AI 助理号）→ roster 追加行 → 提交。 */
 export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
   created: string[]; rosterCommit: string
-  avatars: { human: boolean; agent: boolean | null }
 }> {
   const name = inp.localName.trim().replace(/^@/, '').split(':')[0]
   if (!/^[a-z0-9_.-]+$/i.test(name)) throw new Error(`非法用户名：${name}`)
@@ -149,84 +139,7 @@ export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
   const agentCell = inp.withAgent === false ? '—' : `@${name}-agent:${serverName}`
   const next = appendTableRow(markdown, [`@${human}`, agentCell, inp.role])
   const { commit } = await writeRegistry('roster', next, `账户管理：新增 ${name}（${inp.role}）`, 'account-admin')
-  // 默认头像（化妆性属性，spec D-3）：任一步失败降级记录，不影响建号/roster 结果
-  const avatars: { human: boolean; agent: boolean | null } = { human: false, agent: null }
-  try {
-    avatars.human = await assignDefaultAvatar({
-      userId: `@${human}`, kind: 'human', adminToken: inp.adminToken,
-      homeserverUrl: inp.homeserverUrl, displayName: inp.displayName,
-    })
-  } catch (err) {
-    if (err instanceof UnsafeUrlError) throw err
-    avatars.human = false
-  }
-  if (inp.withAgent !== false) {
-    try {
-      avatars.agent = await assignDefaultAvatar({
-        userId: `@${name}-agent:${serverName}`, kind: 'agent',
-        adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl,
-      })
-    } catch (err) {
-      if (err instanceof UnsafeUrlError) throw err
-      avatars.agent = false
-    }
-  }
-  return { created, rosterCommit: commit, avatars }
-}
-
-export interface BackfillAvatarsInput {
-  adminToken: string; homeserverUrl: string
-  /** 显式指定则只处理这些账号且无视已有头像（覆盖语义）；缺省=全量扫描只补空头像（spec D-7）。 */
-  userIds?: string[]
-  fetchImpl?: typeof fetch
-}
-
-/** 存量默认头像补发（spec D-7）：默认翻页拉全量账号（上限 1000 防失控），
- *  只给「未停用且头像为空」的账号配默认头像；AI/人类按 -agent 命名约定分流。 */
-export async function backfillDefaultAvatars(inp: BackfillAvatarsInput): Promise<{
-  updated: string[]
-  failed: Array<{ userId: string; error: string }>
-}> {
-  const targets: Array<{ userId: string; kind: 'human' | 'agent'; displayName?: string }> = []
-  if (inp.userIds) {
-    for (const id of inp.userIds.filter(Boolean)) {
-      targets.push({ userId: id, kind: isAgentMatrixUser(id) ? 'agent' : 'human' })
-    }
-  } else {
-    let from = 0
-    for (;;) {
-      const page = await listMatrixUsers(inp.adminToken, inp.homeserverUrl, from, 100)
-      if (!page) throw new Error('listMatrixUsers 失败（synapse admin v2 users 未过）')
-      for (const u of page.users) {
-        if (u.deactivated) continue
-        if (u.avatar_url) continue
-        targets.push({
-          userId: u.name,
-          kind: isAgentMatrixUser(u.name) ? 'agent' : 'human',
-          displayName: u.displayname ?? undefined,
-        })
-      }
-      from += page.users.length
-      if (from >= page.total || page.users.length === 0 || from >= 1000) break
-    }
-  }
-  const updated: string[] = []
-  const failed: Array<{ userId: string; error: string }> = []
-  for (const t of targets) {
-    try {
-      const ok = await assignDefaultAvatar({
-        userId: t.userId, kind: t.kind, displayName: t.displayName,
-        adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl,
-        fetchImpl: inp.fetchImpl,
-      })
-      if (ok) updated.push(t.userId)
-      else failed.push({ userId: t.userId, error: 'upload_or_put_failed' })
-    } catch (err) {
-      if (err instanceof UnsafeUrlError) throw err
-      failed.push({ userId: t.userId, error: String(err instanceof Error ? err.message : err) })
-    }
-  }
-  return { updated, failed }
+  return { created, rosterCommit: commit }
 }
 
 export interface OffboardInput {

@@ -628,10 +628,22 @@ export function mergeUatVerdicts(
     const prev = latest.get(r.ac)
     if (!prev || Date.parse(r.ts) >= Date.parse(prev.ts)) latest.set(r.ac, r)
   }
-  return rows.map(row => {
+  const byAc = new Map(rows.map(r => [r.ac, r]))
+  // 台账行不回填为 AC 行——三源全缺席时 trace 整表空属正常（如实呈现）；
+  // 台账数据由 /uat-verdicts 独立端点供给 UAT 页签（spec 2026-10-19-studio-p2 §2.1）。
+  const out = rows.map(row => {
     const hit = latest.get(row.ac)
     return hit ? { ...row, uatVerdict: UAT_VERDICT_LABEL[hit.verdict] } : row
   })
+  // 台账内 ac 不在三源行集合的，附加为"台账补行"（criterion=null）——
+  // 保证人工判定面不丢条目，同时不冒充三源提取。
+  const extra: Array<{ ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }> = []
+  for (const [ac, rec] of latest) {
+    if (byAc.has(ac)) continue
+    extra.push({ ac, criterion: null, caseResult: null, uatVerdict: UAT_VERDICT_LABEL[rec.verdict] })
+  }
+  extra.sort((a, b) => Number(a.ac.replace(/^AC-/i, '')) - Number(b.ac.replace(/^AC-/i, '')))
+  return [...out, ...extra]
 }
 
 function actorOf(ctx: Context): string {
