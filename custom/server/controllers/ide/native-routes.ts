@@ -19,6 +19,9 @@ import { remoteList, remoteStatus, type RemoteDeps } from './remote-workspace'
 // 动态 import 在 vitest 下不进 mock 注册表（实测握手超时真连引擎），kanban
 // 先例（column-automation.test.ts）静态导入+vi.mock 才拦得住。
 import { connectZCodeEngine } from '../../zcode/engine-bridge'
+// 编程工具启动 + zcode CLI 会话兼容展示（2026-10-19 用户需求批）：
+// 逻辑与纯函数全部在 devtools.ts（依赖可注入），此处只挂原生中间件分支。
+import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './devtools'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -36,6 +39,18 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
     }
     if (method === 'POST' && path === '/api/ide/video-frames') {
       await handleVideoFrames(ctx)
+      return
+    }
+    if (method === 'GET' && path === '/api/ide/devtools') {
+      handleDevtoolsList(ctx)
+      return
+    }
+    if (method === 'GET' && path === '/api/ide/zcode-cli/sessions') {
+      handleCliSessions(ctx)
+      return
+    }
+    if (method === 'POST' && path === '/api/ide/devtools/launch') {
+      await handleDevtoolsLaunch(ctx)
       return
     }
     // ── R2：semantica 知识库状态（hermes agent 层配置，非 studio MCP 层）──

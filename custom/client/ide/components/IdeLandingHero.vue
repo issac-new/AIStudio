@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IdeCliSessions from './IdeCliSessions.vue'
 // overlay/custom/client/ide/components/IdeLandingHero.vue
 // IDE 工作台裸落地引导空态（run13 步18 错帧修复配套产品面）：
 // 登录默认落点 /app/ide 不带任务上下文，此前直接落会话栏自动恢复——新用户
@@ -42,6 +43,8 @@ const { t } = useI18n()
     <button type="button" class="ide-landing__enter" data-testid="ide-landing-enter" @click="$emit('enter')">
       {{ t('ide.landing.enter', '进入会话工作区') }}
     </button>
+    <!-- zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同屏 -->
+    <IdeCliSessions />
   </div>
 </template>
 
