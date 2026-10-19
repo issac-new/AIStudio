@@ -1074,7 +1074,14 @@ onMounted(async () => {
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
-.ide-taskbar__cli-body { padding: 0 4px 6px; }
+/* zcode CLI 分组体：内滚上限——侧栏无滚动容器（overflow visible），12 行全展
+   会画穿侧栏底、被状态栏背景遮住（2026-10-19 左下角遮罩走查实锚：
+   cliSec.bottom=1204 vs sidebar.bottom=871）。上限 ≈7 行，其余组内滚动。 */
+.ide-taskbar__cli-body {
+  padding: 0 4px 6px;
+  max-height: 208px;
+  overflow-y: auto;
+}
 
 .ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted); }
 
