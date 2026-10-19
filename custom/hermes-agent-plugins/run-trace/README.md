@@ -56,19 +56,43 @@ Optional environment variables:
 - `HERMES_RUN_TRACE_DIR` — Custom trace directory (default: `~/.hermes/traces`)
 - `HERMES_RUN_TRACE_FORMAT` — Output format: `legacy` (default) or `otel`
 
+Sampling & retention (v1.1, three-layer hybrid — session-end decision):
+
+- `HERMES_RUN_TRACE_SAMPLE_RATE` — Head-sampling rate for successful sessions, `0`-`1` (default: `1.0` = keep everything, zero behavior change)
+- `HERMES_RUN_TRACE_TAIL_TOKENS` — Tail-retention token threshold: sampled-out sessions with total tokens ≥ threshold are still kept (default: `0` = disabled)
+- `HERMES_RUN_TRACE_REASONING_CHARS` — Max chars for the `reasoning_preview` field (default: `2000`)
+
+Correlation fields (stamped into the trace header):
+
+- `HERMES_RUN_TRACE_USER_ID` — User id (default: unset → `null`)
+- `HERMES_RUN_TRACE_PROMPT_TEMPLATE` — Prompt template name
+- `HERMES_RUN_TRACE_PROMPT_VERSION` — Prompt template version
+
+Retention layers at session end (decision recorded in `trailer.sampling`):
+
+1. **error-full** — any API error (`api_request_error` hook), tool error, or trailer error → always kept
+2. **head-sample** — successful sessions kept by stable sha1 hash bucket of `session_id` vs `HERMES_RUN_TRACE_SAMPLE_RATE`
+3. **tail-cost** — otherwise sampled-out sessions kept when total tokens ≥ `HERMES_RUN_TRACE_TAIL_TOKENS`
+
+Unkept session files are deleted after the trailer is written and flushed.
+
 ### OTel Format
 
 Set `HERMES_RUN_TRACE_FORMAT=otel` to output OpenTelemetry GenAI semantic convention
 spans, compatible with Jaeger/Langfuse/Grafana. The Koa API auto-detects both formats.
+Cache/reasoning token splits use `agentscope.usage.*` extension attributes (GenAI
+semconv keys for these are still in Development status); attribute keys are locked
+by golden-span assertions in `tests/test_run_trace.py`.
 
 ## Hooks Subscribed
 
 | Hook | Purpose |
 |------|---------|
-| `on_session_start` | Create JSONL file, write header |
-| `on_session_end` | Write trailer, close file |
+| `on_session_start` | Create JSONL file, write header (with correlation fields) |
+| `on_session_end` | Write trailer with `sampling` decision, close file, apply retention |
 | `pre_api_request` | Write LLM span start chunk |
-| `post_api_request` | Write LLM span end chunk with usage |
+| `post_api_request` | Write LLM span end chunk with usage split + `reasoning_preview` |
+| `api_request_error` | Write LLM error chunk (status_code/retry/error type) — 429 & failure source |
 | `post_tool_call` | Write tool chunk with duration |
 | `subagent_start` | Write subagent start chunk |
 | `subagent_stop` | Write subagent stop chunk |
