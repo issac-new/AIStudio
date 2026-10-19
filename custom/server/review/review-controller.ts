@@ -19,6 +19,9 @@ import {
   addComment, isReviewVerdict, loadReview, openReview, resolveComment, setVerdict,
   type InlineComment, type ReviewVerdict,
 } from './review-store'
+// 评审治理子域（/api/review/gov/*）：风险分级/收敛规则/度量熔断。
+// 挂在既有评审路由下复用 patch 414 的挂载点，避免新增 B 类 patch。
+import { reviewGovRoutes } from '../reviewgov/reviewgov-controller'
 
 const router = new Router({ prefix: '/api/review' })
 
@@ -139,3 +142,6 @@ router.get('/:id', async (ctx) => {
 })
 
 export const reviewRoutes = router
+
+// 评审治理子域：父路由 prefix=/api/review + 子路由 prefix=/gov → /api/review/gov/*。
+router.use(reviewGovRoutes.routes(), reviewGovRoutes.allowedMethods())
