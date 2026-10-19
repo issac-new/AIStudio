@@ -45,6 +45,9 @@ const scheduled = computed(() => workspace.tasks
     <div v-else class="ssp__empty" data-testid="stg-schedule-empty">
       <p>{{ zh ? '还没有已排期的任务。' : 'No task is scheduled yet.' }}</p>
       <p class="ssp__empty-sub">{{ zh ? '在看板里把任务状态改为「scheduled」即进入排期。' : 'Set a task to “scheduled” on the board to schedule it.' }}</p>
+      <button type="button" class="ssp__empty-btn" data-testid="stg-schedule-go-board" @click="emit('open-tab', 'board')">
+        {{ zh ? '打开看板' : 'Open board' }}
+      </button>
     </div>
   </section>
 </template>
@@ -67,4 +70,6 @@ const scheduled = computed(() => workspace.tasks
 .ssp__empty { padding: 22px 16px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px; }
 .ssp__empty p { margin: 0; font-size: 12.5px; }
 .ssp__empty-sub { margin-top: 4px !important; font-size: 11.5px !important; color: var(--text-muted); }
+.ssp__empty-btn { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 12px; padding: 4px 12px; cursor: pointer; }
+.ssp__empty-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
 </style>
