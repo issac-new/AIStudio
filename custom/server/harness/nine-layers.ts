@@ -17,7 +17,8 @@ import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { countRunManifests, latestRunManifest, runCostFromTrace } from '../runmanifest/run-manifest'
-import { listSets as listEvalSets, listRuns as listEvalRuns } from '../eval/store'
+import { listRuns as listEvalRuns, auditSnapshot as evalAuditSnapshot } from '../eval/store'
+import { coverageOfSets } from '../eval/coverage'
 import { listSets as listHeldoutSets } from '../heldout/held-out-store'
 import { resolveLoopBaseDir } from '../loop/paths'
 
@@ -129,6 +130,8 @@ export interface NineLayersInputs {
     evalRuns: number
     heldoutQuestions: number
     coveredDimensions: number
+    /** 未显式标注维度的任务数（覆盖度诚实缺口）。 */
+    untaggedTasks?: number
     gateIntegrated: boolean
   }
 }
@@ -311,7 +314,7 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
     ]),
     layerOf('evals', [
       { key: 'fixedSets', critical: true, status: e.fixedSets > 0 ? 'yes' : 'no', evidence: `固定评测集 ${e.fixedSets} 套 / 评测运行 ${e.evalRuns} 次` },
-      { key: 'dimensions', status: e.coveredDimensions >= 7 ? 'yes' : e.coveredDimensions >= 3 ? 'partial' : 'no', evidence: `七维覆盖 ${e.coveredDimensions}/7` },
+      { key: 'dimensions', status: e.coveredDimensions >= 7 ? 'yes' : e.coveredDimensions >= 3 ? 'partial' : 'no', evidence: `七维覆盖 ${e.coveredDimensions}/7${e.untaggedTasks ? `；未标注任务 ${e.untaggedTasks}` : ''}` },
       { key: 'heldout', status: e.heldoutQuestions > 0 ? 'partial' : 'no', evidence: `密封题 ${e.heldoutQuestions} 道` },
       { key: 'gate', status: e.gateIntegrated ? 'yes' : 'no', evidence: e.gateIntegrated ? '评测结果可阻断发布' : '评测仅回放打分，未接门禁' },
     ]),
@@ -435,7 +438,10 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
   const gatePacks = root ? countSubdirs(join(root, 'custom', 'qgate', 'gate-packs')) : 0
 
   const approvalRecords = queryApprovalLog(500).length
-  const evalSets = listEvalSets().length
+  // 七维覆盖只认任务显式标注的 dimension；不再用「有评测集就算 3/7」的假读数。
+  const evalAudit = evalAuditSnapshot()
+  const evalCoverage = coverageOfSets(evalAudit.sets)
+  const evalSets = evalAudit.sets.length
   const evalRuns = listEvalRuns().length
   let heldoutQuestions = 0
   try {
@@ -533,8 +539,9 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
       fixedSets: evalSets,
       evalRuns,
       heldoutQuestions,
-      // 现有 rubric 覆盖 result/trajectory/risk 三面；参数级/恢复/状态保持/越权未覆盖。
-      coveredDimensions: evalSets > 0 ? 3 : 0,
+      // 显式标注的维度才算覆盖；未标注任务数单独留痕（不拿断言结构猜维度）。
+      coveredDimensions: evalCoverage.covered,
+      untaggedTasks: evalCoverage.untaggedTasks,
       gateIntegrated: false,
     },
   }

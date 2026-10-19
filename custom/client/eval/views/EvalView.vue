@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/eval/views/EvalView.vue -->
-<!-- 评测工作台主视图（M2）：双页签（评测集 / 运行中心）+ 内联报告面板。
-     文案单一事实源=custom/client/eval/i18n.ts（governance 同款 locale 选表）。
-     路由：/app/eval（ia2.eval），features.eval 门控（VITE_CUSTOM_EVAL=true 开）。 -->
+<!-- 评测工作台主视图：评测集（含留出题库）/ 运行记录 / 指标治理 / 安全红队 /
+     UI Oracle / 优化建议。文案单一事实源=custom/client/eval/i18n.ts。
+     路由：/app/eval（ia2.eval），features.eval 门控（默认开，VITE_CUSTOM_EVAL=false 关）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,6 +11,9 @@ import { evalMessages } from '@/custom/eval/i18n'
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
 import EvalOraclePanel from '@/custom/eval/components/EvalOraclePanel.vue'
 import EvalAdvicePanel from '@/custom/eval/components/EvalAdvicePanel.vue'
+import MetricRegistryPanel from '@/custom/eval/components/MetricRegistryPanel.vue'
+import RedteamPanel from '@/custom/eval/components/RedteamPanel.vue'
+import HeldOutPanel from '@/custom/eval/components/HeldOutPanel.vue'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -18,7 +21,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? evalMessages.zh.eval : evalMessages.en.eval
 })
 
-type Tab = 'sets' | 'runs' | 'oracle' | 'advice'
+type Tab = 'sets' | 'runs' | 'metrics' | 'redteam' | 'oracle' | 'advice'
 const tab = ref<Tab>('sets')
 const sets = ref<EvalSetMetaDto[]>([])
 const runs = ref<RunSummaryDto[]>([])
@@ -184,6 +187,8 @@ function deltaText(v: number | null | undefined): string {
       <nav class="eval-view__tabs">
         <button type="button" :class="{ active: tab === 'sets' }" data-testid="eval-tab-sets" @click="tab = 'sets'">{{ L.tabs.sets }}</button>
         <button type="button" :class="{ active: tab === 'runs' }" data-testid="eval-tab-runs" @click="tab = 'runs'">{{ L.tabs.runs }}</button>
+        <button type="button" :class="{ active: tab === 'metrics' }" data-testid="eval-tab-metrics" @click="tab = 'metrics'">{{ L.tabs.metrics }}</button>
+        <button type="button" :class="{ active: tab === 'redteam' }" data-testid="eval-tab-redteam" @click="tab = 'redteam'">{{ L.tabs.redteam }}</button>
         <button type="button" :class="{ active: tab === 'oracle' }" data-testid="eval-tab-oracle" @click="tab = 'oracle'">{{ L.tabs.oracle }}</button>
         <button type="button" :class="{ active: tab === 'advice' }" data-testid="eval-tab-advice" @click="tab = 'advice'">{{ L.tabs.advice }}</button>
       </nav>
@@ -256,6 +261,8 @@ function deltaText(v: number | null | undefined): string {
           </tr>
         </tbody>
       </table>
+
+      <HeldOutPanel />
     </div>
 
     <!-- ── 运行中心页签 ── -->
@@ -330,7 +337,7 @@ function deltaText(v: number | null | undefined): string {
               <span v-else class="muted">—</span>
             </td>
             <td>{{ pct(r.aggregates.unknownRatio) }}</td>
-            <td>{{ r.k }}<span v-if="r.aggregates.statisticallyInsufficient" class="chip chip-warn" title="{{ L.runs.insufficient }}">1?</span></td>
+            <td>{{ r.k }}<span v-if="r.aggregates.statisticallyInsufficient" class="chip chip-warn" :title="L.runs.insufficient">1?</span></td>
             <td><span v-if="!r.aggregates.judgeOnline" class="chip chip-warn">{{ L.runs.judgeOffline }}</span></td>
           </tr>
         </tbody>
@@ -388,6 +395,12 @@ function deltaText(v: number | null | undefined): string {
 
       <EvalReportPanel v-if="selectedRunId" :run-id="selectedRunId" @changed="refresh" />
     </div>
+
+    <!-- ── 指标治理页签（百度评测范式轮 §4） ── -->
+    <MetricRegistryPanel v-if="tab === 'metrics'" />
+
+    <!-- ── 安全红队页签（百度评测范式轮 §8） ── -->
+    <RedteamPanel v-if="tab === 'redteam'" />
 
     <!-- ── UI Oracle 页签 ── -->
     <EvalOraclePanel v-if="tab === 'oracle'" />

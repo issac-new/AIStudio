@@ -35,6 +35,19 @@ export type ExceptionType =
 
 export type VerdictSource = 's0' | 's1' | 'human' | 's0+s1'
 
+/**
+ * 能力维度七值（百度评测范式轮：数据集当资产管——维度是显式标注，不从断言猜）。
+ * 未标注计入 untagged，覆盖度只统计显式标注，避免「看着像覆盖了」的假读数。
+ */
+export type EvalDimension =
+  | 'task_completion'
+  | 'tool_params'
+  | 'failure_recovery'
+  | 'long_task_state'
+  | 'privilege_injection'
+  | 'cost_loop'
+  | 'human_escalation'
+
 /** S0 确定性规则（零判定费）。regex 对证据全文；threshold 对 efficiency 指标。 */
 export interface S0RegexRule {
   kind: 'regex'
@@ -86,6 +99,8 @@ export interface EvalTask {
   exceptionType?: ExceptionType
   /** 期望工具调用序列（工具名，按序）——Tool Head Accuracy 与轨迹编辑距离的参照路径。 */
   expectedToolCalls?: string[]
+  /** 能力维度（可选，七值；显式标注才计入覆盖度，未标注如实计入 untagged）。 */
+  dimension?: EvalDimension
   /** 回流溯源（由坏例回流端点写入；手工建集不填）。 */
   origin?: ReflowOrigin
 }
@@ -124,6 +139,16 @@ export interface AttemptVerdict {
   conflict?: boolean
   /** S1 判定概率（noul P(yes)），留痕供校准分析。 */
   p?: number
+  /**
+   * 判词审计理由（百度范式 §3：裁判判断本身可审计）。
+   * S0=命中规则 id / s0 clean；S1=p、模型、阈值；人工=人工仲裁。
+   */
+  reason?: string
+  /**
+   * 人工裁决覆盖前的机判（只由 recordHumanVerdict 写入）。
+   * 用于统计误杀候选（no/unknown→yes）与假通过（yes→no），不参与聚合。
+   */
+  previousValue?: Binary
 }
 
 export interface AttemptEfficiency {

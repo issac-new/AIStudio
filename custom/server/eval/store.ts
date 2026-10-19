@@ -12,6 +12,7 @@ import { join } from 'path'
 import type {
   EvalRun, EvalSet, EvalSetMeta, EvalTask, RubricAssertion, RubricIterationLog,
 } from './types'
+import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 
 interface StoreShape {
@@ -134,6 +135,9 @@ function validateTask(t: unknown, i: number, problems: string[]): void {
     } else if (it.expectedToolCalls.some((n) => typeof n !== 'string' || !n.trim())) {
       problems.push(`任务 #${i} expectedToolCalls 每项须为非空工具名`)
     }
+  }
+  if (it?.dimension !== undefined && !isEvalDimension(it.dimension)) {
+    problems.push(`任务 #${i} dimension 须为七维之一：task_completion/tool_params/failure_recovery/long_task_state/privilege_injection/cost_loop/human_escalation`)
   }
 }
 
@@ -294,8 +298,15 @@ export function recordHumanVerdict(
   const verdict = attempt.verdicts.find((v) => v.assertionId === assertionId)
   if (!verdict) return { ok: false, problems: [`判词不存在：${assertionId}`] }
   const machine = verdict.value
+  // 只记录第一次人工覆盖前的机判：二次改判不覆盖基线，误杀/假通过统计才稳定。
+  if (verdict.source !== 'human' && verdict.previousValue === undefined) {
+    verdict.previousValue = machine
+  }
   verdict.value = value
   verdict.source = 'human'
+  verdict.reason = verdict.previousValue !== undefined
+    ? `人工仲裁（机判 ${verdict.previousValue} → 人工 ${value}）`
+    : `人工仲裁（${value}）`
   if (machine !== 'unknown' && machine !== value) verdict.conflict = true
   else delete verdict.conflict
   const updated = aggregate(run)
@@ -482,6 +493,39 @@ export function exportSet(id: string): { ok: true; set: EvalSet } | { ok: false;
   if (!set) return { ok: false, problems: [`评测集不存在：${id}`] }
   if (set.sealed) return { ok: false, problems: ['密封集不可导出（内容永不出库）'] }
   return { ok: true, set }
+}
+
+// ---------- 审计快照（指标消费证据 / 能力维度覆盖） ----------
+
+export interface AuditSnapshot {
+  runs: EvalRun[]
+  iterationCount: number
+  /** 带 origin 的回流任务数（跨集；溯源是回流动作的消费证据）。 */
+  reflowCount: number
+  /** 显式标注维度的任务数（数据集治理动作已发生）。 */
+  dimensionTaggedTasks: number
+  /** 供覆盖度计算；只在服务端内部使用，不直接出 API。 */
+  sets: EvalSet[]
+}
+
+/** 服务端内审计快照（只读；不改变密封契约——内容不出对外 API 面）。 */
+export function auditSnapshot(): AuditSnapshot {
+  const store = readStore()
+  let reflowCount = 0
+  let dimensionTaggedTasks = 0
+  for (const set of store.sets) {
+    for (const task of set.tasks) {
+      if (task.origin) reflowCount += 1
+      if (task.dimension) dimensionTaggedTasks += 1
+    }
+  }
+  return {
+    runs: store.runs,
+    iterationCount: store.rubricIterations.length,
+    reflowCount,
+    dimensionTaggedTasks,
+    sets: store.sets,
+  }
 }
 
 /** 测试隔离。 */

@@ -30,6 +30,8 @@ export interface EvalTaskDto {
   outcome?: { verifier: string; params: Record<string, string> }
   exceptionType?: ExceptionTypeDto
   expectedToolCalls?: string[]
+  /** 能力维度七值（可选；覆盖度只认显式标注）。 */
+  dimension?: string
   origin?: { runId: string; taskId: string; sampleIdx?: number; at: number }
 }
 
@@ -96,7 +98,7 @@ export interface AttemptDto {
   taskId: string
   sampleIdx: number
   sessionId?: string
-  verdicts: Array<{ assertionId: string; value: 'yes' | 'no' | 'unknown'; source: string; conflict?: boolean; p?: number }>
+  verdicts: Array<{ assertionId: string; value: 'yes' | 'no' | 'unknown'; source: string; conflict?: boolean; p?: number; reason?: string; previousValue?: string }>
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number; ttftMs?: number }
   toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>
@@ -207,6 +209,163 @@ export const evalApi = {
   // —— 优化建议（2026-10-14 阿里调研轮 A+F：半自动挡建议报告）——
   adviceReport: (days = 7, limit = 5) =>
     req<{ ok: boolean; report: AdviceReportDto }>(`/api/optadvice/report?days=${days}&limit=${limit}`),
+  // —— 百度评测范式轮：指标治理 / 评估器审计 / 证据回溯 ——
+  metricRegistry: () =>
+    req<{ registry: MetricRegistryDto; coverage: CoverageDto }>('/api/hermes/eval/metric-registry'),
+  evaluatorAudit: (runId: string) =>
+    req<{ audit: EvaluatorAuditDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/evaluators`),
+  evidence: (runId: string, taskId: string, sampleIdx: number) =>
+    req<EvidenceDto>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/evidence?taskId=${encodeURIComponent(taskId)}&sampleIdx=${sampleIdx}`),
+  // —— 安全红队（百度评测范式轮 §8）——
+  redteamCorpus: () => req<RedteamCorpusDto>('/api/hermes/eval/redteam/corpus'),
+  runRedteam: (body: { generations?: number; population?: number; threshold?: number; seed?: number }) =>
+    req<{ run: RedteamRunDto }>('/api/hermes/eval/redteam/runs', { method: 'POST', body: JSON.stringify(body) }),
+  listRedteamRuns: (limit = 20) =>
+    req<{ runs: RedteamRunSummaryDto[] }>(`/api/hermes/eval/redteam/runs?limit=${limit}`),
+  getRedteamRun: (id: string) =>
+    req<{ run: RedteamRunDto }>(`/api/hermes/eval/redteam/runs/${encodeURIComponent(id)}`),
+  // —— 留出题库（/api/governance/heldout/*；写面需 super_admin）——
+  heldoutSets: () => req<{ sets: HeldOutMetaDto[] }>('/api/governance/heldout/sets'),
+  createHeldoutSet: (input: { name: string; items: Array<{ prompt: string; expected: string }> }) =>
+    req<{ ok: true; meta: HeldOutMetaDto }>('/api/governance/heldout/sets', { method: 'POST', body: JSON.stringify(input) }),
+  scoreHeldout: (id: string, answers: Array<{ index: number; answer: string }>) =>
+    req<{ ok: true; result: { n: number; passRate: number; attemptsLeft: number } }>(
+      `/api/governance/heldout/sets/${encodeURIComponent(id)}/score`,
+      { method: 'POST', body: JSON.stringify({ answers }) },
+    ),
+}
+
+// ---------- 百度评测范式轮 DTO（服务端契约镜像） ----------
+
+export type MetricActionDto = 'gate_block' | 'reflow' | 'rubric_revise' | 'human_review' | 'advice' | 'dataset_curate' | 'report_only'
+
+export interface MetricDefDto {
+  key: string
+  layer: string
+  zh: string
+  en: string
+  unit: string
+  direction: 'higher_better' | 'lower_better' | 'neutral'
+  source: string
+  drives: MetricActionDto[]
+  gap?: string
+  wired: boolean
+  decoration: boolean
+}
+
+export interface MetricRegistryDto {
+  metrics: MetricDefDto[]
+  actions: Array<{ key: MetricActionDto; zh: string; en: string }>
+  consumption: {
+    observations: Array<{ action: MetricActionDto; observed: number; label: string }>
+    summary: { total: number; wired: number; unwired: number; decoration: number }
+    decorationKeys: string[]
+  }
+  boundary: string
+}
+
+export interface CoverageDto {
+  dimensions: Array<{ key: string; zh: string; en: string; taskCount: number; setCount: number }>
+  covered: number
+  total: number
+  untaggedTasks: number
+  taskTotal: number
+  setTotal: number
+}
+
+export interface EvaluatorAuditDto {
+  runId: string
+  verdictTotal: number
+  bySource: { s0: number; s1: number; 's0+s1': number; human: number }
+  conflicts: number
+  audit: { withReason: number; total: number; ratio: number }
+  unknown: { total: number; bySource: Record<string, number>; s1Ratio: number }
+  judge: { online: boolean; models: string[]; verdictsWithP: number; meanP: number | null }
+  human: { overrides: number; falseKillCandidates: number; falsePassCandidates: number }
+  policy: {
+    strict: { passAt1: number | null; passAtK: number | null }
+    conservative: { passAt1: number | null; passAtK: number | null }
+    delta: { passAt1: number | null; passAtK: number | null }
+    note: string
+  }
+  riskLevel: 'ok' | 'watch' | 'high'
+  notes: string[]
+}
+
+export interface EvidenceDto {
+  ok: boolean
+  reason?: string
+  taskId?: string
+  sampleIdx?: number
+  sessionId?: string
+  transcript?: string
+  truncated?: boolean
+  toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>
+  efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number; ttftMs?: number }
+  meta?: { lines: number; toolCalls: number; tokens: number; durationMs: number | null; startedAt: number | null }
+  hint?: string
+}
+
+export interface RedteamCorpusDto {
+  ok: true
+  detector: { id: string; zh: string; en: string; s1Wired: boolean; note: string }
+  defaults: { generations: number; population: number; threshold: number; seed: number }
+  limits: { maxGenerations: number; maxPopulation: number; maxThreshold: number }
+  categories: Array<{ key: string; zh: string; en: string; seedCount: number }>
+  benignCount: number
+  operators: Array<{ key: string; zh: string; en: string }>
+}
+
+export interface RedteamVariantDto {
+  id: string
+  seedId: string
+  category: string
+  generation: number
+  operator: string | null
+  parentId: string | null
+  lineage: string[]
+  preview: string
+  sha: string
+  score: number
+  hits: string[]
+  detected: boolean
+}
+
+export interface RedteamRunDto {
+  id: string
+  createdAt: number
+  config: { generations: number; population: number; threshold: number; seed: number }
+  detector: string
+  s1Wired: boolean
+  totals: { evaluated: number; detected: number; evaded: number; evasionRate: number | null }
+  benign: {
+    total: number
+    flagged: number
+    falsePositiveRate: number | null
+    flaggedSamples: Array<{ seedId: string; preview: string; hits: string[] }>
+  }
+  byCategory: Array<{ category: string; total: number; detected: number; evasionRate: number | null }>
+  byOperator: Array<{ operator: string; total: number; detected: number; evasionRate: number | null }>
+  byGeneration: Array<{ generation: number; evaluated: number; detected: number; evasionRate: number | null; bestScore: number | null }>
+  survivors: RedteamVariantDto[]
+  notes: string[]
+}
+
+export interface RedteamRunSummaryDto {
+  id: string
+  createdAt: number
+  config: { generations: number; population: number; threshold: number; seed: number }
+  totals: RedteamRunDto['totals']
+  benign: { total: number; flagged: number; falsePositiveRate: number | null }
+}
+
+export interface HeldOutMetaDto {
+  id: string
+  name: string
+  itemCount: number
+  createdAt: number
+  sealedBy: string
+  attemptCount: number
 }
 
 // ---------- 优化建议报告（/api/optadvice/report 客户端镜像） ----------

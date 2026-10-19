@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/eval/components/EvalReportPanel.vue -->
-<!-- 运行报告面板：四层卡（Result/Trajectory/Efficiency/Risk）+ 样本明细 +
-     人工仲裁（conflict/unknown 终裁）+ 归因双 Loop（Agent→review 域 / Rubric→迭代账本）。
+<!-- 运行报告面板：四层卡（Result/Trajectory/Efficiency/Risk）+ 评估器三角互证 +
+     样本明细（含证据一次点击）+ 人工仲裁 + 归因双 Loop。
      腾讯评测体系轮增面：六环节分段 / 过程双指标 / 六维分面 / 发布门禁 / 异常分桶 /
      失败样本回流回归库。 -->
 <script setup lang="ts">
@@ -8,6 +8,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { evalApi, type EvalRunDto, type EvalSetDto, type IterationDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
+import EvaluatorTriangle from '@/custom/eval/components/EvaluatorTriangle.vue'
+import EvidenceDrawer from '@/custom/eval/components/EvidenceDrawer.vue'
 
 const props = defineProps<{ runId: string }>()
 const emit = defineEmits<{ (e: 'changed'): void }>()
@@ -24,6 +26,8 @@ const iterations = ref<IterationDto[]>([])
 const error = ref('')
 const note = ref('')
 const reflowMsg = ref('')
+/** 证据抽屉目标（taskId + sampleIdx）；null=关闭。 */
+const evidenceTarget = ref<{ taskId: string; sampleIdx: number } | null>(null)
 
 /** 六环节呈现固定顺序（与服务端 EVAL_LINKS 同序）。 */
 const LINK_ORDER = ['intent', 'tool_choice', 'params', 'evidence', 'state', 'expression'] as const
@@ -255,6 +259,9 @@ function durationText(ms: number | null): string {
       </table>
     </div>
 
+    <!-- 评估器三角互证（百度评测范式轮 §3） -->
+    <EvaluatorTriangle :run-id="run.id" />
+
     <!-- 样本明细（密封集无明细：只回聚合） -->
     <template v-if="run.attempts && run.attempts.length > 0">
       <h4>{{ L.runs.attempts }}</h4>
@@ -275,6 +282,12 @@ function durationText(ms: number | null): string {
             @click="reflow(a.taskId, a.sampleIdx)"
           >{{ L.runs.reflow }}</button>
           <span v-if="a.judgeMeta && !a.judgeMeta.online" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
+          <button
+            type="button"
+            class="ghost"
+            :data-testid="`evidence-${a.taskId}-${a.sampleIdx}`"
+            @click="evidenceTarget = { taskId: a.taskId, sampleIdx: a.sampleIdx }"
+          >{{ L.evidence.open }}</button>
         </div>
         <table class="verdicts">
           <tbody>
@@ -284,7 +297,10 @@ function durationText(ms: number | null): string {
                 {{ v.value === 'yes' ? L.runs.yes : v.value === 'no' ? L.runs.no : L.runs.unknown }}
                 <span v-if="v.conflict" class="chip chip-warn">{{ L.runs.conflict }}</span>
               </td>
-              <td class="muted">{{ v.source }}<span v-if="v.p !== undefined"> p={{ v.p.toFixed(2) }}</span></td>
+              <td class="muted">
+                {{ v.source }}<span v-if="v.p !== undefined"> p={{ v.p.toFixed(2) }}</span>
+                <div v-if="v.reason" class="verdict-reason" :title="v.reason">{{ v.reason }}</div>
+              </td>
               <td class="row-actions">
                 <template v-if="v.value === 'unknown' || v.conflict">
                   <button type="button" :data-testid="`arb-${a.taskId}-${a.sampleIdx}-${v.assertionId}-yes`" @click="arbitrate(a.taskId, a.sampleIdx, v.assertionId, 'yes')">✓ {{ L.runs.yes }}</button>
@@ -326,6 +342,14 @@ function durationText(ms: number | null): string {
         </li>
       </ul>
     </div>
+
+    <EvidenceDrawer
+      v-if="evidenceTarget"
+      :run-id="run.id"
+      :task-id="evidenceTarget.taskId"
+      :sample-idx="evidenceTarget.sampleIdx"
+      @close="evidenceTarget = null"
+    />
   </section>
 </template>
 
@@ -385,6 +409,7 @@ function durationText(ms: number | null): string {
 .v-pass { color: var(--success); font-weight: 600; }
 .v-fail { color: var(--danger); font-weight: 600; }
 .v-unknown { color: var(--warning); font-weight: 600; }
+.verdict-reason { font-size: 10px; opacity: 0.65; margin-top: 2px; max-width: 320px; white-space: normal; }
 .row-actions { display: flex; gap: 6px; justify-content: flex-end;
   button { border: 1px solid var(--border-color); background: transparent; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 11px;
     &.ghost { border-style: dashed; opacity: 0.8; } }
