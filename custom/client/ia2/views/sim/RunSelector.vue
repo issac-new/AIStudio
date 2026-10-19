@@ -4,7 +4,7 @@
      选择写 ?run=，刷新/分享保持；面板经 useRunContext 跟随。
      2026-10-19 产品走查批：选项只显示可读日期；目录名留在 title 供排查反查。 -->
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunContext, LAST_RUN_KEY } from '../../composables/useRunContext'
@@ -39,17 +39,24 @@ function onChange(e: Event): void {
   selectRun((e.target as HTMLSelectElement).value)
 }
 
+// 「列表已权威为空」须等一次真实加载结束：加载前清 ?run 会把合法深链抹掉。
+// 测试态不发起加载，也不做清场（mock 列表为空不代表真实运行不存在）。
+const fetchSettled = ref(false)
+
 // 无选中 run 时自动落到最新一轮（2026-10-19 走查：运行总览曾停在「选择运行…」
 // 空态，而运行记录实际存在；用户看到的应是最近一轮的进度）。
 onMounted(() => {
   const fetchRuns = (runsStore as { fetchRuns?: () => Promise<void> }).fetchRuns
   const isTest = typeof import.meta !== 'undefined' && (import.meta as { env?: { MODE?: string } }).env?.MODE === 'test'
-  if (!isTest && typeof fetchRuns === 'function' && !(runsStore.sortedRuns ?? []).length) void fetchRuns.call(runsStore)
+  if (isTest) return
+  if ((runsStore.sortedRuns ?? []).length) { fetchSettled.value = true; return }
+  if (typeof fetchRuns !== 'function') return
+  void Promise.resolve(fetchRuns.call(runsStore)).finally(() => { fetchSettled.value = true })
 })
 watch(options, (list) => {
   if (!current.value && list.length) { selectRun(list[0]); return }
-  // 运行记录已被清场：丢掉记忆值与 ?run，面板回到「暂无历史运行」而不是打 404
-  if (!list.length && current.value && !runsStore.loading) {
+  // 运行记录已确认清场（加载完成且无错误）：丢掉记忆值与 ?run，面板回到「暂无历史运行」
+  if (!list.length && current.value && fetchSettled.value && !runsStore.loading && !runsStore.error) {
     try { localStorage.removeItem(LAST_RUN_KEY) } catch { /* 隐私模式 */ }
     selectRun('')
   }
