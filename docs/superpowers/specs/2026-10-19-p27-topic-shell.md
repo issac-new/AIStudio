@@ -29,3 +29,4 @@
 - `npx vitest run custom/client/ia2/__tests__/topic-shell.test.ts custom/client/skillgov custom/client/ontology custom/client/eval custom/client/bpa`：24 用例全过（含筛选纯函数 4 例与统一壳源级守门）。
 - `npx vite build --config <worktree 临时配置>`：构建通过（单 chunk 20.9MB，基线不变）。
 - 浏览器走查：技能治理左栏筛选与抽屉、本体模式/实例筛选、评测与流程架构页签归位（合入后随最终 dist 一起在 SIM `:8802` 复验）。
+- D-7（2026-10-19 首轮浏览器复验）：抽屉在 `findingsCount>0` 但扫描结果未附 `findings` 数组时，原实现复用「没有匹配的技能」文案，语义错位（用户点开的是某条技能，不是搜索无结果）。改为区分「无匹配」与「仅有计数、未附明细」两种文案；同时删除左栏底部与输入框占位符重复的提示句。机械检查=浏览器点开有计数的行，抽屉显示「扫描结果只返回发现计数，未附明细」。
