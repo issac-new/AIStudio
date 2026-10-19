@@ -148,7 +148,7 @@ router.post('/cases/:id/rounds', async (ctx) => {
   const result = startRound(rec, {
     headCommit: str(body.headCommit),
     changedPaths: changedPaths as string[] | undefined,
-  }, policy)
+  }, policy, evaluateBreaker(listSignals(), policy))
   if ('error' in result) return fail(ctx, result.code === 'round_cap_reached' ? 409 : 400, result.code, result.detail)
   const saved = saveCase(refreshCaseState(result.case, policy))
   ctx.body = { ok: true, case: saved, round: result.round, readiness: mergeReadiness(saved, policy) }
