@@ -46,6 +46,15 @@ if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
     echo "[mx-clean FAIL] 推演进行中（驱动 pid $LP 活锁）——拒绝清理；结束推演后重试" >&2; exit 3
   fi
 fi
+# 0a2) 端口兜底（2026-10-19 实测）：pid 复用守卫跳杀后 studio 可能仍活——清场与
+#      活服务互踩（rm "Directory not empty"、sqlite 库锁、半清树）。端口仍在听即中止。
+for _p in "${STUDIO_PORT:-8802}" "${GW_PORT:-8801}"; do
+  if lsof -nP -iTCP:"$_p" -sTCP:LISTEN -t 2>/dev/null | grep -q .; then
+    echo "[mx-clean FAIL] 端口 $_p 仍有服务在听（pid 复用守卫可能跳杀）——先 bash mux/mx-down.sh 再重跑" >&2
+    exit 3
+  fi
+done
+
 # 0b) relay 接力器在跑同样拒绝：驱动死在两代接力之间时锁已被 EXIT trap 摘除，但
 # relay 15s 内会拉起新驱动——清场（删 runs/ + 逐房 purge）与重生成的驱动互踩
 # （run7/8 夜间 relay 常态在跑，此窗口真实存在）
@@ -121,7 +130,29 @@ if [ "$APPLY" = 1 ] && [ -d "$SIM_ROOT/hermes/kanban/boards" ]; then
   tar -cf "$ARC/boards.tar" -C "$SIM_ROOT/hermes/kanban" boards
   rm -rf "$SIM_ROOT/hermes/kanban"
   mkdir -p "$SIM_ROOT/hermes/kanban"
+  # 根 kanban.db（default 哨兵板库）一并归档重置——2026-10-19 实测：旧轮 archived
+  # REL 卡残留 default 板致 G2 哨兵恒红（本注释上方"根 kanban.db 一并清"自建仓起
+  # 就是空头支票，从未真正执行）。
+  if [ -f "$SIM_ROOT/hermes/kanban.db" ]; then
+    cp "$SIM_ROOT/hermes/kanban.db" "$ARC/root-kanban.db" 2>/dev/null || true
+    rm -f "$SIM_ROOT/hermes/kanban.db" "$SIM_ROOT/hermes/kanban.db-wal" "$SIM_ROOT/hermes/kanban.db-shm"
+    say "✓ 根 kanban.db（default 板）已归档重置"
+  fi
   say "✓ kanban 整树已归档重置（重建走 mx-setup.sh；default 哨兵板由首启重建）"
+fi
+
+# 2b2) studio webui user_profiles 重置（2026-10-19 G2 假阳性根因）：ACL 映射是
+#      运行期数据（matrix-login 建号/历史批次写入），从不清会导致 0→1 环境带着
+#      旧轮全量映射跑（实测 chen 残留 43 行含 fanfan/chen-pay-dev 等——profiles
+#      列表与板任务过滤全部失真）。整表归档后清空；mx-setup §5a 按当轮编制重播。
+if [ "$APPLY" = 1 ] && [ -f "$SIM_ROOT/webui/hermes-web-ui.db" ]; then
+  if sqlite3 "$SIM_ROOT/webui/hermes-web-ui.db" ".dump user_profiles" > "$ARC/user_profiles.sql" 2>/dev/null; then
+    if sqlite3 "$SIM_ROOT/webui/hermes-web-ui.db" "delete from user_profiles;" 2>/dev/null; then
+      say "✓ studio user_profiles 已归档清空（重播走 mx-setup §5a）"
+    else
+      say "⚠ user_profiles 清空失败（库锁？studio 未停净）——mx-setup §5a 重播前请先 mx-down"
+    fi
+  fi
 fi
 
 # 2c) hermes 运行态归档重置（2026-10-03 实锤新增段；旧脚本只清 kanban，以下七类全是旧轮数据）

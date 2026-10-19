@@ -115,15 +115,25 @@ fjwt=$(studio_matrix_login "$_A"); cjwt=$(studio_matrix_login "$_B")
 login_body=$(studio POST /api/auth/matrix-login "" "$(jq -n --arg t "$(load_token "$_A")" --arg m "$(human_mxid "$_A")" --arg h "$HS" '{matrixAccessToken:$t, matrixUserId:$m, homeserverUrl:$h}')")
 role=$(echo "$login_body" | jq -r '.user.role' 2>/dev/null || true)
 if [[ "$role" == "admin" ]]; then pin_detail+="/登录 role=admin✓"; else pin_ok=0; pin_detail+="/登录 role=${role}（期望 admin，392 未生效？）"; fi
-fprofs=$(studio GET /api/hermes/profiles "$fjwt" | jq -c '[.[].name // .[]?.profile_name // empty] | map(select(.!=null)) | .' 2>/dev/null || true)
-# 可见性双向断言：fanfan jwt 不含 chen，chen jwt 不含 fanfan
-if echo "${fprofs:-}" | grep -q "\"$_B\""; then pin_ok=0; pin_detail+="/${_A} 可见 ${_B}（ACL 泄漏）"; else pin_detail+="/ACL 单向✓"; fi
-if echo "${fprofs:-}" | grep -q "\"$_A\"" && echo "${fprofs:-}" | grep -qv "\"$_B\""; then pin_detail+=""; fi
-cprofs=$(studio GET /api/hermes/profiles "$cjwt" | jq -c '.' 2>/dev/null || true)
-if echo "${cprofs:-}" | grep -q "\"$_A\""; then pin_ok=0; pin_detail+="/${_B} 可见 ${_A}（ACL 泄漏）"; fi
-# 2d kanban 任务可见性：chen jwt 查 fanfan 板不得见 fanfan-sys-analyst 的卡
+# 可见性双向断言（2026-10-19 修订）：端点形状 {"profiles":[{"name":…}]}——此前
+# fprofs 的 jq 表达式弱化为 [null]（恒过），cprofs 裸 JSON 子串匹配又把看板名/
+# 工作区字段误当 profile 名（恒不过）。改精确名提取 + 行级整行匹配。
+profnames() { jq -r '[.profiles[].name] | join("\n")' 2>/dev/null; }
+fprofs=$(studio GET /api/hermes/profiles "$fjwt" | profnames)
+cprofs=$(studio GET /api/hermes/profiles "$cjwt" | profnames)
+if grep -qx "$_B" <<<"${fprofs:-}"; then pin_ok=0; pin_detail+="/${_A} 可见 ${_B}（ACL 泄漏）"; else pin_detail+="/ACL 单向✓"; fi
+if grep -qx "$_A" <<<"${cprofs:-}"; then pin_ok=0; pin_detail+="/${_B} 可见 ${_A}（ACL 泄漏）"; fi
+# 2d kanban 任务可见性（2026-10-19 修订）：patch 547 语义=未指派卡对有权看板者
+# 可见（认领白名单在认领时卡）——串板断言必须用已指派卡。建即指派 fanfan 的
+# team agent、查询后立刻归档（存活 <10s，赶在任何派发 tick 前），不产生 agent 回合。
+acl_title="acl-probe-$TS"
+mx_kanban fanfan-pm-plan create "$acl_title" --assignee fanfan-sys-analyst --created-by smoke \
+  --body "ACL 探针卡（smoke 自清理，勿执行）" > "$RUN_EVID/acl-create.log" 2>&1 || true
+sleep 2
 chen_view=$(studio GET "/api/hermes/kanban?board=$_A_BOARD" "$cjwt" | jq -c '.' 2>/dev/null || true)
-if echo "${chen_view:-}" | grep -q "pin-test-$TS"; then pin_ok=0; pin_detail+="/${_B} 可见 ${_A} 板任务（过滤失效）"; else pin_detail+="/任务过滤✓"; fi
+if echo "${chen_view:-}" | grep -q "$acl_title"; then pin_ok=0; pin_detail+="/${_B} 可见 ${_A} 板指派卡（过滤失效）"; else pin_detail+="/任务过滤✓"; fi
+_acl_id=$(mxp_sqlite "$(board_db "$_A_BOARD")" "select id from tasks where title='$acl_title'" 2>/dev/null)
+[ -n "${_acl_id:-}" ] && mx_kanban "$_A_BOARD" archive "$_acl_id" >/dev/null 2>&1 || true
 [[ $pin_ok == 1 ]] && gate G2 1 "$pin_detail" || gate G2 0 "$pin_detail"
 
 # ═══ G3：team 围栏（板外 assignee 拒认领）════════════════
@@ -213,5 +223,13 @@ fi
   echo "boards:"; HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards list 2>/dev/null || true
   echo "default board tasks: $(board_count default '1=1')"
 } > "$RUN_EVID/summary.txt"
+# ── 自清理（2026-10-19 起）：smoke 自产卡全部归档——此前靠人工收尾，残留卡会
+#    污染下一轮看板真值（02:0x 实测 5 张 smoke 卡滞留 fanfan 板）。acl-probe 已在
+#    G2 内即时归档，此处兜底全族。
+for _t in "pin-test-$TS" "fence-test-$TS" "dispatch-test-$TS" "acl-probe-$TS"; do
+  _id=$(mxp_sqlite "$(board_db fanfan-pm-plan)" "select id from tasks where title='$_t'" 2>/dev/null)
+  [ -n "${_id:-}" ] && mx_kanban fanfan-pm-plan archive "$_id" >/dev/null 2>&1 || true
+done
+
 log "=== mx-smoke 结束：PASS=$PASS FAIL=${FAIL} SKIPPED=${SKIPPED}（证据 ${RUN_EVID}）==="
 [[ $FAIL == 0 ]] || { log "失败门禁：${FAILED_GATES[*]}"; exit 1; }
