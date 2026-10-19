@@ -20,7 +20,8 @@ export function useRunContext() {
     () => route?.query?.run,
     (v) => {
       const s = String(v ?? '').trim()
-      if (s && s !== run.value) run.value = s
+      // query 被删除也要跟随（清场后选择器会清 ?run，否则 ref 仍停在旧运行）
+      if (s !== run.value) run.value = s
     },
   )
 
