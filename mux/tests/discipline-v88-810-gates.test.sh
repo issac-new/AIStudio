@@ -97,5 +97,16 @@ ck "贯通 requirements-analyst 自证段" skills/requirements-analyst/SKILL.md 
 ck "贯通 aipaydev-dev 门禁集成" skills/aipaydev-dev/SKILL.md '门禁|qgate'
 ck "贯通 对照表在位" mux/qgate-skill-map.md '七技能 × 门禁责任面'
 
+# 闸门收口断言（2026-10-19 企业 Agent 框架完善 #1）：安全评审硬校验/G3 硬校验/
+# UAT 有条件通过分离/G6 键统一——防「绕过面被无声恢复」。
+ck "收口 安全评审 G2 前置硬校验" aipay-scenario.sh 'g2-security-not-closed'
+ck "收口 安全评审 fail-closed 不放行" aipay-scenario.sh '涉敏轮安全评审（security_review_done）未闭环'
+ck "收口 G3 硬校验在 testpass" aipay-scenario.sh 'gate_blocked g3_code_pass testpass'
+ck "收口 UAT 有条件通过落 uat_conditional" aipay-scenario.sh 'sset_once uat_conditional'
+ck "收口 UAT 有条件通过不落 uat_done" aipay-scenario.sh '放行权归 bella，落 uat_conditional（uat_done 不落）'
+ck "收口 UAT bella 批准事件留痕" aipay-scenario.sh 'UAT-COND-APPROVED bella-human'
+ck "收口 复盘门 uat_done/uat_conditional 双键" aipay-scenario.sh '硬闸 uat_done/uat_conditional 未过'
+ck "收口 G6 闸键统一 retro_done" aipay-scenario.sh 'sset_once retro_done'
+
 if (( FAILS > 0 )); then echo "FAIL：${FAILS} 项缺锚"; exit 1; fi
 echo "discipline-v88-810-gates：裸奔五条+首过三态+锚点抽验+技能贯通断言全过"
