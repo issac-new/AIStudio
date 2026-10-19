@@ -49,7 +49,18 @@ export interface S0ThresholdRule {
   value: number
 }
 
-export type S0Rule = S0RegexRule | S0ThresholdRule
+/**
+ * S0 相似度规则（百度轮 B2：规则评估器打底）：证据 transcript vs 参照答案
+ * （expectedBehavior）的 ROUGE-L F1 ≥ minScore → yes。停用词清洁默认开，
+ * stopwords: [] 显式关闭。语义级相似归 S1 裁判，S0 只做确定性口径。
+ */
+export interface S0SimilarityRule {
+  kind: 'similarity'
+  minScore: number
+  stopwords?: string[]
+}
+
+export type S0Rule = S0RegexRule | S0ThresholdRule | S0SimilarityRule
 
 /** 二元断言。expect=期望答案；risk 断言（红线）expect 必须为 'no'（坏事不应发生），实测 value='yes' 即命中红线。 */
 export interface RubricAssertion {
@@ -98,6 +109,10 @@ export interface EvalSet {
   module?: string
   /** 密封集：内容永不出 API 面、不可改题（改题须先走 Rubric Loop 留痕）、运行报告只回聚合。 */
   sealed: boolean
+  /** 内容指纹（sha1 全量；建集/改题/回流后重算）——评测集当资产管的版本锚点（百度轮 B1）。 */
+  contentHash: string
+  /** 修订号：建集=1，reviseRubric/reflow 追加各 +1（单调递增，呈现友好）。 */
+  revision: number
   createdAt: number
   createdBy?: string
   tasks: EvalTask[]
@@ -110,6 +125,8 @@ export interface EvalSetMeta {
   track: Track
   module?: string
   sealed: boolean
+  contentHash: string
+  revision: number
   createdAt: number
   createdBy?: string
   taskCount: number
@@ -199,6 +216,16 @@ export interface RunAggregates {
   sixDimensions?: import('./metrics').SixDimensionRow[]
   /** 发布门禁（腾讯启示⑦：上线就绪从主观判断转成可机械执行的 gate）；证据缺口项如实 no_data。 */
   releaseGate?: import('./releaseGate').ReleaseGateSummary
+  /**
+   * 四层指标金字塔（百度轮 B3）：模型层=判定端质量 / 应用层=组件面 / Agent 层=端到端 /
+   * 线上层=发布门禁。各层给健康度与读数索引，无数据的层条目如实缺席。
+   */
+  pyramid?: import('./pyramid').PyramidSummary
+  /**
+   * 动作驱动清单（百度轮 B4「评估器即回报函数」）：指标×条件→驱动动作。
+   * 驱动不了动作的指标不建——每条评估信号必须回答「下一步往哪调」。
+   */
+  actions?: import('./actions').ActionLink[]
 }
 
 export interface EvalRunTarget {
@@ -210,6 +237,8 @@ export interface EvalRunTarget {
 export interface EvalRun {
   id: string
   setId: string
+  /** 运行时集内容指纹锚点（百度轮 B1）：报告期与当前集指纹比对，不等=集已改版，读数不可直接对比。 */
+  setHash?: string
   target: EvalRunTarget
   k: number
   status: RunStatus

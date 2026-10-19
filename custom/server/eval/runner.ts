@@ -268,6 +268,8 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
   const run: EvalRun = {
     id: `erun-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     setId: set.id,
+    // 资产锚点（百度轮 B1）：钉住运行时集内容指纹，报告期比对示警「集已改版」
+    setHash: set.contentHash,
     target: input.target ?? {},
     k: maxK,
     status: 'done',

@@ -10,6 +10,7 @@
 import type {
   AttemptVerdict, EvalConfig, EvalTask, Evidence,
 } from './types'
+import { similarityVerdict } from './similarity'
 import {
   Breaker, TtlCache, clefAsk, sha1Of,
   type ClefJudgeDeps, type EvalJudgeAnswers, type EvalJudgeRequest,
@@ -111,6 +112,15 @@ function applyThresholdRule(
   }
 }
 
+// S0 相似度规则（百度轮 B2）：ROUGE-L F1 ≥ minScore，停用词清洁默认开。
+function applySimilarityRule(
+  task: EvalTask,
+  rule: { minScore: number; stopwords?: string[] },
+  evidence: Evidence,
+): 'yes' | 'no' | 'unknown' {
+  return similarityVerdict(task, evidence, rule)
+}
+
 // ---------- 主入口 ----------
 
 /**
@@ -137,6 +147,8 @@ export async function judgeAttempt(
     }
     if (assertion.s0.kind === 'regex') {
       verdicts.push({ assertionId: assertion.id, value: applyRegexRule(assertion.s0, evidence), source: 's0' })
+    } else if (assertion.s0.kind === 'similarity') {
+      verdicts.push({ assertionId: assertion.id, value: applySimilarityRule(task, assertion.s0, evidence), source: 's0' })
     } else {
       verdicts.push({ assertionId: assertion.id, value: applyThresholdRule(assertion.s0, evidence), source: 's0' })
     }

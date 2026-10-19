@@ -159,6 +159,52 @@ function durationText(ms: number | null): string {
       ⚠ {{ L.runs.drilldownHint }}（{{ pct(run.aggregates.unknownRatio) }}）
     </p>
 
+    <!-- 四层指标金字塔（百度轮 B3：模型/应用/Agent/线上逐层读数，无数据层如实缺席） -->
+    <div v-if="run.aggregates.pyramid" class="eval-report__pyramid" data-testid="eval-report-pyramid">
+      <div class="seg__title">{{ L.runs.pyramidTitle }}<span v-if="run.aggregates.pyramid.anchorDrift" class="chip chip-warm" data-testid="eval-report-drift">{{ L.runs.anchorDrift }}</span></div>
+      <div class="pyramid__layers">
+        <div
+          v-for="layer in run.aggregates.pyramid.layers"
+          :key="layer.key"
+          class="pyramid__layer"
+          :class="`pyramid__layer--${layer.status}`"
+          :data-testid="`eval-pyramid-${layer.key}`"
+        >
+          <span class="pyramid__name">{{ L.runs.pyramidLayers[layer.key] }}</span>
+          <span v-if="layer.status === 'no_data'" class="pyramid__nodata">{{ L.runs.pyramidNoData }}</span>
+          <span v-else class="pyramid__readings">
+            <span
+              v-for="r in layer.readings"
+              :key="r.key"
+              class="pyramid__reading"
+              :class="{ good: r.tone === 'good', bad: r.tone === 'bad' }"
+            >{{ r.label }} {{ r.value }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 动作驱动清单（百度轮 B4「评估器即回报函数」：读数回答「下一步往哪调」） -->
+    <div v-if="run.aggregates.actions && run.aggregates.actions.length > 0" class="eval-report__actions" data-testid="eval-report-actions">
+      <div class="seg__title">{{ L.runs.actionsTitle }}</div>
+      <table class="verdicts">
+        <thead>
+          <tr>
+            <th>{{ L.runs.actionsCols.metric }}</th>
+            <th>{{ L.runs.actionsCols.condition }}</th>
+            <th>{{ L.runs.actionsCols.action }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in run.aggregates.actions" :key="a.key" :data-testid="`eval-action-${a.key}`" :class="{ 'action-high': a.priority === 'high' }">
+            <td>{{ a.metric }}</td>
+            <td class="muted">{{ a.condition }}</td>
+            <td>{{ a.action }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- 六环节分段 + 过程双指标（腾讯评测体系轮） -->
     <div v-if="run.aggregates.byLink" class="eval-report__seg" data-testid="eval-report-bylink">
       <span class="seg__title">{{ L.runs.linkTitle }}</span>
@@ -339,6 +385,24 @@ function durationText(ms: number | null): string {
 .eval-report__head { display: flex; align-items: center; gap: 10px; h3 { margin: 0; font-size: 14px; } }
 .eval-report__error { color: var(--danger); font-size: 13px; margin: 0; }
 .eval-report__hint { color: var(--warning); font-size: 13px; margin: 0; }
+.eval-report__pyramid { display: flex; flex-direction: column; gap: 6px; }
+.pyramid__layers { display: flex; flex-direction: column; gap: 4px; }
+.pyramid__layer {
+  display: flex; align-items: baseline; gap: 10px;
+  border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 12px;
+  &.pyramid__layer--warn { border-color: var(--warning); }
+  &.pyramid__layer--pass { border-left: 3px solid var(--success); }
+  &.pyramid__layer--no_data { opacity: 0.6; border-style: dashed; }
+}
+.pyramid__name { min-width: 96px; font-weight: 600; }
+.pyramid__nodata { opacity: 0.7; }
+.pyramid__readings { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.pyramid__reading {
+  .good { color: var(--success); } .bad { color: var(--danger); font-weight: 600; }
+  &.good { color: var(--success); } &.bad { color: var(--danger); font-weight: 600; }
+}
+.eval-report__actions { display: flex; flex-direction: column; gap: 6px;
+  tr.action-high td:first-child { color: var(--danger); font-weight: 600; } }
 .eval-report__seg, .eval-report__sixdim {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   .seg__title { font-size: 12px; opacity: 0.7; margin-right: 4px; }
@@ -398,7 +462,8 @@ function durationText(ms: number | null): string {
   ul { margin: 0; padding-left: 18px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
 }
 .chip { border-radius: 9px; padding: 1px 7px; font-size: 11px; background: var(--bg-tertiary); margin-right: 4px;
-  &.chip-warn { background: var(--warning); color: var(--text-on-warning); } }
+  &.chip-warn { background: var(--warning); color: var(--text-on-warning); }
+  &.chip-warm { background: color-mix(in srgb, var(--warning) 22%, transparent); color: var(--warning); margin-left: 8px; } }
 .muted { opacity: 0.65; }
 .mono { font-family: var(--font-mono); }
 h4 { font-size: 13px; margin: 4px 0 0; }
