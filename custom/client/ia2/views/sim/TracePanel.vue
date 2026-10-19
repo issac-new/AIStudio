@@ -48,9 +48,13 @@ async function load(): Promise<void> {
   }
 }
 
-const rows = computed(() => props.onlyUnjudged
-  ? (trace.value?.rows ?? []).filter(r => !r.uatVerdict)
-  : (trace.value?.rows ?? []))
+const rows = computed(() => {
+  const all = trace.value?.rows ?? []
+  // P2（spec 2026-10-19-studio-p2 §2.1）：台账补行（三源缺席但有人工判定的 AC）
+  // 在 UAT 待判模式下不显示——录入入口只面向"未判 AC"；已判条目留在全量
+  // 需求追溯面，不回填待判列表制造"全部已判"的假满。
+  return props.onlyUnjudged ? all.filter(r => !r.uatVerdict) : all
+})
 
 /** UAT 判定三态徽（不通过红/有条件通过琥珀/通过绿；未判定=灰） */
 function verdictClass(v: string | null): string {
