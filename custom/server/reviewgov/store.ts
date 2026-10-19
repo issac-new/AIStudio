@@ -5,6 +5,8 @@
 //   cases/<可读前缀>-<sha256 前 32 hex>.json
 //   signals.json
 //   eval-cases.json
+//   eval-runs.json
+//   nightly/<date>-<reportId>.json + nightly/latest.json
 // 复用 review-store 的原子写与坏档隔离策略：tmp+rename，坏档改名
 // .corrupt.<ts> 留档，不静默当"不存在"续写。
 import { createHash, randomBytes } from 'crypto'
@@ -15,8 +17,10 @@ import { createCase, type OpenCaseInput } from './convergence'
 import {
   DEFAULT_POLICY,
   type BreakerState,
+  type NightlyReport,
   type ReviewCase,
   type ReviewEvalCase,
+  type ReviewEvalRun,
   type ReviewPolicy,
   type ReviewSignal,
   type SignalKind,
@@ -24,6 +28,8 @@ import {
 
 const SIGNAL_CAP = 2000
 const EVAL_CASE_CAP = 500
+const EVAL_RUN_CAP = 100
+const NIGHTLY_CAP = 60
 const CASE_LIST_CAP = 500
 
 export function reviewGovDir(): string {
@@ -35,6 +41,8 @@ export function reviewGovDir(): string {
 function casesDir(): string { return join(reviewGovDir(), 'cases') }
 function signalsFile(): string { return join(reviewGovDir(), 'signals.json') }
 function evalCasesFile(): string { return join(reviewGovDir(), 'eval-cases.json') }
+function evalRunsFile(): string { return join(reviewGovDir(), 'eval-runs.json') }
+function nightlyDir(): string { return join(reviewGovDir(), 'nightly') }
 
 function stemOf(id: string): string {
   const readable = id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 32).replace(/^\.+/, '') || 'case'
@@ -172,4 +180,64 @@ export function appendEvalCase(
   mkdirSync(reviewGovDir(), { recursive: true })
   writeJsonAtomic(evalCasesFile(), next)
   return rec
+}
+
+export function listEvalRuns(limit = EVAL_RUN_CAP): ReviewEvalRun[] {
+  const raw = readJson(evalRunsFile())
+  if (!Array.isArray(raw)) return []
+  return (raw as ReviewEvalRun[])
+    .filter((r) => r && typeof r.runId === 'string' && typeof r.at === 'number')
+    .sort((a, b) => b.at - a.at)
+    .slice(0, limit)
+}
+
+export function appendEvalRun(
+  input: Omit<ReviewEvalRun, 'runId' | 'at'> & { runId?: string; at?: number },
+  now = Date.now(),
+): ReviewEvalRun {
+  const run: ReviewEvalRun = {
+    runId: input.runId ?? `er-${randomBytes(6).toString('hex')}`,
+    at: input.at ?? now,
+    total: input.total,
+    matched: input.matched,
+    recall: input.recall,
+    precision: input.precision,
+    missing: input.missing.slice(0, EVAL_CASE_CAP),
+    falsePositives: input.falsePositives.slice(0, EVAL_CASE_CAP),
+    createdBy: input.createdBy,
+  }
+  const next = [run, ...listEvalRuns()].slice(0, EVAL_RUN_CAP)
+  mkdirSync(reviewGovDir(), { recursive: true })
+  writeJsonAtomic(evalRunsFile(), next)
+  return run
+}
+
+function isNightlyShape(v: unknown): v is NightlyReport {
+  const o = v as Partial<NightlyReport> | null
+  return !!o && typeof o.reportId === 'string' && typeof o.date === 'string'
+    && typeof o.generatedAt === 'number' && Array.isArray(o.groups)
+}
+
+export function saveNightlyReport(report: NightlyReport): NightlyReport {
+  mkdirSync(nightlyDir(), { recursive: true })
+  writeJsonAtomic(join(nightlyDir(), `${report.date}-${report.reportId}.json`), report)
+  writeJsonAtomic(join(nightlyDir(), 'latest.json'), report)
+  return report
+}
+
+export function readLatestNightly(): NightlyReport | null {
+  const raw = readJson(join(nightlyDir(), 'latest.json'))
+  return isNightlyShape(raw) ? raw : null
+}
+
+export function listNightly(limit = NIGHTLY_CAP): NightlyReport[] {
+  const out: NightlyReport[] = []
+  try {
+    for (const name of readdirSync(nightlyDir())) {
+      if (!name.endsWith('.json') || name === 'latest.json') continue
+      const raw = readJson(join(nightlyDir(), name))
+      if (isNightlyShape(raw)) out.push(raw)
+    }
+  } catch { /* 目录缺席=零报告 */ }
+  return out.sort((a, b) => b.generatedAt - a.generatedAt).slice(0, limit)
 }

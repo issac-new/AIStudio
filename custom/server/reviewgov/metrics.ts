@@ -14,6 +14,7 @@ import {
   type BreakerState,
   type ReviewCase,
   type ReviewEvalCase,
+  type ReviewEvalRun,
   type ReviewMetrics,
   type ReviewPolicy,
   type ReviewSignal,
@@ -78,11 +79,13 @@ export function computeMetrics(
   policy: ReviewPolicy = DEFAULT_POLICY,
   evalCases: ReviewEvalCase[] = [],
   now = Date.now(),
+  latestEvalRun: ReviewEvalRun | null = null,
 ): ReviewMetrics {
   const rounds = cases.map((c) => c.rounds.length).filter((n) => n > 0)
   const passed = cases.filter((c) => c.state === 'ready' || c.state === 'merged')
   const firstRoundPass = passed.filter((c) => c.rounds.length === 1).length
   const humanApprovals = cases.map((c) => countEffectiveApprovals(c.approvals, c.headCommit).human)
+  const waits = cases.map(humanWaitMs).filter((n): n is number => n !== null)
   const answered = cases.flatMap((c) => c.findings.filter((f) => f.answeredAt && f.resolution))
   const noisy = answered.filter((f) => f.resolution === 'wrong' || f.resolution === 'intentional' || f.resolution === 'didnt_matter')
   const allFindings = cases.flatMap((c) => c.findings)
@@ -101,11 +104,14 @@ export function computeMetrics(
     p95Rounds: percentile(rounds, 0.95),
     fivePlusShare: ratio(rounds.filter((n) => n >= 5).length, rounds.length),
     humanApprovalsMedian: median(humanApprovals),
+    humanWaitMedianMs: median(waits),
     noiseRate: ratio(noisy.length, answered.length),
     preexistingShare: ratio(preexisting.length, allFindings.length),
     deferredBacklog: deferredBacklog.length,
     openImportant: openImportant.length,
     evalCases: evalCases.length,
+    evalRecall: latestEvalRun?.recall ?? null,
+    evalPrecision: latestEvalRun?.precision ?? null,
     breaker: evaluateBreaker(signals, policy, now),
   }
 }

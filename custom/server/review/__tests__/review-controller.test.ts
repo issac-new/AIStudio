@@ -26,14 +26,19 @@ const comment = () => handlerFor('POST', '/:id/comments')
 const body = { commentId: 'c1', file: 'src/a.ts', line: 42, body: 'x' }
 
 let dir: string
+let govDir: string
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'review-api-'))
+  govDir = mkdtempSync(join(tmpdir(), 'review-gov-api-'))
   process.env.HERMES_REVIEW_DIR = dir
+  process.env.HERMES_REVIEW_GOV_DIR = govDir
   openReview({ reviewId: 'r1', domain: 'baseline' })
 })
 afterEach(() => {
   delete process.env.HERMES_REVIEW_DIR
+  delete process.env.HERMES_REVIEW_GOV_DIR
   rmSync(dir, { recursive: true, force: true })
+  rmSync(govDir, { recursive: true, force: true })
 })
 
 describe('file 路径归一（S-F：项目相对路径）', () => {
@@ -72,5 +77,42 @@ describe('file 路径归一（S-F：项目相对路径）', () => {
     const ctx = fakeCtx({ id: 'r1' }, body, { user: { id: 7, username: 'alice' } })
     await comment()(ctx)
     expect(loadReview('r1')?.comments[0].actor).toBe('alice')
+  })
+})
+
+describe('关联评审治理案例时的 approve 闸门', () => {
+  it('案例未就绪返回 409；补齐人工审批与检查绿后放行', async () => {
+    const { openCase, saveCase, loadCase } = await import('../../reviewgov/store')
+    const { addApproval } = await import('../../reviewgov/convergence')
+    const { loadReviewPolicy } = await import('../../reviewgov/policy-config')
+    const policy = loadReviewPolicy()
+    openCase({
+      caseId: 'gov-1', title: '文档改动', headCommit: 'c1', changedPaths: ['docs/a.md'],
+    }, policy)
+    openReview({ reviewId: 'r-gov', domain: 'baseline', caseId: 'gov-1' })
+
+    const verdict = handlerFor('POST', '/:id/verdict')
+    const first = fakeCtx({ id: 'r-gov' }, { verdict: 'approve' })
+    await verdict(first)
+    expect(first.status).toBe(409)
+    expect((first.body as { code: string }).code).toBe('case_not_ready')
+
+    const approved = addApproval(loadCase('gov-1')!, {
+      actor: 'alice', actorKind: 'human', decision: 'approve', commit: 'c1',
+    })
+    saveCase({ ...approved, checks: 'green' })
+
+    const ok = fakeCtx({ id: 'r-gov' }, { verdict: 'approve' })
+    await verdict(ok)
+    expect(ok.status).toBe(200)
+  })
+
+  it('案例不存在时拒绝 approve（不静默放行）', async () => {
+    openReview({ reviewId: 'r-missing', domain: 'baseline', caseId: 'nope' })
+    const verdict = handlerFor('POST', '/:id/verdict')
+    const res = fakeCtx({ id: 'r-missing' }, { verdict: 'approve' })
+    await verdict(res)
+    expect(res.status).toBe(409)
+    expect((res.body as { code: string }).code).toBe('case_not_found')
   })
 })

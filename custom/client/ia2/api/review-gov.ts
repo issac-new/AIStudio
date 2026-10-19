@@ -107,6 +107,9 @@ export interface ReviewCaseView {
   title: string
   taskId?: string
   reviewId?: string
+  pr?: { provider: 'github' | 'gitlab' | 'generic'; repo: string; number: number; url?: string }
+  rollback?: { at: number; by?: string; note?: string }
+  policyTightenedAt?: number
   author?: string
   authorKind: string
   baseCommit?: string
@@ -145,12 +148,45 @@ export interface ReviewMetricsView {
   p95Rounds: number | null
   fivePlusShare: number | null
   humanApprovalsMedian: number | null
+  humanWaitMedianMs: number | null
   noiseRate: number | null
   preexistingShare: number | null
   deferredBacklog: number
   openImportant: number
   evalCases: number
+  evalRecall: number | null
+  evalPrecision: number | null
   breaker: BreakerView
+}
+
+export interface NightlyGroupView {
+  file: string
+  bugClass: string
+  count: number
+  oldestAt: number
+  findingIds: string[]
+  caseIds: string[]
+}
+
+export interface NightlyReportView {
+  reportId: string
+  date: string
+  generatedAt: number
+  backlog: number
+  groups: NightlyGroupView[]
+  caseCount: number
+}
+
+export interface EvalRunView {
+  runId: string
+  at: number
+  total: number
+  matched: number
+  recall: number | null
+  precision: number | null
+  missing: string[]
+  falsePositives: Array<{ file: string; line?: number; title?: string }>
+  createdBy?: string
 }
 
 export interface CaseDetail {
@@ -261,6 +297,50 @@ export async function mergeCase(caseId: string): Promise<CaseDetail> {
   return json(await authFetch(path, { method: 'POST', body: JSON.stringify({ state: 'merged' }) }), path)
 }
 
+/** 回滚登记（不自动改代码）：案例转 abandoned + 写回滚信号 + 收紧存量案例。 */
+export async function rollbackCase(caseId: string, note?: string): Promise<CaseDetail & { tightenedCases: number }> {
+  const path = `/api/review/gov/cases/${encodeURIComponent(caseId)}/rollback`
+  return json(await authFetch(path, { method: 'POST', body: JSON.stringify({ note }) }), path)
+}
+
+export async function importPr(input: {
+  provider: 'github' | 'gitlab' | 'generic'
+  repo: string
+  number: number
+  title?: string
+  author?: string
+  baseCommit?: string
+  headCommit?: string
+  changedPaths: string[]
+  diffLines?: number
+  behindFlag?: boolean
+  url?: string
+}): Promise<CaseDetail & { created: boolean }> {
+  const path = '/api/review/gov/cases/from-pr'
+  return json(await authFetch(path, { method: 'POST', body: JSON.stringify(input) }), path)
+}
+
+export async function fetchNightly(): Promise<NightlyReportView | null> {
+  const path = '/api/review/gov/nightly/latest'
+  const data = await json<{ report: NightlyReportView | null }>(await authFetch(path), path)
+  return data.report
+}
+
+export async function runNightly(): Promise<{ report: NightlyReportView; breaker: BreakerView }> {
+  const path = '/api/review/gov/nightly/run'
+  return json(await authFetch(path, { method: 'POST', body: JSON.stringify({}) }), path)
+}
+
+export async function fetchEvalScore(): Promise<{ latest: EvalRunView | null; runs: EvalRunView[] }> {
+  const path = '/api/review/gov/eval/score'
+  return json(await authFetch(path), path)
+}
+
+export async function runEval(predictions: Array<{ file: string; line?: number; title?: string }>): Promise<{ run: EvalRunView; score: EvalRunView }> {
+  const path = '/api/review/gov/eval/run'
+  return json(await authFetch(path, { method: 'POST', body: JSON.stringify({ predictions }) }), path)
+}
+
 // ── 纯视图函数（守门测试锚点）──
 
 export interface KpiCard {
@@ -273,11 +353,19 @@ export interface KpiCard {
 
 const pct = (v: number | null): string => (v === null ? '—' : `${(v * 100).toFixed(v * 100 >= 10 ? 0 : 1)}%`)
 const num = (v: number | null, digits = 2): string => (v === null ? '—' : v.toFixed(digits))
+const duration = (v: number | null): string => {
+  if (v === null) return '—'
+  if (v < 60_000) return `${Math.round(v / 1000)}s`
+  if (v < 3_600_000) return `${(v / 60_000).toFixed(1)}m`
+  return `${(v / 3_600_000).toFixed(1)}h`
+}
 
 export function kpiCards(m: ReviewMetricsView): KpiCard[] {
   const fr = m.firstRoundPassRate
   const five = m.fivePlusShare
   const noise = m.noiseRate
+  const wait = m.humanWaitMedianMs
+  const recall = m.evalRecall
   return [
     {
       key: 'firstRound',
@@ -308,11 +396,25 @@ export function kpiCards(m: ReviewMetricsView): KpiCard[] {
       state: 'muted',
     },
     {
+      key: 'humanWait',
+      label: '人工等待中位',
+      value: duration(wait),
+      detail: '案例创建到首个有效人工审批的等待时间',
+      state: wait === null ? 'muted' : wait <= 24 * 3600_000 ? 'ok' : 'warn',
+    },
+    {
       key: 'noise',
       label: '评审噪声率',
       value: pct(noise),
       detail: '作者判定误报/有意为之/无关的比例',
       state: noise === null ? 'muted' : noise <= 0.3 ? 'ok' : 'warn',
+    },
+    {
+      key: 'evalRecall',
+      label: '评测集召回',
+      value: pct(recall),
+      detail: `评测集 ${m.evalCases} 条；最近一次精确率 ${pct(m.evalPrecision)}`,
+      state: recall === null ? 'muted' : recall >= 0.8 ? 'ok' : 'warn',
     },
     {
       key: 'breaker',
