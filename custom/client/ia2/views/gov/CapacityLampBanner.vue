@@ -31,7 +31,7 @@ onMounted(() => { void refresh() })
 
 <template>
   <div v-if="absent" class="clb clb--absent" data-testid="clb-absent">
-    容量水位面缺席（端点未接或未启）。
+    容量水位暂没有数据——接入集群巡检后在这里显示。
   </div>
   <div
     v-else-if="anomalies && anomalies.length > 0"

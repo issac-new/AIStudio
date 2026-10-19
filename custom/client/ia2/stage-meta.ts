@@ -152,7 +152,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
     criteria: '环境冒烟测试通过；密钥台账可在搭建页直接维护',
     target: { name: 'ia2.simOps' },
     keys: ['smoke_done'],
-    note: '模型服务商配置统一入口未接入，当前在 IDE 内（挂账）。',
+    note: '模型服务商在「系统设置 · 模型服务商」统一维护。',
   },
   {
     no: 5, key: 'agents', name: '准备智能体',
