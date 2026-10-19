@@ -1,10 +1,10 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index a1f357145..dbbaae09c 100644
+index 1c97a5f9..8a0df866 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
-@@ -756,6 +756,14 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
+@@ -758,6 +758,14 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
      + `Electron ${process.versions.electron || '-'}; Node ${process.versions.node}\n`
-     + `Executable: ${process.execPath}\nWeb UI: ${webUiDirectory}\nEntry: ${entry}`,
+     + `Executable: ${executable}\nWeb UI: ${webUiDirectory}\nEntry: ${entry}`,
    )
 +  // overlay[fix-window-raise]: keep the Web UI server as a normal child so its
 +  // lifecycle stays bound to the Electron parent. A previous attempt used
@@ -14,6 +14,6 @@ index a1f357145..dbbaae09c 100644
 +  // quit SwarmStudio, and the next launch's second-instance event re-showed
 +  // the (now-restarted) window every few seconds. The WMI-polling fix
 +  // (patch 129) removed the original trigger, so detached is no longer needed.
-   serverProc = spawn(process.execPath, [entry], {
+   serverProc = spawn(executable, [entry], {
      cwd: webUiDirectory,
      env,

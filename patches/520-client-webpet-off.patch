@@ -1,9 +1,8 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 930737292..7a0e09a3f 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -210,6 +210,8 @@ const desktopTitleBarLeft = computed(() => {
-   return appStore.pageSidebarExpanded ? 240 : 10;
+@@ -221,6 +221,8 @@
+   return appStore.pageSidebarExpanded ? sidebarLayoutWidth.value : 10;
  });
  const isDesktopPetRoute = computed(() => route.name === "desktop.pet");
 +// overlay[p10] V5 补遗⑤ S3：宠物浮面默认关（B 档开关；组件与能力保留）
@@ -11,7 +10,7 @@ index 930737292..7a0e09a3f 100644
  const showWebPet = computed(
    () =>
      !isLoginPage.value &&
-@@ -383,7 +385,7 @@ useKeyboard();
+@@ -399,7 +401,7 @@
                </div>
              </div>
            </div>
