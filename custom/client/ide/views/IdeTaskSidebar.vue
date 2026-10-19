@@ -39,6 +39,10 @@ import { bucketSessions } from '../utils/sessionBuckets'
 import { engineDefaultFromCache } from '../utils/engine-models'
 import { buildNewTaskOptions, sessionTaskMode } from '../utils/task-mode'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
+// zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同栏可折叠分组，
+// 数据/动作自持（IdeCliSessions），不进 chatStore（避免伪会话 ID 打断打开链）。
+import IdeCliSessions from '../components/IdeCliSessions.vue'
+import { fetchCliSessions } from '../api/devtools'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -174,6 +178,10 @@ interface TaskGroup {
   sessions: Session[]
 }
 const collapsedGroups = ref<Set<string>>(new Set())
+// zcode CLI 分组：默认展开；头部计数自 CLI 会话库
+const cliCount = ref(0)
+const cliNote = ref('')
+fetchCliSessions(12).then(r => { cliCount.value = r.sessions.length; cliNote.value = r.note ?? '' }).catch(() => {})
 function toggleGroup(key: string): void {
   const next = new Set(collapsedGroups.value)
   if (next.has(key)) next.delete(key)
@@ -646,6 +654,17 @@ onMounted(async () => {
           </ul>
         </section>
 
+        <section class="ide-taskbar__section" data-testid="ide-task-zcode-cli">
+          <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="toggleGroup('zcode-cli')">
+            <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': collapsedGroups.has('zcode-cli') }">▾</span>
+            <span class="ide-taskbar__section-title">zcode CLI 会话</span>
+            <span v-if="cliCount" class="ide-taskbar__section-count">{{ cliCount }}</span>
+          </header>
+          <div v-show="!collapsedGroups.has('zcode-cli')" class="ide-taskbar__cli-body">
+            <IdeCliSessions :boxed="false" />
+          </div>
+        </section>
+
         <section class="ide-taskbar__section" data-testid="ide-task-archived">
           <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="toggleArchived">
             <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': !archivedOpen }">▾</span>
@@ -1055,6 +1074,7 @@ onMounted(async () => {
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
+.ide-taskbar__cli-body { padding: 0 4px 6px; }
 
 .ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted); }
 
