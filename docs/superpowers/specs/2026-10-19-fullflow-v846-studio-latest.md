@@ -123,8 +123,8 @@ V8.45 的 `eval_flow` 只建集、运行、红队、采集、判分；失败样�
 - `python3 -m py_compile`：`mx-report-gen.py`、`mx-report-audit.py`、`mx-eval-summary.py`、`mx-narrative-skeleton.py` 全过。
 - simharness 全量门禁 `tests/run-gates.sh`：rc=0，jargon-source-gate HARD=0。
 - 定向用例：`v846-governance-closure` 7/7、`eval-fullflow-integration` 8/8、`eval-metrics-template-sync` 6/6、`harness-gate-integrity` 128/128。
-- 产品侧 `sim-overview-panel` 21/21（G6 键断言已更新）；`nx run build` rc=0，`verify-dist` 通过。
-- `mx-prelaunch-check.sh` 实测 **30 过 / 0 败**（2026-10-19 20:10，SIM 8801/8802 在跑）。
-- SIM `product-dist` 已刷新到 overlay `b060fc4e`，六个治理端点标记全部在位。
+- 产品侧 `sim-overview-panel` 21/21（G6 键断言已更新）；`npm run build:full` rc=0（client+server 完整构建），`verify-dist` 通过。
+- `mx-prelaunch-check.sh` 实测 **30 过 / 0 败**（2026-10-19 20:20，SIM 8801/8802 在跑）。
+- SIM `product-dist` 已用完整构建刷新到 overlay `d308c9df`，六个治理端点标记全部在位；治理快照对运行中的 8802 实测 9/9 端点通过；发布门/UAT 台账写入实测通过。
 - 宿主 8647/8649 已重启；G6 改动在 serve-main 54539c65 生效。
 - run22 未启动；本文件与 `simharness/docs/2026-10-19-run22-prelude.md` 是起跑前的操作口径。
