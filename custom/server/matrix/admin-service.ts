@@ -1,4 +1,5 @@
 import { assertSafeOutboundUrl, UnsafeUrlError } from '../security/url-guard'
+import { renderAgentAvatarPng, renderHumanAvatarPng, matrixLocalpart, type DefaultAvatarKind } from './default-avatar'
 
 export interface MatrixUserInfo {
   userId: string
@@ -174,6 +175,72 @@ export async function setMatrixUserActive(
     const res = await fetch(`${origin}${endpoint}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
+    })
+    return res.ok
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) throw err
+    return false
+  }
+}
+
+// ── 默认头像落位（2026-10-19 群聊身份标识轮，spec D-3/D-4）──
+// 上传者 = admin token（server admin 本身是真实 matrix 用户，spec D-4——不以
+// 新建用户身份登录，不动一次性初始口令约定）。头像为化妆性属性：全程
+// best-effort，失败返回 false/null 不抛（建号防假成功语义不因此回退）。
+
+/** 上传媒体（POST /_matrix/media/v3/upload）→ mxc://content_uri。失败返回 null。 */
+export async function uploadMatrixMedia(
+  content: Uint8Array,
+  contentType: string,
+  filename: string,
+  uploaderToken: string,
+  homeserverUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  try {
+    const origin = await safeMatrixOrigin(homeserverUrl)
+    const res = await fetchImpl(
+      `${origin}/_matrix/media/v3/upload?filename=${encodeURIComponent(filename)}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${uploaderToken}`, 'Content-Type': contentType },
+        body: content as unknown as BodyInit,
+      },
+    )
+    if (!res.ok) return null
+    const data = await res.json() as { content_uri?: string }
+    return data.content_uri ?? null
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) throw err
+    return null
+  }
+}
+
+/** 默认头像两步落位：生成 PNG → 上传媒体 → v2 PUT 仅写 avatar_url 一字段
+ *  （不触密码/停用态，omitted 字段不变）。任一步失败返回 false。 */
+export async function assignDefaultAvatar(opts: {
+  userId: string
+  kind: DefaultAvatarKind
+  adminToken: string
+  homeserverUrl: string
+  displayName?: string
+  fetchImpl?: typeof fetch
+}): Promise<boolean> {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  const png = opts.kind === 'agent'
+    ? renderAgentAvatarPng(opts.userId)
+    : renderHumanAvatarPng(opts.userId, opts.displayName)
+  const mxc = await uploadMatrixMedia(
+    png, 'image/png', `default-avatar-${opts.kind}-${matrixLocalpart(opts.userId)}.png`,
+    opts.adminToken, opts.homeserverUrl, fetchImpl,
+  )
+  if (!mxc) return false
+  try {
+    const origin = await safeMatrixOrigin(opts.homeserverUrl)
+    const res = await fetchImpl(`${origin}/_synapse/admin/v2/users/${encodeURIComponent(opts.userId)}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${opts.adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_url: mxc }),
     })
     return res.ok
   } catch (err) {

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import MatrixInviteDialog from './MatrixInviteDialog.vue'
+import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -128,6 +129,7 @@ const hasAnyMembers = computed(() =>
           </div>
           <div class="member-info">
             <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <MatrixUserKindBadge :user-id="member.userId" />
             <span :class="['role-label', getRoleClass(member.powerLevel ?? 0)]">{{ getRoleLabel(member.powerLevel ?? 0) }}</span>
           </div>
         </div>
@@ -149,6 +151,7 @@ const hasAnyMembers = computed(() =>
           </div>
           <div class="member-info">
             <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <MatrixUserKindBadge :user-id="member.userId" />
             <span :class="['role-label', getRoleClass(member.powerLevel ?? 0)]">{{ getRoleLabel(member.powerLevel ?? 0) }}</span>
           </div>
         </div>
@@ -170,6 +173,7 @@ const hasAnyMembers = computed(() =>
           </div>
           <div class="member-info">
             <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <MatrixUserKindBadge :user-id="member.userId" />
           </div>
         </div>
       </template>
@@ -188,6 +192,7 @@ const hasAnyMembers = computed(() =>
           </div>
           <div class="member-info">
             <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <MatrixUserKindBadge :user-id="member.userId" />
             <span class="role-label role-label--invited">{{ t('matrixChat.memberInvited') }}</span>
           </div>
         </div>
