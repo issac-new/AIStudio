@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
 import { evalApi, type EvalSetMetaDto, type RunSummaryDto, type RunCompareDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
@@ -176,13 +177,17 @@ function deltaText(v: number | null | undefined): string {
         <h1 class="eval-view__title">{{ L.navTitle }}</h1>
         <p class="eval-view__tag">{{ L.tagline }}</p>
       </div>
+    </header>
+
+    <TopicPageLayout>
+    <template #tabs>
       <nav class="eval-view__tabs">
         <button type="button" :class="{ active: tab === 'sets' }" data-testid="eval-tab-sets" @click="tab = 'sets'">{{ L.tabs.sets }}</button>
         <button type="button" :class="{ active: tab === 'runs' }" data-testid="eval-tab-runs" @click="tab = 'runs'">{{ L.tabs.runs }}</button>
         <button type="button" :class="{ active: tab === 'oracle' }" data-testid="eval-tab-oracle" @click="tab = 'oracle'">{{ L.tabs.oracle }}</button>
         <button type="button" :class="{ active: tab === 'advice' }" data-testid="eval-tab-advice" @click="tab = 'advice'">{{ L.tabs.advice }}</button>
       </nav>
-    </header>
+    </template>
 
     <p v-if="loadError" class="eval-view__error" data-testid="eval-load-error">{{ L.loadedFail }}：{{ loadError }}</p>
 
@@ -389,6 +394,7 @@ function deltaText(v: number | null | undefined): string {
 
     <!-- ── 优化建议页签（2026-10-14 阿里调研轮 A+F） ── -->
     <EvalAdvicePanel v-if="tab === 'advice'" />
+  </TopicPageLayout>
   </section>
 </template>
 

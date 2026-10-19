@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
 import { VueFlow, type Edge, type Node } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -23,6 +24,9 @@ const L = computed(() => {
 
 type Tab = 'overview' | 'schema' | 'graph' | 'instances' | 'validate' | 'versions' | 'export' | 'constraints'
 const tab = ref<Tab>('overview')
+const typeQuery = ref('')
+const instQuery = ref('')
+const filtersActive = computed(() => tab.value === 'schema' || tab.value === 'instances')
 // 模板表达式禁 TS 语法（as 断言）——页签选择经此函数（模板只传 string）
 function selectTab(key: string): void {
   tab.value = key as Tab
@@ -55,13 +59,25 @@ onMounted(() => void refresh())
 // 曾写 computed<Array<…>> 产出 "computed < Array(() =>"，v-for 恒空）——SFC 内
 // computed 一律无泛型写法（graphNodes 同款先例）
 const groupedTypes = computed(() => {
+  const q = typeQuery.value.trim().toLowerCase()
   const by = new Map<string, EntityType[]>()
   for (const t of spec.value?.entityTypes ?? []) {
+    if (q && !t.id.toLowerCase().includes(q) && !(t.label ?? '').toLowerCase().includes(q)) continue
     const c = t.category ?? '未分组'
     if (!by.has(c)) by.set(c, [])
     by.get(c)!.push(t)
   }
   return [...by.entries()].map(([category, types]) => ({ category, types }))
+})
+
+/** 对象属性表同受类型搜索约束（id/domain/range 命中）。 */
+const objectPropsShown = computed(() => {
+  const q = typeQuery.value.trim().toLowerCase()
+  const list = spec.value?.objectProperties ?? []
+  if (!q) return list
+  return list.filter((p) => p.id.toLowerCase().includes(q)
+    || p.domain.join(' ').toLowerCase().includes(q)
+    || p.range.join(' ').toLowerCase().includes(q))
 })
 
 // —— 图谱页（类层级 + 对象属性边；分组配色）——
@@ -106,6 +122,14 @@ const graphEdges = computed<Edge[]>(() => {
 // —— 实例页 ——
 const instances = ref<OntologyInstance[]>([])
 const instFilter = ref('')
+/** 左栏实例搜索（客户端过滤 id/类型/标签；类型下拉仍走服务端）。 */
+const instancesShown = computed(() => {
+  const q = instQuery.value.trim().toLowerCase()
+  if (!q) return instances.value
+  return instances.value.filter((i) => i.id.toLowerCase().includes(q)
+    || i.type.toLowerCase().includes(q)
+    || (i.label ?? '').toLowerCase().includes(q))
+})
 async function refreshInstances(): Promise<void> {
   const r = await ontologyApi.listInstances(instFilter.value || undefined)
   instances.value = r.instances
@@ -258,11 +282,29 @@ function fmtBytes(b: number): string {
     </header>
     <p class="onto__note">{{ L.standardNote }}</p>
 
+    <TopicPageLayout :rail="filtersActive">
+    <template #tabs>
     <nav class="onto__tabs" data-testid="ontology-tabs">
       <button v-for="(label, key) in L.tabs" :key="key" type="button"
         class="onto__tab" :class="{ 'onto__tab--on': tab === key }" :data-testid="`onto-tab-${key}`"
         @click="selectTab(key)">{{ label }}</button>
     </nav>
+    </template>
+    <template #filters>
+      <div class="onto-rail" data-testid="ontology-filters">
+        <template v-if="tab === 'schema'">
+          <input v-model="typeQuery" class="onto-rail__input" :placeholder="L.schema.typesTitle" data-testid="ontology-type-search" />
+          <p class="muted onto-rail__hint">{{ L.schema.typesTitle }} / {{ L.schema.propsTitle }}</p>
+        </template>
+        <template v-else>
+          <select v-model="instFilter" class="onto-rail__input" data-testid="ontology-inst-filter" @change="refreshInstances()">
+            <option value="">{{ L.instances.filterAll }}</option>
+            <option v-for="t in spec?.entityTypes ?? []" :key="t.id" :value="t.id">{{ t.label }}（{{ t.id }}）</option>
+          </select>
+          <input v-model="instQuery" class="onto-rail__input" :placeholder="L.instances.id" data-testid="ontology-inst-search" />
+        </template>
+      </div>
+    </template>
 
     <p v-if="loadError" class="onto__error" data-testid="ontology-load-error">{{ L.loadError }}：{{ loadError }}</p>
 
@@ -323,7 +365,7 @@ function fmtBytes(b: number): string {
         <table class="onto-table">
           <thead><tr><th>id</th><th>{{ L.schema.domain }}</th><th>{{ L.schema.range }}</th><th>{{ L.schema.cardinality }}</th><th>{{ L.schema.modality }}</th></tr></thead>
           <tbody>
-            <tr v-for="p in spec?.objectProperties ?? []" :key="p.id">
+            <tr v-for="p in objectPropsShown" :key="p.id">
               <td><code>{{ p.id }}</code></td>
               <td>{{ p.domain.join(' | ') }}</td>
               <td>{{ p.range.join(' | ') }}</td>
@@ -363,16 +405,12 @@ function fmtBytes(b: number): string {
     <!-- 实例 -->
     <section v-else-if="tab === 'instances'" class="onto__section">
       <div class="onto__toolbar">
-        <select v-model="instFilter" class="onto__select" data-testid="ontology-inst-filter" @change="refreshInstances()">
-          <option value="">{{ L.instances.filterAll }}</option>
-          <option v-for="t in spec?.entityTypes ?? []" :key="t.id" :value="t.id">{{ t.label }}（{{ t.id }}）</option>
-        </select>
         <button type="button" class="onto__btn onto__btn--primary" data-testid="ontology-inst-new" @click="openEditor()">{{ L.instances.newBtn }}</button>
       </div>
       <table class="onto-table" data-testid="ontology-inst-table">
         <thead><tr><th>{{ L.instances.id }}</th><th>{{ L.instances.type }}</th><th>{{ L.instances.label }}</th><th>{{ L.instances.data }}</th><th>{{ L.instances.relations }}</th><th></th></tr></thead>
         <tbody>
-          <tr v-for="i in instances" :key="i.id">
+          <tr v-for="i in instancesShown" :key="i.id">
             <td><code>{{ i.id }}</code></td>
             <td><span class="onto-chip">{{ i.type }}</span></td>
             <td>{{ i.label }}</td>
@@ -383,7 +421,7 @@ function fmtBytes(b: number): string {
               <button type="button" class="onto__btn onto__btn--danger" @click="removeInstance(i.id)">{{ L.instances.delBtn }}</button>
             </td>
           </tr>
-          <tr v-if="instances.length === 0"><td colspan="6" class="onto-table__empty">{{ L.instances.empty }}</td></tr>
+          <tr v-if="instancesShown.length === 0"><td colspan="6" class="onto-table__empty">{{ L.instances.empty }}</td></tr>
         </tbody>
       </table>
 
@@ -503,6 +541,7 @@ function fmtBytes(b: number): string {
     <section v-else-if="tab === 'constraints'" class="onto__section">
       <ConstraintsPanel />
     </section>
+    </TopicPageLayout>
   </div>
 </template>
 
@@ -600,4 +639,7 @@ function fmtBytes(b: number): string {
   &__rel { display: flex; gap: 6px; }
   &__violations { border: 1px solid rgba(var(--error-rgb), 0.4); border-radius: 10px; padding: 8px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
 }
+.onto-rail { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.onto-rail__input { width: 100%; box-sizing: border-box; border: 1px solid var(--onto-border); border-radius: 8px; padding: 6px 8px; font-size: 12px; background: var(--bg-primary); color: inherit; }
+.onto-rail__hint { margin: 0; line-height: 1.4; opacity: 0.7; }
 </style>
