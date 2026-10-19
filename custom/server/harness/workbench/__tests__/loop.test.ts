@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   behaviorContrast, candidateDiversity, diffSummary, evaluatePromotion, findGraderMarkers,
-  sha256, submitReadiness, variantSetDigest,
+  findGraderMarkersInPath, sha256, submitReadiness, variantSetDigest,
 } from '../loop'
 import type { Probe, ProbeMetrics, Proposal, Variant } from '../types'
 
@@ -105,6 +105,11 @@ describe('源码级防泄漏与多样性', () => {
     expect(findGraderMarkers('deterministic_eval_summary: ok')).toContain('deterministic_eval_summary')
   })
 
+  it('文件路径/标签命中判词 marker 也拒绝', () => {
+    expect(findGraderMarkersInPath('reports/pass_rate.json')).toContain('"pass_rate"')
+    expect(findGraderMarkersInPath('clean/SKILL.md')).toEqual([])
+  })
+
   it('逐行 Jaccard：重复候选可见塌缩', () => {
     const a = variant('v1', 'line1\nline2')
     const b = variant('v2', 'line1\nline2')
@@ -156,17 +161,21 @@ describe('evaluatePromotion', () => {
     expect(codes(stale)).toContain('approval_stale')
   })
 
-  it('探测不全/质量倒退/质量未知 → 阻塞', () => {
+  it('选中候选探测不全/质量倒退/质量未知 → 阻塞/警告', () => {
     const incomplete = fixture()
-    incomplete.probes = [incomplete.probes[0]]
+    incomplete.probes = incomplete.probes.filter((pr) => pr.variantId === 'v2')
     const regressed = fixture()
     regressed.probes[0].contrast = behaviorContrast(metrics(), metrics({ passAt1: 0.2 }))
     const unknown = fixture()
     unknown.probes[0].contrast = behaviorContrast(metrics(), metrics({ passAt1: null, passAtK: null }))
     const codes = (x: Proposal) => evaluatePromotion({ proposal: x, currentChampion: null, applyRequested: false, applyEnvEnabled: false }).blockers.map((b) => b.code)
-    expect(codes(incomplete)).toContain('probes_incomplete')
+    const warns = (x: Proposal) => evaluatePromotion({ proposal: x, currentChampion: null, applyRequested: false, applyEnvEnabled: false }).warnings.map((w) => w.code)
+    expect(codes(incomplete)).toContain('composition_unprobed')
+    expect(warns(incomplete)).toContain('probes_incomplete')
     expect(codes(regressed)).toContain('quality_regressed')
-    expect(codes(unknown)).toContain('quality_unknown')
+    expect(codes(unknown)).not.toContain('quality_unknown')
+    const unknownWarn = evaluatePromotion({ proposal: unknown, currentChampion: null, applyRequested: false, applyEnvEnabled: false }).warnings.map((w) => w.code)
+    expect(unknownWarn).toContain('quality_unknown')
   })
 
   it('回归缺失/失败 → 阻塞', () => {
@@ -182,7 +191,7 @@ describe('evaluatePromotion', () => {
     expect(codes(failed)).toContain('regression_failed')
   })
 
-  it('成本缺失/超预算 → 阻塞', () => {
+  it('选中候选成本缺失/超预算 → 阻塞', () => {
     const missing = fixture()
     missing.probes[0].evidence = { ...missing.probes[0].evidence!, costUsd: null }
     const over = fixture()
