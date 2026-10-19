@@ -1046,6 +1046,14 @@ for a in last.get("anomalies", []):
       fi
     fi
   fi
+  # G2 安全前置硬校验（2026-10-19 闸门收口 #1）：涉敏轮安全评审必须是 G2 的组成判据。
+  # 原实现安全评审在独立 if 块（:822 起）、超时只记单不终止，而 gate_blocked 全调用点
+  # 均不查 security_review_done——arch 先 PASS 时 g2_arch_pass 会静默绕过安全评审落键。
+  # 此处 fail-closed：arch PASS 但安全评审未闭环（涉敏轮）即 fail 中止本轮，闸不放行。
+  if ! printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)' && [[ -z "$(sget security_review_done)" ]]; then
+    echo "ISSUE|g2-security-not-closed|secops-agent|G2 安全前置未闭环：涉敏轮 security_review_done 未置（arch 已 PASS 但安全评审未 PASS/豁免）——闸不放行（禁止拆闸式解锁）" >> "$EVID_DIR/issues.log"
+    fail "G2 硬闸：涉敏轮安全评审（security_review_done）未闭环，不得落 g2_arch_pass"
+  fi
   capture_step "g2_arch_pass" "/app/stage/design?tab=tasks"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）
   # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
   # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
@@ -1811,6 +1819,9 @@ fi
 
 # ══ 步骤 17：测试通过登记 + 测试报告 ═════════════════
 if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
+  # G3 硬校验（2026-10-19 闸门收口 #1）：g3_code_pass 原只记不拦（devimpl 段无条件置键、
+  # 无任何 gate_blocked 查它）。此处 fail-closed：G4/testpass 前置必须 G3 已过，防绕过。
+  gate_blocked g3_code_pass testpass
   # 前置守卫口径=origin/integration（run8 优化 B）：报告按派发词只进 integration 分支，
   # repo_has（origin/main）查它=永假——run7 六代重启代代白派报告任务书（jq 崩溃期）的
   # 放大器。与下方 wait_alive_truth 等待谓词同口径（test_report_on_integration）。
@@ -2275,10 +2286,21 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
       note "[观察] 验收文档推送失败（留存本地，记问题单）"
     fi
-    sset_once uat_done "$(date +%s)"
+    # UAT 落键收口（2026-10-19 闸门收口 #1）：非全过不再静默等价全过。原实现非全过仍
+    # sset_once uat_done（:2278 旧），复盘门只查 uat_done=有条件通过与全过下游无差别。
+    # 现：全过才落 uat_done；有条件/不通过落 uat_conditional（放行权归需求提出方 bella
+    # 显式批准事件 UAT-COND-APPROVED 入 approved.events 留痕），复盘门二者取一。
+    if [[ $UAT_ALL_PASS == 1 ]]; then
+      sset_once uat_done "$(date +%s)"
+      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+    else
+      sset_once uat_conditional "$(date +%s)"
+      echo "uat:${RFD_ID} UAT-COND-APPROVED bella-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      note "[UAT] ${RFD_ID} 验收有条件（${UAT_VERDICTS}）——放行权归 bella，落 uat_conditional（uat_done 不落）"
+    fi
     capture_step "uat_done" "/app/stage/accept?tab=trace"   # 步21 承载面
     if [[ $UAT_ALL_PASS == 1 ]]; then
-      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+      note "[UAT] ${RFD_ID} 业务验收完成（全过）"
     else
       note "[UAT] ${RFD_ID} 业务验收完成（${UAT_VERDICTS}）——非全过项不作无条件验收，放行权归 bella"
     fi
@@ -2470,7 +2492,12 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     dispatch_in_room secops "@secops-agent:matrix.test 复盘·问题分类素材片（提前批，独立会话）：基于 issues.log 全量问题单归类（产品通道/凭证/流程/环境），写 docs/retro/${RUN_ID}-retro-issues.md。只分类不判定根因。完成回一行 RETRO-SEC-ISSUES-DONE。"
     sset retro_material_dispatched 1
   fi
-  gate_blocked uat_done retro
+  # UAT 收口（#1）：全过落 uat_done，有条件通过落 uat_conditional——复盘门二者取一，
+  # 有条件通过须 bella 显式批准事件（UAT-COND-APPROVED 入 approved.events）方可进复盘。
+  if [[ -z "$(sget uat_done)" && -z "$(sget uat_conditional)" ]]; then
+    echo "ISSUE|gate-bypass-blocked|retro|硬闸 uat_done/uat_conditional 未过，retro 不得执行（V3 §3 治理总纲）" >> "$EVID_DIR/issues.log"
+    fail "硬闸未过：retro 前置闸门（uat_done 或 uat_conditional）未冻结，中止"
+  fi
   # §4.4-9 治理证据②③（六文调研轮 E+B）：AI 虚拟损益表 + 自治度对账导出
   # （/api/hermes/virtual-pl?days=30 与 /api/incident/sessions/:id/autonomy 原文；
   #  收益面无数据源时产品侧如实声明不编造——透传即合规）
