@@ -121,6 +121,8 @@ if [ "$APPLY" = 1 ]; then
     [ -f "$SIM_ROOT/$f" ] && mv "$SIM_ROOT/$f" "$ARC/$f"
   done
   rm -rf "$SIM_ROOT/gateway-locks" "$SIM_ROOT/.driver.lock.d"
+  # 台账稳定入口回到空基线（runs/ 已删，旧链接会悬空 → 产品端点 503）
+  mx_sync_ledger_link
 fi
 
 # 2b) 看板库归档重置（0→1 补全线——run4 实锤：旧轮 147 卡残留污染 chips 计数与凭证核验）

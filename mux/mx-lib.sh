@@ -501,6 +501,41 @@ gov_role_of() { # <user> → org_gen 同源角色（R31 产品通道 provision �
   esac
 }
 
+# ── 清偿台账稳定入口（2026-10-19 ledger 503 配置）────────────────────────
+# 产品端点 /api/hermes/orgloop/ledger 只认 ORGLOOP_LEDGER_TSV（缺席/指向不存在文件
+# =fail-closed 503）；台账本体仍按轮落 runs/<RUN>/evidence/compensation-ledger.tsv
+# （单一事实源，不复制写入）。本函数维护 var/current-compensation-ledger.tsv 软链：
+#   有在办轮 → 该轮台账（首次创建只写表头）；无轮 → var/compensation-ledger.empty.tsv
+#   （同样只有表头）→ 端点返回 200/0 笔，不再是 503；轮开始后同一路径自动跟到真实台账。
+MX_LEDGER_LINK="$SIM_ROOT/var/current-compensation-ledger.tsv"
+MX_LEDGER_EMPTY="$SIM_ROOT/var/compensation-ledger.empty.tsv"
+mx_sync_ledger_link() {
+  mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+  if [ ! -f "$MX_LEDGER_EMPTY" ]; then
+    printf 'id\tts\ttype\tdefect\tdetail\tstatus\tresolution\n' > "$MX_LEDGER_EMPTY" 2>/dev/null || true
+  fi
+  local target="" cur=""
+  if [ -n "${RUN_ID:-}" ]; then
+    target="$SIM_ROOT/runs/$RUN_ID/evidence/compensation-ledger.tsv"
+    mkdir -p "$(dirname "$target")" 2>/dev/null || true
+  else
+    [ -L "$SIM_ROOT/var/current-state.env" ] && cur="$(readlink "$SIM_ROOT/var/current-state.env" 2>/dev/null || true)"
+    case "$cur" in
+      */runs/*/state.env) [ -f "$cur" ] && target="$(dirname "$cur")/evidence/compensation-ledger.tsv" ;;
+    esac
+  fi
+  if [ -n "$target" ]; then
+    if [ ! -f "$target" ]; then
+      mkdir -p "$(dirname "$target")" 2>/dev/null || true
+      printf 'id\tts\ttype\tdefect\tdetail\tstatus\tresolution\n' > "$target" 2>/dev/null || true
+    fi
+  else
+    target="$MX_LEDGER_EMPTY"
+  fi
+  ln -sfn "$target" "$MX_LEDGER_LINK" 2>/dev/null \
+    || cp -f "$target" "$MX_LEDGER_LINK" 2>/dev/null || true
+}
+
 ensure_spawn_health() { # 执行面预检（run20 00:30 瘫痪实录：宿主拆 venv 全绿假象）
   if ! ("$SIM_ROOT/bin/hermes-sim" --help >/dev/null 2>&1 || true) && ! bash -n "$SIM_ROOT/bin/hermes-sim" 2>/dev/null; then
     fail "执行面瘫痪：bin/hermes-sim 不可用（wrapper 报错行有修法）"
@@ -514,8 +549,10 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   # 双重 fork 脱钩（run12/run15 冷起两次实锤）：直接 `( nohup node & echo $! )` 经 bash
   # 子壳优化后 node 成调用者直子、studio.pid 误记外层 pid，mx-up 收口 wait4 挂死
   # （仅 kill 外层可解，studio 无恙）。内层 bash 托孤 launchd，$! 即 node 真身。
+  mx_sync_ledger_link
   ( cd "$SIM_ROOT" && \
   NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" OBS_SIM_ROOT="$SIM_ROOT" \
+  ORGLOOP_LEDGER_TSV="${ORGLOOP_LEDGER_TSV:-$MX_LEDGER_LINK}" \
   SIM_BRANCHES_REPO="${SIM_BRANCHES_REPO:-$SIM_ROOT/central/aipaydev}" \
   SIM_ANCHOR_REPO="${SIM_ANCHOR_REPO:-$SIM_ROOT/central/aipaydev}" \
   HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
@@ -1284,6 +1321,7 @@ mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
 if ! ln -sfn "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null; then
   cp -f "$STATE" "$SIM_ROOT/var/current-state.env" 2>/dev/null || true
 fi
+mx_sync_ledger_link
 NCWK="$NCWK_ROOT"
 
 # ── 场景层（2026-10-12 新场景轮）────────────────────────
