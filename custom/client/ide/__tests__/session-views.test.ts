@@ -74,12 +74,13 @@ describe('patch 347 漂移守卫', () => {
     expectLocaleKeys('ide.task', ['view_active', 'view_done', 'view_workspace', 'views'])
   })
 
-  it('侧栏接线存在：bucketSessions 调用 + 三段 chip + 工作空间强制 project', () => {
+  it('侧栏接线存在：bucketSessions 调用 + 三段 chip（v-for 动态 testid）+ 工作空间强制 project', () => {
+    // 2026-10-19 视图语义修正批：三按钮改 v-for 渲染（testid 动态拼装
+    // ide-task-view-<key>，运行时三值齐备——本守卫改锚拼装模板 + 三键枚举）。
     const sidebar = readFileSync(resolve(overlayRoot, 'custom/client/ide/views/IdeTaskSidebar.vue'), 'utf8')
     expect(sidebar).toContain('bucketSessions(')
-    expect(sidebar).toContain('ide-task-view-active')
-    expect(sidebar).toContain('ide-task-view-done')
-    expect(sidebar).toContain('ide-task-view-workspace')
+    expect(sidebar).toContain('ide-task-view-${vk}')
+    expect(sidebar).toContain("(['active', 'done', 'workspace'] as const)")
     expect(sidebar).toContain("sessionView === 'workspace' ? 'project'")
   })
 
