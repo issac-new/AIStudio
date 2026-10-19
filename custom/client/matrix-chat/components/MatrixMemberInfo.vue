@@ -4,8 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
-import { isAiUserId, type UserKind } from '../identity/user-kind'
-import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -22,11 +20,6 @@ const member = computed(() => {
 })
 
 const memberName = computed(() => member.value?.name ?? member.value?.rawDisplayName ?? memberUserId.value ?? '')
-
-// 身份归类（-agent 命名约定镜像，spec D-1）：成员详情身份行两态都显（强制 kind）
-const memberKind = computed<UserKind>(() =>
-  memberUserId.value && isAiUserId(memberUserId.value) ? 'ai' : 'human')
-
 const avatarUrl = computed(() => {
   void roomStore.roomVersion
   return roomStore.getUserAvatarUrl(member.value, 120)
@@ -248,9 +241,6 @@ async function copyMxid() {
       <span class="mi-role-badge" :class="powerLevel >= 100 ? 'mi-role--admin' : powerLevel >= 50 ? 'mi-role--mod' : 'mi-role--default'">
         {{ roleLabel }}
       </span>
-
-      <!-- 身份徽标（AI/人类两态都显，强制 kind——spec D-1 成员详情例外） -->
-      <MatrixUserKindBadge :kind="memberKind" />
 
       <!-- E2E verification shield (like element-web UserInfoHeaderVerificationView) -->
       <span v-if="isEncrypted && e2eStatus === 'normal'" class="mi-e2e-shield mi-e2e--trusted" :title="t('matrixChat.e2eVerified')">

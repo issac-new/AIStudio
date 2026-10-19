@@ -28,7 +28,7 @@ import { queryApprovalLog } from '../approvals/approval-log'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
-import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite, backfillDefaultAvatars } from './registry-admin'
+import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
@@ -574,19 +574,6 @@ router.post('/invites', async (ctx) => {
     withAgent: b.withAgent !== 'false',
     expiresInHours: Number(b.expiresInHours) > 0 ? Number(b.expiresInHours) : 24,
     actor: b.actor ? String(b.actor) : undefined,
-  }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
-})
-
-// 默认头像存量补发（2026-10-19 群聊身份标识轮，spec D-7）：与 matrix-users
-// 同闸同凭据（superAdmin JWT + body.adminToken 双闸）。默认只补头像为空的账号；
-// 显式 userIds 则只处理指定账号（覆盖语义）。AI/人类按 -agent 命名约定分流。
-router.post('/matrix-avatars/backfill', async (ctx) => {
-  if (superAdminDenied(ctx)) return
-  const b = ctx.request.body as { adminToken?: string; homeserverUrl?: string; userIds?: unknown }
-  if (!b.adminToken || !b.homeserverUrl) { ctx.status = 400; ctx.body = { error: '缺 adminToken/homeserverUrl' }; return }
-  try { ctx.body = await backfillDefaultAvatars({
-    adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
-    userIds: Array.isArray(b.userIds) ? b.userIds.map(String) : undefined,
   }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
 })
 
