@@ -91,7 +91,7 @@ export function collectTraceRows(days = 7, opts: { dir?: string; now?: number } 
         }
         fileRows += 1
         if ((row as { otelFormat?: boolean }).otelFormat === true) continue
-        const ts = row.ended_at ?? row.started_at
+        const ts = row.ended_at ?? row.started_at ?? row.ts
         // header 用 started_at；无时间戳行（坏行）不进入窗口统计
         if (!Number.isFinite(ts) || Number(ts) < cutoffSec) continue
         rows.push(row)
