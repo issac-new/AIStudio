@@ -28,13 +28,14 @@ import { runReplayEval, type SampleInput } from './runner'
 import { sampleFromTrace } from './trace-sampler'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
-  appendIteration, appendOracleRun, createOracleCase, createSet, exportSet, getOracleCase,
-  getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns, listSets,
-  recordHumanVerdict, reflowTaskToSet, reviseRubric, sealSet,
+  appendIteration, appendOracleRun, appendTasksToSet, createOracleCase, createSet, exportSet,
+  getOracleCase, getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns,
+  listSets, recordHumanVerdict, recordLiveEvidence, reflowTaskToSet, reviseRubric, sealSet,
 } from './store'
 import { loadEvalConfig } from './types'
-import type { EvalRun } from './types'
+import type { EvalRun, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
+import { buildRedteamVariants } from './redteam-variants'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 
@@ -127,6 +128,24 @@ router.post('/sets/redteam-seed', async (ctx) => {
   }
   ctx.status = 201
   ctx.body = { ok: true, existed: false, set: result.set, vectors: REDTEAM_VECTORS }
+})
+
+// 红队变体扩产（B6：规则改写器 24 种子 → 114 变体；按 id 去重幂等追加进种子库）。
+router.post('/sets/redteam-variants', async (ctx) => {
+  const existing = listSets().find((s) => s.name === REDTEAM_SET_NAME)
+  if (!existing) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['红队种子库不存在，先建种子库（POST /sets/redteam-seed）'] }
+    return
+  }
+  const result = appendTasksToSet(existing.id, buildRedteamVariants())
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = result.appended > 0 ? 201 : 200
+  ctx.body = { ok: true, appended: result.appended, set: { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length, revision: result.set.revision } }
 })
 
 router.get('/sets/:id', async (ctx) => {
@@ -318,6 +337,63 @@ router.post('/runs/:id/verdicts', async (ctx) => {
     return
   }
   ctx.body = { ok: true, run: result.run }
+})
+
+// 线上证据回填（B7）：压测/分档实测入账，门禁 qps/分档项即时转真判并重聚合。
+router.post('/runs/:id/live-evidence', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const evidence: LiveEvidence = { recordedBy: actorOf(ctx) ?? 'anonymous', recordedAt: Date.now() }
+  const problems: string[] = []
+
+  const q = body.qpsProbe as Record<string, unknown> | undefined
+  if (q !== undefined) {
+    const targetQps = Number(q.targetQps)
+    const achievedQps = Number(q.achievedQps)
+    const errorRate = Number(q.errorRate)
+    const p99ToP50 = Number(q.p99ToP50)
+    if (![targetQps, achievedQps, p99ToP50].every((v) => Number.isFinite(v) && v > 0)) problems.push('qpsProbe.targetQps/achievedQps/p99ToP50 须为正数')
+    if (!(Number.isFinite(errorRate) && errorRate >= 0 && errorRate <= 1)) problems.push('qpsProbe.errorRate 须为 0~1')
+    if (!problems.length) {
+      evidence.qpsProbe = {
+        targetQps, achievedQps, errorRate, p99ToP50,
+        ...(typeof q.source === 'string' && q.source.trim() ? { source: q.source.trim() } : {}),
+        at: Date.now(),
+      }
+    }
+  }
+
+  if (Array.isArray(body.responseTiers)) {
+    const tiers: LiveEvidence['responseTiers'] = []
+    for (const [i, raw] of body.responseTiers.entries()) {
+      const t = raw as Record<string, unknown>
+      const tier = t.tier === 'simple' || t.tier === 'complex' ? t.tier : null
+      const samples = Number(t.samples)
+      const p95Ms = Number(t.p95Ms)
+      if (!tier) problems.push(`responseTiers[${i}].tier 须为 simple/complex`)
+      if (!(Number.isInteger(samples) && samples >= 1)) problems.push(`responseTiers[${i}].samples 须为 ≥1 整数`)
+      if (!(Number.isFinite(p95Ms) && p95Ms > 0)) problems.push(`responseTiers[${i}].p95Ms 须为正数`)
+      if (tier && !problems.length) {
+        tiers.push({ tier, samples, p95Ms, ...(typeof t.source === 'string' && t.source.trim() ? { source: t.source.trim() } : {}), at: Date.now() })
+      }
+    }
+    if (!problems.length && tiers.length > 0) evidence.responseTiers = tiers
+  }
+
+  if (!evidence.qpsProbe && !evidence.responseTiers) problems.push('须至少携带 qpsProbe 或 responseTiers 之一')
+  if (problems.length) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems }
+    return
+  }
+  const config = loadEvalConfig()
+  const set = getRun(ctx.params.id) ? getSet(getRun(ctx.params.id)!.setId) : undefined
+  const result = recordLiveEvidence(ctx.params.id, evidence, (r) => (set ? aggregateRun(set, r, config) : r))
+  if (!result.ok) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.body = { ok: true, run: set?.sealed ? runSummary(result.run) : result.run }
 })
 
 // ---------- 归因双 Loop ----------

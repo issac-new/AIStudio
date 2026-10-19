@@ -92,6 +92,45 @@ function pct(v: number | null): string {
   return v === null ? '—' : `${Math.round(v * 100)}%`
 }
 
+// —— 线上证据回填（后续批 B7）——
+const liveTargetQps = ref<number | null>(null)
+const liveAchievedQps = ref<number | null>(null)
+const liveErrorRate = ref<number | null>(null)
+const liveP99ToP50 = ref<number | null>(null)
+const liveSimpleP95 = ref<number | null>(null)
+const liveComplexP95 = ref<number | null>(null)
+const liveError = ref('')
+
+/** 填了 QPS 全组四项才回填压测；分档各项独立可选。 */
+async function submitLive(): Promise<void> {
+  liveError.value = ''
+  const qpsComplete = [liveTargetQps.value, liveAchievedQps.value, liveErrorRate.value, liveP99ToP50.value].every((v) => typeof v === 'number' && Number.isFinite(v) && v >= 0)
+  const qpsPartial = [liveTargetQps.value, liveAchievedQps.value, liveErrorRate.value, liveP99ToP50.value].some((v) => v !== null)
+  if (qpsPartial && !qpsComplete) {
+    liveError.value = L.value.runs.liveQpsIncomplete
+    return
+  }
+  const tiers: Array<{ tier: 'simple' | 'complex'; samples: number; p95Ms: number }> = []
+  if (typeof liveSimpleP95.value === 'number' && liveSimpleP95.value > 0) tiers.push({ tier: 'simple', samples: 1, p95Ms: liveSimpleP95.value })
+  if (typeof liveComplexP95.value === 'number' && liveComplexP95.value > 0) tiers.push({ tier: 'complex', samples: 1, p95Ms: liveComplexP95.value })
+  if (!qpsComplete && tiers.length === 0) {
+    liveError.value = L.value.runs.liveEmpty
+    return
+  }
+  try {
+    await evalApi.recordLiveEvidence(props.runId, {
+      ...(qpsComplete
+        ? { qpsProbe: { targetQps: liveTargetQps.value!, achievedQps: liveAchievedQps.value!, errorRate: liveErrorRate.value!, p99ToP50: liveP99ToP50.value!, source: 'manual' } }
+        : {}),
+      ...(tiers.length > 0 ? { responseTiers: tiers } : {}),
+    })
+    await load()
+    emit('changed')
+  } catch (e) {
+    liveError.value = (e as Error).message
+  }
+}
+
 function verdictClass(value: string, expect?: string): string {
   if (value === 'unknown') return 'v-unknown'
   if (expect !== undefined && value === expect) return 'v-pass'
@@ -261,6 +300,21 @@ function durationText(ms: number | null): string {
         </tbody>
       </table>
       <p class="muted gate__basis">{{ run.aggregates.releaseGate.basis }}</p>
+      <!-- 线上证据回填（后续批 B7）：压测/分档实测入账，qps/分档缺口项转真判 -->
+      <details class="gate__live">
+        <summary data-testid="eval-live-toggle">{{ L.runs.liveToggle }}</summary>
+        <form class="gate__live-form" data-testid="eval-live-form" @submit.prevent="submitLive">
+          <label>{{ L.runs.liveQps.target }}<input v-model.number="liveTargetQps" type="number" min="0.1" step="any" data-testid="eval-live-target" /></label>
+          <label>{{ L.runs.liveQps.achieved }}<input v-model.number="liveAchievedQps" type="number" min="0.1" step="any" data-testid="eval-live-achieved" /></label>
+          <label>{{ L.runs.liveQps.errRate }}<input v-model.number="liveErrorRate" type="number" min="0" max="1" step="any" data-testid="eval-live-err" /></label>
+          <label>{{ L.runs.liveQps.p99 }}<input v-model.number="liveP99ToP50" type="number" min="0.1" step="any" data-testid="eval-live-p99" /></label>
+          <label>{{ L.runs.liveTier.simple }}<input v-model.number="liveSimpleP95" type="number" min="1" placeholder="ms" data-testid="eval-live-simple" /></label>
+          <label>{{ L.runs.liveTier.complex }}<input v-model.number="liveComplexP95" type="number" min="1" placeholder="ms" data-testid="eval-live-complex" /></label>
+          <p v-if="liveError" class="eval-report__error">{{ liveError }}</p>
+          <p class="muted">{{ L.runs.liveHint }}</p>
+          <div class="actions"><button type="submit" data-testid="eval-live-submit">{{ L.runs.liveSubmit }}</button></div>
+        </form>
+      </details>
     </div>
 
     <!-- 六维分面（未采集维如实立账） -->
@@ -422,6 +476,17 @@ function durationText(ms: number | null): string {
   display: flex; flex-direction: column; gap: 6px;
   .gate__head { display: flex; align-items: center; gap: 8px; }
   .gate__basis { margin: 0; font-size: 11px; }
+}
+.gate__live {
+  font-size: 12px;
+  summary { cursor: pointer; opacity: 0.75; }
+  .gate__live-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding-top: 8px;
+    label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+    input { border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 12px; background: var(--bg-primary); color: inherit; }
+    .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end;
+      button { border: 1px solid var(--border-color); background: transparent; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 12px; } }
+    p { grid-column: 1 / -1; margin: 0; }
+  }
 }
 .eval-report__exc {
   display: flex; flex-direction: column; gap: 6px;

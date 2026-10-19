@@ -6,7 +6,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
 vi.mock('@/api/client', () => ({ request: vi.fn(), getApiKey: () => '', getBaseUrlValue: () => '' }))
 vi.mock('@/custom/eval/api', () => ({
-  evalApi: { getRun: vi.fn(), listIterations: vi.fn(), getSet: vi.fn() },
+  evalApi: { getRun: vi.fn(), listIterations: vi.fn(), getSet: vi.fn(), recordLiveEvidence: vi.fn() },
 }))
 
 import EvalReportPanel from '@/custom/eval/components/EvalReportPanel.vue'
@@ -99,5 +99,32 @@ describe('EvalReportPanel 百度轮渲染（B3/B4）', () => {
     await flushPromises()
     expect(w.find('[data-testid="eval-report-pyramid"]').exists()).toBe(false)
     expect(w.find('[data-testid="eval-report-actions"]').exists()).toBe(false)
+  })
+
+  it('线上证据回填表单：QPS 全组+分档提交走 recordLiveEvidence；填一半 QPS 拦截', async () => {
+    vi.mocked(evalApi.getRun).mockResolvedValue({ run: runOf({
+      releaseGate: { verdict: 'no_data', checks: [], measuredCount: 0, gapKeys: ['qps_headroom'], basis: 'x' },
+    }) } as never)
+    vi.mocked(evalApi.recordLiveEvidence).mockResolvedValue({ run: {} } as never)
+    const w = mount(EvalReportPanel, { props: { runId: 'erun-baidu-01' } })
+    await flushPromises()
+
+    // 填一半 QPS → 拦截不发包
+    await w.find('[data-testid="eval-live-target"]').setValue('100')
+    await w.find('form[data-testid="eval-live-form"]').trigger('submit')
+    await flushPromises()
+    expect(evalApi.recordLiveEvidence).not.toHaveBeenCalled()
+
+    // 全组 QPS + 简单档 → 发包载荷正确
+    await w.find('[data-testid="eval-live-achieved"]').setValue('95')
+    await w.find('[data-testid="eval-live-err"]').setValue('0.005')
+    await w.find('[data-testid="eval-live-p99"]').setValue('1.8')
+    await w.find('[data-testid="eval-live-simple"]').setValue('4000')
+    await w.find('form[data-testid="eval-live-form"]').trigger('submit')
+    await flushPromises()
+    expect(evalApi.recordLiveEvidence).toHaveBeenCalledTimes(1)
+    const payload = vi.mocked(evalApi.recordLiveEvidence).mock.calls[0][1]
+    expect(payload.qpsProbe).toMatchObject({ targetQps: 100, achievedQps: 95, errorRate: 0.005, p99ToP50: 1.8 })
+    expect(payload.responseTiers).toEqual([{ tier: 'simple', samples: 1, p95Ms: 4000 }])
   })
 })
