@@ -35,7 +35,7 @@ ck "③ V8.8/V8.9 新接线在位" "grep -q 'uc_dispatched' '$HERE/aipay-scenari
 ck "④ 双仓工作区干净" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no | head -1)\" ] && [ -z \"\$(git -C '$HERE/../overlay' status --porcelain --untracked-files=no 2>/dev/null | head -1)\" ]" "提交或暂存未提交改动"
 
 # ⑤ 网关+studio 健康
-ck "⑤ 服务健康（8801+8802，studio 带 OBS_SIM_ROOT）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null && _pid=\$(lsof -ti :8802 | head -1) && ps eww -p \"\$_pid\" | grep -q 'OBS_SIM_ROOT='" "bash mux/mx-up.sh 拉起；若 studio 已在跑但无 OBS_SIM_ROOT（推演端点会 503），先 bash mux/mx-down.sh 再 mx-up"
+ck "⑤ 服务健康（8801+8802，studio 带 OBS_SIM_ROOT）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null && _pid=\$(lsof -nP -tiTCP:8802 -sTCP:LISTEN | head -1) && ps eww -p \"\$_pid\" | grep -q 'OBS_SIM_ROOT='" "bash mux/mx-up.sh 拉起；若 studio 已在跑但无 OBS_SIM_ROOT（推演端点会 503），先 bash mux/mx-down.sh 再 mx-up"
 
 # ⑥ 中央仓谱系（本地=远端或线性领先）
 ck "⑥ 中央仓 main 谱系" "git -C '$SR/central/aipaydev' fetch -q origin 2>/dev/null; _lb=\$(git -C '$SR/central/aipaydev' rev-list --count main..origin/main 2>/dev/null || echo 0); [ \"\$_lb\" = \"0\" ]" "中央仓本地 main 落后 origin N 提交：git -C central/aipaydev merge --ff-only origin/main 收敛"

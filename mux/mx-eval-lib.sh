@@ -167,10 +167,10 @@ eval_live_evidence() { # <runId> [probe-jsonl]：把 mx-load-probe 实测回填�
   local run_id="$1" probe="${2:-${EVID_DIR:-$SIM_ROOT/runs/${RUN_ID:-}/evidence}/load-probe.jsonl}"
   local d last body tmp
   d=$(eval_dir); mkdir -p "$d"
-  [[ -s "$probe" ]] || { issue_once eval-live-evidence-missing "$RFD_ID" "线上证据未回填：探针产物缺席（$probe）；QPS/分档如实 no_data"; return 2; }
+  [[ -s "$probe" ]] || { issue_once eval-live-evidence-missing "$RFD_ID" "线上证据未回填：探针产物缺席（${probe}）；QPS/分档如实 no_data"; return 2; }
   last=$(grep -v '^[[:space:]]*$' "$probe" | tail -1)
   body=$(printf '%s' "$last" | jq -c '{qpsProbe:{targetQps:.target_qps,achievedQps:.achieved_qps,errorRate:.error_rate,p99ToP50:(if ((.latency_ms.p50 // 0) > 0) then (.latency_ms.p99 / .latency_ms.p50) else 1 end),source:"mx-load-probe"}}' 2>/dev/null) || {
-    issue_once eval-live-evidence-bad "$RFD_ID" "线上证据回填失败：探针档案解析失败（$probe）"
+    issue_once eval-live-evidence-bad "$RFD_ID" "线上证据回填失败：探针档案解析失败（${probe}）"
     return 2
   }
   tmp=$(mktemp "${TMPDIR:-/tmp}/mx-eval-live.XXXXXX") || return 2
