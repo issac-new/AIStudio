@@ -32,8 +32,13 @@ import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, 
 import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
+import { workbenchRoutes } from './workbench/controller'
 
 const router = new Router({ prefix: '/api/harness' })
+
+// Harness² 改进实验台（2026-10-19）：提案-探测-组合-冠军闭环，复用本路由前缀，
+// 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
+router.use('/workbench', workbenchRoutes.routes(), workbenchRoutes.allowedMethods())
 
 function daysOf(v: unknown): number {
   const n = Number(v)
