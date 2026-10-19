@@ -10,6 +10,7 @@
 import type {
   AttemptVerdict, EvalConfig, EvalTask, Evidence,
 } from './types'
+import { similarityVerdict } from './similarity'
 import {
   Breaker, TtlCache, clefAsk, sha1Of,
   type ClefJudgeDeps, type EvalJudgeAnswers, type EvalJudgeRequest,
@@ -123,6 +124,21 @@ function applyThresholdRule(
   return { value: result, reason: `${head}（实测 ${value}）` }
 }
 
+// S0 相似度规则（百度轮 B2）：ROUGE-L F1 ≥ minScore，停用词清洁默认开。
+function applySimilarityRule(
+  task: EvalTask,
+  rule: { minScore: number; stopwords?: string[] },
+  evidence: Evidence,
+): RuleOutcome {
+  const value = similarityVerdict(task, evidence, rule)
+  return {
+    value,
+    reason: value === 'unknown'
+      ? `S0 similarity 证据缺席（minScore=${rule.minScore}）`
+      : `S0 similarity ${value === 'yes' ? '达阈' : '未达阈'}（ROUGE-L F1 ≥ ${rule.minScore}）`,
+  }
+}
+
 // ---------- 主入口 ----------
 
 /**
@@ -149,7 +165,9 @@ export async function judgeAttempt(
     }
     const outcome = assertion.s0.kind === 'regex'
       ? applyRegexRule(assertion.s0, evidence)
-      : applyThresholdRule(assertion.s0, evidence)
+      : assertion.s0.kind === 'similarity'
+        ? applySimilarityRule(task, assertion.s0, evidence)
+        : applyThresholdRule(assertion.s0, evidence)
     verdicts.push({ assertionId: assertion.id, value: outcome.value, source: 's0', reason: outcome.reason })
     if (options.crossValidate) s1Needed.push(assertion.id)
   }

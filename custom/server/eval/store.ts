@@ -14,6 +14,7 @@ import type {
 } from './types'
 import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
+import { contentFingerprint } from './fingerprint'
 
 interface StoreShape {
   sets: EvalSet[]
@@ -46,13 +47,25 @@ function readStore(): StoreShape {
     throw e
   }
   return {
-    sets: Array.isArray(raw.sets) ? raw.sets : [],
+    sets: Array.isArray(raw.sets) ? raw.sets.map(backfillSetAsset) : [],
     runs: Array.isArray(raw.runs) ? raw.runs : [],
     rubricIterations: Array.isArray(raw.rubricIterations) ? raw.rubricIterations : [],
     oracleCases: Array.isArray(raw.oracleCases) ? raw.oracleCases : [],
     oracleRuns: Array.isArray(raw.oracleRuns) ? raw.oracleRuns : [],
     nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
   }
+}
+
+/** 旧数据回填（百度轮 B1 上线前的集无指纹）：读时补算，不落盘（下次改题自然固化）。 */
+function backfillSetAsset(set: EvalSet): EvalSet {
+  if (set.contentHash && typeof set.revision === 'number') return set
+  return { ...set, contentHash: contentFingerprint(set), revision: set.revision ?? 1 }
+}
+
+/** 改题后维护资产面：重算指纹 + 修订号递增（三条路径共用：revise/reflow/建集置 1 在各自现场）。 */
+function bumpSetAsset(set: EvalSet): void {
+  set.revision = (set.revision ?? 1) + 1
+  set.contentHash = contentFingerprint(set)
 }
 
 function writeStore(store: StoreShape): void {
@@ -102,8 +115,15 @@ function validateAssertion(a: unknown, i: number, problems: string[]): void {
       if (!METRICS.has(String(it.s0.metric))) problems.push(`断言 #${i} s0.threshold.metric 非法`)
       if (!OPS.has(String(it.s0.op))) problems.push(`断言 #${i} s0.threshold.op 非法`)
       if (typeof it.s0.value !== 'number' || !Number.isFinite(it.s0.value)) problems.push(`断言 #${i} s0.threshold.value 须为有限数`)
+    } else if (it.s0.kind === 'similarity') {
+      if (typeof it.s0.minScore !== 'number' || !Number.isFinite(it.s0.minScore) || it.s0.minScore < 0 || it.s0.minScore > 1) {
+        problems.push(`断言 #${i} s0.similarity.minScore 须为 0~1`)
+      }
+      if (it.s0.stopwords !== undefined && (!Array.isArray(it.s0.stopwords) || it.s0.stopwords.some((w) => typeof w !== 'string'))) {
+        problems.push(`断言 #${i} s0.similarity.stopwords 须为字符串数组（[] = 关闭停用词清洁）`)
+      }
     } else {
-      problems.push(`断言 #${i} s0.kind 须为 regex/threshold`)
+      problems.push(`断言 #${i} s0.kind 须为 regex/threshold/similarity`)
     }
   }
 }
@@ -158,6 +178,8 @@ export function listSets(): EvalSetMeta[] {
     track: s.track,
     module: s.module,
     sealed: s.sealed,
+    contentHash: s.contentHash,
+    revision: s.revision,
     createdAt: s.createdAt,
     createdBy: s.createdBy,
     taskCount: s.tasks.length,
@@ -190,10 +212,13 @@ export function createSet(
     track: input.track as EvalSet['track'],
     module: input.track === 'process' && input.module?.trim() ? input.module.trim() : undefined,
     sealed: false,
+    contentHash: '',
+    revision: 1,
     createdAt: Date.now(),
     createdBy,
     tasks: input.tasks as EvalTask[],
   }
+  set.contentHash = contentFingerprint(set)
   store.sets.push(set)
   store.nextSeq += 1
   writeStore(store)
@@ -249,6 +274,7 @@ export function reviseRubric(
   if (iter && typeof revision === 'string') iter.revision = revision
 
   assertion.text = revision.trim()
+  bumpSetAsset(set)
   writeStore(store)
   return { ok: true, set }
 }
@@ -361,6 +387,9 @@ export function reflowTaskToSet(
       track: source.track,
       ...(source.track === 'process' && source.module ? { module: source.module } : {}),
       sealed: false,
+      // 空库 rev 0，首个回流任务入内即 bump 到 1（落盘前不可见）
+      contentHash: '',
+      revision: 0,
       createdAt: Date.now(),
       ...(input.actor ? { createdBy: input.actor } : {}),
       tasks: [],
@@ -383,6 +412,7 @@ export function reflowTaskToSet(
       at: Date.now(),
     },
   })
+  bumpSetAsset(target)
   writeStore(store)
   return { ok: true, set: target, created: true, taskId: reflowId }
 }

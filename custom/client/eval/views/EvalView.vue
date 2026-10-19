@@ -107,6 +107,34 @@ async function exportSet(id: string): Promise<void> {
   }
 }
 
+// —— 红队种子库（百度轮 B5：攻击向量种子集，幂等建库）——
+const redteamBusy = ref(false)
+const redteamNote = ref('')
+
+async function createRedteamSeed(): Promise<void> {
+  redteamBusy.value = true
+  redteamNote.value = ''
+  try {
+    const res = await evalApi.createRedteamSeed()
+    redteamNote.value = res.existed ? L.value.sets.redteamExisted : L.value.sets.redteamCreated
+    await refresh()
+  } catch (e) {
+    redteamNote.value = (e as Error).message
+  } finally {
+    redteamBusy.value = false
+  }
+}
+
+/** 短指纹（呈现 12 位；title 悬停给全量）。 */
+function shortHash(hash: string | undefined): string {
+  return hash ? hash.slice(0, 12) : '—'
+}
+
+/** 待驱动动作数（动作驱动清单，评估器即回报函数——读数指向动作）。 */
+function actionCount(r: RunSummaryDto): number {
+  return r.aggregates.actions?.length ?? 0
+}
+
 async function launch(): Promise<void> {
   launchError.value = ''
   let samples: Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>
@@ -203,10 +231,20 @@ function deltaText(v: number | null | undefined): string {
           <h2>{{ L.sets.title }}</h2>
           <p class="muted">{{ L.sets.sub }}</p>
         </div>
-        <button type="button" class="primary" data-testid="eval-create-toggle" @click="showCreate = !showCreate">
-          {{ L.sets.createTitle }}
-        </button>
+        <div class="eval-sets__bar-actions">
+          <button
+            type="button"
+            data-testid="eval-redteam-seed"
+            :disabled="redteamBusy"
+            :title="L.sets.redteamHint"
+            @click="createRedteamSeed"
+          >{{ L.sets.redteamSeed }}</button>
+          <button type="button" class="primary" data-testid="eval-create-toggle" @click="showCreate = !showCreate">
+            {{ L.sets.createTitle }}
+          </button>
+        </div>
       </div>
+      <p v-if="redteamNote" class="muted" data-testid="eval-redteam-note">{{ redteamNote }}</p>
 
       <form v-if="showCreate" class="eval-sets__form card" data-testid="eval-create-form" @submit.prevent="createSet">
         <label>
@@ -243,6 +281,7 @@ function deltaText(v: number | null | undefined): string {
             <th>{{ L.sets.module }}</th>
             <th>{{ L.sets.taskCount }}</th>
             <th>{{ L.sets.runCount }}</th>
+            <th>{{ L.sets.assetCol }}</th>
             <th />
           </tr>
         </thead>
@@ -253,6 +292,9 @@ function deltaText(v: number | null | undefined): string {
             <td>{{ s.module ?? '—' }}</td>
             <td>{{ s.taskCount }}</td>
             <td>{{ s.runCount }}</td>
+            <td>
+              <span class="chip chip-asset mono" :title="s.contentHash" :data-testid="`eval-set-hash-${s.id}`">r{{ s.revision }}·{{ shortHash(s.contentHash) }}</span>
+            </td>
             <td class="row-actions">
               <span v-if="s.sealed" class="chip chip-sealed">{{ L.sets.sealed }}</span>
               <button v-else type="button" :data-testid="`eval-seal-${s.id}`" @click="sealSet(s.id)">{{ L.sets.seal }}</button>
@@ -338,7 +380,21 @@ function deltaText(v: number | null | undefined): string {
             </td>
             <td>{{ pct(r.aggregates.unknownRatio) }}</td>
             <td>{{ r.k }}<span v-if="r.aggregates.statisticallyInsufficient" class="chip chip-warn" :title="L.runs.insufficient">1?</span></td>
-            <td><span v-if="!r.aggregates.judgeOnline" class="chip chip-warn">{{ L.runs.judgeOffline }}</span></td>
+            <td>
+              <span v-if="!r.aggregates.judgeOnline" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
+              <span
+                v-if="r.aggregates.pyramid?.anchorDrift"
+                class="chip chip-warn"
+                :title="L.runs.anchorDriftHint"
+                :data-testid="`eval-run-drift-${r.id}`"
+              >{{ L.runs.anchorDrift }}</span>
+              <span
+                v-if="actionCount(r) > 0"
+                class="chip chip-asset"
+                :title="L.runs.actionChipHint"
+                :data-testid="`eval-run-actions-${r.id}`"
+              >{{ L.runs.actionChip }} {{ actionCount(r) }}</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -450,6 +506,10 @@ function deltaText(v: number | null | undefined): string {
   h2 { font-size: 15px; margin: 0 0 4px; }
   .muted { margin: 0; }
 }
+.eval-sets__bar-actions { display: flex; gap: 8px; align-items: center;
+  button:not(.primary) { border: 1px solid var(--border-color); background: transparent; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+  button:disabled { opacity: 0.55; cursor: wait; }
+}
 .eval-sets__form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -506,6 +566,7 @@ button.primary {
   &.chip-sealed { background: var(--bg-tertiary); }
   &.chip-warn { background: var(--warning); color: var(--text-on-warning); }
   &.chip-gate-pass { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+  &.chip-asset { background: var(--bg-tertiary); font-family: var(--font-mono); }
 }
 .eval-compare {
   display: flex;
