@@ -109,6 +109,7 @@ const AsyncTeams = defineAsyncComponent(() => import('../TeamsView.vue').then(m 
 const AsyncAgents = defineAsyncComponent(() => import('../agents/AgentsView.vue').then(m => m.default))
 const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vue').then(m => m.default))
 const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue').then(m => m.default))
+const AsyncReviewGov = defineAsyncComponent(() => import('../gov/ReviewGovPanel.vue').then(m => m.default))
 const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue').then(m => m.default))
 const AsyncOrchestration = defineAsyncComponent(() => import('../orchestration/OrchestrationView.vue').then(m => m.default))
 
@@ -140,6 +141,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   clearance: ClearancePanel,
   issues: GovIssuesPanel,
   audit: AsyncAudit,
+  reviewGov: AsyncReviewGov,
   metrics: StageMetricsPanel,
   gateLog: StageGatePanel,
 }
