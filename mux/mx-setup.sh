@@ -153,6 +153,28 @@ done
 profile_count=$(find "$HERMES_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 log "profiles 就绪：${profile_count} 个（${#INSTANCED_USERS[@]} Orchestrator + agent，admin 不起实例）"
 
+# ── 4b. provider 归一（宿主快照 vs SIM 0.22.2 命名差，2026-10-19）：write_root_config/
+#        write_*_profile 从宿主 ~/.hermes/config.yaml 快照派生，宿主新式 builtin
+#        provider（ZCode 3.15 命名空间）SIM 快照不识别 → 每回合 "Primary provider
+#        auth failed" WARNING + fallback。归一到快照在册的 custom:cc-switch/
+#        glm-5.3-flash。宿主再换 provider 时此步须同步（判据=网关日志零
+#        Primary provider auth failed）。
+_norm_cnt=0
+for _cfg in "$HERMES_ROOT/config.yaml" "$HERMES_ROOT"/profiles/*/config.yaml; do
+  [ -f "$_cfg" ] || continue
+  if grep -q 'provider: builtin:bigmodel-coding-plan' "$_cfg" 2>/dev/null; then
+    python3 - "$_cfg" <<'PYN'
+import sys, re, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text(encoding='utf-8')
+s = s.replace('provider: builtin:bigmodel-coding-plan', 'provider: custom:cc-switch')
+s = re.sub(r'^(\s*)default: GLM-5\.3\s*$', r'default: glm-5.3-flash', s, count=1, flags=re.M)
+p.write_text(s, encoding='utf-8')
+PYN
+    _norm_cnt=$((_norm_cnt+1))
+  fi
+done
+[ "$_norm_cnt" -gt 0 ] && log "provider 归一：${_norm_cnt} 份 config（builtin:bigmodel-coding-plan → custom:cc-switch/glm-5.3-flash）"
+
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
 for u in $(node_users); do
   for b in $(boards_of "$u"); do
@@ -167,6 +189,27 @@ for u in $(node_users); do
 done
 # default 板 = 串板哨兵（G2 门禁要求全程零任务）
 log "default 板保留为串板哨兵"
+
+# ── 5a. studio user_profiles 重播（0→1 ACL 真值；mx-clean 2b2 清空后由此重建）──
+#       每账号 = 本账号 profile（default）+ 两块板的 team agent profile；admin 是
+#       super_admin 走角色旁路不映射。studio 用户行由 matrix-login 建号产生，
+#       缺席即跳过（账号首次登录后重跑本脚本收敛）。幂等：先清后播。
+WEBUI_DB="$WEBUI_HOME/hermes-web-ui.db"
+if [ -f "$WEBUI_DB" ]; then
+  mxp_sqlite "$WEBUI_DB" "delete from user_profiles;" || true
+  _seeded=0
+  for u in $(node_users); do
+    _uid=$(mxp_sqlite "$WEBUI_DB" "select id from users where username='$u' limit 1;")
+    [ -n "${_uid:-}" ] || continue
+    mxp_sqlite "$WEBUI_DB" "insert or replace into user_profiles(user_id,profile_name,is_default,created_at) values(${_uid},'${u}',1,strftime('%s','now')*1000);" || true
+    for a in $(agents_of "$u"); do
+      if mxp_sqlite "$WEBUI_DB" "insert or replace into user_profiles(user_id,profile_name,is_default,created_at) values(${_uid},'$(agent_profile "$u" "$a")',0,strftime('%s','now')*1000);" ; then
+        _seeded=$((_seeded+1))
+      fi
+    done
+  done
+  log "user_profiles 重播完成（agent 映射 ${_seeded} 条；studio 用户行缺席的账号登录后重跑收敛）"
+fi
 
 # ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
 # 克隆后立即剥掉 remote URL 里的 token：git clone <带token URL> 会把它永久写进每个
