@@ -186,6 +186,12 @@ const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
     </nav>
 
     <div id="stg-panel" class="stg__body" role="tabpanel" :aria-label="zh ? currentTab.zh : currentTab.en">
+      <!-- P2-9（走查 §四）：阶段页内嵌的是全量看板，与「常用 · 看板」同源；
+           这里明确说明并给全量入口，避免用户以为有三份不同的看板。 -->
+      <div v-if="currentTab.component === 'board'" class="stg__same-src" data-testid="stg-board-note">
+        <span>{{ zh ? '这里是全量看板，与「常用 · 看板」同源；按阶段看用本页其他页签。' : 'This is the full board (same source as Common · Board); use the stage tabs for a stage view.' }}</span>
+        <button type="button" data-testid="stg-open-full-board" @click="router.push({ name: 'ia2.board' })">{{ zh ? '在全量看板打开 →' : 'Open full board →' }}</button>
+      </div>
       <component
         :is="TAB_COMPONENTS[currentTab.component]"
         v-bind="currentProps"
@@ -242,4 +248,12 @@ const currentProps = computed(() => TAB_PROPS[activeTab.value] ?? {})
 .stg__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
 .stg__tab--on { color: var(--accent-primary); border-bottom-color: var(--accent-primary); font-weight: 600; }
 .stg__body { flex: 1; min-height: 0; overflow: auto; padding-top: 2px; }
+.stg__same-src {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 8px; padding: 6px 10px; border: 1px dashed var(--border-color); border-radius: 6px;
+  font-size: 11.5px; color: var(--text-muted);
+}
+.stg__same-src button {
+  border: none; background: none; color: var(--accent-info); font-size: 11.5px; cursor: pointer; white-space: nowrap;
+}
 </style>
