@@ -80,7 +80,7 @@ export const STEPS_26: ReadonlyArray<StepMeta> = [
   { no: 26, name: 'HTML 推演报告', displayName: 'HTML 运行报告', operator: '驱动脚本', keys: ['report_done'] },
 ]
 
-// ── 六闸（详设签 1「六闸 n/6（键=g1_frozen…report_done）」；全名见 §5.3/SimGateBadge） ──
+// ── 六闸（详设签 1「六闸 n/6（键=g1_frozen…retro_done）」；全名见 §5.3/SimGateBadge） ──
 
 export interface GateMeta { id: 'G1' | 'G2' | 'G3' | 'G4' | 'G5' | 'G6'; key: string; step: number }
 
@@ -90,9 +90,10 @@ export const SIX_GATES: ReadonlyArray<GateMeta> = [
   { id: 'G3', key: 'g3_code_pass', step: 18 },
   { id: 'G4', key: 'g4_pass', step: 19 },
   { id: 'G5', key: 'g5_ready', step: 20 },
-  // G6 取 report_done（详设签 1 键区间右端；闸键首过保护族另含 uat_done/retro_done，
-  // 那两键属步完成键不入六闸计数）
-  { id: 'G6', key: 'report_done', step: 26 },
+  // G6 取 retro_done（V8.46 2026-10-19 键统一）：复盘门在步 24 落键，步 26 是报告
+  // 交付动作不是闸。此前取 report_done 会让「复盘已过、报告未出」时 G6 灯不亮，
+  // 与审计器/叙事/演示件口径分裂。见 docs/superpowers/specs/2026-10-19-fullflow-v846-studio-latest.md
+  { id: 'G6', key: 'retro_done', step: 24 },
 ]
 
 // ── 行状态折算（导出纯函数，测试面） ──
