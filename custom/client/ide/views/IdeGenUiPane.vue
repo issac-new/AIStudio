@@ -11,6 +11,7 @@ import {
   collectGenUiReferences, isWithinWorkspace, wrapGenUiHtml, GEN_UI_MAX_SOURCE_BYTES,
   type GenUiReference,
 } from '../utils/genui'
+import { checkDiagram, type DiagramCheckResultDto } from '../utils/diagram-api'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const { locale } = useI18n()
@@ -27,18 +28,25 @@ const html = ref('')
 const loading = ref(false)
 const error = ref('')
 const fullscreen = ref(false)
+const checking = ref(false)
+const checkResult = ref<DiagramCheckResultDto | null>(null)
+const checkError = ref('')
 
 function clear(): void {
   selected.value = null
   html.value = ''
   error.value = ''
   fullscreen.value = false
+  checkResult.value = null
+  checkError.value = ''
 }
 
 async function open(row: Row): Promise<void> {
   selected.value = row
   html.value = ''
   error.value = ''
+  checkResult.value = null
+  checkError.value = ''
   if (!root.value) { error.value = tx.value.needWorkspace; return }
   if (!isWithinWorkspace(row.path, root.value)) { error.value = tx.value.outside; return }
   loading.value = true
@@ -57,6 +65,21 @@ function refresh(): void {
   clear()
 }
 
+/** 项3 机械门禁：对当前选中产物跑 self_check（服务端=vendored self_check.py） */
+async function runCheck(): Promise<void> {
+  if (!selected.value || checking.value) return
+  checking.value = true
+  checkResult.value = null
+  checkError.value = ''
+  try {
+    checkResult.value = await checkDiagram(selected.value.path)
+  } catch (e) {
+    checkError.value = `${tx.value.checkFailed}: ${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    checking.value = false
+  }
+}
+
 watch(() => chat.activeSessionId, () => clear())
 </script>
 
@@ -66,6 +89,9 @@ watch(() => chat.activeSessionId, () => clear())
       <strong>{{ tx.title }}</strong>
       <span class="ide-genui__spacer" />
       <button type="button" class="ide-genui__btn" data-testid="ide-genui-refresh" @click="refresh">{{ tx.refresh }}</button>
+      <button v-if="selected" type="button" class="ide-genui__btn" data-testid="ide-genui-check" :disabled="checking" @click="runCheck">
+        {{ checking ? tx.checking : tx.check }}
+      </button>
       <button v-if="selected" type="button" class="ide-genui__btn" data-testid="ide-genui-full" @click="fullscreen = !fullscreen">
         {{ fullscreen ? tx.exitFullscreen : tx.fullscreen }}
       </button>
@@ -83,6 +109,17 @@ watch(() => chat.activeSessionId, () => clear())
       </ul>
 
       <div class="ide-genui__preview">
+        <div v-if="checkResult" class="ide-genui__verdict" :class="checkResult.ok ? 'is-pass' : 'is-fail'" data-testid="ide-genui-verdict">
+          <template v-if="checkResult.runnerError">⚠ {{ checkResult.runnerError }}</template>
+          <template v-else-if="checkResult.ok">✓ {{ tx.checkPass }}（{{ checkResult.durationMs }}ms）</template>
+          <template v-else>
+            ✗ {{ tx.checkFail }}
+            <ul class="ide-genui__findings">
+              <li v-for="(f, i) in checkResult.findings" :key="i">{{ f.message }}</li>
+            </ul>
+          </template>
+        </div>
+        <div v-else-if="checkError" class="ide-genui__verdict is-fail" data-testid="ide-genui-verdict">{{ checkError }}</div>
         <p v-if="loading" class="ide-genui__hint">…</p>
         <p v-else-if="error" class="ide-genui__error" data-testid="ide-genui-error">{{ error }}</p>
         <iframe
@@ -119,5 +156,9 @@ watch(() => chat.activeSessionId, () => clear())
 .ide-genui__frame { flex: 1; width: 100%; height: 100%; border: none; background: var(--bg-primary); }
 .ide-genui__hint { padding: 12px; color: var(--text-muted); margin: 0; }
 .ide-genui__error { padding: 12px; color: var(--error-color); margin: 0; word-break: break-word; }
+.ide-genui__verdict { padding: 8px 12px; font-size: 11px; line-height: 1.6; border-bottom: 1px solid var(--border-color); }
+.ide-genui__verdict.is-pass { color: var(--success-color, #2e7d32); }
+.ide-genui__verdict.is-fail { color: var(--error-color); }
+.ide-genui__findings { margin: 4px 0 0; padding-left: 16px; color: var(--text-secondary); }
 .ide-genui__note { margin: 0; color: var(--text-muted); font-size: 10.5px; line-height: 1.5; }
 </style>

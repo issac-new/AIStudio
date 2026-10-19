@@ -14,6 +14,7 @@ import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { layoutRunGraph } from '../adapters/run-graph'
 import type { RunGraphData } from '../adapters/run-graph'
+import { exportFlowDiagramHtml, downloadHtml, type FlowExportNode, type FlowExportEdge } from '@/custom/ide/utils/diagram-export'
 
 /** P4 T8：容器可视化元数据（GraphSpec.containers 同构子集，结构性传入） */
 interface RunGraphContainerLike {
@@ -140,10 +141,38 @@ const flowEdges = computed<Edge[]>(() => {
 function onSelect(id: string): void {
   emit('select-node', id)
 }
+
+/** 项6：活图导出为品牌静态 HTML（汇报/归档用，正交连线+a11y+自包含） */
+function exportDiagram(): void {
+  const exportNodes: FlowExportNode[] = props.graph.nodes.map((n) => {
+    const p = positions.value.get(n.id) ?? { x: 0, y: 0 }
+    const sub = [n.type, n.status, durationLabel(n.durationMs)].filter(Boolean).join(' · ')
+    const status = n.status === 'failed' ? 'failed' : n.status === 'running' ? 'running' : undefined
+    return { id: n.id, label: n.label, sublabel: sub, status, x: p.x, y: p.y, w: 176, h: 58 }
+  })
+  const exportEdges: FlowExportEdge[] = props.graph.edges.map((e) => ({
+    from: e.from,
+    to: e.to,
+    label: e.guard !== undefined ? `×${e.guard}` : undefined,
+    strong: e.taken,
+    dashed: e.guard !== undefined,
+  }))
+  const html = exportFlowDiagramHtml(exportNodes, exportEdges, { title: '执行图' })
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')
+  downloadHtml(html, `run-graph-${stamp}.html`)
+}
 </script>
 
 <template>
   <div class="rg-canvas" data-run-graph-canvas>
+    <button
+      v-if="graph.nodes.length > 0"
+      type="button"
+      class="rg-canvas__export"
+      data-testid="rg-canvas-export"
+      title="导出为品牌静态图（HTML）"
+      @click.stop="exportDiagram"
+    >导出图</button>
     <VueFlow
       v-if="graph.nodes.length > 0"
       :nodes="flowNodes"
@@ -211,6 +240,22 @@ function onSelect(id: string): void {
     radial-gradient(circle at 1px 1px, var(--border-light, rgba(127, 127, 127, 0.18)) 1px, transparent 0) 0 0 / 16px 16px;
 }
 :deep(.vue-flow) { width: 100%; height: 100%; background: transparent; }
+
+.rg-canvas__export {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-card, var(--color-bg-primary));
+  color: var(--text-primary, var(--color-text-primary));
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.rg-canvas__export:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+
 :deep(.vue-flow__node) { cursor: pointer; width: auto; }
 :deep(.vue-flow__node.is-selected .rg-node) { border-width: 2px; }
 
