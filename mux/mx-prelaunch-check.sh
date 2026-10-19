@@ -133,12 +133,12 @@ ck "㉓ 评测接线（隔离库+G4 子门+报告消费+库/汇总器可执行�
 #    完成键 report_done。口径分裂会让「复盘已过、报告未出」时 G6 灯不亮。
 ck "㉔ G6 闸键统一（retro_done@步24）" "grep -q \"id: 'G6', key: 'retro_done', step: 24\" '$OV/custom/client/ia2/views/sim/steps-registry.ts' && ! grep -q \"id: 'G6', key: 'report_done'\" '$OV/custom/client/ia2/views/sim/steps-registry.ts'" "改 custom/client/ia2/views/sim/steps-registry.ts：G6 键=retro_done、步=24，并同步 sim-overview-panel 测试"
 
-# ㉕ 治理闭环端点编入生效 dist（V8.46）：评审治理/观测信号/告警/改进实验/发布门/UAT
+# ㉕ 治理结果端点编入生效 dist（V8.46）：评审治理/观测信号/告警/改进实验/发布门/UAT
 #    台账六类端点必须在生效构建里——旧 dist 会让证据九整段缺席。
-ck "㉕ 治理闭环端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'release-gate' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'uat-verdict' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-signals' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-alerts' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'review/gov' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'workbench' \"\$_d\" 2>/dev/null" "生效 dist 不含治理闭环端点：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑"
+ck "㉕ 治理结果端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'release-gate' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'uat-verdict' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-signals' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-alerts' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'review/gov' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'workbench' \"\$_d\" 2>/dev/null" "生效 dist 不含治理结果端点：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑"
 
-# ㉖ 闭环快照与证据九接线（V8.46）：采集脚本在位+驱动调用+报告消费+审计查16。
-ck "㉖ 闭环快照与证据九接线" "bash -n '$HERE/mux/mx-closure-snapshot.sh' && grep -q 'mx-closure-snapshot.sh' '$HERE/aipay-scenario.sh' && grep -q '证据九：治理结果可反查' '$HERE/mux/mx-report-gen.py' && grep -q '查 16：治理闭环' '$HERE/mux/mx-report-audit.py'" "闭环快照件不齐：检查 mx-closure-snapshot.sh/驱动步24/报告生成器/审计器四处"
+# ㉖ 治理结果快照与证据九接线（V8.46）：采集脚本在位+驱动调用+报告消费+审计查16。
+ck "㉖ 治理结果快照与证据九接线" "bash -n '$HERE/mux/mx-closure-snapshot.sh' && grep -q 'mx-closure-snapshot.sh' '$HERE/aipay-scenario.sh' && grep -q '证据九：治理结果可反查' '$HERE/mux/mx-report-gen.py' && grep -q '查 16：治理结果证据九' '$HERE/mux/mx-report-audit.py'" "治理结果快照件不齐：检查 mx-closure-snapshot.sh/驱动步24/报告生成器/审计器四处"
 
 # ㉗ 评测处置链与线上证据接线（V8.46）：失败样本→处置单→同卷复评→机械关闭；
 #    线上证据回填走 /runs/:id/live-evidence（只回填不采集）。
