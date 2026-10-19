@@ -336,6 +336,21 @@ describe('OverviewPanel——挂载渲染主块', () => {
     wrapper.unmount()
   })
 
+  it('七阶段默认只展开当前阶段；点阶段头切换展开（P2 密度批）', async () => {
+    const { wrapper } = await mountPanel('/app/sim?run=20261015-v8-run20')
+    await flushPromises()
+    // frontier=步 7 → 当前阶段=第二幕；第一幕折叠、第二幕展开
+    expect(wrapper.find('[data-testid="ov-step-acttoggle-2"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('[data-testid="ov-step-acttoggle-1"]').attributes('aria-expanded')).toBe('false')
+    const row1 = wrapper.find('[data-testid="ov-step-row-1"]')
+    expect(row1.exists()).toBe(true)
+    expect((row1.element as HTMLElement).style.display).toBe('none')
+    await wrapper.find('[data-testid="ov-step-acttoggle-1"]').trigger('click')
+    expect((wrapper.find('[data-testid="ov-step-row-1"]').element as HTMLElement).style.display).not.toBe('none')
+    expect(wrapper.find('[data-testid="ov-step-acttoggle-1"]').attributes('aria-expanded')).toBe('true')
+    wrapper.unmount()
+  })
+
   it('步 5 键值含 commit → 行带双凭证标（提交锚）；纯时刻行不带', async () => {
     const { wrapper } = await mountPanel('/app/sim?run=20261015-v8-run20')
     await flushPromises()
