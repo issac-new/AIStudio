@@ -207,4 +207,9 @@ onBeforeUnmount(() => {
   color: var(--text-secondary); font-size: 11px; padding: 4px 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
+/* 窄屏：收起逐条 chip，只留总数入口，避免首行被截断文字占满 */
+@media (max-width: 720px) {
+  .ia-attn__item { display: none; }
+  .ia-attn__empty { display: none; }
+}
 </style>

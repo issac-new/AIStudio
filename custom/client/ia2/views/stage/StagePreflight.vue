@@ -5,9 +5,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useStageProgress } from '../../composables/useStageProgress'
 
-const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
+const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const progress = useStageProgress()
@@ -39,8 +40,8 @@ const checks = computed(() => [
 const readyCount = computed(() => checks.value.filter(c => c.ok).length)
 
 function openRun(): void {
-  // 启动运行已并入本页「启动运行」页签，不再跳整页
-  emit('open-tab', 'launch')
+  // 启动与续跑由 harness 执行；这里只把用户送到运行中心核对真实状态。
+  void router.push({ name: 'ia2.sim' })
 }
 </script>
 
@@ -50,8 +51,8 @@ function openRun(): void {
       <div>
         <h2 class="spf__title">{{ zh ? '启动前检查' : 'Launch preflight' }}</h2>
         <p class="spf__sub">{{ zh
-          ? '启动、断点续跑和运行模式切换已并入本页「启动运行」页签；这里先核对条件。'
-          : 'Launch, resume and mode switching are in the Launch tab of this page; this tab checks readiness.' }}</p>
+          ? '这里只核对条件；启动与续跑由 harness 执行。运行编排页的启动前自动检查尚未接入，起跑前需在 harness 侧确认。'
+          : 'This tab only checks readiness; harness performs launch and resume. Automated preflight is not wired in Orchestration yet; confirm on the harness side.' }}</p>
       </div>
       <span class="spf__count" data-testid="stg-preflight-count">{{ readyCount }}/{{ checks.length }}</span>
     </header>
@@ -67,8 +68,8 @@ function openRun(): void {
     </ul>
 
     <footer class="spf__foot">
-      <span class="spf__note">{{ zh ? '运行编排页会再跑 19 项机械检查；有红项先处理再起跑。' : 'Orchestration runs 19 mechanical checks; fix red items before launching.' }}</span>
-      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '进入启动运行 →' : 'Open orchestration →' }}</button>
+      <span class="spf__note">{{ zh ? '运行编排页显示当前运行与任务链；启动前自动检查尚未接入，需在 harness 侧确认。' : 'Orchestration shows the current run and task chain; automated preflight is not wired in yet — confirm on the harness side.' }}</span>
+      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '打开运行中心 →' : 'Open run center →' }}</button>
     </footer>
   </section>
 </template>

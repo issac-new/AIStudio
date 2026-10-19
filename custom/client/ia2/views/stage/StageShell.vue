@@ -13,7 +13,6 @@ import { useI18n } from 'vue-i18n'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import OrgEditor from '../../components/gov/OrgEditor.vue'
-import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
 import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
 import TracePanel from '../sim/TracePanel.vue'
@@ -29,6 +28,7 @@ import StageGatePanel from './StageGatePanel.vue'
 import StageRiskPanel from './StageRiskPanel.vue'
 import StageMetricsPanel from './StageMetricsPanel.vue'
 import StageAssetsPanel from './StageAssetsPanel.vue'
+import StageDevApprovals from './StageDevApprovals.vue'
 import RunSelector from '../sim/RunSelector.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
@@ -111,7 +111,6 @@ const AsyncDocs = defineAsyncComponent(() => import('../gov/GovDocsReviewView.vu
 const AsyncAudit = defineAsyncComponent(() => import('../gov/GovAuditChangeView.vue').then(m => m.default))
 const AsyncReviewGov = defineAsyncComponent(() => import('../gov/ReviewGovPanel.vue').then(m => m.default))
 const AsyncCases = defineAsyncComponent(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue').then(m => m.default))
-const AsyncOrchestration = defineAsyncComponent(() => import('../orchestration/OrchestrationView.vue').then(m => m.default))
 
 const TAB_COMPONENTS: Record<string, Component> = {
   setupSteps: StageSetupSteps,
@@ -125,11 +124,10 @@ const TAB_COMPONENTS: Record<string, Component> = {
   g1: StageGatePanel,
   g2: StageGatePanel,
   preflight: StagePreflight,
-  launch: AsyncOrchestration,
   board: AsyncKanban,
   schedule: StageSchedulePanel,
   today: StageDevToday,
-  approvals: GatekeeperSection,
+  approvals: StageDevApprovals,
   risk: StageRiskPanel,
   quality: StageGatePanel,
   acceptance: StageAcceptanceOverview,
@@ -149,9 +147,10 @@ const TAB_COMPONENTS: Record<string, Component> = {
 const TAB_PROPS: Record<string, Record<string, unknown>> = {
   g1: { gates: ['G1'] },
   g2: { gates: ['G2'] },
+  analysis: { scope: 'g2' },
   quality: { gates: ['G3', 'G4'] },
   uat: { onlyUnjudged: true },
-  g5: { pollMs: 10000, showHistory: true, hideTitle: true },
+  g5: { pollMs: 10000, showHistory: true, hideTitle: true, filter: 'release' },
 }
 /** ③④阶段页内嵌看板只显示本阶段在办的卡（映射单一事实源=stage-task-filter.ts）；
  *  其他阶段页签不传 statuses，行为与全量看板一致。 */
@@ -210,6 +209,7 @@ const currentProps = computed(() => {
         @open-tab="openTab"
         @open-task="openTask"
         @open-inbox="openInbox"
+        @open-all="router.push({ name: 'ia2.inbox' })"
       />
     </div>
 

@@ -34,9 +34,9 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
   {
     key: 'general', title: '总务', note: '全局配置、版本与运维入口——系统底座类设置。',
     entries: [
-      { name: 'hermes.settings', label: '设置主页（含账号/用户/webhook/显示等九页签）', source: 'native' },
+      { name: 'hermes.settings', label: '设置主页', source: 'native' },
       { name: 'hermes.configSettings', label: '配置编辑', source: 'legacy' },
-      { name: 'hermes.versionPreview', label: '版本预览', source: 'legacy', featureGate: 'versionPreview' },
+      { name: 'hermes.versionPreview', label: '版本预览', source: 'legacy', superAdmin: true, featureGate: 'versionPreview' },
     ],
   },
   {
@@ -58,7 +58,7 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
   {
     key: 'function', title: '功能', note: 'agent、插件与技能装载——组织会什么、装了什么。',
     entries: [
-      { name: 'hermes.plugins', label: '插件（功能开关）', source: 'legacy' },
+      { name: 'hermes.plugins', label: '插件', source: 'legacy' },
       { name: 'hermes.skills', label: '技能装载', source: 'legacy' },
       { name: 'hermes.petdex', label: '宠物图鉴', source: 'legacy', featureGate: 'pet' },
     ],
@@ -66,7 +66,7 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
   {
     key: 'assets', title: '资产', note: '工具接入、渠道、连接与记忆库——组织依赖的外部资产。',
     entries: [
-      { name: 'ia2.modelProviders', label: '模型服务商（组织级引擎目录）', source: 'native' },
+      { name: 'ia2.modelProviders', label: '模型服务商', source: 'native' },
       { name: 'hermes.mcp', label: '工具接入', source: 'legacy' },
       { name: 'hermes.channels', label: '渠道接入', source: 'legacy' },
       { name: 'hermes.connections', label: '连接管理', source: 'legacy' },
@@ -96,7 +96,7 @@ export function entryVisible(entry: GovSettingEntry, router: Router, superAdmin:
   if (entry.featureGate === 'pet' && !features.pet) return false
   if (entry.featureGate === 'agentManager' && !features.agentManager) return false
   if (entry.featureGate === 'ekko' && !features.ekko) return false
-  if (entry.featureGate === 'versionPreview') return true // 侧栏按 isVersionPreview 收敛；此处导航层不重复判，路由侧自守
+  if (entry.featureGate === 'versionPreview') return entry.superAdmin ? superAdmin && router.hasRoute(entry.name) : router.hasRoute(entry.name)
   return router.hasRoute(entry.name)
 }
 

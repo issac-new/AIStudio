@@ -60,6 +60,16 @@ describe('P5 驾驶舱概览', () => {
     expect(fill.attributes('style')).toContain('width: 40%')
   })
 
+  it('未全部完成时绝不显示 100%：1149/1154 显示 99.5%', () => {
+    const tasks = Array.from({ length: 1154 }, (_, i) => task(`t_${i}`, i < 1149 ? 'done' : 'blocked'))
+    const w = mount(CockpitOverview, {
+      props: { tasks, pending: [], history: [], username: 'fanfan' },
+    })
+    expect(w.find('[data-testid="ov-progress-pct"]').attributes('data-complete')).toBe('false')
+    expect(w.find('[data-testid="ov-progress-fill"]').attributes('style')).toContain('width: 99.5%')
+    expect(w.find('[data-testid="ov-progress-pct"]').text()).not.toContain('"pct":100')
+  })
+
   it('评审闸口：待裁决 1 + 最近裁决只取 review 类（kanban 决策不混入）', () => {
     const w = mount(CockpitOverview, {
       props: { tasks: [], pending: PENDING, history: HISTORY, username: 'fanfan' },

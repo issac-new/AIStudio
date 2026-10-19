@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import AppRegistryEditor from '../../components/gov/AppRegistryEditor.vue'
 import OrgEditor from '../../components/gov/OrgEditor.vue'
@@ -25,6 +25,10 @@ import {
 import { useGovTabsText } from '../../i18n-gov-tabs'
 
 const route = useRoute()
+const router = useRouter()
+/** g2=③分析设计页签：只显示质量门工件与待裁决评审；
+ *  应用资产/组织权限只在①维护，避免同一表单在三个阶段重复出现。 */
+const props = withDefaults(defineProps<{ scope?: 'g2' }>(), { scope: undefined })
 const i18nCtx = useI18n()
 /** 文案单一事实源=custom/governance/i18n.ts；legacy i18n 无 mergeLocaleMessage，
  *  组件内按当前 locale 选表（zh* → zh，其余 en）。 */
@@ -92,7 +96,9 @@ const DOC_GROUPS: Array<{ key: string; labelKey: 'docGroupGate' | 'docGroupAdmin
   { key: 'evidence', labelKey: 'docGroupEvidence' },
 ]
 const docGroups = computed(() =>
-  DOC_GROUPS.map(g => ({ ...g, docs: (overview.value?.docs ?? []).filter(d => (d.group || 'gate') === g.key) }))
+  DOC_GROUPS
+    .filter(g => props.scope !== 'g2' || g.key === 'gate')
+    .map(g => ({ ...g, docs: (overview.value?.docs ?? []).filter(d => (d.group || 'gate') === g.key) }))
     .filter(g => g.docs.length))
 
 async function refresh(): Promise<void> {
@@ -233,10 +239,18 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- P7/P8 管理维护（补遗④）：应用资产表 + 组织关系，保存即提交 git（R13） -->
-      <section class="gov-docs__admin" data-testid="gov-admin-maintain">
+      <!-- P7/P8 管理维护（补遗④）：应用资产表 + 组织关系，保存即提交 git（R13）。
+           ③G2 页签不复制这两张表，只给维护入口。 -->
+      <section v-if="scope !== 'g2'" class="gov-docs__admin" data-testid="gov-admin-maintain">
         <AppRegistryEditor />
         <OrgEditor />
+      </section>
+      <section v-else class="gov-docs__admin" data-testid="gov-g2-admin-link">
+        <p class="gov-docs__sub">应用资产与组织权限在「①搭建 · 环境与资产 / 组织」维护；本页只负责 G2 设计文档与评审。</p>
+        <div class="gov-docs__g2-actions">
+          <button type="button" class="gov-docs__btn" data-testid="gov-g2-open-assets" @click="router.push({ name: 'ia2.stage1', query: { tab: 'assets' } })">去环境与资产 →</button>
+          <button type="button" class="gov-docs__btn" data-testid="gov-g2-open-org" @click="router.push({ name: 'ia2.stage1', query: { tab: 'org' } })">去组织与权限 →</button>
+        </div>
       </section>
     </div>
   </div>
@@ -399,6 +413,7 @@ onMounted(async () => {
   gap: 14px;
   min-width: 0;
 }
+.gov-docs__g2-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .gov-docs__fresh {
   margin-left: auto;

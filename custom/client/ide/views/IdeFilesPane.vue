@@ -17,6 +17,15 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 const { t, locale } = useI18n()
 const router = useRouter()
 const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
+const zhUi = computed(() => String(locale.value ?? 'zh').startsWith('zh'))
+const permissionDenied = computed(() =>
+  /super administrator|super admin|permission|forbidden|not authorized/i.test(validation.message || ''))
+const invalidTitle = computed(() => {
+  if (!permissionDenied.value) return invalidTx.value.title(validation.message || invalidTx.value.fallback)
+  return zhUi.value
+    ? '当前工作区根目录需要管理员权限；当前账号只能打开自己的任务工作区。'
+    : 'This workspace root requires administrator privileges; this account can only open its own task workspace.'
+})
 const filesStore = useFilesStore()
 const { root, validation, validate, invalidate } = useIdeWorkspace()
 
@@ -63,8 +72,19 @@ async function openEntry(entry: FileEntry): Promise<void> {
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
     <p v-if="tab === 'tree' && validation.status === 'checking'" class="ide-files__hint" data-testid="ide-files-checking">{{ t('ide.loading') }}</p>
     <div v-else-if="tab === 'tree' && validation.status === 'invalid'" class="ide-files__invalid" data-testid="ide-files-invalid">
-      <p>{{ invalidTx.title(validation.message || invalidTx.fallback) }}</p>
-      <button type="button" class="ide-files__retry" @click="retryRoot">{{ invalidTx.retry }}</button>
+      <p data-testid="ide-files-invalid-message">{{ invalidTitle }}</p>
+      <p v-if="permissionDenied" class="ide-files__invalid-hint">
+        {{ zhUi ? '重试不会改变权限。请改选你自己的任务工作区，或确认账号角色。' : 'Retrying will not change permissions. Pick your own task workspace or check the account role.' }}
+      </p>
+      <div class="ide-files__actions">
+        <button type="button" class="ide-files__retry" @click="retryRoot">{{ invalidTx.retry }}</button>
+        <button v-if="permissionDenied" type="button" class="ide-files__retry" data-testid="ide-files-pick-workspace" @click="router.push({ name: 'ia2.board' })">
+          {{ zhUi ? '选择任务工作区' : 'Pick task workspace' }}
+        </button>
+        <button v-if="permissionDenied" type="button" class="ide-files__retry" data-testid="ide-files-view-role" @click="router.push({ name: 'hermes.settings' })">
+          {{ zhUi ? '查看账号角色' : 'View account role' }}
+        </button>
+      </div>
     </div>
     <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
       <p>{{ t('ide.files.noWorkspace', '还没有任务工作区——从左侧任务或看板选一张卡带入') }}</p>
@@ -142,6 +162,8 @@ async function openEntry(entry: FileEntry): Promise<void> {
 
   p { margin: 0 0 6px; word-break: break-all; }
 }
+.ide-files__invalid-hint { color: var(--text-muted); font-size: 10.5px; }
+.ide-files__actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .ide-files__retry {
   border: 1px solid var(--border-color);

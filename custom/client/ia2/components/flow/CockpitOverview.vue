@@ -75,10 +75,14 @@ const statusCount = computed(() => {
   }
   return c
 })
+/** 完成度只向下取一位小数：四舍五入会把 1149/1154 显示成 100%，让未完成工作消失。 */
 const progressPct = computed(() => {
   const total = props.tasks.length
-  return total ? Math.round((statusCount.value.done / total) * 100) : 0
+  if (!total) return 0
+  if (statusCount.value.done >= total) return 100
+  return Math.floor((statusCount.value.done / total) * 1000) / 10
 })
+const progressComplete = computed(() => props.tasks.length > 0 && statusCount.value.done >= props.tasks.length)
 
 function fmtTime(ts: number): string {
   if (!ts) return ''
@@ -150,13 +154,14 @@ function raciOf(t: CockpitTask) {
         <div class="ov__bar" role="progressbar" :aria-valuenow="progressPct">
           <div class="ov__bar-fill" data-testid="ov-progress-fill" :style="{ width: progressPct + '%' }" />
         </div>
-        <div class="ov__pct">{{ t('ia2.overviewDash.doneOfTotal', { done: statusCount.done, total: tasks.length, pct: progressPct }) }}</div>
+        <div class="ov__pct" data-testid="ov-progress-pct" :data-complete="progressComplete">{{ t('ia2.overviewDash.doneOfTotal', { done: statusCount.done, total: tasks.length, pct: progressPct }) }}</div>
         <div class="ov__dist">
           <span>{{ t('ia2.overviewDash.running') }} {{ statusCount.running }}</span>
           <span>{{ t('ia2.overviewDash.review') }} {{ statusCount.review }}</span>
           <span>{{ t('ia2.overviewDash.blocked') }} {{ statusCount.blocked }}</span>
           <span>{{ t('ia2.overviewDash.open') }} {{ statusCount.open }}</span>
         </div>
+        <p class="ov__scope" data-testid="ov-progress-scope">{{ t('ia2.overviewDash.scopeNote') }}</p>
       </section>
     </div>
   </div>
@@ -205,4 +210,5 @@ function raciOf(t: CockpitTask) {
 .ov__bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--success)); transition: width .3s; }
 .ov__pct { font-size: 12px; font-weight: 600; margin-top: 6px; }
 .ov__dist { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.ov__scope { margin: 6px 0 0; font-size: 10.5px; color: var(--text-muted); }
 </style>

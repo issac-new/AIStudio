@@ -6,6 +6,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
+import { useTabQuery } from '@/custom/ia2/composables/useTabQuery'
 import { bpaApi, type BpaArchitectureDto } from '@/custom/bpa/api'
 import { bpaMessages } from '@/custom/bpa/i18n'
 import BpaTreePanel from '../components/BpaTreePanel.vue'
@@ -21,7 +22,8 @@ const L = computed(() => {
   return loc.startsWith('zh') ? bpaMessages.zh.bpa : bpaMessages.en.bpa
 })
 
-const tab = ref<'registry' | 'map' | 'link' | 'pcf' | 'governance' | 'maturity'>('registry')
+const BPA_TABS = ['registry', 'map', 'link', 'pcf', 'governance', 'maturity'] as const
+const tab = useTabQuery('tab', BPA_TABS, 'registry')
 const dto = ref<BpaArchitectureDto | null>(null)
 const busy = ref(false)
 const error = ref('')
