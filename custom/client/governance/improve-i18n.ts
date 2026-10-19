@@ -49,6 +49,17 @@ export interface ImproveCopy {
   formVariants: string
   formVariant: string
   formVariantContent: string
+  formVariantMode: string
+  formModeSingle: string
+  formModeTree: string
+  formFiles: string
+  formFilePath: string
+  formFileContent: string
+  formDeletions: string
+  formDeletionsHint: string
+  addFile: string
+  removeFile: string
+  fileCount: string
   addVariant: string
   removeVariant: string
   create: string
@@ -184,6 +195,17 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     formVariants: '候选修改',
     formVariant: '候选',
     formVariantContent: '候选内容',
+    formVariantMode: '候选形态',
+    formModeSingle: '单文件',
+    formModeTree: '多文件树',
+    formFiles: '文件清单',
+    formFilePath: '文件路径（相对 HERMES_HOME）',
+    formFileContent: '文件内容',
+    formDeletions: '删除文件（每行一个路径）',
+    formDeletionsHint: '删除路径也必须在可写根内；回滚会恢复被删内容。',
+    addFile: '加一个文件',
+    removeFile: '删除文件',
+    fileCount: '文件数',
     addVariant: '加一个候选',
     removeVariant: '删除',
     create: '创建草稿',
@@ -317,6 +339,17 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     formVariants: 'Candidate edits',
     formVariant: 'Candidate',
     formVariantContent: 'Candidate content',
+    formVariantMode: 'Candidate form',
+    formModeSingle: 'Single file',
+    formModeTree: 'Multi-file tree',
+    formFiles: 'Files',
+    formFilePath: 'File path (relative to HERMES_HOME)',
+    formFileContent: 'File content',
+    formDeletions: 'Deleted files (one path per line)',
+    formDeletionsHint: 'Deleted paths must also stay inside writable roots; rollback restores the deleted content.',
+    addFile: 'Add file',
+    removeFile: 'Remove file',
+    fileCount: 'Files',
     addVariant: 'Add candidate',
     removeVariant: 'Remove',
     create: 'Create draft',

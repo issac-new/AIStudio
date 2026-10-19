@@ -58,7 +58,14 @@ const overview = {
     budgetCapUsd: 5, evidenceRefs: ['task:t1'], experienceIds: [], baselineRunId: 'run-base', baseline: null,
     base: { content: 'old', digest: 'd', revision: null, exists: true },
     variants: [
-      { id: 'v1', label: '候选 A', content: 'A', digest: 'a', diffSummary: { added: 4, removed: 1, unchanged: 2 } },
+      {
+        id: 'v1', label: '候选 A', content: 'A', digest: 'a', diffSummary: { added: 4, removed: 1, unchanged: 2 },
+        files: [
+          { path: 'profiles/p1/SOUL.md', content: 'A', digest: 'd1' },
+          { path: 'skills/new_skill/SKILL.md', content: 'B', digest: 'd2' },
+        ],
+        deletions: ['scripts/old.py'],
+      },
       { id: 'v2', label: '候选 B', content: 'B', digest: 'b', diffSummary: { added: 3, removed: 2, unchanged: 1 } },
     ],
     probes: [
@@ -99,6 +106,8 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-experiences"]').text()).toContain('先复现再改代码')
     expect(w.text()).toContain('HARNESS2_APPLY=1')
     expect(w.find('[data-testid="hi-proposal-hw-001"]').text()).toContain('提升')
+    expect(w.find('[data-testid="hi-proposal-hw-001"]').text()).toContain('profiles/p1/SOUL.md')
+    expect(w.find('[data-testid="hi-proposal-hw-001"]').text()).toContain('skills/new_skill/SKILL.md')
     w.unmount()
   })
 
@@ -127,6 +136,20 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-create"]').exists()).toBe(false)
     await w.find('[data-testid="hi-create-toggle"]').trigger('click')
     expect(w.find('[data-testid="hi-create"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('树候选开关：展开文件清单并可加文件行', async () => {
+    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    await flushPromises()
+    await w.find('[data-testid="hi-create-toggle"]').trigger('click')
+    expect(w.find('[data-testid="hi-create-treeform-0"]').exists()).toBe(false)
+    await w.find('[data-testid="hi-create-tree-0"]').setValue(true)
+    expect(w.find('[data-testid="hi-create-treeform-0"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-create-file-path-0-0"]').exists()).toBe(true)
+    const rows = w.findAll('.hi__fileRow').length
+    await w.find('[data-testid="hi-create-treeform-0"] > button').trigger('click')
+    expect(w.findAll('.hi__fileRow').length).toBe(rows + 1)
     w.unmount()
   })
 })

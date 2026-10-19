@@ -82,7 +82,16 @@ router.post('/proposals', async (ctx) => {
     const variants = Array.isArray(b.variants)
       ? b.variants.map((v) => {
         const row = v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
-        return { label: typeof row.label === 'string' ? row.label : undefined, content: String(row.content ?? '') }
+        const files = Array.isArray(row.files)
+          ? (row.files as Array<Record<string, unknown>>).map((f) => ({ path: String(f.path ?? ''), content: String(f.content ?? '') }))
+          : undefined
+        const deletions = Array.isArray(row.deletions) ? (row.deletions as unknown[]).map(String) : undefined
+        return {
+          label: typeof row.label === 'string' ? row.label : undefined,
+          content: typeof row.content === 'string' ? row.content : undefined,
+          files,
+          deletions,
+        }
       })
       : []
     const proposal = await createProposal({
@@ -90,6 +99,7 @@ router.post('/proposals', async (ctx) => {
       hypothesis: String(b.hypothesis ?? ''),
       surfaceKey: String(b.surfaceKey ?? '') as SurfaceKey,
       targetPath: typeof b.targetPath === 'string' ? b.targetPath : null,
+      treeRoot: typeof b.treeRoot === 'string' ? b.treeRoot : null,
       mode: b.mode === 'sequential' ? 'sequential' : 'parallel',
       domain: typeof b.domain === 'string' ? b.domain : undefined,
       budgetCapUsd: typeof b.budgetCapUsd === 'number' ? b.budgetCapUsd : Number(b.budgetCapUsd),

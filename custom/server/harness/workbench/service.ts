@@ -9,7 +9,8 @@ import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } fro
 import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
 import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, behaviorContrast, candidateDiversity, composedVariant,
-  diffSummary, evaluatePromotion, findGraderMarkers, findGraderMarkersInPath, probeCost, sha256, submitReadiness, variantSetDigest,
+  diffSummary, diffSummaryTree, evaluatePromotion, findGraderMarkers, findGraderMarkersInPath,
+  probeCost, sha256, submitReadiness, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
@@ -133,12 +134,13 @@ export interface CreateProposalInput {
   hypothesis: string
   surfaceKey: SurfaceKey
   targetPath?: string | null
+  treeRoot?: string | null
   mode?: 'parallel' | 'sequential'
   domain?: string
   budgetCapUsd?: number
   evidenceRefs?: string[]
   experienceIds?: string[]
-  variants: Array<{ label?: string; content: string }>
+  variants: Array<{ label?: string; content?: string; files?: Array<{ path: string; content: string }>; deletions?: string[] }>
   createdBy?: string
 }
 
@@ -173,20 +175,53 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
 
   const budgetCapUsd = Number(input.budgetCapUsd)
   const variants: Variant[] = rawVariants.map((v, i) => {
-    const content = String(v.content ?? '')
-    if (!content.trim()) throw new ServiceError(400, `候选 ${i + 1} 内容为空`)
-    // 源文防泄漏：harness 文件不得携带评测器判词（core/context.py 的 marker 清单）。
+    const isTree = Array.isArray(v.files) && v.files.length > 0
+    const content = isTree ? '' : String(v.content ?? '')
+    if (!isTree && !content.trim()) throw new ServiceError(400, `候选 ${i + 1} 内容为空`)
+    const label = String(v.label ?? `候选 ${i + 1}`).slice(0, 80)
+    const pathMarkers = findGraderMarkersInPath(label)
+    if (pathMarkers.length > 0) {
+      throw new ServiceError(400, `候选 ${i + 1} 标签含评测判词标记，不能写入 harness`, { markers: pathMarkers })
+    }
+    if (isTree) {
+      const files = (v.files ?? []).map((f) => {
+        const path = String(f.path ?? '').trim()
+        if (!path) throw new ServiceError(400, `候选 ${i + 1} 文件路径为空`)
+        const markers = findGraderMarkers(f.content ?? '')
+        if (markers.length > 0) {
+          throw new ServiceError(400, `候选 ${i + 1} 文件 ${path} 含评测判词标记，不能写入 harness`, { markers })
+        }
+        const pMarkers = findGraderMarkersInPath(path)
+        if (pMarkers.length > 0) {
+          throw new ServiceError(400, `候选 ${i + 1} 文件路径 ${path} 含评测判词标记`, { markers: pMarkers })
+        }
+        return { path, content: String(f.content ?? ''), digest: sha256(String(f.content ?? '')) }
+      })
+      const deletions = Array.isArray(v.deletions) ? v.deletions.map(String) : []
+      const digest = treeDigest(files, deletions)
+      const tree: Record<string, string> = Object.fromEntries(files.map((f) => [f.path, f.content]))
+      const validation = validateTree(tree)
+      if (!validation.ok) {
+        throw new ServiceError(400, `候选 ${i + 1} 树校验失败`, validation.issues)
+      }
+      const baseFiles = base ? [{ path: targetPath ?? 'base', content: base.content }] : []
+      return {
+        id: `v${i + 1}`,
+        label,
+        content: files.map((f) => f.content).join('\n\n'),
+        digest,
+        diffSummary: base ? diffSummaryTree(baseFiles, files, deletions) : diffSummaryTree([], files, deletions),
+        files,
+        deletions,
+      }
+    }
     const markers = findGraderMarkers(content)
     if (markers.length > 0) {
       throw new ServiceError(400, `候选 ${i + 1} 含评测判词标记，不能写入 harness`, { markers })
     }
-    const pathMarkers = findGraderMarkersInPath(v.label ?? '')
-    if (pathMarkers.length > 0) {
-      throw new ServiceError(400, `候选 ${i + 1} 标签含评测判词标记，不能写入 harness`, { markers: pathMarkers })
-    }
     return {
       id: `v${i + 1}`,
-      label: String(v.label ?? `候选 ${i + 1}`).slice(0, 80),
+      label,
       content,
       digest: sha256(content),
       diffSummary: base ? diffSummary(base.content, content) : diffSummary('', content),
@@ -202,6 +237,7 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
       hypothesis,
       surfaceKey: input.surfaceKey,
       targetPath,
+      treeRoot: input.treeRoot ? String(input.treeRoot).trim() || null : null,
       risk: def.risk,
       mode: input.mode === 'sequential' ? 'sequential' : 'parallel',
       domain: String(input.domain ?? 'general').trim().slice(0, 80) || 'general',
@@ -518,7 +554,7 @@ export async function promoteProposal(
         confidence: reflection.confidence === 'high' || reflection.confidence === 'low' ? reflection.confidence : 'medium',
         status: 'adopted',
         sourceProposalId: p.id,
-        snapshot: { variantId: selected.id, digest: selected.digest, targetPath: p.targetPath, content: selected.content },
+        snapshot: { variantId: selected.id, digest: selected.digest, targetPath: p.targetPath, content: variantContent(selected) },
         createdAt: now,
         updatedAt: now,
       }
