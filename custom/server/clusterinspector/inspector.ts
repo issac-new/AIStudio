@@ -210,8 +210,9 @@ export class ClusterInspector {
         || a.subject.replace(/^profile:/, '').replace(/^branch:/, '').replace(/^session:/, '').replace(/@.*$/, '')
       // #9 决策影子层：记录本档案静默时长（供影子判官特征，不改真值）。
       const tailForSilence = this.lastSnapshot?.profiles?.tails?.find((t) => t.profile === profile)
-      const silenceMs = tailForSilence && tailForSilence.realWorkTsMs > 0
-        ? Math.max(0, (this.deps.now?.() ?? Date.now()) - tailForSilence.realWorkTsMs) : 0
+      // realWorkTsMs 可选（TS18048）：先收窄再比较，无打点（旧快照/无工作痕迹）按 0 静默。
+      const realWorkTs = typeof tailForSilence?.realWorkTsMs === 'number' ? tailForSilence.realWorkTsMs : 0
+      const silenceMs = realWorkTs > 0 ? Math.max(0, (this.deps.now?.() ?? Date.now()) - realWorkTs) : 0
       const shadow = (ruleAction: string, suggestedAction: string, confidence: number, nudgeCount = 0): void => {
         try {
           this.deps.recordShadow?.({
