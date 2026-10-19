@@ -13,6 +13,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { isHermesAgentPatchPath } from './inject.mjs';
+import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
@@ -108,6 +109,38 @@ const manifestApplied = readManifestApplied();
 const zcodeRoot = resolve(upstreamRootBase, 'zcode');
 const zcodeSeriesFile = resolve(overlayRoot, 'zcode-patches', 'series');
 
+// 脏树=已注入只是整体判断；补丁新增的文件可能被外部删除而树仍是脏的。
+// 逐个核对声明的新增文件，缺哪个就按文件粒度从原补丁补放（git apply --include）。
+// 2026-10-19 实录：node-backend.js 被删后树仍脏，旧自愈直接 return，CUA 测试长期红。
+function healMissingZcodeFiles(series) {
+  const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+  for (const p of series) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) continue;
+    let declared;
+    try {
+      declared = addedFilesFromPatch(readFileSync(patchPath, 'utf8'));
+    } catch {
+      continue;
+    }
+    const missing = missingFiles(declared, (rel) => existsSync(resolve(zcodeRoot, rel)));
+    if (missing.length === 0) continue;
+    console.warn(`[ensure-injected] zcode 补丁 ${p} 声明的 ${missing.length} 个新增文件缺失，按文件补放：`);
+    for (const rel of missing) {
+      console.warn(`  ${rel}`);
+      const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
+      try {
+        execSync(`git apply --whitespace=nowarn${wsFlag} --include="${rel}" "${patchPath}"`, { cwd: zcodeRoot, stdio: 'pipe' });
+        console.log(`[ensure-injected] restored ${rel}`);
+      } catch (e) {
+        console.error(`[ensure-injected] FAILED: 补放 ${rel} 失败（${p}）`);
+        console.error(`  ${String(e.stderr || e.message).trim().split('\n').slice(0, 4).join('\n  ')}`);
+        process.exit(1);
+      }
+    }
+  }
+}
+
 // ── zcode patch 漂移自愈（2026-10-03 全功能回归轮 T1 根治）──
 // zcode-patches/series 由 inject.mjs 按目录路由打进 upstream/zcode，但旧逻辑只对账
 // hermes series：zcode 树被 reset/re-pull（v3.14.3 刷新实测）后补丁静默丢失，
@@ -135,7 +168,11 @@ function healZcodePatches() {
     console.warn('[ensure-injected] zcode 树不可读(非 git 仓?),跳过 zcode 补丁自愈。');
     return;
   }
-  if (status) return; // 脏树=已注入态
+  if (status) {
+    // 脏树=已注入态；仍核对新增文件是否齐全（外部删除不会让树变干净）
+    healMissingZcodeFiles(series);
+    return;
+  }
   console.warn(`[ensure-injected] zcode 树干净但 series 有 ${series.length} 条补丁,重放自愈:`);
   const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
   for (const p of series) {
@@ -155,6 +192,10 @@ function healZcodePatches() {
     }
   }
 }
+
+// zcode 补丁漂移自愈先于主 inject 判定：zcode 是独立树，与 hermes-studio
+// 的 inject 标志无关；早退路径同样需要它（2026-10-19：脏树缺文件被早退跳过）。
+healZcodePatches();
 
 if (manifestApplied === null && !existsSync(manifestPath) && !cockpitRouteInjected()) {
   // 未 inject → 检查 upstream 是否干净
@@ -196,8 +237,5 @@ if (delta.length > 0) {
   writeFileSync(manifestPath, JSON.stringify({ appliedPatches: nextApplied, generatedAt: new Date().toISOString() }, null, 2));
   console.log(`[ensure-injected] manifest 已更新(${nextApplied.length} 条)`);
 }
-
-// zcode 补丁漂移自愈须在所有早退路径之后执行(含 delta=0 的健康路径)
-healZcodePatches();
 
 
