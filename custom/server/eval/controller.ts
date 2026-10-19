@@ -31,14 +31,15 @@ import { runReplayEval, type SampleInput } from './runner'
 import { sampleFromTrace } from './trace-sampler'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
-  appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createSet, exportSet,
-  getOracleCase, getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns,
-  listSets, recordHumanVerdict, recordLiveEvidence, reflowTaskToSet, reviseRubric, sealSet,
+  appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
+  getOracleCase, getRemediation, getRun, getSet, getSetRevision, listIterations, listOracleCases, listOracleRuns,
+  listRemediations, listRuns, listSetRevisions, listSets, recordHumanVerdict, recordLiveEvidence,
+  reflowTaskToSet, reviseRubric, sealSet, verifyRemediation,
 } from './store'
 import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
-import type { EvalRun, LiveEvidence } from './types'
+import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
 
@@ -67,6 +68,7 @@ function runSummary(run: EvalRun) {
     id: run.id,
     setId: run.setId,
     ...(run.setHash ? { setHash: run.setHash } : {}),
+    ...(run.setRevision !== undefined ? { setRevision: run.setRevision } : {}),
     target: run.target,
     k: run.k,
     status: run.status,
@@ -75,6 +77,34 @@ function runSummary(run: EvalRun) {
     note: run.note,
     aggregates: run.aggregates,
   }
+}
+
+/** 密封契约：集摘要永不携带题目内容（写端点同样适用）。 */
+function setSummary(set: EvalSet) {
+  return {
+    id: set.id,
+    name: set.name,
+    track: set.track,
+    module: set.module,
+    sealed: true,
+    contentHash: set.contentHash,
+    revision: set.revision,
+    createdAt: set.createdAt,
+    taskCount: set.tasks.length,
+  }
+}
+
+/** 按运行钉住的版本取考卷；历史运行无版本时回落当前集（由指纹门另判）。 */
+function setForRun(run: EvalRun): EvalSet | undefined {
+  const current = getSet(run.setId)
+  if (!current) return undefined
+  if (run.setRevision !== undefined) {
+    const frozen = getSetRevision(run.setId, run.setRevision)
+    if (frozen) {
+      return { ...current, revision: frozen.revision, contentHash: frozen.contentHash, tasks: frozen.tasks }
+    }
+  }
+  return current
 }
 
 // ---------- 评测集 ----------
@@ -198,7 +228,52 @@ router.post('/sets/:id/tasks/:taskId/rubric', async (ctx) => {
     ctx.body = { ok: false, problems: result.problems }
     return
   }
-  ctx.body = { ok: true, set: result.set }
+  ctx.body = { ok: true, set: result.set.sealed ? setSummary(result.set) : result.set }
+})
+
+// ---------- 考卷版本快照（收口轮） ----------
+
+router.get('/sets/:id/revisions', async (ctx) => {
+  const set = getSet(ctx.params.id)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  const revisions = listSetRevisions(set.id).map((r) => ({
+    revision: r.revision,
+    contentHash: r.contentHash,
+    createdAt: r.createdAt,
+    taskCount: r.tasks.length,
+  }))
+  ctx.body = { ok: true, revisions }
+})
+
+router.get('/sets/:id/revisions/:revision', async (ctx) => {
+  const set = getSet(ctx.params.id)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  const revision = Number(ctx.params.revision)
+  if (!Number.isInteger(revision) || revision < 1) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['revision 须为 ≥1 的整数'] }
+    return
+  }
+  const frozen = getSetRevision(set.id, revision)
+  if (!frozen) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: [`版本不存在：r${revision}`] }
+    return
+  }
+  if (set.sealed) {
+    ctx.status = 403
+    ctx.body = { ok: false, problems: ['密封集不提供历史版本题目内容（防探测）'] }
+    return
+  }
+  ctx.body = { ok: true, revision: frozen }
 })
 
 // ---------- 运行 ----------
@@ -242,6 +317,118 @@ router.get('/runs', async (ctx) => {
   ctx.body = { ok: true, runs: listRuns(setId).map(runSummary) }
 })
 
+// 同卷复评（收口轮）：按基准运行钉住的版本快照判分，考卷改版即拒绝。
+router.post('/runs/:id/rerun', async (ctx) => {
+  const base = getRun(ctx.params.id)
+  if (!base) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const rawSamples = (body.samples ?? {}) as Record<string, SampleInput[]>
+  if (typeof rawSamples !== 'object' || Array.isArray(rawSamples)) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['samples 必填（taskId → 样本列表）'] }
+    return
+  }
+  const set = getSet(base.setId)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  const result = await runReplayEval(
+    {
+      setId: base.setId,
+      samples: rawSamples,
+      target: (body.target ?? base.target) as EvalRun['target'],
+      crossValidate: body.crossValidate === true,
+      note: typeof body.note === 'string' && body.note.trim() ? body.note.trim() : `同卷复评：${base.id}`,
+      actor: actorOf(ctx) ?? 'anonymous',
+      ...(base.setRevision !== undefined ? { setRevision: base.setRevision } : {}),
+      ...(base.setHash ? { expectedSetHash: base.setHash } : {}),
+      ...(base.setRevision !== undefined ? { expectedRevision: base.setRevision } : {}),
+    },
+    { judge: { config: loadEvalConfig() }, outcomeCtx: outcomeContext() },
+  )
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = 201
+  ctx.body = set.sealed
+    ? { ok: true, run: runSummary(result.run) }
+    : { ok: true, run: result.run }
+})
+
+// ---------- 处置单（收口轮：失败样本 → 修复 → 同卷复评 → 机械关闭） ----------
+
+router.post('/runs/:id/remediations', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const taskId = typeof body.taskId === 'string' ? body.taskId : ''
+  if (!taskId) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 必填'] }
+    return
+  }
+  const sampleIdx = Number(body.sampleIdx)
+  const result = createRemediation({
+    runId: ctx.params.id,
+    taskId,
+    ...(Number.isInteger(sampleIdx) && sampleIdx >= 1 ? { sampleIdx } : {}),
+    ...(typeof body.note === 'string' ? { note: body.note } : {}),
+    ...(typeof body.owner === 'string' ? { owner: body.owner } : {}),
+    ...(actorOf(ctx) ? { createdBy: actorOf(ctx) } : {}),
+  })
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = result.created ? 201 : 200
+  ctx.body = { ok: true, created: result.created, remediation: result.remediation }
+})
+
+router.get('/runs/:id/remediations', async (ctx) => {
+  ctx.body = { ok: true, remediations: listRemediations({ runId: ctx.params.id }) }
+})
+
+router.get('/remediations', async (ctx) => {
+  const runId = typeof ctx.query.runId === 'string' ? ctx.query.runId : undefined
+  const setId = typeof ctx.query.setId === 'string' ? ctx.query.setId : undefined
+  const status = typeof ctx.query.status === 'string' ? ctx.query.status : undefined
+  ctx.body = { ok: true, remediations: listRemediations({ runId, setId, status }) }
+})
+
+router.post('/remediations/:id/verify', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const rerunRunId = typeof body.rerunRunId === 'string' ? body.rerunRunId : ''
+  if (!rerunRunId) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['rerunRunId 必填（先经 /runs/:id/rerun 复评）'] }
+    return
+  }
+  if (!getRemediation(ctx.params.id)) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['处置单不存在'] }
+    return
+  }
+  const result = verifyRemediation(ctx.params.id, rerunRunId)
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    closed: result.closed,
+    alreadyClosed: result.alreadyClosed,
+    remediation: result.remediation,
+  }
+})
+
 // A/B 对比（腾讯启示⑩）：字面路由须先于 /runs/:id 注册（同前缀按注册序匹配）
 router.get('/runs/compare', async (ctx) => {
   const baseId = typeof ctx.query.base === 'string' ? ctx.query.base : ''
@@ -263,7 +450,18 @@ router.get('/runs/compare', async (ctx) => {
     ctx.body = { ok: false, problems: [`A/B 对比须同评测集：base=${base.setId} / head=${head.setId}`] }
     return
   }
-  const set = getSet(base.setId)
+  // 同集不代表同一份考卷：改题前后读数不可直接比较（收口轮）
+  if (base.setHash && head.setHash && base.setHash !== head.setHash) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['A/B 对比须同考卷版本：两侧试卷指纹不一致（集已改版，读数不可直接比较）'] }
+    return
+  }
+  if (base.setRevision !== undefined && head.setRevision !== undefined && base.setRevision !== head.setRevision) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`A/B 对比须同考卷版本：r${base.setRevision} ≠ r${head.setRevision}`] }
+    return
+  }
+  const set = setForRun(base)
   if (!set) {
     ctx.status = 404
     ctx.body = { ok: false, problems: ['评测集不存在'] }
@@ -329,7 +527,7 @@ router.post('/runs/:id/verdicts', async (ctx) => {
   }
   const config = loadEvalConfig()
   const run = getRun(ctx.params.id)
-  const set = run ? getSet(run.setId) : undefined
+  const set = run ? setForRun(run) : undefined
   if (!run || !set) {
     ctx.status = 404
     ctx.body = { ok: false, problems: ['运行不存在'] }
@@ -341,7 +539,7 @@ router.post('/runs/:id/verdicts', async (ctx) => {
     ctx.body = { ok: false, problems: result.problems }
     return
   }
-  ctx.body = { ok: true, run: result.run }
+  ctx.body = { ok: true, run: set.sealed ? runSummary(result.run) : result.run }
 })
 
 // ---------- 评估器三角互证审计（百度范式 §3） ----------
@@ -480,7 +678,8 @@ router.post('/runs/:id/live-evidence', async (ctx) => {
     return
   }
   const config = loadEvalConfig()
-  const set = getRun(ctx.params.id) ? getSet(getRun(ctx.params.id)!.setId) : undefined
+  const run = getRun(ctx.params.id)
+  const set = run ? setForRun(run) : undefined
   const result = recordLiveEvidence(ctx.params.id, evidence, (r) => (set ? aggregateRun(set, r, config) : r))
   if (!result.ok) {
     ctx.status = 404

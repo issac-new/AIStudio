@@ -25,6 +25,7 @@ describe('buildRunOptions', () => {
   it('RunSelector 空态清记忆与 query（源级守门）', () => {
     const src = readFileSync(resolve(__dirname, '../views/sim/RunSelector.vue'), 'utf8')
     expect(src).toContain('localStorage.removeItem(LAST_RUN_KEY)')
-    expect(src).toContain("if (!list.length && current.value && !runsStore.loading)")
+    // 2026-10-19 收口：清场须等一次真实加载结束（fetchSettled），加载中/失败/测试态不清深链
+    expect(src).toContain('fetchSettled.value && !runsStore.loading && !runsStore.error')
   })
 })

@@ -101,7 +101,9 @@ const HARNESS_REST_WHITELIST = [
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
-    if (name === '__tests__' || name === 'node_modules' || name === '.git') continue
+    // .claude/worktrees：并行任务的嵌套工作树副本，不是本仓源文件；
+    // 纳入扫描会把别的分支/在途 worktree 误报成白名单违规（2026-10-19 实测）。
+    if (name === '__tests__' || name === 'node_modules' || name === '.git' || name === '.claude') continue
     const p = join(dir, name)
     if (statSync(p).isDirectory()) walk(p, exts, out)
     else if (exts.some((e) => p.endsWith(e))) out.push(p)
