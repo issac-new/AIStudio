@@ -165,7 +165,9 @@ npm run build                                                     # 客户端构
 | 数据集 | 内容指纹 + 修订号 + run 锚点漂移 | 能力维度显式标注 + 真实覆盖度 + 留出题库 UI |
 | 阶段集成 | 报告块 + 运行表芯片 | ⑥治理评测运营卡 + 评测默认开 |
 
-合并冲突三处，按「保留双方语义」解决：`judge.ts` 的 S0 分派同时支持 regex/threshold/similarity，且每种都写审计理由；`EvalView.vue` 运行表同时保留本分支的 tooltip 修复与对方的锚点漂移/动作芯片；同名测试文件拆分——对方保留 `eval-baidu.test.ts`（B1-B5），本分支改为 `eval-baidu-registry.test.ts`。合并后评测域 168/168 全绿。
+合并冲突三处，按「保留双方语义」解决：`judge.ts` 的 S0 分派同时支持 regex/threshold/similarity，且每种都写审计理由；`EvalView.vue` 运行表同时保留本分支的 tooltip 修复与对方的锚点漂移/动作芯片；同名测试文件拆分——对方保留 `eval-baidu.test.ts`（B1-B5），本分支改为 `eval-baidu-registry.test.ts`。合并后评测域 166/166 全绿、`typecheck:harness` 0 错、vite build 成功。
+
+交接时 main 已推进到 `504bf125`（另一个会话的 IDE 轮）且其工作区存在未提交的暂存改动（IDE devtools 回退），因此本轮**未在 main 工作区执行快进**——避免覆盖并行会话的在途工作。分支 `feat/eval-baidu-paradigm` 已包含 main `504bf125`（该时点 main 为分支祖先）；main 工作区清空后执行 `git merge --ff-only feat/eval-baidu-paradigm` 即可落地。若 main 在清空暂存后继续推进，先 `git merge main` 再快进。落地后按服务拓扑更新 `serve-merged` 到新 main 并重启 8647/8649 激活。
 
 ## 7. 边界（本轮不做）
 
