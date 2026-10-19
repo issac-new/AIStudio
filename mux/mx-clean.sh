@@ -48,12 +48,16 @@ if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
 fi
 # 0a2) 端口兜底（2026-10-19 实测）：pid 复用守卫跳杀后 studio 可能仍活——清场与
 #      活服务互踩（rm "Directory not empty"、sqlite 库锁、半清树）。端口仍在听即中止。
-for _p in "${STUDIO_PORT:-8802}" "${GW_PORT:-8801}"; do
-  if lsof -nP -iTCP:"$_p" -sTCP:LISTEN -t 2>/dev/null | grep -q .; then
-    echo "[mx-clean FAIL] 端口 $_p 仍有服务在听（pid 复用守卫可能跳杀）——先 bash mux/mx-down.sh 再重跑" >&2
-    exit 3
-  fi
-done
+#      只在本 SIM 根确有 pid 台账时检查：隔离夹具（tests/integration-retention）跑
+#      mx-clean 时生产服务仍占 8801/8802，不能因此拒绝夹具清场（2026-10-19 实测回退）。
+if [ -f "$SIM_ROOT/pids/studio.pid" ] || [ -f "$SIM_ROOT/pids/gateway.pid" ]; then
+  for _p in "${STUDIO_PORT:-8802}" "${GW_PORT:-8801}"; do
+    if lsof -nP -iTCP:"$_p" -sTCP:LISTEN -t 2>/dev/null | grep -q .; then
+      echo "[mx-clean FAIL] 端口 $_p 仍有服务在听（pid 复用守卫可能跳杀）——先 bash mux/mx-down.sh 再重跑" >&2
+      exit 3
+    fi
+  done
+fi
 
 # 0b) relay 接力器在跑同样拒绝：驱动死在两代接力之间时锁已被 EXIT trap 摘除，但
 # relay 15s 内会拉起新驱动——清场（删 runs/ + 逐房 purge）与重生成的驱动互踩
