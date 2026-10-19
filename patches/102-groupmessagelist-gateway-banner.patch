@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index a6fb86775..fce92c540 100644
+index 6992d61f..0e95fbec 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
+@@ -10,6 +10,7 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
  import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
@@ -10,7 +10,7 @@ index a6fb86775..fce92c540 100644
  import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
  
-@@ -37,9 +38,14 @@ const emptyStateAgents = [
+@@ -43,9 +44,14 @@ const emptyStateAgents = [
      { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
@@ -26,13 +26,13 @@ index a6fb86775..fce92c540 100644
 +        msg.tool_name === 'workspace_diff'
 +    ),
  )))
- const summaryAnchorMessageId = computed(() => {
-     const roomId = store.currentRoomId
-@@ -162,6 +168,7 @@ defineExpose({ scrollToBottom })
+ const supportsMessageSelection = computed(() => props.allowMessageDeletion && !store.inviteGuest)
+ const {
+@@ -255,6 +261,7 @@ defineExpose({ scrollToBottom })
  
  <template>
      <div class="group-message-list-shell">
 +      <GatewayNoticeBanner :session-id="store.currentRoomId" :messages="store.sortedMessages" />
-         <VirtualMessageList
-             class="group-message-list"
-             ref="listRef"
+         <NDropdown trigger="manual" placement="bottom-start" :show="selectionMenu.show"
+             :x="selectionMenu.x" :y="selectionMenu.y" :options="selectionMenuOptions"
+             @select="selectFromMenu" @clickoutside="selectionMenu.show = false" @update:show="selectionMenu.show = $event" />

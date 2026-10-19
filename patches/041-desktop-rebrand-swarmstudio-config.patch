@@ -32,7 +32,7 @@ index ff225d35c..dc5359042 100644
    icon: build/icon.ico
    target:
      - target: nsis
-       arch: [x64]
+       arch: [x64, arm64]
 -  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
 +  artifactName: "SwarmStudio-${version}-${os}-${arch}.${ext}"
  

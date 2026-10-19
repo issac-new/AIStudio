@@ -29,5 +29,5 @@ index ed9d2a1a2..dbe9dc105 100644
 +authProtectedRoutes.post('/api/auth/matrix-users/:id/deactivate', requireSuperAdmin, ctrl.deactivateMatrixUser)
 +authProtectedRoutes.post('/api/auth/matrix-users/:id/reset-password', requireSuperAdmin, ctrl.resetMatrixUserPassword)
 +
- authProtectedRoutes.get('/api/auth/locked-ips', ctrl.listLockedIps)
- authProtectedRoutes.delete('/api/auth/locked-ips', ctrl.unlockIpHandler)
+ authProtectedRoutes.get('/api/auth/locked-ips', requireSuperAdmin, ctrl.listLockedIps)
+ authProtectedRoutes.delete('/api/auth/locked-ips', requireSuperAdmin, ctrl.unlockIpHandler)

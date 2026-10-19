@@ -1,8 +1,7 @@
 diff --git a/packages/ekko-agent/src/runtime/runtime.ts b/packages/ekko-agent/src/runtime/runtime.ts
-index 3644aa0bf..7dc682d50 100644
 --- a/packages/ekko-agent/src/runtime/runtime.ts
 +++ b/packages/ekko-agent/src/runtime/runtime.ts
-@@ -20,7 +20,7 @@ import type { AgentSkill } from '../skills/types'
+@@ -20,7 +20,7 @@
  import { RunTaskPlan } from '../tools/plan'
  import { AgentToolRegistry, createDefaultToolRegistry } from '../tools/registry'
  import { sanitizeAgentToolResult } from '../tools/tool-result-sanitizer'
@@ -11,22 +10,22 @@ index 3644aa0bf..7dc682d50 100644
  import {
    inspectLocalSkillValidationIssues,
    resolveSkillRouting,
-@@ -210,6 +210,10 @@ export class AgentRuntime {
+@@ -209,6 +209,10 @@
+       : new AgentToolRegistry()
      if (this.toolsEnabled && options.tools && options.toolAuthorizer) {
        this.tools.setAuthorizer(options.toolAuthorizer)
-     }
++    }
 +    // HERMES_CUSTOM[tool-waterfall] P1：瀑布钩子挂载（自建与外部传入 registry 双路径）
 +    if (this.toolsEnabled) {
 +      this.tools.setExecuteHooks(options.toolExecuteHooks ?? [])
-+    }
+     }
      this.skillsEnabled = options.skillsEnabled !== false
      this.skillsAvailable = options.skillsAvailable
-     this.skills = this.skillsEnabled ? options.skills ?? [] : []
+
 diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/runtime/types.ts
-index 5d2bc35f8..a78098d16 100644
 --- a/packages/ekko-agent/src/runtime/types.ts
 +++ b/packages/ekko-agent/src/runtime/types.ts
-@@ -2,7 +2,8 @@ import type { AgentMessage, ModelClient, ModelRequest } from '../model/types'
+@@ -2,7 +2,8 @@
  import type { AgentMessageInput, AgentOutputMessage } from '../model/messages'
  import type { AgentSkill } from '../skills/types'
  import type { AgentToolRegistry } from '../tools/registry'
@@ -36,7 +35,7 @@ index 5d2bc35f8..a78098d16 100644
  import type { AgentRuntimeEvent } from './events'
  import type { MemoryContext, MemoryEvidenceMessageInput, MemoryOrigin, MemoryScope, MemoryWritePolicy } from '../memory/types'
  import type { MemoryService } from '../memory/service'
-@@ -45,6 +46,9 @@ export interface AgentRuntimeRecoveryDirective {
+@@ -45,6 +46,9 @@
  }
  
  export interface AgentRuntimeOptions {
@@ -46,11 +45,11 @@ index 5d2bc35f8..a78098d16 100644
    /** JEV configuration values only; the runtime creates its own client and never persists overrides. */
    jev?: EkkoJevOverrides
    /** Fixed profile identity for tool and memory operations. Per-run input cannot override it. */
+
 diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src/tools/registry.ts
-index d65af4133..de9317af1 100644
 --- a/packages/ekko-agent/src/tools/registry.ts
 +++ b/packages/ekko-agent/src/tools/registry.ts
-@@ -4,6 +4,7 @@ import type {
+@@ -4,6 +4,7 @@
    AgentToolContext,
    AgentToolProvider,
    AgentToolResult,
@@ -58,7 +57,7 @@ index d65af4133..de9317af1 100644
  } from './types'
  import { UpdatePlanTool } from './plan'
  import { createBrowserTools } from './browser'
-@@ -23,9 +24,15 @@ export class AgentToolRegistry {
+@@ -24,9 +25,15 @@
    private readonly tools = new Map<string, AgentTool>()
    private readonly providers = new Map<string, AgentToolProvider>()
    private readonly providerTools = new Map<string, Set<string>>()
@@ -74,11 +73,11 @@ index d65af4133..de9317af1 100644
    setAuthorizer(authorizer?: AgentToolAuthorizer): void {
      this.authorizer = authorizer
    }
-@@ -99,7 +106,24 @@ export class AgentToolRegistry {
+@@ -100,7 +107,26 @@
          },
        }
      }
--    return tool.execute(input, context)
+-    if (!authorization || authorization.scope === 'safe') return tool.execute(input, context)
 +    // HERMES_CUSTOM[tool-waterfall] P1：pre-execute 钩子（权限已过；{allow:false} 拒绝）
 +    for (const hook of this.executeHooks) {
 +      const verdict = await hook.preExecute?.(name, input, context)
@@ -90,21 +89,35 @@ index d65af4133..de9317af1 100644
 +        }
 +      }
 +    }
-+    let result = await tool.execute(input, context)
-+    // post-execute 钩子：可改写结果（返回 undefined=原样）
++    if (!authorization || authorization.scope === 'safe') {
++      // HERMES_CUSTOM[tool-waterfall]：safe 快道同样过 post 钩子（改写=原样跳过）
++      let safeResult = await tool.execute(input, context)
++      for (const hook of this.executeHooks) {
++        const rewritten = await hook.postExecute?.(name, input, safeResult, context)
++        if (rewritten) safeResult = rewritten
++      }
++      return safeResult
++    }
+ 
+     let result: AgentToolResult
+     try {
+@@ -110,6 +136,11 @@
+       const message = error instanceof Error ? error.message : String(error)
+       result = { ok: false, content: message, error: message }
+     }
++    // HERMES_CUSTOM[tool-waterfall]：post-execute 钩子：可改写结果（返回 undefined=原样）
 +    for (const hook of this.executeHooks) {
 +      const rewritten = await hook.postExecute?.(name, input, result, context)
 +      if (rewritten) result = rewritten
 +    }
-+    return result
-   }
- }
- 
+     // Approval events reach the UI, not the model. Carry the actual decision in
+     // the persisted tool content too, even when execution after approval fails.
+     const status = { approved: true, scope: authorization.scope, key: authorization.key }
+
 diff --git a/packages/ekko-agent/src/tools/types.ts b/packages/ekko-agent/src/tools/types.ts
-index 1819802e3..5181edbc5 100644
 --- a/packages/ekko-agent/src/tools/types.ts
 +++ b/packages/ekko-agent/src/tools/types.ts
-@@ -122,3 +122,23 @@ export class AgentToolError extends Error {
+@@ -124,3 +124,23 @@
      this.name = 'AgentToolError'
    }
  }

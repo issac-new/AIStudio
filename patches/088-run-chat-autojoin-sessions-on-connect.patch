@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
-index 00534d5de..b30f5a43e 100644
+index 00534d5d..b30f5a43 100644
 --- a/packages/server/src/modules/studio/repositories/session-store.ts
 +++ b/packages/server/src/modules/studio/repositories/session-store.ts
 @@ -645,6 +645,20 @@ export function countSessions(
@@ -24,7 +24,7 @@ index 00534d5de..b30f5a43e 100644
    return value.replace(/[\\%_]/g, '\\$&')
  }
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 3304bb710..89e8e3f84 100644
+index be98d085..09b4f49a 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -33,7 +33,7 @@ import type { Server, Socket } from 'socket.io'
@@ -33,6 +33,6 @@ index 3304bb710..89e8e3f84 100644
  import { getSystemPrompt } from '../public/runs/prompt'
 -import { clearSessionMessages, deleteSession, getSession, getSessionMetadata, listSessions, updateMessageDisplayContent } from '../repositories/session-store'
 +import { clearSessionMessages, deleteSession, getSession, getSessionMetadata, listSessions, updateMessageDisplayContent, listSessionIdsByUserId } from '../repositories/session-store'
+ import { deleteSessionMessageGroups } from '../repositories/session-message-deletion'
  import { listWorkspaceRunChangesForAssistantMessages } from '../repositories/workspace-run-changes-store'
  import { getSessionCategory } from '../repositories/session-category-store'
- import { getActiveProfileName, getProfileDir, listProfileNamesFromDisk } from '../public/profile-config'

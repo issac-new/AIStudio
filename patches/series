@@ -823,7 +823,7 @@
 # 652: 插件页 stderr 降噪——CLI 启动横幅与 unknown-kind 兜底告警按行过滤，真错误保留。
 652-server-plugins-stderr-noise-filter.patch
 # 653: matrixChat.syncing 词条（zh/en）——首屏同步中提示，防空列表被误读为无房间。
-653-client-matrix-syncing-locale.patch
+# 653 moved to _skip-0737/ (0.7.37: upstream absorbed matrix syncing locale keys en+zh)
 # 654: canUseProfile 空映射集放行（477 同族）——matrix 建号 admin 的空 user_profiles
 # 把一切 profile 定向读 403（旧看板任务详情 search-sessions 即全局无权限 toast）。
 654-server-kanban-empty-profileset-allow.patch
@@ -848,7 +848,7 @@
 
 # 659: 任务工作区/任务会话/一键发上下文 词条（zh/en）——关联轮配套；Composer t
 # 无默认文案参数，键必须真实落语言包（否则界面直出键名）。
-659-client-task-workspace-locale.patch
+# 659 moved to _skip-0737/ (0.7.37: 内容已含于再生 473 全链终态，键集 14/14 已在树)
 
 # 660: IDE 聊天容器提供 ideDeferLocalMedia 时，Markdown 本地图片/音频/视频只出
 # data-local-media 占位，由容器鉴权 fetch 换 blob——API key 不再进入媒体 src。
