@@ -6,7 +6,7 @@
 //
 // 诚实契约：回放判分证据里没有的指标（TTFT/响应分档/QPS 压测）不硬凑代理值，
 // 如实标 no_data + 证据缺口说明——缺口清单本身就是评测覆盖度的产品面。
-import type { Attempt } from './types'
+import type { Attempt, LiveEvidence } from './types'
 import { p99Of, toolSuccessRateOf } from './metrics'
 
 export interface ReleaseGateCheck {
@@ -18,6 +18,8 @@ export interface ReleaseGateCheck {
   status: 'pass' | 'fail' | 'no_data'
   /** 证据缺口说明（no_data 项必填）。 */
   gap?: string
+  /** 证据来源（live 回填项注明，如 mx-load-probe）。 */
+  source?: string
 }
 
 export interface ReleaseGateSummary {
@@ -59,8 +61,12 @@ function pct(v: number): string {
   return `${(v * 100).toFixed(v * 100 >= 10 ? 1 : 2)}%`
 }
 
-/** 发布门禁评估（纯函数）：从 attempt 证据面机械执行阈值清单。 */
-export function evaluateReleaseGate(attempts: Attempt[], config: ReleaseGateConfig): ReleaseGateSummary {
+/** 发布门禁评估（纯函数）：从 attempt 证据面机械执行阈值清单；live 证据回填后 qps/分档项转真判（B7）。 */
+export function evaluateReleaseGate(
+  attempts: Attempt[],
+  config: ReleaseGateConfig,
+  live?: Pick<LiveEvidence, 'qpsProbe' | 'responseTiers'>,
+): ReleaseGateSummary {
   const checks: ReleaseGateCheck[] = []
 
   // ① 工具调用成功率 ≥ 99%
@@ -120,32 +126,71 @@ export function evaluateReleaseGate(attempts: Attempt[], config: ReleaseGateConf
           status: ttftWorst <= config.ttftMaxMs ? 'pass' : 'fail',
         },
   )
-  // ⑤⑥ 在线服务口径项：回放判分不产生（如实缺口，不硬凑代理值）
-  checks.push({
-    key: 'response_tier',
-    threshold: '简单 ≤5s / 复杂 ≤15s',
-    measured: null,
-    status: 'no_data',
-    gap: '交互响应分档属在线服务口径（回放样本为长任务会话）',
-  })
-  checks.push({
-    key: 'qps_headroom',
-    threshold: '峰值 QPS ×2 压测通过',
-    measured: null,
-    status: 'no_data',
-    gap: '容量压测属部署验收（回放判分零并发负载）',
-  })
+  // ⑤⑥ 在线服务口径项（B7）：live 证据回填后转真判（口径对齐 mx-load-probe），否则如实缺口
+  // （顺序契约：response_tier 在前、qps_headroom 在后——既有报告/测试按此序锁定）
+  const tiers = live?.responseTiers ?? []
+  const tierSimple = tiers.find((t) => t.tier === 'simple')
+  const tierComplex = tiers.find((t) => t.tier === 'complex')
+  if (tiers.length > 0) {
+    const parts: string[] = []
+    let tierOk = true
+    if (tierSimple) {
+      const ok = tierSimple.p95Ms <= 5000
+      tierOk = tierOk && ok
+      parts.push(`简单 p95 ${(tierSimple.p95Ms / 1000).toFixed(2)}s（${tierSimple.samples} 样本）${ok ? '' : '✗'}`)
+    }
+    if (tierComplex) {
+      const ok = tierComplex.p95Ms <= 15000
+      tierOk = tierOk && ok
+      parts.push(`复杂 p95 ${(tierComplex.p95Ms / 1000).toFixed(2)}s（${tierComplex.samples} 样本）${ok ? '' : '✗'}`)
+    }
+    const src = tierSimple?.source ?? tierComplex?.source
+    checks.push({
+      key: 'response_tier',
+      threshold: '简单 ≤5s / 复杂 ≤15s（p95）',
+      measured: parts.join(' · '),
+      status: tierOk ? 'pass' : 'fail',
+      ...(src ? { source: src } : {}),
+    })
+  } else {
+    checks.push({
+      key: 'response_tier',
+      threshold: '简单 ≤5s / 复杂 ≤15s（p95）',
+      measured: null,
+      status: 'no_data',
+      gap: '交互响应分档属在线服务口径；实测后经 /runs/:id/live-evidence 回填',
+    })
+  }
+
+  const qps = live?.qpsProbe
+  if (qps) {
+    const qpsOk = qps.achievedQps >= 0.9 * qps.targetQps && qps.errorRate < 0.01 && qps.p99ToP50 <= 2
+    checks.push({
+      key: 'qps_headroom',
+      threshold: '峰值 QPS ×2 压测通过（达成≥90%、错误率<1%、p99≤2×p50）',
+      measured: `${qps.achievedQps.toFixed(1)}/${qps.targetQps.toFixed(1)} QPS · 错误率 ${pct(qps.errorRate)} · p99/p50 ${qps.p99ToP50.toFixed(2)}×`,
+      status: qpsOk ? 'pass' : 'fail',
+      ...(qps.source ? { source: qps.source } : {}),
+    })
+  } else {
+    checks.push({
+      key: 'qps_headroom',
+      threshold: '峰值 QPS ×2 压测通过',
+      measured: null,
+      status: 'no_data',
+      gap: '容量压测属部署验收（回放判分零并发负载）；压测后经 /runs/:id/live-evidence 回填',
+    })
+  }
 
   const measured = checks.filter((c) => c.status !== 'no_data')
   const verdict = measured.some((c) => c.status === 'fail') ? 'fail' : measured.length > 0 ? 'pass' : 'no_data'
+  const liveNote = qps || tiers.length > 0 ? '；线上项=live 证据回填' : ''
   return {
     verdict,
     checks,
     measuredCount: measured.length,
     gapKeys: checks.filter((c) => c.status === 'no_data').map((c) => c.key),
-    basis: ttftWorst === null
-      ? '降级率口径=判定端离线 fail-open 样本占比；TTFT/响应分档/QPS 为证据缺口项（见 gapKeys）'
-      : '降级率口径=判定端离线 fail-open 样本占比；TTFT=最差样本首 token 时延；响应分档/QPS 为证据缺口项',
+    basis: `${ttftWorst === null ? '降级率口径=判定端离线 fail-open 样本占比；TTFT 需 live 打点' : '降级率口径=判定端离线 fail-open 样本占比；TTFT=最差样本首 token 时延'}${liveNote}（缺口项见 gapKeys）`,
     numeric: { toolSuccessRate: toolRate, p99Ratio: ratio, degradeRate: judged.length === 0 ? null : degraded / judged.length },
   }
 }

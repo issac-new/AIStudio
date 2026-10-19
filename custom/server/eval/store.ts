@@ -303,6 +303,35 @@ export function sealedAttemptCount(setId: string, actor: string): number {
   return store.runs.filter((r) => r.setId === setId && r.createdBy === actor).length
 }
 
+// ---------- 任务追加（红队变体扩产，百度轮后续批 B6） ----------
+
+/**
+ * 向开放集追加任务（按 id 去重，幂等）。资产语义：扩产后 bump 指纹/修订号。
+ * 与 reflow 分离：reflow 带线上坏例溯源（origin），本函数是资产扩产，不混口径。
+ */
+export function appendTasksToSet(
+  setId: string,
+  tasks: EvalTask[],
+): { ok: true; set: EvalSet; appended: number } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const set = store.sets.find((s) => s.id === setId)
+  if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
+  if (set.sealed) return { ok: false, problems: ['密封集不可追加任务'] }
+  const problems: string[] = []
+  tasks.forEach((t, i) => validateTask(t, i, problems))
+  if (problems.length) return { ok: false, problems }
+  const existing = new Set(set.tasks.map((t) => t.id))
+  const fresh = tasks.filter((t) => !existing.has(t.id))
+  if (fresh.length > 0) {
+    set.tasks.push(...fresh)
+    bumpSetAsset(set)
+    writeStore(store)
+  }
+  return { ok: true, set, appended: fresh.length }
+}
+
+// ---------- 线上证据回填（百度轮后续批 B7） ----------
+
 /** 人工裁决落库：改写 attempt 判词（source='human'）。冲突=人工与既有机判相反。 */
 export function recordHumanVerdict(
   runId: string,
@@ -324,6 +353,26 @@ export function recordHumanVerdict(
   verdict.source = 'human'
   if (machine !== 'unknown' && machine !== value) verdict.conflict = true
   else delete verdict.conflict
+  const updated = aggregate(run)
+  const idx = store.runs.findIndex((r) => r.id === runId)
+  store.runs[idx] = updated
+  writeStore(store)
+  return { ok: true, run: updated }
+}
+
+/**
+ * 线上证据回填（B7）：写 run.liveEvidence 后重聚合（门禁 qps/response_tier 项
+ * 即时转 pass/fail）。与 recordHumanVerdict 同模式：聚合器由调用方注入。
+ */
+export function recordLiveEvidence(
+  runId: string,
+  evidence: import('./types').LiveEvidence,
+  aggregate: (run: EvalRun) => EvalRun,
+): { ok: true; run: EvalRun } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const run = store.runs.find((r) => r.id === runId)
+  if (!run) return { ok: false, problems: [`运行不存在：${runId}`] }
+  run.liveEvidence = { ...run.liveEvidence, ...evidence, recordedAt: Date.now() }
   const updated = aggregate(run)
   const idx = store.runs.findIndex((r) => r.id === runId)
   store.runs[idx] = updated
