@@ -5,31 +5,57 @@
      PATH 中的 zcode 命令）；「复制 ID」供 CLI --resume 等场景。
      数据源 GET /api/ide/zcode-cli/sessions（只读 ~/.zcode/cli/db）；无库=空态。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { fetchCliSessions, launchDevtool, type CliSession } from '../api/devtools'
 import { showToast } from '../utils/toast'
 
-const sessions = ref<CliSession[]>([])
+const props = withDefaults(defineProps<{
+  boxed?: boolean
+  /** 跟随侧栏三段视图：active=24h 内活跃；done=更早；workspace=全部 */
+  view?: 'active' | 'done' | 'workspace'
+  /** 跟随侧栏搜索（命中标题或工作区路径） */
+  query?: string
+}>(), { boxed: true, view: 'workspace', query: '' })
+
+const emit = defineEmits<{ (e: 'count', n: number): void }>()
+
 const note = ref('')
 const loadError = ref('')
 const loading = ref(true)
-const props = withDefaults(defineProps<{ boxed?: boolean }>(), { boxed: true })
 const busyId = ref('')
+
+const ALL = ref<CliSession[]>([])
+const DAY = 24 * 60 * 60 * 1000
 
 async function load(): Promise<void> {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await fetchCliSessions(12)
-    sessions.value = res.sessions
+    // 拉宽到 30：视图/搜索过滤后仍有余量（界面只展示过滤结果）
+    const res = await fetchCliSessions(30)
+    ALL.value = res.sessions
     note.value = res.note ?? ''
   } catch (e) {
-    sessions.value = []
+    ALL.value = []
     loadError.value = (e as Error).message
   } finally {
     loading.value = false
   }
 }
+
+/** 视图 + 搜索过滤（2026-10-19 视图语义修正批：CLI 分组跟随侧栏口径）。 */
+const sessions = computed(() => {
+  const now = Date.now()
+  return ALL.value.filter(s => {
+    if (props.view === 'active' && !(now - s.timeUpdated <= DAY)) return false
+    if (props.view === 'done' && !(now - s.timeUpdated > DAY)) return false
+    const q = props.query.trim().toLowerCase()
+    if (q && !s.title.toLowerCase().includes(q) && !s.directory.toLowerCase().includes(q)) return false
+    return true
+  })
+})
+
+watch(sessions, list => emit('count', list.length), { immediate: true })
 
 async function resumeInTerminal(s: CliSession): Promise<void> {
   busyId.value = s.id
@@ -84,7 +110,8 @@ onMounted(() => { void load() })
 
     <p v-if="loadError" class="ide-cli-sessions__hint ide-cli-sessions__hint--err">{{ loadError }}</p>
     <p v-else-if="loading" class="ide-cli-sessions__hint">正在读取 zcode CLI 会话……</p>
-    <p v-else-if="!hasAny" class="ide-cli-sessions__hint">{{ note || '还没有 zcode CLI 会话——在终端运行 zcode 开始一次会话，之后会出现在这里。' }}</p>
+    <p v-else-if="ALL.length === 0" class="ide-cli-sessions__hint">{{ note || '还没有 zcode CLI 会话——在终端运行 zcode 开始一次会话，之后会出现在这里。' }}</p>
+    <p v-else-if="sessions.length === 0" class="ide-cli-sessions__hint">{{ view === 'active' ? '24 小时内没有活跃的 zcode CLI 会话（切到「更早」看全部）。' : view === 'done' ? '没有超过 24 小时的 zcode CLI 会话。' : '没有匹配搜索的 zcode CLI 会话。' }}</p>
 
     <ul v-else class="ide-cli-sessions__list">
       <li v-for="s in sessions" :key="s.id" class="ide-cli-sessions__row" :data-testid="`ide-cli-session-${s.id}`">
