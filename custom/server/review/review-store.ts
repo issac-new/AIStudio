@@ -46,6 +46,8 @@ export interface ReviewRecord {
   createdAt: number
   /** 开评审者（ctx.state.user 同源取法）。 */
   actor?: string
+  /** 关联评审治理案例；存在时 approve 必须通过该案例的合并就绪度。 */
+  caseId?: string
   comments: InlineComment[]
   verdict?: { verdict: ReviewVerdict; note?: string; at: number; actor?: string }
   /** 裁决→evidence 落账失败标记（待补账；裁决本体已一次定音）。 */

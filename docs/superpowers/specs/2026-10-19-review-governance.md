@@ -106,24 +106,60 @@ SwarmStudio 已有 `/api/review` 行内评审、qgate 质量门、并行评审�
 | POST | `/api/review/gov/cases/:id/findings/:fid/promote` | 提升为回归评测案例 |
 | POST | `/api/review/gov/cases/:id/approvals` | 记录审批（人/Agent） |
 | POST | `/api/review/gov/cases/:id/checks` | 上报自动检查状态（green/red/unknown） |
-| POST | `/api/review/gov/signals` | 记录回滚/事故/合并信号 |
-| GET | `/api/review/gov/metrics` | 度量 + 熔断 + 评测案例数 |
+| POST | `/api/review/gov/cases/:id/state` | 标记 merged/abandoned |
+| POST | `/api/review/gov/cases/:id/rollback` | 回滚登记（转 abandoned + 写 revert 信号，不自动改代码） |
+| POST | `/api/review/gov/cases/from-pr` | 从 GitHub/GitLab/通用 PR 归一化载荷导入案例 |
+| POST | `/api/review/gov/signals` | 记录回滚/事故/合并信号；熔断激活时收紧存量案例 |
+| GET | `/api/review/gov/nightly/latest` | 最近一次夜间存量扫描报告 |
+| POST | `/api/review/gov/nightly/run` | 立即执行一次存量扫描 |
+| GET | `/api/review/gov/eval/score` | 最近评测运行与历史 |
+| POST | `/api/review/gov/eval/run` | 导入预测发现并打分（召回/精确率） |
+| GET | `/api/review/gov/metrics` | 度量 + 熔断 + 评测分 + 最近夜间报告 |
 
 所有写接口的 actor 取 `ctx.state.user`（与 `/api/review` 同源），缺省不伪造。
 
 ### 3.7 存储
 
 - `HERMES_REVIEW_GOV_DIR` > `~/.hermes-web-ui/review-gov`。
-- `cases/<caseId 哈希>.json`、`signals.json`、`eval-cases.json`。
+- `cases/<caseId 哈希>.json`、`signals.json`、`eval-cases.json`、`eval-runs.json`、`nightly/<date>-<reportId>.json` + `nightly/latest.json`。
 - 原子写（tmp+rename）；坏档改名 `.corrupt.<ts>` 留档；案例文件名 = 可读前缀 + sha256 前 32 hex，避免清洗名碰撞。
+
+### 3.8 夜间存量扫描
+
+- `buildNightlyReport(cases)` 把延后队列按「文件 + bug 类」归并，产出 backlog、涉及案例数、最老发现时间。
+- `runNightlyScan` 落盘日期报告与 `latest.json`；`maybeRunNightly` 保证同一天只自动跑一次。
+- 定时器显式 `HERMES_REVIEW_NIGHTLY=on` 才启动（每小时检查一次）；也可由外部 cron/launchd 调 `POST /nightly/run`。
+- 扫描只产出账本，不改代码、不自动派单；派单留给上层调度器。
+
+### 3.9 评测集打分（错题本）
+
+- 评测案例来自发现项 `promote` 或事故/回滚回流；`scorePredictions` 一对一匹配（同文件、行号容差 ±3），产出召回率、精确率、漏网与误报。
+- `POST /eval/run` 接收一次评审 Agent 的预测（`[{file,line?,title?}]`），落 `eval-runs.json`；不执行任意命令，避免服务端变成任意代码执行入口。
+- 指标卡展示评测集规模与最近一次召回/精确率。
+
+### 3.10 熔断收紧存量案例与回滚登记
+
+- 记录 revert/incident 信号后，若熔断激活，对全部未结束案例重新分级；门槛升高时作废旧审批（`invalidatedBy=policy_tightened`），要求按新档重新放行。
+- 回滚登记只写事实、责任人、备注和 revert 信号，并把案例转 `abandoned`；**不自动执行代码回滚**，避免越权与误伤。
+- 熔断只升不降：风险回落后不撤销既有审批，避免同一提交反复横跳。
+
+### 3.11 PR 导入
+
+- `POST /cases/from-pr` 接受归一化载荷（provider/repo/number/title/headCommit/changedPaths/url 等），案例 ID = `pr-<provider>-<repo>-<number>`，同 PR 幂等。
+- 不做 GitHub/GitLab 回写、不拉取 diff 全文；风险分级仍由 changedPaths/diffLines 驱动。
+
+### 3.12 旧 `/api/review` 闸门
+
+- `POST /api/review` 可带 `caseId` 关联评审治理案例；`approve` 时先查案例合并就绪度，未就绪返回 409 `case_not_ready` 并带 blockers；案例不存在返回 409 `case_not_found`。
+- 未关联 `caseId` 的既有评审保持原行为，零回归。
 
 ## 4. 验收
 
-1. 纯函数守门：风险分级、审批计数与失效、轮次上限、diff-only、去重、nit 预算、验证票、度量、熔断阈值。
-2. REST 守门：开案例→加发现→回答→审批→合并就绪度→信号→度量全链路；非法输入 400；轮次上限 409。
-3. 客户端守门：策略表/度量卡纯函数；页签 zh/en 成对；StageShell 组件映射存在。
-4. 既有 `/api/review` 测试零回归。
-5. `npm run typecheck`、相关 vitest 全绿。
+1. 纯函数守门：风险分级、审批计数与失效、轮次上限、diff-only、去重、nit 预算、验证票、度量、熔断阈值、夜间归并、评测打分。
+2. REST 守门：开案例→加发现→回答→审批→合并就绪度→信号→度量全链路；PR 导入幂等；夜间扫描；评测运行；回滚登记；熔断收紧存量案例；非法输入 400；轮次上限 409。
+3. 客户端守门：策略表/度量卡纯函数；页签 zh/en 成对；StageShell 组件映射存在；夜间/评测卡渲染。
+4. 既有 `/api/review` 测试零回归；关联案例时 approve 闸门生效。
+5. 服务端 `tsc` 与新增 Vue 文件 `vue-tsc` 零错；相关 vitest 全绿。
 
 ## 5. 与既有能力的关系
 
@@ -139,6 +175,10 @@ SwarmStudio 已有 `/api/review` 行内评审、qgate 质量门、并行评审�
 3. **失败分支统一带 `error` 字段**：项目 tsconfig 为 `strict:false`，布尔字面量判别不会收窄；沿用 `review-store` 的 `'error' in result` 约定，避免类型层假绿。
 4. **审批只认人类 approve 且绑定当前 head commit**：Agent 审批记痕但不占名额；新提交或解冲突统一失效旧审批，防止旧结论被复用。
 5. **重要发现必须有证据**：`important` 缺证据直接 400；Agent 发现需独立验证多数确认才阻塞合并，人类发现视为已确认。
-6. **熔断先做“信号 → 状态 → 升档”**：本批只收紧审批门槛，不自动执行回滚；回滚仍由人或发布系统执行，避免越权。
-7. **存量问题延后由开关控制**：`deferPreexisting` 默认开；本批只落延后队列与 API，夜间扫描执行器留待后续接入。
+6. **熔断做“信号 → 状态 → 收紧”**：激活时对存量未结束案例升档并作废旧审批；不回滚代码，回滚由人或发布系统执行，避免越权。
+7. **存量问题延后由开关控制**：`deferPreexisting` 默认开；夜间扫描把延后队列按文件+bug 类归并成报告，定时器显式 `HERMES_REVIEW_NIGHTLY=on` 才启动，默认不偷跑。
 8. **配置采用 JSON 覆盖内置默认**：`HERMES_REVIEW_POLICY_FILE` > `<cwd>/config/review-policy.json`；坏配置回落默认，不允许把审批门槛清零。
+9. **评测打分器不执行任意命令**：只接收调用方导入的预测（`file/line`），避免服务端变成代码执行入口；自动跑模型留给上层评审 Agent 调度。
+10. **PR 导入只做归一化载荷**：不拉全量 diff、不回写 GitHub/GitLab，避免凭证与网络依赖进入治理域。
+11. **旧 `/api/review` 闸门按关联启用**：只有显式带 `caseId` 的评审才强制合并就绪度，未关联的既有评审保持原行为。
+12. **回滚登记不自动改代码**：只写事实、责任人、备注与 revert 信号；真正 revert 由发布系统或人执行。

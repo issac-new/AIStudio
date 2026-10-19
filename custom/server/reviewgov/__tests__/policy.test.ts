@@ -2,7 +2,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   classifyChangeRisk, countEffectiveApprovals, escalateTier, globToRegExp, invalidateApprovals,
+  tightenCaseRisk,
 } from '../policy'
+import { createCase } from '../convergence'
 import { DEFAULT_POLICY, type BreakerState, type ReviewApproval, type ReviewPolicy } from '../types'
 
 const policy: ReviewPolicy = {
@@ -123,5 +125,34 @@ describe('审批语义', () => {
     expect(countEffectiveApprovals(invalidated, 'c1').human).toBe(0)
     // 不改入参
     expect(approvals[0].invalidatedAt).toBeUndefined()
+  })
+})
+
+describe('熔断收紧存量案例', () => {
+  it('升档并作废旧审批；风险回落不撤销既有结论', () => {
+    const c = createCase({
+      caseId: 'c1',
+      title: 'x',
+      headCommit: 'c1',
+      changedPaths: ['packages/server/src/x.ts'],
+    }, policy)
+    const withApproval = { ...c, approvals: [approval({ commit: 'c1' })] }
+    const tightened = tightenCaseRisk(withApproval, policy, breaker(true))
+    expect(tightened.tightened).toBe(true)
+    expect(tightened.case.risk.tier).toBe('high')
+    expect(tightened.case.risk.requiredHumanApprovals).toBe(2)
+    expect(tightened.case.approvals[0].invalidatedBy).toBe('policy_tightened')
+    expect(tightened.case.policyTightenedAt).toBeTypeOf('number')
+
+    const relaxed = tightenCaseRisk(tightened.case, policy, breaker(false))
+    expect(relaxed.tightened).toBe(false)
+    expect(relaxed.case.risk.tier).toBe('high')
+  })
+
+  it('已合并/已放弃案例不被收紧', () => {
+    const c = createCase({ caseId: 'c2', title: 'x', changedPaths: ['packages/server/src/x.ts'] }, policy)
+    for (const state of ['merged', 'abandoned'] as const) {
+      expect(tightenCaseRisk({ ...c, state }, policy, breaker(true)).tightened).toBe(false)
+    }
   })
 })

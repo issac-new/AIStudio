@@ -22,6 +22,9 @@ import {
 // 评审治理子域（/api/review/gov/*）：风险分级/收敛规则/度量熔断。
 // 挂在既有评审路由下复用 patch 414 的挂载点，避免新增 B 类 patch。
 import { reviewGovRoutes } from '../reviewgov/reviewgov-controller'
+import { mergeReadiness } from '../reviewgov/convergence'
+import { loadReviewPolicy } from '../reviewgov/policy-config'
+import { loadCase } from '../reviewgov/store'
 
 const router = new Router({ prefix: '/api/review' })
 
@@ -30,6 +33,12 @@ function actorOf(ctx: Context): string | undefined {
   const user = (ctx.state as { user?: { id?: number | string; username?: string } } | undefined)?.user
   if (!user) return undefined
   return user.username ?? (user.id !== undefined ? String(user.id) : undefined)
+}
+
+/** koa 的 Request 类型未声明 body（由 bodyparser 运行时注入）；显式收窄避免类型误报。 */
+function bodyOf(ctx: Context): Record<string, unknown> {
+  const req = ctx.request as unknown as { body?: unknown }
+  return (req.body ?? {}) as Record<string, unknown>
 }
 
 /** 行内评论 file 归一（S-F）：项目相对路径；拒绝对路径/'..' 段/控制字符（路径穿越、盘符、
@@ -47,8 +56,8 @@ function normalizeCommentFile(file: string): string | null {
 }
 
 router.post('/', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
-  const { reviewId, domain, taskId, baseRef, headRef } = body
+  const body = bodyOf(ctx)
+  const { reviewId, domain, taskId, baseRef, headRef, caseId } = body
   if (typeof reviewId !== 'string' || !reviewId) {
     ctx.status = 400
     ctx.body = { ok: false, detail: 'reviewId 必填' }
@@ -63,6 +72,7 @@ router.post('/', async (ctx) => {
   const rec = openReview({
     reviewId, domain,
     taskId: typeof taskId === 'string' ? taskId : undefined,
+    ...(typeof caseId === 'string' && caseId ? { caseId } : {}),
     baseRef: typeof baseRef === 'string' ? baseRef : undefined,
     headRef: typeof headRef === 'string' ? headRef : undefined,
     ...(actor ? { actor } : {}),
@@ -71,7 +81,7 @@ router.post('/', async (ctx) => {
 })
 
 router.post('/:id/comments', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const body = bodyOf(ctx)
   const { commentId, file, line, body: text } = body
   if (typeof commentId !== 'string' || !commentId || typeof file !== 'string' || !file
       || typeof line !== 'number' || !Number.isInteger(line) || line < 1 || typeof text !== 'string' || !text) {
@@ -110,12 +120,35 @@ router.post('/:id/comments/:cid/resolve', async (ctx) => {
 })
 
 router.post('/:id/verdict', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const body = bodyOf(ctx)
   const verdict = body.verdict
   if (!isReviewVerdict(verdict)) {
     ctx.status = 400
     ctx.body = { ok: false, detail: 'verdict 须为 approve/request_changes/comment' }
     return
+  }
+  // 关联评审治理案例时，approve 必须通过案例的合并就绪度（人工名额/阻塞发现/检查全绿）。
+  if (verdict === 'approve') {
+    const rec = loadReview(ctx.params.id)
+    if (rec?.caseId) {
+      const govCase = loadCase(rec.caseId)
+      if (!govCase) {
+        ctx.status = 409
+        ctx.body = { ok: false, code: 'case_not_found', detail: `关联评审治理案例不存在：${rec.caseId}` }
+        return
+      }
+      const readiness = mergeReadiness(govCase, loadReviewPolicy())
+      if (!readiness.ready) {
+        ctx.status = 409
+        ctx.body = {
+          ok: false,
+          code: 'case_not_ready',
+          detail: `关联评审治理案例未就绪：${readiness.blockers.join('；')}`,
+          readiness,
+        }
+        return
+      }
+    }
   }
   const result = setVerdict(
     ctx.params.id, verdict as ReviewVerdict,
