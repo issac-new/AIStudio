@@ -154,6 +154,17 @@ submitted/approved --reject--> rejected
 
 本仓差异（有意为之）：不内置 Proposer/Aggregator 模型调用（候选由人或外部 agent 提供）；不实现匿名选择器（治理页需要可复核的候选标签）；用 Eval 运行的通过率/回归作为硬门（比源文的“选择后再评分”更严）；未移植常驻 24k 上限、技能触发、脚本编译、hooks schema 的完整树校验（这些留在 skillgov/qgate 面，避免双重事实源）。
 
+## 12a. 多文件树候选（2026-10-19 第二批）
+
+源文 harness 是整棵 c1..c8 树；第一批的候选只有单文件。本批把候选扩展为树：
+
+- **数据模型**：`Variant.files[]`（path/content/digest）+ `deletions[]`；`digest` 由 `treeDigest(files, deletions)` 派生。单文件形态保留兼容（`content` 字段不变）。
+- **树校验**（`validateTree`，源文 `tree.validate` 的映射）：技能必须有 `description:`、`name:` 与目录一致、且被常驻文本触发（否则=死技能）；脚本走真实 `python3 -m py_compile`（python3 缺席时不伪造判定）；hooks.json 校验 JSON 合法性、事件名（PreToolUse/PostToolUse/SessionStart）、`type: "command"` 与命令非空；常驻文本上限 24,000 字符；技能/常驻文件引用的脚本必须存在。树校验在**创建提案时**执行，失败即 400 带逐条 issues。
+- **写盘边界**：树候选只受面的 `writableRoots` 约束（文件名格式放宽——Harness² 树本就跨组件）；单文件候选仍受 `writablePattern` 约束。新建文件允许（新技能主场景），权限 0600。
+- **写盘与回滚三态**：apply 先解析全部路径（任一不可写整体不动），快照 `touched`（existed + oldContent + action + newContent）后执行新建/修改/删除；回滚逐文件核对晋级后状态，外部改动即拒，恢复=恢复旧内容/删除新建/恢复被删。
+- **门禁**：树提案的 apply 检查不再要求单文件 `targetPath`；树校验不合格在创建期就被拒，不进生命周期。
+- **前端**：候选表单支持单文件/多文件树切换，候选表展示文件清单与删除数。
+
 ## 12. 边界与挂账
 
 - 不实现自动生成候选的 LLM Proposer（源文 Proposer 属研究件）；候选内容由人或外部 agent 写入。

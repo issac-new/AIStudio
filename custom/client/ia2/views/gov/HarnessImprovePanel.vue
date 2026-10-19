@@ -66,7 +66,9 @@ const createForm = reactive({
   domain: 'general',
   budgetCapUsd: 5,
   evidenceRefs: '',
-  variants: [{ label: '候选 A', content: '' }] as Array<{ label: string; content: string }>,
+  variants: [{ label: '候选 A', tree: false, content: '', files: [{ path: '', content: '' }], deletions: '' }] as Array<{
+    label: string; tree: boolean; content: string; files: Array<{ path: string; content: string }>; deletions: string
+  }>,
 })
 
 const expForm = reactive({
@@ -191,8 +193,19 @@ function splitRefs(raw: string): string[] {
 
 async function create(): Promise<void> {
   const variants = createForm.variants
-    .filter((v) => v.content.trim())
-    .map((v, i) => ({ label: v.label.trim() || `候选 ${i + 1}`, content: v.content }))
+    .map((v, i) => {
+      const label = v.label.trim() || `候选 ${i + 1}`
+      if (v.tree) {
+        const files = v.files.filter((f) => f.path.trim()).map((f) => ({ path: f.path.trim(), content: f.content }))
+        if (files.length === 0) return null
+        return {
+          label, files,
+          deletions: v.deletions.split(/[,，\n]+/).map((x) => x.trim()).filter(Boolean),
+        }
+      }
+      return v.content.trim() ? { label, content: v.content } : null
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null)
   const ok = await act(() => createWorkbenchProposal({
     title: createForm.title.trim(),
     hypothesis: createForm.hypothesis.trim(),
@@ -211,16 +224,27 @@ async function create(): Promise<void> {
     createForm.targetPath = ''
     createForm.evidenceRefs = ''
     createForm.domain = 'general'
-    createForm.variants = [{ label: '候选 A', content: '' }]
+    createForm.variants = [{ label: '候选 A', tree: false, content: '', files: [{ path: '', content: '' }], deletions: '' }]
   }
 }
 
 function addVariant(): void {
-  createForm.variants.push({ label: `候选 ${String.fromCharCode(65 + createForm.variants.length)}`, content: '' })
+  createForm.variants.push({
+    label: `候选 ${String.fromCharCode(65 + createForm.variants.length)}`,
+    tree: false, content: '', files: [{ path: '', content: '' }], deletions: '',
+  })
 }
 
 function removeVariant(i: number): void {
   if (createForm.variants.length > 1) createForm.variants.splice(i, 1)
+}
+
+function addFile(v: { files: Array<{ path: string; content: string }> }): void {
+  v.files.push({ path: '', content: '' })
+}
+
+function removeFile(v: { files: Array<{ path: string; content: string }> }, i: number): void {
+  if (v.files.length > 1) v.files.splice(i, 1)
 }
 
 async function attachBaseline(p: ProposalDto): Promise<void> {
@@ -385,10 +409,31 @@ onMounted(() => void refresh())
           <label>{{ L.formEvidence }}<input v-model="createForm.evidenceRefs" :placeholder="'task:DEV-123, run:run-xxx'" /><small>{{ L.formEvidenceHint }}</small></label>
           <div class="hi__variantsForm">
             <div class="hi__meta">{{ L.formVariants }}</div>
-            <div v-for="(v, i) in createForm.variants" :key="i" class="hi__variantForm">
-              <input v-model="v.label" :placeholder="L.formVariant" />
-              <textarea v-model="v.content" rows="3" :placeholder="L.formVariantContent" :data-testid="`hi-create-variant-${i}`" />
-              <button type="button" class="hi__btn hi__btn--ghost" @click="removeVariant(i)">{{ L.removeVariant }}</button>
+            <div v-for="(v, i) in createForm.variants" :key="i" class="hi__variantForm hi__variantForm--col">
+              <div class="hi__row">
+                <input v-model="v.label" :placeholder="L.formVariant" />
+                <label class="hi__check">
+                  <input v-model="v.tree" type="checkbox" :data-testid="`hi-create-tree-${i}`" />
+                  {{ L.formModeTree }}
+                </label>
+                <button type="button" class="hi__btn hi__btn--ghost" @click="removeVariant(i)">{{ L.removeVariant }}</button>
+              </div>
+              <textarea
+                v-if="!v.tree" v-model="v.content" rows="3"
+                :placeholder="L.formVariantContent" :data-testid="`hi-create-variant-${i}`"
+              />
+              <div v-else class="hi__treeForm" :data-testid="`hi-create-treeform-${i}`">
+                <div v-for="(f, fi) in v.files" :key="fi" class="hi__fileRow">
+                  <input v-model="f.path" :placeholder="L.formFilePath" :data-testid="`hi-create-file-path-${i}-${fi}`" />
+                  <textarea v-model="f.content" rows="2" :placeholder="L.formFileContent" />
+                  <button type="button" class="hi__btn hi__btn--ghost" @click="removeFile(v, fi)">{{ L.removeFile }}</button>
+                </div>
+                <button type="button" class="hi__btn" @click="addFile(v)">{{ L.addFile }}</button>
+                <label>{{ L.formDeletions }}
+                  <textarea v-model="v.deletions" rows="2" :placeholder="'scripts/old.py'" />
+                  <small>{{ L.formDeletionsHint }}</small>
+                </label>
+              </div>
             </div>
             <button type="button" class="hi__btn" @click="addVariant">{{ L.addVariant }}</button>
           </div>
@@ -430,7 +475,15 @@ onMounted(() => void refresh())
               </thead>
               <tbody>
                 <tr v-for="v in p.variants" :key="v.id">
-                  <td>{{ v.label }} <small class="hi__meta">{{ v.id }}</small></td>
+                  <td>
+                    {{ v.label }} <small class="hi__meta">{{ v.id }}</small>
+                    <div v-if="v.files" class="hi__meta">{{ L.fileCount }} {{ v.files.length }}</div>
+                    <div v-if="v.files" class="hi__fileList">
+                      <code v-for="f in v.files.slice(0, 4)" :key="f.path">{{ f.path }}</code>
+                      <span v-if="v.files.length > 4" class="hi__meta">+{{ v.files.length - 4 }}</span>
+                    </div>
+                    <div v-if="v.deletions?.length" class="hi__del">-{{ v.deletions.length }} 删除</div>
+                  </td>
                   <td><span class="hi__add">+{{ v.diffSummary.added }}</span> / <span class="hi__del">-{{ v.diffSummary.removed }}</span></td>
                   <td>
                     <span v-if="probeOf(p, v.id)" class="hi__chip" :class="probeOf(p, v.id)?.status === 'recorded' ? 'hi__chip--ok' : 'hi__chip--muted'">
@@ -650,6 +703,14 @@ onMounted(() => void refresh())
 .hi__formRow, .hi__row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hi__variantsForm { display: flex; flex-direction: column; gap: 6px; }
 .hi__variantForm { display: grid; grid-template-columns: 120px 1fr auto; gap: 6px; align-items: start; }
+.hi__variantForm--col { display: flex; flex-direction: column; }
+.hi__treeForm { display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--border-color); border-radius: 7px; padding: 6px 8px; }
+.hi__treeForm label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+.hi__treeForm small { font-size: 10px; opacity: 0.6; }
+.hi__fileRow { display: grid; grid-template-columns: minmax(160px, 240px) 1fr auto; gap: 6px; align-items: start; }
+.hi__fileRow textarea { width: 100%; }
+.hi__fileList { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.hi__fileList code { font-size: 10px; }
 .hi__variantForm textarea { width: 100%; }
 .hi__empty { font-size: 12px; opacity: 0.65; margin: 0; }
 .hi__proposal { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }

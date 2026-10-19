@@ -323,7 +323,7 @@ export interface ResolvedTarget {
  * managed 面目标路径解析：只接受 writableRoots 内、命中 writablePattern、且真实存在
  * 的文件。绝对路径会转成相对 HERMES_HOME；`..` 一律拒绝；符号链接逃出 HOME 也拒绝。
  */
-export function resolveManagedTarget(key: SurfaceKey, input: string, home = hermesHome()): ResolvedTarget {
+export function resolveManagedTarget(key: SurfaceKey, input: string, home = hermesHome(), opts: { requireExists?: boolean; relaxPattern?: boolean } = {}): ResolvedTarget {
   const def = surfaceDef(key)
   if (!def) return { ok: false, error: `未知可编辑面：${key}` }
   if (def.applyMode !== 'managed' || !def.spec.writableRoots) {
@@ -343,20 +343,22 @@ export function resolveManagedTarget(key: SurfaceKey, input: string, home = herm
   if (!def.spec.writableRoots.some((root) => rel === root || rel.startsWith(`${root}/`))) {
     return { ok: false, error: `目标路径必须位于 ${def.spec.writableRoots.join(' / ')} 下` }
   }
-  if (def.spec.writablePattern && !def.spec.writablePattern.test(rel)) {
+  if (!opts.relaxPattern && def.spec.writablePattern && !def.spec.writablePattern.test(rel)) {
     return { ok: false, error: '目标文件名不符合该面的可写格式' }
   }
   const abs = resolve(homeAbs, rel)
   const inside = relative(homeAbs, abs)
   if (inside.startsWith('..') || inside === '') return { ok: false, error: '目标路径越出 HERMES_HOME' }
-  if (!existsSync(abs)) return { ok: false, error: '目标文件不存在（本工作台不创建新文件）' }
-  try {
-    const real = realpathSync(abs)
-    const realHome = realpathSync(homeAbs)
-    const realRel = relative(realHome, real)
-    if (realRel.startsWith('..')) return { ok: false, error: '目标文件经符号链接逃出 HERMES_HOME' }
-  } catch (e) {
-    return { ok: false, error: `目标文件不可解析：${e instanceof Error ? e.message : String(e)}` }
+  if (opts.requireExists !== false && !existsSync(abs)) return { ok: false, error: '目标文件不存在（单文件写盘不创建新文件；树候选走 applyProposalTree）' }
+  if (existsSync(abs)) {
+    try {
+      const real = realpathSync(abs)
+      const realHome = realpathSync(homeAbs)
+      const realRel = relative(realHome, real)
+      if (realRel.startsWith('..')) return { ok: false, error: '目标文件经符号链接逃出 HERMES_HOME' }
+    } catch (e) {
+      return { ok: false, error: `目标文件不可解析：${e instanceof Error ? e.message : String(e)}` }
+    }
   }
   return { ok: true, rel, abs }
 }

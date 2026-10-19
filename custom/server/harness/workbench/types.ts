@@ -74,13 +74,24 @@ export type ProposalStatus =
 
 export type ProbeMode = 'parallel' | 'sequential'
 
+export interface VariantFile {
+  /** 相对 HERMES_HOME 的路径（如 profiles/p1/SOUL.md）。 */
+  path: string
+  content: string
+  digest: string
+}
+
 export interface Variant {
   id: string
   label: string
+  /** 单文件候选（兼容旧形态）：等于 files[0].content。 */
   content: string
   digest: string
   /** 相对基线的行级摘要（+新增/-删除）。 */
   diffSummary: { added: number; removed: number; unchanged: number }
+  /** 多文件候选：files 为新增/修改，deletions 为删除。digest 由 files+deletions 派生。 */
+  files?: VariantFile[]
+  deletions?: string[]
 }
 
 export interface RegressionEvidence {
@@ -188,6 +199,8 @@ export interface Proposal {
   title: string
   hypothesis: string
   surfaceKey: SurfaceKey
+  /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
+  treeRoot?: string | null
   /** managed 面的相对 HERMES_HOME 目标文件；advisory 面只作锚点展示。 */
   targetPath: string | null
   risk: RiskTier

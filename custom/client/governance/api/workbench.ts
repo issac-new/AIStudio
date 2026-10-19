@@ -35,12 +35,20 @@ export interface SurfaceDto {
   note: string
 }
 
+export interface VariantFileDto {
+  path: string
+  content: string
+  digest: string
+}
+
 export interface VariantDto {
   id: string
   label: string
   content: string
   digest: string
   diffSummary: { added: number; removed: number; unchanged: number }
+  files?: VariantFileDto[]
+  deletions?: string[]
 }
 
 export interface RegressionDto {
@@ -135,6 +143,7 @@ export interface ProposalDto {
   hypothesis: string
   surfaceKey: SurfaceKey
   targetPath: string | null
+  treeRoot?: string | null
   risk: 'low' | 'medium' | 'high'
   mode: 'parallel' | 'sequential'
   status: ProposalStatus
@@ -224,7 +233,8 @@ export interface CreateProposalInput {
   budgetCapUsd: number
   evidenceRefs: string[]
   experienceIds?: string[]
-  variants: Array<{ label?: string; content: string }>
+  treeRoot?: string
+  variants: Array<{ label?: string; content?: string; files?: Array<{ path: string; content: string }>; deletions?: string[] }>
 }
 
 export function createWorkbenchProposal(input: CreateProposalInput): Promise<{ ok: boolean; proposal: ProposalDto }> {

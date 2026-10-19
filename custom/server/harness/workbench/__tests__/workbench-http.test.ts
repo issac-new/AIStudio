@@ -216,4 +216,67 @@ describe('Harness² 工作台 HTTP', () => {
     expect(composed.approval.variantSetDigest).toMatch(/^[0-9a-f]{64}$/)
     expect(composed.approval.approvalLogId).toBeTruthy()
   })
+
+  it('树候选：缺 description 的技能被树校验拒绝（400 带 issues）', async () => {
+    const res = await post('/api/harness/workbench/proposals', {
+      title: '坏树', hypothesis: 'h', surfaceKey: 'skills',
+      evidenceRefs: ['task:t1'],
+      variants: [{
+        label: 'bad',
+        files: [
+          { path: 'profiles/p1/SOUL.md', content: '你是工程师。load the `new_skill` skill.' },
+          { path: 'skills/new_skill/SKILL.md', content: '---\nname: new_skill\n---\n' },
+        ],
+      }],
+    })
+    expect(res.status).toBe(400)
+    expect((res.body.blockers as any[]).some((b) => b.code === 'skill_missing_description')).toBe(true)
+  })
+
+  it('树候选全链：多文件晋级写盘（新建+修改）→ 回滚三态恢复', async () => {
+    process.env.HARNESS2_APPLY = '1'
+    const soulNew = '你是工程师。When 审查代码, load the `new_skill` skill.'
+    const skillNew = '---\nname: new_skill\ndescription: 新技能\n---\n# new_skill\n'
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '新增审查技能', hypothesis: '把审查流程沉淀为技能',
+      surfaceKey: 'skills', treeRoot: '',
+      budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{
+        label: '候选 A',
+        files: [
+          { path: 'profiles/p1/SOUL.md', content: soulNew },
+          { path: 'skills/new_skill/SKILL.md', content: skillNew },
+        ],
+      }],
+    })
+    expect(created.status).toBe(200)
+    const v = created.body.proposal.variants[0]
+    expect(v.files).toHaveLength(2)
+    expect(v.digest).toMatch(/^[0-9a-f]{64}$/)
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/submit`, {})).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'approve', actor: 'reviewer' })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/probes`, {})).status).toBe(200)
+    const probed = await get('/api/harness/workbench/proposals')
+    const proposal = probed.body.proposals.find((p: any) => p.id === id)
+    for (const probe of proposal.probes) {
+      const rec = await post(`/api/harness/workbench/proposals/${id}/probes/${probe.id}/record`, {
+        evalRunId: 'run-probe', regressionRunId: 'run-reg',
+      })
+      expect(rec.status).toBe(200)
+    }
+    expect((await post(`/api/harness/workbench/proposals/${id}/compose`, { variantId: 'v1', rationale: '证据充分' })).status).toBe(200)
+    const promoted = await post(`/api/harness/workbench/proposals/${id}/promote`, { apply: true, actor: 'reviewer' })
+    expect(promoted.status).toBe(200)
+    expect(promoted.body.applied).toBe(true)
+    const { readFileSync, existsSync } = await import('node:fs')
+    expect(readFileSync(join(process.env.HERMES_HOME!, 'profiles/p1/SOUL.md'), 'utf8')).toBe(soulNew)
+    expect(readFileSync(join(process.env.HERMES_HOME!, 'skills/new_skill/SKILL.md'), 'utf8')).toBe(skillNew)
+    const rolled = await post(`/api/harness/workbench/proposals/${id}/rollback`, { reason: '实验结束' })
+    expect(rolled.status).toBe(200)
+    expect(readFileSync(join(process.env.HERMES_HOME!, 'profiles/p1/SOUL.md'), 'utf8')).toBe('old persona')
+    expect(existsSync(join(process.env.HERMES_HOME!, 'skills/new_skill/SKILL.md'))).toBe(false)
+    delete process.env.HARNESS2_APPLY
+  })
 })
