@@ -43,7 +43,9 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 // 数据/动作自持（IdeCliSessions），不进 chatStore（避免伪会话 ID 打断打开链）。
 import IdeCliSessions from '../components/IdeCliSessions.vue'
 // 项目归类（2026-10-19 组织模式修正）：内部工作区/空 → 未绑项目；真实路径 → 目录名
-import { sessionProjectOf } from '../utils/sessionProjects'
+import { sessionProjectOf, cliProjectOf, filterCliSessions } from '../utils/sessionProjects'
+import { fetchCliSessions, launchDevtool, type CliSession } from '../api/devtools'
+import { showToast } from '../utils/toast'
 // 2026-10-19 视图语义修正批：本地视图文案（覆盖词表 view_*——词表值「已完成」
 // 名不副实：done 桶口径是「超过 24h 无活动」而非任务完成，会话无完成态字段，
 // 诚实口径=「更早」）。title 写明口径，避免再次误读。
@@ -186,10 +188,33 @@ interface TaskGroup {
   categoryId?: number | null
   workspace?: string
   sessions: Session[]
+  /** 混排的 zcode CLI 会话（项目/时间线组织；分组模式 CLI 走独立段） */
+  cli?: CliSession[]
 }
 const collapsedGroups = ref<Set<string>>(new Set())
-// zcode CLI 分组：默认展开；计数=当前视图/搜索过滤后的条数（组件 emit）
-const cliCount = ref(0)
+// ── zcode CLI 会话（单一数据源在侧栏，组件/混排共用）──────────────────────
+// 2026-10-19「组织取 zcode 信息」批：CLI 会话库的 directory 是 zcode 的权威
+// 项目路径——「项目」「时间线」组织把 CLI 会话按同一维度混排；「分组」模式
+// zcode 无自建分组存储，保持独立段。
+const cliAll = ref<CliSession[]>([])
+const cliFiltered = computed(() => filterCliSessions(cliAll.value, ide.sidebar.sessionView, activeQuery.value, Date.now()))
+const cliCount = computed(() => cliFiltered.value.length)
+async function loadCli(): Promise<void> {
+  try { cliAll.value = (await fetchCliSessions(30)).sessions } catch { cliAll.value = [] }
+}
+onMounted(() => { void loadCli() })
+async function resumeCli(c: CliSession): Promise<void> {
+  try { await launchDevtool('terminal-zcode', c.directory || undefined) }
+  catch (e) { showToast((e as Error).message, 'error') }
+}
+async function copyCliId(c: CliSession): Promise<void> {
+  try { await navigator.clipboard.writeText(c.id); showToast('会话 ID 已复制', 'info') }
+  catch { showToast('剪贴板不可用——请手动复制', 'error') }
+}
+function cliDirShort(dir: string): string {
+  const parts = dir.split('/').filter(Boolean)
+  return parts.slice(-2).join('/') || dir
+}
 function toggleGroup(key: string): void {
   const next = new Set(collapsedGroups.value)
   if (next.has(key)) next.delete(key)
@@ -245,8 +270,11 @@ const taskGroups = computed<TaskGroup[]>(() => {
         sessions: rest
           .filter(s => { const age = now - (s.updatedAt || 0); return age >= tier.min && age < tier.max })
           .sort(byUpdated),
+        // zcode CLI 会话同维度分层（时间口径=timeUpdated）
+        cli: cliFiltered.value.filter(c => { const age = now - c.timeUpdated; return age >= tier.min && age < tier.max })
+          .sort((a, b) => b.timeUpdated - a.timeUpdated),
       }))
-      .filter(g => g.sessions.length > 0)
+      .filter(g => g.sessions.length > 0 || (g.cli?.length ?? 0) > 0)
   }
   if (effectiveOrganize === 'grouped') {
     const groups: TaskGroup[] = categories.value.map(c => ({
@@ -281,20 +309,50 @@ const taskGroups = computed<TaskGroup[]>(() => {
     hit.sessions.push(s)
     byProject.set(key, hit)
   }
-  return [...byProject.entries()]
-    .map(([key, g]) => ({
+  // zcode CLI 会话按其 directory（zcode 权威项目路径）并入同名组
+  const cliByProj = new Map<string, CliSession[]>()
+  for (const c of cliFiltered.value) {
+    const proj = cliProjectOf(c)
+    const k = proj ?? NO_PROJECT_KEY
+    const list = cliByProj.get(k) ?? []
+    list.push(c)
+    cliByProj.set(k, list)
+  }
+  const seen = new Set<string>()
+  const groups = [...byProject.entries()]
+    .map(([key, g]) => {
+      seen.add(key)
+      return {
+        key: `proj-${key}`,
+        label: g.label,
+        workspace: key === NO_PROJECT_KEY ? '' : key,
+        sessions: g.sessions.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
+        cli: (cliByProj.get(key) ?? []).sort((a, b) => b.timeUpdated - a.timeUpdated),
+      }
+    })
+  // 只有 CLI 会话的项目（IDE 无会话）也成组——zcode 项目完整呈现
+  for (const [key, list] of cliByProj) {
+    if (seen.has(key) || list.length === 0) continue
+    groups.push({
       key: `proj-${key}`,
-      label: g.label,
+      label: key === NO_PROJECT_KEY ? (zh.value ? '未绑项目' : 'No project') : key,
       workspace: key === NO_PROJECT_KEY ? '' : key,
-      sessions: g.sessions.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
-    }))
-    // 项目按最新会话逆序；「未绑项目」恒置底（有内容的兜底桶不抢位）
+      sessions: [],
+      cli: list.slice().sort((a, b) => b.timeUpdated - a.timeUpdated),
+    })
+  }
+  // 项目按最新会话逆序（IDE 与 CLI 取较新）；「未绑项目」恒置底
+  return groups
     .sort((a, b) => {
       if (a.key === `proj-${NO_PROJECT_KEY}`) return 1
       if (b.key === `proj-${NO_PROJECT_KEY}`) return -1
-      return (b.sessions[0]?.updatedAt || 0) - (a.sessions[0]?.updatedAt || 0)
+      const at = Math.max(a.sessions[0]?.updatedAt || 0, a.cli?.[0]?.timeUpdated || 0)
+      const bt = Math.max(b.sessions[0]?.updatedAt || 0, b.cli?.[0]?.timeUpdated || 0)
+      return bt - at
     })
 })
+
+const effectiveOrganizeMode = computed(() => (ide.sidebar.sessionView === 'workspace' ? 'project' : ide.sidebar.organize))
 
 // ---- 归档区 ----
 const showDeleteAllConfirm = ref(false)
@@ -680,17 +738,33 @@ onMounted(async () => {
                 </button>
               </NDropdown>
             </li>
+            <!-- zcode CLI 会话混排（项目/时间线组织取 zcode directory/时间）：
+                 行=徽标+标题+工作区+终端继续；与 IDE 会话同组同维度。 -->
+            <li
+              v-for="c in g.cli ?? []"
+              :key="`cli-${c.id}`"
+              class="ide-taskbar__item ide-taskbar__item--cli"
+              :data-testid="`ide-task-cli-${c.id}`"
+            >
+              <button type="button" class="ide-taskbar__item-main" :title="`${c.title} · ${c.directory}`" @click="resumeCli(c)">
+                <span class="ide-taskbar__mode-badge is-cli" title="zcode CLI 会话（终端）">zcode</span>
+                <span class="ide-taskbar__item-title">{{ c.title }}</span>
+                <span class="ide-taskbar__item-time">{{ c.directory ? cliDirShort(c.directory) : '' }}</span>
+              </button>
+              <button type="button" class="ide-taskbar__group-btn" :title="`复制会话 ID：${c.id}`" @click="copyCliId(c)">⧉</button>
+            </li>
           </ul>
         </section>
 
-        <section class="ide-taskbar__section" data-testid="ide-task-zcode-cli">
+        <!-- 分组模式下 zcode 无自建分组存储 → CLI 保持独立段；项目/时间线模式已混排进组 -->
+        <section v-if="effectiveOrganizeMode === 'grouped'" class="ide-taskbar__section" data-testid="ide-task-zcode-cli">
           <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="toggleGroup('zcode-cli')">
             <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': collapsedGroups.has('zcode-cli') }">▾</span>
             <span class="ide-taskbar__section-title">zcode CLI 会话</span>
             <span v-if="cliCount" class="ide-taskbar__section-count">{{ cliCount }}</span>
           </header>
           <div v-show="!collapsedGroups.has('zcode-cli')" class="ide-taskbar__cli-body">
-            <IdeCliSessions :boxed="false" :view="ide.sidebar.sessionView" :query="activeQuery" @count="cliCount = $event" />
+            <IdeCliSessions :boxed="false" :view="ide.sidebar.sessionView" :query="activeQuery" :sessions="cliFiltered" />
           </div>
         </section>
 
@@ -1104,6 +1178,10 @@ onMounted(async () => {
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
 .ide-taskbar__group-hint { margin: 2px 4px 6px; font-size: 10.5px; color: var(--text-muted); }
+.ide-taskbar__item--cli .ide-taskbar__mode-badge.is-cli {
+  color: var(--accent-info, #3b82f6); border: 1px solid var(--accent-info, #3b82f6); border-radius: 6px;
+  font-size: 9px; padding: 0 4px; flex-shrink: 0;
+}
 /* zcode CLI 分组体：内滚上限——侧栏无滚动容器（overflow visible），12 行全展
    会画穿侧栏底、被状态栏背景遮住（2026-10-19 左下角遮罩走查实锚：
    cliSec.bottom=1204 vs sidebar.bottom=871）。上限 ≈7 行，其余组内滚动。 */
