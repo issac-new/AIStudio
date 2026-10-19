@@ -57,6 +57,8 @@ export const STAGE_TABS: Readonly<Record<StageNo, readonly StageTabMeta[]>> = {
     { key: 'audit', zh: '审计与变更', en: 'Audit & changes', component: 'audit' },
     // 2026-10-19 评审治理批：风险分档/收敛规则/度量熔断（Anthropic Code Review 文章吸收）
     { key: 'reviewGov', zh: '评审治理', en: 'Review governance', component: 'reviewGov' },
+    // 2026-10-19 Harness² 调研轮：提案-探测-组合-晋级-回滚的改进闭环
+    { key: 'improve', zh: '改进实验', en: 'Improvement experiments', component: 'improve' },
     { key: 'metrics', zh: '度量检查', en: 'Metrics', component: 'metrics' },
     { key: 'docs', zh: '文档评审', en: 'Doc review', component: 'docs' },
     { key: 'gateLog', zh: '质量门记录', en: 'Gate records', component: 'gateLog' },
