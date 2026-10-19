@@ -55,8 +55,20 @@ describe('IdeLandingHero 渲染与交互', () => {
     const w = mount(IdeLandingHero, { props: { tasks: [] } })
     expect(w.find('[data-testid="ide-landing-enter"]').exists()).toBe(true)
     expect(w.text()).toContain('暂无任务')
+    expect(w.text()).toContain('从看板选一张卡')
     await w.find('[data-testid="ide-landing-enter"]').trigger('click')
     expect(w.emitted('enter')).toHaveLength(1)
+  })
+
+  it('空板给「从看板选一张任务」出口，emit board（2026-10-19 P1-4）', async () => {
+    const w = mount(IdeLandingHero, { props: { tasks: [] } })
+    const board = w.find('[data-testid="ide-landing-board"]')
+    expect(board.exists()).toBe(true)
+    await board.trigger('click')
+    expect(w.emitted('board')).toHaveLength(1)
+    // 有最近任务时不显示该出口（速选已覆盖）
+    const withTasks = mount(IdeLandingHero, { props: { tasks } })
+    expect(withTasks.find('[data-testid="ide-landing-board"]').exists()).toBe(false)
   })
 })
 

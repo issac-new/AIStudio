@@ -50,10 +50,10 @@ export async function bootstrapClient(app: App): Promise<void> {
   registrations.push(import('../../custom/client/ia2').then(m => m.registerIa2(app)))
 
   // Eval Studio 评测工作台（M2，spec 2026-10-07-eval-studio-design.md）：默认关，
-  // VITE_CUSTOM_EVAL=true 再开。导航入口（FlowNavPanel 内 EvalNavEntry）同经 features.eval 门控。
-  if (features.eval) {
-    registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
-  }
+  // VITE_CUSTOM_EVAL=true 再开。路由无条件注册（2026-10-19 P1-5）：关闭时由
+  // IaFeatureShell 渲染「未启用」说明页，深链不再被路由兜底静默送回 /app；
+  // 导航入口仍由 FlowNavPanel 内的 features.eval 门控隐藏。
+  registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
 
   // 技能安全扫描（Skill 三段治理第一段，2026-10-13 挂账清偿续批）：默认开，
   // VITE_CUSTOM_SKILLGOV=false 显式关。导航入口（FlowNavPanel 内 SkillgovNavEntry）。

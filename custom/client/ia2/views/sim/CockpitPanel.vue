@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/views/sim/CockpitPanel.vue -->
 <!-- 轻量驾驶条（B10，R1/R6——Q1 镜头层解体裁定的「值班台轻量随 B」落位）：
-     挂仿真中心壳头、任意签常驻的三徽标行（运行模式档色点/遗留项清算灯/服务异常数）。
+     挂全流程推演壳头、任意签常驻的三徽标行（运行模式档色点/遗留项清算灯/服务异常数）。
      与旗舰签 1（OverviewPanel 全量总览屏）同端点不同密度——run 口径与四个面板
      签同源（useRunContext：query 优先+记忆回落），此处只读不自建输入；无 run=
      提示去签 1。点击整条跳签 1 看全量。 -->
@@ -15,7 +15,7 @@ import { runDisplayName } from '../../run-display'
 const router = useRouter()
 
 // run 口径与四个面板签同源（useRunContext）：query.run 优先，无 query 回落最近
-// 一次成功读取的记忆——本条挂在仿真中心壳头与②需求阶段页，两处都不该要求手打目录名
+// 一次成功读取的记忆——本条挂在全流程推演壳头与②需求阶段页，两处都不该要求手打目录名
 const { run } = useRunContext()
 const state = ref<RunStateResponse | null>(null)
 const failServices = ref<number | null>(null)
