@@ -167,7 +167,7 @@ for _cfg in "$HERMES_ROOT/config.yaml" "$HERMES_ROOT"/profiles/*/config.yaml; do
 import sys, re, pathlib
 p = pathlib.Path(sys.argv[1]); s = p.read_text(encoding='utf-8')
 s = s.replace('provider: builtin:bigmodel-coding-plan', 'provider: custom:cc-switch')
-s = re.sub(r'^(\s*)default: GLM-5\.3\s*$', r'default: glm-5.3-flash', s, count=1, flags=re.M)
+s = re.sub(r'^(\s*)default: GLM-5\.3\s*$', lambda m: m.group(1) + 'default: glm-5.3-flash', s, count=1, flags=re.M)
 p.write_text(s, encoding='utf-8')
 PYN
     _norm_cnt=$((_norm_cnt+1))
