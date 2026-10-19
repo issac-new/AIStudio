@@ -56,12 +56,41 @@ const stepRows = computed<StepRow[]>(() =>
 const gateRows = computed(() =>
   runState.value ? resolveGateRows(runState.value.gates, runState.value.steps, issues.value ? issues.value.lines : null) : [])
 
+// 2026-10-19 P2 批（全页面走查 §四 P2-6）：七阶段默认只展开当前阶段，
+// 其余折叠——首屏不再被 26 行步骤表压满；右栏改为粘性固定。
+const openActs = ref<Set<number>>(new Set())
+const userToggledAct = ref(false)
+
 const curAct = computed(() => {
   const dones = stepRows.value.filter(r => r.state === 'done')
   if (dones.length === 0) return 1
   const maxNo = Math.max(...dones.map(d => d.no))
   return ACTS_7.find(a => maxNo >= a.from && maxNo <= a.to)?.act ?? 1
 })
+
+watch(curAct, (act) => {
+  if (!userToggledAct.value) openActs.value = new Set([act])
+}, { immediate: true })
+
+function isActOpen(act: number): boolean {
+  return openActs.value.has(act)
+}
+function toggleAct(act: number): void {
+  userToggledAct.value = true
+  const next = new Set(openActs.value)
+  if (next.has(act)) next.delete(act)
+  else next.add(act)
+  openActs.value = next
+}
+/** 阶段头右侧的完成度（已执行步/总步）。 */
+function actStat(from: number, to: number): string {
+  const rows = stepRows.value.filter(r => r.no >= from && r.no <= to)
+  const done = rows.filter(r => r.state === 'done').length
+  return `${done}/${rows.length}`
+}
+function actRows(from: number, to: number): StepRow[] {
+  return stepRows.value.filter(r => r.no >= from && r.no <= to)
+}
 
 const gatesPassed = computed(() => gateRows.value.filter(g => g.passed).length)
 const stepsDoneComp = computed(() => countStepsDone(stepRows.value))
@@ -226,39 +255,47 @@ function goSupervision(): void {
             <thead><tr><th>步</th><th>全名</th><th>操作者</th><th>状态</th><th>凭证</th></tr></thead>
             <tbody>
               <!-- V3 排版：七幕分段头行（步号连续同幕只出一条头） -->
-              <tr
-                v-for="g in stepGroups"
-                :key="`grp-${g.act}`"
-                class="ov__act-head"
-                :data-testid="`ov-step-acthead-${g.act}`"
-              >
-                <td colspan="5">
-                  <span class="ov__act-head-name">{{ g.name }}</span>
-                  <span class="ov__act-head-range">步 {{ g.from }}-{{ g.to }}</span>
-                </td>
-              </tr>
-              <tr
-                v-for="row in stepRows"
-                :key="row.no"
-                class="ov__step"
-                :class="`ov__step--${row.state}`"
-                :data-testid="`ov-step-row-${row.no}`"
-                role="button"
-                @click="openStepDrawer(row)"
-              >
-                <td class="ov__step-no">{{ row.no }}</td>
-                <td class="ov__step-name">{{ row.name }}</td>
-                <td class="ov__step-op" :title="row.operator">{{ row.operator }}</td>
-                <td class="ov__step-state">
-                  <template v-if="row.state === 'done'">✓ {{ row.at }}</template>
-                  <template v-else-if="row.state === 'active'">进行中</template>
-                  <template v-else>未达</template>
-                </td>
-                <td class="ov__step-cred">
-                  <SimDualCredential v-if="row.commit" :commit="row.commit" />
-                  <span v-else class="ov__cred-none">—</span>
-                </td>
-              </tr>
+              <template v-for="g in stepGroups" :key="`grp-${g.act}`">
+                <tr class="ov__act-head" :data-testid="`ov-step-acthead-${g.act}`">
+                  <td colspan="5">
+                    <button
+                      type="button"
+                      class="ov__act-head-btn"
+                      :aria-expanded="isActOpen(g.act)"
+                      :data-testid="`ov-step-acttoggle-${g.act}`"
+                      @click="toggleAct(g.act)"
+                    >
+                      <span class="ov__act-chev" aria-hidden="true">{{ isActOpen(g.act) ? '▾' : '▸' }}</span>
+                      <span class="ov__act-head-name">{{ g.name }}</span>
+                      <span class="ov__act-head-range">步 {{ g.from }}-{{ g.to }}</span>
+                      <span class="ov__act-head-stat">{{ actStat(g.from, g.to) }}</span>
+                    </button>
+                  </td>
+                </tr>
+                <tr
+                  v-for="row in actRows(g.from, g.to)"
+                  v-show="isActOpen(g.act)"
+                  :key="row.no"
+                  class="ov__step"
+                  :class="`ov__step--${row.state}`"
+                  :data-testid="`ov-step-row-${row.no}`"
+                  role="button"
+                  @click="openStepDrawer(row)"
+                >
+                  <td class="ov__step-no">{{ row.no }}</td>
+                  <td class="ov__step-name">{{ row.name }}</td>
+                  <td class="ov__step-op" :title="row.operator">{{ row.operator }}</td>
+                  <td class="ov__step-state">
+                    <template v-if="row.state === 'done'">✓ {{ row.at }}</template>
+                    <template v-else-if="row.state === 'active'">进行中</template>
+                    <template v-else>未达</template>
+                  </td>
+                  <td class="ov__step-cred">
+                    <SimDualCredential v-if="row.commit" :commit="row.commit" />
+                    <span v-else class="ov__cred-none">—</span>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
 
@@ -369,7 +406,15 @@ function goSupervision(): void {
 .ov__tick { width: 8px; height: 8px; border-radius: 2px; background: var(--ia-border-control, var(--border-color)); }
 .ov__tick--done { background: var(--ia-fresh); }
 .ov__tick--active { background: var(--ia-stale); }
-.ov__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
+.ov__grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.ov__act-head-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  border: none; background: none; color: inherit; font: inherit;
+  padding: 2px 4px; cursor: pointer; text-align: left;
+}
+.ov__act-head-btn:hover { color: var(--accent-primary); }
+.ov__act-chev { width: 10px; font-size: 10px; color: var(--text-muted); }
+.ov__act-head-stat { margin-left: auto; font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
 .ov__main { min-width: 0; overflow-x: auto; }
 /* 26 步表 5 列在 2/3 轨道里会横向溢出盖住右栏（2026-10-19 走查实证）：给表最小宽+容器横向滚动，右栏不再被压字。 */
 .ov__table { min-width: 760px; }
@@ -394,7 +439,12 @@ function goSupervision(): void {
 .ov__dl-item--uncovered { color: var(--ia-compensated); }
 .ov__dl-label { flex: none; }
 .ov__dl-file, .ov__dl-note { color: var(--text-muted); font-size: 10px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov__side { display: flex; flex-direction: column; gap: 10px; }
+.ov__side {
+  display: flex; flex-direction: column; gap: 10px;
+  /* P2-6：右栏粘性固定——左栏长表滚动时六道门/自动代处理/观察窗入口仍在视野 */
+  position: sticky; top: 8px; align-self: start;
+  max-height: calc(100vh - 160px); overflow-y: auto;
+}
 .ov__side-box { border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; }
 .ov__gates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ov__gate { display: flex; align-items: center; gap: 8px; justify-content: space-between; }

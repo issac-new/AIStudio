@@ -195,6 +195,17 @@ const visibleGroups = computed(() => GROUPS
 
 const total = computed(() => visibleGroups.value.reduce((n, g) => n + g.rows.length, 0))
 
+// 2026-10-19 P2 批（走查 §四 P2-8）：类型页签带计数——先看数量再决定钻哪一类。
+const counts = computed<Record<SearchType, number>>(() => {
+  const map = { all: 0, sessions: 0, tasks: 0, runs: 0, docs: 0, people: 0 } as Record<SearchType, number>
+  for (const g of GROUPS) {
+    const n = g.rows().length
+    map[g.key] = n
+    map.all += n
+  }
+  return map
+})
+
 function reset(): void {
   q.value = ''
   workspaceFilter.value = ''
@@ -234,7 +245,7 @@ function reset(): void {
         :aria-selected="type === t"
         :data-testid="`search-type-${t}`"
         @click="type = t"
-      >{{ { all: zh ? '全部' : 'All', sessions: zh ? '会话' : 'Chats', tasks: zh ? '任务' : 'Tasks', runs: zh ? '运行' : 'Runs', docs: zh ? '文档' : 'Docs', people: zh ? '人员' : 'People' }[t] }}</button>
+      >{{ { all: zh ? '全部' : 'All', sessions: zh ? '会话' : 'Chats', tasks: zh ? '任务' : 'Tasks', runs: zh ? '运行' : 'Runs', docs: zh ? '文档' : 'Docs', people: zh ? '人员' : 'People' }[t] }}<span v-if="counts[t]" class="srch__tab-n" :data-testid="`search-count-${t}`">{{ counts[t] }}</span></button>
     </nav>
 
     <div class="srch__filters">
@@ -314,6 +325,7 @@ function reset(): void {
 .srch__clear { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 15px; }
 .srch__count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .srch__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+.srch__tab-n { margin-left: 4px; font-size: 10px; opacity: .72; }
 .srch__tab { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 7px 11px; font-family: inherit; font-size: 12.5px; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
 .srch__tab:hover { color: var(--text-primary); }
 .srch__tab--on { color: var(--accent-primary); border-bottom-color: var(--accent-primary); font-weight: 600; }
