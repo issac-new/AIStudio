@@ -133,6 +133,19 @@ export interface EvalSet {
   tasks: EvalTask[]
 }
 
+/**
+ * 不可变考卷快照（2026-10-19 收口轮）：每次改题/回流/扩产追加一版。
+ * 运行钉版本后，复评按快照判分——改题不会把历史运行的解释口径一起改掉。
+ */
+export interface EvalSetRevision {
+  setId: string
+  revision: number
+  contentHash: string
+  tasks: EvalTask[]
+  createdAt: number
+  createdBy?: string
+}
+
 /** 集元数据（密封契约：list 面永不携带题目内容）。 */
 export interface EvalSetMeta {
   id: string
@@ -293,6 +306,8 @@ export interface EvalRun {
   setId: string
   /** 运行时集内容指纹锚点（百度轮 B1）：报告期与当前集指纹比对，不等=集已改版，读数不可直接对比。 */
   setHash?: string
+  /** 运行时考卷版本（收口轮）：复评按该版本快照判分；历史运行缺省。 */
+  setRevision?: number
   target: EvalRunTarget
   k: number
   status: RunStatus
@@ -303,6 +318,31 @@ export interface EvalRun {
   createdAt: number
   createdBy?: string
   note?: string
+}
+
+/** 处置单：评测失败样本的修复追踪，关闭由同卷复评结果机械决定。 */
+export type RemediationStatus = 'open' | 'closed'
+
+export interface RemediationRecord {
+  id: string
+  runId: string
+  setId: string
+  /** 建单时锁定的考卷指纹与版本：复评必须两者一致。 */
+  setHash: string
+  setRevision?: number
+  taskId: string
+  sampleIdx?: number
+  status: RemediationStatus
+  rerunCount: number
+  rerunRunId?: string
+  /** 最近一次复评该任务是否通过（原始事实；是否关闭还要看风险否决）。 */
+  lastRerunPassed?: boolean
+  note?: string
+  owner?: string
+  createdAt: number
+  createdBy?: string
+  updatedAt: number
+  closedAt?: number
 }
 
 /** 运行报告对外形态：密封集只回聚合（防探测：逐条对错可被重试探测泄露）。 */

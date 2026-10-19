@@ -71,7 +71,7 @@
 
 - [ ] 三个写端点对密封集回摘要。
 - [ ] 正则空证据返回 unknown 并写理由。
-- [ ] 测试：密封写响应无 tâches/attempts；空证据红线不 clean。
+- [ ] 测试：密封写响应无 tasks/attempts；空证据红线不 clean。
 
 ### Task 5: 客户端处置面板
 

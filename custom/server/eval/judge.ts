@@ -99,7 +99,11 @@ interface RuleOutcome {
 }
 
 function applyRegexRule(rule: { pattern: string; flags?: string }, evidence: Evidence): RuleOutcome {
-  const text = evidence.transcript ?? ''
+  const text = evidence.transcript
+  // 无证据 ≠ 未命中：对 expect=no 的红线断言，'no' 会被当成「确认坏事没发生」。
+  if (typeof text !== 'string' || text.trim() === '') {
+    return { value: 'unknown', reason: `S0 regex 证据缺席 /${rule.pattern}/${rule.flags ?? ''}` }
+  }
   const matched = new RegExp(rule.pattern, rule.flags ?? '').test(text)
   return {
     value: matched ? 'yes' : 'no',

@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { evalApi, type EvalRunDto, type EvalSetDto, type IterationDto } from '@/custom/eval/api'
+import { evalApi, type EvalRunDto, type EvalSetDto, type IterationDto, type RemediationDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 import EvaluatorTriangle from '@/custom/eval/components/EvaluatorTriangle.vue'
 import EvidenceDrawer from '@/custom/eval/components/EvidenceDrawer.vue'
@@ -26,6 +26,11 @@ const iterations = ref<IterationDto[]>([])
 const error = ref('')
 const note = ref('')
 const reflowMsg = ref('')
+/** 处置单与同卷复评（收口轮）。 */
+const remediations = ref<RemediationDto[]>([])
+const rerunDraft = ref<Record<string, string>>({})
+const remediationMsg = ref('')
+const remediationBusy = ref('')
 /** 证据抽屉目标（taskId + sampleIdx）；null=关闭。 */
 const evidenceTarget = ref<{ taskId: string; sampleIdx: number } | null>(null)
 
@@ -38,6 +43,12 @@ async function load(): Promise<void> {
     const [r, it] = await Promise.all([evalApi.getRun(props.runId), evalApi.listIterations(props.runId)])
     run.value = r.run
     iterations.value = it.iterations
+    try {
+      remediations.value = (await evalApi.listRemediations(props.runId)).remediations
+    } catch {
+      // 旧后端无处置端点：面板如实为空，不阻断报告主体
+      remediations.value = []
+    }
     // 断言期望值（判词配色用）：非密封集取任务内容；密封集 404/元数据态降级
     try {
       const s = await evalApi.getSet(r.run.setId)
@@ -89,6 +100,49 @@ async function reflow(taskId: string, sampleIdx: number): Promise<void> {
     reflowMsg.value = result.created ? `${L.value.runs.reflowDone}：${result.set.name}（${result.taskId}）` : L.value.runs.reflowDup
   } catch (e) {
     error.value = (e as Error).message
+  }
+}
+
+async function openRemediation(taskId: string, sampleIdx: number): Promise<void> {
+  remediationMsg.value = ''
+  try {
+    const res = await evalApi.createRemediation(props.runId, { taskId, sampleIdx })
+    remediationMsg.value = res.created ? L.value.runs.remediationCreated : L.value.runs.remediationDup
+    await load()
+  } catch (e) {
+    error.value = (e as Error).message
+  }
+}
+
+/** 同卷复评 → 用新运行验证处置单；是否关闭由服务端判据决定，前端只展示结果。 */
+async function rerunAndVerify(rem: RemediationDto): Promise<void> {
+  remediationBusy.value = rem.id
+  remediationMsg.value = ''
+  try {
+    let samples: Record<string, unknown>
+    try {
+      samples = JSON.parse((rerunDraft.value[rem.id] ?? '').trim())
+    } catch {
+      remediationMsg.value = L.value.runs.remediationSamplesInvalid
+      return
+    }
+    if (!samples || typeof samples !== 'object' || Array.isArray(samples) || Object.keys(samples).length === 0) {
+      remediationMsg.value = L.value.runs.remediationSamplesInvalid
+      return
+    }
+    const { run: rerun } = await evalApi.rerunRun(props.runId, {
+      samples: samples as Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>,
+      note: `复评 ${rem.id}`,
+    })
+    const verified = await evalApi.verifyRemediation(rem.id, rerun.id)
+    remediationMsg.value = verified.closed ? L.value.runs.remediationVerifiedClosed : L.value.runs.remediationStillOpen
+    delete rerunDraft.value[rem.id]
+    await load()
+    emit('changed')
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    remediationBusy.value = ''
   }
 }
 
@@ -383,6 +437,14 @@ function durationText(ms: number | null): string {
           >{{ L.runs.reflow }}</button>
           <span v-if="a.judgeMeta && !a.judgeMeta.online" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
           <button
+            v-if="!a.passed"
+            type="button"
+            class="ghost"
+            :title="L.runs.remediationOpenHint"
+            :data-testid="`remediation-open-${a.taskId}-${a.sampleIdx}`"
+            @click="openRemediation(a.taskId, a.sampleIdx)"
+          >{{ L.runs.remediationOpen }}</button>
+          <button
             type="button"
             class="ghost"
             :data-testid="`evidence-${a.taskId}-${a.sampleIdx}`"
@@ -421,6 +483,43 @@ function durationText(ms: number | null): string {
       <input v-model="note" class="attr-note" :placeholder="L.runs.attrNotePh" data-testid="eval-attr-note" />
       <p v-if="reflowMsg" class="eval-report__reflow-msg" data-testid="eval-reflow-msg">{{ reflowMsg }}</p>
     </template>
+
+    <!-- 处置单：失败样本 → 修复 → 同卷复评 → 按结果关闭 -->
+    <div class="eval-report__remediations" data-testid="eval-remediations">
+      <h4>{{ L.runs.remediationTitle }}</h4>
+      <p v-if="remediations.length === 0" class="muted">{{ L.runs.remediationNone }}</p>
+      <ul v-else>
+        <li v-for="rem in remediations" :key="rem.id" :data-testid="`eval-remediation-${rem.id}`">
+          <div class="remediation__head">
+            <span class="mono">{{ rem.taskId }}<template v-if="rem.sampleIdx">#{{ rem.sampleIdx }}</template></span>
+            <span class="chip" :class="rem.status === 'closed' ? 'v-pass' : 'chip-warn'" :data-testid="`eval-remediation-status-${rem.id}`">
+              {{ L.runs.remediationStatus[rem.status] }}
+            </span>
+            <span class="muted">{{ L.runs.remediationRerunCount }}：{{ rem.rerunCount }}</span>
+            <span v-if="rem.lastRerunPassed !== undefined" class="muted">
+              {{ L.runs.remediationLastPassed }}：{{ rem.lastRerunPassed ? '✓' : '✗' }}
+            </span>
+          </div>
+          <details v-if="rem.status === 'open'">
+            <summary>{{ L.runs.remediationRerun }}</summary>
+            <p class="muted">{{ L.runs.remediationRerunHint }}</p>
+            <textarea
+              v-model="rerunDraft[rem.id]"
+              class="remediation__samples"
+              :placeholder="L.runs.remediationSamplesPh"
+              :data-testid="`eval-remediation-samples-${rem.id}`"
+            />
+            <button
+              type="button"
+              :disabled="remediationBusy === rem.id"
+              :data-testid="`eval-remediation-rerun-${rem.id}`"
+              @click="rerunAndVerify(rem)"
+            >{{ L.runs.remediationRerun }}</button>
+          </details>
+        </li>
+      </ul>
+      <p v-if="remediationMsg" class="eval-report__reflow-msg" data-testid="eval-remediation-msg">{{ remediationMsg }}</p>
+    </div>
 
     <!-- 归因双 Loop -->
     <div class="eval-report__loops">
@@ -517,6 +616,18 @@ function durationText(ms: number | null): string {
   .seg__title { font-size: 12px; opacity: 0.7; }
 }
 .eval-report__reflow-msg { color: var(--success); font-size: 12px; margin: 0; }
+.eval-report__remediations {
+  h4 { margin: 0 0 6px; font-size: 13px; }
+  ul { margin: 0; padding-left: 18px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+  li { display: flex; flex-direction: column; gap: 4px; }
+  .remediation__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .remediation__samples {
+    width: 100%; min-height: 64px; margin: 6px 0; border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: var(--font-mono);
+    background: var(--bg-primary); color: inherit;
+  }
+  button { border: 1px solid var(--border-color); background: transparent; border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
+}
 .eval-report__layers { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .layer {
   border: 1px solid var(--border-color);
