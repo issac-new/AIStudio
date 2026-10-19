@@ -102,8 +102,8 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
 
     // ── 末端工作页导语（2026-10-17 驾驶舱末端可用性批：此前这些页零导语）──
     'inbox': { what: '等真人拍板的事都在这：人工介入请求、遗留项清算审批、升级裁决。', source: '网关审批事件与治理台账实时聚合；没有待办时如实显示空。', act: '每天先看这里——每一笔都阻塞下游 AI 的工作，批一笔动一串。' },
-    'orchestration': { what: '一轮运行的操作台：启动、断点续跑、切换运行模式；启动前自动跑二十二项机械检查。', source: 'harness 驱动脚本状态与检查结果。', act: '开新轮或续跑在这里操作；检查有红项先处理再起跑。' },
-    'sim-settings': { what: '推演设置：端口、账号编制、采集选项等推演专属配置。', source: '配置文件读写，保存即生效并留痕。', act: '环境不对先来这里核对；改完重启相关服务生效。' },
+    'orchestration': { what: '运行编排视图：展示当前运行的任务链、人机分工与控制点。启动与续跑由 harness 执行，本页不发起运行。', source: 'harness 驱动状态与任务链实读；启动前自动检查尚未接入。', act: '核对任务链与责任人；需要起跑或续跑时在 harness 侧执行。' },
+    'sim-settings': { what: '推演设置：运行模式缺省、观察窗间隔、遗留项清算策略、审批升级分钟数。', source: '推演设置端点读写，保存即生效并留痕。', act: '调整监督与审批节奏；端口与账号编制不在本页。' },
     'gov-settings': { what: '系统设置的分组入口：模型服务商、平台连接等底层配置直达。', source: '各设置注册表（git 版本化）。', act: '找一项具体设置从分组进，不用在菜单之间跳。' },
     'model-providers': { what: '模型服务商清单：每个档案用什么模型、走哪个通道。', source: '模型配置注册表。', act: '换模型或加通道在这里改；改完去智能体工作台验证生效。' },
     'teams': { what: '团队与房间：谁在哪个队、向谁汇报、值守怎么分派。', source: '组织注册表与团队配置。', act: '建团队、指领导、设值守分派——这些决定消息往哪路由。' },
@@ -164,8 +164,8 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
 
     // ── End-page intros (2026-10-17 cockpit usability batch) ──
     'inbox': { what: 'Everything waiting for a human call: intervention requests, open-item approvals, escalations.', source: 'Gateway approval events and governance ledgers, live; empty means empty.', act: 'Check daily — each item blocks downstream agents.' },
-    'orchestration': { what: 'The driver seat of a run: launch, resume, switch posture; 19 mechanical checks before start.', source: 'Harness driver state and check results.', act: 'Start or resume runs here; fix red checks first.' },
-    'sim-settings': { what: 'Switchboard of the simulation environment: ports, account roster, capture options.', source: 'Config files; saving takes effect with a trail.', act: 'Verify here when the environment feels wrong.' },
+    'orchestration': { what: 'Run orchestration view: the task chain, human/agent split and control points. Harness launches and resumes; this page does not start runs.', source: 'Harness driver state and task-chain reads; automated preflight is not wired in yet.', act: 'Verify the chain and owners; launch or resume on the harness side.' },
+    'sim-settings': { what: 'Simulation settings: default posture, observation window, clearance policy and approval escalation minutes.', source: 'Settings endpoint reads and writes, effective immediately with a trail.', act: 'Tune supervision cadence; ports and roster live elsewhere.' },
     'gov-settings': { what: 'Grouped entry to system settings: model providers, platform connections and more.', source: 'Git-versioned settings registries.', act: 'Jump straight to the setting you need.' },
     'model-providers': { what: 'Model provider list: which model and channel each profile uses.', source: 'Model configuration registry.', act: 'Change models or channels here; verify in the agents workbench.' },
     'teams': { what: 'Teams and rooms: who is in which team, reporting lines, on-duty routing.', source: 'Org registry and team configs.', act: 'Create teams, assign leads, set duty routing.' },

@@ -4,11 +4,13 @@
      呈现（meta 三徽标明冻结单/测试报告/验收书在场状态），不硬凑。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRunContext } from '../../composables/useRunContext'
 
 /** UAT 判定页签只看未判条目（2026-10-18 阶段页页签批；默认全量） */
 const props = withDefaults(defineProps<{ onlyUnjudged?: boolean }>(), { onlyUnjudged: false })
+const router = useRouter()
 
 interface TraceRow { ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }
 interface TraceResponse {
@@ -62,9 +64,18 @@ watch(run, () => { if (run.value.trim()) void load() })
 <template>
   <div class="trc" data-testid="trc-panel">
     <p v-if="loadError" class="trc__error" data-testid="trc-error">{{ loadError }}</p>
-    <p v-else-if="!trace" class="trc__hint">在页头选择一次运行，读取验收判定链（冻结单×测试报告×验收书三源聚合）。</p>
+    <div v-else-if="!trace" class="trc__empty" data-testid="trc-no-run">
+      <p class="trc__hint">在页头选择一次运行，读取验收判定链（冻结单×测试报告×验收书三源聚合）。</p>
+      <p class="trc__hint">若页头列表为空，说明当前还没有历史运行；先完成一次运行，或到运行中心查看启动准备。</p>
+      <button type="button" class="trc__action" data-testid="trc-open-sim" @click="router.push({ name: 'ia2.sim' })">
+        打开运行中心 →
+      </button>
+    </div>
 
     <template v-if="trace">
+      <p v-if="onlyUnjudged" class="trc__readonly" data-testid="trc-uat-readonly">
+        UAT 待判为只读清单：本版本尚不在此页录入判定，判定结果来自运行验收数据；未判条目需回到对应运行补齐证据。
+      </p>
       <p class="trc__meta" data-testid="trc-meta">
         源在场：
         <span :class="trace.meta.frozenPresent ? 'trc__ok' : 'trc__absent'">冻结单{{ trace.meta.frozenPresent ? '✓' : '缺' }}</span>
@@ -94,6 +105,24 @@ watch(run, () => { if (run.value.trim()) void load() })
 .trc { display: flex; flex-direction: column; gap: 12px; }
 .trc__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .trc__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
+.trc__empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.trc__action {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--accent-primary);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.trc__readonly {
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
 .trc__meta { font-size: 12px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .trc__ok { color: var(--ia-fresh); }
 .trc__absent { color: var(--ia-fail); }

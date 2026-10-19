@@ -70,6 +70,7 @@ const stubs = {
   StageRiskPanel: { name: 'StageRiskPanel', template: '<div data-testid="risk-stub" />' },
   StageMetricsPanel: { name: 'StageMetricsPanel', template: '<div data-testid="metrics-stub" />' },
   GatekeeperSection: { name: 'GatekeeperSection', template: '<div data-testid="approvals-stub" />' },
+  StageDevApprovals: { name: 'StageDevApprovals', template: '<div data-testid="dev-approvals-stub" />' },
   ApprovalPanel: { name: 'ApprovalPanel', template: '<div data-testid="approval-panel-stub" />' },
   DeliveryPanel: { name: 'DeliveryPanel', template: '<div data-testid="delivery-stub" />' },
   GovIssuesPanel: { name: 'GovIssuesPanel', template: '<div data-testid="issues-stub" />' },
@@ -82,6 +83,7 @@ function makeRouter(stage: number, initial: string): Router {
     { path: '/x', name: `ia2.stage${stage}` as 'ia2.stage1', component: StageShell, props: { stage } },
     { path: '/app/collab', name: 'ia2.collab', component: { template: '<div />' } },
     { path: '/app/inbox', name: 'ia2.inbox', component: { template: '<div />' } },
+    { path: '/app/sim', name: 'ia2.sim', component: { template: '<div />' } },
     { path: '/app/sim/orchestration', name: 'ia2.simOrchestration', component: { template: '<div />' } },
   ]
   return createRouter({ history: createMemoryHistory(), routes })
@@ -126,11 +128,12 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('②需求：五个页签；默认需求与冻结；G1 页签按 G1 过滤', async () => {
+  it('②需求：四个页签；默认需求与冻结；G1 页签按 G1 过滤', async () => {
     const { w, router } = await mountStage(2)
-    for (const key of ['reqs', 'docs', 'g1', 'preflight', 'launch']) {
+    for (const key of ['reqs', 'docs', 'g1', 'preflight']) {
       expect(w.find(`[data-testid="stg-tab-${key}"]`).exists(), key).toBe(true)
     }
+    expect(w.find('[data-testid="stg-tab-launch"]').exists()).toBe(false)
     expect(w.find('[data-testid="stg-tab-reqs"]').classes()).toContain('stg__tab--on')
     expect(w.text()).toContain('G1 需求冻结')
     await w.find('[data-testid="stg-tab-g1"]').trigger('click')
@@ -140,15 +143,14 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('②启动准备切换到本页「启动运行」页签，不跳整页', async () => {
+  it('②启动准备只核对条件，主按钮去运行中心（不在阶段页假装启动）', async () => {
     const { w, router } = await mountStage(2, '?tab=preflight')
     expect(w.find('[data-testid="stg-preflight"]').exists()).toBe(true)
-    expect(w.text()).toContain('启动、断点续跑和运行模式切换已并入本页「启动运行」页签')
+    expect(w.text()).toContain('启动与续跑由 harness 执行')
     expect(w.find('[data-testid="stg-preflight-run"]').exists()).toBe(true)
     await w.find('[data-testid="stg-preflight-run"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.query.tab).toBe('launch')
-    expect(w.find('[data-testid="stg-tab-launch"]').classes()).toContain('stg__tab--on')
+    expect(router.currentRoute.value.name).toBe('ia2.sim')
     w.unmount()
   })
 
