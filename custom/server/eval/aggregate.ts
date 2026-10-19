@@ -136,8 +136,9 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     processMetrics: processMetricsOf(set, run),
   }
 
-  // 发布门禁（六维分面的 performance 读数复用其 P99/均值比，先算门禁再建分面）
-  const gate = evaluateReleaseGate(run.attempts, loadReleaseGateConfig())
+  // 发布门禁（六维分面的 performance 读数复用其 P99/均值比，先算门禁再建分面）；
+  // live 证据（B7 回填面）随 run 透传——qps/分档项在有回填时转真判
+  const gate = evaluateReleaseGate(run.attempts, loadReleaseGateConfig(), run.liveEvidence)
   run.aggregates.releaseGate = gate
   run.aggregates.sixDimensions = sixDimensionsOf(run, gate.numeric.p99Ratio)
 

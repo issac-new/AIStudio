@@ -107,7 +107,7 @@ async function exportSet(id: string): Promise<void> {
   }
 }
 
-// —— 红队种子库（百度轮 B5：攻击向量种子集，幂等建库）——
+// —— 红队种子库（百度轮 B5：攻击向量种子集，幂等建库）+ 变体扩产（后续批 B6）——
 const redteamBusy = ref(false)
 const redteamNote = ref('')
 
@@ -117,6 +117,20 @@ async function createRedteamSeed(): Promise<void> {
   try {
     const res = await evalApi.createRedteamSeed()
     redteamNote.value = res.existed ? L.value.sets.redteamExisted : L.value.sets.redteamCreated
+    await refresh()
+  } catch (e) {
+    redteamNote.value = (e as Error).message
+  } finally {
+    redteamBusy.value = false
+  }
+}
+
+async function expandRedteamVariants(): Promise<void> {
+  redteamBusy.value = true
+  redteamNote.value = ''
+  try {
+    const res = await evalApi.expandRedteamVariants()
+    redteamNote.value = L.value.sets.redteamExpanded.replace('{n}', String(res.appended)).replace('{total}', String(res.set.taskCount))
     await refresh()
   } catch (e) {
     redteamNote.value = (e as Error).message
@@ -239,6 +253,13 @@ function deltaText(v: number | null | undefined): string {
             :title="L.sets.redteamHint"
             @click="createRedteamSeed"
           >{{ L.sets.redteamSeed }}</button>
+          <button
+            type="button"
+            data-testid="eval-redteam-variants"
+            :disabled="redteamBusy"
+            :title="L.sets.redteamVariantsHint"
+            @click="expandRedteamVariants"
+          >{{ L.sets.redteamVariants }}</button>
           <button type="button" class="primary" data-testid="eval-create-toggle" @click="showCreate = !showCreate">
             {{ L.sets.createTitle }}
           </button>

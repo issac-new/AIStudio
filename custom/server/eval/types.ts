@@ -259,6 +259,35 @@ export interface EvalRunTarget {
   version?: string
 }
 
+/** 容量压测证据（口径对齐 simharness mx-load-probe：错误率<1%、达成≥90% 目标、p99≤2×p50）。 */
+export interface QpsProbeEvidence {
+  targetQps: number
+  achievedQps: number
+  errorRate: number
+  /** p99 与 p50 之比（≤2 达标）。 */
+  p99ToP50: number
+  /** 证据来源（如 mx-load-probe）。 */
+  source?: string
+  at: number
+}
+
+/** 交互响应分档证据（简单 ≤5s / 复杂 ≤15s，p95 口径）。 */
+export interface ResponseTierEvidence {
+  tier: 'simple' | 'complex'
+  samples: number
+  p95Ms: number
+  source?: string
+  at: number
+}
+
+/** 线上层证据（百度轮后续批 B7）：只回填不采集——压测/分档数据由外部产出后显式入账。 */
+export interface LiveEvidence {
+  qpsProbe?: QpsProbeEvidence
+  responseTiers?: ResponseTierEvidence[]
+  recordedBy?: string
+  recordedAt: number
+}
+
 export interface EvalRun {
   id: string
   setId: string
@@ -269,6 +298,8 @@ export interface EvalRun {
   status: RunStatus
   attempts: Attempt[]
   aggregates: RunAggregates
+  /** 线上层证据（回填面；缺席=no_data 如实呈现）。 */
+  liveEvidence?: LiveEvidence
   createdAt: number
   createdBy?: string
   note?: string
