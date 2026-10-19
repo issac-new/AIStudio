@@ -138,11 +138,13 @@ export function createCase(
   }
 }
 
-/** 开新一轮：轮次封顶；新提交使旧审批失效；第 N 轮后进入只看新增模式。 */
+/** 开新一轮：轮次封顶；新提交使旧审批失效；第 N 轮后进入只看新增模式；
+ *  风险档按累计变更路径重新评估（新增 CI/发布文件会当场升档，不能沿用首轮结论）。 */
 export function startRound(
   c: ReviewCase,
   input: RoundInput,
   policy: ReviewPolicy = DEFAULT_POLICY,
+  breaker: BreakerState | null = null,
 ): ConvergeResult<{ round: ReviewRound }> {
   const now = input.at ?? Date.now()
   if (c.rounds.length >= policy.convergence.maxRounds) {
@@ -158,6 +160,17 @@ export function startRound(
   const changedPaths = (input.changedPaths ?? prev?.changedPaths ?? [])
     .map((p) => p.replace(/\\/g, '/').replace(/^\.\//, ''))
     .filter(Boolean)
+  const cumulativePaths = [...new Set([...c.changedPaths, ...changedPaths])]
+  const risk = classifyChangeRisk({
+    changedPaths: cumulativePaths,
+    diffLines: c.diffLines,
+    behindFlag: c.behindFlag,
+    author: c.author,
+    authorKind: c.authorKind,
+    policy,
+    breaker,
+    now,
+  })
   const round: ReviewRound = {
     round: c.rounds.length + 1,
     headCommit: input.headCommit ?? c.headCommit,
@@ -170,7 +183,8 @@ export function startRound(
   const next: ReviewCase = {
     ...c,
     headCommit: input.headCommit ?? c.headCommit,
-    changedPaths: changedPaths.length ? changedPaths : c.changedPaths,
+    changedPaths: cumulativePaths.length ? cumulativePaths : c.changedPaths,
+    risk,
     rounds: [...c.rounds, round],
     approvals: headChanged ? invalidateApprovals(c.approvals, 'new_commit', now) : c.approvals,
     updatedAt: now,

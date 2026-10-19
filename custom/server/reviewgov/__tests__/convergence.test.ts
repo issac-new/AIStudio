@@ -67,6 +67,26 @@ describe('开案例与轮次', () => {
     const r2 = must(startRound(withApproval, {}, policy)).case
     expect(mergeReadiness(r2, policy).humanApprovals).toBe(1)
   })
+
+  it('新一轮新增受保护路径会按累计 diff 重新分级，人工名额当场提高', () => {
+    const r2 = must(startRound(open(), {
+      headCommit: 'c2',
+      changedPaths: ['packages/server/src/feature.ts', '.github/workflows/ci.yml'],
+    }, policy)).case
+    expect(r2.risk.tier).toBe('high')
+    expect(r2.risk.requiredHumanApprovals).toBe(2)
+    expect(r2.risk.protectedHits.length).toBeGreaterThan(0)
+  })
+
+  it('开新一轮时熔断同样升档', () => {
+    const breaker = {
+      active: true, windowHours: 24, from: 0, to: 1, reverts: 1, merges: 1,
+      incidents: 0, revertRate: 1, reasons: ['test'], evaluatedAt: 1,
+    }
+    const r2 = must(startRound(open(), { headCommit: 'c2' }, policy, breaker)).case
+    expect(r2.risk.tier).toBe('high')
+    expect(r2.risk.breakerTightened).toBe(true)
+  })
 })
 
 describe('发现项与收敛', () => {

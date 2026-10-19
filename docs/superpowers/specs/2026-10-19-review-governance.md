@@ -63,6 +63,8 @@ SwarmStudio 已有 `/api/review` 行内评审、qgate 质量门、并行评审�
 
 每个结论都带 `reasons` 与命中路径，便于 UI 解释“为什么这档”。
 
+每开新一轮按**累计变更路径**重新分级：新增受保护路径会当场升档，人工名额随之上调，不能沿用首轮的结论；熔断状态在开轮时同样参与升档。
+
 ### 3.3 审批语义
 
 - `ReviewApproval { actor, actorKind: human|agent|policy|system, decision: approve|request_changes|comment, commit, at, invalidatedAt? }`。
