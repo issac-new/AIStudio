@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/views/IaShell.vue -->
-<!-- 驾驶舱统一壳（2026-09-19 v12.1 壳层重排）：全局顶区 IaGlobalTop（D18 后 =
+<!-- 工作台统一壳（2026-09-19 v12.1 壳层重排）：全局顶区 IaGlobalTop（D18 后 =
      注意力条 + 页头，注意力条置顶）+ router-view。数据面武装走 useSharedArm 引用计数（与 IDE 壳
      共享单份流/调度器）；壳私有逻辑保留：Esc（管理台收起）、standalone 补标、
      merge-back 监听（IDE 窗口不得响应）。全局弹窗：日程/RunTrace/管理台。
@@ -63,11 +63,11 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 onMounted(() => {
-  // 驾驶舱全程隐藏上游 StudioNavigationRail（否则与新 IaSideNav 双左栏）。
+  // 工作台全程隐藏上游 StudioNavigationRail（否则与新 IaSideNav 双左栏）。
   // 引用计数：Workbench/SimCenter 等页内 retain 不互相摘除。
   releaseBodyClass = retainBodyClass('ia-center-full')
   window.addEventListener('keydown', onKeydown)
-  // 独立窗口「合并回驾驶舱」：storage 事件跨窗口广播，仅主壳导航。
+  // 独立窗口「合并回工作台」：storage 事件跨窗口广播，仅主壳导航。
   // standalone 面板窗不得响应——否则别的面板合并回时本面板被导航劫持串台
   mergeBackOff = listenMergeBack(path => {
     if (!standaloneActive) void router.push(path)

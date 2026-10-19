@@ -2,7 +2,7 @@
 // IdeShell — IDE 工作台主页面壳（/ide，fullscreen 自带壳）。
 //
 // 布局（布局沿用 ZCode 3.12.3，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
-//   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部驾驶舱入口）
+//   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部工作台入口）
 //   | 会话列（IdeChatPane）| 右辅助面板（IdeSidePane，终端在其页签）
 // 加 IdeStatusBar；顶区 = 共享 IaGlobalTop（D18 后 = 注意力条+页头，与沟通协作一致，
 // 09-20 裁定移除自有 IdeTopBar：⌘K/命令面板与功能导航入口都在命令面板）；
@@ -13,7 +13,7 @@
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeBoot } from '../composables/useIdeBoot'
@@ -51,6 +51,7 @@ import { isInterfaceModeToggle, isEditableTarget } from '../utils/interface-mode
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
 const cockpitStore = useCockpitStore()
@@ -382,6 +383,12 @@ function landingPickTask(id: string) {
 function landingEnterWorkspace() {
   landingEngaged.value = true
 }
+// 空态出口（2026-10-19 P1-4）：无任务可速选时给「去选任务」的明确动作，
+// 不自动替用户挑任务（会连带切简报/文件根/会话，见 spec D-3）。
+function landingGoBoard() {
+  landingEngaged.value = true
+  void router.push({ name: 'ia2.board' })
+}
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 // 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
 // （同一 resolveBriefingCrossBoard，当前板缓存优先零额外请求），随后刷新 Git 块。
@@ -594,7 +601,7 @@ onUnmounted(() => {
               @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
             />
           </div>
-          <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" />
+          <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" @board="landingGoBoard" />
           <IdeChatPane v-else class="ide-shell__colbody" />
         </div>
       </div>

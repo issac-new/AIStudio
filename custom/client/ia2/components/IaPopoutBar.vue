@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/components/IaPopoutBar.vue -->
-<!-- 独立窗口精简页头（standalone=1）：品牌 + 当前场景标签 + 合并回驾驶舱。
+<!-- 独立窗口精简页头（standalone=1）：品牌 + 当前场景标签 + 合并回工作台。
      窗口本体的最大化/最小化/关闭由 OS 原生窗控提供（Electron BrowserWindow）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'

@@ -171,7 +171,7 @@ export function useSitCounts() {
         .map((t: { assignee?: string | null }) => t.assignee as string),
     )
     // 本人已登录即在线（人≥登录本人，run5 口径补齐）：matrix client 只在聊天视图
-    // initClient 建连，驾驶舱首屏 client 未起时仅认 isLoggedIn 会把已登录本人漏成 0
+    // initClient 建连，工作台首屏 client 未起时仅认 isLoggedIn 会把已登录本人漏成 0
     // ——补 cockpit 会话名兜底（有会话名=已登录本人在场）。
     const selfOnline = matrixConnected() || !!cockpit.currentUserName ? 1 : 0
     return {

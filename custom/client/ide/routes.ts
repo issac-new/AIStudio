@@ -6,7 +6,7 @@
 // 结构：
 //   /app/ide → ide.shell → views/IdeShell.vue（fullscreen 自带壳，上游 App.vue
 //              对 meta.fullscreen 路由隐藏 AppSidebar）
-//   /ide     → 兼容重定向 → /app/ide（V5 补遗⑤ M2：IDE 归一为驾驶舱子页面，
+//   /ide     → 兼容重定向 → /app/ide（V5 补遗⑤ M2：IDE 归一为工作台子页面，
 //              全流程 UI 不出 /app 路由树；旧深链保真）
 //
 // 登录落点三处（守卫两处 + LoginView）由 patch 276/277 改为 /app/ide；

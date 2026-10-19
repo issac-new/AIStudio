@@ -184,7 +184,7 @@ watch(detailLoopId, id => {
 const loopArmed = computed(() =>
   !!detailLoopId.value && loopStore.currentLoop?.id === detailLoopId.value)
 
-/** RunCanvas 的 loopRow 兜底（真实行在驾驶舱左栏投影；此处最小元数据即可） */
+/** RunCanvas 的 loopRow 兜底（真实行在工作台左栏投影；此处最小元数据即可） */
 const loopRowFallback = computed<FlowLoopRow | null>(() => {
   const id = detailLoopId.value
   if (!id || !loopStore.currentLoop) return null
@@ -329,7 +329,7 @@ function onLoopOpenTask(taskId: string): void {
     </div>
 
     <!-- V5 补遗⑤ M6：循环实时画布（R-C1 裁决合一——原 /app/l 画布能力内嵌，
-         仅循环类 run 显示；任务/看板/IDE 动线直通驾驶舱） -->
+         仅循环类 run 显示；任务/看板/IDE 动线直通工作台） -->
     <section
       v-if="loopArmed && loopRowFallback"
       class="rd-view__loopcanvas"

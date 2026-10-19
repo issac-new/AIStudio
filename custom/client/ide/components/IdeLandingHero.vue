@@ -13,7 +13,7 @@ export interface LandingTask {
 }
 
 defineProps<{ tasks: LandingTask[] }>()
-defineEmits<{ pick: [id: string]; enter: [] }>()
+defineEmits<{ pick: [id: string]; enter: []; board: [] }>()
 const { t } = useI18n()
 </script>
 
@@ -35,7 +35,10 @@ const { t } = useI18n()
         </button>
       </li>
     </ul>
-    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '暂无任务：从看板新建或跳转进入后自动带入任务上下文') }}</p>
+    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '暂无任务：从看板选一张卡带入工作区，或直接进入会话工作区') }}</p>
+    <button v-if="!tasks.length" type="button" class="ide-landing__board" data-testid="ide-landing-board" @click="$emit('board')">
+      {{ t('ide.landing.board', '从看板选一张任务') }}
+    </button>
     <button type="button" class="ide-landing__enter" data-testid="ide-landing-enter" @click="$emit('enter')">
       {{ t('ide.landing.enter', '进入会话工作区') }}
     </button>
@@ -95,6 +98,16 @@ const { t } = useI18n()
   flex-shrink: 0;
   color: var(--text-muted);
   font-size: 11px;
+}
+.ide-landing__board {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
 }
 .ide-landing__enter {
   margin-top: 10px;

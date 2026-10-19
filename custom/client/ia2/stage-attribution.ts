@@ -35,7 +35,7 @@ export function stageCircles(nos: readonly StageNo[]): string {
  * 顶栏不高亮——如实呈现「到处都要用」而非硬指一站）。
  */
 export const STAGE_ATTRIBUTION: Readonly<Record<string, readonly StageNo[]>> = {
-  // ── 仿真中心六签（按各签用途时段）──
+  // ── 全流程推演六签（按各签用途时段）──
   'ia2.sim': [], // 运行总览：一轮全程总览屏
   'ia2.simSupervision': [3, 4], // 监督面板：分析期态势研判+运行期值班盯盘
   'ia2.simOps': [1, 4], // 运行监控：搭建期环境体检+开发期日常排障
@@ -59,7 +59,7 @@ export const STAGE_ATTRIBUTION: Readonly<Record<string, readonly StageNo[]>> = {
   'ia2.inbox': [4, 5], // 审批收件箱：开发期人工介入+验收期 G5 批准
   'ia2.collab': [4], // 工作台：开发期日常协调
   'ide.shell': [4], // IDE 工作区：开发阶段生产位（非 ia2 前缀，独立壳路由）
-  'ia2.dash': [], // 驾驶舱概览：个人三卡，跨阶段
+  'ia2.dash': [], // 工作台概览：个人三卡，跨阶段
   'ia2.teams': [1], // 团队管理：搭建期协调关系
   'ia2.agents': [1], // 智能体工作台：搭建期编制
   'ia2.accounts': [1], // 账户管理：搭建期建号
@@ -72,7 +72,7 @@ export const STAGE_ATTRIBUTION: Readonly<Record<string, readonly StageNo[]>> = {
 }
 
 /**
- * 路径 → 路由名（最长前缀优先，段边界匹配：/app/simulation 不误判仿真中心）。
+ * 路径 → 路由名（最长前缀优先，段边界匹配：/app/simulation 不误判全流程推演）。
  * 只收 /app 家族里归属表涉及的页面；重定向路由按落点归属（/app/eng、/app/runs）。
  */
 const PATH_TO_ROUTE: ReadonlyArray<readonly [string, string]> = [
