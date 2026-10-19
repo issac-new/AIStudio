@@ -10,7 +10,10 @@ export interface EvalAssertionDto {
   expect: 'yes' | 'no'
   kind: 'result' | 'trajectory' | 'risk'
   link?: 'intent' | 'tool_choice' | 'params' | 'evidence' | 'state' | 'expression'
-  s0?: { kind: 'regex'; pattern: string; flags?: string } | { kind: 'threshold'; metric: string; op: string; value: number }
+  s0?:
+    | { kind: 'regex'; pattern: string; flags?: string }
+    | { kind: 'threshold'; metric: string; op: string; value: number }
+    | { kind: 'similarity'; minScore: number; stopwords?: string[] }
 }
 
 export type ExceptionTypeDto =
@@ -41,6 +44,8 @@ export interface EvalSetDto {
   track: 'e2e' | 'process'
   module?: string
   sealed: boolean
+  contentHash?: string
+  revision?: number
   createdAt: number
   createdBy?: string
   tasks: EvalTaskDto[]
@@ -52,6 +57,8 @@ export interface EvalSetMetaDto {
   track: 'e2e' | 'process'
   module?: string
   sealed: boolean
+  contentHash: string
+  revision: number
   createdAt: number
   createdBy?: string
   taskCount: number
@@ -92,6 +99,17 @@ export interface AggregatesDto {
     gapKeys: string[]
     basis: string
   }
+  /** 百度轮 B3：四层金字塔（模型/应用/Agent/线上）。 */
+  pyramid?: {
+    layers: Array<{
+      key: 'model' | 'app' | 'agent' | 'online'
+      status: 'pass' | 'warn' | 'no_data'
+      readings: Array<{ key: string; label: string; value: string; tone: 'good' | 'bad' | 'muted' }>
+    }>
+    anchorDrift: boolean
+  }
+  /** 百度轮 B4：动作驱动清单（评估器即回报函数——读数驱动什么动作）。 */
+  actions?: Array<{ key: string; metric: string; condition: string; action: string; priority: 'high' | 'medium' | 'low' }>
 }
 
 export interface AttemptDto {
@@ -110,6 +128,7 @@ export interface AttemptDto {
 export interface RunSummaryDto {
   id: string
   setId: string
+  setHash?: string
   target: { profile?: string; model?: string; version?: string }
   k: number
   status: string
@@ -192,6 +211,9 @@ export const evalApi = {
   // —— 腾讯评测体系轮 ——
   compareRuns: (base: string, head: string) =>
     req<{ compare: RunCompareDto }>(`/api/hermes/eval/runs/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`),
+  // —— 百度评测体系轮 B5：红队种子库（幂等；existed=true 表示已有同名集） ——
+  createRedteamSeed: () =>
+    req<{ existed: boolean; set: EvalSetMetaDto | EvalSetDto; vectors: Array<{ key: string; label: string; description: string }> }>('/api/hermes/eval/sets/redteam-seed', { method: 'POST' }),
   reflow: (runId: string, body: { taskId: string; sampleIdx?: number; targetSetId?: string }) =>
     req<{ created: boolean; taskId: string; set: { id: string; name: string; taskCount: number } }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/reflow`, {
       method: 'POST',

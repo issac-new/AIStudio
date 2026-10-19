@@ -9,6 +9,8 @@
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
 import { calibrationReport } from './calibration'
 import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf } from './metrics'
+import { actionLinksOf } from './actions'
+import { pyramidOf } from './pyramid'
 import { evaluateReleaseGate, loadReleaseGateConfig } from './releaseGate'
 
 /** attempt 是否通过（断言全对 + outcome 通过）。 */
@@ -138,6 +140,11 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
   const gate = evaluateReleaseGate(run.attempts, loadReleaseGateConfig())
   run.aggregates.releaseGate = gate
   run.aggregates.sixDimensions = sixDimensionsOf(run, gate.numeric.p99Ratio)
+
+  // 百度轮 B3/B4：四层金字塔 + 动作驱动清单（锚点漂移在本层判定——此处持集对象）
+  const anchorDrift = run.setHash !== undefined && run.setHash !== set.contentHash
+  run.aggregates.pyramid = pyramidOf(run, anchorDrift)
+  run.aggregates.actions = actionLinksOf(run, anchorDrift)
 
   // Risk 一票否决：整 run FAIL（status 保留原值，passed 语义在 aggregates.riskVeto）
   return run
