@@ -28,7 +28,7 @@ import { evaluatorAuditOf } from './evaluators'
 import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
-import { sampleFromTrace } from './trace-sampler'
+import { sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
@@ -121,6 +121,26 @@ router.post('/sample-from-trace', async (ctx) => {
   const result = sampleFromTrace(sessionId)
   if (!result.ok) {
     ctx.status = result.reason === 'sessionId 含非法字符' ? 400 : 404
+    ctx.body = result
+    return
+  }
+  ctx.body = { ...result, actor: actorOf(ctx) }
+})
+
+// span 级采样（2026-10-19 观测层轮）：评估下沉 observation 级——单 LLM 调用
+// （及其子工具调用）或单工具 span → Evidence，spanRef=api_request_id/tool_call_id。
+router.post('/sample-span-from-trace', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { sessionId?: unknown; spanRef?: unknown }
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : ''
+  const spanRef = typeof body.spanRef === 'string' ? body.spanRef.trim() : ''
+  if (!sessionId || !spanRef) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'sessionId 与 spanRef 必填' }
+    return
+  }
+  const result = sampleSpanFromTrace(sessionId, spanRef)
+  if (!result.ok) {
+    ctx.status = result.reason?.includes('非法字符') ? 400 : 404
     ctx.body = result
     return
   }

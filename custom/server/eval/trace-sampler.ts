@@ -112,3 +112,160 @@ export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } 
     meta: { lines, toolCalls: toolCalls.length, tokens, durationMs, startedAt },
   }
 }
+
+// ── span 级采样（2026-10-19 观测层轮）──
+//
+// 源文《AI-Native可观测层》：「把评估下沉到 observation 级，对单个 LLM 调用、检索、
+// 工具执行分别打分，比 trace 级评估更快更准」。本函数把单个 span（LLM 调用及其
+// 子工具调用，或单个工具 span）转成 Evidence，供建集/oracle/判定复用。
+// 与 sampleFromTrace 的差别：span 级判定需要内容面，故请求/响应/reasoning 以
+// 有界字符上限落入 transcript（请求 4000 / 响应原文 / reasoning 1000），
+// 不再只留参数摘要——这是调用方显式指定 span 的按需取证。
+
+interface SpanTraceLine extends TraceLine {
+  phase?: string
+  api_request_id?: string
+  tool_call_id?: string
+  request_messages?: unknown
+  response_preview?: unknown
+  reasoning_preview?: unknown
+  first_token_ms?: number
+  ttft_ms?: number
+  cache_read_tokens?: number
+  error_type?: string
+}
+
+export interface SpanSampleResult {
+  ok: boolean
+  sessionId: string
+  spanRef: string
+  spanKind?: 'llm_span' | 'tool_span'
+  sample?: Evidence
+  meta?: { spanRef: string; tokens: number; durationMs: number | null; ttftMs: number | null; childToolCalls: number }
+  reason?: string
+}
+
+function renderMessages(messages: unknown, maxChars: number): string {
+  if (!Array.isArray(messages)) return ''
+  const parts: string[] = []
+  let used = 0
+  for (const m of messages) {
+    if (used >= maxChars) break
+    const role = typeof (m as { role?: unknown })?.role === 'string' ? (m as { role: string }).role : '?'
+    let content = (m as { content?: unknown })?.content
+    if (typeof content !== 'string') {
+      try { content = JSON.stringify(content) } catch { content = '<content>' }
+    }
+    const text = `${role}: ${content}`
+    parts.push(text.slice(0, Math.max(0, maxChars - used)))
+    used += text.length
+  }
+  return parts.join('\n')
+}
+
+/** 从 trace 构造单 span 级 Evidence；span 不存在/文件缺席如实降级。 */
+export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { tracesDir?: string } = {}): SpanSampleResult {
+  if (!safeSessionId(sessionId)) return { ok: false, sessionId, spanRef, reason: 'sessionId 含非法字符' }
+  if (!/^[A-Za-z0-9._:-]{1,200}$/.test(spanRef)) return { ok: false, sessionId, spanRef, reason: 'spanRef 含非法字符' }
+  const dir = opts.tracesDir ?? tracesDir()
+  const file = join(dir, `${sessionId}.jsonl`)
+  if (!existsSync(file)) return { ok: false, sessionId, spanRef, reason: 'trace 不存在' }
+
+  let rows: SpanTraceLine[] = []
+  try {
+    rows = readFileSync(file, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        try { return JSON.parse(line) as SpanTraceLine } catch { return null }
+      })
+      .filter((r): r is SpanTraceLine => r !== null)
+  } catch {
+    return { ok: false, sessionId, spanRef, reason: 'trace 读取失败' }
+  }
+
+  const chunks = rows.filter((r) => r.type === 'chunk')
+
+  // 工具 span：tool_call_id 直匹
+  const toolRow = chunks.find((r) => r.kind === 'tool_span' && r.tool_call_id === spanRef)
+  if (toolRow) {
+    const ok = toolRow.status !== 'error' && !toolRow.error_message
+    const transcript = [
+      `tool: ${toolRow.tool_name ?? 'unknown'}(${argSummary(toolRow.args)}) -> ${ok ? 'ok' : `error: ${toolRow.error_message ?? 'unknown'}`}`,
+    ].join('\n')
+    return {
+      ok: true,
+      sessionId,
+      spanRef,
+      spanKind: 'tool_span',
+      sample: {
+        transcript,
+        toolCalls: [{
+          name: toolRow.tool_name ?? 'unknown',
+          ok,
+          durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : undefined,
+        }],
+      },
+      meta: {
+        spanRef,
+        tokens: 0,
+        durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : null,
+        ttftMs: null,
+        childToolCalls: 0,
+      },
+    }
+  }
+
+  // LLM span：api_request_id 匹配（pre/post/error 三段）+ 子工具调用
+  const pre = chunks.find((r) => r.kind === 'llm_span' && r.phase === 'pre' && r.api_request_id === spanRef)
+  const post = chunks.find((r) => r.kind === 'llm_span' && (r.phase === 'post' || r.phase === 'error') && r.api_request_id === spanRef)
+  if (!pre && !post) {
+    return { ok: false, sessionId, spanRef, reason: 'span 不存在（api_request_id/tool_call_id 均未命中）' }
+  }
+  const children = chunks.filter((r) => r.kind === 'tool_span' && r.api_request_id === spanRef)
+
+  const transcript: string[] = []
+  const requestText = renderMessages(pre?.request_messages, 4000)
+  if (requestText) transcript.push(`[request]\n${requestText}`)
+  if (typeof post?.response_preview === 'string' && post.response_preview) {
+    transcript.push(`[response]\n${post.response_preview}`)
+  }
+  if (typeof post?.reasoning_preview === 'string' && post.reasoning_preview) {
+    transcript.push(`[reasoning]\n${String(post.reasoning_preview).slice(0, 1000)}`)
+  }
+  if (post?.error_message) transcript.push(`[error] ${post.error_type ?? 'error'}: ${post.error_message}`)
+
+  const toolCalls: ToolCallRecord[] = []
+  for (const c of children) {
+    const ok = c.status !== 'error' && !c.error_message
+    toolCalls.push({
+      name: c.tool_name ?? 'unknown',
+      ok,
+      durationMs: typeof c.duration_ms === 'number' ? c.duration_ms : undefined,
+    })
+    transcript.push(`tool: ${c.tool_name ?? 'unknown'}(${argSummary(c.args)}) -> ${ok ? 'ok' : 'error'}`)
+  }
+
+  const usage = post?.usage
+  const tokens = (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0)
+  const durationMs = typeof post?.duration_ms === 'number' ? post.duration_ms : null
+  const ttftMs = typeof post?.first_token_ms === 'number' ? post.first_token_ms : (typeof post?.ttft_ms === 'number' ? post.ttft_ms : null)
+
+  return {
+    ok: true,
+    sessionId,
+    spanRef,
+    spanKind: 'llm_span',
+    sample: {
+      transcript: transcript.join('\n\n').slice(0, 20_000),
+      toolCalls,
+      efficiency: {
+        tokens,
+        steps: toolCalls.length,
+        ...(durationMs != null ? { durationMs } : {}),
+        ...(ttftMs != null ? { ttftMs } : {}),
+      },
+    },
+    meta: { spanRef, tokens, durationMs, ttftMs, childToolCalls: children.length },
+  }
+}

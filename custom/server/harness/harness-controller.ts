@@ -10,6 +10,8 @@
  *   GET  /api/harness/tool-audit?days=&limit=      工具执行审计查询（窗口/身份/结果过滤+聚合）
  *   GET  /api/harness/policy-decisions?days=        执法放行/拒绝决策账（P0-2）
  *   GET  /api/harness/run-manifests?days=            运行清单与运行级成本（P1-3）
+ *   GET  /api/harness/obs-signals?days=7           观测信号聚合（2026-10-19：请求量/token拆分/TTFT/429 率，按日分桶）
+ *   GET  /api/harness/obs-alerts?days=7            基线漂移四类告警（2026-10-19：成本/延迟/错误率/质量，24h vs N 天基线）
  *
  * 四职能映射：统筹协同（L2/L4 指标）· 规范治理（B1 目录/B4 原语）· 效率提升
  * （B2 成本账）· 安全保障（安全治理账+审计完整率）。全部只读聚合，fail-soft：
@@ -28,6 +30,8 @@ import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
+import { collectObsSignals } from '../obssignals/collect'
+import { collectObsAlerts } from '../obsalerts/collect'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
 import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
@@ -218,6 +222,29 @@ router.get('/resume-plan', async (ctx) => {
 router.get('/process-quality', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectProcessQuality(daysOf(ctx.query.days)) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 观测信号聚合（2026-10-19 观测层轮）：请求量/token 拆分/TTFT 分布/工具成功率/
+// 429 率，按日分桶+窗口合计；trace 目录缺席如实 available:false。
+router.get('/obs-signals', async (ctx) => {
+  try {
+    const { report, files, rows } = collectObsSignals(daysOf(ctx.query.days))
+    ctx.body = { ok: true, ...report, sources: { traceFiles: files, traceRows: rows } }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 基线漂移告警（2026-10-19 观测层轮）：成本尖峰/延迟尖峰/错误率/质量漂移四类，
+// 最近 24h vs 前 N 天基线比率判定；基线不足如实 skipped。
+router.get('/obs-alerts', async (ctx) => {
+  try {
+    ctx.body = collectObsAlerts(daysOf(ctx.query.days))
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }

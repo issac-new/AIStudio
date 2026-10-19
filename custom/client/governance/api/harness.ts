@@ -358,3 +358,81 @@ export function fetchResumePlan(input: { runId?: string; sessionId?: string }): 
   if (input.sessionId) q.set('sessionId', input.sessionId)
   return request<ResumePlanDto>(`/api/harness/resume-plan?${q.toString()}`)
 }
+
+// ---- 观测信号聚合（2026-10-19 观测层轮）----
+export interface TokenSplitDto {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+  reasoning: number
+}
+
+export interface ObsDayAggDto {
+  day: string
+  sessions: number
+  llmCalls: number
+  llmErrors: number
+  rateLimit429: number
+  toolCalls: number
+  toolFailures: number
+  tokens: TokenSplitDto
+  ttftMs: { p50: number | null; p95: number | null; samples: number }
+  llmDurationMs: { p50: number | null; p95: number | null }
+}
+
+export interface ObsSignalsDto {
+  ok: boolean
+  days: number
+  available: boolean
+  byDay: ObsDayAggDto[]
+  totals: Omit<ObsDayAggDto, 'day'> & {
+    llmErrorRate: number | null
+    toolFailureRate: number | null
+    rateLimit429Rate: number | null
+    cacheHitRate: number | null
+  }
+  byModel: Array<{ model: string; llmCalls: number; tokens: TokenSplitDto }>
+  notes: string[]
+  sources: { traceFiles: number; traceRows: number }
+}
+
+export function fetchObsSignals(days = 7): Promise<ObsSignalsDto> {
+  return request<ObsSignalsDto>(`/api/harness/obs-signals?days=${encodeURIComponent(String(days))}`)
+}
+
+// ---- 基线漂移告警（2026-10-19 观测层轮）----
+export type ObsAlertKindDto = 'cost-spike' | 'latency-spike' | 'error-rate' | 'quality-drift'
+
+export interface ObsAlertDto {
+  kind: ObsAlertKindDto
+  severity: 'warn' | 'critical'
+  current: number | null
+  baseline: number | null
+  ratio?: number | null
+  deltaPp?: number | null
+  threshold: number
+  evidence: string
+}
+
+export interface ObsAlertsDto {
+  ok: boolean
+  baselineDays: number
+  windowDays: number
+  alerts: ObsAlertDto[]
+  skipped: Array<{ kind: ObsAlertKindDto; reason: 'no_baseline' | 'no_data'; detail: string }>
+  thresholds: {
+    costSpikeRatio: number
+    latencySpikeRatio: number
+    errorRateDeltaPp: number
+    qualityDropPp: number
+    minBaselineSamples: number
+  }
+  sources: { traceRows: number; traceFiles: number; evalRunsCurrent: number; evalRunsBaseline: number }
+  notes: string[]
+}
+
+export function fetchObsAlerts(days = 7): Promise<ObsAlertsDto> {
+  return request<ObsAlertsDto>(`/api/harness/obs-alerts?days=${encodeURIComponent(String(days))}`)
+}
+

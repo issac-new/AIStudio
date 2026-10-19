@@ -14,9 +14,11 @@ Fail-open design: if the trace directory is not writable, hooks are inert.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -72,6 +74,11 @@ class TraceSession:
     tool_call_ids: Dict[str, dict] = field(default_factory=dict)  # tool_call_id -> span info
     subagent_ids: Dict[str, dict] = field(default_factory=dict)  # subagent label -> span info
     last_updated_at: float = field(default_factory=time.time)
+    # 三层保留决策用的会话内累计（2026-10-19 观测层轮）：
+    # had_error=任一路径出错（api_request_error/tool error/trailer error）→ 第一层全量保留；
+    # total_tokens=post span usage input+output 累计 → 第三层高成本尾部保留阈值判定。
+    had_error: bool = False
+    total_tokens: int = 0
 
 
 def _env(name: str, default: str = "") -> str:
@@ -138,6 +145,116 @@ def _lookup_state(session_id: str, task_id: Optional[str]) -> Optional["TraceSes
 
 # ── Hook Handlers ──
 
+# reasoning/thinking 标签集（与上游 turn_response_intake._RELAY_THINKING 同款：
+# REASONING_SCRATCHPAD / think / reasoning）。文章③「reasoning 与主回答分开记录」。
+_REASONING_BLOCK_RE = re.compile(
+    r"<(?:REASONING_SCRATCHPAD|think|reasoning)>(.*?)</(?:REASONING_SCRATCHPAD|think|reasoning)>",
+    re.DOTALL | re.IGNORECASE,
+)
+_REASONING_TAG_RE = re.compile(r"</?(?:REASONING_SCRATCHPAD|think|reasoning)>", re.IGNORECASE)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = _env(name)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = _env(name)
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _sample_rate() -> float:
+    """头部采样率（第二层）。默认 1.0=全留，不破坏既有消费面。"""
+    return min(1.0, max(0.0, _env_float("HERMES_RUN_TRACE_SAMPLE_RATE", 1.0)))
+
+
+def _tail_tokens() -> int:
+    """尾部保留 token 阈值（第三层）。默认 0=禁用。"""
+    return max(0, _env_int("HERMES_RUN_TRACE_TAIL_TOKENS", 0))
+
+
+def _reasoning_max_chars() -> int:
+    return max(200, _env_int("HERMES_RUN_TRACE_REASONING_CHARS", 2000))
+
+
+def _correlation_fields() -> Dict[str, Optional[str]]:
+    """横贯关联字段（文章⑤）：user/prompt 模板版本由部署侧 env 注入，缺省 None 不猜。"""
+    return {
+        "user_id": _env("HERMES_RUN_TRACE_USER_ID") or None,
+        "prompt_template": _env("HERMES_RUN_TRACE_PROMPT_TEMPLATE") or None,
+        "prompt_version": _env("HERMES_RUN_TRACE_PROMPT_VERSION") or None,
+    }
+
+
+def _split_reasoning(text: str) -> tuple:
+    """(清洗后正文, reasoning 文本或 None)。无标签时 reasoning 为 None。"""
+    if not isinstance(text, str) or not text:
+        return text, None
+    blocks = _REASONING_BLOCK_RE.findall(text)
+    if not blocks:
+        return text, None
+    cleaned = _REASONING_BLOCK_RE.sub("", text)
+    cleaned = _REASONING_TAG_RE.sub("", cleaned).strip()
+    reasoning = "\n".join(b.strip() for b in blocks if b.strip())
+    return cleaned, reasoning or None
+
+
+def _response_text(response: Any) -> Optional[str]:
+    """response 载荷形态归一：dict（上游 sanitize 后）取 assistant_message.content；str 原样。"""
+    if isinstance(response, dict):
+        msg = response.get("assistant_message")
+        if isinstance(msg, dict):
+            content = msg.get("content")
+            if isinstance(content, str):
+                return content
+        return json.dumps(response, ensure_ascii=False)[:2000]
+    if isinstance(response, str):
+        return response
+    return None
+
+
+def _session_sample_bucket(session_id: str) -> float:
+    """session_id 稳定哈希 → [0,1) 桶位。sha1 跨进程稳定（Python hash() 加盐不可用）。"""
+    digest = hashlib.sha1(session_id.encode("utf-8", "replace")).digest()
+    return int.from_bytes(digest[:8], "big") / float(1 << 64)
+
+
+def _retention_decision(state: "TraceSession", trailer_error: Any) -> Dict[str, Any]:
+    """三层混合保留决策（文章「落地指南」采样策略的会话末变体）：
+
+    ① 错误全量：任一路径出错（api 错误/工具 error/trailer error）必留——负例是
+       评估与调试最有价值的样本；② 成功会话头部采样：按 session_id 稳定哈希，
+       比率 HERMES_RUN_TRACE_SAMPLE_RATE（默认 1.0 全留）；③ 高成本尾部：未命中
+       采样但总 token ≥ HERMES_RUN_TRACE_TAIL_TOKENS（默认 0=禁用）仍留。
+    """
+    rate = _sample_rate()
+    tail = _tail_tokens()
+    if state.had_error or trailer_error:
+        return {"kept": True, "reason": "error-full", "sample_rate": rate,
+                "tail_tokens": tail, "total_tokens": state.total_tokens}
+    bucket = _session_sample_bucket(state.session_id)
+    if bucket < rate:
+        return {"kept": True, "reason": "head-sample", "sample_rate": rate,
+                "bucket": round(bucket, 6), "total_tokens": state.total_tokens}
+    if tail > 0 and state.total_tokens >= tail:
+        return {"kept": True, "reason": "tail-cost", "sample_rate": rate,
+                "tail_tokens": tail, "bucket": round(bucket, 6),
+                "total_tokens": state.total_tokens}
+    return {"kept": False, "reason": "sampled-out", "sample_rate": rate,
+            "bucket": round(bucket, 6), "total_tokens": state.total_tokens}
+
+
 def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: Any = None, session_id: Any = None, source: Any = None, started_at: Any = None, task_id: Any = None, **_kw: Any) -> None:
     payload: dict = dict(_kw)
     payload.update({'collab_event_id': collab_event_id, 'model': model, 'provider': provider, 'session_id': session_id, 'source': source, 'started_at': started_at, 'task_id': task_id})
@@ -173,6 +290,7 @@ def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: 
 
         # Build header
         started_at = payload.get("started_at", time.time())
+        corr = _correlation_fields()
         if _use_otel_format():
             header = build_session_span(
                 session_id=session_id,
@@ -181,17 +299,19 @@ def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: 
                 model=payload.get("model"),
                 provider=payload.get("provider"),
                 collab_event_id=payload.get("collab_event_id"),
+                correlation=corr,
             )
         else:
             header = {
                 "type": "header",
-                "version": "1.0.0",
+                "version": "1.1.0",
                 "session_id": session_id,
                 "task_id": task_id,
                 "started_at": started_at,
                 "model": payload.get("model"),
                 "provider": payload.get("provider"),
                 "source": payload.get("source", "hermes-agent"),
+                **corr,
             }
         _write_jsonl_line(file_handle, header)
 
@@ -231,6 +351,8 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
         # Write trailer
         ended_at = payload.get("ended_at", time.time())
         duration_ms = int((ended_at - state.started_at) * 1000)
+        # 三层混合保留决策（2026-10-19 观测层轮）：先算决策写进 trailer，未保留再删文件。
+        decision = _retention_decision(state, payload.get("error"))
         if _use_otel_format():
             trailer = build_trailer_span(
                 session_id=session_id,
@@ -238,6 +360,7 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
                 duration_ms=duration_ms,
                 outcome=payload.get("outcome"),
                 error=payload.get("error"),
+                sampling=decision,
             )
         else:
             trailer = {
@@ -248,6 +371,7 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
                 "outcome": payload.get("outcome"),
                 "error": payload.get("error"),
                 "summary": payload.get("summary"),
+                "sampling": decision,
             }
         _write_jsonl_line(state.file_handle, trailer)
 
@@ -260,6 +384,13 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
         _SESSION_FILES.pop(session_id, None)
         if _SESSION_KEY_INDEX.get(session_id) == key:
             _SESSION_KEY_INDEX.pop(session_id, None)
+
+        # 未命中保留的会话删文件（决策已写进 trailer 随行留痕，删除前已 flush/close）。
+        if not decision["kept"]:
+            try:
+                state.file_path.unlink(missing_ok=True)
+            except Exception as exc:
+                logger.warning("Failed to discard sampled-out trace %s: %s", state.file_path, exc)
 
     logger.debug("Ended trace session %s", session_id)
 
@@ -349,6 +480,11 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                 collab_event_id=payload.get("collab_event_id"),
             )
         else:
+            # reasoning 与主回答分离记录（2026-10-19 观测层轮，文章③）：
+            # 上游 response 载荷是 dict（assistant_message.content 含 <think> 等标签块），
+            # 抽标签块独立落 reasoning_preview，正文清洗后存 response_preview。
+            raw_text = _response_text(payload.get("response"))
+            cleaned_text, reasoning_text = _split_reasoning(raw_text) if raw_text else (raw_text, None)
             chunk = {
                 "type": "chunk",
                 "kind": "llm_span",
@@ -363,8 +499,13 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                 "duration_ms": duration_ms,
                 "finish_reason": payload.get("finish_reason"),
                 "usage": payload.get("usage"),
-                "response_preview": payload.get("response"),
+                "response_preview": cleaned_text,
             }
+            if reasoning_text:
+                _max = _reasoning_max_chars()
+                chunk["reasoning_preview"] = (
+                    reasoning_text[:_max] + "..." if len(reasoning_text) > _max else reasoning_text
+                )
             # TTFT：上游 0.21.7 post_api_request 已携带 first_chunk_at（epoch s，
             # 非流式/无分片为 None）——TTFB=first_chunk_at-started_at，落双字段名
             # 兼容消费面（eval 门禁读 first_token_ms）。
@@ -383,6 +524,13 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                     chunk["response_preview"] = chunk["response_preview"][:500] + "..."
 
         _write_jsonl_line(state.file_handle, chunk)
+        # 第三层尾部保留判定的 token 累计（usage 拆分含 cache/reasoning，全部计入成本体量）。
+        usage = payload.get("usage")
+        if isinstance(usage, dict):
+            for k in ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens", "reasoning_tokens"):
+                v = usage.get(k)
+                if isinstance(v, (int, float)) and v > 0:
+                    state.total_tokens += int(v)
         state.last_updated_at = time.time()
 
     logger.debug("Post API request %s for session %s", api_request_id, session_id)
@@ -442,6 +590,8 @@ def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_i
                     chunk["result"] = chunk["result"][:1000] + "..."
 
         _write_jsonl_line(state.file_handle, chunk)
+        if payload.get("status") == "error" or payload.get("error_message"):
+            state.had_error = True
         state.last_updated_at = time.time()
 
     logger.debug("Tool call %s (%s) for session %s", tool_call_id, payload.get("tool_name"), session_id)
@@ -544,6 +694,57 @@ def _subagent_stop(api_calls: Any = None, collab_event_id: Any = None, ended_at:
     logger.debug("Subagent %s stopped for session %s", subagent_label, session_id)
 
 
+def _on_api_request_error(api_duration: Any = None, api_request_id: Any = None, ended_at: Any = None, error: Any = None, max_retries: Any = None, model: Any = None, provider: Any = None, retry_count: Any = None, retryable: Any = None, session_id: Any = None, started_at: Any = None, status_code: Any = None, task_id: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_duration': api_duration, 'api_request_id': api_request_id, 'ended_at': ended_at, 'error': error, 'max_retries': max_retries, 'model': model, 'provider': provider, 'retry_count': retry_count, 'retryable': retryable, 'session_id': session_id, 'started_at': started_at, 'status_code': status_code, 'task_id': task_id, 'turn_id': turn_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """Write LLM error chunk（2026-10-19 观测层轮）。
+
+    上游失败请求走 api_request_error 钩子（turn_response_intake/api_request_hooks），
+    本插件此前未订阅——429 率/错误率指标与第一层「错误全量保留」都依赖此 span。
+    """
+    session_id = payload.get("session_id", "")
+    task_id = payload.get("task_id")
+    api_request_id = payload.get("api_request_id", "")
+
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, task_id)
+        if not state:
+            return
+
+        started_at = payload.get("started_at")
+        ended_at = payload.get("ended_at", time.time())
+        duration_ms = (
+            int((ended_at - started_at) * 1000) if started_at
+            else int((payload.get("api_duration") or 0) * 1000)
+        )
+        error = payload.get("error") if isinstance(payload.get("error"), dict) else {}
+        chunk = {
+            "type": "chunk",
+            "kind": "llm_span",
+            "phase": "error",
+            "session_id": session_id,
+            "api_request_id": api_request_id,
+            "turn_id": payload.get("turn_id"),
+            "model": payload.get("model"),
+            "provider": payload.get("provider"),
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_ms": duration_ms,
+            "status": "error",
+            "status_code": payload.get("status_code"),
+            "retry_count": payload.get("retry_count"),
+            "retryable": payload.get("retryable"),
+            "error_type": error.get("type"),
+            "error_message": (error.get("message") or "")[:500] or None,
+        }
+        _write_jsonl_line(state.file_handle, chunk)
+        state.had_error = True
+        state.last_updated_at = time.time()
+
+    logger.debug("API request error %s for session %s", api_request_id, session_id)
+
+
 # ── Plugin Registration ──
 
 def register(ctx: Any) -> None:
@@ -559,6 +760,7 @@ def register(ctx: Any) -> None:
     ctx.register_hook("on_session_end", _on_session_end)
     ctx.register_hook("pre_api_request", _pre_api_request)
     ctx.register_hook("post_api_request", _post_api_request)
+    ctx.register_hook("api_request_error", _on_api_request_error)
     ctx.register_hook("post_tool_call", _post_tool_call)
     ctx.register_hook("subagent_start", _subagent_start)
     ctx.register_hook("subagent_stop", _subagent_stop)

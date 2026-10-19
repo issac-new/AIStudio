@@ -51,6 +51,15 @@ class SpanAttributes:
     # 跨机协作事件锚点（边界设计 §2/§6-T4b）：本 span 由哪个 Matrix $event_id
     # 驱动（协议事件触发 agent 回合时由 payload.collab_event_id 透传）。
     COLLAB_EVENT_ID = "collab.event_id"
+    # 2026-10-19 观测层轮扩展（文章②token 拆分/⑤关联字段）：OTel GenAI semconv 对
+    # cache/reasoning 用量键仍在 Development 状态，落 agentscope 扩展命名空间并
+    # 由 golden-span 钉测锁定，不冒认稳定 semconv 键。
+    AGENTSCOPE_USAGE_CACHE_READ_TOKENS = "agentscope.usage.cache_read_tokens"
+    AGENTSCOPE_USAGE_CACHE_WRITE_TOKENS = "agentscope.usage.cache_write_tokens"
+    AGENTSCOPE_USAGE_REASONING_TOKENS = "agentscope.usage.reasoning_tokens"
+    AGENTSCOPE_USER_ID = "agentscope.user.id"
+    AGENTSCOPE_PROMPT_TEMPLATE = "agentscope.prompt.template"
+    AGENTSCOPE_PROMPT_VERSION = "agentscope.prompt.version"
 
 
 class OperationName:
@@ -85,7 +94,7 @@ def _status(code: str, message: Optional[str] = None) -> Dict[str, Any]:
     return s
 
 
-def build_session_span(session_id: str, task_id: Optional[str], started_at: float, model: Optional[str] = None, provider: Optional[str] = None, collab_event_id: Optional[str] = None) -> Dict[str, Any]:
+def build_session_span(session_id: str, task_id: Optional[str], started_at: float, model: Optional[str] = None, provider: Optional[str] = None, collab_event_id: Optional[str] = None, correlation: Optional[Dict[str, Optional[str]]] = None) -> Dict[str, Any]:
     """Build the root trace span for a session (header)."""
     attrs = {
         SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
@@ -99,6 +108,13 @@ def build_session_span(session_id: str, task_id: Optional[str], started_at: floa
         attrs[SpanAttributes.GEN_AI_REQUEST_MODEL] = model
     if provider:
         attrs[SpanAttributes.GEN_AI_PROVIDER_NAME] = provider
+    if correlation:
+        if correlation.get("user_id"):
+            attrs[SpanAttributes.AGENTSCOPE_USER_ID] = correlation["user_id"]
+        if correlation.get("prompt_template"):
+            attrs[SpanAttributes.AGENTSCOPE_PROMPT_TEMPLATE] = correlation["prompt_template"]
+        if correlation.get("prompt_version"):
+            attrs[SpanAttributes.AGENTSCOPE_PROMPT_VERSION] = correlation["prompt_version"]
     return {
         "traceId": session_id,
         "spanId": f"session-{session_id}",
@@ -139,6 +155,13 @@ def build_llm_span(
     if usage:
         attrs[SpanAttributes.GEN_AI_USAGE_INPUT_TOKENS] = usage.get("input_tokens", 0)
         attrs[SpanAttributes.GEN_AI_USAGE_OUTPUT_TOKENS] = usage.get("output_tokens", 0)
+        # token 拆分（文章②）：cache/reasoning 落 agentscope 扩展键（semconv 未定稿）。
+        if usage.get("cache_read_tokens"):
+            attrs[SpanAttributes.AGENTSCOPE_USAGE_CACHE_READ_TOKENS] = usage["cache_read_tokens"]
+        if usage.get("cache_write_tokens"):
+            attrs[SpanAttributes.AGENTSCOPE_USAGE_CACHE_WRITE_TOKENS] = usage["cache_write_tokens"]
+        if usage.get("reasoning_tokens"):
+            attrs[SpanAttributes.AGENTSCOPE_USAGE_REASONING_TOKENS] = usage["reasoning_tokens"]
     if finish_reason:
         attrs[SpanAttributes.GEN_AI_RESPONSE_FINISH_REASONS] = [finish_reason]
 
@@ -253,8 +276,16 @@ def build_subagent_span(
     return span
 
 
-def build_trailer_span(session_id: str, ended_at: float, duration_ms: int, outcome: Optional[str] = None, error: Optional[str] = None) -> Dict[str, Any]:
+def build_trailer_span(session_id: str, ended_at: float, duration_ms: int, outcome: Optional[str] = None, error: Optional[str] = None, sampling: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Build the trailer span marking session end."""
+    attrs: Dict[str, Any] = {
+        SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
+        SpanAttributes.AGENTSCOPE_SESSION_ID: session_id,
+        "agentscope.session.outcome": outcome or "unknown",
+    }
+    if sampling:
+        attrs["agentscope.sampling.kept"] = bool(sampling.get("kept"))
+        attrs["agentscope.sampling.reason"] = str(sampling.get("reason") or "unknown")
     return {
         "traceId": session_id,
         "spanId": f"session-{session_id}",
@@ -263,11 +294,7 @@ def build_trailer_span(session_id: str, ended_at: float, duration_ms: int, outco
         "startTime": _us(ended_at),
         "endTime": _us(ended_at),
         "durationMs": duration_ms,
-        "attributes": {
-            SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
-            SpanAttributes.AGENTSCOPE_SESSION_ID: session_id,
-            "agentscope.session.outcome": outcome or "unknown",
-        },
+        "attributes": attrs,
         "status": _status(StatusCode.ERROR if error else StatusCode.OK, error),
         "otelFormat": True,
         "isTrailer": True,

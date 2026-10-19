@@ -15,6 +15,7 @@ import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.
 import EvalLayersSection from '@/custom/governance/components/EvalLayersSection.vue'
 import RsiMaturitySection from '@/custom/governance/components/RsiMaturitySection.vue'
 import NineLayersSection from '@/custom/governance/components/NineLayersSection.vue'
+import ObsSignalsSection from '@/custom/governance/components/ObsSignalsSection.vue'
 import HarnessRunOpsSection from '@/custom/governance/components/HarnessRunOpsSection.vue'
 import { governanceMessages } from '@/custom/governance/i18n'
 // A0 三中心拆分：标题键 tabGovHarness 已迁 i18n-gov-tabs（⑥治理页签过渡事实源）
@@ -48,6 +49,7 @@ const L = computed(() => {
       <PrimitivesSection />
       <EvalLayersSection />
       <NineLayersSection />
+      <ObsSignalsSection />
       <HarnessRunOpsSection />
       <RsiMaturitySection />
     </div>
