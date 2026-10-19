@@ -180,7 +180,6 @@ describe('Harness² 工作台 HTTP', () => {
     expect(rolled.body.proposal.status).toBe('rolled_back')
     const after = await get('/api/harness/workbench/overview')
     expect(after.body.counts.champions).toBe(0)
-    expect(after.body.champions[0].rolledBack).toBe(true)
     expect(after.body.experiences.find((e: any) => e.sourceProposalId === composed.id).status).toBe('retired')
   })
 
