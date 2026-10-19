@@ -104,21 +104,21 @@ ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3
 # ⑲ 产品 IA 版本（V8.44 纪律 75：生效 studio dist 必须含左侧导航五组、阶段页签、
 #     全流程推演与检索标记，防 V8.44 前旧 dist 上轮——旧 UI 拍出的帧与方案 §2.5 新锚
 #     全部错位。生效面判定与 mx-lib 一致：product-dist 有 server 目录用之，否则回落 upstream dist）。
-ck "⑲ 产品 IA 版本（左栏+阶段页签+全流程推演+检索在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq 'ia2.journey' \"\$_d\" 2>/dev/null && grep -rq 'ia-side-nav' \"\$_d\" 2>/dev/null && grep -rq '五步进度' \"\$_d\" 2>/dev/null && grep -rq '全流程推演' \"\$_d\" 2>/dev/null && grep -rq 'ia2.search' \"\$_d\" 2>/dev/null" "生效 dist 不含左侧栏/阶段页签/全流程推演/检索标记——是 V8.44 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+ck "⑲ 产品 IA 版本（左栏+阶段页签+全流程推演+检索在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia2.journey' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia-side-nav' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '五步进度' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '全流程推演' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia2.search' \"\$_d\" 2>/dev/null" "生效 dist 不含左侧栏/阶段页签/全流程推演/检索标记——是 V8.44 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
 
 # ⑳ Harness 运行底座编入生效 dist（V8.42）：九层体检/过程质量/恢复判定/执法决策/
 #    运行清单/预算六个新端点必须出现在生效构建里——旧 dist 起跑会让证据面整段缺席，
 #    报告第 9 章「Harness 运行面」无数据可引。判据与⑲同源：product-dist 优先，回落 upstream dist。
-ck "⑳ Harness 运行底座编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'nine-layers' \"\$_d\" 2>/dev/null && grep -rq 'process-quality' \"\$_d\" 2>/dev/null && grep -rq 'resume-plan' \"\$_d\" 2>/dev/null && grep -rq 'policy-decisions' \"\$_d\" 2>/dev/null && grep -rq 'run-manifests' \"\$_d\" 2>/dev/null && grep -rq 'budget-status' \"\$_d\" 2>/dev/null" "生效 dist 不含 Harness 运行底座端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）——是旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+ck "⑳ Harness 运行底座编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'nine-layers' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'process-quality' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'resume-plan' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'policy-decisions' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'run-manifests' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'budget-status' \"\$_d\" 2>/dev/null" "生效 dist 不含 Harness 运行底座端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）——是旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
 
 # ㉑ IDE 任务工作区端点编入生效 dist（V8.44）：步 18/25 的任务简报依赖
 #     GET /api/ide/task-workspace?task=&board=；旧 dist 会让「任务工作区/任务会话」
 #     两块整段缺席，报告图注与操作路径对不上。判据与⑲同源。
-ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'task-workspace' \"\$_d\" 2>/dev/null" "生效 dist 不含 /api/ide/task-workspace——是任务工作区批前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑本检查"
+ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'task-workspace' \"\$_d\" 2>/dev/null" "生效 dist 不含 /api/ide/task-workspace——是任务工作区批前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑本检查"
 
 # ㉒ 阶段页签与重定向矩阵在位（V8.44）：六阶段页签化后，旧 /app/gov/* 深链必须
 #     redirect 到阶段页（书签/通知零断链）；页签注册表缺位会让 ?tab= 全部回落默认签。
-ck "㉒ 阶段页签与重定向矩阵在位" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq 'stage/accept' \"\$_d\" 2>/dev/null && grep -rq 'gov/org-assets' \"\$_d\" 2>/dev/null && grep -rq 'clearance' \"\$_d\" 2>/dev/null" "生效 dist 不含阶段页签或 /app/gov/* 重定向矩阵——按 overlay custom/client/ia2/{stage-tabs.ts,routes.ts} 重建后再试"
+ck "㉒ 阶段页签与重定向矩阵在位" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/accept' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'gov/org-assets' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'clearance' \"\$_d\" 2>/dev/null" "生效 dist 不含阶段页签或 /app/gov/* 重定向矩阵——按 overlay custom/client/ia2/{stage-tabs.ts,routes.ts} 重建后再试"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 二十二项）" || { echo "有红项——修复后再跑"; exit 1; }
