@@ -240,7 +240,6 @@ onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
             <span>{{ f.label }}</span><span class="sgov-rail__count">{{ f.count }}</span>
           </button>
         </div>
-        <p class="muted sgov-rail__hint">{{ L.filters.searchPh }}</p>
       </div>
     </template>
 
@@ -439,7 +438,7 @@ onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
             <span :class="verdictClass(selectedSkill.verdict)">{{ L.verdictNames[selectedSkill.verdict] }}</span>
             ｜{{ L.table.findings }}：{{ selectedSkill.findingsCount }}
           </p>
-          <p v-if="!selectedSkill.findings?.length" class="muted">{{ L.filters.empty }}</p>
+          <p v-if="!selectedSkill.findings?.length" class="muted">{{ selectedSkill.findingsCount ? L.filters.findingsUnavailable : L.filters.empty }}</p>
           <ul v-else class="sgov-drawer__findings">
             <li v-for="(f, i) in selectedSkill.findings" :key="i" :class="`sev-${f.severity}`">
               <span class="chip">[{{ f.severity }}]</span>
