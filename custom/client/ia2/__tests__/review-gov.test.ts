@@ -132,6 +132,21 @@ describe('阶段页签注册', () => {
     }
     expect(STAGE_TABS[6].map((t) => t.key)).toContain('reviewGov')
   })
+
+  it('STAGE_TABS 的每个 component 都能在 StageShell 的 TAB_COMPONENTS 找到映射', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(__dirname, '../views/stage/StageShell.vue'), 'utf8')
+    const start = src.indexOf('const TAB_COMPONENTS')
+    const block = src.slice(start, src.indexOf('}', start))
+    const missing: string[] = []
+    for (const stage of [1, 2, 3, 4, 5, 6] as const) {
+      for (const tab of STAGE_TABS[stage]) {
+        if (!new RegExp(`\\b${tab.component}\\s*:`).test(block)) missing.push(`${stage}/${tab.key} → ${tab.component}`)
+      }
+    }
+    expect(missing).toEqual([])
+  })
 })
 
 describe('ReviewGovPanel 渲染与动作', () => {

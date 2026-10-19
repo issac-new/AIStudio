@@ -97,6 +97,19 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - Markdown 渲染、附件管理、租户解析（多租户隔离）
 - 工作区文件列表、时间线、附件同步 API
 
+### 🛡️ 评审治理 — 按改动风险分配人工审批（2026-10-19）
+
+吸收 Anthropic 工程博客《How the Claude Code team does code review》（2026-10-15）。在 ⑥治理阶段页新增「评审治理」页签（`/app/stage/govern?tab=reviewGov`），把「AI 写代码、人看不过来」拆成可执行的治理闭环：
+
+- **风险分档**：受保护路径（CI、发布脚本、计费、自动更新、鉴权、依赖清单）永远 2 人；敏感路径与常规产品逻辑 1 人；纯文档 / 内部工具 / 特性开关后，受信任作者 0 人。按改动内容分档，不按作者是人是 Agent。
+- **审批语义**：只有绑定当前 head commit、未被新提交或解冲突失效的人类 approve 计数；Agent 审批只记录、不占名额；人类 request_changes 阻塞合并。
+- **互审收敛**：最多 3 轮；第 3 轮起只看新增 diff；同文件同 bug 类去重；每轮 nit 上限；存量问题转延后队列（对应夜间扫描）。
+- **发现项质量**：important 必须附证据（终端输出 / 截图引用）；Agent 发现需独立验证多数确认才阻塞合并。
+- **度量与熔断**：一轮通过率 / 平均轮次 / 5+ 轮占比 / 人工审批中位 / 噪声率 / 回滚率；回滚或事故抬头时自动升一档审批。
+- **错题本**：发现项可提升为回归评测案例（`POST /api/review/gov/cases/:id/findings/:fid/promote`）。
+
+数据面：`/api/review/gov/*`（复用 `/api/review` 挂载，无新增 B 类 patch）；策略/收敛/度量/控制器/真实 Koa 挂载/客户端视图均有守门测试。设计文档：`docs/superpowers/specs/2026-10-19-review-governance.md`。
+
 ### 💬 Matrix Chat — 完整 Matrix 客户端
 
 50 个组件构成的完整即时通讯客户端，路由动态注册（P3 起挂新 IA 沟通区 `/app/comms`）：
