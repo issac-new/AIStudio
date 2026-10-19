@@ -12,6 +12,8 @@ import { VueFlow, MarkerType, Handle, Position, type Node, type Edge } from '@vu
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { edgeId, type CanvasDoc } from '../adapters/editor'
+import { editorDocToFlowExport } from '../adapters/canvas-export'
+import { exportFlowDiagramHtml, downloadHtml } from '@/custom/ide/utils/diagram-export'
 
 const props = defineProps<{
   doc: CanvasDoc
@@ -100,6 +102,19 @@ function onDragStop(node: { id: string; position: { x: number; y: number } }): v
   emit('move-node', { id: node.id, x: node.position.x, y: node.position.y })
 }
 
+/** 导出为品牌静态图（diagram 吸收轮挂账件）：非法边/警告如实入图（D-10），
+ *  选中态不入图（交互瞬态）；布局忠实保留当前拖拽坐标。 */
+function exportDiagram(): void {
+  const { nodes, edges } = editorDocToFlowExport({
+    doc: props.doc,
+    invalidEdgeIds: props.invalidEdgeIds,
+    warningNodeIds: props.warningNodeIds,
+  })
+  const html = exportFlowDiagramHtml(nodes, edges, { title: props.doc.description || '编排图' })
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')
+  downloadHtml(html, `orchestration-${stamp}.html`)
+}
+
 /** 面板拖入落位：以画布元素左上角为原点（不补偿视口平移/缩放——小图近似够用，
  *  落点微调由拖拽完成）。dataTransfer 键与左侧面板约定 application/x-node-type。 */
 function onDrop(ev: DragEvent): void {
@@ -122,6 +137,14 @@ function onDrop(ev: DragEvent): void {
     @dragover.prevent
     @drop.prevent="onDrop"
   >
+    <button
+      v-if="props.doc.nodes.length > 0"
+      type="button"
+      class="ed-canvas__export"
+      data-testid="ed-canvas-export"
+      title="导出为品牌静态图（HTML）"
+      @click.stop="exportDiagram"
+    >导出图</button>
     <VueFlow
       v-if="props.doc.nodes.length > 0"
       v-model:nodes="flowNodes"
@@ -173,6 +196,22 @@ function onDrop(ev: DragEvent): void {
     radial-gradient(circle at 1px 1px, var(--border-light, rgba(127, 127, 127, 0.18)) 1px, transparent 0) 0 0 / 16px 16px;
 }
 :deep(.vue-flow) { width: 100%; height: 100%; background: transparent; }
+
+.ed-canvas__export {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-card, var(--color-bg-primary));
+  color: var(--text-primary, var(--color-text-primary));
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.ed-canvas__export:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+
 :deep(.vue-flow__node) { width: auto; cursor: grab; }
 :deep(.vue-flow__handle) {
   width: 8px;

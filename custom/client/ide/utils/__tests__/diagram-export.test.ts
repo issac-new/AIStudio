@@ -68,6 +68,24 @@ describe('exportFlowDiagramHtml', () => {
   it('空节点如实抛错', () => {
     expect(() => exportFlowDiagramHtml([], [])).toThrowError(/至少一个节点/)
   })
+
+  it('warning 节点琥珀描边 + invalid 边 error 描边加粗（D-10 如实入图）', () => {
+    const html = exportFlowDiagramHtml(
+      [
+        { id: 'a', label: '审单', sublabel: 'gate · warning', status: 'warning', x: 0, y: 0 },
+        { id: 'b', label: '放行', x: 240, y: 0 },
+      ],
+      [{ from: 'a', to: 'b', invalid: true, label: '非法' }],
+      { title: '草稿' },
+    )
+    expect(html).toContain(`stroke="${CLIENT_BRAND.warning}"`)
+    expect(html).toContain(`stroke="${CLIENT_BRAND.error}"`)
+    expect(html).toContain('stroke-width="1.6"')
+  })
+
+  it('warning 色锚定 status-colors.ts 语义（#f57f17）', () => {
+    expect(CLIENT_BRAND.warning).toBe('#f57f17')
+  })
 })
 
 describe('产出真跑 self_check（真实工具链，--offline）', () => {
