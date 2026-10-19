@@ -53,6 +53,16 @@ export interface InspectorDeps {
   approvalsDir?: string
   /** safe-act 注入：僵尸任务回收（缺省 CLI 桥 hermes kanban reclaim；测试可stub） */
   reclaimTask?: (taskId: string) => Promise<string | undefined>
+  /**
+   * #9 决策影子层：催办/升级决策点并行调用的「影子判官」注入。只记录建议动作+置信度+
+   * 特征，绝不改真值（规则判官照旧执行）。缺省=静默跳过（fail-soft）；测试可 stub 断言。
+   * 落账走 decisiongraph（category=shadow-nudge），攒校准真值后再定是否接管。
+   */
+  recordShadow?: (input: {
+    detector: string; profile: string; ruleAction: string
+    silenceMs: number; nudgeCount: number; degraded: boolean; tripped: boolean
+    suggestedAction: string; confidence: number
+  }) => void
   /** govbus 发事件注入（缺省动态 require fail-soft） */
   emitGovEvent?: (e: { domain: 'system' | 'security'; severity: 'info' | 'warn' | 'high'; type: string; source: string; summary: string; payload?: Record<string, unknown> }) => void
   /** 安全告警中继数据源注入（M9，2026-10-16 安全轮）：缺省动态 require
@@ -198,14 +208,30 @@ export class ClusterInspector {
       const profile = (a.detail as { assignee?: string; profile?: string } | undefined)?.assignee?.trim()
         || (a.detail as { profile?: string } | undefined)?.profile?.trim()
         || a.subject.replace(/^profile:/, '').replace(/^branch:/, '').replace(/^session:/, '').replace(/@.*$/, '')
+      // #9 决策影子层：记录本档案静默时长（供影子判官特征，不改真值）。
+      const tailForSilence = this.lastSnapshot?.profiles?.tails?.find((t) => t.profile === profile)
+      const silenceMs = tailForSilence && tailForSilence.realWorkTsMs > 0
+        ? Math.max(0, (this.deps.now?.() ?? Date.now()) - tailForSilence.realWorkTsMs) : 0
+      const shadow = (ruleAction: string, suggestedAction: string, confidence: number, nudgeCount = 0): void => {
+        try {
+          this.deps.recordShadow?.({
+            detector: a.detector, profile, ruleAction, silenceMs, nudgeCount,
+            degraded: degraded.has(profile),
+            tripped: !!this.convergence?.isTripped(anomalyKey(a.detector, a.subject)),
+            suggestedAction, confidence,
+          })
+        } catch { /* fail-soft：影子层绝不阻断真值链 */ }
+      }
       // 降级先于熔断判（负责人有活跃熵增风险时不喂新活——领卡督办抑制；此语义
       // 优先于 idle.with-work 自身指纹的熔断，动作记 nudge-degrade 更可读）
       if (a.detector === 'idle.with-work' && degraded.has(profile)) {
+        shadow('nudge-degrade', 'suppress-new-work', 0.6)
         acted.push(`nudge-degrade:${profile}`)
         continue
       }
       // 熵增熔断：该指纹的提醒催单已反复无效（复发不收敛）——停发防回灌轰炸，等人介入
       if (this.convergence?.isTripped(anomalyKey(a.detector, a.subject))) {
+        shadow('nudge-breaker', 'human-intervene', 0.75)
         acted.push(`nudge-breaker:${profile}`)
         continue
       }
@@ -219,6 +245,7 @@ export class ClusterInspector {
         if (rwNow > entry.lastRealWorkTsMs + 1000) {
           // 真做刷新了→清账（重活轻催，不重催）
           this.nudgedProfiles.delete(profile)
+          shadow('nudge-resumed', 'resume-normal', 0.9, entry.nudgeCount)
           acted.push(`nudge-resumed:${profile}`)
           continue
         }
@@ -227,15 +254,18 @@ export class ClusterInspector {
         if (nextCount >= 3) {
           // 3 次仍 0 升级：停发提醒催单，标记需换档案
           this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
+          shadow('nudge-escalate', 'rotate-profile', 0.7, nextCount)
           acted.push(`nudge-escalate:${profile}:${nextCount}-nudges-no-realwork`)
           // 同时发一条升级消息让群内其他人能看到
           await nudge(profile, `【升级】已催 ${nextCount} 次仍无真做，疑似空转收场或唤醒即再死，建议换档案接手收尾`)
           continue
         }
         this.nudgedProfiles.set(profile, { firstNudgeAt: entry.firstNudgeAt, nudgeCount: nextCount, lastRealWorkTsMs: rwNow })
+        shadow('nudge-renudge', 'renudge', 0.55, nextCount)
       } else {
         // 首次提醒催单：登记
         this.nudgedProfiles.set(profile, { firstNudgeAt: Date.now(), nudgeCount: 1, lastRealWorkTsMs: rwNow })
+        shadow('nudge-first', 'nudge', 0.5, 1)
       }
       // 会话饥饿专属令（run20 复盘 D6）：通用收尾三步对饥饿是错误处方——
       // 空转×高上下文再催也没用，处方=换会话+显式命令清单（run20 wei 形态

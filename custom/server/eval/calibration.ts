@@ -36,6 +36,10 @@ export interface CalibrationSummary {
   brier: number | null
   /** 加权平均信心 − 加权平均命中（百分点级总信号；正=高估）。 */
   meanGap: number | null
+  /** #6：本次判定是否多裁判交叉（judgeModels>1）。单裁判=false 时下面给未交叉验证标注。 */
+  multiJudge: boolean
+  /** 单裁判（multiJudge=false）时的显式标注——校准只覆盖该单模型，未交叉验证。 */
+  singleJudgeNote?: string
   /** 大白话结论（人话先行）。 */
   plainSummary: string
 }
@@ -68,12 +72,15 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, x))
 }
 
-export function calibrationReport(set: EvalSet, attempts: Attempt[]): CalibrationSummary {
+export function calibrationReport(set: EvalSet, attempts: Attempt[], judgeCount = 1): CalibrationSummary {
   const { pairs, excludedUnknown, missingP } = extractCalibrationPairs(set, attempts)
+  const multiJudge = judgeCount > 1
+  const singleJudgeNote = multiJudge ? undefined
+    : '单裁判判定：校准只覆盖该单一模型的概率面，未经多裁判交叉验证（EVAL_JUDGE_MODELS 可启用多数决）。'
   if (pairs.length === 0) {
     return {
       samples: 0, excludedUnknown, missingP, buckets: [],
-      ece: null, brier: null, meanGap: null,
+      ece: null, brier: null, meanGap: null, multiJudge, singleJudgeNote,
       plainSummary: '无概率留痕判词（p 字段缺席）——校准面不可用：S1 判定端在线并留痕 p 后自动生成',
     }
   }
@@ -112,6 +119,7 @@ export function calibrationReport(set: EvalSet, attempts: Attempt[]): Calibratio
   return {
     samples: pairs.length, excludedUnknown, missingP, buckets,
     ece: round4(ece), brier: round4(brier), meanGap: round4(meanGap),
+    multiJudge, singleJudgeNote,
     plainSummary: plain,
   }
 }

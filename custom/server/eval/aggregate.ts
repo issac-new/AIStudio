@@ -7,6 +7,7 @@
 //   腾讯评测体系轮增面：byLink 六环节分段 / byException 异常分桶 / processMetrics
 //   过程双指标 / releaseGate 发布门禁 / sixDimensions 六维分面（均无数据时缺省）。
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
+import { loadEvalConfig } from './types'
 import { calibrationReport } from './calibration'
 import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf } from './metrics'
 import { actionLinksOf } from './actions'
@@ -108,6 +109,9 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
 
   const riskVeto = riskState === 'violated'
 
+  // #6：校准报告标注本次是否多裁判交叉（judgeModels>1）。默认单裁判时显式提示未交叉验证。
+  const judgeCount = loadEvalConfig().judgeModels.length
+
   run.aggregates = {
     taskCount,
     passAt1: passAt1Denom === 0 ? null : passAt1 / passAt1Denom,
@@ -129,7 +133,8 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     statisticallyInsufficient: run.k < 2,
     judgeOnline,
     // 校准度（六文调研轮 G）：判词有 p 留痕即生成；全无 p 时 samples=0 如实缺席（不造数）
-    calibration: calibrationReport(set, run.attempts),
+    // #6：传入裁判数，报告据此标注单/多裁判（单裁判显式提示未交叉验证）。
+    calibration: calibrationReport(set, run.attempts, judgeCount),
     // 腾讯评测体系轮：六环节分段 / 异常分桶 / 过程双指标（各自在无标注/无数据时缺省）
     byLink: byLinkOf(set, run),
     byException: byExceptionOf(set, run),

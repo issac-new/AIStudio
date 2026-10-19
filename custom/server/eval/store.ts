@@ -12,6 +12,7 @@ import { join } from 'path'
 import type {
   EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
 } from './types'
+import { loadEvalConfig } from './types'
 import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 import { contentFingerprint } from './fingerprint'
@@ -442,7 +443,7 @@ export function getRemediation(id: string): RemediationRecord | undefined {
 export function verifyRemediation(
   id: string,
   rerunRunId: string,
-): { ok: true; remediation: RemediationRecord; closed: boolean; alreadyClosed: boolean } | { ok: false; problems: string[] } {
+): { ok: true; remediation: RemediationRecord; closed: boolean; alreadyClosed: boolean; autoReflow?: { ok: true; created: boolean; taskId: string } | { ok: false; problems: string[] } } | { ok: false; problems: string[] } {
   const store = readStore()
   const remediation = store.remediations.find((r) => r.id === id)
   if (!remediation) return { ok: false, problems: [`处置单不存在：${id}`] }
@@ -475,7 +476,14 @@ export function verifyRemediation(
     remediation.closedAt = now
   }
   writeStore(store)
-  return { ok: true, remediation, closed, alreadyClosed: false }
+  // 自改进飞轮（#4）：处置单机械关闭时，把该任务自动回流到回归样本库——修复过的
+  // 场景变成永久回归用例，防问题回潮。幂等（reflowId=re-<run尾6>-<taskId>，复跑同 run
+  // 幂等跳过）；密封源集/自指回流由 reflowTaskToSet 结构性拒绝；EVAL_AUTO_REFLOW_ON_CLOSE=0 可关。
+  let autoReflow: { ok: true; created: boolean; taskId: string } | { ok: false; problems: string[] } | undefined
+  if (closed && loadEvalConfig().autoReflowOnClose) {
+    autoReflow = reflowTaskToSet({ runId: rerun.id, taskId: remediation.taskId, actor: 'auto-reflow-on-close' })
+  }
+  return { ok: true, remediation, closed, alreadyClosed: false, autoReflow }
 }
 
 // ---------- 任务追加（红队变体扩产，百度轮后续批 B6） ----------
