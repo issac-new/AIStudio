@@ -14,6 +14,8 @@ export interface ObsSpanRow {
   provider?: string | null
   started_at?: number | null
   ended_at?: number | null
+  /** 工具 span 的时间锚（插件 tool chunk 用 ts 键，无 started_at/ended_at）。 */
+  ts?: number | null
   duration_ms?: number | null
   first_token_ms?: number | null
   ttft_ms?: number | null
@@ -77,6 +79,12 @@ export interface ObsSignalsReport {
   /** 请求量按 model 分组（unknown 单列）。 */
   byModel: Array<{ model: string; llmCalls: number; tokens: TokenSplit }>
   notes: string[]
+}
+
+
+/** 行时间锚：ended_at 优先，回退 started_at / 工具 span 的 ts。 */
+function rowTs(row: ObsSpanRow): number | null | undefined {
+  return row.ended_at ?? row.started_at ?? row.ts
 }
 
 export function dayKeyOf(epochSeconds: number): string {
@@ -182,7 +190,7 @@ function finalizeDay(day: string, acc: DayAcc): ObsDayAgg {
     if (row.kind === 'llm_span') {
       // pre 段无独立指标（post/error 才是一次调用的结果面）
       if (row.phase !== 'post' && row.phase !== 'error') continue
-      const acc = dayAcc(row.ended_at ?? row.started_at)
+      const acc = dayAcc(rowTs(row))
       const model = row.model?.trim() || 'unknown'
       const modelAcc = byModelAcc.get(model) ?? { llmCalls: 0, tokens: emptyTokens() }
       modelAcc.llmCalls += 1
@@ -204,7 +212,7 @@ function finalizeDay(day: string, acc: DayAcc): ObsDayAgg {
       continue
     }
     if (row.kind === 'tool_span') {
-      const acc = dayAcc(row.ended_at ?? row.started_at)
+      const acc = dayAcc(rowTs(row))
       const failed = row.status === 'error' || Boolean(row.error_message)
       for (const target of [acc, total] as const) {
         if (!target) continue

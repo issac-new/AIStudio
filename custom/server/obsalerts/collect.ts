@@ -59,14 +59,14 @@ export function collectObsAlerts(
     notes.push(...collected.notes)
   }
 
-  const currentRows = rows.filter((r) => Number(r.ended_at ?? r.started_at ?? 0) >= currentFromSec)
+  const currentRows = rows.filter((r) => Number(r.ended_at ?? r.started_at ?? r.ts ?? 0) >= currentFromSec)
   const baselineRows = rows.filter((r) => {
-    const ts = Number(r.ended_at ?? r.started_at ?? 0)
+    const ts = Number(r.ended_at ?? r.started_at ?? r.ts ?? 0)
     return ts > 0 && ts < currentFromSec
   })
   const baselineEffectiveDays = new Set(
     baselineRows
-      .map((r) => r.ended_at ?? r.started_at)
+      .map((r) => r.ended_at ?? r.started_at ?? r.ts)
       .filter((ts): ts is number => Number.isFinite(ts))
       .map((ts) => dayKeyOf(ts)),
   ).size

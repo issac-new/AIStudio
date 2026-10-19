@@ -75,6 +75,23 @@ describe('buildObsSignals', () => {
     expect(r.totals.toolCalls).toBe(0)
     expect(r.totals.sessions).toBe(0) // trailer 不计会话（只认 header）
   })
+
+  it('工具 span 只带 ts 锚（插件 tool chunk 实际字段）也进入指标与分桶（2026-10-19 活体探针暴露的集成缺口）', () => {
+    const rows: ObsSpanRow[] = [
+      { type: 'chunk', kind: 'tool_span', session_id: 's1', tool_name: 'read_file', status: 'ok', ts: DAY1 + 10, duration_ms: 5 },
+      { type: 'chunk', kind: 'tool_span', session_id: 's1', tool_name: 'write_file', status: 'error', error_message: 'x', ts: DAY1 + 20 },
+    ]
+    const r = buildObsSignals(rows, { days: 7 })
+    expect(r.totals.toolCalls).toBe(2)
+    expect(r.totals.toolFailures).toBe(1)
+    expect(r.totals.toolFailureRate).toBe(0.5)
+    expect(r.byDay.length).toBe(1)
+    expect(r.byDay[0].toolCalls).toBe(2)
+    // 告警窗汇总同样吃到 ts 锚
+    const w = summarizeWindow(rows)
+    expect(w.toolCalls).toBe(2)
+    expect(w.errorRate).toBeCloseTo(0.5, 3)
+  })
 })
 
 describe('summarizeWindow', () => {
