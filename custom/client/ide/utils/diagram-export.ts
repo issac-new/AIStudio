@@ -14,6 +14,7 @@ export const CLIENT_BRAND = {
   accent: '#333333',
   link: '#2e6db4',
   error: '#c62828',
+  warning: '#f57f17',
 } as const
 
 const FONT_SANS = "'Geist', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif"
@@ -24,8 +25,8 @@ export interface FlowExportNode {
   id: string
   label: string
   sublabel?: string
-  /** 失败/运行中等状态语义：failed=error 描边，running=虚线描边（文本仍承载含义） */
-  status?: 'failed' | 'running' | 'done' | 'pending'
+  /** 状态语义：failed=error 描边，running=虚线描边，warning=琥珀描边（文本仍承载含义） */
+  status?: 'failed' | 'running' | 'done' | 'pending' | 'warning'
   x: number
   y: number
   w?: number
@@ -39,6 +40,8 @@ export interface FlowExportEdge {
   /** 走过的边加粗；回边 dashed */
   strong?: boolean
   dashed?: boolean
+  /** 非法边（校验判红）：error 描边加粗——如实入图，草稿态不化妆 */
+  invalid?: boolean
 }
 
 const PAD = 24
@@ -148,8 +151,9 @@ export function exportFlowDiagramHtml(
       ? backRoute(round4(s.x + s.w / 2 + ox), round4(s.y + s.h + oy), round4(t.x + t.w / 2 + ox), round4(t.y + t.h + oy))
       : elbow(sx, sy, tx, ty)
     const dash = e.dashed ? ' stroke-dasharray="6 4"' : ''
-    const stroke = e.strong ? CLIENT_BRAND.accent : CLIENT_BRAND.muted
-    const widthAttr = e.strong ? 1.6 : 1
+    const invalid = e.invalid === true
+    const stroke = invalid ? CLIENT_BRAND.error : e.strong ? CLIENT_BRAND.accent : CLIENT_BRAND.muted
+    const widthAttr = invalid || e.strong ? 1.6 : 1
     parts.push(`<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${widthAttr}"${dash} marker-end="url(#fx-arrow)"/>`)
     if (e.label) {
       const cjk = hasCjk(e.label)
@@ -165,7 +169,9 @@ export function exportFlowDiagramHtml(
   for (const n of placed) {
     const x = round4(n.x + ox)
     const y = round4(n.y + oy)
-    const stroke = n.status === 'failed' ? CLIENT_BRAND.error : CLIENT_BRAND.ink
+    const stroke = n.status === 'failed' ? CLIENT_BRAND.error
+      : n.status === 'warning' ? CLIENT_BRAND.warning
+        : CLIENT_BRAND.ink
     const dash = n.status === 'running' ? ' stroke-dasharray="6 4"' : ''
     parts.push(`<rect x="${x}" y="${y}" width="${round4(n.w)}" height="${round4(n.h)}" rx="6" fill="#ffffff" stroke="${stroke}" stroke-width="1"${dash}/>`)
     parts.push(`<text x="${x + 12}" y="${y + 22}" font-family='${FONT_SANS}' font-size="12" font-weight="600" fill="${CLIENT_BRAND.ink}">${esc(n.label)}</text>`)
