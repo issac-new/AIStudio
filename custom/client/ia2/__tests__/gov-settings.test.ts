@@ -58,12 +58,13 @@ describe('GovSettingsView — C9 验收门', () => {
     expect(w.find('[data-testid="gs-entry-hermes.profiles"]').exists()).toBe(false)
     expect(w.find('[data-testid="gs-entry-hermes.agentManager"]').exists()).toBe(false)
     expect(w.find('[data-testid="gs-entry-hermes.performance"]').exists()).toBe(false)
+    expect(w.find('[data-testid="gs-entry-hermes.versionPreview"]').exists()).toBe(false)
     // 普通条目在位；petdex 随 features.pet=false 隐藏
     expect(w.find('[data-testid="gs-entry-hermes.models"]').exists()).toBe(true)
     expect(w.find('[data-testid="gs-entry-hermes.petdex"]').exists()).toBe(false)
-    // 来源徽标两类并存（同域同区合并呈现，来源只标注不分隔）
-    expect(w.find('[data-testid="gs-source-hermes.settings"]').text()).toBe('原生')
-    expect(w.find('[data-testid="gs-source-hermes.kanban"]').text()).toBe('旧族')
+    // 界面不再暴露内部迁移术语（原生/旧族）
+    expect(w.text()).not.toContain('原生')
+    expect(w.text()).not.toContain('旧族')
     w.unmount()
   })
 

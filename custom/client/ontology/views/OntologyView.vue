@@ -6,6 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
+import { useTabQuery } from '@/custom/ia2/composables/useTabQuery'
 import { VueFlow, type Edge, type Node } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -22,8 +23,9 @@ const L = computed(() => {
   return loc.startsWith('zh') ? ontologyMessages.zh.onto : ontologyMessages.en.onto
 })
 
-type Tab = 'overview' | 'schema' | 'graph' | 'instances' | 'validate' | 'versions' | 'export' | 'constraints'
-const tab = ref<Tab>('overview')
+const ONTO_TABS = ['overview', 'schema', 'graph', 'instances', 'validate', 'versions', 'export', 'constraints'] as const
+type Tab = typeof ONTO_TABS[number]
+const tab = useTabQuery('tab', ONTO_TABS, 'overview')
 const typeQuery = ref('')
 const instQuery = ref('')
 const filtersActive = computed(() => tab.value === 'schema' || tab.value === 'instances')

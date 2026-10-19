@@ -4,6 +4,7 @@
      在服务端，界面只消费）＋交付物 14 件链（件名/在场状态）。缺件如实缺席。 -->
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import { useRunContext } from '../../composables/useRunContext'
 
@@ -13,6 +14,7 @@ interface DeliverableRow { name: string; label: string; file: string | null }
 interface DeliverablesResponse { run: string; deliverables: DeliverableRow[]; scanned: number }
 
 const { run, remember } = useRunContext()
+const router = useRouter()
 const loading = ref(false)
 const loadError = ref('')
 const branches = ref<BranchesResponse | null>(null)
@@ -55,6 +57,8 @@ watch(run, () => { if (run.value.trim()) void load() })
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
     <div v-else-if="!branches && !deliverables" class="dlv__hint" data-testid="dlv-empty">
       <p>在页头选择一次运行，读取分支新鲜度与交付物链。</p>
+      <p>若页头列表为空，说明当前还没有历史运行；先完成一次运行，或到运行中心查看启动准备。</p>
+      <button type="button" class="dlv__action" data-testid="dlv-open-sim" @click="router.push({ name: 'ia2.sim' })">打开运行中心 →</button>
     </div>
 
     <section v-if="branches" class="dlv__box">
@@ -90,7 +94,16 @@ watch(run, () => { if (run.value.trim()) void load() })
 <style scoped lang="scss">
 .dlv { display: flex; flex-direction: column; gap: 12px; }
 .dlv__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
-.dlv__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
+.dlv__hint { color: var(--text-muted); font-size: 12px; margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.dlv__action {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--accent-primary);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
 .dlv__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .dlv__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
 .dlv__table { width: 100%; border-collapse: collapse; font-size: 12px; }

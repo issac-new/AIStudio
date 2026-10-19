@@ -45,9 +45,14 @@ const props = withDefaults(defineProps<{
   showHistory?: boolean
   /** 隐藏面板内标题（外层页面栏已给出标题时置 true，收敛双标题） */
   hideTitle?: boolean
-}>(), { pollMs: 10000, showHistory: true, hideTitle: false })
+  /**
+   * 展示过滤：all=全部；release=只保留发布准出类评审。
+   * G5 页签只认发布语义，绝不以普通命令/普通评审冒充发布审批。
+   */
+  filter?: 'all' | 'release'
+}>(), { pollMs: 10000, showHistory: true, hideTitle: false, filter: 'all' })
 
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: []; 'open-all': [] }>()
 
 const i18nApi = useI18n() as unknown as {
   t: (key: string, named?: Record<string, unknown>) => string
@@ -96,6 +101,31 @@ const spotChecks = ref<SpotCheckItem[]>([])
 /** 已处置条目（API 返 resolved 全量；此前只取 length 当计数，回看内容整块丢弃——
  *  抽检器的意义恰在事后回看，UI 必须展示条目与裁决结论）。 */
 const spotResolved = ref<SpotCheckItem[]>([])
+
+const RELEASE_RE = /(发布|准出|G5|release|上线|发版|deploy\s*to\s*prod|production)/i
+/** 发布准出类审批：只认评审语义 + 发布关键词；命令审批永不进入 G5。 */
+function isReleaseApproval(item: PendingApprovalItem): boolean {
+  return item.kind === 'review' && RELEASE_RE.test(`${item.title ?? ''} ${item.detail ?? ''} ${item.domain ?? ''}`)
+}
+const visibleItems = computed(() =>
+  props.filter === 'release' ? items.value.filter(isReleaseApproval) : items.value)
+const visibleHistory = computed(() =>
+  props.filter === 'release'
+    ? history.value.filter(h => h.targetKind === 'review' && RELEASE_RE.test(`${h.targetTitle ?? ''} ${h.note ?? ''}`))
+    : history.value)
+const showSpotcheck = computed(() => props.showHistory && props.filter !== 'release')
+const releaseEmpty = computed(() => props.filter === 'release' && visibleItems.value.length === 0)
+const releaseT = computed(() => locale.value.startsWith('zh')
+  ? {
+      empty: '当前没有发布准出类审批',
+      emptyHint: 'G5 只展示与发布、准出相关的评审；普通命令与普通评审请到审批收件箱处理。',
+      openAll: '查看全部审批 →',
+    }
+  : {
+      empty: 'No release-gate approvals',
+      emptyHint: 'G5 only lists reviews tied to release or gate exit. Command and ordinary reviews live in the approval inbox.',
+      openAll: 'Open all approvals →',
+    })
 /** 抽检区词条：本地字典（见 i18n-approvals.ts 头注释——键族已从注入词表丢失）。 */
 const spotT = computed(() =>
   locale.value.startsWith('zh') ? approvalsSpotcheckMessages.zh : approvalsSpotcheckMessages.en)
@@ -111,7 +141,7 @@ let timer: ReturnType<typeof setInterval> | null = null
  *  服务端 pending 已按档排序，这里仅按档聚桶；缺档（老服务端）按 medium 兜底。 */
 const tierGroups = computed(() => {
   const buckets: Record<ApprovalRiskTier, PendingApprovalItem[]> = { high: [], medium: [], low: [] }
-  for (const item of items.value) buckets[item.risk ?? 'medium'].push(item)
+  for (const item of visibleItems.value) buckets[item.risk ?? 'medium'].push(item)
   return (['high', 'medium', 'low'] as const)
     .map((key) => ({ key, rows: buckets[key] }))
     .filter((g) => g.rows.length > 0)
@@ -223,8 +253,8 @@ defineExpose({ refresh })
   <div class="approval-panel" data-testid="approval-panel">
     <div class="approval-panel__head">
       <h3 v-if="!hideTitle" class="approval-panel__title">{{ t('approvals.title') }}</h3>
-      <span v-if="items.length" class="approval-panel__count" data-testid="approval-pending-count">{{ t('approvals.pendingCount', { n: items.length }) }}</span>
-      <span v-else class="approval-panel__count approval-panel__count--idle">{{ t('approvals.empty') }}</span>
+      <span v-if="visibleItems.length" class="approval-panel__count" data-testid="approval-pending-count">{{ t('approvals.pendingCount', { n: visibleItems.length }) }}</span>
+      <span v-else class="approval-panel__count approval-panel__count--idle">{{ releaseEmpty ? releaseT.empty : t('approvals.empty') }}</span>
       <button
         type="button"
         class="approval-panel__refresh"
@@ -237,9 +267,13 @@ defineExpose({ refresh })
     <div v-if="error" class="approval-panel__error" data-testid="approval-error">{{ t('approvals.loadFailed') }}：{{ error }}</div>
 
     <!-- 空态：图标 + 文案的暖空态（对照 Run Center 3 步引导范式，不再裸灰字） -->
-    <div v-if="!loading && items.length === 0" class="ui-empty-state" data-testid="approval-empty">
+    <div v-if="!loading && visibleItems.length === 0" class="ui-empty-state" data-testid="approval-empty">
       <span class="approval-panel__empty-icon" aria-hidden="true">✓</span>
-      <span class="approval-panel__empty-text">{{ t('approvals.empty') }}</span>
+      <span class="approval-panel__empty-text">{{ releaseEmpty ? releaseT.empty : t('approvals.empty') }}</span>
+      <template v-if="releaseEmpty">
+        <span class="approval-panel__empty-hint">{{ releaseT.emptyHint }}</span>
+        <button type="button" class="approval-panel__open-all" data-testid="approval-open-all" @click="emit('open-all')">{{ releaseT.openAll }}</button>
+      </template>
     </div>
 
     <!-- V4-N1 风险三档分区：高危（红标逐条）/ 常规 / 低风险（可自动通过·抽检） -->
@@ -325,7 +359,7 @@ defineExpose({ refresh })
 
     <!-- V4.1 §七 抽检器：低风险自动放行的事后回看（收件箱治理面）。
          词条走本地字典 spotT（i18n-approvals.ts——键族从注入词表丢失，t() 会回退）。 -->
-    <section v-if="showHistory && (spotChecks.length || spotResolved.length)" class="approval-panel__spotcheck" data-testid="approval-spotcheck">
+    <section v-if="showSpotcheck && (spotChecks.length || spotResolved.length)" class="approval-panel__spotcheck" data-testid="approval-spotcheck">
       <h4 class="approval-panel__group-title">
         <span class="risk-dot risk-dot--low"></span>{{ spotT.title }}
         <span class="risk-hint risk-hint--low">{{ spotT.hint }}</span>
@@ -379,7 +413,7 @@ defineExpose({ refresh })
     <!-- 审批历史 -->
     <section v-if="showHistory" class="approval-panel__history">
       <h4 class="approval-panel__group-title">{{ t('approvals.history') }}</h4>
-      <div v-if="history.length === 0" class="ui-empty-state">{{ t('approvals.historyEmpty') }}</div>
+      <div v-if="visibleHistory.length === 0" class="ui-empty-state">{{ t('approvals.historyEmpty') }}</div>
       <table v-else class="approval-history" data-testid="approval-history">
         <thead>
           <tr>
@@ -392,7 +426,7 @@ defineExpose({ refresh })
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entry in history" :key="entry.id + entry.ts">
+          <tr v-for="entry in visibleHistory" :key="entry.id + entry.ts">
             <td>{{ fmtTime(entry.ts) }}</td>
             <td>{{ entry.actor }}</td>
             <td :title="entry.targetTitle">{{ prettyTarget(entry.targetTitle) }}</td>
@@ -534,6 +568,21 @@ defineExpose({ refresh })
 .approval-panel__empty-text {
   color: var(--text-muted);
   font-size: 13px;
+}
+.approval-panel__empty-hint {
+  max-width: 520px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.approval-panel__open-all {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--accent-primary);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
 }
 .approval-panel__group {
   display: flex;
