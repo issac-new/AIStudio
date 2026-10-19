@@ -61,6 +61,7 @@ export const IDE_LOCAL_TEXT = {
       needWorkspace: '需先绑定工作区才能读取产物文件', loadFailed: '读取失败', tooLarge: '文件超过 512 KiB，未渲染',
       outside: '路径不在工作区内，已拒绝', untitled: '未命名产物', invalid: '条指令格式不合法已忽略',
       sandboxNote: '沙箱 iframe：允许脚本、禁止同源与网络（CSP default-src none）',
+      check: '自检', checking: '自检中…', checkPass: '自检通过（self_check 机械门禁）', checkFail: '自检未通过', checkFailed: '自检调用失败',
     },
     remote: {
       title: '远程工作区', refresh: '重新探测', probe: '连接', backend: '后端', cwd: '远端目录',
@@ -182,6 +183,7 @@ export const IDE_LOCAL_TEXT = {
       needWorkspace: 'Bind a workspace first to read artifacts', loadFailed: 'Failed to read', tooLarge: 'File exceeds 512 KiB; not rendered',
       outside: 'Path is outside the workspace; refused', untitled: 'Untitled', invalid: 'invalid directive(s) ignored',
       sandboxNote: 'Sandboxed iframe: scripts allowed, same-origin and network blocked (CSP default-src none)',
+      check: 'Self-check', checking: 'Checking…', checkPass: 'Self-check passed (self_check gate)', checkFail: 'Self-check failed', checkFailed: 'Self-check request failed',
     },
     remote: {
       title: 'Remote workspace', refresh: 'Re-probe', probe: 'Connection', backend: 'Backend', cwd: 'Remote cwd',

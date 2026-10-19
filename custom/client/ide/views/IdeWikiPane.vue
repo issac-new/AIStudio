@@ -21,6 +21,10 @@ import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { ideGitApi } from '../api/git'
 import {
+  splitMermaidSegments, brandMermaid, brandedFrameHeight, type MermaidSegment,
+} from '../utils/mermaid-brand'
+import { wrapGenUiHtml } from '../utils/genui'
+import {
   buildWikiPipelinePrompt,
   parseWikiMeta,
   parseWikiFrontMatter,
@@ -50,6 +54,10 @@ const LOC_DICT = {
     groupTop: '顶层页',
     groupModules: '模块页',
     pageMeta: '生成于 {at} · 基线 {commit}',
+    brandRender: '品牌重绘',
+    brandPending: '品牌重绘中…',
+    brandFallback: '该图型暂不支持品牌重绘，已回退默认渲染',
+    brandFailed: '品牌重绘失败，已回退默认渲染',
   },
   en: {
     stale: 'Wiki is behind HEAD (code moved past the baseline) — update suggested',
@@ -64,6 +72,10 @@ const LOC_DICT = {
     groupTop: 'Top-level',
     groupModules: 'Modules',
     pageMeta: 'Generated {at} · baseline {commit}',
+    brandRender: 'Brand redraw',
+    brandPending: 'Redrawing with brand skin…',
+    brandFallback: 'This diagram type is not brand-renderable yet; fell back to default',
+    brandFailed: 'Brand redraw failed; fell back to default',
   },
 } as const
 type WikiLocalKey = keyof typeof LOC_DICT.zh
@@ -91,6 +103,40 @@ const cfgOpen = ref(false)
 const meta = ref<WikiMeta | null>(null)
 const gitHead = ref<string | null>(null)
 const gitDirty = ref<boolean | null>(null)
+
+// 项5 品牌重绘：开=逐 mermaid 块走服务端品牌渲染；失败/不支持如实回退默认渲染。
+// 默认开（决策记录在 spec 项5）：失败语义=回退现状渲染，内容不丢，风险可控。
+const brandRender = ref(true)
+const brandStates = ref<Array<{ state: 'pending' | 'ok' | 'fallback'; html?: string; height?: number; note?: string }>>([])
+const segments = computed<MermaidSegment[]>(() => splitMermaidSegments(content.value))
+const hasMermaid = computed(() => segments.value.some((s) => s.kind === 'mermaid'))
+/** 渲染块：段 + 其在 mermaid 子序列中的序号（brandStates 按此对齐） */
+const renderBlocks = computed(() => {
+  let mm = 0
+  return segments.value.map((seg) => ({ seg, mmIndex: seg.kind === 'mermaid' ? mm++ : -1 }))
+})
+
+watch([content, brandRender], async () => {
+  if (!brandRender.value || !hasMermaid.value) { brandStates.value = []; return }
+  const segs = segments.value.filter((s) => s.kind === 'mermaid')
+  brandStates.value = segs.map(() => ({ state: 'pending' as const }))
+  await Promise.all(segs.map(async (seg, i) => {
+    try {
+      const res = await brandMermaid(seg.text)
+      if (res.ok && res.html) {
+        brandStates.value[i] = {
+          state: 'ok',
+          html: wrapGenUiHtml(res.html, seg.text.split('\n')[0]?.slice(0, 60)),
+          height: brandedFrameHeight(res.html),
+        }
+      } else {
+        brandStates.value[i] = { state: 'fallback', note: res.reason === 'unsupported_kind' ? 'brandFallback' : 'brandFailed' }
+      }
+    } catch {
+      brandStates.value[i] = { state: 'fallback', note: 'brandFailed' }
+    }
+  }))
+}, { immediate: true })
 
 const hasWorkspace = computed(() => Boolean(root.value))
 
@@ -283,6 +329,7 @@ watch(() => root.value, () => void loadPages())
       <button type="button" class="ide-wiki__btn" :disabled="!selected" :title="t('ide.wiki.referencePage')" @click="referencePage">{{ t('ide.wiki.referencePage') }}</button>
       <button type="button" class="ide-wiki__btn" :disabled="!hasWorkspace" :title="t('ide.wiki.pipeline')" data-testid="ide-wiki-pipeline" @click="runPipeline">{{ t('ide.wiki.pipeline') }}</button>
       <button type="button" class="ide-wiki__btn ide-wiki__btn--primary" :title="t('ide.wiki.generate')" data-testid="ide-wiki-generate" @click="copyGeneratePrompt">{{ t('ide.wiki.generate') }}</button>
+      <button type="button" class="ide-wiki__btn" :class="{ 'is-on': brandRender }" :title="wt('brandRender')" data-testid="ide-wiki-brand-toggle" @click="brandRender = !brandRender">{{ wt('brandRender') }}</button>
       <button type="button" class="ide-wiki__btn ide-wiki__btn--cfg" :title="wt('cfg')" data-testid="ide-wiki-cfg-toggle" @click="cfgOpen = !cfgOpen">⚙</button>
     </div>
 
@@ -352,7 +399,31 @@ watch(() => root.value, () => void loadPages())
           <p v-if="pageFm.generatedAt || pageFm.commit" class="ide-wiki__pagemeta" data-testid="ide-wiki-pagemeta">
             {{ wt('pageMeta').replace('{at}', pageFm.generatedAt ?? '?').replace('{commit}', pageFm.commit ?? '?') }}
           </p>
-          <MarkdownRenderer :content="content" />
+          <template v-if="brandRender && hasMermaid">
+            <template v-for="(b, bi) in renderBlocks" :key="bi">
+              <MarkdownRenderer v-if="b.seg.kind === 'md'" :content="b.seg.text" />
+              <template v-else>
+                <p v-if="brandStates[b.mmIndex]?.state === 'pending'" class="ide-wiki__hint">{{ wt('brandPending') }}</p>
+                <iframe
+                  v-else-if="brandStates[b.mmIndex]?.state === 'ok'"
+                  class="ide-wiki__brandframe"
+                  :style="{ height: `${brandStates[b.mmIndex]?.height ?? 240}px` }"
+                  sandbox="allow-scripts"
+                  referrerpolicy="no-referrer"
+                  title="branded diagram"
+                  :srcdoc="brandStates[b.mmIndex]?.html ?? ''"
+                  :data-testid="`ide-wiki-brandframe-${bi}`"
+                />
+                <div v-else>
+                  <p class="ide-wiki__brandnote" :data-testid="`ide-wiki-brandnote-${bi}`">
+                    {{ wt(brandStates[b.mmIndex]?.note === 'brandFailed' ? 'brandFailed' : 'brandFallback') }}
+                  </p>
+                  <MarkdownRenderer :content="'```mermaid\n' + b.seg.text + '\n```'" />
+                </div>
+              </template>
+            </template>
+          </template>
+          <MarkdownRenderer v-else :content="content" />
         </template>
         <p v-else class="ide-wiki__hint">{{ t('ide.wiki.noSelection') }}</p>
       </div>
@@ -405,6 +476,20 @@ watch(() => root.value, () => void loadPages())
     color: var(--accent-primary);
   }
   &.is-on { border-color: var(--accent-primary); color: var(--accent-primary); }
+}
+
+.ide-wiki__brandframe {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  margin: 8px 0;
+}
+
+.ide-wiki__brandnote {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .ide-wiki__cfg {
