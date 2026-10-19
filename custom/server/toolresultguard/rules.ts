@@ -34,23 +34,30 @@ export const SUSPICION_RULES: SuspicionRule[] = [
   { id: 'indirect', weight: 2, re: /\b(ai (assistant|agent) (inside|within|reading)|note to (the )?(ai|agent|assistant|model)|instructions? (for|to) (the )?(ai|agent|assistant))\b/i },
   { id: 'indirect-zh', weight: 2, re: /(致|写给|通知)(本页|本文档|正在阅读的)?(AI|智能体|助手|模型)[：:]?/ },
   // —— 编码混淆（A3）——
+  // 语言陷阱（2026-10-19 红队实测）：JS 的 \b 只认 ASCII 单词字符，把中文
+  // 选项包在 \b(...)\b 里等于永远不会命中（中文字符两侧都不是 \w，无边界）。
+  // 含中文的分支一律不加 \b；英文分支保留 \b 收紧，中英拆成独立规则。
   { id: 'b64-blob', weight: 1, re: /[A-Za-z0-9+/]{160,}={0,2}/ },
-  { id: 'b64-decode', weight: 2, re: /\b(base64|decode|rot13|hex[- ]?decode|atob)\b[^.\n]{0,30}\b(and|then|后|再|之后)\b[^.\n]{0,40}\b(follow|execute|run|执行|遵[循从])/i },
+  { id: 'b64-decode', weight: 2, re: /\b(base64|decode|rot13|hex[- ]?decode|atob)\b[^.\n]{0,30}(and|then|后|再|之后)[^.\n]{0,40}(follow|execute|run|执行|遵[循从])/i },
   { id: 'zero-width', weight: 2, re: /[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/ },
   // —— 多轮诱导开场（A4，弱信号）——
-  { id: 'grooming', weight: 1, re: /\b(hypothetically|in a fictional|just (for|between) us|let'?s play a game|角色扮演一下|假设(一个)?场景)\b/i },
+  { id: 'grooming', weight: 1, re: /\b(hypothetically|in a fictional|just (for|between) us|let'?s play a game)\b/i },
+  { id: 'grooming-zh', weight: 1, re: /(角色扮演一下|假设(一个)?场景|我们(先)?演一下)/ },
   // P2 实测补面（2026-10-16）：阶梯式拆解（Step 1..N 同段多现）与「既成约定」
   // （we established / earlier agreement）是渐进诱导的主形态，原 grooming 只抓
   // 虚构场景开场。阶梯=同文本 ≥2 个 step 标记（弱信号×2 累积才过闸）。
-  { id: 'grooming-steps', weight: 1, re: /(?:\bstep\s*\d\b|\b第\s*[一二三四五六七八九十\d]+\s*[步阶段])[^\n]{0,80}(?:\bstep\s*\d\b|\b第\s*[一二三四五六七八九十\d]+\s*[步阶段])/i },
-  { id: 'grooming-precedent', weight: 1, re: /\b(we (established|agreed)|as (we|i) (established|agreed)|earlier (agreement|you (said|confirmed))|just to confirm (that|our) (earlier|prior)|前面(已经|说过)约定|如前所述)\b/i },
+  { id: 'grooming-steps', weight: 1, re: /(?:\bstep\s*\d\b|第\s*[一二三四五六七八九十\d]+\s*[步阶段])[^\n]{0,80}(?:\bstep\s*\d\b|第\s*[一二三四五六七八九十\d]+\s*[步阶段])/i },
+  { id: 'grooming-precedent', weight: 1, re: /\b(we (established|agreed)|as (we|i) (established|agreed)|earlier (agreement|you (said|confirmed))|just to confirm (that|our) (earlier|prior))\b/i },
+  { id: 'grooming-precedent-zh', weight: 1, re: /(前面(已经|说过)约定|如前所述|既成约定)/ },
   // —— 工具滥用诱导（A6）——
   { id: 'tool-abuse', weight: 2, re: /\b(run|execute|curl|wget|rm -rf|sudo)\b[^.\n]{0,50}\b(without|bypassing|ignore)\b[^.\n]{0,30}\b(approval|permission|sandbox|review)/i },
   // P2 实测补面（2026-10-16）：原规则被 URL 打断（curl 与 without 间隔 >50 字符
   // 即漏）；补三个高频形态——管道直执、免确认、伪授权（pre-approved/admin said ok）。
   { id: 'tool-pipe-exec', weight: 2, re: /\b(curl|wget|fetch)\b[^\n]{0,120}\|\s*(ba)?sh\b/i },
   { id: 'tool-no-confirm', weight: 2, re: /\b(do not|don'?t|no need to|without) (ask|asking) (for )?(confirmation|approval|permission)\b[^.\n]{0,60}\b(pre-?approved|admin|owner|already)\b/i },
-  { id: 'tool-fake-auth', weight: 2, re: /\b(pre-?approved|admin (said|approved)|the owner (said|approved)|已授权|管理员(已)?(批准|同意))\b[^.\n]{0,60}\b(run|execute|delete|drop|exec|调用|执行)/i },
+  { id: 'tool-fake-auth', weight: 2, re: /\b(pre-?approved|admin (said|approved)|the owner (said|approved))\b[^.\n]{0,60}\b(run|execute|delete|drop|exec)/i },
+  // 中文伪授权（2026-10-19 红队实测补面）：中文分支不加 \b，见上「语言陷阱」。
+  { id: 'tool-fake-auth-zh', weight: 2, re: /(已授权|管理员(已)?(批准|同意))[^。\n]{0,40}(执行|删除|调用|运行|操作)/ },
   { id: 'tool-sql-destructive', weight: 2, re: /\b(drop|truncate|delete from)\s+(table\s+)?\w+\s*(;|--|$)/i },
   // —— 有害内容诱导（A8，P2 实测补面 2026-10-16）——
   // 设计难点=双刃剑：同一批词在教学/医学科普/安全研究/新闻报道里大量出现。对策=

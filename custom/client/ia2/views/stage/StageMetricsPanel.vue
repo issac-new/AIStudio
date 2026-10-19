@@ -1,7 +1,8 @@
-<!-- ⑥治理·度量检查页签：容量灯 + AI 产出质量 + 研发效能，一屏内按序排列。 -->
+<!-- ⑥治理·度量检查页签：容量灯 + AI 产出质量 + 评测运营 + 研发效能，一屏内按序排列。 -->
 <script setup lang="ts">
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 import GovAiQualitySection from '../gov/GovAiQualitySection.vue'
+import EvalOpsSection from '../gov/EvalOpsSection.vue'
 import GovHarnessView from '../gov/GovHarnessView.vue'
 </script>
 
@@ -9,6 +10,7 @@ import GovHarnessView from '../gov/GovHarnessView.vue'
   <div class="smp">
     <CapacityLampBanner />
     <GovAiQualitySection />
+    <EvalOpsSection />
     <GovHarnessView />
   </div>
 </template>

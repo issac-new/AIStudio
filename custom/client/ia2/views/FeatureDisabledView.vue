@@ -1,8 +1,8 @@
 <!-- overlay/custom/client/ia2/views/FeatureDisabledView.vue
      专题未启用说明页（2026-10-19 P1-5）：专题路由无条件注册，构建开关关闭时
      由本页说明原因与开启方式，替代此前被路由兜底静默送回 /app 的行为。
-     P1-5 实测对象=评测工作台（VITE_CUSTOM_EVAL 默认关）；其余专题同为
-     features.* 构建开关，本页对四个专题通用。 -->
+     P1-5 实测对象=评测工作台（2026-10-19 起默认开，VITE_CUSTOM_EVAL=false 可关）；
+     其余专题同为 features.* 构建开关，本页对四个专题通用。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

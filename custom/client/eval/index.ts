@@ -1,7 +1,7 @@
 // overlay/custom/client/eval/index.ts
-// Eval Studio A 类注册入口（M2）：路由 /app/eval（ia2.eval），features.eval 门控
-// （VITE_CUSTOM_EVAL=true 再开，观察后转默认开——S3 开关语义同款）。
-// 导航入口经 ia2 FlowNavPanel 挂载（EvalNavEntry，导航入口同款模式）。
+// Eval Studio A 类注册入口：路由 /app/eval（ia2.eval），features.eval 门控
+// （2026-10-19 起默认开，VITE_CUSTOM_EVAL=false 显式关——评测已织进⑥治理）。
+// 导航入口经 ISLAND_NAVS（nav-centers.ts）挂载。
 import type { App } from 'vue'
 import { registerRoute } from '../../../registries/client'
 

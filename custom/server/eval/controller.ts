@@ -23,15 +23,20 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { aggregateRun, compareRuns } from './aggregate'
+import { coverageOfSets } from './coverage'
+import { evaluatorAuditOf } from './evaluators'
+import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
 import { sampleFromTrace } from './trace-sampler'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
-  appendIteration, appendOracleRun, createOracleCase, createSet, exportSet, getOracleCase,
+  appendIteration, appendOracleRun, auditSnapshot, createOracleCase, createSet, exportSet, getOracleCase,
   getRun, getSet, listIterations, listOracleCases, listOracleRuns, listRuns, listSets,
   recordHumanVerdict, reflowTaskToSet, reviseRubric, sealSet,
 } from './store'
+import { countRuns as countRedteamRuns } from '../redteam/store'
+import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
 import type { EvalRun } from './types'
 
@@ -296,6 +301,95 @@ router.post('/runs/:id/verdicts', async (ctx) => {
   ctx.body = { ok: true, run: result.run }
 })
 
+// ---------- 评估器三角互证审计（百度范式 §3） ----------
+
+router.get('/runs/:id/evaluators', async (ctx) => {
+  const run = getRun(ctx.params.id)
+  if (!run) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  const set = getSet(run.setId)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  // 只回聚合与判词来源统计，不回题目内容——密封集也可安全查看。
+  ctx.body = { ok: true, audit: evaluatorAuditOf(set, run) }
+})
+
+// ---------- 归因一次点击：按 sessionId 重读证据（百度范式 §5） ----------
+
+router.get('/runs/:id/evidence', async (ctx) => {
+  const run = getRun(ctx.params.id)
+  if (!run) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  const set = getSet(run.setId)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  if (set.sealed) {
+    // 逐条证据是探测通道（可反推题目对错），密封集结构性拒绝。
+    ctx.status = 403
+    ctx.body = { ok: false, problems: ['密封集不提供逐条证据（防探测）'] }
+    return
+  }
+  const taskId = typeof ctx.query.taskId === 'string' ? ctx.query.taskId : ''
+  const sampleIdx = Number(ctx.query.sampleIdx)
+  if (!taskId || !Number.isInteger(sampleIdx) || sampleIdx < 1) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 与 sampleIdx(≥1) 必填'] }
+    return
+  }
+  const attempt = run.attempts.find((a) => a.taskId === taskId && a.sampleIdx === sampleIdx)
+  if (!attempt) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['样本不存在'] }
+    return
+  }
+  if (!attempt.sessionId) {
+    ctx.body = {
+      ok: false,
+      reason: '该样本为内联证据，未关联 session trace，无法回溯',
+      taskId,
+      sampleIdx,
+    }
+    return
+  }
+  const sample = sampleFromTrace(attempt.sessionId)
+  if (!sample.ok || !sample.sample) {
+    ctx.body = {
+      ok: false,
+      reason: sample.reason ?? 'trace 读取失败',
+      taskId,
+      sampleIdx,
+      sessionId: attempt.sessionId,
+    }
+    return
+  }
+  const transcript = sample.sample.transcript ?? ''
+  const maxChars = 4000
+  ctx.body = {
+    ok: true,
+    taskId,
+    sampleIdx,
+    sessionId: attempt.sessionId,
+    transcript: transcript.slice(0, maxChars),
+    truncated: transcript.length > maxChars,
+    toolCalls: sample.sample.toolCalls ?? [],
+    efficiency: sample.sample.efficiency ?? {},
+    meta: sample.meta,
+    hint: '证据为工具调用摘要（参数已脱敏）；原始轨迹见 ~/.hermes/traces/<sessionId>.jsonl。',
+  }
+})
+
 // ---------- 归因双 Loop ----------
 
 router.post('/runs/:id/attributions', async (ctx) => {
@@ -412,10 +506,39 @@ router.get('/oracle/runs', async (ctx) => {
   ctx.body = { ok: true, runs: listOracleRuns(caseId) }
 })
 
+// ---------- 指标注册表与消费证据（百度范式 §4：评估器即回报函数） ----------
+
+router.get('/metric-registry', async (ctx) => {
+  const snapshot = auditSnapshot()
+  const coverage = coverageOfSets(snapshot.sets)
+  const consumption = summarizeConsumption({
+    runs: snapshot.runs.map((run) => ({
+      aggregates: {
+        passAt1: run.aggregates.passAt1,
+        passAtK: run.aggregates.passAtK,
+        riskVeto: run.aggregates.riskVeto,
+        releaseGate: { measuredCount: run.aggregates.releaseGate?.measuredCount ?? 0 },
+      },
+      attempts: run.attempts.map((attempt) => ({
+        verdicts: attempt.verdicts.map((v) => ({ source: v.source, previousValue: v.previousValue })),
+      })),
+    })),
+    iterations: snapshot.iterationCount,
+    reflows: snapshot.reflowCount,
+    dimensionTaggedTasks: snapshot.dimensionTaggedTasks,
+    redteamRuns: countRedteamRuns(),
+  })
+  ctx.body = { ok: true, registry: buildRegistryView(consumption), coverage }
+})
+
 // ---------- 辅助 ----------
 
 router.get('/outcome-verifiers', async (ctx) => {
   ctx.body = { ok: true, verifiers: listOutcomeVerifiers() }
 })
+
+// 红队路由挂在同一前缀下（/api/hermes/eval/redteam/*），零新增 patch。
+mountRedteam(router)
+
 
 export const evalRoutes = router

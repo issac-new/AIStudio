@@ -40,8 +40,9 @@ export interface FeatureConfig {
   /** S3：图像生成辅助模型面板（ModelsView auxiliary tab）。
    *  VITE_CUSTOM_IMAGE_ASSIST=true 再开。 */
   imageAssist: boolean;
-  /** Eval Studio 评测工作台（M2，/app/eval + FlowNav 入口；spec
-   *  2026-10-07-eval-studio-design.md）。默认关，VITE_CUSTOM_EVAL=true 再开。 */
+  /** Eval Studio 评测工作台（/app/eval；spec 2026-10-07-eval-studio-design.md，
+   *  2026-10-19 百度范式轮补指标治理/红队/留出题库）。评测已织进⑥治理度量检查，
+   *  不再是实验特性：默认开，VITE_CUSTOM_EVAL=false 显式关。 */
   eval: boolean;
   /** 技能安全扫描（Skill 三段治理第一段产品面，2026-10-13：/app/skillgov + FlowNav
    *  入口）。产品能力非实验特性，默认开，VITE_CUSTOM_SKILLGOV=false 显式关。 */
@@ -74,7 +75,7 @@ export const features: FeatureConfig = {
   agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
   externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
   imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',
-  eval: import.meta.env.VITE_CUSTOM_EVAL === 'true',
+  eval: import.meta.env.VITE_CUSTOM_EVAL !== 'false',
   ontology: import.meta.env.VITE_CUSTOM_ONTOLOGY !== 'false',
   skillgov: import.meta.env.VITE_CUSTOM_SKILLGOV !== 'false',
   bpa: import.meta.env.VITE_CUSTOM_BPA !== 'false',

@@ -91,24 +91,36 @@ export function buildQuestions(task: EvalTask, assertionIds: string[]): Record<s
 
 // ---------- S0 确定性规则 ----------
 
-function applyRegexRule(rule: { pattern: string; flags?: string }, evidence: Evidence): 'yes' | 'no' {
+interface RuleOutcome {
+  value: 'yes' | 'no' | 'unknown'
+  /** 审计理由（百度范式 §3：判断本身可追问）。 */
+  reason: string
+}
+
+function applyRegexRule(rule: { pattern: string; flags?: string }, evidence: Evidence): RuleOutcome {
   const text = evidence.transcript ?? ''
   const matched = new RegExp(rule.pattern, rule.flags ?? '').test(text)
-  return matched ? 'yes' : 'no'
+  return {
+    value: matched ? 'yes' : 'no',
+    reason: `S0 regex ${matched ? '命中' : '未命中'} /${rule.pattern}/${rule.flags ?? ''}`,
+  }
 }
 
 function applyThresholdRule(
   rule: { metric: 'tokens' | 'steps' | 'costUsd' | 'durationMs'; op: '<' | '<=' | '>' | '>='; value: number },
   evidence: Evidence,
-): 'yes' | 'no' | 'unknown' {
+): RuleOutcome {
   const value = evidence.efficiency?.[rule.metric]
-  if (value === undefined || !Number.isFinite(value)) return 'unknown'
+  const head = `S0 threshold ${rule.metric}${rule.op}${rule.value}`
+  if (value === undefined || !Number.isFinite(value)) return { value: 'unknown', reason: `${head}：实测值缺席` }
+  let result: 'yes' | 'no'
   switch (rule.op) {
-    case '<': return value < rule.value ? 'yes' : 'no'
-    case '<=': return value <= rule.value ? 'yes' : 'no'
-    case '>': return value > rule.value ? 'yes' : 'no'
-    default: return value >= rule.value ? 'yes' : 'no'
+    case '<': result = value < rule.value ? 'yes' : 'no'; break
+    case '<=': result = value <= rule.value ? 'yes' : 'no'; break
+    case '>': result = value > rule.value ? 'yes' : 'no'; break
+    default: result = value >= rule.value ? 'yes' : 'no'
   }
+  return { value: result, reason: `${head}（实测 ${value}）` }
 }
 
 // ---------- 主入口 ----------
@@ -135,11 +147,10 @@ export async function judgeAttempt(
       s1Needed.push(assertion.id)
       continue
     }
-    if (assertion.s0.kind === 'regex') {
-      verdicts.push({ assertionId: assertion.id, value: applyRegexRule(assertion.s0, evidence), source: 's0' })
-    } else {
-      verdicts.push({ assertionId: assertion.id, value: applyThresholdRule(assertion.s0, evidence), source: 's0' })
-    }
+    const outcome = assertion.s0.kind === 'regex'
+      ? applyRegexRule(assertion.s0, evidence)
+      : applyThresholdRule(assertion.s0, evidence)
+    verdicts.push({ assertionId: assertion.id, value: outcome.value, source: 's0', reason: outcome.reason })
     if (options.crossValidate) s1Needed.push(assertion.id)
   }
 
@@ -224,6 +235,9 @@ export async function judgeAttempt(
   // τ 三段映射（多裁判时已由多数决定值，此处仅单模型/未过半路径）+ 冲突仲裁 + 组装
   const s0ById = new Map(verdicts.map((v) => [v.assertionId, v]))
   const s1Set = new Set(s1Needed)
+  const judgeLabel = config.judgeModels.length > 1 ? config.judgeModels.join(',') : config.judgeModel
+  const s1Reason = (value: 'yes' | 'no' | 'unknown', p?: number): string =>
+    `S1 ${value}${p !== undefined ? ` p=${p.toFixed(2)}` : ''}（τyes=${config.tauYes}, τno=${config.tauNo}, model=${judgeLabel}）`
   const finalVerdicts: AttemptVerdict[] = []
   for (const assertion of task.rubric) {
     const s0Verdict = s0ById.get(assertion.id)
@@ -240,16 +254,37 @@ export async function judgeAttempt(
       }
       // 多裁判未过半：s1Value 保持 unknown（均值已留痕在 p）
       if (!s0Verdict) {
-        finalVerdicts.push({ assertionId: assertion.id, value: s1Value, source: 's1', ...(p !== undefined ? { p } : {}) })
+        finalVerdicts.push({
+          assertionId: assertion.id,
+          value: s1Value,
+          source: 's1',
+          reason: s1Reason(s1Value, p),
+          ...(p !== undefined ? { p } : {}),
+        })
         continue
       }
       // crossValidate 双源：结论相反 → 保守 unknown 进仲裁；一致/单侧 unknown → 取已判侧
       if (s1Value !== 'unknown' && s0Verdict.value !== 'unknown' && s0Verdict.value !== s1Value) {
-        finalVerdicts.push({ assertionId: assertion.id, value: 'unknown', source: 's0+s1', conflict: true, ...(p !== undefined ? { p } : {}) })
+        finalVerdicts.push({
+          assertionId: assertion.id,
+          value: 'unknown',
+          source: 's0+s1',
+          conflict: true,
+          reason: `S0 ${s0Verdict.value} / S1 ${s1Value} 相反 → unknown（进人工仲裁）`,
+          ...(p !== undefined ? { p } : {}),
+        })
         continue
       }
       const value = s1Value !== 'unknown' ? s1Value : s0Verdict.value
-      finalVerdicts.push({ assertionId: assertion.id, value, source: 's0+s1', ...(p !== undefined ? { p } : {}) })
+      finalVerdicts.push({
+        assertionId: assertion.id,
+        value,
+        source: 's0+s1',
+        reason: s1Value === 'unknown'
+          ? `S1 unknown（${p !== undefined ? `p=${p.toFixed(2)}` : '未答题'}），取 S0 ${s0Verdict.value}`
+          : `S0 ${s0Verdict.value} / S1 ${s1Value} 一致`,
+        ...(p !== undefined ? { p } : {}),
+      })
       continue
     }
     if (s0Verdict) {
@@ -257,7 +292,12 @@ export async function judgeAttempt(
       continue
     }
     // 无 s0 且 S1 未覆盖（判定端离线时 s1Needed 内全部落在上面分支）——不会到这里，防御性兜底。
-    finalVerdicts.push({ assertionId: assertion.id, value: 'unknown', source: 's1' })
+    finalVerdicts.push({
+      assertionId: assertion.id,
+      value: 'unknown',
+      source: 's1',
+      reason: 'S1 判定端离线或未接线 → unknown',
+    })
   }
 
   return {
