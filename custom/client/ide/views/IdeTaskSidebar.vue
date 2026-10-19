@@ -42,9 +42,17 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 // zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同栏可折叠分组，
 // 数据/动作自持（IdeCliSessions），不进 chatStore（避免伪会话 ID 打断打开链）。
 import IdeCliSessions from '../components/IdeCliSessions.vue'
-import { fetchCliSessions } from '../api/devtools'
+// 2026-10-19 视图语义修正批：本地视图文案（覆盖词表 view_*——词表值「已完成」
+// 名不副实：done 桶口径是「超过 24h 无活动」而非任务完成，会话无完成态字段，
+// 诚实口径=「更早」）。title 写明口径，避免再次误读。
+const VIEW_TEXT: Record<'active' | 'done' | 'workspace', { zh: string; en: string; hint: string }> = {
+  active: { zh: '进行中', en: 'Active', hint: '24 小时内活跃或正在运行的会话' },
+  done: { zh: '更早', en: 'Earlier', hint: '超过 24 小时未活跃的会话（非已完成）' },
+  workspace: { zh: '工作空间', en: 'Workspaces', hint: '按工作空间分组查看全部会话' },
+}
 
 const { t } = useI18n()
+const zh = computed(() => String((useI18n() as unknown as { locale?: { value?: string } }).locale?.value ?? 'zh').startsWith('zh'))
 const router = useRouter()
 const message = useMessage()
 const chat = useChatStore()
@@ -178,10 +186,8 @@ interface TaskGroup {
   sessions: Session[]
 }
 const collapsedGroups = ref<Set<string>>(new Set())
-// zcode CLI 分组：默认展开；头部计数自 CLI 会话库
+// zcode CLI 分组：默认展开；计数=当前视图/搜索过滤后的条数（组件 emit）
 const cliCount = ref(0)
-const cliNote = ref('')
-fetchCliSessions(12).then(r => { cliCount.value = r.sessions.length; cliNote.value = r.note ?? '' }).catch(() => {})
 function toggleGroup(key: string): void {
   const next = new Set(collapsedGroups.value)
   if (next.has(key)) next.delete(key)
@@ -210,7 +216,9 @@ const viewCounts = computed(() => {
   return {
     active: buckets.active.length,
     done: buckets.done.length,
-    workspace: buckets.byWorkspace.length,
+    // 口径=会话数（此前是工作空间数，与另两视图口径不一致——用户看到的
+    // 「工作空间 1」实为 1 个工作空间而非 1 个会话）
+    workspace: all.length,
   }
 })
 
@@ -218,14 +226,25 @@ const taskGroups = computed<TaskGroup[]>(() => {
   const rest = sessionViewSessions.value
   const effectiveOrganize = ide.sidebar.sessionView === 'workspace' ? 'project' : ide.sidebar.organize
   if (effectiveOrganize === 'timeline') {
-    // 优先级降序（无任务者 -1 垫底）→ 最后更新时间逆序
-    const sessions = rest.slice().sort((a, b) => {
-      const pa = sessionPriority(a) ?? -1
-      const pb = sessionPriority(b) ?? -1
-      if (pa !== pb) return pb - pa
-      return (b.updatedAt || 0) - (a.updatedAt || 0)
-    })
-    return [{ key: '__timeline__', label: t('ide.task.timeline'), sessions }]
+    // 2026-10-19 语义修正：时间线=时间分层（今天/近 7 天/更早），段内更新逆序。
+    // 此前是「优先级+时间」平铺单列表，名叫时间线却无时间维度。
+    const byUpdated = (a: Session, b: Session) => (b.updatedAt || 0) - (a.updatedAt || 0)
+    const now = Date.now()
+    const DAY = 24 * 60 * 60 * 1000
+    const tiers: Array<{ key: string; label: string; min: number; max: number }> = [
+      { key: '__timeline_today__', label: zh.value ? '今天' : 'Today', min: 0, max: 1 * DAY },
+      { key: '__timeline_week__', label: zh.value ? '近 7 天' : 'Last 7 days', min: 1 * DAY, max: 7 * DAY },
+      { key: '__timeline_older__', label: zh.value ? '更早' : 'Older', min: 7 * DAY, max: Number.POSITIVE_INFINITY },
+    ]
+    return tiers
+      .map(tier => ({
+        key: tier.key,
+        label: tier.label,
+        sessions: rest
+          .filter(s => { const age = now - (s.updatedAt || 0); return age >= tier.min && age < tier.max })
+          .sort(byUpdated),
+      }))
+      .filter(g => g.sessions.length > 0)
   }
   if (effectiveOrganize === 'grouped') {
     const groups: TaskGroup[] = categories.value.map(c => ({
@@ -517,27 +536,18 @@ onMounted(async () => {
       </div>
 
       <div class="ide-taskbar__views" role="group" :aria-label="t('ide.task.views')">
+        <!-- 2026-10-19 视图语义修正：文案走本地 VIEW_TEXT（done 桶口径=超 24h
+             无活动而非完成，词表「已完成」名不副实）；title 写明口径。 -->
         <button
+          v-for="vk in (['active', 'done', 'workspace'] as const)"
+          :key="vk"
           type="button"
           class="ide-taskbar__view"
-          :class="{ 'is-active': ide.sidebar.sessionView === 'active' }"
-          data-testid="ide-task-view-active"
-          @click="ide.setSessionView('active')"
-        >{{ t('ide.task.view_active') }} <span class="ide-taskbar__view-count">{{ viewCounts.active }}</span></button>
-        <button
-          type="button"
-          class="ide-taskbar__view"
-          :class="{ 'is-active': ide.sidebar.sessionView === 'done' }"
-          data-testid="ide-task-view-done"
-          @click="ide.setSessionView('done')"
-        >{{ t('ide.task.view_done') }} <span class="ide-taskbar__view-count">{{ viewCounts.done }}</span></button>
-        <button
-          type="button"
-          class="ide-taskbar__view"
-          :class="{ 'is-active': ide.sidebar.sessionView === 'workspace' }"
-          data-testid="ide-task-view-workspace"
-          @click="ide.setSessionView('workspace')"
-        >{{ t('ide.task.view_workspace') }} <span class="ide-taskbar__view-count">{{ viewCounts.workspace }}</span></button>
+          :class="{ 'is-active': ide.sidebar.sessionView === vk }"
+          :data-testid="`ide-task-view-${vk}`"
+          :title="VIEW_TEXT[vk].hint"
+          @click="ide.setSessionView(vk)"
+        >{{ zh ? VIEW_TEXT[vk].zh : VIEW_TEXT[vk].en }} <span class="ide-taskbar__view-count">{{ viewCounts[vk] }}</span></button>
       </div>
 
       <div v-if="ide.sidebar.sessionView !== 'workspace'" class="ide-taskbar__organize" role="group" :aria-label="t('ide.task.organize')">
@@ -661,7 +671,7 @@ onMounted(async () => {
             <span v-if="cliCount" class="ide-taskbar__section-count">{{ cliCount }}</span>
           </header>
           <div v-show="!collapsedGroups.has('zcode-cli')" class="ide-taskbar__cli-body">
-            <IdeCliSessions :boxed="false" />
+            <IdeCliSessions :boxed="false" :view="ide.sidebar.sessionView" :query="activeQuery" @count="cliCount = $event" />
           </div>
         </section>
 
