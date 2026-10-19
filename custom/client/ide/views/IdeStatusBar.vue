@@ -17,6 +17,7 @@ import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings
 import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
 import IdeKeymapCard from '../components/IdeKeymapCard.vue'
+import IdeDevTools from '../components/IdeDevTools.vue'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
@@ -207,6 +208,7 @@ watch(
       :aria-label="ide.isWorkMode ? modeText.switchToCoding : modeText.switchToWork"
       @click="ide.toggleInterfaceMode()"
     >{{ ide.isWorkMode ? modeText.workShort : modeText.codingShort }}</button>
+    <IdeDevTools />
     <span v-if="slotOn('workspace')" class="ide-statusbar__item" :style="{ order: slotOrder('workspace') }" :title="root ?? ''">
       {{ root ?? t('ide.workspaceDefault') }}
     </span>
