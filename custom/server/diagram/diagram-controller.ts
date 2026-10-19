@@ -4,6 +4,8 @@
 import Router from '@koa/router'
 import { assertDiagramPath, runSelfCheck } from './self-check'
 import { runExportPng } from './export-png'
+import { runMermaidExtract } from './mermaid-extract'
+import { renderBrandedHtml } from './mermaid-branded'
 
 export const diagramRoutes = new Router({ prefix: '/api/hermes/diagram' })
 
@@ -41,6 +43,35 @@ diagramRoutes.post('/export-png', async (ctx) => {
   }
   const result = await runExportPng(safePath, { scale })
   ctx.body = result
+})
+
+// 项5：mermaid 源 → 品牌 HTML+SVG 重绘。「提取内容、丢弃源样式」；不支持的图型
+// 如实回退（ok=false + reason=unsupported_kind），客户端保持现有 mermaid 渲染。
+diagramRoutes.post('/mermaid-brand', async (ctx) => {
+  const body = (ctx.request as { body?: unknown }).body as {
+    source?: unknown
+    title?: unknown
+    diagram?: unknown
+  } | undefined
+  if (typeof body?.source !== 'string') {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'source 必填且必须是字符串', code: 'invalid_source' }
+    return
+  }
+  const extracted = await runMermaidExtract(body.source, {
+    diagram: typeof body.diagram === 'number' ? body.diagram : undefined,
+  })
+  if (!extracted.ok || !extracted.diagram) {
+    ctx.body = { ok: false, reason: 'extract_failed', runnerError: extracted.runnerError }
+    return
+  }
+  const title = typeof body.title === 'string' ? body.title : undefined
+  const rendered = renderBrandedHtml(extracted.diagram, title)
+  if (!rendered) {
+    ctx.body = { ok: false, reason: 'unsupported_kind', kind: extracted.kind }
+    return
+  }
+  ctx.body = { ok: true, html: rendered.html, kind: rendered.kind }
 })
 
 export default diagramRoutes
