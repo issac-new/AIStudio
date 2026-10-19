@@ -2,7 +2,7 @@
 <!-- 技能治理工作台：安全扫描（Skill 三段治理第一段）+ 技能供给对账/供给。
      文案单一事实源=本模块 i18n.ts。供给默认干跑、执行需确认、只增不改。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   skillgovApi,
@@ -12,6 +12,8 @@ import {
   type SkillScanSummaryDto,
 } from '@/custom/skillgov/api'
 import { skillgovMessages } from '@/custom/skillgov/i18n'
+import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
+import { filterScanRows, type ScanVerdictFilter } from '@/custom/skillgov/utils/filter'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -19,14 +21,18 @@ const L = computed(() => {
   return loc.startsWith('zh') ? skillgovMessages.zh.skillgov : skillgovMessages.en.skillgov
 })
 
+type ScanRow = SkillScanSummaryDto['results'][number]
+
 const tab = ref<'scan' | 'provision'>('scan')
+const scanQuery = ref('')
+const scanVerdict = ref<ScanVerdictFilter>('all')
+const selectedSkill = ref<ScanRow | null>(null)
 
 // ── 安全扫描 ─────────────────────────────────────────
 const summary = ref<SkillScanSummaryDto | null>(null)
 const busy = ref(false)
 const error = ref('')
 const rootsInput = ref('')
-const expanded = ref<Set<string>>(new Set())
 
 async function load(): Promise<void> {
   try {
@@ -48,13 +54,6 @@ async function scan(): Promise<void> {
   }
 }
 
-function toggle(name: string): void {
-  const next = new Set(expanded.value)
-  if (next.has(name)) next.delete(name)
-  else next.add(name)
-  expanded.value = next
-}
-
 function verdictClass(v: string): string {
   return v === 'dangerous' ? 'v-dangerous' : v === 'caution' ? 'v-caution' : 'v-safe'
 }
@@ -64,6 +63,20 @@ const sorted = computed(() => {
   const order = { dangerous: 0, caution: 1, safe: 2 } as Record<string, number>
   return [...(summary.value?.results ?? [])].sort((a, b) => (order[a.verdict] ?? 9) - (order[b.verdict] ?? 9))
 })
+
+/** 左栏筛选（2026-10-19 P2-7）：名称/目录搜索 + 判定档位；危险优先序保持不变。 */
+const scanFiltered = computed(() => filterScanRows(sorted.value, scanQuery.value, scanVerdict.value))
+
+const verdictFilters = computed(() => [
+  { key: 'all' as const, label: L.value.filters.all, count: summary.value?.results?.length ?? 0 },
+  { key: 'safe' as const, label: L.value.verdictNames.safe, count: summary.value?.byVerdict.safe ?? 0 },
+  { key: 'caution' as const, label: L.value.verdictNames.caution, count: summary.value?.byVerdict.caution ?? 0 },
+  { key: 'dangerous' as const, label: L.value.verdictNames.dangerous, count: summary.value?.byVerdict.dangerous ?? 0 },
+])
+
+function openSkill(row: ScanRow): void { selectedSkill.value = row }
+function closeSkill(): void { selectedSkill.value = null }
+function onDrawerKey(event: KeyboardEvent): void { if (event.key === 'Escape') closeSkill() }
 
 // ── 技能供给对账 ─────────────────────────────────────
 const prov = ref<ProvisionReportDto | null>(null)
@@ -191,7 +204,11 @@ function toggleProv(name: string): void {
   provExpanded.value = next
 }
 
-onMounted(() => void load())
+onMounted(() => {
+  void load()
+  window.addEventListener('keydown', onDrawerKey)
+})
+onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
 </script>
 
 <template>
@@ -203,6 +220,8 @@ onMounted(() => void load())
       </div>
     </header>
 
+    <TopicPageLayout :rail="tab === 'scan'">
+    <template #tabs>
     <nav class="sgov-tabs" data-testid="skillgov-tabs">
       <button type="button" :class="{ active: tab === 'scan' }" data-testid="skillgov-tab-scan" @click="tab = 'scan'">
         {{ L.provision.tabScan }}
@@ -211,6 +230,19 @@ onMounted(() => void load())
         {{ L.provision.tabProvision }}
       </button>
     </nav>
+    </template>
+    <template #filters>
+      <div class="sgov-rail" data-testid="skillgov-filters">
+        <input v-model="scanQuery" class="sgov-rail__input" :placeholder="L.filters.searchPh" data-testid="skillgov-search" />
+        <div class="sgov-rail__group">
+          <button v-for="f in verdictFilters" :key="f.key" type="button" class="sgov-rail__chip"
+            :class="{ active: scanVerdict === f.key }" :data-testid="`skillgov-filter-${f.key}`" @click="scanVerdict = f.key">
+            <span>{{ f.label }}</span><span class="sgov-rail__count">{{ f.count }}</span>
+          </button>
+        </div>
+        <p class="muted sgov-rail__hint">{{ L.filters.searchPh }}</p>
+      </div>
+    </template>
 
     <template v-if="tab === 'scan'">
       <p v-if="error" class="sgov-view__error">{{ L.error }}：{{ error }}</p>
@@ -234,7 +266,7 @@ onMounted(() => void load())
           <div class="card-num v-dangerous"><span class="num">{{ summary.byVerdict.dangerous }}</span><span class="lbl">{{ L.summary.dangerous }}</span></div>
         </div>
 
-        <p v-if="sorted.length === 0" class="muted">{{ L.empty }}</p>
+        <p v-if="scanFiltered.length === 0" class="muted">{{ L.filters.empty }}</p>
         <table v-else class="sgov-table" data-testid="skillgov-table">
           <thead>
             <tr>
@@ -245,26 +277,12 @@ onMounted(() => void load())
             </tr>
           </thead>
           <tbody>
-            <template v-for="row in sorted" :key="row.dir">
-              <tr :data-testid="`skillgov-row-${row.name}`" @click="toggle(row.name)">
-                <td class="mono">{{ row.name }}</td>
-                <td :class="verdictClass(row.verdict)">{{ L.verdictNames[row.verdict] }}</td>
-                <td>{{ row.findingsCount }}<span v-if="row.findingsCount > 0" class="muted"> ▾</span></td>
-                <td class="mono muted">{{ row.dir }}</td>
-              </tr>
-              <tr v-if="expanded.has(row.name) && row.findings?.length" class="sgov-findings">
-                <td colspan="4">
-                  <ul>
-                    <li v-for="(f, i) in row.findings" :key="i" :class="`sev-${f.severity}`">
-                      <span class="chip">[{{ f.severity }}]</span>
-                      <span class="mono">{{ f.rule }}</span>
-                      <span class="mono muted">{{ f.file }}{{ f.line ? `:${f.line}` : '' }}</span>
-                      <span>{{ f.message }}</span>
-                    </li>
-                  </ul>
-                </td>
-              </tr>
-            </template>
+            <tr v-for="row in scanFiltered" :key="row.dir" :data-testid="`skillgov-row-${row.name}`" @click="openSkill(row)">
+              <td class="mono">{{ row.name }}</td>
+              <td :class="verdictClass(row.verdict)">{{ L.verdictNames[row.verdict] }}</td>
+              <td>{{ row.findingsCount }}<span v-if="row.findingsCount > 0" class="muted"> ›</span></td>
+              <td class="mono muted">{{ row.dir }}</td>
+            </tr>
           </tbody>
         </table>
       </template>
@@ -408,6 +426,32 @@ onMounted(() => void load())
       </section>
       <p v-else class="muted">{{ L.provision.loading }}</p>
     </template>
+
+    <template #drawer>
+      <div v-if="selectedSkill" class="sgov-drawer" data-testid="skillgov-drawer" @click.self="closeSkill">
+        <aside class="sgov-drawer__panel" role="dialog" aria-modal="true" aria-label="skill detail">
+          <header class="sgov-drawer__head">
+            <b class="mono">{{ selectedSkill.name }}</b>
+            <button type="button" class="ghost" data-testid="skillgov-drawer-close" @click="closeSkill">{{ L.filters.close }}</button>
+          </header>
+          <p class="muted mono sgov-drawer__dir">{{ selectedSkill.dir }}</p>
+          <p class="sgov-drawer__meta">
+            <span :class="verdictClass(selectedSkill.verdict)">{{ L.verdictNames[selectedSkill.verdict] }}</span>
+            ｜{{ L.table.findings }}：{{ selectedSkill.findingsCount }}
+          </p>
+          <p v-if="!selectedSkill.findings?.length" class="muted">{{ L.filters.empty }}</p>
+          <ul v-else class="sgov-drawer__findings">
+            <li v-for="(f, i) in selectedSkill.findings" :key="i" :class="`sev-${f.severity}`">
+              <span class="chip">[{{ f.severity }}]</span>
+              <span class="mono">{{ f.rule }}</span>
+              <span class="mono muted">{{ f.file }}{{ f.line ? `:${f.line}` : '' }}</span>
+              <span>{{ f.message }}</span>
+            </li>
+          </ul>
+        </aside>
+      </div>
+    </template>
+    </TopicPageLayout>
   </section>
 </template>
 
@@ -454,8 +498,22 @@ button.ghost { background: transparent; color: inherit; border: 1px solid var(--
   td.v-safe { color: var(--success, #16a34a); font-weight: 600; }
   td.v-caution { color: var(--warning, #b45309); font-weight: 600; }
   td.v-dangerous { color: var(--danger, #dc2626); font-weight: 600; } }
-.sgov-findings td { background: var(--bg-tertiary, rgba(0,0,0,0.03)); }
+ .sgov-findings td { background: var(--bg-tertiary, rgba(0,0,0,0.03)); }
 .sgov-findings ul { margin: 0; padding-left: 14px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.sgov-rail { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.sgov-rail__input { width: 100%; box-sizing: border-box; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 6px 8px; font-size: 12px; background: var(--bg-primary, #fff); color: inherit; }
+.sgov-rail__group { display: flex; flex-direction: column; gap: 4px; }
+.sgov-rail__chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid transparent; border-radius: 7px; padding: 5px 8px; background: transparent; color: inherit; font-size: 12px; cursor: pointer; opacity: 0.8;
+  &.active { opacity: 1; border-color: var(--border-color, #e5e7eb); background: var(--bg-tertiary, rgba(0,0,0,0.03)); font-weight: 600; } }
+.sgov-rail__count { opacity: 0.6; font-variant-numeric: tabular-nums; }
+.sgov-rail__hint { margin: 2px 0 0; line-height: 1.4; }
+.sgov-drawer { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.35); display: flex; justify-content: flex-end; }
+.sgov-drawer__panel { width: min(440px, 92vw); height: 100%; overflow: auto; background: var(--bg-primary, #fff); border-left: 1px solid var(--border-color, #e5e7eb); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.sgov-drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sgov-drawer__dir { margin: 0; word-break: break-all; }
+.sgov-drawer__meta { margin: 0; font-size: 12px; }
+.sgov-drawer__findings { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.sgov-drawer__findings li { border-bottom: 1px solid var(--border-color, #e5e7eb); padding-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .prov-detail { display: flex; flex-direction: column; gap: 4px; font-size: 12px;
   b { font-weight: 600; margin-right: 4px; } }
 .sev-high { color: var(--danger, #dc2626); }
