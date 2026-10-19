@@ -90,7 +90,7 @@ npm run build
 
 - 目标域：`custom/server/eval` + `custom/server/redteam` + `custom/client/eval` → **189 通过 / 0 失败**。
 - 基线三件：journey / incident-window / CUA 平台 + 补丁清单 → **16 通过 / 0 失败**。
-- 全量：**739 文件通过、5 跳过；5376 用例通过、8 跳过、0 失败**（744 文件 / 5384 用例）。
+- 全量（rebase 到最新 main 后）：**741 文件通过、5 跳过；5385 用例通过、8 跳过、0 失败**（746 文件 / 5393 用例）。
 - 类型：`npm run typecheck:harness` 0 错误；`vite build` 成功（输出 `/tmp/eval-closure-dist`，未覆盖共享 dist）。
 - 浏览器走查（隔离后端 8648 + 前端 8653，未触碰 8647/8649）：失败样本建处置单 → 处置单待修复 → 同卷复评通过 → 状态自动变「已关闭」、复评次数 1、最近复评通过 ✓。截图 [closure-closed.png](assets/eval-closure-2026-10-19/closure-closed.png)。
 - 走查后经 API 复核：处置单 `status=closed`、`rerunRunId` 指向复评运行；复评运行 `setRevision=1`、`passAtK=1`；首次运行 `passAtK=0`。
