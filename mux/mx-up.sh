@@ -151,8 +151,11 @@ else
   # 2.8h 隐形断档）：90s 窗内等矩阵平台装载行，未见即 fail-fast（带排障指引）
   for _i in $(seq 1 18); do
     sleep 5
-    if grep -qE "MULTIPLEX.*Profile.*(ready|listening|connected)" "$LOGS_DIR/gateway.log" 2>/dev/null; then
-      log "✓ 矩阵适配器装载确认（MULTIPLEX 行）"; break
+    # V8.46：launchd 托管形态把运行日志写到 $HERMES_ROOT/logs/gateway.log（banner 在
+    # $LOGS_DIR/gateway.log）——只查后者会把「适配器已连」误报成未见。两处都认。
+    if grep -qE "MULTIPLEX.*Profile.*(ready|listening|connected)|✓ matrix connected" "$LOGS_DIR/gateway.log" 2>/dev/null \
+       || grep -qE "MULTIPLEX.*Profile.*(ready|listening|connected)|✓ matrix connected" "$HERMES_ROOT/logs/gateway.log" 2>/dev/null; then
+      log "✓ 矩阵适配器装载确认"; break
     fi
     [[ $_i -eq 18 ]] && { log "⚠ 90s 未见矩阵适配器装载行——查 gateway.log 平台段（假 home_channel/凭据缺失均可致此）；派发链路未通，禁起跑"; }
   done
