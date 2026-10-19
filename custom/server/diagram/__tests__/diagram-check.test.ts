@@ -51,7 +51,9 @@ beforeAll(() => {
 afterAll(() => {
   if (prevHermesHome === undefined) delete process.env.HERMES_HOME
   else process.env.HERMES_HOME = prevHermesHome
-  rmSync(root, { recursive: true, force: true })
+  // task-workspace-cache 后台 hermes CLI 可能正往 HERMES_HOME（=本夹具 root）写状态，
+  // 与 rm 竞态报 ENOTEMPTY——重试窗口覆盖（maxRetries×retryDelay≈500ms）。
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
 })
 
 describe('parseSelfCheckOutput', () => {
