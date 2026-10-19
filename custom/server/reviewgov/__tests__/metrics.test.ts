@@ -109,11 +109,15 @@ describe('评审判度聚合', () => {
     }),
   ]
 
-  it('一轮通过率/平均轮次/5+ 轮占比/人工审批中位/噪声率/存量占比', () => {
+  it('一轮通过率/平均轮次/5+ 轮占比/人工审批中位/等待中位/噪声率/存量占比/评测分', () => {
     const evalCases: ReviewEvalCase[] = [{
       evalCaseId: 'ev1', caseId: 'd', source: 'manual', title: 'x', expected: 'y', createdAt: now,
     }]
-    const m = computeMetrics(cases, [], policy, evalCases, now)
+    const latestEvalRun = {
+      runId: 'er1', at: now, total: 2, matched: 1, recall: 0.5, precision: 0.5,
+      missing: ['ev2'], falsePositives: [],
+    }
+    const m = computeMetrics(cases, [], policy, evalCases, now, latestEvalRun)
     expect(m.cases).toBe(4)
     expect(m.merged).toBe(2)
     expect(m.active).toBe(1)
@@ -121,11 +125,14 @@ describe('评审判度聚合', () => {
     expect(m.meanRounds).toBeCloseTo((1 + 1 + 2 + 5) / 4)
     expect(m.fivePlusShare).toBeCloseTo(1 / 4)
     expect(m.humanApprovalsMedian).toBe(0.5)           // 1/0/2/0 → 中位 (0+1)/2
+    expect(m.humanWaitMedianMs).toBe(550)              // a=500ms、c=600ms → 中位 550ms
     expect(m.noiseRate).toBe(0.75)                     // fixed + 三个噪声 → 3/4
     expect(m.preexistingShare).toBeCloseTo(1 / 6)
     expect(m.deferredBacklog).toBe(1)
     expect(m.openImportant).toBe(1)
     expect(m.evalCases).toBe(1)
+    expect(m.evalRecall).toBe(0.5)
+    expect(m.evalPrecision).toBe(0.5)
   })
 
   it('人工等待时间 = 创建到首个有效人工审批', () => {

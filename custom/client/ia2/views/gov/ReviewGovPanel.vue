@@ -7,11 +7,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  addFinding, answerFinding, caseRow, fetchCase, fetchCases, fetchMetrics, fetchPolicy,
-  kpiCards, mergeCase, openCase, openFindings, recordApproval, recordSignal, setChecks, tierRows,
-  verifyFinding,
-  type BreakerView, type CaseDetail, type FindingSeverity, type Resolution, type ReviewCaseView,
-  type ReviewMetricsView, type ReviewPolicyView,
+  addFinding, answerFinding, caseRow, fetchCase, fetchCases, fetchEvalScore, fetchMetrics,
+  fetchNightly, fetchPolicy, importPr, kpiCards, mergeCase, openCase, openFindings, recordApproval,
+  recordSignal, rollbackCase, runEval, runNightly, setChecks, tierRows, verifyFinding,
+  type BreakerView, type CaseDetail, type EvalRunView, type FindingSeverity, type NightlyReportView,
+  type Resolution, type ReviewCaseView, type ReviewMetricsView, type ReviewPolicyView,
 } from '../../api/review-gov'
 
 const loading = ref(false)
@@ -19,6 +19,8 @@ const error = ref('')
 const policy = ref<ReviewPolicyView | null>(null)
 const breaker = ref<BreakerView | null>(null)
 const metrics = ref<ReviewMetricsView | null>(null)
+const nightly = ref<NightlyReportView | null>(null)
+const evalRun = ref<EvalRunView | null>(null)
 const cases = ref<ReviewCaseView[]>([])
 const selectedId = ref('')
 const detail = ref<CaseDetail | null>(null)
@@ -45,6 +47,22 @@ const findingForm = ref({
 })
 const addingFinding = ref(false)
 
+// PR 导入表单（归一化载荷；不主动回写 GitHub/GitLab）
+const prForm = ref({
+  provider: 'github' as 'github' | 'gitlab' | 'generic',
+  repo: '',
+  number: 1,
+  title: '',
+  headCommit: '',
+  paths: '',
+  url: '',
+})
+const importingPr = ref(false)
+
+// 评测集预测导入（每行 path:line）
+const evalForm = ref({ lines: '' })
+const runningEval = ref(false)
+
 const kpis = computed(() => (metrics.value ? kpiCards(metrics.value) : []))
 const tiers = computed(() => (policy.value ? tierRows(policy.value) : []))
 const rows = computed(() => cases.value.map((c) => caseRow(c, policy.value?.convergence.maxRounds ?? 3)))
@@ -52,6 +70,7 @@ const findings = computed(() => (detail.value ? openFindings(detail.value.case) 
 const deferred = computed(() => (detail.value ? detail.value.case.findings.filter((f) => f.deferred) : []))
 const selected = computed(() => detail.value?.case ?? null)
 const readiness = computed(() => detail.value?.readiness ?? null)
+const nightlyTop = computed(() => nightly.value?.groups.slice(0, 5) ?? [])
 
 const TIER_ZH = { low: '低风险', medium: '中风险', high: '高风险' } as const
 const STATE_ZH = { open: '评审中', ready: '可合并', merged: '已合并', abandoned: '已放弃' } as const
@@ -59,6 +78,7 @@ const CHECK_ZH = { green: '全绿', red: '未通过', unknown: '未上报' } as 
 const selectedTier = computed(() => (selected.value ? TIER_ZH[selected.value.risk.tier] : ''))
 const selectedState = computed(() => (selected.value ? STATE_ZH[selected.value.state] : ''))
 const selectedChecks = computed(() => (selected.value ? CHECK_ZH[selected.value.checks] : ''))
+const pct = (v: number | null): string => (v === null ? '—' : `${(v * 100).toFixed(v * 100 >= 10 ? 0 : 1)}%`)
 
 async function run(fn: () => Promise<void>): Promise<void> {
   loading.value = true
@@ -74,11 +94,15 @@ async function run(fn: () => Promise<void>): Promise<void> {
 
 async function loadAll(): Promise<void> {
   await run(async () => {
-    const [p, list, m] = await Promise.all([fetchPolicy(), fetchCases({ limit: 200 }), fetchMetrics()])
+    const [p, list, m, n, e] = await Promise.all([
+      fetchPolicy(), fetchCases({ limit: 200 }), fetchMetrics(), fetchNightly(), fetchEvalScore(),
+    ])
     policy.value = p.policy
     breaker.value = p.breaker
     cases.value = list
     metrics.value = m
+    nightly.value = n
+    evalRun.value = e.latest
     const first = selectedId.value || list[0]?.caseId
     if (first) await select(first)
   })
@@ -90,11 +114,15 @@ async function select(caseId: string): Promise<void> {
 }
 
 async function refreshLight(): Promise<void> {
-  const [list, m, p] = await Promise.all([fetchCases({ limit: 200 }), fetchMetrics(), fetchPolicy()])
+  const [list, m, p, n, e] = await Promise.all([
+    fetchCases({ limit: 200 }), fetchMetrics(), fetchPolicy(), fetchNightly(), fetchEvalScore(),
+  ])
   cases.value = list
   metrics.value = m
   policy.value = p.policy
   breaker.value = p.breaker
+  nightly.value = n
+  evalRun.value = e.latest
   if (selectedId.value) detail.value = await fetchCase(selectedId.value)
 }
 
@@ -103,6 +131,62 @@ async function onSignal(kind: 'revert' | 'incident'): Promise<void> {
     await recordSignal(kind, kind === 'revert' ? '治理页手工登记回滚' : '治理页手工登记事故')
     await refreshLight()
   })
+}
+
+async function onRunNightly(): Promise<void> {
+  await run(async () => {
+    const res = await runNightly()
+    nightly.value = res.report
+    breaker.value = res.breaker
+    await refreshLight()
+  })
+}
+
+async function onRunEval(): Promise<void> {
+  const predictions = evalForm.value.lines.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
+    const m = line.match(/^(.+?):(\d+)$/)
+    return m ? { file: m[1].trim(), line: Number(m[2]) } : { file: line }
+  })
+  if (!predictions.length) { error.value = '请粘贴预测发现（每行 path:line）'; return }
+  runningEval.value = true
+  await run(async () => {
+    const res = await runEval(predictions)
+    evalRun.value = res.run
+    evalForm.value = { lines: '' }
+    await refreshLight()
+  })
+  runningEval.value = false
+}
+
+async function onRollback(): Promise<void> {
+  if (!selected.value) return
+  await run(async () => {
+    const res = await rollbackCase(selected.value!.caseId, '治理页登记回滚')
+    detail.value = res
+    await refreshLight()
+  })
+}
+
+async function onImportPr(): Promise<void> {
+  const f = prForm.value
+  if (!f.repo.trim() || !f.number) { error.value = 'PR 仓库与编号必填'; return }
+  importingPr.value = true
+  await run(async () => {
+    const res = await importPr({
+      provider: f.provider,
+      repo: f.repo.trim(),
+      number: Number(f.number),
+      title: f.title.trim() || undefined,
+      headCommit: f.headCommit.trim() || undefined,
+      changedPaths: f.paths.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean),
+      url: f.url.trim() || undefined,
+    })
+    selectedId.value = res.case.caseId
+    detail.value = res
+    prForm.value = { provider: 'github', repo: '', number: 1, title: '', headCommit: '', paths: '', url: '' }
+    await refreshLight()
+  })
+  importingPr.value = false
 }
 
 async function onCreateCase(): Promise<void> {
@@ -250,6 +334,44 @@ onMounted(() => { void loadAll() })
       <p v-if="!kpis.length && !loading" class="rg__hint">暂无度量数据；登记第一个评审案例后开始累计。</p>
     </div>
 
+    <!-- 夜间存量扫描 + 评测集打分 -->
+    <div class="rg__ops">
+      <section class="rg__card" data-testid="rg-nightly">
+        <div class="rg__ops-head">
+          <h5 class="rg__card-title">夜间存量扫描</h5>
+          <button class="rg__btn" :disabled="loading" @click="onRunNightly">立即扫描</button>
+        </div>
+        <p v-if="!nightly" class="rg__hint">还没有扫描记录；延后队列里的存量问题会按「文件 + bug 类」归并成报告。</p>
+        <template v-else>
+          <p class="rg__meta">
+            最近扫描 {{ nightly.date }} · 存量 {{ nightly.backlog }} 条 · 涉及 {{ nightly.caseCount }} 个案例
+          </p>
+          <p v-if="!nightlyTop.length" class="rg__hint">没有延后项，扫描结果为空。</p>
+          <ul v-else class="rg__nightly-list">
+            <li v-for="g in nightlyTop" :key="`${g.file}|${g.bugClass}`">
+              <code>{{ g.file }}</code> · {{ g.bugClass }} · {{ g.count }} 条
+            </li>
+          </ul>
+        </template>
+      </section>
+      <section class="rg__card" data-testid="rg-eval">
+        <div class="rg__ops-head">
+          <h5 class="rg__card-title">评测集打分（错题本）</h5>
+        </div>
+        <p class="rg__meta">
+          评测集 {{ metrics?.evalCases ?? 0 }} 条
+          <template v-if="evalRun"> · 最近召回 {{ pct(evalRun.recall) }} / 精确 {{ pct(evalRun.precision) }}（命中 {{ evalRun.matched }}/{{ evalRun.total }}）</template>
+          <template v-else> · 还没有运行记录</template>
+        </p>
+        <p v-if="evalRun && evalRun.missing.length" class="rg__hint">漏网：{{ evalRun.missing.join('、') }}</p>
+        <details class="rg__details">
+          <summary>导入一次评审 Agent 的预测（每行 path:line）</summary>
+          <textarea v-model="evalForm.lines" class="rg__eval-input" rows="3" placeholder="packages/server/src/x.ts:42" />
+          <button class="rg__btn rg__btn--primary" :disabled="runningEval" @click="onRunEval">打分</button>
+        </details>
+      </section>
+    </div>
+
     <!-- 策略 -->
     <section v-if="policy" class="rg__card" data-testid="rg-policy">
       <h5 class="rg__card-title">风险档与审批名额</h5>
@@ -307,6 +429,26 @@ onMounted(() => { void loadAll() })
             <button class="rg__btn rg__btn--primary rg__wide" :disabled="creating" @click="onCreateCase">登记</button>
           </div>
         </details>
+
+        <details class="rg__details rg__new">
+          <summary>从 PR 导入（GitHub / GitLab / 通用）</summary>
+          <div class="rg__form">
+            <label>平台
+              <select v-model="prForm.provider">
+                <option value="github">GitHub</option>
+                <option value="gitlab">GitLab</option>
+                <option value="generic">通用</option>
+              </select>
+            </label>
+            <label>仓库<input v-model="prForm.repo" placeholder="owner/repo" /></label>
+            <label>编号<input v-model.number="prForm.number" type="number" min="1" /></label>
+            <label>标题<input v-model="prForm.title" placeholder="PR 标题（可选）" /></label>
+            <label>head commit<input v-model="prForm.headCommit" placeholder="commit（可选）" /></label>
+            <label>PR 链接<input v-model="prForm.url" placeholder="https://...（可选）" /></label>
+            <label class="rg__wide">变更路径<textarea v-model="prForm.paths" rows="2" placeholder="每行一个" /></label>
+            <button class="rg__btn rg__btn--primary rg__wide" :disabled="importingPr" @click="onImportPr">导入</button>
+          </div>
+        </details>
       </section>
 
       <!-- 案例详情 -->
@@ -317,7 +459,20 @@ onMounted(() => { void loadAll() })
             <h5 class="rg__card-title">{{ selected.title }}</h5>
             <span class="rg__tier" :class="`is-${selected.risk.tier}`">{{ selectedTier }}</span>
             <span class="rg__state">{{ selectedState }}</span>
+            <a
+              v-if="selected.pr?.url"
+              class="rg__pr"
+              :href="selected.pr.url"
+              target="_blank"
+              rel="noreferrer"
+              data-testid="rg-pr-link"
+            >{{ selected.pr.provider }} #{{ selected.pr.number }}</a>
+            <span v-else-if="selected.pr" class="rg__pr">{{ selected.pr.provider }} #{{ selected.pr.number }}</span>
           </div>
+          <p v-if="selected.rollback" class="rg__meta" data-testid="rg-rollback">
+            已于 {{ new Date(selected.rollback.at).toLocaleString() }} 登记回滚
+            <template v-if="selected.rollback.by"> · {{ selected.rollback.by }}</template>
+          </p>
           <p class="rg__meta">
             第 {{ selected.rounds.length }}/{{ policy?.convergence.maxRounds ?? 3 }} 轮 ·
             提交 {{ selected.headCommit || '未绑定' }} ·
@@ -334,6 +489,7 @@ onMounted(() => { void loadAll() })
             <button class="rg__btn" :disabled="loading" @click="onApprove">记录我的审批</button>
             <button class="rg__btn" :disabled="loading" @click="onChecks">标记检查全绿</button>
             <button class="rg__btn rg__btn--primary" :disabled="loading || !readiness?.ready || selected.state === 'merged'" @click="onMerge">标记合并</button>
+            <button class="rg__btn rg__btn--danger" :disabled="loading || !!selected.rollback" @click="onRollback">登记回滚</button>
           </div>
 
           <details class="rg__details" open>
@@ -418,8 +574,8 @@ onMounted(() => { void loadAll() })
 .is-warn .rg__badge { color: var(--error); }
 .rg__breaker-text { font-size: 12px; }
 
-.rg__kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-@media (max-width: 1200px) { .rg__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rg__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 1200px) { .rg__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rg__kpi { border: 1px solid var(--border-color); border-top: 3px solid var(--border-color); border-radius: 8px; padding: 7px 9px; }
 .rg__kpi.is-ok { border-top-color: var(--success); }
 .rg__kpi.is-warn { border-top-color: var(--error); }
@@ -429,6 +585,15 @@ onMounted(() => { void loadAll() })
 .rg__kpi.is-warn .rg__kpi-value { color: var(--error); }
 .rg__kpi.is-ok .rg__kpi-value { color: var(--success); }
 .rg__kpi-detail { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+.rg__ops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1080px) { .rg__ops { grid-template-columns: 1fr; } }
+.rg__ops-head { display: flex; align-items: center; gap: 8px; }
+.rg__ops-head .rg__btn { margin-left: auto; }
+.rg__nightly-list { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text-muted); }
+.rg__nightly-list code { font-size: 11px; }
+.rg__eval-input { width: 100%; margin: 4px 0; font: inherit; font-size: 11px; padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: inherit; }
+.rg__pr { font-size: 11px; color: var(--primary, #2563eb); text-decoration: none; }
 
 .rg__cols { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.6fr); gap: 10px; align-items: start; }
 @media (max-width: 1080px) { .rg__cols { grid-template-columns: 1fr; } }

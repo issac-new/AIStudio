@@ -105,10 +105,13 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - **审批语义**：只有绑定当前 head commit、未被新提交或解冲突失效的人类 approve 计数；Agent 审批只记录、不占名额；人类 request_changes 阻塞合并。
 - **互审收敛**：最多 3 轮；第 3 轮起只看新增 diff；同文件同 bug 类去重；每轮 nit 上限；存量问题转延后队列（对应夜间扫描）。
 - **发现项质量**：important 必须附证据（终端输出 / 截图引用）；Agent 发现需独立验证多数确认才阻塞合并。
-- **度量与熔断**：一轮通过率 / 平均轮次 / 5+ 轮占比 / 人工审批中位 / 噪声率 / 回滚率；回滚或事故抬头时自动升一档审批。
-- **错题本**：发现项可提升为回归评测案例（`POST /api/review/gov/cases/:id/findings/:fid/promote`）。
+- **度量与熔断**：一轮通过率 / 平均轮次 / 5+ 轮占比 / 人工审批中位 / 人工等待中位 / 噪声率 / 回滚率 / 评测召回；回滚或事故抬头时自动升一档，并收紧存量未结束案例、作废旧审批。
+- **夜间存量扫描**：延后队列按「文件 + bug 类」归并成报告，手动 `POST /nightly/run` 或 `HERMES_REVIEW_NIGHTLY=on` 定时跑；只出账本，不自动改代码。
+- **错题本与评测打分**：发现项可提升为回归评测案例；导入一次评审 Agent 的预测（`file:line`）即算召回率/精确率、漏网与误报。
+- **回滚登记与 PR 导入**：回滚只登记事实与 revert 信号（不自动 revert 代码）；GitHub/GitLab/通用 PR 可按归一化载荷导入，同仓库同编号幂等。
+- **旧评审闸门**：`/api/review` 开评审时带 `caseId`，`approve` 会先查该案例的合并就绪度，未就绪直接 409。
 
-数据面：`/api/review/gov/*`（复用 `/api/review` 挂载，无新增 B 类 patch）；策略/收敛/度量/控制器/真实 Koa 挂载/客户端视图均有守门测试。设计文档：`docs/superpowers/specs/2026-10-19-review-governance.md`。
+数据面：`/api/review/gov/*`（复用 `/api/review` 挂载，无新增 B 类 patch）；策略/收敛/度量/夜间扫描/评测打分/控制器/真实 Koa 挂载/客户端视图均有守门测试。设计文档：`docs/superpowers/specs/2026-10-19-review-governance.md`。
 
 ### 💬 Matrix Chat — 完整 Matrix 客户端
 

@@ -229,3 +229,107 @@ describe('父路由挂载（/api/review/gov/*）', () => {
     expect(db.case).toMatchObject({ caseId: 'http-case', risk: { tier: 'low' } })
   })
 })
+
+describe('P2 扩展端点（PR 导入/夜间扫描/评测打分/回滚/熔断收紧）', () => {
+  const fromPr = () => handlerFor('POST', '/gov/cases/from-pr')
+  const nightlyRun = () => handlerFor('POST', '/gov/nightly/run')
+  const evalRun = () => handlerFor('POST', '/gov/eval/run')
+  const rollback = () => handlerFor('POST', '/gov/cases/:id/rollback')
+
+  it('PR 导入：归一化载荷、风险分级、同 repo+number 幂等', async () => {
+    const body = {
+      provider: 'github', repo: 'acme/repo', number: 12, title: '修复缓存',
+      headCommit: 'abc', changedPaths: ['docs/readme.md'], url: 'https://github.com/acme/repo/pull/12',
+    }
+    const first = fakeCtx({}, body)
+    await fromPr()(first)
+    expect(first.status).toBe(200)
+    const b1 = first.body as { created: boolean; case: { caseId: string; pr: { number: number }; risk: { tier: string } } }
+    expect(b1.created).toBe(true)
+    expect(b1.case.pr.number).toBe(12)
+    expect(b1.case.risk.tier).toBe('low')
+
+    const second = fakeCtx({}, body)
+    await fromPr()(second)
+    expect(second.status).toBe(200)
+    expect((second.body as { created: boolean }).created).toBe(false)
+  })
+
+  it('夜间扫描：第 3 轮转入的存量问题进报告', async () => {
+    const created = fakeCtx({}, {
+      caseId: 'nightly-case', title: 'x', headCommit: 'c1', changedPaths: ['packages/server/src/x.ts'],
+    })
+    await openCase()(created)
+    for (const head of ['c2', 'c3']) {
+      const r = fakeCtx({ id: 'nightly-case' }, { headCommit: head })
+      await rounds()(r)
+    }
+    const stale = fakeCtx({ id: 'nightly-case' }, {
+      file: 'packages/server/src/old.ts', line: 1, body: '历史遗留', severity: 'preexisting',
+    })
+    await addFinding()(stale)
+    expect((stale.body as { finding: { deferred: boolean } }).finding.deferred).toBe(true)
+
+    const run = fakeCtx({})
+    await nightlyRun()(run)
+    expect(run.status).toBe(200)
+    const report = (run.body as { report: { backlog: number; groups: Array<{ file: string; count: number }> } }).report
+    expect(report.backlog).toBe(1)
+    expect(report.groups[0].file).toBe('packages/server/src/old.ts')
+  })
+
+  it('评测打分：命中/漏网/误报与运行台账', async () => {
+    const { appendEvalCase } = await import('../store')
+    appendEvalCase({ caseId: 'seed', source: 'manual', title: 'x', expected: 'y', file: 'a.ts', line: 10 })
+    const run = fakeCtx({}, { predictions: [{ file: 'a.ts', line: 11 }, { file: 'b.ts', line: 1 }] })
+    await evalRun()(run)
+    expect(run.status).toBe(200)
+    const b = run.body as { run: { total: number; matched: number; recall: number; precision: number; falsePositives: unknown[] } }
+    expect(b.run).toMatchObject({ total: 1, matched: 1, recall: 1, precision: 0.5 })
+    expect(b.run.falsePositives).toHaveLength(1)
+
+    const bad = fakeCtx({}, { predictions: [{ file: '/etc/passwd' }] })
+    await evalRun()(bad)
+    expect(bad.status).toBe(400)
+  })
+
+  it('回滚登记：转 abandoned、写回滚字段与 revert 信号，重复调用不重复记账', async () => {
+    const { listSignals } = await import('../store')
+    const created = fakeCtx({}, { caseId: 'rb-case', title: 'x', headCommit: 'c1', changedPaths: ['packages/server/src/x.ts'] })
+    await openCase()(created)
+    const first = fakeCtx({ id: 'rb-case' }, { note: '线上回滚' })
+    await rollback()(first)
+    expect(first.status).toBe(200)
+    const b = first.body as { case: { state: string; rollback: { note: string } } }
+    expect(b.case.state).toBe('abandoned')
+    expect(b.case.rollback.note).toBe('线上回滚')
+    const reverts = listSignals().filter((s) => s.kind === 'revert').length
+    expect(reverts).toBe(1)
+
+    const second = fakeCtx({ id: 'rb-case' }, {})
+    await rollback()(second)
+    expect(listSignals().filter((s) => s.kind === 'revert').length).toBe(1)
+  })
+
+  it('熔断信号收紧存量案例：升档并作废旧审批', async () => {
+    const { loadCase } = await import('../store')
+    const created = fakeCtx({}, { caseId: 'tight-case', title: 'x', headCommit: 'c1', changedPaths: ['packages/server/src/x.ts'] })
+    await openCase()(created)
+    const approveCtx = fakeCtx({ id: 'tight-case' }, { actor: 'alice', actorKind: 'human', decision: 'approve', commit: 'c1' })
+    await approve()(approveCtx)
+    const green = fakeCtx({ id: 'tight-case' }, { checks: 'green' })
+    await checks()(green)
+
+    const inc1 = fakeCtx({}, { kind: 'incident' })
+    await signal()(inc1)
+    const inc2 = fakeCtx({}, { kind: 'incident' })
+    await signal()(inc2)
+    const b = inc2.body as { breaker: { active: boolean }; tightenedCases: number }
+    expect(b.breaker.active).toBe(true)
+    expect(b.tightenedCases).toBe(1)
+
+    const c = loadCase('tight-case')!
+    expect(c.risk.tier).toBe('high')
+    expect(c.approvals[0].invalidatedBy).toBe('policy_tightened')
+  })
+})
