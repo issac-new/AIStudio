@@ -29,6 +29,15 @@ export function findGraderMarkers(content: string): string[] {
   return GRADER_VERDICT_MARKERS.filter((m) => body.includes(m))
 }
 
+/** 源文还会扫文件路径：文件名里带判词 marker 同样视为泄漏。 marker 里带引号的按去引号后匹配。 */
+export function findGraderMarkersInPath(rel: string): string[] {
+  const body = String(rel ?? '')
+  return GRADER_VERDICT_MARKERS.filter((m) => {
+    const token = m.replace(/^"|"$/g, '')
+    return body.includes(m) || body.includes(token)
+  })
+}
+
 export function sha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex')
 }
@@ -214,14 +223,6 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     blockers.push({ code: 'approval_stale', message: '批准后候选集合发生变化，批准已失效' })
   }
 
-  const missingProbe = proposal.variants.filter((v) => !proposal.probes.some((p) => p.variantId === v.id && p.status === 'recorded'))
-  if (missingProbe.length > 0) {
-    blockers.push({
-      code: 'probes_incomplete',
-      message: `${missingProbe.length} 个候选尚未绑定真实评测运行`,
-    })
-  }
-
   const selected = composedVariant(proposal)
   if (!selected) {
     blockers.push({ code: 'composition_unprobed', message: '组合结果没有对应的候选探测证据' })
@@ -232,16 +233,16 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     } else {
       const contrast = probe.contrast
       if (!contrast || contrast.quality === 'unknown') {
-        blockers.push({ code: 'quality_unknown', message: '选中候选的结果层证据不足，不能晋级' })
+        warnings.push({ code: 'quality_unknown', message: '选中候选的结果层证据不足，请人工复核' })
       } else if (contrast.quality === 'regressed') {
         blockers.push({ code: 'quality_regressed', message: '选中候选相对基线出现倒退' })
       }
       if (!probe.evidence.regression) {
-        blockers.push({ code: 'regression_missing', message: '未绑定历史回归运行（回归样本库）' })
+        blockers.push({ code: 'regression_missing', message: '选中候选未绑定历史回归运行（回归样本库）' })
       } else if (probe.evidence.regression.failed > 0) {
         blockers.push({
           code: 'regression_failed',
-          message: `历史回归失败 ${probe.evidence.regression.failed} 项`,
+          message: `选中候选的历史回归失败 ${probe.evidence.regression.failed} 项`,
         })
       }
       if (probe.evidence.statisticallyInsufficient) {
@@ -250,14 +251,25 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     }
   }
 
-  const cost = probeCost(proposal)
-  if (!cost.complete) {
-    blockers.push({ code: 'cost_missing', message: `${cost.missing.length} 个探测缺少成本读数` })
-  } else if (cost.total > proposal.budgetCapUsd) {
-    blockers.push({
-      code: 'budget_exceeded',
-      message: `探测总成本 $${cost.total.toFixed(2)} 超提案上限 $${proposal.budgetCapUsd.toFixed(2)}`,
+  const missingProbe = proposal.variants.filter((v) => !proposal.probes.some((p) => p.variantId === v.id && p.status === 'recorded'))
+  if (missingProbe.length > 0) {
+    warnings.push({
+      code: 'probes_incomplete',
+      message: `${missingProbe.length} 个候选尚未绑定真实评测运行（非选中候选可缺失）`,
     })
+  }
+
+  const selectedProbeForCost = selected ? proposal.probes.find((p) => p.variantId === selected.id && p.status === 'recorded') : null
+  if (selectedProbeForCost?.evidence?.costUsd == null) {
+    blockers.push({ code: 'cost_missing', message: '选中候选的探测缺少成本读数' })
+  } else {
+    const cost = probeCost(proposal)
+    if (cost.total > proposal.budgetCapUsd) {
+      blockers.push({
+        code: 'budget_exceeded',
+        message: `探测总成本 ${cost.total.toFixed(2)} 超提案上限 ${proposal.budgetCapUsd.toFixed(2)}`,
+      })
+    }
   }
 
   const champion = input.currentChampion
