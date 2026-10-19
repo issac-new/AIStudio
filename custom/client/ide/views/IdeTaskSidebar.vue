@@ -42,6 +42,8 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 // zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同栏可折叠分组，
 // 数据/动作自持（IdeCliSessions），不进 chatStore（避免伪会话 ID 打断打开链）。
 import IdeCliSessions from '../components/IdeCliSessions.vue'
+// 项目归类（2026-10-19 组织模式修正）：内部工作区/空 → 未绑项目；真实路径 → 目录名
+import { sessionProjectOf } from '../utils/sessionProjects'
 // 2026-10-19 视图语义修正批：本地视图文案（覆盖词表 view_*——词表值「已完成」
 // 名不副实：done 桶口径是「超过 24h 无活动」而非任务完成，会话无完成态字段，
 // 诚实口径=「更早」）。title 写明口径，避免再次误读。
@@ -254,6 +256,8 @@ const taskGroups = computed<TaskGroup[]>(() => {
       sessions: rest.filter(s => s.categoryId === c.id)
         .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
     }))
+    // 2026-10-19：无任何自建分类时未分组桶头给引导提示（否则看起来像分类失效）
+    const hasCategories = categories.value.length > 0
     const ungrouped = rest.filter(s => !s.categoryId || !categories.value.some(c => c.id === s.categoryId))
     if (ungrouped.length) {
       groups.push({
@@ -265,22 +269,31 @@ const taskGroups = computed<TaskGroup[]>(() => {
     }
     return groups
   }
-  // project：按 workspace 分组（M1.1 行为；工作空间视图强制走此路）
-  const byWorkspace = new Map<string, Session[]>()
+  // project：按项目归类（2026-10-19 修正批）——此前按 workspace 原值分组，
+  // 引擎内部目录末段（global/scoped）与空值（「默认」）被当项目展示。
+  // 现走 sessionProjectOf：真实路径→目录名；内部工作区/空→「未绑项目」（置底）。
+  const NO_PROJECT_KEY = '__noproject__'
+  const byProject = new Map<string, { label: string; sessions: Session[] }>()
   for (const s of rest) {
-    const key = (s.workspace || '').trim()
-    const list = byWorkspace.get(key) || []
-    list.push(s)
-    byWorkspace.set(key, list)
+    const proj = sessionProjectOf(s)
+    const key = proj ?? NO_PROJECT_KEY
+    const hit = byProject.get(key) ?? { label: proj ?? (zh.value ? '未绑项目' : 'No project'), sessions: [] }
+    hit.sessions.push(s)
+    byProject.set(key, hit)
   }
-  return [...byWorkspace.entries()]
-    .map(([key, sessions]) => ({
-      key: `ws-${key || '__default__'}`,
-      label: workspaceLabel(t, key),
-      workspace: key,
-      sessions: sessions.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
+  return [...byProject.entries()]
+    .map(([key, g]) => ({
+      key: `proj-${key}`,
+      label: g.label,
+      workspace: key === NO_PROJECT_KEY ? '' : key,
+      sessions: g.sessions.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
     }))
-    .sort((a, b) => (b.sessions[0]?.updatedAt || 0) - (a.sessions[0]?.updatedAt || 0))
+    // 项目按最新会话逆序；「未绑项目」恒置底（有内容的兜底桶不抢位）
+    .sort((a, b) => {
+      if (a.key === `proj-${NO_PROJECT_KEY}`) return 1
+      if (b.key === `proj-${NO_PROJECT_KEY}`) return -1
+      return (b.sessions[0]?.updatedAt || 0) - (a.sessions[0]?.updatedAt || 0)
+    })
 })
 
 // ---- 归档区 ----
@@ -631,6 +644,12 @@ onMounted(async () => {
               <span class="ide-taskbar__section-count">{{ g.sessions.length }}</span>
             </template>
           </header>
+          <!-- 2026-10-19：无自建分类时未分组桶给创建引导（否则像分类失效） -->
+          <p
+            v-if="g.key === '__ungrouped__' && categories.length === 0 && g.sessions.length"
+            class="ide-taskbar__group-hint"
+            data-testid="ide-task-ungrouped-hint"
+          >{{ zh ? '还没有自建分组：任务菜单「移动到分组 → 新建分组」可创建' : 'No custom groups yet: create one via task menu “Move to group”' }}</p>
           <ul v-show="!collapsedGroups.has(g.key)" class="ide-taskbar__list">
             <li
               v-for="s in g.sessions"
@@ -1084,6 +1103,7 @@ onMounted(async () => {
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
+.ide-taskbar__group-hint { margin: 2px 4px 6px; font-size: 10.5px; color: var(--text-muted); }
 /* zcode CLI 分组体：内滚上限——侧栏无滚动容器（overflow visible），12 行全展
    会画穿侧栏底、被状态栏背景遮住（2026-10-19 左下角遮罩走查实锚：
    cliSec.bottom=1204 vs sidebar.bottom=871）。上限 ≈7 行，其余组内滚动。 */
