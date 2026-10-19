@@ -73,22 +73,38 @@
 - D-8 self_check 走 python3 宿主直调而非 TS 重写：门禁语义必须与上游技能逐字节对齐，重写即双源漂移；python3 是宿主机既有条件（sync/provision 链已在用）。
 - D-9 品牌 accent 用墨色 #333333 而非引入彩色：Pure Ink 教义即"墨色为焦点"，与 status-colors.ts 单一事实源一致；link/soft 等过对比度加深值由项2 机械验锁定。
 
-## 变更清单（随批随行补全）
+## 变更清单（终态，随批已全部提交）
 
-- 新增 `assets/skills/diagram-design/`（vendored 技能正本 + LICENSE + PROVENANCE.md）
-- 新增 `assets/skills/diagram-design-brand/swarmstudio.profile.md`
-- 新增 `scripts/sync-diagram-skill.mjs`、`scripts/diagram-self-check.sh`、`scripts/diagram-export-png.mjs`
-- 新增 `custom/server/diagram/`（self-check.ts、export-png.ts、mermaid-branded.ts、brand-tokens.ts、controller、__tests__）
-- `custom/server/` 路由注册 diagram 端点（具体文件以实现时路由正本为准）
-- `custom/client/ide/views/IdeGenUiPane.vue`：自检动作
-- `custom/client/ide/views/IdeWikiPane.vue`：品牌重绘开关
-- 新增 `custom/client/ide/utils/diagram-export.ts` + `RunGraphCanvas.vue` 导出接线
-- 各件配套 `__tests__/`
-- 仓外（任务记录如实列出）：`~/.hermes/skills/diagram-design/`、中央仓 `_shared/skill-provisioning.json` 三行、`~/.diagram-design/profiles/swarmstudio.md`
+- 新增 `assets/skills/diagram-design/`（vendored 技能正本 + LICENSE + PROVENANCE.md；550fd66/v2.6.110）
+- 新增 `assets/skills/diagram-design-brand/swarmstudio.profile.md`（Pure Ink token，font source=system）
+- 新增 `scripts/sync-diagram-skill.mjs`（幂等同步+品牌化妆+复核）、`scripts/diagram-self-check.sh`、`scripts/diagram-export-png.mjs`
+- 新增 `custom/server/diagram/`：self-check.ts、export-png.ts、mermaid-extract.ts、mermaid-branded.ts、brand-tokens.ts、diagram-controller.ts、__tests__×3（36 例）
+- patch `666-server-diagram-routes.patch` 挂载 `/api/hermes/diagram/*` 三端点（临时树验证 applies clean）
+- `custom/client/ide/utils/diagram-api.ts`、`mermaid-brand.ts`、`diagram-export.ts` + `__tests__`×2（15 例）
+- `custom/client/ide/views/IdeGenUiPane.vue`：自检动作+三态结果条
+- `custom/client/ide/views/IdeWikiPane.vue`：品牌重绘开关（默认开，失败/不支持回退现状渲染）
+- `custom/client/loop/runcenter/components/RunGraphCanvas.vue`：「导出图」按钮
+- 测试合计：本批新增 60 例全绿（真实 python3/playwright 工具链，非 mock）
 
-## 验证
+## 实施偏差与挂账（如实记录）
 
-- 每批：`npx vitest run <本批路径>` 全绿后才 commit（测试与 commit 分两轮）。
-- 收尾：overlay 全量 `npm test` 不回归 + `npx vue-tsc` 0 错 + 构建 rc=0。
-- 激活：合 main 后 serve-main 拉取重启 8647/8649；8649 走查——GenUI 自检动作、wiki 品牌重绘、RunGraph 导出。
-- 技能侧实证：主机库安装后于一个已供给 profile 触发 provision 对账（dry-run），确认 diagram-design 列入已装/计划。
+- mermaid 品牌重绘实际覆盖 flowchart / sequenceDiagram / stateDiagram-v2 三类（提取器支持前两类+state，erDiagram 提取器本身不支持→如实 unsupported_kind 回退）；spec 原文"两类"上调为三类。
+- 项6 只接线 RunGraphCanvas；OrchestrationView EditorCanvas 同款接线挂账（独立画布体系，另轮）。
+- 品牌 token 存在三份（profile 单一事实源 + server 镜像 + client 副本）——已用三方绊线测试锁死一致性；client 副本存在的原因是仓库既有边界「client 不 import server 模块」。
+- WikiPane 品牌重绘默认开：失败语义=回退现状渲染内容不丢，风险可控（D-7 原文"以实现时风险定"，定=开）。
+- tsc 基线噪音（`@/` alias 在裸 tsconfig 下 1357 处既有错误）与本批无关；本批服务端新文件零类型错。
+
+## 仓外动作（已执行，2026-10-19）
+
+- `~/.hermes/skills/diagram-design/` 安装（sync 脚本真跑，复核 OK；style-guide 已品牌化）
+- `~/.diagram-design/profiles/swarmstudio.md` 安装
+- 中央仓 `~/.hermes/profiles/_shared/skill-provisioning.json`：orchestrator、*-sys-analyst 各 +diagram-design；新增 *-researcher 行（含 * base 4 防 matchRole 取最具体后期望集回退）；改前备份 .bak-2026-10-19T16-27-37
+- 供给真跑：orchestrator / worker-researcher / product-researcher 三 profile 已装（dry-run 先行，9 copied 0 failed）
+- skillgov 扫描：verdict=safe（1 条 low=findings 上限如实记界）
+
+## 验证（终态口径）
+
+- 每批 vitest 全绿后才 commit；`custom/client/ide` 全量 120 文件 730 例绿；`custom/server/diagram` 36 例绿；`scripts/diagram-skill.test.ts` 9 例绿。
+- 品牌 mermaid 产出与活图导出 HTML 均真跑 `self_check.py --offline` 通过（门禁吃自己的狗粮）。
+- PNG 导出真实浏览器链路实证：viewBox 200x100 × scale2 → 400x200 PNG（bundled chromium 缺失自动回退系统 Chrome，walkthrough 同例）。
+- 全量 `npm test` + 构建 + inject 重放 + 8647/8649 激活走查：合 main 收口轮执行（见收口记录）。
