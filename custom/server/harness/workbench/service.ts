@@ -9,7 +9,7 @@ import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } fro
 import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
 import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, behaviorContrast, candidateDiversity, composedVariant,
-  diffSummary, evaluatePromotion, findGraderMarkers, probeCost, sha256, submitReadiness, variantSetDigest,
+  diffSummary, evaluatePromotion, findGraderMarkers, findGraderMarkersInPath, probeCost, sha256, submitReadiness, variantSetDigest,
 } from './loop'
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
@@ -44,9 +44,9 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
-function currentChampionOf(champions: Champion[], surfaceKey: SurfaceKey): Champion | null {
+function currentChampionOf(champions: Champion[], surfaceKey: SurfaceKey, excludeProposalId?: string): Champion | null {
   return champions
-    .filter((c) => c.surfaceKey === surfaceKey && !c.rolledBack)
+    .filter((c) => c.surfaceKey === surfaceKey && !c.rolledBack && c.proposalId !== excludeProposalId)
     .sort((a, b) => (a.promotedAt < b.promotedAt ? 1 : -1))[0] ?? null
 }
 
@@ -179,6 +179,10 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
     const markers = findGraderMarkers(content)
     if (markers.length > 0) {
       throw new ServiceError(400, `候选 ${i + 1} 含评测判词标记，不能写入 harness`, { markers })
+    }
+    const pathMarkers = findGraderMarkersInPath(v.label ?? '')
+    if (pathMarkers.length > 0) {
+      throw new ServiceError(400, `候选 ${i + 1} 标签含评测判词标记，不能写入 harness`, { markers: pathMarkers })
     }
     return {
       id: `v${i + 1}`,
@@ -434,7 +438,7 @@ export async function promoteProposal(
   const store = readStore()
   const p0 = store.proposals.find((x) => x.id === id)
   if (!p0) throw new ServiceError(404, `提案不存在：${id}`)
-  const champion = currentChampionOf(store.champions, p0.surfaceKey)
+  const champion = currentChampionOf(store.champions, p0.surfaceKey, p0.id)
   let targetDigestNow: string | null | undefined
   let targetExists: boolean | undefined
   if (opts.apply) {
@@ -468,7 +472,7 @@ export async function promoteProposal(
   return mutateStore((store2) => {
     const p = requireProposal(store2, id)
     const now = nowIso()
-    const previous = currentChampionOf(store2.champions, p.surfaceKey)
+    const previous = currentChampionOf(store2.champions, p.surfaceKey, p.id)
     const champ: Champion = {
       id: nextId(store2, 'ch'),
       surfaceKey: p.surfaceKey,
@@ -538,9 +542,8 @@ export async function rollbackProposal(
   if (!fileRes.ok) throw new ServiceError(409, `回滚失败：${fileRes.error}`, [{ code: 'rollback_failed', message: fileRes.error ?? '回滚失败' }])
   return mutateStore((store) => {
     const p = requireProposal(store, id)
-    for (const c of store.champions) {
-      if (c.proposalId === p.id && !c.rolledBack) c.rolledBack = true
-    }
+    // 回滚=撤销本次冠军：直接移除该 champion 记录，让 currentChampionOf 自动落回上一条未回滚记录。
+    store.champions = store.champions.filter((c) => !(c.proposalId === p.id && !c.rolledBack))
     p.rollback = {
       actor: String(opts.actor ?? 'operator'),
       at: nowIso(),
