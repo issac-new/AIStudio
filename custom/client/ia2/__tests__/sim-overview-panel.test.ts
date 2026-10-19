@@ -58,13 +58,13 @@ describe('§3.3 前端副本抽查——完成键逐行誊写（改任一端本�
     expect(step(20).gateFlags).toEqual(['g5_ready'])
   })
 
-  it('隐藏键步 8/9=room_analysis/dispatch_marker 且标 hiddenKey；六闸键=g1_frozen…report_done', () => {
+  it('隐藏键步 8/9=room_analysis/dispatch_marker 且标 hiddenKey；六闸键=g1_frozen…retro_done', () => {
     expect(step(8).keys).toEqual(['room_analysis'])
     expect(step(8).hiddenKey).toBe(true)
     expect(step(9).keys).toEqual(['dispatch_marker'])
     expect(step(9).hiddenKey).toBe(true)
     expect(SIX_GATES.map(g => g.key)).toEqual([
-      'g1_frozen', 'g2_arch_pass', 'g3_code_pass', 'g4_pass', 'g5_ready', 'report_done',
+      'g1_frozen', 'g2_arch_pass', 'g3_code_pass', 'g4_pass', 'g5_ready', 'retro_done',
     ])
   })
 })
@@ -152,7 +152,7 @@ describe('resolveStepRows——键→行状态纯函数（done/进行中/未达�
 describe('六闸折算与打回计数', () => {
   it('闸行=六闸键在位判 pass；issues code 前缀 g<N> 计打回（DISP 行与无关 code 不计）', () => {
     const rows = resolveGateRows(
-      { g1_frozen: 't1', report_done: 't26' }, {},
+      { g1_frozen: 't1', retro_done: 't24' }, {},
       [
         { kind: 'issue', code: 'g1-acceptance-blocked' },
         { kind: 'issue', code: 'g1-acceptance-blocked' },
