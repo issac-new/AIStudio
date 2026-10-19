@@ -929,6 +929,84 @@ else:
         warns.append(f'查14c 台账键未注册到任何步 {len(_unreg14)} 个（逐步问题单无归属呈现）：'
                      + '、'.join(_unreg14[:10]) + '——收尾链补注册 STEPS_META issue_keys')
 
+# ── 查 15：评测结果一致性（V8.46，2026-10-19）──
+# 评测摘要必须与 state 闸键一致；失败样本必须进入处置链；报告必须带「证据八」。
+# run22 起缺席=FAIL（接线缺口），历史轮=WARN（旧轮无此义务，防误咬归档轮）。
+_run_no = 0
+_m = re.search(r'run(\d+)', RUN_ID)
+if _m:
+    _run_no = int(_m.group(1))
+_v846 = _run_no >= 22
+_state = {}
+if STATE.exists():
+    for _ln in STATE.read_text(encoding='utf-8', errors='replace').splitlines():
+        _ln = _ln.strip()
+        if _ln.startswith('export '):
+            _ln = _ln[7:]
+        if '=' in _ln and not _ln.startswith('#'):
+            _k, _v = _ln.split('=', 1)
+            _state[_k.strip()] = _v.strip().strip('"').strip("'")
+_evals_f = EVID / 'evals' / 'eval-summary.json'
+if not _evals_f.exists():
+    (_fails if _v846 else warns).append(
+        '查15 评测摘要缺席（evidence/evals/eval-summary.json）——G4-E 未接线或未运行；'
+        'run22 起为接线缺口，不得以「G4 已过」代替评测子门证据'
+    )
+else:
+    try:
+        _e15 = json.loads(_evals_f.read_text(encoding='utf-8', errors='replace'))
+        _v15 = str(_e15.get('verdict') or '').upper()
+    except Exception as _ex15:
+        fails.append(f'查15 评测摘要不可解析：{_ex15}')
+    else:
+        if _v15 == 'PASS' and not _state.get('g4_eval_pass'):
+            fails.append('查15 评测 PASS 但 state 无 g4_eval_pass——摘要与闸键不同源')
+        if _v15 in ('GAP', 'FAIL') and not _state.get('g4_eval_gap'):
+            fails.append(f'查15 评测 {_v15} 但 state 无 g4_eval_gap——缺口未显形')
+        if _v15 == 'FAIL' and not _state.get('g4_eval_blocked'):
+            fails.append('查15 评测 FAIL 但 state 无 g4_eval_blocked——G4 未阻断')
+        if _v15 == 'PASS' and _state.get('g4_eval_blocked'):
+            fails.append('查15 评测 PASS 但 state 仍有 g4_eval_blocked——判据自相矛盾')
+        if '证据八' not in rep:
+            fails.append('查15 评测摘要在场但报告缺「证据八：EvalOps 评测运营」——报告未消费评测读数')
+        _rem_f = EVID / 'evals' / 'remediations.json'
+        if _rem_f.exists():
+            try:
+                _rem15 = json.loads(_rem_f.read_text(encoding='utf-8', errors='replace'))
+                if int(_rem15.get('open') or 0) > 0:
+                    warns.append(f"查15 评测处置链未闭合：失败 {_rem15.get('failed')} / 未关 {_rem15.get('open')}"
+                                 '——报告证据九如实呈现；未关项须随复盘给处置')
+            except Exception:
+                warns.append('查15 处置链档案不可解析（evidence/evals/remediations.json）')
+
+# ── 查 16：治理结果证据九（V8.46，2026-10-19）──
+# 快照缺席=run22 起接线缺口（FAIL）；端点失败=如实缺口（WARN）；报告必须带「证据九」。
+_closure_sum = EVID / 'governance-closure' / 'summary.json'
+if not _closure_sum.exists():
+    (_fails if _v846 else warns).append(
+        '查16 治理结果快照缺席（evidence/governance-closure/summary.json）——'
+        '评审治理/观测告警/改进实验/发布门与 UAT 台账未采集；run22 起为接线缺口'
+    )
+else:
+    try:
+        _c16 = json.loads(_closure_sum.read_text(encoding='utf-8', errors='replace'))
+    except Exception as _ex16:
+        fails.append(f'查16 治理结果快照不可解析：{_ex16}')
+    else:
+        if '证据九' not in rep:
+            fails.append('查16 治理结果快照在场但报告缺「证据九：治理结果」——报告未消费治理结果读数')
+        if int(_c16.get('failedCount') or 0) > 0:
+            warns.append(f"查16 治理结果端点缺口 {_c16.get('failedCount')} 项："
+                         + '、'.join(_c16.get('failed') or []) + '——报告证据九按缺席呈现')
+    _rg = EVID / 'release-gate.jsonl'
+    if _state.get('g5_ready') and not _rg.exists():
+        warns.append('查16 G5 已过但发布门台账缺席（evidence/release-gate.jsonl）——'
+                     '产品端点未写入或驱动接线未生效')
+    _uv = EVID / 'uat-verdicts.jsonl'
+    if (_state.get('uat_done') or _state.get('uat_conditional')) and (not _uv.exists() or _uv.stat().st_size == 0):
+        warns.append('查16 UAT 已判但判定台账缺席/为空（evidence/uat-verdicts.jsonl）——'
+                     '产品端点未写入或驱动接线未生效')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。

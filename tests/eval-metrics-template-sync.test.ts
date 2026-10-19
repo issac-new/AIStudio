@@ -87,7 +87,7 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(sh).toContain('评测与运行时指标')
     expect(sh).toContain('EVAL_GATE_TOOL_SUCCESS_MIN')
     expect(sh).toContain('eval-metrics')
-    expect(sh).toContain('二十三项')  // V8.45 加 ㉓ 评测接线；V8.44 ㉑/㉒ 任务工作区与阶段页签）；此前 二十=⑳ Harness 运行底座（V8.42）
+    expect(sh).toContain('三十项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
     expect(sh).toContain('㉓ 评测接线')
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })

@@ -44,6 +44,7 @@
 ## 7. HumanGate 人工批准
 
 对外发布由人批准，批准记录落评审卡 body（批准人/时间/结论）。自评自批=评审 FAIL。
+G5 收口同时写产品发布门台账 `evidence/release-gate.jsonl`（run/decision/actor/ts，append-only）；台账记录与评审卡 body 不一致时以评审卡为准并记问题单。
 
 ## 8. 机械核对判据（缺一打回）
 
@@ -56,3 +57,4 @@
 | 5 | 制品验证三件（SBOM/签名/来源证明）逐项在场或写明缺项与补救 | 逐项存在性 |
 | 6 | 漏洞响应分档时限在场 | 正则 `严重.*[0-9]` |
 | 7 | 破坏性变更兼容声明在场（无则写「无」） | 存在性 |
+| 8 | 发布门台账记录在位（run/decision/actor/ts）（V8.46） | `evidence/release-gate.jsonl` 实查 |
