@@ -368,6 +368,39 @@ router.get('/pending', async (ctx) => {
   ctx.body = { ok: true, items, ts: Date.now() }
 })
 
+// P2 审批汇总单一契约（spec 2026-10-19-studio-p2 §2.3）：同一聚合管线的计数投影——
+// 概览/阶段页/收件箱的计数面从此一处取数，不再各自拼装导致口径漂移。
+export interface PendingSummary {
+  total: number
+  command: number
+  review: number
+  enforce: number
+  byRisk: Record<ApprovalRiskTier, number>
+  ts: number
+}
+
+/** 计数投影（纯函数，测试面）：kind 前缀归域（fleet/fleetfile→command；enf→enforce）。 */
+export function summarizePendingItems(items: PendingItem[]): PendingSummary {
+  const byRisk: Record<ApprovalRiskTier, number> = { high: 0, medium: 0, low: 0 }
+  let command = 0
+  let review = 0
+  let enforce = 0
+  for (const it of items) {
+    byRisk[it.risk ?? 'medium']++
+    if (it.id.startsWith('enf:')) enforce++
+    else if (it.kind === 'review') review++
+    else command++
+  }
+  return { total: items.length, command, review, enforce, byRisk, ts: Date.now() }
+}
+
+router.get('/pending-summary', async (ctx) => {
+  const pre = collectPendingItems()
+  const acted = await runAutoPassScan(pre)
+  const items = acted > 0 ? collectPendingItems() : pre
+  ctx.body = { ok: true, ...summarizePendingItems(items) }
+})
+
 const FLEET_CHOICES = new Set(['once', 'session', 'always', 'deny'])
 
 router.post('/:id/decide', async (ctx) => {

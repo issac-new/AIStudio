@@ -547,7 +547,209 @@ router.get('/trace', (ctx: Context) => {
     return f ? readCapped(resolve(evidDir, f)) : null
   }
   const { rows, meta } = assembleTrace(readByName('freeze'), readByName('test-report'), readByName('acceptance'))
-  ctx.body = { run, rows, meta, source: { evidenceDir: evidDir } }
+  // 人工 UAT 判定台账（2026-10-19 P2）：最新人工判定覆盖验收书提取值——人判晚于文档。
+  const uatLedger = readUatLedger(root, run)
+  const merged = uatLedger ? mergeUatVerdicts(rows, uatLedger.records) : rows
+  ctx.body = {
+    run,
+    rows: merged,
+    meta: { ...meta, uatLedger: uatLedger !== null },
+    source: { evidenceDir: evidDir },
+  }
+})
+
+// ── 9b. UAT 判定台账：run 绑定的人工判定持久化（spec 2026-10-19-studio-p2 §2.1） ──
+
+export type UatVerdictKey = 'pass' | 'conditional' | 'reject'
+export const UAT_VERDICT_LABEL: Record<UatVerdictKey, string> = {
+  pass: '通过', conditional: '有条件通过', reject: '不通过',
+}
+
+export interface UatVerdictRecord {
+  ts: string
+  actor: string
+  run: string
+  ac: string
+  verdict: UatVerdictKey
+  note?: string
+}
+
+/** UAT 判定入参强校验（纯函数）：ac 归一 AC-N（≤3 位）；verdict 三态键；note ≤200。 */
+export function validateUatVerdict(body: unknown):
+  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string } | { ok: false; error: string } {
+  const b = body as { run?: unknown; ac?: unknown; verdict?: unknown; note?: unknown } | undefined
+  const run = typeof b?.run === 'string' ? b.run : ''
+  if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
+  const rawAc = typeof b?.ac === 'string' ? b.ac.trim() : ''
+  const m = /^(?:AC[-\s]?)?(\d{1,3})$/i.exec(rawAc)
+  if (!m) return { ok: false, error: 'ac 非法（形如 AC-1，编号 ≤3 位）' }
+  const verdict = b?.verdict
+  if (verdict !== 'pass' && verdict !== 'conditional' && verdict !== 'reject') {
+    return { ok: false, error: 'verdict 须为 pass|conditional|reject' }
+  }
+  const note = typeof b?.note === 'string' ? b.note.trim() : ''
+  if (note.length > 200) return { ok: false, error: 'note 超长（≤200 字符）' }
+  return { ok: true, run, ac: `AC-${m[1]}`, verdict, note: note || undefined }
+}
+
+/** 台账落位（穿越防护同 evidence/mark）：runs/<run>/evidence/uat-verdicts.jsonl。 */
+export function safeUatLedgerFile(root: string, run: string): string | null {
+  const runDir = safeRunDir(root, run)
+  if (!runDir) return null
+  const evidDir = resolve(runDir, 'evidence')
+  const file = resolve(evidDir, 'uat-verdicts.jsonl')
+  return file.startsWith(evidDir + sep) ? file : null
+}
+
+/** 读台账（缺file→null）；坏行跳过（append-only jsonl 容错读）。 */
+export function readUatLedger(root: string, run: string): { file: string; records: UatVerdictRecord[] } | null {
+  const file = safeUatLedgerFile(root, run)
+  if (!file || !existsSync(file)) return null
+  const records: UatVerdictRecord[] = []
+  for (const ln of (readCapped(file) ?? '').split('\n')) {
+    if (!ln.trim()) continue
+    try {
+      const r = JSON.parse(ln) as UatVerdictRecord
+      if (r && typeof r.ac === 'string' && (r.verdict === 'pass' || r.verdict === 'conditional' || r.verdict === 'reject')) {
+        records.push(r)
+      }
+    } catch { /* 坏行丢弃 */ }
+  }
+  return { file, records }
+}
+
+/** 人工判定合并（纯函数）：同一 AC 取 ts 最新的人工记录，label 覆盖 uatVerdict。 */
+export function mergeUatVerdicts(
+  rows: Array<{ ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }>,
+  records: UatVerdictRecord[],
+): Array<{ ac: string; criterion: string | null; caseResult: string | null; uatVerdict: string | null }> {
+  const latest = new Map<string, UatVerdictRecord>()
+  for (const r of records) {
+    const prev = latest.get(r.ac)
+    if (!prev || Date.parse(r.ts) >= Date.parse(prev.ts)) latest.set(r.ac, r)
+  }
+  return rows.map(row => {
+    const hit = latest.get(row.ac)
+    return hit ? { ...row, uatVerdict: UAT_VERDICT_LABEL[hit.verdict] } : row
+  })
+}
+
+function actorOf(ctx: Context): string {
+  const user = (ctx.state as { user?: { username?: string } } | undefined)?.user
+  return typeof user?.username === 'string' && user.username ? user.username : 'unknown'
+}
+
+router.get('/uat-verdicts', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.query.run ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const ledger = readUatLedger(root, run)
+  ctx.body = { run, records: ledger?.records ?? [], source: ledger?.file ?? null }
+})
+
+router.post('/uat-verdict', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const v = validateUatVerdict(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const runDir = safeRunDir(root, v.run)
+  if (!runDir || !existsSync(runDir)) { ctx.status = 400; ctx.body = { error: 'run 参数非法或不存在' }; return }
+  const file = safeUatLedgerFile(root, v.run)
+  if (!file) { ctx.status = 400; ctx.body = { error: '目标路径越界' }; return }
+  mkdirSync(resolve(runDir, 'evidence'), { recursive: true })
+  const rec: UatVerdictRecord = { ts: new Date().toISOString(), actor: actorOf(ctx), run: v.run, ac: v.ac, verdict: v.verdict, ...(v.note ? { note: v.note } : {}) }
+  appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
+  ctx.body = { ok: true, record: rec, anchor: `evidence/uat-verdicts.jsonl#${v.ac}` }
+})
+
+// ── 9c. G5 发布准出台账：run 绑定的批准/打回留痕（spec §2.2；iv-08 人工批准半件） ──
+
+export type ReleaseGateDecision = 'approve' | 'reject'
+
+export interface ReleaseGateRecord {
+  ts: string
+  actor: string
+  run: string
+  decision: ReleaseGateDecision
+  note?: string
+}
+
+/** 发布门入参强校验（纯函数）：打回必须给理由（≤300 字）；批准 note 可选。 */
+export function validateReleaseGate(body: unknown):
+  { ok: true; run: string; decision: ReleaseGateDecision; note?: string } | { ok: false; error: string } {
+  const b = body as { run?: unknown; decision?: unknown; note?: unknown } | undefined
+  const run = typeof b?.run === 'string' ? b.run : ''
+  if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
+  if (b?.decision !== 'approve' && b?.decision !== 'reject') {
+    return { ok: false, error: 'decision 须为 approve|reject' }
+  }
+  const note = typeof b?.note === 'string' ? b.note.trim() : ''
+  if (note.length > 300) return { ok: false, error: 'note 超长（≤300 字符）' }
+  if (b.decision === 'reject' && !note) return { ok: false, error: '打回必须给理由（note 必填）' }
+  return { ok: true, run, decision: b.decision, note: note || undefined }
+}
+
+export function safeReleaseGateFile(root: string, run: string): string | null {
+  const runDir = safeRunDir(root, run)
+  if (!runDir) return null
+  const evidDir = resolve(runDir, 'evidence')
+  const file = resolve(evidDir, 'release-gate.jsonl')
+  return file.startsWith(evidDir + sep) ? file : null
+}
+
+export function readReleaseGate(root: string, run: string): { file: string; records: ReleaseGateRecord[] } | null {
+  const file = safeReleaseGateFile(root, run)
+  if (!file || !existsSync(file)) return null
+  const records: ReleaseGateRecord[] = []
+  for (const ln of (readCapped(file) ?? '').split('\n')) {
+    if (!ln.trim()) continue
+    try {
+      const r = JSON.parse(ln) as ReleaseGateRecord
+      if (r && (r.decision === 'approve' || r.decision === 'reject')) records.push(r)
+    } catch { /* 坏行丢弃 */ }
+  }
+  return { file, records }
+}
+
+/** 当前判定（纯函数）：最新一条记录胜出；无记录=未决 null。 */
+export function latestReleaseDecision(records: ReleaseGateRecord[]): ReleaseGateRecord | null {
+  let latest: ReleaseGateRecord | null = null
+  for (const r of records) {
+    if (!latest || Date.parse(r.ts) >= Date.parse(latest.ts)) latest = r
+  }
+  return latest
+}
+
+router.get('/release-gate', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.query.run ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const ledger = readReleaseGate(root, run)
+  const current = ledger ? latestReleaseDecision(ledger.records) : null
+  ctx.body = {
+    run,
+    decision: current?.decision ?? null,
+    current,
+    records: ledger?.records ?? [],
+    source: ledger?.file ?? null,
+  }
+})
+
+router.post('/release-gate', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const v = validateReleaseGate(ctx.request.body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const runDir = safeRunDir(root, v.run)
+  if (!runDir || !existsSync(runDir)) { ctx.status = 400; ctx.body = { error: 'run 参数非法或不存在' }; return }
+  const file = safeReleaseGateFile(root, v.run)
+  if (!file) { ctx.status = 400; ctx.body = { error: '目标路径越界' }; return }
+  mkdirSync(resolve(runDir, 'evidence'), { recursive: true })
+  const rec: ReleaseGateRecord = { ts: new Date().toISOString(), actor: actorOf(ctx), run: v.run, decision: v.decision, ...(v.note ? { note: v.note } : {}) }
+  appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
+  ctx.body = { ok: true, record: rec, anchor: 'evidence/release-gate.jsonl' }
 })
 
 // ── 10. evidence/mark：本族唯一写端点（强校验+路径穿越防护） ──
