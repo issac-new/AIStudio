@@ -142,6 +142,21 @@ export interface BehaviorContrast {
   regressionFailed: number | null
 }
 
+export interface AutoRunState {
+  status: 'running' | 'done' | 'stopped' | 'failed'
+  setId: string
+  tasksTotal: number
+  tasksDone: number
+  /** 真实成本累计（trace usage 同源；价目缺失的任务用估值并已如实标注）。 */
+  costUsd: number
+  /** 用估值记账的任务数（价目表未收录模型的兜底口径）。 */
+  estimatedTasks: number
+  reason?: string
+  error?: string
+  startedAt: string
+  finishedAt?: string
+}
+
 export interface Probe {
   id: string
   variantId: string
@@ -154,6 +169,8 @@ export interface Probe {
   recordedBy?: string
   createdAt: string
   recordedAt?: string
+  /** 一键自动探测任务态（running 的服务重启后失联，需重新发起）。 */
+  autoRun?: AutoRunState
 }
 
 export interface ApprovalRecord {
@@ -208,6 +225,8 @@ export interface Proposal {
   status: ProposalStatus
   /** 经验库的检索单元（源文 per-domain library）；缺省 general。 */
   domain: string
+  /** 自动探测运行的基准档案（缺省从 targetPath 的 profiles/<name> 推导）。 */
+  profile?: string | null
   budgetCapUsd: number
   evidenceRefs: string[]
   experienceIds: string[]

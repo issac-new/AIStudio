@@ -4,9 +4,9 @@
 import Router from '@koa/router'
 import { collectSurfaces } from './surface-registry'
 import {
-  ServiceError, addExperience, attachBaseline, composeProposal, createProbes, createProposal,
+  ServiceError, addExperience, attachBaseline, autoProbeRunning, composeProposal, createProbes, createProposal,
   decideProposal, importExperiences, listExperiences, listProposals, overview,
-  promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, submitProposal,
+  promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, startAutoProbe, submitProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
 
@@ -106,6 +106,7 @@ router.post('/proposals', async (ctx) => {
       evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
       experienceIds: Array.isArray(b.experienceIds) ? b.experienceIds.map(String) : [],
       variants,
+      profile: typeof b.profile === 'string' ? b.profile : null,
       createdBy: actorOf(ctx, b),
     })
     ctx.body = { ok: true, proposal }
@@ -184,6 +185,29 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
   } catch (e) {
     fail(ctx, e)
   }
+})
+
+// 一键自动探测（spec §13）：批准后方可发起；异步跑，202 返回任务态。
+router.post('/proposals/:id/probes/auto-run', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    const job = await startAutoProbe(ctx.params.id, {
+      setId: String(b.setId ?? ''),
+      regressionSetId: typeof b.regressionSetId === 'string' && b.regressionSetId ? b.regressionSetId : undefined,
+      maxTasks: Number.isFinite(Number(b.maxTasks)) ? Number(b.maxTasks) : undefined,
+      estimatedCostPerTaskUsd: Number.isFinite(Number(b.estimatedCostPerTaskUsd)) ? Number(b.estimatedCostPerTaskUsd) : undefined,
+      actor: actorOf(ctx, b),
+    })
+    ctx.status = 202
+    ctx.body = { ok: true, job }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.get('/proposals/:id/probes/auto-status', async (ctx) => {
+  ctx.body = { ok: true, running: autoProbeRunning(ctx.params.id) }
 })
 
 router.post('/proposals/:id/compose', async (ctx) => {

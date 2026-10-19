@@ -12,6 +12,12 @@ import {
   diffSummary, diffSummaryTree, evaluatePromotion, findGraderMarkers, findGraderMarkersInPath,
   probeCost, sha256, submitReadiness, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
+import { getSet } from '../../eval/store'
+import { runReplayEval } from '../../eval/runner'
+import { loadEvalConfig } from '../../eval/types'
+import type { AskFn } from '../../eval/judge'
+import type { OutcomeRunContext } from '../../eval/outcome'
+import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import type {
@@ -141,6 +147,7 @@ export interface CreateProposalInput {
   evidenceRefs?: string[]
   experienceIds?: string[]
   variants: Array<{ label?: string; content?: string; files?: Array<{ path: string; content: string }>; deletions?: string[] }>
+  profile?: string | null
   createdBy?: string
 }
 
@@ -238,6 +245,7 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
       surfaceKey: input.surfaceKey,
       targetPath,
       treeRoot: input.treeRoot ? String(input.treeRoot).trim() || null : null,
+      profile: input.profile?.trim() || profileFromTarget(targetPath),
       risk: def.risk,
       mode: input.mode === 'sequential' ? 'sequential' : 'parallel',
       domain: String(input.domain ?? 'general').trim().slice(0, 80) || 'general',
@@ -274,6 +282,13 @@ function readFileSafe(abs: string): string | null {
 function readHomeFileSafe(rel: string | null): string | null {
   if (!rel || rel.startsWith('/') || rel.split('/').includes('..')) return null
   return readFileSafe(`${hermesHome()}/${rel}`)
+}
+
+/** 从 targetPath（profiles/<name>/...）推导探测运行的基准档案；推不出返回 null。 */
+export function profileFromTarget(targetPath: string | null): string | null {
+  if (!targetPath) return null
+  const m = targetPath.match(/^profiles\/([^/]+)\//)
+  return m ? m[1] : null
 }
 
 export async function attachBaseline(id: string, evalRunId: string): Promise<ProposalView> {
@@ -598,6 +613,295 @@ export async function rollbackProposal(
     p.updatedAt = nowIso()
     return view(store, p)
   })
+}
+
+
+// ---------- 一键自动探测（spec §13：批准后自动发起，不自动提出候选） ----------
+
+/** 在途自动探测（同提案并发二次发起 409；服务重启后 running 态失联，需重新发起）。 */
+const runningProbes = new Set<string>()
+
+export interface AutoProbeOptions {
+  setId: string
+  regressionSetId?: string
+  maxTasks?: number
+  estimatedCostPerTaskUsd?: number
+  actor?: string
+  /** 测试注入：不真起 agent。 */
+  spawnRun?: SpawnRun
+  /** 测试注入：判分通道（生产缺省走本地 clef 裁判）。 */
+  judgeAsk?: AskFn
+}
+
+export interface AutoProbeJob {
+  proposalId: string
+  status: 'running' | 'done' | 'failed'
+  variantsTotal: number
+  variantsDone: number
+  costUsd: number
+  estimatedTasks: number
+  error?: string
+}
+
+function probeOutcomeContext(): OutcomeRunContext {
+  const roots = process.env.EVAL_OUTCOME_ALLOWED_ROOTS?.split(',').map((s) => s.trim()).filter(Boolean)
+  const baseUrl = process.env.EVAL_KANBAN_BASE_URL?.trim()
+  const token = process.env.EVAL_KANBAN_TOKEN?.trim()
+  const board = process.env.EVAL_KANBAN_BOARD?.trim()
+  return {
+    runStartedAt: Date.now(),
+    ...(roots && roots.length ? { allowedRoots: roots } : {}),
+    ...(baseUrl ? { kanban: { baseUrl, ...(token ? { token } : {}), ...(board ? { board } : {}) } } : {}),
+  }
+}
+
+/** 发起自动探测：预检同步完成（状态/预算/可执行件闸），任务异步跑。 */
+export async function startAutoProbe(id: string, opts: AutoProbeOptions): Promise<AutoProbeJob> {
+  if (runningProbes.has(id)) throw new ServiceError(409, '该提案已有在途自动探测')
+  const store = readStore()
+  const p = store.proposals.find((x) => x.id === id)
+  if (!p) throw new ServiceError(404, `提案不存在：${id}`)
+  if (p.status !== 'approved' && p.status !== 'probing') {
+    throw new ServiceError(409, `当前状态 ${p.status} 不可自动探测（须先人工批准）`)
+  }
+  const set = getSet(String(opts.setId ?? ''))
+  if (!set) throw new ServiceError(400, `评测集不存在：${opts.setId}`)
+  let regressionSet = null
+  if (opts.regressionSetId) {
+    regressionSet = getSet(opts.regressionSetId)
+    if (!regressionSet) throw new ServiceError(400, `回归集不存在：${opts.regressionSetId}`)
+  }
+  const maxTasks = Math.max(1, Math.min(50, opts.maxTasks ?? 5))
+  const estimate = opts.estimatedCostPerTaskUsd ?? DEFAULT_TASK_COST_ESTIMATE_USD
+  const pendingVariants = p.variants.filter((v) => !p.probes.some((x) => x.variantId === v.id && x.status === 'recorded'))
+  if (pendingVariants.length === 0) throw new ServiceError(409, '全部候选都已记录探测')
+
+  // 可执行件闸：先把不能跑的挑出来如实拒绝（不静默跳过）
+  const blocked: Array<{ variantId: string; problems: string[] }> = []
+  for (const v of pendingVariants) {
+    const r = assertTreeRunnable(v)
+    if (!r.ok) blocked.push({ variantId: v.id, problems: r.problems })
+  }
+  if (blocked.length > 0) {
+    throw new ServiceError(400, `候选含可执行件，自动探测禁跑：${blocked.map((b) => `${b.variantId}（${b.problems[0]}）`).join('；')}`, blocked)
+  }
+
+  // 预算预估闸：预估 > 剩余额度即拒（实际花费在跑中逐题硬停）
+  const spent = probeCost(p).total
+  const remaining = p.budgetCapUsd - spent
+  const worst = pendingVariants.length * maxTasks * estimate * (regressionSet ? 2 : 1)
+  if (remaining <= 0 || worst > remaining) {
+    throw new ServiceError(400, `预算不足：剩余 $${remaining.toFixed(2)}，预估最高 $${worst.toFixed(2)}（${pendingVariants.length} 候选 × ${maxTasks} 题 × $${estimate}${regressionSet ? ' × 2（含回归）' : ''}）`)
+  }
+
+  // 为未建探测的候选先建探测（置 planned）
+  await mutateStore((st) => {
+    const pp = requireProposal(st, id)
+    const now = nowIso()
+    for (const v of pendingVariants) {
+      if (!pp.probes.some((x) => x.variantId === v.id)) {
+        pp.probes.push({ id: `pr-${pp.id.slice(3)}-${v.id}`, variantId: v.id, status: 'planned', createdAt: now })
+      }
+    }
+    pp.status = 'probing'
+    pp.updatedAt = now
+  })
+
+  const job: AutoProbeJob = {
+    proposalId: id,
+    status: 'running',
+    variantsTotal: pendingVariants.length,
+    variantsDone: 0,
+    costUsd: 0,
+    estimatedTasks: 0,
+  }
+  runningProbes.add(id)
+  void runAutoProbeJob(id, pendingVariants.map((v) => v.id), opts, { setId: set.id, regressionSetId: regressionSet?.id }, { maxTasks, estimate }, job)
+    .catch((e) => { job.status = 'failed'; job.error = e instanceof Error ? e.message : String(e) })
+    .finally(() => { runningProbes.delete(id) })
+  return job
+}
+
+async function runAutoProbeJob(
+  id: string,
+  variantIds: string[],
+  opts: AutoProbeOptions,
+  sets: { setId: string; regressionSetId?: string },
+  limits: { maxTasks: number; estimate: number },
+  job: AutoProbeJob,
+): Promise<void> {
+  for (const variantId of variantIds) {
+    const store = readStore()
+    const p = store.proposals.find((x) => x.id === id)
+    if (!p) throw new ServiceError(404, `提案不存在：${id}`)
+    const variant = p.variants.find((v) => v.id === variantId)
+    const probe = p.probes.find((x) => x.variantId === variantId)
+    if (!variant || !probe) continue
+    const tree = treeOfVariant(variant, p.targetPath)
+    const profile = p.profile ?? profileFromTarget(p.targetPath) ?? 'orchestrator'
+    const evalSet = getSet(sets.setId)
+    if (!evalSet) throw new ServiceError(400, `评测集不存在：${sets.setId}`)
+    const tasks = evalSet.tasks.slice(0, limits.maxTasks).map((t) => ({ taskId: t.id, prompt: t.problem }))
+    const spent = probeCost(p).total + job.costUsd
+    const remaining = p.budgetCapUsd - spent
+
+    await mutateStore((st) => {
+      const pp = requireProposal(st, id)
+      const pr = pp.probes.find((x) => x.variantId === variantId)
+      if (pr) {
+        pr.autoRun = {
+          status: 'running', setId: evalSet.id, tasksTotal: tasks.length, tasksDone: 0,
+          costUsd: 0, estimatedTasks: 0, startedAt: nowIso(),
+        }
+        pp.updatedAt = nowIso()
+      }
+    })
+
+    const result = await runProbeTasks({
+      prompts: tasks,
+      baseHome: hermesHome(),
+      profile,
+      variantTree: tree,
+      budgetRemainingUsd: Math.max(0, remaining),
+      estimatePerTaskUsd: limits.estimate,
+      spawnRun: opts.spawnRun,
+      onProgress: (done, costUsd, estimatedTasks) => {
+        job.costUsd = costUsd
+        job.estimatedTasks = estimatedTasks
+        void mutateStore((st) => {
+          const pp = requireProposal(st, id)
+          const pr = pp.probes.find((x) => x.variantId === variantId)
+          if (pr?.autoRun) {
+            pr.autoRun.tasksDone = done
+            pr.autoRun.costUsd = costUsd
+            pr.autoRun.estimatedTasks = estimatedTasks
+          }
+        })
+      },
+    })
+
+    if (!result.ok) {
+      await mutateStore((st) => {
+        const pp = requireProposal(st, id)
+        const pr = pp.probes.find((x) => x.variantId === variantId)
+        if (pr) {
+          pr.status = 'failed'
+          if (pr.autoRun) { pr.autoRun.status = 'failed'; pr.autoRun.error = result.error; pr.autoRun.finishedAt = nowIso() }
+          pr.note = result.error ?? '自动探测失败'
+        }
+        pp.updatedAt = nowIso()
+      })
+      job.variantsDone += 1
+      continue
+    }
+
+    if (Object.keys(result.samples).length === 0) {
+      await mutateStore((st) => {
+        const pp = requireProposal(st, id)
+        const pr = pp.probes.find((x) => x.variantId === variantId)
+        if (pr) {
+          pr.status = 'failed'
+          if (pr.autoRun) { pr.autoRun.status = 'stopped'; pr.autoRun.reason = 'budget_stop'; pr.autoRun.finishedAt = nowIso() }
+          pr.note = '预算在第一题前已耗尽，未产生样本'
+        }
+        pp.updatedAt = nowIso()
+      })
+      job.variantsDone += 1
+      break
+    }
+
+    const replay = await runReplayEval(
+      {
+        setId: evalSet.id,
+        samples: result.samples,
+        target: { profile, harnessRef: `${id}:${variantId}` },
+        actor: 'workbench-auto',
+        note: `一键自动探测 ${id}/${variantId}${result.stoppedBy ? `（${result.stoppedBy}：${result.tasksDone}/${tasks.length} 题）` : ''}`,
+      },
+      { judge: { config: loadEvalConfig(), ...(opts.judgeAsk ? { ask: opts.judgeAsk } : {}) }, outcomeCtx: probeOutcomeContext() },
+    )
+    if (!replay.ok) {
+      const problems = (replay as { ok: false; problems: string[] }).problems
+      await mutateStore((st) => {
+        const pp = requireProposal(st, id)
+        const pr = pp.probes.find((x) => x.variantId === variantId)
+        if (pr) {
+          pr.status = 'failed'
+          if (pr.autoRun) { pr.autoRun.status = 'failed'; pr.autoRun.error = problems.join('；'); pr.autoRun.finishedAt = nowIso() }
+          pr.note = `判分失败：${problems.join('；')}`
+        }
+        pp.updatedAt = nowIso()
+      })
+      job.variantsDone += 1
+      continue
+    }
+
+    let regressionRunId: string | undefined
+    if (sets.regressionSetId) {
+      const regSet = getSet(sets.regressionSetId)
+      if (regSet) {
+        const regTasks = regSet.tasks.map((t) => ({ taskId: t.id, prompt: t.problem }))
+        const regRemaining = p.budgetCapUsd - (probeCost(p).total + job.costUsd)
+        const regResult = await runProbeTasks({
+          prompts: regTasks,
+          baseHome: hermesHome(),
+          profile,
+          variantTree: tree,
+          budgetRemainingUsd: Math.max(0, regRemaining),
+          estimatePerTaskUsd: limits.estimate,
+          spawnRun: opts.spawnRun,
+        })
+        if (regResult.ok && Object.keys(regResult.samples).length > 0) {
+          const regReplay = await runReplayEval(
+            {
+              setId: regSet.id,
+              samples: regResult.samples,
+              target: { profile, harnessRef: `${id}:${variantId}:regression` },
+              actor: 'workbench-auto',
+              note: `一键自动探测（回归）${id}/${variantId}`,
+            },
+            { judge: { config: loadEvalConfig(), ...(opts.judgeAsk ? { ask: opts.judgeAsk } : {}) }, outcomeCtx: probeOutcomeContext() },
+          )
+          if (regReplay.ok) regressionRunId = regReplay.run.id
+        }
+      }
+    }
+
+    await recordProbe(id, probe.id, {
+      evalRunId: replay.run.id,
+      regressionRunId: regressionRunId ?? null,
+      note: `一键自动探测${result.stoppedBy ? `（${result.stoppedBy}）` : ''}`,
+      actor: opts.actor ?? 'workbench-auto',
+    })
+    await mutateStore((st) => {
+      const pp = requireProposal(st, id)
+      const pr = pp.probes.find((x) => x.variantId === variantId)
+      if (pr?.autoRun) {
+        pr.autoRun.status = result.stoppedBy ? 'stopped' : 'done'
+        pr.autoRun.reason = result.stoppedBy
+        pr.autoRun.finishedAt = nowIso()
+      }
+    })
+    job.variantsDone += 1
+    if (result.stoppedBy === 'budget_stop') break
+  }
+  job.status = 'done'
+}
+
+/** 候选 → 隔离树（rel → content|null）；单文件候选映射为 targetPath 一个文件。 */
+function treeOfVariant(variant: Variant, targetPath: string | null): Record<string, string | null> {
+  const tree: Record<string, string | null> = {}
+  if (variant.files && variant.files.length > 0) {
+    for (const f of variant.files) tree[f.path] = f.content
+    for (const d of variant.deletions ?? []) tree[d] = null
+  } else if (targetPath && variant.content) {
+    tree[targetPath] = variant.content
+  }
+  return tree
+}
+
+export function autoProbeRunning(id: string): boolean {
+  return runningProbes.has(id)
 }
 
 // ---------- 经验库 ----------

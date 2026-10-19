@@ -174,3 +174,26 @@ submitted/approved --reject--> rejected
 - 未实现按域物理目录隔离与“整棵树多文件快照”；单文件面的快照已存，多文件面待后续。
 - 未实现源文的 2K 候选自动生成、匿名选择器、R=4k/P=3k 账本对账；这些需要内置 Proposer/rollout，属下一阶段。
 - 未移植常驻文本 24k 上限、技能触发行检查、脚本 compile、hooks schema 校验；本批只做 managed 面的路径安全、非空与防泄漏。
+
+## 13. 一键自动探测（2026-10-19 第三批，用户裁定「做到批准后自动发起探测为止」）
+
+批准范围：提案人工批准后，一键自动物化候选树并发起真实评测运行，回填运行号；不做自动提出候选。两道前置闸随批落地：
+
+- **预算硬停**：自动探测按任务逐条记真实成本（trace usage 同源估算；价目缺失时用可配置单题估值并如实标注）。累计成本达到提案 `budgetCapUsd` 即停止派题，已完成部分照常回填，未跑任务如实标 `budget_stop`，不伪造全量。
+- **可执行件禁跑**：候选树含 `scripts/`、`plugin/`、`.codex/hooks.json` 或任何 `.py/.js/.ts/.sh` 文件时，自动探测直接拒绝（该探测标 failed）。SKILL.md/AGENT.md/SOUL.md 等纯文本不受限。
+
+### 执行模型
+
+1. **物化**：在系统临时目录（`mkdtemp harness2-probe-*`）建隔离 HERMES_HOME——未触及条目符号链接，触及文件写实内容，删除项不落盘；目录由 OS 定期清理，v1 不接沙箱租约（探测 home 不含生产可写面，执行件已被禁跑闸挡在物化前）。候选含可执行件的树在物化前即被拒。
+2. **驱动**：沿用 kanban 派发先例，子进程 `hermes -p <profile> --cli --accept-hooks chat -q <题面>`，env 重指 `HERMES_HOME=<隔离 home>` + `HERMES_RUN_TRACE_DIR=<隔离 traces>`，trace 不混生产目录。profile 由提案 `profile` 字段指定（缺省从 targetPath 的 profiles/<name> 推导）。
+3. **判分**：任务完成后直读隔离 trace（`evidenceFromTraceLines`），以内联证据调 `runReplayEval`——不依赖全局 trace 目录。运行落 Eval Studio，`target.harnessRef=<提案>:<候选>`（EvalRunTarget 新增字段）保证可归因。
+4. **回填**：`probe.evalRunId` 指向新运行，走既有 recordProbe 逻辑算行为对比；回归集可选同跑（`regressionSetId`），未提供则晋级仍被 `regression_missing` 拦，可手工绑定。
+5. **任务形态**：探测在服务端进程内顺序执行（预算账本需要串行），同提案并发二次发起返回 409。每题默认上限 10 分钟、每提案默认 5 题（可调、上限 50）。服务重启后「running」任务判失联，需人工重新发起——v1 如实挂账，不做断点续跑。
+6. **判分通道**：生产走本地 clef 裁判（EVAL_JUDGE_* 配置）；裁判离线时判词如实落 unknown（online=false），晋级门按既有 quality_unknown 警告处理。测试注入离线 ask，绝不在单元测试里触真实裁判服务。
+
+### 边界
+
+- 自动探测只消费**已批准**提案；未批准提案端点直接 409（批准仍是安全闸）。
+- 判分沿用 Eval Studio 回放判分（S0/S1/人工三层），不新增判定逻辑。
+- scripts/plugins/hooks 禁跑闸是 v1 保守线；沙箱化执行（sandbox-lease 真根 + rlimit）属下一阶段，不在本批。
+- 密封集尝试计数照常生效（actor=workbench-auto）。

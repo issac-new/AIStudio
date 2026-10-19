@@ -94,6 +94,19 @@ export interface BehaviorContrastDto {
   regressionFailed: number | null
 }
 
+export interface AutoRunStateDto {
+  status: 'running' | 'done' | 'stopped' | 'failed'
+  setId: string
+  tasksTotal: number
+  tasksDone: number
+  costUsd: number
+  estimatedTasks: number
+  reason?: string
+  error?: string
+  startedAt: string
+  finishedAt?: string
+}
+
 export interface ProbeDto {
   id: string
   variantId: string
@@ -106,6 +119,7 @@ export interface ProbeDto {
   recordedBy?: string
   createdAt: string
   recordedAt?: string
+  autoRun?: AutoRunStateDto
 }
 
 export interface ApprovalDto {
@@ -261,6 +275,29 @@ export function decideWorkbenchProposal(
 
 export function createWorkbenchProbes(id: string): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/probes`, { method: 'POST', body: '{}' })
+}
+
+export interface AutoProbeJobDto {
+  proposalId: string
+  status: 'running' | 'done' | 'failed'
+  variantsTotal: number
+  variantsDone: number
+  costUsd: number
+  estimatedTasks: number
+  error?: string
+}
+
+export function startAutoProbe(
+  id: string,
+  input: { setId: string; regressionSetId?: string; maxTasks?: number; estimatedCostPerTaskUsd?: number },
+): Promise<{ ok: boolean; job: AutoProbeJobDto }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/probes/auto-run`, {
+    method: 'POST', body: JSON.stringify(input),
+  })
+}
+
+export function fetchAutoProbeStatus(id: string): Promise<{ ok: boolean; running: boolean }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/probes/auto-status`)
 }
 
 export function recordWorkbenchProbe(

@@ -20,6 +20,7 @@ import {
   recordWorkbenchProbe,
   rollbackWorkbenchProposal,
   setWorkbenchExperienceStatus,
+  startAutoProbe,
   submitWorkbenchProposal,
   type ExperienceDto,
   type ProbeDto,
@@ -53,6 +54,9 @@ interface ProposalForm {
   lesson: string
   evidence: string
   confidence: 'low' | 'medium' | 'high'
+  autoSetId: string
+  autoRegressionSetId: string
+  autoMaxTasks: number
 }
 const forms = reactive<Record<string, ProposalForm>>({})
 const probeInputs = reactive<Record<string, { evalRunId: string; regressionRunId: string }>>({})
@@ -99,6 +103,7 @@ function formFor(id: string): ProposalForm {
     forms[id] = {
       baselineRunId: '', selectedVariant: '', rationale: '', rollbackReason: '', actor: '', note: '',
       apply: false, cue: '', lesson: '', evidence: '', confidence: 'medium',
+      autoSetId: '', autoRegressionSetId: '', autoMaxTasks: 5,
     }
   }
   return forms[id]
@@ -280,6 +285,26 @@ async function decide(p: ProposalDto, decision: 'approve' | 'reject'): Promise<v
 
 async function createProbes(p: ProposalDto): Promise<void> {
   await act(() => createWorkbenchProbes(p.id))
+}
+
+async function autoProbe(p: ProposalDto): Promise<void> {
+  const f = formFor(p.id)
+  if (!f.autoSetId.trim()) return
+  await act(() => startAutoProbe(p.id, {
+    setId: f.autoSetId.trim(),
+    regressionSetId: f.autoRegressionSetId.trim() || undefined,
+    maxTasks: Number(f.autoMaxTasks) || 5,
+  }))
+}
+
+function autoStatusLabel(st: string): string {
+  return st === 'running' ? L.value.autoRunning : st === 'stopped' ? L.value.autoStopped : st === 'failed' ? L.value.autoFailed : L.value.autoDone
+}
+
+function hasRunnableProbe(p: ProposalDto): boolean {
+  return (p.status === 'approved' || p.status === 'probing')
+    && p.probes.some((x) => x.status !== 'recorded')
+    && !p.probes.some((x) => x.autoRun?.status === 'running')
 }
 
 async function recordProbe(p: ProposalDto, probe: ProbeDto): Promise<void> {
@@ -586,6 +611,31 @@ onMounted(() => void refresh())
               <div v-if="p.status === 'approved' || p.status === 'probing'" class="hi__row">
                 <button type="button" class="hi__btn" @click="createProbes(p)">{{ L.createProbes }}</button>
                 <span class="hi__meta">{{ L.recordHint }}</span>
+              </div>
+
+              <div v-if="p.status === 'approved' || p.status === 'probing'" class="hi__row" :data-testid="`hi-auto-${p.id}`">
+                <b>{{ L.autoProbe }}</b>
+                <input v-model="formFor(p.id).autoSetId" :placeholder="L.autoSetId" :data-testid="`hi-auto-set-${p.id}`" />
+                <input v-model="formFor(p.id).autoRegressionSetId" :placeholder="L.autoRegressionSetId" />
+                <input v-model.number="formFor(p.id).autoMaxTasks" type="number" min="1" max="50" :placeholder="L.autoMaxTasks" style="width: 90px" />
+                <button type="button" class="hi__btn hi__btn--primary" :disabled="!hasRunnableProbe(p)" :data-testid="`hi-auto-run-${p.id}`" @click="autoProbe(p)">
+                  {{ L.autoRun }}
+                </button>
+                <span class="hi__meta">{{ L.autoProbeHint }}</span>
+              </div>
+
+              <div v-for="probe in p.probes.filter((x) => x.autoRun)" :key="`ar-${probe.id}`" class="hi__row hi__autoState" :data-testid="`hi-auto-state-${probe.id}`">
+                <code>{{ probe.id }}</code>
+                <span class="hi__chip" :class="probe.autoRun?.status === 'done' ? 'hi__chip--ok' : probe.autoRun?.status === 'running' ? 'hi__chip--status-probing' : 'hi__chip--muted'">
+                  {{ autoStatusLabel(probe.autoRun?.status ?? 'done') }}
+                </span>
+                <span class="hi__meta">
+                  {{ L.autoProgress }} {{ probe.autoRun?.tasksDone }}/{{ probe.autoRun?.tasksTotal }}
+                  · {{ fmtUsd(probe.autoRun?.costUsd) }}
+                  <template v-if="probe.autoRun?.estimatedTasks">· {{ L.autoEstimated }} {{ probe.autoRun.estimatedTasks }}</template>
+                  <template v-if="probe.autoRun?.reason === 'budget_stop'">· {{ L.autoBudgetStop }}</template>
+                </span>
+                <span v-if="probe.autoRun?.error" class="hi__error">{{ probe.autoRun.error }}</span>
               </div>
 
               <div v-for="probe in p.probes.filter((x) => x.status === 'planned')" :key="probe.id" class="hi__row">
