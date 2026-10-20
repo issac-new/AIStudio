@@ -12,6 +12,7 @@ import type { EventLogStore, GraphLogEvent } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
 import { appendContractsById } from './phase-nodes'
+import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -172,6 +173,9 @@ export interface GraphRestDeps {
   /** 任务工厂（2026-10-10）：模板台账追加入口（治理注册表 mission-templates，保存即提交）。
    *  缺省时 deposit 仍存 spec，仅跳过台账登记（响应 registered=false 如实告示）。 */
   missionRegistry?: { appendRow(row: string[], message: string, actor?: string): Promise<void> } | null
+  /** 产品内导演：按请求 JWT 构造独立 spec runtime（真实 kanban 桥），
+   *  不依赖 GRAPH_ENGINE=on 的全局调度接管。缺省时导演 start 返回 501。 */
+  directorRuntimeFactory?: ((token?: string) => { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null) | null
 }
 
 export function createGraphRunRouter(deps: GraphRestDeps): Router {
@@ -450,6 +454,105 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
       const message = err instanceof Error ? err.message : String(err)
       ctx.status = message.includes('not found') ? 404 : 400
       ctx.body = { error: message }
+    }
+  })
+
+  // ── 产品内导演：需求 → 模拟员工图 → 起跑（独立 spec runtime）────────────────
+  const DIRECTOR_MODULE_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,40}$/
+  const DIRECTOR_ASSIGNEE_RE = /^[a-zA-Z0-9._-]{1,40}$/
+
+  function readDirectorInput(raw: unknown): { ok: true; value: RequirementInput } | { ok: false; error: string } {
+    const body = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+    const title = typeof body.title === 'string' ? body.title.trim() : DEFAULT_SIMULATION_SCENARIO.title
+    const description = typeof body.description === 'string' ? body.description.trim() : DEFAULT_SIMULATION_SCENARIO.description
+    if (!title || title.length > 120) return { ok: false, error: 'title 必须为 1-120 字符' }
+    if (!description || description.length > 2000) return { ok: false, error: 'description 必须为 1-2000 字符' }
+    let modules: string[] | undefined
+    if (body.modules !== undefined) {
+      if (!Array.isArray(body.modules) || body.modules.length === 0 || body.modules.length > 12) {
+        return { ok: false, error: 'modules 必须为 1-12 个模块名数组' }
+      }
+      modules = body.modules.map(m => String(m).trim()).filter(Boolean)
+      if (modules.some(m => !DIRECTOR_MODULE_RE.test(m))) return { ok: false, error: '模块名只允许字母/数字/下划线/短横线' }
+    }
+    let assignees: Record<string, string> | undefined
+    if (body.assignees !== undefined) {
+      if (!body.assignees || typeof body.assignees !== 'object' || Array.isArray(body.assignees)) {
+        return { ok: false, error: 'assignees 必须为 模块→员工 的对象' }
+      }
+      assignees = {}
+      for (const [k, v] of Object.entries(body.assignees as Record<string, unknown>)) {
+        const who = String(v ?? '').trim()
+        if (!DIRECTOR_MODULE_RE.test(k) || !DIRECTOR_ASSIGNEE_RE.test(who)) return { ok: false, error: 'assignees 键/员工名不合法' }
+        assignees[k] = who
+      }
+    }
+    return { ok: true, value: { title, description, ...(modules ? { modules } : {}), ...(assignees ? { assignees } : {}) } }
+  }
+
+  function compiledDirectorSpec(input: RequirementInput, actor?: string): GraphSpec {
+    const spec = compileRequirementToGraph(input)
+    spec.id = `sim-director-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+    // 导演场景是用户发起的可执行 spec（不是 loop 编译模板），origin 用 editor 过校验。
+    spec.origin = 'editor'
+    spec.meta = { ...(spec.meta ?? {}), director: { scenario: true, createdBy: actor ?? 'studio-ui' } }
+    validateGraphSpec(spec, { appendById: appendContractsById })
+    return spec
+  }
+
+  function directorCast(spec: GraphSpec): string[] {
+    const cast = new Set<string>()
+    for (const n of spec.nodes) {
+      const who = (n.config as Record<string, unknown> | undefined)?.assignee
+      if (typeof who === 'string' && who) cast.add(who)
+      const reviewer = (n.config as Record<string, unknown> | undefined)?.reviewer
+      if (typeof reviewer === 'string' && reviewer) cast.add(reviewer)
+      const tester = (n.config as Record<string, unknown> | undefined)?.tester
+      if (typeof tester === 'string' && tester) cast.add(tester)
+    }
+    return [...cast]
+  }
+
+  router.get('/api/graph/sim-director/scenarios', (ctx) => {
+    ctx.body = { scenarios: [{ id: 'default', ...DEFAULT_SIMULATION_SCENARIO }] }
+  })
+
+  router.post('/api/graph/sim-director/plan', (ctx) => {
+    const parsed = readDirectorInput(ctx.request.body)
+    if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
+    try {
+      const spec = compiledDirectorSpec(parsed.value)
+      ctx.body = {
+        scenario: parsed.value,
+        spec,
+        cast: directorCast(spec),
+        nodeCount: spec.nodes.length,
+        gateCount: spec.nodes.filter(n => n.type === 'human-gate').length,
+        modules: parsed.value.modules ?? [...new Set(spec.nodes.filter(n => n.id.startsWith('analysis-')).map(n => n.id.slice('analysis-'.length)))],
+      }
+    } catch (err) {
+      ctx.status = 400; ctx.body = { error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  router.post('/api/graph/sim-director/start', async (ctx) => {
+    const parsed = readDirectorInput(ctx.request.body)
+    if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
+    if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
+    if (!deps.directorRuntimeFactory) { ctx.status = 501; ctx.body = { error: 'Director runtime not configured' }; return }
+    const auth = String(ctx.headers.authorization ?? '')
+    const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+    if (!token) { ctx.status = 401; ctx.body = { error: '导演启动需要登录 JWT' }; return }
+    const runtime = deps.directorRuntimeFactory(token)
+    if (!runtime) { ctx.status = 501; ctx.body = { error: 'Director runtime not configured' }; return }
+    try {
+      const username = (ctx.state as { user?: { username?: string } }).user?.username
+      const spec = compiledDirectorSpec(parsed.value, username)
+      await deps.specStore.save(spec)
+      const { runId, instance } = await runtime.startRun(spec.id)
+      ctx.body = { ok: true, specId: spec.id, runId, instance, cast: directorCast(spec), modules: parsed.value.modules ?? [] }
+    } catch (err) {
+      ctx.status = 400; ctx.body = { error: err instanceof Error ? err.message : String(err) }
     }
   })
 
