@@ -95,3 +95,12 @@
 ## 八、验收账（M3 后回填）
 
 待填。
+
+## 九、接管记录（2026-10-20，用户裁定）
+
+| 项 | 内容 |
+|---|---|
+| 裁定 | 兄弟会话已停止，本会话接管其在途工作并继续整项任务（含合 main 与后续批次） |
+| 接管物 | 导演台在途波：`DirectorPanel.vue` 重构（457 行改动）、新客户端 `ia2/api/sim-director.ts`、graph-rest 三端点（`/api/graph/sim-director/scenarios\|plan\|start`）、推演模板 26→29 节点线性化（去 verdict 回退环+3 人工闸路由+第 7 节点类型）、`HttpKanbanBridge` JWT 透传、`directorRuntimeFactory` 装配（独立 spec runtime，不依赖 GRAPH_ENGINE 全局接管） |
+| 稳定化动作 | 补守门测试 `sim-director-rest.test.ts` 7 例（入参校验/401 JWT 闸/501 无工厂/起跑全链落库溯源）；DirectorPanel SFC 编译+import 解析验证通过；图引擎 33 文件 434 测全绿 |
+| 决策 D13 | 接管波按「未接线能力如实告示」验收：无 runtime 工厂=501、无 JWT=401、DryRun 仅测试预览——不假成功（与兄弟 spec D2 同源） |

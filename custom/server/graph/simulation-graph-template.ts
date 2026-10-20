@@ -12,30 +12,29 @@
 import type { GraphSpec, NodeSpec, EdgeSpec } from '../loop/graph/graph-spec'
 
 // ── 通道（节点间传数据的变量）──
-// 判定通道（review/test/g5/g6 verdict）是条件边与 endCondition 的取值面：模板此前的
-// 条件引用了不存在的 `$review.verdict` 等路径（且 op 形态不合 predicate API），
-// 这里按真实 PredicateExpr API（op:'cmp'+path+value）补全通道与条件的对应关系。
+// 2026-10-20 产品内导演闭环：模块流水改为线性（analysis→review→coding→testing），
+// 评审/测试结果由卡状态承载（已完成=通过、blocked=失败），不再依赖未写入的
+// review/test verdict 通道；人工闸统一用 runtime 的 __resume:<interruptId> 通道
+// 做条件边与终止判定（G1/G5/G6 各一道）。
 const SIM_BASE_CHANNELS: GraphSpec['channels'] = {
   rfd_id: { reducer: 'overwrite', default: '' },
   rfd_doc: { reducer: 'overwrite', default: '' },
   modules: { reducer: 'overwrite', default: [] as string[] },
-  analysis_docs: { reducer: 'appendById', default: [] },
+  analysis_docs: { reducer: 'overwrite', default: [] },
   design_doc: { reducer: 'overwrite', default: '' },
-  dev_branches: { reducer: 'appendById', default: [] },
+  dev_branches: { reducer: 'overwrite', default: [] },
   test_report: { reducer: 'overwrite', default: '' },
-  issues: { reducer: 'appendById', default: [] },
-  g5_verdict: { reducer: 'overwrite', default: '' },
-  g6_verdict: { reducer: 'overwrite', default: '' },
+  issues: { reducer: 'overwrite', default: [] },
+  // 人工闸 resume 值由 runtime 写入 __resume:<interruptId>；声明为通道供条件边/终止判定的点路径取值。
+  '__resume:g1-lock-gate': { reducer: 'overwrite', default: {} },
+  '__resume:g5-release-gate': { reducer: 'overwrite', default: {} },
+  '__resume:g6-final-gate': { reducer: 'overwrite', default: {} },
 }
 
-/** 按模块清单装配通道：基础通道 + 每模块 review/test 判定通道（条件边取值面）。 */
-function simChannels(modules: string[]): GraphSpec['channels'] {
-  const channels: GraphSpec['channels'] = { ...SIM_BASE_CHANNELS }
-  for (const m of modules) {
-    channels[`review_verdict_${m}`] = { reducer: 'overwrite', default: '' }
-    channels[`test_verdict_${m}`] = { reducer: 'overwrite', default: '' }
-  }
-  return channels
+/** 线性模块流水：判定由卡状态承载（review/test 卡完成即通过，blocked 即失败），
+ *  不再用尚未写入的 verdict 通道做条件边——避免图在中途因空通道停滞。 */
+function simChannels(_modules: string[]): GraphSpec['channels'] {
+  return { ...SIM_BASE_CHANNELS }
 }
 
 // ── 节点工厂：按模块生成四段子流水线（分析→评审→编码→测试）──
@@ -77,12 +76,8 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
   ]
   const edges: EdgeSpec[] = [
     { from: `analysis-${p}`, to: `review-${p}` },
-    { from: `review-${p}`, to: `coding-${p}`, condition: { op: 'cmp', path: `review_verdict_${p}`, cmp: 'eq', value: 'PASS' } },
-    // 缺陷修复回边：测试不过→修复→重测（有限循环）
+    { from: `review-${p}`, to: `coding-${p}` },
     { from: `coding-${p}`, to: `testing-${p}` },
-    { from: `testing-${p}`, to: `coding-${p}`, condition: { op: 'cmp', path: `test_verdict_${p}`, cmp: 'eq', value: 'FAIL' },
-      guard: { maxIterations: 3, breakCondition: { op: 'cmp', path: `test_verdict_${p}`, cmp: 'eq', value: 'PASS' } },
-      label: '缺陷回流修复' },
   ]
   return { nodes, edges }
 }
@@ -92,8 +87,11 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
   const nodes: NodeSpec[] = [
     // G1 需求锁定
     { id: 'g1-lock', type: 'human-gate', config: { title: '需求冻结',
+      prompt: '需求冻结：AC 可判定≥3、范围外清单、影响面、涉敏评估已核对，是否放行？',
       checks: ['AC 可判定≥3', '范围外清单', '影响面', '涉敏评估'] },
       timeoutMs: 5 * 60 * 1000 },
+    { id: 'g1-router', type: 'gate-router',
+      config: { interruptId: 'g1-lock-gate', approvedTarget: 'dispatch', label: '需求冻结放行路由' } },
     // 派发（fan-out 起点）
     { id: 'dispatch', type: 'dispatch', config: { action: 'fan-out', targets: '$modules' } },
     // 集成测试（join 屏障：等全部模块测试通过）
@@ -104,8 +102,11 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
     // G5 发布准出
     { id: 'g5-release', type: 'human-gate', joinMode: 'all',
       config: { title: '发布准出',
+      prompt: '发布准出：测试证据、同 commit 复现、依赖、回滚方案、灰度、用户收益已核对，是否放行？',
       checks: ['测试证据挂卡', '同commit复现', '依赖无新增', '回滚方案', '灰度三档', '用户收益', '人工批准'] },
       timeoutMs: 15 * 60 * 1000 },
+    { id: 'g5-router', type: 'gate-router',
+      config: { interruptId: 'g5-release-gate', approvedTarget: 'uat', label: '发布准出放行路由' } },
     // UAT 验收
     { id: 'uat', type: 'agent-task', config: { task: 'UAT 逐条对账', assignee: 'fanfan',
       output: 'docs/acceptance/RFD-001-acceptance.md', boundaryRole: 'governance' },
@@ -119,20 +120,26 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
       config: { task: '复盘 G6', assignee: 'fanfan', output: 'docs/retro/retrospective.md', boundaryRole: 'governance' } },
     // G6 终闸
     { id: 'g6-final', type: 'human-gate', joinMode: 'all',
-      config: { title: '复盘关闸', checks: ['三段式', '行动项四要素', '问题 100% DISP', '经验入库'] },
+      config: { title: '复盘关闸',
+      prompt: '复盘关闸：三段式、行动项四要素、问题 100% DISP、经验入库已核对，是否放行？',
+      checks: ['三段式', '行动项四要素', '问题 100% DISP', '经验入库'] },
       timeoutMs: 10 * 60 * 1000 },
+    { id: 'g6-router', type: 'gate-router',
+      config: { interruptId: 'g6-final-gate', approvedTarget: 'report', label: '复盘关闸放行路由' } },
     // HTML 报告
     { id: 'report', type: 'report-gen', config: { format: 'html', output: 'final-report.html' } },
   ]
 
   const edges: EdgeSpec[] = [
-    { from: 'g1-lock', to: 'dispatch' },
+    { from: 'g1-lock', to: 'g1-router' },
+    { from: 'g1-router', to: 'dispatch' },
     // fan-out：dispatch→每模块的 analysis
     ...modules.map(m => ({ from: 'dispatch', to: `analysis-${m}` })),
     // fan-in：每模块的 testing→integration-test
     ...modules.map(m => ({ from: `testing-${m}`, to: 'integration-test' })),
     { from: 'integration-test', to: 'g5-release' },
-    { from: 'g5-release', to: 'uat', condition: { op: 'cmp', path: 'g5_verdict', cmp: 'eq', value: 'PASS' } },
+    { from: 'g5-release', to: 'g5-router' },
+    { from: 'g5-router', to: 'uat' },
     // 治理三步并发（g5 过后即触发，joinMode:'any' 不互等）
     { from: 'g5-release', to: 'work-report' },
     { from: 'g5-release', to: 'audit' },
@@ -142,7 +149,8 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
     { from: 'work-report', to: 'g6-final' },
     { from: 'audit', to: 'g6-final' },
     { from: 'retro', to: 'g6-final' },
-    { from: 'g6-final', to: 'report' },
+    { from: 'g6-final', to: 'g6-router' },
+    { from: 'g6-router', to: 'report' },
   ]
   return { nodes, edges }
 }
@@ -175,7 +183,7 @@ export function compileRequirementToGraph(req: RequirementInput): GraphSpec {
     nodes: [...allModuleNodes, ...global.nodes],
     edges: [...allModuleEdges, ...global.edges],
     entryNode: 'g1-lock',
-    endCondition: { op: 'cmp', path: 'g6_verdict', cmp: 'eq', value: 'PASS' },
+    endCondition: { op: 'cmp', path: '__resume:g6-final-gate.approved', cmp: 'eq', value: true },
     limits: { maxSteps: 500, maxCost: 100, maxDurationMs: 4 * 60 * 60 * 1000 },
     description: `推演全流程：${req.title}（${modules.length} 模块并行流水）`,
     meta: { goal: req.title, permissionLevel: 'standard',
@@ -201,12 +209,14 @@ function defaultAssignees(modules: string[]): Record<string, string> {
   return map
 }
 
-// ── 导出标准推演模板（可直接 startRun）──
+// ── 标准推演场景（导演台预填；可直接 startRun）──
+export const DEFAULT_SIMULATION_SCENARIO: RequirementInput = {
+  title: '收单商户多端小程序支付收银台',
+  description: '微信/支付宝双渠道支付收银台，含支付核心/渠道适配/小程序前端',
+  modules: ['pay-core', 'channel-wechat', 'channel-alipay', 'cashier-mp'],
+  assignees: { 'pay-core': 'chen', 'channel-wechat': 'hu', 'channel-alipay': 'lin', 'cashier-mp': 'xiao' },
+}
+
 export function defaultSimulationGraph(): GraphSpec {
-  return compileRequirementToGraph({
-    title: '收单商户多端小程序支付收银台',
-    description: '微信/支付宝双渠道支付收银台，含支付核心/渠道适配/小程序前端',
-    modules: ['pay-core', 'channel-wechat', 'channel-alipay', 'cashier-mp'],
-    assignees: { 'pay-core': 'chen', 'channel-wechat': 'hu', 'channel-alipay': 'lin', 'cashier-mp': 'xiao' },
-  })
+  return compileRequirementToGraph(DEFAULT_SIMULATION_SCENARIO)
 }
