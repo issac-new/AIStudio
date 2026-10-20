@@ -146,3 +146,13 @@
 ## 决策记录（补批 2026-10-20 · 导演台文案）
 
 - D-10：导演台不提供“假启动”。启动/续跑仍由 harness 执行；按钮统一为「查看运行编排」，导语明确写出 harness 边界，避免让用户以为页面能直接起跑。
+
+## 验证账（补批 2026-10-20 · 布局复检）
+
+- 全站 87 路由溢出探针（1440×900）复跑后，仅剩：
+  - `/hermes/kanban` 旧版横向看板列超出视口——该入口已从设置侧栏移除，主界面看板为唯一入口；
+  - `/app/stage/govern?tab=reviewGov` 两处行内按钮被卡片标题层覆盖（评审卡布局，登记待后续）。
+- IDE 任务栏已限高：`taskbar 737px / scroll 481px / scrollHeight 1116px`，列表内部滚动，Shell 不再溢出（此前 1466px）。
+- `npm run build` rc=0（补批后复跑，`verify-dist` 通过）。
+- 定向测试：`sim-center-shell` + `ia-settings-sidebar` + `engine-round5` 27/27 通过；`engine-round5` 单跑 13.5s，低于 15s 但接近阈值，全量并发时曾超时，登记为负载敏感。
+- 全量 `npm test` 早前结果：1 个服务端注入态基线失败（tool-waterfall-gate）+ 1 个 IDE 超时（并发负载，单跑通过），其余 5647 通过。
