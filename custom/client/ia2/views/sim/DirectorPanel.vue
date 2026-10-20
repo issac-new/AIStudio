@@ -177,7 +177,22 @@ async function approveGate(interruptId: string, approved: boolean): Promise<void
 
 const pendingGates = computed(() => pendingGatesOf(graphEvents.value))
 const recentEvents = computed(() => recentEventRows(graphEvents.value, 10))
-const graphStatus = computed(() => String(graphRun.value?.instance?.status ?? 'unknown'))
+/** 实例 status 在 resume/等卡期间可能滞留 awaiting-input；以事件流为准，
+ *  只有未应答 interrupt 才显示“等待人工”。 */
+const graphStatus = computed(() => {
+  const inst = String(graphRun.value?.instance?.status ?? '')
+  if (inst === 'completed' || inst === 'failed') return inst
+  if (pendingGates.value.length) return 'awaiting-input'
+  const kind = (e: GraphEvent): string => String(e.kind ?? e.type ?? '')
+  const last = [...graphEvents.value].reverse().find(e => /^(run\.(completed|failed|started)|node\.(started|completed|failed)|interrupt\.(raised|resumed))$/.test(kind(e)))
+  if (last) {
+    if (kind(last) === 'run.completed') return 'completed'
+    if (kind(last) === 'run.failed') return 'failed'
+    if (kind(last) === 'interrupt.raised') return 'awaiting-input'
+  }
+  if (inst === 'paused') return 'paused'
+  return inst === 'unknown' && !graphEvents.value.length ? 'unknown' : 'running'
+})
 const graphStatusLabel = computed(() => GRAPH_STATUS_LABEL[graphStatus.value] ?? graphStatus.value)
 const planCounts = computed(() => {
   const nodes = plan.value?.spec.nodes ?? []

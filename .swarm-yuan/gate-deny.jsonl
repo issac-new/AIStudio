@@ -15,3 +15,4 @@
 {"ts":"2026-10-19T12:02:51Z","tool":"git-commit","target":"custom/client/ia2/__tests__/sim-overview-panel.test.ts","gates":"spec-required"}
 {"ts":"2026-10-20T02:38:42Z","tool":"git-commit","target":"custom/client/ia2/views/TasksView.vue","gates":"spec-required"}
 {"ts":"2026-10-20T04:17:06Z","tool":"git-commit","target":"custom/client/ia2/views/sim/SupervisionPanel.vue","gates":"spec-required"}
+{"ts":"2026-10-20T06:23:48Z","tool":"git-commit","target":"custom/client/ia2/api/sim-director.ts","gates":"spec-required"}

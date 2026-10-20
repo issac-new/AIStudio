@@ -44,7 +44,7 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
     {
       id: `analysis-${p}`,
       type: 'agent-task',
-      config: { task: `系分 ${moduleName}`, assignee, skill: 'requirements-analyst',
+      config: { title: `系分 ${moduleName}`, task: `系分 ${moduleName}`, assignee, skill: 'requirements-analyst',
         output: `docs/analysis/AN-${moduleName.toUpperCase()}-analysis.md`,
         boundaryRole: 'analyst',
         gate: { ac: ['接口签名', '数据模型', '错误码', '幂等键', '工作量人日'] } },
@@ -53,14 +53,14 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
     {
       id: `review-${p}`,
       type: 'agent-review',
-      config: { reviewer: 'arch', subject: `AN-${moduleName.toUpperCase()}`,
+      config: { title: `评审 系分 ${moduleName}`, reviewer: 'arch', subject: `AN-${moduleName.toUpperCase()}`,
         checklist: ['设计五要素', '爆炸半径', '验证计划前移', '备选方案', '历史偏差'] },
       timeoutMs: 15 * 60 * 1000,
     },
     {
       id: `coding-${p}`,
       type: 'agent-task',
-      config: { task: `开发 ${moduleName}`, assignee, skill: 'aipaydev-dev',
+      config: { title: `开发 ${moduleName}`, task: `开发 ${moduleName}`, assignee, skill: 'aipaydev-dev',
         output: `feat/DEV-${moduleName.toUpperCase()}`,
         boundaryRole: 'dev',
         gate: { tests: '≥6', coverage: '分支覆盖', style: 'snake_case' } },
@@ -69,7 +69,7 @@ function moduleNodes(moduleName: string, assignee: string): { nodes: NodeSpec[];
     {
       id: `testing-${p}`,
       type: 'agent-test',
-      config: { tester: 'qi', target: moduleName,
+      config: { title: `测试 ${moduleName}`, tester: 'qi', target: moduleName,
         output: `docs/test/TEST-${moduleName.toUpperCase()}-testlog.txt` },
       timeoutMs: 30 * 60 * 1000,
     },
@@ -96,7 +96,7 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
     { id: 'dispatch', type: 'dispatch', config: { action: 'fan-out', targets: '$modules' } },
     // 集成测试（join 屏障：等全部模块测试通过）
     { id: 'integration-test', type: 'agent-test', joinMode: 'all',
-      config: { tester: 'qi', target: 'integration',
+      config: { title: '集成测试', tester: 'qi', target: 'integration',
         output: 'docs/test/RFD-001-test-report.md' },
       timeoutMs: 30 * 60 * 1000 },
     // G5 发布准出
@@ -113,11 +113,11 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
       timeoutMs: 40 * 60 * 1000 },
     // 治理三步（并发，不等彼此）
     { id: 'work-report', type: 'agent-task', joinMode: 'any',
-      config: { task: '工作台账', assignee: 'fanfan', output: 'work-report.md', boundaryRole: 'governance' } },
+      config: { title: '工作台账', task: '工作台账', assignee: 'fanfan', output: 'work-report.md', boundaryRole: 'governance' } },
     { id: 'audit', type: 'agent-task', joinMode: 'any',
-      config: { task: '独立审计', assignee: 'audit', output: 'docs/retro/audit-opinion.md', boundaryRole: 'governance' } },
+      config: { title: '独立审计', task: '独立审计', assignee: 'audit', output: 'docs/retro/audit-opinion.md', boundaryRole: 'governance' } },
     { id: 'retro', type: 'agent-task', joinMode: 'any',
-      config: { task: '复盘 G6', assignee: 'fanfan', output: 'docs/retro/retrospective.md', boundaryRole: 'governance' } },
+      config: { title: '复盘 G6', task: '复盘 G6', assignee: 'fanfan', output: 'docs/retro/retrospective.md', boundaryRole: 'governance' } },
     // G6 终闸
     { id: 'g6-final', type: 'human-gate', joinMode: 'all',
       config: { title: '复盘关闸',
@@ -127,7 +127,7 @@ function globalNodes(modules: string[]): { nodes: NodeSpec[]; edges: EdgeSpec[] 
     { id: 'g6-router', type: 'gate-router',
       config: { interruptId: 'g6-final-gate', approvedTarget: 'report', label: '复盘关闸放行路由' } },
     // HTML 报告
-    { id: 'report', type: 'report-gen', config: { format: 'html', output: 'final-report.html' } },
+    { id: 'report', type: 'report-gen', config: { title: '生成交付报告', format: 'html', output: 'final-report.html' } },
   ]
 
   const edges: EdgeSpec[] = [
