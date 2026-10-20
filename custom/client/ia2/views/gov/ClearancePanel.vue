@@ -9,6 +9,7 @@ import {
   type ClearanceLedgerView,
 } from '../../api/gatekeeper'
 import { compensationLabel } from '../../compensation-labels'
+import { humanDateTime } from '../../format'
 
 const ledger = ref<ClearanceLedgerView | null>(null)
 const loadError = ref('')
@@ -113,7 +114,7 @@ onMounted(() => { void refresh() })
             <tr v-for="r in rows" :key="r.id">
               <td>{{ r.type }}</td>
               <td>{{ r.defect || '—' }}</td>
-              <td class="clr__mono">{{ r.ts }}</td>
+              <td class="clr__mono">{{ humanDateTime((r as { ts?: string }).ts) }}</td>
               <td><span class="clr__state" :class="`clr__state--${r.state}`">{{ STATE_LABEL[r.state] }}</span></td>
             </tr>
           </tbody>

@@ -2,17 +2,17 @@
      ①搭建·五步进度页签（2026-10-18 阶段页页签批）：
      只做一件事——把「建立组织→账号→团队→环境资产→智能体」五步的状态与下一步
      摆在一屏内；按钮切换本页页签，不再跳到别的整页。
-     状态读 useStageProgress 共享缓存；无运行/无键的步骤如实显示「轮次内不跟踪」。 -->
+     状态读 useDailyStageProgress 共享缓存；无运行/无键的步骤如实显示「轮次内不跟踪」。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SETUP_STEPS } from '../../stage-meta'
-import { useStageProgress } from '../../composables/useStageProgress'
+import { useDailyStageProgress } from '../../composables/useDailyStageProgress'
 
 const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
-const progress = useStageProgress()
+const progress = useDailyStageProgress()
 
 const STEP_TAB: Record<string, string> = {
   org: 'org', accounts: 'accounts', teams: 'teams', env: 'assets', agents: 'agents',

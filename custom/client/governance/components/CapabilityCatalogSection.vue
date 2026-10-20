@@ -4,6 +4,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { humanDateTime } from '@/custom/ia2/format'
 import { governanceMessages } from '@/custom/governance/i18n'
 import {
   fetchCapabilityCatalog, type CapabilityCatalogDto, type CapabilityEntryDto, type CapabilitySourceId, type FactorKey,
@@ -51,8 +52,7 @@ function setFilter(f: CapabilitySourceId | 'all'): void {
 }
 
 const pct = (v: number): string => `${Math.round(v * 1000) / 10}%`
-const fmtTime = (ts: number | null | undefined): string =>
-  ts == null ? '—' : new Date(ts).toISOString().slice(0, 10)
+const fmtTime = (ts: number | null | undefined): string => humanDateTime(ts).slice(0, 10)
 
 const entries = computed<CapabilityEntryDto[]>(() => data.value?.entries ?? [])
 const summary = computed(() => data.value?.gapSummary)

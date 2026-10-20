@@ -4,6 +4,7 @@
      Markdown 导出。缺席要素如实灰态（不造数）；框架依据页头注明。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { humanDateTime } from '@/custom/ia2/format'
 import { fetchSessions } from '@/api/studio/sessions'
 import {
   fetchIncidentReport, incidentReportMdUrl,
@@ -61,8 +62,7 @@ const warnCount = computed(() =>
   report.value?.autonomy.divergences.filter((d) => d.severity === 'warn').length ?? 0)
 
 function fmtTime(ts: number): string {
-  if (!ts) return '—'
-  return new Date(ts).toLocaleString()
+  return humanDateTime(ts)
 }
 
 onMounted(() => void loadSessions())

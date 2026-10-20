@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { humanDateTime } from '@/custom/ia2/format'
 import { governanceMessages } from '@/custom/governance/i18n'
 
 const i18nCtx = useI18n()
@@ -88,7 +89,7 @@ async function showChain(id: string): Promise<void> {
   } catch { chainOf.value = null }
 }
 
-function fmtTime(ts: number): string { return ts ? new Date(ts).toLocaleString() : '' }
+function fmtTime(ts: number): string { return humanDateTime(ts) }
 
 onMounted(() => void refresh())
 </script>

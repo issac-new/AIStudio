@@ -9,6 +9,7 @@ import { authFetch } from '../../ide/utils/auth-fetch'
 import { LAST_RUN_KEY, useRunContext } from './useRunContext'
 import { directorRunGuideError } from '../utils/director-run'
 import { SETUP_STEPS, STAGE_META, type SetupStep } from '../stage-meta'
+export type { SetupStep }
 
 export interface RunStateLike {
   steps: Record<string, string>

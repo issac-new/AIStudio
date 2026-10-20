@@ -157,19 +157,19 @@ async function save(): Promise<void> {
       <div class="gmp__row gmp__route">
         <span>Auto 路由档</span>
         <select v-model="routeEconomy">
-          <option value="">economy（自动兜底）</option>
+          <option value="">economy（自动选择）</option>
           <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
         <select v-model="routeStandard">
-          <option value="">standard（自动兜底）</option>
+          <option value="">standard（自动选择）</option>
           <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
         <select v-model="routePower">
-          <option value="">power（自动兜底）</option>
+          <option value="">power（自动选择）</option>
           <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
       </div>
-      <p class="gmp__routehint">复杂度→档位（0.5×/1×/2×）；未映射档按目录顺序自动兜底。</p>
+      <p class="gmp__routehint">复杂度→档位（0.5×/1×/2×）；未指定档位时，会按可用模型目录自动选择。</p>
       <ul v-if="problems.length" class="gmp__problems" data-testid="gmp-problems">
         <li v-for="(p, i) in problems" :key="i">{{ p }}</li>
       </ul>

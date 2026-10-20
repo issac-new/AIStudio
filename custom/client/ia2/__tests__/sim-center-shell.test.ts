@@ -239,12 +239,12 @@ describe('sim-tabs 文案单一事实源', () => {
     expect(Object.keys(SIM_TABS_TEXT.zh)).toEqual(Object.keys(SIM_TABS_TEXT.en))
   })
 
-  it('四签 zh 文案与词表一致；交付/追溯词条保留兼容', () => {
+  it('四签 zh 文案与词表一致；交付/追溯死词条清退', () => {
     const zh = SIM_TABS_TEXT.zh
     expect([zh.tabOverview, zh.tabSupervision, zh.tabOps, zh.tabEvidence]).toEqual([...FOUR_TAB_LABELS])
     expect(zh.shellTitle).toBe('全流程推演')
-    expect(zh.tabDelivery).toBe('交付健康')
-    expect(zh.tabTrace).toBe('需求追溯')
+    expect(zh).not.toHaveProperty('tabDelivery')
+    expect(zh).not.toHaveProperty('tabTrace')
   })
 })
 

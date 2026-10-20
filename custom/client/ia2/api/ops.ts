@@ -5,6 +5,7 @@
 // GET /api/hermes/sim/sleeping-workers（635 CLI）。纯函数层（行视图整形）
 // =单测锚点；fetch 层薄封装。红点如实显示：探测失败=红+原因，不静默。
 import { authFetch } from '../../ide/utils/auth-fetch'
+import { humanField } from '../format'
 
 // ── 类型（服务端契约最小镜像）──
 
@@ -65,8 +66,8 @@ export function cliHealthEntries(res: CliHealthResponse): Array<{ k: string; v: 
   const data = res.data
   if (data && typeof data === 'object' && !Array.isArray(data) && !('raw' in (data as Record<string, unknown>))) {
     return Object.entries(data as Record<string, unknown>).map(([k, v]) => ({
-      k,
-      v: typeof v === 'object' ? JSON.stringify(v) : String(v),
+      k: humanField(k),
+      v: typeof v === 'object' && v !== null ? `结构化数据（${Object.keys(v).length} 项）` : String(v ?? '—'),
     }))
   }
   const raw = data && typeof data === 'object' && 'raw' in (data as Record<string, unknown>)
@@ -80,12 +81,12 @@ export function sleepingRows(res: CliHealthResponse): Array<Record<string, strin
   if (!res.ok) return [{ 错误: String(res.error ?? 'CLI 执行失败') }]
   const data = res.data as { sleeping?: unknown; idle_sec?: unknown } | undefined
   if (!data || typeof data !== 'object' || !Array.isArray(data.sleeping)) {
-    return [{ 输出: JSON.stringify(data ?? {}) }]
+    return [{ 字段: '数据形状', 值: '服务端返回了未识别的结构；可刷新重试或查看技术日志' }]
   }
   return data.sleeping.map((w: unknown) => {
     const r = w as Record<string, unknown>
     const out: Record<string, string> = {}
-    for (const [k, v] of Object.entries(r)) out[k] = typeof v === 'object' ? JSON.stringify(v) : String(v)
+    for (const [k, v] of Object.entries(r)) out[humanField(k)] = typeof v === 'object' && v !== null ? `结构化数据（${Object.keys(v).length} 项）` : String(v ?? '—')
     return out
   })
 }

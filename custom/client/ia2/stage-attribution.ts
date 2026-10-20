@@ -40,8 +40,6 @@ export const STAGE_ATTRIBUTION: Readonly<Record<string, readonly StageNo[]>> = {
   'ia2.simSupervision': [3, 4], // 监督面板：分析期态势研判+运行期值班盯盘
   'ia2.simOps': [1, 4], // 运行监控：搭建期环境体检+开发期日常排障
   'ia2.simEvidence': [4, 5], // 证据库：开发期锚点反查+验收期审计取证
-  'ia2.simDelivery': [5], // 交付健康：验收期分支与交付物核对
-  'ia2.simTrace': [5], // 需求追溯：验收期 AC 判定对账
   'ia2.simOrchestration': [2, 4], // 场景编排：需求期选模式启动+开发期断点续跑
   'ia2.simSettings': [], // 推演设置：引擎参数，跨阶段
   // ── 治理中心七签 ──
@@ -81,8 +79,6 @@ const PATH_TO_ROUTE: ReadonlyArray<readonly [string, string]> = [
   ['/app/sim/supervision', 'ia2.simSupervision'],
   ['/app/sim/ops', 'ia2.simOps'],
   ['/app/sim/evidence', 'ia2.simEvidence'],
-  ['/app/sim/delivery', 'ia2.simDelivery'],
-  ['/app/sim/trace', 'ia2.simTrace'],
   ['/app/sim', 'ia2.sim'],
   ['/app/gov/model-providers', 'ia2.modelProviders'],
   ['/app/gov/org-assets', 'ia2.govOrgAssets'],

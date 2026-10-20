@@ -7,6 +7,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import MatrixRoomList from './MatrixRoomList.vue'
+import MatrixServerMovedBanner from './MatrixServerMovedBanner.vue'
 import MatrixMessagePanel from './MatrixMessagePanel.vue'
 import MatrixRightPanel from './MatrixRightPanel.vue'
 import MatrixRoomHeader from './MatrixRoomHeader.vue'
@@ -106,6 +107,9 @@ onUnmounted(() => {
 
 <template>
   <div class="matrix-chat-panel">
+    <!-- 存量 homeserver 迁移横幅（server-info 单源对账命中时渲染） -->
+    <MatrixServerMovedBanner />
+
     <!-- Mobile backdrop -->
     <div class="sidebar-backdrop" :class="{ active: showSidebar }" @click="showSidebar = false" />
 

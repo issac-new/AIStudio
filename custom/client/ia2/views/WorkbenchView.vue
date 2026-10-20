@@ -27,6 +27,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
+import MatrixServerMovedBanner from '@/custom/matrix-chat/components/MatrixServerMovedBanner.vue'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
@@ -603,6 +604,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     </div>
     <section class="wb__center" data-testid="wb-center">
       <TabIntroBanner tab="collab" />
+      <!-- 存量 homeserver 迁移横幅（server-info 单源对账命中时渲染；房间列不可用时先看这里） -->
+      <MatrixServerMovedBanner />
       <!-- R6 补充：中栏栏控迁独立控制条行 -->
       <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
         <IaColumnControls
@@ -714,6 +717,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 /* v12 三栏铁律：栏宽可拖（180-560，colWidths 单一事实源）| 自适应(≥320) | 栏宽可拖，
  * 永不换列不堆叠（窄屏由外层整体缩放）。此处静态轨道仅作挂载前兜底，数值同源于
  * colWidths 默认 280/480；真实轨道由 wbGridStyle 内联绑定驱动（拖拽即改轨道）。
+ * B6 例外：≤1100px 退化为单列堆叠（见文件尾 @media），铁律只在 1100px 以上成立。
  * v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右侧元素让位 62px）；
  * 折叠态 18px 导轨就地展开；中栏最大化 = 两侧齐折（flow.centerMaximized）。 */
 .wb {
@@ -745,7 +749,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 
 /* R6 补充：栏宽拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
 .wb__split {
-  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 100;
+  position: absolute; top: 26px; bottom: 0; width: 5px; z-index: 90;
   cursor: col-resize; background: transparent;
   /* 命中域加宽：视觉 6px 不变，两侧各外延 5px（6px 真实鼠标打不中；z-index
      须压过栏内高层级内容——ide chat-input-area 是 z-80，曾盖住分割条右半） */
@@ -786,5 +790,17 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   border: 1px solid var(--border-color); background: var(--bg-primary);
   color: var(--text-primary); cursor: pointer;
   &:hover { background: var(--bg-secondary); }
+}
+
+@media (max-width: 1100px) {
+  .wb {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto;
+    overflow-y: auto;
+  }
+  .wb__left, .wb__right { max-height: 45vh; }
+  /* 中栏在 auto 行里高度随内容塌缩，保底高度让会话面在窄屏可用 */
+  .wb__center { min-height: 360px; }
+  .wb__split { display: none; }
 }
 </style>

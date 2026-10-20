@@ -398,7 +398,7 @@ describe('updateNodeConfig / moveNode', () => {
     expect(doc.nodes[0]).toMatchObject({ x: 42, y: 24 })
   })
 
-  it('edgeId 生成与 RunGraphCanvas 边 id 同构', () => {
+  it('edgeId 生成与 执行图画布 边 id 同构', () => {
     expect(edgeId('a', 'b')).toBe('a->b')
   })
 })

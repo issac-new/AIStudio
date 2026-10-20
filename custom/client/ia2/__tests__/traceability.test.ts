@@ -2,7 +2,7 @@
 // P3 Task 7 — 追溯矩阵纯函数聚合（重点测试面）：
 //   buildTraceMatrix        loop 分组矩阵：需求(goal) → run(状态/迭代) → 产出任务 → 验证轮次
 //   persistedLinksForTask   任务 → run 反查（loop.persisted 按 taskId 显式匹配）
-//   persistedTaskLinksOfRun run → 任务（replay 事件 payload 读取，NodeInspector 消费）
+//   persistedTaskLinksOfRun run → 任务（replay 事件 payload 读取，图回放消费）
 // 全部纯函数、零 store 零 DOM；事件输入 = LoopEvent / replay GraphLogEvent 的结构化最小子集。
 import { describe, it, expect } from 'vitest'
 import {

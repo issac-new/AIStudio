@@ -210,7 +210,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
   position: absolute; top: 100%; right: 8px; width: 400px; max-width: calc(100vw - 24px);
   max-height: 420px; display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14); z-index: 999; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14); z-index: var(--ia-z-header-panel); overflow: hidden;
 }
 .ndp__head {
   display: flex; align-items: center; gap: 4px; padding: 6px 8px;

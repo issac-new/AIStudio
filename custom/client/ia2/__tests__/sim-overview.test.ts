@@ -111,7 +111,7 @@ describe('OverviewPanel — 总览屏', () => {
     await router.isReady()
     const w = mount(CockpitPanel, { global: { plugins: [router] } })
     await flushPromises()
-    expect(w.find('[data-testid="cpb-error"]').text()).toContain('不可达')
+    expect(w.find('[data-testid="cpb-error"]').text()).toContain('暂不可读')
     expect(w.find('[data-testid="cpb-clearance"]').exists()).toBe(false)
     w.unmount()
   })

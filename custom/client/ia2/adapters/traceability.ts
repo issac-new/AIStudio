@@ -11,7 +11,7 @@
 // 全部纯函数、零 store 零 DOM（同 overview/orchestrate adapter 纪律）：
 //   buildTraceMatrix        需求(loop goal) → run(状态/迭代) → 产出任务 → 验证轮次，按 loop 分组
 //   persistedLinksForTask   任务 → run 反查（RunLinks.vue 消费）
-//   persistedTaskLinksOfRun run → 任务（NodeInspector persistence 节点消费）
+//   persistedTaskLinksOfRun run → 任务（图回放事件消费）
 
 /** loop 通道事件的结构化最小子集（LoopEvent 超集：多余字段被忽略） */
 export interface TraceLoopEvent {
@@ -88,7 +88,7 @@ export function persistedLinksForTask(events: TraceLoopEvent[], taskId: string):
 }
 
 // ---------------------------------------------------------------------------
-// run → 任务（NodeInspector，replay 事件词汇）
+// run → 任务（图回放事件词汇）
 // ---------------------------------------------------------------------------
 
 export interface PersistedTaskLink {

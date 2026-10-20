@@ -84,6 +84,8 @@ function kindLabel(kind?: string): string {
   return t('ide.briefing.ctxKindDoc', '文档')
 }
 
+const boardHref = computed(() => `#/app/board?task=${encodeURIComponent(props.task.id)}`)
+
 const auxDraft = ref('')
 function sendAux(): void {
   const text = auxDraft.value.trim()
@@ -101,7 +103,7 @@ function sendAux(): void {
       <!-- 工作台联动：IDE 简报 ↔ 看板卡（board?task= 深链打开卡抽屉）——聊天消息里的
            card=t_xxx 芯片已直达看板，此处补 IDE→看板回跳，三区互相可达。 -->
       <nav class="briefing-cplinks" data-testid="briefing-cplinks">
-        <a :href="boardHref" :title="`打开任务卡 ${task.id}`">看板卡 ↗</a>
+        <a :href="boardHref" :title="`打开任务卡 ${task.id}`" data-testid="ide-brief-board-link">看板卡 ↗</a>
       </nav>
     </header>
 

@@ -1,0 +1,26 @@
+diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
+--- a/packages/client/src/views/LoginView.vue
++++ b/packages/client/src/views/LoginView.vue
+@@ -83,15 +83,13 @@
+ }
+
+ onMounted(async () => {
+-  const savedHs = localStorage.getItem('matrix_homeserver_url');
+-  if (savedHs) homeserverUrl.value = savedHs;
+-  // overlay[matrix-server-info]: 无本地记忆时用服务端下发地址预填（LAN 部署不再拿写死的 localhost）
+-  else {
+-    try {
+-      const info = await fetchMatrixServerInfo();
+-      if (info.homeserverUrl) homeserverUrl.value = info.homeserverUrl;
+-    } catch { /* 预填失败保持默认 */ }
+-  }
++  // overlay[matrix-server-info]: 预填以服务端单源为准（helper 端点不可达时自带
++  // 兜底值）；localStorage 里的历史地址不再压过单源——服务器迁移后登录表单不再
++  // 预填失效地址（存量凭据由迁移横幅引导至此重登）。
++  try {
++    const info = await fetchMatrixServerInfo();
++    if (info.homeserverUrl) homeserverUrl.value = info.homeserverUrl;
++  } catch { /* 预填失败保持默认 */ }
+   // C2 自动登录：本机 gateway 已配 Matrix access_token 时免密直入，失败回落手动登录。
+   // 手动登出闸门：本标签页刚退出登录时不再自动拉回 gateway 账号，回落手动表单；
+   // 手动登录成功后清除标记（新开标签页不受影响，自动登录照常）。

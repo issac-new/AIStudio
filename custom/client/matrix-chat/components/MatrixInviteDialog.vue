@@ -328,7 +328,7 @@ $text-on-accent: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--ia-z-modal, 1000);
 }
 
 .invite-dialog {

@@ -13,6 +13,7 @@ import {
   type BreakerView, type CaseDetail, type EvalRunView, type FindingSeverity, type NightlyReportView,
   type Resolution, type ReviewCaseView, type ReviewMetricsView, type ReviewPolicyView,
 } from '../../api/review-gov'
+import { humanEnum } from '../../format'
 
 const loading = ref(false)
 const error = ref('')
@@ -289,7 +290,7 @@ onMounted(() => { void loadAll() })
         <h4 class="rg__title">评审治理</h4>
         <p class="rg__sub">
           按改动风险分配人工审批，Agent 审批不占名额；互审最多 3 轮，第 3 轮起只看新增 diff；
-          回滚率或事故抬头时自动收紧审批。口径见 Anthropic 工程博客（2026-10-15）。
+          回滚率或事故抬头时自动收紧审批。
         </p>
       </div>
       <div class="rg__head-actions">
@@ -389,7 +390,7 @@ onMounted(() => { void loadAll() })
       </table>
       <p class="rg__meta">
         收敛：最多 {{ policy.convergence.maxRounds }} 轮 · 第 {{ policy.convergence.diffOnlyAfterRound + 1 }} 轮起只看新增 diff ·
-        每轮 nit 上限 {{ policy.convergence.nitBudgetPerRound }} 条 ·
+        每轮小建议上限 {{ policy.convergence.nitBudgetPerRound }} 条 ·
         熔断窗口 {{ policy.circuitBreaker.windowHours }}h（回滚率 &gt; {{ (policy.circuitBreaker.revertRateThreshold * 100).toFixed(1) }}% 或事故 ≥ {{ policy.circuitBreaker.incidentCountThreshold }} 起）。
       </p>
       <details class="rg__details">
@@ -497,7 +498,7 @@ onMounted(() => { void loadAll() })
             <p v-if="!findings.length" class="rg__hint">没有未决发现项。</p>
             <div v-for="f in findings" :key="f.findingId" class="rg__finding" :data-testid="`rg-finding-${f.findingId}`">
               <div class="rg__finding-head">
-                <span class="rg__sev" :class="`is-${f.severity}`">{{ f.severity }}</span>
+                <span class="rg__sev" :class="`is-${f.severity}`">{{ humanEnum(f.severity) }}</span>
                 <code class="rg__loc">{{ f.file }}:{{ f.line }}</code>
                 <span class="rg__finding-round">第 {{ f.round }} 轮</span>
               </div>
@@ -519,10 +520,10 @@ onMounted(() => { void loadAll() })
           </details>
 
           <details v-if="deferred.length" class="rg__details">
-            <summary>延后队列（{{ deferred.length }}）：存量问题与超预算 nit</summary>
+            <summary>延后队列（{{ deferred.length }}）：历史存量与超预算的小建议</summary>
             <div v-for="f in deferred" :key="f.findingId" class="rg__finding is-deferred">
               <div class="rg__finding-head">
-                <span class="rg__sev" :class="`is-${f.severity}`">{{ f.severity }}</span>
+                <span class="rg__sev" :class="`is-${f.severity}`">{{ humanEnum(f.severity) }}</span>
                 <code class="rg__loc">{{ f.file }}:{{ f.line }}</code>
               </div>
               <p class="rg__finding-body">{{ f.body }}</p>
@@ -537,14 +538,14 @@ onMounted(() => { void loadAll() })
               <label>行号<input v-model.number="findingForm.line" type="number" min="1" /></label>
               <label>严重级
                 <select v-model="findingForm.severity">
-                  <option value="important">important</option>
-                  <option value="nit">nit</option>
-                  <option value="preexisting">preexisting</option>
+                  <option value="important">重要（需处置）</option>
+                  <option value="nit">建议（小改进）</option>
+                  <option value="preexisting">历史存量（非本轮引入）</option>
                 </select>
               </label>
               <label>bug 类<input v-model="findingForm.bugClass" placeholder="null-deref（可空）" /></label>
               <label class="rg__wide">问题描述<textarea v-model="findingForm.body" rows="2" /></label>
-              <label class="rg__wide">证据（important 必填）<input v-model="findingForm.evidence" placeholder="npm test 输出 / 截图引用" /></label>
+              <label class="rg__wide">证据（「重要」级必填）<input v-model="findingForm.evidence" placeholder="npm test 输出 / 截图引用" /></label>
               <button class="rg__btn rg__btn--primary rg__wide" :disabled="addingFinding" @click="onAddFinding">入库</button>
             </div>
           </details>

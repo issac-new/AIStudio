@@ -2,18 +2,17 @@
 <!-- P6 账户管理（补遗④第 2 项）：matrix 系统管理员在此创建/分配账号（synapse 管理端 API），
      本机账号↔matrix 双账号绑定维护（roster），保存/建号即入仓提交（R13）。 -->
 <script setup lang="ts">
-import IaBreadcrumb from '../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { ref, onMounted } from 'vue'
 import { fetchRegistry, saveRegistry, provisionAccount, createInvite, type InviteResult } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
+import { fetchMatrixServerInfo } from '../matrix-server-info'
 
 const COLS = ['账号', 'AI 助理账号', '角色']
 const rows = ref<string[][]>([]); const preamble = ref<string[]>([]); const after = ref<string[]>([])
 const commit = ref(''); const msg = ref(''); const busy = ref(false)
-const form = ref({ localName: '', role: '', password: '', adminToken: '', homeserverUrl: 'http://127.0.0.1:8008', withAgent: true })
+const form = ref({ localName: '', role: '', password: '', adminToken: '', homeserverUrl: '', withAgent: true })
 // D20 邀请表单：口令由服务端生成，不经管理员之手
-const inv = ref({ localName: '', role: '', adminToken: '', homeserverUrl: 'http://127.0.0.1:8008', withAgent: true, expiresInHours: 24 })
+const inv = ref({ localName: '', role: '', adminToken: '', homeserverUrl: '', withAgent: true, expiresInHours: 24 })
 const inviteResult = ref<InviteResult | null>(null)
 const invCopied = ref(false)
 async function invite() {
@@ -41,7 +40,14 @@ async function load() {
   const { table, preamble: p, after: a } = parseFirstTable(doc.markdown)
   rows.value = setCellAlign(table.rows, COLS.length); preamble.value = p; after.value = a
 }
-onMounted(() => { void load().catch(e => { msg.value = String(e) }) })
+onMounted(() => {
+  void load().catch(e => { msg.value = String(e) })
+  // 不写死部署地址：服务端 server-info 提供本部署默认值；读取失败保留空值。
+  void fetchMatrixServerInfo().then(info => {
+    form.value = { ...form.value, homeserverUrl: form.value.homeserverUrl || info.homeserverUrl }
+    inv.value = { ...inv.value, homeserverUrl: inv.value.homeserverUrl || info.homeserverUrl }
+  }).catch(() => {})
+})
 
 async function create() {
   const f = form.value
@@ -69,8 +75,6 @@ function delRow(i: number) { rows.value.splice(i, 1) }
 
 <template>
   <div class="aac" data-testid="account-admin">
-  <IaBreadcrumb />
-  <TabIntroBanner tab="accounts" />
     <h2>设置 · 账户管理 <span class="aac__meta">中央仓 @{{ commit || '…' }}</span></h2>
     <p class="aac__sub">matrix 系统管理员功能：创建/分配 matrix 账号（人类+AI 助理双账号），维护本机账号 ↔ matrix 账号绑定；一切变更提交中央仓可回溯。</p>
 

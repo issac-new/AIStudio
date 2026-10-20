@@ -12,6 +12,7 @@ import {
 } from '../../api/gov'
 import { useRouter } from 'vue-router'
 import UiEmptyState from '../../../ui/UiEmptyState.vue'
+import { humanDateTime } from '../../format'
 
 /** 质量门过滤（阶段页按 G1/G2/G3/G4 分签时用；空=全部） */
 const props = withDefaults(defineProps<{ gates?: string[] }>(), { gates: () => [] })
@@ -105,14 +106,14 @@ onMounted(() => { void refresh() })
       <div class="grp__rec-head">
         <span class="grp__gate">{{ GATE_FULL_NAME[r.gate] ?? r.gate }}</span>
         <span class="grp__state" :class="`grp__state--${r.state}`">{{ GATE_STATE_LABEL[r.state] }}</span>
-        <span class="grp__ts">{{ r.ts }}</span>
+        <span class="grp__ts">{{ humanDateTime(r.ts) }}</span>
       </div>
       <p class="grp__evidence">失败证据：{{ r.fail_evidence || '（未附）' }}</p>
       <p v-if="r.missing.length > 0" class="grp__missing">缺项：{{ r.missing.join('、') }}</p>
       <details v-if="r.history.length > 0" class="grp__history">
         <summary>流转留痕 {{ r.history.length }} 条</summary>
         <ul class="grp__history-list">
-          <li v-for="(h, i) in r.history" :key="i">{{ h.ts }}｜{{ GATE_STATE_LABEL[h.from] }} → {{ GATE_STATE_LABEL[h.to] }}｜{{ h.note }}</li>
+          <li v-for="(h, i) in r.history" :key="i">{{ humanDateTime(h.ts) }}｜{{ GATE_STATE_LABEL[h.from] }} → {{ GATE_STATE_LABEL[h.to] }}｜{{ h.note }}</li>
         </ul>
       </details>
       <div class="grp__actions">

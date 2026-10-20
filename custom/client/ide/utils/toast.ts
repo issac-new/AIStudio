@@ -25,7 +25,7 @@ function ensureContainer(): HTMLElement | null {
     const style = document.createElement('style')
     style.textContent = `
       #${CONTAINER_ID} {
-        position: fixed; right: 16px; bottom: 40px; z-index: 2000;
+        position: fixed; right: 16px; bottom: 40px; z-index: var(--ia-z-toast, 2000);
         display: flex; flex-direction: column; gap: 8px; max-width: 360px;
         pointer-events: none;
       }
