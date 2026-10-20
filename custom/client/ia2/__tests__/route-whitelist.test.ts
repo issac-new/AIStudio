@@ -109,7 +109,10 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
   it('并入例外全部经 IaLegacyShell（双栏根治单测）：hermes.* 记录零裸视图', () => {
     const hermes = all.filter((r) => typeof r.name === 'string' && r.name.startsWith('hermes.'))
     expect(hermes.length).toBe(29)
-    for (const r of hermes) {
+    // 2026-10-20 去重：旧版看板重定向到主看板，不再挂 IaLegacyShell
+    const kanban = hermes.find(r => r.name === 'hermes.kanban')
+    expect(kanban?.redirect).toBeTruthy()
+    for (const r of hermes.filter(r => r.name !== 'hermes.kanban')) {
       expect(r.meta?.fullscreen, `${r.name} 并入记录须 fullscreen=true`).toBe(true)
       expect(String(r.component), `${r.name} 并入记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
     }
