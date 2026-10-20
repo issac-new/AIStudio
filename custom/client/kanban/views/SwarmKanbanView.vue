@@ -139,23 +139,30 @@ function groupIdsByBoard(ids: string[]): Array<{ board: string; ids: string[] }>
 }
 
 onMounted(async () => {
-  store.fetchCapabilities()
-  // 板清单先就绪（store 域写操作板定位依赖 boards 已加载）
-  await store.fetchBoards()
+  // capabilities 与板清单先就绪：diagnostics 调用以能力表为准（缺失时 store 断言会抛
+  // 未捕获异常——2026-10-20 M3 走查实证 dev 后端无此能力）；板定位依赖 boards 已加载。
+  await Promise.all([store.fetchCapabilities(), store.fetchBoards()])
   store.fetchStats()
   store.fetchAssignees()
-  store.fetchDiagnostics()
+  fetchDiagnosticsIfSupported()
   store.fetchOrchestration()
   store.connectEvents()
   // 聚合数据面（v12.5 主数据源；WS 看板事件驱动 500ms 去抖刷新）
   void workspace.refreshAllBoards(true)
 })
 
+// diagnostics 能力缺失的后端上，store.fetchDiagnostics 的断言在自身 try/catch 之外抛出，
+// 形成未捕获 pageerror（上游 store 次序问题，挂账待补丁）；能力不支持时如实跳过——
+// 注意力条无诊断数据本就不渲染。
+function fetchDiagnosticsIfSupported(): void {
+  if (store.isCapabilitySupported('diagnostics')) void store.fetchDiagnostics()
+}
+
 // 单板详情链（抽屉内诊断/估算等）随板切换重取
 watch(() => store.selectedBoard, () => {
   store.fetchStats()
   store.fetchAssignees()
-  store.fetchDiagnostics()
+  fetchDiagnosticsIfSupported()
   store.fetchOrchestration()
 })
 
@@ -593,7 +600,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       :expanded="attentionExpanded"
       @toggle="attentionExpanded = !attentionExpanded"
       @open="handleAttentionOpen"
-      @refresh="store.fetchDiagnostics()"
+      @refresh="fetchDiagnosticsIfSupported"
     />
 
     <KanbanBulkBar

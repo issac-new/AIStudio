@@ -46,6 +46,7 @@ const kanbanStoreStubs = vi.hoisted(() => {
     setBoard: vi.fn((b: string) => { state.selectedBoard = b }),
     fetchCapabilities: vi.fn(), fetchBoards: vi.fn(async () => {}), fetchTasks: vi.fn(),
     fetchStats: vi.fn(), fetchAssignees: vi.fn(), fetchDiagnostics: vi.fn(),
+    isCapabilitySupported: vi.fn(() => true),
     fetchOrchestration: vi.fn(), connectEvents: vi.fn(),
     toggleSelection: vi.fn(), clearSelection: vi.fn(),
     moveTask: vi.fn(async () => ({})), deleteTask: vi.fn(async () => ({})),
@@ -150,5 +151,16 @@ describe('SwarmKanbanView — v12.5 聚合模式', () => {
     expect(kanbanStoreStubs.state.setBoard).toHaveBeenCalledWith('swarm')
     expect(kanbanStoreStubs.state.createTask).toHaveBeenCalled()
     w.unmount()
+  })
+
+  it('diagnostics 能力缺失时不调 fetchDiagnostics（M3 走查 pageerror 根治守门）', async () => {
+    kanbanStoreStubs.state.isCapabilitySupported.mockReturnValue(false)
+    const w = await mountView()
+    expect(kanbanStoreStubs.state.fetchDiagnostics).not.toHaveBeenCalled()
+    w.unmount()
+    kanbanStoreStubs.state.isCapabilitySupported.mockReturnValue(true)
+    const w2 = await mountView()
+    expect(kanbanStoreStubs.state.fetchDiagnostics).toHaveBeenCalled()
+    w2.unmount()
   })
 })
