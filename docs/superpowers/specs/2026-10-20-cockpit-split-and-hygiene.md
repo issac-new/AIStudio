@@ -54,6 +54,66 @@
 - GovOverlay 管理台与治理签的信息聚合重复（登记，重构另立轮）。
 - QR 本地生成不新增依赖：无现成依赖则移除 QR 功能。
 
-## 六、验证账（收口时回填）
+## 六、分工与交接（2026-10-20 11:00 用户裁定）
+
+本任务发现两个会话并行实施同一方案（主树文件级冲突实锤）。用户裁定：**拆分实施（B4）由另一会话在主树继续**，本会话停手退场。本 spec 与下列已提交件留在分支 `feat/cockpit-split-hygiene`（即当前主树检出分支）上，供继续方直接消费：
+
+- `f0db3ac` spec 本体（决策记录 D1-D12）
+- `5d815c0` B1 matrix 链接修复（ShareDialog 内链+QR 本地生成+SummaryCard+错误折叠+守门测试）
+- `e02c03a` B2 部分术语清理（DeliveryPanel/StageG5Panel/SpotlightPanel；IaShellHeader 的同类一行因与在途改动混布由继续方携带）
+
+继续方可直接按附录 A-D 的 file:line 清单施工，不必重做走查。已提交的收编件：`chore(ux)` 提交未产生（首次尝试被 spec-first 拦截，在途改动仍留在工作树由继续方处置）。
+
+## 七、验证账（收口时由继续方回填）
 
 待实施后回填：定向用例清单与结果、浏览器走查清单与结果、并行会话改动收编记录。
+
+## 附录 A：B2 假功能/死链/黑话待修清单（file:line 为 2026-10-20 走查时点）
+
+1. `kanban/components/KanbanToolbar.vue:250`「？」按钮 `@click="() => {}"` 空对象 → 统一占位提示（D2）。
+2. `ide/components/TaskBriefingPanel.vue:104` `boardHref` 未定义（死链）→ `#/app/board?task=<id>`。
+3. `ia2/views/gov/HarnessImprovePanel.vue:590` `data-testid="`hi-actions-…`"` 字面反引号 → `:data-testid` 绑定。
+4. `ia2/views/gov/KeyLedgerSection.vue:58` `**不含密钥本体**` 星号直出 +「服务端字段守卫禁入」「Q3 裁定」黑话 → 人话。
+5. `ide/components/IdeEngineModelsDialog.vue:157-169`「自动兜底」「回落链」→ 人话（如「未指定时自动选择」）。
+6. `ia2/views/gov/ReviewGovPanel.vue:292`「口径见 Anthropic 工程博客（2026-10-15）」内部调研署名出员工界面 → 移入 title 或删除。
+7. `ia2/views/stage/StagePreflight.vue:53-55,71` 副题/注脚「自动检查尚未接入…harness 侧确认」与同页三条已渲染 ✓/○ 并存 → 口径对齐（docs 检查已在 e02c03a 前序提交诚实化，按钮文案已改「打开全流程推演」）。
+8. `ia2/api/ops.ts:31-32`「请联系管理员」指引悬空 → 给出设置页路径或删除后半句。
+9. matrix 语音/视频「即将推出」按钮（MatrixRoomHeader）保留（D2 用户裁定），现有 alert 反馈已达标，可升级为轻 toast。
+
+## 附录 B：B3 机读噪声人话化清单
+
+统一映射表（建议落 `ia2/format.ts`）：POSTURE strict/standard/demo→严格/标准/演示；VERDICT pass/conditional/reject→通过/有条件通过/不通过；SEVERITY important/nit/preexisting→重要/建议/历史存量；TIER lite/standard/compliance；锚类型 event/commit→事件/提交；P1-P6→阶段名；时间戳→YYYY-MM-DD HH:mm。
+
+- `ia2/components/sim/SimAnchorDrawer.vue:46` 原始 JSON `<pre>` → 结构化字段表+折叠「复制原始 JSON」；喂入方 `SupervisionPanel.vue:28`、`OverviewPanel.vue:124-131`、`EvidencePanel.vue:125`。
+- `SupervisionPanel.vue:59,84` 手打 run 目录名输入+过期示例「20261015-v8-run20」→ 删输入（页头已有选择器）；`:118-119,131` 窗 ID/原始时间戳/机器字段。
+- `api/ops.ts:83` 兜底行 `{ 输出: JSON.stringify }`；`:64-70` 原始键值平铺。
+- `CockpitPanel.vue:24,33,67`、`SimSettingsView.vue:93,101`、`OverviewPanel.vue:190,289` 枚举与原始时间戳。
+- ⑥治理：`ClearancePanel.vue:114,116`、`GateRepairsPanel.vue:108,110`、`GovIssuesPanel.vue:55`、`ReviewGovPanel.vue:500,525,540-543`、`HarnessImprovePanel.vue:583,586,628,642`、`governance/components/{KnowledgeGraphSection:216,MaturitySection:108,CapabilityCatalogSection:118,AgentIdentitySection:174,IncidentReportSection:93,105}`。
+- ①搭建：`AccountAdminView.vue:14,16` 与 `components/gov/OrgEditor.vue:47` 默认 `http://127.0.0.1:8008` → 留空+placeholder。
+- ⑤验收：`matrix-teams/views/DeliveryCasesView.vue:115,124-128,157-158,195,198-199` 枚举/原始 ID/原始证据串。
+- `sim/TracePanel.vue:41,110,129` 原始 API 路径/内部文件路径/字面 null。
+- `views/stage/StageG5Panel.vue:81-82` 内部文件与闸键名暴露。
+- `ia2/i18n-tab-intros.ts:52,57,62,67,72,77,87,92` 8 个永不显示的 gov 死词条 → 挂载或删除；`HarnessImprovePanel.vue:551` 双语表漏「删除」硬编码。
+
+## 附录 C：B5 死代码清单（直接删，路由留 redirect）
+
+- `ia2/views/OrchestrateView.vue`（旧 /app/eng 件）+ `components/SpecList.vue`/`SpecDetail.vue` + `adapters/orchestrate.ts`
+- `ia2/views/scenes/EngScene.vue`
+- `loop/runcenter/views/RunCenterView.vue`、`RunDetailView.vue` 及其独占子件（InboxPanel/GoalLoopStandingPanel/RunListTable/TaskRunsPanel/RunTimeline/NodeInspector）、`ia2/components/flow/RunCanvas.vue`、`adapters/inbox-center.ts`
+- `ia2/views/gov/GovClusterSection.vue`、`GovSessionHealthSection.vue`
+- `sim/sim-tabs.ts` 死词条（tabDelivery/tabTrace/pending）；`i18n-gov-tabs.ts` tabGovCluster/tabGovSessionHealth 死键；`stage-attribution.ts` 已 redirect 的 ia2.gov* 归属行
+- 双入口收敛：ia2.teams/agents/accounts/cases 独立页 redirect 至对应阶段签；旅程五步卡目标（stage-meta.ts:129,137,145,161）改阶段签；上游 `/hermes/journey` 旧旅程页 redirect
+- 面包屑缺口（Workbench 家族/TasksView/SearchView/cases 无面包屑）与 `IaBreadcrumb.vue:54-55` 已 redirect 签级标签清理
+
+## 附录 D：B6 布局遮罩/溢出清单
+
+- z-index 账本（建议 `ia2/z-layers.ts`）：`ia2.scss:108-114`(z40)/`cockpit.scss:138-141`/`SimAnchorDrawer`(z60)/`GovOverlay`(z60)/`EvidencePanel:347`(z60)/`OntologyView:628`(z60)/`CockpitRunTraceModal`(z100)/`IaShellHeader:366-385`(998/999)/`RunCenterView:535`(z1000)/`matrix-chat`(z1000)/`ide/toast:28`(z2000)——同层互挤与 999>1000 倒挂需重排。
+- `AttentionStrip.vue:157-163` 抽屉依赖已删全局 `.ia-attn` 定位+硬编码 left:96px → scoped 自持定位。
+- `kanban/components/KanbanTaskDrawer.vue:1902-1910` 评论输入条 fixed width:720px → sticky。
+- `sim/OverviewPanel.vue:389,409,435,445` 零断点 → 1100px 折行/sticky 退场；`WorkbenchView.vue:717-728` 三栏永不塌缩+分割条 z100 压内容。
+- `sim/TracePanel.vue:124-147,186` 三按钮 nowrap 塞 5 列表、`DeliveryPanel.vue:109-110` mono 长串 → 表 min-width+overflow-x:auto。
+- `OverviewPanel.vue:192-199` 清算灯整句 nowrap、`CockpitPanel.vue:49-85` 徽标串 → 换行/隐藏策略。
+- `stage/StageShell.vue:277-285` 页签横滚隐藏无可发现性 → 渐隐遮罩。
+- `ide/views/IdeTaskSidebar.vue:1179` archived 组无滚动上限（cli-body 先例旁）。
+- `ia2/components/gov/GovOverlay.vue:117-119` <900px 中列被 overflow:hidden 裁切。
+- 断点覆盖面：126 个 ia2 .vue 仅 8 个含 @media（sim 四签/TasksView/InboxView/SearchView/AgentsView/AccountAdminView/GovOverlay/WorkbenchView 无兜底）。
