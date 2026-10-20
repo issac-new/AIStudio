@@ -19,3 +19,43 @@ index 5b7da32a4..be31e43e7 100644
    if (to.path === '/hermes/models' && Object.prototype.hasOwnProperty.call(to.query, 'importProvider')) {
      captureProviderImport(to.query.importProvider)
      const query = { ...to.query }
+diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
+
+--- a/packages/client/src/components/hermes/chat/ChatInput.vue
++++ b/packages/client/src/components/hermes/chat/ChatInput.vue
+@@ -18,6 +18,8 @@ import { useI18n } from 'vue-i18n'
+ import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
+ import { extractClipboardFiles } from '@/utils/clipboard-files'
+ import VoiceDialogueControls from './VoiceDialogueControls.vue'
++// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
++import { features } from '@/custom/features'
+ import BundleCreateModal from './BundleCreateModal.vue'
+ import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
+ import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
+@@ -505,7 +507,8 @@ function startResize(e: MouseEvent) {
+ }
+ 
+ const inputSettingsOptions = computed<DropdownOption[]>(() => [
+-  {
++  // overlay[s3]：语音模式入口随 features.voice 摘除（关时不留死菜单项）
++  ...(features.voice ? [{
+     label: t('realtimeVoice.mode'),
+     key: 'voiceMode',
+     disabled: props.draft,
+@@ -513,7 +516,7 @@ const inputSettingsOptions = computed<DropdownOption[]>(() => [
+       class: 'settings-voice-mode-icon',
+       'aria-hidden': 'true',
+     }, '◉'),
+-  },
++  }] : []),
+   {
+     label: t('chat.showToolCalls'),
+     key: 'toolTrace',
+@@ -1457,6 +1460,7 @@ function openAttachmentPreview(attachment: Attachment) {
+         </div>
+         <div class="input-actions">
+           <VoiceDialogueControls
++            v-if="features.voice"
+             :status="voiceInput.dialogue.status.value"
+             :transcript="voiceInput.transcript.value"
+             :error="voiceInput.error.value"
