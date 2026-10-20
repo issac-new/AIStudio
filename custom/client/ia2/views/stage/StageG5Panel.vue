@@ -84,7 +84,7 @@ watch(run, () => { void load() })
 
       <div v-if="!hasRun" class="g5p__empty" data-testid="g5-no-run">
         <p>在页头选择一次运行后，这里显示发布门判定并可批准/打回。</p>
-        <p class="g5p__dim">当前还没有历史运行——先完成一次运行，或到运行中心查看启动准备。</p>
+        <p class="g5p__dim">当前还没有历史运行——先完成一次运行，或到全流程推演·运行总览查看启动准备。</p>
       </div>
       <template v-else>
         <p v-if="loadError" class="g5p__error" data-testid="g5-load-error">{{ loadError }}</p>

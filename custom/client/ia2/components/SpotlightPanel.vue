@@ -42,7 +42,7 @@ const query = computed(() => props.query.trim().toLowerCase())
     IDE=ide.shell（/app/ide 子路由）、设置=hermes.settings（收编路由）。 */
 const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: { name: string; query?: Record<string, string> } }>>(() => [
   { key: 'overview', label: tx.value.cmdOverview, icon: '🏠', to: { name: 'ia2.dash' } },
-  { key: 'journey', label: '旅程首页（搭建五步＋交付五阶段）', icon: '🧭', to: { name: 'ia2.journey' } },
+  { key: 'journey', label: '流程总览（搭建五步＋交付五阶段）', icon: '🧭', to: { name: 'ia2.journey' } },
   { key: 'board', label: tx.value.cmdBoard, icon: '📋', to: { name: 'ia2.board' } },
   { key: 'inbox', label: tx.value.cmdInbox, icon: '📥', to: { name: 'ia2.inbox' } },
   // 动线批（2026-10-17）：runs/gov 两命令语义过期实锤（runs 走退役重定向多一跳、
