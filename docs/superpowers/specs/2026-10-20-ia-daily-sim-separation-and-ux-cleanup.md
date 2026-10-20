@@ -189,3 +189,11 @@
 
 - D-17：harness 启动默认关闭，必须后端以 `SIM_HARNESS_LAUNCH=1` 启动且调用者为 super_admin；只允许固定脚本 `simharness/aipay-scenario.sh`，runId 白名单，同一时刻仅一个本进程子进程，已有驱动锁拒绝双开，只终止自己拉起的 PID。
 - D-18：UI 在未启用时只显示说明，不放假启动按钮；启用后显示 RUN_ID/PID/日志尾部与停止入口。
+
+## 验证账（产品内导演 + 受控 harness，2026-10-20）
+
+- 产品内导演（方案 1）实测：1 模块最小场景 → 17 节点/3 道人工闸；G1 等待人工 → 批准 → `g1-router` → dispatch → `analysis-pay-core` 节点创建真实看板卡（assignee=chen），图进入等卡状态；随后清理了该测试卡。
+- 导演端点测试：`sim-director-rest` 7/7；模板 12/12；节点执行器 9/9；客户端导演台壳 15/15。
+- 受控 harness（方案 2）：`/api/harness/sim-launch/status` 实测 `enabled=false`（默认关闭）；`start` 返回 403 并给出 `SIM_HARNESS_LAUNCH=1` 说明；单测用临时固定脚本验证 start/status/stop 与驱动锁拒绝双开，4/4。
+- `npm run build` rc=0（含导演台与启动器 UI，`verify-dist` 通过）。
+- 启用受控 harness 的操作口径：后端以 `SIM_HARNESS_LAUNCH=1` 启动（如 `SIM_HARNESS_LAUNCH=1 npm run serve`），登录 super_admin，在导演台「受控 harness 启动」填 RUN_ID 并确认；默认关闭是为了避免误触真实环境重置。
