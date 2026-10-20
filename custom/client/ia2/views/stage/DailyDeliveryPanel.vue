@@ -5,12 +5,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskPathLabel, taskResultLabel, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
+import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
+const assigneeLabel = useAssigneeLabel()
 
 const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
   .filter(r => r.task.status === 'review' || (r.task.status === 'done' && isRecentTask(r.task)))
@@ -43,7 +45,7 @@ const missingResult = computed(() => rows.value.filter(r => !String(r.task.resul
               <strong>{{ r.task.title }}</strong>
               <span>{{ taskResultLabel(r.task) }}</span>
             </td>
-            <td>{{ r.task.assignee || '未指派' }}</td>
+            <td>{{ assigneeLabel(r.task.assignee) }}</td>
             <td>{{ taskStatusLabel(r.task.status) }}</td>
             <td class="ddp__mono">{{ r.task.branch_name || '未填写' }}</td>
             <td class="ddp__mono" :title="r.task.workspace_path">{{ taskPathLabel(r.task) }}</td>

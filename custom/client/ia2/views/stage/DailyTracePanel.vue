@@ -5,12 +5,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskPathLabel, taskResultLabel, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
+import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
+const assigneeLabel = useAssigneeLabel()
 
 const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
   .filter(r => r.task.status === 'review' || (r.task.status === 'done' && isRecentTask(r.task)))
@@ -32,7 +34,7 @@ const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
     <div v-else class="dtp__rows">
       <button v-for="r in rows" :key="`${r.board}:${r.task.id}`" type="button" class="dtp__row" :data-testid="`daily-trace-${r.task.id}`" @click="emit('open-task', r.task.id)">
         <strong class="dtp__name">{{ r.task.title }}</strong>
-        <span class="dtp__meta">{{ r.task.id }} · {{ r.board }} · {{ r.task.assignee || '未指派' }} · {{ taskUpdatedLabel(r.task) }}</span>
+        <span class="dtp__meta">{{ r.task.id }} · {{ r.board }} · {{ assigneeLabel(r.task.assignee) }} · {{ taskUpdatedLabel(r.task) }}</span>
         <span class="dtp__result">{{ taskResultLabel(r.task) }}</span>
         <span class="dtp__status" :data-status="r.task.status">{{ taskStatusLabel(r.task.status) }}</span>
         <span v-if="r.task.workspace_path" class="dtp__path" :title="r.task.workspace_path">{{ taskPathLabel(r.task) }}</span>

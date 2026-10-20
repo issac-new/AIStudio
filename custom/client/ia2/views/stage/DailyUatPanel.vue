@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useWorkspaceStore } from '../../store/workspace'
 import { taskPathLabel, taskResultLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
+import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
@@ -13,6 +14,7 @@ const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
+const assigneeLabel = useAssigneeLabel()
 const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
   .filter(r => r.task.status === 'review')
   .sort((a, b) => (b.task.last_heartbeat_at ?? b.task.created_at) - (a.task.last_heartbeat_at ?? a.task.created_at)))
@@ -33,7 +35,7 @@ function openInbox(): void { void router.push({ name: 'ia2.inbox' }) }
     <div v-else class="dup__rows">
       <article v-for="r in rows" :key="`${r.board}:${r.task.id}`" class="dup__row" :data-testid="`daily-uat-${r.task.id}`">
         <strong class="dup__name">{{ r.task.title }}</strong>
-        <span class="dup__meta">{{ r.task.assignee || '未指派' }} · {{ taskUpdatedLabel(r.task) }} · {{ taskPathLabel(r.task) }}</span>
+        <span class="dup__meta">{{ assigneeLabel(r.task.assignee) }} · {{ taskUpdatedLabel(r.task) }} · {{ taskPathLabel(r.task) }}</span>
         <span class="dup__result">{{ taskResultLabel(r.task) }}</span>
         <button type="button" class="dup__btn" @click="emit('open-task', r.task.id)">打开任务判定</button>
       </article>

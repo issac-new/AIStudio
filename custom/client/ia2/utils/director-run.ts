@@ -15,6 +15,6 @@ export function isDirectorRun(runId: string): boolean {
 /** 旧体系 API 守卫：导演 run 返回改道错误（调用方即时 reject，零网络探测）；否则 null。 */
 export function directorRunGuideError(runId: string): Error | null {
   return isDirectorRun(runId)
-    ? new Error('导演运行——26 步视图不适用，运行详情见「导演台」')
+    ? new Error('这是导演台发起的运行，不适用按 26 步流程组织的视图；运行详情请到「导演台」查看')
     : null
 }
