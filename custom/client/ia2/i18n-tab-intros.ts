@@ -49,50 +49,10 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
       act: '对任何数字/判定有疑问就点它——锚点抽屉给原文；重要消息可存证备查。',
     },
     // ── ⑥治理页签 ──
-    'gov-process': {
-      what: '六道质量门的守门记录：哪道门被打回过、修复单走到哪一步。',
-      source: 'orgloop 修复单台账。',
-      act: '质量门 FAIL 后来这里跟踪修复进度。界面没有绕过质量门的按钮——那是设计。',
-    },
-    'gov-orgAssets': {
-      what: '组织花名册与家底：人员权限、应用资产、密钥台账。',
-      source: '各注册表只读聚合。',
-      act: '启动运行前检查编制齐不齐；密钥到期轮换在这里登记（不含密钥本体）。',
-    },
-    'gov-clearance': {
-      what: '遗留项清单：上轮运行留下的代偿（程序替人干的活），根治一笔消一笔。',
-      source: '代偿台账逐笔实读。',
-      act: '开新运行前必须清零或豁免。紫色=豁免须写理由；resolve 填 PR 号标记已根治。',
-    },
-    'gov-issues': {
-      what: '问题清单对账：这轮登记的每个问题，处理了没有。',
-      source: '本次运行的问题清单实读。',
-      act: '复盘前查处置率；红色未处理的逐条要有说法。',
-    },
-    'gov-metrics': {
-      what: '组织度量检查五卡：效率/集群/语义/会话/成本，含磁盘水位预警。',
-      source: '巡检官快照与度量端点。',
-      act: '复盘时看趋势；磁盘红灯=立即处理（96% 事故先例）。',
-    },
-    'gov-org': {
-      what: '团队协作的三面镜子：协作断点诊断（信息/决策/责任/资源/反馈哪一环断了）、知识图谱（谁和谁在哪些任务上共事）、决策时间线（谁在何时批了什么）。',
-      source: '结案任务与审批记录沉淀，跨轮累积。',
-      act: '复盘会从这里取材；排兵布阵看协作网络；升级没人认领时先查断点诊断。',
-    },
     'gov-registry': {
       what: '能力与流程的登记处：能力台账（每项能力由哪个模块承载、缺口多少）、任务状态机（状态怎么流转才合法）、派发前自动规则检查。',
       source: '能力台账与规则文件（git 版本化），运行消费实况来自看板与用量记录。',
       act: '查"这个功能归谁管"；新能力先登记再开工；调整流程规则改这里，不用改代码。',
-    },
-    'gov-audit': {
-      what: '操作留痕与变更管控：可检索的审计日志（谁在何时对什么做了什么）+ 变更单分级评审、冻结窗口与管控基准。',
-      source: '各系统审计事件聚合；变更单为真实流程产物。',
-      act: '出问题时查责任链；发布封板期查有没有违规穿透的变更；月度看管控基准是否超标。',
-    },
-    'gov-docs': {
-      what: '治理文档的集中评审入口：需求/设计/测试文档是否入库、是否最新、待裁决项。',
-      source: 'git 仓文档实查，带提交锚点。',
-      act: '评审人在这里过文档、做裁决；缺件或过期的文档会被标出督促补齐。',
     },
     'gov-harness': {
       what: '研发过程的账本：六类成本账（人力/token/工具/等待/返工/安全）+ 能力目录 + L1-L5 成熟度自检 + 工程要素对账。',
@@ -135,31 +95,11 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'sim-supervision': { what: 'On-duty watch desk: observation windows and analyst briefs answer "where is it stuck".', source: 'Read-only supervision journal.', act: 'Check periodically during a run; read briefs before intervening.' },
     'sim-ops': { what: 'Infrastructure health: four services, dispatcher, idle workers.', source: 'Live /health probes + hermes-agent commands.', act: 'When things feel dead, check red dots here first.' },
     'sim-evidence': { what: 'Evidence lookup: paste an event id or commit hash to see the original.', source: 'Live synapse/git lookups.', act: 'Distrust any number? Click it. Anchor drawer shows the source.' },
-    'gov-process': { what: 'Quality-gate keeping records: which gate was rejected, repair ticket progress.', source: 'orgloop repair ledger.', act: 'Track gate-FAIL repairs here. No gate bypass button by design.' },
-    'gov-orgAssets': { what: 'Roster and assets: people, permissions, app registry, key ledger.', source: 'Read-only registries.', act: 'Check staffing before a run; log key rotations (no secrets).' },
-    'gov-clearance': { what: 'Open items: compensations left from the last run; resolve one, clear one.', source: 'Compensation ledger TSV.', act: 'Must be zero or waived before a new run. Waive needs a reason.' },
-    'gov-issues': { what: 'Issue reconciliation: every registered issue, disposed or not.', source: 'Run issues.log.', act: 'Check disposal rate before retro; red rows need answers.' },
-    'gov-metrics': { what: 'Org health five cards incl. disk watermark alarm.', source: 'Inspector snapshots and metric endpoints.', act: 'Review trends at retro; red disk lamp = act now.' },
 
-    'gov-org': {
-      what: 'Three mirrors of teamwork: breakpoint diagnosis (info/decision/ownership/resource/feedback), knowledge graph (who worked with whom), decision timeline.',
-      source: 'Accumulated from closed tasks and approvals.',
-      act: 'Fuel for retrospectives; staffing from the collaboration graph; check breakpoints when escalations stall.',
-    },
     'gov-registry': {
       what: 'Registry of capabilities and process rules: capability ledger, task state machine, pre-dispatch rule checks.',
       source: 'Git-versioned ledger and rule files; live consumption from kanban and usage records.',
       act: 'Find what owns a feature; register new capabilities first; tune process rules here, not in code.',
-    },
-    'gov-audit': {
-      what: 'Audit trail and change control: searchable audit log plus tiered change review, freeze windows, control baselines.',
-      source: 'Aggregated audit events; change records are real process artifacts.',
-      act: 'Trace accountability after incidents; check freeze-window violations before release; watch monthly baselines.',
-    },
-    'gov-docs': {
-      what: 'Central review entry for governance docs: presence, freshness, pending verdicts.',
-      source: 'Live git inspection with commit anchors.',
-      act: 'Reviewers decide here; missing or stale docs get flagged for follow-up.',
     },
     'gov-harness': {
       what: 'The R&D process ledger: six cost accounts, capability catalog, L1-L5 maturity self-check, engineering-primitive reconciliation.',

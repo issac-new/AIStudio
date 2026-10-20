@@ -14,6 +14,11 @@ describe('run-display — 运行标识产品化', () => {
     expect(runShortLabel('20260105-v8-run3')).toBe('1/5 运行')
   })
 
+  it('导演 run → 域名称，不把长机读 ID 放首屏', () => {
+    expect(runDisplayName('run-sim-director-abc-1')).toBe('导演运行')
+    expect(runShortLabel('run-sim-director-abc-1')).toBe('导演运行')
+  })
+
   it('非日期形态原样透出（不编造日期）', () => {
     expect(runDisplayName('cli-run')).toBe('cli-run')
     expect(runShortLabel('cli-run')).toBe('cli-run')

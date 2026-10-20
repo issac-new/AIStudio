@@ -2,17 +2,13 @@
 // overlay/custom/client/ia2/__tests__/traceability-components.test.ts
 // P3 Task 7 — 双向关联 + 追溯矩阵组件 jsdom 冒烟：
 //   RunLinks             任务详情"来源 run"（反查命中 → runId 深链 / 空态 / 失败态）
-//   TraceabilityMatrix   追溯矩阵（loop 分组表渲染 / run 深链 / 任务回看板 open-task / 失败重试）
-//   NodeInspector        persistence 节点产物任务链接（run → 任务深链 /app/board?task=）
-//   TasksView            页签切换 + 深链预选（?tab/status/task → kanban store 过滤器）
 // REST 与重 store 全桩（同 orchestrate/overview 冒烟纪律）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 
-// ── loop/run REST 桩（loopRest 被 RunLinks/TraceabilityMatrix 消费；
-//    runRest 被 runcenter store 与 NodeInspector 消费）──
+// ── loop/run REST 桩（本文件仅 RunLinks 消费 loopRest；runRest 桩保留供同链组件复用）──
 const { runRest, loopRest } = vi.hoisted(() => ({
   runRest: {
     listRuns: vi.fn(async () => [] as Array<{ runId: string; graphId: string; status: string; updatedAt: string | null }>),
@@ -40,7 +36,7 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
 vi.mock('@/custom/loop/api/loop-rest', () => ({ loopRest }))
 // naive-ui NSpin 桩（jsdom 无需真实加载动画）
 vi.mock('naive-ui', () => ({ NSpin: { template: '<div class="nspin-stub" />' } }))
-// TasksView 的看板页签重组件打桩（import 链带上游 vite define + 重 store，装配接线在
+// 看板页签重组件打桩（import 链带上游 vite define + 重 store；本文件已不挂载，桩保留
 // ia-views.test 单独断言；本文件聚焦页签/预选/矩阵行为）
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
   default: { props: ['openTaskId', 'autoOpenCreate'], template: '<div class="kanban-stub" :data-open-task="openTaskId" />' },
@@ -54,18 +50,14 @@ vi.mock('@/custom/cockpit/components/RunTraceOverview.vue', () => ({
     emits: ['select-session', 'close'],
   },
 }))
-// cockpit store 桩（TasksView observatory 下钻经 openRunTrace 开弹窗）
+// cockpit store 桩（历史挂载面已退役；桩保留避免 import 链回潮）
 const cockpitOpenTrace = vi.hoisted(() => vi.fn())
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace: cockpitOpenTrace }),
 }))
 
 import RunLinks from '../components/RunLinks.vue'
-import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
-import NodeInspector from '@/custom/loop/runcenter/components/NodeInspector.vue'
-import TasksView from '../views/TasksView.vue'
 import type { TraceLoopEvent } from '../adapters/traceability'
-import type { RunGraphNode, ReplayEventLike } from '@/custom/loop/runcenter/adapters/run-graph'
 
 // ── kanban store 状态桩（真身 import 链带上游 vite define，单测不可达——
 //    同 cockpit-attention 纪律整桩替换；filterStatus/searchQuery 记录预选写入）──
@@ -113,7 +105,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   loopRest.listLoops.mockResolvedValue([])
   loopRest.getEvents.mockResolvedValue([])
-  runRest.listRuns.mockResolvedValue([])
   kanbanState.tasks = []
   kanbanState.filterStatus = null
   kanbanState.searchQuery = ''
@@ -157,186 +148,5 @@ describe('RunLinks', () => {
     const failed = mount(RunLinks, { props: { taskId: 't_none', show: true }, global: { plugins: [router] } })
     await flushPromises()
     expect(failed.find('.ia-runlinks__error').exists()).toBe(true)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// TraceabilityMatrix（追溯矩阵页签本体）
-// ---------------------------------------------------------------------------
-
-describe('TraceabilityMatrix', () => {
-  function matrixStubs() {
-    kanbanState.tasks = [
-      { id: 't_1', title: '修登录页', status: 'done' },
-    ]
-  }
-
-  it('loop 分组表渲染：goal/run 徽标/迭代/任务标题/验证轮次', async () => {
-    loopRest.listLoops.mockResolvedValue([{ id: 'l1', name: 'Alpha', goal: '修复登录' }])
-    loopRest.getEvents.mockResolvedValue([
-      { type: 'loop.tick-complete', ts: '2026-09-09T10:00:00Z', loopId: 'l1', iteration: 1 },
-      { type: 'loop.verification-complete', ts: '2026-09-10T09:00:00Z', loopId: 'l1', contractId: 'task/a', passed: false },
-      { type: 'loop.verification-complete', ts: '2026-09-10T09:30:00Z', loopId: 'l1', contractId: 'task/a', passed: true },
-      PERSIST({ contractId: 'task/a', taskId: 't_1', runId: 'run-l1-2' }),
-    ])
-    runRest.listRuns.mockResolvedValue([
-      { runId: 'run-l1-2', graphId: 'loop-l1', status: 'completed', updatedAt: '2026-09-10T10:05:00Z' },
-    ])
-    matrixStubs()
-    const router = makeRouter()
-    const wrapper = mount(TraceabilityMatrix, { global: { plugins: [router] } })
-    await flushPromises()
-
-    const group = wrapper.find('[data-loop-id="l1"]')
-    expect(group.exists()).toBe(true)
-    expect(group.find('.ia-trace__name').text()).toBe('Alpha')
-    expect(group.find('.ia-trace__goal').text()).toBe('修复登录')
-    expect(group.find('.ia-trace__runlink').text()).toBe('run-l1-2')
-    expect(group.find('.ia-trace__iter').text()).toBe('#2')
-    expect(group.find('.ia-trace__tasklink').text()).toBe('修登录页')
-    expect(group.find('.ia-trace__rounds').text()).toContain('1/2')
-    expect(runRest.listRuns).toHaveBeenCalled()
-  })
-
-  it('任务点击 emit open-task 携带 taskId（宿主切回看板定位）；run 点击深链运行详情', async () => {
-    loopRest.listLoops.mockResolvedValue([{ id: 'l1', name: 'A', goal: 'g' }])
-    loopRest.getEvents.mockResolvedValue([
-      PERSIST({ contractId: 'task/a', taskId: 't_1', runId: 'run-l1-1' }),
-    ])
-    matrixStubs()
-    const router = makeRouter()
-    const wrapper = mount(TraceabilityMatrix, { global: { plugins: [router] } })
-    await flushPromises()
-
-    await wrapper.find('.ia-trace__tasklink').trigger('click')
-    expect(wrapper.emitted('open-task')![0]).toEqual(['t_1'])
-    await wrapper.find('.ia-trace__runlink').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/runs/run-l1-1')
-  })
-
-  it('listLoops 整体失败 → 失败态 + 重试；空 loop 列表 → 空态', async () => {
-    loopRest.listLoops.mockRejectedValue(new Error('api down'))
-    const router = makeRouter()
-    matrixStubs()
-    const failed = mount(TraceabilityMatrix, { global: { plugins: [router] } })
-    await flushPromises()
-    expect(failed.find('.ia-trace__failed').exists()).toBe(true)
-
-    loopRest.listLoops.mockResolvedValue([])
-    const empty = mount(TraceabilityMatrix, { global: { plugins: [router] } })
-    await flushPromises()
-    expect(empty.find('.ia-trace__empty-title').exists()).toBe(true)
-  })
-
-  it('2026-09-30 空白根治：任务链 API 失败且无循环 → 失败态+双面重试（不再落入泛化空态装作没数据）', async () => {
-    loopRest.listLoops.mockResolvedValue([])
-    runRest.getMind.mockRejectedValueOnce(new Error('mind down'))
-    matrixStubs()
-    const router = makeRouter()
-    const wrapper = mount(TraceabilityMatrix, { global: { plugins: [router] } })
-    await flushPromises()
-    expect(wrapper.find('.ia-trace__failed').exists()).toBe(true)
-    expect(wrapper.find('.ia-trace__empty-title').exists()).toBe(false)
-    // 重试拉双面
-    wrapper.find('.ia-trace__retry').trigger('click')
-    await flushPromises()
-    expect(loopRest.listLoops).toHaveBeenCalledTimes(2)
-    expect(runRest.getMind).toHaveBeenCalledTimes(2)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// NodeInspector（run → 任务，persistence 节点）
-// ---------------------------------------------------------------------------
-
-describe('NodeInspector 产物任务链接', () => {
-  const events: ReplayEventLike[] = [
-    { kind: 'run.started', ts: 1 },
-    { kind: 'loop.persisted', ts: 2, payload: { contractId: 'task/a', artifact: 'kanban:t_9', taskId: 't_9' } },
-  ]
-  const node = (id: string) => ({
-    id, type: 'function', status: 'done', iteration: 1, durationMs: 10,
-  } as unknown as RunGraphNode)
-
-  it('persistence 节点 + 事件流含 taskId → 渲染产物任务链接，点击深链工作项', async () => {
-    const router = makeRouter()
-    const wrapper = mount(NodeInspector, {
-      props: { node: node('persistence'), events, runId: 'run-1' },
-      global: { plugins: [router] },
-    })
-    await flushPromises()
-    const section = wrapper.find('[data-persisted-tasks]')
-    expect(section.exists()).toBe(true)
-    expect(section.find('.ni-panel__task-link').text()).toBe('t_9')
-    await section.find('.ni-panel__task-link').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/board?task=t_9')
-  })
-
-  it('非 persistence 节点不渲染；payload 缺 taskId 的事件不产生链接', async () => {
-    const router = makeRouter()
-    const other = mount(NodeInspector, {
-      props: { node: node('validation'), events, runId: 'run-1' },
-      global: { plugins: [router] },
-    })
-    expect(other.find('[data-persisted-tasks]').exists()).toBe(false)
-
-    const legacy = mount(NodeInspector, {
-      props: { node: node('persistence'), events: [{ kind: 'loop.persisted', ts: 1, payload: { contractId: 'task/a' } }], runId: 'run-1' },
-      global: { plugins: [router] },
-    })
-    await flushPromises()
-    expect(legacy.find('[data-persisted-tasks]').exists()).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// TasksView（页签 + 深链预选）
-// ---------------------------------------------------------------------------
-
-describe('TasksView 页签与深链预选', () => {
-  it('A0 后默认看板页签（board 3 签）；query 预选 status/task 写入看板过滤器；追溯签深链落推演中心', async () => {
-    const router = makeRouter()
-    await router.push('/app/board?status=blocked&task=t_42')
-    await router.isReady()
-    const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    expect(kanbanState.filterStatus).toBe('blocked')
-    // 2026-10-20：?task= 不再写搜索框，改为把任务 ID 传给看板直接开抽屉
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('.kanban-stub').attributes('data-open-task')).toBe('t_42')
-    // board 3 签注册表（追溯/交付健康/运行观测已迁推演中心，页签位消失）
-    expect(wrapper.findAll('.ia-tasks__tab')).toHaveLength(3)
-    expect(wrapper.find('[data-testid="ia-tasks-tab-trace"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-tasks-tab-accounts"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-tasks-tab-observatory"]').exists()).toBe(false)
-    // 旧 ?tab=trace 深链 → 推演中心需求追溯签（深链不死链）
-    await router.push('/app/board?tab=trace')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.simTrace')
-    // L4 页签 URL 回写引入跨 tick 的 router.replace——组件不卸载会在下一用例
-    // 执行期 resolve 并经共享 kanbanState 污染断言（跨用例泄漏组件的既有卫生债）
-    wrapper.unmount()
-  })
-
-  it('非法 status 忽略不炸；未知 tab 回落看板；三旧签深链全部重定向不死链', async () => {
-    const router = makeRouter()
-    await router.push('/app/board?status=not-a-status&tab=weird')
-    await router.isReady()
-    const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    expect(kanbanState.filterStatus).toBeNull()
-    expect(wrapper.find('.kanban-stub').exists()).toBe(true)
-    wrapper.unmount()
-
-    // 迁出签深链重定向（交付健康→签 5；运行观测→签 3）
-    for (const [tab, name] of [['accounts', 'ia2.simDelivery'], ['observatory', 'ia2.simOps']] as const) {
-      const router2 = makeRouter()
-      await router2.push(`/app/board?tab=${tab}`)
-      await router2.isReady()
-      const wrapper2 = mount(TasksView, { global: { plugins: [router2] } })
-      await flushPromises()
-      expect(router2.currentRoute.value.name, tab).toBe(name)
-      wrapper2.unmount()
-    }
   })
 })

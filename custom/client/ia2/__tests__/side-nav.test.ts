@@ -17,12 +17,12 @@ const progressState = vi.hoisted(() => ({
   run: null as unknown as { value: string },
   stage: {} as Record<number, string>,
 }))
-vi.mock('../composables/useStageProgress', async () => {
+vi.mock('../composables/useDailyStageProgress', async () => {
   const { ref } = await import('vue')
   const run = ref('run21')
   progressState.run = run as unknown as { value: string }
   return {
-    useStageProgress: () => ({
+    useDailyStageProgress: () => ({
       run,
       state: ref(null),
       loading: ref(false),
@@ -77,7 +77,6 @@ async function mountAt(path: string) {
 
 beforeEach(() => {
   localStorage.clear()
-  progressState.run.value = 'run21'
   progressState.stage = { 1: 'done', 2: 'done', 3: 'done', 4: 'current', 5: 'pending', 6: 'pending' }
 })
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ide/__tests__/trajectory-pane.test.ts
 // 守门：运行观测吸收批（2026-10-01）——轨迹账本谓词过滤/排序/inspector +
-// trace 路由双路径修复 + RunListTable 来源徽标判据 + 常驻意图面板过滤逻辑。
+// trace 路由双路径修复 + 运行来源徽标判据 + 常驻意图面板过滤逻辑。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -141,7 +141,7 @@ describe('trace 路由双路径注册（legacy-app-api 改写防御）', () => {
   })
 })
 
-// ── RunListTable 来源徽标判据（P11 Phase 2） ──
+// ── 运行来源徽标判据（P11 Phase 2） ──
 describe('run 来源徽标判据（graphId 前缀）', () => {
   it('loop- 前缀=循环 run（↻），其余=图规格 run（⟐）', () => {
     const badge = (graphId: string) => graphId?.startsWith('loop-') ? '↻' : '⟐'

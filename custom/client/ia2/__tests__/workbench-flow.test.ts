@@ -143,10 +143,6 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
   runRest: { getSpec: vi.fn(async () => null), replay: vi.fn(async () => []), exportRun: vi.fn(async () => ({})) },
   connectGraph: vi.fn(), disconnectGraph: vi.fn(),
 }))
-vi.mock('@/custom/loop/runcenter/components/RunGraphCanvas.vue', () => ({
-  default: { name: 'RunGraphCanvas', props: ['graph', 'entryNode'], template: '<div class="rgc-stub" />' },
-}))
-
 const loopStubs = vi.hoisted(() => {
   const state = {
     loops: [{

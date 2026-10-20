@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import { NButton, NInput, NSelect, NSpace, NCheckbox, NModal, NForm, NFormItem, NTooltip, NPopconfirm } from 'naive-ui'
+import { NButton, NInput, NSelect, NSpace, NCheckbox, NModal, NForm, NFormItem, NPopover, NPopconfirm } from 'naive-ui'
 import type { KanbanAssignee, KanbanBoard, KanbanProject } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
@@ -240,20 +240,26 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
         </div>
       </div>
       <div class="toolbar-right">
-        <NTooltip>
+        <NPopover trigger="click" placement="bottom-end" :show-arrow="false">
           <template #trigger>
             <NButton
               quaternary
               size="small"
               circle
               class="help-btn"
-              @click="() => {}"
+              data-testid="kanban-help-button"
+              :aria-label="t('kanban.helpTooltip', 'Kanban board help')"
             >
               ?
             </NButton>
           </template>
-          {{ t('kanban.helpTooltip', 'Kanban board help') }}
-        </NTooltip>
+          <div class="kanban-help" data-testid="kanban-help-content">
+            <strong>看板怎么用</strong>
+            <p>筛选：按状态、负责人、租户和关键词组合查询；「只看我的」保留你负责或需你审批的卡。</p>
+            <p>视图：把当前筛选保存成命名视图，之后一键切换；卡片点开后可直接改状态、留言和跳 IDE。</p>
+            <p>任务卡：状态流转会留痕；进入 review 后需要对应审批人处理。</p>
+          </div>
+        </NPopover>
         <NButton
           size="small"
           @click="openCreateBoard"
@@ -276,7 +282,7 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
           {{ t('kanban.board.archiveConfirm', { name: currentBoard }) }}
         </NPopconfirm>
 <!-- overlay[ia2]: cockpit 全屏弹窗关闭按钮随 cockpit 退役删除（Task 8）——
-     看板现内嵌于 /app/tasks，无"关闭弹窗"语义 -->
+     看板现内嵌于 /app/board，无"关闭弹窗"语义 -->
       </div>
     </div>
 

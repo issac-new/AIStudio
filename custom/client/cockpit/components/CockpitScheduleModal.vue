@@ -417,7 +417,7 @@ function miniTitle(c: MiniCell): string {
 <style scoped lang="scss">
 .cockpit-schedule-modal {
   position: fixed; inset: 24px;
-  z-index: 1001;
+  z-index: var(--ia-z-modal, 1000);
   display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-color);
   border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;

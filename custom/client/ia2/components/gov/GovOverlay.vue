@@ -112,7 +112,7 @@ function setSection(section: GovSection): void {
 </template>
 
 <style scoped lang="scss">
-.gov { position: fixed; inset: 0; z-index: 60; }
+.gov { position: fixed; inset: 0; z-index: var(--ia-z-fullscreen); }
 .gov__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .38); }
 .gov__panel {
   position: absolute; inset: 24px 32px; display: grid;
@@ -151,5 +151,12 @@ function setSection(section: GovSection): void {
 .gov__right {
   border-left: 1px solid var(--border-color); background: var(--bg-card);
   min-width: 0; overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .gov__panel { inset: 10px; grid-template-columns: 1fr; overflow: auto; }
+  .gov__left { border-right: 0; border-bottom: 1px solid var(--border-color); }
+  .gov__center, .gov__right { overflow: visible; min-width: 0; }
+  .gov__nav-note { margin-top: 8px; }
 }
 </style>

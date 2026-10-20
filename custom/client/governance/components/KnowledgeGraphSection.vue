@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { humanDateTime } from '@/custom/ia2/format'
 import {
   fetchConflictInbox, fetchKgSummary, resolveConflict, syncKnowledgeGraph,
   fetchKgVersions, rollbackKg, kgEvolutionStatus, tickKg, armKg, disarmKg,
@@ -127,7 +128,7 @@ async function doArm(on: boolean): Promise<void> {
 
 const pendingConflicts = computed(() => inbox.value.filter((e) => !e.resolved))
 const kgUnavailable = computed(() => syncResults.value?.some((r) => !r.kgAvailable) ?? false)
-const fmtTime = (ts: number): string => (ts > 0 ? new Date(ts).toLocaleString() : '')
+const fmtTime = (ts: number): string => humanDateTime(ts)
 
 onMounted(() => {
   // 版本下拉依赖 summary.board——先取摘要再拉版本。并行发起时 summary 尚未

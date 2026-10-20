@@ -148,7 +148,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
   },
   {
     no: 4, key: 'env', name: '准备环境与资产',
-    purpose: '四服务环境拓扑健康、密钥台账（不含密钥本体）、模型服务商配置、应用资产登记。',
+    purpose: '四服务环境拓扑健康、密钥轮换台账、模型服务商配置、应用资产登记。',
     criteria: '环境冒烟测试通过；密钥台账可在搭建页直接维护',
     target: { name: 'ia2.stage1', query: { tab: 'assets' } },
     keys: ['smoke_done'],

@@ -161,4 +161,9 @@ function sanitizeHtml(html: string): string {
   font-weight: 600;
 }
 :deep(.mx-mention) { color: var(--accent-primary); }
+/* B6：长 URL/长等宽串（永久链接、mxc→http）缺断行规则会撑破气泡——
+   链接与代码允许在任意字符处折行（同 MatrixRoomSummaryCard 的 break-word 先例） */
+.mx_EventTile_content { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+:deep(a), :deep(code) { overflow-wrap: anywhere; word-break: break-word; }
+:deep(pre) { white-space: pre-wrap; overflow-wrap: anywhere; }
 </style>

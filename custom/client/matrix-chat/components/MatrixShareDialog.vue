@@ -135,7 +135,7 @@ async function handleCopyAlias() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: var(--ia-z-modal, 1000);
 }
 
 .share-dialog {

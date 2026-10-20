@@ -86,7 +86,7 @@ const INTRO_KEY: Record<string, string> = {
 /** W3 两体系贯通（2026-10-20 挂账清零批 B）：选中导演 run 时自动改道「导演台」——
  *  旧体系三签（监督/监控/证据）读不到导演运行（API 层即时拒答零网络探测，
  *  见 utils/director-run.ts），与其满屏改道提示不如直接落到正确面板。 */
-const { run: selectedSimRun } = useRunContext()
+const { run: selectedSimRun } = useRunContext('sim')
 watch(
   () => selectedSimRun.value.trim(),
   (name) => {

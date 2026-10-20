@@ -23,7 +23,7 @@ interface TraceResponse {
   source: { evidenceDir: string }
 }
 
-const { run, remember } = useRunContext()
+const { run, remember } = useRunContext('sim')
 const loading = ref(false)
 const loadError = ref('')
 const trace = ref<TraceResponse | null>(null)
@@ -157,7 +157,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 </template>
 
 <style scoped lang="scss">
-.trc { display: flex; flex-direction: column; gap: 12px; }
+.trc { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-x: auto; }
 .trc__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .trc__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
 .trc__empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -182,7 +182,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 .trc__ok { color: var(--ia-fresh); }
 .trc__absent { color: var(--ia-fail); }
 .trc__src { color: var(--text-muted); font-size: 11px; font-family: var(--font-mono); }
-.trc__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.trc__table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 12px; }
 .trc__table th, .trc__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
 .trc__mono { font-family: var(--font-mono); white-space: nowrap; }
 .trc__verdict { padding: 0 6px; border-radius: 4px; font-size: 11px; }
@@ -190,7 +190,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 .trc__verdict--conditional { color: var(--ia-stale); background: rgba(201, 150, 46, 0.14); }
 .trc__verdict--reject { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
 .trc__verdict--none { color: var(--text-muted); background: rgba(127, 127, 127, 0.12); }
-.trc__entry { white-space: nowrap; }
+.trc__entry { white-space: normal; min-width: 180px; }
 .trc__verdict-btn {
   border: 1px solid var(--border-color);
   background: transparent;

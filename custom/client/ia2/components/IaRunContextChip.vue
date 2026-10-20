@@ -12,7 +12,7 @@ import { runDisplayName } from '../run-display'
 const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
-const { run } = useRunContext()
+const { run } = useRunContext('sim')
 const raw = computed(() => run.value.trim())
 // 产品面只呈现可读日期；运行目录名留在 title 供排查反查（2026-10-19 走查批）
 const name = computed(() => (raw.value ? runDisplayName(raw.value) : ''))

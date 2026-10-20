@@ -1180,7 +1180,7 @@ onMounted(async () => {
 
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
-.ide-taskbar__archived-body { padding-bottom: 4px; }
+.ide-taskbar__archived-body { padding-bottom: 4px; max-height: 320px; overflow-y: auto; }
 .ide-taskbar__group-hint { margin: 2px 4px 6px; font-size: 10.5px; color: var(--text-muted); }
 .ide-taskbar__item--cli .ide-taskbar__mode-badge.is-cli {
   color: var(--accent-info, #3b82f6); border: 1px solid var(--accent-info, #3b82f6); border-radius: 6px;

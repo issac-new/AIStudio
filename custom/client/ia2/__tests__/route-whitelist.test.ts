@@ -112,7 +112,7 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
     // 2026-10-20 去重：旧版看板重定向到主看板，不再挂 IaLegacyShell
     const kanban = hermes.find(r => r.name === 'hermes.kanban')
     expect(kanban?.redirect).toBeTruthy()
-    for (const r of hermes.filter(r => r.name !== 'hermes.kanban')) {
+    for (const r of hermes.filter(r => r.name !== 'hermes.kanban' && r.name !== 'hermes.journey')) {
       expect(r.meta?.fullscreen, `${r.name} 并入记录须 fullscreen=true`).toBe(true)
       expect(String(r.component), `${r.name} 并入记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
     }

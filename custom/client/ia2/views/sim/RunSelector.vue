@@ -17,7 +17,7 @@ const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const runsStore = useRunCenterStore()
-const { run } = useRunContext()
+const { run } = useRunContext('sim')
 
 const current = computed(() => run.value.trim())
 /** 选项构造抽成纯函数（utils/run-options）：空列表且加载完不再把 localStorage

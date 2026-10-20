@@ -60,6 +60,7 @@ export interface ImproveCopy {
   addFile: string
   removeFile: string
   fileCount: string
+  deletionsCount: string
   addVariant: string
   removeVariant: string
   create: string
@@ -222,6 +223,7 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     addFile: '加一个文件',
     removeFile: '删除文件',
     fileCount: '文件数',
+    deletionsCount: '删除',
     addVariant: '加一个候选',
     removeVariant: '删除',
     create: '创建草稿',
@@ -382,6 +384,7 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     addFile: 'Add file',
     removeFile: 'Remove file',
     fileCount: 'Files',
+    deletionsCount: 'deleted',
     addVariant: 'Add candidate',
     removeVariant: 'Remove',
     create: 'Create draft',

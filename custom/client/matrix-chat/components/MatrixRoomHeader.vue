@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { showToast } from '@/custom/ide/utils/toast'
 import { useRouter } from 'vue-router'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
@@ -171,11 +172,11 @@ function handleOpenMemberList() {
 }
 
 function handleVideoCall() {
-  window.alert(t('matrixChat.comingSoon'))
+  showToast(t('matrixChat.comingSoon'), 'info', 2600)
 }
 
 function handleVoiceCall() {
-  window.alert(t('matrixChat.comingSoon'))
+  showToast(t('matrixChat.comingSoon'), 'info', 2600)
 }
 
 const roomTopic = computed(() => {

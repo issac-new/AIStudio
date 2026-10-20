@@ -896,3 +896,4 @@
 670-client-kanban-diagnostics-order.patch
 # 671: index.html boot-fallback 补首帧文字「SwarmStudio 加载中…」（原纯 logo 无提示=W2 白屏体感）。
 671-client-boot-fallback-caption.patch
+672-loginview-server-info-priority.patch

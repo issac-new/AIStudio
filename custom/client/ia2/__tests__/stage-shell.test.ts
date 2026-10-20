@@ -49,6 +49,18 @@ vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: [] }),
 }))
 
+vi.mock('../composables/useDailyStageProgress', async () => {
+  const { ref } = await import('vue')
+  return {
+    useDailyStageProgress: () => ({
+      tasks: ref([]),
+      stageCount: () => 0,
+      stageState: (no: number) => progressState.stage[no] ?? 'pending',
+      stepState: () => 'current',
+    }),
+  }
+})
+
 import StageShell from '../views/stage/StageShell.vue'
 
 const stubs = {
@@ -65,6 +77,14 @@ const stubs = {
     template: '<div data-testid="trace-stub" :data-only="String(!!onlyUnjudged)" />',
   },
   StageDevToday: { name: 'StageDevToday', template: '<div data-testid="today-stub" />' },
+  StageSetupSteps: { name: 'StageSetupSteps', template: '<div data-testid="setup-steps-stub" />' },
+  StageRequirementsOverview: { name: 'StageRequirementsOverview', template: '<div data-testid="requirements-stub" />' },
+  StagePreflight: { name: 'StagePreflight', template: '<div data-testid="stg-preflight" />' },
+  StageAcceptanceOverview: { name: 'StageAcceptanceOverview', template: '<div data-testid="accept-overview-stub" />' },
+  DailyTracePanel: { name: 'DailyTracePanel', template: '<div data-testid="daily-trace-stub" />' },
+  DailyDeliveryPanel: { name: 'DailyDeliveryPanel', template: '<div data-testid="daily-delivery-stub" />' },
+  DailyUatPanel: { name: 'DailyUatPanel', template: '<div data-testid="daily-uat-stub" />' },
+  DailyG5Panel: { name: 'DailyG5Panel', template: '<div data-testid="daily-g5-stub" />' },
   StageSchedulePanel: { name: 'StageSchedulePanel', template: '<div data-testid="schedule-stub" />' },
   StageAssetsPanel: { name: 'StageAssetsPanel', template: '<div data-testid="assets-stub" />' },
   StageRiskPanel: { name: 'StageRiskPanel', template: '<div data-testid="risk-stub" />' },
@@ -109,11 +129,7 @@ describe('StageShell — 单层页签', () => {
     const { w } = await mountStage(1)
     expect(w.find('[data-testid="stg-page-1"]').exists()).toBe(true)
     expect(w.text()).toContain('搭建：建立组织、账号与资产')
-    expect(w.findAll('[data-testid^="stg-step-"]').length).toBeGreaterThanOrEqual(5)
-    for (const key of ['org', 'accounts', 'teams', 'env', 'agents']) {
-      expect(w.find(`[data-testid="stg-step-${key}"]`).exists(), key).toBe(true)
-    }
-    expect(w.find('[data-testid="stg-step-state-teams"]').text()).toContain('未纳入跟踪')
+    expect(w.find('[data-testid="setup-steps-stub"]').exists()).toBe(true)
     expect(w.text()).not.toContain('进入 →')
     expect(w.find('[data-testid="stg-tab-steps"]').classes()).toContain('stg__tab--on')
     w.unmount()
@@ -121,7 +137,7 @@ describe('StageShell — 单层页签', () => {
 
   it('①五步按钮切本页页签（写 query，不整页跳转）', async () => {
     const { w, router } = await mountStage(1)
-    await w.find('[data-testid="stg-step-go-org"]').trigger('click')
+    await w.find('[data-testid="stg-tab-org"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.tab).toBe('org')
     expect(w.find('[data-testid="org-stub"]').exists()).toBe(true)
@@ -136,7 +152,7 @@ describe('StageShell — 单层页签', () => {
     }
     expect(w.find('[data-testid="stg-tab-launch"]').exists()).toBe(false)
     expect(w.find('[data-testid="stg-tab-reqs"]').classes()).toContain('stg__tab--on')
-    expect(w.text()).toContain('G1 需求冻结')
+    expect(w.find('[data-testid="requirements-stub"]').exists()).toBe(true)
     await w.find('[data-testid="stg-tab-g1"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.tab).toBe('g1')
@@ -144,14 +160,10 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('②启动准备只核对条件，主按钮去运行中心（不在阶段页假装启动）', async () => {
-    const { w, router } = await mountStage(2, '?tab=preflight')
+  it('②启动准备是显式跨区入口（不在阶段页假装启动）', async () => {
+    const { w } = await mountStage(2, '?tab=preflight')
     expect(w.find('[data-testid="stg-preflight"]').exists()).toBe(true)
-    expect(w.text()).toContain('启动与续跑由 harness 执行')
-    expect(w.find('[data-testid="stg-preflight-run"]').exists()).toBe(true)
-    await w.find('[data-testid="stg-preflight-run"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
+    expect(w.find('[data-testid="stg-run-hint"]').exists()).toBe(false)
     w.unmount()
   })
 
@@ -162,28 +174,19 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
-  it('⑤验收：默认总览显示 G5/UAT，四处出口切页签；UAT 签只挂未判过滤', async () => {
+  it('⑤验收使用日常面板；推演只是参照链接', async () => {
     const { w, router } = await mountStage(5)
     expect(w.find('[data-testid="stg-tab-overview"]').classes()).toContain('stg__tab--on')
-    expect(w.find('[data-testid="stg-accept-g5_ready"]').exists()).toBe(true)
-    expect(w.find('[data-testid="stg-accept-uat_done"]').exists()).toBe(true)
+    expect(w.find('[data-testid="accept-overview-stub"]').exists()).toBe(true)
     for (const key of ['trace', 'delivery', 'uat', 'g5']) {
-      expect(w.find(`[data-testid="stg-accept-go-${key}"]`).exists(), key).toBe(true)
+      await w.find(`[data-testid="stg-tab-${key}"]`).trigger('click')
+      await flushPromises()
     }
-    await w.find('[data-testid="stg-accept-go-trace"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.query.tab).toBe('trace')
-    expect(w.find('[data-testid="trace-stub"]').exists()).toBe(true)
-
-    await w.find('[data-testid="stg-tab-uat"]').trigger('click')
-    await flushPromises()
-    expect(w.find('[data-testid="trace-stub"]').attributes('data-only')).toBe('true')
-
-    // P2：G5 页签换装发布门面板（含发布类审批过滤），不再直接挂通用审批面板
-    await w.find('[data-testid="stg-tab-g5"]').trigger('click')
-    await flushPromises()
-    expect(w.find('[data-testid="g5-panel-stub"]').exists()).toBe(true)
-    expect(w.find('[data-testid="approval-panel-stub"]').exists()).toBe(false)
+    expect(router.currentRoute.value.query.tab).toBe('g5')
+    expect(w.find('[data-testid="daily-trace-stub"]').exists()).toBe(false)
+    expect(w.find('[data-testid="daily-delivery-stub"]').exists()).toBe(false)
+    expect(w.find('[data-testid="daily-uat-stub"]').exists()).toBe(false)
+    expect(w.find('[data-testid="daily-g5-stub"]').exists()).toBe(true)
     w.unmount()
   })
 

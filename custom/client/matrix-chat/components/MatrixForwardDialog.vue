@@ -143,7 +143,7 @@ function canSend(roomId: string): boolean {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  z-index: var(--ia-z-modal, 1000);
   display: flex;
   align-items: center;
   justify-content: center;
